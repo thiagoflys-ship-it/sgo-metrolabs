@@ -67,6 +67,9 @@ var CHV_ITENS = [
     ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → WhatsApp → Configuração da API: campo "Identificação do número de telefone" (Phone Number ID). O da Metrolabs (+55 62 98241-7106) é 1409597008899044. Não é o número de telefone.' },
   { chave: 'META_WA_WABA_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1406451067859707', nome: 'WhatsApp oficial (Meta): identificação da conta comercial',
     ajuda: 'Na mesma tela da Configuração da API: "Identificação da conta do WhatsApp Business" (WABA ID). O da Metrolabs é 1406451067859707. Usado para conferir os modelos de mensagem cadastrados.' },
+  // 20/10/2026: com esta chave, o webhook do COMMAND só aceita evento da Meta com a assinatura X-Hub-Signature-256 certa.
+  { chave: 'META_APP_SECRET', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', nome: 'WhatsApp oficial (Meta): chave secreta do aplicativo',
+    ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → Configurações do app → Básico → "Chave secreta do aplicativo" → Mostrar. Com ela gravada, o COMMAND confere a assinatura de cada mensagem recebida pelo webhook e recusa o que não veio da Meta. Vazia: vale só o segredo do endereço do webhook, como hoje.' },
   { chave: 'ZAPI_INSTANCIA', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: identificação da instância',
     ajuda: 'No painel da Z-API (app.z-api.io): Instâncias → abra a instância do WhatsApp da Metrolabs → copie o campo "ID da instância". Sem as 3 chaves Z-API, o WhatsApp por Z-API fica desligado.' },
   { chave: 'ZAPI_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token da instância',

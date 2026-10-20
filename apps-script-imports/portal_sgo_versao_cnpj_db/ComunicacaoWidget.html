@@ -76,6 +76,28 @@
   .comw-toast span { display: block; font-size: 12px; color: var(--bc-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @keyframes comwEntrar { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
   .comw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .comw-tag.comw-wa { color: var(--comw-verde); border-color: var(--comw-verde); }
+  .comw-evento { align-self: center; max-width: 92%; text-align: center; font-size: 12px; color: var(--comw-mut); background: var(--comw-card2); border: 1px dashed var(--comw-borda);
+    border-radius: 8px; padding: 5px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .comw-cabconv { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .comw-cabconv .comw-btn { padding: 6px 10px; white-space: nowrap; }
+  .comw-filtros { display: flex; gap: 6px; margin: 6px 0; }
+  .comw-filtros > * { flex: 1; min-width: 0; }
+  .comw-pessoa { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--comw-borda); border-radius: 8px; margin-bottom: 6px; background: var(--comw-card); }
+  .comw-pessoa input[type=checkbox] { width: 20px; height: 20px; flex: none; }
+  .comw-pessoa label { flex: 1; min-width: 0; cursor: pointer; }
+  .comw-resumo { background: var(--bc-info-bg); border: 1px solid var(--bc-info-line); border-radius: 8px; padding: 10px; margin: 8px 0; font-size: 13px; }
+  .comw-resumo ul, .comw-ajuda ul, .comw-ajuda ol { margin: 6px 0 0 18px; padding: 0; }
+  .comw-resumo li, .comw-ajuda li { margin: 2px 0; }
+  .comw-ajuda h3 { font-size: 13px; margin: 12px 0 4px; }
+  .comw-ajuda p { margin: 4px 0; font-size: 13px; }
+  .comw-sug { border: 1px solid var(--comw-borda); border-radius: 8px; background: var(--comw-card); margin-bottom: 6px; max-height: 180px; overflow-y: auto; }
+  .comw-sug button { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--comw-borda); padding: 8px 10px; cursor: pointer; font: inherit; color: var(--comw-txt); }
+  .comw-sug button:last-child { border-bottom: 0; }
+  .comw-sug button:hover, .comw-sug button:focus-visible { background: var(--comw-card2); }
+  .comw-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comw-tabela td { border-bottom: 1px solid var(--comw-borda); padding: 5px 4px; vertical-align: top; }
+  .comw-btn.comw-perigo { background: var(--comw-card2); color: var(--comw-verm); border: 1px solid var(--comw-verm); }
   @media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
     /* celular (também deitado): botão colado na borda direita, no meio da tela (não cobre botões de salvar
        do rodapé), com 44 px de toque e fora da área do entalhe */
@@ -92,10 +114,13 @@
   "use strict";
   var CFG = window.COM_CFG || {};
   var OUTRO = CFG.outro || (CFG.sistema === "COMMAND" ? "SGO+" : "COMMAND");
-  var NOME_SIS = { COMMAND: "COMMAND", SGO: "SGO+" };
-  var ST = { token: "", d: null, conv: {}, ordem: [], msgs: {}, mais: {}, antes: {}, aberta: null, aba: "conversas", pessoas: null, setores: [],
+  var NOME_SIS = { COMMAND: "COMMAND", SGO: "SGO+", WHATSAPP: "WhatsApp" };
+  var ST = { token: "", d: null, conv: {}, ordem: [], msgs: {}, mais: {}, antes: {}, aberta: null, aba: "conversas", pessoas: null, setores: [], areas: [],
     avisos: [], comunicados: [], cursores: null, parado: "", semBanco: false, timer: null, ocupado: false, aberto: false, tela: "lista",
-    toasts: [], tituloBase: "", piscando: null, ultimoErro: 0 };
+    toasts: [], tituloBase: "", piscando: null, ultimoErro: 0,
+    sel: {}, grupoTit: "", part: null, prefs: null, cfgWa: null, trilha: null, sugIds: {}, voltarPara: "lista" };
+  // telas com formulário: a atualização automática (novidades a cada 25 s) só mexe nos contadores, nunca redesenha o que está sendo preenchido
+  var FORMULARIOS = { nova: 1, grupo: 1, revisar: 1, adicionar: 1, participantes: 1, preferencias: 1, publicar: 1, ajuda: 1 };
   var raiz, botao, qt, painel, corpo, pe, abas, toasts, viva;
 
   /* ---------------- utilitários ---------------- */
@@ -120,7 +145,7 @@
     if (min < 48 * 60) return "visto há " + Math.round(min / 60) + " h";
     return "visto em " + quando(iso);
   }
-  function tagSis(s) { return s ? "<span class='comw-tag " + (s === "COMMAND" ? "comw-cmd" : "comw-sgo") + "'>" + h(NOME_SIS[s] || s) + "</span>" : ""; }
+  function tagSis(s) { return s ? "<span class='comw-tag " + (s === "COMMAND" ? "comw-cmd" : s === "WHATSAPP" ? "comw-wa" : "comw-sgo") + "'>" + h(NOME_SIS[s] || s) + "</span>" : ""; }
   function tagsPessoa(p) { return (p.cmd ? tagSis("COMMAND") + " " : "") + (p.sgo ? tagSis("SGO") : ""); }
   function anunciar(t) { if (viva) { viva.textContent = ""; setTimeout(function () { viva.textContent = t; }, 30); } }
 
@@ -172,7 +197,7 @@
     ST.timer = setTimeout(function () { if (ST.d) novidades(); else iniciar(); }, ms !== undefined ? ms : (document.hidden ? 120000 : 25000));
   }
   function iniciar() {
-    api("iniciar", {}, function (r) {
+    api("iniciar", { visivel: !document.hidden }, function (r) {
       ST.d = r; ST.cursores = r.cursores; ST.conv = {}; ST.ordem = [];
       (r.conversas || []).forEach(function (c) { ST.conv[c.conversa_id] = c; ST.ordem.push(c.conversa_id); });
       ST.avisos = r.avisos || []; ST.comunicados = r.comunicados || [];
@@ -182,7 +207,7 @@
   function novidades() {
     if (ST.ocupado) return agendar();
     ST.ocupado = true;
-    api("novidades", { cursores: ST.cursores }, function (r) {
+    api("novidades", { cursores: ST.cursores, visivel: !document.hidden }, function (r) {
       ST.ocupado = false;
       ST.cursores = r.cursores;
       if (r.truncado) return iniciar();
@@ -193,7 +218,15 @@
   function aplicar(r) {
     var eu = ST.d.eu, novosToast = [];
     (r.conversas || []).forEach(function (c) {
-      if (!ST.conv[c.conversa_id]) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
+      var ja = ST.conv[c.conversa_id];
+      if (!ja) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
+      else { ja.titulo = c.titulo; ja.membros = c.membros; ja.pode_editar = c.pode_editar; }   // nome ou participantes mudaram
+    });
+    (r.saidas || []).forEach(function (id) {   // saiu do grupo ou foi removido: some da lista (as mensagens continuam guardadas)
+      if (!ST.conv[id]) return;
+      delete ST.conv[id]; delete ST.msgs[id];
+      ST.ordem = ST.ordem.filter(function (x) { return x !== id; });
+      if (ST.aberta === id) { ST.aberta = null; ST.tela = "lista"; toast({ titulo: "Você não está mais nesta conversa", texto: "Quem criou o grupo ou a gestão tirou você do grupo. As mensagens não foram apagadas.", prioridade: "INFO" }); }
     });
     (r.mensagens || []).forEach(function (m) {
       var c = ST.conv[m.conversa_id];
@@ -203,7 +236,8 @@
       if (lista) lista.push(m);
       c.ultima = { de_nome: m.de_nome, de_sistema: m.de_sistema, texto: String(m.texto).slice(0, 140), criado_em: m.criado_em };
       ST.ordem = [m.conversa_id].concat(ST.ordem.filter(function (id) { return id !== m.conversa_id; }));
-      if (m.de_pessoa === eu.pessoa_id) return;
+      if (m.de_pessoa === eu.pessoa_id && m.de_sistema !== "WHATSAPP") return;
+      if (m.ref_tipo === "EVENTO_GRUPO") return;   // mudança de participantes: aparece na conversa, sem balão
       if (!(ST.aberto && ST.aberta === m.conversa_id && !document.hidden)) novosToast.push({ titulo: m.de_nome + (c.tipo === "DIRETA" ? "" : " · " + c.titulo), texto: m.texto, prioridade: "INFO",
         sis: m.de_sistema, ir: { conversa: m.conversa_id } });
     });
@@ -224,7 +258,7 @@
         novosToast.push({ titulo: "Comunicado: " + a.titulo, texto: a.texto, prioridade: a.prioridade, sis: a.origem_sistema, ir: { aba: "comunicados" } });
     });
     (r.ciencias || []).forEach(function (c) { ST.comunicados.forEach(function (a) { if (a.aviso_id === c.aviso_id) a.ciente = true; }); });
-    if (ST.aberto && ST.aberta && ST.conv[ST.aberta] && !document.hidden) lerConversa(ST.aberta);
+    if (ST.aberto && ST.aberta && ST.tela === "conversa" && ST.conv[ST.aberta] && !document.hidden) lerConversa(ST.aberta);
     if (ST.aberto && !document.hidden && (ST.aba === "avisos" || ST.aba === "comunicados") && ST.tela === "lista") marcarAba(ST.aba);
     if (novosToast.length > 3) {
       var crit = novosToast.filter(function (t) { return t.prioridade === "CRITICA"; });
@@ -232,7 +266,8 @@
       toast({ titulo: (novosToast.length - crit.length) + " novidades na Comunicação", texto: "Mensagens, avisos e comunicados novos.", prioridade: "INFO" });
     } else novosToast.forEach(toast);
     if (novosToast.length) bip(novosToast.some(function (t) { return t.prioridade === "CRITICA"; }));
-    desenhar();
+    if (ST.aberto && FORMULARIOS[ST.tela]) desenharLeve();   // formulário aberto: só os contadores mudam
+    else desenhar();
   }
 
   /* ---------------- contagens, título, som ---------------- */
@@ -295,45 +330,62 @@
 
   /* ---------------- painel ---------------- */
   function abrir() { ST.aberto = true; painel.hidden = false; botao.setAttribute("aria-expanded", "true"); desenhar(); setTimeout(function () { var f = painel.querySelector("textarea, .comw-abas button.comw-on"); if (f) f.focus(); }, 30);
-    if (ST.aba === "avisos" || ST.aba === "comunicados") marcarAba(ST.aba); if (ST.aberta) lerConversa(ST.aberta); if (!ST.d && ST.token && !ST.parado) iniciar(); }
+    if (ST.aba === "avisos" || ST.aba === "comunicados") marcarAba(ST.aba); if (ST.aberta && ST.tela === "conversa") lerConversa(ST.aberta); if (!ST.d && ST.token && !ST.parado) iniciar(); }
   function fechar() { ST.aberto = false; if (painel) painel.hidden = true; if (botao) { botao.setAttribute("aria-expanded", "false"); } }
   function alternar() { if (ST.aberto) { fechar(); botao.focus(); } else abrir(); }
   function irAba(a) { ST.aba = a; ST.tela = "lista"; if (a !== "conversas") ST.aberta = null; desenhar(); marcarAba(a); }
 
-  function desenhar() {
+  /** Só o que muda sozinho (número no botão, título da aba do navegador, contadores das abas): nunca mexe no corpo. */
+  function desenharLeve() {
     if (!raiz) return;
     var c = contagens();
     qt.textContent = c.total > 99 ? "99+" : String(c.total); qt.hidden = !c.total;
     botao.setAttribute("aria-label", "Comunicação" + (c.total ? " — " + c.total + " novidade(s)" : ""));
     botao.classList.toggle("comw-inativo", !!ST.parado || ST.semBanco);
     atualizarTitulo(c.total);
-    if (!ST.aberto) return;
+    if (!ST.aberto) return c;
     painel.querySelector(".comw-som").innerHTML = modoSom() === "nada" ? "<i class='fas fa-bell-slash' aria-hidden='true'></i>" : "<i class='fas fa-bell' aria-hidden='true'></i>";
     painel.querySelector(".comw-som").setAttribute("aria-label", "Som dos avisos: " + rotSom() + " (clique para trocar)");
     painel.querySelector(".comw-som").title = "Som: " + rotSom();
     abas.innerHTML = [["conversas", "Conversas", c.mensagens], ["avisos", "Avisos", c.avisos], ["comunicados", "Comunicados", c.comunicados]].map(function (a) {
       return "<button type='button' role='tab' aria-selected='" + (ST.aba === a[0]) + "' data-aba='" + a[0] + "' class='" + (ST.aba === a[0] ? "comw-on" : "") + "'>" + a[1] + (a[2] ? "<span class='comw-n'>" + a[2] + "</span>" : "") + "</button>";
     }).join("");
-    var emConversa = ST.aba === "conversas" && ST.aberta && ST.d && !ST.parado && !ST.semBanco;
+    return c;
+  }
+
+  function desenhar() {
+    if (!raiz) return;
+    desenharLeve();
+    if (!ST.aberto) return;
+    var emConversa = ST.aba === "conversas" && ST.aberta && ST.tela === "conversa" && ST.d && !ST.parado && !ST.semBanco;
     if (!emConversa) { pe.innerHTML = ""; pe.hidden = true; pe.removeAttribute("data-conv"); }
     if (ST.parado === "SESSAO") { corpo.innerHTML = "<div class='comw-vazio'>Sua sessão terminou. Entre de novo no sistema para voltar a receber mensagens.</div>"; return; }
     if (ST.semBanco) { corpo.innerHTML = "<div class='comw-aviso-sis'>Comunicação ainda não ativada: abra o COMMAND uma vez (ele cria a planilha compartilhada). Vamos tentar de novo sozinhos.</div>"; return; }
     if (!ST.d) { corpo.innerHTML = "<div class='comw-vazio'>Carregando…</div>"; return; }
-    if (ST.aba === "conversas") return ST.aberta ? telaConversa() : ST.tela === "nova" ? telaNova() : ST.tela === "grupo" ? telaGrupo() : telaConversas();
+    if (ST.tela === "ajuda") return telaAjuda();
+    if (ST.tela === "preferencias") return telaPreferencias();
+    if (ST.aba === "conversas") {
+      if (ST.tela === "participantes") return telaParticipantes();
+      if (ST.tela === "adicionar") return telaAdicionar();
+      if (ST.aberta) return telaConversa();
+      return ST.tela === "nova" ? telaNova() : ST.tela === "grupo" ? telaGrupo() : ST.tela === "revisar" ? telaRevisar() : telaConversas();
+    }
     if (ST.aba === "avisos") return telaAvisos();
     return ST.tela === "publicar" ? telaPublicar() : telaComunicados();
   }
+  /** Muda de tela (sempre redesenha, inclusive formulário novo). */
+  function ir(tela) { ST.tela = tela; desenhar(); var f = corpo.querySelector("input:not([type=checkbox]), textarea, select"); corpo.scrollTop = 0; if (f && tela !== "conversa") setTimeout(function () { try { f.focus(); } catch (e) { } }, 30); }
 
   /* ---- conversas ---- */
   function telaConversas() {
     var html = "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='nova'>+ Conversa</button><button type='button' class='comw-btn comw-sec' data-acao='grupo'>+ Grupo</button>" +
-      (ST.d.eu.setor ? "<button type='button' class='comw-btn comw-sec' data-acao='setor'>Meu setor</button>" : "") + "</div>";
+      (ST.d.eu.area ? "<button type='button' class='comw-btn comw-sec' data-acao='setor' title='Conversa de todas as pessoas da área " + h(ST.d.eu.area_nome || ST.d.eu.area) + "'>Minha área</button>" : "") + "</div>";
     if (!ST.ordem.length) html += "<div class='comw-vazio'>Nenhuma conversa ainda.</div>";
     ST.ordem.forEach(function (id) {
       var c = ST.conv[id]; if (!c) return;
       var u = c.ultima;
       html += "<button type='button' class='comw-item" + (c.nao_lidas ? " comw-novo" : "") + "' data-conv='" + h(id) + "' aria-label='Abrir conversa " + h(c.titulo) + (c.nao_lidas ? ", " + c.nao_lidas + " não lida(s)" : "") + "'>" +
-        "<div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + (c.tipo === "GERAL" ? "<i class='fas fa-bullhorn' aria-hidden='true'></i> " : c.tipo === "GRUPO" ? "<i class='fas fa-users' aria-hidden='true'></i> " : c.tipo === "SETOR" ? "<i class='fas fa-tag' aria-hidden='true'></i> " : "") + h(c.titulo) + "</div>" +
+        "<div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + (c.tipo === "GERAL" ? "<i class='fas fa-bullhorn' aria-hidden='true'></i> " : c.tipo === "GRUPO" ? "<i class='fas fa-users' aria-hidden='true'></i> " : c.tipo === "SETOR" ? "<i class='fas fa-tag' aria-hidden='true'></i> " : c.tipo === "RECEBIDAS" ? "<i class='fas fa-mobile-alt' aria-hidden='true'></i> " : "") + h(c.titulo) + "</div>" +
         "<div class='comw-prev'>" + (u ? h(u.de_nome) + ": " + h(u.texto) : "sem mensagens") + "</div></div>" +
         "<div style='text-align:right'><div class='comw-mut'>" + h(u ? quando(u.criado_em) : "") + "</div>" + (c.com ? tagsPessoa(c.com) : "") + (c.nao_lidas ? "<div class='comw-badge'>" + c.nao_lidas + "</div>" : "") + "</div></div></button>";
     });
@@ -373,15 +425,20 @@
   function rascChave(id) { return "comw_rasc_" + (CFG.sistema || "") + "_" + ((ST.d && ST.d.eu.pessoa_id) || "") + "_" + id; }
   function telaConversa() {
     var id = ST.aberta, c = ST.conv[id] || { titulo: "Conversa" }, eu = ST.d.eu, lista = ST.msgs[id];
-    var html = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar para a lista de conversas'>←</button>" +
-      "<div class='comw-cresce'><div class='comw-tit'>" + h(c.titulo) + "</div>" + (c.com ? "<div>" + tagsPessoa(c.com) + "</div>" : "") + "</div></div>";
+    var temPart = c.tipo && c.tipo !== "DIRETA";
+    var html = "<div class='comw-cabconv'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar para a lista de conversas'>←</button>" +
+      "<div class='comw-cresce'><div class='comw-tit'>" + h(c.titulo) + "</div>" + (c.com ? "<div>" + tagsPessoa(c.com) + "</div>" : "") + "</div>" +
+      (temPart ? "<button type='button' class='comw-btn comw-sec' data-acao='participantes' aria-label='Ver quem está nesta conversa'><i class='fas fa-users' aria-hidden='true'></i> Participantes" +
+        (c.membros && c.membros.length ? " (" + c.membros.length + ")" : "") + "</button>" : "") + "</div>";
     if (!lista) html += "<div class='comw-vazio'>Carregando…</div>";
     else {
       if (ST.mais[id]) html += "<div style='text-align:center;margin-bottom:8px'><button type='button' class='comw-btn comw-sec' data-acao='anteriores'>Mensagens anteriores</button></div>";
-      if (!lista.length) html += "<div class='comw-vazio'>Escreva a primeira mensagem.</div>";
+      if (!lista.length) html += "<div class='comw-vazio'>Escreva a primeira mensagem." + (temPart ? " Para chamar alguém, escreva @ e escolha o nome." : "") + "</div>";
       html += "<div class='comw-msgs'>" + lista.map(function (m) {
-        var minha = m.de_pessoa === eu.pessoa_id;
-        return "<div class='comw-msg" + (minha ? " comw-minha" : "") + "'><div class='comw-de'><b>" + h(minha ? "Você" : m.de_nome) + "</b>" + tagSis(m.de_sistema) + "<span>" + h(quando(m.criado_em)) + "</span></div>" +
+        if (m.ref_tipo === "EVENTO_GRUPO") return "<div class='comw-evento' role='note'>" + h(m.texto) + " <span>" + h(quando(m.criado_em)) + "</span></div>";
+        var minha = m.de_pessoa === eu.pessoa_id && m.de_sistema !== "WHATSAPP";
+        var rot = m.de_sistema === "WHATSAPP" ? (m.de_pessoa === eu.pessoa_id ? "Você" : m.de_nome) + " (pelo WhatsApp)" : (minha ? "Você" : m.de_nome);
+        return "<div class='comw-msg" + (minha ? " comw-minha" : "") + "'><div class='comw-de'><b>" + h(rot) + "</b>" + tagSis(m.de_sistema) + "<span>" + h(quando(m.criado_em)) + "</span></div>" +
           "<div class='comw-txt'>" + h(m.texto) + "</div>" + linkRef(m) + "</div>";
       }).join("") + "</div>";
     }
@@ -391,16 +448,61 @@
     pe.hidden = false;
     if (pe.getAttribute("data-conv") === id) return;   // a caixa de texto não é recriada: nada do que está sendo digitado se perde
     pe.setAttribute("data-conv", id);
-    pe.innerHTML = "<div class='comw-compor'><label class='comw-sr' for='comw-texto'>Mensagem</label><textarea id='comw-texto' rows='2' maxlength='4000' placeholder='Mensagem (Enter envia, Shift+Enter quebra linha)'></textarea>" +
+    ST.sugIds = {};
+    pe.innerHTML = "<div class='comw-sug' id='comw-sug' hidden role='listbox' aria-label='Pessoas para mencionar'></div>" +
+      "<div class='comw-compor'><label class='comw-sr' for='comw-texto'>Mensagem</label><textarea id='comw-texto' rows='2' maxlength='4000' placeholder='" +
+      (temPart ? "Mensagem (@ chama alguém; Enter envia)" : "Mensagem (Enter envia, Shift+Enter quebra linha)") + "'></textarea>" +
       "<button type='button' class='comw-btn comw-verde' data-acao='enviar' aria-label='Enviar mensagem'>Enviar</button></div>";
     var ta = pe.querySelector("textarea");
     ta.value = lsGet(rascChave(id)) || "";
     var t;
-    ta.addEventListener("input", function () { clearTimeout(t); t = setTimeout(function () { var v = ta.value; if (v.trim()) lsSet(rascChave(id), v); else lsDel(rascChave(id)); }, 400); });
-    ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviar(); } });
+    ta.addEventListener("input", function () {
+      clearTimeout(t); t = setTimeout(function () { var v = ta.value; if (v.trim()) lsSet(rascChave(id), v); else lsDel(rascChave(id)); }, 400);
+      if (temPart) sugerirMencao(ta);
+    });
+    ta.addEventListener("keydown", function (e) {
+      var sug = document.getElementById("comw-sug");
+      if (e.key === "Escape" && sug && !sug.hidden) { e.stopPropagation(); sug.hidden = true; return; }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        if (sug && !sug.hidden && sug.querySelector("button")) { e.preventDefault(); sug.querySelector("button").click(); return; }
+        e.preventDefault(); enviar();
+      }
+    });
   }
+  /* ---- menção: "@" + começo do nome mostra a lista das pessoas da conversa ---- */
+  function membrosDaConversa(id, depois) {
+    var c = ST.conv[id];
+    if (c && c._part) return depois(c._part);
+    api("participantes", { conversa_id: id }, function (r) { if (ST.conv[id]) ST.conv[id]._part = r.participantes; depois(r.participantes); }, function () { depois([]); });
+  }
+  function sugerirMencao(ta) {
+    var sug = document.getElementById("comw-sug");
+    if (!sug) return;
+    var antes = ta.value.slice(0, ta.selectionStart || ta.value.length), m = /(^|\s)@([^\s@]{0,30})$/.exec(antes);
+    if (!m) { sug.hidden = true; return; }
+    var q = m[2].toLowerCase(), id = ST.aberta;
+    membrosDaConversa(id, function (lista) {
+      if (ST.aberta !== id) return;
+      var achou = lista.filter(function (p) { return !p.eu && (!q || semAcento(p.nome).indexOf(semAcento(q)) >= 0); }).slice(0, 6);
+      if (!achou.length) { sug.hidden = true; return; }
+      sug.innerHTML = achou.map(function (p) { return "<button type='button' role='option' data-mencao='" + h(p.pessoa_id) + "' data-nome='" + h(p.nome) + "'>" + h(p.nome) + (p.area_nome ? " <span class='comw-mut'>" + h(p.area_nome) + "</span>" : "") + "</button>"; }).join("");
+      sug.hidden = false;
+    });
+  }
+  function escolherMencao(pid, nome) {
+    var ta = pe.querySelector("textarea"), sug = document.getElementById("comw-sug");
+    if (!ta) return;
+    var pos = ta.selectionStart || ta.value.length, antes = ta.value.slice(0, pos), depois = ta.value.slice(pos);
+    antes = antes.replace(/@([^\s@]{0,30})$/, "@" + nome + " ");
+    ta.value = antes + depois;
+    ST.sugIds[pid] = 1;
+    if (sug) sug.hidden = true;
+    ta.focus(); try { ta.setSelectionRange(antes.length, antes.length); } catch (e) { }
+  }
+  function semAcento(s) { var t = String(s || "").toLowerCase(); try { t = t.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) { } return t; }
   function linkRef(x) {
     if (!x.ref_tipo && !x.ref_id) return "";
+    if (x.ref_tipo === "EVENTO_GRUPO") return "";
     var rot = (x.ref_codigo || x.ref_tipo || "registro");
     if (x.ref_sistema && ST.d && x.ref_sistema === ST.d.sistema && CFG.abrirLocal)
       return "<div><button type='button' class='comw-link' data-local='" + h(x.ref_tipo) + "' data-id='" + h(x.ref_id) + "'>Abrir " + h(rot) + "</button></div>";
@@ -416,54 +518,245 @@
     if (texto.length > 4000) return toastErro("Mensagem muito longa: o limite é 4000 caracteres.");
     lsSet(rascChave(id), texto);   // se a rede cair, o texto continua guardado
     bt.disabled = true;
-    api("enviar", { conversa_id: id, texto: texto }, function (r) {
+    api("enviar", { conversa_id: id, texto: texto, mencoes: Object.keys(ST.sugIds || {}) }, function (r) {
       lsDel(rascChave(id));
+      ST.sugIds = {};
       var m = r.mensagem, lista = ST.msgs[id] = ST.msgs[id] || [];
       if (!lista.some(function (x) { return x.msg_id === m.msg_id; })) lista.push(m);
       var c = ST.conv[id]; if (c) { c.ultima = { de_nome: m.de_nome, de_sistema: m.de_sistema, texto: String(m.texto).slice(0, 140), criado_em: m.criado_em }; }
       ST.ordem = [id].concat(ST.ordem.filter(function (x) { return x !== id; }));
       bt.disabled = false;
       if (ST.aberta === id) { var t2 = pe.querySelector("textarea"); if (t2 && t2.value === texto) t2.value = ""; desenhar(); rolarFim(); if (t2) t2.focus(); }
+      var mc = String(m.mencoes || "").split(",").filter(String).length;
+      if (mc) anunciar(mc === 1 ? "Mensagem enviada. A pessoa mencionada será avisada se estiver fora do sistema." : "Mensagem enviada. As " + mc + " pessoas mencionadas serão avisadas se estiverem fora do sistema.");
       agendar(4000);
     }, function (erro) {
       bt.disabled = false;
       toastErro(erro + " — o texto continua guardado; tente de novo.");
     });
   }
-  function carregarPessoas(depois) {
-    if (ST.pessoas) return depois();
-    api("pessoas", {}, function (r) { ST.pessoas = r.pessoas; ST.setores = r.setores || []; depois(); }, toastErro);
+  function carregarPessoas(depois, forcar) {
+    if (ST.pessoas && !forcar) return depois();
+    api("pessoas", {}, function (r) { ST.pessoas = r.pessoas; ST.setores = r.setores || []; ST.areas = r.areas || []; depois(); }, toastErro);
   }
+  function linhaPessoa(p) { return h(p.area_nome || "Sem área no cadastro"); }
   function telaNova() {
     if (!ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
     corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Nova conversa</b></div>" +
-      "<input class='comw-busca' type='search' placeholder='Buscar pessoa' aria-label='Buscar pessoa' id='comw-busca'><div id='comw-lista-p' style='margin-top:8px'></div>";
+      "<input class='comw-busca' type='search' placeholder='Buscar por nome ou área' aria-label='Buscar por nome ou área' id='comw-busca'><div id='comw-lista-p' style='margin-top:8px'></div>";
     var desenharLista = function () {
-      var q = (document.getElementById("comw-busca").value || "").toLowerCase();
-      document.getElementById("comw-lista-p").innerHTML = ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false && (!q || (p.nome + " " + (p.setor || "")).toLowerCase().indexOf(q) >= 0); }).map(function (p) {
+      var q = semAcento(document.getElementById("comw-busca").value || "");
+      document.getElementById("comw-lista-p").innerHTML = ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false && (!q || semAcento(p.nome + " " + (p.area_nome || "")).indexOf(q) >= 0); }).map(function (p) {
         return "<button type='button' class='comw-item' data-pessoa='" + h(p.pessoa_id) + "' aria-label='Conversar com " + h(p.nome) + "'><div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + h(p.nome) + "</div>" +
-          "<div class='comw-mut'>" + h(p.setor || "") + " · " + h(visto(p.visto_em)) + "</div></div><div>" + tagsPessoa(p) + "</div></div></button>";
+          "<div class='comw-mut'>" + linhaPessoa(p) + " · " + h(visto(p.visto_em)) + "</div></div><div>" + tagsPessoa(p) + "</div></div></button>";
       }).join("") || "<div class='comw-vazio'>Ninguém encontrado.</div>";
     };
     document.getElementById("comw-busca").addEventListener("input", desenharLista);
     desenharLista();
   }
+  /**
+   * Seletor de pessoas (novo grupo e adicionar ao grupo): busca por nome ou área, filtro por área, "Marcar a área
+   * inteira" e caixas de marcar. O que foi marcado fica em ST.sel (não se perde ao buscar). fora = ids que não aparecem.
+   */
+  function seletorPessoas(alvo, fora) {
+    var areas = ST.areas || [];
+    alvo.innerHTML = "<div class='comw-filtros'><input class='comw-busca' type='search' id='comw-sbusca' placeholder='Buscar por nome ou área' aria-label='Buscar por nome ou área'>" +
+      "<select class='comw-busca' id='comw-sarea' aria-label='Filtrar por área'><option value=''>Todas as áreas</option>" + areas.map(function (a) { return "<option value='" + h(a.codigo) + "'>" + h(a.nome) + "</option>"; }).join("") +
+      "<option value='-'>Sem área no cadastro</option></select></div>" +
+      "<div class='comw-linha' style='margin:4px 0 8px'><span class='comw-mut comw-cresce' id='comw-scont' aria-live='polite'></span><button type='button' class='comw-btn comw-sec' id='comw-sarea-tudo' hidden>Marcar a área inteira</button></div>" +
+      "<div id='comw-slista'></div>";
+    var busca = alvo.querySelector("#comw-sbusca"), sel = alvo.querySelector("#comw-sarea"), lista = alvo.querySelector("#comw-slista"), tudo = alvo.querySelector("#comw-sarea-tudo"), cont = alvo.querySelector("#comw-scont");
+    var visiveis = function () {
+      var q = semAcento(busca.value), a = sel.value;
+      return ST.pessoas.filter(function (p) {
+        if (p.eu || p.ativo === false || (fora && fora[p.pessoa_id])) return false;
+        if (a === "-" && p.area) return false;
+        if (a && a !== "-" && p.area !== a) return false;
+        return !q || semAcento(p.nome + " " + (p.area_nome || "")).indexOf(q) >= 0;
+      });
+    };
+    var contar = function () { var n = Object.keys(ST.sel).length; cont.textContent = n ? n + " pessoa(s) marcada(s)" : "Ninguém marcado ainda"; };
+    var desenharLista = function () {
+      var l = visiveis();
+      tudo.hidden = !sel.value || sel.value === "-" || !l.length;
+      lista.innerHTML = l.map(function (p) {
+        var idc = "comw-p-" + h(p.pessoa_id);
+        return "<div class='comw-pessoa'><input type='checkbox' id='" + idc + "' value='" + h(p.pessoa_id) + "'" + (ST.sel[p.pessoa_id] ? " checked" : "") + ">" +
+          "<label for='" + idc + "'><div class='comw-tit'>" + h(p.nome) + "</div><div class='comw-mut'>" + linhaPessoa(p) + "</div></label><div>" + tagsPessoa(p) + "</div></div>";
+      }).join("") || "<div class='comw-vazio'>Ninguém encontrado com esse filtro.</div>";
+      contar();
+    };
+    lista.addEventListener("change", function (e) { var x = e.target; if (x && x.type === "checkbox") { if (x.checked) ST.sel[x.value] = 1; else delete ST.sel[x.value]; contar(); } });
+    busca.addEventListener("input", desenharLista);
+    sel.addEventListener("change", desenharLista);
+    tudo.addEventListener("click", function () { visiveis().forEach(function (p) { ST.sel[p.pessoa_id] = 1; }); desenharLista(); anunciar("Área inteira marcada."); });
+    desenharLista();
+  }
   function telaGrupo() {
     if (!ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
     corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Novo grupo</b></div>" +
-      "<div class='comw-form'><label for='comw-gtit'>Nome do grupo</label><input id='comw-gtit' maxlength='80'><label>Pessoas</label>" +
-      ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false; }).map(function (p) {
-        return "<label class='comw-chk'><input type='checkbox' value='" + h(p.pessoa_id) + "'> " + h(p.nome) + " " + tagsPessoa(p) + "</label>";
-      }).join("") + "<div style='margin-top:10px'><button type='button' class='comw-btn' data-acao='criarGrupo'>Criar grupo</button></div></div>";
+      "<div class='comw-form'><label for='comw-gtit'>Nome do grupo</label><input id='comw-gtit' maxlength='80' placeholder='Ex.: Plantão de sábado'><label>Quem entra no grupo</label></div><div id='comw-gsel'></div>" +
+      "<div style='margin-top:10px;position:sticky;bottom:0;background:var(--comw-bg);padding:6px 0'><button type='button' class='comw-btn' data-acao='revisarGrupo'>Revisar e criar</button></div>";
+    var tit = document.getElementById("comw-gtit");
+    tit.value = ST.grupoTit || "";
+    tit.addEventListener("input", function () { ST.grupoTit = tit.value; });
+    seletorPessoas(document.getElementById("comw-gsel"), null);
+  }
+  function nomesMarcados() {
+    var por = {}; (ST.pessoas || []).forEach(function (p) { por[p.pessoa_id] = p; });
+    return Object.keys(ST.sel).map(function (id) { return por[id]; }).filter(Boolean).sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+  }
+  function telaRevisar() {
+    var lista = nomesMarcados(), eu = ST.d.eu;
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarGrupo' aria-label='Voltar e ajustar'>←</button><b>Conferir o grupo</b></div>" +
+      "<div class='comw-resumo'>Você vai criar o grupo <b>" + h(ST.grupoTit) + "</b> com:<ul><li>" + h(eu.nome) + " (você, quem criou)</li>" +
+      lista.map(function (p) { return "<li>" + h(p.nome) + " <span class='comw-mut'>" + linhaPessoa(p) + "</span></li>"; }).join("") + "</ul>" +
+      "<p class='comw-mut' style='margin:8px 0 0'>Todos veem quem está no grupo. Depois de criado, você e a gestão podem adicionar, remover e mudar o nome.</p></div>" +
+      "<div class='comw-acoes'><button type='button' class='comw-btn comw-verde' data-acao='criarGrupo'>Confirmar e criar</button><button type='button' class='comw-btn comw-sec' data-acao='voltarGrupo'>Voltar e ajustar</button></div>";
+  }
+  function revisarGrupo() {
+    if (!String(ST.grupoTit || "").trim()) return toastErro("Dê um nome ao grupo antes de continuar.");
+    if (!Object.keys(ST.sel).length) return toastErro("Marque pelo menos uma pessoa para o grupo.");
+    ir("revisar");
   }
   function criarGrupo() {
-    var tit = document.getElementById("comw-gtit").value;
-    var ms = Array.prototype.slice.call(corpo.querySelectorAll("input[type=checkbox]:checked")).map(function (x) { return x.value; });
-    api("criarGrupo", { tipo: "GRUPO", titulo: tit, membros: ms }, function (r) { entrouConversa(r.conversa); }, toastErro);
+    var bt = corpo.querySelector("[data-acao='criarGrupo']"); if (bt) bt.disabled = true;
+    api("criarGrupo", { tipo: "GRUPO", titulo: ST.grupoTit, membros: Object.keys(ST.sel) }, function (r) {
+      ST.sel = {}; ST.grupoTit = ""; entrouConversa(r.conversa); anunciar("Grupo criado.");
+    }, function (e) { if (bt) bt.disabled = false; toastErro(e); });
   }
   function entrouConversa(c) {
     if (!ST.conv[c.conversa_id]) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
     abrirConversa(c.conversa_id);
+  }
+
+  /* ---- participantes ---- */
+  function abrirParticipantes() {
+    var id = ST.aberta; if (!id) return;
+    ST.part = null; ir("participantes");
+    api("participantes", { conversa_id: id }, function (r) {
+      if (ST.aberta !== id) return;
+      ST.part = r;
+      if (ST.conv[id]) { ST.conv[id]._part = r.participantes; ST.conv[id].membros = r.participantes.map(function (p) { return p.pessoa_id; }); }
+      if (ST.tela === "participantes") desenhar();
+    }, function (e) { toastErro(e); ir("conversa"); });
+  }
+  function telaParticipantes() {
+    var r = ST.part, c = ST.conv[ST.aberta] || {};
+    var html = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarConversa' aria-label='Voltar para a conversa'>←</button><div class='comw-cresce'><b>Participantes</b><div class='comw-mut'>" + h(c.titulo || "") + "</div></div></div>";
+    if (!r) { corpo.innerHTML = html + "<div class='comw-vazio'>Carregando…</div>"; return; }
+    html += "<p class='comw-mut' style='margin:0 0 8px'>" + h(r.regra) + "</p>";
+    if (r.gestao_inteira) html += "<p class='comw-mut' style='margin:0 0 8px'>A gestão inteira também participa.</p>";
+    if (r.pode_editar) html += "<div class='comw-form' style='margin-bottom:8px'><label for='comw-ptitulo'>Nome do grupo</label><div class='comw-linha'><input id='comw-ptitulo' maxlength='80' value='" + h(c.titulo || "") + "'>" +
+      "<button type='button' class='comw-btn comw-sec' data-acao='renomear'>Salvar nome</button></div></div>" +
+      "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='adicionar'>+ Adicionar pessoas</button></div>";
+    html += "<div class='comw-mut' style='margin-bottom:4px'>" + r.participantes.length + " pessoa(s)</div>" + r.participantes.map(function (p) {
+      return "<div class='comw-pessoa'><div class='comw-cresce'><div class='comw-tit'>" + h(p.nome) + (p.eu ? " (você)" : "") + (p.criador ? " <span class='comw-tag'>criou o grupo</span>" : "") + "</div>" +
+        "<div class='comw-mut'>" + linhaPessoa(p) + "</div></div><div>" + tagsPessoa(p) + "</div>" +
+        (r.pode_editar && !p.eu ? "<button type='button' class='comw-btn comw-perigo' data-remover='" + h(p.pessoa_id) + "' data-nome='" + h(p.nome) + "' aria-label='Remover " + h(p.nome) + " do grupo'>Remover</button>" : "") + "</div>";
+    }).join("");
+    if (r.pode_sair) html += "<div style='margin-top:12px'><button type='button' class='comw-btn comw-perigo' data-acao='sair'>Sair do grupo</button>" +
+      "<p class='comw-mut' style='margin:6px 0 0'>Ao sair, você deixa de ver este grupo. As mensagens não são apagadas. Para voltar, peça a quem criou o grupo ou à gestão.</p></div>";
+    corpo.innerHTML = html;
+  }
+  function editarGrupo(dados, msgOk) {
+    dados.conversa_id = ST.aberta;
+    api("editarGrupo", dados, function (r) {
+      var c = ST.conv[ST.aberta]; if (c) { c.titulo = r.conversa.titulo; c.membros = r.conversa.membros; c._part = null; }
+      ST.sel = {}; anunciar(msgOk); abrirParticipantes();
+      if (ST.aberta) { var id = ST.aberta; api("conversa", { conversa_id: id, limite: 50 }, function (x) { var ids = {}; (ST.msgs[id] || []).forEach(function (m) { ids[m.msg_id] = 1; }); x.mensagens.forEach(function (m) { if (!ids[m.msg_id]) (ST.msgs[id] = ST.msgs[id] || []).push(m); }); }, function () { }); }
+    }, toastErro);
+  }
+  function telaAdicionar() {
+    var r = ST.part;
+    if (!r || !ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
+    var fora = {}; r.participantes.forEach(function (p) { fora[p.pessoa_id] = 1; });
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarPart' aria-label='Voltar'>←</button><b>Adicionar ao grupo</b></div><div id='comw-asel'></div>" +
+      "<div id='comw-aresumo'></div><div style='margin-top:10px;position:sticky;bottom:0;background:var(--comw-bg);padding:6px 0'><button type='button' class='comw-btn' data-acao='conferirAdicionar'>Conferir</button></div>";
+    seletorPessoas(document.getElementById("comw-asel"), fora);
+  }
+  function conferirAdicionar() {
+    var l = nomesMarcados();
+    if (!l.length) return toastErro("Marque pelo menos uma pessoa para adicionar.");
+    var c = ST.conv[ST.aberta] || {};
+    document.getElementById("comw-aresumo").innerHTML = "<div class='comw-resumo'>Você vai adicionar ao grupo <b>" + h(c.titulo || "") + "</b>:<ul>" +
+      l.map(function (p) { return "<li>" + h(p.nome) + " <span class='comw-mut'>" + linhaPessoa(p) + "</span></li>"; }).join("") + "</ul>" +
+      "<p class='comw-mut' style='margin:6px 0 0'>Quem entra passa a ver todas as mensagens do grupo, inclusive as antigas.</p>" +
+      "<div class='comw-acoes' style='margin:8px 0 0'><button type='button' class='comw-btn comw-verde' data-acao='confirmarAdicionar'>Confirmar</button></div></div>";
+    var b = document.querySelector("[data-acao='confirmarAdicionar']"); if (b) b.focus();
+  }
+
+  /* ---- preferências (som, aviso pelo WhatsApp; administração: a ponte) e ajuda ---- */
+  function abrirPreferencias() {
+    ST.voltarPara = ST.tela === "preferencias" || ST.tela === "ajuda" ? ST.voltarPara : ST.tela;
+    ST.prefs = null; ST.cfgWa = null; ST.trilha = null; ir("preferencias");
+    api("preferencias", {}, function (r) { ST.prefs = r; if (ST.tela === "preferencias") desenhar(); }, toastErro);
+    if (ST.d.eu.admin) api("configWhatsapp", {}, function (r) { ST.cfgWa = r; if (ST.tela === "preferencias") desenhar(); }, function () { });
+  }
+  function telaPreferencias() {
+    var p = ST.prefs, a = ST.cfgWa, eu = ST.d.eu;
+    var html = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarPref' aria-label='Voltar'>←</button><b>Preferências</b></div>" +
+      "<div class='comw-form'><label>Som dos avisos neste aparelho</label><div class='comw-linha'><span class='comw-cresce'>" + h(rotSom()) + "</span><button type='button' class='comw-btn comw-sec' data-acao='som'>Trocar</button></div>";
+    if (!p) html += "<div class='comw-vazio'>Carregando…</div>";
+    else {
+      html += "<label class='comw-chk' style='margin-top:12px'><input type='checkbox' id='comw-wa'" + (p.wa_aviso ? " checked" : "") + "> Avisar no meu WhatsApp (ou e-mail) quando eu estiver fora do sistema</label>" +
+        "<p class='comw-mut' style='margin:4px 0 0'>Vale só para mensagem direta para você e quando alguém chamar você com @ num grupo. Mensagem comum de grupo nunca vai para o WhatsApp. " +
+        "O aviso sai só em dia útil e no horário de trabalho, no máximo " + p.ponte.limite_hora + " por hora e " + p.ponte.limite_dia + " por dia, juntando várias mensagens num aviso só. " +
+        "O número é o do cadastro do SGO+ (Administração › Usuários) e nunca aparece para os colegas." + (p.tem_sgo ? "" : " Você ainda não tem cadastro no SGO+: por isso não recebe aviso fora do sistema.") + "</p>" +
+        (p.ponte.ligada ? "" : "<p class='comw-aviso-sis' style='margin-top:8px'>A administração ainda não ligou os avisos fora do sistema. Sua escolha fica guardada e passa a valer quando forem ligados.</p>") +
+        "<div style='margin-top:8px'><button type='button' class='comw-btn' data-acao='salvarPref'>Salvar minha preferência</button></div>";
+    }
+    html += "</div>";
+    if (eu.admin) {
+      html += "<h3 style='font-size:14px;margin:16px 0 4px'>Avisos fora do sistema (administração)</h3>";
+      if (!a) html += "<div class='comw-vazio'>Carregando…</div>";
+      else {
+        var c = a.config;
+        html += "<div class='comw-form'><label class='comw-chk'><input type='checkbox' id='comw-cl'" + (c.ligado ? " checked" : "") + "> Ligar os avisos de mensagem direta e menção pelo WhatsApp e e-mail</label>" +
+          "<label for='comw-cmin'>Minutos sem a pessoa no sistema antes de avisar (5 a 240)</label><input id='comw-cmin' type='number' min='5' max='240' value='" + h(c.ausente_min) + "'>" +
+          "<label for='comw-ch'>Avisos por pessoa por hora (1 a 6)</label><input id='comw-ch' type='number' min='1' max='6' value='" + h(c.limite_hora) + "'>" +
+          "<label for='comw-cd'>Avisos por pessoa por dia (1 a 12)</label><input id='comw-cd' type='number' min='1' max='12' value='" + h(c.limite_dia) + "'>" +
+          "<p class='comw-mut'>Dia útil e horário de trabalho: os mesmos de Atividades da equipe › Avisos e horários. Quem tem vínculo PJ (ou sem vínculo no cadastro) recebe por e-mail. " +
+          "Antes de ligar, confira o WhatsApp da empresa em SGO+ › Chaves e senhas. Pela Z-API: o webhook «Ao receber» da instância apontando para o endereço do COMMAND (sem ele as respostas não chegam). Pela Meta: o modelo sgo_bate_papo_mensagem aprovado e o webhook assinado no painel da Meta." +
+          (a.alterado_por ? " Última alteração: " + h(a.alterado_por) + ", " + h(quando(a.alterado_em)) + "." : "") + "</p>" +
+          "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='salvarCfgWa'>Salvar</button><button type='button' class='comw-btn comw-sec' data-acao='trilha'>Ver últimos envios e respostas</button></div></div>";
+        if (ST.trilha) html += !ST.trilha.length ? "<div class='comw-vazio'>Nenhum envio ou resposta ainda.</div>" : "<table class='comw-tabela'><tbody>" + ST.trilha.map(function (t) {
+          return "<tr><td>" + h(quando(t.em)) + "</td><td>" + h(t.direcao === "SAIDA" ? "Aviso para " : "Resposta de ") + h(t.pessoa) + (t.qtd > 1 ? " (" + t.qtd + " mensagens)" : "") +
+            "<div class='comw-mut'>" + h(t.conversa) + (t.canal ? " · " + h(t.canal === "email" ? "e-mail" : "WhatsApp") : "") + "</div></td><td>" + h(t.situacao) + "<div class='comw-mut'>" + h(t.motivo || t.regra || "") + "</div></td></tr>";
+        }).join("") + "</tbody></table>";
+      }
+    }
+    corpo.innerHTML = html;
+  }
+  function salvarPref() {
+    var x = document.getElementById("comw-wa"); if (!x) return;
+    api("preferencias", { wa_aviso: !!x.checked }, function (r) { ST.prefs = r; ST.d.eu.wa_aviso = r.wa_aviso; desenhar(); toast({ titulo: "Preferência salva", texto: r.wa_aviso ? "Você recebe aviso fora do sistema." : "Você não recebe mais aviso fora do sistema; as mensagens continuam aqui.", prioridade: "INFO" }); }, toastErro);
+  }
+  function salvarCfgWa() {
+    var d = { salvar: true, ligado: document.getElementById("comw-cl").checked, ausente_min: document.getElementById("comw-cmin").value, limite_hora: document.getElementById("comw-ch").value, limite_dia: document.getElementById("comw-cd").value };
+    api("configWhatsapp", d, function (r) { ST.cfgWa = r; desenhar(); toast({ titulo: "Configuração salva", texto: r.config.ligado ? "Avisos fora do sistema ligados." : "Avisos fora do sistema desligados.", prioridade: "INFO" }); }, toastErro);
+  }
+  function abrirAjuda() { ST.voltarPara = ST.tela === "preferencias" || ST.tela === "ajuda" ? ST.voltarPara : ST.tela; ir("ajuda"); }
+  function voltarDeTela() { var t = ST.voltarPara || "lista"; ST.voltarPara = "lista"; if (t === "conversa" && !ST.aberta) t = "lista"; ir(t); }
+  function telaAjuda() {
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarPref' aria-label='Voltar'>←</button><b>Como usar esta tela</b></div><div class='comw-ajuda'>" +
+      "<p>O balão de conversas é o bate-papo da equipe. Ele é o mesmo no SGO+ e no COMMAND: quem está num sistema conversa com quem está no outro.</p>" +
+      "<h3>Conversar com uma pessoa</h3><ol><li>Toque em «+ Conversa».</li><li>Busque pelo nome ou pela área.</li><li>Toque na pessoa e escreva. Enter envia; Shift+Enter quebra a linha.</li></ol>" +
+      "<h3>Criar um grupo</h3><ol><li>Toque em «+ Grupo» e dê um nome.</li><li>Busque pelo nome ou pela área, ou escolha a área no filtro e toque em «Marcar a área inteira».</li><li>Toque em «Revisar e criar», confira a lista «Você vai criar o grupo … com:» e toque em «Confirmar e criar».</li></ol>" +
+      "<h3>Ver quem está na conversa</h3><p>Dentro do grupo, toque em «Participantes». Aparecem o nome, a área do cadastro e o sistema que cada pessoa usa (SGO+, COMMAND ou os dois). Só quem está na conversa vê essa lista.</p>" +
+      "<h3>Adicionar, remover e mudar o nome</h3><p>Só quem criou o grupo e a gestão. Em «Participantes»: «+ Adicionar pessoas», «Remover» ao lado do nome, ou escreva o nome novo e toque em «Salvar nome». Cada mudança fica registrada na conversa (por exemplo, «Ana adicionou Bruno»).</p>" +
+      "<h3>Sair do grupo</h3><p>Em «Participantes», toque em «Sair do grupo» e confirme. Você deixa de ver o grupo; as mensagens não são apagadas. Para voltar, peça a quem criou o grupo ou à gestão.</p>" +
+      "<h3>Minha área</h3><p>Abre a conversa de todas as pessoas da sua área no cadastro do SGO+ (Administração › Usuários › Área). Quem muda de área entra e sai sozinho. Se o botão não aparece, sua área ainda não foi preenchida: peça à gestão.</p>" +
+      "<h3>Chamar alguém num grupo (@)</h3><p>Escreva @ e o começo do nome e escolha a pessoa na lista. Só quem foi chamado assim pode receber aviso fora do sistema.</p>" +
+      "<h3>Aviso no WhatsApp quando você está fora</h3><p>Mensagem direta para você, ou @ com o seu nome, vira aviso no WhatsApp do número da empresa quando você está fora do sistema há alguns minutos. Mensagem comum de grupo nunca vai. " +
+      "Sai só em dia útil e no horário de trabalho; o que chegar à noite ou no fim de semana vai junto, num aviso só, no começo do expediente seguinte. Quem é PJ (ou sem vínculo no cadastro) recebe por e-mail. " +
+      "Para não receber, abra «Preferências» (ícone de engrenagem) e desmarque o aviso.</p>" +
+      "<h3>Responder pelo WhatsApp</h3><p>Responda o próprio aviso (segure a mensagem e toque em Responder): a resposta entra na mesma conversa, marcada «pelo WhatsApp». Mensagem nova, sem responder a um aviso, vai para a última conversa direta avisada nas últimas 24 horas; se não houver, vai para «Recebidas pelo WhatsApp», que a gestão lê e encaminha. Fotos e áudios chegam como aviso («Fulano enviou uma foto pelo WhatsApp»); o arquivo fica no celular de quem enviou.</p>" +
+      "<h3>Cores e selos</h3><ul><li>Faixa verde à esquerda: conversa com mensagem que você não leu.</li><li>Selo SGO+, COMMAND ou WhatsApp: de onde a mensagem veio.</li><li>Linha tracejada no meio da conversa: mudança de participantes ou de nome.</li></ul>" +
+      "<h3>Erros comuns</h3><ul><li>«Só quem criou o grupo e a gestão mudam os participantes»: peça a quem criou (aparece com o selo «criou o grupo» em Participantes).</li>" +
+      "<li>«Sua área ainda não está no cadastro»: a gestão preenche em SGO+ › Administração › Usuários › Área.</li><li>Mensagem não enviou: o texto fica guardado na caixa; confira a internet e toque em Enviar de novo.</li></ul>" +
+      "<h3>Quem pode o quê</h3><ul><li>Todos: conversar, criar grupo, ver participantes das próprias conversas, sair de grupo, ligar ou desligar o próprio aviso fora do sistema.</li>" +
+      "<li>Quem criou o grupo e a gestão: adicionar, remover e mudar o nome do grupo.</li><li>Gestão: publicar comunicados e ler «Recebidas pelo WhatsApp».</li><li>Administração: ligar os avisos fora do sistema, ajustar minutos e limites e ver os últimos envios e respostas.</li></ul></div>";
   }
 
   /* ---- avisos e comunicados ---- */
@@ -491,14 +784,19 @@
     html += ST.comunicados.map(function (a) {
       var pend = a.exige_ciencia && !a.ciente;
       return "<div class='comw-item comw-" + h(a.prioridade) + (pend || a.novo ? " comw-novo" : "") + "' style='cursor:default'><div class='comw-linha'><div class='comw-cresce comw-tit'>" + h(a.titulo) + "</div>" + tagSis(a.origem_sistema) + "</div>" +
-        "<div class='comw-txt'>" + h(a.texto) + "</div><div class='comw-mut'>" + h(a.criado_por) + " · " + h(quando(a.criado_em)) + (a.para && a.para !== "TODOS" ? " · " + h(String(a.para).replace("SETOR:", "setor ")) : "") + "</div>" +
+        "<div class='comw-txt'>" + h(a.texto) + "</div><div class='comw-mut'>" + h(a.criado_por) + " · " + h(quando(a.criado_em)) + (a.para && a.para !== "TODOS" ? " · " + h(paraTexto(a.para)) : "") + "</div>" +
         (a.exige_ciencia ? (a.ciente ? "<div class='comw-mut'><i class='fas fa-check' aria-hidden='true'></i> Você deu ciência.</div>" : "<div style='margin-top:6px'><button type='button' class='comw-btn comw-verde' data-ciente='" + h(a.aviso_id) + "'>Li e estou ciente</button></div>") : "") +
         linkRef(a) + "</div>";
     }).join("");
     corpo.innerHTML = html;
   }
+  function paraTexto(p) {
+    p = String(p || "");
+    if (p.indexOf("AREA:") === 0) { var cod = p.slice(5), a = (ST.areas || []).filter(function (x) { return x.codigo === cod; })[0]; return "área " + (a ? a.nome : cod); }
+    return p.replace("SETOR:", "setor ");
+  }
   function telaPublicar() {
-    var setores = (ST.setores || []).map(function (s) { return "<option value='SETOR:" + h(s) + "'>Setor " + h(s) + "</option>"; }).join("");
+    var setores = (ST.areas || []).map(function (a) { return "<option value='AREA:" + h(a.codigo) + "'>Área " + h(a.nome) + "</option>"; }).join("");
     if (!ST.pessoas) carregarPessoas(function () { if (ST.tela === "publicar") desenhar(); });
     corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Publicar comunicado</b></div>" +
       "<div class='comw-form'><label for='comw-ptit'>Título</label><input id='comw-ptit' maxlength='140'>" +
@@ -532,6 +830,8 @@
     qt = el("span", "comw-qt"); qt.hidden = true; botao.appendChild(qt);
     painel = el("div", "comw-painel"); painel.hidden = true; painel.setAttribute("role", "dialog"); painel.setAttribute("aria-label", "Comunicação " + (NOME_SIS[CFG.sistema] || "") + " e " + OUTRO);
     painel.innerHTML = "<div class='comw-cab'><h2>Comunicação <small>" + h(NOME_SIS[CFG.sistema] || "") + " ↔ " + h(OUTRO) + "</small></h2>" +
+      "<button type='button' class='comw-ico' data-acao='ajuda' aria-label='Como usar esta tela' title='Como usar esta tela'><i class='fas fa-circle-question' aria-hidden='true'></i></button>" +
+      "<button type='button' class='comw-ico' data-acao='preferencias' aria-label='Preferências: som e aviso pelo WhatsApp' title='Preferências'><i class='fas fa-gear' aria-hidden='true'></i></button>" +
       "<button type='button' class='comw-ico comw-som' aria-label='Som'><i class='fas fa-bell' aria-hidden='true'></i></button><button type='button' class='comw-ico' data-acao='fechar' aria-label='Fechar a Comunicação (Esc)'>✕</button></div>" +
       "<div class='comw-abas' role='tablist'></div><div class='comw-corpo' tabindex='-1'></div><div class='comw-pe' hidden></div>";
     toasts = el("div", "comw-toasts");
@@ -542,8 +842,14 @@
     botao.addEventListener("click", alternar);
     painel.querySelector(".comw-som").addEventListener("click", trocarSom);
     painel.addEventListener("click", function (e) {
-      var t = e.target.closest ? e.target.closest("[data-acao],[data-conv],[data-aba],[data-pessoa],[data-ciente],[data-local]") : null;
+      var t = e.target.closest ? e.target.closest("[data-acao],[data-conv],[data-aba],[data-pessoa],[data-ciente],[data-local],[data-remover],[data-mencao]") : null;
       if (!t || !painel.contains(t)) return;
+      if (t.getAttribute("data-mencao")) return escolherMencao(t.getAttribute("data-mencao"), t.getAttribute("data-nome"));
+      if (t.getAttribute("data-remover")) {
+        var nm = t.getAttribute("data-nome");
+        if (!window.confirm("Remover " + nm + " do grupo? A pessoa deixa de ver o grupo; as mensagens não são apagadas.")) return;
+        return editarGrupo({ remover: [t.getAttribute("data-remover")] }, nm + " foi removido do grupo.");
+      }
       if (t.getAttribute("data-aba")) return irAba(t.getAttribute("data-aba"));
       if (t.getAttribute("data-conv")) return abrirConversa(t.getAttribute("data-conv"));
       if (t.getAttribute("data-pessoa")) return api("abrirDireta", { pessoa_id: t.getAttribute("data-pessoa") }, function (r) { entrouConversa(r.conversa); }, toastErro);
@@ -551,20 +857,44 @@
       if (t.getAttribute("data-local")) { try { CFG.abrirLocal(t.getAttribute("data-local"), t.getAttribute("data-id")); } catch (x) { } return; }
       var a = t.getAttribute("data-acao");
       if (a === "fechar") { fechar(); botao.focus(); }
-      else if (a === "voltar") { ST.aberta = null; ST.tela = "lista"; desenhar(); }
-      else if (a === "nova") { ST.tela = "nova"; desenhar(); }
-      else if (a === "grupo") { ST.tela = "grupo"; desenhar(); }
-      else if (a === "setor") api("criarGrupo", { tipo: "SETOR", setor: ST.d.eu.setor }, function (r) { entrouConversa(r.conversa); }, toastErro);
+      else if (a === "voltar") { ST.aberta = null; ir("lista"); }
+      else if (a === "nova") ir("nova");
+      else if (a === "grupo") { ST.sel = {}; ST.grupoTit = ""; carregarPessoas(function () { ir("grupo"); }, true); }
+      else if (a === "setor") api("criarGrupo", { tipo: "SETOR", area: ST.d.eu.area }, function (r) { entrouConversa(r.conversa); }, toastErro);
+      else if (a === "revisarGrupo") revisarGrupo();
+      else if (a === "voltarGrupo") ir("grupo");
       else if (a === "criarGrupo") criarGrupo();
       else if (a === "enviar") enviar();
       else if (a === "anteriores") anteriores();
-      else if (a === "publicar") { ST.tela = "publicar"; desenhar(); }
+      else if (a === "participantes") abrirParticipantes();
+      else if (a === "voltarConversa") { ST.part = null; ir("conversa"); if (ST.aberta) lerConversa(ST.aberta); }
+      else if (a === "renomear") { var nt = document.getElementById("comw-ptitulo"); if (nt) editarGrupo({ titulo: nt.value }, "Nome do grupo salvo."); }
+      else if (a === "adicionar") { ST.sel = {}; carregarPessoas(function () { ir("adicionar"); }, true); }
+      else if (a === "voltarPart") { ST.sel = {}; ir("participantes"); }
+      else if (a === "conferirAdicionar") conferirAdicionar();
+      else if (a === "confirmarAdicionar") editarGrupo({ adicionar: Object.keys(ST.sel) }, "Pessoas adicionadas ao grupo.");
+      else if (a === "sair") {
+        if (!window.confirm("Sair do grupo? Você deixa de ver este grupo. As mensagens não são apagadas; para voltar, peça a quem criou o grupo ou à gestão.")) return;
+        var cid = ST.aberta;
+        api("sairGrupo", { conversa_id: cid }, function () {
+          delete ST.conv[cid]; delete ST.msgs[cid]; ST.ordem = ST.ordem.filter(function (x) { return x !== cid; });
+          ST.aberta = null; ST.part = null; ir("lista"); toast({ titulo: "Você saiu do grupo", texto: "As mensagens continuam guardadas. Para voltar, peça a quem criou o grupo ou à gestão.", prioridade: "INFO" });
+        }, toastErro);
+      }
+      else if (a === "preferencias") abrirPreferencias();
+      else if (a === "ajuda") abrirAjuda();
+      else if (a === "voltarPref") voltarDeTela();
+      else if (a === "som") { trocarSom(); if (ST.tela === "preferencias") desenhar(); }
+      else if (a === "salvarPref") salvarPref();
+      else if (a === "salvarCfgWa") salvarCfgWa();
+      else if (a === "trilha") api("trilhaWhatsapp", { limite: 60 }, function (r) { ST.trilha = r.trilha; desenhar(); }, toastErro);
+      else if (a === "publicar") { carregarPessoas(function () { ir("publicar"); }); }
       else if (a === "enviarComunicado") publicar();
     });
     document.addEventListener("keydown", function (e) { if ((e.key === "Escape" || e.key === "Esc") && ST.aberto) { fechar(); botao.focus(); } });
     document.addEventListener("visibilitychange", function () {
       atualizarTitulo(contagens().total);
-      if (!document.hidden && ST.d && !ST.parado) { agendar(800); if (ST.aberto && ST.aberta) lerConversa(ST.aberta); }
+      if (!document.hidden && ST.d && !ST.parado) { agendar(800); if (ST.aberto && ST.aberta && ST.tela === "conversa") lerConversa(ST.aberta); }
     });
     vigiarToken();
     setInterval(vigiarToken, 3000);

@@ -18,21 +18,48 @@
  *    geral têm id determinístico (duas criações simultâneas dão o mesmo id e a
  *    leitura descarta a repetida);
  *  - a leitura é incremental pelo número da linha (o navegador guarda o cursor).
- * COM_PESSOAS e COM_CONFIG mudam raramente e usam setValues na linha (o último
- * a gravar vence).
+ * COM_PESSOAS, COM_PRESENCA e COM_CONFIG mudam raramente e usam setValues na
+ * linha (o último a gravar vence).
+ *
+ * PARTICIPANTES (20/10/2026): o grupo é editado acrescentando uma NOVA linha em
+ * COM_CONVERSAS com o mesmo conversa_id (a última linha vale; a posição na lista
+ * é a da primeira). Cada mudança (criou, adicionou, removeu, saiu, renomeou)
+ * vira uma mensagem de sistema na própria conversa (ref_tipo EVENTO_GRUPO).
+ * Nada é apagado: quem sai deixa de ver a conversa, as mensagens ficam.
+ * Grupo por ÁREA (tipo SETOR, membros "AREA:<código>"): a área vem do cadastro
+ * do SGO+ (CAD_USUARIOS.AREA, códigos de CAD_AREAS), gravada em COM_PESSOAS.area
+ * pelo adaptador do SGO+; quem muda de área entra e sai sozinho. As conversas de
+ * setor antigas ("SETOR:<nome>", pelo perfil de acesso) continuam como estavam.
+ *
+ * PONTE COM O WHATSAPP (20/10/2026): COM_WHATSAPP é a trilha de tudo que foi
+ * enviado (SAIDA: aviso de mensagem direta ou menção, com o id da Meta) e
+ * recebido (ENTRADA: resposta entregue numa conversa). Quem envia é o SGO+
+ * (SGO_ComunicacaoWhatsapp.js, que tem o celular, o vínculo e o expediente);
+ * quem recebe é o webhook do COMMAND (ComunicacaoWhatsapp.js). As regras de
+ * conteúdo (quem recebe, o que já foi avisado, para qual conversa vai a
+ * resposta) ficam aqui, iguais para os dois. Celular nunca é gravado aqui.
  */
 
 var COM_NOME_DB = "METROLABS — Comunicação";
 var COM_PROP_DB = "COM_DB_ID";
 var COM_TABS = {
-  COM_PESSOAS: ["pessoa_id", "nome", "setor", "cmd_id", "cmd_login", "sgo_id", "sgo_login", "ativo", "criado_em", "atualizado_em", "vinculo"],
-  COM_CONVERSAS: ["conversa_id", "tipo", "titulo", "membros", "criado_por", "criado_em"],
-  COM_MENSAGENS: ["msg_id", "conversa_id", "de_pessoa", "de_nome", "de_sistema", "texto", "criado_em", "ref_sistema", "ref_tipo", "ref_id", "ref_codigo", "resposta_a"],
+  COM_PESSOAS: ["pessoa_id", "nome", "setor", "cmd_id", "cmd_login", "sgo_id", "sgo_login", "ativo", "criado_em", "atualizado_em", "vinculo", "area", "area_nome", "wa_aviso"],
+  COM_CONVERSAS: ["conversa_id", "tipo", "titulo", "membros", "criado_por", "criado_em", "atualizado_em", "atualizado_por"],
+  COM_MENSAGENS: ["msg_id", "conversa_id", "de_pessoa", "de_nome", "de_sistema", "texto", "criado_em", "ref_sistema", "ref_tipo", "ref_id", "ref_codigo", "resposta_a", "mencoes"],
   COM_AVISOS: ["aviso_id", "origem_sistema", "para", "titulo", "texto", "prioridade", "tipo", "exige_ciencia", "ref_sistema", "ref_tipo", "ref_id", "ref_codigo", "criado_por", "criado_em", "expira_em"],
   COM_LEITURAS: ["pessoa_id", "conversa_id", "lido_ate", "em"],
   COM_CIENCIAS: ["aviso_id", "pessoa_id", "em", "sistema"],
-  COM_CONFIG: ["chave", "valor", "sistema", "atualizado_em"]
+  COM_CONFIG: ["chave", "valor", "sistema", "atualizado_em"],
+  COM_PRESENCA: ["pessoa_id", "visto_em", "sistema"],
+  COM_WHATSAPP: ["id", "direcao", "pessoa_id", "conversa_id", "msg_ids", "canal", "wamid", "contexto_id", "regra", "situacao", "motivo", "texto", "em", "sistema"]
 };
+var COM_EVENTO = "EVENTO_GRUPO";      // ref_tipo das mensagens de sistema (participantes e nome do grupo)
+var COM_MAX_MEMBROS = 200;
+// Ponte com o WhatsApp: padrões (a administração muda em COM_CONFIG pela tela de preferências do balão)
+var COM_WA_PADRAO = { ligado: false, ausente_min: 10, limite_hora: 1, limite_dia: 4 };
+var COM_WA_JANELA_H = 96;             // mensagem mais antiga que isto não vira aviso (fim de semana prolongado)
+var COM_WA_RESPOSTA_H = 24;           // resposta sem "responder a" vai para a última conversa direta avisada neste prazo
+var COM_PRESENCA_GRAVA_S = 120;       // presença (tela visível) gravada no máximo a cada 2 min por pessoa
 var COM_MAX_TEXTO = 4000;
 var COM_JANELA_MSG = 3000;       // mensagens consideradas para "não lidas"
 var COM_JANELA_LEIT = 10000;     // leituras consideradas (vale a mais recente)
@@ -189,6 +216,7 @@ function comGarantirAbas_(ss, nova) {
   if (nova) {
     try { var p1 = ss.getSheetByName("Página1") || ss.getSheetByName("Sheet1"); if (p1 && ss.getSheets().length > 1 && p1.getLastRow() === 0 && ss.deleteSheet) ss.deleteSheet(p1); } catch (e) { }
   }
+  delete COM_MEMO_.conversas;
   var convs = comConversas_(ss);
   if (!convs.some(function (c) { return c.conversa_id === "GERAL"; }))
     comAppend_(ss, "COM_CONVERSAS", { conversa_id: "GERAL", tipo: "GERAL", titulo: "Geral — todos", membros: "TODOS", criado_por: "sistema", criado_em: comAgora_() });
@@ -333,7 +361,8 @@ function comGravarPessoa_(ss, p, campos) {
 
 function comNovaPessoa_(ss, sistema, u) {
   var pr = comPref_(sistema), agora = comAgora_();
-  var p = { pessoa_id: comUuid_(), nome: comTexto_(u.nome, 120) || u.login, setor: comTexto_(u.setor, 80), ativo: "SIM", criado_em: agora, atualizado_em: agora, vinculo: "" };
+  var p = { pessoa_id: comUuid_(), nome: comTexto_(u.nome, 120) || u.login, setor: comTexto_(u.setor, 80), ativo: "SIM", criado_em: agora, atualizado_em: agora, vinculo: "",
+    area: u.area !== undefined ? comTexto_(u.area, 40) : "", area_nome: u.area !== undefined ? comTexto_(u.area_nome, 80) : "", wa_aviso: "" };
   p[pr + "_id"] = String(u.id); p[pr + "_login"] = comTexto_(u.login, 80);
   comAppend_(ss, "COM_PESSOAS", p);
   p._linha = comUltima_(ss, "COM_PESSOAS");   // melhor esforço (só usado nesta execução)
@@ -350,10 +379,25 @@ function comMesclar_(ss, a, b, manual) {
   });
   if (!a.setor && b.setor) campos.setor = b.setor;
   if (b.cmd_id && !a.cmd_id) { campos.nome = b.nome || a.nome; if (b.setor) campos.setor = b.setor; }   // nome/setor do COMMAND prevalecem
+  if (b.sgo_id && !a.sgo_id && b.area) { campos.area = b.area; campos.area_nome = b.area_nome; }   // área: vale a do SGO+
+  else if (!a.area && b.area) { campos.area = b.area; campos.area_nome = b.area_nome; }
+  if (String(b.wa_aviso) === "NAO") campos.wa_aviso = "NAO";   // quem desligou o WhatsApp em qualquer um dos lados continua desligado
   if (manual) campos.vinculo = "MANUAL";
   comGravarPessoa_(ss, a, campos);
   comGravarPessoa_(ss, b, { cmd_id: "", sgo_id: "", ativo: "MESCLADA:" + a.pessoa_id });
   return a;
+}
+
+/**
+ * Área do cadastro: só o sistema que informa a área (o SGO+, u.area definido, mesmo vazio) grava; o outro nunca mexe.
+ * Acrescenta em "campos" o que mudou. Devolve true se mudou.
+ */
+function comCamposArea_(p, u, campos) {
+  if (!u || u.area === undefined) return false;
+  var cod = comTexto_(u.area, 40), nome = cod ? comTexto_(u.area_nome || cod, 80) : "";
+  if (String(p.area || "") === cod && String(p.area_nome || "") === nome) return false;
+  campos.area = cod; campos.area_nome = nome;
+  return true;
 }
 
 function comCandidatoVinculo_(pessoas, sistema, u, nomesRepetidos) {
@@ -398,6 +442,7 @@ function comSincronizarNucleo_(ss) {
         var dono = sis === "COMMAND" || !p[ou + "_id"];   // nome/setor: COMMAND prevalece quando vinculado
         if (dono && u.nome && String(p.nome) !== comTexto_(u.nome, 120)) campos.nome = comTexto_(u.nome, 120);
         if ((dono || !p.setor) && u.setor && String(p.setor) !== comTexto_(u.setor, 80)) campos.setor = comTexto_(u.setor, 80);
+        comCamposArea_(p, u, campos);
         if (String(p.ativo) !== "SIM") campos.ativo = "SIM";
         if (Object.keys(campos).length) { comGravarPessoa_(ss, p, campos); r.atualizados++; }
         if (!p[ou + "_id"] && String(p.vinculo) !== "MANUAL") {
@@ -412,6 +457,7 @@ function comSincronizarNucleo_(ss) {
         cc[pr + "_id"] = String(u.id); cc[pr + "_login"] = comTexto_(u.login, 80);
         if (sis === "COMMAND") { if (u.nome) cc.nome = comTexto_(u.nome, 120); if (u.setor) cc.setor = comTexto_(u.setor, 80); }
         else if (!cand.setor && u.setor) cc.setor = comTexto_(u.setor, 80);
+        comCamposArea_(cand, u, cc);
         comGravarPessoa_(ss, cand, cc); r.vinculados++;
         return;
       }
@@ -453,9 +499,12 @@ function comPessoaDoUsuario_(ss, u, registrar) {
     if (!p) { delete COM_MEMO_.pessoas; comNovaPessoa_(ss, sis, u); delete COM_MEMO_.pessoas; p = acha(); }
   }
   if (!p) return null;
+  // a área mudou no cadastro (SGO+): grava já, sem esperar a rotina diária (entra e sai sozinho dos grupos de área)
+  var mud = {};
+  if (registrar !== false && comCamposArea_(p, u, mud)) { try { comGravarPessoa_(ss, p, mud); } catch (e) { comLog_("área: " + e.message); } }
   var ps = comPessoas_(ss);
-  return { pessoa_id: p.pessoa_id, nome: p.nome, setor: p.setor, ids: comIdsDe_(ps, p.pessoa_id), criado_em: p.criado_em, ativo: p.ativo,
-    cmd: !!p.cmd_id, sgo: !!p.sgo_id };
+  return { pessoa_id: p.pessoa_id, nome: p.nome, setor: p.setor, area: String(p.area || ""), area_nome: String(p.area_nome || ""), wa_aviso: String(p.wa_aviso || ""),
+    ids: comIdsDe_(ps, p.pessoa_id), criado_em: p.criado_em, ativo: p.ativo, cmd: !!p.cmd_id, sgo: !!p.sgo_id };
 }
 
 /* ======================================================================
@@ -466,10 +515,15 @@ function comConversas_(ss) {
   if (COM_MEMO_.conversas) return COM_MEMO_.conversas;
   var ult = comAba_(ss, "COM_CONVERSAS").getLastRow(), cache = null, chave = "COM_CONV_" + String(ss.getId()).slice(-24) + "_" + ult;
   try { cache = CacheService.getScriptCache(); var c = cache.get(chave); if (c) { COM_MEMO_.conversas = JSON.parse(c); return COM_MEMO_.conversas; } } catch (e) { }
-  var vistos = {}, lista = [];
+  // a mesma conversa em várias linhas: a ÚLTIMA vale (participantes e nome editados viram uma linha nova); a posição é a da primeira.
+  // Criação simultânea de conversa de id fixo (direta, área, geral) dá linhas iguais: tanto faz qual vale.
+  var pos = {}, lista = [];
   comLerLinhas_(ss, "COM_CONVERSAS", 2, ult).forEach(function (c) {
-    if (!c.conversa_id || vistos[c.conversa_id]) return;   // repetida por criação simultânea: vale a primeira
-    vistos[c.conversa_id] = 1; lista.push(c);
+    if (!c.conversa_id) return;
+    if (pos[c.conversa_id] === undefined) { pos[c.conversa_id] = lista.length; lista.push(c); return; }
+    var prim = lista[pos[c.conversa_id]];
+    c.criado_em = prim.criado_em; c.criado_por = prim.criado_por;   // quem criou e quando não mudam
+    lista[pos[c.conversa_id]] = c;
   });
   try { var js = JSON.stringify(lista); if (cache && js.length < 90000) cache.put(chave, js, 21600); } catch (e) { }
   COM_MEMO_.conversas = lista;
@@ -478,17 +532,26 @@ function comConversas_(ss) {
 
 function comMembros_(c) { return String(c.membros || "").split(",").map(function (s) { return s.trim(); }).filter(String); }
 
+/** Código da área de uma conversa de área ("AREA:TECNICA" → "TECNICA"); "" se não for. */
+function comAreaDaConversa_(c) { var m = /^AREA:(.+)$/.exec(String((c && c.membros) || "")); return m ? m[1] : ""; }
+
 function comEhMembro_(c, eu) {
   if (!c) return false;
   if (c.tipo === "GERAL") return true;
-  if (c.tipo === "SETOR") { var s = String(c.membros || "").replace(/^SETOR:/, ""); return !!eu.setor && comNorm_(s) === comNorm_(eu.setor); }
+  if (c.tipo === "SETOR") {
+    var ar = comAreaDaConversa_(c);
+    if (ar) return !!eu.area && String(eu.area) === ar;   // área do cadastro: entra e sai sozinho
+    var s = String(c.membros || "").replace(/^SETOR:/, ""); return !!eu.setor && comNorm_(s) === comNorm_(eu.setor);
+  }
   var m = comMembros_(c);
+  if (m.indexOf("GESTAO") >= 0 && eu.gestao) return true;   // "Recebidas pelo WhatsApp": a gestão inteira participa
   return eu.ids.some(function (id) { return m.indexOf(id) >= 0; });
 }
 
 function comParaMim_(a, eu) {
   var para = String(a.para || "");
   if (para === "TODOS") return true;
+  if (para.indexOf("AREA:") === 0) return !!eu.area && para.slice(5) === String(eu.area);
   if (para.indexOf("SETOR:") === 0) return !!eu.setor && comNorm_(para.slice(6)) === comNorm_(eu.setor);
   return eu.ids.indexOf(para) >= 0;
 }
@@ -526,8 +589,10 @@ function comNomes_(ss) {
 
 /** Conversa no formato da tela (título da direta = nome da outra pessoa). */
 function comConversaTela_(c, eu, nomes) {
-  var o = { conversa_id: c.conversa_id, tipo: c.tipo, titulo: c.titulo, criado_em: c.criado_em, membros: [] };
-  if (c.tipo === "GRUPO" || c.tipo === "DIRETA") o.membros = comMembros_(c);
+  var o = { conversa_id: c.conversa_id, tipo: c.tipo, titulo: c.titulo, criado_em: c.criado_em, criado_por: c.criado_por || "", membros: [] };
+  if (c.tipo === "GRUPO" || c.tipo === "DIRETA" || c.tipo === "RECEBIDAS") o.membros = comMembros_(c).filter(function (id) { return id !== "GESTAO"; });
+  if (c.tipo === "GRUPO") o.pode_editar = !!(eu.gestao || eu.ids.indexOf(String(c.criado_por)) >= 0);
+  if (c.tipo === "SETOR" && comAreaDaConversa_(c)) o.area = comAreaDaConversa_(c);
   if (c.tipo === "DIRETA") {
     var outro = o.membros.filter(function (id) { return eu.ids.indexOf(id) < 0; })[0];
     var p = outro && nomes[outro];
@@ -591,14 +656,40 @@ function comContagens_(ss, eu, sis) {
     contagens: { mensagens: nMsg, avisos: nAv, comunicados: nCom, ciencia: nCien, total: nMsg + nAv + nCom + nCien } };
 }
 
-/** Grava "visto por último" (linha de leitura com conversa "*"), no máximo a cada 30 min por pessoa. */
-function comPresenca_(ss, eu) {
+/**
+ * Presença ("visto por último" e "está no sistema agora"): uma linha por pessoa em COM_PRESENCA, regravada no lugar,
+ * no máximo a cada 2 min, e só com a tela VISÍVEL (aba escondida não conta como presente: é o que decide se a
+ * mensagem direta vira aviso no WhatsApp). Antes (até 20/10/2026) era uma linha "*" em COM_LEITURAS a cada 30 min,
+ * que continua valendo para quem não voltou desde então.
+ */
+function comPresenca_(ss, eu, visivel) {
+  if (visivel === false) return;
   try {
-    var cache = CacheService.getScriptCache(), k = "COM_VISTO_" + eu.pessoa_id;
+    var cache = CacheService.getScriptCache(), k = "COM_PRES_" + eu.pessoa_id;
     if (cache.get(k)) return;
-    cache.put(k, "1", COM_PRESENCA_S);
-    comAppend_(ss, "COM_LEITURAS", { pessoa_id: eu.pessoa_id, conversa_id: "*", lido_ate: comAgora_(), em: comAgora_() });
+    cache.put(k, "1", COM_PRESENCA_GRAVA_S);
+    var sh = comAba_(ss, "COM_PRESENCA"), ult = comUltima_(ss, "COM_PRESENCA"), linha = 0;
+    if (ult >= 2) {
+      var ids = sh.getRange(2, 1, ult - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) if (String(comVal_(ids[i][0])) === String(eu.pessoa_id)) { linha = i + 2; break; }
+    }
+    var reg = [eu.pessoa_id, comAgora_(), comAdaptador_().sistema].map(comSeguro_);
+    if (linha) sh.getRange(linha, 1, 1, reg.length).setValues([reg]);
+    else comAppend_(ss, "COM_PRESENCA", { pessoa_id: eu.pessoa_id, visto_em: comAgora_(), sistema: comAdaptador_().sistema });
+    delete COM_MEMO_.presenca;
   } catch (e) { }
+}
+
+/** Mapa pessoa_id (a real, depois de mesclas) → último "visto" (presença nova, leituras antigas "*" e mensagens enviadas). */
+function comPresencaMapa_(ss) {
+  if (COM_MEMO_.presenca) return COM_MEMO_.presenca;
+  var ps = comPessoas_(ss), visto = {};
+  var marca = function (id, em) { if (!id || !em) return; var r = comReal_(ps, String(id)); if (!visto[r] || String(em) > visto[r]) visto[r] = String(em); };
+  comLerLinhas_(ss, "COM_PRESENCA", 2, comUltima_(ss, "COM_PRESENCA")).forEach(function (p) { marca(p.pessoa_id, p.visto_em); });
+  comCauda_(ss, "COM_LEITURAS", COM_JANELA_LEIT).forEach(function (l) { marca(l.pessoa_id, l.em); });
+  comCauda_(ss, "COM_MENSAGENS", COM_JANELA_MSG).forEach(function (m) { if (m.de_sistema !== "WHATSAPP") marca(m.de_pessoa, m.criado_em); });
+  COM_MEMO_.presenca = visto;
+  return visto;
 }
 
 function comCursores_(ss) {
@@ -653,11 +744,11 @@ function comApi(token, acao, dados) {
   }
 }
 
-var COM_ACOES_ADMIN_ = ["vincular", "sincronizarPessoas", "status"];
+var COM_ACOES_ADMIN_ = ["vincular", "sincronizarPessoas", "status", "configWhatsapp", "trilhaWhatsapp"];
 
 var COM_ACOES_ = {
   iniciar: function (ss, eu, d, sis) {
-    comPresenca_(ss, eu);
+    comPresenca_(ss, eu, d.visivel);
     comPublicarConfigSistema_(false);
     var k = comContagens_(ss, eu, sis), nomes = comNomes_(ss);
     var conversas = k.convs.map(function (c) {
@@ -669,7 +760,8 @@ var COM_ACOES_ = {
     }).sort(function (a, b) { return String((b.ultima || {}).criado_em || b.criado_em).localeCompare(String((a.ultima || {}).criado_em || a.criado_em)); });
     return {
       sistema: sis, outro: comOutro_(sis),
-      eu: { pessoa_id: eu.pessoa_id, nome: eu.nome, setor: eu.setor, admin: eu.admin, gestao: eu.gestao },
+      eu: { pessoa_id: eu.pessoa_id, nome: eu.nome, setor: eu.setor, area: eu.area, area_nome: eu.area_nome, admin: eu.admin, gestao: eu.gestao, sgo: eu.sgo,
+        wa_aviso: eu.wa_aviso !== "NAO" },
       conversas: conversas,
       avisos: k.avisos.slice(-60).reverse(),
       comunicados: k.comunicados.slice(-60).reverse(),
@@ -694,9 +786,15 @@ var COM_ACOES_ = {
     });
     saida.cursores = novo;
     var relevante = false;
+    saida.saidas = [];
     if (linhas.COM_CONVERSAS.length) {
-      var nomes = comNomes_(ss);
-      linhas.COM_CONVERSAS.forEach(function (c) { if (comEhMembro_(c, eu)) saida.conversas.push(comConversaTela_(c, eu, nomes)); });
+      var nomes = comNomes_(ss), vigentes = {};
+      comConversas_(ss).forEach(function (c) { vigentes[c.conversa_id] = c; });
+      linhas.COM_CONVERSAS.forEach(function (l) {
+        var c = vigentes[l.conversa_id] || l;   // a versão que vale agora (a linha nova pode ser uma edição)
+        if (comEhMembro_(c, eu)) saida.conversas.push(comConversaTela_(c, eu, nomes));
+        else if (l.atualizado_em && saida.saidas.indexOf(c.conversa_id) < 0) saida.saidas.push(c.conversa_id);   // edição em que a pessoa saiu ou foi removida: o balão tira da lista (só o id)
+      });
     }
     if (linhas.COM_MENSAGENS.length) {
       var minhas = {};
@@ -715,14 +813,15 @@ var COM_ACOES_ = {
         (a.tipo === "COMUNICADO" ? saida.comunicados : saida.avisos).push(t);
       });
     }
-    relevante = saida.mensagens.length || saida.conversas.length || saida.avisos.length || saida.comunicados.length || saida.leituras.length || saida.ciencias.length;
+    relevante = saida.mensagens.length || saida.conversas.length || saida.avisos.length || saida.comunicados.length || saida.leituras.length || saida.ciencias.length || saida.saidas.length;
     if (relevante) {
       var k = comContagens_(ss, eu, sis);
       saida.contagens = k.contagens;
       saida.naoLidas = {};
       Object.keys(k.porConv).forEach(function (id) { saida.naoLidas[id] = k.porConv[id].n; });
     }
-    comPresenca_(ss, eu);
+    if (!saida.saidas.length) delete saida.saidas;
+    comPresenca_(ss, eu, d.visivel);
     return saida;
   },
 
@@ -755,11 +854,122 @@ var COM_ACOES_ = {
     if (!texto) comFalha_("Escreva a mensagem.");
     if (texto.length > COM_MAX_TEXTO) comFalha_("Mensagem muito longa: o limite é " + COM_MAX_TEXTO + " caracteres.");
     var ref = d.ref || {};
+    if (String(ref.tipo || "") === COM_EVENTO) ref = {};   // mensagem de sistema só o próprio núcleo grava
+    var mencoes = c.tipo === "DIRETA" ? [] : comMencoes_(ss, c, eu, texto, d.mencoes);
     var m = { msg_id: comUuid_(), conversa_id: c.conversa_id, de_pessoa: eu.pessoa_id, de_nome: eu.nome, de_sistema: sis, texto: texto, criado_em: comAgora_(),
       ref_sistema: ref.tipo || ref.id ? (ref.sistema === "COMMAND" || ref.sistema === "SGO" ? ref.sistema : sis) : "", ref_tipo: comTexto_(ref.tipo, 60), ref_id: comTexto_(ref.id, 120),
-      ref_codigo: comTexto_(ref.codigo, 60), resposta_a: comTexto_(d.resposta_a, 60) };
+      ref_codigo: comTexto_(ref.codigo, 60), resposta_a: comTexto_(d.resposta_a, 60), mencoes: mencoes.join(",") };
     comAppend_(ss, "COM_MENSAGENS", m);
     return { mensagem: comMsgTela_(ss, m) };
+  },
+
+  /** Quem está na conversa: nome, área e sistema de cada um. Só quem é da conversa vê. */
+  participantes: function (ss, eu, d) {
+    var c = comConversaPorId_(ss, d.conversa_id);
+    if (!comEhMembro_(c, eu)) comFalha_("Conversa não encontrada.");
+    var lista = comParticipantes_(ss, c), ps = comPessoas_(ss), criador = comReal_(ps, String(c.criado_por || ""));
+    var tela = comConversaTela_(c, eu, comNomes_(ss));
+    return {
+      conversa: tela,
+      participantes: lista.map(function (p) {
+        return { pessoa_id: p.pessoa_id, nome: p.nome, area_nome: p.area_nome || "", cmd: !!p.cmd_id, sgo: !!p.sgo_id, eu: eu.ids.indexOf(p.pessoa_id) >= 0, criador: c.tipo === "GRUPO" && p.pessoa_id === criador };
+      }).sort(function (a, b) { return (b.eu - a.eu) || comNorm_(a.nome).localeCompare(comNorm_(b.nome)); }),
+      gestao_inteira: c.tipo === "RECEBIDAS",
+      pode_editar: !!tela.pode_editar,
+      pode_sair: c.tipo === "GRUPO",
+      regra: c.tipo === "GERAL" ? "Todas as pessoas da equipe estão nesta conversa." :
+        c.tipo === "SETOR" ? (comAreaDaConversa_(c) ? "Entram e saem sozinhas as pessoas com esta área no cadastro do SGO+ (Administração › Usuários › Área)." : "Conversa de setor antiga: vale o perfil de acesso de cada pessoa.") :
+        c.tipo === "RECEBIDAS" ? "Mensagens que esta pessoa mandou pelo WhatsApp sem dizer para quem. A gestão lê e encaminha." :
+        c.tipo === "DIRETA" ? "Conversa só entre vocês dois." : "Quem criou o grupo e a gestão adicionam, removem e mudam o nome."
+    };
+  },
+
+  /** Grupo: { conversa_id, adicionar: [ids], remover: [ids], titulo }. Só quem criou o grupo e a gestão. */
+  editarGrupo: function (ss, eu, d) {
+    var c = comConversaPorId_(ss, d.conversa_id);
+    if (!comEhMembro_(c, eu)) comFalha_("Conversa não encontrada.");
+    if (c.tipo !== "GRUPO") comFalha_("Só grupos têm participantes editáveis. Conversa de área se atualiza sozinha pelo cadastro; a geral é de todos.");
+    var ps = comPessoas_(ss);
+    if (!eu.gestao && eu.ids.indexOf(String(c.criado_por)) < 0 && eu.ids.indexOf(comReal_(ps, String(c.criado_por))) < 0)
+      comFalha_("Só quem criou o grupo e a gestão mudam os participantes e o nome. Peça a quem criou o grupo.");
+    var atuais = comMembros_(c).map(function (id) { return comReal_(ps, id); }), mapa = {};
+    atuais.forEach(function (id) { mapa[id] = 1; });
+    var nomes = comNomes_(ss), eventos = [];
+    var nomeDe = function (id) { var p = nomes[id]; return p ? p.nome : "uma pessoa"; };
+    var ativa = function (id) { return ps.some(function (p) { return p.pessoa_id === id && !comMesclada_(p) && String(p.ativo) === "SIM"; }); };
+    var add = [], rem = [];
+    (d.adicionar || []).forEach(function (id) { var r = comReal_(ps, String(id)); if (r && !mapa[r] && ativa(r) && add.indexOf(r) < 0) add.push(r); });
+    (d.remover || []).forEach(function (id) { var r = comReal_(ps, String(id)); if (r && mapa[r] && rem.indexOf(r) < 0) rem.push(r); });
+    if (rem.some(function (id) { return eu.ids.indexOf(id) >= 0; })) comFalha_("Para sair do grupo, use o botão «Sair do grupo».");
+    add.forEach(function (id) { mapa[id] = 1; });
+    rem.forEach(function (id) { delete mapa[id]; });
+    var titulo = d.titulo === undefined || d.titulo === null ? c.titulo : comTexto_(d.titulo, 80);
+    if (!titulo) comFalha_("Dê um nome ao grupo.");
+    if (!add.length && !rem.length && titulo === c.titulo) comFalha_("Nada mudou: escolha quem adicionar ou remover, ou escreva o nome novo.");
+    var ids = Object.keys(mapa);
+    if (ids.length < 2) comFalha_("O grupo precisa de pelo menos duas pessoas. Para encerrar sua participação, use «Sair do grupo».");
+    if (ids.length > COM_MAX_MEMBROS) comFalha_("Grupo grande demais (máx. " + COM_MAX_MEMBROS + " pessoas).");
+    if (add.length) eventos.push(eu.nome + " adicionou " + comListaNomes_(add.map(nomeDe)) + ".");
+    if (rem.length) eventos.push(eu.nome + " removeu " + comListaNomes_(rem.map(nomeDe)) + ".");
+    if (titulo !== c.titulo) eventos.push(eu.nome + " mudou o nome do grupo de \"" + c.titulo + "\" para \"" + titulo + "\".");
+    var nova = comGravarVersaoConversa_(ss, c, { titulo: titulo, membros: ids.join(",") }, eu);
+    eventos.forEach(function (t) { comEventoConversa_(ss, nova, eu, t); });
+    return { conversa: comConversaTela_(nova, eu, comNomes_(ss)), eventos: eventos };
+  },
+
+  /** O participante sai do grupo (as mensagens ficam; ele deixa de ver a conversa). */
+  sairGrupo: function (ss, eu, d) {
+    var c = comConversaPorId_(ss, d.conversa_id);
+    if (!comEhMembro_(c, eu)) comFalha_("Conversa não encontrada.");
+    if (c.tipo !== "GRUPO") comFalha_("Só dá para sair de grupos. Conversa de área segue o cadastro; a geral é de todos.");
+    var ps = comPessoas_(ss);
+    var ficam = comMembros_(c).map(function (id) { return comReal_(ps, id); }).filter(function (id, i, a) { return eu.ids.indexOf(id) < 0 && a.indexOf(id) === i; });
+    var nova = comGravarVersaoConversa_(ss, c, { membros: ficam.join(",") }, eu);
+    comEventoConversa_(ss, nova, eu, eu.nome + " saiu do grupo.");
+    return { conversa_id: c.conversa_id, saiu: true };
+  },
+
+  /** Preferência da própria pessoa: { wa_aviso: true|false } liga/desliga o aviso pelo WhatsApp para si. Sem dados = só lê. */
+  preferencias: function (ss, eu, d) {
+    var p = comPessoas_(ss).filter(function (x) { return x.pessoa_id === eu.pessoa_id; })[0];
+    if (!p) comFalha_("Não foi possível achar seu cadastro na Comunicação. Feche e abra o balão de novo.");
+    if (d.wa_aviso !== undefined) {
+      var v = d.wa_aviso === false || d.wa_aviso === "NAO" ? "NAO" : "";
+      if (String(p.wa_aviso || "") !== v) comGravarPessoa_(ss, p, { wa_aviso: v });
+    }
+    var cfg = comWaCfg_(ss);
+    return { wa_aviso: String(p.wa_aviso || "") !== "NAO", ponte: { ligada: cfg.ligado, ausente_min: cfg.ausente_min, limite_hora: cfg.limite_hora, limite_dia: cfg.limite_dia },
+      tem_sgo: !!p.sgo_id };
+  },
+
+  /** Administração: lê ou grava a configuração da ponte com o WhatsApp (COM_CONFIG wa_*). */
+  configWhatsapp: function (ss, eu, d) {
+    if (d.salvar) {
+      var n = function (v, min, max, padrao) { var x = parseInt(v, 10); if (!isFinite(x)) return padrao; if (x < min || x > max) comFalha_("Valor fora do limite (" + min + " a " + max + ")."); return x; };
+      var aus = n(d.ausente_min, 5, 240, COM_WA_PADRAO.ausente_min), lh = n(d.limite_hora, 1, 6, COM_WA_PADRAO.limite_hora), ld = n(d.limite_dia, 1, 12, COM_WA_PADRAO.limite_dia);
+      if (ld < lh) comFalha_("O limite por dia não pode ser menor que o limite por hora.");
+      comConfigGravar_("wa_ligado", d.ligado ? "SIM" : "NAO");
+      comConfigGravar_("wa_ausente_min", String(aus));
+      comConfigGravar_("wa_limite_hora", String(lh));
+      comConfigGravar_("wa_limite_dia", String(ld));
+      comConfigGravar_("wa_config_por", eu.nome);
+      delete COM_MEMO_.config;
+    }
+    var cfg = comWaCfg_(ss), mapa = comConfigMapa_(ss);
+    return { config: cfg, alterado_por: mapa.wa_config_por ? String(mapa.wa_config_por.valor) : "", alterado_em: mapa.wa_config_por ? String(mapa.wa_config_por.atualizado_em) : "" };
+  },
+
+  /** Administração: os últimos envios e recebimentos da ponte (sem telefone: ele nunca é gravado aqui). */
+  trilhaWhatsapp: function (ss, eu, d) {
+    var nomes = comNomes_(ss), convs = {};
+    comConversas_(ss).forEach(function (c) { convs[c.conversa_id] = c; });
+    var lim = Math.min(Math.max(parseInt(d.limite, 10) || 60, 1), 300);
+    var linhas = comCauda_(ss, "COM_WHATSAPP", lim).reverse().map(function (w) {
+      var p = nomes[w.pessoa_id], c = convs[w.conversa_id];
+      return { em: w.em, direcao: w.direcao, pessoa: p ? p.nome : "", conversa: c ? (c.tipo === "DIRETA" ? "conversa direta" : c.titulo) : "", canal: w.canal, regra: w.regra,
+        situacao: w.situacao, motivo: w.motivo, qtd: String(w.msg_ids || "").split(",").filter(String).length };
+    });
+    return { trilha: linhas };
   },
 
   abrirDireta: function (ss, eu, d) {
@@ -784,14 +994,15 @@ var COM_ACOES_ = {
 
   criarGrupo: function (ss, eu, d) {
     var ps = comPessoas_(ss);
-    if (String(d.tipo) === "SETOR") {
-      var setor = comTexto_(d.setor || eu.setor, 80);
-      if (!setor) comFalha_("Informe o setor.");
-      if (comNorm_(setor) !== comNorm_(eu.setor) && !eu.gestao) comFalha_("Só a gestão cria conversa de outro setor.");
-      var sid = "S:" + comNorm_(setor);
-      var ex = comConversas_(ss).filter(function (c) { return c.conversa_id === sid; })[0];
+    if (String(d.tipo) === "SETOR" || String(d.tipo) === "AREA") {
+      // conversa da ÁREA do cadastro (CAD_USUARIOS.AREA no SGO+): id fixo por área, membros calculados na hora
+      var cod = comTexto_(d.area || eu.area, 40).toUpperCase();
+      if (!cod) comFalha_("Sua área ainda não está no cadastro, por isso não há conversa de área para você. Peça à gestão para preencher em SGO+ › Administração › Usuários › Área.");
+      if (cod !== String(eu.area || "")) comFalha_("A conversa de área é só de quem está na área. Para falar com outra área, crie um grupo e use «Marcar a área inteira».");
+      var sid = "A:" + cod;
+      var ex = comConversaPorId_(ss, sid);
       if (!ex) {
-        ex = { conversa_id: sid, tipo: "SETOR", titulo: "Setor " + setor, membros: "SETOR:" + setor, criado_por: eu.pessoa_id, criado_em: comAgora_() };
+        ex = { conversa_id: sid, tipo: "SETOR", titulo: "Área " + (eu.area_nome || cod), membros: "AREA:" + cod, criado_por: eu.pessoa_id, criado_em: comAgora_() };
         comAppend_(ss, "COM_CONVERSAS", ex); delete COM_MEMO_.conversas;
       }
       return { conversa: comConversaTela_(ex, eu, comNomes_(ss)) };
@@ -801,13 +1012,15 @@ var COM_ACOES_ = {
     var ids = {}; ids[eu.pessoa_id] = 1;
     (d.membros || []).forEach(function (id) {
       var r = comReal_(ps, String(id));
-      if (ps.some(function (p) { return p.pessoa_id === r && !comMesclada_(p); })) ids[r] = 1;
+      if (ps.some(function (p) { return p.pessoa_id === r && !comMesclada_(p) && String(p.ativo) === "SIM"; })) ids[r] = 1;
     });
     if (Object.keys(ids).length < 2) comFalha_("Escolha pelo menos uma pessoa para o grupo.");
-    if (Object.keys(ids).length > 200) comFalha_("Grupo grande demais (máx. 200 pessoas).");
+    if (Object.keys(ids).length > COM_MAX_MEMBROS) comFalha_("Grupo grande demais (máx. " + COM_MAX_MEMBROS + " pessoas).");
     var g = { conversa_id: comUuid_(), tipo: "GRUPO", titulo: titulo, membros: Object.keys(ids).join(","), criado_por: eu.pessoa_id, criado_em: comAgora_() };
     comAppend_(ss, "COM_CONVERSAS", g); delete COM_MEMO_.conversas;
-    return { conversa: comConversaTela_(g, eu, comNomes_(ss)) };
+    var nomes = comNomes_(ss), outros = Object.keys(ids).filter(function (id) { return id !== eu.pessoa_id; }).map(function (id) { return nomes[id] ? nomes[id].nome : "uma pessoa"; });
+    comEventoConversa_(ss, g, eu, eu.nome + " criou o grupo \"" + titulo + "\" com " + comListaNomes_(outros) + ".");
+    return { conversa: comConversaTela_(g, eu, nomes) };
   },
 
   marcarLido: function (ss, eu, d) {
@@ -849,8 +1062,9 @@ var COM_ACOES_ = {
     if (texto.length > COM_MAX_TEXTO) comFalha_("Comunicado muito longo: o limite é " + COM_MAX_TEXTO + " caracteres.");
     var para = String(d.para || "TODOS");
     if (para !== "TODOS") {
-      if (para.indexOf("SETOR:") !== 0 || !comTexto_(para.slice(6))) comFalha_("Destino inválido (TODOS ou SETOR:nome).");
-      para = "SETOR:" + comTexto_(para.slice(6), 80);
+      if (para.indexOf("AREA:") === 0 && comTexto_(para.slice(5))) para = "AREA:" + comTexto_(para.slice(5), 40).toUpperCase();
+      else if (para.indexOf("SETOR:") !== 0 || !comTexto_(para.slice(6))) comFalha_("Destino inválido (TODOS, AREA:código ou SETOR:nome).");
+      else para = "SETOR:" + comTexto_(para.slice(6), 80);
     }
     var expira = "";
     if (d.expira_em) { var x = new Date(d.expira_em); if (isNaN(x.getTime())) comFalha_("Data de validade inválida."); expira = x.toISOString(); }
@@ -862,17 +1076,17 @@ var COM_ACOES_ = {
 
   /** Diretório: quem é quem, em qual sistema, visto por último. */
   pessoas: function (ss, eu) {
-    var ps = comPessoas_(ss), visto = {};
-    var marca = function (id, em) { var r = comReal_(ps, String(id)); if (em && (!visto[r] || String(em) > visto[r])) visto[r] = String(em); };
-    comCauda_(ss, "COM_LEITURAS", COM_JANELA_LEIT).forEach(function (l) { marca(l.pessoa_id, l.em); });
-    comCauda_(ss, "COM_MENSAGENS", COM_JANELA_MSG).forEach(function (m) { marca(m.de_pessoa, m.criado_em); });
+    var ps = comPessoas_(ss), visto = comPresencaMapa_(ss);
     var lista = ps.filter(function (p) { return !comMesclada_(p) && (String(p.ativo) === "SIM" || eu.admin); }).map(function (p) {
-      var o = { pessoa_id: p.pessoa_id, nome: p.nome, setor: p.setor, cmd: !!p.cmd_id, sgo: !!p.sgo_id, ativo: String(p.ativo) === "SIM", visto_em: visto[p.pessoa_id] || "", eu: p.pessoa_id === eu.pessoa_id };
+      var o = { pessoa_id: p.pessoa_id, nome: p.nome, setor: p.setor, area: p.area || "", area_nome: p.area_nome || "", cmd: !!p.cmd_id, sgo: !!p.sgo_id, ativo: String(p.ativo) === "SIM",
+        visto_em: visto[p.pessoa_id] || "", eu: p.pessoa_id === eu.pessoa_id };
       if (eu.admin) { o.cmd_login = p.cmd_login; o.sgo_login = p.sgo_login; o.vinculo = p.vinculo; o.criado_em = p.criado_em; }
       return o;
     }).sort(function (a, b) { return comNorm_(a.nome).localeCompare(comNorm_(b.nome)); });
-    var setores = {}; lista.forEach(function (p) { if (p.setor) setores[p.setor] = 1; });
-    return { pessoas: lista, setores: Object.keys(setores).sort() };
+    var setores = {}, areas = {};
+    lista.forEach(function (p) { if (p.setor) setores[p.setor] = 1; if (p.area && p.ativo) areas[p.area] = p.area_nome || p.area; });
+    return { pessoas: lista, setores: Object.keys(setores).sort(),
+      areas: Object.keys(areas).map(function (k) { return { codigo: k, nome: areas[k] }; }).sort(function (a, b) { return comNorm_(a.nome).localeCompare(comNorm_(b.nome)); }) };
   },
 
   /** Admin: { a, b } junta duas pessoas (uma do COMMAND, outra do SGO+); { desvincular: pessoa_id } separa. */
@@ -952,6 +1166,237 @@ function comPublicarAviso_(d) {
     comLog_("comPublicarAviso_: " + (e && e.message || e));
     return { ok: false, erro: "FALHA" };
   }
+}
+
+/* ======================================================================
+ * participantes, versões da conversa e mensagens de sistema
+ * ====================================================================== */
+
+function comConversaPorId_(ss, id) {
+  id = String(id || "");
+  return comConversas_(ss).filter(function (x) { return x.conversa_id === id; })[0] || null;
+}
+
+/** "Ana", "Ana e Bruno", "Ana, Bruno e Carla". */
+function comListaNomes_(nomes) {
+  var l = (nomes || []).filter(String);
+  if (l.length <= 1) return l.join("");
+  return l.slice(0, -1).join(", ") + " e " + l[l.length - 1];
+}
+
+/** Pessoas (linhas de COM_PESSOAS, só as reais) que estão na conversa agora. */
+function comParticipantes_(ss, c) {
+  var ps = comPessoas_(ss), ativas = ps.filter(function (p) { return !comMesclada_(p) && String(p.ativo) === "SIM"; });
+  if (!c) return [];
+  if (c.tipo === "GERAL") return ativas;
+  if (c.tipo === "SETOR") {
+    var ar = comAreaDaConversa_(c);
+    if (ar) return ativas.filter(function (p) { return String(p.area || "") === ar; });
+    var s = comNorm_(String(c.membros || "").replace(/^SETOR:/, ""));
+    return ativas.filter(function (p) { return comNorm_(p.setor) === s; });
+  }
+  var vistos = {}, out = [];
+  comMembros_(c).forEach(function (id) {
+    if (id === "GESTAO") return;
+    var r = comReal_(ps, id);
+    if (vistos[r]) return;
+    vistos[r] = 1;
+    var p = ps.filter(function (x) { return x.pessoa_id === r && !comMesclada_(x); })[0];
+    if (p) out.push(p);
+  });
+  return out;
+}
+
+/** Grava uma nova versão da conversa (linha nova com o mesmo id; a última vale). Devolve a versão nova. */
+function comGravarVersaoConversa_(ss, c, mud, eu) {
+  var nova = { conversa_id: c.conversa_id, tipo: c.tipo, titulo: mud.titulo !== undefined ? mud.titulo : c.titulo, membros: mud.membros !== undefined ? mud.membros : c.membros,
+    criado_por: c.criado_por, criado_em: c.criado_em, atualizado_em: comAgora_(), atualizado_por: eu.pessoa_id };
+  comAppend_(ss, "COM_CONVERSAS", nova);
+  delete COM_MEMO_.conversas;
+  return nova;
+}
+
+/** Mensagem de sistema na conversa ("Fulano adicionou Ciclano."): fica no histórico, nunca vai para o WhatsApp. */
+function comEventoConversa_(ss, c, eu, texto) {
+  var m = { msg_id: comUuid_(), conversa_id: c.conversa_id, de_pessoa: eu.pessoa_id, de_nome: eu.nome, de_sistema: comAdaptador_().sistema, texto: comTexto_(texto, 1000),
+    criado_em: comAgora_(), ref_sistema: "", ref_tipo: COM_EVENTO, ref_id: "", ref_codigo: "", resposta_a: "", mencoes: "" };
+  comAppend_(ss, "COM_MENSAGENS", m);
+  return m;
+}
+
+/**
+ * Menções "@Nome" numa conversa que não é direta: compara com o nome completo de cada participante e, quando o
+ * primeiro nome é único na conversa, também com "@Primeiro". "sugeridas" (ids que o balão marcou ao escolher na
+ * lista) valem se a pessoa for da conversa. Quem escreveu nunca é mencionado. Devolve os pessoa_id.
+ */
+function comMencoes_(ss, c, eu, texto, sugeridas) {
+  var t = comNorm_(texto);
+  var membros = comParticipantes_(ss, c).filter(function (p) { return eu.ids.indexOf(p.pessoa_id) < 0; });
+  var ids = [], prim = {};
+  membros.forEach(function (p) { var f = comNorm_(p.nome).split(" ")[0]; if (f) prim[f] = (prim[f] || 0) + 1; });
+  var tem = function (alvo) {
+    if (!alvo) return false;
+    var k = "@" + alvo, i = t.indexOf(k);
+    while (i >= 0) { var dep = t.charAt(i + k.length); if (!dep || !/[a-z0-9]/.test(dep)) return true; i = t.indexOf(k, i + 1); }
+    return false;
+  };
+  membros.forEach(function (p) {
+    var n = comNorm_(p.nome), f = n.split(" ")[0];
+    if (tem(n) || (prim[f] === 1 && tem(f))) ids.push(p.pessoa_id);
+  });
+  (sugeridas || []).forEach(function (id) {
+    var p = membros.filter(function (x) { return x.pessoa_id === String(id); })[0];   // escolhida na lista e o "@Primeiro" continua no texto
+    if (p && ids.indexOf(p.pessoa_id) < 0 && tem(comNorm_(p.nome).split(" ")[0])) ids.push(p.pessoa_id);
+  });
+  return ids;
+}
+
+/* ======================================================================
+ * ponte com o WhatsApp — regras comuns (envio no SGO+, resposta no COMMAND)
+ * ====================================================================== */
+
+/** Configuração da ponte (COM_CONFIG wa_*, com os padrões). Nunca lança. */
+function comWaCfg_(ss) {
+  var m = {};
+  try { m = comConfigMapa_(ss); } catch (e) { m = {}; }
+  var v = function (k) { return m[k] ? String(m[k].valor) : ""; };
+  var n = function (k, padrao) { var x = parseInt(v(k), 10); return isFinite(x) && x > 0 ? x : padrao; };
+  return { ligado: v("wa_ligado") === "SIM", ausente_min: n("wa_ausente_min", COM_WA_PADRAO.ausente_min), limite_hora: n("wa_limite_hora", COM_WA_PADRAO.limite_hora),
+    limite_dia: n("wa_limite_dia", COM_WA_PADRAO.limite_dia) };
+}
+
+function comWaRegistrar_(ss, o) {
+  var reg = { id: comUuid_(), direcao: o.direcao, pessoa_id: o.pessoa_id || "", conversa_id: o.conversa_id || "", msg_ids: o.msg_ids || "", canal: o.canal || "",
+    wamid: o.wamid || "", contexto_id: o.contexto_id || "", regra: o.regra || "", situacao: o.situacao || "", motivo: comTexto_(o.motivo, 480), texto: comTexto_(o.texto, 600),
+    em: o.em || comAgora_(), sistema: comAdaptador_().sistema };
+  comAppend_(ss, "COM_WHATSAPP", reg);
+  delete COM_MEMO_.wa;
+  return reg;
+}
+
+function comWaLinhas_(ss) {
+  if (!COM_MEMO_.wa) COM_MEMO_.wa = comCauda_(ss, "COM_WHATSAPP", 3000);
+  return COM_MEMO_.wa;
+}
+
+/** Avisos já resolvidos (enviados, com erro ou pulados de vez): { "msg_id|pessoa_id": 1 }. */
+function comWaFeitos_(ss) {
+  var f = {};
+  comWaLinhas_(ss).forEach(function (w) {
+    if (w.direcao !== "SAIDA") return;
+    String(w.msg_ids || "").split(",").filter(String).forEach(function (id) { f[id + "|" + w.pessoa_id] = 1; });
+  });
+  return f;
+}
+
+/** Quantos avisos saíram (OK) para a pessoa: { hora, dia } (dia no fuso da empresa). */
+function comWaContagem_(ss, pessoaId, agoraMs) {
+  var hora = new Date(agoraMs - 3600000).toISOString(), fuso = "America/Sao_Paulo", hoje = Utilities.formatDate(new Date(agoraMs), fuso, "yyyy-MM-dd"), r = { hora: 0, dia: 0 };
+  comWaLinhas_(ss).forEach(function (w) {
+    if (w.direcao !== "SAIDA" || w.situacao !== "OK" || String(w.pessoa_id) !== String(pessoaId)) return;
+    if (String(w.em) >= hora) r.hora++;
+    var d = new Date(w.em);
+    if (!isNaN(d.getTime()) && Utilities.formatDate(d, fuso, "yyyy-MM-dd") === hoje) r.dia++;
+  });
+  return r;
+}
+
+/**
+ * Mensagens que viram aviso fora do sistema, por pessoa: { pessoa_id: { pessoa, itens: [{ m, c }] } }.
+ *  - só conversa DIRETA (para a outra pessoa), "Recebidas pelo WhatsApp" (para o colaborador) e MENÇÃO em grupo,
+ *    área ou geral (para quem foi mencionado e ainda está na conversa); mensagem comum de grupo nunca;
+ *  - mensagem de sistema (participantes) nunca; quem escreveu nunca;
+ *  - criada há pelo menos "ausente_min" minutos e há no máximo COM_WA_JANELA_H horas, ainda sem leitura;
+ *  - a pessoa não está no sistema (sem presença nos últimos "ausente_min" minutos), não desligou o aviso e ainda não
+ *    foi avisada desta mensagem.
+ */
+function comWaPendentes_(ss, agoraMs, cfg) {
+  cfg = cfg || comWaCfg_(ss);
+  var lim = new Date(agoraMs - cfg.ausente_min * 60000).toISOString(), desde = new Date(agoraMs - COM_WA_JANELA_H * 3600000).toISOString();
+  var ps = comPessoas_(ss), porId = {}, convs = {}, feitos = comWaFeitos_(ss), visto = comPresencaMapa_(ss), porPessoa = {};
+  ps.forEach(function (p) { porId[p.pessoa_id] = p; });
+  comConversas_(ss).forEach(function (c) { convs[c.conversa_id] = c; });
+  comCauda_(ss, "COM_MENSAGENS", COM_JANELA_MSG).forEach(function (m) {
+    if (!m.msg_id || m.ref_tipo === COM_EVENTO || String(m.criado_em) > lim || String(m.criado_em) < desde) return;
+    var c = convs[m.conversa_id];
+    if (!c) return;
+    var autor = comReal_(ps, String(m.de_pessoa)), dest;
+    if (c.tipo === "DIRETA" || c.tipo === "RECEBIDAS") dest = comMembros_(c).filter(function (id) { return id !== "GESTAO"; });
+    else dest = String(m.mencoes || "").split(",").filter(String);
+    var vistos = {};
+    dest.map(function (id) { return comReal_(ps, id); }).forEach(function (pid) {
+      if (vistos[pid] || pid === autor) return;
+      vistos[pid] = 1;
+      var p = porId[pid];
+      if (!p || comMesclada_(p) || String(p.ativo) !== "SIM" || String(p.wa_aviso) === "NAO" || feitos[m.msg_id + "|" + pid]) return;
+      var euP = { pessoa_id: pid, ids: comIdsDe_(ps, pid), area: p.area, setor: p.setor, gestao: false, criado_em: p.criado_em };
+      if (!comEhMembro_(c, euP)) return;
+      (porPessoa[pid] = porPessoa[pid] || { pessoa: p, eu: euP, itens: [] }).itens.push({ m: m, c: c });
+    });
+  });
+  Object.keys(porPessoa).forEach(function (pid) {
+    var x = porPessoa[pid];
+    if (visto[pid] && String(visto[pid]) >= lim) { delete porPessoa[pid]; return; }   // está no sistema: vê no balão
+    COM_MEMO_.lido = null;   // o mapa de leitura é por pessoa
+    var lido = comLidoMapa_(ss, x.eu);
+    x.itens = x.itens.filter(function (i) { return comNovo_(i.m.criado_em, lido[i.c.conversa_id], x.pessoa.criado_em); });
+    if (!x.itens.length) delete porPessoa[pid];
+  });
+  COM_MEMO_.lido = null;
+  return porPessoa;
+}
+
+/** Conversa "Recebidas pelo WhatsApp" de um colaborador (id fixo W:<pessoa>): ele e a gestão inteira. */
+function comWaConversaRecebidas_(ss, p) {
+  var id = "W:" + p.pessoa_id, c = comConversaPorId_(ss, id);
+  if (c) return c;
+  c = { conversa_id: id, tipo: "RECEBIDAS", titulo: "Recebidas pelo WhatsApp: " + p.nome, membros: "GESTAO," + p.pessoa_id, criado_por: "sistema", criado_em: comAgora_() };
+  comAppend_(ss, "COM_CONVERSAS", c);
+  delete COM_MEMO_.conversas;
+  return c;
+}
+
+/**
+ * Entrega no bate-papo a resposta que um colaborador mandou pelo WhatsApp. o = { pessoa_id, texto, wamid, contexto_id,
+ * em, fase: "PRIMEIRA" (só "responder a" um aviso, ou a última conversa direta avisada em 24 h quando a ponte está
+ * ligada) | "RESTO" (sem ligação: "Recebidas pelo WhatsApp", só com a ponte ligada) }.
+ * Devolve { conversa_id, regra } ou null (não é do bate-papo: segue o caminho normal da Caixa de Entrada).
+ */
+function comWaEntregarResposta_(ss, o) {
+  var ps = comPessoas_(ss), pid = comReal_(ps, String(o.pessoa_id || ""));
+  var p = ps.filter(function (x) { return x.pessoa_id === pid && !comMesclada_(x); })[0];
+  if (!p) return null;
+  var linhas = comWaLinhas_(ss);
+  if (o.wamid) {
+    var ja = linhas.filter(function (w) { return w.direcao === "ENTRADA" && String(w.wamid) === String(o.wamid); })[0];
+    if (ja) return { conversa_id: ja.conversa_id, regra: ja.regra, repetida: true };
+  }
+  var cfg = comWaCfg_(ss), eu = { pessoa_id: pid, ids: comIdsDe_(ps, pid), area: p.area, setor: p.setor, gestao: false };
+  var alvo = null, regra = "", resp = "", saida = null;
+  if (o.fase !== "RESTO") {
+    if (o.contexto_id) saida = linhas.filter(function (w) { return w.direcao === "SAIDA" && w.wamid && String(w.wamid) === String(o.contexto_id); }).pop() || null;
+    if (saida && comReal_(ps, String(saida.pessoa_id)) === pid) {
+      alvo = comConversaPorId_(ss, saida.conversa_id); regra = "CONTEXTO";
+      resp = String(saida.msg_ids || "").split(",").filter(String).pop() || "";
+      if (!alvo || !comEhMembro_(alvo, eu)) { alvo = comWaConversaRecebidas_(ss, p); regra = "CONTEXTO_SEM_ACESSO"; resp = ""; }   // saiu do grupo depois do aviso
+    } else if (cfg.ligado) {
+      var desde = new Date(Date.now() - COM_WA_RESPOSTA_H * 3600000).toISOString();
+      var ult = linhas.filter(function (w) {
+        if (w.direcao !== "SAIDA" || w.situacao !== "OK" || comReal_(ps, String(w.pessoa_id)) !== pid || String(w.em) < desde) return false;
+        var c = comConversaPorId_(ss, w.conversa_id);
+        return c && (c.tipo === "DIRETA" || c.tipo === "RECEBIDAS") && comEhMembro_(c, eu);
+      }).pop();
+      if (ult) { alvo = comConversaPorId_(ss, ult.conversa_id); regra = "ULTIMA_24H"; }
+    }
+  } else if (cfg.ligado) { alvo = comWaConversaRecebidas_(ss, p); regra = "RECEBIDAS"; }
+  if (!alvo) return null;
+  var texto = comTexto_(o.texto, COM_MAX_TEXTO) || "(mensagem vazia)";
+  var m = { msg_id: comUuid_(), conversa_id: alvo.conversa_id, de_pessoa: pid, de_nome: p.nome, de_sistema: "WHATSAPP", texto: texto, criado_em: comAgora_(),
+    ref_sistema: "", ref_tipo: "", ref_id: "", ref_codigo: "", resposta_a: resp, mencoes: "" };
+  comAppend_(ss, "COM_MENSAGENS", m);
+  comWaRegistrar_(ss, { direcao: "ENTRADA", pessoa_id: pid, conversa_id: alvo.conversa_id, msg_ids: m.msg_id, canal: "whatsapp", wamid: o.wamid, contexto_id: o.contexto_id,
+    regra: regra, situacao: "ENTREGUE", texto: texto.slice(0, 200) });
+  return { conversa_id: alvo.conversa_id, regra: regra, msg_id: m.msg_id };
 }
 
 /** Mesmo login só liga contas se os nomes forem compatíveis: mesmo primeiro nome e sobrenome igual ou abreviado ("Maria S." = "Maria Souza"; "Ana Vendas" ≠ "Ana Técnica"). */
