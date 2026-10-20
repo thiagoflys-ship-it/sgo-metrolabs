@@ -47,7 +47,8 @@
   .em-editor { border: 1px solid var(--border); border-radius: 6px; min-height: 160px; padding: 10px; background: var(--card); overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
   .em-editor:focus { outline: 2px solid var(--info, #1f5fa8); }
   .em-barra { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-  .em-barra button { min-height: 34px; min-width: 38px; }
+  .em-barra button { min-height: 34px; min-width: 38px; width: auto !important; flex: 0 0 auto; }
+  .em-acoes select { width: auto; max-width: 100%; }
   .em-overlay { position: fixed; inset: 0; background: rgba(15, 20, 18, .45); z-index: 9000; display: flex; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow-y: auto; }
   .em-janela { background: var(--card); color: var(--text); border-radius: 10px; width: 100%; max-width: 820px; padding: 14px 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25); box-sizing: border-box; }
   .em-janela h3 { margin: 0 0 10px; font-size: 16px; }
