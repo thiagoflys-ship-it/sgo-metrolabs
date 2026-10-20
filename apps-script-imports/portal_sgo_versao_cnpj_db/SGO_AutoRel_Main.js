@@ -190,14 +190,10 @@ function AutoRel_apiUploadArquivo(payload) {
     ? String(AutoRel_UCFG.UPLOAD_FOLDER_ID).trim()
     : '';
 
-  if (!folderId) {
-    throw new Error('UPLOAD_FOLDER_ID não configurado.');
-  }
-
   try {
     const bytes = Utilities.base64Decode(base64);
     const blob = Utilities.newBlob(bytes, mimeType, fileName);
-    const folder = DriveApp.getFolderById(folderId);
+    const folder = AutoRel_pastaUploads_(folderId);
     const file = folder.createFile(blob);
 
     return {
@@ -681,4 +677,24 @@ function AutoRel_limitarNumeroOpcionalSeguro_(valor, min, max) {
 function AutoRel_normalizarTextoOpcional_(valor) {
   if (valor === null || valor === undefined) return '';
   return String(valor).trim();
+}
+
+
+/**
+ * Pasta das planilhas enviadas para leitura (20/10/2026). A pasta fixa da configuração era do Google Drive antigo e não
+ * existe no servidor novo: o envio falhava com "Não foi possível encontrar a pasta". Usa a pasta configurada quando ela
+ * existe; senão, a pasta própria "Autoclave - Planilhas enviadas" (criada uma vez, endereço guardado em AUTOREL_UPLOAD_PASTA_ID).
+ */
+function AutoRel_pastaUploads_(folderIdConfigurado) {
+  if (folderIdConfigurado) {
+    try { return DriveApp.getFolderById(folderIdConfigurado); } catch (e) { /* pasta antiga não existe aqui: segue para a própria */ }
+  }
+  const props = PropertiesService.getScriptProperties();
+  const idSalvo = props.getProperty('AUTOREL_UPLOAD_PASTA_ID');
+  if (idSalvo) {
+    try { return DriveApp.getFolderById(idSalvo); } catch (e) { /* apagada: cria de novo */ }
+  }
+  const pasta = DriveApp.getRootFolder().createFolder('Autoclave - Planilhas enviadas');
+  props.setProperty('AUTOREL_UPLOAD_PASTA_ID', pasta.getId());
+  return pasta;
 }
