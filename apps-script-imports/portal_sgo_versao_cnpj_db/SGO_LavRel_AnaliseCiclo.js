@@ -673,7 +673,8 @@ function LavRel_avaliarQualidadeDados_(linhas, analise, idxAtivos, dtMin) {
     const varMin = Number(q.paradoVariacaoProcessoC) > 0 ? Number(q.paradoVariacaoProcessoC) : 5;
     qs.parado = qs.parado.filter(function(p) {
       let mn = Infinity, mx = -Infinity;
-      const folga = Math.max(2, Math.min(Math.ceil((Number(q.paradoFolgaSeg) || 60) / Math.max(1, dtMin * 60)), Math.floor((p.i1 - p.i0) / 4)));
+      // Trecho curto demais para sobrar miolo não é acusado (sensor travado de verdade fica parado o ciclo todo).
+      const folga = Math.max(2, Math.ceil((Number(q.paradoFolgaSeg) || 60) / Math.max(1 / 60, dtMin) / 60));
       for (let k = p.i0 + folga; k <= p.i1 - folga; k++) { const r = media[k] && media[k].t; if (r === null || r === undefined || !isFinite(r)) continue; mn = Math.min(mn, r); mx = Math.max(mx, r); }
       return isFinite(mn) && mx - mn >= varMin;
     });

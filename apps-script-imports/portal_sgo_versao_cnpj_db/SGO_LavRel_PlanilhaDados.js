@@ -182,6 +182,9 @@ function LavRel_pdGraficoMapa_(D, largura) {
   return s.join('');
 }
 
+/** Nome curto da fase (na ultrassônica a primeira etapa é o pré-enxágue). */
+function LavRel_pdFaseCurta_(codigo, termo) { return (!termo && codigo === 'PRE_LAVAGEM') ? 'Pré-enxágue' : (LAVREL_PD_FASE_CURTA[codigo] || ''); }
+
 var LAVREL_PD_COR_FASE = {
   PRE_LAVAGEM: '#d6e4f5', LAVAGEM_AQUECIMENTO: '#cfe0f3', ENXAGUE_INTERMEDIARIO: '#f6ecc4', AQUECIMENTO_DESINFECCAO: '#fbe6c8', AQUECIMENTO_BANHO: '#fbe6c8',
   DESINFECCAO_TERMICA: '#d4ecdc', CAVITACAO_ULTRASSOM: '#d4ecdc', SECAGEM_RESFRIAMENTO: '#e7def2', DRENAGEM_FINAL: '#e7def2', PREPARO_INCOMPLETO: '#eef1f4'
@@ -196,7 +199,7 @@ function LavRel_pdFiguras_(D) {
   var nome = function(k) { return 'S' + (k + 1); };
   var fases = D.fases.map(function(fz) {
     var a = L[fz.ini], b = L[fz.fim < L.length - 1 ? fz.fim + 1 : fz.fim];
-    return { x0: x(a), x1: x(b), cor: LAVREL_PD_COR_FASE[fz.codigo] || '#eef1f4', rotulo: LAVREL_PD_FASE_CURTA[fz.codigo] || '', curto: '' };
+    return { x0: x(a), x1: x(b), cor: LAVREL_PD_COR_FASE[fz.codigo] || '#eef1f4', rotulo: LavRel_pdFaseCurta_(fz.codigo, D.termo), curto: '' };
   });
   var series = D.idxAtivos.map(function(k) {
     return { nome: nome(k), cor: SGO_DocA4_corSerie_(k), pontos: L.filter(function(l) { return l.ms !== null && l.t[k] !== null; }).map(function(l) { return [x(l), l.t[k]]; }) };
@@ -442,7 +445,7 @@ function LavRel_pdCorpo_(ctx, D, op) {
   function celulas(bloco, ultimo, comFase) {
     return function(l) {
       var c = [{ t: l.hora, cls: 'cen' }];
-      if (comFase) c.push({ t: LAVREL_PD_FASE_CURTA[l.fase] || '—', cls: '' });
+      if (comFase) c.push({ t: LavRel_pdFaseCurta_(l.fase, D.termo) || '—', cls: '' });
       var vals = D.idxAtivos.map(function(k) { return l.t[k]; }).filter(function(v) { return v !== null && isFinite(v); });
       var mn = vals.length ? Math.min.apply(null, vals) : null, mx = vals.length ? Math.max.apply(null, vals) : null;
       bloco.forEach(function(k) {
