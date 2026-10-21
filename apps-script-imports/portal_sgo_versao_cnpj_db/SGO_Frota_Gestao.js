@@ -49,7 +49,7 @@ var FROTA_RECORRENCIA_MULTA_DIAS = 365;  // 2 multas do mesmo condutor em 12 mes
 function FrotaG_exigirGestao_(sessionId) {
   var sessao = Frota_exigirEquipe_(sessionId);
   if (!Frota_ehGestao_(sessionId)) {
-    throw new Error('Gestão e melhoria da Frota é da gestão (Administrador, Gestor ou Diretoria). Para retirar e devolver veículo, use a aba Situação e retiradas.');
+    throw new Error('Gestão e melhoria da Frota é da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Para retirar e devolver veículo, use a aba Situação e retiradas.');
   }
   Frota_bootstrap_();
   CertCal_garantirTabela_(FROTA_ABA_CASO, FROTA_COLUNAS_CASO);

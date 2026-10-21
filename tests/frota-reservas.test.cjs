@@ -132,7 +132,7 @@ test('Retirada respeita a reserva: bloqueada se a devolução prevista + folga d
   assert.equal(b.podeLiberar, false);
   assert.match(b.message, /reservado por CONDUTORA ANA de .* \(RV-\d{4}-0001\)/);
   assert.match(b.message, /retire um veículo livre agora \(TST2B22 \(Sedan teste\), TST3C33/);
-  assert.match(b.message, /só a gestão \(Administrador, Gestor ou Diretoria\) pode liberar/);
+  assert.match(b.message, /só a gestão \(Administrador, Diretoria, Gestor, RH ou Financeiro\) pode liberar/);
   assert.equal(tabelas.REG_FROTA_MOVIMENTACAO.length, 0);
   // repetir não conta duas vezes
   retirar(ctx, 'v1', 40);

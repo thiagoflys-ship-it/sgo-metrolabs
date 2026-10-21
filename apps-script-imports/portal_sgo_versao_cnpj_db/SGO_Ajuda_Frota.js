@@ -73,7 +73,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "Deu erro ao confirmar, ou o sinal está fraco", oQueFazer: "Não saia da tela. O sistema tenta de novo sozinho. Se a tela pedir, toque de novo em \"Confirmar retirada\" ou \"Confirmar devolução\": as fotos já enviadas não são enviadas outra vez." },
         { situacao: "Aparece \"Já estava registrado\" ou \"já estava registrada\"", oQueFazer: "Está tudo certo. O primeiro toque já tinha gravado. Nada foi registrado em dobro. Não faça mais nada." },
         { situacao: "Aparece \"Registro conferido\" (\"A conexão caiu na resposta, mas o registro foi gravado\")", oQueFazer: "Está tudo certo. Não registre de novo." },
-        { situacao: "\"Seu login ainda não tem condutor vinculado\"", oQueFazer: "Peça à gestão (Administrador, Gestor ou Diretoria) para ligar o seu usuário a um condutor em Frota > Veículos e condutores. Depois abra a Frota de novo." },
+        { situacao: "\"Seu login ainda não tem condutor vinculado\"", oQueFazer: "Peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para ligar o seu usuário a um condutor em Frota > Veículos e condutores. Depois abra a Frota de novo." },
         { situacao: "KM \"Menor que o KM registrado\"", oQueFazer: "Confira o número no painel. O odômetro não volta. Se o número registrado estiver errado, peça à gestão o ajuste de KM." },
         { situacao: "KM \"Diferente do KM registrado\"", oQueFazer: "Não é erro. Tire a foto do painel e continue. A gestão confere depois." },
         { situacao: "\"Esta retirada está com\" outra pessoa", oQueFazer: "Só quem retirou, ou a gestão, pode devolver. Peça a essa pessoa para registrar. Se não der, procure a gestão." },
@@ -88,7 +88,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Reservar veículo, retirar em seu próprio nome e devolver a própria retirada. Ver a situação da frota, a agenda das reservas, os avisos e o histórico." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: retirar em nome de outro condutor e devolver no lugar dele (com justificativa), informar outra data e hora, cadastrar veículos e condutores, ajustar KM, conferir KM, ver a trilha de auditoria, registrar manutenção, parada, documentos, multas e abastecimentos, consultar despesas, gerar relatório, usar o rastreador e tratar os casos e ver os indicadores em \"Gestão e melhoria\"." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Tudo da equipe. Também: retirar em nome de outro condutor e devolver no lugar dele (com justificativa), informar outra data e hora, cadastrar veículos e condutores, ajustar KM, conferir KM, ver a trilha de auditoria, registrar manutenção, parada, documentos, multas e abastecimentos, consultar despesas, gerar relatório, usar o rastreador e tratar os casos e ver os indicadores em \"Gestão e melhoria\"." },
         { perfil: "ADMIN", pode: "Também o \"Levantamento de valores suspeitos\", na aba Abastecimentos e despesas." },
         { perfil: "CLIENTE", pode: "Não usa a Frota." }
       ],
@@ -133,7 +133,7 @@ function SGO_ajudaTelas_Frota_() {
         { p: "O condutor fica sabendo?", r: "Sim. Ele recebe um aviso. O registro fica marcado como registrado pela gestão e entra na trilha de auditoria." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Usar as opções da gestão." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Usar as opções da gestão." }
       ]
     },
 
@@ -167,7 +167,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "O consumo não aparece", oQueFazer: "É preciso ter pelo menos 2 abastecimentos do mesmo veículo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Registrar e excluir abastecimentos." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar e excluir abastecimentos." },
         { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\"). Quem recebeu um pedido de comprovante da gestão envia no quadro \"Comprovante pedido a você\", no topo desta aba." }
       ]
     },
@@ -196,7 +196,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "\"Nenhuma despesa lançada para este filtro\"", oQueFazer: "Aumente o período ou escolha \"Todas\" as categorias." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Consultar as despesas." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Consultar as despesas." },
         { perfil: "ADMIN", pode: "Fazer o levantamento de valores suspeitos." }
       ]
     },
@@ -237,7 +237,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "\"mais de uma retirada cobre esse horário\"", oQueFazer: "Confira o condutor sugerido e toque em \"Indicar\" com o certo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Registrar, indicar condutor, mudar a situação, recruzar e excluir." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar, indicar condutor, mudar a situação, recruzar e excluir." },
         { perfil: "TODOS", pode: "Ver a lista de multas." }
       ]
     },
@@ -266,7 +266,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Cinza \"sem validade\" ou \"substituído por um mais novo\"", significado: "Não gera aviso." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Anexar e excluir documentos." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Anexar e excluir documentos." },
         { perfil: "TODOS", pode: "Ver e abrir os documentos." }
       ]
     },
@@ -293,7 +293,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "Linha \"(KM rodado pelo rastreador)\"", oQueFazer: "Compare o KM rodado informado com o medido pelo rastreador e veja a foto do painel da devolução. Se o condutor digitou errado, corrija em \"Ajustar KM do veículo\" com a justificativa; depois toque em \"Conferido\"." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver e conferir." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver e conferir." }
       ]
     },
 
@@ -325,7 +325,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "\"é igual ao KM registrado. Nada a ajustar.\"", oQueFazer: "O número já está certo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ajustar o KM. O antes, o depois, quem fez e o motivo ficam na trilha de auditoria." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ajustar o KM. O antes, o depois, quem fez e o motivo ficam na trilha de auditoria." }
       ]
     },
 
@@ -341,7 +341,7 @@ function SGO_ajudaTelas_Frota_() {
         ] }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Consultar a trilha." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Consultar a trilha." }
       ]
     },
 
@@ -689,7 +689,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Reservar em seu próprio nome, ver a agenda, cancelar e trocar o veículo das próprias reservas." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também: reservar em nome de outra pessoa, lançar manutenção programada, cancelar ou trocar qualquer reserva (com justificativa; a pessoa é avisada), liberar uma retirada sobre reserva (na tela de retirada, com justificativa), ver indicadores, gerar o relatório A4 e mudar as regras." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Também: reservar em nome de outra pessoa, lançar manutenção programada, cancelar ou trocar qualquer reserva (com justificativa; a pessoa é avisada), liberar uma retirada sobre reserva (na tela de retirada, com justificativa), ver indicadores, gerar o relatório A4 e mudar as regras." },
         { perfil: "CLIENTE", pode: "Não usa a Frota." }
       ],
       perguntas: [
@@ -944,7 +944,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "\"CNH até ...\" em amarelo", significado: "A CNH vence em até 30 dias." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar, anexar CNH e ver telefone e CNH dos condutores." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar, reativar, anexar CNH e ver telefone e CNH dos condutores." },
         { perfil: "TODOS", pode: "Ver as listas (dos colegas, só o nome)." }
       ]
     },
@@ -970,7 +970,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Aviso \"Vencido\" ou \"A vencer\"", significado: "A manutenção venceu ou vence em até 500 km ou 30 dias." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Registrar manutenções e paradas." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar manutenções e paradas." }
       ]
     },
 
@@ -998,7 +998,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Ver o histórico." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o relatório." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Gerar o relatório." }
       ]
     }
   };

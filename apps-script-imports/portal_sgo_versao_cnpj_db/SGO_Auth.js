@@ -429,6 +429,39 @@ function SGO_ehPerfilRH_(perfil) {
   return String(perfil === null || perfil === undefined ? "" : perfil).trim().toUpperCase() === "RH";
 }
 
+/* =========================================================================
+   ROTINA DA EMPRESA (21/10/2026, pedido do dono)
+   "Toda parte do sistema de inserir e organizar, os gestores, RH e
+   financeiro conseguem fazer; só coisas importantes do sistema são do
+   Administrador." Cadastros do dia a dia (condutores, CNH, veículos,
+   documentos, multas, clientes, unidades, equipamentos, contatos,
+   fornecedores, usuários dos perfis operacionais), frota, reservas,
+   atividades da equipe, avisos, regras de compras, catálogo comercial,
+   horários e o Assistente do ponto: ADMIN, DIRETORIA, GESTOR, RH e
+   FINANCEIRO.
+   isAdminPerfilAuth_ continua sendo a "gestão de decisões" (Programa de
+   conduta, valores do Comercial, aprovações por faixa): não muda aqui.
+   Só o Administrador: Chaves e senhas, integrações e credenciais, acervo do
+   Auvo, modos especiais, Matriz de avisos, perfis ADMIN/DIRETORIA, excluir
+   usuário definitivamente.
+   ========================================================================= */
+var SGO_PERFIS_ROTINA = ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"];
+
+/** Perfil que faz a rotina da empresa (cadastrar, editar e organizar). */
+function SGO_ehGestaoRotina_(perfil) {
+  var p = String(perfil === null || perfil === undefined ? "" : perfil).trim().toUpperCase();
+  return SGO_PERFIS_ROTINA.indexOf(p) >= 0;
+}
+
+/** Mesma regra, a partir da sessão (falso se a sessão não vale). */
+function SGO_ehGestaoRotinaSessao_(sessionId) {
+  var v = validarSessao(sessionId);
+  return !!(v && v.valid && SGO_ehGestaoRotina_(v.data && v.data.perfil));
+}
+
+/** Texto de quem pode, para as mensagens das telas. */
+var SGO_TEXTO_GESTAO_ROTINA = "a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro)";
+
 /** Gestão (Administrador, Gestor, Diretoria) ou RH: consulta dados de pessoas de toda a equipe. */
 function SGO_podeConsultarPessoas_(perfil) {
   return isAdminPerfilAuth_(perfil) || SGO_ehPerfilRH_(perfil);

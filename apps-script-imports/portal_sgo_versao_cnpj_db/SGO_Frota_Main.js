@@ -129,15 +129,16 @@ function Frota_apiDispatch(req) {
 
 /**
  * Trava de perfil pra tudo que é cadastro/alteração/criação de dado
- * mestre (veículo, condutor, manutenção, despesa, parada) — só
- * ADMIN/DIRETORIA/GESTOR (mesma lista de `isAdminPerfilAuth_` em
- * SGO_Auth.js). Retirada/devolução (uso do dia a dia) fica de fora
+ * mestre (veículo, condutor, manutenção, despesa, parada) — só a
+ * gestão da Frota (Frota_ehGestao_: ADMIN, DIRETORIA, GESTOR, RH e
+ * FINANCEIRO desde 21/10/2026). Retirada/devolução (uso do dia a dia) fica de fora
  * dessa trava de propósito — é o "básico" que qualquer perfil de staff
  * (não-CLIENTE) precisa conseguir fazer, inclusive no celular.
  */
 function Frota_exigirGestor_(sessionId) {
-  if (!isAdminSession(sessionId)) {
-    throw new Error('Acesso restrito a Gestor/Administrador — esta ação não está disponível para o seu perfil.');
+  if (!Frota_ehGestao_(sessionId)) {
+    throw new Error('Esta ação da Frota é da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) e não está disponível para o seu perfil. ' +
+      'Para retirar e devolver veículo, use a aba Situação e retiradas; para mudar um cadastro, peça a quem é da gestão.');
   }
 }
 
@@ -516,11 +517,18 @@ var FROTA_MEDIA_MAXIMA_KMH = 120;
 var FROTA_KM_MAXIMO_RETIRADA = 1500;
 var FROTA_HORAS_RETIRADA_ESQUECIDA = 12;
 var FROTA_DIAS_AVISO_REGISTRO_GESTAO = 7;
-var FROTA_TEXTO_GESTAO = 'a gestão (Administrador, Gestor ou Diretoria)';
+var FROTA_TEXTO_GESTAO = 'a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro)';
 
-/** Mesma regra de Frota_exigirGestor_ (ADMIN, GESTOR, DIRETORIA). */
+/**
+ * Gestão da Frota. 21/10/2026 (pedido do dono): RH e Financeiro fazem a rotina
+ * da Frota com as mesmas regras do Gestor (condutores, CNH, veículos,
+ * documentos, multas, manutenção, reservas e rastreamento): SGO_ehGestaoRotina_
+ * em SGO_Auth.js. Quem já era gestão (isAdminSession) continua sendo.
+ */
 function Frota_ehGestao_(sessionId) {
-  return isAdminSession(sessionId);
+  if (isAdminSession(sessionId)) return true;
+  if (typeof SGO_ehGestaoRotina_ !== 'function') return false;
+  try { var s = exigirSessao(sessionId); return SGO_ehGestaoRotina_(s && s.perfil); } catch (e) { return false; }
 }
 
 /** KM em pt-BR ("12.650"). */
@@ -697,7 +705,7 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
   if (!atual) throw new Error('Veículo não encontrado.');
 
   // Placa/KM adicionados 2026-09-08 — ferramenta de correção manual
-  // (ex.: KM divergente do real), restrita a Gestor/Admin/Diretoria
+  // (ex.: KM divergente do real), restrita à gestão da Frota (Frota_ehGestao_)
   // (Frota_exigirGestor_ acima) e escondida da tela pra quem não é.
   var placa = payload.placa !== undefined && payload.placa !== '' ? SGO_UTILS.safeUpper(payload.placa) : SGO_UTILS.safeUpper(atual.PLACA);
   if (!placa) throw new Error('Informe a placa do veículo.');
@@ -1160,7 +1168,7 @@ function Frota_apiIniciarViagem(sessionId, payload) {
     var dif = kmSaida - kmAtual;
     if (dif < 0 && !gestao) {
       throw new Error('O KM de saída (' + Frota_kmTexto_(kmSaida) + ') é menor que o KM registrado do veículo ' + v.PLACA + ' (' + Frota_kmTexto_(kmAtual) +
-        '). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Gestor ou Diretoria) o ajuste de KM do veículo (Frota > Veículos e condutores > Ajustar KM).');
+        '). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) o ajuste de KM do veículo (Frota > Veículos e condutores > Ajustar KM).');
     }
     if (dif !== 0 && !fotosPainel.length) {
       throw new Error('O KM de saída (' + Frota_kmTexto_(kmSaida) + ') é diferente do KM registrado do veículo ' + v.PLACA + ' (' + Frota_kmTexto_(kmAtual) +
@@ -1297,7 +1305,7 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   var saidaReg = Frota_parseDataHora_(mov.DATA_SAIDA, mov.HORA_SAIDA);
   if (saidaReg && quandoChegada.quando.getTime() < saidaReg.getTime()) {
     throw new Error('A data/hora de chegada (' + quandoChegada.data + ' ' + quandoChegada.hora + ') é anterior à saída registrada (' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) + '). ' +
-      (quandoChegada.horaDoServidor ? 'A saída foi registrada com data/hora errada: peça à gestão (Administrador, Gestor ou Diretoria) para conferir a retirada.' : 'Confira os campos de chegada.'));
+      (quandoChegada.horaDoServidor ? 'A saída foi registrada com data/hora errada: peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para conferir a retirada.' : 'Confira os campos de chegada.'));
   }
   var kmSaidaMov = Frota_num_(mov.KM_SAIDA, 0);
   if (kmChegada < kmSaidaMov) {
@@ -1391,7 +1399,7 @@ function Frota_apiAjustarKm(sessionId, payload) {
   Frota_bootstrap_();
   var sessao = Frota_exigirEquipe_(sessionId);
   if (!Frota_ehGestao_(sessionId)) {
-    throw new Error('O ajuste de KM do veículo é feito só pela gestão (Administrador, Gestor ou Diretoria). Se o KM registrado está errado, avise a gestão com a foto do painel.');
+    throw new Error('O ajuste de KM do veículo é feito só pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Se o KM registrado está errado, avise a gestão com a foto do painel.');
   }
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.veiculoId);
@@ -1472,7 +1480,7 @@ function Frota_apiListarKmAConferir(sessionId) {
 function Frota_apiConferirKm(sessionId, payload) {
   Frota_bootstrap_();
   var sessao = Frota_exigirEquipe_(sessionId);
-  if (!Frota_ehGestao_(sessionId)) throw new Error('A conferência de KM é feita só pela gestão (Administrador, Gestor ou Diretoria).');
+  if (!Frota_ehGestao_(sessionId)) throw new Error('A conferência de KM é feita só pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).');
   payload = payload || {};
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
   // 17/10/2026: também as divergências com o hodômetro do rastreador (RASTREADOR_SAIDA / RASTREADOR_CHEGADA).

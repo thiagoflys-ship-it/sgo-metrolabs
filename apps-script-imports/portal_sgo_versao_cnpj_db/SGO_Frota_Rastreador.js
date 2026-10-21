@@ -1217,12 +1217,12 @@ function Rastreador_pendencias_(add, veiculos, condutores) {
 }
 
 // ------------------------------------------------------------
-// API DA GESTÃO (Frota_apiDispatch). Só ADMIN, GESTOR, DIRETORIA (localização é só da gestão).
+// API DA GESTÃO (Frota_apiDispatch). Só a gestão da Frota (Frota_ehGestao_: ADMIN, DIRETORIA, GESTOR, RH, FINANCEIRO).
 // ------------------------------------------------------------
 function Rastreador_exigirGestao_(sessionId) {
   var sessao = Frota_exigirEquipe_(sessionId);
   if (!Frota_ehGestao_(sessionId)) {
-    throw new Error('O rastreador (localização, vínculo e alertas) é só da gestão (Administrador, Gestor ou Diretoria). Para retirar e devolver o veículo, use a tela normal da Frota; em caso de dúvida, procure a gestão.');
+    throw new Error('O rastreador (localização, vínculo e alertas) é só da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Para retirar e devolver o veículo, use a tela normal da Frota; em caso de dúvida, procure a gestão.');
   }
   Frota_bootstrap_();
   return sessao;

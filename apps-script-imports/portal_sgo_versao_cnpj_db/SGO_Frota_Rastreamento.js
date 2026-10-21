@@ -356,7 +356,7 @@ function FrotaR_reduzir_(ps, max) {
 function FrotaR_exigirGestao_(sessionId) {
   var sessao = Frota_exigirEquipe_(sessionId);
   if (!Frota_ehGestao_(sessionId)) {
-    throw new Error('Localização, mapa e rotas dos veículos são só da gestão (Administrador, Gestor ou Diretoria): é o que a política de privacidade da frota garante a quem dirige. Para retirar e devolver o veículo, use a aba Situação e retiradas; em caso de dúvida, procure a gestão.');
+    throw new Error('Localização, mapa e rotas dos veículos são só da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro): é o que a política de privacidade da frota garante a quem dirige. Para retirar e devolver o veículo, use a aba Situação e retiradas; em caso de dúvida, procure a gestão.');
   }
   Frota_bootstrap_();
   return sessao;
@@ -1036,8 +1036,8 @@ function FrotaR_ponte_(acao, dados) {
   var sessao = { userId: SGO_UTILS.safe(u.ID), usuario: SGO_UTILS.safe(u.USUARIO), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: perfil };
   if (acao === 'frota.pedidos') return { ok: true, itens: FrotaR_listarPedidos_(sessao.userId).filter(function (p) { return p.situacao === 'PENDENTE'; }) };
   if (acao !== 'frota.painel') return { ok: false, erro: 'Ação da frota desconhecida.' };
-  if (['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(perfil) < 0) {
-    return { ok: false, erro: 'A localização dos veículos é só da gestão (no SGO+, perfil Administrador, Gestor ou Diretoria). O seu usuário do SGO+ é ' + perfil + '.' };
+  if (['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(perfil) < 0 && !(typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil))) {
+    return { ok: false, erro: 'A localização dos veículos é só da gestão (no SGO+, perfil Administrador, Diretoria, Gestor, RH ou Financeiro). O seu usuário do SGO+ é ' + perfil + '.' };
   }
   try { Frota_bootstrap_(); } catch (e0) {}
   var est = FrotaR_estadoRastreador_();

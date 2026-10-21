@@ -25,7 +25,7 @@ No **computador**, a mesma tela de retirar e devolver fica na aba "Situação e 
 | Perfil | O que pode fazer |
 |---|---|
 | Toda a equipe | Retirar em seu próprio nome. Devolver a própria retirada. Ver a situação da frota, os avisos, as listas e o histórico. |
-| Gestão (Administrador, Gestor e Diretoria) | Tudo da equipe. Também: retirar em nome de outra pessoa e devolver no lugar dela, com justificativa; informar outra data e hora; cadastrar veículos e condutores; ajustar e conferir KM; ver a trilha de auditoria; registrar manutenção, parada, documentos, multas e abastecimentos; consultar despesas; gerar relatório; usar o rastreador. |
+| Gestão (Administrador, Diretoria, Gestor, RH e Financeiro) | Tudo da equipe. Também: retirar em nome de outra pessoa e devolver no lugar dela, com justificativa; informar outra data e hora; cadastrar veículos e condutores; ajustar e conferir KM; ver a trilha de auditoria; registrar manutenção, parada, documentos, multas e abastecimentos; consultar despesas; gerar relatório; usar o rastreador. |
 | Só o Administrador | "Levantamento de valores suspeitos", na aba Despesas. |
 | Cliente | Não usa a Frota. |
 
@@ -332,7 +332,7 @@ O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, 
 - Depois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.
 - Cada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).
 - Quem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.
-- Só a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
+- Só a gestão (Administrador, Diretoria, Gestor, RH e Financeiro) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
 - Os avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.
 - Telefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas.
 
@@ -376,7 +376,7 @@ Multa e avaria com condutor identificado também viram sugestão no Programa de 
 
 ## 19. Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto
 
-Aba "Rastreamento", só da gestão (Administrador, Gestor e Diretoria). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.
+Aba "Rastreamento", só da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.
 
 > **Rastreador não configurado?** A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e "Rastreador ligado no SGO+"). Depois volte e toque em "Atualizar".
 
@@ -454,7 +454,7 @@ A reserva garante o veículo para quem já tem compromisso marcado (viagem, aten
 4. Escreva o destino e o motivo. Passageiros e "Ligar a" (O.S. do Auvo, atividade ou cliente) são opcionais.
 5. Toque em "Reservar". Aparece o código da reserva (RV-AAAA-NNNN).
 
-Quem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Gestor ou Diretoria) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa.
+Quem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa.
 
 ### Regras
 

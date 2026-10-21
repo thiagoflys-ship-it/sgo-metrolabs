@@ -75,7 +75,7 @@ var FROTA_RES_AVISO_EMAIL_VALIDADE_DIAS = 3;
 var FROTA_RES_PROBLEMA_JANELA_DIAS = 7;    // pendência de reserva com problema: reservas dos próximos 7 dias
 var FROTA_RES_RODADA_SEG = 240;
 var FROTA_RES_SISTEMA = { userId: '', usuario: 'sistema', nome: 'Rotina das reservas da Frota', perfil: 'SISTEMA', gestao: true };
-var FROTA_RES_GESTAO_TXT = 'a gestão (Administrador, Gestor ou Diretoria)';
+var FROTA_RES_GESTAO_TXT = 'a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro)';
 
 // ------------------------------------------------------------
 // INFRA
@@ -152,11 +152,15 @@ function FrotaRes_saidaMs_(m) { var q = Frota_parseDataHora_(m.DATA_SAIDA, m.HOR
 function FrotaRes_chegadaMs_(m) { var q = Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA); return q ? q.getTime() : null; }
 
 function FrotaRes_ehGestaoPerfil_(perfil) { return ['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(FrotaRes_up_(perfil)) >= 0; }
+// 21/10/2026 (pedido do dono): quem faz a rotina da Frota (reservar em nome de outro, manutenção programada, regras,
+// indicadores e relatório) inclui RH e Financeiro, como o Gestor (SGO_ehGestaoRotina_ em SGO_Auth.js). Quem recebe os
+// avisos à gestão (FrotaRes_gestores_) não muda.
+function FrotaRes_ehGestaoRotina_(perfil) { return FrotaRes_ehGestaoPerfil_(perfil) || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil)); }
 
 /** Sessão da equipe (cliente não usa a Frota) com a marca de gestão. */
 function FrotaRes_sessao_(sessionId) {
   var s = Frota_exigirEquipe_(sessionId);
-  return { userId: FrotaRes_s_(s.userId), usuario: FrotaRes_s_(s.usuario), nome: FrotaRes_s_(s.nome) || FrotaRes_s_(s.usuario), perfil: FrotaRes_up_(s.perfil), gestao: FrotaRes_ehGestaoPerfil_(s.perfil) };
+  return { userId: FrotaRes_s_(s.userId), usuario: FrotaRes_s_(s.usuario), nome: FrotaRes_s_(s.nome) || FrotaRes_s_(s.usuario), perfil: FrotaRes_up_(s.perfil), gestao: FrotaRes_ehGestaoRotina_(s.perfil) };
 }
 
 function FrotaRes_todas_() { return Frota_lerSeExistir_(FROTA_RES_ABA); }
@@ -362,7 +366,7 @@ function FrotaRes_condutorDaReserva_(sessao, condutorId) {
   var id = sessao.gestao ? (FrotaRes_s_(condutorId) || (vinculado && vinculado.ID)) : (vinculado && vinculado.ID);
   if (!id) {
     throw new Error(sessao.gestao ? 'Escolha o condutor da reserva no campo "Condutor" (seu login não tem condutor vinculado) e toque em Reservar de novo.'
-      : 'Seu login ainda não tem condutor vinculado, então a reserva não pode ser feita em seu nome. Peça à gestão (Administrador, Gestor ou Diretoria) para vincular o seu usuário em Frota > Veículos e condutores > Condutores e abra a Frota de novo.');
+      : 'Seu login ainda não tem condutor vinculado, então a reserva não pode ser feita em seu nome. Peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para vincular o seu usuário em Frota > Veículos e condutores > Condutores e abra a Frota de novo.');
   }
   var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, id);
   if (!c || FrotaRes_up_(c.STATUS) === 'INATIVO') throw new Error('O condutor escolhido não foi encontrado ou está inativo. Atualize a tela e escolha de novo; se continuar, fale com a gestão.');
@@ -381,7 +385,7 @@ function FrotaRes_criar_(sessao, p, o) {
   FrotaRes_garantirAbas_();
   var cfg = FrotaRes_cfg_(), agora = o.agora || FrotaRes_agora_();
   var tipo = FrotaRes_up_(p.tipo) === 'MANUTENCAO' ? 'MANUTENCAO' : 'USO';
-  if (tipo === 'MANUTENCAO' && !sessao.gestao) throw new Error('A manutenção programada é lançada só pela gestão (Administrador, Gestor ou Diretoria). Para usar o veículo, faça uma reserva comum.');
+  if (tipo === 'MANUTENCAO' && !sessao.gestao) throw new Error('A manutenção programada é lançada só pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Para usar o veículo, faça uma reserva comum.');
   var ini = FrotaRes_ms_(p.dataInicio, p.horaInicio), fim = FrotaRes_ms_(p.dataFim, p.horaFim);
   if (ini === null) throw new Error('Informe a data e a hora de início (dd/mm/aaaa e hh:mm) e toque em Reservar de novo.');
   if (fim === null) throw new Error('Informe a data e a hora de fim (devolução prevista, dd/mm/aaaa e hh:mm) e toque em Reservar de novo.');
@@ -1398,12 +1402,12 @@ function Frota_apiReservaCancelar(sessionId, payload) { Frota_bootstrap_(); retu
 function Frota_apiReservaTrocarVeiculo(sessionId, payload) { Frota_bootstrap_(); return FrotaRes_trocarVeiculo_(FrotaRes_sessao_(sessionId), payload || {}); }
 function Frota_apiReservaIndicadores(sessionId, payload) {
   var s = FrotaRes_sessao_(sessionId);
-  if (!s.gestao) throw new Error('Os indicadores das reservas são da gestão (Administrador, Gestor ou Diretoria). As suas reservas estão em Minhas reservas.');
+  if (!s.gestao) throw new Error('Os indicadores das reservas são da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). As suas reservas estão em Minhas reservas.');
   return FrotaRes_indicadores_(payload || {});
 }
 function Frota_apiReservaRelatorio(sessionId, payload) {
   var s = FrotaRes_sessao_(sessionId);
-  if (!s.gestao) throw new Error('O relatório de uso e reservas é gerado pela gestão (Administrador, Gestor ou Diretoria).');
+  if (!s.gestao) throw new Error('O relatório de uso e reservas é gerado pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).');
   return FrotaRes_relatorio_(s, payload || {});
 }
 /** Regras configuráveis (gestão): folga, tolerância, antecipação, hora do lembrete, antecedência e duração máximas. */
@@ -1411,7 +1415,7 @@ function Frota_apiReservaConfig(sessionId, payload) {
   var s = FrotaRes_sessao_(sessionId);
   payload = payload || {};
   if (!payload.salvar) return { ok: true, cfg: FrotaRes_cfg_(), padrao: FROTA_RES_CFG_PADRAO, gestor: s.gestao };
-  if (!s.gestao) throw new Error('As regras das reservas são alteradas só pela gestão (Administrador, Gestor ou Diretoria).');
+  if (!s.gestao) throw new Error('As regras das reservas são alteradas só pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).');
   var c = payload.cfg || {}, antes = FrotaRes_cfg_();
   var novo = { folgaMin: Number(c.folgaMin), toleranciaMin: Number(c.toleranciaMin), antecipacaoMin: Number(c.antecipacaoMin), horaVespera: String(c.horaVespera || ''), antecedenciaMaxDias: Number(c.antecedenciaMaxDias), duracaoMaxDias: Number(c.duracaoMaxDias) };
   PropertiesService.getScriptProperties().setProperty(FROTA_RES_PROP_CFG, JSON.stringify(novo));
@@ -1435,7 +1439,7 @@ function FrotaRes_ponte_(acao, dados) {
   if (!u || FrotaRes_up_(u.STATUS || 'ATIVO') !== 'ATIVO' || FrotaRes_up_(u.PERFIL) === 'CLIENTE') {
     return { ok: false, erro: 'A sua conta do COMMAND não está ligada a um usuário ativo da equipe no SGO+. Peça ao administrador para ligar a conta em Usuários e papéis (Migrar do SGO+).' };
   }
-  var sessao = { userId: FrotaRes_s_(u.ID), usuario: FrotaRes_s_(u.USUARIO), nome: FrotaRes_s_(u.NOME) || FrotaRes_s_(u.USUARIO), perfil: FrotaRes_up_(u.PERFIL), gestao: FrotaRes_ehGestaoPerfil_(u.PERFIL) };
+  var sessao = { userId: FrotaRes_s_(u.ID), usuario: FrotaRes_s_(u.USUARIO), nome: FrotaRes_s_(u.NOME) || FrotaRes_s_(u.USUARIO), perfil: FrotaRes_up_(u.PERFIL), gestao: FrotaRes_ehGestaoRotina_(u.PERFIL) };
   var p = dados.payload || {};
   try {
     try { Frota_bootstrap_(); } catch (e0) {}

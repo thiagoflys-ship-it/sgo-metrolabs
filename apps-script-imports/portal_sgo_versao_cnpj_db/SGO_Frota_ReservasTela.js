@@ -334,7 +334,7 @@ function FrotaRes_telaNavegador_() {
     var vinc = d.vinculos || { tipos: {}, atividades: [], clientes: [] };
     var semCondutor = !d.condutor && !g;
     wrap.innerHTML = '<div class="frs-form" id="frs_form"><h3>Reservar um veículo</h3>' +
-      (semCondutor ? '<div class="alert-box error">Seu login ainda não tem condutor vinculado, então a reserva não pode ser feita em seu nome. Peça à gestão (Administrador, Gestor ou Diretoria) para vincular o seu usuário em Frota &gt; Veículos e condutores &gt; Condutores.</div>' : '') +
+      (semCondutor ? '<div class="alert-box error">Seu login ainda não tem condutor vinculado, então a reserva não pode ser feita em seu nome. Peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para vincular o seu usuário em Frota &gt; Veículos e condutores &gt; Condutores.</div>' : '') +
       (d.condutor && d.condutor.cnhProblema ? '<div class="alert-box error">Atenção: ' + esc(d.condutor.cnhProblema) + '. Sem CNH válida no período a reserva é recusada; peça à gestão para atualizar a validade.</div>' : '') +
       (g ? '<label style="display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:6px"><input type="checkbox" id="frs_fManut" style="width:auto;min-height:0"> Manutenção programada (bloqueia o veículo no período; sem condutor)</label>' : '') +
       '<div class="frs-grade">' +

@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "eb6c03d9683e",
+ "versao": "5d721c7de1c6",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -1413,7 +1413,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Celular e computador; quem pode o quê",
-     "texto": "No celular a tela é a mesma para todos: avisos, botão de devolver, veículos para retirar e veículos em uso. A gestão tem também o quadro \"Opções da gestão\", com \"Registrar abastecimento\", \"Ajustar KM do veículo\" e \"Partida do veículo (rastreador)\".\n\nNo computador, a mesma tela de retirar e devolver fica na aba \"Situação e retiradas\", quadro \"Retirar e devolver\".\nPerfil | O que pode fazerToda a equipe | Retirar em seu próprio nome. Devolver a própria retirada. Ver a situação da frota, os avisos, as listas e o histórico.\nGestão (Administrador, Gestor e Diretoria) | Tudo da equipe. Também: retirar em nome de outra pessoa e devolver no lugar dela, com justificativa; informar outra data e hora; cadastrar veículos e condutores; ajustar e conferir KM; ver a trilha de auditoria; registrar manutenção, parada, documentos, multas e abastecimentos; consultar despesas; gerar relatório; usar o rastreador.\nSó o Administrador | \"Levantamento de valores suspeitos\", na aba Despesas.\nCliente | Não usa a Frota."
+     "texto": "No celular a tela é a mesma para todos: avisos, botão de devolver, veículos para retirar e veículos em uso. A gestão tem também o quadro \"Opções da gestão\", com \"Registrar abastecimento\", \"Ajustar KM do veículo\" e \"Partida do veículo (rastreador)\".\n\nNo computador, a mesma tela de retirar e devolver fica na aba \"Situação e retiradas\", quadro \"Retirar e devolver\".\nPerfil | O que pode fazerToda a equipe | Retirar em seu próprio nome. Devolver a própria retirada. Ver a situação da frota, os avisos, as listas e o histórico.\nGestão (Administrador, Diretoria, Gestor, RH e Financeiro) | Tudo da equipe. Também: retirar em nome de outra pessoa e devolver no lugar dela, com justificativa; informar outra data e hora; cadastrar veículos e condutores; ajustar e conferir KM; ver a trilha de auditoria; registrar manutenção, parada, documentos, multas e abastecimentos; consultar despesas; gerar relatório; usar o rastreador.\nSó o Administrador | \"Levantamento de valores suspeitos\", na aba Despesas.\nCliente | Não usa a Frota."
     },
     {
      "titulo": "Veículos e condutores",
@@ -1525,7 +1525,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > Localização e LGPD",
-     "texto": "A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.\nDesde 20/10/2026 (decisão da diretoria) o SGO+ guarda a rota de cada veículo: cada posição lida do rastreador vira um ponto da rota, numa tabela própria do servidor. Ficam também o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.\nDepois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.\nCada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).\nQuem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.\nSó a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.\nOs avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.\nTelefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas."
+     "texto": "A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.\nDesde 20/10/2026 (decisão da diretoria) o SGO+ guarda a rota de cada veículo: cada posição lida do rastreador vira um ponto da rota, numa tabela própria do servidor. Ficam também o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.\nDepois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.\nCada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).\nQuem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.\nSó a gestão (Administrador, Diretoria, Gestor, RH e Financeiro) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.\nOs avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.\nTelefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas."
     },
     {
      "titulo": "Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores",
@@ -1545,7 +1545,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto",
-     "texto": "Aba \"Rastreamento\", só da gestão (Administrador, Gestor e Diretoria). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.\nRastreador não configurado? A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e \"Rastreador ligado no SGO+\"). Depois volte e toque em \"Atualizar\"."
+     "texto": "Aba \"Rastreamento\", só da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.\nRastreador não configurado? A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e \"Rastreador ligado no SGO+\"). Depois volte e toque em \"Atualizar\"."
     },
     {
      "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Mapa ao vivo",
@@ -1585,7 +1585,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Reservas de veículo > Reservar",
-     "texto": "1. Abra a Frota, aba \"Reservas\", e toque em \"Reservar um veículo\" (ou toque num espaço vazio da agenda).\n2. Preencha o início e a devolução prevista (data e hora).\n3. O campo \"Veículo\" já sugere o primeiro veículo livre no período; os ocupados aparecem com o motivo.\n4. Escreva o destino e o motivo. Passageiros e \"Ligar a\" (O.S. do Auvo, atividade ou cliente) são opcionais.\n5. Toque em \"Reservar\". Aparece o código da reserva (RV-AAAA-NNNN).\n\nQuem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Gestor ou Diretoria) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa."
+     "texto": "1. Abra a Frota, aba \"Reservas\", e toque em \"Reservar um veículo\" (ou toque num espaço vazio da agenda).\n2. Preencha o início e a devolução prevista (data e hora).\n3. O campo \"Veículo\" já sugere o primeiro veículo livre no período; os ocupados aparecem com o motivo.\n4. Escreva o destino e o motivo. Passageiros e \"Ligar a\" (O.S. do Auvo, atividade ou cliente) são opcionais.\n5. Toque em \"Reservar\". Aparece o código da reserva (RV-AAAA-NNNN).\n\nQuem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa."
     },
     {
      "titulo": "Reservas de veículo > Regras (parte 1)",

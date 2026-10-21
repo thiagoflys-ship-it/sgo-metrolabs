@@ -2210,7 +2210,7 @@
   }
 
   // ---------- FROTA (mobile enxuto — retirar/devolver veículo) ----------
-  // Login que não é ADMIN/DIRETORIA/GESTOR só enxerga isto no celular:
+  // Login que não é da gestão da Frota (ADMIN/DIRETORIA/GESTOR/RH/FINANCEIRO) só enxerga isto no celular:
   // nada de cadastro/alteração de veículo, condutor, manutenção, despesa
   // ou parada — só o básico do dia a dia, igual pra toda a equipe (ver o
   // bloco "frota" em abrir(mod)). Reaproveita o MESMO backend do desktop
@@ -2331,9 +2331,10 @@
 
   // ---------- Travas da Frota (17/10/2026, decisão do dono) ----------
   // O servidor decide; estas funções só avisam antes de enviar as fotos, com a mesma regra.
+  // 21/10/2026 (pedido do dono): RH e Financeiro fazem a rotina da Frota como o Gestor (Frota_ehGestao_ no servidor).
   function frotaSouGestao_() {
     const perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
-    return perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA";
+    return ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"].indexOf(perfil) !== -1;
   }
   function frotaMeuUsuarioId_() { return USER_CONTEXT ? String(USER_CONTEXT.id || USER_CONTEXT.userId || "") : ""; }
   // Pode registrar a devolução: o condutor da retirada ou a gestão.
