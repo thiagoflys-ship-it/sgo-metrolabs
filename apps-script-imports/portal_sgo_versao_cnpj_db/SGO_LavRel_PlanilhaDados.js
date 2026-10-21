@@ -159,7 +159,7 @@ function LavRel_pdGraficoMapa_(D, largura) {
   var tTopo = (D.tMax !== null && isFinite(D.tMax)) ? D.tMax : x1;
   var a = Math.max(mL, X(D.tMin)), b = Math.min(mL + pw, X(tTopo));
   if (b > a) s.push('<rect x="' + f1(a) + '" y="' + (mT - 6) + '" width="' + f1(b - a) + '" height="' + (lista.length * linha + 6) + '" fill="#e3f2e8"/>');
-  s.push('<text x="' + f1(Math.max(mL + 2, X(D.tMin) + 3)) + '" y="' + (mT - 11) + '" fill="#1d6b3f" font-size="9">' + esc(D.termo ? 'Temperatura programada ' + SGO_DocA4_val_(D.tProg, 1, '°C') + (D.tMax !== null && isFinite(D.tMax) ? ' a ' + SGO_DocA4_val_(D.tMax, 1, '°C') : ' ou mais') : 'Tolerância ' + SGO_DocA4_val_(D.tMin, 1, '°C') + ' a ' + SGO_DocA4_val_(D.tMax, 1, '°C')) + '</text>');
+  s.push('<text x="' + f1(Math.max(mL + 2, X(D.tMin) + 3)) + '" y="' + (mT - 11) + '" fill="#1d6b3f" font-size="9">' + esc(D.termo ? (D.tMax !== null && isFinite(D.tMax) ? 'Faixa de referência ' : 'Temperatura programada ') + SGO_DocA4_val_(D.tProg, 1, '°C') + (D.tMax !== null && isFinite(D.tMax) ? ' a ' + SGO_DocA4_val_(D.tMax, 1, '°C') : ' ou mais') : 'Tolerância ' + SGO_DocA4_val_(D.tMin, 1, '°C') + ' a ' + SGO_DocA4_val_(D.tMax, 1, '°C')) + '</text>');
   for (var v = x0; v <= x1 + passo / 2; v += passo) {
     var xx = X(v);
     s.push('<line x1="' + f1(xx) + '" y1="' + (mT - 6) + '" x2="' + f1(xx) + '" y2="' + (mT + lista.length * linha) + '" stroke="#e1e6ec" stroke-width="0.7"/>');
