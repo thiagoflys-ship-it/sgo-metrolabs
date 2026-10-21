@@ -254,6 +254,7 @@
           if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
           if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
           if (typeof Email_iniciar_ === "function") Email_iniciar_();
+          if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
           if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
         } else {
           limparSessaoFront_();
@@ -327,6 +328,7 @@
         if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
         if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
         if (typeof Email_iniciar_ === "function") Email_iniciar_();
+        if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
         if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
       })
       .withFailureHandler(function (err) {
@@ -684,6 +686,7 @@
     if (typeof AvisosTela_parar_ === "function") AvisosTela_parar_();
     if (typeof ChavesTela_parar_ === "function") ChavesTela_parar_();
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
+    if (typeof Comercial_parar_ === "function") Comercial_parar_();
     if (typeof Email_parar_ === "function") Email_parar_();
 
     const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
@@ -892,6 +895,12 @@
     if (mod === "gestao_desempenho" && typeof Gestao_renderDesempenho_ === "function") {
       Gestao_renderDesempenho_();
       atualizarBadgeModulo_("gestao_desempenho");
+      return;
+    }
+
+    // COMERCIAL NATIVO (2026-10-21) — ver JS_Comercial.html / SGO_Comercial_*.js. O servidor confere o perfil em toda chamada.
+    if ((mod === "comercial" || mod.indexOf("comercial_") === 0) && typeof Comercial_render_ === "function") {
+      Comercial_render_(mod);
       return;
     }
 
@@ -4191,6 +4200,12 @@
       // 20/10/2026: Caixa de decisões para a gestão (o que depende dela, de todos os módulos).
       if (typeof Gestao_ehGestao_ === "function" && Gestao_ehGestao_()) itens.push({ icone: '<i class="fas fa-inbox" aria-hidden="true"></i>', legenda: "Caixa de decisões", mod: "gestao_decisoes" });
       itens.push({ icone: '<i class="fas fa-bullhorn" aria-hidden="true"></i>', legenda: "Avisos", mod: "avisos" });
+      // 21/10/2026: Comercial (só quem tem o grupo no menu: Comercial, gestão comercial, Diretoria, Administrador; Financeiro vê Pedidos aprovados).
+      var grupoCom = document.getElementById("menu-secao-comercial");
+      if (grupoCom && grupoCom.style.display !== "none") {
+        var soPedidos = !!document.querySelector('#menu .menu-btn[data-mod="comercial"]') && document.querySelector('#menu .menu-btn[data-mod="comercial"]').style.display === "none";
+        itens.push(soPedidos ? { icone: '<i class="fas fa-clipboard-check" aria-hidden="true"></i>', legenda: "Pedidos aprovados", mod: "comercial_pedidos" } : { icone: '<i class="fas fa-briefcase" aria-hidden="true"></i>', legenda: "Comercial", mod: "comercial" });
+      }
       // 21/10/2026: e-mail integrado (caixa do próprio colaborador)
       itens.push({ icone: '<i class="fas fa-envelope" aria-hidden="true"></i>', legenda: "E-mail", mod: "email" });
       itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de calibração", mod: "certificado_calibracao" });

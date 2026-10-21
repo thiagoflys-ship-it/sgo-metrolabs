@@ -31,7 +31,9 @@ var SGO_AJUDA_NOMES = {
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
   chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
-  assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp'
+  assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp',
+  comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',
+  comercial_catalogo: 'Produtos e serviços', comercial_painel: 'Painel comercial', comercial_metodologia: 'Metodologia comercial'
 };
 
 /**
@@ -57,6 +59,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Inventario_ === 'function') fontes.push(['Inventario', SGO_ajudaTelas_Inventario_]);
   // 20/10/2026: Caixa de decisões e Desempenho da gestão (SGO_Ajuda_Gestao.js).
   if (typeof SGO_ajudaTelas_Gestao_ === 'function') fontes.push(['Gestao', SGO_ajudaTelas_Gestao_]);
+  // 21/10/2026: Comercial nativo (SGO_Ajuda_Comercial.js).
+  if (typeof SGO_ajudaTelas_Comercial_ === 'function') fontes.push(['Comercial', SGO_ajudaTelas_Comercial_]);
   // 21/10/2026: E-mail integrado (SGO_Ajuda_Email.js).
   if (typeof SGO_ajudaTelas_Email_ === 'function') fontes.push(['Email', SGO_ajudaTelas_Email_]);
   // 20/10/2026: assistente "Tire sua dúvida" e o painel das perguntas (SGO_Ajuda_Assistente.js).

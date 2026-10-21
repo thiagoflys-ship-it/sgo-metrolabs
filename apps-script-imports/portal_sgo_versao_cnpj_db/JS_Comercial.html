@@ -1,0 +1,882 @@
+<style>
+  /* COMERCIAL NATIVO (21/10/2026) — servidor: SGO_Comercial_*.js (uma porta: Comercial_api). Celular sem rolagem lateral. */
+  .cm-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .cm-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 40px; }
+  .cm-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .cm-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); font-size: 13px; line-height: 1.5; }
+  .cm-faixa.aviso { border-left-color: var(--warning); } .cm-faixa.erro { border-left-color: var(--danger); background: var(--danger-bg); } .cm-faixa.ok { border-left-color: var(--success); }
+  .cm-gestora { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); margin-bottom: 12px; }
+  .cm-gestora .ic { flex: 0 0 38px; height: 38px; border-radius: 50%; background: var(--info-bg, #e8f0fb); color: var(--info, #1f5fa8); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .cm-gestora .t { font-weight: 800; font-size: 14px; margin: 0 0 2px; } .cm-gestora .s { font-size: 12px; color: var(--muted); margin: 0; }
+  .cm-gestora p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; }
+  .cm-lista { display: flex; flex-direction: column; gap: 10px; }
+  .cm-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; padding: 12px 14px; overflow-wrap: anywhere; }
+  .cm-card.p1 { border-left-color: var(--danger); } .cm-card.p2 { border-left-color: var(--warning); } .cm-card.p3 { border-left-color: var(--info, #1f5fa8); } .cm-card.p4, .cm-card.p5 { border-left-color: var(--muted); }
+  .cm-card.feito { opacity: .6; }
+  .cm-card-tit { font-weight: 700; font-size: 14px; margin: 0 0 4px; color: var(--text-strong, var(--text)); }
+  .cm-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .cm-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; }
+  .cm-txt b { color: var(--text-strong, var(--text)); }
+  .cm-msg { font-size: 12.5px; line-height: 1.5; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; margin: 6px 0; }
+  .cm-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .cm-acoes button { min-height: 40px; }
+  .cm-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
+  .cm-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .cm-selo.laranja { color: var(--warning); background: var(--warning-bg); }
+  .cm-selo.verde { color: var(--success); background: var(--success-bg); } .cm-selo.azul { color: var(--info, #1f5fa8); } .cm-selo.cinza { color: var(--muted); }
+  .cm-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .cm-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .cm-filtros select, .cm-filtros input { min-height: 40px; max-width: 100%; }
+  .cm-quadro { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+  .cm-coluna { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px; min-height: 120px; }
+  .cm-coluna h4 { margin: 0 0 6px; font-size: 12.5px; display: flex; justify-content: space-between; gap: 6px; }
+  .cm-coluna h4 span { color: var(--muted); font-weight: 600; }
+  .cm-mini { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; font-size: 12.5px; overflow-wrap: anywhere; }
+  .cm-mini:hover { border-color: var(--info, #1f5fa8); }
+  .cm-mini b { display: block; font-size: 13px; }
+  .cm-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .cm-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: 8px; padding: 10px 12px; }
+  .cm-kpi .v { display: block; font-size: 20px; font-weight: 800; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .cm-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .cm-kpi.ok { border-top-color: var(--success); } .cm-kpi.aviso { border-top-color: var(--warning); } .cm-kpi.critico { border-top-color: var(--danger); }
+  .cm-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cm-tabela th, .cm-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .cm-tabela td.n, .cm-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cm-caixa { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+  .cm-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .cm-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .cm-grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .cm-campo { margin-bottom: 10px; min-width: 0; }
+  .cm-campo label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .cm-campo input, .cm-campo select, .cm-campo textarea { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; }
+  .cm-campo textarea { min-height: 70px; resize: vertical; }
+  .cm-ajuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .cm-det { display: grid; grid-template-columns: 150px 1fr; gap: 5px 10px; font-size: 12.5px; margin: 0 0 12px; }
+  .cm-det dt { color: var(--muted); font-weight: 700; } .cm-det dd { margin: 0; overflow-wrap: anywhere; }
+  .cm-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
+  .cm-hist div { margin-bottom: 9px; font-size: 12.5px; } .cm-hist .q { color: var(--muted); font-size: 11.5px; }
+  .cm-itens .cm-item { display: grid; grid-template-columns: 2.2fr .6fr .6fr 1fr 1.4fr auto; gap: 6px; align-items: end; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+  .cm-itens .cm-item .cm-campo { margin: 0; }
+  .cm-politica { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin: 6px 0 2px; }
+  .cm-politica i { display: block; height: 100%; }
+  .cm-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .cm-sec { margin: 14px 0 6px; font-size: 13px; font-weight: 800; color: var(--text-strong, var(--text)); }
+  .cm-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 4px 0; }
+  .cm-check input { min-height: 0; width: auto; margin-top: 3px; }
+  @media (max-width: 900px) {
+    .cm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cm-grade2, .cm-grade3 { grid-template-columns: 1fr; }
+    .cm-quadro { grid-auto-flow: row; grid-auto-columns: auto; overflow-x: visible; }
+    .cm-det { grid-template-columns: 1fr; }
+    .cm-det dt { margin-top: 6px; }
+    .cm-itens .cm-item { grid-template-columns: 1fr 1fr; }
+    .cm-itens .cm-item .cm-desc { grid-column: 1 / -1; }
+    .cm-tabela thead { display: none; }
+    .cm-tabela, .cm-tabela tbody, .cm-tabela tr, .cm-tabela td { display: block; width: 100%; box-sizing: border-box; }
+    .cm-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+    .cm-tabela td { border: 0; padding: 3px 0; text-align: left !important; }
+    .cm-tabela td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+    .cm-filtros > div { flex: 1 1 140px; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // COMERCIAL NATIVO DO SGO+ (21/10/2026)
+  // Telas (abrir(mod)): comercial (Hoje), comercial_oportunidades, comercial_propostas, comercial_pedidos,
+  // comercial_catalogo, comercial_painel, comercial_metodologia -> Comercial_render_(mod).
+  // Uma chamada só no servidor: Comercial_api(sessionId, acao, dados). O servidor confere o perfil em toda chamada.
+  // A tela não se redesenha sozinha (formulário aberto nunca é apagado): recarrega depois de cada ação ou em "Atualizar".
+  // ==========================================================
+  var CM = { ini: null, mod: "", hojePapel: "", visao: "quadro", filtro: { situacao: "ABERTA" }, filtroProp: { situacao: "ABERTAS" }, cache: {} };
+  var CM_MODS = { comercial: "Hoje no Comercial", comercial_oportunidades: "Oportunidades", comercial_propostas: "Propostas", comercial_pedidos: "Pedidos aprovados",
+    comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial" };
+
+  function Com_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Com_$_(id) { return document.getElementById(id); }
+  function Com_chamar_(acao, dados, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (m) { fim(); if (erro) erro(m); else alert(m); };
+    google.script.run.withSuccessHandler(function (r) {
+      if (!r || !r.ok) { falhou((r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+      fim();
+      try { if (ok) ok(r); } catch (e) { console.error("Comercial " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+    }).withFailureHandler(function (e) { falhou("Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado."); })
+      .Comercial_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function Com_msg_(onde, texto, tipo) { var el = typeof onde === "string" ? Com_$_(onde) : onde; if (el) el.innerHTML = texto ? '<div class="cm-faixa ' + (tipo || "erro") + '">' + Com_esc_(texto) + "</div>" : ""; }
+
+  // ---------------- casca: menu ----------------
+  function Comercial_iniciar_() {
+    var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    if (!p || p === "CLIENTE" || p === "RH") { Comercial_mostrarMenu_(null); return; }
+    Com_chamar_("acesso", {}, function (r) { Comercial_mostrarMenu_(r); }, function () { Comercial_mostrarMenu_(null); });
+  }
+  function Comercial_parar_() { CM.ini = null; CM.cache = {}; Comercial_mostrarMenu_(null); }
+  function Comercial_mostrarMenu_(r) {
+    var nivel = r ? r.nivel : "NENHUM";
+    var grupo = Com_$_("menu-secao-comercial");
+    if (grupo) grupo.style.display = nivel === "NENHUM" ? "none" : "";
+    document.querySelectorAll("#menu-grupo-itens-comercial .menu-btn").forEach(function (b) {
+      var m = b.getAttribute("data-mod"), ver = nivel !== "NENHUM";
+      if (nivel === "FINANCEIRO") ver = m === "comercial_pedidos";
+      if (m === "comercial_metodologia" || m === "comercial_catalogo") ver = ver && nivel !== "FINANCEIRO";
+      b.style.display = ver ? "" : "none";
+    });
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+    // o acesso chega depois do login: a tela inicial do celular ganha o atalho do Comercial quando ele chega
+    if (nivel !== "NENHUM" && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
+  }
+
+  function Comercial_garantirInicio_(cb) {
+    if (CM.ini) { cb(CM.ini); return; }
+    Com_chamar_("iniciar", {}, function (r) { CM.ini = r; cb(r); });
+  }
+
+  function Comercial_cabecalho_(titulo, sub, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Com_esc_(titulo) + '</h2><p class="content-subtitle">' + Com_esc_(sub) + "</p></div>" +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + (botoes || "") + "</div></div>";
+  }
+
+  /** Ponto de entrada de abrir(mod). */
+  function Comercial_render_(mod, alvo) {
+    var div = Com_$_("conteudo");
+    if (!div) return;
+    CM.mod = mod;
+    if (ehMobileModo_()) atualizarTituloMobile_(CM_MODS[mod] || "Comercial");
+    div.innerHTML = '<div class="module-shell"><div class="cm-vazio">Carregando o Comercial…</div></div>';
+    Comercial_garantirInicio_(function (ini) {
+      if (ini.nivel === "NENHUM") {
+        div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Comercial", "") + '<div class="cm-faixa aviso">O Comercial é da equipe comercial (perfil Comercial ou área Comercial), da gestão comercial, da Diretoria e do Administrador. O Financeiro vê só os pedidos aprovados. Se você precisa trabalhar no Comercial, peça ao Administrador para ajustar o seu perfil ou a sua área em Administração > Usuários.</div></div>';
+        return;
+      }
+      if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos") mod = "comercial_pedidos";
+      var mapa = { comercial: Comercial_renderHoje_, comercial_oportunidades: Comercial_renderOportunidades_, comercial_propostas: Comercial_renderPropostas_, comercial_pedidos: Comercial_renderPedidos_,
+        comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_ };
+      (mapa[mod] || Comercial_renderHoje_)(div, alvo || {});
+      if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) Com_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
+    });
+  }
+
+  /** Atalho vindo do Início, da Caixa de decisões ou de um aviso: { tipo:'comercial', aba, id }. */
+  function Comercial_irPara_(acao) {
+    var aba = (acao && acao.aba) || "hoje";
+    var mod = aba === "oportunidades" ? "comercial_oportunidades" : aba === "propostas" ? "comercial_propostas" : aba === "pedidos" ? "comercial_pedidos" : "comercial";
+    abrir(mod);
+    if (acao && acao.id) setTimeout(function () { if (aba === "propostas") Comercial_abrirProposta_(acao.id); else if (aba === "oportunidades") Comercial_abrirOportunidade_(acao.id); }, 500);
+  }
+
+  // ---------------- janelas ----------------
+  function Com_modal_(titulo, corpo, rodape, largura) {
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    ov.innerHTML = '<div class="atv-modal" style="max-width:' + (largura || 640) + 'px"><div class="atv-modal-cab"><h3>' + Com_esc_(titulo) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+      '<div class="atv-modal-corpo">' + corpo + '</div>' + (rodape ? '<div class="atv-modal-rod">' + rodape + '</div>' : '') + '</div>';
+    ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function Com_gaveta_(titulo, corpo) {
+    var antiga = Com_$_("cmGaveta"); if (antiga) antiga.remove();
+    var g = document.createElement("div");
+    g.id = "cmGaveta"; g.className = "atv-overlay"; g.style.justifyContent = "flex-end"; g.style.padding = "0";
+    g.innerHTML = '<div class="atv-drawer" role="dialog" aria-label="' + Com_esc_(titulo) + '"><div class="atv-drawer-cab"><h3>' + Com_esc_(titulo) + '</h3><button type="button" class="btn-secondary" data-cm-fechar>Fechar</button></div><div class="atv-drawer-corpo" id="cmGavetaCorpo">' + corpo + '</div></div>';
+    g.querySelector("[data-cm-fechar]").onclick = function () { g.remove(); };
+    g.addEventListener("click", function (e) { if (e.target === g) g.remove(); });
+    document.body.appendChild(g);
+    return g;
+  }
+  function Com_campo_(rotulo, html, ajuda) { return '<div class="cm-campo"><label>' + Com_esc_(rotulo) + "</label>" + html + (ajuda ? '<div class="cm-ajuda-campo">' + Com_esc_(ajuda) + "</div>" : "") + "</div>"; }
+  function Com_opcoes_(lista, atual, vazio) {
+    return (vazio !== undefined ? '<option value="">' + Com_esc_(vazio) + "</option>" : "") + lista.map(function (o) { var v = typeof o === "object" ? o.v : o, t = typeof o === "object" ? o.t : o; return '<option value="' + Com_esc_(v) + '"' + (String(v) === String(atual || "") ? " selected" : "") + ">" + Com_esc_(t) + "</option>"; }).join("");
+  }
+  function Com_hojeIso_(dias) { var d = new Date(Date.now() + (dias || 0) * 864e5); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function Com_copiar_(texto, botao) {
+    var ok = function () { if (botao) { var t = botao.textContent; botao.textContent = "Copiado"; setTimeout(function () { botao.textContent = t; }, 1500); } };
+    try { navigator.clipboard.writeText(texto).then(ok, function () { window.prompt("Copie o texto:", texto); }); } catch (e) { window.prompt("Copie o texto:", texto); }
+  }
+  function Com_selosOpo_(o) {
+    var s = [];
+    if (o.situacao === "GANHA") s.push('<span class="cm-selo verde">Ganha</span>');
+    if (o.situacao === "PERDIDA") s.push('<span class="cm-selo cinza">Perdida</span>');
+    if (o.reaberturaPedida) s.push('<span class="cm-selo laranja">Reabertura pedida</span>');
+    if (o.semProxima) s.push('<span class="cm-selo vermelho">Sem próxima ação</span>');
+    if (o.atrasada) s.push('<span class="cm-selo vermelho">Retorno atrasado</span>');
+    if (o.parada) s.push('<span class="cm-selo vermelho">Parada há ' + o.diasSemContato + ' dias</span>');
+    else if (o.esfriando) s.push('<span class="cm-selo laranja">Esfriando</span>');
+    if (o.venceHoje) s.push('<span class="cm-selo azul">Retorno hoje</span>');
+    if (o.mudarEstrategia) s.push('<span class="cm-selo laranja">Mudar a estratégia</span>');
+    return s.join("");
+  }
+  function Com_seloProp_(p) {
+    var cor = { RASCUNHO: "cinza", AGUARDANDO_APROVACAO: "laranja", PRONTA: "azul", ENVIADA: "azul", APROVADA: "verde", RECUSADA: "vermelho", VENCIDA: "vermelho", CANCELADA: "cinza", SUBSTITUIDA: "cinza" }[p.situacao] || "cinza";
+    return '<span class="cm-selo ' + cor + '">' + Com_esc_(p.situacaoNome) + "</span>";
+  }
+
+  // =========================================================
+  // HOJE (a gestora comercial)
+  // =========================================================
+  function Comercial_renderHoje_(div) {
+    var ini = CM.ini;
+    var papel = CM.hojePapel || (ini.gestao ? "GESTAO" : "VENDEDOR");
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Hoje no Comercial", "O que fazer hoje, em ordem de prioridade, segundo a metodologia comercial da empresa. A gestora comercial sugere; quem decide e envia é você.",
+      '<button type="button" class="btn-secondary" id="cmHojeAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+      '<button type="button" class="btn-primary" id="cmNovaOpo"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+      (ini.gestao ? '<div class="cm-tabs"><button type="button" class="cm-tab' + (papel === "GESTAO" ? " active" : "") + '" data-papel="GESTAO">Panorama da gestão</button><button type="button" class="cm-tab' + (papel === "VENDEDOR" ? " active" : "") + '" data-papel="VENDEDOR">Minha lista</button></div>' : "") +
+      '<div id="cmHoje"><div class="cm-vazio">A gestora está montando a lista…</div></div></div>';
+    Com_$_("cmHojeAtualizar").onclick = function () { Comercial_renderHoje_(div); };
+    Com_$_("cmNovaOpo").onclick = function () { Comercial_formOportunidade_(null); };
+    div.querySelectorAll("[data-papel]").forEach(function (b) { b.onclick = function () { CM.hojePapel = b.getAttribute("data-papel"); Comercial_renderHoje_(div); }; });
+    Com_chamar_("hoje", { papel: papel }, function (r) { Comercial_desenharHoje_(r); }, function (m) { Com_msg_("cmHoje", m); });
+  }
+
+  function Comercial_desenharHoje_(r) {
+    var ini = CM.ini, alvo = Com_$_("cmHoje");
+    if (!alvo) return;
+    var h = '<div class="cm-gestora"><div class="ic"><i class="fas fa-user-tie" aria-hidden="true"></i></div><div style="flex:1;min-width:0"><p class="t">Gestora comercial · ' + Com_esc_(r.hoje) + '</p>' +
+      '<p class="s">' + (r.origem === "IA" ? "Lista conferida pela gestora (IA) contra os dados do sistema" + (r.geradoEm ? " em " + Com_esc_(r.geradoEm) : "") : "Lista pelas regras da metodologia") + '</p><p>' + Com_esc_(r.resumo) + '</p>' +
+      (r.iaDisponivel ? '<div class="cm-acoes"><button type="button" class="btn-secondary" id="cmPedirIA"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Pedir a análise da gestora agora</button></div>' : '<p class="s" style="margin-top:6px">Sem a chave da IA, a gestora trabalha só pelas regras (a lista é a mesma; os textos são os padrão).</p>') + '</div></div>';
+    if (r.aviso) h += '<div class="cm-faixa aviso">' + Com_esc_(r.aviso) + '</div>';
+    if (r.papel === "GESTAO" && r.equipe && r.equipe.length) {
+      h += '<div class="cm-caixa"><h3>Equipe agora</h3><table class="cm-tabela"><thead><tr><th>Vendedor</th><th class="n">Abertas</th><th class="n">Em aberto</th><th class="n">Sem próxima ação</th><th class="n">Atrasadas</th><th class="n">Paradas</th><th class="n">Contatos em 10 dias</th></tr></thead><tbody>' +
+        r.equipe.map(function (e) { return '<tr><td data-r="Vendedor"><b>' + Com_esc_(e.nome) + '</b></td><td class="n" data-r="Abertas">' + e.abertas + '</td><td class="n" data-r="Em aberto">' + Com_esc_(e.valorAbertoTxt) + '</td><td class="n" data-r="Sem próxima ação">' + e.semProxima + '</td><td class="n" data-r="Atrasadas">' + e.atrasadas + '</td><td class="n" data-r="Paradas">' + e.paradas + '</td><td class="n" data-r="Contatos em 10 dias">' + e.contatos10d + '</td></tr>'; }).join("") + '</tbody></table></div>';
+    }
+    if (!r.itens.length) h += '<div class="cm-vazio">Nada pendente agora. ' + (r.papel === "GESTAO" ? "A equipe está em dia." : "Bom momento para prospectar contas novas.") + '</div>';
+    h += '<div class="cm-lista">' + r.itens.map(function (i, k) {
+      return '<div class="cm-card p' + i.prioridade + (i.decisao ? " feito" : "") + '" id="cmItem' + k + '"><p class="cm-card-tit">' + Com_esc_(i.titulo) + '</p>' +
+        '<p class="cm-meta"><span class="cm-selo ' + (i.prioridade === 1 ? "vermelho" : i.prioridade === 2 ? "laranja" : "cinza") + '">' + Com_esc_(i.prioridadeNome) + '</span>' + (i.valorTxt ? Com_esc_(i.valorTxt) : "") + (i.daGestora ? ' · texto da gestora' : '') + (i.decisao ? ' · anotado: ' + Com_esc_(i.decisao === "FEITO" ? "feito" : "não se aplica") : '') + '</p>' +
+        '<p class="cm-txt"><b>Por quê:</b> ' + Com_esc_(i.porque) + '</p><p class="cm-txt"><b>Próximo passo:</b> ' + Com_esc_(i.acao) + '</p>' +
+        (i.tambem && i.tambem.length ? '<p class="cm-meta">Também: ' + Com_esc_(i.tambem.join("; ")) + '</p>' : '') +
+        (i.mensagem ? '<div class="cm-msg">' + Com_esc_(i.mensagem) + '</div>' : '') +
+        '<div class="cm-acoes">' + (i.ref && i.ref.id ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Abrir</button>' : (i.ref && i.ref.tipo === "oportunidades" ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Ver oportunidades</button>' : '')) +
+        (i.mensagem ? '<button type="button" class="btn-secondary" data-copiar="' + k + '">Copiar mensagem</button>' : '') +
+        (!i.decisao ? '<button type="button" class="btn-secondary" data-feito="' + k + '">Feito</button><button type="button" class="btn-secondary" data-naose="' + k + '">Não se aplica</button>' : '') + '</div></div>';
+    }).join("") + '</div>';
+    if (r.papel === "GESTAO") h += '<div class="cm-caixa" style="margin-top:14px"><h3>Pergunte à gestora</h3><p class="cm-meta">Perguntas sobre o funil, respondidas só com os números do sistema (por exemplo: "quais propostas acima de R$ 10 mil vencem nesta semana?").</p>' +
+      Com_campo_("Pergunta", '<textarea id="cmPergunta" maxlength="500"></textarea>') + '<div class="cm-acoes"><button type="button" class="btn-primary" id="cmPerguntar">Perguntar</button></div><div id="cmResposta"></div></div>';
+    if (ini.avisos && ini.avisos.length) h += '<div class="cm-caixa" style="margin-top:14px"><h3>Avisos recentes do Comercial</h3>' + ini.avisos.map(function (a) { return '<p class="cm-txt"><b>' + Com_esc_(a.titulo) + '</b> <span class="cm-meta">' + Com_esc_(a.em) + '</span><br>' + Com_esc_(a.texto) + '</p>'; }).join("") + '</div>';
+    alvo.innerHTML = h;
+    var itens = r.itens;
+    alvo.querySelectorAll("[data-abrir]").forEach(function (b) { b.onclick = function () { var i = itens[+b.getAttribute("data-abrir")]; if (i.ref.tipo === "proposta") { abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(i.ref.id); }, 400); } else if (i.ref.tipo === "oportunidade") Comercial_abrirOportunidade_(i.ref.id); else { if (i.ref.responsavelId) CM.filtro.responsavelId = i.ref.responsavelId; abrir("comercial_oportunidades"); } }; });
+    alvo.querySelectorAll("[data-copiar]").forEach(function (b) { b.onclick = function () { Com_copiar_(itens[+b.getAttribute("data-copiar")].mensagem, b); }; });
+    var decidir = function (k, decisao, motivo) { var i = itens[k]; Com_chamar_("decidirSugestao", { chave: i.chave, regra: i.regra, decisao: decisao, motivo: motivo || "", ref: i.ref }, function () { i.decisao = decisao; var c = Com_$_("cmItem" + k); if (c) { c.classList.add("feito"); c.querySelectorAll("[data-feito],[data-naose]").forEach(function (x) { x.remove(); }); } }); };
+    alvo.querySelectorAll("[data-feito]").forEach(function (b) { b.onclick = function () { decidir(+b.getAttribute("data-feito"), "FEITO"); }; });
+    alvo.querySelectorAll("[data-naose]").forEach(function (b) { b.onclick = function () { var m = window.prompt("Por que esta sugestão não se aplica? (a gestão usa isso para ajustar a metodologia)"); if (m && m.trim().length >= 5) decidir(+b.getAttribute("data-naose"), "NAO_SE_APLICA", m.trim()); else if (m !== null) alert("Escreva pelo menos 5 letras."); }; });
+    var bIA = Com_$_("cmPedirIA");
+    if (bIA) bIA.onclick = function () { Com_chamar_("hoje", { papel: r.papel, gerarComIA: true }, function (x) { Comercial_desenharHoje_(x); }, null, { carregando: "A gestora está analisando a lista com a metodologia…" }); };
+    var bP = Com_$_("cmPerguntar");
+    if (bP) bP.onclick = function () {
+      Com_chamar_("perguntar", { pergunta: Com_$_("cmPergunta").value }, function (x) {
+        Com_$_("cmResposta").innerHTML = (x.resposta ? '<div class="cm-faixa ok" style="white-space:pre-wrap">' + Com_esc_(x.resposta) + '</div>' : '') + (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '');
+      }, function (m) { Com_msg_("cmResposta", m); }, { carregando: "A gestora está consultando os números…" });
+    };
+  }
+
+  // =========================================================
+  // OPORTUNIDADES
+  // =========================================================
+  function Comercial_renderOportunidades_(div) {
+    var ini = CM.ini, f = CM.filtro;
+    var funis = ini.funis.map(function (x) { return { v: x.codigo, t: x.nome }; });
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Oportunidades", "Cada venda, do primeiro contato ao pedido, ligada ao cliente, à unidade e aos equipamentos do cadastro. Toda oportunidade aberta tem próxima ação em Minhas atividades.",
+      '<button type="button" class="btn-secondary" id="cmVisao">' + (CM.visao === "quadro" ? '<i class="fas fa-list" aria-hidden="true"></i>&nbsp;Ver em lista' : '<i class="fas fa-table-columns" aria-hidden="true"></i>&nbsp;Ver em quadro') + '</button>' +
+      '<button type="button" class="btn-primary" id="cmNovaOpo2"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+      '<div class="cm-filtros"><div><label>Situação</label><select id="cmFSit">' + Com_opcoes_([{ v: "ABERTA", t: "Abertas" }, { v: "GANHA", t: "Ganhas" }, { v: "PERDIDA", t: "Perdidas" }, { v: "TODAS", t: "Todas" }], f.situacao) + '</select></div>' +
+      '<div><label>Funil</label><select id="cmFFunil">' + Com_opcoes_(funis, f.funil, "Todos") + '</select></div>' +
+      (ini.gestao ? '<div><label>Responsável</label><select id="cmFResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
+      '<div style="flex:1 1 200px"><label>Buscar</label><input id="cmFBusca" placeholder="Cliente, título ou código" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmOpos"><div class="cm-vazio">Carregando…</div></div></div>';
+    Com_$_("cmVisao").onclick = function () { CM.visao = CM.visao === "quadro" ? "lista" : "quadro"; Comercial_renderOportunidades_(div); };
+    Com_$_("cmNovaOpo2").onclick = function () { Comercial_formOportunidade_(null); };
+    var ler = function () { f.situacao = Com_$_("cmFSit").value; f.funil = Com_$_("cmFFunil").value; f.busca = Com_$_("cmFBusca").value; if (Com_$_("cmFResp")) f.responsavelId = Com_$_("cmFResp").value; Comercial_carregarOpos_(); };
+    ["cmFSit", "cmFFunil", "cmFResp"].forEach(function (id) { var el = Com_$_(id); if (el) el.onchange = ler; });
+    var t = null; Com_$_("cmFBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 400); };
+    Comercial_carregarOpos_();
+  }
+
+  function Comercial_carregarOpos_() {
+    Com_chamar_("oportunidades", CM.filtro, function (r) {
+      var alvo = Com_$_("cmOpos"); if (!alvo) return;
+      var l = r.oportunidades;
+      if (!l.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhuma oportunidade com estes filtros. Toque em "Nova oportunidade" para começar.</div>'; return; }
+      var mini = function (o) {
+        return '<div class="cm-mini" data-opo="' + Com_esc_(o.id) + '"><b>' + Com_esc_(o.cliente) + '</b>' + Com_esc_(o.titulo) + '<div class="cm-meta" style="margin:4px 0 2px">' + Com_esc_(o.codigo) + (o.valorTxt ? ' · ' + Com_esc_(o.valorTxt) : '') + (CM.ini.gestao ? ' · ' + Com_esc_(o.responsavel) : '') + '</div>' +
+          (o.situacao === "ABERTA" ? '<div class="cm-meta">Próxima: ' + Com_esc_(o.proximaAcao || "—") + (o.proximaEm ? ' (' + Com_esc_(o.proximaEm) + ')' : '') + '</div>' : '') + Com_selosOpo_(o) + '</div>';
+      };
+      if (CM.visao === "quadro" && CM.filtro.situacao === "ABERTA") {
+        var funis = CM.ini.funis.filter(function (f) { return !CM.filtro.funil || f.codigo === CM.filtro.funil; });
+        alvo.innerHTML = funis.map(function (f) {
+          var deste = l.filter(function (o) { return o.funil === f.codigo; });
+          if (!deste.length && funis.length > 1) return '';
+          return '<p class="cm-sec">' + Com_esc_(f.nome) + '</p><div class="cm-quadro">' + f.etapas.map(function (e) {
+            var c = deste.filter(function (o) { return o.etapa === e.codigo; });
+            return '<div class="cm-coluna"><h4>' + Com_esc_(e.nome) + '<span>' + e.probabilidade + '% · ' + c.length + '</span></h4>' + c.map(mini).join("") + '</div>';
+          }).join("") + '</div>';
+        }).join("") || '<div class="cm-vazio">Nenhuma oportunidade aberta.</div>';
+      } else alvo.innerHTML = '<div class="cm-lista">' + l.map(mini).join("") + '</div>';
+      alvo.querySelectorAll("[data-opo]").forEach(function (c) { c.onclick = function () { Comercial_abrirOportunidade_(c.getAttribute("data-opo")); }; });
+    }, function (m) { Com_msg_("cmOpos", m); });
+  }
+
+  /** Escolha de cliente, unidade, contato e equipamentos (cadastro único). */
+  function Comercial_seletorCliente_(raiz, atual, aoMudar) {
+    var st = { clienteId: atual.clienteId || "", clienteNome: atual.cliente || "", unidades: [], equipamentos: [], contatos: [] };
+    raiz.innerHTML = Com_campo_("Cliente (cadastro único)", '<input id="cmCliBusca" placeholder="Digite o nome ou o CNPJ" value="' + Com_esc_(st.clienteNome) + '" autocomplete="off"><div id="cmCliRes"></div>', "Cliente que não existe: cadastre em Cadastros > Clientes e volte aqui.") +
+      '<div class="cm-grade2"><div id="cmCliUn"></div><div id="cmCliCt"></div></div><div id="cmCliEq"></div>';
+    var carregar = function (cid) {
+      Com_chamar_("cliente", { clienteId: cid }, function (r) {
+        st.unidades = r.unidades; st.equipamentos = r.equipamentos; st.contatos = r.contatos.filter(function (c) { return c.ativo; });
+        Com_$_("cmCliUn").innerHTML = Com_campo_("Unidade", '<select id="cmUn">' + Com_opcoes_(st.unidades.map(function (u) { return { v: u.id, t: u.nome + (u.cidade ? " (" + u.cidade + ")" : "") }; }), atual.unidadeId, st.unidades.length ? "Escolha a unidade" : "O cliente não tem unidades") + '</select>');
+        var desenharCt = function (sel) {
+          Com_$_("cmCliCt").innerHTML = Com_campo_("Contato principal", '<select id="cmCt">' + Com_opcoes_(st.contatos.map(function (c) { return { v: c.id, t: c.nome + (c.cargo ? " — " + c.cargo : "") + (c.unidadeNome ? " (" + c.unidadeNome + ")" : "") }; }), sel, "Escolha o contato") + '</select><button type="button" class="btn-secondary" id="cmNovoCt" style="margin-top:6px">Novo contato</button>');
+          Com_$_("cmNovoCt").onclick = function () { Comercial_formContato_({ clienteId: st.clienteId, unidadeId: Com_$_("cmUn") ? Com_$_("cmUn").value : "" }, function (c) { st.contatos.push(c); desenharCt(c.id); }); };
+        };
+        desenharCt(atual.contatoId);
+        var desenharEq = function () {
+          var un = Com_$_("cmUn") ? Com_$_("cmUn").value : "";
+          var eqs = st.equipamentos.filter(function (e) { return !un || !e.unidadeId || e.unidadeId === un; });
+          Com_$_("cmCliEq").innerHTML = eqs.length ? '<div class="cm-campo"><label>Equipamentos envolvidos (opcional)</label>' + eqs.map(function (e) { return '<label class="cm-check"><input type="checkbox" value="' + Com_esc_(e.id) + '"' + ((atual.equipamentos || []).indexOf(e.id) >= 0 ? " checked" : "") + '> ' + Com_esc_(e.texto) + '</label>'; }).join("") + '</div>' : '';
+        };
+        desenharEq();
+        Com_$_("cmUn").onchange = desenharEq;
+        if (aoMudar) aoMudar(st);
+      });
+    };
+    var t = null;
+    Com_$_("cmCliBusca").oninput = function () {
+      clearTimeout(t); var q = this.value;
+      t = setTimeout(function () {
+        if (q.length < 2) { Com_$_("cmCliRes").innerHTML = ""; return; }
+        Com_chamar_("clientes", { busca: q }, function (r) {
+          Com_$_("cmCliRes").innerHTML = r.clientes.length ? '<div class="cm-lista" style="gap:4px;margin-top:6px">' + r.clientes.map(function (c) { return '<div class="cm-mini" data-cli="' + Com_esc_(c.id) + '" data-nome="' + Com_esc_(c.nome) + '"><b>' + Com_esc_(c.nome) + '</b>' + Com_esc_(c.cnpj || "sem CNPJ") + '</div>'; }).join("") + '</div>' : '<div class="cm-meta" style="margin-top:6px">Nenhum cliente encontrado. Cadastre em Cadastros > Clientes.</div>';
+          Com_$_("cmCliRes").querySelectorAll("[data-cli]").forEach(function (el) { el.onclick = function () { st.clienteId = el.getAttribute("data-cli"); st.clienteNome = el.getAttribute("data-nome"); Com_$_("cmCliBusca").value = st.clienteNome; Com_$_("cmCliRes").innerHTML = ""; atual = {}; carregar(st.clienteId); }; });
+        });
+      }, 350);
+    };
+    if (st.clienteId) carregar(st.clienteId);
+    return {
+      valor: function () {
+        return { clienteId: st.clienteId, unidadeId: Com_$_("cmUn") ? Com_$_("cmUn").value : "", contatoId: Com_$_("cmCt") ? Com_$_("cmCt").value : "",
+          equipamentos: Array.prototype.map.call(raiz.querySelectorAll("#cmCliEq input:checked"), function (x) { return x.value; }) };
+      }
+    };
+  }
+
+  function Comercial_formContato_(base, depois) {
+    var papeis = Object.keys(CM.ini.papeisContato).map(function (k) { return { v: k, t: CM.ini.papeisContato[k] }; });
+    var ov = Com_modal_(base.id ? "Editar contato" : "Novo contato do cliente",
+      '<div class="cm-grade2">' + Com_campo_("Nome", '<input id="cmCtNome" maxlength="160" value="' + Com_esc_(base.nome || "") + '">') + Com_campo_("Cargo", '<input id="cmCtCargo" maxlength="120" value="' + Com_esc_(base.cargo || "") + '">') +
+      Com_campo_("Papel na compra", '<select id="cmCtPapel">' + Com_opcoes_(papeis, base.papel, "Não informado") + '</select>') + Com_campo_("E-mail", '<input id="cmCtEmail" type="email" value="' + Com_esc_(base.email || "") + '">') +
+      Com_campo_("Celular (com DDD)", '<input id="cmCtCel" inputmode="tel" value="' + Com_esc_(base.celular || "") + '">') + Com_campo_("Telefone fixo", '<input id="cmCtTel" inputmode="tel" value="' + Com_esc_(base.telefone || "") + '">') + '</div>' +
+      '<label class="cm-check"><input type="checkbox" id="cmCtPrin"' + (base.principal ? " checked" : "") + '> Contato principal deste cliente (ou da unidade)</label><div id="cmCtMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Salvar contato</button>', 560);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      Com_chamar_("salvarContato", { id: base.id || "", clienteId: base.clienteId, unidadeId: base.unidadeId || "", nome: Com_$_("cmCtNome").value, cargo: Com_$_("cmCtCargo").value, papel: Com_$_("cmCtPapel").value,
+        email: Com_$_("cmCtEmail").value, celular: Com_$_("cmCtCel").value, telefone: Com_$_("cmCtTel").value, principal: Com_$_("cmCtPrin").checked }, function (r) { ov.remove(); if (depois) depois(r.contato); }, function (m) { Com_msg_("cmCtMsg", m); });
+    };
+  }
+
+  function Comercial_formOportunidade_(o) {
+    var ini = CM.ini, novo = !o;
+    o = o || { funil: ini.funis[0].codigo, etapa: ini.funis[0].etapas[0].codigo, chance: "MEDIA" };
+    var funis = ini.funis.map(function (f) { return { v: f.codigo, t: f.nome + " — " + f.descricao }; });
+    var etapasDe = function (fc) { var f = ini.funis.filter(function (x) { return x.codigo === fc; })[0] || ini.funis[0]; return f.etapas.map(function (e) { return { v: e.codigo, t: e.nome + " (" + e.probabilidade + "%)" }; }); };
+    var qual = ini.qualificacao.map(function (q) { return Com_campo_(q.nome, '<input data-qual="' + Com_esc_(q.codigo) + '" maxlength="300" value="' + Com_esc_((o.qualificacao || {})[q.codigo] || "") + '">', q.pergunta); }).join("");
+    var g = Com_gaveta_(novo ? "Nova oportunidade" : "Editar " + o.codigo,
+      '<div id="cmFormCli"></div>' + Com_campo_("Título (o que o cliente precisa)", '<input id="cmOTit" maxlength="200" value="' + Com_esc_(o.titulo || "") + '">') +
+      '<div class="cm-grade2">' + Com_campo_("Funil", '<select id="cmOFunil"' + (novo ? '' : ' disabled') + '>' + Com_opcoes_(funis, o.funil) + '</select>') +
+      (novo ? Com_campo_("Etapa", '<select id="cmOEtapa">' + Com_opcoes_(etapasDe(o.funil), o.etapa) + '</select>') : '') +
+      Com_campo_("Origem", '<select id="cmOOrigem">' + Com_opcoes_(ini.origens, o.origem, "Escolha a origem") + '</select>') +
+      Com_campo_("Valor estimado (R$)", '<input id="cmOValor" inputmode="decimal" placeholder="4.500,00" value="' + Com_esc_(o.valor !== undefined ? String(o.valor).replace(".", ",") : "") + '">') +
+      Com_campo_("Chance", '<select id="cmOChance">' + Com_opcoes_([{ v: "BAIXA", t: "Baixa (dor fraca, sem decisor, prazo ou verba)" }, { v: "MEDIA", t: "Média (dor clara, sem decisão)" }, { v: "ALTA", t: "Alta (decisor envolvido e prazo definido)" }], o.chance) + '</select>') +
+      Com_campo_("Previsão de fechamento", '<input id="cmOPrev" type="date" value="' + Com_esc_(o.previsao || "") + '">') +
+      (ini.gestao ? Com_campo_("Responsável", '<select id="cmOResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), o.responsavelId || ini.eu.id) + '</select>') : '') + '</div>' +
+      '<p class="cm-sec">Qualificação (dor, decisor, verba e prazo)</p>' + qual +
+      (novo ? '<p class="cm-sec">Próxima ação (obrigatória)</p><div class="cm-grade3">' + Com_campo_("O que fazer", '<input id="cmPAcao" maxlength="300" placeholder="Ligar para entender o escopo">') +
+        Com_campo_("Data", '<input id="cmPData" type="date" value="' + Com_hojeIso_(1) + '">') + Com_campo_("Como", '<select id="cmPTipo">' + Com_opcoes_(Object.keys(ini.tiposContato).map(function (k) { return { v: k, t: ini.tiposContato[k] }; }), "LIGACAO") + '</select>') + '</div>' +
+        '<p class="cm-meta">A próxima ação vira uma atividade em Minhas atividades, com prazo, e é cobrada como as outras.</p>' : '') +
+      Com_campo_("Observações", '<textarea id="cmOObs" maxlength="3000">' + Com_esc_(o.observacoes || "") + '</textarea>') +
+      '<div id="cmOMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmOSalvar">' + (novo ? "Criar oportunidade" : "Salvar") + '</button></div>');
+    var sel = Comercial_seletorCliente_(Com_$_("cmFormCli"), o);
+    var fs = Com_$_("cmOFunil"); if (fs && novo) fs.onchange = function () { Com_$_("cmOEtapa").innerHTML = Com_opcoes_(etapasDe(fs.value)); };
+    Com_$_("cmOSalvar").onclick = function () {
+      var v = sel.valor(), q = {};
+      g.querySelectorAll("[data-qual]").forEach(function (x) { if (x.value.trim()) q[x.getAttribute("data-qual")] = x.value.trim(); });
+      var d = Object.assign(v, { id: novo ? "" : o.id, titulo: Com_$_("cmOTit").value, funil: Com_$_("cmOFunil").value, etapa: novo ? Com_$_("cmOEtapa").value : o.etapa, origem: Com_$_("cmOOrigem").value,
+        valor: Com_$_("cmOValor").value, chance: Com_$_("cmOChance").value, previsao: Com_$_("cmOPrev").value, observacoes: Com_$_("cmOObs").value, qualificacao: q,
+        responsavelId: Com_$_("cmOResp") ? Com_$_("cmOResp").value : "" });
+      if (novo) d.proxima = { acao: Com_$_("cmPAcao").value, data: Com_$_("cmPData").value, tipo: Com_$_("cmPTipo").value };
+      Com_chamar_("salvarOportunidade", d, function (r) { g.remove(); Comercial_aposAlterar_(); Comercial_abrirOportunidade_(r.oportunidade.id, r.message); }, function (m) { Com_msg_("cmOMsg", m); }, { carregando: "Salvando…" });
+    };
+  }
+
+  function Comercial_aposAlterar_() {
+    if (CM.mod === "comercial_oportunidades" && Com_$_("cmOpos")) Comercial_carregarOpos_();
+    if (CM.mod === "comercial_propostas" && Com_$_("cmProps")) Comercial_carregarProps_();
+    if (CM.mod === "comercial" && Com_$_("cmHoje")) Com_chamar_("hoje", { papel: CM.hojePapel || (CM.ini.gestao ? "GESTAO" : "VENDEDOR") }, Comercial_desenharHoje_, function () {});
+  }
+
+  function Comercial_abrirOportunidade_(id, aviso) {
+    var g = Com_gaveta_("Oportunidade", '<div class="cm-vazio">Carregando…</div>');
+    Com_chamar_("oportunidade", { id: id }, function (r) { Comercial_desenharOportunidade_(g, r, aviso); }, function (m) { Com_$_("cmGavetaCorpo").innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; });
+  }
+
+  function Comercial_desenharOportunidade_(g, r, aviso) {
+    var o = r.oportunidade, ini = CM.ini, aberta = o.situacao === "ABERTA", corpo = Com_$_("cmGavetaCorpo");
+    g.querySelector("h3").textContent = o.codigo + " · " + o.cliente;
+    var b = function (acao, texto, cls) { return '<button type="button" class="' + (cls || "btn-secondary") + '" data-acao="' + acao + '">' + texto + '</button>'; };
+    var h = (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '') + '<p class="cm-card-tit" style="font-size:15px">' + Com_esc_(o.titulo) + '</p><p>' + Com_selosOpo_(o) + '</p>' +
+      '<dl class="cm-det"><dt>Cliente</dt><dd>' + Com_esc_(o.cliente) + (o.unidade ? ' · ' + Com_esc_(o.unidade) : '') + '</dd><dt>Contato</dt><dd>' + Com_esc_(o.contato || "—") + '</dd>' +
+      '<dt>Funil e etapa</dt><dd>' + Com_esc_(o.funilNome) + ' · ' + Com_esc_(o.etapaNome) + ' (' + o.probabilidade + '%, há ' + o.diasNaEtapa + ' dias)</dd>' +
+      (o.valorTxt ? '<dt>Valor estimado</dt><dd>' + Com_esc_(o.valorTxt) + ' · chance ' + Com_esc_({ BAIXA: "baixa", MEDIA: "média", ALTA: "alta" }[o.chance] || "") + '</dd>' : '') +
+      '<dt>Origem</dt><dd>' + Com_esc_(o.origem) + '</dd><dt>Responsável</dt><dd>' + Com_esc_(o.responsavel) + '</dd><dt>Último contato</dt><dd>' + Com_esc_(o.ultimoContato || "nenhum registrado") + ' (' + o.diasSemContato + ' dias)</dd>' +
+      (aberta ? '<dt>Próxima ação</dt><dd><b>' + Com_esc_(o.proximaAcao || "—") + '</b>' + (r.atividade ? ' · ' + Com_esc_(r.atividade.previsao) + ' · atividade ' + Com_esc_(r.atividade.situacao) : ' · sem atividade aberta') + '</dd>' : '') +
+      (o.situacao === "PERDIDA" ? '<dt>Motivo da perda</dt><dd>' + Com_esc_(o.motivoPerda) + '. ' + Com_esc_(o.aprendizado) + '</dd>' : '') +
+      (r.equipamentos.length ? '<dt>Equipamentos</dt><dd>' + r.equipamentos.map(function (e) { return Com_esc_(e.texto); }).join("<br>") + '</dd>' : '') + '</dl>';
+    if (aberta && r.podeEditar) h += '<div class="cm-acoes">' + b("contato", '<i class="fas fa-phone" aria-hidden="true"></i>&nbsp;Registrar contato', "btn-primary") + b("passo", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Próximo passo da gestora') +
+      b("etapa", "Mudar etapa") + b("proposta", "Nova proposta") + b("editar", "Editar") + b("ganha", "Marcar como ganha") + b("perda", "Registrar perda") + '</div>';
+    if (!aberta && !o.reaberturaPedida && !ini.gestao) h += '<div class="cm-acoes">' + b("pedirReabrir", "Pedir reabertura à gestão") + '</div>';
+    if (!aberta && ini.gestao) h += '<div class="cm-acoes">' + b("reabrir", "Reabrir", "btn-primary") + (o.reaberturaPedida ? b("recusarReabrir", "Recusar o pedido de reabertura") : '') + '</div>' + (o.reaberturaPedida ? '<div class="cm-faixa aviso">Pedido de reabertura: ' + Com_esc_(o.reaberturaMotivo) + '</div>' : '');
+    h += '<div id="cmOpoAcao"></div>';
+    if (r.sugestoes && r.sugestoes.length) h += '<p class="cm-sec">A gestora sugere</p>' + r.sugestoes.map(function (s) { return '<div class="cm-faixa"><b>' + Com_esc_(s.titulo) + '.</b> ' + Com_esc_(s.texto) + '</div>'; }).join("");
+    if (r.etapaChecklist.length) h += '<p class="cm-sec">Para sair desta etapa (' + Com_esc_(r.etapaCriterio) + ')</p><ul style="margin:0 0 8px 18px;font-size:12.5px">' + r.etapaChecklist.map(function (c) { return '<li>' + Com_esc_(c) + '</li>'; }).join("") + '</ul>';
+    h += '<p class="cm-sec">Qualificação</p><dl class="cm-det">' + ini.qualificacao.map(function (q) { return '<dt>' + Com_esc_(q.nome) + '</dt><dd>' + (o.qualificacao[q.codigo] ? Com_esc_(o.qualificacao[q.codigo]) : '<span class="cm-selo laranja">Falta</span> ' + Com_esc_(q.pergunta)) + '</dd>'; }).join("") + '</dl>';
+    h += '<p class="cm-sec">Propostas</p>' + (r.propostas.length ? r.propostas.map(function (p) { return '<div class="cm-mini" data-prop="' + Com_esc_(p.id) + '"><b>' + Com_esc_(p.numero) + ' rev.' + Com_esc_(p.revisao) + '</b>' + Com_seloProp_(p) + (p.total ? ' ' + Com_esc_(p.total) : '') + '</div>'; }).join("") : '<p class="cm-meta">Nenhuma proposta ainda.</p>');
+    h += '<p class="cm-sec">Contatos registrados</p>' + (r.contatosRegistrados.length ? '<div class="cm-hist">' + r.contatosRegistrados.map(function (c) { return '<div><b>' + Com_esc_(c.tipo) + '</b> ' + (c.respondeu ? '<span class="cm-selo verde">respondeu</span>' : '<span class="cm-selo cinza">sem resposta</span>') + ' ' + Com_esc_(c.resumo) + '<div class="q">' + Com_esc_(c.em) + ' · ' + Com_esc_(c.por) + (c.contato ? ' · com ' + Com_esc_(c.contato) : '') + '</div></div>'; }).join("") + '</div>' : '<p class="cm-meta">Nenhum contato registrado.</p>');
+    if (r.emails.length) h += '<p class="cm-sec">E-mails do cliente</p><div class="cm-hist">' + r.emails.map(function (e) { return '<div>' + (e.origem === "aviso" ? Com_esc_(e.resumo) : '<b>' + Com_esc_(e.assunto || "(sem assunto)") + '</b> · ' + Com_esc_(e.de) + (e.resumo ? '<br>' + Com_esc_(e.resumo) : '') + '<div class="q">' + Com_esc_(e.em) + ' · ' + (e.origem === "caixa" ? "na sua caixa de e-mail" + (e.lida ? "" : " (não lido)") : "registrado no cliente por " + Com_esc_(e.por)) + '</div>') + '</div>'; }).join("") + '</div>';
+    h += '<p class="cm-sec">Contatos do cliente</p>' + (r.contatosCliente.length ? r.contatosCliente.map(function (c) { return '<p class="cm-txt" style="margin:2px 0"><b>' + Com_esc_(c.nome) + '</b>' + (c.cargo ? ' — ' + Com_esc_(c.cargo) : '') + (c.papelNome ? ' · ' + Com_esc_(c.papelNome) : '') + (c.email ? ' · ' + Com_esc_(c.email) : '') + (c.celular ? ' · ' + Com_esc_(c.celular) : '') + '</p>'; }).join("") : '<p class="cm-meta">Nenhum contato cadastrado.</p>') +
+      '<div class="cm-acoes">' + b("novoContato", "Novo contato") + '</div>';
+    h += '<p class="cm-sec">Histórico</p><div class="cm-hist">' + r.historico.map(function (x) { return '<div>' + Com_esc_(x.texto) + '<div class="q">' + Com_esc_(x.em) + ' · ' + Com_esc_(x.por) + '</div></div>'; }).join("") + '</div>';
+    corpo.innerHTML = h;
+    corpo.querySelectorAll("[data-prop]").forEach(function (el) { el.onclick = function () { g.remove(); abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(el.getAttribute("data-prop")); }, 400); }; });
+    var recarregar = function (msg) { Comercial_aposAlterar_(); Com_chamar_("oportunidade", { id: o.id }, function (x) { Comercial_desenharOportunidade_(g, x, msg); }); };
+    var area = Com_$_("cmOpoAcao");
+    var formProx = function (pref) { return '<div class="cm-grade3">' + Com_campo_("Próxima ação", '<input id="cmPAcao" maxlength="300" value="' + Com_esc_(pref || "") + '">') + Com_campo_("Data", '<input id="cmPData" type="date" value="' + Com_hojeIso_(1) + '">') + Com_campo_("Hora", '<input id="cmPHora" type="time" value="10:00">') + '</div>' + Com_campo_("Como", '<select id="cmPTipo">' + Com_opcoes_(Object.keys(ini.tiposContato).map(function (k) { return { v: k, t: ini.tiposContato[k] }; }), "LIGACAO") + '</select>'); };
+    var lerProx = function () { return { acao: Com_$_("cmPAcao").value, data: Com_$_("cmPData").value, hora: Com_$_("cmPHora").value, tipo: Com_$_("cmPTipo").value }; };
+    var acoes = {
+      contato: function () {
+        area.innerHTML = '<div class="cm-caixa"><h3>Registrar contato com o cliente</h3><div class="cm-grade2">' + Com_campo_("Como foi", '<select id="cmCTipo">' + Com_opcoes_(Object.keys(ini.tiposContato).map(function (k) { return { v: k, t: ini.tiposContato[k] }; }), "LIGACAO") + '</select>') +
+          Com_campo_("O cliente respondeu?", '<select id="cmCResp"><option value="SIM">Sim, conversamos</option><option value="NAO">Não respondeu</option></select>') + Com_campo_("Com quem", '<select id="cmCCt">' + Com_opcoes_(r.contatosCliente.map(function (c) { return { v: c.id, t: c.nome }; }), o.contatoId) + '</select>') +
+          Com_campo_("Estratégia (quando o cliente não responde)", '<select id="cmCEst">' + Com_opcoes_(ini.estrategias.filter(function (e) { return e.codigo !== "PERDA"; }).map(function (e) { return { v: e.codigo, t: e.titulo }; }), "", "Nenhuma mudança") + '</select>') + '</div>' +
+          Com_campo_("O que aconteceu", '<textarea id="cmCResumo" maxlength="3000" placeholder="Falei com a coordenadora da CME; ela pediu a proposta até sexta"></textarea>') + formProx("") +
+          '<div id="cmCMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmCOk">Registrar e marcar a próxima ação</button></div></div>';
+        Com_$_("cmCOk").onclick = function () { Com_chamar_("registrarContato", { id: o.id, tipo: Com_$_("cmCTipo").value, respondeu: Com_$_("cmCResp").value === "SIM", contatoId: Com_$_("cmCCt").value, estrategia: Com_$_("cmCEst").value, resumo: Com_$_("cmCResumo").value, proxima: lerProx() }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmCMsg", m); }); };
+      },
+      passo: function () {
+        area.innerHTML = '<div class="cm-vazio">A gestora está analisando a oportunidade com a metodologia…</div>';
+        Com_chamar_("proximoPasso", { id: o.id }, function (x) {
+          var s = x.sugestao;
+          area.innerHTML = '<div class="cm-caixa"><h3>Próximo passo sugerido pela gestora ' + (x.origem === "IA" ? "(conferido contra os dados do sistema)" : "(pelas regras)") + '</h3>' + (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '') +
+            '<p class="cm-txt"><b>' + Com_esc_(s.proximoPasso) + '</b></p><p class="cm-txt">' + Com_esc_(s.porque) + '</p>' + (s.perguntas && s.perguntas.length ? '<p class="cm-txt"><b>Perguntas para o cliente:</b></p><ul style="margin:0 0 6px 18px;font-size:12.5px">' + s.perguntas.map(function (q) { return '<li>' + Com_esc_(q) + '</li>'; }).join("") + '</ul>' : '') +
+            '<p class="cm-txt"><b>Mensagem (WhatsApp)</b></p><div class="cm-msg" id="cmSugMsg">' + Com_esc_(s.mensagem) + '</div><p class="cm-txt"><b>E-mail:</b> ' + Com_esc_(s.emailAssunto) + '</p><div class="cm-msg" id="cmSugEmail">' + Com_esc_(s.emailCorpo) + '</div>' +
+            '<p class="cm-meta">' + Com_esc_(x.lembrete) + '</p><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmCopMsg">Copiar mensagem</button><button type="button" class="btn-secondary" id="cmCopEmail">Copiar e-mail</button>' +
+            '<button type="button" class="btn-secondary" id="cmUsei">Usei</button><button type="button" class="btn-secondary" id="cmDescartei">Descartei</button></div></div>';
+          Com_$_("cmCopMsg").onclick = function () { Com_copiar_(s.mensagem, this); };
+          Com_$_("cmCopEmail").onclick = function () { Com_copiar_(s.emailAssunto + "\n\n" + s.emailCorpo, this); };
+          Com_$_("cmUsei").onclick = function () { Com_chamar_("decidirSugestao", { sugestaoId: x.sugestaoId, decisao: "USEI" }, function () { Com_$_("cmUsei").textContent = "Anotado"; }); };
+          Com_$_("cmDescartei").onclick = function () { var m = window.prompt("Por que a sugestão não serviu?"); if (m && m.trim().length >= 5) Com_chamar_("decidirSugestao", { sugestaoId: x.sugestaoId, decisao: "DESCARTEI", motivo: m }, function () { Com_$_("cmDescartei").textContent = "Anotado"; }); };
+        }, function (m) { Com_msg_(area, m); });
+      },
+      etapa: function () {
+        var f = ini.funis.filter(function (x) { return x.codigo === o.funil; })[0];
+        area.innerHTML = '<div class="cm-caixa"><h3>Mudar etapa</h3>' + Com_campo_("Nova etapa", '<select id="cmEEt">' + Com_opcoes_(f.etapas.map(function (e) { return { v: e.codigo, t: e.nome + " (" + e.probabilidade + "%) — " + e.criterio }; }), o.etapa) + '</select>') +
+          (o.semProxima ? '<p class="cm-meta">A oportunidade está sem próxima ação: marque agora.</p>' + formProx("") : '<details><summary class="cm-meta">Trocar também a próxima ação (opcional)</summary>' + formProx("") + '</details>') + '<div id="cmEMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmEOk">Mudar etapa</button></div></div>';
+        Com_$_("cmEOk").onclick = function () { Com_chamar_("moverEtapa", { id: o.id, etapa: Com_$_("cmEEt").value, proxima: Com_$_("cmPAcao").value ? lerProx() : null }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmEMsg", m); }); };
+      },
+      proposta: function () { Com_chamar_("novaProposta", { oportunidadeId: o.id }, function (x) { g.remove(); abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(x.proposta.id, x.message); }, 400); }, function (m) { Com_msg_(area, m); }); },
+      editar: function () { g.remove(); Comercial_formOportunidade_(o); },
+      ganha: function () { if (!confirm("Marcar a oportunidade " + o.codigo + " como ganha? Depois, registre a resposta do cliente na proposta e passe o pedido aos setores.")) return; Com_chamar_("ganhar", { id: o.id }, function (x) { recarregar(x.message); }, function (m) { Com_msg_(area, m); }); },
+      perda: function () {
+        area.innerHTML = '<div class="cm-caixa"><h3>Registrar perda</h3><p class="cm-meta">' + Com_esc_(ini.regraPerda) + '</p>' + Com_campo_("Motivo", '<select id="cmLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') +
+          Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmLApr" maxlength="2000"></textarea>') + '<div id="cmLMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmLOk">Registrar perda</button></div></div>';
+        Com_$_("cmLOk").onclick = function () { Com_chamar_("perder", { id: o.id, motivo: Com_$_("cmLMot").value, aprendizado: Com_$_("cmLApr").value }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmLMsg", m); }); };
+      },
+      pedirReabrir: function () { var m = window.prompt("Por que reabrir? (vai para a Caixa de decisões da gestão comercial)"); if (m) Com_chamar_("pedirReabertura", { id: o.id, motivo: m }, function (x) { recarregar(x.message); }, function (e) { alert(e); }); },
+      reabrir: function () {
+        area.innerHTML = '<div class="cm-caixa"><h3>Reabrir a oportunidade</h3>' + Com_campo_("Motivo da reabertura", '<textarea id="cmRMot" maxlength="1000">' + Com_esc_(o.reaberturaMotivo || "") + '</textarea>') + formProx("") + '<div id="cmRMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmROk">Reabrir</button></div></div>';
+        Com_$_("cmROk").onclick = function () { Com_chamar_("reabrir", { id: o.id, motivo: Com_$_("cmRMot").value, proxima: lerProx() }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmRMsg", m); }); };
+      },
+      recusarReabrir: function () { var m = window.prompt("Por que o pedido de reabertura não foi aceito? (o vendedor recebe o aviso)"); if (m) Com_chamar_("reabrir", { id: o.id, recusar: true, motivo: m }, function (x) { recarregar(x.message); }, function (e) { alert(e); }); },
+      novoContato: function () { Comercial_formContato_({ clienteId: o.clienteId, unidadeId: o.unidadeId }, function () { recarregar("Contato cadastrado."); }); }
+    };
+    corpo.querySelectorAll("[data-acao]").forEach(function (el) { el.onclick = function () { acoes[el.getAttribute("data-acao")](); var a = Com_$_("cmOpoAcao"); if (a && a.scrollIntoView) a.scrollIntoView({ behavior: "smooth", block: "start" }); }; });
+  }
+
+  // =========================================================
+  // PROPOSTAS
+  // =========================================================
+  function Comercial_renderPropostas_(div) {
+    var ini = CM.ini, f = CM.filtroProp;
+    var sits = [{ v: "ABERTAS", t: "Em andamento" }].concat(Object.keys(ini.situacoesProposta).map(function (k) { return { v: k, t: ini.situacoesProposta[k] }; })).concat([{ v: "TODAS", t: "Todas" }]);
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Propostas", "Proposta numerada (PROP-ano-número) com revisão, folha A4 salva na pasta do cliente e envio pelo \"Enviar documento\". Desconto acima do limite passa pela aprovação do gestor comercial.",
+      '<button type="button" class="btn-secondary" id="cmPAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div class="cm-faixa">Para criar uma proposta, abra a oportunidade e toque em "Nova proposta": a proposta nasce ligada ao cliente, à unidade e ao contato dela.</div>' +
+      '<div class="cm-filtros"><div><label>Situação</label><select id="cmPSit">' + Com_opcoes_(sits, f.situacao) + '</select></div>' +
+      (ini.gestao ? '<div><label>Responsável</label><select id="cmPResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
+      '<div style="flex:1 1 200px"><label>Buscar</label><input id="cmPBusca" placeholder="Número, cliente ou título" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmProps"><div class="cm-vazio">Carregando…</div></div></div>';
+    var ler = function () { f.situacao = Com_$_("cmPSit").value; f.busca = Com_$_("cmPBusca").value; if (Com_$_("cmPResp")) f.responsavelId = Com_$_("cmPResp").value; Comercial_carregarProps_(); };
+    Com_$_("cmPSit").onchange = ler; if (Com_$_("cmPResp")) Com_$_("cmPResp").onchange = ler;
+    var t = null; Com_$_("cmPBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 400); };
+    Com_$_("cmPAtual").onclick = ler;
+    Comercial_carregarProps_();
+  }
+
+  function Comercial_carregarProps_() {
+    Com_chamar_("propostas", CM.filtroProp, function (r) {
+      var alvo = Com_$_("cmProps"); if (!alvo) return;
+      if (!r.propostas.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhuma proposta com estes filtros.</div>'; return; }
+      alvo.innerHTML = '<div class="cm-lista">' + r.propostas.map(function (p) {
+        return '<div class="cm-mini" data-prop="' + Com_esc_(p.id) + '"><b>' + Com_esc_(p.rotulo) + ' · ' + Com_esc_(p.cliente) + '</b>' + Com_esc_(p.titulo) + '<div class="cm-meta" style="margin:4px 0 2px">' + (p.totalTxt ? Com_esc_(p.totalTxt) + ' · ' : '') + 'válida até ' + Com_esc_(p.validaAte) + (CM.ini.gestao ? ' · ' + Com_esc_(p.responsavel) : '') + '</div>' + Com_seloProp_(p) + '</div>';
+      }).join("") + '</div>';
+      alvo.querySelectorAll("[data-prop]").forEach(function (c) { c.onclick = function () { Comercial_abrirProposta_(c.getAttribute("data-prop")); }; });
+    }, function (m) { Com_msg_("cmProps", m); });
+  }
+
+  function Comercial_abrirProposta_(id, aviso) {
+    var g = Com_gaveta_("Proposta", '<div class="cm-vazio">Carregando…</div>');
+    Com_chamar_("proposta", { id: id }, function (r) { Comercial_desenharProposta_(g, r.proposta, aviso); }, function (m) { Com_$_("cmGavetaCorpo").innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; });
+  }
+
+  function Comercial_desenharProposta_(g, p, aviso) {
+    var ini = CM.ini, corpo = Com_$_("cmGavetaCorpo"), s = p.situacao, meu = p.responsavelId === ini.eu.id || ini.gestao;
+    g.querySelector("h3").textContent = p.rotulo + " · " + p.cliente;
+    var b = function (acao, texto, cls) { return '<button type="button" class="' + (cls || "btn-secondary") + '" data-acao="' + acao + '">' + texto + '</button>'; };
+    var h = (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '') + '<p class="cm-card-tit" style="font-size:15px">' + Com_esc_(p.titulo) + '</p><p>' + Com_seloProp_(p) + '</p>';
+    var passosSit = { RASCUNHO: "Monte os itens, o escopo e as condições e toque em Concluir. A gestora revisa a proposta e a política de desconto é conferida.", AGUARDANDO_APROVACAO: "Aguardando o gestor comercial decidir o desconto (Caixa de decisões). A proposta não pode ser enviada até lá.",
+      PRONTA: p.pdfId ? "Documento na pasta do cliente. Toque em Enviar ao cliente." : "Toque em Gerar documento para salvar a folha A4 na pasta do cliente.", ENVIADA: "Aguardando a resposta do cliente. Registre a aprovação (com o aceite anexado) ou a recusa.",
+      APROVADA: p.pedidoSituacao === "SEM_PASSAGEM" || !p.pedidoSituacao ? "Pedido aprovado: passe aos setores." : p.pedidoSituacao === "CONCLUIDO" ? "Todos os setores concluíram." : "Pedido com os setores: acompanhe abaixo.",
+      VENCIDA: "Venceu sem resposta: renove com nova revisão ou registre a resposta do cliente.", RECUSADA: "Recusada: faça nova revisão ou registre a perda na oportunidade." };
+    if (passosSit[s]) h += '<div class="cm-faixa">' + Com_esc_(passosSit[s]) + '</div>';
+    if (p.descontoSituacao === "NEGADO" && s === "RASCUNHO") h += '<div class="cm-faixa erro">Desconto não aprovado por ' + Com_esc_(p.descontoDecisaoPor) + ': ' + Com_esc_(p.descontoDecisao) + '</div>';
+    if (p.descontoSituacao === "APROVADO" || p.descontoSituacao === "EXCECAO_GESTAO") h += '<div class="cm-faixa ok">' + Com_esc_(p.descontoDecisao || "Desconto aprovado") + (p.descontoDecisaoPor ? ' (' + Com_esc_(p.descontoDecisaoPor) + ')' : '') + '</div>';
+    h += '<dl class="cm-det"><dt>Cliente</dt><dd>' + Com_esc_(p.cliente) + (p.unidade ? ' · ' + Com_esc_(p.unidade) : '') + '</dd><dt>A/C</dt><dd>' + Com_esc_(p.contato || "—") + '</dd><dt>Responsável</dt><dd>' + Com_esc_(p.responsavel) + '</dd>' +
+      '<dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
+      (p.margemTxt ? '<dt>Margem (só gestão)</dt><dd>' + Com_esc_(p.margemTxt) + ' · custo ' + Com_esc_(p.custoTxt) + '</dd>' : '') + (p.enviadaEm ? '<dt>Enviada</dt><dd>' + Com_esc_(p.enviadaEm) + ' · ' + Com_esc_(p.envioComo) + '</dd>' : '') +
+      (p.respostaEm ? '<dt>Resposta</dt><dd>' + Com_esc_(p.respostaEm) + ' · ' + Com_esc_(p.respostaTexto) + (p.motivoRecusa ? ' (' + Com_esc_(p.motivoRecusa) + ')' : '') + (p.aceiteNome ? '<br>Aceite: ' + Com_esc_(p.aceiteNome) : '') + '</dd>' : '') +
+      (p.faturamento ? '<dt>Faturamento</dt><dd>' + Com_esc_(p.faturamento.razao) + ' · CNPJ ' + Com_esc_(p.faturamento.cnpj || "não informado") + '<br>' + Com_esc_(p.faturamento.endereco || "endereço não informado") + '<br>Pagamento: ' + Com_esc_(p.faturamento.pagamento || "—") + '</dd>' : '') + '</dl>';
+    if (p.politica && s === "RASCUNHO") {
+      var pct = Math.min(100, p.limiteTxt ? 0 : 0);
+      var uso = p.politica.limite ? Math.min(100, (p.descontoPct || 0) / p.politica.limite * 100) : (p.descontoPct ? 100 : 0);
+      var cor = uso < 80 ? "var(--success)" : uso <= 100 ? "var(--warning)" : "var(--danger)";
+      h += '<div class="cm-caixa"><h3>Política de desconto</h3><p class="cm-meta">Desconto atual ' + Com_esc_(p.politica.descontoPctTxt) + ' · limite sem aprovação ' + Com_esc_(p.politica.limiteTxt) + '</p><div class="cm-politica"><i style="width:' + Math.min(100, uso) + '%;background:' + cor + '"></i></div>' +
+        (p.politica.motivos.length ? '<p class="cm-txt" style="color:var(--danger)">' + Com_esc_(p.politica.motivos.join("; ")) + '. Ao concluir, a proposta vai para a aprovação do gestor comercial.</p>' : '') + '</div>';
+    }
+    if (p.editavel) h += Comercial_editorProposta_(p);
+    else h += '<p class="cm-sec">Itens</p><table class="cm-tabela"><thead><tr><th>Descrição</th><th class="n">Qtd.</th><th>Un.</th>' + (p.totalTxt ? '<th class="n">Preço unit.</th><th class="n">Total</th>' : '') + '</tr></thead><tbody>' +
+      p.itens.map(function (i) { return '<tr><td data-r="Item"><b>' + Com_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<br><span class="cm-meta">' + Com_esc_(i.equipamentoTexto) + '</span>' : '') + '</td><td class="n" data-r="Qtd.">' + Com_esc_(String(i.quantidade).replace(".", ",")) + '</td><td data-r="Un.">' + Com_esc_(i.unidade) + '</td>' +
+        (p.totalTxt ? '<td class="n" data-r="Preço unit.">' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '</td><td class="n" data-r="Total">' + Com_esc_(Comercial_moeda_(i.total)) + '</td>' : '') + '</tr>'; }).join("") + '</tbody></table>' +
+      (p.escopo ? '<p class="cm-sec">Escopo</p><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(p.escopo) + '</p>' : '');
+    var acoes = [];
+    if (meu && !ini.financeiro) {
+      if (s === "RASCUNHO" && p.editavel) acoes.push(b("salvar", "Salvar rascunho"), b("revisar", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Revisão da gestora'), b("concluir", "Concluir", "btn-primary"));
+      if (s === "AGUARDANDO_APROVACAO" || s === "PRONTA") acoes.push(b("voltar", "Voltar para rascunho"));
+      if (s === "PRONTA") { acoes.push(b("gerar", p.pdfId ? "Gerar documento de novo" : "Gerar documento", p.pdfId ? "btn-secondary" : "btn-primary")); if (p.pdfId) acoes.push(b("enviar", '<i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar ao cliente', "btn-primary"), b("jaEnviei", "Já enviei: atualizar"), b("marcar", "Entregue por outro meio")); }
+      if (s === "ENVIADA" || s === "VENCIDA") acoes.push(b("resposta", "Registrar resposta do cliente", "btn-primary"));
+      if (["ENVIADA", "RECUSADA", "VENCIDA", "PRONTA", "AGUARDANDO_APROVACAO"].indexOf(s) >= 0) acoes.push(b("revisao", "Nova revisão"));
+      if (["RASCUNHO", "AGUARDANDO_APROVACAO", "PRONTA", "ENVIADA", "VENCIDA"].indexOf(s) >= 0) acoes.push(b("cancelar", "Cancelar proposta"));
+      if (s === "APROVADA" && p.pedidoSituacao !== "CONCLUIDO") acoes.push(b("passar", "Passar aos setores", p.pedidoSituacao === "SEM_PASSAGEM" || !p.pedidoSituacao ? "btn-primary" : "btn-secondary"));
+    }
+    if (p.podeDecidirDesconto) acoes.push(b("aprovarDesc", "Aprovar o desconto", "btn-primary"), b("negarDesc", "Negar o desconto"));
+    if (p.pdfUrl) acoes.push('<a class="btn-secondary" href="' + Com_esc_(p.htmlUrl || p.pdfUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Abrir a folha A4</a>');
+    h += '<div class="cm-acoes">' + acoes.join("") + '</div><div id="cmPropAcao"></div>';
+    if (p.descontoMotivo && s === "AGUARDANDO_APROVACAO") h += '<div class="cm-faixa aviso">Motivo do pedido de desconto: ' + Com_esc_(p.descontoMotivo) + '</div>';
+    if (p.revisaoGestora) h += '<p class="cm-sec">Última revisão da gestora</p>' + Comercial_htmlRevisao_(p.revisaoGestora);
+    if (p.passagem && p.passagem.length) h += '<p class="cm-sec">Setores</p><table class="cm-tabela"><thead><tr><th>Setor</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead><tbody>' + p.passagem.map(function (x) { return '<tr><td data-r="Setor">' + Com_esc_(x.setorNome) + '</td><td data-r="Responsável">' + Com_esc_(x.responsavel) + '</td><td data-r="Prazo">' + Com_esc_(x.prazo) + '</td><td data-r="Situação">' + Com_esc_(x.situacao) + (x.obs ? '<br><span class="cm-meta">' + Com_esc_(x.obs) + '</span>' : '') + '</td></tr>'; }).join("") + '</tbody></table>';
+    if (p.revisoes && p.revisoes.length) h += '<p class="cm-sec">Outras revisões</p>' + p.revisoes.map(function (x) { return '<div class="cm-mini" data-rev="' + Com_esc_(x.id) + '"><b>' + Com_esc_(x.rotulo) + '</b>' + Com_esc_(x.situacaoNome) + '</div>'; }).join("");
+    if (p.historico) h += '<p class="cm-sec">Histórico</p><div class="cm-hist">' + p.historico.map(function (x) { return '<div>' + Com_esc_(x.texto || x.tipo) + '<div class="q">' + Com_esc_(x.em) + ' · ' + Com_esc_(x.por) + '</div></div>'; }).join("") + '</div>';
+    corpo.innerHTML = h;
+    if (p.editavel) Comercial_ligarEditor_(p);
+    corpo.querySelectorAll("[data-rev]").forEach(function (el) { el.onclick = function () { Comercial_abrirProposta_(el.getAttribute("data-rev")); }; });
+    var area = Com_$_("cmPropAcao");
+    var recarregar = function (msg) { Comercial_aposAlterar_(); Com_chamar_("proposta", { id: p.id }, function (x) { Comercial_desenharProposta_(g, x.proposta, msg); }); };
+    var acao = {
+      salvar: function (depois) { Com_chamar_("salvarProposta", Comercial_lerEditor_(p), function (x) { if (typeof depois === "function") depois(x); else recarregar(x.message); }, function (m) { Com_msg_(area, m); }, { carregando: "Salvando…" }); },
+      revisar: function () { acao.salvar(function () { area.innerHTML = '<div class="cm-vazio">A gestora está revisando a proposta…</div>'; Com_chamar_("revisarProposta", { id: p.id }, function (x) { area.innerHTML = '<div class="cm-caixa"><h3>Revisão da gestora ' + (x.origem === "IA" ? "(regras e comentários conferidos)" : "(regras)") + '</h3>' + (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '') + Comercial_htmlRevisao_(x) + '</div>'; }, function (m) { Com_msg_(area, m); }); }); },
+      concluir: function () {
+        acao.salvar(function (x) {
+          var pedir = x.politica && !x.politica.dentro;
+          if (pedir && !ini.gestao) {
+            area.innerHTML = '<div class="cm-caixa"><h3>Pedido de aprovação do desconto</h3><p class="cm-txt">' + Com_esc_(x.politica.motivos.join("; ")) + '. A proposta vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão.</p>' +
+              Com_campo_("Por que este desconto é necessário?", '<textarea id="cmJust" maxlength="1000"></textarea>') + '<div id="cmJMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmJOk">Pedir aprovação</button></div></div>';
+            Com_$_("cmJOk").onclick = function () { Com_chamar_("concluirProposta", { id: p.id, justificativa: Com_$_("cmJust").value }, function (y) { recarregar(y.message); }, function (m) { Com_msg_("cmJMsg", m); }); };
+            return;
+          }
+          var just = pedir ? window.prompt("A proposta passa do limite de desconto. Como gestão comercial, escreva o motivo da exceção (fica registrado):") : "";
+          if (pedir && !just) return;
+          Com_chamar_("concluirProposta", { id: p.id, justificativa: just || "" }, function (y) { recarregar(y.message + (y.alertas && y.alertas.length ? " Alertas: " + y.alertas.join("; ") + "." : "")); }, function (m) { Com_msg_(area, m); });
+        });
+      },
+      voltar: function () { Com_chamar_("voltarRascunho", { id: p.id }, function (x) { recarregar(x.message); }, function (m) { Com_msg_(area, m); }); },
+      gerar: function () { Com_chamar_("gerarDocumento", { id: p.id }, function (x) { recarregar(x.message + (x.alertas && x.alertas.length ? " Alertas da revisão: " + x.alertas.join("; ") + "." : "")); }, function (m) { Com_msg_(area, m); }, { carregando: "Gerando a folha A4 e salvando na pasta do cliente…" }); },
+      enviar: function () { if (window.SGO_EnviarDoc && SGO_EnviarDoc.abrir) { SGO_EnviarDoc.abrir({ arquivoId: p.pdfId, htmlId: p.htmlId, dica: { clienteId: p.clienteId } }); area.innerHTML = '<div class="cm-faixa">Depois de enviar, toque em "Já enviei: atualizar". O sistema confere o envio registrado e marca a proposta como enviada.</div>'; } else alert("A janela Enviar documento não carregou. Atualize a página (F5)."); },
+      jaEnviei: function () { Com_chamar_("sincronizarEnvios", {}, function (x) { recarregar(x.atualizadas ? "Envio encontrado: proposta marcada como enviada e o retorno ao cliente agendado." : "Ainda não há envio registrado deste documento. Se enviou agora, aguarde alguns segundos e tente de novo."); }); },
+      marcar: function () { var m = window.prompt("Como a proposta chegou ao cliente? (por exemplo: entregue em mãos na reunião)"); if (m) Com_chamar_("marcarEnviada", { id: p.id, como: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); },
+      resposta: function () {
+        area.innerHTML = '<div class="cm-caixa"><h3>Resposta do cliente</h3>' + Com_campo_("O cliente", '<select id="cmRResp"><option value="APROVADA">Aprovou</option><option value="RECUSADA">Recusou</option></select>') +
+          '<div id="cmRAprov">' + Com_campo_("Arquivo do aceite (obrigatório)", '<input type="file" id="cmRArq" accept=".pdf,.png,.jpg,.jpeg,.eml,.msg,.txt,.doc,.docx">', "E-mail de aprovação salvo em PDF, pedido de compra ou proposta assinada. Fica na pasta do cliente.") +
+          '<label class="cm-check"><input type="checkbox" id="cmRGanha" checked> Marcar a oportunidade como ganha</label></div>' +
+          '<div id="cmRRec" style="display:none">' + Com_campo_("Motivo", '<select id="cmRMot">' + Com_opcoes_(p.motivosRecusa || ini.motivosPerda, "", "Escolha o motivo") + '</select>') + '</div>' +
+          Com_campo_("Data da resposta", '<input type="date" id="cmRData" value="' + Com_hojeIso_(0) + '">') + Com_campo_("O que o cliente disse", '<textarea id="cmRTexto" maxlength="2000"></textarea>') +
+          '<div id="cmRMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmROk2">Registrar</button></div></div>';
+        Com_$_("cmRResp").onchange = function () { var ap = this.value === "APROVADA"; Com_$_("cmRAprov").style.display = ap ? "" : "none"; Com_$_("cmRRec").style.display = ap ? "none" : ""; };
+        Com_$_("cmROk2").onclick = function () {
+          var enviar = function (arq) { Com_chamar_("respostaCliente", { id: p.id, resposta: Com_$_("cmRResp").value, texto: Com_$_("cmRTexto").value, motivo: Com_$_("cmRMot").value, data: Com_$_("cmRData").value, marcarGanha: Com_$_("cmRGanha").checked, arquivo: arq }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmRMsg", m); }, { carregando: "Registrando a resposta…" }); };
+          var f = Com_$_("cmRArq").files[0];
+          if (Com_$_("cmRResp").value === "APROVADA" && f) { if (f.size > 10 * 1024 * 1024) { Com_msg_("cmRMsg", "O arquivo passa de 10 MB. Salve em PDF menor e anexe de novo."); return; } var rd = new FileReader(); rd.onload = function () { enviar({ nome: f.name, tipo: f.type || "application/octet-stream", base64: String(rd.result).replace(/^data:[^,]+,/, "") }); }; rd.readAsDataURL(f); }
+          else enviar(null);
+        };
+      },
+      revisao: function () { if (confirm("Criar a revisão seguinte da " + p.rotulo + "? A atual fica marcada como substituída.")) Com_chamar_("novaRevisao", { id: p.id }, function (x) { Comercial_desenharProposta_(g, x.proposta, x.message); Comercial_aposAlterar_(); Com_chamar_("proposta", { id: x.proposta.id }, function (y) { Comercial_desenharProposta_(g, y.proposta, x.message); }); }, function (m) { Com_msg_(area, m); }); },
+      cancelar: function () { var m = window.prompt("Motivo do cancelamento (a proposta fica no histórico):"); if (m) Com_chamar_("cancelarProposta", { id: p.id, motivo: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); },
+      passar: function () {
+        Com_chamar_("opcoesPassagem", { id: p.id }, function (x) {
+          area.innerHTML = '<div class="cm-caixa"><h3>Passar o pedido aos setores</h3><p class="cm-meta">Cada setor recebe uma atividade com prazo e a lista de conferência, sem valores. A Área técnica aparece também no Cronograma de execução.</p>' +
+            x.setores.map(function (s) { return '<div class="cm-caixa" style="margin-bottom:8px"><label class="cm-check"><input type="checkbox" data-setor="' + s.codigo + '"' + (s.obrigatorio ? ' checked disabled' : '') + '> <b>' + Com_esc_(s.nome) + '</b> · ' + s.prazoDiasUteis + ' dia(s) útil(eis)' + (s.obrigatorio ? ' · obrigatório pelos itens' : '') + '</label>' +
+              Com_campo_("Quem recebe", '<select data-resp="' + s.codigo + '">' + Com_opcoes_(x.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), s.sugerido ? s.sugerido.id : "") + '</select>', s.sugerido ? "Sugestão: " + s.sugerido.motivo : "") +
+              '<p class="cm-meta">' + Com_esc_(s.checklist.join(" · ")) + '</p></div>'; }).join("") +
+            Com_campo_("Observação para os setores (opcional)", '<textarea id="cmSObs" maxlength="1500"></textarea>') + '<div id="cmSMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmSOk">Passar aos setores</button></div></div>';
+          Com_$_("cmSOk").onclick = function () {
+            var setores = [], resp = {};
+            area.querySelectorAll("[data-setor]").forEach(function (c) { if (c.checked) setores.push(c.getAttribute("data-setor")); });
+            area.querySelectorAll("[data-resp]").forEach(function (c) { resp[c.getAttribute("data-resp")] = c.value; });
+            Com_chamar_("passarSetores", { id: p.id, setores: setores, responsaveis: resp, observacao: Com_$_("cmSObs").value }, function (y) { recarregar(y.message); }, function (m) { Com_msg_("cmSMsg", m); });
+          };
+        }, function (m) { Com_msg_(area, m); });
+      },
+      aprovarDesc: function () { var m = window.prompt("Fundamentação da aprovação (o vendedor recebe o aviso):"); if (m) Com_chamar_("decidirDesconto", { id: p.id, aprovar: true, texto: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); },
+      negarDesc: function () { var m = window.prompt("Por que o desconto não foi aprovado? O que o vendedor pode oferecer no lugar?"); if (m) Com_chamar_("decidirDesconto", { id: p.id, aprovar: false, texto: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); }
+    };
+    corpo.querySelectorAll("[data-acao]").forEach(function (el) { el.onclick = function () { acao[el.getAttribute("data-acao")](); }; });
+  }
+
+  function Comercial_moeda_(v) { return "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function Comercial_htmlRevisao_(r) {
+    return (r.erros && r.erros.length ? '<div class="cm-faixa erro"><b>Impede o envio:</b> ' + Com_esc_(r.erros.join("; ")) + '.</div>' : '<div class="cm-faixa ok">Nenhum problema que impeça o envio.</div>') +
+      (r.alertas && r.alertas.length ? '<div class="cm-faixa aviso"><b>Atenção:</b> ' + Com_esc_(r.alertas.join("; ")) + '.</div>' : '') +
+      (r.observacoes && r.observacoes.length ? '<div class="cm-faixa"><b>Comentários da gestora:</b><ul style="margin:4px 0 0 18px">' + r.observacoes.map(function (o) { return '<li>' + Com_esc_(o) + '</li>'; }).join("") + '</ul></div>' : '');
+  }
+
+  function Comercial_editorProposta_(p) {
+    var cond = p.condicoes || {};
+    var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: "Prazo de execução ou entrega", garantia: "Garantia", frete: "Frete", impostos: "Impostos", local: "Local de execução ou entrega", gerais: "Condições gerais", observacoes: "Observações" };
+    return '<div class="cm-caixa"><h3>Rascunho</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
+      Com_campo_("Escopo (o que será feito, onde e o que o cliente recebe)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:110px">' + Com_esc_(p.escopo) + '</textarea>') +
+      '<p class="cm-sec">Itens</p><div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
+      '<div class="cm-grade3" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
+      Com_campo_("Validade (dias)", '<input id="cmPrVal" inputmode="numeric" value="' + Com_esc_(p.validadeDias || CM.ini.validadePadrao) + '">') + Com_campo_("Contato (A/C)", '<select id="cmPrCt">' + Com_opcoes_((p.contatosCliente || []).map(function (c) { return { v: c.id, t: c.nome }; }), p.contatoId) + '</select>') + '</div>' +
+      '<div id="cmPrTotais" class="cm-meta"></div><p class="cm-sec">Condições comerciais</p><div class="cm-grade2">' + Object.keys(rotCond).map(function (k) { return Com_campo_(rotCond[k], '<textarea data-cond="' + k + '" maxlength="2000"' + (k === "gerais" ? ' style="min-height:90px"' : '') + '>' + Com_esc_(cond[k] || "") + '</textarea>'); }).join("") + '</div>' +
+      '<details><summary class="cm-meta">Apresentação (texto de abertura)</summary>' + Com_campo_("Apresentação", '<textarea id="cmPrApr" maxlength="4000" style="min-height:120px">' + Com_esc_(p.apresentacao) + '</textarea>') + '</details></div>';
+  }
+
+  function Comercial_ligarEditor_(p) {
+    CM.itens = (p.itens || []).map(function (i) { return Object.assign({}, i); });
+    CM.equipProp = [];
+    Com_chamar_("cliente", { clienteId: p.clienteId }, function (r) { CM.equipProp = r.equipamentos.filter(function (e) { return !p.unidadeId || !e.unidadeId || e.unidadeId === p.unidadeId; }); Comercial_desenharItens_(); }, function () {});
+    Comercial_desenharItens_();
+    Com_$_("cmAddItem").onclick = function () { Comercial_lerItens_(); CM.itens.push({ tipo: "SERVICO", descricao: "", quantidade: 1, unidade: "un.", precoUnitario: "" }); Comercial_desenharItens_(); };
+    Com_$_("cmAddCat").onclick = function () {
+      Com_chamar_("catalogo", {}, function (r) {
+        if (!r.produtos.length) { alert("O catálogo está vazio. A gestão cadastra os produtos e serviços em Comercial > Produtos e serviços; enquanto isso, use \"Acrescentar item\"."); return; }
+        var ov = Com_modal_("Escolher do catálogo", '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + '</div>'; }).join("") + '</div>', '', 560);
+        ov.querySelectorAll("[data-k]").forEach(function (el) { el.onclick = function () { var x = r.produtos[+el.getAttribute("data-k")]; Comercial_lerItens_(); CM.itens.push({ produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao, quantidade: 1, unidade: x.unidade, precoUnitario: x.preco, precoTabela: x.preco }); ov.remove(); Comercial_desenharItens_(); }; });
+      });
+    };
+    var dsc = Com_$_("cmPrDesc"); if (dsc) dsc.oninput = Comercial_totais_;
+  }
+  function Comercial_desenharItens_() {
+    var alvo = Com_$_("cmItens"); if (!alvo) return;
+    var tipos = Object.keys(CM.ini.tiposItem).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
+    alvo.innerHTML = CM.itens.length ? CM.itens.map(function (i, k) {
+      return '<div class="cm-item" data-i="' + k + '"><div class="cm-campo cm-desc"><label>Descrição' + (i.codigo ? ' (' + Com_esc_(i.codigo) + ')' : '') + '</label><input data-f="descricao" maxlength="400" value="' + Com_esc_(i.descricao) + '"></div>' +
+        '<div class="cm-campo"><label>Qtd.</label><input data-f="quantidade" inputmode="decimal" value="' + Com_esc_(String(i.quantidade).replace(".", ",")) + '"></div>' +
+        '<div class="cm-campo"><label>Un.</label><input data-f="unidade" maxlength="20" value="' + Com_esc_(i.unidade || "un.") + '"></div>' +
+        '<div class="cm-campo"><label>Preço unit. (R$)' + (i.precoTabela ? ' · tabela ' + Com_esc_(Comercial_moeda_(i.precoTabela)) : '') + '</label><input data-f="precoUnitario" inputmode="decimal" value="' + Com_esc_(i.precoUnitario === "" ? "" : String(i.precoUnitario).replace(".", ",")) + '"></div>' +
+        '<div class="cm-campo"><label>Equipamento</label><select data-f="equipamentoId">' + Com_opcoes_((CM.equipProp || []).map(function (e) { return { v: e.id, t: e.texto }; }), i.equipamentoId, "Nenhum") + '</select></div>' +
+        '<button type="button" class="btn-secondary" data-rem="' + k + '" aria-label="Tirar o item">Tirar</button>' +
+        '<div class="cm-campo cm-desc"><label>Tipo</label><select data-f="tipo">' + Com_opcoes_(tipos, i.tipo) + '</select></div></div>';
+    }).join("") : '<p class="cm-meta">Nenhum item. Toque em "Acrescentar item" ou "Do catálogo".</p>';
+    alvo.querySelectorAll("[data-rem]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); CM.itens.splice(+b.getAttribute("data-rem"), 1); Comercial_desenharItens_(); }; });
+    alvo.querySelectorAll("input,select").forEach(function (x) { x.oninput = Comercial_totais_; x.onchange = Comercial_totais_; });
+    Comercial_totais_();
+  }
+  function Comercial_num_(v) { var s = String(v == null ? "" : v).replace(/R\$|\s/g, ""); if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(",", "."); var n = Number(s); return isFinite(n) ? n : 0; }
+  function Comercial_lerItens_() {
+    document.querySelectorAll("#cmItens [data-i]").forEach(function (l) { var i = CM.itens[+l.getAttribute("data-i")]; if (!i) return; l.querySelectorAll("[data-f]").forEach(function (x) { i[x.getAttribute("data-f")] = x.value; }); });
+  }
+  function Comercial_totais_() {
+    Comercial_lerItens_();
+    var sub = 0, bruto = 0;
+    CM.itens.forEach(function (i) { var q = Comercial_num_(i.quantidade), pu = Comercial_num_(i.precoUnitario), pt = Number(i.precoTabela) || 0; sub += q * pu; bruto += q * Math.max(pu, pt || pu); });
+    var dg = Comercial_num_(Com_$_("cmPrDesc") ? Com_$_("cmPrDesc").value : 0), tot = sub - dg;
+    var pct = bruto > 0 ? (bruto - tot) / bruto * 100 : 0;
+    var el = Com_$_("cmPrTotais"); if (el) el.innerHTML = 'Subtotal ' + Com_esc_(Comercial_moeda_(sub)) + ' · desconto ' + Com_esc_(Comercial_moeda_(dg)) + ' · <b>total ' + Com_esc_(Comercial_moeda_(tot)) + '</b> · ' + pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + '% sobre a tabela (limite sem aprovação: ' + CM.ini.politica.descontoMaxPct + '%)';
+  }
+  function Comercial_lerEditor_(p) {
+    Comercial_lerItens_();
+    var cond = {};
+    document.querySelectorAll("[data-cond]").forEach(function (x) { cond[x.getAttribute("data-cond")] = x.value; });
+    return { id: p.id, titulo: Com_$_("cmPrTit").value, escopo: Com_$_("cmPrEsc").value, apresentacao: Com_$_("cmPrApr").value, contatoId: Com_$_("cmPrCt").value, descontoGeral: Com_$_("cmPrDesc").value || "0",
+      validadeDias: Com_$_("cmPrVal").value, condicoes: cond, itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "" }; }) };
+  }
+
+  // =========================================================
+  // PEDIDOS APROVADOS (Financeiro, vendedor e gestão)
+  // =========================================================
+  function Comercial_renderPedidos_(div) {
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Pedidos aprovados", "Propostas aprovadas pelo cliente, com o valor, a condição de pagamento e os dados de faturamento, e o andamento de cada setor.",
+      '<button type="button" class="btn-secondary" id="cmPedAt"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') + '<div id="cmPeds"><div class="cm-vazio">Carregando…</div></div></div>';
+    Com_$_("cmPedAt").onclick = function () { Comercial_renderPedidos_(div); };
+    Com_chamar_("pedidos", {}, function (r) {
+      var alvo = Com_$_("cmPeds");
+      if (!r.pedidos.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum pedido aprovado ainda.</div>'; return; }
+      alvo.innerHTML = '<div class="cm-lista">' + r.pedidos.map(function (p) {
+        var sit = { SEM_PASSAGEM: '<span class="cm-selo vermelho">Sem passagem aos setores</span>', EM_ANDAMENTO: '<span class="cm-selo azul">Com os setores</span>', CONCLUIDO: '<span class="cm-selo verde">Setores concluíram</span>' }[p.pedidoSituacao] || '';
+        return '<div class="cm-card"><p class="cm-card-tit">' + Com_esc_(p.rotulo) + ' · ' + Com_esc_(p.cliente) + '</p><p class="cm-meta">' + sit + 'Aprovada em ' + Com_esc_(p.respostaEm) + ' · vendedor ' + Com_esc_(p.responsavel) + '</p>' +
+          '<dl class="cm-det"><dt>Valor</dt><dd><b>' + Com_esc_(p.totalTxt || "") + '</b></dd><dt>Faturar para</dt><dd>' + Com_esc_(p.faturamento.razao) + ' · CNPJ ' + Com_esc_(p.faturamento.cnpj || "não informado") + '<br>' + Com_esc_(p.faturamento.endereco || "") + (p.faturamento.email ? '<br>' + Com_esc_(p.faturamento.email) : '') + '</dd>' +
+          '<dt>Pagamento</dt><dd>' + Com_esc_(p.faturamento.pagamento || "—") + '</dd>' + (p.aceiteNome ? '<dt>Aceite</dt><dd>' + Com_esc_(p.aceiteNome) + '</dd>' : '') + '</dl>' +
+          (p.passagem.length ? '<table class="cm-tabela"><thead><tr><th>Setor</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead><tbody>' + p.passagem.map(function (x) { return '<tr><td data-r="Setor">' + Com_esc_(x.setorNome) + '</td><td data-r="Responsável">' + Com_esc_(x.responsavel) + '</td><td data-r="Prazo">' + Com_esc_(x.prazo) + '</td><td data-r="Situação">' + Com_esc_(x.situacao) + '</td></tr>'; }).join("") + '</tbody></table>' : '') +
+          (CM.ini.nivel !== "FINANCEIRO" ? '<div class="cm-acoes"><button type="button" class="btn-secondary" data-prop="' + Com_esc_(p.id) + '">Abrir a proposta</button></div>' : '') + '</div>';
+      }).join("") + '</div>';
+      alvo.querySelectorAll("[data-prop]").forEach(function (b) { b.onclick = function () { Comercial_abrirProposta_(b.getAttribute("data-prop")); }; });
+    }, function (m) { Com_msg_("cmPeds", m); });
+  }
+
+  // =========================================================
+  // CATÁLOGO
+  // =========================================================
+  function Comercial_renderCatalogo_(div) {
+    var ini = CM.ini;
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + (ini.gestao ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
+      ini.gestao ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') + '<div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
+    if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
+    Com_chamar_("catalogo", { incluirArquivados: ini.gestao }, function (r) {
+      var alvo = Com_$_("cmCat");
+      if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (ini.gestao ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
+      alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + (ini.gestao ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
+        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
+          (ini.gestao ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
+      }).join("") + '</tbody></table>';
+      alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
+      alvo.querySelectorAll("[data-arq]").forEach(function (b) { b.onclick = function () { var p = r.produtos[+b.getAttribute("data-arq")]; Com_chamar_("arquivarProduto", { id: p.id, reativar: !p.ativo }, function (x) { alert(x.message); Comercial_renderCatalogo_(div); }); }; });
+    }, function (m) { Com_msg_("cmCat", m); });
+  }
+  function Comercial_formProduto_(p) {
+    var tipos = Object.keys(CM.ini.tiposItem).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
+    var ov = Com_modal_(p.id ? "Editar " + p.codigo : "Novo item do catálogo",
+      '<div class="cm-grade2">' + Com_campo_("Código", '<input id="cmPdCod" maxlength="40" value="' + Com_esc_(p.codigo || "") + '">') + Com_campo_("Tipo", '<select id="cmPdTipo">' + Com_opcoes_(tipos, p.tipo) + '</select>') + '</div>' +
+      Com_campo_("Nome", '<input id="cmPdNome" maxlength="200" value="' + Com_esc_(p.nome || "") + '">') + Com_campo_("Descrição (vai para a proposta)", '<textarea id="cmPdDesc" maxlength="2000">' + Com_esc_(p.descricao || "") + '</textarea>') +
+      '<div class="cm-grade3">' + Com_campo_("Unidade", '<input id="cmPdUn" maxlength="20" value="' + Com_esc_(p.unidade || "un.") + '">') + Com_campo_("Preço de venda (R$)", '<input id="cmPdPreco" inputmode="decimal" value="' + Com_esc_(p.preco !== undefined ? String(p.preco).replace(".", ",") : "") + '">') +
+      Com_campo_("Custo (R$, opcional)", '<input id="cmPdCusto" inputmode="decimal" value="' + Com_esc_(p.custo !== null && p.custo !== undefined ? String(p.custo).replace(".", ",") : "") + '">', "Só a gestão vê; usado na margem") + '</div>' + Com_campo_("Categoria", '<input id="cmPdCat" maxlength="80" value="' + Com_esc_(p.categoria || "") + '">') + '<div id="cmPdMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Salvar</button>', 600);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      Com_chamar_("salvarProduto", { id: p.id || "", codigo: Com_$_("cmPdCod").value, tipo: Com_$_("cmPdTipo").value, nome: Com_$_("cmPdNome").value, descricao: Com_$_("cmPdDesc").value, unidade: Com_$_("cmPdUn").value, preco: Com_$_("cmPdPreco").value, custo: Com_$_("cmPdCusto").value, categoria: Com_$_("cmPdCat").value },
+        function () { ov.remove(); Comercial_renderCatalogo_(Com_$_("conteudo")); }, function (m) { Com_msg_("cmPdMsg", m); });
+    };
+  }
+
+  // =========================================================
+  // PAINEL
+  // =========================================================
+  function Comercial_renderPainel_(div) {
+    var ini = CM.ini, comp = CM.compPainel || new Date().toISOString().slice(0, 7);
+    var meses = []; for (var k = 0; k < 12; k++) { var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - k); var v = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2); meses.push({ v: v, t: ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear() }); }
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Painel comercial", ini.gestao ? "Funil, ganhos, perdas, propostas e a situação de cada vendedor." : "Os seus números do mês.",
+      ini.gestao ? '<button type="button" class="btn-secondary" id="cmRelMes"><i class="fas fa-file-pdf" aria-hidden="true"></i>&nbsp;Relatório mensal A4</button>' : '') +
+      '<div class="cm-filtros"><div><label>Mês</label><select id="cmCompPainel">' + Com_opcoes_(meses, comp) + '</select></div>' + (ini.gestao ? '<div><label>Vendedor</label><select id="cmVendPainel">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), CM.vendPainel, "Toda a equipe") + '</select></div>' : '') + '</div><div id="cmPainel"><div class="cm-vazio">Carregando…</div></div></div>';
+    Com_$_("cmCompPainel").onchange = function () { CM.compPainel = this.value; Comercial_renderPainel_(div); };
+    if (Com_$_("cmVendPainel")) Com_$_("cmVendPainel").onchange = function () { CM.vendPainel = this.value; Comercial_renderPainel_(div); };
+    if (Com_$_("cmRelMes")) Com_$_("cmRelMes").onclick = function () {
+      var w = window.open("", "_blank"); if (w) w.document.write("<p style='font-family:Arial'>Gerando o relatório mensal do Comercial…</p>");
+      Com_chamar_("relatorioMes", { competencia: comp }, function (r) { if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } }, function (m) { if (w) w.close(); alert(m); }, { carregando: "Gerando o relatório mensal (a gestora escreve a análise)…" });
+    };
+    Com_chamar_("painel", { competencia: comp, vendedorId: CM.vendPainel || "" }, function (r) {
+      var i = r.indicadores, alvo = Com_$_("cmPainel");
+      var kpi = function (v, t, c) { return '<div class="cm-kpi ' + (c || "") + '"><span class="v">' + Com_esc_(v) + '</span><span class="r">' + Com_esc_(t) + '</span></div>'; };
+      var h = '<div class="cm-kpis">' + kpi(Comercial_moeda_(i.ganho.valor), "Ganho no mês (" + i.ganho.qtd + ")", i.ganho.qtd ? "ok" : "") + kpi(i.perdido.qtd + " perdida(s)", "Perdido no mês (" + Comercial_moeda_(i.perdido.valor) + ")", i.perdido.qtd ? "aviso" : "") +
+        kpi(i.conversaoTxt, "Conversão (ganhas sobre decididas)") + kpi(Comercial_moeda_(i.aberto.valor), "Em aberto (" + i.aberto.qtd + "), ponderado " + Comercial_moeda_(i.aberto.ponderado)) +
+        kpi(i.higieneTxt, "Abertas com próxima ação em dia", i.higienePct >= 90 ? "ok" : i.higienePct >= 70 ? "aviso" : "critico") + kpi(String(i.propostas.enviadas), "Propostas enviadas no mês") +
+        kpi(i.aprovacaoTxt, "Aprovação das respondidas") + kpi(String(i.pedidosSemPassagem), "Aprovados sem passagem aos setores", i.pedidosSemPassagem ? "critico" : "ok") + '</div>';
+      h += '<div class="cm-caixa"><h3>Funil em aberto</h3><table class="cm-tabela"><thead><tr><th>Funil</th><th>Etapa</th><th class="n">Oportunidades</th><th class="n">Valor</th><th class="n">Ponderado</th></tr></thead><tbody>' +
+        i.funil.map(function (e) { return '<tr><td data-r="Funil">' + Com_esc_(e.funil) + '</td><td data-r="Etapa">' + Com_esc_(e.etapa) + ' (' + e.probabilidade + '%)</td><td class="n" data-r="Oportunidades">' + e.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(e.valor)) + '</td><td class="n" data-r="Ponderado">' + Com_esc_(Comercial_moeda_(e.ponderado)) + '</td></tr>'; }).join("") + '</tbody></table></div>';
+      var perdas = i.perdasPorMotivo.filter(function (m) { return m.qtd; });
+      h += '<div class="cm-caixa"><h3>Perdas por motivo</h3>' + (perdas.length ? '<table class="cm-tabela"><tbody>' + perdas.map(function (m) { return '<tr><td data-r="Motivo">' + Com_esc_(m.motivo) + '</td><td class="n" data-r="Quantidade">' + m.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(m.valor)) + '</td></tr>'; }).join("") + '</tbody></table>' : '<p class="cm-meta">Nenhuma perda no mês.</p>') + '</div>';
+      h += '<div class="cm-caixa"><h3>Propostas</h3><p class="cm-txt">Enviadas ' + i.propostas.enviadas + ' · aprovadas ' + i.propostas.aprovadas + ' · recusadas ' + i.propostas.recusadas + ' · vencidas sem resposta ' + i.propostas.vencidas + ' · desconto médio ' + Com_esc_(i.propostas.descontoMedioTxt) + ' · tempo médio até a 1ª proposta ' + Com_esc_(i.tempoPrimeiraPropostaTxt) + '</p></div>';
+      if (i.porVendedor && i.porVendedor.length) h += '<div class="cm-caixa"><h3>Por vendedor</h3><table class="cm-tabela"><thead><tr><th>Vendedor</th><th class="n">Abertas</th><th class="n">Sem próxima ação</th><th class="n">Paradas</th><th class="n">Ganhas</th><th class="n">Valor ganho</th><th class="n">Perdidas</th></tr></thead><tbody>' +
+        i.porVendedor.map(function (v) { return '<tr><td data-r="Vendedor"><b>' + Com_esc_(v.nome) + '</b></td><td class="n" data-r="Abertas">' + v.abertas + '</td><td class="n" data-r="Sem próxima ação">' + v.semProxima + '</td><td class="n" data-r="Paradas">' + v.paradas + '</td><td class="n" data-r="Ganhas">' + v.ganhas + '</td><td class="n" data-r="Valor ganho">' + Com_esc_(Comercial_moeda_(v.valorGanho)) + '</td><td class="n" data-r="Perdidas">' + v.perdidas + '</td></tr>'; }).join("") + '</tbody></table></div>';
+      alvo.innerHTML = h;
+    }, function (m) { Com_msg_("cmPainel", m); });
+  }
+
+  // =========================================================
+  // METODOLOGIA (a "cartilha" da gestora comercial)
+  // =========================================================
+  function Comercial_renderMetodologia_(div) {
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Metodologia comercial", "As regras que a gestora comercial segue: funis e etapas, qualificação, cadência, estratégias, objeções, política de desconto, modelo da proposta e pós-venda. Quem escreve é a gestão; cada versão fica no histórico.") + '<div id="cmMet"><div class="cm-vazio">Carregando…</div></div></div>';
+    Com_chamar_("metodologia", {}, function (r) { Comercial_desenharMetodologia_(r); }, function (m) { Com_msg_("cmMet", m); });
+  }
+  function Comercial_desenharMetodologia_(r) {
+    var m = r.metodologia, ed = r.podeEditar, alvo = Com_$_("cmMet"), dis = ed ? "" : " disabled";
+    var linhas = function (l) { return (l || []).join("\n"); };
+    var ta = function (id, v, alt) { return '<textarea id="' + id + '"' + dis + ' style="min-height:' + (alt || 90) + 'px">' + Com_esc_(v) + '</textarea>'; };
+    var h = '<p class="cm-meta">Versão ' + Com_esc_(m.versao) + (m.atualizadaEm ? ' · ' + Com_esc_(m.atualizadaEm) + ' por ' + Com_esc_(m.atualizadaPor) : ' · padrão trazido do Comercial do COMMAND') + '</p>';
+    h += '<div class="cm-caixa"><h3>Tese e regras de ouro</h3>' + Com_campo_("Tese", ta("cmMTese", m.tese, 60)) + Com_campo_("Regras de ouro (uma por linha)", ta("cmMOuro", linhas(m.regrasDeOuro), 110)) + '</div>';
+    h += '<div class="cm-caixa"><h3>Funis e etapas</h3><p class="cm-meta">Uma etapa por linha: nome | probabilidade % | máximo de dias na etapa | critério para sair | itens da lista separados por ;</p>' + m.funis.map(function (f, k) {
+      return Com_campo_("Funil " + f.nome + " — " + f.descricao, ta("cmMFunil" + k, f.etapas.map(function (e) { return [e.nome, e.probabilidade, e.maxDias, e.criterio, (e.checklist || []).join("; ")].join(" | "); }).join("\n"), 130));
+    }).join("") + '</div>';
+    h += '<div class="cm-caixa"><h3>Listas</h3><div class="cm-grade2">' + Com_campo_("Origens (uma por linha)", ta("cmMOrig", linhas(m.origens), 150)) + Com_campo_("Motivos de perda (um por linha)", ta("cmMPerda", linhas(m.motivosPerda), 150)) + '</div>' + Com_campo_("Regra da perda", ta("cmMRegraPerda", m.regraPerda, 50)) + '</div>';
+    h += '<div class="cm-caixa"><h3>Qualificação</h3>' + Com_campo_("Critério", ta("cmMQCrit", m.qualificacao.criterio, 50)) + Com_campo_("Itens (nome | pergunta, um por linha)", ta("cmMQItens", m.qualificacao.itens.map(function (i) { return i.nome + " | " + i.pergunta; }).join("\n"), 100)) +
+      Com_campo_("Perguntas de qualificação rápida (uma por linha)", ta("cmMQPerg", linhas(m.qualificacao.perguntas), 120)) + Com_campo_("Perfil de cliente atendido", ta("cmMQPerfil", m.qualificacao.perfilCliente, 60)) + '</div>';
+    var c = m.cadencia;
+    var num = function (id, v, rot, aj) { return Com_campo_(rot, '<input id="' + id + '" inputmode="numeric" value="' + Com_esc_(v) + '"' + dis + '>', aj); };
+    h += '<div class="cm-caixa"><h3>Cadência de retorno</h3><div class="cm-grade3">' + num("cmMCEsf", c.esfriandoDias, "Esfriando após (dias sem contato)") + num("cmMCPar", c.paradaDias, "Parada após (dias sem contato)") + num("cmMCTent", c.tentativasMudarEstrategia, "Mudar a estratégia após (tentativas sem resposta)") +
+      num("cmMCLemb", c.propostaLembreteDiaUtil, "Retorno da proposta no (dia útil)") + num("cmMCEsc", c.propostaEscalaDiaUtil, "Proposta sem resposta: gestão no (dia útil)") + num("cmMCVenc", c.propostaVencendoDias, "Avisar proposta vencendo (dias antes)") + '</div>' +
+      Com_campo_("Passos da cadência (dia | canal | título, um por linha; canais: LIGACAO, WHATSAPP, EMAIL, REUNIAO, VISITA)", ta("cmMCPassos", c.passos.map(function (p) { return p.dia + " | " + p.canal + " | " + p.titulo; }).join("\n"), 120)) +
+      '<p class="cm-meta">Não há cobrança a cada hora: o retorno vira atividade em Minhas atividades e é cobrado pela regra das atividades (sistema até resolver, e-mail no expediente, WhatsApp só no resumo diário).</p></div>';
+    h += '<div class="cm-caixa"><h3>Estratégias, objeções e mensagens</h3>' + Com_campo_("Estratégias quando o cliente não responde (código | título | texto)", ta("cmMEstr", m.estrategias.map(function (e) { return e.codigo + " | " + e.titulo + " | " + e.texto; }).join("\n"), 120)) +
+      Com_campo_("Objeções (objeção | resposta)", ta("cmMObj", m.objecoes.map(function (o) { return o.objecao + " | " + o.resposta; }).join("\n"), 120)) +
+      Object.keys(m.modelosMensagem).map(function (k) { return Com_campo_("Modelo de mensagem: " + k + " (use {nome}, {assunto}, {eu}, {proposta})", ta("cmMMsg_" + k, m.modelosMensagem[k], 70)); }).join("") + '</div>';
+    h += '<div class="cm-caixa"><h3>Política de desconto</h3><div class="cm-grade2">' + num("cmMDesc", m.politica.descontoMaxPct, "Desconto máximo sem aprovação (%)") + num("cmMMarg", m.politica.margemMinPct, "Margem mínima quando o item tem custo (%)", "0 = não confere margem") + '</div>' + Com_campo_("Texto da política", ta("cmMPolTxt", m.politica.texto, 70)) + '</div>';
+    var pr = m.proposta;
+    h += '<div class="cm-caixa"><h3>Modelo da proposta</h3><p class="cm-meta">Quando o modelo oficial da empresa chegar, os textos entram aqui. Valem para as propostas novas.</p>' + num("cmMVal", pr.validadeDias, "Validade padrão (dias)") + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
+      '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC_" + k, pr.condicoes[k], 60)); }).join("") + '</div>' + Com_campo_("Responsabilidades", ta("cmMPResp", pr.responsabilidades, 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite", pr.textoAceite, 60)) + '</div>';
+    var pv = m.posVenda;
+    var pessoas = (r.equipeSgo || []).map(function (u) { return { v: u.id, t: u.nome }; });
+    h += '<div class="cm-caixa"><h3>Pós-venda (passagem aos setores)</h3>' + Object.keys(CM.ini.setores).map(function (s) {
+      return '<div class="cm-grade3">' + num("cmMPV_" + s, pv[s].prazoDiasUteis, CM.ini.setores[s] + ": prazo (dias úteis)") + Com_campo_("Quem recebe", '<select id="cmMPVR_' + s + '"' + dis + '>' + Com_opcoes_(pessoas, (pv.destinatarios[s] || [])[0], "Padrão: gestor da área na Caixa de decisões") + '</select>') + Com_campo_("Lista de conferência (uma por linha)", ta("cmMPVC_" + s, linhas(pv[s].checklist), 90)) + '</div>';
+    }).join("") + num("cmMPVParado", pv.pedidoParadoDiasUteis, "Pedido sem passagem vai para a Caixa após (dias úteis)") + '</div>';
+    h += '<div class="cm-caixa"><h3>Gestão comercial</h3><p class="cm-meta">Gestor com área Comercial no cadastro já é gestão comercial. Aqui entram outras pessoas (por exemplo um Gestor de outra área que também responde pelo Comercial).</p>' +
+      (pessoas.length ? '<div style="max-height:180px;overflow:auto">' + pessoas.map(function (p) { return '<label class="cm-check"><input type="checkbox" data-gestor="' + Com_esc_(p.v) + '"' + ((m.gestores || []).indexOf(p.v) >= 0 ? ' checked' : '') + dis + '> ' + Com_esc_(p.t) + '</label>'; }).join("") + '</div>' : '') + '</div>';
+    if (r.aprendizado && r.aprendizado.length) h += '<div class="cm-caixa"><h3>O que a equipe fez com as sugestões da gestora</h3><table class="cm-tabela"><thead><tr><th>Tipo</th><th>Regra</th><th class="n">Sugestões</th><th class="n">Usadas</th><th class="n">Não serviram</th><th>Por que não serviram</th></tr></thead><tbody>' +
+      r.aprendizado.map(function (a) { return '<tr><td data-r="Tipo">' + Com_esc_(a.tipo) + '</td><td data-r="Regra">' + Com_esc_(a.regra) + '</td><td class="n" data-r="Sugestões">' + a.total + '</td><td class="n" data-r="Usadas">' + a.usadas + '</td><td class="n" data-r="Não serviram">' + a.descartadas + '</td><td data-r="Motivos">' + Com_esc_(a.motivos.join("; ")) + '</td></tr>'; }).join("") + '</tbody></table></div>';
+    if (r.versoes && r.versoes.length) h += '<div class="cm-caixa"><h3>Versões</h3>' + r.versoes.map(function (v) { return '<p class="cm-txt">Versão ' + v.versao + ' · ' + Com_esc_(v.em) + ' · ' + Com_esc_(v.por) + ': ' + Com_esc_(v.motivo) + '</p>'; }).join("") + '</div>';
+    if (ed) h += '<div class="cm-caixa">' + Com_campo_("O que mudou e por quê (obrigatório)", '<textarea id="cmMMotivo" maxlength="500"></textarea>') + '<div id="cmMMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmMSalvar">Salvar nova versão</button></div></div>';
+    alvo.innerHTML = h;
+    if (!ed) return;
+    Com_$_("cmMSalvar").onclick = function () {
+      try {
+        var v = function (id) { var el = Com_$_(id); return el ? el.value : ""; };
+        var ls = function (id) { return v(id).split("\n").map(function (x) { return x.trim(); }).filter(Boolean); };
+        var partes = function (l) { return l.split("|").map(function (x) { return x.trim(); }); };
+        var n = JSON.parse(JSON.stringify(m));
+        n.tese = v("cmMTese"); n.regrasDeOuro = ls("cmMOuro");
+        n.funis.forEach(function (f, k) { var antigas = f.etapas; f.etapas = ls("cmMFunil" + k).map(function (l, j) { var p = partes(l); return { codigo: (antigas[j] && antigas[j].codigo) || (f.codigo.slice(0, 3) + "_" + (j + 1)), nome: p[0], probabilidade: Number(p[1]), maxDias: Number(p[2]) || 0, criterio: p[3] || "", checklist: (p[4] || "").split(";").map(function (x) { return x.trim(); }).filter(Boolean) }; }); });
+        n.origens = ls("cmMOrig"); n.motivosPerda = ls("cmMPerda"); n.regraPerda = v("cmMRegraPerda");
+        n.qualificacao = { criterio: v("cmMQCrit"), perguntas: ls("cmMQPerg"), perfilCliente: v("cmMQPerfil"), itens: ls("cmMQItens").map(function (l, j) { var p = partes(l); var ant = m.qualificacao.itens[j]; return { codigo: ant ? ant.codigo : "Q" + (j + 1), nome: p[0], pergunta: p[1] || "" }; }) };
+        n.cadencia = { esfriandoDias: Number(v("cmMCEsf")), paradaDias: Number(v("cmMCPar")), tentativasMudarEstrategia: Number(v("cmMCTent")), propostaLembreteDiaUtil: Number(v("cmMCLemb")), propostaEscalaDiaUtil: Number(v("cmMCEsc")), propostaVencendoDias: Number(v("cmMCVenc")), carteiraEsquecidaDias: m.cadencia.carteiraEsquecidaDias,
+          passos: ls("cmMCPassos").map(function (l) { var p = partes(l); return { dia: Number(p[0]), canal: (p[1] || "LIGACAO").toUpperCase(), titulo: p[2] || "" }; }) };
+        n.estrategias = ls("cmMEstr").map(function (l) { var p = partes(l); return { codigo: (p[0] || "").toUpperCase(), titulo: p[1] || "", texto: p[2] || "" }; });
+        n.objecoes = ls("cmMObj").map(function (l) { var p = partes(l); return { objecao: p[0], resposta: p[1] || "" }; });
+        Object.keys(m.modelosMensagem).forEach(function (k) { n.modelosMensagem[k] = v("cmMMsg_" + k); });
+        n.politica.descontoMaxPct = Number(String(v("cmMDesc")).replace(",", ".")); n.politica.margemMinPct = Number(String(v("cmMMarg")).replace(",", ".")); n.politica.texto = v("cmMPolTxt");
+        n.proposta.validadeDias = Number(v("cmMVal")); n.proposta.apresentacao = v("cmMPApr"); Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta.condicoes[k] = v("cmMPC_" + k); }); n.proposta.responsabilidades = v("cmMPResp"); n.proposta.textoAceite = v("cmMPAceite");
+        Object.keys(CM.ini.setores).forEach(function (s) { n.posVenda[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; n.posVenda[s].checklist = ls("cmMPVC_" + s); n.posVenda.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
+        n.posVenda.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;
+        n.gestores = Array.prototype.map.call(document.querySelectorAll("[data-gestor]:checked"), function (x) { return x.getAttribute("data-gestor"); });
+        delete n.versao; delete n.atualizadaEm; delete n.atualizadaPor;
+        Com_chamar_("metodologia", { salvar: n, motivo: v("cmMMotivo") }, function (x) { CM.ini = null; Comercial_garantirInicio_(function () {}); Comercial_desenharMetodologia_(Object.assign(r, { metodologia: x.metodologia })); Com_msg_("cmMMsg", x.message, "ok"); }, function (e) { Com_msg_("cmMMsg", e); });
+      } catch (e) { Com_msg_("cmMMsg", "Não foi possível ler a metodologia da tela: " + (e && e.message ? e.message : e) + ". Confira o formato das linhas (campos separados por |)."); }
+    };
+  }
+</script>
