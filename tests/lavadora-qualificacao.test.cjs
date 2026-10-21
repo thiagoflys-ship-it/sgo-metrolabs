@@ -223,6 +223,19 @@ test('texto padrão com critério informativo fora da referência não contradiz
   assert.ok(env.fn('LavRel_lvConferirTextos_')(r.contexto, r.textos, true).ok);
 });
 
+test('texto do ciclo reprovado: sigla A0 preservada e mínimo de 3.000 s sem virar 3,000 s', () => {
+  const env = L.criarAmbiente();
+  const p = payload({ classeArtigo: 'CRITICO', textoColado: L.csvCompleto(L.cicloTermo({ nSensores: 3, patamarMin: 3 })) });
+  const r = env.fn('LavRel_apiGerarRascunhoCertificado')(p, { perfil: 'TECNICO' });
+  assert.equal(r.contexto.statusConsolidado, 'REPROVADO');
+  assert.match(r.contexto.resumoResultado, /letalidade térmica \(A0\)/);
+  assert.doesNotMatch(r.contexto.resumoResultado + r.textos.analisePorEstudo.TERMO, /\(a0\)/);
+  const html = env.fn('LavRel_listaA4_')(['A0 abaixo do mínimo de 3.000 s exigido.']);
+  assert.match(html, /3\.000 s/);
+  assert.doesNotMatch(html, /3,000/);
+  assert.equal(env.fn('LavRel_minusculaInicial_')('QO sem carga'), 'QO sem carga');
+});
+
 /* ---------------------------------------------------------------- emissão com aprovação */
 test('emissão: só o aprovador emite, com confirmação; reemissão gera revisão; enviar, prévia, aprovar e devolver', () => {
   const env = L.criarAmbiente({ props: { QUALIF_VINCULO_OBRIGATORIO: 'NAO' } });

@@ -177,7 +177,7 @@ function LavRel_lvMontarContextoCertificado_(payload, interno) {
   const ncsDecisivas = criterios.filter(function(c) { return c.conforme === false && c.decisivo; });
   let resumo;
   if (statusConsolidado === 'REPROVADO') {
-    resumo = ncsDecisivas.length ? 'Não atendido: ' + ncsDecisivas.map(function(c) { return c.criterio.toLowerCase(); }).join('; ') + '.' : 'O ciclo não atende aos critérios de aceitação.';
+    resumo = ncsDecisivas.length ? 'Não atendido: ' + ncsDecisivas.map(function(c) { return LavRel_minusculaInicial_(c.criterio); }).join('; ') + '.' : 'O ciclo não atende aos critérios de aceitação.';
   } else if (termo) {
     resumo = 'Todos os critérios decisivos foram atendidos. A0 mínimo de ' + SGO_DocA4_val_(a.minA0, 2, 's') + (a.piorSensorA0 ? ' no sensor ' + a.piorSensorA0.sensor : '') + ' para o mínimo de ' + SGO_DocA4_val_(limite, 0, 's') + '.';
   } else {
@@ -360,14 +360,14 @@ function LavRel_lvTextosPadrao_(ctx) {
   if (fasesEst.length) {
     p.push('Pelo perfil de temperatura, as demais etapas do ciclo foram estimadas assim: ' + fasesEst.map(function(x) { return x.nome.toLowerCase() + ' de ' + x.inicio + ' a ' + x.fim + ' (máxima de ' + V(x.tMax, 1, '°C') + ')'; }).join('; ') + '.');
   }
-  if (ncDec.length) p.push('Não foram atendidos: ' + ncDec.map(function(c) { return c.criterio.toLowerCase() + ' (obtido ' + c.obtido + '; requisito ' + c.requisito + ')'; }).join('; ') + '.');
+  if (ncDec.length) p.push('Não foram atendidos: ' + ncDec.map(function(c) { return LavRel_minusculaInicial_(c.criterio) + ' (obtido ' + c.obtido + '; requisito ' + c.requisito + ')'; }).join('; ') + '.');
   else if (decisivos.length) p.push((decisivos.length === 1 ? 'O critério decisivo foi atendido' : 'Os ' + decisivos.length + ' critérios decisivos foram atendidos') + '; os valores obtidos estão na tabela de verificação dos critérios.');
-  if (foraRef.length) p.push('Ficaram fora do valor de referência, sem efeito no resultado: ' + foraRef.map(function(c) { return c.criterio.toLowerCase() + ' (obtido ' + c.obtido + '; referência ' + c.requisito + ')'; }).join('; ') + '. Recomenda-se avaliar a causa.');
+  if (foraRef.length) p.push('Ficaram fora do valor de referência, sem efeito no resultado: ' + foraRef.map(function(c) { return LavRel_minusculaInicial_(c.criterio) + ' (obtido ' + c.obtido + '; referência ' + c.requisito + ')'; }).join('; ') + '. Recomenda-se avaliar a causa.');
   naoAv.forEach(function(c) { p.push(c.criterio + ': ' + String(c.obtido || '').replace(/^Não avaliado:\s*/, 'não avaliado, porque ')); });
   const analise = p.join('\n\n');
   const conclusao = [
     (decisivos.length === 1 ? 'Foi avaliado 1 critério decisivo' : 'Foram avaliados ' + decisivos.length + ' critérios decisivos') + '. ' +
-      (ncDec.length ? 'Não foram atendidos: ' + ncDec.map(function(c) { return c.criterio.toLowerCase(); }).join('; ') + '.' : (decisivos.length === 1 ? 'O critério foi atendido.' : 'Todos foram atendidos.')),
+      (ncDec.length ? 'Não foram atendidos: ' + ncDec.map(function(c) { return LavRel_minusculaInicial_(c.criterio); }).join('; ') + '.' : (decisivos.length === 1 ? 'O critério foi atendido.' : 'Todos foram atendidos.')),
     st === 'APROVADO' ? 'O ensaio está APROVADO.' : (st === 'REPROVADO' ? 'O ensaio está REPROVADO.' : 'O ensaio tem caráter informativo, sem critério de aprovação aplicável.')
   ].join('\n\n');
   const leigo = termo
@@ -733,4 +733,19 @@ function LavRel_lvFmtValor_(v, sufixo) {
 function LavRel_lvAssinatura_(valor) {
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(valor), Utilities.Charset.UTF_8);
   return digest.map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+
+
+/** Primeira letra minúscula, preservando siglas (A0, QI, QO...). */
+function LavRel_minusculaInicial_(t) {
+  t = String(t == null ? '' : t);
+  if (/^[A-ZÀ-Ú0-9]{2,}(\s|$)/.test(t)) return t;
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+
+/** Lista A4 sem a conversão de ponto para vírgula (os textos da lavadora já saem em pt-BR; "3.000 s" não pode virar "3,000 s"). */
+function LavRel_listaA4_(itens) {
+  var l = (itens || []).map(function (i) { return String(i == null ? '' : i).trim(); }).filter(Boolean);
+  if (!l.length) return '';
+  return '<ul class="lista">' + l.map(function (i) { return '<li>' + SGO_DocA4_esc_(i) + '</li>'; }).join('') + '</ul>';
 }

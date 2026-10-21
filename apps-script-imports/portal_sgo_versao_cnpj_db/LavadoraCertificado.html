@@ -71,9 +71,9 @@
 <p class="nota">Critérios configurados pela empresa executante e revisáveis pelo responsável técnico; a coluna Referência indica a fonte técnica de cada critério. Só os critérios decisivos aprovam ou reprovam o ensaio; os informativos são medidos e registrados.</p>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Tipo', cls: 'cen' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, { t: c.decisivo ? 'Decisivo' : 'Informativo', cls: 'cen' }, c.referencia]; }), { classe: 'compacta' }) ?>
 <h3>3.2 Escopo e limitações</h3>
-<?!= SGO_DocA4_lista_(ctx.escopo || []) ?>
+<?!= LavRel_listaA4_(ctx.escopo || []) ?>
 <h3>3.3 Referências normativas</h3>
-<?!= SGO_DocA4_lista_(ctx.normas) ?>
+<?!= LavRel_listaA4_(ctx.normas) ?>
 
 <h2>4. Resultados</h2>
 <h3>4.1 Fases do ciclo</h3>
@@ -130,9 +130,9 @@
   var obs = [].concat(estudo.alertasAnalise || [], estudo.observacoesAnalise || [], (ctx.registradores && ctx.registradores.observacoes) || []);
 ?>
 <h3>6.1 Não conformidades</h3>
-<? if (ncs.length) { ?><?!= SGO_DocA4_lista_(ncs) ?><? } else { ?><p>Nenhuma não conformidade foi registrada neste ensaio.</p><? } ?>
+<? if (ncs.length) { ?><?!= LavRel_listaA4_(ncs) ?><? } else { ?><p>Nenhuma não conformidade foi registrada neste ensaio.</p><? } ?>
 <h3>6.2 Observações</h3>
-<? if (obs.length) { ?><?!= SGO_DocA4_lista_(obs) ?><? } else { ?><p>Sem observações adicionais.</p><? } ?>
+<? if (obs.length) { ?><?!= LavRel_listaA4_(obs) ?><? } else { ?><p>Sem observações adicionais.</p><? } ?>
 
 <h2>7. Conclusão</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.conclusaoGeral) ?></div>

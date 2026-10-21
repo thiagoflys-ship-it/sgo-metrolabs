@@ -315,8 +315,8 @@ function LavRel_pdCorpo_(ctx, D, op) {
   params.push(['Leituras registradas', String(L.length) + (L.length ? ' (de ' + L[0].hora + ' a ' + L[L.length - 1].hora + ')' : '')]);
   params.push(['Duração total do registro', val(f.tempoTotalMinutos, 2, 'min')]);
   h.push('<h3>2.1 Parâmetros</h3>' + SGO_DocA4_tabelaIdent_(params, '', { porLinha: 3 }));
-  h.push('<h3>2.2 Escopo e limitações</h3>' + SGO_DocA4_lista_(ctx.escopo || []));
-  h.push('<h3>2.3 Referências normativas</h3>' + SGO_DocA4_lista_(ctx.normas || []));
+  h.push('<h3>2.2 Escopo e limitações</h3>' + LavRel_listaA4_(ctx.escopo || []));
+  h.push('<h3>2.3 Referências normativas</h3>' + LavRel_listaA4_(ctx.normas || []));
   h.push('</section>');
 
   // 3. Por sensor e por fase
@@ -419,8 +419,8 @@ function LavRel_pdCorpo_(ctx, D, op) {
   var ncs = e.motivosReprovacao || [];
   var obs = [].concat(e.alertasAnalise || [], e.observacoesAnalise || [], (ctx.registradores && ctx.registradores.observacoes) || []);
   h.push('<section class="pd-secao"><h2>6. Não conformidades e observações</h2>' +
-    '<h3>6.1 Não conformidades</h3>' + (ncs.length ? SGO_DocA4_lista_(ncs) : '<p>Nenhuma não conformidade foi registrada neste ensaio.</p>') +
-    '<h3>6.2 Observações</h3>' + (obs.length ? SGO_DocA4_lista_(obs) : '<p>Sem observações adicionais.</p>'));
+    '<h3>6.1 Não conformidades</h3>' + (ncs.length ? LavRel_listaA4_(ncs) : '<p>Nenhuma não conformidade foi registrada neste ensaio.</p>') +
+    '<h3>6.2 Observações</h3>' + (obs.length ? LavRel_listaA4_(obs) : '<p>Sem observações adicionais.</p>'));
   var id = ctx.identificacao;
   var resp = '<div class="manter"><h2>7. Responsabilidade técnica</h2><p>Este documento reúne os dados do registrador e os cálculos do ensaio identificado na capa e acompanha o relatório de ensaio do mesmo número. Os resultados foram calculados pelo sistema a partir das leituras do registrador, com os critérios configurados pela empresa executante; as leituras da seção 8 e do Anexo A fazem parte deste documento. A reprodução parcial deste documento depende de autorização da empresa executante.</p>';
   if (op.aprovacao) resp += '<p><b>Revisado e aprovado para emissão por</b> ' + esc(op.aprovacao.nome || '—') + (op.aprovacao.perfil ? ' (' + esc(String(op.aprovacao.perfil).toLowerCase()) + ')' : '') + ', em ' + esc(op.aprovacao.em) + ', com registro no sistema. Revisão ' + esc(id.revisao || '0') + ' desta planilha' + (Number(id.revisao) > 0 ? '; as revisões anteriores continuam arquivadas e são substituídas por esta' : '') + '.</p>';

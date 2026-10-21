@@ -305,8 +305,8 @@ function LavOficial_montarContexto_(sessionId, p) {
     var r = c.resumo, f = r.fatos || {};
     var pre = 'Relatório de ensaio ' + c.numero + ': ';
     if ((f.sensoresDesabilitados || []).length) observacoes.push(pre + 'sensores desconsiderados na análise: ' + f.sensoresDesabilitados.join(', ') + '.');
-    (r.criterios || []).filter(function (k) { return k.naoAvaliado; }).forEach(function (k) { observacoes.push(pre + k.criterio.toLowerCase() + ' não avaliado (' + String(k.obtido || '').replace(/^Não avaliado:?\s*/i, '').replace(/[.\s]+$/, '') + ').'); });
-    (r.criterios || []).filter(function (k) { return k.conforme === false && k.decisivo === false; }).forEach(function (k) { observacoes.push(pre + k.criterio.toLowerCase() + ' fora do valor de referência (obtido ' + String(k.obtido || '').replace(/[.\s]+$/, '') + '; não decide o resultado).'); });
+    (r.criterios || []).filter(function (k) { return k.naoAvaliado; }).forEach(function (k) { observacoes.push(pre + LavRel_minusculaInicial_(k.criterio) + ' não avaliado (' + String(k.obtido || '').replace(/^Não avaliado:?\s*/i, '').replace(/[.\s]+$/, '') + ').'); });
+    (r.criterios || []).filter(function (k) { return k.conforme === false && k.decisivo === false; }).forEach(function (k) { observacoes.push(pre + LavRel_minusculaInicial_(k.criterio) + ' fora do valor de referência (obtido ' + String(k.obtido || '').replace(/[.\s]+$/, '') + '; não decide o resultado).'); });
     (r.alertasAnalise || []).filter(function (a) { return !/não decide o resultado/.test(a); }).slice(0, 3).forEach(function (a) { observacoes.push(pre + String(a).replace(/[.\s]+$/, '') + '.'); });
   });
   var obsLivre = LavOficial_s_(p.observacoes).slice(0, 2000);

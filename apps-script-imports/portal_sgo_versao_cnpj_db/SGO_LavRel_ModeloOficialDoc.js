@@ -13,7 +13,7 @@
 
 function LavOficialDoc_esc_(s) { return SGO_DocA4_esc_(s); }
 function LavOficialDoc_p_(t) { return '<p>' + SGO_DocA4_esc_(t) + '</p>'; }
-function LavOficialDoc_lista_(itens) { return SGO_DocA4_lista_(itens); }
+function LavOficialDoc_lista_(itens) { return LavRel_listaA4_(itens); }
 
 function LavOficialDoc_etapasLista_(et) {
   var l = [];
