@@ -307,6 +307,8 @@
         var eqp = res.equipamento || {};
         var nc = String(eqp.CLIENTE_NOME || "").trim(), nu = String(eqp.UNIDADE_NOME || "").trim();
         var linha = nu && nu.toUpperCase() !== nc.toUpperCase() ? nc + " - " + nu : nc;
+        // 21/10/2026: o setor do cadastro entra no local da etiqueta.
+        if (eqp.SETOR) linha = linha + " · " + eqp.SETOR;
         EQP_QR_ATUAL = { qrUrl: res.qrUrl, tag: eqp.TAG, tipo: eqp.TIPO, modelo: eqp.MODELO, serie: eqp.SERIE, local: linha };
         body.innerHTML = '<img src="' + CadUI_esc_(res.qrUrl) + '" alt="QR Code do equipamento" class="qr-image"><div class="qr-info">' +
           "<div><strong>TAG:</strong> " + CadUI_esc_(eqp.TAG) + "</div><div><strong>Tipo:</strong> " + CadUI_esc_(eqp.TIPO) + "</div><div><strong>Modelo:</strong> " + CadUI_esc_(eqp.MODELO) + "</div><div><strong>Série:</strong> " + CadUI_esc_(eqp.SERIE) + "</div>" +

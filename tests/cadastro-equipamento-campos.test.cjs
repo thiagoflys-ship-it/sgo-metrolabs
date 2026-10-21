@@ -216,3 +216,9 @@ test('campos "do cadastro" nas seções do ensaio: somente leitura com explicaç
   assert.match(html('SGO_AutoRel_ConteudoModulo.js'), /prefixo: 'tplAutoRelV'[\s\S]*id="tplAutoRel_uiTag"|id="tplAutoRel_uiTag"[\s\S]*prefixo: 'tplAutoRelV'/);
   assert.match(html('SGO_LavRel_ConteudoModulo.js'), /tplLavRel_uiNumSerie/);
 });
+
+test('etiqueta do QR Code: o setor do cadastro entra no local (cliente - unidade · setor)', () => {
+  const tela = ler('JS_Equipamentos.html');
+  assert.match(tela, /if \(eqp\.SETOR\) linha = linha \+ " · " \+ eqp\.SETOR;/);
+  assert.match(tela, /EQP_QR_ATUAL = \{[^}]*local: linha \}/);
+});
