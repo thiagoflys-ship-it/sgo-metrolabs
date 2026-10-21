@@ -364,7 +364,7 @@ function AutoOficial_montarContexto_(sessionId, p) {
       cliente: ident.cliente, cnpj: ident.cnpj, endereco: ident.endereco, cidadeUf: ident.cidadeUf, unidade: ident.unidade, setor: ident.setor,
       tag: ident.tag, tipo: ident.tipo, numeroSerie: ident.numeroSerie,
       empresaExecutante: (typeof AutoRel_UCFG !== 'undefined' && AutoRel_UCFG.EMPRESA_EXECUTANTE) || {},
-      tecnicos: tecnicos, responsavelCliente: AutoOficial_s_(p.responsavelCliente).slice(0, 120), programas: programas
+      tecnicos: tecnicos, responsavelCliente: (AutoOficial_s_(p.responsavelCliente) || AutoOficial_s_(ident.responsavelEquipamento)).slice(0, 120), programas: programas
     },
     etapas: etapas, motivo: motivo, periodicidadeMeses: meses,
     inicio: SGO_QEQ_br_(inicioIso), fim: SGO_QEQ_br_(fimIso), validadeAte: SGO_QEQ_br_(validadeIso), validadeIso: validadeIso,
@@ -378,6 +378,8 @@ function AutoOficial_montarContexto_(sessionId, p) {
     travas: travas, emissaoBloqueada: travas.length > 0,
     _nomesProibidos: ident._nomesProibidos
   };
+  // 21/10/2026: patrimônio, capacidade e câmaras do cadastro entram só quando preenchidos (a assinatura dos envios antigos não muda).
+  ['patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (AutoOficial_s_(ident[k])) ctx.identificacao[k] = AutoOficial_s_(ident[k]); });
   ctx.assinatura = AutoOficial_assinaturaContexto_(ctx);
   return ctx;
 }
@@ -757,7 +759,9 @@ function AutoOficial_apiDispatch(req) {
       apiIdentificacao: AutoOficial_apiIdentificacao, apiEquipamento: AutoOficial_apiEquipamento, apiVincular: AutoOficial_apiVincular,
       apiGerarRascunho: AutoOficial_apiGerarRascunho, apiPrevia: AutoOficial_apiPrevia, apiEnviarParaAprovacao: AutoOficial_apiEnviarParaAprovacao,
       apiListarAprovacoes: AutoOficial_apiListarAprovacoes, apiPreverAprovacao: AutoOficial_apiPreverAprovacao, apiAprovarEmitir: AutoOficial_apiAprovarEmitir,
-      apiDevolver: AutoOficial_apiDevolver, apiAbrir: AutoOficial_apiAbrir
+      apiDevolver: AutoOficial_apiDevolver, apiAbrir: AutoOficial_apiAbrir,
+      // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio) e trazer dados de ensaios antigos.
+      apiPreencherCadastro: function (p, s, id) { return SGO_QEQ_apiPreencherCadastro(p, s, id); }, apiSugestoesCadastro: function (p, s, id) { return SGO_QEQ_apiSugestoesCadastro(p, s, id); }
     };
     var fn = String(req.fn || '');
     if (!allow[fn]) throw new Error('Operação desconhecida: ' + fn + '. Atualize a página (F5).');

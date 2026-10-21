@@ -518,7 +518,9 @@ function EstufaOficial_apiDispatch(req) {
       apiListarEquipamentos: EstufaOficial_apiListarEquipamentos, apiIdentificacao: EstufaOficial_apiIdentificacao, apiEquipamento: EstufaOficial_apiEquipamento, apiVincular: EstufaOficial_apiVincular,
       apiGerarRascunho: EstufaOficial_apiGerarRascunho, apiPrevia: EstufaOficial_apiPrevia, apiEnviarParaAprovacao: EstufaOficial_apiEnviarParaAprovacao,
       apiListarAprovacoes: EstufaOficial_apiListarAprovacoes, apiPreverAprovacao: EstufaOficial_apiPreverAprovacao, apiAprovarEmitir: EstufaOficial_apiAprovarEmitir,
-      apiDevolver: EstufaOficial_apiDevolver, apiAbrir: EstufaOficial_apiAbrir
+      apiDevolver: EstufaOficial_apiDevolver, apiAbrir: EstufaOficial_apiAbrir,
+      // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio) e trazer dados de ensaios antigos.
+      apiPreencherCadastro: function (p, s, id) { return SGO_QEQ_apiPreencherCadastro(p, s, id); }, apiSugestoesCadastro: function (p, s, id) { return SGO_QEQ_apiSugestoesCadastro(p, s, id); }
     };
     var fn = String(req.fn || '');
     if (!allow[fn]) throw new Error('Operação desconhecida: ' + fn + '. Atualize a página (F5).');

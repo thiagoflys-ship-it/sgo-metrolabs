@@ -123,6 +123,7 @@ const SGO_EQUIPAMENTOS = (() => {
       return { success: false, message: "Acesso negado: Seu perfil não permite criar equipamentos." };
     }
 
+    SGO_EQP_garantirColunas_();
     const dados = normalizarPayload_(payload);
     const errosVinculo = validarVinculo_(dados);
     if (errosVinculo) return { success: false, message: "Não foi possível cadastrar: " + errosVinculo };
@@ -138,6 +139,11 @@ const SGO_EQUIPAMENTOS = (() => {
         SERIE: dados.SERIE,
         TAG: dados.TAG,
         SETOR: dados.SETOR,
+        PATRIMONIO: dados.PATRIMONIO,
+        ANO_FABRICACAO: dados.ANO_FABRICACAO,
+        CAPACIDADE: dados.CAPACIDADE,
+        NUM_CAMARAS: dados.NUM_CAMARAS,
+        RESPONSAVEL_CLIENTE: dados.RESPONSAVEL_CLIENTE,
         STATUS: STATUS_ATIVO,
         QR_TOKEN: SGO_UTILS.uuid() // 🔥 QR automático
       })
@@ -146,7 +152,7 @@ const SGO_EQUIPAMENTOS = (() => {
     SGO_DATA.insert(SHEET_NAME, registro);
     SGO_DATA.log("EQUIPAMENTOS_CRIAR", sessao.usuario, "Equipamento criado TAG=" + dados.TAG, "EQUIPAMENTOS");
 
-    return { success: true, message: "Equipamento " + nomeEquip_(registro) + " cadastrado.", item: registro };
+    return { success: true, message: "Equipamento " + nomeEquip_(registro) + " cadastrado." + avisoSerieRepetida_(registro), item: registro };
   }
 
   function atualizar(sessionId, id, payload) {
@@ -156,6 +162,7 @@ const SGO_EQUIPAMENTOS = (() => {
       return { success: false, message: "Acesso negado: Seu perfil não permite editar equipamentos." };
     }
 
+    SGO_EQP_garantirColunas_();
     const equipId = SGO_UTILS.safe(id);
     const atual = SGO_DATA.getById(SHEET_NAME, equipId);
     
@@ -163,7 +170,7 @@ const SGO_EQUIPAMENTOS = (() => {
 
     // Merge: campo ausente no pedido mantém o valor atual (não apaga).
     const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
-      ["CLIENTE_ID", "UNIDADE_ID", "TIPO", "FABRICANTE", "MODELO", "SERIE", "TAG", "SETOR"]);
+      ["CLIENTE_ID", "UNIDADE_ID", "TIPO", "FABRICANTE", "MODELO", "SERIE", "TAG", "SETOR"].concat(SGO_EQP_CAMPOS_NOVOS));
     if (SGO_UTILS.safe(dados.CLIENTE_ID) !== SGO_UTILS.safe(atual.CLIENTE_ID) || SGO_UTILS.safe(dados.UNIDADE_ID) !== SGO_UTILS.safe(atual.UNIDADE_ID)) {
       return { success: false, message: "Não foi possível salvar: o equipamento não muda de cliente ou de unidade por esta tela. Use Gestão de vínculos (Tipo Equipamento, ação Transferir), que confere documentos e certificados ligados." };
     }
@@ -178,6 +185,11 @@ const SGO_EQUIPAMENTOS = (() => {
       SERIE: dados.SERIE,
       TAG: dados.TAG,
       SETOR: dados.SETOR,
+      PATRIMONIO: dados.PATRIMONIO,
+      ANO_FABRICACAO: dados.ANO_FABRICACAO,
+      CAPACIDADE: dados.CAPACIDADE,
+      NUM_CAMARAS: dados.NUM_CAMARAS,
+      RESPONSAVEL_CLIENTE: dados.RESPONSAVEL_CLIENTE,
       STATUS: atual.STATUS,
       CRIADO_EM: atual.CRIADO_EM,
       QR_TOKEN: atual.QR_TOKEN || SGO_UTILS.uuid() // Garante token caso não tenha
@@ -188,11 +200,23 @@ const SGO_EQUIPAMENTOS = (() => {
     if (ok) SGO_DATA.log("EQUIPAMENTOS_ATUALIZAR", sessao.usuario, "Equipamento atualizado ID=" + equipId, "EQUIPAMENTOS");
 
     return ok
-      ? { success: true, message: "Equipamento " + nomeEquip_(Object.assign({}, atual, novosDados)) + " atualizado." }
+      ? { success: true, message: "Equipamento " + nomeEquip_(Object.assign({}, atual, novosDados)) + " atualizado." + avisoSerieRepetida_(novosDados) }
       : { success: false, message: "Erro ao atualizar." };
   }
 
   // 17/10/2026: mensagens dizem qual equipamento (TAG, ou tipo e série).
+  // 21/10/2026: número de série repetido no mesmo cliente não bloqueia (placas antigas, série curta), mas avisa.
+  function avisoSerieRepetida_(e) {
+    try {
+      const serie = SGO_UTILS.safeUpper(e && e.SERIE);
+      if (!serie || /^(N\/P|N\/A|S\/N|SEM SERIE|SEM SÉRIE|-)$/.test(serie)) return "";
+      const outro = SGO_DATA.getAll(SHEET_NAME).filter(function (x) {
+        return String(x.ID) !== String(e.ID) && SGO_UTILS.safe(x.CLIENTE_ID) === SGO_UTILS.safe(e.CLIENTE_ID) && SGO_UTILS.safeUpper(x.SERIE) === serie && SGO_UTILS.safeUpper(x.STATUS || STATUS_ATIVO) === STATUS_ATIVO;
+      })[0];
+      return outro ? " Atenção: o equipamento " + nomeEquip_(outro) + " deste cliente tem o mesmo número de série (" + serie + "). Confira se não é o mesmo equipamento cadastrado duas vezes." : "";
+    } catch (err) { return ""; }
+  }
+
   function nomeEquip_(e) { e = e || {}; return SGO_UTILS.safe(e.TAG) || [SGO_UTILS.safe(e.TIPO), SGO_UTILS.safe(e.SERIE)].filter(Boolean).join(" ") || "sem identificação"; }
 
   function inativar(sessionId, id) {
@@ -327,7 +351,12 @@ const SGO_EQUIPAMENTOS = (() => {
       MODELO: SGO_UTILS.safeUpper(payload.MODELO),
       SERIE: SGO_UTILS.safeUpper(payload.SERIE),
       TAG: SGO_UTILS.safeUpper(payload.TAG),
-      SETOR: SGO_UTILS.safeUpper(payload.SETOR)
+      SETOR: SGO_UTILS.safeUpper(payload.SETOR),
+      PATRIMONIO: SGO_UTILS.safeUpper(payload.PATRIMONIO),
+      ANO_FABRICACAO: SGO_UTILS.safe(payload.ANO_FABRICACAO).replace(/\D/g, "").slice(0, 4),
+      CAPACIDADE: SGO_UTILS.safe(payload.CAPACIDADE),
+      NUM_CAMARAS: SGO_UTILS.safe(payload.NUM_CAMARAS).replace(/\D/g, "").slice(0, 3),
+      RESPONSAVEL_CLIENTE: SGO_UTILS.safe(payload.RESPONSAVEL_CLIENTE)
     };
   }
 
@@ -358,6 +387,17 @@ const SGO_EQUIPAMENTOS = (() => {
 /* =========================
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
+/* 21/10/2026: campos de identificação que os documentos usam e que antes eram digitados na tela do ensaio.
+ * Só acrescenta coluna (nunca remove nem reordena); registros antigos ficam com o campo vazio. */
+var SGO_EQP_CAMPOS_NOVOS = ["PATRIMONIO", "ANO_FABRICACAO", "CAPACIDADE", "NUM_CAMARAS", "RESPONSAVEL_CLIENTE"];
+var SGO_EQP_COLUNAS_OK_ = false;
+function SGO_EQP_garantirColunas_() {
+  if (SGO_EQP_COLUNAS_OK_) return;
+  if (typeof CertCal_garantirColuna_ !== "function") return;
+  ["SETOR"].concat(SGO_EQP_CAMPOS_NOVOS).forEach(function (c) { CertCal_garantirColuna_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, c); });
+  SGO_EQP_COLUNAS_OK_ = true;
+}
+
 function equipamentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar os equipamentos", e) }; } }
 function equipamentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("carregar o equipamento", e) }; } }
 function equipamentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("cadastrar o equipamento", e) }; } }

@@ -80,7 +80,10 @@ function CadeiaFrioRel_apiDispatch(req) {
     apiPesquisarClientes: CadeiaFrioRel_apiPesquisarClientes,
     apiListarUnidades: CadeiaFrioRel_apiListarUnidades,
     apiListarEquipamentos: CadeiaFrioRel_apiListarEquipamentos,
-    apiIdentificacao: CadeiaFrioRel_apiIdentificacao
+    apiIdentificacao: CadeiaFrioRel_apiIdentificacao,
+    // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio) e trazer dados de ensaios antigos.
+    apiPreencherCadastro: function (p, s, id) { return SGO_QEQ_apiPreencherCadastro(p, s, id); },
+    apiSugestoesCadastro: function (p, s, id) { return SGO_QEQ_apiSugestoesCadastro(p, s, id); }
   };
 
   if (!fn) {

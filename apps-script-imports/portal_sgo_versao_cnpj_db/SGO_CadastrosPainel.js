@@ -168,7 +168,8 @@ function CadPainel_montar_(sessionId, tipo) {
       var cli = b.mC[CadPainel_txt_(e.CLIENTE_ID)] || null, uni = b.mU[CadPainel_txt_(e.UNIDADE_ID)] || null;
       var de = docsE[id] || { total: 0, vencidos: 0, vencendo: 0, proximo: null };
       var faltam = [];
-      ['TAG', 'FABRICANTE', 'MODELO', 'SERIE'].forEach(function (k) { if (!CadPainel_txt_(e[k])) faltam.push({ TAG: 'TAG', FABRICANTE: 'fabricante', MODELO: 'modelo', SERIE: 'número de série' }[k]); });
+      // 21/10/2026: setor entra (sai nos relatórios e certificados, como TAG e série).
+      ['TAG', 'SERIE', 'SETOR', 'FABRICANTE', 'MODELO'].forEach(function (k) { if (!CadPainel_txt_(e[k])) faltam.push({ TAG: 'TAG', FABRICANTE: 'fabricante', MODELO: 'modelo', SERIE: 'número de série', SETOR: 'setor' }[k]); });
       var pend = [];
       var ativo = CadPainel_ativo_(e);
       if (ativo && (!CadPainel_ativo_(cli) || !CadPainel_ativo_(uni) || CadPainel_txt_(uni.CLIENTE_ID) !== CadPainel_txt_(e.CLIENTE_ID))) pend.push('vinculo_pendente');

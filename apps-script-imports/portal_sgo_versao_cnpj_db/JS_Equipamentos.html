@@ -37,7 +37,7 @@
         { id: "venc", rotulo: "Vencimento mais próximo", fn: function (a, b) { var x = a.PROXIMO_VENCIMENTO_DIAS, y = b.PROXIMO_VENCIMENTO_DIAS; return (x === null) - (y === null) || (x || 0) - (y || 0); } },
         { id: "recentes", rotulo: "Mais recentes primeiro", fn: function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); } }
       ],
-      texto: function (e) { return [e.TAG, e.TIPO, e.SERIE, e.FABRICANTE, e.MODELO, e.SETOR, e.CLIENTE_NOME, e.UNIDADE_NOME, e.CLIENTE_CNPJ].join(" "); },
+      texto: function (e) { return [e.TAG, e.TIPO, e.SERIE, e.PATRIMONIO, e.FABRICANTE, e.MODELO, e.SETOR, e.CLIENTE_NOME, e.UNIDADE_NOME, e.CLIENTE_CNPJ].join(" "); },
       acao: cliente ? null : { texto: "Novo equipamento", fn: function () { Equipamentos_formulario_(null); } },
       vazioTitulo: "Nenhum equipamento cadastrado ainda.", vazio: cliente ? "Os equipamentos da sua empresa aparecem aqui assim que forem cadastrados pela Metrolabs." : "Clique em Novo equipamento. Antes, o cliente e a unidade precisam estar cadastrados.",
       colunas: [
@@ -71,7 +71,7 @@
       { texto: "Ver detalhes e documentos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("equipamentos", e.ID); } },
       { texto: "QR Code e etiqueta", icone: "fa-qrcode", acao: function () { equipamentosGerarQR_(e.ID); } },
       { texto: "Novo documento deste equipamento", icone: "fa-file-circle-plus", desabilitado: !ativo, nota: ativo ? "" : "Reative o equipamento para anexar documento.", acao: function () { if (typeof Documentos_novoPara_ === "function") Documentos_novoPara_(e); } },
-      { texto: "Transferir para outra unidade (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Gestor, Diretoria ou Administrador).", acao: function () { CadTela_abrirVinculos_("EQUIPAMENTO", e.ID); } },
+      { texto: "Transferir para outra unidade (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).", acao: function () { CadTela_abrirVinculos_("EQUIPAMENTO", e.ID); } },
       "-",
       ativo
         ? { texto: "Inativar equipamento", icone: "fa-ban", risco: true, acao: function () { Equipamentos_inativar_(e); } }
@@ -97,8 +97,8 @@
         if ((e.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> A unidade ou o cliente deste equipamento estão inativos, ou a unidade é de outro cliente. ' + (gestao ? "Corrija em Mais › Transferir para outra unidade." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
         if ((e.PENDENCIAS || []).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((e.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
         return faixas +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["TAG", e.TAG], ["Tipo", CadUI_maiusculaInicial_(e.TIPO)], ["Número de série", e.SERIE], ["Fabricante", e.FABRICANTE], ["Modelo", e.MODELO]]) + "</section>" +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Onde está</h4>' + CadUI_dados_([["Cliente", e.CLIENTE_NOME], ["Unidade", e.UNIDADE_NOME], ["Setor ou local", e.SETOR]]) +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["TAG", e.TAG], ["Tipo", CadUI_maiusculaInicial_(e.TIPO)], ["Número de série", e.SERIE], ["Patrimônio", e.PATRIMONIO], ["Fabricante", e.FABRICANTE], ["Modelo", e.MODELO], ["Ano de fabricação", e.ANO_FABRICACAO], ["Capacidade ou volume", e.CAPACIDADE], ["Câmaras ou portas", e.NUM_CAMARAS]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Onde está</h4>' + CadUI_dados_([["Cliente", e.CLIENTE_NOME], ["Unidade", e.UNIDADE_NOME], ["Setor ou local", e.SETOR], ["Responsável no cliente", e.RESPONSAVEL_CLIENTE]]) +
             (cliente ? "" : '<div class="cadx-acoes" style="margin-top:8px"><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'clientes\',\'' + CadUI_esc_(e.CLIENTE_ID) + '\')">Abrir cliente</button><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'unidades\',\'' + CadUI_esc_(e.UNIDADE_ID) + '\')">Abrir unidade</button></div>') + "</section>" +
           (e.QUALIF_ROTULO ? '<section class="cadx-sec"><h4 class="cadx-sec-tit">Qualificação</h4><div class="qualif-situacao ' + CadUI_esc_(e.QUALIF_SITUACAO) + '">' + CadUI_esc_(e.QUALIF_ROTULO) + '</div><p class="cadx-sub">Relatórios, revisões e próxima requalificação na aba Qualificações.</p></section>' : "") +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Documentos</h4>' + CadUI_dados_([["Documentos", CadUI_num_(e.QTD_DOCUMENTOS)], ["Vencidos", CadUI_num_(e.DOCS_VENCIDOS)], ["Vencendo em 30 dias", CadUI_num_(e.DOCS_VENCENDO)], ["Cadastrado em", CadUI_dataHora_(e.CRIADO_EM)]]) + "</section>";
@@ -187,14 +187,21 @@
           CadUI_secao_("Identificação", [
             CadUI_campo_({ id: "eqp_tipo", rotulo: "Tipo do equipamento", obrigatorio: true, inteiro: true, valor: e.TIPO, placeholder: "Ex.: Autoclave, Lavadora termodesinfectora, Refrigerador", attrs: ' list="eqpTiposLista"' }) + '<datalist id="eqpTiposLista">' + Equipamentos_tiposConhecidos_().map(function (t) { return '<option value="' + CadUI_esc_(t) + '">'; }).join("") + "</datalist>",
             CadUI_campo_({ id: "eqp_tag", rotulo: "TAG (identificador)", valor: e.TAG, placeholder: "Ex.: AUT-01", dica: "Código da etiqueta ou do patrimônio. Não se repete no mesmo cliente." }),
-            CadUI_campo_({ id: "eqp_serie", rotulo: "Número de série", valor: e.SERIE, placeholder: "Como está na placa do fabricante" })
+            CadUI_campo_({ id: "eqp_serie", rotulo: "Número de série", valor: e.SERIE, placeholder: "Como está na placa do fabricante", dica: "Se outro equipamento deste cliente tiver a mesma série, o sistema avisa ao salvar." }),
+            CadUI_campo_({ id: "eqp_patrimonio", rotulo: "Patrimônio", valor: e.PATRIMONIO, placeholder: "Número de patrimônio do cliente, se houver" })
           ]) +
-          CadUI_secao_("Fabricação", [
-            CadUI_campo_({ id: "eqp_fabricante", rotulo: "Fabricante", valor: e.FABRICANTE }),
-            CadUI_campo_({ id: "eqp_modelo", rotulo: "Modelo", valor: e.MODELO })
+          CadUI_secao_("Fabricação e capacidade", [
+            CadUI_campo_({ id: "eqp_fabricante", rotulo: "Fabricante (uso interno)", valor: e.FABRICANTE, dica: "Não aparece nos relatórios de qualificação." }),
+            CadUI_campo_({ id: "eqp_modelo", rotulo: "Modelo (uso interno)", valor: e.MODELO }),
+            CadUI_campo_({ id: "eqp_ano", rotulo: "Ano de fabricação", valor: e.ANO_FABRICACAO, placeholder: "Ex.: 2019", attrs: ' inputmode="numeric" maxlength="4"' }),
+            CadUI_campo_({ id: "eqp_capacidade", rotulo: "Capacidade ou volume", valor: e.CAPACIDADE, placeholder: "Ex.: 150 L, 4 cestos, 500 L" }),
+            CadUI_campo_({ id: "eqp_camaras", rotulo: "Número de câmaras ou portas", valor: e.NUM_CAMARAS, placeholder: "Quando o tipo tiver mais de uma", attrs: ' inputmode="numeric" maxlength="3"' })
           ]) +
-          CadUI_secao_("Localização", [CadUI_campo_({ id: "eqp_setor", rotulo: "Setor ou local", inteiro: true, valor: e.SETOR, placeholder: "Ex.: CME, Centro cirúrgico, Sala de vacina" })]) +
-          '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios. TAG, série, fabricante e modelo completam o cadastro (sem eles o equipamento aparece como "Cadastro incompleto").</p>';
+          CadUI_secao_("Localização e responsável", [
+            CadUI_campo_({ id: "eqp_setor", rotulo: "Setor ou local", inteiro: true, valor: e.SETOR, placeholder: "Ex.: CME, Centro cirúrgico, Sala de vacina", dica: "Setor da unidade onde o equipamento está instalado. Sai nos relatórios e certificados." }),
+            CadUI_campo_({ id: "eqp_responsavel", rotulo: "Responsável no cliente", inteiro: true, valor: e.RESPONSAVEL_CLIENTE, placeholder: "Nome e função de quem responde pelo equipamento no cliente" })
+          ]) +
+          '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios. TAG, número de série e setor saem nos relatórios, certificados e na etiqueta do QR code; TAG, série, setor, fabricante e modelo completam o cadastro (sem eles o equipamento aparece como "Cadastro incompleto").</p>';
       },
       rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Equipamentos_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Cadastrar equipamento" : "Salvar alterações"),
       depois: function (p) {
@@ -244,7 +251,9 @@
 
   function Equipamentos_salvar_(id) {
     var novo = !id;
-    var p = { TIPO: getValue_("eqp_tipo"), TAG: getValue_("eqp_tag"), SERIE: getValue_("eqp_serie"), FABRICANTE: getValue_("eqp_fabricante"), MODELO: getValue_("eqp_modelo"), SETOR: getValue_("eqp_setor") };
+    var p = { TIPO: getValue_("eqp_tipo"), TAG: getValue_("eqp_tag"), SERIE: getValue_("eqp_serie"), FABRICANTE: getValue_("eqp_fabricante"), MODELO: getValue_("eqp_modelo"), SETOR: getValue_("eqp_setor"),
+      PATRIMONIO: getValue_("eqp_patrimonio"), ANO_FABRICACAO: getValue_("eqp_ano"), CAPACIDADE: getValue_("eqp_capacidade"), NUM_CAMARAS: getValue_("eqp_camaras"), RESPONSAVEL_CLIENTE: getValue_("eqp_responsavel") };
+    if (p.ANO_FABRICACAO && !/^(19|20)\d{2}$/.test(String(p.ANO_FABRICACAO).trim())) { CadUI_mostrarErros_({ eqp_ano: "Informe o ano com 4 dígitos (ex.: 2019) ou deixe em branco." }, ["eqp_ano"]); return; }
     if (novo) { p.CLIENTE_ID = getValue_("eqp_cliente_id"); p.UNIDADE_ID = getValue_("eqp_unidade_id"); }
     else { var at = CadTela_item_("equipamentos", id) || {}; p.CLIENTE_ID = at.CLIENTE_ID; p.UNIDADE_ID = at.UNIDADE_ID; }
     var erros = {};

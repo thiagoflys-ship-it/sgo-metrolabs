@@ -195,8 +195,142 @@ function SGO_QEQ_identificacao_(sessionId, clienteId, unidadeId, equipamentoId) 
     cidadeUf: [SGO_QEQ_s_(u.CIDADE), SGO_QEQ_s_(u.UF)].filter(Boolean).join('/'),
     unidade: SGO_QEQ_s_(u.NOME_UNIDADE), setor: SGO_QEQ_s_(e.SETOR),
     tag: SGO_QEQ_s_(e.TAG), tipo: SGO_QEQ_maiusculaInicial_(e.TIPO) || 'Equipamento', numeroSerie: SGO_QEQ_s_(e.SERIE),
+    // 21/10/2026: identificação completa do cadastro (antes digitada na tela do ensaio). Fabricante e modelo só para uso interno.
+    patrimonio: SGO_QEQ_s_(e.PATRIMONIO), anoFabricacao: SGO_QEQ_s_(e.ANO_FABRICACAO), capacidade: SGO_QEQ_s_(e.CAPACIDADE),
+    numCamaras: SGO_QEQ_s_(e.NUM_CAMARAS), responsavelEquipamento: SGO_QEQ_s_(e.RESPONSAVEL_CLIENTE) || SGO_QEQ_s_(u.RESPONSAVEL),
+    faltam: SGO_QEQ_faltam_(e),
     _nomesProibidos: nomes
   };
+}
+
+/* ============================================================
+ * Campos do cadastro do equipamento que os documentos usam (21/10/2026)
+ * ============================================================ */
+
+/** Campos que a tela do ensaio pode preencher no cadastro (só quando vazios). obrigatorio: o documento precisa dele. */
+var SGO_QEQ_CAMPOS_CADASTRO = [
+  { campo: 'TAG', rotulo: 'TAG', obrigatorio: true, maiuscula: true },
+  { campo: 'SERIE', rotulo: 'Nº de série', obrigatorio: true, maiuscula: true },
+  { campo: 'SETOR', rotulo: 'Setor', obrigatorio: true, maiuscula: true },
+  { campo: 'PATRIMONIO', rotulo: 'Patrimônio', maiuscula: true },
+  { campo: 'ANO_FABRICACAO', rotulo: 'Ano de fabricação' },
+  { campo: 'CAPACIDADE', rotulo: 'Capacidade ou volume' },
+  { campo: 'NUM_CAMARAS', rotulo: 'Número de câmaras ou portas' },
+  { campo: 'RESPONSAVEL_CLIENTE', rotulo: 'Responsável no cliente' }
+];
+
+function SGO_QEQ_campoCadastro_(campo) { return SGO_QEQ_CAMPOS_CADASTRO.filter(function (c) { return c.campo === campo; })[0] || null; }
+
+/** Campos obrigatórios para o documento que estão vazios no cadastro: [{ campo, rotulo }]. */
+function SGO_QEQ_faltam_(e) {
+  return SGO_QEQ_CAMPOS_CADASTRO.filter(function (c) { return c.obrigatorio && !SGO_QEQ_s_(e && e[c.campo]); }).map(function (c) { return { campo: c.campo, rotulo: c.rotulo }; });
+}
+
+/** Identificação sem os campos internos (prefixo _). */
+function SGO_QEQ_identPublica_(ident) {
+  var o = {};
+  Object.keys(ident || {}).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = ident[k]; });
+  return o;
+}
+
+/**
+ * Preenche no cadastro do equipamento, a partir da tela do ensaio, os campos que estão VAZIOS
+ * (nunca troca valor já gravado: isso continua em Cadastros › Equipamentos, por quem tem permissão).
+ * p: { clienteId, unidadeId, equipamentoId, campos: { TAG: '...', SERIE: '...', SETOR: '...' }, origem }.
+ * Grava trilha (quem, quando, de onde, valor). Devolve a identificação atualizada.
+ */
+function SGO_QEQ_preencherCadastro_(sessionId, sessao, p) {
+  p = p || {};
+  if (!SGO_QEQ_ehEquipe_(sessao)) throw new Error('Somente a equipe técnica completa o cadastro do equipamento pela tela do ensaio. Peça à Metrolabs.');
+  var ident = SGO_QEQ_identificacao_(sessionId, p.clienteId, p.unidadeId, p.equipamentoId);
+  var atual = SGO_QEQ_porId_('CAD_EQUIPAMENTOS', ident.equipamentoId) || {};
+  var pedidos = p.campos || {};
+  var mudancas = {}, gravados = [], ignorados = [];
+  Object.keys(pedidos).forEach(function (k) {
+    var def = SGO_QEQ_campoCadastro_(k);
+    if (!def) return;
+    var v = SGO_QEQ_s_(pedidos[k]).replace(/\s+/g, ' ');
+    if (!v) return;
+    if (def.maiuscula) v = v.toUpperCase();
+    if (k === 'ANO_FABRICACAO' && !/^(19|20)\d{2}$/.test(v)) throw new Error('Ano de fabricação: informe 4 dígitos (ex.: 2019) ou deixe em branco.');
+    if (k === 'NUM_CAMARAS' && !/^\d{1,3}$/.test(v)) throw new Error('Número de câmaras ou portas: informe só o número (ex.: 2) ou deixe em branco.');
+    if (v.length > 120) throw new Error(def.rotulo + ': texto longo demais (até 120 caracteres).');
+    if (SGO_QEQ_s_(atual[k])) { ignorados.push(def.rotulo); return; }
+    mudancas[k] = v; gravados.push(def.rotulo + ' = ' + v);
+  });
+  if (!gravados.length) {
+    return { ok: true, gravados: 0, identificacao: SGO_QEQ_identPublica_(ident),
+      mensagem: ignorados.length ? 'Nada gravado: ' + ignorados.join(', ') + (ignorados.length > 1 ? ' já estão preenchidos' : ' já está preenchido') + ' no cadastro. Para alterar um valor já gravado, use Cadastros › Equipamentos › Editar.' : 'Preencha ao menos um campo antes de gravar.' };
+  }
+  var outros = SGO_QEQ_ler_('CAD_EQUIPAMENTOS').filter(function (x) { return SGO_QEQ_s_(x.ID) !== ident.equipamentoId && SGO_QEQ_s_(x.CLIENTE_ID) === ident.clienteId && SGO_QEQ_ativo_(x); });
+  if (mudancas.TAG) {
+    var tagN = SGO_QEQ_normTag_(mudancas.TAG);
+    var repetida = outros.filter(function (x) { return SGO_QEQ_normTag_(x.TAG) === tagN; })[0];
+    if (repetida) throw new Error('A TAG ' + mudancas.TAG + ' já é de outro equipamento deste cliente (' + (SGO_QEQ_maiusculaInicial_(repetida.TIPO) || 'equipamento') + (repetida.SERIE ? ', série ' + repetida.SERIE : '') + '). Confira a etiqueta; se for o mesmo equipamento cadastrado duas vezes, a gestão resolve em Cadastros › Equipamentos.');
+  }
+  var aviso = '';
+  if (mudancas.SERIE) {
+    var serieRep = outros.filter(function (x) { return SGO_QEQ_up_(x.SERIE) === mudancas.SERIE; })[0];
+    if (serieRep) aviso = ' Atenção: o equipamento ' + (SGO_QEQ_s_(serieRep.TAG) || 'sem TAG') + ' deste cliente tem o mesmo número de série. Confira se não é o mesmo equipamento cadastrado duas vezes.';
+  }
+  try { if (typeof SGO_EQP_garantirColunas_ === 'function') SGO_EQP_garantirColunas_(); } catch (eCol) {}
+  var ok = SGO_DATA.update(SGO_QEQ_aba_('CAD_EQUIPAMENTOS'), ident.equipamentoId, mudancas);
+  if (ok === false) throw new Error('O cadastro do equipamento não foi gravado (o registro pode ter sido excluído). Atualize as listas e tente de novo.');
+  var origem = SGO_QEQ_s_(p.origem) || 'tela do ensaio';
+  try {
+    SGO_DATA.log('EQUIPAMENTOS_PREENCHER_VAZIO', SGO_QEQ_s_(sessao.usuario || sessao.nome), 'Equipamento ID=' + ident.equipamentoId + ' completado pela ' + origem + ' (só campos vazios): ' + gravados.join('; ') + '.', 'EQUIPAMENTOS');
+  } catch (eLog) {}
+  try { if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_(); } catch (ePend) {}
+  var novo = SGO_QEQ_identificacao_(sessionId, ident.clienteId, ident.unidadeId, ident.equipamentoId);
+  return { ok: true, gravados: gravados.length, identificacao: SGO_QEQ_identPublica_(novo),
+    mensagem: 'Gravado no cadastro do equipamento: ' + gravados.join('; ') + '.' + (ignorados.length ? ' Não alterado (já preenchido): ' + ignorados.join(', ') + '.' : '') + aviso };
+}
+
+/**
+ * Dados digitados em ensaios antigos (antes do cadastro travado) que podem completar o cadastro:
+ * só para campos vazios no cadastro, a partir dos registros de emissão ligados a este equipamento
+ * ou, sem vínculo, do mesmo CNPJ e da mesma TAG. Devolve { TAG: [{ valor, origem }], SERIE: [...], SETOR: [...] }.
+ */
+function SGO_QEQ_sugestoesAntigas_(ident) {
+  var atual = SGO_QEQ_porId_('CAD_EQUIPAMENTOS', ident.equipamentoId) || {};
+  var vazios = SGO_QEQ_CAMPOS_CADASTRO.filter(function (c) { return !SGO_QEQ_s_(atual[c.campo]); }).map(function (c) { return c.campo; });
+  var out = {};
+  if (!vazios.length) return out;
+  var lista = [];
+  try { if (typeof SGO_QE_lerTudo_ === 'function') lista = SGO_QE_lerTudo_(); } catch (e) { lista = []; }
+  var cnpj = SGO_QEQ_digitos_(ident.cnpj), tag = SGO_QEQ_normTag_(ident.tag);
+  var unidadeN = SGO_QEQ_semAcento_(ident.unidade);
+  lista.forEach(function (r) {
+    var eq = SGO_QEQ_s_(r.EQUIPAMENTO_ID);
+    var doEquip = eq ? eq === ident.equipamentoId : (!!cnpj && SGO_QEQ_digitos_(r.CNPJ) === cnpj && !!tag && SGO_QEQ_normTag_(r.TAG) === tag);
+    if (!doEquip) return;
+    var d = {};
+    try { d = JSON.parse(r.PAYLOAD_JSON || '{}') || {}; } catch (e) { d = {}; }
+    var setor = SGO_QEQ_s_(d.setor || d.local || d.localizacao);
+    // Payload já montado pelo cadastro: "Unidade — Setor"; fica só o setor.
+    var partes = setor.split(' — ');
+    if (partes.length > 1 && SGO_QEQ_semAcento_(partes[0]) === unidadeN) setor = partes.slice(1).join(' — ');
+    else if (unidadeN && SGO_QEQ_semAcento_(setor) === unidadeN) setor = '';
+    var cand = { TAG: SGO_QEQ_s_(d.tag || r.TAG), SERIE: SGO_QEQ_s_(d.numSerie || d.numeroSerie || d.serie), SETOR: setor,
+      PATRIMONIO: SGO_QEQ_s_(d.patrimonio), ANO_FABRICACAO: SGO_QEQ_s_(d.anoFabricacao), CAPACIDADE: SGO_QEQ_s_(d.capacidade || d.volume), RESPONSAVEL_CLIENTE: SGO_QEQ_s_(d.responsavelCliente) };
+    var origem = [SGO_QEQ_s_(r.NUMERO), SGO_QEQ_br_(SGO_QEQ_iso_(r.APROVADO_EM || r.ENVIADO_EM))].filter(Boolean).join(' de ') || 'ensaio anterior';
+    vazios.forEach(function (k) {
+      var v = cand[k];
+      if (!v) return;
+      var def = SGO_QEQ_campoCadastro_(k);
+      if (def && def.maiuscula) v = v.toUpperCase();
+      var arr = out[k] = out[k] || [];
+      if (!arr.some(function (x) { return x.valor === v; })) arr.push({ valor: v, origem: origem });
+    });
+  });
+  return out;
+}
+
+/** Roteadores dos módulos: preencher vazio no cadastro e sugestões de ensaios antigos. */
+function SGO_QEQ_apiPreencherCadastro(p, sessao, sessionId) { return SGO_QEQ_preencherCadastro_(sessionId, sessao, p); }
+function SGO_QEQ_apiSugestoesCadastro(p, sessao, sessionId) {
+  var ident = SGO_QEQ_identificacao_(sessionId, p.clienteId, p.unidadeId, p.equipamentoId);
+  return { ok: true, sugestoes: SGO_QEQ_sugestoesAntigas_(ident), campos: SGO_QEQ_CAMPOS_CADASTRO.map(function (c) { return { campo: c.campo, rotulo: c.rotulo }; }) };
 }
 
 /**
@@ -210,11 +344,15 @@ function SGO_QEQ_aplicarVinculoPayload_(sessionId, payload) {
   try { obrigatorio = SGO_QEQ_up_(PropertiesService.getScriptProperties().getProperty('QUALIF_VINCULO_OBRIGATORIO')) !== 'NAO'; } catch (e) {}
   if (!payload.equipamentoId && !obrigatorio) return payload;
   var id = SGO_QEQ_identificacao_(sessionId, payload.clienteId, payload.unidadeId, payload.equipamentoId);
-  return Object.assign({}, payload, {
+  var local = [id.unidade, id.setor].filter(Boolean).join(' — ');
+  // 21/10/2026: "local"/"localizacao" também vêm do cadastro (a planilha de dados usa "local"; antes ficava o que a tela mandasse).
+  var p = Object.assign({}, payload, {
     clienteId: id.clienteId, unidadeId: id.unidadeId, equipamentoId: id.equipamentoId,
     cliente: id.cliente, cnpj: id.cnpj, endereco: [id.endereco, id.cidadeUf].filter(Boolean).join(' - '),
-    setor: [id.unidade, id.setor].filter(Boolean).join(' — '), tag: id.tag, numSerie: id.numeroSerie, tipoEquipamento: id.tipo, marca: '', modelo: ''
+    setor: local, local: local, localizacao: local, tag: id.tag, numSerie: id.numeroSerie, tipoEquipamento: id.tipo, marca: '', modelo: ''
   });
+  ['patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (id[k]) p[k] = id[k]; });
+  return p;
 }
 
 /* ============================================================

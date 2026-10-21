@@ -283,7 +283,8 @@ function SGO_ajudaTelas_Cadastros_() {
       paraQueServe: "Cadastra o parque de equipamentos de cada cliente e unidade, identificados pela TAG. Mostra a situação dos documentos e da qualificação de cada equipamento e gera o QR Code da etiqueta. Os módulos de qualificação (Autoclaves, baixa temperatura) começam por este cadastro: o relatório emitido aparece sozinho na ficha do equipamento.",
       antesDeComecar: [
         "O cliente e a unidade precisam estar cadastrados e ativos.",
-        "Tenha em mãos a TAG (código da etiqueta ou do patrimônio), o número de série, o fabricante e o modelo, como estão na placa do equipamento.",
+        "Tenha em mãos a TAG (código da etiqueta), o número de série, o setor onde ele está instalado, o patrimônio do cliente (se houver), o fabricante, o modelo, o ano de fabricação e a capacidade, como estão na placa do equipamento.",
+        "TAG, número de série e setor saem nos relatórios de qualificação, nos certificados e na etiqueta do QR Code. Os módulos de ensaio não pedem para digitar de novo: puxam daqui.",
         "A TAG não pode se repetir entre equipamentos ativos do mesmo cliente.",
         "Para o perfil Cliente, esta tela mostra só os equipamentos da própria empresa."
       ],
@@ -298,8 +299,9 @@ function SGO_ajudaTelas_Cadastros_() {
             "Digite o tipo do equipamento ou escolha um da lista (por exemplo, Autoclave).",
             "Digite a TAG.",
             "Confira a mensagem embaixo da TAG. Se aparecer que o cliente já tem um equipamento ativo com essa TAG, toque em \"Abrir o existente\".",
-            "Digite o número de série, o fabricante e o modelo.",
-            "Digite o setor ou local (por exemplo, CME ou Centro cirúrgico).",
+            "Digite o número de série e, se houver, o patrimônio do cliente. Se outro equipamento do cliente tiver a mesma série, o sistema avisa ao salvar (confira se não é o mesmo equipamento cadastrado duas vezes).",
+            "Em \"Fabricação e capacidade\", digite o fabricante e o modelo (uso interno: não aparecem nos relatórios de qualificação), o ano de fabricação (4 dígitos), a capacidade ou volume (por exemplo, 150 L) e o número de câmaras ou portas, quando houver mais de uma.",
+            "Em \"Localização e responsável\", digite o setor onde o equipamento está instalado (por exemplo, CME ou Centro cirúrgico) e o responsável por ele no cliente.",
             "Toque em \"Cadastrar equipamento\"."
           ]
         },
@@ -389,7 +391,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Número \"Total\"", significado: "Todos os equipamentos que você pode ver." },
         { nome: "Número verde \"Ativos\"", significado: "Equipamentos em uso." },
         { nome: "Número \"Inativos\"", significado: "Equipamentos tirados de uso, com o histórico guardado." },
-        { nome: "Número amarelo \"Cadastro incompleto\"", significado: "Falta TAG, fabricante, modelo ou número de série." },
+        { nome: "Número amarelo \"Cadastro incompleto\"", significado: "Falta TAG, número de série, setor, fabricante ou modelo." },
         { nome: "Número vermelho \"Vínculo pendente\"", significado: "A unidade ou o cliente estão inativos, ou a unidade é de outro cliente. A correção é feita em Vínculos (gestão)." },
         { nome: "Número vermelho \"Documento vencido ou vencendo\"", significado: "O equipamento tem documento vencido ou que vence em até 30 dias." },
         { nome: "Número amarelo \"Sem documento\"", significado: "Nenhum documento do equipamento no Arquivo de documentos." },
@@ -405,6 +407,8 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Selo amarelo \"Em andamento\" na aba Atendimentos", significado: "O atendimento do Auvo ainda não foi finalizado." }
       ],
       problemas: [
+        { situacao: "Na tela do ensaio aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "Preencha ali mesmo e toque em \"Gravar no cadastro\" (só o que está vazio é gravado, com registro de quem gravou), ou complete aqui em Editar." },
+        { situacao: "Ao salvar aparece \"o equipamento ... deste cliente tem o mesmo número de série\".", oQueFazer: "O cadastro foi salvo. Abra os dois equipamentos e confira a placa: se for o mesmo, inative o repetido (ou peça à gestão para juntar em Vínculos)." },
         { situacao: "Aparece \"Este cliente já tem um equipamento ativo com a TAG ...\".", oQueFazer: "Toque em \"Abrir o existente\" e confira se é o mesmo equipamento. Se for outro, use uma TAG diferente." },
         { situacao: "A lista de unidades mostra \"Este cliente não tem unidade ativa\".", oQueFazer: "Toque em \"Nova unidade\", no aviso embaixo do campo, cadastre a unidade e volte ao equipamento." },
         { situacao: "Aparece \"Escolha a unidade onde o equipamento fica.\"", oQueFazer: "Escolha o cliente primeiro e depois a unidade na lista." },

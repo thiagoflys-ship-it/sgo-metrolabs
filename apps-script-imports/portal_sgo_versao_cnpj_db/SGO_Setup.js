@@ -162,6 +162,11 @@ function setupSGO() {
     "SERIE",
     "TAG",
     "SETOR",
+    "PATRIMONIO", // 21/10/2026: identificação que os documentos usam (SGO_EQP_CAMPOS_NOVOS)
+    "ANO_FABRICACAO",
+    "CAPACIDADE",
+    "NUM_CAMARAS",
+    "RESPONSAVEL_CLIENTE",
     "QRCODE_LINK", // <- Adicionado para integrar com SGO_QRCode.gs
     "STATUS",
     "CRIADO_EM"

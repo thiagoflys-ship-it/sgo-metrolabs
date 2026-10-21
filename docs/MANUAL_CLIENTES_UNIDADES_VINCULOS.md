@@ -65,6 +65,23 @@ A ordem de trabalho é sempre a mesma: **Clientes → Unidades → Equipamentos 
 
 Se o cliente, a unidade ou o equipamento ainda não existir, os botões **Cadastrar cliente**, **Cadastrar unidade** e **Cadastrar equipamento** abrem o cadastro em outra aba. Depois de salvar, volte para a aba do ensaio e clique em **Atualizar listas** (na baixa temperatura, **Buscar cliente** de novo): o que já foi preenchido no ensaio continua.
 
+### Campos do equipamento que os documentos usam (21/10/2026)
+
+O cadastro do equipamento guarda tudo o que antes era digitado na tela do ensaio. Os relatórios, certificados, a planilha de dados e a etiqueta do QR Code puxam daqui:
+
+| Campo | Para que serve |
+|---|---|
+| **TAG** | Identifica o equipamento em todos os documentos e no nome da pasta. Não se repete entre equipamentos ativos do mesmo cliente. |
+| **Número de série** | Rastreabilidade do equipamento nos documentos. Série repetida no mesmo cliente não bloqueia, mas o sistema avisa ao salvar. |
+| **Setor ou local** | Setor da unidade onde o equipamento está instalado (ex.: CME). Sai nos documentos junto com a unidade. |
+| **Patrimônio** | Número de patrimônio do cliente, quando houver. |
+| **Tipo** | Define em qual módulo de qualificação o equipamento aparece. |
+| **Fabricante e modelo** | Uso interno. Não aparecem nos relatórios de qualificação. |
+| **Ano de fabricação, capacidade ou volume, câmaras ou portas** | Saem no relatório de qualificação quando preenchidos. |
+| **Responsável no cliente** | Quem responde pelo equipamento no cliente; entra como acompanhamento no relatório quando a tela do ensaio não informar outro. |
+
+Equipamento sem TAG, número de série ou setor aparece como **Cadastro incompleto**. Na tela do ensaio, o quadro "Cliente e equipamento" mostra **Falta no cadastro do equipamento** com os campos para preencher ali mesmo: **Gravar no cadastro** grava só o que está vazio (com registro de quem gravou e de onde) e **Buscar nos ensaios anteriores** traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar. Trocar um valor já gravado é feito aqui, em **Editar**, por quem tem permissão de editar cadastros.
+
 Ao emitir, o relatório:
 
 - fica na pasta do equipamento, dentro da pasta do cliente: `<pasta do módulo>/<CNPJ do cliente>/<TAG - tipo>/Qualificação`, em HTML (para imprimir) e PDF;

@@ -26,6 +26,17 @@
   .qvinc .qvinc-cartao { display: none; border-left: 3px solid var(--bc-action-line, #2a7); background: var(--bc-action-bg, #f2f8f4); padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.55; }
   .qvinc .qvinc-cartao.mostrar { display: block; }
   .qvinc .qvinc-cartao b { font-weight: 700; }
+  /* 21/10/2026: falta no cadastro do equipamento (preencher ali mesmo, só o que está vazio). */
+  .qvinc .qvinc-falta { margin-top: 10px; border: 1px solid var(--bc-warn-line); background: var(--bc-warn-bg); color: var(--bc-text-1, inherit); border-radius: 6px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+  .qvinc .qvinc-falta > b { color: var(--bc-warn); display: block; margin-bottom: 4px; }
+  .qvinc .qvinc-falta .qvinc-linha { margin: 8px 0 6px; }
+  .qvinc .qvinc-falta .qvinc-sug { display: block; font-size: 12px; color: var(--bc-text-3); margin-top: 3px; }
+  /* 21/10/2026: campos "do cadastro" nas seções do ensaio: aparência de somente leitura e explicação ao clicar (nunca o círculo de bloqueio). */
+  .qvinc-selo { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; color: var(--bc-text-3); background: var(--bc-info-bg, #eef2f6); border: 1px solid var(--bc-info-line, #d5dde6); vertical-align: middle; }
+  .qvinc-nota-cad { margin-top: 6px; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; line-height: 1.5; background: var(--bc-info-bg, #eef2f6); border: 1px solid var(--bc-info-line, #d5dde6); color: var(--bc-text-2, inherit); }
+  .qvinc-nota-cad button, .qvinc-sem-equip button { margin-top: 6px; min-height: 36px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .qvinc-sem-equip { margin: 0 0 12px; padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.5; background: var(--bc-warn-bg, #fff7e6); border: 1px solid var(--bc-warn-line, #f0d9a8); color: var(--bc-text-1, inherit); }
+  .qvinc-sem-equip b { display: block; margin-bottom: 2px; }
   .qualif-lista { list-style: none; margin: 0; padding: 0; }
   .qualif-lista li { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
   .qualif-lista li.substituido { opacity: .72; }
@@ -83,7 +94,7 @@
         '<button type="button" class="btn-secondary" id="' + px + 'BtnAtualizar">Atualizar listas</button></div></div>';
 
       function msg(tipo, texto) { var m = $("Msg"); if (!m) return; m.className = "qvinc-msg" + (texto ? " mostrar " + tipo : ""); m.textContent = texto || ""; }
-      function avisar() { if (typeof opcoes.aoMudar === "function") { try { opcoes.aoMudar(st.ident ? Object.assign({}, st.ident) : null); } catch (e) { console.error(e); } } }
+      function avisar() { if (typeof opcoes.aoMudar === "function") { try { opcoes.aoMudar(st.ident ? Object.assign({}, st.ident) : null); } catch (e) { console.error(e); } } if (!opcoes.somenteLeitura && typeof atualizarCamposCadastro === "function") atualizarCamposCadastro(); }
       function desenharSelect(sel, itens, vazio, rotulo, atual) {
         sel.innerHTML = '<option value="">' + esc(vazio) + '</option>' + itens.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === atual ? " selected" : "") + '>' + esc(rotulo(x)) + '</option>'; }).join("");
       }
@@ -92,9 +103,67 @@
         var i = st.ident;
         if (!i) { c.className = "qvinc-cartao"; c.innerHTML = ""; return; }
         c.className = "qvinc-cartao mostrar";
+        var extras = [i.patrimonio ? "patrimônio " + i.patrimonio : "", i.capacidade ? "capacidade " + i.capacidade : "", i.numCamaras ? i.numCamaras + " câmara(s)/porta(s)" : "", i.anoFabricacao ? "fabricado em " + i.anoFabricacao : ""].filter(Boolean);
         c.innerHTML = "<b>" + esc(i.cliente) + "</b>" + (i.cnpj ? " — CNPJ " + esc(i.cnpj) : "") + "<br>" + esc(i.unidade) + (i.setor ? " · " + esc(i.setor) : "") +
           "<br>Equipamento: <b>" + esc(i.tag || "sem TAG") + "</b> · " + esc(i.tipo) + (i.numeroSerie ? " · nº de série " + esc(i.numeroSerie) : "") +
-          (i.tipoCompativel === false ? '<br><span style="color:var(--bc-warn)">' + esc(opcoes.textoTipoIncompativel || "O tipo cadastrado não é de autoclave: confira se escolheu o equipamento certo.") + '</span>' : "");
+          (extras.length ? "<br>" + esc(extras.join(" · ")) : "") +
+          (i.tipoCompativel === false ? '<br><span style="color:var(--bc-warn)">' + esc(opcoes.textoTipoIncompativel || "O tipo cadastrado não é de autoclave: confira se escolheu o equipamento certo.") + '</span>' : "") +
+          htmlFalta(i);
+        ligarFalta();
+      }
+      // 21/10/2026: campo que o documento usa e está vazio no cadastro: aviso com o preenchimento ali mesmo
+      // (grava no cadastro do equipamento, só o que está vazio; trocar valor já gravado continua em Cadastros).
+      var DICAS_FALTA = { TAG: "Código da etiqueta (ex.: AUT-01)", SERIE: "Como está na placa do equipamento", SETOR: "Setor onde está instalado (ex.: CME)" };
+      function htmlFalta(i) {
+        var faltam = i.faltam || [];
+        if (!faltam.length) return "";
+        var titulo = "Falta no cadastro do equipamento: " + faltam.map(function (f) { return f.rotulo; }).join(", ") + ".";
+        if (opcoes.somenteLeitura) return '<div class="qvinc-falta" id="' + px + 'Falta"><b>' + esc(titulo) + "</b>O relatório usa esses dados. Peça à equipe técnica para completar em Cadastros › Equipamentos.</div>";
+        return '<div class="qvinc-falta" id="' + px + 'Falta"><b>' + esc(titulo) + "</b>" +
+          "O relatório usa esses dados. Preencha aqui e clique em \"Gravar no cadastro\": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua daqui. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." +
+          '<div class="qvinc-linha">' + faltam.map(function (f) {
+            return '<div class="qvinc-campo"><label for="' + px + "F_" + esc(f.campo) + '">' + esc(f.rotulo) + '</label><input id="' + px + "F_" + esc(f.campo) + '" data-campo-cadastro="' + esc(f.campo) + '" type="text" maxlength="120" autocomplete="off" placeholder="' + esc(DICAS_FALTA[f.campo] || "") + '"><span class="qvinc-sug" id="' + px + "S_" + esc(f.campo) + '"></span></div>';
+          }).join("") + "</div>" +
+          '<div class="qvinc-atalhos"><button type="button" class="btn-primary qvinc-btn" id="' + px + 'BtnGravarCad">Gravar no cadastro</button>' +
+          '<button type="button" class="btn-secondary qvinc-btn" id="' + px + 'BtnSugestoes">Buscar nos ensaios anteriores</button></div>' +
+          '<div class="qvinc-msg" id="' + px + 'MsgCad"></div></div>';
+      }
+      function msgCad(tipo, texto) { var m = $("MsgCad"); if (!m) return; m.className = "qvinc-msg" + (texto ? " mostrar " + tipo : ""); m.textContent = texto || ""; }
+      function ligarFalta() {
+        var bG = $("BtnGravarCad"), bS = $("BtnSugestoes");
+        if (bG) bG.onclick = gravarCadastro;
+        if (bS) bS.onclick = buscarSugestoes;
+      }
+      function gravarCadastro() {
+        if (!st.ident) return;
+        var campos = {}, n = 0;
+        Array.prototype.forEach.call(el.querySelectorAll("[data-campo-cadastro]"), function (inp) { var v = String(inp.value || "").trim(); if (v) { campos[inp.getAttribute("data-campo-cadastro")] = v; n++; } });
+        if (!n) { msgCad("aviso", "Preencha ao menos um dos campos acima (pela placa ou pela etiqueta do equipamento) e clique em \"Gravar no cadastro\"."); return; }
+        var b = $("BtnGravarCad"); if (b) b.disabled = true;
+        msgCad("info", "Gravando no cadastro do equipamento…");
+        chamar("apiPreencherCadastro", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId, campos: campos, origem: "tela " + (opcoes.titulo || "do ensaio") }, function (r) {
+          var compat = st.ident ? st.ident.tipoCompativel : undefined;
+          st.ident = Object.assign({}, r.identificacao || st.ident, { tipoCompativel: compat });
+          var sel = $("Equip");
+          if (sel && sel.selectedIndex >= 0 && st.ident) { var op = sel.options[sel.selectedIndex]; if (op && op.value === st.v.equipamentoId) op.text = [st.ident.tag || "sem TAG", st.ident.tipo, st.ident.numeroSerie].filter(Boolean).join(" — "); }
+          cartao(); avisar();
+          msg(r.gravados ? "info" : "aviso", r.mensagem || "Cadastro atualizado.");
+        }, function (e) { if (b) b.disabled = false; msgCad("erro", e); });
+      }
+      function buscarSugestoes() {
+        if (!st.ident) return;
+        msgCad("info", "Procurando nos ensaios anteriores deste equipamento…");
+        chamar("apiSugestoesCadastro", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId }, function (r) {
+          var sug = r.sugestoes || {}, achou = 0;
+          Array.prototype.forEach.call(el.querySelectorAll("[data-campo-cadastro]"), function (inp) {
+            var k = inp.getAttribute("data-campo-cadastro"), lista = sug[k] || [], info = $("S_" + k);
+            if (!lista.length) { if (info) info.textContent = ""; return; }
+            achou++;
+            if (!String(inp.value || "").trim()) inp.value = lista[0].valor;
+            if (info) info.textContent = "Encontrado em " + lista.map(function (x) { return x.valor + " (" + x.origem + ")"; }).slice(0, 3).join("; ") + (lista.length > 1 ? ". Confira qual é o certo." : ".");
+          });
+          msgCad(achou ? "info" : "aviso", achou ? "Valores dos ensaios anteriores colocados nos campos. Confira com a placa ou a etiqueta e clique em \"Gravar no cadastro\" (só grava o que está vazio no cadastro)." : "Nenhum ensaio anterior deste equipamento tem esses dados. Preencha pela placa ou pela etiqueta do equipamento.");
+        }, function (e) { msgCad("erro", e); });
       }
       function buscar() {
         var t = ($("Busca").value || "").trim();
@@ -152,6 +221,116 @@
       };
       Array.prototype.forEach.call(el.querySelectorAll("[data-tela]"), function (b) { b.onclick = function () { abrirCadastro(b.getAttribute("data-tela")); msg("info", 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e clique em "Atualizar listas": o que já foi preenchido aqui continua.'); }; });
       if (opcoes.somenteLeitura) Array.prototype.forEach.call(el.querySelectorAll("input,select,button"), function (x) { x.disabled = true; });
+
+      // ---------- Campos "do cadastro" nas outras seções da tela do ensaio (21/10/2026) ----------
+      // Os campos de identificação (TAG, série, setor, cliente...) vêm do cadastro: ficam com aparência de somente leitura e,
+      // ao clicar, explicam de onde vem o dado e levam ao que fazer (escolher o equipamento, preencher no cadastro ou abrir o
+      // cadastro). Os demais campos da seção (dados do ensaio) continuam editáveis. Sem equipamento escolhido, a seção avisa no topo.
+      var base = px.replace(/V$/, "");
+      var NOMES = [
+        ["Cliente", "cliente", ""], ["Cnpj", "cnpj", ""], ["Endereco", "endereco", ""],
+        ["Tag", "tag", "TAG"], ["TagEquipamento", "tagEquipamento", "TAG"], ["NumSerie", "numSerie", "SERIE"], ["NumeroSerie", "numeroSerie", "SERIE"],
+        ["Local", "local", "SETOR"], ["Localizacao", "localizacao", "SETOR"]
+      ];
+      var escopo = el.closest('[id$="Container"]') || document;
+      function porId(id) { try { return escopo.querySelector("#" + id) || document.getElementById(id); } catch (e) { return document.getElementById(id); } }
+      var camposCad = [];
+      (opcoes.camposCadastro || []).forEach(function (c) { var x = porId(c.id); if (x) camposCad.push({ el: x, campo: c.campo || "", marca: !!c.marca }); });
+      if (!opcoes.camposCadastro) {
+        NOMES.forEach(function (n) {
+          [base + "_ui" + n[0], base + "_" + n[1]].forEach(function (id) { var x = porId(id); if (x && !camposCad.some(function (c) { return c.el === x; })) camposCad.push({ el: x, campo: n[2], marca: false }); });
+        });
+        // Marca e modelo da Autoclave e da Lavadora: não saem nos documentos (ficam no cadastro, uso interno).
+        ["Marca", "Modelo"].forEach(function (n) { var x = porId(base + "_ui" + n); if (x) camposCad.push({ el: x, campo: "", marca: true }); });
+      }
+      var avisosSecao = [];
+      function irParaVinculo() { try { el.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} var b = $("Busca"); if (b && !b.disabled) setTimeout(function () { try { b.focus(); } catch (e2) {} }, 350); }
+      function irParaFalta(campo) {
+        var alvo = (campo && $("F_" + campo)) || $("Falta") || el;
+        try { alvo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
+        if (alvo && alvo.focus) setTimeout(function () { try { alvo.focus(); } catch (e2) {} }, 350);
+      }
+      function faltaCampo(campo) { return !!(st.ident && campo && (st.ident.faltam || []).some(function (f) { return f.campo === campo; })); }
+      function notaDe(c) {
+        var n = c.el.parentNode && c.el.parentNode.querySelector('.qvinc-nota-cad[data-para="' + c.el.id + '"]');
+        if (!n) { n = document.createElement("div"); n.className = "qvinc-nota-cad"; n.setAttribute("data-para", c.el.id); n.setAttribute("role", "status"); c.el.parentNode.insertBefore(n, c.el.nextSibling); }
+        return n;
+      }
+      function explicar(c) {
+        var n = notaDe(c), b = null;
+        if (c.marca) {
+          n.innerHTML = "Marca e modelo não saem nos documentos de qualificação. Ficam no cadastro do equipamento, para uso interno.";
+        } else if (!st.ident) {
+          n.innerHTML = 'Este dado vem do cadastro do equipamento escolhido em "Cliente e equipamento", no início da tela. Nenhum equipamento foi escolhido ainda.<br><button type="button" class="btn-secondary">Escolher o equipamento</button>';
+          b = function () { irParaVinculo(); };
+        } else if (faltaCampo(c.campo)) {
+          n.innerHTML = 'Este dado vem do cadastro do equipamento e está vazio lá. Preencha no quadro "Cliente e equipamento": grava no cadastro do equipamento (só o que está vazio) e volta para cá.<br><button type="button" class="btn-primary">Preencher no cadastro</button>';
+          b = function () { irParaFalta(c.campo); };
+        } else if (c.campo) {
+          n.innerHTML = 'Este dado vem do cadastro do equipamento escolhido em "Cliente e equipamento". Para corrigir um valor já gravado, edite o cadastro do equipamento (Cadastros › Equipamentos › Editar) e escolha o equipamento de novo aqui.<br><button type="button" class="btn-secondary">Abrir o cadastro de equipamentos</button>';
+          b = function () { abrirCadastro("equipamentos"); msg("info", 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e clique em "Atualizar listas".'); };
+        } else {
+          n.innerHTML = 'Este dado vem do cadastro do cliente e da unidade escolhidos em "Cliente e equipamento". Para corrigir, edite em Cadastros › Clientes ou Unidades e escolha de novo aqui.<br><button type="button" class="btn-secondary">Abrir o cadastro de clientes</button>';
+          b = function () { abrirCadastro("clientes"); msg("info", 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e clique em "Atualizar listas".'); };
+        }
+        var bt = n.querySelector("button"); if (bt && b) bt.onclick = b;
+        n.style.display = "";
+      }
+      function marcarCampo(c) {
+        var x = c.el;
+        x.readOnly = true;
+        x.setAttribute("aria-readonly", "true");
+        x.classList.add("qvinc-do-cadastro");
+        x.style.background = "var(--bc-surface-2, #f1f3f5)";
+        x.style.cursor = "pointer";
+        x.style.opacity = "";
+        x.title = c.marca ? "Não sai nos documentos de qualificação." : "Vem do cadastro. Clique para ver de onde vem e o que fazer.";
+        if (!c.marca) x.placeholder = !st.ident ? "Escolha o equipamento em Cliente e equipamento" : (faltaCampo(c.campo) ? "Falta no cadastro: clique para preencher" : "");
+        if (!x.getAttribute("data-qvinc-cad")) {
+          x.setAttribute("data-qvinc-cad", "1");
+          x.addEventListener("click", function () { explicar(c); });
+          x.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); explicar(c); } });
+          var lab = escopo.querySelector('label[for="' + x.id + '"]') || document.querySelector('label[for="' + x.id + '"]');
+          if (lab && !lab.querySelector(".qvinc-selo")) {
+            var selo = document.createElement("span"); selo.className = "qvinc-selo";
+            selo.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i>' + (/do cadastro/i.test(lab.textContent || "") ? "" : (c.marca ? " uso interno" : " do cadastro"));
+            lab.appendChild(selo);
+          }
+        }
+        var n = x.parentNode && x.parentNode.querySelector('.qvinc-nota-cad[data-para="' + x.id + '"]');
+        if (n && n.style.display !== "none") explicar(c);
+      }
+      function montarAvisosSecao() {
+        var grupos = [];
+        camposCad.forEach(function (c) {
+          if (c.marca) return;
+          var sec = c.el.closest(".card, section, fieldset, .panel, .bt-painel") || c.el.parentNode;
+          if (!sec || sec.contains(el)) return; // a própria seção do quadro "Cliente e equipamento" já explica
+          if (grupos.some(function (g) { return g.sec === sec; })) return;
+          var linha = c.el.closest(".form-row, .row, .grid") || c.el.closest(".form-group") || c.el;
+          var aviso = document.createElement("div"); aviso.className = "qvinc-sem-equip"; aviso.setAttribute("role", "status");
+          if (linha.parentNode) linha.parentNode.insertBefore(aviso, linha);
+          grupos.push({ sec: sec, aviso: aviso });
+        });
+        avisosSecao = grupos;
+      }
+      function atualizarCamposCadastro() {
+        (camposCad || []).forEach(marcarCampo);
+        (avisosSecao || []).forEach(function (g) {
+          var faltam = st.ident ? (st.ident.faltam || []) : [];
+          var b = null;
+          if (!st.ident) {
+            g.aviso.innerHTML = '<b>Nenhum equipamento escolhido.</b>Os campos marcados "do cadastro" (TAG, número de série, setor, cliente) são preenchidos quando você escolhe o cliente, a unidade e o equipamento em "Cliente e equipamento", no início da tela. Os demais campos desta seção são do ensaio e podem ser preenchidos normalmente.<br><button type="button" class="btn-secondary">Escolher o equipamento</button>';
+            b = irParaVinculo;
+          } else if (faltam.length) {
+            g.aviso.innerHTML = "<b>Falta no cadastro do equipamento: " + esc(faltam.map(function (f) { return f.rotulo; }).join(", ")) + ".</b>Preencha no quadro \"Cliente e equipamento\": grava no cadastro do equipamento (só o que está vazio) e os campos daqui são atualizados.<br><button type=\"button\" class=\"btn-primary\">Preencher no cadastro</button>";
+            b = function () { irParaFalta(faltam[0].campo); };
+          }
+          g.aviso.style.display = b ? "" : "none";
+          var bt = g.aviso.querySelector("button"); if (bt && b) bt.onclick = b;
+        });
+      }
+      if (!opcoes.somenteLeitura) { montarAvisosSecao(); atualizarCamposCadastro(); }
 
       // Valor inicial (ensaio reaberto): carrega as listas do cliente salvo.
       if (st.v.clienteId) {

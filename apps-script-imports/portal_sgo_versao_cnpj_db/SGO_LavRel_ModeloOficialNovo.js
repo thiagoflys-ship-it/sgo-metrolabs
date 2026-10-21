@@ -753,7 +753,9 @@ function LavOficial_apiDispatch(req) {
       apiIdentificacao: LavOficial_apiIdentificacao, apiEquipamento: LavOficial_apiEquipamento, apiVincular: LavOficial_apiVincular,
       apiGerarRascunho: LavOficial_apiGerarRascunho, apiPrevia: LavOficial_apiPrevia, apiEnviarParaAprovacao: LavOficial_apiEnviarParaAprovacao,
       apiListarAprovacoes: LavOficial_apiListarAprovacoes, apiPreverAprovacao: LavOficial_apiPreverAprovacao, apiAprovarEmitir: LavOficial_apiAprovarEmitir,
-      apiDevolver: LavOficial_apiDevolver, apiAbrir: LavOficial_apiAbrir
+      apiDevolver: LavOficial_apiDevolver, apiAbrir: LavOficial_apiAbrir,
+      // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio) e trazer dados de ensaios antigos.
+      apiPreencherCadastro: function (p, s, id) { return SGO_QEQ_apiPreencherCadastro(p, s, id); }, apiSugestoesCadastro: function (p, s, id) { return SGO_QEQ_apiSugestoesCadastro(p, s, id); }
     };
     var fn = String(req.fn || '');
     if (!allow[fn]) throw new Error('Operação desconhecida: ' + fn + '. Atualize a página (F5).');

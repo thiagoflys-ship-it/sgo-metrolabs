@@ -31,6 +31,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque na aba \"Gerar relatório\".",
           "No quadro \"Cliente e equipamento (do cadastro)\", digite o nome ou o CNPJ do cliente e toque em \"Buscar cliente\". Escolha o cliente, a unidade e a autoclave.",
           "Cliente, CNPJ, endereço, TAG, número de série e local são preenchidos pelo cadastro e ficam travados. Equipamento de outro cliente ou de outra unidade é recusado. Para corrigir um dado, edite o cadastro e escolha o equipamento de novo.",
+          "Se aparecer \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\" (ou parte deles), preencha os campos ali mesmo pela placa ou pela etiqueta e toque em \"Gravar no cadastro\". O valor vai para o cadastro do equipamento (só o que está vazio, com registro de quem gravou) e o ensaio continua. \"Buscar nos ensaios anteriores\" traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar.",
           "Se algo não aparecer, toque em \"Cadastrar cliente\", \"Cadastrar unidade\" ou \"Cadastrar equipamento\" (abre em outra aba), salve lá, volte para esta aba e toque em \"Atualizar listas\". O que já foi preenchido continua.",
           "Preencha \"Receita / Programa\", \"Tipo de Ensaio\" e \"Ciclo Nº\".",
           "Em \"2. Equipamento\", preencha o lote e o responsável técnico. TAG, número de série e local vêm do cadastro; marca e modelo não entram no documento. O campo \"Operador\" já vem com o seu nome.",
@@ -129,6 +130,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "A prévia mostra datas trocadas (dia no lugar do mês).", oQueFazer: "Em \"Formato da data no arquivo\", escolha \"Brasil (DD/MM/AAAA)\" ou \"Americano (MM/DD/AAAA)\" e toque de novo em \"Pré-visualizar dados\"." },
         { situacao: "A prévia mostra as colunas misturadas.", oQueFazer: "Em \"Separador das colunas\", escolha o separador do arquivo (tabulação, ponto e vírgula, vírgula ou espaços) e pré-visualize de novo." },
         { situacao: "Um sensor mostra temperatura absurda (por exemplo, abaixo de zero) no início.", oQueFazer: "É leitura de sensor desconectado. O gráfico já deixa essa leitura de fora da escala e avisa na legenda. Se o sensor falhou o ciclo inteiro, desmarque-o em \"Sensores considerados na análise\" e registre o motivo." },
@@ -190,6 +192,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Gerar a planilha de dados", itens: [
           "Toque em \"Lavadoras\" no menu e na aba \"Gerar relatório\".",
           "Em \"Cliente e equipamento (do cadastro)\", busque o cliente, escolha a unidade e a lavadora. Cliente, CNPJ, endereço, TAG, número de série e local ficam travados.",
+          "Se aparecer \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\" (ou parte deles), preencha os campos ali mesmo pela placa ou pela etiqueta e toque em \"Gravar no cadastro\". O valor vai para o cadastro do equipamento (só o que está vazio, com registro de quem gravou) e o ensaio continua. \"Buscar nos ensaios anteriores\" traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar.",
           "Em \"1. Cliente e ensaio\" e \"2. Equipamento\", preencha programa, tipo de ensaio, número do ciclo, lote e responsável técnico.",
           "Em \"3. Parâmetros de processo e receita\", confira o \"Equipamento a validar\", escolha a classificação do artigo (termodesinfectora) e informe a \"Temperatura programada (°C)\", que é obrigatória.",
           "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou e registre a falha.",
@@ -225,6 +228,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Aparece \"Informe a temperatura programada do ciclo\".", oQueFazer: "Preencha \"Temperatura programada (°C)\" com a temperatura da receita no equipamento e gere de novo." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "Use o quadro \"Cliente e equipamento (do cadastro)\" no início da tela. Se o equipamento não aparece, cadastre pelos atalhos (abre em outra aba) e toque em \"Atualizar listas\"." },
         { situacao: "O rascunho mostrou a lista de problemas dos dados.", oQueFazer: "Cada item diz o que aconteceu, por quê e como corrigir. Sensor que falhou: desmarque e registre a falha. Arquivo incompleto: exporte de novo do registrador." },
@@ -273,6 +277,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque em \"Cadeia de frio\" no menu.",
           "Em \"1. Cliente e equipamento\", busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento.",
           "Cliente, CNPJ, endereço, TAG, número de série e local vêm do cadastro e ficam travados. Se faltar algo, use \"Cadastrar cliente\", \"Cadastrar unidade\" ou \"Cadastrar equipamento\" (abre em outra aba) e depois \"Atualizar listas\".",
+          "Se aparecer \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\" (ou parte deles), preencha os campos ali mesmo pela placa ou pela etiqueta e toque em \"Gravar no cadastro\". O valor vai para o cadastro do equipamento (só o que está vazio, com registro de quem gravou) e o ensaio continua. \"Buscar nos ensaios anteriores\" traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar.",
           "Preencha \"Técnico executor do ensaio\".",
           "Em \"2. Equipamento\", escolha o \"Perfil do equipamento\". A tela muda conforme o perfil.",
           "Informe o volume e marque \"Equipamento conjugado\" só se for um aparelho com duas partes (por exemplo, refrigerador com freezer).",
@@ -326,6 +331,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "O documento só sai com o equipamento do cadastro. Escolha no quadro \"1. Cliente e equipamento\"." },
         { situacao: "\"O registrador não está no cadastro de padrões\" ou \"estava vencido\".", oQueFazer: "Corrija a identificação na seção 4 ou atualize o certificado em Cadastros › Padrões de referência. Registrador vencido na data do ensaio exige repetir o ensaio." },
         { situacao: "\"No início do evento havia sensor fora da faixa\".", oQueFazer: "O estudo de porta ou energia precisa começar com todos os sensores na faixa. Marque o início num horário em que todos já estavam na faixa (veja a prévia) ou repita o estudo." },
@@ -373,6 +379,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque em \"Estufa, banho-maria e secadora\" no menu.",
           "Em \"Cliente e equipamento (do cadastro)\", busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento.",
           "Cliente, CNPJ, endereço, TAG, número de série e local são preenchidos pelo cadastro e ficam travados. Se algo estiver errado, corrija o cadastro.",
+          "Se aparecer \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\" (ou parte deles), preencha os campos ali mesmo pela placa ou pela etiqueta e toque em \"Gravar no cadastro\". O valor vai para o cadastro do equipamento (só o que está vazio, com registro de quem gravou) e o ensaio continua. \"Buscar nos ensaios anteriores\" traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar.",
           "Preencha \"Responsável técnico (assinatura do laudo)\" com o nome do técnico que executou o ensaio."
         ] },
         { titulo: "Perfil, faixa e critérios", itens: [
@@ -419,6 +426,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Apareceu \"O registrador não está no cadastro de padrões\" ou \"vencido\".", oQueFazer: "Digite a identificação como está em Cadastros › Padrões de referência. Se o certificado foi renovado antes do ensaio, atualize a validade lá; se não, o ensaio precisa ser repetido com registrador calibrado." },
         { situacao: "Apareceu \"duração menor que 24 h\" ou \"intervalo de registro maior\".", oQueFazer: "Ajuste o período do estudo. Se o protocolo do cliente define outra duração ou outro intervalo, escreva a justificativa em \"Justificativa de desvio do protocolo\"." },
         { situacao: "Apareceu \"sensor parado\", \"pico\" ou \"leitura impossível\".", oQueFazer: "Confira o sensor no arquivo. Se ele falhou, desmarque-o em Sensores (fica registrado no documento) ou repita o ensaio." },
