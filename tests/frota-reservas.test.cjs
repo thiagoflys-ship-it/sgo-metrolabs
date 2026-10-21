@@ -191,7 +191,11 @@ test('Liberação só pela gestão, com justificativa; o reservante é avisado n
   assert.equal(aviso.DESTINATARIO_ID, 'uA');
   assert.match(aviso.TEXTO, /Veículos livres no seu horário: TST2B22/);
   assert.match(aviso.TEXTO, /Trocar veículo/);
-  assert.ok(notificacoes.some((n) => n.categoria === 'FROTA_RESERVAS' && (n.canais || []).includes('whatsapp')), 'WhatsApp pedido ao notificador com a regra sutil (reserva no mesmo dia)');
+  // WhatsApp só quando a reserva é no mesmo dia: a reserva começa 60 min depois de agora, o que depois das 23h cai no dia
+  // seguinte (aí o certo é não pedir WhatsApp). O teste confere a regra nos dois casos, sem depender da hora em que roda.
+  const mesmoDia = em(0).data === em(60).data;
+  const pediuWhats = notificacoes.some((n) => n.categoria === 'FROTA_RESERVAS' && (n.canais || []).includes('whatsapp'));
+  assert.equal(pediuWhats, mesmoDia, mesmoDia ? 'WhatsApp pedido ao notificador com a regra sutil (reserva no mesmo dia)' : 'reserva no dia seguinte não pede WhatsApp');
   assert.ok(tabelas.REG_FROTA_RESERVA_EVENTO.some((e) => e.TIPO === 'LIBERACAO_GESTAO'));
   // na central: aviso para a Ana
   const itens = []; ctx.FrotaRes_pendencias_((i) => itens.push(i));
