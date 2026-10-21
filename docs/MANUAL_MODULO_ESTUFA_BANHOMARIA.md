@@ -1,5 +1,22 @@
 # Manual do Operador — Módulo Estufa + Banho-maria
 
+## O que mudou em 21/10/2026 — documentos no modelo novo
+
+A qualificação da estufa, do banho-maria e da secadora passou a seguir o mesmo caminho da autoclave. Em resumo:
+
+1. **O ensaio começa pelo cadastro.** No topo da tela, em "Cliente e equipamento (do cadastro)", busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, número de série e local vêm do cadastro e ficam travados; marca e modelo não entram nos documentos. Equipamento de outro cliente é recusado. Se faltar algo no cadastro, os botões "Cadastrar cliente", "Cadastrar unidade" e "Cadastrar equipamento" abrem o cadastro em outra aba; depois toque em "Atualizar listas".
+2. **Critérios e grandezas do ensaio** (seção nova, depois do Equipamento): temperatura programada, de onde vem a faixa de aceitação e os limites que o protocolo do cliente define (uniformidade, estabilidade, desvio da temperatura programada, recuperação após porta ou queda de energia). O que ficar em branco aparece no documento como **informativo**: não aprova nem reprova. Informe também a resolução do registrador (entra na incerteza).
+3. **Umidade relativa** é opcional: marque "Avaliar a umidade relativa" quando ela faz parte do ensaio (o arquivo precisa ter a coluna "Umidade" ou "UR"). Se o equipamento controla umidade ou o arquivo tem a coluna e ela não for avaliada, escreva o motivo; ele aparece no documento.
+4. **Uma leitura fora da faixa de aceitação reprova o estudo.** No modelo novo não existe "aprovado com observação" pela tolerância. Na secadora, a faixa é a temperatura de trabalho ± a tolerância do protocolo.
+5. **O que corrigir antes de gerar.** Se o dado tem problema, nenhum documento é gerado e a tela mostra a lista: o que aconteceu, por quê e como corrigir. Exemplos: registrador fora do cadastro de padrões ou vencido, menos sensores que o mínimo do anexo da norma (12 na estufa de incubação e na de esterilização, 6 no banho-maria), leitura impossível, sensor parado, pico isolado, lacuna no registro, distribuição da estufa de incubação com menos de 24 horas ou intervalo de registro maior que o da referência. Quando a duração ou o intervalo forem diferentes por decisão do protocolo do cliente, escreva a "Justificativa de desvio do protocolo".
+6. **Seção 5 — Documentos do ensaio e planilha de dados.** Preencha a identificação do registrador como está em Cadastros › Padrões de referência (ex.: DTL-01). O número do relatório é atribuído na emissão. "Gerar a planilha de dados" abre a minuta em outra aba (A4 deitado: critérios, resultados por sensor, gráficos, memória de cálculo e todas as leituras).
+7. **Seção 6 — Relatório de ensaio térmico (A4).** "Gerar rascunho" mostra o resultado, a tabela dos critérios e os textos: a análise de cada estudo, a conclusão técnica e a conclusão em linguagem simples. Os resultados são calculados pelo sistema; a redação automática é conferida e, se não passar, entra o texto padrão. Revise, veja a prévia e envie para aprovação.
+8. **Aprovação do responsável técnico.** O técnico usa "Enviar para aprovação". O responsável técnico confere a prévia em "7. Aguardando aprovação" e toca em "Aprovar e emitir" ou em "Devolver" com o motivo. O responsável técnico também pode emitir direto, marcando a confirmação. Reemitir o mesmo número gera uma nova revisão; a anterior continua guardada na pasta.
+9. **Onde ficam os documentos.** HTML e PDF na pasta do equipamento, dentro da pasta do cliente (CNPJ › TAG - tipo › Qualificação), com os botões do PDF, da pasta e "Enviar ao cliente".
+10. **Seção 8 — Relatório de qualificação do equipamento.** Junta os relatórios de ensaio emitidos do equipamento com a verificação da instalação (lista própria de cada tipo de equipamento) e declara a qualificação de instalação, de operação e de desempenho, com a data da próxima requalificação. Uma não conformidade em qualquer ensaio ou item da instalação reprova. Emitido com a aprovação do responsável técnico, ele aparece na ficha do equipamento (aba Qualificações), no QR code do equipamento e nas pendências de requalificação.
+
+As seções abaixo descrevem a tela anterior (seções 1 a 6) e continuam valendo para os campos do ensaio (perfil, estudos, sensores e dados do registrador).
+
 ## O que mudou em 18/10/2026
 
 - O certificado em A4 ganhou um sumário na primeira página, com o número da página de cada seção. As seções e subseções são numeradas (por exemplo, "5.1 Critérios de aceitação" e "7.2 Observações").
@@ -12,7 +29,7 @@
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
 - Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
 - São quatro perfis: Estufa de Incubação, Banho-maria, Estufa de Esterilização/Despirogenização e Secadora de traqueias (CME).
-- Selo verde "APROVADO (COM OBSERVAÇÃO)": saída da faixa dentro da tolerância declarada. O equipamento está aprovado e a saída aparece em Observações do certificado.
+- (Até 20/10/2026, no modelo anterior) Selo verde "APROVADO (COM OBSERVAÇÃO)": saída da faixa dentro da tolerância declarada. No modelo novo (21/10/2026) não existe mais: leitura fora da faixa reprova.
 - O campo "DTL" virou "Identificação do registrador" (TAG do cadastro de Padrões de referência). O botão final é "Confirmar e gerar o certificado".
 - Se o arquivo tem várias abas, informe "Nome da aba de dados (opcional)".
 
@@ -114,7 +131,7 @@ Existe ainda um **Console Operacional** no fim da tela — um "diário de bordo"
 |---|---|---|---|
 | **Faixa mínima (°C)** | Temperatura mínima aceitável para este equipamento | É o piso: leituras abaixo disso reprovam o ensaio | Já vem preenchido com um valor sugerido ao escolher o perfil — ajuste se o protocolo do cliente pedir outro valor |
 | **Faixa máxima (°C)** | Temperatura máxima aceitável | É o teto: leituras acima disso reprovam o ensaio | Mesma lógica do campo acima |
-| **Tolerância operacional (°C)** | Uma margem de segurança em torno da faixa | Uma leitura que passou da faixa por **pouco** (dentro da tolerância) vira "Aprovado com Alerta" em vez de "Reprovado" direto | Normalmente não precisa mexer — já vem com um valor padrão sensato para o perfil |
+| **Tolerância (± °C)** | Só na secadora de traqueias: a tolerância da temperatura de trabalho | A faixa de aceitação da secadora é a temperatura de trabalho ± a tolerância do protocolo | Copie do protocolo. Nos outros perfis o campo não aparece: a faixa é a mínima e a máxima |
 
 **Importante:** estes três campos **sempre podem ser editados**, em qualquer perfil — o sistema não trava nenhum deles. Eles só vêm pré-preenchidos com um valor de partida razoável para te ajudar; a responsabilidade de confirmar o valor certo com o protocolo do cliente é sua.
 
@@ -257,7 +274,6 @@ O sistema mostra um "selo" colorido com o status geral do laudo, e um selo separ
 | Status | O que significa | O que fazer |
 |---|---|---|
 | **APROVADO** | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente |
-| **APROVADO (COM OBSERVAÇÃO)** | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha |
 | **REPROVADO** | O equipamento saiu da faixa aceitável em algum momento (além da tolerância), ou uma repetição/indicador de laboratório reprovou | **Não invente uma solução sozinho** — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 11) |
 | **INFORMATIVO** ou **CARACTERIZAÇÃO** | O estudo não teve critério de aprovação/reprovação definido (ex.: Abertura de Porta ou Queda de Energia sem "Tempo-alvo mínimo" preenchido) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado |
 
@@ -272,7 +288,11 @@ Depois do selo de status, aparecem dois botões:
 
 ---
 
+> No modelo novo (21/10/2026), esta seção virou "5. Documentos do ensaio e planilha de dados": o botão é "Gerar a planilha de dados" e o resultado aparece com a tabela de critérios. Veja o resumo no início deste manual.
+
 ## 10. Seção 6 — Certificado de Qualificação Térmica (Beta)
+
+> No modelo novo (21/10/2026), esta seção virou "6. Relatório de ensaio térmico (A4)", com "Gerar rascunho", "Ver a prévia", "Enviar para aprovação" e, para o responsável técnico, "Emitir o relatório". Os campos de número, registrador, aceite e tarefa passaram para a seção 5. Veja o resumo no início deste manual.
 
 Este é um **segundo documento**, opcional, diferente da planilha da seção 5. Ele não substitui a planilha — é complementar. É um PDF em formato de página A4, com texto corrido explicando o ensaio (não uma tabela de dados). Os textos (Introdução, Objetivo, Análise, Conclusão) são **escritos por Inteligência Artificial**, a partir dos números que o sistema já calculou.
 
@@ -320,7 +340,8 @@ Um roteiro prático, resumindo tudo o que este manual explica, para você seguir
 5. **Seção 4 (Importação):** escolha o modo de entrada certo e informe o arquivo/dados. Clique em "Pré-visualizar dados" e confira se o número de linhas e sensores detectados bate com o que você espera.
 6. **Seção 5:** clique em "Gerar Relatório". Confira o selo de status geral e o de cada estudo. Se algo reprovou, olhe o Console Operacional para entender o motivo exato.
 7. Clique em "Abrir planilha" para conferir visualmente o relatório completo (tabela, gráfico), ou "Baixar PDF" para já baixar o documento final.
-8. **(Opcional) Seção 6:** se o cliente pediu também o Certificado, preencha os campos daquela seção, clique em "Gerar Rascunho com IA", **leia com atenção** os textos gerados, corrija o que precisar, e clique em "Confirmar e Gerar Certificado".
+8. **Modelo novo (21/10/2026):** antes da seção 3, escolha o equipamento em "Cliente e equipamento (do cadastro)" e preencha "Critérios e grandezas do ensaio"; na seção 5 gere a planilha de dados; na seção 6 gere o rascunho do relatório de ensaio, revise e envie para aprovação; depois de emitido, monte o relatório de qualificação na seção 8.
+9. **(Modelo anterior) Seção 6:** se o cliente pediu também o Certificado, preencha os campos daquela seção, clique em "Gerar Rascunho com IA", **leia com atenção** os textos gerados, corrija o que precisar, e clique em "Confirmar e Gerar Certificado".
 
 ---
 
@@ -331,6 +352,8 @@ Um roteiro prático, resumindo tudo o que este manual explica, para você seguir
 | Sistema bloqueia e diz que o número de sensores é insuficiente | Você digitou menos sensores que o mínimo exigido para o perfil escolhido | Confira o mínimo na tabela da seção 2 deste manual e ajuste o número de sensores usados no ensaio |
 | "Pré-visualizar dados" mostra um número de sensores diferente do que você esperava | O arquivo importado tem mais ou menos colunas de temperatura do que você imaginava | Confira o arquivo original antes de prosseguir — não gere o laudo até bater o número certo |
 | Um estudo aparece como "Reprovado" mas você achava que devia estar "Aprovado" | Alguma leitura de temperatura saiu da faixa/tolerância configurada, ou (no Anexo E) o indicador de laboratório foi marcado como reprovado | Olhe o Console Operacional — o motivo exato da reprovação sempre aparece ali |
+| Apareceu "O documento não pode ser gerado até corrigir…" | O dado tem algum problema (registrador, sensores, leituras, duração, intervalo, umidade) | Siga o "Como corrigir" de cada item; depois gere de novo |
+| Na emissão, "Os textos revisados não podem ser emitidos" | O texto contradiz o resultado calculado, cita número que não está nos resultados ou cita cláusula de norma | Corrija o trecho indicado ou gere o rascunho de novo para receber o texto padrão |
 | Bloco de estudo (ex.: Abertura de Porta) não aparece na tela | O perfil escolhido não usa esse estudo, segundo a norma | Confira a tabela da seção 6 deste manual — não é erro, é intencional |
 
 ---
@@ -342,7 +365,11 @@ Um roteiro prático, resumindo tudo o que este manual explica, para você seguir
 | **Anexo E, F, I** | São capítulos numerados dentro da norma ABNT NBR 16328:2024, cada um com regras específicas para um tipo de equipamento. E = Estufa de Esterilização/Despirogenização; F = Estufa de Incubação; I = Banho-maria |
 | **Datalogger** | Aparelho gravador de temperatura, que fica registrando leituras ao longo do tempo e depois gera um arquivo com esses dados |
 | **Faixa operacional** | O intervalo de temperatura (mínima até máxima) considerado aceitável para aquele equipamento funcionar corretamente |
-| **Tolerância** | Uma margem extra em torno da faixa — uma leitura que passou um pouco do limite, mas dentro dessa margem, não é tratada como uma falha grave |
+| **Tolerância** | Na secadora de traqueias, a margem (±) em torno da temperatura de trabalho que forma a faixa de aceitação |
+| **Uniformidade** | A maior diferença entre o sensor mais quente e o mais frio no mesmo instante |
+| **Estabilidade** | Metade da variação de temperatura de um sensor no período avaliado (± °C) |
+| **Incerteza de medição** | A dúvida que acompanha cada leitura, vinda da calibração e da resolução do registrador; aparece no documento com k = 2 |
+| **Responsável técnico** | Quem confere e aprova a emissão dos documentos; sem a aprovação registrada nenhum documento é entregue ao cliente |
 | **Rampa de estabilização** | O período inicial em que um equipamento recém-ligado ainda está esquentando/esfriando até chegar na temperatura de trabalho — leituras desse período não contam para aprovação |
 | **FH** | Sigla usada no cálculo de esterilização por calor seco — um número que resume, em minutos equivalentes, o quanto de "efeito esterilizante" a temperatura registrada realmente entregou |
 | **FD** | Mesma ideia do FH, mas para despirogenização (destruição de endotoxinas) — usa uma fórmula com parâmetros diferentes |
