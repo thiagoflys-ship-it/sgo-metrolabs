@@ -67,6 +67,9 @@ var ENVDOC_RAIZES = [
   // 21/10/2026: Comercial nativo (SGO_Comercial_Propostas.js): proposta ao cliente; o relatório mensal é interno.
   { rx: /^Comercial - Propostas$/i, tipo: 'Proposta comercial', classe: 'CLIENTE', frase: 'A proposta apresenta o escopo, os valores e as condições comerciais. Para aprovar, basta responder a este e-mail confirmando o aceite ou enviar o pedido de compra.' },
   { rx: /^Comercial - Relat/i, tipo: 'Relatório do Comercial', classe: 'INTERNO' },
+  // 21/10/2026: Compras nativo (SGO_Compras_Pedido.js): pedido de compra ao fornecedor; o relatório mensal é interno.
+  { rx: /^Compras - Pedidos de compra$/i, tipo: 'Pedido de compra', classe: 'FORNECEDOR', frase: 'Pedimos a confirmação do recebimento deste pedido e da data de entrega. Favor citar o número do pedido na nota fiscal.' },
+  { rx: /^Compras - Relat/i, tipo: 'Relatório de compras', classe: 'INTERNO' },
   { rx: /^Inventario de Equipamentos - Documentos Gerados$/i, tipo: 'Inventário de equipamentos', classe: 'CLIENTE', frase: 'O inventário lista os equipamentos levantados e a análise da situação de cada um.' },
   { rx: /^Programa de conduta - Relat/i, tipo: 'Relatório do Programa de conduta', classe: 'BLOQUEADO' },
   { rx: /^Conduta - Fotos/i, tipo: 'Foto de ocorrência do Programa de conduta', classe: 'BLOQUEADO' },
@@ -501,9 +504,11 @@ function EnviarDoc_apiPreparar(sessionId, payload) {
     base.avisos = [];
     if (doc.avisoDica) base.avisos.push(doc.avisoDica);
     if (doc.classe === 'INTERNO') base.avisos.push('Documento interno (não está na pasta de um cliente). Confira se ele pode sair da Metrolabs antes de enviar; escolha as pessoas da equipe ou digite o destinatário.');
-    else if (!doc.cliente) base.avisos.push('Não foi possível saber de qual cliente é este documento pela pasta em que ele foi gravado. Digite o destinatário e confira o documento antes de enviar.');
+    else if (!doc.cliente && doc.classe !== 'FORNECEDOR') base.avisos.push('Não foi possível saber de qual cliente é este documento pela pasta em que ele foi gravado. Digite o destinatário e confira o documento antes de enviar.');
     if (arq.tamanho > ENVDOC_LIMITES.whatsMb * 1048576) base.avisos.push('O arquivo tem ' + Math.ceil(arq.tamanho / 1048576) + ' MB: acima do limite do WhatsApp (' + ENVDOC_LIMITES.whatsMb + ' MB). Envie por e-mail.');
     base.contatos = EnviarDoc_contatosCliente_(doc.cliente);
+    // 21/10/2026: pedido de compra: o fornecedor do pedido é o destinatário sugerido (Compras > Fornecedores).
+    if (doc.classe === 'FORNECEDOR') { base.contatos = typeof Compras_contatosEnvio_ === 'function' ? Compras_contatosEnvio_(arq.id) : []; base.avisos.push('Pedido de compra ao fornecedor: confira o e-mail para pedidos antes de enviar. Sem e-mail no cadastro, digite o endereço.'); }
     base.equipe = doc.classe === 'INTERNO' || !doc.cliente ? EnviarDoc_equipe_() : [];
     base.textos = EnviarDoc_textos_(doc, eu);
     base.canais = EnviarDoc_canais_(eu);

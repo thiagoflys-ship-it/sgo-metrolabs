@@ -754,6 +754,8 @@ function ComP_passarSetores_(eu, d) {
         modulo: cfgS.modulo || 'comercial', moduloNome: cfgS.modulo === 'cronograma_execucao' ? 'Cronograma de execução' : 'Comercial', clienteId: Com_s_(p.CLIENTE_ID), unidadeId: Com_s_(p.UNIDADE_ID),
         porQue: 'Pedido aprovado pelo cliente: o setor ' + COM_SETORES[s] + ' executa a sua parte.', onde: s === 'TECNICA' ? 'Cronograma de execução e Minhas atividades' : 'Minhas atividades',
         como: (cfgS.checklist || []).join('; '), restrita: s !== 'TECNICA' });
+      // 21/10/2026: Compras nativo: o pedido aprovado também abre a requisição de compra com os produtos, sem o valor de venda (SGO_Compras_Pedido.js).
+      if (s === 'COMPRAS' && typeof Compras_doPedidoComercial_ === 'function') { try { Compras_doPedidoComercial_(p, { setorResponsavelId: r.id, atividadeId: atv }); } catch (eCmp) { console.error('Comercial -> Compras: ' + ((eCmp && eCmp.message) || eCmp)); } }
       novos.push({ setor: s, setorNome: COM_SETORES[s], responsavelId: r.id, responsavelNome: r.nome, motivo: r.motivo, atividadeId: atv, prazo: prazo, avisadoConclusao: false });
     });
     var passagem = ja.concat(novos), agora = Com_agora_();

@@ -205,6 +205,15 @@ var CMP_ACOES = {
   retirarCotacao: function (eu, sid, d) { return CmpC_retirar_(eu, d); },
   escolher: function (eu, sid, d) { return CmpC_escolher_(eu, d); },
   decidir: function (eu, sid, d) { return CmpC_decidir_(eu, d); },
+  // pedido de compra, recebimento e entrega
+  emitirPedido: function (eu, sid, d) { return CmpP_emitir_(eu, d); },
+  marcarEnviado: function (eu, sid, d) { return CmpP_marcarEnviado_(eu, d); },
+  sincronizarEnvios: function (eu, sid, d) { CmpP_sincronizarEnvios_(); return { requisicao: CmpR_detalhe_(eu, d && d.requisicaoId) }; },
+  previsao: function (eu, sid, d) { return CmpP_previsao_(eu, d); },
+  receber: function (eu, sid, d) { return CmpP_receber_(eu, d); },
+  resolverDivergencia: function (eu, sid, d) { return CmpP_resolverDivergencia_(eu, d); },
+  entregar: function (eu, sid, d) { return CmpP_entregar_(eu, d); },
+  equipe: function (eu) { Cmp_exigir_(eu, 'COMPRADOR', 'ver a equipe'); var us = Cmp_usuarios_(); return { equipe: Object.keys(us).filter(function (id) { return us[id].ativo && !Cmp_ehContaSistema_(us[id]); }).map(function (id) { return { id: id, nome: us[id].nome }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }) }; },
   // fornecedores
   fornecedores: function (eu, sid, d) { return { fornecedores: CmpF_listar_(eu, d) }; },
   fornecedor: function (eu, sid, d) { return { fornecedor: CmpF_detalhe_(eu, d && d.id) }; },

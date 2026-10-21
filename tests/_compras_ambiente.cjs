@@ -83,7 +83,7 @@ function ambiente(opcoes) {
   function objPasta(p) {
     return {
       getId: () => p.id, getName: () => p.nome, getUrl: () => '/pastas/' + p.id,
-      createFile(blob) { const id = 'arq' + (++seq); arquivos[id] = { id, nome: blob.getName(), mime: blob.getContentType(), bytes: Buffer.from(blob._bytes || blob.getBytes()), pasta: p.id }; p.arquivos.push(id); return objArquivo(arquivos[id]); },
+      createFile(blob) { const id = 'arquivo' + String(++seq).padStart(6, '0'); arquivos[id] = { id, nome: blob.getName(), mime: blob.getContentType(), bytes: Buffer.from(blob._bytes || blob.getBytes()), pasta: p.id }; p.arquivos.push(id); return objArquivo(arquivos[id]); },
       createFolder(nome) { const id = 'pasta' + (++seq); pastas[id] = { id, nome, arquivos: [], pai: p.id }; return objPasta(pastas[id]); },
       getFoldersByName(nome) { const l = Object.values(pastas).filter((x) => x.pai === p.id && x.nome === nome); let i = 0; return { hasNext: () => i < l.length, next: () => objPasta(l[i++]) }; },
       getFiles() { const l = p.arquivos.slice(); let i = 0; return { hasNext: () => i < l.length, next: () => objArquivo(arquivos[l[i++]]) }; },

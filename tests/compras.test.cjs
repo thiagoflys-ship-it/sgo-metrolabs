@@ -243,3 +243,130 @@ test('etapa 2 · quem pediu não aprova a própria compra: comprador que pediu p
   assert.match(hist, /reprovada/i);
   semValor(hist, 'histórico de quem pediu');
 });
+
+// ------------------------------------------------------------------ etapa 3
+/** Compra aprovada na faixa do comprador (um item de R$ 250,00). */
+function aprovada(amb, fs, extra) {
+  const q = emCotacao(amb, 'Kit de vedação da porta');
+  const t = cotar(amb, q, fs[0], '250,00', extra);
+  return ok(amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: t.cotacoes[0].id })).requisicao;
+}
+const pagCartao = { formaPagamento: 'CARTAO_CREDITO', cartaoFinal: '4321', parcelas: 2 };
+
+test('etapa 3 · pedido de compra numerado (PC-2026-0001) em A4 na pasta, sem nome do cliente; envio pelo Enviar documento com o fornecedor', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const q = aprovada(amb, fs);
+  assert.match(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-24' }, { formaPagamento: 'CARTAO_CREDITO', cartaoFinal: '12' })).message, /4 últimos números/);
+  assert.match(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-01' }, pagCartao)).message, /já passou/);
+  assert.match(amb.api('s_tiago', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-24' }, pagCartao)).message, /ação é do comprador/);
+  const e = ok(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-24' }, pagCartao)));
+  assert.equal(e.requisicao.situacao, 'PEDIDO_FEITO');
+  assert.equal(e.requisicao.pedido.numero, 'PC-2026-0001');
+  const pdf = amb.arquivos[e.pdfId], html = amb.arquivos[e.htmlId].bytes.toString('utf8');
+  assert.match(pdf.nome, /^Pedido de compra - PC-2026-0001 rev\.00 - Fornecedor Teste Um/);
+  const pasta = amb.pastas[pdf.pasta];
+  assert.equal(pasta.nome, '2026-10');
+  assert.equal(amb.pastas[pasta.pai].nome, 'Compras - Pedidos de compra');
+  assert.match(html, /PC-2026-0001/); assert.match(html, /R\$ 250,00/); assert.match(html, /REQ-2026-0001/); assert.match(html, /Marca de conferência/);
+  assert.doesNotMatch(html, /4321/, 'final do cartão não vai ao fornecedor');
+  assert.doesNotMatch(html, /Hospital Teste Alfa/);
+  const env = amb.ctx.EnviarDoc_apiPreparar('s_carlos', { arquivoId: e.pdfId });
+  assert.equal(env.documento.classe, 'FORNECEDOR');
+  assert.equal(env.contatos[0].email, 'pedidos1@fornecedor.exemplo.test');
+  // envio registrado marca o pedido como enviado; "peça pedida" só histórico (sem aviso)
+  amb.tabelas.DOC_ENVIOS.push({ ID: 'env1', ARQUIVO_ID: e.pdfId, SITUACAO: 'ENVIADO', CANAL: 'EMAIL', DESTINO: 'pedidos1@fornecedor.exemplo.test', USUARIO_ID: 'u_cmp', USUARIO_NOME: 'CARLOS', QUANDO: '2026-10-19T11:00:00' });
+  const s = ok(amb.api('s_carlos', 'sincronizarEnvios', { requisicaoId: q.id }));
+  assert.ok(s.requisicao.pedido.enviado);
+  assert.equal(amb.tabelas.CMP_AVISOS.filter((v) => v.DESTINATARIO_ID === 'u_tec').length, 0, 'pedido feito não gera aviso');
+  // solicitante: previsão e número, sem valor nem documento
+  const meu = ok(amb.api('s_tiago', 'meus')).requisicoes[0];
+  assert.equal(meu.previsaoEntrega, '24/10/2026');
+  assert.ok(!JSON.stringify(meu).includes('R$'), 'Meus pedidos sem valor');
+  const det = ok(amb.api('s_tiago', 'requisicao', { id: q.id })).requisicao;
+  assert.equal(det.pedido.pdfUrl, undefined, 'quem pediu não recebe o PDF (tem valor)');
+  // nova revisão
+  const rv = ok(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-27', novaRevisao: true, motivo: 'Fornecedor mudou a data de entrega' }, pagCartao)));
+  assert.equal(rv.requisicao.pedido.rotulo, 'PC-2026-0001 rev.01');
+  assert.equal(amb.tabelas.CMP_PEDIDOS.length, 1);
+});
+
+test('etapa 3 · recebimento com conferência: divergência segura a peça; disponível avisa quem pediu e vira entrega; atrasado e parado cobrados', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const q = aprovada(amb, fs);
+  // aprovada sem pedido: comprador no 1º dia útil; Caixa no 2º
+  amb.mudar('2026-10-20T10:00:00-03:00');
+  assert.equal(pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_parado').length, 1);
+  amb.mudar('2026-10-21T10:00:00-03:00');
+  let cx = caixa(amb);
+  assert.equal(cx.length, 1); assert.equal(cx[0].tipo, 'compras_parado_gestao'); assert.deepEqual(Array.from(cx[0].responsaveis), ['u_log'], 'gestor da área de Compras');
+  ok(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-22' }, pagCartao)));
+  assert.equal(caixa(amb).length, 0);
+  const it = q.itens[0];
+  assert.match(amb.api('s_carlos', 'receber', { requisicaoId: q.id, itens: [{ itemId: it.id, qtdRecebida: 2 }], especificacaoConfere: true, semDano: false, nfNumero: '555' }).message, /dano exige foto/);
+  assert.match(amb.api('s_carlos', 'receber', { requisicaoId: q.id, itens: [{ itemId: it.id, qtdRecebida: 2 }], especificacaoConfere: true, semDano: true }).message, /nota fiscal/);
+  const d = ok(amb.api('s_carlos', 'receber', { requisicaoId: q.id, itens: [{ itemId: it.id, qtdRecebida: 0 }], especificacaoConfere: true, semDano: true, nfNumero: '555', obs: 'Veio a nota sem a peça; fornecedor manda amanhã' }));
+  assert.equal(d.requisicao.situacao, 'RECEBIDA_DIVERGENCIA');
+  assert.equal(pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_divergencia').length, 1);
+  assert.equal(amb.tabelas.CMP_AVISOS.filter((v) => v.TIPO === 'DISPONIVEL').length, 0, 'com divergência ninguém é avisado de disponível');
+  ok(amb.api('s_carlos', 'resolverDivergencia', { requisicaoId: q.id, texto: 'Fornecedor entregou a unidade que faltava' }));
+  const av = pend(amb, 's_tiago').filter((i) => i.tipo === 'compras_aviso');
+  assert.ok(av.some((i) => /Peça disponível/.test(i.titulo)));
+  assert.ok(amb.tabelas.ATV_ATIVIDADES.some((a) => /^Entregar REQ-2026-0001/.test(a.TITULO) && a.SITUACAO === 'A fazer'));
+  const ent = ok(amb.api('s_tiago', 'entregar', { requisicaoId: q.id }));
+  assert.equal(ent.requisicao.situacao, 'ENTREGUE');
+  assert.ok(amb.tabelas.ATV_ATIVIDADES.filter((a) => /REQ-2026-0001/.test(a.TITULO)).every((a) => a.SITUACAO === 'Concluída'));
+  // entrega atrasada
+  const q2 = aprovada(amb, fs);
+  ok(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q2.id, previsaoEntrega: '2026-10-22' }, pagCartao)));
+  amb.mudar('2026-10-23T10:00:00-03:00');
+  const atr = pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_parado');
+  assert.equal(atr.length, 1); assert.match(atr[0].titulo, /atrasada/);
+  assert.match(amb.api('s_carlos', 'previsao', { requisicaoId: q2.id, previsaoEntrega: '2026-10-28' }).message, /motivo/);
+  ok(amb.api('s_carlos', 'previsao', { requisicaoId: q2.id, previsaoEntrega: '2026-10-28', motivo: 'Fornecedor sem estoque; data nova por telefone' }));
+  assert.equal(pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_parado').length, 0);
+});
+
+test('etapa 3 · pedido aprovado do Comercial abre a requisição com os produtos, sem o valor de venda; disponível conclui a atividade do setor e avisa o vendedor', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const ct = ok(amb.com('s_vera', 'salvarContato', { clienteId: 'c1', unidadeId: 'un1', nome: 'Ana Enfermeira Teste', cargo: 'Coordenadora da CME', papel: 'USA', email: 'ana@alfa.exemplo.test' }));
+  const op = ok(amb.com('s_vera', 'salvarOportunidade', { titulo: 'Peças para lavadora da CME', clienteId: 'c1', unidadeId: 'un1', contatoId: ct.contato.id, funil: 'PRODUTOS', etapa: 'PRO_2', origem: 'Indicação', valor: '3.200,00', proxima: { acao: 'Confirmar o modelo das peças', data: '2026-10-20', hora: '10:00', tipo: 'LIGACAO' } })).oportunidade;
+  const np = ok(amb.com('s_vera', 'novaProposta', { oportunidadeId: op.id }));
+  ok(amb.com('s_vera', 'salvarProposta', { id: np.proposta.id, escopo: 'Fornecimento de peças de reposição para a lavadora da CME.', itens: [{ tipo: 'PRODUTO', descricao: 'Kit de vedação da câmara', quantidade: 2, unidade: 'kit', precoUnitario: '1.600,00' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'Até 30 dias', garantia: 'Garantia do fabricante' } }));
+  ok(amb.com('s_vera', 'concluirProposta', { id: np.proposta.id }));
+  const g = ok(amb.com('s_vera', 'gerarDocumento', { id: np.proposta.id }));
+  ok(amb.com('s_vera', 'marcarEnviada', { id: np.proposta.id, como: 'Enviada por e-mail para a coordenação (teste)' }));
+  ok(amb.com('s_vera', 'respostaCliente', { id: np.proposta.id, resposta: 'APROVADA', texto: 'Aprovado por e-mail', arquivo: { nome: 'aceite.pdf', tipo: 'application/pdf', base64: Buffer.from('%PDF').toString('base64') } }));
+  void g;
+  ok(amb.com('s_vera', 'passarSetores', { id: np.proposta.id, responsaveis: { COMPRAS: 'u_cmp' } }));
+  const reqs = amb.tabelas.CMP_REQUISICOES;
+  assert.equal(reqs.length, 1);
+  assert.equal(reqs[0].ORIGEM, 'COMERCIAL'); assert.equal(reqs[0].PROPOSTA_NUMERO, 'PROP-2026-0001'); assert.equal(reqs[0].COMERCIAL_VENDEDOR_ID, 'u_ven');
+  assert.equal(reqs[0].ESPEC_INCOMPLETA, '');
+  const itens = amb.tabelas.CMP_ITENS.filter((i) => i.REQUISICAO_ID === reqs[0].ID);
+  assert.equal(itens.length, 1); assert.equal(itens[0].QUANTIDADE, 2);
+  assert.ok(!JSON.stringify(reqs[0]).includes('1600') && !JSON.stringify(itens).includes('1600'), 'sem o valor de venda');
+  assert.ok(!amb.tabelas.ATV_ATIVIDADES.some((a) => /Conferir e cotar/.test(a.TITULO)), 'a atividade do setor Compras já é a tarefa');
+  // passar de novo não duplica
+  assert.equal(amb.ctx.Compras_doPedidoComercial_(amb.tabelas.COM_PROPOSTAS.find((p) => p.ID === np.proposta.id), {}), 'REQ-2026-0001');
+  assert.equal(amb.tabelas.CMP_REQUISICOES.length, 1);
+  // a vendedora acompanha sem valor
+  const meus = ok(amb.api('s_vera', 'meus')).requisicoes;
+  assert.equal(meus.length, 1); assert.equal(meus[0].solicitante.nome, 'VERA VENDEDORA TESTE'); assert.equal(meus[0].valorTxt, undefined);
+  // ciclo até disponível
+  const id = reqs[0].ID;
+  ok(amb.api('s_carlos', 'iniciarCotacao', { id }));
+  const q = ok(amb.api('s_carlos', 'requisicao', { id })).requisicao;
+  const t = cotar(amb, q, fs[0], '400,00');
+  ok(amb.api('s_carlos', 'escolher', { requisicaoId: id, cotacaoId: t.cotacoes[0].id }));
+  ok(amb.api('s_carlos', 'emitirPedido', { requisicaoId: id, previsaoEntrega: '2026-10-24', formaPagamento: 'PIX' }));
+  ok(amb.api('s_carlos', 'receber', { requisicaoId: id, itens: [{ itemId: q.itens[0].id, qtdRecebida: 2 }], especificacaoConfere: true, semDano: true, nfNumero: '777' }));
+  const atvCom = amb.tabelas.ATV_ATIVIDADES.find((a) => /Pedido aprovado PROP-2026-0001 rev\.00 · Compras/.test(a.TITULO));
+  assert.equal(atvCom.SITUACAO, 'Concluída');
+  assert.ok(pend(amb, 's_vera').some((i) => i.tipo === 'compras_aviso' && /PROP-2026-0001/.test(i.titulo)), 'vendedora avisada');
+});

@@ -577,6 +577,114 @@
   }
 
   // =========================================================
+  // PEDIDO DE COMPRA, RECEBIMENTO E ENTREGA (seção da ficha)
+  // =========================================================
+  function Cp_secaoPedido_(q) {
+    var a = q.acoes || {}, p = q.pedido, h = "";
+    if (!p && !a.emitir && !q.recebimento && !q.entrega) return "";
+    h += '<div class="cp-sec">Pedido ao fornecedor</div>';
+    if (p) {
+      h += '<dl class="cp-det"><dt>Pedido de compra</dt><dd>' + Cp_esc_(p.rotulo || p.numero) + (p.fornecedor ? ' · ' + Cp_esc_(p.fornecedor) : '') + (p.valorTxt ? ' · <b>' + Cp_esc_(p.valorTxt) + '</b>' : '') + '</dd>' +
+        '<dt>Previsão de entrega</dt><dd>' + Cp_esc_(p.previsao) + (p.rastreio ? ' · rastreio ' + Cp_esc_(p.rastreio) : '') + '</dd>' + (p.forma ? '<dt>Pagamento</dt><dd>' + Cp_esc_(p.forma) + '</dd>' : '') +
+        (p.emitido ? '<dt>Emitido</dt><dd>' + Cp_esc_(p.emitido) + '</dd>' : '') + '<dt>Enviado ao fornecedor</dt><dd>' + (p.enviado ? Cp_esc_(p.enviado + ' · ' + p.envioComo) : 'ainda não') + '</dd></dl>' +
+        (p.pdfUrl ? '<div class="cp-fotos"><a href="' + Cp_esc_(p.pdfUrl) + '" target="_blank" rel="noopener">PDF do pedido</a>' + (p.htmlUrl ? '<a href="' + Cp_esc_(p.htmlUrl) + '" target="_blank" rel="noopener">Folha A4 (HTML)</a>' : '') + (p.pastaUrl ? '<a href="' + Cp_esc_(p.pastaUrl) + '" target="_blank" rel="noopener">Pasta</a>' : '') + '</div>' : '');
+    }
+    var bt = [];
+    if (a.emitir) bt.push('<button type="button" class="btn-primary" data-f="emitir">Emitir o pedido de compra</button>');
+    if (a.enviar && p && p.pdfId) bt.push('<button type="button" class="btn-primary" data-f="enviar">Enviar ao fornecedor</button><button type="button" class="btn-secondary" data-f="jaEnviei">Já enviei: atualizar</button><button type="button" class="btn-secondary" data-f="marcarEnviado">Enviado por outro meio</button>');
+    if (a.previsao) bt.push('<button type="button" class="btn-secondary" data-f="previsao">Mudar previsão ou rastreio</button>');
+    if (a.novaRevisao) bt.push('<button type="button" class="btn-secondary" data-f="revisao">Nova revisão do pedido</button>');
+    if (a.receber) bt.push('<button type="button" class="btn-primary" data-f="receber">Registrar o recebimento</button>');
+    if (a.resolverDivergencia) bt.push('<button type="button" class="btn-primary" data-f="resolver">Divergência resolvida</button>');
+    if (a.entregar) bt.push('<button type="button" class="btn-primary" data-f="entregar">Registrar a entrega</button>');
+    if (bt.length) h += '<div class="cp-acoes">' + bt.join("") + '</div><div id="cpEnvioMsg"></div>';
+    if (q.recebimento) { var rc = q.recebimento; h += '<div class="cp-sec">Recebimento</div><p class="cp-txt">Conferido em ' + Cp_esc_(rc.em) + ' por ' + Cp_esc_(rc.por) + ': especificação ' + (rc.especificacaoConfere ? 'confere' : '<b>não confere</b>') + ', ' + (rc.semDano ? 'sem dano' : '<b>com dano</b>') + ', nota ' + Cp_esc_(rc.nf || ('sem nota: ' + (rc.semNota || ''))) + '.' + (rc.obs ? ' ' + Cp_esc_(rc.obs) : '') + '</p>' + (rc.fotos && rc.fotos.length ? '<div class="cp-fotos">' + rc.fotos.map(function (f) { return '<a href="' + Cp_esc_(f.url) + '" target="_blank" rel="noopener">' + Cp_esc_(f.nome) + '</a>'; }).join("") + '</div>' : ''); }
+    if (q.divergencia && q.situacao === "RECEBIDA_DIVERGENCIA") h += '<div class="cp-faixa erro"><b>Divergência:</b> ' + Cp_esc_(q.divergencia) + '</div>';
+    if (q.entrega) h += '<div class="cp-sec">Entrega</div><p class="cp-txt">Entregue a ' + Cp_esc_(q.entrega.a) + ' em ' + Cp_esc_(q.entrega.em) + ' (registrado por ' + Cp_esc_(q.entrega.por) + '). ' + Cp_esc_(q.entrega.evidencia) + '</p>';
+    return h;
+  }
+
+  function Cp_campoPagamento_(pref) {
+    var f = CP.ini.formasPagamento;
+    return '<div class="cp-grade2">' + Cp_campo_("Forma de pagamento", '<select id="' + pref + 'Forma">' + Cp_opcoes_(Cp_mapaOpcoes_(f), "", "Escolha") + '</select>') + '<div id="' + pref + 'Extra"></div></div>';
+  }
+  function Cp_ligarPagamento_(pref, equipe) {
+    var sel = Cp_$_(pref + "Forma"), extra = Cp_$_(pref + "Extra");
+    var desenhar = function () {
+      var v = sel.value, h = "";
+      if (v === "CARTAO_CREDITO" || v === "CARTAO_DEBITO") h = Cp_campo_("4 últimos números do cartão", '<input type="text" inputmode="numeric" maxlength="4" id="' + pref + 'Final">', "Nunca digite o número inteiro.") + (v === "CARTAO_CREDITO" ? Cp_campo_("Parcelas", '<input type="number" min="1" max="24" value="1" id="' + pref + 'Parc">') : "");
+      else if (v === "BOLETO") h = Cp_campo_("Vencimento do boleto", '<input type="date" id="' + pref + 'Venc">');
+      else if (v === "FATURADO") h = Cp_campo_("Condição do faturamento", '<input type="text" maxlength="200" id="' + pref + 'Cond" placeholder="28 dias da nota fiscal">');
+      else if (v === "REEMBOLSO") h = Cp_campo_("Quem pagou (recebe o reembolso)", '<select id="' + pref + 'Reemb">' + Cp_opcoes_((equipe || []).map(function (u) { return { v: u.id, t: u.nome }; }), "", "Escolha") + '</select>');
+      extra.innerHTML = h;
+    };
+    sel.onchange = desenhar; desenhar();
+    return function () { var g = function (s) { var el = Cp_$_(pref + s); return el ? el.value : ""; }; return { formaPagamento: sel.value, cartaoFinal: g("Final"), parcelas: g("Parc"), boletoVencimento: g("Venc"), condicao: g("Cond"), reembolsoParaId: g("Reemb") }; };
+  }
+
+  function Cp_ligarPedido_(q, corpo) {
+    var b = function (sel, fn) { var el = corpo.querySelector('[data-f="' + sel + '"]'); if (el) el.onclick = fn; };
+    var p = q.pedido || {};
+    var emitir = function (revisao) {
+      Cp_chamar_("equipe", {}, function (re) {
+        var ov = Cp_modal_(revisao ? "Nova revisão do pedido de compra" : "Emitir o pedido de compra", '<p class="cp-txt">O pedido sai em folha A4 numerada (PDF e HTML) na pasta Compras - Pedidos de compra, com o fornecedor escolhido, os itens, os valores, a previsão e a forma de pagamento.</p>' +
+          Cp_campo_("Previsão de entrega combinada", '<input type="date" id="emPrev" value="' + Cp_esc_(p.previsaoIso || "") + '">') + Cp_campoPagamento_("em") +
+          Cp_campo_("Observações no pedido (opcional)", '<textarea id="emObs" maxlength="1000"></textarea>') + (revisao ? Cp_campo_("O que mudou e por quê", '<textarea id="emMot" maxlength="500"></textarea>') : '') + '<div id="emMsg"></div>',
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + (revisao ? "Emitir a revisão" : "Emitir o pedido") + '</button>', 640);
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        var pag = Cp_ligarPagamento_("em", re.equipe);
+        ov.querySelector("[data-ok]").onclick = function () {
+          var d = Object.assign({ requisicaoId: q.id, previsaoEntrega: Cp_$_("emPrev").value, obs: Cp_$_("emObs").value, novaRevisao: !!revisao, motivo: revisao ? Cp_$_("emMot").value : "" }, pag());
+          Cp_chamar_("emitirPedido", d, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("emMsg", m); }, { carregando: "Gerando o pedido de compra…" });
+        };
+      });
+    };
+    b("emitir", function () { emitir(false); });
+    b("revisao", function () { emitir(true); });
+    b("enviar", function () { if (window.SGO_EnviarDoc && SGO_EnviarDoc.abrir) { SGO_EnviarDoc.abrir({ arquivoId: p.pdfId, htmlId: p.htmlId, dica: { numero: p.numero } }); Cp_msg_("cpEnvioMsg", 'Depois de enviar, toque em "Já enviei: atualizar". O sistema confere o envio registrado.', "ok"); } else alert("A janela Enviar documento não carregou. Atualize a página (F5)."); });
+    b("jaEnviei", function () { Cp_chamar_("sincronizarEnvios", { requisicaoId: q.id }, function (r) { Cp_desenharFicha_(r.requisicao); }, function (m) { Cp_msg_("cpEnvioMsg", m); }); });
+    b("marcarEnviado", function () { Cp_pedirTexto_("Enviado por outro meio", "Use só quando o fornecedor recebeu o pedido fora do \"Enviar documento\" (portal do fornecedor, entregue em mãos).", "Como o fornecedor recebeu", 10, function (t, ov) { Cp_chamar_("marcarEnviado", { requisicaoId: q.id, como: t }, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }); });
+    b("previsao", function () {
+      var ov = Cp_modal_("Previsão de entrega e rastreio", Cp_campo_("Nova previsão", '<input type="date" id="pvData" value="' + Cp_esc_(p.previsaoIso || "") + '">') + Cp_campo_("Motivo da mudança", '<textarea id="pvMot" maxlength="500"></textarea>', "Obrigatório quando a data muda. Quem pediu vê a nova data.") + Cp_campo_("Código de rastreio", '<input type="text" id="pvRas" maxlength="120" value="' + Cp_esc_(p.rastreio || "") + '">') + '<div id="pvMsg"></div>',
+        '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>');
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () { Cp_chamar_("previsao", { requisicaoId: q.id, previsaoEntrega: Cp_$_("pvData").value, motivo: Cp_$_("pvMot").value, rastreio: Cp_$_("pvRas").value }, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("pvMsg", m); }); };
+    });
+    b("receber", function () {
+      var ov = Cp_modal_("Registrar o recebimento", '<p class="cp-txt">Confira antes de liberar. Qualquer divergência segura a peça até resolver com o fornecedor.</p>' +
+        q.itens.map(function (i) { return Cp_campo_(i.ordem + ". " + i.descricao + " (pedido: " + i.quantidadeTxt + " " + i.unidade + ")", '<input type="text" inputmode="decimal" data-rq="' + Cp_esc_(i.id) + '" value="' + Cp_esc_(i.quantidade) + '">', "Quantidade recebida (conte)."); }).join("") +
+        '<label class="cp-check"><input type="checkbox" id="rcEsp"> A especificação confere com o pedido (número da peça, medidas, tensão...)</label><label class="cp-check"><input type="checkbox" id="rcDano"> Chegou sem dano</label>' +
+        '<div class="cp-grade2">' + Cp_campo_("Número da nota fiscal", '<input type="text" id="rcNf" maxlength="60">') + Cp_campo_("Arquivo da nota (opcional)", '<input type="file" id="rcNfArq" accept=".pdf,image/*">') + '</div>' +
+        Cp_campo_("Sem nota fiscal? Motivo", '<input type="text" id="rcSemNota" maxlength="300">') + Cp_campo_("Fotos (obrigatória se houver dano)", '<input type="file" id="rcFotos" accept="image/*" multiple>') +
+        Cp_campo_("O que aconteceu (obrigatório se houver divergência)", '<textarea id="rcObs" maxlength="1000"></textarea>') + '<div id="rcMsg"></div>',
+        '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Registrar o recebimento</button>', 640);
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () {
+        Cp_lerArquivos_(Cp_$_("rcFotos"), function (fotos) { Cp_lerArquivos_(Cp_$_("rcNfArq"), function (nfs) {
+          var d = { requisicaoId: q.id, itens: Array.prototype.map.call(ov.querySelectorAll("[data-rq]"), function (x) { return { itemId: x.getAttribute("data-rq"), qtdRecebida: x.value }; }), especificacaoConfere: Cp_$_("rcEsp").checked, semDano: Cp_$_("rcDano").checked,
+            nfNumero: Cp_$_("rcNf").value, nfArquivo: nfs[0] || null, semNotaMotivo: Cp_$_("rcSemNota").value, fotos: fotos, obs: Cp_$_("rcObs").value };
+          Cp_chamar_("receber", d, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, r.requisicao.situacao === "DISPONIVEL" ? "ok" : "aviso"); }, function (m) { Cp_msg_("rcMsg", m); }, { carregando: "Registrando…" });
+        }); }, true);
+      };
+    });
+    b("resolver", function () { Cp_pedirTexto_("Divergência resolvida", "A peça passa a \"Disponível\" e quem pediu é avisado. Se a compra não serve, use \"Cancelar o pedido\".", "Como foi resolvida", 10, function (t, ov) { Cp_chamar_("resolverDivergencia", { requisicaoId: q.id, texto: t }, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }); });
+    b("entregar", function () {
+      Cp_chamar_("equipe", {}, function (re) {
+        var ov = Cp_modal_("Registrar a entrega", Cp_campo_("Entregue a", '<select id="etPara">' + Cp_opcoes_(re.equipe.map(function (u) { return { v: u.id, t: u.nome }; }), q.solicitante.id) + '</select>') +
+          Cp_campo_("Evidência", '<textarea id="etEv" maxlength="500" placeholder="Retirada assinada no protocolo da Logística"></textarea>') + Cp_campo_("Foto da entrega (opcional)", '<input type="file" id="etFoto" accept="image/*">') + '<div id="etMsg"></div>',
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Registrar a entrega</button>');
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () { Cp_lerArquivos_(Cp_$_("etFoto"), function (l) { Cp_chamar_("entregar", { requisicaoId: q.id, entregueAId: Cp_$_("etPara").value, evidencia: Cp_$_("etEv").value, foto: l[0] || null }, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("etMsg", m); }); }, true); };
+      });
+    });
+  }
+
+  function Cp_confirmarRecebimento_(q, depois) {
+    if (!confirm("Confirma que você recebeu " + q.titulo + "? O pedido " + q.numero + " será encerrado.")) return;
+    Cp_chamar_("entregar", { requisicaoId: q.id }, function (r) { alert(r.message); if (depois) depois(); });
+  }
+
+  // =========================================================
   // FORNECEDORES
   // =========================================================
   function Compras_renderFornecedores_(div) {

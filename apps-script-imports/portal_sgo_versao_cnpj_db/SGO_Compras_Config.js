@@ -57,7 +57,7 @@ var CMP_COLUNAS = {
     'PEDIDO_ID', 'PEDIDO_NUMERO', 'PREVISAO_ENTREGA', 'RECEBIDA_EM', 'RECEBIDA_POR_NOME', 'DIVERGENCIA_TEXTO', 'DISPONIVEL_EM',
     'ENTREGUE_EM', 'ENTREGUE_A_ID', 'ENTREGUE_A_NOME', 'ENTREGA_EVIDENCIA', 'ENTREGUE_POR_NOME', 'CANCELADA_EM', 'CANCELADA_POR_NOME', 'CANCELADA_MOTIVO',
     'SEM_PEDIDO', 'SEM_PEDIDO_JUSTIFICATIVA', 'GESTAO_CIENTE_EM', 'GESTAO_CIENTE_POR_NOME', 'GESTAO_CIENTE_TEXTO',
-    'COMERCIAL_ATIVIDADE_ID', 'COMERCIAL_VENDEDOR_ID', 'COMERCIAL_CONCLUIDA_EM', 'ORIGEM', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'COMERCIAL_ATIVIDADE_ID', 'COMERCIAL_VENDEDOR_ID', 'COMERCIAL_CONCLUIDA_EM', 'RECEBIMENTO_JSON', 'ORIGEM', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   CMP_ITENS: ['ID', 'REQUISICAO_ID', 'ORDEM', 'CATEGORIA', 'DESCRICAO', 'QUANTIDADE', 'UNIDADE', 'PART_NUMBER', 'MARCA', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO',
     'TENSAO', 'CORRENTE', 'PRESSAO', 'ROSCA', 'DIMENSAO', 'MATERIAL', 'OUTRAS_ESPEC', 'FOTOS_JSON', 'PRODUTO_ID', 'QTD_RECEBIDA', 'ATIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
   CMP_COTACOES: ['ID', 'REQUISICAO_ID', 'FORNECEDOR_ID', 'FORNECEDOR_NOME', 'PRECOS_JSON', 'SUBTOTAL', 'FRETE', 'IMPOSTOS', 'TOTAL', 'PRAZO_DIAS', 'VALIDADE',
@@ -230,13 +230,13 @@ function Cmp_comTrava_(fn) {
 // ------------------------------------------------------------
 function Cmp_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('CMP_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('CMP_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(CMP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, CMP_COLUNAS[aba]);
     CMP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (CMP_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('CMP_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('CMP_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 
 function Cmp_ler_(aba) {

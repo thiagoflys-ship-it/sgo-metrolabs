@@ -86,6 +86,26 @@ A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovado
 
 "Aprovar" (observação opcional): o comprador recebe a atividade "Fazer o pedido de compra" (crítica: no mesmo dia; demais: 1 dia útil) e o aviso no sistema e no resumo de e-mail. "Reprovar" exige o motivo: a compra volta para cotação, o comprador recebe o motivo no sistema e a atividade "Rever a cotação". Orçamento vencido não é aprovado: reprove com o motivo para o comprador pedir a revalidação.
 
+## Pedido de compra ao fornecedor
+
+Com a compra "Aprovada", o comprador toca em "Emitir o pedido de compra", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.
+
+O pedido sai numerado (PC-ano-número, por exemplo PC-2026-0001, revisão 00) em folha A4 retrato, salva em PDF e HTML na pasta "Compras - Pedidos de compra", separada por mês. Traz os dados da Metrolabs (endereço de entrega e de faturamento, em Regras de compras), o fornecedor, os itens com a especificação e a quantidade, o preço unitário, o frete, os impostos e o total, a previsão, a condição e a forma de pagamento, o número do orçamento do fornecedor, quem emitiu e quem aprovou. O vínculo aparece só pela referência interna, sem o nome do cliente. No rodapé, a marca de conferência do conteúdo.
+
+"Enviar ao fornecedor" abre a janela Enviar documento com o e-mail para pedidos do fornecedor sugerido; o envio fica no histórico. Depois, "Já enviei: atualizar" marca o pedido como enviado (a rotina também confere sozinha). Enviado por outro meio (portal do fornecedor, em mãos): "Enviado por outro meio", com o relato.
+
+A previsão de entrega muda só com o motivo ("Mudar previsão ou rastreio"); quem pediu vê a data nova em Meus pedidos. Para mudar o pedido em si, "Nova revisão do pedido" com o que mudou: sai a revisão 01, 02, e a anterior continua na pasta.
+
+## Recebimento, divergência e entrega
+
+Na chegada, "Registrar o recebimento": a quantidade recebida de cada item, se a especificação confere, se chegou sem dano (com dano, a foto é obrigatória) e o número da nota fiscal (ou o motivo de vir sem nota). Qualquer divergência (quantidade diferente, especificação que não confere, dano) segura a compra em "Recebida com divergência", com a descrição, até o comprador tocar em "Divergência resolvida" (ou cancelar com o motivo).
+
+Sem divergência, a compra fica "Disponível": quem pediu é avisado no sistema e no resumo de e-mail, e o comprador recebe a atividade "Entregar" (1 dia útil). A entrega é registrada com quem recebeu e a evidência (protocolo, retirada assinada ou foto); quem pediu também pode tocar em "Recebi a peça" em Meus pedidos de compra. A entrega encerra o pedido.
+
+## Pedido aprovado do Comercial
+
+Quando o vendedor passa um pedido aprovado aos setores e há produto, além da atividade do setor Compras nasce o pedido de compra (REQ) com os produtos do pedido, ligado à proposta e sem o valor de venda. A atividade do setor Compras é a tarefa do comprador; quando todas as compras daquele pedido ficam disponíveis, ela é concluída sozinha e o vendedor é avisado.
+
 ## Fornecedores
 
 Cadastro único: CNPJ (ou CPF de pessoa física) que não se repete, razão social, nome fantasia e endereço pela consulta de CNPJ, contato, telefone, WhatsApp, e-mail para pedidos, categorias, prazo médio, condição de pagamento e observações. Antes de criar, o sistema avisa se já existe fornecedor com nome parecido.
@@ -117,3 +137,7 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
 - Pedido novo para cotar: o comprador, como atividade.
 - Compra aguardando aprovação: o aprovador da faixa, pela Caixa de decisões (faixa do comprador: no Início dos compradores).
 - Compra aprovada: o comprador, no sistema e no resumo de e-mail, com a atividade de fazer o pedido. Compra reprovada: o comprador, só no sistema, com o motivo.
+- Aprovada sem pedido há 1 dia útil ou entrega atrasada: o comprador, no Início; depois de 2 dias úteis, a Caixa de decisões do gestor da área de Compras.
+- Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos).
+- Recebida com divergência: o comprador, no sistema até resolver.
+- Peça disponível: quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail.
