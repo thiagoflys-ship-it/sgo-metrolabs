@@ -179,13 +179,14 @@ function ComG_panorama_(ctx) {
     if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') return;
     var d = ComOpo_derivados_(o, { met: met, agora: agora, atividades: atvs });
     e.abertas++; e.valorAberto += Number(o.VALOR_ESTIMADO) || 0;
+    var criada = Com_dia_(o.CRIADO_EM) || hoje; if (!e.maisAntiga || criada < e.maisAntiga) e.maisAntiga = criada;
     if (d.semProxima) e.semProxima++; if (d.atrasada) e.atrasadas++; if (d.parada) e.paradas++;
   });
   var corte = Com_somarDias_(hoje, -10);
   regs.forEach(function (r) { var e = equipe[Com_s_(r.USUARIO_ID)]; if (e && Com_dia_(r.DATA) >= corte) e.contatos10d++; });
   Object.keys(equipe).forEach(function (uid) {
     var e = equipe[uid];
-    if (e.abertas && !e.contatos10d) itens.push({ chave: 'CADENCIA:' + uid, regra: 'CADENCIA_QUEBRADA', prioridade: 1, titulo: e.nome + ': ' + Com_plural_(e.abertas, 'oportunidade aberta', 'oportunidades abertas') + ' e nenhum contato registrado em 10 dias', ref: { tipo: 'oportunidades', responsavelId: uid },
+    if (e.abertas && !e.contatos10d && e.maisAntiga && e.maisAntiga <= corte) itens.push({ chave: 'CADENCIA:' + uid, regra: 'CADENCIA_QUEBRADA', prioridade: 1, titulo: e.nome + ': ' + Com_plural_(e.abertas, 'oportunidade aberta', 'oportunidades abertas') + ' e nenhum contato registrado em 10 dias', ref: { tipo: 'oportunidades', responsavelId: uid },
       porque: 'Cadência quebrada: sem contato registrado o funil esfria e a previsão perde valor.', acao: 'Converse com ' + ComG_primeiroNome_(e.nome) + ' citando os códigos e peça o porquê e o próximo passo com data.' });
     if (e.abertas >= 2 && e.paradas * 2 >= e.abertas) itens.push({ chave: 'PARADO:' + uid, regra: 'FUNIL_PARADO', prioridade: 2, titulo: e.nome + ': ' + e.paradas + ' de ' + e.abertas + ' oportunidades paradas', ref: { tipo: 'oportunidades', responsavelId: uid },
       porque: 'Metade ou mais do funil está sem contato há ' + met.cadencia.paradaDias + ' dias ou mais.', acao: 'Revise com o vendedor quais reaquecer e quais encerrar com o motivo real.' });
@@ -550,8 +551,8 @@ function ComG_revisarProposta_(eu, d) {
 /** Análise por regras (sempre sai) e, com IA, o texto conferido. { texto, sugestoes[], origem, aviso } */
 function ComG_analiseMes_(ind, comIA) {
   var met = Com_metodologia_(), sug = [], par = [];
-  par.push('No mês de ' + RelA4_competencia_(ind.competencia) + ' foram ganhas ' + ind.ganho.qtd + ' oportunidades (' + Com_moeda_(ind.ganho.valor) + ') e perdidas ' + ind.perdido.qtd + ' (' + Com_moeda_(ind.perdido.valor) + '), com conversão de ' + ind.conversaoTxt + ' sobre as oportunidades decididas.');
-  par.push('O funil termina o mês com ' + ind.aberto.qtd + ' oportunidades abertas (' + Com_moeda_(ind.aberto.valor) + ', ponderado ' + Com_moeda_(ind.aberto.ponderado) + ') e ' + ind.higieneTxt + ' delas com a próxima ação em dia. Foram enviadas ' + ind.propostas.enviadas + ' propostas; ' + ind.propostas.aprovadas + ' aprovadas e ' + ind.propostas.recusadas + ' recusadas.');
+  par.push('Em ' + RelA4_competencia_(ind.competencia) + ', ' + Com_plural_(ind.ganho.qtd, 'oportunidade foi ganha', 'oportunidades foram ganhas') + ' (' + Com_moeda_(ind.ganho.valor) + ') e ' + Com_plural_(ind.perdido.qtd, 'foi perdida', 'foram perdidas') + ' (' + Com_moeda_(ind.perdido.valor) + '), com conversão de ' + ind.conversaoTxt + ' sobre as oportunidades decididas.');
+  par.push('O funil termina o mês com ' + Com_plural_(ind.aberto.qtd, 'oportunidade aberta', 'oportunidades abertas') + ' (' + Com_moeda_(ind.aberto.valor) + ', ponderado ' + Com_moeda_(ind.aberto.ponderado) + '), ' + ind.higieneTxt + ' delas com a próxima ação em dia. Propostas enviadas no mês: ' + ind.propostas.enviadas + '; aprovadas: ' + ind.propostas.aprovadas + '; recusadas: ' + ind.propostas.recusadas + '.');
   var mp = ind.perdasPorMotivo.filter(function (m) { return m.qtd; }).sort(function (a, b) { return b.qtd - a.qtd; });
   if (mp.length) par.push('O principal motivo de perda foi "' + mp[0].motivo + '" (' + mp[0].qtd + ').');
   var preco = mp.filter(function (m) { return /^Preço/.test(m.motivo); })[0];

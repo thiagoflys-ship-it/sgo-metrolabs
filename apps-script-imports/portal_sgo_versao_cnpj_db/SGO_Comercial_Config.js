@@ -550,10 +550,19 @@ function Com_comoSistema_(fn) {
  */
 function Com_criarAtividade_(o) {
   if (typeof Atividades_apiCriar !== 'function') throw new Error('Minhas atividades não está disponível neste servidor');
+  // a identidade da rotina (Com_comoSistema_) não passa por Atividades_sessao_, que é quem cria as abas: garante aqui
+  if (typeof Atividades_garantirAbas_ === 'function') Atividades_garantirAbas_();
   var payload = { titulo: Com_texto_(o.titulo, 200), descricao: Com_texto_(o.descricao, 4000), prazo: o.prazo, prioridade: o.prioridade || 'Normal', responsavelId: o.responsavelId,
     modulo: o.modulo || 'comercial', moduloNome: o.moduloNome || 'Comercial', clienteId: o.clienteId || '', unidadeId: o.unidadeId || '',
     porQue: o.porQue || '', onde: o.onde || '', como: o.como || '', restrita: o.restrita === false ? '' : 'SIM' };
-  var r = o.sessionId ? Atividades_apiCriar(o.sessionId, payload) : Com_comoSistema_(function (t) { return Atividades_apiCriar(t, payload); });
+  var r;
+  if (o.sessionId) r = Atividades_apiCriar(o.sessionId, payload);
+  else if (o.comoPessoa && Com_s_(o.comoPessoa.id) === Com_s_(o.responsavelId)) {
+    // a própria pessoa disparou (enviou a proposta, registrou a resposta): a atividade é dela, sem o aviso de "nova atividade para você"
+    var ant = typeof ATV_PONTE_CTX !== 'undefined' ? ATV_PONTE_CTX : null, tk = 'COMERCIAL-P-' + Utilities.getUuid();
+    ATV_PONTE_CTX = { token: tk, eu: { id: Com_s_(o.comoPessoa.id), usuario: Com_s_(o.comoPessoa.login), nome: Com_s_(o.comoPessoa.nome), perfil: Com_up_(o.comoPessoa.perfil) || 'COMERCIAL', gestor: false, sistema: 'SGO+' } };
+    try { r = Atividades_apiCriar(tk, payload); } finally { ATV_PONTE_CTX = ant; }
+  } else r = Com_comoSistema_(function (t) { return Atividades_apiCriar(t, payload); });
   if (!r || !r.ok || !r.item) throw new Error(String((r && r.message) || 'Minhas atividades não respondeu').replace(/^Não foi possível [^:]+:\s*/, '').replace(/[.\s]+$/, ''));
   return Com_s_(r.item.ID);
 }

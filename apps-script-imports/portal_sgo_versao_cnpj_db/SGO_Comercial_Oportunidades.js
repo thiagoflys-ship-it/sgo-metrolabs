@@ -157,7 +157,7 @@ function ComOpo_proxima_(p, acao) {
 function ComOpo_criarProxima_(eu, sessionId, o, prox) {
   var resp = Com_s_(o.RESPONSAVEL_ID);
   return Com_criarAtividade_({
-    sessionId: resp === eu.id ? sessionId : '', responsavelId: resp,
+    sessionId: resp === eu.id ? sessionId : '', comoPessoa: eu, responsavelId: resp,
     titulo: 'Retorno ao cliente: ' + Com_s_(o.CLIENTE_NOME) + ' (' + (COM_TIPOS_CONTATO[prox.tipo] || 'Contato').toLowerCase() + ')',
     descricao: prox.texto + '\nOportunidade ' + Com_s_(o.CODIGO) + ': ' + Com_s_(o.TITULO) + (Com_s_(o.CONTATO_NOME) ? '\nContato: ' + Com_s_(o.CONTATO_NOME) : '') +
       '\nAo falar com o cliente, registre o contato na oportunidade (Comercial > Oportunidades): a atividade é concluída e você marca o próximo passo.',

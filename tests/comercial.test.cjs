@@ -385,3 +385,22 @@ test('painel e relatório mensal: indicadores pt-BR e relatório A4 na pasta Com
   assert.equal(amb.ctx.Comercial_emUso_(), true);
   assert.equal(amb.ctx.Ges_relatoriosMensaisLista_().map((x) => x[0]).slice(-1)[0], 'COMERCIAL', 'entra nos relatórios do 1º dia útil');
 });
+
+test('banco novo: a primeira oportunidade cria as abas de Minhas atividades; salvar o rascunho sem um campo não apaga o texto padrão', () => {
+  const amb = ambiente({ tabelas: { ATV_ATIVIDADES: undefined, ATV_HISTORICO: undefined, ATV_AVISOS: undefined } });
+  const { oportunidade } = oportunidadeDeTeste(amb);
+  assert.ok(Array.isArray(amb.tabelas.ATV_ATIVIDADES) && amb.tabelas.ATV_ATIVIDADES.length === 1, 'atividade criada mesmo sem a aba existir antes');
+  const p = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id })).proposta;
+  ok(amb.api('s_vera', 'salvarProposta', { id: p.id, itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
+  const reg = amb.tabelas.COM_PROPOSTAS.find((x) => x.ID === p.id);
+  assert.match(reg.APRESENTACAO, /agradece a oportunidade/);
+  assert.match(JSON.parse(reg.CONDICOES_JSON).pagamento, /Boleto/);
+  // o retorno criado pela própria vendedora ao enviar não gera aviso de "nova atividade" para ela
+  ok(amb.api('s_vera', 'salvarProposta', { id: p.id, escopo: 'Escopo de teste com mais de trinta letras para a revisão.', itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
+  ok(amb.api('s_vera', 'concluirProposta', { id: p.id }));
+  ok(amb.api('s_vera', 'gerarDocumento', { id: p.id }));
+  ok(amb.api('s_vera', 'marcarEnviada', { id: p.id, como: 'Entregue em mãos (teste)' }));
+  const ret = amb.tabelas.ATV_ATIVIDADES.find((a) => /Retorno sobre a proposta/.test(a.TITULO));
+  assert.equal(ret.CRIADO_POR_ID, 'u_ven');
+  assert.ok(!amb.tabelas.ATV_AVISOS.some((v) => v.ATIVIDADE_ID === ret.ID && v.TIPO === 'NOVA'));
+});

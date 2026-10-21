@@ -19,6 +19,14 @@ var COM_PASTA_RELATORIOS = 'Comercial - Relatórios';
 
 function ComDoc_esc_(s) { return typeof RelA4_esc_ === 'function' ? RelA4_esc_(s) : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+/** Telefone brasileiro legível: (62) 99999-0000 / (62) 3333-0000; outro formato passa como está. */
+function ComDoc_fone_(f) {
+  var d = Com_s_(f).replace(/D/g, '').replace(/^55(?=d{10,11}$)/, '');
+  if (d.length === 11) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+  if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+  return Com_s_(f);
+}
+
 function ComDoc_cnpj_(c) {
   var d = Com_s_(c).replace(/\D/g, '');
   return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : Com_s_(c);
@@ -36,10 +44,10 @@ function ComDoc_propostaHtml_(p, cong, marca) {
     ['Razão social', cli.razao], ['CNPJ', ComDoc_cnpj_(un.cnpj || cli.cnpj)],
     ['Unidade', un.nome || '—'], ['Endereço', endereco || '—'],
     ['A/C', [ct.nome, ct.cargo].filter(Boolean).join(' — ') || '—'], ['E-mail', ct.email || '—'],
-    ['Telefone', ct.telefone || '—', { largo: true }]
+    ['Telefone', ComDoc_fone_(ct.telefone) || '—', { largo: true }]
   ]));
   corpo += RelA4_secao_('Responsável pela proposta', RelA4_identificacao_([
-    ['Responsável', vd.nome || Com_s_(p.RESPONSAVEL_NOME)], ['Contato', [vd.email, vd.telefone].filter(Boolean).join(' · ') || '—'],
+    ['Responsável', vd.nome || Com_s_(p.RESPONSAVEL_NOME)], ['Contato', [vd.email, ComDoc_fone_(vd.telefone)].filter(Boolean).join(' · ') || '—'],
     ['Empresa', empresa.nome + (empresa.cnpj ? ' · CNPJ ' + empresa.cnpj : ''), { largo: true }]
   ]));
   if (Com_s_(p.APRESENTACAO)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(p.APRESENTACAO));

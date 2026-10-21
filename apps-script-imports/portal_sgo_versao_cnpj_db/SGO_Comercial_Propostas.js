@@ -328,10 +328,12 @@ function ComP_salvar_(eu, d) {
     if (!(val >= 1 && val <= 365)) val = Number(p.VALIDADE_DIAS) || 15;
     var cond = {};
     var padrao = Com_metodologia_().proposta.condicoes;
-    Object.keys(padrao).concat(['observacoes']).forEach(function (k) { cond[k] = Com_texto_((d.condicoes || {})[k], 2000); });
+    var condAtual = Com_json_(p.CONDICOES_JSON, {}) || {};
+    // campo que a tela não mandou fica como estava (salvar nunca apaga o que não veio)
+    Object.keys(padrao).concat(['observacoes']).forEach(function (k) { var v = (d.condicoes || {})[k]; cond[k] = v === undefined ? Com_s_(condAtual[k]) : Com_texto_(v, 2000); });
     var ct = Com_s_(d.contatoId) ? SGO_DATA.getById(COM_ABAS.CONTATOS, Com_s_(d.contatoId)) : null;
     if (Com_s_(d.contatoId) && (!ct || Com_s_(ct.CLIENTE_ID) !== Com_s_(p.CLIENTE_ID))) throw new Error('Não foi possível salvar: o contato escolhido não é deste cliente. Escolha de novo');
-    var campos = { TITULO: Com_texto_(d.titulo, 200) || Com_s_(p.TITULO), ESCOPO: Com_texto_(d.escopo, 8000), APRESENTACAO: Com_texto_(d.apresentacao, 4000), ITENS_JSON: JSON.stringify(itens),
+    var campos = { TITULO: Com_texto_(d.titulo, 200) || Com_s_(p.TITULO), ESCOPO: d.escopo === undefined ? Com_s_(p.ESCOPO) : Com_texto_(d.escopo, 8000), APRESENTACAO: d.apresentacao === undefined ? Com_s_(p.APRESENTACAO) : Com_texto_(d.apresentacao, 4000), ITENS_JSON: JSON.stringify(itens),
       CONDICOES_JSON: JSON.stringify(cond), VALIDADE_DIAS: val, VALIDA_ATE: Com_somarDias_(Com_hoje_(), val), MODELO: ComP_modeloDosItens_(itens),
       SUBTOTAL: calc.subtotal, DESCONTO_GERAL: calc.descontoGeral, TOTAL: calc.total, DESCONTO_PCT: calc.descontoPct, MARGEM_PCT: calc.margemPct === null ? '' : calc.margemPct, CUSTO_TOTAL: calc.custoTotal,
       ATUALIZADO_EM: Com_agora_() };
@@ -488,7 +490,7 @@ function ComP_aoEnviar_(p, quando, como, eu) {
     if (prazo < agora) prazo = Com_somarDiasUteis_(Com_hoje_(), 1) + 'T10:00';
     try {
       if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', 'Proposta ' + ComP_rotulo_(p) + ' enviada ao cliente; o próximo passo é o retorno sobre a proposta.');
-      var atv = Com_criarAtividade_({ responsavelId: Com_s_(o.RESPONSAVEL_ID), titulo: 'Retorno sobre a proposta ' + ComP_rotulo_(p) + ': ' + Com_s_(o.CLIENTE_NOME),
+      var atv = Com_criarAtividade_({ comoPessoa: eu || null, responsavelId: Com_s_(o.RESPONSAVEL_ID), titulo: 'Retorno sobre a proposta ' + ComP_rotulo_(p) + ': ' + Com_s_(o.CLIENTE_NOME),
         descricao: 'Ligue para o cliente e combine a data de decisão da proposta ' + ComP_rotulo_(p) + ' (enviada em ' + Com_br_(campos.ENVIADA_EM) + ').\nRegistre o contato na oportunidade ' + o.CODIGO + ' (Comercial > Oportunidades).',
         prazo: prazo, clienteId: Com_s_(o.CLIENTE_ID), unidadeId: Com_s_(o.UNIDADE_ID), porQue: 'Regra do Comercial: toda proposta enviada tem retorno agendado. Enviar a proposta e sumir costuma ser venda perdida.',
         onde: 'Comercial > Oportunidades > ' + o.CODIGO, como: 'Ligação ou mensagem ao contato; pergunte se ficou dúvida técnica, de prazo ou de condição.', restrita: true });
@@ -654,7 +656,7 @@ function ComP_registrarResposta_(eu, sessionId, d) {
       try {
         var prazo = Com_somarDiasUteis_(Com_hoje_(), 1) + 'T10:00';
         if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', 'Cliente recusou a proposta.');
-        var atv = Com_criarAtividade_({ responsavelId: Com_s_(o.RESPONSAVEL_ID), titulo: 'Decidir após a recusa da proposta ' + ComP_rotulo_(p) + ': ' + Com_s_(o.CLIENTE_NOME),
+        var atv = Com_criarAtividade_({ comoPessoa: eu, responsavelId: Com_s_(o.RESPONSAVEL_ID), titulo: 'Decidir após a recusa da proposta ' + ComP_rotulo_(p) + ': ' + Com_s_(o.CLIENTE_NOME),
           descricao: 'O cliente recusou (' + Com_s_(d.motivo) + '). Entenda a recusa e decida: nova revisão da proposta ou registrar a perda na oportunidade ' + o.CODIGO + '.', prazo: prazo,
           clienteId: Com_s_(o.CLIENTE_ID), unidadeId: Com_s_(o.UNIDADE_ID), porQue: 'Toda recusa tem um próximo passo: revisar ou encerrar com o motivo real.', onde: 'Comercial > Oportunidades > ' + o.CODIGO, restrita: true });
         SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { ATIVIDADE_ID: atv, PROXIMA_ACAO: 'Decidir após a recusa: nova revisão ou perda', PROXIMA_ACAO_TIPO: 'LIGACAO', PROXIMA_ACAO_EM: prazo });
