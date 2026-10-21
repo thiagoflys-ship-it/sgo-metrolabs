@@ -32,6 +32,8 @@
   .pt-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 6px 0; } .pt-check input { width: auto; min-height: 0; margin-top: 3px; }
   .pt-modelo { white-space: pre-wrap; font-size: 12.5px; line-height: 1.5; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
   .pt-mini { font-size: 12px; color: var(--muted); }
+  .pt-tabela.pt-dia { table-layout: fixed; } .pt-tabela.pt-dia th:first-child { width: 24%; }
+  .pt-tabela.pt-dia td { overflow-wrap: anywhere; }
   @media (max-width: 900px) {
     .pt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pt-grade2, .pt-grade3 { grid-template-columns: 1fr; }
@@ -95,7 +97,8 @@
   function Ponto_abas_(ini) {
     var l = [];
     if (ini.equipe) l.push(["hoje", ini.pessoas ? "Hoje" : "Hoje da equipe"]);
-    l.push(["pedidos", ini.tratar ? "Pedidos de ajuste" : ini.equipe ? "Pedidos da equipe" : "Meus pedidos"]);
+    // colaborador: os pedidos dele já estão em "Meus lembretes" (sem aba repetida)
+    if (ini.tratar || ini.equipe) l.push(["pedidos", ini.tratar ? "Pedidos de ajuste" : "Pedidos da equipe"]);
     if (ini.equipe) l.push(["mes", "Mês"]);
     l.push(["meus", "Meus lembretes"]);
     if (ini.pessoas) l.push(["pessoas", "Pessoas e jornadas"]);
@@ -145,7 +148,9 @@
     var t = x.situacaoTexto + (x.confirmadoAs && x.situacao === "CONFIRMADO" ? " às " + x.confirmadoAs : "") + (x.horarioInformado && x.situacao === "ESQUECI" ? " (" + x.horarioInformado + ")" : "");
     var canal = x.canal === "WHATSAPP" ? "WhatsApp" : x.canal === "EMAIL" ? "e-mail" : "";
     return Pto_selo_(t, PT_SIT_COR[x.situacao]) + '<div class="pt-mini">' + (x.previsto ? "previsto " + Pto_esc_(x.previsto) : "") + (canal ? " · por " + canal : "") + "</div>" +
-      (x.obs && x.situacao === "DISPENSADO" ? '<div class="pt-mini">' + Pto_esc_(x.obs) + "</div>" : "") + (x.situacao === "NAO_ENVIADO" && x.envioMotivo ? '<div class="pt-mini">' + Pto_esc_(x.envioMotivo) + "</div>" : "");
+      (x.obs && x.situacao === "DISPENSADO" ? '<div class="pt-mini">' + Pto_esc_(x.obs) + "</div>" : "") +
+      // motivo técnico do envio: resumido na tela, inteiro ao passar o mouse (title)
+      (x.situacao === "NAO_ENVIADO" && x.envioMotivo ? '<div class="pt-mini" title="' + Pto_esc_(x.envioMotivo) + '">' + Pto_esc_(x.envioMotivo.length > 90 ? x.envioMotivo.slice(0, 87) + "..." : x.envioMotivo) + "</div>" : "");
   }
   function Ponto_abaHoje_(alvo) {
     PT.dia = PT.dia || Pto_hoje_();
@@ -156,7 +161,7 @@
       h += '<div class="pt-kpis"><div class="pt-kpi"><span class="v">' + c.lembradas + '</span><span class="r">Lembradas</span></div><div class="pt-kpi ok"><span class="v">' + c.confirmadas + '</span><span class="r">Confirmadas</span></div>' +
         '<div class="pt-kpi aviso"><span class="v">' + c.pendentes + '</span><span class="r">Lembradas, sem confirmação</span></div><div class="pt-kpi"><span class="v">' + c.esqueci + '</span><span class="r">"Esqueci de bater"</span></div></div>';
       if (!p.linhas.length) h += '<div class="pt-vazio">Ninguém para mostrar neste dia.</div>';
-      else h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Colaborador</th>' + PT_MARCS.map(function (m) { return "<th>" + m[1] + "</th>"; }).join("") + "</tr></thead><tbody>" +
+      else h += '<div class="pt-caixa"><table class="pt-tabela pt-dia"><thead><tr><th>Colaborador</th>' + PT_MARCS.map(function (m) { return "<th>" + m[1] + "</th>"; }).join("") + "</tr></thead><tbody>" +
         p.linhas.map(function (l) {
           return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(l.pessoa) + '</b><div class="pt-mini">' + Pto_esc_(l.area) + " · " + Pto_esc_(l.jornada) + "</div>" + (l.fora ? '<div class="pt-mini">Fora do assistente: ' + Pto_esc_(l.foraTexto) + "</div>" : "") + "</td>" +
             l.marcacoes.map(function (x, k) { return '<td data-r="' + PT_MARCS[k][1] + '">' + Ponto_celulaMarc_(x) + "</td>"; }).join("") + "</tr>";
