@@ -319,6 +319,12 @@
       Email_verificar_();
     }, function (msg) { var e = document.getElementById("emLeitor"); if (e) e.innerHTML = '<button type="button" class="btn-secondary em-voltar" onclick="Email_fecharLeitor_()">Voltar à lista</button><div class="em-msg erro">' + Email_esc_(msg) + '</div>'; });
   }
+  function Email_abrirChamado_() {
+    var m = EM.aberta; if (!m || typeof Assistencia_abrirDeEmail_ !== "function") return;
+    var txt = String(m.texto || m.textoPlano || "").trim();
+    if (!txt && m.html) { var d = document.createElement("div"); d.innerHTML = String(m.html); txt = (d.textContent || "").replace(/[ \t]+\n/g, "\n").trim(); }
+    Assistencia_abrirDeEmail_({ assunto: m.assunto || "", de: m.de || "", texto: txt, id: String(m.messageId || m.uid || ""), clienteId: m.cliente ? m.cliente.id : "", clienteNome: m.cliente ? m.cliente.nome : "" });
+  }
   function Email_fecharLeitor_() { var g = document.getElementById("emGrade"); if (g) g.classList.remove("lendo"); }
 
   function Email_desenharLeitor_() {
@@ -340,6 +346,8 @@
         '<button type="button" class="btn-primary" onclick="Email_responder_(false)"><i class="fas fa-reply" aria-hidden="true"></i>&nbsp;Responder</button>' +
         '<button type="button" class="btn-secondary" onclick="Email_responder_(true)"><i class="fas fa-reply-all" aria-hidden="true"></i>&nbsp;Responder a todos</button>' +
         '<button type="button" class="btn-secondary" onclick="Email_encaminhar_()"><i class="fas fa-share" aria-hidden="true"></i>&nbsp;Encaminhar</button>' +
+        // 21/10/2026: e-mail de cliente pedindo atendimento vira chamado da Assistência técnica (JS_Assistencia.html), já com o texto e o cliente
+        (typeof Assistencia_abrirDeEmail_ === "function" ? '<button type="button" class="btn-secondary" onclick="Email_abrirChamado_()"><i class="fas fa-headset" aria-hidden="true"></i>&nbsp;Abrir chamado</button>' : "") +
         '<button type="button" class="btn-secondary" onclick="Email_marcar_(false)">Marcar como não lida</button>' +
         (destinos.length ? '<select aria-label="Mover para" onchange="if(this.value){Email_mover_(this.value)}"><option value="">Mover para...</option>' + destinos.map(function (p) { return '<option value="' + Email_esc_(p.caminho) + '">' + Email_esc_(p.nome) + '</option>'; }).join("") + '</select>' : "") +
         '<button type="button" class="btn-secondary" onclick="Email_apagar_(' + (lix ? "true" : "false") + ')"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;' + (lix ? "Apagar para sempre" : "Apagar") + '</button>' +

@@ -1,0 +1,992 @@
+<style>
+  /* ASSISTÊNCIA TÉCNICA NATIVA (21/10/2026) — servidor: SGO_Assistencia_*.js (uma porta: Assistencia_api). Celular sem rolagem lateral. */
+  .at-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .at-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 7px 12px; font-weight: 700; font-size: 12.5px; cursor: pointer; min-height: 38px; }
+  .at-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .at-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .at-faixa.aviso { border-left-color: var(--warning); } .at-faixa.erro { border-left-color: var(--danger); background: var(--danger-bg); } .at-faixa.ok { border-left-color: var(--success); }
+  .at-lista { display: flex; flex-direction: column; gap: 10px; }
+  .at-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; padding: 12px 14px; overflow-wrap: anywhere; }
+  .at-card.p1 { border-left-color: var(--danger); } .at-card.p2 { border-left-color: var(--warning); } .at-card.fim { border-left-color: var(--muted); opacity: .85; }
+  .at-card.clicavel { cursor: pointer; } .at-card.clicavel:hover { border-color: var(--info, #1f5fa8); }
+  .at-card-tit { font-weight: 700; font-size: 14px; margin: 0 0 4px; color: var(--text-strong, var(--text)); }
+  .at-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .at-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; }
+  .at-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .at-acoes button, .at-acoes a.btn-secondary { min-height: 40px; }
+  .at-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
+  .at-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .at-selo.laranja { color: var(--warning); background: var(--warning-bg); }
+  .at-selo.verde { color: var(--success); background: var(--success-bg); } .at-selo.azul { color: var(--info, #1f5fa8); } .at-selo.cinza { color: var(--muted); }
+  .at-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .at-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .at-filtros select, .at-filtros input { min-height: 40px; max-width: 100%; }
+  .at-caixa { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+  .at-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .at-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .at-grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .at-grade4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 12px; }
+  .at-campo { margin-bottom: 10px; min-width: 0; }
+  .at-campo label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .at-campo input, .at-campo select, .at-campo textarea { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; }
+  .at-campo textarea { min-height: 64px; resize: vertical; }
+  .at-ajuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .at-det { display: grid; grid-template-columns: 170px 1fr; gap: 5px 10px; font-size: 12.5px; margin: 0 0 12px; }
+  .at-det dt { color: var(--muted); font-weight: 700; } .at-det dd { margin: 0; overflow-wrap: anywhere; }
+  .at-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
+  .at-hist div { margin-bottom: 9px; font-size: 12.5px; } .at-hist .q { color: var(--muted); font-size: 11.5px; }
+  .at-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .at-sec { margin: 14px 0 6px; font-size: 13px; font-weight: 800; color: var(--text-strong, var(--text)); }
+  .at-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .at-tabela th, .at-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .at-tabela td.n, .at-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .at-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 4px 0; }
+  .at-check input { min-height: 0; width: auto; margin-top: 3px; }
+  .at-radios { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .at-radios label { display: flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; background: var(--card); }
+  .at-radios input { width: auto; min-height: 0; }
+  .at-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .at-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: 8px; padding: 10px 12px; }
+  .at-kpi .v { display: block; font-size: 20px; font-weight: 800; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .at-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .at-kpi.ok { border-top-color: var(--success); } .at-kpi.aviso { border-top-color: var(--warning); } .at-kpi.critico { border-top-color: var(--danger); }
+  .at-faltas { margin: 6px 0 10px; padding-left: 18px; font-size: 12.5px; color: var(--danger); }
+  .at-pergunta { border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; background: var(--bg); }
+  .at-pergunta .tp { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .at-pergunta .tp .obr { color: var(--danger); margin-left: 4px; }
+  .at-fotos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .at-fotos a, .at-fotos span { font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; background: var(--card); }
+  .at-assinatura { border: 1px dashed var(--border); border-radius: 8px; background: #fff; width: 100%; max-width: 520px; height: 170px; touch-action: none; display: block; }
+  .at-agenda { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+  .at-agenda th, .at-agenda td { border: 1px solid var(--border); padding: 5px; vertical-align: top; }
+  .at-agenda th { background: var(--bg); font-size: 11.5px; }
+  .at-agenda .tec { width: 150px; font-weight: 700; }
+  .at-item { border-radius: 6px; padding: 4px 6px; margin-bottom: 4px; font-size: 11.5px; border-left: 3px solid var(--info, #1f5fa8); background: var(--card); cursor: pointer; overflow-wrap: anywhere; }
+  .at-item.auvo { border-left-color: var(--muted); cursor: default; } .at-item.aus { border-left-color: var(--warning); cursor: default; } .at-item.fim { opacity: .7; }
+  .at-etapas { display: flex; gap: 4px; margin: 6px 0; flex-wrap: wrap; }
+  .at-etapas span { flex: 1 1 80px; text-align: center; font-size: 11px; padding: 4px; border-radius: 6px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .at-etapas span.feita { background: var(--success-bg); color: var(--success); border-color: var(--success); font-weight: 700; }
+  .at-wrap-tabela { overflow-x: auto; max-width: 100%; }
+  @media (max-width: 900px) {
+    .at-grade2, .at-grade3 { grid-template-columns: 1fr; }
+    .at-grade4, .at-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .at-det { grid-template-columns: 1fr; } .at-det dt { margin-top: 6px; }
+    .at-filtros > div { flex: 1 1 140px; }
+    .at-tabela thead { display: none; }
+    .at-tabela, .at-tabela tbody, .at-tabela tr, .at-tabela td { display: block; width: 100%; box-sizing: border-box; }
+    .at-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+    .at-tabela td { border: 0; padding: 3px 0; text-align: left !important; }
+    .at-tabela td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+    .at-agenda .tec { width: 90px; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // ASSISTÊNCIA TÉCNICA NATIVA DO SGO+ (21/10/2026)
+  // Telas (abrir(mod)): assistencia (Chamados), assistencia_abrir, assistencia_os (O.S.), assistencia_agenda,
+  // assistencia_solicitacoes, assistencia_casos, assistencia_indicadores, assistencia_regras, assistencia_transicao e,
+  // para o cliente, assistencia_portal (Meus chamados). Uma chamada no servidor: Assistencia_api(sessionId, acao, dados).
+  // O servidor confere o perfil e o técnico responsável em toda chamada. A tela não se redesenha sozinha: recarrega
+  // depois de cada ação ou em "Atualizar" (nunca apaga o que está sendo digitado).
+  // ==========================================================
+  var AT = { ini: null, mod: "", filtro: { grupo: "ABERTOS", busca: "", prioridade: "" }, osFiltro: "ABERTAS", agenda: { inicio: "", dias: 1 }, comp: "" };
+  var AT_MODS = { assistencia: "Chamados", assistencia_abrir: "Abrir chamado", assistencia_os: "Ordens de serviço", assistencia_agenda: "Agenda dos técnicos", assistencia_solicitacoes: "Solicitações dos clientes",
+    assistencia_casos: "Reclamações", assistencia_indicadores: "Indicadores da assistência", assistencia_regras: "Regras da assistência", assistencia_transicao: "Transição do Auvo", assistencia_portal: "Meus chamados" };
+  var AT_COR_SIT = { ABERTO: "azul", EM_TRIAGEM: "azul", RESOLVIDO_REMOTO: "verde", AGUARDANDO_ORCAMENTO: "laranja", AGUARDANDO_PECA: "laranja", PLANEJADO: "laranja", AGENDADO: "azul", EM_DESLOCAMENTO: "azul",
+    NO_LOCAL: "azul", EM_EXECUCAO: "azul", PAUSADO: "laranja", AGUARDANDO_CLIENTE: "laranja", DOC_PENDENTE: "vermelho", ENCERRADO: "cinza", CANCELADO: "cinza",
+    AGENDADA: "azul", PAUSADA: "laranja", ENCERRADA: "cinza", CANCELADA: "cinza" };
+  var AT_COR_SLA = { ESTOURADO: "vermelho", EM_RISCO: "laranja", EM_DIA: "verde", CUMPRIDO: "verde", FORA_DO_PRAZO: "vermelho", PAUSADO: "cinza" };
+
+  function At_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function At_$_(id) { return document.getElementById(id); }
+  function At_chamar_(acao, dados, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (m) { fim(); if (erro) erro(m); else alert(m); };
+    google.script.run.withSuccessHandler(function (r) {
+      if (!r || (!r.ok && !r.duplicado && !r.conflito)) { falhou((r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+      fim();
+      try { if (ok) ok(r); } catch (e) { console.error("Assistência " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+    }).withFailureHandler(function (e) { falhou("Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado."); })
+      .Assistencia_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function At_msg_(onde, texto, tipo) { var el = typeof onde === "string" ? At_$_(onde) : onde; if (el) el.innerHTML = texto ? '<div class="at-faixa ' + (tipo || "erro") + '">' + At_esc_(texto) + "</div>" : ""; }
+  function At_campo_(rotulo, html, ajuda) { return '<div class="at-campo"><label>' + At_esc_(rotulo) + "</label>" + html + (ajuda ? '<div class="at-ajuda-campo">' + At_esc_(ajuda) + "</div>" : "") + "</div>"; }
+  function At_opcoes_(lista, atual, vazio) {
+    return (vazio !== undefined ? '<option value="">' + At_esc_(vazio) + "</option>" : "") + lista.map(function (o) { var v = typeof o === "object" ? o.v : o, t = typeof o === "object" ? o.t : o; return '<option value="' + At_esc_(v) + '"' + (String(v) === String(atual === undefined || atual === null ? "" : atual) ? " selected" : "") + ">" + At_esc_(t) + "</option>"; }).join("");
+  }
+  function At_mapaOpcoes_(m) { return Object.keys(m || {}).map(function (k) { return { v: k, t: m[k] }; }); }
+  function At_selo_(cor, txt) { return '<span class="at-selo ' + (cor || "cinza") + '">' + At_esc_(txt) + "</span>"; }
+  function At_cabecalho_(titulo, sub, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + At_esc_(titulo) + '</h2><p class="content-subtitle">' + At_esc_(sub) + "</p></div>" +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + (botoes || "") + "</div></div>";
+  }
+  function At_modal_(titulo, corpo, rodape, largura) {
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    ov.innerHTML = '<div class="atv-modal" style="max-width:' + (largura || 600) + 'px"><div class="atv-modal-cab"><h3>' + At_esc_(titulo) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+      '<div class="atv-modal-corpo">' + corpo + '</div>' + (rodape ? '<div class="atv-modal-rod">' + rodape + '</div>' : '') + '</div>';
+    ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function At_gaveta_(titulo, corpo) {
+    var antiga = At_$_("atGaveta"); if (antiga) antiga.remove();
+    var g = document.createElement("div");
+    g.id = "atGaveta"; g.className = "atv-overlay"; g.style.justifyContent = "flex-end"; g.style.padding = "0";
+    g.innerHTML = '<div class="atv-drawer" role="dialog" aria-label="' + At_esc_(titulo) + '" style="max-width:760px;width:100%"><div class="atv-drawer-cab"><h3>' + At_esc_(titulo) + '</h3><button type="button" class="btn-secondary" data-at-fechar>Fechar</button></div><div class="atv-drawer-corpo" id="atGavetaCorpo">' + corpo + '</div></div>';
+    g.querySelector("[data-at-fechar]").onclick = function () { g.remove(); };
+    g.addEventListener("click", function (e) { if (e.target === g) g.remove(); });
+    document.body.appendChild(g);
+    return g;
+  }
+  function At_pedirTexto_(titulo, explicacao, rotulo, minimo, ok, botao) {
+    var ov = At_modal_(titulo, '<p class="at-txt">' + At_esc_(explicacao) + "</p>" + At_campo_(rotulo, '<textarea id="atTxtPedido" maxlength="1000"></textarea>', minimo ? "Pelo menos " + minimo + " letras." : "") + '<div id="atTxtMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + At_esc_(botao || "Confirmar") + "</button>");
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      var t = At_$_("atTxtPedido").value.trim();
+      if (minimo && t.length < minimo) { At_msg_("atTxtMsg", "Escreva pelo menos " + minimo + " letras.", "aviso"); return; }
+      ok(t, ov);
+    };
+  }
+  /** Lê arquivos: fotos reduzidas no navegador (até 1600 px, JPEG ~300 KB); outros como estão. */
+  function At_lerArquivos_(input, cb, soImagem) {
+    var fs = Array.prototype.slice.call((input && input.files) || []);
+    if (!fs.length) { cb([]); return; }
+    var saida = [], falta = fs.length;
+    fs.forEach(function (f, i) {
+      var fim = function (obj) { saida[i] = obj; if (--falta === 0) cb(saida.filter(Boolean)); };
+      if (f.size > 25 * 1048576) { alert('O arquivo "' + f.name + '" passa de 25 MB e não foi anexado. Reduza e tente de novo.'); fim(null); return; }
+      var rd = new FileReader();
+      rd.onload = function () {
+        var dataUrl = String(rd.result || "");
+        if (/^image\//.test(f.type) && !/gif|svg/.test(f.type)) {
+          var img = new Image();
+          img.onload = function () {
+            var esc = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+            cv.width = Math.round(img.width * esc); cv.height = Math.round(img.height * esc);
+            cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+            fim({ nome: f.name.replace(/\.[^.]+$/, "") + ".jpg", tipo: "image/jpeg", base64: cv.toDataURL("image/jpeg", 0.78).split(",")[1] });
+          };
+          img.onerror = function () { fim({ nome: f.name, tipo: f.type, base64: dataUrl.split(",")[1] }); };
+          img.src = dataUrl;
+        } else if (soImagem) { alert('O arquivo "' + f.name + '" não é uma foto (JPG ou PNG) e não foi anexado.'); fim(null); }
+        else fim({ nome: f.name, tipo: f.type || "application/octet-stream", base64: dataUrl.split(",")[1] });
+      };
+      rd.onerror = function () { fim(null); };
+      rd.readAsDataURL(f);
+    });
+  }
+  function At_idLocal_() { return "tela-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); }
+  function At_abrirHtml_(html) {
+    var w = window.open("", "_blank");
+    if (!w) { alert("O navegador bloqueou a janela do documento. Libere as janelas do SGO+ e tente de novo."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+  function At_seloSla_(sla) { return sla && sla.estado && sla.estado !== "SEM_PRAZO" ? At_selo_(AT_COR_SLA[sla.estado] || "cinza", sla.texto) : ""; }
+
+  // ---------------- casca: menu ----------------
+  function Assistencia_iniciar_() {
+    var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    if (!p) { Assistencia_mostrarMenu_(null); return; }
+    At_chamar_("acesso", {}, function (r) { Assistencia_mostrarMenu_(r); }, function () { Assistencia_mostrarMenu_(null); });
+  }
+  function Assistencia_parar_() { AT.ini = null; Assistencia_mostrarMenu_(null); }
+  function Assistencia_mostrarMenu_(r) {
+    var grupo = At_$_("menu-secao-assistencia");
+    if (grupo) grupo.style.display = r ? "" : "none";
+    document.querySelectorAll("#menu-grupo-itens-assistencia .menu-btn").forEach(function (b) {
+      var m = b.getAttribute("data-mod"), ver = !!r && !r.cliente;
+      if (m === "assistencia_portal") ver = !!(r && r.cliente);
+      if (m === "assistencia_regras") ver = !!(r && !r.cliente);
+      if (["assistencia_transicao", "assistencia_indicadores"].indexOf(m) >= 0) ver = !!(r && r.gestao);
+      if (m === "assistencia_solicitacoes" || m === "assistencia_casos") ver = !!(r && !r.cliente && r.nivel !== "TECNICO");
+      b.style.display = ver ? "" : "none";
+    });
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+    if (r && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
+  }
+  function Assistencia_garantirInicio_(cb) {
+    if (AT.ini) { cb(AT.ini); return; }
+    At_chamar_("iniciar", {}, function (r) { AT.ini = r; cb(r); });
+  }
+  /** Ponto de entrada de abrir(mod). */
+  function Assistencia_render_(mod, alvo) {
+    var div = At_$_("conteudo");
+    if (!div) return;
+    AT.mod = mod;
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_(AT_MODS[mod] || "Assistência técnica");
+    div.innerHTML = '<div class="module-shell"><div class="at-vazio">Carregando a Assistência técnica…</div></div>';
+    Assistencia_garantirInicio_(function (ini) {
+      if (ini.cliente && mod !== "assistencia_portal") mod = "assistencia_portal";
+      var mapa = { assistencia: At_renderChamados_, assistencia_abrir: At_renderAbrir_, assistencia_os: At_renderOs_, assistencia_agenda: At_renderAgenda_, assistencia_solicitacoes: At_renderSolicitacoes_,
+        assistencia_casos: At_renderCasos_, assistencia_indicadores: At_renderIndicadores_, assistencia_regras: At_renderRegras_, assistencia_transicao: At_renderTransicao_, assistencia_portal: At_renderPortal_ };
+      var fn = mapa[mod] || At_renderChamados_;
+      fn(div, alvo || {});
+      if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) At_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
+    });
+  }
+  /** Atalho vindo do Início, da Caixa de decisões ou de um aviso: { tipo:'assistencia', mod, id }. */
+  function Assistencia_irPara_(acao) {
+    var mod = (acao && acao.mod) || "assistencia";
+    abrir(mod);
+    if (acao && acao.id) setTimeout(function () {
+      if (mod === "assistencia_os") At_abrirOs_(acao.id);
+      else if (mod === "assistencia" ) At_abrirChamado_(acao.id);
+    }, 800);
+  }
+  /** "Abrir chamado" a partir de uma mensagem do e-mail integrado. m: { assunto, de, texto, id } */
+  function Assistencia_abrirDeEmail_(m) {
+    AT.prefill = { canal: "EMAIL", origemRef: (m && m.id) || "", sintoma: ((m && m.assunto ? m.assunto + "\n" : "") + (m && m.texto ? String(m.texto).slice(0, 2500) : "")).trim(), contato: (m && m.de) || "", clienteId: (m && m.clienteId) || "", clienteNome: (m && m.clienteNome) || "" };
+    abrir("assistencia_abrir");
+  }
+
+  function At_avisosRecentes_() {
+    var ini = AT.ini;
+    if (!ini || !ini.avisos) return "";
+    var novos = ini.avisos.filter(function (a) { return a.novo; });
+    if (!novos.length) return "";
+    return '<div class="at-caixa"><h3>Avisos da Assistência técnica</h3>' + novos.map(function (a) { return '<p class="at-txt"><b>' + At_esc_(a.titulo) + '</b> <span class="at-meta">' + At_esc_(a.em) + '</span><br>' + At_esc_(a.texto) + '</p>'; }).join("") + '</div>';
+  }
+
+  // =========================================================
+  // CHAMADOS
+  // =========================================================
+  function At_renderChamados_(div) {
+    var ini = AT.ini;
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Chamados de assistência técnica", "Cada pedido de atendimento: triagem, prazo, agenda, O.S. e relatório. Em uso junto com o Auvo: atendimento novo nasce aqui.",
+      '<button type="button" class="btn-primary" onclick="abrir(\'assistencia_abrir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Abrir chamado</button><button type="button" class="btn-secondary" id="atAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      (!ini.ligada ? '<div class="at-faixa aviso">A Assistência do SGO+ está desligada (Regras da assistência). Os chamados abertos continuam aqui; o aplicativo do técnico não recebe O.S. novas.</div>' : '') +
+      At_avisosRecentes_() + '<div id="atKpis"></div>' +
+      '<div class="at-tabs" id="atGrupos">' + [["ABERTOS", "Em aberto"], ["TRIAGEM", "Triagem"], ["AGUARDANDO", "Aguardando"], ["CAMPO", "Em campo"], ["ENCERRADOS", "Encerrados"], ["TODOS", "Todos"]].map(function (g) {
+        return '<button type="button" class="at-tab' + (AT.filtro.grupo === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
+      '<div class="at-filtros"><div><label for="atBusca">Buscar</label><input id="atBusca" type="search" placeholder="Número, cliente, equipamento, técnico" value="' + At_esc_(AT.filtro.busca) + '"></div>' +
+      '<div><label for="atPrio">Prioridade</label><select id="atPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), AT.filtro.prioridade, "Todas") + '</select></div></div><div id="atLista"><div class="at-vazio">Carregando…</div></div></div>';
+    At_$_("atAtualizar").onclick = function () { At_carregarChamados_(); };
+    div.querySelectorAll("#atGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.filtro.grupo = b.getAttribute("data-g"); At_renderChamados_(div); }; });
+    var t = null;
+    At_$_("atBusca").oninput = function () { clearTimeout(t); t = setTimeout(function () { AT.filtro.busca = At_$_("atBusca").value; At_carregarChamados_(); }, 400); };
+    At_$_("atPrio").onchange = function () { AT.filtro.prioridade = At_$_("atPrio").value; At_carregarChamados_(); };
+    At_carregarChamados_();
+  }
+  function At_carregarChamados_() {
+    At_chamar_("lista", AT.filtro, function (r) {
+      var k = r.contagem || {};
+      var kp = At_$_("atKpis");
+      if (kp) kp.innerHTML = '<div class="at-kpis">' + [[k.triagem, "Aguardando triagem", k.triagem ? "aviso" : "ok"], [k.estourados, "Prazo estourado", k.estourados ? "critico" : "ok"], [k.emRisco, "Prazo em risco", k.emRisco ? "aviso" : "ok"],
+        [k.docPendente, "Documentação pendente", k.docPendente ? "aviso" : "ok"]].map(function (x) { return '<div class="at-kpi ' + x[2] + '"><span class="v">' + At_esc_(x[0] || 0) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>';
+      var l = At_$_("atLista"); if (!l) return;
+      l.innerHTML = r.chamados.length ? '<div class="at-lista">' + r.chamados.map(At_cardChamado_).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado neste filtro.</div>';
+      l.querySelectorAll("[data-ch]").forEach(function (c) { c.onclick = function () { At_abrirChamado_(c.getAttribute("data-ch")); }; });
+    }, function (m) { At_msg_("atLista", m); });
+  }
+  function At_cardChamado_(c) {
+    var cls = c.terminal ? "fim" : (c.prioridade === "P1" ? "p1" : c.prioridade === "P2" ? "p2" : "");
+    return '<div class="at-card clicavel ' + cls + '" data-ch="' + At_esc_(c.id) + '" tabindex="0"><p class="at-card-tit">' + At_esc_(c.numero) + ' · ' + At_esc_(c.clienteNome) + (c.unidadeNome ? ' (' + At_esc_(c.unidadeNome) + ')' : '') + '</p>' +
+      '<p class="at-meta">' + At_esc_(c.equipamentoTexto || "Equipamento não identificado") + ' · aberto em ' + At_esc_(c.abertoEm) + ' (' + At_esc_(c.canalNome) + ')</p>' +
+      '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : c.prioridade === "P2" ? "laranja" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) +
+      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + '</div>' +
+      '<p class="at-txt">' + At_esc_(String(c.sintoma || "").slice(0, 180)) + '</p>' + (c.proximaAcao ? '<p class="at-meta"><b>Próximo passo:</b> ' + At_esc_(c.proximaAcao) + '</p>' : '') +
+      (c.tecnicoNome ? '<p class="at-meta">Técnico: ' + At_esc_(c.tecnicoNome) + (c.agendadoPara ? ' · ' + At_esc_(c.agendadoPara) : '') + '</p>' : '') + '</div>';
+  }
+
+  function At_abrirChamado_(id, msg, tipo) {
+    At_chamar_("chamado", { id: id }, function (r) { At_desenharChamado_(r, msg, tipo); }, null, { carregando: "Abrindo o chamado…" });
+  }
+  function At_desenharChamado_(r, msg, tipo) {
+    var c = r.chamado, ini = AT.ini;
+    var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
+    var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') +
+      '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) + '</div>' +
+      (c.proximaAcao ? '<div class="at-faixa">Próximo passo: ' + At_esc_(c.proximaAcao) + '</div>' : '') +
+      dl([["Cliente", c.clienteNome + (c.unidadeNome ? " · " + c.unidadeNome : "")], ["Equipamento", c.equipamentoTexto + (c.equipNaoIdentificado ? " (não identificado no cadastro)" : "")], ["Problema relatado", c.sintoma],
+        ["Solicitante", c.solicitante + (c.contato ? " · " + c.contato : "")], ["Aberto em", c.abertoEm + " por " + c.abertoPor + " (" + c.canalNome + ")"], ["Parada", c.paradaNome], ["Prazo", c.sla && c.sla.texto ? c.sla.texto + " · " + c.slaFonte : ""],
+        ["Triagem", c.triagemResponsavel + (c.prazoTriagem ? " · prazo " + c.prazoTriagem : "")], ["Tipo de serviço", c.tipoNome], ["Técnico", c.tecnicoNome + (c.agendadoPara ? " · " + c.agendadoPara + " (" + c.duracaoMin + " min)" : "")],
+        ["Orientação remota", c.orientacaoRemota], ["Orçamento", c.orcamentoDescricao], ["Peça", c.pecaDescricao + (c.requisicaoNumero ? " · pedido de compra " + c.requisicaoNumero : "")], ["Reincidência", c.reincidente ? "Sim, do chamado " + c.reincidenciaDe : ""],
+        ["Encerrado em", c.encerradoEm], ["Cancelado", c.canceladoMotivo]]);
+    if (c.podeTriar) h += At_formTriagem_(c, r);
+    if (c.situacao === "RESOLVIDO_REMOTO" && ini.gestao) h += '<div class="at-caixa"><h3>Encerrar (resolvido remotamente)</h3><div class="at-grade2">' + At_campo_("Quem confirmou no cliente", '<input id="atRemQuem" maxlength="120">') +
+      At_campo_("Teste ou confirmação de funcionamento", '<input id="atRemTeste" maxlength="500">') + '</div><div class="at-acoes"><button type="button" class="btn-primary" id="atRemOk">Encerrar o chamado</button></div><div id="atRemMsg"></div></div>';
+    if (c.podeAgendar) h += At_formAgendar_(c, r);
+    if ((c.situacao === "AGUARDANDO_PECA" || c.situacao === "AGUARDANDO_ORCAMENTO") && ini.gestao) h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRetomar">Liberar para agendar (peça chegou ou orçamento aprovado)</button></div>';
+    if (r.orcamentos && r.orcamentos.length) h += At_secaoOrcamentos_(r);
+    if (r.os) h += '<div class="at-sec">Ordem de serviço</div><div class="at-card clicavel" id="atAbrirOs"><p class="at-card-tit">' + At_esc_(r.os.numero) + ' · ' + At_esc_(r.os.situacaoNome) + '</p><p class="at-meta">' + At_esc_(r.os.tipo.nome || "") + ' · ' + At_esc_(r.os.tecnicoNome) + ' · ' + At_esc_(r.os.agendadoPara) + '</p>' +
+      (r.os.faltas && r.os.faltas.length ? '<p class="at-txt">Falta: ' + At_esc_(r.os.faltas.join("; ")) + '</p>' : '') + (r.os.relatorio ? '<p class="at-txt"><a href="' + At_esc_(r.os.relatorio.url) + '" target="_blank" rel="noopener">Relatório A4 v' + At_esc_(r.os.relatorio.versao) + '</a></p>' : '') + '</div>';
+    if (r.historicoEquipamento && r.historicoEquipamento.length) h += '<div class="at-sec">Histórico do equipamento</div>' + At_listaHistorico_(r.historicoEquipamento);
+    h += '<div class="at-sec">Histórico do chamado</div><div class="at-hist">' + (r.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto || ((e.de || "") + " → " + (e.para || ""))) + '</div>'; }).join("") + '</div>';
+    h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAnotar">Registrar contato ou observação</button><button type="button" class="btn-secondary" id="atReclamar">Registrar reclamação</button>' +
+      (c.podeCancelar ? '<button type="button" class="btn-secondary" id="atCancelar" style="color:var(--danger)">Cancelar o chamado</button>' : '') + '</div>';
+    var g = At_gaveta_("Chamado " + c.numero, h), corpo = g.querySelector("#atGavetaCorpo");
+    var reabrir = function (m, t) { At_abrirChamado_(c.id, m, t); };
+    if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);
+    if (c.podeAgendar) At_ligarAgendar_(c, corpo, reabrir, r);
+    var b;
+    if ((b = corpo.querySelector("#atRemOk"))) b.onclick = function () { At_chamar_("encerrarRemoto", { id: c.id, confirmadoPor: At_$_("atRemQuem").value, testeFuncional: At_$_("atRemTeste").value }, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atRemMsg", m); }); };
+    if ((b = corpo.querySelector("#atRetomar"))) b.onclick = function () { At_pedirTexto_("Liberar para agendar", "O chamado volta para \"Planejado\" e a gestão agenda o atendimento.", "O que aconteceu (peça chegou, orçamento aprovado...)", 5, function (t, ov) { At_chamar_("retomar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
+    if ((b = corpo.querySelector("#atAbrirOs"))) b.onclick = function () { At_abrirOs_(r.os.id); };
+    corpo.querySelector("#atAnotar").onclick = function () { At_pedirTexto_("Registrar no histórico", "Ligação do cliente, e-mail recebido ou observação. Fica no histórico do chamado.", "O que aconteceu", 5, function (t, ov) { At_chamar_("anotar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Registrar"); };
+    corpo.querySelector("#atReclamar").onclick = function () { At_pedirTexto_("Registrar reclamação do cliente", "A reclamação vira um caso com dono e prazo (Assistência técnica > Reclamações).", "O que o cliente reclamou", 10, function (t, ov) { At_chamar_("salvarCaso", { chamadoId: c.id, clienteId: c.clienteId, tipo: "RECLAMACAO", descricao: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Registrar"); };
+    if ((b = corpo.querySelector("#atCancelar"))) b.onclick = function () { At_pedirTexto_("Cancelar o chamado " + c.numero, "O cancelamento fica no histórico e o cliente vê que foi cancelado. Se houver O.S. aberta, ela também é cancelada.", "Motivo", 10, function (t, ov) { At_chamar_("cancelar", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Cancelar o chamado"); };
+    if (r.orcamentos && r.orcamentos.length) At_ligarOrcamentos_(r, corpo, reabrir);
+  }
+  function At_listaHistorico_(l) {
+    return '<div class="at-lista">' + l.slice(0, 12).map(function (x) {
+      return '<div class="at-card fim"><p class="at-meta"><b>' + At_esc_(x.dataBr || "") + '</b> · ' + At_esc_(x.origemNome) + ' · ' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + (x.tecnico ? ' · ' + At_esc_(x.tecnico) : '') + '</p>' +
+        (x.relato ? '<p class="at-txt">' + At_esc_(String(x.relato).slice(0, 220)) + '</p>' : '') + (x.relatorioUrl ? '<a href="' + At_esc_(x.relatorioUrl) + '" target="_blank" rel="noopener">Relatório da O.S.</a>' : '') +
+        (x.acervo && x.qtdArquivos ? ' <button type="button" class="btn-secondary" data-acervo="' + At_esc_(x.numero) + '">Fotos do Auvo (' + At_esc_(x.qtdArquivos) + ')</button>' : '') + '</div>';
+    }).join("") + '</div>';
+  }
+  function At_fotosAcervo_(taskId) {
+    At_chamar_("arquivosAcervo", { taskId: taskId }, function (r) {
+      At_modal_("Tarefa " + taskId + " do Auvo (histórico)", r.arquivos.length ? '<div class="at-fotos">' + r.arquivos.map(function (a) { return a.url ? '<a href="' + At_esc_(a.url) + '" target="_blank" rel="noopener">' + At_esc_((a.tipo || "") + " · " + (a.pergunta || a.nome)) + '</a>' : '<span>' + At_esc_(a.nome) + ' (indisponível)</span>'; }).join("") + '</div>' : '<p class="at-txt">Nenhum arquivo copiado desta tarefa.</p>', "", 640);
+    });
+  }
+  document.addEventListener("click", function (e) { var b = e.target && e.target.closest ? e.target.closest("[data-acervo]") : null; if (b) { e.stopPropagation(); At_fotosAcervo_(b.getAttribute("data-acervo")); } });
+
+  function At_formTriagem_(c, r) {
+    var ini = AT.ini, tk = c.triagem || {};
+    return '<div class="at-caixa"><h3>Triagem</h3><p class="at-meta">Registre o que confirmou com o cliente e decida o caminho. Os itens marcados com * são obrigatórios para concluir.</p>' +
+      (r.triagemItens || ini.triagemItens).map(function (it) { return At_campo_(it.t + (it.obrig ? " *" : ""), '<textarea data-tk="' + At_esc_(it.k) + '" maxlength="1000">' + At_esc_(tk[it.k] || "") + '</textarea>'); }).join("") +
+      '<div class="at-grade2">' + At_campo_("Prioridade", '<select id="atTrPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), c.prioridade) + '</select>') + At_campo_("Motivo da mudança de prioridade", '<input id="atTrPrioMot" maxlength="300" placeholder="Só se mudar">') + '</div>' +
+      (c.equipNaoIdentificado ? At_campo_("Ligar ao equipamento do cadastro", '<select id="atTrEq"><option value="">Carregando…</option></select>', "O chamado chegou sem o equipamento do cadastro: escolha aqui.") : '') +
+      At_campo_("Tipo de serviço da visita", '<select id="atTrTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>', "Define o checklist, as fotos mínimas e o que o relatório exige.") +
+      '<label class="at-meta">Caminho</label><div class="at-radios" id="atTrAcoes">' + Object.keys(ini.acoesTriagem).map(function (k) { return '<label><input type="radio" name="atTrAcao" value="' + k + '"> ' + At_esc_(ini.acoesTriagem[k]) + '</label>'; }).join("") + '</div>' +
+      '<div id="atTrExtra"></div><div class="at-acoes"><button type="button" class="btn-secondary" id="atTrSalvar">Salvar a triagem</button><button type="button" class="btn-primary" id="atTrConcluir">Concluir a triagem</button></div><div id="atTrMsg"></div></div>';
+  }
+  function At_ligarTriagem_(c, corpo, reabrir) {
+    var sel = corpo.querySelector("#atTrEq");
+    if (sel) At_chamar_("buscarCadastro", { clienteId: c.clienteId }, function (r) { sel.innerHTML = At_opcoes_(r.equipamentos.map(function (e) { return { v: e.id, t: e.texto }; }), "", "Escolha o equipamento"); });
+    var extra = corpo.querySelector("#atTrExtra");
+    corpo.querySelectorAll('input[name="atTrAcao"]').forEach(function (rd) {
+      rd.onchange = function () {
+        var a = rd.value;
+        extra.innerHTML = a === "RESOLVIDO_REMOTO" ? At_campo_("Orientação remota que resolveu", '<textarea id="atTrOri" maxlength="2000"></textarea>') :
+          a === "AGUARDANDO_ORCAMENTO" ? At_campo_("O que precisa ser orçado", '<textarea id="atTrOrc" maxlength="1500"></textarea>', "Vira atividade para o Comercial, que faz o orçamento A4 e registra o aceite do cliente.") :
+          a === "AGUARDANDO_PECA" ? '<div class="at-grade3">' + At_campo_("Peça que falta", '<input id="atTrPeca" maxlength="300">') + At_campo_("Número da peça (se souber)", '<input id="atTrPecaCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atTrPecaQtd" type="number" min="1" value="1">') + '</div><p class="at-meta">O pedido de compra abre sozinho em Compras, ligado ao cliente e ao chamado.</p>' :
+          At_campo_("Observação para a visita (opcional)", '<input id="atTrObs" maxlength="500">');
+      };
+    });
+    var juntar = function (comAcao) {
+      var ck = {}; corpo.querySelectorAll("[data-tk]").forEach(function (t) { ck[t.getAttribute("data-tk")] = t.value; });
+      var d = { id: c.id, checklist: ck, prioridade: corpo.querySelector("#atTrPrio").value, prioridadeMotivo: corpo.querySelector("#atTrPrioMot").value, tipoCodigo: corpo.querySelector("#atTrTipo").value };
+      if (sel && sel.value) d.equipamentoId = sel.value;
+      if (comAcao) {
+        var a = corpo.querySelector('input[name="atTrAcao"]:checked');
+        if (!a) { At_msg_("atTrMsg", "Escolha o caminho (remoto, orçamento, peça ou visita) antes de concluir.", "aviso"); return null; }
+        d.acao = a.value;
+        var v = function (id) { var el = corpo.querySelector("#" + id); return el ? el.value : ""; };
+        d.orientacao = v("atTrOri"); d.orcamentoDescricao = v("atTrOrc"); d.pecaDescricao = v("atTrPeca"); d.pecaCodigo = v("atTrPecaCod"); d.pecaQuantidade = v("atTrPecaQtd"); d.observacao = v("atTrObs");
+      }
+      return d;
+    };
+    corpo.querySelector("#atTrSalvar").onclick = function () { var d = juntar(false); At_chamar_("triagem", d, function (x) { reabrir(x.message); }, function (m) { At_msg_("atTrMsg", m); }); };
+    corpo.querySelector("#atTrConcluir").onclick = function () { var d = juntar(true); if (!d) return; At_chamar_("triagem", d, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTrMsg", m); }, { carregando: "Concluindo a triagem…" }); };
+  }
+  function At_dtLocal_(iso) { return iso ? String(iso).slice(0, 16) : ""; }
+  function At_formAgendar_(c) {
+    var ini = AT.ini, reag = c.situacao === "AGENDADO";
+    var amanha = new Date(Date.now() + 864e5); amanha.setHours(9, 0, 0, 0);
+    var padrao = c.agendadoIso ? At_dtLocal_(c.agendadoIso) : (amanha.getFullYear() + "-" + ("0" + (amanha.getMonth() + 1)).slice(-2) + "-" + ("0" + amanha.getDate()).slice(-2) + "T09:00");
+    return '<div class="at-caixa"><h3>' + (reag ? "Reagendar" : "Agendar o atendimento") + '</h3><div class="at-grade3">' +
+      At_campo_("Técnico", '<select id="atAgTec">' + At_opcoes_(ini.tecnicos.map(function (t) { return { v: t.id, t: t.nome }; }), c.tecnicoId, "Escolha") + '</select>') +
+      At_campo_("Data e hora", '<input id="atAgIni" type="datetime-local" value="' + At_esc_(padrao) + '">') +
+      At_campo_("Duração (minutos)", '<input id="atAgDur" type="number" min="15" max="1440" step="15" value="' + At_esc_(c.duracaoMin || ini.duracaoPadrao || 90) + '">') + '</div>' +
+      At_campo_("Tipo de serviço", '<select id="atAgTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>') +
+      At_campo_("Orientação para o técnico (opcional)", '<input id="atAgOri" maxlength="1500" placeholder="Ex.: levar resistência reserva; falar com o Rui na CME">') +
+      '<label class="at-meta">Preparo (obrigatório)</label>' + ini.preparo.map(function (p) { return '<label class="at-check"><input type="checkbox" data-prep="' + p[0] + '"> ' + At_esc_(p[1].charAt(0).toUpperCase() + p[1].slice(1)) + '</label>'; }).join("") +
+      '<label class="at-check"><input type="checkbox" id="atAgPecas"> Peças separadas</label>' + At_campo_("Se não há peça: por quê", '<input id="atAgPecasJ" maxlength="500" placeholder="Ex.: visita de diagnóstico, sem peça">') +
+      '<div class="at-grade2">' + At_campo_("Risco do atendimento", '<input id="atAgRisco" maxlength="500" placeholder="Ex.: baixo, equipamento desligado">') + At_campo_("Observações do preparo", '<input id="atAgObs" maxlength="1000">') + '</div>' +
+      (reag ? At_campo_("Motivo do reagendamento", '<input id="atAgMot" maxlength="500">', "O técnico e o cliente recebem o horário novo.") : '') +
+      '<div id="atAgConf"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atAgOk">' + (reag ? "Reagendar" : "Agendar") + '</button></div><div id="atAgMsg"></div><div id="atAgVeic"></div></div>';
+  }
+  function At_ligarAgendar_(c, corpo, reabrir) {
+    var enviar = function (confirmar) {
+      var prep = {}; corpo.querySelectorAll("[data-prep]").forEach(function (x) { prep[x.getAttribute("data-prep")] = x.checked; });
+      prep.pecas = corpo.querySelector("#atAgPecas").checked; prep.pecasJustificativa = corpo.querySelector("#atAgPecasJ").value; prep.risco = corpo.querySelector("#atAgRisco").value; prep.observacoes = corpo.querySelector("#atAgObs").value;
+      var d = { id: c.id, tecnicoId: corpo.querySelector("#atAgTec").value, inicio: corpo.querySelector("#atAgIni").value, duracaoMin: corpo.querySelector("#atAgDur").value, tipoCodigo: corpo.querySelector("#atAgTipo").value,
+        orientacao: corpo.querySelector("#atAgOri").value, preparo: prep, motivo: corpo.querySelector("#atAgMot") ? corpo.querySelector("#atAgMot").value : "" };
+      if (confirmar) { d.confirmarConflito = true; d.motivoConflito = corpo.querySelector("#atAgConfMot").value; }
+      At_chamar_("agendar", d, function (x) {
+        if (x.conflito) {
+          At_$_("atAgConf").innerHTML = '<div class="at-faixa aviso">' + At_esc_(x.message) + '</div>' + At_campo_("Motivo para agendar mesmo assim", '<input id="atAgConfMot" maxlength="500">') + '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAgConfOk">Agendar mesmo assim</button></div>';
+          At_$_("atAgConfOk").onclick = function () { enviar(true); };
+          return;
+        }
+        At_carregarChamados_();
+        var sug = x.veiculoSugerido;
+        reabrir(x.message);
+        if (sug && sug.veiculo && x.os) setTimeout(function () {
+          var ov = At_modal_("Reservar veículo para " + x.os.numero, '<p class="at-txt">Veículo livre no horário (30 minutos antes até 1 hora depois do atendimento):</p>' +
+            At_campo_("Veículo", '<select id="atVeic">' + At_opcoes_([sug.veiculo].concat(sug.outros || []).map(function (v) { return { v: v.id, t: v.rotulo }; }), sug.veiculo.id) + '</select>') + (sug.motivo ? '<div class="at-faixa aviso">' + At_esc_(sug.motivo) + '</div>' : '') + '<div id="atVeicMsg"></div>',
+            '<button type="button" class="btn-secondary" data-x>Agora não</button><button type="button" class="btn-primary" data-ok>Reservar veículo</button>');
+          ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+          ov.querySelector("[data-ok]").onclick = function () { At_chamar_("reservarVeiculo", { osId: x.os.id, veiculoId: At_$_("atVeic").value }, function (y) { ov.remove(); alert(y.message); }, function (m) { At_msg_("atVeicMsg", m); }); };
+        }, 600);
+      }, function (m) { At_msg_("atAgMsg", m); }, { carregando: "Agendando…" });
+    };
+    corpo.querySelector("#atAgOk").onclick = function () { enviar(false); };
+  }
+
+  // ---------------- orçamento do chamado ----------------
+  function At_secaoOrcamentos_(r) {
+    var ini = AT.ini;
+    return '<div class="at-sec">Orçamento do chamado</div>' + r.orcamentos.filter(function (o) { return o.situacao !== "SUBSTITUIDO"; }).map(function (o) {
+      var itens = '<table class="at-tabela"><thead><tr><th>Item</th><th>Tipo</th><th class="n">Qtd.</th>' + (o.veValores ? '<th class="n">Unitário</th><th class="n">Total</th>' : '') + '</tr></thead><tbody>' + o.itens.map(function (i) {
+        return '<tr><td data-r="Item">' + At_esc_(i.descricao) + '</td><td data-r="Tipo">' + (i.tipo === "PECA" ? "Peça" : "Serviço") + '</td><td class="n" data-r="Qtd.">' + At_esc_(i.quantidade) + ' ' + At_esc_(i.unidade) + '</td>' +
+          (o.veValores ? '<td class="n" data-r="Unitário">' + At_esc_(Number(i.valorUnitario || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })) + '</td><td class="n" data-r="Total">' + At_esc_(Number(i.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })) + '</td>' : '') + '</tr>';
+      }).join("") + '</tbody></table>';
+      var botoes = '';
+      if (o.veValores && o.situacao === "RASCUNHO") botoes += '<button type="button" class="btn-secondary" data-orc-editar="' + At_esc_(o.id) + '">Preencher valores</button><button type="button" class="btn-primary" data-orc-emitir="' + At_esc_(o.id) + '">Emitir o A4</button>';
+      if (o.veValores && o.situacao === "EMITIDO") botoes += (o.pdfId ? '<button type="button" class="btn-secondary" data-orc-enviar="' + At_esc_(o.pdfId) + '">Enviar ao cliente</button>' : '') + '<button type="button" class="btn-primary" data-orc-decidir="' + At_esc_(o.id) + '">Registrar a resposta do cliente</button>';
+      if (o.veValores && (o.situacao === "EMITIDO" || o.situacao === "RECUSADO")) botoes += '<button type="button" class="btn-secondary" data-orc-revisar="' + At_esc_(o.id) + '">Nova revisão</button>';
+      return '<div class="at-card"><p class="at-card-tit">' + At_esc_(o.numero) + ' rev. ' + At_esc_(o.revisao) + ' · ' + At_esc_(o.situacaoNome) + (o.veValores && o.valorTotalTxt ? ' · ' + At_esc_(o.valorTotalTxt) : '') + '</p>' + itens +
+        (o.pdfUrl ? '<p class="at-txt"><a href="' + At_esc_(o.pdfUrl) + '" target="_blank" rel="noopener">Abrir o orçamento A4</a></p>' : '') + (o.aceiteUrl ? '<p class="at-txt"><a href="' + At_esc_(o.aceiteUrl) + '" target="_blank" rel="noopener">Aceite do cliente</a> (' + At_esc_(o.aceitePor) + ', ' + At_esc_(o.decididoEm) + ')</p>' : '') +
+        (o.decisaoTexto ? '<p class="at-meta">' + At_esc_(o.decisaoTexto) + '</p>' : '') + (!o.veValores ? '<p class="at-meta">Valores ficam com a gestão, o Comercial e o Financeiro.</p>' : '') + '<div class="at-acoes">' + botoes + '</div></div>';
+    }).join("");
+  }
+  function At_ligarOrcamentos_(r, corpo, reabrir) {
+    var achar = function (id) { return r.orcamentos.filter(function (o) { return o.id === id; })[0]; };
+    corpo.querySelectorAll("[data-orc-editar]").forEach(function (b) { b.onclick = function () { At_editarOrcamento_(achar(b.getAttribute("data-orc-editar")), reabrir); }; });
+    corpo.querySelectorAll("[data-orc-emitir]").forEach(function (b) { b.onclick = function () { At_chamar_("emitirOrcamento", { id: b.getAttribute("data-orc-emitir") }, function (x) { reabrir(x.message); if (x.html) At_abrirHtml_(x.html); }, null, { carregando: "Emitindo o orçamento…" }); }; });
+    corpo.querySelectorAll("[data-orc-enviar]").forEach(function (b) { b.onclick = function () { if (window.SGO_EnviarDoc) SGO_EnviarDoc.abrir({ arquivoId: b.getAttribute("data-orc-enviar") }); }; });
+    corpo.querySelectorAll("[data-orc-revisar]").forEach(function (b) { b.onclick = function () { At_chamar_("revisarOrcamento", { id: b.getAttribute("data-orc-revisar") }, function (x) { reabrir(x.message); }); }; });
+    corpo.querySelectorAll("[data-orc-decidir]").forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute("data-orc-decidir");
+        var ov = At_modal_("Resposta do cliente ao orçamento", '<div class="at-radios"><label><input type="radio" name="atDec" value="APROVADO" checked> Aprovado</label><label><input type="radio" name="atDec" value="RECUSADO"> Recusado</label></div>' +
+          At_campo_("Quem respondeu pelo cliente", '<input id="atDecPor" maxlength="120">') + At_campo_("Aceite (e-mail salvo em PDF, foto do orçamento assinado ou PDF)", '<input id="atDecArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.eml">', "Obrigatório para aprovar.") +
+          At_campo_("Observação (motivo, se recusado)", '<textarea id="atDecTxt" maxlength="1000"></textarea>') + '<label class="at-check"><input type="checkbox" id="atDecCompra" checked> Pedir a Compras as peças do orçamento</label><div id="atDecMsg"></div>',
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Registrar</button>');
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () {
+          At_lerArquivos_(At_$_("atDecArq"), function (arqs) {
+            At_chamar_("decidirOrcamento", { id: id, decisao: ov.querySelector('input[name="atDec"]:checked').value, aceitePor: At_$_("atDecPor").value, texto: At_$_("atDecTxt").value, aceite: arqs[0] || null, comprarPecas: At_$_("atDecCompra").checked },
+              function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atDecMsg", m); }, { carregando: "Registrando…" });
+          });
+        };
+      };
+    });
+  }
+  function At_editarOrcamento_(o, reabrir) {
+    var linha = function (i) { return '<div class="at-grade4" data-item>' + At_campo_("Descrição", '<input data-f="descricao" maxlength="300" value="' + At_esc_(i.descricao || "") + '">') +
+      At_campo_("Tipo", '<select data-f="tipo">' + At_opcoes_([{ v: "SERVICO", t: "Serviço" }, { v: "PECA", t: "Peça" }], i.tipo || "SERVICO") + '</select>') +
+      At_campo_("Quantidade", '<input data-f="quantidade" type="number" min="0" step="0.01" value="' + At_esc_(i.quantidade || 1) + '">') + At_campo_("Valor unitário (R$)", '<input data-f="valorUnitario" inputmode="decimal" value="' + At_esc_(i.valorUnitario || "") + '">') + '</div>'; };
+    var ov = At_modal_("Orçamento " + o.numero, '<div id="atOrcItens">' + o.itens.map(linha).join("") + '</div><div class="at-acoes"><button type="button" class="btn-secondary" id="atOrcMais">Mais um item</button></div>' +
+      At_campo_("Condições (prazo de execução, pagamento, garantia)", '<textarea id="atOrcCond" maxlength="1500">' + At_esc_(o.condicoes || "") + '</textarea>') + At_campo_("Validade", '<input id="atOrcVal" type="date" value="' + At_esc_(o.validadeIso || "") + '">') + '<div id="atOrcMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>', 760);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    At_$_("atOrcMais").onclick = function () { At_$_("atOrcItens").insertAdjacentHTML("beforeend", linha({})); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      var itens = []; ov.querySelectorAll("[data-item]").forEach(function (l) { var i = {}; l.querySelectorAll("[data-f]").forEach(function (f) { i[f.getAttribute("data-f")] = f.value; }); if (String(i.descricao || "").trim()) itens.push(i); });
+      At_chamar_("salvarOrcamento", { id: o.id, itens: itens, condicoes: At_$_("atOrcCond").value, validade: At_$_("atOrcVal").value }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atOrcMsg", m); });
+    };
+  }
+
+  // =========================================================
+  // ABRIR CHAMADO (tela interna: telefone, presencial, e-mail recebido)
+  // =========================================================
+  function At_renderAbrir_(div) {
+    var ini = AT.ini, pf = AT.prefill || {}; AT.prefill = null;
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Abrir chamado", "Para pedido recebido por telefone, e-mail ou pessoalmente. Pedido feito pelo cliente no portal ou no QR entra em Solicitações dos clientes.",
+      '<button type="button" class="btn-secondary" onclick="abrir(\'assistencia\')">Ver os chamados</button>') +
+      '<div class="at-caixa"><h3>1. Cliente e equipamento</h3>' + At_campo_("Cliente (nome ou CNPJ)", '<input id="atAbCli" type="search" autocomplete="off" placeholder="Digite pelo menos 2 letras"><div id="atAbCliLista"></div>') +
+      '<input type="hidden" id="atAbCliId"><div class="at-grade2">' + At_campo_("Unidade", '<select id="atAbUn"><option value="">Escolha o cliente primeiro</option></select>') + At_campo_("Equipamento", '<select id="atAbEq"><option value="">Escolha o cliente primeiro</option></select>') + '</div>' +
+      '<label class="at-check"><input type="checkbox" id="atAbNaoId"> Equipamento não identificado (descreva abaixo; a triagem liga ao cadastro)</label>' + At_campo_("Descrição do equipamento não identificado", '<input id="atAbEqDesc" maxlength="300" placeholder="Tipo, marca, setor">') + '</div>' +
+      '<div class="at-caixa"><h3>2. Pedido</h3>' + At_campo_("Problema relatado", '<textarea id="atAbSint" maxlength="3000" placeholder="Ex.: não aquece, apita erro E04 ao iniciar o ciclo">' + At_esc_(pf.sintoma || "") + '</textarea>') +
+      '<div class="at-grade2">' + At_campo_("Quem pediu (solicitante)", '<input id="atAbSol" maxlength="120">') + At_campo_("Telefone ou e-mail de contato", '<input id="atAbCont" maxlength="200" value="' + At_esc_(pf.contato || "") + '">') + '</div>' +
+      '<div class="at-grade3">' + At_campo_("Prioridade", '<select id="atAbPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), "P3") + '</select>', "P1: equipamento parado que afeta o paciente.") +
+      At_campo_("Equipamento parado?", '<select id="atAbPar">' + At_opcoes_(At_mapaOpcoes_(ini.paradas), "NAO") + '</select>') +
+      At_campo_("Como chegou", '<select id="atAbCanal">' + At_opcoes_([{ v: "TELEFONE", t: "Telefone" }, { v: "EMAIL", t: "E-mail recebido" }, { v: "PRESENCIAL", t: "Presencial" }, { v: "INTERNO", t: "Tela interna" }], pf.canal || "TELEFONE") + '</select>') + '</div>' +
+      '<input type="hidden" id="atAbRef" value="' + At_esc_(pf.origemRef || "") + '"></div><div id="atAbMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atAbOk">Abrir o chamado</button></div></div>';
+    var t = null;
+    At_$_("atAbCli").oninput = function () {
+      clearTimeout(t); var termo = At_$_("atAbCli").value;
+      t = setTimeout(function () {
+        At_chamar_("buscarCadastro", { termo: termo }, function (r) {
+          At_$_("atAbCliLista").innerHTML = (r.clientes || []).map(function (c) { return '<button type="button" class="btn-secondary" style="margin:4px 4px 0 0" data-cli="' + At_esc_(c.id) + '">' + At_esc_(c.nome + (c.cnpj ? " · " + c.cnpj : "")) + '</button>'; }).join("") || (termo.length >= 2 ? '<p class="at-meta">Nenhum cliente com esse nome. Cadastre em Cadastros > Clientes e volte aqui.</p>' : '');
+          At_$_("atAbCliLista").querySelectorAll("[data-cli]").forEach(function (b) { b.onclick = function () { At_$_("atAbCliId").value = b.getAttribute("data-cli"); At_$_("atAbCli").value = b.textContent; At_$_("atAbCliLista").innerHTML = ""; At_carregarEquipCliente_(b.getAttribute("data-cli")); }; });
+        }, function () {});
+      }, 350);
+    };
+    At_$_("atAbOk").onclick = function () { At_enviarAbertura_(false); };
+    if (pf.clienteId) { At_$_("atAbCliId").value = pf.clienteId; At_$_("atAbCli").value = pf.clienteNome || ""; At_carregarEquipCliente_(pf.clienteId); }
+  }
+  function At_carregarEquipCliente_(cid) {
+    At_chamar_("buscarCadastro", { clienteId: cid }, function (r) {
+      At_$_("atAbUn").innerHTML = At_opcoes_(r.unidades.map(function (u) { return { v: u.id, t: u.nome }; }), r.unidades.length === 1 ? r.unidades[0].id : "", "Escolha a unidade");
+      AT.equipCliente = r.equipamentos;
+      var desenhar = function () { var un = At_$_("atAbUn").value; At_$_("atAbEq").innerHTML = At_opcoes_(AT.equipCliente.filter(function (e) { return !un || e.unidadeId === un; }).map(function (e) { return { v: e.id, t: e.texto }; }), "", "Escolha o equipamento"); };
+      At_$_("atAbUn").onchange = desenhar; desenhar();
+    });
+  }
+  function At_enviarAbertura_(confirmar) {
+    var d = { clienteId: At_$_("atAbCliId").value, unidadeId: At_$_("atAbUn").value, equipamentoId: At_$_("atAbNaoId").checked ? "" : At_$_("atAbEq").value, equipNaoIdentificado: At_$_("atAbNaoId").checked,
+      equipamentoDescricao: At_$_("atAbEqDesc").value, sintoma: At_$_("atAbSint").value, solicitante: At_$_("atAbSol").value, contato: At_$_("atAbCont").value, prioridade: At_$_("atAbPrio").value,
+      parada: At_$_("atAbPar").value, canal: At_$_("atAbCanal").value, origemRef: At_$_("atAbRef").value, confirmarDuplicado: !!confirmar };
+    At_chamar_("abrir", d, function (r) {
+      if (r.duplicado) {
+        At_$_("atAbMsg").innerHTML = '<div class="at-faixa aviso">' + At_esc_(r.message) + '</div><div class="at-acoes"><button type="button" class="btn-secondary" id="atAbDup">Abrir mesmo assim</button></div>';
+        At_$_("atAbDup").onclick = function () { At_enviarAbertura_(true); };
+        return;
+      }
+      abrir("assistencia");
+      setTimeout(function () { At_abrirChamado_(r.chamado.id, r.message); }, 700);
+    }, function (m) { At_msg_("atAbMsg", m); }, { carregando: "Abrindo o chamado…" });
+  }
+
+  // =========================================================
+  // ORDENS DE SERVIÇO (técnico no computador ou tablet; gestão)
+  // =========================================================
+  function At_renderOs_(div) {
+    var ini = AT.ini;
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_(ini.gestao ? "Ordens de serviço" : "Minhas O.S.", "Registre o atendimento: chegada, checklist, fotos, relato, peças, assinatura e conclusão. No celular, use o aplicativo do técnico (funciona sem internet).",
+      '<button type="button" class="btn-secondary" id="atOsAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div class="at-tabs" id="atOsGrupos">' + [["ABERTAS", "Abertas"], ["PENDENTES", "Documentação pendente"], ["ENCERRADAS", "Encerradas"], ["TODAS", "Todas"]].map(function (g) { return '<button type="button" class="at-tab' + (AT.osFiltro === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
+      '<div id="atOsLista"><div class="at-vazio">Carregando…</div></div></div>';
+    At_$_("atOsAtualizar").onclick = function () { At_renderOs_(div); };
+    div.querySelectorAll("#atOsGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.osFiltro = b.getAttribute("data-g"); At_renderOs_(div); }; });
+    At_chamar_("listaOs", { situacao: AT.osFiltro }, function (r) {
+      var l = At_$_("atOsLista"); if (!l) return;
+      l.innerHTML = r.os.length ? '<div class="at-lista">' + r.os.map(function (o) {
+        return '<div class="at-card clicavel' + (o.situacao === "ENCERRADA" ? " fim" : "") + '" data-os="' + At_esc_(o.id) + '"><p class="at-card-tit">' + At_esc_(o.numero) + ' · ' + At_esc_(o.clienteNome) + '</p><p class="at-meta">' + At_esc_(o.agendadoPara) + ' · ' + At_esc_(o.tipoNome) + ' · ' + At_esc_(o.tecnicoNome) + '</p>' +
+          '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + '</div>' +
+          '<p class="at-txt">' + At_esc_(o.equipamentoTexto) + '</p>' + (o.faltas ? '<p class="at-meta" style="color:var(--danger)">Falta: ' + At_esc_(o.faltas) + '</p>' : '') + (o.endereco ? '<p class="at-meta">' + At_esc_(o.endereco) + '</p>' : '') + '</div>';
+      }).join("") + '</div>' : '<div class="at-vazio">Nenhuma O.S. neste filtro.</div>';
+      l.querySelectorAll("[data-os]").forEach(function (c) { c.onclick = function () { At_abrirOs_(c.getAttribute("data-os")); }; });
+    }, function (m) { At_msg_("atOsLista", m); });
+  }
+  function At_abrirOs_(id, msg, tipo) { At_chamar_("os", { id: id }, function (r) { At_desenharOs_(r.os, msg, tipo); }, null, { carregando: "Abrindo a O.S.…" }); }
+  function At_inputPergunta_(p) {
+    var v = p.resposta, nome = "atP_" + p.id;
+    if (p.tipo === "SIM_NAO") return '<div class="at-radios">' + [["SIM", "Sim"], ["NAO", "Não"], ["NA", "Não se aplica"]].map(function (o) { return '<label><input type="radio" name="' + nome + '" value="' + o[0] + '"' + (v === o[0] ? " checked" : "") + '> ' + o[1] + '</label>'; }).join("") + '</div>';
+    if (p.tipo === "OPCAO") return '<select data-perg="' + At_esc_(p.id) + '">' + At_opcoes_(p.opcoes || [], v, "Escolha") + '</select>';
+    if (p.tipo === "MULTIPLA") return (p.opcoes || []).map(function (o) { return '<label class="at-check"><input type="checkbox" data-mult="' + At_esc_(p.id) + '" value="' + At_esc_(o) + '"' + (Array.isArray(v) && v.indexOf(o) >= 0 ? " checked" : "") + '> ' + At_esc_(o) + '</label>'; }).join("");
+    if (p.tipo === "NUMERO") return '<input type="number" step="any" data-perg="' + At_esc_(p.id) + '" value="' + At_esc_(v === null || v === undefined ? "" : v) + '">';
+    if (p.tipo === "DATA") return '<input type="date" data-perg="' + At_esc_(p.id) + '" value="' + At_esc_(v || "") + '">';
+    if (p.tipo === "FOTO") return '<p class="at-meta">' + At_esc_(p.fotos) + ' de ' + At_esc_(p.fotosMin || 1) + ' foto(s)</p><input type="file" accept="image/*" capture="environment" multiple data-foto-perg="' + At_esc_(p.id) + '">';
+    if (p.tipo === "ASSINATURA") return '<p class="at-meta">Use o quadro de assinatura abaixo.</p>';
+    return '<textarea data-perg="' + At_esc_(p.id) + '" maxlength="3000">' + At_esc_(v || "") + '</textarea>';
+  }
+  function At_desenharOs_(o, msg, tipo) {
+    var ini = AT.ini, campo = o.podeCampo, s = o.situacao;
+    var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
+    var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[s], o.situacaoNome) + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + '</div>' +
+      (o.faltas && o.faltas.length ? '<div class="at-faixa erro"><b>Para fechar a O.S. falta:</b><ul class="at-faltas">' + o.faltas.map(function (f) { return '<li>' + At_esc_(f) + '</li>'; }).join("") + '</ul>A O.S. só fecha com a documentação completa; enquanto isso ela aparece nas pendências.</div>' : '') +
+      dl([["Chamado", o.chamadoNumero], ["Cliente", o.clienteNome + (o.unidadeNome ? " · " + o.unidadeNome : "")], ["Endereço", o.endereco], ["Equipamento", o.equipamentoTexto], ["Tipo de serviço", o.tipo.nome], ["Técnico", o.tecnicoNome],
+        ["Agendado", o.agendadoPara + " (" + o.duracaoMin + " min)"], ["Orientação", o.orientacao], ["Chegada", o.chegouEm], ["Conclusão", o.concluiuEm], ["Localização", o.obsLocalizacao], ["Veículo", o.reserva ? "reserva " + o.reserva : ""],
+        ["Documento técnico", o.docTecnico ? o.docTecnico.nome : (o.documentoTecnicoNome ? o.documentoTecnicoNome + " (ainda não ligado)" : "")]]) +
+      (o.mapa ? '<p class="at-txt"><a href="' + At_esc_(o.mapa) + '" target="_blank" rel="noopener">Abrir o endereço no mapa</a></p>' : '');
+    if (campo) {
+      h += '<div class="at-acoes">' + (s === "AGENDADA" ? '<button type="button" class="btn-secondary" data-marco="SAIU">Saí para o atendimento</button>' : '') +
+        (["AGENDADA", "EM_DESLOCAMENTO", "PAUSADA"].indexOf(s) >= 0 ? '<button type="button" class="btn-primary" data-marco="CHEGUEI">Cheguei</button>' : '') +
+        (["NO_LOCAL", "EM_EXECUCAO", "PAUSADA"].indexOf(s) >= 0 ? '<button type="button" class="btn-primary" data-marco="CONCLUI">Concluí a execução</button>' : '') + '</div>' +
+        '<p class="at-meta">A localização é registrada só nos toques Cheguei e Concluí, se o navegador permitir. Longe do endereço vira observação para a gestão, não bloqueio.</p>';
+      h += '<div class="at-sec">Checklist</div>' + (o.perguntas.length ? o.perguntas.map(function (p) { return '<div class="at-pergunta"><div class="tp">' + At_esc_(p.texto) + (p.obrigatoria ? '<span class="obr">*</span>' : '') + '</div>' + At_inputPergunta_(p) + '</div>'; }).join("") : '<p class="at-meta">Este tipo de serviço não tem checklist.</p>');
+      h += '<div class="at-sec">Relato e conferência</div><div class="at-grade2">' + [["condicaoEncontrada", "Condição encontrada", o.condicaoEncontrada], ["causa", "Causa ou diagnóstico", o.causa], ["servicoRealizado", "Serviço realizado", o.servicoRealizado], ["testeFuncional", "Teste funcional", o.testeFuncional]]
+        .map(function (x) { return At_campo_(x[1], '<textarea data-rel="' + x[0] + '" maxlength="3000">' + At_esc_(x[2] || "") + '</textarea>'); }).join("") + '</div>' +
+        At_campo_("Relato do técnico", '<textarea data-rel="relato" maxlength="4000">' + At_esc_(o.relato || "") + '</textarea>') + At_campo_("Recomendações ao cliente", '<textarea data-rel="recomendacoes" maxlength="3000">' + At_esc_(o.recomendacoes || "") + '</textarea>') +
+        '<div class="at-grade2">' + At_campo_("Número de série conferido no local", '<input id="atOsSerie" maxlength="80" value="' + At_esc_(o.serieConfirmada || "") + '" placeholder="Cadastro: ' + At_esc_(o.serieCadastro || "—") + '">', "Se for diferente do cadastro, a gestão é avisada; o cadastro não muda sozinho.") +
+        At_campo_("Equipamento conferido por", '<select id="atOsIdent">' + At_opcoes_([{ v: "QR", t: "Leitura do QR" }, { v: "SERIE", t: "Número de série" }, { v: "TAG", t: "TAG" }], o.identificadoPor, "Escolha") + '</select>') + '</div>';
+      h += '<div class="at-sec">Fotos gerais</div><input type="file" accept="image/*" capture="environment" multiple id="atOsFotos">';
+    }
+    h += '<div class="at-fotos">' + (o.fotos || []).map(function (f) { return f.url ? '<a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.nome) + '</a>' : '<span>' + At_esc_(f.nome) + '</span>'; }).join("") + '</div>';
+    h += '<div class="at-sec">Peças</div>' + ((o.pecas || []).length ? '<div class="at-lista">' + o.pecas.map(function (p) { return '<div class="at-card fim"><p class="at-txt">' + At_esc_(p.quantidade) + ' × ' + At_esc_(p.descricao) + (p.codigo ? ' (' + At_esc_(p.codigo) + ')' : '') + ' · ' + (p.situacao === "FALTA" ? "Em falta" + (p.requisicao ? " · pedido " + At_esc_(p.requisicao) : "") : "Aplicada") +
+      (campo ? ' <button type="button" class="btn-secondary" data-peca-tirar="' + At_esc_(p.idLocal) + '">Desfazer</button>' : '') + '</p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhuma peça lançada.</p>');
+    if (campo) h += '<div class="at-grade4">' + At_campo_("Peça", '<input id="atPcDesc" maxlength="300">') + At_campo_("Código", '<input id="atPcCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atPcQtd" type="number" min="0.01" step="0.01" value="1">') +
+      At_campo_("Situação", '<select id="atPcSit">' + At_opcoes_([{ v: "APLICADA", t: "Aplicada" }, { v: "FALTA", t: "Em falta (abre pedido de compra)" }], "APLICADA") + '</select>') + '</div><div class="at-acoes"><button type="button" class="btn-secondary" id="atPcAdd">Lançar a peça</button></div>';
+    h += '<div class="at-sec">Assinatura do cliente</div>' + (o.assinatura ? '<p class="at-txt">Assinado por ' + At_esc_(o.assinatura.nome) + (o.assinatura.documento ? ' (' + At_esc_(o.assinatura.documento) + ')' : '') + ' em ' + At_esc_(o.assinatura.em) + '.</p>' :
+      o.semAssinatura ? '<p class="at-txt">Sem assinatura: ' + At_esc_(o.semAssinatura.motivo) + '. Recebido por ' + At_esc_(o.semAssinatura.recebidoPor) + '. ' + At_esc_(o.semAssinatura.justificativa) + '</p>' : '');
+    if (campo && !o.assinatura) h += '<canvas class="at-assinatura" id="atAssQuadro" width="520" height="170" aria-label="Quadro de assinatura"></canvas><div class="at-grade2">' + At_campo_("Nome de quem assina", '<input id="atAssNome" maxlength="120">') + At_campo_("Documento (opcional)", '<input id="atAssDoc" maxlength="60">') + '</div>' +
+      '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAssLimpar">Limpar o quadro</button><button type="button" class="btn-secondary" id="atAssOk">Guardar a assinatura</button><button type="button" class="btn-secondary" id="atAssAus">Responsável ausente</button></div>';
+    if (campo) h += '<div id="atOsMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atOsSalvar">Salvar o que preenchi</button>' + (o.podeEncerrar ? '<button type="button" class="btn-primary" id="atOsEncerrar">Encerrar a O.S.</button>' : '') + '</div>';
+    h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atOsRel">' + (s === "ENCERRADA" ? "Relatório A4" : "Prévia do relatório (rascunho)") + '</button>' + (o.relatorio && o.relatorio.pdfId ? '<button type="button" class="btn-secondary" id="atOsEnviar">Enviar ao cliente</button>' : '') +
+      (o.documentoTecnicoTipo ? '<button type="button" class="btn-secondary" id="atOsDoc">Ligar o documento técnico emitido</button>' : '') + (ini.gestao && o.serieDivergente ? '<button type="button" class="btn-secondary" id="atOsSerieOk">Série conferida</button>' : '') +
+      '<button type="button" class="btn-secondary" id="atOsChamado">Abrir o chamado</button></div>';
+    h += '<div class="at-sec">Histórico da O.S.</div><div class="at-hist">' + (o.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + (e.emAparelho && e.emAparelho !== e.em ? ' (aparelho ' + At_esc_(e.emAparelho) + ')' : '') + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto) + '</div>'; }).join("") + '</div>';
+    var g = At_gaveta_("O.S. " + o.numero, h), corpo = g.querySelector("#atGavetaCorpo");
+    var reabrir = function (m, t) { At_abrirOs_(o.id, m, t); if (AT.mod === "assistencia_os") { var d = At_$_("conteudo"); if (d) At_renderOs_(d); } };
+    var enviarEventos = function (eventos, carregando) {
+      if (!eventos.length) { At_msg_("atOsMsg", "Nada novo para salvar.", "aviso"); return; }
+      At_chamar_("osEventos", { osId: o.id, eventos: eventos }, function (x) { reabrir(x.message, x.avisos && x.avisos.length ? "aviso" : "ok"); }, function (m) { At_msg_("atOsMsg", m); }, { carregando: carregando || "Salvando…" });
+    };
+    corpo.querySelectorAll("[data-marco]").forEach(function (b) {
+      b.onclick = function () {
+        var marco = b.getAttribute("data-marco");
+        var seguir = function (coord) { enviarEventos([{ tipo: marco, dados: coord || {} }], "Registrando…"); };
+        if ((marco === "CHEGUEI" || marco === "CONCLUI") && navigator.geolocation) {
+          var feito = false, t = setTimeout(function () { if (!feito) { feito = true; seguir({}); } }, 8000);
+          navigator.geolocation.getCurrentPosition(function (p) { if (feito) return; feito = true; clearTimeout(t); seguir({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy }); }, function () { if (feito) return; feito = true; clearTimeout(t); seguir({}); }, { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 });
+        } else seguir({});
+      };
+    });
+    if (!campo) { At_ligarOsComuns_(o, corpo, reabrir); return; }
+    corpo.querySelector("#atOsSalvar").onclick = function () {
+      var ev = [];
+      o.perguntas.forEach(function (p) {
+        var v;
+        if (p.tipo === "SIM_NAO") { var r = corpo.querySelector('input[name="atP_' + p.id + '"]:checked'); v = r ? r.value : null; }
+        else if (p.tipo === "MULTIPLA") { v = []; corpo.querySelectorAll('[data-mult="' + p.id + '"]:checked').forEach(function (c) { v.push(c.value); }); if (!v.length) v = null; }
+        else if (p.tipo === "FOTO" || p.tipo === "ASSINATURA") return;
+        else { var el = corpo.querySelector('[data-perg="' + p.id + '"]'); v = el ? el.value : null; }
+        var antes = p.resposta;
+        if (v === null || v === "" || JSON.stringify(v) === JSON.stringify(antes)) return;
+        ev.push({ tipo: "RESPOSTA", dados: { perguntaId: p.id, valor: v } });
+      });
+      var rel = {}, mudouRel = false;
+      corpo.querySelectorAll("[data-rel]").forEach(function (t) { var k = t.getAttribute("data-rel"); if (t.value !== (o[k] || "")) { rel[k] = t.value; mudouRel = true; } });
+      var serie = corpo.querySelector("#atOsSerie").value.trim(), ident = corpo.querySelector("#atOsIdent").value;
+      if (serie && serie !== o.serieConfirmada) { rel.serieConfirmada = serie; mudouRel = true; }
+      if (ident && ident !== o.identificadoPor) { rel.identificadoPor = ident; mudouRel = true; }
+      if (mudouRel) ev.push({ tipo: "RELATO", dados: rel });
+      var fotosPend = [];
+      corpo.querySelectorAll("[data-foto-perg]").forEach(function (inp) { if (inp.files && inp.files.length) fotosPend.push({ input: inp, pergunta: inp.getAttribute("data-foto-perg") }); });
+      var gerais = corpo.querySelector("#atOsFotos"); if (gerais && gerais.files && gerais.files.length) fotosPend.push({ input: gerais, pergunta: "" });
+      var depoisFotos = function () { if (ev.length) enviarEventos(ev); else reabrir("Fotos recebidas."); };
+      if (!fotosPend.length) { enviarEventos(ev); return; }
+      SGO_iniciarCarregamento_("Enviando as fotos…");
+      var fila = [];
+      var lerProx = function (i) {
+        if (i >= fotosPend.length) { enviarFotos(0); return; }
+        At_lerArquivos_(fotosPend[i].input, function (arqs) { arqs.forEach(function (a) { fila.push({ a: a, pergunta: fotosPend[i].pergunta }); }); lerProx(i + 1); }, true);
+      };
+      var enviarFotos = function (k) {
+        if (k >= fila.length) { SGO_finalizarCarregamento_(); depoisFotos(); return; }
+        google.script.run.withSuccessHandler(function (r) { if (!r || !r.ok) { SGO_finalizarCarregamento_(); At_msg_("atOsMsg", (r && r.message) || "A foto não foi recebida."); return; } enviarFotos(k + 1); })
+          .withFailureHandler(function (e) { SGO_finalizarCarregamento_(); At_msg_("atOsMsg", "A foto não foi enviada (" + ((e && e.message) || e) + "). Verifique a conexão e salve de novo; as que já subiram não se repetem."); })
+          .Assistencia_api(SGO_getSessionId(), "osFoto", { osId: o.id, idLocal: At_idLocal_(), nome: fila[k].a.nome, base64: fila[k].a.base64, perguntaId: fila[k].pergunta });
+      };
+      lerProx(0);
+    };
+    var b;
+    if ((b = corpo.querySelector("#atPcAdd"))) b.onclick = function () { enviarEventos([{ tipo: "PECA", dados: { descricao: At_$_("atPcDesc").value, codigo: At_$_("atPcCod").value, quantidade: At_$_("atPcQtd").value, situacao: At_$_("atPcSit").value } }]); };
+    corpo.querySelectorAll("[data-peca-tirar]").forEach(function (x) { x.onclick = function () { enviarEventos([{ tipo: "PECA", dados: { removerIdLocal: x.getAttribute("data-peca-tirar") } }]); }; });
+    var cv = corpo.querySelector("#atAssQuadro");
+    if (cv) {
+      var ctx = cv.getContext("2d"), desenhando = false, tracou = false;
+      ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.strokeStyle = "#111";
+      var pos = function (e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+      cv.addEventListener("pointerdown", function (e) { desenhando = true; tracou = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener("pointermove", function (e) { if (!desenhando) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+      cv.addEventListener("pointerup", function () { desenhando = false; });
+      corpo.querySelector("#atAssLimpar").onclick = function () { ctx.clearRect(0, 0, cv.width, cv.height); tracou = false; };
+      corpo.querySelector("#atAssOk").onclick = function () {
+        if (!tracou) { At_msg_("atOsMsg", "Peça ao cliente para assinar no quadro.", "aviso"); return; }
+        enviarEventos([{ tipo: "ASSINATURA", dados: { nome: At_$_("atAssNome").value, documento: At_$_("atAssDoc").value, imagem: cv.toDataURL("image/png") } }], "Guardando a assinatura…");
+      };
+      corpo.querySelector("#atAssAus").onclick = function () {
+        var ov = At_modal_("Responsável ausente", '<p class="at-txt">Use só quando o responsável não está para assinar. O relatório mostra quem recebeu e a justificativa.</p>' + At_campo_("Nome de quem recebeu o serviço", '<input id="atAusRec" maxlength="120">') +
+          At_campo_("Justificativa", '<textarea id="atAusJust" maxlength="1000"></textarea>', "Pelo menos 10 letras.") + '<div id="atAusMsg"></div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Registrar</button>');
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () { ov.remove(); enviarEventos([{ tipo: "ASSINATURA", dados: { semAssinatura: true, motivo: "RESPONSAVEL_AUSENTE", recebidoPor: At_$_("atAusRec").value, justificativa: At_$_("atAusJust").value } }]); };
+      };
+    }
+    if ((b = corpo.querySelector("#atOsEncerrar"))) b.onclick = function () { At_chamar_("osEncerrar", { osId: o.id }, function (x) { reabrir(x.message); }, function (m) { At_msg_("atOsMsg", m); }, { carregando: "Encerrando e gerando o relatório…" }); };
+    At_ligarOsComuns_(o, corpo, reabrir);
+  }
+  function At_ligarOsComuns_(o, corpo, reabrir) {
+    var b;
+    if ((b = corpo.querySelector("#atOsRel"))) b.onclick = function () { At_chamar_("relatorio", { osId: o.id }, function (x) { if (x.html) At_abrirHtml_(x.html); else if (x.pdfUrl) window.open(x.pdfUrl, "_blank"); }, null, { carregando: "Gerando o relatório A4…" }); };
+    if ((b = corpo.querySelector("#atOsEnviar"))) b.onclick = function () { if (window.SGO_EnviarDoc) SGO_EnviarDoc.abrir({ arquivoId: o.relatorio.pdfId }); };
+    if ((b = corpo.querySelector("#atOsChamado"))) b.onclick = function () { At_abrirChamado_(o.chamadoId); };
+    if ((b = corpo.querySelector("#atOsSerieOk"))) b.onclick = function () { At_pedirTexto_("Série conferida", "Confira o equipamento e, se o cadastro estava errado, corrija em Cadastros > Equipamentos.", "O que foi feito", 5, function (t, ov) { At_chamar_("serieTratada", { osId: o.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
+    if ((b = corpo.querySelector("#atOsDoc"))) b.onclick = function () {
+      At_chamar_("osDocumento", { osId: o.id }, function (x) {
+        var mods = { CERTCAL: "certificado_calibracao", RELCAL: "relatorio_calibracao", QUALIFICACAO: "autoclave", DECLARACAO: "declaracao_exec", QIQO: "declaracao_qiqo", NR13: "nr13" };
+        var ov = At_modal_("Documento técnico da O.S. " + o.numero, '<p class="at-txt">Emita o documento no módulo (' + At_esc_(o.documentoTecnicoNome) + ') e ligue aqui. Documento do mesmo equipamento emitido depois da chegada é ligado sozinho ao encerrar.</p>' +
+          (x.documentos.length ? '<div class="at-lista">' + x.documentos.map(function (d) { return '<div class="at-card"><p class="at-txt">' + At_esc_(d.em) + ' · ' + At_esc_(d.tipo) + ' · ' + At_esc_(d.nome) + '</p><div class="at-acoes"><button type="button" class="btn-secondary" data-ligar="' + At_esc_(d.id) + '">Ligar à O.S.</button></div></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum documento deste equipamento no Arquivo de documentos ainda.</p>'),
+          '<button type="button" class="btn-secondary" data-mod>Abrir o módulo do documento</button><button type="button" class="btn-secondary" data-x>Fechar</button>', 680);
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-mod]").onclick = function () { ov.remove(); var g = At_$_("atGaveta"); if (g) g.remove(); abrir(mods[o.documentoTecnicoTipo] || "documentos"); };
+        ov.querySelectorAll("[data-ligar]").forEach(function (bb) { bb.onclick = function () { At_chamar_("osDocumento", { osId: o.id, docId: bb.getAttribute("data-ligar") }, function (y) { ov.remove(); reabrir(y.message); }); }; });
+      });
+    };
+  }
+
+  // =========================================================
+  // AGENDA DOS TÉCNICOS
+  // =========================================================
+  function At_hojeIso_() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function At_renderAgenda_(div) {
+    if (!AT.agenda.inicio) AT.agenda.inicio = At_hojeIso_();
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Agenda dos técnicos", "Atendimentos do SGO+ e do Auvo, reservas de veículo e ausências por técnico. A ordem do dia é da gestão.", '') +
+      '<div class="at-filtros"><div><label for="atAgDia">A partir de</label><input id="atAgDia" type="date" value="' + At_esc_(AT.agenda.inicio) + '"></div><div><label for="atAgVer">Ver</label><select id="atAgVer">' + At_opcoes_([{ v: 1, t: "Dia" }, { v: 7, t: "Semana" }], AT.agenda.dias) + '</select></div>' +
+      '<div><button type="button" class="btn-secondary" id="atAgAnt">Anterior</button> <button type="button" class="btn-secondary" id="atAgHoje">Hoje</button> <button type="button" class="btn-secondary" id="atAgProx">Próximo</button></div></div><div id="atAgCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    var mover = function (n) { var d = new Date(AT.agenda.inicio + "T12:00:00"); d.setDate(d.getDate() + n * Number(AT.agenda.dias)); AT.agenda.inicio = d.toISOString().slice(0, 10); At_renderAgenda_(div); };
+    At_$_("atAgDia").onchange = function () { AT.agenda.inicio = At_$_("atAgDia").value || At_hojeIso_(); At_renderAgenda_(div); };
+    At_$_("atAgVer").onchange = function () { AT.agenda.dias = Number(At_$_("atAgVer").value); At_renderAgenda_(div); };
+    At_$_("atAgAnt").onclick = function () { mover(-1); }; At_$_("atAgProx").onclick = function () { mover(1); }; At_$_("atAgHoje").onclick = function () { AT.agenda.inicio = At_hojeIso_(); At_renderAgenda_(div); };
+    At_chamar_("agenda", { inicio: AT.agenda.inicio, dias: AT.agenda.dias }, function (r) {
+      var c = At_$_("atAgCorpo"); if (!c) return;
+      if (!r.tecnicos.length) { c.innerHTML = '<div class="at-vazio">Nenhum técnico cadastrado (usuários ativos com perfil Técnico ou área Técnica, em Administração > Usuários).</div>'; return; }
+      var h = '<div class="at-wrap-tabela"><table class="at-agenda"><thead><tr><th class="tec">Técnico</th>' + r.dias.map(function (d) { return '<th' + (d.util ? '' : ' style="opacity:.6"') + '>' + At_esc_(d.rotulo) + '</th>'; }).join("") + '</tr></thead><tbody>';
+      r.tecnicos.forEach(function (t) {
+        h += '<tr><td class="tec">' + At_esc_(t.nome) + '<br><button type="button" class="btn-secondary" style="margin-top:4px;min-height:32px;font-size:11px" data-rota="' + At_esc_(t.id) + '">Rota do dia</button></td>';
+        r.dias.forEach(function (d) {
+          var itens = t.itens.filter(function (i) { return i.dia === d.dia; });
+          var aus = t.ausencias.filter(function (a) { return a.de <= d.dia && a.ate >= d.dia; });
+          var res = t.reservas.filter(function (x) { return x.dia === d.dia; });
+          h += '<td>' + aus.map(function (a) { return '<div class="at-item aus">' + At_esc_(a.motivo) + '</div>'; }).join("") +
+            itens.map(function (i) { return '<div class="at-item' + (i.origem === "AUVO" ? " auvo" : "") + (i.situacao === "ENCERRADA" || i.situacao === "FINALIZADA_AUVO" ? " fim" : "") + '"' + (i.origem === "SGO" ? ' data-os="' + At_esc_(i.id) + '"' : '') + '><b>' + At_esc_(i.inicio) + '</b> ' + At_esc_(i.numero) + '<br>' + At_esc_(i.cliente) + '<br><span class="at-meta">' + At_esc_(i.situacaoNome) + '</span></div>'; }).join("") +
+            res.map(function (x) { return '<div class="at-item aus">Veículo ' + At_esc_(x.placa) + ' ' + At_esc_(x.inicio) + '</div>'; }).join("") + '</td>';
+        });
+        h += '</tr>';
+      });
+      c.innerHTML = h + '</tbody></table></div>';
+      c.querySelectorAll("[data-os]").forEach(function (x) { x.onclick = function () { At_abrirOs_(x.getAttribute("data-os")); }; });
+      c.querySelectorAll("[data-rota]").forEach(function (x) { x.onclick = function () { At_abrirRota_(x.getAttribute("data-rota"), AT.agenda.inicio); }; });
+    }, function (m) { At_msg_("atAgCorpo", m); });
+  }
+  function At_abrirRota_(tecId, dia) {
+    At_chamar_("rota", { tecnicoId: tecId, dia: dia }, function (r) {
+      var ids = r.paradas.filter(function (p) { return p.origem === "SGO"; }).map(function (p) { return p.id; });
+      var desenhar = function () {
+        return r.paradas.length ? '<div class="at-lista">' + r.paradas.map(function (p, i) { return '<div class="at-card"><p class="at-card-tit">' + (i + 1) + '. ' + At_esc_(p.inicio) + ' · ' + At_esc_(p.numero) + ' · ' + At_esc_(p.cliente) + '</p><p class="at-meta">' + At_esc_(p.endereco || "Sem endereço no cadastro") + '</p>' +
+          (p.mapa ? '<a href="' + At_esc_(p.mapa) + '" target="_blank" rel="noopener">Mapa</a>' : '') + (AT.ini.gestao && p.origem === "SGO" ? ' <button type="button" class="btn-secondary" data-sobe="' + At_esc_(p.id) + '">Subir</button>' : '') + '</div>'; }).join("") + '</div>' : '<p class="at-txt">Nenhum atendimento neste dia.</p>';
+      };
+      var ov = At_modal_("Rota de " + r.tecnico.nome + " em " + r.rotulo, '<div id="atRotaLista">' + desenhar() + '</div>' + (r.linkRota ? '<p class="at-txt"><a href="' + At_esc_(r.linkRota) + '" target="_blank" rel="noopener">Abrir o caminho do dia no mapa</a></p>' : ''),
+        (AT.ini.gestao && ids.length > 1 ? '<button type="button" class="btn-primary" data-salvar>Salvar a ordem</button>' : '') + '<button type="button" class="btn-secondary" data-x>Fechar</button>', 640);
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      var ligar = function () {
+        ov.querySelectorAll("[data-sobe]").forEach(function (b) { b.onclick = function () { var id = b.getAttribute("data-sobe"), i = r.paradas.findIndex(function (p) { return p.id === id; }); if (i > 0) { var x = r.paradas[i]; r.paradas[i] = r.paradas[i - 1]; r.paradas[i - 1] = x; At_$_("atRotaLista").innerHTML = desenhar(); ligar(); } }; });
+      };
+      ligar();
+      var sv = ov.querySelector("[data-salvar]");
+      if (sv) sv.onclick = function () { At_chamar_("ordenar", { ordem: r.paradas.filter(function (p) { return p.origem === "SGO"; }).map(function (p) { return p.id; }) }, function (x) { ov.remove(); alert(x.message); }); };
+    });
+  }
+
+  // =========================================================
+  // SOLICITAÇÕES DOS CLIENTES (portal, QR, e-mail)
+  // =========================================================
+  function At_renderSolicitacoes_(div) {
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Solicitações dos clientes", "Pedidos feitos pelo portal do cliente ou pelo QR do equipamento. Confira e abra o chamado, ou descarte com o motivo.", '') + '<div id="atSolLista"><div class="at-vazio">Carregando…</div></div></div>';
+    At_chamar_("solicitacoes", { situacao: "NOVA" }, function (r) {
+      var l = At_$_("atSolLista"); if (!l) return;
+      l.innerHTML = r.solicitacoes.length ? '<div class="at-lista">' + r.solicitacoes.map(function (s) {
+        return '<div class="at-card' + (s.parada === "TOTAL" ? " p1" : "") + '"><p class="at-card-tit">' + At_esc_(s.numero) + ' · ' + At_esc_(s.clienteNome) + '</p><p class="at-meta">' + At_esc_(s.em) + ' · ' + At_esc_(s.origemNome) + ' · ' + At_esc_(s.solicitante) + (s.contato ? ' · ' + At_esc_(s.contato) : '') + '</p>' +
+          '<p class="at-txt"><b>' + At_esc_(s.equipamentoTexto || "Equipamento não informado") + '</b><br>' + At_esc_(s.descricao) + '</p><div class="at-acoes"><button type="button" class="btn-primary" data-conv="' + At_esc_(s.id) + '">Abrir chamado</button><button type="button" class="btn-secondary" data-desc="' + At_esc_(s.id) + '">Descartar</button></div></div>';
+      }).join("") + '</div>' : '<div class="at-vazio">Nenhuma solicitação nova.</div>';
+      l.querySelectorAll("[data-conv]").forEach(function (b) {
+        b.onclick = function () {
+          var ov = At_modal_("Abrir chamado da solicitação", At_campo_("Prioridade", '<select id="atConvPrio">' + At_opcoes_(At_mapaOpcoes_(AT.ini.prioridades), "P3") + '</select>') + '<div id="atConvMsg"></div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Abrir chamado</button>');
+          ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+          var conv = function (dup) { At_chamar_("converter", { solicitacaoId: b.getAttribute("data-conv"), prioridade: At_$_("atConvPrio").value, confirmarDuplicado: dup }, function (x) {
+            if (x.duplicado) { At_$_("atConvMsg").innerHTML = '<div class="at-faixa aviso">' + At_esc_(x.message) + '</div><button type="button" class="btn-secondary" id="atConvDup">Abrir mesmo assim</button>'; At_$_("atConvDup").onclick = function () { conv(true); }; return; }
+            ov.remove(); At_renderSolicitacoes_(div); At_abrirChamado_(x.chamado.id, x.message); }, function (m) { At_msg_("atConvMsg", m); }); };
+          ov.querySelector("[data-ok]").onclick = function () { conv(false); };
+        };
+      });
+      l.querySelectorAll("[data-desc]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Descartar a solicitação", "Ela sai da fila e o motivo fica registrado.", "Motivo", 10, function (t, ov) { At_chamar_("descartar", { solicitacaoId: b.getAttribute("data-desc"), motivo: t }, function () { ov.remove(); At_renderSolicitacoes_(div); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Descartar"); }; });
+    }, function (m) { At_msg_("atSolLista", m); });
+  }
+
+  // =========================================================
+  // RECLAMAÇÕES (casos)
+  // =========================================================
+  function At_renderCasos_(div) {
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Reclamações", "Reclamação do cliente ou problema que se repete: cada caso tem dono, prazo, causa, ação e resposta ao cliente.", '<button type="button" class="btn-primary" id="atCasoNovo">Registrar reclamação</button>') + '<div id="atCasoLista"><div class="at-vazio">Carregando…</div></div></div>';
+    At_$_("atCasoNovo").onclick = function () {
+      var ov = At_modal_("Registrar reclamação", At_campo_("Cliente (nome ou CNPJ)", '<input id="atCaCli" type="search" autocomplete="off"><div id="atCaCliLista"></div><input type="hidden" id="atCaCliId">') + At_campo_("Tipo", '<select id="atCaTipo">' + At_opcoes_(At_mapaOpcoes_(AT.ini.casoTipos), "RECLAMACAO") + '</select>') +
+        At_campo_("O que o cliente disse", '<textarea id="atCaDesc" maxlength="3000"></textarea>') + '<div id="atCaMsg"></div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Registrar</button>');
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      var t = null;
+      At_$_("atCaCli").oninput = function () { clearTimeout(t); t = setTimeout(function () { At_chamar_("buscarCadastro", { termo: At_$_("atCaCli").value }, function (r) { At_$_("atCaCliLista").innerHTML = (r.clientes || []).map(function (c) { return '<button type="button" class="btn-secondary" style="margin:4px 4px 0 0" data-cli="' + At_esc_(c.id) + '">' + At_esc_(c.nome) + '</button>'; }).join(""); At_$_("atCaCliLista").querySelectorAll("[data-cli]").forEach(function (b) { b.onclick = function () { At_$_("atCaCliId").value = b.getAttribute("data-cli"); At_$_("atCaCli").value = b.textContent; At_$_("atCaCliLista").innerHTML = ""; }; }); }, function () {}); }, 350); };
+      ov.querySelector("[data-ok]").onclick = function () { At_chamar_("salvarCaso", { clienteId: At_$_("atCaCliId").value, tipo: At_$_("atCaTipo").value, descricao: At_$_("atCaDesc").value }, function () { ov.remove(); At_renderCasos_(div); }, function (m) { At_msg_("atCaMsg", m); }); };
+    };
+    At_chamar_("casos", { situacao: "ABERTOS" }, function (r) {
+      var l = At_$_("atCasoLista"); if (!l) return;
+      l.innerHTML = r.casos.length ? '<div class="at-lista">' + r.casos.map(function (k) {
+        return '<div class="at-card' + (k.atrasado ? " p1" : "") + '"><p class="at-card-tit">' + At_esc_(k.numero) + ' · ' + At_esc_(k.clienteNome) + '</p><p class="at-meta">' + At_esc_(k.tipoNome) + ' · dono ' + At_esc_(k.donoNome || "—") + ' · prazo ' + At_esc_(k.prazo) + (k.atrasado ? ' (vencido)' : '') + '</p>' +
+          '<p class="at-txt">' + At_esc_(k.descricao) + '</p>' + (AT.ini.gestao ? '<div class="at-acoes"><button type="button" class="btn-secondary" data-caso="' + At_esc_(k.id) + '">Tratar</button></div>' : '') + '</div>';
+      }).join("") + '</div>' : '<div class="at-vazio">Nenhuma reclamação em aberto.</div>';
+      l.querySelectorAll("[data-caso]").forEach(function (b) {
+        b.onclick = function () {
+          var k = r.casos.filter(function (x) { return x.id === b.getAttribute("data-caso"); })[0];
+          var ov = At_modal_("Caso " + k.numero, '<p class="at-txt">' + At_esc_(k.descricao) + '</p>' + At_campo_("Causa", '<textarea id="atKCausa" maxlength="2000">' + At_esc_(k.causa || "") + '</textarea>') + At_campo_("Ação tomada", '<textarea id="atKAcao" maxlength="2000">' + At_esc_(k.acao || "") + '</textarea>') +
+            At_campo_("Resposta dada ao cliente", '<textarea id="atKResp" maxlength="2000">' + At_esc_(k.respostaCliente || "") + '</textarea>') + At_campo_("Situação", '<select id="atKSit">' + At_opcoes_([{ v: "ABERTO", t: "Aberto" }, { v: "EM_TRATAMENTO", t: "Em tratamento" }, { v: "RESOLVIDO", t: "Resolvido" }], k.situacao) + '</select>') + '<div id="atKMsg"></div>',
+            '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>');
+          ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+          ov.querySelector("[data-ok]").onclick = function () { At_chamar_("salvarCaso", { id: k.id, causa: At_$_("atKCausa").value, acao: At_$_("atKAcao").value, respostaCliente: At_$_("atKResp").value, situacao: At_$_("atKSit").value }, function () { ov.remove(); At_renderCasos_(div); }, function (m) { At_msg_("atKMsg", m); }); };
+        };
+      });
+    }, function (m) { At_msg_("atCasoLista", m); });
+  }
+
+  // =========================================================
+  // INDICADORES
+  // =========================================================
+  function At_renderIndicadores_(div) {
+    if (!AT.comp) { var d = new Date(); AT.comp = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2); }
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Indicadores da assistência", "Prazo cumprido, tempo de atendimento, reincidência por equipamento e O.S. por técnico. O relatório mensal A4 vai no e-mail mensal da Diretoria.",
+      '<button type="button" class="btn-secondary" id="atIndRel">Relatório mensal A4</button>') + '<div class="at-filtros"><div><label for="atIndComp">Mês</label><input id="atIndComp" type="month" value="' + At_esc_(AT.comp) + '"></div></div><div id="atIndCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    At_$_("atIndComp").onchange = function () { AT.comp = At_$_("atIndComp").value; At_renderIndicadores_(div); };
+    At_$_("atIndRel").onclick = function () { At_chamar_("relatorioMes", { competencia: AT.comp }, function (x) { At_abrirHtml_(x.html); }, null, { carregando: "Gerando o relatório mensal…" }); };
+    At_chamar_("indicadores", { competencia: AT.comp }, function (r) {
+      var i = r.indicadores, c = At_$_("atIndCorpo"); if (!c) return;
+      var kp = [[i.slaPct === null ? "—" : i.slaPct + "%", "Atendimentos no prazo (" + i.cumpridos + " de " + i.atendidos + ")", i.slaPct === null ? "" : i.slaPct >= 90 ? "ok" : i.slaPct >= 75 ? "aviso" : "critico"],
+        [(Math.round(i.tempoMedioMinUteis / 6) / 10).toString().replace(".", ",") + " h", "Tempo médio de atendimento (horas úteis)", ""], [i.abertos, "Chamados abertos no mês", ""], [i.encerrados, "Encerrados no mês", "ok"],
+        [i.estouradosAgora.length, "Prazos estourados agora", i.estouradosAgora.length ? "critico" : "ok"], [i.reincidentes.length, "Reincidências no mês", i.reincidentes.length ? "aviso" : "ok"],
+        [i.docPendenteAgora, "Documentação pendente agora", i.docPendenteAgora ? "aviso" : "ok"], [i.reclamacoes.pendentes, "Reclamações em aberto", i.reclamacoes.pendentes ? "aviso" : "ok"]];
+      var tab = function (cols, linhas, vazio) { return linhas.length ? '<table class="at-tabela"><thead><tr>' + cols.map(function (x) { return '<th>' + At_esc_(x) + '</th>'; }).join("") + '</tr></thead><tbody>' + linhas.map(function (l) { return '<tr>' + l.map(function (v, k) { return '<td data-r="' + At_esc_(cols[k]) + '">' + At_esc_(v) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table>' : '<p class="at-meta">' + At_esc_(vazio) + '</p>'; };
+      c.innerHTML = '<div class="at-kpis">' + kp.map(function (x) { return '<div class="at-kpi ' + x[2] + '"><span class="v">' + At_esc_(x[0]) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>' +
+        '<div class="at-sec">Prazo por prioridade</div>' + tab(["Prioridade", "Atendidos", "No prazo", "%"], i.porPrioridade.map(function (p) { return [p.nome, p.atendidos, p.cumpridos, p.pct === null ? "—" : p.pct + "%"]; }), "Nenhum atendimento no mês.") +
+        '<div class="at-sec">O.S. por técnico</div>' + tab(["Técnico", "Encerradas", "Doc. pendente", "Tempo médio no local", "Sem assinatura", "Série divergente"], i.tecnicos.map(function (t) { return [t.nome, t.encerradas, t.docPendente, t.mediaLocalMin ? t.mediaLocalMin + " min" : "—", t.semAssinatura, t.divergencias]; }), "Nenhuma O.S. no mês.") +
+        '<div class="at-sec">Reincidência por equipamento (90 dias)</div>' + tab(["Equipamento", "Cliente", "Chamados"], i.equipamentosReincidentes.map(function (e) { return [e.equipamento, e.cliente, e.qtd]; }), "Nenhum equipamento com reincidência.") +
+        '<div class="at-sec">Prazos estourados agora</div>' + tab(["Chamado", "Cliente", "Prioridade", "Situação"], i.estouradosAgora.map(function (e) { return [e.numero, e.cliente, e.prioridade, e.situacao]; }), "Nenhum.") +
+        '<p class="at-meta">Uso em paralelo: ' + At_esc_(i.osSgoMes) + ' O.S. no SGO+ e ' + At_esc_(i.tarefasAuvoMes) + ' tarefa(s) no Auvo no mês.</p>';
+    }, function (m) { At_msg_("atIndCorpo", m); });
+  }
+
+  // =========================================================
+  // REGRAS DA ASSISTÊNCIA (prazos, contratos, interruptor, tipos e checklists)
+  // =========================================================
+  function At_renderRegras_(div) {
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Regras da assistência", "Prazos por prioridade, contratos com prazo próprio, avisos, tipos de serviço e modelos de checklist. Cada mudança vira uma versão com o motivo.", '') + '<div id="atRgCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    At_chamar_("regras", {}, function (r) {
+      var c = At_$_("atRgCorpo"); if (!c) return;
+      var g = r.regras, ed = r.podeEditar, dis = ed ? "" : " disabled";
+      var h2 = function (m) { return (Math.round(Number(m) / 6) / 10).toString(); };
+      var h = '<div class="at-caixa"><h3>Assistência do SGO+</h3><p class="at-txt">' + (g.ligada ? At_selo_("verde", "Ligada") + ' Uso em paralelo ao Auvo: atendimento novo nasce no SGO+.' : At_selo_("vermelho", "Desligada") + ' O aplicativo do técnico não recebe O.S. novas; nada é apagado.') + '</p>' +
+        (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRgLigar">' + (g.ligada ? "Desligar" : "Ligar") + '</button></div>' : '') + '<p class="at-meta">Triagem: ' + At_esc_(r.triagem.nome || "ninguém") + ' (' + At_esc_(r.triagem.motivo) + '). Técnicos: ' + At_esc_(r.tecnicos.map(function (t) { return t.nome; }).join(", ") || "nenhum") + '.</p></div>';
+      h += '<div class="at-caixa"><h3>Prazos por prioridade (horas úteis do expediente)</h3><table class="at-tabela"><thead><tr><th>Prioridade</th><th>Prazo de atendimento (h)</th><th>Prazo de triagem (h)</th></tr></thead><tbody>' +
+        ["P1", "P2", "P3", "P4"].map(function (p) { return '<tr><td data-r="Prioridade">' + p + '</td><td data-r="Atendimento"><input data-pz="' + p + '|atendimentoMin" type="number" step="0.5" min="0.5" value="' + h2(g.prazos[p].atendimentoMin) + '"' + dis + '></td><td data-r="Triagem"><input data-pz="' + p + '|triagemMin" type="number" step="0.25" min="0.1" value="' + h2(g.prazos[p].triagemMin) + '"' + dis + '></td></tr>'; }).join("") +
+        '</tbody></table><p class="at-meta">Padrão: P1 4 h úteis, P2 1 dia útil (9,5 h), P3 3 dias úteis, P4 7 dias úteis. O contrato do cliente prevalece.</p>' +
+        '<div class="at-grade4">' + At_campo_("Em risco quando resta (fração)", '<input id="atRgRisco" type="number" step="0.05" min="0.05" max="0.9" value="' + At_esc_(g.emRiscoFracao) + '"' + dis + '>') + At_campo_("Documentação pendente vira cobrança da gestão após (h)", '<input id="atRgDoc" type="number" min="1" value="' + At_esc_(g.docPendenteHoras) + '"' + dis + '>') +
+        At_campo_("Reincidência: mesmo equipamento em (dias)", '<input id="atRgReinc" type="number" min="1" value="' + At_esc_(g.reincidenciaDias) + '"' + dis + '>') + At_campo_("Duração padrão da visita (min)", '<input id="atRgDur" type="number" min="15" step="15" value="' + At_esc_(g.agenda.duracaoPadraoMin) + '"' + dis + '>') + '</div>' +
+        [["atRgPausa", "Prazo pausa ao aguardar cliente ou peça (sem contrato)", g.pausaPermitidaPadrao], ["atRgAss", "Assinatura do cliente obrigatória para encerrar (exceção: responsável ausente)", g.assinatura.obrigatoria], ["atRgCmp", "Peça em falta abre pedido em Compras", g.pecas.faltaAbreCompras],
+          ["atRgWaP1", "WhatsApp ao gestor no chamado P1 (exceção da matriz de avisos)", g.avisos.whatsappP1Gestor], ["atRgMailCli", "E-mail ao cliente (chamado recebido, reagendado e concluído)", g.avisos.emailCliente], ["atRgWaCli", "WhatsApp ao cliente (só depois do piloto)", g.avisos.whatsappCliente], ["atRgRelMes", "Relatório mensal A4", g.relatorioMensal.ligado]]
+          .map(function (x) { return '<label class="at-check"><input type="checkbox" id="' + x[0] + '"' + (x[2] ? " checked" : "") + dis + '> ' + At_esc_(x[1]) + '</label>'; }).join("") +
+        '<div class="at-grade2">' + At_campo_("Chegada longe do endereço avisa a partir de (metros)", '<input id="atRgDist" type="number" min="100" value="' + At_esc_(g.localizacao.distanciaAvisoMetros) + '"' + dis + '>') + At_campo_("Tamanho máximo da foto (MB)", '<input id="atRgFoto" type="number" min="0.5" step="0.5" value="' + At_esc_(g.fotos.maxBytes / 1000000) + '"' + dis + '>') + '</div></div>';
+      h += '<div class="at-caixa"><h3>Contratos com prazo próprio</h3><div id="atRgContratos">' + (g.contratos || []).map(function (k, i) { return At_linhaContrato_(k, r.clientes, dis); }).join("") + '</div>' + (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRgContMais">Mais um contrato</button></div>' : '') + '</div>';
+      if (ed) h += '<div class="at-caixa">' + At_campo_("O que mudou e por quê", '<input id="atRgMot" maxlength="500">', "Pelo menos 10 letras. Cada versão fica no histórico.") + '<div id="atRgMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atRgSalvar">Salvar as regras</button></div></div>';
+      h += '<div class="at-caixa"><h3>Tipos de serviço (' + r.tipos.length + ')</h3><p class="at-meta">Vieram dos 30 tipos do Auvo ("Entrega" e "Entrega de equipamentos" viraram um só). A Qualidade ajusta as exigências; cada mudança fica registrada.</p><table class="at-tabela"><thead><tr><th>Tipo</th><th>Grupo</th><th>Relato</th><th>Assinatura</th><th class="n">Fotos</th><th>QR ou série</th><th>Checklist</th><th>Documento</th><th></th></tr></thead><tbody>' +
+        r.tipos.map(function (t) { return '<tr' + (t.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Tipo">' + At_esc_(t.nome) + '</td><td data-r="Grupo">' + At_esc_(t.grupo) + '</td><td data-r="Relato">' + (t.exige.relato ? "Sim" : "—") + '</td><td data-r="Assinatura">' + (t.exige.assinatura ? "Sim" : "—") + '</td><td class="n" data-r="Fotos">' + t.exige.fotosMin + '</td><td data-r="QR ou série">' + (t.exige.qrOuSerie ? "Sim" : "—") + '</td><td data-r="Checklist">' + At_esc_(t.modeloCodigo || "—") + '</td><td data-r="Documento">' + At_esc_(r.docsTecnicos[t.documentoTecnico] || "") + '</td><td>' + (ed ? '<button type="button" class="btn-secondary" data-tipo="' + At_esc_(t.codigo) + '">Editar</button>' : '') + '</td></tr>'; }).join("") +
+        '</tbody></table>' + (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" data-tipo="">Novo tipo</button></div>' : '') + '</div>';
+      h += '<div class="at-caixa"><h3>Modelos de checklist (' + r.modelos.length + ')</h3><div class="at-lista">' + r.modelos.map(function (m) { return '<div class="at-card' + (m.ativo ? '' : ' fim') + '"><p class="at-card-tit">' + At_esc_(m.nome) + ' · versão ' + m.versao + (m.origem === "AUVO" ? ' · trazido do Auvo' : '') + '</p><p class="at-meta">' + m.perguntas.length + ' perguntas · ' + At_esc_(m.codigo) + '</p>' + (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" data-modelo="' + At_esc_(m.codigo) + '">Editar</button></div>' : '') + '</div>'; }).join("") + '</div>' +
+        (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" data-modelo="">Novo modelo</button><button type="button" class="btn-secondary" id="atRgImp">Trazer os questionários do Auvo (acervo)</button></div>' : '') + '</div>';
+      h += '<div class="at-caixa"><h3>Versões das regras</h3>' + (r.versoes.length ? r.versoes.slice(0, 15).map(function (v) { return '<p class="at-meta">Versão ' + v.versao + ' · ' + At_esc_(v.em) + ' · ' + At_esc_(v.por) + ' · ' + At_esc_(v.motivo) + '</p>'; }).join("") : '<p class="at-meta">Valem os padrões aprovados (nenhuma mudança gravada).</p>') + '</div>';
+      c.innerHTML = h;
+      if (!ed) return;
+      At_$_("atRgLigar").onclick = function () { At_pedirTexto_(g.ligada ? "Desligar a Assistência do SGO+" : "Ligar a Assistência do SGO+", g.ligada ? "O aplicativo do técnico deixa de receber O.S. novas. Nada é apagado; o Auvo continua como está." : "Atendimento novo volta a nascer no SGO+ (uso em paralelo ao Auvo).", "Motivo", 10, function (t, ov) { At_chamar_("ligar", { ligada: !g.ligada, motivo: t }, function (x) { ov.remove(); AT.ini = null; alert(x.message); At_renderRegras_(div); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
+      var mais = At_$_("atRgContMais"); if (mais) mais.onclick = function () { At_$_("atRgContratos").insertAdjacentHTML("beforeend", At_linhaContrato_({}, r.clientes, "")); };
+      At_$_("atRgSalvar").onclick = function () {
+        var nova = JSON.parse(JSON.stringify(g));
+        c.querySelectorAll("[data-pz]").forEach(function (x) { var k = x.getAttribute("data-pz").split("|"); nova.prazos[k[0]][k[1]] = Math.round(Number(String(x.value).replace(",", ".")) * 60); });
+        nova.emRiscoFracao = Number(At_$_("atRgRisco").value); nova.docPendenteHoras = Number(At_$_("atRgDoc").value); nova.reincidenciaDias = Number(At_$_("atRgReinc").value); nova.agenda.duracaoPadraoMin = Number(At_$_("atRgDur").value);
+        nova.pausaPermitidaPadrao = At_$_("atRgPausa").checked; nova.assinatura.obrigatoria = At_$_("atRgAss").checked; nova.pecas.faltaAbreCompras = At_$_("atRgCmp").checked;
+        nova.avisos.whatsappP1Gestor = At_$_("atRgWaP1").checked; nova.avisos.emailCliente = At_$_("atRgMailCli").checked; nova.avisos.whatsappCliente = At_$_("atRgWaCli").checked; nova.relatorioMensal.ligado = At_$_("atRgRelMes").checked;
+        nova.localizacao.distanciaAvisoMetros = Number(At_$_("atRgDist").value); nova.fotos.maxBytes = Math.round(Number(At_$_("atRgFoto").value) * 1000000);
+        nova.contratos = [];
+        c.querySelectorAll("[data-contrato]").forEach(function (l) {
+          var cid = l.querySelector("[data-c=cliente]").value; if (!cid) return;
+          var pz = {}; ["P1", "P2", "P3", "P4"].forEach(function (p) { var v = l.querySelector('[data-c="' + p + '"]').value; if (v) pz[p] = { atendimentoMin: Math.round(Number(String(v).replace(",", ".")) * 60) }; });
+          nova.contratos.push({ clienteId: cid, clienteNome: l.querySelector("[data-c=cliente]").selectedOptions[0].textContent, prazos: pz, pausaPermitida: l.querySelector("[data-c=pausa]").checked, observacao: l.querySelector("[data-c=obs]").value });
+        });
+        At_chamar_("regras", { salvar: nova, motivo: At_$_("atRgMot").value }, function (x) { AT.ini = null; At_renderRegras_(div); setTimeout(function () { alert(x.message); }, 300); }, function (m) { At_msg_("atRgMsg", m); });
+      };
+      c.querySelectorAll("[data-tipo]").forEach(function (b) { b.onclick = function () { At_editarTipo_(r.tipos.filter(function (t) { return t.codigo === b.getAttribute("data-tipo"); })[0] || null, r, function () { AT.ini = null; At_renderRegras_(div); }); }; });
+      c.querySelectorAll("[data-modelo]").forEach(function (b) { b.onclick = function () { At_editarModelo_(r.modelos.filter(function (m) { return m.codigo === b.getAttribute("data-modelo"); })[0] || null, r, function () { At_renderRegras_(div); }); }; });
+      var imp = At_$_("atRgImp"); if (imp) imp.onclick = function () { At_chamar_("importarAuvo", {}, function (x) { alert(x.message); At_renderRegras_(div); }, null, { carregando: "Lendo os questionários do acervo do Auvo…" }); };
+    }, function (m) { At_msg_("atRgCorpo", m); });
+  }
+  function At_linhaContrato_(k, clientes, dis) {
+    var h2 = function (m) { return m ? (Math.round(Number(m) / 6) / 10).toString() : ""; };
+    return '<div class="at-card" data-contrato><div class="at-grade2">' + At_campo_("Cliente", '<select data-c="cliente"' + dis + '>' + At_opcoes_(clientes.map(function (c) { return { v: c.id, t: c.nome }; }), k.clienteId, "Escolha o cliente") + '</select>') + At_campo_("Observação", '<input data-c="obs" maxlength="300" value="' + At_esc_(k.observacao || "") + '"' + dis + '>') + '</div>' +
+      '<div class="at-grade4">' + ["P1", "P2", "P3", "P4"].map(function (p) { return At_campo_(p + " (h úteis)", '<input data-c="' + p + '" type="number" step="0.5" min="0.5" value="' + h2(k.prazos && k.prazos[p] && k.prazos[p].atendimentoMin) + '" placeholder="padrão"' + dis + '>'); }).join("") + '</div>' +
+      '<label class="at-check"><input type="checkbox" data-c="pausa"' + (k.pausaPermitida ? " checked" : "") + dis + '> O contrato permite pausar o prazo ao aguardar cliente ou peça</label></div>';
+  }
+  function At_editarTipo_(t, r, depois) {
+    t = t || { codigo: "", nome: "", grupo: "TECNICO", descricao: "", exige: { relato: true, assinatura: true, fotosMin: 2, qrOuSerie: true }, modeloCodigo: "MOD_TECNICO", documentoTecnico: "", semVisita: false, ativo: true };
+    var ov = At_modal_(t.codigo ? "Tipo de serviço: " + t.nome : "Novo tipo de serviço", '<div class="at-grade2">' + At_campo_("Nome", '<input id="atTpNome" maxlength="120" value="' + At_esc_(t.nome) + '">') + At_campo_("Grupo", '<select id="atTpGrupo">' + At_opcoes_([{ v: "TECNICO", t: "Serviço técnico" }, { v: "LOGISTICA", t: "Logística" }, { v: "OUTROS", t: "Outros" }], t.grupo) + '</select>') + '</div>' +
+      At_campo_("Quando usar", '<input id="atTpDesc" maxlength="300" value="' + At_esc_(t.descricao) + '">') +
+      '<label class="at-check"><input type="checkbox" id="atTpRel"' + (t.exige.relato ? " checked" : "") + '> Exige relato (condição encontrada e teste)</label><label class="at-check"><input type="checkbox" id="atTpAss"' + (t.exige.assinatura ? " checked" : "") + '> Exige assinatura do cliente</label>' +
+      '<label class="at-check"><input type="checkbox" id="atTpQr"' + (t.exige.qrOuSerie ? " checked" : "") + '> Exige conferir o equipamento (QR ou série)</label><label class="at-check"><input type="checkbox" id="atTpSem"' + (t.semVisita ? " checked" : "") + '> Sem visita (não exige chegada)</label>' +
+      '<label class="at-check"><input type="checkbox" id="atTpAtivo"' + (t.ativo ? " checked" : "") + '> Ativo (inativo some da lista; nada é apagado)</label>' +
+      '<div class="at-grade3">' + At_campo_("Fotos mínimas", '<input id="atTpFotos" type="number" min="0" max="20" value="' + At_esc_(t.exige.fotosMin) + '">') + At_campo_("Checklist", '<select id="atTpMod">' + At_opcoes_(r.modelos.filter(function (m) { return m.ativo; }).map(function (m) { return { v: m.codigo, t: m.nome }; }), t.modeloCodigo, "Sem checklist") + '</select>') +
+      At_campo_("Documento técnico", '<select id="atTpDoc">' + At_opcoes_(At_mapaOpcoes_(r.docsTecnicos), t.documentoTecnico) + '</select>') + '</div>' + At_campo_("O que mudou e por quê", '<input id="atTpMot" maxlength="500">') + '<div id="atTpMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>', 680);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      At_chamar_("salvarTipo", { tipo: { codigo: t.codigo, nome: At_$_("atTpNome").value, grupo: At_$_("atTpGrupo").value, descricao: At_$_("atTpDesc").value, exige: { relato: At_$_("atTpRel").checked, assinatura: At_$_("atTpAss").checked, qrOuSerie: At_$_("atTpQr").checked, fotosMin: At_$_("atTpFotos").value },
+        modeloCodigo: At_$_("atTpMod").value, documentoTecnico: At_$_("atTpDoc").value, semVisita: At_$_("atTpSem").checked, ativo: At_$_("atTpAtivo").checked }, motivo: At_$_("atTpMot").value }, function (x) { ov.remove(); depois(); setTimeout(function () { alert(x.message); }, 300); }, function (m) { At_msg_("atTpMsg", m); });
+    };
+  }
+  function At_editarModelo_(m, r, depois) {
+    m = m || { codigo: "", nome: "", perguntas: [{ id: "", texto: "", tipo: "SIM_NAO", obrigatoria: true }], ativo: true };
+    var linha = function (p) { return '<div class="at-card" data-p><div class="at-grade3">' + At_campo_("Pergunta", '<input data-f="texto" maxlength="300" value="' + At_esc_(p.texto || "") + '">') + At_campo_("Tipo de resposta", '<select data-f="tipo">' + At_opcoes_(At_mapaOpcoes_(r.tiposPergunta), p.tipo) + '</select>') +
+      At_campo_("Opções (separe com |)", '<input data-f="opcoes" maxlength="1000" value="' + At_esc_((p.opcoes || []).join("|")) + '">') + '</div><input type="hidden" data-f="id" value="' + At_esc_(p.id || "") + '"><label class="at-check"><input type="checkbox" data-f="obrigatoria"' + (p.obrigatoria ? " checked" : "") + '> Obrigatória</label>' +
+      '<div class="at-grade2">' + At_campo_("Fotos mínimas (pergunta de foto)", '<input data-f="fotosMin" type="number" min="0" max="10" value="' + At_esc_(p.fotosMin || (p.tipo === "FOTO" ? 1 : 0)) + '">') + '<div class="at-acoes"><button type="button" class="btn-secondary" data-tirar>Tirar a pergunta</button></div></div></div>'; };
+    var ov = At_modal_(m.codigo ? "Modelo: " + m.nome : "Novo modelo de checklist", At_campo_("Nome do modelo", '<input id="atMdNome" maxlength="150" value="' + At_esc_(m.nome) + '">') + '<div id="atMdPerg">' + m.perguntas.map(linha).join("") + '</div><div class="at-acoes"><button type="button" class="btn-secondary" id="atMdMais">Mais uma pergunta</button></div>' +
+      '<label class="at-check"><input type="checkbox" id="atMdAtivo"' + (m.ativo ? " checked" : "") + '> Ativo</label>' + At_campo_("O que mudou e por quê", '<input id="atMdMot" maxlength="500">', "A versão nova vale para as próximas O.S.; as já agendadas seguem com a versão que tinham.") + '<div id="atMdMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>', 820);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    var ligar = function () { ov.querySelectorAll("[data-tirar]").forEach(function (b) { b.onclick = function () { b.closest("[data-p]").remove(); }; }); };
+    ligar();
+    At_$_("atMdMais").onclick = function () { At_$_("atMdPerg").insertAdjacentHTML("beforeend", linha({ tipo: "TEXTO" })); ligar(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      var perg = [];
+      ov.querySelectorAll("[data-p]").forEach(function (l) { var p = {}; l.querySelectorAll("[data-f]").forEach(function (f) { var k = f.getAttribute("data-f"); p[k] = f.type === "checkbox" ? f.checked : f.value; }); p.opcoes = String(p.opcoes || "").split("|").map(function (x) { return x.trim(); }).filter(Boolean); if (String(p.texto || "").trim()) perg.push(p); });
+      At_chamar_("salvarModelo", { modelo: { codigo: m.codigo, nome: At_$_("atMdNome").value, perguntas: perg, ativo: At_$_("atMdAtivo").checked }, motivo: At_$_("atMdMot").value }, function (x) { ov.remove(); depois(); setTimeout(function () { alert(x.message); }, 300); }, function (msg) { At_msg_("atMdMsg", msg); });
+    };
+  }
+
+  // =========================================================
+  // TRANSIÇÃO DO AUVO (6 critérios)
+  // =========================================================
+  function At_renderTransicao_(div) {
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Transição do Auvo", "Os seis critérios do projeto para deixar de usar o Auvo. Nada é desligado sozinho: quando todos estiverem cumpridos, só o Administrador marca \"Auvo desligado\".", '') + '<div id="atTrCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    At_chamar_("transicao", {}, function (r) { At_desenharTransicao_(div, r.transicao); }, function (m) { At_msg_("atTrCorpo", m); });
+  }
+  function At_desenharTransicao_(div, t) {
+    var c = At_$_("atTrCorpo"); if (!c) return;
+    var h = (t.auvoDesligado ? '<div class="at-faixa ok">Auvo marcado como desligado por ' + At_esc_(t.auvoDesligado.por) + ' em ' + At_esc_(t.auvoDesligado.em) + ': ' + At_esc_(t.auvoDesligado.texto) + '</div>' :
+      '<div class="at-faixa ' + (t.todosCumpridos ? "ok" : "aviso") + '">' + (t.todosCumpridos ? "Os seis critérios estão cumpridos." : "Ainda há critério por cumprir. Uso em paralelo: o Auvo continua funcionando.") + '</div>') + '<div class="at-lista">';
+    t.criterios.forEach(function (k, i) {
+      h += '<div class="at-card ' + (k.cumprido ? "fim" : "p2") + '"><p class="at-card-tit">' + (i + 1) + '. ' + At_esc_(k.titulo) + ' ' + (k.cumprido ? At_selo_("verde", "Cumprido") : At_selo_("laranja", "Falta")) + '</p><p class="at-txt">' + At_esc_(k.automatico) + '</p>' +
+        k.confirmacoes.map(function (m) { return '<p class="at-meta">' + (m.feito ? "Confirmado: " + At_esc_(m.rotulo) + " por " + At_esc_(m.por) + " em " + At_esc_(m.em) + " (" + At_esc_(m.texto) + ")" + (t.podeConfirmar && !t.auvoDesligado ? ' <button type="button" class="btn-secondary" data-desf="' + m.chave + '">Desfazer</button>' : '') :
+          (t.podeConfirmar && !t.auvoDesligado ? '<button type="button" class="btn-secondary" data-conf="' + m.chave + '">' + At_esc_(m.rotulo) + '</button>' : "Falta: " + At_esc_(m.rotulo))) + '</p>'; }).join("") +
+        (k.abertas && k.abertas.length ? '<div class="at-sec">O.S. abertas no Auvo sem destino</div>' + k.abertas.map(function (a) { return '<div class="at-card"><p class="at-txt">Tarefa ' + At_esc_(a.taskId) + ' · ' + At_esc_(a.cliente) + ' · ' + At_esc_(a.data) + ' · ' + At_esc_(a.tecnico) + (a.link ? ' · <a href="' + At_esc_(a.link) + '" target="_blank" rel="noopener">Abrir no Auvo</a>' : '') + '</p>' +
+          '<div class="at-acoes"><button type="button" class="btn-secondary" data-dest="FECHAR_NO_AUVO" data-task="' + At_esc_(a.taskId) + '">Vai ser fechada no Auvo</button><button type="button" class="btn-secondary" data-dest="RECRIAR" data-task="' + At_esc_(a.taskId) + '">Recriar como chamado no SGO+</button><button type="button" class="btn-secondary" data-dest="SEM_ATENDIMENTO" data-task="' + At_esc_(a.taskId) + '">Não houve atendimento</button></div></div>'; }).join("") : '') + '</div>';
+    });
+    h += '</div><div class="at-caixa"><h3>Histórico do Auvo nos equipamentos</h3><p class="at-txt">' + (t.indiceAcervo ? At_esc_(t.indiceAcervo.indexadas + " de " + t.indiceAcervo.total + " tarefas do acervo ligadas aos equipamentos (" + (t.indiceAcervo.concluido ? "concluído" : "a rotina continua de hora em hora") + ").") : "Ainda não começou. A rotina liga um lote por hora; você pode adiantar.") + '</p>' +
+      '<div class="at-acoes"><button type="button" class="btn-secondary" id="atTrIdx">Ligar um lote agora</button><button type="button" class="btn-secondary" id="atTrRev">Tarefas sem equipamento (revisão)</button></div></div>' +
+      (t.podeDesligar ? '<div class="at-caixa"><h3>Marcar "Auvo desligado"</h3><p class="at-txt">Registro da decisão. Depois: desligar os gatilhos em Integração Auvo, retirar a criação de tarefa nos geradores, trocar os textos de ajuda e cancelar o contrato.</p><div class="at-acoes"><button type="button" class="btn-primary" id="atTrDesl">Marcar Auvo desligado</button></div></div>' : '');
+    c.innerHTML = h;
+    var redesenhar = function (x) { At_desenharTransicao_(div, x.transicao); if (x.message) setTimeout(function () { alert(x.message); }, 200); };
+    c.querySelectorAll("[data-conf]").forEach(function (b) { b.onclick = function () { At_pedirTexto_(b.textContent, "Fica registrado com o seu nome e a data.", "O que foi conferido", 10, function (tx, ov) { At_chamar_("confirmarCriterio", { chave: b.getAttribute("data-conf"), texto: tx }, function (x) { ov.remove(); redesenhar(x); }, function (m) { At_msg_("atTxtMsg", m); }); }); }; });
+    c.querySelectorAll("[data-desf]").forEach(function (b) { b.onclick = function () { At_chamar_("confirmarCriterio", { chave: b.getAttribute("data-desf"), desfazer: true }, redesenhar); }; });
+    c.querySelectorAll("[data-dest]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Destino da tarefa " + b.getAttribute("data-task"), b.textContent, "Observação", 5, function (tx, ov) { At_chamar_("destinoAuvo", { taskId: b.getAttribute("data-task"), destino: b.getAttribute("data-dest"), texto: tx }, function (x) { ov.remove(); redesenhar(x); }, function (m) { At_msg_("atTxtMsg", m); }); }); }; });
+    At_$_("atTrIdx").onclick = function () { At_chamar_("indexarAcervo", {}, function (x) { alert((x.indice.motivo || ("Lote feito: " + x.indice.feitos + " tarefa(s); faltam " + x.indice.restantes + "."))); At_renderTransicao_(div); }, null, { carregando: "Ligando o histórico do Auvo aos equipamentos…" }); };
+    At_$_("atTrRev").onclick = function () { At_chamar_("revisaoAcervo", {}, function (x) { At_modal_("Tarefas do Auvo sem equipamento do SGO+ (" + x.total + ")", x.itens.length ? x.itens.map(function (i) { return '<p class="at-meta">Tarefa ' + At_esc_(i.taskId) + ' · ' + At_esc_(i.data) + ' · ' + At_esc_(i.tipo) + (i.equipAuvo ? ' · equipamento ' + At_esc_(i.equipAuvo) + ' do Auvo sem vínculo' : ' · sem equipamento no Auvo') + '</p>'; }).join("") + '<p class="at-txt">Para ligar, vincule o equipamento em Integração Auvo (sincronização reversa) e rode o lote de novo. Nada se perde: a tarefa continua no acervo.</p>' : '<p class="at-txt">Nenhuma.</p>', "", 700); }); };
+    var dsl = At_$_("atTrDesl"); if (dsl) dsl.onclick = function () { At_pedirTexto_("Marcar Auvo desligado", "Só o registro da decisão: nada é desligado sozinho.", "Decisão (ex.: data combinada para cancelar o contrato)", 10, function (tx, ov) { At_chamar_("auvoDesligado", { texto: tx }, function (x) { ov.remove(); redesenhar(x); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
+  }
+
+  // =========================================================
+  // PORTAL DO CLIENTE (Meus chamados)
+  // =========================================================
+  function At_renderPortal_(div) {
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Meus chamados", "Peça atendimento técnico para os seus equipamentos e acompanhe cada pedido até o relatório.", '<button type="button" class="btn-primary" id="atPoNovo">Pedir atendimento</button>') + '<div id="atPoCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    At_chamar_("portal", {}, function (r) {
+      var c = At_$_("atPoCorpo"); if (!c) return;
+      AT.portal = r;
+      var h = (r.pedidos.length ? '<div class="at-sec">Pedidos em análise</div><div class="at-lista">' + r.pedidos.map(function (p) { return '<div class="at-card"><p class="at-card-tit">' + At_esc_(p.numero) + ' · ' + At_esc_(p.equipamentoTexto) + '</p><p class="at-meta">Enviado em ' + At_esc_(p.em) + '. A equipe técnica confere e abre o chamado.</p><p class="at-txt">' + At_esc_(p.descricao) + '</p></div>'; }).join("") + '</div>' : '') +
+        '<div class="at-sec">Chamados</div>' + (r.chamados.length ? '<div class="at-lista">' + r.chamados.map(function (ch) {
+          return '<div class="at-card' + (ch.cancelado ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(ch.numero) + ' · ' + At_esc_(ch.equipamentoTexto) + '</p><p class="at-meta">Aberto em ' + At_esc_(ch.abertoEm) + (ch.unidadeNome ? ' · ' + At_esc_(ch.unidadeNome) : '') + '</p>' +
+            (ch.cancelado ? '<p class="at-txt">Cancelado.</p>' : '<div class="at-etapas">' + ch.etapas.map(function (e, i) { return '<span class="' + (i + 1 <= ch.etapa ? "feita" : "") + '">' + At_esc_(e) + '</span>'; }).join("") + '</div>') +
+            '<p class="at-txt">' + At_esc_(ch.sintoma) + '</p>' + (ch.agendadoPara ? '<p class="at-meta">Visita agendada para ' + At_esc_(ch.agendadoPara) + '.</p>' : '') + (ch.relatorioUrl ? '<a href="' + At_esc_(ch.relatorioUrl) + '" target="_blank" rel="noopener">Baixar o relatório do atendimento (' + At_esc_(ch.osNumero) + ')</a>' : '') + '</div>';
+        }).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado ainda.</div>') +
+        '<div class="at-sec">Relatórios emitidos</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
+      c.innerHTML = h;
+    }, function (m) { At_msg_("atPoCorpo", m); });
+    At_$_("atPoNovo").onclick = function () {
+      var eqs = (AT.portal && AT.portal.equipamentos) || [];
+      var ov = At_modal_("Pedir atendimento técnico", At_campo_("Equipamento", '<select id="atPoEq">' + At_opcoes_(eqs.map(function (e) { return { v: e.id, t: e.texto + (e.unidade ? " · " + e.unidade : "") }; }), "", "Escolha o equipamento") + '</select>') +
+        At_campo_("O que está acontecendo", '<textarea id="atPoDesc" maxlength="3000" placeholder="Ex.: a autoclave não completa o ciclo e apita no final"></textarea>') + '<div class="at-grade2">' + At_campo_("Equipamento parado?", '<select id="atPoPar">' + At_opcoes_([{ v: "NAO", t: "Não" }, { v: "PARCIAL", t: "Parcialmente" }, { v: "TOTAL", t: "Sim, totalmente" }], "NAO") + '</select>') +
+        At_campo_("Seu nome", '<input id="atPoSol" maxlength="120">') + '</div>' + At_campo_("Telefone ou e-mail para falarmos com você", '<input id="atPoCont" maxlength="200">') + '<div id="atPoMsg"></div>',
+        '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Enviar o pedido</button>');
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () { At_chamar_("solicitar", { equipamentoId: At_$_("atPoEq").value, descricao: At_$_("atPoDesc").value, parada: At_$_("atPoPar").value, solicitante: At_$_("atPoSol").value, contato: At_$_("atPoCont").value, origem: "PORTAL" }, function (x) { ov.remove(); alert(x.message); At_renderPortal_(div); }, function (m) { At_msg_("atPoMsg", m); }); };
+    };
+  }
+</script>

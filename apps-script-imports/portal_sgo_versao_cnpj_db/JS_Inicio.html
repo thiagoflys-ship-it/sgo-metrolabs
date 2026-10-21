@@ -333,6 +333,10 @@
         // 21/10/2026: pendências de Compras abrem a tela e a ficha do pedido (JS_Compras.html).
         if (typeof Compras_irPara_ === "function") Compras_irPara_(acao); else abrir(acao.mod || "compras_meus");
         break;
+      case "assistencia":
+        // 21/10/2026: pendências da Assistência técnica abrem o chamado, a O.S. ou a fila (JS_Assistencia.html).
+        if (typeof Assistencia_irPara_ === "function") Assistencia_irPara_(acao); else abrir(acao.mod || "assistencia");
+        break;
       case "comercial":
         // 21/10/2026: pendências do Comercial abrem a oportunidade ou a proposta (JS_Comercial.html).
         if (typeof Comercial_irPara_ === "function") Comercial_irPara_(acao); else abrir("comercial");

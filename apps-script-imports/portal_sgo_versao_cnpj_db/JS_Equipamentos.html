@@ -123,9 +123,13 @@
             var lista = auvo || [];
             corpo.innerHTML = lista.length ? '<ul class="cadx-arvore">' + lista.map(function (x) {
               return '<li><div class="cadx-no"><div class="cadx-no-texto"><b>' + CadUI_esc_(x.data ? new Date(x.data).toLocaleDateString("pt-BR") : "Sem data") + "</b> · " + CadUI_esc_(x.tipo || "") + " " + (x.finalizada ? '<span class="cadx-selo bc-selo tom-ok">Concluído</span>' : '<span class="cadx-selo bc-selo tom-alerta">Em andamento</span>') +
-                '<div class="cadx-sub">Técnico: ' + CadUI_esc_(x.tecnico || "não informado") + "</div>" + (x.relato ? '<div class="cadx-sub">' + CadUI_esc_(x.relato) + "</div>" : "") + "</div>" +
-                (x.auvoTaskId && typeof Auvo_abrirModalOS_ === "function" ? '<button type="button" class="cadx-btn" onclick="Auvo_abrirModalOS_(\'' + CadUI_esc_(String(x.auvoTaskId).replace(/'/g, "")) + '\')">Ver O.S.</button>' : "") + "</div></li>";
-            }).join("") + "</ul>" : '<div class="cadx-vazio bc-vazio">Nenhum atendimento do Auvo ligado a este equipamento.</div>';
+                '<div class="cadx-sub">' + CadUI_esc_(x.origemNome || "Auvo") + (x.numero ? " " + CadUI_esc_(x.numero) : "") + " · Técnico: " + CadUI_esc_(x.tecnico || "não informado") + "</div>" + (x.relato ? '<div class="cadx-sub">' + CadUI_esc_(x.relato) + "</div>" : "") + "</div>" +
+                (x.relatorioUrl ? '<a class="cadx-btn" href="' + CadUI_esc_(x.relatorioUrl) + '" target="_blank" rel="noopener">Relatório da O.S.</a>' : "") +
+                ((x.origem || "AUVO") === "AUVO" && x.auvoTaskId && typeof Auvo_abrirModalOS_ === "function" ? '<button type="button" class="cadx-btn" onclick="Auvo_abrirModalOS_(\'' + CadUI_esc_(String(x.auvoTaskId).replace(/'/g, "")) + '\')">Ver O.S.</button>' : "") +
+                // 21/10/2026: fonte única (Assistência técnica do SGO+, Auvo e o histórico copiado do Auvo)
+                (x.origem === "SGO" && x.osId && typeof Assistencia_irPara_ === "function" ? '<button type="button" class="cadx-btn" onclick="Assistencia_irPara_({ mod: \'assistencia_os\', id: \'' + CadUI_esc_(String(x.osId).replace(/'/g, "")) + '\' })">Ver O.S. do SGO+</button>' : "") +
+                (x.origem === "AUVO_ACERVO" && x.acervo && x.qtdArquivos ? '<button type="button" class="cadx-btn" data-acervo="' + CadUI_esc_(x.numero) + '">Fotos do Auvo</button>' : "") + "</div></li>";
+            }).join("") + "</ul>" : '<div class="cadx-vazio bc-vazio">Nenhum atendimento ligado a este equipamento (SGO+, Auvo ou histórico do Auvo).</div>';
           };
           if (auvo) d2(); else CadUI_chamar_("equipamentosObter", [e.ID], function (res) { auvo = res.atendimentosAuvo || []; if (CADUI.painel === cfg && cfg.aba === "auvo") d2(); }, function (msg) { if (corpo) corpo.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + CadUI_esc_(msg) + "</div>"; });
         }

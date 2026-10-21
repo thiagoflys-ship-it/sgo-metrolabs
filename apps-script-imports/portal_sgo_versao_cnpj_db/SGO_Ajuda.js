@@ -37,7 +37,11 @@ var SGO_AJUDA_NOMES = {
   comercial_kanban: 'Quadro do funil', comercial_gantt: 'Gantt comercial',
   compras_pedir: 'Pedir peça ou material', compras_meus: 'Meus pedidos de compra', compras: 'Fila de compras', compras_fornecedores: 'Fornecedores',
   compras_financeiro: 'Conferência do Financeiro', compras_painel: 'Painel de compras', compras_regras: 'Regras de compras',
-  ponto: 'Assistente do ponto', avisos_matriz: 'Matriz de avisos', meus_avisos: 'Meus avisos'
+  ponto: 'Assistente do ponto', avisos_matriz: 'Matriz de avisos', meus_avisos: 'Meus avisos',
+  // 21/10/2026: Assistência técnica nativa (SGO_Ajuda_Assistencia.js)
+  assistencia: 'Chamados', assistencia_abrir: 'Abrir chamado', assistencia_os: 'Ordens de serviço', assistencia_agenda: 'Agenda dos técnicos',
+  assistencia_solicitacoes: 'Solicitações dos clientes', assistencia_casos: 'Reclamações', assistencia_indicadores: 'Indicadores da assistência',
+  assistencia_regras: 'Regras da assistência', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados'
 };
 
 /**
@@ -69,6 +73,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Comercial_ === 'function') fontes.push(['Comercial', SGO_ajudaTelas_Comercial_]);
   // 21/10/2026: Compras e peças nativo (SGO_Ajuda_Compras.js).
   if (typeof SGO_ajudaTelas_Compras_ === 'function') fontes.push(['Compras', SGO_ajudaTelas_Compras_]);
+  // 21/10/2026: Assistência técnica nativa (SGO_Ajuda_Assistencia.js).
+  if (typeof SGO_ajudaTelas_Assistencia_ === 'function') fontes.push(['Assistencia', SGO_ajudaTelas_Assistencia_]);
   // 21/10/2026: E-mail integrado (SGO_Ajuda_Email.js).
   if (typeof SGO_ajudaTelas_Email_ === 'function') fontes.push(['Email', SGO_ajudaTelas_Email_]);
   // 20/10/2026: assistente "Tire sua dúvida" e o painel das perguntas (SGO_Ajuda_Assistente.js).

@@ -264,6 +264,7 @@
           if (typeof Email_iniciar_ === "function") Email_iniciar_();
           if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
           if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
+          if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
           if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
           if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
         } else {
@@ -341,6 +342,7 @@
         if (typeof Email_iniciar_ === "function") Email_iniciar_();
         if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
         if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
+        if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
         if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
         if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
       })
@@ -701,6 +703,7 @@
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
     if (typeof Comercial_parar_ === "function") Comercial_parar_();
     if (typeof Compras_parar_ === "function") Compras_parar_();
+    if (typeof Assistencia_parar_ === "function") Assistencia_parar_();
     if (typeof Ponto_parar_ === "function") Ponto_parar_();
     if (typeof Email_parar_ === "function") Email_parar_();
 
@@ -928,6 +931,12 @@
     // ASSISTENTE DO PONTO NATIVO (2026-10-21) — ver JS_Ponto.html / SGO_Ponto_*.js. O servidor confere o papel em toda chamada.
     if (mod === "ponto" && typeof Ponto_render_ === "function") {
       Ponto_render_();
+      return;
+    }
+
+    // ASSISTÊNCIA TÉCNICA NATIVA (2026-10-21) — ver JS_Assistencia.html / SGO_Assistencia_*.js. O servidor confere o perfil e o técnico responsável em toda chamada.
+    if ((mod === "assistencia" || mod.indexOf("assistencia_") === 0) && typeof Assistencia_render_ === "function") {
+      Assistencia_render_(mod);
       return;
     }
 
@@ -4297,6 +4306,9 @@
       // 21/10/2026: Compras (todo colaborador interno pede peça; o grupo aparece depois que o servidor responde o acesso).
       var grupoCmp = document.getElementById("menu-secao-compras");
       if (grupoCmp && grupoCmp.style.display !== "none") itens.push({ icone: '<i class="fas fa-cart-plus" aria-hidden="true"></i>', legenda: "Pedir peça", mod: "compras_pedir" });
+      // 21/10/2026: Assistência técnica (O.S. do técnico; o grupo aparece depois que o servidor responde o acesso).
+      var grupoAst = document.getElementById("menu-secao-assistencia");
+      if (grupoAst && grupoAst.style.display !== "none") itens.push({ icone: '<i class="fas fa-clipboard-list" aria-hidden="true"></i>', legenda: "Ordens de serviço", mod: "assistencia_os" });
       // 21/10/2026: Assistente do ponto (quando o botão do menu está visível: ligado, ou RH/Administrador/Diretoria).
       var btnPonto = document.getElementById("menu-btn-ponto");
       if (btnPonto && btnPonto.style.display !== "none") itens.push({ icone: '<i class="fas fa-clock" aria-hidden="true"></i>', legenda: "Ponto", mod: "ponto" });
@@ -4308,6 +4320,8 @@
       itens.push({ icone: '<i class="fas fa-traffic-light" aria-hidden="true"></i>', legenda: "Conduta", mod: "conduta" });
       itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Clientes", mod: "clientes" });
     }
+    // 21/10/2026: portal do cliente da Assistência técnica (pedir atendimento e acompanhar os chamados dos próprios equipamentos).
+    if (isCliente) { var grupoAstCli = document.getElementById("menu-secao-assistencia"); if (grupoAstCli && grupoAstCli.style.display !== "none") itens.push({ icone: '<i class="fas fa-headset" aria-hidden="true"></i>', legenda: "Meus chamados", mod: "assistencia_portal" }); }
     itens.push({ icone: '<i class="fas fa-location-dot" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });

@@ -4,8 +4,60 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "1acdfc75792c",
+ "versao": "c29b60a3daf3",
  "manuais": [
+  {
+   "arquivo": "MANUAL_APP_CAMPO.md",
+   "titulo": "SGO+ Campo — Manual do aplicativo do técnico",
+   "tela": "assistencia_os",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 21/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo\nnos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de\naplicativos, e usa o mesmo usuário e senha do SGO+.\n\nEndereço: https://sgo.metrolabs.com.br/campo/\n\nA mesma ajuda está dentro do aplicativo, no botão Ajuda (canto de cima, em todas as telas)."
+    },
+    {
+     "titulo": "Instalar > Android (Chrome)",
+     "texto": "1. Abra o endereço no Chrome, com internet.\n2. Entre com o seu usuário e senha do SGO+.\n3. Toque em Instalar o app (aparece no aviso amarelo ou em Minha conta). Se não aparecer, toque no menu de três\n pontos e em Instalar aplicativo ou Adicionar à tela inicial.\n4. Daqui em diante, abra sempre pelo ícone SGO+ Campo."
+    },
+    {
+     "titulo": "Instalar > iPhone (Safari)",
+     "texto": "1. Abra o endereço no Safari (não em outro navegador), com internet.\n2. Toque em Compartilhar (o quadrado com a seta para cima) e em Adicionar à Tela de Início.\n3. Abra pelo ícone SGO+ Campo que apareceu na Tela de Início e entre com o seu usuário.\n4. Use sempre o ícone. No iPhone, o que um site guarda no Safari pode ser apagado pelo próprio aparelho depois de alguns\n dias sem uso; pelo ícone da Tela de Início isso não acontece. Enquanto o app não estiver na Tela de Início, ele mostra\n um aviso amarelo explicando isso."
+    },
+    {
+     "titulo": "Meu dia",
+     "texto": "Mostra as suas O.S. de hoje (e as que ficaram abertas de dias anteriores, marcadas em vermelho) e as de\n amanhã, na ordem definida pelo supervisor.\nAbra o app com internet ao menos uma vez por dia, de preferência antes de sair. É quando a agenda é baixada e fica\n guardada no celular. A linha \"Agenda atualizada às ...\" mostra quando foi a última vez.\nCada cartão mostra cliente, horário, tipo de serviço, prioridade, endereço, equipamento e a situação (\"A fazer\",\n \"Em atendimento\", \"Concluída, aguardando envio\", \"Concluída e enviada\").\nAtualizar agenda baixa de novo quando houver sinal."
+    },
+    {
+     "titulo": "Atendimento, passo a passo (parte 1)",
+     "texto": "Toque no cartão da O.S. Em cima ficam cliente, unidade, endereço, responsável, problema e orientação; os botões\nAbrir no mapa (abre o aplicativo de mapas do celular) e Ligar; o equipamento (TAG, nº de série, setor) e os\núltimos atendimentos dele (inclusive os do Auvo). Embaixo, o passo a passo. Cada passo fica com um visto quando está\nfeito, e \"Falta\" em vermelho quando é obrigatório e ainda não foi feito. 1. Saí para o atendimento (opcional): ao sair para o cliente. Não registra localização. 2. Cheguei: ao chegar. O app avisa antes: a localização é registrada só neste toque e no Concluí, nunca o tempo\n todo. Pode escolher Registrar sem localização; o registro vale do mesmo jeito, com a observação. 3. Confirmar equipamento: no Android, Ler o QR do equipamento (tira uma foto da etiqueta QR do SGO+). Em\n qualquer celular, confirme pela série ou pela TAG. Se a série da etiqueta for outra, digite-a: o app aceita e a gestão\n é avisada da série divergente (o cadastro não muda sozinho). 4. Checklist: responda cada pergunta (Sim / Não / Não se aplica, opções, números, data, texto ou foto). As\n obrigatórias estão marcadas. Número aceita vírgula ou ponto. Cada resposta é guardada na hora. 5. Fotos: Tirar foto abre a câmera; Escolher da galeria usa uma foto já tirada. A foto é reduzida no próprio\n celular (lado maior até 1600 pixels, cerca de 300 KB) e leva gravados o número da O.S., a data e a hora. Escreva uma\n legenda curta. Foto ainda não enviada pode ser removida; depois de começar a subir, não. 6. Peças: Aplicada para a peça usada; Falta (pedir) para a peça que precisa ser comprada (abre o pedido em\n Compras e a O.S. fica aguardando peça), com urgência Normal ou Urgente. Lançou errado: Desfazer. 7. Relato:"
+    },
+    {
+     "titulo": "Atendimento, passo a passo (parte 2)",
+     "texto": "condição encontrada, causa, serviço realizado, teste funcional, recomendações e observações. Pode usar o\n microfone do teclado para ditar. Toque em Guardar relato (sair da tela também guarda). 8. Assinatura do cliente: o responsável assina no quadro com o dedo e informa nome e documento (CPF, RG ou\n matrícula). Sem quem assine: Registrar sem assinatura, com o motivo, o nome de quem recebeu o serviço e a\n justificativa. 9. Concluí: só libera quando não falta nada. A tela diz em palavras o que falta (por exemplo: \"1 foto (mínimo 2)\",\n \"A assinatura do cliente ou o motivo de não haver assinatura\"). Ao concluir, o app pede a localização de novo, com o\n mesmo aviso. Depois de concluída, a O.S. não muda mais no celular; correções são feitas pela gestão na tela do SGO+."
+    },
+    {
+     "titulo": "Sem sinal (subsolo, centro cirúrgico, estrada)",
+     "texto": "Trabalhe normalmente. Tudo o que você faz fica guardado no celular, inclusive fotos e assinatura, mesmo que o app seja\n fechado ou o celular desligado.\nA barra de baixo, sempre visível, mostra Pendente de envio (N) e a situação (\"Sem sinal: guardado no aparelho\",\n \"Enviando...\", \"Tudo enviado às 14:32\").\nQuando o sinal volta, o app envia sozinho, na ordem em que as coisas foram feitas, uma foto de cada vez. Se a conexão\n cair no meio, ele tenta de novo; o servidor reconhece o que já recebeu e nada é registrado duas vezes.\nPara forçar, toque na barra e em Enviar agora.\nNada é apagado do celular antes do servidor confirmar.\nSe a sessão terminar no servidor (muitas horas sem uso), o app mostra \"A sua sessão terminou\" e o botão Entrar de\n novo. O que está guardado não se perde: depois de entrar, o envio continua.\nItens guardados há mais de 12 horas sem envio geram um aviso vermelho: abra o app num lugar com internet."
+    },
+    {
+     "titulo": "Envios",
+     "texto": "Toque na barra Pendente de envio (N). A tela lista:\nEsperando envio: o que ainda não subiu, com a hora em que foi feito e as tentativas.\nRecusados pelo servidor: com o motivo e o que fazer. Quando dá para corrigir, há Tentar de novo. Quando não\n adianta reenviar (por exemplo, O.S. cancelada ou de outro técnico), o item fica guardado como registro; fale com o\n supervisor.\nEnviados: os últimos confirmados, com a hora do envio."
+    },
+    {
+     "titulo": "Trocar de celular (ou entregar o aparelho)",
+     "texto": "1. No celular antigo, abra o app com internet e espere Pendente de envio (0).\n2. Só depois desinstale, limpe ou entregue o aparelho. O que não foi enviado existe só naquele celular.\n3. No celular novo, instale o app (item 1) e entre com o seu usuário. A agenda e o que já está no servidor (chegada,\n respostas, fotos, relato, assinatura) são baixados de novo.\n\nCelular perdido ou quebrado com itens pendentes: avise o supervisor. O que não chegou ao servidor terá de ser\nregistrado de novo pela gestão."
+    },
+    {
+     "titulo": "Cuidados",
+     "texto": "Não limpe os dados do navegador nem desinstale o app com itens pendentes.\nNo iPhone, use sempre o ícone da Tela de Início e abra o app com internet todos os dias.\nUm celular por pessoa. Se outra pessoa entrar no mesmo celular, o que é seu fica guardado e só é enviado quando você\n entrar de novo; o app avisa que há itens de outro usuário.\nSair (em Minha conta) não apaga o que está guardado para envio.\nLetra grande (em Minha conta) aumenta textos e botões.\nQuando houver versão nova, aparece Versão nova do app pronta — Atualizar agora."
+    },
+    {
+     "titulo": "Para a gestão e o suporte",
+     "texto": "O app chama as funções do contrato docs/API_APP_TECNICO.md (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto)\n pelo /api/run do servidor, com o número de pedido no cabeçalho X-Pedido-Id. Cada ação tem uma chave única do\n aparelho (idLocal); o servidor guarda a hora do aparelho e a do recebimento.\nO aplicativo fica em sgo_servidor/src/publico/campo/ (página, service worker, manifest, ícones) e é servido por\n src/servicos/campo.ts. Ele só existe no endereço do SGO+.\nA localização é coletada só nos toques Cheguei e Concluí."
+    }
+   ]
+  },
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
    "titulo": "Manual do assistente \"Tire sua dúvida\" (SGO+ e COMMAND)",
@@ -440,6 +492,86 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Registros",
      "texto": "Nada é apagado. NTF_REGRAS (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), NTF_RESUMO_FILA (itens guardados para o e-mail de resumo ou para o próximo expediente), NTF_RESUMOS (cada resumo avaliado: pessoa, dia, canal, situação, motivo), NTF_PREFERENCIAS (cada mudança de preferência) e NTF_ENVIOS (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO)."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_ASSISTENCIA.md",
+   "titulo": "Manual do módulo Assistência técnica",
+   "tela": "assistencia",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Assistência técnica nativa do SGO+ (21/10/2026). Substitui o uso do Auvo para chamados, agenda, ordens de serviço,\nrelatório do atendimento e acompanhamento do cliente. Funciona em paralelo ao Auvo até os seis critérios da tela\n\"Transição do Auvo\" serem cumpridos. O aplicativo do técnico no celular tem manual próprio (Manual do SGO+ Campo)."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Cada pedido de atendimento técnico vira um chamado com número (CH-2026-0001). O chamado passa pela triagem da gestão\nda área Técnica, ganha prazo pela prioridade, é agendado para um técnico e gera a ordem de serviço (OS-2026-0001). O\ntécnico registra o atendimento pelo aplicativo ou pela tela; a O.S. só fecha com a documentação completa e gera o\nrelatório A4, salvo na pasta do equipamento e enviado ao cliente."
+    },
+    {
+     "titulo": "Quem faz o quê",
+     "texto": "Equipe interna: abre chamado (telefone, e-mail, presencial) e acompanha.\nTécnico: registra as próprias O.S. Não vê valores de orçamento.\nGestor da área Técnica: triagem, agenda, reagendamento, cancelamento, série divergente, indicadores. Sem gestor da\n área Técnica configurado em Caixa de decisões > Regras e responsáveis, a triagem vai para a Diretoria.\nComercial e Financeiro: preenchem, emitem e registram a resposta do orçamento do chamado.\nAdministrador, Diretoria e Gestor: alteram as Regras da assistência.\nAdministrador: marca \"Auvo desligado\" quando os seis critérios estão cumpridos.\nCliente: em \"Meus chamados\" pede atendimento para os próprios equipamentos e baixa os relatórios."
+    },
+    {
+     "titulo": "O caminho do chamado",
+     "texto": "1. Aberto: o pedido chegou (tela interna, e-mail recebido, portal do cliente, QR do equipamento, pedido aprovado do Comercial).\n2. Em triagem: a gestão confirma os sintomas, o risco de continuar usando e o diagnóstico preliminar.\n3. Decisão da triagem: resolvido remotamente, aguardando orçamento, aguardando peça ou planejado (visita).\n4. Agendado: técnico, data, duração, tipo de serviço e preparo.\n5. Em campo: em deslocamento, no local, em execução (pausado ou aguardando cliente quando preciso).\n6. Execução concluída, documentação pendente: o técnico concluiu, mas falta algo da documentação.\n7. Encerrado (ou Cancelado, sempre com motivo).\n\nChamado encerrado ou cancelado não muda. Se o problema voltar, abra outro chamado: ele aparece como reincidência\nquando o mesmo equipamento teve chamado nos últimos 30 dias."
+    },
+    {
+     "titulo": "Prazos (SLA)",
+     "texto": "O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa\n(08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):\nPrioridade | Quando usar | Prazo de atendimento | Prazo de triagemP1, crítica | Equipamento parado que afeta o paciente | 4 horas úteis | 30 minutos úteis\nP2, alta | Equipamento com falha importante | 1 dia útil | 2 horas úteis\nP3, normal | Falha que permite uso | 3 dias úteis | 4 horas úteis\nP4, baixa | Ajuste, melhoria, dúvida | 7 dias úteis | 1 dia útil\nContrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar\ncliente ou peça quando o contrato permite. Selos: \"Em dia\", \"Em risco\" (resta um quarto do prazo ou menos) e\n\"Prazo estourado\". Prazo em risco ou estourado entra na Caixa de decisões da área Técnica."
+    },
+    {
+     "titulo": "Abrir um chamado",
+     "texto": "1. Menu > Assistência técnica > Abrir chamado.\n2. Busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento. Equipamento fora do cadastro: marque\n \"Equipamento não identificado\" e descreva; a triagem liga ao cadastro.\n3. Escreva o problema relatado, quem pediu e o contato. Escolha a prioridade e se o equipamento está parado.\n4. Toque em \"Abrir o chamado\". Se o equipamento já tem chamado em aberto, a tela avisa: acompanhe pelo chamado aberto\n ou toque em \"Abrir mesmo assim\" se for outro problema.\n\nPelo e-mail integrado: abra a mensagem do cliente e toque em \"Abrir chamado\"; o texto, o remetente e o cliente\nreconhecido já vêm preenchidos.\n\nPedido do cliente pelo portal ou pelo QR entra em \"Solicitações dos clientes\": a equipe confere e abre o chamado\n(ou descarta com o motivo). O chamado não nasce sozinho, para não haver chamado duplicado ou errado."
+    },
+    {
+     "titulo": "Triagem",
+     "texto": "1. Abra o chamado e preencha os sintomas confirmados, o risco de continuar usando e o diagnóstico preliminar.\n2. Mude a prioridade se precisar (com o motivo; o prazo é recalculado).\n3. Escolha o tipo de serviço e o caminho:\nResolvido remotamente: descreva a orientação. Depois, encerre com quem confirmou no cliente e o teste.\nPrecisa de orçamento: descreva o que orçar. O Comercial recebe a atividade.\nPrecisa de peça: diga qual peça. O pedido abre sozinho em Compras, ligado ao cliente e ao chamado.\nPlanejar visita: o chamado vai para \"Planejado\" e aparece para agendar."
+    },
+    {
+     "titulo": "Agenda e despacho",
+     "texto": "1. No chamado \"Planejado\", escolha o técnico (usuário ativo com perfil Técnico ou da área Técnica), a data, a hora,\n a duração e o tipo de serviço.\n2. Confirme o preparo: ferramentas, instrumentos calibrados, acesso combinado, documentação, peças (ou por que não\n precisa) e a avaliação de risco.\n3. Toque em \"Agendar\". Se o técnico já tem O.S. no horário, tarefa aberta no Auvo ou ausência (férias, afastamento,\n dispensa do ponto), a tela mostra o conflito. Escolha outro horário ou confirme com o motivo (a gestão é avisada).\n4. Reserve o veículo livre sugerido pela Frota, se precisar. A reserva fica no nome do técnico e ligada ao cliente.\n\nO técnico recebe a atividade \"Atender OS-...\" em Minhas atividades, com prazo no fim do atendimento; ela é concluída\nsozinha quando a O.S. fecha. Reagendar exige motivo e avisa o técnico (e o anterior, se mudou) e o cliente por e-mail.\n\nAgenda dos técnicos: dia ou semana, com os atendimentos do SGO+ e do Auvo, reservas de veículo e ausências. \"Rota do\ndia\" mostra as paradas na ordem e o caminho no mapa; a gestão muda a ordem e o técnico vê a mesma no Meu dia."
+    },
+    {
+     "titulo": "Ordem de serviço",
+     "texto": "O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Assistência técnica > Ordens de serviço:\n1. Cheguei: registra a hora e, se o aparelho permitir, a localização. Localização só nos toques Cheguei e Concluí,\n nunca o tempo todo. Chegada longe do endereço da unidade vira observação para a gestão, não bloqueio.\n2. Checklist do tipo de serviço (itens com * são obrigatórios), fotos de cada pergunta de foto e fotos gerais.\n3. Relato: condição encontrada, causa, serviço realizado, teste funcional, recomendações e o número de série\n conferido (ou leitura do QR). Série diferente do cadastro é aceita, avisada à gestão e vira pendência até alguém\n conferir; o cadastro não muda sozinho.\n4. Peças aplicadas. Peça em falta abre o pedido em Compras e a O.S. fica aguardando peça; quando a peça chegar, a\n gestão libera e reagenda a mesma O.S.\n5. Assinatura do cliente no quadro, com o nome (e o documento, se quiser). Sem o responsável: \"Responsável ausente\",\n com o nome de quem recebeu e a justificativa.\n6. Concluí: registra a conclusão.\n\nA O.S. só fecha com a documentação completa do tipo de serviço: chegada, relato, condição encontrada, teste\nfuncional, conferência do equipamento, checklist obrigatório, fotos mínimas e assinatura (ou a exceção). Faltando\nalgo, fica \"Documentação pendente\": o técnico vê o que falta e recebe a cobrança; passadas 24 horas, a gestão também.\nQuando o que falta chega, a O.S. fecha sozinha.\n\nCalibração e qualificação: emita o documento no módulo (certificado, relatório de qualificação). O documento do mesmo\nequipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; também dá para ligar pela ficha da O.S."
+    },
+    {
+     "titulo": "Relatório da O.S.",
+     "texto": "Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da\nhora do servidor), serviço, checklist, peças, fotos, assinaturas e linha do tempo. Antes do encerramento sai como\nrascunho e fica numa pasta privada. Encerrada, a versão é salva na pasta \"4. Ordens de Serviço\" do equipamento (a\nmesma do QR), registrada no Arquivo de documentos e aparece na ficha do equipamento e no portal do cliente. Nenhuma\nversão é sobrescrita. \"Enviar ao cliente\" usa o Enviar documento do SGO+."
+    },
+    {
+     "titulo": "Orçamento do chamado",
+     "texto": "1. A triagem escolhe \"Precisa de orçamento\"; o Comercial recebe a atividade.\n2. Em Chamados > chamado > Orçamento: \"Preencher valores\" (peças e serviços), \"Emitir o A4\" e \"Enviar ao cliente\".\n3. Resposta do cliente: \"Aprovado\" exige o aceite anexado (e-mail salvo em PDF, foto do orçamento assinado ou PDF).\n Aprovado, o chamado vai para \"Planejado\" (ou \"Aguardando peça\", com as peças pedidas a Compras). Recusado, a gestão\n decide entre nova revisão e cancelar.\n\nO técnico não vê valores."
+    },
+    {
+     "titulo": "Reclamações",
+     "texto": "Reclamação do cliente ou problema que se repete vira um caso (RC-2026-0001) com dono (gestor da área Técnica) e\nprazo. Registre a causa, a ação e a resposta ao cliente e marque \"Resolvido\". Caso com prazo vencido vai à Caixa de\ndecisões."
+    },
+    {
+     "titulo": "Indicadores e relatório mensal",
+     "texto": "Atendimentos no prazo, tempo médio de atendimento em horas úteis, reincidência por equipamento (dois ou mais chamados\nem 90 dias), O.S. por técnico (encerradas, documentação pendente, tempo médio no local, sem assinatura, série\ndivergente), prazos estourados e reclamações. O relatório mensal A4 é gerado no primeiro dia útil e vai no e-mail\nmensal da Diretoria, junto com os relatórios do Comercial e de Compras."
+    },
+    {
+     "titulo": "Avisos",
+     "texto": "Pela matriz de avisos (eventos AT01 a AT12): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado\npara a triagem, chamado crítico, reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto.\nWhatsApp só na exceção do chamado P1 ao gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do\nresumo do dia. O cliente recebe só e-mail (chamado recebido, visita reagendada, atendimento concluído) enquanto durar\no piloto do WhatsApp."
+    },
+    {
+     "titulo": "Regras da assistência",
+     "texto": "Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,\ntamanho máximo da foto, peça em falta abrindo pedido em Compras, avisos ao cliente, relatório mensal e o interruptor\n\"Assistência do SGO+ ligada\". Tipos de serviço (29, vindos dos 30 tipos do Auvo) e modelos de checklist (editáveis;\n\"Trazer os questionários do Auvo\" cria os modelos a partir dos 13 questionários copiados no acervo). Cada mudança\nvira uma versão com o motivo; as O.S. já agendadas seguem o checklist que tinham."
+    },
+    {
+     "titulo": "Fonte única de atendimentos e o Auvo",
+     "texto": "Painel de qualidade, Programa de conduta (sugestões), Frota (deslocamento até o atendimento), ponto (técnico em\natendimento não recebe lembrete), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:\ntarefas do Auvo e O.S. do SGO+. A ficha do equipamento mostra também o histórico copiado do Auvo; as fotos do acervo\nabrem só para a equipe interna."
+    },
+    {
+     "titulo": "Transição do Auvo",
+     "texto": "Os seis critérios do projeto, cada um com o que o sistema mediu e a confirmação da gestão:\n1. Cópia do acervo do Auvo com zero faltas (ou faltas aceitas pelo dono) e o backup conferido.\n2. Quatro semanas seguidas com todos os técnicos só no SGO+, sem atendimento perdido.\n3. Painel de qualidade, Conduta e Frota mostrando os dados do módulo novo, conferidos pela gestão.\n4. Nenhuma O.S. aberta no Auvo, ou cada uma com destino registrado (fechar no Auvo, recriar como chamado no SGO+ ou\n não houve atendimento).\n5. Pelo menos um atendimento feito sem internet e sincronizado sem perda, conferido.\n6. Relatório da O.S. aprovado pela Qualidade e já enviado a clientes reais.\n\nCom os seis cumpridos, o Administrador marca \"Auvo desligado\". É o registro da decisão: nada é desligado sozinho.\nDepois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa nos geradores e cancele o contrato."
+    },
+    {
+     "titulo": "Problemas comuns",
+     "texto": "\"Esse caminho não é permitido\": siga o \"Próximo passo\" indicado na ficha do chamado.\nO técnico não aparece na lista: ajuste o perfil (Técnico) ou a área (Técnica) em Administração > Usuários.\n\"A O.S. é de outro técnico\": só o técnico responsável ou a gestão da área Técnica registra.\nA foto não subiu: verifique a conexão e salve de novo; as que já subiram não se repetem.\nCadastro de cliente com chamado aberto não muda de cliente em Vínculos: encerre ou cancele o chamado primeiro."
     }
    ]
   },
@@ -1445,7 +1577,15 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Veículos e condutores > Cadastrar um veículo",
-     "texto": "1. Toque em \"+ Cadastrar novo veículo\".\n2. Preencha placa, modelo, marca, ano, cor e \"KM atual\".\n3. Toque em \"Salvar veículo\"."
+     "texto": "1. Toque em \"+ Cadastrar novo veículo\".\n2. Preencha placa, modelo, marca, ano, cor e \"KM atual\".\n3. Em \"Apelido\", escreva como a equipe vai chamar o carro (ex.: Onça) ou toque em \"Sugerir apelido\": vem um nome de animal brasileiro que nenhum veículo usa. Toque de novo para outro nome.\n4. Em \"Base\", escolha a cidade onde o carro fica (ex.: Goiânia ou Rio de Janeiro).\n5. Toque em \"Salvar veículo\"."
+    },
+    {
+     "titulo": "Veículos e condutores > Apelido e base: como reconhecer cada carro (parte 1)",
+     "texto": "Temos carros de mesmo modelo e cor, em Goiânia e no Rio de Janeiro. Por isso cada veículo pode ter um apelido (Onça, Tucano, Capivara...) e uma base (a cidade onde ele fica). Em todo lugar o veículo aparece assim: Onça · PQB4394 · Onix branco · Goiânia (nas listas apertadas, só Onça · PQB4394). Sem apelido, aparece a placa, como antes. Onde aparece: lista e cartão de veículos, tela de retirar e devolver (computador e celular), reservas e agenda, mapa do rastreamento (nome do marcador), Gantt da frota, Kanban da gestão, multas, abastecimentos, manutenção, documentos, comprovantes, avisos do Início e Caixa de decisões, relatórios A4 da Frota e o COMMAND (Frota e Reservas). Apelido único: dois veículos ativos não têm o mesmo apelido. Maiúscula, acento, hífen e espaço não contam (\"Lobo-guará\" e \"lobo guara\" são o mesmo). Veículo inativo não segura o nome, mas para reativá-lo com um nome que outro ativo já usa é preciso trocar o apelido antes. Dar apelido a um veículo já cadastrado: na lista, o aviso \"N veículos ativos sem apelido\" mostra quantos faltam. Toque em \"Editar\" na linha, preencha \"Apelido\" e \"Base\" e toque em \"Salvar edição\". Campo vazio mantém o que já estava gravado. Nada fica travado enquanto faltar apelido. Escolher a base: acima da lista de veículos, do mapa, da agenda das reservas e do Gantt há o campo \"Base\". No celular e na tela de retirar, são botões (\"Todas\", \"Goiânia\", \"Rio de Janeiro\"). A escolha fica guardada no navegador ou no celular e vale para todas essas telas. Veículo ainda sem base aparece em todas as bases. Lista de bases: a gestão muda em \"Bases da frota\" (embaixo de \"+ Cadastrar novo veículo\"), uma cidade por linha, e toca em \"Gravar bases\". Padrão: Goiânia e Rio de Janeiro. Base com veículo ativo não sai da lista:"
+    },
+    {
+     "titulo": "Veículos e condutores > Apelido e base: como reconhecer cada carro (parte 2)",
+     "texto": "troque a base desses veículos antes. Quem pode: Administrador, Diretoria, Gestor, RH e Financeiro dão apelido, escolhem a base e mudam a lista. A equipe vê e escolhe a base para filtrar."
     },
     {
      "titulo": "Veículos e condutores > Cadastrar um condutor",
@@ -1457,7 +1597,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Retirar veículo",
-     "texto": "1. Abra a Frota.\n2. Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis.\n3. Olhe o número no painel do carro.\n4. Se for igual ao KM que já aparece na tela, não mexa.\n5. Se for diferente, corrija o número e toque em \"Tirar foto do painel (obrigatória: KM diferente)\".\n6. Toque em \"Tirar foto do veículo\". A câmera abre direto. Tire pelo menos uma foto.\n7. Olhe o veículo por fora e por dentro.\n8. Se estiver tudo certo, toque em \"Tudo OK\".\n9. Se achar um problema, toque em \"Tem problema\", toque no item e escreva o que viu.\n10. Se quiser, preencha \"Finalidade (opcional)\".\n11. Toque em \"Confirmar retirada\".\n12. Espere o aviso \"Retirada registrada\".\nA linha acima do botão diz o que falta, por exemplo \"Falta: a foto do painel\". Quando aparece \"Tudo pronto.\", pode confirmar.\nData e hora: vale sempre a hora do momento em que você confirma (horário de Brasília). Você não digita data nem hora.\nKM maior que o registrado: não é erro. Alguém pode ter usado sem registrar. Corrija o número, tire a foto do painel e continue. A gestão confere depois. KM menor não é aceito, porque o odômetro não volta. Se o número registrado estiver errado, peça à gestão o ajuste de KM.\nVeículo com outra pessoa: ele aparece em \"Em uso por outras pessoas\". Se você tocar nele, a tela diz com quem está. Se duas pessoas tentarem retirar o mesmo veículo ao mesmo tempo, só a primeira consegue.\nSaiu da tela sem confirmar? Ao abrir a Frota de novo, toque em \"Continuar a retirada\" com a placa. As fotos já enviadas continuam lá. Para desistir, toque em \"Cancelar e voltar\" e confirme: nada é registrado."
+     "texto": "1. Abra a Frota.\n2. Em \"Retirar um veículo\", toque na sua base (botões \"Todas\", \"Goiânia\", \"Rio de Janeiro\"...) e no cartão do veículo. Só aparecem os disponíveis. O nome grande é o apelido do carro; embaixo vêm placa, modelo, cor e base.\n3. Olhe o número no painel do carro.\n4. Se for igual ao KM que já aparece na tela, não mexa.\n5. Se for diferente, corrija o número e toque em \"Tirar foto do painel (obrigatória: KM diferente)\".\n6. Toque em \"Tirar foto do veículo\". A câmera abre direto. Tire pelo menos uma foto.\n7. Olhe o veículo por fora e por dentro.\n8. Se estiver tudo certo, toque em \"Tudo OK\".\n9. Se achar um problema, toque em \"Tem problema\", toque no item e escreva o que viu.\n10. Se quiser, preencha \"Finalidade (opcional)\".\n11. Toque em \"Confirmar retirada\".\n12. Espere o aviso \"Retirada registrada\".\nA linha acima do botão diz o que falta, por exemplo \"Falta: a foto do painel\". Quando aparece \"Tudo pronto.\", pode confirmar.\nData e hora: vale sempre a hora do momento em que você confirma (horário de Brasília). Você não digita data nem hora.\nKM maior que o registrado: não é erro. Alguém pode ter usado sem registrar. Corrija o número, tire a foto do painel e continue. A gestão confere depois. KM menor não é aceito, porque o odômetro não volta. Se o número registrado estiver errado, peça à gestão o ajuste de KM.\nVeículo com outra pessoa: ele aparece em \"Em uso por outras pessoas\". Se você tocar nele, a tela diz com quem está. Se duas pessoas tentarem retirar o mesmo veículo ao mesmo tempo, só a primeira consegue.\nSaiu da tela sem confirmar? Ao abrir a Frota de novo, toque em \"Continuar a retirada\" com a placa. As fotos já enviadas continuam lá. Para desistir, toque em \"Cancelar e voltar\" e confirme: nada é registrado."
     },
     {
      "titulo": "Devolver veículo",
@@ -1520,12 +1660,16 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "O que aparece | O que quer dizerBotão verde \"Devolver\" com a placa | Este veículo está com você\n\"Disponível\" (verde) | Pode ser retirado\n\"Em uso\" (amarelo) | Está com alguém\n\"Em manutenção\" ou \"Inativo\" (cinza) | Não pode ser retirado\nSelo da foto \"Enviada\" (verde) | A foto chegou\nSelo da foto \"Sem sinal: nova tentativa em instantes\" | O sistema vai tentar de novo sozinho\nSelo da foto \"Não enviada\" ou \"Não deu para ler\" (vermelho) | Toque na foto para tentar de novo, ou remova e tire outra\n\"Tudo OK\" verde / \"Tem problema\" vermelho | Resultado da vistoria\nAviso \"Vencido\" (vermelho) | Prazo vencido ou vencendo hoje\nAviso \"A vencer\" (amarelo) | Vence em até 30 dias\nDocumento \"VENCIDO\" vermelho, \"VENCENDO\" amarelo, \"OK\" verde | Situação da validade\nMulta: \"(automático)\" verde, \"(manual)\" azul, \"(conferir)\" amarelo, \"Não identificado\" vermelho | Como o condutor da multa foi definido"
     },
     {
-     "titulo": "Erros comuns e o que fazer",
-     "texto": "O que aparece | O que fazer\"Seu login ainda não tem condutor vinculado\" | Peça à gestão para ligar o seu usuário a um condutor (seção 4). Depois abra a Frota de novo\nKM \"Menor que o KM registrado\" | Confira o número no painel. Se o registro estiver errado, peça à gestão o ajuste de KM\nKM \"Diferente do KM registrado\" | Tire a foto do painel e continue. A gestão confere depois\n\"Esta retirada está com [nome]. Só [nome] ou a gestão podem registrar a devolução\" | Peça a essa pessoa para registrar. Se não der, procure a gestão\n\"O veículo [placa] já está retirado por [nome]\" ou \"não está mais disponível\" | Escolha outro veículo\n\"Nenhum veículo disponível agora\" | Todos estão em uso. A lista se atualiza sozinha quando alguém devolver\n\"Já estava registrado\" / \"já estava registrada\" | Está tudo certo. Nada foi registrado em dobro\n\"Registro conferido\" | O registro foi gravado. Não registre de novo\n\"Justificativa obrigatória\" (gestão) | Escreva o motivo em \"Justificativa\", com pelo menos 15 letras\n\"está no futuro\" (gestão) | Corrija a data e a hora, ou deixe vazio para usar a hora atual\n\"Anexe a foto ou o PDF do comprovante do abastecimento.\" | Anexe o comprovante e salve de novo\n\"Partida não liberada pelo rastreador\" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17)\n\"Não foi possível carregar a frota agora\" | Confira a internet e toque em \"Tentar de novo\"\nO consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período"
+     "titulo": "Erros comuns e o que fazer (parte 1)",
+     "texto": "O que aparece | O que fazer\"Seu login ainda não tem condutor vinculado\" | Peça à gestão para ligar o seu usuário a um condutor (seção 4). Depois abra a Frota de novo\nKM \"Menor que o KM registrado\" | Confira o número no painel. Se o registro estiver errado, peça à gestão o ajuste de KM\nKM \"Diferente do KM registrado\" | Tire a foto do painel e continue. A gestão confere depois\n\"Esta retirada está com [nome]. Só [nome] ou a gestão podem registrar a devolução\" | Peça a essa pessoa para registrar. Se não der, procure a gestão\n\"O veículo [placa] já está retirado por [nome]\" ou \"não está mais disponível\" | Escolha outro veículo\n\"Nenhum veículo disponível agora\" | Todos estão em uso. A lista se atualiza sozinha quando alguém devolver\n\"Já estava registrado\" / \"já estava registrada\" | Está tudo certo. Nada foi registrado em dobro\n\"Registro conferido\" | O registro foi gravado. Não registre de novo\n\"Justificativa obrigatória\" (gestão) | Escreva o motivo em \"Justificativa\", com pelo menos 15 letras\n\"está no futuro\" (gestão) | Corrija a data e a hora, ou deixe vazio para usar a hora atual\n\"Anexe a foto ou o PDF do comprovante do abastecimento.\" | Anexe o comprovante e salve de novo\n\"Partida não liberada pelo rastreador\" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17)\n\"Não foi possível carregar a frota agora\" | Confira a internet e toque em \"Tentar de novo\"\nO consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período\n\"O apelido ... já é do veículo ...\" | Escolha outro apelido ou toque em \"Sugerir apelido\"\n\"A base ... não está na lista de bases da Frota\" | Escolha uma base da lista ou inclua a cidade em \"Bases da frota\"\nA lista mostra poucos carros | A base escolhida filtra a lista:"
+    },
+    {
+     "titulo": "Erros comuns e o que fazer (parte 2)",
+     "texto": "escolha \"Todas as bases\" (ou \"Todas\" no celular)"
     },
     {
      "titulo": "Glossário",
-     "texto": "Termo | O que éVistoria | Conferência dos itens do veículo na retirada e na devolução\nRetirada em andamento | Veículo que foi pego e ainda não foi devolvido\nCondutor vinculado | Condutor ligado a um login do SGO+. É o que permite retirar em seu próprio nome\nFoto do painel | Foto do odômetro. Obrigatória na devolução e quando o KM foge do registrado\nRegistrado pela gestão | Retirada ou devolução que a gestão registrou no lugar do condutor, com justificativa\nTrilha de auditoria | Lista que guarda quem fez cada registro especial, quando, o antes e o depois e o motivo\nVencendo / Vencido | Prazo perto de acabar (até 30 dias) / prazo acabado ou vencendo hoje\nParada | Período em que o veículo ficou fora de uso\nConsumo (km/L) | Quantos quilômetros o veículo roda com 1 litro\nCruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo\nBloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos\nUso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador"
+     "texto": "Termo | O que éVistoria | Conferência dos itens do veículo na retirada e na devolução\nRetirada em andamento | Veículo que foi pego e ainda não foi devolvido\nCondutor vinculado | Condutor ligado a um login do SGO+. É o que permite retirar em seu próprio nome\nFoto do painel | Foto do odômetro. Obrigatória na devolução e quando o KM foge do registrado\nRegistrado pela gestão | Retirada ou devolução que a gestão registrou no lugar do condutor, com justificativa\nTrilha de auditoria | Lista que guarda quem fez cada registro especial, quando, o antes e o depois e o motivo\nVencendo / Vencido | Prazo perto de acabar (até 30 dias) / prazo acabado ou vencendo hoje\nParada | Período em que o veículo ficou fora de uso\nConsumo (km/L) | Quantos quilômetros o veículo roda com 1 litro\nCruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo\nBloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos\nUso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador\nApelido | Nome curto do carro (ex.: Onça), único entre os veículos ativos, para não confundir carros iguais\nBase | Cidade onde o carro fica (ex.: Goiânia, Rio de Janeiro). Filtra as listas, o mapa, as reservas e o Gantt"
     },
     {
      "titulo": "Rastreador: monitoramento, localização e bloqueio da partida",
