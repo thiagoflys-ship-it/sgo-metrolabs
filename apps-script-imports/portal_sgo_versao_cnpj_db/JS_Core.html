@@ -120,12 +120,17 @@
   // ==========================================
   // HELPERS DE STORAGE
   // ==========================================
+  // 21/10/2026: no celular o navegador apaga o sessionStorage quando a aba vai para segundo plano, quando libera memória
+  // ou quando o link abre em outra aba — o colaborador caía no login no meio do preenchimento. A sessão passa a ficar
+  // guardada também no localStorage (o servidor continua encerrando depois de 6 h sem uso; Sair apaga os dois).
+  var SGO_SESSAO_PERSISTENTE = "SGO_SESSION_PERSIST";
   function getSessionStorageItem_(key) {
-    try {
-      return sessionStorage.getItem(key);
-    } catch (e) {
-      return null;
+    var v = null;
+    try { v = sessionStorage.getItem(key); } catch (e) { v = null; }
+    if (!v && key === STORAGE_KEYS.SESSION) {
+      try { v = localStorage.getItem(SGO_SESSAO_PERSISTENTE); if (v) { try { sessionStorage.setItem(key, v); } catch (e2) {} } } catch (e3) { v = null; }
     }
+    return v;
   }
 
   function setSessionStorageItem_(key, value) {
@@ -134,6 +139,7 @@
     } catch (e) {
       console.error("Falha ao salvar no sessionStorage:", e);
     }
+    if (key === STORAGE_KEYS.SESSION) { try { localStorage.setItem(SGO_SESSAO_PERSISTENTE, value); } catch (e4) {} }
   }
 
   function removeSessionStorageItem_(key) {
@@ -142,6 +148,7 @@
     } catch (e) {
       console.error("Falha ao remover do sessionStorage:", e);
     }
+    if (key === STORAGE_KEYS.SESSION) { try { localStorage.removeItem(SGO_SESSAO_PERSISTENTE); } catch (e5) {} }
   }
 
   function getLocalStorageItem_(key) {
