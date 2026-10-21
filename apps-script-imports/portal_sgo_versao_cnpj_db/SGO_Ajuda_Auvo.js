@@ -153,6 +153,78 @@ function SGO_ajudaTelas_Auvo_() {
         { perfil: "ADMIN", pode: "Usar todas as ferramentas de implantação." },
         { perfil: "GESTOR,DIRETORIA", pode: "Não usam. Pedem ao Administrador." }
       ]
+    },
+    // 21/10/2026: etapa 0 da Assistência técnica (SGO_AuvoAcervo.js, docs/ACERVO_AUVO.md).
+    "auvo/acervo": {
+      titulo: "Acervo do Auvo (cópia de segurança)",
+      paraQueServe: "Copia para o servidor do SGO+ tudo o que está no Auvo: o registro completo de cada tarefa desde o início da conta, as fotos, as assinaturas e os anexos. É a garantia de que nada se perde quando a empresa deixar de usar o Auvo. Só lê o Auvo: não altera nada lá nem nos atendimentos que o SGO+ já mostra.",
+      antesDeComecar: [
+        "Esta parte aparece só para o Administrador e a Diretoria, no topo da tela Integração Auvo.",
+        "A conexão com o Auvo precisa estar funcionando: toque em \"Testar conexão\" antes.",
+        "A contagem e a cópia rodam sozinhas no servidor, em lotes de poucos minutos. Pode fechar a tela e voltar depois.",
+        "Comece sempre pela contagem: ela diz quanto espaço a cópia vai ocupar."
+      ],
+      passos: [
+        { titulo: "Contar o acervo (não baixa nada)", itens: [
+          "Toque em \"Integração Auvo\" no menu.",
+          "No quadro \"Acervo do Auvo (cópia de segurança)\", confira o mês em \"Começar em\". O padrão é 01/2022.",
+          "Toque em \"Contar o acervo\".",
+          "Acompanhe a caixa azul: ela mostra a etapa, o mês e a página que estão sendo lidos.",
+          "Quando a caixa ficar verde (\"Concluída\"), leia \"Resultado da contagem\": tarefas, fotos, assinaturas, espaço e tempo estimados."
+        ] },
+        { titulo: "Copiar o acervo", itens: [
+          "Confira se há espaço livre no servidor maior que o \"espaço estimado\" da contagem.",
+          "Toque em \"Iniciar cópia\" e confirme.",
+          "Acompanhe os números: tarefas lidas, arquivos copiados, aguardando cópia e com falha.",
+          "A cópia passa por seis etapas: listas de apoio, leitura das tarefas, segunda passada, cópia dos arquivos, conferência e relatório.",
+          "No fim aparece o \"Relatório de conferência da cópia\"."
+        ] },
+        { titulo: "Pausar e continuar", itens: [
+          "Toque em \"Pausar\". O lote em andamento termina o passo atual e para.",
+          "Espere a situação mudar para \"Pausada\".",
+          "Para retomar, toque em \"Continuar\". A cópia segue de onde parou, sem baixar de novo o que já foi copiado."
+        ] },
+        { titulo: "Resolver as falhas", itens: [
+          "Abra \"Falhas de cópia\" para ver cada arquivo que não veio e o motivo.",
+          "Falha marcada \"tenta de novo sozinha\" é repetida pela própria cópia até três vezes.",
+          "Depois que a cópia terminar, toque em \"Tentar de novo as falhas\" para colocar todas de volta na fila.",
+          "Se a falha continuar com \"o Auvo não tem mais este arquivo\", anote o número da tarefa e leve ao dono para decidir."
+        ] },
+        { titulo: "Conferir de novo os arquivos copiados", itens: [
+          "Toque em \"Conferir arquivos\".",
+          "O SGO+ relê cada arquivo do acervo e compara com a impressão digital gravada na cópia.",
+          "No relatório, \"com diferença ou sumidos\" precisa ficar em zero."
+        ] },
+        { titulo: "Consultar uma tarefa do acervo", itens: [
+          "Abra \"Consultar uma tarefa do acervo\".",
+          "Digite o número da tarefa no Auvo em \"Número da tarefa no Auvo\".",
+          "Toque em \"Consultar\".",
+          "Toque no nome de um arquivo para abrir a foto, a assinatura ou o anexo. Toque em \"abrir o registro completo\" para ver tudo o que o Auvo guardava da tarefa."
+        ] }
+      ],
+      cores: [
+        { nome: "Caixa azul", significado: "Contagem ou cópia em andamento, ou informação." },
+        { nome: "Caixa verde", significado: "Concluída. No relatório: zero faltas." },
+        { nome: "Caixa amarela", significado: "Pausada, ou há faltas no relatório: veja o motivo de cada uma." },
+        { nome: "Caixa vermelha", significado: "Parada por erro. Confira a conexão e toque em \"Continuar\"." }
+      ],
+      problemas: [
+        { situacao: "\"Já existe uma cópia em andamento.\"", oQueFazer: "Toque em \"Pausar\", espere \"Pausada\" e só então comece outra." },
+        { situacao: "Caixa vermelha \"Parada por erro\"", oQueFazer: "Toque em \"Testar conexão\" no quadro \"Conexão\". Se estiver certa, toque em \"Continuar\"." },
+        { situacao: "Falhas com \"HTTP 403\" ou \"HTTP 401\"", oQueFazer: "O endereço da imagem venceu. A cópia busca o endereço novo no Auvo sozinha; se continuar, toque em \"Tentar de novo as falhas\"." },
+        { situacao: "\"tarefas faltando\" maior que zero no relatório", oQueFazer: "Toque em \"Iniciar cópia\" de novo. O que já foi copiado não é baixado outra vez e a segunda passada busca o que faltou." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN,DIRETORIA", pode: "Contar, copiar, pausar, continuar, tentar de novo as falhas, conferir e consultar o acervo." },
+        { perfil: "GESTOR", pode: "Não vê o acervo. Pede ao Administrador ou à Diretoria." }
+      ],
+      perguntas: [
+        { p: "A cópia altera alguma coisa no Auvo?", r: "Não. Ela só lê. Nada é criado, alterado ou apagado no Auvo." },
+        { p: "A cópia muda os atendimentos que o SGO+ já mostra?", r: "Não. O acervo fica separado e só para consulta." },
+        { p: "Posso rodar a cópia mais de uma vez?", r: "Sim. O que já foi copiado e conferido não é baixado de novo. Tarefa que mudou no Auvo ganha uma versão nova e a anterior continua guardada." },
+        { p: "Onde ficam os arquivos?", r: "No servidor do SGO+, na pasta \"Acervo Auvo\", separados por ano e pelo número da tarefa. Entram no backup diário." },
+        { p: "Quando o Auvo pode ser cancelado?", r: "Só depois que o relatório de conferência mostrar zero faltas, ou faltas explicadas e aceitas pelo dono." }
+      ]
     }
   };
 }

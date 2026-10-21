@@ -7,6 +7,7 @@
 
     if (tplAuvo_carregado_) {
       if (typeof tplAuvo_renderReal_ === 'function') tplAuvo_renderReal_();
+      tplAuvo_montarAcervo_();
       return;
     }
 
@@ -32,6 +33,7 @@
 
           if (typeof tplAuvo_renderReal_ === 'function') {
             tplAuvo_renderReal_();
+            tplAuvo_montarAcervo_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +47,30 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .Auvo_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Acervo do Auvo" (etapa 0 da Assistência técnica, SGO_AuvoAcervo.js). Só Administrador e
+  // Diretoria; o servidor confere de novo e devolve vazio para os outros perfis.
+  let acvAuvo_carregado_ = false;
+  function tplAuvo_montarAcervo_() {
+    try {
+      const perfil = (typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT && USER_CONTEXT.perfil) ? String(USER_CONTEXT.perfil).toUpperCase() : '';
+      if (['ADMIN', 'DIRETORIA'].indexOf(perfil) === -1) return;
+      if (acvAuvo_carregado_) { if (typeof AuvoAcervo_montarNaTela_ === 'function') AuvoAcervo_montarNaTela_(); return; }
+      google.script.run
+        .withSuccessHandler(function (bruto) {
+          if (!bruto) return;
+          try {
+            const estilo = bruto.match(/<style>([\s\S]*?)<\/style>/);
+            const codigo = bruto.match(/<script>([\s\S]*?)<\/script>/);
+            if (estilo) { const el = document.createElement('style'); el.textContent = estilo[1]; document.head.appendChild(el); }
+            if (codigo) window.eval(codigo[1]);
+            acvAuvo_carregado_ = true;
+            if (typeof AuvoAcervo_montarNaTela_ === 'function') AuvoAcervo_montarNaTela_();
+          } catch (e) { console.error('Acervo do Auvo: erro ao montar:', e); }
+        })
+        .withFailureHandler(function (err) { console.error('Acervo do Auvo: falha ao carregar:', err); })
+        .AuvoAcervo_obterConteudo(typeof SGO_getSessionId === 'function' ? SGO_getSessionId() : '');
+    } catch (e) { console.error('Acervo do Auvo:', e); }
   }
 </script>
