@@ -338,7 +338,21 @@ var GES_RELATORIOS_MENSAIS = [
 function Ges_relatoriosMensaisLista_() {
   var l = GES_RELATORIOS_MENSAIS.slice();
   try { if (typeof Comercial_relatorioMes_ === 'function' && typeof Comercial_emUso_ === 'function' && Comercial_emUso_()) l.push(['COMERCIAL', 'Comercial']); } catch (e) {}
+  try { if (typeof Compras_relatorioMes_ === 'function' && typeof Compras_emUso_ === 'function' && Compras_emUso_()) l.push(['COMPRAS', 'Compras e peças']); } catch (e) {}
   return l;
+}
+
+/**
+ * Relatório mensal de Compras no e-mail da Diretoria (21/10/2026). A rotina de Compras também gera o mesmo relatório:
+ * as duas usam a marca CMP_RELMES_<competência>, então o documento sai uma vez só e o e-mail leva o link dele.
+ */
+function Ges_relatorioComprasMes_(comp) {
+  if (typeof Compras_relatorioMes_ !== 'function') return { salvo: false, aviso: 'Compras indisponível' };
+  var props = PropertiesService.getScriptProperties(), k = 'CMP_RELMES_' + comp, v = String(props.getProperty(k) || '');
+  if (v && v !== 'erro' && v !== 'sem uso') return { salvo: true, link: v === 'ok' ? '' : v };
+  var g = Compras_relatorioMes_(comp, 'Rotina automática') || {};
+  props.setProperty(k, g.salvo ? (g.pdfUrl || 'ok') : 'erro');
+  return { salvo: !!g.salvo, aviso: g.aviso || '', link: g.pdfUrl || g.link || '' };
 }
 
 /** Relatórios que o e-mail da Diretoria de hoje leva: { lista: [{nome, link, aviso}], pendente }. */
@@ -384,6 +398,7 @@ function Ges_relatoriosMensais_(ex) {
     else if (falta[0] === 'FROTA') g = Ges_relatorioFrotaMes_(comp);
     else if (falta[0] === 'CONDUTA') g = Ges_relatorioCondutaMes_(comp);
     else if (falta[0] === 'COMERCIAL') g = typeof Comercial_relatorioMes_ === 'function' ? Comercial_relatorioMes_(comp, 'Rotina automática') : { salvo: false, aviso: 'Comercial indisponível' };
+    else if (falta[0] === 'COMPRAS') g = Ges_relatorioComprasMes_(comp);
     else g = Ges_relatorioAtividades_(comp, { nome: 'Rotina automática' });
   } catch (e) { g = { salvo: false, aviso: String((e && e.message) || e).slice(0, 300) }; }
   Ges_registrarEnvio_({ tipo: 'MENSAL', uid: '', nome: 'Diretoria', dia: ex.dia, ref: comp + '|' + falta[0], situacao: g && g.salvo ? 'OK' : 'ERRO', motivo: (g && g.aviso) || '', link: (g && g.link) || '' });

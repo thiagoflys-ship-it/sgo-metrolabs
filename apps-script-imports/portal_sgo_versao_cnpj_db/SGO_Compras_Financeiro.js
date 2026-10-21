@@ -319,9 +319,12 @@ function CmpFin_relatorioAutomatico_(quando) {
   if (!Cmp_ler_(CMP_ABAS.REQUISICOES).length) { props.setProperty(chave, 'sem uso'); return { fora: 'Compras sem uso no mês' }; }
   var g = Compras_relatorioMes_(comp, 'Rotina automática');
   props.setProperty(chave, g.salvo ? g.pdfUrl || 'ok' : 'erro');
+  // Com o e-mail mensal da Diretoria ligado (Caixa de decisões), o relatório já vai nele: aqui o aviso fica só no sistema.
+  var noEmailGestao = false;
+  try { var gc = typeof Ges_cfg_ === 'function' ? Ges_cfg_() : null; noEmailGestao = !!(gc && gc.escada && gc.escada.mensal && gc.automacoes && gc.automacoes.relatoriosMensais); } catch (eG) {}
   var us = Cmp_usuarios_();
   Cmp_diretoria_(us, []).forEach(function (id) {
-    Cmp_avisar_(id, 'RELATORIO_MES', 'Relatório mensal de compras: ' + (typeof RelA4_competencia_ === 'function' ? RelA4_competencia_(comp) : comp), g.salvo ? 'O relatório do mês está na pasta Compras - Relatórios e em Compras > Painel de compras.' : 'Não foi possível salvar o relatório: ' + g.aviso, '', { email: true });
+    Cmp_avisar_(id, 'RELATORIO_MES', 'Relatório mensal de compras: ' + (typeof RelA4_competencia_ === 'function' ? RelA4_competencia_(comp) : comp), g.salvo ? 'O relatório do mês está na pasta Compras - Relatórios e em Compras > Painel de compras.' : 'Não foi possível salvar o relatório: ' + g.aviso, '', { email: !(noEmailGestao && g.salvo) });
   });
   return { gerado: comp, salvo: g.salvo };
 }
