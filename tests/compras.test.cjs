@@ -3,7 +3,7 @@
 // Código real num contexto isolado (tests/_compras_ambiente.cjs). Só dados de teste; relógio fixo (não depende da hora real).
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, FOTO, regrasDeTeste, fornecedoresDeTeste, pedidoSimples, CNPJS } = require('./_compras_ambiente.cjs');
+const { ambiente, FOTO, PDF, regrasDeTeste, fornecedoresDeTeste, pedidoSimples, CNPJS } = require('./_compras_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 const pend = (amb, sid) => amb.ctx.SGO_Pendencias_listar(sid, { semCache: true }).itens;
@@ -144,4 +144,102 @@ test('etapa 1 · regras: só Administrador e Diretoria alteram, com motivo e ver
   assert.deepEqual(Array.from(s.regras.compradores), ['u_cmp']);
   assert.equal(ok(amb.api('s_dora', 'regras', {})).versoes.length, 1);
   assert.equal(ok(amb.api('s_carlos', 'acesso')).comprador, true);
+});
+
+// ------------------------------------------------------------------ etapa 2
+/** Pedido em cotação com um item; devolve a ficha (com o item). */
+function emCotacao(amb, descricao, sid) {
+  const r = pedidoSimples(amb, { itens: [{ categoria: 'FERRAMENTA', descricao: descricao, quantidade: 1, unidade: 'un.' }] }, sid);
+  ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
+  return ok(amb.api('s_carlos', 'requisicao', { id: r.id })).requisicao;
+}
+function cotar(amb, q, forn, preco, extra) {
+  return ok(amb.api('s_carlos', 'salvarCotacao', Object.assign({ requisicaoId: q.id, fornecedorId: forn.id, precos: [{ itemId: q.itens[0].id, precoUnitario: preco }], prazoDias: 5, validade: '2026-11-10', arquivo: PDF }, extra || {}))).requisicao;
+}
+const caixa = (amb) => amb.ctx.Ges_caixa_().itens.filter((i) => /^compras/.test(i.tipo));
+
+test('etapa 2 · cotação: arquivo obrigatório, total pelo sistema, validade, mais barata exige justificativa', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const q = emCotacao(amb, 'Multímetro digital');
+  const sem = amb.api('s_carlos', 'salvarCotacao', { requisicaoId: q.id, fornecedorId: fs[0].id, precos: [{ itemId: q.itens[0].id, precoUnitario: '300,00' }], prazoDias: 3, validade: '2026-11-10' });
+  assert.match(sem.message, /anexe o arquivo do orçamento/);
+  assert.match(amb.api('s_carlos', 'salvarCotacao', { requisicaoId: q.id, fornecedorId: fs[0].id, precos: [{ itemId: q.itens[0].id, precoUnitario: '300' }], prazoDias: 3, validade: '2026-10-01', arquivo: PDF }).message, /já passou/);
+  let t = cotar(amb, q, fs[0], '300,00', { frete: '25,50', impostos: '10' });
+  assert.equal(t.cotacoes[0].totalTxt, 'R$ 335,50', 'preço x quantidade + frete + impostos');
+  assert.match(amb.api('s_tiago', 'salvarCotacao', { requisicaoId: q.id }).message, /ação é do comprador/);
+  t = cotar(amb, q, fs[1], '290,00');
+  const cara = t.cotacoes.find((c) => !c.maisBarata);
+  assert.match(amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: cara.id }).message, /não é o mais barato/);
+  amb.mudar('2026-11-12T10:00:00-03:00');
+  const venc = amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: t.cotacoes.find((c) => c.maisBarata).id });
+  assert.match(venc.message, /validade vencida/);
+});
+
+test('etapa 2 · faixas: até R$ 1.000 o comprador aprova na escolha; até R$ 10.000 o gestor da área na Caixa; acima, a Diretoria', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const q1 = emCotacao(amb, 'Alicate amperímetro');
+  const t1 = cotar(amb, q1, fs[0], '800,00');
+  const e1 = ok(amb.api('s_carlos', 'escolher', { requisicaoId: q1.id, cotacaoId: t1.cotacoes[0].id }));
+  assert.equal(e1.requisicao.situacao, 'APROVADA');
+  assert.match(e1.requisicao.aprovacaoTexto, /comprador.*registrado/);
+  assert.equal(amb.tabelas.CMP_APROVACOES.length, 1);
+  assert.ok(amb.tabelas.ATV_ATIVIDADES.some((a) => /Fazer o pedido de compra/.test(a.TITULO) && a.RESPONSAVEL_ID === 'u_cmp'));
+  const q2 = emCotacao(amb, 'Analisador de segurança elétrica');
+  const t2 = cotar(amb, q2, fs[0], '5.000,00');
+  assert.match(amb.api('s_carlos', 'escolher', { requisicaoId: q2.id, cotacaoId: t2.cotacoes[0].id }).message, /pede 2 cotações/);
+  const e2 = ok(amb.api('s_carlos', 'escolher', { requisicaoId: q2.id, cotacaoId: t2.cotacoes[0].id, justificativaMinimo: 'Fornecedor único autorizado do analisador' }));
+  assert.equal(e2.requisicao.situacao, 'AGUARDANDO_APROVACAO');
+  assert.deepEqual(Array.from(e2.requisicao.aprovacao.quem), ['GIL GESTOR TECNICO TESTE', 'DORA DIRETORA TESTE', 'DAVI DIRETOR TESTE']);
+  let cx = caixa(amb);
+  assert.equal(cx.length, 1);
+  assert.equal(cx[0].tipo, 'compras_aprovar');
+  assert.deepEqual(Array.from(cx[0].responsaveis), ['u_gt'], 'Caixa: gestor da área de quem pediu');
+  semValor(cx[0].titulo + cx[0].detalhe, 'Caixa');
+  assert.equal(cx[0].prazoIso, '2026-10-20', '1 dia útil');
+  assert.match(amb.api('s_carlos', 'decidir', { requisicaoId: q2.id, aprovar: true }).message, /quem cota não aprova/);
+  assert.match(amb.api('s_lia', 'decidir', { requisicaoId: q2.id, aprovar: true }).message, /Quem aprova: GIL/);
+  ok(amb.api('s_gil', 'decidir', { requisicaoId: q2.id, aprovar: true, texto: 'Necessário para a manutenção preventiva' }));
+  assert.equal(caixa(amb).length, 0, 'sai da Caixa depois da decisão');
+  assert.equal(pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_aviso' && /aprovada/i.test(i.titulo)).length, 1, 'comprador avisado no sistema');
+  const q3 = emCotacao(amb, 'Bancada de calibração');
+  cotar(amb, q3, fs[0], '15.000,00'); cotar(amb, q3, fs[1], '16.000,00');
+  const t3 = cotar(amb, q3, fs[2], '17.000,00');
+  const e3 = ok(amb.api('s_carlos', 'escolher', { requisicaoId: q3.id, cotacaoId: t3.cotacoes.find((c) => c.maisBarata).id }));
+  assert.equal(e3.requisicao.aprovacao.nivelNome, 'Diretoria');
+  cx = caixa(amb);
+  assert.equal(cx.length, 1);
+  assert.deepEqual(Array.from(cx[0].responsaveis).sort(), ['u_dir', 'u_dir2']);
+  assert.equal(cx[0].reserva, true);
+  assert.match(amb.api('s_gil', 'decidir', { requisicaoId: q3.id, aprovar: true }).message, /faixa "Diretoria"/);
+  ok(amb.api('s_dora', 'decidir', { requisicaoId: q3.id, aprovar: true }));
+});
+
+test('etapa 2 · quem pediu não aprova a própria compra: comprador que pediu passa ao substituto; reprovação volta para cotação com motivo', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const r = pedidoSimples(amb, { itens: [{ categoria: 'ESCRITORIO', descricao: 'Toner da impressora de Compras', quantidade: 2, unidade: 'un.' }] }, 's_carlos');
+  ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
+  const q = ok(amb.api('s_carlos', 'requisicao', { id: r.id })).requisicao;
+  const t = cotar(amb, q, fs[0], '150,00');
+  const e = ok(amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: t.cotacoes[0].id }));
+  assert.equal(e.requisicao.situacao, 'AGUARDANDO_APROVACAO', 'quem pediu escolheu: não aprova sozinho');
+  assert.ok(e.requisicao.aprovacao.quem.includes('SARA SUBSTITUTA TESTE'));
+  assert.ok(!e.requisicao.aprovacao.quem.includes('CARLOS COMPRADOR TESTE'));
+  assert.match(amb.api('s_carlos', 'decidir', { requisicaoId: q.id, aprovar: true }).message, /Quem pediu não aprova a própria compra/);
+  const p = pend(amb, 's_sara').filter((i) => i.tipo === 'compras_aprovar_comprador');
+  assert.equal(p.length, 1, 'faixa do comprador: no Início do substituto, fora da Caixa');
+  assert.equal(caixa(amb).length, 0);
+  assert.match(amb.api('s_sara', 'decidir', { requisicaoId: q.id, aprovar: false, texto: 'curto' }).message, /pelo menos 10 letras/);
+  const rep = ok(amb.api('s_sara', 'decidir', { requisicaoId: q.id, aprovar: false, texto: 'Use o toner compatível do contrato de impressão' }));
+  assert.equal(rep.requisicao.situacao, 'EM_COTACAO');
+  assert.equal(amb.tabelas.CMP_COTACOES[0].SITUACAO, 'ATIVA', 'a cotação volta a concorrer');
+  assert.ok(amb.tabelas.ATV_ATIVIDADES.some((a) => /Rever a cotação/.test(a.TITULO)));
+  const hist = ok(amb.api('s_carlos', 'meus')).requisicoes[0].historico.map((h) => h.texto).join(' ');
+  assert.match(hist, /reprovada/i);
+  semValor(hist, 'histórico de quem pediu');
 });

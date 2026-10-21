@@ -491,6 +491,92 @@
   }
 
   // =========================================================
+  // COTAÇÕES E APROVAÇÃO (seção da ficha; só para quem vê valores)
+  // =========================================================
+  function Cp_secaoCotacoes_(q) {
+    if (!q.veValores || !q.cotacoes) return "";
+    var a = q.acoes || {}, h = '<div class="cp-sec">Cotações</div>';
+    if (["SOLICITADA"].indexOf(q.situacao) >= 0) return h + '<p class="cp-meta">Os orçamentos são lançados depois que a especificação é conferida ("iniciar cotação").</p>';
+    var ativas = q.cotacoes.filter(function (c) { return c.situacao !== "RETIRADA"; });
+    if (!ativas.length) h += '<p class="cp-meta">Nenhum orçamento lançado ainda.' + (q.faixa ? '' : ' Cada orçamento precisa do arquivo do fornecedor (PDF, foto ou e-mail salvo).') + '</p>';
+    else h += '<table class="cp-tabela"><thead><tr><th>Fornecedor</th><th class="n">Total</th><th>Prazo</th><th>Validade</th><th>Situação</th><th></th></tr></thead><tbody>' + ativas.map(function (c) {
+      var sit = c.situacao === "ESCOLHIDA" ? '<span class="cp-selo verde">Escolhida</span>' : (c.elegivel ? (c.maisBarata ? '<span class="cp-selo azul">Mais barata</span>' : '') : '<span class="cp-selo vermelho">' + Cp_esc_(c.motivoInelegivel) + '</span>');
+      return '<tr' + (c.situacao === "ESCOLHIDA" ? ' class="vencedora"' : '') + '><td data-r="Fornecedor"><b>' + Cp_esc_(c.fornecedor) + '</b>' + (c.referencia ? '<br><span class="cp-meta">Orçamento ' + Cp_esc_(c.referencia) + '</span>' : '') + (c.compatNome ? '<br><span class="cp-meta">' + Cp_esc_(c.compatNome) + '</span>' : '') +
+        (c.arquivo ? '<br><a href="' + Cp_esc_(c.arquivo.url) + '" target="_blank" rel="noopener">Arquivo do orçamento</a>' : '') + '</td><td class="n" data-r="Total"><b>' + Cp_esc_(c.totalTxt) + '</b><br><span class="cp-meta">frete ' + Cp_esc_(c.freteTxt) + ' · impostos ' + Cp_esc_(c.impostosTxt) + '</span></td>' +
+        '<td data-r="Prazo">' + Cp_esc_(c.prazoDias) + ' dias</td><td data-r="Validade">' + Cp_esc_(c.validade) + '</td><td data-r="Situação">' + sit + '</td><td data-r="">' +
+        (a.cotar ? '<button type="button" class="btn-secondary" data-cot-corrigir="' + Cp_esc_(c.id) + '">Corrigir</button> <button type="button" class="btn-secondary" data-cot-retirar="' + Cp_esc_(c.id) + '">Retirar</button>' + (c.elegivel ? ' <button type="button" class="btn-primary" data-cot-escolher="' + Cp_esc_(c.id) + '">Escolher este orçamento</button>' : '') : '') + '</td></tr>';
+    }).join("") + '</tbody></table>';
+    var ret = q.cotacoes.filter(function (c) { return c.situacao === "RETIRADA"; });
+    if (ret.length) h += '<p class="cp-meta">Retirados: ' + Cp_esc_(ret.map(function (c) { return c.fornecedor + " (" + c.retiradaMotivo + ")"; }).join("; ")) + '</p>';
+    if (a.cotar) h += '<div class="cp-acoes"><button type="button" class="btn-primary" data-f="cotar"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Lançar orçamento</button></div>';
+    if (q.escolhida) h += '<p class="cp-txt"><b>Escolhido:</b> ' + Cp_esc_(q.escolhida.fornecedor) + ' · ' + Cp_esc_(q.escolhida.totalTxt) + ' por ' + Cp_esc_(q.escolhida.por) + ' em ' + Cp_esc_(q.escolhida.em) + (q.escolhaJustificativa ? '. Não é o mais barato: ' + Cp_esc_(q.escolhaJustificativa) : '') + (q.cotacoesJustificativa ? '. Menos cotações que o mínimo: ' + Cp_esc_(q.cotacoesJustificativa) : '') + '</p>';
+    h += '<div class="cp-sec">Aprovação</div>';
+    if (q.aprovacao) {
+      h += '<div class="cp-faixa aviso"><b>Aguardando aprovação</b> (' + Cp_esc_(q.aprovacao.nivelNome) + ') desde ' + Cp_esc_(q.aprovacao.pedidaEm) + '. Quem aprova: ' + Cp_esc_(q.aprovacao.quem.join(", ")) + '. ' + Cp_esc_(q.aprovacao.motivoRota) + '</div>';
+      if (q.aprovacao.podeEu) h += '<div class="cp-acoes"><button type="button" class="btn-primary" data-f="aprovar">Aprovar</button><button type="button" class="btn-secondary" data-f="reprovar">Reprovar</button></div>';
+      else h += '<p class="cp-meta">' + Cp_esc_(q.aprovacao.motivoNaoPode) + '</p>';
+    } else if (q.aprovadaPor) h += '<p class="cp-txt">Aprovada por <b>' + Cp_esc_(q.aprovadaPor) + '</b> em ' + Cp_esc_(q.aprovadaEm) + (q.aprovadorNivelNome ? ' (' + Cp_esc_(q.aprovadorNivelNome) + ')' : '') + '. ' + Cp_esc_(q.aprovacaoTexto) + '</p>';
+    else h += '<p class="cp-meta">Depois da escolha do orçamento. Faixas: ' + Cp_esc_((CP.ini.faixas || []).map(function (f) { return f.nome + " — " + f.aprovador + " (" + f.cotacoes + " cotação" + (f.cotacoes > 1 ? "ões" : "") + ")"; }).join("; ")) + '.</p>';
+    if (q.aprovacoes && q.aprovacoes.length) h += '<div class="cp-hist">' + q.aprovacoes.map(function (x) { return '<div><span class="q">' + Cp_esc_(x.em) + ' · ' + Cp_esc_(x.por) + ' · ' + Cp_esc_(x.nivel) + '</span><br>' + (x.decisao === "APROVADA" ? "Aprovada" : "Reprovada") + ' (' + Cp_esc_(x.valorTxt) + ')' + (x.texto ? ': ' + Cp_esc_(x.texto) : '') + '</div>'; }).join("") + '</div>';
+    return h;
+  }
+
+  function Cp_ligarCotacoes_(q, corpo) {
+    var b = function (sel, fn) { var el = corpo.querySelector('[data-f="' + sel + '"]'); if (el) el.onclick = fn; };
+    b("cotar", function () { Cp_formCotacao_(q, null); });
+    corpo.querySelectorAll("[data-cot-corrigir]").forEach(function (x) { x.onclick = function () { Cp_formCotacao_(q, q.cotacoes.filter(function (c) { return c.id === x.getAttribute("data-cot-corrigir"); })[0]); }; });
+    corpo.querySelectorAll("[data-cot-retirar]").forEach(function (x) { x.onclick = function () { Cp_pedirTexto_("Retirar o orçamento", "O orçamento sai da comparação e fica no histórico com o motivo.", "Motivo", 5, function (t, ov) { Cp_chamar_("retirarCotacao", { id: x.getAttribute("data-cot-retirar"), motivo: t }, function (r) { ov.remove(); Cp_recarregarFicha_(q.id, r.message); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Retirar"); }; });
+    corpo.querySelectorAll("[data-cot-escolher]").forEach(function (x) { x.onclick = function () { Cp_escolher_(q, q.cotacoes.filter(function (c) { return c.id === x.getAttribute("data-cot-escolher"); })[0]); }; });
+    b("aprovar", function () { Cp_pedirTexto_("Aprovar a compra " + q.numero, "O comprador recebe a atividade para fazer o pedido ao fornecedor. Observação opcional.", "Observação (opcional)", 0, function (t, ov) { Cp_chamar_("decidir", { requisicaoId: q.id, aprovar: true, texto: t }, function (r) { ov.remove(); Cp_recarregarFicha_(q.id, r.message); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Aprovar"); });
+    b("reprovar", function () { Cp_pedirTexto_("Reprovar a compra " + q.numero, "A compra volta para cotação e o comprador recebe o motivo.", "Motivo", 10, function (t, ov) { Cp_chamar_("decidir", { requisicaoId: q.id, aprovar: false, texto: t }, function (r) { ov.remove(); Cp_recarregarFicha_(q.id, r.message); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Reprovar"); });
+  }
+
+  /** Lançar (c = null) ou corrigir um orçamento. */
+  function Cp_formCotacao_(q, c) {
+    var num = function (v) { var s = String(v || "").replace(/\s|R\$/g, ""); if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(",", "."); var n = Number(s); return isFinite(n) ? n : 0; };
+    var moeda = function (n) { return "R$ " + (Number(n) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var ov = Cp_modal_(c ? "Corrigir o orçamento de " + c.fornecedor : "Lançar orçamento", '<div class="cp-vazio">Carregando os fornecedores…</div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar o orçamento</button>', 720);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    Cp_chamar_("fornecedores", {}, function (rf) {
+      var corpo = ov.querySelector(".atv-modal-corpo"), precoDe = function (itemId) { var p = c && c.precos.filter(function (x) { return x.itemId === itemId; })[0]; return p && p.precoUnitario !== null ? String(p.precoUnitario).replace(".", ",") : ""; };
+      corpo.innerHTML = Cp_campo_("Fornecedor", '<select id="ctForn">' + Cp_opcoes_(rf.fornecedores.map(function (f) { return { v: f.id, t: f.nome + " · " + f.documento }; }), c ? c.fornecedorId : "", "Escolha o fornecedor") + '</select>', rf.fornecedores.length ? "Não está na lista? Cadastre em Compras > Fornecedores." : "Nenhum fornecedor ativo: cadastre em Compras > Fornecedores.") +
+        '<div class="cp-sec">Preço unitário de cada item</div>' + q.itens.map(function (i) { return Cp_campo_(i.ordem + ". " + i.descricao + " (" + i.quantidadeTxt + " " + i.unidade + ")", '<input type="text" inputmode="decimal" data-pu="' + Cp_esc_(i.id) + '" data-q="' + i.quantidade + '" value="' + Cp_esc_(precoDe(i.id)) + '" placeholder="0,00">'); }).join("") +
+        '<div class="cp-grade3">' + Cp_campo_("Frete (R$)", '<input type="text" inputmode="decimal" id="ctFrete" value="' + Cp_esc_(c ? String(c.frete).replace(".", ",") : "") + '">') + Cp_campo_("Impostos (R$)", '<input type="text" inputmode="decimal" id="ctImp" value="' + Cp_esc_(c ? String(c.impostos).replace(".", ",") : "") + '">', "Só os que não estão no preço.") +
+        Cp_campo_("Total (calculado)", '<input type="text" id="ctTotal" disabled>') + '</div>' +
+        '<div class="cp-grade3">' + Cp_campo_("Prazo de entrega (dias)", '<input type="number" min="0" id="ctPrazo" value="' + Cp_esc_(c ? c.prazoDias : "") + '">') + Cp_campo_("Orçamento válido até", '<input type="date" id="ctVal" value="' + Cp_esc_(c ? c.validadeIso : "") + '">') +
+        Cp_campo_("Número do orçamento do fornecedor", '<input type="text" id="ctRef" maxlength="80" value="' + Cp_esc_(c ? c.referencia : "") + '">') + '</div>' +
+        Cp_campo_("Condição de pagamento", '<input type="text" id="ctCond" maxlength="200" value="' + Cp_esc_(c ? c.condicao : "") + '" placeholder="Exemplo: boleto 28 dias, cartão em 3 vezes">') +
+        (q.temTecnica ? Cp_campo_("A peça cotada é", '<select id="ctCompat">' + Cp_opcoes_(Cp_mapaOpcoes_(CP.ini.compatibilidade), c ? c.compatibilidade : "", "Escolha") + '</select>', "Orçamento \"a confirmar\" não pode ser escolhido.") : '') +
+        Cp_campo_("Observações", '<textarea id="ctObs" maxlength="1000">' + Cp_esc_(c ? c.obs : "") + '</textarea>') +
+        Cp_campo_("Arquivo do orçamento" + (c ? " (só se for trocar)" : ""), '<input type="file" id="ctArq" accept=".pdf,image/*,.eml,.msg,.txt,.doc,.docx,.xls,.xlsx">', "Obrigatório: PDF, foto ou e-mail salvo do fornecedor. É a prova do preço.") + '<div id="ctMsg"></div>';
+      var recalc = function () { var t = 0; corpo.querySelectorAll("[data-pu]").forEach(function (x) { t += num(x.value) * Number(x.getAttribute("data-q")); }); t += num(Cp_$_("ctFrete").value) + num(Cp_$_("ctImp").value); Cp_$_("ctTotal").value = moeda(t); };
+      corpo.querySelectorAll("input").forEach(function (x) { x.addEventListener("input", recalc); });
+      recalc();
+      ov.querySelector("[data-ok]").onclick = function () {
+        Cp_lerArquivos_(Cp_$_("ctArq"), function (l) {
+          var dados = { requisicaoId: q.id, id: c ? c.id : "", fornecedorId: Cp_$_("ctForn").value, precos: Array.prototype.map.call(corpo.querySelectorAll("[data-pu]"), function (x) { return { itemId: x.getAttribute("data-pu"), precoUnitario: x.value }; }),
+            frete: Cp_$_("ctFrete").value, impostos: Cp_$_("ctImp").value, prazoDias: Cp_$_("ctPrazo").value, validade: Cp_$_("ctVal").value, referencia: Cp_$_("ctRef").value, condicao: Cp_$_("ctCond").value,
+            compatibilidade: Cp_$_("ctCompat") ? Cp_$_("ctCompat").value : "", obs: Cp_$_("ctObs").value, arquivo: l[0] || null };
+          Cp_chamar_("salvarCotacao", dados, function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("ctMsg", m); }, { carregando: "Salvando o orçamento…" });
+        });
+      };
+    }, function (m) { Cp_msg_(ov.querySelector(".atv-modal-corpo"), m); });
+  }
+
+  function Cp_escolher_(q, c) {
+    var corpo = '<p class="cp-txt"><b>' + Cp_esc_(c.fornecedor) + '</b> · ' + Cp_esc_(c.totalTxt) + '. Faixa ' + Cp_esc_(c.faixaSeEscolhida.nome) + ': aprova ' + Cp_esc_(c.faixaSeEscolhida.aprovador) + '; pede ' + c.faixaSeEscolhida.cotacoes + ' cotação(ões) de fornecedores diferentes (há ' + c.cotacoesValidas + ').</p>' +
+      (c.precisaJustPreco ? Cp_campo_("Por que este e não o mais barato", '<textarea id="esPreco" maxlength="1000" placeholder="Exemplo: prazo de entrega menor; equipamento parado"></textarea>', "Obrigatório: este orçamento não é o mais barato.") : '') +
+      (c.precisaJustMinimo ? Cp_campo_("Por que há menos cotações que o mínimo", '<textarea id="esMin" maxlength="1000" placeholder="Exemplo: fornecedor único da peça original"></textarea>', "Obrigatório. A compra aparece marcada para o Financeiro.") : '') +
+      '<p class="cp-meta">' + (c.faixaSeEscolhida.aprovador === "Comprador" ? "Na faixa do comprador, a sua escolha já é a aprovação registrada (a menos que você seja quem pediu)." : "A compra vai para a Caixa de decisões de quem aprova; quem lançou ou escolheu orçamento não aprova.") + '</p><div id="esMsg"></div>';
+    var ov = Cp_modal_("Escolher este orçamento", corpo, '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Escolher este orçamento</button>');
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      Cp_chamar_("escolher", { requisicaoId: q.id, cotacaoId: c.id, justificativaPreco: Cp_$_("esPreco") ? Cp_$_("esPreco").value : "", justificativaMinimo: Cp_$_("esMin") ? Cp_$_("esMin").value : "" },
+        function (r) { ov.remove(); Cp_desenharFicha_(r.requisicao); Cp_msg_("cpFichaMsg", r.message, "ok"); }, function (m) { Cp_msg_("esMsg", m); }, { carregando: "Salvando…" });
+    };
+  }
+
+  // =========================================================
   // FORNECEDORES
   // =========================================================
   function Compras_renderFornecedores_(div) {

@@ -51,6 +51,8 @@ function Compras_fontePendencias_(add, ctx) {
   if (ctx.userId && !ctx.interno) {
     Cmp_ler_(CMP_ABAS.AVISOS).forEach(function (v) {
       if (Cmp_s_(v.DESTINATARIO_ID) !== ctx.userId || Cmp_s_(v.LIDO_EM)) return;
+      // estes avisos já têm a pendência viva (até resolver); no Início aparece só ela (o aviso vai no resumo de e-mail)
+      if (['ESPEC_DEVOLVIDA', 'PARA_CONFERIR', 'DIVERGENCIA_FIN'].indexOf(Cmp_up_(v.TIPO)) >= 0) return;
       add(Pend_item_('compras_aviso', {
         id: 'CMP:AVISO:' + v.ID, nome: Cmp_s_(v.TITULO).slice(0, 40), publico: 'PESSOA', paraUsuarios: [ctx.userId], responsavel: ctx.nome, responsavelId: ctx.userId, gravidade: 'INFO', dias: null,
         titulo: Cmp_s_(v.TITULO), detalhe: Cmp_s_(v.TEXTO).slice(0, 220), oQueFazer: 'Abra Compras: o aviso fica marcado como lido ao aparecer na tela.',
@@ -198,6 +200,11 @@ var CMP_ACOES = {
   clientes: function (eu, sid, d) { return { clientes: CmpR_buscarClientes_(eu, d) }; },
   cliente: function (eu, sid, d) { return CmpR_doCliente_(eu, d); },
   opcoesVinculo: function (eu) { return { pedidosComercial: CmpR_pedidosComercial_(), veiculos: CmpR_veiculos_() }; },
+  // cotações e aprovação
+  salvarCotacao: function (eu, sid, d) { return CmpC_salvar_(eu, d); },
+  retirarCotacao: function (eu, sid, d) { return CmpC_retirar_(eu, d); },
+  escolher: function (eu, sid, d) { return CmpC_escolher_(eu, d); },
+  decidir: function (eu, sid, d) { return CmpC_decidir_(eu, d); },
   // fornecedores
   fornecedores: function (eu, sid, d) { return { fornecedores: CmpF_listar_(eu, d) }; },
   fornecedor: function (eu, sid, d) { return { fornecedor: CmpF_detalhe_(eu, d && d.id) }; },

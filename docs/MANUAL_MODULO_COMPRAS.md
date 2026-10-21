@@ -1,6 +1,6 @@
 # Manual do módulo Compras e peças do SGO+
 
-Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras, Fornecedores e Regras de compras.
+Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras (com cotações e aprovação), Fornecedores e Regras de compras.
 
 ## Para que serve
 
@@ -64,6 +64,28 @@ Conferir a especificação: se estiver clara, toque em "Especificação conferid
 
 Cada pedido novo com a especificação completa vira a atividade "Conferir e cotar" do comprador em Minhas atividades, com o prazo da urgência (crítica: no mesmo dia; alta e normal: 1 dia útil; baixa: 2 dias úteis; configurável).
 
+## Cotações
+
+Com o pedido "Em cotação", o comprador toca em "Lançar orçamento" para cada fornecedor: preço unitário de cada item, frete, impostos que não estão no preço, prazo de entrega, validade, número do orçamento do fornecedor, condição de pagamento e, para peça, se é original (mesmo número de peça), equivalente (especificação conferida) ou a confirmar. O total é calculado pelo sistema (preço vezes a quantidade pedida, mais frete e impostos). O arquivo do orçamento (PDF, foto ou e-mail salvo) é obrigatório: é a prova do preço e fica na pasta "Compras - Anexos", visto só por quem vê valores.
+
+Um orçamento por fornecedor em cada pedido: para mudar, "Corrigir"; para tirar da comparação, "Retirar" com o motivo (fica no histórico).
+
+## Escolha e aprovação por valor
+
+O comprador toca em "Escolher este orçamento". Só pode ser escolhido o orçamento com arquivo, dentro da validade e com a compatibilidade confirmada. Se não é o mais barato, o comprador escreve o motivo. Se há menos cotações de fornecedores diferentes que o mínimo da faixa, escreve a justificativa (fornecedor único, urgência) e a compra aparece marcada para o Financeiro.
+
+O valor total do orçamento escolhido define quem aprova (Regras de compras):
+
+1. Faixa do comprador (até R$ 1.000 no padrão): a escolha feita pelo comprador já é a aprovação, registrada com o nome dele. Se quem escolheu é quem pediu, aprova o substituto (sem ele, o gestor da área).
+2. Faixa do gestor (até R$ 10.000): o gestor da área de quem pediu (responsável em Caixa de decisões > Regras e responsáveis; sem ele, o Gestor com essa área no cadastro; sem ninguém, a Diretoria).
+3. Faixa da Diretoria (acima de R$ 10.000): a Diretoria.
+
+Quem pediu nunca aprova a própria compra. Acima da faixa do comprador, quem lançou ou escolheu orçamento também não aprova. A Diretoria pode aprovar qualquer faixa.
+
+A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovador, com prazo de 1 dia útil (urgência crítica: no mesmo dia). A decisão é tomada na ficha da compra: a Caixa mostra, cobra pela escada (e-mail da manhã, depois o resumo do WhatsApp da gestão e, parada, a Diretoria) e leva até a ficha. Na faixa do comprador, o item aparece no Início dos compradores.
+
+"Aprovar" (observação opcional): o comprador recebe a atividade "Fazer o pedido de compra" (crítica: no mesmo dia; demais: 1 dia útil) e o aviso no sistema e no resumo de e-mail. "Reprovar" exige o motivo: a compra volta para cotação, o comprador recebe o motivo no sistema e a atividade "Rever a cotação". Orçamento vencido não é aprovado: reprove com o motivo para o comprador pedir a revalidação.
+
 ## Fornecedores
 
 Cadastro único: CNPJ (ou CPF de pessoa física) que não se repete, razão social, nome fantasia e endereço pela consulta de CNPJ, contato, telefone, WhatsApp, e-mail para pedidos, categorias, prazo médio, condição de pagamento e observações. Antes de criar, o sistema avisa se já existe fornecedor com nome parecido.
@@ -93,3 +115,5 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
 - Especificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail.
 - Pedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema.
 - Pedido novo para cotar: o comprador, como atividade.
+- Compra aguardando aprovação: o aprovador da faixa, pela Caixa de decisões (faixa do comprador: no Início dos compradores).
+- Compra aprovada: o comprador, no sistema e no resumo de e-mail, com a atividade de fazer o pedido. Compra reprovada: o comprador, só no sistema, com o motivo.

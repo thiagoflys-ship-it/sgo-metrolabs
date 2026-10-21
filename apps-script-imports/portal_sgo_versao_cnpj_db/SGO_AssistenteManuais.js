@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "1d9f8cd44b85",
+ "versao": "de0d4f857ddb",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -380,6 +380,58 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Para quem mantém o sistema",
      "texto": "Chamadas da tela: EnviarDoc_apiConferir, EnviarDoc_apiPreparar, EnviarDoc_apiEnviar, EnviarDoc_apiTentarDeNovo, EnviarDoc_apiHistorico, EnviarDoc_apiEnvios, EnviarDoc_apiDocumentosDoCliente.\nA barra \"Documento salvo\" vem de uma observação passiva das respostas do google.script.run (o módulo não precisa mudar): se a resposta traz o link de um arquivo salvo, o servidor confere qual é o documento. Para ligar um botão explícito em qualquer tela: SGO_EnviarDoc.abrir({ arquivoId | url, htmlId, docDocumentoId, dica: { clienteId, numero, equipamento } }) ou o atributo data-sgo-enviar=\"<id ou link>\".\nPasta raiz nova de módulo: acrescentar em ENVDOC_RAIZES (tipo, classe e frase do e-mail).\nWhatsApp: se a equipe da Z-API criar SGO_zapiEnviarDocumento_(telefone, { nome, mime, base64, legenda }, { tipo }), ela é usada no lugar do envio próprio (send-document).\nTestes: tests/enviar-documento.test.cjs."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MATRIZ_DE_AVISOS.md",
+   "titulo": "Manual da Matriz de avisos e de Meus avisos (SGO+ e COMMAND)",
+   "tela": "meus_avisos",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 21/10/2026. Matriz aprovada pelo dono em 21/10/2026 (estudo docs/MATRIZ_DE_AVISOS_20261021.md, todas as respostas da seção 8 conforme a recomendação). Telas: SGO+ › Administração › Matriz de avisos (Administrador e Diretoria) e SGO+ › Principal › Meus avisos (cada pessoa), em JS_AvisosMatriz.html. Servidor: SGO_Avisos_Matriz.js (regras, resumo do dia, preferências, central por área e medição) e SGO_Notificar.js (todo envio passa pela matriz)."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Define, para cada aviso que o sistema manda, quem recebe e por qual canal. Uma tabela só (evento, público, canal e frequência), com a matriz aprovada como padrão. O notificador consulta a tabela em todo envio. O Administrador e a Diretoria ajustam na tela; cada mudança fica na trilha. Cada pessoa ajusta o que é opcional em Meus avisos."
+    },
+    {
+     "titulo": "Os três canais (parte 1)",
+     "texto": "Canal | O que vai | QuandoSistema | Todo aviso (Início, central de pendências, Caixa de decisões, sino). Cobra até ser resolvido. | Na hora, sempre\nE-mail de resumo do dia | Um e-mail por pessoa com o que espera por ela: atividades, decisões (gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo | A partir das 08:00 do dia útil (ou 12:00, se a pessoa escolher), só se houver algo\nE-mail na hora | O que exige ciência (avisos), o que muda algo de hoje (reserva cancelada ou trocada, lembrete da reserva, cliente respondeu a proposta, pedido de apoio, atividade com prazo para hoje) | Na hora, no expediente; fora dele, sai agrupado na primeira rodada do expediente seguinte\nWhatsApp de resumo do dia | Só contagens: atividades atrasadas, para hoje e novas, decisões paradas, avisos para confirmar, mensagens não lidas | A partir das 09:30 do dia útil, só CLT, só se a pessoa ainda não abriu o sistema, só se há item para hoje, atrasado ou decisão parada; durante o piloto, só quem está na lista do piloto\nWhatsApp na hora | Só as quatro exceções da Frota | No expediente, só CLT, uma por pessoa por dia em cada exceção\nAs quatro exceções do WhatsApp na hora: partida não liberada pelo rastreador (gestor da Frota); veículo em uso sem registro, só no expediente (gestor da Frota; fora do expediente vai no resumo do dia seguinte); devolução atrasada com reserva no mesmo dia (quem está com o veículo); reserva de hoje liberada a outra pessoa (quem reservou)."
+    },
+    {
+     "titulo": "Os três canais (parte 2)",
+     "texto": "Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horários). WhatsApp e e-mail de resumo nunca levam valor em reais, dado pessoal, assunto de conduta, ocorrência, incentivo ou ponto de colega: esses vão só como contagem."
+    },
+    {
+     "titulo": "Regras gerais que valem para todo envio",
+     "texto": "WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo). PJ e vínculo não informado recebem pelo sistema e por e-mail. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.\nWhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.\nCliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).\nEvento \"vira histórico\": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).\nGestor da área no lugar de \"toda a gestão\": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.\nO assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa.\nO piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista."
+    },
+    {
+     "titulo": "Matriz de avisos (Administrador e Diretoria)",
+     "texto": "1. Abra Menu › Administração › Matriz de avisos.\n2. \"Resumo do dia e filtro por área\": confira as horas (e-mail 08:00, WhatsApp 09:30), o WhatsApp de resumo e a central por área. Para mudar, abra \"Alterar horários\", ajuste, escreva o motivo e toque em \"Salvar horários\".\n3. \"Gestor de cada área\": mostra quem responde por cada área. Área sem gestor aparece em amarelo (vai para a Diretoria). Para definir, toque no botão que abre Caixa de decisões › Regras e responsáveis.\n4. \"Regras de cada evento\": filtre pelo módulo. Em cada evento escolha o canal do e-mail (só no sistema, no resumo do dia, na hora), o do WhatsApp (sem WhatsApp, na contagem do dia; na hora só nas exceções) e a decisão (continua avisando ou vira só histórico). Toque em \"Salvar\" e escreva o motivo.\n5. \"Voltar ao padrão aprovado\" desfaz uma mudança (também pede o motivo).\n6. \"Resumos do dia\": escolha o dia e veja, por pessoa e canal, se o resumo saiu e por quê não saiu (sem novidade, já abriu o sistema, PJ, desligado pela pessoa, retido pelo piloto).\n7. \"Medição\": antes (16/10 a 20/10) e depois; mostra a média e o maior número de e-mails e WhatsApp por pessoa por dia, quantas pessoas-dia passaram da meta, WhatsApp fora do expediente e para PJ, retidos pelo piloto e e-mails guardados para o resumo.\n8. \"Preferências da equipe\": o que cada pessoa escolheu em Meus avisos (só leitura).\n9. \"Trilha de mudanças\": quem mudou, quando, o antes, o depois e o motivo.\n\nTravas: WhatsApp na hora só nos eventos aprovados como exceção; evento obrigatório (avisos com ciência, atividade atrasada, decisões do gestor, escalada à Diretoria, exceções da Frota) não pode deixar de avisar; toda mudança pede motivo de pelo menos 8 letras."
+    },
+    {
+     "titulo": "Meus avisos (cada pessoa)",
+     "texto": "1. Abra Menu › Principal › Meus avisos.\n2. Marque ou desmarque o WhatsApp de resumo do dia (só para CLT).\n3. Escolha a hora do e-mail de resumo: 08:00 ou 12:00.\n4. Se quiser, receba no e-mail de resumo os avisos informativos (comentário, atividade concluída, venda ganha), que continuam no sistema.\n5. Se quiser, tire do e-mail de resumo os avisos do Comercial, da Frota ou do Auvo (continuam no sistema).\n6. Toque em \"Salvar\". Vale a partir do próximo resumo.\n7. \"Ver a prévia\" mostra o texto do seu e-mail de resumo de hoje, sem enviar nada.\n\nNão podem ser desligados: avisos com ciência (sistema e e-mail), a cobrança da atividade atrasada no sistema, o e-mail com as decisões do gestor, as exceções da Frota para o gestor da Frota e para quem está com o veículo, e as pendências da central. Só a própria pessoa altera as suas preferências; a gestão vê na Matriz de avisos."
+    },
+    {
+     "titulo": "Central de pendências por área",
+     "texto": "O gestor vê o da sua área (área do cadastro e áreas de Regras e responsáveis) e o que é dele; a Diretoria vê tudo; o Administrador sem área vê as falhas técnicas (rastreador sem conexão, importação do Auvo parada) e o que é dele. Gestor sem área definida continua vendo tudo, para ninguém ficar sem enxergar o que precisa. Quem publicou um aviso com ciência vê a leitura atrasada dele. O filtro desliga em Matriz de avisos › Alterar horários."
+    },
+    {
+     "titulo": "COMMAND",
+     "texto": "O COMMAND fica em silêncio fora do próprio sino enquanto não for usado pela equipe: não põe nada na fila do WhatsApp nem espelha no SGO+, Demandas e SEDNA não mandam WhatsApp nem e-mail, e os eventos que viraram histórico deixam de gravar o sino. As preferências valem no SGO+ (Meus avisos), para os dois sistemas."
+    },
+    {
+     "titulo": "Problemas comuns",
+     "texto": "O que aparece | O que fazerUma pessoa não recebe o WhatsApp de resumo | Em Resumos do dia, veja o motivo: PJ ou vínculo não informado, já abriu o sistema, nada para hoje, fora do piloto ou desligado por ela.\nUma pessoa não recebe o e-mail de resumo | Confira o e-mail no cadastro (Administração › Usuários). Dia sem nada para ela não tem e-mail.\n\"WhatsApp na hora só vale para as exceções aprovadas pelo dono\" | Escolha \"Na contagem do WhatsApp do dia\" ou \"Sem WhatsApp\".\n\"é obrigatório pela matriz aprovada pelo dono\" | Troque só entre na hora e no resumo; para mudar a regra, leve ao dono.\nUm gestor vê poucas pendências | Confira a área dele em Administração › Usuários e em Caixa de decisões › Regras e responsáveis."
+    },
+    {
+     "titulo": "Registros",
+     "texto": "Nada é apagado. NTF_REGRAS (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), NTF_RESUMO_FILA (itens guardados para o e-mail de resumo ou para o próximo expediente), NTF_RESUMOS (cada resumo avaliado: pessoa, dia, canal, situação, motivo), NTF_PREFERENCIAS (cada mudança de preferência) e NTF_ENVIOS (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO)."
     }
    ]
   },
@@ -1441,7 +1493,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Combustível e KM",
-     "texto": "1. Escolha o período e toque em \"Calcular\".\n2. \"Consumo por veículo\": km/L do período, a média do próprio veículo e o desvio. Vermelho = gastou mais que a média além do limite configurado (padrão 15%): revise o veículo.\n3. \"Capacidade do tanque\": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.\n4. \"Abastecimentos a conferir\": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque \"Conferir com a posição do veículo\").\n5. \"KM por condutor\": km informado nas retiradas do período.\n6. \"Pedir comprovante\": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, e-mail no horário de trabalho e no máximo um resumo por dia no WhatsApp). Ele envia em Frota > Abastecimentos e despesas > \"Comprovantes pedidos a você\"; o pedido e a atividade fecham sozinhos.\n\nConsumo pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. Abastecimento parcial distorce o resultado daquele intervalo. O registro de abastecimento ganhou o campo \"Hora (opcional)\": com ela o SGO+ confere a posição do veículo no horário."
+     "texto": "1. Escolha o período e toque em \"Calcular\".\n2. \"Consumo por veículo\": km/L do período, a média do próprio veículo e o desvio. Vermelho = gastou mais que a média além do limite configurado (padrão 15%): revise o veículo.\n3. \"Capacidade do tanque\": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.\n4. \"Abastecimentos a conferir\": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque \"Conferir com a posição do veículo\").\n5. \"KM por condutor\": km informado nas retiradas do período.\n6. \"Pedir comprovante\": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, no e-mail de resumo do dia e na contagem do WhatsApp de resumo do dia, se for CLT). Ele envia em Frota > Abastecimentos e despesas > \"Comprovantes pedidos a você\"; o pedido e a atividade fecham sozinhos.\n\nConsumo pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. Abastecimento parcial distorce o resultado daquele intervalo. O registro de abastecimento ganhou o campo \"Hora (opcional)\": com ela o SGO+ confere a posição do veículo no horário."
     },
     {
      "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Relatórios",
@@ -1473,7 +1525,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Reservas de veículo > Regras (parte 1)",
-     "texto": "Regra | Como funcionaSem sobreposição | O mesmo veículo não tem duas reservas no mesmo horário, nem reserva sobre manutenção programada, parada ou retirada em andamento. O sistema mostra os livres no mesmo período. Uma pessoa não segura dois veículos ao mesmo tempo. A conferência final é feita dentro da trava do sistema, relendo o banco. A retirada respeita a reserva | Ao retirar, informe a devolução prevista. Se o veículo tem reserva de outra pessoa (ou manutenção programada) começando antes da devolução prevista mais a folga (1 hora), a retirada é recusada com quem reservou, quando e os veículos livres agora. Só a gestão libera, com justificativa; quem reservou é avisado na hora com a sugestão de outro veículo. A liberação não vira registro \"pela gestão\" nem sugestão no Programa de conduta. Dono da reserva | Retira normalmente a partir de 2 horas antes do início; a reserva passa a \"em uso\" e, na devolução, a \"concluída\". Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); e-mail no expediente; WhatsApp só se a reserva for no mesmo dia, pela regra sutil (vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). A gestão e quem reservou também são avisados. Se a reserva começar com o veículo fora, conta como \"atraso que afetou reserva\" e vira só sugestão no Programa de conduta. Véspera | Último dia útil antes do início, a partir das 14:00: lembrete ao reservante (sistema; e-mail no expediente) e conferência do veículo (ativo, sem parada ou manutenção no período, sem manutenção vencida, documentos e CNH válidos, veículo de volta a tempo). Problema avisa o reservante e a gestão, com os livres para troca;"
+     "texto": "Regra | Como funcionaSem sobreposição | O mesmo veículo não tem duas reservas no mesmo horário, nem reserva sobre manutenção programada, parada ou retirada em andamento. O sistema mostra os livres no mesmo período. Uma pessoa não segura dois veículos ao mesmo tempo. A conferência final é feita dentro da trava do sistema, relendo o banco. A retirada respeita a reserva | Ao retirar, informe a devolução prevista. Se o veículo tem reserva de outra pessoa (ou manutenção programada) começando antes da devolução prevista mais a folga (1 hora), a retirada é recusada com quem reservou, quando e os veículos livres agora. Só a gestão libera, com justificativa; quem reservou é avisado na hora com a sugestão de outro veículo. A liberação não vira registro \"pela gestão\" nem sugestão no Programa de conduta. Dono da reserva | Retira normalmente a partir de 2 horas antes do início; a reserva passa a \"em uso\" e, na devolução, a \"concluída\". Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); WhatsApp só se a reserva for no mesmo dia (exceção S44 da matriz de avisos: vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). Quem reservou recebe e-mail na hora; o gestor da Frota vê na Caixa de decisões. Se a reserva começar com o veículo fora, conta como \"atraso que afetou reserva\" e vira só sugestão no Programa de conduta. Véspera | Último dia útil antes do início, a partir das 14:00: lembrete ao reservante (sistema; e-mail no expediente) e conferência do veículo (ativo, sem parada ou manutenção no período, sem manutenção vencida, documentos e CNH válidos, veículo de volta a tempo). Problema avisa o reservante e a gestão, com os livres para troca;"
     },
     {
      "titulo": "Reservas de veículo > Regras (parte 2)",
@@ -1486,6 +1538,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Enviar o documento por e-mail ou WhatsApp (20/10/2026)",
      "texto": "Os relatórios da frota são documentos internos: depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar\"; a janela \"Enviar documento\" oferece as pessoas da equipe (e-mail e celular do cadastro de Usuários) ou o destinatário digitado. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    },
+    {
+     "titulo": "Avisos da Frota pela matriz de avisos (21/10/2026)",
+     "texto": "Aviso | Quem recebe | CanalRetirada ou devolução registrada em seu nome pela gestão | Condutor | Sistema e e-mail de resumo do dia (sem WhatsApp)\nVeículo em uso sem registro (rastreador) | Gestor da Frota | E-mail e WhatsApp na hora, no expediente; fora dele, no resumo do dia seguinte\nPartida não liberada pelo rastreador | Gestor da Frota | WhatsApp na hora, no expediente (o condutor está esperando)\nBloqueio da partida pendente há 30 minutos | Gestor da Frota | E-mail na hora\nReserva cancelada, trocada de veículo, lembrete da véspera, problema na reserva, devolução atrasada (a quem reservou) | Reservante | E-mail na hora\nVeículo da sua reserva de hoje liberado a outra pessoa | Reservante | E-mail e WhatsApp na hora (mesmo dia, expediente, CLT)\nDevolução atrasada com reserva no mesmo dia | Quem está com o veículo | WhatsApp na hora (expediente, CLT, uma por dia)\nReserva feita pela gestão em seu nome, reserva não utilizada, problema na reserva (à gestão), CNH vencendo | Reservante, condutor ou gestor da Frota | E-mail de resumo do dia\nVeículo da sua reserva devolvido, devolução atrasada (à gestão) | Próximo reservante, gestor da Frota | Só no sistema (Caixa de decisões)\nO gestor da Frota é o da área Administrativo em Caixa de decisões › Regras e responsáveis (sem gestor, a Diretoria). PJ e vínculo não informado não recebem WhatsApp. Detalhes em docs/MANUAL_MATRIZ_DE_AVISOS.md."
     }
    ]
   },
@@ -1520,8 +1576,12 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Cada item ganha um registro quando entra na caixa (GES_DECISOES) e sai sozinho quando a pendência some da origem. Itens que já existiam quando a caixa foi ligada começam a contar do dia em que a caixa os viu.\nPrazo de decisão: o da própria regra quando existe (prazo de homologação, de julgamento, de registro da sugestão, vencimento) ou a entrada mais N dias úteis do tipo (1 a 5).\nParado: dias úteis desde a entrada ou desde a última providência. Fins de semana e feriados não contam (expediente da empresa).\n\"Registrar providência\": o que foi feito e até quando acompanhar (no máximo 10 dias). Conta como decisão tomada e pausa a escada até a data.\n\"Ciente\": só para justificativa de atraso; tira o item da caixa.\nOcorrência que o sistema descartou porque o prazo de homologação venceu fica como \"venceu sem decisão\" e conta na avaliação."
     },
     {
-     "titulo": "Escada de cobrança",
-     "texto": "Quando | CanalNa hora | item na caixa, no Início da gestão e no balão do menu\nTodo dia útil, a partir das 08:00 | UM e-mail por pessoa da gestão com o resumo do que espera por ela (só se houver algo), agrupado: paradas, prazo vencido, novas e demais, com o caminho de cada item\nParado há 2 dias úteis | entra no resumo diário do WhatsApp do gestor\nParado há 5 dias úteis | escala para a Diretoria (aba \"Com a Diretoria\" e e-mail diário da Diretoria com o nome de quem está segurando)\nPrimeiro dia útil da semana, 08:00 | o e-mail da Diretoria leva o relatório A4 semanal da gestão\nPrimeiro dia útil do mês | relatórios do mês anterior (Desempenho da gestão, Frota, Programa de conduta, Atividades da equipe) gerados e enviados no e-mail da Diretoria\nRegras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-mail por dia (as decisões dela, os escalados, as áreas sem gestor e os relatórios do dia); o mesmo item não é cobrado duas vezes no mesmo dia (cada envio fica em GES_ENVIOS). WhatsApp: no máximo uma mensagem por pessoa por dia somando atividades e gestão (no dia em que o gestor recebe o resumo da gestão, ele já leva a contagem das atividades dele), só no horário de trabalho, só para o vínculo liberado (padrão CLT). Modelo da Meta próprio: sgo_gestao_resumo_dia (até ser aprovado, sai pelo sgo_aviso_geral).\n\nTudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários."
+     "titulo": "Escada de cobrança (parte 1)",
+     "texto": "Quando | CanalNa hora | item na caixa, no Início da gestão e no balão do menu\nTodo dia útil, a partir das 08:00 | UM e-mail por pessoa da gestão com o resumo do que espera por ela (só se houver algo), agrupado: paradas, prazo vencido, novas e demais, com o caminho de cada item\nParado há 2 dias úteis | entra na contagem do WhatsApp de resumo do dia do gestor (09:30, só CLT, só se ele ainda não abriu o sistema)\nParado há 5 dias úteis | escala para a Diretoria (aba \"Com a Diretoria\" e e-mail diário da Diretoria com o nome de quem está segurando)\nPrimeiro dia útil da semana, 08:00 | o e-mail da Diretoria leva o relatório A4 semanal da gestão\nPrimeiro dia útil do mês | relatórios do mês anterior (Desempenho da gestão, Frota, Programa de conduta, Atividades da equipe) gerados e enviados no e-mail da Diretoria\nMatriz de avisos (21/10/2026): o e-mail diário da gestão, a escalada e os relatórios da Diretoria saem dentro do e-mail de resumo do dia único de cada pessoa (com atividades, avisos e o resto, um e-mail só), e o WhatsApp da gestão é a contagem de decisões paradas no WhatsApp de resumo do dia. Cada envio continua registrado em GES_ENVIOS (EMAIL_GESTOR, EMAIL_DIRETORIA, WHATS_GESTOR). Decisões do Programa de conduta e do ponto vão só como contagem. Ver docs/MANUAL_MATRIZ_DE_AVISOS.md."
+    },
+    {
+     "titulo": "Escada de cobrança (parte 2)",
+     "texto": "Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-mail por dia (as decisões dela, os escalados, as áreas sem gestor e os relatórios do dia); o mesmo item não é cobrado duas vezes no mesmo dia (cada envio fica em GES_ENVIOS). WhatsApp: no máximo uma mensagem por pessoa por dia somando atividades e gestão (no dia em que o gestor recebe o resumo da gestão, ele já leva a contagem das atividades dele), só no horário de trabalho, só para o vínculo liberado (padrão CLT). Modelo da Meta próprio: sgo_gestao_resumo_dia (até ser aprovado, sai pelo sgo_aviso_geral).\n\nTudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários."
     },
     {
      "titulo": "Avaliação do gestor (parte 1)",
@@ -1537,7 +1597,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Rotina",
-     "texto": "Gatilho Gestao_rotinaDecisoes a cada 15 minutos (instalado por Gestao_garantirRotina_, também conferido uma vez por dia quando alguém da gestão abre o sistema; no servidor, scripts/instalar_gatilhos.ts). O resumo do WhatsApp também é chamado no começo do resumo de atividades, para sair antes dele."
+     "texto": "Gatilho Gestao_rotinaDecisoes a cada 15 minutos (instalado por Gestao_garantirRotina_, também conferido uma vez por dia quando alguém da gestão abre o sistema; no servidor, scripts/instalar_gatilhos.ts). Desde 21/10/2026 a rodada chama o resumo do dia único (SGO_resumoDiaRodada_, SGO_Avisos_Matriz.js), que também é chamado pela rotina das atividades de hora em hora; cada pessoa recebe no máximo um e-mail e um WhatsApp de resumo por dia."
     },
     {
      "titulo": "COMMAND",
@@ -1790,10 +1850,6 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "RH > Resumo A4 do mês",
      "texto": "Na aba \"Mês\", toque em \"Resumo A4 / PDF\". O resumo traz os números do mês por pessoa e a lista dos pedidos de ajuste (código, pessoa, dia, marcação, horário informado e situação). Ele não traz justificativas, evidências nem contatos."
-    },
-    {
-     "titulo": "RH > Avisos no alto da tela",
-     "texto": "Pedido novo, resumo do mês e resposta do RH aparecem em \"Avisos para você\", no alto da tela do Assistente do ponto e no Início. Toque em \"Ciente\" em cada um ou em \"Ciente em todos\"."
     },
     {
      "titulo": "Gestão",

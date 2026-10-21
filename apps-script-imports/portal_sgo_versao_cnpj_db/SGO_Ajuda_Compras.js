@@ -69,15 +69,24 @@ function SGO_ajudaTelas_Compras_() {
       passos: [
         { titulo: 'Conferir a especificação', itens: ['Toque no pedido para abrir a ficha.', 'Leia os itens, as fotos e os dados técnicos.', 'Se estiver tudo claro, toque em "Especificação conferida: iniciar cotação".', 'Se faltar algo, toque em "Devolver a especificação" e escreva o que falta. Quem pediu recebe o texto.'] },
         { titulo: 'Corrigir a especificação você mesmo', itens: ['Na ficha de um pedido "Solicitada", toque em "Editar a especificação".', 'Complete os itens e toque em "Salvar e enviar a Compras".'] },
+        { titulo: 'Lançar os orçamentos', itens: ['Na ficha de um pedido "Em cotação", toque em "Lançar orçamento".', 'Escolha o fornecedor.', 'Digite o preço unitário de cada item, o frete e os impostos que não estão no preço. O total é calculado pelo sistema.', 'Informe o prazo de entrega, a validade, o número do orçamento e a condição de pagamento.', 'Para peça, diga se é original, equivalente ou a confirmar.', 'Anexe o arquivo do orçamento (obrigatório) e toque em "Salvar o orçamento".', 'Repita para cada fornecedor. Para trocar algo, toque em "Corrigir"; para tirar da comparação, "Retirar" com o motivo.'] },
+        { titulo: 'Escolher o orçamento', itens: ['Toque em "Escolher este orçamento" no orçamento vencedor.', 'Se não for o mais barato, escreva o motivo.', 'Se a faixa pede mais cotações do que há, escreva a justificativa (por exemplo, fornecedor único).', 'Na faixa do comprador (até R$ 1.000 no padrão), a sua escolha já é a aprovação registrada.', 'Nas outras faixas, a compra vai para a Caixa de decisões de quem aprova.'] },
+        { titulo: 'Aprovar ou reprovar (quem tem a alçada)', itens: ['Abra a compra pela Caixa de decisões ou pela fila (aba "Aguardando aprovação").', 'Confira os orçamentos, os arquivos e as justificativas.', 'Toque em "Aprovar" (observação opcional) ou em "Reprovar" e escreva o motivo.', 'Aprovada: o comprador recebe a atividade para fazer o pedido. Reprovada: volta para cotação com o motivo.'] },
         { titulo: 'Cancelar', itens: ['Toque em "Cancelar o pedido".', 'Escreva o motivo. Quem pediu é avisado no sistema.', 'Se o pedido de compra já foi feito, avise o fornecedor.'] }
       ],
       cores: [
         { nome: 'Faixa vermelha à esquerda', significado: 'Urgência crítica (equipamento ou atendimento parado).' },
         { nome: 'Faixa laranja à esquerda', significado: 'Urgência alta.' },
-        { nome: 'Selo laranja "Especificação incompleta"', significado: 'Não pode ser cotado nem aprovado até completar.' }
+        { nome: 'Selo laranja "Especificação incompleta"', significado: 'Não pode ser cotado nem aprovado até completar.' },
+        { nome: 'Selo azul "Mais barata" na cotação', significado: 'O menor total entre os orçamentos que podem ser escolhidos.' },
+        { nome: 'Selo verde "Escolhida"', significado: 'O orçamento vencedor.' },
+        { nome: 'Selo vermelho na cotação', significado: 'Não pode ser escolhida: sem o arquivo do orçamento, validade vencida ou compatibilidade da peça a confirmar.' }
       ],
       problemas: [
-        { situacao: 'O botão "iniciar cotação" não aparece.', oQueFazer: 'A especificação está incompleta ou foi devolvida. Complete pelo botão "Editar a especificação" ou espere quem pediu completar.' }
+        { situacao: 'O botão "iniciar cotação" não aparece.', oQueFazer: 'A especificação está incompleta ou foi devolvida. Complete pelo botão "Editar a especificação" ou espere quem pediu completar.' },
+        { situacao: 'Aparece "anexe o arquivo do orçamento".', oQueFazer: 'Só conta orçamento com a prova do preço. Salve o e-mail ou o PDF do fornecedor (ou tire foto) e anexe.' },
+        { situacao: 'Não consigo aprovar a compra que eu cotei.', oQueFazer: 'Acima da faixa do comprador, quem lançou ou escolheu orçamento não aprova, e quem pediu nunca aprova a própria compra. A ficha mostra quem aprova.' },
+        { situacao: 'A aprovação recusou: "o orçamento escolhido venceu".', oQueFazer: 'Reprove com o motivo "orçamento vencido". O comprador pede a revalidação ao fornecedor, corrige a validade e escolhe de novo.' }
       ],
       quemPode: quem
     },
