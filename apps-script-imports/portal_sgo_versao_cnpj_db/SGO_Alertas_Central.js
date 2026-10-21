@@ -63,7 +63,8 @@ var PEND_MODULOS = {
   auvo: 'Integração Auvo',
   atividades: 'Atividades',
   avisos: 'Avisos',
-  email: 'E-mail'
+  email: 'E-mail',
+  comercial: 'Comercial'
 };
 
 /**
@@ -138,7 +139,15 @@ var PEND_TIPOS = {
   atividade_justificativa: { modulo: 'atividades', um: 'justificativa de atraso para avaliar', varios: 'justificativas de atraso para avaliar', rotulo: 'Avaliar', fazer: 'leia a justificativa e toque em Ciente na Caixa de decisões', tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, origem: 'ATIVIDADES' },
   frota_caso: { modulo: 'frota', um: 'caso da Frota em análise', varios: 'casos da Frota em análise', rotulo: 'Analisar', fazer: 'decida a causa e o tratamento em Frota > Gestão e melhoria', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   plano_atrasado: { modulo: 'qualidade', um: 'plano de ação com prazo vencido', varios: 'planos de ação com prazo vencido', rotulo: 'Plano atrasado', fazer: 'cobre as ações ou replaneje o plano', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'QUALIDADE' },
-  frota_copiloto: { modulo: 'frota', um: 'sugestão do copiloto da Frota para decidir', varios: 'sugestões do copiloto da Frota para decidir', rotulo: 'Decidir', fazer: 'aceite ou descarte em Frota > Gestão e melhoria > Copiloto', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' }
+  frota_copiloto: { modulo: 'frota', um: 'sugestão do copiloto da Frota para decidir', varios: 'sugestões do copiloto da Frota para decidir', rotulo: 'Decidir', fazer: 'aceite ou descarte em Frota > Gestão e melhoria > Copiloto', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js › Comercial_fontePendencias_). Nenhum item leva valor.
+  comercial_sem_proxima: { modulo: 'comercial', um: 'oportunidade sem próxima ação', varios: 'oportunidades sem próxima ação', rotulo: 'Sem próxima ação', fazer: 'registre o contato e marque a próxima ação em Comercial > Oportunidades', tela: { tipo: 'comercial', aba: 'oportunidades' }, origem: 'COMERCIAL' },
+  comercial_parada: { modulo: 'comercial', um: 'oportunidade parada', varios: 'oportunidades paradas', rotulo: 'Parada', fazer: 'registre um contato real ou a perda em Comercial > Oportunidades', tela: { tipo: 'comercial', aba: 'oportunidades' }, origem: 'COMERCIAL' },
+  comercial_desconto: { modulo: 'comercial', um: 'desconto de proposta para aprovar', varios: 'descontos de propostas para aprovar', rotulo: 'Aprovar desconto', fazer: 'aprove ou negue em Comercial > Propostas', tela: { tipo: 'comercial', aba: 'propostas' }, origem: 'COMERCIAL' },
+  comercial_reabertura: { modulo: 'comercial', um: 'pedido de reabertura de oportunidade', varios: 'pedidos de reabertura de oportunidades', rotulo: 'Decidir', fazer: 'reabra ou recuse em Comercial > Oportunidades', tela: { tipo: 'comercial', aba: 'oportunidades' }, origem: 'COMERCIAL' },
+  comercial_pedido_parado: { modulo: 'comercial', um: 'pedido aprovado sem passagem aos setores', varios: 'pedidos aprovados sem passagem aos setores', rotulo: 'Pedido parado', fazer: 'passe o pedido aos setores em Comercial > Propostas', tela: { tipo: 'comercial', aba: 'propostas' }, origem: 'COMERCIAL' },
+  comercial_pedido_passar: { modulo: 'comercial', um: 'pedido aprovado para passar aos setores', varios: 'pedidos aprovados para passar aos setores', rotulo: 'Passar aos setores', fazer: 'toque em Passar aos setores na proposta', tela: { tipo: 'comercial', aba: 'propostas' }, origem: 'COMERCIAL' },
+  comercial_aviso: { modulo: 'comercial', um: 'aviso do Comercial', varios: 'avisos do Comercial', rotulo: 'Informativo', fazer: 'abra o Comercial para ver', tela: { tipo: 'comercial', aba: 'hoje' }, origem: 'COMERCIAL' }
 };
 
 // Tipos que já têm janela própria ao entrar (não se repetem no resumo da janela de avisos).
@@ -975,6 +984,8 @@ var PEND_FONTES = [
   { nome: 'Auvo', fn: Pend_fonteAuvo_ },
   // 21/10/2026: e-mails de cliente sem leitura/resposta (SGO_Email.js): da própria pessoa e, parados, da gestão.
   { nome: 'e-mail', fn: function (add, ctx) { if (!ctx.cliente && typeof Email_pendencias_ === 'function') Email_pendencias_(add, ctx); } },
+  // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js): sem próxima ação, desconto, reabertura, pedido parado e avisos.
+  { nome: 'Comercial', fn: function (add, ctx) { if (!ctx.cliente && typeof Comercial_fontePendencias_ === 'function') Comercial_fontePendencias_(add, ctx); } },
   // 20/10/2026: decisões da gestão que só a Caixa de decisões conhecia (SGO_Gestao_Decisoes.js).
   { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } }
 ];

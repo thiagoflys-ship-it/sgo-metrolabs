@@ -95,6 +95,16 @@ function Email_indiceClientes_() {
       porDominio[dom] = { id: Email_s_(c.ID), nome: nome };
     });
   });
+  // 21/10/2026: e-mails dos contatos do cliente (CAD_CONTATOS, Comercial) também identificam o cliente (endereço exato).
+  try {
+    var nomesCli = {};
+    lista.forEach(function (c) { nomesCli[Email_s_(c.ID)] = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL) || Email_s_(c.ID); });
+    (SGO_DATA.getAll('CAD_CONTATOS') || []).forEach(function (k) {
+      var e = Email_s_(k.EMAIL).toLowerCase(), cid = Email_s_(k.CLIENTE_ID);
+      if (!nomesCli[cid] || SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') !== 'ATIVO' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) || porEndereco[e]) return;
+      porEndereco[e] = { id: cid, nome: nomesCli[cid] };
+    });
+  } catch (e) {}
   Object.keys(dominiosAmbiguos).forEach(function (d) { delete porDominio[d]; });
   EMAIL_INDICE_CLIENTES = { porEndereco: porEndereco, porDominio: porDominio };
   return EMAIL_INDICE_CLIENTES;

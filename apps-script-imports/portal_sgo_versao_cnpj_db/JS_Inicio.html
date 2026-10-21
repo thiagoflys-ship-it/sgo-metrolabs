@@ -329,6 +329,10 @@
         abrir("minhas_atividades");
         if (acao.id && typeof Atividades_abrirDetalhe_ === "function") setTimeout(function () { Atividades_abrirDetalhe_(acao.id); }, 300);
         break;
+      case "comercial":
+        // 21/10/2026: pendências do Comercial abrem a oportunidade ou a proposta (JS_Comercial.html).
+        if (typeof Comercial_irPara_ === "function") Comercial_irPara_(acao); else abrir("comercial");
+        break;
       case "frota_reservas": {
         // 20/10/2026: pendência das reservas de veículo abre a Frota na aba Reservas (no celular, a tela completa da Frota).
         if (typeof fsAbrirFrotaCompleta_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) { fsAbrirFrotaCompleta_("reservas"); break; }

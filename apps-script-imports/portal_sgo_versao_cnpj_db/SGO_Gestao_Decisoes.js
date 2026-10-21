@@ -76,10 +76,10 @@ var GES_SITUACOES = { ABERTA: 'Aberta', RESOLVIDA: 'Resolvida', PERDIDA: 'Venceu
 /** Área padrão de cada módulo quando o item não é de uma pessoa (configurável em Regras e responsáveis). */
 var GES_AREA_MODULO_PADRAO = {
   padroes: 'METROLOGIA', certificados: 'METROLOGIA', documentos: 'COMERCIAL', nr13: 'TECNICA', frota: 'ADMINISTRATIVO',
-  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO', email: 'COMERCIAL'
+  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO', email: 'COMERCIAL', comercial: 'COMERCIAL'
 };
 var GES_MODULOS_CONFIG = [['padroes', 'Padrões de referência'], ['certificados', 'Certificados de calibração'], ['documentos', 'Documentos de clientes'], ['nr13', 'NR-13'],
-  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos'], ['email', 'E-mail de clientes']];
+  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos'], ['email', 'E-mail de clientes'], ['comercial', 'Comercial']];
 
 /**
  * Pendências da central que são decisão da gestão.
@@ -104,7 +104,9 @@ var GES_TIPOS = {
   qualidade_os: { prazo: 3 }, qualidade_mov: { prazo: 3 },
   auvo_os_aberta: { prazo: 3 }, auvo_sem_vinculo: { prazo: 3 }, auvo_importacao: { prazo: 1 },
   // 21/10/2026: e-mail de cliente sem resposta além do prazo da gestão (SGO_Email.js); vai ao gestor da área da pessoa
-  email_cliente_parado: { prazo: 1 }
+  email_cliente_parado: { prazo: 1 },
+  // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js). A decisão é tomada na tela do Comercial; a caixa mostra, cobra e leva até lá.
+  comercial_sem_proxima: { prazo: 1 }, comercial_desconto: { prazo: 1 }, comercial_reabertura: { prazo: 2 }, comercial_pedido_parado: { prazo: 1 }
 };
 
 var GES_CFG_PADRAO = {
@@ -322,7 +324,7 @@ function Ges_rotear_(it, cfg, us) {
   }
   // dono do caso ou do plano
   var decisor = Ges_s_(ex.decisor);
-  if (decisor && us[decisor] && us[decisor].ativo && us[decisor].gestao) { r.ids = [decisor]; r.motivo = 'Responsável pelo caso ou plano.'; return r; }
+  if (decisor && us[decisor] && us[decisor].ativo && us[decisor].gestao) { r.ids = [decisor]; r.motivo = ex.motivoDecisor || 'Responsável pelo caso ou plano.'; return r; }
   // Programa de conduta que envolve alguém da gestão: decisão da Diretoria
   if (ex.soDiretoria || (it.modulo === 'conduta' && pessoa && pessoa.gestao)) {
     r.ids = Ges_diretoria_(us, naoPode); r.reserva = true;
