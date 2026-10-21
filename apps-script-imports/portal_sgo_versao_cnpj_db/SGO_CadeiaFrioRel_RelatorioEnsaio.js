@@ -54,7 +54,9 @@ function CadeiaFrioRel_reGraficoEstudo_(analise, ctx, opcoes) {
   var faixasX = [], sombra = '';
   var t = String(analise.tipoEstudo || '').toUpperCase();
   if (analise.rampaEstabilizacao) {
-    faixasX.push({ x0: 0, x1: xDeTexto(analise.rampaEstabilizacao.fimRampaStr), rotulo: 'Estabilização (fora do julgamento)', cor: '#f1f3f5' });
+    var xr = xDeTexto(analise.rampaEstabilizacao.fimRampaStr);
+    // Rótulo só quando a faixa é larga o bastante para o texto (senão a legenda da figura explica).
+    faixasX.push({ x0: 0, x1: xr, rotulo: (duracaoMin > 0 && xr / duracaoMin > 0.2) ? 'Estabilização (fora do julgamento)' : '', cor: '#f1f3f5' });
     sombra = ' Área cinza: estabilização inicial, fora do julgamento.';
   }
   if (t === 'ABERTURA_PORTA' || t === 'QUEDA_ENERGIA') {

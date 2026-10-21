@@ -211,7 +211,7 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
   if (analise.rampaEstabilizacao) {
     analise.observacoesAnalise.push(
       'Período de estabilização inicial identificado: o equipamento levou ' +
-      SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2), 2) + 'h (de ' + analise.tempoInicio + ' até ' +
+      SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2), 2) + ' h (de ' + analise.tempoInicio + ' até ' +
       analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + SGO_DocA4_num_(analise.rampaEstabilizacao.temperaturaInicial, 2) +
       ' °C até estabilizar dentro da faixa operacional. Esse intervalo foi registrado nos dados brutos e no gráfico, ' +
       'mas excluído do julgamento de aprovação/reprovação e das estatísticas acima, por representar o acionamento ' +
