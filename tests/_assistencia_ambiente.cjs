@@ -21,7 +21,7 @@ const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO
   'SGO_EnviarDoc.js', 'SGO_Compras_Config.js', 'SGO_Compras_Cotacoes.js', 'SGO_Compras_Financeiro.js', 'SGO_Compras_Fornecedores.js', 'SGO_Compras_Painel.js', 'SGO_Compras_Pedido.js',
   'SGO_Compras_Requisicoes.js', 'SGO_Pendencias_Compras.js', 'SGO_Qualidade_Auvo.js',
   'SGO_Assistencia_Agenda.js', 'SGO_Assistencia_App.js', 'SGO_Assistencia_Chamados.js', 'SGO_Assistencia_Config.js', 'SGO_Assistencia_Fonte.js', 'SGO_Assistencia_OS.js',
-  'SGO_Assistencia_Painel.js', 'SGO_Assistencia_Relatorio.js', 'SGO_Pendencias_Assistencia.js'].filter((f) => fs.existsSync(path.join(pastaLegado, f)));
+  'SGO_Assistencia_Painel.js', 'SGO_Assistencia_Questionarios.js', 'SGO_Assistencia_Relatorio.js', 'SGO_Pendencias_Assistencia.js'].filter((f) => fs.existsSync(path.join(pastaLegado, f)));
 
 function ambiente(opcoes) {
   const o = opcoes || {};

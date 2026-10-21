@@ -160,7 +160,7 @@ o piloto do WhatsApp.
 Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,
 tamanho máximo da foto, peça em falta abrindo pedido em Compras, avisos ao cliente, relatório mensal e o interruptor
 "Assistência do SGO+ ligada". Tipos de serviço (29, vindos dos 30 tipos do Auvo) e modelos de checklist (editáveis;
-"Trazer os questionários do Auvo" cria os modelos a partir dos 13 questionários copiados no acervo). Cada mudança
+"Trazer os questionários do Auvo" cria os modelos a partir dos 13 questionários copiados no acervo). Quando a lista de questionários do acervo veio vazia, "Montar os checklists a partir das tarefas do Auvo" (e a rotina, de hora em hora) lê as tarefas copiadas em lotes e monta um modelo por questionário, com as perguntas na ordem mais frequente e o tipo de resposta inferido das respostas (foto, assinatura, sim ou não, número, opção, texto). Esses modelos nascem inativos: revise e marque "Ativo" no editor do modelo. Cada mudança
 vira uma versão com o motivo; as O.S. já agendadas seguem o checklist que tinham.
 
 ## Fonte única de atendimentos e o Auvo

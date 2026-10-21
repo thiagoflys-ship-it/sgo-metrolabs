@@ -210,7 +210,8 @@ function AstF_listaApoio_(nome) {
     var c = est && (est.catalogos || []).filter(function (x) { return x.nome === nome && x.arquivoId; })[0];
     if (!c) return null;
     var j = JSON.parse(DriveApp.getFileById(String(c.arquivoId)).getBlob().getDataAsString('UTF-8'));
-    return Array.isArray(j) ? j : (j && Array.isArray(j.itens) ? j.itens : null);
+    var l = Array.isArray(j) ? j : (j && Array.isArray(j.itens) ? j.itens : null);
+    return l && l.length ? l : null; // lista vazia (o Auvo não respondeu): os modelos saem das tarefas (SGO_Assistencia_Questionarios.js)
   } catch (e) { return null; }
 }
 function AstF_tipoPergunta_(q) {

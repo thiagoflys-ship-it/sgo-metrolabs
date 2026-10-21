@@ -147,8 +147,11 @@ function Assistencia_rotina_(quando, forcar) {
   // os 13 questionários do Auvo viram modelos de checklist assim que a lista de apoio do acervo existir (uma vez; só acrescenta)
   passo('questionarios', function () {
     if (Ast_ler_(AST_ABAS.MODELOS).some(function (m) { return Ast_up_(m.ORIGEM) === 'AUVO'; })) return { fora: 'já importados' };
-    if (!AstF_listaApoio_('questionarios')) return { fora: 'lista de questionários do acervo ainda não copiada' };
-    return AstF_importarDoAcervo_(sis, { sistema: true });
+    if (AstF_listaApoio_('questionarios')) return AstF_importarDoAcervo_(sis, { sistema: true });
+    // lista de apoio vazia no acervo: os modelos saem das próprias tarefas copiadas, em lotes (SGO_Assistencia_Questionarios.js)
+    var qd = Ast_cfgChave_('QUEST_DERIVA', null);
+    if (qd && qd.concluido) return { fora: 'checklists das tarefas do Auvo já montados (rascunho)' };
+    return typeof AstQ_derivar_ === 'function' ? AstQ_derivar_(sis, { sistema: true, lote: 60, orcamentoMs: 60000 }).situacao : { fora: 'derivação indisponível' };
   });
   passo('acervo', function () { var e = Ast_cfgChave_('ACERVO_INDICE', null); if (e && e.concluido) return { fora: 'índice concluído' }; return AstF_indexarAcervo_({ lote: 120, orcamentoMs: 90000 }); });
   passo('relatorioMensal', function () { return AstP_relatorioAutomatico_(quando); });
@@ -498,6 +501,7 @@ var AST_ACOES = {
   salvarTipo: function (eu, d) { return AstP_salvarTipo_(eu, d); },
   salvarModelo: function (eu, d) { return AstP_salvarModelo_(eu, d); },
   importarAuvo: function (eu) { return AstF_importarDoAcervo_(eu); },
+  derivarQuestionarios: function (eu, d) { return AstQ_derivar_(eu, { lote: 60, orcamentoMs: 90000, gerarAgora: !!(d && d.gerarAgora), recomecar: !!(d && d.recomecar) }); },
   ligar: function (eu, d) {
     Ast_exigir_(eu, 'REGRAS', 'ligar ou desligar a Assistência do SGO+');
     var motivo = Ast_texto_(d && d.motivo, 500);
