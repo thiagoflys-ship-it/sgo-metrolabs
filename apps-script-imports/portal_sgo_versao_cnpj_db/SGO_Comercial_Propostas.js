@@ -764,6 +764,8 @@ function ComP_passarSetores_(eu, d) {
         como: (cfgS.checklist || []).join('; '), restrita: s !== 'TECNICA' });
       // 21/10/2026: Compras nativo: o pedido aprovado também abre a requisição de compra com os produtos, sem o valor de venda (SGO_Compras_Pedido.js).
       if (s === 'COMPRAS' && typeof Compras_doPedidoComercial_ === 'function') { try { Compras_doPedidoComercial_(p, { setorResponsavelId: r.id, atividadeId: atv }); } catch (eCmp) { console.error('Comercial -> Compras: ' + ((eCmp && eCmp.message) || eCmp)); } }
+      // 21/10/2026: Assistência técnica nativa: o pedido aprovado com serviço técnico também abre o chamado da Técnica (sem valores, SGO_Assistencia_Chamados.js).
+      if (s === 'TECNICA' && typeof Assistencia_doPedidoComercial_ === 'function') { try { Assistencia_doPedidoComercial_(p, { responsavelId: r.id, atividadeId: atv }); } catch (eAst) { console.error('Comercial -> Assistência: ' + ((eAst && eAst.message) || eAst)); } }
       novos.push({ setor: s, setorNome: COM_SETORES[s], responsavelId: r.id, responsavelNome: r.nome, motivo: r.motivo, atividadeId: atv, prazo: prazo, avisadoConclusao: false });
     });
     var passagem = ja.concat(novos), agora = Com_agora_();

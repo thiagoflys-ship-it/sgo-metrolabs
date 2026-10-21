@@ -483,7 +483,8 @@ function FrotaRes_vinculo_(sessao, p) {
   var id = FrotaRes_s_(p.vinculoId).slice(0, 80);
   if (!id) return { tipo: '', id: '', texto: '' };
   if (tipo === 'AUVO') {
-    var t = Frota_lerSeExistir_(SGO_CFG.SHEETS.AUVO_TAREFAS || 'AUVO_TAREFAS').filter(function (x) { return FrotaRes_s_(x.AUVO_TASK_ID) === id; })[0];
+    // 21/10/2026: a O.S. pode ser do Auvo ou da Assistência do SGO+ (fonte única, SGO_Assistencia_Fonte.js)
+    var t = (typeof SGO_Atendimentos_linhas_ === 'function' ? SGO_Atendimentos_linhas_() : Frota_lerSeExistir_(SGO_CFG.SHEETS.AUVO_TAREFAS || 'AUVO_TAREFAS')).filter(function (x) { return FrotaRes_s_(x.AUVO_TASK_ID) === id; })[0];
     return { tipo: tipo, id: id, texto: 'O.S. ' + id + (t ? ' — ' + (FrotaRes_s_(t.CLIENTE_NOME_AUVO) || 'cliente') : ' (não encontrada na integração do Auvo)') };
   }
   if (tipo === 'ATIVIDADE') {

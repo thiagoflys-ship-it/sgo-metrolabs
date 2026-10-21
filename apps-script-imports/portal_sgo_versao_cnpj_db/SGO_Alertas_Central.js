@@ -707,7 +707,8 @@ function Pend_fonteQualidade_(add, ctx) {
   if (SGO_CFG.SHEETS.AUVO_TAREFAS && typeof QualidadeAuvo_motivosTarefa_ === 'function') {
     var usuarios = {};
     Pend_ler_(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) { usuarios[Pend_s_(u.ID)] = u; });
-    Pend_ler_(SGO_CFG.SHEETS.AUVO_TAREFAS).forEach(function (t) {
+    // 21/10/2026: fonte única de atendimentos (Auvo + O.S. da Assistência do SGO+, SGO_Assistencia_Fonte.js)
+    (typeof SGO_Atendimentos_linhas_ === 'function' ? SGO_Atendimentos_linhas_() : Pend_ler_(SGO_CFG.SHEETS.AUVO_TAREFAS)).forEach(function (t) {
       if (SGO_UTILS.safeUpper(t.FINALIZADA) !== 'SIM') return;
       var data = Pend_iso_(t.DATA_TAREFA);
       if (!data || data < corte) return;
@@ -721,9 +722,9 @@ function Pend_fonteQualidade_(add, ctx) {
         gravidade: 'ATENCAO', dias: null, vencimento: Pend_br_(data),
         titulo: 'O.S. nº ' + os + (cli ? ' (' + Pend_curto_(cli, 40) + ')' : '') + ' concluída com registro incompleto',
         detalhe: 'Falta: ' + motivos.join(', ') + '. Técnico ' + nomeTec + ', atendimento de ' + Pend_br_(data) + '.',
-        oQueFazer: 'Complete no aplicativo do Auvo o que falta nesta O.S.; a correção aparece aqui depois da próxima sincronização.',
-        oQueFazerOutro: 'Peça a ' + nomeTec + ' para completar o registro no Auvo; se não for possível, registre a cobrança no Painel de qualidade.',
-        tela: Pend_s_(t.TASK_URL) ? { tipo: 'link', url: Pend_s_(t.TASK_URL), rotulo: 'Abrir no Auvo' } : { tipo: 'modulo', mod: 'qualidade' },
+        oQueFazer: t.ORIGEM === 'SGO' ? 'A O.S. do SGO+ já foi encerrada: peça à gestão da área Técnica para registrar a correção na ficha da O.S. (Assistência técnica > O.S.).' : 'Complete no aplicativo do Auvo o que falta nesta O.S.; a correção aparece aqui depois da próxima sincronização.',
+        oQueFazerOutro: 'Peça a ' + nomeTec + ' para completar o registro ' + (t.ORIGEM === 'SGO' ? 'na O.S. do SGO+' : 'no Auvo') + '; se não for possível, registre a cobrança no Painel de qualidade.',
+        tela: t.ORIGEM === 'SGO' ? { tipo: 'assistencia', mod: 'assistencia_os', id: Pend_s_(t.OS_ID_SGO) } : (Pend_s_(t.TASK_URL) ? { tipo: 'link', url: Pend_s_(t.TASK_URL), rotulo: 'Abrir no Auvo' } : { tipo: 'modulo', mod: 'qualidade' }),
         telaOutro: { tipo: 'modulo', mod: 'qualidade' }
       }));
     });

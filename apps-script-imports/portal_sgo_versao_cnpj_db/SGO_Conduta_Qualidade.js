@@ -236,7 +236,17 @@ function Cndq_coletarFrota_(usuarios, desde, avisos) {
 function Cndq_coletarAuvo_(usuarios, desde, avisos) {
   var saida = [], semVinculo = 0;
   var dataTarefa = function (v) { return Cndq_iso_(v); };
-  Cndq_ler_(SGO_CFG.SHEETS.AUVO_TAREFAS).forEach(function (t) {
+  // 21/10/2026: fonte única de atendimentos (Auvo + O.S. da Assistência do SGO+, SGO_Assistencia_Fonte.js); a O.S. do SGO+
+  // aberta há 3 dias ou mais (documentação pendente) vira a mesma sugestão de "O.S. aberta" que o Auvo dá pela varredura.
+  var fonteCndq = typeof SGO_Atendimentos_linhas_ === 'function' ? SGO_Atendimentos_linhas_() : Cndq_ler_(SGO_CFG.SHEETS.AUVO_TAREFAS);
+  fonteCndq.forEach(function (t) {
+    if (t.ORIGEM === 'SGO' && SGO_UTILS.safeUpper(t.FINALIZADA) !== 'SIM' && Number(t.DIAS_ABERTA) >= 3) {
+      var uidA = SGO_UTILS.safe(t.TECNICO_ID_SGO), dataA = Cndq_iso_(t.DATA_TAREFA);
+      if (uidA && dataA && dataA >= desde) saida.push({ chave: 'SGO|ABERTA|' + t.AUVO_TASK_ID, origem: 'SGO', tipo: 'OS_ABERTA', origemId: String(t.AUVO_TASK_ID), colaboradorId: uidA, dataFato: dataA,
+        tipoCodigo: 'CAM-02', resolvivel: true, link: '', rotulo: 'O.S. ' + t.AUVO_TASK_ID + ' aberta há ' + t.DIAS_ABERTA + ' dias',
+        titulo: 'O.S. aberta há ' + t.DIAS_ABERTA + ' dias no SGO+ (documentação pendente?)', detalhe: (t.CLIENTE_NOME_AUVO ? t.CLIENTE_NOME_AUVO + '. ' : '') + 'Agendada para ' + Conduta_dataBr_(dataA) + (t.CHECKIN_EM ? ', com chegada registrada.' : ', sem chegada registrada.') });
+      return;
+    }
     if (SGO_UTILS.safeUpper(t.FINALIZADA) !== 'SIM') return;
     var data = dataTarefa(t.DATA_TAREFA);
     if (!data || data < desde) return;
@@ -245,13 +255,14 @@ function Cndq_coletarAuvo_(usuarios, desde, avisos) {
     if (!semFoto && !semRelato && !semCheckout) return;
     var uid = SGO_UTILS.safe(t.TECNICO_ID_SGO);
     if (!uid) { semVinculo++; return; }
-    var base = { origem: 'AUVO', origemId: String(t.AUVO_TASK_ID || t.ID), colaboradorId: uid, dataFato: data, link: SGO_UTILS.safe(t.TASK_URL),
+    var orig = t.ORIGEM === 'SGO' ? 'SGO' : 'AUVO', ondeTxt = orig === 'SGO' ? 'no SGO+' : 'no Auvo';
+    var base = { origem: orig, origemId: String(t.AUVO_TASK_ID || t.ID), colaboradorId: uid, dataFato: data, link: SGO_UTILS.safe(t.TASK_URL),
       rotulo: 'O.S. ' + (t.AUVO_TASK_ID || '') + ' de ' + Conduta_dataBr_(data) + (t.CLIENTE_NOME_AUVO ? ' (' + t.CLIENTE_NOME_AUVO + ')' : '') };
-    if (semFoto) saida.push(Object.assign({ chave: 'AUVO|SEM_FOTO|' + base.origemId, tipo: 'OS_SEM_FOTO', tipoCodigo: 'CAM-01',
-      titulo: 'O.S. finalizada sem foto (' + Conduta_dataBr_(data) + ')', detalhe: 'O.S. ' + base.origemId + ' finalizada no Auvo sem nenhuma foto de evidência.' }, base));
-    if (semRelato) saida.push(Object.assign({ chave: 'AUVO|SEM_RELATO|' + base.origemId, tipo: 'OS_SEM_RELATO', tipoCodigo: 'CAM-02',
-      titulo: 'O.S. finalizada sem relato do serviço (' + Conduta_dataBr_(data) + ')', detalhe: 'O.S. ' + base.origemId + ' finalizada no Auvo sem o relato do serviço.' }, base));
-    if (semCheckout) saida.push(Object.assign({ chave: 'AUVO|SEM_CHECKOUT|' + base.origemId, tipo: 'CHECKOUT_ESQUECIDO', tipoCodigo: 'CAM-02',
+    if (semFoto) saida.push(Object.assign({ chave: orig + '|SEM_FOTO|' + base.origemId, tipo: 'OS_SEM_FOTO', tipoCodigo: 'CAM-01',
+      titulo: 'O.S. finalizada sem foto (' + Conduta_dataBr_(data) + ')', detalhe: 'O.S. ' + base.origemId + ' finalizada ' + ondeTxt + ' sem nenhuma foto de evidência.' }, base));
+    if (semRelato) saida.push(Object.assign({ chave: orig + '|SEM_RELATO|' + base.origemId, tipo: 'OS_SEM_RELATO', tipoCodigo: 'CAM-02',
+      titulo: 'O.S. finalizada sem relato do serviço (' + Conduta_dataBr_(data) + ')', detalhe: 'O.S. ' + base.origemId + ' finalizada ' + ondeTxt + ' sem o relato do serviço.' }, base));
+    if (semCheckout) saida.push(Object.assign({ chave: orig + '|SEM_CHECKOUT|' + base.origemId, tipo: 'CHECKOUT_ESQUECIDO', tipoCodigo: 'CAM-02',
       titulo: 'O.S. finalizada sem check-out (' + Conduta_dataBr_(data) + ')', detalhe: 'O.S. ' + base.origemId + ' finalizada sem o check-out: o tempo de atendimento não fica registrado.' }, base));
   });
   // O.S. aberta há 3 dias ou mais (check-out esquecido): some quando é finalizada.

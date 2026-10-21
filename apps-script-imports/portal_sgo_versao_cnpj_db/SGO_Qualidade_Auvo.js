@@ -34,14 +34,17 @@ function QualidadeAuvo_motivosTarefa_(t, opcoes) {
 function QualidadeAuvo_coletar_(desde) {
   try {
     var aba = SGO_CFG.SHEETS.AUVO_TAREFAS;
-    try { SGO_DATA.getSheet(aba); } catch (e) { return null; }
+    // 21/10/2026: fonte única (Auvo + O.S. da Assistência do SGO+, SGO_Assistencia_Fonte.js); sem ela, só o Auvo, como antes
+    var fonteUnica = typeof SGO_Atendimentos_linhas_ === 'function';
+    if (fonteUnica) { if (typeof SGO_Atendimentos_existe_ === 'function' && !SGO_Atendimentos_existe_()) return null; }
+    else { try { SGO_DATA.getSheet(aba); } catch (e) { return null; } }
     var parseDataTarefa_ = function(v) {
       if (!v) return null;
       var m=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
       var d = (v instanceof Date) ? v : (m?new Date(Number(m[3]),Number(m[2])-1,Number(m[1])):new Date(String(v)));
       return (d && !isNaN(d.getTime())) ? d : null;
     };
-    var tarefas = SGO_DATA.getAll(aba);
+    var tarefas = fonteUnica ? SGO_Atendimentos_linhas_() : SGO_DATA.getAll(aba);
     if (desde) tarefas = tarefas.filter(function(t) { var dt = parseDataTarefa_(t.DATA_TAREFA); return dt && dt >= desde; });
     if (!tarefas.length) return { total: 0 };
 

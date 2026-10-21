@@ -140,7 +140,7 @@ function ambiente(opcoes) {
     Chaves_ehDonoUsuario_: () => false,
     SGO_execucaoInterna_: () => true
   });
-  for (const f of ARQUIVOS) vm.runInContext(fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: f });
+  for (const f of ARQUIVOS.concat(o.extras || [])) vm.runInContext(fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: f });
   vm.runInContext("var CONDUTA_SHEETS = undefined; var CNDQ_SHEETS = undefined;", ctx);
   const api = (sid, acao, dados) => { const r = ctx.Assistencia_api(sid, acao, dados || {}); if (trava.presa) throw new Error('trava ficou presa depois de ' + acao); return r; };
   const app = (fn, sid, payload) => { const r = ctx[fn](sid, payload || {}); if (trava.presa) throw new Error('trava ficou presa depois de ' + fn); return r; };

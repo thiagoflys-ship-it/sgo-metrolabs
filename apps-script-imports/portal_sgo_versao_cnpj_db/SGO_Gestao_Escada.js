@@ -339,6 +339,8 @@ function Ges_relatoriosMensaisLista_() {
   var l = GES_RELATORIOS_MENSAIS.slice();
   try { if (typeof Comercial_relatorioMes_ === 'function' && typeof Comercial_emUso_ === 'function' && Comercial_emUso_()) l.push(['COMERCIAL', 'Comercial']); } catch (e) {}
   try { if (typeof Compras_relatorioMes_ === 'function' && typeof Compras_emUso_ === 'function' && Compras_emUso_()) l.push(['COMPRAS', 'Compras e peças']); } catch (e) {}
+  // 21/10/2026: Assistência técnica nativa (SGO_Assistencia_Relatorio.js), quando em uso (há chamados).
+  try { if (typeof Assistencia_relatorioMesParaGestao_ === 'function' && typeof Assistencia_emUso_ === 'function' && Assistencia_emUso_()) l.push(['ASSISTENCIA', 'Assistência técnica']); } catch (e) {}
   return l;
 }
 
@@ -399,6 +401,7 @@ function Ges_relatoriosMensais_(ex) {
     else if (falta[0] === 'CONDUTA') g = Ges_relatorioCondutaMes_(comp);
     else if (falta[0] === 'COMERCIAL') g = typeof Comercial_relatorioMes_ === 'function' ? Comercial_relatorioMes_(comp, 'Rotina automática') : { salvo: false, aviso: 'Comercial indisponível' };
     else if (falta[0] === 'COMPRAS') g = Ges_relatorioComprasMes_(comp);
+    else if (falta[0] === 'ASSISTENCIA') g = Assistencia_relatorioMesParaGestao_(comp);
     else g = Ges_relatorioAtividades_(comp, { nome: 'Rotina automática' });
   } catch (e) { g = { salvo: false, aviso: String((e && e.message) || e).slice(0, 300) }; }
   Ges_registrarEnvio_({ tipo: 'MENSAL', uid: '', nome: 'Diretoria', dia: ex.dia, ref: comp + '|' + falta[0], situacao: g && g.salvo ? 'OK' : 'ERRO', motivo: (g && g.aviso) || '', link: (g && g.link) || '' });

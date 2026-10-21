@@ -526,7 +526,9 @@ function FrotaR_atendimentosAuvo_(usuarioId, deMs, ateMs, an) {
   if (!usuarioId || !SGO_CFG.SHEETS.AUVO_TAREFAS) return [];
   var ps = an && an._todos ? an._todos : null;
   var lista = [];
-  Frota_lerSeExistir_(SGO_CFG.SHEETS.AUVO_TAREFAS).forEach(function (t) {
+  // 21/10/2026: fonte única de atendimentos (Auvo + O.S. da Assistência do SGO+, com o "Cheguei" e o "Concluí" do aplicativo)
+  var atend = typeof SGO_Atendimentos_linhas_ === 'function' ? SGO_Atendimentos_linhas_() : Frota_lerSeExistir_(SGO_CFG.SHEETS.AUVO_TAREFAS);
+  atend.forEach(function (t) {
     if (SGO_UTILS.safe(t.TECNICO_ID_SGO) !== String(usuarioId)) return;
     var ci = FrotaR_msAuvo_(t.CHECKIN_EM);
     if (ci === null || ci < deMs || ci > ateMs) return;

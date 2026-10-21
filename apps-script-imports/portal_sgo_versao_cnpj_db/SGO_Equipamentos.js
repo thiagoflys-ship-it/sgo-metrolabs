@@ -96,6 +96,16 @@ const SGO_EQUIPAMENTOS = (() => {
   // do Task, resolvido sob demanda em SGO_Auvo_Incremental.js). Só
   // leitura — nunca cria/edita nada aqui.
   function listarAtendimentosAuvo_(equipId, sessao) {
+    // 21/10/2026: fonte única de atendimentos (SGO_Assistencia_Fonte.js): O.S. do SGO+, tarefas do Auvo e o
+    // histórico copiado do Auvo (acervo), com os mesmos campos de antes e a origem de cada um.
+    if (typeof SGO_Atendimentos_doEquipamento_ === "function") {
+      try {
+        return SGO_Atendimentos_doEquipamento_(equipId, { limite: 40, sessao: sessao }).map(function(x) {
+          return { auvoTaskId: x.auvoTaskId, data: x.data, tipo: x.tipo, finalizada: x.finalizada, tecnico: x.tecnico, relato: x.relato,
+            origem: x.origem, origemNome: x.origemNome, numero: x.numero, osId: x.osId, chamadoId: x.chamadoId || "", relatorioUrl: x.relatorioUrl || "", acervo: !!x.acervo, qtdArquivos: x.qtdArquivos || 0 };
+        });
+      } catch (eFonte) { /* segue para a leitura antiga */ }
+    }
     try {
       return SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_TAREFAS)
         .filter(function(t) { return (SGO_UTILS.safeUpper(sessao.perfil) !== "CLIENTE" || SGO_UTILS.safe(t.CLIENTE_ID_SGO) === SGO_UTILS.safe(sessao.clienteId)) && SGO_UTILS.safe(t.EQUIPAMENTOS_ID_SGO).split(",").indexOf(equipId) !== -1; })

@@ -481,12 +481,13 @@ function Ponto_abaAuvo_() { return (SGO_CFG.SHEETS && SGO_CFG.SHEETS.AUVO_TAREFA
 function Ponto_tarefasAuvo_(dia) {
   var m = {};
   try {
-    Pto_ler_(Ponto_abaAuvo_()).forEach(function (t) {
+    // 21/10/2026: fonte única (Auvo + O.S. da Assistência do SGO+): o técnico em atendimento no aplicativo novo também conta
+    (typeof SGO_Atendimentos_linhas_ === 'function' ? SGO_Atendimentos_linhas_() : Pto_ler_(Ponto_abaAuvo_())).forEach(function (t) {
       var uid = Pto_s_(t.TECNICO_ID_SGO);
       if (!uid) return;
       var ci = Pto_msDe_(t.CHECKIN_EM), co = Pto_msDe_(t.CHECKOUT_EM);
       var doDia = (!isNaN(ci) && Pto_dia_(new Date(ci)) === dia) || (!isNaN(co) && Pto_dia_(new Date(co)) === dia);
-      if (doDia) (m[uid] = m[uid] || []).push({ id: Pto_s_(t.AUVO_TASK_ID) || Pto_s_(t.ID), ci: ci, co: co, finalizada: Pto_up_(t.FINALIZADA) === 'SIM', cliente: Pto_s_(t.CLIENTE_NOME_AUVO) });
+      if (doDia) (m[uid] = m[uid] || []).push({ id: Pto_s_(t.AUVO_TASK_ID) || Pto_s_(t.ID), ci: ci, co: co, finalizada: Pto_up_(t.FINALIZADA) === 'SIM', cliente: Pto_s_(t.CLIENTE_NOME_AUVO), origem: Pto_s_(t.ORIGEM) || 'AUVO' });
     });
   } catch (e) {}
   return m;
@@ -498,7 +499,7 @@ function Ponto_emAtendimento_(tarefas, uid, agoraMs) {
 /** Evidência para o pedido de ajuste: só os horários de check-in e check-out do Auvo naquele dia (sem local, sem cliente). */
 function Ponto_evidencia_(uid, dia) {
   var l = (Ponto_tarefasAuvo_(dia)[uid] || []).map(function (t) {
-    return 'Auvo (tarefa ' + t.id + '): check-in ' + (isNaN(t.ci) ? '—' : Pto_horaDe_(new Date(t.ci))) + ', check-out ' + (isNaN(t.co) ? 'não feito' : Pto_horaDe_(new Date(t.co)));
+    return (t.origem === 'SGO' ? 'SGO+ (O.S. ' + t.id + '): chegada ' : 'Auvo (tarefa ' + t.id + '): check-in ') + (isNaN(t.ci) ? '—' : Pto_horaDe_(new Date(t.ci))) + (t.origem === 'SGO' ? ', conclusão ' : ', check-out ') + (isNaN(t.co) ? 'não feito' : Pto_horaDe_(new Date(t.co)));
   });
   return l.join('; ');
 }

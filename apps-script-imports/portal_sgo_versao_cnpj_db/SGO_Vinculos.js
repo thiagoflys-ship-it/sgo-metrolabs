@@ -170,7 +170,9 @@ const SGO_VINCULOS = (() => {
     // Detecta efeitos em registros persistidos fora do cadastro. Documentos do Arquivo acompanham o cadastro
     // (acima); certificados, laudos e atendimentos ficam no proprietário original.
     const affected=new Set([spec.origem,...changes.map(c=>c.id)]);
-    const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS'];
+    // 21/10/2026: abas da Assistência técnica do SGO+ (chamados, O.S., pedidos, reclamações, orçamentos e o índice do acervo do Auvo)
+    // ficam com o proprietário original, como o histórico; chamado ou O.S. em aberto trava só quando o cliente muda.
+    const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS','ATEC_CHAMADOS','ATEC_OS','ATEC_SOLICITACOES','ATEC_CASOS','ATEC_ORCAMENTOS','ATEC_ACERVO_EQUIP'];
     Object.keys(snapshot.tables).filter(n=>!Object.values(TABLES).includes(n)&&n!=='AUVO_SYNC').forEach(name=>{
       const matches=base(snapshot,name).filter(r=>Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO)$/.test(k)&&text(r[k]).split(',').some(id=>affected.has(id.trim()))));
       if(!matches.length)return;
@@ -187,6 +189,15 @@ const SGO_VINCULOS = (() => {
           const lista=abertas.map(r=>text(r.AUVO_TASK_ID)).filter(Boolean).slice(0,15).join(', ');
           if(abertas.length&&clienteMuda)blocks.push('Há '+abertas.length+' tarefa(s) do Auvo em aberto ligadas a este cadastro'+(lista?' (nº '+lista+')':'')+'. Como o cliente vai mudar, finalize ou exclua essas tarefas no Auvo, sincronize e confira de novo.');
           else if(abertas.length)warnings.push(abertas.length+' tarefa(s) do Auvo em aberto'+(lista?' (nº '+lista+')':'')+' continuam válidas: o cliente e os equipamentos não mudam de cadastro.');
+        }
+        if(name==='ATEC_CHAMADOS'||name==='ATEC_OS'){
+          const fechadas=['ENCERRADO','CANCELADO','ENCERRADA','CANCELADA'];
+          const abertasA=matches.filter(r=>fechadas.indexOf(text(r.SITUACAO))<0);
+          const clienteMudaA=changes.some(c=>c.field==='CLIENTE_ID'&&(c.table==='CAD_EQUIPAMENTOS'||c.table==='CAD_UNIDADES'));
+          const listaA=abertasA.map(r=>text(r.NUMERO)).filter(Boolean).slice(0,15).join(', ');
+          const oque=name==='ATEC_CHAMADOS'?'chamado(s)':'O.S.';
+          if(abertasA.length&&clienteMudaA)blocks.push('Há '+abertasA.length+' '+oque+' da Assistência técnica em aberto ligados a este cadastro'+(listaA?' ('+listaA+')':'')+'. Como o cliente vai mudar, encerre ou cancele em Assistência técnica > Chamados e volte aqui para clicar em Conferir impacto de novo.');
+          else if(abertasA.length)warnings.push(abertasA.length+' '+oque+' da Assistência técnica em aberto'+(listaA?' ('+listaA+')':'')+' continuam válidos: o cliente e os equipamentos não mudam de cadastro.');
         }
       } else blocks.push('Há '+matches.length+' registro(s) na tabela '+name+' ligados a este cadastro, e o painel não sabe ajustá-los sozinho. Nada foi alterado. Avise o administrador do sistema informando a tabela '+name+' e este cadastro; depois da revisão, refaça a operação.');
     });

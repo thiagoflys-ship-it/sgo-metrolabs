@@ -235,10 +235,13 @@ function montarAuvoResumoDashboard_() {
   var sheets = SGO_CFG.SHEETS;
   var aba = sheets.AUVO_TAREFAS;
   var existe = false;
-  try { SGO_DATA.getSheet(aba); existe = true; } catch (e) { existe = false; }
+  // 21/10/2026: fonte única de atendimentos (Auvo + O.S. da Assistência do SGO+, SGO_Assistencia_Fonte.js)
+  var fonteUnica = typeof SGO_Atendimentos_linhas_ === "function";
+  if (fonteUnica && typeof SGO_Atendimentos_existe_ === "function") existe = SGO_Atendimentos_existe_();
+  else { try { SGO_DATA.getSheet(aba); existe = true; } catch (e) { existe = false; } }
   if (!existe) return null;
 
-  var tarefas = SGO_DATA.getAll(aba);
+  var tarefas = fonteUnica ? SGO_Atendimentos_linhas_() : SGO_DATA.getAll(aba);
   if (!tarefas.length) {
     return { total: 0, abertas: 0, concluidas30d: 0, ultimosAtendimentos: [], rankingTecnicos: [], qualidade: null };
   }
