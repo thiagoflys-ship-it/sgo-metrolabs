@@ -1004,11 +1004,14 @@
     var alvo = Com_$_("cmkLeitura"); if (!alvo) return;
     var tempos = (ia && ia.tempos) || q.tempos || [];
     var risco = (ia && ia.emRisco) || q.emRisco || [];
+    var movel = ehMobileModo_();
     var h = '<div class="cm-gestora cmk-leitura"><div class="ic"><i class="fas fa-user-tie" aria-hidden="true"></i></div><div style="flex:1;min-width:0">' +
       '<p class="t">Leitura do funil · ' + Com_esc_(q.funil.nome) + '</p><p class="s">' + Com_esc_(q.periodoTxt) + ' · ' + (leitura.origem === "IA" ? "texto da especialista, conferido contra os números do sistema" : "pelas regras da metodologia, com os números do sistema") + '</p>' +
+      (movel ? '<details><summary class="cm-meta" style="cursor:pointer">Ver a leitura' + (risco.length ? ' (' + risco.length + ' em risco)' : '') + '</summary>' : '') +
       '<p>' + Com_esc_(leitura.texto) + '</p>' +
       (leitura.origem === "IA" && leitura.gargalos && leitura.gargalos.length ? '<p class="cm-txt" style="margin-top:6px"><b>Gargalos</b></p><ul>' + leitura.gargalos.map(function (g) { return '<li>' + Com_esc_(g) + '</li>'; }).join("") + '</ul>' : '') +
       (risco.length ? '<p class="cm-txt" style="margin-top:6px"><b>Em risco</b></p><ul>' + risco.map(function (x) { return '<li><button type="button" class="atv-titulo-link" data-opo-risco="' + Com_esc_(x.id) + '" style="font-size:12.5px">' + Com_esc_(x.codigo) + ' · ' + Com_esc_(x.cliente) + '</button>' + (x.valorTxt ? ' · ' + Com_esc_(x.valorTxt) : '') + ': ' + Com_esc_(x.motivos.join(", ")) + '</li>'; }).join("") + '</ul>' : '') +
+      (movel ? '</details>' : '') +
       (ia && ia.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(ia.aviso) + '</div>' : '') +
       '<details style="margin-top:6px"><summary class="cm-meta" style="cursor:pointer">Tempo médio por etapa contra a meta da metodologia</summary><table class="cm-tabela" style="margin-top:6px"><thead><tr><th>Etapa</th><th class="n">Meta</th><th class="n">Média para sair</th><th class="n">Passagens</th><th class="n">Na etapa agora</th><th class="n">Acima do prazo</th></tr></thead><tbody>' +
       tempos.map(function (t) { return '<tr><td data-r="Etapa"><b>' + Com_esc_(t.nome) + '</b></td><td class="n" data-r="Meta">até ' + t.maxDias + ' dias</td><td class="n" data-r="Média para sair"' + (t.acimaDaMeta ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + Com_esc_(t.mediaTxt) + '</td><td class="n" data-r="Passagens">' + t.passagens + '</td><td class="n" data-r="Na etapa agora">' + t.atuais + (t.atuais ? ' (média ' + Com_esc_(t.mediaAtuaisTxt) + ')' : '') + '</td><td class="n" data-r="Acima do prazo"' + (t.acimaDoPrazo ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + t.acimaDoPrazo + '</td></tr>'; }).join("") +
