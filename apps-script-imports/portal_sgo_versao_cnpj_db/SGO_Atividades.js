@@ -20,8 +20,10 @@
  * Datas gravadas como texto no horário de Brasília, "aaaa-mm-ddThh:mm"
  * (comparáveis como texto). Nada de Date cru volta ao navegador.
  *
- * Perfis: lançar atividade para OUTRA pessoa = Gestor, Admin, Diretoria
- * (isAdminPerfilAuth_, SGO_Auth.js). Demais perfis só criam para si.
+ * Perfis: lançar atividade para OUTRA pessoa = Gestor, Admin, Diretoria e,
+ * desde 21/10/2026, RH e Financeiro (rotina da empresa: Atividades_ehGestorPerfil_).
+ * Atividade restrita (conduta) de outra pessoa: só a gestão de decisões
+ * (isAdminPerfilAuth_) e o RH (veRestritas). Demais perfis só criam para si.
  * Perfil CLIENTE não usa o módulo.
  *
  * 19/10/2026 — equipe inteira e COMMAND:
@@ -129,13 +131,30 @@ function Atividades_sessao_(sessionId) {
     usuario: SGO_UTILS.safe(s.usuario),
     nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario),
     perfil: perfil,
-    gestor: isAdminPerfilAuth_(perfil)
+    gestor: Atividades_ehGestorPerfil_(perfil),
+    veRestritas: Atividades_veRestritasPerfil_(perfil)
   };
+}
+
+/** 21/10/2026 (pedido do dono): atividades da equipe são rotina da empresa (gestão, RH e Financeiro). */
+function Atividades_ehGestorPerfil_(perfil) {
+  return isAdminPerfilAuth_(perfil) || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil));
+}
+
+/** Atividade restrita (Programa de conduta) de outra pessoa: a gestão de decisões e o RH; o Financeiro não. */
+function Atividades_veRestritasPerfil_(perfil) {
+  return isAdminPerfilAuth_(perfil) || (typeof SGO_ehPerfilRH_ === 'function' && SGO_ehPerfilRH_(perfil));
+}
+
+/** A gestão sobre esta atividade: gestor, e, se for restrita, quem vê as restritas. */
+function Atividades_gestaoSobre_(eu, a) {
+  if (!eu || !eu.gestor) return false;
+  return !Atividades_restrita_(a) || eu.veRestritas !== false;
 }
 
 function Atividades_exigirGestor_(eu, acao) {
   if (!eu.gestor) {
-    throw new Error('Não foi possível ' + acao + ': esta ação é só para os perfis Gestor, Admin e Diretoria. Peça a um gestor para fazer, ou lance a atividade para você mesmo.');
+    throw new Error('Não foi possível ' + acao + ': esta ação é só para a gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Peça a um gestor para fazer, ou lance a atividade para você mesmo.');
   }
 }
 
@@ -350,13 +369,13 @@ function Atividades_restrita_(a) {
 
 /** Ver: toda a equipe interna, menos atividade restrita de outra pessoa. */
 function Atividades_podeVer_(eu, a) {
-  if (eu.gestor || Atividades_envolvido_(eu, a)) return true;
+  if (Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a)) return true;
   return !Atividades_restrita_(a);
 }
 
 /** Alterar situação, comentar: só o responsável, quem lançou e a gestão. */
 function Atividades_podeAlterar_(eu, a) {
-  return eu.gestor || Atividades_envolvido_(eu, a);
+  return Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a);
 }
 
 /** Atividade para a tela, com o que esta pessoa pode fazer nela (a tela só mostra; o servidor confere de novo). */
@@ -372,7 +391,7 @@ function Atividades_paraTela_(eu, a) {
 
 /** Quem vê o texto da justificativa de atraso: envolvidos e gestão. */
 function Atividades_veJustificativa_(eu, a) {
-  return eu.gestor || Atividades_envolvido_(eu, a);
+  return Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a);
 }
 
 /** Pessoa do SGO+ pelo ID (chamadas da ponte do COMMAND). Lança erro com mensagem para a tela. */
@@ -385,7 +404,7 @@ function Atividades_euDoUsuario_(userId, sistema) {
   var perfil = SGO_UTILS.safeUpper(u.PERFIL);
   if (perfil === 'CLIENTE') throw new Error('Não foi possível abrir as atividades: o perfil Cliente não usa este módulo.');
   Atividades_garantirAbas_();
-  return { id: String(u.ID), usuario: SGO_UTILS.safe(u.USUARIO), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: perfil, gestor: isAdminPerfilAuth_(perfil), sistema: sistema || 'COMMAND' };
+  return { id: String(u.ID), usuario: SGO_UTILS.safe(u.USUARIO), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: perfil, gestor: Atividades_ehGestorPerfil_(perfil), veRestritas: Atividades_veRestritasPerfil_(perfil), sistema: sistema || 'COMMAND' };
 }
 
 function Atividades_usuariosAtivos_() {
@@ -588,7 +607,7 @@ function Atividades_apiCriar(sessionId, payload) {
 
 /** Quem pode editar: gestão qualquer uma; demais perfis só a que lançaram para si mesmos. */
 function Atividades_podeEditar_(eu, a) {
-  return eu.gestor || (a.CRIADO_POR_ID === eu.id && a.RESPONSAVEL_ID === eu.id);
+  return Atividades_gestaoSobre_(eu, a) || (a.CRIADO_POR_ID === eu.id && a.RESPONSAVEL_ID === eu.id);
 }
 
 function Atividades_resumoHist_(v) {

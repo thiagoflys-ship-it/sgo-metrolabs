@@ -20,7 +20,9 @@ Demais gestores: veem a fila com valores e aprovam as compras da faixa do gestor
 
 Financeiro (perfil ou área): confere as compras e consulta os fornecedores.
 
-Diretoria e Administrador: tudo, inclusive as Regras de compras. A Diretoria aprova a faixa mais alta.
+Diretoria e Administrador: tudo. A Diretoria aprova a faixa mais alta.
+
+Regras de compras: Administrador, Diretoria, Gestor, RH e Financeiro alteram. As aprovações continuam seguindo as faixas, e quem pediu não aprova o próprio pedido.
 
 Técnicos, Metrologia e RH não veem preço, orçamento nem pagamento.
 
@@ -132,7 +134,7 @@ Importar da planilha (opcional): copie a linha de títulos e as linhas dos forne
 
 ## Regras de compras
 
-Só o Administrador e a Diretoria alteram; compradores e gestores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.
+Administrador, Diretoria, Gestor, RH e Financeiro alteram; compradores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.
 
 Padrão aprovado pelo dono em 21/10/2026:
 

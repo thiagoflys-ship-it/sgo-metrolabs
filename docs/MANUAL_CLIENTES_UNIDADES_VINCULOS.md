@@ -31,7 +31,9 @@ No computador, o painel fica ao lado do formulário. No celular, fica abaixo, em
 
 Localize o cadastro, clique em **Abrir cadastro**, confirme a troca de tela, ajuste os dados e salve. Para mudar o cliente responsável ou a unidade de um equipamento, use o painel do gestor.
 
-## Corrigir vínculos — gestor
+## Corrigir vínculos — gestão
+
+Quem corrige vínculos (transferir, desvincular, consolidar): Administrador, Diretoria, Gestor, RH e Financeiro. Excluir de vez um cadastro sem dependências fica com Administrador, Diretoria e Gestor; os demais usam Inativar.
 
 1. Clique em **Abrir painel de vínculos** ou **Ver vínculos** no cartão correto.
 2. Confira o cadastro de origem, o responsável atual, os filhos e as referências nos módulos.

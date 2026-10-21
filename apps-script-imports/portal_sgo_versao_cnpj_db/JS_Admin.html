@@ -123,7 +123,7 @@
       ativo
         ? { texto: "Inativar documento", icone: "fa-ban", risco: true, acao: function () { Documentos_inativar_(d); } }
         : { texto: "Reativar documento", icone: "fa-rotate-left", acao: function () { Documentos_reativar_(d); } },
-      { texto: "Excluir documento", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Documentos_excluir_(d); } }
+      { texto: "Excluir documento", icone: "fa-trash-can", risco: true, desabilitado: !CadUI_podeExcluir_(), nota: CadUI_podeExcluir_() ? "" : CADUI_TXT_EXCLUIR, acao: function () { Documentos_excluir_(d); } }
     ];
   }
 
@@ -206,7 +206,7 @@
                    : CadUI_campo_({ id: "doc_unidade_id", rotulo: "Unidade", obrigatorio: true, inteiro: true, tipo: "select", opcoes: [["", "Escolha o cliente primeiro"]] }),
           travaEq ? CadUI_campo_({ id: "doc_equip_fixo", rotulo: "Equipamento", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_(d.EQUIPAMENTO_NOME) + "</div>" })
                   : CadUI_campo_({ id: "doc_equipamento_id", rotulo: "Equipamento (opcional)", inteiro: true, tipo: "select", opcoes: [["", "Escolha a unidade primeiro"]], dica: "Deixe em branco para documento geral da unidade (ex.: contrato)." })
-        ].concat(travaCli || travaUni || travaEq ? ['<p class="cadx-dica is-inteiro" style="grid-column:1/-1">Trocar o cliente, a unidade ou o equipamento de um documento já ligado é feito pela gestão (Gestor, Diretoria ou Administrador). Os outros campos você edita normalmente.</p>'] : [])) +
+        ].concat(travaCli || travaUni || travaEq ? ['<p class="cadx-dica is-inteiro" style="grid-column:1/-1">Trocar o cliente, a unidade ou o equipamento de um documento já ligado é feito pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Os outros campos você edita normalmente.</p>'] : [])) +
         CadUI_secao_("Documento", [
           CadUI_campo_({ id: "doc_tipo_documento", rotulo: "Categoria (NBR 15943)", obrigatorio: true, inteiro: true, tipo: "select", valor: valorCat, opcoes: [["", "Escolha a categoria"]].concat(cats) }),
           CadUI_campo_({ id: "doc_nome_arquivo", rotulo: "Nome ou referência", obrigatorio: true, inteiro: true, valor: d.NOME_ARQUIVO, placeholder: "Ex.: Relatório de qualificação AUT-01 2026" }),
@@ -326,11 +326,11 @@
 
   function renderUsuariosModulo_() {
     var div = document.getElementById("conteudo");
-    // RH (19/10/2026): consulta a lista (vínculo de trabalho, celular, situação), sem criar nem alterar.
-    var soConsulta = !CadUI_gestao_() && CadUI_perfil_() === "RH";
-    if (!CadUI_gestao_() && !soConsulta) {
+    // 21/10/2026 (pedido do dono): a gestão, o RH e o Financeiro criam e alteram contas (CadUI_gestao_ = rotina da empresa).
+    var soConsulta = false;
+    if (!CadUI_gestao_()) {
       if (div) div.innerHTML = '<div class="module-shell cadx"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Usuários</h2><p class="content-subtitle">Contas de acesso ao SGO+.</p></div></div>' +
-        '<div class="cadx-faixa bc-faixa tom-info" role="status">A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um deles.</div></div>';
+        '<div class="cadx-faixa bc-faixa tom-info" role="status">A gestão de usuários é feita pelos perfis Administrador, Diretoria, Gestor, RH e Financeiro. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um deles.</div></div>';
       return;
     }
     CadTela_montar_({
@@ -338,13 +338,14 @@
       subtitulo: soConsulta ? "Consulta das contas do SGO+: perfil, vínculo de trabalho, situação, e-mail e celular. Para criar ou alterar uma conta, peça à gestão." : "Contas de acesso ao SGO+: perfil, vínculo de trabalho, situação, e-mail e celular (WhatsApp) de cada pessoa.",
       idBusca: "usuariosPesquisa", buscaPlaceholder: "Buscar por nome, login, e-mail ou celular",
       ajuda:
-        "<ul><li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Gestor e Diretoria são a gestão; Cliente vê só a própria empresa.</li>" +
-        "<li><b>RH</b> vê o que um colaborador vê, publica avisos, consulta o Programa de conduta de toda a equipe e esta lista (sem criar nem alterar contas). Não abre documentos técnicos, Configurações nem Chaves e senhas.</li>" +
+        "<ul><li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Diretoria e Gestor são a gestão; Cliente vê só a própria empresa.</li>" +
+        "<li><b>Quem cria e altera contas</b>: Administrador, Diretoria, Gestor, RH e Financeiro (perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente). Os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria. Ninguém muda o próprio perfil.</li>" +
+        "<li><b>RH</b> faz a rotina da empresa como o Gestor (usuários, áreas, cadastros, frota, avisos, atividades, ponto). Não abre documentos técnicos, o Comercial, Configurações nem Chaves e senhas.</li>" +
         "<li><b>Área</b> (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez aqui e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. O botão <i>Áreas</i> mostra quem está sem área e permite criar ou corrigir áreas.</li>" +
         "<li><b>Vínculo de trabalho</b> (CLT, PJ ou Não informado): mensagens do ponto só vão para quem é CLT. PJ e Não informado não recebem; os outros avisos chegam para todos.</li>" +
         "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
         "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
-        "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Prefira inativar a excluir.</li>" +
+        "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Excluir de vez é só do Administrador e da Diretoria.</li>" +
         "<li><b>Redefinir senha</b> fica em <i>Mais</i>. Combine a senha nova com a pessoa por um canal seguro e peça para ela trocar no primeiro acesso.</li></ul>",
       resumo: [
         { id: "todos", rotulo: "Total" },
@@ -388,11 +389,11 @@
       editar: function (u) { Usuarios_formulario_(u.ID); },
       mais: soConsulta ? null : function (u) { return Usuarios_menu_(u); },
       abrir: function (u) { Usuarios_detalhe_(u); },
-      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas }); }, erro); }
+      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, podeExcluir: !!res.podeExcluir, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas }); }, erro); }
     });
-    // Áreas (19/10/2026): gestão e RH abrem a tela das áreas a partir daqui.
+    // Áreas (19/10/2026): a gestão, o RH e o Financeiro abrem a tela das áreas a partir daqui.
     var dirUsr = document.querySelector("#cadxTela_usuarios .module-header-right");
-    if (dirUsr && (CadUI_gestao_() || CadUI_perfil_() === "RH")) {
+    if (dirUsr && CadUI_gestao_()) {
       var bAreas = document.createElement("button");
       bAreas.type = "button"; bAreas.className = "btn-secondary"; bAreas.id = "usrBtnAreas";
       bAreas.innerHTML = '<i class="fas fa-sitemap" aria-hidden="true"></i>&nbsp;Áreas';
@@ -412,6 +413,8 @@
     var ativo = u.STATUS === "ATIVO";
     var bloqueio = !u.PODE_ALTERAR ? "Conta de Administrador: só outro Administrador altera." : "";
     var proprio = u.EU ? "Você não pode inativar nem excluir a sua própria conta." : "";
+    var stU = CADUI.telas.usuarios || {};
+    var semExcluir = !(stU.extra && stU.extra.podeExcluir) ? "Excluir de vez é só do Administrador e da Diretoria. Para tirar o acesso, use Inativar." : "";
     var ultimo = u.ULTIMO_ADMIN ? "Único Administrador ativo: cadastre ou reative outro antes." : "";
     return [
       { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("usuarios", u.ID); } },
@@ -420,7 +423,7 @@
       ativo
         ? { texto: "Inativar (bloquear o acesso)", icone: "fa-ban", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_inativar_(u); } }
         : { texto: "Reativar (liberar o acesso)", icone: "fa-rotate-left", desabilitado: !!bloqueio, nota: bloqueio, acao: function () { Usuarios_reativar_(u); } },
-      { texto: "Excluir usuário", icone: "fa-trash-can", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_excluir_(u); } }
+      { texto: "Excluir usuário", icone: "fa-trash-can", risco: true, desabilitado: !!(bloqueio || proprio || ultimo || semExcluir), nota: bloqueio || proprio || ultimo || semExcluir, acao: function () { Usuarios_excluir_(u); } }
     ];
   }
 
@@ -442,7 +445,7 @@
         if (mais) mais.onclick = function () { CadUI_menu_(mais, Usuarios_menu_(u).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes"; })); };
       },
       // RH só consulta: sem Mais ações nem Editar.
-      rodape: (!CadUI_gestao_() ? '<p class="cadx-dica" style="margin:0">Consulta: para alterar esta conta, peça à gestão (Administrador, Gestor ou Diretoria).</p>' :
+      rodape: (!CadUI_gestao_() ? '<p class="cadx-dica" style="margin:0">Consulta: para alterar esta conta, peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).</p>' :
         '<div class="cadx-rodape-esq"><button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button></div>') +
         (u.PODE_ALTERAR ? '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Usuarios_formulario_(\'' + CadUI_esc_(u.ID) + '\')">Editar</button>' : "")
     });
@@ -527,6 +530,13 @@
         var atualizarCliente = function () { bloco.hidden = perfilSel.value !== "CLIENTE"; };
         perfilSel.addEventListener("change", atualizarCliente);
         atualizarCliente();
+        // 21/10/2026: ninguém muda o próprio perfil (o servidor também recusa).
+        if (!novo && u.EU) {
+          perfilSel.disabled = true;
+          var avisoPerfil = document.createElement("p"); avisoPerfil.className = "cadx-dica";
+          avisoPerfil.textContent = "Você não muda o próprio perfil. Para isso, peça a outra pessoa da gestão (Administrador ou Diretoria para os perfis de gestão).";
+          perfilSel.parentNode.appendChild(avisoPerfil);
+        }
         // Área (19/10/2026): ao escolher um perfil que diz a área, ela é sugerida se o campo estiver vazio.
         var areaPorPerfil = { COMERCIAL: "COMERCIAL", FINANCEIRO: "FINANCEIRO", RH: "RH", DIRETORIA: "DIRETORIA", METROLOGIA: "METROLOGIA", TECNICO: "TECNICA" };
         perfilSel.addEventListener("change", function () { var a = p.querySelector("#usr_area"); if (a && !a.value && areaPorPerfil[perfilSel.value] && a.querySelector('option[value="' + areaPorPerfil[perfilSel.value] + '"]')) a.value = areaPorPerfil[perfilSel.value]; });
@@ -723,7 +733,7 @@
           (dono ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="abrir(\'chaves\')"><i class="fas fa-key" aria-hidden="true"></i> Chaves e senhas das integrações</button>' : "") +
           (perfil !== "CLIENTE" ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="abrir(\'padroes\')"><i class="fas fa-scale-balanced" aria-hidden="true"></i> Padrões de referência</button>' : "") +
         "</div>" +
-        (!gestao ? '<p class="cadx-dica">Usuários e perfis são geridos pelos perfis Administrador, Gestor e Diretoria.</p>' : ""), ""));
+        (!gestao ? '<p class="cadx-dica">Usuários e perfis são geridos pelos perfis Administrador, Diretoria, Gestor, RH e Financeiro.</p>' : ""), ""));
     div.innerHTML = '<div class="module-shell cadx"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Configurações</h2>' +
       '<p class="content-subtitle">Ajustes do SGO+ separados por assunto. Cada bloco tem o seu próprio Salvar.</p></div><div class="module-header-right"></div></div>' +
       '<div class="cadx-blocos">' + blocos.join("") + "</div></div>";

@@ -20,7 +20,7 @@
  *   5. Integrações: central de pendências, Programa de conduta (sugestões), ponte do COMMAND (frota.*).
  * Gantt, copiloto e relatórios A4: SGO_Frota_RastreamentoGestao.js. Tela: SGO_Frota_RastreamentoTela.js.
  *
- * LGPD: o dado é do veículo, não da pessoa. Só a gestão (ADMIN, GESTOR, DIRETORIA) vê localização e rotas; cada
+ * LGPD: o dado é do veículo, não da pessoa. Só a gestão da Frota (ADMIN, DIRETORIA, GESTOR, RH, FINANCEIRO) vê localização e rotas; cada
  * consulta de mapa, rota ou relatório com localização fica na trilha de consultas (quem, quando, o quê). O
  * condutor é avisado na tela de retirada e no manual. Nada aqui manda comando ao veículo (a API é só leitura).
  ****************************************************/

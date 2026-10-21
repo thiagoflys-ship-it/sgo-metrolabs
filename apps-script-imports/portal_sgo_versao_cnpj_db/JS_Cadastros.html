@@ -54,7 +54,13 @@
     return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   }
   function CadUI_perfil_() { return String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase(); }
-  function CadUI_gestao_() { var p = CadUI_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  // 21/10/2026 (pedido do dono): a rotina dos cadastros (criar, editar, inativar, juntar repetidos, transferir e corrigir
+  // vínculos) é da gestão, do RH e do Financeiro, como no servidor (SGO_ehGestaoRotina_). Excluir de vez continua com
+  // Administrador, Diretoria e Gestor (CadUI_podeExcluir_; o servidor confere com isAdminSession).
+  function CadUI_gestao_() { var p = CadUI_perfil_(); return ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
+  function CadUI_rotina_() { return CadUI_gestao_(); }
+  function CadUI_podeExcluir_() { var p = CadUI_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  var CADUI_TXT_EXCLUIR = "Excluir de vez é feito pelo Administrador, pela Diretoria ou pelo Gestor. Para tirar de uso sem perder o histórico, use Inativar.";
   function CadUI_ehCliente_() { return CadUI_perfil_() === "CLIENTE"; }
   function CadUI_movel_() { return typeof ehMobileModo_ === "function" && ehMobileModo_(); }
   function CadUI_maiusculaInicial_(s) {
@@ -711,7 +717,7 @@
 
   // ---------- caminhos para outras telas (vínculos, nova unidade, novo equipamento) ----------
   function CadTela_abrirVinculos_(tipo, id) {
-    if (!CadUI_gestao_()) { CadUI_aviso_("Transferir, consolidar ou desvincular é feito pela gestão (Gestor, Diretoria ou Administrador). Peça a eles informando o cadastro e o motivo.", "alerta"); return; }
+    if (!CadUI_gestao_()) { CadUI_aviso_("Transferir, consolidar ou desvincular é feito pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Peça a um deles informando o cadastro e o motivo.", "alerta"); return; }
     if (typeof Vinculos_abrirCom_ === "function") Vinculos_abrirCom_(tipo, id);
     else abrir("vinculos");
   }
@@ -778,12 +784,12 @@
       { texto: "Ver detalhes e vínculos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("clientes", c.ID); } },
       { texto: "Nova unidade deste cliente", icone: "fa-location-dot", desabilitado: !ativo, nota: ativo ? "" : "Reative o cliente para cadastrar unidade.", acao: function () { Unidades_novaPara_(c.ID, Clientes_nome_(c)); } },
       { texto: "Novo equipamento deste cliente", icone: "fa-industry", desabilitado: !ativo, nota: ativo ? "" : "Reative o cliente para cadastrar equipamento.", acao: function () { if (typeof Equipamentos_novoPara_ === "function") Equipamentos_novoPara_(c.ID, Clientes_nome_(c)); } },
-      { texto: "Juntar cadastro repetido (Vínculos)", icone: "fa-diagram-project", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Gestor, Diretoria ou Administrador).", acao: function () { CadTela_abrirVinculos_("CLIENTE", c.ID); } },
+      { texto: "Juntar cadastro repetido (Vínculos)", icone: "fa-diagram-project", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).", acao: function () { CadTela_abrirVinculos_("CLIENTE", c.ID); } },
       "-",
       ativo
         ? { texto: "Inativar cliente", icone: "fa-ban", risco: true, acao: function () { Clientes_inativar_(c); } }
         : { texto: "Reativar cliente", icone: "fa-rotate-left", acao: function () { Clientes_reativar_(c); } },
-      { texto: "Excluir cliente", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Clientes_excluir_(c); } }
+      { texto: "Excluir cliente", icone: "fa-trash-can", risco: true, desabilitado: !CadUI_podeExcluir_(), nota: CadUI_podeExcluir_() ? "" : CADUI_TXT_EXCLUIR, acao: function () { Clientes_excluir_(c); } }
     ];
   }
 
@@ -1089,12 +1095,12 @@
     return [
       { texto: "Ver detalhes e vínculos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("unidades", u.ID); } },
       { texto: "Novo equipamento nesta unidade", icone: "fa-industry", desabilitado: !ativo, nota: ativo ? "" : "Reative a unidade para cadastrar equipamento.", acao: function () { if (typeof Equipamentos_novoPara_ === "function") Equipamentos_novoPara_(u.CLIENTE_ID, u.CLIENTE_NOME, u.ID); } },
-      { texto: "Transferir para outro cliente (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Gestor, Diretoria ou Administrador).", acao: function () { CadTela_abrirVinculos_("UNIDADE", u.ID); } },
+      { texto: "Transferir para outro cliente (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).", acao: function () { CadTela_abrirVinculos_("UNIDADE", u.ID); } },
       "-",
       ativo
         ? { texto: "Inativar unidade", icone: "fa-ban", risco: true, acao: function () { Unidades_inativar_(u); } }
         : { texto: "Reativar unidade", icone: "fa-rotate-left", acao: function () { Unidades_reativar_(u); } },
-      { texto: "Excluir unidade", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Unidades_excluir_(u); } }
+      { texto: "Excluir unidade", icone: "fa-trash-can", risco: true, desabilitado: !CadUI_podeExcluir_(), nota: CadUI_podeExcluir_() ? "" : CADUI_TXT_EXCLUIR, acao: function () { Unidades_excluir_(u); } }
     ];
   }
 

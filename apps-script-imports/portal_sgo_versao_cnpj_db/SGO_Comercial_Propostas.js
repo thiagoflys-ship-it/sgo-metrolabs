@@ -41,14 +41,14 @@ function ComP_produtoParaTela_(p, eu) {
 }
 
 function ComP_catalogo_(eu, incluirArquivados) {
-  Com_exigir_(eu, 'VENDEDOR', 'ver o catálogo');
-  return Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return incluirArquivados ? eu.gestao : Com_up_(p.ATIVO || 'SIM') !== 'NAO'; })
+  if (!eu.catalogo) Com_exigir_(eu, 'VENDEDOR', 'ver o catálogo');
+  return Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return incluirArquivados ? (eu.gestao || eu.catalogo) : Com_up_(p.ATIVO || 'SIM') !== 'NAO'; })
     .map(function (p) { return ComP_produtoParaTela_(p, eu); }).sort(function (a, b) { return (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
 }
 
 /** Gestão cadastra ou altera. d: { id?, codigo, nome, tipo, categoria, unidade, descricao, preco, custo } */
 function ComP_salvarProduto_(eu, d) {
-  Com_exigir_(eu, 'GESTAO', 'salvar o produto ou serviço');
+  if (!eu.catalogo) Com_exigir_(eu, 'GESTAO', 'salvar o produto ou serviço');
   d = d || {};
   var nome = Com_texto_(d.nome, 200);
   if (nome.length < 3) throw new Error('Não foi possível salvar: escreva o nome do produto ou serviço (pelo menos 3 letras)');
@@ -82,7 +82,7 @@ function ComP_salvarProduto_(eu, d) {
 }
 
 function ComP_arquivarProduto_(eu, d) {
-  Com_exigir_(eu, 'GESTAO', 'arquivar o item');
+  if (!eu.catalogo) Com_exigir_(eu, 'GESTAO', 'arquivar o item');
   return Com_comTrava_(function () {
     var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d && d.id));
     if (!p) throw new Error('Não foi possível arquivar: o item não existe mais. Atualize o catálogo');

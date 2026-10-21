@@ -131,12 +131,17 @@ test('etapa 1 · fornecedores: CNPJ válido e único, nome parecido avisa, arqui
   assert.equal(amb.tabelas.CMP_FORNECEDORES.length, 2);
 });
 
-test('etapa 1 · regras: só Administrador e Diretoria alteram, com motivo e versão; faixas precisam crescer', () => {
+// 21/10/2026 (pedido do dono): as regras são rotina da empresa — Administrador, Diretoria, Gestor, RH e Financeiro alteram.
+test('etapa 1 · regras: a gestão (com RH e Financeiro) altera, com motivo e versão; técnico não; faixas precisam crescer', () => {
   const amb = ambiente();
+  const auth = require('node:fs').readFileSync(require('node:path').join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/SGO_Auth.js'), 'utf8').replace(/\r\n/g, '\n');
+  require('node:vm').runInContext(auth.match(/function SGO_ehPerfilRH_[\s\S]*?function SGO_bloquearRH_[\s\S]*?\n}\n/)[0], amb.ctx);
   assert.match(amb.api('s_tiago', 'regras', {}).message, /valores de compra/);
-  const atual = ok(amb.api('s_lia', 'regras', {}));
-  assert.equal(atual.podeEditar, false);
-  assert.match(amb.api('s_lia', 'regras', { salvar: atual.regras, motivo: 'Teste de alteração das regras' }).message, /só pelo Administrador e pela Diretoria/);
+  assert.equal(ok(amb.api('s_lia', 'regras', {})).podeEditar, true);
+  assert.equal(ok(amb.api('s_fabio', 'regras', {})).podeEditar, true);
+  const rh = ok(amb.api('s_rita', 'regras', {}));
+  assert.equal(rh.podeEditar, true, 'o RH abre e altera as regras (sem ver valores de compra)');
+  const atual = rh;
   const ruim = JSON.parse(JSON.stringify(atual.regras)); ruim.faixas[1].ate = 500;
   assert.match(amb.api('s_dora', 'regras', { salvar: ruim, motivo: 'Teste de faixas fora de ordem' }).message, /precisam crescer/);
   assert.match(amb.api('s_dora', 'regras', { salvar: atual.regras, motivo: 'curto' }).message, /pelo menos 10 letras/);

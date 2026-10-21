@@ -743,13 +743,20 @@
     });
   }
 
-  // PERFIL RH (19/10/2026): o RH vê o que um colaborador vê (Início, Minhas atividades, Avisos,
-  // Frota e Programa de conduta) e a lista de Usuários (só consulta). O resto do menu some e
+  // PERFIL RH (19/10/2026; rotina da empresa desde 21/10/2026): o RH vê o que um colaborador vê e faz a rotina
+  // da empresa (lista SGO_TELAS_RH abaixo). O resto do menu some e
   // abrir() mostra uma tela explicando. O servidor também recusa (SGO_Auth.js › SGO_bloquearRH_).
   // 19/10/2026: Atividades da equipe aberta a todos os perfis internos (o RH acompanha, não altera o que não é dele).
   // 21/10/2026: + Assistente do ponto (o RH trata os pedidos de ajuste).
   // 21/10/2026: + Meus avisos (preferências de e-mail e WhatsApp da própria pessoa).
-  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "meus_avisos"];
+  // 21/10/2026 (pedido do dono, rotina da empresa): o RH faz a rotina como o Gestor: + cadastros de clientes, unidades,
+  // equipamentos e vínculos, Caixa de decisões (itens das áreas dele), Regras de compras e Piloto do WhatsApp (pessoas).
+  // Continuam fora: documentos técnicos, arquivo de documentos, inventário, Comercial (valores de venda), Integração Auvo,
+  // Painel de qualidade, Configurações, Chaves e senhas e Matriz de avisos.
+  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "meus_avisos",
+    "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto"];
+  // Rotina da empresa (cadastrar, editar e organizar): Administrador, Diretoria, Gestor, RH e Financeiro (SGO_ehGestaoRotina_ no servidor).
+  function SGO_ehRotina_() { var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
   function SGO_telaLiberadaRH_(mod) { return !SGO_ehRH_() || SGO_TELAS_RH.indexOf(String(mod || "")) >= 0; }
 
@@ -776,17 +783,19 @@
     // Inventário passou para Cadastros (grupo que o cliente vê); antes ficava em Documentos técnicos, escondido do cliente.
     const btnInventario = document.querySelector('#menu .menu-btn[data-mod="inventario"]');
     if (btnInventario) btnInventario.style.display = isCliente ? "none" : "";
-    // Usuários: o servidor só deixa ADMIN, GESTOR e DIRETORIA gerir usuários (SGO_Usuarios.js,
+    // Usuários: rotina da empresa (Administrador, Diretoria, Gestor, RH e Financeiro: SGO_Usuarios.js,
     // verificarPermissaoAdmin_); para os demais perfis o item levaria a uma tela que só dá erro.
     // Mesma regra para Integração Auvo e Painel de qualidade (Auvo_exigirAdmin_ / Qualidade_exigirGestor_
     // usam isAdminPerfilAuth_: ADMIN, DIRETORIA, GESTOR).
     const perfilMenu = String(USER_CONTEXT.perfil || "").toUpperCase();
     const ehGestaoMenu = (perfilMenu === "ADMIN" || perfilMenu === "GESTOR" || perfilMenu === "DIRETORIA");
-    ["#menu-btn-usuarios", '#menu .menu-btn[data-mod="auvo"]', '#menu .menu-btn[data-mod="qualidade"]'].forEach(function (sel) {
+    ['#menu .menu-btn[data-mod="auvo"]', '#menu .menu-btn[data-mod="qualidade"]'].forEach(function (sel) {
       const el = document.querySelector(sel);
       if (el) el.style.display = ehGestaoMenu ? "" : "none";
     });
-    // Perfil RH: consulta a lista de Usuários; tudo que não é do RH some do menu (os grupos vazios somem sozinhos).
+    const btnUsuarios = document.querySelector("#menu-btn-usuarios");
+    if (btnUsuarios) btnUsuarios.style.display = SGO_ehRotina_() ? "" : "none";
+    // Perfil RH: tudo que não é do RH some do menu (os grupos vazios somem sozinhos).
     if (SGO_ehRH_()) {
       document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
         const mod = btn.getAttribute("data-mod");
@@ -809,8 +818,9 @@
       const divRh = document.getElementById("conteudo");
       if (divRh) divRh.innerHTML =
         '<div class="module-shell"><h2 class="content-title">Tela fora do perfil RH</h2>' +
-        '<p class="content-subtitle">O perfil RH usa o Início, Minhas atividades, Avisos (inclusive para publicar comunicados), Frota, Programa de conduta (consulta de toda a equipe) e Usuários (consulta). ' +
-        'Documentos técnicos, cadastros de clientes e equipamentos, Configurações e Chaves e senhas ficam com a equipe técnica e a gestão. Se precisar de algo daqui, peça à gestão.</p>' +
+        '<p class="content-subtitle">O perfil RH faz a rotina da empresa: Início, Minhas atividades, Atividades da equipe, Avisos, Frota, Programa de conduta (consulta de toda a equipe), Usuários, ' +
+        'Clientes, Unidades, Equipamentos, Vínculos, Caixa de decisões, Assistente do ponto, Regras de compras e Piloto do WhatsApp. ' +
+        'Documentos técnicos, Comercial, Configurações e Chaves e senhas ficam com a equipe técnica, a equipe comercial e o Administrador. Se precisar de algo daqui, peça à gestão.</p>' +
         '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
       return;
     }
@@ -2351,7 +2361,7 @@
   function frotaTextoSoCondutorDevolve_(nome) {
     nome = nome || "o condutor da retirada";
     return "Esta retirada está com " + nome + ". Só " + nome + " ou a gestão podem registrar a devolução. Se o veículo já voltou, peça a " + nome +
-      " para registrar no SGO+; se não for possível, procure a gestão (Administrador, Gestor ou Diretoria), que registra no lugar dele com justificativa.";
+      " para registrar no SGO+; se não for possível, procure a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro), que registra no lugar dele com justificativa.";
   }
   function frotaAvisoDevolucaoDeOutro_(nome) { alert(frotaTextoSoCondutorDevolve_(nome)); }
   // Mesma leitura do servidor (Frota_num_): "45.000" e "45000" = 45000; "1.234,5" = 1234,5.
@@ -2754,7 +2764,7 @@
         return fsEsc_(r.placa) + ' ' + fsEsc_(r.quando) + (r.destino ? ' (' + fsEsc_(r.destino) + ')' : '');
       }).join('; ') + '. No horário, toque no veículo para retirar.</div>';
     }
-    if (semCondutor) h += '<div class="fs-aviso">Seu login ainda não tem condutor vinculado, então a retirada não pode ser registrada em seu nome. Peça à gestão (Administrador, Gestor ou Diretoria) para vincular o seu usuário em Frota &gt; Condutores e abra a Frota de novo.</div>';
+    if (semCondutor) h += '<div class="fs-aviso">Seu login ainda não tem condutor vinculado, então a retirada não pode ser registrada em seu nome. Peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para vincular o seu usuário em Frota &gt; Condutores e abra a Frota de novo.</div>';
     if (alertas.length) {
       h += alertas.length > 2
         ? '<details><summary>Avisos da frota (' + alertas.length + ')</summary><div class="fs-det">' + alertas.join("") + "</div></details>"
@@ -3364,7 +3374,7 @@
     if (!(MOBILE_FROTA.gruposChecklist || []).length) { fsStatus_("erro", "A lista da vistoria não carregou. Toque em Cancelar e voltar, depois em Atualizar agora."); return; }
     const ret = f.tipo === "retirada";
     const km = frotaNumCliente_(f.km);
-    if (ret && km < Number(f.veiculo.km) && !d.gestor) { fsStatus_("erro", "O KM (" + fsKm_(km) + ") é menor que o KM registrado do veículo (" + fsKm_(f.veiculo.km) + "). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Gestor ou Diretoria) o ajuste de KM."); return; }
+    if (ret && km < Number(f.veiculo.km) && !d.gestor) { fsStatus_("erro", "O KM (" + fsKm_(km) + ") é menor que o KM registrado do veículo (" + fsKm_(f.veiculo.km) + "). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) o ajuste de KM."); return; }
     if (!ret && km < Number(f.mov.kmSaida)) { fsStatus_("erro", "O KM de chegada (" + fsKm_(km) + ") é menor que o KM de saída desta retirada (" + fsKm_(f.mov.kmSaida) + "). Confira o número no painel."); return; }
     const gestao = !!d.gestor;
     const payload = ret ? {
@@ -3602,7 +3612,7 @@
       .finally(function () { FROTA_ENVIO_ATIVO = false; });
   }
 
-  // Abastecimento no celular (gestão: o servidor só aceita Administrador, Gestor e Diretoria).
+  // Abastecimento no celular (gestão da Frota: Administrador, Diretoria, Gestor, RH e Financeiro).
   function renderMobileFrotaAbastecer_() {
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Registrar abastecimento");
@@ -4264,11 +4274,11 @@
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
-    // Perfil RH: só as telas do perfil, e a lista de Usuários (consulta).
+    // Perfil RH: só as telas do perfil. Usuários: a rotina da empresa (gestão, RH e Financeiro) tem o atalho no celular.
     if (SGO_ehRH_()) {
       for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }
-      itens.push({ icone: '<i class="fas fa-users" aria-hidden="true"></i>', legenda: "Usuários", mod: "usuarios" });
     }
+    if (SGO_ehRotina_()) itens.push({ icone: '<i class="fas fa-users" aria-hidden="true"></i>', legenda: "Usuários", mod: "usuarios" });
 
     const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
     atualizarTituloMobile_("Início");
@@ -5871,8 +5881,8 @@
     if (FROTA_POLL_INTERVAL) return;
     // Mesmo motivo do iniciarPollingAuvo_ — desligado no celular pra todo mundo.
     if (ehMobileModo_()) return;
-    const perfil = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase();
-    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) === -1) return;
+    // 21/10/2026: a gestão da Frota inclui RH e Financeiro (Frota_ehGestao_ no servidor).
+    if (!SGO_ehRotina_()) return;
 
     FROTA_POLL_DESDE = new Date().toISOString();
     FROTA_POLL_INTERVAL = setInterval(verificarEventosFrota_, 45000);

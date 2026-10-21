@@ -35,7 +35,8 @@
 
   function WaPiloto_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function WaPiloto_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
-  function WaPiloto_pode_() { var p = WaPiloto_perfil_(); return p === "ADMIN" || p === "DIRETORIA"; }
+  // 21/10/2026: a gestão, o RH e o Financeiro escolhem as pessoas; ligar e desligar o piloto, só Administrador e Diretoria (o servidor confere).
+  function WaPiloto_pode_() { var p = WaPiloto_perfil_(); return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function WaPiloto_hoje_() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
 
   function WaPiloto_iniciar_() {
@@ -55,7 +56,7 @@
     if (!div) return;
     if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Piloto do WhatsApp"); } catch (e) {} }
     if (!WaPiloto_pode_()) {
-      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Piloto do WhatsApp</h2><p class="content-subtitle">Esta tela é do Administrador e da Diretoria. Os seus avisos continuam no sistema e no seu e-mail.</p>' +
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Piloto do WhatsApp</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Os seus avisos continuam no sistema e no seu e-mail.</p>' +
         '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
       return;
     }
@@ -99,7 +100,7 @@
     d.areas.forEach(function (a) { areas[a] = true; });
     var rotArea = { ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH" };
     var pessoas = '<div class="wap-bloco"><h3>Quem recebe pelo WhatsApp</h3>' +
-      '<label class="wap-linha" style="margin-bottom:10px"><input type="checkbox" id="wapLigado"' + (d.ligado ? " checked" : "") + ' style="width:18px;height:18px"> <b>Piloto ligado</b> (desmarque só quando for liberar o WhatsApp para todos)</label>' +
+      '<label class="wap-linha" style="margin-bottom:10px"><input type="checkbox" id="wapLigado"' + (d.ligado ? " checked" : "") + (d.ligaDesliga ? "" : " disabled") + ' style="width:18px;height:18px"> <b>Piloto ligado</b> (' + (d.ligaDesliga ? "desmarque só quando for liberar o WhatsApp para todos" : "ligar e desligar é do Administrador e da Diretoria") + ')</label>' +
       '<input type="search" class="wap-busca" id="wapBusca" placeholder="Buscar pessoa pelo nome" value="' + esc(WAP.busca) + '" oninput="WAP.busca=this.value;WaPiloto_filtrar_()" aria-label="Buscar pessoa pelo nome">' +
       '<div class="wap-pessoas" id="wapPessoas">' + d.pessoas.map(function (p) {
         var obs = [rotArea[p.perfil] || p.perfil, p.vinculo || "vínculo não informado", p.temCelular ? "celular " + p.celular : "sem celular válido (não recebe WhatsApp)", p.temEmail ? "com e-mail" : "sem e-mail"];

@@ -332,7 +332,7 @@ test('ponte: COMMAND lê e grava com assinatura, em nome do usuário ligado e co
   const id = r.item.ID;
   // não lança para outra pessoa (regra do SGO+ vale na ponte)
   r = amb.ponte('atividades.criar', { sgoUsuarioId: 'u_tec', payload: { titulo: 'Para a Mara', prazo: amb.amanha18, responsavelId: 'u_met' } });
-  assert.equal(r.ok, false); assert.match(r.erro, /Gestor, Admin e Diretoria/);
+  assert.equal(r.ok, false); assert.match(r.erro, /Administrador, Diretoria, Gestor, RH e Financeiro/);
   // a mesma lista nos dois sistemas: aparece no SGO+ para o Tiago e na equipe para a Mara (que não altera)
   assert.ok(amb.ctx.Atividades_apiListarMinhas('s_tec', {}).itens.some((i) => i.ID === id));
   r = amb.ponte('atividades.situacao', { sgoUsuarioId: 'u_met', payload: { id, situacao: 'Concluída' } });

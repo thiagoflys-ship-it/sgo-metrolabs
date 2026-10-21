@@ -81,7 +81,10 @@
 
   function Gestao_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Gestao_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
-  function Gestao_ehGestao_() { var p = Gestao_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  // 21/10/2026: a Caixa de decisões abre também para RH e Financeiro (itens das áreas deles). O Desempenho da gestão
+  // (avaliação do gestor) continua com quem é avaliado e com a Diretoria (Gestao_ehGestaoDecisao_).
+  function Gestao_ehGestao_() { var p = Gestao_perfil_(); return ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
+  function Gestao_ehGestaoDecisao_() { var p = Gestao_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
 
   function Gestao_chamar_(fn, payload, ok, erro, opcoes) {
     var o = opcoes || {};
@@ -100,7 +103,8 @@
   // ---------------- casca: menu e balão ----------------
   function Gestao_iniciar_() {
     var g = Gestao_ehGestao_();
-    ["menu-btn-gestao-decisoes", "menu-btn-gestao-desempenho"].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = g ? "" : "none"; });
+    var bDec = document.getElementById("menu-btn-gestao-decisoes"); if (bDec) bDec.style.display = g ? "" : "none";
+    var bDes = document.getElementById("menu-btn-gestao-desempenho"); if (bDes) bDes.style.display = Gestao_ehGestaoDecisao_() ? "" : "none";
     if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
     if (!g) return;
     Gestao_atualizarBalao_();
@@ -130,7 +134,7 @@
     GD.modoRegras = false;
     if (ehMobileModo_()) atualizarTituloMobile_("Caixa de decisões");
     if (!Gestao_ehGestao_()) {
-      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Caixa de decisões</h2><div class="gd-faixa">A Caixa de decisões é da gestão (Administrador, Gestor e Diretoria). O que depende de você aparece no Início e em Minhas atividades.</div></div>';
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Caixa de decisões</h2><div class="gd-faixa">A Caixa de decisões é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). O que depende de você aparece no Início e em Minhas atividades.</div></div>';
       return;
     }
     div.innerHTML = '<div class="module-shell">' +

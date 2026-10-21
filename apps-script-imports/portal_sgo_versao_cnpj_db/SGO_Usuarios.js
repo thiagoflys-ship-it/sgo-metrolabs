@@ -3,22 +3,44 @@ const SGO_USUARIOS = (() => {
   const STATUS_ATIVO = "ATIVO";
   const STATUS_INATIVO = "INATIVO";
 
+  // 21/10/2026 (pedido do dono): a rotina de usuários (criar, editar, área,
+  // vínculo CLT/PJ, celular, redefinir senha, inativar e reativar) é da gestão
+  // e também do RH e do Financeiro (SGO_ehGestaoRotina_ em SGO_Auth.js).
+  // Contas e perfis ADMIN e DIRETORIA seguem em exigirAdminParaContaAdmin_;
+  // excluir de vez é do Administrador e da Diretoria (exigirExcluir_);
+  // ninguém muda o próprio perfil (exigirNaoMudarProprioPerfil_).
+  function perfilRotina_(perfil) {
+    return typeof SGO_ehGestaoRotina_ === "function" ? SGO_ehGestaoRotina_(perfil) : (perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA");
+  }
+
   function verificarPermissaoAdmin_(sessao) {
     const perfil = SGO_UTILS.safeUpper(sessao.perfil);
-    // Expandido para permitir que GESTORES e DIRETORIA também gerenciem usuários.
-    if (perfil !== "ADMIN" && perfil !== "GESTOR" && perfil !== "DIRETORIA") {
-      throw new Error("Acesso negado: Apenas gestores e administradores podem gerenciar usuários.");
+    if (!perfilRotina_(perfil)) {
+      throw new Error("Acesso negado: as contas de acesso são criadas e alteradas pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Peça a um deles.");
     }
   }
 
-  // Consulta da lista (19/10/2026): a gestão e o perfil RH (para conferir o
-  // vínculo de trabalho e o celular). Criar, editar, redefinir senha, inativar,
-  // reativar e excluir continuam em verificarPermissaoAdmin_ (só a gestão).
+  // Consulta da lista: a mesma regra (a gestão, o RH e o Financeiro).
   function verificarPermissaoConsulta_(sessao) {
     const perfil = SGO_UTILS.safeUpper(sessao.perfil);
-    if (perfil !== "ADMIN" && perfil !== "GESTOR" && perfil !== "DIRETORIA" && perfil !== "RH") {
-      throw new Error("Acesso negado: a lista de usuários é consultada pelos perfis Administrador, Gestor, Diretoria e RH.");
+    if (!perfilRotina_(perfil)) {
+      throw new Error("Acesso negado: a lista de usuários é consultada pelos perfis Administrador, Diretoria, Gestor, RH e Financeiro.");
     }
+  }
+
+  // Excluir de vez (some da lista, sem volta): Administrador e Diretoria.
+  // Para tirar o acesso, todos da gestão usam Inativar (o histórico fica).
+  function exigirExcluir_(sessao) {
+    const perfil = SGO_UTILS.safeUpper(sessao.perfil);
+    if (perfil === "ADMIN" || perfil === "DIRETORIA") return "";
+    return "Não foi possível excluir: excluir uma conta de vez é do Administrador e da Diretoria. Para tirar o acesso desta pessoa, use Mais > Inativar (o histórico fica guardado).";
+  }
+
+  // Ninguém muda o próprio perfil (nem se promove): só outro Administrador.
+  function exigirNaoMudarProprioPerfil_(sessao, usuarioId, perfilAtual, perfilNovo) {
+    if (SGO_UTILS.safe(usuarioId) !== SGO_UTILS.safe(sessao.userId)) return "";
+    if (SGO_UTILS.safeUpper(perfilAtual) === SGO_UTILS.safeUpper(perfilNovo)) return "";
+    return "Não foi possível salvar: ninguém muda o próprio perfil. Os outros dados da sua conta podem ser alterados; para mudar o seu perfil, peça a outra pessoa da gestão (perfil Administrador ou Diretoria para os perfis de gestão).";
   }
 
   // VINCULO_TRABALHO (19/10/2026): "CLT", "PJ" ou vazio (não informado).
@@ -254,7 +276,8 @@ const SGO_USUARIOS = (() => {
       return { success: false, message: erros.join(" ") };
     }
 
-    const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "salvar") || exigirAdminParaContaAdmin_(sessao, dados.PERFIL, "salvar");
+    const negado = exigirNaoMudarProprioPerfil_(sessao, usuarioId, atual.PERFIL, dados.PERFIL) ||
+      exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "salvar") || exigirAdminParaContaAdmin_(sessao, dados.PERFIL, "salvar");
     if (negado) return { success: false, message: negado };
 
     if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && dados.PERFIL !== "ADMIN" && ehUltimoAdminAtivo_(usuarioId)) {
@@ -357,7 +380,7 @@ const SGO_USUARIOS = (() => {
 
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
-    const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "excluir");
+    const negado = exigirExcluir_(sessao) || exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "excluir");
     if (negado) return { success: false, message: negado };
     if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && ehUltimoAdminAtivo_(usuarioId)) {
       return { success: false, message: "Não foi possível excluir: este é o único Administrador ativo. Cadastre outro Administrador antes." };
@@ -523,8 +546,10 @@ function usuariosPainel(sessionId) {
     var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
     // 19/10/2026: o perfil Diretoria é dado só por Administrador ou Diretoria (exigirAdminParaContaAdmin_).
     var podeDarDiretoria = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
-    // Perfil RH só consulta (19/10/2026): a tela esconde Novo usuário, Editar e Mais.
-    var podeGerir = isAdminPerfilAuth_(sessao.perfil);
+    // 21/10/2026: a gestão, o RH e o Financeiro criam e alteram contas (rotina da empresa); excluir de vez, só
+    // Administrador e Diretoria; o próprio perfil ninguém muda (a tela trava o campo).
+    var podeGerir = typeof SGO_ehGestaoRotina_ === "function" ? SGO_ehGestaoRotina_(sessao.perfil) : isAdminPerfilAuth_(sessao.perfil);
+    var podeExcluir = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
     var acessos = Usuarios_ultimosAcessos_();
     // Áreas (19/10/2026): lista para o formulário e nomes para a coluna da lista.
     var areasAtivas = [], nomesAreas = {};
@@ -553,7 +578,7 @@ function usuariosPainel(sessionId) {
       var sa = SGO_UTILS.safeUpper(a.STATUS) === "ATIVO" ? 0 : 1, sb = SGO_UTILS.safeUpper(b.STATUS) === "ATIVO" ? 0 : 1;
       return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
     });
-    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir,
+    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir, podeExcluir: podeExcluir,
       areas: areasAtivas, podeGerirAreas: SGO_podeConsultarPessoas_(sessao.perfil),
       perfis: (SGO_CFG.PROFILES || []).filter(function (p) { var k = SGO_UTILS.safeUpper(p); return (souAdmin || k !== "ADMIN") && (podeDarDiretoria || k !== "DIRETORIA"); }) }));
   } catch (e) {

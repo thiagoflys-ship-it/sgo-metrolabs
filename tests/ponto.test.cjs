@@ -132,8 +132,8 @@ test('desligado (padrão): nada sai e nada é lido', () => {
   // o colaborador não vê o menu com o assistente desligado; o RH vê
   assert.equal(ok(a.api('s_ana', 'acesso')).verMenu, false);
   assert.equal(ok(a.api('s_rita', 'acesso')).verMenu, true);
-  // só Administrador e Diretoria ligam
-  assert.match(a.api('s_rita', 'salvarConfig', { ligado: true }).message, /Administrador e da Diretoria/);
+  // 21/10/2026: ligar e configurar é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro); o colaborador não liga
+  assert.match(a.api('s_ana', 'salvarConfig', { ligado: true }).message, /gestão \(Administrador, Diretoria, Gestor, RH ou Financeiro\)/);
   const r = ok(a.api('s_dora', 'salvarConfig', { ligado: true }));
   assert.equal(r.config.ligado, true);
   assert.ok(a.gatilhos.includes('Ponto_rotina'), 'rotina de 5 min instalada ao ligar');

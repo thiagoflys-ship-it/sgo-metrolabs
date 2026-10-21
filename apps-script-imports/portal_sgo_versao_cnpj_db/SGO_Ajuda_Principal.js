@@ -120,7 +120,7 @@ function SGO_ajudaTelas_Principal_() {
         { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Ver tudo do Início, incluindo as pendências da equipe, o bloco de atendimentos do Auvo e os botões de gestão do farol de conduta." },
         { perfil: "METROLOGIA", pode: "Ver as próprias pendências, os padrões de referência e os vencimentos dos clientes, além do farol, da frota, dos números e dos gráficos." },
         { perfil: "TECNICO,COMERCIAL,FINANCEIRO", pode: "Ver as próprias pendências (atividades, avisos, a própria CNH, as próprias O.S.) e os padrões de referência, além do farol, da frota, dos números e dos gráficos." },
-        { perfil: "RH", pode: "Ver as próprias pendências, o farol da conduta e a frota. Os quadros técnicos (clientes, equipamentos, documentos e vencimentos) não aparecem." },
+        { perfil: "RH", pode: "Ver as próprias pendências, o farol da conduta, a frota e as pendências da Frota da gestão (CNH, documentos, multas). Os quadros técnicos (clientes, equipamentos, documentos e vencimentos) não aparecem." },
         { perfil: "CLIENTE", pode: "Ver os vencimentos de documentos, calibrações e NR-13 da sua empresa, os equipamentos ativos, os documentos e os gráficos. Farol, frota, clientes e unidades não aparecem." }
       ],
       perguntas: [
@@ -209,7 +209,7 @@ function SGO_ajudaTelas_Principal_() {
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ver pendências, farol, frota e os atalhos \"Minhas atividades\", \"Avisos\", \"Certificado de calibração\", \"Padrões de referência\", \"Frota\", \"Conduta\", \"Clientes\", \"Unidades\", \"Equipamentos\" e \"Documentos\". Em \"Outras telas\" aparecem as telas que o seu perfil acessa no menu." },
-        { perfil: "RH", pode: "Ver pendências, farol, frota e os atalhos \"Minhas atividades\", \"Avisos\", \"Frota\", \"Conduta\" e \"Usuários\" (consulta)." },
+        { perfil: "RH", pode: "Ver pendências, farol, frota e os atalhos do perfil: \"Minhas atividades\", \"Caixa de decisões\", \"Avisos\", \"Ponto\", \"Frota\", \"Conduta\", \"Clientes\", \"Unidades\", \"Equipamentos\" e \"Usuários\"." },
         { perfil: "CLIENTE", pode: "Ver os vencimentos da sua empresa e os atalhos \"Unidades\", \"Equipamentos\" e \"Documentos\". Farol e frota não aparecem." },
         { perfil: "TODOS", pode: "Usar a lupa do alto para procurar telas e cadastros." }
       ],
@@ -278,7 +278,7 @@ function SGO_ajudaTelas_Principal_() {
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Procurar telas, equipamentos, clientes, certificados, documentos e padrões de referência." },
-        { perfil: "RH", pode: "Procurar as telas do perfil RH. Cadastros técnicos, certificados e padrões de referência não aparecem; se abrir um atalho deles, a tela explica que fica fora do perfil." },
+        { perfil: "RH", pode: "Procurar as telas do perfil RH (inclusive clientes, unidades e equipamentos). Certificados, documentos técnicos e padrões de referência não aparecem; se abrir um atalho deles, a tela explica que fica fora do perfil." },
         { perfil: "CLIENTE", pode: "Procurar telas, equipamentos, certificados e documentos da própria empresa. Clientes e padrões de referência não aparecem." }
       ],
       perguntas: [
@@ -421,9 +421,8 @@ function SGO_ajudaTelas_Principal_() {
         { situacao: "A tela ficou com a mensagem de erro e o botão \"Tentar de novo\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\". Nada foi alterado." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Lançar atividade para qualquer pessoa, editar, trocar o responsável, mudar o prazo (replanejar), reabrir e cancelar qualquer atividade." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Lançar atividades para si, mudar a situação, comentar, registrar andamento e justificar atraso das próprias atividades. Edita e cancela só as que lançou para si." },
-        { perfil: "RH", pode: "O mesmo dos demais colaboradores: lançar atividades para si e cuidar das próprias." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Lançar atividade para qualquer pessoa, editar, trocar o responsável, mudar o prazo (replanejar), reabrir e cancelar qualquer atividade. Atividade restrita (Programa de conduta) de outra pessoa: o Financeiro não vê nem altera." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Lançar atividades para si, mudar a situação, comentar, registrar andamento e justificar atraso das próprias atividades. Edita e cancela só as que lançou para si." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
@@ -586,9 +585,9 @@ function SGO_ajudaTelas_Principal_() {
         { situacao: "Os blocos mostram \"Não carregou. Veja o aviso abaixo.\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\"." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Ver todas as atividades da equipe, inclusive as restritas, ler todas as justificativas, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar. Admin e Diretoria também configuram Avisos e horários." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ver as atividades da equipe (menos as restritas de outras pessoas). Alteram só as próprias e as que lançaram. O texto das justificativas aparece só nas atividades em que estão envolvidos." },
-        { perfil: "RH", pode: "O mesmo dos demais colaboradores: acompanha a equipe e altera só as próprias atividades e as que lançou." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH", pode: "Ver todas as atividades da equipe, inclusive as restritas, ler todas as justificativas, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar." },
+        { perfil: "FINANCEIRO", pode: "O mesmo da gestão, menos as atividades restritas (Programa de conduta) de outras pessoas." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ver as atividades da equipe (menos as restritas de outras pessoas). Alteram só as próprias e as que lançaram. O texto das justificativas aparece só nas atividades em que estão envolvidos." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
@@ -786,9 +785,8 @@ function SGO_ajudaTelas_Principal_() {
         { situacao: "Aparece \"Não foi possível reenviar: o aviso está arquivado.\"", oQueFazer: "Marque \"Mostrar arquivados\", toque em \"Reativar\" e depois reenvie." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Ler e confirmar os próprios avisos, publicar avisos, ver quem leu, reenviar a quem não leu, arquivar e reativar." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ler os avisos recebidos, abrir os anexos e confirmar a leitura." },
-        { perfil: "RH", pode: "Ler e confirmar os próprios avisos e publicar comunicados de RH: publicar, ver quem leu, reenviar a quem não leu, arquivar e reativar (as mesmas ações da gestão)." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ler e confirmar os próprios avisos, publicar avisos, ver quem leu, reenviar a quem não leu, arquivar e reativar." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ler os avisos recebidos, abrir os anexos e confirmar a leitura." },
         { perfil: "CLIENTE", pode: "Não recebe avisos. Os avisos são internos da equipe." }
       ],
       perguntas: [

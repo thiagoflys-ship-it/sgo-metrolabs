@@ -215,7 +215,8 @@
     return '<span class="atv-selo emdia">Em dia</span>';
   }
   function Atividades_sitHtml_(s) { return '<span class="atv-sit" style="background:' + (ATV_CORES[s] || "#666") + '">' + Atividades_esc_(s) + "</span>"; }
-  function Atividades_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  // 21/10/2026: RH e Financeiro lançam e acompanham atividades da equipe como o Gestor (o servidor confere: Atividades_ehGestorPerfil_).
+  function Atividades_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function Atividades_meuId_() { return USER_CONTEXT ? String(USER_CONTEXT.id || USER_CONTEXT.userId || "") : ""; }
   /** Mesma regra do servidor (Atividades_podeEditar_): gestão qualquer uma; demais, só a que lançaram para si. */
   function Atividades_podeEditar_(a, eu) {

@@ -100,17 +100,18 @@ test('vínculo de trabalho: grava CLT/PJ, editar outro campo ou a senha não apa
   assert.equal(tabelas.CAD_USUARIOS.find((x) => x.USUARIO === 'davi').VINCULO_TRABALHO, 'CLT');
 });
 
-test('perfil RH: consulta a lista de usuários, não cria nem altera; Técnico não consulta', () => {
+// 21/10/2026 (pedido do dono): o RH faz a rotina de usuários como o Gestor (perfis-rotina-geral.test.cjs cobre o resto).
+test('perfil RH: consulta e altera contas operacionais, não dá Administrador; Técnico não consulta', () => {
   const { s, tabelas } = contexto(equipe(), sessoes);
   const lista = s.SGO_USUARIOS.pesquisar('R', '');
   assert.equal(lista.success, true);
   assert.ok(lista.items.every((x) => x.SENHA === undefined));
   assert.equal(lista.items.find((x) => x.ID === 'u2').VINCULO_TRABALHO, 'PJ');
-  assert.throws(() => s.SGO_USUARIOS.atualizar('R', 'u2', { NOME: 'x' }), /Acesso negado/);
-  assert.throws(() => s.SGO_USUARIOS.criar('R', { USUARIO: 'z', NOME: 'Z', EMAIL: 'z@x.com.br', PERFIL: 'ADMIN', SENHA: '123456' }), /Acesso negado/);
-  assert.throws(() => s.SGO_USUARIOS.inativar('R', 'u2'), /Acesso negado/);
+  assert.equal(s.SGO_USUARIOS.atualizar('R', 'u2', { NOME: 'BIA PJ ALTERADA' }).success, true);
+  assert.equal(s.SGO_USUARIOS.criar('R', { USUARIO: 'z', NOME: 'Z', EMAIL: 'z@x.com.br', PERFIL: 'ADMIN', SENHA: '123456' }).success, false);
   assert.throws(() => s.SGO_USUARIOS.pesquisar('T', ''), /Acesso negado/);
-  assert.equal(tabelas.CAD_USUARIOS.find((x) => x.ID === 'u2').NOME, 'BIA PJ');
+  assert.throws(() => s.SGO_USUARIOS.atualizar('T', 'u2', { NOME: 'x' }), /Acesso negado/);
+  assert.equal(tabelas.CAD_USUARIOS.find((x) => x.ID === 'u2').NOME, 'BIA PJ ALTERADA');
   // Gestor dá o perfil RH, mas continua sem dar Administrador.
   assert.equal(s.SGO_USUARIOS.atualizar('G', 'u1', { PERFIL: 'RH' }).success, true);
   assert.equal(s.SGO_USUARIOS.atualizar('G', 'u1', { PERFIL: 'ADMIN' }).success, false);

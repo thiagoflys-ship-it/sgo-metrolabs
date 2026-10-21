@@ -139,8 +139,9 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "Aparece \"Não foi possível falar com o servidor\".", oQueFazer: "Confira a conexão. Antes de repetir, veja na lista se a alteração já foi feita, para não gravar em dobro." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar e excluir clientes sem nada ligado. Juntar cadastros repetidos pela tela Vínculos." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar clientes. Excluir e juntar cadastros fica com a gestão." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar clientes. Juntar cadastros repetidos pela tela Vínculos." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também excluir de vez clientes sem nada ligado." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Cadastrar, editar, inativar e reativar clientes. Excluir e juntar cadastros fica com a gestão." },
         { perfil: "CLIENTE", pode: "Não vê esta tela. Os dados da sua empresa aparecem em Unidades, Equipamentos e Arquivo de documentos." }
       ],
       perguntas: [
@@ -263,8 +264,9 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "\"Transferir para outro cliente (Vínculos)\" ou \"Excluir unidade\" aparecem apagados.", oQueFazer: "Essas ações são da gestão (Gestor, Diretoria ou Administrador). Peça a eles informando a unidade e o motivo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar e excluir unidades sem nada ligado. Transferir a unidade para outro cliente em Vínculos." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar unidades. Excluir e trocar de cliente fica com a gestão." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar unidades. Transferir a unidade para outro cliente em Vínculos." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também excluir de vez unidades sem nada ligado." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Cadastrar, editar, inativar e reativar unidades. Excluir e trocar de cliente fica com a gestão." },
         { perfil: "CLIENTE", pode: "Ver as unidades da própria empresa, com os equipamentos e os documentos. Para corrigir um dado, fale com a Metrolabs." }
       ],
       perguntas: [
@@ -420,8 +422,9 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "A aba \"Atendimentos\" mostra \"Nenhum atendimento do Auvo ligado a este equipamento\".", oQueFazer: "O atendimento ainda não foi ligado a este equipamento no Auvo. Fale com a gestão da integração Auvo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar e excluir equipamentos sem nada ligado. Transferir para outra unidade em Vínculos." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar equipamentos, gerar o QR Code e anexar documentos. Excluir e transferir fica com a gestão." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar equipamentos, gerar o QR Code e anexar documentos. Transferir para outra unidade em Vínculos." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também excluir de vez equipamentos sem nada ligado." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Cadastrar, editar, inativar e reativar equipamentos, gerar o QR Code e anexar documentos. Excluir e transferir fica com a gestão." },
         { perfil: "CLIENTE", pode: "Ver os equipamentos da própria empresa, os documentos de cada um e o QR Code (botão \"QR Code\"). Para corrigir um dado, fale com a Metrolabs." }
       ],
       perguntas: [
@@ -548,8 +551,8 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "O painel de vínculos não carregou.", oQueFazer: "Toque em \"Tentar de novo\". Se continuar, confira a conexão." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver tudo, escolher a ação, conferir o impacto, confirmar e ver o histórico das alterações." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ver a situação de cada cadastro, abrir o cadastro para corrigir dados e criar a unidade principal de cliente sem unidade. As ações de vínculo ficam com a gestão." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver tudo, escolher a ação, conferir o impacto, confirmar e ver o histórico das alterações." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ver a situação de cada cadastro, abrir o cadastro para corrigir dados e criar a unidade principal de cliente sem unidade. As ações de vínculo ficam com a gestão." },
         { perfil: "CLIENTE", pode: "Não vê esta tela." }
       ],
       perguntas: [
@@ -588,7 +591,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "O histórico não carregou.", oQueFazer: "Toque em \"Tentar de novo\". Se continuar, confira a conexão." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver o histórico completo das alterações de vínculo." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver o histórico completo das alterações de vínculo." }
       ],
       perguntas: [
         { p: "O histórico pode ser apagado?", r: "Não pela tela. Cada operação fica registrada na auditoria com o motivo." }
@@ -721,7 +724,8 @@ function SGO_ajudaTelas_Cadastros_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Enviar, editar, trocar o vínculo, inativar, reativar e excluir documentos da lista." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Enviar, editar, anexar arquivo, inativar e reativar documentos. O vínculo já preenchido fica travado; excluir fica com a gestão." },
+        { perfil: "FINANCEIRO", pode: "Enviar, editar, trocar o vínculo, inativar e reativar documentos. Excluir fica com Administrador, Diretoria e Gestor." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Enviar, editar, anexar arquivo, inativar e reativar documentos. O vínculo já preenchido fica travado; excluir fica com a gestão." },
         { perfil: "CLIENTE", pode: "Ver os documentos da própria empresa e abrir o arquivo pelo botão \"Abrir arquivo\"." }
       ],
       perguntas: [

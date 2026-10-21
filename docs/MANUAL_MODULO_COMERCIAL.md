@@ -12,7 +12,7 @@ A gestora comercial do sistema conhece a metodologia que a gestão escreve (funi
 
 - Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas.
 - Gestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto, mantém o catálogo e a metodologia.
-- Financeiro: perfil Financeiro ou área Financeiro. Vê só os pedidos aprovados, com o valor e os dados de faturamento.
+- Financeiro: perfil Financeiro ou área Financeiro. Vê os pedidos aprovados, com o valor e os dados de faturamento, e mantém o catálogo de Produtos e serviços (preço e custo). O RH não vê o Comercial.
 - Técnico, Metrologia, RH e gestores de outras áreas não veem o Comercial nem valores. Quando recebem a parte deles de um pedido aprovado, é uma atividade em Minhas atividades, sem valor.
 
 ## Hoje no Comercial

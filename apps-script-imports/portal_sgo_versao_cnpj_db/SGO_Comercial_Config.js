@@ -447,7 +447,10 @@ function Com_nivelDe_(u, gestoresCfg) {
   var vendedor = !gestao && (perfil === 'COMERCIAL' || (area === 'COMERCIAL' && perfil !== 'CLIENTE' && perfil !== 'RH'));
   var financeiro = !gestao && !vendedor && (perfil === 'FINANCEIRO' || area === 'FINANCEIRO');
   var nivel = gestao ? 'GESTAO' : vendedor ? 'VENDEDOR' : financeiro ? 'FINANCEIRO' : 'NENHUM';
-  return { nivel: nivel, gestao: gestao, vendedor: vendedor, financeiro: financeiro, veValores: nivel !== 'NENHUM', veCusto: gestao, diretoria: diretoria };
+  // 21/10/2026 (pedido do dono): o catálogo de produtos e serviços (preço e custo) é mantido também pelo Financeiro. O RH não
+  // entra no Comercial (não vê valores de venda).
+  var catalogo = gestao || financeiro;
+  return { nivel: nivel, gestao: gestao, vendedor: vendedor, financeiro: financeiro, veValores: nivel !== 'NENHUM', veCusto: catalogo, catalogo: catalogo, diretoria: diretoria };
 }
 
 /** Quem está chamando (sessão), com o nível no Comercial. Não lança por falta de acesso: quem chama decide. */

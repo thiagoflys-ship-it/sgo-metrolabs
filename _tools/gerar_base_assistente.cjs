@@ -36,7 +36,7 @@ const MAPA = {
   "MANUAL_MODULO_EMAIL.md": { tela: "email" },
   "MANUAL_MODULO_ESTUFA_BANHOMARIA.md": { tela: "estufa_banhomaria" },
   "MANUAL_MODULO_FROTA.md": { tela: "frota" },
-  "MANUAL_MODULO_GESTAO_DECISOES.md": { tela: "gestao_decisoes", perfis: ["ADMIN", "GESTOR", "DIRETORIA"] },
+  "MANUAL_MODULO_GESTAO_DECISOES.md": { tela: "gestao_decisoes", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"] },
   "MANUAL_MODULO_INVENTARIO_EQUIPAMENTOS.md": { tela: "inventario" },
   "MANUAL_MODULO_LAVADORA.md": { tela: "lavadora" },
   "MANUAL_MODULO_PGT_POP.md": { tela: "pgt_pop" },

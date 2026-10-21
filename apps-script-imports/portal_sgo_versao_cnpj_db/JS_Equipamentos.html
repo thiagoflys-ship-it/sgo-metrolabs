@@ -76,8 +76,8 @@
       ativo
         ? { texto: "Inativar equipamento", icone: "fa-ban", risco: true, acao: function () { Equipamentos_inativar_(e); } }
         : { texto: "Reativar equipamento", icone: "fa-rotate-left", acao: function () { Equipamentos_reativar_(e); } },
-      { texto: "Excluir equipamento", icone: "fa-trash-can", risco: true, desabilitado: !gestao || temDoc,
-        nota: !gestao ? "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador)." : temDoc ? "Tem documento ligado: não é excluído. Use Inativar para tirar de uso sem perder o histórico." : "",
+      { texto: "Excluir equipamento", icone: "fa-trash-can", risco: true, desabilitado: !CadUI_podeExcluir_() || temDoc,
+        nota: !CadUI_podeExcluir_() ? CADUI_TXT_EXCLUIR : temDoc ? "Tem documento ligado: não é excluído. Use Inativar para tirar de uso sem perder o histórico." : "",
         acao: function () { Equipamentos_excluir_(e); } }
     ];
   }

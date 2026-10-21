@@ -53,7 +53,7 @@
  *   - a trilha de auditoria e os avisos por e-mail/WhatsApp não levam a localização;
  *   - depois de RASTREADOR_RETENCAO_DIAS (padrão 90) os pontos são apagados e o local dos
  *     alertas é retirado (Rastreador_limparRetencao_, uma vez por dia pela rotina);
- *   - só a gestão (ADMIN, GESTOR, DIRETORIA) vê localização; o técnico não vê, nem na retirada.
+ *   - só a gestão da Frota (ADMIN, DIRETORIA, GESTOR, RH, FINANCEIRO) vê localização; o técnico não vê, nem na retirada.
  *
  * Sem os endereços de comando, Rastreador_chamar_ recusa qualquer método que não seja GET.
  *

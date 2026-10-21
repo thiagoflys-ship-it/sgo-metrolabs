@@ -8,8 +8,9 @@ function SGO_ajudaTelas_Compras_() {
     { perfil: 'TODOS', pode: 'Todo colaborador interno pede peça ou material e acompanha os próprios pedidos em "Meus pedidos de compra", sem valores.' },
     { perfil: 'TECNICO,METROLOGIA', pode: 'Pede e acompanha. Não vê preço, orçamento nem pagamento. Quem estiver na lista de compradores (Regras de compras) trabalha a fila de compras, mesmo com este perfil.' },
     { perfil: 'GESTOR', pode: 'Vê a fila com valores e aprova as compras da faixa do gestor quando a área é dele. O gestor da área de Compras (Logística, no padrão) faz tudo o que o comprador faz e cobra as compras paradas.' },
-    { perfil: 'FINANCEIRO', pode: 'Confere as compras (comprovante, forma de pagamento, final do cartão) e consulta os fornecedores.' },
-    { perfil: 'DIRETORIA,ADMIN', pode: 'Tudo, inclusive as Regras de compras (compradores, faixas de aprovação, cotações mínimas). A Diretoria aprova as compras da faixa mais alta.' }
+    { perfil: 'FINANCEIRO', pode: 'Confere as compras (comprovante, forma de pagamento, final do cartão), consulta os fornecedores e altera as Regras de compras.' },
+    { perfil: 'DIRETORIA,ADMIN', pode: 'Tudo, inclusive as Regras de compras (compradores, faixas de aprovação, cotações mínimas). A Diretoria aprova as compras da faixa mais alta.' },
+    { perfil: 'GESTOR,RH,FINANCEIRO', pode: 'Alteram as Regras de compras (cada versão fica no histórico com o motivo). As aprovações continuam seguindo as faixas, e quem pediu não aprova o próprio pedido.' }
   ];
   return {
     'compras_pedir': {

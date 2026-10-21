@@ -11,7 +11,7 @@ function SGO_ajudaTelas_Administracao_() {
       titulo: "Usuários",
       paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT ou PJ), a situação, o e-mail, o celular (WhatsApp) e o último acesso da pessoa.",
       antesDeComecar: [
-        "Esta tela é usada pela gestão: Administrador, Gestor e Diretoria. O perfil RH também abre a tela, só para consultar (sem criar nem alterar contas). Os demais perfis não veem o item \"Usuários\" no menu.",
+        "Esta tela é usada pela gestão: Administrador, Diretoria, Gestor, RH e Financeiro. Os demais perfis não veem o item \"Usuários\" no menu.",
         "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
         "Vínculo de trabalho: pela matriz de avisos (21/10/2026), o WhatsApp é só para quem é CLT, inclusive as mensagens do ponto. Quem é PJ ou está como \"Não informado\" recebe os avisos pelo sistema e por e-mail.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
@@ -157,16 +157,17 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "Aparece \"Você não pode inativar nem excluir a sua própria conta.\"", oQueFazer: "Peça a outra pessoa da gestão para fazer isso na sua conta." },
         { situacao: "Aparece \"Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista.\"", oQueFazer: "Outra pessoa mexeu na conta ao mesmo tempo. Saia e entre de novo na tela \"Usuários\" e confira." },
         { situacao: "Aparece \"Vínculo de trabalho inválido: escolha CLT, PJ ou Não informado.\"", oQueFazer: "Escolha uma das três opções da lista \"Vínculo de trabalho\" e salve de novo." },
-        { situacao: "Sou do RH e não vejo \"Novo usuário\", \"Editar\" nem \"Mais\"", oQueFazer: "O perfil RH só consulta a lista. Para criar uma conta, trocar o perfil, o vínculo ou a senha, peça a um Administrador, Gestor ou Diretoria." },
-        { situacao: "A tela mostra \"A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria.\"", oQueFazer: "O seu perfil não gerencia contas. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um Administrador, Gestor ou Diretoria." },
+        { situacao: "Não consigo mudar o meu próprio perfil", oQueFazer: "Ninguém muda o próprio perfil. Peça a outra pessoa da gestão; os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria." },
+        { situacao: "A tela mostra \"A gestão de usuários é feita pelos perfis Administrador, Diretoria, Gestor, RH e Financeiro.\"", oQueFazer: "O seu perfil não gerencia contas. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um deles." },
         { situacao: "A lista de empresas aparece como \"A lista de clientes não carregou\"", oQueFazer: "Verifique a conexão, feche o formulário e abra de novo." },
         { situacao: "A pessoa inativada ainda está usando o sistema", oQueFazer: "Aguarde até 5 minutos. A sessão aberta dela é encerrada nesse prazo." }
       ],
       quemPode: [
         { perfil: "ADMIN", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir qualquer conta, inclusive de Administrador. Dar o perfil Administrador." },
-        { perfil: "GESTOR,DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir contas que não sejam de Administrador. Não dão o perfil Administrador." },
-        { perfil: "RH", pode: "Consultar a lista, os filtros e o detalhe de cada conta (vínculo de trabalho, celular, e-mail, situação e último acesso). Não cria, não edita, não redefine senha, não inativa e não exclui." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão." },
+        { perfil: "DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir contas que não sejam de Administrador. Dá e tira o perfil Diretoria. Não dá o perfil Administrador." },
+        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Criar, editar (área, vínculo CLT ou PJ, celular), redefinir a senha, inativar e reativar contas dos perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente, e organizar as áreas. Não dão nem alteram os perfis Administrador e Diretoria e não excluem conta (use Inativar)." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão (Gestor, RH ou Financeiro)." },
+        { perfil: "TODOS", pode: "Ninguém muda o próprio perfil: o campo fica travado na própria conta." },
         { perfil: "CLIENTE", pode: "Não usa esta tela. Para acesso de mais alguém da sua empresa, peça à Metrolabs." },
         { perfil: "TODOS", pode: "Ninguém inativa ou exclui a própria conta. O sistema nunca fica sem um Administrador ativo." }
       ],
@@ -252,12 +253,12 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "Aparece \"Não foi possível salvar. Verifique a conexão e tente de novo; nada foi alterado.\"", oQueFazer: "Confira a internet e toque em \"Salvar\" de novo. Nada foi gravado." },
         { situacao: "Ao tocar em \"Testar agora\" aparece \"Nenhum padrão vencido ou vencendo agora: não há o que mostrar no teste.\"", oQueFazer: "Está tudo em dia. A janela só aparece quando há padrão vencido ou vencendo." },
         { situacao: "Não vejo o bloco \"Alertas de calibração\"", oQueFazer: "Esse bloco é só do Administrador. Peça a ele a alteração." },
-        { situacao: "Não vejo os botões \"Usuários e perfis\" ou \"Chaves e senhas das integrações\"", oQueFazer: "\"Usuários e perfis\" é da gestão (Administrador, Gestor e Diretoria). \"Chaves e senhas das integrações\" é só do responsável pelo sistema." }
+        { situacao: "Não vejo os botões \"Usuários e perfis\" ou \"Chaves e senhas das integrações\"", oQueFazer: "\"Usuários e perfis\" é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). \"Chaves e senhas das integrações\" é só do responsável pelo sistema." }
       ],
       quemPode: [
         { perfil: "ADMIN", pode: "Usar todos os blocos, inclusive \"Alertas de calibração\"." },
-        { perfil: "GESTOR,DIRETORIA", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar os atalhos para Usuários e Padrões." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar o atalho para Padrões." },
+        { perfil: "GESTOR,DIRETORIA,FINANCEIRO", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar os atalhos para Usuários e Padrões." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar o atalho para Padrões." },
         { perfil: "RH", pode: "Não usa esta tela: o item \"Configurações\" não aparece no menu do RH." },
         { perfil: "CLIENTE", pode: "Não vê o grupo de administração no menu." },
         { perfil: "TODOS", pode: "O atalho \"Chaves e senhas das integrações\" só aparece para o responsável pelo sistema." }
@@ -611,7 +612,8 @@ function SGO_ajudaTelas_Administracao_() {
       quemPode: [
         { perfil: "ADMIN", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório com o telefone. Recebe o e-mail das 18h, quando é o responsável pelo sistema." },
         { perfil: "DIRETORIA", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório sem o telefone." },
-        { perfil: "GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre a tela. Recebe pelo WhatsApp só se estiver na lista; os avisos seguem no sistema e por e-mail." }
+        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Escolhe as pessoas e as áreas que recebem pelo WhatsApp e vê o relatório sem o telefone. Ligar e desligar o piloto fica com o Administrador e a Diretoria." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não abre a tela. Recebe pelo WhatsApp só se estiver na lista; os avisos seguem no sistema e por e-mail." },
       ],
       perguntas: [
         { p: "O que cada pessoa da lista recebe pelo WhatsApp?", r: "Desde a matriz de avisos (21/10/2026): no máximo um resumo do dia (09:30, só CLT, só se a pessoa ainda não abriu o sistema) e, na hora, só as quatro exceções da Frota, no expediente. O assistente do ponto tem regra própria. Tudo por modelo aprovado na Meta. As regras ficam em Administração > Matriz de avisos." },

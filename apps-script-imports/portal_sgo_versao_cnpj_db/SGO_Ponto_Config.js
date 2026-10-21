@@ -368,12 +368,14 @@ function Ponto_eu_(sessionId) {
   eu.admin = perfil === 'ADMIN';
   eu.diretoria = perfil === 'DIRETORIA' || dono;
   eu.rh = perfil === 'RH' || eu.area === 'RH' || cfg.rhIds.indexOf(eu.id) >= 0;
-  eu.configurar = eu.admin || eu.diretoria;
-  eu.verTodos = eu.configurar || eu.rh;
+  // 21/10/2026 (pedido do dono): ligar, desligar, horários e textos do assistente são rotina da empresa (Administrador,
+  // Diretoria, Gestor, RH e Financeiro). Ver o ponto de todos continua com Administrador, Diretoria e RH; o gestor vê a área dele.
+  eu.configurar = eu.admin || eu.diretoria || eu.rh || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil));
+  eu.verTodos = eu.admin || eu.diretoria || eu.rh;
   eu.tratar = eu.verTodos;
   eu.areasGestor = eu.verTodos ? [] : Ponto_areasDoGestor_(eu);
   eu.gestor = !eu.verTodos && eu.areasGestor.length > 0;
-  eu.papel = eu.configurar ? (eu.rh ? 'RH' : 'GESTAO_GERAL') : eu.rh ? 'RH' : eu.gestor ? 'GESTOR' : 'COLABORADOR';
+  eu.papel = eu.rh ? 'RH' : (eu.admin || eu.diretoria) ? 'GESTAO_GERAL' : eu.gestor ? 'GESTOR' : 'COLABORADOR';
   return eu;
 }
 /** Ids que a pessoa vê (null = todos). */
@@ -386,7 +388,7 @@ function Ponto_idsVisiveis_(eu, us) {
 function Ponto_exigir_(eu, oQue, acao) {
   var ok = oQue === 'configurar' ? eu.configurar : oQue === 'tratar' ? eu.tratar : oQue === 'pessoas' ? eu.verTodos : oQue === 'equipe' ? (eu.verTodos || eu.gestor) : true;
   if (ok) return eu;
-  if (oQue === 'configurar') throw new Error('Não foi possível ' + acao + ': ligar, desligar e mudar a jornada geral do assistente do ponto é do Administrador e da Diretoria. Peça a um deles.');
+  if (oQue === 'configurar') throw new Error('Não foi possível ' + acao + ': ligar, desligar e mudar a jornada geral do assistente do ponto é da gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Peça a um deles.');
   if (oQue === 'tratar' || oQue === 'pessoas') throw new Error('Não foi possível ' + acao + ': isso é do RH (perfil RH, área RH no cadastro ou marcado na configuração do assistente), do Administrador ou da Diretoria. O pedido continua na fila do RH.');
   throw new Error('Não foi possível ' + acao + ': o acompanhamento da equipe é do RH e da gestão. Em Assistente do ponto > Meus lembretes você vê os seus.');
 }

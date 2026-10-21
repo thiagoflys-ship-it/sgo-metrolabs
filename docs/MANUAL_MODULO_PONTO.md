@@ -34,7 +34,7 @@ Não recebe lembrete naquele momento:
 - Cada marcação tem um lembrete só. Não existe segundo lembrete, mesmo sem confirmação.
 - Nada sai antes da entrada menos 5 minutos nem depois da saída da pessoa. Nada sai em fim de semana ou feriado.
 - O lembrete só sai até 20 minutos depois do horário dele. Se o servidor ficou parado, ele não chega atrasado.
-- A jornada geral é configurada pelo Administrador ou pela Diretoria. Cada pessoa pode ter outra jornada, lançada pelo RH.
+- A jornada geral é configurada pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro), na aba Configuração. Cada pessoa pode ter outra jornada, lançada pelo RH.
 - Quais marcações lembrar é configurável: as quatro (padrão) ou só entrada e saída.
 
 ## Como o lembrete chega
@@ -109,7 +109,9 @@ O gestor acompanha a própria equipe: a área dele no cadastro e as áreas pelas
 - O Programa de conduta recebe uma sugestão informativa por pessoa por mês (Programa de conduta > Sugestões). Nada vira ocorrência sozinho: a gestão decide se registra ou descarta, com o motivo.
 - PJ e vínculo não informado não contam esquecimento.
 
-## Administrador e Diretoria
+## Configuração (Administrador, Diretoria, Gestor, RH e Financeiro)
+
+A aba Configuração (ligar, desligar, marcações, jornada geral e feriados) é da gestão, do RH e do Financeiro. O ponto de todas as pessoas continua com o RH, o Administrador e a Diretoria; o gestor acompanha a própria equipe. O cadastro dos modelos na Meta (passo 1) é do Administrador.
 
 ### Ligar
 

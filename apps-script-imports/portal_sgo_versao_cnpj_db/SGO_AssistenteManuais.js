@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "53fcbf736903",
+ "versao": "15543cbd3d65",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -133,8 +133,8 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Localize o cadastro, clique em Abrir cadastro, confirme a troca de tela, ajuste os dados e salve. Para mudar o cliente responsável ou a unidade de um equipamento, use o painel do gestor."
     },
     {
-     "titulo": "Corrigir vínculos — gestor",
-     "texto": "1. Clique em Abrir painel de vínculos ou Ver vínculos no cartão correto.\n2. Confira o cadastro de origem, o responsável atual, os filhos e as referências nos módulos.\n3. Escolha a ação e, quando necessário, o destino.\n4. Explique o motivo e clique em Conferir impacto.\n5. Leia os impedimentos, o histórico preservado e os campos que mudarão.\n6. Confirme somente a alteração conferida. Se a prévia expirar ou os dados mudarem, atualize e confira novamente.\nAção | Quando usarTransferir | Mudar a unidade para outro cliente ou o equipamento para outra unidade; também vincular novamente um cadastro pendente.\nDesvincular | Deixar o cadastro temporariamente sem responsável. Novos atendimentos ficam bloqueados até a correção.\nConsolidar | Reunir cadastros duplicados da mesma identificação. A origem fica inativa para preservar o histórico. Não usar para juntar filiais diferentes.\nInativar | Impedir novos usos, mantendo o cadastro e seu histórico.\nReativar | Retomar o uso após conferir vínculo e duplicidades.\nExcluir | Remover cadastro sem dependências. O sistema impede a exclusão quando encontra vínculos.\nAs mudanças do painel registram usuário, motivo e valores anteriores e posteriores na auditoria. Equipamentos acompanham a transferência de sua unidade; documentos antigos permanecem associados ao atendimento original."
+     "titulo": "Corrigir vínculos — gestão",
+     "texto": "Quem corrige vínculos (transferir, desvincular, consolidar): Administrador, Diretoria, Gestor, RH e Financeiro. Excluir de vez um cadastro sem dependências fica com Administrador, Diretoria e Gestor; os demais usam Inativar.\n1. Clique em Abrir painel de vínculos ou Ver vínculos no cartão correto.\n2. Confira o cadastro de origem, o responsável atual, os filhos e as referências nos módulos.\n3. Escolha a ação e, quando necessário, o destino.\n4. Explique o motivo e clique em Conferir impacto.\n5. Leia os impedimentos, o histórico preservado e os campos que mudarão.\n6. Confirme somente a alteração conferida. Se a prévia expirar ou os dados mudarem, atualize e confira novamente.\nAção | Quando usarTransferir | Mudar a unidade para outro cliente ou o equipamento para outra unidade; também vincular novamente um cadastro pendente.\nDesvincular | Deixar o cadastro temporariamente sem responsável. Novos atendimentos ficam bloqueados até a correção.\nConsolidar | Reunir cadastros duplicados da mesma identificação. A origem fica inativa para preservar o histórico. Não usar para juntar filiais diferentes.\nInativar | Impedir novos usos, mantendo o cadastro e seu histórico.\nReativar | Retomar o uso após conferir vínculo e duplicidades.\nExcluir | Remover cadastro sem dependências. O sistema impede a exclusão quando encontra vínculos.\nAs mudanças do painel registram usuário, motivo e valores anteriores e posteriores na auditoria. Equipamentos acompanham a transferência de sua unidade; documentos antigos permanecem associados ao atendimento original."
     },
     {
      "titulo": "Avisos e carregamento",
@@ -925,7 +925,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Quem usa",
-     "texto": "Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas.\nGestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto, mantém o catálogo e a metodologia.\nFinanceiro: perfil Financeiro ou área Financeiro. Vê só os pedidos aprovados, com o valor e os dados de faturamento.\nTécnico, Metrologia, RH e gestores de outras áreas não veem o Comercial nem valores. Quando recebem a parte deles de um pedido aprovado, é uma atividade em Minhas atividades, sem valor."
+     "texto": "Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas.\nGestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto, mantém o catálogo e a metodologia.\nFinanceiro: perfil Financeiro ou área Financeiro. Vê os pedidos aprovados, com o valor e os dados de faturamento, e mantém o catálogo de Produtos e serviços (preço e custo). O RH não vê o Comercial.\nTécnico, Metrologia, RH e gestores de outras áreas não veem o Comercial nem valores. Quando recebem a parte deles de um pedido aprovado, é uma atividade em Minhas atividades, sem valor."
     },
     {
      "titulo": "Hoje no Comercial",
@@ -997,7 +997,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Quem faz o quê",
-     "texto": "Solicitante: qualquer colaborador interno. Pede, completa a especificação, acompanha em Meus pedidos de compra e recebe a peça. Não vê valores.\n\nComprador: quem está na lista de compradores ou de substitutos em Compras > Regras de compras. Confere a especificação, cadastra fornecedores, cota, escolhe, faz o pedido, recebe, entrega e cancela com motivo. Aprova as compras da faixa do comprador.\n\nGestor da área de Compras (Logística, no padrão): faz tudo o que o comprador faz e cobra as compras paradas.\n\nDemais gestores: veem a fila com valores e aprovam as compras da faixa do gestor quando a área é deles.\n\nFinanceiro (perfil ou área): confere as compras e consulta os fornecedores.\n\nDiretoria e Administrador: tudo, inclusive as Regras de compras. A Diretoria aprova a faixa mais alta.\n\nTécnicos, Metrologia e RH não veem preço, orçamento nem pagamento."
+     "texto": "Solicitante: qualquer colaborador interno. Pede, completa a especificação, acompanha em Meus pedidos de compra e recebe a peça. Não vê valores.\n\nComprador: quem está na lista de compradores ou de substitutos em Compras > Regras de compras. Confere a especificação, cadastra fornecedores, cota, escolhe, faz o pedido, recebe, entrega e cancela com motivo. Aprova as compras da faixa do comprador.\n\nGestor da área de Compras (Logística, no padrão): faz tudo o que o comprador faz e cobra as compras paradas.\n\nDemais gestores: veem a fila com valores e aprovam as compras da faixa do gestor quando a área é deles.\n\nFinanceiro (perfil ou área): confere as compras e consulta os fornecedores.\n\nDiretoria e Administrador: tudo. A Diretoria aprova a faixa mais alta.\n\nRegras de compras: Administrador, Diretoria, Gestor, RH e Financeiro alteram. As aprovações continuam seguindo as faixas, e quem pediu não aprova o próprio pedido.\n\nTécnicos, Metrologia e RH não veem preço, orçamento nem pagamento."
     },
     {
      "titulo": "Situações de um pedido de compra",
@@ -1057,7 +1057,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Regras de compras",
-     "texto": "Só o Administrador e a Diretoria alteram; compradores e gestores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.\n\nPadrão aprovado pelo dono em 21/10/2026:\nValor total da compra | Quem aprova | Cotações mínimasAté R$ 1.000 | O comprador (fica registrado) | 1\nDe R$ 1.000,01 a R$ 10.000 | Gestor da área | 2\nAcima de R$ 10.000 | Diretoria | 3\nCompras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código."
+     "texto": "Administrador, Diretoria, Gestor, RH e Financeiro alteram; compradores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.\n\nPadrão aprovado pelo dono em 21/10/2026:\nValor total da compra | Quem aprova | Cotações mínimasAté R$ 1.000 | O comprador (fica registrado) | 1\nDe R$ 1.000,01 a R$ 10.000 | Gestor da área | 2\nAcima de R$ 10.000 | Diretoria | 3\nCompras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código."
     },
     {
      "titulo": "Avisos",
@@ -1636,7 +1636,9 @@ var SGO_ASSIST_MANUAIS = {
    "perfis": [
     "ADMIN",
     "GESTOR",
-    "DIRETORIA"
+    "DIRETORIA",
+    "RH",
+    "FINANCEIRO"
    ],
    "secoes": [
     {
@@ -1653,7 +1655,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Quem recebe cada item",
-     "texto": "1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.\n2. Gestor responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram).\n3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.\n4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.\n5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).\n6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano."
+     "texto": "1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.\n2. Responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram). Pode ser Gestor, RH ou Financeiro. RH e Financeiro abrem a caixa e veem só os itens das áreas em que são responsáveis.\n3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.\n4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.\n5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).\n6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano."
     },
     {
      "titulo": "Idade, prazo e providência",
@@ -1965,7 +1967,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Horários",
-     "texto": "Marcação | Quando chega o lembreteEntrada | 5 minutos antes (07:55 com entrada às 08:00)\nSaída para o almoço | Na hora (11:00)\nVolta do almoço | Saída para o almoço confirmada mais a pausa (padrão 1 hora). Sem confirmação, conta do horário do almoço\nSaída | 5 minutos antes (17:55; na sexta, 17:25)\nSó em dia útil. Os dias e os feriados vêm do expediente comum do SGO+: feriados nacionais, Carnaval, Sexta-feira Santa, Corpus Christi e os feriados extras cadastrados.\nCada marcação tem um lembrete só. Não existe segundo lembrete, mesmo sem confirmação.\nNada sai antes da entrada menos 5 minutos nem depois da saída da pessoa. Nada sai em fim de semana ou feriado.\nO lembrete só sai até 20 minutos depois do horário dele. Se o servidor ficou parado, ele não chega atrasado.\nA jornada geral é configurada pelo Administrador ou pela Diretoria. Cada pessoa pode ter outra jornada, lançada pelo RH.\nQuais marcações lembrar é configurável: as quatro (padrão) ou só entrada e saída."
+     "texto": "Marcação | Quando chega o lembreteEntrada | 5 minutos antes (07:55 com entrada às 08:00)\nSaída para o almoço | Na hora (11:00)\nVolta do almoço | Saída para o almoço confirmada mais a pausa (padrão 1 hora). Sem confirmação, conta do horário do almoço\nSaída | 5 minutos antes (17:55; na sexta, 17:25)\nSó em dia útil. Os dias e os feriados vêm do expediente comum do SGO+: feriados nacionais, Carnaval, Sexta-feira Santa, Corpus Christi e os feriados extras cadastrados.\nCada marcação tem um lembrete só. Não existe segundo lembrete, mesmo sem confirmação.\nNada sai antes da entrada menos 5 minutos nem depois da saída da pessoa. Nada sai em fim de semana ou feriado.\nO lembrete só sai até 20 minutos depois do horário dele. Se o servidor ficou parado, ele não chega atrasado.\nA jornada geral é configurada pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro), na aba Configuração. Cada pessoa pode ter outra jornada, lançada pelo RH.\nQuais marcações lembrar é configurável: as quatro (padrão) ou só entrada e saída."
     },
     {
      "titulo": "Como o lembrete chega",
@@ -2008,15 +2010,19 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Esquecimento é cada \"Esqueci de bater\" e cada marcação lembrada e não confirmada até o fim do dia (\"não confirmado\").\n\"Não confirmado\" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão.\nA partir do 3º esquecimento no mês (configurável), o RH e a gestão da pessoa recebem um resumo no SGO+ e por e-mail (o e-mail sai dentro do expediente). Nunca pelo WhatsApp.\nO Programa de conduta recebe uma sugestão informativa por pessoa por mês (Programa de conduta > Sugestões). Nada vira ocorrência sozinho: a gestão decide se registra ou descarta, com o motivo.\nPJ e vínculo não informado não contam esquecimento."
     },
     {
-     "titulo": "Administrador e Diretoria > Ligar",
+     "titulo": "Configuração (Administrador, Diretoria, Gestor, RH e Financeiro)",
+     "texto": "A aba Configuração (ligar, desligar, marcações, jornada geral e feriados) é da gestão, do RH e do Financeiro. O ponto de todas as pessoas continua com o RH, o Administrador e a Diretoria; o gestor acompanha a própria equipe. O cadastro dos modelos na Meta (passo 1) é do Administrador."
+    },
+    {
+     "titulo": "Configuração (Administrador, Diretoria, Gestor, RH e Financeiro) > Ligar",
      "texto": "1. Em Administração > Chaves e senhas, toque em \"Cadastrar modelos na Meta\". Os quatro modelos do ponto (sgo_ponto_entrada, sgo_ponto_almoco, sgo_ponto_retorno e sgo_ponto_saida) vão para a análise da Meta junto com os outros.\n2. Toque em \"Situação dos modelos\" até eles ficarem aprovados (de minutos a 24 horas).\n3. No Assistente do ponto, abra a aba \"Configuração\".\n4. Escolha quais marcações lembrar.\n5. Confira a jornada geral.\n6. Marque o RH, se for alguém sem o perfil ou a área RH no cadastro.\n7. Marque \"Assistente ligado\" e toque em \"Salvar configuração\". A rotina de 5 minutos é instalada junto.\n8. Toque em \"Pré-visualizar a página do link\" para ver o que o colaborador vê. Nada é gravado.\n\nDesligar: desmarque \"Assistente ligado\" e salve. Nenhum lembrete sai."
     },
     {
-     "titulo": "Administrador e Diretoria > Feriados",
+     "titulo": "Configuração (Administrador, Diretoria, Gestor, RH e Financeiro) > Feriados",
      "texto": "Os feriados extras (estaduais, municipais e recessos) ficam no expediente comum do SGO+ e valem para todos os avisos automáticos. Edite na aba \"Configuração\" > \"Feriados\"."
     },
     {
-     "titulo": "Administrador e Diretoria > Sem mensagem em dobro com o COMMAND",
+     "titulo": "Configuração (Administrador, Diretoria, Gestor, RH e Financeiro) > Sem mensagem em dobro com o COMMAND",
      "texto": "Com o assistente do SGO+ ligado, o assistente do ponto do COMMAND não manda nada. O ponto passa a ser só do SGO+."
     },
     {

@@ -156,8 +156,9 @@
     if (grupo) grupo.style.display = nivel === "NENHUM" ? "none" : "";
     document.querySelectorAll("#menu-grupo-itens-comercial .menu-btn").forEach(function (b) {
       var m = b.getAttribute("data-mod"), ver = nivel !== "NENHUM";
-      if (nivel === "FINANCEIRO") ver = m === "comercial_pedidos";
-      if (m === "comercial_metodologia" || m === "comercial_catalogo") ver = ver && nivel !== "FINANCEIRO";
+      // 21/10/2026: o Financeiro vê os pedidos aprovados e mantém o catálogo (preços e custos).
+      if (nivel === "FINANCEIRO") ver = m === "comercial_pedidos" || m === "comercial_catalogo";
+      if (m === "comercial_metodologia") ver = ver && nivel !== "FINANCEIRO";
       b.style.display = ver ? "" : "none";
     });
     if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
@@ -187,7 +188,7 @@
         div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Comercial", "") + '<div class="cm-faixa aviso">O Comercial é da equipe comercial (perfil Comercial ou área Comercial), da gestão comercial, da Diretoria e do Administrador. O Financeiro vê só os pedidos aprovados. Se você precisa trabalhar no Comercial, peça ao Administrador para ajustar o seu perfil ou a sua área em Administração > Usuários.</div></div>';
         return;
       }
-      if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos") mod = "comercial_pedidos";
+      if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos" && mod !== "comercial_catalogo") mod = "comercial_pedidos";
       var mapa = { comercial: Comercial_renderHoje_, comercial_oportunidades: Comercial_renderOportunidades_, comercial_propostas: Comercial_renderPropostas_, comercial_pedidos: Comercial_renderPedidos_,
         comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_, comercial_kanban: Comercial_renderKanban_, comercial_gantt: Comercial_renderGantt_ };
       (mapa[mod] || Comercial_renderHoje_)(div, alvo || {});
@@ -786,15 +787,15 @@
   // =========================================================
   function Comercial_renderCatalogo_(div) {
     var ini = CM.ini;
-    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + (ini.gestao ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
-      ini.gestao ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') + '<div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + ((ini.gestao || ini.catalogo) ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
+      (ini.gestao || ini.catalogo) ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') + '<div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
     if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
-    Com_chamar_("catalogo", { incluirArquivados: ini.gestao }, function (r) {
+    Com_chamar_("catalogo", { incluirArquivados: (ini.gestao || ini.catalogo) }, function (r) {
       var alvo = Com_$_("cmCat");
-      if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (ini.gestao ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
-      alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + (ini.gestao ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
+      if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + ((ini.gestao || ini.catalogo) ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
+      alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + ((ini.gestao || ini.catalogo) ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
         return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
-          (ini.gestao ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
+          ((ini.gestao || ini.catalogo) ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
       }).join("") + '</tbody></table>';
       alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
       alvo.querySelectorAll("[data-arq]").forEach(function (b) { b.onclick = function () { var p = r.produtos[+b.getAttribute("data-arq")]; Com_chamar_("arquivarProduto", { id: p.id, reativar: !p.ativo }, function (x) { alert(x.message); Comercial_renderCatalogo_(div); }); }; });

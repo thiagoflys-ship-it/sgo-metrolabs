@@ -278,6 +278,8 @@ function Pend_contextoDaSessao_(sessao) {
     userId: SGO_UTILS.safe(sessao.userId), perfil: perfil, nome: SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario),
     clienteId: SGO_UTILS.safe(sessao.clienteId), cliente: perfil === 'CLIENTE',
     gestao: typeof isAdminPerfilAuth_ === 'function' ? isAdminPerfilAuth_(perfil) : (perfil === 'ADMIN' || perfil === 'GESTOR' || perfil === 'DIRETORIA'),
+    // 21/10/2026 (pedido do dono): RH e Financeiro fazem a rotina da Frota; veem as pendências da Frota da gestão (CNH, documentos, multas).
+    rotina: typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil),
     // 20/10/2026: Diretoria (perfil ou dono do sistema) vê o que é só dela (sugestões sobre gestor).
     diretoria: perfil === 'DIRETORIA' || (function () { try { return typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(sessao.usuario); } catch (e) { return false; } })(),
     interno: false
@@ -303,7 +305,7 @@ function Pend_podeVer_(it, ctx) {
     case 'EQUIPE': return true;
     case 'CLIENTE':
     case 'TECNICA': return (ctx.gestao && daArea()) || (!ctx.gestao && ctx.perfil === 'METROLOGIA');
-    case 'GESTAO': return ctx.gestao && daArea();
+    case 'GESTAO': return (ctx.gestao && daArea()) || (!ctx.gestao && !!ctx.rotina && /^FROTA:/.test(Pend_s_(it.id)));
     case 'ADMIN': return ctx.perfil === 'ADMIN' && !ctx.interno;
     case 'DIRETORIA': return !!ctx.interno || !!ctx.diretoria;
     default: return false;

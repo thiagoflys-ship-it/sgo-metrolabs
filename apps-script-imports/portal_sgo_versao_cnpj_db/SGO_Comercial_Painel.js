@@ -249,7 +249,7 @@ function Com_listasDoDia_() {
 // ------------------------------------------------------------
 function Com_inicio_(eu) {
   var met = Com_metodologia_();
-  var base = { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, veCusto: eu.veCusto, diretoria: eu.diretoria, eu: { id: eu.id, nome: eu.nome } };
+  var base = { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, veCusto: eu.veCusto, catalogo: !!eu.catalogo, diretoria: eu.diretoria, eu: { id: eu.id, nome: eu.nome } };
   if (eu.nivel === 'NENHUM') return base;
   base.funis = met.funis.map(function (f) { return { codigo: f.codigo, nome: f.nome, descricao: f.descricao, etapas: f.etapas.map(function (e) { return { codigo: e.codigo, nome: e.nome, probabilidade: e.probabilidade, maxDias: e.maxDias, criterio: e.criterio }; }) }; });
   base.origens = met.origens; base.motivosPerda = met.motivosPerda; base.regraPerda = met.regraPerda; base.tiposContato = COM_TIPOS_CONTATO; base.papeisContato = COM_PAPEIS_CONTATO;
@@ -329,7 +329,7 @@ function Com_metodologiaTela_(eu, d) {
 
 var COM_ACOES = {
   iniciar: function (eu) { var b = Com_inicio_(eu); if (eu.nivel !== 'NENHUM') { try { Com_garantirAbas_(); ComCt_migrarUmaVez_(); } catch (e) {} b.avisos = Com_avisosDe_(eu); } return b; },
-  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro }; },
+  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, catalogo: !!eu.catalogo }; },
   avisosLidos: function (eu) { return { marcados: Com_marcarAvisosLidos_(eu) }; },
   hoje: function (eu, sid, d) { return ComG_hoje_(eu, d); },
   decidirSugestao: function (eu, sid, d) { return ComG_decidirSugestao_(eu, d); },

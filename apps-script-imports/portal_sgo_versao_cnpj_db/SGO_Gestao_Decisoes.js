@@ -260,6 +260,9 @@ function Ges_areaDoModulo_(modulo, cfg) {
 // PESSOAS
 // ------------------------------------------------------------
 function Ges_ehGestaoPerfil_(p) { p = Ges_up_(p); return p === 'ADMIN' || p === 'GESTOR' || p === 'DIRETORIA'; }
+// 21/10/2026 (pedido do dono): RH e Financeiro abrem a Caixa de decisões e decidem o que é das áreas deles (responsáveis em
+// Regras e responsáveis). Veem só os itens em que são responsáveis; quem recebe e-mail e WhatsApp da escada não muda.
+function Ges_ehRotinaPerfil_(p) { return Ges_ehGestaoPerfil_(p) || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(p)); }
 
 /** Mapa id -> pessoa da equipe (com área, perfil, e-mail, vínculo e se é Diretoria). */
 function Ges_usuarios_() {
@@ -274,7 +277,7 @@ function Ges_usuarios_() {
     mapa[Ges_s_(u.ID)] = {
       id: Ges_s_(u.ID), nome: Ges_s_(u.NOME) || login, login: login, perfil: perfil, ativo: Ges_up_(u.STATUS || 'ATIVO') === 'ATIVO',
       area: area, areaNome: area ? (nomesAreas[area] || area) : 'Sem área definida', email: Ges_s_(u.EMAIL).toLowerCase(),
-      gestao: Ges_ehGestaoPerfil_(perfil), diretoria: perfil === 'DIRETORIA' || dono, dono: dono,
+      gestao: Ges_ehGestaoPerfil_(perfil), rotina: Ges_ehRotinaPerfil_(perfil), diretoria: perfil === 'DIRETORIA' || dono, dono: dono,
       sistema: typeof Areas_contaDoSistema_ === 'function' ? Areas_contaDoSistema_(u) : (login.toLowerCase() === 'admin')
     };
   });
@@ -681,8 +684,8 @@ function Ges_resposta_(acao, fn) {
 
 function Ges_sessaoGestao_(sessionId, acao) {
   var s = exigirSessao(sessionId);
-  if (!Ges_ehGestaoPerfil_(s.perfil)) {
-    throw new Error('Não foi possível ' + acao + ': a Caixa de decisões é da gestão (Administrador, Gestor e Diretoria). O que depende de você continua no Início e em Minhas atividades');
+  if (!Ges_ehRotinaPerfil_(s.perfil)) {
+    throw new Error('Não foi possível ' + acao + ': a Caixa de decisões é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). O que depende de você continua no Início e em Minhas atividades');
   }
   return s;
 }
@@ -723,6 +726,8 @@ function Ges_montarCaixa_(s, p) {
   var cx = Ges_caixa_(), uid = Ges_s_(s.userId), us = cx.us, cfg = cx.cfg;
   // item só da Diretoria (sugestão sobre gestor, da avaliação): os demais da gestão não veem nem na lista geral
   if (!Ges_ehDiretoriaSessao_(s)) cx.itens = cx.itens.filter(function (i) { return !i.soDiretoria; });
+  // RH e Financeiro (rotina): só os itens das áreas em que são responsáveis, também em "todas" e "escalados".
+  if (!Ges_ehGestaoPerfil_(s.perfil)) cx.itens = cx.itens.filter(function (i) { return i.responsaveis.indexOf(uid) >= 0; });
   var minhas = Ges_meusItens_(cx.itens, uid, us);
   var filtro = ['minhas', 'todas', 'escalados', 'acompanhamento'].indexOf(p.filtro) >= 0 ? p.filtro : 'minhas';
   var lista = filtro === 'todas' ? cx.itens.filter(function (i) { return !i.acompanhamento; })
@@ -753,7 +758,7 @@ function Ges_montarCaixa_(s, p) {
 function Gestao_apiResumo(sessionId) {
   try {
     var s = exigirSessao(sessionId);
-    if (!Ges_ehGestaoPerfil_(s.perfil)) return { ok: true, gestao: false };
+    if (!Ges_ehRotinaPerfil_(s.perfil)) return { ok: true, gestao: false };
     Ges_registrarAcesso_(s);
     var chave = 'GES_RESUMO_' + Ges_s_(s.userId), cache = null;
     try { cache = CacheService.getScriptCache(); var g = cache.get(chave); if (g) return JSON.parse(g); } catch (e) {}
@@ -828,7 +833,7 @@ function Gestao_apiConfig(sessionId, payload) {
       Object.keys(v.gestoresPorArea || {}).forEach(function (a) {
         var cod = Ges_up_(a);
         if (codigos.indexOf(cod) < 0) return;
-        var ids = (v.gestoresPorArea[a] || []).map(Ges_s_).filter(function (id, i, l) { return us[id] && us[id].ativo && us[id].gestao && l.indexOf(id) === i; });
+        var ids = (v.gestoresPorArea[a] || []).map(Ges_s_).filter(function (id, i, l) { return us[id] && us[id].ativo && (us[id].gestao || us[id].rotina) && l.indexOf(id) === i; });
         if (ids.length) gpa[cod] = ids;
       });
       var apm = {};
@@ -855,7 +860,8 @@ function Gestao_apiConfig(sessionId, payload) {
       podeConfigurar: Ges_podeConfigurar_(s), cfg: { gestoresPorArea: cfg.gestoresPorArea, areaPorModulo: cfg.areaPorModulo, escada: cfg.escada, automacoes: cfg.automacoes },
       areaPadrao: GES_AREA_MODULO_PADRAO, modulos: GES_MODULOS_CONFIG.map(function (m) { return { chave: m[0], nome: m[1] }; }),
       areas: areas.map(function (a) { return { codigo: a.CODIGO, nome: a.NOME }; }),
-      gestao: Object.keys(us).filter(function (id) { return us[id].ativo && us[id].gestao; }).map(function (id) { return { id: id, nome: us[id].nome, perfil: us[id].perfil, area: us[id].areaNome }; })
+      // 21/10/2026: RH e Financeiro também podem ser responsáveis de uma área (rotina da empresa).
+      gestao: Object.keys(us).filter(function (id) { return us[id].ativo && (us[id].gestao || us[id].rotina); }).map(function (id) { return { id: id, nome: us[id].nome, perfil: us[id].perfil, area: us[id].areaNome }; })
         .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }),
       diretoria: Ges_diretoria_(us, []).map(function (id) { return us[id].nome; }),
       expediente: typeof SGO_expediente_ === 'function' ? (function () { var x = SGO_expediente_(); return { ini: x.ini, fim: x.fim }; })() : { ini: '08:00', fim: '17:30' },
@@ -886,7 +892,7 @@ function Gestao_ponte_(acao, dados) {
       var a = Ges_avaliacaoParaSessao_(s, dados.payload || {});
       a.ok = true; return JSON.parse(JSON.stringify(a));
     }
-    if (!Ges_ehGestaoPerfil_(s.perfil)) return { ok: false, erro: 'A Caixa de decisões é da gestão do SGO+ (Administrador, Gestor e Diretoria). O seu perfil no SGO+ é ' + s.perfil + '.' };
+    if (!Ges_ehRotinaPerfil_(s.perfil)) return { ok: false, erro: 'A Caixa de decisões é da gestão do SGO+ (Administrador, Diretoria, Gestor, RH e Financeiro). O seu perfil no SGO+ é ' + s.perfil + '.' };
     Ges_registrarAcesso_(s);
     if (acao === 'gestao.resumo') { var r = Gestao_apiResumoDe_(s); r.ok = true; return r; }
     if (acao === 'gestao.caixa') {

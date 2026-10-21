@@ -168,7 +168,7 @@ function Cmp_regrasTela_(eu, d) {
     var v = Cmp_comTrava_(function () { Cmp_garantirAbas_(); return Cmp_gravarRegras_(d.salvar, eu, motivo); });
     return { regras: Cmp_regras_(), message: 'Regras de compras salvas (versão ' + v + '). Valem para as próximas escolhas de orçamento e aprovações.' };
   }
-  Cmp_exigir_(eu, 'VALORES', 'ver as regras de compras');
+  Cmp_exigir_(eu, eu.regras ? 'REGRAS' : 'VALORES', 'ver as regras de compras');
   var us = Cmp_usuarios_();
   var r = { regras: Cmp_regras_(), podeEditar: eu.regras, padrao: CMP_REGRAS_PADRAO, niveis: CMP_NIVEIS_APROVACAO };
   r.equipe = Object.keys(us).filter(function (id) { return us[id].ativo && !Cmp_ehContaSistema_(us[id]); }).map(function (id) { return { id: id, nome: us[id].nome, perfil: us[id].perfil, area: us[id].area }; })

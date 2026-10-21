@@ -72,7 +72,7 @@
   }
   function AvisosTela_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
   // Quem publica avisos: gestão e o perfil RH (19/10/2026, comunicados de RH). O servidor confere de novo (Avisos_exigirGestor_).
-  function AvisosTela_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA" || p === "RH"; }
+  function AvisosTela_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA" || p === "RH" || p === "FINANCEIRO"; }
 
   /** Chamada padrão ao servidor. res.ok=false vira erro com a mensagem do servidor. */
   function AvisosTela_chamar_(fn, payload, ok, erro, opcoes) {

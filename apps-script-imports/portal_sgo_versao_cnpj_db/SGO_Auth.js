@@ -403,26 +403,19 @@ function isAdminPerfilAuth_(perfil) {
 }
 
 /* =========================================================================
-   PERFIL RH (19/10/2026)
-   O RH vê o que um colaborador vê (Início, Minhas atividades, Avisos, Frota
-   e o próprio farol da conduta) e, além disso:
-     - Avisos: publica comunicados (as mesmas ações de publicação da gestão:
-       publicar, ver quem leu, reenviar e arquivar);
-     - Programa de conduta: consulta ocorrências, missões, ausências,
-       fechamentos, relatórios e extratos de todos. Não homologa, não julga,
-       não decide missão, não registra ausência e não fecha o mês (isso
-       continua com isAdminPerfilAuth_ / Conduta_exigirGestor_). O "fiscal" do
-       programa é quem registra a ocorrência, e isso o RH pode, como todos;
-     - Usuários: consulta da lista (vínculo de trabalho, celular, situação),
-       sem criar, editar, redefinir senha, inativar ou excluir. Conta de
-       Administrador continua só com Administrador.
+   PERFIL RH (19/10/2026; rotina da empresa desde 21/10/2026)
+   O RH faz a rotina da empresa como o Gestor (ver ROTINA DA EMPRESA abaixo):
+   usuários dos perfis operacionais, áreas, cadastros de clientes, unidades
+   e equipamentos, vínculos, frota, avisos, atividades da equipe, Caixa de
+   decisões das áreas dele, regras de compras, Assistente do ponto e piloto
+   do WhatsApp. No Programa de conduta consulta tudo e não decide (isso
+   continua com isAdminPerfilAuth_ / Conduta_exigirGestor_).
    O RH NÃO acessa: Chaves e senhas, Configurações, emissão de certificados,
    laudos, relatórios e documentos técnicos (qualificação, calibração, NR-13,
-   PGT/POP, Planejamento CME, Cronograma, Registros operacionais), os
-   cadastros técnicos (clientes, unidades, equipamentos, vínculos, arquivo de
-   documentos, inventário), Integração Auvo, Painel de qualidade, nem o
-   Comercial. O menu esconde e o servidor recusa (SGO_bloquearRH_ no despacho
-   de cada módulo técnico).
+   PGT/POP, Planejamento CME, Cronograma, Registros operacionais), o arquivo
+   de documentos técnicos, inventário, Integração Auvo, Painel de qualidade,
+   nem o Comercial (valores de venda). O menu esconde e o servidor recusa
+   (SGO_bloquearRH_ no despacho de cada módulo técnico).
    Sem SGO_UTILS de propósito: os testes carregam os módulos sozinhos.
    ========================================================================= */
 function SGO_ehPerfilRH_(perfil) {
@@ -434,16 +427,20 @@ function SGO_ehPerfilRH_(perfil) {
    "Toda parte do sistema de inserir e organizar, os gestores, RH e
    financeiro conseguem fazer; só coisas importantes do sistema são do
    Administrador." Cadastros do dia a dia (condutores, CNH, veículos,
-   documentos, multas, clientes, unidades, equipamentos, contatos,
-   fornecedores, usuários dos perfis operacionais), frota, reservas,
-   atividades da equipe, avisos, regras de compras, catálogo comercial,
-   horários e o Assistente do ponto: ADMIN, DIRETORIA, GESTOR, RH e
-   FINANCEIRO.
+   documentos do veículo, multas, clientes, unidades, equipamentos,
+   vínculos, usuários dos perfis operacionais e áreas), frota, reservas,
+   atividades da equipe, avisos com ciência, Caixa de decisões nas áreas de
+   cada um, regras de compras, configuração do Assistente do ponto e a lista
+   de pessoas do piloto do WhatsApp: ADMIN, DIRETORIA, GESTOR, RH e
+   FINANCEIRO. Catálogo comercial: gestão comercial e Financeiro (o RH não
+   vê valores de venda).
    isAdminPerfilAuth_ continua sendo a "gestão de decisões" (Programa de
-   conduta, valores do Comercial, aprovações por faixa): não muda aqui.
-   Só o Administrador: Chaves e senhas, integrações e credenciais, acervo do
-   Auvo, modos especiais, Matriz de avisos, perfis ADMIN/DIRETORIA, excluir
-   usuário definitivamente.
+   conduta, Integração Auvo, Painel de qualidade, excluir cadastro
+   definitivamente, aprovações por faixa): não muda aqui.
+   Só o Administrador (e a Diretoria onde já era): Chaves e senhas,
+   integrações e credenciais, acervo do Auvo, modos especiais, Matriz de
+   avisos, telefones do piloto, contas e perfis ADMIN e DIRETORIA, excluir
+   usuário. Ninguém muda o próprio perfil.
    ========================================================================= */
 var SGO_PERFIS_ROTINA = ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"];
 
@@ -459,12 +456,18 @@ function SGO_ehGestaoRotinaSessao_(sessionId) {
   return !!(v && v.valid && SGO_ehGestaoRotina_(v.data && v.data.perfil));
 }
 
+/** Rotina pela sessão, para os módulos: gestão de decisões (isAdminSession) ou rotina da empresa. */
+function SGO_rotinaSessao_(sessionId) {
+  try { if (isAdminSession(sessionId)) return true; } catch (e) {}
+  try { return SGO_ehGestaoRotinaSessao_(sessionId); } catch (e2) { return false; }
+}
+
 /** Texto de quem pode, para as mensagens das telas. */
 var SGO_TEXTO_GESTAO_ROTINA = "a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro)";
 
-/** Gestão (Administrador, Gestor, Diretoria) ou RH: consulta dados de pessoas de toda a equipe. */
+/** Quem consulta e organiza dados de pessoas da equipe (lista de usuários, áreas): a rotina da empresa. */
 function SGO_podeConsultarPessoas_(perfil) {
-  return isAdminPerfilAuth_(perfil) || SGO_ehPerfilRH_(perfil);
+  return isAdminPerfilAuth_(perfil) || SGO_ehPerfilRH_(perfil) || SGO_ehGestaoRotina_(perfil);
 }
 
 /** Recusa o perfil RH nos módulos técnicos. "oQue" = nome da área, ex.: "o Certificado de calibração". */

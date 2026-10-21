@@ -8,7 +8,8 @@ const SGO_VINCULOS = (() => {
   const digits = v => SGO_UTILS.cnpjArmazenado(v);
   function staff(sessionId, manager) {
     const s = exigirSessao(sessionId);
-    if (text(s.perfil).toUpperCase() === 'CLIENTE' || (manager && !isAdminSession(sessionId))) throw new Error('Acesso negado. Esta ação exige ' + (manager ? 'gestor.' : 'acesso interno.'));
+    // 21/10/2026 (pedido do dono): transferir, consolidar e desvincular cadastros é rotina da empresa (gestão, RH e Financeiro).
+    if (text(s.perfil).toUpperCase() === 'CLIENTE' || (manager && !(typeof SGO_rotinaSessao_ === 'function' ? SGO_rotinaSessao_(sessionId) : isAdminSession(sessionId)))) throw new Error('Acesso negado. ' + (manager ? 'Transferir, consolidar ou desvincular é feito pela gestão (Administrador, Diretoria, Gestor, RH ou Financeiro). Peça a um deles informando o cadastro e o motivo.' : 'Esta área é da equipe interna.'));
     return s;
   }
   function read() {
@@ -59,7 +60,7 @@ const SGO_VINCULOS = (() => {
   }
   function overview(sessionId) {
     staff(sessionId,false); const snapshot=read();
-    const result={success:true,gestor:isAdminSession(sessionId)};
+    const result={success:true,gestor:(typeof SGO_rotinaSessao_ === 'function' ? SGO_rotinaSessao_(sessionId) : isAdminSession(sessionId))};
     Object.keys(TABLES).forEach(type => {result[type]=base(snapshot,TABLES[type]).map(r=>({ID:text(r.ID),CLIENTE_ID:text(r.CLIENTE_ID),UNIDADE_ID:text(r.UNIDADE_ID),STATUS:text(r.STATUS),label:label(r,type),diagnostic:diagnostic(snapshot,type,r)}));});
     return result;
   }
@@ -75,7 +76,7 @@ const SGO_VINCULOS = (() => {
       if(count)references.push({table:n,count:count});
     });
     const audit=SGO_DATA.getDB().getSheetByName(AUDIT);let history=[];
-    if(isAdminSession(sessionId)&&audit&&audit.getLastRow()>1)history=audit.getRange(2,1,audit.getLastRow()-1,AUDIT_HEADERS.length).getValues().filter(r=>ids.has(text(r[5]))||ids.has(text(r[7]))).slice(-100).reverse().map(r=>({date:text(r[11]),user:text(r[2]),reason:text(r[3]),action:text(r[4]),table:text(r[6]),field:text(r[8]),before:text(r[9]),after:text(r[10])}));
+    if((typeof SGO_rotinaSessao_ === 'function' ? SGO_rotinaSessao_(sessionId) : isAdminSession(sessionId))&&audit&&audit.getLastRow()>1)history=audit.getRange(2,1,audit.getLastRow()-1,AUDIT_HEADERS.length).getValues().filter(r=>ids.has(text(r[5]))||ids.has(text(r[7]))).slice(-100).reverse().map(r=>({date:text(r[11]),user:text(r[2]),reason:text(r[3]),action:text(r[4]),table:text(r[6]),field:text(r[8]),before:text(r[9]),after:text(r[10])}));
     return {success:true,references:references,history:history};
   }
   function search(sessionId,term) {

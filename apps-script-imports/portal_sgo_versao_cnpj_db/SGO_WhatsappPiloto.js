@@ -25,7 +25,9 @@
  ****************************************************/
 
 var WAP_PROP = 'WA_PILOTO';
-var WAP_PERFIS_TELA = ['ADMIN', 'DIRETORIA'];
+// 21/10/2026 (pedido do dono): escolher as pessoas e áreas do piloto é rotina da empresa (gestão, RH e Financeiro). Ligar ou
+// desligar o piloto e ver o telefone completo continuam com o Administrador e a Diretoria (o telefone, só o Administrador).
+var WAP_PERFIS_TELA = ['ADMIN', 'DIRETORIA', 'GESTOR', 'RH', 'FINANCEIRO'];
 var WAP_AREAS = ['ADMIN', 'DIRETORIA', 'GESTOR', 'TECNICO', 'METROLOGIA', 'COMERCIAL', 'FINANCEIRO', 'RH'];
 var WAP_FUSO = 'America/Sao_Paulo';
 var WAP_MOTIVO_PESSOA = 'Retida pelo piloto do WhatsApp: esta pessoa não está na lista do piloto (o aviso segue no sistema e por e-mail).';
@@ -207,8 +209,8 @@ function SGO_waModelosAtualizar_() {
 function SGO_waPilotoEu_(sessionId) {
   var s = exigirSessao(sessionId);
   var perfil = SGO_UTILS.safeUpper(s.perfil);
-  if (WAP_PERFIS_TELA.indexOf(perfil) < 0) throw new Error('A tela Piloto do WhatsApp é do Administrador e da Diretoria. Se você não recebeu um aviso pelo WhatsApp, ele está no sistema e no seu e-mail.');
-  return { id: SGO_UTILS.safe(s.userId), usuario: SGO_UTILS.safe(s.usuario), nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario), perfil: perfil, admin: perfil === 'ADMIN' };
+  if (WAP_PERFIS_TELA.indexOf(perfil) < 0) throw new Error('A tela Piloto do WhatsApp é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Se você não recebeu um aviso pelo WhatsApp, ele está no sistema e no seu e-mail.');
+  return { id: SGO_UTILS.safe(s.userId), usuario: SGO_UTILS.safe(s.usuario), nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario), perfil: perfil, admin: perfil === 'ADMIN', ligaDesliga: perfil === 'ADMIN' || perfil === 'DIRETORIA' };
 }
 
 /** "5562999990001" -> "(62) 99999-0001"; sem o admin: só os 4 últimos. */
@@ -248,12 +250,15 @@ function SGO_waPilotoCarregar_(eu) {
     usuarios: cfg.usuarios, areas: cfg.areas, areasPossiveis: WAP_AREAS.slice(),
     pessoas: pessoas, liberadas: pessoas.filter(function (p) { return p.naLista || p.porArea; }).length,
     provedorEscolhido: prov || '(vazio)', provedorEmUso: pv.provedor === 'meta' ? 'WhatsApp oficial (Meta)' : pv.provedor === 'zapi' ? 'Z-API' : 'nenhum',
-    provedorMotivo: pv.provedor ? '' : String(pv.motivo || ''), zapiFora: SGO_waZapiFora_(), modelos: modelos, admin: eu.admin
+    provedorMotivo: pv.provedor ? '' : String(pv.motivo || ''), zapiFora: SGO_waZapiFora_(), modelos: modelos, admin: eu.admin, ligaDesliga: !!eu.ligaDesliga
   };
 }
 
 function SGO_waPilotoGravar_(eu, d) {
-  if (!eu.admin && eu.perfil !== 'DIRETORIA') throw new Error('Só o Administrador e a Diretoria alteram o piloto do WhatsApp.');
+  if (WAP_PERFIS_TELA.indexOf(eu.perfil) < 0) throw new Error('Só a gestão (Administrador, Diretoria, Gestor, RH e Financeiro) altera o piloto do WhatsApp.');
+  if (!eu.ligaDesliga && (d.ligado !== false) !== (SGO_waPilotoCfg_().ligado !== false)) {
+    throw new Error('Ligar ou desligar o piloto do WhatsApp é do Administrador e da Diretoria. Você pode marcar e desmarcar as pessoas e as áreas; deixe o piloto como está e grave de novo.');
+  }
   var validos = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) {
     if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE') validos[String(u.ID || '')] = true;

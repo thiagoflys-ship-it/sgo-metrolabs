@@ -197,11 +197,11 @@ test('teste de WhatsApp em Chaves e senhas só para celular da lista do piloto',
   assert.equal(a.ctx.Chaves_testarWhatsapp_('(62) 99999-0001').funcionou, true);
 });
 
-test('tela: só Administrador e Diretoria; telefone completo só para o Administrador; gatilho das 18h instalado', () => {
+test('tela: só a gestão (ligar e desligar: Administrador e Diretoria); telefone completo só para o Administrador; gatilho das 18h instalado', () => {
   const a = ambiente({ props: Object.assign({}, META) });
   const tec = a.ctx.SGO_WaPiloto_api('s_tec', 'carregar', {});
   assert.equal(tec.ok, false);
-  assert.match(tec.message, /Administrador e da Diretoria/);
+  assert.match(tec.message, /gestão \(Administrador, Diretoria, Gestor, RH e Financeiro\)/);
   const adm = a.ctx.SGO_WaPiloto_api('s_dono', 'carregar', {});
   assert.equal(adm.ok, true, adm.message);
   assert.equal(adm.ligado, true);

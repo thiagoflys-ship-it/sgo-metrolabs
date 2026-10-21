@@ -8,7 +8,7 @@ function SGO_ajudaTelas_Comercial_() {
     { perfil: 'COMERCIAL', pode: 'Trabalhar as próprias oportunidades e propostas, ver a própria lista do dia e os próprios números. Quem tem a área Comercial no cadastro também é vendedor.' },
     { perfil: 'GESTOR', pode: 'Gestor com área Comercial (ou listado na Metodologia) é a gestão comercial: vê a equipe toda, troca responsável, reabre oportunidade, aprova desconto, mantém catálogo e metodologia. Gestor de outra área não vê o Comercial.' },
     { perfil: 'DIRETORIA,ADMIN', pode: 'Tudo da gestão comercial, inclusive decidir o desconto de quem é da gestão.' },
-    { perfil: 'FINANCEIRO', pode: 'Só a tela Pedidos aprovados, com o valor e os dados de faturamento.' },
+    { perfil: 'FINANCEIRO', pode: 'A tela Pedidos aprovados, com o valor e os dados de faturamento, e o catálogo de Produtos e serviços (cadastrar, editar e arquivar itens, com preço e custo).' },
     { perfil: 'TECNICO,METROLOGIA,RH', pode: 'Não veem o Comercial nem valores. Recebem a parte deles do pedido aprovado como atividade em Minhas atividades, sem valor.' }
   ];
   return {

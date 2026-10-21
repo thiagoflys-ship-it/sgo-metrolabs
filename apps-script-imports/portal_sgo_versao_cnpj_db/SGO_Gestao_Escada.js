@@ -231,7 +231,7 @@ function Ges_emailsDiarios_(ex) {
   var enviados = 0, pessoas = 0;
   Object.keys(us).forEach(function (uid) {
     var u = us[uid];
-    if (!u.ativo || !u.gestao) return;
+    if (!u.ativo || !(u.gestao || u.rotina)) return;
     var tipo = u.diretoria ? 'EMAIL_DIRETORIA' : 'EMAIL_GESTOR';
     if (Ges_jaEnviado_(envios, tipo, uid, dia)) return;
     if (u.diretoria && esperarRelatorios) return;
@@ -307,7 +307,7 @@ function Gestao_whatsDiario_(quando) {
   var us = Ges_usuarios_();
   Object.keys(us).forEach(function (uid) {
     var u = us[uid];
-    if (!u.ativo || !u.gestao || Ges_jaEnviado_(envios, 'WHATS_GESTOR', uid, dia)) return;
+    if (!u.ativo || !(u.gestao || u.rotina) || Ges_jaEnviado_(envios, 'WHATS_GESTOR', uid, dia)) return;
     if (!cx) cx = Ges_caixa_();
     var minhas = cx.itens.filter(function (i) { return !i.acompanhamento && i.responsaveis.indexOf(uid) >= 0; });
     var paradas = minhas.filter(function (i) { return i.diasParado >= cfg.escada.whatsDiasUteis && i.etapa !== 'PAUSADO'; });

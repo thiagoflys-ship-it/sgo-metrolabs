@@ -25,7 +25,8 @@
 var SGO_ASSIST_ABA = 'ASSIST_PERGUNTAS';
 var SGO_ASSIST_COLUNAS = ['ID', 'CRIADO_EM', 'PERFIL', 'TELA', 'PERGUNTA', 'GRUPO', 'TIPO', 'ORIGEM', 'FONTES', 'RESOLVEU', 'AVALIADO_EM', 'REF'];
 var SGO_ASSIST_LIMITE_PADRAO = 20;
-var SGO_ASSIST_GESTAO = ['ADMIN', 'GESTOR', 'DIRETORIA'];
+// 21/10/2026 (pedido do dono): RH e Financeiro fazem a rotina da empresa como o Gestor; o assistente os orienta como gestão.
+var SGO_ASSIST_GESTAO = ['ADMIN', 'GESTOR', 'DIRETORIA', 'RH', 'FINANCEIRO'];
 var SGO_ASSIST_PAINEL = ['ADMIN', 'DIRETORIA'];
 var SGO_ASSIST_PERFIS = ['ADMIN', 'DIRETORIA', 'GESTOR', 'TECNICO', 'METROLOGIA', 'COMERCIAL', 'FINANCEIRO', 'RH'];
 
@@ -35,25 +36,26 @@ var SGO_ASSIST_PERFIS = ['ADMIN', 'DIRETORIA', 'GESTOR', 'TECNICO', 'METROLOGIA'
  * JS_Chaves.html (Chaves e senhas: só a conta do responsável) e deste painel.
  */
 var SGO_ASSIST_ACESSO = {
-  usuarios: ['ADMIN', 'GESTOR', 'DIRETORIA', 'RH'],
+  usuarios: ['ADMIN', 'GESTOR', 'DIRETORIA', 'RH', 'FINANCEIRO'],
   auvo: ['ADMIN', 'GESTOR', 'DIRETORIA'],
   qualidade: ['ADMIN', 'GESTOR', 'DIRETORIA'],
-  gestao_decisoes: ['ADMIN', 'GESTOR', 'DIRETORIA'],
+  gestao_decisoes: ['ADMIN', 'GESTOR', 'DIRETORIA', 'RH', 'FINANCEIRO'],
   gestao_desempenho: ['ADMIN', 'GESTOR', 'DIRETORIA'],
   chaves: ['ADMIN'],
   assistente: ['ADMIN', 'DIRETORIA'],
-  whatsapp_piloto: ['ADMIN', 'DIRETORIA'],
+  whatsapp_piloto: ['ADMIN', 'DIRETORIA', 'GESTOR', 'RH', 'FINANCEIRO'],
   // 21/10/2026: matriz de avisos (Meus avisos fica livre para todo perfil interno).
   avisos_matriz: ['ADMIN', 'DIRETORIA'],
   // 21/10/2026: Comercial nativo (o servidor ainda confere a área: Gestor de outra área não abre; Financeiro só Pedidos aprovados).
   comercial: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_oportunidades: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_propostas: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
-  comercial_pedidos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_catalogo: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_painel: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
+  comercial_pedidos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_catalogo: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_painel: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
   // 21/10/2026: Compras (a conferência é do Financeiro; o servidor confere o resto pela lista de compradores).
   compras_financeiro: ['ADMIN', 'DIRETORIA', 'FINANCEIRO'],
   comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
-var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'meus_avisos'];
+var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'meus_avisos',
+  'clientes', 'unidades', 'equipamentos', 'vinculos', 'gestao_decisoes', 'compras_regras', 'whatsapp_piloto'];
 /** Telas e janelas que não ficam no menu, com o lugar onde se chega a elas. */
 var SGO_ASSIST_FORA_DO_MENU = {
   mobile_home: { nome: 'Início do celular', caminho: 'Celular: tela inicial (Início)', abrir: true },

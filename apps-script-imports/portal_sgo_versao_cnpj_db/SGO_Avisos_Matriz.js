@@ -293,7 +293,9 @@ function Mtz_usuarios_() {
     var dono = false;
     try { dono = typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(u.USUARIO); } catch (e) { dono = false; }
     mapa[Mtz_s_(u.ID)] = { id: Mtz_s_(u.ID), nome: Mtz_s_(u.NOME) || Mtz_s_(u.USUARIO), login: Mtz_s_(u.USUARIO), perfil: perfil, ativo: Mtz_up_(u.STATUS || 'ATIVO') === 'ATIVO',
-      area: Mtz_up_(u.AREA), email: Mtz_s_(u.EMAIL).toLowerCase(), gestao: perfil === 'ADMIN' || perfil === 'GESTOR' || perfil === 'DIRETORIA', diretoria: perfil === 'DIRETORIA' || dono, dono: dono,
+      area: Mtz_up_(u.AREA), email: Mtz_s_(u.EMAIL).toLowerCase(), gestao: perfil === 'ADMIN' || perfil === 'GESTOR' || perfil === 'DIRETORIA',
+      // 21/10/2026: RH e Financeiro responsáveis de área recebem a parte da Caixa de decisões no resumo do dia (rotina da empresa).
+      rotina: typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil), diretoria: perfil === 'DIRETORIA' || dono, dono: dono,
       sistema: Mtz_s_(u.USUARIO).toLowerCase() === 'admin' };
   });
   return mapa;
@@ -604,7 +606,7 @@ function Mtz_naoLidasBatePapo_(uid) {
  */
 function Mtz_parteGestao_(u, cx, ex, rel) {
   var r = { linhas: [], qtd: 0, paradas: 0, ids: [], idsParadas: [], esperar: false };
-  if (!cx || !u.gestao || typeof Ges_meusItens_ !== 'function') return r;
+  if (!cx || !(u.gestao || u.rotina) || typeof Ges_meusItens_ !== 'function') return r;
   var cfg = cx.cfg, e = cfg.escada;
   var minhas = Ges_meusItens_(cx.itens, u.id, cx.us).filter(function (i) { return i.responsaveis.indexOf(u.id) >= 0 && !i.acompanhamento; });
   var paradas = minhas.filter(function (i) { return i.diasParado >= e.whatsDiasUteis && i.etapa !== 'PAUSADO'; });
@@ -820,7 +822,7 @@ function SGO_resumoDiaRodada_(quando) {
       (atvPorPessoa[Mtz_s_(v.DESTINATARIO_ID)] = atvPorPessoa[Mtz_s_(v.DESTINATARIO_ID)] || []).push(v);
     });
     var cx = null, rel = null;
-    try { if (typeof Ges_caixa_ === 'function' && pessoas.some(function (u) { return u.gestao; })) cx = Ges_caixa_(); } catch (e) { console.error('Resumo do dia, Caixa de decisões: ' + ((e && e.message) || e)); }
+    try { if (typeof Ges_caixa_ === 'function' && pessoas.some(function (u) { return u.gestao || u.rotina; })) cx = Ges_caixa_(); } catch (e) { console.error('Resumo do dia, Caixa de decisões: ' + ((e && e.message) || e)); }
     try {
       if (cx && typeof Ges_relatoriosDoDia_ === 'function' && typeof Ges_envios_ === 'function') rel = Ges_relatoriosDoDia_(Ges_envios_(), dia, typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null);
     } catch (e) { rel = null; }
@@ -860,7 +862,7 @@ function SGO_resumoDiaRodada_(quando) {
       m.fila.forEach(function (id) { SGO_DATA.update(MTZ_ABAS.FILA, id, { SITUACAO: sitFila, ENVIADO_EM: agoraTxt, MOTIVO: mot }); });
       m.atv.forEach(function (id) { SGO_DATA.update(abaAtv, id, { EMAIL_SITUACAO: sitFila, EMAIL_EM: agoraTxt, EMAIL_MOTIVO: mot }); });
       // Caixa de decisões: o envio continua contando para a escada e para a avaliação do gestor (GES_ENVIOS)
-      if (u.gestao && typeof Ges_registrarEnvio_ === 'function' && (m.gestao.qtd || m.gestao.diretoria)) {
+      if ((u.gestao || u.rotina) && typeof Ges_registrarEnvio_ === 'function' && (m.gestao.qtd || m.gestao.diretoria)) {
         Ges_registrarEnvio_({ tipo: u.diretoria ? 'EMAIL_DIRETORIA' : 'EMAIL_GESTOR', uid: u.id, nome: u.nome, dia: dia, qtd: m.gestao.qtd, itens: (m.gestao.ids || []).join(','),
           situacao: rr.ok ? 'OK' : 'PULADO', motivo: rr.ok ? 'no e-mail de resumo do dia (matriz de avisos)' : rr.motivo });
       }
@@ -923,7 +925,7 @@ function Mtz_previa_(uid) {
     var abaAtv = typeof Atividades_abas_ === 'function' ? Atividades_abas_().AVISOS : '';
     var atv = abaAtv ? Mtz_ler_(abaAtv).filter(function (v) { return Mtz_s_(v.EMAIL_SITUACAO) === 'PENDENTE' && Mtz_s_(v.DESTINATARIO_ID) === uid; }) : [];
     var cx = null;
-    try { if (u.gestao && typeof Ges_caixa_ === 'function') cx = Ges_caixa_(); } catch (e) { cx = null; }
+    try { if ((u.gestao || u.rotina) && typeof Ges_caixa_ === 'function') cx = Ges_caixa_(); } catch (e) { cx = null; }
     var f = { pend: function (ctx) { return typeof Pend_calcular_ === 'function' ? Pend_calcular_(ctx).itens : []; }, filaPorPessoa: {}, atvPorPessoa: {}, cx: cx, rel: null, ex: ex, batePapo: Mtz_naoLidasBatePapo_, prefs: Mtz_prefsDe_(uid) };
     f.filaPorPessoa[uid] = fila; f.atvPorPessoa[uid] = atv;
     return Mtz_montarResumo_(u, f);

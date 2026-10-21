@@ -348,7 +348,7 @@ function Ponto_acao_(eu, acao, d) {
   var cfg = Ponto_cfg_(), hoje = Pto_partes_(new Date()).dia, us;
   switch (acao) {
     case 'acesso':
-      return { papel: eu.papel, ligado: cfg.ligado, verMenu: cfg.ligado || eu.verTodos, configurar: eu.configurar, tratar: eu.tratar, pessoas: eu.verTodos, equipe: eu.verTodos || eu.gestor };
+      return { papel: eu.papel, ligado: cfg.ligado, verMenu: cfg.ligado || eu.verTodos || eu.configurar, configurar: eu.configurar, tratar: eu.tratar, pessoas: eu.verTodos, equipe: eu.verTodos || eu.gestor };
     case 'iniciar': {
       var avisos = Pto_ler_(PONTO_ABAS.AVISOS).filter(function (v) { return Pto_s_(v.DESTINATARIO_ID) === eu.id && !Pto_s_(v.LIDO_EM); })
         .map(function (v) { return { id: Pto_s_(v.ID), titulo: Pto_s_(v.TITULO), texto: Pto_s_(v.TEXTO), data: Pto_s_(v.DATA).replace('T', ' ').slice(0, 16) }; }).reverse().slice(0, 30);

@@ -38,9 +38,10 @@ function SGO_ajudaTelas_Ponto_() {
       ],
       quemPode: [
         { perfil: 'TODOS', pode: 'Ver os próprios lembretes, confirmar, pedir ajuste ao RH e acompanhar os próprios pedidos (aba "Meus lembretes").' },
-        { perfil: 'RH', pode: 'Ver tudo do ponto, tratar os pedidos de ajuste, ajustar quem participa, a jornada de cada pessoa e as folgas, e gerar o resumo A4.' },
-        { perfil: 'GESTOR', pode: 'Acompanhar a própria equipe (a área do cadastro e as áreas pelas quais responde na Caixa de decisões), só leitura. A justificativa dos pedidos fica com o RH.' },
-        { perfil: 'ADMIN,DIRETORIA', pode: 'Tudo do RH e mais: ligar e desligar, escolher as marcações, a jornada geral, quem é o RH e os feriados do expediente comum.' }
+        { perfil: 'RH', pode: 'Ver tudo do ponto, tratar os pedidos de ajuste, ajustar quem participa, a jornada de cada pessoa e as folgas, gerar o resumo A4 e usar a aba Configuração.' },
+        { perfil: 'GESTOR', pode: 'Acompanhar a própria equipe (a área do cadastro e as áreas pelas quais responde na Caixa de decisões), só leitura, e abrir a aba Configuração (ligar, desligar, marcações, jornada geral e feriados). A justificativa dos pedidos fica com o RH.' },
+        { perfil: 'FINANCEIRO', pode: 'Abrir a aba Configuração (ligar, desligar, marcações, jornada geral e feriados). Os lembretes e pedidos das outras pessoas ficam com o RH.' },
+        { perfil: 'ADMIN,DIRETORIA', pode: 'Tudo do RH, inclusive ligar e desligar, escolher as marcações, a jornada geral, quem é o RH e os feriados do expediente comum.' }
       ],
       perguntas: [
         { p: 'Posso receber o lembrete duas vezes?', r: 'Não. Cada marcação tem um lembrete só, mesmo sem confirmação. Nada sai antes do seu horário de entrada menos 5 minutos, depois do seu horário de saída, em fim de semana ou feriado.' },

@@ -8,7 +8,7 @@ function SGO_ajudaTelas_Gestao_() {
       titulo: 'Caixa de decisões',
       paraQueServe: 'Junta numa lista só tudo o que depende de um gestor ou da Diretoria, venha do módulo que vier: homologar e julgar ocorrências, aprovar missões, decidir sugestões, conferir KM, multas, CNH, manutenção, reservas, comprovantes, casos e planos de ação atrasados, atividades atrasadas da equipe, justificativas de atraso, padrões e O.S. do Auvo. Cada item diz quem decide, o prazo, há quanto tempo está parado e leva à tela de resolver. Você não precisa abrir módulo por módulo para saber o que espera por você.',
       antesDeComecar: [
-        'A caixa é da gestão: perfis Administrador, Gestor e Diretoria.',
+        'A caixa é da gestão: perfis Administrador, Diretoria e Gestor. RH e Financeiro também abrem, com os itens das áreas em que são responsáveis.',
         'Quem recebe cada item depende do gestor responsável por área, definido pelo Administrador ou pela Diretoria em "Regras e responsáveis". Área sem responsável vai para a reserva da Diretoria.',
         'A área de cada pessoa vem do cadastro (Administração > Usuários > Áreas).'
       ],
@@ -38,7 +38,8 @@ function SGO_ajudaTelas_Gestao_() {
         { perfil: 'GESTOR', pode: 'Ver a própria caixa e a da gestão toda, abrir as telas de resolver e registrar providência nos itens dele.' },
         { perfil: 'ADMIN', pode: 'Tudo do gestor, registrar providência em qualquer item e configurar os responsáveis, a escada e as automações.' },
         { perfil: 'DIRETORIA', pode: 'Tudo do administrador, ver os itens escalados e receber a reserva das áreas sem gestor.' },
-        { perfil: 'TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH', pode: 'Não usam esta tela. O que depende de cada um aparece no Início e em Minhas atividades.' }
+        { perfil: 'RH,FINANCEIRO', pode: 'Abrem a caixa com os itens das áreas em que são responsáveis (Regras e responsáveis) e registram a providência neles. Não veem os itens das outras áreas.' },
+        { perfil: 'TECNICO,METROLOGIA,COMERCIAL', pode: 'Não usam esta tela. O que depende de cada um aparece no Início e em Minhas atividades.' }
       ],
       perguntas: [
         { p: 'Quando chegam os e-mails e o WhatsApp?', r: 'As decisões entram no e-mail de resumo do dia único (todo dia útil, a partir das 08:00, um e-mail por pessoa com tudo o que espera por ela, só se houver algo). O WhatsApp de resumo sai a partir das 09:30, no máximo uma vez por dia, só para CLT e só se a pessoa ainda não abriu o sistema; leva a contagem das decisões paradas há 2 dias úteis ou mais. Nunca à noite, no fim de semana ou em feriado. Horários em Administração > Matriz de avisos.' },
@@ -74,7 +75,7 @@ function SGO_ajudaTelas_Gestao_() {
         { situacao: 'Aparece "a hora do envio precisa ficar dentro do horário de trabalho".', oQueFazer: 'Escolha uma hora entre o início e o fim do expediente (Atividades da equipe > Avisos e horários) e salve de novo.' },
         { situacao: 'Aparece "a Diretoria precisa entrar depois do WhatsApp".', oQueFazer: 'O número de dias úteis da Diretoria tem de ser maior que o do WhatsApp. Corrija e salve de novo.' }
       ],
-      quemPode: [{ perfil: 'ADMIN,DIRETORIA', pode: 'Mudar e salvar as regras.' }, { perfil: 'GESTOR', pode: 'Ver as regras, sem mudar.' }]
+      quemPode: [{ perfil: 'ADMIN,DIRETORIA', pode: 'Mudar e salvar as regras. Gestor, RH e Financeiro podem ser escolhidos como responsáveis de uma área.' }, { perfil: 'GESTOR,RH,FINANCEIRO', pode: 'Ver as regras, sem mudar.' }]
     },
     'gestao_desempenho': {
       titulo: 'Desempenho da gestão',

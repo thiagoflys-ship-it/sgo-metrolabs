@@ -107,7 +107,8 @@ function CadPainel_limpo_(r) {
 function CadPainel_montar_(sessionId, tipo) {
   var sessao = exigirSessao(sessionId);
   var b = CadPainel_base_(sessao);
-  var gestao = !b.cliente && isAdminSession(sessionId);
+  // 21/10/2026: gestão = rotina da empresa (gestão, RH e Financeiro), como a tela (CadUI_gestao_).
+  var gestao = !b.cliente && (typeof SGO_rotinaSessao_ === 'function' ? SGO_rotinaSessao_(sessionId) : isAdminSession(sessionId));
   var itens = [];
   tipo = CadPainel_txt_(tipo).toLowerCase();
 

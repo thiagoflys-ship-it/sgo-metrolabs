@@ -386,7 +386,10 @@ function Cmp_nivelDe_(u, regras) {
   var comprador = gestao || compradorLista;
   var nivel = gestao ? 'GESTAO' : compradorLista ? 'COMPRADOR' : gestor ? 'GESTOR' : financeiro ? 'FINANCEIRO' : 'SOLICITANTE';
   return { nivel: nivel, gestao: gestao, comprador: comprador, compradorLista: compradorLista, gestor: gestor || gestao, financeiro: financeiro || diretoria || admin,
-    veValores: comprador || gestor || financeiro, veFila: comprador || gestor, regras: admin || diretoria, diretoria: diretoria, admin: admin };
+    // 21/10/2026 (pedido do dono): as regras de compras (comprador, substituto, faixas, cotações mínimas) são rotina da empresa:
+    // Administrador, Diretoria, Gestor, RH e Financeiro. Cada versão fica no histórico com o motivo; as aprovações seguem as faixas.
+    veValores: comprador || gestor || financeiro, veFila: comprador || gestor,
+    regras: admin || diretoria || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil)), diretoria: diretoria, admin: admin };
 }
 
 /** Quem está chamando (sessão), com o nível em Compras. Não lança por falta de acesso: quem chama decide. */
@@ -410,7 +413,7 @@ function Cmp_exigir_(eu, nivel, acao) {
     VALORES: 'valores de compra ficam só com compradores, gestores, Financeiro e Diretoria. Acompanhe o seu pedido em Compras > Meus pedidos de compra (sem valores)',
     FILA: 'a fila de compras é dos compradores, gestores, da Diretoria e do Administrador. Acompanhe o seu pedido em Compras > Meus pedidos de compra',
     FINANCEIRO: 'a conferência das compras é do Financeiro (perfil ou área Financeiro), da Diretoria e do Administrador',
-    REGRAS: 'as regras de compras (compradores, faixas de aprovação, cotações mínimas) são alteradas só pelo Administrador e pela Diretoria',
+    REGRAS: 'as regras de compras (compradores, faixas de aprovação, cotações mínimas) são alteradas pela gestão (Administrador, Diretoria, Gestor, RH e Financeiro)',
     GESTAO: 'esta ação é da gestão de Compras (gestor da área de Compras, Diretoria ou Administrador)',
     INTERNO: 'Compras é da equipe interna da Metrolabs'
   }[nivel] || 'você não tem acesso a esta parte de Compras';
