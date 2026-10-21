@@ -96,12 +96,15 @@ function PonteCmd_tratar_(req) {
   // 20/10/2026: Frota no COMMAND (SGO_Frota_Rastreamento.js, FrotaR_ponte_): só leitura; frota.painel só para a gestão do SGO+
   // (localização do veículo, nunca para controlar a pessoa: o ponto do COMMAND não usa isto); frota.pedidos = comprovantes pedidos à própria pessoa.
   if (/^frota\.(painel|pedidos)$/.test(String(req.acao || ""))) {
-    return typeof FrotaR_ponte_ === "function" ? FrotaR_ponte_(String(req.acao), d) : { ok: false, erro: "Frota indisponível no SGO+." };
+    // 21/10/2026: cada veículo vem com apelido, base e rótulo ("Onça · PQB4394"), como nas telas do SGO+ (SGO_Frota_Identificacao.js).
+    var rFrota = typeof FrotaR_ponte_ === "function" ? FrotaR_ponte_(String(req.acao), d) : { ok: false, erro: "Frota indisponível no SGO+." };
+    return typeof FrotaId_enfeitarResposta_ === "function" ? FrotaId_enfeitarResposta_(rFrota) : rFrota;
   }
   // 20/10/2026: reservas de veículo no COMMAND (SGO_Frota_Reservas.js, FrotaRes_ponte_): ver a agenda (gestão), as minhas reservas,
   // os veículos livres, reservar e cancelar, em nome do usuário do SGO+ ligado à conta, com as mesmas regras e a mesma trava.
   if (/^frota\.reservas\.(painel|livres|criar|cancelar)$/.test(String(req.acao || ""))) {
-    return typeof FrotaRes_ponte_ === "function" ? FrotaRes_ponte_(String(req.acao), d) : { ok: false, erro: "Reservas da frota indisponíveis no SGO+." };
+    var rRes = typeof FrotaRes_ponte_ === "function" ? FrotaRes_ponte_(String(req.acao), d) : { ok: false, erro: "Reservas da frota indisponíveis no SGO+." };
+    return typeof FrotaId_enfeitarResposta_ === "function" ? FrotaId_enfeitarResposta_(rRes) : rRes;
   }
   // 20/10/2026: Caixa de decisões e avaliação do gestor no COMMAND (SGO_Gestao_Decisoes.js, Gestao_ponte_): só leitura, em nome do
   // usuário do SGO+ ligado à conta; a caixa só para a gestão do SGO+ e a avaliação só para o próprio gestor e a Diretoria.

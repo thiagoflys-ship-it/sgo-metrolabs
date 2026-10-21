@@ -83,6 +83,12 @@ function FrotaRes_telaNavegador_() {
   var NOMES_MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
   function esc(v) { return tplFrota_esc(v); }
+  // 21/10/2026: identificação dos veículos (apelido e base). O servidor manda rotuloVeiculo/identVeiculo em cada veículo;
+  // a agenda filtra pela base escolhida (a mesma escolha guardada no navegador da tela de veículos).
+  function rotV(x, completo) { return (x && (completo ? x.identVeiculo : x.rotuloVeiculo)) || (typeof tplFrota_rotuloVeic_ === 'function' ? tplFrota_rotuloVeic_(x, completo) : (x && (x.placa || x.PLACA)) || ''); }
+  function passaBase(x) { return typeof tplFrota_passaBase_ === 'function' ? tplFrota_passaBase_(x) : true; }
+  function seletorBase(id) { return typeof tplFrota_seletorBaseHtml_ === 'function' ? tplFrota_seletorBaseHtml_(id) : ''; }
+  function ligarBase(id, f) { if (typeof tplFrota_ligarSeletorBase_ === 'function') tplFrota_ligarSeletorBase_(id, f); }
   function api(fn, p) { return tplFrota_chamarApiSilencioso_(fn, p || {}); }
   function apiC(fn, p) { return tplFrota_chamarApi(fn, p || {}); }
   function el(id) { return document.getElementById(id); }
@@ -148,7 +154,7 @@ function FrotaRes_telaNavegador_() {
     var m = el('frs_minhasMini'), d = S.dados;
     if (!m || !d) return;
     var ativas = d.minhas.filter(function (x) { return x.situacao === 'RESERVADA' || x.situacao === 'INICIADA'; });
-    m.textContent = ativas.length ? 'Sua próxima reserva: ' + ativas[0].placa + ', ' + ativas[0].quando + (ativas.length > 1 ? ' (e mais ' + (ativas.length - 1) + ')' : '') + '.' :
+    m.textContent = ativas.length ? 'Sua próxima reserva: ' + rotV(ativas[0]) + ', ' + ativas[0].quando + (ativas.length > 1 ? ' (e mais ' + (ativas.length - 1) + ')' : '') + '.' :
       (d.condutor ? 'Você não tem reserva em aberto.' : (d.gestor ? 'Seu login não tem condutor vinculado: você reserva para outra pessoa escolhendo o condutor; para reservar em seu nome, vincule em Veículos e condutores > Condutores.' : 'Seu login não tem condutor vinculado: peça à gestão para vincular em Veículos e condutores > Condutores.'));
   }
 
@@ -167,7 +173,7 @@ function FrotaRes_telaNavegador_() {
     var h = '<div class="frr-faixa"><strong>Como usar:</strong> cada linha é um veículo. Toque num espaço vazio para reservar aquele veículo naquele dia' + (dia ? ' e hora' : '') + '; toque numa reserva para ver o detalhe, cancelar ou trocar o veículo.</div>' +
       '<div class="frs-barra"><button type="button" class="btn" data-frs-vista="semana"' + (dia ? '' : ' aria-pressed="true" style="font-weight:800"') + '>Semana</button><button type="button" class="btn" data-frs-vista="dia"' + (dia ? ' aria-pressed="true" style="font-weight:800"' : '') + '>Dia</button>' +
       '<button type="button" class="btn" id="frs_ant">‹ Anterior</button><button type="button" class="btn" id="frs_hoje">Hoje</button><button type="button" class="btn" id="frs_prox">Próximo ›</button>' +
-      '<span class="frs-periodo">' + esc(rotPer) + '</span><button type="button" class="btn" id="frs_atualizar">Atualizar</button></div>' +
+      '<span class="frs-periodo">' + esc(rotPer) + '</span><button type="button" class="btn" id="frs_atualizar">Atualizar</button>' + seletorBase('frs_base') + '</div>' +
       '<div class="frs-leg"><span><i style="background:#e3f5ec"></i>Minha reserva</span><span><i style="background:#e8eefc"></i>Reserva de outra pessoa</span><span><i style="background:#fdecd8"></i>Manutenção programada</span><span><i style="background:#1f5fa8"></i>Retirado agora</span><span><i style="background:#a61b1b"></i>Devolução atrasada</span><span><i style="background:#e5e7eb"></i>Parada</span></div>' +
       '<div id="frs_agenda"></div><div id="frs_detalhe" aria-live="polite"></div>';
     c.innerHTML = h;
@@ -176,10 +182,13 @@ function FrotaRes_telaNavegador_() {
     el('frs_prox').onclick = function () { S.de = d.proximo; carregar(); };
     el('frs_hoje').onclick = function () { S.de = S.vista === 'dia' ? d.hoje : ''; carregar(); };
     el('frs_atualizar').onclick = carregar;
+    ligarBase('frs_base', function () { desenharAgenda(c, d); });
     var alvo = el('frs_agenda');
     if (!d.veiculos.length) { alvo.innerHTML = '<p class="muted">Nenhum veículo ativo cadastrado.</p>'; return; }
-    if (dia) alvo.innerHTML = htmlDia(d); else alvo.innerHTML = celular() ? htmlSemanaCelular(d) : htmlSemana(d);
-    ligarAgenda(alvo, d);
+    var dB = Object.assign({}, d, { veiculos: d.veiculos.filter(passaBase) });
+    if (!dB.veiculos.length) { alvo.innerHTML = '<p class="muted">Nenhum veículo nesta base. Escolha "Todas as bases".</p>'; return; }
+    if (dia) alvo.innerHTML = htmlDia(dB); else alvo.innerHTML = celular() ? htmlSemanaCelular(dB) : htmlSemana(dB);
+    ligarAgenda(alvo, dB);
   }
 
   var itensPorK = [];
@@ -199,10 +208,10 @@ function FrotaRes_telaNavegador_() {
     itensPorK = [];
     var h = '<div class="frs-sem"><div class="cab">Veículo</div>' + d.diasLista.map(function (x) { return '<div class="cab' + (x.hoje ? ' hoje' : '') + '">' + esc(x.rotulo) + '</div>'; }).join('');
     d.veiculos.forEach(function (v) {
-      h += '<div class="veic">' + esc(v.placa) + '<small>' + esc(v.modelo) + (v.situacao === 'EM_USO' ? ' · em uso' : '') + '</small></div>';
+      h += '<div class="veic">' + esc(rotV(v)) + '<small>' + esc([v.modelo, v.baseFrota].filter(Boolean).join(' · ')) + (v.situacao === 'EM_USO' ? ' · em uso' : '') + '</small></div>';
       d.diasLista.forEach(function (x, i) {
         var its = itensDoDia(v, i);
-        h += '<div class="dia' + (x.hoje ? ' hoje' : '') + '" data-frs-livre="' + esc(v.id) + '|' + esc(x.data) + '" role="button" tabindex="0" aria-label="Reservar ' + esc(v.placa) + ' em ' + esc(x.rotulo) + '">' + (its.length ? its.map(function (it) { return chip(it); }).join('') : '<span class="frs-livre">livre</span>') + '</div>';
+        h += '<div class="dia' + (x.hoje ? ' hoje' : '') + '" data-frs-livre="' + esc(v.id) + '|' + esc(x.data) + '" role="button" tabindex="0" aria-label="Reservar ' + esc(rotV(v)) + ' em ' + esc(x.rotulo) + '">' + (its.length ? its.map(function (it) { return chip(it); }).join('') : '<span class="frs-livre">livre</span>') + '</div>';
       });
     });
     return h + '</div>';
@@ -212,7 +221,7 @@ function FrotaRes_telaNavegador_() {
     return '<div class="frs-semcel">' + d.diasLista.map(function (x, i) {
       return '<div class="frs-dia-card' + (x.hoje ? ' hoje' : '') + '"><h4>' + esc(x.rotulo) + (x.hoje ? ' (hoje)' : '') + '</h4>' + d.veiculos.map(function (v) {
         var its = itensDoDia(v, i);
-        return '<div class="lin"><b>' + esc(v.placa) + '</b><div class="itens">' + (its.length ? its.map(function (it) { return chip(it); }).join('') : '') +
+        return '<div class="lin"><b>' + esc(rotV(v)) + '</b><div class="itens">' + (its.length ? its.map(function (it) { return chip(it); }).join('') : '') +
           '<button type="button" class="frs-chip" style="color:#1f5fa8;border:1px dashed #b9c9ee;background:#fff" data-frs-livre="' + esc(v.id) + '|' + esc(x.data) + '">' + (its.length ? 'Reservar outro horário' : 'Livre: reservar') + '</button></div></div>';
       }).join('') + '</div>';
     }).join('') + '</div>';
@@ -228,7 +237,7 @@ function FrotaRes_telaNavegador_() {
     var h = '<div class="frs-diaw"><div class="frs-dl cab"><div class="rot">Veículo</div><div class="trilho" style="height:28px;cursor:default">' + cab + '</div></div>';
     d.veiculos.forEach(function (v) {
       var its = itensDoDia(v, 0);
-      h += '<div class="frs-dl"><div class="rot">' + esc(v.placa) + '<small>' + esc(v.modelo) + '</small></div><div class="trilho" data-frs-livre-dia="' + esc(v.id) + '" role="button" tabindex="0" aria-label="Reservar ' + esc(v.placa) + ' neste dia">' + ticks + agora +
+      h += '<div class="frs-dl"><div class="rot">' + esc(rotV(v)) + '<small>' + esc([v.modelo, v.baseFrota].filter(Boolean).join(' · ')) + '</small></div><div class="trilho" data-frs-livre-dia="' + esc(v.id) + '" role="button" tabindex="0" aria-label="Reservar ' + esc(rotV(v)) + ' neste dia">' + ticks + agora +
         its.map(function (it) { var l = pct(it.iniDia), w = Math.max(3, pct(it.fimDia) - l); return chip(Object.assign(it, { texto: it.rotulo }), ' style="left:' + l.toFixed(2) + '%;width:' + w.toFixed(2) + '%"'); }).join('') + '</div></div>';
     });
     return h + '</div><p class="frs-dica">Das 06:00 às 22:00. Reservas fora desse horário aparecem na visão da semana.</p>';
@@ -266,7 +275,7 @@ function FrotaRes_telaNavegador_() {
 
   // ---------------- LISTAS ----------------
   function cartao(r, semMolde) {
-    var h = '<h4>' + esc(r.codigo) + ' · ' + esc(r.placa) + ' ' + marca(r.situacaoTexto, corSit(r.situacao)) + (r.tipo === 'MANUTENCAO' ? ' ' + marca('Manutenção programada', 'alerta') : '') + '</h4>' +
+    var h = '<h4>' + esc(r.codigo) + ' · ' + esc(rotV(r)) + ' ' + marca(r.situacaoTexto, corSit(r.situacao)) + (r.tipo === 'MANUTENCAO' ? ' ' + marca('Manutenção programada', 'alerta') : '') + '</h4>' +
       '<div><strong>' + esc(r.periodo) + '</strong> (' + esc(r.quando) + ')</div>' +
       (r.tipo === 'MANUTENCAO' ? '<div>' + esc(r.motivo) + '</div>' : '<div>Condutor: ' + esc(r.condutor) + (r.pelaGestao ? ' <span class="frr-meta">(reservado por ' + esc(r.criadaPor) + ')</span>' : '') + '</div>') +
       (r.destino ? '<div>Destino: ' + esc(r.destino) + '</div>' : '') + (r.tipo !== 'MANUTENCAO' && r.motivo ? '<div>Motivo: ' + esc(r.motivo) + '</div>' : '') +
@@ -308,7 +317,7 @@ function FrotaRes_telaNavegador_() {
     api('apiReservaLivres', { dataInicio: r.dataInicio, horaInicio: r.horaInicio, dataFim: r.dataFim, horaFim: r.horaFim }).then(function (l) {
       var livres = l.livres.filter(function (x) { return x.id !== r.veiculoId; });
       if (!livres.length) { box.innerHTML = infoHtml('Nenhum outro veículo está livre de ' + r.periodo + '. Fale com a gestão.'); return; }
-      box.innerHTML = '<div class="frs-dica">Livres de ' + esc(r.periodo) + ':</div><div class="frs-livres">' + livres.map(function (x) { return '<button type="button" class="btn" data-frs-para="' + esc(x.id) + '">Passar para ' + esc(x.placa) + (x.modelo ? ' (' + esc(x.modelo) + ')' : '') + '</button>'; }).join('') + '</div><div id="frs_trSt_' + esc(id) + '"></div>';
+      box.innerHTML = '<div class="frs-dica">Livres de ' + esc(r.periodo) + ':</div><div class="frs-livres">' + livres.map(function (x) { return '<button type="button" class="btn" data-frs-para="' + esc(x.id) + '">Passar para ' + esc(rotV(x)) + (x.modelo ? ' (' + esc(x.modelo) + ')' : '') + '</button>'; }).join('') + '</div><div id="frs_trSt_' + esc(id) + '"></div>';
       Array.prototype.forEach.call(box.querySelectorAll('[data-frs-para]'), function (b) {
         b.onclick = function () {
           b.disabled = true;
@@ -387,12 +396,12 @@ function FrotaRes_telaNavegador_() {
     api('apiReservaLivres', p).then(function (l) {
       if (!el('frs_fVeic')) return;
       var manut = el('frs_fManut') && el('frs_fManut').checked;
-      var ops = l.livres.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.placa) + (x.modelo ? ' — ' + esc(x.modelo) : '') + ' (livre)</option>'; }).join('') +
-        l.ocupados.map(function (x) { return '<option value="' + esc(x.id) + '" disabled>' + esc(x.placa) + ' — ocupado: ' + esc(x.motivo).slice(0, 90) + '</option>'; }).join('');
+      var ops = l.livres.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.identVeiculo || (x.placa + (x.modelo ? ' — ' + x.modelo : ''))) + ' (livre)</option>'; }).join('') +
+        l.ocupados.map(function (x) { return '<option value="' + esc(x.id) + '" disabled>' + esc(rotV(x)) + ' — ocupado: ' + esc(x.motivo).slice(0, 90) + '</option>'; }).join('');
       s.innerHTML = ops || '<option value="">Nenhum veículo ativo</option>';
       var ok = l.livres.some(function (x) { return x.id === escolhido; });
       s.value = ok ? escolhido : (l.livres[0] ? l.livres[0].id : '');
-      dica.textContent = l.aviso ? l.aviso : (l.livres.length ? (ok || !escolhido ? (manut ? 'Veículos livres no período.' : 'Sugerido o primeiro veículo livre no período; troque se preferir.') : 'O veículo escolhido está ocupado nesse período; sugerimos ' + l.livres[0].placa + '.') + (l.ocupados.length ? ' Os ocupados aparecem na lista com o motivo.' : '') : 'Nenhum veículo está livre de ' + (l.periodo || 'neste período') + '. Mude o horário.');
+      dica.textContent = l.aviso ? l.aviso : (l.livres.length ? (ok || !escolhido ? (manut ? 'Veículos livres no período.' : 'Sugerido o primeiro veículo livre no período; troque se preferir.') : 'O veículo escolhido está ocupado nesse período; sugerimos ' + rotV(l.livres[0]) + '.') + (l.ocupados.length ? ' Os ocupados aparecem na lista com o motivo.' : '') : 'Nenhum veículo está livre de ' + (l.periodo || 'neste período') + '. Mude o horário.');
     }).catch(function (err) { if (dica) dica.textContent = (err && err.message) || String(err); });
   }
   function enviarReserva() {
@@ -406,7 +415,7 @@ function FrotaRes_telaNavegador_() {
     apiC('apiReservaCriar', p).then(function (r) {
       bt.disabled = false;
       if (r.ok === false) {
-        st.innerHTML = erroHtml(new Error(r.message)) + (r.livres && r.livres.length ? '<div class="frs-livres">' + r.livres.slice(0, 6).map(function (x) { return '<button type="button" class="btn" data-frs-usar="' + esc(x.id) + '">Reservar o ' + esc(x.placa) + '</button>'; }).join('') + '</div>' : '');
+        st.innerHTML = erroHtml(new Error(r.message)) + (r.livres && r.livres.length ? '<div class="frs-livres">' + r.livres.slice(0, 6).map(function (x) { return '<button type="button" class="btn" data-frs-usar="' + esc(x.id) + '">Reservar o ' + esc(rotV(x)) + '</button>'; }).join('') + '</div>' : '');
         Array.prototype.forEach.call(st.querySelectorAll('[data-frs-usar]'), function (b) { b.onclick = function () { buscarLivres(b.getAttribute('data-frs-usar')); setTimeout(function () { var s = el('frs_fVeic'); if (s) s.value = b.getAttribute('data-frs-usar'); enviarReserva(); }, 900); }; });
         return;
       }
@@ -446,14 +455,14 @@ function FrotaRes_telaNavegador_() {
       kpi(n(r.atrasosAfetaram), 'Atrasos que afetaram reserva', r.atrasosAfetaram ? 'critico' : '') + kpi(n(r.atrasosComReserva), 'Devoluções atrasadas com reserva a seguir') +
       kpi(n(r.bloqueadas), 'Retiradas bloqueadas por reserva') + kpi(n(r.liberacoes), 'Liberações pela gestão', r.liberacoes ? 'alerta' : '') + kpi(n(r.recusas), 'Pedidos recusados por sobreposição') + '</div>' +
       '<h3>Por veículo</h3>' + tabela([{ t: 'Veículo' }, { t: 'Reservas', num: true }, { t: 'Horas reservadas', num: true }, { t: 'Tempo reservado', num: true }, { t: 'Não utilizadas', num: true }, { t: 'Disputas', num: true }],
-        r.veiculos.map(function (v) { return [esc(v.placa), n(v.reservas), n(v.horas, 1), n(v.ocupacaoPct, 1) + '%', n(v.naoUtilizadas), v.disputas ? marca(n(v.disputas), v.disputas >= 3 ? 'critico' : 'alerta') : '0']; }), 'Nenhum veículo.') +
+        r.veiculos.map(function (v) { return [esc(rotV(v)), n(v.reservas), n(v.horas, 1), n(v.ocupacaoPct, 1) + '%', n(v.naoUtilizadas), v.disputas ? marca(n(v.disputas), v.disputas >= 3 ? 'critico' : 'alerta') : '0']; }), 'Nenhum veículo.') +
       '<p class="frr-meta">Disputas = pedidos de reserva recusados por sobreposição + retiradas bloqueadas por reserva. Por dia da semana: ' + r.diasSemana.map(function (d, i) { return d + ' ' + (r.disputasPorDia[i] || 0); }).join(' · ') + '.</p>' +
       '<h3>Por condutor</h3>' + tabela([{ t: 'Condutor' }, { t: 'Reservas', num: true }, { t: 'Cumpridas', num: true }, { t: 'Não utilizadas', num: true }, { t: 'Canceladas', num: true }, { t: 'Atrasos que afetaram reserva', num: true }],
         r.condutores.map(function (c) { return [esc(c.nome), n(c.reservas), n(c.cumpridas), n(c.naoUtilizadas), n(c.canceladas), c.atrasosAfetaram ? marca(n(c.atrasosAfetaram), 'critico') : '0']; }), 'Nenhuma reserva no período.') +
       '<h3>Liberações pela gestão</h3>' + tabela([{ t: 'Quando' }, { t: 'Veículo' }, { t: 'Reserva' }, { t: 'Liberado por' }, { t: 'Reservante' }, { t: 'Justificativa' }],
-        r.liberacoesLista.map(function (l) { return [esc(l.quando), esc(l.placa), esc(l.codigo), esc(l.por), esc(l.afetado), esc(l.justificativa)]; }), 'Nenhuma liberação no período.') +
+        r.liberacoesLista.map(function (l) { return [esc(l.quando), esc(rotV(l)), esc(l.codigo), esc(l.por), esc(l.afetado), esc(l.justificativa)]; }), 'Nenhuma liberação no período.') +
       '<h3>Atrasos que afetaram reserva</h3>' + tabela([{ t: 'Quando' }, { t: 'Veículo' }, { t: 'Reserva' }, { t: 'Condutor em atraso' }, { t: 'O que houve' }],
-        r.afetaramLista.map(function (l) { return [esc(l.quando), esc(l.placa), esc(l.codigo), esc(l.condutor), esc(l.detalhe)]; }), 'Nenhum atraso afetou reserva no período.');
+        r.afetaramLista.map(function (l) { return [esc(l.quando), esc(rotV(l)), esc(l.codigo), esc(l.condutor), esc(l.detalhe)]; }), 'Nenhum atraso afetou reserva no período.');
   }
   function gerarRelatorio() {
     var janela = window.open('', '_blank');

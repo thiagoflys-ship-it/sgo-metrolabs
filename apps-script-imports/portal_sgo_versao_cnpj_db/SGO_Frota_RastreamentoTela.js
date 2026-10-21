@@ -168,6 +168,12 @@ function FrotaR_telaNavegador_() {
   var SUBS = [['mapa', 'Mapa ao vivo'], ['rotas', 'Rotas'], ['combustivel', 'Combustível e KM'], ['relatorios', 'Relatórios'], ['aparelhos', 'Aparelhos e alertas'], ['config', 'Privacidade e configuração']];
 
   function esc(v) { return tplFrota_esc(v); }
+  // 21/10/2026: identificação dos veículos (apelido e base). O servidor manda rotuloVeiculo/identVeiculo em cada veículo;
+  // o filtro de base usa a mesma escolha guardada no navegador da tela de veículos (funções do módulo da Frota).
+  function rotV(x, completo) { return (x && (completo ? x.identVeiculo : x.rotuloVeiculo)) || (typeof tplFrota_rotuloVeic_ === 'function' ? tplFrota_rotuloVeic_(x, completo) : (x && (x.placa || x.PLACA)) || ''); }
+  function passaBase(x) { return typeof tplFrota_passaBase_ === 'function' ? tplFrota_passaBase_(x) : true; }
+  function seletorBase(id) { return typeof tplFrota_seletorBaseHtml_ === 'function' ? tplFrota_seletorBaseHtml_(id) : ''; }
+  function ligarBase(id, f) { if (typeof tplFrota_ligarSeletorBase_ === 'function') tplFrota_ligarSeletorBase_(id, f); }
   function num(v, c) { return v === null || v === undefined || v === '' ? '—' : tplFrota_num_(v, c || 0); }
   function moeda(v) { return tplFrota_moeda_(v); }
   function api(fn, p) { return tplFrota_chamarApiSilencioso_(fn, p || {}); }
@@ -188,7 +194,7 @@ function FrotaR_telaNavegador_() {
   }
   function opcoesVeiculos(lista, comTodos) {
     return (comTodos ? '<option value="">' + esc(comTodos) + '</option>' : '<option value="">Escolha o veículo</option>') +
-      (lista || []).map(function (v) { return '<option value="' + esc(v.ID) + '">' + esc(v.PLACA) + (v.MODELO ? ' — ' + esc(v.MODELO) : '') + '</option>'; }).join('');
+      (lista || []).map(function (v) { return '<option value="' + esc(v.ID) + '">' + esc(v.IDENT_VEICULO || (v.PLACA + (v.MODELO ? ' — ' + v.MODELO : ''))) + '</option>'; }).join('');
   }
   function carregarVeiculos() {
     if (R.veiculos) return Promise.resolve(R.veiculos);
@@ -279,9 +285,16 @@ function FrotaR_telaNavegador_() {
   function telaMapa(corpo) {
     corpo.innerHTML = '<div class="frr-faixa"><strong>Como usar:</strong> o mapa mostra onde está cada veículo com aparelho ligado e se atualiza sozinho a cada 30 segundos enquanto esta tela está aberta. ' +
       'Toque num veículo da lista para centralizar. As cores dizem a situação (legenda abaixo). Só a gestão vê; cada abertura fica registrada em "Quem consultou".</div>' +
-      '<div id="frr_mapaAviso"></div><div class="frr-mapa-wrap"><div id="frr_mapa" class="frr-mapa" role="region" aria-label="Mapa dos veículos"></div><div id="frr_lista" class="frr-lista" aria-live="polite"><span class="muted">Carregando...</span></div></div>' +
+      '<div class="frota-ident-topo">' + seletorBase('frr_mBase') + '</div><div id="frr_mapaAviso"></div><div class="frr-mapa-wrap"><div id="frr_mapa" class="frr-mapa" role="region" aria-label="Mapa dos veículos"></div><div id="frr_lista" class="frr-lista" aria-live="polite"><span class="muted">Carregando...</span></div></div>' +
       '<div class="frr-legenda" id="frr_legenda"></div><div class="frr-rodape"><span id="frr_atualizado"></span><button type="button" class="btn btn-sm" id="frr_atualizar">Atualizar agora</button></div>';
     el('frr_atualizar').onclick = function () { carregarMapa(false); };
+    ligarBase('frr_mBase', function () {
+      var r = R.dados;
+      if (!r || !r.veiculos) return;
+      R.ajustou = false;
+      desenharLista(r.veiculos.filter(passaBase));
+      garantirLeaflet().then(function (L) { desenharMarcadores(L, r.veiculos.filter(passaBase)); }).catch(function () {});
+    });
     carregarMapa(false);
   }
 
@@ -298,9 +311,9 @@ function FrotaR_telaNavegador_() {
         return;
       }
       aviso.innerHTML = (r.aviso ? '<div class="frr-faixa alerta">' + esc(r.aviso) + '</div>' : '') + (!r.veiculos.length ? '<div class="frr-faixa">Nenhum veículo tem aparelho do rastreador ligado. Ligue em "Aparelhos e alertas".</div>' : '');
-      desenharLista(r.veiculos);
+      desenharLista(r.veiculos.filter(passaBase));
       el('frr_atualizado').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR') + ' · próxima leitura em ' + r.intervaloSeg + ' s';
-      garantirLeaflet().then(function (L) { desenharMarcadores(L, r.veiculos); }).catch(function () {
+      garantirLeaflet().then(function (L) { desenharMarcadores(L, r.veiculos.filter(passaBase)); }).catch(function () {
         var m = el('frr_mapa');
         if (m && !R.mapa) m.innerHTML = '<p class="muted" style="padding:14px">O mapa de fundo não carregou (internet ou bloqueio da rede). A lista ao lado continua atualizada; use "abrir no mapa" de cada veículo.</p>';
       });
@@ -317,12 +330,13 @@ function FrotaR_telaNavegador_() {
     if (!lista) return;
     lista.innerHTML = vs.length ? vs.map(function (v) {
       var link = v.lat !== null ? 'https://www.openstreetmap.org/?mlat=' + v.lat + '&mlon=' + v.lon + '#map=17/' + v.lat + '/' + v.lon : '';
-      return '<button type="button" class="frr-veic" data-frr-veic="' + esc(v.id) + '" style="border-left-color:' + esc(v.cor) + '"><strong>' + esc(v.placa) + '</strong>' +
+      return '<button type="button" class="frr-veic" data-frr-veic="' + esc(v.id) + '" style="border-left-color:' + esc(v.cor) + '"><strong>' + esc(rotV(v)) + '</strong>' +
         '<span class="frr-chip" style="background:' + esc(v.cor) + '">' + esc(v.situacaoTexto) + '</span>' +
         (v.alertaUsoSemRegistro && v.situacao !== 'USO_SEM_REGISTRO' ? '<span class="frr-chip" style="background:#a61b1b">Alerta aberto</span>' : '') +
         '<div>' + (v.condutorNome ? 'Condutor: ' + esc(v.condutorNome) + (v.retiradaDesde ? ' (desde ' + esc(v.retiradaDesde) + ')' : '') : '<span class="frr-meta">Sem retirada aberta</span>') + '</div>' +
         '<div>' + (v.kmh !== null ? num(v.kmh) + ' km/h · ' : '') + esc(v.estadoTexto) + '</div>' +
         (v.local ? '<div class="frr-meta">' + esc(v.local) + '</div>' : '') +
+        (v.baseFrota ? '<div class="frr-meta">Base ' + esc(v.baseFrota) + '</div>' : '') +
         '<div class="frr-meta">' + (v.atualizadoEm ? 'Posição de ' + esc(v.atualizadoEm) + (v.idadeMin !== null ? ' (há ' + dur(v.idadeMin) + ')' : '') : 'Sem posição') +
         (link ? ' · <a href="' + esc(link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">abrir no mapa</a>' : '') + '</div></button>';
     }).join('') : '<span class="muted">Nenhum veículo com aparelho ligado.</span>';
@@ -332,7 +346,7 @@ function FrotaR_telaNavegador_() {
   }
 
   function popupVeic(v) {
-    return '<strong>' + esc(v.placa) + '</strong> ' + esc(v.modelo) + '<br>' + esc(v.situacaoTexto) + (v.condutorNome ? '<br>Condutor: ' + esc(v.condutorNome) : '') +
+    return '<strong>' + esc(rotV(v)) + '</strong> ' + esc(v.modelo) + (v.baseFrota ? ' · ' + esc(v.baseFrota) : '') + '<br>' + esc(v.situacaoTexto) + (v.condutorNome ? '<br>Condutor: ' + esc(v.condutorNome) : '') +
       '<br>' + (v.kmh !== null ? num(v.kmh) + ' km/h · ' : '') + esc(v.estadoTexto) + (v.local ? '<br>' + esc(v.local) : '') + '<br><small>Posição de ' + esc(v.atualizadoEm) + '</small>';
   }
 
@@ -354,7 +368,7 @@ function FrotaR_telaNavegador_() {
       var estilo = { radius: 9, color: '#ffffff', weight: 2, fillColor: v.cor, fillOpacity: 0.95 };
       if (!m) {
         m = L.circleMarker([v.lat, v.lon], estilo).addTo(R.mapa);
-        m.bindTooltip(v.placa, { permanent: true, direction: 'top', offset: [0, -8], className: 'frr-tt' });
+        m.bindTooltip(esc(v.apelido || v.placa), { permanent: true, direction: 'top', offset: [0, -8], className: 'frr-tt' });
         m.bindPopup(popupVeic(v));
         R.marcadores[v.id] = m;
       } else { m.setLatLng([v.lat, v.lon]); m.setStyle(estilo); m.setPopupContent(popupVeic(v)); }
@@ -390,7 +404,7 @@ function FrotaR_telaNavegador_() {
     api('apiRastrRetiradas', { veiculoId: val('frr_rVeic'), de: val('frr_rDe'), ate: val('frr_rAte') }).then(function (r) {
       alvo.innerHTML = '<h3>Retiradas no período</h3>' + tabela([{ t: 'Saída' }, { t: 'Chegada' }, { t: 'Veículo' }, { t: 'Condutor' }, { t: 'KM', num: true }, { t: 'Finalidade' }, { t: '' }],
         r.itens.map(function (x) {
-          return [esc(x.saida), esc(x.chegada), esc(x.placa), esc(x.condutor), x.km === null ? '—' : num(x.km), esc(x.finalidade || '—'),
+          return [esc(x.saida), esc(x.chegada), esc(rotV(x)), esc(x.condutor), x.km === null ? '—' : num(x.km), esc(x.finalidade || '—'),
             '<div class="frr-botoes"><button type="button" class="btn btn-sm" data-frr-rota="' + esc(x.id) + '">Ver rota</button><button type="button" class="btn btn-sm" data-frr-relrota="' + esc(x.id) + '">Relatório A4</button></div>'];
         }), 'Nenhuma retirada no período.');
       Array.prototype.forEach.call(alvo.querySelectorAll('[data-frr-rota]'), function (b) { b.onclick = function () { verRota({ movimentacaoId: b.getAttribute('data-frr-rota') }); }; });
@@ -404,7 +418,7 @@ function FrotaR_telaNavegador_() {
     alvo.innerHTML = '<span class="muted">Carregando a rota...</span>';
     apiC('apiRastrRota', p).then(function (r) {
       var a = r.analise, lim = r.limiteKmh;
-      var tit = r.tipo === 'RETIRADA' ? 'Rota da retirada: ' + r.retirada.placa + ' — ' + r.retirada.condutor : 'Rota do veículo ' + r.placa;
+      var tit = r.tipo === 'RETIRADA' ? 'Rota da retirada: ' + rotV(r.retirada) + ' — ' + r.retirada.condutor : 'Rota do veículo ' + rotV(r);
       var h = '<h3>' + esc(tit) + '</h3><p class="frr-meta">' + esc(r.periodo) + (r.tipo === 'RETIRADA' && r.retirada.finalidade ? ' · ' + esc(r.retirada.finalidade) : '') + '</p>';
       if (r.vazio) { alvo.innerHTML = h + '<div class="frr-faixa alerta">' + esc(r.vazio) + '</div>'; return; }
       var kpis = [[num(a.distanciaKm, 1) + ' km', 'Trajeto medido pela rota', '']];
@@ -474,13 +488,13 @@ function FrotaR_telaNavegador_() {
         '<h3>Consumo por veículo (' + esc(r.periodo) + ')</h3>' + tabela([{ t: 'Veículo' }, { t: 'Abastec.', num: true }, { t: 'Litros', num: true }, { t: 'Valor', num: true }, { t: 'KM informado', num: true }, { t: 'KM pela rota', num: true },
           { t: 'Custo/km', num: true }, { t: 'km/L no período', num: true }, { t: 'Média do veículo', num: true }, { t: 'Desvio', num: true }, { t: 'Tanque (L)' }],
         r.consumo.map(function (c) {
-          return ['<strong>' + esc(c.placa) + '</strong><div class="frr-meta">' + esc(c.modelo) + '</div>', String(c.abastecimentos), num(c.litros, 2), moeda(c.valor), num(c.kmInformado), c.kmRastreador === null ? '—' : num(c.kmRastreador, 1),
+          return ['<strong>' + esc(rotV(c)) + '</strong><div class="frr-meta">' + esc(c.modelo) + '</div>', String(c.abastecimentos), num(c.litros, 2), moeda(c.valor), num(c.kmInformado), c.kmRastreador === null ? '—' : num(c.kmRastreador, 1),
             c.custoPorKm === null ? '—' : moeda(c.custoPorKm), c.kmLPeriodo === null ? '—' : num(c.kmLPeriodo, 2), c.kmLReferencia === null ? '<span class="frr-meta">poucos dados</span>' : num(c.kmLReferencia, 2),
             c.desvioPct === null ? '—' : marca((c.desvioPct > 0 ? '+' : '') + num(c.desvioPct, 1) + '%', c.alertaConsumo ? 'critico' : 'ok'),
             '<div style="display:flex;gap:4px;min-width:130px"><input aria-label="Capacidade do tanque de ' + esc(c.placa) + '" data-frr-tq="' + esc(c.veiculoId) + '" value="' + (c.capacidadeTanque === null ? '' : esc(c.capacidadeTanque)) + '" inputmode="decimal" style="width:62px"><button type="button" class="btn btn-sm" data-frr-tqg="' + esc(c.veiculoId) + '">Gravar</button></div>'];
         }), 'Nenhum veículo ativo.') +
         '<h3>Abastecimentos a conferir</h3>' + tabela([{ t: 'Veículo' }, { t: 'Data' }, { t: 'Litros', num: true }, { t: 'KM', num: true }, { t: 'Comprovante' }, { t: 'Apontamento' }],
-          aConferir.map(function (a) { return [esc(a.placa), esc(a.data + (a.hora ? ' ' + a.hora : '')), num(a.litros, 2), num(a.km), a.comprovante ? '<a href="' + esc(a.comprovante) + '" target="_blank" rel="noopener">ver</a>' : marca('sem', 'critico'), a.apontamentos.map(function (p) { return esc(p.texto); }).join('<br>')]; }),
+          aConferir.map(function (a) { return [esc(rotV(a)), esc(a.data + (a.hora ? ' ' + a.hora : '')), num(a.litros, 2), num(a.km), a.comprovante ? '<a href="' + esc(a.comprovante) + '" target="_blank" rel="noopener">ver</a>' : marca('sem', 'critico'), a.apontamentos.map(function (p) { return esc(p.texto); }).join('<br>')]; }),
           'Nenhum abastecimento com apontamento no período (' + r.abastecimentos.length + ' conferidos).') +
         '<h3>KM por condutor</h3>' + tabela([{ t: 'Condutor' }, { t: 'Retiradas', num: true }, { t: 'KM informado', num: true }],
           r.kmPorCondutor.map(function (c) { return [esc(c.nome), String(c.retiradas), num(c.km)]; }), 'Nenhuma retirada concluída no período.');
@@ -510,7 +524,7 @@ function FrotaR_telaNavegador_() {
         '<h3>Pedidos de comprovante</h3>' + tabela([{ t: 'Pedido em' }, { t: 'Veículo' }, { t: 'Condutor' }, { t: 'O que pedir' }, { t: 'Prazo' }, { t: 'Situação' }, { t: '' }],
           (pedidos || []).map(function (p) {
             var sit = p.situacao === 'PENDENTE' ? marca(p.atrasado ? 'Atrasado' : 'Pendente', p.atrasado ? 'critico' : 'alerta') : p.situacao === 'ENVIADO' ? marca('Enviado ' + p.enviadoEm, 'ok') : marca('Cancelado', 'cinza');
-            return [esc(p.pedidoEm), esc(p.placa), esc(p.condutor), esc(p.motivo), esc(p.prazo), sit, p.situacao === 'PENDENTE' ? '<button type="button" class="btn btn-sm" data-frr-canc="' + esc(p.id) + '">Cancelar</button>' : ''];
+            return [esc(p.pedidoEm), esc(rotV(p)), esc(p.condutor), esc(p.motivo), esc(p.prazo), sit, p.situacao === 'PENDENTE' ? '<button type="button" class="btn btn-sm" data-frr-canc="' + esc(p.id) + '">Cancelar</button>' : ''];
           }), 'Nenhum pedido ainda.');
       el('frr_pEnviar').onclick = function () {
         if (R.enviando) return;
@@ -586,7 +600,7 @@ function FrotaR_telaNavegador_() {
     }).catch(function (err) { el('frr_cfg').innerHTML = erroHtml(err); });
     api('apiRastrConsultas').then(function (r) {
       el('frr_trilha').innerHTML = tabela([{ t: 'Quando' }, { t: 'Quem' }, { t: 'O quê' }, { t: 'Veículo' }, { t: 'Período' }, { t: 'Onde' }],
-        r.itens.map(function (x) { return [esc(x.quando), esc(x.quem) + ' <span class="frr-meta">' + esc(x.perfil) + '</span>', esc(x.acao), esc(x.placa || '—'), esc(x.periodo || '—'), esc(x.origem)]; }), 'Ninguém consultou ainda.');
+        r.itens.map(function (x) { return [esc(x.quando), esc(x.quem) + ' <span class="frr-meta">' + esc(x.perfil) + '</span>', esc(x.acao), esc(x.placa ? rotV(x) : '—'), esc(x.periodo || '—'), esc(x.origem)]; }), 'Ninguém consultou ainda.');
     }).catch(function (err) { el('frr_trilha').innerHTML = erroHtml(err); });
   }
 
@@ -628,8 +642,9 @@ function FrotaR_telaNavegador_() {
       '<div class="frg-nav"><button type="button" class="btn" id="frg_ant">‹ Anterior</button><button type="button" class="btn" id="frg_hoje">Hoje</button><button type="button" class="btn" id="frg_prox">Próximo ›</button></div>' +
       '<div class="frg-per"><div><label for="frr_gDe">De</label><input id="frr_gDe" value="' + esc(G.de) + '" inputmode="numeric" placeholder="dd/mm/aaaa"></div><div><label for="frr_gAte">Até</label><input id="frr_gAte" value="' + esc(G.ate) + '" inputmode="numeric" placeholder="dd/mm/aaaa"></div><button type="button" class="btn" id="frr_gAtualizar">Atualizar</button></div>' +
       (cel ? '<div class="frg-seg" role="group" aria-label="Como ver"><button type="button" data-frg-vista="lista" aria-pressed="' + (G.vista === 'lista') + '">Lista</button><button type="button" data-frg-vista="grafico" aria-pressed="' + (G.vista === 'grafico') + '">Gráfico</button></div>' : '') + '</div>' +
-      '<div id="frr_gRes"><span class="muted">Carregando...</span></div><div id="frr_gDetalhe" class="frr-meta" aria-live="polite" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>';
+      '<div class="frota-ident-topo">' + seletorBase('frr_gBase') + '</div><div id="frr_gRes"><span class="muted">Carregando...</span></div><div id="frr_gDetalhe" class="frr-meta" aria-live="polite" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>';
     var recarregar = function () { window.tplFrotaR_gantt_(corpo); };
+    ligarBase('frr_gBase', function () { if (G.dados) desenharGantt(G.dados); });
     Array.prototype.forEach.call(corpo.querySelectorAll('[data-frg-modo]'), function (b) {
       b.onclick = function () { var m = b.getAttribute('data-frg-modo'); if (m === G.modo) return; G.modo = m; var p = gtPadrao(m); G.de = p[0]; G.ate = p[1]; recarregar(); };
     });
@@ -664,7 +679,7 @@ function FrotaR_telaNavegador_() {
       '<div class="frg-leg-g"><b>Marcos</b>' + sw('frg-MANUTENCAO', 'Manutenção prevista', 'losango') + sw('frg-DOCUMENTO', 'Documento vence', 'losango') + sw('frg-DOCUMENTO vencida', 'vencido', 'losango') + '<span><i class="frg-sw linha"></i>Agora</span></div></div>';
   }
 
-  function gtGuardar(it, linha) { return gtItens.push({ it: it, placa: linha.veiculoId ? linha.placa : '' }) - 1; }
+  function gtGuardar(it, linha) { return gtItens.push({ it: it, placa: linha.veiculoId ? rotV(linha) : '' }) - 1; }
 
   function desenharGantt(r) {
     var alvo = el('frr_gRes');
@@ -672,11 +687,12 @@ function FrotaR_telaNavegador_() {
     gtFechar(true);
     gtItens = [];
     var G = R.gantt, S = window.SGOGantt;
+    r = Object.assign({}, r, { linhas: (r.linhas || []).filter(function (l) { return !l.veiculoId || passaBase(l); }) }); // 21/10/2026: filtro por base
     var com = r.linhas.filter(function (l) { return l.itens.length; });
     var sem = r.linhas.filter(function (l) { return !l.itens.length && l.veiculoId; });
     var nEv = com.reduce(function (s, l) { return s + l.itens.length; }, 0);
     var topo = '<p class="frg-resumo"><b>' + esc(r.periodo || '') + '</b> · ' + com.filter(function (l) { return l.veiculoId; }).length + ' veículo(s) com eventos · ' + nEv + ' evento(s)</p>' + gtLegenda();
-    var vaz = sem.length ? '<p class="frg-vazios">Sem eventos no período: ' + sem.map(function (l) { return esc(l.placa) + (l.modelo ? ' (' + esc(l.modelo) + ')' : ''); }).join(', ') + '.</p>' : '';
+    var vaz = sem.length ? '<p class="frg-vazios">Sem eventos no período: ' + sem.map(function (l) { return esc(rotV(l)) + (l.modelo ? ' (' + esc(l.modelo) + ')' : ''); }).join(', ') + '.</p>' : '';
     if (!S) { alvo.innerHTML = erroHtml({ message: 'O desenho do Gantt não carregou. Recarregue a página (F5).' }); return; }
     if (!com.length) { alvo.innerHTML = topo + '<p class="muted">Nada no período escolhido.</p>' + vaz + '<p class="frr-meta">' + esc(r.nota) + '</p>'; return; }
     var corpoHtml = gtCelular() && G.vista === 'lista' ? gtLista(r, com, S) : gtGrafico(r, com, S, alvo);
@@ -726,7 +742,7 @@ function FrotaR_telaNavegador_() {
           return '<button type="button" class="frg-b ' + gtClasse(p.item.grupo ? p.item.grupo[0] : p.item) + (p.curta ? ' curta' : '') + (p.agrupado ? ' grupo' : '') + '" data-frg="' + k + '" style="left:' + p.x.toFixed(1) + 'px;top:' + top + 'px;width:' + p.w.toFixed(1) + 'px" aria-label="' + aria + '">' + (p.posTexto === 'dentro' ? esc(p.texto) : '') + '</button>' + fora;
         }).join('') + '</div>';
       });
-      return '<div class="frg-linha"><div class="frg-rot" style="width:' + rotW + 'px"><div class="frg-nome">' + esc(l.placa) + (cel ? '' : '<small>' + esc(l.modelo) + '</small>') + '</div><div class="frg-tags" style="flex-basis:' + tagW + 'px">' + tags + '</div></div>' +
+      return '<div class="frg-linha"><div class="frg-rot" style="width:' + rotW + 'px"><div class="frg-nome">' + esc(rotV(l)) + (cel ? '' : '<small>' + esc(l.modelo) + '</small>') + '</div><div class="frg-tags" style="flex-basis:' + tagW + 'px">' + tags + '</div></div>' +
         '<div class="frg-trilhos" style="width:' + W + 'px">' + trilhos + '</div></div>';
     }).join('');
     return (e.rolar ? '<p class="frr-meta" style="margin:0 0 4px">Deslize o quadro para os lados para ver o período inteiro; o nome do veículo fica fixo.</p>' : '') +
@@ -747,7 +763,7 @@ function FrotaR_telaNavegador_() {
         if (!dias[d]) { dias[d] = []; ordem.push(d); }
         dias[d].push(it);
       });
-      return '<div class="frg-card"><h4>' + esc(l.placa) + '<small>' + esc(l.modelo) + '</small></h4>' + ordem.map(function (d) {
+      return '<div class="frg-card"><h4>' + esc(rotV(l)) + '<small>' + esc(l.modelo) + '</small></h4>' + ordem.map(function (d) {
         var q = S.partes(d);
         return '<div class="frg-dia' + (d === hojeIni ? ' hoje' : '') + '"><h5>' + esc(S.semana[q.s] + ', ' + S.dataCurta(d) + (d === hojeIni ? ' (hoje)' : '')) + '</h5>' + dias[d].map(function (it) {
           var k = gtGuardar(it, l), marco = GT_GRUPOS[it.tipo] === 'marco';
@@ -899,7 +915,7 @@ function FrotaR_telaNavegador_() {
       var tipos = ['Gasolina', 'Etanol', 'Diesel', 'Diesel S10', 'GNV', 'Outro'];
       alvo.innerHTML = r.itens.map(function (p) {
         var id = esc(p.id);
-        return '<div class="frr-pedido" data-frr-ped="' + id + '"><strong>Comprovante pedido a você: veículo ' + esc(p.placa) + (p.dataRef ? ' (' + esc(p.dataRef) + ')' : '') + '</strong>' +
+        return '<div class="frr-pedido" data-frr-ped="' + id + '"><strong>Comprovante pedido a você: veículo ' + esc(rotV(p)) + (p.dataRef ? ' (' + esc(p.dataRef) + ')' : '') + '</strong>' +
           '<div>' + esc(p.motivo) + '</div><div class="frr-meta">Pedido por ' + esc(p.pedidoPor) + ' em ' + esc(p.pedidoEm) + ' · prazo ' + esc(p.prazo) + (p.atrasado ? ' · ' : '') + (p.atrasado ? marca('prazo vencido', 'critico') : '') + '</div>' +
           '<div class="frr-form"><div><label>Data</label><input data-c="data" inputmode="numeric" placeholder="dd/mm/aaaa" value="' + esc(p.dataRef) + '"></div><div><label>Hora (se souber)</label><input data-c="hora" inputmode="numeric" placeholder="hh:mm"></div>' +
           '<div><label>KM do painel</label><input data-c="km" inputmode="numeric"></div><div><label>Litros</label><input data-c="litros" inputmode="decimal"></div><div><label>Valor (R$)</label><input data-c="valor" inputmode="decimal"></div>' +

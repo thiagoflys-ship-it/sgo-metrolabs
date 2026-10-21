@@ -66,7 +66,7 @@ function ambiente() {
   });
   vm.runInContext(ler('SGO_Utilis.js'), ctx);
   carregarAuth(ctx);
-  for (const f of ['SGO_Frota_Config.js', 'SGO_Frota_Main.js', 'SGO_Frota_Rastreador.js', 'SGO_Frota_Reservas.js']) vm.runInContext(ler(f), ctx);
+  for (const f of ['SGO_Frota_Config.js', 'SGO_Frota_Main.js', 'SGO_Frota_Identificacao.js', 'SGO_Frota_Rastreador.js', 'SGO_Frota_Reservas.js']) vm.runInContext(ler(f), ctx);
   return { ctx, tabelas, sessao };
 }
 

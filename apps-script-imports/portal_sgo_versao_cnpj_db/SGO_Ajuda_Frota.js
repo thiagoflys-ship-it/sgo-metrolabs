@@ -5,6 +5,7 @@
  * 19/10/2026 (revisão da Frota): abas reorganizadas, Gestão e melhoria, editar condutor, rastreador que se explica sozinho e KM rodado.
  * 20/10/2026: aba Rastreamento (mapa ao vivo, rotas, combustível e KM, relatórios, privacidade), Gantt e copiloto em Gestão e melhoria, comprovantes pedidos.
  * 20/10/2026: reservas de veículo (aba Reservas, devolução prevista na retirada, retirada bloqueada por reserva e liberação pela gestão).
+ * 21/10/2026: identificação fácil dos veículos (apelido, base, "Sugerir apelido", escolha da base nas listas, mapa, reservas e Gantt).
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -20,7 +21,8 @@ function SGO_ajudaTelas_Frota_() {
       passos: [
         { titulo: "Retirar um veículo", itens: [
           "Toque em \"Frota\" no menu.",
-          "Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis.",
+          "Se aparecerem os botões das bases (\"Todas\", \"Goiânia\", \"Rio de Janeiro\"...), toque na sua base. A escolha fica guardada no aparelho.",
+          "Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis. O nome grande é o apelido do carro (ex.: Onça); embaixo vêm a placa, o modelo, a cor e a base.",
           "Olhe o número no painel do carro.",
           "Se for igual ao KM que já aparece, não mexa.",
           "Se for diferente, corrija o número e toque em \"Tirar foto do painel (obrigatória: KM diferente)\".",
@@ -34,7 +36,7 @@ function SGO_ajudaTelas_Frota_() {
         ] },
         { titulo: "Devolver o veículo", itens: [
           "Abra a Frota (ou o Início, no celular).",
-          "Toque no botão verde \"Devolver\" com a placa do veículo.",
+          "Toque no botão verde \"Devolver\" com o apelido e a placa do veículo.",
           "Digite o KM que está no painel agora.",
           "Toque em \"Tirar foto do painel (obrigatória)\".",
           "Faça a vistoria: \"Tudo OK\" ou \"Tem problema\".",
@@ -78,6 +80,8 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "KM \"Diferente do KM registrado\"", oQueFazer: "Não é erro. Tire a foto do painel e continue. A gestão confere depois." },
         { situacao: "\"Esta retirada está com\" outra pessoa", oQueFazer: "Só quem retirou, ou a gestão, pode devolver. Peça a essa pessoa para registrar. Se não der, procure a gestão." },
         { situacao: "Tocou num veículo que está com outra pessoa", oQueFazer: "A tela mostra com quem ele está. Escolha outro veículo ou fale com essa pessoa." },
+        { situacao: "\"Nenhum veículo disponível em [base] agora\"", oQueFazer: "Na sua base todos estão em uso. Toque em \"Todas\" para ver os disponíveis das outras bases." },
+        { situacao: "Dois carros iguais (mesmo modelo e cor)", oQueFazer: "Confira o apelido e a placa no cartão antes de tocar. O apelido também está na chave ou no painel do carro, se a gestão colou a etiqueta." },
         { situacao: "\"Nenhum veículo disponível agora\"", oQueFazer: "Todos estão em uso. Veja em \"Em uso por outras pessoas\". A lista se atualiza sozinha quando alguém devolver." },
         { situacao: "\"O veículo ... não está mais disponível. A lista foi atualizada.\"", oQueFazer: "Outra pessoa retirou antes. Escolha outro veículo." },
         { situacao: "\"Partida não liberada pelo rastreador\" (só quando o bloqueio da partida estiver ligado)", oQueFazer: "A retirada já está registrada. Não registre de novo. Ligue para a gestão, que libera a partida." },
@@ -99,6 +103,7 @@ function SGO_ajudaTelas_Frota_() {
         { p: "Tirei a foto sem internet. Perdi?", r: "Não. O sistema tenta de novo sozinho em alguns segundos. Se ficar \"Não enviada\", toque na foto." },
         { p: "Toquei duas vezes em confirmar. Ficou em dobro?", r: "Não. O botão vira \"Registrando…\" e fica desligado. Se o pedido se repetir, aparece \"já estava registrada\" e nada é gravado em dobro." },
         { p: "Para que serve a devolução prevista?", r: "Para proteger quem reservou o veículo depois de você. Se a devolução passar do início da próxima reserva, você recebe a cobrança no sistema e em Minhas atividades, e a gestão e quem reservou são avisados." },
+        { p: "O que é o nome grande no cartão do veículo (Onça, Tucano...)?", r: "É o apelido do carro, para não confundir carros de mesmo modelo e cor. Cada veículo ativo tem um apelido diferente. Sem apelido, aparece a placa." },
         { p: "Para que serve a vistoria na devolução?", r: "Para comparar com a saída. Se um item saiu OK e voltou com problema, fica claro que aconteceu durante o uso." }
       ]
     },
@@ -496,6 +501,8 @@ function SGO_ajudaTelas_Frota_() {
           "titulo": "Ver os veículos no mapa",
           "itens": [
             "Abra a aba \"Rastreamento\". O \"Mapa ao vivo\" abre primeiro.",
+            "Em \"Base\", acima do mapa, escolha a cidade para ver só os carros dela (\"Todas as bases\" mostra todos).",
+            "No mapa, cada veículo aparece com o apelido (ou a placa, se ainda não tiver apelido). Na lista ao lado vêm apelido, placa e base.",
             "Leia a cor de cada veículo na legenda abaixo do mapa.",
             "Toque num veículo da lista para centralizar o mapa nele e ver condutor, velocidade e local.",
             "A tela se atualiza sozinha a cada 30 segundos enquanto estiver aberta. \"Atualizar agora\" lê na hora (se já passaram 30 segundos)."
@@ -650,7 +657,8 @@ function SGO_ajudaTelas_Frota_() {
         ] },
         { titulo: "Ver a agenda", itens: [
           "Na parte \"Agenda\", escolha \"Semana\" ou \"Dia\". Use \"‹ Anterior\", \"Hoje\" e \"Próximo ›\" para andar no tempo.",
-          "Cada linha é um veículo. Toque numa reserva para ver o detalhe."
+          "Em \"Base\", no fim da barra, escolha a cidade para ver só os carros dela.",
+          "Cada linha é um veículo, com o apelido e a placa (ex.: Onça · PQB4394). Toque numa reserva para ver o detalhe."
         ] },
         { titulo: "Cancelar ou trocar o veículo", itens: [
           "Abra \"Minhas reservas\".",
@@ -808,6 +816,7 @@ function SGO_ajudaTelas_Frota_() {
             "Toque em \"Gantt da frota\".",
             "Escolha a escala: \"Dia\" (uma marca por hora), \"Semana\" (um dia por coluna; abre de 7 dias antes a 14 dias depois de hoje) ou \"Mês\" (um rótulo por semana).",
             "Use \"‹ Anterior\", \"Hoje\" e \"Próximo ›\" para andar no tempo, ou escreva as datas em \"De\" e \"Até\" e toque em \"Atualizar\".",
+            "Em \"Base\", escolha a cidade para ver só os carros dela. O nome de cada linha é o apelido e a placa do veículo.",
             "Cada veículo tem as sub-linhas \"Planejado\" (reservas e manutenção programada), \"Realizado\" (retiradas e paradas) e, quando houver, \"Marcos\" (losangos de manutenção prevista e documento que vence). A última linha, \"Ações dos planos\", mostra as ações de Minhas atividades.",
             "O que acontece ao mesmo tempo fica um embaixo do outro, nunca por cima. Várias retiradas curtas no mesmo dia viram um bloco só (\"7 retiradas\"): toque nele para ver a lista e em \"Ver este dia um a um\".",
             "O nome aparece dentro da barra quando cabe inteiro; senão, ao lado. Para ver tudo, passe o mouse ou toque na barra ou no losango: o balão mostra condutor, saída, devolução, KM e situação. Toque fora ou em \"×\" para fechar.",
@@ -932,7 +941,25 @@ function SGO_ajudaTelas_Frota_() {
           "Abra a aba \"Veículos e condutores\".",
           "Toque em \"+ Cadastrar novo veículo\".",
           "Preencha placa, modelo, marca, ano, cor e \"KM atual\".",
+          "Em \"Apelido\", escreva como a equipe vai chamar o carro (ex.: Onça) ou toque em \"Sugerir apelido\": vem um nome de animal que nenhum veículo usa. Toque de novo para outro nome.",
+          "Em \"Base\", escolha a cidade onde o carro fica (ex.: Goiânia ou Rio de Janeiro).",
           "Toque em \"Salvar veículo\"."
+        ] },
+        { titulo: "Dar apelido e base a um veículo já cadastrado", itens: [
+          "No topo da lista, o aviso \"N veículos ativos sem apelido\" mostra quantos faltam (nada fica travado enquanto isso).",
+          "Na linha do veículo, toque em \"Editar\".",
+          "Preencha \"Apelido\" (ou toque em \"Sugerir apelido\") e escolha a \"Base\".",
+          "Toque em \"Salvar edição\". O apelido passa a aparecer em todas as telas, no mapa, nas reservas, no Gantt, nos avisos e nos relatórios. Campo vazio mantém o que já estava gravado."
+        ] },
+        { titulo: "Ver só os carros de uma base", itens: [
+          "Acima da lista, em \"Base\", escolha a cidade. \"Todas as bases\" mostra a frota inteira.",
+          "A escolha fica guardada neste navegador e vale também para o mapa, a agenda das reservas e o Gantt.",
+          "Veículo ainda sem base aparece em todas as bases até a gestão escolher a dele."
+        ] },
+        { titulo: "Mudar a lista de bases", itens: [
+          "Abra \"Bases da frota\", embaixo do botão \"+ Cadastrar novo veículo\".",
+          "Escreva uma base por linha (ex.: Goiânia, Rio de Janeiro, Brasília).",
+          "Toque em \"Gravar bases\". Base com veículo ativo não sai da lista: troque a base desses veículos em \"Editar\" antes."
         ] },
         { titulo: "Cadastrar um condutor", itens: [
           "Toque em \"+ Cadastrar novo condutor\".",
@@ -954,6 +981,10 @@ function SGO_ajudaTelas_Frota_() {
       ],
       problemas: [
         { situacao: "\"Já existe um veículo cadastrado com essa placa.\"", oQueFazer: "O veículo já está no cadastro. Procure na lista." },
+        { situacao: "\"O apelido ... já é do veículo ...\"", oQueFazer: "Cada veículo ativo tem um apelido diferente (maiúscula e acento não contam: Onça e onca são o mesmo). Escolha outro ou toque em \"Sugerir apelido\"." },
+        { situacao: "\"A base ... não está na lista de bases da Frota\"", oQueFazer: "Escolha uma base da lista. Para incluir uma cidade nova, use \"Bases da frota\"." },
+        { situacao: "Ao reativar: \"O apelido ... já é do veículo ...\"", oQueFazer: "Outro veículo ativo ficou com o mesmo apelido. Toque em \"Editar\" no veículo inativo, troque o apelido e reative." },
+        { situacao: "\"A base ... ainda está em uso\" ao gravar as bases", oQueFazer: "Troque a base dos veículos listados em \"Editar\" e grave a lista de novo." },
         { situacao: "\"Este usuário já está vinculado ao condutor\"", oQueFazer: "Cada login só pode ter um condutor. Escolha outro usuário." },
         { situacao: "\"Este veículo está em uso\" ao inativar", oQueFazer: "Registre a devolução primeiro e depois inative." },
         { situacao: "Aviso de CNH vencida ou a vencer no Início", oQueFazer: "Quando chegar a CNH nova, toque em \"Editar\" no condutor, grave a nova validade e anexe a CNH em \"Trocar CNH\". O aviso some sozinho." },
@@ -964,7 +995,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "\"CNH até ...\" em amarelo", significado: "A CNH vence em até 30 dias." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar, reativar, anexar CNH e ver telefone e CNH dos condutores." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar, reativar, anexar CNH e ver telefone e CNH dos condutores. Dar apelido e base aos veículos e mudar a lista de bases." },
         { perfil: "TODOS", pode: "Ver as listas (dos colegas, só o nome)." }
       ]
     },

@@ -544,25 +544,26 @@ function Pend_fonteFrota_(add) {
       var dias = a.vencimento ? diasAte(a.vencimento) : null;
       var critico = a.status === 'VENCIDO' || (dias !== null && dias <= 0);
       var placa = Pend_s_(a.veiculoPlaca) || 'sem placa';
+      var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
       var venc = Pend_iso_(a.vencimento);
       if (a.categoria === 'DOCUMENTO') {
         add(Pend_item_(critico ? 'veiculo_doc_vencido' : 'veiculo_doc_vencendo', {
-          id: 'FROTA:DOC:' + Pend_s_(a.veiculoId) + ':' + Pend_s_(a.tipo), nome: placa + ' (' + a.tipoLabel + ')', publico: 'GESTAO',
+          id: 'FROTA:DOC:' + Pend_s_(a.veiculoId) + ':' + Pend_s_(a.tipo), nome: placaRot + ' (' + a.tipoLabel + ')', publico: 'GESTAO',
           gravidade: critico ? 'CRITICO' : 'ATENCAO', dias: dias, vencimento: Pend_br_(venc), responsavel: 'Gestão da frota',
-          titulo: a.tipoLabel + ' do veículo ' + placa + (dias === 0 ? ' vence hoje' : (critico ? ' vencido' : ' vence') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : '')),
+          titulo: a.tipoLabel + ' do veículo ' + placaRot + (dias === 0 ? ' vence hoje' : (critico ? ' vencido' : ' vence') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : '')),
           detalhe: 'Documento do veículo ' + Pend_textoPrazo_(dias, false) + '. Veículo com documento vencido não deve circular.',
-          oQueFazer: 'Renove o ' + a.tipoLabel + ' e cadastre o novo em Frota > Documentos e multas (veículo ' + placa + '); o novo substitui o vencido.',
+          oQueFazer: 'Renove o ' + a.tipoLabel + ' e cadastre o novo em Frota > Documentos e multas (veículo ' + placaRot + '); o novo substitui o vencido.',
           textoEstavel: 'O veículo \'' + placa + '\' está com o documento \'' + a.tipoLabel + '\' ' + (critico ? 'vencido' : 'vencendo') + (venc ? ' (validade ' + Pend_br_(venc) + ')' : '') + '.'
         }));
       } else {
         var porKm = !venc;
         add(Pend_item_(critico ? 'manutencao_vencida' : 'manutencao_vencendo', {
-          id: 'FROTA:MAN:' + Pend_s_(a.veiculoId) + ':' + Pend_s_(a.tipo), nome: placa + ' (' + a.tipoLabel + ')', publico: 'GESTAO',
+          id: 'FROTA:MAN:' + Pend_s_(a.veiculoId) + ':' + Pend_s_(a.tipo), nome: placaRot + ' (' + a.tipoLabel + ')', publico: 'GESTAO',
           gravidade: critico ? 'CRITICO' : 'ATENCAO', dias: dias, vencimento: Pend_br_(venc), responsavel: 'Gestão da frota',
-          titulo: a.tipoLabel + ' do veículo ' + placa + (critico ? ' vencida' : ' a vencer') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : ''),
+          titulo: a.tipoLabel + ' do veículo ' + placaRot + (critico ? ' vencida' : ' a vencer') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : ''),
           detalhe: porKm ? (critico ? 'Passou da quilometragem prevista para a manutenção.' : 'Faltam menos de ' + Pend_num_((typeof FROTA_CFG !== 'undefined' && FROTA_CFG.KM_AVISO_VENCIMENTO) || 500) + ' km para a manutenção prevista.')
             : 'Manutenção ' + Pend_textoPrazo_(dias, true) + (critico ? ' (pela data ou pela quilometragem, o que vencer primeiro).' : '.'),
-          oQueFazer: 'Faça a manutenção e lance em Frota > Manutenção e paradas (veículo ' + placa + '); o alerta some quando a nova manutenção for registrada.',
+          oQueFazer: 'Faça a manutenção e lance em Frota > Manutenção e paradas (veículo ' + placaRot + '); o alerta some quando a nova manutenção for registrada.',
           textoEstavel: 'O veículo \'' + placa + '\' está com a manutenção \'' + a.tipoLabel + '\' ' + (critico ? 'vencida' : 'vencendo') + (venc ? ' (prevista para ' + Pend_br_(venc) + ')' : ' (pela quilometragem)') + '.'
         }));
       }
@@ -597,11 +598,12 @@ function Pend_fonteFrota_(add) {
     if (Pend_s_(m.CONDUTOR_ID) && !ambigua) return;
     var v = veiculos[Pend_s_(m.VEICULO_ID)] || {};
     var placa = Pend_s_(v.PLACA) || 'veículo não identificado';
+    var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
     var data = Pend_br_(Pend_iso_(m.DATA_INFRACAO));
     add(Pend_item_('multa_conferir', {
-      id: 'FROTA:MULTA:' + Pend_s_(m.ID), nome: placa + (data ? ' (' + data + ')' : ''), publico: 'GESTAO', gravidade: 'ATENCAO', dias: null,
+      id: 'FROTA:MULTA:' + Pend_s_(m.ID), nome: placaRot + (data ? ' (' + data + ')' : ''), publico: 'GESTAO', gravidade: 'ATENCAO', dias: null,
       vencimento: data, responsavel: 'Gestão da frota',
-      titulo: 'Multa do veículo ' + placa + (data ? ' de ' + data : '') + (ambigua ? ' com condutor a conferir' : ' sem condutor definido'),
+      titulo: 'Multa do veículo ' + placaRot + (data ? ' de ' + data : '') + (ambigua ? ' com condutor a conferir' : ' sem condutor definido'),
       detalhe: ambigua ? 'Mais de uma retirada cobre o horário da infração; o condutor gravado é só um palpite.' : 'O cruzamento automático não achou retirada no horário da infração.',
       oQueFazer: 'Em Frota > Documentos e multas, confira as retiradas do horário da infração e indique o condutor responsável.',
       textoEstavel: 'O veículo \'' + placa + '\' tem uma multa' + (data ? ' (' + data + ')' : '') + (ambigua ? ' com condutor a conferir' : ' sem condutor vinculado') + '. Indique em Frota > Multas.'
@@ -621,15 +623,16 @@ function Pend_fonteFrota_(add) {
     if (horasFora <= limiteHoras) return;
     var v = veiculos[Pend_s_(m.VEICULO_ID)] || {}, c = condutores[Pend_s_(m.CONDUTOR_ID)] || {};
     var placa = Pend_s_(v.PLACA) || 'veículo não identificado', nome = Pend_s_(c.NOME) || 'condutor não identificado';
+    var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
     var dataSaida = typeof Frota_textoData_ === 'function' ? Frota_textoData_(m.DATA_SAIDA) : Pend_br_(Pend_iso_(m.DATA_SAIDA));
     var horaSaida = typeof Frota_textoHora_ === 'function' ? Frota_textoHora_(m.HORA_SAIDA) : Pend_s_(m.HORA_SAIDA);
     var fora = horasFora < 48 ? Pend_num_(Math.floor(horasFora)) + ' horas' : Pend_dias_(Math.floor(horasFora / 24));
     add(Pend_item_('frota_viagem_aberta', {
-      id: 'FROTA:VIAGEM:' + Pend_s_(m.ID), nome: placa + ' (' + nome + ')', publico: 'GESTAO', paraUsuarios: [Pend_s_(c.USUARIO_ID)], responsavel: nome, responsavelId: Pend_s_(c.USUARIO_ID),
+      id: 'FROTA:VIAGEM:' + Pend_s_(m.ID), nome: placaRot + ' (' + nome + ')', publico: 'GESTAO', paraUsuarios: [Pend_s_(c.USUARIO_ID)], responsavel: nome, responsavelId: Pend_s_(c.USUARIO_ID),
       gravidade: 'ATENCAO', dias: null, vencimento: dataSaida,
-      titulo: 'Possível devolução esquecida: veículo ' + placa + ' fora há ' + fora,
+      titulo: 'Possível devolução esquecida: veículo ' + placaRot + ' fora há ' + fora,
       detalhe: 'Retirado por ' + nome + ' em ' + (dataSaida || 'data não informada') + (horaSaida ? ' às ' + horaSaida : '') + ' e sem devolução registrada há mais de ' + limiteHoras + ' horas.',
-      oQueFazer: 'Se o veículo já voltou, registre a devolução agora em Frota > Situação e retiradas (botão verde "Devolver" com a placa: KM, vistoria e fotos). Se ainda está com você, nada a fazer: o aviso some quando a devolução for registrada.',
+      oQueFazer: 'Se o veículo já voltou, registre a devolução agora em Frota > Situação e retiradas (botão verde "Devolver" com a placaRot: KM, vistoria e fotos). Se ainda está com você, nada a fazer: o aviso some quando a devolução for registrada.',
       oQueFazerOutro: 'Confirme com ' + nome + '. Se o veículo já voltou, ' + nome + ' registra a devolução; se não puder, a gestão registra no lugar dele em Frota > Situação e retiradas > "Em uso por outras pessoas", com justificativa (o condutor é avisado).',
       textoEstavel: 'O veículo \'' + placa + '\' saiu em ' + dataSaida + ' com ' + nome + ' e não tem devolução registrada.'
     }));
@@ -639,12 +642,13 @@ function Pend_fonteFrota_(add) {
   if (typeof Frota_kmAConferir_ === 'function') {
     Frota_kmAConferir_().forEach(function (k) {
       var placa = k.placa || 'veículo não identificado';
+      var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
       // 19/10/2026: etapa RASTREADOR_CHEGADA = KM rodado informado x KM rodado medido pelo rastreador (Rastreador_kmRodadoConferencia_).
       var etapaTxt = (/SAIDA$/.test(k.etapa) ? 'retirada' : 'devolução') + (k.rastreador ? ' (KM rodado pelo rastreador)' : '');
       add(Pend_item_('frota_km_conferir', {
-        id: 'FROTA:KM:' + k.movimentacaoId + ':' + k.etapa, nome: placa + ' (' + etapaTxt + ' de ' + k.data + ')', publico: 'GESTAO',
+        id: 'FROTA:KM:' + k.movimentacaoId + ':' + k.etapa, nome: placaRot + ' (' + etapaTxt + ' de ' + k.data + ')', publico: 'GESTAO',
         gravidade: 'ATENCAO', dias: null, vencimento: k.data, responsavel: 'Gestão da frota',
-        titulo: 'KM a conferir: veículo ' + placa + ' na ' + etapaTxt + ' de ' + k.data,
+        titulo: 'KM a conferir: veículo ' + placaRot + ' na ' + etapaTxt + ' de ' + k.data,
         detalhe: k.motivo + '. Condutor: ' + (k.condutorNome || 'não identificado') + '.' + (k.fotos && k.fotos.length ? ' Registrado com foto do painel.' : ''),
         oQueFazer: k.rastreador
           ? 'Abra Frota > Situação e retiradas > KM a conferir e compare o KM rodado informado com o medido pelo rastreador (veja a foto do painel). Se o condutor digitou errado, use "Ajustar KM" com a justificativa; depois clique em "Conferido".'
@@ -672,6 +676,7 @@ function Pend_fonteFrota_(add) {
     if (!uid) return;
     var v = veiculos[Pend_s_(m.VEICULO_ID)] || {};
     var placa = Pend_s_(v.PLACA) || 'veículo não identificado';
+    var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
     [['SAIDA', 'retirada'], ['CHEGADA', 'devolução']].forEach(function (e) {
       if (SGO_UTILS.safeUpper(m['REGISTRO_GESTAO_' + e[0]]) !== 'SIM') return;
       var por = Pend_s_(m['REGISTRADO_' + e[0] + '_POR_ID']);
@@ -682,9 +687,9 @@ function Pend_fonteFrota_(add) {
       var hora = typeof Frota_textoHora_ === 'function' ? Frota_textoHora_(m[e[0] === 'SAIDA' ? 'HORA_SAIDA' : 'HORA_CHEGADA']) : '';
       var quem = Pend_s_(m['REGISTRADO_' + e[0] + '_POR_NOME']) || 'a gestão';
       add(Pend_item_('frota_registro_gestao', {
-        id: 'FROTA:GESTAO:' + Pend_s_(m.ID) + ':' + e[0], nome: placa + ' (' + e[1] + ')', publico: 'PESSOA', paraUsuarios: [uid],
+        id: 'FROTA:GESTAO:' + Pend_s_(m.ID) + ':' + e[0], nome: placaRot + ' (' + e[1] + ')', publico: 'PESSOA', paraUsuarios: [uid],
         responsavel: Pend_s_(c.NOME), responsavelId: uid, gravidade: 'INFO', dias: null, vencimento: data,
-        titulo: 'A gestão registrou a ' + e[1] + ' do veículo ' + placa + ' em seu nome',
+        titulo: 'A gestão registrou a ' + e[1] + ' do veículo ' + placaRot + ' em seu nome',
         detalhe: 'Registrado por ' + quem + ' com ' + (e[0] === 'SAIDA' ? 'saída' : 'chegada') + ' em ' + data + (hora ? ' às ' + hora : '') +
           ' e KM ' + Pend_num_(typeof Frota_num_ === 'function' ? Frota_num_(m[e[0] === 'SAIDA' ? 'KM_SAIDA' : 'KM_CHEGADA'], 0) : Number(m[e[0] === 'SAIDA' ? 'KM_SAIDA' : 'KM_CHEGADA']) || 0) + '. Justificativa: ' + (Pend_s_(m['JUSTIFICATIVA_' + e[0]]) || 'não informada') + '.',
         oQueFazer: 'Confira os dados na Frota. Se algo estiver errado, fale com ' + quem + ' ou com a gestão. Este aviso some sozinho em ' + diasInfo + ' dias.',
@@ -736,10 +741,11 @@ function Pend_fonteQualidade_(add, ctx) {
       if (!motivos.length) return;
       var v = veic[Pend_s_(m.VEICULO_ID)] || {}, c = cond[Pend_s_(m.CONDUTOR_ID)] || {};
       var placa = Pend_s_(v.PLACA) || 'veículo não identificado', nome = Pend_s_(c.NOME) || 'condutor não identificado';
+      var placaRot = typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(placa) : placa; // 21/10/2026: apelido do veículo (Onça · PQB4394)
       add(Pend_item_('qualidade_mov', {
-        id: 'QUAL:MOV:' + Pend_s_(m.ID), nome: placa + ' (' + Pend_br_(data) + ')', publico: 'GESTAO', paraUsuarios: [Pend_s_(c.USUARIO_ID)], responsavel: nome, responsavelId: Pend_s_(c.USUARIO_ID),
+        id: 'QUAL:MOV:' + Pend_s_(m.ID), nome: placaRot + ' (' + Pend_br_(data) + ')', publico: 'GESTAO', paraUsuarios: [Pend_s_(c.USUARIO_ID)], responsavel: nome, responsavelId: Pend_s_(c.USUARIO_ID),
         gravidade: 'ATENCAO', dias: null, vencimento: Pend_br_(data),
-        titulo: 'Retirada do veículo ' + placa + ' em ' + Pend_br_(data) + ' com registro incompleto',
+        titulo: 'Retirada do veículo ' + placaRot + ' em ' + Pend_br_(data) + ' com registro incompleto',
         detalhe: 'Falta: ' + motivos.slice(0, 4).join('; ') + (motivos.length > 4 ? ' e mais ' + (motivos.length - 4) : '') + '. Condutor ' + nome + '.',
         oQueFazer: 'Abra a Frota, confira esta movimentação e complete o que falta (checklist, fotos e KM).',
         oQueFazerOutro: 'Confira com ' + nome + ' e complete a movimentação na Frota; se não der para corrigir, registre a observação no Painel de qualidade.',

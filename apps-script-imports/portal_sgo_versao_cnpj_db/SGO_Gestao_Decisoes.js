@@ -451,16 +451,16 @@ function Gestao_fontePendencias_(add, ctx) {
       if (etapa === 'ANALISE') {
         var desde = Ges_dia_(c.CRIADO_EM) || hoje, pz = Ges_somarDiasUteis_(desde, GES_TIPOS.frota_caso.prazo, cfgExp);
         add(Pend_item_('frota_caso', {
-          id: 'FROTA:CASO:' + Ges_s_(c.ID), nome: Ges_s_(c.CODIGO) + ' · ' + Ges_s_(c.PLACA), publico: 'GESTAO', responsavel: Ges_nomeDe_(us, dono), responsavelId: '',
+          id: 'FROTA:CASO:' + Ges_s_(c.ID), nome: Ges_s_(c.CODIGO) + ' · ' + (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(Ges_s_(c.PLACA)) : Ges_s_(c.PLACA)), publico: 'GESTAO', responsavel: Ges_nomeDe_(us, dono), responsavelId: '',
           gravidade: grav(pz), dias: Pend_diasAte_(pz, hoje), vencimento: Ges_brDia_(pz),
           titulo: 'Caso ' + Ges_s_(c.CODIGO) + ' da Frota em análise: ' + Ges_s_(c.TITULO).slice(0, 90),
-          detalhe: 'Veículo ' + (Ges_s_(c.PLACA) || 'não informado') + '. Falta decidir a causa e o que fazer (resolver direto ou plano de ação).',
+          detalhe: 'Veículo ' + ((typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(Ges_s_(c.PLACA)) : Ges_s_(c.PLACA)) || 'não informado') + '. Falta decidir a causa e o que fazer (resolver direto ou plano de ação).',
           oQueFazer: 'Abra Frota > Gestão e melhoria > Kanban, preencha os 5 Porquês e decida: resolver direto ou criar o plano de ação.',
           extra: { prazo: pz, decisor: dono, area: areaFrota, desde: desde }
         }));
       } else if (quando && quando < hoje) {
         add(Pend_item_('plano_atrasado', {
-          id: 'FROTA:PLANO:' + Ges_s_(c.ID), nome: Ges_s_(c.CODIGO) + ' · ' + Ges_s_(c.PLACA), publico: 'GESTAO', responsavel: Ges_nomeDe_(us, dono), responsavelId: '',
+          id: 'FROTA:PLANO:' + Ges_s_(c.ID), nome: Ges_s_(c.CODIGO) + ' · ' + (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(Ges_s_(c.PLACA)) : Ges_s_(c.PLACA)), publico: 'GESTAO', responsavel: Ges_nomeDe_(us, dono), responsavelId: '',
           gravidade: 'CRITICO', dias: Pend_diasAte_(quando, hoje), vencimento: Ges_brDia_(quando),
           titulo: 'Plano de ação do caso ' + Ges_s_(c.CODIGO) + ' (Frota) passou do prazo de ' + Ges_brDia_(quando),
           detalhe: 'O quê: ' + Ges_s_(c.O_QUE).slice(0, 160) + '. Quem: ' + (Ges_s_(c.QUEM_NOME) || 'não informado') + '.',
@@ -492,7 +492,7 @@ function Gestao_fontePendencias_(add, ctx) {
     cop.itens.forEach(function (s) {
       var desde = Ges_s_(s.desde) || hoje, pz = Ges_somarDiasUteis_(desde, GES_TIPOS.frota_copiloto.prazo, cfgExp);
       add(Pend_item_('frota_copiloto', {
-        id: 'FROTA:COPILOTO:' + Ges_s_(s.chave), nome: Ges_s_(s.placa) || 'Frota', publico: 'GESTAO', responsavel: 'Gestão da frota', responsavelId: Ges_s_(s.condutorUsuarioId),
+        id: 'FROTA:COPILOTO:' + Ges_s_(s.chave), nome: (typeof FrotaId_rotuloRapido_ === 'function' && s.placa ? FrotaId_rotuloRapido_(Ges_s_(s.placa)) : Ges_s_(s.placa)) || 'Frota', publico: 'GESTAO', responsavel: 'Gestão da frota', responsavelId: Ges_s_(s.condutorUsuarioId),
         gravidade: 'ATENCAO', dias: Pend_diasAte_(pz, hoje), vencimento: Ges_brDia_(pz),
         titulo: 'Copiloto da Frota: ' + Ges_s_(s.titulo).slice(0, 110), detalhe: Ges_s_(s.detalhe).slice(0, 240),
         oQueFazer: 'Abra Frota > Gestão e melhoria > Copiloto e aceite (vira caso, atividade ou pedido de comprovante) ou descarte com o motivo.',

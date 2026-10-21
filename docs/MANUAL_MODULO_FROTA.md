@@ -37,7 +37,20 @@ Cada veículo e cada condutor são cadastrados uma vez só. Isso é feito pela g
 
 1. Toque em "+ Cadastrar novo veículo".
 2. Preencha placa, modelo, marca, ano, cor e "KM atual".
-3. Toque em "Salvar veículo".
+3. Em "Apelido", escreva como a equipe vai chamar o carro (ex.: Onça) ou toque em "Sugerir apelido": vem um nome de animal brasileiro que nenhum veículo usa. Toque de novo para outro nome.
+4. Em "Base", escolha a cidade onde o carro fica (ex.: Goiânia ou Rio de Janeiro).
+5. Toque em "Salvar veículo".
+
+### Apelido e base: como reconhecer cada carro
+
+Temos carros de mesmo modelo e cor, em Goiânia e no Rio de Janeiro. Por isso cada veículo pode ter um **apelido** (Onça, Tucano, Capivara...) e uma **base** (a cidade onde ele fica). Em todo lugar o veículo aparece assim: **Onça · PQB4394 · Onix branco · Goiânia** (nas listas apertadas, só **Onça · PQB4394**). Sem apelido, aparece a placa, como antes.
+
+- **Onde aparece:** lista e cartão de veículos, tela de retirar e devolver (computador e celular), reservas e agenda, mapa do rastreamento (nome do marcador), Gantt da frota, Kanban da gestão, multas, abastecimentos, manutenção, documentos, comprovantes, avisos do Início e Caixa de decisões, relatórios A4 da Frota e o COMMAND (Frota e Reservas).
+- **Apelido único:** dois veículos ativos não têm o mesmo apelido. Maiúscula, acento, hífen e espaço não contam ("Lobo-guará" e "lobo guara" são o mesmo). Veículo inativo não segura o nome, mas para reativá-lo com um nome que outro ativo já usa é preciso trocar o apelido antes.
+- **Dar apelido a um veículo já cadastrado:** na lista, o aviso "N veículos ativos sem apelido" mostra quantos faltam. Toque em "Editar" na linha, preencha "Apelido" e "Base" e toque em "Salvar edição". Campo vazio mantém o que já estava gravado. Nada fica travado enquanto faltar apelido.
+- **Escolher a base:** acima da lista de veículos, do mapa, da agenda das reservas e do Gantt há o campo "Base". No celular e na tela de retirar, são botões ("Todas", "Goiânia", "Rio de Janeiro"). A escolha fica guardada no navegador ou no celular e vale para todas essas telas. Veículo ainda sem base aparece em todas as bases.
+- **Lista de bases:** a gestão muda em "Bases da frota" (embaixo de "+ Cadastrar novo veículo"), uma cidade por linha, e toca em "Gravar bases". Padrão: Goiânia e Rio de Janeiro. Base com veículo ativo não sai da lista: troque a base desses veículos antes.
+- **Quem pode:** Administrador, Diretoria, Gestor, RH e Financeiro dão apelido, escolhem a base e mudam a lista. A equipe vê e escolhe a base para filtrar.
 
 ### Cadastrar um condutor
 
@@ -63,7 +76,7 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 ## 5. Retirar veículo
 
 1. Abra a Frota.
-2. Em "Retirar um veículo", toque no cartão do veículo. Só aparecem os disponíveis.
+2. Em "Retirar um veículo", toque na sua base (botões "Todas", "Goiânia", "Rio de Janeiro"...) e no cartão do veículo. Só aparecem os disponíveis. O nome grande é o apelido do carro; embaixo vêm placa, modelo, cor e base.
 3. Olhe o número no painel do carro.
 4. Se for igual ao KM que já aparece na tela, não mexa.
 5. Se for diferente, corrija o número e toque em "Tirar foto do painel (obrigatória: KM diferente)".
@@ -269,6 +282,9 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | "Partida não liberada pelo rastreador" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17) |
 | "Não foi possível carregar a frota agora" | Confira a internet e toque em "Tentar de novo" |
 | O consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período |
+| "O apelido ... já é do veículo ..." | Escolha outro apelido ou toque em "Sugerir apelido" |
+| "A base ... não está na lista de bases da Frota" | Escolha uma base da lista ou inclua a cidade em "Bases da frota" |
+| A lista mostra poucos carros | A base escolhida filtra a lista: escolha "Todas as bases" (ou "Todas" no celular) |
 
 ## 16. Glossário
 
@@ -286,6 +302,8 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | Cruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo |
 | Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos |
 | Uso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador |
+| Apelido | Nome curto do carro (ex.: Onça), único entre os veículos ativos, para não confundir carros iguais |
+| Base | Cidade onde o carro fica (ex.: Goiânia, Rio de Janeiro). Filtra as listas, o mapa, as reservas e o Gantt |
 
 ## 17. Rastreador: monitoramento, localização e bloqueio da partida
 

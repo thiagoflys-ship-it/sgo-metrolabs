@@ -62,7 +62,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   var porVeiculo = {};
   veiculos.forEach(function(v) {
     porVeiculo[SGO_UTILS.safe(v.ID)] = {
-      id: v.ID, placa: v.PLACA, modelo: v.MODELO || '', marca: v.MARCA || '', ano: v.ANO || '', status: v.STATUS, kmAtual: Frota_num_(v.KM_ATUAL, 0),
+      id: v.ID, placa: v.PLACA, rotulo: Frota_rotuloVeiculo_(v), apelido: SGO_UTILS.safe(v.APELIDO), base: SGO_UTILS.safe(v.BASE), cor: SGO_UTILS.safe(v.COR), modelo: v.MODELO || '', marca: v.MARCA || '', ano: v.ANO || '', status: v.STATUS, kmAtual: Frota_num_(v.KM_ATUAL, 0),
       retiradas: 0, kmRodado: 0, kmInicioPeriodo: null, kmFimPeriodo: null, horasEmUso: 0, taxaUtilizacao: 0,
       manutencoesQtd: 0, manutencoesCusto: 0, manutencoesLista: [],
       despesasValor: 0, despesasLista: [],
@@ -287,9 +287,9 @@ function FrotaRel_montarPendencias_(alertasJaFiltrados) {
   return alertasJaFiltrados.map(function(a) {
     var critico = a.status === 'VENCIDO';
     var pendencia = a.categoria === 'CNH' ? ('Renovar a CNH de ' + a.veiculoPlaca)
-      : a.categoria === 'DOCUMENTO' ? ('Renovar ' + a.tipoLabel + ' do veículo ' + a.veiculoPlaca)
+      : a.categoria === 'DOCUMENTO' ? ('Renovar ' + a.tipoLabel + ' do veículo ' + FrotaId_rotuloPorPlaca_(a.veiculoPlaca))
       : a.categoria === 'QUALIDADE' ? (a.tipoLabel + (a.veiculoPlaca ? ' (' + a.veiculoPlaca + ')' : '') + (a.vencimento ? ', infração de ' + a.vencimento : ''))
-      : ('Manutenção: ' + a.tipoLabel + ' do veículo ' + a.veiculoPlaca);
+      : ('Manutenção: ' + a.tipoLabel + ' do veículo ' + FrotaId_rotuloPorPlaca_(a.veiculoPlaca));
     return {
       pendencia: pendencia,
       responsavel: a.categoria === 'CNH' ? a.veiculoPlaca : 'Gestão da frota',
@@ -351,8 +351,8 @@ function FrotaRel_textoPadraoGeral_(dados) {
   p.push('No período de ' + dados.periodo.inicio + ' a ' + dados.periodo.fim + ' (' + RelA4_plural_(dados.periodo.dias, 'dia', 'dias') + '), a frota contou com ' +
     RelA4_plural_(dados.totalVeiculosFrota, 'veículo ativo', 'veículos ativos') + ', que somaram ' + RelA4_plural_(t.retiradas, 'retirada', 'retiradas') +
     ' e ' + RelA4_num_(t.km, 0) + ' km rodados.' +
-    (usados.length ? ' O veículo mais utilizado foi ' + usados[0].placa + ', com ' + RelA4_plural_(usados[0].retiradas, 'retirada', 'retiradas') + ' e ' + RelA4_num_(usados[0].kmRodado, 0) + ' km.' : ' Não houve retirada registrada no período.') +
-    (dados.rankingOciosos.length ? ' ' + RelA4_plural_(dados.rankingOciosos.length, 'veículo ficou', 'veículos ficaram') + ' sem uso: ' + dados.rankingOciosos.map(function(v) { return v.placa; }).join(', ') + '.' : ''));
+    (usados.length ? ' O veículo mais utilizado foi ' + (usados[0].rotulo || usados[0].placa) + ', com ' + RelA4_plural_(usados[0].retiradas, 'retirada', 'retiradas') + ' e ' + RelA4_num_(usados[0].kmRodado, 0) + ' km.' : ' Não houve retirada registrada no período.') +
+    (dados.rankingOciosos.length ? ' ' + RelA4_plural_(dados.rankingOciosos.length, 'veículo ficou', 'veículos ficaram') + ' sem uso: ' + dados.rankingOciosos.map(function(v) { return (v.rotulo || v.placa); }).join(', ') + '.' : ''));
   p.push('O custo total do período foi de ' + RelA4_moeda_(t.custoTotal) + ', sendo ' + RelA4_moeda_(t.abastecimentosValor) + ' em combustível, ' + RelA4_moeda_(t.manutencao) +
     ' em manutenção e ' + RelA4_moeda_(t.despesas) + ' em outras despesas' + (t.km > 0 ? ', o que corresponde a ' + RelA4_moeda_(t.custoPorKm) + ' por quilômetro rodado' : '') + '.' +
     (t.consumoMedioKmL > 0 ? ' O consumo médio da frota foi de ' + RelA4_num_(t.consumoMedioKmL, 1) + ' km/L.' : ' Não houve abastecimentos suficientes para calcular o consumo médio.') +
@@ -368,7 +368,7 @@ function FrotaRel_textoPadraoGeral_(dados) {
 
 function FrotaRel_textoPadraoVeiculo_(v, periodo, pendencias) {
   var p = [];
-  p.push('No período de ' + periodo.inicio + ' a ' + periodo.fim + ', o veículo ' + v.placa + (v.modelo ? ' (' + v.modelo + ')' : '') + ' teve ' +
+  p.push('No período de ' + periodo.inicio + ' a ' + periodo.fim + ', o veículo ' + (v.rotulo || v.placa) + (v.modelo ? ' (' + v.modelo + ')' : '') + ' teve ' +
     RelA4_plural_(v.retiradas, 'retirada', 'retiradas') + ' e rodou ' + RelA4_num_(v.kmRodado, 0) + ' km, com utilização de ' + RelA4_num_(v.taxaUtilizacao, 1) + '% do tempo do período.' +
     (v.condutorResponsavel ? ' O condutor mais frequente foi ' + v.condutorResponsavel + '.' : ''));
   p.push('Os gastos somaram ' + RelA4_moeda_(v.custoTotal) + ' (combustível ' + RelA4_moeda_(v.abastecimentosValor) + ', manutenção ' + RelA4_moeda_(v.manutencoesCusto) + ', outras despesas ' + RelA4_moeda_(v.despesasValor) + ')' +
@@ -383,7 +383,7 @@ function FrotaRel_textoPadraoVeiculo_(v, periodo, pendencias) {
 }
 
 function FrotaRel_celVeiculo_(v) {
-  return { html: '<strong style="white-space:nowrap">' + RelA4_esc_(v.placa) + '</strong>' + (v.modelo ? '<span class="sub">' + RelA4_esc_(v.modelo) + '</span>' : '') };
+  return { html: '<strong style="white-space:nowrap">' + RelA4_esc_((v.rotulo || v.placa)) + '</strong>' + (v.modelo ? '<span class="sub">' + RelA4_esc_(v.modelo) + '</span>' : '') };
 }
 
 // ------------------------------------------------------------
@@ -407,16 +407,16 @@ function FrotaRel_montarDocumentoHtml_(dados, analise, emitidoPor) {
 
   var porRet = dados.veiculos.slice().sort(function(a, b) { return b.retiradas - a.retiradas; }).slice(0, 15);
   var porKm = dados.veiculos.slice().sort(function(a, b) { return b.kmRodado - a.kmRodado; }).slice(0, 15);
-  var uso = RelA4_barras_(porRet.map(function(v) { return { rotulo: v.placa, valor: v.retiradas, rotuloValor: RelA4_plural_(v.retiradas, 'retirada', 'retiradas') }; }), { titulo: 'Retiradas por veículo no período', cor: RELA4_CORES.verde }) +
-    RelA4_barras_(porKm.map(function(v) { return { rotulo: v.placa, valor: v.kmRodado, rotuloValor: RelA4_num_(v.kmRodado, 0) + ' km · ' + RelA4_num_(v.taxaUtilizacao, 1) + '%' }; }), { titulo: 'Quilometragem rodada e utilização do tempo por veículo', cor: RELA4_CORES.azul });
+  var uso = RelA4_barras_(porRet.map(function(v) { return { rotulo: (v.rotulo || v.placa), valor: v.retiradas, rotuloValor: RelA4_plural_(v.retiradas, 'retirada', 'retiradas') }; }), { titulo: 'Retiradas por veículo no período', cor: RELA4_CORES.verde }) +
+    RelA4_barras_(porKm.map(function(v) { return { rotulo: (v.rotulo || v.placa), valor: v.kmRodado, rotuloValor: RelA4_num_(v.kmRodado, 0) + ' km · ' + RelA4_num_(v.taxaUtilizacao, 1) + '%' }; }), { titulo: 'Quilometragem rodada e utilização do tempo por veículo', cor: RELA4_CORES.azul });
   var notas = [];
-  notas.push(dados.rankingOciosos.length ? 'Sem uso no período: ' + dados.rankingOciosos.map(function(v) { return v.placa + (v.modelo ? ' (' + v.modelo + ')' : ''); }).join(', ') + '.' : 'Todos os veículos ativos tiveram ao menos uma retirada no período.');
+  notas.push(dados.rankingOciosos.length ? 'Sem uso no período: ' + dados.rankingOciosos.map(function(v) { return (v.rotulo || v.placa) + (v.modelo ? ' (' + v.modelo + ')' : ''); }).join(', ') + '.' : 'Todos os veículos ativos tiveram ao menos uma retirada no período.');
   if (dados.condutorMaisAtuante) notas.push('Condutor com mais retiradas: ' + dados.condutorMaisAtuante.nome + ' (' + RelA4_plural_(dados.condutorMaisAtuante.retiradas, 'retirada', 'retiradas') + ').');
   c.push(RelA4_secao_('Uso dos veículos', uso + '<p class="nota">' + RelA4_esc_(notas.join(' ')) + '</p>'));
 
   var porCusto = dados.veiculos.filter(function(v) { return v.custoTotal > 0; }).sort(function(a, b) { return b.custoTotal - a.custoTotal; }).slice(0, 15);
   var custos = RelA4_barrasEmpilhadas_(porCusto.map(function(v) {
-    return { rotulo: v.placa, partes: [v.abastecimentosValor, v.manutencoesCusto, v.despesasValor], rotuloValor: RelA4_moeda_(v.custoTotal) };
+    return { rotulo: (v.rotulo || v.placa), partes: [v.abastecimentosValor, v.manutencoesCusto, v.despesasValor], rotuloValor: RelA4_moeda_(v.custoTotal) };
   }), FROTAREL_SERIES_CUSTO, { titulo: 'Composição do custo por veículo no período', vazio: 'Sem gastos lançados no período.' });
   var tipos = Object.keys(dados.despesasPorTipo || {}).sort(function(a, b) { return dados.despesasPorTipo[b] - dados.despesasPorTipo[a]; });
   if (tipos.length) {
@@ -429,7 +429,7 @@ function FrotaRel_montarDocumentoHtml_(dados, analise, emitidoPor) {
   var parados = dados.veiculos.filter(function(v) { return v.paradasDias > 0; }).sort(function(a, b) { return b.paradasDias - a.paradasDias; });
   if (parados.length) {
     var listaParadas = [];
-    parados.forEach(function(v) { v.paradasLista.forEach(function(p) { listaParadas.push([v.placa, p.motivo || 'Motivo não informado', Frota_textoData_(p.dataInicio), p.dataFim ? Frota_textoData_(p.dataFim) : 'em aberto', RelA4_num_(p.dias, 1)]); }); });
+    parados.forEach(function(v) { v.paradasLista.forEach(function(p) { listaParadas.push([(v.rotulo || v.placa), p.motivo || 'Motivo não informado', Frota_textoData_(p.dataInicio), p.dataFim ? Frota_textoData_(p.dataFim) : 'em aberto', RelA4_num_(p.dias, 1)]); }); });
     c.push(RelA4_secao_('Veículos parados', RelA4_tabela_([{ t: 'Veículo' }, { t: 'Motivo' }, { t: 'Início' }, { t: 'Fim' }, { t: 'Dias no período', num: true }], listaParadas, { legenda: 'Paradas que tocaram o período' })));
   }
   c.push(RelA4_secao_('Avisos e providências', FrotaRel_tabelaProvidencias_(dados.alertasAtuais)));
@@ -460,7 +460,7 @@ function FrotaRel_montarDocumentoHtml_(dados, analise, emitidoPor) {
 function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, analise, alertasVeiculo, documentosAtuais, pendencias, emitidoPor) {
   var c = [];
   c.push(RelA4_secao_('Identificação do veículo', RelA4_identificacao_([
-    ['Placa', v.placa], ['Marca e modelo', (v.marca || '—') + ' / ' + (v.modelo || '—')], ['Ano', v.ano || '—'], ['Situação atual', FrotaRel_situacaoVeiculoLabel_(v.status)],
+    ['Apelido', v.apelido || '—'], ['Placa', v.placa], ['Base', v.base || '—'], ['Cor', v.cor || '—'], ['Marca e modelo', (v.marca || '—') + ' / ' + (v.modelo || '—')], ['Ano', v.ano || '—'], ['Situação atual', FrotaRel_situacaoVeiculoLabel_(v.status)],
     ['Km no início do período', v.kmInicioPeriodo !== null ? RelA4_num_(v.kmInicioPeriodo, 0) : '—'],
     ['Km no fim do período', v.kmFimPeriodo !== null ? RelA4_num_(v.kmFimPeriodo, 0) : '—'],
     ['Condutor mais frequente', v.condutorResponsavel || 'Nenhuma retirada no período', { largo: true }]
@@ -513,7 +513,7 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, analise, alertasVeicul
     RelA4_assinaturas_(['Gestão da frota', 'Diretoria']) + '</div>'));
 
   return RelA4_documento_({
-    titulo: 'Relatório de frota por veículo', subtitulo: 'Veículo ' + v.placa + (v.modelo ? ' — ' + v.modelo : ''), tituloCurto: 'Relatório de frota — ' + v.placa,
+    titulo: 'Relatório de frota por veículo', subtitulo: 'Veículo ' + (v.rotulo || v.placa) + (v.modelo ? ' — ' + v.modelo : ''), tituloCurto: 'Relatório de frota — ' + (v.rotulo || v.placa),
     tituloArquivo: 'Relatório de frota por veículo', identificacao: periodo.inicio + ' a ' + periodo.fim + ' (' + RelA4_plural_(periodo.dias, 'dia', 'dias') + ')',
     sigla: 'FRV', corpo: c.join('\n'), emitidoPor: emitidoPor
   });

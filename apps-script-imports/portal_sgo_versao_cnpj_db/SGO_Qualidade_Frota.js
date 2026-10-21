@@ -86,7 +86,7 @@ function QualidadeFrota_coletar_(desde) {
     movimentacoes.forEach(function(m) {
       var veiculo = veiculos[SGO_UTILS.safe(m.VEICULO_ID)] || {};
       var condutor = condutores[SGO_UTILS.safe(m.CONDUTOR_ID)] || {};
-      var placa = veiculo.PLACA || 'placa não identificada';
+      var placa = veiculo.PLACA ? (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(veiculo.PLACA) : veiculo.PLACA) : 'placa não identificada'; // 21/10/2026: com o apelido
       var nomeCondutor = condutor.NOME || (m.CONDUTOR_ID ? 'Condutor não identificado' : 'Sem condutor vinculado');
 
       if (!porVeiculoUso[placa]) porVeiculoUso[placa] = { nome: placa, qtd: 0 };
@@ -164,7 +164,7 @@ function QualidadeFrota_coletar_(desde) {
     SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).forEach(function(m) {
       if (desde && !depoisDoCorte_(m.DATA)) return;
       var veiculo = veiculos[SGO_UTILS.safe(m.VEICULO_ID)] || {};
-      var placa = veiculo.PLACA || 'placa não identificada';
+      var placa = veiculo.PLACA ? (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(veiculo.PLACA) : veiculo.PLACA) : 'placa não identificada'; // 21/10/2026: com o apelido
       custoPorVeiculo[placa] = (custoPorVeiculo[placa] || 0) + (Number(m.CUSTO) || 0);
     });
     var rankingCustoManutencao = Object.keys(custoPorVeiculo).map(function(k) { return { nome: k, valor: Math.round(custoPorVeiculo[k] * 100) / 100 }; })
@@ -177,7 +177,7 @@ function QualidadeFrota_coletar_(desde) {
       var motivo = SGO_UTILS.safeUpper(p.MOTIVO);
       if (motivo.indexOf('ACIDENTE') === -1 && motivo.indexOf('PANE') === -1) return;
       var veiculo = veiculos[SGO_UTILS.safe(p.VEICULO_ID)] || {};
-      var placa = veiculo.PLACA || 'placa não identificada';
+      var placa = veiculo.PLACA ? (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(veiculo.PLACA) : veiculo.PLACA) : 'placa não identificada'; // 21/10/2026: com o apelido
       paradasPorVeiculo[placa] = (paradasPorVeiculo[placa] || 0) + 1;
     });
     var rankingParadasNaoPlanejadas = Object.keys(paradasPorVeiculo).map(function(k) { return { nome: k, qtd: paradasPorVeiculo[k] }; })
@@ -203,7 +203,7 @@ function QualidadeFrota_coletar_(desde) {
       }
       if (!deltas.length) return;
       var veiculo = veiculos[vid] || {};
-      var placa = veiculo.PLACA || 'placa não identificada';
+      var placa = veiculo.PLACA ? (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(veiculo.PLACA) : veiculo.PLACA) : 'placa não identificada'; // 21/10/2026: com o apelido
       var media = deltas.reduce(function(a, b) { return a + b; }, 0) / deltas.length;
       consumoPorVeiculo[placa] = Math.round(media * 100) / 100;
     });

@@ -2474,7 +2474,7 @@
         const uso = v.SITUACAO === 'EM_USO';
         const cor = uso ? 'var(--bc-warn)' : (v.SITUACAO === 'DISPONIVEL' ? 'var(--bc-action)' : 'var(--bc-text-3)');
         return '<div style="border-left:4px solid '+cor+';padding:10px;background:var(--bc-surface-2);border-radius:6px">' +
-          '<strong>'+escapeHtml_(v.PLACA+' — '+(v.MODELO||''))+'</strong><div style="color:'+cor+'">'+escapeHtml_(frotaRotuloSituacao_(v.SITUACAO))+'</div>' +
+          '<strong>'+escapeHtml_(v.IDENT_VEICULO || (v.PLACA+' — '+(v.MODELO||'')))+'</strong><div style="color:'+cor+'">'+escapeHtml_(frotaRotuloSituacao_(v.SITUACAO))+'</div>' +
           (uso ? '<div>Retirado por: '+escapeHtml_(v.CONDUTOR_NOME || 'Responsável não localizado')+'</div><small>'+escapeHtml_([v.DATA_SAIDA,v.HORA_SAIDA,v.FINALIDADE].filter(Boolean).join(' · '))+'</small>' : '')+'</div>';
       }).join('') : '<p>Nenhum veículo cadastrado.</p>') + '</div></section>';
   }
@@ -2490,7 +2490,7 @@
       if (sessao !== SGO_getSessionId() || pedido !== FROTA_SITUACAO_PEDIDO) return;
       els.forEach(function(el) { if (el.isConnected) el.innerHTML = frotaSituacaoHtml_(res.items || []); });
       const viagens = (res.items || []).filter(function(v) { return v.MOVIMENTACAO_ID; }).map(function(v) {
-        return { id: v.MOVIMENTACAO_ID, veiculoId: v.ID, veiculoPlaca: v.PLACA, veiculoModelo: v.MODELO,
+        return { id: v.MOVIMENTACAO_ID, veiculoId: v.ID, veiculoPlaca: v.PLACA, veiculoRotulo: v.ROTULO_VEICULO || v.PLACA, veiculoModelo: v.MODELO,
           condutorNome: v.CONDUTOR_NOME, condutorId: v.CONDUTOR_ID, condutorUsuarioId: v.CONDUTOR_USUARIO_ID,
           dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: v.KM_SAIDA, finalidade: v.FINALIDADE };
       });
@@ -2501,7 +2501,7 @@
       if (mobileSit && mobileSit.isConnected && minhas.length) {
         fsEstilo_();
         mobileSit.insertAdjacentHTML('afterbegin', minhas.map(function(m) {
-          return '<button type="button" class="fs-devolver" style="margin:14px 0 0" onclick="' + escapeHtml_('fsIrDevolver_(' + JSON.stringify(String(m.id)) + ')') + '"><span class="fs-dv-txt"><b>Devolver ' + escapeHtml_(m.veiculoPlaca) + '</b><span>' +
+          return '<button type="button" class="fs-devolver" style="margin:14px 0 0" onclick="' + escapeHtml_('fsIrDevolver_(' + JSON.stringify(String(m.id)) + ')') + '"><span class="fs-dv-txt"><b>Devolver ' + escapeHtml_(m.veiculoRotulo || m.veiculoPlaca) + '</b><span>' +
             escapeHtml_((m.veiculoModelo || '') + ' · retirado em ' + m.dataSaida + ' ' + m.horaSaida) + '</span></span><span class="fs-seta" aria-hidden="true" style="color:#fff">&rsaquo;</span></button>';
         }).join(''));
       }
@@ -2511,7 +2511,7 @@
         frotaState.emAndamento = viagens;
         desktopLista.innerHTML = viagens.length ? viagens.map(function(m) {
           const pode = frotaPodeDevolver_(m);
-          return '<div class="linha-lista"><span><strong>' + escapeHtml_(m.veiculoPlaca) + '</strong> — ' + escapeHtml_(m.condutorNome) +
+          return '<div class="linha-lista"><span><strong>' + escapeHtml_(m.veiculoRotulo || m.veiculoPlaca) + '</strong> — ' + escapeHtml_(m.condutorNome) +
             ' — saiu ' + escapeHtml_(m.dataSaida + ' ' + m.horaSaida) + '</span>' + (pode ? '<button class="btn btn-sm btn-primary" onclick="' +
             escapeHtml_('tplFrota_abrirDevolucao_(' + JSON.stringify(String(m.id)) + ')') + '">Registrar devolução</button>'
             : '<span class="muted">Só ' + escapeHtml_(m.condutorNome) + ' ou a gestão registram a devolução</span>') + '</div>';
@@ -2565,6 +2565,10 @@
       ".fs-foto-veic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}",
       ".fs-veic-txt{flex:1;min-width:0}",
       ".fs-placa{display:block;font-size:20px;font-weight:800;color:var(--text-strong);letter-spacing:.03em}",
+      // 21/10/2026: identificação fácil (apelido em destaque) e escolha da base
+      ".fs-bases{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}",
+      ".fs-base{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--bc-line);background:#fff;font:inherit;font-weight:700;font-size:14px;color:var(--bc-text);cursor:pointer}",
+      ".fs-base.on{background:var(--text-strong,#1f2933);border-color:var(--text-strong,#1f2933);color:#fff}",
       ".fs-modelo{display:block;font-size:15px;color:var(--bc-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
       ".fs-km{display:block;font-size:13px;color:var(--muted);margin-top:2px}",
       ".fs-seta{flex:0 0 auto;font-size:22px;color:var(--muted)}",
@@ -2648,6 +2652,32 @@
     if (!v.foto) return '<span class="fs-foto-veic" aria-hidden="true">' + sigla + '</span>';
     // A sigla fica atrás da foto: se a foto não abrir, ela aparece sozinha (sem caixa vazia).
     return '<span class="fs-foto-veic" aria-hidden="true">' + sigla + '<img src="' + fsEsc_(fsUrlImagem_(v.foto)) + '" alt="" width="88" height="66" loading="lazy" decoding="async" onerror="this.remove()"></span>';
+  }
+  // 21/10/2026 (pedido do dono): identificação fácil dos veículos. O servidor manda apelido, baseFrota e rotuloVeiculo em cada
+  // veículo (e veiculoApelido, veiculoBase e veiculoRotulo na retirada em andamento). O apelido aparece grande; sem apelido, a placa.
+  // A base escolhida fica no navegador (a mesma da tela completa da Frota).
+  const FS_BASE_CHAVE = "sgo_frota_base";
+  // Sem armazenamento no navegador (janela anônima, bloqueio), vale a escolha desta página (a mesma variável da tela completa).
+  function fsBaseEscolhida_() {
+    if (typeof window.SGO_FROTA_BASE_MEMO === "string") return window.SGO_FROTA_BASE_MEMO;
+    try { return localStorage.getItem(FS_BASE_CHAVE) || ""; } catch (e) { return ""; }
+  }
+  function fsGuardarBase_(b) { window.SGO_FROTA_BASE_MEMO = String(b || ""); try { localStorage.setItem(FS_BASE_CHAVE, b || ""); } catch (e) {} }
+  function fsTituloVeic_(apelido, placa, detalhes) {
+    apelido = String(apelido || "").trim();
+    const resto = (apelido ? [placa] : []).concat(detalhes || []).map(function (x) { return String(x || "").trim(); }).filter(Boolean).join(" · ");
+    return '<span class="fs-placa">' + fsEsc_(apelido || placa) + "</span>" + (resto ? '<span class="fs-modelo">' + fsEsc_(resto) + "</span>" : "");
+  }
+  function fsBasesDe_(lista) {
+    const vistas = {};
+    (lista || []).forEach(function (v) { const b = String(v.baseFrota || "").trim(); if (b) vistas[b] = 1; });
+    return Object.keys(vistas).sort(function (a, b) { return a.localeCompare(b, "pt-BR"); });
+  }
+  function fsChipsBase_(bases, atual) {
+    if (bases.length < 2) return "";
+    return '<div class="fs-bases" role="group" aria-label="Base dos veículos">' + [""].concat(bases).map(function (b) {
+      return '<button type="button" class="fs-base' + (b === atual ? " on" : "") + '" data-acao="base" data-id="' + fsEsc_(b) + '" aria-pressed="' + (b === atual ? "true" : "false") + '">' + fsEsc_(b || "Todas") + "</button>";
+    }).join("") + "</div>";
   }
   function fsRaiz_() { return document.getElementById("fsRaiz"); }
   function fsHost_() { return document.getElementById("tplFrota_simples") || document.getElementById("conteudo"); }
@@ -2737,31 +2767,31 @@
     const alertas = (d.alertas || []).map(function (a) {
       if (a.tipo === "MULTA_SEM_CONDUTOR") {
         const ambigua = /conferir/i.test(String(a.tipoLabel || ""));
-        return '<div class="fs-aviso erro"><b>Multa a conferir:</b> ' + fsEsc_(a.veiculoPlaca) + " — " + (ambigua ? "mais de uma retirada no horário; confirme o condutor" : "condutor não identificado") +
+        return '<div class="fs-aviso erro"><b>Multa a conferir:</b> ' + fsEsc_(a.veiculoRotulo || a.veiculoPlaca) + " — " + (ambigua ? "mais de uma retirada no horário; confirme o condutor" : "condutor não identificado") +
           (a.vencimento ? " (infração em " + fsEsc_(a.vencimento) + ")" : "") + "</div>";
       }
       const critico = a.status === "VENCIDO";
       const generoOk = a.categoria === "DOCUMENTO" ? "vencido" : "vencida";
-      return '<div class="fs-aviso' + (critico ? " erro" : "") + '"><b>' + (critico ? "Vencido" : "A vencer") + ":</b> " + fsEsc_(a.veiculoPlaca) + " — " + fsEsc_(a.tipoLabel) + (critico ? " " + generoOk : " vencendo em breve") + "</div>";
+      return '<div class="fs-aviso' + (critico ? " erro" : "") + '"><b>' + (critico ? "Vencido" : "A vencer") + ":</b> " + fsEsc_(a.veiculoRotulo || a.veiculoPlaca) + " — " + fsEsc_(a.tipoLabel) + (critico ? " " + generoOk : " vencendo em breve") + "</div>";
     });
 
     let h = "";
     if (avisoRastreador) h += '<div class="fs-aviso erro" id="mob_frota_avisoRastreador" role="alert"><b>' + fsEsc_(avisoRastreador) + "</b></div>";
     minhas.forEach(function (m) {
       h += '<button type="button" class="fs-devolver" data-acao="devolver" data-id="' + fsEsc_(m.id) + '">' + fsFotoVeicHtml_({ placa: m.veiculoPlaca, foto: m.foto }) +
-        '<span class="fs-dv-txt"><b>Devolver ' + fsEsc_(m.veiculoPlaca) + "</b><span>" + fsEsc_(m.veiculoModelo || "") + "</span><span>Retirado " + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) + " · KM " + fsEsc_(fsKm_(m.kmSaida)) + "</span></span>" +
+        '<span class="fs-dv-txt"><b>Devolver ' + fsEsc_(m.veiculoRotulo || m.veiculoPlaca) + "</b><span>" + fsEsc_([m.veiculoModelo, m.veiculoBase].filter(Boolean).join(" · ")) + "</span><span>Retirado " + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) + " · KM " + fsEsc_(fsKm_(m.kmSaida)) + "</span></span>" +
         '<span class="fs-seta" aria-hidden="true" style="color:#fff">&rsaquo;</span></button>';
     });
     if (rascunho) {
       const enviadas = rascunho.fotos.concat(rascunho.painel).filter(function (f) { return f.estado === "enviada"; }).length;
-      h += '<button type="button" class="fs-btn" data-acao="continuar">Continuar ' + (rascunho.tipo === "retirada" ? "a retirada do " : "a devolução do ") + fsEsc_(rascunho.placa) +
+      h += '<button type="button" class="fs-btn" data-acao="continuar">Continuar ' + (rascunho.tipo === "retirada" ? "a retirada do " : "a devolução do ") + fsEsc_(rascunho.rotulo || rascunho.placa) +
         (enviadas ? " (" + SGO_qtd_(enviadas, "foto enviada", "fotos enviadas") + ")" : "") + "</button>";
     }
     // 20/10/2026 (reservas): as minhas próximas reservas e o atalho para a agenda (toda a equipe)
     const res = d.reservas || null;
     if (res && res.minhas && res.minhas.length) {
       h += '<div class="fs-aviso info"><b>' + (res.minhas.length === 1 ? 'Sua reserva' : 'Suas reservas') + ':</b> ' + res.minhas.map(function (r) {
-        return fsEsc_(r.placa) + ' ' + fsEsc_(r.quando) + (r.destino ? ' (' + fsEsc_(r.destino) + ')' : '');
+        return fsEsc_(r.rotuloVeiculo || r.placa) + ' ' + fsEsc_(r.quando) + (r.destino ? ' (' + fsEsc_(r.destino) + ')' : '');
       }).join('; ') + '. No horário, toque no veículo para retirar.</div>';
     }
     if (semCondutor) h += '<div class="fs-aviso">Seu login ainda não tem condutor vinculado, então a retirada não pode ser registrada em seu nome. Peça à gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) para vincular o seu usuário em Frota &gt; Condutores e abra a Frota de novo.</div>';
@@ -2770,17 +2800,24 @@
         ? '<details><summary>Avisos da frota (' + alertas.length + ')</summary><div class="fs-det">' + alertas.join("") + "</div></details>"
         : alertas.join("");
     }
-    h += '<div class="fs-titulo">' + (minhas.length ? "Retirar outro veículo" : "Retirar um veículo") + ' <span class="fs-sub">(' + SGO_qtd_(livres.length, "disponível", "disponíveis") + ")</span></div>";
-    h += livres.length ? '<div class="fs-veics">' + livres.map(function (v) {
+    // 21/10/2026: escolha da base (Goiânia, Rio de Janeiro...): mostra os carros da base escolhida; veículo sem base aparece em todas.
+    const basesFrota = fsBasesDe_(d.veiculos);
+    let baseSel = fsBaseEscolhida_();
+    if (baseSel && basesFrota.indexOf(baseSel) === -1) baseSel = "";
+    const livresBase = livres.filter(function (v) { return !baseSel || !v.baseFrota || v.baseFrota === baseSel; });
+    h += '<div class="fs-titulo">' + (minhas.length ? "Retirar outro veículo" : "Retirar um veículo") + ' <span class="fs-sub">(' + SGO_qtd_(livresBase.length, "disponível", "disponíveis") + (baseSel ? " em " + fsEsc_(baseSel) : "") + ")</span></div>";
+    h += fsChipsBase_(basesFrota, baseSel);
+    h += livresBase.length ? '<div class="fs-veics">' + livresBase.map(function (v) {
       return '<button type="button" class="fs-veic" data-acao="retirar" data-id="' + fsEsc_(v.id) + '"' + (semCondutor ? ' aria-disabled="true"' : "") + ">" + fsFotoVeicHtml_(v) +
-        '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(v.placa) + '</span><span class="fs-modelo">' + fsEsc_([v.modelo, v.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">KM ' + fsEsc_(fsKm_(v.km)) + "</span>" + fsReservaSelo_(v) + "</span>" +
+        '<span class="fs-veic-txt">' + fsTituloVeic_(v.apelido, v.placa, [[v.modelo, String(v.cor || "").toLowerCase()].filter(Boolean).join(" "), baseSel ? "" : v.baseFrota]) + '<span class="fs-km">KM ' + fsEsc_(fsKm_(v.km)) + "</span>" + fsReservaSelo_(v) + "</span>" +
         '<span class="fs-seta" aria-hidden="true">&rsaquo;</span></button>';
     }).join("") + "</div>"
+      : livres.length ? '<div class="fs-aviso info">Nenhum veículo disponível em ' + fsEsc_(baseSel) + ' agora. Toque em "Todas" para ver os ' + SGO_qtd_(livres.length, "disponível", "disponíveis") + ' de outras bases.</div>'
       : '<div class="fs-aviso info">Nenhum veículo disponível agora. Os veículos em uso aparecem abaixo; quando alguém devolver, ele volta para esta lista (a tela se atualiza sozinha).</div>';
     if (outras.length) {
       h += "<details" + (gestao ? " open" : "") + "><summary>Em uso por outras pessoas (" + outras.length + ")</summary><div class=\"fs-det\">" + outras.map(function (m) {
         return '<button type="button" class="fs-veic" data-acao="devolver" data-id="' + fsEsc_(m.id) + '">' + fsFotoVeicHtml_({ placa: m.veiculoPlaca, foto: m.foto }) +
-          '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(m.veiculoPlaca) + '</span><span class="fs-modelo">Com ' + fsEsc_(m.condutorNome || "condutor não localizado") + '</span><span class="fs-km">Desde ' + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) +
+          '<span class="fs-veic-txt">' + fsTituloVeic_(m.veiculoApelido, m.veiculoPlaca, [m.veiculoBase]) + '<span class="fs-modelo">Com ' + fsEsc_(m.condutorNome || "condutor não localizado") + '</span><span class="fs-km">Desde ' + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) +
           (gestao ? " · Toque para devolver no lugar" : " · Só " + fsEsc_(m.condutorNome || "o condutor") + " ou a gestão devolvem") + "</span></span></button>";
       }).join("") + "</div></details>";
     }
@@ -2807,7 +2844,7 @@
     google.script.run.withSuccessHandler(function (r) {
       const el = document.getElementById("fs_pedidosComp");
       if (!el || !r || !r.itens || !r.itens.length) return;
-      el.innerHTML = '<div class="fs-aviso">A gestão pediu ' + (r.itens.length === 1 ? 'o comprovante de um abastecimento' : 'comprovantes de ' + r.itens.length + ' abastecimentos') + ' (veículo ' + fsEsc_(r.itens.map(function (p) { return p.placa; }).join(', ')) + ').' +
+      el.innerHTML = '<div class="fs-aviso">A gestão pediu ' + (r.itens.length === 1 ? 'o comprovante de um abastecimento' : 'comprovantes de ' + r.itens.length + ' abastecimentos') + ' (veículo ' + fsEsc_(r.itens.map(function (p) { return p.rotuloVeiculo || p.placa; }).join(', ')) + ').' +
         '<button type="button" class="fs-btn" data-acao="completa" data-aba="despesas">Enviar comprovante</button></div>';
     }).withFailureHandler(function () {}).Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: "apiRastrMeusPedidos", payload: {} });
   }
@@ -2848,7 +2885,7 @@
     const el = document.getElementById("fs_status");
     if (!el) return;
     el.innerHTML = '<div class="fs-aviso erro" role="alert">' + fsEsc_(f.bloqueioMsg) + "</div>" +
-      (f.livres.length ? '<div class="fs-livres">' + f.livres.slice(0, 5).map(function (l) { return '<button type="button" class="fs-btn" data-acao="trocarRetirada" data-id="' + fsEsc_(l.id) + '">Retirar o ' + fsEsc_(l.placa) + (l.modelo ? " (" + fsEsc_(l.modelo) + ")" : "") + " em vez deste</button>"; }).join("") + "</div>" : "");
+      (f.livres.length ? '<div class="fs-livres">' + f.livres.slice(0, 5).map(function (l) { return '<button type="button" class="fs-btn" data-acao="trocarRetirada" data-id="' + fsEsc_(l.id) + '">Retirar o ' + fsEsc_(l.rotuloVeiculo || l.placa) + (l.modelo ? " (" + fsEsc_(l.modelo) + ")" : "") + " em vez deste</button>"; }).join("") + "</div>" : "");
     el.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
@@ -2867,6 +2904,7 @@
     if (!alvo || !fsRaiz_() || !fsRaiz_().contains(alvo)) return;
     const acao = alvo.getAttribute("data-acao"), id = alvo.getAttribute("data-id") || "";
     if (acao === "recarregar") { FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (acao === "base") { fsGuardarBase_(id); fsDesenharInicio_(); return; }
     if (acao === "retirar") { fsAbrirRetirada_(id); return; }
     if (acao === "devolver") { fsAbrirDevolucao_(id); return; }
     if (acao === "continuar") { if (FS.fluxo) fsDesenharFluxo_(); return; }
@@ -2894,10 +2932,10 @@
     const v = (d.veiculos || []).filter(function (x) { return x.id === veiculoId; })[0];
     if (!v) { FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
     if (!d.condutor && !d.gestor) { fsDesenharInicio_(); const r = fsRaiz_(); if (r) r.scrollIntoView({ block: "start" }); return; }
-    if (v.situacao !== "DISPONIVEL") { alert("O veículo " + v.placa + " não está mais disponível. A lista foi atualizada."); FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (v.situacao !== "DISPONIVEL") { alert("O veículo " + (v.rotuloVeiculo || v.placa) + " não está mais disponível. A lista foi atualizada."); FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
     if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "retirada" && FS.fluxo.veiculo.id === v.id)) {
       const pp = fsPrevistaPadrao_(v);
-      FS.fluxo = fsNovoFluxo_("retirada", { veiculo: v, placa: v.placa, km: fsKm_(v.km), condutorId: d.condutor ? d.condutor.id : "", prevData: pp.data, prevHora: pp.hora });
+      FS.fluxo = fsNovoFluxo_("retirada", { veiculo: v, placa: v.placa, rotulo: v.rotuloVeiculo || v.placa, km: fsKm_(v.km), condutorId: d.condutor ? d.condutor.id : "", prevData: pp.data, prevHora: pp.hora });
     }
     fsDesenharFluxo_();
   }
@@ -2917,7 +2955,7 @@
       return;
     }
     if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "devolucao" && FS.fluxo.mov.id === m.id)) {
-      FS.fluxo = fsNovoFluxo_("devolucao", { mov: m, placa: m.veiculoPlaca });
+      FS.fluxo = fsNovoFluxo_("devolucao", { mov: m, placa: m.veiculoPlaca, rotulo: m.veiculoRotulo || m.veiculoPlaca });
     }
     fsDesenharFluxo_();
   }
@@ -2929,18 +2967,18 @@
     const gestao = !!d.gestor;
     if (!fsNoComputador_()) {
       MOBILE_NAV = { modulo: "frota", tela: "form" };
-      atualizarTituloMobile_((ret ? "Retirar " : "Devolver ") + f.placa);
+      atualizarTituloMobile_((ret ? "Retirar " : "Devolver ") + (f.rotulo || f.placa));
     }
     const noLugar = !ret && !f.mov.minha;
     const semCondutorProprio = ret && gestao && !d.condutor;
     let h = "";
     // cabeçalho do veículo
     if (ret) {
-      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_(f.veiculo) + '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(f.placa) + '</span><span class="fs-modelo">' +
-        fsEsc_([f.veiculo.modelo, f.veiculo.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">Retirada em nome de ' + fsEsc_(d.condutor ? d.condutor.nome : "condutor a escolher (Opções da gestão)") + "</span></span></div>";
+      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_(f.veiculo) + '<span class="fs-veic-txt">' +
+        fsTituloVeic_(f.veiculo.apelido, f.placa, [[f.veiculo.modelo, String(f.veiculo.cor || "").toLowerCase()].filter(Boolean).join(" "), f.veiculo.baseFrota]) + '<span class="fs-km">Retirada em nome de ' + fsEsc_(d.condutor ? d.condutor.nome : "condutor a escolher (Opções da gestão)") + "</span></span></div>";
     } else {
-      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_({ placa: f.placa, foto: f.mov.foto }) + '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(f.placa) + '</span><span class="fs-modelo">' +
-        fsEsc_(f.mov.veiculoModelo || "") + '</span><span class="fs-km">Retirado por ' + fsEsc_(f.mov.condutorNome) + " " + fsEsc_(fsDiaHora_(f.mov.dataSaida, f.mov.horaSaida)) + " · KM " + fsEsc_(fsKm_(f.mov.kmSaida)) + "</span></span></div>";
+      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_({ placa: f.placa, foto: f.mov.foto }) + '<span class="fs-veic-txt">' +
+        fsTituloVeic_(f.mov.veiculoApelido, f.placa, [f.mov.veiculoModelo, f.mov.veiculoBase]) + '<span class="fs-km">Retirado por ' + fsEsc_(f.mov.condutorNome) + " " + fsEsc_(fsDiaHora_(f.mov.dataSaida, f.mov.horaSaida)) + " · KM " + fsEsc_(fsKm_(f.mov.kmSaida)) + "</span></span></div>";
       if (noLugar) h += '<div class="fs-aviso">Você está registrando a devolução no lugar de ' + fsEsc_(f.mov.condutorNome) + ". Escreva a justificativa em Opções da gestão (mínimo de 15 caracteres); " + fsEsc_(f.mov.condutorNome) + " será avisado.</div>";
     }
     // 1. KM
@@ -3452,7 +3490,7 @@
         const v = d.veiculos.filter(function (x) { return x.id === f.veiculo.id; })[0];
         if (v) { v.situacao = "EM_USO"; v.km = km; if (payload.miniaturaLink) v.foto = payload.miniaturaLink; }
         const cond = (d.condutores || []).filter(function (c) { return c.id === payload.condutorId; })[0] || d.condutor || {};
-        if (!res.conferido && !d.emAndamento.some(function (m) { return m.id === res.movimentacaoId; })) d.emAndamento.push({ id: res.movimentacaoId, veiculoId: f.veiculo.id, veiculoPlaca: f.placa, veiculoModelo: f.veiculo.modelo, condutorNome: cond.nome || "",
+        if (!res.conferido && !d.emAndamento.some(function (m) { return m.id === res.movimentacaoId; })) d.emAndamento.push({ id: res.movimentacaoId, veiculoId: f.veiculo.id, veiculoPlaca: f.placa, veiculoRotulo: f.rotulo || f.placa, veiculoApelido: f.veiculo.apelido || "", veiculoBase: f.veiculo.baseFrota || "", veiculoModelo: f.veiculo.modelo, condutorNome: cond.nome || "",
           condutorId: payload.condutorId, condutorUsuarioId: "", dataSaida: res.data, horaSaida: res.hora, kmSaida: km, finalidade: payload.finalidade,
           minha: !!(d.condutor && payload.condutorId === d.condutor.id), foto: v ? v.foto : "" });
       } else {
@@ -3468,10 +3506,10 @@
     const rt = res.rastreador || {};
     const quando = res.data ? " · " + res.data + " " + res.hora : "";
     if (ret) {
-      frotaToastEnvio_(!rt.aviso, "Retirada registrada", f.placa + quando + (res.devolucaoPrevista ? " · devolução prevista " + res.devolucaoPrevista : "") + (res.reservaIniciada ? " · reserva " + res.reservaIniciada + " em uso" : "") + (res.reservaLiberada ? " · reserva " + res.reservaLiberada + " liberada (quem reservou foi avisado)" : "") + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
+      frotaToastEnvio_(!rt.aviso, "Retirada registrada", (f.rotulo || f.placa) + quando + (res.devolucaoPrevista ? " · devolução prevista " + res.devolucaoPrevista : "") + (res.reservaIniciada ? " · reserva " + res.reservaIniciada + " em uso" : "") + (res.reservaLiberada ? " · reserva " + res.reservaLiberada + " liberada (quem reservou foi avisado)" : "") + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
       if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + " A retirada já está registrada: não registre de novo.";
     } else {
-      frotaToastEnvio_(true, "Devolução registrada", f.placa + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
+      frotaToastEnvio_(true, "Devolução registrada", (f.rotulo || f.placa) + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
     }
     if (res.conferido) frotaToastEnvio_(true, "Registro conferido", "A conexão caiu na resposta, mas o registro foi gravado. Não registre de novo.");
     if (res.jaRegistrada) frotaToastEnvio_(true, "Já estava registrado", res.mensagem || "O registro já tinha sido gravado na primeira tentativa. Nada foi registrado em dobro.");
@@ -3516,7 +3554,7 @@
       MOBILE_FROTA.veiculosKm = r.items || [];
       const sel = document.getElementById("mob_frota_k_veiculo");
       if (sel) sel.innerHTML = '<option value="">Selecione</option>' + MOBILE_FROTA.veiculosKm.map(function (v) {
-        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.PLACA + " — " + (v.MODELO || "")) + '</option>';
+        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.IDENT_VEICULO || (v.PLACA + " — " + (v.MODELO || ""))) + '</option>';
       }).join("");
     }).catch(function (err) { mobileFrotaErro_("mob_frota_k_status", err); });
   }
@@ -3535,7 +3573,7 @@
     FROTA_ENVIO_ATIVO = true;
     mobileFrota_chamarApi_("apiAjustarKm", { veiculoId: veiculoId, kmNovo: getValue_("mob_frota_k_km"), justificativa: just }).then(function (res) {
       FS.inicioEm = 0;
-      frotaToastEnvio_(true, "KM ajustado", res.placa + ": " + frotaKm_(res.kmAntes) + " para " + frotaKm_(res.kmNovo));
+      frotaToastEnvio_(true, "KM ajustado", (res.rotuloVeiculo || res.placa) + ": " + frotaKm_(res.kmAntes) + " para " + frotaKm_(res.kmNovo));
       renderMobileFrotaOperacional_();
     }).catch(function (err) { mobileFrotaErro_("mob_frota_k_status", err); })
       .finally(function () { FROTA_ENVIO_ATIVO = false; });
@@ -3569,7 +3607,7 @@
       const comDispositivo = (r.veiculos || []).filter(function (v) { return v.deviceId; });
       const sel = document.getElementById("mob_frota_p_veiculo");
       if (sel) sel.innerHTML = '<option value="">' + (comDispositivo.length ? 'Selecione' : 'Nenhum veículo com rastreador vinculado') + '</option>' + comDispositivo.map(function (v) {
-        return '<option value="' + escapeHtml_(v.id) + '">' + escapeHtml_(v.placa + " — " + (v.modelo || "") + (v.situacao === "EM_USO" ? " (em uso)" : "")) + '</option>';
+        return '<option value="' + escapeHtml_(v.id) + '">' + escapeHtml_((v.identVeiculo || v.placa + " — " + (v.modelo || "")) + (v.situacao === "EM_USO" ? " (em uso)" : "")) + '</option>';
       }).join("");
       const bL = document.getElementById("mob_frota_p_liberar"), bB = document.getElementById("mob_frota_p_bloquear");
       if (bL) { bL.disabled = !r.ligado || !!r.somenteLeitura; bL.style.display = r.somenteLeitura ? "none" : ""; }
@@ -3599,8 +3637,8 @@
     if (just.length < 15) return mobileFrotaMsg_("mob_frota_p_status", "error", "Escreva a justificativa (mínimo de 15 caracteres; foram " + just.length + ").");
     const v = ((MOBILE_FROTA.rastreador || {}).veiculos || []).filter(function (x) { return x.id === veiculoId; })[0] || {};
     const texto = qual === "liberar"
-      ? "Liberar a partida do veículo " + v.placa + "?\n\nO comando vai agora para o rastreador e fica na trilha de auditoria."
-      : "Bloquear a partida do veículo " + v.placa + "?" + (v.situacao === "EM_USO" ? "\n\nAtenção: o veículo está em uso por " + (v.condutorNome || "condutor não localizado") + "." : "") +
+      ? "Liberar a partida do veículo " + (v.rotuloVeiculo || v.placa) + "?\n\nO comando vai agora para o rastreador e fica na trilha de auditoria."
+      : "Bloquear a partida do veículo " + (v.rotuloVeiculo || v.placa) + "?" + (v.situacao === "EM_USO" ? "\n\nAtenção: o veículo está em uso por " + (v.condutorNome || "condutor não localizado") + "." : "") +
         "\n\nO bloqueio só é enviado com o veículo parado e a ignição desligada; se estiver andando, fica pendente.";
     if (!confirm(texto)) return;
     FROTA_ENVIO_ATIVO = true;
@@ -3644,7 +3682,7 @@
     ]).then(function (r) {
       const selV = document.getElementById("mob_frota_a_veiculo");
       if (selV) selV.innerHTML = '<option value="">Selecione</option>' + (r[1].items || []).map(function (v) {
-        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.PLACA + " — " + (v.MODELO || "")) + '</option>';
+        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.IDENT_VEICULO || (v.PLACA + " — " + (v.MODELO || ""))) + '</option>';
       }).join("");
       const selT = document.getElementById("mob_frota_a_tipo");
       if (selT) selT.innerHTML = (r[0].tiposCombustivel || []).map(function (t) { return '<option value="' + escapeHtml_(t) + '">' + escapeHtml_(t) + '</option>'; }).join("");

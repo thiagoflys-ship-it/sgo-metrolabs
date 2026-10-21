@@ -111,7 +111,11 @@ function Frota_apiDispatch(req) {
     apiReservaTrocarVeiculo: Frota_apiReservaTrocarVeiculo,
     apiReservaIndicadores: Frota_apiReservaIndicadores,
     apiReservaConfig: Frota_apiReservaConfig,
-    apiReservaRelatorio: Frota_apiReservaRelatorio
+    apiReservaRelatorio: Frota_apiReservaRelatorio,
+    // 21/10/2026: identificação fácil dos veículos (SGO_Frota_Identificacao.js): apelido, base e sugestão de apelido
+    apiListarIdentificacao: Frota_apiListarIdentificacao,
+    apiListarSugestoesApelido: Frota_apiListarSugestoesApelido,
+    apiSalvarBasesFrota: Frota_apiSalvarBasesFrota
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -119,6 +123,8 @@ function Frota_apiDispatch(req) {
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
   var resultado = allow[fn](req.sessionId, payload);
+  // 21/10/2026: todo veículo da resposta ganha apelido, base e rótulo ("Onça · PQB4394"), sem trocar campo existente.
+  if (typeof FrotaId_enfeitarResposta_ === 'function') resultado = FrotaId_enfeitarResposta_(resultado);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
   if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
@@ -482,6 +488,8 @@ function Frota_bootstrapSemTrava_() {
   CertCal_garantirTabela_(FROTA_ABA_AUDITORIA, FROTA_COLUNAS_AUDITORIA);
   // 17/10/2026 (Frota simples): miniatura do veículo para a escolha no celular (foto da última vistoria, reduzida). Só coluna nova.
   CertCal_garantirColuna_(SGO_CFG.SHEETS.CAD_VEICULOS, 'FOTO_MINIATURA_LINK');
+  // 21/10/2026 (identificação dos veículos): APELIDO e BASE no cadastro. Só colunas novas.
+  if (typeof FrotaId_garantirColunas_ === 'function') FrotaId_garantirColunas_();
   // Rastreador (17/10/2026): vínculo no veículo, hodômetro na movimentação, comandos e alertas (SGO_Frota_Rastreador.js).
   if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
   // 20/10/2026 (rastreamento): pedidos de comprovante, trilha de consultas, HORA/ORIGEM no abastecimento e capacidade do tanque. Só colunas e tabelas novas.
@@ -675,8 +683,13 @@ function Frota_apiCriarVeiculo(sessionId, payload) {
   var placa = SGO_UTILS.safeUpper(payload.placa);
   if (!placa) throw new Error('Informe a placa do veículo.');
 
-  var jaExiste = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS).some(function(v) { return SGO_UTILS.safeUpper(v.PLACA) === placa; });
+  var todosVeiculos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS);
+  var jaExiste = todosVeiculos.some(function(v) { return SGO_UTILS.safeUpper(v.PLACA) === placa; });
   if (jaExiste) throw new Error('Já existe um veículo cadastrado com essa placa.');
+  // 21/10/2026: apelido (único entre os ativos) e base (da lista da Frota); os dois são opcionais.
+  var apelido = FrotaId_apelidoLimpo_(payload.apelido);
+  FrotaId_conferirApelidoUnico_(apelido, '', todosVeiculos);
+  var baseFrota = FrotaId_baseValida_(payload.base);
 
   var registro = SGO_DATA.normalizarObjetoParaSheet(
     SGO_CFG.SHEETS.CAD_VEICULOS,
@@ -687,11 +700,13 @@ function Frota_apiCriarVeiculo(sessionId, payload) {
       ANO: SGO_UTILS.safe(payload.ano),
       COR: SGO_UTILS.safe(payload.cor),
       KM_ATUAL: Frota_num_(payload.kmAtual, 0),
-      STATUS: 'ATIVO'
+      STATUS: 'ATIVO',
+      APELIDO: apelido,
+      BASE: baseFrota
     })
   );
   SGO_DATA.insert(SGO_CFG.SHEETS.CAD_VEICULOS, registro);
-  SGO_DATA.log('FROTA_VEICULO_CRIAR', sessao.usuario, 'Veículo criado: ' + placa, 'FROTA');
+  SGO_DATA.log('FROTA_VEICULO_CRIAR', sessao.usuario, 'Veículo criado: ' + placa + (apelido ? ' (apelido ' + apelido + ')' : '') + (baseFrota ? ', base ' + baseFrota : ''), 'FROTA');
   return { ok: true, item: registro };
 }
 
@@ -721,14 +736,22 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
     throw new Error('O KM do veículo não é alterado por aqui. Use o botão "Ajustar KM" (Frota > Veículos e condutores), que pede a justificativa e grava o valor antigo e o novo na trilha de auditoria.');
   }
 
+  // 21/10/2026: apelido e base. Vazio (ou campo ausente) mantém o que está gravado, como os outros campos.
+  var apelido = FrotaId_apelidoLimpo_(payload.apelido) || SGO_UTILS.safe(atual.APELIDO);
+  if (FrotaId_chave_(apelido) !== FrotaId_chave_(atual.APELIDO) && SGO_UTILS.safeUpper(atual.STATUS) !== 'INATIVO') FrotaId_conferirApelidoUnico_(apelido, id);
+  var baseFrota = FrotaId_baseValida_(payload.base) || SGO_UTILS.safe(atual.BASE);
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, {
     PLACA: placa,
     MODELO: SGO_UTILS.safe(payload.modelo || atual.MODELO),
     MARCA: SGO_UTILS.safe(payload.marca || atual.MARCA),
     ANO: SGO_UTILS.safe(payload.ano || atual.ANO),
-    COR: SGO_UTILS.safe(payload.cor || atual.COR)
+    COR: SGO_UTILS.safe(payload.cor || atual.COR),
+    APELIDO: apelido,
+    BASE: baseFrota
   });
-  SGO_DATA.log('FROTA_VEICULO_ATUALIZAR', sessao.usuario, 'Veículo atualizado ID=' + id + ' (placa=' + placa + ', km=' + kmAtual + ')', 'FROTA');
+  SGO_DATA.log('FROTA_VEICULO_ATUALIZAR', sessao.usuario, 'Veículo atualizado ID=' + id + ' (placa=' + placa + ', km=' + kmAtual +
+    (apelido !== SGO_UTILS.safe(atual.APELIDO) ? ', apelido ' + (SGO_UTILS.safe(atual.APELIDO) || '(vazio)') + ' -> ' + apelido : '') +
+    (baseFrota !== SGO_UTILS.safe(atual.BASE) ? ', base ' + (SGO_UTILS.safe(atual.BASE) || '(vazia)') + ' -> ' + baseFrota : '') + ')', 'FROTA');
   // 17/10/2026: ID do dispositivo no rastreador (mesma regra e trilha do painel Rastreador).
   var rastreador = null;
   if (payload.rastreadorDeviceId !== undefined && typeof Rastreador_vincular_ === 'function' &&
@@ -757,7 +780,10 @@ function Frota_apiReativarVeiculo(sessionId, payload) {
   Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   var id = SGO_UTILS.safe((payload || {}).id);
-  if (!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id)) throw new Error('Veículo não encontrado.');
+  var veiculoReativar = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id);
+  if (!veiculoReativar) throw new Error('Veículo não encontrado.');
+  // 21/10/2026: apelido único entre os ativos; com outro ativo de mesmo apelido, troque o apelido em Editar antes.
+  FrotaId_conferirApelidoUnico_(veiculoReativar.APELIDO, id);
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, { STATUS: 'ATIVO' });
   return { ok: true };
 }

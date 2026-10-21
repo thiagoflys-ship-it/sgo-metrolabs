@@ -18,7 +18,7 @@ function FrotaIA_chamarGemini_(prompt, maxTokens) {
 }
 
 function FrotaIA_linhaVeiculo_(v) {
-  return '- ' + v.placa + ' (' + (v.modelo || 'modelo não informado') + '): ' + RelA4_plural_(v.retiradas, 'retirada', 'retiradas') + ', ' +
+  return '- ' + (v.rotulo || v.placa) + ' (' + (v.modelo || 'modelo não informado') + '): ' + RelA4_plural_(v.retiradas, 'retirada', 'retiradas') + ', ' +
     RelA4_num_(v.kmRodado, 0) + ' km rodados, utilização de ' + RelA4_num_(v.taxaUtilizacao, 1) + '% do tempo, consumo ' +
     (v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) + ' km/L' : 'sem dado suficiente') + ', combustível ' + RelA4_moeda_(v.abastecimentosValor) +
     ', ' + RelA4_plural_(v.manutencoesQtd, 'manutenção', 'manutenções') + ' (' + RelA4_moeda_(v.manutencoesCusto) + '), outras despesas ' + RelA4_moeda_(v.despesasValor) +

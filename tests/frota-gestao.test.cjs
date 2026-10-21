@@ -43,7 +43,7 @@ function ambiente(tabelasIniciais, sessao) {
     Atividades_apiCriar: (sid, p) => { const item = { ID: 'atv' + (atividades.length + 1), TITULO: p.titulo, RESPONSAVEL_NOME: 'R', PRAZO: p.prazo, SITUACAO: 'A fazer', MODULO: p.modulo, POR_QUE: p.porQue }; atividades.push(item); return { ok: true, item }; },
     Atividades_todas_: () => atividades.map((a) => Object.assign({}, a))
   });
-  for (const f of ['SGO_Utilis.js', 'SGO_Frota_Config.js', 'SGO_Frota_Main.js', 'SGO_Frota_Rastreador.js', 'SGO_Frota_Relatorio.js', 'SGO_Conduta_Qualidade.js', 'SGO_Frota_Gestao.js']) {
+  for (const f of ['SGO_Utilis.js', 'SGO_Frota_Config.js', 'SGO_Frota_Main.js', 'SGO_Frota_Identificacao.js', 'SGO_Frota_Rastreador.js', 'SGO_Frota_Relatorio.js', 'SGO_Conduta_Qualidade.js', 'SGO_Frota_Gestao.js']) {
     vm.runInContext(fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'), ctx);
   }
   return { ctx, tabelas, atividades };
