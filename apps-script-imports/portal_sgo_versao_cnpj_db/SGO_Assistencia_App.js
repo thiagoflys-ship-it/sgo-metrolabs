@@ -56,7 +56,9 @@ function AstApp_os_(os, eu, opcoes) {
     id: Ast_s_(os.ID), numero: Ast_s_(os.NUMERO), chamadoId: Ast_s_(os.CHAMADO_ID), chamadoNumero: Ast_s_(os.CHAMADO_NUMERO), situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s,
     ordem: Number(os.ORDEM_DIA) || 0, agendadoPara: Ast_iso_(os.AGENDADO_PARA), duracaoMin: Number(os.DURACAO_MIN) || 0,
     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', prazoAtendimento: { ate: sla.ate || '', estado: sla.estado },
-    tipo: { codigo: tipo.codigo, nome: tipo.nome, exige: { relato: !!tipo.exige.relato, assinatura: !!tipo.exige.assinatura, fotosMin: Number(tipo.exige.fotosMin) || 0, qrOuSerie: !!tipo.exige.qrOuSerie, checklist: !!tipo.exige.checklist } },
+    tipo: { codigo: tipo.codigo, nome: tipo.nome, exige: { relato: !!tipo.exige.relato, assinatura: !!tipo.exige.assinatura, fotosMin: Number(tipo.exige.fotosMin) || 0, qrOuSerie: !!tipo.exige.qrOuSerie, checklist: !!tipo.exige.checklist,
+      // 21/10/2026 (ensaio com o aplicativo): campos do RELATO que AstO_faltas_ exige, para o "Concluí" do aparelho dizer o mesmo que o servidor
+      relatoCampos: tipo.exige.relato ? ['servicoRealizado'].concat(tipo.semVisita ? [] : ['condicaoEncontrada']).concat(tipo.grupo === 'TECNICO' ? ['testeFuncional'] : []) : [] } },
     sintoma: Ast_s_(c.SINTOMA), orientacao: Ast_s_(os.ORIENTACAO),
     cliente: { id: Ast_s_(os.CLIENTE_ID), nome: Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), cnpj: Ast_s_(cli.CNPJ), telefone: Ast_s_(cli.TELEFONE) },
     unidade: { id: Ast_s_(os.UNIDADE_ID), nome: Ast_s_(os.UNIDADE_NOME) || Ast_s_(un.NOME_UNIDADE), endereco: Ast_s_(un.ENDERECO) || Ast_s_(cli.ENDERECO), cidade: Ast_s_(un.CIDADE), uf: Ast_s_(un.UF),

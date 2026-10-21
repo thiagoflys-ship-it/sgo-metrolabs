@@ -159,3 +159,6 @@ Uma O.S. no mesmo formato do item de `os` de `Ast_appMeuDia`, para atualizar a t
 ## Mudanças
 
 - 21/10/2026: versão 1.
+- 21/10/2026 (ensaio integrado com o aplicativo): `tipo.exige.relatoCampos` em cada O.S. do `Ast_appMeuDia`: os campos do
+  `RELATO` que o servidor exige para encerrar (`servicoRealizado` = relato ou serviço realizado com 10 letras ou mais;
+  `condicaoEncontrada` e `testeFuncional` com 3 ou mais). Campo novo, só acrescentado; o aplicativo antigo continua valendo.
