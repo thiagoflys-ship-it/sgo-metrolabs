@@ -1,5 +1,11 @@
 # Manual do Operador — Módulo Declaração de Execução de Serviço
 
+## O que mudou em 21/10/2026 (busca no cadastro)
+
+- **Buscar no cadastro (opcional).** Acima de "1. Cliente" há o quadro "Buscar no cadastro": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido).
+- Se o equipamento não estiver no cadastro, use "Cadastrar equipamento" no próprio quadro (abre em outra aba) e depois "Atualizar listas". Sem escolher nada, a tela funciona como antes, com digitação livre.
+- Se faltar TAG, número de série ou setor no cadastro, o quadro mostra "Falta no cadastro do equipamento" com os campos para preencher ali mesmo e "Gravar no cadastro" (só o que está vazio, com registro de quem gravou).
+
 ## O que mudou em 18/10/2026 (documento A4)
 
 - A declaração sai em seções numeradas: identificação, introdução, metodologia, calibrações realizadas (Tabela 1 com itens, quantidades e observações), referências normativas e, no fim, a declaração com a data de emissão e as assinaturas na mesma página. As normas aparecem uma vez só.

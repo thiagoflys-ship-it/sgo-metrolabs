@@ -475,7 +475,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       passos: [
         { titulo: "Gerar o relatório", itens: [
           "Toque em \"Relatório QI/QO/QD\" no menu.",
-          "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
+          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda e a marca não vem do cadastro. O nº de série do cadastro sai no documento.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
           "Em \"2. Equipamento\", escolha o equipamento e preencha TAG, marca, modelo, localização, datas e técnico.",
           "Marque \"Realizado no laboratório da Metrolabs\" só se o equipamento foi levado ao laboratório.",
           "Em \"3. Qualificação de Instalação / Operação (QI/QO)\", marque os itens verificados no atendimento.",

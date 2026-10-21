@@ -163,11 +163,13 @@ function RelCalDoc_montarDocumentoHtml_(ctx) {
     ['Cliente', (ctx.cliente || '—') + (cnpjCli ? ' — CNPJ ' + cnpjCli : ''), { largo: true }],
     ['Endereço', ctx.endereco, { largo: true }],
     ['Instrumento', ctx.instrumentoLabel], ['TAG', ctx.tag],
+    // 21/10/2026: nº de série do cadastro (quando o equipamento foi escolhido em "Buscar no cadastro").
+    ctx.numeroSerie ? ['Nº de série', ctx.numeroSerie] : null,
     ['Marca / modelo', (ctx.marca || '—') + ' / ' + (ctx.modelo || '—')], ['Localização habitual', ctx.localizacao],
     ['Data da calibração', ctx.dataCalibracao], ['Técnico responsável', ctx.tecnicoResponsavel],
     ['Local da calibração', localCal, { largo: true }],
     ['Empresa emitente', empresaTxt, { largo: true }]
-  ]));
+  ].filter(Boolean)));
   h.push('</section>');
 
   // 2. Introdução

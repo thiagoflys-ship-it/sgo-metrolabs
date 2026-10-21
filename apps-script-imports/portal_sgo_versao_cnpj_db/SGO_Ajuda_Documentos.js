@@ -21,7 +21,7 @@ function SGO_ajudaTelas_Documentos_() {
       passos: [
         { titulo: "Gerar a declaração", itens: [
           "Toque em \"Declaração de execução\" no menu.",
-          "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
+          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda e a marca não vem do cadastro. O nº de série do cadastro sai no documento.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
           "Confira a razão social e o endereço.",
           "Em \"2. Equipamento\", escolha o tipo de equipamento.",
           "Preencha TAG, marca, modelo e localização.",

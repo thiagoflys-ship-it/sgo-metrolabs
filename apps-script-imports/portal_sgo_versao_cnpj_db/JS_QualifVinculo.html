@@ -373,6 +373,61 @@
         .qualifEquipamentoAbrir(SGO_getSessionId(), equipamentoId, ref, via || "ficha");
     }
 
-    return { montar: montar, htmlQualificacoes: htmlQualificacoes, abrirDocumento: abrirDocumento, chamarOficial: chamarOficial, esc: esc };
+    /* 21/10/2026: busca no cadastro para telas que continuam com digitação livre (Relatório de calibração, Declaração de
+       execução e Relatório de qualificação QI/QO/QD). Escolhido o equipamento, preenche os campos da tela que estão vazios ou
+       que receberam valor automático (da leitura do certificado ou de uma escolha anterior); o que a pessoa digitou não muda.
+       O fabricante (marca) não é preenchido daqui. o: { prefixo, despacho, campos: { cliente, cnpj, endereco, tag, modelo, serie,
+       localizacao, tipo }: ids dos campos da tela, titulo, subtitulo, aoEscolher(ident, preenchidos) }. */
+    function preencherAuto(id, valor, forcar) {
+      var x = document.getElementById(id);
+      valor = String(valor == null ? "" : valor).trim();
+      if (!x || !valor) return false;
+      var atual = String(x.value || "").trim(), auto = x.getAttribute("data-auto") || "";
+      if (atual && !(forcar && auto && atual === auto)) return false;
+      x.value = valor;
+      x.setAttribute("data-auto", valor);
+      return true;
+    }
+    function montarBusca(antesDe, o) {
+      o = o || {};
+      if (!antesDe || !antesDe.parentNode || !o.despacho) return null;
+      var px = o.prefixo || "qvb";
+      var velho = document.getElementById(px + "Box");
+      if (velho && velho.parentNode) velho.parentNode.removeChild(velho);
+      var box = document.createElement("div");
+      box.id = px + "Box";
+      antesDe.parentNode.insertBefore(box, antesDe);
+      var estado = { ident: null };
+      function chamar(fn, payload, ok, erro) {
+        google.script.run
+          .withSuccessHandler(function (r) { if (r && r.ok) ok(r); else erro((r && r.erro) || "O servidor não confirmou a operação. Tente de novo."); })
+          .withFailureHandler(function (e) { erro("Não foi possível falar com o servidor (" + String(e && e.message ? e.message : e).replace(/[.\s]+$/, "") + "). Confira a conexão e tente de novo."); })
+          [o.despacho]({ sessionId: SGO_getSessionId(), fn: fn, payload: payload || {} });
+      }
+      montar(box, {
+        prefixo: px, camposCadastro: [], chamar: chamar,
+        titulo: o.titulo || "Buscar no cadastro (opcional)",
+        subtitulo: o.subtitulo || "Escolha o cliente, a unidade e o equipamento para preencher cliente, CNPJ, endereço, TAG, modelo e localização a partir do cadastro. Só os campos vazios (ou preenchidos automaticamente) recebem o valor; o que você digitou continua. Sem escolher, a tela funciona como antes.",
+        aoMudar: function (i) {
+          estado.ident = i;
+          if (!i) return;
+          var c = o.campos || {}, n = 0;
+          var pares = [["cliente", i.cliente], ["cnpj", i.cnpj], ["endereco", [i.endereco, i.cidadeUf].filter(Boolean).join(" — ")], ["tag", i.tag], ["modelo", i.modelo],
+            ["serie", i.numeroSerie], ["localizacao", [i.unidade, i.setor].filter(Boolean).join(" — ")], ["tipo", i.tipo]];
+          pares.forEach(function (p) { if (c[p[0]] && preencherAuto(c[p[0]], p[1], true)) n++; });
+          if (typeof o.aoEscolher === "function") { try { o.aoEscolher(Object.assign({}, i), n); } catch (e) { console.error(e); } }
+        }
+      });
+      return { ident: function () { return estado.ident ? Object.assign({}, estado.ident) : null; }, box: box };
+    }
+    /* Dados do cadastro que vão no envio (série e ligação ao cadastro), só enquanto a TAG da tela for a do equipamento escolhido. */
+    function dadosDoCadastro(busca, tagTela) {
+      var i = busca && busca.ident ? busca.ident() : null;
+      if (!i) return {};
+      var t = String(tagTela || "").trim().toUpperCase();
+      if (i.tag && t !== String(i.tag).trim().toUpperCase()) return {};
+      return { numeroSerie: i.numeroSerie || "", clienteId: i.clienteId || "", unidadeId: i.unidadeId || "", equipamentoId: i.equipamentoId || "" };
+    }
+    return { montar: montar, htmlQualificacoes: htmlQualificacoes, abrirDocumento: abrirDocumento, chamarOficial: chamarOficial, esc: esc, montarBusca: montarBusca, preencherAuto: preencherAuto, dadosDoCadastro: dadosDoCadastro };
   })();
 </script>

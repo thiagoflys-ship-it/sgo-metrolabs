@@ -1,5 +1,11 @@
 # Manual do Operador — Módulo Relatório de Calibração
 
+## O que mudou em 21/10/2026 (busca no cadastro)
+
+- **Buscar no cadastro (opcional).** Acima de "1. Cliente" há o quadro "Buscar no cadastro": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido). A leitura automática do certificado continua; quando o equipamento é escolhido no cadastro, o valor do cadastro fica no lugar do que veio do certificado.
+- Se o equipamento não estiver no cadastro, use "Cadastrar equipamento" no próprio quadro (abre em outra aba) e depois "Atualizar listas". Sem escolher nada, a tela funciona como antes, com digitação livre.
+- Se faltar TAG, número de série ou setor no cadastro, o quadro mostra "Falta no cadastro do equipamento" com os campos para preencher ali mesmo e "Gravar no cadastro" (só o que está vazio, com registro de quem gravou).
+
 ## O que mudou em 18/10/2026
 
 - O documento segue o padrão A4 dos documentos técnicos: seções numeradas (1. Identificação, 2. Introdução, 3. Resultados da calibração, Registro fotográfico quando houver fotos, Referências normativas e Conclusão e responsabilidade técnica), tabelas de resultados numeradas ("Tabela 1 — …") e o certificado anexado como figura numerada ("Figura 1 — Certificado de calibração anexado"), com altura limitada para a seção começar já na primeira folha.

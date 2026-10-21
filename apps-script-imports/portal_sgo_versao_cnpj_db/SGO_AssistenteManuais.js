@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "0854b4e4fa6e",
+ "versao": "08c15f18e8f7",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -1132,6 +1132,10 @@ var SGO_ASSIST_MANUAIS = {
    "perfis": null,
    "secoes": [
     {
+     "titulo": "O que mudou em 21/10/2026 (busca no cadastro)",
+     "texto": "Buscar no cadastro (opcional). Acima de \"1. Cliente\" há o quadro \"Buscar no cadastro\": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido).\nSe o equipamento não estiver no cadastro, use \"Cadastrar equipamento\" no próprio quadro (abre em outra aba) e depois \"Atualizar listas\". Sem escolher nada, a tela funciona como antes, com digitação livre.\nSe faltar TAG, número de série ou setor no cadastro, o quadro mostra \"Falta no cadastro do equipamento\" com os campos para preencher ali mesmo e \"Gravar no cadastro\" (só o que está vazio, com registro de quem gravou)."
+    },
+    {
      "titulo": "O que mudou em 18/10/2026 (documento A4)",
      "texto": "A declaração sai em seções numeradas: identificação, introdução, metodologia, calibrações realizadas (Tabela 1 com itens, quantidades e observações), referências normativas e, no fim, a declaração com a data de emissão e as assinaturas na mesma página. As normas aparecem uma vez só.\nO documento é salvo na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome \"Declaracao de execucao - número - TAG - data e hora\", em PDF e em HTML. As declarações antigas, na pasta com o nome do cliente, continuam aparecendo em \"Documentos já gerados\"."
     },
@@ -2106,6 +2110,10 @@ var SGO_ASSIST_MANUAIS = {
    "perfis": null,
    "secoes": [
     {
+     "titulo": "O que mudou em 21/10/2026 (busca no cadastro)",
+     "texto": "Buscar no cadastro (opcional). Acima de \"1. Cliente\" há o quadro \"Buscar no cadastro\": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido). A leitura automática do certificado continua; quando o equipamento é escolhido no cadastro, o valor do cadastro fica no lugar do que veio do certificado.\nSe o equipamento não estiver no cadastro, use \"Cadastrar equipamento\" no próprio quadro (abre em outra aba) e depois \"Atualizar listas\". Sem escolher nada, a tela funciona como antes, com digitação livre.\nSe faltar TAG, número de série ou setor no cadastro, o quadro mostra \"Falta no cadastro do equipamento\" com os campos para preencher ali mesmo e \"Gravar no cadastro\" (só o que está vazio, com registro de quem gravou)."
+    },
+    {
      "titulo": "O que mudou em 18/10/2026",
      "texto": "O documento segue o padrão A4 dos documentos técnicos: seções numeradas (1. Identificação, 2. Introdução, 3. Resultados da calibração, Registro fotográfico quando houver fotos, Referências normativas e Conclusão e responsabilidade técnica), tabelas de resultados numeradas (\"Tabela 1 — …\") e o certificado anexado como figura numerada (\"Figura 1 — Certificado de calibração anexado\"), com altura limitada para a seção começar já na primeira folha.\nAs normas aparecem uma única vez, na seção \"Referências normativas\". A nota de escopo fica junto da conclusão e das assinaturas, na mesma folha.\nA cópia (HTML + PDF) vai para a subpasta do cliente com o CNPJ de 14 dígitos, procurado no cadastro de clientes pela razão social ou pelo nome fantasia; sem CNPJ no cadastro, a subpasta usa o nome do cliente. Nome do arquivo: \"Relatorio de calibracao - <número> - <TAG> - <aaaa-MM-dd HHmm>\".\nSem número informado no formulário, o relatório recebe um número automático no formato RCL-aaaammdd-hhmm."
     },
@@ -2181,6 +2189,10 @@ var SGO_ASSIST_MANUAIS = {
    "tela": "declaracao_qiqo",
    "perfis": null,
    "secoes": [
+    {
+     "titulo": "O que mudou em 21/10/2026 (busca no cadastro)",
+     "texto": "Buscar no cadastro (opcional). Acima de \"1. Cliente\" há o quadro \"Buscar no cadastro\": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido).\nSe o equipamento não estiver no cadastro, use \"Cadastrar equipamento\" no próprio quadro (abre em outra aba) e depois \"Atualizar listas\". Sem escolher nada, a tela funciona como antes, com digitação livre.\nSe faltar TAG, número de série ou setor no cadastro, o quadro mostra \"Falta no cadastro do equipamento\" com os campos para preencher ali mesmo e \"Gravar no cadastro\" (só o que está vazio, com registro de quem gravou)."
+    },
     {
      "titulo": "O que mudou até 17/10/2026",
      "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nO relatório é salvo sozinho na pasta do cliente. Se falhar, aparece \"Tentar salvar de novo\". Os perfis Comercial e Financeiro só consultam."

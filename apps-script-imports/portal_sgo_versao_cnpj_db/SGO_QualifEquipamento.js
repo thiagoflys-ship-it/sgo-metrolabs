@@ -636,3 +636,34 @@ function qualifEquipamentoAbrir(sessionId, equipamentoId, ref, via) {
     return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('abrir o documento', e) : String(e && e.message ? e.message : e) };
   }
 }
+
+/* ============================================================
+ * Busca no cadastro para telas de digitação livre (21/10/2026)
+ * Relatório de calibração, Declaração de execução e Relatório de qualificação QI/QO/QD: o roteador de cada
+ * módulo encaminha para cá (os nomes são os do componente SGO_QVinc). Lista todos os tipos de equipamento;
+ * a identificação leva também o modelo (a tela do módulo tem o campo). Fabricante não sai daqui.
+ * ============================================================ */
+var SGO_QEQ_FNS_BUSCA = ['apiPesquisarClientes', 'apiListarUnidades', 'apiListarEquipamentos', 'apiIdentificacao', 'apiPreencherCadastro', 'apiSugestoesCadastro'];
+function SGO_QEQ_apiBuscaCadastro_(fn, p, sessionId) {
+  var sessao = exigirSessao(String(sessionId || ''));
+  p = p || {};
+  if (fn === 'apiPesquisarClientes') return { ok: true, items: SGO_QEQ_pesquisarClientes_(sessao, p.termo) };
+  if (fn === 'apiListarUnidades') return { ok: true, items: SGO_QEQ_listarUnidades_(sessao, p.clienteId) };
+  if (fn === 'apiListarEquipamentos') return { ok: true, items: SGO_QEQ_listarEquipamentos_(sessao, p.clienteId, p.unidadeId, null) };
+  if (fn === 'apiIdentificacao') {
+    var ident = SGO_QEQ_identificacao_(sessionId, p.clienteId, p.unidadeId, p.equipamentoId);
+    var e = SGO_QEQ_porId_('CAD_EQUIPAMENTOS', ident.equipamentoId) || {};
+    var limpo = SGO_QEQ_identPublica_(ident);
+    limpo.modelo = SGO_QEQ_s_(e.MODELO);
+    return { ok: true, identificacao: limpo, tipoCompativel: true };
+  }
+  if (fn === 'apiPreencherCadastro') return SGO_QEQ_apiPreencherCadastro(p, sessao, sessionId);
+  if (fn === 'apiSugestoesCadastro') return SGO_QEQ_apiSugestoesCadastro(p, sessao, sessionId);
+  throw new Error('Operação desconhecida: ' + fn + '. Atualize a página (F5).');
+}
+/** Entradas do roteador do módulo: { apiPesquisarClientes: fn(payload, sessionId), ... }. */
+function SGO_QEQ_rotasBuscaCadastro_() {
+  var o = {};
+  SGO_QEQ_FNS_BUSCA.forEach(function (fn) { o[fn] = function (payload, sessionId) { return SGO_QEQ_apiBuscaCadastro_(fn, payload, sessionId); }; });
+  return o;
+}
