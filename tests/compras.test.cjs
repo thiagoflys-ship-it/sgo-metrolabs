@@ -370,3 +370,90 @@ test('etapa 3 · pedido aprovado do Comercial abre a requisição com os produto
   assert.equal(atvCom.SITUACAO, 'Concluída');
   assert.ok(pend(amb, 's_vera').some((i) => i.tipo === 'compras_aviso' && /PROP-2026-0001/.test(i.titulo)), 'vendedora avisada');
 });
+
+// ------------------------------------------------------------------ etapa 4
+function comPedido(amb, fs) {
+  const q = aprovada(amb, fs);
+  ok(amb.api('s_carlos', 'emitirPedido', Object.assign({ requisicaoId: q.id, previsaoEntrega: '2026-10-24' }, pagCartao)));
+  return q;
+}
+
+test('etapa 4 · Financeiro: pagamento com comprovante, conferência por outra pessoa, filtro pelo final do cartão, divergência volta ao comprador, planilha', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  const q = comPedido(amb, fs);
+  assert.match(amb.api('s_carlos', 'pagamento', { requisicaoId: q.id, valorPago: '250,00', pagoEm: '2026-10-19' }).message, /anexe o comprovante/);
+  ok(amb.api('s_carlos', 'pagamento', { requisicaoId: q.id, valorPago: '260,00', pagoEm: '2026-10-19', comprovante: PDF }));
+  const pf = pend(amb, 's_fabio').filter((i) => i.tipo === 'compras_conferir');
+  assert.equal(pf.length, 1);
+  semValor(pf[0].titulo + pf[0].detalhe, 'pendência do Financeiro');
+  assert.match(amb.api('s_tiago', 'financeiro', {}).message, /conferência das compras é do Financeiro/);
+  const l = ok(amb.api('s_fabio', 'financeiro', { mes: '2026-10', cartaoFinal: '4321', situacao: 'AGUARDANDO' }));
+  assert.equal(l.compras.length, 1);
+  assert.equal(l.compras[0].diferenca, true, 'valor pago diferente do pedido');
+  assert.equal(ok(amb.api('s_fabio', 'financeiro', { mes: '2026-10', cartaoFinal: '9999' })).compras.length, 0);
+  // quem registrou não confere a própria (Diretoria registrando e conferindo)
+  assert.match(amb.api('s_carlos', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }).message, /conferência das compras é do Financeiro/);
+  const pedRow = amb.tabelas.CMP_PEDIDOS[0], quem = pedRow.PAGAMENTO_POR_ID; pedRow.PAGAMENTO_POR_ID = 'u_fin';
+  assert.match(amb.api('s_fabio', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }).message, /Quem registra não confere a própria/);
+  pedRow.PAGAMENTO_POR_ID = quem;
+  const div = ok(amb.api('s_fabio', 'conferir', { pedidoId: l.compras[0].id, resultado: 'DIVERGENTE', obs: 'Comprovante de 260 e pedido de 250' }));
+  void div;
+  assert.equal(pend(amb, 's_carlos').filter((i) => i.tipo === 'compras_fin_divergente').length, 1);
+  assert.match(amb.api('s_carlos', 'pagamento', { requisicaoId: q.id, valorPago: '250,00', pagoEm: '2026-10-19' }).message, /escreva o que foi corrigido/);
+  ok(amb.api('s_carlos', 'pagamento', { requisicaoId: q.id, valorPago: '250,00', pagoEm: '2026-10-19', correcao: 'Valor digitado errado; comprovante confere 250' }));
+  ok(amb.api('s_fabio', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }));
+  assert.match(amb.api('s_carlos', 'pagamento', { requisicaoId: q.id, valorPago: '250,00', pagoEm: '2026-10-19' }).message, /já conferiu/);
+  const csv = ok(amb.api('s_fabio', 'planilha', { mes: '2026-10' })).csv;
+  assert.match(csv, /PC-2026-0001;REQ-2026-0001/); assert.match(csv, /R\$ 250,00/); assert.match(csv, /4321/);
+  // e-mails: o resumo da manhã leva o aviso do Financeiro, sem valor, um por pessoa por dia
+  amb.mudar('2026-10-20T09:00:00-03:00');
+  ok(amb.ctx.Compras_rotina_(null, true) ? { ok: true } : { ok: false });
+  const paraFabio = amb.emails.filter((m) => m.to === 'fabio@exemplo.test');
+  assert.equal(paraFabio.length, 1);
+  semValor(paraFabio[0].subject + paraFabio[0].body, 'e-mail');
+  amb.emails.forEach((m) => semValor(m.subject + m.body, 'e-mail'));
+  assert.equal(amb.whats.length, 0, 'Compras nunca manda WhatsApp');
+});
+
+test('etapa 4 · compra sem pedido: registrada com justificativa e comprovante, vai à conferência e à Caixa da gestão até a ciência', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const base = { finalidade: 'Fusível para o equipamento parado no cliente', vinculo: { tipo: 'CLIENTE', clienteId: 'c1' }, itens: [{ categoria: 'INSUMO', descricao: 'Fusível 10 A', quantidade: 2, unidade: 'un.' }],
+    fornecedorNome: 'Loja de materiais elétricos de teste', valor: '35,00', pagoEm: '2026-10-19', formaPagamento: 'PIX', comprovante: PDF };
+  assert.match(amb.api('s_tiago', 'semPedido', Object.assign({}, base, { justificativa: 'urgente' })).message, /pelo menos 20 letras/);
+  const s = ok(amb.api('s_tiago', 'semPedido', Object.assign({}, base, { justificativa: 'Comprado no balcão durante o atendimento; equipamento parado' })));
+  assert.equal(s.requisicao.situacao, 'ENTREGUE');
+  assert.equal(s.requisicao.valorTxt, undefined, 'quem registrou (técnico) não recebe o valor de volta na tela');
+  const cx = caixa(amb);
+  assert.equal(cx.length, 1); assert.equal(cx[0].tipo, 'compras_sem_pedido'); assert.deepEqual(Array.from(cx[0].responsaveis), ['u_gt']);
+  assert.equal(pend(amb, 's_fabio').filter((i) => i.tipo === 'compras_conferir').length, 1);
+  assert.match(amb.api('s_carlos', 'ciente', { requisicaoId: s.requisicao.id }).message, /é da gestão/);
+  ok(amb.api('s_gil', 'ciente', { requisicaoId: s.requisicao.id, texto: 'Combinado com o técnico' }));
+  assert.equal(caixa(amb).length, 0);
+});
+
+test('etapa 4 · painel e relatório mensal A4: gasto por vínculo, área e fornecedor fecha com os pedidos; rotina gera no 1º dia útil e avisa a Diretoria', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const fs = fornecedoresDeTeste(amb);
+  comPedido(amb, fs);
+  ok(amb.api('s_tiago', 'semPedido', { finalidade: 'Fusível para o equipamento parado no cliente', vinculo: { tipo: 'CLIENTE', clienteId: 'c1' }, itens: [{ categoria: 'INSUMO', descricao: 'Fusível 10 A', quantidade: 2, unidade: 'un.' }],
+    fornecedorNome: 'Loja de teste', valor: '35,00', pagoEm: '2026-10-19', formaPagamento: 'PIX', comprovante: PDF, justificativa: 'Comprado no balcão durante o atendimento; equipamento parado' }));
+  assert.match(amb.api('s_tiago', 'painel', {}).message, /fila de compras é dos compradores/);
+  const p = ok(amb.api('s_carlos', 'painel', { competencia: '2026-10' }));
+  assert.equal(p.pedidos.valorTxt, 'R$ 285,00');
+  assert.deepEqual(p.porVinculo.map((x) => x.nome + ' ' + x.valorTxt), ['Uso interno R$ 250,00', 'Cliente R$ 35,00']);
+  assert.equal(p.semPedido.length, 1);
+  const rel = ok(amb.api('s_dora', 'relatorioMes', { competencia: '2026-10' }));
+  assert.equal(rel.salvo, true);
+  assert.match(rel.html, /Relatório mensal de compras/); assert.match(rel.html, /R\$ 285,00/); assert.match(rel.html, /Compras sem pedido no sistema/);
+  assert.match(amb.api('s_tiago', 'relatorioMes', {}).message, /gestão de Compras/);
+  amb.mudar('2026-12-01T09:30:00-03:00');
+  const r1 = amb.ctx.Compras_rotina_(null, true);
+  assert.equal(r1.relatorioMensal.gerado, '2026-11');
+  assert.ok(amb.ctx.Compras_rotina_(null, true).relatorioMensal.feito, 'uma vez só');
+  assert.ok(pend(amb, 's_dora').some((i) => i.tipo === 'compras_aviso' && /Relatório mensal de compras/.test(i.titulo)));
+  assert.ok(Object.values(amb.pastas).some((x) => x.nome === 'Compras - Relatórios'));
+});

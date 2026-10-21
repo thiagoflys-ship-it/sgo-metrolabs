@@ -137,6 +137,7 @@ function CmpR_paraTela_(eu, r, completo) {
     t.escolhaJustificativa = Cmp_s_(r.ESCOLHA_JUSTIFICATIVA); t.cotacoesJustificativa = Cmp_s_(r.COTACOES_JUSTIFICATIVA); t.minimoCotacoes = Cmp_s_(r.MINIMO_COTACOES);
     t.reprovacoes = Number(r.REPROVACOES) || 0; t.semPedidoJustificativa = Cmp_s_(r.SEM_PEDIDO_JUSTIFICATIVA); t.gestaoCiente = Cmp_s_(r.GESTAO_CIENTE_EM) ? Cmp_br_(r.GESTAO_CIENTE_EM) + ' por ' + Cmp_s_(r.GESTAO_CIENTE_POR_NOME) : '';
   }
+  if (typeof CmpFin_paraTela_ === 'function' && valores) CmpFin_paraTela_(eu, r, t);
   if (completo) {
     var itens = CmpR_itensDe_(r.ID);
     var todasFotos = eu.veFila || eu.comprador;
@@ -158,6 +159,7 @@ function CmpR_acoes_(eu, r) {
   a.iniciarCotacao = s === 'SOLICITADA' && eu.comprador && !Cmp_sim_(r.ESPEC_INCOMPLETA);
   if (typeof CmpC_acoes_ === 'function') CmpC_acoes_(eu, r, a);
   if (typeof CmpP_acoes_ === 'function') CmpP_acoes_(eu, r, a);
+  if (typeof CmpFin_acoes_ === 'function') CmpFin_acoes_(eu, r, a);
   return a;
 }
 

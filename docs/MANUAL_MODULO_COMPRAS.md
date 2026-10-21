@@ -1,6 +1,6 @@
 # Manual do módulo Compras e peças do SGO+
 
-Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras (com cotações e aprovação), Fornecedores e Regras de compras.
+Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras.
 
 ## Para que serve
 
@@ -106,6 +106,22 @@ Sem divergência, a compra fica "Disponível": quem pediu é avisado no sistema 
 
 Quando o vendedor passa um pedido aprovado aos setores e há produto, além da atividade do setor Compras nasce o pedido de compra (REQ) com os produtos do pedido, ligado à proposta e sem o valor de venda. A atividade do setor Compras é a tarefa do comprador; quando todas as compras daquele pedido ficam disponíveis, ela é concluída sozinha e o vendedor é avisado.
 
+## Pagamento e conferência do Financeiro
+
+Depois do pedido feito, o comprador toca em "Registrar o pagamento": valor pago, data, forma (a do pedido ou outra) e o comprovante (recibo, extrato, cupom ou boleto pago). A compra entra na Conferência do Financeiro como "Aguardando conferência", e o Financeiro é avisado no sistema e no resumo de e-mail (sem valor).
+
+Compras > Conferência do Financeiro (perfil ou área Financeiro, Diretoria e Administrador) lista as compras por mês, situação e final do cartão, com o valor do pedido, o valor pago (selo "diferente" quando não batem), o comprovante, a nota e os selos "Sem pedido" e "Menos cotações". "Abrir o dossiê" mostra a ficha completa (vínculo, orçamentos com os arquivos, aprovação, pedido, recebimento, pagamento). "Conferida" encerra a conferência; "Divergente" exige o que não bate e volta para quem registrou o pagamento, que corrige e reenvia com o que foi corrigido. Quem registrou a compra ou o pagamento não confere a própria. "Baixar a planilha" gera o arquivo CSV com a lista filtrada, para bater a fatura do cartão.
+
+## Compra feita sem pedido no sistema
+
+Resposta do dono: a compra feita fora do sistema não é bloqueada, mas é registrada. Em Meus pedidos de compra, "Registrar compra feita fora do sistema": para que foi, o vínculo, o que foi comprado, onde, o valor, a data, a forma de pagamento, o comprovante e por que foi fora do sistema (pelo menos 20 letras). A compra nasce encerrada, entra na conferência do Financeiro e aparece na Caixa de decisões do gestor da área de quem comprou (sem gestor, a Diretoria) até alguém da gestão tocar em "Ciente" na ficha.
+
+## Painel e relatório mensal
+
+Compras > Painel de compras (compradores, gestores e Diretoria): compras em aberto por situação, entregas atrasadas, o que aguarda o Financeiro, o gasto do mês por vínculo, por área de quem pediu e por fornecedor, e os controles do mês (recebidas fora do prazo, menos cotações que o mínimo, divergências de recebimento, compras sem pedido).
+
+"Relatório do mês (A4)" abre o relatório mensal de compras e salva PDF e HTML na pasta "Compras - Relatórios". No primeiro dia útil de cada mês, a rotina de Compras gera sozinha o relatório do mês anterior e avisa a Diretoria no sistema e no resumo de e-mail.
+
 ## Fornecedores
 
 Cadastro único: CNPJ (ou CPF de pessoa física) que não se repete, razão social, nome fantasia e endereço pela consulta de CNPJ, contato, telefone, WhatsApp, e-mail para pedidos, categorias, prazo médio, condição de pagamento e observações. Antes de criar, o sistema avisa se já existe fornecedor com nome parecido.
@@ -141,3 +157,8 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
 - Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos).
 - Recebida com divergência: o comprador, no sistema até resolver.
 - Peça disponível: quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail.
+- Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail.
+- Compra sem pedido: a Caixa de decisões da gestão até a ciência.
+- Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.
+
+A rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês.

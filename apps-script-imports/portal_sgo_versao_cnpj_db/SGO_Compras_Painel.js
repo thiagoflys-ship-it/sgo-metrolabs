@@ -214,6 +214,20 @@ var CMP_ACOES = {
   resolverDivergencia: function (eu, sid, d) { return CmpP_resolverDivergencia_(eu, d); },
   entregar: function (eu, sid, d) { return CmpP_entregar_(eu, d); },
   equipe: function (eu) { Cmp_exigir_(eu, 'COMPRADOR', 'ver a equipe'); var us = Cmp_usuarios_(); return { equipe: Object.keys(us).filter(function (id) { return us[id].ativo && !Cmp_ehContaSistema_(us[id]); }).map(function (id) { return { id: id, nome: us[id].nome }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }) }; },
+  // Financeiro, compra sem pedido, painel e relatório
+  pagamento: function (eu, sid, d) { return CmpFin_registrarPagamento_(eu, d); },
+  conferir: function (eu, sid, d) { return CmpFin_conferir_(eu, d); },
+  financeiro: function (eu, sid, d) { return CmpFin_lista_(eu, d); },
+  planilha: function (eu, sid, d) { return CmpFin_planilha_(eu, d); },
+  semPedido: function (eu, sid, d) { return CmpFin_semPedido_(eu, d); },
+  ciente: function (eu, sid, d) { return CmpFin_ciente_(eu, d); },
+  painel: function (eu, sid, d) { return CmpFin_painel_(eu, d); },
+  relatorioMes: function (eu, sid, d) {
+    if (!(eu.gestao || eu.gestor || eu.diretoria)) Cmp_exigir_(eu, 'GESTAO', 'gerar o relatório mensal');
+    var comp = /^\d{4}-\d{2}$/.test(Cmp_s_(d && d.competencia)) ? Cmp_s_(d.competencia) : Cmp_hoje_().slice(0, 7);
+    var g = Compras_relatorioMes_(comp, eu.nome);
+    return { html: typeof RelA4_injetarAvisos_ === 'function' ? RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_({ salvo: g.salvo, pdfUrl: g.pdfUrl, pastaUrl: g.pastaUrl, aviso: g.salvo ? '' : g.aviso }, [])) : g.html, salvo: g.salvo, pdfUrl: g.pdfUrl };
+  },
   // fornecedores
   fornecedores: function (eu, sid, d) { return { fornecedores: CmpF_listar_(eu, d) }; },
   fornecedor: function (eu, sid, d) { return { fornecedor: CmpF_detalhe_(eu, d && d.id) }; },

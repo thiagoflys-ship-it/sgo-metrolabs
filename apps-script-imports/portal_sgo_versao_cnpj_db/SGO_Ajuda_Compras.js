@@ -45,7 +45,9 @@ function SGO_ajudaTelas_Compras_() {
       paraQueServe: 'Acompanhar os pedidos que você fez (e, se você é vendedor, os do seu pedido aprovado no Comercial): situação, previsão de entrega e o que falta completar. Sem valores.',
       passos: [
         { titulo: 'Acompanhar um pedido', itens: ['Abra "Meus pedidos de compra".', 'Leia a situação e a frase embaixo dela.', 'Toque em "Itens e andamento" para ver os itens e o histórico.'] },
-        { titulo: 'Cancelar um pedido', itens: ['Enquanto o pedido está "Solicitada", toque em "Cancelar o pedido".', 'Escreva o motivo e confirme.', 'Depois que a cotação começa, peça o cancelamento ao comprador.'] }
+        { titulo: 'Cancelar um pedido', itens: ['Enquanto o pedido está "Solicitada", toque em "Cancelar o pedido".', 'Escreva o motivo e confirme.', 'Depois que a cotação começa, peça o cancelamento ao comprador.'] },
+        { titulo: 'Confirmar que recebeu', itens: ['Quando o pedido estiver "Disponível" e você já estiver com a peça, toque em "Recebi a peça".', 'O pedido é encerrado.'] },
+        { titulo: 'Registrar uma compra feita fora do sistema', itens: ['Use só quando já comprou (por exemplo, no balcão durante um atendimento).', 'Toque em "Registrar compra feita fora do sistema".', 'Diga para que foi, a que está ligada, o que comprou, onde, o valor, a data e a forma de pagamento.', 'Anexe o comprovante e explique por que foi fora do sistema.', 'A compra vai para a conferência do Financeiro e para a ciência da gestão.'] }
       ],
       cores: [
         { nome: 'Selo azul', significado: 'Em andamento em Compras (solicitada, em cotação, aprovada, pedido feito).' },
@@ -75,6 +77,8 @@ function SGO_ajudaTelas_Compras_() {
         { titulo: 'Fazer o pedido ao fornecedor', itens: ['Na ficha de uma compra "Aprovada", toque em "Emitir o pedido de compra".', 'Informe a previsão de entrega combinada e a forma de pagamento (cartão com os 4 últimos números e as parcelas, PIX, boleto com vencimento, transferência, faturado com a condição ou reembolso).', 'Toque em "Emitir o pedido". Sai a folha A4 numerada (PC-ano-número) na pasta Compras - Pedidos de compra.', 'Toque em "Enviar ao fornecedor": o e-mail para pedidos do fornecedor já vem sugerido.', 'Depois de enviar, toque em "Já enviei: atualizar".'] },
         { titulo: 'Mudar a previsão ou o pedido', itens: ['Toque em "Mudar previsão ou rastreio", informe a data nova e o motivo. Quem pediu vê a data nova.', 'Para mudar o próprio pedido (quantidade, forma de pagamento), toque em "Nova revisão do pedido" e escreva o que mudou. Sai a revisão 01, 02...'] },
         { titulo: 'Receber e conferir', itens: ['Quando a compra chegar, toque em "Registrar o recebimento".', 'Conte e informe a quantidade recebida de cada item.', 'Marque se a especificação confere e se chegou sem dano.', 'Informe o número da nota fiscal (ou o motivo de vir sem nota).', 'Com dano, anexe a foto. Com qualquer divergência, descreva o que aconteceu.', 'Sem divergência, a peça fica "Disponível" e quem pediu é avisado. Com divergência, fica segura até você tocar em "Divergência resolvida".'] },
+        { titulo: 'Registrar o pagamento', itens: ['Na ficha, toque em "Registrar o pagamento".', 'Informe o valor pago e a data (troque a forma de pagamento se mudou).', 'Anexe o comprovante e toque em "Enviar ao Financeiro".', 'Se o Financeiro apontar divergência, toque em "Corrigir e reenviar ao Financeiro" e escreva o que foi corrigido.'] },
+        { titulo: 'Gestão: compra feita sem pedido', itens: ['Abra a compra pela Caixa de decisões.', 'Leia a justificativa e toque em "Ciente".', 'Converse com a pessoa para que a próxima compra passe pelo sistema.'] },
         { titulo: 'Entregar a quem pediu', itens: ['Toque em "Registrar a entrega".', 'Escolha quem recebeu e escreva a evidência (protocolo, retirada assinada) ou anexe a foto.', 'Quem pediu também pode tocar em "Recebi a peça" em Meus pedidos de compra. O pedido é encerrado.'] },
         { titulo: 'Cancelar', itens: ['Toque em "Cancelar o pedido".', 'Escreva o motivo. Quem pediu é avisado no sistema.', 'Se o pedido de compra já foi feito, avise o fornecedor.'] }
       ],
@@ -112,6 +116,25 @@ function SGO_ajudaTelas_Compras_() {
       ],
       quemPode: quem,
       perguntas: [{ p: 'A importação troca o que já está cadastrado?', r: 'Não. CNPJ que já existe só ganha os campos que estavam vazios. O que já foi digitado nunca é trocado.' }]
+    },
+    'compras_financeiro': {
+      titulo: 'Conferência do Financeiro',
+      paraQueServe: 'Conferir cada compra com o pagamento registrado: o dossiê (vínculo, cotações com os arquivos, aprovação, comprovante, nota) e a forma de pagamento. Filtre pelo mês e pelo final do cartão para bater a fatura, e baixe a planilha.',
+      antesDeComecar: ['Quem registrou a compra ou o pagamento não confere a própria.', 'As compras com "Menos cotações" ou "Sem pedido" vêm marcadas: confira a justificativa.'],
+      passos: [
+        { titulo: 'Conferir uma compra', itens: ['Escolha o mês e a situação "Aguardando conferência".', 'Toque em "Abrir o dossiê".', 'Confira o vínculo, os orçamentos, a aprovação, o comprovante e a nota.', 'Toque em "Conferida", ou em "Divergente" e escreva o que não bate.'] },
+        { titulo: 'Bater a fatura do cartão', itens: ['Escolha o mês e digite os 4 últimos números do cartão.', 'Compare a lista com a fatura.', 'Toque em "Baixar a planilha" para guardar ou conferir na planilha.'] }
+      ],
+      cores: [{ nome: 'Selo laranja "diferente"', significado: 'O valor pago é diferente do valor do pedido de compra: confira o motivo.' }, { nome: 'Selo vermelho "Sem pedido"', significado: 'Compra feita fora do sistema e registrada depois.' }, { nome: 'Selo laranja "Menos cotações"', significado: 'O comprador justificou ter menos orçamentos que o mínimo da faixa.' }],
+      problemas: [{ situacao: 'Aparece "foi você quem registrou esta compra".', oQueFazer: 'Quem registra não confere. Peça a outra pessoa do Financeiro ou à Diretoria.' }],
+      quemPode: quem,
+      perguntas: [{ p: 'A divergência volta para quem?', r: 'Para quem registrou o pagamento (normalmente o comprador), no sistema e no resumo de e-mail, até corrigir e reenviar.' }]
+    },
+    'compras_painel': {
+      titulo: 'Painel de compras',
+      paraQueServe: 'Compras em aberto por situação, entregas atrasadas, gasto do mês por vínculo, área e fornecedor, e os controles: recebidas fora do prazo, menos cotações que o mínimo, divergências e compras sem pedido. Gera o relatório mensal em A4.',
+      passos: [{ titulo: 'Ver outro mês e o relatório', itens: ['Escolha o mês no alto da tela.', 'Toque em "Relatório do mês (A4)": abre a folha A4 e salva PDF e HTML na pasta Compras - Relatórios.', 'No primeiro dia útil, o relatório do mês anterior sai sozinho e a Diretoria é avisada.'] }],
+      quemPode: quem
     },
     'compras_regras': {
       titulo: 'Regras de compras',
