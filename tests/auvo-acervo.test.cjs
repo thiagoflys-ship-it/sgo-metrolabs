@@ -158,17 +158,19 @@ function ambiente(op) {
       const nome = url.split('/').pop();
       if (nome === 'falha404.jpg' && !auvo.voltou404) return resposta(404, 'não encontrado', { 'Content-Type': 'text/plain' });
       if (nome === 'instavel.jpg' && auvo.contagemImg[url] < 2 && metodo === 'get') return resposta(500, 'erro', { 'Content-Type': 'text/plain' });
+      if (auvo.pendurar && auvo.pendurar.has(nome) && metodo === 'get') { auvo.penduradas = (auvo.penduradas || 0) + 1; for (;;) { /* download que nunca responde */ } }
       if (nome === 'pagina.jpg') return resposta(200, '<html>entre</html>', { 'Content-Type': 'text/html; charset=utf-8' });
       const b = auvo.imagens[url] || bytesImagem(url);
       const tipo = nome.endsWith('.pdf') ? 'application/pdf' : nome.endsWith('.png') ? 'image/png' : 'image/jpeg';
-      if (metodo === 'head') return resposta(200, Buffer.alloc(0), { 'Content-Type': tipo, 'Content-Length': String(b.length) });
+      if (metodo === 'head') return resposta(200, Buffer.alloc(0), { 'Content-Type': tipo, 'Content-Length': String((auvo.tamanhos && auvo.tamanhos[nome]) || b.length) });
       return resposta(200, b, { 'Content-Type': tipo });
     }
     return resposta(404, 'inesperado no teste: ' + url, { 'Content-Type': 'text/plain' });
   }
+  const grupos = [];
   const UrlFetchApp = {
     fetch: (url, p) => servidor(url, p),
-    fetchAll: (lista) => lista.map((r) => servidor(r.url, r))
+    fetchAll: (lista) => { grupos.push(lista.map((r) => ({ url: r.url, metodo: String(r.method || 'get') }))); return lista.map((r) => servidor(r.url, r)); }
   };
 
   const props = Object.assign({ AUVO_API_KEY: 'chave-teste', AUVO_API_TOKEN: 'token-teste' }, op.props || {});
@@ -219,7 +221,7 @@ function ambiente(op) {
     const l = abas[nome]._linhas; const cab = l[0];
     return l.slice(1).map((row) => Object.fromEntries(cab.map((h, i) => [h, row[i] === undefined ? '' : row[i]])));
   };
-  return { ctx, api, rodarAteParar, tabela, abas, arquivos, pastas, caminhoDe, pedidos, auvo, props, gatilhos, sonos, estat, sha, avancar, fotoAtual, atual, logs, bytesImagem };
+  return { grupos, ctx, api, rodarAteParar, tabela, abas, arquivos, pastas, caminhoDe, pedidos, auvo, props, gatilhos, sonos, estat, sha, avancar, fotoAtual, atual, logs, bytesImagem };
 }
 
 function conferirSoLeituraNoAuvo(e) {
@@ -264,8 +266,9 @@ test('contagem: percorre todos os meses e páginas, conta e estima o espaço sem
 
 test('cópia completa em lotes: registro sem cortes, arquivos com sha256, falhas com motivo e relatório', () => {
   const e = ambiente();
+  e.ctx.AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA = true; // trechos do JSON na aba (desligado por padrão)
   e.api('s_adm', 'apiIniciarCopia', { inicio: '2023-12' });
-  const fim = e.rodarAteParar(80000);
+  const fim = e.rodarAteParar(130000);
   assert.ok(fim.lotes > 3, 'retomou em vários lotes');
   assert.equal(fim.r.situacao, 'CONCLUIDO');
   const tarefas = e.tabela('AUVO_ACERVO_TAREFAS');
@@ -325,6 +328,7 @@ test('cópia completa em lotes: registro sem cortes, arquivos com sha256, falhas
 
 test('idempotência: rodar de novo não baixa nem duplica; tarefa alterada ganha versão nova sem apagar a anterior', () => {
   const e = ambiente();
+  e.ctx.AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA = true;
   e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
   e.rodarAteParar(240000);
   const getsAntes = e.pedidos.filter((p) => p.url.startsWith(IMG) && p.metodo === 'get').length;
@@ -432,7 +436,7 @@ test('conferência acusa arquivo alterado no servidor (sha256 diferente) e arqui
   e.arquivos[arqs[0].ARQUIVO_ID].bytes = Buffer.from('conteúdo trocado');
   delete e.arquivos[arqs[1].ARQUIVO_ID];
   e.api('s_dir', 'apiConferir', {});
-  e.rodarAteParar(60000);
+  e.rodarAteParar(130000);
   const depois = e.tabela('AUVO_ACERVO_ARQUIVOS');
   assert.equal(depois.find((a) => a.ID === arqs[0].ID).CONFERENCIA, 'DIVERGENTE');
   assert.equal(depois.find((a) => a.ID === arqs[1].ID).CONFERENCIA, 'ARQUIVO_NAO_ENCONTRADO');
@@ -538,4 +542,145 @@ test('tela: conteúdo sem barra invertida nem crase, script válido; ajuda "auvo
   const js = fs.readFileSync(path.join(base, 'JS_Auvo.html'), 'utf8');
   assert.match(js, /AuvoAcervo_obterConteudo\(/);
   assert.equal((js.match(/tplAuvo_montarAcervo_\(\);/g) || []).length, 2);
+});
+
+/* ---------------- 22/10/2026: lote que derrubava o servidor (memória) e download pendurado ---------------- */
+const v8 = require('node:v8');
+v8.setFlagsFromString('--expose-gc');
+const coletar = vm.runInNewContext('gc');
+
+// roda um lote como o servidor: se passar do tempo, o lote é encerrado à força (sem finally, sem gravar nada)
+function loteComLimite(e, ms) {
+  e.ctx.__orc = 10 ** 9;
+  try { vm.runInContext('AuvoAcervo_rodarLote_({ orcamentoMs: __orc })', e.ctx, { timeout: ms || 1500 }); return 'terminou'; }
+  catch (err) { if (/timed out/i.test(String(err && err.message))) return 'encerrado'; throw err; }
+}
+
+test('download que nunca responde: o lote é encerrado, a próxima rodada separa o arquivo e na 2ª vez registra FALHA e segue', () => {
+  const tarefas = [tarefaFalsa(5001, '2024-01-03T08:00:00', { questionnaires: [questionario(1, [IMG + 'ok1.jpg', IMG + 'pendurado.jpg', IMG + 'ok2.jpg'])] })];
+  const e = ambiente({ tarefas });
+  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
+  // primeiro lote: lê as tarefas e chega aos arquivos; o grupo com o pendurado trava
+  e.auvo.pendurar = new Set(['pendurado.jpg']);
+  assert.equal(loteComLimite(e), 'encerrado');
+  let arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
+  assert.ok(arqs.every((a) => a.ANDAMENTO_EM), 'os três ficaram marcados como tentativa em andamento');
+  assert.ok(e.props.AUVO_ACERVO_EXECUTANDO, 'a trava ficou (o lote morreu)');
+  // a trava vence em 330 s; o vigia retoma
+  e.avancar(6 * 60 * 1000);
+  assert.equal(loteComLimite(e), 'encerrado', 'agora cada um vai sozinho: o primeiro passa, o pendurado trava de novo');
+  arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
+  assert.deepEqual(arqs.filter((a) => a.SITUACAO === 'COPIADO').map((a) => a.URL_ORIGINAL.split('/').pop()), ['ok1.jpg']);
+  assert.ok(!arqs.find((a) => a.URL_ORIGINAL.endsWith('ok2.jpg')).ANDAMENTO_EM, 'o que não foi tentado não conta como interrompido');
+  const p = arqs.find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg'));
+  assert.ok(p.ANDAMENTO_EM && Number(p.INICIOS_SEM_FIM) === 1);
+  e.avancar(6 * 60 * 1000);
+  const fim = e.rodarAteParar(240000);
+  assert.equal(fim.r.situacao, 'CONCLUIDO');
+  const p2 = e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg'));
+  assert.equal(p2.SITUACAO, 'FALHA');
+  assert.match(p2.MOTIVO, /download não concluiu/);
+  assert.equal(p2.RETENTAVEL, 'NAO');
+  assert.equal(e.auvo.penduradas, 2, 'não tentou uma terceira vez');
+  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('ok2.jpg')).SITUACAO, 'COPIADO');
+  assert.ok(!e.props.AUVO_ACERVO_EXECUTANDO, 'trava solta');
+  // "Tentar de novo as falhas" devolve o arquivo à fila; com o servidor respondendo, copia
+  e.auvo.pendurar = new Set();
+  e.api('s_adm', 'apiTentarDeNovo', {});
+  e.rodarAteParar(240000);
+  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg')).SITUACAO, 'COPIADO');
+});
+
+test('arquivo grande não é baixado (FALHA com o tamanho); grupo em paralelo respeita o teto de bytes; limite sobe pela propriedade', () => {
+  const fotos = ['g1.jpg', 'g2.jpg', 'g3.jpg', 'g4.jpg', 'g5.jpg', 'g6.jpg'].map((n) => IMG + n);
+  const e = ambiente({ tarefas: [tarefaFalsa(6001, '2024-01-03T08:00:00', { questionnaires: [questionario(1, fotos)], attachments: [{ url: IMG + 'video.mp4' }] })] });
+  e.auvo.tamanhos = { 'video.mp4': 90 * 1024 * 1024 };
+  fotos.forEach((u) => { e.auvo.tamanhos[u.split('/').pop()] = 10 * 1024 * 1024; });
+  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
+  e.rodarAteParar(240000);
+  const arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
+  const video = arqs.find((a) => a.URL_ORIGINAL.endsWith('video.mp4'));
+  assert.equal(video.SITUACAO, 'FALHA');
+  assert.match(video.MOTIVO, /arquivo grande \(90 MB\), acima do limite de 40 MB/);
+  assert.ok(!e.pedidos.some((p) => p.url.endsWith('video.mp4') && p.metodo === 'get'), 'o vídeo não foi baixado');
+  assert.equal(arqs.filter((a) => a.SITUACAO === 'COPIADO').length, 6);
+  // teto de 24 MB por grupo: no máximo 2 fotos de 10 MB juntas
+  const gets = e.grupos.filter((g) => g.every((x) => x.metodo === 'get') && g.some((x) => /\/g\d\.jpg$/.test(x.url)));
+  assert.ok(gets.length >= 3 && gets.every((g) => g.length <= 2), JSON.stringify(gets.map((g) => g.length)));
+  e.props.AUVO_ACERVO_MAX_MB = '200';
+  e.api('s_adm', 'apiTentarDeNovo', {});
+  e.rodarAteParar(240000);
+  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('video.mp4')).SITUACAO, 'COPIADO');
+});
+
+test('25 mil linhas de arquivos: cada lote para na quantidade e nos bytes, memória estável e estado pequeno', () => {
+  const N = 25000;
+  const e = ambiente({ tarefas: [] });
+  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
+  // acervo já lido (fase de arquivos), como em produção: 250 tarefas com pasta e 25 mil arquivos pendentes
+  const C = e.ctx.AUVO_ACERVO_COLS;
+  e.ctx.AuvoAcervo_aba_('AUVO_ACERVO_TAREFAS', C.TAREFAS);
+  const shA = e.ctx.AuvoAcervo_aba_('AUVO_ACERVO_ARQUIVOS', C.ARQUIVOS);
+  const raiz = e.ctx.AuvoAcervo_pastaRaiz_();
+  const ano = raiz.createFolder('2024');
+  const linT = e.abas.AUVO_ACERVO_TAREFAS._linhas;
+  for (let t = 0; t < 250; t++) { const row = C.TAREFAS.map(() => ''); row[C.TAREFAS.indexOf('AUVO_TASK_ID')] = String(90000 + t); row[C.TAREFAS.indexOf('PASTA_ID')] = ano.createFolder(String(90000 + t)).getId(); linT.push(row); }
+  const linA = shA._linhas, ix = (h) => C.ARQUIVOS.indexOf(h);
+  for (let i = 0; i < N; i++) {
+    const row = C.ARQUIVOS.map(() => '');
+    const t = 90000 + (i % 250);
+    row[ix('ID')] = 'a' + i; row[ix('CHAVE')] = t + '|q' + i; row[ix('AUVO_TASK_ID')] = String(t); row[ix('TIPO')] = 'FOTO';
+    row[ix('ORIGEM')] = 'questionnaires[0].answers[' + i + '].reply'; row[ix('URL_ORIGINAL')] = IMG + 'm' + i + '.jpg?assinatura=' + 'x'.repeat(300);
+    row[ix('SITUACAO')] = 'PENDENTE'; row[ix('TENTATIVAS')] = 0;
+    linA.push(row);
+  }
+  const est = JSON.parse(e.props.AUVO_ACERVO_ESTADO);
+  est.fase = 'ARQUIVOS';
+  e.props.AUVO_ACERVO_ESTADO = JSON.stringify(est);
+  const LIM = e.ctx.AUVO_ACERVO_CFG.LIMITE_ARQUIVOS_LOTE;
+  const heap = [];
+  let antes = 0;
+  for (let lote = 0; lote < 8; lote++) {
+    e.avancar(30000);
+    const r = e.ctx.AuvoAcervo_rodarLote_({ orcamentoMs: 10 ** 9 });
+    assert.equal(r.situacao, 'RODANDO');
+    const gets = e.pedidos.filter((p) => p.metodo === 'get' && p.url.startsWith(IMG)).length;
+    assert.ok(gets - antes <= LIM, 'lote baixou ' + (gets - antes) + ' arquivos (limite ' + LIM + ')');
+    assert.ok(gets - antes >= LIM - e.ctx.AUVO_ACERVO_CFG.DOWNLOAD_PARALELO, 'lote parou cedo demais: ' + (gets - antes));
+    antes = gets;
+    // os bytes já gravados saem da conta (o servidor guarda em disco, não na memória do lote)
+    Object.values(e.arquivos).forEach((a) => { a.bytes = Buffer.alloc(0); });
+    e.pedidos.length = 0; antes = 0;
+    coletar();
+    heap.push(process.memoryUsage().heapUsed);
+  }
+  const st = e.api('s_adm', 'apiStatus', {});
+  assert.equal(st.estado.arquivos.copiados, 8 * LIM);
+  assert.equal(st.estado.arquivos.pendentes, N - 8 * LIM);
+  assert.ok(e.props.AUVO_ACERVO_ESTADO.length < 6000, 'estado pequeno: ' + e.props.AUVO_ACERVO_ESTADO.length + ' caracteres');
+  const cresc = (heap[7] - heap[1]) / 1048576;
+  assert.ok(cresc < 40, 'memória cresceu ' + cresc.toFixed(1) + ' MB entre o 2º e o 8º lote: ' + heap.map((h) => Math.round(h / 1048576)).join(', '));
+  // a aba de trechos do JSON não é criada nem lida por padrão
+  assert.ok(!e.abas.AUVO_ACERVO_JSON);
+  // teto de bytes do lote
+  e.ctx.AUVO_ACERVO_CFG.LIMITE_BYTES_LOTE = 5000;
+  e.avancar(30000);
+  e.ctx.AuvoAcervo_rodarLote_({ orcamentoMs: 10 ** 9 });
+  const n = e.pedidos.filter((p) => p.metodo === 'get' && p.url.startsWith(IMG)).length;
+  assert.ok(n > 0 && n <= 2 * e.ctx.AUVO_ACERVO_CFG.DOWNLOAD_PARALELO, 'parou pelos bytes depois de ' + n + ' arquivos');
+});
+
+test('retomada segura depois do lote morto da versão anterior: trava velha vence sozinha; Pausar e Continuar voltam a agendar', () => {
+  const e = ambiente();
+  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
+  // como em produção: estado RODANDO, trava de um lote que morreu, gatilho apagado à mão
+  e.props.AUVO_ACERVO_EXECUTANDO = JSON.stringify({ dono: '3fa641c6-teste', em: Date.parse('2024-05-10T12:00:00Z') });
+  e.gatilhos.length = 0;
+  e.avancar(331 * 1000);
+  let st = e.api('s_adm', 'apiPausar', {});
+  assert.equal(st.estado.situacao, 'PAUSADO', 'trava vencida não segura a pausa');
+  st = e.api('s_adm', 'apiContinuar', {});
+  assert.equal(st.estado.situacao, 'RODANDO');
+  assert.equal(e.gatilhos.length, 1);
+  assert.equal(e.rodarAteParar(240000).r.situacao, 'CONCLUIDO');
 });

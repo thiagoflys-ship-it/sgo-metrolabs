@@ -21,7 +21,7 @@ Regras que o código garante:
 | Código | `SGO_AuvoAcervo.js` (rotina e chamadas da tela), `SGO_AuvoAcervo_Tela.js` (parte da tela), carregada por `JS_Auvo.html` |
 | Ajuda da tela | `SGO_Ajuda_Auvo.js`, chave `auvo/acervo` |
 | Tarefas | aba `AUVO_ACERVO_TAREFAS`: uma linha por tarefa (resumo, sha256 e versão do JSON, pasta, conferência) |
-| JSON completo | aba `AUVO_ACERVO_JSON`: o JSON em trechos de 40.000 caracteres (versão, parte, total, sha256) e o arquivo `tarefa_<id>.json` na pasta da tarefa |
+| JSON completo | arquivo `tarefa_<id>.json` na pasta da tarefa, com sha256 e tamanho na aba de tarefas. A aba `AUVO_ACERVO_JSON` (trechos de 40.000 caracteres) foi preenchida na primeira cópia e continua lá; desde 22/10/2026 não recebe mais trechos (`GRAVAR_JSON_NA_ABA: false`), porque o servidor carrega a aba inteira na memória a cada gravação |
 | Fotos, assinaturas, anexos | aba `AUVO_ACERVO_ARQUIVOS`: endereço original, tipo, de onde veio no JSON, nome, tamanho, tipo do conteúdo, sha256, situação, tentativas, motivo da falha, conferência |
 | Arquivos | pasta `Acervo Auvo/<ano>/<número da tarefa>/` no servidor (disco + banco). Nome: `<tarefa>_foto_q1_r2.jpg`, `<tarefa>_assinatura_tarefa.png`, `<tarefa>_assinatura_questionario_q1_r4.png`, `<tarefa>_anexo_...pdf` |
 | Listas de apoio | `Acervo Auvo/_listas_de_apoio/<lista>_<data>.json` |
@@ -45,8 +45,27 @@ Pré-requisito: as chaves do Auvo gravadas em "Chaves e senhas" (AUVO_API_KEY e 
 As funções abaixo rodam no worker do legado (mesma via dos testes `pool.executar`), com o SGO+ já importado em `legado/`:
 
 - `AuvoAcervo_iniciar_('CONTAGEM', { inicio: '2022-01' }, null)` ou `AuvoAcervo_iniciar_('COPIA', { inicio: '2022-01' }, null)`
-- `AuvoAcervo_rodarLote_()` — um lote (até 4 min); o agendador chama `AuvoAcervo_loteGatilho` a cada 30 s enquanto houver trabalho, e um vigia de 8 min retoma se um lote for interrompido.
+- `AuvoAcervo_rodarLote_()` — um lote (até 3 min); o agendador chama `AuvoAcervo_loteGatilho` a cada 30 s enquanto houver trabalho, e um vigia de 6 min retoma se um lote for interrompido.
 - `AuvoAcervo_status_()` — situação, contagem e relatório.
+
+### Limites do lote (correção de 22/10/2026)
+
+Em 21–22/10 a cópia derrubou o servidor ("JavaScript heap out of memory", 13 quedas), e o vigia retomava o mesmo grupo de arquivos a cada 8 min. Causas no código: no servidor, `blob.getBytes()` vira uma lista de números (cerca de 8 bytes de memória por byte do arquivo) e `Utilities.newBlob(lista)` copiava de novo, com 6 arquivos por grupo e sem saber o tamanho antes; além disso, o grupo podia passar do limite de 300 s do servidor. O que mudou:
+
+- **Tamanho antes de baixar.** HEAD em cada arquivo. Acima de 40 MB, o arquivo não é baixado: vira FALHA "arquivo grande (N MB)...". Para copiar esses arquivos, grave a propriedade `AUVO_ACERVO_MAX_MB` com o limite novo (em MB) e toque em "Tentar de novo as falhas". Teste antes um arquivo só: um arquivo de 200 MB ocupa várias vezes o tamanho dele na memória durante a cópia.
+- **Teto por grupo e por lote.** No máximo 24 MB por grupo em paralelo; arquivo sem tamanho informado vai sozinho. O lote para em 3 min, em 400 arquivos ou em 250 MB baixados, o que vier primeiro.
+- **Sem cópias dos bytes.** O sha256 e o tamanho saem direto do blob da resposta, que é gravado como veio.
+- **Leitura leve das abas.** A fila é montada lendo a aba de arquivos uma vez por lote, e só as linhas do lote viram objeto. Das tarefas, o lote lê só o número e a pasta. A conferência usa uma lista enxuta e grava só as duas colunas da conferência.
+- **Tentativa marcada.** Cada arquivo é marcado (`ANDAMENTO_EM`) antes de baixar e gravado assim que termina. Se o lote for encerrado no meio, a próxima rodada separa os arquivos marcados e tenta cada um sozinho. O que for encerrado 2 vezes vira FALHA "download não concluiu" e a cópia segue.
+- **Tempo por download.** O servidor corta cada busca em 60 s. A rotina não começa um grupo com menos de 90 s de folga e, na busca um a um, adia para o próximo lote o que não couber.
+- **Trava curta.** A trava do lote vale 330 s, um pouco acima do limite do servidor; a trava de um lote morto se solta sozinha.
+
+### Retomar depois de uma parada
+
+1. Importe o SGO+ atualizado para o `legado/` do servidor e reinicie.
+2. Não é preciso apagar `AUVO_ACERVO_EXECUTANDO`: a trava antiga vence sozinha (330 s).
+3. Na tela Integração Auvo › Acervo, toque em "Pausar": com a trava vencida, a situação muda na hora para "Pausada". Depois toque em "Continuar": o gatilho volta a ser criado e o próximo lote começa em 5 s. Sem a tela, pelo worker: `AuvoAcervo_apiPausar(null)` e depois `AuvoAcervo_apiContinuar(null)`.
+4. Acompanhe pelas próximas rodadas: `estado.ultimaRodada` muda a cada ~3,5 min e `estado.arquivos.copiados` sobe a cada lote.
 
 `AuvoAcervo_loteGatilho` tem "Gatilho" no nome, então o navegador não consegue chamá-lo (regra do servidor); o navegador só chama `AuvoAcervo_apiDispatch` e `AuvoAcervo_obterConteudo`, que conferem a sessão e o perfil.
 
@@ -60,7 +79,7 @@ Base do projeto: ~5.174 tarefas em 2 anos, 30 tipos, 13 questionários. Sem a co
 | 6 | ~31 mil | ~12 GB | ~2 h a 3 h |
 | 10 | ~52 mil | ~20 GB | ~3 h a 5 h |
 
-Mais: JSON das tarefas (~25 a 100 MB, duas vezes: aba e arquivo) e listas de apoio (poucos MB). Leitura das tarefas: ~60 meses + ~55 páginas + gravação de ~5.200 registros, em torno de 20 a 40 minutos. O ritmo mínimo entre chamadas à API do Auvo é de 250 ms; em 429 a rotina espera o tempo pedido pelo Auvo.
+Mais: JSON das tarefas (~25 a 100 MB) e listas de apoio (poucos MB). Leitura das tarefas: ~60 meses + ~55 páginas + gravação de ~5.200 registros, em torno de 20 a 40 minutos. O ritmo mínimo entre chamadas à API do Auvo é de 250 ms; em 429 a rotina espera o tempo pedido pelo Auvo.
 
 ## Backup
 
@@ -79,5 +98,5 @@ O backup diário (`deploy/backup/backup.sh` do servidor) já cobre o acervo: o b
 
 ## Testes
 
-- `tests/auvo-acervo.test.cjs` (13 testes, `node --test`): contagem, paginação e retomada em lotes, JSON sem cortes em trechos, sha256 de cada arquivo, nomes e pastas, versão nova sem apagar a anterior, idempotência (segunda cópia não baixa nada), reaproveitamento de arquivo já gravado, falha registrada e "Tentar de novo", 401/403 com endereço renovado, conferência (divergente e sumido), 404/429/ERRO e retomada, pausa, trava, acesso por perfil, sem chave, tela e ajuda; em todos, só GET no Auvo e a aba AUVO_TAREFAS intacta.
+- `tests/auvo-acervo.test.cjs` (17 testes, `node --test`): download que nunca responde (lote encerrado à força, arquivo separado e FALHA na 2ª vez), arquivo grande e teto de bytes, 25 mil linhas com memória estável e estado pequeno, retomada com trava velha; contagem, paginação e retomada em lotes, JSON sem cortes em trechos, sha256 de cada arquivo, nomes e pastas, versão nova sem apagar a anterior, idempotência (segunda cópia não baixa nada), reaproveitamento de arquivo já gravado, falha registrada e "Tentar de novo", 401/403 com endereço renovado, conferência (divergente e sumido), 404/429/ERRO e retomada, pausa, trava, acesso por perfil, sem chave, tela e ajuda; em todos, só GET no Auvo e a aba AUVO_TAREFAS intacta.
 - `sgo_servidor/testes/auvoAcervo.test.ts` (vitest): o mesmo fluxo na camada de compatibilidade real (planilha no PostgreSQL, DriveApp em disco, UrlFetchApp pela ponte), conferindo o sha256 da aba com o do arquivo no banco.

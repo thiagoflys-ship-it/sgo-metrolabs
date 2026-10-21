@@ -50,10 +50,29 @@ var AUVO_ACERVO_CFG = {
   MAX_PAGINAS_MES: 1000,
   MAX_PAGINAS_LISTA: 300,
   // o servidor encerra a chamada em 300 s (LIMITE_SEGUNDOS); o Apps Script em 360 s
-  ORCAMENTO_MS: 240000,
+  // 22/10/2026: lote mais curto e folga que cobre um download inteiro (o servidor corta cada busca em 60 s);
+  // antes um grupo lento passava dos 300 s, o lote morria sem gravar e o vigia voltava ao mesmo arquivo.
+  ORCAMENTO_MS: 180000,
   FOLGA_PAGINA_MS: 60000,
-  FOLGA_GRUPO_MS: 30000,
-  TRAVA_VENCE_MS: 7 * 60 * 1000,
+  FOLGA_GRUPO_MS: 90000,
+  // tempo máximo de uma busca no servidor (servicos/atendente.ts › buscar, 60 s) mais a margem de gravação
+  DOWNLOAD_MAX_MS: 65000,
+  // tentativa que começou e não terminou (o lote morreu no meio) N vezes: o arquivo vira FALHA e a cópia segue
+  MAX_INICIOS_SEM_FIM: 2,
+  // limites por lote além do tempo (22/10/2026, memória): quantidade e bytes baixados; teto de bytes do grupo
+  // em paralelo; arquivo acima de MAX_MB_ARQUIVO não é baixado (sobe pela propriedade AUVO_ACERVO_MAX_MB)
+  LIMITE_ARQUIVOS_LOTE: 400,
+  LIMITE_BYTES_LOTE: 250 * 1024 * 1024,
+  LIMITE_BYTES_GRUPO: 24 * 1024 * 1024,
+  LIMITE_CONFERENCIA_LOTE: 3000,
+  MAX_MB_ARQUIVO: 40,
+  PROP_MAX_MB: 'AUVO_ACERVO_MAX_MB',
+  // o JSON completo fica sempre em tarefa_<id>.json (sha256 na aba de tarefas). Gravar também em trechos na
+  // aba AUVO_ACERVO_JSON obriga o servidor a carregar a aba inteira a cada lote; desligado desde 22/10/2026
+  // (os trechos já gravados continuam lá).
+  GRAVAR_JSON_NA_ABA: false,
+  // um pouco acima do limite do servidor (300 s): lote encerrado à força libera a trava logo
+  TRAVA_VENCE_MS: 330 * 1000,
   INTERVALO_MIN_MS: 250,
   MAX_TENTATIVAS_API: 6,
   ESPERA_MAX_MS: 60000,
@@ -66,7 +85,7 @@ var AUVO_ACERVO_CFG = {
   AMOSTRA_PASSO: 5,
   TRECHO_JSON: 40000,
   CONTINUAR_APOS_MS: 30000,
-  VIGIA_APOS_MS: 8 * 60 * 1000,
+  VIGIA_APOS_MS: 6 * 60 * 1000,
   MAX_LOTES_COM_ERRO: 5,
   GATILHO: 'AuvoAcervo_loteGatilho',
   PERFIS: ['ADMIN', 'DIRETORIA'],
@@ -87,7 +106,7 @@ var AUVO_ACERVO_COLS = {
   JSON: ['ID', 'AUVO_TASK_ID', 'VERSAO', 'PARTE', 'TOTAL_PARTES', 'SHA256', 'TRECHO', 'CRIADO_EM'],
   ARQUIVOS: ['ID', 'CHAVE', 'AUVO_TASK_ID', 'ANO', 'TIPO', 'ORIGEM', 'PERGUNTA', 'URL_ORIGINAL', 'URL_ANTERIOR',
     'NOME_ARQUIVO', 'TAMANHO', 'CONTENT_TYPE', 'SHA256', 'ARQUIVO_ID', 'SITUACAO', 'TENTATIVAS', 'MOTIVO', 'RETENTAVEL',
-    'ULTIMA_TENTATIVA_EM', 'COPIADO_EM', 'CONFERENCIA', 'CONFERIDO_EM', 'CRIADO_EM']
+    'ULTIMA_TENTATIVA_EM', 'COPIADO_EM', 'CONFERENCIA', 'CONFERIDO_EM', 'CRIADO_EM', 'ANDAMENTO_EM', 'INICIOS_SEM_FIM', 'TAMANHO_AUVO']
 };
 
 var AUVO_ACERVO_FASES_COPIA = ['CATALOGOS', 'TAREFAS', 'VERIFICAR', 'ARQUIVOS', 'CONFERENCIA', 'FIM'];
@@ -336,6 +355,23 @@ function AuvoAcervo_pastaRaiz_() {
   return pasta;
 }
 
+/*
+ * 22/10/2026 (memória): blob.getBytes() no servidor vira uma lista de números (8 bytes por byte do arquivo) e
+ * Utilities.newBlob(lista) copia de novo; com 6 fotos grandes por grupo o processo estourava a memória.
+ * No servidor o blob guarda os bytes em _bytes (Uint8Array): o sha256 e o tamanho saem dali sem cópia, e o
+ * próprio blob da resposta é gravado. No Google (sem _bytes) segue pelo getBytes().
+ */
+function AuvoAcervo_shaBlob_(blob) {
+  var alvo = blob && blob._bytes ? blob : blob.getBytes();
+  return AuvoAcervo_hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, alvo));
+}
+
+function AuvoAcervo_tamanhoBlob_(blob) {
+  if (blob && blob._bytes && typeof blob._bytes.length === 'number') return blob._bytes.length;
+  var b = blob.getBytes();
+  return b ? b.length : 0;
+}
+
 function AuvoAcervo_privado_(arquivo) {
   try { arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (e) {}
   return arquivo;
@@ -357,7 +393,7 @@ function AuvoAcervo_gravarArquivo_(pasta, nome, blob, sha) {
       var f = it.next();
       if (f.isTrashed && f.isTrashed()) continue;
       ocupado = true;
-      try { if (AuvoAcervo_sha256_(f.getBlob().getBytes()) === sha) { igual = f; break; } } catch (e) {}
+      try { if (AuvoAcervo_shaBlob_(f.getBlob()) === sha) { igual = f; break; } } catch (e) {}
     }
     if (igual) return { arquivo: igual, nome: candidato, reaproveitado: true };
     if (!ocupado) {
@@ -381,7 +417,7 @@ function AuvoAcervo_ritmo_() {
  * GET na API do Auvo com o token da integração. Repete em 429 (respeita Retry-After),
  * 5xx e falha de rede; renova o token uma vez em 401/403. 404 devolve { __naoExiste: true }.
  */
-function AuvoAcervo_getAuvo_(caminho) {
+function AuvoAcervo_getAuvo_(caminho, prazo) {
   if (!/^\/[A-Za-z]/.test(String(caminho || ''))) throw new Error('Caminho inválido para a API do Auvo: ' + caminho);
   var reautenticou = false, ultimo = '';
   for (var t = 1; t <= AUVO_ACERVO_CFG.MAX_TENTATIVAS_API; t++) {
@@ -408,6 +444,8 @@ function AuvoAcervo_getAuvo_(caminho) {
       var espera = Math.min(AUVO_ACERVO_CFG.ESPERA_MAX_MS, 2000 * Math.pow(2, t - 1));
       var ra = resp ? Number(AuvoAcervo_cabecalho_(resp, 'Retry-After')) : NaN;
       if (isFinite(ra) && ra > 0) espera = Math.min(AUVO_ACERVO_CFG.ESPERA_MAX_MS, ra * 1000);
+      // com prazo (renovar endereço durante a cópia de arquivos): não espera além do que cabe no lote
+      if (prazo && AuvoAcervo_agora_() + espera > prazo) break;
       if (t < AUVO_ACERVO_CFG.MAX_TENTATIVAS_API) Utilities.sleep(espera);
       continue;
     }
@@ -547,7 +585,7 @@ function AuvoAcervo_iniciar_(modo, payload, sessao) {
   var est = AuvoAcervo_novoEstado_(modo, inicio, sessao && (sessao.nome || sessao.usuario));
   if (modo === 'COPIA') {
     AuvoAcervo_aba_(AUVO_ACERVO_CFG.ABA_TAREFAS, AUVO_ACERVO_COLS.TAREFAS);
-    AuvoAcervo_aba_(AUVO_ACERVO_CFG.ABA_JSON, AUVO_ACERVO_COLS.JSON);
+    if (AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA) AuvoAcervo_aba_(AUVO_ACERVO_CFG.ABA_JSON, AUVO_ACERVO_COLS.JSON);
     AuvoAcervo_aba_(AUVO_ACERVO_CFG.ABA_ARQUIVOS, AUVO_ACERVO_COLS.ARQUIVOS);
     AuvoAcervo_pastaRaiz_();
   }
@@ -745,21 +783,21 @@ function AuvoAcervo_medirAmostra_(am, urls) {
     resps.forEach(function (r, j) {
       if (!r.resp || r.cod < 200 || r.cod >= 300) {
         var g = AuvoAcervo_buscarVarios_([{ url: grupo[j], metodo: 'get' }])[0];
-        if (g.resp && g.cod >= 200 && g.cod < 300) { am.n++; am.bytes += g.resp.getContent().length; }
+        if (g.resp && g.cod >= 200 && g.cod < 300) { am.n++; am.bytes += AuvoAcervo_tamanhoBlob_(g.resp.getBlob()); }
         else am.falhas++;
         return;
       }
       var len = Number(AuvoAcervo_cabecalho_(r.resp, 'Content-Length'));
       if (isFinite(len) && len > 0) { am.n++; am.bytes += len; return; }
       var g2 = AuvoAcervo_buscarVarios_([{ url: grupo[j], metodo: 'get' }])[0];
-      if (g2.resp && g2.cod >= 200 && g2.cod < 300) { am.n++; am.bytes += g2.resp.getContent().length; }
+      if (g2.resp && g2.cod >= 200 && g2.cod < 300) { am.n++; am.bytes += AuvoAcervo_tamanhoBlob_(g2.resp.getBlob()); }
       else am.semTamanho++;
     });
   }
 }
 
 /** Busca vários endereços de arquivo em paralelo (só GET/HEAD). Nunca lança: devolve { resp, cod, erro }. */
-function AuvoAcervo_buscarVarios_(pedidos) {
+function AuvoAcervo_buscarVarios_(pedidos, prazo) {
   var token = null;
   var reqs = pedidos.map(function (p) {
     var r = { url: p.url, method: p.metodo === 'head' ? 'head' : 'get', muteHttpExceptions: true, followRedirects: true };
@@ -775,7 +813,9 @@ function AuvoAcervo_buscarVarios_(pedidos) {
     saida = [];
     for (var i = 0; i < reqs.length; i++) saida.push({ resp: resps[i], cod: resps[i].getResponseCode(), erro: '' });
   } catch (eTodos) {
+    // um da lista falhou (ou estourou o tempo): busca um a um, só enquanto couber no lote
     saida = reqs.map(function (r) {
+      if (prazo && AuvoAcervo_agora_() + AUVO_ACERVO_CFG.DOWNLOAD_MAX_MS > prazo) return { resp: null, cod: -1, erro: 'adiado para o próximo lote' };
       try {
         var x = UrlFetchApp.fetch(r.url, r);
         return { resp: x, cod: x.getResponseCode(), erro: '' };
@@ -818,7 +858,7 @@ function AuvoAcervo_copiarPagina_(ctx, lista, mes) {
     var nomeJson = 'tarefa_' + id + (versao > 1 ? '_versao' + versao : '') + '.json';
     var g = AuvoAcervo_gravarArquivo_(pasta, nomeJson, Utilities.newBlob(json, 'application/json', nomeJson), sha);
     var total = Math.max(1, Math.ceil(json.length / AUVO_ACERVO_CFG.TRECHO_JSON));
-    for (var p = 0; p < total; p++) {
+    for (var p = 0; AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA && p < total; p++) {
       partes.push({ AUVO_TASK_ID: id, VERSAO: versao, PARTE: p + 1, TOTAL_PARTES: total, SHA256: sha,
         TRECHO: json.slice(p * AUVO_ACERVO_CFG.TRECHO_JSON, (p + 1) * AUVO_ACERVO_CFG.TRECHO_JSON) });
     }
@@ -868,7 +908,7 @@ function AuvoAcervo_copiarPagina_(ctx, lista, mes) {
   });
   // ordem de gravação: trechos do JSON, arquivos e, por último, a linha da tarefa (o "feito").
   // Se o lote parar no meio, a tarefa sem linha é refeita na próxima rodada sem duplicar arquivo.
-  AuvoAcervo_acrescentar_(AUVO_ACERVO_CFG.ABA_JSON, AUVO_ACERVO_COLS.JSON, partes);
+  if (AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA) AuvoAcervo_acrescentar_(AUVO_ACERVO_CFG.ABA_JSON, AUVO_ACERVO_COLS.JSON, partes);
   AuvoAcervo_inserir_(tA, novosArquivos);
   arquivosAtualizados.forEach(function (r) { AuvoAcervo_gravarLinha_(tA, r); });
   AuvoAcervo_inserir_(tT, novasTarefas);
@@ -906,25 +946,12 @@ function AuvoAcervo_retentavelHttp_(cod) {
   return cod === 0 || cod === 401 || cod === 403 || cod === 408 || cod === 425 || cod === 429 || cod >= 500;
 }
 
-function AuvoAcervo_candidatos_(tA) {
-  var agora = AuvoAcervo_agora_(), pend = [], repetir = [], aguardando = 0;
-  tA.linhas.forEach(function (r) {
-    var s = String(r.SITUACAO);
-    if (s === 'PENDENTE') { pend.push(r); return; }
-    if (s === 'FALHA' && String(r.RETENTAVEL) === 'SIM' && Number(r.TENTATIVAS || 0) < AUVO_ACERVO_CFG.MAX_TENTATIVAS_ARQUIVO) {
-      var ult = Date.parse(String(r.ULTIMA_TENTATIVA_EM || '')) || 0;
-      if (agora - ult >= AUVO_ACERVO_CFG.ESPERA_REPETIR_MS) repetir.push(r); else aguardando++;
-    }
-  });
-  return { lista: pend.concat(repetir), aguardando: aguardando };
-}
-
 /** Endereço vencido (401/403): relê a tarefa no Auvo e usa o endereço atual do mesmo ponto. */
-function AuvoAcervo_renovarEndereco_(ctx, reg) {
+function AuvoAcervo_renovarEndereco_(ctx, reg, prazo) {
   if (ctx.renovados >= AUVO_ACERVO_CFG.MAX_RENOVAR_POR_LOTE) return;
   ctx.renovados++;
   try {
-    var r = AuvoAcervo_getAuvo_(AUVO_CFG.ENDPOINTS.TASKS + '/' + encodeURIComponent(String(reg.AUVO_TASK_ID)));
+    var r = AuvoAcervo_getAuvo_(AUVO_CFG.ENDPOINTS.TASKS + '/' + encodeURIComponent(String(reg.AUVO_TASK_ID)), prazo || 0);
     if (r.__naoExiste) return;
     var tarefa = r.result && !Array.isArray(r.result) ? r.result : r;
     var novo = reg.ORIGEM === 'signatureUrl' ? AuvoAcervo_txt_(tarefa.signatureUrl) : AuvoAcervo_valorNoCaminho_(tarefa, reg.ORIGEM);
@@ -932,99 +959,305 @@ function AuvoAcervo_renovarEndereco_(ctx, reg) {
   } catch (e) { /* segue com o endereço que já tem */ }
 }
 
+/*
+ * 22/10/2026 — cópia dos arquivos sem acumular memória (o lote derrubava o servidor: "heap out of memory").
+ *  - A aba de arquivos é lida uma vez por lote e só as linhas da fila do lote viram objeto; as outras só contam.
+ *  - Antes de baixar, HEAD diz o tamanho: arquivo acima do limite não é baixado (FALHA com o motivo; o limite
+ *    sobe pela propriedade AUVO_ACERVO_MAX_MB); o grupo em paralelo respeita um teto de bytes; tamanho
+ *    desconhecido vai sozinho.
+ *  - O lote para por tempo, por quantidade de arquivos e por bytes baixados (o próximo lote começa limpo).
+ *  - Cada arquivo é marcado (ANDAMENTO_EM) antes de baixar e gravado assim que termina; tentativa que não
+ *    terminou duas vezes vira FALHA "download não concluiu" e a cópia segue.
+ */
+function AuvoAcervo_maxBytesArquivo_() {
+  var mb = Number(AuvoAcervo_props_().getProperty(AUVO_ACERVO_CFG.PROP_MAX_MB));
+  return (isFinite(mb) && mb > 0 ? mb : AUVO_ACERVO_CFG.MAX_MB_ARQUIVO) * 1024 * 1024;
+}
+
+function AuvoAcervo_contaDe_(s) {
+  return s === 'COPIADO' ? 'copiados' : s === 'FALHA' ? 'falhas' : s === 'LINK' ? 'links' : 'pendentes';
+}
+
+/** Muda a situação de um arquivo mantendo a contagem do lote em dia. */
+function AuvoAcervo_mudarSituacao_(ctx, reg, nova) {
+  var antes = String(reg.SITUACAO || 'PENDENTE');
+  if (antes !== nova && ctx.k) { ctx.k[AuvoAcervo_contaDe_(antes)]--; ctx.k[AuvoAcervo_contaDe_(nova)]++; }
+  reg.SITUACAO = nova;
+}
+
+function AuvoAcervo_cabecalhoAba_(sh) {
+  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h || '').trim(); });
+}
+
+/** Lê a aba de arquivos uma vez: contagem por situação e a fila do lote (no máximo LIMITE_ARQUIVOS_LOTE objetos). */
+function AuvoAcervo_lerFilaArquivos_(ctx) {
+  var C = AUVO_ACERVO_CFG;
+  var sh = AuvoAcervo_aba_(C.ABA_ARQUIVOS, AUVO_ACERVO_COLS.ARQUIVOS);
+  var cab = AuvoAcervo_cabecalhoAba_(sh), col = {};
+  cab.forEach(function (h, i) { col[h] = i; });
+  var k = { esperados: 0, copiados: 0, pendentes: 0, falhas: 0, links: 0, bytes: 0 };
+  var fila = [], aguardando = 0, agora = AuvoAcervo_agora_();
+  var lr = sh.getLastRow();
+  if (lr >= 2) {
+    var vals = sh.getRange(2, 1, lr - 1, cab.length).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i], s = String(v[col.SITUACAO]);
+      if (s === 'LINK') { k.links++; continue; }
+      k.esperados++;
+      k[AuvoAcervo_contaDe_(s)]++;
+      if (s === 'COPIADO') { k.bytes += Number(v[col.TAMANHO] || 0); continue; }
+      var entra = s === 'PENDENTE' || s === '';
+      if (s === 'FALHA' && String(v[col.RETENTAVEL]) === 'SIM' && Number(v[col.TENTATIVAS] || 0) < C.MAX_TENTATIVAS_ARQUIVO) {
+        var ult = Date.parse(String(v[col.ULTIMA_TENTATIVA_EM] || '')) || 0;
+        if (agora - ult >= C.ESPERA_REPETIR_MS) entra = true; else aguardando++;
+      }
+      if (!entra || fila.length >= C.LIMITE_ARQUIVOS_LOTE) continue;
+      var o = { _linha: i + 2 };
+      for (var j = 0; j < cab.length; j++) o[cab[j]] = v[j];
+      fila.push(o);
+    }
+    vals = null;
+  }
+  ctx.tA = { sh: sh, cab: cab, linhas: [], indice: {}, chave: '' };
+  ctx.k = k;
+  var normais = [], sozinhos = [];
+  fila.forEach(function (r) {
+    var interrompido = !!r.ANDAMENTO_EM;
+    if (!AuvoAcervo_tratarInterrompido_(ctx, r)) return;
+    if (interrompido || Number(r.INICIOS_SEM_FIM || 0) > 0) { r._sozinho = true; sozinhos.push(r); } else normais.push(r);
+  });
+  ctx.filaArquivos = normais.concat(sozinhos);
+  ctx.aguardando = aguardando;
+  ctx.filaLidas = (ctx.filaLidas || 0) + 1;
+}
+
+/** Só AUVO_TASK_ID -> PASTA_ID da aba de tarefas (sem montar objetos das linhas). */
+function AuvoAcervo_pastasTarefas_(ctx) {
+  if (ctx.pastasTarefa) return ctx.pastasTarefa;
+  var sh = AuvoAcervo_aba_(AUVO_ACERVO_CFG.ABA_TAREFAS, AUVO_ACERVO_COLS.TAREFAS);
+  var cab = AuvoAcervo_cabecalhoAba_(sh), iId = cab.indexOf('AUVO_TASK_ID'), iP = cab.indexOf('PASTA_ID');
+  var mapa = {}, lr = sh.getLastRow();
+  if (lr >= 2) {
+    var vals = sh.getRange(2, 1, lr - 1, cab.length).getValues();
+    for (var i = 0; i < vals.length; i++) mapa[String(vals[i][iId])] = String(vals[i][iP] || '');
+  }
+  ctx.pastasTarefa = mapa;
+  return mapa;
+}
+
+/**
+ * Tentativa que começou e não terminou (ANDAMENTO_EM preenchido: o lote foi encerrado no meio do download).
+ * Conta mais uma; no limite vira FALHA "download não concluiu" e sai da fila; antes disso vai sozinha, no fim
+ * da fila, para não levar junto os outros arquivos do grupo. Devolve true se o arquivo continua na fila.
+ */
+function AuvoAcervo_tratarInterrompido_(ctx, reg) {
+  if (!reg.ANDAMENTO_EM) return true;
+  reg.INICIOS_SEM_FIM = Number(reg.INICIOS_SEM_FIM || 0) + 1;
+  reg.ULTIMA_TENTATIVA_EM = String(reg.ANDAMENTO_EM);
+  reg.ANDAMENTO_EM = '';
+  if (reg.INICIOS_SEM_FIM >= AUVO_ACERVO_CFG.MAX_INICIOS_SEM_FIM) {
+    AuvoAcervo_mudarSituacao_(ctx, reg, 'FALHA');
+    reg.RETENTAVEL = 'NAO';
+    reg.MOTIVO = 'download não concluiu (o lote foi encerrado ' + reg.INICIOS_SEM_FIM + ' vezes durante a cópia deste arquivo)';
+    AuvoAcervo_gravarLinha_(ctx.tA, reg);
+    return false;
+  }
+  AuvoAcervo_gravarLinha_(ctx.tA, reg);
+  return true;
+}
+
+function AuvoAcervo_publicarContagem_(ctx) {
+  if (!ctx.k) return;
+  var k = ctx.k;
+  ctx.est.arquivos = { esperados: k.esperados, copiados: k.copiados, pendentes: k.pendentes, falhas: k.falhas, links: k.links,
+    bytes: k.bytes, registrados: (ctx.est.arquivos && ctx.est.arquivos.registrados) || 0 };
+}
+
+function AuvoAcervo_mb_(b) { return Math.round(Number(b || 0) / 104857.6) / 10; }
+
+function AuvoAcervo_falhaGrande_(ctx, reg, bytes, max) {
+  AuvoAcervo_mudarSituacao_(ctx, reg, 'FALHA');
+  reg.RETENTAVEL = 'NAO';
+  reg.MOTIVO = 'arquivo grande (' + String(AuvoAcervo_mb_(bytes)).replace('.', ',') + ' MB), acima do limite de ' +
+    String(AuvoAcervo_mb_(max)).replace('.', ',') + ' MB por arquivo: não baixado (ver docs/ACERVO_AUVO.md)';
+  reg.ULTIMA_TENTATIVA_EM = AuvoAcervo_iso_();
+  reg.ANDAMENTO_EM = '';
+  AuvoAcervo_gravarLinha_(ctx.tA, reg);
+}
+
 function AuvoAcervo_passoArquivos_(ctx) {
-  if (!ctx.tArquivos) ctx.tArquivos = AuvoAcervo_tabela_(AUVO_ACERVO_CFG.ABA_ARQUIVOS, AUVO_ACERVO_COLS.ARQUIVOS, 'CHAVE');
-  if (!ctx.tTarefas) ctx.tTarefas = AuvoAcervo_tabela_(AUVO_ACERVO_CFG.ABA_TAREFAS, AUVO_ACERVO_COLS.TAREFAS, 'AUVO_TASK_ID');
-  var tA = ctx.tArquivos, tT = ctx.tTarefas, est = ctx.est;
+  var C = AUVO_ACERVO_CFG;
+  if (!ctx.arquivosLote) { ctx.arquivosLote = 0; ctx.bytesLote = 0; }
+  if (ctx.arquivosLote >= C.LIMITE_ARQUIVOS_LOTE || ctx.bytesLote >= C.LIMITE_BYTES_LOTE) { AuvoAcervo_publicarContagem_(ctx); return 'SEM_TEMPO'; }
   if (!ctx.filaArquivos || !ctx.filaArquivos.length) {
-    // fila vazia: recalcula (as falhas deste lote voltam depois da espera, até o limite de tentativas)
-    var c = AuvoAcervo_candidatos_(tA);
-    ctx.filaArquivos = c.lista;
-    if (!c.lista.length) {
-      AuvoAcervo_contarArquivos_(ctx);
-      return c.aguardando ? 'AGUARDAR' : 'FASE_CONCLUIDA';
+    // fila vazia: relê (as falhas deste lote voltam depois da espera, até o limite de tentativas)
+    if (ctx.filaLidas >= 2) { AuvoAcervo_publicarContagem_(ctx); return 'SEM_TEMPO'; }
+    AuvoAcervo_lerFilaArquivos_(ctx);
+    if (!ctx.filaArquivos.length) {
+      AuvoAcervo_publicarContagem_(ctx);
+      return ctx.aguardando ? 'AGUARDAR' : 'FASE_CONCLUIDA';
     }
   }
-  if (ctx.restante() < AUVO_ACERVO_CFG.FOLGA_GRUPO_MS) { AuvoAcervo_contarArquivos_(ctx); return 'SEM_TEMPO'; }
-  var grupo = ctx.filaArquivos.splice(0, AUVO_ACERVO_CFG.DOWNLOAD_PARALELO);
-  grupo.forEach(function (reg) {
-    if (/HTTP 40[13]/.test(String(reg.MOTIVO || ''))) AuvoAcervo_renovarEndereco_(ctx, reg);
+  if (ctx.restante() < C.FOLGA_GRUPO_MS) { AuvoAcervo_publicarContagem_(ctx); return 'SEM_TEMPO'; }
+  var prazo = ctx.t0 + ctx.orcamento, maxArq = AuvoAcervo_maxBytesArquivo_();
+  var grupo = [];
+  if (ctx.filaArquivos[0]._sozinho) grupo = ctx.filaArquivos.splice(0, 1);
+  else while (grupo.length < C.DOWNLOAD_PARALELO && ctx.filaArquivos.length && !ctx.filaArquivos[0]._sozinho) grupo.push(ctx.filaArquivos.shift());
+
+  // tamanho antes de baixar (HEAD); o resultado fica na linha para não perguntar de novo
+  var semTam = grupo.filter(function (r) { return !(Number(r.TAMANHO_AUVO) > 0) && !r._headFeito; });
+  if (semTam.length) {
+    var hs = AuvoAcervo_buscarVarios_(semTam.map(function (r) { return { url: String(r.URL_ORIGINAL), metodo: 'head' }; }), prazo);
+    semTam.forEach(function (r, i) {
+      r._headFeito = true;
+      var h = hs[i];
+      if (h && h.resp && h.cod >= 200 && h.cod < 300) {
+        var len = Number(AuvoAcervo_cabecalho_(h.resp, 'Content-Length'));
+        if (isFinite(len) && len > 0) r.TAMANHO_AUVO = len;
+      }
+      hs[i] = null;
+    });
+    hs = null;
+  }
+  grupo = grupo.filter(function (r) {
+    if (Number(r.TAMANHO_AUVO) > maxArq) { AuvoAcervo_falhaGrande_(ctx, r, Number(r.TAMANHO_AUVO), maxArq); return false; }
+    return true;
   });
-  var resps = AuvoAcervo_buscarVarios_(grupo.map(function (r) { return { url: String(r.URL_ORIGINAL), metodo: 'get' }; }));
+  // tamanho desconhecido num grupo de vários: vai sozinho depois
+  if (grupo.length > 1) {
+    var desconhecidos = grupo.filter(function (r) { return !(Number(r.TAMANHO_AUVO) > 0); });
+    if (desconhecidos.length) {
+      desconhecidos.forEach(function (r) { r._sozinho = true; ctx.filaArquivos.push(r); });
+      grupo = grupo.filter(function (r) { return Number(r.TAMANHO_AUVO) > 0; });
+    }
+  }
+  // teto de bytes do grupo em paralelo (o que não cabe volta para a frente da fila)
+  var soma = 0, cabem = [], sobra = [];
+  grupo.forEach(function (r) {
+    var t = Number(r.TAMANHO_AUVO) || 0;
+    if (!cabem.length || soma + t <= C.LIMITE_BYTES_GRUPO) { cabem.push(r); soma += t; } else sobra.push(r);
+  });
+  if (sobra.length) ctx.filaArquivos = sobra.concat(ctx.filaArquivos);
+  grupo = cabem;
+  if (!grupo.length) { AuvoAcervo_publicarContagem_(ctx); return 'CONTINUAR'; }
+
+  grupo.forEach(function (reg) {
+    if (/HTTP 40[13]/.test(String(reg.MOTIVO || '')) && ctx.restante() > C.FOLGA_GRUPO_MS) AuvoAcervo_renovarEndereco_(ctx, reg, prazo - C.FOLGA_GRUPO_MS);
+  });
+  // marca a tentativa ANTES de baixar: se o lote for encerrado no meio, a próxima rodada sabe qual arquivo travou
+  var inicio = AuvoAcervo_iso_();
+  grupo.forEach(function (reg) {
+    reg.ANDAMENTO_EM = inicio;
+    reg.TENTATIVAS = Number(reg.TENTATIVAS || 0) + 1;
+    AuvoAcervo_gravarLinha_(ctx.tA, reg);
+  });
+  ctx.arquivosLote += grupo.length;
+  var resps = AuvoAcervo_buscarVarios_(grupo.map(function (r) { return { url: String(r.URL_ORIGINAL), metodo: 'get' }; }), prazo);
   var agora = AuvoAcervo_iso_();
+  var pastas = AuvoAcervo_pastasTarefas_(ctx);
   grupo.forEach(function (reg, i) {
     var r = resps[i];
-    reg.TENTATIVAS = Number(reg.TENTATIVAS || 0) + 1;
+    resps[i] = null;
+    reg.ANDAMENTO_EM = '';
+    if (r.cod === -1) {
+      // não coube neste lote: volta para a fila como estava
+      reg.TENTATIVAS = Math.max(0, Number(reg.TENTATIVAS || 0) - 1);
+      AuvoAcervo_gravarLinha_(ctx.tA, reg);
+      return;
+    }
     reg.ULTIMA_TENTATIVA_EM = agora;
     var falha = function (motivo, retentavel) {
-      reg.SITUACAO = 'FALHA'; reg.MOTIVO = motivo; reg.RETENTAVEL = retentavel ? 'SIM' : 'NAO';
-      AuvoAcervo_gravarLinha_(tA, reg);
+      AuvoAcervo_mudarSituacao_(ctx, reg, 'FALHA');
+      reg.MOTIVO = motivo; reg.RETENTAVEL = retentavel ? 'SIM' : 'NAO';
+      AuvoAcervo_gravarLinha_(ctx.tA, reg);
     };
+    var blob = null;
     try {
       if (!r.resp) return falha(r.erro || 'falha de rede', true);
       if (r.cod < 200 || r.cod >= 300) return falha('HTTP ' + r.cod + (r.cod === 404 || r.cod === 410 ? ' (o Auvo não tem mais este arquivo)' : ''), AuvoAcervo_retentavelHttp_(r.cod));
-      var blob = r.resp.getBlob();
-      var bytes = blob.getBytes();
+      blob = r.resp.getBlob();
       var tipo = String(blob.getContentType() || AuvoAcervo_cabecalho_(r.resp, 'Content-Type') || '').split(';')[0].trim().toLowerCase();
-      if (!bytes || !bytes.length) return falha('arquivo vazio', true);
+      r = null;
+      var tam = AuvoAcervo_tamanhoBlob_(blob);
+      ctx.bytesLote += tam;
+      if (!tam) return falha('arquivo vazio', true);
       if (/^text\/html/.test(tipo)) return falha('o endereço devolveu uma página da internet, não um arquivo', false);
-      var sha = AuvoAcervo_sha256_(bytes);
-      var linhaT = tT.indice[String(reg.AUVO_TASK_ID)];
-      if (!linhaT || !linhaT.PASTA_ID) return falha('tarefa sem pasta no acervo (rode a cópia de novo)', true);
-      var pasta = DriveApp.getFolderById(String(linhaT.PASTA_ID));
+      if (tam > maxArq) { AuvoAcervo_falhaGrande_(ctx, reg, tam, maxArq); return; }
+      var sha = AuvoAcervo_shaBlob_(blob);
+      var pastaId = pastas[String(reg.AUVO_TASK_ID)];
+      if (!pastaId) return falha('tarefa sem pasta no acervo (rode a cópia de novo)', true);
+      var pasta = DriveApp.getFolderById(pastaId);
       var nome = AuvoAcervo_nomeArquivo_(reg, AuvoAcervo_extensao_(tipo, reg.URL_ORIGINAL));
-      var g = AuvoAcervo_gravarArquivo_(pasta, nome, Utilities.newBlob(bytes, tipo || 'application/octet-stream', nome), sha);
-      reg.SITUACAO = 'COPIADO'; reg.MOTIVO = ''; reg.RETENTAVEL = '';
-      reg.NOME_ARQUIVO = g.nome; reg.TAMANHO = bytes.length; reg.CONTENT_TYPE = tipo; reg.SHA256 = sha;
+      if (!tipo) { try { blob.setContentType('application/octet-stream'); } catch (eT) {} }
+      var g = AuvoAcervo_gravarArquivo_(pasta, nome, blob, sha);
+      AuvoAcervo_mudarSituacao_(ctx, reg, 'COPIADO');
+      reg.MOTIVO = ''; reg.RETENTAVEL = '';
+      reg.NOME_ARQUIVO = g.nome; reg.TAMANHO = tam; reg.CONTENT_TYPE = tipo; reg.SHA256 = sha;
       reg.ARQUIVO_ID = g.arquivo.getId(); reg.COPIADO_EM = agora;
-      AuvoAcervo_gravarLinha_(tA, reg);
+      ctx.k.bytes += tam;
+      AuvoAcervo_gravarLinha_(ctx.tA, reg);
     } catch (e) {
       falha('erro ao gravar: ' + (e && e.message ? e.message : e), true);
+    } finally {
+      blob = null;
     }
   });
+  resps = null;
+  // números da tela atualizados a cada grupo (o estado é gravado depois de cada passo)
+  AuvoAcervo_publicarContagem_(ctx);
   return 'CONTINUAR';
 }
 
-function AuvoAcervo_contarArquivos_(ctx) {
-  var tA = ctx.tArquivos;
-  if (!tA) return;
-  var k = { esperados: 0, copiados: 0, pendentes: 0, falhas: 0, links: 0, bytes: 0 };
-  tA.linhas.forEach(function (r) {
-    var s = String(r.SITUACAO);
-    if (s === 'LINK') { k.links++; return; }
-    k.esperados++;
-    if (s === 'COPIADO') { k.copiados++; k.bytes += Number(r.TAMANHO || 0); }
-    else if (s === 'FALHA') k.falhas++;
-    else k.pendentes++;
+/* ---------------- Conferência (relê e confere o sha256) ---------------- */
+/**
+ * Lista leve do que conferir: [aba, linha, id do arquivo, sha256] — arquivos copiados e depois o JSON das
+ * tarefas. Sem objetos por linha; a ordem não muda durante a conferência, então o cursor é um índice.
+ */
+function AuvoAcervo_filaConferencia_() {
+  var fila = [];
+  [[AUVO_ACERVO_CFG.ABA_ARQUIVOS, AUVO_ACERVO_COLS.ARQUIVOS, 'ARQUIVO_ID', 'SHA256', true],
+   [AUVO_ACERVO_CFG.ABA_TAREFAS, AUVO_ACERVO_COLS.TAREFAS, 'JSON_ARQUIVO_ID', 'JSON_SHA256', false]].forEach(function (d) {
+    var sh = AuvoAcervo_aba_(d[0], d[1]);
+    var cab = AuvoAcervo_cabecalhoAba_(sh), iId = cab.indexOf(d[2]), iSha = cab.indexOf(d[3]), iSit = cab.indexOf('SITUACAO');
+    var iConf = cab.indexOf('CONFERENCIA'), iEm = cab.indexOf('CONFERIDO_EM');
+    var lr = sh.getLastRow();
+    if (lr < 2) return;
+    var vals = sh.getRange(2, 1, lr - 1, cab.length).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      if (d[4] && String(vals[i][iSit]) !== 'COPIADO') continue;
+      if (!vals[i][iId]) continue;
+      fila.push({ sh: sh, linha: i + 2, id: String(vals[i][iId]), sha: String(vals[i][iSha]), iConf: iConf, iEm: iEm });
+    }
+    vals = null;
   });
-  k.registrados = ctx.est.arquivos.registrados || 0;
-  ctx.est.arquivos = k;
+  return fila;
 }
 
-/* ---------------- Conferência (relê e confere o sha256) ---------------- */
 function AuvoAcervo_passoConferencia_(ctx) {
-  if (!ctx.tArquivos) ctx.tArquivos = AuvoAcervo_tabela_(AUVO_ACERVO_CFG.ABA_ARQUIVOS, AUVO_ACERVO_COLS.ARQUIVOS, 'CHAVE');
-  if (!ctx.tTarefas) ctx.tTarefas = AuvoAcervo_tabela_(AUVO_ACERVO_CFG.ABA_TAREFAS, AUVO_ACERVO_COLS.TAREFAS, 'AUVO_TASK_ID');
-  var est = ctx.est;
-  var fila = [];
-  ctx.tArquivos.linhas.forEach(function (r) { if (String(r.SITUACAO) === 'COPIADO') fila.push({ t: ctx.tArquivos, r: r, id: r.ARQUIVO_ID, sha: r.SHA256 }); });
-  ctx.tTarefas.linhas.forEach(function (r) { if (r.JSON_ARQUIVO_ID) fila.push({ t: ctx.tTarefas, r: r, id: r.JSON_ARQUIVO_ID, sha: r.JSON_SHA256 }); });
+  var C = AUVO_ACERVO_CFG, est = ctx.est;
+  if (!ctx.filaConf) ctx.filaConf = AuvoAcervo_filaConferencia_();
+  var fila = ctx.filaConf;
   var i = Number(est.conferenciaCursor || 0);
-  var agora = AuvoAcervo_iso_();
+  var agora = AuvoAcervo_iso_(), n = 0;
+  if (!ctx.confBytes) { ctx.confBytes = 0; ctx.confLote = 0; }
   while (i < fila.length) {
-    if (ctx.restante() < AUVO_ACERVO_CFG.FOLGA_GRUPO_MS) { est.conferenciaCursor = i; return 'SEM_TEMPO'; }
-    var item = fila[i];
-    var resultado;
+    if (ctx.restante() < C.FOLGA_GRUPO_MS || ctx.confBytes >= C.LIMITE_BYTES_LOTE || ctx.confLote >= C.LIMITE_CONFERENCIA_LOTE) { est.conferenciaCursor = i; return 'SEM_TEMPO'; }
+    // grava o cursor a cada 200 arquivos (o estado é gravado depois de cada passo)
+    if (n >= 200) { est.conferenciaCursor = i; return 'CONTINUAR'; }
+    var item = fila[i], resultado, blob = null;
     try {
-      var bytes = DriveApp.getFileById(String(item.id)).getBlob().getBytes();
-      resultado = AuvoAcervo_sha256_(bytes) === String(item.sha) ? 'OK' : 'DIVERGENTE';
+      blob = DriveApp.getFileById(item.id).getBlob();
+      ctx.confBytes += AuvoAcervo_tamanhoBlob_(blob);
+      resultado = AuvoAcervo_shaBlob_(blob) === item.sha ? 'OK' : 'DIVERGENTE';
     } catch (e) { resultado = 'ARQUIVO_NAO_ENCONTRADO'; }
-    item.r.CONFERENCIA = resultado;
-    item.r.CONFERIDO_EM = agora;
-    AuvoAcervo_gravarLinha_(item.t, item.r);
-    i++;
+    blob = null;
+    if (item.iEm === item.iConf + 1) item.sh.getRange(item.linha, item.iConf + 1, 1, 2).setValues([[resultado, agora]]);
+    else { item.sh.getRange(item.linha, item.iConf + 1).setValue(resultado); item.sh.getRange(item.linha, item.iEm + 1).setValue(agora); }
+    fila[i] = null;
+    i++; n++; ctx.confLote++;
   }
   est.conferenciaCursor = 0;
+  ctx.filaConf = null;
   return 'FASE_CONCLUIDA';
 }
 
