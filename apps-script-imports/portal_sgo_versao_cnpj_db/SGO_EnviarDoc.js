@@ -292,10 +292,17 @@ function EnviarDoc_documento_(arquivoId, dica) {
   if (docReg) classe = 'CLIENTE';
   var titulo = EnviarDoc_s_(dica.titulo) || EnviarDoc_tituloDoNome_(arq.nome);
   var tipo = raiz ? raiz.tipo : (docReg ? (EnviarDoc_s_(docReg.TIPO_DOCUMENTO).replace(/^\s*\d+\.\s*/, '') || 'Documento') : 'Documento');
+  var frase = raiz && raiz.frase ? raiz.frase : '';
+  // 21/10/2026: relatório de qualificação (modelo novo) gravado na pasta "Laudos" do módulo: o assunto e o texto falam de
+  // qualificação, não de "relatório de ensaio" (autoclave e lavadora usam a mesma pasta para os dois documentos).
+  if (raiz && raiz.classe === 'CLIENTE' && /^relat[oó]rio de qualifica/i.test(arq.nome) && /^Relatório de ensaio/.test(tipo)) {
+    tipo = tipo.replace(/^Relatório de ensaio/, 'Relatório de qualificação');
+    frase = 'O relatório reúne as etapas da qualificação, os resultados e a conclusão técnica, com a validade quando aprovado. Recomendamos arquivá-lo no prontuário do equipamento.';
+  }
   return {
     arquivo: arq, raiz: raiz, classe: classe, cliente: cliente, docReg: docReg, tipo: tipo, titulo: titulo,
     numero: EnviarDoc_s_(dica.numero), equipamento: equipamento, avisoDica: avisoDica,
-    frase: raiz && raiz.frase ? raiz.frase : ''
+    frase: frase
   };
 }
 
@@ -390,7 +397,10 @@ function EnviarDoc_textos_(doc, eu) {
   var cli = doc.cliente ? doc.cliente.nome : '';
   var ident = doc.titulo + (doc.numero && doc.titulo.indexOf(doc.numero) < 0 ? ' (nº ' + doc.numero + ')' : '');
   var sobre = (cli ? ' de ' + cli : '') + (doc.equipamento && ident.indexOf(doc.equipamento) < 0 ? ', equipamento ' + doc.equipamento : '');
-  var assunto = (doc.tipo && doc.titulo.toLowerCase().indexOf(doc.tipo.toLowerCase()) !== 0 ? doc.tipo + ': ' : '') + ident + (cli ? ' | ' + cli : '');
+  // o tipo só entra no assunto quando o título não começa por ele (nem pelas três primeiras palavras: "Relatório de qualificação ...")
+  var inicioTipo = String(doc.tipo || '').toLowerCase().split(/\s+/).slice(0, 3).join(' ');
+  var tituloJaDiz = doc.titulo.toLowerCase().indexOf(String(doc.tipo || '').toLowerCase()) === 0 || (inicioTipo.split(' ').length === 3 && doc.titulo.toLowerCase().indexOf(inicioTipo) === 0);
+  var assunto = (doc.tipo && !tituloJaDiz ? doc.tipo + ': ' : '') + ident + (cli ? ' | ' + cli : '');
   var email = 'Prezados(as),\n\n' +
     'Encaminhamos em anexo o documento "' + ident + '"' + sobre + ', emitido pela Metrolabs.\n\n' +
     (doc.frase ? doc.frase + '\n\n' : '') +

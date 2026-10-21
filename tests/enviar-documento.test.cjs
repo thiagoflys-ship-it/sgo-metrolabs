@@ -28,6 +28,9 @@ function drive() {
   const comCliente = (nomeRaiz, sub, base) => { const r = pasta(nomeRaiz, raiz); const s = pasta(sub, r, 'HOSPITAL ALFA TESTE'); ids[base] = { pdf: arquivo(base + ' - 2026-10-19 0930.pdf', s, 'application/pdf'), html: arquivo(base + ' - 2026-10-19 0930.html', s, 'text/html'), pasta: s }; return s; };
   comCliente('Autoclave - Laudos', CNPJ_A, 'Relatório de ensaio - AC-77 - TAG-AC1');
   comCliente('Lavadora - Laudos', CNPJ_A, 'Relatório de ensaio - LV-12 - TAG-LV1');
+  // 21/10/2026: relatório de qualificação (modelo novo) na pasta do equipamento, dentro da mesma raiz da autoclave
+  { const acR = pastas[Object.keys(pastas).find((k) => pastas[k].nome === 'Autoclave - Laudos')].id; const cliA = Object.keys(pastas).find((k) => pastas[k].nome === CNPJ_A && pastas[k].pai === acR);
+    const q = pasta('Qualificação', pasta('TAG-AC1 - Autoclave', cliA)); ids.RQA = { pdf: arquivo('Relatório de qualificação Autoclave - RQA-2026-00001 - TAG-AC1.pdf', q, 'application/pdf'), pasta: q }; }
   comCliente('Cadeia de Frio - Laudos', CNPJ_A, 'Relatório de qualificação térmica - CF-3 - TAG-GEL');
   comCliente('Estufa+Banho-maria - Laudos', CNPJ_A, 'Relatório de qualificação térmica - EB-5 - TAG-EST');
   comCliente('Certificado de Calibracao - Documentos Gerados', 'HOSPITAL ALFA TESTE LTDA', 'Certificado 2026-0377');
@@ -160,6 +163,21 @@ test('a janela abre a partir de cada tipo de documento, com o tipo e o cliente c
   assert.ok(r.documento.html && /\.html$/.test(r.documento.html.nome));
   // link do sistema também serve
   assert.equal(A.ctx.EnviarDoc_apiPreparar('s_tec', { arquivoId: 'https://sgo.exemplo.test/arquivos/' + A.D.ids.PGT.pdf }).ok, true);
+});
+
+test('relatório de qualificação: tipo, assunto e texto falam de qualificação (auditoria de integração, 21/10/2026)', () => {
+  const A = ambiente();
+  const r = A.ctx.EnviarDoc_apiPreparar('s_tec', { arquivoId: A.D.ids.RQA.pdf });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.documento.tipo, 'Relatório de qualificação da autoclave');
+  assert.equal(r.cliente && r.cliente.id, 'cliA');
+  assert.equal(r.textos.assunto.indexOf('Relatório de qualificação Autoclave - RQA-2026-00001'), 0, 'sem o tipo repetido antes do título: ' + r.textos.assunto);
+  assert.doesNotMatch(r.textos.assunto + r.textos.email, /relatório de ensaio|resultados do ensaio/i);
+  assert.match(r.textos.email, /etapas da qualificação/);
+  // o relatório de ensaio continua como era
+  const e = A.ctx.EnviarDoc_apiPreparar('s_tec', { arquivoId: A.D.ids['Relatório de ensaio - AC-77 - TAG-AC1'].pdf });
+  assert.equal(e.documento.tipo, 'Relatório de ensaio da autoclave');
+  assert.match(e.textos.email, /resultados do ensaio/);
 });
 
 test('destinatários sempre do cliente do arquivo, nunca de outro (mesmo se a tela mandar outro cliente)', () => {

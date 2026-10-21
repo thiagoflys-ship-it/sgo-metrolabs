@@ -371,6 +371,25 @@ test('etapa 3 · pedido aprovado do Comercial abre a requisição com os produto
   assert.ok(pend(amb, 's_vera').some((i) => i.tipo === 'compras_aviso' && /PROP-2026-0001/.test(i.titulo)), 'vendedora avisada');
 });
 
+test('auditoria de integração (21/10/2026): sem escolher o responsável, o setor Compras do pedido aprovado vai ao comprador das Regras de compras', () => {
+  const amb = ambiente();
+  regrasDeTeste(amb);
+  const ct = ok(amb.com('s_vera', 'salvarContato', { clienteId: 'c1', unidadeId: 'un1', nome: 'Ana Enfermeira Teste', cargo: 'Coordenadora da CME', papel: 'USA', email: 'ana@alfa.exemplo.test' }));
+  const op = ok(amb.com('s_vera', 'salvarOportunidade', { titulo: 'Peças para lavadora da CME', clienteId: 'c1', unidadeId: 'un1', contatoId: ct.contato.id, funil: 'PRODUTOS', etapa: 'PRO_2', origem: 'Indicação', valor: '3.200,00', proxima: { acao: 'Confirmar o modelo das peças', data: '2026-10-20', hora: '10:00', tipo: 'LIGACAO' } })).oportunidade;
+  const np = ok(amb.com('s_vera', 'novaProposta', { oportunidadeId: op.id }));
+  ok(amb.com('s_vera', 'salvarProposta', { id: np.proposta.id, escopo: 'Fornecimento de peças de reposição para a lavadora da CME.', itens: [{ tipo: 'PRODUTO', descricao: 'Kit de vedação da câmara', quantidade: 2, unidade: 'kit', precoUnitario: '1.600,00' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'Até 30 dias', garantia: 'Garantia do fabricante' } }));
+  ok(amb.com('s_vera', 'concluirProposta', { id: np.proposta.id }));
+  ok(amb.com('s_vera', 'gerarDocumento', { id: np.proposta.id }));
+  ok(amb.com('s_vera', 'marcarEnviada', { id: np.proposta.id, como: 'Enviada por e-mail (teste)' }));
+  ok(amb.com('s_vera', 'respostaCliente', { id: np.proposta.id, resposta: 'APROVADA', texto: 'Aprovado por e-mail', arquivo: { nome: 'aceite.pdf', tipo: 'application/pdf', base64: Buffer.from('%PDF').toString('base64') } }));
+  const opc = ok(amb.com('s_vera', 'opcoesPassagem', { id: np.proposta.id }));
+  assert.equal(opc.setores.find((x) => x.codigo === 'COMPRAS').sugerido.id, 'u_cmp', 'a janela já sugere o comprador');
+  ok(amb.com('s_vera', 'passarSetores', { id: np.proposta.id }));
+  const req = amb.tabelas.CMP_REQUISICOES[0];
+  assert.equal(req.COMPRADOR_ID, 'u_cmp', 'quem cota é o comprador');
+  assert.equal(amb.tabelas.ATV_ATIVIDADES.find((a) => /· Compras/.test(a.TITULO)).RESPONSAVEL_ID, 'u_cmp');
+});
+
 // ------------------------------------------------------------------ etapa 4
 function comPedido(amb, fs) {
   const q = aprovada(amb, fs);

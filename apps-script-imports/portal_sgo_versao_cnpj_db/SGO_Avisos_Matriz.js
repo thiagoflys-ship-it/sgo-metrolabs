@@ -617,7 +617,8 @@ function Mtz_parteGestao_(u, cx, ex, rel) {
   if (ordem.length > MTZ_MAX_ITENS_EMAIL) r.linhas.push('E mais ' + (ordem.length - MTZ_MAX_ITENS_EMAIL) + ' na Caixa de decisões.');
   if (sens.length) r.linhas.push('- ' + Mtz_plural_(sens.length, 'decisão do Programa de conduta ou do ponto', 'decisões do Programa de conduta ou do ponto') + ' (o detalhe fica só no sistema). Abra a Caixa de decisões.');
   if (paradas.length) r.linhas.unshift('Paradas há ' + e.whatsDiasUteis + ' dias úteis ou mais: ' + paradas.length + '. Com ' + e.diretoriaDiasUteis + ' dias úteis o item vai para a Diretoria com o seu nome.');
-  var acomp = cx.itens.filter(function (i) { return i.acompanhamento && i.responsaveis.indexOf(u.id) >= 0; }).length;
+  var acompItens = cx.itens.filter(function (i) { return i.acompanhamento && i.responsaveis.indexOf(u.id) >= 0; }), acomp = acompItens.length;
+  r.idsAcomp = acompItens.map(function (i) { return i.id; });
   if (acomp) r.linhas.push('Para acompanhar (vencimentos de clientes): ' + acomp + ' item(ns) na aba Acompanhamento da Caixa de decisões.');
   if (u.diretoria && typeof Ges_textoDiretoria_ === 'function') {
     if (rel && rel.pendente && ex.hora < (typeof GES_HORA_LIMITE_RELATORIOS !== 'undefined' ? GES_HORA_LIMITE_RELATORIOS : '10:30')) r.esperar = true;
@@ -675,6 +676,9 @@ function Mtz_montarResumo_(u, f) {
   cont.decisoes = g.qtd; cont.decisoesParadas = g.paradas;
   if (g.qtd) blocos.push(['DECISÕES QUE DEPENDEM DE VOCÊ (' + g.qtd + ')'].concat(g.linhas).join('\n'));
   if (g.diretoria) blocos.push(g.diretoria);
+  // 21/10/2026: o que já está na Caixa de decisões (inclusive em acompanhamento) não se repete em "Outras pendências suas"
+  var naCaixa = (g.ids || []).concat(g.idsAcomp || []);
+  if (naCaixa.length) outros = outros.filter(function (i) { return naCaixa.indexOf(i.id) < 0; });
   // 4. avisos do dia guardados pelos módulos (Frota, Comercial, Programa de conduta, Auvo, CNH...)
   var fila = ((f.filaPorPessoa && f.filaPorPessoa[u.id]) || []);
   var filaVisivel = fila.filter(function (v) { return !(MTZ_MODULOS_SILENCIAVEIS[Mtz_s_(v.MODULO)] && silencio.indexOf(Mtz_s_(v.MODULO)) >= 0); });

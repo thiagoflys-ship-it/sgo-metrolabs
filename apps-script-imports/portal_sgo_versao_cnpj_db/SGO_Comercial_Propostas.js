@@ -688,6 +688,14 @@ function ComP_responsavelSetor_(setor, escolhido, met) {
   if (escolhido && us[escolhido] && us[escolhido].ativo) return { id: escolhido, nome: us[escolhido].nome, motivo: 'escolhido por quem passou o pedido' };
   var conf = ((met.posVenda.destinatarios || {})[setor] || []).filter(function (id) { return us[id] && us[id].ativo; });
   if (conf.length) return { id: conf[0], nome: us[conf[0]].nome, motivo: 'responsável configurado para o setor' };
+  // 21/10/2026: Compras: o comprador das Regras de compras (é ele quem cota e faz o pedido de compra); sem comprador na lista,
+  // segue a regra da área (gestor de Logística). Antes ia ao gestor da área e o comprador não recebia nada.
+  if (setor === 'COMPRAS' && typeof Cmp_regras_ === 'function' && typeof Cmp_compradoresAtivos_ === 'function' && typeof Cmp_usuarios_ === 'function') {
+    try {
+      var compradores = Cmp_compradoresAtivos_(Cmp_regras_(), Cmp_usuarios_()).filter(function (id) { return us[id] && us[id].ativo; });
+      if (compradores.length) return { id: compradores[0], nome: us[compradores[0]].nome, motivo: 'comprador das Regras de compras' };
+    } catch (eC) { /* sem Compras: segue a regra da área */ }
+  }
   var area = (met.posVenda.areaDoSetor || {})[setor] || setor;
   var areas = [area];
   if (setor === 'COMPRAS') areas.push('ADMINISTRATIVO');

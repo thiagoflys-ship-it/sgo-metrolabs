@@ -292,6 +292,9 @@ function Ponto_fontePendencias_(add, ctx) {
   if (!ctx.userId) return;
   Pto_ler_(PONTO_ABAS.AVISOS).forEach(function (v) {
     if (Pto_s_(v.DESTINATARIO_ID) !== ctx.userId || Pto_s_(v.LIDO_EM)) return;
+    // 21/10/2026: o aviso de pedido novo ao RH não vira um segundo item: o pedido já aparece como "ponto_ajuste" até ser tratado
+    // (o aviso continua na tela do Assistente do ponto e o e-mail segue como antes).
+    if (Pto_up_(v.TIPO) === 'AJUSTE_NOVO') return;
     add(Pend_item_('ponto_aviso', { id: 'PONTO:AV:' + v.ID, nome: 'Assistente do ponto', publico: 'PESSOA', paraUsuarios: [ctx.userId], gravidade: 'ATENCAO', dias: null,
       titulo: Pto_s_(v.TITULO), detalhe: Pto_s_(v.TEXTO).split('\n')[0].slice(0, 300), oQueFazer: 'Abra o Assistente do ponto e toque em Ciente.', tela: { tipo: 'modulo', mod: 'ponto' } }));
   });

@@ -241,6 +241,8 @@ test('"Esqueci de bater" vira pedido ao RH (atividade, pendência, aviso com e-m
   assert.ok(a.tabelas.PONTO_AVISOS.some((v) => v.DESTINATARIO_ID === 'u_rh' && v.TIPO === 'AJUSTE_NOVO' && v.EMAIL_SITUACAO === 'PENDENTE'));
   const pendRh = a.ctx.SGO_Pendencias_listar('s_rita', { semCache: true }).itens.filter((i) => i.tipo === 'ponto_ajuste');
   assert.equal(pendRh.length, 1);
+  // 21/10/2026 (auditoria de integração): o aviso do pedido novo não vira um segundo item no Início do RH
+  assert.equal(a.ctx.SGO_Pendencias_listar('s_rita', { semCache: true }).itens.filter((i) => i.tipo === 'ponto_aviso' && /Pedido de ajuste/.test(i.titulo)).length, 0, 'um item por pedido');
   assert.equal(a.ctx.SGO_Pendencias_listar('s_beto', { semCache: true }).itens.filter((i) => i.tipo === 'ponto_ajuste').length, 0);
   // e-mail ao RH sai na rodada dentro do expediente, nunca pelo WhatsApp
   const whatsRh = a.msgs('u_rh').length;

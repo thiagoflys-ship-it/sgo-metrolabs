@@ -7469,10 +7469,15 @@
       document.querySelectorAll('input[type="file"]:not([data-sgo-arquivo])').forEach(function (i) {
         try { SGO_melhorarSeletorArquivo_(i); } catch (e) { /* segue com o nativo */ }
       });
-      // depois de limpar o campo por código (input.value = ""), a linha volta ao texto padrão
+      // depois de limpar o campo por código (input.value = ""), a linha volta ao texto padrão.
+      // 21/10/2026: só grava quando o texto muda. Gravar sempre gerava uma mutação, que agendava outra varredura
+      // (laço a cada 120 ms enquanto a tela tinha um seletor de arquivo): o botão "Como usar esta tela" não
+      // aparecia (a espera de 150 ms da ajuda nunca terminava) e o celular trabalhava sem parar.
       document.querySelectorAll(".sgo-arquivo").forEach(function (c) {
         const i = c.querySelector('input[type="file"]'), n = c.querySelector(".sgo-arquivo-nome");
-        if (i && n) n.textContent = SGO_arquivoTexto_(i);
+        if (!i || !n) return;
+        const t = SGO_arquivoTexto_(i);
+        if (n.textContent !== t) n.textContent = t;
       });
     }
     function agendar() { if (!agendado) { agendado = true; setTimeout(varrer, 120); } }

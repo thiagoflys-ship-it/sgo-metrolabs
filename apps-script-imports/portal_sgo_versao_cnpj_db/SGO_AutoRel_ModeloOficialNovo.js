@@ -31,7 +31,9 @@ var AUTOFICIAL_CFG = {
   PERIODICIDADE_PADRAO_MESES: 12,
   PERIODICIDADE_MIN_MESES: 1,
   PERIODICIDADE_MAX_MESES: 24,
-  TIPO_EQUIPAMENTO_RE: /AUTOCLAV|ESTERILIZ|VAPOR/,
+  // 21/10/2026: esterilizador a baixa temperatura (peróxido, plasma, formaldeído, óxido de etileno) é do módulo próprio
+  // e não entra como autoclave a vapor (antes "ESTERILIZ" o aceitava aqui).
+  TIPO_EQUIPAMENTO_RE: /^(?!.*(BAIXA TEMP|PEROXIDO|PLASMA|FORMALDEID|OXIDO DE ETILENO|VBTF|LTSF)).*(AUTOCLAV|ESTERILIZ|VAPOR)/,
   MOTIVOS: ['Qualificação inicial', 'Requalificação periódica', 'Requalificação após manutenção', 'Requalificação após mudança de local', 'Requalificação após mudança de programa ou de carga'],
   // Lista de verificação da qualificação de instalação. pressao: item que só se aplica quando a pressão é analisada.
   QI_ITENS: [

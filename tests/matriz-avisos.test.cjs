@@ -427,3 +427,19 @@ test('piloto do WhatsApp: o resumo do dia só sai para quem está na lista; os d
   assert.ok(amb.tabelas.NTF_ENVIOS.some((l) => l.USUARIO_ID === 'u_dir' && l.CANAL === 'whatsapp' && l.SITUACAO === 'RETIDO'));
   assert.ok(amb.emails.some((e) => e.to === 'dora@exemplo.test'), 'o e-mail de resumo segue normal');
 });
+
+// ------------------------------------------------------------------ auditoria de integração (21/10/2026)
+test('resumo do dia: item que está na Caixa de decisões não se repete em "Outras pendências suas"', () => {
+  const amb = ambiente({ agora: em(TER('08:05')) });
+  const c = amb.ctx;
+  const item = { id: 'CMP:APROVAR:r1', tipo: 'compras_aprovar', modulo: 'compras', moduloNome: 'Compras e peças', meu: true, gravidade: 'ATENCAO', titulo: 'Aprovar a compra REQ-2026-0001 (item de teste)', oQueFazer: 'Abra a ficha e aprove ou reprove.' };
+  const outro = { id: 'COM:X', tipo: 'comercial_sem_proxima', modulo: 'comercial', moduloNome: 'Comercial', meu: true, gravidade: 'ATENCAO', titulo: 'Oportunidade de teste sem próximo passo' };
+  const cx = { cfg: { escada: { whatsDiasUteis: 2, diretoriaDiasUteis: 4 } }, us: { u_gt: { id: 'u_gt', nome: 'GIL GESTOR TESTE' } },
+    itens: [{ id: item.id, titulo: item.titulo, modulo: 'compras', responsaveis: ['u_gt'], acompanhamento: false, diasParado: 0, etapa: 'NA_HORA' }] };
+  const u = { id: 'u_gt', nome: 'GIL GESTOR TESTE', perfil: 'GESTOR', gestao: true };
+  const m = c.Mtz_montarResumo_(u, { pend: () => [item, outro], filaPorPessoa: {}, atvPorPessoa: {}, cx, rel: null, ex: { dia: '2026-10-20', hora: '08:05', dentro: true } });
+  assert.match(m.texto, /DECISÕES QUE DEPENDEM DE VOCÊ \(1\)/);
+  assert.equal(m.texto.split('Aprovar a compra REQ-2026-0001').length - 1, 1, 'a compra aparece uma vez só');
+  assert.match(m.texto, /OUTRAS PENDÊNCIAS SUAS[\s\S]*Oportunidade de teste sem próximo passo/, 'o que não está na Caixa continua');
+  assert.equal(m.contagens.outros, 1);
+});

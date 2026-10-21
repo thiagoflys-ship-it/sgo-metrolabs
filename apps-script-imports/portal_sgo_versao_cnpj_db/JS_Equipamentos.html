@@ -227,7 +227,7 @@
   function Equipamentos_voltarDetalhe_(id) { CadUI_painelSujo_(false); var e = CadTela_item_("equipamentos", id); if (e) Equipamentos_detalhe_(e); else CadUI_painelFechar_(); }
   function Equipamentos_tiposConhecidos_() {
     var st = CADUI.telas.equipamentos, vistos = {};
-    var base = ["AUTOCLAVE", "LAVADORA TERMODESINFECTORA", "LAVADORA ULTRASSÔNICA", "REFRIGERADOR", "CÂMARA FRIA", "ESTUFA", "BANHO-MARIA", "SECADORA", "TERMO-HIGRÔMETRO", "SELADORA"];
+    var base = ["AUTOCLAVE", "LAVADORA TERMODESINFECTORA", "LAVADORA ULTRASSÔNICA", "REFRIGERADOR", "CÂMARA FRIA", "ESTUFA", "BANHO-MARIA", "SECADORA", "ESTERILIZADOR A BAIXA TEMPERATURA", "TERMO-HIGRÔMETRO", "SELADORA"];
     (st ? st.itens : []).forEach(function (e) { if (e.TIPO) base.push(String(e.TIPO)); });
     return base.filter(function (t) { var k = t.toUpperCase(); if (vistos[k]) return false; vistos[k] = 1; return true; });
   }
