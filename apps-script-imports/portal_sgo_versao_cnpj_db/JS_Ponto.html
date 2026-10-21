@@ -33,7 +33,7 @@
   .pt-modelo { white-space: pre-wrap; font-size: 12.5px; line-height: 1.5; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
   .pt-mini { font-size: 12px; color: var(--muted); }
   .pt-tabela.pt-dia { table-layout: fixed; } .pt-tabela.pt-dia th:first-child { width: 24%; }
-  .pt-tabela.pt-dia td { overflow-wrap: anywhere; }
+  .pt-tabela.pt-dia td { overflow-wrap: anywhere; } .pt-tabela.pt-dia .pt-selo { white-space: normal; }
   @media (max-width: 900px) {
     .pt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pt-grade2, .pt-grade3 { grid-template-columns: 1fr; }
@@ -121,9 +121,10 @@
       if (!ini.ligado) h += '<div class="pt-faixa aviso"><b>O assistente está desligado.</b> Nenhuma mensagem sai e ninguém recebe lembrete. ' + (ini.configurar ? "Para ligar, abra a aba Configuração, confira a jornada e o RH, marque «Assistente ligado» e toque em «Salvar configuração»." : "Quem liga é o Administrador ou a Diretoria.") + "</div>";
       h += '<div class="pt-faixa">O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra, recebe a confirmação de um toque e leva o "Esqueci de bater" ao RH. "Não confirmado" não é prova de falta.</div>';
       if (ini.avisos && ini.avisos.length) {
-        h += '<div class="pt-caixa"><h3>Avisos para você (' + ini.avisos.length + ")</h3>" + ini.avisos.map(function (a) {
+        h += '<div class="pt-caixa"><h3>Avisos para você (' + ini.avisos.length + ")</h3>" + ini.avisos.slice(0, 3).map(function (a) {
           return '<div style="border-top:1px solid var(--border);padding:8px 0"><b>' + Pto_esc_(a.titulo) + '</b> <span class="pt-mini">' + Pto_esc_(a.data) + '</span><div style="white-space:pre-wrap;font-size:13px;margin:4px 0">' + Pto_esc_(a.texto) + '</div><button type="button" class="btn-secondary" onclick="Ponto_ciente_(\'' + Pto_esc_(a.id) + '\')">Ciente</button></div>';
-        }).join("") + "</div>";
+        }).join("") + (ini.avisos.length > 3 ? '<p class="pt-mini">E mais ' + (ini.avisos.length - 3) + ' aviso(s).</p>' : "") +
+          (ini.avisos.length > 1 ? '<div class="pt-acoes"><button type="button" class="btn-secondary" onclick="Ponto_cienteTodos_()">Ciente em todos</button></div>' : "") + "</div>";
       }
       h += '<div class="pt-tabs" role="tablist">' + abas.map(function (a) {
         var n = a[0] === "pedidos" && ini.tratar && ini.pendentes ? '<span class="pt-n">' + ini.pendentes + "</span>" : "";
@@ -141,6 +142,7 @@
     ({ hoje: Ponto_abaHoje_, pedidos: Ponto_abaPedidos_, mes: Ponto_abaMes_, meus: Ponto_abaMeus_, pessoas: Ponto_abaPessoas_, config: Ponto_abaConfig_ }[PT.aba] || Ponto_abaMeus_)(alvo);
   }
   function Ponto_ciente_(id) { Pto_chamar_("ciente", { id: id }, function () { Ponto_render_(); }); }
+  function Ponto_cienteTodos_() { Pto_chamar_("cienteTodos", {}, function () { Ponto_render_(); }); }
 
   // ---------------- Hoje ----------------
   function Ponto_celulaMarc_(x) {

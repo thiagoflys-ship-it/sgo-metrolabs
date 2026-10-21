@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "29d480e35047",
+ "versao": "1d9f8cd44b85",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -1790,6 +1790,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "RH > Resumo A4 do mês",
      "texto": "Na aba \"Mês\", toque em \"Resumo A4 / PDF\". O resumo traz os números do mês por pessoa e a lista dos pedidos de ajuste (código, pessoa, dia, marcação, horário informado e situação). Ele não traz justificativas, evidências nem contatos."
+    },
+    {
+     "titulo": "RH > Avisos no alto da tela",
+     "texto": "Pedido novo, resumo do mês e resposta do RH aparecem em \"Avisos para você\", no alto da tela do Assistente do ponto e no Início. Toque em \"Ciente\" em cada um ou em \"Ciente em todos\"."
     },
     {
      "titulo": "Gestão",

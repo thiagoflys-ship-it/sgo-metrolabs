@@ -93,6 +93,10 @@ O pedido também aparece no Início do RH. Se a opção estiver ligada, vira uma
 
 Na aba "Mês", toque em "Resumo A4 / PDF". O resumo traz os números do mês por pessoa e a lista dos pedidos de ajuste (código, pessoa, dia, marcação, horário informado e situação). Ele não traz justificativas, evidências nem contatos.
 
+### Avisos no alto da tela
+
+Pedido novo, resumo do mês e resposta do RH aparecem em "Avisos para você", no alto da tela do Assistente do ponto e no Início. Toque em "Ciente" em cada um ou em "Ciente em todos".
+
 ## Gestão
 
 O gestor acompanha a própria equipe: a área dele no cadastro e as áreas pelas quais responde na Caixa de decisões (Regras e responsáveis). Ele vê as abas "Hoje", "Mês" e "Pedidos da equipe", só leitura. A justificativa dos pedidos fica com o RH.

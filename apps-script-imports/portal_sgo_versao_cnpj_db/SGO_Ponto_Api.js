@@ -364,6 +364,12 @@ function Ponto_acao_(eu, acao, d) {
       if (typeof SGO_Pendencias_invalidar_ === 'function') { try { SGO_Pendencias_invalidar_(); } catch (e) {} }
       return { message: 'Ciente.' };
     }
+    case 'cienteTodos': {
+      var ag = Pto_agoraIso_(new Date()), n = 0;
+      Pto_ler_(PONTO_ABAS.AVISOS).forEach(function (v) { if (Pto_s_(v.DESTINATARIO_ID) === eu.id && !Pto_s_(v.LIDO_EM)) { SGO_DATA.update(PONTO_ABAS.AVISOS, v.ID, { LIDO_EM: ag }); n++; } });
+      if (typeof SGO_Pendencias_invalidar_ === 'function') { try { SGO_Pendencias_invalidar_(); } catch (e) {} }
+      return { message: n + ' aviso(s) marcados como ciente.' };
+    }
     case 'dia':
       Ponto_exigir_(eu, 'equipe', 'abrir o painel do dia');
       return { painel: Ponto_painelDia_(eu, /^\d{4}-\d{2}-\d{2}$/.test(Pto_s_(d.dia)) ? d.dia : hoje) };

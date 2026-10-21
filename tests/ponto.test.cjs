@@ -381,6 +381,11 @@ test('telas: painel do dia e do mês por papel, colaborador vê só os próprios
   assert.match(a4.html, /Resumo mensal do assistente do ponto/);
   assert.ok(!/Motivo sigiloso|62990000|@exemplo/.test(a4.html), 'A4 sem justificativa, telefone ou e-mail');
   assert.match(a.api('s_gil', 'resumoA4', { mes: '2026-10' }).message, /RH/);
+  // avisos: Ciente em todos marca só os da própria pessoa
+  const antesAna = a.tabelas.PONTO_AVISOS.filter((v) => v.DESTINATARIO_ID === 'u_ana' && !v.LIDO_EM).length;
+  assert.match(ok(a.api('s_rita', 'cienteTodos')).message, /ciente/);
+  assert.equal(a.tabelas.PONTO_AVISOS.filter((v) => v.DESTINATARIO_ID === 'u_rh' && !v.LIDO_EM).length, 0);
+  assert.equal(a.tabelas.PONTO_AVISOS.filter((v) => v.DESTINATARIO_ID === 'u_ana' && !v.LIDO_EM).length, antesAna);
   // ajuda da tela e regras de acesso
   const ajuda = a.ctx.SGO_Ajuda_todas_().telas.ponto;
   assert.ok(ajuda && ajuda.passos.length >= 5 && ajuda.quemPode.length >= 4);
