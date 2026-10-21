@@ -76,10 +76,10 @@ var GES_SITUACOES = { ABERTA: 'Aberta', RESOLVIDA: 'Resolvida', PERDIDA: 'Venceu
 /** Área padrão de cada módulo quando o item não é de uma pessoa (configurável em Regras e responsáveis). */
 var GES_AREA_MODULO_PADRAO = {
   padroes: 'METROLOGIA', certificados: 'METROLOGIA', documentos: 'COMERCIAL', nr13: 'TECNICA', frota: 'ADMINISTRATIVO',
-  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO', email: 'COMERCIAL', comercial: 'COMERCIAL'
+  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO', email: 'COMERCIAL', comercial: 'COMERCIAL', ponto: 'RH'
 };
 var GES_MODULOS_CONFIG = [['padroes', 'Padrões de referência'], ['certificados', 'Certificados de calibração'], ['documentos', 'Documentos de clientes'], ['nr13', 'NR-13'],
-  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos'], ['email', 'E-mail de clientes'], ['comercial', 'Comercial']];
+  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos'], ['email', 'E-mail de clientes'], ['comercial', 'Comercial'], ['ponto', 'Assistente do ponto']];
 
 /**
  * Pendências da central que são decisão da gestão.
@@ -106,7 +106,9 @@ var GES_TIPOS = {
   // 21/10/2026: e-mail de cliente sem resposta além do prazo da gestão (SGO_Email.js); vai ao gestor da área da pessoa
   email_cliente_parado: { prazo: 1 },
   // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js). A decisão é tomada na tela do Comercial; a caixa mostra, cobra e leva até lá.
-  comercial_sem_proxima: { prazo: 1 }, comercial_desconto: { prazo: 1 }, comercial_reabertura: { prazo: 2 }, comercial_pedido_parado: { prazo: 1 }
+  comercial_sem_proxima: { prazo: 1 }, comercial_desconto: { prazo: 1 }, comercial_reabertura: { prazo: 2 }, comercial_pedido_parado: { prazo: 1 },
+  // 21/10/2026: Assistente do ponto (SGO_Ponto_Api.js). Pedido de ajuste pendente há 2 dias úteis: vai à gestão da área RH (sem gestor, a Diretoria).
+  ponto_ajuste_parado: { prazo: 1 }
 };
 
 var GES_CFG_PADRAO = {

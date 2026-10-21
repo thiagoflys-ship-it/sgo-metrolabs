@@ -64,7 +64,8 @@ var PEND_MODULOS = {
   atividades: 'Atividades',
   avisos: 'Avisos',
   email: 'E-mail',
-  comercial: 'Comercial'
+  comercial: 'Comercial',
+  ponto: 'Assistente do ponto'
 };
 
 /**
@@ -147,7 +148,11 @@ var PEND_TIPOS = {
   comercial_reabertura: { modulo: 'comercial', um: 'pedido de reabertura de oportunidade', varios: 'pedidos de reabertura de oportunidades', rotulo: 'Decidir', fazer: 'reabra ou recuse em Comercial > Oportunidades', tela: { tipo: 'comercial', aba: 'oportunidades' }, origem: 'COMERCIAL' },
   comercial_pedido_parado: { modulo: 'comercial', um: 'pedido aprovado sem passagem aos setores', varios: 'pedidos aprovados sem passagem aos setores', rotulo: 'Pedido parado', fazer: 'passe o pedido aos setores em Comercial > Propostas', tela: { tipo: 'comercial', aba: 'propostas' }, origem: 'COMERCIAL' },
   comercial_pedido_passar: { modulo: 'comercial', um: 'pedido aprovado para passar aos setores', varios: 'pedidos aprovados para passar aos setores', rotulo: 'Passar aos setores', fazer: 'toque em Passar aos setores na proposta', tela: { tipo: 'comercial', aba: 'propostas' }, origem: 'COMERCIAL' },
-  comercial_aviso: { modulo: 'comercial', um: 'aviso do Comercial', varios: 'avisos do Comercial', rotulo: 'Informativo', fazer: 'abra o Comercial para ver', tela: { tipo: 'comercial', aba: 'hoje' }, origem: 'COMERCIAL' }
+  comercial_aviso: { modulo: 'comercial', um: 'aviso do Comercial', varios: 'avisos do Comercial', rotulo: 'Informativo', fazer: 'abra o Comercial para ver', tela: { tipo: 'comercial', aba: 'hoje' }, origem: 'COMERCIAL' },
+  // 21/10/2026: Assistente do ponto nativo (SGO_Ponto_Api.js › Ponto_fontePendencias_). Pedido do RH, parado (Caixa de decisões) e avisos.
+  ponto_ajuste: { modulo: 'ponto', um: 'pedido de ajuste do ponto para tratar', varios: 'pedidos de ajuste do ponto para tratar', rotulo: 'Tratar', fazer: 'lance no relógio ou no sistema de ponto e marque em Assistente do ponto > Pedidos de ajuste', tela: { tipo: 'modulo', mod: 'ponto' }, origem: 'PONTO' },
+  ponto_ajuste_parado: { modulo: 'ponto', um: 'pedido de ajuste do ponto parado', varios: 'pedidos de ajuste do ponto parados', rotulo: 'Parado', fazer: 'cobre o RH ou trate em Assistente do ponto > Pedidos de ajuste', tela: { tipo: 'modulo', mod: 'ponto' }, origem: 'PONTO' },
+  ponto_aviso: { modulo: 'ponto', um: 'aviso do assistente do ponto', varios: 'avisos do assistente do ponto', rotulo: 'Informativo', fazer: 'abra o Assistente do ponto e toque em Ciente', tela: { tipo: 'modulo', mod: 'ponto' }, origem: 'PONTO' }
 };
 
 // Tipos que já têm janela própria ao entrar (não se repetem no resumo da janela de avisos).
@@ -986,6 +991,8 @@ var PEND_FONTES = [
   { nome: 'e-mail', fn: function (add, ctx) { if (!ctx.cliente && typeof Email_pendencias_ === 'function') Email_pendencias_(add, ctx); } },
   // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js): sem próxima ação, desconto, reabertura, pedido parado e avisos.
   { nome: 'Comercial', fn: function (add, ctx) { if (!ctx.cliente && typeof Comercial_fontePendencias_ === 'function') Comercial_fontePendencias_(add, ctx); } },
+  // 21/10/2026: Assistente do ponto (SGO_Ponto_Api.js): pedidos de ajuste do RH, pedido parado (Caixa de decisões) e avisos.
+  { nome: 'Assistente do ponto', fn: function (add, ctx) { if (!ctx.cliente && typeof Ponto_fontePendencias_ === 'function') Ponto_fontePendencias_(add, ctx); } },
   // 20/10/2026: decisões da gestão que só a Caixa de decisões conhecia (SGO_Gestao_Decisoes.js).
   { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } }
 ];

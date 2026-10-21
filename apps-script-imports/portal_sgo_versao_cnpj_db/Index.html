@@ -116,6 +116,8 @@
           <button type="button" class="menu-btn" data-mod="minhas_atividades" data-busca="tarefas agenda kanban" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
           <button type="button" class="menu-btn" data-mod="atividades_equipe" data-busca="tarefas gantt equipe justificativas" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
           <button type="button" class="menu-btn" data-mod="avisos" data-busca="comunicados ciencia recados" id="menu-btn-avisos" onclick="abrir('avisos')"><span class="menu-btn-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span>Avisos<span class="menu-badge" id="menuBadgeAvisos"></span></button>
+          <!-- 21/10/2026: Assistente do ponto nativo (JS_Ponto.html / SGO_Ponto_*.js). Aparece quando o assistente está ligado; RH, Administrador e Diretoria veem sempre (Ponto_iniciar_). -->
+          <button type="button" class="menu-btn" data-mod="ponto" data-busca="ponto relogio batida lembrete esqueci de bater ajuste rh jornada" id="menu-btn-ponto" style="display:none;" onclick="abrir('ponto')"><span class="menu-btn-icon"><i class="fas fa-clock" aria-hidden="true"></i></span>Assistente do ponto<span class="menu-badge" id="menuBadgePonto"></span></button>
           <button type="button" class="menu-btn" data-mod="email" data-busca="email e-mail caixa de entrada mensagens responder cliente outlook" id="menu-btn-email" style="display:none;" onclick="abrir('email')"><span class="menu-btn-icon"><i class="fas fa-envelope" aria-hidden="true"></i></span>E-mail<span class="menu-badge" id="menuBadgeEmail"></span></button>
           </div>
         </div>
@@ -269,6 +271,7 @@
 <?!= include('JS_EnviarDoc'); ?>
 <?!= include('JS_Gestao'); ?>
 <?!= include('JS_Comercial'); ?>
+<?!= include('JS_Ponto'); ?>
 <?!= include('JS_Email'); ?>
 <?!= include('JS_Assistente'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->

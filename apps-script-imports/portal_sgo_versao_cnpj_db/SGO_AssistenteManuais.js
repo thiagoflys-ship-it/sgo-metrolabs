@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "9a8f8bcb86b6",
+ "versao": "56bb1e21464f",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -1690,6 +1690,86 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Enviar o documento ao cliente (20/10/2026)",
      "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_PONTO.md",
+   "titulo": "Manual do módulo — Assistente do ponto (SGO+)",
+   "tela": "ponto",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 21/10/2026. Menu: Principal > Assistente do ponto."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O Assistente do ponto lembra o colaborador CLT de bater o ponto, na hora de cada marcação, e leva o \"Esqueci de bater\" ao RH como pedido de ajuste.\n\nO ponto oficial continua sendo o relógio da empresa. Em viagem, vale o aplicativo de ponto que o RH libera. O SGO+ não fala com o relógio e não sabe quem bateu: ele só lembra e recebe a confirmação de um toque. O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O lembrete não substitui a batida."
+    },
+    {
+     "titulo": "Quem recebe os lembretes",
+     "texto": "Só quem é CLT. O vínculo fica em Administração > Usuários > Vínculo. PJ nunca recebe nada do ponto. Quem está sem vínculo informado também não recebe.\nDurante o piloto do WhatsApp, só as pessoas da lista do piloto (Administração > Piloto do WhatsApp).\nQuem o RH não tirou do assistente (aba \"Pessoas e jornadas\").\nQuem tem celular ou e-mail no cadastro.\n\nNão recebe lembrete naquele momento:\nquem está de férias ou afastado no Programa de conduta;\nquem tem folga, atestado, consulta ou viagem sem marcação lançada pelo RH em \"Folgas e dispensas\";\nquem está em atendimento no Auvo (check-in feito, sem check-out)."
+    },
+    {
+     "titulo": "Horários",
+     "texto": "Marcação | Quando chega o lembreteEntrada | 5 minutos antes (07:55 com entrada às 08:00)\nSaída para o almoço | Na hora (11:00)\nVolta do almoço | Saída para o almoço confirmada mais a pausa (padrão 1 hora). Sem confirmação, conta do horário do almoço\nSaída | 5 minutos antes (17:55; na sexta, 17:25)\nSó em dia útil. Os dias e os feriados vêm do expediente comum do SGO+: feriados nacionais, Carnaval, Sexta-feira Santa, Corpus Christi e os feriados extras cadastrados.\nCada marcação tem um lembrete só. Não existe segundo lembrete, mesmo sem confirmação.\nNada sai antes da entrada menos 5 minutos nem depois da saída da pessoa. Nada sai em fim de semana ou feriado.\nO lembrete só sai até 20 minutos depois do horário dele. Se o servidor ficou parado, ele não chega atrasado.\nA jornada geral é configurada pelo Administrador ou pela Diretoria. Cada pessoa pode ter outra jornada, lançada pelo RH.\nQuais marcações lembrar é configurável: as quatro (padrão) ou só entrada e saída."
+    },
+    {
+     "titulo": "Como o lembrete chega",
+     "texto": "1. Pelo WhatsApp oficial da empresa (Meta), com o botão \"Confirmar\".\n2. Sem o WhatsApp (modelo ainda não aprovado na Meta, ou pessoa sem celular), por e-mail, com o mesmo link. Essa reserva pode ser desligada na configuração.\n\nO WhatsApp do ponto nunca leva resumo, cobrança ou nome de outra pessoa."
+    },
+    {
+     "titulo": "Colaborador > Confirmar pelo lembrete",
+     "texto": "1. Bata o ponto no relógio (em viagem, no aplicativo de ponto).\n2. Toque em \"Confirmar\" na mensagem.\n3. Na página que abre, toque no botão verde (por exemplo, \"Já bati a entrada\").\n4. Confira a mensagem \"confirmada às\".\n\nA página não pede senha. Ela mostra só o seu primeiro nome, o dia, a marcação e o horário previsto. O link vale só naquele dia e uma vez só: depois de confirmar ou pedir o ajuste, ele só mostra a situação."
+    },
+    {
+     "titulo": "Colaborador > Esqueci de bater",
+     "texto": "1. Na página do lembrete, toque em \"Esqueci de bater\".\n2. Informe o horário em que você chegou ou saiu.\n3. Escreva uma frase curta contando o que aconteceu.\n4. Toque em \"Enviar ao RH\".\n\nO dia já passou, ou o link venceu? No SGO+, abra Assistente do ponto > \"Meus lembretes\" > \"Pedir ajuste ao RH\". Vale para um dia de hoje até 31 dias atrás. Para um dia mais antigo, fale direto com o RH.\n\nA resposta do RH aparece no SGO+ (aviso no Assistente do ponto e no Início) e no seu e-mail."
+    },
+    {
+     "titulo": "Colaborador > Meus lembretes",
+     "texto": "A aba mostra se você recebe os lembretes (e o motivo, se não recebe), a sua jornada, os lembretes do mês com a situação de cada um e os seus pedidos de ajuste. Com um lembrete de hoje em aberto, o botão \"Já bati\" confirma por ali mesmo."
+    },
+    {
+     "titulo": "RH > Pedidos de ajuste",
+     "texto": "1. Abra a aba \"Pedidos de ajuste\". O número vermelho na aba mostra quantos estão pendentes.\n2. Leia o horário informado, a frase da pessoa e a evidência automática. A evidência é só o horário de check-in e de check-out do Auvo naquele dia. O SGO+ não usa localização.\n3. Lance no relógio ou no sistema de ponto.\n4. Toque em \"Lançado no ponto\". Se não for o caso, toque em \"Não lançado\" e escreva o motivo.\n\nA pessoa é avisada no SGO+ e por e-mail. Quem pediu não trata o próprio pedido: outra pessoa do RH, a Diretoria ou o Administrador trata.\n\nO pedido também aparece no Início do RH. Se a opção estiver ligada, vira uma atividade do RH em Minhas atividades, concluída sozinha quando o pedido é tratado. Pedido parado há 2 dias úteis entra na Caixa de decisões da gestão da área RH (sem gestor da área, da Diretoria)."
+    },
+    {
+     "titulo": "RH > Pessoas e jornadas",
+     "texto": "A coluna \"Situação\" diz quem recebe e, para quem não recebe, o motivo: PJ, vínculo não informado, tirado do assistente, fora do piloto do WhatsApp, sem celular e sem e-mail.\n\"Ajustar\" tira a pessoa do assistente ou muda a jornada dela (entrada, almoço, pausa, saída, saída na sexta, sem intervalo registrado). Campo vazio segue a jornada geral.\n\"Folgas e dispensas\": lance folga, atestado, consulta ou viagem sem marcação de ponto. Nesses dias a pessoa não recebe lembrete. \"Retirar\" não apaga: só marca a dispensa como retirada."
+    },
+    {
+     "titulo": "RH > Resumo A4 do mês",
+     "texto": "Na aba \"Mês\", toque em \"Resumo A4 / PDF\". O resumo traz os números do mês por pessoa e a lista dos pedidos de ajuste (código, pessoa, dia, marcação, horário informado e situação). Ele não traz justificativas, evidências nem contatos."
+    },
+    {
+     "titulo": "Gestão",
+     "texto": "O gestor acompanha a própria equipe: a área dele no cadastro e as áreas pelas quais responde na Caixa de decisões (Regras e responsáveis). Ele vê as abas \"Hoje\", \"Mês\" e \"Pedidos da equipe\", só leitura. A justificativa dos pedidos fica com o RH."
+    },
+    {
+     "titulo": "Esquecimentos e Programa de conduta",
+     "texto": "Esquecimento é cada \"Esqueci de bater\" e cada marcação lembrada e não confirmada até o fim do dia (\"não confirmado\").\n\"Não confirmado\" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão.\nA partir do 3º esquecimento no mês (configurável), o RH e a gestão da pessoa recebem um resumo no SGO+ e por e-mail (o e-mail sai dentro do expediente). Nunca pelo WhatsApp.\nO Programa de conduta recebe uma sugestão informativa por pessoa por mês (Programa de conduta > Sugestões). Nada vira ocorrência sozinho: a gestão decide se registra ou descarta, com o motivo.\nPJ e vínculo não informado não contam esquecimento."
+    },
+    {
+     "titulo": "Administrador e Diretoria > Ligar",
+     "texto": "1. Em Administração > Chaves e senhas, toque em \"Cadastrar modelos na Meta\". Os quatro modelos do ponto (sgo_ponto_entrada, sgo_ponto_almoco, sgo_ponto_retorno e sgo_ponto_saida) vão para a análise da Meta junto com os outros.\n2. Toque em \"Situação dos modelos\" até eles ficarem aprovados (de minutos a 24 horas).\n3. No Assistente do ponto, abra a aba \"Configuração\".\n4. Escolha quais marcações lembrar.\n5. Confira a jornada geral.\n6. Marque o RH, se for alguém sem o perfil ou a área RH no cadastro.\n7. Marque \"Assistente ligado\" e toque em \"Salvar configuração\". A rotina de 5 minutos é instalada junto.\n8. Toque em \"Pré-visualizar a página do link\" para ver o que o colaborador vê. Nada é gravado.\n\nDesligar: desmarque \"Assistente ligado\" e salve. Nenhum lembrete sai."
+    },
+    {
+     "titulo": "Administrador e Diretoria > Feriados",
+     "texto": "Os feriados extras (estaduais, municipais e recessos) ficam no expediente comum do SGO+ e valem para todos os avisos automáticos. Edite na aba \"Configuração\" > \"Feriados\"."
+    },
+    {
+     "titulo": "Administrador e Diretoria > Sem mensagem em dobro com o COMMAND",
+     "texto": "Com o assistente do SGO+ ligado, o assistente do ponto do COMMAND não manda nada. O ponto passa a ser só do SGO+."
+    },
+    {
+     "titulo": "Modelos do WhatsApp",
+     "texto": "Categoria Utilidade, idioma Português (BR). Cada modelo tem um botão de link \"Confirmar\" com o endereço https://sgo.metrolabs.com.br/?ponto={{1}}.\nModelo | Textosgo_ponto_entrada | Bom dia, {{1}}. Lembrete do ponto: a sua entrada é às {{2}}. Se já bateu o ponto, toque em \"Confirmar\". Se esqueceu, a mesma página tem a opção \"Esqueci de bater\". O registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida. Metrolabs — SGO+\nsgo_ponto_almoco | Olá, {{1}}. Lembrete do ponto: são {{2}}, horário da saída para o almoço. Ao bater o ponto, toque em \"Confirmar\". Assim o lembrete da volta chega na hora certa. (rodapé igual)\nsgo_ponto_retorno | Olá, {{1}}. Lembrete do ponto: o retorno do almoço é às {{2}}. Se já bateu o ponto, toque em \"Confirmar\". (rodapé igual)\nsgo_ponto_saida | Olá, {{1}}. Lembrete do ponto: a sua saída é às {{2}}. Ao bater o ponto, toque em \"Confirmar\". (rodapé igual)"
+    },
+    {
+     "titulo": "Erros comuns",
+     "texto": "Situação | O que fazerO colaborador não recebeu o lembrete | Veja \"Pessoas e jornadas\": vínculo, piloto, celular e e-mail. Corrija em Administração > Usuários ou no Piloto do WhatsApp\nO lembrete chegou por e-mail | O modelo ainda não foi aprovado na Meta ou a pessoa está sem celular. Confira em \"Configuração\" > Modelos do WhatsApp\n\"Este link já foi usado\" | Cada link vale uma vez. Peça o ajuste em \"Meus lembretes\" > \"Pedir ajuste ao RH\"\n\"Este link valia só para...\" | O link vence no fim do dia. Peça o ajuste em \"Meus lembretes\" ou fale com o RH\nO RH não consegue tratar um pedido | Quem pediu não trata o próprio pedido. Outra pessoa do RH, a Diretoria ou o Administrador trata\n\"Lembrete não saiu\" | Nem o WhatsApp nem o e-mail funcionaram; o motivo aparece embaixo. Não conta como esquecimento"
     }
    ]
   },

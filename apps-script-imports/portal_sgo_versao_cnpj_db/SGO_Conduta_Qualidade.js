@@ -42,6 +42,8 @@ var CNDQ_ORIGENS = {
   ATIVIDADES: { nome: 'Minhas atividades', tela: 'atividades_equipe' },
   AVISOS: { nome: 'Avisos', tela: 'avisos' },
   COMMAND_PONTO: { nome: 'Assistente do ponto (COMMAND)', tela: '' },
+  // 21/10/2026: Assistente do ponto nativo do SGO+ (SGO_Ponto_Rodada.js): 3º esquecimento no mês = sugestão informativa
+  PONTO: { nome: 'Assistente do ponto', tela: 'ponto' },
   // 20/10/2026: avaliação do gestor (SGO_Gestao_Avaliacao.js). Sugestão sobre gestor: só a Diretoria vê e decide.
   GESTAO: { nome: 'Desempenho da gestão', tela: 'gestao_desempenho' }
 };
@@ -529,11 +531,13 @@ function Conduta_sugestaoDoPonto_(dados) {
   var u = uid ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, uid) : null;
   if (!u) return { ok: false, message: 'Pessoa sem cadastro no SGO+ (sgo_id vazio ou desconhecido).' };
   var mes = /^\d{4}-\d{2}$/.test(String(dados.mes || '')) ? String(dados.mes) : Conduta_competenciaDe_(Conduta_hojeISO_());
-  var chave = 'COMMAND_PONTO|' + uid + '|' + mes + '|' + (Number(dados.quantidade) || 3);
+  // 21/10/2026: o assistente nativo do SGO+ (origem PONTO) gera UMA sugestão por pessoa por mês; o do COMMAND segue como era
+  var nativo = String(dados.origem || '').toUpperCase() === 'PONTO';
+  var chave = nativo ? 'PONTO|' + uid + '|' + mes : 'COMMAND_PONTO|' + uid + '|' + mes + '|' + (Number(dados.quantidade) || 3);
   if (Cndq_ler_(CNDQ_SHEETS.SUGESTAO).some(function (s) { return String(s.CHAVE) === chave; })) return { ok: true, repetida: true };
   var hoje = Conduta_hojeISO_();
-  SGO_DATA.insert(CNDQ_SHEETS.SUGESTAO, { CHAVE: chave, ORIGEM_MODULO: 'COMMAND_PONTO', ORIGEM_TIPO: 'PONTO_ESQUECIMENTO', ORIGEM_ID: SGO_UTILS.safe(dados.chave) || (uid + '|' + mes),
-    ORIGEM_ROTULO: 'Resumo do ponto de ' + Conduta_nomeCompetencia_(mes), ORIGEM_TELA: '', ORIGEM_LINK: '',
+  SGO_DATA.insert(CNDQ_SHEETS.SUGESTAO, { CHAVE: chave, ORIGEM_MODULO: nativo ? 'PONTO' : 'COMMAND_PONTO', ORIGEM_TIPO: 'PONTO_ESQUECIMENTO', ORIGEM_ID: SGO_UTILS.safe(dados.chave) || (uid + '|' + mes),
+    ORIGEM_ROTULO: 'Resumo do ponto de ' + Conduta_nomeCompetencia_(mes), ORIGEM_TELA: nativo ? 'ponto' : '', ORIGEM_LINK: '',
     COLABORADOR_ID: uid, COLABORADOR_NOME: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), DATA_FATO: hoje, TIPO_CODIGO: '',
     TITULO: (Number(dados.quantidade) || 3) + ' esquecimentos de ponto em ' + Conduta_nomeCompetencia_(mes) + ' (informativo)',
     DETALHE: String(dados.texto || '').slice(0, 1200) + ' Informativo do Assistente do ponto: nenhuma medida é automática. Se houver falta de comunicação (RH-01) ou atraso recorrente (RH-02), registre; senão, descarte com o motivo.',

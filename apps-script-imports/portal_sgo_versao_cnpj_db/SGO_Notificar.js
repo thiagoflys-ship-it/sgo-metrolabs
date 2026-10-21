@@ -162,13 +162,13 @@ function Notificar_contatos_(ids) {
   return mapa;
 }
 
-function Notificar_htmlEmail_(titulo, texto, link) {
+function Notificar_htmlEmail_(titulo, texto, link, rotuloLink) {
   var corpo = Notificar_esc_(texto).replace(/\r\n|\r|\n/g, '<br>');
   return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1f2a24;max-width:640px">' +
     '<div style="border-bottom:2px solid #2f5d50;padding:0 0 8px;margin:0 0 16px;font-weight:bold;color:#2f5d50">SGO+ Metrolabs</div>' +
     '<h2 style="font-size:18px;margin:0 0 12px;color:#1f2a24">' + Notificar_esc_(titulo) + '</h2>' +
     '<div style="margin:0 0 18px">' + corpo + '</div>' +
-    (link ? '<p style="margin:0 0 18px"><a href="' + Notificar_esc_(link) + '" style="display:inline-block;background:#2f5d50;color:#ffffff;text-decoration:none;padding:9px 16px;border-radius:4px">Abrir o SGO+</a></p>' +
+    (link ? '<p style="margin:0 0 18px"><a href="' + Notificar_esc_(link) + '" style="display:inline-block;background:#2f5d50;color:#ffffff;text-decoration:none;padding:9px 16px;border-radius:4px">' + Notificar_esc_(rotuloLink || 'Abrir o SGO+') + '</a></p>' +
       '<p style="font-size:12px;color:#5b6b63;margin:0 0 18px">Se o botão não abrir, copie este endereço no navegador: ' + Notificar_esc_(link) + '</p>' : '') +
     '<div style="border-top:1px solid #d5ddd8;padding-top:8px;font-size:12px;color:#5b6b63">Mensagem automática do SGO+. Não responda este e-mail; em caso de dúvida, fale com a gestão.</div>' +
     '</div>';
@@ -298,8 +298,41 @@ var NTF_MODELOS_META = {
     limites: [120, 200, 60],
     texto: 'Chamado técnico concluído.\n\nCliente: {{1}}\nChamado: {{2}}\nConcluído em: {{3}}\n\nEm caso de dúvida, responda esta mensagem ou fale com a Metrolabs.\n\nMetrolabs — SGO+',
     exemplos: ['Clínica Exemplo Ltda.', 'Nº 1234', '21/10/2026']
+  },
+  // 21/10/2026: Assistente do ponto nativo (SGO_Ponto_*.js). Um lembrete por marcação, só CLT, só dia útil e na hora da
+  // marcação. Botão de link (URL dinâmica) com o token de confirmação de um toque no fim da URL. Sem modelo aprovado, o
+  // lembrete não usa o sgo_aviso_geral (modeloSemReserva): vai por e-mail, como reserva. Textos dos cmd_ponto_* do COMMAND,
+  // sem a frase do segundo lembrete (no SGO+ não existe segundo lembrete) e com a assinatura do SGO+.
+  sgo_ponto_entrada: {
+    uso: 'Assistente do ponto: lembrete da entrada (nome, horário; botão Confirmar)',
+    limites: [60, 10],
+    texto: 'Bom dia, {{1}}. Lembrete do ponto: a sua entrada é às {{2}}.\n\nSe já bateu o ponto, toque em "Confirmar". Se esqueceu, a mesma página tem a opção "Esqueci de bater".\n\nO registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida.\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '08:00'],
+    botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
+  },
+  sgo_ponto_almoco: {
+    uso: 'Assistente do ponto: lembrete da saída para o almoço (nome, horário; botão Confirmar)',
+    limites: [60, 10],
+    texto: 'Olá, {{1}}. Lembrete do ponto: são {{2}}, horário da saída para o almoço.\n\nAo bater o ponto, toque em "Confirmar". Assim o lembrete da volta chega na hora certa.\n\nO registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida.\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '11:00'],
+    botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
+  },
+  sgo_ponto_retorno: {
+    uso: 'Assistente do ponto: lembrete da volta do almoço (nome, horário; botão Confirmar)',
+    limites: [60, 10],
+    texto: 'Olá, {{1}}. Lembrete do ponto: o retorno do almoço é às {{2}}.\n\nSe já bateu o ponto, toque em "Confirmar".\n\nO registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida.\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '12:00'],
+    botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
+  },
+  sgo_ponto_saida: {
+    uso: 'Assistente do ponto: lembrete da saída (nome, horário; botão Confirmar)',
+    limites: [60, 10],
+    texto: 'Olá, {{1}}. Lembrete do ponto: a sua saída é às {{2}}.\n\nAo bater o ponto, toque em "Confirmar".\n\nO registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida.\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '18:00'],
+    botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
   }
 };
+
 
 /** Confere um modelo contra as regras da Meta. Devolve a lista de problemas (vazia = ok). */
 function Notificar_validarModeloMeta_(nome, def) {
@@ -323,6 +356,14 @@ function Notificar_validarModeloMeta_(nome, def) {
   (def.exemplos || []).forEach(function (ex, k) {
     if (!String(ex || '').trim() || /[\r\n\t]| {4,}/.test(String(ex))) erros.push('exemplo {{' + (k + 1) + '}} vazio ou com quebra de linha');
   });
+  // 21/10/2026: botão de link (URL dinâmica) — só uma variável, no fim da URL
+  if (def.botao) {
+    var b = def.botao;
+    if (!b.texto || String(b.texto).length > 25) erros.push('botão sem texto ou com mais de 25 caracteres');
+    if (!/^https:\/\/[^\s{}]+\{\{1\}\}$/.test(String(b.url || ''))) erros.push('URL do botão precisa ser https e terminar com {{1}}');
+    if (!/^https:\/\/\S+$/.test(String(b.exemplo || '')) || String(b.exemplo).indexOf(String(b.url || '').replace('{{1}}', '')) !== 0) erros.push('exemplo da URL do botão ausente ou fora do endereço');
+  }
+  if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(t)) erros.push('emoji no texto');
   return erros;
 }
 
@@ -332,11 +373,13 @@ function Notificar_corpoCadastroMeta_(nomeModelo) {
   if (!def) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
   var erros = Notificar_validarModeloMeta_(nomeModelo, def);
   if (erros.length) throw new Error('O modelo ' + nomeModelo + ' está fora das regras da Meta: ' + erros.join('; ') + '.');
+  var comps = [{ type: 'BODY', text: def.texto, example: { body_text: [def.exemplos.slice()] } }];
+  if (def.botao) comps.push({ type: 'BUTTONS', buttons: [{ type: 'URL', text: def.botao.texto, url: def.botao.url, example: [def.botao.exemplo] }] });
   return {
     name: nomeModelo,
     language: NTF_META_IDIOMA,
     category: NTF_META_CATEGORIA,
-    components: [{ type: 'BODY', text: def.texto, example: { body_text: [def.exemplos.slice()] } }]
+    components: comps
   };
 }
 
@@ -354,13 +397,22 @@ function Notificar_primeiroNome_(nome) {
   return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : 'colaborador';
 }
 
-/** Pedido do envio por modelo: { url, corpo }. Lança erro se o modelo não for um dos fixos ou faltar variável. */
-function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros) {
+/**
+ * Pedido do envio por modelo: { url, corpo }. Lança erro se o modelo não for um dos fixos ou faltar variável.
+ * botao (21/10/2026): texto que completa a URL do botão de link do modelo (obrigatório quando o modelo tem botão).
+ */
+function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros, botao) {
   var def = Object.prototype.hasOwnProperty.call(NTF_MODELOS_META, nomeModelo) ? NTF_MODELOS_META[nomeModelo] : null;
   var limites = def && def.limites;
   if (!limites) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
   var ps = parametros || [];
   if (ps.length !== limites.length) throw new Error('O modelo ' + nomeModelo + ' tem ' + limites.length + ' variáveis; vieram ' + ps.length + '.');
+  var comps = [{ type: 'body', parameters: ps.map(function (v, i) { return { type: 'text', text: Notificar_paramMeta_(v, limites[i]) }; }) }];
+  if (def.botao) {
+    var b = String(botao === null || botao === undefined ? '' : botao).trim();
+    if (!b || /[\s{}]/.test(b)) throw new Error('O modelo ' + nomeModelo + ' tem botão de link e o complemento da URL veio vazio ou inválido.');
+    comps.push({ type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: b }] });
+  }
   return {
     url: 'https://graph.facebook.com/' + NTF_META_VERSAO + '/' + encodeURIComponent(String(phoneId)) + '/messages',
     corpo: {
@@ -370,7 +422,7 @@ function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros) 
       template: {
         name: nomeModelo,
         language: { code: NTF_META_IDIOMA },
-        components: [{ type: 'body', parameters: ps.map(function (v, i) { return { type: 'text', text: Notificar_paramMeta_(v, limites[i]) }; }) }]
+        components: comps
       }
     }
   };
@@ -432,8 +484,8 @@ var NTF_META_DICAS = {
 };
 
 /** Envia um modelo. Devolve { ok, id } ou { ok:false, motivo } com o código e a mensagem da Meta. */
-function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros) {
-  var ped = Notificar_montarPedidoMeta_(cred.phoneId, telefone, nomeModelo, parametros);
+function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros, botao) {
+  var ped = Notificar_montarPedidoMeta_(cred.phoneId, telefone, nomeModelo, parametros, botao);
   var r = UrlFetchApp.fetch(ped.url, {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { Authorization: 'Bearer ' + cred.token },
@@ -604,7 +656,7 @@ function SGO_notificar_(opcoes) {
     var whatsAtvHoje = null; // categoria ATIVIDADES: quem já recebeu hoje (lido só se precisar)
     var wa = externos.indexOf('whatsapp') >= 0 ? Notificar_provedorWhatsapp_() : { provedor: '', segredos: [] };
     var segredos = wa.segredos || [];
-    var modelo = o.modelo && o.modelo.nome ? { nome: String(o.modelo.nome), parametros: (o.modelo.parametros || []).slice() } : null;
+    var modelo = o.modelo && o.modelo.nome ? { nome: String(o.modelo.nome), parametros: (o.modelo.parametros || []).slice(), botao: o.modelo.botao === undefined || o.modelo.botao === null ? '' : String(o.modelo.botao) } : null;
     if (!modelo) {
       var resumoMeta = texto.replace(/\s+/g, ' ');
       modelo = { nome: 'sgo_aviso_geral', parametros: [titulo, resumoMeta || titulo, '@LINK'] };
@@ -616,7 +668,7 @@ function SGO_notificar_(opcoes) {
         return v;
       });
     };
-    var htmlEmail = Notificar_htmlEmail_(titulo, texto, link);
+    var htmlEmail = Notificar_htmlEmail_(titulo, texto, link, o.rotuloLink);
     var txtEmail = Notificar_textoEmail_(titulo, texto, link);
     // 20/10/2026: Z-API sem modelo — texto pronto por destinatário (SGO_Zapi.js, Notificar_textoZapi_): o texto próprio do
     // módulo; senão o texto do modelo que o módulo pediu, preenchido; senão o aviso geral com saudação, assunto e link.
@@ -685,6 +737,12 @@ function SGO_notificar_(opcoes) {
               // 21/10/2026: modelo com situação conhecida e não aprovada na Meta não é usado (Chaves e senhas > Situação dos modelos)
               var nomeMod = modelo.nome, paramsMod = paramsPara(c);
               var stMod = typeof SGO_waModeloSituacao_ === 'function' ? SGO_waModeloSituacao_(nomeMod) : '';
+              // 21/10/2026 (assistente do ponto): modeloSemReserva = sem o modelo aprovado não troca pelo aviso geral (quem chamou manda por e-mail)
+              if (stMod && stMod !== 'APPROVED' && o.modeloSemReserva) {
+                liberar();
+                registrar(uid, c.nome, canal, c.telefone, 'PULADO', 'Modelo ' + nomeMod + ' do WhatsApp não aprovado na Meta (situação: ' + stMod + '); a mensagem não troca pelo aviso geral. Confira em Chaves e senhas > Situação dos modelos.');
+                return;
+              }
               if (stMod && stMod !== 'APPROVED') {
                 var stGeral = SGO_waModeloSituacao_('sgo_aviso_geral');
                 if (nomeMod !== 'sgo_aviso_geral' && (!stGeral || stGeral === 'APPROVED')) {
@@ -696,8 +754,13 @@ function SGO_notificar_(opcoes) {
                   return;
                 }
               }
-              r = Notificar_enviarMeta_(wa.cred, c.telefone, nomeMod, paramsMod);
+              r = Notificar_enviarMeta_(wa.cred, c.telefone, nomeMod, paramsMod, nomeMod === modelo.nome ? modelo.botao : '');
               if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + nomeMod + (r.id ? ', id ' + r.id : '') + ').'); return; }
+            } else if (o.soMeta) {
+              // 21/10/2026: o assistente do ponto fala só pelo WhatsApp oficial (Meta); pela Z-API não sai
+              liberar();
+              registrar(uid, c.nome, canal, c.telefone, 'PULADO', 'Esta mensagem sai só pelo WhatsApp oficial (Meta); o provedor em uso é a Z-API. Escolha meta em Chaves e senhas > Provedor do WhatsApp em uso.');
+              return;
             } else {
               // envio único da Z-API (SGO_Zapi.js): só celular válido, fila única com o COMMAND, intervalo e limites do número
               r = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(c.telefone, txtWhatsPara(c), { cred: wa.cred, tipo: 'AVISO' }) : Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhatsPara(c));

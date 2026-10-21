@@ -8,6 +8,8 @@ function include(file) {
 
 function doGet(e) {
   try {
+    // 21/10/2026: link do assistente do ponto (?ponto=<token>): página leve de confirmação, sem login (SGO_Ponto_Api.js)
+    if (e && e.parameter && e.parameter.ponto && typeof Ponto_pagina_ === "function") return Ponto_pagina_(e.parameter.ponto);
     const template = HtmlService.createTemplateFromFile("Index");
 
     return template

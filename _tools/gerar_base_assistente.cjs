@@ -38,6 +38,7 @@ const MAPA = {
   "MANUAL_MODULO_INVENTARIO_EQUIPAMENTOS.md": { tela: "inventario" },
   "MANUAL_MODULO_PGT_POP.md": { tela: "pgt_pop" },
   "MANUAL_MODULO_PLANEJAMENTO_CME.md": { tela: "planejamento_cme" },
+  "MANUAL_MODULO_PONTO.md": { tela: "ponto" },
   "MANUAL_MODULO_REGISTROS_OPERACIONAIS.md": { tela: "reg_op" },
   "MANUAL_MODULO_RELATORIO_CALIBRACAO.md": { tela: "relatorio_calibracao" },
   "MANUAL_MODULO_RELATORIO_QUALIFICACAO_QIQOQD.md": { tela: "declaracao_qiqo" }
