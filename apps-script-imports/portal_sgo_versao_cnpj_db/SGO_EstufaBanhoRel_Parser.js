@@ -240,6 +240,9 @@ function EstufaBanhoRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSens
   const idxHora = EstufaBanhoRel_findAnyIndexParser_(hlow, ['hora', 'horario', 'time']);
   const idxPressao = EstufaBanhoRel_findPressaoIndexParser_(hlow);
   let tempIdx = EstufaBanhoRel_findTempColumnsParser_(headerDisplay, idxTempo, idxData, idxHora, idxPressao);
+  // 21/10/2026: coluna de umidade relativa (opcional) — nunca entra como sensor de temperatura.
+  const idxUmidade = EstufaBanhoRel_findUmidadeIndexParser_(hlow);
+  if (idxUmidade !== -1) tempIdx = tempIdx.filter(function(c) { return c !== idxUmidade; });
 
   // Cabeçalhos explícitos S1/S3/S8 preservam o canal, mesmo sem colunas intermediárias.
   if(nSensores>1&&tempIdx.length){
@@ -333,12 +336,14 @@ function EstufaBanhoRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSens
       throw new Error('Nenhuma temperatura válida na linha '+(r+1)+'. Confira as colunas de sensores; nenhuma leitura foi descartada.');
     }
 
-    outRows.push({
+    const linhaSaida = {
       tempoStr: tempoStr,
       tempoDate: tempoDate,
       temperaturas: temps.slice(0, nSensores),
       pressao: pressao
-    });
+    };
+    if (idxUmidade !== -1) linhaSaida.umidade = EstufaBanhoRel_parseNumeroRobusto_(row[idxUmidade]);
+    outRows.push(linhaSaida);
   }
 
   if (outRows.length < 3) {
@@ -651,6 +656,14 @@ function EstufaBanhoRel_findAnyIndexParser_(hlow, keys) {
     }
   }
   for(let i=0;i<hlow.length;i++){const h=String(hlow[i]||'');for(let k=0;k<keys.length;k++){const kk=EstufaBanhoRel_normalizarTextoComparacaoParser_(keys[k]);if(h.indexOf(kk)===0&&/^[\s([:_/-]/.test(h.slice(kk.length)))return i;}}
+  return -1;
+}
+/** Coluna de umidade relativa: "Umidade", "UR", "%UR", "RH", "Humidity" (21/10/2026). */
+function EstufaBanhoRel_findUmidadeIndexParser_(hlow) {
+  for (let i = 0; i < hlow.length; i++) {
+    const h = String(hlow[i] || '');
+    if (/umid|humid|(^|[^a-z])ur([^a-z]|$)|(^|[^a-z])rh([^a-z]|$)/.test(h)) return i;
+  }
   return -1;
 }
 function EstufaBanhoRel_findPressaoIndexParser_(hlow) {

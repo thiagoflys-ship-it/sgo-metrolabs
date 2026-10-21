@@ -36,7 +36,21 @@ function EstufaBanhoRel_apiDispatch(req) {
   var sessaoDispatchRH = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
   if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Estufa, banho-maria e secadora'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   const fn = String(req.fn || '').trim();
-  const payload = req.payload || {};
+  let payload = req.payload || {};
+  // 21/10/2026 — modelo novo (SGO_EstufaBanhoRel_Qualif.js): critérios com fonte, travas, aprovação do
+  // responsável técnico, documentos A4 e fluxo cliente → unidade → equipamento. Os documentos do ensaio
+  // exigem o equipamento escolhido no cadastro (identificação vem do cadastro; outro cliente é recusado).
+  const rotasNovas = typeof EstufaQ_rotas_ === 'function' ? EstufaQ_rotas_() : {};
+  if (rotasNovas[fn]) {
+    if (ESTUFAQ_ROTAS_COM_VINCULO.indexOf(fn) >= 0) payload = EstufaQ_aplicarVinculo_(String(req.sessionId || ''), payload, true);
+    return JSON.parse(JSON.stringify(rotasNovas[fn](payload, sessaoDispatchRH, String(req.sessionId || ''))));
+  }
+  // Modelo anterior (planilha do Google Planilhas e certificado antigo): preservado e desligado; volta só com
+  // ESTUFA_DOCUMENTOS_MODELO = ANTERIOR em Chaves e senhas.
+  if (/^(apiConverter|apiGerarRascunhoCertificado|apiMontarCertificadoFinal)$/.test(fn) && typeof EstufaQ_modelo_ === 'function') {
+    if (EstufaQ_modelo_() !== 'ANTERIOR') throw new Error('Este botão é do modelo anterior dos documentos, que está desativado. Atualize a página (F5) para usar a planilha de dados e o relatório de ensaio do modelo novo.');
+    if (payload.equipamentoId) payload = EstufaQ_aplicarVinculo_(String(req.sessionId || ''), payload, false);
+  }
   const allow = {
     apiPing: EstufaBanhoRel_apiPing,
     apiPreviewEntrada: EstufaBanhoRel_apiPreviewEntrada,
@@ -451,6 +465,7 @@ function EstufaBanhoRel_ebExecutarAnaliseCompleta_(payload) {
       });
       dadosAvaliados = [].concat.apply([], repeticoesDados);
       analise = EstufaBanhoRel_ebAnalisarDistribuicaoVazioE_(repeticoesDados, faixa, sensoresAtivos, {});
+      analise._dadosRepeticoes = repeticoesDados; // 21/10/2026: leituras de cada repetição (modelo novo)
     } else if (cfg.tipoEstudo === 'PENETRACAO_CARGA_E') {
       const repeticoesDados = cfg.repeticoesJanelas.map(function (j, idx) {
         const f = EstufaBanhoRel_ebFatiarDadosPorJanela_(dadosCompletos, j.janelaInicioMs, j.janelaFimMs);
@@ -472,6 +487,7 @@ function EstufaBanhoRel_ebExecutarAnaliseCompleta_(payload) {
           return j.registroCicloFileId;
         })
       });
+      analise._dadosRepeticoes = repeticoesDados; // 21/10/2026: leituras de cada repetição (modelo novo)
     } else {
       throw new Error('Tipo de estudo não implementado: ' + cfg.tipoEstudo);
     }

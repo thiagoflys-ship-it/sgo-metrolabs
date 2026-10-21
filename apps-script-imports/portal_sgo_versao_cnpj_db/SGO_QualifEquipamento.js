@@ -28,7 +28,11 @@ var SGO_QEQ_MODULOS = {
   // 21/10/2026: Lavadoras (termodesinfectora e ultrassônica), no mesmo molde.
   LAVADORA_OFICIAL: { titulo: 'Relatório de qualificação — lavadora', conta: true, ordem: 1 },
   LAVADORA: { titulo: 'Relatório de ensaio de ciclo — lavadora', conta: false, ordem: 2 },
-  LAVADORA_DADOS: { titulo: 'Planilha de dados de ciclo — lavadora', conta: false, ordem: 3 }
+  LAVADORA_DADOS: { titulo: 'Planilha de dados de ciclo — lavadora', conta: false, ordem: 3 },
+  // 21/10/2026: Estufa, banho-maria e secadora (SGO_EstufaBanhoRel_Qualif.js e ModeloOficialNovo.js).
+  ESTUFA_OFICIAL: { titulo: 'Relatório de qualificação térmica — estufa, banho-maria ou secadora', conta: true, ordem: 1 },
+  ESTUFA: { titulo: 'Relatório de ensaio térmico — estufa, banho-maria ou secadora', conta: false, ordem: 2 },
+  ESTUFA_DADOS: { titulo: 'Planilha de dados do ensaio térmico — estufa, banho-maria ou secadora', conta: false, ordem: 3 }
 };
 
 function SGO_QEQ_s_(v) { return v === null || v === undefined ? '' : String(v).trim(); }

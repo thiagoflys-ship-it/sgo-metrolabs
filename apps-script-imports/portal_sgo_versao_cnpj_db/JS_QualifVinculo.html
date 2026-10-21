@@ -62,6 +62,8 @@
     function montar(el, opcoes) {
       opcoes = opcoes || {};
       var px = opcoes.prefixo || "qv";
+      // 21/10/2026: cada módulo pode usar o próprio roteador (ex.: Estufa, com o filtro do tipo de equipamento dele).
+      var chamar = typeof opcoes.chamar === "function" ? opcoes.chamar : chamarOficial;
       var st = { clientes: [], unidades: [], equipamentos: [], v: Object.assign({ clienteId: "", unidadeId: "", equipamentoId: "", cliente: "" }, opcoes.valor || {}), ident: null };
       function $(s) { return el.querySelector("#" + px + s); }
       el.innerHTML = '<div class="qvinc">' +
@@ -92,13 +94,13 @@
         c.className = "qvinc-cartao mostrar";
         c.innerHTML = "<b>" + esc(i.cliente) + "</b>" + (i.cnpj ? " — CNPJ " + esc(i.cnpj) : "") + "<br>" + esc(i.unidade) + (i.setor ? " · " + esc(i.setor) : "") +
           "<br>Equipamento: <b>" + esc(i.tag || "sem TAG") + "</b> · " + esc(i.tipo) + (i.numeroSerie ? " · nº de série " + esc(i.numeroSerie) : "") +
-          (i.tipoCompativel === false ? '<br><span style="color:var(--bc-warn)">O tipo cadastrado não é de autoclave: confira se escolheu o equipamento certo.</span>' : "");
+          (i.tipoCompativel === false ? '<br><span style="color:var(--bc-warn)">' + esc(opcoes.textoTipoIncompativel || "O tipo cadastrado não é de autoclave: confira se escolheu o equipamento certo.") + '</span>' : "");
       }
       function buscar() {
         var t = ($("Busca").value || "").trim();
         if (t.replace(/\D/g, "").length < 3 && t.length < 2) { msg("aviso", "Digite ao menos 2 letras do nome ou 3 números do CNPJ do cliente."); return; }
         msg("info", "Buscando…");
-        chamarOficial("apiPesquisarClientes", { termo: t }, function (r) {
+        chamar("apiPesquisarClientes", { termo: t }, function (r) {
           st.clientes = r.items || [];
           desenharSelect($("Cliente"), st.clientes, st.clientes.length ? "Escolha o cliente" : "Nenhum cliente encontrado", function (c) { return c.nome + (c.cnpj ? " — " + c.cnpj : ""); }, st.v.clienteId);
           msg(st.clientes.length ? "info" : "aviso", st.clientes.length ? "Escolha o cliente na lista." : 'Nenhum cliente ativo encontrado com "' + t + '". Confira a grafia ou cadastre em "Cadastrar cliente" (abre em outra aba) e depois clique em "Atualizar listas".');
@@ -114,7 +116,7 @@
         carregarUnidades();
       }
       function carregarUnidades(depois) {
-        chamarOficial("apiListarUnidades", { clienteId: st.v.clienteId }, function (r) {
+        chamar("apiListarUnidades", { clienteId: st.v.clienteId }, function (r) {
           st.unidades = r.items || [];
           desenharSelect($("Unidade"), st.unidades, st.unidades.length ? "Escolha a unidade" : "Este cliente não tem unidade ativa", function (u) { return u.nome; }, st.v.unidadeId);
           if (!st.unidades.length) msg("aviso", 'Este cliente não tem unidade ativa. Cadastre em "Cadastrar unidade" (abre em outra aba) e depois clique em "Atualizar listas".');
@@ -124,7 +126,7 @@
         }, function (e) { msg("erro", e); });
       }
       function carregarEquipamentos(depois) {
-        chamarOficial("apiListarEquipamentos", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId }, function (r) {
+        chamar("apiListarEquipamentos", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId }, function (r) {
           st.equipamentos = r.items || [];
           desenharSelect($("Equip"), st.equipamentos, st.equipamentos.length ? "Escolha o equipamento" : "Nenhum equipamento ativo nesta unidade", function (q) { return [q.tag || "sem TAG", q.tipo, q.serie].filter(Boolean).join(" — ") + (q.compativel ? "" : " (outro tipo)"); }, st.v.equipamentoId);
           if (!st.equipamentos.length) msg("aviso", 'Nenhum equipamento ativo nesta unidade. Cadastre em "Cadastrar equipamento" (abre em outra aba) e depois clique em "Atualizar listas".');
@@ -133,7 +135,7 @@
       }
       function identificar() {
         if (!st.v.equipamentoId) { st.ident = null; cartao(); avisar(); return; }
-        chamarOficial("apiIdentificacao", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId }, function (r) {
+        chamar("apiIdentificacao", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId }, function (r) {
           st.ident = Object.assign({}, r.identificacao, { tipoCompativel: r.tipoCompativel });
           msg("", ""); cartao(); avisar();
         }, function (e) { st.ident = null; cartao(); msg("erro", e); avisar(); });

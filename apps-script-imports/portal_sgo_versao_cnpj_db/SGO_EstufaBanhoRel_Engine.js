@@ -852,8 +852,10 @@ function EstufaBanhoRel_ebAnalisarPenetracaoELetalidade_(repeticoesDados, faixa,
         const t = EstufaBanhoRel_ebParseNumero_(row.temperaturas[s]);
         if (t === null || !isFinite(t)) return;
         // Integra entre leituras reais; a última leitura não cria um intervalo extra.
-        if (rowIdx > 0) {
-          const anterior = EstufaBanhoRel_ebParseNumero_(dadosRep[rowIdx - 1].temperaturas[s]);
+        // 21/10/2026: intervalo com leitura anterior ausente não soma (antes a leitura vazia entrava como 0 °C).
+        const anteriorBruta = rowIdx > 0 ? EstufaBanhoRel_ebParseNumero_(dadosRep[rowIdx - 1].temperaturas[s]) : null;
+        if (rowIdx > 0 && anteriorBruta !== null && isFinite(anteriorBruta)) {
+          const anterior = anteriorBruta;
           const dtMin = (EstufaBanhoRel_ebConverterTempoParaMs_(row.tempoDate || row.tempoStr) - EstufaBanhoRel_ebConverterTempoParaMs_(dadosRep[rowIdx - 1].tempoDate || dadosRep[rowIdx - 1].tempoStr)) / 60000;
           letalidadeAcumulada[s] += (Math.pow(10, (anterior - cfgLetalidade.tBase) / cfgLetalidade.z) + Math.pow(10, (t - cfgLetalidade.tBase) / cfgLetalidade.z)) * 0.5 * dtMin;
         }
