@@ -426,6 +426,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Preparar a planilha de dados, o relatório de ensaio e o relatório de qualificação e enviar para aprovação." },
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir (responsável técnico) e devolver com o motivo." },
+        { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (dados reconstituídos, com senha administrativa)." },
         { perfil: "CLIENTE", pode: "Não acessa esta tela. Vê os relatórios emitidos na ficha do equipamento e no QR code." }
       ],
       perguntas: [
