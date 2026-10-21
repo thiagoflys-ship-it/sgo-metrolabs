@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "d27f56e077d8",
+ "versao": "8179c0b7bb89",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -941,7 +941,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Pedido aprovado e setores",
-     "texto": "No pedido aprovado, toque em \"Passar aos setores\". A Área técnica (serviço ou contrato), Compras (produto) e o Financeiro (sempre) recebem uma atividade com prazo (2, 1 e 2 dias úteis, configuráveis) e a lista de conferência, sem valores. A atividade da Área técnica aparece também no Kanban do Cronograma de execução. Quem recebe: o escolhido na janela, o responsável configurado na Metodologia ou o gestor da área na Caixa de decisões. O vendedor é avisado quando cada setor conclui. Pedido aprovado sem passagem há 1 dia útil entra na Caixa de decisões.\n\nO Financeiro vê o valor, a condição de pagamento e os dados de faturamento em Comercial > Pedidos aprovados."
+     "texto": "No pedido aprovado, toque em \"Passar aos setores\". A Área técnica (serviço ou contrato), Compras (produto) e o Financeiro (sempre) recebem uma atividade com prazo (2, 1 e 2 dias úteis, configuráveis) e a lista de conferência, sem valores. A atividade da Área técnica aparece também no Kanban do Cronograma de execução. Quem recebe: o escolhido na janela, o responsável configurado na Metodologia ou, em Compras, o comprador das Regras de compras (que também recebe a requisição de compra com os produtos); nos demais setores, e em Compras sem comprador na lista, o gestor da área na Caixa de decisões. O vendedor é avisado quando cada setor conclui. Pedido aprovado sem passagem há 1 dia útil entra na Caixa de decisões.\n\nO Financeiro vê o valor, a condição de pagamento e os dados de faturamento em Comercial > Pedidos aprovados."
     },
     {
      "titulo": "Produtos e serviços",
