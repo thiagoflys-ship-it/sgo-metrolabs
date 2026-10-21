@@ -2,7 +2,7 @@
 
 Retirar e devolver veículo, vistoria, KM, abastecimento, despesas, multas, documentos, manutenção, relatório e rastreador.
 
-*Revisão: 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
+*Revisão: 21/10/2026 (Gantt da frota refeito: escalas Dia, Semana e Mês, sub-linhas sem sobreposição, balão e lista no celular); 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
 
 ## 1. Como usar este manual
 
@@ -430,7 +430,12 @@ Quatro relatórios A4 para imprimir, salvos em PDF e HTML na pasta "Frota - Rela
 
 ### Gantt da frota e copiloto (aba Gestão e melhoria)
 
-- **Gantt da frota:** por veículo, no tempo: retiradas (tracejada se em andamento), paradas, manutenção prevista pela data ou pelo KM (média de km por dia) e vencimento de documentos. Uma linha extra mostra as ações dos planos (Minhas atividades). Reservas de veículo ainda não existem no SGO+.
+- **Gantt da frota:** por veículo, no tempo. Cada veículo tem as sub-linhas "Planejado" (reservas e manutenção programada), "Realizado" (retiradas, listrada se em andamento, e paradas) e, quando houver, "Marcos" (losangos de manutenção prevista pela data ou pelo KM, pela média de km por dia, e de documento que vence). A última linha mostra as ações dos planos (Minhas atividades).
+  - Escala "Dia" (uma marca por hora), "Semana" (um dia por coluna; abre de 7 dias antes a 14 dias depois de hoje) ou "Mês" (um rótulo por semana); "‹ Anterior", "Hoje" e "Próximo ›" andam no tempo; "De" e "Até" escolhem outro período (até 190 dias). Sábados e domingos ficam em cinza; a linha vermelha é agora.
+  - O que acontece ao mesmo tempo fica um embaixo do outro, nunca por cima. Várias retiradas curtas que se encostam na escala escolhida viram um bloco só ("7 retiradas"); tocando nele aparece a lista e o botão "Ver este dia um a um". Evento de poucas horas tem largura mínima e um ponto no meio.
+  - O nome fica dentro da barra só quando cabe inteiro (o nome curto, como "Ana T.", quando o inteiro não cabe); senão, ao lado ou só no balão. Passar o mouse ou tocar numa barra ou losango abre o balão com condutor, saída, devolução, KM e situação (na reserva: código, condutor, período e situação). Toque fora, em "×" ou Esc fecha.
+  - Veículos sem nada no período aparecem numa linha só, embaixo do quadro. A legenda é agrupada em Planejado, Realizado e Marcos, com as mesmas cores das barras.
+  - No celular a tela abre em "Lista": um cartão por veículo, com os eventos de cada dia (toque num item para ver o detalhe). Em "Gráfico", o quadro desliza para os lados por dentro e a placa fica fixa; a página não rola para o lado.
 - **Copiloto de sugestões:** o SGO+ lê os dados do período e sugere ações: veículo gastando mais combustível que a média, abastecimento a conferir, condutor com trechos acima do limite, uso fora do expediente, uso sem registro repetido, manutenção próxima pelo KM estimado do rastreador, aparelho sem sinal e muito KM sem abastecimento lançado. Marque "Pedir ajuda da IA" para a IA ordenar e escrever a recomendação com os mesmos números (texto com número que não está nos dados é trocado pelo das regras).
 - Toda sugestão é só sugestão: "Abrir caso no Kanban", "Lançar atividade" (Minhas atividades), "Pedir comprovante" ou "Descartar" com o motivo. Decidida, ela não volta no mesmo mês.
 
@@ -476,7 +481,7 @@ As regras de tempo (folga, tolerância, antecipação, hora do lembrete, anteced
 - **Minhas reservas**: cancelar (com o motivo) e trocar o veículo (só os livres no mesmo período).
 - **Todas as reservas, Indicadores e relatório, Regras** (gestão): cumpridas, não utilizadas, canceladas, retiradas bloqueadas, liberações, atrasos que afetaram reserva, pedidos recusados por sobreposição, por veículo, por condutor e por dia da semana; relatório A4 de uso e reservas do mês (HTML e PDF em "Frota - Relatorios Gerados/Reservas").
 - **Tela de retirada**: o cartão do veículo mostra a próxima reserva ("Reservado para ... · devolva até ..."); o passo "Devolução prevista" já vem preenchido (fim da sua reserva ou fim do expediente).
-- **Gantt da frota** (Gestão e melhoria): reservas (planejado) na faixa de cima, retiradas (realizado) na de baixo.
+- **Gantt da frota** (Gestão e melhoria): reservas na sub-linha "Planejado", retiradas na sub-linha "Realizado" de cada veículo.
 - **Copiloto**: sugere ação para veículo disputado, dia da semana de pico, reservas não utilizadas e atrasos recorrentes de um condutor, e liberações frequentes.
 - **COMMAND**: tela "Reservas de veículo" para quem tem a conta ligada ao SGO+ (minhas reservas, livres, reservar, cancelar; a gestão vê a agenda), pela ponte assinada, com as mesmas regras.
 

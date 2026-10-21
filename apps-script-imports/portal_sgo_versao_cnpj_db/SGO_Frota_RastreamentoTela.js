@@ -54,37 +54,106 @@ var FROTAR_TELA_CSS = [
   '.frr-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:8px 0}',
   '.frr-form label{font-size:12px;font-weight:700;display:block;margin-bottom:3px}',
   '.frr-form .largo{grid-column:1/-1}',
-  '.frr-gantt-rolar{overflow-x:auto;max-width:100%;border:1px solid var(--border,#d9e0e7);border-radius:8px;background:#fff}',
-  '.frr-gantt{position:relative;font-size:11.5px}',
-  '.frr-g-linha{display:flex;border-bottom:1px solid #edf1f4;min-height:34px}',
-  '.frr-g-rot{flex:0 0 130px;position:sticky;left:0;background:#fff;z-index:2;padding:6px 8px;border-right:1px solid #e3e8ee;font-weight:700;line-height:1.25}',
-  '.frr-g-rot small{display:block;font-weight:400;color:#52606d}',
-  '.frr-g-trilho{position:relative;flex:1 1 auto}',
-  '.frr-g-cab .frr-g-trilho span{position:absolute;top:6px;font-size:10.5px;color:#52606d;white-space:nowrap}',
-  '.frr-g-cab .frr-g-trilho i{position:absolute;top:0;bottom:-2000px;border-left:1px dashed #e7ebef}',
-  '.frr-g-barra{position:absolute;top:7px;height:20px;border-radius:5px;color:#fff;font-size:10.5px;line-height:20px;padding:0 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;box-sizing:border-box;min-width:6px}',
-  '.frr-g-barra.RETIRADA{background:#1f5fa8}.frr-g-barra.PARADA{background:#7b8794}.frr-g-barra.ACAO{background:#7b4fb0}.frr-g-barra.ACAO.ok{background:#1d6b3f}.frr-g-barra.ACAO.vencida{background:#a61b1b}',
-  '.frr-g-barra.andamento{border:2px dashed #fff;outline:1px solid #1f5fa8}',
-  // 20/10/2026 (reservas): planejado (reserva, manutenção programada) na faixa de cima; realizado (retirada) na de baixo
-  '.frr-g-linha.dupla{min-height:50px}',
-  '.frr-g-barra.RESERVA,.frr-g-barra.MANUT_PROG{top:4px;height:18px;line-height:18px;background:#e8eefc;color:#1f3a7a;border:1px dashed #1f5fa8}',
-  '.frr-g-barra.MANUT_PROG{background:#fdecd8;color:#7a3c06;border-color:#b45309}',
-  '.frr-g-barra.RESERVA.ok{background:#e3f5ec;color:#0f6b43;border-color:#1d6b3f}.frr-g-barra.RESERVA.vencida{background:#fde8e8;color:#9b1c1c;border-color:#a61b1b}',
-  '.frr-g-linha.dupla .frr-g-barra:not(.RESERVA):not(.MANUT_PROG){top:26px}.frr-g-linha.dupla .frr-g-marco{top:28px}',
-  '.frr-g-marco{position:absolute;top:9px;width:14px;height:14px;transform:translateX(-7px) rotate(45deg);cursor:pointer;border:1px solid #fff}',
-  '.frr-g-marco.MANUTENCAO{background:#b45309}.frr-g-marco.DOCUMENTO{background:#0f8b8d}.frr-g-marco.vencida{background:#a61b1b}',
-  '.frr-g-hoje{position:absolute;top:0;bottom:0;border-left:2px solid #a61b1b;z-index:1}',
-  '.frr-leg-g{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0;font-size:12px}',
-  '.frr-leg-g i{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px}',
+  // 21/10/2026: Gantt da frota refeito (régua Dia/Semana/Mês, sub-linhas Planejado/Realizado/Marcos sem sobreposição,
+  // texto só quando cabe, balão de detalhe, lista no celular). Disposição comum: SGO_Gantt_Layout.js.
+  '.frg-barra{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:4px 0 8px}',
+  '.frg-seg{display:inline-flex;border:1px solid #b8c2cc;border-radius:8px;overflow:hidden;background:#fff}',
+  '.frg-seg button{border:0;border-right:1px solid #b8c2cc;background:#fff;color:#1f2933;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;min-height:36px;cursor:pointer}',
+  '.frg-seg button:last-child{border-right:0}',
+  '.frg-seg button[aria-pressed="true"]{background:#1f2933;color:#fff}',
+  '.frg-nav{display:inline-flex;gap:4px;flex-wrap:wrap}',
+  '.frg-nav .btn{margin-top:0;min-height:36px;padding:7px 12px}',
+  '.frg-per{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap}',
+  '.frg-per label{font-size:12px;font-weight:700;display:block;margin-bottom:3px}',
+  '.frg-per input{width:116px;min-height:36px;box-sizing:border-box}',
+  '.frg-per .btn{margin-top:0;min-height:36px}',
+  '.frg-resumo{font-size:12.5px;color:#3e4c59;margin:2px 0 6px}',
+  '.frg-resumo b{color:#1f2933}',
+  '.frg-leg{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12px;margin:4px 0 10px;align-items:center;color:#1f2933}',
+  '.frg-leg-g{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}',
+  '.frg-leg-g>b{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#52606d}',
+  '.frg-leg-g span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}',
+  '.frg-sw{display:inline-block;flex:0 0 auto;width:20px;height:13px;border-radius:3px;box-sizing:border-box}',
+  '.frg-sw.losango{width:11px;height:11px;transform:rotate(45deg);border-radius:2px;margin:0 3px;border:0}',
+  '.frg-sw.linha{width:3px;height:15px;border-radius:0;background:#c81e1e}',
+  // cores (as mesmas nas barras, na legenda e na lista do celular); texto escuro em fundo claro, branco em fundo escuro (contraste 4,5:1 ou mais)
+  '.frg-RESERVA{background:#dfe8fb;border:1.5px dashed #1f5fa8;color:#17325e}',
+  '.frg-RESERVA.ok{background:#d8f0e2;border-color:#1d6b3f;color:#0f4d2c}',
+  '.frg-RESERVA.vencida{background:#fbe2e2;border-color:#a61b1b;color:#7d1313}',
+  '.frg-MANUT_PROG{background:#fde6cc;border:1.5px dashed #b45309;color:#6b3005}',
+  '.frg-RETIRADA{background:#1f5fa8;border:1.5px solid #1f5fa8;color:#fff}',
+  '.frg-RETIRADA.andamento{background:repeating-linear-gradient(135deg,#1f5fa8 0 6px,#174a85 6px 11px);border-color:#0f325c}',
+  '.frg-PARADA{background:#556270;border:1.5px solid #556270;color:#fff}',
+  '.frg-ACAO{background:#6b3fa0;border:1.5px solid #6b3fa0;color:#fff}',
+  '.frg-ACAO.ok{background:#1d6b3f;border-color:#1d6b3f}.frg-ACAO.vencida{background:#a61b1b;border-color:#a61b1b}',
+  '.frg-MANUTENCAO{background:#b45309}.frg-DOCUMENTO{background:#0f7c7e}.frg-MANUTENCAO.vencida,.frg-DOCUMENTO.vencida{background:#a61b1b}',
+  // quadro: rola para o lado só dentro da moldura, com o nome do veículo fixo à esquerda
+  '.frg-quadro{border:1px solid #d9e0e7;border-radius:8px;background:#fff;overflow-x:auto;overflow-y:hidden;max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}',
+  '.frg-conteudo{position:relative}',
+  '.frg-fundo{position:absolute;top:0;bottom:0;pointer-events:none}',
+  '.frg-fundo .fds{position:absolute;top:0;bottom:0;background:#f0f2f5}',
+  '.frg-fundo .ln{position:absolute;top:0;bottom:0;border-left:1px solid #eef1f4}',
+  '.frg-fundo .ln.forte{border-left-color:#d5dce3}',
+  '.frg-fundo .hojecol{position:absolute;top:0;bottom:0;background:rgba(200,30,30,.06)}',
+  '.frg-fundo .hoje{position:absolute;top:0;bottom:0;border-left:2px solid #c81e1e}',
+  '.frg-linha{display:flex;position:relative;border-bottom:1px solid #d9e0e7}',
+  '.frg-linha:last-child{border-bottom:0}',
+  '.frg-rot{position:sticky;left:0;z-index:5;background:#fff;flex:0 0 auto;display:flex;border-right:1px solid #d9e0e7;box-sizing:border-box}',
+  '.frg-nome{flex:1 1 auto;min-width:0;padding:6px 8px;font-weight:800;font-size:12.5px;line-height:1.25;overflow-wrap:anywhere}',
+  '.frg-nome small{display:block;font-weight:400;color:#52606d;font-size:11px}',
+  '.frg-tags{flex:0 0 76px;border-left:1px solid #eef1f4}',
+  '.frg-tag{display:flex;align-items:center;padding:0 7px;font-size:10.5px;font-weight:700;color:#3e4c59;box-sizing:border-box;border-top:1px dashed #dfe5ea}',
+  '.frg-tag:first-child,.frg-grupo:first-child{border-top:0}',
+  '.frg-trilhos{position:relative;flex:0 0 auto}',
+  '.frg-grupo{position:relative;border-top:1px dashed #dfe5ea;box-sizing:border-box}',
+  '.frg-b{position:absolute;height:20px;border-radius:5px;padding:0 6px;margin:0;font:inherit;font-size:11.5px;font-weight:600;line-height:17px;white-space:nowrap;overflow:hidden;cursor:pointer;box-sizing:border-box;z-index:3;text-align:left;min-height:0}',
+  '.frg-b.curta::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:currentColor}',
+  '.frg-b:focus-visible,.frg-m:focus-visible,.frg-ev:focus-visible{outline:2px solid #111;outline-offset:2px}',
+  '.frg-b:hover{filter:brightness(1.08)}',
+  '.frg-fora{position:absolute;font-size:11.5px;font-weight:600;color:#1f2933;white-space:nowrap;line-height:20px;pointer-events:none;z-index:3;background:rgba(255,255,255,.88);padding:0 3px;margin-left:-3px;border-radius:3px}',
+  '.frg-b.grupo{box-shadow:3px -3px 0 -1px #fff,3px -3px 0 0 currentColor}',
+  '.frg-balao ol{margin:4px 0 0;padding-left:18px}.frg-balao li{margin:1px 0}',
+  '.frg-balao .ver{margin-top:8px;border:1px solid #fff;background:transparent;color:#fff;border-radius:6px;padding:5px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;min-height:32px}',
+  '.frg-m{position:absolute;width:22px;height:22px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;min-height:0}',
+  '.frg-m i{display:block;width:13px;height:13px;transform:rotate(45deg);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);border-radius:2px}',
+  '.frg-regua .frg-nome{display:flex;align-items:flex-end;font-size:12px}',
+  '.frg-regua .frg-trilhos{height:46px}',
+  '.frg-mes{position:absolute;top:3px;font-size:11px;font-weight:800;color:#1f2933;padding-left:4px;white-space:nowrap}',
+  '.frg-tk{position:absolute;top:18px;font-size:11px;color:#3e4c59;line-height:1.2;white-space:nowrap;box-sizing:border-box;text-align:center}',
+  '.frg-tk small{display:block;font-size:10px;color:#6b7785}',
+  '.frg-tk.forte{font-weight:800;color:#1f2933}',
+  '.frg-tk.esq{text-align:left;padding-left:4px}',
+  '.frg-hoje-selo{position:absolute;top:2px;transform:translateX(-50%);background:#c81e1e;color:#fff;font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px;z-index:4;white-space:nowrap}',
+  '.frg-vazios{font-size:12px;color:#52606d;margin:8px 0 0}',
+  '.frg-balao{position:fixed;z-index:10050;max-width:310px;background:#1f2933;color:#fff;border-radius:8px;padding:9px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 8px 22px rgba(0,0,0,.28);pointer-events:none}',
+  '.frg-balao.fixo{pointer-events:auto}',
+  '.frg-balao .t{display:block;font-weight:800;font-size:13px;margin:0 22px 4px 0}',
+  '.frg-balao dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px}',
+  '.frg-balao dt{color:#c4cdd5}.frg-balao dd{margin:0;overflow-wrap:anywhere}',
+  '.frg-balao .fechar{position:absolute;top:4px;right:4px;border:0;background:transparent;color:#fff;font-size:18px;line-height:1;cursor:pointer;padding:4px 7px;min-height:0}',
+  // celular: lista por veículo e dia (sem rolagem lateral)
+  '.frg-card{background:#fff;border:1px solid #d9e0e7;border-radius:8px;margin-bottom:10px;overflow:hidden}',
+  '.frg-card h4{margin:0;padding:9px 12px;font-size:14px;background:#f4f6f8;border-bottom:1px solid #e3e8ee}',
+  '.frg-card h4 small{font-weight:400;color:#52606d;font-size:12px;margin-left:6px}',
+  '.frg-dia{padding:4px 10px 8px;border-top:1px solid #eef1f4}.frg-dia:first-of-type{border-top:0}',
+  '.frg-dia h5{margin:6px 2px 2px;font-size:12px;color:#3e4c59}',
+  '.frg-dia.hoje h5{color:#c81e1e}',
+  '.frg-ev{display:flex;width:100%;gap:8px;align-items:flex-start;text-align:left;background:#fff;border:1px solid #e3e8ee;border-radius:6px;padding:7px 8px;margin:4px 0 0;font:inherit;font-size:12.5px;cursor:pointer;color:#1f2933;min-height:40px;box-sizing:border-box;flex-wrap:wrap}',
+  '.frg-ev .frg-sw{margin-top:2px}.frg-ev .frg-sw.losango{margin:4px 5px 0}',
+  '.frg-ev .h{flex:0 0 auto;font-weight:700;font-variant-numeric:tabular-nums;min-width:84px}',
+  '.frg-ev .d{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}',
+  '.frg-ev dl{flex:1 1 100%;margin:6px 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:12px}',
+  '.frg-ev dt{color:#52606d}.frg-ev dd{margin:0;overflow-wrap:anywhere}',
+  '@media (max-width:760px){.frg-tag{padding:0 5px;font-size:10px}.frg-nome{font-size:12px;padding:6px}.frg-per input{width:104px}.frg-seg button{padding:7px 11px}.frg-leg{gap:6px 14px}}',
   '.frr-pedido{border:1px solid #f0c36d;background:#fffaf0;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:12.5px}',
   '.leaflet-container .frr-tt{font-weight:700;font-size:11px;padding:1px 5px}',
   // celular: cada linha da tabela vira um cartão com o nome da coluna ao lado do valor (sem rolagem lateral)
   '@media (max-width:760px){.frr-tabela thead{display:none}.frr-tabela,.frr-tabela tbody,.frr-tabela tr,.frr-tabela td{display:block;width:100%;box-sizing:border-box}.frr-tabela tr{border:1px solid var(--border,#d9e0e7);border-radius:8px;margin-bottom:8px;padding:4px 8px;background:var(--card,#fff)}.frr-tabela td{border:0;padding:3px 0;display:flex;gap:10px;justify-content:space-between;text-align:right}.frr-tabela td.num{white-space:normal}.frr-tabela td::before{content:attr(data-rot);font-weight:700;text-align:left;color:var(--muted,#52606d);flex:0 0 42%}.frr-tabela td[data-rot=""]::before{display:none}}',
-  '@media (max-width:760px){.frr-mapa-wrap{grid-template-columns:minmax(0,1fr)}.frr-mapa{height:320px}.frr-mapa.pequeno{height:300px}.frr-lista{max-height:none}.frr-g-rot{flex-basis:92px}.frr-sub button{flex:1 1 auto}}'
+  '@media (max-width:760px){.frr-mapa-wrap{grid-template-columns:minmax(0,1fr)}.frr-mapa{height:320px}.frr-mapa.pequeno{height:300px}.frr-lista{max-height:none}.frr-sub button{flex:1 1 auto}}'
 ].join('\n');
 
 function Frota_obterTelaRastreamento() {
-  var t = { css: FROTAR_TELA_CSS, js: '(' + FrotaR_telaNavegador_.toString() + ')();' };
+  var t = { css: FROTAR_TELA_CSS, js: (typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() + '\n' : '') + '(' + FrotaR_telaNavegador_.toString() + ')();' };
   // 20/10/2026: a tela das reservas (SGO_Frota_ReservasTela.js) vem junto, na mesma chamada.
   if (typeof Frota_telaReservas_ === 'function') { var r = Frota_telaReservas_(); t.css += '\n' + r.css; t.js += '\n' + r.js; }
   return t;
@@ -92,7 +161,7 @@ function Frota_obterTelaRastreamento() {
 
 function FrotaR_telaNavegador_() {
   var R = { sub: 'mapa', mapa: null, marcadores: {}, timer: null, dados: null, veiculos: null, condutores: null, rotaMapa: null, rotaCamada: null,
-    leaflet: null, ajustou: false, enviando: false, gantt: { de: '', ate: '' }, cop: { dias: 30, ia: false, dados: null } };
+    leaflet: null, ajustou: false, enviando: false, gantt: { de: '', ate: '', modo: 'semana', vista: '', dados: null }, cop: { dias: 30, ia: false, dados: null } };
   var LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
   var LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
   var CENTRO = [-16.6869, -49.2648];
@@ -522,44 +591,242 @@ function FrotaR_telaNavegador_() {
   }
 
   // ---------------- GANTT (Gestão e melhoria) ----------------
+  // 21/10/2026: refeito. Vistas Dia / Semana / Mês; em cada veículo as sub-linhas "Planejado" (reservas, manutenção
+  // programada), "Realizado" (retiradas, paradas) e "Marcos" (manutenção prevista, documento que vence); o que acontece
+  // ao mesmo tempo fica um embaixo do outro (SGOGantt.empilhar, SGO_Gantt_Layout.js). Texto só quando cabe inteiro;
+  // o detalhe fica no balão (passar o mouse ou tocar). No celular, lista por veículo e dia (ou o gráfico rolando
+  // dentro do quadro). Só visualização: os dados e as regras são os do servidor (Frota_apiRastrGantt).
+  var GT_NOMES = { RETIRADA: 'Retirada', PARADA: 'Parada', RESERVA: 'Reserva', MANUT_PROG: 'Manutenção programada', MANUTENCAO: 'Manutenção prevista', DOCUMENTO: 'Documento vence', ACAO: 'Ação de plano' };
+  var GT_GRUPOS = { RESERVA: 'plan', MANUT_PROG: 'plan', RETIRADA: 'real', PARADA: 'real', MANUTENCAO: 'marco', DOCUMENTO: 'marco', ACAO: 'acao' };
+  var GT_MODOS = [['dia', 'Dia'], ['semana', 'Semana'], ['mes', 'Mês']];
+  var GT_PLURAL = { RETIRADA: 'retiradas', PARADA: 'paradas', RESERVA: 'reservas', MANUT_PROG: 'manutenções', ACAO: 'ações' };
+  var GT_LANE = 26, GT_BARRA = 20;
+  var gtItens = [], gtBalao = null, gtFixo = null, gtMedidor = null, gtRedim = null;
+
+  function gtParse(s) { var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim()); if (!m) return null; var d = new Date(+m[3], +m[2] - 1, +m[1]); return isNaN(d.getTime()) ? null : d.getTime(); }
+  function gtPadrao(modo) { return modo === 'dia' ? [diasBr(0), diasBr(0)] : modo === 'mes' ? [diasBr(-30), diasBr(60)] : [diasBr(-7), diasBr(14)]; }
+  function gtCelular() { try { if (typeof ehMobileModo_ === 'function' && ehMobileModo_()) return true; } catch (e) {} return window.matchMedia ? window.matchMedia('(max-width: 760px)').matches : window.innerWidth <= 760; }
+  function gtClasse(it) { return 'frg-' + it.tipo + (it.emAndamento ? ' andamento' : '') + (it.concluida ? ' ok' : '') + (it.vencida ? ' vencida' : ''); }
+  function gtMedir(t) {
+    try {
+      if (!gtMedidor) { gtMedidor = document.createElement('canvas').getContext('2d'); gtMedidor.font = '600 11.5px ' + (getComputedStyle(document.body).fontFamily || 'sans-serif'); }
+      return Math.ceil(gtMedidor.measureText(String(t || '')).width) + 1;
+    } catch (e) { return String(t || '').length * 6.6; }
+  }
+
   window.tplFrotaR_gantt_ = function (corpo) {
     if (!corpo) return;
     corpo.classList.remove('muted');
-    var de = R.gantt.de || diasBr(-7), ate = R.gantt.ate || diasBr(30);
-    corpo.innerHTML = '<div class="frr-faixa"><strong>Como usar:</strong> cada linha é um veículo. Na faixa de cima ficam as reservas e a manutenção programada (o planejado: verde quando a reserva foi cumprida, vermelha quando ficou sem uso); na de baixo, as retiradas (o realizado: barras azuis, tracejada em andamento) e as paradas (cinzas); losangos marcam manutenção prevista (pela data ou pelo KM) e documento que vence; a última linha mostra as ações dos planos. Toque numa barra para ver o detalhe. A linha vermelha é hoje.</div>' +
-      '<div class="frr-filtros"><div><label for="frr_gDe">De</label><input id="frr_gDe" value="' + esc(de) + '"></div><div><label for="frr_gAte">Até</label><input id="frr_gAte" value="' + esc(ate) + '"></div><div><button type="button" class="btn" id="frr_gAtualizar">Atualizar</button></div></div>' +
-      '<div id="frr_gRes"><span class="muted">Carregando...</span></div><div id="frr_gDetalhe" class="frr-meta" aria-live="polite"></div>';
-    el('frr_gAtualizar').onclick = function () { R.gantt.de = val('frr_gDe'); R.gantt.ate = val('frr_gAte'); window.tplFrotaR_gantt_(corpo); };
-    api('apiRastrGantt', { de: de, ate: ate }).then(function (r) { desenharGantt(r); }).catch(function (err) { el('frr_gRes').innerHTML = erroHtml(err); });
+    var G = R.gantt;
+    if (!G.modo) G.modo = 'semana';
+    if (!G.de || !G.ate) { var p = gtPadrao(G.modo); G.de = p[0]; G.ate = p[1]; }
+    var cel = gtCelular();
+    if (!G.vista) G.vista = cel ? 'lista' : 'grafico';
+    corpo.innerHTML = '<div class="frr-faixa"><strong>Como usar:</strong> cada veículo tem a sub-linha <b>Planejado</b> (reservas e manutenção programada), <b>Realizado</b> (retiradas e paradas) e, quando houver, <b>Marcos</b> (losangos: manutenção prevista e documento que vence). O que acontece ao mesmo tempo fica um embaixo do outro. ' +
+      'Escolha Dia, Semana ou Mês e use Anterior, Hoje e Próximo para andar no tempo. Passe o mouse ou toque numa barra para ver condutor, saída, devolução, KM e situação. A linha vermelha é agora.</div>' +
+      '<div class="frg-barra"><div class="frg-seg" role="group" aria-label="Escala">' + GT_MODOS.map(function (m) { return '<button type="button" data-frg-modo="' + m[0] + '" aria-pressed="' + (G.modo === m[0]) + '">' + m[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="frg-nav"><button type="button" class="btn" id="frg_ant">‹ Anterior</button><button type="button" class="btn" id="frg_hoje">Hoje</button><button type="button" class="btn" id="frg_prox">Próximo ›</button></div>' +
+      '<div class="frg-per"><div><label for="frr_gDe">De</label><input id="frr_gDe" value="' + esc(G.de) + '" inputmode="numeric" placeholder="dd/mm/aaaa"></div><div><label for="frr_gAte">Até</label><input id="frr_gAte" value="' + esc(G.ate) + '" inputmode="numeric" placeholder="dd/mm/aaaa"></div><button type="button" class="btn" id="frr_gAtualizar">Atualizar</button></div>' +
+      (cel ? '<div class="frg-seg" role="group" aria-label="Como ver"><button type="button" data-frg-vista="lista" aria-pressed="' + (G.vista === 'lista') + '">Lista</button><button type="button" data-frg-vista="grafico" aria-pressed="' + (G.vista === 'grafico') + '">Gráfico</button></div>' : '') + '</div>' +
+      '<div id="frr_gRes"><span class="muted">Carregando...</span></div><div id="frr_gDetalhe" class="frr-meta" aria-live="polite" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>';
+    var recarregar = function () { window.tplFrotaR_gantt_(corpo); };
+    Array.prototype.forEach.call(corpo.querySelectorAll('[data-frg-modo]'), function (b) {
+      b.onclick = function () { var m = b.getAttribute('data-frg-modo'); if (m === G.modo) return; G.modo = m; var p = gtPadrao(m); G.de = p[0]; G.ate = p[1]; recarregar(); };
+    });
+    Array.prototype.forEach.call(corpo.querySelectorAll('[data-frg-vista]'), function (b) {
+      b.onclick = function () { G.vista = b.getAttribute('data-frg-vista'); recarregar(); };
+    });
+    var andar = function (sinal) {
+      var a = gtParse(G.de), b = gtParse(G.ate);
+      if (a === null || b === null || b < a) { var p = gtPadrao(G.modo); G.de = p[0]; G.ate = p[1]; recarregar(); return; }
+      var n = Math.round((b - a) / 86400000) + 1;
+      G.de = br(a + sinal * n * 86400000 + 43200000); G.ate = br(b + sinal * n * 86400000 + 43200000); recarregar();
+    };
+    el('frg_ant').onclick = function () { andar(-1); };
+    el('frg_prox').onclick = function () { andar(1); };
+    el('frg_hoje').onclick = function () { var p = gtPadrao(G.modo); G.de = p[0]; G.ate = p[1]; recarregar(); };
+    el('frr_gAtualizar').onclick = function () { G.de = val('frr_gDe'); G.ate = val('frr_gAte'); recarregar(); };
+    api('apiRastrGantt', { de: G.de, ate: G.ate }).then(function (r) { G.dados = r; desenharGantt(r); }).catch(function (err) { el('frr_gRes').innerHTML = erroHtml(err); });
+    if (!gtRedim) {
+      gtRedim = function () {
+        clearTimeout(gtRedim.t);
+        gtRedim.t = setTimeout(function () { if (R.gantt.dados && el('frr_gRes') && el('frr_gRes').offsetParent !== null) desenharGantt(R.gantt.dados); }, 200);
+      };
+      window.addEventListener('resize', gtRedim);
+    }
   };
+
+  function gtLegenda() {
+    var sw = function (cls, t, forma) { return '<span><i class="frg-sw ' + (forma || '') + ' ' + cls + '"></i>' + esc(t) + '</span>'; };
+    return '<div class="frg-leg" aria-label="Legenda">' +
+      '<div class="frg-leg-g"><b>Planejado</b>' + sw('frg-RESERVA', 'Reserva') + sw('frg-RESERVA ok', 'cumprida') + sw('frg-RESERVA vencida', 'não utilizada') + sw('frg-MANUT_PROG', 'Manutenção programada') + sw('frg-ACAO', 'Ação de plano') + '</div>' +
+      '<div class="frg-leg-g"><b>Realizado</b>' + sw('frg-RETIRADA', 'Retirada') + sw('frg-RETIRADA andamento', 'em andamento') + sw('frg-PARADA', 'Parada') + '</div>' +
+      '<div class="frg-leg-g"><b>Marcos</b>' + sw('frg-MANUTENCAO', 'Manutenção prevista', 'losango') + sw('frg-DOCUMENTO', 'Documento vence', 'losango') + sw('frg-DOCUMENTO vencida', 'vencido', 'losango') + '<span><i class="frg-sw linha"></i>Agora</span></div></div>';
+  }
+
+  function gtGuardar(it, linha) { return gtItens.push({ it: it, placa: linha.veiculoId ? linha.placa : '' }) - 1; }
 
   function desenharGantt(r) {
     var alvo = el('frr_gRes');
     if (!alvo) return;
-    var total = r.ate - r.de, dias = Math.max(1, Math.round(total / 86400000));
-    var pct = function (ms) { return Math.max(0, Math.min(100, (ms - r.de) / total * 100)); };
-    var passo = dias > 120 ? 14 : dias > 45 ? 7 : dias > 14 ? 2 : 1;
-    var cab = '';
-    for (var i = 0; i <= dias; i += passo) { var ms = r.de + i * 86400000; var d = new Date(ms); cab += '<i style="left:' + pct(ms).toFixed(2) + '%"></i><span style="left:calc(' + pct(ms).toFixed(2) + '% + 3px)">' + ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '</span>'; }
-    var hoje = r.hoje >= r.de && r.hoje <= r.ate ? '<div class="frr-g-hoje" style="left:' + pct(r.hoje).toFixed(2) + '%"></div>' : '';
-    var detalhes = [];
-    var linhas = r.linhas.map(function (l) {
-      var dupla = l.itens.some(function (it) { return it.tipo === 'RESERVA' || it.tipo === 'MANUT_PROG'; });
-      return '<div class="frr-g-linha' + (dupla ? ' dupla' : '') + '"><div class="frr-g-rot">' + esc(l.placa) + '<small>' + esc(l.modelo) + '</small></div><div class="frr-g-trilho">' + hoje +
-        l.itens.map(function (it) {
-          var k = detalhes.push(it.detalhe) - 1;
-          if (it.ini === it.fim) return '<span class="frr-g-marco ' + it.tipo + (it.vencida ? ' vencida' : '') + '" style="left:' + pct(it.ini).toFixed(2) + '%" title="' + esc(it.detalhe) + '" data-frr-gd="' + k + '" tabindex="0" role="button" aria-label="' + esc(it.detalhe) + '"></span>';
-          var l0 = pct(it.ini), w = Math.max(0.6, pct(it.fim) - l0);
-          return '<span class="frr-g-barra ' + it.tipo + (it.emAndamento ? ' andamento' : '') + (it.concluida ? ' ok' : '') + (it.vencida ? ' vencida' : '') + '" style="left:' + l0.toFixed(2) + '%;width:' + w.toFixed(2) + '%" title="' + esc(it.detalhe) + '" data-frr-gd="' + k + '" tabindex="0" role="button">' + esc(it.rotulo) + '</span>';
-        }).join('') + '</div></div>';
+    gtFechar(true);
+    gtItens = [];
+    var G = R.gantt, S = window.SGOGantt;
+    var com = r.linhas.filter(function (l) { return l.itens.length; });
+    var sem = r.linhas.filter(function (l) { return !l.itens.length && l.veiculoId; });
+    var nEv = com.reduce(function (s, l) { return s + l.itens.length; }, 0);
+    var topo = '<p class="frg-resumo"><b>' + esc(r.periodo || '') + '</b> · ' + com.filter(function (l) { return l.veiculoId; }).length + ' veículo(s) com eventos · ' + nEv + ' evento(s)</p>' + gtLegenda();
+    var vaz = sem.length ? '<p class="frg-vazios">Sem eventos no período: ' + sem.map(function (l) { return esc(l.placa) + (l.modelo ? ' (' + esc(l.modelo) + ')' : ''); }).join(', ') + '.</p>' : '';
+    if (!S) { alvo.innerHTML = erroHtml({ message: 'O desenho do Gantt não carregou. Recarregue a página (F5).' }); return; }
+    if (!com.length) { alvo.innerHTML = topo + '<p class="muted">Nada no período escolhido.</p>' + vaz + '<p class="frr-meta">' + esc(r.nota) + '</p>'; return; }
+    var corpoHtml = gtCelular() && G.vista === 'lista' ? gtLista(r, com, S) : gtGrafico(r, com, S, alvo);
+    alvo.innerHTML = topo + corpoHtml + vaz + '<p class="frr-meta">' + esc(r.nota) + '</p>';
+    gtLigar(alvo);
+    var q = alvo.querySelector('.frg-quadro');
+    if (q && q.scrollWidth > q.clientWidth) { var h = q.querySelector('[data-frg-hojex]'); if (h) q.scrollLeft = Math.max(0, Number(h.getAttribute('data-frg-hojex')) - q.clientWidth / 3); }
+  }
+
+  function gtGrafico(r, com, S, alvo) {
+    var cel = gtCelular();
+    var rotW = cel ? 152 : 204, tagW = cel ? 66 : 76;
+    var disp = Math.max(240, (alvo.clientWidth || 900) - 2 - rotW);
+    var e = S.escala({ de: r.de, ate: r.ate, largura: disp, modo: R.gantt.modo, hoje: r.hoje });
+    var W = e.largura;
+    var fundo = '<div class="frg-fundo" style="left:' + rotW + 'px;width:' + W + 'px">' +
+      e.fds.map(function (f) { return '<div class="fds" style="left:' + f.x.toFixed(1) + 'px;width:' + f.w.toFixed(1) + 'px"></div>'; }).join('') +
+      e.linhas.map(function (l) { return '<div class="ln' + (l.forte ? ' forte' : '') + '" style="left:' + l.x.toFixed(1) + 'px"></div>'; }).join('') +
+      (e.hojeDia ? '<div class="hojecol" style="left:' + e.hojeDia.x.toFixed(1) + 'px;width:' + e.hojeDia.w.toFixed(1) + 'px"></div>' : '') +
+      (e.hojeX !== null ? '<div class="hoje" data-frg-hojex="' + Math.round(e.hojeX) + '" style="left:' + (e.hojeX - 1).toFixed(1) + 'px"></div>' : '') + '</div>';
+    var regua = '<div class="frg-linha frg-regua"><div class="frg-rot" style="width:' + rotW + 'px"><div class="frg-nome">Veículo</div></div><div class="frg-trilhos" style="width:' + W + 'px">' +
+      e.meses.map(function (m) { return '<span class="frg-mes" style="left:' + m.x.toFixed(1) + 'px">' + esc(m.rot) + '</span>'; }).join('') +
+      e.ticks.map(function (t) {
+        var largo = t.w ? 'width:' + t.w.toFixed(1) + 'px;' : '';
+        var esq = e.modo !== 'semana';
+        return '<span class="frg-tk' + (t.forte ? ' forte' : '') + (esq ? ' esq' : '') + '" style="left:' + t.x.toFixed(1) + 'px;' + largo + '">' + (t.sub && e.modo === 'semana' ? '<small>' + esc(t.sub) + '</small>' : '') + esc(t.rot) + '</span>';
+      }).join('') +
+      (e.hojeX !== null ? '<span class="frg-hoje-selo" style="left:' + e.hojeX.toFixed(1) + 'px">agora ' + esc(S.hora(r.hoje)) + '</span>' : '') + '</div></div>';
+    var opc = { x: e.x, limite: W - 2, medir: gtMedir, larguraMin: 10, folga: 4, pad: 13, marco: 22, ehMarco: function (it) { return GT_GRUPOS[it.tipo] === 'marco'; },
+      agrupar: function (it) { return it.tipo + (it.emAndamento ? '|a' : '') + (it.concluida ? '|ok' : '') + (it.vencida ? '|v' : ''); },
+      rotuloGrupo: function (ch, n) { return n + ' ' + (GT_PLURAL[ch.split('|')[0]] || 'eventos'); } };
+    var linhas = com.map(function (l) {
+      var grupos = l.veiculoId ? [['plan', 'Planejado'], ['real', 'Realizado']] : [['acao', 'Ações']];
+      if (l.itens.some(function (it) { return GT_GRUPOS[it.tipo] === 'marco'; })) grupos.push(['marco', 'Marcos']);
+      var tags = '', trilhos = '';
+      grupos.forEach(function (g) {
+        var its = l.itens.filter(function (it) { return (GT_GRUPOS[it.tipo] || 'real') === g[0]; });
+        // nome curto ("Ana T.") só para pessoas; título de ação, motivo e documento aparecem inteiros ou ficam no balão
+        its.forEach(function (it) { if (it.tipo !== 'RETIRADA' && it.tipo !== 'RESERVA' && it.curto === undefined) it.curto = ''; });
+        var emp = S.empilhar(its, opc), h = emp.faixas * GT_LANE + 6;
+        tags += '<div class="frg-tag" style="height:' + h + 'px">' + esc(g[1]) + '</div>';
+        trilhos += '<div class="frg-grupo" style="height:' + h + 'px">' + emp.itens.map(function (p) {
+          var k = gtGuardar(p.item, l), top = 3 + p.faixa * GT_LANE + (GT_LANE - GT_BARRA) / 2;
+          var aria = esc((GT_NOMES[p.item.tipo] || '') + ': ' + (p.item.detalhe || p.item.rotulo || ''));
+          var fora = p.posTexto === 'fora' ? '<span class="frg-fora" style="left:' + (p.x + p.w + 5).toFixed(1) + 'px;top:' + (top - 1) + 'px">' + esc(p.texto) + '</span>' : '';
+          if (p.marco) return '<button type="button" class="frg-m" data-frg="' + k + '" style="left:' + p.x.toFixed(1) + 'px;top:' + (top - 1) + 'px" aria-label="' + aria + '"><i class="' + gtClasse(p.item) + '"></i></button>' + fora;
+          return '<button type="button" class="frg-b ' + gtClasse(p.item.grupo ? p.item.grupo[0] : p.item) + (p.curta ? ' curta' : '') + (p.agrupado ? ' grupo' : '') + '" data-frg="' + k + '" style="left:' + p.x.toFixed(1) + 'px;top:' + top + 'px;width:' + p.w.toFixed(1) + 'px" aria-label="' + aria + '">' + (p.posTexto === 'dentro' ? esc(p.texto) : '') + '</button>' + fora;
+        }).join('') + '</div>';
+      });
+      return '<div class="frg-linha"><div class="frg-rot" style="width:' + rotW + 'px"><div class="frg-nome">' + esc(l.placa) + (cel ? '' : '<small>' + esc(l.modelo) + '</small>') + '</div><div class="frg-tags" style="flex-basis:' + tagW + 'px">' + tags + '</div></div>' +
+        '<div class="frg-trilhos" style="width:' + W + 'px">' + trilhos + '</div></div>';
     }).join('');
-    alvo.innerHTML = '<div class="frr-leg-g"><span><i style="background:#e8eefc;border:1px dashed #1f5fa8"></i>Reserva (planejado)</span><span><i style="background:#e3f5ec;border:1px dashed #1d6b3f"></i>Reserva cumprida</span><span><i style="background:#fde8e8;border:1px dashed #a61b1b"></i>Reserva não utilizada</span><span><i style="background:#fdecd8;border:1px dashed #b45309"></i>Manutenção programada</span><span><i style="background:#1f5fa8"></i>Retirada (realizado)</span><span><i style="background:#7b8794"></i>Parada</span><span><i style="background:#b45309"></i>Manutenção prevista</span><span><i style="background:#0f8b8d"></i>Documento vence</span><span><i style="background:#7b4fb0"></i>Ação de plano</span><span><i style="background:#a61b1b"></i>Vencido / hoje</span></div>' +
-      '<div class="frr-gantt-rolar"><div class="frr-gantt" style="min-width:' + Math.max(600, 130 + dias * 22) + 'px"><div class="frr-g-linha frr-g-cab"><div class="frr-g-rot">Veículo</div><div class="frr-g-trilho">' + cab + '</div></div>' +
-      (linhas || '<p class="muted" style="padding:10px">Nenhum veículo ativo.</p>') + '</div></div><p class="frr-meta">' + esc(r.nota) + '</p>';
-    Array.prototype.forEach.call(alvo.querySelectorAll('[data-frr-gd]'), function (b) {
-      var mostrar = function () { el('frr_gDetalhe').textContent = detalhes[Number(b.getAttribute('data-frr-gd'))]; };
-      b.onclick = mostrar; b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mostrar(); } };
+    return (e.rolar ? '<p class="frr-meta" style="margin:0 0 4px">Deslize o quadro para os lados para ver o período inteiro; o nome do veículo fica fixo.</p>' : '') +
+      '<div class="frg-quadro"><div class="frg-conteudo" style="width:' + (rotW + W) + 'px">' + fundo + regua + linhas + '</div></div>';
+  }
+
+  function gtLista(r, com, S) {
+    var hojeIni = S.inicioDia(r.hoje);
+    var quando = function (it) {
+      if (GT_GRUPOS[it.tipo] === 'marco') return 'no dia';
+      var a = S.hora(it.ini), mesmoDia = S.inicioDia(it.ini) === S.inicioDia(it.fim);
+      return a + (mesmoDia ? '–' + S.hora(it.fim) : ' até ' + S.dataCurta(it.fim) + ' ' + S.hora(it.fim));
+    };
+    return '<div class="frg-lista">' + com.map(function (l) {
+      var dias = {}, ordem = [];
+      l.itens.slice().sort(function (a, b) { return a.ini - b.ini; }).forEach(function (it) {
+        var d = S.inicioDia(Math.max(it.ini, r.de));
+        if (!dias[d]) { dias[d] = []; ordem.push(d); }
+        dias[d].push(it);
+      });
+      return '<div class="frg-card"><h4>' + esc(l.placa) + '<small>' + esc(l.modelo) + '</small></h4>' + ordem.map(function (d) {
+        var q = S.partes(d);
+        return '<div class="frg-dia' + (d === hojeIni ? ' hoje' : '') + '"><h5>' + esc(S.semana[q.s] + ', ' + S.dataCurta(d) + (d === hojeIni ? ' (hoje)' : '')) + '</h5>' + dias[d].map(function (it) {
+          var k = gtGuardar(it, l), marco = GT_GRUPOS[it.tipo] === 'marco';
+          var inicioAntes = it.ini < r.de && !marco;
+          return '<button type="button" class="frg-ev" data-frg="' + k + '" data-frg-lista="1" aria-expanded="false"><i class="frg-sw ' + (marco ? 'losango ' : '') + gtClasse(it) + '"></i><span class="h">' + esc(inicioAntes ? 'desde ' + S.dataCurta(it.ini) : quando(it)) + '</span>' +
+            '<span class="d"><b>' + esc(GT_NOMES[it.tipo] || it.tipo) + (it.emAndamento ? ' (em andamento)' : '') + '</b> · ' + esc(it.rotulo || '') + '</span></button>';
+        }).join('') + '</div>';
+      }).join('') + '</div>';
+    }).join('') + '</div>';
+  }
+
+  function gtConteudo(g) {
+    if (g.it.grupo) {
+      var S = window.SGOGantt, gs = g.it.grupo;
+      var li = gs.map(function (x) { return '<li>' + esc(S.dataCurta(x.ini) + ' ' + S.hora(x.ini) + '–' + (S.inicioDia(x.ini) === S.inicioDia(x.fim) ? '' : S.dataCurta(x.fim) + ' ') + S.hora(x.fim) + ' · ' + (x.rotulo || '')) + '</li>'; }).join('');
+      return { titulo: g.it.rotulo + (g.placa ? ' · ' + g.placa : ''), dl: '<ol>' + li + '</ol>', dia: S.inicioDia(g.it.ini), texto: g.it.rotulo + ': ' + gs.map(function (x) { return S.hora(x.ini) + ' ' + (x.rotulo || ''); }).join('; ') };
+    }
+    var it = g.it, campos = it.campos && it.campos.length ? it.campos : null;
+    var sit = it.emAndamento ? ' (em andamento)' : it.tipo === 'RESERVA' && it.concluida ? ' (cumprida)' : it.tipo === 'RESERVA' && it.vencida ? ' (não utilizada)' : it.vencida ? ' (vencido)' : '';
+    var dl = campos ? '<dl>' + (g.placa ? '<dt>Veículo</dt><dd>' + esc(g.placa) + '</dd>' : '') + campos.map(function (c) { return '<dt>' + esc(c[0]) + '</dt><dd>' + esc(c[1]) + '</dd>'; }).join('') + '</dl>'
+      : '<dl>' + (g.placa ? '<dt>Veículo</dt><dd>' + esc(g.placa) + '</dd>' : '') + '<dt>Detalhe</dt><dd>' + esc(it.detalhe || it.rotulo || '') + '</dd></dl>';
+    return { titulo: (GT_NOMES[it.tipo] || it.tipo) + sit, dl: dl, texto: (GT_NOMES[it.tipo] || '') + sit + '. ' + (campos ? campos.map(function (c) { return c[0] + ': ' + c[1]; }).join('; ') : (it.detalhe || '')) };
+  }
+
+  function gtFechar(tudo) {
+    if (gtBalao && (tudo || !gtFixo)) { gtBalao.remove(); gtBalao = null; gtFixo = null; }
+  }
+
+  function gtMostrar(b, fixo) {
+    var g = gtItens[Number(b.getAttribute('data-frg'))];
+    if (!g) return;
+    var c = gtConteudo(g);
+    if (gtBalao) gtBalao.remove();
+    gtBalao = document.createElement('div');
+    gtBalao.className = 'frg-balao' + (fixo ? ' fixo' : '');
+    gtBalao.setAttribute('role', fixo ? 'dialog' : 'tooltip');
+    gtBalao.innerHTML = (fixo ? '<button type="button" class="fechar" aria-label="Fechar">×</button>' : '') + '<span class="t">' + esc(c.titulo) + '</span>' + c.dl +
+      (c.dia !== undefined ? (fixo ? '<button type="button" class="ver">Ver este dia um a um</button>' : '<div style="margin-top:6px;color:#c4cdd5">Toque para abrir e ver o dia um a um.</div>') : '');
+    document.body.appendChild(gtBalao);
+    gtFixo = fixo ? b : null;
+    if (fixo) gtBalao.querySelector('.fechar').onclick = function () { gtFechar(true); b.focus(); };
+    var ver = gtBalao.querySelector('.ver');
+    if (ver) ver.onclick = function () { var d = br(c.dia + 43200000); gtFechar(true); R.gantt.modo = 'dia'; R.gantt.de = d; R.gantt.ate = d; var corpo = el('frr_gRes') && el('frr_gRes').parentNode; if (corpo) window.tplFrotaR_gantt_(corpo); };
+    var rb = b.getBoundingClientRect(), bw = gtBalao.offsetWidth, bh = gtBalao.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    var left = Math.max(8, Math.min(vw - bw - 8, rb.left + Math.min(rb.width, 40) / 2 - 20));
+    var top = rb.bottom + 8 + bh <= vh - 8 ? rb.bottom + 8 : Math.max(8, rb.top - bh - 8);
+    gtBalao.style.left = left + 'px'; gtBalao.style.top = top + 'px';
+    var det = el('frr_gDetalhe'); if (det && fixo) det.textContent = c.texto;
+  }
+
+  function gtLigar(alvo) {
+    var pairar = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    Array.prototype.forEach.call(alvo.querySelectorAll('[data-frg]'), function (b) {
+      if (b.getAttribute('data-frg-lista')) {
+        b.onclick = function () {
+          var aberto = b.getAttribute('aria-expanded') === 'true', dl = b.querySelector('dl');
+          if (aberto) { if (dl) dl.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+          var c = gtConteudo(gtItens[Number(b.getAttribute('data-frg'))]);
+          b.insertAdjacentHTML('beforeend', c.dl); b.setAttribute('aria-expanded', 'true');
+          var det = el('frr_gDetalhe'); if (det) det.textContent = c.texto;
+        };
+        return;
+      }
+      if (pairar) {
+        b.onmouseenter = function () { if (!gtFixo) gtMostrar(b, false); };
+        b.onmouseleave = function () { if (!gtFixo) gtFechar(false); };
+      }
+      b.onfocus = function () { if (!gtFixo) gtMostrar(b, false); };
+      b.onblur = function () { if (!gtFixo) gtFechar(false); };
+      b.onclick = function (ev) { ev.stopPropagation(); if (gtFixo === b) { gtFechar(true); return; } gtMostrar(b, true); };
     });
+    var q = alvo.querySelector('.frg-quadro');
+    if (q) q.addEventListener('scroll', function () { gtFechar(true); }, { passive: true });
+    if (!window.__frgFora) {
+      window.__frgFora = true;
+      document.addEventListener('click', function (ev) { if (gtBalao && gtFixo && !gtBalao.contains(ev.target)) gtFechar(true); });
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && gtBalao) { var f = gtFixo; gtFechar(true); if (f) f.focus(); } });
+      window.addEventListener('scroll', function () { if (gtBalao) gtFechar(true); }, { passive: true, capture: true });
+    }
   }
 
   // ---------------- COPILOTO (Gestão e melhoria) ----------------

@@ -806,9 +806,13 @@ function SGO_ajudaTelas_Frota_() {
           "titulo": "Ver a frota no tempo (Gantt)",
           "itens": [
             "Toque em \"Gantt da frota\".",
-            "Escolha o período e toque em \"Atualizar\".",
-            "Cada linha é um veículo: barras azuis são retiradas (tracejada em andamento), cinzas são paradas, losangos são manutenção prevista e documento que vence.",
-            "Toque numa barra ou losango para ver o detalhe embaixo do quadro."
+            "Escolha a escala: \"Dia\" (uma marca por hora), \"Semana\" (um dia por coluna; abre de 7 dias antes a 14 dias depois de hoje) ou \"Mês\" (um rótulo por semana).",
+            "Use \"‹ Anterior\", \"Hoje\" e \"Próximo ›\" para andar no tempo, ou escreva as datas em \"De\" e \"Até\" e toque em \"Atualizar\".",
+            "Cada veículo tem as sub-linhas \"Planejado\" (reservas e manutenção programada), \"Realizado\" (retiradas e paradas) e, quando houver, \"Marcos\" (losangos de manutenção prevista e documento que vence). A última linha, \"Ações dos planos\", mostra as ações de Minhas atividades.",
+            "O que acontece ao mesmo tempo fica um embaixo do outro, nunca por cima. Várias retiradas curtas no mesmo dia viram um bloco só (\"7 retiradas\"): toque nele para ver a lista e em \"Ver este dia um a um\".",
+            "O nome aparece dentro da barra quando cabe inteiro; senão, ao lado. Para ver tudo, passe o mouse ou toque na barra ou no losango: o balão mostra condutor, saída, devolução, KM e situação. Toque fora ou em \"×\" para fechar.",
+            "A linha vermelha é agora; colunas cinza são sábado e domingo. Veículos sem nada no período aparecem numa linha só, embaixo do quadro.",
+            "No celular a tela abre em \"Lista\" (por veículo e por dia; toque num item para ver o detalhe). Em \"Gráfico\", deslize o quadro para os lados: a placa fica fixa à esquerda."
           ]
         },
         {
@@ -842,6 +846,22 @@ function SGO_ajudaTelas_Frota_() {
         {
           "nome": "Faixa P, D, C, A",
           "significado": "Passo do ciclo: Planejar, Executar, Verificar, Agir. O escuro é o passo atual; o verde, os feitos."
+        },
+        {
+          "nome": "Gantt: caixa clara tracejada (azul, verde, vermelha ou laranja)",
+          "significado": "Planejado: reserva (azul), reserva cumprida (verde), reserva não utilizada (vermelha) e manutenção programada (laranja)."
+        },
+        {
+          "nome": "Gantt: barra cheia azul, azul listrada ou cinza",
+          "significado": "Realizado: retirada devolvida (azul), retirada em andamento (listrada) e parada do veículo (cinza). Barra roxa é ação de plano (verde: concluída; vermelha: vencida)."
+        },
+        {
+          "nome": "Gantt: losango laranja, verde-azulado ou vermelho",
+          "significado": "Marcos: manutenção prevista (laranja), documento que vence (verde-azulado) e vencido (vermelho)."
+        },
+        {
+          "nome": "Gantt: barra curta com um ponto no meio",
+          "significado": "Evento de poucas horas, desenhado com a largura mínima para dar para tocar. O horário certo está no balão."
         }
       ],
       "problemas": [

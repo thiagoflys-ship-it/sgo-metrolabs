@@ -63,7 +63,7 @@ function FrotaR_kmEstimado_(v, posicoes, deslocamentos) {
 function Frota_apiRastrGantt(sessionId, payload) {
   FrotaR_exigirGestao_(sessionId);
   payload = payload || {};
-  var per = FrotaR_periodo_(payload.de || FrotaR_diasAtrasBr_(7), payload.ate || FrotaR_local_(Date.now() + 30 * 86400000).data, 190);
+  var per = FrotaR_periodo_(payload.de || FrotaR_diasAtrasBr_(7), payload.ate || FrotaR_local_(Date.now() + 14 * 86400000).data, 190); // padrão da tela: 7 dias antes a 14 depois
   var movs = Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO);
   var cnd = FrotaR_condutores_();
   var veics = FrotaR_veiculosAtivos_();
@@ -83,14 +83,21 @@ function Frota_apiRastrGantt(sessionId, payload) {
       var p = FrotaR_periodoMov_(m);
       if (!dentro(p.deMs, p.ateMs)) return;
       var aberta = SGO_UTILS.safeUpper(m.STATUS) === 'EM_ANDAMENTO';
+      var nomeCnd = SGO_UTILS.safe((cnd[SGO_UTILS.safe(m.CONDUTOR_ID)] || {}).NOME) || 'Condutor';
+      // 21/10/2026: campos do balão do Gantt (condutor, saída, devolução, km, situação); só leitura do que já está gravado
+      var kmS = Frota_num_(m.KM_SAIDA, NaN), kmC = Frota_num_(m.KM_CHEGADA, NaN);
       itens.push({ tipo: 'RETIRADA', ini: p.deMs, fim: aberta ? Math.max(Date.now(), p.deMs + 3600000) : p.ateMs, emAndamento: aberta,
-        rotulo: SGO_UTILS.safe((cnd[SGO_UTILS.safe(m.CONDUTOR_ID)] || {}).NOME) || 'Condutor', detalhe: 'Retirada ' + FrotaR_textoMs_(p.deMs) + ' a ' + (aberta ? 'em andamento' : FrotaR_textoMs_(p.ateMs)) + (m.FINALIDADE ? ' — ' + SGO_UTILS.safe(m.FINALIDADE) : '') });
+        rotulo: nomeCnd, detalhe: 'Retirada ' + FrotaR_textoMs_(p.deMs) + ' a ' + (aberta ? 'em andamento' : FrotaR_textoMs_(p.ateMs)) + (m.FINALIDADE ? ' — ' + SGO_UTILS.safe(m.FINALIDADE) : ''),
+        campos: [['Condutor', nomeCnd], ['Saída', FrotaR_textoMs_(p.deMs)], ['Devolução', aberta ? 'em andamento' : FrotaR_textoMs_(p.ateMs)],
+          ['KM', (isFinite(kmS) ? FrotaR_n_(kmS) : '—') + ' → ' + (isFinite(kmC) ? FrotaR_n_(kmC) : '—') + (isFinite(kmS) && isFinite(kmC) && kmC >= kmS ? ' (' + FrotaR_n_(kmC - kmS) + ' km)' : '')],
+          ['Situação', aberta ? 'Em andamento' : 'Devolvida']].concat(m.FINALIDADE ? [['Finalidade', SGO_UTILS.safe(m.FINALIDADE)]] : []) });
     });
     Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_PARADA).forEach(function (pa) {
       if (SGO_UTILS.safe(pa.VEICULO_ID) !== vid) return;
       var a = FrotaR_inicioDia_(Frota_textoData_(pa.DATA_INICIO)), b = SGO_UTILS.safe(pa.DATA_FIM) ? FrotaR_fimDia_(Frota_textoData_(pa.DATA_FIM)) : per.ateMs;
       if (a === null || b === null || !dentro(a, b)) return;
-      itens.push({ tipo: 'PARADA', ini: a, fim: b, rotulo: SGO_UTILS.safe(pa.MOTIVO) || 'Parada', detalhe: 'Parada: ' + (SGO_UTILS.safe(pa.MOTIVO) || '') + (pa.DESCRICAO ? ' — ' + SGO_UTILS.safe(pa.DESCRICAO) : '') + (SGO_UTILS.safe(pa.DATA_FIM) ? '' : ' (sem data de fim)') });
+      itens.push({ tipo: 'PARADA', ini: a, fim: b, rotulo: SGO_UTILS.safe(pa.MOTIVO) || 'Parada', detalhe: 'Parada: ' + (SGO_UTILS.safe(pa.MOTIVO) || '') + (pa.DESCRICAO ? ' — ' + SGO_UTILS.safe(pa.DESCRICAO) : '') + (SGO_UTILS.safe(pa.DATA_FIM) ? '' : ' (sem data de fim)'),
+        campos: [['Motivo', SGO_UTILS.safe(pa.MOTIVO) || '—'], ['Início', Frota_textoData_(pa.DATA_INICIO)], ['Fim', SGO_UTILS.safe(pa.DATA_FIM) ? Frota_textoData_(pa.DATA_FIM) : 'sem data de fim']].concat(pa.DESCRICAO ? [['Descrição', SGO_UTILS.safe(pa.DESCRICAO)]] : []) });
     });
     var kmDia = FrotaR_kmPorDia_(vid, movs);
     var est = FrotaR_kmEstimado_(v, posicoes, desl);
@@ -129,7 +136,8 @@ function Frota_apiRastrGantt(sessionId, payload) {
         if (!isFinite(ini) || ini > fim) ini = fim - 86400000;
         if (!dentro(ini, fim)) return;
         acoes.push({ tipo: 'ACAO', ini: ini, fim: fim, rotulo: SGO_UTILS.safe(a.TITULO).slice(0, 60), concluida: a.SITUACAO === 'Concluída', vencida: a.SITUACAO !== 'Concluída' && fim < Date.now(),
-          detalhe: SGO_UTILS.safe(a.TITULO) + ' — ' + SGO_UTILS.safe(a.RESPONSAVEL_NOME) + ', prazo ' + FrotaR_textoMs_(fim) + ' (' + a.SITUACAO + ')' });
+          detalhe: SGO_UTILS.safe(a.TITULO) + ' — ' + SGO_UTILS.safe(a.RESPONSAVEL_NOME) + ', prazo ' + FrotaR_textoMs_(fim) + ' (' + a.SITUACAO + ')',
+          campos: [['Ação', SGO_UTILS.safe(a.TITULO)], ['Responsável', SGO_UTILS.safe(a.RESPONSAVEL_NOME) || '—'], ['Início', FrotaR_textoMs_(ini)], ['Prazo', FrotaR_textoMs_(fim)], ['Situação', SGO_UTILS.safe(a.SITUACAO)]] });
       });
     } catch (e) {}
   }
@@ -150,14 +158,16 @@ function Frota_apiRastrGantt(sessionId, payload) {
         if (ra === null || rb === null || !dentro(ra, rb)) return;
         var manut = SGO_UTILS.safeUpper(r.TIPO) === 'MANUTENCAO';
         l.itens.push({ tipo: manut ? 'MANUT_PROG' : 'RESERVA', ini: ra, fim: rb, rotulo: manut ? 'Manutenção' : SGO_UTILS.safe(r.CONDUTOR_NOME), vencida: sit === 'NAO_UTILIZADA', concluida: sit === 'INICIADA' || sit === 'CONCLUIDA',
-          detalhe: (manut ? 'Manutenção programada ' : 'Reserva ') + SGO_UTILS.safe(r.CODIGO) + ' ' + FrotaRes_periodo_(a, b) + (manut ? ': ' + SGO_UTILS.safe(r.MOTIVO) : ' de ' + SGO_UTILS.safe(r.CONDUTOR_NOME) + (r.DESTINO ? ' — ' + SGO_UTILS.safe(r.DESTINO) : '')) + ' (' + (FROTA_RES_SITUACOES[sit] || sit).toLowerCase() + ')' });
+          detalhe: (manut ? 'Manutenção programada ' : 'Reserva ') + SGO_UTILS.safe(r.CODIGO) + ' ' + FrotaRes_periodo_(a, b) + (manut ? ': ' + SGO_UTILS.safe(r.MOTIVO) : ' de ' + SGO_UTILS.safe(r.CONDUTOR_NOME) + (r.DESTINO ? ' — ' + SGO_UTILS.safe(r.DESTINO) : '')) + ' (' + (FROTA_RES_SITUACOES[sit] || sit).toLowerCase() + ')',
+          campos: [['Código', SGO_UTILS.safe(r.CODIGO)], manut ? ['Motivo', SGO_UTILS.safe(r.MOTIVO) || '—'] : ['Condutor', SGO_UTILS.safe(r.CONDUTOR_NOME) || '—'], ['Período', FrotaRes_periodo_(a, b)]]
+            .concat(!manut && r.DESTINO ? [['Destino', SGO_UTILS.safe(r.DESTINO)]] : []).concat([['Situação', FROTA_RES_SITUACOES[sit] || sit]]) });
       });
       linhas.forEach(function (l) { l.itens.sort(function (x, y) { return x.ini - y.ini; }); });
     } catch (eRes) { console.error('Gantt, reservas: ' + ((eRes && eRes.message) || eRes)); }
   }
   return { ok: true, de: per.deMs, ate: per.ateMs, hoje: Date.now(), periodo: per.texto, linhas: linhas,
     legenda: [['RESERVA', 'Reserva (planejado; verde: cumprida; vermelha: não utilizada)'], ['MANUT_PROG', 'Manutenção programada (bloqueia a agenda)'], ['RETIRADA', 'Retirada (realizado; em andamento com borda tracejada)'], ['PARADA', 'Parada do veículo'], ['MANUTENCAO', 'Manutenção prevista (data ou KM)'], ['DOCUMENTO', 'Documento vence'], ['ACAO', 'Ação de plano (Minhas atividades)']],
-    nota: 'Em cada veículo, a faixa de cima é o planejado (reservas e manutenção programada) e a de baixo o realizado (retiradas). A previsão de manutenção pelo KM usa a média de km por dia dos últimos 60 dias.' };
+    nota: 'Em cada veículo, a sub-linha "Planejado" mostra reservas e manutenção programada, "Realizado" as retiradas e paradas e "Marcos" a manutenção prevista e o documento que vence; eventos ao mesmo tempo ficam um embaixo do outro. A previsão de manutenção pelo KM usa a média de km por dia dos últimos 60 dias.' };
 }
 
 // ------------------------------------------------------------

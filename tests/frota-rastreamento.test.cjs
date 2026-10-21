@@ -352,6 +352,13 @@ test('relatórios mensal, consumo e fora do expediente, Gantt, combustível e co
   assert.match(fora.html, /TECNICO TESTE/);
   const g = env.ctx.Frota_apiRastrGantt('sGestor', {});
   assert.ok(g.linhas[0].itens.some((i) => i.tipo === 'RETIRADA'));
+  // balão do Gantt: condutor, saída, devolução, km e situação
+  const ret = g.linhas[0].itens.find((i) => i.tipo === 'RETIRADA');
+  const campos = Object.fromEntries(ret.campos);
+  assert.equal(campos.Condutor, 'TECNICO TESTE');
+  assert.match(campos.KM, /21 km/);
+  assert.equal(campos['Situação'], 'Devolvida');
+  assert.ok(campos['Saída'] && campos['Devolução']);
   assert.throws(() => env.ctx.Frota_apiRastrGantt('sTec', {}), /só da gestão/);
   const c = env.ctx.Frota_apiRastrCombustivel('sGestor', { comPosicao: true });
   const ab = c.abastecimentos.find((x) => x.id === 'a1');
