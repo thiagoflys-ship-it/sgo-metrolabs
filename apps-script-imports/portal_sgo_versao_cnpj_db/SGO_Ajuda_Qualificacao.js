@@ -357,81 +357,93 @@ function SGO_ajudaTelas_Qualificacao_() {
     // ================================================================
     "estufa_banhomaria": {
       titulo: "Estufa, banho-maria e secadora",
-      paraQueServe: "Gera a qualificação térmica de estufas de incubação, banhos-maria, estufas de esterilização ou despirogenização e secadoras de traqueias da CME (ABNT NBR 16328). O sistema lê o arquivo do registrador, avalia cada estudo e monta a planilha e o certificado A4.",
+      paraQueServe: "Faz a qualificação térmica de estufas de incubação, banhos-maria, estufas de esterilização ou despirogenização e secadoras de traqueias (ABNT NBR 16328). O ensaio começa pelo cadastro do equipamento; o sistema lê o arquivo do registrador, calcula cada estudo, mostra o que corrigir quando o dado tem problema e gera a planilha de dados, o relatório de ensaio e o relatório de qualificação do equipamento, emitidos com a aprovação do responsável técnico.",
       antesDeComecar: [
-        "Tenha o arquivo do registrador com todo o período gravado.",
-        "Anote os horários de início e fim de cada estudo e de cada repetição.",
-        "Na estufa de esterilização ou despirogenização, tenha o resultado do indicador biológico ou do ensaio de endotoxina de cada repetição, e o registro impresso do ciclo.",
-        "Tenha o CNPJ do cliente e os dados da placa do equipamento.",
+        "Confira se o cliente, a unidade e o equipamento estão no cadastro (se faltar, os atalhos da tela abrem o cadastro em outra aba).",
+        "Confira se o registrador está em Cadastros › Padrões de referência, com o certificado de calibração, a validade e a incerteza.",
+        "Tenha o arquivo do registrador com todo o período gravado e os horários de início e fim de cada estudo e de cada repetição.",
+        "Tenha o protocolo do ensaio do cliente: faixa de aceitação, temperatura programada e os limites que ele define.",
+        "Na estufa de esterilização ou despirogenização, tenha o resultado do indicador biológico ou do ensaio de endotoxina de cada repetição e o registro impresso do ciclo.",
         CELULAR_TELA_COMPLETA
       ],
       passos: [
-        { titulo: "Preencher cliente e equipamento", itens: [
+        { titulo: "Escolher o cliente e o equipamento", itens: [
           "Toque em \"Estufa, banho-maria e secadora\" no menu.",
-          "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
-          "Preencha \"Responsável técnico (assinatura do laudo)\".",
-          "Em \"2. Equipamento\", escolha o \"Perfil do equipamento\" antes de tudo.",
-          "Preencha TAG, marca, modelo, número de série, localização e volume.",
-          "Confira a faixa mínima, a faixa máxima e a tolerância. Os valores são sugestões: confirme com o protocolo do cliente."
+          "Em \"Cliente e equipamento (do cadastro)\", busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento.",
+          "Cliente, CNPJ, endereço, TAG, número de série e local são preenchidos pelo cadastro e ficam travados. Se algo estiver errado, corrija o cadastro.",
+          "Preencha \"Responsável técnico (assinatura do laudo)\" com o nome do técnico que executou o ensaio."
         ] },
-        { titulo: "Marcar os estudos feitos", itens: [
-          "Em \"3. Estudos do ensaio\", inclua só os estudos que foram realmente feitos.",
-          "Estufa de incubação e banho-maria: preencha a distribuição de temperatura (início e fim).",
-          "Banho-maria: responda \"Utilizou tampa durante o ensaio?\" e a \"Quantidade de líquido na cuba (observação)\".",
-          "Estufa de incubação: se fez, inclua abertura de porta e queda de energia.",
-          "Estufa de esterilização ou despirogenização: preencha as 3 repetições da distribuição em vazio e as 3 da penetração com carga.",
-          "Em cada repetição com carga, informe o resultado de laboratório, o lote, a validade e o laboratório. Anexe o laudo, se tiver.",
-          "Na despirogenização, anexe o registro impresso do ciclo do equipamento.",
-          "Secadora de traqueias: preencha os três estudos em vazio e os três com carga, com início, duração e temperatura de trabalho.",
-          "Em \"Sensores\", informe o \"Nº de sensores instalados\" e marque os sensores usados."
+        { titulo: "Perfil, faixa e critérios", itens: [
+          "Em \"2. Equipamento\", escolha o \"Perfil do equipamento\" e informe a faixa de aceitação do protocolo (na secadora, a temperatura de trabalho e a tolerância).",
+          "Em \"Critérios e grandezas do ensaio\", informe a temperatura programada e os limites que o protocolo define (uniformidade, estabilidade, desvio, recuperação). O que ficar em branco sai como informativo.",
+          "Informe a resolução do registrador.",
+          "Umidade relativa: marque \"Avaliar a umidade relativa\" se ela faz parte do ensaio. Se o equipamento controla umidade ou o arquivo tem a coluna e ela não for avaliada, escreva o motivo.",
+          "Se a duração ou o intervalo de registro forem diferentes da referência por decisão do protocolo do cliente, escreva a justificativa em \"Justificativa de desvio do protocolo\"."
         ] },
-        { titulo: "Enviar os dados e gerar a planilha", itens: [
-          "Em \"4. Dados do registrador\", confira o \"Formato de data nos arquivos\".",
-          "Escolha \"Arquivo do registrador (enviar ou informar o link)\" e toque em \"Escolher arquivo\".",
-          "Se o arquivo tem várias abas, digite o nome da aba do ensaio em \"Nome da aba de dados (opcional)\".",
-          "Toque em \"Pré-visualizar dados\" e confira o período importado.",
-          "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Confira os selos e toque em \"Abrir planilha\" ou \"Baixar PDF\".",
-          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
+        { titulo: "Estudos, sensores e dados do registrador", itens: [
+          "Em \"3. Estudos do ensaio\", inclua só os estudos realmente feitos, com início e fim (e as repetições na estufa de esterilização ou despirogenização).",
+          "Em \"Sensores\", marque os sensores usados. O mínimo do anexo da norma é conferido na emissão.",
+          "Em \"4. Dados do registrador\", envie o arquivo, confira o formato de data e toque em \"Pré-visualizar dados\"."
         ] },
-        { titulo: "Gerar o certificado de qualificação térmica (A4)", itens: [
-          "Em \"6. Certificado de qualificação térmica\", preencha número, revisão, \"Identificação do registrador\" (TAG do cadastro de padrões) e o responsável pelo aceite.",
-          "Toque em \"Gerar rascunho do certificado\".",
-          "Leia e corrija os textos.",
-          "Toque em \"Confirmar e gerar o certificado\".",
-          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente."
+        { titulo: "Planilha de dados (seção 5)", itens: [
+          "Preencha \"Identificação do registrador\" como está no cadastro de padrões (ex.: DTL-01) e, se quiser, o responsável pelo aceite e a tarefa de origem. O número do relatório é atribuído na emissão.",
+          "Toque em \"Gerar a planilha de dados\". Se houver problema nos dados, aparece a lista com o que aconteceu, o porquê e como corrigir, e nada é gerado.",
+          "Sem problema, a minuta abre em outra aba. O técnico toca em \"Enviar a planilha para aprovação\"; o responsável técnico marca a confirmação e gera de novo para emitir."
+        ] },
+        { titulo: "Relatório de ensaio (seção 6)", itens: [
+          "Toque em \"Gerar rascunho\": aparecem o resultado, a tabela de critérios e os textos (análise de cada estudo e as duas conclusões).",
+          "Leia e corrija os textos. O resultado é o calculado: texto que contradiz o resultado, cita número que não existe ou cita cláusula de norma é recusado.",
+          "Toque em \"Ver a prévia\" para conferir o documento.",
+          "Técnico: toque em \"Enviar para aprovação\". Responsável técnico: marque a confirmação e toque em \"Emitir o relatório\".",
+          "Emitido, o relatório fica em HTML e PDF na pasta do equipamento, dentro da pasta do cliente, com os botões do PDF, da pasta e \"Enviar ao cliente\"."
+        ] },
+        { titulo: "Aprovação (seção 7)", itens: [
+          "O responsável técnico abre a prévia, toca em \"Aprovar e emitir\" ou em \"Devolver\" com o motivo.",
+          "Quem enviou vê aqui o motivo da devolução, corrige e envia de novo."
+        ] },
+        { titulo: "Relatório de qualificação do equipamento (seção 8)", itens: [
+          "Marque as etapas (instalação, operação, desempenho), escolha o motivo e a periodicidade da requalificação.",
+          "Marque os relatórios de ensaio emitidos que fundamentam a qualificação e, na instalação, responda cada item da lista.",
+          "Toque em \"Gerar rascunho\", revise a conclusão, veja a prévia e envie para aprovação.",
+          "Emitido, o relatório aparece na ficha do equipamento e no QR code, e a próxima requalificação entra nas pendências."
         ] }
       ],
       cores: [
-        { nome: "Selo verde \"LAUDO: APROVADO\"", significado: "Todos os estudos com critério foram atendidos." },
-        { nome: "Selo verde \"LAUDO: APROVADO (COM OBSERVAÇÃO)\"", significado: "Houve saída da faixa dentro da tolerância declarada. O equipamento está aprovado; a saída vai para Observações do certificado e da planilha. Não existe \"aprovado com alerta\"." },
-        { nome: "Selo vermelho \"LAUDO: REPROVADO\"", significado: "Saiu da faixa além da tolerância, uma repetição reprovou ou o laboratório reprovou o indicador. Avise o responsável técnico." },
-        { nome: "Selo cinza \"INFORMATIVO\" ou \"CARACTERIZACAO\"", significado: "Estudo sem critério de aprovação, por exemplo porta ou energia sem tempo-alvo." },
+        { nome: "Selo verde \"RESULTADO: APROVADO\"", significado: "Todos os critérios avaliados foram atendidos." },
+        { nome: "Selo vermelho \"RESULTADO: REPROVADO\"", significado: "Algum critério não foi atendido (uma não conformidade reprova). A tabela mostra qual. Avise o responsável técnico." },
+        { nome: "Selo cinza \"RESULTADO: INFORMATIVO\"", significado: "Nenhum critério com limite foi avaliado (por exemplo, só estudos sem limite no protocolo)." },
+        { nome: "Quadro vermelho \"O documento não pode ser gerado\"", significado: "Problema nos dados (registrador, sensores, leitura, duração, intervalo, umidade). Cada item diz como corrigir." },
         FAIXA_VERMELHA,
         DETALHES
       ],
       problemas: [
-        { situacao: "A repetição tem FH ou FD acima da meta, mas saiu reprovada.", oQueFazer: "O resultado do laboratório (indicador biológico ou endotoxina) vale mais que o cálculo. Se o laboratório reprovou, a repetição é reprovada." },
-        { situacao: "O sistema avisa que falta o registro impresso do ciclo.", oQueFazer: "Na despirogenização a norma exige esse registro. Anexe o PDF ou a foto do papel impresso pelo equipamento." },
-        { situacao: "O sistema informou várias abas no arquivo.", oQueFazer: "Copie o nome exato da aba do ensaio em \"Nome da aba de dados (opcional)\" e pré-visualize de novo." },
-        { situacao: "Não aparece o estudo que eu fiz.", oQueFazer: "O perfil escolhido não usa esse estudo. Confira o perfil do equipamento." },
-        { situacao: "Mudei sensores depois de gerar o certificado.", oQueFazer: "Gere a planilha de novo e depois gere os textos do certificado de novo." }
+        { situacao: "Apareceu \"O registrador não está no cadastro de padrões\" ou \"vencido\".", oQueFazer: "Digite a identificação como está em Cadastros › Padrões de referência. Se o certificado foi renovado antes do ensaio, atualize a validade lá; se não, o ensaio precisa ser repetido com registrador calibrado." },
+        { situacao: "Apareceu \"duração menor que 24 h\" ou \"intervalo de registro maior\".", oQueFazer: "Ajuste o período do estudo. Se o protocolo do cliente define outra duração ou outro intervalo, escreva a justificativa em \"Justificativa de desvio do protocolo\"." },
+        { situacao: "Apareceu \"sensor parado\", \"pico\" ou \"leitura impossível\".", oQueFazer: "Confira o sensor no arquivo. Se ele falhou, desmarque-o em Sensores (fica registrado no documento) ou repita o ensaio." },
+        { situacao: "A repetição tem FH ou FD acima do mínimo, mas saiu reprovada.", oQueFazer: "O resultado do laboratório (indicador biológico ou endotoxina) também é critério. Se o laboratório reprovou, a repetição é reprovada." },
+        { situacao: "Mudei dados depois de gerar o rascunho.", oQueFazer: "Gere o rascunho de novo antes de emitir ou enviar: o sistema recusa texto feito sobre dados diferentes." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha e certificado." },
-        { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (dados reconstituídos, com senha administrativa)." },
-        { perfil: "CLIENTE", pode: "Não acessa esta tela." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Preparar a planilha de dados, o relatório de ensaio e o relatório de qualificação e enviar para aprovação." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir (responsável técnico) e devolver com o motivo." },
+        { perfil: "CLIENTE", pode: "Não acessa esta tela. Vê os relatórios emitidos na ficha do equipamento e no QR code." }
       ],
       perguntas: [
-        { p: "Por que a estufa de esterilização tem 3 repetições?", r: "A norma pede 3 repetições independentes. Se qualquer uma reprovar, o estudo é reprovado." },
-        { p: "O que são FH e FD?", r: "FH é o efeito esterilizante do calor seco, em minutos equivalentes. FD é o mesmo para a destruição de endotoxinas (despirogenização). Em branco, o valor mínimo exigido é o padrão de 30 min." }
+        { p: "Por que um limite em branco não reprova?", r: "Uniformidade, estabilidade, desvio e recuperação só têm limite quando o protocolo do cliente define. Sem limite, o valor medido aparece no documento como informativo." },
+        { p: "Existe aprovado com observação?", r: "Não. Uma leitura fora da faixa de aceitação reprova o estudo. Valores perto do limite continuam aprovados e podem ser comentados na análise." },
+        { p: "O que são FH e FD?", r: "FH é o efeito esterilizante do calor seco, em minutos equivalentes. FD é o mesmo para a destruição de endotoxinas (despirogenização). Em branco, vale o mínimo da configuração (30 min), que o protocolo do cliente pode mudar." }
       ],
       secoesManual: [
         { titulo: "Perfis e estudos", paragrafos: [
-          "Estufa de incubação (Anexo F): distribuição de temperatura (24 horas recomendadas), abertura de porta e queda de energia.",
-          "Banho-maria (Anexo I): distribuição de temperatura, com registro do uso de tampa e da quantidade de líquido.",
+          "Estufa de incubação (Anexo F): distribuição de temperatura por 24 horas a partir da estabilização, abertura de porta e queda de energia.",
+          "Banho-maria (Anexo I): distribuição de temperatura pelo tempo do protocolo, com registro do uso de tampa e da quantidade de líquido.",
           "Estufa de esterilização ou despirogenização (Anexo E): distribuição em vazio e penetração com carga, cada uma com 3 repetições.",
-          "Secadora de traqueias da CME: três estudos em vazio e três com carga, com temperatura, tolerância e duração editáveis."
+          "Secadora de traqueias da CME: três estudos em vazio e três com carga; a faixa é a temperatura de trabalho ± a tolerância do protocolo."
+        ] },
+        { titulo: "Documentos", paragrafos: [
+          "Planilha de dados (A4 deitado): critérios, resultados por sensor, gráficos, memória de cálculo e as leituras.",
+          "Relatório de ensaio (A4 em pé): identificação, instrumentos e incerteza, critérios com a fonte, resultados, análise e conclusão.",
+          "Relatório de qualificação do equipamento: junta os relatórios de ensaio emitidos e a verificação da instalação, com a data da próxima requalificação."
         ] }
       ]
     },
