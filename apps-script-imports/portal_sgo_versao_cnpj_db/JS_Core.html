@@ -255,6 +255,7 @@
           if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
           if (typeof Email_iniciar_ === "function") Email_iniciar_();
           if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
+          if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
           if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
           if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
         } else {
@@ -330,6 +331,7 @@
         if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
         if (typeof Email_iniciar_ === "function") Email_iniciar_();
         if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
+        if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
         if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
         if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
       })
@@ -689,6 +691,7 @@
     if (typeof ChavesTela_parar_ === "function") ChavesTela_parar_();
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
     if (typeof Comercial_parar_ === "function") Comercial_parar_();
+    if (typeof Compras_parar_ === "function") Compras_parar_();
     if (typeof Ponto_parar_ === "function") Ponto_parar_();
     if (typeof Email_parar_ === "function") Email_parar_();
 
@@ -736,7 +739,7 @@
   // abrir() mostra uma tela explicando. O servidor também recusa (SGO_Auth.js › SGO_bloquearRH_).
   // 19/10/2026: Atividades da equipe aberta a todos os perfis internos (o RH acompanha, não altera o que não é dele).
   // 21/10/2026: + Assistente do ponto (o RH trata os pedidos de ajuste).
-  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto"];
+  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus"];
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
   function SGO_telaLiberadaRH_(mod) { return !SGO_ehRH_() || SGO_TELAS_RH.indexOf(String(mod || "")) >= 0; }
 
@@ -905,6 +908,12 @@
     // ASSISTENTE DO PONTO NATIVO (2026-10-21) — ver JS_Ponto.html / SGO_Ponto_*.js. O servidor confere o papel em toda chamada.
     if (mod === "ponto" && typeof Ponto_render_ === "function") {
       Ponto_render_();
+      return;
+    }
+
+    // COMPRAS E PEÇAS NATIVO (2026-10-21) — ver JS_Compras.html / SGO_Compras_*.js. O servidor confere o acesso em toda chamada e nunca manda valor a quem não pode ver.
+    if ((mod === "compras" || mod.indexOf("compras_") === 0) && typeof Compras_render_ === "function") {
+      Compras_render_(mod);
       return;
     }
 
@@ -4216,6 +4225,9 @@
         var soPedidos = !!document.querySelector('#menu .menu-btn[data-mod="comercial"]') && document.querySelector('#menu .menu-btn[data-mod="comercial"]').style.display === "none";
         itens.push(soPedidos ? { icone: '<i class="fas fa-clipboard-check" aria-hidden="true"></i>', legenda: "Pedidos aprovados", mod: "comercial_pedidos" } : { icone: '<i class="fas fa-briefcase" aria-hidden="true"></i>', legenda: "Comercial", mod: "comercial" });
       }
+      // 21/10/2026: Compras (todo colaborador interno pede peça; o grupo aparece depois que o servidor responde o acesso).
+      var grupoCmp = document.getElementById("menu-secao-compras");
+      if (grupoCmp && grupoCmp.style.display !== "none") itens.push({ icone: '<i class="fas fa-cart-plus" aria-hidden="true"></i>', legenda: "Pedir peça", mod: "compras_pedir" });
       // 21/10/2026: Assistente do ponto (quando o botão do menu está visível: ligado, ou RH/Administrador/Diretoria).
       var btnPonto = document.getElementById("menu-btn-ponto");
       if (btnPonto && btnPonto.style.display !== "none") itens.push({ icone: '<i class="fas fa-clock" aria-hidden="true"></i>', legenda: "Ponto", mod: "ponto" });

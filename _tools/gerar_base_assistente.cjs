@@ -28,6 +28,7 @@ const MAPA = {
   "MANUAL_MODULO_AUTOCLAVE.md": { tela: "autoclave" },
   "MANUAL_MODULO_CADEIA_FRIO.md": { tela: "cadeia_frio" },
   "MANUAL_MODULO_COMERCIAL.md": { tela: "comercial", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "COMERCIAL", "FINANCEIRO"] },
+  "MANUAL_MODULO_COMPRAS.md": { tela: "compras_pedir" },
   "MANUAL_MODULO_CERTIFICADO_CALIBRACAO.md": { tela: "certificado_calibracao" },
   "MANUAL_MODULO_CRONOGRAMA_EXECUCAO.md": { tela: "cronograma_execucao" },
   "MANUAL_MODULO_DECLARACAO_EXECUCAO.md": { tela: "declaracao_exec" },

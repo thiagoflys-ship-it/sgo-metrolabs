@@ -35,6 +35,8 @@ var SGO_AJUDA_NOMES = {
   comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',
   comercial_catalogo: 'Produtos e serviços', comercial_painel: 'Painel comercial', comercial_metodologia: 'Metodologia comercial',
   comercial_kanban: 'Quadro do funil', comercial_gantt: 'Gantt comercial',
+  compras_pedir: 'Pedir peça ou material', compras_meus: 'Meus pedidos de compra', compras: 'Fila de compras', compras_fornecedores: 'Fornecedores',
+  compras_financeiro: 'Conferência do Financeiro', compras_painel: 'Painel de compras', compras_regras: 'Regras de compras',
   ponto: 'Assistente do ponto'
 };
 
@@ -65,6 +67,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Ponto_ === 'function') fontes.push(['Ponto', SGO_ajudaTelas_Ponto_]);
   // 21/10/2026: Comercial nativo (SGO_Ajuda_Comercial.js).
   if (typeof SGO_ajudaTelas_Comercial_ === 'function') fontes.push(['Comercial', SGO_ajudaTelas_Comercial_]);
+  // 21/10/2026: Compras e peças nativo (SGO_Ajuda_Compras.js).
+  if (typeof SGO_ajudaTelas_Compras_ === 'function') fontes.push(['Compras', SGO_ajudaTelas_Compras_]);
   // 21/10/2026: E-mail integrado (SGO_Ajuda_Email.js).
   if (typeof SGO_ajudaTelas_Email_ === 'function') fontes.push(['Email', SGO_ajudaTelas_Email_]);
   // 20/10/2026: assistente "Tire sua dúvida" e o painel das perguntas (SGO_Ajuda_Assistente.js).

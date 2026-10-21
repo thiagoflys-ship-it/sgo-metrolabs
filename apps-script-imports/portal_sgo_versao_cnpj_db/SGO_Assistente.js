@@ -49,7 +49,7 @@ var SGO_ASSIST_ACESSO = {
   comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
-var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto'];
+var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus'];
 /** Telas e janelas que não ficam no menu, com o lugar onde se chega a elas. */
 var SGO_ASSIST_FORA_DO_MENU = {
   mobile_home: { nome: 'Início do celular', caminho: 'Celular: tela inicial (Início)', abrir: true },

@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "56bb1e21464f",
+ "versao": "29d480e35047",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -894,6 +894,54 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Problemas comuns",
      "texto": "\"Ainda não dá para mover\" (quadro ou ficha): falta algo exigido pela metodologia para sair da etapa. A janela diz o quê e onde resolver; resolva e mova de novo.\nNo celular o cartão não arrasta: use \"Mover para\".\n\"Escolha em qual unidade é a oportunidade\": o cliente tem unidades; documentos, equipamentos e pastas do SGO+ são por unidade.\n\"A próxima ação não pode ficar no passado\": o que já foi feito se registra em \"Registrar contato\".\nA proposta não ficou \"Enviada\": toque em \"Já enviei: atualizar\"; se enviou por outro meio, use \"Entregue por outro meio\".\n\"Quem pediu não aprova o próprio desconto\": a decisão é de outro gestor comercial ou da Diretoria."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_COMPRAS.md",
+   "titulo": "Manual do módulo Compras e peças do SGO+",
+   "tela": "compras_pedir",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras, Fornecedores e Regras de compras."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O Compras do SGO+ acaba com dois problemas: o pedido vago (\"uma mangueira de 1/2\") que leva à compra errada e a compra sem rastro (sem saber para que foi, quem aprovou, como foi paga e se o Financeiro conferiu). O caminho inteiro fica no sistema: alguém pede a peça com a especificação, o comprador confere, cota com os fornecedores, a compra é aprovada por quem tem alçada para aquele valor, o pedido é feito ao fornecedor, a peça chega e é conferida, é entregue a quem pediu e o Financeiro confere o pagamento.\n\nAs regras vieram do Compras do COMMAND, mais enxutas. As tarefas de cada pessoa são atividades de Minhas atividades; a aprovação por valor aparece e é cobrada na Caixa de decisões; os avisos seguem a matriz de avisos aprovada pelo dono."
+    },
+    {
+     "titulo": "Quem faz o quê",
+     "texto": "Solicitante: qualquer colaborador interno. Pede, completa a especificação, acompanha em Meus pedidos de compra e recebe a peça. Não vê valores.\n\nComprador: quem está na lista de compradores ou de substitutos em Compras > Regras de compras. Confere a especificação, cadastra fornecedores, cota, escolhe, faz o pedido, recebe, entrega e cancela com motivo. Aprova as compras da faixa do comprador.\n\nGestor da área de Compras (Logística, no padrão): faz tudo o que o comprador faz e cobra as compras paradas.\n\nDemais gestores: veem a fila com valores e aprovam as compras da faixa do gestor quando a área é deles.\n\nFinanceiro (perfil ou área): confere as compras e consulta os fornecedores.\n\nDiretoria e Administrador: tudo, inclusive as Regras de compras. A Diretoria aprova a faixa mais alta.\n\nTécnicos, Metrologia e RH não veem preço, orçamento nem pagamento."
+    },
+    {
+     "titulo": "Situações de um pedido de compra",
+     "texto": "1. Solicitada: Compras recebeu. Quando falta algo na especificação, leva a marca \"especificação incompleta\" e não é cotada nem aprovada até completar.\n2. Em cotação: o comprador está pedindo orçamentos.\n3. Aguardando aprovação: orçamento escolhido; espera quem tem a alçada para aquele valor.\n4. Aprovada: o pedido ao fornecedor vai ser feito.\n5. Pedido feito: o fornecedor recebeu o pedido de compra.\n6. Recebida com divergência: chegou com problema (quantidade, especificação ou dano).\n7. Disponível: chegou e foi conferida; quem pediu é avisado.\n8. Entregue: encerra.\n9. Cancelada: sempre com o motivo."
+    },
+    {
+     "titulo": "Pedir peça ou material",
+     "texto": "1. Toque em Compras > Pedir peça ou material.\n2. Escreva para que é e onde será usado (obrigatório).\n3. Escolha a urgência. Crítica é para equipamento ou atendimento parado: o comprador recebe a atividade com prazo no mesmo dia.\n4. Escolha a que a compra está ligada: cliente (com a unidade e, se houver, o número da O.S. do Auvo), pedido aprovado do Comercial, veículo da Frota ou uso interno (com a explicação de pelo menos 20 letras). Nenhuma compra fica sem vínculo.\n5. Acrescente os itens: tipo, descrição, quantidade e unidade. Um pedido pode ter vários itens.\n6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória.\n7. Toque em \"Enviar a Compras\". O pedido recebe o número REQ-ano-número (por exemplo REQ-2026-0001).\n\nPara material simples (papel, ferramenta comum) bastam descrição, quantidade e unidade.\n\nO que falta aparece na hora, embaixo de cada item. O pedido pode ser enviado assim mesmo, mas fica marcado \"especificação incompleta\" e aparece para quem pediu no Início e em Meus pedidos até completar."
+    },
+    {
+     "titulo": "Meus pedidos de compra",
+     "texto": "Mostra os pedidos que você fez e, para o vendedor, os do pedido aprovado dele no Comercial. Para cada um: situação, uma frase do que está acontecendo, previsão de entrega, itens e andamento. Não mostra valores.\n\nEnquanto o pedido está \"Solicitada\", quem pediu pode alterar, completar a especificação ou cancelar com o motivo. Depois que a cotação começa, o cancelamento é pedido ao comprador."
+    },
+    {
+     "titulo": "Fila de compras",
+     "texto": "A fila do comprador traz todos os pedidos, do mais urgente ao mais antigo, com abas por situação e busca. A ficha do pedido mostra os itens, as fotos, os dados técnicos, o vínculo, o histórico e os botões do que pode ser feito agora.\n\nConferir a especificação: se estiver clara, toque em \"Especificação conferida: iniciar cotação\". Se faltar algo ou estiver ambíguo, toque em \"Devolver a especificação\" e escreva o que falta: quem pediu recebe o texto no sistema e no resumo de e-mail da manhã, e o pedido volta para \"Solicitada\" até completar. O comprador também pode completar ele mesmo pelo botão \"Editar a especificação\".\n\nCada pedido novo com a especificação completa vira a atividade \"Conferir e cotar\" do comprador em Minhas atividades, com o prazo da urgência (crítica: no mesmo dia; alta e normal: 1 dia útil; baixa: 2 dias úteis; configurável)."
+    },
+    {
+     "titulo": "Fornecedores",
+     "texto": "Cadastro único: CNPJ (ou CPF de pessoa física) que não se repete, razão social, nome fantasia e endereço pela consulta de CNPJ, contato, telefone, WhatsApp, e-mail para pedidos, categorias, prazo médio, condição de pagamento e observações. Antes de criar, o sistema avisa se já existe fornecedor com nome parecido.\n\nArquivar não apaga: o fornecedor sai da escolha nas cotações e o histórico continua. \"Mostrar arquivados\" e \"Reativar\" trazem de volta.\n\nImportar da planilha (opcional): copie a linha de títulos e as linhas dos fornecedores e cole no quadro. Primeiro aparece a prévia; depois \"Aplicar a importação\". CNPJ que já existe só ganha os campos que estavam vazios; o que já foi digitado nunca é trocado."
+    },
+    {
+     "titulo": "Regras de compras",
+     "texto": "Só o Administrador e a Diretoria alteram; compradores e gestores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.\n\nPadrão aprovado pelo dono em 21/10/2026:\nValor total da compra | Quem aprova | Cotações mínimasAté R$ 1.000 | O comprador (fica registrado) | 1\nDe R$ 1.000,01 a R$ 10.000 | Gestor da área | 2\nAcima de R$ 10.000 | Diretoria | 3\nCompras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código."
+    },
+    {
+     "titulo": "Avisos",
+     "texto": "Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp nunca pelo Compras. Nenhum aviso leva valor em reais. Quem fez a ação não é avisado.\nEspecificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail.\nPedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema.\nPedido novo para cotar: o comprador, como atividade."
     }
    ]
   },

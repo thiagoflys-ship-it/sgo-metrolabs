@@ -1,0 +1,628 @@
+<style>
+  /* COMPRAS E PEÇAS NATIVO (21/10/2026) — servidor: SGO_Compras_*.js (uma porta: Compras_api). Celular sem rolagem lateral. */
+  .cp-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .cp-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 7px 12px; font-weight: 700; font-size: 12.5px; cursor: pointer; min-height: 38px; }
+  .cp-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .cp-tab span { font-weight: 600; opacity: .8; margin-left: 4px; }
+  .cp-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); font-size: 13px; line-height: 1.5; }
+  .cp-faixa.aviso { border-left-color: var(--warning); } .cp-faixa.erro { border-left-color: var(--danger); background: var(--danger-bg); } .cp-faixa.ok { border-left-color: var(--success); }
+  .cp-lista { display: flex; flex-direction: column; gap: 10px; }
+  .cp-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; padding: 12px 14px; overflow-wrap: anywhere; }
+  .cp-card.critica { border-left-color: var(--danger); } .cp-card.alta { border-left-color: var(--warning); } .cp-card.encerrada { border-left-color: var(--muted); opacity: .8; }
+  .cp-card.clicavel { cursor: pointer; } .cp-card.clicavel:hover { border-color: var(--info, #1f5fa8); }
+  .cp-card-tit { font-weight: 700; font-size: 14px; margin: 0 0 4px; color: var(--text-strong, var(--text)); }
+  .cp-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .cp-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; }
+  .cp-txt b { color: var(--text-strong, var(--text)); }
+  .cp-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .cp-acoes button { min-height: 40px; }
+  .cp-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
+  .cp-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .cp-selo.laranja { color: var(--warning); background: var(--warning-bg); }
+  .cp-selo.verde { color: var(--success); background: var(--success-bg); } .cp-selo.azul { color: var(--info, #1f5fa8); } .cp-selo.cinza { color: var(--muted); }
+  .cp-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .cp-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .cp-filtros select, .cp-filtros input { min-height: 40px; max-width: 100%; }
+  .cp-caixa { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+  .cp-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .cp-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .cp-grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .cp-grade4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 12px; }
+  .cp-campo { margin-bottom: 10px; min-width: 0; }
+  .cp-campo label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .cp-campo input, .cp-campo select, .cp-campo textarea { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; }
+  .cp-campo textarea { min-height: 64px; resize: vertical; }
+  .cp-ajuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .cp-det { display: grid; grid-template-columns: 160px 1fr; gap: 5px 10px; font-size: 12.5px; margin: 0 0 12px; }
+  .cp-det dt { color: var(--muted); font-weight: 700; } .cp-det dd { margin: 0; overflow-wrap: anywhere; }
+  .cp-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
+  .cp-hist div { margin-bottom: 9px; font-size: 12.5px; } .cp-hist .q { color: var(--muted); font-size: 11.5px; }
+  .cp-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--bg); }
+  .cp-item h4 { margin: 0 0 8px; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .cp-falta { font-size: 12px; color: var(--warning); margin: 4px 0 0; }
+  .cp-falta.ok { color: var(--success); }
+  .cp-vinculos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .cp-vinculos label { display: flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; background: var(--card); }
+  .cp-vinculos input { width: auto; min-height: 0; }
+  .cp-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .cp-sec { margin: 14px 0 6px; font-size: 13px; font-weight: 800; color: var(--text-strong, var(--text)); }
+  .cp-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cp-tabela th, .cp-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .cp-tabela td.n, .cp-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cp-tabela tr.vencedora td { background: var(--success-bg); }
+  .cp-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 4px 0; }
+  .cp-check input { min-height: 0; width: auto; margin-top: 3px; }
+  .cp-fotos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .cp-fotos a, .cp-fotos span { font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; background: var(--card); }
+  .cp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .cp-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: 8px; padding: 10px 12px; }
+  .cp-kpi .v { display: block; font-size: 20px; font-weight: 800; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .cp-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .cp-kpi.ok { border-top-color: var(--success); } .cp-kpi.aviso { border-top-color: var(--warning); } .cp-kpi.critico { border-top-color: var(--danger); }
+  @media (max-width: 900px) {
+    .cp-grade2, .cp-grade3 { grid-template-columns: 1fr; }
+    .cp-grade4, .cp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cp-det { grid-template-columns: 1fr; }
+    .cp-det dt { margin-top: 6px; }
+    .cp-tabela thead { display: none; }
+    .cp-tabela, .cp-tabela tbody, .cp-tabela tr, .cp-tabela td { display: block; width: 100%; box-sizing: border-box; }
+    .cp-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+    .cp-tabela td { border: 0; padding: 3px 0; text-align: left !important; }
+    .cp-tabela td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+    .cp-filtros > div { flex: 1 1 140px; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // COMPRAS E PEÇAS NATIVO DO SGO+ (21/10/2026)
+  // Telas (abrir(mod)): compras_pedir (Pedir peça ou material), compras_meus (Meus pedidos de compra), compras (Fila de compras),
+  // compras_fornecedores, compras_financeiro (Conferência do Financeiro), compras_painel (Painel de compras), compras_regras.
+  // Uma chamada só no servidor: Compras_api(sessionId, acao, dados). O servidor confere o perfil em toda chamada e
+  // nunca manda valor para quem não pode ver. A tela não se redesenha sozinha: recarrega depois de cada ação ou em "Atualizar".
+  // ==========================================================
+  var CP = { ini: null, mod: "", filtro: { situacao: "ABERTAS", busca: "" }, fornBusca: "", fornArquivados: false, opcoes: null };
+  var CP_MODS = { compras_pedir: "Pedir peça ou material", compras_meus: "Meus pedidos de compra", compras: "Fila de compras", compras_fornecedores: "Fornecedores",
+    compras_financeiro: "Conferência do Financeiro", compras_painel: "Painel de compras", compras_regras: "Regras de compras" };
+  var CP_COR_SIT = { SOLICITADA: "azul", EM_COTACAO: "azul", AGUARDANDO_APROVACAO: "laranja", APROVADA: "azul", PEDIDO_FEITO: "azul", RECEBIDA_DIVERGENCIA: "vermelho", DISPONIVEL: "verde", ENTREGUE: "cinza", CANCELADA: "cinza" };
+
+  function Cp_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Cp_$_(id) { return document.getElementById(id); }
+  function Cp_chamar_(acao, dados, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (m) { fim(); if (erro) erro(m); else alert(m); };
+    google.script.run.withSuccessHandler(function (r) {
+      if (!r || !r.ok) { falhou((r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+      fim();
+      try { if (ok) ok(r); } catch (e) { console.error("Compras " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+    }).withFailureHandler(function (e) { falhou("Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado."); })
+      .Compras_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function Cp_msg_(onde, texto, tipo) { var el = typeof onde === "string" ? Cp_$_(onde) : onde; if (el) el.innerHTML = texto ? '<div class="cp-faixa ' + (tipo || "erro") + '">' + Cp_esc_(texto) + "</div>" : ""; }
+  function Cp_campo_(rotulo, html, ajuda) { return '<div class="cp-campo"><label>' + Cp_esc_(rotulo) + "</label>" + html + (ajuda ? '<div class="cp-ajuda-campo">' + Cp_esc_(ajuda) + "</div>" : "") + "</div>"; }
+  function Cp_opcoes_(lista, atual, vazio) {
+    return (vazio !== undefined ? '<option value="">' + Cp_esc_(vazio) + "</option>" : "") + lista.map(function (o) { var v = typeof o === "object" ? o.v : o, t = typeof o === "object" ? o.t : o; return '<option value="' + Cp_esc_(v) + '"' + (String(v) === String(atual || "") ? " selected" : "") + ">" + Cp_esc_(t) + "</option>"; }).join("");
+  }
+  function Cp_mapaOpcoes_(mapa) { return Object.keys(mapa || {}).map(function (k) { return { v: k, t: mapa[k] }; }); }
+  function Cp_seloSit_(r) { return '<span class="cp-selo ' + (CP_COR_SIT[r.situacao] || "cinza") + '">' + Cp_esc_(r.situacaoNome) + "</span>"; }
+  function Cp_selos_(r) {
+    var s = [Cp_seloSit_(r)];
+    if (r.urgencia === "CRITICA") s.push('<span class="cp-selo vermelho">Crítica</span>'); else if (r.urgencia === "ALTA") s.push('<span class="cp-selo laranja">Alta</span>');
+    if (r.especIncompleta) s.push('<span class="cp-selo laranja">Especificação incompleta</span>');
+    if (r.semPedido) s.push('<span class="cp-selo vermelho">Compra sem pedido</span>');
+    if (r.finSituacao === "DIVERGENTE") s.push('<span class="cp-selo vermelho">Divergência do Financeiro</span>');
+    return s.join("");
+  }
+  function Cp_cabecalho_(titulo, sub, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Cp_esc_(titulo) + '</h2><p class="content-subtitle">' + Cp_esc_(sub) + "</p></div>" +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + (botoes || "") + "</div></div>";
+  }
+  function Cp_modal_(titulo, corpo, rodape, largura) {
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    ov.innerHTML = '<div class="atv-modal" style="max-width:' + (largura || 600) + 'px"><div class="atv-modal-cab"><h3>' + Cp_esc_(titulo) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+      '<div class="atv-modal-corpo">' + corpo + '</div>' + (rodape ? '<div class="atv-modal-rod">' + rodape + '</div>' : '') + '</div>';
+    ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function Cp_gaveta_(titulo, corpo) {
+    var antiga = Cp_$_("cpGaveta"); if (antiga) antiga.remove();
+    var g = document.createElement("div");
+    g.id = "cpGaveta"; g.className = "atv-overlay"; g.style.justifyContent = "flex-end"; g.style.padding = "0";
+    g.innerHTML = '<div class="atv-drawer" role="dialog" aria-label="' + Cp_esc_(titulo) + '"><div class="atv-drawer-cab"><h3>' + Cp_esc_(titulo) + '</h3><button type="button" class="btn-secondary" data-cp-fechar>Fechar</button></div><div class="atv-drawer-corpo" id="cpGavetaCorpo">' + corpo + '</div></div>';
+    g.querySelector("[data-cp-fechar]").onclick = function () { g.remove(); };
+    g.addEventListener("click", function (e) { if (e.target === g) g.remove(); });
+    document.body.appendChild(g);
+    return g;
+  }
+  /** Pede um texto (motivo, fundamentação) numa janela e chama ok(texto). */
+  function Cp_pedirTexto_(titulo, explicacao, rotulo, minimo, ok, botao) {
+    var ov = Cp_modal_(titulo, '<p class="cp-txt">' + Cp_esc_(explicacao) + "</p>" + Cp_campo_(rotulo, '<textarea id="cpTxtPedido" maxlength="1000"></textarea>', minimo ? "Pelo menos " + minimo + " letras." : "") + '<div id="cpTxtMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + Cp_esc_(botao || "Confirmar") + "</button>");
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      var t = Cp_$_("cpTxtPedido").value.trim();
+      if (minimo && t.length < minimo) { Cp_msg_("cpTxtMsg", "Escreva pelo menos " + minimo + " letras.", "aviso"); return; }
+      ok(t, ov);
+    };
+  }
+  /** Lê arquivos de um <input type=file>: imagens reduzidas (até 1600 px, JPEG) para caber no envio; demais como estão. */
+  function Cp_lerArquivos_(input, cb, soImagem) {
+    var fs = Array.prototype.slice.call((input && input.files) || []);
+    if (!fs.length) { cb([]); return; }
+    var saida = [], falta = fs.length;
+    fs.forEach(function (f, i) {
+      var fim = function (obj) { saida[i] = obj; if (--falta === 0) cb(saida.filter(Boolean)); };
+      if (f.size > 25 * 1048576) { alert('O arquivo "' + f.name + '" passa de 25 MB e não foi anexado. Reduza o tamanho e tente de novo.'); fim(null); return; }
+      var rd = new FileReader();
+      rd.onload = function () {
+        var dataUrl = String(rd.result || "");
+        if (/^image\//.test(f.type) && !/gif|svg/.test(f.type)) {
+          var img = new Image();
+          img.onload = function () {
+            var esc = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+            cv.width = Math.round(img.width * esc); cv.height = Math.round(img.height * esc);
+            cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+            var j = cv.toDataURL("image/jpeg", 0.82);
+            fim({ nome: f.name.replace(/\.[^.]+$/, "") + ".jpg", tipo: "image/jpeg", base64: j.split(",")[1] });
+          };
+          img.onerror = function () { fim({ nome: f.name, tipo: f.type, base64: dataUrl.split(",")[1] }); };
+          img.src = dataUrl;
+        } else if (soImagem) { alert('O arquivo "' + f.name + '" não é uma foto (PNG ou JPG) e não foi anexado.'); fim(null); }
+        else fim({ nome: f.name, tipo: f.type || "application/octet-stream", base64: dataUrl.split(",")[1] });
+      };
+      rd.onerror = function () { fim(null); };
+      rd.readAsDataURL(f);
+    });
+  }
+
+  // ---------------- casca: menu ----------------
+  function Compras_iniciar_() {
+    var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    if (!p || p === "CLIENTE") { Compras_mostrarMenu_(null); return; }
+    Cp_chamar_("acesso", {}, function (r) { Compras_mostrarMenu_(r); }, function () { Compras_mostrarMenu_(null); });
+  }
+  function Compras_parar_() { CP.ini = null; CP.opcoes = null; Compras_mostrarMenu_(null); }
+  function Compras_mostrarMenu_(r) {
+    var grupo = Cp_$_("menu-secao-compras");
+    if (grupo) grupo.style.display = r ? "" : "none";
+    document.querySelectorAll("#menu-grupo-itens-compras .menu-btn").forEach(function (b) {
+      var m = b.getAttribute("data-mod"), ver = !!r;
+      if (m === "compras" || m === "compras_painel") ver = !!(r && r.veFila);
+      if (m === "compras_fornecedores") ver = !!(r && r.veValores);
+      if (m === "compras_financeiro") ver = !!(r && r.financeiro);
+      if (m === "compras_regras") ver = !!(r && (r.podeRegras || r.comprador));
+      b.style.display = ver ? "" : "none";
+    });
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+    if (r && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
+  }
+  function Compras_garantirInicio_(cb) {
+    if (CP.ini) { cb(CP.ini); return; }
+    Cp_chamar_("iniciar", {}, function (r) { CP.ini = r; cb(r); });
+  }
+
+  /** Ponto de entrada de abrir(mod). */
+  function Compras_render_(mod, alvo) {
+    var div = Cp_$_("conteudo");
+    if (!div) return;
+    CP.mod = mod;
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_(CP_MODS[mod] || "Compras");
+    div.innerHTML = '<div class="module-shell"><div class="cp-vazio">Carregando Compras…</div></div>';
+    Compras_garantirInicio_(function (ini) {
+      if (ini.nivel === "NENHUM") { div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Compras", "") + '<div class="cp-faixa aviso">Compras é da equipe interna da Metrolabs.</div></div>'; return; }
+      var mapa = { compras_pedir: Compras_renderPedir_, compras_meus: Compras_renderMeus_, compras: Compras_renderFila_, compras_fornecedores: Compras_renderFornecedores_, compras_regras: Compras_renderRegras_ };
+      if (typeof Compras_renderFinanceiro_ === "function") mapa.compras_financeiro = Compras_renderFinanceiro_;
+      if (typeof Compras_renderPainel_ === "function") mapa.compras_painel = Compras_renderPainel_;
+      var fn = mapa[mod];
+      if ((mod === "compras" || mod === "compras_painel") && !ini.veFila) fn = null;
+      if (mod === "compras_fornecedores" && !ini.veValores) fn = null;
+      if (mod === "compras_financeiro" && !ini.financeiro) fn = null;
+      if (!fn) {
+        if (mapa[mod]) { div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_(CP_MODS[mod] || "Compras", "") + '<div class="cp-faixa aviso">Esta tela de Compras é dos compradores, gestores, do Financeiro (conferência) e da Diretoria. Para pedir uma peça ou acompanhar os seus pedidos, use "Pedir peça ou material" e "Meus pedidos de compra" no menu Compras.</div></div>'; return; }
+        fn = Compras_renderMeus_;
+      }
+      fn(div, alvo || {});
+      if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) Cp_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
+    });
+  }
+
+  /** Atalho vindo do Início, da Caixa de decisões ou de um aviso: { tipo:'compras', mod, id }. */
+  function Compras_irPara_(acao) {
+    var mod = (acao && acao.mod) || "compras_meus";
+    abrir(mod);
+    if (acao && acao.id) setTimeout(function () { Compras_abrirFicha_(acao.id); }, 700);
+  }
+
+  function Cp_avisosRecentes_() {
+    var ini = CP.ini;
+    if (!ini || !ini.avisos || !ini.avisos.length) return "";
+    var novos = ini.avisos.filter(function (a) { return a.novo; });
+    if (!novos.length) return "";
+    return '<div class="cp-caixa"><h3>Avisos de Compras</h3>' + novos.map(function (a) { return '<p class="cp-txt"><b>' + Cp_esc_(a.titulo) + '</b> <span class="cp-meta">' + Cp_esc_(a.em) + '</span><br>' + Cp_esc_(a.texto) + '</p>'; }).join("") + '</div>';
+  }
+
+  // =========================================================
+  // PEDIR PEÇA OU MATERIAL (novo ou completar a especificação)
+  // =========================================================
+  function Compras_renderPedir_(div, alvo) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Pedir peça ou material", "Diga o que precisa, para que é e a que está ligado. O comprador confere, cota e avisa quando chegar. Você acompanha em Meus pedidos de compra, sem valores.",
+      '<button type="button" class="btn-secondary" onclick="abrir(\'compras_meus\')"><i class="fas fa-list" aria-hidden="true"></i>&nbsp;Meus pedidos</button>') +
+      (CP.ini && !CP.ini.temComprador ? '<div class="cp-faixa aviso">Ainda não há comprador escolhido em Regras de compras. O pedido vai para o gestor da área de Compras (ou para a Diretoria) até o Administrador escolher o comprador.</div>' : "") +
+      '<div id="cpForm"></div></div>';
+    Cp_formRequisicao_(Cp_$_("cpForm"), alvo && alvo.requisicao ? alvo.requisicao : null);
+  }
+
+  function Cp_garantirOpcoes_(cb) {
+    if (CP.opcoes) { cb(CP.opcoes); return; }
+    Cp_chamar_("opcoesVinculo", {}, function (r) { CP.opcoes = r; cb(r); }, function () { cb({ pedidosComercial: [], veiculos: [] }); });
+  }
+
+  /** Formulário da requisição. req: a requisição para completar (ou null para um pedido novo). */
+  function Cp_formRequisicao_(alvo, req) {
+    var ini = CP.ini, v = (req && req.vinculo) || { tipo: "" };
+    var estado = { itens: req ? req.itens.map(function (i) { return Object.assign({}, i, { fotosManter: (i.fotos || []).map(function (f) { return f.id; }), fotosNovas: [] }); }) : [{ categoria: "", descricao: "", quantidade: 1, unidade: "un.", fotos: [], fotosNovas: [] }],
+      equipamentos: [], clienteId: v.clienteId || "", clienteNome: v.clienteNome || "" };
+    var h = (req ? '<div class="cp-faixa aviso"><b>Pedido ' + Cp_esc_(req.numero) + '.</b> ' + (req.devolvida ? "Compras pediu: " + Cp_esc_(req.devolvida.texto) + " " : "") + (req.falta && req.falta.length ? "Falta: " + Cp_esc_(req.falta.join("; ")) : "") + '</div>' : "") +
+      '<div class="cp-caixa"><h3>1. Para que é</h3>' +
+      Cp_campo_("Para que é e onde será usado", '<textarea id="cpFin" maxlength="500" placeholder="Exemplo: troca da resistência da autoclave AC-01, parada na CME do Hospital Teste">' + Cp_esc_(req ? req.finalidade : "") + '</textarea>', "Obrigatório. Ajuda o comprador a comprar certo e o Financeiro a saber para que foi.") +
+      '<div class="cp-grade2">' + Cp_campo_("Urgência", '<select id="cpUrg">' + Cp_opcoes_(Cp_mapaOpcoes_(ini.urgencias), req ? req.urgencia : "NORMAL") + '</select>', "Crítica: equipamento ou atendimento parado (o comprador recebe com prazo no mesmo dia).") +
+      Cp_campo_("Precisa até (opcional)", '<input type="date" id="cpAte" value="' + Cp_esc_(req ? req.precisaAteIso : "") + '">') + '</div></div>' +
+      '<div class="cp-caixa"><h3>2. A que está ligado</h3><div class="cp-vinculos">' + Object.keys(ini.vinculos).map(function (k) { return '<label><input type="radio" name="cpVinc" value="' + k + '"' + (v.tipo === k ? " checked" : "") + '> ' + Cp_esc_(ini.vinculos[k]) + '</label>'; }).join("") + '</div><div id="cpVincCampos"></div></div>' +
+      '<div class="cp-caixa"><h3>3. O que precisa ser comprado</h3><div id="cpItens"></div><div class="cp-acoes"><button type="button" class="btn-secondary" id="cpAddItem"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Acrescentar item</button></div></div>' +
+      '<div id="cpFormMsg"></div><div class="cp-acoes"><button type="button" class="btn-primary" id="cpEnviar"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;' + (req ? "Salvar e enviar a Compras" : "Enviar a Compras") + '</button></div>';
+    alvo.innerHTML = h;
+    var vincCampos = function () {
+      var tipo = (document.querySelector('input[name="cpVinc"]:checked') || {}).value || "";
+      var c = Cp_$_("cpVincCampos");
+      if (tipo === "CLIENTE") {
+        c.innerHTML = '<div class="cp-grade2">' + Cp_campo_("Cliente", '<input type="text" id="cpCliBusca" placeholder="Digite o nome ou o CNPJ" value="' + Cp_esc_(estado.clienteNome) + '"><div id="cpCliRes"></div><input type="hidden" id="cpCliId" value="' + Cp_esc_(estado.clienteId) + '">') +
+          Cp_campo_("Unidade", '<select id="cpUni"><option value="">Escolha o cliente primeiro</option></select>') + '</div>' +
+          Cp_campo_("Número da O.S. do Auvo (se houver)", '<input type="text" id="cpOs" maxlength="40" value="' + Cp_esc_(v.osAuvo || "") + '">');
+        var t = null;
+        Cp_$_("cpCliBusca").oninput = function () {
+          clearTimeout(t); var q = this.value.trim();
+          t = setTimeout(function () {
+            if (q.length < 2) { Cp_$_("cpCliRes").innerHTML = ""; return; }
+            Cp_chamar_("clientes", { busca: q }, function (r) {
+              Cp_$_("cpCliRes").innerHTML = r.clientes.map(function (x) { return '<div class="cp-card clicavel" style="padding:6px 10px;margin-top:4px" data-cli="' + Cp_esc_(x.id) + '" data-nome="' + Cp_esc_(x.nome) + '">' + Cp_esc_(x.nome) + (x.cnpj ? ' <span class="cp-meta">' + Cp_esc_(x.cnpj) + '</span>' : '') + '</div>'; }).join("") || '<p class="cp-meta">Nenhum cliente com esse nome. Cadastre em Cadastros > Clientes.</p>';
+              Cp_$_("cpCliRes").querySelectorAll("[data-cli]").forEach(function (b) { b.onclick = function () { estado.clienteId = b.getAttribute("data-cli"); estado.clienteNome = b.getAttribute("data-nome"); Cp_$_("cpCliId").value = estado.clienteId; Cp_$_("cpCliBusca").value = estado.clienteNome; Cp_$_("cpCliRes").innerHTML = ""; carregarCliente(); }; });
+            }, function () {});
+          }, 350);
+        };
+        if (estado.clienteId) carregarCliente();
+      } else if (tipo === "COMERCIAL") {
+        c.innerHTML = '<div class="cp-vazio">Carregando os pedidos aprovados…</div>';
+        Cp_garantirOpcoes_(function (o) { c.innerHTML = Cp_campo_("Pedido aprovado do Comercial", '<select id="cpProp">' + Cp_opcoes_(o.pedidosComercial.map(function (p) { return { v: p.id, t: p.numero + " · " + p.cliente }; }), v.propostaId, o.pedidosComercial.length ? "Escolha o pedido" : "Nenhum pedido aprovado no Comercial") + '</select>', "Só aparece proposta aprovada pelo cliente."); });
+      } else if (tipo === "VEICULO") {
+        c.innerHTML = '<div class="cp-vazio">Carregando os veículos…</div>';
+        Cp_garantirOpcoes_(function (o) { c.innerHTML = Cp_campo_("Veículo da Frota", '<select id="cpVei">' + Cp_opcoes_(o.veiculos.map(function (x) { return { v: x.id, t: x.placa + (x.modelo ? " · " + x.modelo : "") }; }), v.veiculoId, "Escolha o veículo") + '</select>'); });
+      } else if (tipo === "INTERNO") {
+        c.innerHTML = Cp_campo_("Explique o uso interno", '<textarea id="cpInt" maxlength="500" placeholder="Exemplo: reposição da maleta de ferramentas da equipe de campo">' + Cp_esc_(v.motivoInterno || "") + '</textarea>', "Pelo menos 20 letras: ferramenta, estoque, escritório, manutenção da sede...");
+      } else c.innerHTML = '<p class="cp-meta">Escolha uma opção acima. Toda compra precisa dizer para que é.</p>';
+      desenharItens();
+    };
+    function carregarCliente() {
+      Cp_chamar_("cliente", { clienteId: estado.clienteId }, function (r) {
+        estado.equipamentos = r.equipamentos || [];
+        var sel = Cp_$_("cpUni");
+        if (sel) sel.innerHTML = Cp_opcoes_(r.unidades.map(function (u) { return { v: u.id, t: u.nome }; }), v.unidadeId, r.unidades.length ? "Sem unidade (sede)" : "Cliente sem unidades");
+        desenharItens();
+      }, function () {});
+    }
+    function categorias() { return ini.categorias.map(function (c) { return { v: c.codigo, t: c.nome }; }); }
+    function eTecnica(cod) { var c = ini.categorias.filter(function (x) { return x.codigo === cod; })[0]; return !!(c && c.tecnica); }
+    function faltaItem(i) {
+      var f = [];
+      if (String(i.descricao || "").trim().length < 5) f.push("descrição");
+      if (!(Number(String(i.quantidade).replace(",", ".")) > 0)) f.push("quantidade");
+      if (!eTecnica(i.categoria)) return f;
+      var tipo = (document.querySelector('input[name="cpVinc"]:checked') || {}).value || "";
+      if (!i.equipamentoId && String(i.equipamentoTexto || "").trim().length < 3 && !(tipo === "VEICULO" && i.categoria === "PECA_VEICULO")) f.push("equipamento de origem");
+      var nTec = ["tensao", "corrente", "pressao", "rosca", "dimensao", "material"].filter(function (k) { return String(i[k] || "").trim(); }).length + (String(i.outras || "").trim().length >= 20 ? 1 : 0);
+      var pn = String(i.partNumber || "").trim();
+      if (!pn && nTec < 2) f.push("número da peça ou dois dados técnicos");
+      if (!pn && !((i.fotosManter || []).length + (i.fotosNovas || []).length)) f.push("foto da peça");
+      if (pn && !String(i.marca || "").trim()) f.push("marca ou fabricante da peça");
+      return f;
+    }
+    function lerItens() {
+      document.querySelectorAll("#cpItens [data-item]").forEach(function (box) {
+        var k = Number(box.getAttribute("data-item")), i = estado.itens[k];
+        box.querySelectorAll("[data-c]").forEach(function (el) { i[el.getAttribute("data-c")] = el.value; });
+      });
+    }
+    function desenharItens() {
+      var c = Cp_$_("cpItens"); if (!c) return;
+      c.innerHTML = estado.itens.map(function (i, k) {
+        var tec = eTecnica(i.categoria), f = faltaItem(i);
+        var equip = estado.equipamentos.length ? '<select data-c="equipamentoId">' + Cp_opcoes_(estado.equipamentos.map(function (e) { return { v: e.id, t: e.texto }; }), i.equipamentoId, "Equipamento do cadastro (ou escreva ao lado)") + '</select>' : '<input type="hidden" data-c="equipamentoId" value="">';
+        return '<div class="cp-item" data-item="' + k + '"><h4><span>Item ' + (k + 1) + '</span>' + (estado.itens.length > 1 ? '<button type="button" class="btn-secondary" data-tirar="' + k + '">Tirar</button>' : '') + '</h4>' +
+          '<div class="cp-grade2">' + Cp_campo_("Tipo", '<select data-c="categoria">' + Cp_opcoes_(categorias(), i.categoria, "Escolha o tipo") + '</select>') + Cp_campo_("Descrição", '<input type="text" data-c="descricao" maxlength="300" value="' + Cp_esc_(i.descricao) + '" placeholder="O que é (nome da peça ou do material)">') + '</div>' +
+          '<div class="cp-grade2">' + Cp_campo_("Quantidade", '<input type="text" inputmode="decimal" data-c="quantidade" value="' + Cp_esc_(i.quantidade) + '">') + Cp_campo_("Unidade", '<input type="text" data-c="unidade" maxlength="20" value="' + Cp_esc_(i.unidade || "un.") + '" placeholder="un., m, kg, caixa">') + '</div>' +
+          (tec ? '<p class="cp-meta">Peça: informe o equipamento de origem e o número da peça (com a marca) ou pelo menos dois dados técnicos. Sem o número da peça, a foto é obrigatória.</p>' +
+            '<div class="cp-grade2">' + Cp_campo_("Equipamento de origem", equip + '<input type="text" data-c="equipamentoTexto" maxlength="160" style="margin-top:4px" value="' + Cp_esc_(i.equipamentoTexto) + '" placeholder="Tipo e modelo (se não estiver no cadastro)">') +
+            Cp_campo_("Número da peça (part number)", '<input type="text" data-c="partNumber" maxlength="80" value="' + Cp_esc_(i.partNumber) + '">') + '</div>' +
+            '<div class="cp-grade3">' + Cp_campo_("Marca ou fabricante da peça", '<input type="text" data-c="marca" maxlength="80" value="' + Cp_esc_(i.marca) + '">') + Cp_campo_("Tensão", '<input type="text" data-c="tensao" maxlength="60" value="' + Cp_esc_(i.tensao) + '" placeholder="220 V">') + Cp_campo_("Corrente ou potência", '<input type="text" data-c="corrente" maxlength="60" value="' + Cp_esc_(i.corrente) + '" placeholder="10 A ou 2.000 W">') + '</div>' +
+            '<div class="cp-grade3">' + Cp_campo_("Pressão", '<input type="text" data-c="pressao" maxlength="60" value="' + Cp_esc_(i.pressao) + '">') + Cp_campo_("Rosca ou diâmetro", '<input type="text" data-c="rosca" maxlength="60" value="' + Cp_esc_(i.rosca) + '" placeholder="1/2 pol. BSP">') + Cp_campo_("Dimensão", '<input type="text" data-c="dimensao" maxlength="120" value="' + Cp_esc_(i.dimensao) + '">') + '</div>' +
+            '<div class="cp-grade2">' + Cp_campo_("Material", '<input type="text" data-c="material" maxlength="80" value="' + Cp_esc_(i.material) + '">') + Cp_campo_("Outras especificações", '<input type="text" data-c="outras" maxlength="2000" value="' + Cp_esc_(i.outras) + '">') + '</div>' : '') +
+          Cp_campo_("Fotos (opcional para material simples)", '<input type="file" accept="image/*" multiple data-fotos="' + k + '"><div class="cp-fotos">' + (i.fotos || []).filter(function (f) { return (i.fotosManter || []).indexOf(f.id) >= 0; }).map(function (f) { return '<span>' + Cp_esc_(f.nome) + ' <a href="#" data-tirarfoto="' + k + '|' + Cp_esc_(f.id) + '">tirar</a></span>'; }).join("") + (i.fotosNovas || []).map(function (f) { return '<span>' + Cp_esc_(f.nome) + ' (nova)</span>'; }).join("") + '</div>') +
+          '<p class="cp-falta' + (f.length ? '' : ' ok') + '">' + (f.length ? 'Falta: ' + Cp_esc_(f.join(", ")) + '. Pode enviar assim, mas o pedido não é cotado até completar.' : 'Especificação completa.') + '</p></div>';
+      }).join("");
+      c.querySelectorAll("[data-c]").forEach(function (el) { el.onchange = function () { lerItens(); if (el.getAttribute("data-c") === "categoria" || el.getAttribute("data-c") === "equipamentoId") desenharItens(); else { var box = el.closest("[data-item]"), k = Number(box.getAttribute("data-item")), f = faltaItem(estado.itens[k]), p = box.querySelector(".cp-falta"); p.className = "cp-falta" + (f.length ? "" : " ok"); p.textContent = f.length ? "Falta: " + f.join(", ") + ". Pode enviar assim, mas o pedido não é cotado até completar." : "Especificação completa."; } }; });
+      c.querySelectorAll("[data-tirar]").forEach(function (b) { b.onclick = function () { lerItens(); estado.itens.splice(Number(b.getAttribute("data-tirar")), 1); desenharItens(); }; });
+      c.querySelectorAll("[data-fotos]").forEach(function (inp) { inp.onchange = function () { lerItens(); var k = Number(inp.getAttribute("data-fotos")); Cp_lerArquivos_(inp, function (l) { estado.itens[k].fotosNovas = (estado.itens[k].fotosNovas || []).concat(l).slice(0, 4); desenharItens(); }, true); }; });
+      c.querySelectorAll("[data-tirarfoto]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); lerItens(); var p = a.getAttribute("data-tirarfoto").split("|"), it = estado.itens[Number(p[0])]; it.fotosManter = (it.fotosManter || []).filter(function (x) { return x !== p[1]; }); desenharItens(); }; });
+    }
+    alvo.querySelectorAll('input[name="cpVinc"]').forEach(function (r) { r.onchange = vincCampos; });
+    Cp_$_("cpAddItem").onclick = function () { lerItens(); estado.itens.push({ categoria: "", descricao: "", quantidade: 1, unidade: "un.", fotos: [], fotosNovas: [] }); desenharItens(); };
+    vincCampos();
+    Cp_$_("cpEnviar").onclick = function () {
+      lerItens();
+      var tipo = (document.querySelector('input[name="cpVinc"]:checked') || {}).value || "";
+      var vinc = { tipo: tipo };
+      if (tipo === "CLIENTE") { vinc.clienteId = estado.clienteId; vinc.unidadeId = (Cp_$_("cpUni") || {}).value || ""; vinc.osAuvo = (Cp_$_("cpOs") || {}).value || ""; }
+      if (tipo === "COMERCIAL") vinc.propostaId = (Cp_$_("cpProp") || {}).value || "";
+      if (tipo === "VEICULO") vinc.veiculoId = (Cp_$_("cpVei") || {}).value || "";
+      if (tipo === "INTERNO") vinc.motivoInterno = (Cp_$_("cpInt") || {}).value || "";
+      var dados = { id: req ? req.id : "", finalidade: Cp_$_("cpFin").value, urgencia: Cp_$_("cpUrg").value, precisaAte: Cp_$_("cpAte").value, vinculo: vinc,
+        itens: estado.itens.map(function (i) { return { id: i.id || "", categoria: i.categoria, descricao: i.descricao, quantidade: i.quantidade, unidade: i.unidade, partNumber: i.partNumber, marca: i.marca, equipamentoId: i.equipamentoId,
+          equipamentoTexto: i.equipamentoTexto, tensao: i.tensao, corrente: i.corrente, pressao: i.pressao, rosca: i.rosca, dimensao: i.dimensao, material: i.material, outras: i.outras, fotosManter: i.fotosManter || [], fotosNovas: i.fotosNovas || [] }; }) };
+      Cp_msg_("cpFormMsg", "");
+      Cp_chamar_("salvarRequisicao", dados, function (r) {
+        alvo.innerHTML = '<div class="cp-faixa ' + (r.falta && r.falta.length ? "aviso" : "ok") + '">' + Cp_esc_(r.message) + '</div><div class="cp-acoes"><button type="button" class="btn-primary" onclick="abrir(\'compras_meus\')">Ver meus pedidos</button><button type="button" class="btn-secondary" onclick="abrir(\'compras_pedir\')">Pedir outra peça</button></div>';
+        var g = Cp_$_("cpGaveta"); if (g) g.remove();
+      }, function (m) { Cp_msg_("cpFormMsg", m); }, { carregando: "Enviando o pedido…" });
+    };
+  }
+
+  // =========================================================
+  // MEUS PEDIDOS DE COMPRA (sem valores)
+  // =========================================================
+  function Compras_renderMeus_(div) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Meus pedidos de compra", "Os pedidos que você fez e os do seu pedido aprovado no Comercial: situação, previsão de entrega e o que falta completar. Sem valores.",
+      '<button type="button" class="btn-secondary" id="cpMeusAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-primary" onclick="abrir(\'compras_pedir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Pedir peça ou material</button>') +
+      Cp_avisosRecentes_() + '<div id="cpMeus"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_$_("cpMeusAtualizar").onclick = function () { Compras_renderMeus_(div); };
+    Cp_chamar_("meus", {}, function (r) {
+      var el = Cp_$_("cpMeus");
+      if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Você ainda não fez pedidos de compra. Toque em "Pedir peça ou material".</div>'; return; }
+      el.innerHTML = '<div class="cp-lista">' + r.requisicoes.map(function (q, k) {
+        var enc = q.situacao === "ENTREGUE" || q.situacao === "CANCELADA";
+        return '<div class="cp-card' + (q.urgencia === "CRITICA" && !enc ? " critica" : enc ? " encerrada" : "") + '"><p class="cp-card-tit">' + Cp_esc_(q.numero) + ' · ' + Cp_esc_(q.titulo) + '</p>' +
+          '<p class="cp-meta">' + Cp_selos_(q) + ' Pedido em ' + Cp_esc_(q.criadoEm) + (q.meu ? '' : ' por ' + Cp_esc_(q.solicitante.nome)) + ' · ' + Cp_esc_(q.vinculo.texto) + '</p>' +
+          '<p class="cp-txt">' + Cp_esc_(q.situacaoTexto) + (q.previsaoEntrega && (q.situacao === "PEDIDO_FEITO") ? ' <b>Previsão de entrega: ' + Cp_esc_(q.previsaoEntrega) + '.</b>' : '') + (q.situacao === "CANCELADA" && q.canceladaMotivo ? ' Motivo: ' + Cp_esc_(q.canceladaMotivo) : '') + (q.entregueA ? ' Entregue a ' + Cp_esc_(q.entregueA) + ' em ' + Cp_esc_(q.entregueEm) + '.' : '') + '</p>' +
+          (q.especIncompleta ? '<div class="cp-faixa aviso">' + (q.devolvida ? '<b>Compras pediu:</b> ' + Cp_esc_(q.devolvida.texto) + '<br>' : '') + '<b>Falta:</b> ' + Cp_esc_((q.falta || []).filter(function (x) { return !/^Compras pediu/.test(x); }).join("; ") || "ver o pedido de Compras") + '</div>' : '') +
+          '<details><summary class="cp-meta" style="cursor:pointer">Itens e andamento</summary>' + q.itens.map(function (i) { return '<p class="cp-txt">' + i.ordem + '. ' + Cp_esc_(i.quantidadeTxt + ' ' + i.unidade) + ' · ' + Cp_esc_(i.descricao) + (i.partNumber ? ' (nº ' + Cp_esc_(i.partNumber) + ')' : '') + '</p>'; }).join("") +
+          '<div class="cp-hist">' + q.historico.map(function (h) { return '<div><span class="q">' + Cp_esc_(h.em) + ' · ' + Cp_esc_(h.por) + '</span><br>' + Cp_esc_(h.texto) + '</div>'; }).join("") + '</div></details>' +
+          '<div class="cp-acoes">' + (q.acoes.editar ? '<button type="button" class="btn-primary" data-editar="' + k + '">' + (q.especIncompleta ? 'Completar a especificação' : 'Alterar o pedido') + '</button>' : '') +
+          (q.acoes.confirmarRecebimento ? '<button type="button" class="btn-primary" data-recebi="' + k + '">Recebi a peça</button>' : '') +
+          (q.acoes.cancelar ? '<button type="button" class="btn-secondary" data-cancelar="' + k + '">Cancelar o pedido</button>' : '') + '</div></div>';
+      }).join("") + '</div>';
+      el.querySelectorAll("[data-editar]").forEach(function (b) { b.onclick = function () { var q = r.requisicoes[Number(b.getAttribute("data-editar"))]; Cp_gaveta_("Completar o pedido " + q.numero, '<div id="cpFormG"></div>'); Cp_formRequisicao_(Cp_$_("cpFormG"), q); }; });
+      el.querySelectorAll("[data-cancelar]").forEach(function (b) { b.onclick = function () { var q = r.requisicoes[Number(b.getAttribute("data-cancelar"))]; Cp_cancelar_(q, function () { Compras_renderMeus_(div); }); }; });
+      el.querySelectorAll("[data-recebi]").forEach(function (b) { b.onclick = function () { var q = r.requisicoes[Number(b.getAttribute("data-recebi"))]; if (typeof Cp_confirmarRecebimento_ === "function") Cp_confirmarRecebimento_(q, function () { Compras_renderMeus_(div); }); }; });
+    }, function (m) { Cp_msg_("cpMeus", m); });
+  }
+
+  function Cp_cancelar_(q, depois) {
+    Cp_pedirTexto_("Cancelar o pedido " + q.numero, "O pedido fica no histórico com o motivo. Se o pedido de compra já foi feito ao fornecedor, avise o fornecedor do cancelamento.", "Motivo do cancelamento", 10, function (t, ov) {
+      Cp_chamar_("cancelar", { id: q.id, motivo: t }, function (r) { ov.remove(); alert(r.message); if (depois) depois(r); }, function (m) { Cp_msg_("cpTxtMsg", m); });
+    }, "Cancelar o pedido");
+  }
+
+  // =========================================================
+  // FILA DE COMPRAS (comprador, gestores, Diretoria)
+  // =========================================================
+  function Compras_renderFila_(div) {
+    var f = CP.filtro, ini = CP.ini;
+    var abas = [["ABERTAS", "Abertas"], ["SOLICITADA", "Solicitadas"], ["EM_COTACAO", "Em cotação"], ["AGUARDANDO_APROVACAO", "Aguardando aprovação"], ["APROVADA", "Aprovadas"], ["PEDIDO_FEITO", "Pedido feito"],
+      ["RECEBIDA_DIVERGENCIA", "Com divergência"], ["DISPONIVEL", "Disponíveis"], ["ENTREGUE", "Entregues"], ["CANCELADA", "Canceladas"], ["TODAS", "Todas"]];
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Fila de compras", "Todos os pedidos de compra, do mais urgente ao mais antigo. Toque num pedido para conferir a especificação, cotar, aprovar, fazer o pedido, receber e entregar.",
+      '<button type="button" class="btn-secondary" id="cpFilaAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' + (ini.comprador ? '<button type="button" class="btn-primary" onclick="abrir(\'compras_pedir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo pedido</button>' : '')) +
+      (!ini.temComprador ? '<div class="cp-faixa aviso">Nenhum comprador escolhido. Os pedidos vão para o gestor da área de Compras ou para a Diretoria. O Administrador escolhe o comprador e o substituto em Compras > Regras de compras.</div>' : '') +
+      Cp_avisosRecentes_() + '<div class="cp-tabs" id="cpAbas"></div><div class="cp-filtros"><div>' + Cp_campo_("Buscar", '<input type="search" id="cpBusca" placeholder="Número, item, quem pediu, cliente" value="' + Cp_esc_(f.busca) + '">') + '</div></div><div id="cpFila"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_$_("cpFilaAtualizar").onclick = function () { Compras_renderFila_(div); };
+    var t = null;
+    Cp_$_("cpBusca").oninput = function () { clearTimeout(t); var v = this.value; t = setTimeout(function () { f.busca = v; carregar(); }, 400); };
+    function carregar() {
+      Cp_chamar_("fila", { situacao: f.situacao, busca: f.busca }, function (r) {
+        var cont = r.contagem || {}, abertas = ["SOLICITADA", "EM_COTACAO", "AGUARDANDO_APROVACAO", "APROVADA", "PEDIDO_FEITO", "RECEBIDA_DIVERGENCIA", "DISPONIVEL"].reduce(function (s, k) { return s + (cont[k] || 0); }, 0);
+        Cp_$_("cpAbas").innerHTML = abas.map(function (a) { var n = a[0] === "ABERTAS" ? abertas : a[0] === "TODAS" ? "" : (cont[a[0]] || 0); return '<button type="button" class="cp-tab' + (f.situacao === a[0] ? " active" : "") + '" data-sit="' + a[0] + '">' + a[1] + (n !== "" ? '<span>' + n + '</span>' : '') + '</button>'; }).join("");
+        Cp_$_("cpAbas").querySelectorAll("[data-sit]").forEach(function (b) { b.onclick = function () { f.situacao = b.getAttribute("data-sit"); carregar(); }; });
+        var el = Cp_$_("cpFila");
+        if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Nenhum pedido nesta situação.</div>'; return; }
+        el.innerHTML = '<div class="cp-lista">' + r.requisicoes.map(function (q) {
+          var enc = q.situacao === "ENTREGUE" || q.situacao === "CANCELADA";
+          return '<div class="cp-card clicavel' + (q.urgencia === "CRITICA" && !enc ? " critica" : q.urgencia === "ALTA" && !enc ? " alta" : enc ? " encerrada" : "") + '" data-req="' + Cp_esc_(q.id) + '"><p class="cp-card-tit">' + Cp_esc_(q.numero) + ' · ' + Cp_esc_(q.titulo) + '</p>' +
+            '<p class="cp-meta">' + Cp_selos_(q) + (q.valorTxt ? ' <b>' + Cp_esc_(q.valorTxt) + '</b> ·' : '') + ' ' + Cp_esc_(q.solicitante.nome) + ' · ' + Cp_esc_(q.vinculo.texto) + ' · desde ' + Cp_esc_(q.criadoEm) + (q.previsaoEntrega ? ' · previsão ' + Cp_esc_(q.previsaoEntrega) : '') + '</p></div>';
+        }).join("") + '</div>';
+        el.querySelectorAll("[data-req]").forEach(function (c) { c.onclick = function () { Compras_abrirFicha_(c.getAttribute("data-req")); }; });
+      }, function (m) { Cp_msg_("cpFila", m); });
+    }
+    carregar();
+  }
+
+  /** Ficha do pedido (gaveta). Cada etapa acrescenta a sua seção (cotações, aprovação, pedido, recebimento, Financeiro). */
+  function Compras_abrirFicha_(id) {
+    Cp_gaveta_("Pedido de compra", '<div class="cp-vazio">Carregando…</div>');
+    Cp_chamar_("requisicao", { id: id }, function (r) { Cp_desenharFicha_(r.requisicao); }, function (m) { Cp_msg_("cpGavetaCorpo", m); });
+  }
+  function Cp_recarregarFicha_(id, msg, tipo) {
+    Cp_chamar_("requisicao", { id: id }, function (r) { Cp_desenharFicha_(r.requisicao); if (msg) Cp_msg_("cpFichaMsg", msg, tipo || "ok"); }, function (m) { Cp_msg_("cpGavetaCorpo", m); });
+  }
+  function Cp_desenharFicha_(q) {
+    var corpo = Cp_$_("cpGavetaCorpo");
+    if (!corpo) { Cp_gaveta_("Pedido de compra", ""); corpo = Cp_$_("cpGavetaCorpo"); }
+    var cab = document.querySelector("#cpGaveta .atv-drawer-cab h3"); if (cab) cab.textContent = q.numero + " · " + q.situacaoNome;
+    var a = q.acoes || {};
+    var h = '<div id="cpFichaMsg"></div><p class="cp-card-tit">' + Cp_esc_(q.titulo) + '</p><p class="cp-meta">' + Cp_selos_(q) + (q.valorTxt ? ' <b>' + Cp_esc_(q.valorTxt) + '</b>' : '') + '</p>' +
+      '<dl class="cp-det"><dt>Quem pediu</dt><dd>' + Cp_esc_(q.solicitante.nome) + ' em ' + Cp_esc_(q.criadoEm) + '</dd><dt>Para que é</dt><dd>' + Cp_esc_(q.finalidade) + '</dd>' +
+      '<dt>Vínculo</dt><dd>' + Cp_esc_(q.vinculo.texto) + '</dd><dt>Urgência</dt><dd>' + Cp_esc_(q.urgenciaNome) + (q.precisaAte ? ' · precisa até ' + Cp_esc_(q.precisaAte) : '') + '</dd>' +
+      '<dt>Comprador</dt><dd>' + Cp_esc_(q.comprador.nome || "—") + '</dd>' + (q.previsaoEntrega ? '<dt>Previsão de entrega</dt><dd>' + Cp_esc_(q.previsaoEntrega) + '</dd>' : '') + '</dl>';
+    if (q.especIncompleta) h += '<div class="cp-faixa aviso"><b>Especificação incompleta.</b> ' + Cp_esc_((q.falta || []).join("; ")) + ' O pedido não é cotado até completar.</div>';
+    h += '<div class="cp-sec">Itens</div>' + q.itens.map(function (i) {
+      var tec = [i.partNumber ? "nº da peça " + i.partNumber : "", i.marca, i.equipamentoTexto, i.tensao, i.corrente, i.pressao, i.rosca, i.dimensao, i.material, i.outras].filter(Boolean).join(" · ");
+      return '<div class="cp-item"><p class="cp-txt"><b>' + i.ordem + '. ' + Cp_esc_(i.descricao) + '</b> — ' + Cp_esc_(i.quantidadeTxt + ' ' + i.unidade) + ' <span class="cp-meta">' + Cp_esc_(i.categoriaNome) + '</span></p>' +
+        (tec ? '<p class="cp-meta">' + Cp_esc_(tec) + '</p>' : '') + (i.fotos.length ? '<div class="cp-fotos">' + i.fotos.map(function (f) { return '<a href="' + Cp_esc_(f.url) + '" target="_blank" rel="noopener">' + Cp_esc_(f.nome) + '</a>'; }).join("") + '</div>' : '') +
+        (i.falta && i.falta.length ? '<p class="cp-falta">Falta: ' + Cp_esc_(i.falta.join(", ")) + '</p>' : '') + '</div>';
+    }).join("");
+    var botoes = [];
+    if (a.iniciarCotacao) botoes.push('<button type="button" class="btn-primary" data-f="iniciar">Especificação conferida: iniciar cotação</button>');
+    if (a.editar) botoes.push('<button type="button" class="btn-secondary" data-f="editar">Editar a especificação</button>');
+    if (a.devolver) botoes.push('<button type="button" class="btn-secondary" data-f="devolver">Devolver a especificação</button>');
+    if (a.cancelar) botoes.push('<button type="button" class="btn-secondary" data-f="cancelar">Cancelar o pedido</button>');
+    if (botoes.length) h += '<div class="cp-acoes">' + botoes.join("") + '</div>';
+    if (typeof Cp_secaoCotacoes_ === "function") h += Cp_secaoCotacoes_(q);
+    if (typeof Cp_secaoPedido_ === "function") h += Cp_secaoPedido_(q);
+    if (typeof Cp_secaoFinanceiro_ === "function") h += Cp_secaoFinanceiro_(q);
+    h += '<div class="cp-sec">Histórico</div><div class="cp-hist">' + (q.historico || []).map(function (x) { return '<div><span class="q">' + Cp_esc_(x.em) + ' · ' + Cp_esc_(x.por) + (x.para ? ' · ' + Cp_esc_(x.para) : '') + '</span><br>' + Cp_esc_(x.texto) + '</div>'; }).join("") + '</div>';
+    corpo.innerHTML = h;
+    var b = function (sel, fn) { var el = corpo.querySelector('[data-f="' + sel + '"]'); if (el) el.onclick = fn; };
+    b("iniciar", function () { Cp_chamar_("iniciarCotacao", { id: q.id }, function (r) { Cp_recarregarFicha_(q.id, r.message); }, function (m) { Cp_msg_("cpFichaMsg", m); }, { carregando: "Salvando…" }); });
+    b("editar", function () { corpo.innerHTML = '<div id="cpFormG"></div>'; Cp_formRequisicao_(Cp_$_("cpFormG"), q); });
+    b("devolver", function () { Cp_pedirTexto_("Devolver a especificação", "Quem pediu recebe o texto no sistema e no resumo de e-mail da manhã, e o pedido volta para \"Solicitada\" até completar.", "O que falta ou está ambíguo", 10, function (t, ov) { Cp_chamar_("devolverEspec", { id: q.id, texto: t }, function (r) { ov.remove(); Cp_recarregarFicha_(q.id, r.message); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Devolver"); });
+    b("cancelar", function () { Cp_cancelar_(q, function (r) { Cp_recarregarFicha_(q.id, r.message); }); });
+    if (typeof Cp_ligarCotacoes_ === "function") Cp_ligarCotacoes_(q, corpo);
+    if (typeof Cp_ligarPedido_ === "function") Cp_ligarPedido_(q, corpo);
+    if (typeof Cp_ligarFinanceiro_ === "function") Cp_ligarFinanceiro_(q, corpo);
+  }
+
+  // =========================================================
+  // FORNECEDORES
+  // =========================================================
+  function Compras_renderFornecedores_(div) {
+    var ini = CP.ini;
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Fornecedores", "Cadastro único de fornecedores: CNPJ que não se repete, dados pela consulta de CNPJ, contato e e-mail para pedidos. Arquivar não apaga: o histórico de compras continua.",
+      (ini.comprador ? '<button type="button" class="btn-secondary" id="cpImportar"><i class="fas fa-file-import" aria-hidden="true"></i>&nbsp;Importar da planilha</button><button type="button" class="btn-primary" id="cpNovoForn"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo fornecedor</button>' : '')) +
+      '<div class="cp-filtros"><div>' + Cp_campo_("Buscar", '<input type="search" id="cpFBusca" placeholder="Nome, contato ou CNPJ" value="' + Cp_esc_(CP.fornBusca) + '">') + '</div><div>' + Cp_campo_("Categoria", '<select id="cpFCat">' + Cp_opcoes_(ini.categoriasFornecedor, "", "Todas") + '</select>') + '</div>' +
+      '<div><label class="cp-check"><input type="checkbox" id="cpFArq"' + (CP.fornArquivados ? " checked" : "") + '> Mostrar arquivados</label></div></div><div id="cpForn"><div class="cp-vazio">Carregando…</div></div></div>';
+    var t = null;
+    var carregar = function () {
+      Cp_chamar_("fornecedores", { busca: CP.fornBusca, categoria: Cp_$_("cpFCat").value, incluirArquivados: CP.fornArquivados }, function (r) {
+        var el = Cp_$_("cpForn");
+        if (!r.fornecedores.length) { el.innerHTML = '<div class="cp-vazio">Nenhum fornecedor ' + (CP.fornBusca ? 'com essa busca' : 'cadastrado ainda') + '. ' + (ini.comprador ? 'Toque em "Novo fornecedor" ou importe a lista da planilha.' : '') + '</div>'; return; }
+        el.innerHTML = '<table class="cp-tabela"><thead><tr><th>Código</th><th>Fornecedor</th><th>CNPJ/CPF</th><th>Contato</th><th>E-mail para pedidos</th><th>Categorias</th></tr></thead><tbody>' + r.fornecedores.map(function (f) {
+          return '<tr data-forn="' + Cp_esc_(f.id) + '" style="cursor:pointer' + (f.ativo ? '' : ';opacity:.6') + '"><td data-r="Código">' + Cp_esc_(f.codigo) + '</td><td data-r="Fornecedor"><b>' + Cp_esc_(f.nome) + '</b>' + (f.ativo ? '' : ' <span class="cp-selo cinza">Arquivado</span>') + (f.cidade ? '<br><span class="cp-meta">' + Cp_esc_(f.cidade) + '</span>' : '') + '</td><td data-r="CNPJ/CPF">' + Cp_esc_(f.documento) + '</td>' +
+            '<td data-r="Contato">' + Cp_esc_([f.contato, f.telefone].filter(Boolean).join(" · ")) + '</td><td data-r="E-mail">' + Cp_esc_(f.email) + '</td><td data-r="Categorias">' + Cp_esc_(f.categorias.join(", ")) + '</td></tr>';
+        }).join("") + '</tbody></table>';
+        el.querySelectorAll("[data-forn]").forEach(function (tr) { tr.onclick = function () { Cp_abrirFornecedor_(tr.getAttribute("data-forn"), carregar); }; });
+      }, function (m) { Cp_msg_("cpForn", m); });
+    };
+    Cp_$_("cpFBusca").oninput = function () { clearTimeout(t); var v = this.value; t = setTimeout(function () { CP.fornBusca = v; carregar(); }, 400); };
+    Cp_$_("cpFCat").onchange = carregar;
+    Cp_$_("cpFArq").onchange = function () { CP.fornArquivados = this.checked; carregar(); };
+    if (Cp_$_("cpNovoForn")) Cp_$_("cpNovoForn").onclick = function () { Cp_formFornecedor_(null, carregar); };
+    if (Cp_$_("cpImportar")) Cp_$_("cpImportar").onclick = function () { Cp_importarFornecedores_(carregar); };
+    carregar();
+  }
+
+  function Cp_abrirFornecedor_(id, depois) {
+    Cp_gaveta_("Fornecedor", '<div class="cp-vazio">Carregando…</div>');
+    Cp_chamar_("fornecedor", { id: id }, function (r) {
+      var f = r.fornecedor, ini = CP.ini;
+      var h = '<div id="cpFornMsg"></div><p class="cp-card-tit">' + Cp_esc_(f.nome) + ' <span class="cp-meta">' + Cp_esc_(f.codigo) + '</span></p>' + (f.ativo ? '' : '<div class="cp-faixa aviso">Arquivado: ' + Cp_esc_(f.arquivadoMotivo) + '</div>') +
+        '<dl class="cp-det"><dt>Razão social</dt><dd>' + Cp_esc_(f.razao) + '</dd><dt>CNPJ/CPF</dt><dd>' + Cp_esc_(f.documento) + '</dd><dt>Endereço</dt><dd>' + Cp_esc_([f.endereco, f.cidade].filter(Boolean).join(" · ") || "—") + '</dd>' +
+        '<dt>Contato</dt><dd>' + Cp_esc_([f.contato, f.telefone, f.whatsapp ? "WhatsApp " + f.whatsapp : ""].filter(Boolean).join(" · ") || "—") + '</dd><dt>E-mail para pedidos</dt><dd>' + Cp_esc_(f.email || "—") + '</dd>' +
+        '<dt>Categorias</dt><dd>' + Cp_esc_(f.categorias.join(", ") || "—") + '</dd><dt>Prazo médio</dt><dd>' + Cp_esc_(f.prazoMedioDias ? f.prazoMedioDias + " dias" : "—") + '</dd><dt>Condição de pagamento</dt><dd>' + Cp_esc_(f.condicaoPagamento || "—") + '</dd>' +
+        '<dt>Observações</dt><dd>' + Cp_esc_(f.obs || "—") + '</dd><dt>Atualizado</dt><dd>' + Cp_esc_([f.atualizadoEm, f.atualizadoPor].filter(Boolean).join(" · ")) + '</dd></dl>' +
+        (ini.comprador ? '<div class="cp-acoes"><button type="button" class="btn-primary" data-x="editar">Editar</button>' + (f.ativo ? '<button type="button" class="btn-secondary" data-x="arquivar">Arquivar</button>' : '<button type="button" class="btn-secondary" data-x="reativar">Reativar</button>') + '</div>' : '') +
+        '<div class="cp-sec">Compras com este fornecedor</div>' + (f.compras.length ? '<table class="cp-tabela"><tbody>' + f.compras.map(function (c) { return '<tr><td data-r="Pedido">' + Cp_esc_(c.numero) + ' · ' + Cp_esc_(c.requisicao) + '</td><td data-r="Item">' + Cp_esc_(c.titulo) + '</td><td data-r="Data">' + Cp_esc_(c.em) + '</td><td class="n" data-r="Valor">' + Cp_esc_(c.valorTxt) + '</td></tr>'; }).join("") + '</tbody></table>' : '<p class="cp-meta">Nenhuma compra registrada ainda (' + f.cotacoes + ' cotações lançadas).</p>');
+      Cp_$_("cpGavetaCorpo").innerHTML = h;
+      var g = Cp_$_("cpGavetaCorpo");
+      var bx = function (s, fn) { var el = g.querySelector('[data-x="' + s + '"]'); if (el) el.onclick = fn; };
+      bx("editar", function () { Cp_formFornecedor_(f, depois); });
+      bx("arquivar", function () { Cp_pedirTexto_("Arquivar " + f.nome, "O fornecedor sai da escolha nas cotações; o histórico de compras continua.", "Motivo", 10, function (t, ov) { Cp_chamar_("arquivarFornecedor", { id: f.id, motivo: t }, function (rr) { ov.remove(); Cp_abrirFornecedor_(f.id, depois); if (depois) depois(); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Arquivar"); });
+      bx("reativar", function () { Cp_chamar_("arquivarFornecedor", { id: f.id, reativar: true }, function () { Cp_abrirFornecedor_(f.id, depois); if (depois) depois(); }, function (m) { Cp_msg_("cpFornMsg", m); }); });
+    }, function (m) { Cp_msg_("cpGavetaCorpo", m); });
+  }
+
+  function Cp_formFornecedor_(f, depois) {
+    var ini = CP.ini; f = f || { categorias: [] };
+    Cp_gaveta_(f.id ? "Editar fornecedor" : "Novo fornecedor", '<div id="cpFF"></div>');
+    var el = Cp_$_("cpFF");
+    el.innerHTML = '<div class="cp-grade2">' + Cp_campo_("CNPJ (ou CPF de pessoa física)", '<input type="text" id="ffDoc" inputmode="numeric" value="' + Cp_esc_(f.documento) + '">', "Toque em Consultar CNPJ para preencher razão social e endereço.") +
+      '<div class="cp-campo"><label>&nbsp;</label><button type="button" class="btn-secondary" id="ffConsultar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>&nbsp;Consultar CNPJ</button></div></div>' +
+      '<div class="cp-grade2">' + Cp_campo_("Razão social", '<input type="text" id="ffRazao" maxlength="160" value="' + Cp_esc_(f.razao) + '">') + Cp_campo_("Nome fantasia", '<input type="text" id="ffFant" maxlength="160" value="' + Cp_esc_(f.fantasia) + '">') + '</div>' +
+      Cp_campo_("Endereço", '<input type="text" id="ffEnd" maxlength="300" value="' + Cp_esc_(f.endereco) + '">') +
+      '<div class="cp-grade3">' + Cp_campo_("Cidade", '<input type="text" id="ffCid" maxlength="80" value="' + Cp_esc_(f.cidadeNome) + '">') + Cp_campo_("UF", '<input type="text" id="ffUf" maxlength="2" value="' + Cp_esc_(f.uf) + '">') + Cp_campo_("Prazo médio de entrega (dias)", '<input type="text" inputmode="numeric" id="ffPrazo" value="' + Cp_esc_(f.prazoMedioDias) + '">') + '</div>' +
+      '<div class="cp-grade3">' + Cp_campo_("Contato", '<input type="text" id="ffCont" maxlength="120" value="' + Cp_esc_(f.contato) + '">') + Cp_campo_("Telefone", '<input type="text" id="ffTel" maxlength="40" value="' + Cp_esc_(f.telefone) + '">') + Cp_campo_("WhatsApp", '<input type="text" id="ffWa" maxlength="40" value="' + Cp_esc_(f.whatsapp) + '">') + '</div>' +
+      Cp_campo_("E-mail para pedidos", '<input type="email" id="ffEmail" maxlength="160" value="' + Cp_esc_(f.email) + '">', "Para onde vai o pedido de compra pelo Enviar documento.") +
+      Cp_campo_("Categorias", ini.categoriasFornecedor.map(function (c) { return '<label class="cp-check"><input type="checkbox" data-cat value="' + Cp_esc_(c) + '"' + (f.categorias.indexOf(c) >= 0 ? " checked" : "") + '> ' + Cp_esc_(c) + '</label>'; }).join("")) +
+      Cp_campo_("Condição de pagamento usual", '<input type="text" id="ffCond" maxlength="200" value="' + Cp_esc_(f.condicaoPagamento) + '">') +
+      Cp_campo_("Observações", '<textarea id="ffObs" maxlength="1000">' + Cp_esc_(f.obs) + '</textarea>') +
+      '<div id="ffMsg"></div><div class="cp-acoes"><button type="button" class="btn-primary" id="ffSalvar">Salvar fornecedor</button></div>';
+    Cp_$_("ffConsultar").onclick = function () {
+      Cp_chamar_("consultarCnpj", { documento: Cp_$_("ffDoc").value }, function (r) {
+        var d = r.dados;
+        Cp_$_("ffDoc").value = d.documento; Cp_$_("ffRazao").value = d.razao; if (d.fantasia) Cp_$_("ffFant").value = d.fantasia; Cp_$_("ffEnd").value = d.endereco; Cp_$_("ffCid").value = d.cidade; Cp_$_("ffUf").value = d.uf;
+        if (d.telefone && !Cp_$_("ffTel").value) Cp_$_("ffTel").value = d.telefone; if (d.email && !Cp_$_("ffEmail").value) Cp_$_("ffEmail").value = d.email;
+        Cp_msg_("ffMsg", r.message + (d.situacao && !/ATIVA/i.test(d.situacao) ? " Atenção: situação cadastral " + d.situacao + "." : ""), r.jaCadastrado ? "aviso" : "ok");
+      }, function (m) { Cp_msg_("ffMsg", m); }, { carregando: "Consultando o CNPJ…" });
+    };
+    var salvar = function (confirmar) {
+      var dados = { id: f.id || "", documento: Cp_$_("ffDoc").value, razao: Cp_$_("ffRazao").value, fantasia: Cp_$_("ffFant").value, endereco: Cp_$_("ffEnd").value, cidade: Cp_$_("ffCid").value, uf: Cp_$_("ffUf").value,
+        prazoMedioDias: Cp_$_("ffPrazo").value, contato: Cp_$_("ffCont").value, telefone: Cp_$_("ffTel").value, whatsapp: Cp_$_("ffWa").value, email: Cp_$_("ffEmail").value, condicaoPagamento: Cp_$_("ffCond").value, obs: Cp_$_("ffObs").value,
+        categorias: Array.prototype.map.call(document.querySelectorAll("#cpFF [data-cat]:checked"), function (x) { return x.value; }), confirmarParecido: !!confirmar };
+      Cp_chamar_("salvarFornecedor", dados, function (r) {
+        if (r.parecidos) { Cp_$_("ffMsg").innerHTML = '<div class="cp-faixa aviso">' + Cp_esc_(r.message) + '<div class="cp-acoes"><button type="button" class="btn-secondary" id="ffMesmo">Salvar mesmo assim</button></div></div>'; Cp_$_("ffMesmo").onclick = function () { salvar(true); }; return; }
+        if (depois) depois();
+        Cp_abrirFornecedor_(r.fornecedor.id, depois);
+      }, function (m) { Cp_msg_("ffMsg", m); }, { carregando: "Salvando…" });
+    };
+    Cp_$_("ffSalvar").onclick = function () { salvar(false); };
+  }
+
+  function Cp_importarFornecedores_(depois) {
+    var ov = Cp_modal_("Importar fornecedores da planilha", '<p class="cp-txt">Na planilha, selecione a linha de títulos e as linhas dos fornecedores, copie e cole aqui. Títulos reconhecidos: CNPJ, Razão social, Nome fantasia, Contato, Telefone, WhatsApp, E-mail, Categoria, Prazo, Cidade, UF, Endereço, Condição, Observações.</p>' +
+      '<p class="cp-txt"><b>Nada já preenchido é trocado:</b> CNPJ que já existe só ganha os campos vazios; CNPJ novo vira fornecedor.</p>' + Cp_campo_("Linhas copiadas", '<textarea id="cpImpTxt" style="min-height:160px"></textarea>') + '<div id="cpImpRes"></div>',
+      '<button type="button" class="btn-secondary" data-x>Fechar</button><button type="button" class="btn-secondary" data-previa>Ver a prévia</button><button type="button" class="btn-primary" data-aplicar disabled>Aplicar a importação</button>', 720);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    var mostrar = function (r) {
+      Cp_$_("cpImpRes").innerHTML = '<div class="cp-faixa ok">' + Cp_esc_(r.message) + '</div>' + (r.recusados.length ? '<p class="cp-meta">Recusadas: ' + Cp_esc_(r.recusados.map(function (x) { return "linha " + x.linha + " (" + x.motivo + ")"; }).join("; ")) + '</p>' : '') +
+        (r.completados.length ? '<p class="cp-meta">Completados: ' + Cp_esc_(r.completados.map(function (x) { return x.nome + " (" + x.campos.length + " campos)"; }).join("; ")) + '</p>' : '');
+    };
+    ov.querySelector("[data-previa]").onclick = function () { Cp_chamar_("importarFornecedores", { texto: Cp_$_("cpImpTxt").value }, function (r) { mostrar(r); ov.querySelector("[data-aplicar]").disabled = !(r.novos.length || r.completados.length); }, function (m) { Cp_msg_("cpImpRes", m); }); };
+    ov.querySelector("[data-aplicar]").onclick = function () { Cp_chamar_("importarFornecedores", { texto: Cp_$_("cpImpTxt").value, aplicar: true }, function (r) { mostrar(r); ov.querySelector("[data-aplicar]").disabled = true; if (depois) depois(); }, function (m) { Cp_msg_("cpImpRes", m); }, { carregando: "Importando…" }); };
+  }
+
+  // =========================================================
+  // REGRAS DE COMPRAS (Administrador e Diretoria editam; compradores consultam)
+  // =========================================================
+  function Compras_renderRegras_(div) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Regras de compras", "Quem compra, quem aprova até que valor, quantos orçamentos cada faixa pede e os dados da empresa no pedido de compra. Cada alteração vira uma versão nova, com o motivo.") + '<div id="cpRegras"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_chamar_("regras", {}, function (r) {
+      var g = r.regras, ed = r.podeEditar, dis = ed ? "" : " disabled";
+      var pessoas = function (campo) { return '<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px">' + r.equipe.map(function (u) { return '<label class="cp-check"><input type="checkbox" data-' + campo + ' value="' + Cp_esc_(u.id) + '"' + ((g[campo] || []).indexOf(u.id) >= 0 ? " checked" : "") + dis + '> ' + Cp_esc_(u.nome) + ' <span class="cp-meta">' + Cp_esc_(u.perfil + (u.area ? " · " + u.area : "")) + '</span></label>'; }).join("") + '</div>'; };
+      var h = (ed ? '' : '<div class="cp-faixa">Só o Administrador e a Diretoria alteram as regras. Você está vendo as regras em vigor.</div>') +
+        '<div class="cp-caixa"><h3>Compradores</h3><div class="cp-grade2">' + Cp_campo_("Comprador (recebe os pedidos)", pessoas("compradores"), "O primeiro ativo da lista recebe a atividade de cada pedido novo.") +
+        Cp_campo_("Substituto (férias e ausências)", pessoas("substitutos"), "Também pode cotar, fazer o pedido e aprovar a faixa do comprador. Assume quando o comprador está inativo.") + '</div>' +
+        Cp_campo_("Área de Compras", '<select id="rgArea"' + dis + '>' + Cp_opcoes_(r.areas.map(function (a) { return { v: a.codigo, t: a.nome }; }), g.areaCompras) + '</select>', "Define o gestor que cobra as compras paradas (hoje: " + (r.gestoresCompras.join(", ") || "nenhum gestor nesta área; vai para a Diretoria") + ").") + '</div>' +
+        '<div class="cp-caixa"><h3>Aprovação por valor e cotações mínimas</h3><table class="cp-tabela"><thead><tr><th>Faixa</th><th>Valor total até</th><th>Quem aprova</th><th>Cotações mínimas</th></tr></thead><tbody>' + g.faixas.map(function (f, i) {
+          var ult = i === g.faixas.length - 1;
+          return '<tr><td data-r="Faixa">' + (i + 1) + '</td><td data-r="Até">' + (ult ? 'acima da faixa anterior' : '<input type="text" inputmode="decimal" data-fx-ate="' + i + '" value="' + Cp_esc_(f.ate) + '"' + dis + '>') + '</td>' +
+            '<td data-r="Quem aprova"><select data-fx-apr="' + i + '"' + dis + '>' + Cp_opcoes_(Cp_mapaOpcoes_(r.niveis), f.aprovador) + '</select></td><td data-r="Cotações"><input type="number" min="1" max="5" data-fx-cot="' + i + '" value="' + Cp_esc_(f.cotacoes) + '"' + dis + '></td></tr>';
+        }).join("") + '</tbody></table><p class="cp-meta">Quem pediu não aprova a própria compra. Acima da faixa do comprador, quem lançou ou escolheu a cotação também não aprova. Com menos cotações que o mínimo, o comprador escreve a justificativa e a compra aparece marcada para o Financeiro.</p></div>' +
+        '<div class="cp-caixa"><h3>Prazos</h3><div class="cp-grade3">' + Cp_campo_("Cotar (dias úteis, urgência normal e alta)", '<input type="number" min="1" max="10" id="rgCotar" value="' + Cp_esc_(g.prazos.cotarDiasUteis) + '"' + dis + '>') +
+        Cp_campo_("Cotar (dias úteis, urgência baixa)", '<input type="number" min="1" max="15" id="rgCotarBaixa" value="' + Cp_esc_(g.prazos.cotarBaixaDiasUteis) + '"' + dis + '>') + Cp_campo_("Crítica: horas para cotar", '<input type="number" min="1" max="8" id="rgCritica" value="' + Cp_esc_(g.prazos.criticaHoras) + '"' + dis + '>') + '</div>' +
+        '<div class="cp-grade3">' + Cp_campo_("Aprovada sem pedido: avisar após (dias úteis)", '<input type="number" min="1" max="10" id="rgParado" value="' + Cp_esc_(g.prazos.paradoDiasUteis) + '"' + dis + '>') + Cp_campo_("Gestor de Compras cobra após (dias úteis)", '<input type="number" min="1" max="15" id="rgGestor" value="' + Cp_esc_(g.prazos.gestorAposDiasUteis) + '"' + dis + '>') +
+        Cp_campo_("Resumo de e-mail a partir de", '<input type="time" id="rgHora" value="' + Cp_esc_(g.avisos.horaResumo) + '"' + dis + '>') + '</div></div>' +
+        '<div class="cp-caixa"><h3>Pedido de compra (folha A4)</h3>' + Cp_campo_("Endereço de entrega", '<textarea id="rgEntrega" maxlength="400"' + dis + '>' + Cp_esc_(g.empresa.enderecoEntrega) + '</textarea>') + Cp_campo_("Endereço de faturamento", '<textarea id="rgFat" maxlength="400"' + dis + '>' + Cp_esc_(g.empresa.enderecoFaturamento) + '</textarea>') +
+        Cp_campo_("Observação no pedido", '<textarea id="rgObs" maxlength="600"' + dis + '>' + Cp_esc_(g.empresa.observacaoPedido) + '</textarea>') + '</div>' +
+        (ed ? Cp_campo_("O que mudou e por quê", '<textarea id="rgMotivo" maxlength="500"></textarea>', "Obrigatório (pelo menos 10 letras). Fica no histórico de versões.") + '<div id="rgMsg"></div><div class="cp-acoes"><button type="button" class="btn-primary" id="rgSalvar">Salvar as regras</button></div>' : '') +
+        '<div class="cp-sec">Versões</div>' + (r.versoes.length ? r.versoes.map(function (v) { return '<p class="cp-meta">Versão ' + v.versao + ' · ' + Cp_esc_(v.em) + ' · ' + Cp_esc_(v.por) + ' · ' + Cp_esc_(v.motivo) + '</p>'; }).join("") : '<p class="cp-meta">Em uso o padrão aprovado pelo dono (21/10/2026).</p>');
+      var el = Cp_$_("cpRegras"); el.innerHTML = h;
+      if (!ed) return;
+      Cp_$_("rgSalvar").onclick = function () {
+        var marcados = function (c) { return Array.prototype.map.call(el.querySelectorAll("[data-" + c + "]:checked"), function (x) { return x.value; }); };
+        var nova = { compradores: marcados("compradores"), substitutos: marcados("substitutos"), areaCompras: Cp_$_("rgArea").value,
+          faixas: g.faixas.map(function (f, i) { var a = el.querySelector('[data-fx-ate="' + i + '"]'); return { ate: a ? a.value : null, aprovador: el.querySelector('[data-fx-apr="' + i + '"]').value, cotacoes: el.querySelector('[data-fx-cot="' + i + '"]').value }; }),
+          prazos: { cotarDiasUteis: Number(Cp_$_("rgCotar").value), cotarBaixaDiasUteis: Number(Cp_$_("rgCotarBaixa").value), criticaHoras: Number(Cp_$_("rgCritica").value), paradoDiasUteis: Number(Cp_$_("rgParado").value), gestorAposDiasUteis: Number(Cp_$_("rgGestor").value), pedidoDiasUteis: g.prazos.pedidoDiasUteis, entregaDiasUteis: g.prazos.entregaDiasUteis },
+          empresa: { enderecoEntrega: Cp_$_("rgEntrega").value, enderecoFaturamento: Cp_$_("rgFat").value, observacaoPedido: Cp_$_("rgObs").value }, avisos: { horaResumo: Cp_$_("rgHora").value || "08:00" } };
+        Cp_chamar_("regras", { salvar: nova, motivo: Cp_$_("rgMotivo").value }, function (rr) { CP.ini = null; Compras_garantirInicio_(function () {}); Compras_renderRegras_(div); setTimeout(function () { alert(rr.message); }, 50); }, function (m) { Cp_msg_("rgMsg", m); }, { carregando: "Salvando…" });
+      };
+    }, function (m) { Cp_msg_("cpRegras", m); });
+  }
+</script>
