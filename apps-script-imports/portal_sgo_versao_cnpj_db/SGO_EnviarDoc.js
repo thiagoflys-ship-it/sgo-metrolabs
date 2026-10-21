@@ -64,6 +64,9 @@ var ENVDOC_RAIZES = [
   { rx: /^METROLABS_CME_SISTEMA$/i, tipo: 'Planejamento técnico do CME', classe: 'CLIENTE', frase: 'O planejamento deve ser revisado pelo responsável técnico da unidade.' },
   { rx: /^METROLABS_CRONEXEC_SISTEMA$/i, tipo: 'Cronograma de execução', classe: 'CLIENTE', frase: 'As datas podem ser ajustadas em comum acordo com a equipe da unidade.' },
   { rx: /^METROLABS_REGOP_SISTEMA$/i, tipo: 'Registro operacional', classe: 'CLIENTE', frase: 'Recomendamos arquivar o registro junto à documentação da unidade.' },
+  // 21/10/2026: Comercial nativo (SGO_Comercial_Propostas.js): proposta ao cliente; o relatório mensal é interno.
+  { rx: /^Comercial - Propostas$/i, tipo: 'Proposta comercial', classe: 'CLIENTE', frase: 'A proposta apresenta o escopo, os valores e as condições comerciais. Para aprovar, basta responder a este e-mail confirmando o aceite ou enviar o pedido de compra.' },
+  { rx: /^Comercial - Relat/i, tipo: 'Relatório do Comercial', classe: 'INTERNO' },
   { rx: /^Inventario de Equipamentos - Documentos Gerados$/i, tipo: 'Inventário de equipamentos', classe: 'CLIENTE', frase: 'O inventário lista os equipamentos levantados e a análise da situação de cada um.' },
   { rx: /^Programa de conduta - Relat/i, tipo: 'Relatório do Programa de conduta', classe: 'BLOQUEADO' },
   { rx: /^Conduta - Fotos/i, tipo: 'Foto de ocorrência do Programa de conduta', classe: 'BLOQUEADO' },
@@ -343,6 +346,11 @@ function EnviarDoc_contatosCliente_(cliente) {
     if (c) add(c.CONTATO || EnviarDoc_nomeCliente_(c), c.EMAIL, c.TELEFONE, 'Cadastro do cliente');
     EnviarDoc_unidades_().filter(function (u) { return String(u.CLIENTE_ID) === String(cliente.id) && SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO'; })
       .forEach(function (u) { add(u.RESPONSAVEL || u.NOME_UNIDADE, u.EMAIL, u.TELEFONE || u.CELULAR, 'Unidade ' + EnviarDoc_s_(u.NOME_UNIDADE)); });
+    // 21/10/2026: contatos do cliente e das unidades (CAD_CONTATOS, Comercial), ativos e com o cargo.
+    try {
+      SGO_DATA.getAll('CAD_CONTATOS').filter(function (k) { return String(k.CLIENTE_ID) === String(cliente.id) && SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') === 'ATIVO'; })
+        .forEach(function (k) { add(k.NOME, k.EMAIL, k.CELULAR || k.TELEFONE, 'Contato do cliente' + (EnviarDoc_s_(k.CARGO) ? ' (' + EnviarDoc_s_(k.CARGO) + ')' : '')); });
+    } catch (e) {}
     try {
       SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
         return SGO_UTILS.safeUpper(u.PERFIL) === 'CLIENTE' && String(u.CLIENTE_ID) === String(cliente.id) && SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO';
