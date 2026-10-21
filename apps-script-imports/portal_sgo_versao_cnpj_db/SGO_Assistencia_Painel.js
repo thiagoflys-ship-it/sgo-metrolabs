@@ -132,7 +132,7 @@ function Assistencia_garantirRotina_() {
 }
 function Assistencia_rotina_(quando, forcar) {
   var r = {};
-  try { if (!AstF_lerAba_(AST_ABAS.CHAMADOS).length && !AstF_lerAba_(AST_ABAS.OS).length && !forcar) return { fora: 'Assistência ainda sem uso' }; } catch (e) { return { fora: 'Assistência ainda sem uso' }; }
+  // sem chamado ainda, a rotina só prepara o histórico do Auvo (índice do acervo) e os questionários; o resto fica de fora
   var props = PropertiesService.getScriptProperties(), ultima = Number(props.getProperty(AST_ROTINA_PROP)) || 0, agoraMs = (quando || new Date()).getTime();
   if (!forcar && agoraMs - ultima < 55 * 60 * 1000) return { fora: 'rodou há menos de 1 hora' };
   props.setProperty(AST_ROTINA_PROP, String(agoraMs));
@@ -143,6 +143,12 @@ function Assistencia_rotina_(quando, forcar) {
     var n = 0;
     Ast_ler_(AST_ABAS.OS).forEach(function (o) { if (n < 3 && Ast_up_(o.SITUACAO) === 'ENCERRADA' && !Ast_s_(o.RELATORIO_PDF_ID)) { AstR_emitirRelatorioOS_(sis, o.ID, {}); n++; } });
     return { gerados: n };
+  });
+  // os 13 questionários do Auvo viram modelos de checklist assim que a lista de apoio do acervo existir (uma vez; só acrescenta)
+  passo('questionarios', function () {
+    if (Ast_ler_(AST_ABAS.MODELOS).some(function (m) { return Ast_up_(m.ORIGEM) === 'AUVO'; })) return { fora: 'já importados' };
+    if (!AstF_listaApoio_('questionarios')) return { fora: 'lista de questionários do acervo ainda não copiada' };
+    return AstF_importarDoAcervo_(sis, { sistema: true });
   });
   passo('acervo', function () { var e = Ast_cfgChave_('ACERVO_INDICE', null); if (e && e.concluido) return { fora: 'índice concluído' }; return AstF_indexarAcervo_({ lote: 120, orcamentoMs: 90000 }); });
   passo('relatorioMensal', function () { return AstP_relatorioAutomatico_(quando); });
@@ -426,7 +432,7 @@ function AstP_buscarCadastro_(eu, d) {
 }
 
 var AST_ACOES = {
-  iniciar: function (eu) { var b = AstP_inicio_(eu); if (!eu.cliente) { try { Assistencia_rotina_(new Date(), false); } catch (e) {} } return b; },
+  iniciar: function (eu) { var b = AstP_inicio_(eu); if (!eu.cliente) { try { if (eu.gestao) Assistencia_garantirRotina_(); Assistencia_rotina_(new Date(), false); } catch (e) {} } return b; },
   acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, cliente: eu.cliente, podeRegras: eu.regras, admin: eu.perfil === 'ADMIN', ligada: Ast_ligada_() }; },
   avisosLidos: function (eu) { return { marcados: AstP_avisosLidos_(eu) }; },
   buscarCadastro: function (eu, d) { return AstP_buscarCadastro_(eu, d); },

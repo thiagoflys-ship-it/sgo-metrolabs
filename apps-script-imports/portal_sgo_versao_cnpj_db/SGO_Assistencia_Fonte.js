@@ -230,8 +230,8 @@ function AstF_opcoes_(q) {
   return l.map(function (x) { return typeof x === 'object' && x ? Ast_s_(x.description || x.text || x.value || x.name) : Ast_s_(x); }).filter(Boolean);
 }
 /** Importa os questionários do Auvo como modelos (ORIGEM AUVO) e liga aos tipos que o Auvo exigia. Só acrescenta. */
-function AstF_importarDoAcervo_(eu) {
-  Ast_exigir_(eu, 'REGRAS', 'trazer os questionários do Auvo');
+function AstF_importarDoAcervo_(eu, opcoes) {
+  if (!(opcoes && opcoes.sistema)) Ast_exigir_(eu, 'REGRAS', 'trazer os questionários do Auvo');
   var qs = AstF_listaApoio_('questionarios');
   if (!qs) throw new Error('Não foi possível trazer os questionários: a lista de questionários do acervo do Auvo não foi encontrada. Ela é copiada na etapa 0 (Integração Auvo > Acervo do Auvo, fase "Listas de apoio"); depois volte aqui');
   var tiposAuvo = AstF_listaApoio_('tipos_de_tarefa') || [];
