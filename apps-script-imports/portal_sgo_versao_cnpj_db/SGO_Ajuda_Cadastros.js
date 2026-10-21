@@ -547,6 +547,9 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "Aparece \"Os dois equipamentos têm números de série diferentes\".", oQueFazer: "Eles não são o mesmo equipamento. Se um número estiver errado, toque em \"Abrir o cadastro\", corrija e refaça." },
         { situacao: "Aparece \"O destino escolhido está inativo.\"", oQueFazer: "Escolha um destino ativo, ou reative o destino antes, e refaça." },
         { situacao: "Aparece \"o cliente não tem CNPJ válido\" ao criar a unidade principal.", oQueFazer: "Toque em \"Abrir o cadastro\", informe o CNPJ do cliente, salve e tente de novo." },
+        { situacao: "Unidade com nome ou CNPJ de outra empresa pendurada no cliente errado.", oQueFazer: "Escolha a unidade como origem, a ação Desvincular (ou Transferir, se já sabe o cliente certo), escreva o motivo e toque em \"Conferir o impacto\". A ligação da unidade com o Auvo continua guardada com ela; os equipamentos e documentos acompanham só quando há cliente novo." },
+        { situacao: "Quero excluir uma unidade que só tem a ligação com o Auvo ou um contato.", oQueFazer: "Escolha a unidade, a ação Excluir e toque em \"Conferir o impacto\". Se a ligação com o Auvo foi criada pelo SGO+, ela fica guardada como de cadastro excluído e o contato da unidade fica inativo (nada é apagado). Se a unidade é o cadastro original de um cliente do Auvo, ou se o Auvo tem atendimento nesse cliente, a prévia pede Inativar ou Consolidar." },
+        { situacao: "Aparece \"Excluir de vez é feito por Administrador, Diretoria ou Gestor.\"", oQueFazer: "Use a ação Inativar, ou peça a um deles informando o cadastro e o motivo." },
         { situacao: "Não aparecem as ações nem o botão de prévia.", oQueFazer: "Seu perfil não é da gestão. Peça a um Gestor, Diretoria ou Administrador, informando o cadastro e o motivo." },
         { situacao: "O painel de vínculos não carregou.", oQueFazer: "Toque em \"Tentar de novo\". Se continuar, confira a conexão." }
       ],
@@ -556,7 +559,8 @@ function SGO_ajudaTelas_Cadastros_() {
         { perfil: "CLIENTE", pode: "Não vê esta tela." }
       ],
       perguntas: [
-        { p: "O que acompanha uma unidade transferida para outro cliente?", r: "Os equipamentos da unidade e os documentos do Arquivo de documentos. O arquivo fica na mesma pasta e o link não muda." },
+        { p: "O que acompanha uma unidade transferida para outro cliente?", r: "Os equipamentos da unidade, os documentos do Arquivo de documentos, os contatos da unidade e a ligação do cliente Auvo daquele endereço. O arquivo fica na mesma pasta e o link não muda." },
+        { p: "E a ligação com o Auvo quando desvinculo uma unidade?", r: "Continua guardada com a unidade. Enquanto ela estiver sem cliente, tarefa nova do Auvo nesse endereço fica pendente em Integração Auvo; ao transferir a unidade para um cliente, a ligação acompanha." },
         { p: "Certificados e laudos também mudam de cliente?", r: "Não. Certificados, laudos NR-13 e atendimentos do Auvo ficam no cadastro original. A prévia mostra quantos registros ficam." },
         { p: "Juntar cadastros repetidos apaga a origem?", r: "Não. Tudo vai para o destino e a origem fica inativa." },
         { p: "Desvincular é o mesmo que excluir?", r: "Não. Desvincular tira a unidade do cliente, ou o equipamento da unidade. O cadastro fica com vínculo pendente até ser ligado de novo." },

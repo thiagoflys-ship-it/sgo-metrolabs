@@ -49,9 +49,18 @@ Quem corrige vínculos (transferir, desvincular, consolidar): Administrador, Dir
 | Consolidar | Reunir cadastros duplicados da mesma identificação. A origem fica inativa para preservar o histórico. Não usar para juntar filiais diferentes. |
 | Inativar | Impedir novos usos, mantendo o cadastro e seu histórico. |
 | Reativar | Retomar o uso após conferir vínculo e duplicidades. |
-| Excluir | Remover cadastro sem dependências. O sistema impede a exclusão quando encontra vínculos. |
+| Excluir | Remover cadastro sem dependências (Administrador, Diretoria e Gestor). O sistema impede a exclusão quando encontra vínculos. |
 
 As mudanças do painel registram usuário, motivo e valores anteriores e posteriores na auditoria. Equipamentos acompanham a transferência de sua unidade; documentos antigos permanecem associados ao atendimento original.
+
+### Unidades ligadas ao Auvo (21/10/2026)
+
+- **Desvincular** uma unidade ligada ao Auvo não é mais impedido pela mensagem "vínculo com o Auvo incompleto ou repetido". A ligação da unidade com o cliente do Auvo continua guardada com a unidade; enquanto ela estiver sem cliente, tarefa nova do Auvo nesse endereço fica pendente em **Integração Auvo**.
+- **Transferir** a unidade para outro cliente leva junto os equipamentos, os documentos, os contatos da unidade e a ligação do cliente Auvo daquele endereço (quando existir).
+- **Excluir** uma unidade que só tem a ligação com o Auvo criada pelo próprio SGO+ e/ou um contato: a prévia mostra que a ligação fica guardada como de cadastro excluído (para consulta) e que o contato fica inativo; nada é apagado além da unidade. Se a unidade é o cadastro original de um cliente do Auvo (veio do Auvo) ou se o Auvo tem atendimento nesse cliente, a exclusão é impedida e a prévia orienta **Inativar** ou **Consolidar** — a ligação com o Auvo vale para o cadastro original.
+- Contatos da unidade acompanham Transferir e Consolidar; em Desvincular ficam no cadastro original.
+
+**Exemplo — unidade com o nome de outra empresa pendurada no cliente errado:** em Vínculos, escolha a unidade como origem, ação **Desvincular**, motivo, **Conferir impacto** e confirme. Depois, se a unidade não serve para nada, escolha a mesma unidade, ação **Excluir**, motivo, **Conferir impacto** e confirme; se ela é de fato um local de outro cliente, use **Transferir** para esse cliente.
 
 ## Avisos e carregamento
 

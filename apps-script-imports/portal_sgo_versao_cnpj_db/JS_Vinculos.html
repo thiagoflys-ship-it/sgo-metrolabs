@@ -26,7 +26,7 @@
     DESVINCULAR: { rotulo: "Desvincular", risco: true, texto: { UNIDADE: "Tira a unidade do cliente. Ela fica com vínculo pendente e bloqueia novos atendimentos até ser vinculada de novo.", EQUIPAMENTO: "Tira o equipamento da unidade. Ele fica com vínculo pendente até ser vinculado de novo." } },
     INATIVAR: { rotulo: "Inativar", risco: true, texto: { ALL: "Tira de uso e guarda o histórico. Pode ser reativado depois." } },
     REATIVAR: { rotulo: "Reativar", risco: false, texto: { ALL: "Volta a usar. O sistema confere antes se não cria duplicidade nem vínculo quebrado." } },
-    EXCLUIR: { rotulo: "Excluir", risco: true, texto: { ALL: "Apaga o cadastro. Só funciona se nada estiver ligado a ele; senão o sistema orienta a inativar." } }
+    EXCLUIR: { rotulo: "Excluir", risco: true, texto: { ALL: "Apaga o cadastro (Administrador, Diretoria ou Gestor). Só funciona se nada estiver ligado a ele; a ligação com o Auvo criada pelo SGO+ fica guardada e o contato da unidade fica inativo. Senão o sistema orienta a inativar." } }
   };
 
   function vincEsc_(v) { return CadUI_esc_(v); }
@@ -38,7 +38,7 @@
   function vincGestao_() { return !!(VINC.data && VINC.data.gestor); }
 
   // Nomes de tela no lugar das tabelas e campos internos (prévia e histórico).
-  var VINC_TABELAS = { CAD_CLIENTES: "Clientes", CAD_UNIDADES: "Unidades", CAD_EQUIPAMENTOS: "Equipamentos", DOC_DOCUMENTOS: "Arquivo de documentos", CERT_CALIBRACAO: "Certificados de calibração", NR13_LAUDOS: "Laudos NR-13", AUVO_TAREFAS: "Atendimentos do Auvo", AUVO_SYNC: "Integração com o Auvo", ATV_ATIVIDADES: "Atividades", AVS_AVISOS: "Avisos", MOV_POPS: "Registros operacionais" };
+  var VINC_TABELAS = { CAD_CLIENTES: "Clientes", CAD_UNIDADES: "Unidades", CAD_EQUIPAMENTOS: "Equipamentos", DOC_DOCUMENTOS: "Arquivo de documentos", CERT_CALIBRACAO: "Certificados de calibração", NR13_LAUDOS: "Laudos NR-13", AUVO_TAREFAS: "Atendimentos do Auvo", AUVO_SYNC: "Integração com o Auvo", CAD_CONTATOS: "Contatos",ATV_ATIVIDADES: "Atividades", AVS_AVISOS: "Avisos", MOV_POPS: "Registros operacionais" };
   var VINC_PREFIXOS = [["CAD_", "Cadastros"], ["DOC_", "Arquivo de documentos"], ["CERT", "Certificados de calibração"], ["PAD", "Padrões de referência"], ["NR13", "Laudos NR-13"], ["AUVO", "Integração com o Auvo"], ["FROTA", "Frota"], ["FRT", "Frota"], ["CND", "Programa de conduta"], ["CONDUTA", "Programa de conduta"], ["QUAL", "Painel de qualidade"], ["ATV", "Atividades"], ["AVS", "Avisos"], ["PGT", "PGT e POP"], ["POP", "PGT e POP"], ["MOV_POP", "Registros operacionais"], ["REGOP", "Registros operacionais"], ["CRON", "Cronograma de execução"], ["PLANCME", "Planejamento CME"], ["PCME", "Planejamento CME"], ["RELCAL", "Relatório de calibração"], ["DECL", "Declaração de execução"], ["INV", "Inventário de equipamentos"], ["AUTOREL", "Autoclaves"], ["LAVREL", "Lavadoras"], ["CADEIA", "Cadeia de frio"], ["ESTUFA", "Estufas e banhos-maria"], ["BT_", "Esterilização a baixa temperatura"]];
   var VINC_CAMPOS = { CLIENTE_ID: "Cliente", UNIDADE_ID: "Unidade", EQUIPAMENTO_ID: "Equipamento", STATUS: "Situação", ENTIDADE_ID: "Cadastro ligado no Auvo", CLIENTE_ID_SGO: "Cliente", EQUIPAMENTOS_ID_SGO: "Equipamentos", __DELETE__: "Cadastro" };
   function vincTabela_(n) { n = String(n || ""); if (VINC_TABELAS[n]) return VINC_TABELAS[n]; for (var i = 0; i < VINC_PREFIXOS.length; i++) if (n.indexOf(VINC_PREFIXOS[i][0]) === 0) return VINC_PREFIXOS[i][1]; return "Outros registros do SGO+"; }

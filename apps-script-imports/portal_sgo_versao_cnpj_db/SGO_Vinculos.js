@@ -21,7 +21,8 @@ const SGO_VINCULOS = (() => {
       // 17/10/2026: DOC_DOCUMENTOS lido inteiro — os documentos acompanham a unidade/equipamento
       // que muda de cliente (decisão do dono) e a prévia mostra nome e tipo de cada um.
       const core = Object.values(TABLES).includes(name) || name === 'AUVO_SYNC' || name === 'DOC_DOCUMENTOS';
-      const fields = headers.filter(h => /^(ID|CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|STATUS|FINALIZADA|STATUS_PENDENCIA|AUVO_TASK_ID)$/.test(h));
+      // 21/10/2026: AUVO_TAREFAS também traz o nº do cliente Auvo (excluir unidade ligada ao Auvo confere se há tarefa nele).
+      const fields = headers.filter(h => /^(ID|CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|STATUS|FINALIZADA|STATUS_PENDENCIA|AUVO_TASK_ID)$/.test(h) || (name === 'AUVO_TAREFAS' && h === 'CLIENTE_AUVO_ID'));
       if (!core && !fields.some(h => h !== 'ID' && h !== 'STATUS')) return;
       schema[name] = {sheetId:sheet.getSheetId(),headers:headers};
       tables[name] = [];
@@ -119,18 +120,33 @@ const SGO_VINCULOS = (() => {
         docsMovidos[text(d.ID)]=d;
       });
     }
+    // 21/10/2026: contatos (CAD_CONTATOS) da unidade acompanham a unidade quando ela muda de cliente, como os documentos.
+    // Sem cliente novo (Desvincular), ficam no cadastro original. Cada troca vai para a auditoria.
+    const contatosTratados={};
+    function moverContatos(filtro,campos) {
+      base(snapshot,'CAD_CONTATOS').filter(filtro).forEach(k=>{
+        Object.keys(campos).forEach(f=>change('CAD_CONTATOS',k,f,campos[f]));
+        contatosTratados[text(k.ID)]=k;
+      });
+    }
+    const avisosAuvo=[];
     function moveUnit(u,clientId) {
       change('CAD_UNIDADES',u,'CLIENTE_ID',clientId);
       base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===text(u.ID)).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',clientId));
       const equipsDaUnidade=new Set(base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===text(u.ID)).map(e=>text(e.ID)));
       moverDocs(d=>text(d.UNIDADE_ID)===text(u.ID)||(text(d.EQUIPAMENTO_ID)&&equipsDaUnidade.has(text(d.EQUIPAMENTO_ID))),clientId,text(u.ID));
+      if(clientId)moverContatos(k=>text(k.UNIDADE_ID)===text(u.ID),{CLIENTE_ID:clientId});
+      // 21/10/2026 (produção): a trava "vínculo com o Auvo incompleto ou repetido" exigia exatamente uma linha CLIENTE
+      // com o mesmo nº do Auvo da unidade. Unidade enviada ao Auvo pelo próprio SGO+ só tem a linha UNIDADE (o cliente
+      // tem a dele, com outro nº), então desvincular, transferir e excluir ficavam bloqueados sem saída na tela.
+      // Agora: a linha UNIDADE fica com a unidade; as linhas CLIENTE desse cliente Auvo (uma, várias ou nenhuma)
+      // acompanham a unidade só quando ela vai para outro cliente. Desvincular não mexe nelas (antes ficavam vazias).
+      // Linha sem nº do Auvo é ignorada (antes casava com qualquer outra linha sem nº).
       const maps=base(snapshot,'AUVO_SYNC');
-      maps.filter(m=>text(m.ENTIDADE_TIPO)==='UNIDADE'&&text(m.ENTIDADE_ID)===text(u.ID)).forEach(m=>{
+      maps.filter(m=>text(m.ENTIDADE_TIPO).toUpperCase()==='UNIDADE'&&text(m.ENTIDADE_ID)===text(u.ID)&&text(m.AUVO_ID)).forEach(m=>{
         const customer=text(m.AUVO_ID);
-        const cm=maps.filter(x=>text(x.ENTIDADE_TIPO)==='CLIENTE'&&text(x.AUVO_ID)===customer);
-        if(cm.length!==1) blocks.push('O vínculo deste cadastro com o Auvo (cliente Auvo nº '+customer+') está incompleto ou repetido no SGO+. Abra Integração Auvo, sincronize os clientes e volte aqui para conferir de novo. Se continuar, avise o administrador informando o nº '+customer+'.');
-        cm.forEach(x=>change('AUVO_SYNC',x,'ENTIDADE_ID',clientId));
-        // O mapeamento da unidade permanece, inclusive no estado pendente.
+        if(!clientId){avisosAuvo.push(customer);return;}
+        maps.filter(x=>text(x.ENTIDADE_TIPO).toUpperCase()==='CLIENTE'&&text(x.AUVO_ID)===customer).forEach(x=>change('AUVO_SYNC',x,'ENTIDADE_ID',clientId));
       });
     }
     let target=null;
@@ -144,6 +160,7 @@ const SGO_VINCULOS = (() => {
       if(spec.tipo==='UNIDADE') moveUnit(source,'');
       else {change(table,source,'UNIDADE_ID','');change(table,source,'CLIENTE_ID','');}
       warnings.push('O cadastro ficará com vínculo pendente. Novos atendimentos e emissões serão bloqueados até a vinculação.');
+      if(avisosAuvo.length)warnings.push('A ligação desta unidade com o Auvo (cliente Auvo nº '+[...new Set(avisosAuvo)].join(', ')+') continua guardada com a unidade. Enquanto ela estiver sem cliente, tarefa nova do Auvo nesse endereço fica pendente em Integração Auvo. Para ligar a unidade a outro cliente, use Unidade → Transferir; para tirá-la de uso, Inativar ou Excluir.');
     }
     if(spec.acao==='CONSOLIDAR') {
       target=get(snapshot,table,spec.destino);if(!active(target))throw new Error('O cadastro de destino está inativo. Escolha um destino ativo, ou reative-o antes (ação Reativar), e refaça.');
@@ -152,12 +169,14 @@ const SGO_VINCULOS = (() => {
         base(snapshot,'CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===spec.origem).forEach(u=>moveUnit(u,target.ID));
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.CLIENTE_ID)===spec.origem).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.ID));
         moverDocs(d=>text(d.CLIENTE_ID)===spec.origem,text(target.ID),null);
+        moverContatos(k=>text(k.CLIENTE_ID)===spec.origem,{CLIENTE_ID:text(target.ID)});
       } else if(spec.tipo==='UNIDADE') {
         if(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE))throw new Error('Só dá para consolidar unidades com o mesmo CNPJ (o mesmo local). Se for outro local, use Transferir. Se for o mesmo local e o CNPJ estiver errado, corrija o CNPJ (botão Abrir / editar cadastro) e refaça.');
         if(!active(get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID)))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');
         moveUnit(source,target.CLIENTE_ID);
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===spec.origem).forEach(e=>{change('CAD_EQUIPAMENTOS',e,'UNIDADE_ID',target.ID);change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.CLIENTE_ID);});
         moverDocs(d=>text(d.UNIDADE_ID)===spec.origem,text(target.CLIENTE_ID),text(target.ID));
+        moverContatos(k=>text(k.UNIDADE_ID)===spec.origem,{CLIENTE_ID:text(target.CLIENTE_ID),UNIDADE_ID:text(target.ID)});
       } else {
         if(text(source.CLIENTE_ID)!==text(target.CLIENTE_ID)||text(source.TAG).toUpperCase()!==text(target.TAG).toUpperCase()||!text(source.TAG)||/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(source.TAG).toUpperCase()))throw new Error('Só dá para consolidar equipamentos do mesmo cliente e com a mesma TAG real (TAGs como S/N ou N/A não servem). Confira a TAG dos dois (botão Abrir / editar cadastro) e refaça.');
         if(text(source.SERIE)&&text(target.SERIE)&&text(source.SERIE)!==text(target.SERIE))throw new Error('Os dois equipamentos têm números de série diferentes, então não são o mesmo equipamento. Se um número estiver errado, corrija (botão Abrir / editar cadastro) e refaça; se forem equipamentos diferentes, não consolide.');
@@ -172,12 +191,13 @@ const SGO_VINCULOS = (() => {
     const affected=new Set([spec.origem,...changes.map(c=>c.id)]);
     // 21/10/2026: abas da Assistência técnica do SGO+ (chamados, O.S., pedidos, reclamações, orçamentos e o índice do acervo do Auvo)
     // ficam com o proprietário original, como o histórico; chamado ou O.S. em aberto trava só quando o cliente muda.
-    const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS','ATEC_CHAMADOS','ATEC_OS','ATEC_SOLICITACOES','ATEC_CASOS','ATEC_ORCAMENTOS','ATEC_ACERVO_EQUIP'];
-    Object.keys(snapshot.tables).filter(n=>!Object.values(TABLES).includes(n)&&n!=='AUVO_SYNC').forEach(name=>{
+    const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS','ATEC_CHAMADOS','ATEC_OS','ATEC_SOLICITACOES','ATEC_CASOS','ATEC_ORCAMENTOS','ATEC_ACERVO_EQUIP','CAD_CONTATOS'];
+    // 21/10/2026: na exclusão as referências são conferidas no bloco EXCLUIR (abaixo), com o caminho para resolver.
+    Object.keys(snapshot.tables).filter(n=>spec.acao!=='EXCLUIR'&&!Object.values(TABLES).includes(n)&&n!=='AUVO_SYNC').forEach(name=>{
       const matches=base(snapshot,name).filter(r=>Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO)$/.test(k)&&text(r[k]).split(',').some(id=>affected.has(id.trim()))));
       if(!matches.length)return;
       if(knownHistorical.includes(name)) {
-        const ficam=name==='DOC_DOCUMENTOS'?matches.filter(r=>!docsMovidos[text(r.ID)]).length:matches.length;
+        const ficam=name==='DOC_DOCUMENTOS'?matches.filter(r=>!docsMovidos[text(r.ID)]).length:name==='CAD_CONTATOS'?matches.filter(r=>!contatosTratados[text(r.ID)]).length:matches.length;
         if(ficam)historical[name]=ficam;
         if(name==='NR13_LAUDOS'&&matches.some(r=>text(r.STATUS)==='RASCUNHO'||text(r.STATUS)==='PENDENTE'||text(r.STATUS_PENDENCIA)==='ABERTA'))blocks.push('Há laudo NR-13 em andamento ligado a este cadastro. Abra o módulo NR-13, conclua ou cancele o laudo e volte aqui para clicar em Conferir impacto de novo.');
         // 2026-10-15: a maioria das tarefas nunca é finalizada no Auvo (160 de 224), então a trava antiga
@@ -221,11 +241,31 @@ const SGO_VINCULOS = (() => {
       if(text(e.TAG)&&!/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(e.TAG).toUpperCase())&&projected.CAD_EQUIPAMENTOS.some(o=>active(o)&&text(o.ID)!==text(e.ID)&&text(o.CLIENTE_ID)===text(e.CLIENTE_ID)&&text(o.TAG).toUpperCase()===text(e.TAG).toUpperCase()))blocks.push('O cliente destino já tem um equipamento com a TAG '+text(e.TAG)+'. Se for o mesmo equipamento, use Equipamento → Consolidar; se forem diferentes, edite a TAG de um deles (botão Abrir / editar cadastro) e refaça.');
     });
     if(spec.acao==='EXCLUIR') {
+      // 21/10/2026: duas referências deixam de impedir a exclusão, sem apagar nada:
+      // - a ligação com o Auvo criada pelo próprio SGO+ (CHAVE sem ":AUVOID:") fica guardada, marcada CADASTRO_EXCLUIDO;
+      //   a ligação que veio do Auvo (o cadastro original, "vale o original") ou com tarefa do Auvo nesse cliente impede;
+      // - contato só da unidade excluída fica inativo na lista de contatos (histórico preservado).
+      const proprios=base(snapshot,'AUVO_SYNC').filter(m=>text(m.ENTIDADE_TIPO).toUpperCase()===spec.tipo&&text(m.ENTIDADE_ID)===spec.origem);
+      const nAuvo=[...new Set(proprios.map(m=>text(m.AUVO_ID)).filter(Boolean))];
+      const comTarefa=nAuvo.filter(a=>base(snapshot,'AUVO_TAREFAS').some(t=>text(t.CLIENTE_AUVO_ID)===a));
+      const originais=proprios.filter(m=>/:AUVOID:/.test(text(m.CHAVE))&&text(m.AUVO_ID)).map(m=>text(m.AUVO_ID));
+      const presos=[...new Set(originais.concat(spec.tipo==='UNIDADE'?comTarefa:[]))];
+      const nomeTela={AUVO_SYNC:'Integração com o Auvo',AUVO_TAREFAS:'Atendimentos do Auvo',CAD_CLIENTES:'Clientes',CAD_UNIDADES:'Unidades',CAD_EQUIPAMENTOS:'Equipamentos',CAD_CONTATOS:'Contatos',DOC_DOCUMENTOS:'Arquivo de documentos',CERT_CALIBRACAO:'Certificados de calibração',NR13_LAUDOS:'Laudos NR-13'};
+      const contatosDaUnidade=spec.tipo==='UNIDADE'?base(snapshot,'CAD_CONTATOS').filter(k=>text(k.UNIDADE_ID)===spec.origem):[];
       const refs=[];Object.keys(snapshot.tables).forEach(n=>base(snapshot,n).forEach(r=>{
         if(n===table&&text(r.ID)===spec.origem)return;
+        if(n==='AUVO_SYNC'&&proprios.includes(r))return;
+        if(n==='CAD_CONTATOS'&&contatosDaUnidade.includes(r)&&text(r.CLIENTE_ID)!==spec.origem)return;
         if(Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|ENTIDADE_ID)$/.test(k)&&text(r[k]).split(',').includes(spec.origem)))refs.push(n);
       }));
-      if(refs.length) blocks.push('Não dá para excluir: ainda há registros ligados a este cadastro em '+[...new Set(refs)].join(', ')+'. Para tirar de uso sem perder o histórico, use a ação Inativar; se for o mesmo cadastro de outro registro, use Consolidar.');
+      if(refs.length) blocks.push('Não dá para excluir: ainda há registros ligados a este cadastro em '+[...new Set(refs)].map(n=>nomeTela[n]||n).join(', ')+'. Para tirar de uso sem perder o histórico, use a ação Inativar; se for o mesmo cadastro de outro registro, use Consolidar.');
+      if(presos.length) blocks.push('Não dá para excluir: este cadastro é o que está ligado ao cliente Auvo nº '+presos.join(', ')+(comTarefa.length?' (há atendimento do Auvo nesse cliente)':'')+', e a ligação com o Auvo vale para o cadastro original. Para tirá-lo de uso sem perder a ligação, use a ação Inativar; se ele repete outro cadastro do mesmo local, use Consolidar para juntar no outro.');
+      else if(!refs.length) {
+        proprios.forEach(m=>change('AUVO_SYNC',m,'STATUS','CADASTRO_EXCLUIDO'));
+        contatosDaUnidade.filter(k=>text(k.STATUS||'ATIVO').toUpperCase()==='ATIVO').forEach(k=>{change('CAD_CONTATOS',k,'STATUS','INATIVO');contatosTratados[text(k.ID)]=k;});
+        if(nAuvo.length)warnings.push('A ligação deste cadastro com o Auvo (cliente Auvo nº '+nAuvo.join(', ')+') fica guardada como de cadastro excluído, para consulta. Se esse cliente não existe de fato, exclua ou inative também no Auvo; se o Auvo abrir tarefa nele, ela aparece pendente em Integração Auvo.');
+        if(Object.keys(contatosTratados).length)warnings.push(Object.keys(contatosTratados).length+' contato(s) desta unidade ficam inativos na lista de contatos (não são apagados). Se a pessoa continua sendo contato do cliente, reative e escolha a unidade certa.');
+      }
       changes.push({table:table,id:spec.origem,row:source._row,field:'__DELETE__',before:source,after:''});
     }
     if(!changes.length)blocks.push('Nada a fazer: o cadastro já está assim. Confira se escolheu a origem e o destino certos.');
@@ -237,8 +277,13 @@ const SGO_VINCULOS = (() => {
     return {spec:spec,source:label(source),target:target?label(target):'',changes:changes,blocks:[...new Set(blocks)],warnings:warnings,historical:historical,documentos:documentos};
   }
   function hash(value) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value))); }
+  // 21/10/2026: excluir de vez segue com Administrador, Diretoria e Gestor (como em Cadastros); RH e Financeiro usam Inativar.
+  function exigirExcluir(sessionId,acao) {
+    if(text(acao)==='EXCLUIR'&&!isAdminSession(sessionId))throw new Error('Excluir de vez é feito por Administrador, Diretoria ou Gestor. Nada foi alterado. Para tirar de uso, use a ação Inativar; ou peça a um deles informando o cadastro e o motivo.');
+  }
   function preview(sessionId,input) {
-    const user=staff(sessionId,true),snapshot=read(),plan=build(snapshot,input),token=Utilities.getUuid();
+    const user=staff(sessionId,true);exigirExcluir(sessionId,input&&input.acao);
+    const snapshot=read(),plan=build(snapshot,input),token=Utilities.getUuid();
     if(!plan.blocks.length) CacheService.getScriptCache().put('vinc:'+token,JSON.stringify({session:sessionId,user:user.usuario,spec:plan.spec,hash:hash(snapshot)}),600);
     function display(c,value){const name={CLIENTE_ID:'CAD_CLIENTES',UNIDADE_ID:'CAD_UNIDADES'}[c.field];return name&&value?label(get(snapshot,name,value))+' ('+value+')':value;}
     const nomeDe=(tabela,id)=>id?label(get(snapshot,tabela,id)):'(sem vínculo)';
@@ -253,7 +298,7 @@ const SGO_VINCULOS = (() => {
   function confirm(sessionId,token) {
     const user=staff(sessionId,true),cached=CacheService.getScriptCache().get('vinc:'+text(token));
     if(!cached)throw new Error('A prévia vale 10 minutos e expirou. Nada foi gravado. Clique em Conferir impacto de novo e confirme.');
-    const permit=JSON.parse(cached);if(permit.session!==sessionId||permit.user!==user.usuario)throw new Error('Esta prévia foi feita em outro login ou em outra aba. Nada foi gravado. Clique em Conferir impacto de novo nesta tela e confirme.');
+    const permit=JSON.parse(cached);exigirExcluir(sessionId,permit.spec&&permit.spec.acao);if(permit.session!==sessionId||permit.user!==user.usuario)throw new Error('Esta prévia foi feita em outro login ou em outra aba. Nada foi gravado. Clique em Conferir impacto de novo nesta tela e confirme.');
     const lock=LockService.getScriptLock();lock.waitLock(30000);
     try {
       const db=SGO_DATA.getDB(),audit=db.getSheetByName(AUDIT);
