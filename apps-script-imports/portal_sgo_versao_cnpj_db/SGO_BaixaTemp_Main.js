@@ -554,6 +554,13 @@ function BaixaTemp_apiPrevia(sessionId, p) {
   return { ok: true, html: html };
 }
 
+/** <pasta do cliente>/<TAG - tipo>/Qualificação (cria o que faltar), mesmo nome usado por SGO_QEQ_pastaEquipamento_. */
+function BaixaTemp_pastaEquipamento_(pastaCliente, id) {
+  var sub = function (pai, nome) { var it = pai.getFoldersByName(nome); return it.hasNext() ? it.next() : pai.createFolder(nome); };
+  var nomeEq = SGO_DocSalvar_sanitizarNome_([BaixaTemp_s_(id.tag) || 'Sem TAG', BaixaTemp_s_(id.tipoEquipamento) || 'Esterilizador'].join(' - '));
+  return sub(sub(pastaCliente, nomeEq), 'Qualificação');
+}
+
 function BaixaTemp_apiEmitir(sessionId, p, sessao) {
   var l = BaixaTemp_linha_(p.id);
   if (l.STATUS === BAIXATEMP_STATUS.EMITIDO) return { ok: true, jaEmitido: true, numero: l.NUMERO, pdfId: l.PDF_ID, pdfUrl: l.LINK_PDF, htmlId: l.HTML_ID, htmlUrl: l.LINK_HTML, pastaUrl: l.PASTA_URL };
@@ -567,7 +574,9 @@ function BaixaTemp_apiEmitir(sessionId, p, sessao) {
   SGO_VINCULOS.relation(sessionId, id.clienteId, id.unidadeId, id.equipamentoId);
   var numero = BaixaTemp_proximoNumero_();
   var html = BaixaTemp_montarHtml_(c.calc, dados, l, { emitindo: true, numero: numero, emissor: BaixaTemp_nomeSessao_(sessao) });
-  var pasta = SGO_DocSalvar_pastaClienteEm_(BaixaTemp_pastaLaudos_(), id.cnpj, id.cliente);
+  // 21/10/2026: pasta do equipamento dentro da pasta do cliente, como nos outros módulos de qualificação
+  // (Baixa Temperatura - Laudos/<CNPJ>/<TAG - tipo>/Qualificação). Relatórios antigos continuam onde estão.
+  var pasta = BaixaTemp_pastaEquipamento_(SGO_DocSalvar_pastaClienteEm_(BaixaTemp_pastaLaudos_(), id.cnpj, id.cliente), id);
   var carimbo = Utilities.formatDate(new Date(), BAIXATEMP_CFG.TZ, 'yyyy-MM-dd HHmm');
   var nomeBase = SGO_DocSalvar_sanitizarNome_('Relatório de qualificação baixa temperatura - ' + numero + ' - ' + (id.tag || 'sem-tag') + ' - ' + carimbo);
   var salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });

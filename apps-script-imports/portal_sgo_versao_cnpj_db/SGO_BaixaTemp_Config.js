@@ -32,7 +32,9 @@ var BAIXATEMP_CFG = {
   PASTA_DADOS_PROP: 'BAIXATEMP_DADOS_PASTA_ID',
   NUMERO_PROP_PREFIXO: 'BAIXATEMP_NUMERO_',
   SIGLA_NUMERO: 'QBT',
-  TIPO_DOCUMENTO_ARQUIVO: 'RELATORIO DE QUALIFICACAO - ESTERILIZADOR BAIXA TEMPERATURA',
+  // 21/10/2026: categoria da NBR 15943 do Arquivo de documentos, a mesma dos outros relatórios de qualificação (antes saía como
+  // "categoria antiga" na edição do documento). Documentos já registrados com o nome antigo continuam reconhecidos.
+  TIPO_DOCUMENTO_ARQUIVO: '3. RELATÓRIOS DE QUALIFICAÇÃO',
   VALIDADE_DOCUMENTO_MESES: 12,           // vencimento no Arquivo de documentos: requalificação anual (prática do laboratório; confirmar com o RT)
 
   /* Perfis */

@@ -122,10 +122,15 @@ test('fluxo completo: salvar, travas no envio, revisão independente, aprovaçã
   const pastaLaudos = Object.values(amb.pastas).find((p) => p.nome === 'Baixa Temperatura - Laudos');
   const pastaCli = Object.values(amb.pastas).find((p) => p.pai === pastaLaudos.id);
   assert.equal(pastaCli.nome, '11222333000181');
-  assert.ok(Object.values(amb.arquivos).some((a) => a.pasta === pastaCli.id && /^Relatório de qualificação baixa temperatura - QBT-.* - EST-T01 - .*\.html$/.test(a.nome)));
+  // 21/10/2026: dentro da pasta do cliente, a pasta do equipamento (TAG - tipo) e a subpasta Qualificação, como nos outros módulos
+  const pastaEq = Object.values(amb.pastas).find((p) => p.pai === pastaCli.id);
+  assert.match(pastaEq.nome, /^EST-T01 - Esterilizador/);
+  const pastaQ = Object.values(amb.pastas).find((p) => p.pai === pastaEq.id);
+  assert.equal(pastaQ.nome, 'Qualificação');
+  assert.ok(Object.values(amb.arquivos).some((a) => a.pasta === pastaQ.id &&/^Relatório de qualificação baixa temperatura - QBT-.* - EST-T01 - .*\.html$/.test(a.nome)));
   // Arquivo de documentos
   const doc = j(amb.ctx.DOCS_REGISTRADOS)[0];
-  assert.equal(doc.TIPO_DOCUMENTO, 'RELATORIO DE QUALIFICACAO - ESTERILIZADOR BAIXA TEMPERATURA');
+  assert.equal(doc.TIPO_DOCUMENTO, '3. RELATÓRIOS DE QUALIFICAÇÃO', 'categoria da NBR 15943, como os outros relatórios de qualificação');
   assert.equal(doc.EQUIPAMENTO_ID, 'eq1');
   // imutável
   assert.throws(() => amb.api('tec', 'apiSalvar', { id: s1.id, versaoDados: 2, dados }), /já foi emitido/);

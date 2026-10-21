@@ -65,7 +65,7 @@ function SGO_ajudaTelas_BaixaTemp_() {
           "Em \"8. Revisão e emissão\", toque em \"Ver prévia do relatório\" e leia o documento inteiro.",
           "Toque em \"Enviar para revisão\". O ensaio passa a \"Aguardando revisão do responsável técnico\".",
           "O responsável técnico abre o ensaio, lê a prévia, escolhe quem assina, escreve o parecer e toca em \"Aprovar\" (ou em \"Devolver ao técnico\", com o que corrigir).",
-          "Depois da aprovação, toque em \"Emitir relatório\". O documento abre em outra aba e fica salvo em PDF e HTML na pasta do cliente e no Arquivo de documentos.",
+          "Depois da aprovação, toque em \"Emitir relatório\". O documento abre em outra aba e fica salvo em PDF e HTML na pasta do equipamento (dentro da pasta do cliente) e no Arquivo de documentos.",
           "Toque em \"Enviar ao cliente\" para mandar por e-mail ou WhatsApp."
         ] },
         { titulo: "Corrigir um relatório já emitido", itens: [
@@ -108,7 +108,7 @@ function SGO_ajudaTelas_BaixaTemp_() {
         { p: "Como o sistema acha a exposição?", r: "No peróxido de hidrogênio, pelos pulsos de pressão: do início do primeiro pulso de injeção até a volta ao vácuo depois do último. No VBTF, pelo maior trecho em que todos os sensores ativos ficam no limite inferior da faixa de temperatura. Sem os dados necessários, um método serve de reserva para o outro." },
         { p: "Posso usar um arquivo por sensor?", r: "Sim. Envie todos os arquivos do ciclo de uma vez. O sistema une as leituras pelo horário (até meio intervalo de diferença)." },
         { p: "Quantos ciclos de desempenho são exigidos?", r: "Três ciclos, conforme o plano de validação configurado. Se o plano do cliente for outro, o responsável técnico ajusta a configuração do módulo." },
-        { p: "Onde fica o relatório?", r: "Na pasta do cliente (subpasta com o CNPJ), em PDF e HTML A4, com o nome \"Relatório de qualificação baixa temperatura - número - TAG - data e hora\", e no Arquivo de documentos do cliente." }
+        { p: "Onde fica o relatório?", r: "Na pasta do equipamento, dentro da pasta do cliente (Baixa Temperatura - Laudos > CNPJ > TAG e tipo do equipamento > Qualificação), em PDF e HTML A4, com o nome \"Relatório de qualificação baixa temperatura - número - TAG - data e hora\", e no Arquivo de documentos do cliente." }
       ],
       secoesManual: [
         { titulo: "Termos usados nesta tela", paragrafos: [

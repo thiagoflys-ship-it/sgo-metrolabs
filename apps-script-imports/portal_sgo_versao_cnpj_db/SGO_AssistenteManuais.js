@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "8179c0b7bb89",
+ "versao": "eb6c03d9683e",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -607,7 +607,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Revisão, aprovação e emissão",
-     "texto": "O técnico envia para revisão; o sistema guarda a impressão digital (SHA-256) dos dados, dos resultados e dos textos. O responsável técnico (perfis Administrador, Diretoria ou Gestor, diferente de quem elaborou) escolhe quem assina, escreve o parecer e aprova, ou devolve com o que corrigir. Qualquer alteração depois do envio volta o ensaio para rascunho e anula a aprovação. Na emissão, os arquivos são lidos de novo e a impressão digital precisa conferir com a aprovada. O relatório recebe o número QBT-ano-sequência, é salvo em PDF e HTML A4 na pasta do cliente (subpasta do CNPJ dentro de \"Baixa Temperatura - Laudos\") e registrado no Arquivo de documentos, com vencimento de 12 meses para a requalificação. Ensaio emitido não muda: correções são feitas por \"Nova revisão\"."
+     "texto": "O técnico envia para revisão; o sistema guarda a impressão digital (SHA-256) dos dados, dos resultados e dos textos. O responsável técnico (perfis Administrador, Diretoria ou Gestor, diferente de quem elaborou) escolhe quem assina, escreve o parecer e aprova, ou devolve com o que corrigir. Qualquer alteração depois do envio volta o ensaio para rascunho e anula a aprovação. Na emissão, os arquivos são lidos de novo e a impressão digital precisa conferir com a aprovada. O relatório recebe o número QBT-ano-sequência, é salvo em PDF e HTML A4 na pasta do equipamento, dentro da pasta do cliente (\"Baixa Temperatura - Laudos\" > CNPJ > TAG e tipo do equipamento > Qualificação), e registrado no Arquivo de documentos na categoria \"Relatórios de qualificação\", com vencimento de 12 meses para a requalificação. Ensaio emitido não muda: correções são feitas por \"Nova revisão\"."
     },
     {
      "titulo": "O relatório",
