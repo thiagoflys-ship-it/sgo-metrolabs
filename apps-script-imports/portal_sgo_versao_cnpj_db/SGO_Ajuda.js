@@ -37,7 +37,7 @@ var SGO_AJUDA_NOMES = {
   comercial_kanban: 'Quadro do funil', comercial_gantt: 'Gantt comercial',
   compras_pedir: 'Pedir peça ou material', compras_meus: 'Meus pedidos de compra', compras: 'Fila de compras', compras_fornecedores: 'Fornecedores',
   compras_financeiro: 'Conferência do Financeiro', compras_painel: 'Painel de compras', compras_regras: 'Regras de compras',
-  ponto: 'Assistente do ponto'
+  ponto: 'Assistente do ponto', avisos_matriz: 'Matriz de avisos', meus_avisos: 'Meus avisos'
 };
 
 /**

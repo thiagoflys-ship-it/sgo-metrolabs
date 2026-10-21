@@ -130,16 +130,23 @@ function Conduta_gestoresParaAviso_(excetoIds) {
   }).map(function (u) { return u.ID; });
 }
 
+/**
+ * 21/10/2026 (matriz de avisos, S51): a missão aguardando aprovação vai ao gestor da área do executante (Caixa de decisões >
+ * Regras e responsáveis; missão que envolve alguém da gestão vai à Diretoria), no e-mail de resumo do dia e sem WhatsApp
+ * (assunto de incentivo). Sem a matriz: Gestores e Diretoria, como antes.
+ */
 function Conduta_avisarGestaoMissaoPendente_(registro, sessao) {
   try {
-    var destino = Conduta_gestoresParaAviso_([sessao.userId]);
+    var destino = typeof SGO_avisoGestoresDe_ === 'function'
+      ? SGO_avisoGestoresDe_('conduta', { responsavelId: registro.EXECUTANTE_1_ID || sessao.userId, excluir: [sessao.userId, registro.EXECUTANTE_1_ID, registro.EXECUTANTE_2_ID].filter(Boolean) })
+      : Conduta_gestoresParaAviso_([sessao.userId]);
     if (!destino.length) return;
     var dataBr = Conduta_dataBr_(registro.DATA);
     SGO_notificar_({ usuarios: destino, titulo: 'Missão aguardando aprovação: ' + registro.DESTINO + ' em ' + dataBr,
       texto: (sessao.nome || sessao.usuario || 'Um colaborador') + ' registrou uma missão com incentivo que precisa da aprovação da gestão.\n' +
         'Destino: ' + registro.DESTINO + '\nData: ' + dataBr + '\nDistância do trecho: ' + String(Number(registro.KM_TRECHO) || 0).replace('.', ',') + ' km.\n' +
         'Para decidir, abra Programa de conduta > Missões no SGO+ e clique em Aprovar ou Recusar. O mês só fecha depois da decisão.',
-      canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID });
+      canais: ['sgo', 'email'], origem: 'CONDUTA', refId: registro.ID, evento: 'S51' });
   } catch (e) { console.error('Conduta aviso missão pendente: ' + ((e && e.message) || e)); }
 }
 
@@ -187,12 +194,13 @@ function Conduta_apiDecidirMissao(sessionId, payload) {
       texto: 'A missão para ' + m.DESTINO + ' em ' + dataBr + ' foi ' + (nova === 'APROVADA' ? 'aprovada' : 'recusada') + ' por ' + (sessao.nome || sessao.usuario) + '.\n' +
         (nova === 'APROVADA' ? 'Ela passa a contar para o incentivo de missão do mês.' : 'Motivo: ' + motivo + '\nEla não conta para o incentivo. Se houver engano, fale com a gestão antes do fechamento do mês.') +
         '\nVeja em Programa de conduta > Missões, no SGO+.',
-      canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: m.ID });
+      canais: ['sgo', 'email'], origem: 'CONDUTA', refId: m.ID, evento: 'S52' });
   } catch (eAviso) { console.error('Conduta aviso decisão missão: ' + ((eAviso && eAviso.message) || eAviso)); }
   return { success: true, aprovacao: nova, message: 'Missão ' + (nova === 'APROVADA' ? 'aprovada' : 'recusada') + '. Quem lançou recebe o aviso.' };
 }
 
 /**
+ * 21/10/2026 (matriz de avisos, S53): só no sistema (sem e-mail e sem WhatsApp); a regra do evento decide.
  * 2026-10-16: avisa por e-mail/WhatsApp (SGO_Notificar.js) os executantes da missão
  * recém-cadastrada, menos quem cadastrou. Só informa — não muda regra nem cálculo;
  * qualquer falha de envio fica em NTF_ENVIOS e não desfaz o cadastro.
@@ -213,7 +221,7 @@ function Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo) 
       'Distância do trecho: ' + String(km).replace('.', ',') + ' km. ' +
       (qualifica ? 'Qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).' : 'Não qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).') + '\n' +
       'Se algum dado estiver errado, fale com a gestão. Veja em Programa de conduta, no SGO+.';
-    SGO_notificar_({ usuarios: destino, titulo: 'Missão cadastrada: ' + registro.DESTINO + ' em ' + dataBr, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID,
+    SGO_notificar_({ usuarios: destino, titulo: 'Missão cadastrada: ' + registro.DESTINO + ' em ' + dataBr, texto: texto, canais: ['sgo', 'email'], origem: 'CONDUTA', refId: registro.ID, evento: 'S53',
       modelo: { nome: 'sgo_missao_nova', parametros: ['@NOME', registro.DESTINO, dataBr, '@LINK'] } });
   } catch (e) {
     console.error('Conduta notificar missão: ' + ((e && e.message) || e));

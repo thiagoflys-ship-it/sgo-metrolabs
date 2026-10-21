@@ -1,0 +1,302 @@
+<style>
+  /* MATRIZ DE AVISOS E MEUS AVISOS (21/10/2026) — ver SGO_Avisos_Matriz.js. */
+  .mtz-bloco { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .mtz-bloco h3 { margin: 0 0 8px; font-size: 15px; }
+  .mtz-linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .mtz-sit { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .mtz-sit.ok { color: var(--success); background: var(--success-bg); }
+  .mtz-sit.alerta { color: var(--warning); background: var(--warning-bg); }
+  .mtz-sit.perigo { color: var(--danger); background: var(--danger-bg); }
+  .mtz-sit.neutro { color: var(--muted); }
+  .mtz-q { font-size: 12px; color: var(--muted); word-break: break-word; }
+  .mtz-campos { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .mtz-campos label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  .mtz-campos input, .mtz-campos select, .mtz-regra select { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--card); color: var(--text); max-width: 100%; }
+  .mtz-check { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-size: 14px; }
+  .mtz-check input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+  .mtz-regra { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  .mtz-regra:last-child { border-bottom: none; }
+  .mtz-regra .cab { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .mtz-regra .cod { font-weight: 700; min-width: 40px; }
+  .mtz-regra .sels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center; }
+  .mtz-travado { opacity: .75; }
+  .mtz-previa { white-space: pre-wrap; font-family: inherit; font-size: 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; max-height: 420px; overflow: auto; }
+  @media (max-width: 700px) { .mtz-tabela thead { display: none; } .mtz-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .mtz-tabela td { display: block; border: none; padding: 2px 4px; } }
+</style>
+
+<script>
+  // ==========================================================
+  // MATRIZ DE AVISOS (Administração, Administrador e Diretoria) e MEUS AVISOS (cada pessoa) — 21/10/2026
+  // Servidor: SGO_Avisos_Matriz.js (SGO_AvisosMatriz_api, SGO_MeusAvisos_api).
+  // Ganchos na casca (JS_Core): AvisosMatriz_iniciar_ no login (mostra o item do menu para Administrador e Diretoria),
+  // abrir('avisos_matriz') -> AvisosMatriz_render_; abrir('meus_avisos') -> MeusAvisos_render_.
+  // ==========================================================
+  var MTZ = { dados: null, modulo: "", meus: null };
+
+  function Mtz_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Mtz_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
+  function Mtz_podeMatriz_() { var p = Mtz_perfil_(); return p === "ADMIN" || p === "DIRETORIA" || !!(USER_CONTEXT && USER_CONTEXT.dono); }
+
+  function AvisosMatriz_iniciar_() {
+    var b = document.getElementById("menu-btn-avisos_matriz");
+    if (b) b.style.display = Mtz_podeMatriz_() ? "" : "none";
+    var m = document.getElementById("menu-btn-meus_avisos");
+    if (m) m.style.display = Mtz_perfil_() === "CLIENTE" ? "none" : "";
+  }
+
+  function Mtz_chamar_(funcao, acao, dados, ok, falha) {
+    google.script.run
+      .withSuccessHandler(function (r) { if (r && r.ok) ok(r); else falha((r && r.message) || "Não foi possível concluir. Tente de novo."); })
+      .withFailureHandler(function (e) { falha((e && e.message) || "Sem comunicação com o SGO+. Confira a internet e tente de novo."); })
+      [funcao](SGO_getSessionId(), acao, dados || {});
+  }
+
+  function Mtz_casca_(titulo, subtitulo, ajuda, idCorpo) {
+    var div = document.getElementById("conteudo");
+    if (!div) return null;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_(titulo); } catch (e) {} }
+    div.innerHTML = '<div class="module-shell cadx">' +
+      '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Mtz_esc_(titulo) + '</h2><p class="content-subtitle">' + Mtz_esc_(subtitulo) + '</p></div><div class="module-header-right"></div></div>' +
+      (typeof CadUI_ajuda_ === "function" ? CadUI_ajuda_(ajuda) : "") +
+      '<div id="' + idCorpo + '">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(5) : "Carregando...") + '</div></div>';
+    return div;
+  }
+
+  function Mtz_falhaTela_(idCorpo, m, refazer) {
+    var c = document.getElementById(idCorpo);
+    if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não carregou.</strong> ' + Mtz_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="' + refazer + '()">Tentar de novo</button></div></div>';
+  }
+
+  // ---------------------------------------------------------- Matriz de avisos (Administrador e Diretoria)
+  function AvisosMatriz_render_() {
+    if (!Mtz_podeMatriz_()) {
+      var d0 = document.getElementById("conteudo");
+      if (d0) d0.innerHTML = '<div class="module-shell"><h2 class="content-title">Matriz de avisos</h2><p class="content-subtitle">Esta tela é do Administrador e da Diretoria. O que você recebe por e-mail e WhatsApp está em Menu &gt; Meus avisos.</p>' +
+        '<p><button type="button" class="btn-primary" onclick="abrir(\'meus_avisos\')">Abrir Meus avisos</button> <button type="button" class="btn-secondary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
+    Mtz_casca_("Matriz de avisos", "Quem recebe cada aviso e por qual canal (sistema, e-mail, WhatsApp), com a matriz aprovada pelo dono como padrão.",
+      "<ul><li><b>Sistema</b>: todo aviso aparece na hora no SGO+ (Início, central de pendências, Caixa de decisões) e cobra até ser resolvido.</li>" +
+      "<li><b>E-mail</b>: um resumo por pessoa por dia útil (padrão 08:00). Na hora só o que exige ciência ou muda algo de hoje, sempre no expediente.</li>" +
+      "<li><b>WhatsApp</b>: um resumo por dia (09:30), só para CLT, só para quem ainda não abriu o sistema e só para quem está no piloto. Na hora, só as quatro exceções da Frota.</li>" +
+      "<li>Cada mudança pede o motivo e fica na trilha, com nome e data. Os eventos obrigatórios não podem ser desligados.</li>" +
+      "<li>O Assistente do ponto tem regra própria e não aparece aqui.</li></ul>", "mtzCorpo");
+    Mtz_chamar_("SGO_AvisosMatriz_api", "carregar", {}, function (r) { MTZ.dados = r; AvisosMatriz_desenhar_(); }, function (m) { Mtz_falhaTela_("mtzCorpo", m, "AvisosMatriz_render_"); });
+  }
+
+  function AvisosMatriz_desenhar_() {
+    var c = document.getElementById("mtzCorpo"), d = MTZ.dados, esc = Mtz_esc_;
+    if (!c || !d) return;
+    var cfg = d.cfg;
+    var horarios = '<div class="mtz-bloco"><h3>Resumo do dia e filtro por área</h3>' +
+      '<div class="mtz-linha" style="margin-bottom:8px"><span class="mtz-sit ok">E-mail de resumo: ' + esc(cfg.horaEmail) + '</span><span class="mtz-sit ' + (cfg.whatsResumo ? "ok" : "neutro") + '">WhatsApp de resumo: ' + (cfg.whatsResumo ? esc(cfg.horaWhats) : "desligado") + '</span>' +
+      '<span class="mtz-sit ' + (cfg.centralPorArea ? "ok" : "neutro") + '">Central por área: ' + (cfg.centralPorArea ? "ligada" : "desligada") + '</span><span class="mtz-sit neutro">Expediente: ' + esc(d.expediente.ini) + ' a ' + esc(d.expediente.fim) + '</span></div>' +
+      '<details><summary>Alterar horários</summary><div class="mtz-campos" style="margin-top:8px">' +
+        '<label>Hora do e-mail de resumo<input type="time" id="mtzHoraEmail" value="' + esc(cfg.horaEmail) + '"></label>' +
+        '<label>Hora do WhatsApp de resumo<input type="time" id="mtzHoraWhats" value="' + esc(cfg.horaWhats) + '"></label></div>' +
+        '<label class="mtz-check"><input type="checkbox" id="mtzWhatsResumo"' + (cfg.whatsResumo ? " checked" : "") + '> Mandar o WhatsApp de resumo do dia (só CLT, só quem não abriu o sistema, só o piloto enquanto ele durar)</label>' +
+        '<label class="mtz-check"><input type="checkbox" id="mtzCentralArea"' + (cfg.centralPorArea ? " checked" : "") + '> Central de pendências por área (o gestor vê o da sua área e o que é dele; a Diretoria vê tudo)</label>' +
+        '<div class="mtz-campos"><label style="flex:1 1 260px">Motivo da mudança<input type="text" id="mtzCfgMotivo" placeholder="por exemplo: pedido do dono em reunião"></label>' +
+        '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarCfg_()">Salvar horários</button></div><span id="mtzCfgMsg" class="mtz-q" role="status"></span>' +
+        '<p class="mtz-q">O horário de trabalho e os feriados ficam em Atividades da equipe &gt; Avisos e horários.</p></details></div>';
+
+    var areas = d.areas;
+    var semGestor = areas.porArea.filter(function (a) { return a.reserva; });
+    var blocoAreas = '<div class="mtz-bloco"><h3>Gestor de cada área</h3>' +
+      '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Área</th><th>Gestor responsável</th></tr></thead><tbody>' +
+      areas.porArea.map(function (a) { return '<tr><td>' + esc(a.nome) + '</td><td>' + (a.gestores.length ? esc(a.gestores.join(", ")) : '<span class="mtz-sit alerta">Sem gestor: vai para a Diretoria</span>') + '</td></tr>'; }).join("") +
+      '</tbody></table></div>' +
+      (semGestor.length ? '<p class="mtz-q">Área sem gestor: os avisos de "gestor da área" vão para a Diretoria. Compras fica na área Logística.</p>' : '') +
+      (areas.gestoresSemArea.length ? '<p class="mtz-q" role="alert">Gestores sem área definida (continuam vendo toda a central até ganhar uma área): ' + esc(areas.gestoresSemArea.join(", ")) + '.</p>' : '') +
+      '<button type="button" class="cadx-btn" onclick="abrir(\'gestao_decisoes\');setTimeout(function(){if(typeof Gestao_abrirRegras_===\'function\')Gestao_abrirRegras_();},400);">Definir gestores em Caixa de decisões &gt; Regras e responsáveis</button></div>';
+
+    var mods = Object.keys(d.modulos);
+    var filtro = '<div class="mtz-campos" style="margin-bottom:6px"><label>Módulo<select id="mtzModulo" onchange="MTZ.modulo=this.value;AvisosMatriz_desenharRegras_()"><option value="">Todos</option>' +
+      mods.map(function (m) { return '<option value="' + esc(m) + '"' + (MTZ.modulo === m ? " selected" : "") + '>' + esc(d.modulos[m]) + '</option>'; }).join("") + '</select></label></div>';
+    var regras = '<div class="mtz-bloco"><h3>Regras de cada evento</h3><p class="mtz-q">Cada linha é um aviso que o sistema manda. "Vira histórico" = ninguém é avisado; o fato continua no histórico do registro. Para mudar, ajuste e toque em Salvar (o sistema pede o motivo).</p>' +
+      filtro + '<div id="mtzRegras"></div></div>';
+
+    var resumos = '<div class="mtz-bloco"><h3>Resumos do dia</h3><div class="mtz-campos"><label>Dia<input type="date" id="mtzDiaResumo" value="' + esc(Mtz_hojeIso_()) + '"></label><button type="button" class="cadx-btn" onclick="AvisosMatriz_resumos_()">Mostrar</button></div><div id="mtzResumos"></div></div>';
+    var medicao = '<div class="mtz-bloco"><h3>Medição: avisos por pessoa por dia, antes e depois</h3>' +
+      '<div class="mtz-campos"><label>Antes: de<input type="date" id="mtzAi" value="2026-10-16"></label><label>até<input type="date" id="mtzAf" value="2026-10-20"></label>' +
+      '<label>Depois: de<input type="date" id="mtzDi" value="2026-10-22"></label><label>até<input type="date" id="mtzDf" value="' + esc(Mtz_hojeIso_()) + '"></label>' +
+      '<button type="button" class="cadx-btn" onclick="AvisosMatriz_medicao_()">Calcular</button></div><div id="mtzMedicao"></div>' +
+      '<p class="mtz-q">Conta os e-mails e WhatsApp enviados pelo SGO+ (Notificações enviadas). Metas: até 2 e-mails e 1 WhatsApp por pessoa por dia útil; zero WhatsApp fora do expediente; zero WhatsApp para PJ ou vínculo vazio. As mensagens retidas pelo piloto estão em Administração &gt; Piloto do WhatsApp.</p></div>';
+    var prefs = '<div class="mtz-bloco"><h3>Preferências da equipe</h3><p class="mtz-q">Cada pessoa ajusta as suas em Menu &gt; Meus avisos. A gestão vê, mas não altera.</p>' +
+      (d.prefsEquipe.length ? '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Pessoa</th><th>WhatsApp de resumo</th><th>E-mail de resumo</th><th>Informativos por e-mail</th><th>Fora do e-mail de resumo</th><th>Alterado em</th></tr></thead><tbody>' +
+        d.prefsEquipe.map(function (p) { return '<tr><td>' + esc(p.nome) + '</td><td>' + (p.whatsResumo ? "Sim" : "Não") + '</td><td>' + esc(p.horaEmail || cfg.horaEmail) + '</td><td>' + (p.emailInformativos ? "Sim" : "Não") + '</td><td>' + esc(p.silenciar.join(", ") || "-") + '</td><td>' + esc(p.alteradoEm) + '</td></tr>'; }).join("") +
+        '</tbody></table></div>' : '<p class="mtz-q">Ninguém mudou as preferências: vale o padrão da matriz para todos.</p>') + '</div>';
+    var trilha = '<div class="mtz-bloco"><h3>Trilha de mudanças</h3><div id="mtzTrilha">' + AvisosMatriz_trilhaHtml_(d.trilha) + '</div>' +
+      '<button type="button" class="cadx-btn" onclick="AvisosMatriz_trilhaToda_()">Ver a trilha inteira</button></div>';
+    c.innerHTML = horarios + blocoAreas + regras + resumos + medicao + prefs + trilha;
+    AvisosMatriz_desenharRegras_();
+  }
+
+  function Mtz_hojeIso_() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+
+  function AvisosMatriz_desenharRegras_() {
+    var alvo = document.getElementById("mtzRegras"), d = MTZ.dados, esc = Mtz_esc_;
+    if (!alvo || !d) return;
+    var lista = d.regras.filter(function (r) { return !MTZ.modulo || r.modulo === MTZ.modulo; });
+    var opc = function (rotulos, valor, permitidos) {
+      return Object.keys(rotulos).filter(function (k) { return !permitidos || permitidos.indexOf(k) >= 0 || k === valor; }).map(function (k) { return '<option value="' + k + '"' + (k === valor ? " selected" : "") + '>' + esc(rotulos[k]) + '</option>'; }).join("");
+    };
+    alvo.innerHTML = lista.map(function (r) {
+      var whatsPerm = r.whatsHoraPermitido ? null : ["NAO", "RESUMO"];
+      return '<div class="mtz-regra" data-cod="' + esc(r.cod) + '"><div class="cab"><span class="cod">' + esc(r.cod) + '</span><b>' + esc(r.evento) + '</b>' +
+        (r.obrigatorio ? ' <span class="mtz-sit neutro">Obrigatório</span>' : '') + (r.alterada ? ' <span class="mtz-sit alerta">Alterada</span>' : '') + (r.decisao === "HISTORICO" ? ' <span class="mtz-sit neutro">Vira histórico</span>' : '') + '</div>' +
+        '<div class="mtz-q">' + esc(r.moduloNome) + ' · Quem recebe: ' + esc(r.publico) + (r.area ? ' (área ' + esc(r.area) + ')' : '') + ' · Limite: ' + esc(r.limite) + (r.obs ? ' · ' + esc(r.obs) : '') + ' · Origem: ' + esc(r.origem) + '</div>' +
+        '<div class="sels"><label class="mtz-q">E-mail <select data-c="email" aria-label="E-mail de ' + esc(r.cod) + '">' + opc(d.rotulosEmail, r.email) + '</select></label>' +
+        '<label class="mtz-q">WhatsApp <select data-c="whatsapp" aria-label="WhatsApp de ' + esc(r.cod) + '">' + opc(d.rotulosWhats, r.whatsapp, whatsPerm) + '</select></label>' +
+        '<label class="mtz-q">Decisão <select data-c="decisao" aria-label="Decisão de ' + esc(r.cod) + '"><option value="AVISA"' + (r.decisao === "AVISA" ? " selected" : "") + '>Continua avisando</option><option value="HISTORICO"' + (r.decisao === "HISTORICO" ? " selected" : "") + '>Vira só histórico</option></select></label>' +
+        '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', false)">Salvar</button>' +
+        (r.alterada ? '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', true)">Voltar ao padrão aprovado</button>' : '') + '</div></div>';
+    }).join("") || '<p class="mtz-q">Nenhum evento neste módulo.</p>';
+  }
+
+  function AvisosMatriz_salvarRegra_(cod, restaurar) {
+    var el = document.querySelector('.mtz-regra[data-cod="' + cod + '"]');
+    if (!el) return;
+    var motivo = prompt((restaurar ? "Voltar " + cod + " ao padrão aprovado pelo dono." : "Salvar a mudança em " + cod + ".") + "\n\nEscreva o motivo (fica na trilha, com o seu nome e a data):", "");
+    if (motivo === null) return;
+    var dados = { cod: cod, motivo: motivo };
+    if (!restaurar) el.querySelectorAll("select[data-c]").forEach(function (s) { dados[s.getAttribute("data-c")] = s.value; });
+    Mtz_chamar_("SGO_AvisosMatriz_api", restaurar ? "restaurar" : "salvarRegra", dados, function (r) {
+      alert(r.message);
+      Mtz_chamar_("SGO_AvisosMatriz_api", "carregar", {}, function (r2) { MTZ.dados = r2; AvisosMatriz_desenhar_(); }, function () {});
+    }, function (m) { alert(m); });
+  }
+
+  function AvisosMatriz_salvarCfg_() {
+    var msg = document.getElementById("mtzCfgMsg");
+    var dados = { horaEmail: document.getElementById("mtzHoraEmail").value, horaWhats: document.getElementById("mtzHoraWhats").value,
+      whatsResumo: document.getElementById("mtzWhatsResumo").checked, centralPorArea: document.getElementById("mtzCentralArea").checked, motivo: document.getElementById("mtzCfgMotivo").value };
+    if (msg) msg.textContent = "Salvando...";
+    Mtz_chamar_("SGO_AvisosMatriz_api", "salvarCfg", dados, function (r) {
+      Mtz_chamar_("SGO_AvisosMatriz_api", "carregar", {}, function (r2) { MTZ.dados = r2; AvisosMatriz_desenhar_(); var m2 = document.getElementById("mtzCfgMsg"); if (m2) m2.textContent = r.message; }, function () {});
+    }, function (m) { if (msg) msg.textContent = "Não salvou: " + m; });
+  }
+
+  function AvisosMatriz_trilhaHtml_(t) {
+    var esc = Mtz_esc_;
+    if (!t || !t.length) return '<p class="mtz-q">Nenhuma mudança: vale a matriz aprovada pelo dono em 21/10/2026.</p>';
+    var txt = function (o) { return Object.keys(o || {}).filter(function (k) { return k !== "restaurada"; }).map(function (k) { return k + ": " + o[k]; }).join("; "); };
+    return '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Evento</th><th>Antes</th><th>Depois</th><th>Motivo</th></tr></thead><tbody>' +
+      t.map(function (l) { return '<tr><td>' + esc(l.emBr) + '</td><td>' + esc(l.por) + '</td><td>' + esc(l.codigo === "CONFIG" ? "Horários" : l.codigo) + '</td><td>' + esc(txt(l.antes)) + '</td><td>' + esc(txt(l.depois)) + (l.depois && l.depois.restaurada ? " (padrão aprovado)" : "") + '</td><td>' + esc(l.motivo) + '</td></tr>'; }).join("") +
+      '</tbody></table></div>';
+  }
+
+  function AvisosMatriz_trilhaToda_() {
+    var alvo = document.getElementById("mtzTrilha");
+    if (alvo) alvo.innerHTML = '<p class="mtz-q">Carregando...</p>';
+    Mtz_chamar_("SGO_AvisosMatriz_api", "trilha", {}, function (r) { if (alvo) alvo.innerHTML = AvisosMatriz_trilhaHtml_(r.trilha); }, function (m) { if (alvo) alvo.innerHTML = '<p class="mtz-q" role="alert">' + Mtz_esc_(m) + '</p>'; });
+  }
+
+  function AvisosMatriz_resumos_() {
+    var alvo = document.getElementById("mtzResumos"), esc = Mtz_esc_;
+    if (!alvo) return;
+    alvo.innerHTML = '<p class="mtz-q">Carregando...</p>';
+    var rot = { ENVIADO: ["Enviado", "ok"], SEM_NOVIDADE: ["Sem novidade", "neutro"], ABRIU_O_SISTEMA: ["Já abriu o sistema", "neutro"], SEM_WHATSAPP: ["Sem WhatsApp (vínculo)", "neutro"], DESLIGADO_PELA_PESSOA: ["Desligado pela pessoa", "neutro"], RETIDO: ["Retido pelo piloto", "neutro"], PULADO: ["Não enviado", "alerta"], ERRO: ["Erro", "perigo"] };
+    Mtz_chamar_("SGO_AvisosMatriz_api", "resumos", { dia: document.getElementById("mtzDiaResumo").value }, function (r) {
+      if (!r.resumos.length) { alvo.innerHTML = '<p class="mtz-q">Nenhum resumo avaliado neste dia (o e-mail sai a partir da hora do resumo, em dia útil).</p>'; return; }
+      alvo.innerHTML = '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Hora</th><th>Pessoa</th><th>Canal</th><th>Situação</th><th>Motivo</th></tr></thead><tbody>' +
+        r.resumos.map(function (l) { var s = rot[l.situacao] || [l.situacao, "neutro"]; return '<tr><td>' + esc(l.hora) + '</td><td>' + esc(l.nome) + '</td><td>' + (l.canal === "email" ? "E-mail" : "WhatsApp") + '</td><td><span class="mtz-sit ' + s[1] + '">' + esc(s[0]) + '</span></td><td class="mtz-q">' + esc(l.motivo) + '</td></tr>'; }).join("") +
+        '</tbody></table></div>';
+    }, function (m) { alvo.innerHTML = '<p class="mtz-q" role="alert">' + esc(m) + '</p>'; });
+  }
+
+  function AvisosMatriz_medicao_() {
+    var alvo = document.getElementById("mtzMedicao"), esc = Mtz_esc_;
+    if (!alvo) return;
+    alvo.innerHTML = '<p class="mtz-q">Calculando...</p>';
+    var v = function (id) { return (document.getElementById(id) || {}).value || ""; };
+    Mtz_chamar_("SGO_AvisosMatriz_api", "medicao", { antesIni: v("mtzAi"), antesFim: v("mtzAf"), depoisIni: v("mtzDi"), depoisFim: v("mtzDf") }, function (r) {
+      var m = r.medicao, a = m.antes, d = m.depois;
+      var linha = function (rot, x, y, meta) { return '<tr><td>' + esc(rot) + '</td><td>' + esc(x) + '</td><td>' + esc(y) + '</td><td class="mtz-q">' + esc(meta || "") + '</td></tr>'; };
+      alvo.innerHTML = '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Indicador</th><th>Antes</th><th>Depois</th><th>Meta</th></tr></thead><tbody>' +
+        linha("Pessoas-dia com envio", a.pessoasDias, d.pessoasDias) +
+        linha("E-mails por pessoa por dia (média)", a.mediaEmail, d.mediaEmail, "até 2") +
+        linha("E-mails por pessoa por dia (maior)", a.maxEmail, d.maxEmail) +
+        linha("WhatsApp por pessoa por dia (média)", a.mediaWhatsapp, d.mediaWhatsapp, "até 1") +
+        linha("WhatsApp por pessoa por dia (maior)", a.maxWhatsapp, d.maxWhatsapp, "até 1, fora o ponto") +
+        linha("Pessoas-dia acima da meta de e-mail", a.pessoasDiasAcimaMetaEmail, d.pessoasDiasAcimaMetaEmail, "zero") +
+        linha("Pessoas-dia acima da meta de WhatsApp", a.pessoasDiasAcimaMetaWhatsapp, d.pessoasDiasAcimaMetaWhatsapp, "zero") +
+        linha("WhatsApp fora do expediente", a.whatsForaExpediente, d.whatsForaExpediente, "zero") +
+        linha("WhatsApp para PJ ou vínculo vazio", a.whatsPjOuVazio, d.whatsPjOuVazio, "zero") +
+        linha("WhatsApp do COMMAND (relatório do piloto)", a.whatsappCommand, d.whatsappCommand, "zero: o COMMAND fica no próprio sino") +
+        linha("Retidas pelo piloto ou bloqueadas pelo servidor", a.retidos, d.retidos, "mostra quanto sairia sem o piloto") +
+        linha("E-mails guardados para o resumo", a.noResumo, d.noResumo) +
+        '</tbody></table></div>' +
+        '<details><summary>Por pessoa (média por dia com envio)</summary><div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Pessoa</th><th>Antes: e-mail / WhatsApp</th><th>Depois: e-mail / WhatsApp</th></tr></thead><tbody>' +
+        (function () {
+          var mapa = {};
+          a.porPessoa.forEach(function (p) { mapa[p.nome] = { a: p }; });
+          d.porPessoa.forEach(function (p) { (mapa[p.nome] = mapa[p.nome] || {}).d = p; });
+          return Object.keys(mapa).sort().map(function (n) { var x = mapa[n]; return '<tr><td>' + esc(n) + '</td><td>' + (x.a ? x.a.mediaEmail + " / " + x.a.mediaWhatsapp : "-") + '</td><td>' + (x.d ? x.d.mediaEmail + " / " + x.d.mediaWhatsapp : "-") + '</td></tr>'; }).join("");
+        })() + '</tbody></table></div></details>';
+    }, function (m2) { alvo.innerHTML = '<p class="mtz-q" role="alert">' + esc(m2) + '</p>'; });
+  }
+
+  // ---------------------------------------------------------- Meus avisos (cada pessoa)
+  function MeusAvisos_render_() {
+    Mtz_casca_("Meus avisos", "O que você recebe por e-mail e WhatsApp, e o que pode ligar ou desligar.",
+      "<ul><li>No <b>sistema</b> você vê tudo na hora (Início, central de pendências). Isso não desliga.</li>" +
+      "<li>Por <b>e-mail</b> chega um resumo por dia útil, com o que espera por você. Na hora só o que exige ciência ou muda algo de hoje.</li>" +
+      "<li>Pelo <b>WhatsApp</b> chega no máximo um resumo por dia, só para CLT, só se você ainda não abriu o sistema. Os lembretes do ponto ficam em Assistente do ponto.</li>" +
+      "<li>Só você altera as suas preferências. A gestão vê o que você escolheu.</li></ul>", "maCorpo");
+    Mtz_chamar_("SGO_MeusAvisos_api", "carregar", {}, function (r) { MTZ.meus = r; MeusAvisos_desenhar_(); }, function (m) { Mtz_falhaTela_("maCorpo", m, "MeusAvisos_render_"); });
+  }
+
+  function MeusAvisos_desenhar_() {
+    var c = document.getElementById("maCorpo"), d = MTZ.meus, esc = Mtz_esc_;
+    if (!c || !d) return;
+    var p = d.prefs;
+    var whatsTxt = d.whatsLiberado ? (d.temCelular ? "Você é CLT e tem celular no cadastro: pode receber o WhatsApp de resumo do dia (enquanto durar o piloto, só quem está na lista do piloto recebe)." : "Você é CLT, mas está sem celular no cadastro: peça ao Administrador para completar em Administração > Usuários.")
+      : (d.vinculo === "PJ" ? "Seu vínculo é PJ: você recebe pelo sistema e por e-mail, sem WhatsApp." : "Seu vínculo de trabalho não está informado no cadastro: até o RH ou o Administrador informar, você recebe só pelo sistema e por e-mail.");
+    var silencio = Object.keys(d.silenciaveis).map(function (m) { return '<label class="mtz-check"><input type="checkbox" class="ma-sil" value="' + esc(m) + '"' + (p.silenciar.indexOf(m) >= 0 ? " checked" : "") + '> Tirar do e-mail de resumo: ' + esc(d.silenciaveis[m]) + '</label>'; }).join("");
+    var hora = p.horaEmail || d.horas.email;
+    c.innerHTML =
+      '<div class="mtz-bloco"><h3>O que você pode ajustar</h3>' +
+        '<label class="mtz-check"><input type="checkbox" id="maWhats"' + (p.whatsResumo && d.whatsLiberado ? " checked" : "") + (d.whatsLiberado && d.whatsResumoLigado ? "" : " disabled") + '> Receber o WhatsApp de resumo do dia (' + esc(d.horas.whats) + ')</label>' +
+        '<p class="mtz-q">' + esc(whatsTxt) + (d.whatsResumoLigado ? "" : " O WhatsApp de resumo está desligado para todos pela gestão.") + '</p>' +
+        '<div class="mtz-campos"><label>Hora do e-mail de resumo<select id="maHora"><option value="' + esc(d.horas.email) + '"' + (hora !== d.horas.emailAlternativa ? " selected" : "") + '>' + esc(d.horas.email) + '</option><option value="' + esc(d.horas.emailAlternativa) + '"' + (hora === d.horas.emailAlternativa ? " selected" : "") + '>' + esc(d.horas.emailAlternativa) + '</option></select></label></div>' +
+        (d.temEmail ? '' : '<p class="mtz-q" role="alert">Seu cadastro está sem e-mail: o resumo não chega até o Administrador completar em Administração &gt; Usuários.</p>') +
+        '<label class="mtz-check"><input type="checkbox" id="maInfo"' + (p.emailInformativos ? " checked" : "") + '> Receber no e-mail de resumo os avisos informativos (comentário, atividade concluída, venda ganha), que continuam no sistema</label>' +
+        silencio +
+        '<p class="mtz-q">Lembretes do ponto (almoço e retorno): ajuste em Assistente do ponto, quando ele estiver ligado para você.</p>' +
+        '<div class="mtz-linha" style="margin-top:8px"><button type="button" class="cadx-btn cadx-btn-grande" id="maSalvar" onclick="MeusAvisos_salvar_()">Salvar</button><span id="maMsg" class="mtz-q" role="status">' + (d.alteradoEm ? "Última alteração: " + esc(d.alteradoEm) : "Você ainda não mudou nada: vale o padrão.") + '</span></div></div>' +
+      '<div class="mtz-bloco mtz-travado"><h3>O que não pode ser desligado</h3><ul style="margin:0;padding-left:18px">' +
+        '<li>Avisos com ciência: no sistema e por e-mail. A empresa precisa saber que você leu.</li>' +
+        '<li>Atividade atrasada: a cobrança no sistema continua até você concluir ou justificar com nova previsão.</li>' +
+        '<li>Caixa de decisões (para quem é gestor): o e-mail de resumo com as decisões que dependem de você.</li>' +
+        '<li>Exceções do WhatsApp na hora da Frota, para quem é gestor da Frota ou está com o veículo: ' + esc((d.excecoesWhats || []).join("; ") || "nenhuma ligada") + '.</li>' +
+        '<li>Pendências da central: aparecem sempre no Início.</li></ul></div>' +
+      '<div class="mtz-bloco"><h3>Como fica o seu resumo de hoje</h3><p class="mtz-q">Mostra o texto do e-mail de resumo com o que existe agora. Nada é enviado.</p>' +
+        '<button type="button" class="cadx-btn" onclick="MeusAvisos_previa_()">Ver a prévia</button><div id="maPrevia" style="margin-top:8px"></div></div>';
+  }
+
+  function MeusAvisos_salvar_() {
+    var btn = document.getElementById("maSalvar"), msg = document.getElementById("maMsg");
+    var w = document.getElementById("maWhats");
+    var dados = { whatsResumo: w ? (w.disabled ? MTZ.meus.prefs.whatsResumo : w.checked) : true, horaEmail: document.getElementById("maHora").value,
+      emailInformativos: document.getElementById("maInfo").checked, silenciar: Array.prototype.map.call(document.querySelectorAll(".ma-sil:checked"), function (x) { return x.value; }) };
+    if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
+    Mtz_chamar_("SGO_MeusAvisos_api", "salvar", dados, function (r) {
+      MTZ.meus = r; MeusAvisos_desenhar_();
+      var m = document.getElementById("maMsg"); if (m) m.textContent = r.message;
+    }, function (e) { if (btn) { btn.disabled = false; btn.textContent = "Salvar"; } if (msg) msg.textContent = "Não salvou: " + e; });
+  }
+
+  function MeusAvisos_previa_() {
+    var alvo = document.getElementById("maPrevia"), esc = Mtz_esc_;
+    if (!alvo) return;
+    alvo.innerHTML = '<p class="mtz-q">Montando a prévia...</p>';
+    Mtz_chamar_("SGO_MeusAvisos_api", "previa", {}, function (r) {
+      var p = r.previa;
+      if (!p) { alvo.innerHTML = '<p class="mtz-q">Não foi possível montar a prévia agora.</p>'; return; }
+      alvo.innerHTML = (p.vazio ? '<p class="mtz-q">Hoje não há nada para o seu e-mail de resumo: nesse caso o e-mail não é enviado.</p>' : '') +
+        '<p><b>' + esc(p.titulo) + '</b></p><div class="mtz-previa">' + esc(p.texto) + '</div>' +
+        (p.whats ? '<p class="mtz-q">WhatsApp de resumo (se você for CLT, estiver no piloto e ainda não tiver aberto o sistema): ' + esc(p.whats) + '.</p>' : '');
+    }, function (m) { alvo.innerHTML = '<p class="mtz-q" role="alert">' + esc(m) + '</p>'; });
+  }
+</script>

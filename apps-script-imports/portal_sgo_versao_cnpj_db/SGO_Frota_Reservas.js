@@ -167,7 +167,10 @@ function FrotaRes_veiculosAtivos_() {
   return Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_VEICULOS).filter(function (v) { return FrotaRes_up_(v.STATUS) !== 'INATIVO'; })
     .sort(function (a, b) { return FrotaRes_s_(a.PLACA).localeCompare(FrotaRes_s_(b.PLACA)); });
 }
+// 21/10/2026 (matriz de avisos): avisos de reserva à gestão vão ao gestor da Frota (área da Frota em Caixa de decisões >
+// Regras e responsáveis; sem gestor, a Diretoria), no lugar de toda a gestão.
 function FrotaRes_gestores_() {
+  if (typeof SGO_avisoGestoresDe_ === 'function') return SGO_avisoGestoresDe_('frota');
   return Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) { return FrotaRes_ehGestaoPerfil_(u.PERFIL) && FrotaRes_up_(u.STATUS || 'ATIVO') !== 'INATIVO'; })
     .map(function (u) { return FrotaRes_s_(u.ID); });
 }
@@ -226,9 +229,23 @@ function FrotaRes_noExpediente_(o) {
  * notificador com a categoria FROTA_RESERVAS (vínculo CLT, dia útil, horário de trabalho, uma por pessoa por dia).
  * Nunca derruba a ação principal.
  */
+// Tipo do aviso de reserva -> evento da matriz de avisos (SGO_Avisos_Matriz.js).
+var FROTA_RES_EVENTOS = { CRIADA_PELA_GESTAO: 'S38', CANCELADA_GESTAO: 'S39', TROCA_VEICULO: 'S40', LIBERACAO_GESTAO: 'S41', DEVOLVIDO: 'S42', NAO_UTILIZADA: 'S43',
+  ATRASO_DEVOLUCAO: 'S44', ATRASO_RESERVANTE: 'S45', ATRASO_GESTAO: 'S46', LEMBRETE: 'S47', CONFERENCIA_PROBLEMA: 'S48', CONFERENCIA_GESTAO: 'S49' };
+
+/**
+ * 21/10/2026 (matriz de avisos): o canal de cada tipo vem da regra do evento. E-mail "na hora" fica PENDENTE e sai no
+ * expediente (FrotaRes_enviarEmails_); "no resumo" vai para o e-mail de resumo do dia (EMAIL_SITUACAO = NO_RESUMO);
+ * "só no sistema" não guarda e-mail. WhatsApp só nas exceções S41 e S44 (mesmo dia, expediente, CLT).
+ */
 function FrotaRes_avisar_(o) {
   try {
     var destinos = [];
+    var evento = FROTA_RES_EVENTOS[o.tipo] || '';
+    var regra = evento && typeof SGO_avisoRegra_ === 'function' ? SGO_avisoRegra_(evento) : null;
+    var modoEmail = o.email === false ? 'NAO' : (regra ? regra.email : 'HORA');
+    if (regra && regra.decisao === 'HISTORICO') modoEmail = 'NAO';
+    var querWhats = !!o.whatsapp && (!regra || regra.whatsapp === 'HORA');
     (o.destinos || []).forEach(function (d) { d = FrotaRes_s_(d); if (d && destinos.indexOf(d) < 0 && d !== FrotaRes_s_(o.exceto)) destinos.push(d); });
     var usuarios = {};
     Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) { usuarios[FrotaRes_s_(u.ID)] = u; });
@@ -236,10 +253,13 @@ function FrotaRes_avisar_(o) {
       var reg = SGO_DATA.normalizarObjetoParaSheet(FROTA_RES_ABA_AVISOS, SGO_DATA.gerarRegistroBase({
         QUANDO: SGO_UTILS.nowIso(), TIPO: o.tipo || '', RESERVA_ID: o.reservaId || '', DESTINATARIO_ID: uid, DESTINATARIO_NOME: FrotaRes_s_((usuarios[uid] || {}).NOME),
         TITULO: String(o.titulo || 'Reserva de veículo').slice(0, 180), TEXTO: String(o.texto || '').slice(0, 3000),
-        EMAIL_SITUACAO: o.email === false ? '' : 'PENDENTE', EMAIL_EM: '', EMAIL_MOTIVO: '', WHATSAPP_SITUACAO: '', WHATSAPP_MOTIVO: ''
+        EMAIL_SITUACAO: modoEmail === 'HORA' ? 'PENDENTE' : (modoEmail === 'RESUMO' ? 'NO_RESUMO' : ''), EMAIL_EM: '', EMAIL_MOTIVO: modoEmail === 'RESUMO' ? 'vai no e-mail de resumo do dia (matriz de avisos, ' + evento + ')' : '', WHATSAPP_SITUACAO: '', WHATSAPP_MOTIVO: ''
       }));
-      if (o.whatsapp && typeof SGO_notificar_ === 'function') {
-        var r = SGO_notificar_({ usuarios: [uid], canais: ['whatsapp'], titulo: o.titulo, texto: o.textoWhatsapp || o.texto, origem: 'FROTA_RESERVAS', refId: reg.ID, categoria: 'FROTA_RESERVAS' });
+      if (modoEmail === 'RESUMO' && typeof SGO_avisoGuardarResumo_ === 'function') {
+        try { SGO_avisoGuardarResumo_([uid], { evento: evento, titulo: o.titulo, texto: o.texto, origem: 'FROTA_RESERVAS', refId: reg.ID }); } catch (eF) { reg.EMAIL_SITUACAO = 'PENDENTE'; }
+      }
+      if (querWhats && typeof SGO_notificar_ === 'function') {
+        var r = SGO_notificar_({ usuarios: [uid], canais: ['whatsapp'], titulo: o.titulo, texto: o.textoWhatsapp || o.texto, origem: 'FROTA_RESERVAS', refId: reg.ID, categoria: 'FROTA_RESERVAS', evento: evento });
         reg.WHATSAPP_SITUACAO = r && r.ok ? 'ENVIADO' : (r && r.erro ? 'ERRO' : 'PULADO');
         reg.WHATSAPP_MOTIVO = String((r && r.motivo) || '').slice(0, 300);
       }
@@ -257,7 +277,7 @@ function FrotaRes_enviarEmails_(o) {
     var quando = new Date(FrotaRes_s_(a.QUANDO)).getTime();
     if (isFinite(quando) && quando < limite) { SGO_DATA.update(FROTA_RES_ABA_AVISOS, a.ID, { EMAIL_SITUACAO: 'PULADO', EMAIL_EM: SGO_UTILS.nowIso(), EMAIL_MOTIVO: 'guardado há mais de ' + FROTA_RES_AVISO_EMAIL_VALIDADE_DIAS + ' dias' }); return; }
     var r = { ok: 0 };
-    try { r = typeof SGO_notificar_ === 'function' ? SGO_notificar_({ usuarios: [FrotaRes_s_(a.DESTINATARIO_ID)], canais: ['email'], titulo: a.TITULO, texto: a.TEXTO, origem: 'FROTA_RESERVAS', refId: a.ID }) : { pulado: 1, motivo: 'notificador ausente' }; }
+    try { r = typeof SGO_notificar_ === 'function' ? SGO_notificar_({ usuarios: [FrotaRes_s_(a.DESTINATARIO_ID)], canais: ['email'], titulo: a.TITULO, texto: a.TEXTO, origem: 'FROTA_RESERVAS', refId: a.ID, evento: FROTA_RES_EVENTOS[FrotaRes_s_(a.TIPO)] || '' }) : { pulado: 1, motivo: 'notificador ausente' }; }
     catch (e) { r = { erro: 1, motivo: String((e && e.message) || e) }; }
     SGO_DATA.update(FROTA_RES_ABA_AVISOS, a.ID, { EMAIL_SITUACAO: r.ok ? 'ENVIADO' : (r.erro ? 'ERRO' : 'PULADO'), EMAIL_EM: SGO_UTILS.nowIso(), EMAIL_MOTIVO: String(r.motivo || '').slice(0, 300) });
     if (r.ok) enviados++;

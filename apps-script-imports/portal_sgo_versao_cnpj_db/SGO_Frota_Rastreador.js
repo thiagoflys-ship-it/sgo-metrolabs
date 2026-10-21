@@ -536,19 +536,27 @@ function Rastreador_conexaoOk_() {
   return n;
 }
 
-/** Usuários ativos da gestão (ADMIN, GESTOR, DIRETORIA) para os avisos do rastreador. */
+/**
+ * Quem recebe os avisos do rastreador. 21/10/2026 (matriz de avisos): o gestor da Frota (Caixa de decisões > Regras e
+ * responsáveis, área da Frota; sem gestor, a Diretoria), no lugar de toda a gestão. Sem a matriz: a gestão toda, como antes.
+ */
 function Rastreador_gestores_() {
+  if (typeof SGO_avisoGestoresDe_ === 'function') return SGO_avisoGestoresDe_('frota');
   return Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
     var p = SGO_UTILS.safeUpper(u.PERFIL);
     return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && (p === 'ADMIN' || p === 'GESTOR' || p === 'DIRETORIA');
   }).map(function (u) { return SGO_UTILS.safe(u.ID); }).filter(String);
 }
 
-function Rastreador_avisarGestao_(titulo, texto, refId) {
+/**
+ * evento (matriz de avisos): S35 uso sem registro (e-mail e WhatsApp na hora, no expediente; fora dele, resumo do dia seguinte),
+ * S36 partida não liberada (só WhatsApp na hora, no expediente), S37 bloqueio pendente (só e-mail na hora). Só CLT recebe WhatsApp.
+ */
+function Rastreador_avisarGestao_(titulo, texto, refId, evento) {
   if (typeof SGO_notificar_ !== 'function') return;
   try {
     var ids = Rastreador_gestores_();
-    if (ids.length) SGO_notificar_({ usuarios: ids, titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'FROTA', refId: refId });
+    if (ids.length) SGO_notificar_({ usuarios: ids, titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'FROTA', refId: refId, evento: evento || '' });
   } catch (e) { console.error('Rastreador aviso: ' + ((e && e.message) || e)); }
 }
 
@@ -912,7 +920,7 @@ function Rastreador_rodada_(o) {
           Rastreador_avisarGestao_('Uso sem registro: veículo ' + SGO_UTILS.safe(v.PLACA),
             'O rastreador mostra o veículo ' + SGO_UTILS.safe(v.PLACA) + ' em uso sem retirada registrada no SGO+.\nHora: ' + pos.quandoTexto + '\nSituação: ' + estado +
             '\nLocal e mapa: na Central de pendências e em Frota > Rastreador (só a gestão).' +
-            '\n\nConfirme com a equipe quem está com o veículo. Se foi esquecimento, a gestão registra a retirada no lugar do condutor, com justificativa. Depois de conferir, marque o alerta como conferido em Frota > Rastreador.', a.alerta.ID);
+            '\n\nConfirme com a equipe quem está com o veículo. Se foi esquecimento, a gestão registra a retirada no lugar do condutor, com justificativa. Depois de conferir, marque o alerta como conferido em Frota > Rastreador.', a.alerta.ID, 'S35');
         }
       }
       movs.forEach(function (m) {
@@ -1100,7 +1108,7 @@ function Rastreador_liberarNaRetirada_(c, sessao, veiculo, movId, km, erroLeitur
   var aviso = 'Partida não liberada pelo rastreador: ' + r.motivo + '. Peça à gestão para liberar.';
   Rastreador_avisarGestao_('Partida não liberada: veículo ' + placa,
     'A retirada do veículo ' + placa + ' foi registrada por ' + SGO_UTILS.safe(sessao && (sessao.nome || sessao.usuario)) + ', mas o rastreador não liberou a partida (' + r.motivo + ').\n' +
-    'O condutor está aguardando. Libere em Frota > Rastreador > "Liberar partida" ou pelo aplicativo do rastreador. O SGO+ tenta de novo a cada 2 minutos enquanto a retirada estiver aberta.', cmd.ID);
+    'O condutor está aguardando. Libere em Frota > Rastreador > "Liberar partida" ou pelo aplicativo do rastreador. O SGO+ tenta de novo a cada 2 minutos enquanto a retirada estiver aberta.', cmd.ID, 'S36');
   return { ativo: true, bloqueio: true, liberado: false, km: Rastreador_kmParaTela_(km), aviso: aviso, erroLeitura: erroLeitura };
 }
 
@@ -1145,7 +1153,7 @@ function Rastreador_verificarAtrasos_() {
       campo: 'PARTIDA', detalhe: 'Bloqueio pendente há mais de ' + RASTR_MIN_BLOQUEIO_ATRASADO + ' minutos. ' + SGO_UTILS.safe(cmd.MOTIVO) });
     Rastreador_avisarGestao_('Bloqueio da partida pendente: veículo ' + SGO_UTILS.safe(cmd.PLACA),
       'O bloqueio da partida do veículo ' + SGO_UTILS.safe(cmd.PLACA) + ' foi pedido em ' + Rastreador_agoraTexto_(new Date(desde)) + ' e ainda não foi enviado.\n' + SGO_UTILS.safe(cmd.MOTIVO) +
-      '\n\nO SGO+ só bloqueia com o veículo parado e a ignição desligada. Confira onde está o veículo em Frota > Rastreador; se precisar, bloqueie pelo aplicativo do rastreador.', cmd.ID);
+      '\n\nO SGO+ só bloqueia com o veículo parado e a ignição desligada. Confira onde está o veículo em Frota > Rastreador; se precisar, bloqueie pelo aplicativo do rastreador.', cmd.ID, 'S37');
   });
 }
 

@@ -13,7 +13,7 @@ function SGO_ajudaTelas_Administracao_() {
       antesDeComecar: [
         "Esta tela é usada pela gestão: Administrador, Gestor e Diretoria. O perfil RH também abre a tela, só para consultar (sem criar nem alterar contas). Os demais perfis não veem o item \"Usuários\" no menu.",
         "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
-        "Vínculo de trabalho: mensagens do ponto só vão para quem é CLT. Quem é PJ ou está como \"Não informado\" não recebe mensagens do ponto; os outros avisos (WhatsApp e e-mail) chegam para todos, inclusive PJ.",
+        "Vínculo de trabalho: pela matriz de avisos (21/10/2026), o WhatsApp é só para quem é CLT, inclusive as mensagens do ponto. Quem é PJ ou está como \"Não informado\" recebe os avisos pelo sistema e por e-mail.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
         "Para um usuário do perfil Cliente, a empresa dele precisa estar cadastrada e ativa em Clientes.",
@@ -503,6 +503,65 @@ function SGO_ajudaTelas_Administracao_() {
       ]
     },
 
+    // 21/10/2026: matriz de avisos (SGO_Avisos_Matriz.js / JS_AvisosMatriz.html), aprovada pelo dono.
+    "avisos_matriz": {
+      titulo: "Matriz de avisos",
+      paraQueServe: "Mostra e ajusta a regra de cada aviso que o SGO+ manda: quem recebe e por qual canal (sistema, e-mail na hora, e-mail no resumo do dia, WhatsApp). O padrão é a matriz aprovada pelo dono em 21/10/2026. Aqui também ficam os horários do resumo do dia, o gestor de cada área, os resumos enviados, a medição de avisos por pessoa e a trilha de mudanças.",
+      antesDeComecar: [
+        "Esta tela é do Administrador e da Diretoria. Para as demais pessoas, o item não aparece no menu; cada uma ajusta o que recebe em Menu > Meus avisos.",
+        "No sistema, todo aviso aparece na hora e cobra até ser resolvido. Isso não muda por esta tela.",
+        "E-mail: cada pessoa recebe no máximo um e-mail de resumo por dia útil (padrão 08:00). Na hora, só o que exige ciência ou muda algo de hoje, sempre no expediente.",
+        "WhatsApp: no máximo um resumo por dia (padrão 09:30), só para CLT, só para quem ainda não abriu o sistema e, durante o piloto, só para quem está na lista do piloto. Na hora, só as quatro exceções da Frota (partida não liberada, uso de veículo sem registro no expediente, devolução atrasada com reserva no mesmo dia e reserva de hoje liberada a outra pessoa).",
+        "O Assistente do ponto tem regra própria e não aparece aqui.",
+        "O gestor de cada área vem de Caixa de decisões > Regras e responsáveis. Área sem gestor: os avisos vão para a Diretoria. Compras fica na área Logística."
+      ],
+      passos: [
+        { titulo: "Ver e ajustar a regra de um aviso", itens: [
+          "Toque em \"Matriz de avisos\" no menu Administração.",
+          "No bloco \"Regras de cada evento\", escolha o módulo no filtro.",
+          "Em cada evento, confira quem recebe, o limite e a observação.",
+          "Escolha o canal do e-mail, o do WhatsApp e a decisão (continua avisando ou vira só histórico).",
+          "Toque em \"Salvar\" e escreva o motivo. A mudança vale a partir do próximo aviso.",
+          "Para desfazer, toque em \"Voltar ao padrão aprovado\" e escreva o motivo."
+        ] },
+        { titulo: "Mudar os horários do resumo do dia", itens: [
+          "No bloco \"Resumo do dia e filtro por área\", abra \"Alterar horários\".",
+          "Escolha a hora do e-mail e a do WhatsApp (dentro do expediente).",
+          "Marque ou desmarque o WhatsApp de resumo e o filtro da central por área.",
+          "Escreva o motivo e toque em \"Salvar horários\"."
+        ] },
+        { titulo: "Acompanhar os resumos e medir", itens: [
+          "No bloco \"Resumos do dia\", escolha o dia e toque em \"Mostrar\": cada pessoa, o canal, a situação e o motivo.",
+          "No bloco \"Medição\", confira os períodos antes e depois e toque em \"Calcular\".",
+          "Compare as médias de e-mail e WhatsApp por pessoa por dia com as metas (até 2 e-mails e 1 WhatsApp; zero WhatsApp fora do expediente e para PJ)."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo \"Obrigatório\"", significado: "Aviso que a matriz aprovada não deixa desligar. Dá para trocar entre na hora e no resumo, mas não tirar o aviso." },
+        { nome: "Selo amarelo \"Alterada\"", significado: "A regra foi mudada nesta tela. A trilha mostra quem, quando e por quê." },
+        { nome: "Selo \"Vira histórico\"", significado: "Ninguém é avisado. O fato continua no histórico do próprio registro." },
+        { nome: "Selo amarelo \"Sem gestor: vai para a Diretoria\"", significado: "A área não tem gestor em Regras e responsáveis. Os avisos dela vão para a Diretoria." },
+        { nome: "Selo verde \"Enviado\" nos resumos", significado: "O resumo saiu. \"Já abriu o sistema\", \"Sem WhatsApp (vínculo)\" e \"Sem novidade\" não são erro: são a regra." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"WhatsApp na hora só vale para as exceções aprovadas pelo dono\"", oQueFazer: "Escolha \"Na contagem do WhatsApp do dia\" ou \"Sem WhatsApp\" para este evento. Só as quatro exceções da Frota e o aviso ao cliente (depois do piloto) podem ir na hora." },
+        { situacao: "Aparece \"é obrigatório pela matriz aprovada pelo dono\"", oQueFazer: "Este aviso não pode deixar de avisar. Troque só entre \"na hora\" e \"no resumo\". Se a regra precisa mudar, leve ao dono." },
+        { situacao: "Aparece \"escreva o motivo da mudança\"", oQueFazer: "Toque em Salvar de novo e escreva pelo menos 8 letras explicando a mudança." },
+        { situacao: "Uma pessoa diz que não recebeu o WhatsApp de resumo", oQueFazer: "Em \"Resumos do dia\", veja o motivo: PJ ou vínculo não informado, já abriu o sistema, nada para hoje, fora do piloto ou desligado por ela em Meus avisos." },
+        { situacao: "Um gestor diz que a central mostra pouca coisa", oQueFazer: "Com o filtro por área, ele vê o da sua área e o que é dele. Confira a área dele em Administração > Usuários e em Caixa de decisões > Regras e responsáveis." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Vê e ajusta as regras, os horários e a medição. Cada mudança fica na trilha com o nome." },
+        { perfil: "DIRETORIA", pode: "Vê e ajusta as regras, os horários e a medição. Cada mudança fica na trilha com o nome." },
+        { perfil: "GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre a tela. Ajusta o que recebe em Menu > Meus avisos." }
+      ],
+      perguntas: [
+        { p: "Por que o COMMAND não manda mais aviso?", r: "Pela matriz aprovada, o COMMAND fica em silêncio fora do próprio sino enquanto não for usado pela equipe. Cada módulo que vier para o SGO+ entra já com a sua linha nesta matriz." },
+        { p: "O que entra no e-mail de resumo do dia?", r: "Atividades (atrasadas, que vencem hoje e avisos novos), decisões da Caixa de decisões (para quem é gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta guardados para o resumo, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo. Assunto de conduta e de ponto vai só como contagem." },
+        { p: "E o assistente do ponto?", r: "Tem identificação e regra próprias (Assistente do ponto). O resumo do dia não leva assunto do ponto e não sai perto de um lembrete do ponto da mesma pessoa." }
+      ]
+    },
+
     // 21/10/2026: piloto do WhatsApp (SGO_WhatsappPiloto.js / JS_WhatsappPiloto.html).
     "whatsapp_piloto": {
       titulo: "Piloto do WhatsApp",
@@ -555,7 +614,7 @@ function SGO_ajudaTelas_Administracao_() {
         { perfil: "GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre a tela. Recebe pelo WhatsApp só se estiver na lista; os avisos seguem no sistema e por e-mail." }
       ],
       perguntas: [
-        { p: "O que cada pessoa da lista recebe pelo WhatsApp?", r: "As mensagens que o SGO+ e o COMMAND já mandavam, com as regras de cada módulo: avisos com ciência, resumo de Minhas atividades, resumo da Caixa de decisões, missões do Programa de conduta, avisos da Frota e das reservas, chamados do Auvo e o bate-papo. Tudo por modelo aprovado na Meta." },
+        { p: "O que cada pessoa da lista recebe pelo WhatsApp?", r: "Desde a matriz de avisos (21/10/2026): no máximo um resumo do dia (09:30, só CLT, só se a pessoa ainda não abriu o sistema) e, na hora, só as quatro exceções da Frota, no expediente. O assistente do ponto tem regra própria. Tudo por modelo aprovado na Meta. As regras ficam em Administração > Matriz de avisos." },
         { p: "Cliente recebe alguma coisa durante o piloto?", r: "Não pelo WhatsApp. O Atendente de IA, os avisos do Auvo ao cliente e o orçamento do chamado ficam retidos. O e-mail ao cliente continua como antes." },
         { p: "E se alguém mandar mensagem para o número antigo da Z-API?", r: "A mensagem não entra no sistema: não vai para a Caixa de Entrada, nem para o bate-papo, nem para a IA. A Z-API está fora." },
         { p: "Dá para mandar documento pelo WhatsApp?", r: "Não durante o piloto. Envie o documento por e-mail, pela janela \"Enviar documento\"." }

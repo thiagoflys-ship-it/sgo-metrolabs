@@ -411,7 +411,7 @@ A empresa do rastreador não informa trânsito. O SGO+ mostra o que os pontos pe
 3. "Capacidade do tanque": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.
 4. "Abastecimentos a conferir": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque "Conferir com a posição do veículo").
 5. "KM por condutor": km informado nas retiradas do período.
-6. "Pedir comprovante": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, e-mail no horário de trabalho e no máximo um resumo por dia no WhatsApp). Ele envia em Frota > Abastecimentos e despesas > "Comprovantes pedidos a você"; o pedido e a atividade fecham sozinhos.
+6. "Pedir comprovante": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, no e-mail de resumo do dia e na contagem do WhatsApp de resumo do dia, se for CLT). Ele envia em Frota > Abastecimentos e despesas > "Comprovantes pedidos a você"; o pedido e a atividade fecham sozinhos.
 
 Consumo pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. Abastecimento parcial distorce o resultado daquele intervalo. O registro de abastecimento ganhou o campo "Hora (opcional)": com ela o SGO+ confere a posição do veículo no horário.
 
@@ -463,7 +463,7 @@ Quem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem 
 | Sem sobreposição | O mesmo veículo não tem duas reservas no mesmo horário, nem reserva sobre manutenção programada, parada ou retirada em andamento. O sistema mostra os livres no mesmo período. Uma pessoa não segura dois veículos ao mesmo tempo. A conferência final é feita dentro da trava do sistema, relendo o banco. |
 | A retirada respeita a reserva | Ao retirar, informe a devolução prevista. Se o veículo tem reserva de outra pessoa (ou manutenção programada) começando antes da devolução prevista mais a folga (1 hora), a retirada é recusada com quem reservou, quando e os veículos livres agora. Só a gestão libera, com justificativa; quem reservou é avisado na hora com a sugestão de outro veículo. A liberação não vira registro "pela gestão" nem sugestão no Programa de conduta. |
 | Dono da reserva | Retira normalmente a partir de 2 horas antes do início; a reserva passa a "em uso" e, na devolução, a "concluída". |
-| Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); e-mail no expediente; WhatsApp só se a reserva for no mesmo dia, pela regra sutil (vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). A gestão e quem reservou também são avisados. Se a reserva começar com o veículo fora, conta como "atraso que afetou reserva" e vira só sugestão no Programa de conduta. |
+| Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); WhatsApp só se a reserva for no mesmo dia (exceção S44 da matriz de avisos: vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). Quem reservou recebe e-mail na hora; o gestor da Frota vê na Caixa de decisões. Se a reserva começar com o veículo fora, conta como "atraso que afetou reserva" e vira só sugestão no Programa de conduta. |
 | Véspera | Último dia útil antes do início, a partir das 14:00: lembrete ao reservante (sistema; e-mail no expediente) e conferência do veículo (ativo, sem parada ou manutenção no período, sem manutenção vencida, documentos e CNH válidos, veículo de volta a tempo). Problema avisa o reservante e a gestão, com os livres para troca; problema que aparece depois avisa de novo. |
 | Não comparecimento | Sem retirada até 1 hora depois do início, a reserva vira "não utilizada" e o veículo fica livre (o reservante é avisado). Se o veículo ainda estava fora com outra pessoa, a tolerância conta da devolução. |
 | Nada é apagado | Canceladas, não utilizadas e concluídas ficam no histórico, com quem e quando. |
@@ -483,3 +483,19 @@ As regras de tempo (folga, tolerância, antecipação, hora do lembrete, anteced
 ## Enviar o documento por e-mail ou WhatsApp (20/10/2026)
 
 Os relatórios da frota são documentos internos: depois de gerar, a barra "Documento salvo" mostra o botão "Enviar"; a janela "Enviar documento" oferece as pessoas da equipe (e-mail e celular do cadastro de Usuários) ou o destinatário digitado. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).
+
+## Avisos da Frota pela matriz de avisos (21/10/2026)
+
+| Aviso | Quem recebe | Canal |
+|---|---|---|
+| Retirada ou devolução registrada em seu nome pela gestão | Condutor | Sistema e e-mail de resumo do dia (sem WhatsApp) |
+| Veículo em uso sem registro (rastreador) | Gestor da Frota | E-mail e WhatsApp na hora, no expediente; fora dele, no resumo do dia seguinte |
+| Partida não liberada pelo rastreador | Gestor da Frota | WhatsApp na hora, no expediente (o condutor está esperando) |
+| Bloqueio da partida pendente há 30 minutos | Gestor da Frota | E-mail na hora |
+| Reserva cancelada, trocada de veículo, lembrete da véspera, problema na reserva, devolução atrasada (a quem reservou) | Reservante | E-mail na hora |
+| Veículo da sua reserva de hoje liberado a outra pessoa | Reservante | E-mail e WhatsApp na hora (mesmo dia, expediente, CLT) |
+| Devolução atrasada com reserva no mesmo dia | Quem está com o veículo | WhatsApp na hora (expediente, CLT, uma por dia) |
+| Reserva feita pela gestão em seu nome, reserva não utilizada, problema na reserva (à gestão), CNH vencendo | Reservante, condutor ou gestor da Frota | E-mail de resumo do dia |
+| Veículo da sua reserva devolvido, devolução atrasada (à gestão) | Próximo reservante, gestor da Frota | Só no sistema (Caixa de decisões) |
+
+O gestor da Frota é o da área Administrativo em Caixa de decisões › Regras e responsáveis (sem gestor, a Diretoria). PJ e vínculo não informado não recebem WhatsApp. Detalhes em `docs/MANUAL_MATRIZ_DE_AVISOS.md`.

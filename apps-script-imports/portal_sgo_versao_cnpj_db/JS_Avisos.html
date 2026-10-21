@@ -360,7 +360,7 @@
   }
 
   function AvisosTela_reenviar_(id) {
-    if (!confirm("Reenviar este aviso por e-mail e WhatsApp para quem ainda não confirmou a leitura?")) return;
+    if (!confirm("Reenviar este aviso por e-mail para quem ainda não confirmou a leitura? O reenvio vale uma vez por dia; pela matriz de avisos não vai WhatsApp avulso.")) return;
     AvisosTela_chamar_("Avisos_apiReenviar", { id: id }, function (res) {
       alert(res.message + AvisosTela_resumoEnvio_(res.notificacoes));
       AvisosTela_carregar_();
@@ -450,7 +450,7 @@
             '<div class="atv-campo"><label for="avsF_arq">Anexos (imagens e documentos; até ' + res.limites.anexos + " arquivos, " + res.limites.mbArquivo + " MB cada)</label>" +
               '<input id="avsF_arq" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.odt,.ods" onchange="AvisosTela_adicionarArquivos_(this)">' +
               '<div id="avsF_lista" style="margin-top:6px"></div></div>' +
-            '<div style="font-size:12px;color:var(--muted)">Ao publicar, cada pessoa do público vê o aviso numa janela ao entrar no SGO+ e recebe o aviso completo por e-mail e um resumo por WhatsApp (quando o cadastro tem e-mail/telefone).</div>' +
+            '<div style="font-size:12px;color:var(--muted)">Ao publicar, cada pessoa do público vê o aviso numa janela ao entrar no SGO+ e recebe o aviso completo por e-mail (quando o cadastro tem e-mail). Pela matriz de avisos não vai WhatsApp avulso: quem é CLT vê a contagem de avisos para confirmar no WhatsApp de resumo do dia.</div>' +
             '<div id="avsFormMsg"></div>' +
           "</div>" +
           '<div class="atv-modal-rod"><button type="button" class="btn-secondary" onclick="AvisosTela_fecharFormulario_()">Cancelar</button>' +
@@ -534,16 +534,17 @@
       anexos: AVT.anexosForm.map(function (x) { return { nome: x.nome, tipo: x.tipo, base64: x.base64 }; }) };
     if (tipo === "PERFIS" && !payload.perfis.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos um perfil, ou escolha Todos os usuários."); return; }
     if (tipo === "PESSOAS" && !payload.pessoas.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos uma pessoa, ou escolha Todos os usuários."); return; }
-    // Confirmação: publicar dispara e-mail e WhatsApp na hora e não pode ser desfeito.
+    // Confirmação: publicar dispara o e-mail na hora (no expediente) e não pode ser desfeito. Sem WhatsApp avulso (matriz de avisos).
     var todas = (AVT.opcoes && AVT.opcoes.pessoas) || [];
     var alvo = tipo === "PESSOAS" ? todas.filter(function (p) { return payload.pessoas.indexOf(p.id) >= 0; })
       : tipo === "PERFIS" ? todas.filter(function (p) { return payload.perfis.indexOf(p.perfil) >= 0; }) : todas;
-    var nEmail = alvo.filter(function (p) { return p.temEmail; }).length, nWhats = alvo.filter(function (p) { return p.temWhatsapp; }).length;
+    var nEmail = alvo.filter(function (p) { return p.temEmail; }).length;
     var temContatos = alvo.some(function (p) { return p.temEmail !== undefined; });
     var conf = "Publicar o aviso \"" + titulo + "\" para " + alvo.length + (alvo.length === 1 ? " pessoa" : " pessoas") + "?\n\n" +
       "- Janela de ciência no SGO+: " + alvo.length + "\n" +
-      (temContatos ? "- E-mail agora: " + nEmail + " (quem tem e-mail no cadastro)\n- WhatsApp agora: " + nWhats + " (quem tem celular no cadastro)\n" : "- E-mail e WhatsApp agora, para quem tem contato no cadastro\n") +
-      "\nOs envios saem na hora e não podem ser desfeitos. Para conferir antes, clique em Cancelar.";
+      (temContatos ? "- E-mail agora: " + nEmail + " (quem tem e-mail no cadastro; fora do expediente, sai na abertura do próximo)\n" : "- E-mail agora, para quem tem e-mail no cadastro\n") +
+      "- WhatsApp: não vai avulso; a contagem entra no resumo do dia de quem é CLT\n" +
+      "\nOs envios não podem ser desfeitos. Para conferir antes, clique em Cancelar.";
     if (!confirm(conf)) return;
     var btn = document.getElementById("avsF_ok"); if (btn) btn.disabled = true;
     AvisosTela_chamar_("Avisos_apiPublicar", payload, function (res) {

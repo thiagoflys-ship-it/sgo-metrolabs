@@ -459,3 +459,23 @@ test('Indicadores, copiloto (veículo disputado) e relatório A4 do mês; técni
   assert.match(salvos[0].html, /pedido\(s\) de reserva foram recusados por sobreposição/);
   assert.equal(tabelas.REG_FROTA_RESERVA.length, 1);
 });
+
+test('Matriz de avisos (21/10/2026): canal de cada aviso de reserva pela regra do evento; WhatsApp só nas exceções S41 e S44; gestor da Frota no lugar de toda a gestão', () => {
+  const { ctx, tabelas, notificacoes } = ambiente(base(), { atual: GESTORA });
+  vm.runInContext(fs.readFileSync(path.join(pastaLegado, 'SGO_Avisos_Matriz.js'), 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: 'SGO_Avisos_Matriz.js' });
+  const tipos = ['CRIADA_PELA_GESTAO', 'CANCELADA_GESTAO', 'TROCA_VEICULO', 'LIBERACAO_GESTAO', 'DEVOLVIDO', 'NAO_UTILIZADA', 'ATRASO_DEVOLUCAO', 'ATRASO_RESERVANTE', 'ATRASO_GESTAO', 'LEMBRETE', 'CONFERENCIA_PROBLEMA', 'CONFERENCIA_GESTAO'];
+  tipos.forEach((t) => ctx.FrotaRes_avisar_({ tipo: t, reservaId: 'r-' + t, destinos: ['uA'], whatsapp: true, titulo: 'Aviso ' + t, texto: 'Texto de teste ' + t }));
+  const avisos = tabelas[ctx.FROTA_RES_ABA_AVISOS];
+  const sit = Object.fromEntries(avisos.map((a) => [a.TIPO, a.EMAIL_SITUACAO]));
+  assert.deepEqual(sit, {
+    CRIADA_PELA_GESTAO: 'NO_RESUMO', CANCELADA_GESTAO: 'PENDENTE', TROCA_VEICULO: 'PENDENTE', LIBERACAO_GESTAO: 'PENDENTE', DEVOLVIDO: '', NAO_UTILIZADA: 'NO_RESUMO',
+    ATRASO_DEVOLUCAO: '', ATRASO_RESERVANTE: 'PENDENTE', ATRASO_GESTAO: '', LEMBRETE: 'PENDENTE', CONFERENCIA_PROBLEMA: 'PENDENTE', CONFERENCIA_GESTAO: 'NO_RESUMO'
+  });
+  // e-mail no resumo: guardado na fila do resumo do dia único
+  assert.deepEqual(tabelas.NTF_RESUMO_FILA.map((v) => v.EVENTO).sort(), ['S38', 'S43', 'S49']);
+  // WhatsApp pedido em todos, mas só sai (pelo notificador, com o evento) nas exceções S41 e S44
+  const whats = notificacoes.filter((n) => (n.canais || []).indexOf('whatsapp') >= 0);
+  assert.deepEqual(whats.map((n) => n.evento).sort(), ['S41', 'S44']);
+  // gestor da Frota: sem a Caixa de decisões carregada, a gestão (como antes); com ela, o gestor da área
+  assert.deepEqual(Array.from(ctx.FrotaRes_gestores_()), ['uG']);
+});

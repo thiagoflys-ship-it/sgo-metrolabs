@@ -36,7 +36,17 @@
  *     categoria: 'GESTAO' — (20/10/2026) resumo da Caixa de decisões para o gestor (SGO_Gestao_Escada.js): mesma regra sutil, e o
  *             limite de UMA mensagem por dia é somado com o de atividades (ORIGEM começando por ATIVIDADES ou GESTAO): quem
  *             recebe o resumo da gestão no dia não recebe outro de atividades (o da gestão já leva a contagem das atividades).
+ *     evento: 'S01'...'S58' — (21/10/2026) código do evento na MATRIZ DE AVISOS (SGO_Avisos_Matriz.js). A regra do evento
+ *             decide o canal: e-mail "na hora", "no resumo do dia" (vai para a fila NTF_RESUMO_FILA e sai no e-mail de
+ *             resumo das 08:00) ou "só no sistema"; "vira histórico" não manda nada. Sem evento, a origem indica (COMERCIAL,
+ *             AVISOS, GESTAO_CNH). prazoHoje: true = atividade com prazo hoje (e-mail na hora).
  *   })
+ *
+ * MATRIZ DE AVISOS (21/10/2026, aprovada pelo dono): valem para TODO envio, menos o assistente do ponto (categoria PONTO,
+ * regra própria) — WhatsApp só para vínculo liberado (padrão CLT); WhatsApp só no resumo do dia (categoria RESUMO_DIA) ou
+ * nas quatro exceções da Frota com "na hora" (S35, S36, S41, S44: só no expediente, uma por pessoa por dia); cliente sem
+ * WhatsApp até o fim do piloto. O que não pode sair fica PULADO em NTF_ENVIOS com o motivo; o e-mail guardado para o
+ * resumo fica com SITUACAO = NO_RESUMO.
  *
  * PILOTO DO WHATSAPP (21/10/2026, SGO_WhatsappPiloto.js): com o piloto ligado, o WhatsApp só sai para as pessoas da lista
  * (Administração > Piloto do WhatsApp); cliente e contato externo não recebem, salvo telefone da lista. Quem não está na
@@ -73,7 +83,8 @@
  * Mensagens sóbrias, sem emoji.
  ****************************************************/
 
-var NTF_COLUNAS = ['ID', 'QUANDO', 'USUARIO_ID', 'USUARIO_NOME', 'CANAL', 'DESTINO', 'ASSUNTO', 'ORIGEM', 'REF_ID', 'SITUACAO', 'MOTIVO', 'CRIADO_EM'];
+var NTF_COLUNAS = ['ID', 'QUANDO', 'USUARIO_ID', 'USUARIO_NOME', 'CANAL', 'DESTINO', 'ASSUNTO', 'ORIGEM', 'REF_ID', 'SITUACAO', 'MOTIVO', 'CRIADO_EM', 'EVENTO'];
+// 21/10/2026: EVENTO = código da matriz de avisos (SGO_Avisos_Matriz.js; S01..S58) quando a chamada informa ou a origem indica.
 var NTF_FUSO = 'America/Sao_Paulo';
 // Mesma mensagem, mesma pessoa, mesmo canal: não repete dentro desta janela (ver SGO_notificar_).
 var NTF_JANELA_REPETICAO_SEG = 600;
@@ -91,13 +102,13 @@ function Notificar_aba_() {
 
 function Notificar_garantirAba_() {
   var cache = CacheService.getScriptCache();
-  if (cache.get('NTF_ABA_OK_V1')) return;
+  if (cache.get('NTF_ABA_OK_V2')) return;
   var aba = Notificar_aba_();
   CertCal_garantirTabela_(aba, NTF_COLUNAS);
   NTF_COLUNAS.forEach(function (c) { CertCal_garantirColuna_(aba, c); });
   CertCal_forcarColunaTexto_(aba, 'QUANDO');
   CertCal_forcarColunaTexto_(aba, 'DESTINO');
-  cache.put('NTF_ABA_OK_V1', '1', 21600);
+  cache.put('NTF_ABA_OK_V2', '1', 21600);
 }
 
 function Notificar_agora_() {
@@ -332,7 +343,6 @@ var NTF_MODELOS_META = {
     botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
   }
 };
-
 
 /** Confere um modelo contra as regras da Meta. Devolve a lista de problemas (vazia = ok). */
 function Notificar_validarModeloMeta_(nome, def) {
@@ -624,6 +634,10 @@ function SGO_notificar_(opcoes) {
       contatosFora.push({ k: k, x: x });
     });
     var canais = (o.canais && o.canais.length ? o.canais : ['sgo', 'email', 'whatsapp']).map(function (c) { return String(c).toLowerCase(); });
+    // 21/10/2026: matriz de avisos (SGO_Avisos_Matriz.js) — canal de cada evento, fila do resumo do dia e "vira histórico"
+    var matriz = ids.length && typeof SGO_avisoMatrizPreparar_ === 'function' ? SGO_avisoMatrizPreparar_(o, ids, canais) : null;
+    if (matriz) canais = matriz.canais;
+    var evento = String((matriz && matriz.evento) || o.evento || '').trim().toUpperCase().slice(0, 20);
     var externos = canais.filter(function (c) { return c === 'email' || c === 'whatsapp'; });
     if (!ids.length || !externos.length) return resumo;
 
@@ -647,7 +661,7 @@ function SGO_notificar_(opcoes) {
       if (situacao !== 'OK') resumo.motivo = String(motivo || '').slice(0, 300); // último motivo de PULADO/ERRO (quem chamou pode registrar)
       linhas.push({
         QUANDO: Notificar_agora_(), USUARIO_ID: uid, USUARIO_NOME: nome || '', CANAL: canal, DESTINO: destino || '',
-        ASSUNTO: titulo, ORIGEM: origem, REF_ID: refId, SITUACAO: situacao, MOTIVO: String(motivo || '').slice(0, 480)
+        ASSUNTO: titulo, ORIGEM: origem, REF_ID: refId, SITUACAO: situacao, MOTIVO: String(motivo || '').slice(0, 480), EVENTO: evento
       });
     };
 
@@ -697,6 +711,20 @@ function SGO_notificar_(opcoes) {
           if (!c) { registrar(uid, '', canal, '', 'PULADO', 'Usuário não encontrado no cadastro.'); return; }
           if (!c.ativo) { registrar(uid, c.nome, canal, '', 'PULADO', 'Usuário inativo.'); return; }
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
+          // 21/10/2026: matriz de avisos — e-mail guardado para o resumo do dia (ou para o próximo expediente) ou só no sistema
+          var semEmail = canal === 'email' && matriz && matriz.semEmail ? matriz.semEmail[uid] : null;
+          if (semEmail) {
+            if (semEmail.modo === 'NAO') { registrar(uid, c.nome, canal, '', 'PULADO', semEmail.motivo); return; }
+            resumo.ok++; resumo.guardados = (resumo.guardados || 0) + 1; resumo.motivo = semEmail.motivo;
+            linhas.push({ QUANDO: Notificar_agora_(), USUARIO_ID: uid, USUARIO_NOME: c.nome || '', CANAL: canal, DESTINO: c.email || '', ASSUNTO: titulo, ORIGEM: origem, REF_ID: refId,
+              SITUACAO: 'NO_RESUMO', MOTIVO: String(semEmail.motivo || '').slice(0, 480), EVENTO: evento });
+            return;
+          }
+          // 21/10/2026: matriz de avisos — WhatsApp só CLT, só no resumo do dia ou nas exceções da Frota (o ponto tem regra própria)
+          if (canal === 'whatsapp' && typeof SGO_avisoMotivoWhatsapp_ === 'function') {
+            var barradoMatriz = SGO_avisoMotivoWhatsapp_(c, { categoria: categoria, origem: origem, evento: evento, refId: refId });
+            if (barradoMatriz) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoMatriz); return; }
+          }
           var barradoCategoria = Notificar_motivoCategoria_(categoria, c);
           if (barradoCategoria) { registrar(uid, c.nome, canal, '', 'PULADO', barradoCategoria); return; }
           if ((categoria === 'ATIVIDADES' || categoria === 'GESTAO') && canal === 'whatsapp') {

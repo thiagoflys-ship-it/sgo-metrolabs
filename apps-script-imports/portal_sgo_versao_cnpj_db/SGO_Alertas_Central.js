@@ -35,6 +35,10 @@
  * QUEM VÊ O QUÊ:
  *  - CLIENTE: só vencimentos de documentos, calibrações e NR-13 do próprio cliente.
  *  - ADMIN, GESTOR, DIRETORIA: tudo da equipe + o que é pessoal dele.
+ *    21/10/2026 (matriz de avisos, SGO_Avisos_Matriz.js › SGO_avisoCentralVe_): o gestor vê o da sua
+ *    área (Administração > Usuários e Caixa de decisões > Regras e responsáveis) e o que é dele; a
+ *    Diretoria vê tudo; o Administrador sem área vê as falhas técnicas e o que é dele. Gestor sem área
+ *    definida continua vendo tudo. Desliga em Administração > Matriz de avisos (filtro por área).
  *  - METROLOGIA: padrões, vencimentos dos clientes + o que é dele.
  *  - TECNICO e demais: padrões de referência (bloqueiam o trabalho de todos) +
  *    o que é dele (atividades, avisos, CNH, O.S. do Auvo, cobranças).
@@ -293,11 +297,13 @@ function Pend_contextoInterno_() {
 function Pend_podeVer_(it, ctx) {
   if (ctx.cliente) return it.publico === 'CLIENTE' && !!ctx.clienteId && Pend_s_(it.clienteId) === ctx.clienteId;
   if (ctx.userId && (it.paraUsuarios || []).indexOf(ctx.userId) >= 0) return true;
+  // 21/10/2026: filtro da gestão pela área (matriz de avisos); sem a matriz carregada, a gestão vê tudo, como antes
+  var daArea = function () { return typeof SGO_avisoCentralVe_ !== 'function' || SGO_avisoCentralVe_(it, ctx); };
   switch (it.publico) {
     case 'EQUIPE': return true;
     case 'CLIENTE':
-    case 'TECNICA': return ctx.gestao || ctx.perfil === 'METROLOGIA';
-    case 'GESTAO': return ctx.gestao;
+    case 'TECNICA': return (ctx.gestao && daArea()) || (!ctx.gestao && ctx.perfil === 'METROLOGIA');
+    case 'GESTAO': return ctx.gestao && daArea();
     case 'ADMIN': return ctx.perfil === 'ADMIN' && !ctx.interno;
     case 'DIRETORIA': return !!ctx.interno || !!ctx.diretoria;
     default: return false;
@@ -841,8 +847,9 @@ function Pend_fonteAvisos_(add, ctx) {
     if (!a.PRAZO_CIENCIA || a.PRAZO_CIENCIA >= hoje) return;
     var faltam = a.destinatarios.filter(function (u) { var c = ciencias[a.ID + '|' + u]; return ativos[u] && !(c && c.CIENTE_EM); }).length;
     if (!faltam) return;
+    // 21/10/2026 (matriz de avisos, S21): quem publicou vê sempre (também fora da sua área)
     add(Pend_item_('aviso_leitura_atrasada', {
-      id: 'AVISO_LEITURA:' + a.ID, nome: Pend_curto_(a.TITULO, 40), publico: 'GESTAO', responsavel: Pend_s_(a.PUBLICADO_POR_NOME) || 'gestão',
+      id: 'AVISO_LEITURA:' + a.ID, nome: Pend_curto_(a.TITULO, 40), publico: 'GESTAO', paraUsuarios: Pend_s_(a.PUBLICADO_POR_ID) ? [Pend_s_(a.PUBLICADO_POR_ID)] : [], responsavel: Pend_s_(a.PUBLICADO_POR_NOME) || 'gestão',
       gravidade: 'ATENCAO', dias: Pend_diasAte_(a.PRAZO_CIENCIA, hoje), vencimento: Pend_br_(a.PRAZO_CIENCIA),
       titulo: 'Aviso "' + Pend_curto_(a.TITULO, 60) + '": ' + Pend_plural_(faltam, 'pessoa sem confirmar', 'pessoas sem confirmar') + ' a leitura',
       detalhe: 'O prazo de ciência era ' + Pend_br_(a.PRAZO_CIENCIA) + '.',
@@ -1140,6 +1147,8 @@ function Pend_resposta_(ctx, opcoes) {
  */
 function SGO_Pendencias_listar(sessionId, opcoes) {
   var sessao = exigirSessao(sessionId);
+  // 21/10/2026: a pessoa abriu o sistema hoje (o WhatsApp de resumo do dia não vai a quem já entrou; SGO_Avisos_Matriz.js)
+  if (typeof SGO_avisoMarcarPresenca_ === 'function') SGO_avisoMarcarPresenca_(sessao.userId);
   var r = Pend_resposta_(Pend_contextoDaSessao_(sessao), opcoes);
   var limite = Number((opcoes || {}).limite) || 500;
   if (r.itens.length > limite) { r.itens = r.itens.slice(0, limite); r.cortado = true; }

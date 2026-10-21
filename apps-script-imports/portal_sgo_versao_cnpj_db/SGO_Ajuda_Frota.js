@@ -696,7 +696,7 @@ function SGO_ajudaTelas_Frota_() {
         { p: "Preciso de aprovação para reservar?", r: "Não. A reserva vale assim que aparece o código." },
         { p: "Alguém pode pegar o carro que eu reservei?", r: "Não. A retirada é recusada se a devolução prevista dela, mais 1 hora de folga, passar do início da sua reserva. Só a gestão pode liberar, com justificativa, e você é avisado na hora com a sugestão de outro veículo." },
         { p: "E se quem está com o veículo atrasar?", r: "A pessoa recebe a cobrança no sistema e em Minhas atividades; você e a gestão são avisados, com os veículos livres para trocar." },
-        { p: "Recebo mensagem no WhatsApp?", r: "Só quando a reserva está em risco no mesmo dia, no horário de trabalho e no máximo uma mensagem por dia. O resto fica no sistema e no e-mail." },
+        { p: "Recebo mensagem no WhatsApp?", r: "Pela matriz de avisos, só em quatro casos, no horário de trabalho, se você for CLT e no máximo uma por dia em cada caso: a reserva de hoje foi liberada a outra pessoa, você está com o veículo e a devolução atrasou com reserva no mesmo dia, e, para o gestor da Frota, a partida não liberada pelo rastreador e o veículo em uso sem registro. Fora do expediente, o uso sem registro vai no resumo do dia seguinte. O resto fica no sistema e no e-mail (na hora ou no resumo do dia)." },
         { p: "Reserva cancelada some?", r: "Não. Canceladas, não utilizadas e concluídas ficam no histórico." }
       ]
     },

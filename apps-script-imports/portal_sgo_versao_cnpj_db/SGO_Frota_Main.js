@@ -598,12 +598,15 @@ function Frota_auditar_(sessao, o) {
   try { SGO_DATA.log('FROTA_' + o.acao, SGO_UTILS.safe(sessao && sessao.usuario), String(o.detalhe || o.acao).slice(0, 480), 'FROTA'); } catch (e2) {}
 }
 
-/** Aviso ao condutor (e-mail e WhatsApp pelo notificador; no SGO+ o aviso aparece na central de pendências). */
-function Frota_avisarCondutor_(condutor, sessao, titulo, texto, refId) {
+/**
+ * Aviso ao condutor (no SGO+ o aviso aparece na central de pendências). 21/10/2026 (matriz de avisos, S33/S34): é informativo,
+ * então vai no e-mail de resumo do dia e sem WhatsApp (antes saía WhatsApp a qualquer hora, sem olhar o vínculo).
+ */
+function Frota_avisarCondutor_(condutor, sessao, titulo, texto, refId, evento) {
   var uid = SGO_UTILS.safe(condutor && condutor.USUARIO_ID);
   if (!uid || uid === SGO_UTILS.safe(sessao && sessao.userId) || typeof SGO_notificar_ !== 'function') return null;
   try {
-    return SGO_notificar_({ usuarios: [uid], titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'FROTA', refId: refId });
+    return SGO_notificar_({ usuarios: [uid], titulo: titulo, texto: texto, canais: ['sgo', 'email'], origem: 'FROTA', refId: refId, evento: evento || 'S33' });
   } catch (e) { console.error('Frota aviso: ' + ((e && e.message) || e)); return null; }
 }
 
@@ -1248,7 +1251,7 @@ function Frota_apiIniciarViagem(sessionId, payload) {
     Frota_avisarCondutor_(condutor, sessao, 'Retirada registrada em seu nome: veículo ' + veiculo.PLACA,
       (sessao.nome || sessao.usuario) + ' registrou no SGO+ a retirada do veículo ' + veiculo.PLACA + ' em seu nome, com saída em ' + quandoSaida.data + ' às ' + quandoSaida.hora +
       ' e KM ' + Frota_kmTexto_(kmSaida) + '.\nJustificativa: ' + justificativa + '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Ao devolver o veículo, registre a devolução normalmente.',
-      registro.ID);
+      registro.ID, 'S33');
   }
   // Reservas (20/10/2026): a reserva do condutor vira "iniciada"; a liberação avisa quem tinha reservado. Nunca derruba a retirada.
   var resRes = reservasLigadas ? FrotaRes_aposRetirada_(sessao, registro, veiculo, condutor, chkReserva, liberacao, prevista.ms) : {};
@@ -1372,7 +1375,7 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       (sessao.nome || sessao.usuario) + ' registrou no SGO+ a devolução do veículo ' + veiculo.PLACA + ' (sua retirada de ' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) +
       '), com chegada em ' + quandoChegada.data + ' às ' + quandoChegada.hora + ' e KM ' + Frota_kmTexto_(kmChegada) + '.\nJustificativa: ' + justificativa +
       '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Da próxima vez, registre a devolução assim que entregar o veículo.',
-      movId);
+      movId, 'S34');
   }
   // Reservas (20/10/2026): reserva iniciada vira concluída; cobrança de atraso encerrada; o próximo reservante sabe que o veículo voltou.
   if (typeof FrotaRes_aposDevolucao_ === 'function') FrotaRes_aposDevolucao_(sessao, mov, veiculo);

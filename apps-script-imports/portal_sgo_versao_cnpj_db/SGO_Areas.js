@@ -32,14 +32,16 @@ var AREAS_MIGRACAO_RESULTADO = 'USR_AREA_MIGRACAO_V1_RESULTADO';
 // Financeiro, Logística, RH, Qualidade, Metrologia e Técnica) estão todas aqui.
 var AREAS_PADRAO = Object.freeze([
   ['DIRETORIA', 'Diretoria', 'Direção da empresa'],
-  ['ADMINISTRATIVO', 'Administrativo', 'Recepção, compras administrativas, apoio'],
+  // 21/10/2026 (matriz de avisos, decisão do dono): Compras fica na área Logística. Só o texto padrão muda; a descrição
+  // já gravada na aba de áreas não é alterada (Administração > Usuários > Áreas).
+  ['ADMINISTRATIVO', 'Administrativo', 'Recepção e apoio administrativo'],
   ['COMERCIAL', 'Comercial', 'Propostas, contratos, atendimento a clientes'],
   ['FINANCEIRO', 'Financeiro', 'Contas a pagar e a receber, faturamento'],
   ['RH', 'RH', 'Pessoas, ponto, treinamentos'],
   ['QUALIDADE', 'Qualidade', 'Documentos controlados, não conformidades, auditorias'],
   ['METROLOGIA', 'Metrologia', 'Laboratório, calibrações, certificados'],
   ['TECNICA', 'Técnica/Campo', 'Manutenção, qualificação e serviços nos clientes'],
-  ['LOGISTICA', 'Logística', 'Estoque, recebimento e expedição']
+  ['LOGISTICA', 'Logística', 'Compras, estoque, recebimento e expedição']
 ]);
 
 // Perfil de acesso que diz a área sem dúvida. ADMIN e GESTOR não entram.

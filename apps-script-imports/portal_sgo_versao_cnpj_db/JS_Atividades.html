@@ -1154,7 +1154,7 @@
       res.resumosHoje.map(function (x) { return "<tr><td>" + Atividades_esc_(x.nome) + "</td><td>" + Atividades_esc_(sit[x.situacao] || x.situacao) + "</td><td>" + x.novas + " / " + x.venceHoje + " / " + x.vencidasNovas + "</td><td>" + Atividades_esc_(x.motivo) + "</td></tr>"; }).join("") +
       "</tbody></table></div>" : '<div class="atv-sub">O resumo de hoje ainda não foi avaliado (sai na primeira rodada do expediente a partir de ' + Atividades_esc_(av.horaResumo) + ").</div>";
     var corpo = '<div id="atvCfgMsg"></div>' +
-      '<p style="margin-top:0">Os avisos no sistema saem na hora. O e-mail sai só no horário de trabalho (fora dele fica guardado e sai na abertura do expediente). O WhatsApp manda no máximo um resumo por pessoa por dia, em dia útil, dentro do horário, e só quando há novidade.</p>' +
+      '<p style="margin-top:0">Os avisos no sistema saem na hora. Pela matriz de avisos (21/10/2026), o e-mail das atividades vai no e-mail de resumo do dia único (na hora só a atividade com prazo para hoje, no expediente) e o WhatsApp é um resumo do dia só, para CLT, só para quem ainda não abriu o sistema. As horas do resumo ficam em Administração &gt; Matriz de avisos.</p>' +
       '<div class="atv-sub" style="margin-bottom:10px">Agora: ' + (res.agora.dentro ? "dentro do expediente." : "fora do expediente (" + Atividades_esc_(res.agora.motivo) + ").") + (res.emailsGuardados ? " E-mails guardados para o próximo expediente: " + res.emailsGuardados + "." : "") + "</div>" +
       '<h4 style="margin:6px 0 8px;font-size:13px">Horário de trabalho</h4>' +
       '<div class="atv-grade2"><div class="atv-campo"><label for="atvCfgIni">Início</label><input type="time" id="atvCfgIni" value="' + Atividades_esc_(e.ini) + '"></div>' +
@@ -1163,13 +1163,15 @@
       '<div class="atv-campo"><label for="atvCfgFer">Feriados estaduais, municipais e recesso</label><input type="text" id="atvCfgFer" value="' + Atividades_esc_(e.feriados) + '" placeholder="dd/mm ou dd/mm/aaaa, separados por vírgula">' +
         '<div class="atv-sub">Feriados nacionais, Carnaval, Sexta-feira Santa e Corpus Christi já ficam sem aviso automático.</div></div>' +
       '<h4 style="margin:14px 0 8px;font-size:13px">Resumo do dia pelo WhatsApp</h4>' +
-      '<label class="atv-check"><input type="checkbox" id="atvCfgWa"' + (av.whatsappResumo ? " checked" : "") + "> Mandar o resumo do dia pelo WhatsApp</label>" +
-      '<div class="atv-campo"><label for="atvCfgHora">Hora do resumo</label><input type="time" id="atvCfgHora" value="' + Atividades_esc_(av.horaResumo) + '"></div>' +
+      // 21/10/2026: o resumo é o do dia único (matriz de avisos); a hora e o liga/desliga ficam na Matriz de avisos. Os campos antigos seguem gravados.
+      '<input type="checkbox" id="atvCfgWa" hidden' + (av.whatsappResumo ? " checked" : "") + '><input type="time" id="atvCfgHora" hidden value="' + Atividades_esc_(av.horaResumo) + '">' +
+      '<div class="atv-sub" style="margin-bottom:8px">O resumo do dia é único (atividades, Caixa de decisões, Comercial, Frota, avisos e bate-papo). A hora e o liga/desliga ficam em Administração &gt; Matriz de avisos. ' +
+        '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="var o=document.getElementById(\'atvCfgOverlay\');if(o)o.remove();abrir(\'avisos_matriz\');">Abrir a Matriz de avisos</button></div>' +
       '<div class="atv-campo"><label>Quem recebe o resumo pelo WhatsApp (vínculo de trabalho em Administração &gt; Usuários)</label><div class="atv-cfg-dias">' + vincs + "</div>" +
         '<div class="atv-sub">Padrão: só CLT. PJ e vínculo não informado seguem com os avisos no sistema e por e-mail.</div></div>' +
       // 20/10/2026: a escada de cobrança da gestão usa este mesmo horário e o mesmo limite de um WhatsApp por dia.
       '<h4 style="margin:14px 0 8px;font-size:13px">Cobrança da gestão</h4>' +
-      '<div class="atv-sub">O que depende de gestor ou da Diretoria segue a escada da Caixa de decisões (e-mail diário, WhatsApp depois de dias úteis parado, Diretoria), neste mesmo horário de trabalho. O WhatsApp continua no máximo um por pessoa por dia, somando atividades e gestão. ' +
+      '<div class="atv-sub">O que depende de gestor ou da Diretoria segue a escada da Caixa de decisões (no e-mail de resumo do dia; parado há dias úteis, na contagem do WhatsApp de resumo; depois, Diretoria), neste mesmo horário de trabalho. O WhatsApp continua no máximo um por pessoa por dia. ' +
         '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="var o=document.getElementById(\'atvCfgOverlay\');if(o)o.remove();abrir(\'gestao_decisoes\');setTimeout(function(){if(typeof Gestao_abrirRegras_===\'function\')Gestao_abrirRegras_();},400);">Abrir a escada e os responsáveis</button></div>' +
       '<h4 style="margin:14px 0 8px;font-size:13px">Resumos de hoje</h4>' + resumos;
     var ov = Atividades_modal_("Avisos e horários das atividades", corpo,

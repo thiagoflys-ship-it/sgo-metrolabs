@@ -32,6 +32,14 @@
  *    lançou (ou para o gestor da área), com histórico e aviso.
  *  - Relatórios mensais (item 6) e a lista do copiloto da Frota para a caixa.
  * Nada aqui apaga dado; cada ação automática fica registrada.
+ *
+ * MATRIZ DE AVISOS (21/10/2026, SGO_Avisos_Matriz.js): o e-mail diário da gestão
+ * (item 2), a escalada e os relatórios da Diretoria (itens 4 a 6) e o resumo do
+ * WhatsApp (item 3) passam a sair dentro do RESUMO DO DIA ÚNICO de cada pessoa
+ * (e-mail às 08:00; WhatsApp às 09:30, só CLT, só se a pessoa não abriu o sistema).
+ * Cada envio continua registrado em GES_ENVIOS (EMAIL_GESTOR, EMAIL_DIRETORIA,
+ * WHATS_GESTOR), para a escada e a avaliação do gestor. Ges_emailsDiarios_ e
+ * Gestao_whatsDiario_ ficam como reserva quando a matriz não está carregada.
  ****************************************************/
 
 var GES_FUNCAO_ROTINA = 'Gestao_rotinaDecisoes';
@@ -82,6 +90,8 @@ function Ges_rodada_(quando) {
   if (cfg.automacoes.cnhCondutor) passo('cnh', function () { return Ges_autoCnhCondutor_(ex); });
   if (cfg.escada.mensal && cfg.automacoes.relatoriosMensais) passo('mensal', function () { return Ges_relatoriosMensais_(ex); });
   if (cfg.escada.semanal) passo('semanal', function () { return Ges_relatorioSemanalDoDia_(ex); });
+  // 21/10/2026: resumo do dia único (matriz de avisos) no lugar do e-mail diário e do WhatsApp da gestão
+  if (typeof SGO_resumoDiaRodada_ === 'function') { passo('resumoDia', function () { return SGO_resumoDiaRodada_(quando); }); return r; }
   if (cfg.escada.emailDiario) passo('emails', function () { return Ges_emailsDiarios_(ex); });
   if (cfg.escada.whatsapp) passo('whatsapp', function () { return Gestao_whatsDiario_(quando); });
   return r;
@@ -285,6 +295,8 @@ function Ges_textoAtividadesDe_(uid) {
  * O notificador confere de novo vínculo, horário e o limite de uma mensagem por dia (categoria GESTAO).
  */
 function Gestao_whatsDiario_(quando) {
+  // 21/10/2026: substituído pelo resumo do dia único (matriz de avisos, SGO_Avisos_Matriz.js).
+  if (typeof SGO_resumoDiaRodada_ === 'function') return { fora: 'substituído pelo resumo do dia único (matriz de avisos)' };
   var cfg = Ges_cfg_();
   if (!cfg.escada.whatsapp) return { fora: 'WhatsApp da escada desligado' };
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando || new Date()) : { dentro: true, hora: '09:00', dia: Ges_hoje_() };

@@ -429,7 +429,7 @@ function SGO_ajudaTelas_Principal_() {
       perguntas: [
         { p: "Quem fica sabendo quando lanço ou justifico?", r: "Quem recebe uma atividade nova é avisado na hora no SGO+ e no COMMAND, e por e-mail no horário de trabalho. Quem lançou a atividade é avisado da justificativa de atraso do mesmo jeito." },
         { p: "Recebo aviso de atraso?", r: "Sim. No sistema, a janela de justificativa e a lista de pendências cobram até a atividade ser concluída ou justificada. O e-mail do atraso sai uma vez, no horário de trabalho." },
-        { p: "Recebo mensagem de WhatsApp?", r: "No máximo um resumo por dia, em dia útil e no horário de trabalho, e só quando há novidade: atividade nova, que vence hoje ou que venceu desde o último resumo. Nunca à noite, no fim de semana ou em feriado. O resumo vai para quem tem vínculo CLT no cadastro; a Diretoria pode mudar isso em Avisos e horários." },
+        { p: "Recebo mensagem de WhatsApp?", r: "No máximo um resumo do dia (09:30), em dia útil, só para quem tem vínculo CLT e só se a pessoa ainda não abriu o sistema e há atividade nova, para hoje ou atrasada (ou decisão parada). Nunca à noite, no fim de semana ou em feriado. O e-mail das atividades vem no e-mail de resumo do dia (08:00); na hora só a atividade com prazo para hoje. Cada pessoa ajusta em Menu > Meus avisos." },
         { p: "Posso lançar a atividade no COMMAND?", r: "Sim. A lista é a mesma: lance uma vez só, no sistema que for mais prático." },
         { p: "A tela atualiza sozinha?", r: "Sim, a cada 30 segundos, quando você não está digitando nem com janela aberta." },
         { p: "Posso mudar o responsável?", r: "Só a gestão. O novo responsável é avisado e a troca fica no histórico." },
@@ -531,7 +531,7 @@ function SGO_ajudaTelas_Principal_() {
             "Toque em \"Nova atividade\".",
             "Escolha a pessoa em \"Responsável\".",
             "Preencha \"Título\", \"Prazo\" e os demais campos.",
-            "Toque em \"Salvar atividade\". A pessoa é avisada na hora no SGO+ e no COMMAND, por e-mail no horário de trabalho e no resumo do dia pelo WhatsApp."
+            "Toque em \"Salvar atividade\". A pessoa é avisada na hora no SGO+ e no COMMAND, no e-mail de resumo do dia (na hora, se o prazo é hoje) e na contagem do WhatsApp de resumo do dia."
           ]
         },
         {
@@ -566,7 +566,7 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Toque em \"Avisos e horários\", no alto da tela.",
             "Confira o horário de trabalho, os dias de trabalho e os feriados estaduais, municipais e de recesso.",
-            "Confira a hora do resumo do dia e quem recebe o resumo pelo WhatsApp (padrão: só CLT).",
+            "Confira quem recebe o resumo pelo WhatsApp (padrão: só CLT). As horas do resumo do dia ficam em Administração > Matriz de avisos.",
             "Toque em \"Salvar\".",
             "Em \"Resumos de hoje\", veja para quem o resumo saiu, quem não tinha novidade e o motivo de quem não recebeu."
           ]
@@ -652,6 +652,47 @@ function SGO_ajudaTelas_Principal_() {
     // ============================================================
     // AVISOS
     // ============================================================
+    // 21/10/2026: Meus avisos (Minha conta > Avisos; SGO_Avisos_Matriz.js / JS_AvisosMatriz.html).
+    "meus_avisos": {
+      titulo: "Meus avisos",
+      paraQueServe: "Mostra o que você recebe por e-mail e pelo WhatsApp e deixa ligar ou desligar o que é opcional. O obrigatório aparece com o motivo. Também mostra a prévia do seu e-mail de resumo de hoje.",
+      antesDeComecar: [
+        "No sistema você vê tudo na hora (Início e central de pendências). Isso não desliga.",
+        "Por e-mail chega um resumo por dia útil (08:00 ou 12:00, você escolhe), só quando há algo para você.",
+        "Pelo WhatsApp chega no máximo um resumo por dia (09:30), só se você é CLT e ainda não abriu o sistema. Durante o piloto, só quem está na lista do piloto recebe.",
+        "Para receber, confira o seu e-mail e o seu celular no cadastro (peça ao Administrador, em Administração > Usuários)."
+      ],
+      passos: [
+        { titulo: "Ajustar o que você recebe", itens: [
+          "Toque em \"Meus avisos\" no menu Principal.",
+          "Marque ou desmarque \"Receber o WhatsApp de resumo do dia\".",
+          "Escolha a hora do e-mail de resumo: 08:00 ou 12:00.",
+          "Se quiser, marque para receber no e-mail os avisos informativos (comentário, atividade concluída, venda ganha).",
+          "Se quiser, tire do e-mail de resumo os avisos do Comercial, da Frota ou do Auvo. Eles continuam no sistema.",
+          "Toque em \"Salvar\". Vale a partir do próximo resumo."
+        ] },
+        { titulo: "Ver como fica o seu resumo de hoje", itens: [
+          "No bloco \"Como fica o seu resumo de hoje\", toque em \"Ver a prévia\".",
+          "Leia o texto do e-mail com o que existe agora. Nada é enviado."
+        ] }
+      ],
+      cores: [
+        { nome: "Caixa de WhatsApp apagada", significado: "Você não é CLT, está sem vínculo informado ou o WhatsApp de resumo está desligado para todos. Você recebe pelo sistema e por e-mail." }
+      ],
+      problemas: [
+        { situacao: "Não chega o e-mail de resumo", oQueFazer: "Confira se o seu cadastro tem e-mail (aviso em vermelho na tela). Dia sem nada para você não tem e-mail." },
+        { situacao: "Não chega o WhatsApp de resumo", oQueFazer: "Ele só vai para CLT, só se você ainda não abriu o sistema no dia e só se há atividade para hoje, atrasada ou decisão parada. Durante o piloto, só para quem está na lista." },
+        { situacao: "Quero parar de receber os avisos com ciência", oQueFazer: "Não é possível: a empresa precisa saber que você leu. Eles chegam no sistema e por e-mail." }
+      ],
+      quemPode: [
+        { perfil: "TODOS", pode: "Cada pessoa altera só as próprias preferências. A gestão vê o que cada um escolheu, mas não altera." }
+      ],
+      perguntas: [
+        { p: "Por que recebo menos e-mails?", r: "Desde a matriz de avisos (21/10/2026), os avisos de atividades, Comercial, reservas e Caixa de decisões vêm juntos num e-mail de resumo por dia. Na hora só chega o que exige ciência ou muda algo de hoje." },
+        { p: "Vou receber WhatsApp do bate-papo?", r: "Não. O bate-papo fica no sistema. No resumo do dia vai só a contagem de mensagens não lidas." },
+        { p: "E os lembretes do ponto?", r: "Ficam no Assistente do ponto, com regra própria. Ajuste lá, quando ele estiver ligado para você." }
+      ]
+    },
     "avisos": {
       titulo: "Avisos",
       paraQueServe: "Reúne os comunicados da gestão. Cada aviso precisa da sua confirmação de leitura no botão \"Li e estou ciente\". A gestão publica avisos e acompanha quem leu.",
@@ -701,7 +742,7 @@ function SGO_ajudaTelas_Principal_() {
             "Em \"Público\", escolha \"Todos os usuários ativos\", \"Por perfil\" ou \"Pessoas escolhidas\" e marque quem recebe.",
             "Em \"Anexos\", escolha imagens ou documentos, se precisar. Toque em \"Tirar\" para retirar um arquivo da lista.",
             "Toque em \"Publicar\".",
-            "Leia a confirmação: quantas pessoas recebem a janela, o e-mail e o WhatsApp.",
+            "Leia a confirmação: quantas pessoas recebem a janela e o e-mail. Não vai WhatsApp avulso: quem é CLT vê a contagem no resumo do dia.",
             "Confirme para publicar. Os envios saem na hora e não podem ser desfeitos."
           ]
         },
@@ -712,7 +753,7 @@ function SGO_ajudaTelas_Principal_() {
             "Confira em \"Leitura\" quantas pessoas leram.",
             "Toque em \"Quem leu\" para ver a lista de quem leu e de quem não leu.",
             "Toque em \"Ver o texto do aviso\" para relembrar o conteúdo.",
-            "Toque em \"Reenviar a quem não leu\" para mandar de novo por e-mail e WhatsApp a quem falta.",
+            "Toque em \"Reenviar a quem não leu\" para mandar de novo por e-mail a quem falta (uma vez por dia).",
             "Toque em \"Arquivar\" quando o aviso não for mais necessário. Para voltar, marque \"Mostrar arquivados\" e toque em \"Reativar\"."
           ]
         }
@@ -751,7 +792,7 @@ function SGO_ajudaTelas_Principal_() {
         { perfil: "CLIENTE", pode: "Não recebe avisos. Os avisos são internos da equipe." }
       ],
       perguntas: [
-        { p: "Recebo o aviso fora do SGO+?", r: "Sim. Quem tem e-mail no cadastro recebe o aviso completo por e-mail. Quem tem celular recebe um resumo por WhatsApp." },
+        { p: "Recebo o aviso fora do SGO+?", r: "Sim, por e-mail, para quem tem e-mail no cadastro (no expediente). Pela matriz de avisos não vai WhatsApp avulso: quem é CLT vê a contagem de avisos para confirmar no WhatsApp de resumo do dia." },
         { p: "Fechei sem confirmar. Perdi o aviso?", r: "Não. Ele volta na próxima entrada e fica na tela \"Avisos\", com o botão \"Ler e confirmar\"." },
         { p: "A gestão vê se eu abri e não confirmei?", r: "Sim. Em \"Quem leu\" aparece quantas vezes a pessoa viu o aviso sem confirmar." },
         { p: "Arquivar apaga o registro de leitura?", r: "Não. O aviso deixa de aparecer para quem não leu, mas o registro de quem leu continua guardado." },

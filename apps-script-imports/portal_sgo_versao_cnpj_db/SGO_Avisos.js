@@ -22,8 +22,10 @@
  *
  * Público: usuários ATIVOS, sem o perfil Cliente (aviso interno), todos ou
  * por perfil ou pessoas escolhidas. CAD_USUARIOS não tem setor hoje.
- * Ao publicar e ao reenviar: e-mail (aviso completo) e WhatsApp (resumo +
- * endereço) por SGO_notificar_ (SGO_Notificar.js), depois de soltar a trava.
+ * Ao publicar e ao reenviar: e-mail (aviso completo) por SGO_notificar_
+ * (SGO_Notificar.js), depois de soltar a trava. Matriz de avisos (21/10/2026,
+ * S19/S20): sem WhatsApp avulso; quem é CLT vê a contagem de avisos para
+ * confirmar no WhatsApp de resumo do dia. Reenvio: no máximo um por dia.
  *
  * Datas gravadas como texto no horário de Brasília "aaaa-mm-ddThh:mm:ss".
  ****************************************************/
@@ -460,7 +462,7 @@ function Avisos_apiPublicar(sessionId, payload) {
       return { id: res.id, destinatarios: ids.length, repetido: true, message: 'Este aviso já tinha sido publicado por você há menos de ' + AVS_JANELA_REPETICAO_MIN + ' minutos; não foi publicado nem enviado de novo. Ele está no painel de Avisos.' };
     }
     notificar(Avisos_mensagem_({ ID: res.id, TITULO: titulo, TEXTO: texto, IMPORTANCIA: importancia, PRAZO_CIENCIA: prazo, PUBLICADO_POR_NOME: eu.nome, QTD_ANEXOS: anexos.length }, ids, false));
-    return { id: res.id, destinatarios: ids.length, message: 'Aviso publicado para ' + ids.length + ' pessoa(s). Elas verão a janela ao entrar no SGO+ e receberão por e-mail e WhatsApp.' };
+    return { id: res.id, destinatarios: ids.length, message: 'Aviso publicado para ' + ids.length + ' pessoa(s). Elas verão a janela ao entrar no SGO+ e receberão por e-mail (no expediente). Pela matriz de avisos, o WhatsApp leva só a contagem de avisos para confirmar, no resumo do dia de quem é CLT.' };
   });
 }
 
@@ -483,7 +485,8 @@ function Avisos_mensagem_(a, ids, reenvio) {
   var extrasMeta = ((prazoTxt ? ' ' + prazoTxt : '') + (anexosTxt ? ' ' + anexosTxt : '') + ' Confirme a leitura no SGO+.');
   if (resumoMeta.length + extrasMeta.length > 600) resumoMeta = resumoMeta.slice(0, Math.max(0, 597 - extrasMeta.length)).replace(/\s+$/, '') + '...';
   var modelo = { nome: 'sgo_aviso_geral', parametros: [titulo, (resumoMeta + extrasMeta).trim(), '@LINK'] };
-  return { usuarios: ids, titulo: titulo, texto: texto, textoWhatsapp: whats, modelo: modelo, canais: ['sgo', 'email', 'whatsapp'], origem: 'AVISOS', refId: a.ID };
+  // 21/10/2026 (matriz de avisos, S19/S20): sistema + e-mail na hora; sem WhatsApp avulso (a contagem vai no resumo do dia).
+  return { usuarios: ids, titulo: titulo, texto: texto, textoWhatsapp: whats, modelo: modelo, canais: ['sgo', 'email'], origem: 'AVISOS', refId: a.ID, evento: reenvio ? 'S20' : 'S19' };
 }
 
 /** Painel da gestão: avisos publicados com contagem de leitura. */
@@ -538,7 +541,7 @@ function Avisos_apiLeitura(sessionId, payload) {
   });
 }
 
-/** Reenvia por e-mail e WhatsApp para quem ainda não confirmou (e continua ativo). */
+/** Reenvia por e-mail para quem ainda não confirmou (e continua ativo). Matriz de avisos (S20): no máximo um reenvio por dia. */
 function Avisos_apiReenviar(sessionId, payload) {
   return Avisos_resposta_(function (notificar) {
     var eu = Avisos_sessao_(sessionId);
@@ -546,8 +549,8 @@ function Avisos_apiReenviar(sessionId, payload) {
     var r = Avisos_comTrava_(function () {
       var a = Avisos_obter_(payload && payload.id);
       if (a.SITUACAO !== 'PUBLICADO') throw new Error('Não foi possível reenviar: o aviso está arquivado. Reative o aviso no painel antes de reenviar.');
-      if (a.ULTIMO_REENVIO_EM && a.ULTIMO_REENVIO_EM >= Avisos_haMinutos_(AVS_JANELA_REPETICAO_MIN)) {
-        throw new Error('Não foi possível reenviar agora: este aviso já foi reenviado às ' + a.ULTIMO_REENVIO_EM.slice(11, 16) + '. Para não mandar o mesmo lembrete duas vezes, aguarde ' + AVS_JANELA_REPETICAO_MIN + ' minutos e clique em Reenviar de novo.');
+      if (a.ULTIMO_REENVIO_EM && String(a.ULTIMO_REENVIO_EM).slice(0, 10) === Avisos_agora_().slice(0, 10)) {
+        throw new Error('Não foi possível reenviar hoje: este aviso já foi reenviado às ' + String(a.ULTIMO_REENVIO_EM).slice(11, 16) + '. Pela matriz de avisos, o lembrete vai no máximo uma vez por dia, para não cansar quem recebe. Quem não confirmou continua vendo o aviso ao entrar no SGO+; clique em Reenviar de novo amanhã, se ainda for preciso.');
       }
       var ciencias = Avisos_ciencias_(null, a.ID);
       var ativos = {};
@@ -561,7 +564,7 @@ function Avisos_apiReenviar(sessionId, payload) {
     });
     if (!r.faltam.length) return { reenviados: 0, message: 'Todas as pessoas ativas do público já confirmaram a leitura; nada a reenviar.' };
     notificar(Avisos_mensagem_(r.a, r.faltam, true));
-    return { reenviados: r.faltam.length, message: 'Aviso reenviado por e-mail e WhatsApp para ' + r.faltam.length + ' pessoa(s) que ainda não confirmaram.' };
+    return { reenviados: r.faltam.length, message: 'Aviso reenviado por e-mail para ' + r.faltam.length + ' pessoa(s) que ainda não confirmaram (fora do expediente, sai na abertura do próximo). Pela matriz de avisos não vai WhatsApp avulso.' };
   });
 }
 

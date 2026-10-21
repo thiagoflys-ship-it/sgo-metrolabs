@@ -43,13 +43,15 @@ var SGO_ASSIST_ACESSO = {
   chaves: ['ADMIN'],
   assistente: ['ADMIN', 'DIRETORIA'],
   whatsapp_piloto: ['ADMIN', 'DIRETORIA'],
+  // 21/10/2026: matriz de avisos (Meus avisos fica livre para todo perfil interno).
+  avisos_matriz: ['ADMIN', 'DIRETORIA'],
   // 21/10/2026: Comercial nativo (o servidor ainda confere a área: Gestor de outra área não abre; Financeiro só Pedidos aprovados).
   comercial: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_oportunidades: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_propostas: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
   comercial_pedidos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_catalogo: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_painel: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
   comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
-var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus'];
+var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'meus_avisos'];
 /** Telas e janelas que não ficam no menu, com o lugar onde se chega a elas. */
 var SGO_ASSIST_FORA_DO_MENU = {
   mobile_home: { nome: 'Início do celular', caminho: 'Celular: tela inicial (Início)', abrir: true },

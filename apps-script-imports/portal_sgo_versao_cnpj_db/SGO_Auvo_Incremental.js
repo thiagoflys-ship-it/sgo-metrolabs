@@ -534,17 +534,20 @@ function Auvo_avisosEnviar_(av, ev, dados, resolvido) {
   }
   var refId = String(dados.AUVO_TASK_ID) + ':' + (abertura ? 'ABERTURA' : 'FECHAMENTO');
 
-  // (a) técnico + (b) gestão
+  // (a) técnico + (b) gestão. 21/10/2026 (matriz de avisos): abertura (S54) só ao técnico, no e-mail de resumo do dia (o
+  // aplicativo do Auvo já avisa na hora); a gestão acompanha no painel e deixa de receber um aviso por chamado. Conclusão (S55)
+  // vira só histórico (painel e relatório). Sem WhatsApp interno. Sem a matriz: técnico e gestão, como antes.
+  var matriz = typeof SGO_avisoRegra_ === 'function';
   var internos = [];
   if (dados.TECNICO_ID_SGO) internos.push(String(dados.TECNICO_ID_SGO));
-  ctx.gestao.forEach(function (id) { if (internos.indexOf(id) < 0) internos.push(id); });
+  if (!matriz) ctx.gestao.forEach(function (id) { if (internos.indexOf(id) < 0) internos.push(id); });
   var semVinculo = dados.TECNICO_ID_SGO ? [] : [{
     id: 'TECNICO_AUVO:' + (dados.TECNICO_AUVO_ID || 'sem'), nome: dados.TECNICO_NOME_AUVO || 'Técnico do Auvo', cadastro: 'técnico',
     motivo: 'Técnico do Auvo ' + (dados.TECNICO_AUVO_ID ? '#' + dados.TECNICO_AUVO_ID + ' ' : '') +
       'sem vínculo com usuário do SGO+; vincule o usuário ao Auvo na Integração Auvo para ele receber os avisos.'
   }];
-  SGO_notificar_({ usuarios: internos, contatos: semVinculo, titulo: titulo, texto: texto, canais: ['email', 'whatsapp'],
-    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId });
+  SGO_notificar_({ usuarios: internos, contatos: semVinculo, titulo: titulo, texto: texto, canais: matriz ? ['email'] : ['email', 'whatsapp'],
+    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId, evento: matriz ? (abertura ? 'S54' : 'S55') : '' });
 
   // (c) cliente — telefone da unidade primeiro; e-mail do cliente
   var telUnidade = unidade ? (unidade.WHATSAPP || unidade.CELULAR || unidade.TELEFONE) : '';
@@ -557,8 +560,10 @@ function Auvo_avisosEnviar_(av, ev, dados, resolvido) {
     telefone: Notificar_normalizarTelefone_(telUnidade) ? telUnidade : telCliente,
     motivo: cliente ? '' : 'Cliente do Auvo ' + (dados.CLIENTE_AUVO_ID ? '#' + dados.CLIENTE_AUVO_ID + ' ' : '') + 'sem cadastro vinculado no SGO+.'
   };
+  // (c) 21/10/2026 (matriz de avisos, S56): e-mail ao cliente na hora; WhatsApp ao cliente só depois do piloto, quando a regra
+  // S56 for ligada em Administração > Matriz de avisos (o notificador confere).
   SGO_notificar_({ contatos: [contatoCliente], titulo: titulo, texto: texto, canais: ['email', 'whatsapp'], semLink: true,
-    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId });
+    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId, evento: matriz ? 'S56' : '' });
 }
 
 /** Depois de gravar a tarefa: marca e avisa cada evento novo. Nunca lança erro. */

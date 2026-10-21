@@ -22,6 +22,13 @@
  *     resumo usa os modelos já aprovados (sgo_atividade_atrasada ou
  *     sgo_atividade_atribuida) com uma atividade e "e mais N".
  *
+ * MATRIZ DE AVISOS (21/10/2026, SGO_Avisos_Matriz.js): o e-mail de atividades
+ * passa a ir no e-mail de RESUMO DO DIA único (08:00); na hora só a atividade
+ * nova (ou passada para você) com prazo para hoje (S01/S02). O WhatsApp de
+ * atividades vira a contagem do resumo do dia único (09:30, só CLT, só quem
+ * ainda não abriu o sistema). Atividades_resumoDiario_ fica só como reserva
+ * quando a matriz não está carregada.
+ *
  * Configuração: propriedade ATV_AVISOS_CFG (JSON) e SGO_EXPEDIENTE
  * (SGO_Expediente.js), pela tela Atividades da equipe > Avisos e horários
  * (Admin e Diretoria). Registro de cada resumo do dia: aba ATV_RESUMOS.
@@ -75,16 +82,24 @@ function Atividades_enviarEmailsPendentes_(destinatarios) {
   var filtro = destinatarios ? destinatarios.map(String) : null;
   var limite = Atividades_menosDias_(ATV_EMAIL_VALIDADE_DIAS);
   var porPessoa = {}, velhos = [];
+  // 21/10/2026: com a matriz de avisos, na hora só a atividade nova/passada para você com prazo para hoje; o resto
+  // fica PENDENTE e vai no e-mail de resumo do dia (SGO_resumoDiaRodada_), que marca o aviso quando sai.
+  var matriz = typeof SGO_resumoDiaRodada_ === 'function';
+  var porId = null, hoje = Atividades_agora_().slice(0, 10);
+  if (matriz) { porId = {}; Atividades_todas_().forEach(function (a) { porId[a.ID] = a; }); }
   SGO_DATA.getAll(aba).forEach(function (v) {
     if (String(v.EMAIL_SITUACAO || '') !== 'PENDENTE') return;
     var dest = String(v.DESTINATARIO_ID || '');
     if (!dest || (filtro && filtro.indexOf(dest) < 0)) return;
     var data = Atividades_normData_(v.DATA, '00:00');
-    if (data && data < limite) { velhos.push(v); return; }
+    if (data && data < limite) { if (!matriz) velhos.push(v); return; }
+    if (matriz) {
+      var at = porId[String(v.ATIVIDADE_ID)];
+      if (String(v.TIPO) !== 'NOVA' || !at || String(at.PREVISAO_ATUAL || '').slice(0, 10) !== hoje) return;
+    }
     (porPessoa[dest] = porPessoa[dest] || []).push(v);
   });
   var resultado = [];
-  var porId = null;
   Object.keys(porPessoa).forEach(function (dest) {
     if (!porId) { porId = {}; Atividades_todas_().forEach(function (a) { porId[a.ID] = a; }); }
     var lista = porPessoa[dest];
@@ -103,7 +118,8 @@ function Atividades_enviarEmailsPendentes_(destinatarios) {
     }
     var r = { ok: 0, erro: 0, pulado: 0 };
     try {
-      r = SGO_notificar_({ usuarios: [dest], canais: ['email'], titulo: titulo, texto: texto, origem: 'ATIVIDADES', refId: lista.map(function (v) { return v.ID; }).join(',').slice(0, 80) });
+      r = SGO_notificar_({ usuarios: [dest], canais: ['email'], titulo: titulo, texto: texto, origem: 'ATIVIDADES', refId: lista.map(function (v) { return v.ID; }).join(',').slice(0, 80),
+        evento: matriz ? 'S01' : '', prazoHoje: matriz });
     } catch (e) { r = { ok: 0, erro: 1, pulado: 0, motivo: String((e && e.message) || e) }; }
     var sit = r.ok ? 'ENVIADO' : r.pulado ? 'PULADO' : 'ERRO';
     resultado.push({ dest: dest, ids: lista.map(function (v) { return v.ID; }), sit: sit, motivo: r.motivo || '' });
@@ -194,6 +210,8 @@ function Atividades_modeloDoResumo_(c, aprovado) {
  * Devolve { avaliados, enviados } ou { fora: motivo }.
  */
 function Atividades_resumoDiario_(agoraData) {
+  // 21/10/2026: substituído pelo resumo do dia único da matriz de avisos (SGO_Avisos_Matriz.js, SGO_resumoDiaRodada_).
+  if (typeof SGO_resumoDiaRodada_ === 'function') return { fora: 'substituído pelo resumo do dia único (matriz de avisos)' };
   var cfg = Atividades_avisosCfg_();
   if (!cfg.whatsappResumo) return { fora: 'resumo desligado' };
   var quando = agoraData || new Date();

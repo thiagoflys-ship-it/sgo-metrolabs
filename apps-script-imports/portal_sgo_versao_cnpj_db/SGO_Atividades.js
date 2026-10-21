@@ -288,7 +288,12 @@ function Atividades_rotinaAtrasos() {
   ATV_FILA_NTF = [];
   // e-mails guardados (inclusive os que chegaram fora do expediente) e o resumo diário do WhatsApp
   try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(null); } catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
-  try { if (typeof Atividades_resumoDiario_ === 'function') Atividades_resumoDiario_(); } catch (e) { console.error('Atividades resumo: ' + ((e && e.message) || e)); }
+  // 21/10/2026: resumo do dia ÚNICO (matriz de avisos, SGO_Avisos_Matriz.js) no lugar do resumo de atividades; a rotina da
+  // gestão também chama (a cada 15 min); cada pessoa recebe no máximo um e-mail e um WhatsApp de resumo por dia.
+  try {
+    if (typeof SGO_resumoDiaRodada_ === 'function') SGO_resumoDiaRodada_(new Date());
+    else if (typeof Atividades_resumoDiario_ === 'function') Atividades_resumoDiario_();
+  } catch (e) { console.error('Atividades resumo: ' + ((e && e.message) || e)); }
   return n;
 }
 
@@ -738,9 +743,11 @@ function Atividades_apiEditar(sessionId, payload) {
           eu.nome + ' passou "' + titAtual + '" para ' + novoResp.nome + '. Ela saiu das suas atividades.');
       }
       var respFinal = novoResp ? novoResp.id : a.RESPONSAVEL_ID;
-      if (!novoResp && respFinal && respFinal !== eu.id && (replanejada || mudancas.length)) {
-        Atividades_avisar_(respFinal, a.ID, replanejada ? 'REPLANEJAMENTO' : 'EDICAO', replanejada ? 'Atividade replanejada' : 'Atividade alterada',
-          eu.nome + (replanejada ? ' mudou o prazo de "' + titAtual + '" de ' + Atividades_dataBr_(a.PRAZO) + ' para ' + prazoTxt + '.' : ' alterou "' + titAtual + '": ' + mudancas.join('; ') + '.'));
+      // 21/10/2026 (matriz de avisos, S04): só a mudança de prazo avisa o responsável; as outras alterações (texto,
+      // cliente, prioridade) ficam só no histórico da atividade.
+      if (!novoResp && respFinal && respFinal !== eu.id && replanejada) {
+        Atividades_avisar_(respFinal, a.ID, 'REPLANEJAMENTO', 'Atividade replanejada',
+          eu.nome + ' mudou o prazo de "' + titAtual + '" de ' + Atividades_dataBr_(a.PRAZO) + ' para ' + prazoTxt + '.');
       }
       return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Atividade alterada.' + (replanejada ? ' Novo prazo: ' + prazoTxt + '.' : '') + (novoResp ? ' Responsável agora: ' + novoResp.nome + '.' : '') };
     });

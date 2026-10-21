@@ -47,10 +47,12 @@ Novos itens que a central não tinha (homologar, julgar, missão, justificativa,
 |---|---|
 | Na hora | item na caixa, no Início da gestão e no balão do menu |
 | Todo dia útil, a partir das 08:00 | UM e-mail por pessoa da gestão com o resumo do que espera por ela (só se houver algo), agrupado: paradas, prazo vencido, novas e demais, com o caminho de cada item |
-| Parado há 2 dias úteis | entra no resumo diário do WhatsApp do gestor |
+| Parado há 2 dias úteis | entra na contagem do WhatsApp de resumo do dia do gestor (09:30, só CLT, só se ele ainda não abriu o sistema) |
 | Parado há 5 dias úteis | escala para a Diretoria (aba "Com a Diretoria" e e-mail diário da Diretoria com o nome de quem está segurando) |
 | Primeiro dia útil da semana, 08:00 | o e-mail da Diretoria leva o relatório A4 semanal da gestão |
 | Primeiro dia útil do mês | relatórios do mês anterior (Desempenho da gestão, Frota, Programa de conduta, Atividades da equipe) gerados e enviados no e-mail da Diretoria |
+
+Matriz de avisos (21/10/2026): o e-mail diário da gestão, a escalada e os relatórios da Diretoria saem dentro do e-mail de resumo do dia único de cada pessoa (com atividades, avisos e o resto, um e-mail só), e o WhatsApp da gestão é a contagem de decisões paradas no WhatsApp de resumo do dia. Cada envio continua registrado em `GES_ENVIOS` (EMAIL_GESTOR, EMAIL_DIRETORIA, WHATS_GESTOR). Decisões do Programa de conduta e do ponto vão só como contagem. Ver `docs/MANUAL_MATRIZ_DE_AVISOS.md`.
 
 Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-mail por dia (as decisões dela, os escalados, as áreas sem gestor e os relatórios do dia); o mesmo item não é cobrado duas vezes no mesmo dia (cada envio fica em `GES_ENVIOS`). WhatsApp: no máximo uma mensagem por pessoa por dia somando atividades e gestão (no dia em que o gestor recebe o resumo da gestão, ele já leva a contagem das atividades dele), só no horário de trabalho, só para o vínculo liberado (padrão CLT). Modelo da Meta próprio: `sgo_gestao_resumo_dia` (até ser aprovado, sai pelo `sgo_aviso_geral`).
 
@@ -91,7 +93,7 @@ Relatório A4 "Desempenho da gestão" (todos, para a Diretoria; ou só o do gest
 
 ## 8. Rotina
 
-Gatilho `Gestao_rotinaDecisoes` a cada 15 minutos (instalado por `Gestao_garantirRotina_`, também conferido uma vez por dia quando alguém da gestão abre o sistema; no servidor, `scripts/instalar_gatilhos.ts`). O resumo do WhatsApp também é chamado no começo do resumo de atividades, para sair antes dele.
+Gatilho `Gestao_rotinaDecisoes` a cada 15 minutos (instalado por `Gestao_garantirRotina_`, também conferido uma vez por dia quando alguém da gestão abre o sistema; no servidor, `scripts/instalar_gatilhos.ts`). Desde 21/10/2026 a rodada chama o resumo do dia único (`SGO_resumoDiaRodada_`, `SGO_Avisos_Matriz.js`), que também é chamado pela rotina das atividades de hora em hora; cada pessoa recebe no máximo um e-mail e um WhatsApp de resumo por dia.
 
 ## 9. COMMAND
 

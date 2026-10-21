@@ -21,7 +21,7 @@ function SGO_ajudaTelas_Gestao_() {
       ],
       cores: [
         { nome: 'Selo azul "Novo" ou "No e-mail diário"', significado: 'Entrou há pouco ou está parado há 1 dia útil. Vai no e-mail diário.' },
-        { nome: 'Selo laranja "Parado: WhatsApp"', significado: 'Parado há 2 dias úteis ou mais: entra no resumo diário do WhatsApp do responsável.' },
+        { nome: 'Selo laranja "Parado: WhatsApp"', significado: 'Parado há 2 dias úteis ou mais: entra na contagem do WhatsApp de resumo do dia do responsável (só CLT, só se ele ainda não abriu o sistema).' },
         { nome: 'Selo vermelho "Com a Diretoria"', significado: 'Parado há 5 dias úteis ou mais: a Diretoria recebe o item com o nome de quem está com ele.' },
         { nome: 'Selo verde "Providência registrada"', significado: 'Alguém registrou o que foi feito; a cobrança está pausada até a data de acompanhamento.' },
         { nome: 'Selo vermelho "Prazo vencido"', significado: 'O prazo de decisão passou sem nenhuma providência. Conta na avaliação do gestor.' },
@@ -41,8 +41,8 @@ function SGO_ajudaTelas_Gestao_() {
         { perfil: 'TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH', pode: 'Não usam esta tela. O que depende de cada um aparece no Início e em Minhas atividades.' }
       ],
       perguntas: [
-        { p: 'Quando chegam os e-mails e o WhatsApp?', r: 'Todo dia útil, a partir das 08:00, um e-mail por pessoa com o resumo (só se houver algo). O WhatsApp vai no máximo uma vez por dia, só em dia útil e no horário de trabalho, e só quando há item parado há 2 dias úteis ou mais. Nunca à noite, no fim de semana ou em feriado.' },
-        { p: 'Vou receber dois WhatsApp no dia (atividades e gestão)?', r: 'Não. É no máximo uma mensagem por dia somando os dois. No dia em que você recebe o resumo da gestão, ele já leva a contagem das suas atividades.' },
+        { p: 'Quando chegam os e-mails e o WhatsApp?', r: 'As decisões entram no e-mail de resumo do dia único (todo dia útil, a partir das 08:00, um e-mail por pessoa com tudo o que espera por ela, só se houver algo). O WhatsApp de resumo sai a partir das 09:30, no máximo uma vez por dia, só para CLT e só se a pessoa ainda não abriu o sistema; leva a contagem das decisões paradas há 2 dias úteis ou mais. Nunca à noite, no fim de semana ou em feriado. Horários em Administração > Matriz de avisos.' },
+        { p: 'Vou receber dois WhatsApp no dia (atividades e gestão)?', r: 'Não. Desde a matriz de avisos existe um resumo do dia só, com atividades, decisões, avisos e bate-papo juntos: no máximo um e-mail e um WhatsApp por dia.' },
         { p: 'O que conta como "parado"?', r: 'Dias úteis desde a entrada na caixa ou desde a última providência registrada. Fins de semana e feriados não contam.' },
         { p: 'Posso pausar a cobrança para sempre?', r: 'Não. A providência pausa por até 10 dias. Depois disso, se nada mudou, registre de novo com o que foi feito.' },
         { p: 'Os itens que já existiam antes da caixa contam como atrasados?', r: 'Não. Eles começam a contar do dia em que a caixa os viu pela primeira vez.' }
@@ -51,7 +51,7 @@ function SGO_ajudaTelas_Gestao_() {
         { titulo: 'Escada de cobrança', paragrafos: [
           'Na hora: o item entra na caixa, no Início da gestão e no balão do menu.',
           'Todo dia útil a partir das 08:00: um e-mail por pessoa da gestão com o resumo do que espera por ela, agrupado (paradas, prazo vencido, novas e demais), com o caminho de cada item. A Diretoria recebe um só e-mail com as decisões dela, os itens escalados com o nome de quem está segurando, as áreas sem gestor e, no primeiro dia útil da semana e do mês, os relatórios.',
-          'Parado há 2 dias úteis: entra no resumo diário do WhatsApp do responsável (uma mensagem por dia, vínculo CLT por padrão, só no horário de trabalho).',
+          'Parado há 2 dias úteis: entra na contagem do WhatsApp de resumo do dia do responsável (uma mensagem por dia, só CLT, só se ele ainda não abriu o sistema, no horário de trabalho).',
           'Parado há 5 dias úteis: escala para a Diretoria.',
           'Os números de dias e as horas são configuráveis em "Regras e responsáveis" (Administrador e Diretoria).'
         ] },
