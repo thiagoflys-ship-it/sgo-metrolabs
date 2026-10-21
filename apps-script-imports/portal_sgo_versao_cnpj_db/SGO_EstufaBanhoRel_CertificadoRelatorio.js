@@ -287,7 +287,7 @@ function EstufaBanhoRel_apiMontarCertificadoFinal(payload) {
   // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
   return SGO_DocSalvar_finalizarCertificado_(html, payload, function () {
     const id = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
-    return id ? DriveApp.getFolderById(id) : EstufaBanhoRel_ebObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
+    return EstufaBanhoRel_ebPastaConfiguradaOuPropria_(id, 'LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
   }, 'Certificado de qualificação térmica Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
 }
 

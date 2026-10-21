@@ -13,9 +13,16 @@
  * - gerar link de exportação PDF
  ****************************************************/
 
+/**
+ * Pasta própria do módulo (laudos ou planilhas enviadas). 21/10/2026: as chaves genéricas LAUDOS_FOLDER_ID e
+ * UPLOAD_FOLDER_ID eram as mesmas da Cadeia de frio (os dois módulos podiam gravar na mesma pasta). A Estufa passa
+ * a guardar o endereço em ESTUFA_LAUDOS_FOLDER_ID e ESTUFA_UPLOAD_FOLDER_ID. A pasta antiga só é aproveitada quando
+ * é da Estufa (mesmo nome); os documentos antigos continuam onde estão e abrem pelos links já gravados.
+ */
 function EstufaBanhoRel_ebObterPastaPersistente_(propKey, nomePasta) {
   const props = PropertiesService.getScriptProperties();
-  const idSalvo = props.getProperty(propKey);
+  const chave = /^(LAUDOS_FOLDER_ID|UPLOAD_FOLDER_ID)$/.test(propKey) ? 'ESTUFA_' + propKey : propKey;
+  const idSalvo = props.getProperty(chave);
   if (idSalvo) {
     try {
       return DriveApp.getFolderById(idSalvo);
@@ -23,9 +30,25 @@ function EstufaBanhoRel_ebObterPastaPersistente_(propKey, nomePasta) {
       // pasta salva não existe mais (ex.: apagada manualmente) — recria abaixo
     }
   }
+  if (chave !== propKey) {
+    const idAntigo = props.getProperty(propKey);
+    if (idAntigo) {
+      try {
+        const antiga = DriveApp.getFolderById(idAntigo);
+        if (antiga.getName() === nomePasta) { props.setProperty(chave, antiga.getId()); return antiga; }
+      } catch (e) { /* pasta antiga não existe aqui */ }
+    }
+  }
   const folder = DriveApp.getRootFolder().createFolder(nomePasta);
-  props.setProperty(propKey, folder.getId());
+  props.setProperty(chave, folder.getId());
   return folder;
+}
+
+/** Pasta configurada (quando existe de fato) ou a própria do módulo. */
+function EstufaBanhoRel_ebPastaConfiguradaOuPropria_(idConfigurado, propKey, nomePasta) {
+  const id = String(idConfigurado || '').trim();
+  if (id.length > 10) { try { return DriveApp.getFolderById(id); } catch (e) { /* pasta do Google Drive antigo: segue para a própria */ } }
+  return EstufaBanhoRel_ebObterPastaPersistente_(propKey, nomePasta);
 }
 
 /**
@@ -189,7 +212,7 @@ function EstufaBanhoRel_apiUploadArquivo(payload) {
   try {
     const bytes = Utilities.base64Decode(base64);
     const blob = Utilities.newBlob(bytes, mimeType, fileName);
-    const folder = folderIdConfigurado ? DriveApp.getFolderById(folderIdConfigurado) : EstufaBanhoRel_ebObterPastaPersistente_('UPLOAD_FOLDER_ID', 'Estufa+Banho-maria - Uploads');
+    const folder = EstufaBanhoRel_ebPastaConfiguradaOuPropria_(folderIdConfigurado, 'UPLOAD_FOLDER_ID', 'Estufa+Banho-maria - Uploads');
     const file = folder.createFile(blob);
     return {
       ok: true,
@@ -525,7 +548,7 @@ function EstufaBanhoRel_apiConverter(payload) {
   // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
   const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
     const id = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
-    return id ? DriveApp.getFolderById(id) : EstufaBanhoRel_ebObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
+    return EstufaBanhoRel_ebPastaConfiguradaOuPropria_(id, 'LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
   }, 'Relatório de dados Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
   const statusConsolidado = EstufaBanhoRel_ebConsolidarStatus_(analises);
   return {

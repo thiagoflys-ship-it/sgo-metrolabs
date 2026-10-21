@@ -308,3 +308,17 @@ test('abertura de porta: saída da faixa depois de fechar a porta (inércia) con
   assert.strictEqual(r.contexto.criterios.find(c => c.chave === 'TEMPO_RUPTURA').conforme, false); // 2 min < 5 min
   assert.strictEqual(r.contexto.criterios.find(c => c.chave === 'RECUPERACAO').conforme, true);
 });
+
+test('pastas próprias da Estufa: não grava na pasta da Cadeia de frio pela chave genérica; reaproveita a pasta antiga da Estufa', () => {
+  const env = E.criarAmbiente();
+  const cadeia = env.run('DriveApp.getRootFolder().createFolder("Cadeia de Frio - Laudos").getId()');
+  env.props.LAUDOS_FOLDER_ID = cadeia;
+  const p1 = env.run('EstufaQ_pastaLaudos_().getId()');
+  assert.notStrictEqual(p1, cadeia);
+  assert.strictEqual(env.props.ESTUFA_LAUDOS_FOLDER_ID, p1);
+  const env2 = E.criarAmbiente();
+  const antiga = env2.run('DriveApp.getRootFolder().createFolder("Estufa+Banho-maria - Laudos").getId()');
+  env2.props.LAUDOS_FOLDER_ID = antiga;
+  assert.strictEqual(env2.run('EstufaQ_pastaLaudos_().getId()'), antiga);
+  assert.strictEqual(env2.props.ESTUFA_LAUDOS_FOLDER_ID, antiga);
+});

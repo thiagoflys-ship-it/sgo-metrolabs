@@ -871,7 +871,7 @@ function EstufaQ_aplicarVinculo_(sessionId, payload, exigir) {
  * ============================================================ */
 
 function EstufaQ_pastaLaudos_() {
-  return SGO_DocSalvar_pastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos', EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID);
+  return EstufaBanhoRel_ebPastaConfiguradaOuPropria_(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID, 'LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
 }
 
 /** Número do relatório de ensaio: REE-aaaa-00001 (quando o técnico não informa). */
@@ -1019,7 +1019,7 @@ function EstufaQ_apiEmitir(payload, sessao) {
 function EstufaQ_guardarFotos_(fotos, numero) {
   return EstufaQ_fotosValidas_(fotos).map(function (f, i) {
     var blob = Utilities.newBlob(Utilities.base64Decode(f.base64), f.mimeType || 'image/jpeg', 'Foto ' + (i + 1) + ' - ' + (numero || 'sem número') + '.jpg');
-    var arq = EstufaBanhoRel_ebObterPastaPersistente_('UPLOAD_FOLDER_ID', 'Estufa+Banho-maria - Uploads').createFile(blob);
+    var arq = EstufaBanhoRel_ebPastaConfiguradaOuPropria_(EstufaBanhoRel_EBCFG.UPLOAD_FOLDER_ID, 'UPLOAD_FOLDER_ID', 'Estufa+Banho-maria - Uploads').createFile(blob);
     return { fileId: arq.getId(), mimeType: f.mimeType || 'image/jpeg', legenda: f.legenda || '' };
   });
 }
