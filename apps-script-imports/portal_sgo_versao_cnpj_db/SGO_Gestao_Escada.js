@@ -75,6 +75,8 @@ function Ges_rodada_(quando) {
   passo('copiloto', function () { return Ges_atualizarCopiloto_(false); });
   if (cfg.automacoes.atividadeSemResponsavel) passo('semResponsavel', function () { return Ges_autoAtividadeSemResponsavel_(); });
   if (cfg.automacoes.manutencaoAgenda) passo('manutencao', function () { return Ges_autoManutencaoAgenda_(); });
+  // 21/10/2026: rotina do Comercial (no máximo uma vez por hora; lista do dia da gestora comercial no início do expediente)
+  if (typeof Comercial_rotina_ === 'function') passo('comercial', function () { return Comercial_rotina_(quando); });
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando) : { dentro: true, hora: '09:00', dia: Ges_hoje_() };
   if (!ex.dentro) { r.fora = ex.motivo; return r; }
   if (cfg.automacoes.cnhCondutor) passo('cnh', function () { return Ges_autoCnhCondutor_(ex); });
@@ -320,6 +322,12 @@ function Gestao_whatsDiario_(quando) {
 var GES_RELATORIOS_MENSAIS = [
   ['GESTAO', 'Desempenho da gestão'], ['FROTA', 'Frota'], ['CONDUTA', 'Programa de conduta (equipe)'], ['ATIVIDADES', 'Atividades da equipe']
 ];
+// 21/10/2026: o relatório do Comercial entra na lista só quando o módulo está em uso (há oportunidades registradas).
+function Ges_relatoriosMensaisLista_() {
+  var l = GES_RELATORIOS_MENSAIS.slice();
+  try { if (typeof Comercial_relatorioMes_ === 'function' && typeof Comercial_emUso_ === 'function' && Comercial_emUso_()) l.push(['COMERCIAL', 'Comercial']); } catch (e) {}
+  return l;
+}
 
 /** Relatórios que o e-mail da Diretoria de hoje leva: { lista: [{nome, link, aviso}], pendente }. */
 function Ges_relatoriosDoDia_(envios, dia, cfgExp) {
@@ -331,7 +339,7 @@ function Ges_relatoriosDoDia_(envios, dia, cfgExp) {
   }
   if (cfg.escada.mensal && cfg.automacoes.relatoriosMensais && Ges_ehDiaDoMensal_(dia, cfgExp)) {
     var comp = Ges_competenciaAnterior_(dia);
-    GES_RELATORIOS_MENSAIS.forEach(function (rel) {
+    Ges_relatoriosMensaisLista_().forEach(function (rel) {
       var e = envios.filter(function (x) { return Ges_up_(x.TIPO) === 'MENSAL' && Ges_s_(x.REFERENCIA) === comp + '|' + rel[0]; })[0];
       if (e) lista.push({ nome: rel[1] + ' — ' + (typeof RelA4_competencia_ === 'function' ? RelA4_competencia_(comp) : comp), link: Ges_s_(e.LINK), aviso: Ges_up_(e.SITUACAO) === 'OK' ? '' : Ges_s_(e.MOTIVO) });
       else pendente = true;
@@ -356,13 +364,14 @@ function Ges_relatoriosMensais_(ex) {
   var cfgExp = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null;
   if (!Ges_ehDiaDoMensal_(ex.dia, cfgExp)) return { fora: 'não é o primeiro dia útil do mês' };
   var comp = Ges_competenciaAnterior_(ex.dia), envios = Ges_envios_();
-  var falta = GES_RELATORIOS_MENSAIS.filter(function (rel) { return !envios.some(function (e) { return Ges_up_(e.TIPO) === 'MENSAL' && Ges_s_(e.REFERENCIA) === comp + '|' + rel[0]; }); })[0];
+  var falta = Ges_relatoriosMensaisLista_().filter(function (rel) { return !envios.some(function (e) { return Ges_up_(e.TIPO) === 'MENSAL' && Ges_s_(e.REFERENCIA) === comp + '|' + rel[0]; }); })[0];
   if (!falta) return { feito: true };
   var g;
   try {
     if (falta[0] === 'GESTAO') { Ges_congelarAvaliacoes_(comp); try { Ges_sugestoesConduta_(comp); } catch (eS) { console.error('Gestão, sugestão ao Programa de conduta: ' + ((eS && eS.message) || eS)); } g = Ges_relatorioDesempenho_(comp, { nome: 'Rotina automática' }); }
     else if (falta[0] === 'FROTA') g = Ges_relatorioFrotaMes_(comp);
     else if (falta[0] === 'CONDUTA') g = Ges_relatorioCondutaMes_(comp);
+    else if (falta[0] === 'COMERCIAL') g = typeof Comercial_relatorioMes_ === 'function' ? Comercial_relatorioMes_(comp, 'Rotina automática') : { salvo: false, aviso: 'Comercial indisponível' };
     else g = Ges_relatorioAtividades_(comp, { nome: 'Rotina automática' });
   } catch (e) { g = { salvo: false, aviso: String((e && e.message) || e).slice(0, 300) }; }
   Ges_registrarEnvio_({ tipo: 'MENSAL', uid: '', nome: 'Diretoria', dia: ex.dia, ref: comp + '|' + falta[0], situacao: g && g.salvo ? 'OK' : 'ERRO', motivo: (g && g.aviso) || '', link: (g && g.link) || '' });
