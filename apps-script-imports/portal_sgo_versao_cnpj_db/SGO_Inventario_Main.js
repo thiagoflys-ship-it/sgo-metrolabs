@@ -139,6 +139,10 @@ const SGO_INVENTARIO = (() => {
         MODELO: SGO_UTILS.safe(e.MODELO),
         SERIE: SGO_UTILS.safe(e.SERIE),
         SETOR: SGO_UTILS.safe(e.SETOR),
+        // 21/10/2026: campos novos do cadastro (aparecem no relatório quando preenchidos).
+        PATRIMONIO: SGO_UTILS.safe(e.PATRIMONIO),
+        ANO_FABRICACAO: SGO_UTILS.safe(e.ANO_FABRICACAO),
+        CAPACIDADE: SGO_UTILS.safe(e.CAPACIDADE),
         STATUS: SGO_UTILS.safe(e.STATUS),
         CLIENTE_ID: SGO_UTILS.safe(e.CLIENTE_ID),
         CLIENTE_NOME: SGO_UTILS.safe(cliente.NOME_FANTASIA || cliente.RAZAO_SOCIAL || ""),
@@ -414,9 +418,11 @@ const SGO_INVENTARIO = (() => {
     c.push(RelA4_secao_("Itens que exigem ação", RelA4_tabela_([{ t: "TAG", nw: true }, { t: "Tipo" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }],
       acao.map(e => [e.TAG || "—", e.TIPO || "—", e.UNIDADE_NOME || "—", INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO)]),
       { vazio: "Nenhum documento vencido ou vencendo nos próximos 30 dias.", legenda: "Equipamentos com documento vencido (primeiro) ou vencendo em 30 dias", compacta: acao.length > 20 })));
-    c.push(RelA4_secao_("Inventário completo", RelA4_tabela_([{ t: "Nº", num: true }, { t: "TAG", nw: true }, { t: "Tipo" }, { t: "Fabricante e modelo" }, { t: "Série", nw: true }, { t: "Setor" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }, { t: "Situação" }],
-      dados.itens.map(e => [String(e.IDX), e.TAG || "—", e.TIPO || "—", [e.FABRICANTE, e.MODELO].filter(Boolean).join(" / ") || "—", e.SERIE || "—", e.SETOR || "—", e.UNIDADE_NOME || "—",
-        INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO), String(e.STATUS).toUpperCase() === "INATIVO" ? "Inativo" : "Ativo"]),
+    // 21/10/2026: patrimônio do cadastro em coluna própria só quando algum equipamento listado tem; ano e capacidade abaixo do tipo.
+    const invTemPat = dados.itens.some(e => e.PATRIMONIO);
+    c.push(RelA4_secao_("Inventário completo", RelA4_tabela_([{ t: "Nº", num: true }, { t: "TAG", nw: true }].concat(invTemPat ? [{ t: "Patrimônio", nw: true }] : []).concat([{ t: "Tipo" }, { t: "Fabricante e modelo" }, { t: "Série", nw: true }, { t: "Setor" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }, { t: "Situação" }]),
+      dados.itens.map(e => [String(e.IDX), e.TAG || "—"].concat(invTemPat ? [e.PATRIMONIO || "—"] : []).concat([[e.TIPO || "—", [e.CAPACIDADE, e.ANO_FABRICACAO ? "fabricação " + e.ANO_FABRICACAO : ""].filter(Boolean).join(" · ")].filter(Boolean).join(" — "), [e.FABRICANTE, e.MODELO].filter(Boolean).join(" / ") || "—", e.SERIE || "—", e.SETOR || "—", e.UNIDADE_NOME || "—",
+        INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO), String(e.STATUS).toUpperCase() === "INATIVO" ? "Inativo" : "Ativo"])),
       { vazio: "Nenhum equipamento com os filtros escolhidos.", legenda: "Equipamentos do inventário", compacta: dados.itens.length > 30 }) +
       '<p class="nota">Situação documental conforme os registros do SGO+ na data de emissão: considera o documento de calibração e o de qualificação de validade mais distante de cada equipamento; "vence em breve" significa nos próximos 30 dias. ' +
       "O inventário não substitui os certificados, que prevalecem em caso de divergência.</p>"));

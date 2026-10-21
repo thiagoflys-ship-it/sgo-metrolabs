@@ -41,7 +41,7 @@ function SGO_ajudaTelas_Inventario_() {
           "Toque em \"Relatório A4 com análise\".",
           "Aguarde até um minuto. O relatório abre numa aba nova.",
           "Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.",
-          "Relatório longo traz capa e sumário com o número das páginas."
+          "Relatório longo traz capa e sumário com o número das páginas.", "No \"Inventário completo\", o patrimônio do cliente ganha coluna própria quando algum equipamento listado tem patrimônio no cadastro; capacidade e ano de fabricação, quando preenchidos no cadastro, aparecem junto do tipo."
         ] },
         { titulo: "Achar um inventário já salvo", itens: [
           "Em \"Documentos já Gerados\", digite o nome do cliente ou do arquivo.",

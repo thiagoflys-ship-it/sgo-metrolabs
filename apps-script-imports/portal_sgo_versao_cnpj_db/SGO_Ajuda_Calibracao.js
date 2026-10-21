@@ -28,7 +28,7 @@ function SGO_ajudaTelas_Calibracao_() {
           "Toque em \"Buscar / Selecionar Cliente\".",
           "Se o cliente não existir, confira os dados que vieram da consulta e toque em \"Cadastrar Cliente\".",
           "Em \"2. Equipamento\", escolha o equipamento em \"Equipamento já cadastrado\" e toque em \"Usar este equipamento\".",
-          "Se o equipamento não estiver na lista, preencha os campos de equipamento novo e toque em \"Cadastrar Equipamento\".",
+          "Se o equipamento não estiver na lista, preencha os campos de equipamento novo (o patrimônio do cliente é opcional) e toque em \"Cadastrar Equipamento\". O patrimônio gravado no cadastro sai no certificado.",
           "Em \"3. Dados da calibração\", escolha o técnico executor ou digite o nome no campo de texto livre.",
           "Digite a data da calibração (dd/mm/aaaa).",
           "Deixe \"Não — emissão sem data (seleção padrão).\" na pergunta sobre a próxima calibração, a menos que o cliente tenha pedido a data.",

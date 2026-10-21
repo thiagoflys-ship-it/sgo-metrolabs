@@ -63,7 +63,7 @@ Monta a lista dos equipamentos de um cliente com a situação da calibração e 
 3. Aguarde até um minuto. O relatório abre numa aba nova.
 4. Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.
 
-O relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.
+O relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Na lista completa, o patrimônio do cliente ganha coluna própria quando algum equipamento listado tem patrimônio no cadastro; capacidade e ano de fabricação, quando preenchidos no cadastro, aparecem junto do tipo. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.
 
 Para achar um inventário salvo: em "Documentos já Gerados", digite o nome do cliente ou do arquivo, toque em "Buscar" e toque no link.
 

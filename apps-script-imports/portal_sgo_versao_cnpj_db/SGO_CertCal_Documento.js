@@ -367,7 +367,7 @@ function CertCalDoc_montarDocumentoHtml_(ctx) {
   html.push(CertCalDoc_tabelaIdentificacao_([
     { titulo: 'Empresa executante', linhas: linhasEmpresa },
     { titulo: 'Cliente', linhas: [['Razão social', ctx.cliente.razaoSocial, true], ['CNPJ', ctx.cliente.cnpj, true], ['Endereço', ctx.cliente.endereco, true]] },
-    { titulo: 'Equipamento em calibração', linhas: [['Descrição', ctx.equipamento.descricao, true], ['Identificação (TAG)', ctx.equipamento.tag], ['Nº de série', ctx.equipamento.serie], ['Fabricante', ctx.equipamento.fabricante], ['Modelo', ctx.equipamento.modelo], ['Localização', ctx.equipamento.localizacao, true]] }
+    { titulo: 'Equipamento em calibração', linhas: [['Descrição', ctx.equipamento.descricao, true], ['Identificação (TAG)', ctx.equipamento.tag], ['Nº de série', ctx.equipamento.serie], ctx.equipamento.patrimonio ? ['Patrimônio', ctx.equipamento.patrimonio] : null, ['Fabricante', ctx.equipamento.fabricante], ['Modelo', ctx.equipamento.modelo], ['Localização', ctx.equipamento.localizacao, true]].filter(Boolean) }
   ]));
 
   var padroes = CertCalDoc_padroesDoCertificado_(ctx);
@@ -459,11 +459,12 @@ function CertCalDoc_montarRelatorioInterpretativoHtml_(ctx, textos, fotos) {
     ['CNPJ do cliente', ctx.cliente.cnpj], ['Local da calibração', ctx.localCalibracao === 'CLIENTE' ? 'Instalações do cliente' : 'Laboratório da Metrolabs'],
     ['Equipamento', ctx.equipamento.descricao, true],
     ['Identificação (TAG)', ctx.equipamento.tag], ['Nº de série', ctx.equipamento.serie],
+    ctx.equipamento.patrimonio ? ['Patrimônio', ctx.equipamento.patrimonio, true] : null,
     ['Fabricante', ctx.equipamento.fabricante], ['Modelo', ctx.equipamento.modelo],
     ['Localização', ctx.equipamento.localizacao, true],
     ['Próxima calibração', CertCalDoc_proximaResumo_(ctx), true],
     ['Empresa executante', CertCalDoc_empresaRodape_(empresa) || empresa.nome, true]
-  ] }]));
+  ].filter(Boolean) }]));
 
   html.push(sec.secao('Introdução'));
   html.push(CertCalDoc_paragrafosHtml_(textos.introducao));

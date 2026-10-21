@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "15543cbd3d65",
+ "versao": "fc41bc8687d8",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -839,7 +839,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Seção 2 — Equipamento",
-     "texto": "Depois de selecionar o cliente, você escolhe um equipamento já cadastrado para esse cliente, ou cadastra um novo.\nCampo | O que é | Para que serve | O que fazerEquipamento já cadastrado (lista) | Equipamentos que esse cliente já tem no sistema | Reaproveitar cadastro existente | Escolha na lista e clique em \"Usar este equipamento\"\nUnidade | O local/filial do cliente onde o equipamento fica | Organização do cadastro | Escolha a unidade (criada automaticamente como \"Matriz\" quando o cliente é novo)\nDescrição/Tipo | O que é o equipamento (ex.: \"Termo higrômetro\") | Aparece no certificado | Digite o tipo\nFabricante / Modelo / Nº de série / TAG / Setor | Identificação física do equipamento | Aparecem no certificado | Copie da placa/etiqueta do equipamento\nO que acontece? Um equipamento novo, uma vez cadastrado, também fica salvo pra sempre — nas próximas calibrações desse mesmo cliente, ele já aparece na lista \"Equipamento já cadastrado\", sem precisar digitar tudo de novo."
+     "texto": "Depois de selecionar o cliente, você escolhe um equipamento já cadastrado para esse cliente, ou cadastra um novo.\nCampo | O que é | Para que serve | O que fazerEquipamento já cadastrado (lista) | Equipamentos que esse cliente já tem no sistema | Reaproveitar cadastro existente | Escolha na lista e clique em \"Usar este equipamento\"\nUnidade | O local/filial do cliente onde o equipamento fica | Organização do cadastro | Escolha a unidade (criada automaticamente como \"Matriz\" quando o cliente é novo)\nDescrição/Tipo | O que é o equipamento (ex.: \"Termo higrômetro\") | Aparece no certificado | Digite o tipo\nFabricante / Modelo / Nº de série / TAG / Setor | Identificação física do equipamento | Aparecem no certificado | Copie da placa/etiqueta do equipamento\nO que acontece? Um equipamento novo, uma vez cadastrado, também fica salvo pra sempre — nas próximas calibrações desse mesmo cliente, ele já aparece na lista \"Equipamento já cadastrado\", sem precisar digitar tudo de novo. O campo Patrimônio (se houver) grava o número de patrimônio do cliente no cadastro; quando preenchido, ele sai no certificado junto da TAG e do número de série."
     },
     {
      "titulo": "Seção 3 — Dados da calibração",
@@ -1731,7 +1731,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Relatório A4 com análise e documentos já gerados",
-     "texto": "1. Gere o inventário.\n2. Toque em \"Relatório A4 com análise\".\n3. Aguarde até um minuto. O relatório abre numa aba nova.\n4. Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.\n\nO relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.\n\nPara achar um inventário salvo: em \"Documentos já Gerados\", digite o nome do cliente ou do arquivo, toque em \"Buscar\" e toque no link."
+     "texto": "1. Gere o inventário.\n2. Toque em \"Relatório A4 com análise\".\n3. Aguarde até um minuto. O relatório abre numa aba nova.\n4. Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.\n\nO relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Na lista completa, o patrimônio do cliente ganha coluna própria quando algum equipamento listado tem patrimônio no cadastro; capacidade e ano de fabricação, quando preenchidos no cadastro, aparecem junto do tipo. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.\n\nPara achar um inventário salvo: em \"Documentos já Gerados\", digite o nome do cliente ou do arquivo, toque em \"Buscar\" e toque no link."
     },
     {
      "titulo": "Quem pode usar",

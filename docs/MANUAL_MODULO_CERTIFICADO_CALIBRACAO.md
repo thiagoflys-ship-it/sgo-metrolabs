@@ -122,7 +122,7 @@ Depois de selecionar o cliente, você escolhe um equipamento **já cadastrado** 
 | **Descrição/Tipo** | O que é o equipamento (ex.: "Termo higrômetro") | Aparece no certificado | Digite o tipo |
 | **Fabricante** / **Modelo** / **Nº de série** / **TAG** / **Setor** | Identificação física do equipamento | Aparecem no certificado | Copie da placa/etiqueta do equipamento |
 
-> **O que acontece?** Um equipamento novo, uma vez cadastrado, também fica salvo pra sempre — nas próximas calibrações desse mesmo cliente, ele já aparece na lista "Equipamento já cadastrado", sem precisar digitar tudo de novo.
+> **O que acontece?** Um equipamento novo, uma vez cadastrado, também fica salvo pra sempre — nas próximas calibrações desse mesmo cliente, ele já aparece na lista "Equipamento já cadastrado", sem precisar digitar tudo de novo. O campo **Patrimônio (se houver)** grava o número de patrimônio do cliente no cadastro; quando preenchido, ele sai no certificado junto da TAG e do número de série.
 
 ---
 
