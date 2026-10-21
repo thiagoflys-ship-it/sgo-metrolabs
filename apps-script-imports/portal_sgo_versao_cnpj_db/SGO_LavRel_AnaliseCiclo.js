@@ -727,9 +727,11 @@ function LavRel_obterParametrosRobustosExposicao_(cfg, dtMin, opcoesAnalise) {
   const histerese = LavRel_valorNumericoPrioritario_([cfgOpcoes.histereseTemperatura, cfgCiclo.histereseTemperatura, raizCfg.histereseTemperatura, 0.5], 0.5);
   const consecutivasInicio = Math.max(1, LavRel_parseIntPrioritario_([cfgOpcoes.consecutivasInicio, cfgCiclo.consecutivasInicio, raizCfg.consecutivasInicio, 2], 2));
   const consecutivasFim = Math.max(1, LavRel_parseIntPrioritario_([cfgOpcoes.consecutivasFim, cfgCiclo.consecutivasFim, raizCfg.consecutivasFim, 3], 3));
-  // A tolerância de entrada/saída do ciclo (ex.: ±3 °C do banho ultrassônico) vale antes da geral.
-  const toleranciaEntrada = LavRel_valorNumericoPrioritario_([cfgOpcoes.toleranciaEntrada, cfgCiclo.toleranciaEntrada, raizCfg.toleranciaEntrada, 0.0], 0.0);
-  const toleranciaSaida = LavRel_valorNumericoPrioritario_([cfgOpcoes.toleranciaSaida, cfgCiclo.toleranciaSaida, raizCfg.toleranciaSaida, histerese], histerese);
+  // Lavadora ultrassônica: a tolerância de entrada e saída é a do banho (±3 °C, configuração do ciclo) e não
+  // a dos ajustes avançados da tela, para a detecção do patamar ser coerente com o critério de faixa do banho.
+  const tolBanho = cfg && cfg.criterios && isFinite(Number(cfg.criterios.toleranciaBanhoK)) && cfg.criterios.toleranciaBanhoK !== null;
+  const toleranciaEntrada = tolBanho ? Number(cfgCiclo.toleranciaEntrada) : LavRel_valorNumericoPrioritario_([cfgOpcoes.toleranciaEntrada, cfgCiclo.toleranciaEntrada, raizCfg.toleranciaEntrada, 0.0], 0.0);
+  const toleranciaSaida = tolBanho ? Number(cfgCiclo.toleranciaSaida) : LavRel_valorNumericoPrioritario_([cfgOpcoes.toleranciaSaida, cfgCiclo.toleranciaSaida, raizCfg.toleranciaSaida, histerese], histerese);
   const modoReconhecimentoExposicao = String(LavRel_valorPrioritario_([cfgOpcoes.modoReconhecimentoExposicao, cfgCiclo.modoReconhecimentoExposicao, raizCfg.modoReconhecimentoExposicao, 'PIOR_SENSOR'], 'PIOR_SENSOR')).toUpperCase().trim();
   const percentualMinimoSensores = LavRel_limitarEntre_(LavRel_valorNumericoPrioritario_([cfgOpcoes.percentualMinimoSensores, cfgCiclo.percentualMinimoSensores, raizCfg.percentualMinimoSensores, 1.0], 1.0), 0.01, 1.0);
   const tMin = LavRel_parseFloatSeguroAnalise_(opcoesAnalise && opcoesAnalise.setpoint, LavRel_parseFloatSeguroAnalise_(cfg.tMin, 20));

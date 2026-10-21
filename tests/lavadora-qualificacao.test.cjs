@@ -321,3 +321,57 @@ test('relatório de ensaio exige o equipamento do cadastro e recusa equipamento 
   assert.equal(r.contexto.identificacao.numeroSerie, 'SN-LAV-0001');
   assert.equal(r.contexto.identificacao.marca, '');
 });
+
+/* ---------------------------------------------------------------- relatório de qualificação (modelo oficial novo) */
+function emitirCicloCadastro(env, extra, ciclo) {
+  const p = payload(Object.assign({ textoColado: L.csvCompleto(L.cicloTermo(Object.assign({ nSensores: 3 }, ciclo || {}))), clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eq1' }, extra || {}));
+  const r = env.lav('tec', 'apiGerarRascunhoCertificado', p);
+  assert.equal(r.bloqueado, false, JSON.stringify(r.travas));
+  const envio = env.lav('tec', 'apiEnviarParaAprovacao', Object.assign({}, p, { assinaturaContextoCertificado: r.assinaturaContexto, textosCertificado: r.textos }));
+  env.lav('rt', 'apiAprovarEmitir', { id: envio.id, confirmacaoRevisao: true });
+  return envio.id;
+}
+
+test('relatório de qualificação: consolida os ciclos, decide por regra, emite com aprovação e entra na ficha do equipamento', () => {
+  const env = L.criarAmbiente({ cadastro: true });
+  const c1 = emitirCicloCadastro(env, { ensaio: 'QO (Vazio)', certNumero: 'LAV-T-0101' });
+  const c2 = emitirCicloCadastro(env, { ensaio: 'QD (Carga)', certNumero: 'LAV-T-0102', cicloNum: '2' });
+  const qi = {};
+  env.fn('LAVOFICIAL_CFG').QI_ITENS.forEach(it => { qi[it.id] = { situacao: 'C' }; });
+  const p = { clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eq1', etapas: { QI: true, QO: true, QD: true }, motivo: 'Requalificação periódica', periodicidadeMeses: 12, qi: qi, dataQi: '10/10/2026', ciclos: [c1, c2] };
+  const r = env.oficial('tec', 'apiGerarRascunho', p);
+  assert.equal(r.ok, true, r.erro);
+  assert.equal(r.bloqueado, false, JSON.stringify(r.travas));
+  assert.equal(r.resumo.statusConsolidado, 'APROVADO');
+  assert.equal(r.resumo.validadeAte, '10/10/2027');
+  assert.match(r.textos.conclusao, /APROVADO/);
+  assert.match(r.textos.conclusao, /menor A0/);
+  assert.ok(!('cesto' in Object.fromEntries((r.travas || []).map(t => [t.codigo, 1]))));
+  const envio = env.oficial('tec', 'apiEnviarParaAprovacao', Object.assign({}, p, { textos: r.textos, assinaturaContexto: r.assinaturaContexto }));
+  assert.equal(envio.ok, true, envio.erro);
+  assert.match(envio.numero, /^RQL-\d{4}-00001$/);
+  const emi = env.oficial('rt', 'apiAprovarEmitir', { id: envio.id, confirmacaoRevisao: true });
+  assert.equal(emi.ok, true, emi.erro);
+  const html = env.ctx.DriveApp.getFileById(emi.htmlId).getBlob().getDataAsString();
+  assert.match(html, /Relatório de qualificação de lavadora termodesinfectora/);
+  const texto = html.replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/data:[^"')]+/g, ' ').replace(/<[^>]+>/g, ' ');
+  assert.doesNotMatch(texto, /MARCAFICTICIA|MODELOXYZ|autoclave|F0/);
+  const ficha = JSON.parse(JSON.stringify(env.fn('SGO_QEQ_listarParaSessao_')({ perfil: 'GESTOR' }, 'eq1')));
+  assert.equal(ficha.situacao.situacao, 'QUALIFICADO');
+  assert.ok(ficha.itens.some(i => /qualificação — lavadora/.test(i.titulo)));
+  assert.ok(env.fn('SGO_DATA').getAll('DOC_DOCUMENTOS').some(d => d.EQUIPAMENTO_ID === 'eq1' && d.DATA_VENCIMENTO === '2027-10-10'));
+  // Ciclo reprovado reprova a qualificação; ciclo de outro equipamento vira trava.
+  const c3 = emitirCicloCadastro(env, { ensaio: 'QD (Carga)', certNumero: 'LAV-T-0103', classeArtigo: 'CRITICO' }, { patamarMin: 2 });
+  const r2 = env.oficial('tec', 'apiGerarRascunho', Object.assign({}, p, { ciclos: [c1, c3] }));
+  assert.equal(r2.resumo.statusConsolidado, 'REPROVADO');
+  assert.match(r2.textos.conclusao, /REPROVADO/);
+  const r3 = env.oficial('tec', 'apiGerarRascunho', Object.assign({}, p, { equipamentoId: 'eq3', ciclos: [c1] }));
+  assert.ok(r3.travas.some(t => t.codigo === 'CICLO_OUTRO_EQUIPAMENTO'));
+});
+
+test('ultrassônica: a tolerância do banho vem da configuração, não dos ajustes avançados da tela', () => {
+  const env = L.criarAmbiente();
+  const a = analisar(env, { motor: 'ULTRASSOM', setpoint: '45', textoColado: L.csvCompleto(L.cicloUltra({})), robustez: { toleranciaEntrada: '0', toleranciaSaida: '0' } });
+  assert.equal(a.configuracaoDeteccaoExposicao.limiteInicio, 42);
+  assert.equal(a.statusAprovacao, 'APROVADO');
+});
