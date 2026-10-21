@@ -167,6 +167,7 @@ function CmpR_acoes_(eu, r) {
 function CmpR_itensDaTela_(lista) {
   if (!Array.isArray(lista) || !lista.length) throw new Error('Não foi possível enviar: acrescente pelo menos um item (o que precisa ser comprado)');
   if (lista.length > 30) throw new Error('Não foi possível enviar: o pedido tem mais de 30 itens. Divida em dois pedidos');
+  var mapaEq = {};
   return lista.map(function (i, k) {
     var desc = Cmp_texto_(i.descricao, 300), q = Cmp_num_(i.quantidade);
     if (desc.length < 3) throw new Error('Não foi possível enviar: o item ' + (k + 1) + ' está sem descrição. Escreva o que é (por exemplo "Resistência da câmara da autoclave") ou tire o item');
@@ -176,7 +177,7 @@ function CmpR_itensDaTela_(lista) {
     if (fotosNovas.length > 4) throw new Error('Não foi possível enviar: o item ' + (k + 1) + ' tem mais de 4 fotos novas. Escolha as melhores (até 4 por item)');
     return { id: Cmp_s_(i.id), fotosNovas: fotosNovas, fotosManter: Array.isArray(i.fotosManter) ? i.fotosManter.map(Cmp_s_) : null, dados: {
       ORDEM: k + 1, CATEGORIA: cat.codigo, DESCRICAO: desc, QUANTIDADE: q, UNIDADE: Cmp_texto_(i.unidade, 20) || 'un.', PART_NUMBER: Cmp_texto_(i.partNumber, 80), MARCA: Cmp_texto_(i.marca, 80),
-      EQUIPAMENTO_ID: Cmp_s_(i.equipamentoId), EQUIPAMENTO_TEXTO: Cmp_texto_(i.equipamentoTexto, 160), TENSAO: Cmp_texto_(i.tensao, 60), CORRENTE: Cmp_texto_(i.corrente, 60),
+      EQUIPAMENTO_ID: Cmp_s_(i.equipamentoId), EQUIPAMENTO_TEXTO: Cmp_texto_(CmpR_equipTextoItem_({ EQUIPAMENTO_ID: i.equipamentoId, EQUIPAMENTO_TEXTO: i.equipamentoTexto }, mapaEq), 160), TENSAO: Cmp_texto_(i.tensao, 60), CORRENTE: Cmp_texto_(i.corrente, 60),
       PRESSAO: Cmp_texto_(i.pressao, 60), ROSCA: Cmp_texto_(i.rosca, 60), DIMENSAO: Cmp_texto_(i.dimensao, 120), MATERIAL: Cmp_texto_(i.material, 80), OUTRAS_ESPEC: Cmp_texto_(i.outras, 2000),
       PRODUTO_ID: Cmp_s_(i.produtoId) } };
   });
@@ -397,8 +398,23 @@ function CmpR_doCliente_(eu, d) {
   var unidades = Cmp_ler_(SGO_CFG.SHEETS.CAD_UNIDADES).filter(function (u) { return Cmp_s_(u.CLIENTE_ID) === cid && Cmp_up_(u.STATUS || 'ATIVO') === 'ATIVO'; })
     .map(function (u) { return { id: Cmp_s_(u.ID), nome: Cmp_s_(u.NOME_UNIDADE) }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
   var equipamentos = Cmp_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) { return Cmp_s_(e.CLIENTE_ID) === cid && Cmp_up_(e.STATUS || 'ATIVO') === 'ATIVO'; })
-    .map(function (e) { return { id: Cmp_s_(e.ID), unidadeId: Cmp_s_(e.UNIDADE_ID), texto: [Cmp_s_(e.TIPO), Cmp_s_(e.MODELO), Cmp_s_(e.TAG) ? 'TAG ' + Cmp_s_(e.TAG) : '', Cmp_s_(e.SETOR)].filter(Boolean).join(' · ') }; });
+    .map(function (e) { return { id: Cmp_s_(e.ID), unidadeId: Cmp_s_(e.UNIDADE_ID), texto: CmpR_equipRotulo_(e) }; });
   return { unidades: unidades, equipamentos: equipamentos };
+}
+
+/** Rótulo do equipamento do cadastro para a requisição e o pedido: tipo · modelo · TAG · nº de série · setor (só o que estiver preenchido). */
+function CmpR_equipRotulo_(e) {
+  if (!e) return '';
+  return [Cmp_s_(e.TIPO), Cmp_s_(e.MODELO), Cmp_s_(e.TAG) ? 'TAG ' + Cmp_s_(e.TAG) : '', Cmp_s_(e.SERIE) ? 'nº de série ' + Cmp_s_(e.SERIE) : '', Cmp_s_(e.SETOR)].filter(Boolean).join(' · ');
+}
+
+/** Texto do equipamento de um item: o que foi escrito; vazio com equipamento do cadastro escolhido, o rótulo do cadastro. mapa: cache { id: linha } (opcional). */
+function CmpR_equipTextoItem_(i, mapa) {
+  var t = Cmp_s_(i && i.EQUIPAMENTO_TEXTO), id = Cmp_s_(i && i.EQUIPAMENTO_ID);
+  if (t || !id) return t;
+  if (!mapa) mapa = {};
+  if (!mapa.__lido) { Cmp_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { mapa[Cmp_s_(e.ID)] = e; }); mapa.__lido = true; }
+  return CmpR_equipRotulo_(mapa[id]);
 }
 
 /** Pedidos aprovados do Comercial (só número e cliente; sem valor). */

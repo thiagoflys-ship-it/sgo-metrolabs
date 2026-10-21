@@ -65,14 +65,14 @@ function CmpP_formaTexto_(p, comCartao) {
 
 /** Dados do momento da emissão (ficam no pedido). */
 function CmpP_congelar_(r, c, f, regras, eu) {
-  var itens = CmpR_itensDe_(r.ID), precos = Cmp_json_(c.PRECOS_JSON, []), emp = typeof RelA4_empresa_ === 'function' ? RelA4_empresa_() : { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
+  var itens = CmpR_itensDe_(r.ID), precos = Cmp_json_(c.PRECOS_JSON, []), mapaEq = {}, emp = typeof RelA4_empresa_ === 'function' ? RelA4_empresa_() : { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
   return {
     empresa: { nome: emp.nome, cnpj: emp.cnpj, entrega: Cmp_s_(regras.empresa.enderecoEntrega), faturamento: Cmp_s_(regras.empresa.enderecoFaturamento), observacao: Cmp_s_(regras.empresa.observacaoPedido) },
     fornecedor: { nome: CmpF_nome_(f), razao: Cmp_s_(f.RAZAO_SOCIAL), documento: CmpF_docFmt_(f.DOCUMENTO), endereco: [Cmp_s_(f.ENDERECO), [Cmp_s_(f.CIDADE), Cmp_s_(f.UF)].filter(Boolean).join('/')].filter(Boolean).join(' · '),
       contato: Cmp_s_(f.CONTATO), email: Cmp_s_(f.EMAIL_PEDIDOS), telefone: Cmp_s_(f.TELEFONE) },
     itens: itens.map(function (i) {
       var p = precos.filter(function (x) { return Cmp_s_(x.itemId) === Cmp_s_(i.ID); })[0] || {};
-      var espec = [Cmp_s_(i.PART_NUMBER) ? 'Nº da peça ' + Cmp_s_(i.PART_NUMBER) : '', Cmp_s_(i.MARCA) ? 'Marca ' + Cmp_s_(i.MARCA) : '', Cmp_s_(i.EQUIPAMENTO_TEXTO) ? 'Equipamento ' + Cmp_s_(i.EQUIPAMENTO_TEXTO) : '',
+      var espec = [Cmp_s_(i.PART_NUMBER) ? 'Nº da peça ' + Cmp_s_(i.PART_NUMBER) : '', Cmp_s_(i.MARCA) ? 'Marca ' + Cmp_s_(i.MARCA) : '', CmpR_equipTextoItem_(i, mapaEq) ? 'Equipamento ' + CmpR_equipTextoItem_(i, mapaEq) : '',
         Cmp_s_(i.TENSAO), Cmp_s_(i.CORRENTE), Cmp_s_(i.PRESSAO), Cmp_s_(i.ROSCA), Cmp_s_(i.DIMENSAO), Cmp_s_(i.MATERIAL), Cmp_s_(i.OUTRAS_ESPEC)].filter(Boolean).join(' · ');
       return { descricao: Cmp_s_(i.DESCRICAO), especificacao: espec, quantidade: Number(i.QUANTIDADE) || 0, unidade: Cmp_s_(i.UNIDADE), precoUnitario: Number(p.precoUnitario) || 0 };
     }),

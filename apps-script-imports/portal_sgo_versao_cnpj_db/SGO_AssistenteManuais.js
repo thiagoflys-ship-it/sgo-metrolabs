@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "5fb674a8feaa",
+ "versao": "b20bf695d47d",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -1005,7 +1005,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Pedir peça ou material",
-     "texto": "1. Toque em Compras > Pedir peça ou material.\n2. Escreva para que é e onde será usado (obrigatório).\n3. Escolha a urgência. Crítica é para equipamento ou atendimento parado: o comprador recebe a atividade com prazo no mesmo dia.\n4. Escolha a que a compra está ligada: cliente (com a unidade e, se houver, o número da O.S. do Auvo), pedido aprovado do Comercial, veículo da Frota ou uso interno (com a explicação de pelo menos 20 letras). Nenhuma compra fica sem vínculo.\n5. Acrescente os itens: tipo, descrição, quantidade e unidade. Um pedido pode ter vários itens.\n6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória.\n7. Toque em \"Enviar a Compras\". O pedido recebe o número REQ-ano-número (por exemplo REQ-2026-0001).\n\nPara material simples (papel, ferramenta comum) bastam descrição, quantidade e unidade.\n\nO que falta aparece na hora, embaixo de cada item. O pedido pode ser enviado assim mesmo, mas fica marcado \"especificação incompleta\" e aparece para quem pediu no Início e em Meus pedidos até completar."
+     "texto": "1. Toque em Compras > Pedir peça ou material.\n2. Escreva para que é e onde será usado (obrigatório).\n3. Escolha a urgência. Crítica é para equipamento ou atendimento parado: o comprador recebe a atividade com prazo no mesmo dia.\n4. Escolha a que a compra está ligada: cliente (com a unidade e, se houver, o número da O.S. do Auvo), pedido aprovado do Comercial, veículo da Frota ou uso interno (com a explicação de pelo menos 20 letras). Nenhuma compra fica sem vínculo.\n5. Acrescente os itens: tipo, descrição, quantidade e unidade. Um pedido pode ter vários itens.\n6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória. Ao escolher o equipamento do cadastro, o campo de texto ao lado é preenchido com tipo, modelo, TAG, nº de série e setor do cadastro (pode completar); se o texto ficar vazio, o pedido de compra usa o rótulo do cadastro, para o documento nunca sair sem o equipamento.\n7. Toque em \"Enviar a Compras\". O pedido recebe o número REQ-ano-número (por exemplo REQ-2026-0001).\n\nPara material simples (papel, ferramenta comum) bastam descrição, quantidade e unidade.\n\nO que falta aparece na hora, embaixo de cada item. O pedido pode ser enviado assim mesmo, mas fica marcado \"especificação incompleta\" e aparece para quem pediu no Início e em Meus pedidos até completar."
     },
     {
      "titulo": "Meus pedidos de compra",

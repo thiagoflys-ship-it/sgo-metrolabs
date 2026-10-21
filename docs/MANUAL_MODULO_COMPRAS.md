@@ -43,7 +43,7 @@ Técnicos, Metrologia e RH não veem preço, orçamento nem pagamento.
 3. Escolha a urgência. Crítica é para equipamento ou atendimento parado: o comprador recebe a atividade com prazo no mesmo dia.
 4. Escolha a que a compra está ligada: cliente (com a unidade e, se houver, o número da O.S. do Auvo), pedido aprovado do Comercial, veículo da Frota ou uso interno (com a explicação de pelo menos 20 letras). Nenhuma compra fica sem vínculo.
 5. Acrescente os itens: tipo, descrição, quantidade e unidade. Um pedido pode ter vários itens.
-6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória.
+6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória. Ao escolher o equipamento do cadastro, o campo de texto ao lado é preenchido com tipo, modelo, TAG, nº de série e setor do cadastro (pode completar); se o texto ficar vazio, o pedido de compra usa o rótulo do cadastro, para o documento nunca sair sem o equipamento.
 7. Toque em "Enviar a Compras". O pedido recebe o número REQ-ano-número (por exemplo REQ-2026-0001).
 
 Para material simples (papel, ferramenta comum) bastam descrição, quantidade e unidade.

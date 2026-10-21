@@ -334,6 +334,13 @@
         box.querySelectorAll("[data-c]").forEach(function (el) { i[el.getAttribute("data-c")] = el.value; });
       });
     }
+    /* Escolheu o equipamento do cadastro: o texto ao lado recebe o rótulo do cadastro (tipo · modelo · TAG · nº de série · setor), só se estiver vazio ou com o rótulo posto antes. */
+    function preencherEquipTexto(i) {
+      if (!i) return;
+      var eq = (estado.equipamentos || []).filter(function (e) { return e.id === i.equipamentoId; })[0], atual = String(i.equipamentoTexto || "").trim();
+      if (atual && atual !== i._equipAuto) return;
+      i.equipamentoTexto = eq ? eq.texto : ""; i._equipAuto = i.equipamentoTexto;
+    }
     function desenharItens() {
       var c = Cp_$_("cpItens"); if (!c) return;
       c.innerHTML = estado.itens.map(function (i, k) {
@@ -351,7 +358,7 @@
           Cp_campo_("Fotos (opcional para material simples)", '<input type="file" accept="image/*" multiple data-fotos="' + k + '"><div class="cp-fotos">' + (i.fotos || []).filter(function (f) { return (i.fotosManter || []).indexOf(f.id) >= 0; }).map(function (f) { return '<span>' + Cp_esc_(f.nome) + ' <a href="#" data-tirarfoto="' + k + '|' + Cp_esc_(f.id) + '">tirar</a></span>'; }).join("") + (i.fotosNovas || []).map(function (f) { return '<span>' + Cp_esc_(f.nome) + ' (nova)</span>'; }).join("") + '</div>') +
           '<p class="cp-falta' + (f.length ? '' : ' ok') + '">' + (f.length ? 'Falta: ' + Cp_esc_(f.join(", ")) + '. Pode enviar assim, mas o pedido não é cotado até completar.' : 'Especificação completa.') + '</p></div>';
       }).join("");
-      c.querySelectorAll("[data-c]").forEach(function (el) { el.onchange = function () { lerItens(); if (el.getAttribute("data-c") === "categoria" || el.getAttribute("data-c") === "equipamentoId") desenharItens(); else { var box = el.closest("[data-item]"), k = Number(box.getAttribute("data-item")), f = faltaItem(estado.itens[k]), p = box.querySelector(".cp-falta"); p.className = "cp-falta" + (f.length ? "" : " ok"); p.textContent = f.length ? "Falta: " + f.join(", ") + ". Pode enviar assim, mas o pedido não é cotado até completar." : "Especificação completa."; } }; });
+      c.querySelectorAll("[data-c]").forEach(function (el) { el.onchange = function () { lerItens(); if (el.getAttribute("data-c") === "equipamentoId") preencherEquipTexto(estado.itens[Number(el.closest("[data-item]").getAttribute("data-item"))]); if (el.getAttribute("data-c") === "categoria" || el.getAttribute("data-c") === "equipamentoId") desenharItens(); else { var box = el.closest("[data-item]"), k = Number(box.getAttribute("data-item")), f = faltaItem(estado.itens[k]), p = box.querySelector(".cp-falta"); p.className = "cp-falta" + (f.length ? "" : " ok"); p.textContent = f.length ? "Falta: " + f.join(", ") + ". Pode enviar assim, mas o pedido não é cotado até completar." : "Especificação completa."; } }; });
       c.querySelectorAll("[data-tirar]").forEach(function (b) { b.onclick = function () { lerItens(); estado.itens.splice(Number(b.getAttribute("data-tirar")), 1); desenharItens(); }; });
       c.querySelectorAll("[data-fotos]").forEach(function (inp) { inp.onchange = function () { lerItens(); var k = Number(inp.getAttribute("data-fotos")); Cp_lerArquivos_(inp, function (l) { estado.itens[k].fotosNovas = (estado.itens[k].fotosNovas || []).concat(l).slice(0, 4); desenharItens(); }, true); }; });
       c.querySelectorAll("[data-tirarfoto]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); lerItens(); var p = a.getAttribute("data-tirarfoto").split("|"), it = estado.itens[Number(p[0])]; it.fotosManter = (it.fotosManter || []).filter(function (x) { return x !== p[1]; }); desenharItens(); }; });
