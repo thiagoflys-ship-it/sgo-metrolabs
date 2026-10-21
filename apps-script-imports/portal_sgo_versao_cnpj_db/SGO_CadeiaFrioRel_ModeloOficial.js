@@ -242,6 +242,8 @@ function CadeiaFrioOficial_montarContexto_(sessionId, p) {
     travas: travas, emissaoBloqueada: travas.length > 0,
     _nomesProibidos: ident._nomesProibidos
   };
+  // 21/10/2026: patrimônio, capacidade, câmaras e ano do cadastro entram só quando preenchidos (a assinatura dos envios antigos não muda).
+  ['patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (CadeiaFrioOficial_s_(ident[k])) ctx.identificacao[k] = CadeiaFrioOficial_s_(ident[k]); });
   ctx.assinatura = SGO_DocSalvar_assinatura_({ i: ctx.identificacao, e: ctx.etapas, m: ctx.motivo, p: ctx.periodicidadeMeses, q: ctx.qi, d: ctx.dataQi,
     c: ctx.ensaios.map(function (c) { return [c.emissaoId, c.revisao, c.hash, c.resultado]; }), o: ctx.observacaoLivre, s: ctx.statusConsolidado });
   return ctx;

@@ -104,7 +104,8 @@ function LavOficialDoc_montar_(o) {
   h += SGO_DocA4_tabelaIdent_([['Razão social', id.cliente], ['CNPJ', id.cnpj], ['Unidade', id.unidade], ['Setor ou local', id.setor],
     ['Endereço', [id.endereco, id.cidadeUf].filter(Boolean).join(' — '), { largo: true }], ['Acompanhamento', id.responsavelCliente || 'Não informado', { largo: true }]]);
   h += sub(2, 'Equipamento');
-  h += SGO_DocA4_tabelaIdent_([['Tipo', id.tipo], ['TAG', id.tag], ['Número de série', id.numeroSerie], ['Programas ensaiados', LavOficialDoc_juntar_(id.programas) || (et.QI && !ciclos.length ? 'Não se aplica' : '—')]]);
+  h += SGO_DocA4_tabelaIdent_([['Tipo', id.tipo], ['TAG', id.tag], ['Número de série', id.numeroSerie], ['Programas ensaiados', LavOficialDoc_juntar_(id.programas) || (et.QI && !ciclos.length ? 'Não se aplica' : '—')]]
+    .concat(id.patrimonio ? [['Patrimônio', id.patrimonio]] : []).concat(id.capacidade ? [['Capacidade ou volume', id.capacidade]] : []).concat(id.numCamaras ? [['Câmaras ou portas', id.numCamaras]] : []).concat(id.anoFabricacao ? [['Ano de fabricação', id.anoFabricacao]] : []));
   h += '<p class="nota">A identificação vem do cadastro do equipamento no SGO+. Este relatório não registra marca nem modelo comercial: a rastreabilidade do equipamento é feita pela TAG e pelo número de série.</p>';
   h += sub(3, 'Empresa executante e qualificação');
   h += SGO_DocA4_tabelaIdent_([['Empresa', empresa.nome], ['CNPJ', empresa.cnpj], ['Motivo', ctx.motivo], ['Período', periodo],
