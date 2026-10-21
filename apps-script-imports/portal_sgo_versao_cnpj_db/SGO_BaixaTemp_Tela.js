@@ -577,11 +577,16 @@ function BaixaTempTela_cliente_() {
     if (!q) return '';
     var faltam = [['TAG', 'TAG', q.tag, 'Código da etiqueta (ex.: EBT-01)'], ['SERIE', 'Nº de série', q.serie, 'Como está na placa do equipamento'], ['SETOR', 'Setor', q.setor, 'Setor onde está instalado (ex.: CME)']]
       .filter(function (f) { return !String(f[2] || '').trim(); });
-    if (!faltam.length) return '';
-    return '<div id="btFaltaCadastro" style="margin-top:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--bc-warn-line);background:var(--bc-warn-bg)">' +
-      '<b style="color:var(--bc-warn)">Falta no cadastro do equipamento: ' + esc(faltam.map(function (f) { return f[1]; }).join(', ')) + '.</b>' +
-      '<p class="bt-nota">O relatório usa esses dados. Preencha aqui e toque em "Gravar no cadastro": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar.</p>' +
-      '<div class="bt-grade">' + faltam.map(function (f) { return '<label class="bt-campo"><span>' + esc(f[1]) + '</span><input type="text" id="btFalta_' + f[0] + '" data-campo-cadastro="' + f[0] + '" maxlength="120" autocomplete="off" placeholder="' + esc(f[3]) + '"></label>'; }).join('') + '</div>' +
+    // 21/10/2026: patrimônio e capacidade (opcionais) também podem ser completados aqui quando estão vazios no cadastro; saem no relatório.
+    var opcionais = [['PATRIMONIO', 'Patrimônio', q.patrimonio, 'Número de patrimônio do cliente, se houver'], ['CAPACIDADE', 'Capacidade ou volume', q.capacidade, 'Ex.: 100 L']]
+      .filter(function (f) { return !String(f[2] || '').trim(); });
+    if (!faltam.length && !opcionais.length) return '';
+    var titulo = faltam.length ? 'Falta no cadastro do equipamento: ' + faltam.map(function (f) { return f[1]; }).join(', ') + '.' : 'Completar no cadastro do equipamento (opcional): ' + opcionais.map(function (f) { return f[1]; }).join(', ') + '.';
+    var cor = faltam.length ? 'border:1px solid var(--bc-warn-line);background:var(--bc-warn-bg)' : 'border:1px solid var(--bc-info-line);background:var(--bc-info-bg)';
+    return '<div id="btFaltaCadastro" style="margin-top:10px;padding:10px 12px;border-radius:6px;' + cor + '">' +
+      '<b' + (faltam.length ? ' style="color:var(--bc-warn)"' : '') + '>' + esc(titulo) + '</b>' +
+      '<p class="bt-nota">' + (faltam.length ? 'O relatório usa esses dados. ' : 'Patrimônio e capacidade são opcionais e saem no relatório quando preenchidos. ') + 'Preencha aqui e toque em "Gravar no cadastro": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar.</p>' +
+      '<div class="bt-grade">' + faltam.concat(opcionais).map(function (f) { return '<label class="bt-campo"><span>' + esc(f[1]) + '</span><input type="text" id="btFalta_' + f[0] + '" data-campo-cadastro="' + f[0] + '" maxlength="120" autocomplete="off" placeholder="' + esc(f[3]) + '"></label>'; }).join('') + '</div>' +
       '<div class="bt-barra" style="margin-top:8px"><button type="button" class="btn-primary" data-acao="gravarCadastro">Gravar no cadastro</button></div></div>';
   }
 
@@ -591,8 +596,10 @@ function BaixaTempTela_cliente_() {
     if (!n) { msg('aviso', 'Preencha ao menos um dos campos (pela placa ou pela etiqueta do equipamento) e toque em "Gravar no cadastro".'); return; }
     api('apiPreencherCadastro', { clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId, campos: campos, origem: 'tela da esterilização a baixa temperatura' }, function (r) {
       var d = r.identificacao || {};
-      BT.equipamentos.forEach(function (q) { if (q.id === i.equipamentoId) { q.tag = d.tag || q.tag; q.serie = d.numeroSerie || q.serie; q.setor = d.setor || q.setor; } });
+      BT.equipamentos.forEach(function (q) { if (q.id === i.equipamentoId) { q.tag = d.tag || q.tag; q.serie = d.numeroSerie || q.serie; q.setor = d.setor || q.setor; q.patrimonio = d.patrimonio || q.patrimonio; q.capacidade = d.capacidade || q.capacidade; } });
       i.tag = d.tag || i.tag; i.numeroSerie = d.numeroSerie || i.numeroSerie;
+      if (d.patrimonio) i.patrimonio = d.patrimonio;
+      if (d.capacidade) i.capacidade = d.capacidade;
       redesenharAba();
       msg(r.gravados ? 'ok' : 'aviso', r.mensagem || 'Cadastro atualizado.');
     }, { espera: 'Gravando no cadastro do equipamento…' });

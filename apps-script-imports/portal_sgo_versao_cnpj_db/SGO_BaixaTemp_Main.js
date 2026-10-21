@@ -187,7 +187,7 @@ function BaixaTemp_apiListarEquipamentos(sessionId, p) {
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) {
     return BaixaTemp_s_(e.CLIENTE_ID) === cli && (!uni || BaixaTemp_s_(e.UNIDADE_ID) === uni) && SGO_UTILS.safeUpper(e.STATUS || 'ATIVO') === 'ATIVO';
   }).sort(function (a, b) { return BaixaTemp_s_(a.TAG).localeCompare(BaixaTemp_s_(b.TAG)); });
-  return { ok: true, items: itens.map(function (e) { return { id: String(e.ID), tag: e.TAG || '', tipo: e.TIPO || '', serie: e.SERIE || '', setor: e.SETOR || '' }; }) };
+  return { ok: true, items: itens.map(function (e) { return { id: String(e.ID), tag: e.TAG || '', tipo: e.TIPO || '', serie: e.SERIE || '', setor: e.SETOR || '', patrimonio: e.PATRIMONIO || '', capacidade: e.CAPACIDADE || '' }; }) };
 }
 
 function BaixaTemp_apiListarPadroes(sessionId) {

@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "08c15f18e8f7",
+ "versao": "1acdfc75792c",
  "manuais": [
   {
    "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
@@ -547,7 +547,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "As oito abas da tela > Identificação",
-     "texto": "Tipo de processo (peróxido de hidrogênio ou VBTF), etapas executadas (QI, QO, QD), cliente (busca por nome ou CNPJ), unidade, equipamento, datas do ensaio, técnico executor, quem acompanhou pelo cliente, motivo da qualificação e observações gerais. Os dados do cliente e do equipamento vêm sempre do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente: equipamento de outro cliente ou de outra unidade é recusado já ao salvar. Se a TAG, o número de série ou o setor estiverem vazios no cadastro, a tela mostra Falta no cadastro do equipamento com os campos para preencher ali mesmo: Gravar no cadastro grava no cadastro do equipamento só o que está vazio (com registro de quem gravou) e o ensaio continua; trocar valor já gravado é em Cadastros › Equipamentos › Editar. Patrimônio e capacidade, quando preenchidos no cadastro, também saem no relatório. Se faltar cadastro, os botões Cadastrar cliente, Cadastrar unidade e Cadastrar equipamento abrem o cadastro em outra aba; depois de salvar, volte e toque em Buscar cliente de novo. O relatório emitido aparece na ficha do equipamento (aba Qualificações), no Arquivo de documentos e na seção Qualificação do QR Code, com a validade da requalificação."
+     "texto": "Tipo de processo (peróxido de hidrogênio ou VBTF), etapas executadas (QI, QO, QD), cliente (busca por nome ou CNPJ), unidade, equipamento, datas do ensaio, técnico executor, quem acompanhou pelo cliente, motivo da qualificação e observações gerais. Os dados do cliente e do equipamento vêm sempre do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente: equipamento de outro cliente ou de outra unidade é recusado já ao salvar. Se a TAG, o número de série ou o setor estiverem vazios no cadastro, a tela mostra Falta no cadastro do equipamento com os campos para preencher ali mesmo: Gravar no cadastro grava no cadastro do equipamento só o que está vazio (com registro de quem gravou) e o ensaio continua; trocar valor já gravado é em Cadastros › Equipamentos › Editar. Patrimônio e capacidade, quando preenchidos no cadastro, também saem no relatório. Se estiverem vazios no cadastro, a aba Identificação mostra \"Completar no cadastro do equipamento (opcional)\" com os dois campos: preencha se souber e toque em Gravar no cadastro (mesma regra: só o que está vazio). Se faltar cadastro, os botões Cadastrar cliente, Cadastrar unidade e Cadastrar equipamento abrem o cadastro em outra aba; depois de salvar, volte e toque em Buscar cliente de novo. O relatório emitido aparece na ficha do equipamento (aba Qualificações), no Arquivo de documentos e na seção Qualificação do QR Code, com a validade da requalificação."
     },
     {
      "titulo": "As oito abas da tela > Ciclo e critérios",
