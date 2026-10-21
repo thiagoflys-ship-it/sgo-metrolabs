@@ -445,6 +445,10 @@ function Chaves_testarWhatsapp_(telefone) {
   if (!tel) return Chaves_falhou_('número de celular inválido', 'digite o celular com DDD, ex.: (62) 98241-7106.');
   var pv = Notificar_provedorWhatsapp_();
   if (!pv.provedor) return Chaves_falhou_(pv.motivo, '');
+  // 21/10/2026: piloto do WhatsApp — o teste também só vai para celular da lista do piloto
+  if (typeof SGO_waPilotoTelefoneLiberado_ === 'function' && !SGO_waPilotoTelefoneLiberado_(tel)) {
+    return Chaves_falhou_('o piloto do WhatsApp está ligado e este celular não é de nenhuma pessoa da lista', 'teste com o celular de uma pessoa da lista ou inclua a pessoa em Administração > Piloto do WhatsApp.');
+  }
   var res;
   try {
     if (pv.provedor === 'meta') {
@@ -614,6 +618,8 @@ function Chaves_apiModelosSituacao(sessionId, payload) {
     var l = Chaves_metaListarModelos_(cred);
     if (!l.ok) return { funcionou: false, texto: 'Não foi possível ler os modelos: ' + l.motivo, itens: [] };
     var s = Chaves_situacaoModelos_(l.lista);
+    // 21/10/2026: guarda a situação para o envio não usar modelo não aprovado (SGO_Notificar.js / SGO_WhatsappPiloto.js)
+    if (typeof SGO_waModelosGuardar_ === 'function') SGO_waModelosGuardar_(s.itens);
     s.funcionou = true;
     s.texto = s.aprovados + ' de ' + s.total + ' modelos aprovados' + (s.faltam ? '; ' + s.faltam + ' não cadastrado(s) em ' + NTF_META_IDIOMA + ' — use "Cadastrar modelos na Meta".' : '.');
     return s;

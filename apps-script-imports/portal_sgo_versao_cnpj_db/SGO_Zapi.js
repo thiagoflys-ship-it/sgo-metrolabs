@@ -102,6 +102,8 @@ function SGO_zapiEnviarTexto_(telefone, texto, op) {
   var cred = op.cred || Notificar_credenciaisZapi_();
   var segredos = [cred.instancia, cred.token, cred.clientToken];
   try {
+    // 21/10/2026: Z-API fora do sistema (piloto do WhatsApp ou provedor meta, SGO_WhatsappPiloto.js) — nada sai pela Z-API
+    if (typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_()) return { ok: false, pulado: true, motivo: WAP_MOTIVO_ZAPI };
     var fone = SGO_zapiCelular_(telefone);
     if (!fone) return { ok: false, pulado: true, motivo: 'Sem celular válido para o WhatsApp (DDD + 9 + 8 dígitos) no cadastro; telefone fixo não recebe pela Z-API.' };
     if (!SGO_zapiCredOk_(cred)) return { ok: false, pulado: true, motivo: 'WhatsApp pela Z-API não configurado: grave ZAPI_INSTANCIA, ZAPI_TOKEN e ZAPI_CLIENT_TOKEN em Chaves e senhas.' };

@@ -1,0 +1,166 @@
+<style>
+  /* PILOTO DO WHATSAPP (21/10/2026) — ver SGO_WhatsappPiloto.js. */
+  .wap-bloco { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .wap-bloco h3 { margin: 0 0 8px; font-size: 15px; }
+  .wap-linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .wap-sit { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .wap-sit.ok { color: var(--success); background: var(--success-bg); }
+  .wap-sit.alerta { color: var(--warning); background: var(--warning-bg); }
+  .wap-sit.perigo { color: var(--danger); background: var(--danger-bg); }
+  .wap-sit.neutro { color: var(--muted); }
+  .wap-pessoas { max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+  .wap-pessoa { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .wap-pessoa:last-child { border-bottom: none; }
+  .wap-pessoa input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+  .wap-pessoa .q { color: var(--muted); font-size: 12px; }
+  .wap-areas label { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px 6px 0; font-size: 13px; }
+  .wap-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+  .wap-filtros label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  .wap-filtros input, .wap-filtros select, .wap-busca { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--card); color: var(--text); max-width: 100%; }
+  .wap-busca { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+  .wap-motivo { font-size: 12px; color: var(--muted); word-break: break-word; }
+  .wap-modelos { font-size: 12.5px; }
+  .wap-modelos div { padding: 3px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 700px) { .wap-tabela thead { display: none; } .wap-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .wap-tabela td { display: block; border: none; padding: 2px 4px; } }
+</style>
+
+<script>
+  // ==========================================================
+  // PILOTO DO WHATSAPP (21/10/2026)
+  // Servidor: SGO_WhatsappPiloto.js (SGO_WaPiloto_api(sessionId, acao, dados)).
+  // Ganchos na casca (JS_Core): WaPiloto_iniciar_ no login (mostra o item do menu para Administrador e Diretoria),
+  // abrir('whatsapp_piloto') -> WaPiloto_render_.
+  // ==========================================================
+  var WAP = { dados: null, rel: null, busca: "" };
+
+  function WaPiloto_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function WaPiloto_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
+  function WaPiloto_pode_() { var p = WaPiloto_perfil_(); return p === "ADMIN" || p === "DIRETORIA"; }
+  function WaPiloto_hoje_() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+
+  function WaPiloto_iniciar_() {
+    var b = document.getElementById("menu-btn-whatsapp_piloto");
+    if (b) b.style.display = WaPiloto_pode_() ? "" : "none";
+  }
+
+  function WaPiloto_chamar_(acao, dados, ok, falha) {
+    google.script.run
+      .withSuccessHandler(function (r) { if (r && r.ok) ok(r); else falha((r && r.message) || "Não foi possível concluir. Tente de novo."); })
+      .withFailureHandler(function (e) { falha((e && e.message) || "Sem comunicação com o SGO+. Confira a internet e tente de novo."); })
+      .SGO_WaPiloto_api(SGO_getSessionId(), acao, dados || {});
+  }
+
+  function WaPiloto_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Piloto do WhatsApp"); } catch (e) {} }
+    if (!WaPiloto_pode_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Piloto do WhatsApp</h2><p class="content-subtitle">Esta tela é do Administrador e da Diretoria. Os seus avisos continuam no sistema e no seu e-mail.</p>' +
+        '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
+    div.innerHTML =
+      '<div class="module-shell cadx" id="wapTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Piloto do WhatsApp</h2>' +
+          '<p class="content-subtitle">Quem recebe mensagens do sistema pelo WhatsApp oficial durante o piloto, e o que saiu, foi retido ou falhou em cada dia.</p></div><div class="module-header-right"></div></div>' +
+        (typeof CadUI_ajuda_ === "function" ? CadUI_ajuda_(
+          "<ul><li><b>Piloto ligado</b>: só as pessoas marcadas recebem WhatsApp. As demais recebem os mesmos avisos no sistema e por e-mail.</li>" +
+          "<li><b>Cliente e contato externo</b> não recebem WhatsApp durante o piloto (Atendente de IA, avisos do Auvo, orçamento do chamado).</li>" +
+          "<li><b>A Z-API está fora</b>: o WhatsApp do sistema é o oficial (Meta). Nenhuma mensagem sai pela Z-API.</li>" +
+          "<li>O servidor confere a mesma lista em toda mensagem, venha do SGO+ ou do COMMAND.</li></ul>") : "") +
+        '<div id="wapCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(5) : "Carregando...") + '</div>' +
+      '</div>';
+    WaPiloto_chamar_("carregar", {}, function (r) { WAP.dados = r; WaPiloto_desenhar_(); WaPiloto_relatorio_(); }, function (m) {
+      var c = document.getElementById("wapCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não carregou.</strong> ' + WaPiloto_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="WaPiloto_render_()">Tentar de novo</button></div></div>';
+    });
+  }
+
+  function WaPiloto_desenhar_() {
+    var c = document.getElementById("wapCorpo"), d = WAP.dados;
+    if (!c || !d) return;
+    var esc = WaPiloto_esc_;
+    var aprov = d.modelos.filter(function (m) { return m.status === "APPROVED"; }).length;
+    var sit = '<div class="wap-bloco"><h3>Situação</h3><div class="wap-linha">' +
+      '<span class="wap-sit ' + (d.ligado ? "alerta" : "ok") + '">' + (d.ligado ? "Piloto ligado" : "Piloto desligado") + '</span>' +
+      '<span class="wap-sit ' + (d.provedorEmUso === "nenhum" ? "perigo" : "ok") + '">Provedor em uso: ' + esc(d.provedorEmUso) + '</span>' +
+      '<span class="wap-sit ' + (d.zapiFora ? "ok" : "alerta") + '">' + (d.zapiFora ? "Z-API desligada" : "Z-API liberada") + '</span>' +
+      '<span class="wap-sit ' + (aprov ? "ok" : "alerta") + '">Modelos aprovados: ' + aprov + ' de ' + d.modelos.length + '</span></div>' +
+      (d.provedorMotivo ? '<p class="wap-motivo" role="alert">' + esc(d.provedorMotivo) + '</p>' : '') +
+      (d.provedorEscolhido !== "meta" ? '<p class="wap-motivo">O provedor gravado em Chaves e senhas é "' + esc(d.provedorEscolhido) + '". Durante o piloto o sistema usa a Meta mesmo assim; para deixar claro, o responsável pelo sistema grava <b>meta</b> em Chaves e senhas &gt; WhatsApp oficial &gt; Provedor do WhatsApp em uso.</p>' : '') +
+      '<p class="wap-motivo">' + (d.gravado ? "Última alteração: " + esc(String(d.atualizadoEm).replace("T", " ").slice(0, 16)) + (d.atualizadoPor ? " por " + esc(d.atualizadoPor) : "") : "Ainda não gravado: vale a lista padrão (só o responsável pelo sistema).") + '</p>' +
+      '<details><summary>Situação de cada modelo na Meta</summary><div class="wap-modelos">' + d.modelos.map(function (m) {
+        return '<div><span>' + esc(m.nome) + ' <span class="q">— ' + esc(m.uso) + '</span></span><span class="wap-sit ' + (m.status === "APPROVED" ? "ok" : m.status ? "alerta" : "neutro") + '">' + esc(m.situacao) + '</span></div>';
+      }).join("") + '<p class="wap-motivo">A situação é a lida pela última vez em Chaves e senhas &gt; Situação dos modelos (e todo dia às 18h). Modelo não aprovado não é usado: a mensagem vai pelo aviso geral, se ele estiver aprovado; senão fica no sistema e no e-mail.</p></div></details></div>';
+
+    var marcados = {};
+    d.usuarios.forEach(function (id) { marcados[id] = true; });
+    var areas = {};
+    d.areas.forEach(function (a) { areas[a] = true; });
+    var rotArea = { ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH" };
+    var pessoas = '<div class="wap-bloco"><h3>Quem recebe pelo WhatsApp</h3>' +
+      '<label class="wap-linha" style="margin-bottom:10px"><input type="checkbox" id="wapLigado"' + (d.ligado ? " checked" : "") + ' style="width:18px;height:18px"> <b>Piloto ligado</b> (desmarque só quando for liberar o WhatsApp para todos)</label>' +
+      '<input type="search" class="wap-busca" id="wapBusca" placeholder="Buscar pessoa pelo nome" value="' + esc(WAP.busca) + '" oninput="WAP.busca=this.value;WaPiloto_filtrar_()" aria-label="Buscar pessoa pelo nome">' +
+      '<div class="wap-pessoas" id="wapPessoas">' + d.pessoas.map(function (p) {
+        var obs = [rotArea[p.perfil] || p.perfil, p.vinculo || "vínculo não informado", p.temCelular ? "celular " + p.celular : "sem celular válido (não recebe WhatsApp)", p.temEmail ? "com e-mail" : "sem e-mail"];
+        if (p.dono) obs.push("responsável pelo sistema");
+        return '<label class="wap-pessoa" data-nome="' + esc(String(p.nome).toLowerCase()) + '"><input type="checkbox" class="wap-chk" value="' + esc(p.id) + '"' + (marcados[p.id] ? " checked" : "") + '>' +
+          '<span><b>' + esc(p.nome) + '</b>' + (p.porArea && !marcados[p.id] ? ' <span class="wap-sit ok">liberada pela área</span>' : '') + '<br><span class="q">' + esc(obs.join(" · ")) + '</span></span></label>';
+      }).join("") + '</div>' +
+      '<details style="margin-top:10px"><summary>Liberar uma área inteira (depois do piloto)</summary><div class="wap-areas" style="margin-top:8px">' + d.areasPossiveis.map(function (a) {
+        return '<label><input type="checkbox" class="wap-area" value="' + esc(a) + '"' + (areas[a] ? " checked" : "") + '> ' + esc(rotArea[a] || a) + '</label>';
+      }).join("") + '<p class="wap-motivo">Área marcada = todas as pessoas daquele perfil recebem, sem marcar uma a uma. Use para liberar por etapas.</p></div></details>' +
+      '<div class="wap-linha" style="margin-top:12px"><button type="button" class="cadx-btn cadx-btn-grande" id="wapGravar" onclick="WaPiloto_gravar_()">Gravar</button><span id="wapMsg" class="wap-motivo" role="status"></span></div></div>';
+
+    var rel = '<div class="wap-bloco"><h3>O que saiu, foi retido ou falhou</h3><div class="wap-filtros">' +
+      '<label>Dia<input type="date" id="wapDia" value="' + WaPiloto_hoje_() + '"></label>' +
+      '<label>Pessoa<select id="wapPessoa"><option value="">Todas</option>' + d.pessoas.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>'; }).join("") + '</select></label>' +
+      '<button type="button" class="cadx-btn" onclick="WaPiloto_relatorio_()">Mostrar</button></div><div id="wapRel"></div></div>';
+    c.innerHTML = sit + pessoas + rel;
+    WaPiloto_filtrar_();
+  }
+
+  function WaPiloto_filtrar_() {
+    var q = String(WAP.busca || "").trim().toLowerCase();
+    document.querySelectorAll("#wapPessoas .wap-pessoa").forEach(function (el) { el.style.display = !q || el.getAttribute("data-nome").indexOf(q) >= 0 ? "" : "none"; });
+  }
+
+  function WaPiloto_gravar_() {
+    var btn = document.getElementById("wapGravar"), msg = document.getElementById("wapMsg");
+    var usuarios = [], areas = [];
+    document.querySelectorAll("#wapPessoas .wap-chk").forEach(function (el) { if (el.checked) usuarios.push(el.value); });
+    document.querySelectorAll(".wap-area").forEach(function (el) { if (el.checked) areas.push(el.value); });
+    var ligado = !!(document.getElementById("wapLigado") || {}).checked;
+    if (!ligado && !confirm("Desligar o piloto libera o WhatsApp oficial para TODAS as pessoas (com as regras de cada módulo). Confirma?")) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Gravando..."; }
+    if (msg) msg.textContent = "";
+    WaPiloto_chamar_("gravar", { ligado: ligado, usuarios: usuarios, areas: areas }, function (r) {
+      WAP.dados = r; WaPiloto_desenhar_(); WaPiloto_relatorio_();
+      var m = document.getElementById("wapMsg"); if (m) m.textContent = r.mensagem || "Gravado.";
+    }, function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Gravar"; }
+      if (msg) msg.textContent = "Não gravou: " + e;
+    });
+  }
+
+  function WaPiloto_relatorio_() {
+    var alvo = document.getElementById("wapRel");
+    if (!alvo) return;
+    var dia = (document.getElementById("wapDia") || {}).value || WaPiloto_hoje_();
+    var pessoa = (document.getElementById("wapPessoa") || {}).value || "";
+    alvo.innerHTML = '<p class="wap-motivo">Carregando...</p>';
+    WaPiloto_chamar_("relatorio", { dia: dia, pessoa: pessoa }, function (r) {
+      var esc = WaPiloto_esc_, k = r.contagem;
+      var tom = function (s) { return s === "OK" || s === "ENVIADO" ? "ok" : s === "RETIDO" ? "neutro" : s === "BLOQUEADO" || s === "ERRO" || s === "FALHOU" ? "perigo" : "alerta"; };
+      var topo = '<div class="wap-linha" style="margin-bottom:8px"><span class="wap-sit ok">Enviadas: ' + k.enviadas + '</span><span class="wap-sit neutro">Retidas pelo piloto: ' + k.retidas + '</span>' +
+        '<span class="wap-sit perigo">Bloqueadas pelo servidor: ' + k.bloqueadas + '</span><span class="wap-sit perigo">Falharam: ' + k.falhas + '</span><span class="wap-sit alerta">Não enviadas por regra do módulo: ' + k.puladas + '</span></div>' +
+        (r.servidor ? "" : '<p class="wap-motivo">Fora do servidor próprio só aparecem as mensagens do SGO+.</p>');
+      if (!r.linhas.length) { alvo.innerHTML = topo + '<p class="wap-motivo">Nenhuma mensagem de WhatsApp neste dia' + (pessoa ? " para esta pessoa" : "") + '.</p>'; return; }
+      alvo.innerHTML = topo + '<div class="table-responsive"><table class="table wap-tabela"><thead><tr><th>Hora</th><th>Sistema</th><th>Origem</th><th>Para</th>' + (r.admin ? '<th>Telefone</th>' : '') + '<th>Situação</th></tr></thead><tbody>' +
+        r.linhas.map(function (l) {
+          return '<tr><td>' + esc(l.hora) + '</td><td>' + esc(l.sistema) + '</td><td>' + esc(l.origem || "-") + (l.assunto && l.assunto !== l.origem ? '<div class="wap-motivo">' + esc(l.assunto) + '</div>' : '') + '</td><td>' + esc(l.pessoa) + '</td>' +
+            (r.admin ? '<td>' + esc(l.telefone || "-") + '</td>' : '') + '<td><span class="wap-sit ' + tom(l.situacao) + '">' + esc(l.situacaoTxt) + '</span>' + (l.motivo ? '<div class="wap-motivo">' + esc(l.motivo) + '</div>' : '') + '</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }, function (e) { alvo.innerHTML = '<p class="wap-motivo" role="alert">O relatório não carregou: ' + WaPiloto_esc_(e) + ' <button type="button" class="cadx-btn" onclick="WaPiloto_relatorio_()">Tentar de novo</button></p>'; });
+  }
+</script>

@@ -458,7 +458,8 @@ function SGO_ajudaTelas_Administracao_() {
     // 20/10/2026: WhatsApp da empresa pela Z-API (SGO_Zapi.js) — passo a passo e os três botões do cartão "Z-API".
     "chaves/zapi": {
       titulo: "WhatsApp pela Z-API",
-      paraQueServe: "Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados do Auvo, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
+      // 21/10/2026: a Z-API saiu do sistema (piloto do WhatsApp); o cartão fica só para consulta.
+      paraQueServe: "Desde 21/10/2026 a Z-API está fora do sistema: com o piloto do WhatsApp ligado (ou o provedor meta), nenhuma mensagem sai pela Z-API e as mensagens que chegam por ela são ignoradas; o WhatsApp do sistema é o oficial (Meta). O texto abaixo vale só se o dono decidir religar a Z-API depois do piloto. Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados do Auvo, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
       antesDeComecar: [
         "Tenha a conta da Z-API aberta (app.z-api.io) e o celular da empresa à mão, com o WhatsApp instalado e internet.",
         "Cadastre o seu celular em Administração > Usuários > Celular, para receber a mensagem de teste.",
@@ -499,6 +500,75 @@ function SGO_ajudaTelas_Administracao_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Só o responsável pelo sistema grava as chaves, confere a conexão, configura o recebimento e envia o teste." }
+      ]
+    },
+
+    // 21/10/2026: piloto do WhatsApp (SGO_WhatsappPiloto.js / JS_WhatsappPiloto.html).
+    "whatsapp_piloto": {
+      titulo: "Piloto do WhatsApp",
+      paraQueServe: "Define quem recebe as mensagens do sistema pelo WhatsApp oficial (Meta) durante o piloto e mostra, dia a dia, o que saiu, o que foi retido e o que falhou, no SGO+ e no COMMAND. Quem não está na lista recebe os mesmos avisos no sistema e por e-mail.",
+      antesDeComecar: [
+        "Esta tela é do Administrador e da Diretoria. Para as demais pessoas, o item não aparece no menu.",
+        "O número do WhatsApp oficial é só do sistema. A Z-API (o WhatsApp de uma pessoa da equipe) está fora: nenhuma mensagem sai por ela e as que chegam por ela são ignoradas.",
+        "Cada pessoa da lista precisa de celular válido no cadastro (Administração > Usuários > Celular, com DDD). Sem celular, ela recebe só no sistema e por e-mail.",
+        "Sem nada gravado, vale a lista padrão: o piloto ligado e só o responsável pelo sistema na lista."
+      ],
+      passos: [
+        { titulo: "Escolher quem recebe", itens: [
+          "Toque em \"Piloto do WhatsApp\" no menu Administração.",
+          "Confira o bloco \"Situação\": piloto ligado, provedor em uso \"WhatsApp oficial (Meta)\" e \"Z-API desligada\".",
+          "No bloco \"Quem recebe pelo WhatsApp\", deixe \"Piloto ligado\" marcado.",
+          "Marque as pessoas do piloto. Use o campo de busca para achar pelo nome.",
+          "Confira, abaixo do nome, se a pessoa tem celular válido.",
+          "Toque em \"Gravar\". A mensagem abaixo do botão diz quantas pessoas recebem pelo WhatsApp."
+        ] },
+        { titulo: "Acompanhar o dia", itens: [
+          "No bloco \"O que saiu, foi retido ou falhou\", escolha o dia e, se quiser, a pessoa.",
+          "Toque em \"Mostrar\".",
+          "Confira os números do topo: enviadas, retidas pelo piloto, bloqueadas pelo servidor, falharam e não enviadas por regra do módulo.",
+          "Em cada linha, veja a hora, o sistema (SGO+ ou COMMAND), a origem, para quem foi e a situação, com o motivo.",
+          "Todo dia às 18h, o responsável pelo sistema recebe por e-mail o resumo do dia."
+        ] },
+        { titulo: "Liberar por etapas (depois do piloto)", itens: [
+          "Abra \"Liberar uma área inteira\" e marque a área. Todas as pessoas daquele perfil passam a receber.",
+          "Toque em \"Gravar\".",
+          "Para liberar todos, desmarque \"Piloto ligado\", toque em \"Gravar\" e confirme."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo verde \"Enviada\"", significado: "A Meta aceitou a mensagem." },
+        { nome: "Selo cinza \"Retida pelo piloto\"", significado: "A pessoa não está na lista, ou é cliente ou contato externo. O aviso ficou no sistema e no e-mail." },
+        { nome: "Selo vermelho \"Bloqueada pelo servidor\"", significado: "O servidor barrou o envio: número fora da lista ou tentativa pela Z-API. Nada saiu." },
+        { nome: "Selo vermelho \"Falhou\"", significado: "A Meta recusou. O motivo diz o que fazer (modelo não aprovado, pagamento, número sem WhatsApp)." },
+        { nome: "Selo amarelo \"Não enviada (regra do módulo)\"", significado: "A regra do módulo segurou: fora do expediente, limite de uma por dia, PJ, sem celular ou modelo não aprovado." }
+      ],
+      problemas: [
+        { situacao: "Ninguém da lista recebe e aparece \"Falhou\" com código 141006 ou de pagamento", oQueFazer: "A conta da Meta está com bloqueio de pagamento. No Gerenciador do WhatsApp (Meta), confira a forma de pagamento; depois as mensagens voltam a sair." },
+        { situacao: "Aparece \"Provedor em uso: nenhum\"", oQueFazer: "O responsável pelo sistema grava o token e o identificador do número da Meta em Chaves e senhas > WhatsApp oficial e escolhe \"meta\" no provedor." },
+        { situacao: "Uma pessoa da lista não recebeu", oQueFazer: "Filtre o relatório pela pessoa. Confira o celular no cadastro e o motivo da linha; regras como expediente e limite por dia continuam valendo." },
+        { situacao: "Aparece \"Modelo não aprovado na Meta\"", oQueFazer: "Em Chaves e senhas > Situação dos modelos, confira e cadastre o modelo. Enquanto isso, o aviso vai pelo aviso geral (se aprovado) ou fica no sistema e no e-mail." },
+        { situacao: "Aparece \"Uma das pessoas marcadas não está mais ativa\"", oQueFazer: "Atualize a tela, marque de novo e toque em \"Gravar\"." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório com o telefone. Recebe o e-mail das 18h, quando é o responsável pelo sistema." },
+        { perfil: "DIRETORIA", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório sem o telefone." },
+        { perfil: "GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre a tela. Recebe pelo WhatsApp só se estiver na lista; os avisos seguem no sistema e por e-mail." }
+      ],
+      perguntas: [
+        { p: "O que cada pessoa da lista recebe pelo WhatsApp?", r: "As mensagens que o SGO+ e o COMMAND já mandavam, com as regras de cada módulo: avisos com ciência, resumo de Minhas atividades, resumo da Caixa de decisões, missões do Programa de conduta, avisos da Frota e das reservas, chamados do Auvo e o bate-papo. Tudo por modelo aprovado na Meta." },
+        { p: "Cliente recebe alguma coisa durante o piloto?", r: "Não pelo WhatsApp. O Atendente de IA, os avisos do Auvo ao cliente e o orçamento do chamado ficam retidos. O e-mail ao cliente continua como antes." },
+        { p: "E se alguém mandar mensagem para o número antigo da Z-API?", r: "A mensagem não entra no sistema: não vai para a Caixa de Entrada, nem para o bate-papo, nem para a IA. A Z-API está fora." },
+        { p: "Dá para mandar documento pelo WhatsApp?", r: "Não durante o piloto. Envie o documento por e-mail, pela janela \"Enviar documento\"." }
+      ],
+      secoesManual: [
+        { titulo: "Garantia dupla", paragrafos: [
+          "A lista é conferida duas vezes: no próprio sistema, antes de montar a mensagem, e no servidor, em toda chamada de envio ao WhatsApp, venha do SGO+ ou do COMMAND. O servidor compara o telefone sem o 9: o mesmo número com ou sem o 9 vale igual.",
+          "Sem a lista gravada, o servidor não deixa sair nenhuma mensagem."
+        ] },
+        { titulo: "O que fica registrado", paragrafos: [
+          "Cada mensagem fica registrada com a data, o sistema, a origem, o destinatário e a situação. O conteúdo da mensagem não é guardado no registro do servidor.",
+          "O registro do servidor é apagado depois de 90 dias. O histórico do SGO+ continua em Notificações enviadas."
+        ] }
       ]
     }
   };

@@ -31,7 +31,7 @@ var SGO_AJUDA_NOMES = {
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
   chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
-  assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida'
+  assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp'
 };
 
 /**

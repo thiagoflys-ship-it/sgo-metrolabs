@@ -38,6 +38,14 @@
  *             recebe o resumo da gestão no dia não recebe outro de atividades (o da gestão já leva a contagem das atividades).
  *   })
  *
+ * PILOTO DO WHATSAPP (21/10/2026, SGO_WhatsappPiloto.js): com o piloto ligado, o WhatsApp só sai para as pessoas da lista
+ * (Administração > Piloto do WhatsApp); cliente e contato externo não recebem, salvo telefone da lista. Quem não está na
+ * lista fica em NTF_ENVIOS com SITUACAO = RETIDO e o motivo; o e-mail e o sistema seguem normais. Com o piloto ligado (ou
+ * WHATSAPP_PROVEDOR = meta) a Z-API está fora: o provedor é sempre o WhatsApp oficial (Meta). Modelo da Meta com
+ * situação conhecida e não aprovada (lida em Chaves e senhas > Situação dos modelos) não é usado: vai o sgo_aviso_geral
+ * se ele estiver aprovado; senão a mensagem fica PULADO com o motivo. O servidor confere a mesma lista em toda chamada
+ * de envio (sgo_servidor, servicos/whatsappPiloto.ts).
+ *
  * Canais:
  *  'sgo'      — a janela/lista do próprio módulo que chama já cobre; aqui nada a fazer.
  *  'email'    — MailApp.sendEmail para CAD_USUARIOS.EMAIL (HTML simples). No servidor
@@ -132,7 +140,9 @@ function Notificar_contatos_(ids) {
       // WHATSAPP/TELEFONE e, por fim, Condutor (Frota) e Técnico (abaixo).
       telefone: Notificar_normalizarTelefone_(u.CELULAR) || Notificar_normalizarTelefone_(u.WHATSAPP) || Notificar_normalizarTelefone_(u.TELEFONE),
       // Vínculo de trabalho (Usuários): "CLT", "PJ" ou "" — usado pela categoria PONTO.
-      vinculo: String(u.VINCULO_TRABALHO || '').replace(/\s+/g, '').toUpperCase()
+      vinculo: String(u.VINCULO_TRABALHO || '').replace(/\s+/g, '').toUpperCase(),
+      // perfil: usado pelo piloto do WhatsApp (liberar por área, SGO_WhatsappPiloto.js)
+      perfil: SGO_UTILS.safeUpper(u.PERFIL)
     };
   });
   var completar = function (aba) {
@@ -186,6 +196,8 @@ function Notificar_credenciaisZapi_() {
 }
 
 function Notificar_enviarWhatsapp_(cred, telefone, mensagem) {
+  // 21/10/2026: Z-API fora do sistema (piloto do WhatsApp ou provedor meta) — nada sai por aqui
+  if (typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_()) return { ok: false, motivo: typeof WAP_MOTIVO_ZAPI !== 'undefined' ? WAP_MOTIVO_ZAPI : 'Z-API desligada.' };
   var url = 'https://api.z-api.io/instances/' + encodeURIComponent(cred.instancia) + '/token/' + encodeURIComponent(cred.token) + '/send-text';
   var r = UrlFetchApp.fetch(url, {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
@@ -385,11 +397,13 @@ function Notificar_provedorWhatsapp_() {
   if (escolha && escolha !== 'meta' && escolha !== 'zapi') {
     return { provedor: '', motivo: 'WhatsApp não configurado: a chave WHATSAPP_PROVEDOR tem "' + escolha.slice(0, 20) + '"; use meta ou zapi (Chaves e senhas do SGO+).' };
   }
-  if (escolha === 'meta' || (!escolha && meta.token)) {
+  // 21/10/2026: com o piloto do WhatsApp ligado (ou o provedor meta) a Z-API está fora — o WhatsApp do sistema é o oficial
+  var zapiFora = typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_();
+  if (zapiFora || escolha === 'meta' || (!escolha && meta.token)) {
     var falta = [];
     if (!meta.token) falta.push('META_WA_TOKEN');
     if (!meta.phoneId) falta.push('META_WA_PHONE_ID');
-    if (falta.length) return { provedor: '', motivo: 'WhatsApp oficial (Meta) não configurado: falta gravar ' + falta.join(' e ') + ' em Chaves e senhas do SGO+.' };
+    if (falta.length) return { provedor: '', motivo: 'WhatsApp oficial (Meta) não configurado: falta gravar ' + falta.join(' e ') + ' em Chaves e senhas do SGO+.' + (zapiFora && escolha !== 'meta' ? ' A Z-API está desligada: o WhatsApp do sistema é o oficial (Meta).' : '') };
     return { provedor: 'meta', cred: meta, segredos: [meta.token] };
   }
   if (escolha === 'zapi' || zapiOk) {
@@ -586,6 +600,7 @@ function SGO_notificar_(opcoes) {
     };
 
     var cotaEmail = null;
+    var pilotoCfg = null; // piloto do WhatsApp (SGO_WhatsappPiloto.js): lido só se houver WhatsApp a mandar
     var whatsAtvHoje = null; // categoria ATIVIDADES: quem já recebeu hoje (lido só se precisar)
     var wa = externos.indexOf('whatsapp') >= 0 ? Notificar_provedorWhatsapp_() : { provedor: '', segredos: [] };
     var segredos = wa.segredos || [];
@@ -642,6 +657,12 @@ function SGO_notificar_(opcoes) {
             var barradoRes = Notificar_motivoFrotaReservasWhatsapp_(c, whatsAtvHoje);
             if (barradoRes) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoRes); return; }
           }
+          // 21/10/2026: piloto do WhatsApp — só as pessoas da lista recebem; as demais ficam RETIDO (sistema e e-mail seguem)
+          if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function') {
+            if (pilotoCfg === null) { SGO_waPilotoSincronizar_(false); pilotoCfg = SGO_waPilotoCfg_(); }
+            var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg);
+            if (barradoPiloto) { registrar(uid, c.nome, canal, c.telefone, 'RETIDO', barradoPiloto); return; }
+          }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;
           if (jaFoi) { registrar(uid, c.nome, canal, canal === 'email' ? c.email : c.telefone, 'PULADO', 'Mesma mensagem já enviada a esta pessoa por este canal às ' + String(jaFoi).split('|')[0] + ' (origem ' + (String(jaFoi).split('|')[1] || 'SGO+') + '); não foi repetida.'); return; }
           // reserva antes de enviar (dois caminhos ao mesmo tempo não enviam os dois); falhou = libera
@@ -661,8 +682,22 @@ function SGO_notificar_(opcoes) {
             var r;
             reservar(); reservaFeita = true;
             if (wa.provedor === 'meta') {
-              r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
-              if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
+              // 21/10/2026: modelo com situação conhecida e não aprovada na Meta não é usado (Chaves e senhas > Situação dos modelos)
+              var nomeMod = modelo.nome, paramsMod = paramsPara(c);
+              var stMod = typeof SGO_waModeloSituacao_ === 'function' ? SGO_waModeloSituacao_(nomeMod) : '';
+              if (stMod && stMod !== 'APPROVED') {
+                var stGeral = SGO_waModeloSituacao_('sgo_aviso_geral');
+                if (nomeMod !== 'sgo_aviso_geral' && (!stGeral || stGeral === 'APPROVED')) {
+                  nomeMod = 'sgo_aviso_geral';
+                  paramsMod = [titulo, texto.replace(/\s+/g, ' ') || titulo, link || 'acesse o SGO+'];
+                } else {
+                  liberar();
+                  registrar(uid, c.nome, canal, c.telefone, 'PULADO', 'Modelo ' + nomeMod + ' do WhatsApp não aprovado na Meta (situação: ' + stMod + '); a mensagem ficou no sistema e no e-mail. Confira em Chaves e senhas > Situação dos modelos.');
+                  return;
+                }
+              }
+              r = Notificar_enviarMeta_(wa.cred, c.telefone, nomeMod, paramsMod);
+              if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + nomeMod + (r.id ? ', id ' + r.id : '') + ').'); return; }
             } else {
               // envio único da Z-API (SGO_Zapi.js): só celular válido, fila única com o COMMAND, intervalo e limites do número
               r = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(c.telefone, txtWhatsPara(c), { cred: wa.cred, tipo: 'AVISO' }) : Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhatsPara(c));

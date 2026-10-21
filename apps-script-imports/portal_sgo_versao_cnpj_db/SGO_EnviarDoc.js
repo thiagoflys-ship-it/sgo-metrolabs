@@ -566,6 +566,8 @@ function EnviarDoc_enviarEmail_(eu, para, cc, assunto, texto, anexos) {
 
 /** Documento pela Z-API (base64). Nunca lança: { ok, id } | { ok:false, motivo }. */
 function EnviarDoc_zapiDocumento_(telefone, anexo, legenda) {
+  // 21/10/2026: Z-API fora do sistema (piloto do WhatsApp ou provedor meta): documento só por e-mail
+  if (typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_()) return { ok: false, motivo: 'O WhatsApp de documentos está desligado: a Z-API saiu do sistema e o WhatsApp oficial só manda avisos por modelo aprovado. Envie este documento por e-mail.' };
   if (typeof SGO_zapiEnviarDocumento_ === 'function') {
     try { return SGO_zapiEnviarDocumento_(telefone, { nome: anexo.nome, mime: anexo.mime, base64: Utilities.base64Encode(anexo.blob.getBytes()), legenda: legenda }, { tipo: 'AVISO' }) || { ok: false, motivo: 'sem resposta do envio' }; }
     catch (e) { return { ok: false, motivo: String((e && e.message) || e).slice(0, 300) }; }

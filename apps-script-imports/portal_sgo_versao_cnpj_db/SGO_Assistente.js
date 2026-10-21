@@ -41,7 +41,8 @@ var SGO_ASSIST_ACESSO = {
   gestao_decisoes: ['ADMIN', 'GESTOR', 'DIRETORIA'],
   gestao_desempenho: ['ADMIN', 'GESTOR', 'DIRETORIA'],
   chaves: ['ADMIN'],
-  assistente: ['ADMIN', 'DIRETORIA']
+  assistente: ['ADMIN', 'DIRETORIA'],
+  whatsapp_piloto: ['ADMIN', 'DIRETORIA']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
 var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios'];
