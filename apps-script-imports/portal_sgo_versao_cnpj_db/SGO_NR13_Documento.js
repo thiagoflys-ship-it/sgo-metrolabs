@@ -310,7 +310,7 @@ function NR13Doc_montarDocumentoHtml_(ctx, opcoes) {
     ['Tipo de vaso', vaso.tipo || '—'], ['Identificação (TAG)', vaso.tag || '—'],
     ['Fabricante', vaso.fabricante || '—'], ['Modelo', vaso.modelo || '—'],
     ['Nº de série', vaso.numeroSerie || '—'], ['Ano de fabricação', vaso.anoFabricacao || '—'],
-    ['Localização', vaso.setor || '—'], ['Código de construção', vaso.codigoConstrucao || '—'],
+    ['Localização', vaso.localizacao || vaso.setor || '—'], ['Código de construção', vaso.codigoConstrucao || '—'],
     ['PMTA (plaqueta)', { html: pmta }], ['Volume interno', { html: volume }],
     ['Classe do fluido', vaso.classeFluido || '—'], ['Fluido de serviço', vaso.fluidoServico || '—']
   ], 'nr13-ident'));

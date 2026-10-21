@@ -624,6 +624,17 @@ function tplNR13_confirmarEquipamento_(eq) {
       elTipo.value = opcaoTipo.value;
     }
   }
+  // 21/10/2026: ano de fabricação e volume vêm do cadastro do equipamento quando o campo está vazio
+  // (o que já foi digitado ou veio de um laudo aberto não é trocado). Volume só com unidade reconhecida (L ou m³).
+  var elAno = document.getElementById('nr13-ano-fabricacao');
+  if (elAno && !String(elAno.value || '').trim() && String(eq.ANO_FABRICACAO || '').trim()) elAno.value = String(eq.ANO_FABRICACAO).trim();
+  var elVol = document.getElementById('nr13-volume'), elVolU = document.getElementById('nr13-volume-unidade');
+  var capEq = String(eq.CAPACIDADE || '').trim(), mCap = /^([0-9][0-9.,]*)\\s*(m³|m3|l|litro|litros)$/i.exec(capEq);
+  if (elVol && elVolU && !String(elVol.value || '').trim() && mCap) {
+    elVol.value = mCap[1];
+    elVolU.value = /^m/i.test(mCap[2]) ? 'm³' : 'L';
+    tplNR13_recalcularCategoria_();
+  }
   var elFab = document.getElementById('nr13-eq-fabricante-atual');
 
   ['nr13-panel-vaso', 'nr13-panel-inspecao', 'nr13-panel-th', 'nr13-panel-fotos', 'nr13-panel-textos', 'nr13-panel-veredito', 'nr13-panel-gerar'].forEach(function(id) {
@@ -1270,7 +1281,7 @@ function tplNR13_manualHtml_() {
   '  <li><strong>Consultar laudos já emitidos ou continuar rascunho salvo</strong> — digite o CNPJ e toque em "Buscar laudos emitidos" ou "Buscar rascunhos salvos".</li>' +
   '  <li><strong>1. Cliente</strong> — digite o CNPJ e toque em "Buscar / Selecionar Cliente". Cliente novo: confira os dados e toque em "Cadastrar Cliente".</li>' +
   '  <li><strong>2. Equipamento (vaso de pressão)</strong> — escolha o vaso e toque em "Usar este equipamento". Vaso novo: toque em "+ Cadastrar equipamento novo". O quadro fecha depois da escolha.</li>' +
-  '  <li><strong>3. Dados técnicos do vaso</strong> — tipo de vaso, PMTA, volume e fluido, copiados da plaqueta. Aqui a categoria é calculada sozinha.</li>' +
+  '  <li><strong>3. Dados técnicos do vaso</strong> — tipo de vaso, PMTA, volume e fluido, copiados da plaqueta. Aqui a categoria é calculada sozinha. Ano de fabricação e volume vêm do cadastro do equipamento quando estão preenchidos lá e o campo está vazio (volume só com a unidade, L ou m³); confira com a plaqueta. A localização do laudo é a unidade e o setor do cadastro.</li>' +
   '  <li><strong>4. Dados da inspeção</strong> — tipo, datas, PLH responsável, válvulas de segurança e manômetros.</li>' +
   '  <li><strong>5. Teste hidrostático (TH)</strong> — se foi feito, pressões e tempos do ensaio.</li>' +
   '  <li><strong>6. Registro fotográfico</strong> — fotos com legenda e "Interpretar com IA".</li>' +

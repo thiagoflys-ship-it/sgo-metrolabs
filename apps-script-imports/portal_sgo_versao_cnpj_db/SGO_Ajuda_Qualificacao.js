@@ -520,7 +520,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       titulo: "Laudo NR-13",
       paraQueServe: "Monta o laudo de inspeção de vasos de pressão conforme a NR-13. O sistema calcula a categoria do vaso, sugere a data da próxima inspeção e gera o laudo em A4 com o parecer do profissional legalmente habilitado.",
       antesDeComecar: [
-        "Tenha os dados da plaqueta do vaso: PMTA, volume, ano de fabricação, fluido e código de construção.",
+        "Tenha os dados da plaqueta do vaso: PMTA, volume, ano de fabricação, fluido e código de construção. Ano de fabricação e capacidade gravados no cadastro do equipamento entram sozinhos.",
         "PMTA é a pressão máxima de trabalho admissível: a maior pressão em que o vaso pode operar com segurança, informada pelo fabricante.",
         "Tenha os dados das válvulas de segurança e dos manômetros inspecionados.",
         "Tenha as fotos do exame e, se houve, os dados do teste hidrostático.",
@@ -533,7 +533,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se o cliente não existir, confira os dados que vieram da consulta e toque em \"Cadastrar Cliente\".",
           "Em \"2. Equipamento (vaso de pressão)\", escolha o vaso em \"Equipamento já cadastrado\" e toque em \"Usar este equipamento\".",
           "Se o vaso não estiver na lista, toque em \"+ Cadastrar equipamento novo\", preencha e toque em \"Cadastrar equipamento\".",
-          "Em \"3. Dados técnicos do vaso\", escolha o \"Tipo de vaso\" e copie os valores da plaqueta, cada um com a sua unidade.",
+          "Em \"3. Dados técnicos do vaso\", escolha o \"Tipo de vaso\" e copie os valores da plaqueta, cada um com a sua unidade. Ano de fabricação e volume já vêm do cadastro do equipamento quando estão preenchidos lá e o campo está vazio (o volume só quando a capacidade do cadastro tem a unidade, L ou m³); confira com a plaqueta. A localização do laudo é a unidade e o setor do cadastro.",
           "Escolha a \"Classe do fluido\". A categoria do vaso aparece sozinha.",
           "Em \"4. Dados da inspeção\", escolha o tipo de inspeção e as datas. A próxima inspeção vem com 1 ano; mude se precisar.",
           "Escolha o PLH responsável.",

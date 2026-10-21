@@ -687,11 +687,13 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
     unidade: { id: unidade.ID || '', nome: unidade.NOME_UNIDADE || '' },
     vaso: {
       tipo: dados.TIPO_VASO, tag: equipamento.TAG || '', fabricante: dados.FABRICANTE, modelo: dados.MODELO,
-      numeroSerie: dados.NUMERO_SERIE, anoFabricacao: dados.ANO_FABRICACAO, codigoConstrucao: dados.CODIGO_CONSTRUCAO,
+      numeroSerie: dados.NUMERO_SERIE, anoFabricacao: dados.ANO_FABRICACAO || SGO_UTILS.safe(equipamento.ANO_FABRICACAO), codigoConstrucao: dados.CODIGO_CONSTRUCAO,
       pmtaValor: dados.PMTA_VALOR, pmtaUnidade: dados.PMTA_UNIDADE, pmtaMpa: dados.PMTA_MPA,
       volumeValor: dados.VOLUME_VALOR, volumeUnidade: dados.VOLUME_UNIDADE, volumeM3: dados.VOLUME_M3,
       classeFluido: dados.CLASSE_FLUIDO, fluidoServico: dados.FLUIDO_SERVICO,
-      setor: equipamento.SETOR || ''
+      setor: equipamento.SETOR || '',
+      // 21/10/2026: localização = unidade + setor do cadastro.
+      localizacao: [SGO_UTILS.safe(unidade.NOME_UNIDADE), SGO_UTILS.safe(equipamento.SETOR)].filter(Boolean).join(' — ')
     },
     categoria: categoria,
     inspecao: {
