@@ -293,3 +293,18 @@ test('estufa de despirogenização: 3 repetições, letalidade FD e resultado do
   const f = r.contexto.estudos[0].fatos.repeticoes[0].letalidade;
   assert.ok(f.pior.valor > 30 && f.incerteza > 0);
 });
+
+test('abertura de porta: saída da faixa depois de fechar a porta (inércia) conta como saída', () => {
+  const env = E.criarAmbiente();
+  // Porta aberta 10:00 a 10:01; a queda acontece de 10:02 a 10:04, com a porta já fechada.
+  const s = E.serieEstufa({ minutos: 4 * 60, dtSeg: 10, evento: (min, k, v) => (min >= 122 && min < 124 ? 32 : v) });
+  const p = E.payloadIncubacao(s, { estudos: { distribuicao: { tipo: '' }, aberturaPorta: { habilitado: true, tipoAbertura: 'TOTAL', inicioEvento: '05/10/2026 10:00:00', fimEvento: '05/10/2026 10:01:00', tempoAlvoMinutos: '5' }, quedaEnergia: { habilitado: false }, autonomia: { habilitado: false }, distribuicaoE: { habilitado: false }, penetracaoE: { habilitado: false } },
+    qualif: { setpoint: '35', recuperacaoMaxMin: '10' } });
+  const r = rascunho(env, 'tec', p);
+  const ev = r.contexto.estudos[0].fatos.evento;
+  assert.strictEqual(ev.rompeu, true);
+  assert.strictEqual(ev.tempoAteRupturaMinutos, 2);
+  assert.strictEqual(ev.tempoAteRecuperacaoMinutos, 3); // 10:04 − 10:01
+  assert.strictEqual(r.contexto.criterios.find(c => c.chave === 'TEMPO_RUPTURA').conforme, false); // 2 min < 5 min
+  assert.strictEqual(r.contexto.criterios.find(c => c.chave === 'RECUPERACAO').conforme, true);
+});

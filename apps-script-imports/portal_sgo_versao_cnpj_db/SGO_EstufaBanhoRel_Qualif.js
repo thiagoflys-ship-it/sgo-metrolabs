@@ -413,26 +413,54 @@ function EstufaQ_criteriosDistribuicao_(rotulo, estat, faixa, par, umid, prefixo
   return l;
 }
 
-function EstufaQ_criteriosEvento_(rotulo, analise, par, prefixo) {
+/**
+ * Evento (abertura de porta, queda de energia), recalculado sobre as leituras desde o início do evento até o fim
+ * do período: qualquer leitura de sensor ativo fora da faixa conta como saída (inclusive depois de fechar a porta
+ * ou de voltar a energia, por inércia térmica); a recuperação é a primeira leitura a partir da qual todos ficam na
+ * faixa até o fim do período, contada a partir do fim do evento (ou da saída, sem fim informado).
+ */
+function EstufaQ_eventoProprio_(linhas, ativosIdx, faixa, analise) {
+  var t0 = EstufaBanhoRel_ebConverterTempoParaMs_(analise.tempoInicioEvento);
+  var tf = analise.tempoFimEvento ? EstufaBanhoRel_ebConverterTempoParaMs_(analise.tempoFimEvento) : null;
+  var primeira = null, ultimaFora = -1;
+  for (var i = 0; i < linhas.length; i++) {
+    for (var k = 0; k < ativosIdx.length; k++) {
+      var t = EstufaQ_valor_(linhas[i].temperaturas[ativosIdx[k]]);
+      if (t !== null && (t < faixa.tMin || t > faixa.tMax)) {
+        if (!primeira) primeira = { i: i, sensor: 'S' + (ativosIdx[k] + 1), valor: t, instante: linhas[i].tempoStr };
+        ultimaFora = i;
+      }
+    }
+  }
+  var ev = { inicio: analise.tempoInicioEvento, fim: analise.tempoFimEvento || '', rompeu: !!primeira, tempoAlvoMinutos: analise.tempoAlvoMinutos,
+    observadoMinutos: linhas.length ? EstufaQ_r_((EstufaQ_ms_(linhas[linhas.length - 1]) - t0) / 60000, 1) : 0,
+    primeiraRuptura: primeira ? { sensor: primeira.sensor, valor: EstufaQ_r_(primeira.valor, 2), instante: primeira.instante } : null,
+    tempoAteRupturaMinutos: primeira ? EstufaQ_r_((EstufaQ_ms_(linhas[primeira.i]) - t0) / 60000, 1) : null, recuperou: false, tempoAteRecuperacaoMinutos: null };
+  if (primeira && ultimaFora < linhas.length - 1) {
+    var base = tf !== null && isFinite(tf) ? tf : EstufaQ_ms_(linhas[primeira.i]);
+    ev.recuperou = true;
+    ev.tempoAteRecuperacaoMinutos = EstufaQ_r_(Math.max(0, EstufaQ_ms_(linhas[ultimaFora + 1]) - base) / 60000, 1);
+  }
+  return ev;
+}
+
+function EstufaQ_criteriosEvento_(rotulo, ev, par, prefixo) {
   var l = [];
-  var alvo = analise.tempoAlvoMinutos;
-  if (alvo !== null && alvo !== undefined && isFinite(alvo)) {
-    var st = String(analise.statusAprovacao || '').toUpperCase();
-    var naoAv = st === 'INFORMATIVO';
+  var alvo = ev.tempoAlvoMinutos;
+  if (alvo !== null && alvo !== undefined && isFinite(alvo) && alvo > 0) {
+    var naoAv = !ev.rompeu && ev.observadoMinutos < alvo;
     l.push(EstufaQ_crit_({ chave: prefixo + 'TEMPO_RUPTURA', estudo: rotulo, criterio: 'Tempo até sair da faixa de aceitação',
       requisito: 'Ao menos ' + SGO_DocA4_val_(alvo, 1, 'min'), referencia: ESTUFAQ_CFG.FONTE_PROTOCOLO,
-      obtido: naoAv ? 'Não avaliado: período observado menor que o tempo exigido' : (analise.rompeu ? SGO_DocA4_val_(analise.tempoAteRupturaMinutos, 1, 'min') : 'Não saiu da faixa no período observado'),
-      conforme: naoAv ? null : st === 'APROVADO', naoAvaliado: naoAv }));
+      obtido: naoAv ? 'Não avaliado: período observado (' + SGO_DocA4_val_(ev.observadoMinutos, 1, 'min') + ') menor que o tempo exigido' : (ev.rompeu ? SGO_DocA4_val_(ev.tempoAteRupturaMinutos, 1, 'min') : 'Não saiu da faixa em ' + SGO_DocA4_val_(ev.observadoMinutos, 1, 'min')),
+      conforme: naoAv ? null : (!ev.rompeu || ev.tempoAteRupturaMinutos >= alvo - 1e-9), naoAvaliado: naoAv }));
   }
-  if (analise.tempoFimEvento || analise.rompeu) {
-    var rec = analise.recuperouTotalmente ? analise.tempoAteRecuperacaoMinutos : null;
-    var obtido = analise.recuperouTotalmente ? SGO_DocA4_val_(rec, 1, 'min') + ' após ' + (analise.tempoFimEvento ? 'o fim do evento' : 'a saída da faixa') : (analise.rompeu ? 'Não voltou à faixa no período registrado' : 'Não saiu da faixa');
-    var precisa = analise.rompeu;
+  if (ev.fim || ev.rompeu) {
+    var obtido = ev.recuperou ? SGO_DocA4_val_(ev.tempoAteRecuperacaoMinutos, 1, 'min') + ' após ' + (ev.fim ? 'o fim do evento' : 'a saída da faixa') : (ev.rompeu ? 'Não voltou à faixa no período registrado' : 'Não saiu da faixa');
     l.push(EstufaQ_crit_({ chave: prefixo + 'RECUPERACAO', estudo: rotulo, criterio: 'Recuperação (volta de todos os sensores à faixa)',
       requisito: par.recuperacaoMaxMin ? 'Até ' + SGO_DocA4_val_(par.recuperacaoMaxMin, 1, 'min') : 'Sem limite no protocolo',
       referencia: par.recuperacaoMaxMin ? ESTUFAQ_CFG.FONTE_PROTOCOLO : '—',
       obtido: par.recuperacaoMaxMin ? obtido : 'Não avaliado: ' + obtido.charAt(0).toLowerCase() + obtido.slice(1) + ' (informativo)',
-      conforme: par.recuperacaoMaxMin ? (!precisa || (analise.recuperouTotalmente && rec <= par.recuperacaoMaxMin + 1e-9)) : null,
+      conforme: par.recuperacaoMaxMin ? (!ev.rompeu || (ev.recuperou && ev.tempoAteRecuperacaoMinutos <= par.recuperacaoMaxMin + 1e-9)) : null,
       naoAvaliado: !par.recuperacaoMaxMin }));
   }
   return l;
@@ -567,7 +595,7 @@ function EstufaQ_montarContexto_(payload, interno) {
       fatos.repeticoes = [];
       var cfgLet = tipo === 'PENETRACAO_CARGA_E' ? (EstufaBanhoRel_EBCFG.LETALIDADE[(analise.repeticoes && analise.repeticoes[0] && analise.repeticoes[0].valorLabel === 'FD') ? 'DESPIROGENIZACAO' : 'ESTERILIZACAO']) : null;
       reps.forEach(function (linhas, i) {
-        var sufixo = ' — repetição ' + (i + 1);
+        var sufixo = ' — repetição ' + (i + 1), serieLet = null;
         conferirTempo(linhas, sufixo);
         conferirQualidade(linhas, sufixo);
         var est = EstufaQ_estatistica_(linhas, ativosIdx, faixa);
@@ -579,7 +607,7 @@ function EstufaQ_montarContexto_(payload, interno) {
           var let_ = EstufaQ_letalidadeRepeticao_(linhas, ativosIdx, cfgLet);
           var minimo = rep.valorMinimoExigido;
           fr.letalidade = { rotulo: cfgLet.valorLabel, tBase: cfgLet.tBase, z: cfgLet.z, minimo: minimo, porSensor: let_.porSensor.map(function (x) { return { sensor: x.sensor, valor: x.valor }; }), pior: let_.pior ? { sensor: let_.pior.sensor, valor: let_.pior.valor } : null };
-          series.push({ tipo: tipo, repeticao: i + 1, letalidade: let_.porSensor });
+          serieLet = { tipo: tipo, repeticao: i + 1, letalidade: let_.porSensor };
           criterios.push(EstufaQ_crit_({ chave: 'R' + (i + 1) + '_LETALIDADE', estudo: rotulo + sufixo, criterio: 'Letalidade ' + cfgLet.valorLabel + ' no sensor de menor valor',
             requisito: 'Ao menos ' + SGO_DocA4_val_(minimo, 2, 'min') + ' (T ref. ' + SGO_DocA4_val_(cfgLet.tBase, 1, '°C') + ', z ' + SGO_DocA4_val_(cfgLet.z, 1, '°C') + ')',
             referencia: ESTUFAQ_CFG.FONTE_LETALIDADE[cfgLet.valorLabel === 'FD' ? 'DESPIROGENIZACAO' : 'ESTERILIZACAO'],
@@ -596,6 +624,7 @@ function EstufaQ_montarContexto_(payload, interno) {
         }
         fatos.repeticoes.push(fr);
         series.push({ tipo: tipo, repeticao: i + 1, linhas: linhas });
+        if (serieLet) series.push(serieLet); // gráfico do perfil antes do da letalidade, em cada repetição
       });
     } else {
       var linhas = EstufaQ_linhasEstudo_(analise);
@@ -622,8 +651,8 @@ function EstufaQ_montarContexto_(payload, interno) {
         }
         if (umid && umid.faltando && !simulado) travas.push(EstufaQ_trava_('UMIDADE_LEITURA_FALTANDO', rotulo + ': ' + umid.faltando + ' leitura(s) de umidade faltando no período.', 'A umidade avaliada precisa cobrir o mesmo período da temperatura.', 'Confira a coluna de umidade do arquivo ou ajuste o período.'));
       } else if (EstufaQ_ehEvento_(tipo)) {
-        fatos.evento = { inicio: analise.tempoInicioEvento, fim: analise.tempoFimEvento, rompeu: !!analise.rompeu, tempoAteRupturaMinutos: analise.tempoAteRupturaMinutos, recuperou: !!analise.recuperouTotalmente, tempoAteRecuperacaoMinutos: analise.tempoAteRecuperacaoMinutos, tempoAlvoMinutos: analise.tempoAlvoMinutos, primeiraRuptura: analise.primeiraRuptura ? { sensor: analise.primeiraRuptura.sensor, valor: analise.primeiraRuptura.valor, instante: analise.primeiraRuptura.tempoStr } : null };
-        criterios = EstufaQ_criteriosEvento_(rotulo, analise, par, '');
+        fatos.evento = EstufaQ_eventoProprio_(linhas, ativosIdx, faixa, analise);
+        criterios = EstufaQ_criteriosEvento_(rotulo, fatos.evento, par, '');
       } else {
         fatos.autonomiaMinutos = analise.autonomiaMinutos;
       }
