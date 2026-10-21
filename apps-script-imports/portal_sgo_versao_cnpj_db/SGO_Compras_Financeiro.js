@@ -272,7 +272,7 @@ function CmpFin_pastaRelatorios_() { return SGO_DocSalvar_pastaPersistente_('CMP
 function CmpFin_relatorioHtml_(comp, ind, emitidoPor) {
   var t = function (cols, linhas, leg, vazio, total) { return RelA4_tabela_(cols, linhas, { legenda: leg, vazio: vazio, total: total }); };
   var grupo = function (l, rot) { return t([{ t: rot }, { t: 'Pedidos', num: true }, { t: 'Valor', num: true }], l.map(function (x) { return [x.nome, String(x.qtd), Cmp_moeda_(x.valor)]; }), 'Gasto do mês por ' + rot.toLowerCase(), 'Nenhuma compra no mês.', ['Total', String(ind.pedidos.qtd), Cmp_moeda_(ind.pedidos.valor)]); };
-  var casos = function (l, leg, vazio) { return t([{ t: 'Pedido' }, { t: 'Item' }, { t: 'Comprador' }, { t: 'Detalhe' }], l.map(function (x) { return [x.numero, x.titulo, x.comprador || x.quem, x.texto || ('previsão ' + x.previsao + (x.recebida ? '; recebida ' + x.recebida : ''))]; }), leg, vazio); };
+  var casos = function (l, leg, vazio) { return t([{ t: 'Pedido' }, { t: 'Item' }, { t: 'Responsável' }, { t: 'Detalhe' }], l.map(function (x) { return [x.numero, x.titulo, x.comprador || x.quem, x.texto || ('previsão ' + x.previsao + (x.recebida ? '; recebida ' + x.recebida : ''))]; }), leg, vazio); };
   var corpo = '';
   corpo += RelA4_secao_('Resumo do mês', RelA4_kpis_([
     [Cmp_moeda_(ind.pedidos.valor), 'Comprado no mês (' + Cmp_plural_(ind.pedidos.qtd, 'pedido', 'pedidos') + ')', ''],
