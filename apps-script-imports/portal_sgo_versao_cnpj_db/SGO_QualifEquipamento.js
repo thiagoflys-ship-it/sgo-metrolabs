@@ -24,7 +24,11 @@ var SGO_QEQ_DIAS_VENCENDO = 30;
 var SGO_QEQ_MODULOS = {
   AUTOCLAVE_OFICIAL: { titulo: 'Relatório de qualificação — autoclave a vapor', conta: true, ordem: 1 },
   AUTOCLAVE: { titulo: 'Relatório de ensaio de ciclo — autoclave a vapor', conta: false, ordem: 2 },
-  AUTOCLAVE_DADOS: { titulo: 'Planilha de dados de ciclo — autoclave a vapor', conta: false, ordem: 3 }
+  AUTOCLAVE_DADOS: { titulo: 'Planilha de dados de ciclo — autoclave a vapor', conta: false, ordem: 3 },
+  // 21/10/2026: Lavadoras (termodesinfectora e ultrassônica), no mesmo molde.
+  LAVADORA_OFICIAL: { titulo: 'Relatório de qualificação — lavadora', conta: true, ordem: 1 },
+  LAVADORA: { titulo: 'Relatório de ensaio de ciclo — lavadora', conta: false, ordem: 2 },
+  LAVADORA_DADOS: { titulo: 'Planilha de dados de ciclo — lavadora', conta: false, ordem: 3 }
 };
 
 function SGO_QEQ_s_(v) { return v === null || v === undefined ? '' : String(v).trim(); }

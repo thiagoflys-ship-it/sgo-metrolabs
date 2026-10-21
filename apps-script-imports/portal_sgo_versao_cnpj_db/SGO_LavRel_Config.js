@@ -108,8 +108,26 @@ const LavRel_UCFG = Object.freeze({
       parametroNormativo: 600.0,
       parametroOperacional: 600.0,
       toleranciaParametro: 0.0,
-      // Artigo crítico (ISO 15883-1, Anexo B): A0 mínimo 3.000 s. Escolhido na tela (classificação do artigo).
+      // Artigo crítico: A0 mínimo 3.000 s. Escolhido na tela (classificação do artigo).
       parametroNormativoCritico: 3000.0,
+
+      // 21/10/2026 (revisão no molde da autoclave): critérios do ciclo de termodesinfecção.
+      // Valores configurados pela empresa executante, com a referência em CRITERIOS_REFERENCIAS,
+      // e listados em CONFIRMAR_RT para o responsável técnico conferir contra a norma.
+      // null = sem limite configurado: o valor é medido e mostrado como informativo.
+      // decisivo: só critério decisivo reprova; o não decisivo fora da referência vira observação.
+      criterios: Object.freeze({
+        // A0 integrado na fase de desinfecção: do aquecimento (a partir de tLimiteA0) até o fim do patamar;
+        // a descida e a secagem não entram (abordagem conservadora: calor seco não é desinfecção térmica).
+        a0Janela: 'AQUECIMENTO_E_PATAMAR',
+        faixaAcimaK: 5,                  // faixa de referência: programada a programada + 5 °C (não decisivo)
+        faixaAcimaDecisivo: false,
+        variacaoMaxEntreSensoresK: null, // uniformidade: informativa até o RT definir o limite
+        tempoEquilibrioMaxSeg: null,     // equilíbrio: informativo até o RT definir o limite
+        tempoMinimoPatamarMin: null,     // o A0 já integra tempo e temperatura; tempo mínimo próprio só se o RT definir
+        preLavagemMaxC: 45,              // pré-lavagem a frio (evita fixar proteínas); não decisivo
+        lavagemMinC: null                // temperatura mínima da lavagem: depende do detergente (instrução do fabricante do produto)
+      }),
 
       analise: Object.freeze({
         histereseTemperatura: 0.5,
@@ -130,21 +148,113 @@ const LavRel_UCFG = Object.freeze({
       tMin: 20.0,
       tMax: 100.0,
 
-      // Parametros de Letalidade (Tempo em Minutos)
-      parametroNormativo: 10.0, 
+      // Tempo mínimo no patamar do banho (minutos): protocolo do fabricante do equipamento.
+      parametroNormativo: 10.0,
       parametroOperacional: 10.0,
       toleranciaParametro: 0.0,
 
+      // 21/10/2026: tolerância da temperatura do banho em relação à programada (±3 °C) e pré-enxágue
+      // abaixo de 35 °C, da ABNT NBR 17130-1:2024 (lavadoras ultrassônicas). A atividade ultrassônica
+      // (cavitação) não é medida pelo registrador de temperatura.
+      criterios: Object.freeze({
+        toleranciaBanhoK: 3,
+        variacaoMaxEntreSensoresK: null,
+        preLavagemMaxC: 35
+      }),
+
+      // O banho é reconhecido quando todos os sensores ficam dentro da tolerância de -3 °C da programada.
       analise: Object.freeze({
         histereseTemperatura: 0.5,
         consecutivasInicio: 2,
         consecutivasFim: 3,
-        toleranciaEntrada: 0.0,
-        toleranciaSaida: 0.5,
+        toleranciaEntrada: 3.0,
+        toleranciaSaida: 3.0,
         modoReconhecimentoExposicao: 'PIOR_SENSOR',
         percentualMinimoSensores: 1.0
       })
     })
+  }),
+
+  /****************************************************
+   * 8.1 FASES DO CICLO (21/10/2026)
+   * As fases são identificadas pelo perfil da temperatura média dos sensores:
+   * cada queda de quedaMinK ou mais (água nova entrando) abre uma etapa. Só a
+   * fase de desinfecção (ou o patamar do banho) decide o resultado; as demais
+   * são estimadas e informativas.
+   ****************************************************/
+  FASES: Object.freeze({
+    quedaMinK: 5,
+    subidaMinK: 2
+  }),
+
+  /****************************************************
+   * 8.2 REFERÊNCIAS DOS CRITÉRIOS E NORMAS CITADAS (21/10/2026)
+   * Nenhum número de cláusula é citado no documento. Cada critério traz a
+   * referência técnica que o motivou; o responsável técnico confere os valores
+   * (lista CONFIRMAR_RT) contra o texto da norma e ajusta aqui.
+   ****************************************************/
+  CRITERIOS_REFERENCIAS: Object.freeze({
+    textoGeral: 'Critérios configurados pela empresa executante e revisáveis pelo responsável técnico.',
+    fase: Object.freeze({ referencia: 'ABNT NBR ISO 15883-1 (fase de desinfecção térmica do ciclo)', referenciaUltra: 'ABNT NBR 17130-1:2024 (ciclo da lavadora ultrassônica)' }),
+    a0: Object.freeze({ referencia: 'ABNT NBR ISO 15883-1 (conceito de A0, com temperatura de referência de 80 °C e z = 10 °C)' }),
+    faixa: Object.freeze({ referencia: 'ABNT NBR ISO 15883-1 (temperatura de desinfecção mantida no patamar)' }),
+    faixaAcima: Object.freeze({ referencia: 'ABNT NBR ISO 15883-1 (faixa de temperatura de desinfecção; valor a confirmar pelo responsável técnico)' }),
+    variacao: Object.freeze({ referencia: 'Uniformidade entre os pontos de medição no patamar (limite a definir pelo responsável técnico)' }),
+    equilibrio: Object.freeze({ referencia: 'Tempo de equilíbrio entre os pontos de medição (limite a definir pelo responsável técnico)' }),
+    tempoPatamar: Object.freeze({ referencia: 'Tempo de patamar definido pelo responsável técnico' }),
+    preLavagem: Object.freeze({ referencia: 'ABNT NBR ISO 15883-1 (pré-lavagem com água fria, para não fixar proteínas; valor a confirmar pelo responsável técnico)', referenciaUltra: 'ABNT NBR 17130-1:2024 (pré-enxágue com água abaixo de 35 °C)' }),
+    tempoBanho: Object.freeze({ referencia: 'Protocolo do fabricante do equipamento (tempo do ciclo ultrassônico)' }),
+    faixaBanho: Object.freeze({ referencia: 'ABNT NBR 17130-1:2024 (tolerância de ±3 °C da temperatura do ciclo em relação à temperatura escolhida)' }),
+    aquecimento: Object.freeze({ referencia: 'ABNT NBR 17130-1:2024 (tempo e taxa de aquecimento informados ao usuário e registrados)' })
+  }),
+
+  // Únicas normas que o documento e a IA podem citar.
+  NORMAS_CITAVEIS: Object.freeze({
+    TERMO: Object.freeze([
+      'RDC ANVISA nº 15/2012 — Boas práticas para o processamento de produtos para saúde',
+      'ABNT NBR ISO 15883-1 — Lavadoras desinfetadoras — Parte 1: Requisitos gerais, termos, definições e ensaios',
+      'ISO 15883-2 — Lavadoras desinfetadoras — Parte 2: requisitos e ensaios para lavadoras desinfetadoras com desinfecção térmica de instrumentos cirúrgicos, equipamentos de anestesia, recipientes, utensílios e vidraria (referência técnica)'
+    ]),
+    ULTRASSOM: Object.freeze([
+      'RDC ANVISA nº 15/2012 — Boas práticas para o processamento de produtos para saúde',
+      'ABNT NBR 17130-1:2024 — Lavadoras ultrassônicas de uso hospitalar — Parte 1: Requisitos gerais e construtivos para lavadoras com volume útil acima de 15 L',
+      'ABNT NBR ISO 15883-1 — Lavadoras desinfetadoras — Parte 1: Requisitos gerais, termos, definições e ensaios'
+    ])
+  }),
+
+  // Itens para o responsável técnico confirmar contra o texto integral das normas (aparecem no manual e na ajuda).
+  CONFIRMAR_RT: Object.freeze([
+    'A0 mínimo de 600 s (artigo semicrítico ou não crítico) e de 3.000 s (artigo crítico), decisão do dono de 17/10/2026, com base no conceito de A0 da ABNT NBR ISO 15883-1.',
+    'Limite inferior de 65 °C para a soma do A0 e a janela de integração (do aquecimento até o fim do patamar; descida e secagem fora).',
+    'Faixa de temperatura de desinfecção: programada a programada + 5 °C (hoje informativa, não decide o resultado).',
+    'Temperatura máxima da pré-lavagem da termodesinfectora: 45 °C (informativa).',
+    'Limites de uniformidade entre sensores, tempo de equilíbrio e tempo mínimo de patamar da termodesinfecção (hoje sem limite: só medidos).',
+    'Lavadora ultrassônica: tempo mínimo de 10 min no patamar do banho (protocolo do fabricante), tolerância de ±3 °C da temperatura escolhida e pré-enxágue abaixo de 35 °C (ABNT NBR 17130-1:2024).',
+    'Edição da ABNT NBR ISO 15883-1 em vigor e adoção da Parte 2 pela ABNT (hoje citada como ISO 15883-2, referência técnica).',
+    'Periodicidade padrão da requalificação: 12 meses.'
+  ]),
+
+  /****************************************************
+   * 8.3 QUALIDADE DOS DADOS — TRAVAS DE EMISSÃO (21/10/2026)
+   * Dado com problema não vira documento: a tela diz o que corrigir.
+   ****************************************************/
+  QUALIDADE_DADOS: Object.freeze({
+    faixaFisicaC: Object.freeze([-5, 150]),
+    paradoMinLeituras: 10,
+    paradoVariacaoProcessoC: 5,
+    picoMinC: 10,
+    minLeiturasPatamar: 5,
+    maxLeiturasFaltandoPatamar: 0,
+    lacunaMaxIntervalos: 3,
+    exigirRegistradorValido: true
+  }),
+
+  /****************************************************
+   * 8.4 EMISSÃO COM APROVAÇÃO DO RESPONSÁVEL TÉCNICO (21/10/2026)
+   ****************************************************/
+  EMISSAO: Object.freeze({
+    perfisAprovadores: Object.freeze(['ADMIN', 'DIRETORIA', 'GESTOR', 'METROLOGIA']),
+    regraDecisao: 'Aceitação simples: o valor medido é comparado diretamente ao limite; a incerteza de medição é informada, sem banda de guarda.'
   }),
 
   /****************************************************

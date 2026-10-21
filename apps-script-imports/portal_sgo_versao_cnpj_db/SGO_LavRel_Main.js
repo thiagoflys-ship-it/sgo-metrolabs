@@ -16,13 +16,22 @@
 /**
  * Roteador seguro de funes chamadas pelo frontend.
  */
+/** Chamadas que geram documento do ensaio: exigem o vínculo com o cadastro (SGO_QEQ_aplicarVinculoPayload_). */
+var LAVREL_FN_COM_VINCULO = ['apiConverter', 'apiGerarRascunhoCertificado', 'apiMontarCertificadoFinal', 'apiEnviarParaAprovacao'];
+
 function LavRel_apiDispatch(req) {
   req = req || {};
   var sessaoDispatchRH = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
   if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Lavadoras'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
 
   const fn = String(req.fn || '').trim();
-  const payload = req.payload || {};
+  let payload = req.payload || {};
+  // 21/10/2026 (fluxo cliente → unidade → equipamento, molde da autoclave): documento do ensaio só com o
+  // equipamento escolhido no cadastro; cliente, CNPJ, endereço, TAG e nº de série vêm do cadastro
+  // (equipamento de outro cliente é recusado). Relatório interno (dados reconstituídos) fica de fora.
+  if (LAVREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !payload.modoRelatorioSimulado && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
+    payload = SGO_QEQ_aplicarVinculoPayload_(String(req.sessionId || ''), payload);
+  }
 
   const allow = {
     apiPing: LavRel_apiPing,
@@ -32,7 +41,13 @@ function LavRel_apiDispatch(req) {
     apiConsultarCnpj: LavRel_apiConsultarCnpj,
     apiValidarSenhaSimuladorAdmin: LavRel_apiValidarSenhaSimuladorAdmin,
     apiGerarRascunhoCertificado: LavRel_apiGerarRascunhoCertificado,
-    apiMontarCertificadoFinal: LavRel_apiMontarCertificadoFinal
+    apiMontarCertificadoFinal: LavRel_apiMontarCertificadoFinal,
+    // Aprovação do responsável técnico (21/10/2026, SGO_QualifEmissao.js)
+    apiEnviarParaAprovacao: LavRel_apiEnviarParaAprovacao,
+    apiListarAprovacoes: LavRel_apiListarAprovacoes,
+    apiPreverAprovacao: LavRel_apiPreverAprovacao,
+    apiAprovarEmitir: LavRel_apiAprovarEmitir,
+    apiDevolverAprovacao: LavRel_apiDevolverAprovacao
   };
 
   if (!fn) {
@@ -43,7 +58,7 @@ function LavRel_apiDispatch(req) {
     throw new Error('Função não permitida ou não encontrada: ' + fn);
   }
 
-  return allow[fn](payload);
+  return allow[fn](payload, sessaoDispatchRH);
 }
 
 // ------------------------------------------------------------
@@ -55,7 +70,7 @@ function LavRel_apiValidarSenhaSimuladorAdmin(payload) {
   LavRel_validarSenhaSimuladorAdmin_(payload.senha);
   return { ok: true };
 }
-function LavRel_apiPing() {
+function LavRel_apiPing(payload, sessao) {
   const laudosId = (LavRel_UCFG.LAUDOS_FOLDER_ID && String(LavRel_UCFG.LAUDOS_FOLDER_ID).length > 10)
     ? String(LavRel_UCFG.LAUDOS_FOLDER_ID).trim()
     : '';
@@ -79,8 +94,12 @@ function LavRel_apiPing() {
     defaultDateStyle: String(LavRel_UCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase(),
     defaultNSensores: Number(LavRel_UCFG.DEFAULT_N || 12),
     motoresDisponiveis: Object.keys(LavRel_UCFG.CICLOS || {}),
-    laudosUrl: laudosId ? ('https://drive.google.com/drive/folders/' + laudosId) : '',
-    uploadsUrl: uploadsId ? ('https://drive.google.com/drive/folders/' + uploadsId) : '',
+    // 21/10/2026: modelo da planilha de dados, se a sessão aprova a emissão e pastas que existem de fato
+    // (a pasta fixa do Google Drive antigo não existe no servidor).
+    planilhaModelo: typeof LavRel_planilhaModelo_ === 'function' ? LavRel_planilhaModelo_() : 'NOVO',
+    podeAprovarEmissao: !!(sessao && typeof LavRel_lvEhAprovador_ === 'function' && LavRel_lvEhAprovador_(sessao)),
+    laudosUrl: LavRel_urlPastaExistente_(laudosId, 'LAVREL_LAUDOS_FOLDER_ID'),
+    uploadsUrl: LavRel_urlPastaExistente_(uploadsId, 'LAVREL_UPLOAD_PASTA_ID'),
     logoFileId: logoFileId,
     simuladorAdmin: {
       habilitado: !!((LavRel_UCFG.SIMULADOR_ADMIN || {}).habilitado),
@@ -148,51 +167,41 @@ function LavRel_apiUploadArquivo(payload) {
 }
 
 // ------------------------------------------------------------
-// LEITURA DO MODO "UM ARQUIVO POR SENSOR" (datalogger individual)
+// LEITURA DO MODO "UM ARQUIVO POR SENSOR" (registradores individuais)
 // ------------------------------------------------------------
 
 /**
- * Lê um arquivo por sensor ativo (payload.arquivosPorSensor, alinhado
- * por índice com a grade de sensores da tela) e normaliza cada um como
- * uma série de 1 sensor só, reaproveitando LavRel_lerDadosEntradaRich_ e
- * LavRel_normalizarMatrizParaAnalise sem mudança — o mesmo parser do modo de
- * arquivo único já lida com o formato Tempo+Temperatura (a coluna
- * "Numero"/índice do datalogger individual é simplesmente ignorada,
- * pois não bate com nenhum padrão de coluna reconhecido).
- * Sensores inativos ficam com série null (não exigem arquivo).
+ * 21/10/2026 (molde da autoclave): cada sensor ativo tem o seu arquivo (payload.arquivosPorSensor[s],
+ * alinhado com a grade de sensores da tela). As séries são alinhadas pela linha do tempo mais completa
+ * (SGO_QT_mesclarSeries_, tolerância de metade do intervalo mediano); leitura sem correspondência fica
+ * vazia e vira trava se cair na fase avaliada. Devolve { linhas, resumo } (resumo vai para o anexo do documento).
  */
-function LavRel_lerSeriesPorSensorArquivo_(payload, nSensores, sensoresAtivos, dateStyle) {
+function LavRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStyle) {
   const arquivos = Array.isArray(payload.arquivosPorSensor) ? payload.arquivosPorSensor : [];
-  const delimManual = String(payload.delimManual || 'AUTO').toUpperCase().trim();
-
+  const delim = String(payload.delimManual || 'AUTO').toUpperCase().trim();
   const series = [];
   for (let s = 0; s < nSensores; s++) {
-    if (!sensoresAtivos[s]) {
-      series.push(null);
-      continue;
-    }
-
-    const fileId = String(arquivos[s] || '').trim();
-    if (!fileId) {
-      throw new Error('Sensor S' + (s + 1) + ' está marcado como ativo, mas nenhum arquivo foi informado para ele (modo "um arquivo por sensor").');
-    }
-
-    const rich = LavRel_lerDadosEntradaRich_({ modoEntrada: 'FILE_ID', fileId: fileId, delimManual: delimManual });
-    if (!rich || !rich.matrix || !rich.matrix.length) {
-      throw new Error('Não foi possível ler o arquivo do sensor S' + (s + 1) + '.');
-    }
-
-    let serieSensor;
+    if (!sensoresAtivos[s]) { series.push(null); continue; }
+    const id = String(arquivos[s] || '').trim();
+    if (!id) throw new Error('O sensor S' + (s + 1) + ' está marcado como ativo, mas não tem arquivo. Envie o arquivo do registrador desse sensor no campo dele ou desmarque o sensor.');
+    let linhas;
     try {
-      serieSensor = LavRel_normalizarMatrizParaAnalise(rich.matrix, rich.displayMatrix, 1, dateStyle);
+      const rich = LavRel_lerDadosEntradaRich_({ modoEntrada: 'FILE_ID', fileId: id, delimManual: delim });
+      linhas = LavRel_normalizarMatrizParaAnalise(rich.matrix, rich.displayMatrix, 1, dateStyle);
     } catch (e) {
-      throw new Error('Falha ao normalizar o arquivo do sensor S' + (s + 1) + ': ' + e.message);
+      throw new Error('Arquivo do sensor S' + (s + 1) + ': ' + e.message);
     }
-
-    series.push(serieSensor);
+    series.push(linhas.map(function(l) { return { tempoDate: l.tempoDate, tempoStr: l.tempoStr, valor: l.temperaturas[0] }; }));
   }
-
-  return series;
+  const mesc = SGO_QT_mesclarSeries_(series);
+  return {
+    linhas: mesc.linhas.map(function(l) { return { tempoStr: l.tempoStr, tempoDate: l.tempoDate, temperaturas: l.valores.slice(0, nSensores), pressao: null }; }),
+    resumo: {
+      referencia: 'S' + (mesc.referencia + 1),
+      toleranciaSeg: Math.round(mesc.toleranciaMs / 100) / 10,
+      sensores: mesc.resumo.map(function(r, s) { return r ? Object.assign({ sensor: 'S' + (s + 1) }, r) : null; }).filter(Boolean)
+    }
+  };
 }
 
 // ------------------------------------------------------------
@@ -208,30 +217,23 @@ function LavRel_apiPreviewEntrada(payload) {
     const nSensores = LavRel_clampIntSeguro_(payload.nSensores, 1, 60, LavRel_UCFG.DEFAULT_N || 12);
     const sensoresAtivos = LavRel_normalizarSensoresAtivosMain_(payload.sensoresAtivos, nSensores);
     const dateStylePrev = String(payload.dateStyle || LavRel_UCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase().trim();
-
-    const seriesPorSensor = LavRel_lerSeriesPorSensorArquivo_(payload, nSensores, sensoresAtivos, dateStylePrev);
-    const mesclado = LavRel_mesclarSeriesPorSensor_(seriesPorSensor);
-
+    const mesc = LavRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStylePrev);
     const headerMulti = ['Tempo'].concat(Array.from({ length: nSensores }, function(_, i) { return 'S' + (i + 1); }));
-    const previewMulti = [headerMulti].concat(mesclado.slice(0, LavRel_UCFG.PREVIEW_ROWS || 20).map(function(row) {
-      return [row.tempoStr].concat(row.temperaturas || []);
+    const previewMulti = [headerMulti].concat(mesc.linhas.slice(0, LavRel_UCFG.PREVIEW_ROWS || 20).map(function(row) {
+      return [row.tempoStr].concat(row.temperaturas.map(function(t) { return t === null ? '' : t; }));
     }));
-
-    const nulosPorSensor = Array.from({ length: nSensores }, function(_, s) {
-      return mesclado.reduce(function(acc, row) { return acc + (row.temperaturas[s] === null ? 1 : 0); }, 0);
-    });
-
     return {
       ok: true,
-      rows: mesclado.length,
+      rows: mesc.linhas.length,
       cols: headerMulti.length,
       preview: previewMulti,
       diagnostico: {
         modoEntrada: 'ARQUIVO_POR_SENSOR',
-        qtdTemperaturas: nSensores,
-        observacao: 'Séries de ' + seriesPorSensor.filter(function(s) { return s; }).length +
-          ' sensor(es) mescladas pela linha do tempo mais completa. Pontos sem correspondência por sensor (S1..S' + nSensores + '): ' +
-          nulosPorSensor.join(', ') + '.'
+        qtdTemperaturas: mesc.resumo.sensores.length,
+        observacao: 'Arquivos de ' + mesc.resumo.sensores.length + ' sensor(es) alinhados pela linha do tempo do ' + mesc.resumo.referencia +
+          ' (tolerância de ' + SGO_DocA4_num_(mesc.resumo.toleranciaSeg, 1) + ' s). Leituras sem correspondência: ' +
+          mesc.resumo.sensores.map(function(r) { return r.sensor + ' ' + r.semCorrespondencia; }).join(', ') + '. Maior defasagem de relógio: ' +
+          mesc.resumo.sensores.map(function(r) { return r.sensor + ' ' + SGO_DocA4_num_(r.maiorDefasagemSeg, 0) + ' s'; }).join(', ') + '.'
       }
     };
   }
@@ -304,11 +306,12 @@ function LavRel_lvExecutarAnaliseCompleta_(payload) {
   }
 
   const sensoresAtivos = LavRel_normalizarSensoresAtivosMain_(payload.sensoresAtivos, nSensores);
-  const opcoesAnalise = LavRel_normalizarOpcoesAnaliseMain_(payload);
-
   const modoEntradaNormalizado = String(payload.modoEntrada || '').toUpperCase().trim();
   const simuladoAdmin = modoEntradaNormalizado === 'SIMULADO_ADMIN';
   const arquivoPorSensor = modoEntradaNormalizado === 'ARQUIVO_POR_SENSOR';
+  // Relatório interno: a temperatura alvo da simulação vale como programada quando a tela não informou.
+  if (simuladoAdmin && !String(payload.setpoint || '').trim() && payload.simulacao && payload.simulacao.temperaturaAlvo) payload.setpoint = payload.simulacao.temperaturaAlvo;
+  const opcoesAnalise = LavRel_normalizarOpcoesAnaliseMain_(payload);
 
   let rich = null;
   let dadosNormalizados;
@@ -320,8 +323,9 @@ function LavRel_lvExecutarAnaliseCompleta_(payload) {
     }
     dadosNormalizados = rich.rows;
   } else if (arquivoPorSensor) {
-    const seriesPorSensor = LavRel_lerSeriesPorSensorArquivo_(payload, nSensores, sensoresAtivos, dateStyle);
-    dadosNormalizados = LavRel_mesclarSeriesPorSensor_(seriesPorSensor);
+    const mesc = LavRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStyle);
+    dadosNormalizados = mesc.linhas;
+    payload._mesclagem = mesc.resumo;
   } else {
     rich = LavRel_lerDadosEntradaRich_(payload);
     if (!rich || !(rich.matrix && rich.matrix.length)) {
@@ -337,6 +341,12 @@ function LavRel_lvExecutarAnaliseCompleta_(payload) {
 
   if (!dadosNormalizados || !dadosNormalizados.length) {
     throw new Error('Não foi possível normalizar os dados para análise.');
+  }
+
+  // 21/10/2026: grandeza complementar. Por padrão o ensaio é só de temperatura; a coluna de pressão
+  // (aspersão ou bomba) só entra, como informação sem critério, se "Analisar pressão" estiver ligado.
+  if (!LavRel_analisaPressao_(payload)) {
+    dadosNormalizados = dadosNormalizados.map(function(r) { return Object.assign({}, r, { pressao: null }); });
   }
 
   if (simuladoAdmin) {
@@ -381,12 +391,26 @@ function LavRel_lvExecutarAnaliseCompleta_(payload) {
   };
 }
 
-function LavRel_apiConverter(payload) {
+/**
+ * Botão "Gerar planilha de dados" (21/10/2026). Modelo NOVO (padrão): documento A4 em paisagem em
+ * HTML + PDF com aprovação do responsável técnico (SGO_LavRel_PlanilhaDados.js). Modelo ANTERIOR
+ * (Google Planilhas, abaixo): preservado sem mudança de leiaute e usado só se o responsável pelo
+ * sistema gravar LAVREL_PLANILHA_MODELO = ANTERIOR em Chaves e senhas.
+ */
+function LavRel_apiConverter(payload, sessao) {
+  if (typeof LavRel_planilhaModelo_ === 'function' && LavRel_planilhaModelo_() !== 'ANTERIOR') return LavRel_apiGerarPlanilhaDados(payload, sessao);
+  return LavRel_apiConverterModeloAnterior_(payload);
+}
+
+/** Modelo anterior da planilha de dados (Google Planilhas → PDF em paisagem). */
+function LavRel_apiConverterModeloAnterior_(payload) {
   const pipeline = LavRel_lvExecutarAnaliseCompleta_(payload);
   payload = pipeline.payload;
   const nSensores = pipeline.nSensores;
   const dadosNormalizados = pipeline.dadosNormalizados;
   const analise = pipeline.analise;
+  // Dado com problema não vira documento (21/10/2026).
+  if (!payload.modoRelatorioSimulado) LavRel_exigirSemTravas_((analise.qualidadeDados || {}).travas);
 
   const infoPlanilha = LavRel_gerarPlanilhaAuditoria(dadosNormalizados, analise, payload);
   if (!infoPlanilha || !infoPlanilha.spreadsheetId) {
@@ -717,4 +741,37 @@ function LavRel_pastaUploads_(folderIdConfigurado) {
   const pasta = DriveApp.getRootFolder().createFolder('Lavadora - Planilhas enviadas');
   props.setProperty('LAVREL_UPLOAD_PASTA_ID', pasta.getId());
   return pasta;
+}
+
+
+// ------------------------------------------------------------
+// 21/10/2026 — pastas, grandeza complementar e travas (molde da autoclave)
+// ------------------------------------------------------------
+
+/** Endereço da pasta que existe de fato (configurada ou a própria do módulo); '' se nenhuma existe ainda. Não cria pasta. */
+function LavRel_urlPastaExistente_(idConfigurado, propKey) {
+  const ids = [String(idConfigurado || '').trim()];
+  try { ids.push(String(PropertiesService.getScriptProperties().getProperty(propKey) || '').trim()); } catch (e) {}
+  for (let i = 0; i < ids.length; i++) {
+    if (!ids[i]) continue;
+    try { return DriveApp.getFolderById(ids[i]).getUrl(); } catch (e) { /* pasta do Google Drive antigo: não existe aqui */ }
+  }
+  return '';
+}
+
+/**
+ * Seletor "Analisar pressão (aspersão ou bomba)" — desligado por padrão: a qualificação térmica da
+ * lavadora é feita pela temperatura. Ligado, a pressão registrada aparece no documento como informação,
+ * sem critério de aceitação (nenhum limite configurado).
+ */
+function LavRel_analisaPressao_(payload) {
+  payload = payload || {};
+  return payload.analisarPressao === true || String(payload.analisarPressao).toLowerCase() === 'true';
+}
+
+/** Trava de emissão: dado com problema não vira documento. Lança erro com a lista do que corrigir. */
+function LavRel_exigirSemTravas_(travas) {
+  if (!travas || !travas.length) return;
+  throw new Error('O documento não foi emitido porque os dados têm ' + travas.length + ' problema(s) a corrigir: ' +
+    travas.map(function(t, i) { return (i + 1) + ') ' + t.oQue + ' Por quê: ' + t.porQue + ' Como corrigir: ' + t.comoCorrigir; }).join(' '));
 }

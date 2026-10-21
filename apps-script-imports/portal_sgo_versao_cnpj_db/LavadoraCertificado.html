@@ -1,96 +1,125 @@
 <?
-  // Relatório de ensaio — Lavadora (termodesinfectora ou lavadora ultrassônica), um ciclo.
-  // Padrão comum SGO_DocA4: cabeçalho/rodapé em todas as páginas, A4, sem JavaScript no PDF.
+  // Relatório de ensaio de ciclo — Lavadoras (termodesinfectora ou lavadora ultrassônica).
+  // Padrão comum SGO_DocA4: capa, sumário, cabeçalho/rodapé em todas as páginas, A4, sem JavaScript no PDF.
+  // 21/10/2026 (molde da autoclave): critérios decisivos e informativos com a fonte, escopo e limitações,
+  // fases pelo perfil de temperatura, aprovação registrada do responsável técnico, A0 pela regra dos trapézios
+  // e memória de cálculo. Ensaio só de temperatura: pressão só aparece na frase do escopo.
   var id = ctx.identificacao;
   var estudo = ctx.estudos[0];
   var f = estudo.fatos || {};
-  var us = ctx.tipoCiclo === 'ULTRASSOM';
+  var termo = ctx.tipoCiclo === 'TERMO';
   var st = String(ctx.statusConsolidado || '').toUpperCase();
+  var numeroDoc = id.certificadoNumero || 'sem número';
   var nFig = 0;
-  var tipoEquip = us ? 'Lavadora ultrassônica' : 'Lavadora termodesinfectora';
-  var temGraf = graficos && graficos.length;
+  var nomeFase = termo ? 'fase de desinfecção' : 'fase do banho';
+  var capaLinhas = [
+    ['Cliente', id.cliente], ['Equipamento', id.equipamentoTipo + (id.tag ? ' — TAG ' + id.tag : '')],
+    ['Ensaio', LavRel_lvTextoTipoEnsaio_(id.tipoEnsaio) + ' — ' + String(ctx.equipamentoLabel || '').toLowerCase()]
+  ];
+  var situacaoCel = function(c) {
+    if (c.naoAvaliado) return { html: '<span class="info-txt">Não avaliado</span>' };
+    if (c.informativo) return { html: '<span class="info-txt">Informativo</span>' };
+    if (c.conforme === false && !c.decisivo) return { html: '<span class="info-txt">Fora da referência (não decide)</span>' };
+    return SGO_DocA4_celSituacao_(c.conforme);
+  };
 ?>
 <?!= SGO_DocA4_inicioDocumento_({
-  titulo: 'Relatório de ensaio — ' + tipoEquip,
-  subtitulo: 'Interpretação técnica de um ' + (us ? 'ciclo de lavagem ultrassônica' : 'ciclo de desinfecção térmica') + '. O resultado refere-se exclusivamente ao ensaio aqui identificado.',
-  tituloCurto: 'Relatório de ensaio — ' + tipoEquip,
+  titulo: 'Relatório de ensaio de ciclo — ' + (termo ? 'Lavadora termodesinfectora' : 'Lavadora ultrassônica'),
+  subtitulo: 'Interpretação técnica de um ' + String(ctx.equipamentoLabel || '').toLowerCase() + '. O resultado refere-se exclusivamente ao ensaio aqui identificado.',
+  tituloCurto: 'Relatório de ensaio de ciclo — ' + (termo ? 'termodesinfectora' : 'lavadora ultrassônica'),
   rotuloNumero: 'Relatório nº',
-  numero: id.certificadoNumero || 'sem número',
+  numero: numeroDoc,
   revisao: id.revisao,
   empresa: id.empresaExecutante,
-  ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm], ['Tipo de ensaio', LavRel_lvTextoTipoEnsaio_(id.tipoEnsaio)], ['Ciclo nº', id.cicloNumero || '—']],
-  simulado: ctx.simulado,
+  capa: { tipo: 'Qualificação térmica', linhas: capaLinhas },
+  ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm], ['Ciclo nº', id.cicloNumero || '—'], ['Registrador', id.dtl || '—']].filter(function(l) { return l[1] !== '—' || l[0] === 'Data do ensaio'; }),
+  simulado: ctx.simulado || minuta,
+  avisoSimulado: minuta ? 'MINUTA PARA CONFERÊNCIA DO RESPONSÁVEL TÉCNICO — documento ainda não aprovado; não entregar ao cliente.' : undefined,
   resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado },
   sumario: true
 }) ?>
 
 <h2>1. Identificação</h2>
-<?!= SGO_DocA4_tabelaIdent_([
-  ['Cliente', id.cliente],
-  ['CNPJ', id.cnpj],
-  ['Endereço', id.endereco, { largo: true }],
-  ['Setor', id.setor],
-  ['TAG', id.tag],
-  ['Equipamento', tipoEquip],
-  ['Marca', id.marca],
-  ['Modelo', id.modelo],
-  ['Nº de série', id.numeroSerie],
-  ['Receita / programa', id.programa],
-  ['Lote', id.lote],
-  ['Técnico executor', id.tecnicoExecutor],
-  ['Responsável pelo aceite', id.responsavelAceite],
-  ['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]
-].concat(id.tarefaOrigem ? [['Tarefa de origem', id.tarefaOrigem, { largo: true }]] : [])) ?>
+<?
+  var identOpc = function(rotulo, valor, extra) { return String(valor || '').trim() ? [[rotulo, valor].concat(extra ? [extra] : [])] : []; };
+  var identLinhas = [['Cliente', id.cliente], ['CNPJ', id.cnpj]]
+    .concat(identOpc('Endereço', id.endereco, { largo: true }), identOpc('Setor', id.setor), [['TAG', id.tag], ['Equipamento', id.equipamentoTipo]],
+      identOpc('Marca', id.marca), identOpc('Modelo', id.modelo), identOpc('Nº de série', id.numeroSerie), identOpc('Receita / programa', id.programa), identOpc('Lote', id.lote),
+      [['Técnico executor', id.tecnicoExecutor || '—']], identOpc('Responsável pelo aceite', id.responsavelAceite),
+      [['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]], identOpc('Tarefa de origem', id.tarefaOrigem, { largo: true }));
+?>
+<?!= SGO_DocA4_tabelaIdent_(identLinhas) ?>
 
 <h2>2. Instrumentação e rastreabilidade</h2>
-<p>As temperaturas foram registradas por registrador de dados (datalogger) com sensores posicionados na câmara<?= us ? ' e na solução de lavagem' : ' e junto à carga' ?>. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados nesta seção.</p>
+<p>As temperaturas<?= ctx.analisarPressao ? ' e a pressão' : '' ?> foram registradas por registrador de dados com sensores distribuídos <?= termo ? 'na câmara e na carga' : 'no banho' ?>. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>
 <?!= SGO_DocA4_tabelaRegistradores_(ctx.registradores) ?>
+<? if (f.incertezaA0) { ?>
+<p class="nota">Incerteza expandida do registrador considerada: <?= SGO_DocA4_val_(f.incertezaA0.uTemperatura, 2, '°C') ?> (certificado de calibração). Propagada ao A<sub>0</sub> do pior sensor como erro constante de temperatura: U(A<sub>0</sub>) ≈ A<sub>0</sub> · ln 10 / z · U(T) = <?= SGO_DocA4_val_(f.incertezaA0.uA0, 2, 's') ?> (<?= SGO_DocA4_num_(f.incertezaA0.relativo, 1) ?> % do valor).</p>
+<? } ?>
 <?!= SGO_DocA4_tabelaIdent_(ctx.parametros || []) ?>
 
 <h2>3. Metodologia, critérios de aceitação e referências</h2>
-<? if (us) { ?>
-<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo. A fase principal (banho aquecido com cavitação) é reconhecida quando os sensores ativos atingem e mantêm a temperatura programada da receita, com histerese e número mínimo de leituras consecutivas. O tempo efetivo de cavitação é a duração dessa fase, comparada ao tempo mínimo definido pelo protocolo do fabricante do equipamento. A ABNT NBR 17130-1:2024 define os requisitos construtivos e de registro das lavadoras ultrassônicas de uso hospitalar, incluindo a tolerância de ± 3 °C em relação à temperatura escolhida para o ciclo.</p>
+<? if (termo) { ?>
+<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. A fase de desinfecção é o primeiro trecho em que todos os sensores ativos atingem e mantêm a temperatura programada, com leituras consecutivas e histerese para que oscilações isoladas não abram nem fechem a janela. As demais etapas (pré-lavagem, lavagem, enxágues, secagem) são identificadas pelo perfil da temperatura média: cada queda brusca, típica da entrada de água nova, abre uma etapa; os horários dessas etapas são estimados e não decidem o resultado.</p>
+<p>Para cada sensor calcula-se o A<sub>0</sub>, tempo equivalente em segundos a 80 °C, pela regra dos trapézios com o intervalo real entre leituras:</p>
+<p class="formula">A<sub>0</sub> = Σ ½ · [10<sup>(T<sub>i−1</sub> − 80) / z</sup> + 10<sup>(T<sub>i</sub> − 80) / z</sup>] · Δt<sub>i</sub></p>
+<p>com z = <?= SGO_DocA4_val_(f.z, 0, '°C') ?>, Δt<sub>i</sub> em segundos e taxa letal zero para leitura abaixo de <?= SGO_DocA4_val_(f.tLimiteA0, 0, '°C') ?>. A soma vai do aquecimento da fase de desinfecção (a partir de <?= SGO_DocA4_val_(f.tLimiteA0, 0, '°C') ?>) até o fim do patamar; a descida e a secagem não entram. O ciclo é avaliado pelo pior sensor (menor A<sub>0</sub>). Leituras impossíveis, sensores parados, picos isolados ou lacunas na fase impedem a emissão do documento até serem corrigidos.</p>
 <? } else { ?>
-<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. A fase principal de desinfecção térmica é reconhecida quando os sensores ativos atingem e mantêm a temperatura programada, com histerese e número mínimo de leituras consecutivas.</p>
-<p>A letalidade térmica de cada sensor é expressa pelo A<sub>0</sub>, em segundos equivalentes a 80 °C, somando somente as leituras iguais ou superiores a <?= SGO_DocA4_val_(f.tLimiteA0, 0, '°C') ?>, conforme a ABNT NBR ISO 15883-1:</p>
-<p class="formula">A<sub>0</sub> = Σ 10<sup>(T − 80) / z</sup> · Δt &nbsp;&nbsp; (z = <?= SGO_DocA4_val_(f.z, 0, '°C') ?>, Δt em segundos)</p>
-<p>O ciclo é avaliado pelo pior sensor (menor A<sub>0</sub>). O valor mínimo exigido depende da classificação do artigo processado: 600 s para artigos semicríticos ou não críticos e 3.000 s para artigos críticos ou sujeitos a microrganismos termorresistentes. Neste ensaio o artigo foi classificado como <b><?= LavRel_lvTextoClasseArtigo_(f.classeArtigo).toLowerCase() ?></b>, e o critério aplicado é A<sub>0</sub> ≥ <?= SGO_DocA4_val_(f.limiteAprovacaoFinal, 0, 's') ?>. A soma considera apenas a fase principal, o que torna o resultado conservador em relação a uma soma que inclua a subida e a descida de temperatura.</p>
+<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. O patamar do banho é o primeiro trecho em que todos os sensores ficam na temperatura programada, dentro da tolerância, com leituras consecutivas e histerese. O tempo no patamar é comparado ao tempo mínimo do protocolo do fabricante e todas as leituras do patamar são comparadas à tolerância de temperatura. As demais etapas são identificadas pelo perfil da temperatura média e têm horários estimados. Leituras impossíveis, sensores parados, picos isolados ou lacunas na fase impedem a emissão do documento até serem corrigidos.</p>
 <? } ?>
 <h3>3.1 Critérios de aceitação</h3>
-<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.referencia]; })) ?>
-<h3>3.2 Referências normativas</h3>
+<p class="nota">Critérios configurados pela empresa executante e revisáveis pelo responsável técnico; a coluna Referência indica a fonte técnica de cada critério. Só os critérios decisivos aprovam ou reprovam o ensaio; os informativos são medidos e registrados.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Tipo', cls: 'cen' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, { t: c.decisivo ? 'Decisivo' : 'Informativo', cls: 'cen' }, c.referencia]; }), { classe: 'compacta' }) ?>
+<h3>3.2 Escopo e limitações</h3>
+<?!= SGO_DocA4_lista_(ctx.escopo || []) ?>
+<h3>3.3 Referências normativas</h3>
 <?!= SGO_DocA4_lista_(ctx.normas) ?>
 
 <h2>4. Resultados</h2>
-<h3>4.1 Fase principal</h3>
-<?!= SGO_DocA4_tabelaIdent_([
-  ['Início da fase principal', f.tempoInicioExposicao || '—'],
-  ['Fim da fase principal', f.tempoFimExposicao || '—'],
-  ['Duração da fase principal', SGO_DocA4_val_(f.tempoExposicaoMinutos, 2, 'min')],
-  ['Duração total registrada', SGO_DocA4_val_(f.tempoTotalMinutos, 2, 'min')]
-].concat(us ? [['Tempo efetivo de cavitação', SGO_DocA4_val_(f.tempoCavitacao, 2, 'min')], ['Mínimo exigido', SGO_DocA4_val_(f.limiteAprovacaoFinal, 2, 'min')]] : [])) ?>
-<? if (!us && f.conformidadePorSensor && f.conformidadePorSensor.length) { ?>
-<h3>4.2 Resultados por sensor (fase principal)</h3>
+<h3>4.1 Fases do ciclo</h3>
+<?!= SGO_DocA4_tabela_([{ t: 'Fase' }, { t: 'Início', cls: 'cen' }, { t: 'Fim', cls: 'cen' }, { t: 'Duração (min)', cls: 'num' }, { t: 'Mín. (°C)', cls: 'num' }, { t: 'Máx. (°C)', cls: 'num' }, { t: 'Identificação' }],
+  (f.fases || []).map(function(x) { return [x.nome, { t: x.inicio, cls: 'cen' }, { t: x.fim, cls: 'cen' }, SGO_DocA4_val_(x.duracaoMin, 2), SGO_DocA4_val_(x.tMin, 2), SGO_DocA4_val_(x.tMax, 2), x.estimada ? 'Estimada pelo perfil' : 'Decide o resultado']; }), { classe: 'compacta' }) ?>
+<?
+  var linhasFase = [
+    ['Temperatura programada', SGO_DocA4_val_(f.temperaturaProgramada, 1, '°C')],
+    ['Início da ' + nomeFase, f.tempoInicioExposicao || '—'],
+    ['Fim da ' + nomeFase, f.tempoFimExposicao || '—'],
+    ['Duração da ' + nomeFase, SGO_DocA4_val_(f.tempoExposicaoMinutos, 2, 'min')],
+    ['Patamar (todos os sensores ' + (termo ? 'na programada' : 'na tolerância') + ')', f.patamar ? SGO_DocA4_val_(f.patamar.duracaoMin, 2, 'min') + ' (' + f.patamar.leituras + ' leituras)' : '—'],
+    ['Duração total registrada', SGO_DocA4_val_(f.tempoTotalMinutos, 2, 'min')]
+  ];
+  if (termo && f.janelaA0) linhasFase.push(['Janela da soma do A0', f.janelaA0.inicio + ' a ' + f.janelaA0.fim]);
+  if (ctx.analisarPressao && f.pressaoRegistrada && f.pressaoRegistrada.count) linhasFase.push(['Pressão registrada (mín. / máx., informativa)', SGO_DocA4_val_(f.pressaoRegistrada.min, 3, '') + ' / ' + SGO_DocA4_val_(f.pressaoRegistrada.max, 3, '')]);
+?>
+<?!= SGO_DocA4_tabelaIdent_(linhasFase) ?>
+<? if (f.conformidadePorSensor && f.conformidadePorSensor.length && f.tempoInicioExposicao) { ?>
+<h3>4.2 Resultados por sensor (<?= nomeFase ?>)</h3>
+<? if (termo) { ?>
 <?!= SGO_DocA4_tabela_(
   [{ t: 'Sensor' }, { t: 'Mínima (°C)', cls: 'num' }, { t: 'Média (°C)', cls: 'num' }, { t: 'Máxima (°C)', cls: 'num' }, { t: 'A0 (s)', cls: 'num' }, { t: 'Situação' }],
   f.conformidadePorSensor.map(function(c) {
     var pior = f.piorSensorA0 && f.piorSensorA0.sensor === c.sensor;
-    return [c.sensor + (pior ? ' (pior)' : ''), SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2), SGO_DocA4_val_(c.a0, 2),
-      SGO_DocA4_celSituacao_(c.statusSensor === 'CONFORME', 'Atende', 'Abaixo do mínimo')];
+    return [c.sensor + (pior ? ' (pior)' : ''), SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2), SGO_DocA4_val_(c.a0, 2), SGO_DocA4_celSituacao_(c.statusSensor === 'CONFORME', 'Atende', 'Abaixo do mínimo')];
   })
 ) ?>
-<p class="nota">A<sub>0</sub> do ciclo entre os sensores ativos: mínimo <?= SGO_DocA4_val_(f.minA0, 2, 's') ?>, médio <?= SGO_DocA4_val_(f.mediaA0, 2, 's') ?> e máximo <?= SGO_DocA4_val_(f.maxA0, 2, 's') ?>. Exigido: <?= SGO_DocA4_val_(f.limiteAprovacaoFinal, 0, 's') ?> ou mais em todos os sensores.</p>
+<p class="nota">A<sub>0</sub> entre os sensores ativos: mínimo <?= SGO_DocA4_val_(f.minA0, 2, 's') ?>, médio <?= SGO_DocA4_val_(f.mediaA0, 2, 's') ?> e máximo <?= SGO_DocA4_val_(f.maxA0, 2, 's') ?>. Exigido: <?= SGO_DocA4_val_(f.limiteAprovacaoFinal, 0, 's') ?> ou mais em todos os sensores (artigo <?= LavRel_lvTextoClasseArtigo_(f.classeArtigo).toLowerCase() ?>).<?= (f.sensoresDesabilitados && f.sensoresDesabilitados.length) ? ' Sensores desconsiderados pelo técnico: ' + f.sensoresDesabilitados.join(', ') + '.' : '' ?></p>
+<? } else { ?>
+<?!= SGO_DocA4_tabela_(
+  [{ t: 'Sensor' }, { t: 'Mínima (°C)', cls: 'num' }, { t: 'Média (°C)', cls: 'num' }, { t: 'Máxima (°C)', cls: 'num' }],
+  f.conformidadePorSensor.map(function(c) { return [c.sensor, SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2)]; })
+) ?>
+<? } ?>
 <? } ?>
 
-<? if (temGraf) { ?>
-<h3>4.<?= us ? '2' : '3' ?> Gráficos</h3>
+<? if (graficos && graficos.length) { ?>
+<h3>4.3 Gráficos</h3>
 <? graficos.forEach(function(g) { if (g.erro) { ?><p class="nota"><?= g.erro ?></p><? } else { nFig++; ?><?!= SGO_DocA4_figura_(g.svg, nFig, g.legenda) ?><? } }); ?>
 <? } ?>
 
-<h3>4.<?= us ? (temGraf ? '3' : '2') : (temGraf ? '4' : '3') ?> Verificação dos critérios de aceitação</h3>
-<p class="nota">O requisito de cada critério está na seção 3.1.</p>
+<h3>4.<?= (graficos && graficos.length) ? '4' : '3' ?> Verificação dos critérios de aceitação</h3>
+<p class="nota">O requisito de cada critério está na seção 3.1. Critério não avaliado ou informativo não aprova nem reprova o ensaio.</p>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
-  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
+  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, situacaoCel(c)]; })) ?>
 
 <h2>5. Análise técnica</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
@@ -113,25 +142,38 @@
 
 <div class="manter">
 <h2>8. Responsabilidade técnica</h2>
-<p>Este relatório refere-se exclusivamente ao ensaio identificado, com os dados do registrador informado. Numa campanha de qualificação com vários ciclos, cada ciclo tem o seu relatório, e a qualificação do equipamento é declarada no documento consolidado da campanha. A reprodução parcial deste documento depende de autorização da empresa executante.</p>
+<p>Este relatório refere-se exclusivamente ao ensaio identificado. Numa campanha de qualificação com vários ciclos, a qualificação do equipamento é declarada no relatório de qualificação, que consolida os relatórios de ensaio. O resultado foi calculado pelo sistema a partir dos dados do registrador; os textos foram revisados antes da emissão. A reprodução parcial deste documento depende de autorização da empresa executante.</p>
+<? if (aprovacao) { ?>
+<p><b>Revisado e aprovado para emissão por</b> <?= aprovacao.nome || '—' ?><?= aprovacao.perfil ? ' (' + String(aprovacao.perfil).toLowerCase() + ')' : '' ?>, em <?= aprovacao.em ?>, com registro no sistema. Revisão <?= id.revisao || '0' ?> deste relatório<?= Number(id.revisao) > 0 ? '; as revisões anteriores continuam arquivadas e são substituídas por esta' : '' ?>.</p>
+<? } else if (minuta) { ?>
+<p><b>Aguardando a aprovação do responsável técnico.</b></p>
+<? } ?>
 <?!= SGO_DocA4_assinaturas_(assinaturas) ?>
 </div>
 
+<? var letra = 'A'; var proxima = function() { var l = letra; letra = String.fromCharCode(letra.charCodeAt(0) + 1); return l; }; ?>
 <? if (memoriaA0 && memoriaA0.resumo && memoriaA0.resumo.length) { ?>
-<h2 class="quebra">Anexo A — Memória de cálculo do A0</h2>
-<p>Valores obtidos no mesmo cálculo que define o resultado deste relatório. Para cada leitura da fase principal com temperatura igual ou superior a <?= SGO_DocA4_val_(f.tLimiteA0, 0, '°C') ?>: fator = 10<sup>(T − 80) / <?= SGO_DocA4_num_(f.z, 0) ?></sup>; contribuição = fator × Δt (Δt = <?= SGO_DocA4_val_(f.intervaloLeiturasSegundos, 0, 's') ?>); o A<sub>0</sub> do sensor é a soma das contribuições.</p>
-<?!= SGO_DocA4_tabela_([{ t: 'Sensor' }, { t: 'Leituras somadas', cls: 'num' }, { t: 'Tempo somado (s)', cls: 'num' }, { t: 'Temperatura média (°C)', cls: 'num' }, { t: 'A0 (s)', cls: 'num' }],
-  memoriaA0.resumo.map(function(r) { return [r.sensor + (r.sensor === memoriaA0.pior ? ' (pior)' : ''), SGO_DocA4_num_(r.leituras, 0), SGO_DocA4_num_(r.tempoSeg, 0), SGO_DocA4_val_(r.media, 2), SGO_DocA4_val_(r.a0, 2)]; })) ?>
+<h2 class="quebra">Anexo <?= proxima() ?> — Memória de cálculo do A0</h2>
+<p>Valores obtidos no mesmo cálculo que define o resultado deste relatório. Em cada leitura: taxa letal L = 10<sup>(T − 80) / <?= SGO_DocA4_num_(f.z, 0) ?></sup> (zero abaixo de <?= SGO_DocA4_val_(f.tLimiteA0, 0, '°C') ?>); contribuição = ½ · (L<sub>anterior</sub> + L) · Δt, com Δt o intervalo real até a leitura anterior, em segundos; o A<sub>0</sub> do sensor é a soma das contribuições. A primeira leitura de cada sensor contribui com zero.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Sensor' }, { t: 'Leituras na janela', cls: 'num' }, { t: 'Leituras a partir de ' + SGO_DocA4_val_(f.tLimiteA0, 0, '°C'), cls: 'num' }, { t: 'Tempo da janela (s)', cls: 'num' }, { t: 'A0 (s)', cls: 'num' }],
+  memoriaA0.resumo.map(function(r) { return [r.sensor + (r.sensor === memoriaA0.pior ? ' (pior)' : ''), SGO_DocA4_num_(r.leituras, 0), SGO_DocA4_num_(r.leiturasAcima, 0), SGO_DocA4_num_(r.tempoSeg, 0), SGO_DocA4_val_(r.a0, 2)]; }), { classe: 'compacta' }) ?>
 <? if (memoriaA0.leiturasPior.length) { ?>
 <h3>Leitura a leitura do pior sensor (<?= memoriaA0.pior ?>)</h3>
-<?!= SGO_DocA4_tabela_([{ t: 'Horário' }, { t: 'Temperatura (°C)', cls: 'num' }, { t: 'Fator', cls: 'num' }, { t: 'Contribuição (s)', cls: 'num' }, { t: 'A0 acumulado (s)', cls: 'num' }],
-  memoriaA0.leiturasPior.map(function(r) { return [LavRel_lvSoHora_(r.tempoStr), SGO_DocA4_num_(r.temperatura, 2), SGO_DocA4_num_(r.fator, 3), SGO_DocA4_num_(r.contribuicao, 2), SGO_DocA4_num_(r.acumulado, 2)]; }),
+<?!= SGO_DocA4_tabela_([{ t: 'Horário' }, { t: 'Temperatura (°C)', cls: 'num' }, { t: 'Taxa letal L', cls: 'num' }, { t: 'Δt (s)', cls: 'num' }, { t: 'Contribuição (s)', cls: 'num' }, { t: 'A0 acumulado (s)', cls: 'num' }],
+  memoriaA0.leiturasPior.map(function(r) { return [LavRel_lvSoHora_(r.tempoStr), SGO_DocA4_num_(r.temperatura, 2), SGO_DocA4_num_(r.fator, 4), SGO_DocA4_num_(r.dtSeg, 0), SGO_DocA4_num_(r.contribuicao, 2), SGO_DocA4_num_(r.acumulado, 2)]; }),
   { classe: 'compacta' }) ?>
 <? } ?>
 <? } ?>
 
+<? if (ctx.mesclagem && ctx.mesclagem.sensores && ctx.mesclagem.sensores.length) { ?>
+<h2 class="quebra">Anexo <?= proxima() ?> — Alinhamento dos registradores individuais</h2>
+<p>Cada sensor foi registrado por um registrador próprio. As leituras foram alinhadas pela linha do tempo do <?= ctx.mesclagem.referencia ?>, com tolerância de <?= SGO_DocA4_val_(ctx.mesclagem.toleranciaSeg, 1, 's') ?> (metade do intervalo típico). Leitura sem correspondência dentro da tolerância fica em branco e, se cair na fase avaliada, impede a emissão.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Sensor' }, { t: 'Leituras', cls: 'num' }, { t: 'Primeira leitura' }, { t: 'Última leitura' }, { t: 'Sem correspondência', cls: 'num' }, { t: 'Maior diferença de horário (s)', cls: 'num' }],
+  ctx.mesclagem.sensores.map(function(r) { return [r.sensor, String(r.leituras), r.inicio, r.fim, String(r.semCorrespondencia), SGO_DocA4_num_(r.maiorDefasagemSeg, 0)]; })) ?>
+<? } ?>
+
 <? if (fotos && fotos.length) { ?>
-<h2 class="quebra">Anexo <?= (memoriaA0 && memoriaA0.resumo && memoriaA0.resumo.length) ? 'B' : 'A' ?> — Registro fotográfico</h2>
+<h2 class="quebra">Anexo <?= proxima() ?> — Registro fotográfico</h2>
 <?!= SGO_DocA4_fotos_(fotos) ?>
 <? } ?>
 <?!= SGO_DocA4_fimDocumento_() ?>

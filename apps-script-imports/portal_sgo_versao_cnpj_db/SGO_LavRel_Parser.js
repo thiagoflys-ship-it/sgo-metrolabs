@@ -323,6 +323,9 @@ function LavRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, da
   const idxHora = LavRel_findAnyIndexParser_(hlow, ['hora', 'time']);
   const idxPressao = LavRel_findPressaoIndexParser_(hlow);
   const tempIdx = LavRel_findTempColumnsParser_(headerDisplay, idxTempo, idxData, idxHora, idxPressao);
+  // Colunas de numeração (Nº, Item, Índice): nunca são temperatura (21/10/2026, como na autoclave).
+  const idxIndice = [];
+  hlow.forEach(function(h, i) { if (/^(n|no|nº|n°|num|numero|item|indice|index|id|#|seq|sequencia|registro|amostra)\.?$/.test(h.replace(/\s+/g, ''))) idxIndice.push(i); });
 
   let startIdx = 1;
   const temCabecalhoDetectado =
@@ -382,7 +385,8 @@ function LavRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, da
       idxTempo: idxTempo,
       idxData: idxData,
       idxHora: idxHora,
-      idxPressao: idxPressao
+      idxPressao: idxPressao,
+      idxIgnorar: idxIndice
     });
 
     while (temps.length < nSensores) {
@@ -392,7 +396,9 @@ function LavRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, da
     let pressao = null;
     if (idxPressao !== -1) {
       pressao = LavRel_parseNumeroRobusto_(row[idxPressao]);
-    } else {
+    } else if (!temCabecalhoDetectado) {
+      // 21/10/2026: só deduz a pressão pela posição quando o arquivo não tem cabeçalho. Com cabeçalho e sem
+      // coluna de pressão, a coluna numérica que sobra é outra coisa (nº da leitura do registrador individual).
       pressao = LavRel_inferirPressaoSemCabecalhoParser_(row, nSensores, tempoInfo.colunasConsumidas);
     }
 
@@ -535,6 +541,18 @@ function LavRel_extrairTempoDaLinhaParser_(row, ctx) {
   const dateStyle = ctx.dateStyle || 'BR';
   const ultimaDataValida = ctx.ultimaDataValida || null;
 
+  // 21/10/2026: data guardada como data de planilha (Date nativo ou número de série) é inequívoca e vale
+  // antes do texto exibido. No servidor próprio a célula aparece como "m/d/aa" e, lida como dia/mês,
+  // o dia e o mês se trocavam (mesma correção da autoclave).
+  if (idxData !== -1 && idxHora !== -1 && LavRel_ehDataNativaParser_(row[idxData])) {
+    const dtNativa = LavRel_parseDataHoraSeparadaRobusta_(row[idxData], rowDisplay[idxHora], dateStyle, ultimaDataValida) ||
+      LavRel_parseDataHoraSeparadaRobusta_(row[idxData], row[idxHora], dateStyle, ultimaDataValida);
+    if (dtNativa) return { tempoDate: dtNativa, colunasConsumidas: [idxData, idxHora] };
+  }
+  if (idxTempo !== -1 && Object.prototype.toString.call(row[idxTempo]) === '[object Date]' && !isNaN(row[idxTempo].getTime())) {
+    return { tempoDate: new Date(row[idxTempo].getTime()), colunasConsumidas: [idxTempo] };
+  }
+
   if (idxData !== -1 && idxHora !== -1) {
     const dataBrutaDisplay = rowDisplay[idxData];
     const horaBrutaDisplay = rowDisplay[idxHora];
@@ -668,7 +686,7 @@ function LavRel_extrairTemperaturasDaLinhaParser_(row, tempIdx, nSensores, ctx) 
   }
 
   const ignorar = {};
-  [ctx.idxTempo, ctx.idxData, ctx.idxHora, ctx.idxPressao].forEach(function(v) {
+  [ctx.idxTempo, ctx.idxData, ctx.idxHora, ctx.idxPressao].concat(ctx.idxIgnorar || []).forEach(function(v) {
     if (v !== null && v !== undefined && v !== -1) ignorar[v] = true;
   });
 
@@ -881,8 +899,13 @@ function LavRel_parseDataHoraSeparadaRobusta_(valorData, valorHora, dateStyle, u
   );
 }
 
+function LavRel_ehDataNativaParser_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]') return !isNaN(v.getTime());
+  return typeof v === 'number' && isFinite(v) && v > 20000 && v < 80000;
+}
+
 function LavRel_parseSomenteDataRobustaParser_(valorData, dateStyle, ultimaDataValida) {
-  if (valorData instanceof Date && !isNaN(valorData.getTime())) {
+  if (Object.prototype.toString.call(valorData) === '[object Date]' && !isNaN(valorData.getTime())) {
     return new Date(valorData.getFullYear(), valorData.getMonth(), valorData.getDate(), 0, 0, 0);
   }
 

@@ -162,7 +162,7 @@ function LavRel_lvIAMontarContextoCertificado_(dados) {
   if (dados.criterios && dados.criterios.length) {
     linhas.push('CRITÉRIOS DE ACEITAÇÃO E RESULTADO OBTIDO (cite exatamente):');
     dados.criterios.forEach(function(c) {
-      linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + ' (' + c.referencia + '); obtido ' + c.obtido + '; situação ' + (c.conforme === true ? 'CONFORME' : (c.conforme === false ? 'NÃO CONFORME' : 'INFORMATIVO')));
+      linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + ' (' + c.referencia + '); obtido ' + c.obtido + '; situação ' + (c.naoAvaliado ? 'NÃO AVALIADO' : (c.conforme === true ? 'CONFORME' : (c.conforme === false ? (c.decisivo ? 'NÃO CONFORME (decide o resultado)' : 'FORA DA REFERÊNCIA (NÃO DECISIVO, só observação)') : 'INFORMATIVO'))));
     });
   }
   if (dados.parametros && dados.parametros.length) linhas.push('PARÂMETROS DO ENSAIO: ' + dados.parametros.map(function(p) { return p[0] + ': ' + p[1]; }).join(' | '));
@@ -181,7 +181,7 @@ function LavRel_lvIAMontarContextoCertificado_(dados) {
     // Conformidade por sensor (A0 acumulado) só existe pra Termodesinfectora
     // — a Ultrassônica não tem conceito de posição/sensor pro parâmetro de
     // aprovação (tempo de cavitação é uma medida única do ciclo inteiro).
-    var cps = (e.fatos && e.fatos.conformidadePorSensor) || [];
+    var cps = e.tipoEstudo === 'TERMO' ? ((e.fatos && e.fatos.conformidadePorSensor) || []) : [];
     if (cps.length) {
       linhas.push('Conformidade detalhada por posição/sensor (A0 acumulado):');
       cps.forEach(function(c) {
@@ -267,7 +267,7 @@ function LavRel_lvIACriarTextosCertificado_(dadosContexto) {
     'equipamento como um todo, já que este documento cobre só este ciclo. Esta seção é dirigida a um público técnico ' +
     '(engenheiros, auditores, outros laboratórios) — use a terminologia correta com precisão total, cite os valores ' +
     'com exatidão e não simplifique nada aqui. Na termodesinfecção, explique que o critério de A0 aplicado decorre da ' +
-    'classificação do artigo informada (600 s para semicrítico ou não crítico, 3.000 s para crítico). O último parágrafo ' +
+    'classificação do artigo informada (cite só o mínimo que está nos critérios do contexto). O último parágrafo ' +
     'deve declarar o veredito de forma inequívoca ("O ensaio está APROVADO" ou "O ensaio está REPROVADO"), citando o ' +
     'critério de aceitação e o valor decisivo (o pior sensor e o seu A0, ou o tempo de cavitação e o mínimo).\n\n' +
     'A CONCLUSÃO EM LINGUAGEM DE FÁCIL COMPREENSÃO deve comunicar exatamente o MESMO veredito e os mesmos fatos ' +
@@ -284,6 +284,13 @@ function LavRel_lvIACriarTextosCertificado_(dadosContexto) {
     '- Explique o que foi verificado neste ensaio e o que o resultado significa na prática (por que isso importa ' +
     'pra segurança de quem usa o equipamento ou de quem é atendido com o material processado por ele).\n' +
     '- Também deve ser um texto substancial (vários parágrafos), não um resumo de uma linha.\n\n' +
+    'REGRAS DESTA REVISÃO (21/10/2026):\n' +
+    '- Cite somente números que estão no contexto; nada de valores de memória ou de outras normas.\n' +
+    '- Não cite número de cláusula, item, seção ou anexo de norma.\n' +
+    '- Critério marcado como INFORMATIVO ou FORA DA REFERÊNCIA (NÃO DECISIVO) não aprova nem reprova: fale dele como observação, sem dizer que o ensaio não atende.\n' +
+    '- As fases anteriores e posteriores à fase principal foram estimadas pelo perfil de temperatura: descreva-as como estimadas.\n' +
+    (dadosContexto.tipoCiclo === 'ULTRASSOM' ? '- O registrador mede temperatura: não afirme nada sobre a intensidade da cavitação, que não foi medida.\n' : '') +
+    (dadosContexto.analisarPressao ? '' : '- Este ensaio considerou somente a temperatura: não escreva sobre pressão.\n') + '\n' +
     'CONTEXTO REAL DESTE ENSAIO (única fonte de fatos permitida):\n' + contextoStr + '\n\n' +
     LavRel_lvIAMontarInstrucaoFormato_(tiposEstudo);
 

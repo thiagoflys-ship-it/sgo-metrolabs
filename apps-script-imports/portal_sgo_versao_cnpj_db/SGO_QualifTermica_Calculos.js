@@ -64,7 +64,8 @@ function SGO_QT_pSatVaporBar_(tC) {
  * Cada intervalo entre duas leituras válidas soma
  *   (L(T1) + L(T2)) / 2 · Δt,   L(T) = 10^((T − Tref) / z),   Δt em minutos.
  * Intervalo com leitura ausente, tempo não crescente ou lacuna maior que
- * opcoes.maxIntervaloMs não soma e é devolvido em "lacunas".
+ * opcoes.maxIntervaloMs não soma e é devolvido em "lacunas". opcoes.tMinContagem (opcional): leitura
+ * abaixo desse valor tem L = 0 (A0 da lavadora: só a partir de 65 °C).
  * Devolve { total, linhas:[{ms, t, fator, dtMin, contribuicao, acumulado}], lacunas:[{ms0, ms1, motivo}] }.
  * ------------------------------------------------------------ */
 function SGO_QT_letalidadeTrapezio_(pontos, tRef, z, opcoes) {
@@ -78,7 +79,9 @@ function SGO_QT_letalidadeTrapezio_(pontos, tRef, z, opcoes) {
     var t = (pt.t === null || pt.t === undefined || pt.t === '') ? NaN : Number(pt.t);
     var ms = Number(pt.ms);
     var valido = isFinite(t) && isFinite(ms);
-    var fator = valido ? Math.pow(10, (t - tRef) / z) : null;
+    // opcoes.tMinContagem (21/10/2026, Lavadora): leitura abaixo do limite conta com taxa letal zero (A0 só soma a partir de 65 °C).
+    var limCont = (opcoes.tMinContagem === null || opcoes.tMinContagem === undefined || opcoes.tMinContagem === '') ? NaN : Number(opcoes.tMinContagem);
+    var fator = valido ? ((isFinite(limCont) && t < limCont) ? 0 : Math.pow(10, (t - tRef) / z)) : null;
     var linha = { ms: ms, t: valido ? t : null, fator: fator, dtMin: 0, contribuicao: 0, acumulado: out.total };
     if (valido && ant) {
       var dtMs = ms - ant.ms;
