@@ -177,80 +177,82 @@ function SGO_ajudaTelas_Qualificacao_() {
     // ================================================================
     "lavadora": {
       titulo: "Lavadoras",
-      paraQueServe: "Gera o relatório de qualificação de termodesinfectoras e lavadoras ultrassônicas a partir do arquivo do registrador. Na termodesinfectora o sistema calcula o A0 de cada sensor. Na ultrassônica avalia o tempo de cavitação.",
+      paraQueServe: "Qualificação térmica de termodesinfectoras e lavadoras ultrassônicas. A partir do arquivo do registrador, o sistema identifica as fases do ciclo, calcula o A0 de cada sensor (termodesinfectora) ou o tempo e a temperatura do banho (ultrassônica), confere os dados e gera a planilha de dados, o relatório de ensaio e, na aba \"Relatório oficial\", o relatório de qualificação do equipamento, sempre com a aprovação do responsável técnico.",
       antesDeComecar: [
-        "Tenha o arquivo exportado pelo registrador com as leituras do ciclo.",
-        "Saiba se o artigo processado é crítico ou semicrítico/não crítico. Isso muda o mínimo de A0.",
-        "Tenha o CNPJ do cliente e os dados da placa do equipamento.",
-        "A0 é a quantidade de desinfecção térmica que o ciclo entregou, contada em segundos equivalentes a 80 °C. O sistema calcula sozinho.",
+        "O cliente, a unidade e a lavadora precisam estar no cadastro. Se faltar, use os atalhos \"Cadastrar cliente\", \"Cadastrar unidade\" e \"Cadastrar equipamento\" do quadro \"Cliente e equipamento\".",
+        "Tenha o arquivo exportado pelo registrador (um arquivo com todos os sensores ou um arquivo por sensor).",
+        "Saiba a temperatura programada da receita e, na termodesinfectora, se o artigo processado é crítico ou semicrítico/não crítico. Isso muda o mínimo de A0.",
+        "A0 é a quantidade de desinfecção térmica que o ciclo entregou, contada em segundos equivalentes a 80 °C. O sistema calcula sozinho, a partir de 65 °C.",
         "Confira se os registradores usados estão com o certificado em dia em \"Padrões de referência\".",
         CELULAR_TELA_COMPLETA
       ],
       passos: [
-        { titulo: "Gerar o relatório de dados (planilha)", itens: [
-          "Toque em \"Lavadoras\" no menu.",
-          "Toque na aba \"Gerar relatório\".",
-          "Em \"1. Cliente e ensaio\", digite o CNPJ e toque em \"Buscar\".",
-          "Preencha \"Receita / Programa\", \"Tipo de Ensaio\" e o número do ciclo.",
-          "Em \"2. Equipamento\", preencha TAG, marca, modelo, número de série, lote, setor e o responsável técnico.",
-          "Em \"3. Parâmetros de processo e receita\", escolha o \"Equipamento a validar\": termodesinfectora ou lavadora ultrassônica.",
-          "Na termodesinfectora, escolha a \"Classificação do artigo processado\".",
-          "Informe a \"Temp. Alvo da Receita (°C)\" e a \"Quantidade de Sensores\".",
-          "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou.",
-          "Em \"4. Dados do registrador\", escolha como enviar os dados e toque em \"Escolher arquivo\".",
-          "Se cada sensor gravou um arquivo, escolha \"Um arquivo por sensor (registrador individual)\" e envie um arquivo por sensor.",
+        { titulo: "Gerar a planilha de dados", itens: [
+          "Toque em \"Lavadoras\" no menu e na aba \"Gerar relatório\".",
+          "Em \"Cliente e equipamento (do cadastro)\", busque o cliente, escolha a unidade e a lavadora. Cliente, CNPJ, endereço, TAG, número de série e local ficam travados.",
+          "Em \"1. Cliente e ensaio\" e \"2. Equipamento\", preencha programa, tipo de ensaio, número do ciclo, lote e responsável técnico.",
+          "Em \"3. Parâmetros de processo e receita\", confira o \"Equipamento a validar\", escolha a classificação do artigo (termodesinfectora) e informe a \"Temperatura programada (°C)\", que é obrigatória.",
+          "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou e registre a falha.",
+          "Deixe \"Analisar pressão (aspersão ou bomba)\" desligado, a menos que o registrador tenha gravado a pressão.",
+          "Em \"4. Dados do registrador\", envie o arquivo ou, em \"Um arquivo por sensor\", um arquivo para cada sensor.",
           "Toque em \"Pré-visualizar dados\" e confira as leituras.",
-          "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\".",
-          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
+          "Em \"5.\", informe o número do ensaio e a \"Identificação do registrador\" (a TAG do cadastro de padrões).",
+          "Toque em \"Gerar planilha de dados\". Responsável técnico: confirme e a planilha é emitida na pasta do equipamento. Técnico: a minuta abre em outra aba e a planilha vai para \"6. Aguardando aprovação\"."
         ] },
-        { titulo: "Gerar o relatório de ensaio (interpretação técnica, A4)", itens: [
-          "Gere antes o relatório de dados com os mesmos dados.",
-          "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\", \"Revisão\" e \"Identificação do registrador\" (a TAG do cadastro de padrões).",
-          "Se quiser, anexe até 4 fotos com legenda.",
-          "Toque em \"Gerar rascunho da interpretação\".",
-          "Leia e corrija os textos em \"Revise os textos antes de confirmar\".",
-          "Toque em \"Confirmar e gerar a interpretação\".",
-          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente. Na termodesinfectora ele traz o anexo \"Memória de cálculo do A0\"."
+        { titulo: "Gerar o relatório de ensaio (A4)", itens: [
+          "Com os mesmos dados, toque em \"Gerar rascunho da interpretação\".",
+          "Se aparecer a lista vermelha de problemas dos dados, corrija o que ela diz e gere de novo: nada é redigido com dado ruim.",
+          "Revise os textos. O resultado é o calculado; texto que contradiga o resultado é recusado.",
+          "Técnico: toque em \"Enviar para aprovação do responsável técnico\".",
+          "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Aprovar e emitir\". O documento abre em nova aba e fica na pasta do equipamento.",
+          "Em \"6. Aguardando aprovação\", o responsável técnico usa \"Ver prévia\", \"Aprovar e emitir\" ou \"Devolver\" com o motivo."
         ] },
-        { titulo: "Preencher o modelo oficial (folha de identificação)", itens: [
-          "Toque na aba \"Preencher modelo\".",
-          "Em \"Tipo de equipamento\", escolha termodesinfectora ou lavadora ultrassônica.",
-          "Preencha os campos e o resultado.",
-          "Toque em \"Gerar relatório da termodesinfectora\" ou \"Gerar relatório da lavadora ultrassônica\"."
+        { titulo: "Gerar o relatório de qualificação (aba \"Relatório oficial\")", itens: [
+          "Toque na aba \"Relatório oficial\" e escolha cliente, unidade e lavadora.",
+          "Marque os relatórios de ensaio emitidos que fundamentam a qualificação.",
+          "Marque as etapas (instalação, operação, desempenho), o motivo e a periodicidade; responda a lista da instalação e, se houver, os ensaios complementares.",
+          "Toque em \"Gerar rascunho\", revise a conclusão, veja a \"Prévia do documento\" e toque em \"Enviar para aprovação\".",
+          "O responsável técnico confere a prévia em \"Aguardando aprovação\", marca a confirmação e toca em \"Aprovar e emitir\". O relatório entra na ficha do equipamento, no QR code e no Arquivo de documentos com o vencimento da requalificação."
         ] }
       ],
       cores: [
-        { nome: "Selo verde \"Último ciclo: aprovado\"", significado: "O menor A0 entre os sensores atingiu o mínimo da classificação escolhida (ou o tempo de cavitação foi atendido, na ultrassônica)." },
-        { nome: "Selo vermelho \"Último ciclo: reprovado\"", significado: "Algum critério não foi atendido. Exemplo: A0 de 1.511,98 s num artigo crítico, que exige 3.000 s." },
-        { nome: "Selo vermelho \"Falha na geração\"", significado: "O relatório não foi gerado. Leia a faixa vermelha no topo." },
+        { nome: "Selo verde \"Último ciclo: aprovado\"", significado: "Todos os critérios decisivos foram atendidos." },
+        { nome: "Selo vermelho \"Último ciclo: reprovado\"", significado: "Algum critério decisivo não foi atendido. Exemplo: A0 de 2.400 s num artigo crítico, que exige 3.000 s." },
+        { nome: "\"Informativo\" e \"Fora da referência (não decide)\"", significado: "Critério medido e registrado, que não aprova nem reprova (por exemplo, pré-lavagem, uniformidade, aquecimento)." },
+        { nome: "Faixa \"MINUTA PARA CONFERÊNCIA\"", significado: "Documento ainda sem a aprovação do responsável técnico. Não entregue ao cliente." },
         { nome: "Selo laranja \"Relatório interno\"", significado: "Modo de dados reconstituídos, só do administrador. Não vai para a pasta do cliente." },
         FAIXA_VERMELHA,
         DETALHES
       ],
       problemas: [
-        { situacao: "Não sei qual classificação escolher.", oQueFazer: "Artigo crítico é o que entra em tecido estéril ou na corrente sanguínea (exige A0 de 3.000 s). Semicrítico ou não crítico é o que toca mucosa ou pele (A0 de 600 s). Na dúvida, pergunte ao responsável técnico do cliente antes de gerar." },
-        { situacao: "O mesmo ensaio aprovou como semicrítico e reprovou como crítico.", oQueFazer: "Está correto: o mínimo de A0 muda com a classificação. Use a classificação real do artigo processado." },
+        { situacao: "Aparece \"Informe a temperatura programada do ciclo\".", oQueFazer: "Preencha \"Temperatura programada (°C)\" com a temperatura da receita no equipamento e gere de novo." },
+        { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "Use o quadro \"Cliente e equipamento (do cadastro)\" no início da tela. Se o equipamento não aparece, cadastre pelos atalhos (abre em outra aba) e toque em \"Atualizar listas\"." },
+        { situacao: "O rascunho mostrou a lista de problemas dos dados.", oQueFazer: "Cada item diz o que aconteceu, por quê e como corrigir. Sensor que falhou: desmarque e registre a falha. Arquivo incompleto: exporte de novo do registrador." },
+        { situacao: "Não sei qual classificação escolher.", oQueFazer: "Artigo crítico entra em tecido estéril ou na corrente sanguínea (A0 de 3.000 s). Semicrítico ou não crítico toca mucosa ou pele (A0 de 600 s). Na dúvida, pergunte ao responsável técnico do cliente." },
         { situacao: "A prévia mostra datas trocadas.", oQueFazer: "Em \"Padrão de Data\", escolha \"Brasil (DD/MM/AAAA)\" ou \"USA (MM/DD/AAAA)\" e pré-visualize de novo." },
-        { situacao: "A temperatura alvo não é aceita.", oQueFazer: "A faixa permitida é de 20 °C a 100 °C. Digite o valor da receita do equipamento." },
-        { situacao: "O rascunho abriu com aviso de que a IA não está disponível.", oQueFazer: "Revise o texto padrão, complete à mão e confirme. A chave da IA é configurada pelo administrador." }
+        { situacao: "O rascunho abriu com aviso de que o texto automático não passou na conferência.", oQueFazer: "Revise o texto padrão, que usa só os resultados calculados, e siga com a emissão ou o envio." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, relatório de ensaio e folha do modelo." },
-        { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (com senha administrativa)." },
-        { perfil: "CLIENTE", pode: "Não acessa esta tela." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Gerar e emitir (responsável técnico): aprova planilhas, relatórios de ensaio e relatórios de qualificação." },
+        { perfil: "TECNICO", pode: "Gerar e enviar para aprovação; corrigir o que foi devolvido." },
+        { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" e escolhe o modelo do relatório oficial." },
+        { perfil: "CLIENTE", pode: "Não acessa esta tela; vê os relatórios de qualificação emitidos na ficha do equipamento e no QR code." }
       ],
       perguntas: [
-        { p: "O A0 é calculado em todo o ciclo?", r: "Não. É calculado só na fase principal de desinfecção. É um resultado conservador, e o relatório explica isso na metodologia." },
-        { p: "Existe \"aprovado com alerta\"?", r: "Não. Abaixo do mínimo exigido o ciclo é reprovado." },
-        { p: "Qual norma a ultrassônica cita?", r: "A ABNT NBR 17130-1:2024 entra nas referências. O critério de aprovação é o tempo de cavitação do protocolo." }
+        { p: "O A0 é calculado em todo o ciclo?", r: "Não. Só na fase de desinfecção: do aquecimento, a partir de 65 °C, até o fim do patamar. A descida e a secagem com ar quente não entram (resultado conservador)." },
+        { p: "Existe \"aprovado com alerta\"?", r: "Não. Critério decisivo não atendido reprova; critério informativo fora da referência vira observação." },
+        { p: "A lavadora ultrassônica tem a cavitação medida?", r: "Não. O registrador mede a temperatura do banho (tempo no patamar e tolerância de ±3 °C). A cavitação é verificada por teste próprio, que pode ser registrado no relatório oficial." },
+        { p: "Como as fases são identificadas?", r: "Pelo perfil da temperatura média: cada queda brusca (água nova) abre uma etapa. Só a fase de desinfecção (ou do banho) decide; as demais têm horário estimado." }
       ],
       secoesManual: [
         { titulo: "Termos usados nesta tela", paragrafos: [
-          "A0: quantidade de desinfecção térmica entregue, em segundos equivalentes a 80 °C. Cada leitura soma uma parcela; quanto mais quente, maior a parcela.",
-          "Mínimo de A0 (ABNT NBR ISO 15883-1, Anexo B): 600 s para artigo semicrítico ou não crítico; 3.000 s para artigo crítico.",
-          "Cavitação: formação de microbolhas pelo ultrassom, que fazem a limpeza na lavadora ultrassônica.",
-          "Memória de cálculo do A0: anexo com o resumo por sensor e a conta leitura a leitura do pior sensor."
+          "A0: quantidade de desinfecção térmica entregue, em segundos equivalentes a 80 °C, somada pela regra dos trapézios com o intervalo real entre leituras, só a partir de 65 °C.",
+          "Mínimo de A0: 600 s para artigo semicrítico ou não crítico; 3.000 s para artigo crítico (decisão de 17/10/2026, com base no conceito de A0 da ABNT NBR ISO 15883-1; valores para o responsável técnico confirmar).",
+          "Critério decisivo: aprova ou reprova. Critério informativo: é medido e registrado, sem decidir.",
+          "Patamar do banho (ultrassônica): trecho com todos os sensores na temperatura programada, dentro de ±3 °C."
+        ] },
+        { titulo: "Documentos", paragrafos: [
+          "Planilha de dados (A4 paisagem), relatório de ensaio de ciclo (A4 retrato) e relatório de qualificação do equipamento (aba \"Relatório oficial\"). Todos ficam na pasta do equipamento, dentro da pasta do cliente, com revisões. Os modelos antigos foram guardados e estão desligados; documentos antigos continuam abrindo."
         ] }
       ]
     },
