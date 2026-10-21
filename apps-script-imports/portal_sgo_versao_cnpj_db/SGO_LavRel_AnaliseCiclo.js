@@ -667,6 +667,15 @@ function LavRel_avaliarQualidadeDados_(linhas, analise, idxAtivos, dtMin) {
       trava('LEITURA_IMPOSSIVEL', 'O sensor ' + nome + ' registrou ' + qs.foraFaixa.length + ' leitura(s) fora da faixa possível do processo; a primeira, ' + num(p.t, 2) + ' °C às ' + LavRel_horaLinhaAnalise_(linhas[p.i]) + '.',
         'Leitura fora de ' + num(faixa[0], 0) + ' °C a ' + num(faixa[1], 0) + ' °C indica sensor desconectado, danificado ou arquivo exportado com erro; usar esses valores falsearia o resultado.', comoSensor);
     }
+    // Sensor parado: a variação dos outros sensores é conferida no miolo do trecho (sem as 2 leituras de cada ponta).
+    // Num patamar de água estável, o sensor que demora alguns segundos a mais para acompanhar a queda seguinte
+    // (água nova) não pode virar "sensor parado" só porque os outros caíram na última leitura do trecho.
+    const varMin = Number(q.paradoVariacaoProcessoC) > 0 ? Number(q.paradoVariacaoProcessoC) : 5;
+    qs.parado = qs.parado.filter(function(p) {
+      let mn = Infinity, mx = -Infinity;
+      for (let k = p.i0 + 2; k <= p.i1 - 2; k++) { const r = media[k] && media[k].t; if (r === null || r === undefined || !isFinite(r)) continue; mn = Math.min(mn, r); mx = Math.max(mx, r); }
+      return isFinite(mn) && mx - mn >= varMin;
+    });
     if (qs.parado.length) {
       const p = qs.parado[0];
       trava('SENSOR_PARADO', 'O sensor ' + nome + ' ficou com o mesmo valor (' + num(p.t, 2) + ' °C) em ' + (p.i1 - p.i0 + 1) + ' leituras seguidas, de ' + LavRel_horaLinhaAnalise_(linhas[p.i0]) + ' a ' + LavRel_horaLinhaAnalise_(linhas[p.i1]) + ', enquanto os outros sensores variaram.',

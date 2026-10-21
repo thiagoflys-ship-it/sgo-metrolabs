@@ -140,6 +140,8 @@ test('travas: leitura impossível, sensor parado, pico na fase, poucas leituras,
   const rampa = (s, i) => (s === 2 ? 22 : 30 + i * 4);
   a = analisar(env, { textoColado: L.csvBlocos([[15, rampa], [40, (s) => (s === 2 ? 22 : 90.5)], [10, 50]], 10, 3) });
   assert.ok(travas(a).includes('SENSOR_PARADO'));
+  // Patamar estável com sensores alguns segundos atrasados na queda seguinte não é sensor parado (achado do ensaio local).
+  igual(travas(analisar(env, { textoColado: L.csvCompleto(L.cicloTermo({ nSensores: 3, atraso: [0, 10, 20] })) })), []);
   a = analisar(env, { textoColado: L.csvBlocos([[20, 50], [10, 90.5], [1, (s) => (s === 0 ? 105 : 90.5)], [20, 90.5], [10, 50]], 10, 3) });
   assert.ok(travas(a).includes('PICO_NA_FASE'));
   a = analisar(env, { textoColado: L.csvBlocos([[5, 50], [4, 90.5], [3, 50]], 60, 3) });
