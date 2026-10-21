@@ -242,6 +242,7 @@ const LavRel_UCFG = Object.freeze({
     faixaFisicaC: Object.freeze([-5, 150]),
     paradoMinLeituras: 10,
     paradoVariacaoProcessoC: 5,
+    paradoFolgaSeg: 60,   // sensor que acompanha a queda seguinte com até 60 s de atraso não é "parado"
     picoMinC: 10,
     minLeiturasPatamar: 5,
     maxLeiturasFaltandoPatamar: 0,

@@ -281,7 +281,7 @@ function LavRel_lvSoHora_(tempoStr) {
 function LavRel_lvTextoTipoEnsaio_(v) {
   const mapa = {
     'QD (Carga)': 'Qualificação de desempenho (com carga)',
-    'QO (Vazio)': 'Qualificação operacional (câmara vazia)',
+    'QO (Vazio)': 'Qualificação operacional (sem carga)',
     'Validação Limpeza': 'Validação de limpeza',
     'Teste Cavitacao': 'Teste de cavitação',
     'Monitoramento de Rotina': 'Monitoramento de rotina'
