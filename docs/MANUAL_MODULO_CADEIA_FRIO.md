@@ -1,5 +1,19 @@
 # Manual do Operador — Módulo Cadeia de Frio
 
+## O que mudou em 21/10/2026 (revisão completa no molde da autoclave)
+
+- **O ensaio começa pelo cadastro.** A seção 1 virou "Cliente e equipamento": busque o cliente, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, número de série e local vêm do cadastro e ficam travados; marca e modelo não entram mais nos documentos. Equipamento de outro cliente é recusado.
+- **Documentos novos, todos em A4, salvos na pasta do equipamento** (Cadeia de Frio - Laudos / CNPJ do cliente / TAG - tipo / Qualificação):
+  - **Relatório de ensaio** (seção 6, retrato): resultado de cada estudo, critérios com a fonte, gráficos, análise e conclusões.
+  - **Planilha de dados** (seção 5, A4 deitado): quadro-resumo dos critérios, estatísticas, gráficos, memória de cálculo e as leituras do registrador folha a folha.
+  - **Relatório de qualificação do equipamento** (seção 8): consolida os relatórios de ensaio emitidos e a lista de verificação da instalação; a validade aparece na ficha do equipamento, no QR code e nas pendências de requalificação.
+- **Aprovação do responsável técnico.** Quem não é responsável técnico envia para aprovação (seção 7). O responsável técnico confere a prévia e emite, ou devolve com o motivo. Emitir de novo o mesmo número gera a revisão seguinte; a anterior fica guardada.
+- **Dados com problema não viram documento.** O rascunho mostra a lista do que corrigir: leitura impossível, sensor parado, pico isolado, leitura faltando, lacuna, registrador sem cadastro ou vencido, evento (porta ou energia) começando com sensor fora da faixa, horário do evento ou do fim da rampa fora dos dados, sensor desmarcado sem justificativa, umidade ou estudo não feito sem justificativa.
+- **Desvio do método.** Duração menor que 24 h, intervalo de leitura maior que 60 s (distribuição) ou 10 s (porta e energia), menos de 5 min de monitoramento depois do evento e menos sensores que o mínimo aparecem como "Desvio do método" no documento. Não mudam o resultado.
+- **Não existe mais "aprovado com observação" na tela.** Saída da faixa dentro da tolerância continua aprovada e aparece em Observações. Estudo sem critério (porta ou energia sem tempo-alvo, autonomia sem mínimo) é informativo e não aprova nem reprova os outros.
+- **Norma na edição certa:** ABNT NBR 16328:2024 (3ª edição), Anexo G. A temperatura cinética média (MKT) aparece como informação, sem critério.
+- **Novos campos:** "Autonomia mínima exigida" (caixa térmica), "Grandezas e estudos não realizados" (umidade, abertura de porta e queda de energia, com o motivo), "Justificativa dos sensores desconsiderados" e a "Identificação do registrador" agora fica na seção 4.
+
 ## O que mudou em 18/10/2026
 
 - O certificado em A4 ganhou um sumário na primeira página, com o número da página de cada seção. As seções e subseções são numeradas (por exemplo, "5.1 Critérios de aceitação" e "7.2 Observações").
@@ -18,7 +32,7 @@
 - No celular, a tela abre com uma apresentação curta: toque em "Abrir a tela completa".
 
 
-### Qualificação térmica de Refrigerador, Câmara de Conservação, Câmara Fria, Freezer, Ultrafreezer e Caixa Térmica — ABNT NBR 16328:2023/2024, Anexo G
+### Qualificação térmica de Refrigerador, Câmara de Conservação, Câmara Fria, Freezer, Ultrafreezer e Caixa Térmica — ABNT NBR 16328:2024, Anexo G
 
 ---
 
@@ -87,17 +101,17 @@ Existe ainda um **Console Operacional** no fim da tela — um "diário de bordo"
 
 ---
 
-## 4. Seção 1 — Cliente
+## 4. Seção 1 — Cliente e equipamento
 
-| Campo | O que é | Para que serve | O que fazer |
-|---|---|---|---|
-| **CNPJ** | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço do cliente | Digite o CNPJ e clique em "Buscar CNPJ" — o sistema consulta uma base pública e preenche os dois campos abaixo sozinho |
-| **Buscar CNPJ** (botão) | Dispara a busca automática | Evita digitar nome/endereço manualmente | Clique depois de digitar o CNPJ |
-| **Cliente / Razão Social** | Nome oficial da empresa | Aparece na capa do laudo | Confira se veio certo depois da busca automática; se a busca falhar, digite manualmente |
-| **Endereço** | Endereço da empresa | Aparece na capa do laudo | Mesma lógica do campo acima |
-| **Responsável técnico (assinatura do laudo)** | Seu nome, ou o nome de quem está assinando tecnicamente o laudo | É o nome que aparece como responsável pelo documento | Digite o nome completo da pessoa que vai assinar |
+| Campo | O que é | O que fazer |
+|---|---|---|
+| **Buscar cliente** | Busca no cadastro de clientes do SGO+, pelo nome ou pelo CNPJ | Digite ao menos 2 letras do nome ou 3 números do CNPJ e toque em "Buscar cliente" |
+| **Cliente, Unidade, Equipamento** | As três listas do cadastro | Escolha o cliente, depois a unidade e depois o equipamento ensaiado |
+| **Cadastrar cliente / unidade / equipamento** | Atalhos que abrem o cadastro em outra aba | Use se algo não aparecer; depois de salvar, volte e toque em "Atualizar listas" (o que já foi preenchido continua) |
+| **Cliente, CNPJ e Endereço (do cadastro)** | Vêm do cadastro e ficam travados | Só confira. Se estiver errado, corrija no cadastro |
+| **Técnico executor do ensaio** | Quem executou o ensaio | Digite o nome completo; ele aparece como "Executado por" nos documentos |
 
-**O que acontece se eu deixar em branco?** O laudo é gerado do mesmo jeito, mas fica com campos vazios na capa — o que passa uma imagem pouco profissional para o cliente. Preencha sempre antes de gerar o relatório final.
+**O que acontece se eu não escolher o equipamento?** Nenhum documento é gerado: a tela pede para escolher o cliente, a unidade e o equipamento. Equipamento cadastrado em outro cliente ou em outra unidade é recusado.
 
 ---
 
@@ -106,11 +120,7 @@ Existe ainda um **Console Operacional** no fim da tela — um "diário de bordo"
 | Campo | O que é | Para que serve | O que fazer |
 |---|---|---|---|
 | **Perfil do equipamento** | O tipo de equipamento (ver seção 2 deste manual) | Define toda a lógica da tela: faixa sugerida, se a faixa é editável, quais estudos aparecem | Escolha o tipo certo **antes** de preencher qualquer outra coisa — trocar depois reseta os estudos habilitados |
-| **TAG / Identificação** | Código interno do equipamento no cliente (etiqueta, patrimônio) | Identifica qual equipamento específico foi testado, entre vários do mesmo cliente | Copie do equipamento físico ou peça ao cliente |
-| **Marca** | Fabricante do equipamento | Informação de identificação no laudo | Digite o nome do fabricante |
-| **Modelo** | Modelo do equipamento | Informação de identificação no laudo | Digite o modelo |
-| **Número de série** | Número de série de fábrica | Informação de identificação no laudo | Digite o número de série |
-| **Localização** | Onde o equipamento fica fisicamente (sala, setor) | Ajuda a rastrear o equipamento no cliente | Digite o local |
+| **TAG, Número de série, Unidade e setor (do cadastro)** | Identificação do equipamento escolhido na seção 1 | Identificam o equipamento nos documentos | Só confira; ficam travados. Marca e modelo não aparecem nos documentos |
 | **Volume interno declarado (L)** | Volume em litros da câmara interna | Sugere automaticamente um número de sensores (ver seção 7) | Preencha se souber — não é obrigatório |
 | **Equipamento conjugado** (caixa de marcar) | Se o equipamento é dois aparelhos numa peça só (ex.: geladeira com freezer embutido) | Também influencia a sugestão automática de sensores (ver seção 7) | Marque só se o equipamento físico realmente tiver duas partes distintas conjugadas |
 
@@ -228,63 +238,75 @@ Aqui você diz ao sistema **de onde** vêm os dados de temperatura.
 
 ---
 
-## 9. Seção 5 — Gerar Relatório
+## 9. Seção 5 — Planilha de dados (A4 deitado)
 
-| Elemento | O que é | O que fazer |
+Documento com as leituras do registrador, as estatísticas de cada estudo, os gráficos, a memória de cálculo e o quadro-resumo dos critérios (valor medido × critério × fonte × situação). Usa o **mesmo número** do relatório de ensaio (seção 6).
+
+1. Preencha o "Número do relatório" na seção 6.
+2. Responsável técnico: marque "Conferi os dados do ensaio e aprovo a emissão da planilha de dados" e toque em "Gerar planilha de dados". O documento abre em outra aba e fica salvo na pasta do equipamento.
+3. Técnico: toque em "Gerar planilha de dados". Ela vai para a aprovação do responsável técnico e a minuta abre em outra aba para conferência.
+
+Quando há mais de 2.000 leituras num estudo, as tabelas mostram uma leitura a cada intervalo da norma (60 s ou 10 s) e todas as linhas com evento marcado; os cálculos usam todas as leituras.
+
+### Resultado de cada estudo
+
+| Situação | O que significa | O que fazer |
 |---|---|---|
-| **Gerar Relatório** (botão) | Processa tudo que você preencheu e produz o laudo final | Clique só depois de conferir tudo (recomendado: rodar "Pré-visualizar dados" antes) |
-| **Limpar Log** (botão) | Apaga o histórico do Console Operacional (seção 12) | Use se a tela de log estiver muito cheia e você quiser começar do zero visualmente — não afeta os dados já preenchidos |
+| **APROVADO** | O estudo atendeu ao critério: leituras na faixa (ou na tolerância declarada, com a saída registrada em Observações), ou aguentou o tempo-alvo | Pode seguir para a emissão |
+| **REPROVADO** | Saiu da faixa além da tolerância, ou antes do tempo-alvo (porta, energia) ou da autonomia mínima | Não invente uma solução sozinho: avise o responsável técnico. O motivo aparece em "Não conformidades" |
+| **INFORMATIVO** | O estudo não tem critério (porta ou energia sem tempo-alvo, autonomia sem mínimo): só registra os tempos | Normal; não aprova nem reprova os outros estudos |
+| **Desvio do método** | O ensaio não seguiu a forma do Anexo G (duração, intervalo de leitura, quantidade de sensores, monitoramento depois do evento) | Fica registrado no documento e não muda o resultado |
 
-### O que aparece depois de clicar em "Gerar Relatório"
-
-O sistema mostra um "selo" colorido com o status geral do laudo, e um selo separado para cada estudo incluído. Veja o que cada status significa:
-
-| Status | O que significa | O que fazer |
-|---|---|---|
-| **APROVADO** | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente |
-| **APROVADO (COM OBSERVAÇÃO)** | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha |
-| **REPROVADO** | O equipamento saiu da faixa aceitável em algum momento, além da tolerância (na Distribuição), ou rompeu antes do tempo-alvo definido (na Abertura de Porta/Queda de Energia) | **Não invente uma solução sozinho** — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 12) |
-| **INFORMATIVO** ou **CARACTERIZAÇÃO** | O estudo não teve critério de aprovação/reprovação definido (Abertura de Porta/Queda de Energia sem "Tempo-alvo mínimo" preenchido, ou o estudo de Autonomia, que nunca tem veredito) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado |
-
-Depois do selo de status, aparecem dois botões:
-
-- **Abrir planilha** — abre o relatório completo (com tabelas e gráfico) direto no navegador.
-
-> Atualização de 18/10/2026: não existe "aprovado com alerta". A excursão dentro da tolerância declarada aprova o estudo e vai para Observações (no certificado sai "Aprovado"; na planilha e no selo da tela, "APROVADO (COM OBSERVAÇÃO)", em verde). O PDF da planilha (relatório de dados) também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome "Relatório de dados ... - <TAG> - <aaaa-MM-dd HHmm>.pdf"; a frase logo abaixo dos botões confirma o arquivo ou diz por que não salvou.
-- **Baixar PDF** — baixa o mesmo relatório já convertido em PDF, pronto para enviar ao cliente.
-
-**Se o laudo tiver mais de um estudo marcado (ex.: Distribuição + Abertura de Porta + Queda de Energia), o status geral no topo é o pior status entre todos os estudos** — ou seja, se um estudo reprovar, o laudo inteiro aparece como Reprovado no selo geral, mesmo que os outros estudos tenham aprovado.
+O resultado do ensaio é REPROVADO se algum estudo reprovou; APROVADO se os estudos com critério foram aprovados; INFORMATIVO se nenhum estudo tem critério.
 
 ---
 
-## 10. Seção 6 — Certificado de Qualificação Térmica (Beta)
+## 10. Seção 6 — Relatório de ensaio
 
-Este é um **segundo documento**, opcional, diferente da planilha da seção 5. Ele não substitui a planilha — é complementar. É um PDF em formato de página A4, com texto corrido explicando o ensaio (não uma tabela de dados). Os textos (Introdução, Objetivo, Análise por estudo, Conclusão) são **escritos por Inteligência Artificial**, a partir dos números que o sistema já calculou.
+Documento A4 (retrato) com a identificação do cadastro, o registrador e a calibração, a metodologia, os critérios com a fonte, os resultados de cada estudo (tabelas por sensor e gráficos), as não conformidades, os desvios do método, a conclusão técnica e a conclusão em linguagem simples.
 
-| Campo | O que é | Para que serve |
-|---|---|---|
-| **Número do Certificado** | Código do documento (ex.: `02062026/01RJ`) | Numeração/controle interno |
-| **Revisão** | Número da versão do certificado (0, 1, 2...) | Controle de revisões, caso o certificado precise ser reemitido |
-| **DTL (identificação do data logger)** | Código do equipamento gravador usado | Rastreabilidade do instrumento de medição |
-| **Responsável pelo aceite (cliente)** | Nome de quem, do lado do cliente, está aceitando o certificado | Aparece no documento como aceite formal |
-| **Tarefa de origem** (opcional) | Código de uma ordem de serviço/tarefa relacionada, se houver | Rastreabilidade interna |
-| **Registros fotográficos** (até 4, opcional) | Fotos do equipamento/ensaio, cada uma com uma legenda | Ilustra o certificado com evidência visual |
+| Campo | O que é |
+|---|---|
+| **Número do relatório** | Código do documento. Emitir de novo o mesmo número gera a revisão seguinte |
+| **Revisão** | Começa em 0; as próximas são atribuídas sozinhas |
+| **Responsável pelo aceite (cliente)** | Nome de quem, do lado do cliente, acompanha |
+| **Tarefa de origem** (opcional) | Código de ordem de serviço relacionada |
+| **Registros fotográficos** (até 4) | Fotos com legenda, no anexo do documento |
+| **Redigir a análise com a ajuda da IA** | O texto é conferido automaticamente (números, normas, resultado); se não passar, vale o texto padrão montado só com os resultados |
 
 ### Como gerar
 
-1. Clique em **"Gerar Rascunho com IA"** — o sistema roda a mesma análise da seção 5 e pede para a IA escrever os textos.
-2. **Revise os textos** que aparecem (Introdução, Objetivo, Análise por estudo, Conclusão Geral) — **eles vão direto para o documento final exatamente como estiverem na tela**, então corrija qualquer coisa que pareça errada antes de continuar.
-3. Clique em **"Confirmar e Gerar Certificado"** — o documento abre em uma nova aba, pronto para imprimir (Ctrl+P) ou salvar como PDF.
+1. Toque em **"Gerar rascunho"**. Se aparecer "O documento não pode ser emitido", corrija cada item da lista (ela diz o que aconteceu, por quê e como corrigir) e gere de novo.
+2. **Revise** a análise de cada estudo, a conclusão técnica e a conclusão em linguagem simples. Texto com resultado diferente do calculado, número que não está nos resultados ou "aprovado com ressalvas" é recusado.
+3. Técnico: **"Enviar para aprovação"** (a minuta abre em outra aba). Responsável técnico: marque a confirmação e toque em **"Emitir relatório"**.
+4. Depois de emitido: "Abrir o PDF", "Abrir para imprimir (HTML)", "Abrir a pasta" e **"Enviar ao cliente"**.
 
-**Atenção:** como o texto é gerado por IA, **sempre leia antes de confirmar**. A IA escreve com base nos números certos, mas o texto em si precisa da sua revisão antes de virar um documento oficial.
-
-**Quais normas o certificado/relatório citam?** Sempre a ABNT NBR 16328 (Anexo G) e a RDC nº 430/2020 da Anvisa (Boas Práticas de Distribuição, Armazenagem e Transporte de Medicamentos). Para o perfil **Câmara de Conservação (Vacinas)** especificamente, o sistema também cita o Manual de Rede de Frio do Programa Nacional de Imunizações (PNI/Ministério da Saúde) — a referência técnica específica para conservação de imunobiológicos.
+**Quais normas os documentos citam?** A ABNT NBR 16328:2024 (Anexo G) e a RDC nº 430/2020 da Anvisa. Para a **Câmara de Conservação (imunobiológicos)**, também o Manual de Rede de Frio do Programa Nacional de Imunizações. A caixa térmica (autonomia) cita só a RDC nº 430/2020, porque não faz parte do Anexo G.
 
 ---
 
-## 11. Sobre o número de sensores — por que este módulo não tem "Modo Personalizado"
+## 10A. Seção 7 — Aguardando aprovação
 
-Se você já usa outro módulo Metrolabs (como Estufa+Banho-maria), talvez espere encontrar aqui um "Modo Personalizado" protegido por senha, que libera usar menos sensores que o mínimo. **Este módulo não tem esse recurso — e a razão é simples: aqui não existe nenhuma trava para liberar.** Como já explicado na seção 7, o número de sensores é só uma sugestão automática que você pode sobrescrever livremente, a qualquer momento, sem senha nenhuma. A responsabilidade de conferir se o número usado está de acordo com o protocolo do cliente é sempre sua.
+Lista dos relatórios de ensaio e das planilhas de dados enviados. O responsável técnico toca em "Prévia" para conferir a minuta e depois em "Aprovar e emitir" ou em "Devolver" (com o motivo, ao menos 10 caracteres). O técnico vê os próprios envios e as devoluções com o motivo. Se os dados mudarem depois do envio (por exemplo, o cadastro do registrador), a emissão é barrada e o envio precisa ser refeito.
+
+---
+
+## 10B. Seção 8 — Relatório de qualificação do equipamento
+
+É o documento de qualificação do equipamento (o que o cliente guarda no prontuário), feito a partir dos relatórios de ensaio já emitidos.
+
+1. Toque em "Carregar o equipamento escolhido" (o da seção 1). Aparecem a situação da qualificação, os relatórios de qualificação já emitidos e os relatórios de ensaio do equipamento.
+2. Marque as etapas: **Instalação (QI)**, **Operação (QO)** — distribuição em vazio, abertura de porta, queda de energia, autonomia — e **Desempenho (QD)** — distribuição com carga.
+3. Escolha o motivo e a periodicidade da requalificação (padrão de 12 meses), marque os relatórios de ensaio que entram e responda a lista da instalação (Conforme, Não conforme com a descrição, ou Não aplicável).
+4. Toque em "Gerar rascunho", revise a conclusão e toque em "Enviar para aprovação". O responsável técnico aprova na mesma lista.
+5. Emitido, o documento vai para a pasta do equipamento e para o Arquivo de documentos com o vencimento: a ficha do equipamento (aba Qualificações), o QR code e as pendências de requalificação passam a mostrar a situação. Uma não conformidade (estudo reprovado ou item da instalação não conforme) reprova a qualificação.
+6. "Nova revisão" carrega um relatório emitido para revisar (o motivo da revisão é obrigatório); "Corrigir" carrega um envio devolvido.
+
+---
+
+## 11. Sobre o número de sensores
+
+O sistema sugere 12 sensores (3 em equipamento com menos de 60 L, 12 no equipamento conjugado). Você pode digitar outro número. Abaixo do mínimo, o documento registra "Desvio do método", sem reprovar. Se um sensor falhou, desmarque-o e escreva o motivo em "Justificativa dos sensores desconsiderados": sem o motivo, o documento não é emitido.
 
 ---
 
@@ -302,18 +324,17 @@ Se você já usa outro módulo Metrolabs (como Estufa+Banho-maria), talvez esper
 
 ---
 
-## 13. Passo a passo — gerando um laudo do zero
+## 13. Passo a passo — do ensaio ao relatório de qualificação
 
-Um roteiro prático, resumindo tudo o que este manual explica, para você seguir na primeira vez.
-
-1. Abra o sistema. Espere o selo "SISTEMA ONLINE" aparecer no topo.
-2. **Seção 1 (Cliente):** digite o CNPJ, clique em "Buscar CNPJ", confira nome/endereço, preencha o responsável técnico.
-3. **Seção 2 (Equipamento):** escolha o perfil correto (um dos nove da tabela da seção 2 deste manual). Preencha TAG, marca, modelo, número de série, localização, volume e se é conjugado. Confira a faixa de temperatura sugerida e ajuste se o perfil permitir e o protocolo do cliente pedir outro valor.
-4. **Seção 3 (Estudos):** marque os estudos que você realmente fez (o sistema já mostra só as opções válidas para o perfil escolhido). Preencha os horários de início/fim de cada um. Confira o número de sensores sugerido e ajuste se necessário.
-5. **Seção 4 (Importação):** escolha o modo de entrada certo e informe o arquivo/dados. Clique em "Pré-visualizar dados" e confira se o número de linhas e sensores detectados bate com o que você espera.
-6. **Seção 5:** clique em "Gerar Relatório". Confira o selo de status geral e o de cada estudo. Se algo reprovou, olhe o Console Operacional para entender o motivo exato.
-7. Clique em "Abrir planilha" para conferir visualmente o relatório completo (tabela, gráfico), ou "Baixar PDF" para já baixar o documento final.
-8. **(Opcional) Seção 6:** se o cliente pediu também o Certificado, preencha os campos daquela seção, clique em "Gerar Rascunho com IA", **leia com atenção** os textos gerados, corrija o que precisar, e clique em "Confirmar e Gerar Certificado".
+1. **Seção 1:** busque o cliente, escolha a unidade e o equipamento; preencha o técnico executor.
+2. **Seção 2:** escolha o perfil, informe o volume e confira a faixa e a tolerância.
+3. **Seção 3:** marque os estudos feitos com os horários; informe o tempo-alvo (porta, energia) ou a autonomia mínima (caixa térmica); responda "Grandezas e estudos não realizados"; confira os sensores.
+4. **Seção 4:** informe a identificação do registrador, envie o arquivo e toque em "Pré-visualizar dados".
+5. **Seção 6:** número do relatório, fotos, "Gerar rascunho"; corrija o que a lista pedir; revise os textos; envie para aprovação (técnico) ou emita (responsável técnico).
+6. **Seção 5:** gere a planilha de dados com o mesmo número.
+7. **Seção 7:** o responsável técnico aprova ou devolve.
+8. **Seção 8:** com os relatórios de ensaio emitidos, gere o relatório de qualificação do equipamento e envie para aprovação.
+9. Use "Enviar ao cliente" para mandar os PDFs.
 
 ---
 
@@ -325,7 +346,11 @@ Um roteiro prático, resumindo tudo o que este manual explica, para você seguir
 | Um estudo aparece como "Reprovado" mas você achava que devia estar "Aprovado" | Alguma leitura de temperatura saiu da faixa/tolerância configurada, ou o equipamento rompeu antes do tempo-alvo (Abertura de Porta/Queda de Energia) | Olhe o Console Operacional — o motivo exato da reprovação sempre aparece ali |
 | Os campos de Faixa mínima/máxima estão cinza e não deixam digitar | O perfil escolhido (Câmara de Vacina, Refrigerador Comum ou Caixa Térmica) tem faixa regulatória fixa, travada de propósito | Comportamento esperado — se realmente precisar de outra faixa, confirme se o perfil escolhido é o certo |
 | Bloco de estudo (ex.: Abertura de Porta) não aparece na tela | O perfil escolhido não usa esse estudo, segundo a norma (ex.: Caixa Térmica só tem Autonomia) | Confira a tabela da seção 6 deste manual — não é erro, é intencional |
-| Preenchi menos sensores que o sugerido e o sistema deixou gerar mesmo assim | Comportamento esperado — este módulo não bloqueia por número de sensores (ver seção 11) | Confira se o número usado está de acordo com o protocolo antes de entregar o laudo |
+| Preenchi menos sensores que o sugerido e o sistema deixou gerar mesmo assim | Comportamento esperado — o número de sensores não bloqueia; vira "Desvio do método" no documento (ver seção 11) | Confira se o número usado está de acordo com o protocolo antes de entregar |
+| "Escolha o cliente, a unidade e o equipamento" | O documento só sai com o equipamento do cadastro | Escolha no quadro da seção 1 |
+| "O registrador ... não está no cadastro de padrões" ou "estava vencido" | Identificação digitada diferente do cadastro, ou certificado vencido na data do ensaio | Corrija a identificação ou o cadastro de padrões; vencido exige repetir o ensaio |
+| "No início do evento havia sensor fora da faixa" | O estudo de porta ou energia começou antes de o equipamento voltar à faixa | Marque o início depois que todos os sensores voltaram à faixa, ou repita o estudo |
+| "Os dados mudaram desde o rascunho" | Algo mudou na tela ou no cadastro depois do rascunho | Toque em "Gerar rascunho" de novo |
 
 ---
 
@@ -342,11 +367,14 @@ Um roteiro prático, resumindo tudo o que este manual explica, para você seguir
 | **Autonomia** | O tempo que um equipamento sem energia (como uma caixa térmica) consegue manter a temperatura dentro da faixa aceitável, contando só com isolamento/carga fria |
 | **Câmara de Conservação** | Nome técnico do refrigerador usado especificamente para guardar vacinas/imunobiológicos, com faixa regulatória fixa de 2 °C a 8 °C |
 | **RDC nº 430/2020** | Norma da Anvisa sobre Boas Práticas de Distribuição, Armazenagem e Transporte de Medicamentos — é o motivo regulatório pelo qual a qualificação térmica de cadeia de frio é exigida |
+| **Desvio do método** | O ensaio não seguiu a forma do Anexo G (duração, intervalo de leitura, quantidade de sensores, monitoramento depois do evento). Fica registrado e não muda o resultado |
+| **MKT (temperatura cinética média)** | Temperatura constante que teria o mesmo efeito acumulado sobre um produto que as temperaturas registradas. Informativa |
+| **Responsável técnico** | Perfil que confere e aprova a emissão dos documentos (Administrador, Diretoria, Gestor, Metrologia) |
 | **PNI** | Programa Nacional de Imunizações (Ministério da Saúde) — dono do "Manual de Rede de Frio", referência específica para conservação de vacinas |
 
 ---
 
-*Este manual descreve o módulo Cadeia de Frio tal como implementado em 2026-07-22. Se a tela mudar no futuro (novos campos, novos perfis), este documento precisa ser atualizado junto — ele não se atualiza sozinho.*
+*Este manual descreve o módulo Cadeia de Frio tal como implementado em 21/10/2026. Se a tela mudar no futuro (novos campos, novos perfis), este documento precisa ser atualizado junto — ele não se atualiza sozinho.*
 
 ## Enviar o documento ao cliente (20/10/2026)
 
