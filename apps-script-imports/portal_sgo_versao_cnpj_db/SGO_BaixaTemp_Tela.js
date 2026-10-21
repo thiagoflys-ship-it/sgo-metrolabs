@@ -250,6 +250,7 @@ function BaixaTempTela_cliente_() {
     h += '<div class="bt-grade" style="margin-top:10px"><div class="bt-campo largo"><span>Cliente</span><div>' + esc(id.cliente || 'Nenhum cliente escolhido') + (id.cnpj ? ' — CNPJ ' + esc(id.cnpj) : '') + '</div></div>';
     h += '<label class="bt-campo"><span>Unidade</span><select id="btSelUnidade"' + dis() + '><option value="">' + (id.clienteId ? 'Escolha a unidade' : 'Escolha o cliente primeiro') + '</option>' + BT.unidades.map(function (u) { return '<option value="' + esc(u.id) + '"' + (u.id === id.unidadeId ? ' selected' : '') + '>' + esc(u.nome) + '</option>'; }).join('') + (id.unidadeId && !BT.unidades.length ? '<option value="' + esc(id.unidadeId) + '" selected>' + esc(id.unidade || id.unidadeId) + '</option>' : '') + '</select></label>';
     h += '<label class="bt-campo"><span>Equipamento (TAG — tipo — nº de série)</span><select id="btSelEquip"' + dis() + '><option value="">' + (id.unidadeId ? 'Escolha o esterilizador' : 'Escolha a unidade primeiro') + '</option>' + BT.equipamentos.map(function (q) { return '<option value="' + esc(q.id) + '"' + (q.id === id.equipamentoId ? ' selected' : '') + '>' + esc([q.tag || 'sem TAG', q.tipo, q.serie].filter(Boolean).join(' — ')) + '</option>'; }).join('') + (id.equipamentoId && !BT.equipamentos.length ? '<option value="' + esc(id.equipamentoId) + '" selected>' + esc([id.tag, id.tipoEquipamento, id.numeroSerie].filter(Boolean).join(' — ') || id.equipamentoId) + '</option>' : '') + '</select></label></div>';
+    h += faltaCadastroHtml(id);
     h += '<p class="bt-nota">O cliente, a unidade e o equipamento vêm do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente. Se algo não aparecer, cadastre pelos botões abaixo (abrem o cadastro em outra aba; este ensaio continua aqui) e depois toque em "Buscar cliente" de novo. O relatório não cita fabricante nem modelo.</p>' +
       (editavel() ? '<div class="bt-barra"><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="clientes">Cadastrar cliente</button><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="unidades">Cadastrar unidade</button><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="equipamentos">Cadastrar equipamento</button></div>' : '') + '</div>';
     h += '<div class="bt-painel"><h3>Ensaio</h3><div class="bt-grade">' + campo('Data de início (dd/mm/aaaa)', 'identificacao.dataInicio', { ph: 'dd/mm/aaaa' }) + campo('Data de término (dd/mm/aaaa)', 'identificacao.dataFim', { ph: 'em branco se foi um dia só' }) +
@@ -501,6 +502,7 @@ function BaixaTempTela_cliente_() {
     if (acao === 'aba') { BT.aba = Number(b.getAttribute('data-aba')); desenharEditor(); if (BT.aba === 1 && BT.d.identificacao.clienteId && !BT.unidades.length) carregarUnidades(true); window.scrollTo(0, 0); return; }
     if (acao === 'salvar') return salvar();
     if (acao === 'buscarCliente') return buscarCliente();
+    if (acao === 'gravarCadastro') return gravarCadastro();
     if (acao === 'cadastro') { try { window.open(String(window.location.href || '').replace(/[?#].*$/, '') + '?tela=' + encodeURIComponent(b.getAttribute('data-tela')), '_blank'); } catch (eCad) {} return msg('info', 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e toque em "Buscar cliente" de novo: o ensaio continua como está.'); }
     if (acao === 'carregarPadroes') return api('apiListarPadroes', {}, function (r) { BT.padroes = r.items || []; msg('', BT.padroes.length ? '' : 'Nenhum padrão ativo no cadastro.'); redesenharAba(); });
     if (acao === 'addPadrao') return addPadrao();
@@ -568,6 +570,34 @@ function BaixaTempTela_cliente_() {
       redesenharAba();
     }, { paralelo: !!silencioso });
   }
+  // 21/10/2026: TAG, nº de série ou setor vazios no cadastro do equipamento: preencher ali mesmo (grava no cadastro, só o que está vazio).
+  function faltaCadastroHtml(id) {
+    if (!id.equipamentoId || !editavel()) return '';
+    var q = BT.equipamentos.filter(function (x) { return x.id === id.equipamentoId; })[0];
+    if (!q) return '';
+    var faltam = [['TAG', 'TAG', q.tag, 'Código da etiqueta (ex.: EBT-01)'], ['SERIE', 'Nº de série', q.serie, 'Como está na placa do equipamento'], ['SETOR', 'Setor', q.setor, 'Setor onde está instalado (ex.: CME)']]
+      .filter(function (f) { return !String(f[2] || '').trim(); });
+    if (!faltam.length) return '';
+    return '<div id="btFaltaCadastro" style="margin-top:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--bc-warn-line);background:var(--bc-warn-bg)">' +
+      '<b style="color:var(--bc-warn)">Falta no cadastro do equipamento: ' + esc(faltam.map(function (f) { return f[1]; }).join(', ')) + '.</b>' +
+      '<p class="bt-nota">O relatório usa esses dados. Preencha aqui e toque em "Gravar no cadastro": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar.</p>' +
+      '<div class="bt-grade">' + faltam.map(function (f) { return '<label class="bt-campo"><span>' + esc(f[1]) + '</span><input type="text" id="btFalta_' + f[0] + '" data-campo-cadastro="' + f[0] + '" maxlength="120" autocomplete="off" placeholder="' + esc(f[3]) + '"></label>'; }).join('') + '</div>' +
+      '<div class="bt-barra" style="margin-top:8px"><button type="button" class="btn-primary" data-acao="gravarCadastro">Gravar no cadastro</button></div></div>';
+  }
+
+  function gravarCadastro() {
+    var i = BT.d.identificacao, campos = {}, n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('#btFaltaCadastro [data-campo-cadastro]'), function (x) { var v = String(x.value || '').trim(); if (v) { campos[x.getAttribute('data-campo-cadastro')] = v; n++; } });
+    if (!n) { msg('aviso', 'Preencha ao menos um dos campos (pela placa ou pela etiqueta do equipamento) e toque em "Gravar no cadastro".'); return; }
+    api('apiPreencherCadastro', { clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId, campos: campos, origem: 'tela da esterilização a baixa temperatura' }, function (r) {
+      var d = r.identificacao || {};
+      BT.equipamentos.forEach(function (q) { if (q.id === i.equipamentoId) { q.tag = d.tag || q.tag; q.serie = d.numeroSerie || q.serie; q.setor = d.setor || q.setor; } });
+      i.tag = d.tag || i.tag; i.numeroSerie = d.numeroSerie || i.numeroSerie;
+      redesenharAba();
+      msg(r.gravados ? 'ok' : 'aviso', r.mensagem || 'Cadastro atualizado.');
+    }, { espera: 'Gravando no cadastro do equipamento…' });
+  }
+
   function escolherEquipamento(id) {
     var q = BT.equipamentos.filter(function (x) { return x.id === id; })[0];
     var i = BT.d.identificacao;

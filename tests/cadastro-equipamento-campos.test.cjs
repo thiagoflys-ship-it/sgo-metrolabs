@@ -183,3 +183,36 @@ test('documentos puxam TAG, série e setor do cadastro (relatório de qualifica�
     assert.match(ler(f), /apiPreencherCadastro: function \(p, s, id\) \{ return SGO_QEQ_apiPreencherCadastro\(p, s, id\); \}/, f);
   }
 });
+
+test('esterilização a baixa temperatura: falta no cadastro aparece na tela e o preencher grava só o vazio', () => {
+  const B = require('./_baixatemp_ambiente.cjs');
+  const bt = B.criarAmbiente({ extra: fs.readFileSync(path.join(B.BASE, 'SGO_QualifEquipamento.js'), 'utf8') });
+  bt.run('SGO_DATA.insert("CAD_EQUIPAMENTOS", { ID: "eqB", CLIENTE_ID: "cli1", UNIDADE_ID: "uni1", TIPO: "ESTERILIZADOR BAIXA TEMPERATURA", TAG: "EST-T02", SERIE: "", SETOR: "", STATUS: "ATIVO" });');
+  const D = p => JSON.parse(JSON.stringify(bt.ctx.BaixaTemp_apiDispatch(p)));
+  const r = D({ sessionId: 'tec', fn: 'apiPreencherCadastro', payload: { clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eqB', campos: { TAG: 'OUTRA', SERIE: 'sn-bt-2', SETOR: 'cme' } } });
+  assert.equal(r.ok, true);
+  assert.equal(r.gravados, 2);
+  const e = bt.ctx.SGO_DATA.getById('CAD_EQUIPAMENTOS', 'eqB');
+  assert.deepEqual([e.TAG, e.SERIE, e.SETOR], ['EST-T02', 'SN-BT-2', 'CME']);
+  assert.throws(() => bt.ctx.BaixaTemp_apiDispatch({ sessionId: 'com', fn: 'apiPreencherCadastro', payload: { clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eqB', campos: { PATRIMONIO: 'X' } } }), /não preenche|equipe técnica/);
+  const tela = ler('SGO_BaixaTemp_Tela.js');
+  assert.match(tela, /Falta no cadastro do equipamento: /);
+  assert.match(tela, /acao === 'gravarCadastro'/);
+  assert.match(ler('SGO_BaixaTemp_Documento.js'), /\['Patrimônio', id\.patrimonio\]/);
+});
+
+test('campos "do cadastro" nas seções do ensaio: somente leitura com explicação ao clicar e aviso da seção', () => {
+  const comp = ler('JS_QualifVinculo.html');
+  assert.match(comp, /Escolher o equipamento/);
+  assert.match(comp, /Preencher no cadastro/);
+  assert.match(comp, /Abrir o cadastro de equipamentos/);
+  assert.match(comp, /<b>Nenhum equipamento escolhido\.<\/b>/);
+  assert.match(comp, /x\.style\.cursor = "pointer"/, 'sem o cursor de bloqueio');
+  // Os campos que a tela procura existem nos quatro módulos (prefixo do quadro + nome do campo).
+  const vm2 = require('node:vm');
+  const html = f => { const c = {}; vm2.createContext(c); vm2.runInContext(ler(f), c); return Object.values(c).filter(v => typeof v === 'string').join('\n'); };
+  assert.match(html('SGO_CadeiaFrioRel_ConteudoModulo.js'), /tplCadeiaFrioRel_tagEquipamento/);
+  assert.match(html('SGO_EstufaBanhoRel_ConteudoModulo.js'), /tplEstufaBanhoRel_numeroSerie/);
+  assert.match(html('SGO_AutoRel_ConteudoModulo.js'), /prefixo: 'tplAutoRelV'[\s\S]*id="tplAutoRel_uiTag"|id="tplAutoRel_uiTag"[\s\S]*prefixo: 'tplAutoRelV'/);
+  assert.match(html('SGO_LavRel_ConteudoModulo.js'), /tplLavRel_uiNumSerie/);
+});

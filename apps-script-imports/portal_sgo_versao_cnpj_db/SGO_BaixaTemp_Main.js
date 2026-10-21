@@ -38,7 +38,9 @@ function BaixaTemp_apiDispatch(req) {
     apiListarEquipamentos: BaixaTemp_apiListarEquipamentos, apiListarPadroes: BaixaTemp_apiListarPadroes, apiUploadArquivo: BaixaTemp_apiUploadArquivo,
     apiLerArquivo: BaixaTemp_apiLerArquivo, apiCalcular: BaixaTemp_apiCalcular, apiRedigir: BaixaTemp_apiRedigir, apiSalvar: BaixaTemp_apiSalvar,
     apiListar: BaixaTemp_apiListar, apiObter: BaixaTemp_apiObter, apiPrevia: BaixaTemp_apiPrevia, apiEnviarRevisao: BaixaTemp_apiEnviarRevisao,
-    apiAprovar: BaixaTemp_apiAprovar, apiDevolver: BaixaTemp_apiDevolver, apiEmitir: BaixaTemp_apiEmitir, apiNovaRevisao: BaixaTemp_apiNovaRevisao
+    apiAprovar: BaixaTemp_apiAprovar, apiDevolver: BaixaTemp_apiDevolver, apiEmitir: BaixaTemp_apiEmitir, apiNovaRevisao: BaixaTemp_apiNovaRevisao,
+    // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio), pela tela do ensaio.
+    apiPreencherCadastro: function (sid, pp, s) { var r = SGO_QEQ_preencherCadastro_(sid, s, pp); return JSON.parse(JSON.stringify(r)); }
   };
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn]) throw new Error('Função não permitida ou não encontrada: ' + fn);
@@ -209,6 +211,9 @@ function BaixaTemp_identificacao_(sessionId, id) {
     var e = id.equipamentoId ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, id.equipamentoId) : null;
     if (c) { out.cliente = c.RAZAO_SOCIAL || c.NOME_FANTASIA || ''; out.cnpj = SGO_UTILS.formatCnpj ? SGO_UTILS.formatCnpj(c.CNPJ) : String(c.CNPJ || ''); out.endereco = (u && u.ENDERECO) || c.ENDERECO || ''; }
     if (u) out.unidade = u.NOME_UNIDADE || '';
+    // 21/10/2026: patrimônio e capacidade do cadastro, quando preenchidos.
+    if (e && e.PATRIMONIO) out.patrimonio = String(e.PATRIMONIO);
+    if (e && e.CAPACIDADE) out.capacidade = String(e.CAPACIDADE);
     if (e) { out.tag = e.TAG || ''; out.numeroSerie = e.SERIE || ''; out.setor = e.SETOR || ''; out.tipoEquipamento = e.TIPO ? String(e.TIPO).charAt(0) + String(e.TIPO).slice(1).toLowerCase() : 'Esterilizador'; nomes = [e.FABRICANTE, e.MODELO].filter(function (x) { return String(x || '').trim().length >= 3; }); }
   } catch (err) { /* sem cadastro: as travas do motor pedem a seleção */ }
   out._nomesProibidos = nomes;

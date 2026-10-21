@@ -134,10 +134,10 @@ function BaixaTempDoc_montar_(o) {
   h.push(h2('Identificação'));
   var pares = [
     ['Cliente', id.cliente], ['CNPJ', id.cnpj], ['Endereço', id.endereco, { largo: true }], ['Unidade', id.unidade], ['Setor', id.setor],
-    ['Equipamento', id.tipoEquipamento || 'Esterilizador'], ['TAG', id.tag], ['Nº de série', id.numeroSerie], ['Processo', tipo.rotuloLongo],
+    ['Equipamento', id.tipoEquipamento || 'Esterilizador'], ['TAG', id.tag], ['Nº de série', id.numeroSerie]].concat(id.patrimonio ? [['Patrimônio', id.patrimonio]] : []).concat(id.capacidade ? [['Capacidade ou volume', id.capacidade]] : []).concat([['Processo', tipo.rotuloLongo],
     ['Motivo da qualificação', id.motivo], ['Período do ensaio', periodo], ['Técnico executor', id.tecnicoExecutor], ['Acompanhado por (cliente)', id.responsavelCliente],
     ['Empresa executante', (o.empresa && o.empresa.nome ? o.empresa.nome : '') + (o.empresa && o.empresa.cnpj ? ' — CNPJ ' + o.empresa.cnpj : ''), { largo: true }]
-  ];
+  ]);
   h.push(SGO_DocA4_tabelaIdent_(pares));
 
   // 2. Objetivo e escopo

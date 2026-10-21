@@ -130,6 +130,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Clico num campo marcado \"do cadastro\" (TAG, número de série, setor) e ele não deixa digitar.", oQueFazer: "Esses dados vêm do cadastro do equipamento. Ao clicar, a tela explica e mostra o botão: \"Escolher o equipamento\" (nenhum escolhido em Cliente e equipamento), \"Preencher no cadastro\" (o dado está vazio no cadastro) ou \"Abrir o cadastro de equipamentos\" (para corrigir um valor já gravado)." },
         { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "A prévia mostra datas trocadas (dia no lugar do mês).", oQueFazer: "Em \"Formato da data no arquivo\", escolha \"Brasil (DD/MM/AAAA)\" ou \"Americano (MM/DD/AAAA)\" e toque de novo em \"Pré-visualizar dados\"." },
         { situacao: "A prévia mostra as colunas misturadas.", oQueFazer: "Em \"Separador das colunas\", escolha o separador do arquivo (tabulação, ponto e vírgula, vírgula ou espaços) e pré-visualize de novo." },
@@ -228,6 +229,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Clico num campo marcado \"do cadastro\" (TAG, número de série, setor) e ele não deixa digitar.", oQueFazer: "Esses dados vêm do cadastro do equipamento. Ao clicar, a tela explica e mostra o botão: \"Escolher o equipamento\" (nenhum escolhido em Cliente e equipamento), \"Preencher no cadastro\" (o dado está vazio no cadastro) ou \"Abrir o cadastro de equipamentos\" (para corrigir um valor já gravado)." },
         { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Aparece \"Informe a temperatura programada do ciclo\".", oQueFazer: "Preencha \"Temperatura programada (°C)\" com a temperatura da receita no equipamento e gere de novo." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "Use o quadro \"Cliente e equipamento (do cadastro)\" no início da tela. Se o equipamento não aparece, cadastre pelos atalhos (abre em outra aba) e toque em \"Atualizar listas\"." },
@@ -331,6 +333,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Clico num campo marcado \"do cadastro\" (TAG, número de série, setor) e ele não deixa digitar.", oQueFazer: "Esses dados vêm do cadastro do equipamento. Ao clicar, a tela explica e mostra o botão: \"Escolher o equipamento\" (nenhum escolhido em Cliente e equipamento), \"Preencher no cadastro\" (o dado está vazio no cadastro) ou \"Abrir o cadastro de equipamentos\" (para corrigir um valor já gravado)." },
         { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "O documento só sai com o equipamento do cadastro. Escolha no quadro \"1. Cliente e equipamento\"." },
         { situacao: "\"O registrador não está no cadastro de padrões\" ou \"estava vencido\".", oQueFazer: "Corrija a identificação na seção 4 ou atualize o certificado em Cadastros › Padrões de referência. Registrador vencido na data do ensaio exige repetir o ensaio." },
@@ -426,6 +429,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         DETALHES
       ],
       problemas: [
+        { situacao: "Clico num campo marcado \"do cadastro\" (TAG, número de série, setor) e ele não deixa digitar.", oQueFazer: "Esses dados vêm do cadastro do equipamento. Ao clicar, a tela explica e mostra o botão: \"Escolher o equipamento\" (nenhum escolhido em Cliente e equipamento), \"Preencher no cadastro\" (o dado está vazio no cadastro) ou \"Abrir o cadastro de equipamentos\" (para corrigir um valor já gravado)." },
         { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Apareceu \"O registrador não está no cadastro de padrões\" ou \"vencido\".", oQueFazer: "Digite a identificação como está em Cadastros › Padrões de referência. Se o certificado foi renovado antes do ensaio, atualize a validade lá; se não, o ensaio precisa ser repetido com registrador calibrado." },
         { situacao: "Apareceu \"duração menor que 24 h\" ou \"intervalo de registro maior\".", oQueFazer: "Ajuste o período do estudo. Se o protocolo do cliente define outra duração ou outro intervalo, escreva a justificativa em \"Justificativa de desvio do protocolo\"." },
