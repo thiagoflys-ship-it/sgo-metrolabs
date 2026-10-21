@@ -345,6 +345,12 @@ var COM_ACOES = {
   oportunidade: function (eu, sid, d) { return ComOpo_detalhe_(eu, d && d.id); },
   salvarOportunidade: function (eu, sid, d) { return ComOpo_salvar_(eu, sid, d); },
   moverEtapa: function (eu, sid, d) { return ComOpo_moverEtapa_(eu, sid, d); },
+  // 21/10/2026: quadro do funil (Kanban), Gantt comercial e a especialista (SGO_Comercial_Quadro.js e SGO_Comercial_Gestora.js)
+  criteriosEtapa: function (eu, sid, d) { return ComOpo_criteriosTela_(eu, d); },
+  quadro: function (eu, sid, d) { return ComQ_quadro_(eu, d); },
+  gantt: function (eu, sid, d) { return ComQ_gantt_(eu, d); },
+  especialista: function (eu, sid, d) { return ComG_especialista_(eu, d); },
+  leituraFunil: function (eu, sid, d) { return ComG_leituraFunil_(eu, d); },
   registrarContato: function (eu, sid, d) { return ComOpo_registrarContato_(eu, sid, d); },
   ganhar: function (eu, sid, d) { return ComOpo_ganhar_(eu, d); },
   perder: function (eu, sid, d) { return ComOpo_perder_(eu, d); },

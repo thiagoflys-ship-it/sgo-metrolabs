@@ -16,7 +16,7 @@ const AREAS = [['DIRETORIA', 'Diretoria'], ['ADMINISTRATIVO', 'Administrativo'],
 
 const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO_Areas.js', 'SGO_Atividades.js', 'SGO_Atividades_Avisos.js', 'SGO_Alertas_Central.js',
   'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_QualifIA_Verificador.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js', 'SGO_EnviarDoc.js',
-  'SGO_Comercial_Config.js', 'SGO_Comercial_Contatos.js', 'SGO_Comercial_Oportunidades.js', 'SGO_Comercial_Propostas.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Painel.js'];
+  'SGO_Comercial_Config.js', 'SGO_Comercial_Contatos.js', 'SGO_Comercial_Oportunidades.js', 'SGO_Comercial_Propostas.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Painel.js', 'SGO_Comercial_Quadro.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};

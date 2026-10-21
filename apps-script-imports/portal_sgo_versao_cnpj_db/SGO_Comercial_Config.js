@@ -20,6 +20,7 @@
  *   SGO_Comercial_Documento.js      proposta A4 e relatório mensal A4
  *   SGO_Comercial_Gestora.js        a gestora comercial: lista do dia, próximo passo, revisão da proposta, análise, perguntas
  *   SGO_Comercial_Painel.js         indicadores, pendências (central e Caixa de decisões), rotina e a chamada única da tela
+ *   SGO_Comercial_Quadro.js         quadro Kanban do funil, Gantt comercial e tempo por etapa (21/10/2026)
  *   SGO_Ajuda_Comercial.js          ajuda "Como usar esta tela"
  *   JS_Comercial.html               telas
  *
@@ -49,7 +50,9 @@ var COM_COLUNAS = {
     'FUNIL', 'ETAPA', 'ORIGEM', 'VALOR_ESTIMADO', 'CHANCE', 'PREVISAO_FECHAMENTO', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'SITUACAO', 'QUALIFICACAO_JSON',
     'MOTIVO_PERDA', 'APRENDIZADO_PERDA', 'ETAPA_DESDE', 'ULTIMO_CONTATO_EM', 'TENTATIVAS_SEM_RESPOSTA', 'PROXIMA_ACAO', 'PROXIMA_ACAO_TIPO', 'PROXIMA_ACAO_EM',
     'ATIVIDADE_ID', 'GANHA_EM', 'PERDIDA_EM', 'REABERTURA_PEDIDA_EM', 'REABERTURA_PEDIDA_POR_ID', 'REABERTURA_MOTIVO', 'ORIGEM_REF', 'OBSERVACOES',
-    'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 21/10/2026: itens da lista de cada etapa confirmados pelo vendedor ao avançar ({ "<etapa>": { itens: [texto], por, em } })
+    'CRITERIOS_JSON'],
   COM_CONTATOS_REGISTRO: ['ID', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'TIPO', 'RESPONDEU', 'RESUMO', 'CONTATO_ID', 'CONTATO_NOME', 'ESTRATEGIA', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'TIPO', 'DE', 'PARA', 'TEXTO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_PRODUTOS: ['ID', 'CODIGO', 'NOME', 'TIPO', 'CATEGORIA', 'UNIDADE_MEDIDA', 'DESCRICAO', 'PRECO', 'CUSTO', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -124,6 +127,15 @@ var COM_METODOLOGIA_PADRAO = {
   motivosPerda: ['Preço ou condição de pagamento', 'Concorrente escolhido', 'Sem verba no momento', 'Cliente fora do perfil atendido', 'Demora na decisão ou sem prazo',
     'Produto ou serviço indisponível ou fora de escopo', 'Falha de acompanhamento ou oportunidade abandonada'],
   regraPerda: 'O motivo de perda deve ser real. Não use "sem retorno" quando o problema foi falta de cadência.',
+  /**
+   * Critérios de saída ao AVANÇAR de etapa (quadro, ficha da oportunidade, qualquer tela): o servidor confere sempre.
+   * exigirLista: o vendedor confirma cada item da lista da etapa que está deixando (e das etapas puladas).
+   * exigirDecisor / exigirContato: regra de ouro "nenhuma oportunidade avança sem decisor mapeado e histórico registrado".
+   * exigirPropostaEnviada: passar da etapa de proposta (a 1ª com 60% ou mais) só com proposta já enviada ao cliente.
+   * exigirAceite: a etapa de 100% só com a aprovação do cliente registrada na proposta (com o arquivo do aceite).
+   * Voltar de etapa pede o motivo (fica no histórico).
+   */
+  avanco: { exigirLista: true, exigirDecisor: true, exigirContato: true, exigirPropostaEnviada: true, exigirAceite: true },
   qualificacao: {
     criterio: 'Oportunidade qualificada tem dor, decisor, prazo e caminho de compra.',
     perguntas: ['Qual equipamento, área ou processo precisa de atenção?', 'Isso impacta a rotina, o prazo de atendimento ou o funcionamento do hospital?', 'Quem participa da decisão técnica?',
@@ -289,13 +301,13 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {

@@ -55,6 +55,7 @@ function SGO_ajudaTelas_Comercial_() {
       passos: [
         { titulo: 'Criar uma oportunidade', itens: ['Toque em "Nova oportunidade".', 'Busque o cliente pelo nome ou CNPJ e escolha a unidade e o contato.', 'Escreva o título (o que o cliente precisa), escolha funil, etapa, origem e informe o valor estimado.', 'Preencha a próxima ação (o que fazer e quando) e toque em "Criar oportunidade". A atividade aparece em Minhas atividades.'] },
         { titulo: 'Registrar um contato com o cliente', itens: ['Abra a oportunidade e toque em "Registrar contato".', 'Diga como foi, se o cliente respondeu e o que aconteceu.', 'Marque a próxima ação. A atividade anterior é concluída e a nova é criada.'] },
+        { titulo: 'Mudar de etapa', itens: ['Toque em "Mudar etapa", escolha a etapa e toque em "Continuar".', 'Marque os itens da lista da etapa que foram feitos de verdade. Para voltar de etapa, escreva o motivo.', 'Se faltar algo exigido pela metodologia, a janela diz o quê e onde resolver; a oportunidade fica onde estava. O mesmo vale no Quadro do funil.'] },
         { titulo: 'Pedir o próximo passo à gestora', itens: ['Toque em "Próximo passo da gestora".', 'Ela sugere o passo, o porquê, perguntas para o cliente e os textos de WhatsApp e e-mail.', 'Copie, revise e envie você mesmo. Depois registre o contato.'] },
         { titulo: 'Ganhar, perder ou reabrir', itens: ['"Marcar como ganha" conclui a atividade; depois registre a resposta do cliente na proposta e passe o pedido aos setores.', '"Registrar perda" pede o motivo da lista e o aprendizado; as propostas não respondidas são canceladas.', 'Encerrada por engano? Toque em "Pedir reabertura": o pedido vai para a Caixa de decisões da gestão comercial.'] }
       ],
@@ -66,7 +67,7 @@ function SGO_ajudaTelas_Comercial_() {
       problemas: [
         { situacao: '"O cliente tem unidades no cadastro: escolha a unidade".', oQueFazer: 'No SGO+ documentos, equipamentos e pastas são por unidade. Escolha a unidade da oportunidade.' },
         { situacao: '"A próxima ação não pode ficar no passado".', oQueFazer: 'O que já foi feito se registra em "Registrar contato"; a próxima ação é o passo seguinte, de hoje em diante.' },
-        { situacao: 'Não consigo mudar a etapa.', oQueFazer: 'A oportunidade está parada. Registre um contato real com o cliente (ou a perda) e tente de novo.' }
+        { situacao: 'Não consigo mudar a etapa.', oQueFazer: 'A janela de mudança de etapa diz o que falta: oportunidade parada (registre um contato real ou a perda), itens da lista da etapa não confirmados, decisor não mapeado, nenhum contato registrado, proposta ainda não enviada ou aceite não registrado. Resolva e mude de novo.' }
       ],
       quemPode: quem,
       perguntas: [
@@ -139,11 +140,68 @@ function SGO_ajudaTelas_Comercial_() {
       perguntas: [],
       secoesManual: []
     },
+    'comercial_kanban': {
+      titulo: 'Quadro do funil',
+      paraQueServe: 'Mostra as oportunidades em colunas, uma por etapa do funil escolhido (Engenharia ou Produtos), mais as ganhas e as perdidas do período. Cada cartão traz o cliente, o valor (para quem vê valores), a próxima ação e a data, há quantos dias está sem contato e na etapa, e os selos (proposta, desconto aguardando aprovação, parada, atrasada). No topo fica a "Leitura do funil": onde o funil está travando, quais oportunidades estão em risco e o tempo médio de cada etapa comparado à meta da metodologia.',
+      antesDeComecar: [
+        'Mudar de etapa no quadro segue as mesmas regras da ficha da oportunidade: o sistema confere os critérios de saída da metodologia antes de mover. Se faltar algo, ele diz o quê e onde resolver, e a oportunidade fica onde estava.',
+        'A especialista (a gestora comercial do sistema) só sugere. Nada é enviado ao cliente e nenhuma oportunidade muda de etapa por ela.',
+        'A tela não se atualiza sozinha: depois de cada ação ela recarrega; para ver o que outra pessoa mudou, toque em "Atualizar".'
+      ],
+      passos: [
+        { titulo: 'Escolher o que ver', itens: ['Escolha o funil.', 'A gestão escolhe o vendedor (ou "Toda a equipe"); o vendedor vê só as próprias.', 'Filtre por cliente (nome, título ou código), por área (tipo do equipamento ou categoria do serviço) e pelo período ("De" e "Até").', 'No computador, role o quadro para os lados; no celular, deslize dentro do quadro.'] },
+        { titulo: 'Mudar uma oportunidade de etapa', itens: ['Arraste o cartão para a coluna da nova etapa, ou toque em "Mover para" e escolha a etapa.', 'Na janela, marque os itens da lista da etapa que foram feitos de verdade.', 'Se aparecer "Ainda não dá para mover", leia o que falta e o que fazer (por exemplo, registrar um contato ou mapear o decisor) e toque em "Abrir a oportunidade" para resolver. Depois mova de novo.', 'Para voltar de etapa, escreva o motivo. Tudo fica no histórico da oportunidade.'] },
+        { titulo: 'Ganhar ou perder pelo quadro', itens: ['Arraste para "Ganhas no período" (ou "Mover para" > Ganha): escolha a proposta enviada, anexe o arquivo do aceite do cliente e registre. A oportunidade vai para Ganhas; depois passe o pedido aos setores na proposta.', 'Sem proposta enviada não há como registrar o aceite: a janela explica o caminho (Nova proposta, gerar o documento, enviar ao cliente).', 'Arraste para "Perdidas no período": escolha o motivo real e escreva o aprendizado (mínimo 15 letras).'] },
+        { titulo: 'Pedir à especialista', itens: ['No cartão, toque em "Pedir à especialista".', 'Ela mostra o próximo passo, a estratégia para cumprir o critério da etapa (com o que falta para avançar), as objeções prováveis com a resposta, perguntas para o cliente e os textos de WhatsApp e e-mail.', 'Copie, revise e envie você mesmo. Toque em "Usei" ou "Não serviu" (com o motivo): a gestão vê o que funciona.'] },
+        { titulo: 'Leitura do funil', itens: ['A leitura pelas regras aparece sempre, com os números do sistema.', 'Toque em "Pedir a leitura da especialista" para o texto escrito pela IA. Todo número citado é conferido: se aparecer número que não está nos dados, o texto é recusado e vale o das regras.', 'Abra "Tempo médio por etapa" para ver a média de dias para sair de cada etapa, a meta, quantas estão na etapa agora e quantas passaram do prazo.'] }
+      ],
+      cores: [
+        { nome: 'Borda vermelha no cartão', significado: 'Sem próxima ação, retorno atrasado ou parada: resolva antes de tudo.' },
+        { nome: 'Borda laranja no cartão', significado: 'Esfriando, tempo acima da meta na etapa, previsão vencida ou desconto aguardando aprovação.' },
+        { nome: 'Borda verde ou cinza', significado: 'Ganha ou perdida no período.' },
+        { nome: 'Selo "Proposta: ..."', significado: 'Situação da proposta mais recente da oportunidade (rascunho, pronta, enviada, aprovada...).' }
+      ],
+      problemas: [
+        { situacao: 'Arrastei e apareceu "Ainda não dá para mover".', oQueFazer: 'É a metodologia: falta algo para sair da etapa (lista, decisor, contato registrado, proposta enviada ou aceite). Leia o que fazer na janela, resolva na oportunidade e mova de novo.' },
+        { situacao: 'No celular o cartão não arrasta.', oQueFazer: 'Use o botão "Mover para" do cartão. Ele faz o mesmo que arrastar.' },
+        { situacao: 'Uma oportunidade sumiu do quadro.', oQueFazer: 'Confira o período ("De" e "Até"), a área e o cliente nos filtros. A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período.' },
+        { situacao: 'A leitura diz que o verificador recusou o texto.', oQueFazer: 'É uma proteção: a IA citou número que não está no sistema. Vale o texto das regras, que usa só os números do sistema.' }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: 'A especialista pode mover o cartão ou mandar a mensagem?', r: 'Não. Ela só sugere. Quem move, envia e registra é o vendedor (ou a gestão comercial).' },
+        { p: 'Posso pular uma etapa?', r: 'Pode, desde que confirme a lista das etapas puladas e cumpra o que a metodologia exige (por exemplo, proposta enviada para passar da etapa de proposta).' },
+        { p: 'Quem decide o que é exigido para avançar?', r: 'A gestão comercial, em Comercial > Metodologia comercial (listas de cada etapa e "Critérios para avançar de etapa").' }
+      ],
+      secoesManual: []
+    },
+    'comercial_gantt': {
+      titulo: 'Gantt comercial',
+      paraQueServe: 'Mostra cada oportunidade no tempo: uma barra da criação até a previsão de fechamento (ou até hoje, quando não há previsão), com os marcos da venda: proposta enviada, validade da proposta, retornos combinados com o cliente (as atividades do Comercial em Minhas atividades), pedido aprovado e passagem aos setores. O dia de hoje fica marcado e os atrasos aparecem em vermelho.',
+      antesDeComecar: ['Os filtros são os mesmos do Quadro do funil (funil, vendedor, cliente, área e período).', 'É só para consulta: para mudar algo, abra a oportunidade.'],
+      passos: [
+        { titulo: 'Ler o Gantt', itens: ['Escolha o período em "De" e "Até" e, se quiser, "Agrupadas por vendedor".', 'Cada linha é uma oportunidade (código e cliente à esquerda). Passe o mouse sobre a barra ou um marco para ver os detalhes.', 'No celular, deslize o gráfico para os lados; a lista abaixo do gráfico abre cada oportunidade.'] },
+        { titulo: 'Abrir uma oportunidade ou pedir à especialista', itens: ['Toque na linha.', 'Na janela aparecem a etapa, as datas e todos os marcos.', 'Toque em "Abrir a oportunidade" para trabalhar nela, ou em "Pedir à especialista" para o próximo passo, a estratégia, as objeções e os textos.'] }
+      ],
+      cores: [
+        { nome: 'Barra azul', significado: 'Oportunidade aberta. Tracejada e clara: sem previsão de fechamento (vai até hoje).' },
+        { nome: 'Barra verde ou cinza', significado: 'Ganha ou perdida.' },
+        { nome: 'Trecho vermelho depois da barra', significado: 'A previsão de fechamento passou e a oportunidade continua aberta.' },
+        { nome: 'Marcos', significado: 'Círculo: proposta enviada. Losango: validade da proposta. Triângulo: retorno combinado (verde quando feito). Quadrado verde: pedido aprovado. Quadrado roxo: passagem aos setores. Marco em vermelho está atrasado.' }
+      ],
+      problemas: [
+        { situacao: 'A oportunidade não aparece.', oQueFazer: 'Ajuste o período: a barra (criação até a previsão) precisa cruzar as datas escolhidas.' },
+        { situacao: 'Apareceu "Mostrando as primeiras oportunidades".', oQueFazer: 'Há muitas linhas. Use os filtros de vendedor, cliente, área ou um período menor.' }
+      ],
+      quemPode: quem,
+      perguntas: [{ p: 'Por que a barra está em vermelho?', r: 'A previsão de fechamento passou e a oportunidade ainda está aberta. Atualize a previsão na oportunidade (Editar) ou registre o resultado.' }],
+      secoesManual: []
+    },
     'comercial_metodologia': {
       titulo: 'Metodologia comercial',
       paraQueServe: 'É a cartilha que a gestora comercial segue: tese e regras de ouro, funis e etapas (probabilidade, prazo máximo, critério de saída e lista), origens, motivos de perda, qualificação, cadência de retorno, estratégias, objeções, modelos de mensagem, política de desconto, modelo da proposta, pós-venda e quem é a gestão comercial. Também mostra quais sugestões da gestora a equipe usou.',
       antesDeComecar: ['O padrão veio do Playbook e das regras do Comercial do COMMAND. Ajuste aos poucos, sempre com o motivo.', 'Só a gestão comercial, a Diretoria e o Administrador salvam. Os vendedores leem.'],
-      passos: [{ titulo: 'Mudar uma regra', itens: ['Altere o campo (listas: uma linha por item; campos separados por |).', 'Escreva o que mudou e por quê.', 'Toque em "Salvar nova versão". A versão anterior fica no histórico e a gestora passa a usar a nova.'] }],
+      passos: [{ titulo: 'Critérios para avançar de etapa', itens: ['Marque o que o sistema exige para uma oportunidade avançar: confirmar a lista da etapa, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta e aceite para a etapa de 100%.', 'A lista de cada etapa é a do campo "Funis e etapas" (itens separados por ;).', 'Vale para o Quadro do funil e para a ficha da oportunidade.'] }, { titulo: 'Mudar uma regra', itens: ['Altere o campo (listas: uma linha por item; campos separados por |).', 'Escreva o que mudou e por quê.', 'Toque em "Salvar nova versão". A versão anterior fica no histórico e a gestora passa a usar a nova.'] }],
       cores: [],
       problemas: [{ situacao: '"A probabilidade das etapas precisa crescer".', oQueFazer: 'As etapas vão de 0% a 100% em ordem. Confira a coluna da probabilidade.' }],
       quemPode: quem,

@@ -13,6 +13,9 @@
  *    próxima ação. Se a atividade for concluída direto em Minhas atividades, a oportunidade fica "sem
  *    próxima ação" e entra no topo da lista do dia e no Início do vendedor.
  *  - Parada (padrão 10 dias sem contato registrado): antes de mudar de etapa, registre um contato real ou a perda.
+ *  - Critérios de saída (21/10/2026, ComOpo_criteriosMudanca_): para AVANÇAR, o vendedor confirma a lista da etapa que deixa
+ *    (e das puladas), o decisor precisa estar mapeado, há pelo menos um contato registrado, passar da etapa de proposta
+ *    exige proposta enviada e a etapa de 100% exige o aceite registrado. VOLTAR pede o motivo. Vale para o quadro e a ficha.
  *  - Perda só com motivo da lista e o aprendizado (mínimo 15 letras); cancela as atividades abertas e as
  *    propostas que não foram respondidas (inclusive rascunhos, falha do COMMAND corrigida aqui).
  *  - Reabrir oportunidade encerrada é decisão da gestão comercial: o vendedor pede (com o motivo) e o
@@ -246,7 +249,91 @@ function ComOpo_salvar_(eu, sessionId, d) {
   });
 }
 
-/** Mudar de etapa. d: { id, etapa, proxima? }. Parada: registre contato ou perda antes. */
+/** Normaliza um texto de item da lista para comparar confirmações (a gestão pode reescrever a lista). */
+function ComOpo_chaveItem_(t) { return Com_s_(t).toLowerCase().replace(/\s+/g, ' ').replace(/[.;:\s]+$/, ''); }
+
+/**
+ * O que a mudança de etapa exige (metodologia: lista de cada etapa, regras de ouro e "avanco"). NÃO grava nada.
+ * Serve ao quadro (antes de soltar o cartão, para montar a janela de confirmação) e à gravação (que confere de novo).
+ * o: linha da oportunidade. destino: código da etapa. ctx: { met, agora, atividades, propostas, contatosReg } (opcional).
+ * confirmados: { "<etapa>": [textos] } que o vendedor marcou agora.
+ * Devolve { pode, sentido: 'AVANCO'|'RECUO'|'IGUAL', origem, destino, confirmar: [{etapa, etapaNome, texto, confirmado}],
+ *   faltas: [{codigo, texto, oQueFazer}], pendentesLista: n, precisaProxima, precisaMotivo }.
+ */
+function ComOpo_criteriosMudanca_(o, destino, ctx, confirmados) {
+  ctx = ctx || {};
+  var met = ctx.met || Com_metodologia_();
+  var av = met.avanco || {};
+  var f = Com_funil_(Com_s_(o.FUNIL), met);
+  var r = { pode: false, sentido: 'IGUAL', origem: null, destino: null, confirmar: [], faltas: [], pendentesLista: 0, precisaProxima: false, precisaMotivo: false };
+  if (!f) { r.faltas.push({ codigo: 'FUNIL', texto: 'O funil desta oportunidade não existe mais na metodologia.', oQueFazer: 'Peça à gestão comercial para conferir os funis em Comercial > Metodologia comercial.' }); return r; }
+  var iO = -1, iD = -1;
+  f.etapas.forEach(function (e, i) { if (e.codigo === Com_s_(o.ETAPA)) iO = i; if (e.codigo === Com_s_(destino)) iD = i; });
+  if (iD < 0) { r.faltas.push({ codigo: 'ETAPA', texto: 'A etapa escolhida não é do funil ' + f.nome + '.', oQueFazer: 'Escolha uma das etapas do funil desta oportunidade.' }); return r; }
+  var eO = iO >= 0 ? f.etapas[iO] : null, eD = f.etapas[iD];
+  r.origem = eO ? { codigo: eO.codigo, nome: eO.nome, probabilidade: Number(eO.probabilidade) || 0 } : { codigo: Com_s_(o.ETAPA), nome: Com_s_(o.ETAPA), probabilidade: 0 };
+  r.destino = { codigo: eD.codigo, nome: eD.nome, probabilidade: Number(eD.probabilidade) || 0, criterio: Com_s_(eD.criterio) };
+  if (iD === iO) { r.pode = true; return r; }
+  r.sentido = iD > iO ? 'AVANCO' : 'RECUO';
+  var der = ComOpo_derivados_(o, { met: met, agora: ctx.agora, atividades: ctx.atividades });
+  if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') r.faltas.push({ codigo: 'ENCERRADA', texto: 'A oportunidade ' + Com_s_(o.CODIGO) + ' está ' + (COM_SITUACOES_OPO[Com_up_(o.SITUACAO)] || '').toLowerCase() + '.', oQueFazer: 'Oportunidade encerrada não muda de etapa. O vendedor pede a reabertura na ficha da oportunidade; a gestão comercial decide.' });
+  if (der.parada) r.faltas.push({ codigo: 'PARADA', texto: 'A oportunidade está parada há ' + der.diasSemContato + ' dias sem contato.', oQueFazer: 'Reaqueça antes: abra a oportunidade, toque em "Registrar contato" e registre um contato real com o cliente e a próxima ação. Se não há mais negócio, registre a perda.' });
+  r.precisaProxima = der.semProxima;
+  if (r.sentido === 'RECUO') { r.precisaMotivo = true; r.pode = !r.faltas.length; return r; }
+  // AVANÇO: lista das etapas deixadas para trás (a atual e as puladas)
+  var guardados = Com_json_(o.CRITERIOS_JSON, {}) || {};
+  if (av.exigirLista !== false) {
+    for (var i = Math.max(0, iO); i < iD; i++) {
+      var e = f.etapas[i], antes = ((guardados[e.codigo] || {}).itens || []).map(ComOpo_chaveItem_), agora = ((confirmados || {})[e.codigo] || []).map(ComOpo_chaveItem_);
+      (e.checklist || []).forEach(function (txt) {
+        var k = ComOpo_chaveItem_(txt), ok = antes.indexOf(k) >= 0 || agora.indexOf(k) >= 0;
+        r.confirmar.push({ etapa: e.codigo, etapaNome: e.nome, texto: txt, confirmado: ok, jaGravado: antes.indexOf(k) >= 0 });
+        if (!ok) r.pendentesLista++;
+      });
+    }
+  }
+  var regs = ctx.contatosReg ? ctx.contatosReg.filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); }) : Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  var props = (ctx.propostas || Com_ler_(COM_ABAS.PROPOSTAS)).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  var qual = Com_json_(o.QUALIFICACAO_JSON, {}) || {};
+  var itemDecisor = (met.qualificacao.itens || []).filter(function (q) { return q.codigo === 'DECISOR'; })[0];
+  if (av.exigirDecisor !== false && itemDecisor && !Com_s_(qual.DECISOR)) r.faltas.push({ codigo: 'DECISOR', texto: 'O decisor não está mapeado (qualificação: ' + itemDecisor.nome + ').', oQueFazer: 'Abra a oportunidade, toque em "Editar" e preencha "' + itemDecisor.nome + '" (quem valida, quem aprova e quem assina). Depois mova de novo.' });
+  if (av.exigirContato !== false && !regs.length) r.faltas.push({ codigo: 'CONTATO', texto: 'Nenhum contato com o cliente foi registrado nesta oportunidade.', oQueFazer: 'Abra a oportunidade e toque em "Registrar contato" (o que foi conversado e a próxima ação). Depois mova de novo.' });
+  var etProposta = f.etapas.filter(function (x) { return Number(x.probabilidade) >= 60; })[0];
+  var enviadas = props.filter(function (p) { return Com_s_(p.ENVIADA_EM) && ['CANCELADA'].indexOf(Com_up_(p.SITUACAO)) < 0; });
+  if (av.exigirPropostaEnviada !== false && etProposta && Number(eD.probabilidade) > Number(etProposta.probabilidade) && !enviadas.length) {
+    r.faltas.push({ codigo: 'PROPOSTA', texto: 'Para passar da etapa ' + etProposta.nome + ' a oportunidade precisa de proposta enviada ao cliente.', oQueFazer: 'Abra a oportunidade e toque em "Nova proposta" (ou abra a proposta em rascunho): conclua, gere o documento e envie pelo "Enviar ao cliente". O envio leva a oportunidade para a etapa ' + etProposta.nome + ' sozinho; depois mova de novo.' });
+  }
+  var aprovada = props.filter(function (p) { return Com_up_(p.SITUACAO) === 'APROVADA' && Com_s_(p.ACEITE_ARQUIVO_ID); })[0];
+  if (av.exigirAceite !== false && Number(eD.probabilidade) >= 100 && !aprovada) {
+    r.faltas.push({ codigo: 'ACEITE', texto: 'A etapa ' + eD.nome + ' é de pedido aprovado: precisa da aprovação do cliente registrada na proposta, com o arquivo do aceite.', oQueFazer: 'Abra a proposta enviada (Comercial > Propostas), toque em "Registrar resposta do cliente", escolha "Aprovou" e anexe o aceite (e-mail em PDF, pedido de compra ou proposta assinada).' });
+  }
+  r.pode = !r.faltas.length && !r.pendentesLista;
+  return r;
+}
+
+/** Texto único da recusa, no padrão do operador (o quê + o que fazer + como voltar). */
+function ComOpo_textoFaltas_(o, c) {
+  var partes = c.faltas.map(function (x, i) { return (c.faltas.length > 1 ? (i + 1) + ') ' : '') + x.texto + ' O que fazer: ' + x.oQueFazer; });
+  if (c.pendentesLista) partes.push((partes.length ? (c.faltas.length + 1) + ') ' : '') + 'Faltam ' + Com_plural_(c.pendentesLista, 'item', 'itens') + ' da lista para sair da etapa (' +
+    c.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return x.texto; }).join('; ') + '). O que fazer: confirme cada item na janela de mudança de etapa (só marque o que foi feito de verdade).');
+  return 'Não foi possível mudar a etapa de ' + Com_s_(o.CODIGO) + ' para ' + (c.destino ? c.destino.nome : 'a etapa escolhida') + ': ' + partes.join(' ') + ' A oportunidade continua na etapa ' + (c.origem ? c.origem.nome : '') + '; depois de resolver, mova de novo';
+}
+
+/** O que falta para mudar de etapa (janela do quadro). d: { id, etapa } */
+function ComOpo_criteriosTela_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'conferir a mudança de etapa');
+  d = d || {};
+  var o = ComOpo_obter_(eu, d.id, 'conferir a mudança de etapa');
+  var c = ComOpo_criteriosMudanca_(o, Com_s_(d.etapa), null, d.confirmados);
+  c.podeMover = Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA' && (eu.gestao || Com_s_(o.RESPONSAVEL_ID) === eu.id);
+  c.oportunidade = { id: Com_s_(o.ID), codigo: Com_s_(o.CODIGO), cliente: Com_s_(o.CLIENTE_NOME), titulo: Com_s_(o.TITULO), proximaAcao: Com_s_(o.PROXIMA_ACAO) };
+  return c;
+}
+
+/**
+ * Mudar de etapa. d: { id, etapa, proxima?, confirmados?: { "<etapa>": [textos] }, motivo? (obrigatório ao voltar) }.
+ * Confere os critérios de saída da metodologia (ComOpo_criteriosMudanca_); faltando algo, explica e NÃO muda.
+ */
 function ComOpo_moverEtapa_(eu, sessionId, d) {
   Com_exigir_(eu, 'VENDEDOR', 'mudar a etapa');
   d = d || {};
@@ -259,8 +346,23 @@ function ComOpo_moverEtapa_(eu, sessionId, d) {
     if (etapa.codigo === Com_s_(o.ETAPA)) return { oportunidade: ComOpo_paraTela_(eu, o), message: 'A oportunidade já estava nesta etapa.' };
     var der = ComOpo_derivados_(o, { met: met });
     if (der.parada) throw new Error('Não foi possível mudar a etapa: a oportunidade ' + o.CODIGO + ' está parada há ' + der.diasSemContato + ' dias sem contato. Regra do Comercial: reaqueça antes, registrando um contato real com o cliente e a próxima ação ("Registrar contato"), ou registre a perda');
+    var crit = ComOpo_criteriosMudanca_(o, etapa.codigo, { met: met }, d.confirmados);
+    if (!crit.pode) throw new Error(ComOpo_textoFaltas_(o, crit));
+    var motivo = Com_texto_(d.motivo, 1000);
+    if (crit.sentido === 'RECUO' && motivo.length < 10) throw new Error('Não foi possível voltar ' + o.CODIGO + ' para a etapa ' + etapa.nome + ': escreva o motivo (pelo menos 10 letras), por exemplo "O cliente pediu para refazer o diagnóstico com outro equipamento". Ele fica no histórico. A oportunidade continua onde estava');
     var campos = { ETAPA: etapa.codigo, ETAPA_DESDE: Com_agora_(), ATUALIZADO_EM: Com_agora_() };
     var antes = Com_etapa_(Com_s_(o.FUNIL), Com_s_(o.ETAPA), met) || { nome: Com_s_(o.ETAPA) };
+    var confirmadosAgora = crit.confirmar.filter(function (x) { return x.confirmado && !x.jaGravado; });
+    if (confirmadosAgora.length) {
+      // nunca sobrescreve: acrescenta ao que já estava confirmado
+      var guard = Com_json_(o.CRITERIOS_JSON, {}) || {};
+      confirmadosAgora.forEach(function (x) {
+        var g = guard[x.etapa] = guard[x.etapa] || { itens: [] };
+        if (g.itens.map(ComOpo_chaveItem_).indexOf(ComOpo_chaveItem_(x.texto)) < 0) g.itens.push(x.texto);
+        g.por = eu.nome; g.em = Com_agora_();
+      });
+      campos.CRITERIOS_JSON = JSON.stringify(guard).slice(0, 20000);
+    }
     if (der.semProxima || (d.proxima && Com_s_(d.proxima.acao))) {
       var prox = ComOpo_proxima_(d.proxima, 'mudar a etapa');
       if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Substituída pela nova próxima ação ao mudar de etapa.');
@@ -268,7 +370,8 @@ function ComOpo_moverEtapa_(eu, sessionId, d) {
       campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, Object.assign({}, o, campos), prox);
     }
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
-    Com_historico_('OPORTUNIDADE', o.ID, 'ETAPA', eu, { de: antes.nome, para: etapa.nome, texto: 'Mudou para a etapa ' + etapa.nome + ' (' + etapa.probabilidade + '%).' });
+    Com_historico_('OPORTUNIDADE', o.ID, 'ETAPA', eu, { de: antes.nome, para: etapa.nome, texto: (crit.sentido === 'RECUO' ? 'Voltou para a etapa ' + etapa.nome + ' (' + etapa.probabilidade + '%). Motivo: ' + motivo : 'Mudou para a etapa ' + etapa.nome + ' (' + etapa.probabilidade + '%).') +
+      (confirmadosAgora.length ? ' Itens confirmados por ' + eu.nome + ': ' + confirmadosAgora.map(function (x) { return x.texto; }).join('; ') + '.' : '') });
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Etapa: ' + etapa.nome + '.' };
   });
 }
@@ -437,6 +540,7 @@ function ComOpo_detalhe_(eu, id) {
     oportunidade: t, contatosRegistrados: contatos, historico: hist.slice(0, 80), propostas: propostas, equipamentos: equipamentos,
     atividade: atv ? { id: Com_s_(atv.ID), titulo: Com_s_(atv.TITULO), situacao: Com_s_(atv.SITUACAO), previsao: Com_br_(atv.PREVISAO_ATUAL || atv.PRAZO) } : null,
     etapaChecklist: etapa.checklist || [], etapaCriterio: Com_s_(etapa.criterio), contatosCliente: ComCt_listar_(t.clienteId, t.unidadeId),
+    etapaConfirmados: (((Com_json_(o.CRITERIOS_JSON, {}) || {})[t.etapa] || {}).itens || []),
     emails: emails, sugestoes: sugestoes, podeEditar: t.situacao === 'ABERTA' && (eu.gestao || t.responsavelId === eu.id)
   };
 }

@@ -22,6 +22,11 @@
  * situação; não inventa preço, prazo, cliente ou número. Cada sugestão fica em COM_IA_SUGESTOES com a decisão
  * do vendedor ("Feito", "Usei", "Não se aplica"), para a gestão ver quais regras funcionam.
  *
+ * 21/10/2026 — ESPECIALISTA NO QUADRO E NO GANTT: "Pedir à especialista" (ComG_especialista_: próximo passo, estratégia
+ * para a etapa com o que falta para avançar, objeções prováveis com a resposta, perguntas, mensagem e e-mail) e a
+ * "Leitura do funil" (ComG_leituraFunil_: gargalos, oportunidades em risco e tempo por etapa contra a meta). Mesmas duas
+ * camadas e o mesmo verificador; nada é enviado e nenhuma etapa muda; a decisão do vendedor fica em COM_IA_SUGESTOES.
+ *
  * Quando: a rotina do Comercial (chamada pela rotina da gestão, a cada 15 min) monta a lista de cada vendedor e
  * o panorama da gestão uma vez por dia útil, no início do expediente (COM_DIA). A tela sempre recalcula as
  * regras com os dados de agora e usa os textos da gestora do dia para os itens que ainda valem.
@@ -427,29 +432,8 @@ function ComG_sugestoesDaOportunidade_(eu, o, t, contatos) {
 function ComG_proximoPasso_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'pedir o próximo passo à gestora');
   var o = ComOpo_obter_(eu, d && d.id, 'pedir o próximo passo');
-  var met = Com_metodologia_(), t = ComOpo_paraTela_(eu, o, { met: met });
-  if (t.situacao !== 'ABERTA') throw new Error('Não foi possível: a oportunidade ' + t.codigo + ' está encerrada');
-  var regs = Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === t.id; }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
-  var props = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; });
-  var enviada = props.filter(function (p) { return Com_up_(p.SITUACAO) === 'ENVIADA'; })[0];
-  var etapa = Com_etapa_(t.funil, t.etapa, met) || {};
-  var nome = ComG_primeiroNome_(t.contato), eunome = ComG_primeiroNome_(eu.nome);
-  // regras
-  var passo, porque, modelo;
-  if (enviada) { passo = 'Ligar para ' + (nome || 'o contato') + ' e combinar a data de decisão da proposta ' + Com_s_(enviada.NUMERO) + '.'; porque = 'Proposta enviada sem resposta: o retorno é o que mais converte.'; modelo = met.modelosMensagem.proposta; }
-  else if (t.parada) { passo = 'Reaquecer com contato real hoje ou registrar a perda.'; porque = 'Parada há ' + t.diasSemContato + ' dias.'; modelo = met.modelosMensagem.parada; }
-  else if (t.mudarEstrategia) { var est = ComG_estrategia_(o, regs, !!enviada, (ComCt_listar_(t.clienteId) || []).length, met); passo = est.titulo + ': ' + est.detalhe; porque = t.tentativasSemResposta + ' tentativas sem resposta.'; modelo = (Number(o.TENTATIVAS_SEM_RESPOSTA) || 0) >= 5 ? met.modelosMensagem.encerramento : met.modelosMensagem.parada; }
-  else { var n = regs.length, pz = met.cadencia.passos.filter(function (p) { return p.dia > n; })[0] || met.cadencia.passos[met.cadencia.passos.length - 1]; passo = 'Cumprir o critério da etapa ' + t.etapaNome + ': ' + Com_s_(etapa.criterio) + '.'; porque = 'Cadência: ' + pz.titulo + '.'; modelo = met.modelosMensagem.parada; }
-  var faltam = ComG_qualificacaoFaltando_(o, met);
-  var regras = { proximoPasso: passo, porque: porque, perguntas: faltam.slice(0, 3).map(function (q) { return q.pergunta; }),
-    mensagem: ComG_preencher_(modelo, { nome: nome, assunto: t.titulo.toLowerCase(), eu: eunome, proposta: enviada ? Com_s_(enviada.NUMERO) : '' }), emailAssunto: 'Metrolabs: ' + t.titulo, emailCorpo: '' };
-  regras.emailCorpo = regras.mensagem + '\n\nAtenciosamente,\n' + eu.nome + '\nMetrolabs';
-  var fatos = { oportunidade: { codigo: t.codigo, titulo: t.titulo, cliente: t.cliente, unidade: t.unidade, contatoPrimeiroNome: nome, funil: t.funilNome, etapa: t.etapaNome, probabilidade: t.probabilidade,
-      criterioEtapa: etapa.criterio, checklistEtapa: etapa.checklist, diasSemContato: t.diasSemContato, diasNaEtapa: t.diasNaEtapa, tentativasSemResposta: t.tentativasSemResposta, proximaAcao: t.proximaAcao,
-      origem: t.origem, valorEstimado: Com_moeda_(o.VALOR_ESTIMADO), qualificacaoRegistrada: t.qualificacao, qualificacaoFaltando: faltam.map(function (f) { return f.nome; }) },
-    ultimosContatos: regs.slice(0, 10).map(function (r) { return { data: Com_brDia_(r.DATA), tipo: COM_TIPOS_CONTATO[Com_up_(r.TIPO)] || r.TIPO, respondeu: Com_up_(r.RESPONDEU) === 'SIM', resumo: Com_s_(r.RESUMO).slice(0, 300) }; }),
-    propostas: props.map(function (p) { return { numero: ComP_rotulo_(p), situacao: COM_SITUACOES_PROP[Com_up_(p.SITUACAO)], total: Com_moeda_(p.TOTAL), validaAte: Com_brDia_(p.VALIDA_ATE), motivoRecusa: Com_s_(p.MOTIVO_RECUSA) }; }),
-    vendedorPrimeiroNome: eunome, hoje: Com_brDia_(Com_hoje_()) };
+  var c = ComG_contextoOportunidade_(eu, o);
+  var met = c.met, t = c.t, regras = c.regras, fatos = c.fatos;
   var saida = Com_copia_(regras), origem = 'REGRAS', aviso = '';
   if (d && d.comIA !== false) {
     var prompt = ComG_regrasPrompt_() + '\n\nMETODOLOGIA:\n' + ComG_metodologiaTexto_(met) + '\n\nFATOS:\n' + JSON.stringify(fatos) + '\n\nSUGESTÃO DAS REGRAS:\n' + JSON.stringify(regras) +
@@ -474,6 +458,164 @@ function ComG_proximoPasso_(eu, d) {
   var id = ComG_registrar_('PROXIMO_PASSO', origem === 'IA' ? 'IA' : 'REGRAS', eu.id, { tipo: 'oportunidade', id: t.id }, origem, t.codigo, saida, aviso);
   return { sugestaoId: id, sugestao: saida, origem: origem, aviso: aviso,
     lembrete: 'A gestora só sugere. Revise o texto, ajuste e envie você mesmo pelo seu e-mail ou WhatsApp; depois registre o contato na oportunidade.' };
+}
+
+/**
+ * Contexto de uma oportunidade para a gestora: a tela da oportunidade, os contatos, as propostas, a sugestão das regras
+ * (próximo passo, perguntas, mensagem, e-mail) e os FATOS (a única fonte que a IA pode usar). Só lê.
+ */
+function ComG_contextoOportunidade_(eu, o) {
+  var met = Com_metodologia_(), t = ComOpo_paraTela_(eu, o, { met: met });
+  if (t.situacao !== 'ABERTA') throw new Error('Não foi possível: a oportunidade ' + t.codigo + ' está encerrada');
+  var regs = Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === t.id; }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
+  var props = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; });
+  var enviada = props.filter(function (p) { return Com_up_(p.SITUACAO) === 'ENVIADA'; })[0];
+  var etapa = Com_etapa_(t.funil, t.etapa, met) || {};
+  var nome = ComG_primeiroNome_(t.contato), eunome = ComG_primeiroNome_(eu.nome);
+  // regras
+  var passo, porque, modelo;
+  if (enviada) { passo = 'Ligar para ' + (nome || 'o contato') + ' e combinar a data de decisão da proposta ' + Com_s_(enviada.NUMERO) + '.'; porque = 'Proposta enviada sem resposta: o retorno é o que mais converte.'; modelo = met.modelosMensagem.proposta; }
+  else if (t.parada) { passo = 'Reaquecer com contato real hoje ou registrar a perda.'; porque = 'Parada há ' + t.diasSemContato + ' dias.'; modelo = met.modelosMensagem.parada; }
+  else if (t.mudarEstrategia) { var est = ComG_estrategia_(o, regs, !!enviada, (ComCt_listar_(t.clienteId) || []).length, met); passo = est.titulo + ': ' + est.detalhe; porque = t.tentativasSemResposta + ' tentativas sem resposta.'; modelo = (Number(o.TENTATIVAS_SEM_RESPOSTA) || 0) >= 5 ? met.modelosMensagem.encerramento : met.modelosMensagem.parada; }
+  else { var n = regs.length, pz = met.cadencia.passos.filter(function (p) { return p.dia > n; })[0] || met.cadencia.passos[met.cadencia.passos.length - 1]; passo = 'Cumprir o critério da etapa ' + t.etapaNome + ': ' + Com_s_(etapa.criterio) + '.'; porque = 'Cadência: ' + pz.titulo + '.'; modelo = met.modelosMensagem.parada; }
+  var faltam = ComG_qualificacaoFaltando_(o, met);
+  var regras = { proximoPasso: passo, porque: porque, perguntas: faltam.slice(0, 3).map(function (q) { return q.pergunta; }),
+    mensagem: ComG_preencher_(modelo, { nome: nome, assunto: t.titulo.toLowerCase(), eu: eunome, proposta: enviada ? Com_s_(enviada.NUMERO) : '' }), emailAssunto: 'Metrolabs: ' + t.titulo, emailCorpo: '' };
+  regras.emailCorpo = regras.mensagem + '\n\nAtenciosamente,\n' + eu.nome + '\nMetrolabs';
+  var fatos = { oportunidade: { codigo: t.codigo, titulo: t.titulo, cliente: t.cliente, unidade: t.unidade, contatoPrimeiroNome: nome, funil: t.funilNome, etapa: t.etapaNome, probabilidade: t.probabilidade,
+      criterioEtapa: etapa.criterio, checklistEtapa: etapa.checklist, diasSemContato: t.diasSemContato, diasNaEtapa: t.diasNaEtapa, tentativasSemResposta: t.tentativasSemResposta, proximaAcao: t.proximaAcao,
+      origem: t.origem, valorEstimado: Com_moeda_(o.VALOR_ESTIMADO), qualificacaoRegistrada: t.qualificacao, qualificacaoFaltando: faltam.map(function (f) { return f.nome; }) },
+    ultimosContatos: regs.slice(0, 10).map(function (r) { return { data: Com_brDia_(r.DATA), tipo: COM_TIPOS_CONTATO[Com_up_(r.TIPO)] || r.TIPO, respondeu: Com_up_(r.RESPONDEU) === 'SIM', resumo: Com_s_(r.RESUMO).slice(0, 300) }; }),
+    propostas: props.map(function (p) { return { numero: ComP_rotulo_(p), situacao: COM_SITUACOES_PROP[Com_up_(p.SITUACAO)], total: Com_moeda_(p.TOTAL), validaAte: Com_brDia_(p.VALIDA_ATE), motivoRecusa: Com_s_(p.MOTIVO_RECUSA) }; }),
+    vendedorPrimeiroNome: eunome, hoje: Com_brDia_(Com_hoje_()) };
+  return { met: met, t: t, o: o, regs: regs, props: props, enviada: enviada, etapa: etapa, faltam: faltam, regras: regras, fatos: fatos };
+}
+
+// ------------------------------------------------------------
+// ESPECIALISTA EM COMERCIAL (cartão do quadro e Gantt): próximo passo, estratégia para a etapa, objeções e e-mail
+// ------------------------------------------------------------
+/** Objeções prováveis pelas regras: escolhidas da lista da metodologia pelo momento da oportunidade. */
+function ComG_objecoesProvaveis_(c) {
+  var met = c.met, t = c.t, l = met.objecoes || [], escolha = [];
+  var pega = function (re) { l.forEach(function (x) { if (re.test(Com_s_(x.objecao)) && escolha.indexOf(x) < 0) escolha.push(x); }); };
+  var falta = c.faltam.map(function (q) { return q.codigo; });
+  if (c.enviada) { pega(/caro|pre[cç]o/i); pega(/retorno|vou ver/i); }
+  if (falta.indexOf('VERBA') >= 0) pega(/verba/i);
+  if (falta.indexOf('DECISOR') >= 0) pega(/compras|decis/i);
+  if (t.probabilidade <= 40) { pega(/fornecedor/i); pega(/e-?mail/i); }
+  l.forEach(function (x) { if (escolha.length < 3 && escolha.indexOf(x) < 0) escolha.push(x); });
+  return escolha.slice(0, 3).map(function (x) { return { objecao: Com_s_(x.objecao), resposta: Com_s_(x.resposta) }; });
+}
+
+/**
+ * "Pedir à especialista": a gestora comercial olha uma oportunidade com a metodologia e devolve o próximo passo, a
+ * estratégia para a etapa (o critério de saída e o que falta para avançar), as objeções prováveis com a resposta, as
+ * perguntas e o texto da mensagem e do e-mail. Regras primeiro; a IA reescreve e o verificador confere campo a campo.
+ * NÃO envia nada, NÃO muda etapa nem grava na oportunidade: só registra a sugestão (COM_IA_SUGESTOES, tipo ESPECIALISTA).
+ * d: { id, comIA }
+ */
+function ComG_especialista_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'pedir à especialista');
+  d = d || {};
+  var o = ComOpo_obter_(eu, d.id, 'pedir à especialista');
+  var c = ComG_contextoOportunidade_(eu, o), met = c.met, t = c.t;
+  var f = Com_funil_(t.funil, met), idx = -1;
+  (f ? f.etapas : []).forEach(function (e, i) { if (e.codigo === t.etapa) idx = i; });
+  var proxima = f && idx >= 0 && idx < f.etapas.length - 1 ? f.etapas[idx + 1] : null;
+  var crit = proxima ? ComOpo_criteriosMudanca_(o, proxima.codigo, { met: met }) : { confirmar: [], faltas: [] };
+  var passos = crit.faltas.map(function (x) { return x.texto + ' ' + x.oQueFazer; })
+    .concat(crit.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return 'Cumprir e confirmar: ' + x.texto + '.'; })).slice(0, 6);
+  var estrategia = { titulo: 'Estratégia para a etapa ' + t.etapaNome, texto: 'Critério para sair: ' + (Com_s_(c.etapa.criterio) || 'não definido na metodologia') + '.' + (proxima ? ' A próxima etapa é ' + proxima.nome + ' (' + proxima.probabilidade + '%).' : ' É a última etapa do funil: garanta o aceite, os documentos e a passagem aos setores.'),
+    passos: passos.length ? passos : ['Nada pendente pelas regras para avançar: confirme a lista da etapa ao mover o cartão.'] };
+  var regras = Com_copia_(c.regras);
+  regras.estrategia = estrategia;
+  regras.objecoes = ComG_objecoesProvaveis_(c);
+  var fatos = Com_copia_(c.fatos);
+  fatos.paraAvancar = { proximaEtapa: proxima ? proxima.nome : '', faltas: crit.faltas.map(function (x) { return x.texto; }), listaPendente: crit.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return x.texto; }) };
+  fatos.objecoesDaMetodologia = met.objecoes;
+  var saida = Com_copia_(regras), origem = 'REGRAS', aviso = '';
+  if (d.comIA !== false) {
+    var prompt = ComG_regrasPrompt_() + '\nVocê é também especialista em gestão comercial B2B de serviços técnicos para hospitais.\n\nMETODOLOGIA:\n' + ComG_metodologiaTexto_(met) + '\n\nFATOS:\n' + JSON.stringify(fatos) +
+      '\n\nSUGESTÃO DAS REGRAS:\n' + JSON.stringify(regras) +
+      '\n\nTAREFA: para esta oportunidade, como especialista: (1) o próximo passo concreto e por quê; (2) a estratégia para cumprir o critério de saída da etapa atual, em até 5 passos curtos, usando o que falta para avançar; ' +
+      '(3) até 3 objeções prováveis do cliente neste momento, cada uma com a resposta que vende valor técnico (não desconto); (4) até 3 perguntas para o cliente; (5) a mensagem curta de WhatsApp e o e-mail, em nome do vendedor, para ele revisar e enviar. ' +
+      'Formato: {"proximoPasso":"...","porque":"...","estrategia":{"texto":"...","passos":["..."]},"objecoes":[{"objecao":"...","resposta":"..."}],"perguntas":["..."],"mensagem":"...","emailAssunto":"...","emailCorpo":"..."}';
+    var r = ComG_chamarIA_(prompt, 16384);
+    aviso = r.aviso;
+    if (r.json) {
+      var recusas = [], aceitos = 0;
+      ['proximoPasso', 'porque', 'mensagem', 'emailAssunto', 'emailCorpo'].forEach(function (k) {
+        if (!Com_s_(r.json[k])) return;
+        var v = ComG_verificar_(r.json[k], fatos);
+        if (v.ok) { saida[k] = Com_texto_(r.json[k], 3000); aceitos++; } else recusas.push(k + ' (' + v.problemas.slice(0, 2).join('; ') + ')');
+      });
+      var e = r.json.estrategia;
+      if (e && typeof e === 'object') {
+        var vt = ComG_verificar_(e.texto, fatos);
+        var ps = (Array.isArray(e.passos) ? e.passos : []).map(Com_s_).filter(function (x) { return x && ComG_verificar_(x, fatos).ok; }).slice(0, 5);
+        if (vt.ok && ps.length) { saida.estrategia = { titulo: estrategia.titulo, texto: Com_texto_(e.texto, 1500), passos: ps.map(function (x) { return Com_texto_(x, 500); }) }; aceitos++; }
+        else recusas.push('estratégia' + (vt.ok ? '' : ' (' + vt.problemas.slice(0, 2).join('; ') + ')'));
+      }
+      if (Array.isArray(r.json.objecoes)) {
+        var ob = r.json.objecoes.filter(function (x) { return x && Com_s_(x.objecao) && Com_s_(x.resposta) && ComG_verificar_(x.objecao, fatos).ok && ComG_verificar_(x.resposta, fatos).ok; }).slice(0, 3)
+          .map(function (x) { return { objecao: Com_texto_(x.objecao, 300), resposta: Com_texto_(x.resposta, 800) }; });
+        if (ob.length) { saida.objecoes = ob; aceitos++; } else if (r.json.objecoes.length) recusas.push('objeções');
+      }
+      if (Array.isArray(r.json.perguntas)) {
+        var pg = r.json.perguntas.map(Com_s_).filter(function (q) { return q && ComG_verificar_(q, fatos).ok; }).slice(0, 3);
+        if (pg.length) saida.perguntas = pg;
+      }
+      if (aceitos) origem = 'IA';
+      if (recusas.length) aviso = 'O verificador recusou parte do texto da IA (' + recusas.join(', ') + '); nessa parte vale o texto das regras.';
+    }
+  }
+  var id = ComG_registrar_('ESPECIALISTA', origem, eu.id, { tipo: 'oportunidade', id: t.id }, origem, t.codigo, saida, aviso);
+  return { sugestaoId: id, sugestao: saida, origem: origem, aviso: aviso, oportunidade: { id: t.id, codigo: t.codigo, cliente: t.cliente, titulo: t.titulo, etapaNome: t.etapaNome },
+    lembrete: 'A especialista só sugere: nada é enviado ao cliente e a etapa não muda sozinha. Revise o texto, envie você mesmo pelo seu e-mail ou WhatsApp e registre o contato na oportunidade.' };
+}
+
+// ------------------------------------------------------------
+// LEITURA DO FUNIL (topo do quadro)
+// ------------------------------------------------------------
+/**
+ * Leitura do funil: gargalos por etapa, oportunidades em risco e tempo médio por etapa contra a meta da metodologia.
+ * Sempre sai pelas regras (ComQ_leituraRegras_); com d.comIA, a gestora reescreve com os NÚMEROS DO SISTEMA e o
+ * verificador recusa número que não está nos fatos (aí vale o texto das regras). Só registra a sugestão; não muda nada.
+ * d: os filtros do quadro + { comIA }.
+ */
+function ComG_leituraFunil_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'pedir a leitura do funil');
+  d = d || {};
+  var m = ComQ_montar_(eu, d);
+  var regras = m.leitura, saida = Com_copia_(regras), aviso = '';
+  var fatos = {
+    funil: m.f.nome, periodo: Com_brDia_(m.fl.de) + ' a ' + Com_brDia_(m.fl.ate), hoje: Com_brDia_(m.b.hoje), visao: eu.gestao ? (m.fl.responsavelId ? 'um vendedor' : 'equipe toda') : 'funil do próprio vendedor',
+    abertas: m.abertas, ganhasNoPeriodo: m.ganhas.qtd, perdidasNoPeriodo: m.perdidas.qtd,
+    etapas: m.colunas.map(function (c, i) { var t = m.tempos[i]; var x = { etapa: c.nome, probabilidade: c.probabilidade, abertas: c.qtd, metaDias: t.maxDias, passagensConcluidas: t.passagens, mediaDiasParaSair: t.mediaDias, mediaDiasDasAtuais: t.mediaAtuais, acimaDoPrazoAgora: t.acimaDoPrazo };
+      if (eu.veValores) x.valorEmAberto = Com_moeda_(c.valor || 0); return x; }),
+    emRisco: m.risco.slice(0, 12).map(function (r) { var x = { codigo: r.codigo, cliente: r.cliente, vendedor: r.responsavel, motivos: r.motivos }; if (eu.veValores && r.valorTxt) x.valor = r.valorTxt; return x; }),
+    leituraDasRegras: regras
+  };
+  if (eu.veValores) fatos.valorEmAberto = Com_moeda_(m.colunas.reduce(function (s, c) { return s + (c.valor || 0); }, 0));
+  if (d.comIA) {
+    var prompt = ComG_regrasPrompt_() + '\nVocê é também especialista em gestão comercial B2B de serviços técnicos para hospitais.\n\nMETODOLOGIA:\n' + ComG_metodologiaTexto_(m.b.met) + '\n\nNÚMEROS DO FUNIL (do sistema):\n' + JSON.stringify(fatos) +
+      '\n\nTAREFA: escreva a leitura do funil para ' + (eu.gestao ? 'a gestão comercial' : 'o vendedor') + ': em 2 ou 3 parágrafos curtos, onde o funil está travando (etapas com tempo acima da meta ou acúmulo), quais oportunidades estão em risco e por quê, e o que fazer nesta semana segundo a metodologia. ' +
+      'Liste também os gargalos (uma frase por etapa) e os riscos (uma frase por oportunidade, citando o código). Use só os números enviados. Formato: {"texto":"...","gargalos":["..."],"riscos":["..."]}';
+    var r = ComG_chamarIA_(prompt, 16384);
+    aviso = r.aviso;
+    if (r.json) {
+      var vt = ComG_verificar_(r.json.texto, fatos, { livres: 10 });
+      var gs = (Array.isArray(r.json.gargalos) ? r.json.gargalos : []).map(Com_s_).filter(function (x) { return x && ComG_verificar_(x, fatos).ok; }).map(function (x) { return Com_texto_(x, 500); });
+      var rs = (Array.isArray(r.json.riscos) ? r.json.riscos : []).map(Com_s_).filter(function (x) { return x && ComG_verificar_(x, fatos).ok; }).map(function (x) { return Com_texto_(x, 500); });
+      if (vt.ok) { saida.texto = Com_texto_(r.json.texto, 4000); saida.origem = 'IA'; }
+      else aviso = 'O verificador recusou a leitura escrita pela IA (' + vt.problemas.slice(0, 2).join('; ') + '); vale o texto das regras, com os números do sistema.';
+      if (vt.ok && gs.length) saida.gargalos = gs.slice(0, 8);
+      if (vt.ok && rs.length) saida.riscos = rs.slice(0, 10);
+    }
+  }
+  var id = ComG_registrar_('LEITURA_FUNIL', saida.origem, eu.id, null, saida.origem, m.f.codigo + ' ' + fatos.periodo, saida, aviso);
+  return { sugestaoId: id, leitura: saida, origem: saida.origem, aviso: aviso, tempos: m.tempos, emRisco: m.risco.slice(0, 10),
+    lembrete: 'A leitura só aponta: nenhuma oportunidade muda de etapa e nada é enviado ao cliente por ela.' };
 }
 
 // ------------------------------------------------------------

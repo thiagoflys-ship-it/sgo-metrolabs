@@ -62,6 +62,40 @@
   .cm-sec { margin: 14px 0 6px; font-size: 13px; font-weight: 800; color: var(--text-strong, var(--text)); }
   .cm-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 4px 0; }
   .cm-check input { min-height: 0; width: auto; margin-top: 3px; }
+  /* QUADRO DO FUNIL (Kanban) e GANTT COMERCIAL (21/10/2026). As colunas e o Gantt rolam DENTRO do quadro; a página não rola para o lado. */
+  .cmk-area { max-width: 100%; min-width: 0; }
+  .cmk-quadro { display: flex; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 2px 10px; scroll-snap-type: x proximity; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .cmk-col { flex: 0 0 262px; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; scroll-snap-align: start; max-height: 72vh; }
+  .cmk-col.alvo { outline: 2px dashed var(--info, #1f5fa8); outline-offset: -4px; }
+  .cmk-col.fechadas { background: transparent; }
+  .cmk-col-cab { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .cmk-col-cab b { display: block; font-size: 13px; color: var(--text-strong, var(--text)); }
+  .cmk-col-cab span { color: var(--muted); }
+  .cmk-col-corpo { padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 90px; }
+  .cmk-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; cursor: pointer; overflow-wrap: anywhere; }
+  .cmk-card[draggable="true"] { cursor: grab; }
+  .cmk-card.risco { border-left-color: var(--danger); }
+  .cmk-card.atencao { border-left-color: var(--warning); }
+  .cmk-card.ganha { border-left-color: var(--success); } .cmk-card.perdida { border-left-color: var(--muted); }
+  .cmk-card.arrastando { opacity: .45; }
+  .cmk-card b.cli { display: block; font-size: 13px; color: var(--text-strong, var(--text)); }
+  .cmk-card .cmk-l { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+  .cmk-card .cmk-bts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .cmk-card .cmk-bts button { min-height: 34px; padding: 4px 10px; font-size: 12px; }
+  .cmk-leitura p { white-space: pre-wrap; }
+  .cmk-leitura ul { margin: 4px 0 8px 18px; padding: 0; font-size: 12.5px; }
+  .cmk-leitura li { margin-bottom: 3px; }
+  .cmk-lista-mover { display: flex; flex-direction: column; gap: 6px; }
+  .cmk-lista-mover button { text-align: left; min-height: 44px; }
+  .cmk-falta { border-left: 3px solid var(--danger); background: var(--danger-bg); padding: 8px 10px; border-radius: 4px; margin: 6px 0; font-size: 12.5px; }
+  .cmg-wrap { overflow-x: auto; overscroll-behavior-x: contain; background: var(--card); border: 1px solid var(--border); border-radius: 8px; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .cmg-wrap svg text { font-family: inherit; }
+  .cmg-legenda { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 8px 0; }
+  .cmg-legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
+  @media (max-width: 900px) {
+    .cmk-col { flex-basis: 82vw; max-height: none; }
+    .cmk-col-corpo { max-height: 62vh; }
+  }
   @media (max-width: 900px) {
     .cm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cm-grade2, .cm-grade3 { grid-template-columns: 1fr; }
@@ -91,7 +125,7 @@
   // ==========================================================
   var CM = { ini: null, mod: "", hojePapel: "", visao: "quadro", filtro: { situacao: "ABERTA" }, filtroProp: { situacao: "ABERTAS" }, cache: {} };
   var CM_MODS = { comercial: "Hoje no Comercial", comercial_oportunidades: "Oportunidades", comercial_propostas: "Propostas", comercial_pedidos: "Pedidos aprovados",
-    comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial" };
+    comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial", comercial_kanban: "Quadro do funil", comercial_gantt: "Gantt comercial" };
 
   function Com_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Com_$_(id) { return document.getElementById(id); }
@@ -155,7 +189,7 @@
       }
       if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos") mod = "comercial_pedidos";
       var mapa = { comercial: Comercial_renderHoje_, comercial_oportunidades: Comercial_renderOportunidades_, comercial_propostas: Comercial_renderPropostas_, comercial_pedidos: Comercial_renderPedidos_,
-        comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_ };
+        comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_, comercial_kanban: Comercial_renderKanban_, comercial_gantt: Comercial_renderGantt_ };
       (mapa[mod] || Comercial_renderHoje_)(div, alvo || {});
       if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) Com_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
     });
@@ -416,6 +450,8 @@
   function Comercial_aposAlterar_() {
     if (CM.mod === "comercial_oportunidades" && Com_$_("cmOpos")) Comercial_carregarOpos_();
     if (CM.mod === "comercial_propostas" && Com_$_("cmProps")) Comercial_carregarProps_();
+    if (CM.mod === "comercial_kanban" && Com_$_("cmkCorpo")) Comercial_carregarKanban_();
+    if (CM.mod === "comercial_gantt" && Com_$_("cmgCorpo")) Comercial_carregarGantt_();
     if (CM.mod === "comercial" && Com_$_("cmHoje")) Com_chamar_("hoje", { papel: CM.hojePapel || (CM.ini.gestao ? "GESTAO" : "VENDEDOR") }, Comercial_desenharHoje_, function () {});
   }
 
@@ -436,7 +472,7 @@
       (aberta ? '<dt>Próxima ação</dt><dd><b>' + Com_esc_(o.proximaAcao || "—") + '</b>' + (r.atividade ? ' · ' + Com_esc_(r.atividade.previsao) + ' · atividade ' + Com_esc_(r.atividade.situacao) : ' · sem atividade aberta') + '</dd>' : '') +
       (o.situacao === "PERDIDA" ? '<dt>Motivo da perda</dt><dd>' + Com_esc_(o.motivoPerda) + '. ' + Com_esc_(o.aprendizado) + '</dd>' : '') +
       (r.equipamentos.length ? '<dt>Equipamentos</dt><dd>' + r.equipamentos.map(function (e) { return Com_esc_(e.texto); }).join("<br>") + '</dd>' : '') + '</dl>';
-    if (aberta && r.podeEditar) h += '<div class="cm-acoes">' + b("contato", '<i class="fas fa-phone" aria-hidden="true"></i>&nbsp;Registrar contato', "btn-primary") + b("passo", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Próximo passo da gestora') +
+    if (aberta && r.podeEditar) h += '<div class="cm-acoes">' + b("contato", '<i class="fas fa-phone" aria-hidden="true"></i>&nbsp;Registrar contato', "btn-primary") + b("passo", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Próximo passo da gestora') + b("especialista", "Pedir à especialista") +
       b("etapa", "Mudar etapa") + b("proposta", "Nova proposta") + b("editar", "Editar") + b("ganha", "Marcar como ganha") + b("perda", "Registrar perda") + '</div>';
     if (!aberta && !o.reaberturaPedida && !ini.gestao) h += '<div class="cm-acoes">' + b("pedirReabrir", "Pedir reabertura à gestão") + '</div>';
     if (!aberta && ini.gestao) h += '<div class="cm-acoes">' + b("reabrir", "Reabrir", "btn-primary") + (o.reaberturaPedida ? b("recusarReabrir", "Recusar o pedido de reabertura") : '') + '</div>' + (o.reaberturaPedida ? '<div class="cm-faixa aviso">Pedido de reabertura: ' + Com_esc_(o.reaberturaMotivo) + '</div>' : '');
@@ -483,9 +519,10 @@
       etapa: function () {
         var f = ini.funis.filter(function (x) { return x.codigo === o.funil; })[0];
         area.innerHTML = '<div class="cm-caixa"><h3>Mudar etapa</h3>' + Com_campo_("Nova etapa", '<select id="cmEEt">' + Com_opcoes_(f.etapas.map(function (e) { return { v: e.codigo, t: e.nome + " (" + e.probabilidade + "%) — " + e.criterio }; }), o.etapa) + '</select>') +
-          (o.semProxima ? '<p class="cm-meta">A oportunidade está sem próxima ação: marque agora.</p>' + formProx("") : '<details><summary class="cm-meta">Trocar também a próxima ação (opcional)</summary>' + formProx("") + '</details>') + '<div id="cmEMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmEOk">Mudar etapa</button></div></div>';
-        Com_$_("cmEOk").onclick = function () { Com_chamar_("moverEtapa", { id: o.id, etapa: Com_$_("cmEEt").value, proxima: Com_$_("cmPAcao").value ? lerProx() : null }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmEMsg", m); }); };
+          '<p class="cm-meta">Ao continuar, o sistema mostra os critérios de saída da metodologia para você confirmar e o que ainda falta (se faltar algo, a oportunidade não muda).</p><div class="cm-acoes"><button type="button" class="btn-primary" id="cmEOk">Continuar</button></div></div>';
+        Com_$_("cmEOk").onclick = function () { Comercial_mudarEtapaJanela_(o.id, Com_$_("cmEEt").value, function (x) { recarregar(x && x.message); }); };
       },
+      especialista: function () { Comercial_especialista_(o.id); },
       proposta: function () { Com_chamar_("novaProposta", { oportunidadeId: o.id }, function (x) { g.remove(); abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(x.proposta.id, x.message); }, 400); }, function (m) { Com_msg_(area, m); }); },
       editar: function () { g.remove(); Comercial_formOportunidade_(o); },
       ganha: function () { if (!confirm("Marcar a oportunidade " + o.codigo + " como ganha? Depois, registre a resposta do cliente na proposta e passe o pedido aos setores.")) return; Com_chamar_("ganhar", { id: o.id }, function (x) { recarregar(x.message); }, function (m) { Com_msg_(area, m); }); },
@@ -827,6 +864,10 @@
     h += '<div class="cm-caixa"><h3>Funis e etapas</h3><p class="cm-meta">Uma etapa por linha: nome | probabilidade % | máximo de dias na etapa | critério para sair | itens da lista separados por ;</p>' + m.funis.map(function (f, k) {
       return Com_campo_("Funil " + f.nome + " — " + f.descricao, ta("cmMFunil" + k, f.etapas.map(function (e) { return [e.nome, e.probabilidade, e.maxDias, e.criterio, (e.checklist || []).join("; ")].join(" | "); }).join("\n"), 130));
     }).join("") + '</div>';
+    var av = m.avanco || {}, chk = function (id, v, t) { return '<label class="cm-check"><input type="checkbox" id="' + id + '"' + (v !== false ? ' checked' : '') + dis + '> ' + Com_esc_(t) + '</label>'; };
+    h += '<div class="cm-caixa"><h3>Critérios para avançar de etapa</h3><p class="cm-meta">Conferidos pelo sistema sempre que alguém move uma oportunidade para a frente (quadro do funil ou ficha). Faltando algo, a oportunidade não muda e a tela diz o que fazer. Voltar de etapa pede o motivo.</p>' +
+      chk('cmMAvLista', av.exigirLista, 'O vendedor confirma cada item da lista da etapa que está deixando') + chk('cmMAvDec', av.exigirDecisor, 'Decisor mapeado na qualificação') + chk('cmMAvCt', av.exigirContato, 'Pelo menos um contato com o cliente registrado') +
+      chk('cmMAvProp', av.exigirPropostaEnviada, 'Passar da etapa de proposta só com proposta enviada ao cliente') + chk('cmMAvAce', av.exigirAceite, 'A etapa de 100% só com a aprovação do cliente registrada (com o aceite)') + '</div>';
     h += '<div class="cm-caixa"><h3>Listas</h3><div class="cm-grade2">' + Com_campo_("Origens (uma por linha)", ta("cmMOrig", linhas(m.origens), 150)) + Com_campo_("Motivos de perda (um por linha)", ta("cmMPerda", linhas(m.motivosPerda), 150)) + '</div>' + Com_campo_("Regra da perda", ta("cmMRegraPerda", m.regraPerda, 50)) + '</div>';
     h += '<div class="cm-caixa"><h3>Qualificação</h3>' + Com_campo_("Critério", ta("cmMQCrit", m.qualificacao.criterio, 50)) + Com_campo_("Itens (nome | pergunta, um por linha)", ta("cmMQItens", m.qualificacao.itens.map(function (i) { return i.nome + " | " + i.pergunta; }).join("\n"), 100)) +
       Com_campo_("Perguntas de qualificação rápida (uma por linha)", ta("cmMQPerg", linhas(m.qualificacao.perguntas), 120)) + Com_campo_("Perfil de cliente atendido", ta("cmMQPerfil", m.qualificacao.perfilCliente, 60)) + '</div>';
@@ -864,6 +905,8 @@
         var n = JSON.parse(JSON.stringify(m));
         n.tese = v("cmMTese"); n.regrasDeOuro = ls("cmMOuro");
         n.funis.forEach(function (f, k) { var antigas = f.etapas; f.etapas = ls("cmMFunil" + k).map(function (l, j) { var p = partes(l); return { codigo: (antigas[j] && antigas[j].codigo) || (f.codigo.slice(0, 3) + "_" + (j + 1)), nome: p[0], probabilidade: Number(p[1]), maxDias: Number(p[2]) || 0, criterio: p[3] || "", checklist: (p[4] || "").split(";").map(function (x) { return x.trim(); }).filter(Boolean) }; }); });
+        var ck = function (id) { var el = Com_$_(id); return el ? el.checked : true; };
+        n.avanco = { exigirLista: ck("cmMAvLista"), exigirDecisor: ck("cmMAvDec"), exigirContato: ck("cmMAvCt"), exigirPropostaEnviada: ck("cmMAvProp"), exigirAceite: ck("cmMAvAce") };
         n.origens = ls("cmMOrig"); n.motivosPerda = ls("cmMPerda"); n.regraPerda = v("cmMRegraPerda");
         n.qualificacao = { criterio: v("cmMQCrit"), perguntas: ls("cmMQPerg"), perfilCliente: v("cmMQPerfil"), itens: ls("cmMQItens").map(function (l, j) { var p = partes(l); var ant = m.qualificacao.itens[j]; return { codigo: ant ? ant.codigo : "Q" + (j + 1), nome: p[0], pergunta: p[1] || "" }; }) };
         n.cadencia = { esfriandoDias: Number(v("cmMCEsf")), paradaDias: Number(v("cmMCPar")), tentativasMudarEstrategia: Number(v("cmMCTent")), propostaLembreteDiaUtil: Number(v("cmMCLemb")), propostaEscalaDiaUtil: Number(v("cmMCEsc")), propostaVencendoDias: Number(v("cmMCVenc")), carteiraEsquecidaDias: m.cadencia.carteiraEsquecidaDias,
@@ -880,5 +923,380 @@
         Com_chamar_("metodologia", { salvar: n, motivo: v("cmMMotivo") }, function (x) { CM.ini = null; Comercial_garantirInicio_(function () {}); Comercial_desenharMetodologia_(Object.assign(r, { metodologia: x.metodologia })); Com_msg_("cmMMsg", x.message, "ok"); }, function (e) { Com_msg_("cmMMsg", e); });
       } catch (e) { Com_msg_("cmMMsg", "Não foi possível ler a metodologia da tela: " + (e && e.message ? e.message : e) + ". Confira o formato das linhas (campos separados por |)."); }
     };
+  }
+
+  // =========================================================
+  // QUADRO DO FUNIL (KANBAN) E GANTT COMERCIAL (21/10/2026)
+  // Servidor: SGO_Comercial_Quadro.js (quadro, gantt), SGO_Comercial_Oportunidades.js (criteriosEtapa, moverEtapa)
+  // e SGO_Comercial_Gestora.js (especialista, leituraFunil). Soltar um cartão nunca grava direto: primeiro a tela
+  // pergunta o que a metodologia exige e mostra a janela de confirmação; o servidor confere tudo de novo ao gravar.
+  // A tela não se redesenha sozinha: recarrega depois de cada ação ou em "Atualizar".
+  // =========================================================
+  function Comercial_filtroQ_() {
+    if (!CM.filtroQ) CM.filtroQ = { funil: "", responsavelId: "", busca: "", area: "", de: Com_hojeIso_(-90), ate: Com_hojeIso_(90), agrupar: "oportunidade" };
+    return CM.filtroQ;
+  }
+
+  /** Barra de filtros comum ao quadro e ao Gantt. tela: 'kanban' | 'gantt'. */
+  function Comercial_filtrosQHtml_(tela) {
+    var ini = CM.ini, f = Comercial_filtroQ_();
+    var funis = ini.funis.map(function (x) { return { v: x.codigo, t: x.nome }; });
+    return '<div class="cm-filtros">' +
+      '<div><label for="cmQFunil">Funil</label><select id="cmQFunil">' + Com_opcoes_(funis, tela === "kanban" ? (f.funil || ini.funis[0].codigo) : f.funil, tela === "kanban" ? undefined : "Todos") + '</select></div>' +
+      (ini.gestao ? '<div><label for="cmQResp">Vendedor</label><select id="cmQResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
+      '<div style="flex:1 1 180px"><label for="cmQBusca">Cliente</label><input id="cmQBusca" placeholder="Nome do cliente, título ou código" value="' + Com_esc_(f.busca || "") + '"></div>' +
+      '<div><label for="cmQArea">Área</label><select id="cmQArea">' + Com_opcoes_((CM.areasQ || []).map(function (a) { return { v: a, t: a }; }), f.area, "Todas") + '</select></div>' +
+      '<div><label for="cmQDe">De</label><input type="date" id="cmQDe" value="' + Com_esc_(f.de) + '"></div>' +
+      '<div><label for="cmQAte">Até</label><input type="date" id="cmQAte" value="' + Com_esc_(f.ate) + '"></div>' +
+      (tela === "gantt" ? '<div><label for="cmQAgr">Linhas</label><select id="cmQAgr">' + Com_opcoes_([{ v: "oportunidade", t: "Uma por oportunidade" }, { v: "vendedor", t: "Agrupadas por vendedor" }], f.agrupar) + '</select></div>' : '') +
+      '</div>';
+  }
+
+  function Comercial_ligarFiltrosQ_(carregar) {
+    var f = Comercial_filtroQ_();
+    var ler = function () {
+      f.funil = Com_$_("cmQFunil").value; f.busca = Com_$_("cmQBusca").value; f.area = Com_$_("cmQArea").value; f.de = Com_$_("cmQDe").value; f.ate = Com_$_("cmQAte").value;
+      if (Com_$_("cmQResp")) f.responsavelId = Com_$_("cmQResp").value;
+      if (Com_$_("cmQAgr")) f.agrupar = Com_$_("cmQAgr").value;
+      carregar();
+    };
+    ["cmQFunil", "cmQResp", "cmQArea", "cmQDe", "cmQAte", "cmQAgr"].forEach(function (id) { var el = Com_$_(id); if (el) el.onchange = ler; });
+    var t = null; Com_$_("cmQBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 450); };
+  }
+
+  /** As áreas chegam do servidor: atualiza só as opções do filtro (sem mexer no que está sendo digitado). */
+  function Comercial_atualizarAreasQ_(areas) {
+    CM.areasQ = areas || [];
+    var sel = Com_$_("cmQArea");
+    if (!sel || document.activeElement === sel) return;
+    var atual = Comercial_filtroQ_().area;
+    sel.innerHTML = Com_opcoes_(CM.areasQ.map(function (a) { return { v: a, t: a }; }), atual, "Todas");
+  }
+
+  // ---------------- quadro ----------------
+  function Comercial_renderKanban_(div) {
+    Comercial_filtroQ_();
+    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Quadro do funil", "As oportunidades em colunas, uma por etapa do funil. Arraste o cartão (ou toque em \"Mover para\") para mudar de etapa: o sistema confere os critérios de saída da metodologia antes de mover.",
+      '<button type="button" class="btn-secondary" id="cmkAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+      '<button type="button" class="btn-secondary" id="cmkGantt"><i class="fas fa-chart-gantt" aria-hidden="true"></i>&nbsp;Ver o Gantt</button>' +
+      '<button type="button" class="btn-primary" id="cmkNova"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+      Comercial_filtrosQHtml_("kanban") + '<div id="cmkLeitura"></div><div id="cmkMsg"></div><div id="cmkCorpo"><div class="cm-vazio">Montando o quadro…</div></div></div>';
+    Com_$_("cmkAtual").onclick = Comercial_carregarKanban_;
+    Com_$_("cmkGantt").onclick = function () { abrir("comercial_gantt"); };
+    Com_$_("cmkNova").onclick = function () { Comercial_formOportunidade_(null); };
+    Comercial_ligarFiltrosQ_(Comercial_carregarKanban_);
+    Comercial_carregarKanban_();
+  }
+
+  function Comercial_carregarKanban_() {
+    Com_chamar_("quadro", Comercial_filtroQ_(), function (r) {
+      if (!Com_$_("cmkCorpo")) return;
+      CM.quadro = r;
+      Comercial_filtroQ_().funil = r.funil.codigo;
+      Comercial_atualizarAreasQ_(r.areas);
+      Com_msg_("cmkMsg", "");
+      Comercial_desenharLeitura_(r.leitura, r, null);
+      Comercial_desenharQuadro_(r);
+    }, function (m) { Com_msg_("cmkMsg", m); });
+  }
+
+  function Comercial_desenharLeitura_(leitura, q, ia) {
+    var alvo = Com_$_("cmkLeitura"); if (!alvo) return;
+    var tempos = (ia && ia.tempos) || q.tempos || [];
+    var risco = (ia && ia.emRisco) || q.emRisco || [];
+    var h = '<div class="cm-gestora cmk-leitura"><div class="ic"><i class="fas fa-user-tie" aria-hidden="true"></i></div><div style="flex:1;min-width:0">' +
+      '<p class="t">Leitura do funil · ' + Com_esc_(q.funil.nome) + '</p><p class="s">' + Com_esc_(q.periodoTxt) + ' · ' + (leitura.origem === "IA" ? "texto da especialista, conferido contra os números do sistema" : "pelas regras da metodologia, com os números do sistema") + '</p>' +
+      '<p>' + Com_esc_(leitura.texto) + '</p>' +
+      (leitura.origem === "IA" && leitura.gargalos && leitura.gargalos.length ? '<p class="cm-txt" style="margin-top:6px"><b>Gargalos</b></p><ul>' + leitura.gargalos.map(function (g) { return '<li>' + Com_esc_(g) + '</li>'; }).join("") + '</ul>' : '') +
+      (risco.length ? '<p class="cm-txt" style="margin-top:6px"><b>Em risco</b></p><ul>' + risco.map(function (x) { return '<li><button type="button" class="atv-titulo-link" data-opo-risco="' + Com_esc_(x.id) + '" style="font-size:12.5px">' + Com_esc_(x.codigo) + ' · ' + Com_esc_(x.cliente) + '</button>' + (x.valorTxt ? ' · ' + Com_esc_(x.valorTxt) : '') + ': ' + Com_esc_(x.motivos.join(", ")) + '</li>'; }).join("") + '</ul>' : '') +
+      (ia && ia.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(ia.aviso) + '</div>' : '') +
+      '<details style="margin-top:6px"><summary class="cm-meta" style="cursor:pointer">Tempo médio por etapa contra a meta da metodologia</summary><table class="cm-tabela" style="margin-top:6px"><thead><tr><th>Etapa</th><th class="n">Meta</th><th class="n">Média para sair</th><th class="n">Passagens</th><th class="n">Na etapa agora</th><th class="n">Acima do prazo</th></tr></thead><tbody>' +
+      tempos.map(function (t) { return '<tr><td data-r="Etapa"><b>' + Com_esc_(t.nome) + '</b></td><td class="n" data-r="Meta">até ' + t.maxDias + ' dias</td><td class="n" data-r="Média para sair"' + (t.acimaDaMeta ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + Com_esc_(t.mediaTxt) + '</td><td class="n" data-r="Passagens">' + t.passagens + '</td><td class="n" data-r="Na etapa agora">' + t.atuais + (t.atuais ? ' (média ' + Com_esc_(t.mediaAtuaisTxt) + ')' : '') + '</td><td class="n" data-r="Acima do prazo"' + (t.acimaDoPrazo ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + t.acimaDoPrazo + '</td></tr>'; }).join("") +
+      '</tbody></table><p class="cm-meta">A média conta o tempo de cada passagem já concluída (do registro de entrada na etapa até a saída). "Na etapa agora" são as abertas hoje.</p></details>' +
+      '<div class="cm-acoes">' + (q.iaDisponivel && !ia ? '<button type="button" class="btn-secondary" id="cmkPedirLeitura"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Pedir a leitura da especialista</button>' : '') +
+      (ia && ia.sugestaoId && leitura.origem === "IA" ? '<button type="button" class="btn-secondary" id="cmkLUsei">Usei</button><button type="button" class="btn-secondary" id="cmkLDesc">Não serviu</button>' : '') + '</div>' +
+      (!q.iaDisponivel ? '<p class="s" style="margin-top:6px">Sem a chave da IA, a leitura sai pelas regras (os números são os mesmos).</p>' : '') +
+      '<p class="s" style="margin-top:4px">A leitura só aponta: nenhuma oportunidade muda de etapa e nada é enviado ao cliente por ela.</p></div></div>';
+    alvo.innerHTML = h;
+    alvo.querySelectorAll("[data-opo-risco]").forEach(function (b) { b.onclick = function () { Comercial_abrirOportunidade_(b.getAttribute("data-opo-risco")); }; });
+    var bL = Com_$_("cmkPedirLeitura");
+    if (bL) bL.onclick = function () {
+      Com_chamar_("leituraFunil", Object.assign({}, Comercial_filtroQ_(), { comIA: true }), function (x) { Comercial_desenharLeitura_(x.leitura, q, x); }, function (m) { Com_msg_("cmkMsg", m); }, { carregando: "A especialista está lendo o funil com os números do sistema…" });
+    };
+    var dec = function (decisao, motivo, b) { Com_chamar_("decidirSugestao", { sugestaoId: ia.sugestaoId, decisao: decisao, motivo: motivo || "" }, function () { b.textContent = "Anotado"; b.disabled = true; }, function (m) { alert(m); }); };
+    if (Com_$_("cmkLUsei")) Com_$_("cmkLUsei").onclick = function () { dec("USEI", "", this); };
+    if (Com_$_("cmkLDesc")) Com_$_("cmkLDesc").onclick = function () { var b = this, m = window.prompt("Por que a leitura não serviu? (a gestão usa isso para ajustar a metodologia)"); if (m && m.trim().length >= 5) dec("DESCARTEI", m.trim(), b); else if (m !== null) alert("Escreva pelo menos 5 letras."); };
+  }
+
+  function Comercial_cartaoQHtml_(c, fechada) {
+    var ini = CM.ini;
+    var cls = fechada ? (c.situacao === "GANHA" ? "ganha" : "perdida") : (c.selos.some(function (s) { return s.cor === "vermelho"; }) ? "risco" : c.selos.some(function (s) { return s.cor === "laranja"; }) ? "atencao" : "");
+    return '<div class="cmk-card ' + cls + '" draggable="' + (c.podeMover ? "true" : "false") + '" data-cmk="' + Com_esc_(c.id) + '" tabindex="0" aria-label="' + Com_esc_(c.codigo + " " + c.cliente) + '">' +
+      '<b class="cli">' + Com_esc_(c.cliente) + '</b>' + Com_esc_(c.titulo) +
+      '<p class="cmk-l">' + Com_esc_(c.codigo) + (c.valorTxt ? ' · ' + Com_esc_(c.valorTxt) : '') + (ini.gestao ? ' · ' + Com_esc_(c.responsavel) : '') + '</p>' +
+      (fechada ? '<p class="cmk-l">' + (c.situacao === "GANHA" ? "Ganha em " : "Perdida em ") + Com_esc_(c.fechadaEm) + (c.motivoPerda ? ' · ' + Com_esc_(c.motivoPerda) : '') + '</p>'
+        : '<p class="cmk-l"><b>Próxima:</b> ' + Com_esc_(c.proximaAcao || "nenhuma") + (c.proximaEm ? ' (' + Com_esc_(c.proximaEm) + ')' : '') + '</p>' +
+          '<p class="cmk-l">Sem contato há ' + c.diasSemContato + (c.diasSemContato === 1 ? ' dia' : ' dias') + ' · ' + c.diasNaEtapa + (c.diasNaEtapa === 1 ? ' dia' : ' dias') + ' na etapa' + (c.previsao ? ' · fechamento previsto ' + Com_esc_(c.previsao) : '') + '</p>') +
+      '<div style="margin-top:4px">' + c.selos.map(function (s) { return '<span class="cm-selo ' + Com_esc_(s.cor) + '">' + Com_esc_(s.texto) + '</span>'; }).join("") + '</div>' +
+      (fechada ? '' : '<div class="cmk-bts">' + (c.podeMover ? '<button type="button" class="btn-secondary" data-cmk-mover="' + Com_esc_(c.id) + '">Mover para</button>' : '') +
+        '<button type="button" class="btn-secondary" data-cmk-esp="' + Com_esc_(c.id) + '"><i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Pedir à especialista</button></div>') + '</div>';
+  }
+
+  function Comercial_desenharQuadro_(r) {
+    var alvo = Com_$_("cmkCorpo"); if (!alvo) return;
+    var porId = {};
+    var col = function (c, fechadas) {
+      c.cartoes.forEach(function (k) { porId[k.id] = k; });
+      var info = fechadas ? (c.valorTxt ? c.valorTxt : '') : (c.probabilidade + '%' + (c.maxDias ? ' · meta até ' + c.maxDias + ' dias' : ''));
+      return '<div class="cmk-col' + (fechadas ? ' fechadas' : '') + '" data-cmk-col="' + Com_esc_(c.codigo) + '"><div class="cmk-col-cab"><b>' + Com_esc_(c.nome) + '</b><span>' + c.qtd + (c.qtd === 1 ? ' oportunidade' : ' oportunidades') + (!fechadas && c.valorTxt ? ' · ' + Com_esc_(c.valorTxt) : '') + '</span><br><span>' + Com_esc_(info) + '</span></div>' +
+        '<div class="cmk-col-corpo">' + (c.cartoes.length ? c.cartoes.map(function (k) { return Comercial_cartaoQHtml_(k, fechadas); }).join("") : '<div class="cm-meta" style="text-align:center;padding:14px 0">' + (fechadas ? "Nenhuma no período" : "Arraste uma oportunidade para cá") + '</div>') +
+        (fechadas && c.qtd > c.cartoes.length ? '<p class="cm-meta">Mostrando as ' + c.cartoes.length + ' mais recentes.</p>' : '') + '</div></div>';
+    };
+    var total = r.colunas.reduce(function (s, c) { return s + c.qtd; }, 0);
+    alvo.innerHTML = '<p class="cm-meta">' + total + (total === 1 ? ' oportunidade aberta' : ' oportunidades abertas') + ' no funil ' + Com_esc_(r.funil.nome) + '. ' +
+      (ehMobileModo_() ? 'Deslize para os lados dentro do quadro para ver as outras etapas. Toque em "Mover para" para mudar de etapa.' : 'Role o quadro para os lados para ver as outras etapas. Arraste o cartão ou use "Mover para".') + '</p>' +
+      '<div class="cmk-quadro" id="cmkQuadro">' + r.colunas.map(function (c) { return col(c, false); }).join("") + col(r.ganhas, true) + col(r.perdidas, true) + '</div>';
+    CM.quadroCartoes = porId;
+    var arrastando = "";
+    alvo.querySelectorAll(".cmk-card").forEach(function (el) {
+      el.addEventListener("dragstart", function (ev) { arrastando = el.getAttribute("data-cmk"); el.classList.add("arrastando"); try { ev.dataTransfer.setData("text/plain", arrastando); ev.dataTransfer.effectAllowed = "move"; } catch (e) {} });
+      el.addEventListener("dragend", function () { el.classList.remove("arrastando"); alvo.querySelectorAll(".cmk-col").forEach(function (k) { k.classList.remove("alvo"); }); });
+      el.addEventListener("click", function (ev) { if (ev.target.closest("button")) return; Comercial_abrirOportunidade_(el.getAttribute("data-cmk")); });
+      el.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && ev.target === el) Comercial_abrirOportunidade_(el.getAttribute("data-cmk")); });
+    });
+    alvo.querySelectorAll(".cmk-col").forEach(function (k) {
+      k.addEventListener("dragover", function (ev) { ev.preventDefault(); k.classList.add("alvo"); });
+      k.addEventListener("dragleave", function () { k.classList.remove("alvo"); });
+      k.addEventListener("drop", function (ev) {
+        ev.preventDefault(); k.classList.remove("alvo");
+        var id = arrastando; try { id = ev.dataTransfer.getData("text/plain") || id; } catch (e) {}
+        arrastando = "";
+        if (porId[id]) Comercial_kanbanSoltar_(porId[id], k.getAttribute("data-cmk-col"));
+      });
+    });
+    alvo.querySelectorAll("[data-cmk-mover]").forEach(function (b) { b.onclick = function () { Comercial_kanbanMoverPara_(porId[b.getAttribute("data-cmk-mover")]); }; });
+    alvo.querySelectorAll("[data-cmk-esp]").forEach(function (b) { b.onclick = function () { Comercial_especialista_(b.getAttribute("data-cmk-esp")); }; });
+  }
+
+  /** Alternativa ao arrastar (celular, teclado): lista das etapas, Ganha e Perdida. */
+  function Comercial_kanbanMoverPara_(c) {
+    var q = CM.quadro; if (!q || !c) return;
+    var ov = Com_modal_("Mover " + c.codigo + " · " + c.cliente, '<p class="cm-meta">Escolha para onde mover. O sistema confere os critérios de saída antes; nada muda sem você confirmar.</p><div class="cmk-lista-mover">' +
+      q.colunas.map(function (k) { return '<button type="button" class="btn-secondary" data-dest="' + Com_esc_(k.codigo) + '"' + (k.codigo === c.etapa ? ' disabled' : '') + '>' + Com_esc_(k.nome) + ' (' + k.probabilidade + '%)' + (k.codigo === c.etapa ? ' · etapa atual' : '') + '</button>'; }).join("") +
+      '<button type="button" class="btn-secondary" data-dest="GANHA">Ganha (registrar o aceite do cliente)</button><button type="button" class="btn-secondary" data-dest="PERDIDA">Perdida (motivo e aprendizado)</button></div>', '<button type="button" class="btn-secondary" data-x="c">Cancelar</button>', 480);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelectorAll("[data-dest]").forEach(function (b) { b.onclick = function () { ov.remove(); Comercial_kanbanSoltar_(c, b.getAttribute("data-dest")); }; });
+  }
+
+  function Comercial_kanbanSoltar_(c, destino) {
+    if (!c || !destino || destino === c.etapa && c.situacao === "ABERTA") return;
+    if (c.situacao !== "ABERTA") { alert("A oportunidade " + c.codigo + " está encerrada e não muda de coluna pelo quadro. Para voltar a trabalhá-la, abra a oportunidade: o vendedor pede a reabertura e a gestão comercial decide (com a próxima ação)."); return; }
+    if (!c.podeMover) { alert("Não foi possível mover: a oportunidade " + c.codigo + " é de " + (c.responsavel || "outra pessoa") + ". Quem move é o responsável ou a gestão comercial."); return; }
+    var depois = function () { Comercial_carregarKanban_(); };
+    if (destino === "GANHA") Comercial_kanbanGanhar_(c, depois);
+    else if (destino === "PERDIDA") Comercial_kanbanPerder_(c, depois);
+    else Comercial_mudarEtapaJanela_(c.id, destino, depois);
+  }
+
+  /**
+   * Janela de mudança de etapa (quadro e ficha da oportunidade): pergunta ao servidor o que a metodologia exige, mostra o que
+   * falta (com o caminho na tela), a lista da etapa para confirmar, a próxima ação (se faltar) e o motivo (ao voltar).
+   */
+  function Comercial_mudarEtapaJanela_(id, etapa, depois) {
+    Com_chamar_("criteriosEtapa", { id: id, etapa: etapa }, function (c) {
+      var o = c.oportunidade, ini = CM.ini;
+      if (c.sentido === "IGUAL") { alert("A oportunidade " + o.codigo + " já está nesta etapa."); return; }
+      var grupos = {}, ordem = [];
+      c.confirmar.forEach(function (x, i) { if (!grupos[x.etapa]) { grupos[x.etapa] = { nome: x.etapaNome, itens: [] }; ordem.push(x.etapa); } grupos[x.etapa].itens.push({ x: x, i: i }); });
+      var corpo = '<p class="cm-txt"><b>' + Com_esc_(o.cliente) + '</b> · ' + Com_esc_(o.titulo) + '</p><p class="cm-txt">De <b>' + Com_esc_(c.origem.nome) + '</b> para <b>' + Com_esc_(c.destino.nome) + '</b> (' + c.destino.probabilidade + '%)' + (c.sentido === "RECUO" ? ', voltando de etapa.' : '.') + '</p>';
+      if (c.faltas.length) corpo += '<div class="cm-faixa erro">Ainda não dá para mover. A oportunidade continua em ' + Com_esc_(c.origem.nome) + ' até resolver:</div>' + c.faltas.map(function (f) { return '<div class="cmk-falta"><b>' + Com_esc_(f.texto) + '</b><br>O que fazer: ' + Com_esc_(f.oQueFazer) + '</div>'; }).join("");
+      if (ordem.length) corpo += '<p class="cm-sec">Critérios de saída (confirme só o que foi feito de verdade)</p>' + ordem.map(function (k) {
+        return '<p class="cm-meta" style="margin:6px 0 2px">Etapa ' + Com_esc_(grupos[k].nome) + '</p>' + grupos[k].itens.map(function (it) { return '<label class="cm-check"><input type="checkbox" data-crit="' + it.i + '"' + (it.x.confirmado ? " checked" : "") + (it.x.jaGravado ? " disabled" : "") + '> ' + Com_esc_(it.x.texto) + (it.x.jaGravado ? ' <span class="cm-meta">(já confirmado antes)</span>' : '') + '</label>'; }).join("");
+      }).join("");
+      if (c.precisaProxima) corpo += '<p class="cm-sec">Próxima ação (a oportunidade está sem nenhuma)</p><div class="cm-grade3">' + Com_campo_("O que fazer", '<input id="cmJAcao" maxlength="300">') + Com_campo_("Data", '<input id="cmJData" type="date" value="' + Com_hojeIso_(1) + '">') + Com_campo_("Hora", '<input id="cmJHora" type="time" value="10:00">') + '</div>' +
+        Com_campo_("Como", '<select id="cmJTipo">' + Com_opcoes_(Object.keys(ini.tiposContato).map(function (k) { return { v: k, t: ini.tiposContato[k] }; }), "LIGACAO") + '</select>');
+      if (c.precisaMotivo) corpo += Com_campo_("Por que voltar de etapa? (fica no histórico, mínimo 10 letras)", '<textarea id="cmJMotivo" maxlength="1000"></textarea>');
+      corpo += '<div id="cmJMsg"></div>';
+      var pode = !c.faltas.length;
+      var ov = Com_modal_("Mudar a etapa de " + o.codigo, corpo, '<button type="button" class="btn-secondary" data-x="c">' + (pode ? "Cancelar" : "Fechar") + '</button>' + (!pode ? '<button type="button" class="btn-secondary" data-x="abrir">Abrir a oportunidade</button>' : '') +
+        (pode ? '<button type="button" class="btn-primary" data-x="ok">Mover para ' + Com_esc_(c.destino.nome) + '</button>' : ''), 600);
+      ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+      var ab = ov.querySelector('[data-x="abrir"]'); if (ab) ab.onclick = function () { ov.remove(); Comercial_abrirOportunidade_(o.id); };
+      var okb = ov.querySelector('[data-x="ok"]');
+      if (okb) okb.onclick = function () {
+        var conf = {}, faltando = [];
+        ov.querySelectorAll("[data-crit]").forEach(function (cb) { var x = c.confirmar[+cb.getAttribute("data-crit")]; if (cb.checked) (conf[x.etapa] = conf[x.etapa] || []).push(x.texto); else faltando.push(x.texto); });
+        if (faltando.length) { Com_msg_("cmJMsg", "Faltam " + faltando.length + (faltando.length === 1 ? " item" : " itens") + " da lista para sair da etapa: " + faltando.join("; ") + ". Se ainda não foram feitos, a oportunidade fica onde está; faça e volte aqui."); return; }
+        var d = { id: o.id, etapa: c.destino.codigo, confirmados: conf };
+        if (c.precisaProxima) d.proxima = { acao: Com_$_("cmJAcao").value, data: Com_$_("cmJData").value, hora: Com_$_("cmJHora").value, tipo: Com_$_("cmJTipo").value };
+        if (c.precisaMotivo) d.motivo = Com_$_("cmJMotivo").value;
+        Com_chamar_("moverEtapa", d, function (x) { ov.remove(); Comercial_aposAlterar_(); if (depois) depois(x); }, function (m) { Com_msg_("cmJMsg", m); }, { carregando: "Conferindo e movendo…" });
+      };
+    }, function (m) { alert(m); });
+  }
+
+  /** Soltar em Ganha: o fluxo exige o aceite do cliente registrado na proposta enviada. */
+  function Comercial_kanbanGanhar_(c, depois) {
+    var l = c.propostasEnviadas || [];
+    if (!l.length) {
+      var ov0 = Com_modal_("Marcar " + c.codigo + " como ganha", '<div class="cm-faixa aviso">Para marcar como ganha pelo quadro, registre a aprovação do cliente na proposta enviada, com o arquivo do aceite. Esta oportunidade ainda não tem proposta enviada aguardando resposta' + (c.proposta ? ' (a proposta atual está "' + Com_esc_(c.proposta.situacaoNome) + '")' : '') + '.</div>' +
+        '<p class="cm-txt">O que fazer: abra a oportunidade, toque em "Nova proposta" (ou abra a proposta em andamento), conclua, gere o documento e envie ao cliente. Quando o cliente aprovar, volte aqui e arraste de novo, ou registre a resposta na proposta.</p><p class="cm-meta">A oportunidade continua na etapa em que estava.</p>',
+        '<button type="button" class="btn-secondary" data-x="c">Fechar</button><button type="button" class="btn-primary" data-x="abrir">Abrir a oportunidade</button>', 520);
+      ov0.querySelector('[data-x="c"]').onclick = function () { ov0.remove(); };
+      ov0.querySelector('[data-x="abrir"]').onclick = function () { ov0.remove(); Comercial_abrirOportunidade_(c.id); };
+      return;
+    }
+    var ov = Com_modal_("Cliente aprovou: " + c.codigo, '<p class="cm-txt"><b>' + Com_esc_(c.cliente) + '</b> · ' + Com_esc_(c.titulo) + '</p>' +
+      Com_campo_("Proposta aprovada", '<select id="cmGProp">' + Com_opcoes_(l.map(function (p) { return { v: p.id, t: p.rotulo + " · " + p.situacaoNome + " · válida até " + p.validaAte }; }), l[0].id) + '</select>') +
+      Com_campo_("Arquivo do aceite (obrigatório)", '<input type="file" id="cmGArq" accept=".pdf,.png,.jpg,.jpeg,.eml,.msg,.txt,.doc,.docx">', "E-mail de aprovação salvo em PDF, pedido de compra ou proposta assinada. Fica na pasta do cliente.") +
+      Com_campo_("Data da resposta", '<input type="date" id="cmGData" value="' + Com_hojeIso_(0) + '">') + Com_campo_("O que o cliente disse", '<textarea id="cmGTexto" maxlength="2000"></textarea>') +
+      '<p class="cm-meta">Ao registrar, a proposta fica aprovada, a oportunidade vai para Ganhas e o próximo passo é passar o pedido aos setores (na proposta).</p><div id="cmGMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Registrar a aprovação</button>', 560);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      var f = Com_$_("cmGArq").files[0];
+      if (!f) { Com_msg_("cmGMsg", "Anexe o arquivo do aceite do cliente (e-mail em PDF, pedido de compra ou proposta assinada). Sem ele a aprovação não é registrada e a oportunidade continua onde está."); return; }
+      if (f.size > 10 * 1024 * 1024) { Com_msg_("cmGMsg", "O arquivo passa de 10 MB. Salve em PDF menor e anexe de novo."); return; }
+      var rd = new FileReader();
+      rd.onload = function () {
+        Com_chamar_("respostaCliente", { id: Com_$_("cmGProp").value, resposta: "APROVADA", texto: Com_$_("cmGTexto").value, data: Com_$_("cmGData").value, marcarGanha: true,
+          arquivo: { nome: f.name, tipo: f.type || "application/octet-stream", base64: String(rd.result).replace(/^data:[^,]+,/, "") } },
+          function (x) { ov.remove(); Comercial_aposAlterar_(); alert(x.message); if (depois) depois(x); }, function (m) { Com_msg_("cmGMsg", m); }, { carregando: "Registrando a aprovação…" });
+      };
+      rd.readAsDataURL(f);
+    };
+  }
+
+  /** Soltar em Perdida: motivo da lista e aprendizado (o mesmo da ficha). */
+  function Comercial_kanbanPerder_(c, depois) {
+    var ini = CM.ini;
+    var ov = Com_modal_("Registrar a perda de " + c.codigo, '<p class="cm-txt"><b>' + Com_esc_(c.cliente) + '</b> · ' + Com_esc_(c.titulo) + '</p><p class="cm-meta">' + Com_esc_(ini.regraPerda) + '</p>' +
+      Com_campo_("Motivo", '<select id="cmKLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') + Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmKLApr" maxlength="2000"></textarea>') +
+      '<p class="cm-meta">As atividades abertas e as propostas sem resposta desta oportunidade são canceladas (ficam no histórico).</p><div id="cmKLMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Registrar a perda</button>', 540);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      Com_chamar_("perder", { id: c.id, motivo: Com_$_("cmKLMot").value, aprendizado: Com_$_("cmKLApr").value }, function () { ov.remove(); Comercial_aposAlterar_(); if (depois) depois(); }, function (m) { Com_msg_("cmKLMsg", m); }, { carregando: "Registrando…" });
+    };
+  }
+
+  // ---------------- especialista ----------------
+  function Comercial_especialista_(id) {
+    var ov = Com_modal_("Pedir à especialista", '<div class="cm-vazio">A especialista está analisando a oportunidade com a metodologia…</div>', '', 680);
+    var corpo = ov.querySelector(".atv-modal-corpo");
+    Com_chamar_("especialista", { id: id }, function (x) {
+      var s = x.sugestao, o = x.oportunidade;
+      ov.querySelector("h3").textContent = "Especialista · " + o.codigo + " · " + o.cliente;
+      var lista = function (l) { return '<ul style="margin:0 0 6px 18px;font-size:12.5px">' + l.map(function (q) { return '<li>' + Com_esc_(q) + '</li>'; }).join("") + '</ul>'; };
+      corpo.innerHTML = '<p class="cm-meta">' + Com_esc_(o.titulo) + ' · etapa ' + Com_esc_(o.etapaNome) + ' · ' + (x.origem === "IA" ? "texto da especialista, conferido contra os dados do sistema" : "pelas regras da metodologia") + '</p>' +
+        (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '') +
+        '<p class="cm-sec">Próximo passo</p><p class="cm-txt"><b>' + Com_esc_(s.proximoPasso) + '</b></p><p class="cm-txt">' + Com_esc_(s.porque) + '</p>' +
+        '<p class="cm-sec">' + Com_esc_(s.estrategia.titulo) + '</p><p class="cm-txt">' + Com_esc_(s.estrategia.texto) + '</p>' + lista(s.estrategia.passos || []) +
+        '<p class="cm-sec">Objeções prováveis</p>' + (s.objecoes || []).map(function (b) { return '<p class="cm-txt"><b>"' + Com_esc_(b.objecao) + '"</b><br>' + Com_esc_(b.resposta) + '</p>'; }).join("") +
+        (s.perguntas && s.perguntas.length ? '<p class="cm-sec">Perguntas para o cliente</p>' + lista(s.perguntas) : '') +
+        '<p class="cm-sec">Mensagem (WhatsApp)</p><div class="cm-msg">' + Com_esc_(s.mensagem) + '</div><p class="cm-sec">E-mail: ' + Com_esc_(s.emailAssunto) + '</p><div class="cm-msg">' + Com_esc_(s.emailCorpo) + '</div>' +
+        '<p class="cm-meta">' + Com_esc_(x.lembrete) + '</p><div id="cmEspMsg"></div>';
+      var rod = document.createElement("div"); rod.className = "atv-modal-rod";
+      rod.innerHTML = '<button type="button" class="btn-secondary" data-e="msg">Copiar mensagem</button><button type="button" class="btn-secondary" data-e="email">Copiar e-mail</button><button type="button" class="btn-secondary" data-e="usei">Usei</button><button type="button" class="btn-secondary" data-e="desc">Não serviu</button><button type="button" class="btn-primary" data-e="abrir">Abrir a oportunidade</button>';
+      ov.querySelector(".atv-modal").appendChild(rod);
+      rod.querySelector('[data-e="msg"]').onclick = function () { Com_copiar_(s.mensagem, this); };
+      rod.querySelector('[data-e="email"]').onclick = function () { Com_copiar_(s.emailAssunto + "\n\n" + s.emailCorpo, this); };
+      var dec = function (b, decisao, motivo) { Com_chamar_("decidirSugestao", { sugestaoId: x.sugestaoId, decisao: decisao, motivo: motivo || "" }, function () { b.textContent = "Anotado"; b.disabled = true; }, function (m) { Com_msg_("cmEspMsg", m); }); };
+      rod.querySelector('[data-e="usei"]').onclick = function () { dec(this, "USEI"); };
+      rod.querySelector('[data-e="desc"]').onclick = function () { var b = this, m = window.prompt("Por que a sugestão não serviu? (a gestão usa isso para ajustar a metodologia)"); if (m && m.trim().length >= 5) dec(b, "DESCARTEI", m.trim()); else if (m !== null) alert("Escreva pelo menos 5 letras."); };
+      rod.querySelector('[data-e="abrir"]').onclick = function () { ov.remove(); Comercial_abrirOportunidade_(o.id); };
+    }, function (m) { corpo.innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; }, { carregando: "A especialista está analisando…" });
+  }
+
+  // ---------------- Gantt ----------------
+  function Comercial_renderGantt_(div) {
+    Comercial_filtroQ_();
+    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Gantt comercial", "Cada oportunidade no tempo: da criação à previsão de fechamento, com a proposta enviada, a validade, os retornos combinados, o pedido aprovado e a passagem aos setores. Toque numa linha para ver os detalhes.",
+      '<button type="button" class="btn-secondary" id="cmgAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-secondary" id="cmgQuadro"><i class="fas fa-table-columns" aria-hidden="true"></i>&nbsp;Ver o quadro</button>') +
+      Comercial_filtrosQHtml_("gantt") + '<div id="cmgMsg"></div><div id="cmgCorpo"><div class="cm-vazio">Montando o Gantt…</div></div></div>';
+    Com_$_("cmgAtual").onclick = Comercial_carregarGantt_;
+    Com_$_("cmgQuadro").onclick = function () { abrir("comercial_kanban"); };
+    Comercial_ligarFiltrosQ_(Comercial_carregarGantt_);
+    Comercial_carregarGantt_();
+  }
+
+  function Comercial_carregarGantt_() {
+    Com_chamar_("gantt", Comercial_filtroQ_(), function (r) {
+      var alvo = Com_$_("cmgCorpo"); if (!alvo) return;
+      CM.gantt = r; Comercial_atualizarAreasQ_(r.areas); Com_msg_("cmgMsg", "");
+      alvo.innerHTML = Comercial_ganttHtml_(r, alvo.clientWidth || 1000);
+      alvo.querySelectorAll("[data-cmg]").forEach(function (g) { g.addEventListener("click", function () { Comercial_ganttDetalhe_(g.getAttribute("data-cmg")); }); });
+      alvo.querySelectorAll("[data-cmg-lista]").forEach(function (b) { b.onclick = function () { Comercial_ganttDetalhe_(b.getAttribute("data-cmg-lista")); }; });
+    }, function (m) { Com_msg_("cmgMsg", m); });
+  }
+
+  var CMG_CORES = { ABERTA: "#5b8fb9", GANHA: "#4f9f75", PERDIDA: "#8a96a8" };
+  function Comercial_ganttHtml_(r, largura) {
+    if (!r.linhas.length) return '<div class="cm-vazio">Nenhuma oportunidade no período e nos filtros escolhidos.</div>';
+    var p = function (iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null; };
+    var ini = p(r.de), fim = p(r.ate), dias = Math.round((fim - ini) / 864e5) + 1;
+    var movel = ehMobileModo_();
+    var rotW = movel ? 128 : 250, W = Math.max(largura - 2, rotW + dias * (movel ? 7 : 6)), area = W - rotW - 10, px = area / dias, lh = 30, cab = 40;
+    var x = function (iso) { var d = p(iso); if (d === null) return rotW; return Math.max(rotW, Math.min(rotW + area, rotW + (d - ini) / 864e5 * px + px / 2)); };
+    var linhas = [];
+    var ultimo = null;
+    r.linhas.forEach(function (l) {
+      if (r.filtros.agrupar === "vendedor" && l.responsavel !== ultimo) { linhas.push({ grupo: l.responsavel }); ultimo = l.responsavel; }
+      linhas.push(l);
+    });
+    var H = cab + linhas.length * lh + 10, s = [];
+    s.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Gantt comercial" style="display:block">');
+    var meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    var passo = px >= 14 ? 1 : px >= 7 ? 2 : px >= 3 ? 7 : 14;
+    for (var i = 0; i < dias; i++) {
+      var d = new Date(ini + i * 864e5), xx = rotW + i * px;
+      if (d.getUTCDay() === 0 || d.getUTCDay() === 6) s.push('<rect x="' + xx.toFixed(1) + '" y="' + cab + '" width="' + px.toFixed(1) + '" height="' + (H - cab) + '" fill="rgba(127,127,127,.07)"/>');
+      if (d.getUTCDate() === 1 || i === 0) s.push('<text x="' + (xx + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + meses[d.getUTCMonth()] + "/" + d.getUTCFullYear() + '</text>');
+      if (i % passo === 0) { s.push('<line x1="' + xx.toFixed(1) + '" y1="' + (cab - 6) + '" x2="' + xx.toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,.16)"/>'); s.push('<text x="' + (xx + 2).toFixed(1) + '" y="' + (cab - 10) + '" font-size="10" fill="var(--muted)">' + ("0" + d.getUTCDate()).slice(-2) + '</text>'); }
+    }
+    var marcador = function (m, cx, cy) {
+      var cor = m.atrasado ? "#d64545" : { ENVIO: "#1E4F7A", VALIDADE: "#c2953f", RETORNO: m.concluido ? "#4f9f75" : "#5b6270", APROVADO: "#2e8b57", PASSAGEM: "#6a4fa3" }[m.tipo] || "#555";
+      var t = '<title>' + Com_esc_(m.diaTxt + " · " + m.rotulo + (m.atrasado ? " (atrasado)" : "")) + '</title>';
+      if (m.tipo === "VALIDADE") return '<g>' + t + '<path d="M' + cx + ' ' + (cy - 6) + ' L' + (cx + 6) + ' ' + cy + ' L' + cx + ' ' + (cy + 6) + ' L' + (cx - 6) + ' ' + cy + ' Z" fill="' + cor + '" stroke="#fff" stroke-width="1"/></g>';
+      if (m.tipo === "RETORNO") return '<g>' + t + '<path d="M' + (cx - 5) + ' ' + (cy + 5) + ' L' + cx + ' ' + (cy - 5) + ' L' + (cx + 5) + ' ' + (cy + 5) + ' Z" fill="' + cor + '" stroke="#fff" stroke-width="1"/></g>';
+      if (m.tipo === "APROVADO" || m.tipo === "PASSAGEM") return '<g>' + t + '<rect x="' + (cx - 5) + '" y="' + (cy - 5) + '" width="10" height="10" fill="' + cor + '" stroke="#fff" stroke-width="1"/></g>';
+      return '<g>' + t + '<circle cx="' + cx + '" cy="' + cy + '" r="5" fill="' + cor + '" stroke="#fff" stroke-width="1"/></g>';
+    };
+    linhas.forEach(function (l, idx) {
+      var y = cab + idx * lh;
+      if (l.grupo !== undefined) { s.push('<line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="rgba(127,127,127,.35)"/><text x="8" y="' + (y + 19) + '" font-size="12" font-weight="800" fill="var(--text)">' + Com_esc_(l.grupo) + '</text>'); return; }
+      var rot = l.codigo + " · " + l.cliente, max = movel ? 18 : 34; if (rot.length > max) rot = rot.slice(0, max - 1) + "…";
+      var hojeIso = r.hoje, fimBarra = l.situacao === "ABERTA" ? (l.previsao || hojeIso) : (l.fim || l.previsao || l.inicio);
+      if (fimBarra < l.inicio) fimBarra = l.inicio;
+      var x0 = x(l.inicio) - px / 2, x1 = x(fimBarra) + px / 2, by = y + 8, bh = lh - 16;
+      var tip = l.codigo + " · " + l.cliente + "\n" + l.titulo + "\nVendedor: " + l.responsavel + "\nEtapa: " + l.etapaNome + " (" + l.funilNome + ")\nCriada em " + l.inicioTxt + (l.previsaoTxt ? "\nPrevisão de fechamento: " + l.previsaoTxt : "\nSem previsão de fechamento") + (l.fimTxt ? "\n" + (l.situacao === "GANHA" ? "Ganha" : "Perdida") + " em " + l.fimTxt : "") + (l.valorTxt ? "\nValor: " + l.valorTxt : "") + (l.atrasada ? "\nATRASADA: a previsão passou e a oportunidade segue aberta" : "");
+      s.push('<g data-cmg="' + Com_esc_(l.id) + '" style="cursor:pointer"><title>' + Com_esc_(tip) + '</title><rect x="0" y="' + y + '" width="' + W + '" height="' + lh + '" fill="transparent"/>');
+      s.push('<text x="8" y="' + (y + 13) + '" font-size="11.5" font-weight="700" fill="' + (l.atrasada ? "#d64545" : "var(--text)") + '">' + Com_esc_(rot) + '</text><text x="8" y="' + (y + 25) + '" font-size="9.5" fill="var(--muted)">' + Com_esc_((movel ? "" : l.responsavel + " · ") + l.etapaNome).slice(0, movel ? 22 : 44) + '</text>');
+      s.push('<rect x="' + x0.toFixed(1) + '" y="' + by + '" width="' + Math.max(4, x1 - x0).toFixed(1) + '" height="' + bh + '" rx="3" fill="' + (CMG_CORES[l.situacao] || "#888") + '"' + (l.semPrevisao && l.situacao === "ABERTA" ? ' fill-opacity=".45" stroke="' + CMG_CORES.ABERTA + '" stroke-dasharray="4 3"' : '') + '/>');
+      if (l.atrasada) { var xa = x(l.previsao) + px / 2, xh = x(hojeIso) + px / 2; if (xh > xa) s.push('<rect x="' + xa.toFixed(1) + '" y="' + by + '" width="' + (xh - xa).toFixed(1) + '" height="' + bh + '" fill="rgba(214,69,69,.6)" stroke="#d64545"/>'); }
+      l.marcos.forEach(function (m) { if (m.dia < r.de || m.dia > r.ate) return; s.push(marcador(m, x(m.dia).toFixed(1), y + lh / 2)); });
+      s.push('</g>');
+    });
+    if (r.hoje >= r.de && r.hoje <= r.ate) { var xh2 = x(r.hoje); s.push('<line x1="' + xh2.toFixed(1) + '" y1="' + (cab - 4) + '" x2="' + xh2.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/><text x="' + (xh2 + 3).toFixed(1) + '" y="' + (cab - 24) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje</text>'); }
+    s.push('</svg>');
+    var leg = '<div class="cmg-legenda"><span><i style="background:' + CMG_CORES.ABERTA + '"></i>Aberta (criação até a previsão)</span><span><i style="background:' + CMG_CORES.ABERTA + ';opacity:.45;outline:1px dashed ' + CMG_CORES.ABERTA + '"></i>Aberta sem previsão (até hoje)</span><span><i style="background:' + CMG_CORES.GANHA + '"></i>Ganha</span><span><i style="background:' + CMG_CORES.PERDIDA + '"></i>Perdida</span>' +
+      '<span><i style="background:rgba(214,69,69,.6);outline:1px solid #d64545"></i>Atraso (previsão vencida, ou marco atrasado em vermelho)</span><span><i style="background:#1E4F7A;border-radius:50%"></i>Proposta enviada</span><span><i style="background:#c2953f;transform:rotate(45deg)"></i>Validade da proposta</span>' +
+      '<span><i style="background:#5b6270;clip-path:polygon(50% 0,100% 100%,0 100%)"></i>Retorno combinado (verde: feito)</span><span><i style="background:#2e8b57"></i>Pedido aprovado</span><span><i style="background:#6a4fa3"></i>Passagem aos setores</span><span><i style="background:#1E4F7A;width:3px"></i>Hoje</span></div>';
+    var aviso = r.cortadas ? '<div class="cm-faixa aviso">Mostrando as primeiras ' + r.linhas.length + ' oportunidades; ' + r.cortadas + ' ficaram de fora. Use os filtros (vendedor, cliente, área ou um período menor).</div>' : '';
+    var lista = movel ? '<p class="cm-sec">Lista</p><div class="cm-lista">' + r.linhas.map(function (l) { return '<button type="button" class="cm-mini" style="text-align:left;width:100%" data-cmg-lista="' + Com_esc_(l.id) + '"><b>' + Com_esc_(l.codigo + " · " + l.cliente) + '</b>' + Com_esc_(l.etapaNome) + ' · criada ' + Com_esc_(l.inicioTxt) + (l.previsaoTxt ? ' · previsão ' + Com_esc_(l.previsaoTxt) : '') + (l.atrasada ? ' <span class="cm-selo vermelho">Atrasada</span>' : '') + '</button>'; }).join("") + '</div>' : '';
+    return '<p class="cm-meta">' + r.linhas.length + (r.linhas.length === 1 ? ' oportunidade' : ' oportunidades') + ' · ' + Com_esc_(r.periodoTxt) + (movel ? ' · deslize o gráfico para os lados.' : '') + '</p>' + aviso + leg + '<div class="cmg-wrap">' + s.join("") + '</div>' + lista;
+  }
+
+  function Comercial_ganttDetalhe_(id) {
+    var l = ((CM.gantt && CM.gantt.linhas) || []).filter(function (x) { return x.id === id; })[0];
+    if (!l) return;
+    var corpo = '<p class="cm-txt"><b>' + Com_esc_(l.cliente) + '</b> · ' + Com_esc_(l.titulo) + '</p><dl class="cm-det"><dt>Situação</dt><dd>' + Com_esc_({ ABERTA: "Aberta", GANHA: "Ganha", PERDIDA: "Perdida" }[l.situacao]) + (l.atrasada ? ' <span class="cm-selo vermelho">Previsão vencida</span>' : '') + '</dd>' +
+      '<dt>Etapa</dt><dd>' + Com_esc_(l.funilNome + " · " + l.etapaNome) + '</dd><dt>Vendedor</dt><dd>' + Com_esc_(l.responsavel) + '</dd>' + (l.valorTxt ? '<dt>Valor estimado</dt><dd>' + Com_esc_(l.valorTxt) + '</dd>' : '') +
+      '<dt>Criada</dt><dd>' + Com_esc_(l.inicioTxt) + '</dd><dt>Previsão de fechamento</dt><dd>' + Com_esc_(l.previsaoTxt || "não informada") + '</dd>' + (l.fimTxt ? '<dt>' + (l.situacao === "GANHA" ? "Ganha em" : "Perdida em") + '</dt><dd>' + Com_esc_(l.fimTxt) + '</dd>' : '') + '</dl>' +
+      '<p class="cm-sec">Marcos</p>' + (l.marcos.length ? '<div class="cm-hist">' + l.marcos.map(function (m) { return '<div' + (m.atrasado ? ' style="color:var(--danger)"' : '') + '><b>' + Com_esc_(m.diaTxt) + '</b> · ' + Com_esc_(m.rotulo) + (m.atrasado ? ' (atrasado)' : '') + '</div>'; }).join("") + '</div>' : '<p class="cm-meta">Nenhum marco ainda.</p>');
+    var ov = Com_modal_(l.codigo + " · " + l.cliente, corpo, '<button type="button" class="btn-secondary" data-x="c">Fechar</button>' + (l.situacao === "ABERTA" ? '<button type="button" class="btn-secondary" data-x="esp"><i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Pedir à especialista</button>' : '') + '<button type="button" class="btn-primary" data-x="abrir">Abrir a oportunidade</button>', 560);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="abrir"]').onclick = function () { ov.remove(); Comercial_abrirOportunidade_(l.id); };
+    var e = ov.querySelector('[data-x="esp"]'); if (e) e.onclick = function () { ov.remove(); Comercial_especialista_(l.id); };
   }
 </script>

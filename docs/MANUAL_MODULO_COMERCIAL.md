@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026. Telas: Comercial > Hoje no Comercial, Oportunidades, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial.
+Versão de 21/10/2026. Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial.
 
 ## Para que serve
 
@@ -34,7 +34,39 @@ Para a gestão, a aba "Panorama da gestão" mostra a equipe (abertas, sem próxi
 
 Ao falar com o cliente, abra a oportunidade e toque em "Registrar contato": diga como foi, se o cliente respondeu e o que aconteceu, e marque a próxima ação. Depois de 3 tentativas sem resposta, a gestora sugere mudar a estratégia (trocar o canal, falar com outro contato, revisar a proposta, envolver a gestão).
 
+Para mudar de etapa, toque em "Mudar etapa", escolha a etapa e toque em "Continuar" (ou use o Quadro do funil). A janela mostra os critérios de saída da metodologia: marque os itens da lista da etapa que foram feitos de verdade. Para avançar, o sistema também exige (padrão, configurável na Metodologia) o decisor mapeado na qualificação, pelo menos um contato registrado, proposta já enviada para passar da etapa de proposta e o aceite do cliente registrado para a etapa de 100%. Faltando algo, a janela diz o quê e onde resolver, e a oportunidade não muda. Voltar de etapa pede o motivo. Os itens confirmados ficam gravados na oportunidade e no histórico (nunca são apagados).
+
 Regras: toda oportunidade aberta tem próxima ação com data; parada há 10 dias sem contato (padrão) não muda de etapa até um contato real ou a perda; a perda exige o motivo da lista e o aprendizado; reabrir é decisão da gestão comercial (o vendedor pede e o pedido vai para a Caixa de decisões).
+
+## Quadro do funil
+
+Comercial > Quadro do funil mostra as oportunidades em colunas, uma por etapa do funil escolhido (Engenharia ou Produtos), mais as ganhas e as perdidas do período. Cada coluna mostra a quantidade e, para quem vê valores, o valor em aberto. Cada cartão traz o cliente, o título, o código, o valor (para quem vê valores), a próxima ação e a data, há quantos dias está sem contato e na etapa, a previsão de fechamento e os selos (proposta, desconto aguardando aprovação, parada, retorno atrasado, tempo acima da meta, pedido sem passagem).
+
+Filtros: funil, vendedor (gestão), cliente (nome, título ou código), área (tipo do equipamento ligado ou categoria do serviço no catálogo) e período ("De" e "Até"; padrão: 90 dias para trás e 90 para frente). A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período; as ganhas e perdidas aparecem pela data em que foram encerradas (as 30 mais recentes).
+
+Para mudar de etapa, arraste o cartão para outra coluna ou toque em "Mover para" (no celular, o botão substitui o arrastar). Nada é gravado ao soltar: o sistema confere os critérios de saída da metodologia e abre a janela de confirmação, a mesma da ficha da oportunidade. Soltar em "Ganhas" pede a proposta enviada e o arquivo do aceite do cliente (a aprovação fica registrada na proposta e a oportunidade é marcada como ganha; depois passe o pedido aos setores). Sem proposta enviada, a janela explica o caminho e a oportunidade continua onde estava. Soltar em "Perdidas" pede o motivo da lista e o aprendizado. Oportunidade encerrada não muda de coluna: o vendedor pede a reabertura na ficha.
+
+No celular as colunas rolam para os lados dentro do quadro; a página não rola para o lado.
+
+### Leitura do funil
+
+No topo do quadro, a "Leitura do funil" mostra, com os números do sistema: os gargalos (etapa com média de dias para sair acima da meta da metodologia, oportunidades acima do prazo agora ou acúmulo de 40% ou mais das abertas numa só etapa), as oportunidades em risco (sem próxima ação, parada, retorno atrasado, tempo acima da meta na etapa, várias tentativas sem resposta, previsão vencida, proposta perto de vencer) e a tabela "Tempo médio por etapa" (meta, média para sair, passagens concluídas, quantas estão na etapa agora e quantas passaram do prazo). O tempo é contado pelo histórico da oportunidade, em dias corridos, como o máximo de dias da metodologia.
+
+"Pedir a leitura da especialista" faz a IA escrever a leitura com os mesmos números. O verificador confere cada número: número que não está nos dados do sistema, promessa ou norma e o texto é recusado; vale o das regras. A leitura não muda nada: nenhuma oportunidade muda de etapa e nada é enviado. "Usei" e "Não serviu" ficam registrados para a gestão.
+
+## Gantt comercial
+
+Comercial > Gantt comercial mostra uma linha por oportunidade (ou agrupadas por vendedor), com a barra da criação até a previsão de fechamento. Sem previsão, a barra vai até hoje, tracejada. Ganha em verde, perdida em cinza. Se a previsão passou e a oportunidade continua aberta, o trecho até hoje fica em vermelho.
+
+Marcos na linha: proposta enviada (círculo), validade da proposta (losango; vermelho se venceu sem resposta), retornos combinados com o cliente, que são as atividades do Comercial em Minhas atividades (triângulo; verde quando feito, vermelho quando atrasado), pedido aprovado (quadrado verde) e passagem aos setores (quadrado roxo; vermelho quando o pedido aprovado está sem passagem além do prazo). A linha azul marca hoje.
+
+Tocar na linha abre os detalhes, com os botões "Abrir a oportunidade" e "Pedir à especialista". Os filtros são os mesmos do quadro. No celular o gráfico rola para os lados dentro da moldura e há uma lista abaixo dele.
+
+## A especialista em comercial
+
+No cartão do quadro, na linha do Gantt e na ficha da oportunidade, "Pedir à especialista" chama a gestora comercial com o contexto da oportunidade e devolve: o próximo passo e o porquê; a estratégia para a etapa (o critério de saída e o que falta para avançar, pelos mesmos critérios do quadro); as objeções prováveis neste momento, com a resposta que vende valor técnico; perguntas para o cliente; e os textos de WhatsApp e e-mail para o vendedor revisar e enviar.
+
+Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verificador confere campo a campo. A especialista não envia nada ao cliente, não muda etapa e não grava nada na oportunidade. Cada pedido fica registrado com a decisão do vendedor ("Usei" ou "Não serviu", com o motivo), que a gestão vê em Metodologia comercial.
 
 ## Propostas
 
@@ -70,9 +102,12 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 ## Metodologia comercial
 
-É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui.
+É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui.
 
 ## Problemas comuns
+
+- "Ainda não dá para mover" (quadro ou ficha): falta algo exigido pela metodologia para sair da etapa. A janela diz o quê e onde resolver; resolva e mova de novo.
+- No celular o cartão não arrasta: use "Mover para".
 
 - "Escolha em qual unidade é a oportunidade": o cliente tem unidades; documentos, equipamentos e pastas do SGO+ são por unidade.
 - "A próxima ação não pode ficar no passado": o que já foi feito se registra em "Registrar contato".

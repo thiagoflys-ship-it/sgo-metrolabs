@@ -46,7 +46,7 @@ var SGO_ASSIST_ACESSO = {
   // 21/10/2026: Comercial nativo (o servidor ainda confere a área: Gestor de outra área não abre; Financeiro só Pedidos aprovados).
   comercial: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_oportunidades: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_propostas: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
   comercial_pedidos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_catalogo: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_painel: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
-  comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
+  comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
 var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios'];
