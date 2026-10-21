@@ -289,10 +289,8 @@ function CadeiaFrioRel_apiMontarCertificadoFinal(payload) {
   const html = template.evaluate().getContent();
   // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
   // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
-  return SGO_DocSalvar_finalizarCertificado_(html, payload, function() {
-    const id = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10) ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim() : '';
-    return id ? DriveApp.getFolderById(id) : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
-  }, 'Certificado de qualificação térmica Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
+  // 21/10/2026: pasta própria do módulo (CadeiaFrioRel_pastaLaudos_, SGO_CadeiaFrioRel_Emissao.js).
+  return SGO_DocSalvar_finalizarCertificado_(html, payload, CadeiaFrioRel_pastaLaudos_, 'Certificado de qualificação térmica Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
 }
 
 // ------------------------------------------------------------

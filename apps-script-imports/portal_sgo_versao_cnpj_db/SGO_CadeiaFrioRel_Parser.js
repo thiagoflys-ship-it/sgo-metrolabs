@@ -416,6 +416,10 @@ function CadeiaFrioRel_cfMesclarSeriesPorSensor_(seriesPorSensor, opcoes) {
   const toleranciaMs = Number(opcoes.toleranciaMs) > 0 ? Number(opcoes.toleranciaMs) : Math.round(intervaloMedioMs * 0.5);
 
   const ponteiros = new Array(nSensores).fill(0);
+  // 21/10/2026: resumo do alinhamento por sensor (anexo do relatório e da planilha de dados).
+  const resumo = seriesPorSensor.map(function(se) {
+    return Array.isArray(se) && se.length ? { leituras: se.length, semCorrespondencia: 0, maiorDefasagemSeg: 0, inicio: se[0].tempoStr, fim: se[se.length - 1].tempoStr } : null;
+  });
 
   const linhasFinais = serieRef.map(function(linhaRef) {
     const alvoMs = linhaRef.tempoDate.getTime();
@@ -435,6 +439,9 @@ function CadeiaFrioRel_cfMesclarSeriesPorSensor_(seriesPorSensor, opcoes) {
       const diffMs = Math.abs(serie[p].tempoDate.getTime() - alvoMs);
       if (diffMs <= toleranciaMs) {
         temperaturas[s] = serie[p].temperaturas[0];
+        if (diffMs / 1000 > resumo[s].maiorDefasagemSeg) resumo[s].maiorDefasagemSeg = diffMs / 1000;
+      } else {
+        resumo[s].semCorrespondencia++;
       }
     }
 
@@ -445,6 +452,9 @@ function CadeiaFrioRel_cfMesclarSeriesPorSensor_(seriesPorSensor, opcoes) {
     };
   });
 
+  // Propriedade só de leitura interna (não vai para JSON): quem precisa do resumo lê daqui.
+  Object.defineProperty(linhasFinais, '_mesclagem', { value: { referencia: 'registrador do sensor S' + (refIdx + 1), toleranciaSeg: Math.round(toleranciaMs / 100) / 10,
+    sensores: resumo.map(function(r, s) { return r ? Object.assign({ sensor: 'S' + (s + 1) }, r) : null; }).filter(Boolean) }, enumerable: false });
   return linhasFinais;
 }
 

@@ -5,7 +5,7 @@
  * Centraliza as configurações globais do sistema, no mesmo
  * papel do Config.js do motor de Autoclave, adaptado para
  * qualificação térmica de equipamentos de cadeia de frio
- * (ABNT NBR 16328:2023, Anexo G).
+ * (ABNT NBR 16328:2024, Anexo G).
  *
  * Diferença estrutural em relação à Autoclave:
  * - não existe F0/letalidade nem fases de vácuo/pulso;
@@ -67,7 +67,7 @@ const CadeiaFrioRel_CFCFG = Object.freeze({
 
   /****************************************************
    * 7. SENSORES MÍNIMOS POR VOLUME DECLARADO
-   * ABNT NBR 16328:2023, art. 15 (regra geral, vale para
+   * ABNT NBR 16328:2024, seção 15 (regra geral, vale para
    * qualquer equipamento térmico, não só autoclave):
    * - volume >= 60 L: mínimo 12 sensores
    * - volume <  60 L: mínimo 3 sensores
@@ -300,7 +300,8 @@ const CadeiaFrioRel_CFCFG = Object.freeze({
  */
 function CadeiaFrioRel_cfCalcularSensoresMinimos_(volumeLitros, conjugado) {
   const cfg = CadeiaFrioRel_CFCFG.SENSORES_POR_VOLUME;
-  const vol = Number(volumeLitros);
+  // 21/10/2026: volume não informado (vazio ou null) não é volume zero: vale a regra de 12 sensores.
+  const vol = (volumeLitros === null || volumeLitros === undefined || String(volumeLitros).trim() === '') ? NaN : Number(volumeLitros);
 
   if (conjugado) {
     return cfg.minSensoresConjugado;

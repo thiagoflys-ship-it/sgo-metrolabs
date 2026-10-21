@@ -34,16 +34,27 @@ function CadeiaFrioRel_cfObterPastaPersistente_(propKey, nomePasta) {
 
 
 
+/** Chamadas que geram documento do ensaio: exigem o vínculo com o cadastro (CadeiaFrioRel_aplicarVinculo_). */
+var CADEIAFRIO_FN_COM_VINCULO = ['apiConverter', 'apiGerarPlanilhaDados', 'apiGerarRascunhoCertificado', 'apiMontarCertificadoFinal', 'apiEnviarParaAprovacao', 'apiPreviaRelatorio'];
+
 /**
  * Roteador seguro de funções chamadas pelo frontend.
+ * 21/10/2026: a sessão vai para as funções (aprovação do responsável técnico) e o documento do ensaio
+ * só sai com o equipamento escolhido no cadastro (relatório interno fica de fora). O relatório de ensaio
+ * e a planilha de dados seguem o modelo novo; os anteriores voltam só pelas propriedades do módulo.
  */
 function CadeiaFrioRel_apiDispatch(req) {
   req = req || {};
-  var sessaoDispatchRH = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  const sessionId = String(req.sessionId || '');
+  var sessaoDispatchRH = exigirSessao(sessionId); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
   if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Cadeia de frio'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
 
   const fn = String(req.fn || '').trim();
-  const payload = req.payload || {};
+  let payload = req.payload || {};
+  if (CADEIAFRIO_FN_COM_VINCULO.indexOf(fn) >= 0 && !payload.modoRelatorioSimulado) {
+    payload = CadeiaFrioRel_aplicarVinculo_(sessionId, payload);
+  }
+  const relatorioNovo = CadeiaFrioRel_relatorioModelo_() === 'NOVO';
 
   const allow = {
     apiPing: CadeiaFrioRel_apiPing,
@@ -53,8 +64,23 @@ function CadeiaFrioRel_apiDispatch(req) {
     apiUploadArquivo: CadeiaFrioRel_apiUploadArquivo,
     apiConsultarCnpj: CadeiaFrioRel_apiConsultarCnpj,
     apiValidarSenhaSimuladorAdmin: CadeiaFrioRel_apiValidarSenhaSimuladorAdmin,
-    apiGerarRascunhoCertificado: CadeiaFrioRel_apiGerarRascunhoCertificado,
-    apiMontarCertificadoFinal: CadeiaFrioRel_apiMontarCertificadoFinal
+    // Relatório de ensaio: modelo novo (com aprovação) ou o certificado anterior (preservado).
+    apiGerarRascunhoCertificado: relatorioNovo ? CadeiaFrioRel_apiRascunhoRelatorio : CadeiaFrioRel_apiGerarRascunhoCertificado,
+    apiMontarCertificadoFinal: relatorioNovo ? CadeiaFrioRel_apiEmitirRelatorio : CadeiaFrioRel_apiMontarCertificadoFinal,
+    apiPreviaRelatorio: CadeiaFrioRel_apiPreviaRelatorio,
+    apiGerarPlanilhaDados: CadeiaFrioRel_apiGerarPlanilhaDados,
+    // Aprovação do responsável técnico (SGO_QualifEmissao.js)
+    apiEnviarParaAprovacao: CadeiaFrioRel_apiEnviarParaAprovacao,
+    apiListarAprovacoes: CadeiaFrioRel_apiListarAprovacoes,
+    apiPreverAprovacao: CadeiaFrioRel_apiPreverAprovacao,
+    apiAprovarEmitir: CadeiaFrioRel_apiAprovarEmitir,
+    apiDevolverAprovacao: CadeiaFrioRel_apiDevolverAprovacao,
+    apiDefinirModelos: CadeiaFrioRel_apiDefinirModelos,
+    // Cliente → unidade → equipamento (componente comum de escolha, JS_QualifVinculo.html)
+    apiPesquisarClientes: CadeiaFrioRel_apiPesquisarClientes,
+    apiListarUnidades: CadeiaFrioRel_apiListarUnidades,
+    apiListarEquipamentos: CadeiaFrioRel_apiListarEquipamentos,
+    apiIdentificacao: CadeiaFrioRel_apiIdentificacao
   };
 
   if (!fn) {
@@ -65,14 +91,16 @@ function CadeiaFrioRel_apiDispatch(req) {
     throw new Error('Função não permitida ou não encontrada: ' + fn);
   }
 
-  return allow[fn](payload);
+  const r = allow[fn](payload, sessaoDispatchRH, sessionId);
+  if (/^api(EnviarParaAprovacao|AprovarEmitir|DevolverAprovacao|GerarPlanilhaDados|MontarCertificadoFinal)$/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') { try { SGO_Pendencias_invalidar_(); } catch (eP) {} }
+  return r;
 }
 
 // ------------------------------------------------------------
 // SINCRONIZAÇÃO COM A INTERFACE
 // ------------------------------------------------------------
 
-function CadeiaFrioRel_apiPing() {
+function CadeiaFrioRel_apiPing(payload, sessao) {
   const laudosId = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10)
     ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim()
     : '';
@@ -106,8 +134,14 @@ function CadeiaFrioRel_apiPing() {
     sensoresPorVolume: CadeiaFrioRel_CFCFG.SENSORES_POR_VOLUME || {},
     perfis: perfis,
     estudos: CadeiaFrioRel_CFCFG.ESTUDOS || {},
-    laudosUrl: laudosId ? ('https://drive.google.com/drive/folders/' + laudosId) : '',
-    uploadsUrl: uploadsId ? ('https://drive.google.com/drive/folders/' + uploadsId) : '',
+    // 21/10/2026: endereço real da pasta própria do módulo (a pasta fixa do Google Drive antigo não existe no servidor).
+    laudosUrl: (function() { try { return CadeiaFrioRel_pastaLaudos_().getUrl(); } catch (e) { return laudosId ? ('https://drive.google.com/drive/folders/' + laudosId) : ''; } })(),
+    uploadsUrl: (function() { try { return CadeiaFrioRel_pastaUploads_().getUrl(); } catch (e) { return uploadsId ? ('https://drive.google.com/drive/folders/' + uploadsId) : ''; } })(),
+    planilhaModelo: CadeiaFrioRel_planilhaModelo_(),
+    relatorioModelo: CadeiaFrioRel_relatorioModelo_(),
+    podeAprovarEmissao: !!(sessao && CadeiaFrioRel_ehAprovador_(sessao)),
+    perfilSessao: String((sessao && sessao.perfil) || '').toUpperCase(),
+    aConfirmar: CADEIAFRIO_QCFG.A_CONFIRMAR.slice(),
     simuladorAdmin: {
       habilitado: !!(CadeiaFrioRel_CFCFG.SIMULADOR_ADMIN && CadeiaFrioRel_CFCFG.SIMULADOR_ADMIN.habilitado !== false),
       intervaloSegundosDefault: Number(CadeiaFrioRel_CFCFG.SIMULADOR_ADMIN && CadeiaFrioRel_CFCFG.SIMULADOR_ADMIN.intervaloSegundosDefault) || 300
@@ -199,9 +233,8 @@ function CadeiaFrioRel_apiUploadArquivo(payload) {
   try {
     const bytes = Utilities.base64Decode(base64);
     const blob = Utilities.newBlob(bytes, mimeType, fileName);
-    const folder = folderIdConfigurado
-      ? DriveApp.getFolderById(folderIdConfigurado)
-      : CadeiaFrioRel_cfObterPastaPersistente_('UPLOAD_FOLDER_ID', 'Cadeia de Frio - Uploads');
+    // 21/10/2026: pasta própria de envios do módulo (a chave genérica antiga podia ser de outro módulo).
+    const folder = CadeiaFrioRel_pastaUploads_();
     const file = folder.createFile(blob);
 
     return {
@@ -452,7 +485,7 @@ function CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload) {
         tempoAlvoMinutos: cfg.tempoAlvoMinutos
       });
     } else if (cfg.tipoEstudo === 'AUTONOMIA') {
-      analise = CadeiaFrioRel_cfAnalisarAutonomia(fatia, faixa, sensoresAtivos, {});
+      analise = CadeiaFrioRel_cfAnalisarAutonomia(fatia, faixa, sensoresAtivos, { tempoAlvoMinutos: cfg.tempoAlvoMinutos });
     } else {
       throw new Error('Tipo de estudo não implementado: ' + cfg.tipoEstudo);
     }
@@ -468,11 +501,24 @@ function CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload) {
     nSensores: nSensores,
     sensoresAtivos: sensoresAtivos,
     dadosCompletos: dadosCompletos,
-    analises: analises
+    analises: analises,
+    // 21/10/2026: resumo do alinhamento dos registradores individuais (anexo dos documentos).
+    mesclagem: dadosCompletos._mesclagem || null
   };
 }
 
-function CadeiaFrioRel_apiConverter(payload) {
+/**
+ * Planilha de dados. 21/10/2026: o modelo novo (A4 paisagem, SGO_CadeiaFrioRel_PlanilhaDados.js) é o padrão;
+ * o modelo anterior (Google Planilhas, SGO_CadeiaFrioRel_Planilha.js) fica preservado e volta só com
+ * CADEIAFRIO_PLANILHA_MODELO = ANTERIOR em Chaves e senhas. Documentos antigos continuam na pasta do cliente.
+ */
+function CadeiaFrioRel_apiConverter(payload, sessao) {
+  if (CadeiaFrioRel_planilhaModelo_() !== 'ANTERIOR') return CadeiaFrioRel_apiGerarPlanilhaDados(payload, sessao);
+  return CadeiaFrioRel_apiConverterModeloAnterior_(payload);
+}
+
+/** Modelo anterior da planilha de dados (Google Planilhas → PDF em paisagem). */
+function CadeiaFrioRel_apiConverterModeloAnterior_(payload) {
   payload = payload || {};
 
   const resultado = CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload);
@@ -492,10 +538,7 @@ function CadeiaFrioRel_apiConverter(payload) {
 
   const pdfUrl = CadeiaFrioRel_cfConstruirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
   // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
-  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
-    const id = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10) ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim() : '';
-    return id ? DriveApp.getFolderById(id) : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
-  }, 'Relatório de dados Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, CadeiaFrioRel_pastaLaudos_, 'Relatório de dados Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
   const statusConsolidado = CadeiaFrioRel_cfConsolidarStatus_(analises);
 
   return {
@@ -643,7 +686,9 @@ function CadeiaFrioRel_cfMontarConfigEstudos_(payload, perfilCfg) {
       janelaFimMs: fimMs,
       janelaInicio: autonomia.inicio,
       janelaFim: autonomia.fim,
-      autonomiaEstimadaMinutos: CadeiaFrioRel_cfParseNumeroMain_(autonomia.autonomiaEstimadaMinutos, null)
+      autonomiaEstimadaMinutos: CadeiaFrioRel_cfParseNumeroMain_(autonomia.autonomiaEstimadaMinutos, null),
+      // 21/10/2026: autonomia mínima exigida (opcional): com ela o estudo aprova ou reprova.
+      tempoAlvoMinutos: CadeiaFrioRel_cfParseNumeroMain_(autonomia.tempoAlvoMinutos, null)
     });
   }
 
@@ -681,14 +726,25 @@ function CadeiaFrioRel_cfMontarConfigEvento_(tipoEstudo, cfgEvento, margemMin) {
   };
 }
 
+/**
+ * Resultado do conjunto de estudos (21/10/2026): REPROVADO se algum estudo reprovou; APROVADO se ao menos um
+ * estudo tem critério e foi aprovado; INFORMATIVO se nenhum estudo tem critério de aprovação. Estudo sem critério
+ * (caracterização) não aprova nem reprova. Não existe mais "aprovado com alerta".
+ */
 function CadeiaFrioRel_cfConsolidarStatus_(analises) {
   if (!analises || !analises.length) return 'INFORMATIVO';
-  if (analises.some(function(a) { return a.statusAprovacao === 'REPROVADO'; })) return 'REPROVADO';
-  if (analises.some(function(a) { return a.statusAprovacao === 'APROVADO_COM_ALERTA'; })) return 'APROVADO_COM_ALERTA';
-  if (analises.every(function(a) { return a.statusAprovacao === 'APROVADO'; })) return 'APROVADO';
-  if (analises.some(function(a) { return a.statusAprovacao === 'INFORMATIVO'; })) return 'INFORMATIVO';
-  if (analises.every(function(a) { return a.statusAprovacao === 'CARACTERIZACAO'; })) return 'CARACTERIZACAO';
-  return 'APROVADO';
+  const st = analises.map(function(a) { return CadeiaFrioRel_cfNormalizarStatus_(a.statusAprovacao); });
+  if (st.indexOf('REPROVADO') >= 0) return 'REPROVADO';
+  if (st.indexOf('APROVADO') >= 0) return 'APROVADO';
+  return 'INFORMATIVO';
+}
+
+/** Status único: APROVADO, REPROVADO ou INFORMATIVO (caracterização e o antigo "com alerta" incluídos). */
+function CadeiaFrioRel_cfNormalizarStatus_(status) {
+  const s = String(status || '').toUpperCase();
+  if (s === 'REPROVADO') return 'REPROVADO';
+  if (s.indexOf('APROVADO') === 0) return 'APROVADO';
+  return 'INFORMATIVO';
 }
 
 function CadeiaFrioRel_cfAplicarMarcadoresSimulacaoNaAnalise_(analise, payload) {

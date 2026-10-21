@@ -3,7 +3,7 @@
  * ARQUIVO: Engine.gs
  * DESCRIÇÃO:
  * Motor de análise térmica para equipamentos de cadeia de
- * frio (ABNT NBR 16328:2023, Anexo G), substituindo o papel
+ * frio (ABNT NBR 16328:2024, Anexo G), substituindo o papel
  * do AnaliseCiclo.js do motor de Autoclave.
  *
  * Diferença de fundo em relação à Autoclave:
@@ -55,9 +55,15 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
   // campo (padrão, comportamento idêntico ao de sempre), toda a série
   // conta normalmente. Nunca é aplicado sozinho — só quando confirmado
   // explicitamente (ver CadeiaFrioRel_cfSugerirFimRampaEstabilizacao_ pra sugestão).
-  const idxFimRampa = opcoes.fimRampaEstabilizacao
-    ? CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, opcoes.fimRampaEstabilizacao, '>=', 0)
-    : 0;
+  // 21/10/2026: horário de fim da rampa que não existe nos dados (depois da última leitura) não é mais
+  // ignorado em silêncio: fica registrado em janelaInvalida e vira trava do documento.
+  let idxFimRampa = 0;
+  let rampaForaDosDados = false;
+  if (opcoes.fimRampaEstabilizacao) {
+    const idxR = CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, opcoes.fimRampaEstabilizacao, '>=', null);
+    if (idxR === null || idxR >= dados.length - 1) rampaForaDosDados = true;
+    else idxFimRampa = idxR;
+  }
 
   const analise = {
     tipoEstudo: opcoes.tipoEstudo || 'DISTRIBUICAO_VAZIO',
@@ -86,6 +92,16 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
     alertasAnalise: [],
     observacoesAnalise: []
   };
+
+  analise.idxInicioAvaliado = idxFimRampa;
+  if (rampaForaDosDados) {
+    analise.janelaInvalida = {
+      codigo: 'RAMPA_FORA_DOS_DADOS',
+      oQue: 'O fim da rampa de estabilização informado (' + opcoes.fimRampaEstabilizacao + ') não está dentro do período do estudo de distribuição (' + analise.tempoInicio + ' a ' + analise.tempoFim + ').',
+      porQue: 'Sem um horário dentro dos dados não há como saber a partir de quando o equipamento estava estável; o estudo seria julgado com o período errado.',
+      comoCorrigir: 'Na seção 3 (Estudos do ensaio), corrija o campo "Fim da rampa de estabilização" com um horário entre o início e o fim do estudo, ou apague o campo se o equipamento já estava estável.'
+    };
+  }
 
   if (idxFimRampa > 0) {
     analise.rampaEstabilizacao = {
@@ -170,22 +186,25 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
       analise.aprovado = false;
       analise.statusAprovacao = 'REPROVADO';
       analise.motivosReprovacao.push(
-        'Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) +
-        ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
-        ' °C, além da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C permitida.'
+        'Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor, 2) +
+        ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + SGO_DocA4_num_(faixa.tMin, 1) + ' a ' + SGO_DocA4_num_(faixa.tMax, 1) +
+        ' °C, além da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia, 1) + ' °C permitida.'
       );
     } else {
-      analise.statusAprovacao = 'APROVADO_COM_ALERTA';
+      // 21/10/2026: não existe mais veredito intermediário ("aprovado com alerta"). Excursão dentro
+      // da tolerância configurada continua APROVADA e fica registrada como alerta (observação).
+      analise.statusAprovacao = 'APROVADO';
+      analise.excursaoDentroTolerancia = true;
       analise.alertasAnalise.push(
-        'Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) +
-        ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C.'
+        'Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor, 2) +
+        ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia, 1) + ' °C.'
       );
     }
   } else {
     analise.observacoesAnalise.push(
-      'Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
-      ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + SGO_DocA4_num_(analise.statsGlobal.min) + ' °C, média ' + SGO_DocA4_num_(analise.statsGlobal.media) +
-      ' °C, máxima ' + SGO_DocA4_num_(analise.statsGlobal.max) + ' °C — amplitude (máx-mín) de ' + SGO_DocA4_num_(analise.statsGlobal.indicacaoMaxMin.maxMin) + ' °C.'
+      'Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + SGO_DocA4_num_(faixa.tMin, 1) + ' a ' + SGO_DocA4_num_(faixa.tMax, 1) +
+      ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + SGO_DocA4_num_(analise.statsGlobal.min, 2) + ' °C, média ' + SGO_DocA4_num_(analise.statsGlobal.media, 2) +
+      ' °C, máxima ' + SGO_DocA4_num_(analise.statsGlobal.max, 2) + ' °C — amplitude (máx-mín) de ' + SGO_DocA4_num_(analise.statsGlobal.indicacaoMaxMin.maxMin, 2) + ' °C.'
     );
   }
 
@@ -193,7 +212,7 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
     analise.observacoesAnalise.push(
       'Período de estabilização inicial identificado: o equipamento levou ' +
       SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2), 2) + 'h (de ' + analise.tempoInicio + ' até ' +
-      analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + SGO_DocA4_num_(analise.rampaEstabilizacao.temperaturaInicial) +
+      analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + SGO_DocA4_num_(analise.rampaEstabilizacao.temperaturaInicial, 2) +
       ' °C até estabilizar dentro da faixa operacional. Esse intervalo foi registrado nos dados brutos e no gráfico, ' +
       'mas excluído do julgamento de aprovação/reprovação e das estatísticas acima, por representar o acionamento ' +
       'do equipamento e não seu regime operacional estável.'
@@ -206,10 +225,10 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
     return (!pior || amp > pior.amp) ? { sensor: s.sensor, amp: amp } : pior;
   }, null);
 
-  if (piorAmplitudeSensor) {
+  if (piorAmplitudeSensor && piorAmplitudeSensor.amp > 0) {
     analise.observacoesAnalise.push(
       'O sensor com maior amplitude térmica ao longo do ensaio foi ' + piorAmplitudeSensor.sensor +
-      ', com variação de ' + SGO_DocA4_num_(piorAmplitudeSensor.amp) + ' °C entre a leitura mínima e máxima registradas.'
+      ', com variação de ' + SGO_DocA4_num_(piorAmplitudeSensor.amp, 2) + ' °C entre a leitura mínima e máxima registradas.'
     );
   }
 
@@ -218,7 +237,11 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
     : analise.tempoTotalMinutos;
   analise.tempoEfetivoAvaliadoMinutos = CadeiaFrioRel_cfRound_(tempoEfetivoMinutos, 2);
 
-  if (tempoEfetivoMinutos > 0 && tempoEfetivoMinutos < 23 * 60) {
+  // 21/10/2026: 24 h a partir da estabilização (ABNT NBR 16328:2024, Anexo G, G.4 e G.5), com a folga de uma
+  // leitura (antes o alerta só aparecia abaixo de 23 h e não batia com o critério do documento).
+  const duracaoMinimaMin = 24 * 60 - (analise.intervaloMedioMinutos > 0 ? analise.intervaloMedioMinutos : 1);
+  analise.duracaoMinimaMinutos = CadeiaFrioRel_cfRound_(duracaoMinimaMin, 2);
+  if (tempoEfetivoMinutos > 0 && tempoEfetivoMinutos < duracaoMinimaMin) {
     analise.alertasAnalise.push(
       'Duração ' + (analise.rampaEstabilizacao ? 'efetivamente avaliada (após a rampa de estabilização)' : 'total monitorada') +
       ' (' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(tempoEfetivoMinutos / 60, 1), 1) + 'h) abaixo das 24h contínuas recomendadas pela norma para este estudo.'
@@ -376,17 +399,18 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
     throw new Error('Nenhum sensor ativo foi selecionado para análise.');
   }
 
-  const idxInicioEvento = janelaEvento.inicioEvento
-    ? CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, janelaEvento.inicioEvento, '>=', 0)
+  // 21/10/2026: início do evento depois da última leitura não cai mais, em silêncio, na primeira
+  // leitura da janela (que inclui a margem de contexto antes do evento): vira janelaInvalida (trava).
+  let idxInicioEvento = janelaEvento.inicioEvento
+    ? CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, janelaEvento.inicioEvento, '>=', null)
     : 0;
+  const inicioForaDosDados = idxInicioEvento === null;
+  if (inicioForaDosDados) idxInicioEvento = 0;
 
-  if (idxInicioEvento === null) {
-    throw new Error('Não foi possível localizar o horário de início do evento (' + janelaEvento.inicioEvento + ') nos dados importados.');
-  }
-
-  const idxFimEvento = janelaEvento.fimEvento
+  let idxFimEvento = janelaEvento.fimEvento
     ? CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, janelaEvento.fimEvento, '<=', null)
     : null;
+  if (idxFimEvento !== null && idxFimEvento < idxInicioEvento) idxFimEvento = null;
 
   const analise = {
     tipoEstudo: tipoEstudo,
@@ -415,6 +439,26 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
 
   const consecutivas = CadeiaFrioRel_cfObterParametrosRobustez_(opcoes);
 
+  // 21/10/2026: dados para a conferência do método (ABNT NBR 16328:2024, Anexo G, G.6 e G.7).
+  analise.idxInicioEvento = idxInicioEvento;
+  analise.idxFimEvento = idxFimEvento;
+  analise.intervaloMedioMinutos = CadeiaFrioRel_cfRound_(CadeiaFrioRel_cfEstimarDeltaMinutos_(dados.slice(idxInicioEvento)), 3);
+  analise.duracaoEventoMinutos = idxFimEvento !== null ? CadeiaFrioRel_cfCalcularDiferencaTempoMin_(dados[idxInicioEvento], dados[idxFimEvento]) : null;
+  analise.minutosMonitoradosAposEvento = CadeiaFrioRel_cfCalcularDiferencaTempoMin_(dados[idxFimEvento !== null ? idxFimEvento : idxInicioEvento], dados[dados.length - 1]);
+  // Sensores fora da faixa na leitura do início do evento (o estudo deve começar com todos na faixa).
+  analise.foraDaFaixaNoInicio = ativosIdx.map(function(s) {
+    const t = CadeiaFrioRel_cfParseNumero_(dados[idxInicioEvento].temperaturas[s]);
+    return (t !== null && isFinite(t) && CadeiaFrioRel_cfDesvioDaFaixa_(t, faixa) > 0) ? { sensor: 'S' + (s + 1), valor: CadeiaFrioRel_cfRound_(t, 2) } : null;
+  }).filter(Boolean);
+  if (inicioForaDosDados) {
+    analise.janelaInvalida = {
+      codigo: 'EVENTO_FORA_DOS_DADOS',
+      oQue: 'O início do evento informado (' + janelaEvento.inicioEvento + ') não está dentro das leituras do arquivo para o estudo "' + CadeiaFrioRel_cfLabelEstudoEngine_(tipoEstudo) + '".',
+      porQue: 'Sem a leitura do início do evento não há como medir o tempo até sair da faixa nem a recuperação.',
+      comoCorrigir: 'Na seção 3 (Estudos do ensaio), confira a data e a hora do início do evento (dd/mm/aaaa hh:mm:ss) com o período importado mostrado na prévia dos dados.'
+    };
+  }
+
   // Fase 1: procurar a primeira ruptura a partir do início do evento
   // (para queda de energia, vai até o fim dos dados; para porta, se
   // fimEvento foi informado, a busca de ruptura fica restrita à janela
@@ -424,6 +468,8 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
     : (dados.length - 1);
 
   const ruptura = CadeiaFrioRel_cfDetectarPrimeiraRuptura_(dados, idxInicioEvento, idxLimiteBuscaRuptura, ativosIdx, faixa, consecutivas);
+  // Minutos observados na busca da ruptura (porta: enquanto aberta; energia: até o fim dos dados).
+  analise.minutosMonitoradosDesdeInicio = CadeiaFrioRel_cfCalcularDiferencaTempoMin_(dados[idxInicioEvento], dados[Math.min(idxLimiteBuscaRuptura, dados.length - 1)]);
 
   if (ruptura) {
     analise.rompeu = true;
@@ -450,8 +496,8 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
   } else {
     const janelaObservadaMin = CadeiaFrioRel_cfCalcularDiferencaTempoMin_(dados[idxInicioEvento], dados[Math.min(idxLimiteBuscaRuptura, dados.length - 1)]);
     analise.observacoesAnalise.push(
-      'Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
-      ' °C) durante os ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(janelaObservadaMin, 1), 1) + ' minutos de dados disponíveis a partir do início do evento — o equipamento sustentou a temperatura sem depender da fonte de refrigeração ativa nesse intervalo.'
+      'Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + SGO_DocA4_num_(faixa.tMin, 1) + ' a ' + SGO_DocA4_num_(faixa.tMax, 1) +
+      ' °C) durante os ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(janelaObservadaMin, 1), 1) + ' minutos de dados disponíveis a partir do início do evento.'
     );
   }
 
@@ -481,8 +527,8 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
     } else {
       analise.statusAprovacao = 'REPROVADO';
       analise.motivosReprovacao.push(
-        'O equipamento rompeu a faixa operacional em ' + SGO_DocA4_num_(analise.tempoAteRupturaMinutos) +
-        ' min, antes do tempo-alvo definido para o ensaio (' + SGO_DocA4_num_(analise.tempoAlvoMinutos) + ' min).'
+        'O equipamento rompeu a faixa operacional em ' + SGO_DocA4_num_(analise.tempoAteRupturaMinutos, 2) +
+        ' min, antes do tempo-alvo definido para o ensaio (' + SGO_DocA4_num_(analise.tempoAlvoMinutos, 0) + ' min).'
       );
     }
   }
@@ -509,6 +555,12 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
 // ------------------------------------------------------------
 // AUTONOMIA (CAIXA TÉRMICA) — sem tempo-alvo, é o próprio objetivo do ensaio
 // ------------------------------------------------------------
+/** Nome do estudo para as mensagens do motor (o rótulo da planilha antiga fica em Planilha.js). */
+function CadeiaFrioRel_cfLabelEstudoEngine_(tipo) {
+  const mapa = { DISTRIBUICAO_VAZIO: 'Distribuição em vazio', DISTRIBUICAO_CARGA: 'Distribuição com carga', ABERTURA_PORTA: 'Abertura de porta', QUEDA_ENERGIA: 'Queda de energia', AUTONOMIA: 'Autonomia' };
+  return mapa[String(tipo || '').toUpperCase()] || String(tipo || '');
+}
+
 function CadeiaFrioRel_cfAnalisarAutonomia(dados, faixa, sensoresAtivos, opcoes) {
   if (!dados || !dados.length) {
     throw new Error('Nenhum dado normalizado foi recebido para análise.');
@@ -551,7 +603,7 @@ function CadeiaFrioRel_cfAnalisarAutonomia(dados, faixa, sensoresAtivos, opcoes)
     analise.primeiraRuptura = ruptura;
     analise.autonomiaMinutos = CadeiaFrioRel_cfRound_(ruptura.minutosDesdeInicio, 2);
     analise.observacoesAnalise.push(
-      'Autonomia registrada: ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.autonomiaMinutos / 60, 2), 2) + 'h (' + SGO_DocA4_num_(analise.autonomiaMinutos) +
+      'Autonomia registrada: ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.autonomiaMinutos / 60, 2), 2) + 'h (' + SGO_DocA4_num_(analise.autonomiaMinutos, 2) +
       ' min) até o sensor ' + ruptura.sensor + ' ultrapassar a faixa operacional.'
     );
   } else {
@@ -561,6 +613,26 @@ function CadeiaFrioRel_cfAnalisarAutonomia(dados, faixa, sensoresAtivos, opcoes)
       'h). A autonomia real pode ser maior que o período monitorado — considere estender a gravação.'
     );
   }
+
+  // 21/10/2026: critério opcional de autonomia mínima (tempo de transporte exigido, informado no ensaio).
+  // Sem ele, o estudo continua só de caracterização (o tempo é registrado, sem aprovar nem reprovar).
+  analise.alertasAnalise = [];
+  analise.motivosReprovacao = [];
+  analise.intervaloMedioMinutos = CadeiaFrioRel_cfRound_(CadeiaFrioRel_cfEstimarDeltaMinutos_(dados), 3);
+  analise.tempoAlvoMinutos = CadeiaFrioRel_cfParseNumero_(opcoes.tempoAlvoMinutos);
+  if (analise.tempoAlvoMinutos !== null && isFinite(analise.tempoAlvoMinutos) && analise.tempoAlvoMinutos > 0) {
+    if (analise.rompeu && analise.autonomiaMinutos < analise.tempoAlvoMinutos) {
+      analise.statusAprovacao = 'REPROVADO';
+      analise.motivosReprovacao.push('A caixa saiu da faixa operacional em ' + SGO_DocA4_num_(analise.autonomiaMinutos, 2) + ' min, antes da autonomia mínima definida para o ensaio (' + SGO_DocA4_num_(analise.tempoAlvoMinutos, 0) + ' min).');
+    } else if (!analise.rompeu && analise.tempoTotalGravadoMinutos < analise.tempoAlvoMinutos) {
+      analise.alertasAnalise.push('O período gravado (' + SGO_DocA4_num_(analise.tempoTotalGravadoMinutos, 2) + ' min) é menor que a autonomia mínima definida (' + SGO_DocA4_num_(analise.tempoAlvoMinutos, 0) + ' min): o critério não pôde ser demonstrado.');
+      analise.statusAprovacao = 'INFORMATIVO';
+      analise.criterioNaoDemonstrado = true;
+    } else {
+      analise.statusAprovacao = 'APROVADO';
+    }
+  }
+  analise.conformidadePorSensor = CadeiaFrioRel_cfAvaliarConformidadePorSensor_(dados, faixa, ativosIdx, analise.intervaloMedioMinutos);
 
   return analise;
 }

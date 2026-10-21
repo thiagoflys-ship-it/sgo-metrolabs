@@ -32,13 +32,8 @@ function CadeiaFrioRel_cfGerarPlanilhaCadeiaFrio(dados, analises, payload, perfi
   ss.setSpreadsheetLocale('pt_BR');
 
   try {
-    const folderIdConfigurado = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10)
-      ? CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID
-      : '';
-
-    const folder = folderIdConfigurado
-      ? DriveApp.getFolderById(folderIdConfigurado)
-      : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
+    // 21/10/2026: pasta própria do módulo (a chave genérica antiga podia ser a pasta de outro módulo).
+    const folder = CadeiaFrioRel_pastaLaudos_();
 
     const file = DriveApp.getFileById(ss.getId());
     folder.addFile(file);
