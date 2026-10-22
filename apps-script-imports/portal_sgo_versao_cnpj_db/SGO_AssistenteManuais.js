@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "3d2130cb3044",
+ "versao": "af66aec14f68",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -14,7 +14,11 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Versão de 21/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo\nnos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de\naplicativos, e usa o mesmo usuário e senha do SGO+.\n\nEndereço: https://sgo.metrolabs.com.br/campo/\n\nA mesma ajuda está dentro do aplicativo, no botão Ajuda (canto de cima, em todas as telas)."
+     "texto": "Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo\nnos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de\naplicativos, e usa o mesmo usuário e senha do SGO+.\n\nEndereço: https://sgo.metrolabs.com.br/campo/\n\nA mesma ajuda está dentro do aplicativo, no botão Ajuda (canto de cima, em todas as telas)."
+    },
+    {
+     "titulo": "Aparência",
+     "texto": "O ícone do aplicativo na tela do celular é o símbolo da Metrolabs (os três hexágonos, azul e verde, sobre fundo\n branco). A logo completa da Metrolabs fica no topo de todas as telas e na tela de entrar; tocar na logo volta para\n o Meu dia.\nAs cores são as mesmas do SGO+: botões principais em verde, fundo claro, cartões brancos, avisos em amarelo\n (atenção), vermelho (erro) e azul (informação), e a barra escura de envio embaixo.\nLetra e botões grandes para uso no sol e com uma mão só; Letra grande (em Minha conta) aumenta ainda mais.\nQuem instalou o aplicativo antes de 22/10/2026 recebe o visual novo sozinho na próxima abertura com internet\n (\"Versão nova do app pronta — Atualizar agora\"). O ícone na tela do celular, porém, é gravado na hora da instalação:\n para ele virar a logo da Metrolabs, remova o ícone antigo e instale de novo (item 1). Antes de remover, espere\n Pendente de envio (0), como na troca de celular (item 6)."
     },
     {
      "titulo": "Instalar > Android (Chrome)",
@@ -54,7 +58,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Para a gestão e o suporte",
-     "texto": "O app chama as funções do contrato docs/API_APP_TECNICO.md (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto)\n pelo /api/run do servidor, com o número de pedido no cabeçalho X-Pedido-Id. Cada ação tem uma chave única do\n aparelho (idLocal); o servidor guarda a hora do aparelho e a do recebimento.\nO aplicativo fica em sgo_servidor/src/publico/campo/ (página, service worker, manifest, ícones) e é servido por\n src/servicos/campo.ts. Ele só existe no endereço do SGO+.\nA localização é coletada só nos toques Cheguei e Concluí."
+     "texto": "O app chama as funções do contrato docs/API_APP_TECNICO.md (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto)\n pelo /api/run do servidor, com o número de pedido no cabeçalho X-Pedido-Id. Cada ação tem uma chave única do\n aparelho (idLocal); o servidor guarda a hora do aparelho e a do recebimento.\nO aplicativo fica em sgo_servidor/src/publico/campo/ (página, service worker, manifest, ícones, logo) e é servido por\n src/servicos/campo.ts. Ele só existe no endereço do SGO+.\nÍcones e logo são gerados pelo scripts/gerar_icones_campo.mjs a partir da logo oficial dos documentos do SGO+\n (SGO_Documento_LogoCompartilhado.js): nunca editar os PNG à mão. As cores vêm do tema do SGO+ (UI_Estilos.html).\nA versão do aplicativo é o resumo de todos os arquivos: qualquer troca (inclusive de ícone) gera versão nova e o\n celular baixa na abertura seguinte com internet. O ícone já instalado só muda com a reinstalação.\nA localização é coletada só nos toques Cheguei e Concluí."
     }
    ]
   },

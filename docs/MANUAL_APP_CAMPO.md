@@ -1,12 +1,25 @@
 # SGO+ Campo — Manual do aplicativo do técnico
 
-Versão de 21/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo
+Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo
 nos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de
 aplicativos, e usa o mesmo usuário e senha do SGO+.
 
 Endereço: `https://sgo.metrolabs.com.br/campo/`
 
 A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em todas as telas).
+
+## Aparência
+
+- O ícone do aplicativo na tela do celular é o símbolo da Metrolabs (os três hexágonos, azul e verde, sobre fundo
+  branco). A logo completa da Metrolabs fica no topo de todas as telas e na tela de entrar; tocar na logo volta para
+  o Meu dia.
+- As cores são as mesmas do SGO+: botões principais em verde, fundo claro, cartões brancos, avisos em amarelo
+  (atenção), vermelho (erro) e azul (informação), e a barra escura de envio embaixo.
+- Letra e botões grandes para uso no sol e com uma mão só; **Letra grande** (em Minha conta) aumenta ainda mais.
+- Quem instalou o aplicativo antes de 22/10/2026 recebe o visual novo sozinho na próxima abertura com internet
+  ("Versão nova do app pronta — Atualizar agora"). O ícone na tela do celular, porém, é gravado na hora da instalação:
+  para ele virar a logo da Metrolabs, remova o ícone antigo e instale de novo (item 1). Antes de remover, espere
+  **Pendente de envio (0)**, como na troca de celular (item 6).
 
 ## 1. Instalar
 
@@ -115,6 +128,10 @@ registrado de novo pela gestão.
 - O app chama as funções do contrato `docs/API_APP_TECNICO.md` (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto)
   pelo `/api/run` do servidor, com o número de pedido no cabeçalho `X-Pedido-Id`. Cada ação tem uma chave única do
   aparelho (`idLocal`); o servidor guarda a hora do aparelho e a do recebimento.
-- O aplicativo fica em `sgo_servidor/src/publico/campo/` (página, service worker, manifest, ícones) e é servido por
+- O aplicativo fica em `sgo_servidor/src/publico/campo/` (página, service worker, manifest, ícones, logo) e é servido por
   `src/servicos/campo.ts`. Ele só existe no endereço do SGO+.
+- Ícones e logo são gerados pelo `scripts/gerar_icones_campo.mjs` a partir da logo oficial dos documentos do SGO+
+  (`SGO_Documento_LogoCompartilhado.js`): nunca editar os PNG à mão. As cores vêm do tema do SGO+ (`UI_Estilos.html`).
+- A versão do aplicativo é o resumo de todos os arquivos: qualquer troca (inclusive de ícone) gera versão nova e o
+  celular baixa na abertura seguinte com internet. O ícone já instalado só muda com a reinstalação.
 - A localização é coletada só nos toques Cheguei e Concluí.
