@@ -379,9 +379,20 @@ function CertCalDoc_montarDocumentoHtml_(ctx) {
     '. O valor de referência de cada ponto corresponde ao valor informado no registro do ensaio. Os resultados e o orçamento de incerteza de cada grandeza estão na seção 3.</p>');
   if (padroes.length) {
     html.push(num.tabela('Padrões de referência utilizados (rastreabilidade das medições)'));
-    html.push('<div class="tabela-wrap"><table class="tabela-fontes"><thead><tr><th>Identificação (TAG)</th><th>Descrição</th><th>Certificado do padrão</th><th>Validade</th></tr></thead><tbody>');
-    padroes.forEach(function (p) {
-      html.push('<tr><td class="txt">' + CertCalDoc_escaparHtml_(p.tag) + '</td><td class="txt">' + CertCalDoc_escaparHtml_(p.descricao) + '</td><td class="txt">' + CertCalDoc_escaparHtml_(p.certificadoNumero || '—') + '</td><td>' + CertCalDoc_escaparHtml_(p.validade || 'não informada') + '</td></tr>');
+    // 22/10/2026 (pedido do dono): tudo o que o cadastro de padrões tem sobre cada padrão usado (fabricante, modelo, série,
+    // laboratório, data de calibração e incerteza do certificado), completado pelo mesmo número de certificado.
+    var completos = typeof SGO_DocA4_completarPadroes_ === 'function'
+      ? SGO_DocA4_completarPadroes_(padroes.map(function (p) { return Object.assign({}, p, { certificado: p.certificadoNumero || '' }); }))
+      : padroes;
+    var e_ = CertCalDoc_escaparHtml_;
+    html.push('<div class="tabela-wrap"><table class="tabela-fontes"><thead><tr><th>Identificação (TAG)</th><th>Descrição</th><th>Fabricante, modelo e nº de série</th><th>Certificado do padrão e laboratório</th><th>Calibração e validade</th><th>Incerteza do certificado (U)</th></tr></thead><tbody>');
+    completos.forEach(function (p) {
+      var fab = [p.marca, p.modelo].filter(function (x) { return String(x || '').trim(); }).join(' · ');
+      var u = typeof SGO_DocA4_numIncerteza_ === 'function' ? SGO_DocA4_numIncerteza_(p.incertezaU95) : '';
+      var k = typeof SGO_DocA4_numFator_ === 'function' ? SGO_DocA4_numFator_(p.fatorK) : '';
+      html.push('<tr><td class="txt">' + e_(p.tag) + '</td><td class="txt">' + e_(p.descricao) + '</td><td class="txt">' + ([fab ? e_(fab) : '', p.serie ? 'Nº de série ' + e_(p.serie) : ''].filter(Boolean).join('<br>') || '—') +
+        '</td><td class="txt">' + e_(p.certificadoNumero || '—') + (p.laboratorio ? '<br>' + e_(p.laboratorio) : '') + '</td><td>' + (p.dataCalibracao ? 'Calibrado em ' + e_(p.dataCalibracao) + '<br>' : '') + 'Válido até ' + e_(p.validade || 'não informada') +
+        '</td><td>' + (u ? e_(u + (p.unidade ? '\u00a0' + p.unidade : '')) + (k ? ' (k = ' + e_(k) + ')' : '') : '—') + '</td></tr>');
     });
     html.push('</tbody></table></div>');
   }

@@ -150,7 +150,7 @@ function EstufaDoc_identLinhas_(ctx) {
   var id = ctx.identificacao;
   function opc(r, v, x) { return EstufaQ_s_(v) ? [[r, v].concat(x ? [x] : [])] : []; }
   return [['Cliente', id.cliente], ['CNPJ', id.cnpj]].concat(opc('Endereço', id.endereco, { largo: true }), opc('Unidade e local', id.setor, { largo: true }),
-    [['TAG', id.tag], ['Equipamento', id.tipoEquipamento]], opc('Nº de série', id.numeroSerie), opc('Volume interno declarado', id.volumeLitros ? id.volumeLitros + ' L' : ''),
+    [['TAG', id.tag], ['Equipamento', id.tipoEquipamento]], opc('Nº de série', id.numeroSerie), opc('Fabricante (marca)', id.marca), opc('Modelo', id.modelo), opc('Patrimônio', id.patrimonio), opc('Capacidade ou volume', id.capacidade), opc('Câmaras ou portas', id.numCamaras), opc('Ano de fabricação', id.anoFabricacao), opc('Volume interno declarado', id.volumeLitros ? id.volumeLitros + ' L' : ''),
     [['Perfil de ensaio', ctx.perfilLabel + (ctx.anexo ? ' (ABNT NBR 16328:2024, Anexo ' + ctx.anexo + ')' : '')]],
     [['Técnico executor', id.tecnicoExecutor || '—']], opc('Responsável pelo aceite', id.responsavelAceite), opc('Tarefa de origem', id.tarefaOrigem),
     [['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]]);

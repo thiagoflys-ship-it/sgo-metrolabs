@@ -302,7 +302,7 @@ function SGO_ajudaTelas_Cadastros_() {
             "Digite a TAG.",
             "Confira a mensagem embaixo da TAG. Se aparecer que o cliente já tem um equipamento ativo com essa TAG, toque em \"Abrir o existente\".",
             "Digite o número de série e, se houver, o patrimônio do cliente. Se outro equipamento do cliente tiver a mesma série, o sistema avisa ao salvar (confira se não é o mesmo equipamento cadastrado duas vezes).",
-            "Em \"Fabricação e capacidade\", digite o fabricante e o modelo (uso interno: não aparecem nos relatórios de qualificação), o ano de fabricação (4 dígitos), a capacidade ou volume (por exemplo, 150 L) e o número de câmaras ou portas, quando houver mais de uma.",
+            "Em \"Fabricação e capacidade\", digite o fabricante (marca) e o modelo como estão na placa (saem na identificação de todos os documentos do equipamento), o ano de fabricação (4 dígitos), a capacidade ou volume (por exemplo, 150 L) e o número de câmaras ou portas, quando houver mais de uma.",
             "Em \"Localização e responsável\", digite o setor onde o equipamento está instalado (por exemplo, CME ou Centro cirúrgico) e o responsável por ele no cliente.",
             "Toque em \"Cadastrar equipamento\"."
           ]

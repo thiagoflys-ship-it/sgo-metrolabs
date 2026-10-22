@@ -34,7 +34,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se aparecer \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\" (ou parte deles), preencha os campos ali mesmo pela placa ou pela etiqueta e toque em \"Gravar no cadastro\". O valor vai para o cadastro do equipamento (só o que está vazio, com registro de quem gravou) e o ensaio continua. \"Buscar nos ensaios anteriores\" traz o que foi digitado em relatórios antigos do mesmo equipamento, para conferir antes de gravar. Patrimônio, capacidade, câmaras e ano de fabricação preenchidos no cadastro também saem no relatório de qualificação.",
           "Se algo não aparecer, toque em \"Cadastrar cliente\", \"Cadastrar unidade\" ou \"Cadastrar equipamento\" (abre em outra aba), salve lá, volte para esta aba e toque em \"Atualizar listas\". O que já foi preenchido continua.",
           "Preencha \"Receita / Programa\", \"Tipo de Ensaio\" e \"Ciclo Nº\".",
-          "Em \"2. Equipamento\", preencha o lote e o responsável técnico. TAG, número de série e local vêm do cadastro; marca e modelo não entram no documento. O campo \"Operador\" já vem com o seu nome.",
+          "Em \"2. Equipamento\", preencha o lote e o responsável técnico. TAG, número de série, local, fabricante (marca) e modelo vêm do cadastro e saem no documento. O que estiver vazio no cadastro pode ser completado no quadro \"Cliente e equipamento\", em \"Gravar no cadastro\". O campo \"Operador\" já vem com o seu nome.",
           "Em \"3. Parâmetros de processo e norma\", escolha a \"Norma / ciclo alvo\" e a \"Temperatura programada\".",
           "Informe a \"Quantidade de sensores\".",
           "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou durante o ensaio.",
@@ -46,7 +46,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Um arquivo por sensor: na grade \"Sensores considerados na análise\" (seção 3), escolha o arquivo de cada sensor marcado. Se a pressão estiver num registrador separado, envie o arquivo dele em \"Arquivo do registrador de pressão\".",
           "Toque em \"Pré-visualizar dados\".",
           "Confira na \"Prévia dos dados lidos\" se as datas, horas e temperaturas estão certas.",
-          "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\" e \"Identificação do registrador\" (TAG do cadastro de padrões, exemplo: DTL-01). A planilha usa esses dois campos: sem o registrador cadastrado e válido, ela não é gerada.",
+          "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\" e \"Identificação do registrador\" (TAG do cadastro de padrões, exemplo: DTL-01). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio. A planilha usa esses dois campos: sem o registrador cadastrado e válido, ela não é gerada.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
           "Responsável técnico: confirme a mensagem de aprovação. A planilha abre em nova aba e fica salva em HTML e PDF na pasta do cliente (subpasta do CNPJ), com o nome \"Planilha de dados Autoclave ...\" e o seu nome como aprovador.",
           "Técnico: a planilha vai para aprovação do responsável técnico. A minuta abre em outra aba com a faixa \"MINUTA PARA CONFERÊNCIA\" (não entregue ao cliente) e o pedido aparece em \"6. Aguardando aprovação\", com a coluna \"Documento\" = \"Planilha de dados\".",
@@ -65,7 +65,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Gerar o relatório de ensaio (interpretação técnica, A4)", itens: [
           "Gere antes o relatório de dados (tarefa acima) com os mesmos dados.",
           "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\" e \"Revisão\".",
-          "Em \"Identificação do registrador\", digite a TAG do registrador como está no cadastro de padrões (exemplo: DTL-01, DTL-06).",
+          "Em \"Identificação do registrador\", digite a TAG do registrador como está no cadastro de padrões (exemplo: DTL-01, DTL-06). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio.",
           "Se quiser, anexe até 4 fotos com legenda.",
           "Toque em \"Gerar rascunho da interpretação\". Pode levar até um minuto e meio.",
           "Se aparecer a caixa vermelha \"O relatório não pode ser emitido\", leia cada item: o que aconteceu, por quê e como corrigir. Corrija e gere o rascunho de novo. Nada é redigido enquanto houver problema nos dados.",
@@ -200,7 +200,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Deixe \"Analisar pressão (aspersão ou bomba)\" desligado, a menos que o registrador tenha gravado a pressão.",
           "Em \"4. Dados do registrador\", envie o arquivo ou, em \"Um arquivo por sensor\", um arquivo para cada sensor.",
           "Toque em \"Pré-visualizar dados\" e confira as leituras.",
-          "Em \"5.\", informe o número do ensaio e a \"Identificação do registrador\" (a TAG do cadastro de padrões).",
+          "Em \"5.\", informe o número do ensaio e a \"Identificação do registrador\" (a TAG do cadastro de padrões). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio.",
           "Toque em \"Gerar planilha de dados\". Responsável técnico: confirme e a planilha é emitida na pasta do equipamento. Técnico: a minuta abre em outra aba e a planilha vai para \"6. Aguardando aprovação\"."
         ] },
         { titulo: "Gerar o relatório de ensaio (A4)", itens: [
@@ -294,7 +294,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Em \"Sensores\", desmarque só o sensor que falhou e escreva o motivo em \"Justificativa dos sensores desconsiderados\"."
         ] },
         { titulo: "Enviar os dados", itens: [
-          "Em \"4. Dados do registrador\", digite a \"Identificação do registrador\" como está no cadastro de padrões (exemplo: DTL-04).",
+          "Em \"4. Dados do registrador\", digite a \"Identificação do registrador\" como está no cadastro de padrões (exemplo: DTL-04). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio.",
           "Confira o \"Formato de data nos arquivos\" e, em \"Como enviar os dados\", escolha o arquivo do registrador ou \"Um arquivo por sensor\".",
           "Toque em \"Pré-visualizar dados\" e confira o período importado e os sensores.",
           "Arquivo com uma aba por estudo (24 horas, abertura de porta, queda de energia) é aceito: a prévia mostra o período de cada aba e cada estudo usa a aba que contém o seu horário. Abas com o mesmo horário são recusadas.",
@@ -402,7 +402,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Em \"4. Dados do registrador\", envie o arquivo, confira o formato de data e toque em \"Pré-visualizar dados\"."
         ] },
         { titulo: "Planilha de dados (seção 5)", itens: [
-          "Preencha \"Identificação do registrador\" como está no cadastro de padrões (ex.: DTL-01) e, se quiser, o responsável pelo aceite e a tarefa de origem. O número do relatório é atribuído na emissão.",
+          "Preencha \"Identificação do registrador\" como está no cadastro de padrões (ex.: DTL-01). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio. Se quiser, preencha também o responsável pelo aceite e a tarefa de origem. O número do relatório é atribuído na emissão.",
           "Toque em \"Gerar a planilha de dados\". Se houver problema nos dados, aparece a lista com o que aconteceu, o porquê e como corrigir, e nada é gerado.",
           "Sem problema, a minuta abre em outra aba. O técnico toca em \"Enviar a planilha para aprovação\"; o responsável técnico marca a confirmação e gera de novo para emitir."
         ] },
@@ -479,7 +479,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       passos: [
         { titulo: "Gerar o relatório", itens: [
           "Toque em \"Relatório QI/QO/QD\" no menu.",
-          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda e a marca não vem do cadastro. O nº de série do cadastro sai no documento.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
+          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda. Desde 22/10/2026 o fabricante (marca) também vem do cadastro, e o nº de série do cadastro sai no documento. No quadro \"Padrões de referência utilizados (opcional)\", logo abaixo, toque em \"Escolher padrões\" e marque todos os padrões usados no serviço (sem limite): o documento traz uma tabela com cada um, e padrão vencido na data do serviço impede a geração, com a explicação.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
           "Em \"2. Equipamento\", escolha o equipamento e preencha TAG, marca, modelo, localização, datas e técnico.",
           "Marque \"Realizado no laboratório da Metrolabs\" só se o equipamento foi levado ao laboratório.",
           "Em \"3. Qualificação de Instalação / Operação (QI/QO)\", marque os itens verificados no atendimento.",

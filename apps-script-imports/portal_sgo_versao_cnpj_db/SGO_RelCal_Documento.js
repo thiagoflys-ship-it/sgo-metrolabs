@@ -165,11 +165,13 @@ function RelCalDoc_montarDocumentoHtml_(ctx) {
     ['Instrumento', ctx.instrumentoLabel], ['TAG', ctx.tag],
     // 21/10/2026: nº de série do cadastro (quando o equipamento foi escolhido em "Buscar no cadastro").
     ctx.numeroSerie ? ['Nº de série', ctx.numeroSerie] : null,
-    ['Marca / modelo', (ctx.marca || '—') + ' / ' + (ctx.modelo || '—')], ['Localização habitual', ctx.localizacao],
+    ['Fabricante (marca)', ctx.marca || '—'], ['Modelo', ctx.modelo || '—'], ['Localização habitual', ctx.localizacao, { largo: true }],
     ['Data da calibração', ctx.dataCalibracao], ['Técnico responsável', ctx.tecnicoResponsavel],
     ['Local da calibração', localCal, { largo: true }],
     ['Empresa emitente', empresaTxt, { largo: true }]
   ].filter(Boolean)));
+  // 22/10/2026: padrões de referência marcados na tela (todos, com os dados do cadastro de padrões).
+  if (ctx.padroesUsados) h.push(SGO_DocA4_blocoPadroesUsados_(ctx.padroesUsados, ctx.dataCalibracao || ctx.dataEmissao));
   h.push('</section>');
 
   // 2. Introdução

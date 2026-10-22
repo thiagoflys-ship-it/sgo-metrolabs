@@ -69,10 +69,11 @@ test('relatório de qualificação: consolida ensaios emitidos, QI, aprovação,
   const cli = env.fn('SGO_QEQ_listarParaSessao_')(env.fn('SESSOES_TESTE').cli, 'eq1');
   assert.ok(cli.itens.every(i => i.situacao !== 'MINUTA'));
   assert.throws(() => env.fn('SGO_QEQ_listarParaSessao_')(env.fn('SESSOES_TESTE').cli2, 'eq1'), /Acesso negado/);
-  // Documento: sem fabricante, com as seções do molde.
+  // Documento: com fabricante e modelo do cadastro (22/10/2026) e as seções do molde.
   const html = prev.html.replace(/data:[^"')]+/g, '');
   ['Objetivo', 'Escopo e limitações', 'Definições', 'Responsabilidades', 'Metodologia', 'Critérios de aceitação', 'Resultados', 'Recomendações e requalificação', 'Anexo A', 'Registro de revisões'].forEach(t => assert.ok(html.includes(t), 'falta ' + t));
-  assert.ok(!/MARCAFICTICIA|MODELOXYZ|undefined|NaN/.test(html));
+  assert.ok(!/undefined|NaN/.test(html));
+  assert.match(html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
 });
 
 test('relatório de qualificação reprovado: ensaio reprovado vira não conformidade, sem validade; nova revisão substitui', () => {

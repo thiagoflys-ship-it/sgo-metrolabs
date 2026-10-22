@@ -77,8 +77,9 @@ test('estufa de incubação conforme: aprovado, critérios com fonte e sem trava
   // Identificação vem do cadastro (o payload não trouxe TAG nem CNPJ).
   assert.strictEqual(r.contexto.identificacao.tag, 'EST-TESTE-01');
   assert.strictEqual(r.contexto.identificacao.cnpj, '11.222.333/0001-81');
-  // Fabricante do cadastro não aparece no documento (nem na descrição do registrador).
-  assert.ok(!/MARCAFICTICIA|MODELOEST/.test(JSON.stringify(r.contexto)));
+  // 22/10/2026: fabricante do cadastro na identificação; a descrição do registrador continua sem a marca do equipamento.
+  assert.equal(r.contexto.identificacao.marca, 'MARCAFICTICIA');
+  assert.ok(!/MARCAFICTICIA|MODELOEST/.test(JSON.stringify(r.contexto.registradores)));
   assert.match(r.avisoIA, /texto padrão/);
 });
 

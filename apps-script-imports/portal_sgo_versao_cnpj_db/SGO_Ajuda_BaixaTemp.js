@@ -15,7 +15,7 @@ function SGO_ajudaTelas_BaixaTemp_() {
         "Confira se os registradores e transdutores usados estão em Calibração > Padrões de referência, com o certificado válido no período do ensaio.",
         "Exporte os arquivos do registrador de cada ciclo (planilha XLSX ou XLS, ou texto CSV ou TXT). Pode ser um arquivo com todos os sensores ou um arquivo por sensor.",
         "Anote os indicadores químicos e biológicos de cada ciclo: posição, lote, validade e resultado. O ciclo de desempenho só fecha depois da incubação dos indicadores biológicos.",
-        "O relatório não cita fabricante nem modelo do equipamento, do registrador ou dos indicadores."
+        "Fabricante (marca), modelo, patrimônio e capacidade do esterilizador saem na identificação do relatório quando preenchidos no cadastro (o que estiver vazio pode ser completado na aba Identificação). Os textos redigidos não citam marca de registrador nem de indicador."
       ],
       passos: [
         { titulo: "Começar um ensaio", itens: [
@@ -33,7 +33,7 @@ function SGO_ajudaTelas_BaixaTemp_() {
           "Em \"2. Ciclo e critérios\", copie da especificação do fabricante a temperatura programada, as tolerâncias, o tempo de exposição e, se houver, o número de pulsos e a pressão de vácuo.",
           "Em \"Origem dos parâmetros\", escreva de onde vieram os valores (exemplo: manual de operação, revisão 3).",
           "Deixe em branco o que o fabricante não declara: o critério fica informativo ou não é avaliado.",
-          "Em \"3. Instrumentos\", toque em \"Carregar padrões\", escolha cada registrador ou transdutor e toque em \"Acrescentar\".",
+          "Em \"3. Instrumentos\", toque em \"Carregar padrões\" e marque na lista (com busca por TAG, descrição ou certificado) todos os registradores e transdutores usados, sem limite; desmarcar tira da tabela. O relatório traz cada um com fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza.",
           "Confira a grandeza (temperatura ou pressão), a incerteza U e o fator k do certificado, e informe a resolução do registrador."
         ] },
         { titulo: "Registrar a instalação (QI) e a operação (QO)", itens: [

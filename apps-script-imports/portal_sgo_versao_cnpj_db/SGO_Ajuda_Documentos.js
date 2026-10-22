@@ -21,7 +21,7 @@ function SGO_ajudaTelas_Documentos_() {
       passos: [
         { titulo: "Gerar a declaração", itens: [
           "Toque em \"Declaração de execução\" no menu.",
-          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda e a marca não vem do cadastro. O nº de série do cadastro sai no documento.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
+          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda. Desde 22/10/2026 o fabricante (marca) também vem do cadastro, e o nº de série do cadastro sai no documento. No quadro \"Padrões de referência utilizados (opcional)\", logo abaixo, toque em \"Escolher padrões\" e marque todos os padrões usados no serviço (sem limite): o documento traz uma tabela com cada um, e padrão vencido na data do serviço impede a geração, com a explicação.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
           "Confira a razão social e o endereço.",
           "Em \"2. Equipamento\", escolha o tipo de equipamento.",
           "Preencha TAG, marca, modelo e localização.",

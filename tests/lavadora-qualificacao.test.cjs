@@ -335,7 +335,7 @@ test('relatório de ensaio exige o equipamento do cadastro e recusa equipamento 
   assert.equal(r.contexto.identificacao.cliente, 'HOSPITAL MODELO TESTE LTDA');
   assert.equal(r.contexto.identificacao.tag, 'LAV-TESTE-01');
   assert.equal(r.contexto.identificacao.numeroSerie, 'SN-LAV-0001');
-  assert.equal(r.contexto.identificacao.marca, '');
+  assert.equal(r.contexto.identificacao.marca, 'MARCAFICTICIA', 'fabricante do cadastro (22/10/2026)');
 });
 
 /* ---------------------------------------------------------------- relatório de qualificação (modelo oficial novo) */
@@ -371,7 +371,8 @@ test('relatório de qualificação: consolida os ciclos, decide por regra, emite
   const html = env.ctx.DriveApp.getFileById(emi.htmlId).getBlob().getDataAsString();
   assert.match(html, /Relatório de qualificação de lavadora termodesinfectora/);
   const texto = html.replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/data:[^"')]+/g, ' ').replace(/<[^>]+>/g, ' ');
-  assert.doesNotMatch(texto, /MARCAFICTICIA|MODELOXYZ|autoclave|F0/);
+  assert.doesNotMatch(texto, /autoclave|F0/);
+  assert.match(html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
   const ficha = JSON.parse(JSON.stringify(env.fn('SGO_QEQ_listarParaSessao_')({ perfil: 'GESTOR' }, 'eq1')));
   assert.equal(ficha.situacao.situacao, 'QUALIFICADO');
   assert.ok(ficha.itens.some(i => /qualificação — lavadora/.test(i.titulo)));

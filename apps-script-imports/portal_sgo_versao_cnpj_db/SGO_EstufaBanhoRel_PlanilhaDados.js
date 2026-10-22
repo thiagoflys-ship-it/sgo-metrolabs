@@ -77,7 +77,7 @@ function EstufaPlanDados_html_(ctx, interno, aprovacao, minuta) {
     subtitulo: 'Leituras, resultados por sensor, gráficos e memória de cálculo do ensaio identificado.',
     tituloCurto: 'Planilha de dados do ensaio térmico', rotuloNumero: 'Relatório nº', numero: id.certificadoNumero || '(atribuído na emissão)', revisao: id.revisao,
     empresa: id.empresaExecutante,
-    capa: { tipo: 'Qualificação térmica — dados do ensaio', linhas: [['Cliente', id.cliente], ['Unidade e local', id.setor], ['Equipamento', id.tipoEquipamento + (id.tag ? ' — TAG ' + id.tag : '') + (id.numeroSerie ? ' — nº de série ' + id.numeroSerie : '')],
+    capa: { tipo: 'Qualificação térmica — dados do ensaio', linhas: [['Cliente', id.cliente], ['Unidade e local', id.setor], ['Equipamento', id.tipoEquipamento + (id.tag ? ' — TAG ' + id.tag : '') + (id.numeroSerie ? ' — nº de série ' + id.numeroSerie : '') + (id.marca || id.modelo ? ' — ' + [id.marca, id.modelo].filter(Boolean).join(' ') : '')],
       ['Estudos', ctx.estudos.map(function (e) { return e.rotulo; }).join('; ')], ['Data do ensaio', id.dataDoEnsaio], ['Técnico executor', id.tecnicoExecutor],
       ['Registrador', (ctx.registradores.itens || []).map(function (r) { return r.tag + (r.certificado ? ' (certificado ' + r.certificado + (r.validade ? ', válido até ' + r.validade : '') + ')' : ''); }).join('; ') || id.dtl],
       ['Incerteza de cada leitura', ctx.incerteza ? SGO_DocA4_val_(ctx.incerteza.Umedicao, 2, '°C') + ' (k = 2)' : 'não declarada'], ['Resultado', SGO_DocA4_rotuloStatus_(st)]] },

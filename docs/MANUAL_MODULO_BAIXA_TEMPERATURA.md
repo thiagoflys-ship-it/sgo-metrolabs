@@ -10,7 +10,7 @@ O módulo registra o ensaio de qualificação, lê os arquivos do registrador de
 
 ## 2. Antes de começar
 
-- Cliente, unidade e esterilizador cadastrados em Cadastros (Clientes, Unidades e Equipamentos). O relatório não cita fabricante nem modelo.
+- Cliente, unidade e esterilizador cadastrados em Cadastros (Clientes, Unidades e Equipamentos). Fabricante (marca), modelo, patrimônio e capacidade do cadastro saem na identificação do relatório quando preenchidos.
 - Especificação do ciclo do fabricante do equipamento: temperatura programada e tolerâncias, tempo de exposição e, quando declarados, número de pulsos de injeção e pressão de vácuo. Esses valores são os limites de aceitação.
 - Registradores e transdutores cadastrados em Calibração > Padrões de referência, com certificado válido no período do ensaio, incerteza U e fator k.
 - Arquivos exportados pelo registrador de cada ciclo: planilha (XLSX, XLS, ODS ou Planilha Google) ou texto (CSV, TXT). Um arquivo com todos os sensores ou um arquivo por sensor.
@@ -119,3 +119,9 @@ Referências configuradas: RDC ANVISA nº 15/2012; ISO 14937:2009; ISO 22441:202
 ## 12. Quem pode fazer
 
 Administrador, Diretoria, Gestor, Técnico e Metrologia preenchem, calculam, enviam para revisão e emitem. Administrador, Diretoria e Gestor revisam e aprovam ensaios elaborados por outra pessoa. Comercial e Financeiro consultam. Cliente e RH não acessam a tela.
+
+## O que mudou em 22/10/2026 (identificação completa e vários padrões)
+
+- **Identificação do equipamento completa.** Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro "Cliente e equipamento", em "Gravar no cadastro" (só grava o que está vazio). Linha vazia não aparece no documento.
+- **Vários padrões de referência.** Na aba "3. Instrumentos", toque em "Carregar padrões" e marque na lista, com busca, todos os registradores e transdutores usados (sem limite); desmarcar tira da tabela. O relatório traz cada um com fabricante, modelo, nº de série, certificado, laboratório, calibração, validade, incerteza e a situação no período do ensaio.
+- Documentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual.

@@ -177,7 +177,10 @@ test('documento A4: seções, critérios com fonte, gráficos, pt-BR, sem fabric
     '11. Incertezas de medição e regra de decisão', '12. Não conformidades e observações', '13. Conclusão', '14. Responsabilidades e assinaturas', 'Anexo A — Registro de revisão e aprovação', 'Anexo B — Arquivos de dados utilizados',
     'Prévia para revisão', 'data-sgo-sumario', 'Não conforme', 'ISO 22441:2022', 'JCGM 100:2008', 'Especificação do ciclo declarada pelo fabricante do equipamento', 'text-align:justify', '<svg', 'escala logarítmica', '0,21 °C', '15,00 min']) assert.ok(html.includes(t), 'falta: ' + t);
   const semImagens = html.replace(/data:[a-z+\/]+;base64,[A-Za-z0-9+\/=]+/g, '');
-  assert.doesNotMatch(semImagens, /MARCAFICTICIA|MODELOXYZ|undefined|NaN|\[object/);
+  assert.doesNotMatch(semImagens, /undefined|NaN|\[object/);
+  // 22/10/2026 (pedido do dono): fabricante e modelo do cadastro saem na identificação; os textos redigidos não citam marca.
+  assert.match(semImagens, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
+  assert.equal((semImagens.match(/MARCAFICTICIA/g) || []).length, 1, 'a marca aparece só na identificação');
   assert.doesNotMatch(html, /EN 14180|ISO 25424/);                 // normas de VBTF não entram no peróxido
   assert.doesNotMatch(html, /Norma de equipamento para esterilizadores a peróxido/); // a confirmar: fora do documento
   assert.doesNotMatch(html, /\d\.\d{2}\s?°C/);                         // nada de ponto decimal

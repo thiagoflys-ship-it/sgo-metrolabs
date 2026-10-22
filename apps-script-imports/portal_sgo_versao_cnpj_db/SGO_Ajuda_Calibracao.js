@@ -37,7 +37,7 @@ function SGO_ajudaTelas_Calibracao_() {
           "Em \"4. Ensaios (blocos de resultado)\", toque em \"+ Adicionar bloco de ensaio\".",
           "Digite o \"Título (grandeza/canal)\" e a unidade.",
           "Digite a \"Resolução do instrumento (na unidade do bloco)\". Se deixar em branco, o sistema deduz pelas leituras e marca com asterisco no certificado.",
-          "Marque os padrões de referência usados neste bloco.",
+          "Marque os padrões de referência usados neste bloco (quantos forem). O certificado traz uma tabela com cada padrão usado: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza do certificado.",
           "Em cada ponto, digite a referência e as leituras do Ensaio 1, 2 e 3. Use \"+ Adicionar ponto\" para mais pontos.",
           "Toque em \"Calcular\" e confira a prévia (média, tendência, U95, Veff).",
           "Em \"5. Fotos do ensaio (opcional)\", anexe as fotos, se tiver.",
@@ -109,7 +109,7 @@ function SGO_ajudaTelas_Calibracao_() {
       passos: [
         { titulo: "Gerar o relatório", itens: [
           "Toque em \"Relatório de calibração\" no menu.",
-          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda e a marca não vem do cadastro. O nº de série do cadastro sai no documento. Se a leitura do certificado já preencheu algum desses campos, o valor do cadastro fica no lugar.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
+          "Opcional: no quadro \"Buscar no cadastro\", acima de \"1. Cliente\", busque o cliente (nome ou CNPJ), escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos vazios; o que você digitou não muda. Desde 22/10/2026 o fabricante (marca) também vem do cadastro, e o nº de série do cadastro sai no documento. Se a leitura do certificado já preencheu algum desses campos, o valor do cadastro fica no lugar. No quadro \"Padrões de referência utilizados (opcional)\", logo abaixo, toque em \"Escolher padrões\" e marque todos os padrões usados (sem limite): o relatório traz uma tabela com cada um, e padrão vencido na data da calibração impede a geração, com a explicação.", "Em \"1. Cliente\", digite o CNPJ e toque em \"Buscar CNPJ\".",
           "Em \"2. Instrumento\", escolha o tipo de instrumento.",
           "Preencha TAG, marca, modelo, localização, data da calibração e técnico.",
           "Deixe \"Realizado no laboratório da Metrolabs\" marcado, a menos que a calibração tenha sido no cliente.",

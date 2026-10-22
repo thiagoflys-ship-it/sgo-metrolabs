@@ -108,7 +108,8 @@ test('emissão direta só pelo responsável técnico, com confirmação; nova em
   assert.match(html, /Relatório de ensaio térmico — Cadeia de frio/);
   assert.match(html, /ABNT NBR 16328:2024/);
   assert.match(html, /Revisado e aprovado para emissão por<\/b> Responsável Teste/);
-  assert.ok(!/MARCAFICTICIA|MODELOXYZ|undefined|NaN|16328:2023/.test(semImagens(html)));
+  assert.ok(!/undefined|NaN|16328:2023/.test(semImagens(html)));
+  assert.match(html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/, 'fabricante do cadastro (22/10/2026)');
   const p2 = rascunhoEEnvio(env, pDist());
   const r2 = env.dispatch('rt', 'apiMontarCertificadoFinal', Object.assign({}, p2, { confirmacaoRevisao: true }));
   assert.equal(r2.revisao, 1);
@@ -164,7 +165,7 @@ test('planilha de dados em A4 paisagem: emitida pelo responsável técnico; téc
   assert.match(html, /Planilha de dados do ensaio térmico — Cadeia de frio/);
   ['1. Quadro-resumo dos resultados', '2. Condições do ensaio', '3. Resultados por estudo', '4. Gráficos', '5. Memória de cálculo', '8. Leituras do registrador', 'Temperatura cinética média'].forEach(t => assert.ok(html.includes(t), 'falta ' + t));
   assert.ok(html.includes('<svg'), 'gráficos em SVG');
-  assert.ok(!/MARCAFICTICIA|MODELOXYZ|undefined|NaN/.test(semImagens(html)));
+  assert.ok(!/undefined|NaN/.test(semImagens(html)));
   // 1441 leituras: abaixo do limite de impressão, todas na tabela (12/10 08:00:00 até 13/10 08:00:00).
   assert.ok(html.includes('12/10 08:00:00') && html.includes('13/10 08:00:00'));
   // Apiconverter (botão antigo) segue para o modelo novo.

@@ -32,8 +32,10 @@ function AstR_htmlOS_(os, opcoes) {
     ['Cliente', Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), { largo: true }], ['CNPJ', Ast_s_(cli.CNPJ)], ['Unidade', Ast_s_(os.UNIDADE_NOME)],
     ['Endereço', Ast_s_(os.ENDERECO), { largo: true }], ['Equipamento', [Ast_s_(eq.TIPO), Ast_s_(eq.MODELO)].filter(Boolean).join(' · ') || Ast_s_(os.EQUIPAMENTO_TEXTO)],
     ['TAG', Ast_s_(eq.TAG)], ['Nº de série (cadastro)', Ast_s_(os.SERIE_CADASTRO) || Ast_s_(eq.SERIE)], ['Nº de série (conferido no local)', Ast_s_(os.SERIE_CONFIRMADA) + (Ast_sim_(os.SERIE_DIVERGENTE) ? ' (DIVERGENTE do cadastro)' : '')],
-    ['Setor', Ast_s_(eq.SETOR)], ['Patrimônio', Ast_s_(eq.PATRIMONIO)]
-  ].filter(function (p) { return p[0] !== 'Patrimônio' || Ast_s_(eq.PATRIMONIO); })));
+    ['Setor', Ast_s_(eq.SETOR)], ['Patrimônio', Ast_s_(eq.PATRIMONIO)],
+    // 22/10/2026: identificação completa do cadastro do equipamento (campo vazio não aparece).
+    ['Fabricante (marca)', Ast_s_(eq.FABRICANTE)], ['Capacidade ou volume', Ast_s_(eq.CAPACIDADE)], ['Ano de fabricação', Ast_s_(eq.ANO_FABRICACAO)]
+  ].filter(function (p) { return ['Patrimônio', 'Fabricante (marca)', 'Capacidade ou volume', 'Ano de fabricação'].indexOf(p[0]) < 0 || Ast_s_(p[1]); })));
   var sla = c.ID ? Ast_slaEstado_(c, Date.now()) : null;
   corpo += RelA4_secao_('Chamado', RelA4_identificacao_([['Chamado', Ast_s_(os.CHAMADO_NUMERO)], ['Aberto em', Ast_br_(c.ABERTO_EM)], ['Solicitante', Ast_s_(c.SOLICITANTE)], ['Canal', AST_CANAIS[Ast_up_(c.CANAL)] || ''],
     ['Prioridade', AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || ''], ['Prazo de atendimento', sla ? sla.texto : '—'], ['Problema relatado', Ast_s_(c.SINTOMA), { largo: true }]]));

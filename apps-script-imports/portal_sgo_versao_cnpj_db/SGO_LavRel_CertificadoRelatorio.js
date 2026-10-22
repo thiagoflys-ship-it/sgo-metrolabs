@@ -116,6 +116,8 @@ function LavRel_lvIncertezaA0_(registradores, minA0, z) {
  * interno (opcional): recebe { resultado } (gráficos, anexo do A0) — fica fora do contexto assinado.
  */
 function LavRel_lvMontarContextoCertificado_(payload, interno) {
+  // 22/10/2026: patrimônio, capacidade, câmaras e ano do cadastro vão ao documento fora do contexto assinado (envios e emissões antigas continuam válidos).
+  if (interno) interno.equipamentoCadastro = { patrimonio: String(payload.patrimonio || '').trim(), capacidade: String(payload.capacidade || '').trim(), numCamaras: String(payload.numCamaras || '').trim(), anoFabricacao: String(payload.anoFabricacao || '').trim() };
   const resultado = LavRel_lvExecutarAnaliseCompleta_(payload);
   if (interno) interno.resultado = resultado;
   payload = resultado.payload;
@@ -442,6 +444,7 @@ function LavRel_lvValidarParaEmissao_(payload) {
 function LavRel_lvMontarHtml_(contexto, interno, textos, fotos, aprovacao, minuta) {
   const template = HtmlService.createTemplateFromFile('LavadoraCertificado');
   template.ctx = contexto;
+  template.equipCad = (interno && interno.equipamentoCadastro) || {};
   template.textos = { conclusaoGeral: textos.conclusaoGeral, conclusaoLeigo: textos.conclusaoLeigo, analisePorEstudo: textos.analisePorEstudo || {} };
   template.fotos = (fotos || []).filter(function(f) { return f && f.base64; }).slice(0, 4);
   template.geradoEm = Utilities.formatDate(new Date(), LavRel_UCFG.TZ, 'dd/MM/yyyy');

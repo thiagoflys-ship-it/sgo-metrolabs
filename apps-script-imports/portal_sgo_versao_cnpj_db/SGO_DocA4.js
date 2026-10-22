@@ -769,17 +769,191 @@ function SGO_DocA4_registradores_(textoDtl, dataReferencia) {
   return saida;
 }
 
-function SGO_DocA4_tabelaRegistradores_(reg) {
+function SGO_DocA4_tabelaRegistradores_(reg, opcoes) {
   var itens = (reg && reg.itens) || [];
   if (!itens.length) return '<p class="nota">Registrador não informado.</p>';
-  return SGO_DocA4_tabela_(
-    [{ t: 'Identificação' }, { t: 'Descrição' }, { t: 'Certificado de calibração' }, { t: 'Validade', cls: 'cen' }, { t: 'Situação' }],
-    itens.map(function (it) {
-      return [it.tag, it.descricao || '—', it.certificado || '—', { t: it.validade || '—', cls: 'cen' },
-        it.conforme === true ? { html: '<span class="ok-txt">' + SGO_DocA4_esc_(it.situacao) + '</span>' }
-          : (it.conforme === false ? { html: '<span class="nok-txt">' + SGO_DocA4_esc_(it.situacao) + '</span>' } : it.situacao)];
-    })
-  );
+  // 22/10/2026: todos os padrões informados, com tudo o que o cadastro de padrões tem sobre eles (tabela comum).
+  return SGO_DocA4_tabelaPadroes_(itens, opcoes);
+}
+
+/* ============================================================
+ * Padrões de referência usados no ensaio (22/10/2026, pedido do dono)
+ * Comum a todos os geradores: o operador marca quantos padrões usou (1, 20 ou mais) e o documento traz
+ * todos, com identificação, fabricante/modelo/série, certificado, laboratório, data de calibração, validade,
+ * incerteza e situação na data do ensaio. Os dados vêm de Cadastros › Padrões de referência (CAD_PADROES)
+ * e do controle documental de cada padrão (PADROES_CONTROLE_DOCUMENTAL). O enriquecimento é feito na hora
+ * de desenhar o documento: o contexto assinado dos ensaios não muda (envios e relatórios antigos continuam
+ * válidos). Dados ligados à calibração (laboratório, data, rastreabilidade) só entram quando o número do
+ * certificado do ensaio é o mesmo do cadastro atual.
+ * ============================================================ */
+
+function SGO_DocA4_txtPadrao_(v) {
+  var s = String(v == null ? '' : v).trim();
+  return /^(n[ãâa]o consta|n\/c|n[ãa]o informado|-+|—)$/i.test(s) ? '' : s;
+}
+
+/** Cadastro de padrões + controle documental: { porTag: { TAGNORM: registro mesclado }, todosPorTag: { TAGNORM: [registros] } }. Nunca lança. */
+function SGO_DocA4_catalogoPadroes_() {
+  var porTag = {}, todosPorTag = {}, controle = {};
+  try {
+    var abaCtl = (typeof PAD_DOC_CONTROLE !== 'undefined' && PAD_DOC_CONTROLE) || 'PADROES_CONTROLE_DOCUMENTAL';
+    (SGO_DATA.getAll(abaCtl) || []).forEach(function (r) {
+      try { controle[String(r.ID)] = JSON.parse(r.DADOS_JSON || '{}') || {}; } catch (e) { /* registro ilegível: fica sem os extras */ }
+    });
+  } catch (e) { controle = {}; }
+  try {
+    var aba = (typeof SGO_CFG !== 'undefined' && SGO_CFG.SHEETS && SGO_CFG.SHEETS.CAD_PADROES) || 'CAD_PADROES';
+    (SGO_DATA.getAll(aba) || []).forEach(function (p) {
+      var n = SGO_DocA4_normTag_(p.TAG);
+      if (!n) return;
+      var x = controle[String(p.ID)] || {};
+      var reg = {
+        id: String(p.ID || ''), tag: String(p.TAG || ''), descricao: String(p.DESCRICAO || ''), certificado: String(p.CERTIFICADO_NUMERO || ''),
+        validade: SGO_DocA4_fmtData_(SGO_DocA4_lerData_(p.VALIDADE)), status: String(p.STATUS || ''),
+        incertezaU95: p.INCERTEZA_U95, fatorK: p.FATOR_K,
+        marca: SGO_DocA4_txtPadrao_(x.MARCA), modelo: SGO_DocA4_txtPadrao_(x.MODELO), serie: SGO_DocA4_txtPadrao_(x.SERIE),
+        laboratorio: SGO_DocA4_txtPadrao_(x.LABORATORIO), dataCalibracao: SGO_DocA4_fmtData_(SGO_DocA4_lerData_(x.DATA_CALIBRACAO)) || SGO_DocA4_txtPadrao_(x.DATA_CALIBRACAO),
+        rastreabilidade: SGO_DocA4_txtPadrao_(x.RASTREABILIDADE), resolucao: SGO_DocA4_txtPadrao_(x.RESOLUCAO),
+        unidade: SGO_DocA4_txtPadrao_(x.UNIDADE), faixa: SGO_DocA4_txtPadrao_(x.FAIXA)
+      };
+      // Mesma TAG em mais de um registro (certificado renovado cadastrado à parte): na lista vale o ativo de validade
+      // mais longa; no documento vale o registro do mesmo certificado do ensaio (SGO_DocA4_completarPadroes_).
+      (todosPorTag[n] = todosPorTag[n] || []).push(reg);
+      var atual = porTag[n], ativo = function (x) { return !String(x.status || '').trim() || String(x.status).toUpperCase() === 'ATIVO'; };
+      var val = function (x) { var d = SGO_DocA4_lerData_(x.validade); return d ? d.getTime() : 0; };
+      if (!atual || (ativo(reg) && !ativo(atual)) || (ativo(reg) === ativo(atual) && val(reg) > val(atual))) porTag[n] = reg;
+    });
+  } catch (e) { /* sem cadastro: os itens saem com o que já têm */ }
+  return { porTag: porTag, todosPorTag: todosPorTag };
+}
+
+/** Completa os itens de padrão (de SGO_DocA4_registradores_ ou de resumos antigos) com o cadastro atual. Devolve cópias. */
+function SGO_DocA4_completarPadroes_(itens, catalogo) {
+  var cat = catalogo || SGO_DocA4_catalogoPadroes_();
+  return (itens || []).map(function (it) {
+    var o = Object.assign({}, it);
+    var nt = SGO_DocA4_normTag_(o.tag), certN = SGO_DocA4_normTag_(o.certificado);
+    var p = (certN && ((cat.todosPorTag || {})[nt] || []).filter(function (x) { return SGO_DocA4_normTag_(x.certificado) === certN; })[0]) || cat.porTag[nt];
+    if (!p) return o;
+    function fill(k, v) { if (!String(o[k] == null ? '' : o[k]).trim() && String(v == null ? '' : v).trim()) o[k] = v; }
+    fill('descricao', p.descricao);
+    ['marca', 'modelo', 'serie', 'resolucao', 'unidade', 'faixa'].forEach(function (k) { fill(k, p[k]); });
+    var mesmoCert = !String(o.certificado || '').trim() || SGO_DocA4_normTag_(o.certificado) === SGO_DocA4_normTag_(p.certificado);
+    if (mesmoCert) {
+      ['laboratorio', 'dataCalibracao', 'rastreabilidade'].forEach(function (k) { fill(k, p[k]); });
+      if (o.incertezaU95 === undefined || o.incertezaU95 === null || o.incertezaU95 === '') {
+        var u = Number(String(p.incertezaU95 == null ? '' : p.incertezaU95).replace(',', '.'));
+        if (String(p.incertezaU95 == null ? '' : p.incertezaU95).trim() !== '' && isFinite(u)) o.incertezaU95 = u;
+      }
+      if (o.fatorK === undefined || o.fatorK === null || o.fatorK === '') {
+        var k2 = Number(String(p.fatorK == null ? '' : p.fatorK).replace(',', '.'));
+        if (String(p.fatorK == null ? '' : p.fatorK).trim() !== '' && isFinite(k2)) o.fatorK = k2;
+      }
+    }
+    return o;
+  });
+}
+
+/** Número de incerteza em pt-BR, com as casas que o valor pede (0,61 / 0,006). */
+function SGO_DocA4_numIncerteza_(v) {
+  var n = typeof v === 'number' ? v : Number(String(v == null ? '' : v).replace(',', '.'));
+  if (v === null || v === undefined || String(v).trim() === '' || !isFinite(n)) return '';
+  // Mínimo de 2 casas, sem cortar casas que o valor já tem (até 4): 0,61 / 0,006 / 0,0125.
+  var m = /\.(\d+)$/.exec(String(Math.abs(n))), casas = Math.max(2, Math.min(4, m ? m[1].length : 0));
+  return SGO_DocA4_num_(n, casas);
+}
+
+/** Fator de abrangência em pt-BR, só com as casas que o valor tem (2 / 2,28). */
+function SGO_DocA4_numFator_(v) {
+  var n = typeof v === 'number' ? v : Number(String(v == null ? '' : v).replace(',', '.'));
+  if (v === null || v === undefined || String(v).trim() === '' || !isFinite(n)) return '';
+  var m = /\.(\d+)$/.exec(String(Math.abs(n)));
+  return SGO_DocA4_num_(n, Math.min(2, m ? m[1].length : 0));
+}
+
+/**
+ * Tabela A4 dos padrões usados (uma linha por padrão; a linha não se parte entre páginas e o cabeçalho se
+ * repete). opcoes: { semDescricao: true (descrição e faixa ficam de fora), unidade: '°C' (quando o cadastro não traz a unidade), colunaExtra: { t: 'Ensaios', valor: fn(it) },
+ * semCompletar: true (itens já completos), legenda: texto da nota abaixo }.
+ */
+function SGO_DocA4_tabelaPadroes_(itens, opcoes) {
+  opcoes = opcoes || {};
+  var lista = opcoes.semCompletar ? (itens || []) : SGO_DocA4_completarPadroes_(itens);
+  if (!lista.length) return '<p class="nota">Nenhum padrão de referência informado.</p>';
+  var esc = SGO_DocA4_esc_;
+  function linhas(partes) { return partes.filter(function (x) { return x; }).join('<br>'); }
+  function peq(t) { return t ? '<span style="font-size:7.6pt;color:#3e4c59">' + esc(t) + '</span>' : ''; }
+  var cols = [{ t: 'Padrão' }, { t: 'Fabricante, modelo e nº de série' }, { t: 'Certificado de calibração' }, { t: 'Calibração e validade', cls: 'cen' }, { t: 'Incerteza (U)', cls: 'num' }, { t: 'Situação na data do ensaio' }];
+  if (opcoes.colunaExtra) cols.push({ t: opcoes.colunaExtra.t });
+  var corpo = lista.map(function (it) {
+    var fab = [it.marca, it.modelo].filter(function (x) { return String(x || '').trim(); }).join(' · ');
+    var u = SGO_DocA4_numIncerteza_(it.incertezaU95);
+    var unid = it.unidade || opcoes.unidade || '';
+    var k = SGO_DocA4_numFator_(it.fatorK);
+    var rastre = String(it.rastreabilidade || '').trim();
+    if (rastre.length > 180) rastre = rastre.slice(0, 177).replace(/\s+\S*$/, '') + '…';
+    var sit = String(it.situacao || '').trim() || (it.encontrado === false ? 'Não localizado no cadastro de padrões' : '—');
+    var l = [
+      { html: linhas(['<b>' + esc(it.tag || '—') + '</b>', opcoes.semDescricao ? '' : peq(it.descricao), it.faixa && !opcoes.semDescricao ? peq('Faixa: ' + it.faixa) : '']) },
+      { html: linhas([fab ? esc(fab) : '', it.serie ? 'Nº de série ' + esc(it.serie) : '']) || '—' },
+      { html: linhas([esc(it.certificado || '—'), it.laboratorio ? peq(it.laboratorio) : '', rastre ? peq('Rastreabilidade: ' + rastre) : '']) },
+      { html: linhas([it.dataCalibracao ? 'Calibrado em ' + esc(it.dataCalibracao) : '', 'Válido até ' + esc(it.validade || '—')]), cls: 'cen' },
+      { html: linhas([u ? esc(u + (unid ? ' ' + unid : '')) + (k ? '<br>' + peq('k = ' + k) : '') : '—', it.resolucao ? peq('Resolução: ' + it.resolucao) : '']), cls: 'num' },
+      it.conforme === true ? { html: '<span class="ok-txt">' + esc(sit) + '</span>' } : (it.conforme === false ? { html: '<span class="nok-txt">' + esc(sit) + '</span>' } : sit)
+    ];
+    if (opcoes.colunaExtra) l.push(String(opcoes.colunaExtra.valor(it) || '—'));
+    return l;
+  });
+  return SGO_DocA4_tabela_(cols, corpo, { classe: 'compacta' }) +
+    '<p class="nota">' + esc(opcoes.legenda || (lista.length === 1 ? 'Padrão de referência informado no ensaio' : lista.length + ' padrões de referência informados no ensaio') + ', com os dados de Cadastros › Padrões de referência da empresa executante. A situação de cada certificado é conferida na data do ensaio.') + '</p>';
+}
+
+/**
+ * 22/10/2026: linhas da identificação do equipamento para os documentos (helper comum de todos os geradores).
+ * ident: identificação do cadastro (SGO_QEQ_identificacao_) ou objeto com as mesmas chaves.
+ * Devolve [[rótulo, valor]]; campo vazio no cadastro não entra (o documento não mostra linha em branco).
+ * o.semTipo / o.semTag / o.semSerie: o chamador já mostra o campo em outro lugar.
+ */
+function SGO_DocA4_linhasEquipamento_(ident, o) {
+  ident = ident || {}; o = o || {};
+  var pares = [];
+  function add(rot, v) { v = String(v == null ? '' : v).trim(); if (v) pares.push([rot, v]); }
+  if (!o.semTipo) add('Tipo', ident.tipo || ident.tipoEquipamento || ident.equipamentoTipo);
+  add('Fabricante (marca)', ident.fabricante || ident.marca);
+  add('Modelo', ident.modelo);
+  if (!o.semSerie) add('Número de série', ident.numeroSerie || ident.numSerie);
+  if (!o.semTag) add('TAG', ident.tag);
+  add('Patrimônio', ident.patrimonio);
+  add('Capacidade ou volume', ident.capacidade);
+  add('Câmaras ou portas', ident.numCamaras);
+  add('Ano de fabricação', ident.anoFabricacao);
+  return pares;
+}
+
+/**
+ * 22/10/2026: padrões marcados nas telas de digitação livre (Relatório de calibração, Declaração de execução,
+ * Relatório QI/QO/QD). texto: TAGs separadas por vírgula; dataRef: data do serviço. Recusa (com o que fazer) padrão
+ * fora do cadastro, vencido na data ou sem validade. Devolve o texto limpo (vazio quando nada foi marcado).
+ */
+function SGO_DocA4_exigirPadroesValidos_(texto, dataRef, rotuloData) {
+  var t = String(texto == null ? '' : texto).trim().slice(0, 4000);
+  if (!t) return '';
+  var reg = SGO_DocA4_registradores_(t, dataRef);
+  var prob = [];
+  (reg.itens || []).forEach(function (it) {
+    if (!it.encontrado) prob.push(it.tag + ' não está em Cadastros › Padrões de referência');
+    else if (it.conforme === false) prob.push(it.tag + ' estava com o certificado vencido na ' + (rotuloData || 'data do serviço') + ' (validade ' + it.validade + ')');
+    else if (it.conforme === null) prob.push(it.tag + ' não tem validade no cadastro de padrões');
+  });
+  if (prob.length) throw new Error('Padrões de referência: ' + prob.join('; ') + '. Desmarque o padrão em "Padrões de referência utilizados" ou corrija o cadastro em Cadastros › Padrões de referência (validade e certificado) e gere de novo.');
+  return t;
+}
+
+/** Bloco A4 "Padrões de referência utilizados" (subtítulo + tabela comum). */
+function SGO_DocA4_blocoPadroesUsados_(texto, dataRef) {
+  var reg = SGO_DocA4_registradores_(String(texto || ''), dataRef);
+  if (!(reg.itens || []).length) return '';
+  return '<h3>Padrões de referência utilizados</h3>' + SGO_DocA4_tabelaPadroes_(reg.itens, { legenda: (reg.itens.length === 1 ? 'Padrão de referência usado' : reg.itens.length + ' padrões de referência usados') + ' no serviço, com os dados de Cadastros › Padrões de referência da empresa executante. A situação de cada certificado é conferida na data do serviço.' });
 }
 
 /* ============================================================

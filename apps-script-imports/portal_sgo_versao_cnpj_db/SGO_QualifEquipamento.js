@@ -195,10 +195,13 @@ function SGO_QEQ_identificacao_(sessionId, clienteId, unidadeId, equipamentoId) 
     cidadeUf: [SGO_QEQ_s_(u.CIDADE), SGO_QEQ_s_(u.UF)].filter(Boolean).join('/'),
     unidade: SGO_QEQ_s_(u.NOME_UNIDADE), setor: SGO_QEQ_s_(e.SETOR),
     tag: SGO_QEQ_s_(e.TAG), tipo: SGO_QEQ_maiusculaInicial_(e.TIPO) || 'Equipamento', numeroSerie: SGO_QEQ_s_(e.SERIE),
-    // 21/10/2026: identificação completa do cadastro (antes digitada na tela do ensaio). Fabricante e modelo só para uso interno.
+    // 21/10/2026: identificação completa do cadastro (antes digitada na tela do ensaio).
+    // 22/10/2026 (pedido do dono): fabricante (marca) e modelo do cadastro saem na identificação dos documentos.
+    // _nomesProibidos continua só para os textos corridos (conclusões redigidas), que não citam marca.
+    fabricante: SGO_QEQ_s_(e.FABRICANTE), modelo: SGO_QEQ_s_(e.MODELO),
     patrimonio: SGO_QEQ_s_(e.PATRIMONIO), anoFabricacao: SGO_QEQ_s_(e.ANO_FABRICACAO), capacidade: SGO_QEQ_s_(e.CAPACIDADE),
     numCamaras: SGO_QEQ_s_(e.NUM_CAMARAS), responsavelEquipamento: SGO_QEQ_s_(e.RESPONSAVEL_CLIENTE) || SGO_QEQ_s_(u.RESPONSAVEL),
-    faltam: SGO_QEQ_faltam_(e),
+    faltam: SGO_QEQ_faltam_(e), vazios: SGO_QEQ_vazios_(e),
     _nomesProibidos: nomes
   };
 }
@@ -212,6 +215,9 @@ var SGO_QEQ_CAMPOS_CADASTRO = [
   { campo: 'TAG', rotulo: 'TAG', obrigatorio: true, maiuscula: true },
   { campo: 'SERIE', rotulo: 'Nº de série', obrigatorio: true, maiuscula: true },
   { campo: 'SETOR', rotulo: 'Setor', obrigatorio: true, maiuscula: true },
+  // 22/10/2026: fabricante e modelo também se completam pela tela (só quando vazios no cadastro).
+  { campo: 'FABRICANTE', rotulo: 'Fabricante (marca)' },
+  { campo: 'MODELO', rotulo: 'Modelo' },
   { campo: 'PATRIMONIO', rotulo: 'Patrimônio', maiuscula: true },
   { campo: 'ANO_FABRICACAO', rotulo: 'Ano de fabricação' },
   { campo: 'CAPACIDADE', rotulo: 'Capacidade ou volume' },
@@ -224,6 +230,11 @@ function SGO_QEQ_campoCadastro_(campo) { return SGO_QEQ_CAMPOS_CADASTRO.filter(f
 /** Campos obrigatórios para o documento que estão vazios no cadastro: [{ campo, rotulo }]. */
 function SGO_QEQ_faltam_(e) {
   return SGO_QEQ_CAMPOS_CADASTRO.filter(function (c) { return c.obrigatorio && !SGO_QEQ_s_(e && e[c.campo]); }).map(function (c) { return { campo: c.campo, rotulo: c.rotulo }; });
+}
+
+/** 22/10/2026: todos os campos completáveis que estão vazios no cadastro (obrigatórios e opcionais): [{ campo, rotulo, obrigatorio }]. */
+function SGO_QEQ_vazios_(e) {
+  return SGO_QEQ_CAMPOS_CADASTRO.filter(function (c) { return !SGO_QEQ_s_(e && e[c.campo]); }).map(function (c) { return { campo: c.campo, rotulo: c.rotulo, obrigatorio: !!c.obrigatorio }; });
 }
 
 /** Identificação sem os campos internos (prefixo _). */
@@ -312,6 +323,7 @@ function SGO_QEQ_sugestoesAntigas_(ident) {
     if (partes.length > 1 && SGO_QEQ_semAcento_(partes[0]) === unidadeN) setor = partes.slice(1).join(' — ');
     else if (unidadeN && SGO_QEQ_semAcento_(setor) === unidadeN) setor = '';
     var cand = { TAG: SGO_QEQ_s_(d.tag || r.TAG), SERIE: SGO_QEQ_s_(d.numSerie || d.numeroSerie || d.serie), SETOR: setor,
+      FABRICANTE: SGO_QEQ_s_(d.marca || d.fabricante), MODELO: SGO_QEQ_s_(d.modelo),
       PATRIMONIO: SGO_QEQ_s_(d.patrimonio), ANO_FABRICACAO: SGO_QEQ_s_(d.anoFabricacao), CAPACIDADE: SGO_QEQ_s_(d.capacidade || d.volume), RESPONSAVEL_CLIENTE: SGO_QEQ_s_(d.responsavelCliente) };
     var origem = [SGO_QEQ_s_(r.NUMERO), SGO_QEQ_br_(SGO_QEQ_iso_(r.APROVADO_EM || r.ENVIADO_EM))].filter(Boolean).join(' de ') || 'ensaio anterior';
     vazios.forEach(function (k) {
@@ -349,7 +361,8 @@ function SGO_QEQ_aplicarVinculoPayload_(sessionId, payload) {
   var p = Object.assign({}, payload, {
     clienteId: id.clienteId, unidadeId: id.unidadeId, equipamentoId: id.equipamentoId,
     cliente: id.cliente, cnpj: id.cnpj, endereco: [id.endereco, id.cidadeUf].filter(Boolean).join(' - '),
-    setor: local, local: local, localizacao: local, tag: id.tag, numSerie: id.numeroSerie, tipoEquipamento: id.tipo, marca: '', modelo: ''
+    // 22/10/2026 (pedido do dono): marca e modelo vêm do cadastro e saem no documento (antes eram apagados).
+    setor: local, local: local, localizacao: local, tag: id.tag, numSerie: id.numeroSerie, tipoEquipamento: id.tipo, marca: id.fabricante, modelo: id.modelo
   });
   ['patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (id[k]) p[k] = id[k]; });
   return p;
@@ -641,7 +654,7 @@ function qualifEquipamentoAbrir(sessionId, equipamentoId, ref, via) {
  * Busca no cadastro para telas de digitação livre (21/10/2026)
  * Relatório de calibração, Declaração de execução e Relatório de qualificação QI/QO/QD: o roteador de cada
  * módulo encaminha para cá (os nomes são os do componente SGO_QVinc). Lista todos os tipos de equipamento;
- * a identificação leva também o modelo (a tela do módulo tem o campo). Fabricante não sai daqui.
+ * a identificação leva também o modelo (a tela do módulo tem o campo). 22/10/2026: o fabricante também (chave fabricante).
  * ============================================================ */
 var SGO_QEQ_FNS_BUSCA = ['apiPesquisarClientes', 'apiListarUnidades', 'apiListarEquipamentos', 'apiIdentificacao', 'apiPreencherCadastro', 'apiSugestoesCadastro'];
 function SGO_QEQ_apiBuscaCadastro_(fn, p, sessionId) {
@@ -666,4 +679,37 @@ function SGO_QEQ_rotasBuscaCadastro_() {
   var o = {};
   SGO_QEQ_FNS_BUSCA.forEach(function (fn) { o[fn] = function (payload, sessionId) { return SGO_QEQ_apiBuscaCadastro_(fn, payload, sessionId); }; });
   return o;
+}
+
+/* ============================================================
+ * Padrões de referência para a escolha na tela (22/10/2026, pedido do dono)
+ * Lista dos padrões ATIVOS de Cadastros › Padrões de referência, com o que o documento vai mostrar (fabricante,
+ * modelo, série, certificado, laboratório, validade). Usada pelo componente SGO_QVinc.ligarPadroes
+ * (JS_QualifVinculo.html) em todos os geradores. A situação aqui é a de hoje; a do documento é conferida na data
+ * do ensaio (SGO_DocA4_registradores_). Só leitura; perfil Cliente não acessa.
+ * ============================================================ */
+function SGO_QEQ_padroesParaSelecao_(sessao) {
+  if (SGO_QEQ_ehCliente_(sessao)) throw new Error('Acesso negado: a lista de padrões é da equipe da Metrolabs.');
+  var cat = typeof SGO_DocA4_catalogoPadroes_ === 'function' ? SGO_DocA4_catalogoPadroes_() : { porTag: {} };
+  var hoje = SGO_QEQ_hojeIso_();
+  var itens = Object.keys(cat.porTag).map(function (k) { return cat.porTag[k]; }).filter(function (p) { return SGO_QEQ_up_(p.status || 'ATIVO') === 'ATIVO'; }).map(function (p) {
+    var v = SGO_QEQ_iso_(p.validade);
+    return {
+      tag: p.tag, descricao: p.descricao, certificado: p.certificado, validade: p.validade,
+      situacao: !v ? 'SEM_VALIDADE' : (v < hoje ? 'VENCIDO' : 'VALIDO'),
+      marca: p.marca, modelo: p.modelo, serie: p.serie, laboratorio: p.laboratorio, dataCalibracao: p.dataCalibracao
+    };
+  });
+  itens.sort(function (a, b) { return String(a.tag).localeCompare(String(b.tag), 'pt-BR', { numeric: true }); });
+  return itens;
+}
+
+/** Chamada da tela (google.script.run): { ok, itens } ou { ok:false, erro }. */
+function padroesParaSelecao(sessionId) {
+  try {
+    var sessao = exigirSessao(String(sessionId || ''));
+    return { ok: true, itens: JSON.parse(JSON.stringify(SGO_QEQ_padroesParaSelecao_(sessao))) };
+  } catch (e) {
+    return { ok: false, erro: /^Acesso negado/.test(String(e && e.message)) ? String(e.message) : (typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('carregar a lista de padrões', e) : String(e && e.message ? e.message : e)) };
+  }
 }

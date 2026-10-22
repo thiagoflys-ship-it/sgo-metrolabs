@@ -125,6 +125,8 @@ function AutoRel_acIncertezaF0_(registradores, minF0, z) {
  * os gráficos — fica fora do contexto (que vai para a tela e é assinado).
  */
 function AutoRel_acMontarContextoCertificado_(payload, interno) {
+  // 22/10/2026: patrimônio, capacidade, câmaras e ano do cadastro vão ao documento fora do contexto assinado (envios e emissões antigas continuam válidos).
+  if (interno) interno.equipamentoCadastro = { patrimonio: String(payload.patrimonio || '').trim(), capacidade: String(payload.capacidade || '').trim(), numCamaras: String(payload.numCamaras || '').trim(), anoFabricacao: String(payload.anoFabricacao || '').trim() };
   const tipoRelatorio = String(payload.tipoRelatorio || '').toUpperCase().trim() === 'LEAK_TEST' ? 'LEAK_TEST' : 'CICLO';
   const comPressao = AutoRel_analisaPressao_(payload);
   const justificativaSemPressao = comPressao ? '' : String(payload.justificativaSemPressao || '').trim();
@@ -543,6 +545,7 @@ function AutoRel_acValidarParaEmissao_(payload) {
 function AutoRel_acMontarHtml_(contexto, interno, textos, fotos, aprovacao, minuta) {
   const template = HtmlService.createTemplateFromFile('AutoclaveCertificado');
   template.ctx = contexto;
+  template.equipCad = (interno && interno.equipamentoCadastro) || {};
   template.textos = { conclusaoGeral: textos.conclusaoGeral, conclusaoLeigo: textos.conclusaoLeigo, analisePorEstudo: textos.analisePorEstudo || {} };
   template.fotos = (fotos || []).filter(function(f) { return f && f.base64; }).slice(0, 4);
   template.geradoEm = Utilities.formatDate(new Date(), AutoRel_UCFG.TZ, 'dd/MM/yyyy');

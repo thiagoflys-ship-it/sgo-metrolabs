@@ -195,8 +195,8 @@
             CadUI_campo_({ id: "eqp_patrimonio", rotulo: "Patrimônio", valor: e.PATRIMONIO, placeholder: "Número de patrimônio do cliente, se houver" })
           ]) +
           CadUI_secao_("Fabricação e capacidade", [
-            CadUI_campo_({ id: "eqp_fabricante", rotulo: "Fabricante (uso interno)", valor: e.FABRICANTE, dica: "Não aparece nos relatórios de qualificação." }),
-            CadUI_campo_({ id: "eqp_modelo", rotulo: "Modelo (uso interno)", valor: e.MODELO }),
+            CadUI_campo_({ id: "eqp_fabricante", rotulo: "Fabricante (marca)", valor: e.FABRICANTE, dica: "Como está na placa. Sai na identificação de todos os documentos do equipamento." }),
+            CadUI_campo_({ id: "eqp_modelo", rotulo: "Modelo", valor: e.MODELO, dica: "Como está na placa. Sai na identificação de todos os documentos do equipamento." }),
             CadUI_campo_({ id: "eqp_ano", rotulo: "Ano de fabricação", valor: e.ANO_FABRICACAO, placeholder: "Ex.: 2019", attrs: ' inputmode="numeric" maxlength="4"' }),
             CadUI_campo_({ id: "eqp_capacidade", rotulo: "Capacidade ou volume", valor: e.CAPACIDADE, placeholder: "Ex.: 150 L, 4 cestos, 500 L" }),
             CadUI_campo_({ id: "eqp_camaras", rotulo: "Número de câmaras ou portas", valor: e.NUM_CAMARAS, placeholder: "Quando o tipo tiver mais de uma", attrs: ' inputmode="numeric" maxlength="3"' })

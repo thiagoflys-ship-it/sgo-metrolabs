@@ -714,6 +714,8 @@ function EstufaQ_montarContexto_(payload, interno) {
     _nomesProibidos: [payload.marca, payload.modelo].map(EstufaQ_s_).filter(function (x) { return x.length >= 3; }).concat(payload._nomesProibidos || [])
   };
   ctx.assinaturaDados = SGO_DocSalvar_assinatura_({ d: (resultado.dadosCompletos || []).map(function (r) { return [EstufaQ_ms_(r)].concat(ativosIdx.map(function (s) { return r.temperaturas[s]; })); }), e: payload.estudos || {}, f: faixa, a: ativos, q: payload.qualif || {} });
+  // 22/10/2026: identificação completa do cadastro; campo vazio não entra (a assinatura de ensaios antigos não muda).
+  ['marca', 'modelo', 'patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (EstufaQ_s_(payload[k])) ctx.identificacao[k] = EstufaQ_s_(payload[k]); });
   if (interno) { interno.resultado = resultado; interno.series = series; }
   return ctx;
 }
@@ -866,7 +868,9 @@ function EstufaQ_aplicarVinculo_(sessionId, payload, exigir) {
     clienteId: id.clienteId, unidadeId: id.unidadeId, equipamentoId: id.equipamentoId,
     cliente: id.cliente, cnpj: id.cnpj, endereco: [id.endereco, id.cidadeUf].filter(Boolean).join(' - '),
     localizacao: [id.unidade, id.setor].filter(Boolean).join(' — '), tagEquipamento: id.tag, tag: id.tag, numeroSerie: id.numeroSerie,
-    tipoEquipamento: id.tipo, marca: '', modelo: '', _nomesProibidos: id._nomesProibidos
+    // 22/10/2026 (pedido do dono): fabricante (marca), modelo, patrimônio, capacidade, câmaras e ano vêm do cadastro e saem no documento.
+    tipoEquipamento: id.tipo, marca: id.fabricante || '', modelo: id.modelo || '', patrimonio: id.patrimonio || '', capacidade: id.capacidade || '',
+    numCamaras: id.numCamaras || '', anoFabricacao: id.anoFabricacao || '', _nomesProibidos: id._nomesProibidos
   });
 }
 

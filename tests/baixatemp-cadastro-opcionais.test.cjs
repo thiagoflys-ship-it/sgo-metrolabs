@@ -28,7 +28,8 @@ test('patrimônio e capacidade: lista do equipamento traz, preencher grava só o
 
 test('tela: "Completar no cadastro" com patrimônio e capacidade; a tela guarda o que foi gravado', () => {
   const tela = ler('SGO_BaixaTemp_Tela.js');
-  assert.match(tela, /var opcionais = \[\['PATRIMONIO', 'Patrimônio', q\.patrimonio, [^\]]*\], \['CAPACIDADE', 'Capacidade ou volume', q\.capacidade, [^\]]*\]\]/);
+  // 22/10/2026: fabricante e modelo também entram nos opcionais (saem no relatório quando preenchidos).
+  assert.match(tela, /var opcionais = \[\['FABRICANTE', 'Fabricante \(marca\)', q\.fabricante, [^\]]*\], \['MODELO', 'Modelo', q\.modelo, [^\]]*\], \['PATRIMONIO', 'Patrimônio', q\.patrimonio, [^\]]*\], \['CAPACIDADE', 'Capacidade ou volume', q\.capacidade, [^\]]*\]\]/);
   assert.match(tela, /'Completar no cadastro do equipamento \(opcional\): '/);
   assert.match(tela, /faltam\.concat\(opcionais\)\.map/);
   assert.match(tela, /q\.patrimonio = d\.patrimonio \|\| q\.patrimonio; q\.capacidade = d\.capacidade \|\| q\.capacidade;/);

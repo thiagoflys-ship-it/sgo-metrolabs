@@ -158,17 +158,17 @@ function CadeiaFrioRel_reMontarHtml_(o) {
     sumario: true
   }));
 
-  // 1. Identificação (campos opcionais vazios não aparecem; marca e modelo nunca aparecem)
+  // 1. Identificação (campos opcionais vazios não aparecem; 22/10/2026: fabricante e modelo do cadastro aparecem)
   var opc = function (r, v, x) { return String(v || '').trim() ? [[r, v].concat(x ? [x] : [])] : []; };
   h.push('<h2>1. Identificação</h2>');
   h.push(SGO_DocA4_tabelaIdent_([['Cliente', id.cliente], ['CNPJ', id.cnpj]].concat(opc('Endereço', id.endereco, { largo: true }), opc('Setor', id.setor), [['TAG', id.tag], ['Equipamento', id.equipamentoTipo]],
-    opc('Nº de série', id.numeroSerie), [['Perfil do ensaio', ctx.equipamentoLabel], ['Técnico executor', id.tecnicoExecutor]], opc('Responsável pelo aceite', id.responsavelAceite),
+    opc('Nº de série', id.numeroSerie), opc('Fabricante (marca)', id.marca), opc('Modelo', id.modelo), opc('Patrimônio', id.patrimonio), opc('Capacidade ou volume', id.capacidade), opc('Câmaras ou portas', id.numCamaras), opc('Ano de fabricação', id.anoFabricacao), [['Perfil do ensaio', ctx.equipamentoLabel], ['Técnico executor', id.tecnicoExecutor]], opc('Responsável pelo aceite', id.responsavelAceite),
     [['Empresa executante', (id.empresaExecutante || {}).nome + ' — CNPJ ' + (id.empresaExecutante || {}).cnpj, { largo: true }]], opc('Tarefa de origem', id.tarefaOrigem, { largo: true }))));
-  h.push('<p class="nota">A identificação vem do cadastro do equipamento no SGO+. Este relatório não registra marca nem modelo comercial: a rastreabilidade do equipamento é feita pela TAG e pelo número de série.</p>');
+  h.push('<p class="nota">A identificação vem do cadastro do equipamento no SGO+ (Cadastros › Equipamentos).</p>');
 
   // 2. Instrumentação
   h.push('<h2>2. Instrumentação e rastreabilidade</h2>');
-  h.push('<p>As temperaturas foram registradas por registrador de dados com sensores distribuídos no volume útil do equipamento, sem contato com as superfícies internas. O registrador e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>');
+  h.push('<p>As temperaturas foram registradas por registrador de dados com sensores distribuídos no volume útil do equipamento, sem contato com as superfícies internas. Todos os registradores e padrões informados no ensaio e a situação de cada certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>');
   h.push(SGO_DocA4_tabelaRegistradores_(ctx.registradores));
   var u95 = ctx.estudos.map(function (e) { return e.fatos.incertezaRegistrador; }).filter(function (x) { return x !== null && x !== undefined; })[0];
   if (u95) h.push('<p class="nota">Incerteza expandida do registrador considerada: ' + esc(SGO_DocA4_val_(u95, 2, '°C')) + ' (k = 2, certificado de calibração). ' + esc(CADEIAFRIO_QCFG.EMISSAO.regraDecisao) + '</p>');

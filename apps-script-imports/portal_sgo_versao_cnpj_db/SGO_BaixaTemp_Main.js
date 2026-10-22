@@ -187,7 +187,7 @@ function BaixaTemp_apiListarEquipamentos(sessionId, p) {
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) {
     return BaixaTemp_s_(e.CLIENTE_ID) === cli && (!uni || BaixaTemp_s_(e.UNIDADE_ID) === uni) && SGO_UTILS.safeUpper(e.STATUS || 'ATIVO') === 'ATIVO';
   }).sort(function (a, b) { return BaixaTemp_s_(a.TAG).localeCompare(BaixaTemp_s_(b.TAG)); });
-  return { ok: true, items: itens.map(function (e) { return { id: String(e.ID), tag: e.TAG || '', tipo: e.TIPO || '', serie: e.SERIE || '', setor: e.SETOR || '', patrimonio: e.PATRIMONIO || '', capacidade: e.CAPACIDADE || '' }; }) };
+  return { ok: true, items: itens.map(function (e) { return { id: String(e.ID), tag: e.TAG || '', tipo: e.TIPO || '', serie: e.SERIE || '', setor: e.SETOR || '', patrimonio: e.PATRIMONIO || '', capacidade: e.CAPACIDADE || '', fabricante: e.FABRICANTE || '', modelo: e.MODELO || '' }; }) };
 }
 
 function BaixaTemp_apiListarPadroes(sessionId) {
@@ -214,6 +214,10 @@ function BaixaTemp_identificacao_(sessionId, id) {
     // 21/10/2026: patrimônio e capacidade do cadastro, quando preenchidos.
     if (e && e.PATRIMONIO) out.patrimonio = String(e.PATRIMONIO);
     if (e && e.CAPACIDADE) out.capacidade = String(e.CAPACIDADE);
+    // 22/10/2026 (pedido do dono): fabricante (marca) e modelo do cadastro saem no relatório quando preenchidos
+    // (os textos redigidos continuam sem citar marca: _nomesProibidos).
+    if (e && String(e.FABRICANTE || '').trim()) out.fabricante = String(e.FABRICANTE).trim();
+    if (e && String(e.MODELO || '').trim()) out.modelo = String(e.MODELO).trim();
     if (e) { out.tag = e.TAG || ''; out.numeroSerie = e.SERIE || ''; out.setor = e.SETOR || ''; out.tipoEquipamento = e.TIPO ? String(e.TIPO).charAt(0) + String(e.TIPO).slice(1).toLowerCase() : 'Esterilizador'; nomes = [e.FABRICANTE, e.MODELO].filter(function (x) { return String(x || '').trim().length >= 3; }); }
   } catch (err) { /* sem cadastro: as travas do motor pedem a seleção */ }
   out._nomesProibidos = nomes;

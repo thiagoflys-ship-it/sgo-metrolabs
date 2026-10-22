@@ -39,17 +39,20 @@
 <?
   // Campos opcionais vazios não aparecem (sem linha com travessão); cliente, CNPJ, TAG, equipamento,
   // técnico e empresa executante aparecem sempre.
+  // 22/10/2026: identificação completa do cadastro do equipamento (campo vazio não aparece).
+  var eqc = (typeof equipCad !== 'undefined' && equipCad) || {};
   var identOpc = function(rotulo, valor, extra) { return String(valor || '').trim() ? [[rotulo, valor].concat(extra ? [extra] : [])] : []; };
   var identLinhas = [['Cliente', id.cliente], ['CNPJ', id.cnpj]]
     .concat(identOpc('Endereço', id.endereco, { largo: true }), identOpc('Setor', id.setor), [['TAG', id.tag], ['Equipamento', id.equipamentoTipo]],
-      identOpc('Marca', id.marca), identOpc('Modelo', id.modelo), identOpc('Nº de série', id.numeroSerie), identOpc('Receita / programa', id.programa), identOpc('Lote', id.lote),
+      identOpc('Fabricante (marca)', id.marca), identOpc('Modelo', id.modelo), identOpc('Nº de série', id.numeroSerie),
+      identOpc('Patrimônio', eqc.patrimonio), identOpc('Capacidade ou volume', eqc.capacidade), identOpc('Câmaras ou portas', eqc.numCamaras), identOpc('Ano de fabricação', eqc.anoFabricacao), identOpc('Receita / programa', id.programa), identOpc('Lote', id.lote),
       [['Técnico executor', id.tecnicoExecutor]], identOpc('Responsável pelo aceite', id.responsavelAceite),
       [['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]], identOpc('Tarefa de origem', id.tarefaOrigem, { largo: true }));
 ?>
 <?!= SGO_DocA4_tabelaIdent_(identLinhas) ?>
 
 <h2>2. Instrumentação e rastreabilidade</h2>
-<p>As temperaturas<?= leak ? ' e a pressão' : (comPressao ? ' e a pressão da câmara' : '') ?> foram registradas por registrador de dados com sensores distribuídos na câmara. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>
+<p>As temperaturas<?= leak ? ' e a pressão' : (comPressao ? ' e a pressão da câmara' : '') ?> foram registradas por registrador de dados com sensores distribuídos na câmara. Todos os registradores e padrões informados no ensaio e a situação de cada certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>
 <?!= SGO_DocA4_tabelaRegistradores_(ctx.registradores) ?>
 <? if (f.incertezaF0) { ?>
 <p class="nota">Incerteza expandida do registrador considerada: <?= SGO_DocA4_val_(f.incertezaF0.uTemperatura, 2, '°C') ?> (certificado de calibração). Propagada ao F<sub>0</sub> do pior sensor como erro constante de temperatura durante a exposição: U(F<sub>0</sub>) ≈ F<sub>0</sub> · ln 10 / z · U(T) = <?= SGO_DocA4_val_(f.incertezaF0.uF0, 2, 'min') ?> (<?= SGO_DocA4_num_(f.incertezaF0.relativo, 1) ?> % do valor).</p>

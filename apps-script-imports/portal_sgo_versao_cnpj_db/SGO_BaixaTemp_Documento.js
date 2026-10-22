@@ -134,7 +134,7 @@ function BaixaTempDoc_montar_(o) {
   h.push(h2('Identificação'));
   var pares = [
     ['Cliente', id.cliente], ['CNPJ', id.cnpj], ['Endereço', id.endereco, { largo: true }], ['Unidade', id.unidade], ['Setor', id.setor],
-    ['Equipamento', id.tipoEquipamento || 'Esterilizador'], ['TAG', id.tag], ['Nº de série', id.numeroSerie]].concat(id.patrimonio ? [['Patrimônio', id.patrimonio]] : []).concat(id.capacidade ? [['Capacidade ou volume', id.capacidade]] : []).concat([['Processo', tipo.rotuloLongo],
+    ['Equipamento', id.tipoEquipamento || 'Esterilizador'], ['TAG', id.tag], ['Nº de série', id.numeroSerie]].concat(id.fabricante ? [['Fabricante (marca)', id.fabricante]] : []).concat(id.modelo ? [['Modelo', id.modelo]] : []).concat(id.patrimonio ? [['Patrimônio', id.patrimonio]] : []).concat(id.capacidade ? [['Capacidade ou volume', id.capacidade]] : []).concat([['Processo', tipo.rotuloLongo],
     ['Motivo da qualificação', id.motivo], ['Período do ensaio', periodo], ['Técnico executor', id.tecnicoExecutor], ['Acompanhado por (cliente)', id.responsavelCliente],
     ['Empresa executante', (o.empresa && o.empresa.nome ? o.empresa.nome : '') + (o.empresa && o.empresa.cnpj ? ' — CNPJ ' + o.empresa.cnpj : ''), { largo: true }]
   ]);
@@ -167,11 +167,18 @@ function BaixaTempDoc_montar_(o) {
   h.push(h2('Instrumentação e rastreabilidade'));
   var instr = Array.isArray(dados.instrumentos) ? dados.instrumentos : [];
   h.push(tab('Instrumentos utilizados e situação do certificado de calibração no período do ensaio'));
-  h.push(SGO_DocA4_tabela_([{ t: 'Identificação' }, { t: 'Descrição' }, { t: 'Grandeza' }, { t: 'Certificado' }, { t: 'Validade', cls: 'cen' }, { t: 'U do certificado', cls: 'num' }],
-    instr.map(function (i) {
-      var un = { TEMPERATURA: '°C', PRESSAO: 'mbar', UMIDADE: '%', CONCENTRACAO: prog.unidadeConcentracao || '' }[String(i.grandeza || '').toUpperCase()] || '';
-      return [i.tag || '—', i.descricao || '—', { TEMPERATURA: 'Temperatura', PRESSAO: 'Pressão', UMIDADE: 'Umidade', CONCENTRACAO: 'Concentração' }[String(i.grandeza || '').toUpperCase()] || '—', i.certificado || '—', { t: i.validade || '—', cls: 'cen' }, f(BaixaTempMotor_num_(i.U), 2, un) + ' (k = ' + SGO_DocA4_num_(BaixaTempMotor_num_(i.k) || 2, 2) + ')'];
-    })));
+  // 22/10/2026 (pedido do dono): todos os instrumentos marcados, com o que o cadastro de padrões tem sobre cada um
+  // (fabricante, modelo, série, laboratório, data de calibração), na tabela comum dos geradores.
+  var refFim = SGO_DocA4_lerData_(id.dataFim || id.dataInicio);
+  var nomesGrandeza = { TEMPERATURA: 'Temperatura', PRESSAO: 'Pressão', UMIDADE: 'Umidade', CONCENTRACAO: 'Concentração' };
+  h.push(SGO_DocA4_tabelaPadroes_(instr.map(function (i) {
+    var g = String(i.grandeza || '').toUpperCase();
+    var val = SGO_DocA4_lerData_(i.validade);
+    var ok = val && refFim ? val.getTime() >= new Date(refFim.getFullYear(), refFim.getMonth(), refFim.getDate()).getTime() : null;
+    return { tag: i.tag || '—', descricao: i.descricao || '', certificado: i.certificado || '', validade: i.validade || '', grandeza: nomesGrandeza[g] || '',
+      incertezaU95: BaixaTempMotor_num_(i.U), fatorK: BaixaTempMotor_num_(i.k) || 2, unidade: { TEMPERATURA: '°C', PRESSAO: 'mbar', UMIDADE: '%', CONCENTRACAO: prog.unidadeConcentracao || '' }[g] || '',
+      resolucao: i.resolucao ? String(i.resolucao) : '', conforme: ok, situacao: ok === true ? 'Válido no período do ensaio' : (ok === false ? 'Vencido no período do ensaio' : 'Validade não informada') };
+  }), { colunaExtra: { t: 'Grandeza', valor: function (it) { return it.grandeza; } }, legenda: (instr.length === 1 ? 'Instrumento usado' : instr.length + ' instrumentos usados') + ' no ensaio, com os dados de Cadastros › Padrões de referência da empresa executante. A situação de cada certificado é conferida no período do ensaio.' }));
 
   // 6. Critérios de aceitação
   h.push(h2('Critérios de aceitação'));

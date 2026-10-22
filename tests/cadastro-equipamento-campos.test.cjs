@@ -144,7 +144,8 @@ test('ensaios antigos com TAG/série/setor digitados: sugestões só para o que 
   assert.match(s.sugestoes.SERIE[0].origem, /AUT-ANT-1/);
   assert.deepEqual(s.sugestoes.SETOR.map(x => x.valor), ['EXPURGO']);
   assert.equal(s.sugestoes.TAG, undefined, 'TAG já preenchida no cadastro não é sugerida');
-  assert.equal(JSON.stringify(s).includes('MARCAFICTICIA'), false, 'marca não vem como sugestão');
+  // 22/10/2026: fabricante vazio no cadastro também é sugerido a partir do ensaio antigo (só sugestão; grava quem confirmar).
+  assert.deepEqual(s.sugestoes.FABRICANTE.map(x => x.valor), ['MARCAFICTICIA']);
   assert.equal(eq(env, 'eq3').SERIE, '', 'sugestão não grava sozinha');
   const g = env.oficial('tec', 'apiPreencherCadastro', Object.assign({ campos: { SERIE: s.sugestoes.SERIE[0].valor, SETOR: s.sugestoes.SETOR[0].valor }, origem: 'teste' }, V3));
   assert.equal(g.gravados, 2);
@@ -162,8 +163,10 @@ test('documentos puxam TAG, série e setor do cadastro (relatório de qualifica�
   assert.equal(p.local, 'CME CENTRAL TESTE — CME', 'planilha de dados usa "local"');
   assert.equal(p.localizacao, 'CME CENTRAL TESTE — CME');
   assert.equal(p.patrimonio, 'PAT-TESTE-55');
-  assert.equal(p.marca, '');
-  // Relatório de qualificação: TAG, série, setor e patrimônio; sem fabricante nem modelo.
+  // 22/10/2026 (pedido do dono): fabricante e modelo do cadastro também vão ao documento.
+  assert.equal(p.marca, 'MARCAFICTICIA');
+  assert.equal(p.modelo, 'MODELOXYZ');
+  // Relatório de qualificação: TAG, série, setor, patrimônio, fabricante e modelo.
   const c1 = M.emitirCiclo(env, { ensaio: 'QO (Vazio)', certNumero: 'AUT-T-0101' });
   const base = { clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eq1', etapas: { QO: true }, motivo: 'Requalificação periódica', periodicidadeMeses: 12, ciclos: [c1] };
   const prev = env.oficial('tec', 'apiPrevia', base);
@@ -173,7 +176,8 @@ test('documentos puxam TAG, série e setor do cadastro (relatório de qualifica�
   assert.match(prev.html, /Setor ou local<\/th><td>CME</);
   assert.match(prev.html, /Patrimônio<\/th><td>PAT-TESTE-55/);
   assert.match(prev.html, /Capacidade ou volume<\/th><td>150 L/);
-  assert.doesNotMatch(prev.html, /MARCAFICTICIA|MODELOXYZ/);
+  assert.match(prev.html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
+  assert.match(prev.html, /Modelo<\/th><td>MODELOXYZ/);
   // Componente comum das telas de ensaio: aviso e botão; roteadores dos quatro módulos aceitam o preenchimento.
   const comp = ler('JS_QualifVinculo.html');
   assert.match(comp, /Falta no cadastro do equipamento: /);

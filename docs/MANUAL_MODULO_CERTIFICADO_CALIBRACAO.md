@@ -268,3 +268,9 @@ A opção inicial é **NÃO**: nenhuma data é calculada nem incluída por padr�
 ## Enviar o documento ao cliente (20/10/2026)
 
 Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; os links do PDF salvo na tela ganham o botão "Enviar". A janela "Enviar documento" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).
+
+## O que mudou em 22/10/2026 (identificação completa e vários padrões)
+
+- **Identificação do equipamento completa.** Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro "Cliente e equipamento", em "Gravar no cadastro" (só grava o que está vazio). Linha vazia não aparece no documento.
+- **Vários padrões de referência.** Os padrões continuam marcados por bloco (quantos forem). A tabela "Padrões de referência utilizados" do certificado passa a trazer, de cada padrão, fabricante, modelo, nº de série, certificado, laboratório, data de calibração, validade e incerteza do certificado, conforme Cadastros › Padrões de referência (controle documental do padrão).
+- Documentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual.

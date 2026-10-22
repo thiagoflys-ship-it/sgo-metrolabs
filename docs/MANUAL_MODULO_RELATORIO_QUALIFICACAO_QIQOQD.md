@@ -2,7 +2,7 @@
 
 ## O que mudou em 21/10/2026 (busca no cadastro)
 
-- **Buscar no cadastro (opcional).** Acima de "1. Cliente" há o quadro "Buscar no cadastro": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. A marca não vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido).
+- **Buscar no cadastro (opcional).** Acima de "1. Cliente" há o quadro "Buscar no cadastro": busque o cliente pelo nome ou CNPJ, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, modelo e localização (unidade e setor) entram nos campos que estão vazios ou que foram preenchidos automaticamente; o que você digitou não muda. Desde 22/10/2026 o fabricante (marca) também vem do cadastro. O número de série do cadastro vai junto e sai no documento (enquanto a TAG da tela for a do equipamento escolhido).
 - Se o equipamento não estiver no cadastro, use "Cadastrar equipamento" no próprio quadro (abre em outra aba) e depois "Atualizar listas". Sem escolher nada, a tela funciona como antes, com digitação livre.
 - Se faltar TAG, número de série ou setor no cadastro, o quadro mostra "Falta no cadastro do equipamento" com os campos para preencher ali mesmo e "Gravar no cadastro" (só o que está vazio, com registro de quem gravou).
 
@@ -264,3 +264,9 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 **Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
 
 Os certificados da QD e a leitura feita deles voltam com o documento: não é preciso gerar o rascunho de novo, a menos que um certificado seja trocado (nesse caso a tela pede o rascunho, para ler o certificado novo). Sem número digitado, o relatório recebe um número automático (RQQ-aaaammdd-hhmm), usado para as revisões.
+
+## O que mudou em 22/10/2026 (identificação completa e vários padrões)
+
+- **Identificação do equipamento completa.** Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro "Cliente e equipamento", em "Gravar no cadastro" (só grava o que está vazio). Linha vazia não aparece no documento.
+- **Vários padrões de referência.** No quadro "Padrões de referência utilizados (opcional)", abaixo de "Buscar no cadastro", toque em "Escolher padrões" e marque todos os padrões usados (sem limite). O documento traz uma tabela com cada um (fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza). Padrão fora do cadastro, sem validade ou vencido na data do serviço impede a geração, com a explicação. O fabricante (marca) passa a vir do cadastro, como o modelo.
+- Documentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual.

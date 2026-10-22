@@ -103,7 +103,7 @@
         var i = st.ident;
         if (!i) { c.className = "qvinc-cartao"; c.innerHTML = ""; return; }
         c.className = "qvinc-cartao mostrar";
-        var extras = [i.patrimonio ? "patrimônio " + i.patrimonio : "", i.capacidade ? "capacidade " + i.capacidade : "", i.numCamaras ? i.numCamaras + " câmara(s)/porta(s)" : "", i.anoFabricacao ? "fabricado em " + i.anoFabricacao : ""].filter(Boolean);
+        var extras = [[i.fabricante, i.modelo].filter(Boolean).join(" · "), i.patrimonio ? "patrimônio " + i.patrimonio : "", i.capacidade ? "capacidade " + i.capacidade : "", i.numCamaras ? i.numCamaras + " câmara(s)/porta(s)" : "", i.anoFabricacao ? "fabricado em " + i.anoFabricacao : ""].filter(Boolean);
         c.innerHTML = "<b>" + esc(i.cliente) + "</b>" + (i.cnpj ? " — CNPJ " + esc(i.cnpj) : "") + "<br>" + esc(i.unidade) + (i.setor ? " · " + esc(i.setor) : "") +
           "<br>Equipamento: <b>" + esc(i.tag || "sem TAG") + "</b> · " + esc(i.tipo) + (i.numeroSerie ? " · nº de série " + esc(i.numeroSerie) : "") +
           (extras.length ? "<br>" + esc(extras.join(" · ")) : "") +
@@ -113,20 +113,31 @@
       }
       // 21/10/2026: campo que o documento usa e está vazio no cadastro: aviso com o preenchimento ali mesmo
       // (grava no cadastro do equipamento, só o que está vazio; trocar valor já gravado continua em Cadastros).
-      var DICAS_FALTA = { TAG: "Código da etiqueta (ex.: AUT-01)", SERIE: "Como está na placa do equipamento", SETOR: "Setor onde está instalado (ex.: CME)" };
+      var DICAS_FALTA = { TAG: "Código da etiqueta (ex.: AUT-01)", SERIE: "Como está na placa do equipamento", SETOR: "Setor onde está instalado (ex.: CME)",
+        FABRICANTE: "Como está na placa do equipamento", MODELO: "Como está na placa do equipamento", PATRIMONIO: "Número do patrimônio do cliente",
+        ANO_FABRICACAO: "4 dígitos (ex.: 2019)", CAPACIDADE: "Com a unidade (ex.: 150 L)", NUM_CAMARAS: "Só o número (ex.: 2)", RESPONSAVEL_CLIENTE: "Nome de quem acompanha no cliente" };
+      // 22/10/2026: além do obrigatório (TAG, série, setor), os opcionais vazios no cadastro (fabricante, modelo,
+      // patrimônio, capacidade...) também podem ser completados aqui. Todo campo preenchido no cadastro sai no documento.
+      function opcionaisVazios(i) { return (i.vazios || []).filter(function (f) { return !f.obrigatorio && !(i.faltam || []).some(function (x) { return x.campo === f.campo; }); }); }
+      function htmlCampoFalta(f) {
+        return '<div class="qvinc-campo"><label for="' + px + "F_" + esc(f.campo) + '">' + esc(f.rotulo) + '</label><input id="' + px + "F_" + esc(f.campo) + '" data-campo-cadastro="' + esc(f.campo) + '" type="text" maxlength="120" autocomplete="off" placeholder="' + esc(DICAS_FALTA[f.campo] || "") + '"><span class="qvinc-sug" id="' + px + "S_" + esc(f.campo) + '"></span></div>';
+      }
       function htmlFalta(i) {
-        var faltam = i.faltam || [];
-        if (!faltam.length) return "";
-        var titulo = "Falta no cadastro do equipamento: " + faltam.map(function (f) { return f.rotulo; }).join(", ") + ".";
-        if (opcoes.somenteLeitura) return '<div class="qvinc-falta" id="' + px + 'Falta"><b>' + esc(titulo) + "</b>O relatório usa esses dados. Peça à equipe técnica para completar em Cadastros › Equipamentos.</div>";
+        var faltam = i.faltam || [], opc = opcionaisVazios(i);
+        if (!faltam.length && !opc.length) return "";
+        var titulo = faltam.length ? "Falta no cadastro do equipamento: " + faltam.map(function (f) { return f.rotulo; }).join(", ") + "." : "";
+        var tituloOpc = "Vazio no cadastro do equipamento (opcional): " + opc.map(function (f) { return f.rotulo; }).join(", ") + ".";
+        if (opcoes.somenteLeitura) return faltam.length ? '<div class="qvinc-falta" id="' + px + 'Falta"><b>' + esc(titulo) + "</b>O relatório usa esses dados. Peça à equipe técnica para completar em Cadastros › Equipamentos.</div>" : "";
+        var botoes = '<div class="qvinc-atalhos"><button type="button" class="btn-primary qvinc-btn" id="' + px + 'BtnGravarCad">Gravar no cadastro</button>' +
+          '<button type="button" class="btn-secondary qvinc-btn" id="' + px + 'BtnSugestoes">Buscar nos ensaios anteriores</button></div>' +
+          '<div class="qvinc-msg" id="' + px + 'MsgCad"></div>';
+        var blocoOpc = opc.length ? '<details id="' + px + 'Opc"><summary style="cursor:pointer;font-weight:600">' + esc(tituloOpc) + "</summary>" +
+          '<div style="margin-top:6px">Estes dados não impedem o relatório. Preenchidos, saem na identificação do equipamento no documento. Clique em "Gravar no cadastro" para guardar no cadastro do equipamento (só o que está vazio).</div>' +
+          '<div class="qvinc-linha">' + opc.map(htmlCampoFalta).join("") + "</div></details>" : "";
+        if (!faltam.length) return '<div class="qvinc-falta" id="' + px + 'Falta" style="border-color:var(--bc-info-line,#d5dde6);background:var(--bc-info-bg,#eef2f6)">' + blocoOpc + botoes + "</div>";
         return '<div class="qvinc-falta" id="' + px + 'Falta"><b>' + esc(titulo) + "</b>" +
           "O relatório usa esses dados. Preencha aqui e clique em \"Gravar no cadastro\": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua daqui. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." +
-          '<div class="qvinc-linha">' + faltam.map(function (f) {
-            return '<div class="qvinc-campo"><label for="' + px + "F_" + esc(f.campo) + '">' + esc(f.rotulo) + '</label><input id="' + px + "F_" + esc(f.campo) + '" data-campo-cadastro="' + esc(f.campo) + '" type="text" maxlength="120" autocomplete="off" placeholder="' + esc(DICAS_FALTA[f.campo] || "") + '"><span class="qvinc-sug" id="' + px + "S_" + esc(f.campo) + '"></span></div>';
-          }).join("") + "</div>" +
-          '<div class="qvinc-atalhos"><button type="button" class="btn-primary qvinc-btn" id="' + px + 'BtnGravarCad">Gravar no cadastro</button>' +
-          '<button type="button" class="btn-secondary qvinc-btn" id="' + px + 'BtnSugestoes">Buscar nos ensaios anteriores</button></div>' +
-          '<div class="qvinc-msg" id="' + px + 'MsgCad"></div></div>';
+          '<div class="qvinc-linha">' + faltam.map(htmlCampoFalta).join("") + "</div>" + blocoOpc + botoes + "</div>";
       }
       function msgCad(tipo, texto) { var m = $("MsgCad"); if (!m) return; m.className = "qvinc-msg" + (texto ? " mostrar " + tipo : ""); m.textContent = texto || ""; }
       function ligarFalta() {
@@ -240,17 +251,18 @@
         NOMES.forEach(function (n) {
           [base + "_ui" + n[0], base + "_" + n[1]].forEach(function (id) { var x = porId(id); if (x && !camposCad.some(function (c) { return c.el === x; })) camposCad.push({ el: x, campo: n[2], marca: false }); });
         });
-        // Marca e modelo da Autoclave e da Lavadora: não saem nos documentos (ficam no cadastro, uso interno).
-        ["Marca", "Modelo"].forEach(function (n) { var x = porId(base + "_ui" + n); if (x) camposCad.push({ el: x, campo: "", marca: true }); });
+        // 22/10/2026 (pedido do dono): fabricante (marca) e modelo vêm do cadastro e saem no documento, como a TAG e a série.
+        [["Marca", "FABRICANTE"], ["Modelo", "MODELO"]].forEach(function (n) { [base + "_ui" + n[0], base + "_" + n[0].toLowerCase()].forEach(function (id) { var x = porId(id); if (x && !camposCad.some(function (c) { return c.el === x; })) camposCad.push({ el: x, campo: n[1], marca: false }); }); });
       }
       var avisosSecao = [];
       function irParaVinculo() { try { el.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} var b = $("Busca"); if (b && !b.disabled) setTimeout(function () { try { b.focus(); } catch (e2) {} }, 350); }
       function irParaFalta(campo) {
         var alvo = (campo && $("F_" + campo)) || $("Falta") || el;
+        var det = alvo && alvo.closest ? alvo.closest("details") : null; if (det) det.open = true;
         try { alvo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
         if (alvo && alvo.focus) setTimeout(function () { try { alvo.focus(); } catch (e2) {} }, 350);
       }
-      function faltaCampo(campo) { return !!(st.ident && campo && (st.ident.faltam || []).some(function (f) { return f.campo === campo; })); }
+      function faltaCampo(campo) { return !!(st.ident && campo && (st.ident.faltam || []).concat(st.ident.vazios || []).some(function (f) { return f.campo === campo; })); }
       function notaDe(c) {
         var n = c.el.parentNode && c.el.parentNode.querySelector('.qvinc-nota-cad[data-para="' + c.el.id + '"]');
         if (!n) { n = document.createElement("div"); n.className = "qvinc-nota-cad"; n.setAttribute("data-para", c.el.id); n.setAttribute("role", "status"); c.el.parentNode.insertBefore(n, c.el.nextSibling); }
@@ -258,9 +270,7 @@
       }
       function explicar(c) {
         var n = notaDe(c), b = null;
-        if (c.marca) {
-          n.innerHTML = "Marca e modelo não saem nos documentos de qualificação. Ficam no cadastro do equipamento, para uso interno.";
-        } else if (!st.ident) {
+        if (!st.ident) {
           n.innerHTML = 'Este dado vem do cadastro do equipamento escolhido em "Cliente e equipamento", no início da tela. Nenhum equipamento foi escolhido ainda.<br><button type="button" class="btn-secondary">Escolher o equipamento</button>';
           b = function () { irParaVinculo(); };
         } else if (faltaCampo(c.campo)) {
@@ -284,8 +294,8 @@
         x.style.background = "var(--bc-surface-2, #f1f3f5)";
         x.style.cursor = "pointer";
         x.style.opacity = "";
-        x.title = c.marca ? "Não sai nos documentos de qualificação." : "Vem do cadastro. Clique para ver de onde vem e o que fazer.";
-        if (!c.marca) x.placeholder = !st.ident ? "Escolha o equipamento em Cliente e equipamento" : (faltaCampo(c.campo) ? "Falta no cadastro: clique para preencher" : "");
+        x.title = "Vem do cadastro. Clique para ver de onde vem e o que fazer.";
+        x.placeholder = !st.ident ? "Escolha o equipamento em Cliente e equipamento" : (faltaCampo(c.campo) ? "Falta no cadastro: clique para preencher" : "");
         if (!x.getAttribute("data-qvinc-cad")) {
           x.setAttribute("data-qvinc-cad", "1");
           x.addEventListener("click", function () { explicar(c); });
@@ -293,7 +303,7 @@
           var lab = escopo.querySelector('label[for="' + x.id + '"]') || document.querySelector('label[for="' + x.id + '"]');
           if (lab && !lab.querySelector(".qvinc-selo")) {
             var selo = document.createElement("span"); selo.className = "qvinc-selo";
-            selo.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i>' + (/do cadastro/i.test(lab.textContent || "") ? "" : (c.marca ? " uso interno" : " do cadastro"));
+            selo.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i>' + (/do cadastro/i.test(lab.textContent || "") ? "" : " do cadastro");
             lab.appendChild(selo);
           }
         }
@@ -376,7 +386,7 @@
     /* 21/10/2026: busca no cadastro para telas que continuam com digitação livre (Relatório de calibração, Declaração de
        execução e Relatório de qualificação QI/QO/QD). Escolhido o equipamento, preenche os campos da tela que estão vazios ou
        que receberam valor automático (da leitura do certificado ou de uma escolha anterior); o que a pessoa digitou não muda.
-       O fabricante (marca) não é preenchido daqui. o: { prefixo, despacho, campos: { cliente, cnpj, endereco, tag, modelo, serie,
+       22/10/2026: o fabricante (marca) também vem do cadastro. o: { prefixo, despacho, campos: { cliente, cnpj, endereco, tag, marca, modelo, serie,
        localizacao, tipo }: ids dos campos da tela, titulo, subtitulo, aoEscolher(ident, preenchidos) }. */
     function preencherAuto(id, valor, forcar) {
       var x = document.getElementById(id);
@@ -398,6 +408,21 @@
       box.id = px + "Box";
       antesDe.parentNode.insertBefore(box, antesDe);
       var estado = { ident: null };
+      // 22/10/2026: a tela que não informa o campo da marca (ou da série) usa o campo vizinho ao do modelo, quando existe.
+      o.campos = Object.assign({}, o.campos || {});
+      if (!o.campos.marca && o.campos.modelo && document.getElementById(String(o.campos.modelo).replace(/_modelo$/, "_marca"))) o.campos.marca = String(o.campos.modelo).replace(/_modelo$/, "_marca");
+      if (!o.campos.serie && o.campos.modelo && document.getElementById(String(o.campos.modelo).replace(/_modelo$/, "_numeroSerie"))) o.campos.serie = String(o.campos.modelo).replace(/_modelo$/, "_numeroSerie");
+      // 22/10/2026: padrões de referência usados no serviço (opcional), logo abaixo da busca no cadastro.
+      var padVelho = document.getElementById(px + "PadBox");
+      if (padVelho && padVelho.parentNode) padVelho.parentNode.removeChild(padVelho);
+      var padBox = document.createElement("div");
+      padBox.id = px + "PadBox";
+      padBox.className = "qvinc";
+      padBox.innerHTML = '<h3>Padrões de referência utilizados (opcional)</h3><p class="qvinc-sub">Marque todos os padrões da Metrolabs usados neste serviço (sem limite). O documento traz uma tabela com cada um: identificação, fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza, conforme Cadastros › Padrões de referência. Padrão vencido na data do serviço impede a geração, com a explicação.</p>' +
+        '<label for="' + px + 'Padroes" style="display:block;font-size:12.5px;font-weight:600;margin-bottom:5px">Padrões usados (TAG, separadas por vírgula)</label><input id="' + px + 'Padroes" type="text" autocomplete="off" style="width:100%;min-height:42px;padding:9px 10px;border-radius:6px;font-size:14px" placeholder="Marque na lista abaixo ou digite as TAGs">';
+      antesDe.parentNode.insertBefore(padBox, antesDe);
+      var padInput = padBox.querySelector("#" + px + "Padroes");
+      ligarPadroes(padInput);
       function chamar(fn, payload, ok, erro) {
         google.script.run
           .withSuccessHandler(function (r) { if (r && r.ok) ok(r); else erro((r && r.erro) || "O servidor não confirmou a operação. Tente de novo."); })
@@ -407,27 +432,157 @@
       montar(box, {
         prefixo: px, camposCadastro: [], chamar: chamar,
         titulo: o.titulo || "Buscar no cadastro (opcional)",
-        subtitulo: o.subtitulo || "Escolha o cliente, a unidade e o equipamento para preencher cliente, CNPJ, endereço, TAG, modelo e localização a partir do cadastro. Só os campos vazios (ou preenchidos automaticamente) recebem o valor; o que você digitou continua. Sem escolher, a tela funciona como antes.",
+        subtitulo: o.subtitulo || "Escolha o cliente, a unidade e o equipamento para preencher cliente, CNPJ, endereço, TAG, fabricante (marca), modelo, nº de série e localização a partir do cadastro. Só os campos vazios (ou preenchidos automaticamente) recebem o valor; o que você digitou continua. Sem escolher, a tela funciona como antes.",
         aoMudar: function (i) {
           estado.ident = i;
           if (!i) return;
           var c = o.campos || {}, n = 0;
-          var pares = [["cliente", i.cliente], ["cnpj", i.cnpj], ["endereco", [i.endereco, i.cidadeUf].filter(Boolean).join(" — ")], ["tag", i.tag], ["modelo", i.modelo],
+          var pares = [["cliente", i.cliente], ["cnpj", i.cnpj], ["endereco", [i.endereco, i.cidadeUf].filter(Boolean).join(" — ")], ["tag", i.tag], ["modelo", i.modelo], ["marca", i.fabricante],
             ["serie", i.numeroSerie], ["localizacao", [i.unidade, i.setor].filter(Boolean).join(" — ")], ["tipo", i.tipo]];
           pares.forEach(function (p) { if (c[p[0]] && preencherAuto(c[p[0]], p[1], true)) n++; });
           if (typeof o.aoEscolher === "function") { try { o.aoEscolher(Object.assign({}, i), n); } catch (e) { console.error(e); } }
         }
       });
-      return { ident: function () { return estado.ident ? Object.assign({}, estado.ident) : null; }, box: box };
+      return { ident: function () { return estado.ident ? Object.assign({}, estado.ident) : null; }, box: box,
+        padroes: function () { return padInput ? String(padInput.value || "").trim() : ""; },
+        definirPadroes: function (v) { if (padInput) { padInput.value = String(v || ""); try { padInput.dispatchEvent(new Event("input")); } catch (e) {} } } };
     }
-    /* Dados do cadastro que vão no envio (série e ligação ao cadastro), só enquanto a TAG da tela for a do equipamento escolhido. */
+    /* Dados do cadastro que vão no envio (série e ligação ao cadastro), só enquanto a TAG da tela for a do equipamento escolhido.
+       22/10/2026: os padrões marcados (padroesUsados) vão sempre, com ou sem equipamento escolhido. */
     function dadosDoCadastro(busca, tagTela) {
+      var pads = busca && busca.padroes ? busca.padroes() : "";
+      var base = pads ? { padroesUsados: pads } : {};
       var i = busca && busca.ident ? busca.ident() : null;
-      if (!i) return {};
+      if (!i) return base;
       var t = String(tagTela || "").trim().toUpperCase();
-      if (i.tag && t !== String(i.tag).trim().toUpperCase()) return {};
-      return { numeroSerie: i.numeroSerie || "", clienteId: i.clienteId || "", unidadeId: i.unidadeId || "", equipamentoId: i.equipamentoId || "" };
+      if (i.tag && t !== String(i.tag).trim().toUpperCase()) return base;
+      return Object.assign(base, { numeroSerie: i.numeroSerie || "", clienteId: i.clienteId || "", unidadeId: i.unidadeId || "", equipamentoId: i.equipamentoId || "" });
     }
-    return { montar: montar, htmlQualificacoes: htmlQualificacoes, abrirDocumento: abrirDocumento, chamarOficial: chamarOficial, esc: esc, montarBusca: montarBusca, preencherAuto: preencherAuto, dadosDoCadastro: dadosDoCadastro };
+
+    /* ============================================================
+     * 22/10/2026 (pedido do dono): escolha de VÁRIOS padrões de referência, com busca, marcar e desmarcar.
+     * Liga-se a um campo de texto que guarda as TAGs separadas por vírgula (o mesmo formato que o servidor já lê em
+     * SGO_DocA4_registradores_): rascunhos antigos com um padrão só continuam iguais, e a digitação livre continua
+     * valendo. Ligado sozinho a todo campo "…_certDataLogger" (autoclave, lavadora, estufa, cadeia de frio).
+     * Lista: padroesParaSelecao (SGO_QualifEquipamento.js), só padrões ativos de Cadastros › Padrões de referência.
+     * ============================================================ */
+    var PAD_CACHE = { lista: null, carregando: false, espera: [], erro: "" };
+    function normTag(s) { return String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+    function carregarPadroes(depois, forcar) {
+      if (PAD_CACHE.lista && !forcar) { depois(); return; }
+      PAD_CACHE.espera.push(depois);
+      if (PAD_CACHE.carregando) return;
+      PAD_CACHE.carregando = true;
+      function fim() { PAD_CACHE.carregando = false; var l = PAD_CACHE.espera; PAD_CACHE.espera = []; l.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); }
+      try {
+        google.script.run
+          .withSuccessHandler(function (r) {
+            if (r && r.ok) { PAD_CACHE.lista = r.itens || []; PAD_CACHE.erro = ""; }
+            else PAD_CACHE.erro = (r && r.erro) || "O servidor não devolveu a lista de padrões.";
+            fim();
+          })
+          .withFailureHandler(function (e) { PAD_CACHE.erro = "Não foi possível carregar a lista de padrões (" + String(e && e.message ? e.message : e).replace(/[.\s]+$/, "") + "). Confira a conexão e clique em \"Atualizar lista\"."; fim(); })
+          .padroesParaSelecao(SGO_getSessionId());
+      } catch (e) { PAD_CACHE.erro = "A lista de padrões não está disponível nesta tela. Digite as TAGs separadas por vírgula."; fim(); }
+    }
+    function tagsDoCampo(input) {
+      return String(input.value || "").split(/[,;\n]+/).map(function (t) { return t.trim(); }).filter(Boolean);
+    }
+    function ligarPadroes(input, opcoes) {
+      if (!input || input.getAttribute("data-qvinc-padroes")) return null;
+      opcoes = opcoes || {};
+      input.setAttribute("data-qvinc-padroes", "1");
+      var box = document.createElement("div");
+      box.className = "qvinc-pad";
+      box.style.cssText = "margin-top:8px;border:1px solid var(--border,#d5dde6);border-radius:6px;padding:10px 12px;background:var(--bc-surface,#fff);font-size:13px;line-height:1.5;min-width:0";
+      box.innerHTML = '<div class="qvinc-pad-resumo" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between"><span class="qvinc-pad-txt"></span>' +
+        '<button type="button" class="btn-secondary qvinc-pad-abrir" style="min-height:38px;padding:7px 12px;font-weight:700;font-size:12.5px;cursor:pointer">Escolher padrões</button></div>' +
+        '<div class="qvinc-pad-painel" style="display:none;margin-top:8px">' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input type="search" class="qvinc-pad-busca" placeholder="Buscar por TAG, descrição, fabricante ou certificado" style="flex:1 1 220px;min-width:0;min-height:40px;padding:8px 10px;border-radius:6px;font-size:14px">' +
+        '<button type="button" class="btn-secondary qvinc-pad-marcados" style="min-height:40px;padding:7px 10px;font-size:12.5px;cursor:pointer">Só os marcados</button>' +
+        '<button type="button" class="btn-secondary qvinc-pad-limpar" style="min-height:40px;padding:7px 10px;font-size:12.5px;cursor:pointer">Desmarcar todos</button>' +
+        '<button type="button" class="btn-secondary qvinc-pad-atualizar" style="min-height:40px;padding:7px 10px;font-size:12.5px;cursor:pointer">Atualizar lista</button></div>' +
+        '<div class="qvinc-pad-msg" style="font-size:12.5px;color:var(--bc-text-3,#52606d);margin-bottom:6px"></div>' +
+        '<div class="qvinc-pad-lista" role="group" aria-label="Padrões de referência" style="max-height:320px;overflow:auto;border:1px solid var(--border,#d5dde6);border-radius:6px"></div></div>';
+      input.parentNode.insertBefore(box, input.nextSibling);
+      var st = { aberto: false, filtro: "", soMarcados: false, ultimo: null };
+      function q(c) { return box.querySelector(c); }
+      function marcadas() { var m = {}; tagsDoCampo(input).forEach(function (t) { m[normTag(t)] = t; }); return m; }
+      function gravar(lista) { input.value = lista.join(", "); try { input.dispatchEvent(new Event("input", { bubbles: true })); input.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) {} }
+      function alternar(tag, marcar) {
+        var atuais = tagsDoCampo(input), n = normTag(tag);
+        var sem = atuais.filter(function (t) { return normTag(t) !== n; });
+        gravar(marcar ? sem.concat([tag]) : sem);
+      }
+      function resumo() {
+        var tags = tagsDoCampo(input), lista = PAD_CACHE.lista || [];
+        var conhecidas = {}; lista.forEach(function (p) { conhecidas[normTag(p.tag)] = p; });
+        var fora = PAD_CACHE.lista ? tags.filter(function (t) { return !conhecidas[normTag(t)]; }) : [];
+        var vencidos = tags.filter(function (t) { var p = conhecidas[normTag(t)]; return p && p.situacao === "VENCIDO"; });
+        var txt = tags.length ? "<b>" + tags.length + (tags.length === 1 ? " padrão marcado" : " padrões marcados") + ":</b> " + esc(tags.join(", ")) : "<b>Nenhum padrão marcado.</b> Clique em \"Escolher padrões\" e marque todos os usados.";
+        if (fora.length) txt += '<br><span style="color:var(--bc-warn,#8a5a00)">Não está entre os padrões ativos do cadastro: ' + esc(fora.join(", ")) + ". Confira a TAG em Cadastros › Padrões de referência (o documento só sai com padrão cadastrado e válido na data do ensaio).</span>";
+        if (vencidos.length) txt += '<br><span style="color:var(--bc-danger,#a61b1b)">Certificado vencido hoje: ' + esc(vencidos.join(", ")) + ". Se o ensaio foi feito depois do vencimento, o documento não é gerado: troque o padrão ou renove o certificado em Cadastros › Padrões de referência.</span>";
+        q(".qvinc-pad-txt").innerHTML = txt;
+      }
+      function desenhar() {
+        resumo();
+        if (!st.aberto) return;
+        var msg = q(".qvinc-pad-msg"), el = q(".qvinc-pad-lista");
+        if (!PAD_CACHE.lista) { msg.textContent = PAD_CACHE.erro || "Carregando a lista de padrões…"; el.innerHTML = ""; return; }
+        var m = marcadas(), f = normTag(st.filtro), fTxt = String(st.filtro || "").trim().toLowerCase();
+        var itens = PAD_CACHE.lista.filter(function (p) {
+          if (st.soMarcados && !m[normTag(p.tag)]) return false;
+          if (!fTxt) return true;
+          var alvo = [p.tag, p.descricao, p.marca, p.modelo, p.serie, p.certificado, p.laboratorio].join(" ").toLowerCase();
+          return alvo.indexOf(fTxt) >= 0 || (f && normTag(p.tag).indexOf(f) >= 0);
+        });
+        msg.textContent = PAD_CACHE.lista.length + " padrões ativos no cadastro" + (fTxt || st.soMarcados ? " · " + itens.length + " na lista" : "") + " · " + Object.keys(m).length + " marcado(s). Marque ou desmarque; a identificação acima é atualizada sozinha.";
+        el.innerHTML = itens.length ? itens.map(function (p, k) {
+          var on = !!m[normTag(p.tag)], id = "qvpad" + Math.random().toString(36).slice(2, 8) + k;
+          var det = [p.descricao, [p.marca, p.modelo].filter(Boolean).join(" "), p.serie ? "nº de série " + p.serie : "", p.certificado ? "certificado " + p.certificado : "", p.validade ? "válido até " + p.validade : "sem validade no cadastro"].filter(Boolean).join(" · ");
+          var sit = p.situacao === "VENCIDO" ? ' <span style="color:var(--bc-danger,#a61b1b);font-weight:700">vencido hoje</span>' : (p.situacao === "SEM_VALIDADE" ? ' <span style="color:var(--bc-warn,#8a5a00);font-weight:700">sem validade</span>' : "");
+          return '<label for="' + id + '" style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border,#e4e7eb);cursor:pointer;' + (on ? "background:var(--bc-action-bg,#f2f8f4)" : "") + '">' +
+            '<input type="checkbox" id="' + id + '" data-tag="' + esc(p.tag) + '"' + (on ? " checked" : "") + ' style="width:20px;height:20px;min-height:0;margin-top:2px;flex:0 0 auto">' +
+            '<span style="min-width:0"><b>' + esc(p.tag) + "</b>" + sit + '<br><small style="color:var(--bc-text-3,#52606d)">' + esc(det) + "</small></span></label>";
+        }).join("") : '<p style="padding:10px;margin:0">Nenhum padrão encontrado' + (fTxt ? ' com "' + esc(st.filtro) + '"' : "") + ". Se faltar no cadastro, inclua em Cadastros › Padrões de referência e clique em \"Atualizar lista\".</p>";
+        Array.prototype.forEach.call(el.querySelectorAll("input[type=checkbox]"), function (cb) { cb.onchange = function () { alternar(cb.getAttribute("data-tag"), cb.checked); desenhar(); }; });
+      }
+      q(".qvinc-pad-abrir").onclick = function () {
+        st.aberto = !st.aberto;
+        q(".qvinc-pad-painel").style.display = st.aberto ? "" : "none";
+        this.textContent = st.aberto ? "Fechar lista" : "Escolher padrões";
+        if (st.aberto) { desenhar(); carregarPadroes(desenhar); setTimeout(function () { try { q(".qvinc-pad-busca").focus(); } catch (e) {} }, 50); }
+      };
+      q(".qvinc-pad-busca").oninput = function () { st.filtro = this.value; desenhar(); };
+      q(".qvinc-pad-marcados").onclick = function () { st.soMarcados = !st.soMarcados; this.textContent = st.soMarcados ? "Mostrar todos" : "Só os marcados"; desenhar(); };
+      q(".qvinc-pad-limpar").onclick = function () { if (!tagsDoCampo(input).length) return; if (window.confirm("Desmarcar todos os padrões deste ensaio?")) { gravar([]); desenhar(); } };
+      q(".qvinc-pad-atualizar").onclick = function () { PAD_CACHE.lista = null; desenhar(); carregarPadroes(desenhar, true); };
+      input.addEventListener("input", desenhar);
+      // Valor posto pela tela (rascunho reaberto, limpeza do formulário) sem evento: confere de tempos em tempos.
+      var timer = setInterval(function () {
+        if (!document.body.contains(input)) { clearInterval(timer); return; }
+        if (input.value !== st.ultimo) { st.ultimo = input.value; desenhar(); }
+      }, 1200);
+      st.ultimo = input.value;
+      carregarPadroes(resumo);
+      desenhar();
+      return { atualizar: desenhar };
+    }
+    // Liga a escolha de padrões em todo campo do registrador das telas de qualificação térmica, quando aparecer.
+    function ligarPadroesAuto() {
+      if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return;
+      Array.prototype.forEach.call(document.querySelectorAll('input[id$="_certDataLogger"]'), function (x) { try { ligarPadroes(x); } catch (e) { console.error(e); } });
+    }
+    (function () {
+      function iniciar() {
+        ligarPadroesAuto();
+        if (typeof MutationObserver === "undefined" || !document.body) return;
+        var pendente = null;
+        new MutationObserver(function () { if (pendente) return; pendente = setTimeout(function () { pendente = null; ligarPadroesAuto(); }, 300); }).observe(document.body, { childList: true, subtree: true });
+      }
+      if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return;
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
+    })();
+    return { montar: montar, htmlQualificacoes: htmlQualificacoes, abrirDocumento: abrirDocumento, chamarOficial: chamarOficial, esc: esc, montarBusca: montarBusca, preencherAuto: preencherAuto, dadosDoCadastro: dadosDoCadastro, ligarPadroes: ligarPadroes };
   })();
 </script>

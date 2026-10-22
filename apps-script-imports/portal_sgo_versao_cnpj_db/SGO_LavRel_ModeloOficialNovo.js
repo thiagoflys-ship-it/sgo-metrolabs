@@ -376,6 +376,9 @@ function LavOficial_montarContexto_(sessionId, p) {
   };
   // 21/10/2026: patrimônio, capacidade, câmaras e ano do cadastro entram só quando preenchidos (a assinatura dos envios antigos não muda).
   ['patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (LavOficial_s_(ident[k])) ctx.identificacao[k] = LavOficial_s_(ident[k]); });
+  // 22/10/2026 (pedido do dono): fabricante (marca) e modelo do cadastro saem no documento. Ficam fora da
+  // identificação assinada, para os envios que aguardam aprovação continuarem válidos.
+  ctx.equipamentoCadastro = { fabricante: LavOficial_s_(ident.fabricante), modelo: LavOficial_s_(ident.modelo) };
   ctx.assinatura = LavOficial_assinaturaContexto_(ctx);
   return ctx;
 }

@@ -91,10 +91,14 @@ function DeclExecA4_identificacao_(ctx) {
     ['Cliente', ctx.cliente || '—', { largo: true }],
     ['Endereço', ctx.endereco || '—', { largo: true }],
     ['Equipamento', ctx.equipamentoLabel || '—'], ['TAG', ctx.tag || '—'],
-    ['Marca / modelo', (ctx.marca || '—') + ' / ' + (ctx.modelo || '—')], ['Localização', ctx.localizacao || '—'],
+    // 22/10/2026: fabricante (marca), modelo e nº de série em linhas próprias (série só quando informada).
+    ['Fabricante (marca)', ctx.marca || '—'], ['Modelo', ctx.modelo || '—'],
+    ctx.numeroSerie ? ['Nº de série', ctx.numeroSerie] : null, ['Localização', ctx.localizacao || '—'],
     ['Período do atendimento', ctx.periodoLabel || '—'], ['Local do atendimento', ctx.localAtendimento === 'LABORATORIO' ? 'Laboratório da Metrolabs' : 'Instalações do cliente'],
     ['Técnico executor', ctx.tecnicoExecutor || '—', { largo: true }]
-  ], 'de-ident');
+  ].filter(Boolean), 'de-ident') +
+    // 22/10/2026: padrões de referência marcados na tela (todos, com os dados do cadastro de padrões).
+    (ctx.padroesUsados ? SGO_DocA4_blocoPadroesUsados_(ctx.padroesUsados, ctx.padroesDataRef || ctx.dataEmissao) : '');
 }
 
 /** Referências normativas: a única lista de normas do documento. */

@@ -104,9 +104,10 @@ test('emissão: documento na pasta do equipamento (dentro da pasta do cliente), 
   assert.equal(env.fn('SGO_QEQ_situacoesPorEquipamento_')().eq1.situacao, 'QUALIFICADO');
   // Os relatórios de ensaio também ficaram ligados ao equipamento (vínculo gravado no envio para aprovação).
   assert.equal(env.fn('SGO_QE_obter_')(c1).EQUIPAMENTO_ID, 'eq1');
-  // Documento sem fabricante nem modelo do cadastro.
+  // 22/10/2026 (pedido do dono): documento com fabricante e modelo do cadastro.
   const html = htmlDe(env, emi.htmlId);
-  assert.doesNotMatch(html, /MARCAFICTICIA|MODELOXYZ/);
+  assert.match(html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
+  assert.match(html, /Modelo<\/th><td>MODELOXYZ/);
   assert.match(html, /Relatório de qualificação de autoclave a vapor/);
   assert.match(html, /RQA-\d{4}-00001/);
   assert.match(html, /conferido e aprovado para emissão por Responsável Teste/);
@@ -324,11 +325,12 @@ test('aba "Gerar relatório": rascunho, envio e planilha exigem o equipamento do
   const csv = M.A.csvCompleto(M.A.cicloSintetico({ dtSeg: 10, nSensores: 3, tPatamar: 134.6, patamarMin: 4 }));
   assert.throws(() => D({ sessionId: 'tec', fn: 'apiGerarRascunhoCertificado', payload: M.payloadCiclo({ textoColado: csv, clienteId: '', unidadeId: '', equipamentoId: '' }) }), /Escolha o cliente, a unidade e o equipamento/);
   assert.throws(() => D({ sessionId: 'tec', fn: 'apiGerarRascunhoCertificado', payload: M.payloadCiclo({ textoColado: csv, equipamentoId: 'eq2' }) }), /pertence a outro cliente/);
-  // Identificação digitada é trocada pela do cadastro (e marca/modelo não entram).
+  // Identificação digitada é trocada pela do cadastro (marca e modelo também vêm do cadastro, 22/10/2026).
   const r = D({ sessionId: 'tec', fn: 'apiGerarRascunhoCertificado', payload: M.payloadCiclo({ textoColado: csv, cliente: 'DIGITADO ERRADO', tag: 'TAG-ERRADA', marca: 'MARCAFICTICIA', modelo: 'MODELOXYZ', certNumero: 'AUT-T-0500' }) });
   assert.equal(r.contexto.identificacao.cliente, 'HOSPITAL MODELO TESTE LTDA');
   assert.equal(r.contexto.identificacao.tag, 'AUT-TESTE-01');
-  assert.equal(r.contexto.identificacao.marca, '');
+  assert.equal(r.contexto.identificacao.marca, 'MARCAFICTICIA');
+  assert.equal(r.contexto.identificacao.modelo, 'MODELOXYZ');
   const id = M.emitirCiclo(env, { certNumero: 'AUT-T-0501', ensaio: 'QO (Vazio)' });
   const reg = env.fn('SGO_QE_obter_')(id);
   assert.equal(reg.EQUIPAMENTO_ID, 'eq1');

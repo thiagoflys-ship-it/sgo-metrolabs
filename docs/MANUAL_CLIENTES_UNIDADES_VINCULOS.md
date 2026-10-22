@@ -87,7 +87,7 @@ O cadastro do equipamento guarda tudo o que antes era digitado na tela do ensaio
 | **Setor ou local** | Setor da unidade onde o equipamento está instalado (ex.: CME). Sai nos documentos junto com a unidade. |
 | **Patrimônio** | Número de patrimônio do cliente, quando houver. |
 | **Tipo** | Define em qual módulo de qualificação o equipamento aparece. |
-| **Fabricante e modelo** | Uso interno. Não aparecem nos relatórios de qualificação. |
+| **Fabricante e modelo** | Como estão na placa do equipamento. Desde 22/10/2026 saem na identificação de todos os documentos do equipamento (qualificações, ensaios, planilhas de dados, certificado e relatórios). |
 | **Ano de fabricação, capacidade ou volume, câmaras ou portas** | Saem no relatório de qualificação quando preenchidos. |
 | **Responsável no cliente** | Quem responde pelo equipamento no cliente; entra como acompanhamento no relatório quando a tela do ensaio não informar outro. |
 

@@ -1,7 +1,7 @@
 // Relatórios de qualificação da lavadora, da estufa/banho-maria e da cadeia de frio (21/10/2026): patrimônio,
 // capacidade, câmaras e ano de fabricação do cadastro do equipamento aparecem quando preenchidos, como no da
-// autoclave; sem fabricante nem modelo. Com os campos vazios a identificação não muda (envios aguardando aprovação
-// continuam válidos). Fluxo real (rascunho → envio → prévia). Só dados de teste.
+// autoclave. 22/10/2026: fabricante e modelo do cadastro também saem (fora da identificação assinada). Com os campos
+// vazios a identificação não muda (envios aguardando aprovação continuam válidos). Fluxo real (rascunho → envio → prévia). Só dados de teste.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,7 +19,8 @@ function confere(html) {
   assert.match(html, /Capacidade ou volume<\/th><td>200 L/);
   assert.match(html, /Câmaras ou portas<\/th><td>2</);
   assert.match(html, /Ano de fabricação<\/th><td>2019/);
-  assert.doesNotMatch(html, /MARCAFICTICIA|MODELOXYZ|MODELOEST/);
+  assert.match(html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/);
+  assert.match(html, /Modelo<\/th><td>(MODELOXYZ|MODELOEST)/);
 }
 function semCampos(html) { assert.doesNotMatch(html, /Patrimônio<\/th>|Capacidade ou volume<\/th>|Câmaras ou portas<\/th>/); }
 

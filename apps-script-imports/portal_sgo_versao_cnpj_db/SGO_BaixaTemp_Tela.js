@@ -251,7 +251,7 @@ function BaixaTempTela_cliente_() {
     h += '<label class="bt-campo"><span>Unidade</span><select id="btSelUnidade"' + dis() + '><option value="">' + (id.clienteId ? 'Escolha a unidade' : 'Escolha o cliente primeiro') + '</option>' + BT.unidades.map(function (u) { return '<option value="' + esc(u.id) + '"' + (u.id === id.unidadeId ? ' selected' : '') + '>' + esc(u.nome) + '</option>'; }).join('') + (id.unidadeId && !BT.unidades.length ? '<option value="' + esc(id.unidadeId) + '" selected>' + esc(id.unidade || id.unidadeId) + '</option>' : '') + '</select></label>';
     h += '<label class="bt-campo"><span>Equipamento (TAG — tipo — nº de série)</span><select id="btSelEquip"' + dis() + '><option value="">' + (id.unidadeId ? 'Escolha o esterilizador' : 'Escolha a unidade primeiro') + '</option>' + BT.equipamentos.map(function (q) { return '<option value="' + esc(q.id) + '"' + (q.id === id.equipamentoId ? ' selected' : '') + '>' + esc([q.tag || 'sem TAG', q.tipo, q.serie].filter(Boolean).join(' — ')) + '</option>'; }).join('') + (id.equipamentoId && !BT.equipamentos.length ? '<option value="' + esc(id.equipamentoId) + '" selected>' + esc([id.tag, id.tipoEquipamento, id.numeroSerie].filter(Boolean).join(' — ') || id.equipamentoId) + '</option>' : '') + '</select></label></div>';
     h += faltaCadastroHtml(id);
-    h += '<p class="bt-nota">O cliente, a unidade e o equipamento vêm do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente. Se algo não aparecer, cadastre pelos botões abaixo (abrem o cadastro em outra aba; este ensaio continua aqui) e depois toque em "Buscar cliente" de novo. O relatório não cita fabricante nem modelo.</p>' +
+    h += '<p class="bt-nota">O cliente, a unidade e o equipamento vêm do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente. Se algo não aparecer, cadastre pelos botões abaixo (abrem o cadastro em outra aba; este ensaio continua aqui) e depois toque em "Buscar cliente" de novo. Fabricante (marca), modelo, patrimônio e capacidade do cadastro saem na identificação do relatório quando preenchidos.</p>' +
       (editavel() ? '<div class="bt-barra"><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="clientes">Cadastrar cliente</button><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="unidades">Cadastrar unidade</button><button type="button" class="btn-secondary bt-mini" data-acao="cadastro" data-tela="equipamentos">Cadastrar equipamento</button></div>' : '') + '</div>';
     h += '<div class="bt-painel"><h3>Ensaio</h3><div class="bt-grade">' + campo('Data de início (dd/mm/aaaa)', 'identificacao.dataInicio', { ph: 'dd/mm/aaaa' }) + campo('Data de término (dd/mm/aaaa)', 'identificacao.dataFim', { ph: 'em branco se foi um dia só' }) +
       campo('Técnico executor', 'identificacao.tecnicoExecutor') + campo('Acompanhado por (cliente)', 'identificacao.responsavelCliente') +
@@ -288,8 +288,18 @@ function BaixaTempTela_cliente_() {
   function abaInstrumentos() {
     var l = BT.d.instrumentos || (BT.d.instrumentos = []);
     var h = '<div class="bt-painel"><h3>Instrumentos e certificados de calibração</h3><p class="bt-nota">Escolha os registradores e transdutores no cadastro de padrões (Calibração > Padrões de referência). A validade do certificado é conferida com o período do ensaio. Informe a resolução do registrador para o cálculo da incerteza.</p>';
-    if (editavel()) h += '<div class="bt-barra"><select id="btSelPadrao" style="max-width:420px"><option value="">' + (BT.padroes.length ? 'Escolha o padrão' : 'Toque em "Carregar padrões"') + '</option>' + BT.padroes.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.tag + ' — ' + p.descricao + ' (validade ' + (p.validade || '—') + ')') + '</option>'; }).join('') + '</select>' +
-      (BT.padroes.length ? '<button type="button" class="btn-secondary" data-acao="addPadrao">Acrescentar</button>' : '<button type="button" class="btn-secondary" data-acao="carregarPadroes">Carregar padrões</button>') + '</div>';
+    // 22/10/2026 (pedido do dono): lista com busca para marcar e desmarcar VÁRIOS padrões (sem limite); o relatório traz todos.
+    if (editavel() && !BT.padroes.length) h += '<div class="bt-barra"><button type="button" class="btn-secondary" data-acao="carregarPadroes">Carregar padrões</button></div>';
+    if (editavel() && BT.padroes.length) {
+      var marcados = {}; l.forEach(function (x) { marcados[String(x.padraoId || '')] = true; marcados['TAG:' + String(x.tag || '').toUpperCase()] = true; });
+      h += '<div class="bt-barra"><input type="search" id="btBuscaPadrao" placeholder="Buscar padrão por TAG, descrição ou certificado" style="flex:1 1 240px;min-width:0" oninput="(function(v){v=String(v||\'\').toLowerCase();Array.prototype.forEach.call(document.querySelectorAll(\'#btListaPadroes [data-busca]\'),function(r){r.style.display=r.getAttribute(\'data-busca\').indexOf(v)>=0?\'\':\'none\';});})(this.value)"></div>' +
+        '<p class="bt-nota">' + l.length + (l.length === 1 ? ' instrumento marcado' : ' instrumentos marcados') + '. Marque todos os usados no ensaio; desmarcar tira da tabela abaixo.</p>' +
+        '<div id="btListaPadroes" class="bt-rolagem" style="max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:10px">' + BT.padroes.map(function (p) {
+          var on = !!(marcados[String(p.id)] || marcados['TAG:' + String(p.tag || '').toUpperCase()]);
+          var busca = [p.tag, p.descricao, p.certificado].join(' ').toLowerCase();
+          return '<label data-busca="' + esc(busca) + '" style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox" data-acao="alternarPadrao" data-id="' + esc(p.id) + '"' + (on ? ' checked' : '') + ' style="width:20px;height:20px;margin-top:2px;flex:0 0 auto"><span><b>' + esc(p.tag) + '</b> — ' + esc(p.descricao) + '<br><small>certificado ' + esc(p.certificado || '—') + ' · validade ' + esc(p.validade || '—') + '</small></span></label>';
+        }).join('') + '</div>';
+    }
     if (!l.length) h += '<p>Nenhum instrumento informado.</p>';
     else h += '<div class="bt-rolagem"><table class="bt-t"><thead><tr><th>Identificação</th><th>Descrição</th><th>Grandeza</th><th>Certificado</th><th>Validade</th><th>U do certificado</th><th>k</th><th>Resolução</th><th></th></tr></thead><tbody>' + l.map(function (x, i) {
       var p = 'instrumentos.' + i + '.';
@@ -506,6 +516,7 @@ function BaixaTempTela_cliente_() {
     if (acao === 'cadastro') { try { window.open(String(window.location.href || '').replace(/[?#].*$/, '') + '?tela=' + encodeURIComponent(b.getAttribute('data-tela')), '_blank'); } catch (eCad) {} return msg('info', 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e toque em "Buscar cliente" de novo: o ensaio continua como está.'); }
     if (acao === 'carregarPadroes') return api('apiListarPadroes', {}, function (r) { BT.padroes = r.items || []; msg('', BT.padroes.length ? '' : 'Nenhum padrão ativo no cadastro.'); redesenharAba(); });
     if (acao === 'addPadrao') return addPadrao();
+    if (acao === 'alternarPadrao') return alternarPadrao(b);
     if (acao === 'remover') { var l = obter(BT.d, b.getAttribute('data-lista')); l.splice(Number(b.getAttribute('data-i')), 1); marcarSujo(); return redesenharAba(); }
     if (acao === 'addIndicador') { var base = b.getAttribute('data-lista'); var l2 = obter(BT.d, base) || []; var micro = /ibs$/.test(base) ? (BT.cfg.tipos[BT.d.tipo] || {}).microrganismoSugerido || '' : ''; l2.push(micro ? { microrganismo: micro, resultado: 'PENDENTE' } : {}); definir(BT.d, base, l2); marcarSujo(); return redesenharAba(); }
     if (acao === 'addCiclo') return addCiclo(b.getAttribute('data-etapa'));
@@ -578,14 +589,15 @@ function BaixaTempTela_cliente_() {
     var faltam = [['TAG', 'TAG', q.tag, 'Código da etiqueta (ex.: EBT-01)'], ['SERIE', 'Nº de série', q.serie, 'Como está na placa do equipamento'], ['SETOR', 'Setor', q.setor, 'Setor onde está instalado (ex.: CME)']]
       .filter(function (f) { return !String(f[2] || '').trim(); });
     // 21/10/2026: patrimônio e capacidade (opcionais) também podem ser completados aqui quando estão vazios no cadastro; saem no relatório.
-    var opcionais = [['PATRIMONIO', 'Patrimônio', q.patrimonio, 'Número de patrimônio do cliente, se houver'], ['CAPACIDADE', 'Capacidade ou volume', q.capacidade, 'Ex.: 100 L']]
+    // 22/10/2026: fabricante e modelo também (saem no relatório quando preenchidos).
+    var opcionais = [['FABRICANTE', 'Fabricante (marca)', q.fabricante, 'Como está na placa do equipamento'], ['MODELO', 'Modelo', q.modelo, 'Como está na placa do equipamento'], ['PATRIMONIO', 'Patrimônio', q.patrimonio, 'Número de patrimônio do cliente, se houver'], ['CAPACIDADE', 'Capacidade ou volume', q.capacidade, 'Ex.: 100 L']]
       .filter(function (f) { return !String(f[2] || '').trim(); });
     if (!faltam.length && !opcionais.length) return '';
     var titulo = faltam.length ? 'Falta no cadastro do equipamento: ' + faltam.map(function (f) { return f[1]; }).join(', ') + '.' : 'Completar no cadastro do equipamento (opcional): ' + opcionais.map(function (f) { return f[1]; }).join(', ') + '.';
     var cor = faltam.length ? 'border:1px solid var(--bc-warn-line);background:var(--bc-warn-bg)' : 'border:1px solid var(--bc-info-line);background:var(--bc-info-bg)';
     return '<div id="btFaltaCadastro" style="margin-top:10px;padding:10px 12px;border-radius:6px;' + cor + '">' +
       '<b' + (faltam.length ? ' style="color:var(--bc-warn)"' : '') + '>' + esc(titulo) + '</b>' +
-      '<p class="bt-nota">' + (faltam.length ? 'O relatório usa esses dados. ' : 'Patrimônio e capacidade são opcionais e saem no relatório quando preenchidos. ') + 'Preencha aqui e toque em "Gravar no cadastro": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar.</p>' +
+      '<p class="bt-nota">' + (faltam.length ? 'O relatório usa esses dados. ' : 'Fabricante, modelo, patrimônio e capacidade são opcionais e saem no relatório quando preenchidos. ') + 'Preencha aqui e toque em "Gravar no cadastro": grava no cadastro do equipamento (só o que está vazio) e o ensaio continua. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar.</p>' +
       '<div class="bt-grade">' + faltam.concat(opcionais).map(function (f) { return '<label class="bt-campo"><span>' + esc(f[1]) + '</span><input type="text" id="btFalta_' + f[0] + '" data-campo-cadastro="' + f[0] + '" maxlength="120" autocomplete="off" placeholder="' + esc(f[3]) + '"></label>'; }).join('') + '</div>' +
       '<div class="bt-barra" style="margin-top:8px"><button type="button" class="btn-primary" data-acao="gravarCadastro">Gravar no cadastro</button></div></div>';
   }
@@ -596,7 +608,7 @@ function BaixaTempTela_cliente_() {
     if (!n) { msg('aviso', 'Preencha ao menos um dos campos (pela placa ou pela etiqueta do equipamento) e toque em "Gravar no cadastro".'); return; }
     api('apiPreencherCadastro', { clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId, campos: campos, origem: 'tela da esterilização a baixa temperatura' }, function (r) {
       var d = r.identificacao || {};
-      BT.equipamentos.forEach(function (q) { if (q.id === i.equipamentoId) { q.tag = d.tag || q.tag; q.serie = d.numeroSerie || q.serie; q.setor = d.setor || q.setor; q.patrimonio = d.patrimonio || q.patrimonio; q.capacidade = d.capacidade || q.capacidade; } });
+      BT.equipamentos.forEach(function (q) { if (q.id === i.equipamentoId) { q.tag = d.tag || q.tag; q.serie = d.numeroSerie || q.serie; q.setor = d.setor || q.setor; q.patrimonio = d.patrimonio || q.patrimonio; q.capacidade = d.capacidade || q.capacidade; q.fabricante = d.fabricante || q.fabricante; q.modelo = d.modelo || q.modelo; } });
       i.tag = d.tag || i.tag; i.numeroSerie = d.numeroSerie || i.numeroSerie;
       if (d.patrimonio) i.patrimonio = d.patrimonio;
       if (d.capacidade) i.capacidade = d.capacidade;
@@ -610,6 +622,22 @@ function BaixaTempTela_cliente_() {
     var i = BT.d.identificacao;
     i.equipamentoId = id; i.tag = q ? q.tag : ''; i.numeroSerie = q ? q.serie : ''; i.tipoEquipamento = q ? q.tipo : '';
     marcarSujo();
+  }
+
+  // 22/10/2026: marcar acrescenta o padrão (com os dados do cadastro); desmarcar tira. O que já foi editado na tabela fica.
+  function alternarPadrao(el) {
+    var id = el && el.getAttribute('data-id');
+    var p = BT.padroes.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    var l = BT.d.instrumentos || (BT.d.instrumentos = []);
+    var idx = -1;
+    l.forEach(function (x, i) { if (idx < 0 && (String(x.padraoId || '') === String(p.id) || (!x.padraoId && String(x.tag || '').toUpperCase() === String(p.tag || '').toUpperCase()))) idx = i; });
+    if (idx >= 0) l.splice(idx, 1);
+    else {
+      var g = /press|vacu|mbar|kpa/i.test(p.descricao) ? 'PRESSAO' : (/umid/i.test(p.descricao) ? 'UMIDADE' : 'TEMPERATURA');
+      l.push({ padraoId: p.id, tag: p.tag, descricao: p.descricao, certificado: p.certificado, validade: p.validade, U: p.U, k: p.k || '2', resolucao: '', grandeza: g });
+    }
+    marcarSujo(); redesenharAba();
   }
 
   function addPadrao() {

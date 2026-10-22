@@ -37,7 +37,7 @@ test('relatório de qualificação: QI + QO aprovado, emitido com aprovação, r
   assert.match(envio.numero, /^RQE-\d{4}-00001$/);
   const prev = env.oficialEstufa('rt', 'apiPreverAprovacao', { id: envio.id });
   assert.match(prev.html, /MINUTA PARA CONFERÊNCIA/);
-  assert.ok(!/MARCAFICTICIA|MODELOEST/.test(prev.html));
+  assert.match(prev.html, /Fabricante \(marca\)<\/th><td>MARCAFICTICIA/, 'fabricante do cadastro (22/10/2026)');
   const em = env.oficialEstufa('rt', 'apiAprovarEmitir', { id: envio.id, confirmacaoRevisao: true });
   assert.strictEqual(em.ok, true, em.erro);
   assert.strictEqual(em.avisoArquivo, '');

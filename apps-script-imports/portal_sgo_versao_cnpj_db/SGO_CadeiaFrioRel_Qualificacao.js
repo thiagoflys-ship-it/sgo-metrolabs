@@ -641,7 +641,7 @@ function CadeiaFrioRel_qContexto_(payload, interno) {
 
   var tecnico = CadeiaFrioRel_qS_(payload.responsavelTecnico);
   var tipoCadastro = CadeiaFrioRel_qS_(payload.tipoEquipamento);
-  return {
+  var ctxCf = {
     tipoRelatorio: 'CADEIA_FRIO',
     perfil: chavePerfil,
     assinaturaLeituras: SGO_DocSalvar_assinatura_({ dados: (resultado.dadosCompletos || []).map(function (r) { return [r.tempoStr, r.temperaturas]; }), ativos: ativos }),
@@ -687,6 +687,10 @@ function CadeiaFrioRel_qContexto_(payload, interno) {
     },
     estudos: estudos
   };
+  // 22/10/2026 (pedido do dono): fabricante (marca), modelo e demais campos do cadastro saem no documento;
+  // campo vazio não entra (a assinatura de ensaios antigos não muda).
+  ['marca', 'modelo', 'patrimonio', 'capacidade', 'numCamaras', 'anoFabricacao'].forEach(function (k) { if (CadeiaFrioRel_qS_(payload[k])) ctxCf.identificacao[k] = CadeiaFrioRel_qS_(payload[k]); });
+  return ctxCf;
 }
 
 /* ============================================================

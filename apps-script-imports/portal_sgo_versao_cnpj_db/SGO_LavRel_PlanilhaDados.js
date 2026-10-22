@@ -259,6 +259,7 @@ function LavRel_pdCapa_(doc, ctx, D, aprovacao, minuta, aviso) {
     ['Cliente', id.cliente], ['CNPJ', id.cnpj || '—'],
     ['Unidade / setor', id.setor || '—'], ['Equipamento', id.equipamentoTipo + (id.tag ? ' — TAG ' + id.tag : '')],
     ['Nº de série', id.numeroSerie || '—'], ['Programa', id.programa || '—'],
+    ['Fabricante (marca)', id.marca || '—'], ['Modelo', id.modelo || '—'],
     ['Ensaio', LavRel_lvTextoTipoEnsaio_(id.tipoEnsaio) + ' — ' + String(ctx.equipamentoLabel || '').toLowerCase(), { largo: true }],
     ['Ciclo nº', id.cicloNumero || '—'], ['Data do ensaio', id.dataDoEnsaio || '—'],
     ['Lote', id.lote || '—'], ['Técnico executor', id.tecnicoExecutor || '—'],
@@ -266,8 +267,7 @@ function LavRel_pdCapa_(doc, ctx, D, aprovacao, minuta, aviso) {
     ['Documento', doc.rotuloNumero + ' ' + doc.numero + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao), { largo: true }]
   ];
   var regs = (ctx.registradores && ctx.registradores.itens) || [];
-  var tabReg = regs.length ? SGO_DocA4_tabela_([{ t: 'Registrador' }, { t: 'Certificado' }, { t: 'Validade', cls: 'cen' }, { t: 'U95', cls: 'num' }],
-    regs.map(function(r) { return [r.tag, r.certificado || '—', { t: r.validade || '—', cls: 'cen' }, isFinite(r.incertezaU95) && r.incertezaU95 !== null ? SGO_DocA4_val_(r.incertezaU95, 2, '°C') + (r.fatorK ? ' (k = ' + SGO_DocA4_num_(r.fatorK, 0) + ')' : '') : '—']; }))
+  var tabReg = regs.length ? SGO_DocA4_tabelaPadroes_(regs, { unidade: '°C' })
     : '<p class="nota">Registrador não informado.</p>';
   return '<section class="capa"><div class="logo"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"></div>' +
     (aviso ? '<div class="aviso-simulado" style="margin:5mm 0 0">' + esc(aviso) + '</div>' : '') +

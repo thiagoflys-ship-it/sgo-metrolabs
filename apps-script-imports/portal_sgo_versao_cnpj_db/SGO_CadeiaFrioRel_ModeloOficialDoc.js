@@ -72,8 +72,9 @@ function CadeiaFrioOficialDoc_montar_(o) {
   h += SGO_DocA4_tabelaIdent_([['Razão social', id.cliente], ['CNPJ', id.cnpj], ['Unidade', id.unidade], ['Setor ou local', id.setor], ['Endereço', [id.endereco, id.cidadeUf].filter(Boolean).join(' — '), { largo: true }], ['Acompanhamento', id.responsavelCliente || 'Não informado', { largo: true }]]);
   h += sub(2, 'Equipamento');
   h += SGO_DocA4_tabelaIdent_([['Tipo', id.tipo], ['TAG', id.tag], ['Número de série', id.numeroSerie], ['Perfil ensaiado', J(id.perfis) || '—'], ['Faixa de aceitação', faixaTxt, { largo: true }]]
-    .concat(id.patrimonio ? [['Patrimônio', id.patrimonio]] : []).concat(id.capacidade ? [['Capacidade ou volume', id.capacidade]] : []).concat(id.numCamaras ? [['Câmaras ou portas', id.numCamaras]] : []).concat(id.anoFabricacao ? [['Ano de fabricação', id.anoFabricacao]] : []));
-  h += '<p class="nota">A identificação vem do cadastro do equipamento no SGO+. Este relatório não registra marca nem modelo comercial: a rastreabilidade do equipamento é feita pela TAG e pelo número de série.</p>';
+    // 22/10/2026: fabricante e modelo do cadastro (ctx.equipamentoCadastro, fora da assinatura) e os demais campos preenchidos.
+    .concat(SGO_DocA4_linhasEquipamento_({ fabricante: (ctx.equipamentoCadastro || {}).fabricante, modelo: (ctx.equipamentoCadastro || {}).modelo, patrimonio: id.patrimonio, capacidade: id.capacidade, numCamaras: id.numCamaras, anoFabricacao: id.anoFabricacao }, { semTipo: true, semTag: true, semSerie: true })));
+  h += '<p class="nota">A identificação vem do cadastro do equipamento no SGO+ (Cadastros › Equipamentos), inclusive fabricante e modelo quando informados.</p>';
   h += sub(3, 'Empresa executante e qualificação');
   h += SGO_DocA4_tabelaIdent_([['Empresa', empresa.nome], ['CNPJ', empresa.cnpj], ['Motivo', ctx.motivo], ['Período', periodo], ['Etapas', J(etapas), { largo: true }], ['Técnicos executores', J(id.tecnicos) || (o.enviadoPor || '—'), { largo: true }]]);
 
@@ -118,10 +119,8 @@ function CadeiaFrioOficialDoc_montar_(o) {
     h += sec('Instrumentos de medição e rastreabilidade');
     h += P('Os registradores abaixo foram usados nos ensaios. A rastreabilidade metrológica é demonstrada pelos certificados de calibração indicados, conferidos no cadastro de padrões na data de cada ensaio.');
     h += legenda('Instrumentos utilizados');
-    h += SGO_DocA4_tabela_([{ t: 'Identificação' }, { t: 'Certificado' }, { t: 'Validade', cls: 'cen' }, { t: 'U (k = 2)', cls: 'num' }, { t: 'Situação' }, { t: 'Relatórios' }], ctx.instrumentos.map(function (it) {
-      return [it.tag, it.certificado || '—', { t: it.validade || '—', cls: 'cen' }, { t: isFinite(it.incertezaU95) && it.incertezaU95 !== null ? SGO_DocA4_val_(it.incertezaU95, 2, '°C') : '—', cls: 'num' },
-        it.conforme === true ? { html: '<span class="ok-txt">' + esc(it.situacao) + '</span>' } : (it.conforme === false ? { html: '<span class="nok-txt">' + esc(it.situacao) + '</span>' } : (it.situacao || '—')), J(it.ensaios)];
-    }), { classe: 'compacta' });
+    // 22/10/2026: todos os padrões usados, com fabricante, modelo, série, certificado, laboratório e calibração (tabela comum).
+    h += SGO_DocA4_tabelaPadroes_(ctx.instrumentos, { unidade: '°C', colunaExtra: { t: 'Relatórios', valor: function (it) { return J(it.ensaios || []); } } });
   }
 
   h += sec('Critérios de aceitação');

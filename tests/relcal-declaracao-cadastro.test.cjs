@@ -29,7 +29,9 @@ test('servidor: busca no cadastro lista todos os tipos e a identificação traz 
   assert.equal(id.identificacao.tag, 'AUT-TESTE-01');
   assert.equal(id.identificacao.numeroSerie, 'SN-TESTE-0001');
   assert.ok('modelo' in id.identificacao);
-  assert.ok(!('fabricante' in id.identificacao) && !('_nomesProibidos' in id.identificacao));
+  // 22/10/2026 (pedido do dono): o fabricante (marca) também vem do cadastro.
+  assert.equal(id.identificacao.fabricante, 'MARCAFICTICIA');
+  assert.ok(!('_nomesProibidos' in id.identificacao));
   assert.throws(() => f('apiApagarTudo', {}, 'tec'), /Operação desconhecida/);
   // Os roteadores do RelCal e da Declaração (declaração e QI/QO/QD) aceitam as rotas.
   for (const arq of ['SGO_RelCal_Main.js', 'SGO_DeclaracaoExec_Main.js']) {
@@ -87,6 +89,9 @@ test('preenchimento: vazio recebe; digitado não muda; valor da leitura do certi
   assert.deepEqual(JSON.parse(JSON.stringify(Q.dadosDoCadastro(busca, 'OUTRA'))), {});
   assert.deepEqual(JSON.parse(JSON.stringify(Q.dadosDoCadastro(busca, ''))), {});
   assert.deepEqual(JSON.parse(JSON.stringify(Q.dadosDoCadastro(null, 'AC-1'))), {});
+  // 22/10/2026: padrões marcados vão no envio com ou sem equipamento escolhido.
+  const comPadroes = { ident: () => null, padroes: () => 'PAD-1, PAD-2' };
+  assert.deepEqual(JSON.parse(JSON.stringify(Q.dadosDoCadastro(comPadroes, 'X'))), { padroesUsados: 'PAD-1, PAD-2' });
 });
 
 function decodificado(arq, getter) {
@@ -109,7 +114,7 @@ test('telas: quadro "Buscar no cadastro" no RelCal, na Declaração e no QI/QO/Q
     assert.ok(new RegExp(px + '_inicializar\\(\\);\\s+' + px + '_montarBuscaCadastro_\\(\\);').test(js), arq + ': monta ao abrir a tela');
     assert.ok(new RegExp('function ' + payloadFn + '\\(\\) \\{\\s+return Object\\.assign\\(' + px + '_dadosCadastro_\\(\\), \\{').test(js), arq + ': série e ids no envio');
     const bloco = js.slice(js.indexOf('function ' + px + '_montarBuscaCadastro_'), js.indexOf('function ' + px + '_dadosCadastro_'));
-    assert.doesNotMatch(bloco, /marca/i, arq + ': a marca não vem do cadastro');
+    // 22/10/2026: a marca vem do cadastro pelo componente comum (campo vizinho ao do modelo), sem mudar a tela do módulo.
   }
   const rc = decodificado('SGO_RelCal_ConteudoModulo.js', 'RelCal_obterConteudoModulo');
   assert.match(rc, /if \(el && valor && !el\.value\) \{ el\.value = valor; el\.setAttribute\("data-auto", valor\); \}/, 'leitura do certificado marca o automático');

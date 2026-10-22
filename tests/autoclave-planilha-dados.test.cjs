@@ -131,7 +131,9 @@ test('seções do documento: capa, sumário, quadro-resumo, cálculos, gráficos
     'Anexo A — Leituras fora da fase de exposição', 'counter(pages)', 'Planilha de dados nº AUT-T-0001'].forEach(t => assert.ok(h.includes(t), 'faltou: ' + t));
   assert.ok((h.match(/<svg /g) || []).length >= 6, 'gráficos em SVG estático');
   assert.doesNotMatch(h, /<script/i);
-  assert.doesNotMatch(texto(h), /MARCA DE TESTE/);
+  // 22/10/2026 (pedido do dono): fabricante e modelo informados saem na identificação da planilha.
+  assert.match(h, /Fabricante \(marca\)<\/th><td>MARCA DE TESTE/);
+  assert.match(h, /Modelo<\/th><td>MOD-1/);
   assert.match(texto(h), /T ref = 121,1 °C e z = 10 °C|Tref = 121,1|121,1 °C/);
   assert.match(texto(h), /F 0 = \(\d+,\d ± \d+,\d\) min/);
 });
