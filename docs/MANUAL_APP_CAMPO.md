@@ -50,6 +50,36 @@ A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em
   "Em atendimento", "Concluída, aguardando envio", "Concluída e enviada").
 - **Atualizar agenda** baixa de novo quando houver sinal.
 
+## 2a. Novo atendimento (fora da agenda)
+
+Surgiu um atendimento que não estava no Meu dia (equipamento ao lado, pedido do responsável, cliente novo)? Não precisa
+ligar para a gestão: toque em **Novo atendimento**, no fim do Meu dia, e siga os quatro passos.
+
+1. **Cliente.** Digite o nome, o CNPJ, a TAG ou a série e toque em **Buscar** (a busca precisa de internet; a lista mostra no
+   máximo 20 por vez: refine se precisar). Achou: toque em **Escolher**. Achou pela TAG ou pela série: "Escolher este
+   equipamento" pula direto para o passo 4. Não achou: **Cadastrar o cliente** (só o nome é obrigatório; com o CNPJ, toque em
+   **Consultar** para preencher a razão social, o endereço e o telefone pela consulta pública). Se o CNPJ já existir no SGO+,
+   o app avisa "já cadastrado como ..." e oferece usar o cadastro existente.
+2. **Unidade.** Escolha na lista ou **Cadastrar a unidade** (nome e endereço; **Usar a minha localização** guarda as
+   coordenadas do aparelho na unidade, pedidas só nesse toque; em cliente novo, **Mesmo nome e endereço do cliente**).
+3. **Equipamento.** Escolha na lista (filtre por TAG, série ou tipo) ou **Cadastrar o equipamento**: tipo é obrigatório e
+   série ou TAG, ao menos um; fabricante, modelo, setor e patrimônio quando souber.
+4. **Abrir a O.S.** Tipo de serviço (define o checklist, as fotos e o que o relatório exige), o problema relatado, quem pediu,
+   o contato, a prioridade (P1 só para equipamento parado que afeta o paciente) e se o equipamento está parado. Confira o
+   resumo ("Você vai abrir uma O.S. para: cliente › unidade › equipamento") e toque em **Abrir a O.S.**.
+
+A O.S. aparece no Meu dia com o selo **Aberta em campo** e o atendimento segue igual aos outros (item 3). No SGO+, o chamado
+nasce com a triagem feita em campo (sem passar pela gestão) e a gestão é avisada.
+
+- **Com sinal:** a O.S. recebe o número oficial na hora.
+- **Sem sinal:** a busca não funciona, mas o cadastro e a abertura funcionam. A O.S. fica **provisória** (selo "O.S.
+  provisória") e ganha o número oficial quando o aparelho enviar; tudo o que você registrar nela entra na O.S. certa.
+- **Nunca em dobro:** o servidor confere CNPJ, nome, série e TAG antes de criar; se já existir, usa o existente e avisa
+  ("já cadastrado como ..."). Equipamento que já tem O.S. aberta com você: o app continua nela.
+- Todo cadastro feito em campo fica marcado **criado em campo** para a gestão conferir depois (vínculo e repetição); nada é
+  bloqueado por isso. Errou um campo? Peça à gestão para corrigir em Cadastros.
+- Campo com erro: a mensagem aparece ao lado do campo (nome curto, CNPJ inválido, UF com 2 letras, série ou TAG faltando).
+
 ## 3. Atendimento, passo a passo
 
 Toque no cartão da O.S. Em cima ficam cliente, unidade, endereço, responsável, problema e orientação; os botões
@@ -133,9 +163,11 @@ registrado de novo pela gestão.
 
 ## 8. Para a gestão e o suporte
 
-- O app chama as funções do contrato `docs/API_APP_TECNICO.md` (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto)
-  pelo `/api/run` do servidor, com o número de pedido no cabeçalho `X-Pedido-Id`. Cada ação tem uma chave única do
-  aparelho (`idLocal`); o servidor guarda a hora do aparelho e a do recebimento.
+- O app chama as funções do contrato `docs/API_APP_TECNICO.md` (Ast_appMeuDia, Ast_appSincronizar, Ast_appEnviarFoto e, na
+  versão 2, Ast_appBuscarCadastro, Ast_appConsultarCnpj, Ast_appCadastrar e Ast_appAbrirOS) pelo `/api/run` do servidor, com o
+  número de pedido no cabeçalho `X-Pedido-Id`. Cada ação tem uma chave única do aparelho (`idLocal`); o servidor guarda a hora
+  do aparelho e a do recebimento. Cadastro e O.S. feitos sem internet usam o `idLocal` como id provisório; o servidor troca
+  pelo id real na sincronização e a gestão vê o cadastro em Assistência técnica > Chamados > "Cadastros criados em campo".
 - O aplicativo fica em `sgo_servidor/src/publico/campo/` (página, service worker, manifest, ícones, logo) e é servido por
   `src/servicos/campo.ts`. Ele só existe no endereço do SGO+.
 - Ícones e logo são gerados pelo `scripts/gerar_icones_campo.mjs` a partir da logo oficial dos documentos do SGO+

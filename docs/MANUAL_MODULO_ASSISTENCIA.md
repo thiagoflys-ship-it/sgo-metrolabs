@@ -66,6 +66,22 @@ reconhecido já vêm preenchidos.
 Pedido do cliente pelo portal ou pelo QR entra em "Solicitações dos clientes": a equipe confere e abre o chamado
 (ou descarta com o motivo). O chamado não nasce sozinho, para não haver chamado duplicado ou errado.
 
+### Aberta em campo (pelo técnico, no aplicativo)
+
+Desde 22/10/2026 o técnico abre atendimento fora da agenda pelo SGO+ Campo (botão "Novo atendimento"): localiza ou cadastra
+o cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem internet. No SGO+:
+
+- O chamado nasce com canal "Presencial", a **triagem feita em campo** pelo próprio técnico (sintomas confirmados no local,
+  decisão "visita") e a O.S. já no nome dele; não entra na fila de triagem. Chamado e O.S. levam o selo **Aberta em campo**
+  (lista e ficha), e a gestão da área Técnica recebe o aviso AT01 "atendimento aberto em campo".
+- O cadastro feito em campo entra marcado **criado em campo por <técnico> em <data>** e vira a pendência "cadastro criado em
+  campo para conferir" na Central e na Caixa de decisões da área Técnica (2 dias úteis). Em Assistência técnica > Chamados, o
+  quadro "Cadastros criados em campo a conferir" lista cada um: confira em Cadastros (Clientes, Unidades, Equipamentos ou
+  Vínculos), corrija se precisar e toque em "Conferido" (com o que foi conferido). Nada fica bloqueado enquanto isso.
+- Nunca em dobro: antes de criar, o servidor confere CNPJ, nome, série e TAG; se já existir, usa o existente e avisa o
+  técnico ("já cadastrado como ..."). Vale o original: cadastro repetido é consolidado em Vínculos.
+- Equipamento que já tem O.S. aberta com o mesmo técnico: o aplicativo continua nela.
+
 ## Triagem
 
 1. Abra o chamado e preencha os sintomas confirmados, o risco de continuar usando e o diagnóstico preliminar.

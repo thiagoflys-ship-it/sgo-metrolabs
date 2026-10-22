@@ -275,6 +275,27 @@
     At_$_("atBusca").oninput = function () { clearTimeout(t); t = setTimeout(function () { AT.filtro.busca = At_$_("atBusca").value; At_carregarChamados_(); }, 400); };
     At_$_("atPrio").onchange = function () { AT.filtro.prioridade = At_$_("atPrio").value; At_carregarChamados_(); };
     At_carregarChamados_();
+    At_cadastrosCampo_();
+  }
+  /** Cadastros criados em campo pelo técnico (etapa 1, 22/10/2026): a gestão confere e marca "Conferido". */
+  function At_cadastrosCampo_() {
+    var el = At_$_("atCadCampo"); if (!el) return;
+    At_chamar_("cadastrosCampo", {}, function (r) {
+      var l = r.cadastros || [];
+      if (!l.length) { el.innerHTML = ""; return; }
+      var gest = AT.ini && AT.ini.gestao;
+      el.innerHTML = '<div class="at-caixa"><h3>Cadastros criados em campo a conferir (' + l.length + ')</h3><p class="at-meta">Criados pelo técnico no aplicativo, fora da agenda. Confira se não é cadastro repetido e se o vínculo está certo (Cadastros > Clientes, Unidades, Equipamentos ou Vínculos); depois marque "Conferido". Vale o original: cadastro repetido é consolidado em Vínculos.</p>' +
+        l.map(function (x) { return '<p class="at-txt"><b>' + At_esc_(x.tipoNome.charAt(0).toUpperCase() + x.tipoNome.slice(1)) + ':</b> ' + At_esc_(x.texto) + ' <span class="at-meta">· por ' + At_esc_(x.porNome) + ' em ' + At_esc_(x.em) + '</span>' +
+          (gest ? ' <button type="button" class="btn-secondary" data-cad-ok="' + At_esc_(x.tipo) + '|' + At_esc_(x.id) + '">Conferido</button>' : '') + '</p>'; }).join("") +
+        '<div class="at-acoes"><button type="button" class="btn-secondary" onclick="abrir(\'vinculos\')">Abrir Cadastros > Vínculos</button></div></div>';
+      el.querySelectorAll("[data-cad-ok]").forEach(function (b) {
+        b.onclick = function () {
+          var par = b.getAttribute("data-cad-ok").split("|"), t = prompt("O que foi conferido? (ex.: não é repetido; CNPJ conferido)");
+          if (t === null) return;
+          At_chamar_("cadastroConferido", { tipo: par[0], id: par[1], texto: t }, function () { At_cadastrosCampo_(); }, function (m) { alert(m); });
+        };
+      });
+    }, function () { el.innerHTML = ""; });
   }
   function At_carregarChamados_() {
     At_chamar_("lista", AT.filtro, function (r) {
@@ -292,7 +313,7 @@
     return '<div class="at-card clicavel ' + cls + '" data-ch="' + At_esc_(c.id) + '" tabindex="0"><p class="at-card-tit">' + At_esc_(c.numero) + ' · ' + At_esc_(c.clienteNome) + (c.unidadeNome ? ' (' + At_esc_(c.unidadeNome) + ')' : '') + '</p>' +
       '<p class="at-meta">' + At_esc_(c.equipamentoTexto || "Equipamento não identificado") + ' · aberto em ' + At_esc_(c.abertoEm) + ' (' + At_esc_(c.canalNome) + ')</p>' +
       '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : c.prioridade === "P2" ? "laranja" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) +
-      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + '</div>' +
+      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + '</div>' +
       '<p class="at-txt">' + At_esc_(String(c.sintoma || "").slice(0, 180)) + '</p>' + (c.proximaAcao ? '<p class="at-meta"><b>Próximo passo:</b> ' + At_esc_(c.proximaAcao) + '</p>' : '') +
       (c.tecnicoNome ? '<p class="at-meta">Técnico: ' + At_esc_(c.tecnicoNome) + (c.agendadoPara ? ' · ' + At_esc_(c.agendadoPara) : '') + '</p>' : '') + '</div>';
   }
@@ -304,7 +325,8 @@
     var c = r.chamado, ini = AT.ini;
     var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
     var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') +
-      '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) + '</div>' +
+      '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
+      (c.abertaEmCampo ? '<div class="at-faixa">Aberta em campo pelo técnico, fora da agenda: a triagem foi feita no local e a O.S. nasceu em andamento. Confira o cadastro (selo "criado em campo") e o chamado; se for repetido, use Cadastros > Vínculos.</div>' : '') +
       (c.proximaAcao ? '<div class="at-faixa">Próximo passo: ' + At_esc_(c.proximaAcao) + '</div>' : '') +
       // 22/10/2026 (etapa 3): a peça chegou em Compras e o chamado voltou sozinho: a gestão agenda o retorno (o cliente já sabe que a peça chegou)
       (c.retornoAAgendar ? '<div class="at-faixa ok"><b>Peça disponível desde ' + At_esc_(c.pecaDisponivelEm) + ' (conferida por Compras).</b> Agende o retorno do técnico no quadro "Agendar o retorno" abaixo: a mesma O.S. volta para a agenda e o cliente recebe a data por e-mail. O técnico retira a peça com Compras antes de sair.</div>' : '') +
@@ -562,7 +584,7 @@
       var l = At_$_("atOsLista"); if (!l) return;
       l.innerHTML = r.os.length ? '<div class="at-lista">' + r.os.map(function (o) {
         return '<div class="at-card clicavel' + (o.situacao === "ENCERRADA" ? " fim" : "") + '" data-os="' + At_esc_(o.id) + '"><p class="at-card-tit">' + At_esc_(o.numero) + ' · ' + At_esc_(o.clienteNome) + '</p><p class="at-meta">' + At_esc_(o.agendadoPara) + ' · ' + At_esc_(o.tipoNome) + ' · ' + At_esc_(o.tecnicoNome) + '</p>' +
-          '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + '</div>' +
+          '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
           '<p class="at-txt">' + At_esc_(o.equipamentoTexto) + '</p>' + (o.faltas ? '<p class="at-meta" style="color:var(--danger)">Falta: ' + At_esc_(o.faltas) + '</p>' : '') + (o.endereco ? '<p class="at-meta">' + At_esc_(o.endereco) + '</p>' : '') + '</div>';
       }).join("") + '</div>' : '<div class="at-vazio">Nenhuma O.S. neste filtro.</div>';
       l.querySelectorAll("[data-os]").forEach(function (c) { c.onclick = function () { At_abrirOs_(c.getAttribute("data-os")); }; });
@@ -583,7 +605,7 @@
   function At_desenharOs_(o, msg, tipo) {
     var ini = AT.ini, campo = o.podeCampo, s = o.situacao;
     var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
-    var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[s], o.situacaoNome) + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + '</div>' +
+    var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[s], o.situacaoNome) + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
       (o.faltas && o.faltas.length ? '<div class="at-faixa erro"><b>Para fechar a O.S. falta:</b><ul class="at-faltas">' + o.faltas.map(function (f) { return '<li>' + At_esc_(f) + '</li>'; }).join("") + '</ul>A O.S. só fecha com a documentação completa; enquanto isso ela aparece nas pendências.</div>' : '') +
       dl([["Chamado", o.chamadoNumero], ["Cliente", o.clienteNome + (o.unidadeNome ? " · " + o.unidadeNome : "")], ["Endereço", o.endereco], ["Equipamento", o.equipamentoTexto], ["Tipo de serviço", o.tipo.nome], ["Técnico", o.tecnicoNome],
         ["Agendado", o.agendadoPara + " (" + o.duracaoMin + " min)"], ["Orientação", o.orientacao], ["Chegada", o.chegouEm], ["Conclusão", o.concluiuEm], ["Localização", o.obsLocalizacao], ["Veículo", o.reserva ? "reserva " + o.reserva : ""],

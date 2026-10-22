@@ -390,6 +390,7 @@ function AstO_publico_(os, eu) {
     // 22/10/2026 (etapa 2): bloco "Documento e envio" da ficha: situação do PDF e do envio ao cliente, contatos sugeridos e o que a pessoa pode fazer
     envio: AstO_envio_(os, eu),
     reserva: Ast_s_(os.RESERVA_CODIGO), podeCampo: !!eu && (eu.gestao || Ast_s_(os.TECNICO_ID) === eu.id) && AST_OS_ABERTAS.indexOf(s) >= 0,
+    abertaEmCampo: Ast_sim_(os.ABERTA_EM_CAMPO),
     eventos: Ast_ler_(AST_ABAS.EVENTOS).filter(function (e) { return Ast_up_(e.ENTIDADE) === 'OS' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.ID); }).sort(function (a, b) { return String(a.EM).localeCompare(String(b.EM)); })
       .map(function (e) { return { tipo: Ast_s_(e.TIPO), texto: Ast_s_(e.TEXTO), por: Ast_s_(e.USUARIO_NOME), em: Ast_br_(e.EM), emAparelho: Ast_br_(e.EM_APARELHO) }; })
   };
@@ -502,6 +503,6 @@ function AstO_lista_(eu, f) {
     var s = Ast_up_(o.SITUACAO);
     return { id: o.ID, numero: o.NUMERO, chamadoNumero: o.CHAMADO_NUMERO, chamadoId: o.CHAMADO_ID, situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s, tipoNome: Ast_s_(o.TIPO_NOME), clienteNome: Ast_s_(o.CLIENTE_NOME),
       equipamentoTexto: Ast_s_(o.EQUIPAMENTO_TEXTO), tecnicoNome: Ast_s_(o.TECNICO_NOME), agendadoPara: Ast_br_(o.AGENDADO_PARA), endereco: Ast_s_(o.ENDERECO), faltas: Ast_s_(o.FALTAS),
-      relatorioUrl: Ast_s_(o.RELATORIO_PDF_URL), serieDivergente: Ast_sim_(o.SERIE_DIVERGENTE), aguardandoPeca: Ast_sim_(o.AGUARDANDO_PECA) };
+      relatorioUrl: Ast_s_(o.RELATORIO_PDF_URL), serieDivergente: Ast_sim_(o.SERIE_DIVERGENTE), aguardandoPeca: Ast_sim_(o.AGUARDANDO_PECA), abertaEmCampo: Ast_sim_(o.ABERTA_EM_CAMPO) };
   }) };
 }

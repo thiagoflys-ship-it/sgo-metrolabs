@@ -60,6 +60,7 @@ function AstC_publico_(c, eu, agoraMs, regras) {
     tecnicoId: Ast_s_(c.TECNICO_ID), tecnicoNome: Ast_s_(c.TECNICO_NOME), agendadoPara: Ast_br_(c.AGENDADO_PARA), agendadoIso: Ast_iso_(c.AGENDADO_PARA), duracaoMin: Number(c.DURACAO_MIN) || 0,
     osId: Ast_s_(c.OS_ID), osNumero: Ast_s_(c.OS_NUMERO), atendidoEm: Ast_br_(c.ATENDIDO_EM), encerradoEm: Ast_br_(c.ENCERRADO_EM), canceladoMotivo: Ast_s_(c.CANCELADO_MOTIVO),
     reincidente: Ast_sim_(c.REINCIDENTE), reincidenciaDe: Ast_s_(c.REINCIDENCIA_DE), proximaAcao: Ast_s_(c.PROXIMA_ACAO), terminal: AST_TERMINAIS.indexOf(s) >= 0,
+    abertaEmCampo: Ast_sim_(c.ABERTA_EM_CAMPO),
     podeTriar: !!(eu && eu.gestao) && (s === 'ABERTO' || s === 'EM_TRIAGEM'), podeAgendar: !!(eu && eu.gestao) && (s === 'PLANEJADO' || s === 'AGENDADO'),
     podeCancelar: !!(eu && eu.gestao) && (AST_TRANSICOES[s] || []).indexOf('CANCELADO') >= 0,
     // 22/10/2026 (etapa 3): peça disponível em Compras (retorno a agendar), chegada ao local pelo contrato e a volta à triagem da O.S. com documentação pendente
@@ -170,16 +171,18 @@ function AstC_abrir_(eu, d, opcoes) {
       PRAZO_TRIAGEM_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.triagemMin)), PRAZO_ATENDIMENTO_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.atendimentoMin)),
       CHEGADA_MIN_UTEIS: sla.chegadaMin || 0, PRAZO_CHEGADA_EM: sla.chegadaMin ? Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.chegadaMin)) : '',
       TRIAGEM_RESPONSAVEL_ID: triagem.id, TRIAGEM_RESPONSAVEL_NOME: triagem.nome, TRIAGEM_JSON: '{}', REINCIDENTE: reinc ? 'SIM' : '', REINCIDENCIA_DE: reinc ? Ast_s_(reinc.NUMERO) : '',
-      SOLICITACAO_ID: Ast_s_(d.solicitacaoId), PROPOSTA_ID: Ast_s_(d.propostaId), PROXIMA_ACAO: 'Fazer a triagem (' + (triagem.nome || 'gestão da área Técnica') + ')', ATUALIZADO_EM: agora
+      SOLICITACAO_ID: Ast_s_(d.solicitacaoId), PROPOSTA_ID: Ast_s_(d.propostaId), PROXIMA_ACAO: o.campo ? 'Atendimento em campo com ' + eu.nome + ' (triagem feita em campo)' : 'Fazer a triagem (' + (triagem.nome || 'gestão da área Técnica') + ')',
+      ABERTA_EM_CAMPO: o.campo ? 'SIM' : '', ATUALIZADO_EM: agora
     });
   });
   Ast_evento_('CHAMADO', c.ID, 'ABERTURA', o.sistema ? { id: '', nome: o.porNome || 'Sistema' } : eu,
     'Chamado aberto (' + AST_CANAIS[canal] + '): ' + sintoma.slice(0, 300) + (reinc ? ' · Reincidência: o equipamento teve o chamado ' + reinc.NUMERO + ' nos últimos ' + regras.reincidenciaDias + ' dias.' : ''),
     { numero: c.NUMERO, publico: true, para: AST_SITUACOES.ABERTO });
   // avisos: quem faz a triagem (matriz AT01; P1 é a exceção do WhatsApp, AT02)
-  var tit = (prioridade === 'P1' ? 'Chamado CRÍTICO ' : 'Chamado novo ') + c.NUMERO + ': ' + Ast_clienteNome_(v.cli);
+  var tit = (prioridade === 'P1' ? 'Chamado CRÍTICO ' : o.campo ? 'Atendimento aberto em campo ' : 'Chamado novo ') + c.NUMERO + ': ' + Ast_clienteNome_(v.cli);
   var txt = AST_PRIORIDADES[prioridade] + ' · ' + (v.eq ? Ast_equipTexto_(v.eq) : 'equipamento não identificado: ' + descEq) + '\nProblema: ' + sintoma.slice(0, 400) +
-    '\nPrazo de triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '. Faça a triagem em Assistência técnica > Chamados (ou pela Caixa de decisões).';
+    (o.campo ? '\nAberto pelo técnico ' + eu.nome + ' no aplicativo, fora da agenda: a triagem foi feita em campo e a O.S. já está em andamento. Acompanhe em Assistência técnica > Chamados (selo "Aberta em campo").'
+      : '\nPrazo de triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '. Faça a triagem em Assistência técnica > Chamados (ou pela Caixa de decisões).');
   Ast_avisar_(triagem.ids, 'CHAMADO_NOVO', tit, txt, c.ID, { evento: prioridade === 'P1' && regras.avisos.whatsappP1Gestor ? 'AT02' : 'AT01', autorId: o.sistema ? '' : eu.id });
   if (canal === 'PORTAL' || canal === 'QR' || canal === 'EMAIL' || canal === 'TELEFONE') {
     Ast_avisarCliente_(c, 'Recebemos o seu chamado ' + c.NUMERO, 'Olá. Registramos o seu pedido de atendimento técnico ' + c.NUMERO + ' (' + (v.eq ? Ast_equipTexto_(v.eq) : descEq) + ').\nProblema informado: ' +

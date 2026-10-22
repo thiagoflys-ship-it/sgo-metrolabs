@@ -137,6 +137,14 @@ function Assistencia_fontePendencias_(add, ctx) {
       titulo: 'Pedido de atendimento do cliente ' + Ast_s_(s.CLIENTE_NOME).slice(0, 50) + ' (' + (AST_CANAIS[Ast_up_(s.ORIGEM)] || s.ORIGEM) + ')', detalhe: Ast_s_(s.EQUIPAMENTO_TEXTO).slice(0, 80) + '. ' + Ast_s_(s.DESCRICAO).slice(0, 200),
       oQueFazer: 'Abra Assistência técnica > Solicitações dos clientes e toque em "Abrir chamado" (ou descarte com o motivo).', tela: AST_PEND_TELA('assistencia_solicitacoes', s.ID), extra: { area: 'TECNICA' } }));
   });
+  // 22/10/2026 (etapa 1): cadastro criado em campo pelo técnico, até a gestão conferir
+  if (typeof AstApp_cadastrosCampo_ === 'function') {
+    AstApp_cadastrosCampo_().forEach(function (x) {
+      add(Pend_item_('ast_cadastro_campo', { id: 'AST:CADCAMPO:' + x.tipo + ':' + x.id, nome: x.texto.slice(0, 40), publico: 'GESTAO', paraUsuarios: triagem.ids, responsavel: 'Gestão da área Técnica', gravidade: 'ATENCAO', dias: null, clienteId: x.clienteId,
+        titulo: 'Conferir ' + x.tipoNome + ' criado em campo: ' + x.texto.slice(0, 80), detalhe: 'Criado por ' + x.porNome + ' em ' + x.em + ' pelo aplicativo do técnico. Confira se não é um cadastro repetido e se o vínculo (cliente, unidade) está certo.',
+        oQueFazer: 'Abra Assistência técnica > Chamados > "Cadastros criados em campo": confira em Cadastros (Clientes, Unidades, Equipamentos ou Vínculos), corrija se precisar e toque em "Conferido".', tela: AST_PEND_TELA('assistencia', x.id), extra: { area: 'TECNICA' } }));
+    });
+  }
   Ast_ler_(AST_ABAS.CASOS).forEach(function (k) {
     if (Ast_up_(k.SITUACAO) === 'RESOLVIDO') return;
     var atrasado = Ast_dia_(k.PRAZO) && Ast_dia_(k.PRAZO) < hoje;
@@ -441,6 +449,7 @@ function AstP_inicio_(eu) {
   base.avisos = Ast_ler_(AST_ABAS.AVISOS).filter(function (v) { return Ast_s_(v.DESTINATARIO_ID) === eu.id; }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); }).slice(0, 15)
     .map(function (v) { return { titulo: Ast_s_(v.TITULO), texto: Ast_s_(v.TEXTO), em: Ast_br_(v.DATA), novo: !Ast_s_(v.LIDO_EM), refId: Ast_s_(v.REF_ID) }; });
   base.solicitacoesNovas = Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (s) { return Ast_up_(s.SITUACAO) === 'NOVA'; }).length;
+  try { base.cadastrosCampo = typeof AstApp_cadastrosCampo_ === 'function' ? AstApp_cadastrosCampo_().length : 0; } catch (e) { base.cadastrosCampo = 0; }
   return base;
 }
 function AstP_avisosLidos_(eu) {
@@ -473,6 +482,9 @@ var AST_ACOES = {
   acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, cliente: eu.cliente, podeRegras: eu.regras, admin: eu.perfil === 'ADMIN', ligada: Ast_ligada_() }; },
   avisosLidos: function (eu) { return { marcados: AstP_avisosLidos_(eu) }; },
   buscarCadastro: function (eu, d) { return AstP_buscarCadastro_(eu, d); },
+  // cadastros criados em campo pelo técnico (etapa 1, 22/10/2026): lista e conferência pela gestão
+  cadastrosCampo: function (eu) { Ast_exigir_(eu, 'INTERNO', 'ver os cadastros criados em campo'); return { cadastros: AstApp_cadastrosCampo_() }; },
+  cadastroConferido: function (eu, d) { return AstApp_cadastroConferido_(eu, d); },
   // chamados
   abrir: function (eu, d) { return AstC_abrir_(eu, d); },
   lista: function (eu, d) { return AstC_lista_(eu, d); },

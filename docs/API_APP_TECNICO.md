@@ -181,20 +181,29 @@ Evento `ENVIAR_CLIENTE` no `Ast_appSincronizar` (mesma fila, mesmo `idLocal`, id
 - O técnico em atendimento (entre `CHEGUEI` e `CONCLUI`) aparece para o ponto e para a Frota pela fonte única de
   atendimentos (`SGO_Atendimentos_linhas_`).
 
+## 7. Versão 2 (22/10/2026, etapa 1 do estudo): localizar ou cadastrar cliente, unidade e equipamento e abrir a O.S. em campo
 
+O técnico, fora da agenda, localiza (ou cadastra) o cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem
 internet. Tudo o que a versão 1 tinha continua igual; o que entrou está abaixo. Nível: técnico (perfil Técnico ou área
 Técnica) ou gestão; exige a Assistência ligada (`DESLIGADA` como nas demais).
 
+**Ids provisórios.** Sem internet o aparelho cria cliente, unidade, equipamento e O.S. com ids provisórios: o `idLocal` do
+próprio item da fila. Qualquer função da versão 2 (e também `Ast_appSincronizar`, `Ast_appEnviarFoto` e `Ast_appOS`) aceita o id
+provisório no lugar do real: `ATEC_SYNC` guarda, na coluna `REF_ID`, o registro que cada `idLocal` criou (ou reconheceu como
 existente). A fila do aparelho envia na ordem (cadastros, depois a O.S., depois os eventos) e troca o provisório pelo real nos
 itens pendentes assim que o servidor responde.
 
 ### 7.1 `Ast_appMeuDia` traz mais
 
 - `versaoContrato: 2`.
+- `campo`: `{ podeAbrir, duracaoPadraoMin, limiteBusca: 20, prioridades: [{ codigo, nome }], paradas: [{ codigo, nome }] }`.
+  `podeAbrir` é false para quem não é técnico nem gestão.
 - `tipos`: tipos de serviço ativos com visita, cada um `{ codigo, nome, grupo, descricao, exige: { relato, assinatura, fotosMin,
   qrOuSerie, checklist, relatoCampos }, checklist: { modeloId, versao, nome, perguntas: [...] } }`, para o aparelho montar a O.S.
   provisória com o checklist certo sem internet.
+- Cada O.S. ganha `abertaEmCampo: true|false`.
 
+### 7.2 `Ast_appBuscarCadastro(sessionId, { termo, clienteId, unidadeId })`
 
 Busca no cadastro único, **sempre com limite** (`limite: 20` por lista; `total` diz quantos há). Nunca devolve a base inteira.
 Precisa de internet (a tela avisa).
@@ -210,15 +219,19 @@ Precisa de internet (a tela avisa).
   unidadeNome }`. Inativos não entram.
 - Erros: `ENTRADA` (termo curto; cliente não encontrado), `SEM_ACESSO` (cliente do portal).
 
+### 7.3 `Ast_appConsultarCnpj(sessionId, { cnpj })`
 
 Consulta pública do CNPJ, a mesma do cadastro de clientes (precisa de internet no servidor). Resposta
 `{ cnpj, consultado, jaCadastrado, razaoSocial, nomeFantasia, endereco, cidade, uf, cep, telefone, email, aviso }`.
 `jaCadastrado`: `null` ou `{ tipo: CLIENTE|UNIDADE, cliente, unidade, texto }` ("já cadastrado como ..."). Quando a consulta
 pública não responde, `consultado: false` e `aviso` dizem para preencher à mão; nunca é erro. CNPJ inválido: `ENTRADA`.
 
+### 7.4 `Ast_appCadastrar(sessionId, { idLocal, tipo, dados, em, aparelho })`
 
 Cadastro feito em campo. `tipo`: `CLIENTE`, `UNIDADE` ou `EQUIPAMENTO`. **Idempotente por `idLocal`** (o mesmo volta com
 `duplicado: true` e o mesmo registro). Cria pelas mesmas funções da tela Cadastros (maiúsculas, CNPJ válido, QR do
+equipamento) e marca o registro com "criado em campo por <técnico> em <data>" (`ORIGEM_CADASTRO = CAMPO`); a gestão recebe a
+pendência "cadastro criado em campo para conferir" e o aviso AT13; nada é bloqueado.
 
 **Nunca duplica.** Antes de criar, o servidor confere e, se já existe, devolve o existente com `existente: true` e
 `message: "Já cadastrado como ..."`:
@@ -233,7 +246,9 @@ Cadastro feito em campo. `tipo`: `CLIENTE`, `UNIDADE` ou `EQUIPAMENTO`. **Idempo
 (CLIENTE), unidade, clienteId (UNIDADE), equipamento, clienteId, unidadeId (EQUIPAMENTO) }`. Erros `ENTRADA`: nome ou tipo curto,
 CNPJ inválido, cliente ou unidade não encontrados, quem não é técnico.
 
+### 7.5 `Ast_appAbrirOS(sessionId, { idLocal, clienteId, unidadeId, equipamentoId, tipoCodigo, sintoma, solicitante, contato, prioridade, parada, diagnostico, em, aparelho })`
 
+Abre o chamado (canal PRESENCIAL, `ABERTA_EM_CAMPO`), faz a **triagem em campo** pelo próprio técnico (sintomas confirmados no
 local; decisão "visita"), cria a O.S. já no nome dele (AGENDADA para a hora do aparelho, duração padrão) e a atividade
 "Atender OS-...", numa trava só; a gestão recebe o AT01 "atendimento aberto em campo" (sem triagem pendente). Prioridade
 padrão P3. `tipoCodigo` precisa ser um tipo ativo com visita. Ids podem ser provisórios; vale o cadastro do equipamento
@@ -246,7 +261,10 @@ padrão P3. `tipoCodigo` precisa ser um tipo ativo com visita. Ids podem ser pro
 - Erros `ENTRADA`: tipo inexistente ou sem visita, problema com menos de 10 letras, solicitante vazio, equipamento não
   encontrado, quem não é técnico. `DESLIGADA` com a Assistência desligada.
 
+### 7.6 Fila do aparelho (versão 2)
 
+Itens `CADASTRO` (`dados: { tipo, dados }`) e `NOVA_OS` (`osId` = o próprio `idLocal`, `dados` da O.S.) entram na mesma fila,
+na ordem, e sobem um por chamada (como as fotos). `ENTRADA` numa `NOVA_OS` é recusa definitiva e recusa junto os eventos e fotos
 que apontavam para ela (com o que fazer). O número do pedido (`X-Pedido-Id`) do item é estável (`N`/`C` + idLocal + rodada +
 resumo da sessão).
 
@@ -254,6 +272,8 @@ resumo da sessão).
 
 - 22/10/2026 (etapa 2 do estudo): campo `envio` nas O.S. do `Ast_appMeuDia`, do `Ast_appOS` e do `os[]` do
   `Ast_appSincronizar`; evento `ENVIAR_CLIENTE` na fila (seção 5a). Só acrescentado; o aplicativo anterior continua valendo.
+- 22/10/2026: versão 2 (seção 7): `Ast_appBuscarCadastro`, `Ast_appConsultarCnpj`, `Ast_appCadastrar`, `Ast_appAbrirOS`; ids
+  provisórios aceitos; `campo`, `tipos` e `abertaEmCampo` no `Ast_appMeuDia`; itens `CADASTRO` e `NOVA_OS` na fila. Tudo
   acrescentado; o aplicativo da versão 1 continua valendo.
 - 21/10/2026: versão 1.
 - 21/10/2026 (ensaio integrado com o aplicativo): `tipo.exige.relatoCampos` em cada O.S. do `Ast_appMeuDia`: os campos do
