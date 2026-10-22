@@ -1,10 +1,22 @@
+/* Vínculo de trabalho (CAD_USUARIOS.VINCULO_TRABALHO): valores aceitos e rótulo
+   para telas e relatórios (22/10/2026). Fica antes do módulo porque ele lê a
+   lista ao carregar. "Diretoria" entrou a pedido do dono: a empresa tem CLT, PJ
+   e Diretoria, e o sistema precisa reconhecer os diretores. */
+var SGO_VINCULOS_TRABALHO = ["CLT", "PJ", "DIRETORIA"];
+var SGO_VINCULO_ROTULOS = { CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" };
+/** "CLT" -> "CLT", "DIRETORIA" -> "Diretoria", vazio ou desconhecido -> "Não informado". */
+function SGO_rotuloVinculo_(v) {
+  var k = String(v === null || v === undefined ? "" : v).replace(/\s+/g, "").toUpperCase();
+  return SGO_VINCULO_ROTULOS[k] || "Não informado";
+}
+
 const SGO_USUARIOS = (() => {
   const SHEET_NAME = "CAD_USUARIOS";
   const STATUS_ATIVO = "ATIVO";
   const STATUS_INATIVO = "INATIVO";
 
   // 21/10/2026 (pedido do dono): a rotina de usuários (criar, editar, área,
-  // vínculo CLT/PJ, celular, redefinir senha, inativar e reativar) é da gestão
+  // vínculo CLT/PJ/Diretoria, celular, redefinir senha, inativar e reativar) é da gestão
   // e também do RH e do Financeiro (SGO_ehGestaoRotina_ em SGO_Auth.js).
   // Contas e perfis ADMIN e DIRETORIA seguem em exigirAdminParaContaAdmin_;
   // excluir de vez é do Administrador e da Diretoria (exigirExcluir_);
@@ -43,11 +55,13 @@ const SGO_USUARIOS = (() => {
     return "Não foi possível salvar: ninguém muda o próprio perfil. Os outros dados da sua conta podem ser alterados; para mudar o seu perfil, peça a outra pessoa da gestão (perfil Administrador ou Diretoria para os perfis de gestão).";
   }
 
-  // VINCULO_TRABALHO (19/10/2026): "CLT", "PJ" ou vazio (não informado).
+  // VINCULO_TRABALHO (19/10/2026): "CLT", "PJ", "DIRETORIA" (22/10/2026, pedido
+  // do dono: a empresa tem CLT, PJ e Diretoria) ou vazio (não informado).
   // O COMMAND lê esta coluna do CAD_USUARIOS pelo mesmo caminho do CELULAR
   // (cmdSgoUsuarios_ em Sgo.js): não mudar o nome. As mensagens da categoria
-  // PONTO (SGO_notificar_) só vão para quem é CLT.
-  const VINCULOS_TRABALHO = ["CLT", "PJ"];
+  // PONTO (SGO_notificar_) só vão para quem é CLT; Diretoria segue a regra do PJ
+  // (não bate ponto, não é cobrada pelo WhatsApp; recebe resumo e relatórios).
+  const VINCULOS_TRABALHO = SGO_VINCULOS_TRABALHO;
   function normalizarVinculo_(v) {
     const t = SGO_UTILS.safeUpper(v).replace(/\s+/g, "");
     if (!t || t === "NAOINFORMADO" || t === "NÃOINFORMADO") return "";
@@ -468,7 +482,7 @@ const SGO_USUARIOS = (() => {
       erros.push("Área inválida: escolha uma das áreas da lista (Administração > Usuários > Áreas) ou deixe Sem área.");
     }
     if (dados.VINCULO_TRABALHO === null) {
-      erros.push("Vínculo de trabalho inválido: escolha CLT, PJ ou Não informado.");
+      erros.push("Vínculo de trabalho inválido: escolha CLT, PJ, Diretoria ou Não informado.");
     }
     if (dados.CELULAR === null) {
       erros.push("Não foi possível aceitar o celular: informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
@@ -538,11 +552,59 @@ function Usuarios_ultimosAcessos_() {
   return mapa;
 }
 
+/* =========================
+   VÍNCULO DIRETORIA (22/10/2026, pedido do dono)
+   Quem tem perfil Diretoria, ou é responsável pelo sistema (SGO_DONOS em
+   SGO_Chaves.js), e está sem vínculo de trabalho é da Diretoria: a tela sugere
+   e a rotina preenche sozinha, uma vez, com registro no SYS_LOGS (quem:
+   sistema; motivo: perfil Diretoria). Vínculo já informado nunca é trocado.
+========================= */
+var USR_SANEAMENTO_VINCULO_DIRETORIA = "USR_VINCULO_DIRETORIA_20261022";
+
+/** "DIRETORIA" quando o vínculo está vazio e a conta é da Diretoria (perfil) ou do responsável pelo sistema; senão "". */
+function Usuarios_vinculoSugerido_(u) {
+  if (!u) return "";
+  var perfil = SGO_UTILS.safeUpper(u.PERFIL);
+  if (perfil === "CLIENTE" || perfil === "AUVO_SYNC") return "";
+  if (SGO_UTILS.safeUpper(u.VINCULO_TRABALHO).replace(/\s+/g, "")) return "";
+  var login = SGO_UTILS.safeLower(u.USUARIO).trim();
+  var dono = false;
+  try { dono = typeof Chaves_ehDonoUsuario_ === "function" ? Chaves_ehDonoUsuario_(login) : login === "admin"; } catch (e) { dono = false; }
+  return perfil === "DIRETORIA" || dono ? "DIRETORIA" : "";
+}
+
+/**
+ * Preenche com DIRETORIA o vínculo vazio de quem tem perfil Diretoria (ou é o responsável pelo sistema).
+ * Roda uma vez (propriedade USR_VINCULO_DIRETORIA_20261022), chamada pela tela Usuários e pela rotina diária
+ * do Programa de conduta. Nunca lança; devolve { aplicado, logins }.
+ */
+function Usuarios_saneamentoVinculoDiretoria_() {
+  var r = { aplicado: false, logins: [] };
+  var props = null;
+  try { props = PropertiesService.getScriptProperties(); if (props.getProperty(USR_SANEAMENTO_VINCULO_DIRETORIA) === "1") return r; } catch (e) { props = null; }
+  try {
+    var aba = SGO_CFG.SHEETS.CAD_USUARIOS || "CAD_USUARIOS";
+    SGO_DATA.getAll(aba).forEach(function (u) {
+      if (Usuarios_vinculoSugerido_(u) !== "DIRETORIA") return;
+      var login = SGO_UTILS.safeLower(u.USUARIO).trim();
+      if (!SGO_DATA.update(aba, SGO_UTILS.safe(u.ID), { VINCULO_TRABALHO: "DIRETORIA" })) return;
+      r.logins.push(login);
+      SGO_DATA.log("USUARIOS_VINCULO_AUTO", "sistema", "Vínculo de trabalho preenchido com Diretoria: " + login + " (estava Não informado; motivo: " + (SGO_UTILS.safeUpper(u.PERFIL) === "DIRETORIA" ? "perfil Diretoria" : "responsável pelo sistema") + ")", "USUARIOS");
+    });
+    r.aplicado = true;
+    if (props) props.setProperty(USR_SANEAMENTO_VINCULO_DIRETORIA, "1");
+    SGO_DATA.log("USUARIOS_VINCULO_AUTO", "sistema", r.logins.length ? "Diretoria preenchida em: " + r.logins.join(", ") : "nada a preencher", "USUARIOS");
+  } catch (e) { console.warn("Vínculo Diretoria (saneamento): " + ((e && e.message) || e)); }
+  return r;
+}
+
 function usuariosPainel(sessionId) {
   try {
     var sessao = exigirSessao(sessionId);
     var base = SGO_USUARIOS.pesquisar(sessionId, "");
     if (!base || !base.success) return base || { success: false, message: "Não foi possível carregar os usuários." };
+    // 22/10/2026: a primeira abertura da tela depois da publicação preenche o vínculo Diretoria de quem está sem (uma vez).
+    try { if (Usuarios_saneamentoVinculoDiretoria_().logins.length) base = SGO_USUARIOS.pesquisar(sessionId, ""); } catch (eSan) {}
     var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
     // 19/10/2026: o perfil Diretoria é dado só por Administrador ou Diretoria (exigirAdminParaContaAdmin_).
     var podeDarDiretoria = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
@@ -567,7 +629,10 @@ function usuariosPainel(sessionId) {
       o.EU = SGO_UTILS.safe(u.ID) === SGO_UTILS.safe(sessao.userId);
       // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
       o.PODE_ALTERAR = podeGerir && (souAdmin || perfil !== "ADMIN") && (podeDarDiretoria || perfil !== "DIRETORIA");
-      o.VINCULO_TRABALHO = SGO_UTILS.safeUpper(u.VINCULO_TRABALHO);
+      o.VINCULO_TRABALHO = SGO_UTILS.safeUpper(u.VINCULO_TRABALHO).replace(/\s+/g, "");
+      o.VINCULO_ROTULO = SGO_rotuloVinculo_(o.VINCULO_TRABALHO);
+      // 22/10/2026: conta da Diretoria (ou do responsável pelo sistema) sem vínculo: a tela sugere "Diretoria".
+      o.VINCULO_SUGERIDO = Usuarios_vinculoSugerido_(u);
       var ar = perfil === "CLIENTE" ? { codigo: "", nome: "" } : (typeof SGO_areaDoUsuario_ === "function" ? SGO_areaDoUsuario_(u, nomesAreas) : { codigo: SGO_UTILS.safeUpper(u.AREA), nome: SGO_UTILS.safe(u.AREA) });
       o.AREA = ar.codigo;
       o.AREA_NOME = ar.codigo ? ar.nome : "";

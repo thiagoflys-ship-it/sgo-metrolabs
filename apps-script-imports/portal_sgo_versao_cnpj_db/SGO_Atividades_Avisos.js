@@ -35,7 +35,8 @@
  ****************************************************/
 
 var ATV_AVISOS_CFG_PADRAO = { whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'] };
-var ATV_VINCULOS_OPCOES = ['CLT', 'PJ', 'VAZIO'];
+// 22/10/2026: DIRETORIA entrou como opção (padrão continua só CLT; a Diretoria recebe WhatsApp só se a gestão marcar).
+var ATV_VINCULOS_OPCOES = ['CLT', 'PJ', 'DIRETORIA', 'VAZIO'];
 var ATV_MODELO_RESUMO = 'sgo_atividades_resumo_dia';
 var ATV_COLUNAS_RESUMOS = ['ID', 'USUARIO_ID', 'USUARIO_NOME', 'DIA', 'SITUACAO', 'NOVAS', 'VENCEM_HOJE', 'VENCIDAS_NOVAS', 'MODELO', 'MOTIVO', 'AVALIADO_EM', 'CRIADO_EM'];
 var ATV_EMAIL_VALIDADE_DIAS = 7; // aviso com e-mail guardado há mais que isso não sai mais (fica PULADO)

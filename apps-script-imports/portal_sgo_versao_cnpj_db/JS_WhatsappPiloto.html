@@ -103,7 +103,7 @@
       '<label class="wap-linha" style="margin-bottom:10px"><input type="checkbox" id="wapLigado"' + (d.ligado ? " checked" : "") + (d.ligaDesliga ? "" : " disabled") + ' style="width:18px;height:18px"> <b>Piloto ligado</b> (' + (d.ligaDesliga ? "desmarque só quando for liberar o WhatsApp para todos" : "ligar e desligar é do Administrador e da Diretoria") + ')</label>' +
       '<input type="search" class="wap-busca" id="wapBusca" placeholder="Buscar pessoa pelo nome" value="' + esc(WAP.busca) + '" oninput="WAP.busca=this.value;WaPiloto_filtrar_()" aria-label="Buscar pessoa pelo nome">' +
       '<div class="wap-pessoas" id="wapPessoas">' + d.pessoas.map(function (p) {
-        var obs = [rotArea[p.perfil] || p.perfil, p.vinculo || "vínculo não informado", p.temCelular ? "celular " + p.celular : "sem celular válido (não recebe WhatsApp)", p.temEmail ? "com e-mail" : "sem e-mail"];
+        var obs = [rotArea[p.perfil] || p.perfil, ({ CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" })[p.vinculo] || (p.vinculo ? "vínculo " + p.vinculo : "vínculo não informado"), p.temCelular ? "celular " + p.celular : "sem celular válido (não recebe WhatsApp)", p.temEmail ? "com e-mail" : "sem e-mail"];
         if (p.dono) obs.push("responsável pelo sistema");
         return '<label class="wap-pessoa" data-nome="' + esc(String(p.nome).toLowerCase()) + '"><input type="checkbox" class="wap-chk" value="' + esc(p.id) + '"' + (marcados[p.id] ? " checked" : "") + '>' +
           '<span><b>' + esc(p.nome) + '</b>' + (p.porArea && !marcados[p.id] ? ' <span class="wap-sit ok">liberada pela área</span>' : '') + '<br><span class="q">' + esc(obs.join(" · ")) + '</span></span></label>';

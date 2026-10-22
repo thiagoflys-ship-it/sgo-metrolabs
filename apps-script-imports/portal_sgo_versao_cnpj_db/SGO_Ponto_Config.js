@@ -18,7 +18,7 @@
  *  - Sem insistência: UM lembrete por marcação, nunca um segundo; nada fora do horário da pessoa (antes da entrada
  *    menos 5 min ou depois da saída); sem mensagem de fim de semana, de "bom trabalho" ou de resumo pelo WhatsApp.
  *  - Quais marcações lembrar é configurável (padrão: as 4; opção "só entrada e saída" para o piloto).
- *  - Só CLT (CAD_USUARIOS.VINCULO_TRABALHO). PJ e vínculo vazio nunca recebem nada do ponto.
+ *  - Só CLT (CAD_USUARIOS.VINCULO_TRABALHO). PJ, Diretoria (22/10/2026) e vínculo vazio nunca recebem nada do ponto.
  *  - Piloto: com o piloto do WhatsApp ligado, só as pessoas da lista (SGO_WhatsappPiloto.js) participam; o servidor
  *    também barra (sgo_servidor, servicos/whatsappPiloto.ts).
  *  - Não lembra quem está em atendimento no Auvo (check-in sem check-out) nem quem está ausente (férias e afastamento
@@ -328,8 +328,8 @@ function Ponto_areasDoGestor_(eu) {
  * tirado do assistente, fora do piloto do WhatsApp, sem celular e sem e-mail.
  */
 var PONTO_FORA_TEXTO = {
-  INATIVO: 'usuário inativo', SISTEMA: 'conta do sistema', PJ: 'PJ: não recebe nada do ponto',
-  SEM_VINCULO: 'vínculo de trabalho não informado (cadastre CLT ou PJ em Administração > Usuários > Vínculo)',
+  INATIVO: 'usuário inativo', SISTEMA: 'conta do sistema', PJ: 'PJ: não recebe nada do ponto', DIRETORIA: 'Diretoria: não recebe nada do ponto',
+  SEM_VINCULO: 'vínculo de trabalho não informado (cadastre CLT, PJ ou Diretoria em Administração > Usuários > Vínculo)',
   NAO_PARTICIPA: 'tirado do assistente pelo RH (Pessoas e jornadas)', FORA_PILOTO: 'fora da lista do piloto do WhatsApp (Administração > Piloto do WhatsApp)',
   SEM_CONTATO: 'sem celular e sem e-mail no cadastro (Administração > Usuários)'
 };
@@ -337,6 +337,7 @@ function Ponto_motivoFora_(u, pessoa, pilotoCfg, cfg) {
   if (!u || !u.ativo) return 'INATIVO';
   if (u.sistema) return 'SISTEMA';
   if (u.vinculo === 'PJ') return 'PJ';
+  if (u.vinculo === 'DIRETORIA') return 'DIRETORIA';   // 22/10/2026: Diretoria não bate ponto, como PJ
   if (u.vinculo !== 'CLT') return 'SEM_VINCULO';
   if (pessoa && Pto_s_(pessoa.PARTICIPA) && !Pto_verdade_(pessoa.PARTICIPA)) return 'NAO_PARTICIPA';
   if (pilotoCfg && pilotoCfg.ligado && typeof SGO_waPilotoMotivo_ === 'function' && SGO_waPilotoMotivo_({ id: u.id, perfil: u.perfil, telefone: u.celular }, pilotoCfg)) return 'FORA_PILOTO';

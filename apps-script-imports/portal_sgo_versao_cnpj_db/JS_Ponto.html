@@ -75,6 +75,8 @@
   function Pto_meses_() { var l = []; for (var k = 0; k < 12; k++) { var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - k); var v = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2); l.push([v, ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear()]); } return l; }
   function Pto_opcoes_(lista, atual, vazio) { return (vazio !== undefined ? '<option value="">' + Pto_esc_(vazio) + "</option>" : "") + lista.map(function (o) { return '<option value="' + Pto_esc_(o[0]) + '"' + (String(o[0]) === String(atual) ? " selected" : "") + ">" + Pto_esc_(o[1]) + "</option>"; }).join(""); }
   function Pto_selo_(texto, cor) { return '<span class="pt-selo ' + (cor || "cinza") + '">' + Pto_esc_(texto) + "</span>"; }
+  // Vínculo de trabalho como rótulo (22/10/2026): CLT, PJ, Diretoria ou o texto de vazio pedido.
+  function Pto_vinculo_(v, vazio) { var k = String(v || "").replace(/\s+/g, "").toUpperCase(); return ({ CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" })[k] || vazio || "não informado"; }
 
   // ---------------- menu ----------------
   function Ponto_iniciar_() {
@@ -226,7 +228,7 @@
       if (!p.pessoas.length) h += '<div class="pt-vazio">Nenhuma marcação em ' + Pto_esc_(p.mesNome) + ".</div>";
       else h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Colaborador</th><th class="n">Lembretes</th><th class="n">Confirmados</th><th class="n">Esqueci de bater</th><th class="n">Não confirmados</th><th class="n">Não lembrados</th><th class="n">Ajustes</th></tr></thead><tbody>' +
         p.pessoas.map(function (l) {
-          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(l.pessoa) + "</b>" + (l.resumo ? " " + Pto_selo_(l.esquecimentos + " esquecimentos: resumo ao RH e à gestão", "laranja") : "") + (l.vinculo !== "CLT" ? '<div class="pt-mini">' + Pto_esc_(l.vinculo || "sem vínculo") + ": não conta esquecimento</div>" : "") + "</td>" +
+          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(l.pessoa) + "</b>" + (l.resumo ? " " + Pto_selo_(l.esquecimentos + " esquecimentos: resumo ao RH e à gestão", "laranja") : "") + (l.vinculo !== "CLT" ? '<div class="pt-mini">' + Pto_esc_(Pto_vinculo_(l.vinculo, "sem vínculo")) + ": não conta esquecimento</div>" : "") + "</td>" +
             '<td class="n" data-r="Lembretes">' + l.lembradas + '</td><td class="n" data-r="Confirmados">' + l.confirmadas + (l.pct !== null ? " (" + l.pct + "%)" : "") + '</td><td class="n" data-r="Esqueci de bater">' + l.esqueci + "</td>" +
             '<td class="n" data-r="Não confirmados">' + l.naoConfirmadas + '</td><td class="n" data-r="Não lembrados">' + l.dispensadas + '</td><td class="n" data-r="Ajustes">' + l.ajLancados + " lançado(s), " + l.ajPendentes + " pendente(s)</td></tr>";
         }).join("") + "</tbody></table></div>";
@@ -278,7 +280,7 @@
         ". Jornada geral: " + Pto_esc_(r.jornadaGeral) + '. Campos vazios na jornada da pessoa seguem a geral.</div>';
       h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Colaborador</th><th>Vínculo</th><th>Contato</th><th>Jornada</th><th>Situação</th><th></th></tr></thead><tbody>' +
         r.pessoas.map(function (p, k) {
-          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(p.nome) + '</b><div class="pt-mini">' + Pto_esc_(p.area) + '</div></td><td data-r="Vínculo">' + Pto_esc_(p.vinculo || "não informado") + "</td>" +
+          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(p.nome) + '</b><div class="pt-mini">' + Pto_esc_(p.area) + '</div></td><td data-r="Vínculo">' + Pto_esc_(Pto_vinculo_(p.vinculo, "não informado")) + "</td>" +
             '<td data-r="Contato">' + (p.celular ? "celular " + Pto_esc_(p.celular) : "sem celular") + (p.temEmail ? " · e-mail" : " · sem e-mail") + '</td><td data-r="Jornada">' + Pto_esc_(p.jornada) + (p.observacao ? '<div class="pt-mini">' + Pto_esc_(p.observacao) + "</div>" : "") + "</td>" +
             '<td data-r="Situação">' + (p.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(p.foraTexto) + "</div>") + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_editarPessoa_(' + k + ')">Ajustar</button></td></tr>';
         }).join("") + "</tbody></table></div>";

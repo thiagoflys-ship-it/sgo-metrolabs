@@ -22,8 +22,8 @@
  *             Z-API: messageId) } para quem recebeu — o bate-papo (SGO_ComunicacaoWhatsapp.js, origem BATE_PAPO)
  *             guarda esse id para a resposta da pessoa ("responder a") voltar para a conversa certa.
  *     categoria: 'PONTO' — opcional (19/10/2026). Mensagem do ponto (marcação, banco de horas,
- *             espelho) só vai para quem tem CAD_USUARIOS.VINCULO_TRABALHO = "CLT". PJ e vínculo
- *             vazio (e contato externo, que não tem vínculo) ficam PULADO em NTF_ENVIOS com o
+ *             espelho) só vai para quem tem CAD_USUARIOS.VINCULO_TRABALHO = "CLT". PJ, Diretoria (22/10/2026)
+ *             e vínculo vazio (e contato externo, que não tem vínculo) ficam PULADO em NTF_ENVIOS com o
  *             motivo. Sem categoria (ou qualquer outra) a mensagem vai para todos, inclusive PJ.
  *             Hoje o SGO+ não manda mensagem de ponto: é proteção para o futuro.
  *     categoria: 'ATIVIDADES' — (19/10/2026) WhatsApp de Minhas atividades: só vínculo liberado (padrão CLT),
@@ -150,7 +150,7 @@ function Notificar_contatos_(ids) {
       // CELULAR do cadastro de usuários vem PRIMEIRO; se vazio/inválido, tenta
       // WHATSAPP/TELEFONE e, por fim, Condutor (Frota) e Técnico (abaixo).
       telefone: Notificar_normalizarTelefone_(u.CELULAR) || Notificar_normalizarTelefone_(u.WHATSAPP) || Notificar_normalizarTelefone_(u.TELEFONE),
-      // Vínculo de trabalho (Usuários): "CLT", "PJ" ou "" — usado pela categoria PONTO.
+      // Vínculo de trabalho (Usuários): "CLT", "PJ", "DIRETORIA" ou "" — usado pela categoria PONTO e pela lista do WhatsApp.
       vinculo: String(u.VINCULO_TRABALHO || '').replace(/\s+/g, '').toUpperCase(),
       // perfil: usado pelo piloto do WhatsApp (liberar por área, SGO_WhatsappPiloto.js)
       perfil: SGO_UTILS.safeUpper(u.PERFIL)
@@ -525,12 +525,14 @@ function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros, botao) {
  * Só a categoria PONTO tem restrição; ela vale para todos os canais.
  */
 var NTF_MOTIVO_PONTO_PJ = 'PJ: mensagens do ponto não são enviadas';
+var NTF_MOTIVO_PONTO_DIRETORIA = 'Diretoria: mensagens do ponto não são enviadas';
 var NTF_MOTIVO_PONTO_SEM_VINCULO = 'vínculo de trabalho não informado';
 function Notificar_motivoCategoria_(categoria, contato) {
   if (String(categoria || '').trim().toUpperCase() !== 'PONTO') return '';
   var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
   if (v === 'CLT') return '';
   if (v === 'PJ') return NTF_MOTIVO_PONTO_PJ;
+  if (v === 'DIRETORIA') return NTF_MOTIVO_PONTO_DIRETORIA;
   return NTF_MOTIVO_PONTO_SEM_VINCULO;
 }
 
@@ -550,6 +552,7 @@ function Notificar_motivoAtividadesWhatsapp_(contato, enviadosHoje, agora) {
   var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
   if (lib.indexOf(v || 'VAZIO') < 0) {
     return v === 'PJ' ? 'PJ: atividades não são cobradas pelo WhatsApp (seguem no sistema e por e-mail)'
+      : v === 'DIRETORIA' ? 'Diretoria: atividades não são cobradas pelo WhatsApp (seguem no sistema e por e-mail; a gestão libera a Diretoria em Avisos e horários)'
       : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp de atividades' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); atividades seguem no sistema e por e-mail');
   }
   if (typeof SGO_dentroDoExpediente_ === 'function') {
@@ -571,6 +574,7 @@ function Notificar_motivoGestaoWhatsapp_(contato, enviadosHoje, agora) {
   var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
   if (lib.indexOf(v || 'VAZIO') < 0) {
     return v === 'PJ' ? 'PJ: o resumo da gestão não vai pelo WhatsApp (segue no sistema e por e-mail)'
+      : v === 'DIRETORIA' ? 'Diretoria: o resumo da gestão não vai pelo WhatsApp (segue no sistema e por e-mail; a gestão libera a Diretoria em Avisos e horários)'
       : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); o resumo segue no sistema e por e-mail');
   }
   if (typeof SGO_dentroDoExpediente_ === 'function') {
@@ -589,6 +593,7 @@ function Notificar_motivoFrotaReservasWhatsapp_(contato, enviadosHoje, agora) {
   var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
   if (lib.indexOf(v || 'VAZIO') < 0) {
     return v === 'PJ' ? 'PJ: avisos de reserva da Frota não vão pelo WhatsApp (seguem no sistema e por e-mail)'
+      : v === 'DIRETORIA' ? 'Diretoria: avisos de reserva da Frota não vão pelo WhatsApp (seguem no sistema e por e-mail; a gestão libera a Diretoria em Avisos e horários)'
       : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); o aviso segue no sistema e por e-mail');
   }
   if (typeof SGO_dentroDoExpediente_ === 'function') {

@@ -522,6 +522,7 @@ function SGO_avisoMotivoWhatsapp_(c, ctx) {
   var v = String((c && c.vinculo) || '').toUpperCase();
   if (lib.indexOf(v || 'VAZIO') < 0) {
     return v === 'PJ' ? 'PJ: pela matriz de avisos o WhatsApp é só para CLT (o aviso segue no sistema e por e-mail).'
+      : v === 'DIRETORIA' ? 'Diretoria: pela matriz de avisos o WhatsApp é só para CLT (o aviso segue no sistema e por e-mail; a gestão libera a Diretoria em Atividades da equipe > Avisos e horários).'
       : (v ? 'Vínculo ' + v + ' fora da lista do WhatsApp (Atividades da equipe > Avisos e horários).' : 'Vínculo de trabalho não informado (Administração > Usuários > Vínculo): o aviso segue no sistema e por e-mail.');
   }
   if (resumoDia) return '';
@@ -885,7 +886,7 @@ function SGO_resumoDiaRodada_(quando) {
       querWhats.forEach(function (u) {
         var reg = { USUARIO_ID: u.id, USUARIO_NOME: u.nome, DIA: dia, CANAL: 'whatsapp', ITENS: 0, CONTAGENS: '', AVALIADO_EM: agoraTxt };
         var v = vinculos[u.id] || '';
-        if (lib.indexOf(v || 'VAZIO') < 0) { reg.SITUACAO = 'SEM_WHATSAPP'; reg.MOTIVO = v === 'PJ' ? 'PJ: o resumo vai só por e-mail' : 'vínculo ' + (v || 'não informado') + ': o resumo vai só por e-mail'; regs.push(reg); return; }
+        if (lib.indexOf(v || 'VAZIO') < 0) { reg.SITUACAO = 'SEM_WHATSAPP'; reg.MOTIVO = v === 'PJ' ? 'PJ: o resumo vai só por e-mail' : v === 'DIRETORIA' ? 'Diretoria: o resumo vai só por e-mail (a gestão libera a Diretoria em Avisos e horários)' : 'vínculo ' + (v || 'não informado') + ': o resumo vai só por e-mail'; regs.push(reg); return; }
         if (!Mtz_prefsDe_(u.id, prefs).whatsResumo) { reg.SITUACAO = 'DESLIGADO_PELA_PESSOA'; reg.MOTIVO = 'a pessoa desligou o WhatsApp de resumo em Meus avisos'; regs.push(reg); return; }
         if (Mtz_abriuHoje_(u, dia, acessos)) { reg.SITUACAO = 'ABRIU_O_SISTEMA'; reg.MOTIVO = 'a pessoa já abriu o sistema hoje'; regs.push(reg); return; }
         var m = montar(u);
@@ -1170,12 +1171,15 @@ function SGO_MeusAvisos_api(sessionId, acao, dados) {
     var u = null;
     try { u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, eu.id); } catch (e) { u = null; }
     var vinculo = String((u && u.VINCULO_TRABALHO) || '').replace(/\s+/g, '').toUpperCase();
+    // 22/10/2026: liberado = vínculo na lista de Avisos e horários (padrão só CLT; a gestão pode liberar PJ ou Diretoria).
+    var cfgVinc = typeof Atividades_avisosCfg_ === 'function' ? Atividades_avisosCfg_() : { vinculosWhatsapp: ['CLT'] };
+    var libVinc = (cfgVinc.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
     var cfg = Mtz_cfg_();
     var regras = Mtz_regras_();
     var excecoes = ['S35', 'S36', 'S41', 'S44'].map(function (c) { return regras[c]; }).filter(function (r) { return r && r.whatsapp === 'HORA'; }).map(function (r) { return r.evento; });
     return {
       ok: true, prefs: { whatsResumo: p.whatsResumo, horaEmail: p.horaEmail, emailInformativos: p.emailInformativos, silenciar: p.silenciar },
-      alteradoEm: Mtz_br_(p.alteradoEm || ''), vinculo: vinculo, whatsLiberado: vinculo === 'CLT', temEmail: !!(u && String(u.EMAIL || '').indexOf('@') > 0), temCelular: !!(u && String(u.CELULAR || '').replace(/\D/g, '')),
+      alteradoEm: Mtz_br_(p.alteradoEm || ''), vinculo: vinculo, vinculoRotulo: typeof SGO_rotuloVinculo_ === 'function' ? SGO_rotuloVinculo_(vinculo) : vinculo, whatsLiberado: libVinc.indexOf(vinculo || 'VAZIO') >= 0, temEmail: !!(u && String(u.EMAIL || '').indexOf('@') > 0), temCelular: !!(u && String(u.CELULAR || '').replace(/\D/g, '')),
       horas: { email: cfg.horaEmail, emailAlternativa: MTZ_CFG_PADRAO.horaEmailAlternativa, whats: cfg.horaWhats }, whatsResumoLigado: cfg.whatsResumo,
       silenciaveis: MTZ_MODULOS_SILENCIAVEIS, excecoesWhats: excecoes,
       message: acao === 'salvar' ? 'Preferências salvas. Valem a partir do próximo resumo.' : ''

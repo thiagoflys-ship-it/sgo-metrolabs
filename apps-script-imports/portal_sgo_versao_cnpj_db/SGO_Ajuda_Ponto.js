@@ -10,7 +10,7 @@ function SGO_ajudaTelas_Ponto_() {
       paraQueServe: 'Lembra o colaborador CLT de bater o ponto, na hora de cada marcação, e leva o "Esqueci de bater" ao RH como pedido de ajuste. O ponto oficial continua sendo o relógio da empresa (em viagem, o aplicativo de ponto que o RH libera): o SGO+ não sabe quem bateu, só recebe a confirmação de um toque. O RH trata os pedidos, a gestão acompanha a equipe e cada pessoa vê os próprios lembretes.',
       antesDeComecar: [
         'O assistente nasce desligado. Quem liga é o Administrador ou a Diretoria, na aba "Configuração".',
-        'Só recebe quem é CLT: o vínculo fica em Administração > Usuários > Vínculo. PJ nunca recebe nada do ponto.',
+        'Só recebe quem é CLT: o vínculo fica em Administração > Usuários > Vínculo. PJ e Diretoria nunca recebem nada do ponto.',
         'Durante o piloto do WhatsApp, só as pessoas da lista do piloto participam (Administração > Piloto do WhatsApp).',
         'O lembrete chega pelo WhatsApp oficial da empresa, com o botão "Confirmar". Sem o WhatsApp (modelo ainda não aprovado ou sem celular), chega por e-mail.'
       ],

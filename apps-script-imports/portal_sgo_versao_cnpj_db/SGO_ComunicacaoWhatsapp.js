@@ -160,7 +160,7 @@ function SGO_comWhatsappExec_(agoraMs) {
         var conta = comWaContagem_(ss, pid, agoraMs);
         if (conta.hora >= cfg.limite_hora || conta.dia >= cfg.limite_dia) { r.esperando++; return; }   // espera e entra agrupado no próximo aviso
         var v = String(c.vinculo || '').toUpperCase(), porEmail = '';
-        if (liberados.indexOf(v || 'VAZIO') < 0) porEmail = v === 'PJ' ? 'PJ: o aviso do bate-papo vai por e-mail, não pelo WhatsApp' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo): o aviso vai por e-mail';
+        if (liberados.indexOf(v || 'VAZIO') < 0) porEmail = v === 'PJ' ? 'PJ: o aviso do bate-papo vai por e-mail, não pelo WhatsApp' : v === 'DIRETORIA' ? 'Diretoria: o aviso do bate-papo vai por e-mail, não pelo WhatsApp (a gestão libera a Diretoria em Avisos e horários)' : v ? 'vínculo ' + v + ' fora da lista do WhatsApp: o aviso vai por e-mail' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo): o aviso vai por e-mail';
         else if (!c.telefone) porEmail = 'sem celular no cadastro (Administração > Usuários > Celular): o aviso vai por e-mail';
         else if (!prov.provedor) porEmail = 'WhatsApp da empresa não configurado (' + String(prov.motivo || 'Chaves e senhas') + '): o aviso vai por e-mail';
         else if (prov.provedor === 'meta') {

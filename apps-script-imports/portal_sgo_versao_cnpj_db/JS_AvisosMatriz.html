@@ -222,7 +222,7 @@
         linha("Pessoas-dia acima da meta de e-mail", a.pessoasDiasAcimaMetaEmail, d.pessoasDiasAcimaMetaEmail, "zero") +
         linha("Pessoas-dia acima da meta de WhatsApp", a.pessoasDiasAcimaMetaWhatsapp, d.pessoasDiasAcimaMetaWhatsapp, "zero") +
         linha("WhatsApp fora do expediente", a.whatsForaExpediente, d.whatsForaExpediente, "zero") +
-        linha("WhatsApp para PJ ou vínculo vazio", a.whatsPjOuVazio, d.whatsPjOuVazio, "zero") +
+        linha("WhatsApp para PJ, Diretoria ou vínculo vazio", a.whatsPjOuVazio, d.whatsPjOuVazio, "zero") +
         linha("WhatsApp do COMMAND (relatório do piloto)", a.whatsappCommand, d.whatsappCommand, "zero: o COMMAND fica no próprio sino") +
         linha("Retidas pelo piloto ou bloqueadas pelo servidor", a.retidos, d.retidos, "mostra quanto sairia sem o piloto") +
         linha("E-mails guardados para o resumo", a.noResumo, d.noResumo) +
@@ -251,8 +251,9 @@
     var c = document.getElementById("maCorpo"), d = MTZ.meus, esc = Mtz_esc_;
     if (!c || !d) return;
     var p = d.prefs;
-    var whatsTxt = d.whatsLiberado ? (d.temCelular ? "Você é CLT e tem celular no cadastro: pode receber o WhatsApp de resumo do dia (enquanto durar o piloto, só quem está na lista do piloto recebe)." : "Você é CLT, mas está sem celular no cadastro: peça ao Administrador para completar em Administração > Usuários.")
-      : (d.vinculo === "PJ" ? "Seu vínculo é PJ: você recebe pelo sistema e por e-mail, sem WhatsApp." : "Seu vínculo de trabalho não está informado no cadastro: até o RH ou o Administrador informar, você recebe só pelo sistema e por e-mail.");
+    var vincRot = d.vinculoRotulo || ({ CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" })[d.vinculo] || "Não informado";
+    var whatsTxt = d.whatsLiberado ? (d.temCelular ? "Seu vínculo é " + vincRot + ", liberado para o WhatsApp, e você tem celular no cadastro: pode receber o WhatsApp de resumo do dia (enquanto durar o piloto, só quem está na lista do piloto recebe)." : "Seu vínculo é " + vincRot + ", liberado para o WhatsApp, mas você está sem celular no cadastro: peça ao Administrador para completar em Administração > Usuários.")
+      : (d.vinculo === "PJ" || d.vinculo === "DIRETORIA" ? "Seu vínculo é " + vincRot + ": você recebe pelo sistema e por e-mail, sem WhatsApp." : "Seu vínculo de trabalho não está informado no cadastro: até o RH ou o Administrador informar, você recebe só pelo sistema e por e-mail.");
     var silencio = Object.keys(d.silenciaveis).map(function (m) { return '<label class="mtz-check"><input type="checkbox" class="ma-sil" value="' + esc(m) + '"' + (p.silenciar.indexOf(m) >= 0 ? " checked" : "") + '> Tirar do e-mail de resumo: ' + esc(d.silenciaveis[m]) + '</label>'; }).join("");
     var hora = p.horaEmail || d.horas.email;
     c.innerHTML =

@@ -15,11 +15,14 @@
     var k = String(p || "").toUpperCase();
     return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH", CLIENTE: "Cliente" })[k] || p;
   }
-  // Vínculo de trabalho (19/10/2026): CAD_USUARIOS.VINCULO_TRABALHO = "CLT", "PJ" ou vazio.
-  function Usuarios_rotuloVinculo_(v) { var k = String(v || "").toUpperCase(); return k === "CLT" ? "CLT" : k === "PJ" ? "PJ" : "Não informado"; }
+  // Vínculo de trabalho (19/10/2026): CAD_USUARIOS.VINCULO_TRABALHO = "CLT", "PJ", "DIRETORIA" (22/10/2026) ou vazio.
+  var USUARIOS_VINCULOS = [["CLT", "CLT"], ["PJ", "PJ"], ["DIRETORIA", "Diretoria"]];
+  function Usuarios_rotuloVinculo_(v) { var k = String(v || "").replace(/\s+/g, "").toUpperCase(); var o = USUARIOS_VINCULOS.filter(function (x) { return x[0] === k; })[0]; return o ? o[1] : "Não informado"; }
   function Usuarios_seloVinculo_(u) {
-    var k = String(u.VINCULO_TRABALHO || "").toUpperCase();
-    if (k === "CLT" || k === "PJ") return '<span class="cadx-chip tom-info">' + k + "</span>";
+    var k = String(u.VINCULO_TRABALHO || "").replace(/\s+/g, "").toUpperCase();
+    if (USUARIOS_VINCULOS.some(function (x) { return x[0] === k; })) return '<span class="cadx-chip tom-info">' + CadUI_esc_(Usuarios_rotuloVinculo_(k)) + "</span>";
+    // 22/10/2026: conta da Diretoria sem vínculo: o sistema sugere (e preenche sozinho na rotina).
+    if (u.VINCULO_SUGERIDO) return '<span class="cadx-chip tom-alerta" title="Conta da Diretoria sem vínculo de trabalho: o sistema sugere Diretoria. Confirme em Editar ou aguarde a rotina preencher.">' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + "?</span>";
     return String(u.PERFIL).toUpperCase() === "CLIENTE" ? '<span class="cadx-sub">Não se aplica</span>' : '<span class="cadx-sub">Não informado</span>';
   }
   // Celular (WhatsApp): mostra "(11) 98765-4321"; grava só dígitos com 55 na frente.
@@ -342,7 +345,7 @@
         "<li><b>Quem cria e altera contas</b>: Administrador, Diretoria, Gestor, RH e Financeiro (perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente). Os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria. Ninguém muda o próprio perfil.</li>" +
         "<li><b>RH</b> faz a rotina da empresa como o Gestor (usuários, áreas, cadastros, frota, avisos, atividades, ponto). Não abre documentos técnicos, o Comercial, Configurações nem Chaves e senhas.</li>" +
         "<li><b>Área</b> (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez aqui e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. O botão <i>Áreas</i> mostra quem está sem área e permite criar ou corrigir áreas.</li>" +
-        "<li><b>Vínculo de trabalho</b> (CLT, PJ ou Não informado): mensagens do ponto só vão para quem é CLT. PJ e Não informado não recebem; os outros avisos chegam para todos.</li>" +
+        "<li><b>Vínculo de trabalho</b> (CLT, PJ, Diretoria ou Não informado): mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Conta com perfil Diretoria e sem vínculo recebe a sugestão <i>Diretoria?</i> e é preenchida pela rotina do sistema.</li>" +
         "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
         "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
         "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Excluir de vez é só do Administrador e da Diretoria.</li>" +
@@ -353,7 +356,7 @@
         { id: "inativos", rotulo: "Inativos", filtro: function (u) { return u.STATUS !== "ATIVO"; } },
         { id: "semcel", rotulo: "Sem celular (ativos)", tom: "tom-alerta", dica: "Ativos sem celular: não recebem WhatsApp nem usam o Assistente do ponto do COMMAND.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE"; } },
         { id: "gestao", rotulo: "Administração e gestão", filtro: function (u) { return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(u.PERFIL).toUpperCase()) >= 0; } },
-        { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT ou PJ informado: não recebe as mensagens do ponto.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.VINCULO_TRABALHO; } },
+        { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT, PJ ou Diretoria informado: não recebe as mensagens do ponto. Conta da Diretoria sem vínculo não entra aqui: o sistema preenche Diretoria sozinho.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.VINCULO_TRABALHO && !u.VINCULO_SUGERIDO; } },
         { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.AREA && String(u.USUARIO).toLowerCase() !== "admin"; } },
         { id: "nunca", rotulo: "Nunca entraram", filtro: function (u) { return u.STATUS === "ATIVO" && !u.ULTIMO_ACESSO; } }
       ],
@@ -361,13 +364,13 @@
         { id: "perfil", rotulo: "Todos os perfis", opcoes: function (its) { return CadTela_opcoesDe_(its, "PERFIL", "PERFIL").map(function (o) { return [o[0], SGO_rotuloPerfil_(o[0])]; }); }, aplicar: function (u, v) { return String(u.PERFIL).toUpperCase() === v.toUpperCase(); } },
         { id: "situacao", rotulo: "Todas as situações", opcoes: function () { return [["ATIVO", "Ativos"], ["INATIVO", "Inativos"]]; }, aplicar: function (u, v) { return v === "ATIVO" ? u.STATUS === "ATIVO" : u.STATUS !== "ATIVO"; } },
         { id: "area", rotulo: "Todas as áreas", opcoes: function (its) { var m = {}; its.forEach(function (u) { if (u.AREA) m[u.AREA] = u.AREA_NOME || u.AREA; }); return Object.keys(m).sort(function (a, b) { return m[a].localeCompare(m[b], "pt-BR"); }).map(function (k) { return [k, m[k]]; }).concat([["-", "Sem área"]]); }, aplicar: function (u, v) { return v === "-" ? !u.AREA && String(u.PERFIL).toUpperCase() !== "CLIENTE" : u.AREA === v; } },
-        { id: "vinculo", rotulo: "Todos os vínculos", opcoes: function () { return [["CLT", "CLT"], ["PJ", "PJ"], ["NI", "Não informado"]]; }, aplicar: function (u, v) { return v === "NI" ? !u.VINCULO_TRABALHO : String(u.VINCULO_TRABALHO || "").toUpperCase() === v; } }
+        { id: "vinculo", rotulo: "Todos os vínculos", opcoes: function () { return USUARIOS_VINCULOS.concat([["NI", "Não informado"]]); }, aplicar: function (u, v) { return v === "NI" ? !u.VINCULO_TRABALHO : String(u.VINCULO_TRABALHO || "").replace(/\s+/g, "").toUpperCase() === v; } }
       ],
       ordenar: [
         { id: "nome", rotulo: "Ordenar por nome", fn: null },
         { id: "acesso", rotulo: "Último acesso mais recente", fn: function (a, b) { return String(b.ULTIMO_ACESSO || "").localeCompare(String(a.ULTIMO_ACESSO || "")); } }
       ],
-      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO, u.AREA_NOME].join(" "); },
+      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO, Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO), u.AREA_NOME].join(" "); },
       acao: soConsulta ? null : { texto: "Novo usuário", fn: function () { Usuarios_formulario_(null); } },
       vazioTitulo: "Nenhum usuário além de você.", vazio: "Clique em Novo usuário para dar acesso a alguém.",
       colunas: [
@@ -435,6 +438,7 @@
         return (semCel && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem celular.</b> Esta pessoa não recebe avisos por WhatsApp e não consegue usar o Assistente do ponto do COMMAND. Clique em Editar e informe o celular com DDD.</div>' : "") +
           (!u.PODE_ALTERAR ? '<div class="cadx-faixa bc-faixa tom-info">Conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir.</div>' : "") +
           (u.STATUS !== "ATIVO" ? '<div class="cadx-faixa bc-faixa">Acesso bloqueado (inativo). Para liberar, use Mais › Reativar.</div>' : "") +
+          (u.VINCULO_SUGERIDO ? '<div class="cadx-faixa bc-faixa tom-info"><b>Vínculo: ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '?</b> Esta conta é da Diretoria e está sem vínculo de trabalho. O sistema preenche Diretoria sozinho na rotina diária; para fazer agora, clique em Editar e confirme o Vínculo de trabalho.</div>' : "") +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["Login", u.USUARIO]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["E-mail", u.EMAIL], ["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" ? "Não se aplica (cliente)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
@@ -511,8 +515,8 @@
             opcoes: [["", "Sem área"]].concat(((st.extra && st.extra.areas) || []).map(function (a) { return [a.CODIGO, a.NOME]; }))
               .concat(u.AREA && !((st.extra && st.extra.areas) || []).some(function (a) { return a.CODIGO === String(u.AREA).toUpperCase(); }) ? [[String(u.AREA).toUpperCase(), (u.AREA_NOME || u.AREA) + " (inativa)"]] : []),
             dica: "Preencha uma vez: o Programa de conduta e os indicadores de qualidade leem daqui. Para criar uma área, use o botão Áreas da lista." }),
-          CadUI_campo_({ id: "usr_vinculo", rotulo: "Vínculo de trabalho", tipo: "select", valor: String(u.VINCULO_TRABALHO || "").toUpperCase(), opcoes: [["", "Não informado"], ["CLT", "CLT"], ["PJ", "PJ"]],
-            dica: "Mensagens do ponto só vão para quem é CLT. PJ e Não informado não recebem; os outros avisos chegam para todos." })
+          CadUI_campo_({ id: "usr_vinculo", rotulo: "Vínculo de trabalho", tipo: "select", valor: String(u.VINCULO_TRABALHO || u.VINCULO_SUGERIDO || "").replace(/\s+/g, "").toUpperCase(), opcoes: [["", "Não informado"]].concat(USUARIOS_VINCULOS),
+            dica: u.VINCULO_SUGERIDO ? "Sugerido pelo perfil Diretoria (a conta estava sem vínculo): confira e salve." : "Mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Ao escolher o perfil Diretoria com o vínculo vazio, Diretoria é sugerida." })
         ]) +
         CadUI_secao_("Acesso", [
           CadUI_campo_({ id: "usr_perfil", rotulo: "Perfil de acesso", obrigatorio: true, tipo: "select", valor: String(u.PERFIL || "").toUpperCase(), opcoes: [["", "Escolha o perfil"]].concat(perfis.map(function (p) { return [String(p).toUpperCase(), SGO_rotuloPerfil_(p)]; })),
@@ -540,6 +544,8 @@
         // Área (19/10/2026): ao escolher um perfil que diz a área, ela é sugerida se o campo estiver vazio.
         var areaPorPerfil = { COMERCIAL: "COMERCIAL", FINANCEIRO: "FINANCEIRO", RH: "RH", DIRETORIA: "DIRETORIA", METROLOGIA: "METROLOGIA", TECNICO: "TECNICA" };
         perfilSel.addEventListener("change", function () { var a = p.querySelector("#usr_area"); if (a && !a.value && areaPorPerfil[perfilSel.value] && a.querySelector('option[value="' + areaPorPerfil[perfilSel.value] + '"]')) a.value = areaPorPerfil[perfilSel.value]; });
+        // Vínculo (22/10/2026): perfil Diretoria com o vínculo vazio sugere "Diretoria" (quem salva confere; nunca troca um vínculo já escolhido).
+        perfilSel.addEventListener("change", function () { var v = p.querySelector("#usr_vinculo"); if (v && !v.value && perfilSel.value === "DIRETORIA") { v.value = "DIRETORIA"; CadUI_erroCampo_("usr_vinculo", ""); } });
         p.querySelector("#usr_celular").addEventListener("input", function (e) { e.target.value = usuariosMascaraCelular_(e.target.value); });
         p.querySelector("#usr_usuario").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
         CadUI_chamar_("usuariosListarClientesAtivos", [], function (res) {

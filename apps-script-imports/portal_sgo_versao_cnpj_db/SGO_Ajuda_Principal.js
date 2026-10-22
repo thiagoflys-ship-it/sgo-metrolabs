@@ -565,7 +565,7 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Toque em \"Avisos e horários\", no alto da tela.",
             "Confira o horário de trabalho, os dias de trabalho e os feriados estaduais, municipais e de recesso.",
-            "Confira quem recebe o resumo pelo WhatsApp (padrão: só CLT). As horas do resumo do dia ficam em Administração > Matriz de avisos.",
+            "Confira quem recebe o resumo pelo WhatsApp (padrão: só CLT; PJ e Diretoria só se a gestão marcar). As horas do resumo do dia ficam em Administração > Matriz de avisos.",
             "Toque em \"Salvar\".",
             "Em \"Resumos de hoje\", veja para quem o resumo saiu, quem não tinha novidade e o motivo de quem não recebeu."
           ]
@@ -676,7 +676,7 @@ function SGO_ajudaTelas_Principal_() {
         ] }
       ],
       cores: [
-        { nome: "Caixa de WhatsApp apagada", significado: "Você não é CLT, está sem vínculo informado ou o WhatsApp de resumo está desligado para todos. Você recebe pelo sistema e por e-mail." }
+        { nome: "Caixa de WhatsApp apagada", significado: "Seu vínculo (PJ ou Diretoria) não está liberado para o WhatsApp, você está sem vínculo informado ou o WhatsApp de resumo está desligado para todos. Você recebe pelo sistema e por e-mail." }
       ],
       problemas: [
         { situacao: "Não chega o e-mail de resumo", oQueFazer: "Confira se o seu cadastro tem e-mail (aviso em vermelho na tela). Dia sem nada para você não tem e-mail." },

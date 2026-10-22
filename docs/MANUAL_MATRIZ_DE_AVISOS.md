@@ -22,7 +22,7 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 
 ## 3. Regras gerais que valem para todo envio
 
-- WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo). PJ e vínculo não informado recebem pelo sistema e por e-mail. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.
+- WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). PJ, Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.
 - WhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.
 - Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).
 - Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).

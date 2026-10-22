@@ -158,3 +158,169 @@ test('perfil Diretoria (19/10/2026): Administrador e Diretoria dão; Gestor não
   assert.equal(s.SGO_USUARIOS.criar('D', { USUARIO: 'eva', NOME: 'Eva', EMAIL: 'eva@x.com.br', PERFIL: 'DIRETORIA', SENHA: '123456' }).success, true);
   assert.equal(s.SGO_USUARIOS.atualizar('D', 'u2', { PERFIL: 'ADMIN' }).success, false);
 });
+
+// ------------------------------------------------------------
+// Vínculo DIRETORIA (22/10/2026, pedido do dono): a empresa tem CLT, PJ e Diretoria.
+// ------------------------------------------------------------
+// Listas vindas do contexto isolado têm outro Array: comparar pelo conteúdo.
+const j = (x) => JSON.parse(JSON.stringify(x));
+function contextoDiretoria(extra) {
+  const usuarios = equipe().concat([
+    { ID: 'a1', USUARIO: 'admin', NOME: 'THIAGO', PERFIL: 'ADMIN', EMAIL: 'a@x.com.br', STATUS: 'ATIVO', VINCULO_TRABALHO: '' },
+    { ID: 'd1', USUARIO: 'charles', NOME: 'CHARLES', PERFIL: 'DIRETORIA', EMAIL: 'c@x.com.br', CELULAR: '5511987654324', STATUS: 'ATIVO', VINCULO_TRABALHO: '' },
+    { ID: 'd2', USUARIO: 'dirclt', NOME: 'DIRETORA CLT', PERFIL: 'DIRETORIA', EMAIL: 'dc@x.com.br', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'd3', USUARIO: 'dirok', NOME: 'DIRETOR JA INFORMADO', PERFIL: 'DIRETORIA', EMAIL: 'do@x.com.br', CELULAR: '5511987654325', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'c1', USUARIO: 'cli', NOME: 'CLIENTE', PERFIL: 'CLIENTE', CLIENTE_ID: 'x', EMAIL: 'cli@x.com.br', STATUS: 'ATIVO', VINCULO_TRABALHO: '' },
+  ].concat(extra || []));
+  const ses = Object.assign({}, sessoes, { A: { userId: 'a1', usuario: 'admin', perfil: 'ADMIN' }, D: { userId: 'd1', usuario: 'charles', perfil: 'DIRETORIA' } });
+  const amb = contexto(usuarios, ses);
+  const props = {}, logs = [];
+  amb.s.PropertiesService = { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) };
+  amb.s.SGO_DATA.log = (acao, usuario, detalhe, modulo) => logs.push({ acao, usuario, detalhe, modulo });
+  return Object.assign(amb, { props, logs });
+}
+
+test('DIRETORIA: aceito na normalização (qualquer caixa), rótulo "Diretoria", valor estranho continua recusado', () => {
+  const { s, tabelas } = contextoDiretoria();
+  const u = (id) => tabelas.CAD_USUARIOS.find((x) => x.ID === id);
+  assert.equal(s.SGO_USUARIOS.atualizar('A', 'u3', { VINCULO_TRABALHO: 'Diretoria' }).success, true);
+  assert.equal(u('u3').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.equal(s.SGO_USUARIOS.criar('A', { USUARIO: 'novo.dir', NOME: 'Novo', EMAIL: 'nd@x.com.br', PERFIL: 'DIRETORIA', SENHA: '123456', VINCULO_TRABALHO: ' diretoria ' }).success, true);
+  assert.equal(tabelas.CAD_USUARIOS.find((x) => x.USUARIO === 'novo.dir').VINCULO_TRABALHO, 'DIRETORIA');
+  const ruim = s.SGO_USUARIOS.atualizar('A', 'u3', { VINCULO_TRABALHO: 'DIRETOR' });
+  assert.equal(ruim.success, false);
+  assert.match(ruim.message, /escolha CLT, PJ, Diretoria ou Não informado/);
+  assert.equal(u('u3').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.deepEqual(j(s.SGO_VINCULOS_TRABALHO), ['CLT', 'PJ', 'DIRETORIA']);
+  assert.equal(s.SGO_rotuloVinculo_('DIRETORIA'), 'Diretoria');
+  assert.equal(s.SGO_rotuloVinculo_(' diretoria '), 'Diretoria');
+  assert.equal(s.SGO_rotuloVinculo_('PJ'), 'PJ');
+  assert.equal(s.SGO_rotuloVinculo_(''), 'Não informado');
+  assert.equal(s.SGO_rotuloVinculo_('XYZ'), 'Não informado');
+});
+
+test('DIRETORIA: categoria PONTO não vai (como PJ), com o motivo próprio; as outras categorias vão', () => {
+  const { s, tabelas, emails } = contextoDiretoria();
+  s.SGO_notificar_({ usuarios: ['u1', 'd3'], titulo: 'Marcação do ponto', texto: 'Teste', canais: ['email', 'whatsapp'], categoria: 'PONTO', origem: 'PONTO', refId: 'p9' });
+  assert.deepEqual(emails, ['ana@x.com.br']);
+  const l = tabelas.NTF_ENVIOS.find((x) => x.USUARIO_ID === 'd3' && x.CANAL === 'whatsapp');
+  assert.equal(l.SITUACAO, 'PULADO');
+  assert.equal(l.MOTIVO, 'Diretoria: mensagens do ponto não são enviadas');
+  assert.equal(s.Notificar_motivoCategoria_('PONTO', { vinculo: 'DIRETORIA' }), 'Diretoria: mensagens do ponto não são enviadas');
+  assert.equal(s.Notificar_motivoCategoria_('FROTA', { vinculo: 'DIRETORIA' }), '');
+  s.SGO_notificar_({ usuarios: ['d3'], titulo: 'Relatório da gestão', texto: 'Teste', canais: ['email'], categoria: 'GESTAO_RELATORIO', refId: 'g9' });
+  assert.deepEqual(emails, ['ana@x.com.br', 'do@x.com.br']);
+});
+
+test('DIRETORIA: WhatsApp de atividades, gestão e Frota só se a gestão liberar o vínculo (padrão só CLT)', () => {
+  const { s } = contextoDiretoria();
+  const dir = { id: 'd3', vinculo: 'DIRETORIA' };
+  s.Atividades_avisosCfg_ = () => ({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'] });
+  assert.match(s.Notificar_motivoAtividadesWhatsapp_(dir, {}, new Date()), /^Diretoria: atividades não são cobradas pelo WhatsApp/);
+  assert.match(s.Notificar_motivoGestaoWhatsapp_(dir, {}, new Date()), /^Diretoria: o resumo da gestão não vai pelo WhatsApp/);
+  assert.match(s.Notificar_motivoFrotaReservasWhatsapp_(dir, {}, new Date()), /^Diretoria: avisos de reserva da Frota não vão pelo WhatsApp/);
+  s.Atividades_avisosCfg_ = () => ({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT', 'DIRETORIA'] });
+  assert.equal(s.Notificar_motivoAtividadesWhatsapp_(dir, {}, new Date()), '');
+  assert.equal(s.Notificar_motivoGestaoWhatsapp_(dir, {}, new Date()), '');
+  assert.equal(s.Notificar_motivoFrotaReservasWhatsapp_(dir, {}, new Date()), '');
+  assert.match(s.Notificar_motivoAtividadesWhatsapp_({ id: 'u2', vinculo: 'PJ' }, {}, new Date()), /^PJ: /);
+  // A configuração real (SGO_Atividades_Avisos.js) aceita DIRETORIA na lista e descarta o que não existe; o padrão segue só CLT.
+  const atv = ler('SGO_Atividades_Avisos.js');
+  const ctx = { PropertiesService: { getScriptProperties: () => ({ getProperty: () => JSON.stringify({ vinculosWhatsapp: ['clt', 'DIRETORIA', 'ESTAGIO'] }) }) }, SGO_expedienteHoraValida_: () => false };
+  vm.createContext(ctx);
+  vm.runInContext(atv.match(/var ATV_AVISOS_CFG_PADRAO[\s\S]*?var ATV_VINCULOS_OPCOES = [^\n]*\n/)[0], ctx);
+  vm.runInContext(atv.match(/function Atividades_avisosCfg_\(\) \{[\s\S]*?\n\}\n/)[0], ctx);
+  assert.deepEqual(j(ctx.ATV_VINCULOS_OPCOES), ['CLT', 'PJ', 'DIRETORIA', 'VAZIO']);
+  assert.deepEqual(j(ctx.Atividades_avisosCfg_().vinculosWhatsapp), ['CLT', 'DIRETORIA']);
+  assert.deepEqual(j(ctx.ATV_AVISOS_CFG_PADRAO.vinculosWhatsapp), ['CLT']);
+});
+
+test('DIRETORIA: o Assistente do ponto não lembra (como PJ), com texto próprio', () => {
+  const src = ler('SGO_Ponto_Config.js');
+  const ctx = { Pto_s_: (v) => (v === null || v === undefined ? '' : String(v).trim()), Pto_verdade_: (v) => v === true || /^(SIM|TRUE|1)$/i.test(String(v)) };
+  vm.createContext(ctx);
+  vm.runInContext(src.match(/var PONTO_FORA_TEXTO = \{[\s\S]*?\n\};\n/)[0], ctx);
+  vm.runInContext(src.match(/function Ponto_motivoFora_\([\s\S]*?\n\}\n/)[0], ctx);
+  const base = { ativo: true, sistema: false, celular: '5511999999999' };
+  assert.equal(ctx.Ponto_motivoFora_(Object.assign({}, base, { vinculo: 'DIRETORIA' }), null, null, {}), 'DIRETORIA');
+  assert.equal(ctx.PONTO_FORA_TEXTO.DIRETORIA, 'Diretoria: não recebe nada do ponto');
+  assert.equal(ctx.Ponto_motivoFora_(Object.assign({}, base, { vinculo: 'PJ' }), null, null, {}), 'PJ');
+  assert.equal(ctx.Ponto_motivoFora_(Object.assign({}, base, { vinculo: '' }), null, null, {}), 'SEM_VINCULO');
+  assert.match(ctx.PONTO_FORA_TEXTO.SEM_VINCULO, /CLT, PJ ou Diretoria/);
+  assert.equal(ctx.Ponto_motivoFora_(Object.assign({}, base, { vinculo: 'CLT' }), null, null, {}), '');
+});
+
+test('DIRETORIA: saneamento preenche só o vínculo vazio de quem tem perfil Diretoria (ou é o responsável pelo sistema), uma vez, com auditoria', () => {
+  const { s, tabelas, props, logs } = contextoDiretoria();
+  const u = (id) => tabelas.CAD_USUARIOS.find((x) => x.ID === id);
+  assert.equal(s.Usuarios_vinculoSugerido_(u('d1')), 'DIRETORIA');
+  assert.equal(s.Usuarios_vinculoSugerido_(u('a1')), 'DIRETORIA');   // login admin = responsável pelo sistema (SGO_DONOS)
+  assert.equal(s.Usuarios_vinculoSugerido_(u('d2')), '');            // já informado (CLT): nunca sobrescreve
+  assert.equal(s.Usuarios_vinculoSugerido_(u('u3')), '');            // técnico sem vínculo: não é da Diretoria
+  assert.equal(s.Usuarios_vinculoSugerido_(u('c1')), '');            // cliente: não se aplica
+  const r = s.Usuarios_saneamentoVinculoDiretoria_();
+  assert.equal(r.aplicado, true);
+  assert.deepEqual(j(r.logins).sort(), ['admin', 'charles']);
+  assert.equal(u('d1').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.equal(u('a1').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.equal(u('d2').VINCULO_TRABALHO, 'CLT');
+  assert.equal(u('d3').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.equal(u('u3').VINCULO_TRABALHO, '');
+  assert.equal(u('c1').VINCULO_TRABALHO, '');
+  assert.equal(u('d1').NOME, 'CHARLES');   // só o vínculo muda
+  const aud = logs.filter((l) => l.acao === 'USUARIOS_VINCULO_AUTO');
+  assert.ok(aud.every((l) => l.usuario === 'sistema' && l.modulo === 'USUARIOS'));
+  assert.ok(aud.some((l) => /charles/.test(l.detalhe) && /perfil Diretoria/.test(l.detalhe)));
+  assert.ok(aud.some((l) => /admin/.test(l.detalhe) && /responsável pelo sistema/.test(l.detalhe)));
+  assert.equal(props.USR_VINCULO_DIRETORIA_20261022, '1');
+  // Segunda chamada: não roda de novo (nem mexe em quem ficou sem vínculo depois).
+  tabelas.CAD_USUARIOS.push({ ID: 'd4', USUARIO: 'dirdepois', NOME: 'DEPOIS', PERFIL: 'DIRETORIA', EMAIL: 'dd@x.com.br', STATUS: 'ATIVO', VINCULO_TRABALHO: '' });
+  const r2 = s.Usuarios_saneamentoVinculoDiretoria_();
+  assert.equal(r2.aplicado, false);
+  assert.deepEqual(j(r2.logins), []);
+  assert.equal(u('d4').VINCULO_TRABALHO, '');
+  assert.equal(s.Usuarios_vinculoSugerido_(u('d4')), 'DIRETORIA');   // a tela continua sugerindo
+});
+
+test('DIRETORIA: a tela Usuários (usuariosPainel) aplica o saneamento ao abrir, devolve o rótulo e a sugestão', () => {
+  const { s, tabelas } = contextoDiretoria();
+  const r = s.usuariosPainel('A');
+  assert.equal(r.success, true);
+  const it = (id) => r.items.find((x) => x.ID === id);
+  assert.equal(it('d1').VINCULO_TRABALHO, 'DIRETORIA');
+  assert.equal(it('d1').VINCULO_ROTULO, 'Diretoria');
+  assert.equal(it('d1').VINCULO_SUGERIDO, '');
+  assert.equal(it('u2').VINCULO_ROTULO, 'PJ');
+  assert.equal(it('u3').VINCULO_ROTULO, 'Não informado');
+  assert.equal(it('u3').VINCULO_SUGERIDO, '');
+  assert.ok(r.items.every((x) => x.SENHA === undefined));
+  // Diretoria criada depois do saneamento, sem vínculo: a lista sugere "Diretoria".
+  tabelas.CAD_USUARIOS.push({ ID: 'd4', USUARIO: 'dirdepois', NOME: 'DEPOIS', PERFIL: 'DIRETORIA', EMAIL: 'dd@x.com.br', STATUS: 'ATIVO', VINCULO_TRABALHO: '' });
+  const r2 = s.usuariosPainel('A');
+  assert.equal(r2.items.find((x) => x.ID === 'd4').VINCULO_SUGERIDO, 'DIRETORIA');
+  assert.equal(tabelas.CAD_USUARIOS.find((x) => x.ID === 'd4').VINCULO_TRABALHO, '');
+});
+
+test('DIRETORIA na tela (JS_Admin.html): select com Diretoria, filtro de vínculos, rótulo e "Sem vínculo (ativos)" sem contar a Diretoria', () => {
+  const html = fs.readFileSync(path.join(base, 'JS_Admin.html'), 'utf8').replace(/\r\n/g, '\n');
+  const ctx = { CadUI_esc_: (v) => String(v) };
+  vm.createContext(ctx);
+  vm.runInContext(html.match(/var USUARIOS_VINCULOS = [^\n]*\n/)[0], ctx);
+  vm.runInContext(html.match(/function Usuarios_rotuloVinculo_\(v\) \{[^\n]*\n/)[0], ctx);
+  vm.runInContext(html.match(/function Usuarios_seloVinculo_\(u\) \{[\s\S]*?\n  \}\n/)[0], ctx);
+  assert.deepEqual(j(ctx.USUARIOS_VINCULOS), [['CLT', 'CLT'], ['PJ', 'PJ'], ['DIRETORIA', 'Diretoria']]);
+  assert.equal(ctx.Usuarios_rotuloVinculo_('DIRETORIA'), 'Diretoria');
+  assert.equal(ctx.Usuarios_rotuloVinculo_(''), 'Não informado');
+  assert.match(ctx.Usuarios_seloVinculo_({ VINCULO_TRABALHO: 'DIRETORIA', PERFIL: 'DIRETORIA' }), />Diretoria</);
+  assert.match(ctx.Usuarios_seloVinculo_({ VINCULO_TRABALHO: '', VINCULO_SUGERIDO: 'DIRETORIA', PERFIL: 'DIRETORIA' }), /Diretoria\?/);
+  assert.match(ctx.Usuarios_seloVinculo_({ VINCULO_TRABALHO: '', PERFIL: 'TECNICO' }), /Não informado/);
+  const filtro = vm.runInContext('(' + html.match(/id: "semvinculo"[^\n]*?filtro: (function \(u\) \{[^\n]*?\})/)[1] + ')', ctx);
+  assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'DIRETORIA', VINCULO_TRABALHO: 'DIRETORIA' }), false);
+  assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'DIRETORIA', VINCULO_TRABALHO: '', VINCULO_SUGERIDO: 'DIRETORIA' }), false);
+  assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'TECNICO', VINCULO_TRABALHO: '', VINCULO_SUGERIDO: '' }), true);
+  assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'CLIENTE', VINCULO_TRABALHO: '' }), false);
+  const opcoes = vm.runInContext('(' + html.match(/id: "vinculo", rotulo: "Todos os vínculos", opcoes: (function \(\) \{[^\n]*?\}), aplicar/)[1] + ')()', ctx);
+  assert.deepEqual(j(opcoes).map((o) => o[0]), ['CLT', 'PJ', 'DIRETORIA', 'NI']);
+  assert.match(html, /\[\["", "Não informado"\]\]\.concat\(USUARIOS_VINCULOS\)/);   // select do formulário
+  assert.match(html, /perfilSel\.value === "DIRETORIA"\) \{ v\.value = "DIRETORIA"/);   // sugestão ao escolher o perfil
+});

@@ -337,6 +337,10 @@ function Conduta_rotinaImediata_() {
 function Conduta_rotinaDiaria_() {
   Conduta_setup_();
   var r = { saneamento: Conduta_saneamento20261015_(), prazos: Conduta_processarPrazosVencidos_(), fechamentos: Conduta_fecharAutomatico_() };
+  // 22/10/2026: vínculo de trabalho "Diretoria" preenchido uma vez para quem tem perfil Diretoria e está sem vínculo (SGO_Usuarios.js).
+  if (typeof Usuarios_saneamentoVinculoDiretoria_ === 'function') {
+    try { r.vinculoDiretoria = Usuarios_saneamentoVinculoDiretoria_().logins; } catch (eVin) { r.vinculoDiretoria = { falha: String((eVin && eVin.message) || eVin) }; }
+  }
   // 19/10/2026: sugestões de ocorrência vindas dos outros módulos (só sugere; a gestão decide).
   if (typeof Conduta_coletarSugestoes_ === 'function') {
     try { var col = Conduta_coletarSugestoes_('sistema'); r.sugestoes = { novas: col.novas, superadas: col.superadas }; }

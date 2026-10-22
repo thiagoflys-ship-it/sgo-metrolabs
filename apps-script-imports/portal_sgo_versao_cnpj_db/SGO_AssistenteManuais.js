@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "2f1f4e75479e",
+ "versao": "f3cb05ef0a19",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -475,7 +475,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Regras gerais que valem para todo envio",
-     "texto": "WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo). PJ e vínculo não informado recebem pelo sistema e por e-mail. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.\nWhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.\nCliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).\nEvento \"vira histórico\": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).\nGestor da área no lugar de \"toda a gestão\": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.\nO assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa.\nO piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista."
+     "texto": "WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). PJ, Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.\nWhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.\nCliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).\nEvento \"vira histórico\": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).\nGestor da área no lugar de \"toda a gestão\": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.\nO assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa.\nO piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista."
     },
     {
      "titulo": "Matriz de avisos (Administrador e Diretoria)",
@@ -2364,7 +2364,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Quem recebe os lembretes",
-     "texto": "Só quem é CLT. O vínculo fica em Administração > Usuários > Vínculo. PJ nunca recebe nada do ponto. Quem está sem vínculo informado também não recebe.\nDurante o piloto do WhatsApp, só as pessoas da lista do piloto (Administração > Piloto do WhatsApp).\nQuem o RH não tirou do assistente (aba \"Pessoas e jornadas\").\nQuem tem celular ou e-mail no cadastro.\n\nNão recebe lembrete naquele momento:\nquem está de férias ou afastado no Programa de conduta;\nquem tem folga, atestado, consulta ou viagem sem marcação lançada pelo RH em \"Folgas e dispensas\";\nquem está em atendimento no Auvo (check-in feito, sem check-out)."
+     "texto": "Só quem é CLT. O vínculo fica em Administração > Usuários > Vínculo (CLT, PJ ou Diretoria). PJ e Diretoria nunca recebem nada do ponto. Quem está sem vínculo informado também não recebe.\nDurante o piloto do WhatsApp, só as pessoas da lista do piloto (Administração > Piloto do WhatsApp).\nQuem o RH não tirou do assistente (aba \"Pessoas e jornadas\").\nQuem tem celular ou e-mail no cadastro.\n\nNão recebe lembrete naquele momento:\nquem está de férias ou afastado no Programa de conduta;\nquem tem folga, atestado, consulta ou viagem sem marcação lançada pelo RH em \"Folgas e dispensas\";\nquem está em atendimento no Auvo (check-in feito, sem check-out)."
     },
     {
      "titulo": "Horários",

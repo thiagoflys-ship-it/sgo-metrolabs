@@ -10,7 +10,7 @@ O ponto oficial continua sendo o relógio da empresa. Em viagem, vale o aplicati
 
 ## Quem recebe os lembretes
 
-- Só quem é CLT. O vínculo fica em Administração > Usuários > Vínculo. PJ nunca recebe nada do ponto. Quem está sem vínculo informado também não recebe.
+- Só quem é CLT. O vínculo fica em Administração > Usuários > Vínculo (CLT, PJ ou Diretoria). PJ e Diretoria nunca recebem nada do ponto. Quem está sem vínculo informado também não recebe.
 - Durante o piloto do WhatsApp, só as pessoas da lista do piloto (Administração > Piloto do WhatsApp).
 - Quem o RH não tirou do assistente (aba "Pessoas e jornadas").
 - Quem tem celular ou e-mail no cadastro.

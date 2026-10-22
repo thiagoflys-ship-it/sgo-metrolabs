@@ -1148,7 +1148,7 @@
     var e = res.expediente, av = res.avisos;
     var nomesDia = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
     var dias = nomesDia.map(function (n, i) { return '<label><input type="checkbox" data-dia="' + i + '"' + (e.dias.indexOf(i) >= 0 ? " checked" : "") + "> " + n + "</label>"; }).join("");
-    var vinc = { CLT: "CLT", PJ: "PJ", VAZIO: "Vínculo não informado" };
+    var vinc = { CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria", VAZIO: "Vínculo não informado" };
     var vincs = res.vinculosOpcoes.map(function (v) { return '<label><input type="checkbox" data-vinc="' + v + '"' + (av.vinculosWhatsapp.indexOf(v) >= 0 ? " checked" : "") + "> " + vinc[v] + "</label>"; }).join("");
     var sit = { ENVIADO: "Enviado", SEM_NOVIDADE: "Sem novidade", PULADO: "Não enviado", ERRO: "Erro" };
     var resumos = res.resumosHoje.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Pessoa</th><th>Situação</th><th>Novas / hoje / vencidas</th><th>Motivo</th></tr></thead><tbody>' +
@@ -1169,7 +1169,7 @@
       '<div class="atv-sub" style="margin-bottom:8px">O resumo do dia é único (atividades, Caixa de decisões, Comercial, Frota, avisos e bate-papo). A hora e o liga/desliga ficam em Administração &gt; Matriz de avisos. ' +
         '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="var o=document.getElementById(\'atvCfgOverlay\');if(o)o.remove();abrir(\'avisos_matriz\');">Abrir a Matriz de avisos</button></div>' +
       '<div class="atv-campo"><label>Quem recebe o resumo pelo WhatsApp (vínculo de trabalho em Administração &gt; Usuários)</label><div class="atv-cfg-dias">' + vincs + "</div>" +
-        '<div class="atv-sub">Padrão: só CLT. PJ e vínculo não informado seguem com os avisos no sistema e por e-mail.</div></div>' +
+        '<div class="atv-sub">Padrão: só CLT. PJ, Diretoria e vínculo não informado seguem com os avisos no sistema e por e-mail; marque Diretoria só se a direção quiser o resumo pelo WhatsApp.</div></div>' +
       // 20/10/2026: a escada de cobrança da gestão usa este mesmo horário e o mesmo limite de um WhatsApp por dia.
       '<h4 style="margin:14px 0 8px;font-size:13px">Cobrança da gestão</h4>' +
       '<div class="atv-sub">O que depende de gestor ou da Diretoria segue a escada da Caixa de decisões (no e-mail de resumo do dia; parado há dias úteis, na contagem do WhatsApp de resumo; depois, Diretoria), neste mesmo horário de trabalho. O WhatsApp continua no máximo um por pessoa por dia. ' +
