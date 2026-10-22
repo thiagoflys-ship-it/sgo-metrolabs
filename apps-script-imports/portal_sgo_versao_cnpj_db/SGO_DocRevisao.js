@@ -492,7 +492,7 @@ function SGO_DocRev_qeEmitido_(modulo, numero, idAtual) {
     // Dados grandes (fotos, leituras coladas) vão para arquivo privado no registrar_.
     SGO_DocRev_registrar_(modulo, rev, {
       numero: numero, revisao: revisao, payload: payload, titulo: /_DADOS$/.test(modulo) ? 'Planilha de dados' : 'Relatório de ensaio',
-      cliente: reg.CLIENTE, cnpj: reg.CNPJ, tag: reg.TAG, equipamentoId: reg.EQUIPAMENTO_ID, pdfId: reg.PDF_ID, htmlId: reg.HTML_ID,
+      cliente: reg.CLIENTE, cnpj: reg.CNPJ, tag: reg.TAG, equipamentoId: reg.EQUIPAMENTO_ID, pdfId: reg.PDF_ID, htmlId: reg.HTML_ID, pdfUrl: SGO_DocRev_urlArquivo_(reg.PDF_ID), htmlUrl: SGO_DocRev_urlArquivo_(reg.HTML_ID),
       aprovacao: reg.APROVADO_POR ? 'Aprovado por ' + reg.APROVADO_POR + ' em ' + SGO_DocRev_s_(reg.APROVADO_EM).slice(0, 16) : ''
     }, { nome: reg.APROVADO_POR || reg.ENVIADO_POR || '', usuario: reg.APROVADO_LOGIN || '' });
   } catch (e) { /* a emissão já foi gravada no registro de emissões; a correção pela lista fica indisponível só para ela */ }
@@ -638,6 +638,13 @@ function SGO_DocRev_registrarAntigo_(modulo, info, sessao) {
  * Para a tela (DocRev_api)
  * ============================================================ */
 
+/** Endereço do arquivo pelo identificador (registro antigo sem o endereço). Nunca lança. */
+function SGO_DocRev_urlArquivo_(id) {
+  id = SGO_DocRev_s_(id);
+  if (!id || typeof DriveApp === 'undefined' || !DriveApp || typeof DriveApp.getFileById !== 'function') return '';
+  try { return DriveApp.getFileById(id).getUrl(); } catch (e) { return ''; }
+}
+
 function SGO_DocRev_itemTela_(r, todas) {
   var rev = parseInt(r.REVISAO, 10) || 0;
   var temDados = !!(SGO_DocRev_s_(r.DADOS_TAMANHO) && SGO_DocRev_s_(r.DADOS_TAMANHO) !== '0');
@@ -645,8 +652,8 @@ function SGO_DocRev_itemTela_(r, todas) {
     id: r.ID, modulo: r.MODULO, numero: r.NUMERO, revisao: rev, rotulo: SGO_DocRev_rotulo_(rev), status: r.STATUS,
     vigente: r.STATUS === 'EMITIDO', substituidaPor: r.SUBSTITUIDA_POR ? SGO_DocRev_rotulo_(r.SUBSTITUIDA_POR) : '',
     motivo: r.MOTIVO, emitidoPor: r.EMITIDO_POR, emitidoEm: SGO_DocRev_s_(r.EMITIDO_EM).slice(0, 16), titulo: r.TITULO, cliente: r.CLIENTE, cnpj: r.CNPJ, tag: r.TAG,
-    equipamentoId: r.EQUIPAMENTO_ID, pdfId: r.PDF_ID, htmlId: r.HTML_ID, pdfUrl: r.PDF_URL || (r.PDF_ID ? 'https://drive.google.com/file/d/' + r.PDF_ID + '/view' : ''),
-    htmlUrl: r.HTML_URL || (r.HTML_ID ? 'https://drive.google.com/file/d/' + r.HTML_ID + '/view' : ''), temDados: temDados
+    equipamentoId: r.EQUIPAMENTO_ID, pdfId: r.PDF_ID, htmlId: r.HTML_ID, pdfUrl: r.PDF_URL || SGO_DocRev_urlArquivo_(r.PDF_ID),
+    htmlUrl: r.HTML_URL || SGO_DocRev_urlArquivo_(r.HTML_ID), temDados: temDados
   };
 }
 
