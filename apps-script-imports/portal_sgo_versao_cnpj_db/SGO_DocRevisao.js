@@ -91,11 +91,14 @@ function SGO_DocRev_nomeSessao_(sessao) {
 function SGO_DocRev_aba_() {
   if (typeof SGO_DATA === 'undefined' || !SGO_DATA || typeof SGO_DATA.getDB !== 'function') return null;
   var ss = SGO_DATA.getDB();
+  if (!ss || typeof ss.getSheetByName !== 'function') return null;
   var aba = ss.getSheetByName(SGO_DOCREV_ABA);
-  if (!aba) {
+  if (!aba && typeof ss.insertSheet === 'function') {
     aba = ss.insertSheet(SGO_DOCREV_ABA);
     aba.getRange(1, 1, 1, SGO_DOCREV_CAMPOS.length).setValues([SGO_DOCREV_CAMPOS]);
   }
+  // Banco simplificado dos testes de outros módulos (sem as operações de aba): usa a memória.
+  if (!aba || typeof aba.getLastRow !== 'function' || typeof aba.appendRow !== 'function') return null;
   return aba;
 }
 
@@ -516,16 +519,25 @@ function SGO_DocRev_registrarAntigo_(modulo, info, sessao) {
   info = info || {};
   var numero = SGO_DocRev_s_(info.numero);
   if (!numero) throw new Error('Este documento antigo não tem número identificável. Use "Usar como base" não está disponível para ele; gere um documento novo pelo formulário');
-  var existente = SGO_DocRev_lerControle_().filter(function (r) { return r.MODULO === modulo && ((info.pdfId && r.PDF_ID === info.pdfId) || (r.NUMERO === numero && !info.pdfId)); })[0];
-  if (existente) return existente.ID;
+  var doModulo = SGO_DocRev_lerControle_().filter(function (r) { return r.MODULO === modulo; });
+  var peloArquivo = info.pdfId ? doModulo.filter(function (r) { return r.PDF_ID === info.pdfId; })[0] : null;
+  if (peloArquivo) return peloArquivo.ID;
+  // O número já tem registro (revisão feita depois): vale a revisão vigente.
+  var doNumero = doModulo.filter(function (r) { return r.NUMERO === numero; })
+    .sort(function (a, b) { return (parseInt(b.REVISAO, 10) || 0) - (parseInt(a.REVISAO, 10) || 0); });
+  var vigente = doNumero.filter(function (r) { return r.STATUS === 'EMITIDO'; })[0] || doNumero[0];
+  if (vigente) return vigente.ID;
   var id = 'DR-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+  var revAntiga = Math.max(0, parseInt(info.revisao, 10) || 0);
+  // Dados recuperados do registro do próprio gerador (grandes vão para arquivo); faltam = o que a tela vai pedir.
+  var dadosAntigos = info.payload ? SGO_DocRev_guardarDados_(modulo, numero, revAntiga, { v: 1, payload: info.payload, form: null, parcial: true, faltam: info.faltam || [] }) : null;
   SGO_DocRev_inserir_({
-    ID: id, MODULO: modulo, NUMERO: numero, REVISAO: String(Math.max(0, parseInt(info.revisao, 10) || 0)), STATUS: 'EMITIDO', SUBSTITUIDA_POR: '', MOTIVO: '',
+    ID: id, MODULO: modulo, NUMERO: numero, REVISAO: String(revAntiga), STATUS: 'EMITIDO', SUBSTITUIDA_POR: '', MOTIVO: '',
     ORIGEM_ID: '', EMITIDO_POR: SGO_DocRev_s_(info.emitidoPor) || 'Registro anterior', EMITIDO_LOGIN: '', EMITIDO_EM: SGO_DocRev_s_(info.emitidoEm) || SGO_DocRev_agora_(),
     TITULO: SGO_DocRev_s_(info.titulo), CLIENTE: SGO_DocRev_s_(info.cliente), CNPJ: SGO_DocRev_s_(info.cnpj), TAG: SGO_DocRev_s_(info.tag), EQUIPAMENTO_ID: SGO_DocRev_s_(info.equipamentoId),
     PDF_ID: SGO_DocRev_s_(info.pdfId), HTML_ID: SGO_DocRev_s_(info.htmlId), PDF_URL: SGO_DocRev_s_(info.pdfUrl), HTML_URL: SGO_DocRev_s_(info.htmlUrl), APROVACAO: '',
-    DADOS_ARQUIVO_ID: '', DADOS_TAMANHO: '0', ATUALIZADO_EM: SGO_DocRev_agora_(),
-    PAYLOAD_JSON: info.payload ? JSON.stringify({ v: 1, payload: info.payload, form: null, parcial: true }) : ''
+    DADOS_ARQUIVO_ID: dadosAntigos ? dadosAntigos.arquivoId : '', DADOS_TAMANHO: dadosAntigos ? String(dadosAntigos.tamanho) : '0', ATUALIZADO_EM: SGO_DocRev_agora_(),
+    PAYLOAD_JSON: dadosAntigos ? dadosAntigos.celula : ''
   });
   return id;
 }
@@ -591,6 +603,8 @@ function SGO_DocRev_apiAbrir_(p) {
   if (semDados) {
     aviso = (aviso ? aviso + ' ' : '') + (dados && dados.parcial ? '' : 'Este documento foi gerado antes de o sistema guardar os dados do formulário (21/10/2026). ') +
       'O formulário abre só com o que foi possível recuperar; preencha o que estiver vazio e gere: ' + (modo === 'CORRIGIR' ? 'sai a ' + SGO_DocRev_rotulo_(proxima) + ' do mesmo número.' : 'sai um documento novo.');
+  } else if (dados.faltam && dados.faltam.length) {
+    aviso = (aviso ? aviso + ' ' : '') + 'Este documento foi gerado antes de 21/10/2026: o formulário foi remontado com os dados guardados no registro dele. Falta só preencher: ' + dados.faltam.join('; ') + '.';
   }
   var payload = (dados && dados.payload) || {};
   return {

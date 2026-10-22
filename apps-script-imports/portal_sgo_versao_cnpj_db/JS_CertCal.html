@@ -6,7 +6,7 @@
     if (!container) return;
 
     if (tplCertCal_carregado_) {
-      if (typeof tplCertCal_renderReal_ === 'function') tplCertCal_renderReal_();
+      if (typeof tplCertCal_renderReal_ === 'function') tplCertCal_renderReal_(); tplCertCal_ligarRevisao_();
       return;
     }
 
@@ -32,6 +32,7 @@
 
           if (typeof tplCertCal_renderReal_ === 'function') {
             tplCertCal_renderReal_();
+            tplCertCal_ligarRevisao_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +46,79 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .CertCal_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html; servidor em SGO_CertCal_Revisao.js).
+  // O formulário volta com cliente, equipamento, técnico, datas, local, condições ambientais, blocos (leituras e padrões)
+  // e fotos; certificados emitidos antes do registro são remontados do próprio snapshot (falta só temperatura e umidade).
+  function tplCertCal_botoesRevisao_(it) {
+    if (typeof SGO_DocRev === 'undefined' || !it || !it.id) return '';
+    var id = String(it.id).replace(/[^\w-]/g, '');
+    return ' <button class="btn btn-sm" title="Carrega o formulário com os dados deste certificado; ao gerar sai a revisão seguinte do mesmo número" onclick="tplCertCal_abrirRevisao_(\'' + id + '\',\'CORRIGIR\')">Abrir para corrigir</button>' +
+      ' <button class="btn btn-sm" title="Copia os dados para um certificado novo, com número novo (por exemplo, a próxima calibração do mesmo equipamento)" onclick="tplCertCal_abrirRevisao_(\'' + id + '\',\'BASE\')">Usar como base</button>';
+  }
+
+  function tplCertCal_abrirRevisao_(certificadoId, modo) {
+    tplCertCal_chamarApi('apiPrepararCorrecao', { certificadoId: certificadoId }).then(function (r) {
+      SGO_DocRev.abrir('CERTIFICADO_CALIBRACAO', r.id, modo);
+    }).catch(function (err) { tplCertCal_erro('certcal-busca-resultado', err); });
+  }
+
+  function tplCertCal_aplicarRevisao_(p, modo) {
+    p = p || {};
+    if (!p._cliente || !p._cliente.ID || !p._equipamento || !p._equipamento.ID) {
+      alert('Os dados de cliente e equipamento deste certificado não foram encontrados. Escolha o cliente e o equipamento no formulário e confira os blocos antes de gerar.');
+    } else {
+      certcalState.unidadeSelecionadaId = p._equipamento.UNIDADE_ID || null;
+      tplCertCal_selecionarCliente(p._cliente);
+      tplCertCal_confirmarEquipamento_(p._equipamento);
+    }
+    var set = function (id, v) { var el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+    Promise.resolve(tplCertCal_carregarTecnicos()).then(function () { set('certcal-tecnico', p.tecnicoId || ''); });
+    set('certcal-tecnico-livre', p.tecnicoExecutorLivre || '');
+    set('certcal-data-calibracao', modo === 'BASE' ? '' : (p.dataCalibracao || ''));
+    var lab = document.getElementById('certcal-local-lab');
+    if (lab) lab.checked = p.localCalibracao !== 'CLIENTE';
+    set('certcal-temp-ambiente', p.temperaturaAmbiente || '');
+    set('certcal-umidade-ambiente', p.umidadeRelativa || '');
+    var px = p.proximaCalibracao || {};
+    var sim = document.getElementById('certcal-proxima-sim'), nao = document.getElementById('certcal-proxima-nao');
+    if (sim && nao) {
+      sim.checked = !!px.solicitada && modo !== 'BASE';
+      nao.checked = !sim.checked;
+      tplCertCal_alternarProximaCalibracao_();
+      if (sim.checked) {
+        set('certcal-proxima-data', px.data); set('certcal-proxima-solicitante', px.solicitante); set('certcal-proxima-cargo-setor', px.cargoSetor);
+        set('certcal-proxima-referencia', px.referencia); set('certcal-proxima-observacao', px.observacao);
+      }
+    }
+    certcalState.blocos = JSON.parse(JSON.stringify(p.blocos || []));
+    tplCertCal_renderBlocos();
+    certcalState.fotos = (p.fotos || []).filter(function (f) { return f && f.base64; }).map(function (f) { return Object.assign({}, f); });
+    tplCertCal_renderFotos_();
+  }
+
+  function tplCertCal_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'CERTIFICADO_CALIBRACAO';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplCertCal_viewModulo', faixa: 'tplCertCal_viewModulo', acao: 'Gerar Certificado de Calibração', aprovacao: false,
+      dica: 'Cliente, equipamento, técnico, datas, condições ambientais, blocos de ensaio (leituras e padrões) e fotos voltaram ao formulário. Padrão que venceu ou foi inativado depois da emissão é recusado: troque o padrão do bloco antes de gerar. O relatório interpretativo é gerado de novo a partir da revisão nova.',
+      resumoAnexos: function (p) { var n = (p.fotos || []).filter(function (f) { return f && f.base64; }).length; return n ? n + ' foto(s) do certificado de origem continuam anexadas.' : ''; },
+      limpar: function () { tplCertCal_renderReal_(); tplCertCal_ligarRevisao_(); },
+      aplicar: function (payload, form, info, modo) { tplCertCal_aplicarRevisao_(payload, modo); }
+    });
+    SGO_DocRev.envolver('tplCertCal_gerarCertificado', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplCertCal_chamarApi', function (orig) {
+      return function (fn, payload) {
+        if (fn !== 'apiGerarCertificado') return orig.apply(this, arguments);
+        var pr = orig.call(this, fn, Object.assign({}, payload || {}, { _docRev: SGO_DocRev.pedido(M) }));
+        if (pr && pr.then) pr.then(function (r) { if (r && r.ok) SGO_DocRev.concluido(M); });
+        return pr;
+      };
+    });
+    SGO_DocRev.anexarPainel('tplCertCal_viewModulo', M);
   }
 </script>

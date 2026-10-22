@@ -461,7 +461,12 @@ function BaixaTempTela_cliente_() {
       if (e.linkHtml) h += '<a class="btn-secondary" href="' + esc(e.linkHtml) + '" target="_blank" rel="noopener">Abrir HTML (A4)</a>';
       if (e.pastaUrl) h += '<a class="btn-secondary" href="' + esc(e.pastaUrl) + '" target="_blank" rel="noopener">Pasta do cliente</a>';
       if (e.pdfId) h += '<button type="button" class="btn-primary" data-acao="enviarCliente">Enviar ao cliente</button>';
-      if (BT.cfg.podeEditar) h += '<button type="button" class="btn-secondary" data-acao="novaRevisao">Nova revisão</button>';
+      if (BT.cfg.podeEditar) h += '<button type="button" class="btn-secondary" data-acao="novaRevisao" title="Cria a revisão seguinte do mesmo número, com os mesmos dados, para corrigir">Abrir para corrigir</button>';
+      if (BT.cfg.podeEditar) h += '<button type="button" class="btn-secondary" data-acao="usarComoBase" title="Copia os dados para um ensaio novo, com número novo na emissão">Usar como base</button>';
+    }
+    if (e.status === 'SUBSTITUIDO') {
+      if (e.linkPdf) h += '<a class="btn-secondary" href="' + esc(e.linkPdf) + '" target="_blank" rel="noopener">Abrir PDF (revisão substituída)</a>';
+      if (BT.cfg.podeEditar) h += '<button type="button" class="btn-secondary" data-acao="usarComoBase">Usar como base</button>';
     }
     h += '</div>';
     if (e.status === 'RASCUNHO') h += '<p class="bt-nota">Antes de enviar: calcule o resultado (7. Resultado e textos), resolva o que falta, redija e revise os textos e salve. O responsável técnico revisa e aprova; só então o relatório pode ser emitido.</p>';
@@ -531,7 +536,13 @@ function BaixaTempTela_cliente_() {
     if (acao === 'devolver') return fluxo('apiDevolver', { motivo: ($('btParecer') || {}).value }, 'Devolvendo…', 'Ensaio devolvido ao técnico, com o seu parecer.');
     if (acao === 'emitir') return emitir();
     if (acao === 'enviarCliente') { if (window.SGO_EnviarDoc && SGO_EnviarDoc.abrir) SGO_EnviarDoc.abrir({ arquivoId: BT.e.pdfId, htmlId: BT.e.htmlId, dica: { clienteId: BT.d.identificacao.clienteId, numero: BT.e.numero, titulo: 'Relatório de qualificação ' + BT.e.numero } }); else msg('aviso', 'A janela "Enviar documento" não está disponível nesta tela. Abra o Arquivo de documentos e use "Enviar".'); return; }
-    if (acao === 'novaRevisao') { if (!confirm('Criar uma nova revisão deste ensaio? O relatório emitido continua guardado; a nova revisão começa como rascunho com os mesmos dados.')) return; return api('apiNovaRevisao', { id: BT.e.id }, function (r) { msg('ok', 'Nova revisão ' + r.revisao + ' criada como rascunho.'); abrirEnsaio(r.id, 1); }); }
+    if (acao === 'novaRevisao') {
+      var motivoRev = prompt('Correção do relatório ' + (BT.e.numero || '') + ': sai a revisão seguinte do mesmo número, com os mesmos dados, como rascunho. O relatório emitido continua guardado e passa a constar como substituído quando a revisão for emitida.\n\nMotivo da revisão (ao menos 10 caracteres; aparece no histórico de revisões do relatório):', '');
+      if (motivoRev === null) return;
+      if (String(motivoRev).trim().length < 10) return msg('erro', 'Escreva o motivo da revisão com ao menos 10 caracteres e toque de novo em "Abrir para corrigir".');
+      return api('apiNovaRevisao', { id: BT.e.id, motivo: String(motivoRev).trim() }, function (r) { msg('ok', 'Revisão ' + r.revisao + ' do relatório ' + (r.numero || '') + ' criada como rascunho, com os mesmos dados. Altere o que precisa, salve e envie para revisão: o responsável técnico aprova e a emissão sai com o mesmo número, revisão ' + r.revisao + '. Até lá, a revisão emitida continua valendo.'); abrirEnsaio(r.id, 1); });
+    }
+    if (acao === 'usarComoBase') { if (!confirm('Criar um ensaio novo com os dados deste? O ensaio novo começa como rascunho e recebe número novo na emissão; este não muda. Confira datas, ciclos, leituras e indicadores, que são do serviço anterior.')) return; return api('apiUsarComoBase', { id: BT.e.id }, function (r) { msg('ok', 'Ensaio novo criado como rascunho com os dados do relatório ' + (BT.e.numero || '') + '. Confira e substitua o que é do serviço anterior antes de enviar para revisão.'); abrirEnsaio(r.id, 1); }); }
   }
 
   /* ---------------- ações ---------------- */

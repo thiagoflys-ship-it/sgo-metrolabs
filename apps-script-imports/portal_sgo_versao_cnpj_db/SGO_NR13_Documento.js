@@ -403,6 +403,7 @@ function NR13Doc_montarDocumentoHtml_(ctx, opcoes) {
   }
   html.push('</section>');
 
+  if (ctx.historicoRevisoesHtml) html.push(ctx.historicoRevisoesHtml); // histórico de revisões (SGO_DocRevisao.js)
   html.push('</main>');
   html.push('</body></html>');
   return html.join('\n');

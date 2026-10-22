@@ -69,17 +69,24 @@ function SGO_ajudaTelas_BaixaTemp_() {
           "Depois da aprovação, toque em \"Emitir relatório\". O documento abre em outra aba e fica salvo em PDF e HTML na pasta do equipamento (dentro da pasta do cliente) e no Arquivo de documentos.",
           "Toque em \"Enviar ao cliente\" para mandar por e-mail ou WhatsApp."
         ] },
-        { titulo: "Corrigir um relatório já emitido", itens: [
+        { titulo: "Corrigir um relatório já emitido (nova revisão)", itens: [
           "Abra o ensaio emitido pela lista.",
-          "Em \"8. Revisão e emissão\", toque em \"Nova revisão\". O sistema cria um rascunho com os mesmos dados e a revisão seguinte; o relatório emitido continua guardado.",
-          "Corrija, calcule, envie para revisão e emita a nova revisão."
+          "Em \"8. Revisão e emissão\", toque em \"Abrir para corrigir\" e escreva o motivo da revisão (ao menos 10 caracteres). O sistema cria um rascunho com todos os dados (identificação, ciclos, arquivos do registrador, indicadores e textos), com o mesmo número e a revisão seguinte; nada precisa ser importado de novo.",
+          "Corrija o que precisa, calcule, salve e envie para revisão. A revisão passa de novo pela revisão e aprovação do responsável técnico; até lá, a revisão emitida continua valendo.",
+          "Ao emitir, o relatório sai com o mesmo número, a revisão no cabeçalho e no nome do arquivo e o quadro \"Histórico de revisões\" com o motivo. O relatório anterior continua na pasta do cliente e passa a \"Substituído por revisão posterior\"."
+        ] },
+        { titulo: "Usar um relatório como base para um novo", itens: [
+          "Abra o ensaio pela lista e, em \"8. Revisão e emissão\", toque em \"Usar como base\" (por exemplo, a requalificação do mesmo equipamento no ano seguinte).",
+          "O sistema cria um ensaio novo, como rascunho, com os mesmos dados. Troque datas, ciclos, arquivos e indicadores, que são do serviço anterior.",
+          "O ensaio novo recebe número novo na emissão; o de origem não muda."
         ] }
       ],
       cores: [
         { nome: "Selo \"Rascunho\"", significado: "O ensaio pode ser alterado. Ainda não foi enviado para revisão." },
         { nome: "Selo amarelo \"Aguardando revisão do responsável técnico\"", significado: "O técnico enviou. Só o responsável técnico aprova ou devolve. Qualquer alteração nos dados volta o ensaio para rascunho." },
         { nome: "Selo azul \"Aprovado, pronto para emitir\"", significado: "O responsável técnico aprovou sobre estes dados. Falta tocar em \"Emitir relatório\"." },
-        { nome: "Selo verde \"Emitido\"", significado: "O relatório foi emitido e salvo. O ensaio não muda mais; correção é feita por \"Nova revisão\"." },
+        { nome: "Selo verde \"Emitido\"", significado: "O relatório foi emitido e salvo. O ensaio não muda mais; correção é feita por \"Abrir para corrigir\" (revisão seguinte do mesmo número)." },
+        { nome: "Selo \"Substituído por revisão posterior\"", significado: "Uma revisão mais nova do mesmo número foi emitida. Este relatório continua guardado na pasta, mas não vale mais; abra a revisão vigente." },
         { nome: "Selo verde \"Conforme\" e vermelho \"Não conforme\"", significado: "Resultado calculado pelo sistema: conforme quando todos os critérios avaliados foram atendidos. Não existe resultado intermediário." },
         { nome: "Selo \"Informativo\"", significado: "O critério não tem limite declarado pelo fabricante: o valor é registrado, mas não aprova nem reprova." },
         { nome: "Selo amarelo \"a confirmar\" nas normas", significado: "O número, a edição ou o título da norma ainda precisam ser confirmados pelo responsável técnico." },

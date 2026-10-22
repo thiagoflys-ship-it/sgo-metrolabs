@@ -570,6 +570,19 @@ function SGO_ajudaTelas_Qualificacao_() {
           "No topo, em \"Consultar laudos já emitidos ou continuar rascunho salvo (por CNPJ)\", digite o CNPJ.",
           "Toque em \"Buscar rascunhos salvos\" para continuar de onde parou.",
           "Toque em \"Buscar laudos emitidos\" para reabrir um laudo pronto."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No topo da tela, digite o CNPJ do cliente e toque em Buscar laudos emitidos; a lista mostra os botões ao lado de Reabrir laudo.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Emitir laudo final\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Emitir laudo final\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -582,7 +595,10 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "A categoria não aparece.", oQueFazer: "Preencha PMTA, volume e classe do fluido, com as unidades certas." },
         { situacao: "Aparece \"Esta tela ainda aponta para um laudo já emitido\".", oQueFazer: "Laudo emitido não muda mais. Toque em \"Começar novo laudo com estes dados\" para salvar como laudo novo." },
         { situacao: "A página recarregou e perdi o que digitei.", oQueFazer: "Se você tinha tocado em \"Salvar rascunho\", use \"Buscar rascunhos salvos\". Salve o rascunho com frequência." },
-        { situacao: "O perfil Comercial ou Financeiro não consegue salvar.", oQueFazer: "Esses perfis só consultam laudos. Peça a emissão a um técnico, à metrologia ou ao gestor." }
+        { situacao: "O perfil Comercial ou Financeiro não consegue salvar.", oQueFazer: "Esses perfis só consultam laudos. Peça a emissão a um técnico, à metrologia ou ao gestor." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Emitir laudo final\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Laudos já emitidos, inclusive os de antes de 21/10/2026, aparecem na busca por CNPJ do topo da tela com os botões Abrir para corrigir e Usar como base: a planilha do NR-13 guarda todos os campos. Laudo substituído por uma revisão não aparece na busca; ele fica no quadro do fim da tela, como substituído." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Preencher, salvar rascunho e emitir laudos." },

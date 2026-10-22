@@ -58,6 +58,19 @@ function SGO_ajudaTelas_Calibracao_() {
           "Toque em \"Certificado de calibração\".",
           "Siga os 5 passos da tela: cliente, equipamento, dados da calibração, blocos de ensaio, fotos e emissão.",
           "No celular ainda não há campo de resolução. O sistema deduz a resolução pelas leituras e marca com asterisco."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "Na busca de certificados emitidos (por CNPJ), toque em Buscar; cada certificado tem os botões Abrir para corrigir e Usar como base. Os emitidos a partir de 21/10/2026 também ficam no quadro Documentos gerados: corrigir ou usar como base, no fim da tela.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Gerar Certificado de Calibração\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Gerar Certificado de Calibração\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -73,7 +86,10 @@ function SGO_ajudaTelas_Calibracao_() {
         { situacao: "Aparece \"Adicione ao menos 1 bloco de ensaio.\"", oQueFazer: "Toque em \"+ Adicionar bloco de ensaio\" e preencha os pontos." },
         { situacao: "O certificado foi recusado porque o padrão estava vencido na data da calibração.", oQueFazer: "Atualize o padrão com o certificado novo em \"Padrões de referência\" (Editar) ou marque outro padrão no bloco. Sem certificado vigente, a rastreabilidade não está garantida." },
         { situacao: "Um padrão não aparece para marcar.", oQueFazer: "Ele está inativo. Reative em \"Padrões de referência\", filtro \"Inativos\"." },
-        { situacao: "Os números da prévia parecem estranhos.", oQueFazer: "Confira a unidade do bloco, o padrão marcado e as leituras digitadas. Vírgula e ponto valem como separador decimal." }
+        { situacao: "Os números da prévia parecem estranhos.", oQueFazer: "Confira a unidade do bloco, o padrão marcado e as leituras digitadas. Vírgula e ponto valem como separador decimal." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Certificado de Calibração\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Certificados já emitidos, inclusive os de antes de 21/10/2026, aparecem na busca por CNPJ com os botões Abrir para corrigir e Usar como base: o formulário é remontado do registro do certificado. Nos antigos, só a temperatura e a umidade precisam ser digitadas de novo (o certificado guardou só a frase das condições ambientais). Certificado substituído por uma revisão não aparece na busca; ele fica no quadro do fim da tela, como substituído." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Emitir certificados e relatórios interpretativos e consultar os emitidos." },

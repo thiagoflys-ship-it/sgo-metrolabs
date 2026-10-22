@@ -122,6 +122,100 @@ test('Registros operacionais: correção mantém o número REG, revisão 01 no d
   assert.equal(status(r1.registroId), 'aberto');
 });
 
+test('NR-13: laudo emitido antes do registro abre para corrigir pela planilha; correção mantém o número, Rev. 01 e o laudo antigo fica SUBSTITUIDO', () => {
+  const env = A.criarAmbiente({
+    arquivos: BASE_A4.concat(['SGO_NR13_Config.js', 'SGO_NR13_Calculo.js', 'SGO_NR13_Documento.js', 'SGO_NR13_Main.js'].filter(f => require('node:fs').existsSync(require('node:path').join(A.BASE, f)))),
+    extra: SALVAR_SIMPLES + [
+      'var __L = {}; var __S = 0;',
+      'SGO_DATA = { log: function () {}, getById: function (aba, id) { var l = (__L[aba] || {})[id]; return l ? Object.assign({}, l) : null; },',
+      '  update: function (aba, id, campos) { __L[aba] = __L[aba] || {}; __L[aba][id] = Object.assign(__L[aba][id] || {}, campos); },',
+      '  insert: function (aba, o) { o = Object.assign({}, o); o.ID = o.ID || ("L" + (++__S)); __L[aba] = __L[aba] || {}; __L[aba][o.ID] = o; return o; },',
+      '  normalizarObjetoParaSheet: function (aba, o) { return o; }, gerarRegistroBase: function (o) { return Object.assign({ ID: "L" + (++__S) }, o); } };',
+      'var SGO_UTILS = { safe: function (v) { return v == null ? "" : String(v).trim(); }, safeUpper: function (v) { return v == null ? "" : String(v).trim().toUpperCase(); }, formatCnpj: function (v) { return String(v || ""); } };',
+      'var SGO_CFG = { SHEETS: { CAD_CLIENTES: "CAD_CLIENTES", CAD_UNIDADES: "CAD_UNIDADES", CAD_EQUIPAMENTOS: "CAD_EQUIPAMENTOS" } };',
+      'var SGO_VINCULOS = { relation: function () {} }; var SGO_DOCUMENTOS = { registrarDocumentoExistente: function () { return { success: true }; } };',
+      'Auvo_criarTarefa_ = function () {}; NR13_bootstrap_ = function () {}; NR13IA_gerarTextosLaudo_ = function () { throw new Error("sem IA no teste"); };',
+      'SGO_DocA4_pdfDeHtml_ = function () { throw new Error("sem PDF no teste"); }; NR13_obterPastaCliente_ = function () { return DriveApp.getRootFolder(); };',
+      'var CadeiaFrioRel_CFCFG = { ASSINATURAS_PADRAO: [{ nome: "Responsável Técnico Teste", cargo: "Engenheiro" }] };',
+      'SGO_DATA.insert("CAD_CLIENTES", { ID: "cli1", RAZAO_SOCIAL: "HOSPITAL MODELO TESTE LTDA", CNPJ: "11222333000181" });',
+      'SGO_DATA.insert("CAD_UNIDADES", { ID: "uni1", NOME_UNIDADE: "UNIDADE TESTE" });',
+      'SGO_DATA.insert("CAD_EQUIPAMENTOS", { ID: "eq1", TAG: "VP-TESTE-01", SETOR: "CME", UNIDADE_ID: "uni1" });'
+    ].join('\n')
+  });
+  const disp = (sid, fn, payload) => env.fn('NR13_apiDispatch')({ sessionId: sid, fn, payload });
+  const formulario = {
+    clienteId: 'cli1', unidadeId: 'uni1', equipamentoId: 'eq1', tipoVaso: 'Autoclave', fabricante: 'MARCAFICTICIA', modelo: 'M1', numeroSerie: 'SN-1',
+    pmtaValor: 0.25, pmtaUnidade: 'MPa', volumeValor: 0.1, volumeUnidade: 'm³', classeFluido: 'C', fluidoServico: 'Vapor', tipoInspecao: 'Periódica',
+    dataInicioInspecao: '01/10/2026', dataTerminoInspecao: '02/10/2026', descricaoInspecoes: 'Exame externo e interno.', parecerConclusivo: 'Apto a operar.',
+    veredito: 'APROVADO', assinantePh: 'Responsável Técnico Teste', fotos: [], valvulas: [], manometros: []
+  };
+  // Laudo emitido "antes" do registro de revisões: grava direto na planilha simulada, sem passar pelo registro.
+  const rasc = disp('tec', 'apiSalvarRascunho', formulario);
+  const e0 = disp('tec', 'apiEmitirLaudo', Object.assign({}, formulario, { laudoId: rasc.laudoId }));
+  assert.equal(e0.ok, true);
+  env.run('SGO_DOCREV_MEMORIA_ = [];'); // esquece o registro: simula laudo antigo
+  const prep = disp('tec', 'apiPrepararCorrecao', { laudoId: rasc.laudoId });
+  const ab = env.api('tec', 'abrir', { id: prep.id, modo: 'CORRIGIR' });
+  assert.equal(ab.payload._laudoId, rasc.laudoId, 'o formulário é carregado da própria planilha');
+  assert.equal(ab.info.numero, e0.numeroLaudo);
+  const corr = Object.assign({}, formulario, { parecerConclusivo: 'Apto a operar, com a válvula recalibrada.', _docRev: { modo: 'CORRIGIR', origemId: prep.id, motivo: 'Parecer conclusivo completado com a válvula' } });
+  const rasc2 = disp('tec', 'apiSalvarRascunho', corr);
+  const e1 = disp('tec', 'apiEmitirLaudo', Object.assign({}, corr, { laudoId: rasc2.laudoId }));
+  assert.equal(e1.numeroLaudo, e0.numeroLaudo, 'mesmo número');
+  assert.equal(e1.revisao, 'Rev. 01');
+  assert.match(e1.html, /Revisão 01/);
+  assert.match(e1.html, /Parecer conclusivo completado com a válvula/);
+  assert.equal(env.run('SGO_DATA.getById("NR13_LAUDOS", "' + rasc.laudoId + '").STATUS'), 'SUBSTITUIDO');
+  const lista = env.api('tec', 'listar', { modulo: 'NR13' }).itens;
+  assert.equal(lista.length, 2);
+  assert.equal(lista.filter(i => i.revisao === 0)[0].substituidaPor, 'Rev. 01');
+});
+
+test('Certificado de calibração: certificado antigo remontado do snapshot pede só temperatura e umidade; correção sai como Rev. 01 do mesmo número e o anterior fica SUBSTITUIDO', () => {
+  const motor = require(require('node:path').join(A.BASE, 'SGO_CertCal_Calculo.js'));
+  const env = A.criarAmbiente({
+    arquivos: ['SGO_Utilis.js'].concat(BASE_A4, ['SGO_CertCal_Revisao.js', 'SGO_CertCal_Main.js']),
+    extra: [
+      'var __C = { clientes: { c: { ID: "c", RAZAO_SOCIAL: "HOSPITAL MODELO TESTE LTDA", CNPJ: "11222333000181" } }, equipamentos: { e: { ID: "e", CLIENTE_ID: "c", UNIDADE_ID: "un", TAG: "CENT-01", TIPO: "Centrífuga" } }, unidades: { un: { ID: "un", CLIENTE_ID: "c" } }, certificados: {} }; var __N = 0;',
+      'var SGO_CFG = { SHEETS: { CAD_CLIENTES: "clientes", CAD_EQUIPAMENTOS: "equipamentos", CAD_UNIDADES: "unidades", CAD_TECNICOS: "tecnicos", CERT_CALIBRACAO: "certificados" } };',
+      'var SGO_VINCULOS = { relation: function () {} }; var SGO_DOCUMENTOS = { registrarDocumentoExistente: function () {} }; Auvo_criarTarefa_ = function () {};',
+      'var SGO_DATA = { getById: function (a, id) { var r = (__C[a] || {})[id]; return r ? Object.assign({}, r) : null; }, normalizarObjetoParaSheet: function (_, r) { return r; },',
+      '  gerarRegistroBase: function (r) { return Object.assign({ ID: "cert" + (++__N) }, r); }, insert: function (a, r) { __C[a][r.ID] = Object.assign({}, r); return r; },',
+      '  update: function (a, id, campos) { Object.assign(__C[a][id], campos); }, getSheet: function () { return { getLastRow: function () { return 1; }, getMaxRows: function () { return 10; }, getRange: function () { return { setNumberFormat: function () {} }; } }; },',
+      '  getHeaders: function () { return ["NUMERO_CERTIFICADO"]; }, log: function () {} };',
+      'CertCal_bootstrap_ = function () {}; CertCal_mapaPadroesAtivos_ = function () { return {}; }; var __SEQ = 0; CertCal_proximoNumero_ = function () { return "2026000" + (++__SEQ + 50); };',
+      'CertCal_calcularBlocos_ = function (b) { return b.map(function (x) { return { titulo: x.titulo, unidade: x.unidade, resolucao: 1, resolucaoInferida: false, padroesUsados: [], resultados: x.pontos.map(function (p) { return { nominal: p.nominal, leituras: p.leituras }; }) }; }); };',
+      'CertCalDoc_capturarDocumento_ = function () { return {}; }; CertCalDoc_montarDocumentoHtml_ = function (ctx) { return "<html><body><main>Certificado " + ctx.numeroCertificado + " Revisão " + ctx.revisao + "</main></body></html>"; };',
+      'RelTecA4_paginar_ = function (h) { return { html: h, pdfBlob: Utilities.newBlob("%PDF", "application/pdf", "c.pdf") }; };',
+      'CertCal_obterPastaCliente_ = function () { return DriveApp.getRootFolder(); }; CertCal_exigirAcessoCliente_ = function () {};',
+      'SGO_DocSalvar_htmlAoLado_ = function (p, n, h) { var a = p.createFile(n.replace(/pdf$/, "html"), h, "text/html"); return { htmlId: a.getId(), htmlUrl: a.getUrl() }; };'
+    ].join('\n')
+  });
+  env.ctx.CertCalCalculo = motor;
+  env.run('Utilities.newBlob = (function (orig) { return function (c, m, n) { var b = orig(c, m, n); b.getAs = function () { return b; }; return b; }; })(Utilities.newBlob);');
+  const formulario = { clienteId: 'c', equipamentoId: 'e', tecnicoExecutorLivre: 'Executor Teste', dataCalibracao: '08/10/2026', localCalibracao: 'LABORATORIO', temperaturaAmbiente: '22', umidadeRelativa: '50',
+    blocos: [{ titulo: 'Rotação', unidade: 'rpm', resolucao: '1', padroesIds: [], pontos: [{ nominal: '1000', leituras: ['1001', '1000', '999'] }] }], fotos: [], proximaCalibracao: { solicitada: false } };
+  const disp = (fn, p) => JSON.parse(JSON.stringify(env.fn(fn === 'apiGerarCertificado' ? 'CertCal_apiGerarCertificado' : 'CertCal_apiPrepararCorrecao')('tec', p)));
+  const c0 = disp('apiGerarCertificado', Object.assign({ _docRev: { modo: '' } }, formulario));
+  assert.equal(c0.ok, true);
+  env.run('SGO_DOCREV_MEMORIA_ = [];'); // esquece o registro: certificado "antigo"
+  const prep = disp('apiPrepararCorrecao', { certificadoId: c0.certificadoId });
+  const ab = env.api('tec', 'abrir', { id: prep.id, modo: 'CORRIGIR' });
+  assert.equal(ab.payload.blocos[0].pontos[0].leituras[2], '999', 'leituras remontadas do snapshot');
+  assert.equal(ab.payload._equipamento.TAG, 'CENT-01');
+  assert.equal(ab.payload.temperaturaAmbiente, '');
+  assert.match(ab.info.aviso, /Falta só preencher: temperatura ambiente e umidade relativa/);
+  const corr = Object.assign({}, ab.payload, { temperaturaAmbiente: '22', umidadeRelativa: '50', blocos: [{ titulo: 'Rotação', unidade: 'rpm', resolucao: '1', padroesIds: [], pontos: [{ nominal: '1000', leituras: ['1001', '1000', '998'] }] }],
+    _docRev: { modo: 'CORRIGIR', origemId: prep.id, motivo: 'Terceira leitura do ponto de 1000 rpm digitada errada' } });
+  const c1 = disp('apiGerarCertificado', corr);
+  assert.equal(c1.numeroCertificado, c0.numeroCertificado);
+  assert.equal(c1.revisao, 'Rev. 01');
+  assert.match(c1.html, /Revisão 01/);
+  assert.match(c1.html, /Terceira leitura do ponto de 1000 rpm digitada errada/);
+  assert.equal(env.run('__C.certificados["' + c0.certificadoId + '"].STATUS'), 'SUBSTITUIDO');
+  assert.equal(env.run('__C.certificados["' + c1.certificadoId + '"].STATUS'), 'ATIVO');
+});
+
 test('PGT/POP: correção vira a revisão seguinte do mesmo código, com o motivo no controle de revisões', () => {
   const env = A.criarAmbiente({
     arquivos: BASE_A4.concat(['SGO_PgtPop_Config.js', 'SGO_PgtPop_Documento.js', 'SGO_PgtPop_Main.js']),

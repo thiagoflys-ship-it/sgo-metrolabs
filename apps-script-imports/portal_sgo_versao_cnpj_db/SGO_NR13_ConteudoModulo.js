@@ -1131,7 +1131,7 @@ function tplNR13_buscarPorCnpj() {
       return '<div class="cert-item-row">' +
         '<span><strong>Laudo nº ' + it.numeroLaudo + '</strong> — ' + (it.equipamentoTipo || '') + ' (TAG ' + (it.equipamentoTag || '—') + ') — ' +
         (mapaVeredito[it.veredito] || it.veredito) + (it.statusPendencia === 'aberto' ? ' <span style="color:var(--warning);">(pendência aberta)</span>' : '') + '</span>' +
-        '<span><button class="btn btn-sm" onclick="tplNR13_reabrirLaudo_(\\'' + it.id + '\\')">Reabrir laudo</button></span>' +
+        '<span><button class="btn btn-sm" onclick="tplNR13_reabrirLaudo_(\\'' + it.id + '\\')">Reabrir laudo</button>' + (typeof tplNR13_botoesRevisao_ === 'function' ? tplNR13_botoesRevisao_(it) : '') + '</span>' +
         '</div>';
     }).join('') + '</div>';
     document.getElementById('nr13-busca-resultado').innerHTML = html;
@@ -1329,6 +1329,12 @@ function tplNR13_manualHtml_() {
   'botão "Reabrir laudo" pra reimprimir o PDF sem recalcular nada. Para continuar um laudo não emitido, use "Buscar rascunhos salvos". ' +
   'Os perfis Comercial e Financeiro só consultam laudos: o preenchimento e a emissão são da equipe técnica, da metrologia ou da gestão. ' +
   'A ajuda rápida desta tela fica no botão "Como usar esta tela", no cabeçalho.</p>' +
+  '<p><strong>Corrigir um laudo emitido ou usar como base (21/10/2026).</strong> Na lista de laudos emitidos, cada linha tem também "Abrir para corrigir" e "Usar como base". ' +
+  '"Abrir para corrigir" carrega o formulário com todos os dados do laudo (também dos laudos emitidos antes desta data, porque a planilha do NR-13 guarda todos os campos). ' +
+  'No quadro amarelo do alto, escreva o motivo da revisão (ao menos 10 caracteres), altere o que precisa e clique em "Emitir laudo final": sai a revisão seguinte (Rev. 01, 02...) com o mesmo número do laudo, ' +
+  'com o quadro "Histórico de revisões" no documento e a revisão no nome do arquivo. O laudo anterior continua na pasta do cliente e na planilha, marcado como substituído. ' +
+  '"Usar como base" copia os dados para um laudo novo, com número novo (por exemplo, a próxima inspeção do mesmo vaso): confira datas, exames e veredito antes de emitir. ' +
+  'No fim da tela, o quadro "Documentos gerados: corrigir ou usar como base" lista os laudos emitidos a partir desta data, com a revisão e a situação (vigente ou substituído).</p>' +
 
   '<h2 id="tplNR13_ms8">8. Erros comuns</h2>' +
   '<table><tr><th>O que aconteceu</th><th>O que fazer</th></tr>' +

@@ -6,7 +6,7 @@
     if (!container) return;
 
     if (tplNR13_carregado_) {
-      if (typeof tplNR13_renderReal_ === 'function') tplNR13_renderReal_();
+      if (typeof tplNR13_renderReal_ === 'function') tplNR13_renderReal_(); tplNR13_ligarRevisao_();
       return;
     }
 
@@ -32,6 +32,7 @@
 
           if (typeof tplNR13_renderReal_ === 'function') {
             tplNR13_renderReal_();
+            tplNR13_ligarRevisao_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +46,62 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .NR13_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). A planilha do NR-13 guarda todos os
+  // campos de cada laudo: o formulário é carregado do próprio laudo (também dos emitidos antes desta mudança) e o
+  // próximo "Emitir laudo final" cria o laudo novo — na correção com o mesmo número e a revisão seguinte.
+  function tplNR13_botoesRevisao_(it) {
+    if (typeof SGO_DocRev === 'undefined' || !it || !it.id) return '';
+    var id = String(it.id).replace(/[^\w-]/g, '');
+    return ' <button class="btn btn-sm" title="Carrega o formulário com os dados deste laudo; ao emitir sai a revisão seguinte do mesmo número" onclick="tplNR13_abrirRevisao_(\'' + id + '\',\'CORRIGIR\')">Abrir para corrigir</button>' +
+      ' <button class="btn btn-sm" title="Copia os dados para um laudo novo, com número novo (por exemplo, a próxima inspeção do mesmo vaso)" onclick="tplNR13_abrirRevisao_(\'' + id + '\',\'BASE\')">Usar como base</button>';
+  }
+
+  function tplNR13_abrirRevisao_(laudoId, modo) {
+    tplNR13_chamarApi('apiPrepararCorrecao', { laudoId: laudoId }).then(function (r) {
+      SGO_DocRev.abrir('NR13', r.id, modo);
+    }).catch(function (err) { tplNR13_erro('nr13-busca-resultado', err); });
+  }
+
+  function tplNR13_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'NR13';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplNR13_viewModulo', faixa: 'tplNR13_viewModulo', acao: 'Emitir laudo final', aprovacao: false,
+      dica: 'O formulário é carregado com todos os dados do laudo (cliente, vaso, inspeção, teste hidrostático, válvulas, manômetros, fotos e textos). Confira e toque em "Emitir laudo final": é criado um laudo novo; o laudo de origem continua guardado na pasta e na planilha.',
+      limpar: function () { tplNR13_renderReal_(); tplNR13_ligarRevisao_(); },
+      aplicar: function (payload, form, info, modo) {
+        var alvo = payload && payload._laudoId;
+        if (!alvo) { alert('Os dados deste laudo não foram encontrados na planilha do NR-13. Preencha o formulário e emita um laudo novo; avise o administrador.'); return; }
+        tplNR13_carregarRascunho_(alvo);
+        var inicio = Date.now();
+        var espera = setInterval(function () {
+          if (typeof nr13State !== 'undefined' && nr13State.laudoId === alvo) {
+            clearInterval(espera);
+            nr13State.laudoId = null; // o próximo salvar/emitir cria um laudo novo; o emitido não muda
+            if (modo === 'BASE') nr13State.registroOrigemId = null;
+            tplNR13_writeLog(modo === 'BASE' ? 'Dados do laudo copiados para um laudo novo (número novo ao emitir).' : 'Laudo aberto para correção: ao emitir sai a revisão seguinte do mesmo número.', 'SUCESSO');
+          } else if (Date.now() - inicio > 30000) {
+            clearInterval(espera);
+            tplNR13_writeLog('O laudo não terminou de carregar. Clique de novo em "Abrir para corrigir".', 'AVISO');
+          }
+        }, 300);
+      }
+    });
+    SGO_DocRev.envolver('tplNR13_emitirLaudo', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplNR13_montarPayload_', function (orig) {
+      return function () { var p = orig.apply(this, arguments); p._docRev = SGO_DocRev.pedido(M); return p; };
+    });
+    SGO_DocRev.envolver('tplNR13_chamarApi', function (orig) {
+      return function (fn) {
+        var pr = orig.apply(this, arguments);
+        if (fn === 'apiEmitirLaudo' && pr && pr.then) pr.then(function (r) { if (r && r.ok) SGO_DocRev.concluido(M); });
+        return pr;
+      };
+    });
+    SGO_DocRev.anexarPainel('tplNR13_viewModulo', M);
   }
 </script>

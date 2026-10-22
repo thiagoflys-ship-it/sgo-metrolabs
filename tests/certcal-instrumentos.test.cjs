@@ -7,7 +7,7 @@ const base = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_c
 // SGO_UTILS real (SGO_Utilis.js): o simulacro antigo só tinha safe() e o CertCal usa safeUpper e outros.
 const s = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(base,'SGO_Utilis.js'),'utf8'),s);s.SGO_UTILS=vm.runInContext('SGO_UTILS',s);
-for (const f of ['SGO_DocA4.js','SGO_RelTecA4.js','SGO_RelTecIA.js','SGO_CertCal_Config.js','SGO_CertCal_Calculo.js','SGO_DocSalvar.js','SGO_CertCal_Main.js','SGO_CertCal_Documento.js','SGO_CertCal_IA.js','SGO_RelCal_Config.js','SGO_RelCal_IA.js']) vm.runInContext(fs.readFileSync(path.join(base,f),'utf8'),s);
+for (const f of ['SGO_DocA4.js','SGO_RelTecA4.js','SGO_RelTecIA.js','SGO_CertCal_Config.js','SGO_CertCal_Calculo.js','SGO_DocSalvar.js','SGO_DocRevisao.js','SGO_CertCal_Revisao.js','SGO_CertCal_Main.js','SGO_CertCal_Documento.js','SGO_CertCal_IA.js','SGO_RelCal_Config.js','SGO_RelCal_IA.js']) vm.runInContext(fs.readFileSync(path.join(base,f),'utf8'),s);
 // Independent physical scenarios: units and references are fixtures, never inferred by the generic motor.
 const temperature=['Temperatura','°C',[28,37,50],0.15];
 const profiles={TERMOMETRO:[temperature], BANHO_MARIA_BANCADA:[temperature], TERMOHIGROMETRO:[temperature,['Umidade relativa','%UR',[30,50,70],0.8]], INCUBADORA_TESTES_BIOLOGICOS:[['Temperatura','°C',[37,56,60],0.15]], ESTUFA_INCUBACAO:[temperature], BALANCA:[['Massa','g',[0,100,500],0.002]], CENTRIFUGA:[['Tempo','s',[60,120,300],0.1],['Rotação','rpm',[1000,3000,5000],4]], CENTRIFUGA_REFRIGERADA:[['Tempo','s',[60,120,300],0.1],['Rotação','rpm',[1000,3000,5000],4],['Temperatura','°C',[4,10,20],0.15]], ESFIGMOMANOMETRO:[['Pressão','mmHg',[0,100,200],0.5]]};

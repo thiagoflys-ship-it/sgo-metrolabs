@@ -136,10 +136,26 @@ test('fluxo completo: salvar, travas no envio, revisão independente, aprovaçã
   assert.throws(() => amb.api('tec', 'apiSalvar', { id: s1.id, versaoDados: 2, dados }), /já foi emitido/);
   const hist = amb.api('tec', 'apiObter', { id: s1.id }).historico.map((h) => h.codigo);
   assert.deepEqual(hist, ['CRIADO', 'SALVO', 'ENVIADO_REVISAO', 'APROVADO', 'EMITIDO']);
-  // nova revisão: rascunho novo ligado ao original
-  const nr = amb.api('tec', 'apiNovaRevisao', { id: s1.id });
+  // "Abrir para corrigir" (21/10/2026): motivo obrigatório; rascunho novo ligado ao original, com o mesmo número
+  assert.throws(() => amb.api('tec', 'apiNovaRevisao', { id: s1.id, motivo: 'curto' }), /motivo da revisão/);
+  const nr = amb.api('tec', 'apiNovaRevisao', { id: s1.id, motivo: 'Indicador biológico do ciclo 2 registrado errado' });
   assert.equal(nr.revisao, '1');
+  assert.equal(nr.numero, em.numero);
   assert.equal(amb.api('tec', 'apiObter', { id: nr.id }).status, 'RASCUNHO');
+  // a revisão passa de novo pela revisão e aprovação do responsável técnico e sai com o mesmo número
+  amb.api('tec', 'apiEnviarRevisao', { id: nr.id });
+  amb.api('rt', 'apiAprovar', { id: nr.id, rtNome: 'RESPONSAVEL TECNICO DE TESTE', parecer: 'Revisão conferida.' });
+  const em2 = amb.api('tec', 'apiEmitir', { id: nr.id });
+  assert.equal(em2.numero, em.numero, 'mesmo número na revisão');
+  assert.match(em2.html, /Histórico de revisões/);
+  assert.match(em2.html, /Indicador biológico do ciclo 2 registrado errado/);
+  assert.ok(Object.values(amb.arquivos).some((a) => /Relatório de qualificação baixa temperatura - QBT-.* Rev\. 01 - EST-T01/.test(a.nome)), 'revisão no nome do arquivo');
+  assert.equal(amb.api('tec', 'apiObter', { id: s1.id }).status, 'SUBSTITUIDO', 'o emitido antes fica substituído, sem ser apagado');
+  assert.ok(amb.arquivos[em.pdfId], 'o PDF anterior continua na pasta');
+  // usar como base: ensaio novo, sem número até a emissão
+  const base = amb.api('tec', 'apiUsarComoBase', { id: nr.id });
+  assert.notEqual(base.id, nr.id);
+  assert.equal(amb.api('tec', 'apiObter', { id: base.id }).status, 'RASCUNHO');
 });
 
 test('alteração depois do envio anula a revisão; arquivo trocado depois da aprovação impede a emissão', () => {

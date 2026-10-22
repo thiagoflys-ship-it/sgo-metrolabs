@@ -274,3 +274,24 @@ Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; 
 - **Identificação do equipamento completa.** Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro "Cliente e equipamento", em "Gravar no cadastro" (só grava o que está vazio). Linha vazia não aparece no documento.
 - **Vários padrões de referência.** Os padrões continuam marcados por bloco (quantos forem). A tabela "Padrões de referência utilizados" do certificado passa a trazer, de cada padrão, fabricante, modelo, nº de série, certificado, laboratório, data de calibração, validade e incerteza do certificado, conforme Cadastros › Padrões de referência (controle documental do padrão).
 - Documentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual.
+
+## Corrigir um documento gerado e usar como base (21/10/2026)
+
+Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema guarda, junto de cada documento, tudo o que foi usado para gerá-lo (dados digitados, equipamento, textos revisados, anexos, leituras e arquivos importados).
+
+**Onde fica:** na busca de certificados emitidos (por CNPJ), ao lado de "Reabrir certificado", e no quadro "Documentos gerados: corrigir ou usar como base", no fim da tela. Cada linha mostra o número, a revisão (Rev. 00, Rev. 01...), a situação (Vigente ou Substituído pela Rev. NN), quem gerou e quando, e os botões "Abrir PDF", "Abrir para imprimir", "Abrir para corrigir" e "Usar como base".
+
+**Corrigir (nova revisão do mesmo número):**
+
+1. Na linha do documento, toque em "Abrir para corrigir". O formulário volta preenchido com tudo o que foi usado, sem importar nada de novo. Anexos que não voltam para o campo de arquivo (certificados, fotos) continuam valendo pelos dados guardados; o quadro do alto diz quantos são. Só escolha arquivo se quiser trocar.
+2. No quadro amarelo "Correção do documento", no alto do formulário, escreva o motivo da revisão (obrigatório, ao menos 10 caracteres). O campo do número fica travado: a correção mantém o número.
+3. Altere o que precisa e toque em "Gerar Certificado de Calibração". Este gerador não tem etapa de aprovação: sai na hora a revisão seguinte (Rev. 01, 02...) com o mesmo número.
+4. O documento novo traz o quadro "Histórico de revisões" (revisão, data, motivo e responsável) e a revisão no cabeçalho e no nome do arquivo.
+5. A revisão anterior nunca é apagada nem sobrescrita: continua na pasta do cliente, com a revisão no nome do arquivo, ganha a anotação "Substituído pela Rev. NN" na descrição do arquivo e aparece na lista como substituída.
+6. Para desistir, toque em "Cancelar a correção e limpar o formulário".
+
+**Usar como base (documento novo, número novo):** na mesma lista, toque em "Usar como base" (por exemplo, o mesmo equipamento no ano seguinte). O formulário volta preenchido; confira datas, leituras e resultados, que são do serviço anterior, e toque em "Gerar Certificado de Calibração". Sai um documento novo, Rev. 00, com número novo; o documento de origem não muda.
+
+
+
+**Certificados emitidos antes de 21/10/2026** também podem ser corrigidos pela busca por CNPJ: o formulário é remontado a partir do registro do próprio certificado (cliente, equipamento, técnico, datas, local, blocos com as leituras e os padrões, fotos e solicitação de próxima calibração). Só a temperatura ambiente e a umidade relativa precisam ser digitadas de novo, porque o certificado antigo guardou apenas a frase das condições ambientais; o quadro do alto avisa. Padrão que venceu ou foi inativado depois da emissão é recusado na correção: troque o padrão do bloco. O certificado corrigido sai da busca (fica como substituído) e o relatório interpretativo é gerado de novo a partir da revisão nova.

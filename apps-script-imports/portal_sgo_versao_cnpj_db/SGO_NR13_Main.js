@@ -60,7 +60,8 @@ function NR13_apiDispatch(req) {
     apiListarPendenciasAbertas: NR13_apiListarPendenciasAbertas,
     apiEmitirLaudo: NR13_apiEmitirLaudo,
     apiBuscarLaudosPorCnpj: NR13_apiBuscarLaudosPorCnpj,
-    apiReabrirLaudo: NR13_apiReabrirLaudo
+    apiReabrirLaudo: NR13_apiReabrirLaudo,
+    apiPrepararCorrecao: NR13_apiPrepararCorrecao
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -68,7 +69,7 @@ function NR13_apiDispatch(req) {
 
   // Decisão do dono (17/10/2026): Comercial e Financeiro consultam laudos, mas não emitem nem alteram.
   var perfilNr = String(sessaoDispatch.perfil || '').trim().toUpperCase();
-  var soEquipeTecnica = { apiSalvarRascunho: 1, apiEmitirLaudo: 1, apiUploadFoto: 1, apiAnalisarFoto: 1, apiMelhorarTexto: 1, apiGerarParecerConclusivo: 1 };
+  var soEquipeTecnica = { apiPrepararCorrecao: 1, apiSalvarRascunho: 1, apiEmitirLaudo: 1, apiUploadFoto: 1, apiAnalisarFoto: 1, apiMelhorarTexto: 1, apiGerarParecerConclusivo: 1 };
   if ((perfilNr === 'COMERCIAL' || perfilNr === 'FINANCEIRO') && soEquipeTecnica[fn]) {
     throw new Error('O perfil ' + (perfilNr === 'COMERCIAL' ? 'Comercial' : 'Financeiro') + ' consulta os laudos NR-13, mas não pode preencher nem emitir. Peça a emissão a um técnico, à metrologia ou ao gestor.');
   }
@@ -620,6 +621,8 @@ function NR13_apiListarPendenciasAbertas(sessionId, payload) {
 function NR13_apiEmitirLaudo(sessionId, payload) {
   payload = payload || {};
   var sessao = exigirSessao(sessionId);
+  // 21/10/2026: correção de laudo emitido (mesmo número, revisão seguinte, motivo) ou cópia (SGO_DocRevisao.js)
+  var docRev = SGO_DocRev_montar_('NR13', payload, sessao, '', { permitirNumeroRepetido: true });
   NR13_bootstrap_();
 
   var laudoId = SGO_UTILS.safe(payload.laudoId);
@@ -662,7 +665,7 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
   var limiteProxima = NR13_dataBrValida_(limiteProximaBr);
   if (limiteProxima && dProxima.getTime() > limiteProxima.getTime()) throw new Error('A data prevista da próxima inspeção (' + dataProxima + ') ultrapassa o prazo máximo da NR-13 para vaso de categoria ' + categoria.categoria + ' (exame externo a cada ' + categoria.periodicidade.externo + ' ano(s), ou seja, até ' + limiteProximaBr + '). Corrija no passo 4 (Dados da inspeção).');
 
-  var numero = NR13_proximoNumero_();
+  var numero = docRev.numero || NR13_proximoNumero_();
   var tz = Session.getScriptTimeZone() || 'America/Sao_Paulo';
   var dataEmissao = Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy');
 
@@ -682,6 +685,8 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
 
   var ctx = {
     numeroLaudo: numero,
+    revisao: docRev.revisao,
+    historicoRevisoesHtml: SGO_DocRev_blocoHtml_(docRev),
     dataEmissao: dataEmissao,
     cliente: { id: cliente.ID, razaoSocial: cliente.RAZAO_SOCIAL || cliente.NOME_FANTASIA || '', cnpj: SGO_UTILS.formatCnpj(cliente.CNPJ), endereco: unidade.ENDERECO || cliente.ENDERECO || '' },
     unidade: { id: unidade.ID || '', nome: unidade.NOME_UNIDADE || '' },
@@ -737,7 +742,7 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
   // "<Tipo> - <número> - <TAG> - <aaaa-MM-dd HHmm>", .html e .pdf de mesmo nome.
   var pasta = NR13_obterPastaCliente_(ctx.cliente.razaoSocial, ctx.cliente.cnpj);
   var carimbo = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HHmm');
-  var nomeBase = NR13_sanitizarNome_('Laudo NR-13 - ' + numero + ' - ' + (ctx.vaso.tag || ctx.vaso.tipo || 'sem TAG') + ' - ' + carimbo);
+  var nomeBase = NR13_sanitizarNome_('Laudo NR-13 - ' + SGO_DocRev_numeroComRevisao_(numero, docRev) + ' - ' + (ctx.vaso.tag || ctx.vaso.tipo || 'sem TAG') + ' - ' + carimbo);
   var nomeArquivo = nomeBase + '.pdf';
   // Sumário com páginas só se o laudo passar de 3 páginas (NR13Doc_finalizar_).
   var fin = NR13Doc_finalizar_(ctx, nomeBase);
@@ -761,6 +766,16 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
     CRIADO_EM: atual.CRIADO_EM
   }));
   SGO_DATA.update(NR13_SHEET, laudoId, novosDados);
+  // Revisão: dados para corrigir de novo; o laudo corrigido fica SUBSTITUIDO (continua na planilha e na pasta).
+  var docRevR = SGO_DocRev_registrar_('NR13', docRev, {
+    numero: numero, payload: Object.assign({}, payload, { _laudoId: laudoId }), titulo: 'Laudo NR-13 — ' + (ctx.vaso.tag || ctx.vaso.tipo || ''), cliente: ctx.cliente.razaoSocial, cnpj: ctx.cliente.cnpj,
+    tag: ctx.vaso.tag, equipamentoId: dados.EQUIPAMENTO_ID, pdfId: salvo.pdfId, htmlId: salvo.htmlId, pdfUrl: arquivo.getUrl(), htmlUrl: salvo.htmlUrl
+  }, sessao);
+  if (docRev.ehRevisao) {
+    var origemNr = SGO_DocRev_payloadOrigem_(docRev);
+    var idNrAntigo = SGO_UTILS.safe(origemNr && origemNr._laudoId);
+    if (idNrAntigo && idNrAntigo !== laudoId) { try { SGO_DATA.update(NR13_SHEET, idNrAntigo, { STATUS: 'SUBSTITUIDO' }); } catch (eSubst) { /* o registro de revisões já marca a substituição */ } }
+  }
 
   if (ctx.registroOrigemId) {
     SGO_DATA.update(NR13_SHEET, ctx.registroOrigemId, { STATUS_PENDENCIA: 'fechado' });
@@ -800,7 +815,30 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
   }
 
   // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do cliente (gravada junto, acima).
-  return { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, linkPdf: arquivo.getUrl(), htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
+  return { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, revisao: docRevR.rotulo, avisoRevisao: docRevR.ok ? '' : docRevR.aviso, linkPdf: arquivo.getUrl(), htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
+}
+
+/**
+ * "Abrir para corrigir" / "Usar como base" a partir da busca de laudos emitidos (21/10/2026). A planilha do NR-13
+ * guarda todos os campos de cada laudo, então também os laudos emitidos antes do registro de revisões podem ser
+ * corrigidos: o laudo entra no registro como a revisão que já existe e o formulário é carregado da própria planilha.
+ * Devolve o identificador do registro de revisões para a tela abrir (SGO_DocRev.abrir).
+ */
+function NR13_apiPrepararCorrecao(sessionId, payload) {
+  payload = payload || {};
+  var sessao = exigirSessao(sessionId);
+  NR13_bootstrap_();
+  var registro = SGO_DATA.getById(NR13_SHEET, SGO_UTILS.safe(payload.laudoId));
+  if (!registro) throw new Error('Laudo não encontrado. Busque os laudos do CNPJ de novo.');
+  if (SGO_UTILS.safeUpper(registro.STATUS) !== NR13_CFG.STATUS.EMITIDO) throw new Error('Só um laudo emitido e vigente pode ser corrigido ou usado como base. Para um rascunho, use "Continuar preenchendo".');
+  var ctx = {};
+  try { ctx = JSON.parse(registro.DADOS_JSON || '{}'); } catch (e) { ctx = {}; }
+  var id = SGO_DocRev_registrarAntigo_('NR13', {
+    numero: registro.NUMERO_LAUDO, revisao: ctx.revisao || 0, titulo: 'Laudo NR-13 — ' + ((ctx.vaso && (ctx.vaso.tag || ctx.vaso.tipo)) || registro.TIPO_VASO || ''),
+    cliente: (ctx.cliente && ctx.cliente.razaoSocial) || '', cnpj: (ctx.cliente && ctx.cliente.cnpj) || '', tag: (ctx.vaso && ctx.vaso.tag) || '', equipamentoId: registro.EQUIPAMENTO_ID,
+    pdfUrl: registro.LINK_PDF, emitidoEm: ctx.dataEmissao || '', payload: { _laudoId: registro.ID }
+  }, sessao);
+  return { ok: true, id: id };
 }
 
 function NR13_validarParaEmissao_(dados) {

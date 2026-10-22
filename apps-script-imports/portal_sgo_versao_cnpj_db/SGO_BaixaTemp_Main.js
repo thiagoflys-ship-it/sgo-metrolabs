@@ -23,7 +23,7 @@ var BAIXATEMP_COLUNAS_ENSAIOS = ['ID', 'NUMERO', 'REVISAO', 'TIPO', 'ETAPAS', 'C
   'HTML_ID', 'LINK_HTML', 'PASTA_URL', 'REGISTRO_ORIGEM_ID', 'ATUALIZADO_EM', 'CRIADO_EM'];
 var BAIXATEMP_COLUNAS_HISTORICO = ['ID', 'ENSAIO_ID', 'ACAO', 'USUARIO_ID', 'USUARIO', 'PERFIL', 'QUANDO', 'DETALHE', 'ASSINATURA_DADOS', 'CRIADO_EM'];
 var BAIXATEMP_ROTULO_ACAO = { CRIADO: 'Criado', SALVO: 'Dados salvos', ALTERADO_APOS_REVISAO: 'Alterado após revisão', ENVIADO_REVISAO: 'Enviado para revisão', APROVADO: 'Revisado e aprovado', DEVOLVIDO: 'Devolvido ao técnico', EMITIDO: 'Emitido' };
-var BAIXATEMP_STATUS = { RASCUNHO: 'RASCUNHO', EM_REVISAO: 'EM_REVISAO', APROVADO: 'APROVADO', EMITIDO: 'EMITIDO' };
+var BAIXATEMP_STATUS = { RASCUNHO: 'RASCUNHO', EM_REVISAO: 'EM_REVISAO', APROVADO: 'APROVADO', EMITIDO: 'EMITIDO', SUBSTITUIDO: 'SUBSTITUIDO' };
 
 function BaixaTemp_apiDispatch(req) {
   req = req || {};
@@ -38,7 +38,7 @@ function BaixaTemp_apiDispatch(req) {
     apiListarEquipamentos: BaixaTemp_apiListarEquipamentos, apiListarPadroes: BaixaTemp_apiListarPadroes, apiUploadArquivo: BaixaTemp_apiUploadArquivo,
     apiLerArquivo: BaixaTemp_apiLerArquivo, apiCalcular: BaixaTemp_apiCalcular, apiRedigir: BaixaTemp_apiRedigir, apiSalvar: BaixaTemp_apiSalvar,
     apiListar: BaixaTemp_apiListar, apiObter: BaixaTemp_apiObter, apiPrevia: BaixaTemp_apiPrevia, apiEnviarRevisao: BaixaTemp_apiEnviarRevisao,
-    apiAprovar: BaixaTemp_apiAprovar, apiDevolver: BaixaTemp_apiDevolver, apiEmitir: BaixaTemp_apiEmitir, apiNovaRevisao: BaixaTemp_apiNovaRevisao,
+    apiAprovar: BaixaTemp_apiAprovar, apiDevolver: BaixaTemp_apiDevolver, apiEmitir: BaixaTemp_apiEmitir, apiNovaRevisao: BaixaTemp_apiNovaRevisao, apiUsarComoBase: BaixaTemp_apiUsarComoBase,
     // 21/10/2026: completar no cadastro do equipamento o que falta (só campo vazio), pela tela do ensaio.
     apiPreencherCadastro: function (sid, pp, s) { var r = SGO_QEQ_preencherCadastro_(sid, s, pp); return JSON.parse(JSON.stringify(r)); }
   };
@@ -414,7 +414,7 @@ function BaixaTemp_apiSalvar(sessionId, p, sessao) {
   try {
     if (p.id) {
       var l = BaixaTemp_linha_(p.id);
-      if (l.STATUS === BAIXATEMP_STATUS.EMITIDO) throw new Error('Este ensaio já foi emitido (relatório ' + l.NUMERO + ') e não pode mais ser alterado. Para corrigir, toque em "Nova revisão": o sistema cria uma revisão nova com os mesmos dados, e o relatório emitido continua guardado.');
+      if (l.STATUS === BAIXATEMP_STATUS.EMITIDO || l.STATUS === BAIXATEMP_STATUS.SUBSTITUIDO) throw new Error('Este ensaio já foi emitido (relatório ' + l.NUMERO + ') e não pode mais ser alterado. Para corrigir, toque em "Abrir para corrigir" em 8. Revisão e emissão: o sistema cria a revisão seguinte do mesmo número com os mesmos dados, e o relatório emitido continua guardado.');
       if (p.versaoDados && Number(p.versaoDados) !== Number(l.VERSAO_DADOS)) throw new Error('Este ensaio foi alterado por outra pessoa ou em outra aba depois que você o abriu (versão ' + l.VERSAO_DADOS + '). Para não perder nada, copie o que mudou, abra o ensaio de novo pela lista e salve.');
       var versao = (Number(l.VERSAO_DADOS) || 0) + 1;
       var arqId = BaixaTemp_gravarDados_(l.ID, versao, dados);
@@ -426,18 +426,18 @@ function BaixaTemp_apiSalvar(sessionId, p, sessao) {
       return { ok: true, id: l.ID, versaoDados: versao, status: anulou ? BAIXATEMP_STATUS.RASCUNHO : l.STATUS, aviso: anulou ? 'O ensaio voltou para rascunho porque os dados mudaram depois do envio para revisão. Envie para revisão de novo quando terminar.' : '' };
     }
     var reg = SGO_DATA.gerarRegistroBase(Object.assign(BaixaTemp_resumoLinha_(dados), {
-      NUMERO: '', REVISAO: String(p.revisao || '0'), STATUS: BAIXATEMP_STATUS.RASCUNHO, RESULTADO: '', VERSAO_DADOS: 1,
+      NUMERO: BaixaTemp_s_(p.numero), REVISAO: String(p.revisao || '0'), STATUS: BAIXATEMP_STATUS.RASCUNHO, RESULTADO: '', VERSAO_DADOS: 1,
       ELABORADO_POR_ID: BaixaTemp_s_(sessao.userId), ELABORADO_POR: BaixaTemp_nomeSessao_(sessao), REGISTRO_ORIGEM_ID: BaixaTemp_s_(p.registroOrigemId), ATUALIZADO_EM: BaixaTemp_agora_()
     }));
     reg.DADOS_ARQUIVO_ID = BaixaTemp_gravarDados_(reg.ID, 1, dados);
     SGO_DATA.insert(BAIXATEMP_CFG.ABA_ENSAIOS, SGO_DATA.normalizarObjetoParaSheet(BAIXATEMP_CFG.ABA_ENSAIOS, reg));
-    BaixaTemp_historico_(reg.ID, 'CRIADO', sessao, 'Ensaio criado' + (p.registroOrigemId ? ' como nova revisão do ensaio ' + p.registroOrigemId : '') + '.');
+    BaixaTemp_historico_(reg.ID, 'CRIADO', sessao, 'Ensaio criado' + (p.registroOrigemId ? ' como revisão ' + String(p.revisao || '') + ' do relatório ' + BaixaTemp_s_(p.numero) + (p.motivoRevisao ? '. Motivo: ' + p.motivoRevisao : '') : (p.baseNumero ? ' com os dados do relatório ' + p.baseNumero : '')) + '.');
     return { ok: true, id: reg.ID, versaoDados: 1, status: BAIXATEMP_STATUS.RASCUNHO, aviso: '' };
   } finally { trava.releaseLock(); }
 }
 
 function BaixaTemp_rotuloStatus_(s) {
-  return { RASCUNHO: 'Rascunho', EM_REVISAO: 'Aguardando revisão do responsável técnico', APROVADO: 'Aprovado, pronto para emitir', EMITIDO: 'Emitido' }[s] || s;
+  return { RASCUNHO: 'Rascunho', EM_REVISAO: 'Aguardando revisão do responsável técnico', APROVADO: 'Aprovado, pronto para emitir', EMITIDO: 'Emitido', SUBSTITUIDO: 'Substituído por revisão posterior' }[s] || s;
 }
 
 function BaixaTemp_apiListar(sessionId, p) {
@@ -581,18 +581,21 @@ function BaixaTemp_apiEmitir(sessionId, p, sessao) {
   if (ass !== l.ASSINATURA_DADOS) throw new Error('Os dados ou os arquivos mudaram depois da aprovação (a impressão digital não confere). O relatório não foi emitido. Peça ao responsável técnico para devolver e revisar de novo.');
   var id = c.calc.dados.identificacao;
   SGO_VINCULOS.relation(sessionId, id.clienteId, id.unidadeId, id.equipamentoId);
-  var numero = BaixaTemp_proximoNumero_();
-  var html = BaixaTemp_montarHtml_(c.calc, dados, l, { emitindo: true, numero: numero, emissor: BaixaTemp_nomeSessao_(sessao) });
+  // 21/10/2026: revisão aberta por "Abrir para corrigir" mantém o número do relatório corrigido (SGO_DocRevisao.js).
+  var numero = (BaixaTemp_s_(l.REGISTRO_ORIGEM_ID) && BaixaTemp_s_(l.NUMERO)) ? BaixaTemp_s_(l.NUMERO) : BaixaTemp_proximoNumero_();
+  var docRevBt = BaixaTemp_docRev_(l, dados, numero, sessao);
+  var html = SGO_DocRev_injetarHtml_(BaixaTemp_montarHtml_(c.calc, dados, l, { emitindo: true, numero: numero, emissor: BaixaTemp_nomeSessao_(sessao) }), docRevBt);
   // 21/10/2026: pasta do equipamento dentro da pasta do cliente, como nos outros módulos de qualificação
   // (Baixa Temperatura - Laudos/<CNPJ>/<TAG - tipo>/Qualificação). Relatórios antigos continuam onde estão.
   var pasta = BaixaTemp_pastaEquipamento_(SGO_DocSalvar_pastaClienteEm_(BaixaTemp_pastaLaudos_(), id.cnpj, id.cliente), id);
   var carimbo = Utilities.formatDate(new Date(), BAIXATEMP_CFG.TZ, 'yyyy-MM-dd HHmm');
-  var nomeBase = SGO_DocSalvar_sanitizarNome_('Relatório de qualificação baixa temperatura - ' + numero + ' - ' + (id.tag || 'sem-tag') + ' - ' + carimbo);
+  var nomeBase = SGO_DocSalvar_sanitizarNome_('Relatório de qualificação baixa temperatura - ' + SGO_DocRev_numeroComRevisao_(numero, docRevBt) + ' - ' + (id.tag || 'sem-tag') + ' - ' + carimbo);
   var salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
   var agora = BaixaTemp_agora_();
   SGO_DATA.update(BAIXATEMP_CFG.ABA_ENSAIOS, l.ID, { NUMERO: numero, STATUS: BAIXATEMP_STATUS.EMITIDO, RESULTADO: c.calc.av.resultado, EMITIDO_POR: BaixaTemp_nomeSessao_(sessao), EMITIDO_EM: agora,
     PDF_ID: salvo.pdfId, LINK_PDF: salvo.pdfUrl, HTML_ID: salvo.htmlId, LINK_HTML: salvo.htmlUrl, PASTA_URL: pasta.getUrl(), ATUALIZADO_EM: agora });
   BaixaTemp_historico_(l.ID, 'EMITIDO', sessao, 'Relatório ' + numero + ' (' + salvo.pdfNome + ').', ass);
+  BaixaTemp_registrarRevisao_(l, numero, docRevBt, salvo, id, sessao);
   var avisoArquivo = '';
   try {
     var venc = new Date(); venc.setMonth(venc.getMonth() + BAIXATEMP_CFG.VALIDADE_DOCUMENTO_MESES);
@@ -605,9 +608,50 @@ function BaixaTemp_apiEmitir(sessionId, p, sessao) {
 
 function BaixaTemp_apiNovaRevisao(sessionId, p, sessao) {
   var l = BaixaTemp_linha_(p.id);
-  if (l.STATUS !== BAIXATEMP_STATUS.EMITIDO) throw new Error('Nova revisão só se aplica a ensaio emitido. Este ensaio ainda pode ser alterado diretamente.');
+  if (l.STATUS === BAIXATEMP_STATUS.SUBSTITUIDO) throw new Error('Este relatório já foi substituído por uma revisão posterior. Abra a revisão vigente (na lista, a de maior revisão do mesmo número) e corrija a partir dela.');
+  if (l.STATUS !== BAIXATEMP_STATUS.EMITIDO) throw new Error('A correção por revisão só se aplica a ensaio emitido. Este ensaio ainda pode ser alterado diretamente: altere e salve.');
+  // 21/10/2026: motivo obrigatório; a revisão nova leva o mesmo número e, na emissão, a anterior passa a substituída.
+  var motivo = BaixaTemp_s_(p.motivo);
+  if (motivo.length < 10) throw new Error('Escreva o motivo da revisão (ao menos 10 caracteres). Ele aparece no histórico de revisões do relatório.');
   var dados = BaixaTemp_lerDados_(l);
+  dados.revisaoMotivo = motivo;
   var rev = String((parseInt(l.REVISAO, 10) || 0) + 1);
-  var r = BaixaTemp_apiSalvar(sessionId, { dados: dados, revisao: rev, registroOrigemId: l.ID }, sessao);
-  return { ok: true, id: r.id, revisao: rev };
+  var r = BaixaTemp_apiSalvar(sessionId, { dados: dados, revisao: rev, registroOrigemId: l.ID, numero: l.NUMERO, motivoRevisao: motivo }, sessao);
+  return { ok: true, id: r.id, revisao: rev, numero: l.NUMERO };
+}
+
+/** "Usar como base": ensaio novo (rascunho, número novo na emissão) com os dados de outro. O de origem não muda. */
+function BaixaTemp_apiUsarComoBase(sessionId, p, sessao) {
+  var l = BaixaTemp_linha_(p.id);
+  var dados = BaixaTemp_lerDados_(l);
+  delete dados.revisaoMotivo;
+  var r = BaixaTemp_apiSalvar(sessionId, { dados: dados, revisao: '0', baseNumero: l.NUMERO || '' }, sessao);
+  return { ok: true, id: r.id };
+}
+
+/** Revisão para o documento: número, rótulo e histórico das revisões do mesmo número (registro comum). */
+function BaixaTemp_docRev_(l, dados, numero, sessao) {
+  var rev = parseInt(l.REVISAO, 10) || 0;
+  var base = { modo: '', numero: numero, revisao: rev, rotulo: SGO_DocRev_rotulo_(rev), motivo: '', origemId: '', historico: [], ehRevisao: false };
+  if (!rev || !BaixaTemp_s_(l.REGISTRO_ORIGEM_ID)) return base;
+  var hist = SGO_DocRev_historico_('BAIXA_TEMPERATURA', numero);
+  hist.push({ revisao: rev, rotulo: SGO_DocRev_rotulo_(rev), em: BaixaTemp_hojeBr_(), por: BaixaTemp_nomeSessao_(sessao), motivo: BaixaTemp_s_(dados.revisaoMotivo) || 'Revisão do relatório' });
+  return Object.assign(base, { modo: 'CORRIGIR', motivo: BaixaTemp_s_(dados.revisaoMotivo), historico: hist, ehRevisao: true });
+}
+
+/** Depois da emissão: registro comum de revisões e o relatório corrigido passa a substituído (nada é apagado). Nunca lança. */
+function BaixaTemp_registrarRevisao_(l, numero, docRevBt, salvo, id, sessao) {
+  try {
+    SGO_DocRev_registrar_('BAIXA_TEMPERATURA', docRevBt, { numero: numero, revisao: docRevBt.revisao, payload: { _ensaioId: l.ID }, titulo: 'Relatório de qualificação de baixa temperatura',
+      cliente: id.cliente, cnpj: id.cnpj, tag: id.tag, equipamentoId: id.equipamentoId, pdfId: salvo.pdfId, htmlId: salvo.htmlId, pdfUrl: salvo.pdfUrl, htmlUrl: salvo.htmlUrl }, sessao);
+    var origemId = BaixaTemp_s_(l.REGISTRO_ORIGEM_ID);
+    if (!origemId || !docRevBt.ehRevisao) return;
+    var o = BaixaTemp_linha_(origemId);
+    if (o.STATUS !== BAIXATEMP_STATUS.EMITIDO) return;
+    SGO_DATA.update(BAIXATEMP_CFG.ABA_ENSAIOS, o.ID, { STATUS: BAIXATEMP_STATUS.SUBSTITUIDO, ATUALIZADO_EM: BaixaTemp_agora_() });
+    BaixaTemp_historico_(o.ID, 'SUBSTITUIDO', sessao, 'Substituído pela ' + docRevBt.rotulo + ' do relatório ' + numero + ' (ensaio ' + l.ID + ').');
+    var nota = 'Substituído pela ' + docRevBt.rotulo + ' em ' + BaixaTemp_hojeBr_() + (docRevBt.motivo ? '. Motivo: ' + docRevBt.motivo : '') + '.';
+    SGO_DocRev_anotarArquivo_(o.PDF_ID, nota);
+    SGO_DocRev_anotarArquivo_(o.HTML_ID, nota);
+  } catch (e) { /* a emissão já foi feita; a lista mostra as duas revisões */ }
 }

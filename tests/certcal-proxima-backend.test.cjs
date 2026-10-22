@@ -29,7 +29,7 @@ function ambiente() {
     DriveApp: { Access: { ANYONE_WITH_LINK: 'link' }, Permission: { VIEW: 'view' } }, Auvo_criarTarefa_() {}
   });
   // Em produção todos os .js são carregados juntos: SGO_UTILS real, moldura A4 (RelTecA4_paginar_) e cópia HTML (SGO_DocSalvar_htmlAoLado_).
-  for (const f of ['SGO_Utilis.js', 'SGO_DocA4.js', 'SGO_RelTecA4.js', 'SGO_DocSalvar.js', 'SGO_CertCal_Main.js']) vm.runInContext(fs.readFileSync(path.join(base, f), 'utf8'), ctx);
+  for (const f of ['SGO_Utilis.js', 'SGO_DocA4.js', 'SGO_RelTecA4.js', 'SGO_DocSalvar.js', 'SGO_DocRevisao.js', 'SGO_CertCal_Revisao.js', 'SGO_CertCal_Main.js']) vm.runInContext(fs.readFileSync(path.join(base, f), 'utf8'), ctx);
   ctx.CertCal_bootstrap_ = () => {};
   ctx.CertCal_mapaPadroesAtivos_ = () => ({});
   ctx.CertCal_calcularBlocos_ = () => [{ titulo: 'Rotação' }];

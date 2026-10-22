@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const { criarUtilities, criarSession } = require('./_simulacros_gas.cjs');
 
 const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
-const ARQUIVOS_MODULO = ['SGO_Utilis.js', 'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_QualIA_Verificador.js', 'SGO_BaixaTemp_Config.js', 'SGO_BaixaTemp_Parser.js',
+const ARQUIVOS_MODULO = ['SGO_Utilis.js', 'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_DocRevisao.js', 'SGO_QualIA_Verificador.js', 'SGO_BaixaTemp_Config.js', 'SGO_BaixaTemp_Parser.js',
   'SGO_BaixaTemp_Motor.js', 'SGO_BaixaTemp_IA.js', 'SGO_BaixaTemp_Documento.js', 'SGO_BaixaTemp_Main.js', 'SGO_BaixaTemp_Tela.js', 'SGO_Ajuda_BaixaTemp.js'];
 
 function ler(nome) { return fs.readFileSync(path.join(BASE, nome), 'utf8').replace(/\r\n/g, '\n'); }
