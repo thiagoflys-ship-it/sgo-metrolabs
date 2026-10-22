@@ -135,6 +135,8 @@ function SGO_QE_proximaRevisao_(modulo, numero, minima) {
 }
 
 function SGO_QE_marcarSubstituidas_(modulo, numero, idAtual) {
+  // 21/10/2026: a emissão também entra no registro de revisões ("Abrir para corrigir" e "Usar como base", SGO_DocRevisao.js).
+  if (typeof SGO_DocRev_qeEmitido_ === 'function') SGO_DocRev_qeEmitido_(modulo, numero, idAtual);
   var n = String(numero || '').trim();
   if (!n) return;
   SGO_QE_listar_(modulo, 'EMITIDO').forEach(function (r) {

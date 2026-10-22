@@ -41,17 +41,20 @@
     if (!r) return [];
     return Array.prototype.slice.call(r.querySelectorAll('input[id],select[id],textarea[id]')).filter(function (c) {
       var t = String(c.type || '').toLowerCase();
-      return t !== 'file' && t !== 'password' && t !== 'button' && t !== 'submit' && c.id.indexOf('sgoDocRev') !== 0;
+      return t !== 'file' && t !== 'password' && t !== 'button' && t !== 'submit' && c.id.indexOf('sgoDocRev') !== 0 && !/senha/i.test(c.id);
     });
   }
 
   /** { id: valor } de todos os campos com id dentro da raiz (caixas de marcar: true/false). */
-  function capturar(raiz) {
+  // limite: campo de texto maior que isso não entra (leituras coladas já vão no próprio pedido; o gerador as devolve
+  // pelo mapa camposGrandes). Sem limite, entra tudo.
+  function capturar(raiz, limite) {
     var mapa = {};
     campos(raiz).forEach(function (c) {
       var t = String(c.type || '').toLowerCase();
       if (t === 'checkbox' || t === 'radio') mapa[c.id] = !!c.checked;
       else if (c.tagName === 'SELECT' && c.multiple) mapa[c.id] = Array.prototype.slice.call(c.selectedOptions || []).map(function (o) { return o.value; });
+      else if (limite && String(c.value || '').length > limite) return;
       else mapa[c.id] = c.value;
     });
     return mapa;
@@ -156,6 +159,61 @@
     }
   }
 
+  /* ---------- observar chamadas ao servidor (telas que chamam google.script.run direto) ---------- */
+
+  var OBS = {};
+  var OBS_INSTALADO = false;
+
+  /** Executor que guarda a cadeia withSuccessHandler/withFailureHandler/withUserObject e a repete no original. */
+  function executorObservado(base, cadeia) {
+    var alvo = {
+      withSuccessHandler: function (f) { return executorObservado(base, cadeia.concat([['withSuccessHandler', f]])); },
+      withFailureHandler: function (f) { return executorObservado(base, cadeia.concat([['withFailureHandler', f]])); },
+      withUserObject: function (o) { return executorObservado(base, cadeia.concat([['withUserObject', o]])); }
+    };
+    var chamarNome = function (nome, args) {
+      var lista = OBS[nome] || [];
+      var req = args && args[0];
+      var fn = req && typeof req === 'object' ? String(req.fn || '') : '';
+      var interessados = lista.filter(function (o) { return o.fns.indexOf(fn) >= 0; });
+      var c = cadeia;
+      if (interessados.length) {
+        var okOriginal = null, temOk = false;
+        cadeia.forEach(function (p) { if (p[0] === 'withSuccessHandler') { okOriginal = p[1]; temOk = true; } });
+        var okNovo = function (res, obj) {
+          try { if (typeof okOriginal === 'function') okOriginal(res, obj); }
+          finally { interessados.forEach(function (o) { try { o.cb(req, res); } catch (e) { if (window.console) console.error('SGO_DocRev observar', e); } }); }
+        };
+        c = temOk ? cadeia.map(function (p) { return p[0] === 'withSuccessHandler' ? ['withSuccessHandler', okNovo] : p; }) : cadeia.concat([['withSuccessHandler', okNovo]]);
+      }
+      var r = base;
+      c.forEach(function (p) { r = r[p[0]](p[1]); });
+      return r[nome].apply(r, args);
+    };
+    if (typeof Proxy === 'undefined') return base;
+    return new Proxy(alvo, {
+      get: function (t, nome) {
+        if (nome in t) return t[nome];
+        if (typeof nome !== 'string' || nome === 'then') return undefined;
+        return function () { return chamarNome(nome, Array.prototype.slice.call(arguments)); };
+      }
+    });
+  }
+
+  function instalarObservador() {
+    if (OBS_INSTALADO) return;
+    try {
+      if (typeof Proxy === 'undefined' || !window.google || !google.script || !google.script.run) return;
+      var original = google.script.run;
+      var novo = executorObservado(original, []);
+      try { google.script.run = novo; } catch (e1) { /* objeto protegido: */ }
+      if (google.script.run !== novo) {
+        try { Object.defineProperty(google.script, 'run', { value: novo, configurable: true, writable: true }); } catch (e2) { return; }
+      }
+      OBS_INSTALADO = google.script.run === novo;
+    } catch (e) { /* sem observador: a tela funciona igual, só o quadro da correção não fecha sozinho */ }
+  }
+
   /* ---------- API pública ---------- */
 
   var API = {
@@ -172,6 +230,11 @@
         var form = r.form ? Object.assign({}, r.form) : null;
         // Número do documento: na correção é o mesmo (campo travado); na cópia fica em branco (número novo).
         if (cfg.campoNumero && form) form[cfg.campoNumero] = r.modo === 'CORRIGIR' ? (r.info || {}).numero || '' : '';
+        // campos grandes (leituras coladas) voltam do próprio pedido guardado
+        if (form && cfg.camposGrandes) Object.keys(cfg.camposGrandes).forEach(function (id) {
+          var v = (r.payload || {})[cfg.camposGrandes[id]];
+          if (form[id] === undefined && typeof v === 'string' && v) form[id] = v;
+        });
         var aplicarCampos = function () {
           restaurar(cfg.raiz, form, function (faltaram) {
             travarNumero(modulo);
@@ -216,7 +279,7 @@
     pedido: function (modulo) {
       var cfg = CFG[modulo] || {}, est = ESTADO[modulo];
       var m = document.getElementById('sgoDocRevMotivo_' + modulo);
-      var p = { modo: '', origemId: '', motivo: '', form: cfg.raiz ? capturar(cfg.raiz) : null };
+      var p = { modo: '', origemId: '', motivo: '', form: cfg.raiz ? capturar(cfg.raiz, cfg.limiteCampo) : null };
       if (est) { p.modo = est.modo; p.origemId = est.id; p.motivo = String((m && m.value) || est.motivo || '').trim(); }
       return p;
     },
@@ -257,7 +320,7 @@
       if (!box) return;
       opcoes = opcoes || {};
       box.innerHTML = '<p class="panel-subtitle" style="margin:0">Carregando os documentos gerados…</p>';
-      var pedido = Object.assign({}, filtro || {}, { modulo: modulo });
+      var pedido = Object.assign({}, filtro || {}, { modulo: opcoes.modulos || (CFG[modulo] || {}).listaModulos || modulo });
       google.script.run.withSuccessHandler(function (r) {
         if (!r || r.ok === false) { box.innerHTML = '<div class="alert-box show error" style="display:block">' + esc((r && r.erro) || 'Não foi possível carregar a lista.') + ' Clique em "Atualizar" para tentar de novo.</div>'; return; }
         if (!r.itens.length) { box.innerHTML = '<p class="panel-subtitle" style="margin:0">' + esc(opcoes.vazio || 'Nenhum documento gerado com os dados guardados ainda. Os documentos gerados a partir de agora aparecem aqui, prontos para corrigir ou usar como base.') + '</p>'; return; }
@@ -323,6 +386,75 @@
     atualizarPainel: function (modulo) {
       var b = document.getElementById('sgoDocRevPainel_' + modulo + '_buscar');
       if (b) b.click();
+    },
+
+    /**
+     * Avisa quando uma chamada ao servidor de um despacho (ex.: 'AutoRel_apiDispatch') com um dos fn indicados
+     * termina com sucesso: cb(req, resposta). Para as telas que chamam o servidor direto, sem função própria
+     * de chamada. Só essas chamadas ganham o aviso; todas as outras passam iguais.
+     */
+    /**
+     * Telas de relatório de ensaio e planilha de dados com aprovação (Autoclave, Lavadora, Estufa, Cadeia de frio).
+     * O número e a revisão são do registro de emissões (mesmo número = revisão seguinte); aqui entram a lista, o
+     * formulário de volta, o motivo e o quadro da correção. c: { modulo, modulos, raiz, campoNumero, acao, payloadFn,
+     *   validarFns, despacho | chamarApiFn, fnsEmissao, fotoFn, camposGrandes, limpar, nomeTela }
+     */
+    ligarEnsaio: function (c) {
+      var M = c.modulo;
+      API.registrar(M, {
+        raiz: c.raiz, faixa: c.raiz, campoNumero: c.campoNumero, acao: c.acao, aprovacao: true, listaModulos: c.modulos,
+        limiteCampo: 4000, camposGrandes: c.camposGrandes || {}, limpar: c.limpar,
+        dica: 'O formulário voltou com o que foi usado (cliente e equipamento, arquivos do registrador já enviados, sensores, parâmetros e textos). Gere o rascunho de novo antes de emitir ou enviar: a análise é refeita com os dados corrigidos. Quem não é responsável técnico envia para aprovação; quem é pode emitir direto, marcando a conferência.',
+        resumoAnexos: function (p) {
+          var n = (p.fotosCertificado || []).filter(function (f) { return f && f.base64; }).length, a = (p.fotosArquivos || []).length;
+          return n ? n + ' foto(s) do documento de origem continuam valendo; só escolha arquivo nos campos de foto se quiser trocar.' :
+            (a ? 'As ' + a + ' foto(s) do documento de origem ficaram guardadas com ele, mas não voltam aos campos de foto: anexe de novo as que devem sair na revisão.' : '');
+        }
+      });
+      if (c.payloadFn) API.envolver(c.payloadFn, function (orig) {
+        return function () {
+          var r = orig.apply(this, arguments);
+          var por = function (p) { if (p && typeof p === 'object') p._docRev = API.pedido(M); return p; };
+          return r && typeof r.then === 'function' ? r.then(por) : por(r);
+        };
+      });
+      (c.validarFns || []).forEach(function (nome) {
+        API.envolver(nome, function (orig) { return function () { var e = API.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); }; });
+      });
+      // emitido (arquivo gravado) ou enviado para aprovação (registro criado); prévia e minuta não encerram a correção
+      var terminou = function (res) { if (API.ativo(M) && res && res.ok !== false && !res.erro && (res.pdfId || res.id || res.emissaoId)) API.concluido(M); };
+      if (c.despacho) API.observar(c.despacho, c.fnsEmissao || [], function (req, res) { terminou(res); }, M);
+      if (c.chamarApiFn) API.envolver(c.chamarApiFn, function (orig) {
+        return function (fn) {
+          var pr = orig.apply(this, arguments);
+          if ((c.fnsEmissao || []).indexOf(fn) >= 0 && pr && typeof pr.then === 'function') pr.then(terminou, function () {});
+          return pr;
+        };
+      });
+      if (c.fotoFn) API.envolver(c.fotoFn, function (orig) {
+        return function (inputEl) {
+          var r = orig.apply(this, arguments);
+          var trocar = function (f) {
+            if (f || !API.ativo(M)) return f;
+            var m = inputEl && inputEl.id ? /certFoto(\d+)$/.exec(inputEl.id) : null;
+            var g = ((API.payloadAberto(M) || {}).fotosCertificado || []).filter(function (x) { return x && x.base64; });
+            var s = m ? g[Number(m[1]) - 1] : null;
+            return s ? { base64: s.base64, mimeType: s.mimeType || 'image/jpeg' } : f;
+          };
+          return r && typeof r.then === 'function' ? r.then(trocar) : r;
+        };
+      });
+      API.anexarPainel(c.raiz, M, {
+        titulo: 'Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base',
+        subtitulo: '"Abrir para corrigir" carrega o formulário com tudo o que foi usado; o número fica o mesmo e, depois da aprovação, sai a revisão seguinte, com o motivo no histórico de revisões. "Usar como base" copia os dados para um documento novo (digite outro número). Documentos emitidos antes de 21/10/2026 não guardaram os dados do formulário e não aparecem aqui: para corrigir um deles, preencha o formulário com o mesmo número (sai a revisão seguinte).'
+      });
+    },
+
+    observar: function (despacho, fns, cb, chave) {
+      // chave: a mesma tela registra de novo a cada abertura; o registro anterior com a mesma chave é trocado.
+      OBS[despacho] = (OBS[despacho] || []).filter(function (o) { return !chave || o.chave !== chave; });
+      OBS[despacho].push({ fns: [].concat(fns), cb: cb, chave: chave || '' });
+      instalarObservador();
     },
 
     capturar: capturar,

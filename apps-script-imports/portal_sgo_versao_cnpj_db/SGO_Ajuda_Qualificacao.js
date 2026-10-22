@@ -114,6 +114,19 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Reabrir documentos e arquivos", itens: [
           "Toque em \"Relatórios emitidos\" para abrir a pasta dos relatórios.",
           "Toque em \"Arquivos dos registradores\" para abrir a pasta com os arquivos enviados."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, no quadro Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base, busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Enviar para aprovação\". A revisão passa pela aprovação do responsável técnico, como na primeira emissão; depois de aprovada, sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Enviar para aprovação\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -148,7 +161,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\" ao gerar.", oQueFazer: "Escolha os três no quadro \"Cliente e equipamento (do cadastro)\", no início da tela. Se faltar cadastro, use os botões de cadastrar (abrem em outra aba) e depois \"Atualizar listas\"." },
         { situacao: "Aparece que o equipamento pertence a outro cliente ou está em outra unidade.", oQueFazer: "Escolha o equipamento na lista do cliente certo. Se o cadastro estiver errado, a gestão corrige em Cadastros › Vínculos." },
         { situacao: "Relatório oficial: \"foi emitido sem o registro dos dados\" ou \"os dados mudaram desde a aprovação\".", oQueFazer: "Emita de novo o relatório daquele ciclo na aba \"Gerar relatório\" (sai uma nova revisão) e marque a revisão nova." },
-        { situacao: "Relatório oficial: \"a qualificação de desempenho foi marcada, mas nenhum relatório escolhido é de ciclo com carga\".", oQueFazer: "Marque o relatório do ciclo com carga (tipo de ensaio QD) ou desmarque a etapa de desempenho." }
+        { situacao: "Relatório oficial: \"a qualificação de desempenho foi marcada, mas nenhum relatório escolhido é de ciclo com carga\".", oQueFazer: "Marque o relatório do ciclo com carga (tipo de ensaio QD) ou desmarque a etapa de desempenho." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Enviar para aprovação\"." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Relatórios de ensaio e planilhas de dados emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. Para corrigir um deles, preencha o formulário com o mesmo número: sai a revisão seguinte, agora com o histórico de revisões no documento." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, rascunho do relatório de ensaio, memória do F0 e rascunho do relatório de qualificação (aba Relatório oficial)." },
@@ -223,6 +238,19 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
           "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
           "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, no quadro Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base, busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Enviar para aprovação\". A revisão passa pela aprovação do responsável técnico, como na primeira emissão; depois de aprovada, sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Enviar para aprovação\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -242,7 +270,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "O rascunho mostrou a lista de problemas dos dados.", oQueFazer: "Cada item diz o que aconteceu, por quê e como corrigir. Sensor que falhou: desmarque e registre a falha. Arquivo incompleto: exporte de novo do registrador." },
         { situacao: "Não sei qual classificação escolher.", oQueFazer: "Artigo crítico entra em tecido estéril ou na corrente sanguínea (A0 de 3.000 s). Semicrítico ou não crítico toca mucosa ou pele (A0 de 600 s). Na dúvida, pergunte ao responsável técnico do cliente." },
         { situacao: "A prévia mostra datas trocadas.", oQueFazer: "Em \"Padrão de Data\", escolha \"Brasil (DD/MM/AAAA)\" ou \"USA (MM/DD/AAAA)\" e pré-visualize de novo." },
-        { situacao: "O rascunho abriu com aviso de que o texto automático não passou na conferência.", oQueFazer: "Revise o texto padrão, que usa só os resultados calculados, e siga com a emissão ou o envio." }
+        { situacao: "O rascunho abriu com aviso de que o texto automático não passou na conferência.", oQueFazer: "Revise o texto padrão, que usa só os resultados calculados, e siga com a emissão ou o envio." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Enviar para aprovação\"." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Relatórios de ensaio e planilhas de dados emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. Para corrigir um deles, preencha o formulário com o mesmo número: sai a revisão seguinte, agora com o histórico de revisões no documento." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Gerar e emitir (responsável técnico): aprova planilhas, relatórios de ensaio e relatórios de qualificação." },
@@ -335,6 +365,19 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
           "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
           "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, no quadro Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base, busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Enviar para aprovação\". A revisão passa pela aprovação do responsável técnico, como na primeira emissão; depois de aprovada, sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Enviar para aprovação\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -355,7 +398,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "\"No início do evento havia sensor fora da faixa\".", oQueFazer: "O estudo de porta ou energia precisa começar com todos os sensores na faixa. Marque o início num horário em que todos já estavam na faixa (veja a prévia) ou repita o estudo." },
         { situacao: "\"Os dados mudaram desde o rascunho\".", oQueFazer: "Algo mudou no formulário ou no cadastro depois do rascunho. Toque em \"Gerar rascunho\" de novo." },
         { situacao: "O período importado está com dia e mês trocados.", oQueFazer: "Em \"Formato de data nos arquivos\", escolha o formato do registrador e pré-visualize de novo." },
-        { situacao: "Cada sensor gravou um arquivo separado.", oQueFazer: "Em \"Como enviar os dados\", escolha \"Um arquivo por sensor (registrador individual)\". Cada sensor marcado ganha um campo de envio." }
+        { situacao: "Cada sensor gravou um arquivo separado.", oQueFazer: "Em \"Como enviar os dados\", escolha \"Um arquivo por sensor (registrador individual)\". Cada sensor marcado ganha um campo de envio." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Enviar para aprovação\"." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Relatórios de ensaio e planilhas de dados emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. Para corrigir um deles, preencha o formulário com o mesmo número: sai a revisão seguinte, agora com o histórico de revisões no documento." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Gerar, emitir e aprovar (responsável técnico)." },
@@ -438,6 +483,19 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
           "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
           "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, no quadro Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base, busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Enviar para aprovação\". A revisão passa pela aprovação do responsável técnico, como na primeira emissão; depois de aprovada, sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Enviar para aprovação\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -455,7 +513,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Apareceu \"duração menor que 24 h\" ou \"intervalo de registro maior\".", oQueFazer: "Ajuste o período do estudo. Se o protocolo do cliente define outra duração ou outro intervalo, escreva a justificativa em \"Justificativa de desvio do protocolo\"." },
         { situacao: "Apareceu \"sensor parado\", \"pico\" ou \"leitura impossível\".", oQueFazer: "Confira o sensor no arquivo. Se ele falhou, desmarque-o em Sensores (fica registrado no documento) ou repita o ensaio." },
         { situacao: "A repetição tem FH ou FD acima do mínimo, mas saiu reprovada.", oQueFazer: "O resultado do laboratório (indicador biológico ou endotoxina) também é critério. Se o laboratório reprovou, a repetição é reprovada." },
-        { situacao: "Mudei dados depois de gerar o rascunho.", oQueFazer: "Gere o rascunho de novo antes de emitir ou enviar: o sistema recusa texto feito sobre dados diferentes." }
+        { situacao: "Mudei dados depois de gerar o rascunho.", oQueFazer: "Gere o rascunho de novo antes de emitir ou enviar: o sistema recusa texto feito sobre dados diferentes." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Enviar para aprovação\"." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Relatórios de ensaio e planilhas de dados emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. Para corrigir um deles, preencha o formulário com o mesmo número: sai a revisão seguinte, agora com o histórico de revisões no documento." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Preparar a planilha de dados, o relatório de ensaio e o relatório de qualificação e enviar para aprovação." },

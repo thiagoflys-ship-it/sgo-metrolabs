@@ -36,10 +36,10 @@ var SGO_DOCREV_ARQUIVOS_MEMORIA_ = null; // só nos testes (sem Drive)
 
 /* Nome do gerador como aparece nas mensagens. Gerador novo: acrescente aqui. */
 var SGO_DOCREV_MODULOS = {
-  AUTOCLAVE_ENSAIO: 'Relatório de ensaio da autoclave',
-  LAVADORA_ENSAIO: 'Relatório de ensaio da lavadora',
-  ESTUFA_ENSAIO: 'Relatório de ensaio de estufa, banho-maria ou secadora',
-  CADEIA_FRIO_ENSAIO: 'Relatório de ensaio da cadeia de frio',
+  AUTOCLAVE: 'Relatório de ensaio da autoclave', AUTOCLAVE_DADOS: 'Planilha de dados da autoclave',
+  LAVADORA: 'Relatório de ensaio da lavadora', LAVADORA_DADOS: 'Planilha de dados da lavadora',
+  ESTUFA: 'Relatório de ensaio de estufa, banho-maria ou secadora', ESTUFA_DADOS: 'Planilha de dados de estufa, banho-maria ou secadora',
+  CADEIA_FRIO: 'Relatório de ensaio da cadeia de frio', CADEIA_FRIO_DADOS: 'Planilha de dados da cadeia de frio',
   BAIXA_TEMPERATURA: 'Relatório de qualificação de baixa temperatura',
   RELATORIO_CALIBRACAO: 'Relatório de calibração',
   DECLARACAO_EXECUCAO: 'Declaração de execução de serviço',
@@ -423,10 +423,87 @@ function SGO_DocRev_qeComoBase_(c) {
   };
 }
 
+/* ============================================================
+ * Relatórios de ensaio e planilhas de dados com aprovação (QUALIF_EMISSOES: AUTOCLAVE, LAVADORA, ESTUFA,
+ * CADEIA_FRIO e os *_DADOS). Esses geradores já numeram e revisam pelo registro de emissões (mesmo número =
+ * revisão seguinte). Aqui entram, sem mexer em cada gerador:
+ *  - SGO_DocRev_ensaioAntes_ (chamado por SGO_DocSalvar_finalizarCertificado_): histórico de revisões no documento
+ *    quando a emissão é revisão, com o motivo pedido na tela;
+ *  - SGO_DocRev_qeEmitido_ (chamado por SGO_QE_marcarSubstituidas_, logo depois de a emissão ser gravada): registro
+ *    da emissão com os dados usados, para "Abrir para corrigir" e "Usar como base".
+ * ============================================================ */
+
+var SGO_DOCREV_ENSAIO_PENDENTE_ = null; // dados da emissão em andamento (mesma execução)
+
+/** Rótulo do arquivo → módulo do registro de emissões (null quando não é relatório de ensaio nem planilha de dados). */
+function SGO_DocRev_moduloDoRotulo_(rotulo) {
+  var r = SGO_DocRev_s_(rotulo);
+  var mapa = [
+    [/^Relatório de ensaio Autoclave/, 'AUTOCLAVE'], [/^Planilha de dados Autoclave/, 'AUTOCLAVE_DADOS'],
+    [/^Relatório de ensaio (Termodesinfectora|Lavadora)/, 'LAVADORA'], [/^Planilha de dados (Termodesinfectora|Lavadora)/, 'LAVADORA_DADOS'],
+    [/^Relatório de ensaio Estufa/, 'ESTUFA'], [/^Planilha de dados Estufa/, 'ESTUFA_DADOS'],
+    [/^Relatório de ensaio Cadeia de Frio/, 'CADEIA_FRIO'], [/^Planilha de dados Cadeia de Frio/, 'CADEIA_FRIO_DADOS']
+  ];
+  for (var i = 0; i < mapa.length; i++) if (mapa[i][0].test(r)) return mapa[i][1];
+  return null;
+}
+
+/**
+ * Antes de gravar o documento de um relatório de ensaio ou planilha de dados: guarda os dados da emissão e, quando é
+ * revisão (rótulo com " rev N"), põe o histórico de revisões no HTML. Devolve o HTML. Nunca lança.
+ */
+function SGO_DocRev_ensaioAntes_(html, rotulo, payload) {
+  try {
+    payload = payload || {};
+    var modulo = SGO_DocRev_moduloDoRotulo_(rotulo);
+    if (!modulo || payload.modoRelatorioSimulado) return html;
+    var numero = SGO_DocRev_s_(payload.certNumero);
+    var m = / rev (\d+)$/.exec(SGO_DocRev_s_(rotulo));
+    var revisao = m ? parseInt(m[1], 10) || 0 : 0;
+    var pedido = payload._docRev || {};
+    SGO_DOCREV_ENSAIO_PENDENTE_ = { modulo: modulo, numero: numero, payload: payload };
+    if (!revisao || !numero) return html;
+    var motivo = SGO_DocRev_s_(pedido.modo).toUpperCase() === 'CORRIGIR' ? SGO_DocRev_s_(pedido.motivo) : '';
+    var hist = SGO_DocRev_historico_(modulo, numero).filter(function (h) { return h.revisao < revisao; });
+    hist.push({ revisao: revisao, rotulo: SGO_DocRev_rotulo_(revisao), em: SGO_DocRev_agora_().slice(0, 10), por: 'conforme a aprovação deste documento', motivo: motivo || 'Reemissão com o mesmo número' });
+    return SGO_DocRev_injetarHtml_(html, { ehRevisao: true, numero: numero, rotulo: SGO_DocRev_rotulo_(revisao), historico: hist });
+  } catch (e) { return html; }
+}
+
+/** Logo depois de uma emissão ser gravada no registro de emissões: registra a emissão aqui também. Nunca lança. */
+function SGO_DocRev_qeEmitido_(modulo, numero, idAtual) {
+  try {
+    if (!/^(AUTOCLAVE|LAVADORA|ESTUFA|CADEIA_FRIO)(_DADOS)?$/.test(String(modulo || ''))) return;
+    if (typeof SGO_QE_obter_ !== 'function') return;
+    var reg = SGO_QE_obter_(idAtual);
+    if (!reg || reg.STATUS !== 'EMITIDO') return;
+    var pend = SGO_DOCREV_ENSAIO_PENDENTE_;
+    SGO_DOCREV_ENSAIO_PENDENTE_ = null;
+    var payload = pend && pend.modulo === modulo && pend.numero === SGO_DocRev_s_(numero) ? pend.payload : null;
+    if (!payload) { try { payload = JSON.parse(reg.PAYLOAD_JSON || '{}'); } catch (eP) { payload = {}; } }
+    var pedido = (payload && payload._docRev) || {};
+    var revisao = parseInt(reg.REVISAO, 10) || 0;
+    var corrigir = SGO_DocRev_s_(pedido.modo).toUpperCase() === 'CORRIGIR' && revisao > 0;
+    var rev = {
+      modo: corrigir ? 'CORRIGIR' : SGO_DocRev_s_(pedido.modo).toUpperCase() === 'BASE' ? 'BASE' : '', numero: SGO_DocRev_s_(numero), revisao: revisao,
+      motivo: corrigir ? SGO_DocRev_s_(pedido.motivo) : (revisao > 0 ? 'Reemissão com o mesmo número' : ''), origemId: SGO_DocRev_s_(pedido.origemId),
+      form: pedido.form || null, ehRevisao: revisao > 0
+    };
+    // Dados grandes (fotos, leituras coladas) vão para arquivo privado no registrar_.
+    SGO_DocRev_registrar_(modulo, rev, {
+      numero: numero, revisao: revisao, payload: payload, titulo: /_DADOS$/.test(modulo) ? 'Planilha de dados' : 'Relatório de ensaio',
+      cliente: reg.CLIENTE, cnpj: reg.CNPJ, tag: reg.TAG, equipamentoId: reg.EQUIPAMENTO_ID, pdfId: reg.PDF_ID, htmlId: reg.HTML_ID,
+      aprovacao: reg.APROVADO_POR ? 'Aprovado por ' + reg.APROVADO_POR + ' em ' + SGO_DocRev_s_(reg.APROVADO_EM).slice(0, 16) : ''
+    }, { nome: reg.APROVADO_POR || reg.ENVIADO_POR || '', usuario: reg.APROVADO_LOGIN || '' });
+  } catch (e) { /* a emissão já foi gravada no registro de emissões; a correção pela lista fica indisponível só para ela */ }
+}
+
 /** Payload sem o pedido de revisão (o que fica guardado e o que o gerador usa). */
 function SGO_DocRev_limparPayload_(payload) {
   var p = Object.assign({}, payload || {});
   delete p._docRev;
+  // senhas (modo personalizado, simulação) nunca ficam guardadas
+  Object.keys(p).forEach(function (k) { if (/senha/i.test(k)) delete p[k]; });
   return p;
 }
 

@@ -13,6 +13,7 @@
 
     if (tplEstufaBanhoRel_carregado_) {
       if (!container.querySelector('#tplEstufaBanhoRel_viewModulo') && typeof tplEstufaBanhoRel_renderReal_ === 'function') tplEstufaBanhoRel_renderReal_();
+      tplEstufaBanhoRel_ligarRevisao_();
       return;
     }
 
@@ -46,6 +47,7 @@
 
           if (typeof tplEstufaBanhoRel_renderReal_ === 'function') {
             tplEstufaBanhoRel_renderReal_();
+            tplEstufaBanhoRel_ligarRevisao_();
           } else {
             console.error('tplEstufaBanhoRel: tplEstufaBanhoRel_renderReal_ não foi definida após o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -61,5 +63,18 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo Estufa+Banho-maria: ' + String((err && err.message) ? err.message : err).replace(/[&<>]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }) + '</p>';
       })
       .EstufaBanhoRel_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" nos relatórios de ensaio e planilhas de dados (JS_DocRevisao.html).
+  function tplEstufaBanhoRel_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined' || !SGO_DocRev.ligarEnsaio) return;
+    SGO_DocRev.ligarEnsaio({
+      modulo: 'ESTUFA', modulos: ['ESTUFA', 'ESTUFA_DADOS'], raiz: 'tplEstufaBanhoRel_viewModulo', campoNumero: 'tplEstufaBanhoRel_certNumero',
+      acao: 'Emitir relatório de ensaio', payloadFn: 'tplEstufaBanhoRel_montarPayloadBase',
+      validarFns: ['tplEstufaBanhoRel_confirmarEGerarCertificado', 'tplEstufaBanhoRel_qEnviar_', 'tplEstufaBanhoRel_gerarRelatorio'],
+      chamarApiFn: 'tplEstufaBanhoRel_chamarApi', fnsEmissao: ['apiQEmitir', 'apiQEnviarParaAprovacao', 'apiGerarPlanilhaDados', 'apiMontarCertificadoFinal'],
+      fotoFn: 'tplEstufaBanhoRel_lerArquivoComoBase64_', camposGrandes: { tplEstufaBanhoRel_textoColado: 'textoColado' },
+      limpar: function () { tplEstufaBanhoRel_renderReal_(); tplEstufaBanhoRel_ligarRevisao_(); }
+    });
   }
 </script>

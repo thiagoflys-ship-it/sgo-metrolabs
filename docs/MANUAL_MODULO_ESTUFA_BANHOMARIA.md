@@ -405,3 +405,24 @@ Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; 
 Na lista de relatórios de qualificação do equipamento, "Abrir para corrigir" carrega um relatório emitido com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (obrigatório, ao menos 10 caracteres) e envie: a revisão volta para a aprovação do responsável técnico e, aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo e a revisão anterior fica guardada como substituída.
 
 "Usar como base" copia os dados de um relatório emitido para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio e o relatório de origem não muda.
+
+## Corrigir um documento gerado e usar como base (21/10/2026)
+
+Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema guarda, junto de cada documento, tudo o que foi usado para gerá-lo (dados digitados, equipamento, textos revisados, anexos, leituras e arquivos importados).
+
+**Onde fica:** no fim da tela de relatório de ensaio, quadro "Relatórios de ensaio e planilhas de dados gerados: corrigir ou usar como base" (relatórios de ensaio e planilhas de dados emitidos). Cada linha mostra o número, a revisão (Rev. 00, Rev. 01...), a situação (Vigente ou Substituído pela Rev. NN), quem gerou e quando, e os botões "Abrir PDF", "Abrir para imprimir", "Abrir para corrigir" e "Usar como base".
+
+**Corrigir (nova revisão do mesmo número):**
+
+1. Na linha do documento, toque em "Abrir para corrigir". O formulário volta preenchido com tudo o que foi usado, sem importar nada de novo. Anexos que não voltam para o campo de arquivo (certificados, fotos) continuam valendo pelos dados guardados; o quadro do alto diz quantos são. Só escolha arquivo se quiser trocar.
+2. No quadro amarelo "Correção do documento", no alto do formulário, escreva o motivo da revisão (obrigatório, ao menos 10 caracteres). O campo do número fica travado: a correção mantém o número.
+3. Altere o que precisa e toque em "Enviar para aprovação". A revisão passa pela aprovação do responsável técnico, como a primeira emissão; a revisão vigente continua valendo até a aprovação. Depois de aprovada, sai a revisão seguinte (Rev. 01, 02...) com o mesmo número.
+4. O documento novo traz o quadro "Histórico de revisões" (revisão, data, motivo e responsável) e a revisão no cabeçalho e no nome do arquivo.
+5. A revisão anterior nunca é apagada nem sobrescrita: continua na pasta do cliente, com a revisão no nome do arquivo, ganha a anotação "Substituído pela Rev. NN" na descrição do arquivo e aparece na lista como substituída.
+6. Para desistir, toque em "Cancelar a correção e limpar o formulário".
+
+**Usar como base (documento novo, número novo):** na mesma lista, toque em "Usar como base" (por exemplo, o mesmo equipamento no ano seguinte). O formulário volta preenchido; confira datas, leituras e resultados, que são do serviço anterior, e toque em "Enviar para aprovação". Sai um documento novo, Rev. 00, com número novo; o documento de origem não muda.
+
+
+
+Nestes documentos o número continua sendo o digitado no relatório (com o mesmo número, a emissão é a revisão seguinte, como antes); na correção pela lista o campo do número fica travado e o motivo entra no quadro "Histórico de revisões" do documento. Quem é responsável técnico pode emitir direto, marcando a conferência; quem não é envia para aprovação. As leituras e os arquivos do registrador voltam sem reimportar; as fotos do documento de origem voltam quando ele foi emitido direto, e precisam ser anexadas de novo quando ele passou pelo envio para aprovação (o quadro do alto avisa). Gere o rascunho de novo antes de emitir ou enviar. Relatórios de ensaio e planilhas emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram na lista: para corrigir um deles, preencha o formulário com o mesmo número (sai a revisão seguinte, agora com o histórico de revisões no documento).

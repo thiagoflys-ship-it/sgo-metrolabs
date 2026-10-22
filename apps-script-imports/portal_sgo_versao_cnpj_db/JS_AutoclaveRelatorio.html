@@ -13,7 +13,7 @@
     if (!container) return;
 
     if (tplAutoRel_carregado_) {
-      if (typeof tplAutoRel_renderReal_ === 'function') tplAutoRel_renderReal_();
+      if (typeof tplAutoRel_renderReal_ === 'function') tplAutoRel_renderReal_(); tplAutoRel_ligarRevisao_();
       return;
     }
 
@@ -39,6 +39,7 @@
 
           if (typeof tplAutoRel_renderReal_ === 'function') {
             tplAutoRel_renderReal_();
+            tplAutoRel_ligarRevisao_();
           } else {
             console.error('renderTplAutoRel_: tplAutoRel_renderReal_ nao foi definida apos o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -53,5 +54,18 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .AutoRel_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" nos relatórios de ensaio e planilhas de dados (JS_DocRevisao.html).
+  function tplAutoRel_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined' || !SGO_DocRev.ligarEnsaio) return;
+    SGO_DocRev.ligarEnsaio({
+      modulo: 'AUTOCLAVE', modulos: ['AUTOCLAVE', 'AUTOCLAVE_DADOS'], raiz: 'tplAutoRelContainer', campoNumero: 'tplAutoRel_certNumero',
+      acao: 'Aprovar e emitir', payloadFn: 'tplAutoRel_construirPayload',
+      validarFns: ['tplAutoRel_confirmarEGerarCertificado', 'tplAutoRel_enviarParaAprovacao', 'tplAutoRel_chamarConverter'],
+      despacho: 'AutoRel_apiDispatch', fnsEmissao: ['apiMontarCertificadoFinal', 'apiEnviarParaAprovacao', 'apiConverter'],
+      fotoFn: 'tplAutoRel_lerArquivoComoBase64_', camposGrandes: { tplAutoRel_uiDados: 'textoColado' },
+      limpar: function () { tplAutoRel_renderReal_(); tplAutoRel_ligarRevisao_(); }
+    });
   }
 </script>

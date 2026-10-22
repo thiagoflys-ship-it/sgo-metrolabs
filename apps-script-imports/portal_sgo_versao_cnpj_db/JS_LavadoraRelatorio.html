@@ -13,7 +13,7 @@
     if (!container) return;
 
     if (tplLavRel_carregado_) {
-      if (typeof tplLavRel_renderReal_ === 'function') tplLavRel_renderReal_();
+      if (typeof tplLavRel_renderReal_ === 'function') tplLavRel_renderReal_(); tplLavRel_ligarRevisao_();
       return;
     }
 
@@ -39,6 +39,7 @@
 
           if (typeof tplLavRel_renderReal_ === 'function') {
             tplLavRel_renderReal_();
+            tplLavRel_ligarRevisao_();
           } else {
             console.error('renderTplLavRel_: tplLavRel_renderReal_ nao foi definida apos o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -53,5 +54,18 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .LavRel_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" nos relatórios de ensaio e planilhas de dados (JS_DocRevisao.html).
+  function tplLavRel_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined' || !SGO_DocRev.ligarEnsaio) return;
+    SGO_DocRev.ligarEnsaio({
+      modulo: 'LAVADORA', modulos: ['LAVADORA', 'LAVADORA_DADOS'], raiz: 'tplLavRelContainer', campoNumero: 'tplLavRel_certNumero',
+      acao: 'Aprovar e emitir', payloadFn: 'tplLavRel_construirPayload',
+      validarFns: ['tplLavRel_confirmarEGerarCertificado', 'tplLavRel_enviarParaAprovacao', 'tplLavRel_chamarConverter'],
+      despacho: 'LavRel_apiDispatch', fnsEmissao: ['apiMontarCertificadoFinal', 'apiEnviarParaAprovacao', 'apiConverter'],
+      fotoFn: 'tplLavRel_lerArquivoComoBase64_', camposGrandes: { tplLavRel_uiDados: 'textoColado' },
+      limpar: function () { tplLavRel_renderReal_(); tplLavRel_ligarRevisao_(); }
+    });
   }
 </script>

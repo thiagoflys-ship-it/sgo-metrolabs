@@ -20,7 +20,7 @@
     const container = document.getElementById('tplCadeiaFrioRelContainer');
     if (!container) return;
     if (tplCadeiaFrioRel_carregado_) {
-      try { tplCadeiaFrioRel_renderReal_(); }
+      try { tplCadeiaFrioRel_renderReal_(); tplCadeiaFrioRel_ligarRevisao_(); }
       catch (erro) { tplCadeiaFrioRel_falhaCarga_(erro); }
       return;
     }
@@ -60,8 +60,22 @@
           if (typeof tplCadeiaFrioRel_renderReal_ !== 'function') throw new Error('Inicialização do módulo indisponível.');
           tplCadeiaFrioRel_carregado_ = true;
           tplCadeiaFrioRel_renderReal_();
+          tplCadeiaFrioRel_ligarRevisao_();
         } catch (erro) { falha(erro); }
       }).withFailureHandler(falha).CadeiaFrioRel_obterConteudoModulo();
     } catch (erro) { falha(erro); }
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" nos relatórios de ensaio e planilhas de dados (JS_DocRevisao.html).
+  function tplCadeiaFrioRel_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined' || !SGO_DocRev.ligarEnsaio) return;
+    SGO_DocRev.ligarEnsaio({
+      modulo: 'CADEIA_FRIO', modulos: ['CADEIA_FRIO', 'CADEIA_FRIO_DADOS'], raiz: 'tplCadeiaFrioRel_viewModulo', campoNumero: 'tplCadeiaFrioRel_certNumero',
+      acao: 'Emitir relatório', payloadFn: 'tplCadeiaFrioRel_montarPayloadBase',
+      validarFns: ['tplCadeiaFrioRel_confirmarEGerarCertificado', 'tplCadeiaFrioRel_enviarRelatorioAprovacao_', 'tplCadeiaFrioRel_gerarRelatorio'],
+      chamarApiFn: 'tplCadeiaFrioRel_chamarApi', despacho: 'CadeiaFrioRel_apiDispatch', fnsEmissao: ['apiMontarCertificadoFinal', 'apiEnviarParaAprovacao', 'apiConverter'],
+      fotoFn: 'tplCadeiaFrioRel_lerArquivoComoBase64_', camposGrandes: { tplCadeiaFrioRel_textoColado: 'textoColado' },
+      limpar: function () { tplCadeiaFrioRel_renderReal_(); tplCadeiaFrioRel_ligarRevisao_(); }
+    });
   }
 </script>

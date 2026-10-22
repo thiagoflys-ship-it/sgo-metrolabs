@@ -40,6 +40,38 @@ test('relatório oficial da autoclave: usar como base gera relatório novo com n
   assert.match(env.oficial('tec', 'apiAbrir', { id: envio2.id, modo: 'BASE' }).erro, /Só um relatório emitido pode ser usado como base/);
 });
 
+test('relatório de ensaio da autoclave (com aprovação): emissão entra no registro; correção pela lista sai como revisão 1 do mesmo número, com motivo e histórico no documento', () => {
+  const env = M.criarAmbiente();
+  env.run(fs.readFileSync(path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/SGO_DocRevisao.js'), 'utf8'));
+  const api = (sid, fn, payload) => JSON.parse(JSON.stringify(env.fn('DocRev_api')({ sessionId: sid, fn, payload })));
+  M.emitirCiclo(env, { ensaio: 'QO (Vazio)', programa: 'Instrumental 134 °C', certNumero: 'AUT-T-0101', _docRev: { modo: '', form: { tplAutoRel_certNumero: 'AUT-T-0101' } } });
+  const l0 = api('tec', 'listar', { modulo: ['AUTOCLAVE', 'AUTOCLAVE_DADOS'] });
+  assert.equal(l0.itens.length, 1);
+  assert.equal(l0.itens[0].numero, 'AUT-T-0101');
+  assert.equal(l0.itens[0].revisao, 0);
+  assert.ok(l0.itens[0].temDados);
+  const ab = api('tec', 'abrir', { id: l0.itens[0].id, modo: 'CORRIGIR' });
+  assert.ok(ab.payload.textoColado, 'as leituras importadas voltam sem reimportar');
+  assert.equal(ab.form.tplAutoRel_certNumero, 'AUT-T-0101');
+  const p = Object.assign({}, ab.payload, { _docRev: { modo: 'CORRIGIR', origemId: ab.id, motivo: 'Programa do ciclo informado errado na identificação', form: ab.form } });
+  const D = env.fn('AutoRel_apiDispatch');
+  const r = D({ sessionId: 'tec', fn: 'apiGerarRascunhoCertificado', payload: p });
+  const envio = D({ sessionId: 'tec', fn: 'apiEnviarParaAprovacao', payload: Object.assign({}, p, { assinaturaContextoCertificado: r.assinaturaContexto, textosCertificado: r.textos }) });
+  const emi = JSON.parse(JSON.stringify(D({ sessionId: 'rt', fn: 'apiAprovarEmitir', payload: { id: envio.id, confirmacaoRevisao: true } })));
+  assert.equal(emi.ok, true, emi.erro);
+  const l1 = api('tec', 'listar', { modulo: ['AUTOCLAVE', 'AUTOCLAVE_DADOS'] }).itens;
+  assert.equal(l1.length, 2);
+  const nova = l1.filter(i => i.revisao === 1)[0], antiga = l1.filter(i => i.revisao === 0)[0];
+  assert.equal(nova.numero, 'AUT-T-0101');
+  assert.equal(nova.motivo, 'Programa do ciclo informado errado na identificação');
+  assert.equal(nova.emitidoPor, 'Responsável Teste', 'quem aprovou a emissão');
+  assert.equal(antiga.vigente, false);
+  assert.equal(antiga.substituidaPor, 'Rev. 01');
+  const html = env.ctx.DriveApp.getFileById(nova.htmlId).getBlob().getDataAsString();
+  assert.match(html, /Histórico de revisões/);
+  assert.match(html, /Programa do ciclo informado errado na identificação/);
+});
+
 test('telas dos relatórios oficiais: "Abrir para corrigir" e "Usar como base" nas quatro (autoclave, lavadora, estufa e cadeia de frio)', () => {
   const B = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
   const ler = n => fs.readFileSync(path.join(B, n), 'utf8');

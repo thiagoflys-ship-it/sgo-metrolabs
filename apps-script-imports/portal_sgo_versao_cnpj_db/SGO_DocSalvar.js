@@ -218,6 +218,8 @@ function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
 function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, tz) {
   payload = payload || {};
   var resultado;
+  // 21/10/2026: relatório de ensaio ou planilha de dados que é revisão: histórico de revisões no documento (SGO_DocRevisao.js).
+  if (typeof SGO_DocRev_ensaioAntes_ === 'function') html = SGO_DocRev_ensaioAntes_(html, rotulo, payload);
   // Sumário com os números de página (padrão A4 de 18/10/2026). O mesmo HTML vai
   // para a tela e para a pasta; o PDF da 2ª passagem é o que fica gravado.
   var pdfPaginado = null;
