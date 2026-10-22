@@ -643,17 +643,17 @@
   }
 
   /** Envio devolvido (corrigir) ou relatório emitido (nova revisão): recarrega o formulário. */
-  function tplLavOf_abrirRegistro(id) {
-    tplLavOf_chamar('apiAbrir', { id: id }, function (r) {
+  function tplLavOf_abrirRegistro(id, modo) {
+    tplLavOf_chamar('apiAbrir', { id: id, modo: modo || '' }, function (r) {
       var d = r.dados || {};
       TPLLAVOF.form = Object.assign(tplLavOf_formInicial(TPLLAVOF.sit), { etapas: d.etapas || {}, motivo: d.motivo || '', periodicidadeMeses: d.periodicidadeMeses || TPLLAVOF.sit.periodicidadePadrao,
         responsavelCliente: d.responsavelCliente || '', dataQi: d.dataQi || '', qi: Object.assign(tplLavOf_formInicial(TPLLAVOF.sit).qi, d.qi || {}), indicadores: d.indicadores || [], observacoes: d.observacoes || '', ciclos: d.ciclos || [] });
-      TPLLAVOF.numero = r.modo === 'REVISAR' ? (d.numero || '') : (d.numero || '');
+      TPLLAVOF.numero = r.modo === 'BASE' ? '' : (d.numero || '');
       TPLLAVOF.rascunho = null;
       tplLavOf_preencherForm();
       var rev = tplLavOf_el('tplLavOfRevisaoBox');
       rev.classList.toggle('hidden', !TPLLAVOF.numero);
-      if (TPLLAVOF.numero) tplLavOf_el('tplLavOfRevisaoTxt').textContent = 'Nova revisão do relatório ' + TPLLAVOF.numero + '. A revisão emitida antes continua guardada e passa a constar como substituída.';
+      if (TPLLAVOF.numero) tplLavOf_el('tplLavOfRevisaoTxt').textContent = 'Correção do relatório ' + TPLLAVOF.numero + ': ao enviar e ser aprovado, sai a revisão seguinte do mesmo número. A revisão emitida antes continua guardada e passa a constar como substituída. Esta revisão volta para a aprovação do responsável técnico.';
       tplLavOf_msg('tplLavOfMsgGeral', 'info', r.mensagem);
       TPLLAVOF.vinc.definir({ clienteId: d.clienteId, unidadeId: d.unidadeId, equipamentoId: d.equipamentoId, cliente: '' });
       try { tplLavOf_el('tplLavOfVinculo').scrollIntoView({ behavior: 'smooth' }); } catch (e) {}
@@ -670,7 +670,8 @@
         (r.validadeAte && vig ? ' · requalificação até ' + tplLavOf_esc(r.validadeAte) : '') + '<br><span style="color:var(--bc-text-3)">' + (vig ? 'Vigente' : 'Substituída por revisão posterior') + ' · aprovado por ' + tplLavOf_esc(r.aprovadoPor || '—') + ' em ' + tplLavOf_esc(String(r.aprovadoEm || '').slice(0, 16)) + '</span>' +
         '<div class="btn-container" style="margin-top:6px">' + (r.pdfUrl ? '<a class="btn btn-secondary" href="' + tplLavOf_esc(r.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a>' : '') + (r.htmlUrl ? '<a class="btn btn-secondary" href="' + tplLavOf_esc(r.htmlUrl) + '" target="_blank" rel="noopener">Abrir para imprimir</a>' : '') +
         (vig && r.pdfId ? '<button type="button" class="btn btn-secondary" onclick="tplLavOf_enviarCliente(\'' + tplLavOf_esc(r.pdfId) + '\',\'' + tplLavOf_esc(r.htmlId) + '\',\'' + tplLavOf_esc(r.numero) + '\')">Enviar ao cliente</button>' : '') +
-        (vig ? '<button type="button" class="btn btn-secondary" onclick="tplLavOf_abrirRegistro(\'' + tplLavOf_esc(r.id) + '\')">Nova revisão</button>' : '') + '</div></div>';
+        (vig ? '<button type="button" class="btn btn-secondary" title="Carrega o formulário com os dados deste relatório para corrigir; sai a revisão seguinte do mesmo número, depois da aprovação" onclick="tplLavOf_abrirRegistro(\'' + tplLavOf_esc(r.id) + '\')">Abrir para corrigir</button>' : '') +
+        '<button type="button" class="btn btn-secondary" title="Copia os dados para um relatório novo, com número novo (por exemplo, a requalificação do ano seguinte)" onclick="tplLavOf_abrirRegistro(\'' + tplLavOf_esc(r.id) + '\',\'BASE\')">Usar como base</button>' + '</div></div>';
     }).join('') : '<p class="panel-subtitle" style="margin:0">Nenhum relatório de qualificação emitido para este equipamento.</p>';
   }
 

@@ -735,6 +735,7 @@ function AutoOficial_apiDevolver(p, sessao) {
 /** Devolve os dados de um envio (devolvido, para corrigir) ou de um relatório emitido (para nova revisão). */
 function AutoOficial_apiAbrir(p, sessao) {
   var c = AutoOficial_carregar_(p.id);
+  if (String((p && p.modo) || '').toUpperCase() === 'BASE') return SGO_DocRev_qeComoBase_(c); // 21/10/2026: "Usar como base"
   var nome = SGO_QE_nomeSessao_(sessao);
   if (c.reg.STATUS === 'DEVOLVIDO') {
     if (c.reg.ENVIADO_POR !== nome && !AutoOficial_ehAprovador_(sessao)) throw new Error('Este envio é de outra pessoa.');

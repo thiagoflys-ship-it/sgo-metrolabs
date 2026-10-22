@@ -508,6 +508,7 @@ function CadeiaFrioOficial_apiDevolver(p, sessao) {
 /** Dados de um envio devolvido (para corrigir) ou de um relatório emitido (para nova revisão). */
 function CadeiaFrioOficial_apiAbrir(p, sessao) {
   var c = CadeiaFrioOficial_carregar_(p.id);
+  if (String((p && p.modo) || '').toUpperCase() === 'BASE') return SGO_DocRev_qeComoBase_(c); // 21/10/2026: "Usar como base"
   var nome = SGO_QE_nomeSessao_(sessao);
   if (c.reg.STATUS === 'DEVOLVIDO') {
     if (c.reg.ENVIADO_POR !== nome && !CadeiaFrioOficial_ehAprovador_(sessao)) throw new Error('Este envio é de outra pessoa.');

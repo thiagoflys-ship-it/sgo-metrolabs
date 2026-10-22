@@ -408,6 +408,21 @@ function SGO_DocRev_payloadOrigem_(rev) {
   } catch (e) { return null; }
 }
 
+/**
+ * Relatórios de qualificação com aprovação (QUALIF_EMISSOES, módulos *_OFICIAL): "Usar como base" devolve os dados de um
+ * relatório emitido para um relatório novo — sem número (atribuído no envio), sem motivo de revisão e sem o rascunho
+ * conferido (o texto é gerado de novo). c = { reg, payload } do carregar_ do módulo.
+ */
+function SGO_DocRev_qeComoBase_(c) {
+  var st = SGO_DocRev_s_(c && c.reg && c.reg.STATUS);
+  if (st !== 'EMITIDO' && st !== 'SUBSTITUIDO') throw new Error('Só um relatório emitido pode ser usado como base (situação: ' + (st || 'desconhecida') + '). Para um envio devolvido, use "Abrir para corrigir"');
+  var d = Object.assign({}, c.payload || {}, { numero: '', motivoRevisao: '', assinaturaContexto: '' });
+  return {
+    ok: true, dados: d, modo: 'BASE',
+    mensagem: 'Dados do relatório ' + SGO_DocRev_s_(c.reg.NUMERO) + ' copiados para um relatório novo (número novo no envio para aprovação; o de origem não muda). Confira as etapas, as datas e os relatórios de ensaio marcados, que são do serviço anterior, gere o rascunho e envie.'
+  };
+}
+
 /** Payload sem o pedido de revisão (o que fica guardado e o que o gerador usa). */
 function SGO_DocRev_limparPayload_(payload) {
   var p = Object.assign({}, payload || {});

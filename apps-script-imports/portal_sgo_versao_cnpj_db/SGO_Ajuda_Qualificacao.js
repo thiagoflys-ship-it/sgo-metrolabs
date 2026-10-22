@@ -102,7 +102,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque em \"Prévia do documento\" para ver a minuta e em \"Enviar para aprovação\". O número (RQA-ano-sequência) é dado no envio.",
           "Responsável técnico: em \"Aguardando aprovação\", toque em \"Prévia\", marque \"Conferi os dados, os critérios e a conclusão e aprovo a emissão\" e toque em \"Aprovar e emitir\"; ou escreva o motivo e toque em \"Devolver ao técnico\".",
           "O relatório fica em HTML e PDF na pasta do equipamento, dentro da pasta do cliente, entra no Arquivo de documentos com a validade e aparece na ficha do equipamento (aba Qualificações) e no QR Code. Use \"Enviar ao cliente\" para mandar por e-mail ou WhatsApp.",
-          "Para corrigir um relatório emitido, toque em \"Nova revisão\" em \"Relatórios de qualificação deste equipamento\", ajuste, gere o rascunho, escreva o motivo da revisão e envie. A revisão anterior fica guardada como substituída.",
+          "Para corrigir um relatório emitido, toque em \"Abrir para corrigir\" em \"Relatórios de qualificação deste equipamento\", ajuste, gere o rascunho, escreva o motivo da revisão e envie. A revisão volta para a aprovação do responsável técnico; aprovada, sai com o mesmo número e a revisão seguinte, e a anterior fica guardada como substituída.",
+          "Para um relatório novo com os mesmos dados (por exemplo, a requalificação do ano seguinte), toque em \"Usar como base\": confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio.",
           "Envio devolvido: toque em \"Abrir para corrigir\", corrija e envie de novo."
         ] },
         { titulo: "Modelo anterior do relatório oficial (Administrador)", itens: [
@@ -217,6 +218,11 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Marque as etapas (instalação, operação, desempenho), o motivo e a periodicidade; responda a lista da instalação e, se houver, os ensaios complementares.",
           "Toque em \"Gerar rascunho\", revise a conclusão, veja a \"Prévia do documento\" e toque em \"Enviar para aprovação\".",
           "O responsável técnico confere a prévia em \"Aguardando aprovação\", marca a confirmação e toca em \"Aprovar e emitir\". O relatório entra na ficha do equipamento, no QR code e no Arquivo de documentos com o vencimento da requalificação."
+        ] },
+        { titulo: "Relatório de qualificação emitido: corrigir ou usar como base", itens: [
+          "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
+          "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
+          "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
         ] }
       ],
       cores: [
@@ -324,6 +330,11 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Marque os relatórios de ensaio emitidos que entram na qualificação e responda a lista da instalação.",
           "Toque em \"Gerar rascunho\", revise a conclusão e toque em \"Enviar para aprovação\".",
           "O responsável técnico aprova na lista do próprio quadro. A validade passa a aparecer na ficha do equipamento, no QR code e nas pendências de requalificação."
+        ] },
+        { titulo: "Relatório de qualificação emitido: corrigir ou usar como base", itens: [
+          "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
+          "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
+          "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
         ] }
       ],
       cores: [
@@ -422,6 +433,11 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Marque os relatórios de ensaio emitidos que fundamentam a qualificação e, na instalação, responda cada item da lista.",
           "Toque em \"Gerar rascunho\", revise a conclusão, veja a prévia e envie para aprovação.",
           "Emitido, o relatório aparece na ficha do equipamento e no QR code, e a próxima requalificação entra nas pendências."
+        ] },
+        { titulo: "Relatório de qualificação emitido: corrigir ou usar como base", itens: [
+          "Na lista de relatórios de qualificação do equipamento, toque em \"Abrir para corrigir\": o formulário volta com tudo o que foi usado (etapas, lista de verificação, relatórios de ensaio marcados e textos). Ajuste, gere o rascunho, escreva o motivo da revisão (ao menos 10 caracteres) e envie.",
+          "A revisão volta para a aprovação do responsável técnico, como a primeira emissão. Aprovada, sai com o mesmo número e a revisão seguinte; o registro de revisões do documento traz o motivo, e a revisão anterior fica guardada como substituída.",
+          "\"Usar como base\" copia os dados para um relatório novo (por exemplo, a requalificação do ano seguinte): confira etapas, datas e relatórios de ensaio marcados, gere o rascunho e envie; o número novo é atribuído no envio."
         ] }
       ],
       cores: [

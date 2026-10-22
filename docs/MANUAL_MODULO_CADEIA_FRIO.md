@@ -313,7 +313,7 @@ Lista dos relatórios de ensaio e das planilhas de dados enviados. O responsáve
 3. Escolha o motivo e a periodicidade da requalificação (padrão de 12 meses), marque os relatórios de ensaio que entram e responda a lista da instalação (Conforme, Não conforme com a descrição, ou Não aplicável).
 4. Toque em "Gerar rascunho", revise a conclusão e toque em "Enviar para aprovação". O responsável técnico aprova na mesma lista.
 5. Emitido, o documento vai para a pasta do equipamento e para o Arquivo de documentos com o vencimento: a ficha do equipamento (aba Qualificações), o QR code e as pendências de requalificação passam a mostrar a situação. Uma não conformidade (estudo reprovado ou item da instalação não conforme) reprova a qualificação.
-6. "Nova revisão" carrega um relatório emitido para revisar (o motivo da revisão é obrigatório); "Corrigir" carrega um envio devolvido.
+6. "Abrir para corrigir" carrega um relatório emitido para revisar (o motivo da revisão é obrigatório e a revisão volta para a aprovação do responsável técnico); "Corrigir" carrega um envio devolvido; "Usar como base" copia os dados de um relatório emitido para um relatório novo, com número novo no envio.
 
 ---
 

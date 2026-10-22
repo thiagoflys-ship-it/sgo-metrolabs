@@ -598,17 +598,17 @@
   }
 
   /** Envio devolvido (corrigir) ou relatório emitido (nova revisão): recarrega o formulário. */
-  function tplAutOf_abrirRegistro(id) {
-    tplAutOf_chamar('apiAbrir', { id: id }, function (r) {
+  function tplAutOf_abrirRegistro(id, modo) {
+    tplAutOf_chamar('apiAbrir', { id: id, modo: modo || '' }, function (r) {
       var d = r.dados || {};
       TPLAUTOF.form = Object.assign(tplAutOf_formInicial(TPLAUTOF.sit), { etapas: d.etapas || {}, motivo: d.motivo || '', periodicidadeMeses: d.periodicidadeMeses || TPLAUTOF.sit.periodicidadePadrao,
         responsavelCliente: d.responsavelCliente || '', dataQi: d.dataQi || '', qi: Object.assign(tplAutOf_formInicial(TPLAUTOF.sit).qi, d.qi || {}), indicadores: d.indicadores || [], observacoes: d.observacoes || '', ciclos: d.ciclos || [] });
-      TPLAUTOF.numero = r.modo === 'REVISAR' ? (d.numero || '') : (d.numero || '');
+      TPLAUTOF.numero = r.modo === 'BASE' ? '' : (d.numero || '');
       TPLAUTOF.rascunho = null;
       tplAutOf_preencherForm();
       var rev = tplAutOf_el('tplAutOfRevisaoBox');
       rev.classList.toggle('hidden', !TPLAUTOF.numero);
-      if (TPLAUTOF.numero) tplAutOf_el('tplAutOfRevisaoTxt').textContent = 'Nova revisão do relatório ' + TPLAUTOF.numero + '. A revisão emitida antes continua guardada e passa a constar como substituída.';
+      if (TPLAUTOF.numero) tplAutOf_el('tplAutOfRevisaoTxt').textContent = 'Correção do relatório ' + TPLAUTOF.numero + ': ao enviar e ser aprovado, sai a revisão seguinte do mesmo número. A revisão emitida antes continua guardada e passa a constar como substituída. Esta revisão volta para a aprovação do responsável técnico.';
       tplAutOf_msg('tplAutOfMsgGeral', 'info', r.mensagem);
       TPLAUTOF.vinc.definir({ clienteId: d.clienteId, unidadeId: d.unidadeId, equipamentoId: d.equipamentoId, cliente: '' });
       try { tplAutOf_el('tplAutOfVinculo').scrollIntoView({ behavior: 'smooth' }); } catch (e) {}
@@ -625,7 +625,8 @@
         (r.validadeAte && vig ? ' · requalificação até ' + tplAutOf_esc(r.validadeAte) : '') + '<br><span style="color:var(--bc-text-3)">' + (vig ? 'Vigente' : 'Substituída por revisão posterior') + ' · aprovado por ' + tplAutOf_esc(r.aprovadoPor || '—') + ' em ' + tplAutOf_esc(String(r.aprovadoEm || '').slice(0, 16)) + '</span>' +
         '<div class="btn-container" style="margin-top:6px">' + (r.pdfUrl ? '<a class="btn btn-secondary" href="' + tplAutOf_esc(r.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a>' : '') + (r.htmlUrl ? '<a class="btn btn-secondary" href="' + tplAutOf_esc(r.htmlUrl) + '" target="_blank" rel="noopener">Abrir para imprimir</a>' : '') +
         (vig && r.pdfId ? '<button type="button" class="btn btn-secondary" onclick="tplAutOf_enviarCliente(\'' + tplAutOf_esc(r.pdfId) + '\',\'' + tplAutOf_esc(r.htmlId) + '\',\'' + tplAutOf_esc(r.numero) + '\')">Enviar ao cliente</button>' : '') +
-        (vig ? '<button type="button" class="btn btn-secondary" onclick="tplAutOf_abrirRegistro(\'' + tplAutOf_esc(r.id) + '\')">Nova revisão</button>' : '') + '</div></div>';
+        (vig ? '<button type="button" class="btn btn-secondary" title="Carrega o formulário com os dados deste relatório para corrigir; sai a revisão seguinte do mesmo número, depois da aprovação" onclick="tplAutOf_abrirRegistro(\'' + tplAutOf_esc(r.id) + '\')">Abrir para corrigir</button>' : '') +
+        '<button type="button" class="btn btn-secondary" title="Copia os dados para um relatório novo, com número novo (por exemplo, a requalificação do ano seguinte)" onclick="tplAutOf_abrirRegistro(\'' + tplAutOf_esc(r.id) + '\',\'BASE\')">Usar como base</button>' + '</div></div>';
     }).join('') : '<p class="panel-subtitle" style="margin:0">Nenhum relatório de qualificação emitido para este equipamento.</p>';
   }
 
