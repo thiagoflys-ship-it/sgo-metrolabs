@@ -41,6 +41,19 @@ function SGO_ajudaTelas_Documentos_() {
           "Em \"Documentos já gerados\", digite o cliente, a TAG ou o nome do arquivo.",
           "Toque em \"Buscar\".",
           "Abra o documento na lista."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, em \"Documentos gerados: corrigir ou usar como base\", busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Confirmar e Gerar Documento\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Confirmar e Gerar Documento\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -53,7 +66,10 @@ function SGO_ajudaTelas_Documentos_() {
       problemas: [
         { situacao: "A nova aba não abriu.", oQueFazer: "Libere janelas novas (pop-up) para o endereço do SGO+ e toque de novo em \"Confirmar e Gerar Documento\"." },
         { situacao: "Apareceu \"Tentar salvar de novo\".", oQueFazer: "Toque no botão. Se falhar de novo, confira a internet e avise o administrador." },
-        { situacao: "A busca de CNPJ não preencheu nada.", oQueFazer: "Digite a razão social e o endereço à mão e continue." }
+        { situacao: "A busca de CNPJ não preencheu nada.", oQueFazer: "Digite a razão social e o endereço à mão e continue." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Confirmar e Gerar Documento\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Gerar e consultar declarações." },

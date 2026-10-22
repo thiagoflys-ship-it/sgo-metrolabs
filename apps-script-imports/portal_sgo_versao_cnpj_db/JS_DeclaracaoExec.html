@@ -6,7 +6,7 @@
     if (!container) return;
 
     if (tplDeclExec_carregado_) {
-      if (typeof tplDeclExec_renderReal_ === 'function') tplDeclExec_renderReal_();
+      if (typeof tplDeclExec_renderReal_ === 'function') tplDeclExec_renderReal_(); tplDeclExec_ligarRevisao_();
       return;
     }
 
@@ -32,6 +32,7 @@
 
           if (typeof tplDeclExec_renderReal_ === 'function') {
             tplDeclExec_renderReal_();
+            tplDeclExec_ligarRevisao_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +46,43 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .DeclExec_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O formulário, os textos revisados e as
+  // fotos ficam guardados junto do documento; ao abrir, tudo volta e a seção 3.1 já aparece para conferir.
+  function tplDeclExec_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'DECLARACAO_EXECUCAO';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplDeclExec_viewModulo', faixa: 'tplDeclExec_viewModulo', campoNumero: 'tplDeclExec_numeroDocumento', acao: 'Confirmar e Gerar Documento', aprovacao: false,
+      dica: 'Os textos do documento voltaram para a seção 3.1: altere o que precisar e clique em "Confirmar e Gerar Documento". Só clique em "Gerar Declaração com IA" se quiser que os textos sejam redigidos de novo.',
+      resumoAnexos: function (p) { var f = (p.fotos || []).length; return f ? f + ' foto(s) do documento de origem continuam valendo; só escolha arquivo nos campos de foto se quiser trocar.' : ''; },
+      limpar: function () { tplDeclExec_renderReal_(); tplDeclExec_ligarRevisao_(); },
+      depoisDosCampos: function (p) {
+        (p.calibracoes || []).forEach(function (c) {
+          var q = document.querySelector('.declexec-calib-qtd[data-codigo="' + c.codigo + '"]');
+          var a = document.querySelector('.declexec-calib-achado[data-codigo="' + c.codigo + '"]');
+          if (q && c.quantidade != null) q.value = c.quantidade;
+          if (a) a.value = c.observacao || '';
+        });
+        var box = document.getElementById('tplDeclExec_revisaoBox');
+        if (box && p.textos) box.classList.remove('hidden');
+        var bc = document.getElementById('tplDeclExec_txtCalibracoesBox');
+        if (bc && p.textos) bc.classList.toggle('hidden', !p.textos.calibracoes);
+      }
+    });
+    SGO_DocRev.envolver('tplDeclExec_confirmarEGerarDocumento', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplDeclExec_montarPayloadBase', function (orig) {
+      return function () { var p = orig.apply(this, arguments); p._docRev = SGO_DocRev.pedido(M); return p; };
+    });
+    SGO_DocRev.envolver('tplDeclExec_coletarFotos_', function (orig) {
+      return function () { return orig.apply(this, arguments).then(function (f) { return f.length ? f : ((SGO_DocRev.payloadAberto(M) || {}).fotos || []).slice(0); }); };
+    });
+    SGO_DocRev.envolver('tplDeclExec_salvarDocumento', function (orig) {
+      return function () { var r = orig.apply(this, arguments); SGO_DocRev.concluido(M); return r; };
+    });
+    SGO_DocRev.anexarPainel('tplDeclExec_viewModulo', M);
   }
 </script>

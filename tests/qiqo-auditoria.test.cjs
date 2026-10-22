@@ -16,7 +16,7 @@ function context(opcoes = {}) {
   vm.createContext(c);
   // Em produção todos os .js são carregados juntos: a moldura A4 (SGO_DocA4, SGO_RelTecA4), a parte comum da
   // Declaração (SGO_DeclaracaoExec_Documento.js: DeclExecA4_*, DeclExec_finalizarHtml_) e a configuração da IA.
-  for (const file of ['SGO_DocA4.js', 'SGO_RelTecA4.js', 'SGO_DocSalvar.js', 'SGO_DeclaracaoExec_Config.js', 'SGO_DeclaracaoExec_IA.js', 'SGO_DeclaracaoExec_Documento.js', 'SGO_DeclaracaoExec_Main.js', 'SGO_DeclaracaoExec_DocumentoQIQO.js']) vm.runInContext(fs.readFileSync(path.join(dir, file), 'utf8'), c);
+  for (const file of ['SGO_DocA4.js', 'SGO_RelTecA4.js', 'SGO_DocSalvar.js', 'SGO_DocRevisao.js', 'SGO_DeclaracaoExec_Config.js', 'SGO_DeclaracaoExec_IA.js', 'SGO_DeclaracaoExec_Documento.js', 'SGO_DeclaracaoExec_Main.js', 'SGO_DeclaracaoExec_DocumentoQIQO.js']) vm.runInContext(fs.readFileSync(path.join(dir, file), 'utf8'), c);
   return c;
 }
 test('formatacao de medidas preserva sinal, fonte, IDs e datas', () => {

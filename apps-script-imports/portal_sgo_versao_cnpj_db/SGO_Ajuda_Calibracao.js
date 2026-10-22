@@ -128,6 +128,19 @@ function SGO_ajudaTelas_Calibracao_() {
         { titulo: "Reabrir um relatório já gerado", itens: [
           "Em \"Documentos já gerados\", digite o cliente, a TAG ou o nome do arquivo.",
           "Toque em \"Buscar\"."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, em \"Documentos gerados: corrigir ou usar como base\", busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa e toque em \"Gerar Relatório de Calibração\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Gerar Relatório de Calibração\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -137,7 +150,10 @@ function SGO_ajudaTelas_Calibracao_() {
       ],
       problemas: [
         { situacao: "O relatório não foi salvo na pasta.", oQueFazer: "Leia a mensagem em vermelho e tente de novo em instantes. O sistema não salva duas vezes o mesmo documento." },
-        { situacao: "Aparece \"Escolha ao menos Cliente e Unidade.\" ao vincular.", oQueFazer: "Escolha o cliente e a unidade antes de tocar em \"Vincular\"." }
+        { situacao: "Aparece \"Escolha ao menos Cliente e Unidade.\" ao vincular.", oQueFazer: "Escolha o cliente e a unidade antes de tocar em \"Vincular\"." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Relatório de Calibração\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar, salvar e vincular relatórios." },

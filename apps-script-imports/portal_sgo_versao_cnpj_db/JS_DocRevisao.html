@@ -1,0 +1,334 @@
+<script>
+/****************************************************
+ * SGO_DocRev (navegador) — "Abrir para corrigir" e "Usar como base" em todos os geradores
+ * de documento (21/10/2026). Servidor: SGO_DocRevisao.js (DocRev_api).
+ *
+ * Cada gerador registra, uma vez:
+ *   SGO_DocRev.registrar('MODULO', {
+ *     raiz: 'idDoContainerDoFormulario',        // campos com id são guardados e devolvidos sozinhos
+ *     faixa: 'idOndeMostrarOQuadro',            // o quadro da correção aparece no início deste elemento
+ *     aplicar: function (payload, form, info, modo) {...}, // opcional: o que o gerador precisa além dos campos
+ *     aprovacao: false,                          // true: a revisão volta para aprovação antes de emitir
+ *     acao: 'Gerar documento'                    // nome do botão que gera (para o texto do quadro)
+ *   });
+ * Ao gerar: var erro = SGO_DocRev.validar('MODULO'); if (erro) {...}
+ *           payload._docRev = SGO_DocRev.pedido('MODULO');
+ * Depois de gerar e salvar: SGO_DocRev.concluido('MODULO');
+ * Lista de documentos gerados: SGO_DocRev.montarLista(elemento, 'MODULO', filtro).
+ ****************************************************/
+(function () {
+  var CFG = {};
+  var ESTADO = {};
+  var MOTIVO_MIN = 10;
+
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function el(id) { return typeof id === 'string' ? document.getElementById(id) : id; }
+  function sessao() { try { return (window.SGO_getSessionId && window.SGO_getSessionId()) || ''; } catch (e) { return ''; } }
+
+  function chamar(fn, payload, ok, falha, texto) {
+    var fim = function () { try { if (typeof SGO_finalizarCarregamento_ === 'function') SGO_finalizarCarregamento_(); } catch (e) {} };
+    try { if (typeof SGO_iniciarCarregamento_ === 'function') SGO_iniciarCarregamento_(texto || 'Carregando…'); } catch (e) {}
+    google.script.run
+      .withSuccessHandler(function (r) { fim(); if (!r || r.ok === false) { (falha || alert)((r && r.erro) || 'Não foi possível concluir. Tente de novo; se repetir, avise o administrador.'); return; } ok(r); })
+      .withFailureHandler(function (e) { fim(); (falha || alert)('Sem resposta do servidor (' + ((e && e.message) || e) + '). Confira a conexão e tente de novo.'); })
+      .DocRev_api({ sessionId: sessao(), fn: fn, payload: payload || {} });
+  }
+
+  /* ---------- campos do formulário (guardar e devolver) ---------- */
+
+  function campos(raiz) {
+    var r = el(raiz);
+    if (!r) return [];
+    return Array.prototype.slice.call(r.querySelectorAll('input[id],select[id],textarea[id]')).filter(function (c) {
+      var t = String(c.type || '').toLowerCase();
+      return t !== 'file' && t !== 'password' && t !== 'button' && t !== 'submit' && c.id.indexOf('sgoDocRev') !== 0;
+    });
+  }
+
+  /** { id: valor } de todos os campos com id dentro da raiz (caixas de marcar: true/false). */
+  function capturar(raiz) {
+    var mapa = {};
+    campos(raiz).forEach(function (c) {
+      var t = String(c.type || '').toLowerCase();
+      if (t === 'checkbox' || t === 'radio') mapa[c.id] = !!c.checked;
+      else if (c.tagName === 'SELECT' && c.multiple) mapa[c.id] = Array.prototype.slice.call(c.selectedOptions || []).map(function (o) { return o.value; });
+      else mapa[c.id] = c.value;
+    });
+    return mapa;
+  }
+
+  function avisar(c) {
+    try { c.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+    try { c.dispatchEvent(new Event('change', { bubbles: true })); } catch (e2) {}
+  }
+
+  /**
+   * Devolve os valores aos campos. Lista que ainda não tem a opção (carrega depois de escolher o cliente,
+   * por exemplo) é tentada de novo por até 15 segundos, na ordem em que os campos aparecem na tela.
+   */
+  function restaurar(raiz, mapa, aoTerminar) {
+    if (!mapa) { if (aoTerminar) aoTerminar([]); return; }
+    var pendentes = Object.keys(mapa);
+    var tentativas = 0;
+    function passo() {
+      var ainda = [];
+      pendentes.forEach(function (id) {
+        var c = document.getElementById(id);
+        var v = mapa[id];
+        if (!c) { ainda.push(id); return; }
+        var t = String(c.type || '').toLowerCase();
+        if (t === 'checkbox' || t === 'radio') { if (c.checked !== !!v) { c.checked = !!v; avisar(c); } return; }
+        if (c.tagName === 'SELECT') {
+          var lista = [].concat(v);
+          var temTodas = lista.every(function (x) { return x === '' || Array.prototype.some.call(c.options, function (o) { return o.value === String(x); }); });
+          if (!temTodas) { ainda.push(id); return; }
+          if (c.multiple) Array.prototype.forEach.call(c.options, function (o) { o.selected = lista.indexOf(o.value) >= 0; });
+          else if (c.value !== String(v == null ? '' : v)) c.value = String(v == null ? '' : v);
+          else return;
+          avisar(c); return;
+        }
+        if (c.value !== String(v == null ? '' : v)) { c.value = String(v == null ? '' : v); avisar(c); }
+      });
+      pendentes = ainda;
+      tentativas++;
+      if (pendentes.length && tentativas < 30) setTimeout(passo, 500);
+      else if (aoTerminar) aoTerminar(pendentes);
+    }
+    passo();
+  }
+
+  /* ---------- quadro da correção no alto do formulário ---------- */
+
+  function idQuadro(modulo) { return 'sgoDocRevQuadro_' + modulo; }
+
+  function desenharQuadro(modulo) {
+    var cfg = CFG[modulo] || {}, est = ESTADO[modulo];
+    var antigo = document.getElementById(idQuadro(modulo));
+    if (antigo) antigo.parentNode.removeChild(antigo);
+    if (!est) return;
+    var alvo = el(cfg.faixa || cfg.raiz);
+    if (!alvo) return;
+    var i = est.info || {};
+    var acao = cfg.acao || 'Gerar documento';
+    var anexos = '';
+    if (typeof cfg.resumoAnexos === 'function') { try { anexos = cfg.resumoAnexos(est.payload || {}) || ''; } catch (e0) { anexos = ''; } }
+    if (anexos) anexos = '<p style="margin:6px 0 0">' + esc(anexos) + '</p>';
+    if (cfg.dica) anexos += '<p style="margin:6px 0 0">' + esc(cfg.dica) + '</p>';
+    var aprov = cfg.aprovacao
+      ? '<p style="margin:6px 0 0">Este documento passa por aprovação: a ' + (est.modo === 'CORRIGIR' ? 'revisão' : 'emissão') + ' volta para o responsável técnico conferir e aprovar antes de ser emitida. A revisão vigente continua valendo até lá.</p>'
+      : '<p style="margin:6px 0 0">Este gerador não tem etapa de aprovação: ao clicar em "' + esc(acao) + '" a ' + (est.modo === 'CORRIGIR' ? 'revisão é emitida' : 'emissão sai') + ' na hora.</p>';
+    var html;
+    if (est.modo === 'CORRIGIR') {
+      html = '<div class="alert-box show warning" style="display:block;margin-bottom:12px;line-height:1.5">' +
+        '<b>Correção do documento ' + esc(i.numero) + '</b> — o formulário foi preenchido com os dados da ' + esc(i.rotuloOrigem) + '. Altere o que for preciso e clique em "' + esc(acao) + '": sai a <b>' + esc(i.rotuloProxima) + '</b> com o mesmo número. A revisão anterior continua guardada na pasta e passa a constar como substituída.' +
+        (i.aviso ? '<p style="margin:6px 0 0"><b>Atenção:</b> ' + esc(i.aviso) + '</p>' : '') + anexos + aprov +
+        '<div class="form-group" style="margin-top:8px"><label for="sgoDocRevMotivo_' + esc(modulo) + '"><b>Motivo da revisão (obrigatório)</b></label>' +
+        '<textarea id="sgoDocRevMotivo_' + esc(modulo) + '" class="form-control" rows="2" maxlength="400" placeholder="Ex.: correção do número de série do equipamento informado na identificação">' + esc(est.motivo || '') + '</textarea>' +
+        '<span class="field-help">Ao menos ' + MOTIVO_MIN + ' caracteres. Aparece no histórico de revisões do documento, com o seu nome e a data.</span></div>' +
+        '<div class="btn-container" style="margin-top:6px"><button type="button" class="btn btn-secondary" onclick="SGO_DocRev.cancelar(\'' + esc(modulo) + '\')">Cancelar a correção e limpar o formulário</button></div></div>';
+    } else {
+      html = '<div class="alert-box show info" style="display:block;margin-bottom:12px;line-height:1.5">' +
+        '<b>Documento novo com base no ' + esc(i.numero) + ' (' + esc(i.rotuloOrigem) + ')</b> — o formulário foi preenchido com os dados dele. Confira principalmente datas, leituras e resultados, que são de outro serviço, e clique em "' + esc(acao) + '": sai um documento novo, com número novo. O documento de origem não muda.' +
+        (i.aviso ? '<p style="margin:6px 0 0"><b>Atenção:</b> ' + esc(i.aviso) + '</p>' : '') + anexos + aprov +
+        '<div class="btn-container" style="margin-top:6px"><button type="button" class="btn btn-secondary" onclick="SGO_DocRev.cancelar(\'' + esc(modulo) + '\')">Cancelar e limpar o formulário</button></div></div>';
+    }
+    var div = document.createElement('div');
+    div.id = idQuadro(modulo);
+    div.innerHTML = html;
+    alvo.insertBefore(div, alvo.firstChild);
+    var m = document.getElementById('sgoDocRevMotivo_' + modulo);
+    if (m) m.addEventListener('input', function () { if (ESTADO[modulo]) ESTADO[modulo].motivo = m.value; });
+  }
+
+  /** Na correção o campo do número fica travado com o número do documento; fora dela, livre. */
+  function travarNumero(modulo) {
+    var cfg = CFG[modulo] || {}, est = ESTADO[modulo];
+    if (!cfg.campoNumero) return;
+    var c = document.getElementById(cfg.campoNumero);
+    if (!c) return;
+    if (est && est.modo === 'CORRIGIR') {
+      c.value = (est.info || {}).numero || c.value;
+      c.readOnly = true;
+      c.title = 'Na correção o número do documento não muda: sai a revisão seguinte do mesmo número.';
+    } else if (c.readOnly && c.getAttribute('data-sgo-docrev') !== 'livre') {
+      c.readOnly = false;
+      c.title = '';
+    }
+  }
+
+  /* ---------- API pública ---------- */
+
+  var API = {
+    registrar: function (modulo, cfg) { CFG[modulo] = cfg || {}; },
+
+    /** Busca os dados guardados e preenche o formulário. modo: 'CORRIGIR' | 'BASE'. */
+    abrir: function (modulo, id, modo, aoAbrir) {
+      var cfg = CFG[modulo];
+      if (!cfg) { alert('Esta tela ainda não terminou de carregar. Aguarde alguns segundos e clique de novo.'); return; }
+      if (ESTADO[modulo] && !confirm('Já há uma correção em andamento neste formulário. Descartar e abrir este documento?')) return;
+      chamar('abrir', { id: id, modo: modo }, function (r) {
+        ESTADO[modulo] = { modo: r.modo, id: r.id, info: r.info || {}, motivo: '', payload: r.payload || {} };
+        if (typeof cfg.antesDeAplicar === 'function') { try { cfg.antesDeAplicar(r.modo); } catch (e0) {} }
+        var form = r.form ? Object.assign({}, r.form) : null;
+        // Número do documento: na correção é o mesmo (campo travado); na cópia fica em branco (número novo).
+        if (cfg.campoNumero && form) form[cfg.campoNumero] = r.modo === 'CORRIGIR' ? (r.info || {}).numero || '' : '';
+        var aplicarCampos = function () {
+          restaurar(cfg.raiz, form, function (faltaram) {
+            travarNumero(modulo);
+            if (faltaram.length && window.console) console.warn('SGO_DocRev: campos não devolvidos', faltaram);
+            if (typeof cfg.depoisDosCampos === 'function') { try { cfg.depoisDosCampos(r.payload || {}, r.form || {}, r.info || {}, r.modo); } catch (e2) { console.error(e2); } }
+          });
+        };
+        try {
+          if (typeof cfg.aplicar === 'function') cfg.aplicar(r.payload || {}, r.form || null, r.info || {}, r.modo, aplicarCampos);
+          else aplicarCampos();
+        } catch (e) {
+          console.error('SGO_DocRev aplicar', e);
+          alert('Os dados do documento foram carregados, mas parte do formulário não pôde ser preenchida (' + (e && e.message ? e.message : e) + '). Confira os campos antes de gerar.');
+        }
+        desenharQuadro(modulo);
+        var q = document.getElementById(idQuadro(modulo));
+        try { if (q) q.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e3) {}
+        if (aoAbrir) aoAbrir(r);
+      }, function (msg) { alert(msg); }, modo === 'BASE' ? 'Copiando os dados do documento…' : 'Abrindo o documento para corrigir…');
+    },
+
+    /** Há correção ou cópia em andamento? */
+    ativo: function (modulo) { return ESTADO[modulo] ? ESTADO[modulo].modo : ''; },
+    /** Dados do documento aberto (anexos e leituras guardados), para o gerador usar no lugar do que não volta ao campo. */
+    payloadAberto: function (modulo) { return ESTADO[modulo] ? ESTADO[modulo].payload : null; },
+    info: function (modulo) { return ESTADO[modulo] ? ESTADO[modulo].info : null; },
+
+    /** '' quando pode gerar; senão o texto do que falta. */
+    validar: function (modulo) {
+      var est = ESTADO[modulo];
+      if (!est || est.modo !== 'CORRIGIR') return '';
+      var m = document.getElementById('sgoDocRevMotivo_' + modulo);
+      var motivo = String((m && m.value) || est.motivo || '').trim();
+      if (motivo.length < MOTIVO_MIN) {
+        try { if (m) { m.focus(); m.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } catch (e) {}
+        return 'Escreva o motivo da revisão (ao menos ' + MOTIVO_MIN + ' caracteres) no quadro "Correção do documento ' + (est.info || {}).numero + '", no alto do formulário.';
+      }
+      return '';
+    },
+
+    /** O que vai junto do pedido de geração (payload._docRev). Sempre leva os campos do formulário. */
+    pedido: function (modulo) {
+      var cfg = CFG[modulo] || {}, est = ESTADO[modulo];
+      var m = document.getElementById('sgoDocRevMotivo_' + modulo);
+      var p = { modo: '', origemId: '', motivo: '', form: cfg.raiz ? capturar(cfg.raiz) : null };
+      if (est) { p.modo = est.modo; p.origemId = est.id; p.motivo = String((m && m.value) || est.motivo || '').trim(); }
+      return p;
+    },
+
+    /** Depois de gerar e salvar: encerra a correção (o formulário fica como está). */
+    concluido: function (modulo) {
+      delete ESTADO[modulo];
+      desenharQuadro(modulo);
+      travarNumero(modulo);
+      // o salvar termina depois (geradores em duas etapas): a lista é atualizada de novo em seguida
+      API.atualizarPainel(modulo);
+      setTimeout(function () { API.atualizarPainel(modulo); }, 5000);
+      setTimeout(function () { API.atualizarPainel(modulo); }, 15000);
+    },
+
+    cancelar: function (modulo) {
+      var cfg = CFG[modulo] || {};
+      delete ESTADO[modulo];
+      desenharQuadro(modulo);
+      travarNumero(modulo);
+      if (typeof cfg.limpar === 'function') { try { cfg.limpar(); } catch (e) {} }
+    },
+
+    /** Botões de uma linha da lista. item: { id, vigente, temDados } */
+    botoesHtml: function (modulo, item) {
+      if (!item || !item.id) return '';
+      var id = esc(item.id), m = esc(modulo);
+      return '<button type="button" class="btn btn-secondary" title="Carrega o formulário com os dados deste documento para corrigir e gerar a próxima revisão do mesmo número" onclick="SGO_DocRev.abrir(\'' + m + '\',\'' + id + '\',\'CORRIGIR\')">Abrir para corrigir</button>' +
+        '<button type="button" class="btn btn-secondary" title="Copia os dados para um documento novo, com número novo (por exemplo, o mesmo equipamento no ano seguinte)" onclick="SGO_DocRev.abrir(\'' + m + '\',\'' + id + '\',\'BASE\')">Usar como base</button>';
+    },
+
+    /**
+     * Lista de documentos gerados (registro de revisões). filtro: { termo, equipamentoId, cnpj, limite }.
+     * opcoes: { vazio: 'texto quando não há documentos' }
+     */
+    montarLista: function (alvo, modulo, filtro, opcoes) {
+      var box = el(alvo);
+      if (!box) return;
+      opcoes = opcoes || {};
+      box.innerHTML = '<p class="panel-subtitle" style="margin:0">Carregando os documentos gerados…</p>';
+      var pedido = Object.assign({}, filtro || {}, { modulo: modulo });
+      google.script.run.withSuccessHandler(function (r) {
+        if (!r || r.ok === false) { box.innerHTML = '<div class="alert-box show error" style="display:block">' + esc((r && r.erro) || 'Não foi possível carregar a lista.') + ' Clique em "Atualizar" para tentar de novo.</div>'; return; }
+        if (!r.itens.length) { box.innerHTML = '<p class="panel-subtitle" style="margin:0">' + esc(opcoes.vazio || 'Nenhum documento gerado com os dados guardados ainda. Os documentos gerados a partir de agora aparecem aqui, prontos para corrigir ou usar como base.') + '</p>'; return; }
+        box.innerHTML = r.itens.map(function (d) {
+          var situacao = d.vigente ? 'Vigente' : ('Substituído pela ' + (d.substituidaPor || 'revisão seguinte'));
+          return '<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.55;' + (d.vigente ? '' : 'opacity:.78') + '">' +
+            '<b>' + esc(d.numero) + '</b> · ' + esc(d.rotulo) + ' · ' + esc(situacao) + (d.titulo ? ' · ' + esc(d.titulo) : '') +
+            '<br><span style="color:var(--bc-text-3)">' + esc(d.cliente || '') + (d.tag ? ' · TAG ' + esc(d.tag) : '') + ' · gerado por ' + esc(d.emitidoPor || '—') + ' em ' + esc(d.emitidoEm || '—') + '</span>' +
+            (d.motivo ? '<br><span style="color:var(--bc-text-3)">Motivo da revisão: ' + esc(d.motivo) + '</span>' : '') +
+            '<div class="btn-container" style="margin-top:6px;flex-wrap:wrap">' +
+            (d.pdfUrl ? '<a class="btn btn-secondary" href="' + esc(d.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a>' : '') +
+            (d.htmlUrl ? '<a class="btn btn-secondary" href="' + esc(d.htmlUrl) + '" target="_blank" rel="noopener">Abrir para imprimir</a>' : '') +
+            API.botoesHtml(modulo, d) + '</div></div>';
+        }).join('') + (r.total > r.itens.length ? '<p class="field-help">Mostrando ' + r.itens.length + ' de ' + r.total + '. Use a busca para achar os mais antigos.</p>' : '');
+      }).withFailureHandler(function (e) {
+        box.innerHTML = '<div class="alert-box show error" style="display:block">Sem resposta do servidor (' + esc((e && e.message) || e) + '). Confira a conexão e clique em "Atualizar".</div>';
+      }).DocRev_api({ sessionId: sessao(), fn: 'listar', payload: pedido });
+    },
+
+    /**
+     * Painel completo "Documentos gerados" (busca + lista) dentro de um elemento.
+     * Usado pelos geradores que não tinham lista própria com os dados guardados.
+     */
+    montarPainel: function (alvo, modulo, opcoes) {
+      var box = el(alvo);
+      if (!box) return;
+      opcoes = opcoes || {};
+      var p = 'sgoDocRevPainel_' + modulo;
+      box.innerHTML = '<section class="panel" style="margin-top:14px"><h2>' + esc(opcoes.titulo || 'Documentos gerados: corrigir ou usar como base') + '</h2>' +
+        '<p class="panel-subtitle">' + esc(opcoes.subtitulo || '"Abrir para corrigir" carrega o formulário com tudo o que foi usado; ao gerar de novo sai a revisão seguinte do mesmo número, com o motivo. "Usar como base" copia os dados para um documento novo. Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não aparecem aqui.') + '</p>' +
+        '<div class="form-row"><div class="form-group" style="flex:1 1 260px"><input type="text" class="form-control" id="' + p + '_termo" placeholder="Número, cliente ou TAG"></div>' +
+        '<div class="form-group" style="flex:0 0 auto;min-width:0"><button type="button" class="btn btn-secondary" id="' + p + '_buscar">Atualizar</button></div></div>' +
+        '<div id="' + p + '_lista"></div></section>';
+      var buscar = function () { API.montarLista(p + '_lista', modulo, { termo: (document.getElementById(p + '_termo') || {}).value || '' }, opcoes); };
+      document.getElementById(p + '_buscar').onclick = buscar;
+      document.getElementById(p + '_termo').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') buscar(); });
+      buscar();
+    },
+
+    /**
+     * Troca uma função global da tela do gerador por outra que a chama (uma vez só por função).
+     * fabrica(original) devolve a nova função. Usado pelos carregadores JS_*.html depois de montar o módulo.
+     */
+    envolver: function (nome, fabrica) {
+      var f = window[nome];
+      if (typeof f !== 'function' || f.__sgoDocRev) return false;
+      var novo = fabrica(f);
+      novo.__sgoDocRev = true;
+      window[nome] = novo;
+      return true;
+    },
+
+    /** Painel "Documentos gerados" no fim de um elemento da tela (cria o espaço se faltar). */
+    anexarPainel: function (alvo, modulo, opcoes) {
+      var box = el(alvo);
+      if (!box) return;
+      var id = 'sgoDocRevPainelBox_' + modulo;
+      var d = document.getElementById(id);
+      if (!d) { d = document.createElement('div'); d.id = id; box.appendChild(d); }
+      API.montarPainel(d, modulo, opcoes);
+    },
+
+    atualizarPainel: function (modulo) {
+      var b = document.getElementById('sgoDocRevPainel_' + modulo + '_buscar');
+      if (b) b.click();
+    },
+
+    capturar: capturar,
+    restaurar: restaurar
+  };
+
+  window.SGO_DocRev = API;
+})();
+</script>

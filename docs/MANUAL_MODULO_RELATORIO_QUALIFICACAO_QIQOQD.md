@@ -241,3 +241,26 @@ Se você já usa o módulo "Declaração de Execução de Serviço" para o mesmo
 ## Enviar o documento ao cliente (20/10/2026)
 
 Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; os links do PDF salvo na tela ganham o botão "Enviar". A janela "Enviar documento" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).
+
+## Corrigir um documento gerado e usar como base (21/10/2026)
+
+Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema guarda, junto de cada documento, tudo o que foi usado para gerá-lo (dados digitados, equipamento, textos revisados, anexos, leituras e arquivos importados).
+
+**Onde fica:** no fim da tela do módulo, quadro "Documentos gerados: corrigir ou usar como base" (busca por número, cliente ou TAG e botão "Atualizar"). Cada linha mostra o número, a revisão (Rev. 00, Rev. 01...), a situação (Vigente ou Substituído pela Rev. NN), quem gerou e quando, e os botões "Abrir PDF", "Abrir para imprimir", "Abrir para corrigir" e "Usar como base".
+
+**Corrigir (nova revisão do mesmo número):**
+
+1. Na linha do documento, toque em "Abrir para corrigir". O formulário volta preenchido com tudo o que foi usado, sem importar nada de novo. Anexos que não voltam para o campo de arquivo (certificados, fotos) continuam valendo pelos dados guardados; o quadro do alto diz quantos são. Só escolha arquivo se quiser trocar.
+2. No quadro amarelo "Correção do documento", no alto do formulário, escreva o motivo da revisão (obrigatório, ao menos 10 caracteres). O campo do número fica travado: a correção mantém o número.
+3. Altere o que precisa e toque em "Confirmar e Gerar Relatório de QI/QO". Este gerador não tem etapa de aprovação: sai na hora a revisão seguinte (Rev. 01, 02...) com o mesmo número.
+4. O documento novo traz o quadro "Histórico de revisões" (revisão, data, motivo e responsável) e a revisão no cabeçalho e no nome do arquivo.
+5. A revisão anterior nunca é apagada nem sobrescrita: continua na pasta do cliente, com a revisão no nome do arquivo, ganha a anotação "Substituído pela Rev. NN" na descrição do arquivo e aparece na lista como substituída.
+6. Para desistir, toque em "Cancelar a correção e limpar o formulário".
+
+**Usar como base (documento novo, número novo):** na mesma lista, toque em "Usar como base" (por exemplo, o mesmo equipamento no ano seguinte). O formulário volta preenchido; confira datas, leituras e resultados, que são do serviço anterior, e toque em "Confirmar e Gerar Relatório de QI/QO". Sai um documento novo, Rev. 00, com número novo; o documento de origem não muda.
+
+**Número repetido:** um documento novo com o número de um documento já gerado é recusado, com a explicação: para corrigir aquele documento use "Abrir para corrigir"; para um documento novo, apague o número ou use outro.
+
+**Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
+
+Os certificados da QD e a leitura feita deles voltam com o documento: não é preciso gerar o rascunho de novo, a menos que um certificado seja trocado (nesse caso a tela pede o rascunho, para ler o certificado novo). Sem número digitado, o relatório recebe um número automático (RQQ-aaaammdd-hhmm), usado para as revisões.

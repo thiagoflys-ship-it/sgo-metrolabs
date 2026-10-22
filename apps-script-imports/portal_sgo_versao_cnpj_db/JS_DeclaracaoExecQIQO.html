@@ -6,7 +6,7 @@
     if (!container) return;
 
     if (tplDeclExecQIQO_carregado_) {
-      if (typeof tplDeclExecQIQO_renderReal_ === 'function') tplDeclExecQIQO_renderReal_();
+      if (typeof tplDeclExecQIQO_renderReal_ === 'function') tplDeclExecQIQO_renderReal_(); tplDeclExecQIQO_ligarRevisao_();
       return;
     }
 
@@ -32,6 +32,7 @@
 
           if (typeof tplDeclExecQIQO_renderReal_ === 'function') {
             tplDeclExecQIQO_renderReal_();
+            tplDeclExecQIQO_ligarRevisao_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +46,62 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .DeclExecQIQO_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O formulário, os textos revisados, as fotos,
+  // os certificados e a leitura deles ficam guardados junto do documento; ao abrir, tudo volta sem reimportar.
+  function tplDeclExecQIQO_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'DECLARACAO_QIQO';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplDeclExecQIQO_viewModulo', faixa: 'tplDeclExecQIQO_viewModulo', campoNumero: 'tplDeclExecQIQO_numeroDocumentoQIQO', acao: 'Confirmar e Gerar Relatório de QI/QO', aprovacao: false,
+      dica: 'Os textos do relatório voltaram para a revisão dos textos: altere o que precisar e confirme. Os certificados da QD já lidos continuam valendo; só gere o rascunho de novo se trocar um certificado ou quiser que os textos sejam redigidos de novo.',
+      resumoAnexos: function (p) {
+        var c = (p.certificadosQD || []).filter(function (x) { return x && x.base64; }).length, f = (p.fotosQI || []).length + (p.fotosQO || []).length;
+        return 'Anexos do documento de origem que continuam valendo: ' + c + ' certificado(s) da QD e ' + f + ' foto(s). Só escolha arquivo nos campos se quiser trocar.';
+      },
+      limpar: function () { tplDeclExecQIQO_renderReal_(); tplDeclExecQIQO_ligarRevisao_(); },
+      depoisDosCampos: function (p) {
+        [['declexec-qi', p.itensQI], ['declexec-qo', p.itensQO]].forEach(function (par) {
+          (par[1] || []).forEach(function (it) {
+            var o = document.querySelector('.' + par[0] + '-obs[data-codigo="' + it.codigo + '"]');
+            if (o) o.value = it.observacao || '';
+          });
+        });
+        var box = document.getElementById('tplDeclExecQIQO_revisaoBoxQIQO');
+        if (box && p.textos) box.classList.remove('hidden');
+      }
+    });
+    SGO_DocRev.envolver('tplDeclExecQIQO_confirmarEGerarDocumentoQIQO', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplDeclExecQIQO_montarPayloadBaseQIQO_', function (orig) {
+      return function () { var p = orig.apply(this, arguments); p._docRev = SGO_DocRev.pedido(M); return p; };
+    });
+    SGO_DocRev.envolver('tplDeclExecQIQO_coletarFotos_', function (orig) {
+      return function (prefixo) {
+        return orig.apply(this, arguments).then(function (f) {
+          if (f.length) return f;
+          var g = SGO_DocRev.payloadAberto(M) || {};
+          return ((/QO$/.test(String(prefixo)) ? g.fotosQO : g.fotosQI) || []).slice(0);
+        });
+      };
+    });
+    SGO_DocRev.envolver('tplDeclExecQIQO_coletarCertificadosQD_', function (orig) {
+      return function () {
+        return orig.apply(this, arguments).then(function (lista) {
+          var g = (SGO_DocRev.payloadAberto(M) || {}).certificadosQD || [];
+          return lista.map(function (c) {
+            if (c.base64) return c;
+            var s = g.filter(function (x) { return x && x.codigo === c.codigo && x.base64; })[0];
+            return s ? { codigo: c.codigo, base64: s.base64, mimeType: s.mimeType, observacao: c.observacao || s.observacao || '' } : c;
+          });
+        });
+      };
+    });
+    SGO_DocRev.envolver('tplDeclExecQIQO_salvarDocumento', function (orig) {
+      return function () { var r = orig.apply(this, arguments); SGO_DocRev.concluido(M); return r; };
+    });
+    SGO_DocRev.anexarPainel('tplDeclExecQIQO_viewModulo', M);
   }
 </script>

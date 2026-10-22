@@ -7,6 +7,7 @@
 
     if (tplRelCal_carregado_) {
       if (typeof tplRelCal_renderReal_ === 'function') tplRelCal_renderReal_();
+      tplRelCal_ligarRevisao_();
       return;
     }
 
@@ -32,6 +33,7 @@
 
           if (typeof tplRelCal_renderReal_ === 'function') {
             tplRelCal_renderReal_();
+            tplRelCal_ligarRevisao_();
           } else {
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
@@ -45,5 +47,53 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .RelCal_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O formulário inteiro é guardado
+  // junto do documento; certificados e fotos anexados voltam pelos dados guardados (campo de arquivo não se preenche).
+  function tplRelCal_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'RELATORIO_CALIBRACAO';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplRelCal_viewModulo', faixa: 'tplRelCal_viewModulo', campoNumero: 'tplRelCal_numeroDocumento', acao: 'Gerar Relatório de Calibração', aprovacao: false,
+      limpar: function () { if (typeof tplRelCal_prepararProximoRelatorio_ === 'function') tplRelCal_prepararProximoRelatorio_(); },
+      resumoAnexos: function (p) {
+        var c = (p.certificados || []).filter(function (x) { return x && x.base64; }).length, f = (p.fotos || []).length;
+        return 'Anexos do documento de origem que continuam valendo: ' + c + ' certificado(s) e ' + f + ' foto(s). Só escolha arquivo nos campos de certificado ou de foto se quiser trocar.';
+      }
+    });
+    SGO_DocRev.envolver('tplRelCal_gerarRelatorio', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplRelCal_montarPayload_', function (orig) {
+      return function () { var p = orig.apply(this, arguments); p._docRev = SGO_DocRev.pedido(M); return p; };
+    });
+    SGO_DocRev.envolver('tplRelCal_coletarCertificados_', function (orig) {
+      return function () {
+        return orig.apply(this, arguments).then(function (lista) {
+          var g = (SGO_DocRev.payloadAberto(M) || {}).certificados || [];
+          return lista.map(function (c) {
+            if (c.base64) return c;
+            var s = g.filter(function (x) { return x && x.codigo === c.codigo && x.base64; })[0];
+            return s ? { codigo: c.codigo, base64: s.base64, mimeType: s.mimeType } : c;
+          });
+        });
+      };
+    });
+    SGO_DocRev.envolver('tplRelCal_coletarFotos_', function (orig) {
+      return function () {
+        return orig.apply(this, arguments).then(function (fotos) {
+          var g = (SGO_DocRev.payloadAberto(M) || {}).fotos || [];
+          return fotos.length ? fotos : g.slice(0);
+        });
+      };
+    });
+    SGO_DocRev.envolver('tplRelCal_prepararProximoRelatorio_', function (orig) {
+      return function () { var r = orig.apply(this, arguments); SGO_DocRev.concluido(M); return r; };
+    });
+    SGO_DocRev.envolver('tplRelCal_renderPainelVincular_', function (orig) {
+      return function () { var r = orig.apply(this, arguments); SGO_DocRev.atualizarPainel(M); return r; };
+    });
+    SGO_DocRev.anexarPainel('tplRelCal_viewModulo', M);
   }
 </script>
