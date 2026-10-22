@@ -131,6 +131,9 @@ function FrotaBlq_bootstrapSemTrava_() {
   CertCal_garantirTabela_(FBLQ_ABA_ESTADO, FBLQ_COLUNAS_ESTADO);
   CertCal_garantirTabela_(FBLQ_ABA_EVENTOS, FBLQ_COLUNAS_EVENTOS);
   CertCal_garantirTabela_(FBLQ_ABA_PASSAGENS, FBLQ_COLUNAS_PASSAGENS);
+  // Aba de estado criada antes da medição pela conexão (22/10/2026): garantirTabela_ não acrescenta colunas
+  // a uma aba que já existe, e a gravação de coluna ausente era descartada em silêncio.
+  ['CON_ONLINE', 'CON_ULTIMO_EM', 'CON_OFF_DESDE', 'CON_INICIO', 'CON_RESUMO'].forEach(function (c) { CertCal_garantirColuna_(FBLQ_ABA_ESTADO, c); });
   ['PASSAGEM_ID', 'ENCERRADA_POR_PASSAGEM', 'ENCERRADA_ESQUECIDA'].forEach(function (c) { CertCal_garantirColuna_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, c); });
 }
 

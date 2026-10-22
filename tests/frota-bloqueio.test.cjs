@@ -49,7 +49,8 @@ function ambiente(o) {
   const notificacoes = [];
   const sessao = { atual: o.sessao || GESTOR };
   let seq = 0;
-  const resposta = (code, corpo) => ({ getResponseCode: () => code, getContentText: () => (corpo === undefined ? '' : JSON.stringify(corpo)), getAllHeaders: () => ({}) });
+  const cabecalhos = Object.assign({}, o.cabecalhos || {});
+  const resposta =(code, corpo) => ({ getResponseCode: () => code, getContentText: () => (corpo === undefined ? '' : JSON.stringify(corpo)), getAllHeaders: () => ({}) });
   const ctx = vm.createContext({
     console,
     Utilities: criarUtilities({ DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
@@ -80,12 +81,15 @@ function ambiente(o) {
         return resposta(404);
       }
     },
-    CertCal_garantirTabela_: (t) => { tabelas[t] = tabelas[t] || []; }, CertCal_garantirColuna_() {}, CertCal_forcarColunaTexto_() {},
+    // Como a planilha real: garantirTabela_ só cria aba nova (não acrescenta coluna a aba existente) e a gravação de
+    // coluna que não está no cabeçalho é descartada em silêncio (achado em produção, 22/10/2026).
+    CertCal_garantirTabela_: (t, cols) => { if (!tabelas[t]) { tabelas[t] = []; cabecalhos[t] = (cols || []).slice(); } },
+    CertCal_garantirColuna_: (t, c) => { if (cabecalhos[t] && cabecalhos[t].indexOf(c) < 0) cabecalhos[t].push(c); }, CertCal_forcarColunaTexto_() {},
     SGO_DATA: {
       getDB: () => ({ getSheetByName: (n) => (tabelas[n] ? {} : null) }),
       getAll: (t) => (tabelas[t] || []).map((r) => Object.assign({}, r)),
       getById: (t, id) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); return r ? Object.assign({}, r) : null; },
-      update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (!r) return false; Object.assign(r, d); return true; },
+      update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (!r) return false; Object.keys(d).forEach((k) => { if (!cabecalhos[t] || cabecalhos[t].indexOf(k) >= 0) r[k] = d[k]; }); return true; },
       insert: (t, d) => { const r = Object.assign({ ID: 'id' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); },
       remove: () => { throw new Error('apagar é proibido'); },
       gerarRegistroBase: (x) => Object.assign({ ID: 'g' + (++seq), CRIADO_EM: new Date().toISOString() }, x),
@@ -549,6 +553,18 @@ test('Triagem pela CONEXÃO (padrão real do rastreador): pontos densos ligado e
   assert.match(r.texto, /Só avisa/);
   b.rodada();
   assert.equal(b.comandos().length, 0);
+});
+
+test('Aba de estado criada antes da medição pela conexão (produção, 22/10): as colunas CON_* são acrescentadas e a conexão fica gravada', () => {
+  const antigas = ['ID', 'VEICULO_ID', 'PLACA', 'DEVICE_ID', 'MODO', 'MODO_EM', 'MODO_POR', 'MODO_MOTIVO', 'TRIAGEM', 'TRIAGEM_EM', 'TRIAGEM_RESUMO',
+    'TRIAGEM_MANUAL', 'RELE_REAL', 'RELE_REAL_EM', 'RELE_SIMULADO', 'PEDIDO_ACAO', 'PEDIDO_SITUACAO', 'ULT_CMD_ACAO', 'ULT_CMD_EM', 'ATUALIZADO_EM', 'CRIADO_EM'];
+  const a = ambiente({ tabelas: { REG_FROTA_BLOQUEIO_ESTADO: [] }, cabecalhos: { REG_FROTA_BLOQUEIO_ESTADO: antigas } });
+  a.posicao('1039', { min: 300 });
+  a.rodada();
+  const est = a.estado('v1');
+  assert.ok(est, 'estado criado');
+  assert.equal(est.CON_ONLINE, 'SIM');
+  assert.ok(est.CON_ULTIMO_EM && est.CON_INICIO && est.CON_RESUMO, 'conexão gravada');
 });
 
 test('Padrão real (22/10): carro desligado há horas e aparelho online = bloqueio sai; aparelho offline ou posição de ignição ligada mais recente = não sai', () => {
