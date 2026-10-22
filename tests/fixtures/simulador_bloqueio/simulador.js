@@ -68,6 +68,8 @@ function rodadaMotor(w) {
   const e = { agora: w.t * 60000, modo: 'ATIVO', triagem: 'BLOQUEIO_ATIVO', aberta: !!s.resp, emergencia: !!s.emergencia, desdeRetiradaMs: (s.retiradaEm || 0) * 60000,
     pedido: s.pedidoMotor, naBase: p ? BASES.has(p.loc) : null, rele: s.releLido || '',
     pos: p ? { quandoMs: p.t * 60000, quandoTexto: 'min ' + p.t, kmh: p.kmh, ignicao: p.ign, movimento: p.kmh > 0 } : null,
+    // 22/10/2026: "conectado" vem da lista de aparelhos da iTracker (situação e último contato), lida pela plataforma
+    conexao: plataformaNoAr(w) ? (carroConectado(w) ? (s.ultimoContato = w.t, { online: true, ultimoMs: w.t * 60000 }) : { online: false, ultimoMs: (s.ultimoContato || 0) * 60000 }) : null,
     ultimo: s.ultimoMotor || null };
   const d = MOTOR(e);
   w.decisoes = (w.decisoes || 0) + 1;

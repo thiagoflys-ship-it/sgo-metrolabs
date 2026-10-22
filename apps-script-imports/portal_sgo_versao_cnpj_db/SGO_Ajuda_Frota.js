@@ -674,7 +674,7 @@ function SGO_ajudaTelas_Frota_() {
         "Modos de cada carro: Ativo (manda o comando de verdade), Simulação (faz tudo e só registra o que teria feito) e Desligado. Começo do piloto: o Onix em Ativo e os outros em Simulação.",
         "Ativo só manda comando de verdade depois que o responsável pelo sistema grava a \"Chave de acesso dos comandos\" e liga \"Bloqueio da partida pelo SGO+\" em Chaves e senhas > Rastreador da frota. Até lá o cartão mostra \"Ativo aguardando liberação\" e o carro trabalha em simulação.",
         "Configure a área de cada base (centro e raio) no fim da tela. Sem ela, toda devolução vai para a decisão da gestão.",
-        "Regras: com retirada aberta o carro fica liberado, mesmo em viagem de dias; o bloqueio nunca sai com o carro andando, ligado ou sem sinal; devolução fora da base não bloqueia sozinha; um bloqueio aceito com o carro sem conexão (fila do rastreador) é tratado como NÃO feito; a conferência a cada 2 minutos compara o que deveria estar com o relé do carro."
+        "Regras: com retirada aberta o carro fica liberado, mesmo em viagem de dias; o bloqueio nunca sai com o carro andando, ligado ou com o aparelho offline (conectado = online na iTracker e contato nos últimos 2 minutos; com o carro desligado a última posição pode ser de horas antes, porque o rastreador economiza); devolução fora da base não bloqueia sozinha; um bloqueio aceito com o carro sem conexão (fila do rastreador) é tratado como NÃO feito; a conferência a cada 2 minutos compara o que deveria estar com o relé do carro."
       ],
       passos: [
         { titulo: "Ver como está cada carro", itens: [
@@ -716,7 +716,7 @@ function SGO_ajudaTelas_Frota_() {
         ] },
         { titulo: "Mudar o modo ou a triagem do sinal de um carro", itens: [
           "Toque em \"Modo\", escolha Ativo, Simulação ou Desligado, escreva o motivo e grave.",
-          "Toque em \"Triagem do sinal\" para ver os locais onde o carro costuma ficar, a parte do tempo com sinal e o tempo até reconectar. \"Só avisa\" = o SGO+ nunca manda bloqueio para este carro (por exemplo, carro que dorme em garagem subterrânea). Pode deixar automática ou escolher, com motivo."
+          "Toque em \"Triagem do sinal\" para ver os locais onde o carro costuma ficar, a parte do tempo em que o aparelho estava conectado à iTracker e quanto demora, em média, para reconectar. A medida é a conexão do aparelho, não o intervalo entre posições: carro desligado manda posição raramente (economia do rastreador) e continua conectado. Nas primeiras 24 h aparece \"Triagem sem dados\" e vale a regra normal. \"Só avisa\" = o SGO+ nunca manda bloqueio para este carro (por exemplo, carro que dorme em garagem subterrânea). Pode deixar automática ou escolher, com motivo."
         ] },
         { titulo: "Configurar a área de uma base", itens: [
           "No fim da tela, escolha a base.",
@@ -738,7 +738,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       problemas: [
         { situacao: "\"Nenhum comando real sai agora\"", oQueFazer: "O responsável pelo sistema grava a chave e liga o bloqueio em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar\"." },
-        { situacao: "Pendência \"aguardando: o rastreador está sem sinal agora\"", oQueFazer: "Normal. O bloqueio sai sozinho quando o carro conectar, parado e desligado. Se demorar muito, confira onde está o carro no mapa." },
+        { situacao: "Pendência \"aguardando: o aparelho está offline\" (ou \"não fala com a iTracker há mais de 2 minutos\")", oQueFazer: "Normal. O bloqueio sai sozinho quando o aparelho voltar a ficar conectado, com o carro parado e desligado. Se demorar muito, confira onde está o carro no mapa." },
         { situacao: "\"Bloqueio na fila do rastreador\"", oQueFazer: "O carro estava sem conexão. O SGO+ trata como não bloqueado. Se alguém vai usar o carro, a retirada manda a liberação logo em seguida." },
         { situacao: "\"A retirada não foi encerrada: ...\"", oQueFazer: "A mensagem diz a condição que faltou (carro andando, ligado, fora da base ou sem sinal). Espere o carro ficar parado e desligado na base, ou autorize \"Passar o carro\"." },
         { situacao: "\"Registro com problema\" na conferência", oQueFazer: "Alguém mexeu na planilha do registro. Avise o Administrador; a linha indicada mostra o que foi alterado." }
@@ -751,8 +751,9 @@ function SGO_ajudaTelas_Frota_() {
         { perfil: "TODOS", pode: "Passar o carro, assumir o carro e responder à pergunta da retirada esquecida, na tela normal da Frota." }
       ],
       perguntas: [
-        { p: "Por que não bloqueia logo depois da devolução?", r: "Porque o bloqueio só pode sair com o carro conectado no mesmo minuto, parado e desligado. Se o comando ficasse na fila do rastreador, ele poderia cortar o motor de quem saísse dirigindo depois." },
-        { p: "Por que um carro está em \"Só avisa\"?", r: "Pela triagem do sinal: onde ele costuma ficar, o sinal cai por muito tempo (garagem subterrânea, região sem cobertura). Um bloqueio enviado ali poderia ficar na fila e cair quando o carro saísse." },
+        { p: "Por que não bloqueia logo depois da devolução?", r: "Porque o bloqueio só pode sair com o aparelho conectado agora (online na iTracker, com contato nos últimos 2 minutos), o carro parado e desligado. Se o comando ficasse na fila do rastreador, ele poderia cortar o motor de quem saísse dirigindo depois." },
+        { p: "O cartão mostra a última posição de horas atrás. Está sem sinal?", r: "Não necessariamente. Com o carro desligado o rastreador entra em economia e só manda posição quando o carro liga, mas continua conectado. Veja a linha \"Sinal\": \"aparelho online, último contato agora\" é o que vale." },
+        { p: "Por que um carro está em \"Só avisa\"?", r: "Pela triagem do sinal: onde ele costuma ficar, o aparelho perde a conexão com a iTracker por muito tempo (garagem subterrânea, região sem cobertura). Um bloqueio enviado ali poderia ficar na fila e cair quando o carro saísse." },
         { p: "O que a Simulação mostra?", r: "Tudo o que o SGO+ teria feito com o carro (liberar, bloquear, esperar, pedir decisão), no registro e no relatório das 18h, sem mandar nada ao carro." }
       ]
     },

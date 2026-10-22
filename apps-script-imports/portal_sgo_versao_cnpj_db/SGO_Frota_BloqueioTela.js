@@ -99,7 +99,7 @@ function FrotaBlq_telaNavegador_() {
       linha('Responsável', v.responsavel ? v.responsavel + ' (desde ' + v.desde + ')' : 'ninguém (sem retirada)') +
       linha('Partida no carro', rele(v.releReal) + (v.releRealEm ? ' (lido ' + v.releRealEm.slice(-5) + ')' : '')) +
       (v.modoEfetivo === 'SIMULACAO' ? linha('Partida simulada', rele(v.releSimulado)) : '') +
-      linha('Sinal', v.sinal) + linha('Situação', v.situacaoCarro) + linha('Base', v.baseTexto) +
+      linha('Sinal', v.sinal) + linha('Última posição', v.ultimaPosicao) + linha('Situação', v.situacaoCarro) + linha('Base', v.baseTexto) +
       linha('Último comando', v.ultimoComando || 'nenhum') + linha('Pendência', v.pedido) + linha('Emergência', v.emergencia) + linha('Retirada', v.esquecida) +
       linha('Odômetro do rastreador', v.odometroAtual !== null ? tplFrota_num_(v.odometroAtual) + ' km' : '') + linha('Último acerto', v.odoAcerto) +
       (v.modoAviso ? '<p class="muted" style="font-size:12px">' + esc(v.modoAviso) + '</p>' : '') +
@@ -191,8 +191,8 @@ function FrotaBlq_telaNavegador_() {
     } else if (acao === 'modoOk') enviar(f, 'apiBloqueioModo', { veiculoId: v.veiculoId, modo: val(f + 'm'), motivo: val(f + 'j') }, b);
     else if (acao === 'triagem') {
       abrirForm(f, '<p style="font-size:12.5px">' + esc(v.triagemMotivo || 'Sem triagem calculada ainda.') + (v.triagemEm ? ' (calculada em ' + esc(v.triagemEm) + ')' : '') + '</p>' +
-        (v.triagemLocais.length ? '<div class="frr-rolar"><table class="frr-tabela"><thead><tr><th>Local</th><th class="num">Horas parado</th><th class="num">Com sinal</th><th class="num">Reconexão (90%)</th></tr></thead><tbody>' + v.triagemLocais.map(function (l) {
-          return '<tr><td data-rot="Local">' + esc(l.local) + (l.ruim ? ' <span class="fbq-chip alerta">sinal fraco</span>' : '') + '</td><td data-rot="Horas parado" class="num">' + tplFrota_num_(l.horas, 1) + '</td><td data-rot="Com sinal" class="num">' + esc(l.pctSinal) + '%</td><td data-rot="Reconexão (90%)" class="num">' + esc(l.reconexaoP90Min) + ' min</td></tr>';
+        (v.triagemLocais.length ? '<div class="frr-rolar"><table class="frr-tabela"><thead><tr><th>Local</th><th class="num">Horas parado</th><th class="num">Conectado</th><th class="num">Reconexão (média)</th></tr></thead><tbody>' + v.triagemLocais.map(function (l) {
+          return '<tr><td data-rot="Local">' + esc(l.local) + (l.ruim ? ' <span class="fbq-chip alerta">conexão fraca</span>' : '') + '</td><td data-rot="Horas parado" class="num">' + tplFrota_num_(l.horas, 1) + '</td><td data-rot="Conectado" class="num">' + esc(l.pctSinal) + '%</td><td data-rot="Reconexão (média)" class="num">' + (l.reconexoes ? esc(l.reconexaoMin) + ' min' : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>' : '') +
         '<label for="' + f + 't">Valer para este carro</label><select id="' + f + 't"><option value="">Automática (pelo histórico)</option><option value="BLOQUEIO_ATIVO"' + (v.triagemManual === 'BLOQUEIO_ATIVO' ? ' selected' : '') + '>Bloqueio ativo</option><option value="SO_AVISA"' + (v.triagemManual === 'SO_AVISA' ? ' selected' : '') + '>Só avisa (nunca envia bloqueio)</option></select>' +
         campoMotivo(f + 'j', 'Motivo (obrigatório para gravar a escolha)', 'Ex.: carro dorme na garagem subterrânea do cliente') +

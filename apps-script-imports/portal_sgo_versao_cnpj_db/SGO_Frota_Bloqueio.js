@@ -18,9 +18,13 @@
  *  1. Retirada aberta = carro liberado, sempre (mesmo em viagem de dias). A retirada envia LIBERAR e confere;
  *     sem sinal (202) avisa o condutor e a gestão ("liberação aguardando sinal").
  *  2. Devolução só com o carro desligado e parado (Frota_apiFinalizarViagem consulta FrotaBlq_conferirDevolucao_).
- *     A devolução PEDE o bloqueio; ele só é ENVIADO quando o rastreador confirma no mesmo minuto: posição de até
- *     2 minutos, parado (menos de 5 km/h, sem movimento), ignição desligada e nenhuma retirada aberta. Senão espera
- *     e reconfere a cada 2 minutos. Nova retirada cancela o pedido.
+ *     A devolução PEDE o bloqueio; ele só é ENVIADO com o aparelho CONECTADO AGORA (GET /devices: situação "online" e
+ *     último contato, lastUpdate, de até 2 minutos), a última posição parada (menos de 5 km/h, sem movimento) com a
+ *     ignição desligada e nenhuma retirada aberta. Senão espera e reconfere a cada 2 minutos. Nova retirada cancela.
+ *     22/10/2026 (medido em produção): com o carro desligado o rastreador entra em economia e PARA de mandar posição
+ *     (a próxima pode vir horas depois), mas continua conectado e com lastUpdate de poucos minutos. Por isso
+ *     "conectado" vem do /devices e a última posição pode ser antiga: se o carro ligasse ou andasse, o aparelho
+ *     conectado mandaria posição nova. Aparelho offline ou situação desconhecida = nunca bloqueia.
  *  3. Devolução fora da área da base: não bloqueia sozinho; a gestão decide na Caixa de decisões (bloquear ou
  *     não), e o bloqueio autorizado segue as mesmas condições de segurança.
  *  4. "Passar o carro": troca de responsável sem devolução e sem comando, só para condutor ativo com CNH válida.
@@ -33,7 +37,9 @@
  *  8. Emergência: "Liberar agora" (Administrador, Diretoria, Gestor, RH) com motivo; bloqueio de roubo só a
  *     Diretoria, com dupla confirmação e as condições seguras (ou aceite explícito do risco).
  *  9. Hodômetro: a gestão informa o KM do painel e o SGO+ grava no aparelho (PUT accumulators, confirma 204).
- * 10. Triagem do sinal por veículo (histórico das rotas): "Bloqueio ativo" ou "Só avisa" (nunca envia bloqueio).
+ * 10. Triagem do sinal por veículo: "Bloqueio ativo" ou "Só avisa" (nunca envia bloqueio). 22/10/2026: mede a CONEXÃO do
+ *     aparelho (situação e último contato no /devices, uma amostra por rodada guardada como resumo de 14 dias na linha do
+ *     veículo), não o intervalo entre posições, que confundia a economia do rastreador desligado com falta de sinal.
  * 11. Modos por veículo: ATIVO (comando real), SIMULACAO (faz tudo, registra "teria bloqueado/liberado" e não
  *     envia), DESLIGADO. Padrão: SIMULACAO; o piloto começa com o aparelho FBLQ_PILOTO_INICIAL em ATIVO. ATIVO só
  *     envia de verdade com RASTREADOR_LIGADO = 1, RASTREADOR_BLOQUEIO_LIGADO = 1 e a chave dos comandos gravada;
@@ -56,7 +62,8 @@ var FBLQ_COLUNAS_ESTADO = ['ID', 'VEICULO_ID', 'PLACA', 'DEVICE_ID', 'MODO', 'MO
   'ULT_CMD_ACAO', 'ULT_CMD_EM', 'ULT_CMD_HTTP', 'ULT_CMD_RESULTADO', 'ULT_CMD_REAL', 'ULT_CMD_CONSULTADO_EM', 'ULT_CMD_CONFIRMADO_EM', 'ULT_CMD_MOV_ID',
   'EMERGENCIA_ATE', 'EMERGENCIA_MOTIVO', 'EMERGENCIA_POR',
   'ESQ_MOV_ID', 'ESQ_PARADO_DESDE', 'ESQ_PERGUNTA_EM', 'ESQ_RESPOSTA', 'ESQ_RESPOSTA_EM', 'ESQ_GESTAO_EM',
-  'LIB_SINAL_AVISO_MOV_ID', 'ODO_DIVERGENCIA_MOV_ID', 'ODO_PAINEL_KM', 'ODO_RASTREADOR_KM', 'ODO_DIVERGENCIA_EM', 'ODO_FOTO', 'ODO_ACERTO_EM', 'ODO_ACERTO_POR', 'ODO_ACERTO_DE', 'ODO_ACERTO_PARA', 'ODO_ACERTO_REAL', 'ATUALIZADO_EM', 'CRIADO_EM'];
+  'LIB_SINAL_AVISO_MOV_ID', 'ODO_DIVERGENCIA_MOV_ID', 'ODO_PAINEL_KM', 'ODO_RASTREADOR_KM', 'ODO_DIVERGENCIA_EM', 'ODO_FOTO', 'ODO_ACERTO_EM', 'ODO_ACERTO_POR', 'ODO_ACERTO_DE', 'ODO_ACERTO_PARA', 'ODO_ACERTO_REAL',
+  'CON_ONLINE', 'CON_ULTIMO_EM', 'CON_OFF_DESDE', 'CON_INICIO', 'CON_RESUMO', 'ATUALIZADO_EM', 'CRIADO_EM'];
 var FBLQ_COLUNAS_EVENTOS = ['ID', 'QUANDO', 'QUANDO_EM', 'VEICULO_ID', 'PLACA', 'DEVICE_ID', 'MODO', 'TIPO', 'ACAO', 'ORIGEM',
   'QUEM_ID', 'QUEM_NOME', 'PERFIL', 'MOVIMENTACAO_ID', 'CONDICAO', 'HTTP', 'RESPOSTA', 'RESULTADO', 'DETALHE', 'HASH_ANTERIOR', 'HASH', 'CRIADO_EM'];
 var FBLQ_COLUNAS_PASSAGENS = ['ID', 'CODIGO_LOCAL', 'VEICULO_ID', 'PLACA', 'MOV_ORIGEM_ID', 'MOV_NOVA_ID', 'DE_CONDUTOR_ID', 'DE_NOME', 'PARA_CONDUTOR_ID', 'PARA_NOME',
@@ -67,7 +74,11 @@ var FBLQ_COLUNAS_PASSAGENS = ['ID', 'CODIGO_LOCAL', 'VEICULO_ID', 'PLACA', 'MOV_
 var FBLQ_PILOTO_INICIAL = ['1039'];
 var FBLQ_MODOS = { ATIVO: 'Ativo (envia comandos)', SIMULACAO: 'Simulação (só registra)', DESLIGADO: 'Desligado' };
 var FBLQ_CMD_ID = { BLOQUEAR: 35, LIBERAR: 36 };
-var FBLQ_POS_NO_MINUTO_MS = 2 * 60000;      // "conectado no minuto": posição de até 2 minutos
+var FBLQ_POS_NO_MINUTO_MS = 2 * 60000;      // "conectado agora": aparelho online e último contato (lastUpdate) de até 2 minutos
+var FBLQ_CON_TRIAGEM_MS = 5 * 60000;        // triagem: amostra "conectada" = online e último contato de até 5 minutos
+var FBLQ_CON_CACHE = 'FBLQ_CONEXOES_V1';    // lista de aparelhos guardada 45 s (uma chamada por rodada para todos)
+var FBLQ_CON_DIAS = 14;                     // resumo de conexão: últimos 14 dias
+var FBLQ_PROP_TRIAGEM_V2 = 'FROTA_BLQ_TRIAGEM_CONEXAO_EM';
 var FBLQ_PARADO_KMH = 5;
 var FBLQ_SEM_REPETIR_MS = 4 * 60000;        // o mesmo comando não é reenviado antes disso sem resultado
 var FBLQ_SEM_CONFIRMACAO_MS = 10 * 60000;   // comando entregue sem confirmação depois disso = alerta e pode reenviar
@@ -82,12 +93,8 @@ var FBLQ_PROP_RELATORIO = 'FROTA_BLQ_RELATORIO_DIA';
 var FBLQ_PROP_TRIAGEM_DIA = 'FROTA_BLQ_TRIAGEM_DIA';
 var FBLQ_PROP_MIGRADO = 'FROTA_BLQ_REGRA_NOVA_EM';
 var FBLQ_HORA_RELATORIO = 18;
-// Triagem do sinal
-var FBLQ_TRI_DIAS = 30;
-var FBLQ_TRI_MIN_PARADO_H = 24;             // menos que isso de parado no histórico = "sem dados"
-var FBLQ_TRI_LOCAL_FREQUENTE_MIN = 180;     // local com 3 h ou mais parado (ou 3 visitas) é frequente
-var FBLQ_TRI_PCT_MIN = 0.8;                 // local frequente com menos de 80% do tempo com sinal = ruim
-var FBLQ_TRI_RECONEXAO_MAX_MIN = 45;        // ou que demora mais que isso para reconectar (90% das vezes) = ruim
+// Triagem do sinal (22/10/2026: pela conexão do aparelho; local frequente = 3 h ou mais de carro parado)
+var FBLQ_TRI_PCT_MIN = 0.8;                 // local frequente com menos de 80% do tempo conectado = ruim (ou reconexão média acima de 30 min)
 var FBLQ_TRI_PARTE_MIN = 0.05;              // só conta local com pelo menos 5% do tempo parado do veículo
 var FBLQ_SISTEMA = { userId: '', usuario: 'sistema', nome: 'Rotina do bloqueio da partida', perfil: 'SISTEMA' };
 
@@ -274,15 +281,52 @@ function FrotaBlq_naBase_(pos, areas) {
 // ------------------------------------------------------------
 // REGRA (funções puras: as mesmas que os testes e o simulador conferem)
 // ------------------------------------------------------------
-/** Pode ENVIAR bloqueio agora? Conectado no minuto (posição de até 2 min), parado e ignição desligada. */
-function FrotaBlq_seguro_(pos, agoraMs) {
+/** Conectado agora: aparelho "online" na iTracker e último contato (lastUpdate) de até 2 minutos. Função pura. */
+function FrotaBlq_conectado_(con, agoraMs, limiteMs) {
+  return !!(con && con.online === true && con.ultimoMs && agoraMs - con.ultimoMs <= (limiteMs || FBLQ_POS_NO_MINUTO_MS));
+}
+function FrotaBlq_textoConexao_(con, agoraMs) {
+  if (!con) return 'situação do aparelho desconhecida (lista de aparelhos da iTracker não lida)';
+  var min = con.ultimoMs ? Math.max(0, Math.round((agoraMs - con.ultimoMs) / 60000)) : null;
+  var quando = min === null ? 'sem registro de contato' : (min <= 1 ? 'último contato agora' : 'último contato há ' + (typeof Frota_duracaoTexto_ === 'function' ? Frota_duracaoTexto_(min) : min + ' min'));
+  return (con.online ? 'aparelho online' : 'aparelho offline') + ', ' + quando;
+}
+
+/**
+ * GET /devices (uma chamada para todos os aparelhos): mapa deviceId -> { online, ultimoMs, situacao }. A lista é guardada
+ * por maxIdadeSeg (padrão 45 s) para não repetir a chamada na mesma rodada. null = a lista não pôde ser lida (desconhecido).
+ * O casamento é só pelo ID do aparelho (o nome/placa cadastrado na iTracker não é usado: pode estar diferente do SGO+).
+ */
+function FrotaBlq_conexoes_(c, maxIdadeSeg) {
+  var lim = (maxIdadeSeg === undefined ? 45 : maxIdadeSeg) * 1000;
+  try { var g = JSON.parse(CacheService.getScriptCache().get(FBLQ_CON_CACHE) || 'null'); if (g && Date.now() - g.em <= lim) return g.mapa; } catch (e) {}
+  if (!c.ligado || !Rastreador_temCredencial_(c)) return null;
+  var lista;
+  try { lista = Rastreador_lerDispositivos_(c, false); } catch (e2) { return null; }
+  var mapa = {};
+  (lista || []).forEach(function (d) { mapa[String(d.id)] = { online: String(d.situacao || '').toLowerCase() === 'online', ultimoMs: FrotaBlq_ms_(d.ultimaAtualizacao), situacao: String(d.situacao || '') }; });
+  try { CacheService.getScriptCache().put(FBLQ_CON_CACHE, JSON.stringify({ em: Date.now(), mapa: mapa }), 300); } catch (e3) {}
+  return mapa;
+}
+function FrotaBlq_conAgora_(c, veiculo) {
+  var m = FrotaBlq_conexoes_(c, 45);
+  return m ? m[FrotaBlq_s_(veiculo.RASTREADOR_DEVICE_ID)] || null : null;
+}
+
+/**
+ * Pode ENVIAR bloqueio agora? Aparelho conectado agora (online e último contato de até 2 min) e a última posição parada,
+ * com a ignição desligada. A posição pode ser antiga (economia do rastreador desligado): com o aparelho conectado, se o
+ * carro ligasse ou andasse viria posição nova. Aparelho offline ou desconhecido = não.
+ */
+function FrotaBlq_seguro_(pos, agoraMs, con) {
+  if (!con) return { ok: false, semSinal: true, motivo: 'a situação do aparelho na iTracker é desconhecida agora; o bloqueio só sai com o aparelho conectado' };
+  if (con.online !== true) return { ok: false, semSinal: true, motivo: 'o aparelho está offline na iTracker (' + FrotaBlq_textoConexao_(con, agoraMs) + '); o bloqueio só sai com o aparelho conectado' };
+  if (!FrotaBlq_conectado_(con, agoraMs)) return { ok: false, semSinal: true, motivo: 'o aparelho não fala com a iTracker há mais de 2 minutos (' + FrotaBlq_textoConexao_(con, agoraMs) + ')' };
   if (!pos) return { ok: false, motivo: 'o rastreador ainda não mandou posição deste veículo' };
-  var idade = pos.quandoMs ? agoraMs - pos.quandoMs : Infinity;
-  if (!(idade <= FBLQ_POS_NO_MINUTO_MS)) return { ok: false, semSinal: true, motivo: 'o rastreador está sem sinal agora (última posição ' + (pos.quandoTexto || 'sem hora') + '); o bloqueio só sai com o carro conectado no mesmo minuto' };
   if (pos.kmh === null || pos.kmh === undefined || !isFinite(Number(pos.kmh))) return { ok: false, motivo: 'a posição não informa a velocidade' };
   if (Number(pos.kmh) >= FBLQ_PARADO_KMH || pos.movimento === true) return { ok: false, andando: true, motivo: 'o carro está andando (' + Rastreador_num_(pos.kmh, 0) + ' km/h)' };
   if (pos.ignicao !== false) return { ok: false, ligado: pos.ignicao === true, motivo: pos.ignicao === true ? 'a ignição está ligada' : 'o rastreador não informa a ignição' };
-  return { ok: true, motivo: 'conectado (posição das ' + FrotaBlq_hhmm_(pos.quandoMs) + '), parado e com a ignição desligada' };
+  return { ok: true, motivo: 'aparelho conectado (último contato ' + FrotaBlq_hhmm_(con.ultimoMs) + '), parado e com a ignição desligada (última posição ' + (pos.quandoTexto || FrotaBlq_txt_(pos.quandoMs)) + ')' };
 }
 
 /**
@@ -290,7 +334,8 @@ function FrotaBlq_seguro_(pos, agoraMs) {
  * e = { agora, modo ('ATIVO'|'SIMULACAO'|'DESLIGADO'), triagem ('BLOQUEIO_ATIVO'|'SO_AVISA'|'SEM_DADOS'),
  *       aberta (retirada aberta), emergencia (liberação de emergência valendo), desdeRetiradaMs,
  *       pedido: null | { situacao: 'AGUARDANDO'|'AGUARDANDO_GESTAO'|'AUTORIZADO'|'NAO_BLOQUEAR', origem, desdeMs },
- *       pos, naBase (true|false|null), rele ('BLOQUEADO'|'LIBERADO'|''), ultimo: null | { acao, emMs, resultado } }
+ *       pos, conexao: null | { online, ultimoMs } (GET /devices), naBase (true|false|null), rele ('BLOQUEADO'|'LIBERADO'|''),
+ *       ultimo: null | { acao, emMs, resultado } }
  * Devolve { acao: 'LIBERAR'|'BLOQUEAR'|'', espera, decisaoGestao, soAvisa, conferencia }.
  */
 function FrotaBlq_decidir_(e) {
@@ -299,14 +344,14 @@ function FrotaBlq_decidir_(e) {
   var u = e.ultimo || null;
   var semResultado = u && ['ENTREGUE', 'INCERTO', 'SIMULADO_PENDENTE'].indexOf(u.resultado) >= 0;
   var recente = function (acao) { return u && u.acao === acao && e.agora - u.emMs < FBLQ_SEM_REPETIR_MS && (semResultado || u.resultado === 'NA_FILA'); };
-  var posNoMinuto = !!(e.pos && e.pos.quandoMs && e.agora - e.pos.quandoMs <= FBLQ_POS_NO_MINUTO_MS);
+  var conectado = FrotaBlq_conectado_(e.conexao, e.agora);
 
   // 1) retirada aberta (ou emergência): liberado, sempre
   if (e.aberta || e.emergencia) {
     if (e.rele === 'LIBERADO') return nada('');
     if (u && u.acao === 'LIBERAR' && u.resultado === 'CONFIRMADO' && u.emMs >= (e.desdeRetiradaMs || 0) && e.rele !== 'BLOQUEADO') return nada('');
     if (recente('LIBERAR')) return nada('liberação enviada às ' + FrotaBlq_hhmm_(u.emMs) + ', aguardando o resultado');
-    if (u && u.acao === 'LIBERAR' && u.resultado === 'NA_FILA' && !posNoMinuto) return nada('liberação aguardando sinal do carro (o comando está na fila do rastreador)');
+    if (u && u.acao === 'LIBERAR' && u.resultado === 'NA_FILA' && !conectado) return nada('liberação aguardando sinal do carro (o comando está na fila do rastreador)');
     if (!e.rele && u && u.acao === 'LIBERAR' && u.emMs >= (e.desdeRetiradaMs || 0) && (u.resultado === 'ENTREGUE' || u.resultado === 'SEM_CONFIRMACAO')) return nada('liberação entregue ao aparelho (o rastreador não informa o relé)');
     return { acao: 'LIBERAR', espera: '', decisaoGestao: false, soAvisa: false, conferencia: !e.aberta && !e.emergencia };
   }
@@ -316,7 +361,7 @@ function FrotaBlq_decidir_(e) {
   if (e.rele === 'BLOQUEADO') return nada('');
   var conferencia = !p;
   if (conferencia && e.rele !== 'LIBERADO') return nada('');
-  var seg = FrotaBlq_seguro_(e.pos, e.agora);
+  var seg = FrotaBlq_seguro_(e.pos, e.agora, e.conexao);
   if (!seg.ok) return nada('aguardando: ' + seg.motivo);
   if (e.triagem === 'SO_AVISA') return nada('veículo em "Só avisa" (triagem do sinal): o SGO+ não envia bloqueio, só avisa a gestão', { soAvisa: true });
   var autorizado = p && p.situacao === 'AUTORIZADO';
@@ -485,6 +530,7 @@ function FrotaBlq_avaliar_(c, veiculo, est, ctx) {
   var nb = FrotaBlq_naBase_(ctx.pos, areas);
   var e = { agora: agora, modo: me.modo, triagem: FrotaBlq_triagemVale_(est), aberta: !!ctx.aberta, emergencia: FrotaBlq_ms_(est.EMERGENCIA_ATE) > agora,
     desdeRetiradaMs: ctx.aberta ? (FrotaBlq_ms_(ctx.aberta.CRIADO_EM) || 0) : 0, pedido: FrotaBlq_pedidoDe_(est), pos: ctx.pos || null, naBase: nb.naBase,
+    conexao: 'con' in ctx ? ctx.con : FrotaBlq_conAgora_(c, veiculo),
     rele: FrotaBlq_releDe_(est, me.modo), ultimo: FrotaBlq_ultimo_(est, me.modo) };
   var d = FrotaBlq_decidir_(e);
   var out = { decisao: d, modo: me, naBase: nb, exec: null };
@@ -616,6 +662,9 @@ function FrotaBlq_rodada_(c, posicoes, veiculos, movs, inicio) {
     FrotaBlq_bootstrapSemTrava_();
     FrotaBlq_migrarAntigo_();
     var estados = FrotaBlq_estados_();
+    FrotaBlq_migrarTriagemConexao_(estados);
+    // uma leitura do /devices por rodada, para todos (situação e último contato de cada aparelho)
+    var conexoes = FrotaBlq_conexoes_(c, 45);
     var areas = FrotaBlq_areas_();
     var abertas = {};
     (movs || []).forEach(function (m) { if (Frota_movimentoAberto_(m)) abertas[FrotaBlq_s_(m.VEICULO_ID)] = m; });
@@ -629,14 +678,16 @@ function FrotaBlq_rodada_(c, posicoes, veiculos, movs, inicio) {
         if (FrotaBlq_s_(est.DEVICE_ID) !== dev) FrotaBlq_gravarEstado_(est, { DEVICE_ID: dev, PLACA: FrotaBlq_s_(v.PLACA) });
         var pos = posicoes ? posicoes[dev] || null : null;
         var aberta = abertas[FrotaBlq_s_(v.ID)] || null;
+        var con = conexoes ? conexoes[dev] || null : null;
+        FrotaBlq_registrarConexao_(v, est, con, pos, agora, !!conexoes);
         FrotaBlq_atualizarRele_(c, v, est, pos, agora);
         if (aberta && est.PEDIDO_ACAO) FrotaBlq_encerrarPedido_(est, v, 'CANCELADO', 'retirada aberta (registrada pelo celular depois)', FBLQ_SISTEMA);
         if (!aberta && FrotaBlq_ms_(est.EMERGENCIA_ATE) && FrotaBlq_ms_(est.EMERGENCIA_ATE) <= agora) {
           FrotaBlq_gravarEstado_(est, { EMERGENCIA_ATE: '', EMERGENCIA_MOTIVO: '', EMERGENCIA_POR: '' });
           FrotaBlq_evento_({ veiculo: v, modo: est.MODO, tipo: 'EMERGENCIA', acao: 'FIM', origem: 'PRAZO', quem: FBLQ_SISTEMA, detalhe: 'Liberação de emergência venceu (' + FBLQ_EMERGENCIA_HORAS + ' h) sem retirada: o carro volta à regra normal.' });
         }
-        if (aberta) FrotaBlq_esquecida_(c, v, est, aberta, pos, areas, agora);
-        var r = FrotaBlq_avaliar_(c, v, est, { pos: pos, aberta: aberta, quem: FBLQ_SISTEMA, areas: areas, agora: agora, origem: aberta ? 'CONFERENCIA_RETIRADA' : '' });
+        if (aberta) FrotaBlq_esquecida_(c, v, est, aberta, pos, areas, agora, con);
+        var r = FrotaBlq_avaliar_(c, v, est, { pos: pos, con: con, aberta: aberta, quem: FBLQ_SISTEMA, areas: areas, agora: agora, origem: aberta ? 'CONFERENCIA_RETIRADA' : '' });
         if (r.exec) (r.exec.situacao === 'SIMULADO' ? out.simulados : out.enviados).push(r.decisao.acao + ' ' + FrotaBlq_rotulo_(v));
         else if (r.decisao.espera && est.PEDIDO_ACAO) out.esperando.push(FrotaBlq_rotulo_(v) + ': ' + r.decisao.espera);
         if (aberta && r.exec && (r.exec.situacao === 'NA_FILA' || r.exec.situacao === 'FALHOU')) FrotaBlq_avisoLiberacaoSemSinal_(v, est, aberta, r.exec);
@@ -681,10 +732,12 @@ function FrotaBlq_atualizarRele_(c, v, est, pos, agora) {
 }
 
 /** Regra 5: retirada esquecida. */
-function FrotaBlq_esquecida_(c, v, est, aberta, pos, areas, agora) {
+function FrotaBlq_esquecida_(c, v, est, aberta, pos, areas, agora, con) {
   var movId = FrotaBlq_s_(aberta.ID);
   if (FrotaBlq_s_(est.ESQ_MOV_ID) !== movId) FrotaBlq_gravarEstado_(est, { ESQ_MOV_ID: movId, ESQ_PARADO_DESDE: '', ESQ_PERGUNTA_EM: '', ESQ_RESPOSTA: '', ESQ_RESPOSTA_EM: '', ESQ_GESTAO_EM: '' });
-  if (!pos || !pos.quandoMs || agora - pos.quandoMs > 15 * 60000) return;
+  // com o carro desligado a posição pode ser antiga (economia do rastreador): vale o aparelho conectado agora.
+  // Aparelho offline ou desconhecido: não se sabe, nada muda nesta rodada.
+  if (!pos || !pos.quandoMs || !FrotaBlq_conectado_(con, agora)) return;
   var parado = pos.ignicao === false && (pos.kmh === null || Number(pos.kmh) < FBLQ_PARADO_KMH) && pos.movimento !== true;
   var nb = FrotaBlq_naBase_(pos, areas);
   if (!parado || nb.naBase !== true) {
@@ -729,81 +782,111 @@ function FrotaBlq_estacionado_(p) {
 }
 function FrotaBlq_celula_(lat, lon) { return (Math.round(Number(lat) * 1000) / 1000).toFixed(3) + ',' + (Math.round(Number(lon) * 1000) / 1000).toFixed(3); }
 
-/**
- * Pontos (em ordem qualquer) -> agregado por local de estacionamento. A mesma conta que o servidor faz em SQL
- * (sgo_servidor, rotas.sinal): intervalo entre um ponto estacionado e o seguinte; o "tempo com sinal" do intervalo é
- * no máximo o limiar (1,5 x a mediana dos intervalos parados do veículo, entre 5 e 60 min); o resto é falta de sinal.
- */
-function FrotaBlq_agregarPontos_(pontos) {
-  var ps = (pontos || []).filter(function (p) { return p && isFinite(Number(p.lat)) && isFinite(Number(p.lon)) && FrotaBlq_ms_(p.em); })
-    .map(function (p) { return { t: FrotaBlq_ms_(p.em), lat: Number(p.lat), lon: Number(p.lon), kmh: p.kmh, ignicao: p.ignicao, endereco: p.endereco || '' }; })
-    .sort(function (a, b) { return a.t - b.t; });
-  var ints = [];
-  for (var i = 0; i + 1 < ps.length; i++) {
-    var p = ps[i];
-    if (!FrotaBlq_estacionado_(p)) continue;
-    var d = (ps[i + 1].t - p.t) / 60000;
-    if (d <= 0 || d > 7 * 1440) continue;
-    var ant = i > 0 ? ps[i - 1] : null;
-    var cel = FrotaBlq_celula_(p.lat, p.lon);
-    var visita = !ant || !FrotaBlq_estacionado_(ant) || FrotaBlq_celula_(ant.lat, ant.lon) !== cel;
-    ints.push({ cel: cel, d: d, visita: visita, endereco: p.endereco, lat: p.lat, lon: p.lon });
-  }
-  var ord = ints.map(function (x) { return x.d; }).sort(function (a, b) { return a - b; });
-  var mediana = ord.length ? ord[Math.floor((ord.length - 1) / 2)] : 0;
-  var lim = Math.min(60, Math.max(5, mediana * 1.5));
-  var cels = {};
-  ints.forEach(function (x) {
-    var c = cels[x.cel] || (cels[x.cel] = { celula: x.cel, lat: x.lat, lon: x.lon, endereco: x.endereco, totalMin: 0, comSinalMin: 0, visitas: 0, lacunas: [] });
-    c.totalMin += x.d; c.comSinalMin += Math.min(x.d, lim); if (x.visita) c.visitas++;
-    if (x.d > lim) c.lacunas.push(x.d);
-    if (!c.endereco && x.endereco) c.endereco = x.endereco;
-  });
-  return { limiarMin: Math.round(lim * 10) / 10, medianaMin: Math.round(mediana * 10) / 10, locais: Object.keys(cels).map(function (k) {
-    var c = cels[k], l = c.lacunas.sort(function (a, b) { return a - b; });
-    return { celula: c.celula, lat: c.lat, lon: c.lon, endereco: c.endereco, totalMin: Math.round(c.totalMin), comSinalMin: Math.round(c.comSinalMin), visitas: c.visitas, lacunas: l.length,
-      maiorLacunaMin: l.length ? Math.round(l[l.length - 1]) : 0, p90LacunaMin: l.length ? Math.round(l[Math.min(l.length - 1, Math.ceil(l.length * 0.9) - 1)]) : 0 };
-  }) };
+function FrotaBlq_lerResumoConexao_(est) {
+  var r = null;
+  try { r = JSON.parse(FrotaBlq_s_(est.CON_RESUMO) || 'null'); } catch (e) { r = null; }
+  if (!r || typeof r !== 'object' || !r.dias) r = { dias: {}, end: {} };
+  r.end = r.end || {};
+  return r;
 }
 
-/** Agregado -> classificação do veículo. Função pura. */
-function FrotaBlq_classificar_(ag) {
-  var locais = (ag && ag.locais) || [];
-  var total = locais.reduce(function (s, x) { return s + Number(x.totalMin || 0); }, 0);
-  if (total < FBLQ_TRI_MIN_PARADO_H * 60) {
-    return { triagem: 'SEM_DADOS', motivo: 'histórico curto: ' + Rastreador_num_(total / 60, 0) + ' h de carro parado nas rotas guardadas (precisa de ' + FBLQ_TRI_MIN_PARADO_H + ' h). Até lá vale o bloqueio com as condições de sinal no minuto.', locais: [] };
+/**
+ * Uma amostra de conexão por rodada (2 min), por aparelho. Fica no próprio estado do veículo (CON_RESUMO), como resumo por
+ * dia e por local de estacionamento: [amostras, conectadas, reconexões, soma dos minutos até reconectar, maior]. Só os
+ * últimos 14 dias e no máximo 12 locais por dia: o tamanho não cresce. Sem a lista de aparelhos (falha da iTracker ou do
+ * servidor) não há amostra: falha da plataforma não é falta de sinal do carro.
+ */
+function FrotaBlq_registrarConexao_(v, est, con, pos, agora, leituraOk) {
+  if (!leituraOk) return;
+  var on = FrotaBlq_conectado_(con, agora, FBLQ_CON_TRIAGEM_MS);
+  var r = FrotaBlq_lerResumoConexao_(est);
+  var dia = Utilities.formatDate(new Date(agora), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var cel = FrotaBlq_estacionado_(pos) && pos.lat !== null && pos.lat !== undefined ? FrotaBlq_celula_(pos.lat, pos.lon) : 'EM_USO';
+  if (cel !== 'EM_USO' && pos.endereco) r.end[cel] = String(pos.endereco).slice(0, 80);
+  var d = r.dias[dia] || (r.dias[dia] = {});
+  var x = d[cel] || (d[cel] = [0, 0, 0, 0, 0]);
+  x[0]++; if (on) x[1]++;
+  var upd = { CON_ONLINE: con ? (con.online ? 'SIM' : 'NAO') : 'DESCONHECIDO', CON_ULTIMO_EM: con && con.ultimoMs ? new Date(con.ultimoMs).toISOString() : '' };
+  var offDesde = FrotaBlq_ms_(est.CON_OFF_DESDE);
+  if (!on && !offDesde) upd.CON_OFF_DESDE = new Date(con && con.ultimoMs ? Math.min(con.ultimoMs, agora) : agora).toISOString();
+  if (on && offDesde) {
+    var rec = Math.round((agora - offDesde) / 6000) / 10;
+    x[2]++; x[3] = Math.round((x[3] + rec) * 10) / 10; x[4] = Math.max(x[4], rec);
+    upd.CON_OFF_DESDE = '';
   }
-  var lista = locais.map(function (x) {
-    var pct = x.totalMin ? x.comSinalMin / x.totalMin : 1;
-    var parte = x.totalMin / total;
-    var frequente = x.totalMin >= FBLQ_TRI_LOCAL_FREQUENTE_MIN || x.visitas >= 3;
-    var ruim = frequente && parte >= FBLQ_TRI_PARTE_MIN && (pct < FBLQ_TRI_PCT_MIN || x.p90LacunaMin > FBLQ_TRI_RECONEXAO_MAX_MIN);
-    return { local: x.endereco || x.celula, celula: x.celula, horas: Math.round(x.totalMin / 6) / 10, pctSinal: Math.round(pct * 100), parte: Math.round(parte * 100), visitas: x.visitas,
-      reconexaoP90Min: x.p90LacunaMin, maiorLacunaMin: x.maiorLacunaMin, frequente: frequente, ruim: ruim };
+  var dias = Object.keys(r.dias).sort();
+  while (dias.length > FBLQ_CON_DIAS) delete r.dias[dias.shift()];
+  Object.keys(r.dias).forEach(function (k) {
+    var cs = Object.keys(r.dias[k]);
+    if (cs.length > 12) cs.sort(function (a, b) { return r.dias[k][b][0] - r.dias[k][a][0]; }).slice(12).forEach(function (cc) { delete r.dias[k][cc]; });
+  });
+  var vivos = {};
+  Object.keys(r.dias).forEach(function (k) { Object.keys(r.dias[k]).forEach(function (cc) { vivos[cc] = 1; }); });
+  Object.keys(r.end).forEach(function (cc) { if (!vivos[cc]) delete r.end[cc]; });
+  if (!FrotaBlq_s_(est.CON_INICIO)) upd.CON_INICIO = new Date(agora).toISOString();
+  upd.CON_RESUMO = JSON.stringify(r);
+  FrotaBlq_gravarEstado_(est, upd);
+}
+
+/**
+ * Resumo de conexão -> classificação do veículo. Função pura. Até 24 h de histórico novo: SEM_DADOS (vale a regra normal,
+ * bloqueio só com o aparelho conectado, parado e desligado). Local frequente (3 h ou mais de carro parado) com menos de
+ * 80% do tempo conectado, ou que demora em média mais de 30 min para reconectar = "Só avisa".
+ */
+function FrotaBlq_classificarConexao_(r, inicioIso, agoraMs) {
+  var inicio = FrotaBlq_ms_(inicioIso);
+  var horasHist = inicio ? (agoraMs - inicio) / 3600000 : 0;
+  if (!inicio || horasHist < 24) {
+    return { triagem: 'SEM_DADOS', locais: [], motivo: 'histórico de conexão do aparelho com ' + Rastreador_num_(Math.max(0, horasHist), 0) + ' h (a triagem precisa de 24 h). Até lá vale a regra normal: o bloqueio só sai com o aparelho conectado agora, o carro parado e desligado.' };
+  }
+  var cels = {};
+  Object.keys((r && r.dias) || {}).forEach(function (dia) {
+    Object.keys(r.dias[dia]).forEach(function (cel) {
+      if (cel === 'EM_USO') return;
+      var x = r.dias[dia][cel], a = cels[cel] || (cels[cel] = [0, 0, 0, 0, 0]);
+      a[0] += x[0]; a[1] += x[1]; a[2] += x[2]; a[3] += x[3]; a[4] = Math.max(a[4], x[4]);
+    });
+  });
+  var total = Object.keys(cels).reduce(function (s, k) { return s + cels[k][0]; }, 0);
+  if (total < 30) return { triagem: 'SEM_DADOS', locais: [], motivo: 'o carro ficou pouco tempo estacionado com o aparelho acompanhado (' + Rastreador_num_(total * 2 / 60, 1) + ' h). Até lá vale a regra normal.' };
+  var lista = Object.keys(cels).map(function (k) {
+    var a = cels[k], pct = a[0] ? a[1] / a[0] : 1, rec = a[2] ? a[3] / a[2] : 0, parte = a[0] / total;
+    var frequente = a[0] >= 90;
+    var ruim = frequente && parte >= FBLQ_TRI_PARTE_MIN && (pct < FBLQ_TRI_PCT_MIN || rec > 30);
+    return { local: (r.end && r.end[k]) || k, celula: k, horas: Math.round(a[0] * 2 / 6) / 10, pctSinal: Math.round(pct * 100), parte: Math.round(parte * 100),
+      reconexoes: a[2], reconexaoMin: Math.round(rec), maiorLacunaMin: Math.round(a[4]), frequente: frequente, ruim: ruim };
   }).sort(function (a, b) { return b.horas - a.horas; });
   var ruins = lista.filter(function (x) { return x.ruim; });
   return { triagem: ruins.length ? 'SO_AVISA' : 'BLOQUEIO_ATIVO', locais: lista.slice(0, 6),
-    motivo: ruins.length ? 'sinal fraco onde o carro costuma ficar: ' + ruins.slice(0, 3).map(function (x) { return x.local + ' (' + x.pctSinal + '% do tempo com sinal, 90% das reconexões em até ' + x.reconexaoP90Min + ' min)'; }).join('; ') +
-      '. Um bloqueio enviado ali pode ficar na fila e cair quando o carro sair: o SGO+ só avisa.' : 'sinal bom nos locais em que o carro costuma ficar (' + lista.filter(function (x) { return x.frequente; }).length + ' local(is) frequente(s)).' };
-}
-
-/** Agregado do veículo: no servidor próprio pela conta em SQL (rotas.sinal); sem ela, pelos pontos (até 14 dias). */
-function FrotaBlq_agregadoVeiculo_(veiculo) {
-  var arm = typeof FrotaR_armazem_ === 'function' ? FrotaR_armazem_() : null;
-  if (!arm) return null;
-  var ate = new Date(), de = new Date(Date.now() - FBLQ_TRI_DIAS * 86400000);
-  if (typeof arm.sinal === 'function') return arm.sinal({ deviceId: FrotaBlq_s_(veiculo.RASTREADOR_DEVICE_ID), de: de.toISOString(), ate: ate.toISOString() });
-  var de14 = new Date(Date.now() - 14 * 86400000);
-  return FrotaBlq_agregarPontos_(arm.ler({ deviceId: FrotaBlq_s_(veiculo.RASTREADOR_DEVICE_ID), de: de14.toISOString(), ate: ate.toISOString(), limite: 12000 }));
+    motivo: ruins.length ? 'o aparelho perde a conexão onde o carro costuma ficar: ' + ruins.slice(0, 3).map(function (x) { return x.local + ' (conectado ' + x.pctSinal + '% do tempo, reconexão média de ' + x.reconexaoMin + ' min)'; }).join('; ') +
+      '. Um bloqueio enviado ali pode ficar na fila e cair quando o carro sair: o SGO+ só avisa.' : 'aparelho conectado nos locais em que o carro costuma ficar (' + lista.filter(function (x) { return x.frequente; }).length + ' local(is) frequente(s), conexão medida na iTracker).' };
 }
 
 function FrotaBlq_triagemVeiculo_(veiculo, est, quem) {
-  var ag = FrotaBlq_agregadoVeiculo_(veiculo);
-  var cl = ag ? FrotaBlq_classificar_(ag) : { triagem: 'SEM_DADOS', motivo: 'as rotas só ficam guardadas no servidor próprio do SGO+; sem elas não há triagem automática (a gestão escolhe o modo à mão).', locais: [] };
+  var cl = FrotaBlq_classificarConexao_(FrotaBlq_lerResumoConexao_(est), est.CON_INICIO, Date.now());
   var antes = FrotaBlq_s_(est.TRIAGEM);
-  FrotaBlq_gravarEstado_(est, { TRIAGEM: cl.triagem, TRIAGEM_EM: SGO_UTILS.nowIso(), TRIAGEM_RESUMO: JSON.stringify({ motivo: cl.motivo, locais: cl.locais, limiarMin: ag ? ag.limiarMin : null }).slice(0, 4000) });
+  FrotaBlq_gravarEstado_(est, { TRIAGEM: cl.triagem, TRIAGEM_EM: SGO_UTILS.nowIso(), TRIAGEM_RESUMO: JSON.stringify({ motivo: cl.motivo, locais: cl.locais, base: 'conexao' }).slice(0, 4000) });
   if (antes !== cl.triagem) FrotaBlq_evento_({ veiculo: veiculo, modo: est.MODO, tipo: 'TRIAGEM', acao: cl.triagem, origem: quem ? 'GESTAO' : 'ROTINA', quem: quem || FBLQ_SISTEMA, detalhe: 'Triagem do sinal: ' + cl.motivo });
   return cl;
+}
+
+/**
+ * Uma vez (22/10/2026): a triagem da versão anterior media o intervalo entre posições e marcou "Só avisa" carros que estavam
+ * conectados na base (economia do rastreador desligado). Toda triagem automática volta para SEM_DADOS, com o porquê no
+ * registro; a escolha manual da gestão (TRIAGEM_MANUAL) não é mexida.
+ */
+function FrotaBlq_migrarTriagemConexao_(estados) {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(FBLQ_PROP_TRIAGEM_V2)) return;
+  props.setProperty(FBLQ_PROP_TRIAGEM_V2, SGO_UTILS.nowIso());
+  var motivo = 'triagem refeita em 22/10/2026: a medição anterior contava o intervalo entre posições e confundiu o modo de economia do rastreador (carro desligado deixa de mandar posição, mas continua conectado) com falta de sinal. Agora a triagem mede a conexão do aparelho (situação online e último contato na iTracker); até 24 h desse histórico novo vale a regra normal: o bloqueio só sai com o aparelho conectado agora, o carro parado e desligado.';
+  Object.keys(estados || {}).forEach(function (k) {
+    var est = estados[k];
+    var antes = FrotaBlq_s_(est.TRIAGEM);
+    FrotaBlq_gravarEstado_(est, { TRIAGEM: 'SEM_DADOS', TRIAGEM_EM: SGO_UTILS.nowIso(), TRIAGEM_RESUMO: JSON.stringify({ motivo: motivo, locais: [], base: 'conexao' }), CON_INICIO: '', CON_RESUMO: '', CON_OFF_DESDE: '' });
+    FrotaBlq_evento_({ veiculo: est, modo: est.MODO, tipo: 'TRIAGEM', acao: 'CORRECAO', origem: 'ROTINA', quem: FBLQ_SISTEMA,
+      detalhe: 'Triagem do sinal: ' + (antes || 'vazia') + ' -> SEM_DADOS. ' + motivo.charAt(0).toUpperCase() + motivo.slice(1) });
+  });
 }
 
 /** Uma vez por dia, um veículo por rodada (rotina leve). */
@@ -1055,7 +1138,8 @@ function Frota_apiBloqueioEncerrarEsquecida(sessionId, payload) {
   if (!c.ligado || !dev) throw new Error('Sem o rastreador não dá para conferir que o carro está parado na base. Registre a devolução no lugar do condutor pela tela normal (Frota > Situação e retiradas), com a justificativa.');
   var pos = null;
   try { pos = Rastreador_lerPosicoes_(c, dev, { aceitarCacheSeg: 60 })[dev] || null; } catch (e) { throw new Error('Não foi possível ler o rastreador agora (' + Rastreador_limpar_(e && e.message, c) + '). Tente de novo em 1 minuto.'); }
-  var seg = FrotaBlq_seguro_(pos, Date.now());
+  var conE = FrotaBlq_conAgora_(c, veiculo);
+  var seg = FrotaBlq_seguro_(pos, Date.now(), conE);
   var nb = FrotaBlq_naBase_(pos);
   if (!seg.ok || nb.naBase !== true) {
     throw new Error('A retirada não foi encerrada: ' + (!seg.ok ? seg.motivo : nb.motivo) + '. A gestão só encerra a retirada de outra pessoa com o carro parado, desligado, na base e com sinal (regra para não tirar o carro de quem está usando). ' +
@@ -1086,7 +1170,7 @@ function Frota_apiBloqueioEncerrarEsquecida(sessionId, payload) {
   var est = FrotaBlq_estadoDe_(veiculo);
   FrotaBlq_gravarEstado_(est, { ESQ_MOV_ID: '', ESQ_PARADO_DESDE: '', ESQ_PERGUNTA_EM: '', ESQ_RESPOSTA: '', ESQ_RESPOSTA_EM: '', ESQ_GESTAO_EM: '', EMERGENCIA_ATE: '' });
   FrotaBlq_novoPedido_(est, veiculo, 'ESQUECIDA', mov.ID, sessao, 'AUTORIZADO', 'retirada esquecida encerrada pela gestão');
-  var r = FrotaBlq_avaliar_(Object.assign(c, FrotaBlq_cfg_()), veiculo, est, { pos: pos, aberta: null, quem: sessao, origem: 'ESQUECIDA' });
+  var r = FrotaBlq_avaliar_(Object.assign(c, FrotaBlq_cfg_()), veiculo, est, { pos: pos, con: conE, aberta: null, quem: sessao, origem: 'ESQUECIDA' });
   return { ok: true, texto: 'Retirada encerrada (KM ' + Frota_kmTexto_(km) + ', a conferir no painel). ' + (r.exec ? r.exec.texto : 'Bloqueio pedido: ' + (r.decisao.espera || 'aguardando') + '.') };
 }
 
@@ -1201,7 +1285,7 @@ function Frota_apiBloqueioRoubo(sessionId, payload) {
   var me = FrotaBlq_modoEfetivo_(est.MODO, c);
   if (me.modo === 'DESLIGADO') throw new Error('O bloqueio está desligado neste veículo. Use a central 24 h da iTracker.');
   var pos = FrotaBlq_posAgora_(c, v);
-  var seg = FrotaBlq_seguro_(pos, Date.now());
+  var seg = FrotaBlq_seguro_(pos, Date.now(), FrotaBlq_conAgora_(c, v));
   if (!seg.ok && payload.aceitarRisco !== true) {
     return { ok: true, enviado: false, precisaAceitarRisco: true, condicao: seg.motivo,
       texto: 'Bloqueio de roubo NÃO enviado: ' + seg.motivo + '. Com o carro andando, o corte da bomba pode parar o carro no meio do trânsito (o relé só efetiva abaixo de 20 km/h). ' +
@@ -1341,6 +1425,7 @@ function Frota_apiBloqueioPainel(sessionId, payload) {
   payload = payload || {};
   var c = FrotaBlq_cfg_();
   var posicoes = (c.ligado && Rastreador_temCredencial_(c) ? Rastreador_posicoesGuardadas_(c, 900) : null) || {};
+  var conexoes = c.ligado && Rastreador_temCredencial_(c) ? FrotaBlq_conexoes_(c, 120) : null;
   var estados = FrotaBlq_estados_();
   var areas = FrotaBlq_areas_();
   var agora = Date.now();
@@ -1354,13 +1439,15 @@ function Frota_apiBloqueioPainel(sessionId, payload) {
     var nb = FrotaBlq_naBase_(pos, areas);
     var tri = {}; try { tri = JSON.parse(FrotaBlq_s_(est.TRIAGEM_RESUMO) || '{}') || {}; } catch (e) {}
     var idade = pos && pos.quandoMs ? Math.round((agora - pos.quandoMs) / 60000) : null;
+    var con = conexoes ? conexoes[FrotaBlq_s_(v.RASTREADOR_DEVICE_ID)] || null : null;
     return {
       veiculoId: FrotaBlq_s_(v.ID), placa: FrotaBlq_s_(v.PLACA), deviceId: FrotaBlq_s_(v.RASTREADOR_DEVICE_ID),
       modo: FrotaBlq_s_(est.MODO) || 'SIMULACAO', modoEfetivo: me.modo, modoAviso: me.motivo, modoPor: FrotaBlq_s_(est.MODO_POR), modoMotivo: FrotaBlq_s_(est.MODO_MOTIVO),
       triagem: FrotaBlq_triagemVale_(est), triagemAuto: FrotaBlq_s_(est.TRIAGEM) || 'SEM_DADOS', triagemManual: FrotaBlq_s_(est.TRIAGEM_MANUAL), triagemEm: FrotaBlq_txt_(FrotaBlq_ms_(est.TRIAGEM_EM)), triagemMotivo: tri.motivo || '', triagemLocais: tri.locais || [],
       responsavel: v.MOVIMENTACAO_ID ? FrotaBlq_s_(v.CONDUTOR_NOME) : '', movimentacaoId: FrotaBlq_s_(v.MOVIMENTACAO_ID), desde: v.MOVIMENTACAO_ID ? v.DATA_SAIDA + ' ' + v.HORA_SAIDA : '',
       releReal: FrotaBlq_s_(est.RELE_REAL), releRealEm: FrotaBlq_txt_(FrotaBlq_ms_(est.RELE_REAL_EM)), releSimulado: FrotaBlq_s_(est.RELE_SIMULADO),
-      sinal: idade === null ? 'sem posição' : (idade <= 2 ? 'conectado agora' : 'última posição há ' + (typeof Frota_duracaoTexto_ === 'function' ? Frota_duracaoTexto_(idade) : idade + ' min')),
+      sinal: (FrotaBlq_conectado_(con, agora) ? 'conectado agora: ' : '') + FrotaBlq_textoConexao_(con, agora),
+      ultimaPosicao: idade === null ? 'sem posição' : (idade <= 2 ? 'agora' : 'há ' + (typeof Frota_duracaoTexto_ === 'function' ? Frota_duracaoTexto_(idade) : idade + ' min') + (pos && pos.ignicao === false ? ' (carro desligado: o rastreador economiza e manda posição só quando liga)' : '')),
       situacaoCarro: pos ? Rastreador_movimento_(pos).texto : '', naBase: nb.naBase, baseTexto: nb.motivo,
       ultimoComando: FrotaBlq_s_(est.ULT_CMD_ACAO) ? (FrotaBlq_s_(est.ULT_CMD_REAL) === 'NAO' ? 'Simulado: ' : '') + FrotaBlq_s_(est.ULT_CMD_ACAO).toLowerCase() + ' às ' + FrotaBlq_txt_(FrotaBlq_ms_(est.ULT_CMD_EM)) + ' (' + FrotaBlq_s_(est.ULT_CMD_RESULTADO).toLowerCase().replace(/_/g, ' ') + ')' : '',
       pedido: FrotaBlq_textoPedido_(est), pedidoSituacao: FrotaBlq_s_(est.PEDIDO_SITUACAO),

@@ -44,7 +44,8 @@ function ambiente(o) {
     FROTA_BASES_AREA: JSON.stringify({ 'Goiânia': { lat: BASE.lat, lon: BASE.lon, raioM: 300 } }) }, o.props || {});
   Object.keys(props).forEach((k) => { if (props[k] === null) delete props[k]; });
   const cache = {};
-  const api = { posicoes: {}, respostaComando: 200, pedidos: [], respostaHodometro: 204 };
+  // status: situação de cada aparelho no GET /devices (padrão: online, último contato agora)
+  const api = { posicoes: {}, status: {}, respostaComando: 200, pedidos: [], respostaHodometro: 204 };
   const notificacoes = [];
   const sessao = { atual: o.sessao || GESTOR };
   let seq = 0;
@@ -55,7 +56,7 @@ function ambiente(o) {
       computeDigest: (alg, txt) => Array.from(crypto.createHash('sha256').update(String(txt), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)) }),
     Session: criarSession(),
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; } }) },
-    CacheService: { getScriptCache: () => ({ get: (k) => (k === 'RASTR_ULTIMAS_POSICOES_MS' || k === 'RASTR_ULTIMA_CHAMADA_MS' ? null : (k in cache ? cache[k] : null)), put: (k, v) => { cache[k] = v; }, remove: (k) => { delete cache[k]; } }) },
+    CacheService: { getScriptCache: () => ({ get: (k) => (k === 'RASTR_ULTIMAS_POSICOES_MS' || k === 'RASTR_ULTIMA_CHAMADA_MS' || k === 'FBLQ_CONEXOES_V1' ? null : (k in cache ? cache[k] : null)), put: (k, v) => { cache[k] = v; }, remove: (k) => { delete cache[k]; } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {}, hasLock: () => false, tryLock: () => true }) },
     SpreadsheetApp: { flush() {} },
     UrlFetchApp: {
@@ -64,6 +65,11 @@ function ambiente(o) {
         const u = new URL(url);
         const corpo = op.payload ? JSON.parse(op.payload) : null;
         api.pedidos.push({ metodo, caminho: u.pathname.replace(/^\/v1/, ''), corpo, auth: op.headers.Authorization });
+        if (u.pathname.endsWith('/devices')) {
+          if (api.respostaDevices) return resposta(api.respostaDevices);
+          // nome na iTracker de propósito diferente da placa do SGO+ (o casamento é só pelo ID do aparelho)
+          return resposta(200, Object.keys(api.posicoes).map((d) => { const st = Object.assign({ status: 'online', min: 0 }, api.status[d]); return { id: Number(d), name: 'Placa diferente ' + d, status: st.status, lastUpdate: new Date(Date.now() - st.min * 60000).toISOString() }; }));
+        }
         if (u.pathname.endsWith('/positions')) {
           const dev = u.searchParams.get('deviceId');
           return resposta(200, Object.values(api.posicoes).filter((p) => !dev || String(p.deviceId) === dev));
@@ -112,19 +118,29 @@ function ambiente(o) {
 }
 
 // ------------------------------------------------------------------ regra pura
-test('Regra: o bloqueio só sai conectado no minuto, parado e desligado; nunca andando, ligado, sem ignição ou sem sinal', () => {
+test('Regra: o bloqueio só sai com o aparelho conectado agora, parado e desligado; nunca andando, ligado, sem ignição, offline ou desconhecido', () => {
   const { ctx } = ambiente();
   const agora = Date.now();
   const pos = (x) => Object.assign({ quandoMs: agora - 30000, quandoTexto: 'agora', kmh: 0, ignicao: false, movimento: false }, x);
-  const base = { agora, modo: 'ATIVO', triagem: 'BLOQUEIO_ATIVO', aberta: false, emergencia: false, pedido: { situacao: 'AGUARDANDO' }, naBase: true, rele: 'LIBERADO', ultimo: null };
+  const base = { agora, modo: 'ATIVO', triagem: 'BLOQUEIO_ATIVO', aberta: false, emergencia: false, pedido: { situacao: 'AGUARDANDO' }, naBase: true, rele: 'LIBERADO', ultimo: null,
+    conexao: { online: true, ultimoMs: agora - 40000 } };
   assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: pos() })).acao, 'BLOQUEAR');
   for (const [x, motivo] of [[{ kmh: 30, ignicao: true, movimento: true }, /andando/], [{ kmh: 8, ignicao: false }, /andando/], [{ ignicao: true }, /ignição está ligada/], [{ ignicao: null }, /não informa a ignição/],
-    [{ quandoMs: agora - 3 * 60000 }, /sem sinal/], [{ kmh: null }, /velocidade/]]) {
+    [{ kmh: null }, /velocidade/]]) {
     const d = ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: pos(x) }));
     assert.equal(d.acao, '', JSON.stringify(x));
     assert.match(d.espera, motivo);
   }
   assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: null })).acao, '');
+  // conexão (GET /devices): offline, sem contato há mais de 2 min ou desconhecida = espera
+  for (const [conexao, motivo] of [[{ online: false, ultimoMs: agora - 30000 }, /offline/], [{ online: true, ultimoMs: agora - 3 * 60000 }, /há mais de 2 minutos/], [null, /desconhecida/]]) {
+    const d = ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: pos(), conexao }));
+    assert.equal(d.acao, '', JSON.stringify(conexao));
+    assert.match(d.espera, motivo);
+  }
+  // economia do rastreador: carro desligado há 5 h (última posição antiga) e aparelho online = bloqueia
+  assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: pos({ quandoMs: agora - 5 * 3600000 }) })).acao, 'BLOQUEAR');
+  assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { pos: pos({ quandoMs: agora - 5 * 3600000, ignicao: true }) })).acao, '', 'última posição com a ignição ligada: não');
   // retirada aberta: libera, nunca bloqueia (mesmo com pedido antigo e carro parado)
   assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { aberta: true, rele: 'BLOQUEADO', pos: pos() })).acao, 'LIBERAR');
   assert.equal(ctx.FrotaBlq_decidir_(Object.assign({}, base, { aberta: true, rele: 'LIBERADO', pos: pos() })).acao, '');
@@ -192,7 +208,9 @@ test('Retirada libera (POST /commands id 36); 202 = liberação aguardando sinal
   const b = ambiente();
   b.api.respostaComando = 202;
   const m2 = b.abrir('v1', 'cA');
-  const r2 = b.ctx.FrotaBlq_aoRetirar_(b.cfg(), TEC_A, b.veic('v1'), m2, b.posicao('1039', { blocked: true, min: 20 }));
+  const pos2 = b.posicao('1039', { blocked: true, min: 20 });
+  b.api.status['1039'] = { status: 'offline', min: 20 };
+  const r2 = b.ctx.FrotaBlq_aoRetirar_(b.cfg(), TEC_A, b.veic('v1'), m2, pos2);
   assert.equal(r2.situacao, 'NA_FILA');
   assert.match(r2.aviso, /aguardando sinal/);
   assert.equal(b.estado('v1').ULT_CMD_RESULTADO, 'NA_FILA');
@@ -224,7 +242,7 @@ test('Devolução na base: bloqueio sai só com o carro conectado, parado e desl
   assert.equal(a.comandos().length, 1);
   assert.deepEqual(a.comandos()[0].corpo, { id: 35, deviceId: 1039 });
   const env = a.eventos().filter((e) => e.TIPO === 'ENVIO');
-  assert.match(env[env.length - 1].CONDICAO, /conectado .* parado e com a ignição desligada; na base Goiânia/);
+  assert.match(env[env.length - 1].CONDICAO, /aparelho conectado .* parado e com a ignição desligada \(última posição .*\); na base Goiânia/);
   // relé confirma: pedido encerrado
   a.posicao('1039', { blocked: true });
   a.rodada();
@@ -232,7 +250,9 @@ test('Devolução na base: bloqueio sai só com o carro conectado, parado e desl
   assert.equal(a.estado('v1').RELE_REAL, 'BLOQUEADO');
   // nova devolução pedida e, antes de sair, nova retirada: pedido cancelado
   const b = ambiente();
-  b.ctx.FrotaBlq_aoDevolver_(b.cfg(), TEC_A, b.veic('v1'), b.fechar(b.abrir('v1', 'cA')), b.posicao('1039', { min: 10 }), false);
+  const posB = b.posicao('1039', { min: 10 });
+  b.api.status['1039'] = { status: 'offline', min: 10 };
+  b.ctx.FrotaBlq_aoDevolver_(b.cfg(), TEC_A, b.veic('v1'), b.fechar(b.abrir('v1', 'cA')), posB, false);
   assert.equal(b.estado('v1').PEDIDO_SITUACAO, 'AGUARDANDO');
   b.ctx.FrotaBlq_aoRetirar_(b.cfg(), TEC_B, b.veic('v1'), b.abrir('v1', 'cB'), null);
   assert.equal(b.estado('v1').PEDIDO_ACAO, '');
@@ -485,33 +505,111 @@ test('Registro inviolável: cada linha leva o resumo da anterior; linha alterada
 });
 
 // ------------------------------------------------------------------ triagem
-test('Triagem do sinal: garagem sem sinal onde o carro dorme = "Só avisa" (nunca envia bloqueio); sinal bom = "Bloqueio ativo"; pouco histórico = sem dados', () => {
+test('Triagem pela CONEXÃO (padrão real do rastreador): pontos densos ligado e horas sem posição desligado, aparelho online = sem falta de sinal', () => {
   const a = ambiente();
-  const t0 = Date.parse('2026-10-01T00:00:00Z');
-  const pts = (local, sinalBom) => {
-    const p = [];
-    let t = t0;
-    for (let dia = 0; dia < 10; dia++) {
-      // dirige 1 h (pontos a cada 2 min) e estaciona 23 h
-      for (let k = 0; k < 30; k++) { p.push({ em: new Date(t).toISOString(), lat: -10.4 - k * 0.001, lon: -40.4, kmh: 50, ignicao: true }); t += 120000; }
-      const fim = t + 23 * 3600000;
-      while (t < fim) { p.push({ em: new Date(t).toISOString(), lat: local.lat, lon: local.lon, kmh: 0, ignicao: false }); t += sinalBom ? 120000 : (Math.random() < 0.8 ? 6 * 3600000 : 120000); }
-    }
-    return p;
-  };
-  const ruim = a.ctx.FrotaBlq_classificar_(a.ctx.FrotaBlq_agregarPontos_(pts(LONGE, false)));
-  assert.equal(ruim.triagem, 'SO_AVISA');
-  assert.match(ruim.motivo, /sinal fraco/);
-  const bom = a.ctx.FrotaBlq_classificar_(a.ctx.FrotaBlq_agregarPontos_(pts(BASE, true)));
-  assert.equal(bom.triagem, 'BLOQUEIO_ATIVO');
-  assert.equal(a.ctx.FrotaBlq_classificar_(a.ctx.FrotaBlq_agregarPontos_(pts(BASE, true).slice(0, 100))).triagem, 'SEM_DADOS');
-  // carro em "Só avisa": a devolução não manda bloqueio
   a.ctx.FrotaBlq_estadoDe_(a.veic('v1'));
-  a.estado('v1').TRIAGEM_MANUAL = 'SO_AVISA';
-  const r = a.ctx.FrotaBlq_aoDevolver_(a.cfg(), TEC_A, a.veic('v1'), a.fechar(a.abrir('v1', 'cA')), a.posicao('1039'), false);
+  const est = a.estado('v1');
+  const inicio = Date.now() - 30 * 3600000;
+  est.CON_INICIO = new Date(inicio).toISOString();
+  // 30 h, uma amostra a cada 2 min: dirige 1 h (posição a cada 12 s), estaciona e desliga; o rastreador para de mandar
+  // posição (economia), mas o /devices mostra "online" com último contato de 0 a 3 min.
+  let ultimaPos = null;
+  for (let t = inicio; t < Date.now(); t += 120000) {
+    const h = ((t - inicio) / 3600000) % 10;
+    const dirigindo = h < 1;
+    if (dirigindo || !ultimaPos || ultimaPos.ignicao) ultimaPos = { quandoMs: dirigindo ? t : t - 60000, kmh: dirigindo ? 45 : 0, ignicao: dirigindo, lat: BASE.lat, lon: BASE.lon, endereco: 'Pátio de teste' };
+    a.ctx.FrotaBlq_registrarConexao_(a.veic('v1'), est, { online: true, ultimoMs: t - ((t / 120000) % 3) * 60000 }, ultimaPos, t, true);
+  }
+  const cl = a.ctx.FrotaBlq_triagemVeiculo_(a.veic('v1'), est, null);
+  assert.equal(cl.triagem, 'BLOQUEIO_ATIVO', cl.motivo);
+  assert.equal(cl.locais[0].pctSinal, 100);
+  assert.ok(String(est.CON_RESUMO).length < 4000, 'resumo enxuto');
+  // aparelho offline 90% do tempo onde o carro dorme = "Só avisa"
+  const b = ambiente();
+  b.ctx.FrotaBlq_estadoDe_(b.veic('v1'));
+  const eb = b.estado('v1');
+  eb.CON_INICIO = new Date(inicio).toISOString();
+  let n = 0;
+  for (let t = inicio; t < Date.now(); t += 120000) {
+    const on = (n++ % 10) === 0;
+    b.ctx.FrotaBlq_registrarConexao_(b.veic('v1'), eb, { online: on, ultimoMs: on ? t : t - 3600000 }, { quandoMs: inicio, kmh: 0, ignicao: false, lat: LONGE.lat, lon: LONGE.lon, endereco: 'Garagem de teste' }, t, true);
+  }
+  const ruim = b.ctx.FrotaBlq_triagemVeiculo_(b.veic('v1'), eb, null);
+  assert.equal(ruim.triagem, 'SO_AVISA');
+  assert.match(ruim.motivo, /perde a conexão.*Garagem de teste/);
+  // menos de 24 h de histórico novo: sem dados (vale a regra normal)
+  assert.equal(a.ctx.FrotaBlq_classificarConexao_({ dias: {} }, new Date(Date.now() - 5 * 3600000).toISOString(), Date.now()).triagem, 'SEM_DADOS');
+  // falha ao ler a lista de aparelhos não vira amostra (não é falta de sinal do carro)
+  const antes = eb.CON_RESUMO;
+  b.ctx.FrotaBlq_registrarConexao_(b.veic('v1'), eb, null, null, Date.now(), false);
+  assert.equal(eb.CON_RESUMO, antes);
+  // carro em "Só avisa": a devolução não manda bloqueio
+  b.estado('v1').TRIAGEM_MANUAL = 'SO_AVISA';
+  const r = b.ctx.FrotaBlq_aoDevolver_(b.cfg(), TEC_A, b.veic('v1'), b.fechar(b.abrir('v1', 'cA')), b.posicao('1039'), false);
   assert.match(r.texto, /Só avisa/);
+  b.rodada();
+  assert.equal(b.comandos().length, 0);
+});
+
+test('Padrão real (22/10): carro desligado há horas e aparelho online = bloqueio sai; aparelho offline ou posição de ignição ligada mais recente = não sai', () => {
+  // devolvido há 5 h; última posição com a ignição desligada 5 h atrás (economia), /devices "online" com contato há 1 min
+  const a = ambiente();
+  const m = a.fechar(a.abrir('v1', 'cA'));
+  const pos = a.posicao('1039', { min: 300 });
+  a.api.status['1039'] = { status: 'offline', min: 40 };
+  a.ctx.FrotaBlq_aoDevolver_(a.cfg(), TEC_A, a.veic('v1'), m, pos, false);
+  assert.equal(a.comandos().length, 0, 'offline: não sai');
+  assert.match(a.estado('v1').PEDIDO_MOTIVO, /offline/);
+  a.api.status['1039'] = { status: 'online', min: 3 };
   a.rodada();
-  assert.equal(a.comandos().length, 0);
+  assert.equal(a.comandos().length, 0, 'online, mas sem contato há 3 min: não sai');
+  a.api.status['1039'] = { status: 'online', min: 1 };
+  a.rodada();
+  assert.deepEqual(a.comandos().map((c) => c.corpo.id), [35], 'conectado e desligado há horas: sai');
+  const env = a.eventos().filter((e) => e.TIPO === 'ENVIO').pop();
+  assert.match(env.CONDICAO, /aparelho conectado .*ignição desligada \(última posição/);
+  assert.equal(a.estado('v1').CON_ONLINE, 'SIM');
+  // posição mais recente com a ignição ligada (alguém ligou o carro): não sai, mesmo online
+  const b = ambiente();
+  b.ctx.FrotaBlq_aoDevolver_(b.cfg(), TEC_A, b.veic('v1'), b.fechar(b.abrir('v1', 'cA')), b.posicao('1039', { min: 300, ign: true }), false);
+  b.posicao('1039', { min: 0, ign: true });
+  b.rodada();
+  assert.equal(b.comandos().length, 0);
+  // lista de aparelhos indisponível (situação desconhecida): não sai
+  const c = ambiente();
+  const posC = c.posicao('1039', { min: 300 });
+  c.api.respostaDevices = 503;
+  c.ctx.FrotaBlq_aoDevolver_(c.cfg(), TEC_A, c.veic('v1'), c.fechar(c.abrir('v1', 'cA')), posC, false);
+  c.rodada();
+  assert.equal(c.comandos().length, 0, 'sem a lista de aparelhos: não sai');
+  assert.match(c.estado('v1').PEDIDO_MOTIVO, /desconhecida/);
+  assert.equal(c.ctx.FrotaBlq_seguro_(c.ctx.Rastreador_posicao_(c.api.posicoes['1039']), Date.now(), null).ok, false);
+  // retirada esquecida também funciona com a economia: parado na base há horas e online = pergunta ao condutor
+  const d = ambiente();
+  const md = d.abrir('v1', 'cA');
+  d.posicao('1039', { min: 200 });
+  d.rodada();
+  assert.equal(d.ctx.FrotaBlq_ms_(d.estado('v1').ESQ_PARADO_DESDE) <= Date.now() - 199 * 60000, true);
+  d.rodada();
+  assert.ok(d.estado('v1').ESQ_PERGUNTA_EM, 'pergunta enviada');
+  assert.equal(md.STATUS, 'EM_ANDAMENTO');
+});
+
+test('Correção da triagem (22/10): "Só avisa" automático da medição antiga volta para "sem dados", com o porquê no registro; escolha manual mantida', () => {
+  const a = ambiente();
+  a.ctx.FrotaBlq_estadoDe_(a.veic('v1')); a.ctx.FrotaBlq_estadoDe_(a.veic('v2'));
+  Object.assign(a.estado('v1'), { TRIAGEM: 'SO_AVISA', TRIAGEM_RESUMO: '{"motivo":"2% do tempo com sinal"}' });
+  Object.assign(a.estado('v2'), { TRIAGEM: 'SO_AVISA', TRIAGEM_MANUAL: 'SO_AVISA' });
+  a.posicao('1039'); a.posicao('872');
+  a.rodada();
+  assert.equal(a.estado('v1').TRIAGEM, 'SEM_DADOS');
+  assert.equal(a.estado('v2').TRIAGEM, 'SEM_DADOS');
+  assert.equal(a.estado('v2').TRIAGEM_MANUAL, 'SO_AVISA', 'escolha da gestão não muda');
+  const ev = a.eventos().filter((e) => e.TIPO === 'TRIAGEM' && e.ACAO === 'CORRECAO');
+  assert.equal(ev.length, 2);
+  assert.match(ev[0].DETALHE, /SO_AVISA -> SEM_DADOS.*modo de economia do rastreador/);
+  a.rodada();
+  assert.equal(a.eventos().filter((e) => e.ACAO === 'CORRECAO').length, 2, 'só uma vez');
 });
 
 // ------------------------------------------------------------------ código antigo e limites
