@@ -16,10 +16,13 @@
  *    horário de Brasília).
  *  - Auditoria em SYS_LOGS (SGO_DATA.log, módulo CHAVES): quem, quando e
  *    qual chave — nunca o valor.
- *  - SIMULADOR_ADMIN_SENHA e MODO_PERSONALIZADO_SENHA são comparadas em
- *    texto puro pelos relatórios técnicos (AutoRel/LavRel/CadeiaFrio/
- *    EstufaBanho: senha !== senhaEsperada); por isso são gravadas como
- *    texto, o único formato que o sistema aceita hoje.
+ *  - SIMULADOR_ADMIN_SENHA é comparada em texto puro pelos relatórios
+ *    técnicos (AutoRel/LavRel/CadeiaFrio/EstufaBanho: senha !==
+ *    senhaEsperada); por isso é gravada como texto.
+ *  - 21/10/2026: MODO_PERSONALIZADO_SENHA saiu desta tela. O modo
+ *    personalizado tem senha própria de cada responsável técnico,
+ *    guardada só como resumo com sal (SGO_ModoPersonalizado.js); a
+ *    senha antiga é apagada no primeiro uso do modo novo.
  *
  * Tela em JS_Chaves.html. Toda Chaves_api*(sessionId, payload) confere a
  * sessão e o dono; quem não for dono recebe a mensagem de módulo exclusivo.
@@ -53,8 +56,6 @@ var CHV_ITENS = [
     ajuda: 'Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
   { chave: 'AUVO_AVISAR_GESTAO', grupo: 'Auvo', tipo: 'aberto', exemplo: 'joao, maria', nome: 'Avisos de O.S.: quem da gestão recebe (logins)',
     ajuda: 'Logins (campo Usuário do cadastro de usuários) separados por vírgula. Vazio = todos os usuários ativos com perfil Gestor ou Diretoria.' },
-  { chave: 'MODO_PERSONALIZADO_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Modo Personalizado (relatórios)',
-    ajuda: 'A mesma senha usada hoje no Modo Personalizado dos relatórios técnicos.' },
   { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
     ajuda: 'A mesma senha usada hoje no Simulador dos relatórios técnicos.' },
   // 20/10/2026: modelo da planilha de dados da Autoclave (SGO_AutoRel_PlanilhaDados.js). Vazio = modelo novo.

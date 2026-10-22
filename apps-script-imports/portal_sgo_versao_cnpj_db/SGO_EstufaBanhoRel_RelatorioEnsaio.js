@@ -226,7 +226,8 @@ function EstufaRelEnsaio_html_(ctx, interno, textos, fotos, aprovacao, minuta) {
     tituloCurto: 'Relatório de ensaio térmico', rotuloNumero: 'Relatório nº', numero: id.certificadoNumero || '(atribuído na emissão)', revisao: id.revisao,
     empresa: id.empresaExecutante,
     capa: { tipo: 'Qualificação térmica', linhas: [['Cliente', id.cliente], ['Equipamento', id.tipoEquipamento + (id.tag ? ' — TAG ' + id.tag : '')], ['Estudos', estudosTxt]] },
-    ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', SGO_DocA4_hoje_(EstufaQ_tz_())], ['Registrador', id.dtl || '—'], ['Sensores ativos', String(ctx.sensores.ativos.length)]],
+    ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', SGO_DocA4_hoje_(EstufaQ_tz_())], ['Registrador', id.dtl || '—'], ['Sensores ativos', String(ctx.sensores.ativos.length)]]
+      .concat((ctx.parametrosPersonalizados || []).length ? [['Parâmetros', 'Personalizados (ver seção 4)']] : []),
     simulado: ctx.simulado || minuta,
     avisoSimulado: minuta ? 'MINUTA PARA CONFERÊNCIA DO RESPONSÁVEL TÉCNICO — documento ainda não aprovado; não entregar ao cliente.' : 'RELATÓRIO INTERNO — dados reconstituídos pelo laboratório; não representa ensaio real e não pode ser entregue ao cliente.',
     resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado },
@@ -258,6 +259,8 @@ function EstufaRelEnsaio_html_(ctx, interno, textos, fotos, aprovacao, minuta) {
   h.push(EstufaDoc_tabelaCriterios_(ctx.criterios, false));
   h.push('<h3>4.2 Regra de decisão</h3><p>' + SGO_DocA4_esc_(ctx.regraDecisao) + '</p>');
   if (ctx.normas.length) h.push('<h3>4.3 Referências normativas</h3>' + SGO_DocA4_lista_(ctx.normas));
+  // 21/10/2026: parâmetros personalizados pelo responsável técnico (referência, valor usado, justificativa e responsável).
+  if (typeof SGO_MP_secaoDocumento_ === 'function') h.push(SGO_MP_secaoDocumento_(ctx.parametrosPersonalizados, (ctx.normas.length ? '4.4' : '4.3') + ' Parâmetros personalizados', aprovacao, minuta));
 
   h.push('<h2>5. Resultados</h2>');
   var figs = EstufaDoc_figuras_(ctx, interno, 680);

@@ -12,13 +12,14 @@
  *
  * O QUE ELE FAZ:
  *   - Gera e grava SIMULADOR_ADMIN_SENHA (se ausente)
- *   - Gera e grava MODO_PERSONALIZADO_SENHA (se ausente)
+ *   - Apaga a senha única antiga do modo personalizado (21/10/2026:
+ *     cada responsável técnico cria a própria; SGO_ModoPersonalizado.js)
  *   - Migra todas as senhas de CAD_USUARIOS para hash SHA-256
  *   - Imprime checklist de segurança no log
  *
  * Para TROCAR uma senha administrativa depois:
  *   Configurações do projeto > Propriedades do script >
- *   editar SIMULADOR_ADMIN_SENHA / MODO_PERSONALIZADO_SENHA.
+ *   editar SIMULADOR_ADMIN_SENHA.
  ****************************************************/
 
 function setupSeguranca() {
@@ -43,13 +44,12 @@ function setupSeguranca() {
     console.log('SIMULADOR_ADMIN_SENHA já configurada (mantida).');
   }
 
-  if (!String(props.getProperty('MODO_PERSONALIZADO_SENHA') || '').trim()) {
-    const nova = gerarSenhaForteSeguranca_();
-    props.setProperty('MODO_PERSONALIZADO_SENHA', nova);
-    console.log('MODO_PERSONALIZADO_SENHA gerada: ' + nova + '  <-- anote e guarde');
-    resultado.senhaModoPersonalizadoDefinida = true;
-  } else {
-    console.log('MODO_PERSONALIZADO_SENHA já configurada (mantida).');
+  // 21/10/2026: o modo personalizado não tem mais senha única (nem gerada aqui): cada responsável técnico
+  // designado cria a própria senha (SGO_ModoPersonalizado.js). A senha antiga em texto é apagada.
+  if (props.getProperty('MODO_PERSONALIZADO_SENHA') !== null) {
+    if (typeof SGO_MP_migrarSenhaAntiga_ === 'function') SGO_MP_migrarSenhaAntiga_();
+    else props.deleteProperty('MODO_PERSONALIZADO_SENHA');
+    console.log('Senha única antiga do modo personalizado apagada (cada responsável técnico cria a própria).');
   }
 
   // ------------------------------------------------------------
@@ -64,7 +64,6 @@ function setupSeguranca() {
   // ------------------------------------------------------------
   console.log('================ CHECKLIST DE SEGURANÇA ================');
   console.log('Senha do Simulador Admin ....... ' + (String(props.getProperty('SIMULADOR_ADMIN_SENHA') || '').trim() ? 'OK' : 'PENDENTE'));
-  console.log('Senha do Modo Personalizado .... ' + (String(props.getProperty('MODO_PERSONALIZADO_SENHA') || '').trim() ? 'OK' : 'PENDENTE'));
   console.log('Senhas de usuários migradas .... ' + mig.migradas + ' convertida(s), ' + mig.jaHasheadas + ' já em hash');
   console.log('========================================================');
 

@@ -646,32 +646,15 @@ function EstufaBanhoRel_ebObterSensoresMinimosPerfil_(perfilCfg, payload) {
  * aqui no servidor toda vez que um laudo é gerado com o modo marcado
  * como ativo.
  */
+// 21/10/2026: a senha única do modo personalizado (texto, comparada aqui) saiu. O ajuste de parâmetros fica com
+// os responsáveis técnicos designados, cada um com a própria senha (SGO_ModoPersonalizado.js); o modelo novo
+// aplica os valores no motor (EstufaQ_montarContexto_). Estas duas funções só recusam, com o caminho novo.
+var ESTUFA_MSG_MODO_PERSONALIZADO_NOVO = 'O ajuste de parâmetros agora é feito pelo responsável técnico em Qualificação e inspeção > Modo personalizado, com a senha própria dele; o documento sai com a seção "Parâmetros personalizados" e passa pela aprovação dele. Nada foi alterado aqui.';
 function EstufaBanhoRel_ebValidarSenhaModoPersonalizado_(senhaInformada) {
-  const cfg = EstufaBanhoRel_EBCFG.MODO_PERSONALIZADO || {};
-  if (cfg.habilitado === false) {
-    throw new Error('Modo Personalizado desabilitado na configuração.');
-  }
-  const senha = String(senhaInformada || '').trim();
-  if (!senha) {
-    throw new Error('Senha administrativa obrigatória para o Modo Personalizado.');
-  }
-  let senhaEsperada = '';
-  try {
-    senhaEsperada = String(PropertiesService.getScriptProperties().getProperty('MODO_PERSONALIZADO_SENHA') || '').trim();
-  } catch (e) {}
-  if (!senhaEsperada) {
-    senhaEsperada = String(cfg.senhaFallback || '').trim();
-  }
-  if (!senhaEsperada || senha !== senhaEsperada) {
-    throw new Error('Senha administrativa inválida para o Modo Personalizado.');
-  }
+  throw new Error(ESTUFA_MSG_MODO_PERSONALIZADO_NOVO);
 }
 function EstufaBanhoRel_apiValidarSenhaModoPersonalizado(payload) {
-  payload = payload || {};
-  EstufaBanhoRel_ebValidarSenhaModoPersonalizado_(payload.senha);
-  return {
-    ok: true
-  };
+  throw new Error(ESTUFA_MSG_MODO_PERSONALIZADO_NOVO);
 }
 
 /**

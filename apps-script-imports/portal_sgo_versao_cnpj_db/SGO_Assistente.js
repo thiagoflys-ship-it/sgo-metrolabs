@@ -235,6 +235,8 @@ function SGO_Assist_nivelQuem_(quem, perfil) {
 function SGO_Assist_situacao_(base, t, eu) {
   if (t.soAdmin && !eu.admin) return null;
   if (!eu.admin && ASN_TERMOS_ADMIN.test(t.titulo + ' ' + t.texto)) return null;
+  // 21/10/2026: a tela e o manual do modo personalizado não chegam a quem não é Administrador (nem o título).
+  if (!eu.admin && (t.modulo === 'modo_personalizado' || t.quemTela === 'modo_personalizado' || t.tela === 'modo_personalizado')) return null;
   var mod = t.modulo;
   var acessa = SGO_Assist_acessaTela_(base, mod, eu.perfil);
   var restrito = !acessa;

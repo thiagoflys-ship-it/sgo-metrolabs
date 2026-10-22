@@ -313,7 +313,7 @@ test('pendências: relatório de qualificação vira requalificação a vencer; 
   env.ctx.SGO_DATA.getDB = () => ({ getSheetByName: () => aba });
   env.fn('SGO_QE_aba_')();
   delete env.ctx.SGO_DATA.getDB;
-  assert.equal(JSON.stringify(linhas[0].slice(22)), JSON.stringify(['CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'VALIDADE_ATE', 'RESUMO_JSON']));
+  assert.equal(JSON.stringify(linhas[0].slice(22)), JSON.stringify(['CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'VALIDADE_ATE', 'RESUMO_JSON', 'PARAMETROS_PERSONALIZADOS'])); // 21/10/2026: + parâmetros personalizados
   assert.equal(linhas[1][0], 'v_ID');
   assert.equal(linhas[1].length, 22);
 });

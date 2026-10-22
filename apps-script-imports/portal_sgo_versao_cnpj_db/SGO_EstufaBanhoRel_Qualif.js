@@ -510,6 +510,10 @@ function EstufaQ_montarContexto_(payload, interno) {
   var chave = String(payload.perfil || '').trim();
   var perfilCfg = resultado.perfilCfg;
   var cfgP = ESTUFAQ_CFG.PERFIS[chave] || ESTUFAQ_CFG.PERFIS.ESTUFA_INCUBACAO;
+  // 21/10/2026: parâmetros personalizados pelo responsável técnico (SGO_ModoPersonalizado.js): mínimo de sensores,
+  // duração mínima e intervalo máximo de registro do perfil. Sem ajuste gravado, vale a referência normativa.
+  var mpAplicado = typeof SGO_MP_aplicar_ === 'function' ? SGO_MP_aplicar_('ESTUFA', ESTUFAQ_CFG.PERFIS[chave] ? chave : 'ESTUFA_INCUBACAO', EstufaQ_s_(payload.clienteId), cfgP) : { cfg: cfgP, personalizados: [] };
+  cfgP = mpAplicado.cfg;
   var faixa = { tMin: resultado.faixa.tMin, tMax: resultado.faixa.tMax };
   var ativos = resultado.sensoresAtivos;
   var ativosIdx = EstufaQ_indicesAtivos_(ativos);
@@ -528,13 +532,12 @@ function EstufaQ_montarContexto_(payload, interno) {
     travas.push(EstufaQ_trava_('SETPOINT_FORA_FAIXA', 'A temperatura programada (' + SGO_DocA4_val_(par.setpoint, 1, '°C') + ') está fora da faixa de aceitação (' + SGO_DocA4_val_(faixa.tMin, 1, '°C') + ' a ' + SGO_DocA4_val_(faixa.tMax, 1, '°C') + ').', 'A faixa de aceitação deve conter a temperatura de trabalho do equipamento.', 'Confira a temperatura programada e a faixa na seção 2 e gere de novo.'));
   }
 
-  // Sensores: mínimo do anexo.
+  // Sensores: mínimo do anexo (ou o mínimo personalizado pelo responsável técnico, que sai na seção
+  // "Parâmetros personalizados" do documento; a senha única antiga do modo personalizado saiu em 21/10/2026).
   var nAtivos = ativosIdx.length;
+  if (mpAplicado.personalizados.length) escopo.push('Parâmetros personalizados pelo responsável técnico neste ensaio: ' + SGO_MP_resumo_(mpAplicado.personalizados) + '. Justificativa e responsável na seção "Parâmetros personalizados".');
   if (cfgP.sensoresMinimos && nAtivos < cfgP.sensoresMinimos) {
-    var liberado = false;
-    if (payload.modoPersonalizado) { try { EstufaBanhoRel_ebValidarSenhaModoPersonalizado_(payload.modoPersonalizadoSenha); liberado = true; } catch (eSenha) { liberado = false; } }
-    if (liberado) escopo.push('Ensaio com ' + nAtivos + ' sensores, abaixo do mínimo de ' + cfgP.sensoresMinimos + ' (' + cfgP.fonteSensores + '), conforme metodologia acordada com o cliente e autorizada pela gestão da empresa executante.');
-    else travas.push(EstufaQ_trava_('SENSORES_ABAIXO_MINIMO', 'O ensaio tem ' + nAtivos + ' sensor(es) ativo(s); o mínimo para este equipamento é ' + cfgP.sensoresMinimos + ' (' + cfgP.fonteSensores + ').', 'Com menos sensores o mapeamento não cobre o volume útil como pede a referência.', 'Marque os sensores usados no ensaio (seção 3, Sensores). Se o ensaio foi feito com menos sensores, ele precisa ser repetido com a quantidade mínima.'));
+    travas.push(EstufaQ_trava_('SENSORES_ABAIXO_MINIMO', 'O ensaio tem ' + nAtivos + ' sensor(es) ativo(s); o mínimo para este equipamento é ' + cfgP.sensoresMinimos + ' (' + cfgP.fonteSensores + ').', 'Com menos sensores o mapeamento não cobre o volume útil como pede a referência.', 'Marque os sensores usados no ensaio (seção 3, Sensores). Se o ensaio foi feito com menos sensores, ele precisa ser repetido com a quantidade mínima.'));
   }
 
   // Registrador (rastreabilidade) e incerteza.
@@ -707,6 +710,7 @@ function EstufaQ_montarContexto_(payload, interno) {
     observacoes: observacoes.concat((registradores.observacoes || [])),
     escopo: escopo, normas: EstufaQ_normas_(chave, cfgP), regraDecisao: ESTUFAQ_CFG.REGRA_DECISAO,
     travas: travas, emissaoBloqueada: travas.length > 0,
+    parametrosPersonalizados: mpAplicado.personalizados,
     _nomesProibidos: [payload.marca, payload.modelo].map(EstufaQ_s_).filter(function (x) { return x.length >= 3; }).concat(payload._nomesProibidos || [])
   };
   ctx.assinaturaDados = SGO_DocSalvar_assinatura_({ d: (resultado.dadosCompletos || []).map(function (r) { return [EstufaQ_ms_(r)].concat(ativosIdx.map(function (s) { return r.temperaturas[s]; })); }), e: payload.estudos || {}, f: faixa, a: ativos, q: payload.qualif || {} });
@@ -912,7 +916,8 @@ function EstufaQ_resumoEnsaio_(ctx) {
         repeticoes: f.repeticoes ? f.repeticoes.map(function (r) { return { numero: r.numero, min: r.global.min, max: r.global.max, letalidade: r.letalidade ? { rotulo: r.letalidade.rotulo, pior: r.letalidade.pior, minimo: r.letalidade.minimo } : null }; }) : null };
     }),
     criterios: ctx.criterios.map(function (c) { return { chave: c.chave, estudo: c.estudo, etapa: c.etapa, criterio: c.criterio, requisito: c.requisito, referencia: c.referencia, obtido: c.obtido, conforme: c.conforme, naoAvaliado: c.naoAvaliado }; }),
-    registradores: ctx.registradores, incerteza: ctx.incerteza, escopo: ctx.escopo, normas: ctx.normas
+    registradores: ctx.registradores, incerteza: ctx.incerteza, escopo: ctx.escopo, normas: ctx.normas,
+    parametrosPersonalizados: ctx.parametrosPersonalizados || []
   };
 }
 
@@ -922,7 +927,8 @@ function EstufaQ_camposRegistro_(ctx, payload, sessao, modulo) {
     CLIENTE: ctx.identificacao.cliente, CNPJ: ctx.identificacao.cnpj, TAG: ctx.identificacao.tag, RESULTADO: ctx.statusConsolidado,
     HASH_CONTEXTO: EstufaQ_assinatura_(ctx), ENVIADO_POR: SGO_QE_nomeSessao_(sessao), ENVIADO_EM: SGO_QE_agora_(),
     JUSTIFICATIVA_ESCOPO: ctx.escopo.join(' | ').slice(0, 2000),
-    CLIENTE_ID: ctx.identificacao.clienteId, UNIDADE_ID: ctx.identificacao.unidadeId, EQUIPAMENTO_ID: ctx.identificacao.equipamentoId
+    CLIENTE_ID: ctx.identificacao.clienteId, UNIDADE_ID: ctx.identificacao.unidadeId, EQUIPAMENTO_ID: ctx.identificacao.equipamentoId,
+    PARAMETROS_PERSONALIZADOS: (ctx.parametrosPersonalizados || []).length ? SGO_MP_resumo_(ctx.parametrosPersonalizados).slice(0, 1000) : ''
   };
 }
 
@@ -948,6 +954,8 @@ function EstufaQ_fotosValidas_(fotos) {
 /** Emite (aprovação registrada): HTML + PDF na pasta do equipamento e revisão no registro. */
 function EstufaQ_emitirEnsaio_(payload, v, sessao, idPendente) {
   var ctx = v.ctx;
+  // 21/10/2026: com parâmetro personalizado, a emissão final exige o responsável técnico com o modo personalizado aberto.
+  if (!ctx.simulado && typeof SGO_MP_exigirAprovacao_ === 'function') SGO_MP_exigirAprovacao_(ctx.parametrosPersonalizados, sessao);
   var numero = ctx.identificacao.certificadoNumero || EstufaQ_proximoNumero_();
   ctx.identificacao.certificadoNumero = numero;
   var revisao = ctx.simulado ? 0 : SGO_QE_proximaRevisao_(ESTUFAQ_CFG.MODULO_ENSAIO, numero, ctx.identificacao.revisao);
@@ -964,6 +972,7 @@ function EstufaQ_emitirEnsaio_(payload, v, sessao, idPendente) {
     else id = SGO_QE_registrar_(Object.assign(EstufaQ_camposRegistro_(ctx, payload, sessao, ESTUFAQ_CFG.MODULO_ENSAIO), campos, { PAYLOAD_JSON: JSON.stringify(Object.assign({}, payload, { fotosCertificado: [] })) }));
     SGO_QE_marcarSubstituidas_(ESTUFAQ_CFG.MODULO_ENSAIO, numero, id);
     r.emissaoId = id;
+    if (typeof SGO_MP_registrarAprovacao_ === 'function') SGO_MP_registrarAprovacao_(ctx.parametrosPersonalizados, sessao, 'Relatório de ensaio ' + numero + ' rev ' + revisao + ' (' + id + ')');
   }
   r.numero = numero; r.revisao = revisao; r.aprovadoPor = aprovacao.nome; r.resultado = ctx.statusConsolidado;
   return r;
@@ -1048,7 +1057,7 @@ function EstufaQ_apiListarAprovacoes(payload, sessao) {
     return r.STATUS === 'AGUARDANDO_APROVACAO' || (r.STATUS === 'DEVOLVIDO' && r.ENVIADO_POR === nome);
   }).filter(function (r) { return aprovador || r.ENVIADO_POR === nome; });
   return { ok: true, podeAprovar: aprovador, itens: lista.map(function (r) {
-    return { id: r.ID, documento: r.MODULO === ESTUFAQ_CFG.MODULO_DADOS ? 'Planilha de dados' : 'Relatório de ensaio', status: r.STATUS, numero: r.NUMERO, cliente: r.CLIENTE, tag: r.TAG, resultado: r.RESULTADO, enviadoPor: r.ENVIADO_POR, enviadoEm: r.ENVIADO_EM, motivoDevolucao: r.DEVOLVIDO_MOTIVO };
+    return { id: r.ID, documento: r.MODULO === ESTUFAQ_CFG.MODULO_DADOS ? 'Planilha de dados' : 'Relatório de ensaio', status: r.STATUS, numero: r.NUMERO, cliente: r.CLIENTE, tag: r.TAG, resultado: r.RESULTADO, enviadoPor: r.ENVIADO_POR, enviadoEm: r.ENVIADO_EM, motivoDevolucao: r.DEVOLVIDO_MOTIVO, parametrosPersonalizados: r.PARAMETROS_PERSONALIZADOS || '' };
   }) };
 }
 

@@ -235,6 +235,15 @@ function SGO_ajudaTelas_Administracao_() {
             "Toque em \"Salvar\" do bloco e aguarde a confirmação.",
             "Toque em \"Testar agora\" para ver a janela como ela vai aparecer."
           ]
+        },
+        {
+          titulo: "Designar os responsáveis técnicos do modo personalizado (só Administrador)",
+          itens: [
+            "No bloco \"Responsáveis técnicos do modo personalizado\", toque no botão de mesmo nome.",
+            "Marque quem pode ajustar os parâmetros dos geradores e aprovar os documentos com parâmetros personalizados (perfis Administrador, Diretoria, Gestor e Metrologia) e toque em \"Gravar a lista\".",
+            "Quem foi incluído cria a própria senha do modo personalizado ao abrir Qualificação e inspeção > Modo personalizado. Ninguém mais vê a senha.",
+            "Se um responsável esquecer a senha, toque em \"Apagar a senha (esqueceu)\" na linha dele; se ele errou a senha 5 vezes, toque em \"Desbloquear\". Quem é retirado da lista perde a senha e o acesso na hora."
+          ]
         }
       ],
       cores: [

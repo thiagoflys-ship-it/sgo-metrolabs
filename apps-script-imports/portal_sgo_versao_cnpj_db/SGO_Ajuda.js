@@ -30,7 +30,7 @@ var SGO_AJUDA_NOMES = {
   auvo: 'Integração Auvo', frota: 'Frota', qualidade: 'Painel de qualidade', conduta: 'Programa de conduta',
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
-  chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
+  chaves: 'Chaves e senhas', modo_personalizado: 'Modo personalizado', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
   assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp',
   comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',
   comercial_catalogo: 'Produtos e serviços', comercial_painel: 'Painel comercial', comercial_metodologia: 'Metodologia comercial',
@@ -79,6 +79,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Email_ === 'function') fontes.push(['Email', SGO_ajudaTelas_Email_]);
   // 20/10/2026: assistente "Tire sua dúvida" e o painel das perguntas (SGO_Ajuda_Assistente.js).
   if (typeof SGO_ajudaTelas_Assistente_ === 'function') fontes.push(['Assistente', SGO_ajudaTelas_Assistente_]);
+  // 21/10/2026: Modo personalizado (SGO_Ajuda_ModoPersonalizado.js) — só o responsável técnico e o Administrador veem.
+  if (typeof SGO_ajudaTelas_ModoPersonalizado_ === 'function') fontes.push(['ModoPersonalizado', SGO_ajudaTelas_ModoPersonalizado_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;
@@ -123,7 +125,7 @@ function SGO_Ajuda_rotuloPerfis_(texto) {
  * Normaliza uma entrada (só texto puro, listas sempre listas) e marca as linhas de "quemPode"
  * do perfil de quem está vendo. O perfil Cliente só vê a própria linha e a linha "Todos".
  */
-function SGO_Ajuda_normalizar_(chave, e, perfil) {
+function SGO_Ajuda_normalizar_(chave, e, perfil, liberado) {
   e = e || {};
   var quem = (Array.isArray(e.quemPode) ? e.quemPode : []).map(function (q) {
     q = q || {};
@@ -137,7 +139,15 @@ function SGO_Ajuda_normalizar_(chave, e, perfil) {
   // as linhas de quem está vendo primeiro
   quem.sort(function (a, b) { return (a.voce === b.voce) ? 0 : (a.voce ? -1 : 1); });
   var r = SGO_Ajuda_montar_(chave, e, quem);
-  return perfil === 'ADMIN' ? r : SGO_Ajuda_semRecursoAdmin_(r);
+  return (perfil === 'ADMIN' || liberado) ? r : SGO_Ajuda_semRecursoAdmin_(r);
+}
+
+/**
+ * 21/10/2026: a ajuda da tela "Modo personalizado" só existe para o responsável técnico designado e para o
+ * Administrador (SGO_MP_ajudaLiberada_); para os demais, a tela não tem ajuda (nem aparece no manual).
+ */
+function SGO_Ajuda_modoPersonalizadoLiberado_(sessionId) {
+  try { return typeof SGO_MP_ajudaLiberada_ === 'function' && SGO_MP_ajudaLiberada_(sessionId); } catch (e) { return false; }
 }
 
 /**
@@ -209,10 +219,12 @@ function SGO_Ajuda_apiTela(sessionId, chave) {
     if (!k) return { ok: false, message: 'Não foi possível abrir a ajuda: a tela não foi informada. Feche o painel e abra a tela pelo menu antes de tocar em "Como usar esta tela".' };
     var base = SGO_Ajuda_todas_();
     var modulo = k.split('/')[0];
-    var chaves = SGO_Ajuda_doModulo_(base, modulo);
+    var mpLib = modulo === 'modo_personalizado' && SGO_Ajuda_modoPersonalizadoLiberado_(sessionId);
+    var chaves = modulo === 'modo_personalizado' && !mpLib ? [] : SGO_Ajuda_doModulo_(base, modulo);
+    if (modulo === 'modo_personalizado' && !mpLib) base = { telas: {}, ordem: [] };
     var principal = base.telas[k] ? k : (base.telas[modulo] ? modulo : '');
     var subtelas = chaves.filter(function (c) { return c !== principal; }).map(function (c) {
-      return SGO_Ajuda_normalizar_(c, base.telas[c], eu.perfil);
+      return SGO_Ajuda_normalizar_(c, base.telas[c], eu.perfil, mpLib);
     });
     return {
       ok: true,
@@ -220,7 +232,7 @@ function SGO_Ajuda_apiTela(sessionId, chave) {
       modulo: modulo,
       existe: !!principal || subtelas.length > 0,
       nomeTela: SGO_AJUDA_NOMES[modulo] || '',
-      ajuda: principal ? SGO_Ajuda_normalizar_(principal, base.telas[principal], eu.perfil) : null,
+      ajuda: principal ? SGO_Ajuda_normalizar_(principal, base.telas[principal], eu.perfil, mpLib) : null,
       subtelas: subtelas,
       perfil: eu.perfil,
       perfilRotulo: SGO_AJUDA_PERFIS[eu.perfil] || eu.perfil,
@@ -286,10 +298,11 @@ function SGO_Ajuda_apiManual(sessionId, modulo) {
     var m = SGO_Ajuda_chave_(modulo).split('/')[0];
     if (!m) return { ok: false, message: 'Não foi possível montar o manual: o módulo não foi informado. Abra a tela pelo menu e tente de novo.' };
     var base = SGO_Ajuda_todas_();
-    var chaves = SGO_Ajuda_doModulo_(base, m);
+    var mpLibM = m === 'modo_personalizado' && SGO_Ajuda_modoPersonalizadoLiberado_(sessionId);
+    var chaves = m === 'modo_personalizado' && !mpLibM ? [] : SGO_Ajuda_doModulo_(base, m);
     var nome = SGO_AJUDA_NOMES[m] || m;
     if (!chaves.length) return { ok: false, message: 'O manual completo de "' + nome + '" ainda está em preparação. Enquanto isso, use o botão "Manual do operador" da própria tela, quando houver, ou fale com o gestor.' };
-    var telas = chaves.map(function (c) { return SGO_Ajuda_normalizar_(c, base.telas[c], eu.perfil); });
+    var telas = chaves.map(function (c) { return SGO_Ajuda_normalizar_(c, base.telas[c], eu.perfil, mpLibM); });
     var titulo = (base.telas[m] && SGO_Ajuda_txt_(base.telas[m].titulo)) || nome;
     var esc = SGO_DocA4_esc_;
     var hoje = SGO_DocA4_hoje_('America/Sao_Paulo', 'dd/MM/yyyy');

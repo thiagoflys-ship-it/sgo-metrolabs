@@ -22,7 +22,9 @@ var SGO_QE_CAMPOS = ['ID', 'MODULO', 'STATUS', 'NUMERO', 'REVISAO', 'CLIENTE', '
   'PDF_ID', 'HTML_ID', 'JUSTIFICATIVA_ESCOPO', 'PAYLOAD_JSON', 'ATUALIZADO_EM',
   // 20/10/2026 (fluxo cliente → unidade → equipamento): vínculo com o cadastro, validade da qualificação
   // e resumo dos resultados guardado na emissão. Colunas novas entram no fim da aba (nada é apagado).
-  'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'VALIDADE_ATE', 'RESUMO_JSON'];
+  'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'VALIDADE_ATE', 'RESUMO_JSON',
+  // 21/10/2026: resumo dos parâmetros personalizados pelo responsável técnico (SGO_ModoPersonalizado.js); vazio = só referência.
+  'PARAMETROS_PERSONALIZADOS'];
 var SGO_QE_MEMORIA_ = null; // só nos testes (sem banco)
 
 function SGO_QE_agora_() {

@@ -1,0 +1,373 @@
+<style>
+  /* MODO PERSONALIZADO (21/10/2026) — ver SGO_ModoPersonalizado.js. */
+  .mp-bloco { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .mp-bloco h3 { margin: 0 0 8px; font-size: 15px; }
+  .mp-linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .mp-sit { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .mp-sit.ok { color: var(--success); background: var(--success-bg); }
+  .mp-sit.alerta { color: var(--warning); background: var(--warning-bg); }
+  .mp-sit.perigo { color: var(--danger); background: var(--danger-bg); }
+  .mp-sit.neutro { color: var(--muted); }
+  .mp-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .mp-aba { min-height: 38px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); cursor: pointer; font-size: 13.5px; }
+  .mp-aba.ativa { border-color: var(--primary); color: var(--primary); font-weight: 700; }
+  .mp-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .mp-form label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  .mp-form input, .mp-form select, .mp-form textarea { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--card); color: var(--text); max-width: 100%; box-sizing: border-box; }
+  .mp-form textarea { width: 100%; min-height: 70px; }
+  .mp-form .largo { flex: 1 1 100%; }
+  .mp-dica { font-size: 12px; color: var(--muted); word-break: break-word; }
+  .mp-msg { font-size: 13px; }
+  .mp-msg.erro { color: var(--danger); }
+  .mp-tabela td, .mp-tabela th { vertical-align: top; font-size: 13px; }
+  .mp-lado { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mp-lado > div { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  .mp-lado .r { font-size: 11px; color: var(--muted); }
+  @media (max-width: 700px) { .mp-tabela thead { display: none; } .mp-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .mp-tabela td { display: block; border: none; padding: 2px 4px; } .mp-lado { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  // ==========================================================
+  // MODO PERSONALIZADO (21/10/2026)
+  // Servidor: SGO_ModoPersonalizado.js (SGO_MP_api*(sessionId, payload)). O servidor confere tudo
+  // (responsável designado, perfil habilitado, senha do modo digitada nesta sessão há menos de 30 min);
+  // a tela só mostra o que ele libera. Senhas digitadas aqui nunca ficam guardadas no navegador.
+  // Ganchos na casca (JS_Core): ModoPers_iniciar_ no login (item do menu), ModoPers_parar_ no logout,
+  // abrir('modo_personalizado') -> ModoPers_render_. Configurações: ModoPers_abrirResponsaveis_.
+  // ==========================================================
+  var MP = { sit: null, aba: "parametros", sel: { gerador: "", perfil: "", clienteId: "", cliente: "" }, tabela: null, editar: "" };
+
+  function ModoPers_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+
+  function ModoPers_chamar_(fn, payload, ok, falha) {
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) { try { ok(r); } catch (e) { console.error("Modo personalizado " + fn + ":", e); falha("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); } return; }
+        var m = (r && r.message) || "O servidor não confirmou. Tente de novo.";
+        falha(m);
+        // Modo fechado no servidor (30 min sem uso, outra sessão ou removido da lista): a tela volta à entrada.
+        if (/está fechado|exclusivo dos responsáveis|ainda não tem a senha/.test(m)) ModoPers_atualizarSituacao_();
+      })
+      .withFailureHandler(function (e) { falha("Não foi possível falar com o servidor. Verifique a conexão e tente de novo; nada foi alterado."); })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  // ---------- ciclo de vida ----------
+  function ModoPers_mostrarMenu_() {
+    var b = document.getElementById("menu-btn-modo_personalizado");
+    if (b) b.style.display = MP.sit && (MP.sit.responsavel || MP.sit.podeDesignar) ? "" : "none";
+  }
+  function ModoPers_iniciar_() {
+    MP.sit = null; ModoPers_mostrarMenu_();
+    if (typeof SESSION !== "undefined" && !SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (r) { MP.sit = r && r.ok ? r : null; ModoPers_mostrarMenu_(); })
+      .withFailureHandler(function () { MP.sit = null; ModoPers_mostrarMenu_(); })
+      .SGO_MP_apiSituacao(SGO_getSessionId(), {});
+  }
+  function ModoPers_parar_() { MP.sit = null; MP.tabela = null; MP.aba = "parametros"; ModoPers_mostrarMenu_(); }
+  function ModoPers_abrirResponsaveis_() { MP.aba = "responsaveis"; abrir("modo_personalizado"); }
+
+  // ---------- tela ----------
+  function ModoPers_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Modo personalizado"); } catch (e) {} }
+    div.innerHTML =
+      '<div class="module-shell cadx" id="mpTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Modo personalizado</h2>' +
+          '<p class="content-subtitle">Ajuste dos parâmetros dos geradores de documentos técnicos em relação à referência normativa, com justificativa, aprovação e registro de cada alteração. Exclusivo dos responsáveis técnicos designados.</p></div><div class="module-header-right"></div></div>' +
+        '<div id="mpCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(4) : "Carregando...") + '</div>' +
+      '</div>';
+    ModoPers_atualizarSituacao_();
+  }
+
+  function ModoPers_atualizarSituacao_() {
+    ModoPers_chamar_("SGO_MP_apiSituacao", {}, function (r) { MP.sit = r; ModoPers_mostrarMenu_(); ModoPers_desenhar_(); }, function (m) {
+      var c = document.getElementById("mpCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não carregou.</strong> ' + ModoPers_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="ModoPers_render_()">Tentar de novo</button></div></div>';
+    });
+  }
+
+  function ModoPers_msg_(id, texto, erro) { var el = document.getElementById(id); if (el) { el.textContent = texto || ""; el.className = "mp-msg" + (erro ? " erro" : ""); } }
+
+  function ModoPers_desenhar_() {
+    var c = document.getElementById("mpCorpo"), s = MP.sit, esc = ModoPers_esc_;
+    if (!c || !s) return;
+    if (!s.responsavel && !s.podeDesignar) {
+      c.innerHTML = '<div class="mp-bloco"><h3>Acesso não liberado</h3><p>Esta tela é dos responsáveis técnicos designados pelo Administrador. Se você deveria ter acesso, peça ao Administrador para incluir o seu usuário em ' + esc(s.caminhoAdmin) + '.</p>' +
+        '<p><button type="button" class="cadx-btn cadx-btn-grande" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
+    var h = [];
+    if (s.responsavel) h.push(ModoPers_htmlAcesso_());
+    else h.push('<div class="mp-bloco"><h3>Você é Administrador</h3><p class="mp-dica">Você designa quem são os responsáveis técnicos e consulta a auditoria. Para ajustar parâmetros, inclua o seu usuário na lista e crie a sua senha.</p></div>');
+    var abas = [];
+    if (s.responsavel && s.aberto) abas = abas.concat([["parametros", "Parâmetros"], ["diferencas", "Diferenças do padrão"], ["aprovacoes", "Aprovações"]]);
+    if ((s.responsavel && s.aberto) || s.podeDesignar) abas.push(["auditoria", "Auditoria"]);
+    if (s.podeDesignar) abas.push(["responsaveis", "Responsáveis técnicos"]);
+    if (abas.length) {
+      if (!abas.some(function (a) { return a[0] === MP.aba; })) MP.aba = abas[0][0];
+      h.push('<div class="mp-abas" role="tablist">' + abas.map(function (a) { return '<button type="button" role="tab" class="mp-aba' + (MP.aba === a[0] ? " ativa" : "") + '" aria-selected="' + (MP.aba === a[0]) + '" onclick="MP.aba=\'' + a[0] + '\';ModoPers_desenhar_()">' + esc(a[1]) + '</button>'; }).join("") + '</div>');
+      h.push('<div id="mpAba"></div>');
+    }
+    c.innerHTML = h.join("");
+    if (!abas.length) return;
+    if (MP.aba === "parametros") ModoPers_abaParametros_();
+    else if (MP.aba === "diferencas") ModoPers_abaDiferencas_();
+    else if (MP.aba === "aprovacoes") ModoPers_abaAprovacoes_();
+    else if (MP.aba === "auditoria") ModoPers_abaAuditoria_();
+    else if (MP.aba === "responsaveis") ModoPers_abaResponsaveis_();
+  }
+
+  // ---------- entrar, criar senha, sair ----------
+  function ModoPers_htmlAcesso_() {
+    var s = MP.sit, esc = ModoPers_esc_;
+    if (s.bloqueado) return '<div class="mp-bloco" role="alert"><h3>Entrada bloqueada até ' + esc(s.bloqueadoAte) + '</h3><p>Foram ' + s.tentativasMax + ' senhas erradas seguidas. Aguarde até ' + esc(s.bloqueadoAte) + ' e tente de novo, ou peça ao Administrador para desbloquear em ' + esc(s.caminhoAdmin) + '. Se esqueceu a senha, peça para ele apagar a senha; depois você cria outra aqui.</p></div>';
+    if (!s.temSenha) return '<div class="mp-bloco"><h3>Criar minha senha do modo personalizado</h3><p class="mp-dica">Você foi designado responsável técnico. A senha é só sua, diferente da senha de entrada no SGO+: pelo menos 8 caracteres, com letras e números, sem o seu login. Ninguém consegue ver a senha depois de gravada; se esquecer, o Administrador apaga e você cria outra.</p>' +
+      '<form class="mp-form" onsubmit="ModoPers_criarSenha_();return false;" autocomplete="off"><label>Senha nova<input type="password" id="mpNova" autocomplete="new-password" maxlength="128"></label><label>Confirme a senha<input type="password" id="mpConf" autocomplete="new-password" maxlength="128"></label>' +
+      '<button type="submit" class="cadx-btn cadx-btn-grande cadx-btn-primario">Criar minha senha</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></form></div>';
+    if (!s.aberto) return '<div class="mp-bloco"><h3>Entrar no modo personalizado</h3><p class="mp-dica">Digite a sua senha do modo personalizado. O modo fecha sozinho depois de ' + s.minutosSessao + ' minutos sem uso e quando você sai do SGO+. ' + (s.tentativasRestantes < s.tentativasMax ? '<b>Restam ' + s.tentativasRestantes + ' tentativas antes do bloqueio.</b>' : '') + '</p>' +
+      '<form class="mp-form" onsubmit="ModoPers_entrar_();return false;" autocomplete="off"><label>Senha do modo personalizado<input type="password" id="mpSenha" autocomplete="current-password" maxlength="128"></label>' +
+      '<button type="submit" class="cadx-btn cadx-btn-grande cadx-btn-primario">Entrar</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></form></div>';
+    return '<div class="mp-bloco"><div class="mp-linha"><span class="mp-sit ok">Modo aberto</span><span class="mp-dica">Fecha sozinho às ' + esc(s.expiraEm) + ' se não houver uso (cada ação renova o prazo).</span>' +
+      '<button type="button" class="cadx-btn" onclick="ModoPers_sair_()">Sair do modo</button><button type="button" class="cadx-btn" onclick="ModoPers_formTroca_()">Trocar minha senha</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></div><div id="mpTroca"></div></div>';
+  }
+
+  function ModoPers_criarSenha_() {
+    var n = document.getElementById("mpNova"), c = document.getElementById("mpConf");
+    ModoPers_msg_("mpAcessoMsg", "Gravando...");
+    ModoPers_chamar_("SGO_MP_apiCriarSenha", { nova: n ? n.value : "", confirmar: c ? c.value : "" }, function (r) { MP.sit = r; ModoPers_desenhar_(); ModoPers_msg_("mpAcessoMsg", r.mensagem); }, function (m) {
+      if (n) n.value = ""; if (c) c.value = ""; ModoPers_msg_("mpAcessoMsg", m, true);
+    });
+  }
+  function ModoPers_entrar_() {
+    var el = document.getElementById("mpSenha");
+    ModoPers_msg_("mpAcessoMsg", "Conferindo...");
+    ModoPers_chamar_("SGO_MP_apiEntrar", { senha: el ? el.value : "" }, function (r) { MP.sit = r; ModoPers_desenhar_(); ModoPers_msg_("mpAcessoMsg", r.mensagem); }, function (m) {
+      if (el) el.value = ""; ModoPers_msg_("mpAcessoMsg", m, true);
+      ModoPers_chamar_("SGO_MP_apiSituacao", {}, function (r) { if (r.bloqueado) { MP.sit = r; ModoPers_desenhar_(); } }, function () {});
+    });
+  }
+  function ModoPers_sair_() {
+    ModoPers_chamar_("SGO_MP_apiSair", {}, function (r) { MP.sit = r; MP.tabela = null; ModoPers_desenhar_(); }, function (m) { ModoPers_msg_("mpAcessoMsg", m, true); });
+  }
+  function ModoPers_formTroca_() {
+    var d = document.getElementById("mpTroca");
+    if (!d) return;
+    d.innerHTML = '<form class="mp-form" style="margin-top:10px" onsubmit="ModoPers_trocar_();return false;" autocomplete="off"><label>Senha atual<input type="password" id="mpAtual" autocomplete="current-password" maxlength="128"></label>' +
+      '<label>Senha nova<input type="password" id="mpNova2" autocomplete="new-password" maxlength="128"></label><label>Confirme<input type="password" id="mpConf2" autocomplete="new-password" maxlength="128"></label>' +
+      '<button type="submit" class="cadx-btn cadx-btn-primario">Gravar a senha nova</button><span id="mpTrocaMsg" class="mp-msg" role="status"></span></form>';
+  }
+  function ModoPers_trocar_() {
+    var v = function (id) { var e = document.getElementById(id); return e ? e.value : ""; };
+    ModoPers_msg_("mpTrocaMsg", "Gravando...");
+    ModoPers_chamar_("SGO_MP_apiTrocarSenha", { atual: v("mpAtual"), nova: v("mpNova2"), confirmar: v("mpConf2") }, function (r) { MP.sit = r; ModoPers_desenhar_(); ModoPers_msg_("mpAcessoMsg", r.mensagem); }, function (m) {
+      ["mpAtual", "mpNova2", "mpConf2"].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ""; }); ModoPers_msg_("mpTrocaMsg", m, true);
+    });
+  }
+
+  // ---------- Parâmetros ----------
+  function ModoPers_abaParametros_() {
+    var a = document.getElementById("mpAba"), s = MP.sit, esc = ModoPers_esc_;
+    if (!a) return;
+    var gers = s.geradores || [];
+    if (!gers.length) { a.innerHTML = '<div class="mp-bloco"><p>Nenhum gerador com parâmetros ajustáveis está carregado.</p></div>'; return; }
+    if (!MP.sel.gerador || !gers.some(function (g) { return g.codigo === MP.sel.gerador; })) MP.sel.gerador = gers[0].codigo;
+    var g = gers.filter(function (x) { return x.codigo === MP.sel.gerador; })[0];
+    if (!MP.sel.perfil || !g.perfis.some(function (p) { return p.chave === MP.sel.perfil; })) MP.sel.perfil = (g.perfis[0] || {}).chave || "";
+    a.innerHTML = '<div class="mp-bloco"><h3>Onde ajustar</h3><div class="mp-form">' +
+      '<label>Gerador<select id="mpGer" onchange="MP.sel.gerador=this.value;MP.sel.perfil=\'\';ModoPers_abaParametros_()">' + gers.map(function (x) { return '<option value="' + esc(x.codigo) + '"' + (x.codigo === MP.sel.gerador ? " selected" : "") + '>' + esc(x.rotulo) + '</option>'; }).join("") + '</select></label>' +
+      '<label>Equipamento<select id="mpPerf" onchange="MP.sel.perfil=this.value;ModoPers_carregarTabela_()">' + g.perfis.map(function (p) { return '<option value="' + esc(p.chave) + '"' + (p.chave === MP.sel.perfil ? " selected" : "") + '>' + esc(p.rotulo) + '</option>'; }).join("") + '</select></label>' +
+      '<label>Vale para<select id="mpEscopo" onchange="ModoPers_mudarEscopo_(this.value)"><option value="">Todos os clientes</option>' + (MP.sel.clienteId ? '<option value="' + esc(MP.sel.clienteId) + '" selected>' + esc(MP.sel.cliente) + '</option>' : '') + '<option value="__buscar">Um cliente (buscar)...</option></select></label>' +
+      '<span id="mpBuscaCli"></span></div><p class="mp-dica">O ajuste de um cliente vale só para ele e tem prioridade sobre o de todos os clientes. Os documentos gerados depois do ajuste saem com a seção "Parâmetros personalizados" e só são emitidos com a aprovação de um responsável técnico com o modo aberto.</p></div>' +
+      '<div id="mpTabela">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(3) : "Carregando...") + '</div>';
+    ModoPers_carregarTabela_();
+  }
+
+  function ModoPers_mudarEscopo_(v) {
+    if (v === "__buscar") {
+      var b = document.getElementById("mpBuscaCli");
+      if (b) b.innerHTML = '<label class="mp-form" style="display:inline-flex">Cliente (nome ou CNPJ)<input type="search" id="mpCliQ" oninput="ModoPers_buscarCliente_(this.value)" placeholder="Digite 3 letras ou mais"></label><div id="mpCliLista"></div>';
+      var q = document.getElementById("mpCliQ"); if (q) q.focus();
+      return;
+    }
+    MP.sel.clienteId = v; if (!v) MP.sel.cliente = "";
+    ModoPers_carregarTabela_();
+  }
+  var MP_buscaT = null;
+  function ModoPers_buscarCliente_(q) {
+    clearTimeout(MP_buscaT);
+    if (String(q || "").trim().length < 3) return;
+    MP_buscaT = setTimeout(function () {
+      ModoPers_chamar_("SGO_MP_apiClientes", { busca: q }, function (r) {
+        var l = document.getElementById("mpCliLista");
+        if (!l) return;
+        l.innerHTML = r.itens.length ? r.itens.map(function (c) { return '<button type="button" class="cadx-btn" style="margin:4px 4px 0 0" data-id="' + ModoPers_esc_(c.id) + '" data-nome="' + ModoPers_esc_(c.nome) + '" onclick="MP.sel.clienteId=this.getAttribute(\'data-id\');MP.sel.cliente=this.getAttribute(\'data-nome\');ModoPers_abaParametros_()">' + ModoPers_esc_(c.nome) + '</button>'; }).join("") : '<span class="mp-dica">Nenhum cliente ativo encontrado.</span>';
+      }, function (m) { var l = document.getElementById("mpCliLista"); if (l) l.innerHTML = '<span class="mp-msg erro">' + ModoPers_esc_(m) + '</span>'; });
+    }, 350);
+  }
+
+  function ModoPers_carregarTabela_() {
+    var t = document.getElementById("mpTabela");
+    if (t) t.innerHTML = '<p class="mp-dica">Carregando...</p>';
+    ModoPers_chamar_("SGO_MP_apiParametros", { gerador: MP.sel.gerador, perfil: MP.sel.perfil, clienteId: MP.sel.clienteId }, function (r) { MP.tabela = r; ModoPers_desenharTabela_(); }, function (m) {
+      var x = document.getElementById("mpTabela"); if (x) x.innerHTML = '<p class="mp-msg erro" role="alert">' + ModoPers_esc_(m) + '</p>';
+    });
+  }
+
+  function ModoPers_desenharTabela_(mensagem) {
+    var t = document.getElementById("mpTabela"), r = MP.tabela, esc = ModoPers_esc_;
+    if (!t || !r) return;
+    var algum = r.itens.some(function (i) { return i.ajusteDesteEscopo; });
+    t.innerHTML = '<div class="mp-bloco"><h3>' + esc(r.perfilRotulo) + ' — ' + esc(r.cliente || "todos os clientes") + '</h3>' + (mensagem ? '<p class="mp-msg" role="status">' + esc(mensagem) + '</p>' : '') +
+      '<div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Parâmetro</th><th>Referência normativa e valor em uso</th><th>Faixa permitida</th><th>Situação</th><th></th></tr></thead><tbody>' +
+      r.itens.map(function (i) {
+        return '<tr><td><b>' + esc(i.rotulo) + '</b></td><td><div class="mp-lado"><div><div class="r">Referência</div>' + esc(i.normativoTxt) + '<div class="r">' + esc(i.fonte) + '</div></div><div><div class="r">Em uso</div>' + esc(i.emUsoTxt) + '</div></div></td>' +
+          '<td>' + esc(i.faixaTxt) + '</td><td><span class="mp-sit ' + (i.personalizado ? "alerta" : "ok") + '">' + esc(i.origem) + '</span>' + (i.personalizado ? '<div class="mp-dica">' + esc(i.justificativa) + ' — ' + esc(i.por) + ', ' + esc(i.em) + '</div>' : '') + '</td>' +
+          '<td><button type="button" class="cadx-btn" onclick="ModoPers_formAjuste_(\'' + esc(i.chave) + '\')">Ajustar</button>' + (i.ajusteDesteEscopo ? ' <button type="button" class="cadx-btn" onclick="ModoPers_formRestaurar_(\'' + esc(i.chave) + '\')">Restaurar o padrão</button>' : '') + '</td></tr>' +
+          '<tr id="mpForm_' + esc(i.chave).replace(/\./g, "_") + '" style="display:none"><td colspan="5"></td></tr>';
+      }).join("") + '</tbody></table></div>' +
+      (algum ? '<button type="button" class="cadx-btn" onclick="ModoPers_formRestaurar_(\'\')">Restaurar todos os ajustes deste escopo</button>' : '') + '<div id="mpFormTodos"></div></div>';
+  }
+
+  function ModoPers_celulaForm_(chave) {
+    document.querySelectorAll('[id^="mpForm_"]').forEach(function (x) { x.style.display = "none"; x.firstChild.innerHTML = ""; });
+    var f = document.getElementById("mpFormTodos"); if (f) f.innerHTML = "";
+    if (!chave) return f;
+    var tr = document.getElementById("mpForm_" + chave.replace(/\./g, "_"));
+    if (!tr) return null;
+    tr.style.display = "";
+    return tr.firstChild;
+  }
+
+  function ModoPers_formAjuste_(chave) {
+    var i = MP.tabela.itens.filter(function (x) { return x.chave === chave; })[0], cel = ModoPers_celulaForm_(chave), esc = ModoPers_esc_;
+    if (!i || !cel) return;
+    cel.innerHTML = '<form class="mp-form" onsubmit="ModoPers_gravarAjuste_(\'' + esc(chave) + '\');return false;"><label>Valor novo (' + esc(i.unidade) + ')<input type="text" inputmode="decimal" id="mpValor" value="' + esc(String(i.emUso).replace(".", ",")) + '"></label>' +
+      '<span class="mp-dica">Faixa permitida: ' + esc(i.faixaTxt) + '. Referência: ' + esc(i.normativoTxt) + '.</span>' +
+      '<label class="largo">Justificativa (obrigatória; sai no documento e na auditoria)<textarea id="mpJust" maxlength="1000" placeholder="Por que o valor muda e o que embasa a decisão: protocolo do cliente, metodologia acordada, estudo..."></textarea></label>' +
+      '<button type="submit" class="cadx-btn cadx-btn-primario">Gravar ajuste</button><button type="button" class="cadx-btn" onclick="ModoPers_celulaForm_(\'\')">Cancelar</button><span id="mpFormMsg" class="mp-msg" role="status"></span></form>';
+  }
+
+  function ModoPers_gravarAjuste_(chave) {
+    var v = (document.getElementById("mpValor") || {}).value, j = (document.getElementById("mpJust") || {}).value;
+    ModoPers_msg_("mpFormMsg", "Gravando...");
+    ModoPers_chamar_("SGO_MP_apiAlterar", { gerador: MP.sel.gerador, perfil: MP.sel.perfil, clienteId: MP.sel.clienteId, parametro: chave, valor: v, justificativa: j }, function (r) { MP.tabela = r; ModoPers_desenharTabela_(r.mensagem); }, function (m) { ModoPers_msg_("mpFormMsg", m, true); });
+  }
+
+  function ModoPers_formRestaurar_(chave) {
+    var cel = ModoPers_celulaForm_(chave), esc = ModoPers_esc_;
+    if (!cel) return;
+    cel.innerHTML = '<form class="mp-form" onsubmit="ModoPers_restaurar_(\'' + esc(chave) + '\');return false;"><label class="largo">Motivo para voltar à referência (obrigatório; fica na auditoria)<textarea id="mpJustR" maxlength="1000"></textarea></label>' +
+      '<button type="submit" class="cadx-btn cadx-btn-primario">' + (chave ? "Restaurar o padrão" : "Restaurar todos") + '</button><button type="button" class="cadx-btn" onclick="ModoPers_celulaForm_(\'\')">Cancelar</button><span id="mpFormMsg" class="mp-msg" role="status"></span></form>';
+  }
+
+  function ModoPers_restaurar_(chave) {
+    var j = (document.getElementById("mpJustR") || {}).value;
+    ModoPers_msg_("mpFormMsg", "Gravando...");
+    ModoPers_chamar_("SGO_MP_apiRestaurar", { gerador: MP.sel.gerador, perfil: MP.sel.perfil, clienteId: MP.sel.clienteId, parametro: chave, justificativa: j }, function (r) { MP.tabela = r; ModoPers_desenharTabela_(r.mensagem); }, function (m) { ModoPers_msg_("mpFormMsg", m, true); });
+  }
+
+  // ---------- Diferenças do padrão ----------
+  function ModoPers_abaDiferencas_() {
+    var a = document.getElementById("mpAba");
+    if (!a) return;
+    a.innerHTML = '<p class="mp-dica">Carregando...</p>';
+    ModoPers_chamar_("SGO_MP_apiDiferencas", {}, function (r) {
+      var esc = ModoPers_esc_;
+      if (!r.itens.length) { a.innerHTML = '<div class="mp-bloco"><span class="mp-sit ok">Tudo na referência normativa</span><p class="mp-dica">Nenhum parâmetro personalizado em nenhum gerador.</p></div>'; return; }
+      a.innerHTML = '<div class="mp-bloco"><h3>' + r.itens.length + ' parâmetro(s) diferente(s) da referência</h3><div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Gerador e equipamento</th><th>Vale para</th><th>Parâmetro</th><th>Referência × em uso</th><th>Justificativa</th></tr></thead><tbody>' +
+        r.itens.map(function (i) {
+          return '<tr><td>' + esc(i.gerador) + '<div class="mp-dica">' + esc(i.perfil) + '</div></td><td>' + esc(i.escopo) + '</td><td><b>' + esc(i.parametro) + '</b></td>' +
+            '<td><div class="mp-lado"><div><div class="r">Referência</div>' + esc(i.normativoTxt) + '<div class="r">' + esc(i.fonte) + '</div></div><div><div class="r">Em uso (diferença)</div>' + esc(i.usadoTxt) + ' (' + esc(i.diferencaTxt) + ')</div></div>' +
+            (i.aviso ? '<div class="mp-msg erro">' + esc(i.aviso) + '</div>' : '') + '</td><td>' + esc(i.justificativa) + '<div class="mp-dica">' + esc(i.por) + ', ' + esc(i.em) + '</div>' +
+            '<button type="button" class="cadx-btn" style="margin-top:4px" data-g="' + esc(i.geradorCodigo) + '" data-p="' + esc(i.perfilChave) + '" data-c="' + esc(i.clienteId) + '" data-n="' + esc(i.clienteId ? i.escopo : "") + '" onclick="MP.sel={gerador:this.getAttribute(\'data-g\'),perfil:this.getAttribute(\'data-p\'),clienteId:this.getAttribute(\'data-c\'),cliente:this.getAttribute(\'data-n\')};MP.aba=\'parametros\';ModoPers_desenhar_()">Abrir para ajustar ou restaurar</button></td></tr>';
+        }).join("") + '</tbody></table></div></div>';
+    }, function (m) { a.innerHTML = '<p class="mp-msg erro" role="alert">' + ModoPers_esc_(m) + '</p>'; });
+  }
+
+  // ---------- Aprovações ----------
+  function ModoPers_abaAprovacoes_() {
+    var a = document.getElementById("mpAba");
+    if (!a) return;
+    a.innerHTML = '<p class="mp-dica">Carregando...</p>';
+    ModoPers_chamar_("SGO_MP_apiAprovacoes", {}, function (r) {
+      var esc = ModoPers_esc_;
+      var linha = function (i, pend) {
+        return '<tr><td>' + esc(i.gerador) + '<div class="mp-dica">' + esc(i.numero) + (i.revisao ? ' rev ' + esc(i.revisao) : '') + '</div></td><td>' + esc(i.cliente) + '<div class="mp-dica">' + esc(i.tag) + '</div></td><td>' + esc(i.parametros) + '</td>' +
+          '<td>' + (pend ? 'Enviado por ' + esc(i.enviadoPor) + ', ' + esc(i.enviadoEm) : 'Aprovado por ' + esc(i.aprovadoPor) + ', ' + esc(i.aprovadoEm)) + '</td>' +
+          '<td>' + (pend ? '<button type="button" class="cadx-btn cadx-btn-primario" onclick="abrir(\'' + esc(i.tela) + '\')">Abrir no gerador para conferir e aprovar</button>' : '') + '</td></tr>';
+      };
+      a.innerHTML = '<div class="mp-bloco"><h3>Aguardando aprovação (' + r.pendentes.length + ')</h3><p class="mp-dica">Documentos com parâmetros personalizados enviados pelo técnico. Abra o gerador, confira a prévia em "Aguardando aprovação" e aprove com este modo aberto; sem o modo aberto, a emissão é recusada.</p>' +
+        (r.pendentes.length ? '<div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Documento</th><th>Cliente</th><th>Parâmetros</th><th>Envio</th><th></th></tr></thead><tbody>' + r.pendentes.map(function (i) { return linha(i, true); }).join("") + '</tbody></table></div>' : '<p class="mp-dica">Nenhum documento aguardando.</p>') + '</div>' +
+        '<div class="mp-bloco"><h3>Emitidos com parâmetros personalizados (últimos 20)</h3>' + (r.recentes.length ? '<div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Documento</th><th>Cliente</th><th>Parâmetros</th><th>Aprovação</th><th></th></tr></thead><tbody>' + r.recentes.map(function (i) { return linha(i, false); }).join("") + '</tbody></table></div>' : '<p class="mp-dica">Nenhum ainda.</p>') + '</div>';
+    }, function (m) { a.innerHTML = '<p class="mp-msg erro" role="alert">' + ModoPers_esc_(m) + '</p>'; });
+  }
+
+  // ---------- Auditoria ----------
+  function ModoPers_abaAuditoria_(conferir) {
+    var a = document.getElementById("mpAba");
+    if (!a) return;
+    var f = MP.filtro || {};
+    var esc = ModoPers_esc_;
+    a.innerHTML = '<div class="mp-bloco"><h3>Registro de auditoria</h3><p class="mp-dica">Só inclusão: cada linha guarda quem, quando, o que mudou (de quanto para quanto) e o motivo, ligada à linha anterior por um código de conferência. Senhas nunca são registradas.</p>' +
+      '<form class="mp-form" onsubmit="ModoPers_filtrar_();return false;"><label>De<input type="date" id="mpfDe" value="' + esc(f.de || "") + '"></label><label>Até<input type="date" id="mpfAte" value="' + esc(f.ate || "") + '"></label>' +
+      '<label>Ação<select id="mpfAcao"><option value="">Todas</option></select></label><label>Buscar<input type="search" id="mpfBusca" value="' + esc(f.busca || "") + '" placeholder="Pessoa, parâmetro, cliente"></label>' +
+      '<button type="submit" class="cadx-btn">Mostrar</button><button type="button" class="cadx-btn" onclick="ModoPers_abaAuditoria_(true)">Conferir integridade</button></form><div id="mpAud" style="margin-top:10px"><p class="mp-dica">Carregando...</p></div></div>';
+    ModoPers_chamar_("SGO_MP_apiAuditoria", Object.assign({}, f, { conferir: !!conferir }), function (r) {
+      var sel = document.getElementById("mpfAcao");
+      if (sel) sel.innerHTML = '<option value="">Todas</option>' + r.acoes.map(function (x) { return '<option value="' + esc(x.codigo) + '"' + (x.codigo === f.acao ? " selected" : "") + '>' + esc(x.rotulo) + '</option>'; }).join("");
+      var d = document.getElementById("mpAud");
+      if (!d) return;
+      var integ = r.integridade ? (r.integridade.ok ? '<p><span class="mp-sit ok">Íntegro</span> ' + r.integridade.total + ' linha(s) conferida(s), nenhuma alterada ou apagada.</p>' : '<div role="alert"><span class="mp-sit perigo">Registro alterado</span><ul>' + r.integridade.problemas.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join("") + '</ul><p class="mp-dica">Avise o Administrador: alguém mexeu direto na aba MODO_PERS_AUDITORIA do banco.</p></div>') : '';
+      d.innerHTML = integ + (r.linhas.length ? '<p class="mp-dica">' + r.total + ' registro(s)' + (r.total > r.linhas.length ? '; mostrando os ' + r.linhas.length + ' mais recentes' : '') + '.</p><div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Onde</th><th>De → para</th><th>Motivo</th></tr></thead><tbody>' +
+        r.linhas.map(function (l) {
+          return '<tr><td>' + esc(l.em) + '</td><td>' + esc(l.nome) + '<div class="mp-dica">' + esc(l.usuario) + '</div></td><td>' + esc(l.acaoTxt) + '</td><td>' + esc([l.gerador, l.perfil, l.cliente, l.parametro].filter(Boolean).join(" · ")) + (l.referencia ? '<div class="mp-dica">' + esc(l.referencia) + '</div>' : '') + '</td>' +
+            '<td>' + (l.novo || l.anterior ? esc(l.anterior || "—") + ' → ' + esc(l.novo || "—") + (l.normativo ? '<div class="mp-dica">Referência: ' + esc(l.normativo) + '</div>' : '') : '') + '</td><td>' + esc(l.motivo) + '</td></tr>';
+        }).join("") + '</tbody></table></div>' : '<p class="mp-dica">Nenhum registro com estes filtros.</p>');
+    }, function (m) { var d = document.getElementById("mpAud"); if (d) d.innerHTML = '<p class="mp-msg erro" role="alert">' + esc(m) + '</p>'; });
+  }
+  function ModoPers_filtrar_() {
+    var v = function (id) { return (document.getElementById(id) || {}).value || ""; };
+    MP.filtro = { de: v("mpfDe"), ate: v("mpfAte"), acao: v("mpfAcao"), busca: v("mpfBusca") };
+    ModoPers_abaAuditoria_();
+  }
+
+  // ---------- Responsáveis técnicos (Administrador) ----------
+  function ModoPers_abaResponsaveis_(mensagem) {
+    var a = document.getElementById("mpAba");
+    if (!a) return;
+    a.innerHTML = '<p class="mp-dica">Carregando...</p>';
+    ModoPers_chamar_("SGO_MP_apiResponsaveis", {}, function (r) { ModoPers_desenharResponsaveis_(r, mensagem); }, function (m) { a.innerHTML = '<p class="mp-msg erro" role="alert">' + ModoPers_esc_(m) + '</p>'; });
+  }
+  function ModoPers_desenharResponsaveis_(r, mensagem) {
+    var a = document.getElementById("mpAba"), esc = ModoPers_esc_;
+    if (!a) return;
+    var rot = { ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", METROLOGIA: "Metrologia" };
+    a.innerHTML = '<div class="mp-bloco"><h3>Responsáveis técnicos do modo personalizado</h3><p class="mp-dica">Marque quem pode ajustar os parâmetros e aprovar os documentos com parâmetros personalizados (perfis Administrador, Diretoria, Gestor e Metrologia). Quem é incluído cria a própria senha ao abrir Qualificação e inspeção > Modo personalizado. Quem é retirado perde a senha e o acesso na hora.</p>' +
+      (mensagem ? '<p class="mp-msg" role="status">' + esc(mensagem) + '</p>' : '') +
+      '<div class="wap-pessoas" style="max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:6px">' + (r.itens.length ? r.itens.map(function (u) {
+        return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)"><input type="checkbox" class="mp-resp" value="' + esc(u.userId) + '"' + (u.designado ? " checked" : "") + ' style="width:18px;height:18px;margin-top:3px" aria-label="Responsável: ' + esc(u.nome) + '">' +
+          '<div style="flex:1"><b>' + esc(u.nome) + '</b> <span class="mp-dica">' + esc(u.usuario) + (u.perfil ? ' · ' + esc(rot[u.perfil] || u.perfil) : '') + '</span>' +
+          (u.designado ? '<div class="mp-linha" style="margin-top:4px"><span class="mp-sit ' + (u.temSenha ? "ok" : "alerta") + '">' + (u.temSenha ? "Senha criada" : "Ainda sem senha") + '</span>' + (u.bloqueadoAte ? '<span class="mp-sit perigo">Bloqueado até ' + esc(u.bloqueadoAte) + '</span>' : '') +
+            (u.desde ? '<span class="mp-dica">Desde ' + esc(u.desde) + (u.por ? ' (por ' + esc(u.por) + ')' : '') + '</span>' : '') +
+            (u.temSenha ? '<button type="button" class="cadx-btn" onclick="ModoPers_redefinir_(\'' + esc(u.userId) + '\',\'' + esc(u.nome).replace(/'/g, "") + '\')">Apagar a senha (esqueceu)</button>' : '') +
+            (u.bloqueadoAte ? '<button type="button" class="cadx-btn" onclick="ModoPers_desbloquear_(\'' + esc(u.userId) + '\')">Desbloquear</button>' : '') + '</div>' : '') +
+          (u.aviso ? '<div class="mp-msg erro">' + esc(u.aviso) + '</div>' : '') + '</div></div>';
+      }).join("") : '<p class="mp-dica" style="padding:10px">Nenhum usuário ativo dos perfis habilitados.</p>') + '</div>' +
+      '<div class="mp-linha" style="margin-top:12px"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="ModoPers_gravarResponsaveis_()">Gravar a lista</button><span id="mpRespMsg" class="mp-msg" role="status"></span></div></div>';
+  }
+  function ModoPers_gravarResponsaveis_() {
+    var ids = [];
+    document.querySelectorAll(".mp-resp").forEach(function (el) { if (el.checked) ids.push(el.value); });
+    ModoPers_msg_("mpRespMsg", "Gravando...");
+    ModoPers_chamar_("SGO_MP_apiDefinirResponsaveis", { ids: ids }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); ModoPers_iniciar_(); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });
+  }
+  function ModoPers_redefinir_(id, nome) {
+    if (!confirm("Apagar a senha do modo personalizado de " + nome + "? Ele cria uma senha nova na próxima vez que abrir o modo.")) return;
+    ModoPers_chamar_("SGO_MP_apiRedefinirSenha", { userId: id }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });
+  }
+  function ModoPers_desbloquear_(id) {
+    ModoPers_chamar_("SGO_MP_apiDesbloquear", { userId: id }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });
+  }
+</script>

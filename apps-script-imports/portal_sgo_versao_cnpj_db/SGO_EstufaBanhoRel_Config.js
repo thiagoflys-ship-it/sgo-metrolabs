@@ -234,23 +234,18 @@ const EstufaBanhoRel_EBCFG = Object.freeze({
     intervaloSegundosDefault: 300
   }),
   /****************************************************
-   * 10B. MODO PERSONALIZADO (ENSAIO FORA DO PADRÃO MÍNIMO)
+   * 10B. MODO PERSONALIZADO (21/10/2026)
    *
-   * Senha própria, separada da do Simulador Admin de propósito —
-   * o Simulador só afeta relatórios internos/de teste; o Modo
-   * Personalizado afeta LAUDOS REAIS/OFICIAIS, então merece uma
-   * senha distinta e mais restrita, e fica registrado no laudo
-   * quando usado (ver ebGerarPlanilhaEstufaBanhomaria/Planilha.js).
-   * Libera SÓ a contagem de sensores abaixo do mínimo do anexo —
-   * nunca libera faixa, tolerância, critério de aprovação ou
-   * qualquer outro parâmetro normativo.
-   *
-   * Preferencialmente configure a senha real em:
-   * Script Properties > MODO_PERSONALIZADO_SENHA
+   * A senha única (MODO_PERSONALIZADO_SENHA, em texto) saiu. Os
+   * parâmetros ajustáveis (mínimo de sensores, duração mínima e
+   * intervalo máximo de registro de cada perfil) ficam com os
+   * responsáveis técnicos designados pelo Administrador, cada um
+   * com a própria senha: SGO_ModoPersonalizado.js. O motor do
+   * modelo novo aplica os valores (EstufaQ_montarContexto_) e o
+   * documento sai com a seção "Parâmetros personalizados".
    ****************************************************/
   MODO_PERSONALIZADO: Object.freeze({
-    habilitado: true,
-    senhaFallback: '' // SEGURANCA: fallback removido — configure em Script Properties > MODO_PERSONALIZADO_SENHA
+    habilitado: true
   }),
   /****************************************************
    * 9B. MARGEM DE CONTEXTO PARA ESTUDOS DE EVENTO

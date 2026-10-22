@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "51bcc1ec0d3f",
+ "versao": "8c4dfe42f12b",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -496,6 +496,63 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Registros",
      "texto": "Nada é apagado. NTF_REGRAS (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), NTF_RESUMO_FILA (itens guardados para o e-mail de resumo ou para o próximo expediente), NTF_RESUMOS (cada resumo avaliado: pessoa, dia, canal, situação, motivo), NTF_PREFERENCIAS (cada mudança de preferência) e NTF_ENVIOS (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO)."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODO_PERSONALIZADO.md",
+   "titulo": "Manual do responsável técnico — Modo personalizado",
+   "tela": "modo_personalizado",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR",
+    "METROLOGIA"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Este manual é do responsável técnico designado e do Administrador. A tela fica em Qualificação e inspeção > Modo personalizado e só aparece para quem foi designado (ou para o Administrador)."
+    },
+    {
+     "titulo": "O que mudou em 21/10/2026",
+     "texto": "A senha única do modo personalizado, que ficava guardada em texto em Chaves e senhas, foi apagada. Cada responsável técnico tem a própria senha.\nO Administrador designa os responsáveis técnicos em Administração > Configurações > Responsáveis técnicos do modo personalizado.\nO modo personalizado deixou de ser um botão escondido dentro da estufa: virou uma tela própria, com as mesmas ferramentas para todos os geradores que têm parâmetros ajustáveis."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Alguns clientes têm protocolo próprio, acordado com a empresa executante, que pede um valor diferente da referência normativa. O modo personalizado permite usar esse valor sem esconder nada:\n1. O responsável técnico ajusta o parâmetro, dentro da faixa permitida, com justificativa.\n2. Os documentos gerados depois disso saem com a seção Parâmetros personalizados: parâmetro, valor de referência e fonte, valor usado, justificativa, quem definiu e quem aprovou.\n3. A emissão final desses documentos só acontece com a aprovação de um responsável técnico com o modo aberto.\n4. Tudo fica no registro de auditoria: quem, quando, de quanto para quanto e por quê."
+    },
+    {
+     "titulo": "Parâmetros que podem ser ajustados hoje",
+     "texto": "Gerador Estufa, banho-maria e secadora (relatório de ensaio e planilha de dados do modelo novo), por tipo de equipamento:\nParâmetro | Referência | Faixa permitidaMínimo de sensores | Estufa de incubação e de esterilização: 12 (ABNT NBR 16328:2024, Anexos F e E); banho-maria: 6 (Anexo I); secadora: 1 (protocolo) | da metade da referência (arredondada para cima) até 60\nDuração mínima da distribuição | Estufa de incubação: 24 h (Anexo F) | de 1 h a 72 h\nIntervalo máximo de registro | Distribuição 60 s, eventos 10 s (Anexo F); banho-maria 30 s (Anexo I); distribuição e penetração 30 s (Anexo E) | de 1 s a 300 s\nA faixa permitida é definida na configuração do sistema (SGO_ModoPersonalizado.js). Para mudar a faixa ou incluir outro parâmetro ou outro gerador, é preciso uma alteração revisada no sistema.\n\nOs demais geradores (autoclave, lavadora, cadeia de frio, baixa temperatura, calibração, declarações, QI/QO/QD, NR-13) não têm parâmetros no modo personalizado: os limites deles vêm do protocolo informado no ensaio, do cadastro do instrumento ou da especificação do fabricante, e já são digitados no próprio documento."
+    },
+    {
+     "titulo": "Primeira vez: designação e senha",
+     "texto": "1. O Administrador abre Administração > Configurações, toca em Responsáveis técnicos do modo personalizado, marca as pessoas (perfis Administrador, Diretoria, Gestor e Metrologia) e toca em Gravar a lista.\n2. A pessoa designada abre Qualificação e inspeção > Modo personalizado.\n3. No quadro Criar minha senha do modo personalizado, digita a senha duas vezes (pelo menos 8 caracteres, com letras e números, sem o login) e toca em Criar minha senha. O modo abre na hora.\n\nA senha é guardada só como resumo (SHA-256 com sal e 2.000 repetições). Ninguém consegue ler a senha, nem o Administrador."
+    },
+    {
+     "titulo": "Entrar, sair e trocar a senha",
+     "texto": "Entrar: digite a senha e toque em Entrar.\nO modo fica aberto por 30 minutos sem uso; cada ação renova o prazo. Sair do SGO+ ou entrar por outro navegador pede a senha de novo.\nCinco senhas erradas seguidas bloqueiam a entrada por 15 minutos. O Administrador pode desbloquear.\nSair do modo: toque em Sair do modo.\nTrocar a senha: Trocar minha senha, digite a atual, a nova e a confirmação.\nEsqueceu a senha: peça ao Administrador para tocar em Apagar a senha (esqueceu) na sua linha; depois crie outra."
+    },
+    {
+     "titulo": "Ajustar e restaurar",
+     "texto": "1. Aba Parâmetros: escolha o gerador, o equipamento e em Vale para escolha Todos os clientes ou Um cliente (buscar)....\n2. A tabela mostra lado a lado a referência normativa (com a fonte) e o valor em uso, a faixa permitida e a situação (verde = referência; amarelo = ajustado).\n3. Ajustar: digite o valor, escreva a justificativa (pelo menos 20 caracteres) e toque em Gravar ajuste.\n4. Restaurar o padrão: na linha do parâmetro, escreva o motivo e confirme. Restaurar todos os ajustes deste escopo volta tudo do equipamento e do escopo escolhidos.\n\nO ajuste de um cliente tem prioridade sobre o de todos os clientes. Documentos já emitidos não mudam."
+    },
+    {
+     "titulo": "Diferenças do padrão",
+     "texto": "A aba Diferenças do padrão lista tudo o que está diferente da referência em todos os geradores: referência, valor em uso, diferença, justificativa e quem ajustou. Ajuste que ficou fora da faixa permitida atual aparece em vermelho e não é aplicado."
+    },
+    {
+     "titulo": "Aprovação dos documentos",
+     "texto": "1. O técnico gera o rascunho normalmente e toca em Enviar para aprovação. O documento com parâmetros personalizados aparece na aba Aprovações.\n2. O responsável técnico, com o modo aberto, toca em Abrir no gerador para conferir e aprovar, confere a prévia (seção Parâmetros personalizados) em Aguardando aprovação e aprova.\n3. Sem o modo aberto, a emissão é recusada com a explicação; entre no modo e aprove de novo (o documento continua aguardando).\n4. Se o parâmetro foi ajustado ou restaurado depois do envio, a emissão diz que os dados ou os critérios mudaram: devolva ao técnico para gerar o rascunho de novo."
+    },
+    {
+     "titulo": "Auditoria",
+     "texto": "A aba Auditoria mostra cada ação: inclusão e retirada de responsáveis, criação, troca e apagamento de senha (nunca o valor), entradas, senhas erradas, bloqueios, ajustes (de quanto para quanto, com o motivo), restaurações e aprovações de documentos. Filtre por período, ação ou texto. Conferir integridade confere se alguma linha foi alterada ou apagada (cada linha guarda o resumo SHA-256 da anterior). O Administrador também consulta a auditoria, mesmo sem ser responsável."
+    },
+    {
+     "titulo": "Problemas comuns",
+     "texto": "Situação | O que fazer\"O modo personalizado está fechado\" | Passaram 30 minutos sem uso ou você saiu do SGO+. Entre de novo com a senha.\n\"Entrada bloqueada até hh:mm\" | Aguarde ou peça ao Administrador para desbloquear.\n\"Valor fora da faixa permitida\" | Escolha um valor dentro da faixa; se o protocolo pedir outro, fale com o Administrador.\n\"É exclusivo dos responsáveis técnicos designados\" | Peça ao Administrador para incluir o seu usuário na lista.\nA emissão foi recusada por parâmetros personalizados | Entre no modo e aprove de novo, na mesma sessão."
     }
    ]
   },

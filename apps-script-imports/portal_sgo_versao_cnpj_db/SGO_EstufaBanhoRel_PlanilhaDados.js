@@ -99,6 +99,8 @@ function EstufaPlanDados_html_(ctx, interno, aprovacao, minuta) {
     ['Regra de decisão', ctx.regraDecisao, { largo: true }]], '', { porLinha: 3 }));
   if (ctx.escopo.length) h.push(SGO_DocA4_lista_(ctx.escopo));
   if (ctx.normas.length) h.push(SGO_DocA4_lista_(ctx.normas));
+  // 21/10/2026: parâmetros personalizados pelo responsável técnico (referência, valor usado, justificativa e responsável).
+  if (typeof SGO_MP_secaoDocumento_ === 'function') h.push(SGO_MP_secaoDocumento_(ctx.parametrosPersonalizados, 'Parâmetros personalizados', aprovacao, minuta));
 
   h.push('<h2>3. Resultados por estudo</h2>');
   ctx.estudos.forEach(function (e, i) {
@@ -163,6 +165,8 @@ function EstufaPlanDados_html_(ctx, interno, aprovacao, minuta) {
 /** Emite a planilha de dados (aprovação registrada): HTML + PDF na pasta do equipamento. */
 function EstufaPlanDados_emitir_(payload, v, sessao, idPendente) {
   var ctx = v.ctx;
+  // 21/10/2026: com parâmetro personalizado, a emissão final exige o responsável técnico com o modo personalizado aberto.
+  if (!ctx.simulado && typeof SGO_MP_exigirAprovacao_ === 'function') SGO_MP_exigirAprovacao_(ctx.parametrosPersonalizados, sessao);
   var numero = ctx.identificacao.certificadoNumero || EstufaQ_proximoNumero_();
   ctx.identificacao.certificadoNumero = numero;
   var revisao = ctx.simulado ? 0 : SGO_QE_proximaRevisao_(ESTUFAQ_CFG.MODULO_DADOS, numero, 0);
@@ -177,6 +181,7 @@ function EstufaPlanDados_emitir_(payload, v, sessao, idPendente) {
     else id = SGO_QE_registrar_(Object.assign(EstufaQ_camposRegistro_(ctx, payload, sessao, ESTUFAQ_CFG.MODULO_DADOS), campos, { PAYLOAD_JSON: JSON.stringify(payload) }));
     SGO_QE_marcarSubstituidas_(ESTUFAQ_CFG.MODULO_DADOS, numero, id);
     r.emissaoId = id;
+    if (typeof SGO_MP_registrarAprovacao_ === 'function') SGO_MP_registrarAprovacao_(ctx.parametrosPersonalizados, sessao, 'Planilha de dados ' + numero + ' rev ' + revisao + ' (' + id + ')');
   }
   r.numero = numero; r.revisao = revisao; r.resultado = ctx.statusConsolidado; r.aprovadoPor = aprovacao.nome;
   return r;

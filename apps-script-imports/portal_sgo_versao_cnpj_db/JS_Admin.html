@@ -720,6 +720,13 @@
         '<span class="cadx-msg" id="ap_feedback">Carregando…</span><button type="button" id="ap_btn_testar" class="cadx-btn cadx-btn-grande" onclick="adminTestarAlertasPadroes_()">Testar agora</button><button type="button" id="ap_btn_salvar" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="adminSalvarAlertasPadroes_()">Salvar</button>',
         '<span id="ap_status" class="cadx-selo bc-selo">…</span>'));
     }
+    // 21/10/2026: quem são os responsáveis técnicos do modo personalizado (JS_ModoPersonalizado.html). Só Administrador e responsável pelo sistema.
+    if (perfil === "ADMIN" || dono) {
+      blocos.push(Config_bloco_("cfgModoPers", "Responsáveis técnicos do modo personalizado",
+        "Quem pode ajustar os parâmetros dos geradores de documentos (critérios com referência normativa) e aprovar os documentos com parâmetros personalizados. Cada responsável cria a própria senha; aqui você inclui, retira, apaga a senha de quem esqueceu e desbloqueia.",
+        '<p class="cadx-dica" style="margin:0">Podem ser responsáveis os perfis Administrador, Diretoria, Gestor e Metrologia.</p>',
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="if (typeof ModoPers_abrirResponsaveis_ === \'function\') ModoPers_abrirResponsaveis_();"><i class="fas fa-user-shield" aria-hidden="true"></i> Responsáveis técnicos do modo personalizado</button>'));
+    }
     blocos.push(Config_bloco_("cfgSessao", "Sessão neste navegador",
       "Sai do SGO+ neste navegador e recarrega a página. Use quando a tela travar depois de uma atualização. Os dados salvos não são afetados.",
       '<p class="cadx-dica" style="margin:0">Você entra de novo com o seu login e senha.</p>',
