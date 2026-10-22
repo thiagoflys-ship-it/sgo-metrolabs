@@ -136,6 +136,11 @@ Antes: publicar o código no servidor (só o dono), com TUYA_LIGADO = 0. Tudo em
 
 ## 12. Commits e capturas
 
-Commits no repositório google-script-dev (apenas os trechos deste módulo, com índice temporário): ver a seção "Commits" ao final deste arquivo, preenchida ao gravar.
+Commits no repositório google-script-dev (apenas os trechos deste módulo, gravados com índice temporário, sem tocar no trabalho paralelo de outras frentes):
+
+- ac6a606 — módulo completo (cliente da Tuya, módulo, tela, Chaves e senhas, menu, ajuda, manual, base do assistente, pendências, S66, testes).
+- o commit seguinte — esta seção do relatório (hash do primeiro commit e gate).
+
+Gate antes de gravar: node --test sobre a árvore do commit (git archive) e, no servidor, node scripts/importar_legado.mjs --head + npx vitest run --no-file-parallelism, com código de saída 0 (o legado/ do servidor não é gravado por mim).
 
 Capturas do ensaio: diretoria_01_painel.png, diretoria_02_confirmar_portao.png, diretoria_03_portao_confirmado.png, diretoria_04_portao_simulado.png, diretoria_05_fechadura_confirmacao.png, diretoria_06_fechadura_confirmada.png, diretoria_07_limite.png, diretoria_08_historico.png, diretoria_09_administrar.png, diretoria_10_permissoes.png, diretoria_11_auditoria.png, gestor_01_painel.png, admin_01_painel.png, admin_02_auditoria.png, tecnico_01_sem_permissao.png, celular_01_painel.png, na pasta indicada na seção 8.
