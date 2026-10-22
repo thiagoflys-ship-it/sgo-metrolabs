@@ -9,7 +9,7 @@
     if (!container) return;
 
     if (tplRegOp_carregado_) {
-      if (typeof tplRegOp_renderReal_ === 'function') tplRegOp_renderReal_();
+      if (typeof tplRegOp_renderReal_ === 'function') tplRegOp_renderReal_(); tplRegOp_ligarRevisao_();
       return;
     }
 
@@ -35,6 +35,7 @@
 
           if (typeof tplRegOp_renderReal_ === 'function') {
             tplRegOp_renderReal_();
+            tplRegOp_ligarRevisao_();
           } else {
             console.error('renderTplRegOp_: tplRegOp_renderReal_ nao foi definida apos o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -49,5 +50,32 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .RegOp_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O registro guarda hospital, tipo,
+  // respostas, assinaturas, observações e fotos; ao abrir, a tela vai à etapa 3 preenchida.
+  function tplRegOp_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'REGISTROS_OPERACIONAIS';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplRegOp_viewModulo', faixa: 'tplRegOp_viewModulo', acao: 'Gerar Registro', aprovacao: false,
+      dica: 'Hospital, tipo de documento, respostas, assinaturas, observações e fotos voltaram e a tela está na etapa 3. Na correção de um fechamento, a pendência continua ligada ao registro; numa cópia, o registro novo não fecha pendência.',
+      resumoAnexos: function (p) { var n = (p.imagens || []).filter(function (i) { return i && i.base64; }).length; return n ? n + ' foto(s) do registro de origem continuam anexadas; remova ou acrescente na etapa 3.' : ''; },
+      limpar: function () { tplRegOp_renderReal_(); tplRegOp_ligarRevisao_(); },
+      aplicar: function (payload, form, info, modo) {
+        if (typeof tplRegOp_aplicarRevisao_ === 'function') tplRegOp_aplicarRevisao_(payload, modo);
+      }
+    });
+    SGO_DocRev.envolver('tplRegOp_dispatch_', function (orig) {
+      return function (fn, payload) {
+        if (fn !== 'apiGerarRegistro') return orig.call(this, fn, payload);
+        var e = SGO_DocRev.validar(M);
+        if (e) { alert(e); return Promise.resolve({ ok: false, mensagem: e }); }
+        var pr = orig.call(this, fn, Object.assign({}, payload || {}, { _docRev: SGO_DocRev.pedido(M) }));
+        if (pr && pr.then) pr.then(function (r) { if (r && r.ok) SGO_DocRev.concluido(M); });
+        return pr;
+      };
+    });
+    SGO_DocRev.anexarPainel('tplRegOp_viewModulo', M);
   }
 </script>

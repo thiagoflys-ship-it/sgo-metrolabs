@@ -35,7 +35,7 @@ function CronExec_apiDispatch(req) {
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
-  return allow[fn](payload);
+  return allow[fn](payload, String(req.sessionId || ''));
 }
 
 function CronExec_getAppBootstrap() {
@@ -82,7 +82,10 @@ function CronExec_apiSugerirGrupos(payload) {
  * registro do cronograma. O resultado (incluindo textosIA) é reutilizado
  * sem nova chamada de IA pelos passos de documento/salvamento.
  */
-function CronExec_apiFinalizar(payload) {
+function CronExec_apiFinalizar(payload, sessionId) {
+  // 21/10/2026: correção (mesmo número, revisão seguinte, motivo) ou cópia de outro cronograma (SGO_DocRevisao.js)
+  var docRev;
+  try { docRev = SGO_DocRev_montar_('CRONOGRAMA_EXECUCAO', payload, sessionId, ''); } catch (eRev) { return { ok: false, mensagem: String(eRev && eRev.message ? eRev.message : eRev).replace(/[.\s]+$/, '') + '.' }; }
   var cliente = payload.cliente || {};
   var equipamentos = Array.isArray(payload.equipamentos) ? payload.equipamentos : [];
   var grupos = payload.grupos || null;
@@ -123,7 +126,9 @@ function CronExec_apiFinalizar(payload) {
   var salvo = CronExec_salvarCronograma_(resultado);
   resultado.cronogramaId = salvo.cronogramaId || '';
 
-  resultado.numeroDocumento = 'CRN-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm');
+  resultado.numeroDocumento = docRev.numero || SGO_DocRev_numeroLivre_('CRONOGRAMA_EXECUCAO', 'CRN-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm'));
+  resultado.revisao = docRev.revisao;
+  if (payload._docRev) resultado._docRev = payload._docRev;
   var resposta = { ok: true, resultado: resultado };
   if (avisoIA) resposta.avisoIA = avisoIA;
   if (!salvo.ok) {

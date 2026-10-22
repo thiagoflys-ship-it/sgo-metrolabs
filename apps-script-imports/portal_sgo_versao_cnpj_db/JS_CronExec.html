@@ -13,7 +13,7 @@
     if (!container) return;
 
     if (tplCronExec_carregado_) {
-      if (typeof tplCronExec_renderReal_ === 'function') tplCronExec_renderReal_();
+      if (typeof tplCronExec_renderReal_ === 'function') tplCronExec_renderReal_(); tplCronExec_ligarRevisao_();
       return;
     }
 
@@ -39,6 +39,7 @@
 
           if (typeof tplCronExec_renderReal_ === 'function') {
             tplCronExec_renderReal_();
+            tplCronExec_ligarRevisao_();
           } else {
             console.error('renderTplCronExec_: tplCronExec_renderReal_ nao foi definida apos o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -53,5 +54,34 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .CronExec_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O cronograma guarda cliente, parâmetros,
+  // equipamentos e grupos; ao abrir, a tela volta para a etapa 3 com tudo preenchido e o novo documento sai na etapa 4/5.
+  function tplCronExec_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'CRONOGRAMA_EXECUCAO';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplCronExec_viewModulo', faixa: 'tplCronExec_viewModulo', acao: 'Gerar Cronograma', aprovacao: false,
+      dica: 'Cliente, parâmetros, equipamentos e grupos voltaram para as etapas 1 a 3. Confira os grupos na etapa 3, gere na etapa 4 e, na etapa 5, abra e salve o documento: o número e a revisão saem no documento salvo.',
+      limpar: function () { tplCronExec_renderReal_(); tplCronExec_ligarRevisao_(); },
+      aplicar: function (payload, form, info, modo, aplicarCampos) {
+        aplicarCampos();
+        if (typeof tplCronExec_aplicarRevisao_ === 'function') tplCronExec_aplicarRevisao_(payload);
+      }
+    });
+    SGO_DocRev.envolver('tplCronExec_dispatch_', function (orig) {
+      return function (fn, payload) {
+        if (fn === 'apiFinalizar') {
+          var e = SGO_DocRev.validar(M);
+          if (e) { alert(e); return Promise.reject(new Error(e)); }
+          payload = Object.assign({}, payload || {}, { _docRev: SGO_DocRev.pedido(M) });
+        }
+        var pr = orig.call(this, fn, payload);
+        if (fn === 'apiSalvarDocumento' && pr && pr.then) pr.then(function (r) { if (r && r.ok) SGO_DocRev.concluido(M); });
+        return pr;
+      };
+    });
+    SGO_DocRev.anexarPainel('tplCronExec_viewModulo', M);
   }
 </script>

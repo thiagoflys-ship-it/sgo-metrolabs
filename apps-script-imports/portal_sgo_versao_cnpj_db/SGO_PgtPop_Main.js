@@ -115,6 +115,11 @@ var PGTPOP_COL_POP = Object.freeze({
  */
 function PgtPop_apiGerarDocumento(payload, sessionId) {
   payload = payload || {};
+  // 21/10/2026: correção pela lista de documentos gerados (SGO_DocRevisao.js): o motivo obrigatório vira a descrição
+  // da revisão no controle de revisões do próprio documento (o mesmo código no mesmo hospital já sai como revisão seguinte).
+  var docRev;
+  try { docRev = SGO_DocRev_montar_('PGT_POP', payload, sessionId, '', { permitirNumeroRepetido: true }); } catch (eRev) { return { ok: false, mensagem: String(eRev && eRev.message ? eRev.message : eRev).replace(/[.\s]+$/, '') + '.' }; }
+  if (docRev.ehRevisao) payload.descricaoRevisao = docRev.motivo;
   var tipo = String(payload.tipo || '').toUpperCase();
   if (tipo !== 'PGT' && tipo !== 'POP') {
     return { ok: false, mensagem: "Tipo de documento inválido: " + tipo };
@@ -202,6 +207,11 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
   // Nunca derruba a geração se falhar (documento já está salvo na
   // planilha de qualquer forma).
   var pdf = PgtPop_salvarPdfAutomatico_(registro);
+  var docRevR = SGO_DocRev_registrar_('PGT_POP', docRev, {
+    numero: (codigoDocumento || ('POP avulso ' + salvo.registroId)) + ' · ' + (String(hospital.cnpj || '').trim() || String(hospital.razaoSocial || '').trim()),
+    revisao: versaoNova, payload: payload, titulo: (tipo === 'PGT' ? 'PGT' : 'POP') + ' — ' + (gerado.titulo || ''), cliente: hospital.razaoSocial || '', cnpj: hospital.cnpj || '',
+    pdfId: (pdf && pdf.pdfId) || '', htmlId: (pdf && pdf.htmlId) || '', pdfUrl: (pdf && pdf.url) || '', htmlUrl: (pdf && pdf.htmlUrl) || ''
+  }, SGO_DocRev_sessao_(sessionId));
 
   // A gravação acima já deixa o HTML A4 e o PDF (mesmo nome, sumário com páginas) na pasta do CNPJ.
   var htmlSalvo = { htmlId: (pdf && pdf.htmlId) || '', htmlUrl: (pdf && pdf.htmlUrl) || '' };
@@ -254,7 +264,7 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
     pdfFileName: pdf.fileName || '',
     htmlId: htmlSalvo.htmlId || '',
     htmlUrl: htmlSalvo.htmlUrl || '',
-    avisoHtml: [htmlSalvo.avisoHtml || '', avisoSemIA].filter(Boolean).join(' ')
+    avisoHtml: [htmlSalvo.avisoHtml || '', avisoSemIA, docRevR.ok ? '' : docRevR.aviso].filter(Boolean).join(' ')
   };
 }
 

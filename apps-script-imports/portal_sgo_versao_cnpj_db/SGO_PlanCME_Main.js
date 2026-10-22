@@ -35,7 +35,7 @@ function PlanCME_apiDispatch(req) {
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
-  return allow[fn](payload);
+  return allow[fn](payload, String(req.sessionId || ''));
 }
 
 function PlanCME_getAppBootstrap() {

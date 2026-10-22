@@ -50,7 +50,8 @@ function RegOp_montarDocumentoHtml_(dados) {
   const assinaturas = dados.assinaturas || [];
   const imagens = (dados.imagens || []).filter(function (im) { return im && im.base64; });
   const esc = RegOp_escaparHtml_;
-  const numero = dados.registroId ? RegOp_numeroCurto_(dados.registroId) : '';
+  const numero = dados.numeroDocumento || (dados.registroId ? RegOp_numeroCurto_(dados.registroId) : '');
+  const revisaoDoc = RelTecA4_revisao_(dados.revisao);
   const tituloCurto = 'Registro operacional';
   let n = 0;
   const h2 = function (t) { n++; return '<h2>' + n + '. ' + esc(t) + '</h2>'; };
@@ -72,10 +73,10 @@ function RegOp_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
   html.push('<title>' + esc(dados.tipoDocumentoNome || 'Registro operacional') + (numero ? ' ' + esc(numero) : '') + ' — ' + esc(hospital.razaoSocial || '') + '</title>');
-  html.push('<style>' + RegOp_getCss_({ titulo: tituloCurto, numero: numero, revisao: '00' }) + '</style></head><body>');
+  html.push('<style>' + RegOp_getCss_({ titulo: tituloCurto, numero: numero, revisao: revisaoDoc }) + '</style></head><body>');
   html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   html.push('<main class="folha">');
-  html.push('<header class="abertura"><img src="' + RegOpDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + (numero ? '<br>Nº ' + esc(numero) + ' · Revisão 00' : '') + '</div></header>');
+  html.push('<header class="abertura"><img src="' + RegOpDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + (numero ? '<br>Nº ' + esc(numero) + ' · Revisão ' + esc(revisaoDoc) : '') + '</div></header>');
   html.push('<h1>' + esc(dados.tipoDocumentoNome || 'Registro operacional') + '</h1>');
   html.push('<p class="subtitulo">Registro operacional de engenharia clínica, ' + esc(String(REGOP_CFG.BASE_NORMATIVA || '').replace(/^Conforme /, 'conforme ')) + '</p>');
   const ficha = [['Data do registro', dados.data || '—'], ['Registro nº', numero || '—']];

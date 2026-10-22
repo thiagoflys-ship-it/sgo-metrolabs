@@ -118,3 +118,24 @@ Clique em **"Gerar Tudo"**. O sistema gera o PGT (em 6 blocos de IA) e todos os 
 ## Enviar o documento ao cliente (20/10/2026)
 
 Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; os links do PDF salvo na tela ganham o botão "Enviar". A janela "Enviar documento" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).
+
+## Corrigir um documento gerado e usar como base (21/10/2026)
+
+Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema guarda, junto de cada documento, tudo o que foi usado para gerá-lo (dados digitados, equipamento, textos revisados, anexos, leituras e arquivos importados).
+
+**Onde fica:** no fim da tela do módulo, quadro "Documentos gerados: corrigir ou usar como base" (busca por número, cliente ou TAG e botão "Atualizar"). Cada linha mostra o número, a revisão (Rev. 00, Rev. 01...), a situação (Vigente ou Substituído pela Rev. NN), quem gerou e quando, e os botões "Abrir PDF", "Abrir para imprimir", "Abrir para corrigir" e "Usar como base".
+
+**Corrigir (nova revisão do mesmo número):**
+
+1. Na linha do documento, toque em "Abrir para corrigir". O formulário volta preenchido com tudo o que foi usado, sem importar nada de novo. Anexos que não voltam para o campo de arquivo (certificados, fotos) continuam valendo pelos dados guardados; o quadro do alto diz quantos são. Só escolha arquivo se quiser trocar.
+2. No quadro amarelo "Correção do documento", no alto do formulário, escreva o motivo da revisão (obrigatório, ao menos 10 caracteres). O campo do número fica travado: a correção mantém o número.
+3. Altere o que precisa e toque em "Gerar Tudo". Este gerador não tem etapa de aprovação: sai na hora a revisão seguinte (Rev. 01, 02...) com o mesmo número.
+4. O documento novo traz o quadro "Histórico de revisões" (revisão, data, motivo e responsável) e a revisão no cabeçalho e no nome do arquivo.
+5. A revisão anterior nunca é apagada nem sobrescrita: continua na pasta do cliente, com a revisão no nome do arquivo, ganha a anotação "Substituído pela Rev. NN" na descrição do arquivo e aparece na lista como substituída.
+6. Para desistir, toque em "Cancelar a correção e limpar o formulário".
+
+**Usar como base (documento novo, número novo):** na mesma lista, toque em "Usar como base" (por exemplo, o mesmo equipamento no ano seguinte). O formulário volta preenchido; confira datas, leituras e resultados, que são do serviço anterior, e toque em "Gerar Tudo". Sai um documento novo, Rev. 00, com número novo; o documento de origem não muda.
+
+**Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
+
+Neste módulo o número do documento é o código (PGTS para o PGT, o código do POP no catálogo) no hospital: gerar de novo o mesmo código para o mesmo hospital já sai como a revisão seguinte, com a tabela "Controle de revisões" no próprio documento. Pelo "Abrir para corrigir", o motivo digitado vira a descrição dessa revisão (antes saía "Revisão de conteúdo"), e só o documento aberto é gerado de novo (os outros marcados na tela não são gerados nessa rodada). "Usar como base" para outro hospital sai como a primeira revisão do código nesse hospital; POP avulso (sem código) não tem revisão e sai como documento novo.

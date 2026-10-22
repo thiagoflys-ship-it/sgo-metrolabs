@@ -330,6 +330,9 @@ function RegOp_apiListarRegistrosPendentes(payload) {
  */
 function RegOp_apiGerarRegistro(payload, sessionId) {
   payload = payload || {};
+  // 21/10/2026: correção (mesmo número, revisão seguinte, motivo) ou cópia de outro registro (SGO_DocRevisao.js)
+  var docRev;
+  try { docRev = SGO_DocRev_montar_('REGISTROS_OPERACIONAIS', payload, sessionId, ''); } catch (eRev) { return { ok: false, mensagem: String(eRev && eRev.message ? eRev.message : eRev).replace(/[.\s]+$/, '') + '.' }; }
   var hospital = payload.hospital || {};
   if (!String(hospital.razaoSocial || '').trim()) {
     return { ok: false, mensagem: "Informe os dados do hospital antes de gerar." };
@@ -371,7 +374,8 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
   if (fechaRegistroId) {
     for (var r = 1; r < dadosReg.length; r++) {
       if (String(dadosReg[r][REGOP_COL_REGISTRO.ID]) === fechaRegistroId) {
-        if (String(dadosReg[r][REGOP_COL_REGISTRO.STATUS_PENDENCIA]) !== 'aberto') {
+        // Na correção de um fechamento, a pendência foi fechada pelo próprio registro corrigido.
+        if (String(dadosReg[r][REGOP_COL_REGISTRO.STATUS_PENDENCIA]) !== 'aberto' && !docRev.ehRevisao) {
           return { ok: false, mensagem: 'Esta pendência já foi fechada por outro registro. Atualize a lista na etapa 4 (botão "Buscar") antes de continuar.' };
         }
         var cnpjOrigem = RegOp_normalizarCnpj_(dadosReg[r][REGOP_COL_REGISTRO.CNPJ]);
@@ -415,12 +419,14 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     observacoesGerais: payload.observacoesGerais || '',
     imagens: imagens,
     registroOrigemInfo: registroOrigemInfo,
-    registroId: registroId
+    registroId: registroId,
+    numeroDocumento: docRev.numero || RegOp_numeroCurto_(registroId),
+    revisao: docRev.revisao
   };
 
   var html;
   try {
-    html = RegOp_montarDocumentoHtml_(dadosDoc);
+    html = SGO_DocRev_injetarHtml_(RegOp_montarDocumentoHtml_(dadosDoc), docRev);
   } catch (e) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
@@ -431,14 +437,14 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     // Nome do padrão A4 (18/10/2026): "Registro operacional - <nº> - <tipo> - <aaaa-MM-dd HHmm>",
     // com a data do registro e a hora da emissão; HTML e PDF com o mesmo nome, na pasta do CNPJ.
     var partesData = data.split('/');
-    var nomeBase = 'Registro operacional - ' + RegOp_numeroCurto_(registroId) + ' - ' + String(tipoDocumentoNome || 'Registro').substring(0, 60) + ' - ' +
+    var nomeBase = 'Registro operacional - ' + SGO_DocRev_numeroComRevisao_(dadosDoc.numeroDocumento, docRev) + ' - ' + String(tipoDocumentoNome || 'Registro').substring(0, 60) + ' - ' +
       partesData[2] + '-' + partesData[1] + '-' + partesData[0] + ' ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HHmm");
     var salvoDoc = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
     var arquivo = DriveApp.getFileById(salvoDoc.pdfId);
     fileName = salvoDoc.pdfNome;
     pdfUrl = salvoDoc.pdfUrl;
     RegOp_registrarDocumento_({ hospital: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', registroId: registroId }, arquivo);
-    htmlSalvo = { htmlId: salvoDoc.htmlId, htmlUrl: salvoDoc.htmlUrl };
+    htmlSalvo = { htmlId: salvoDoc.htmlId, htmlUrl: salvoDoc.htmlUrl, pdfId: salvoDoc.pdfId };
   } catch (e) {
     // não bloqueia o registro se o auto-save do PDF falhar — o registro
     // já fica salvo na planilha (abaixo) mesmo sem o PDF. Mas o operador
@@ -463,6 +469,25 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     }
   } catch (e) {
     return { ok: false, mensagem: "Erro ao salvar o registro: " + e.message };
+  }
+
+  // Revisão: registra os dados usados (para corrigir de novo) e, na correção, a pendência aberta pelo registro
+  // corrigido passa para a revisão nova (a linha antiga fica como "substituido"; nada é apagado).
+  var docRevR = SGO_DocRev_registrar_('REGISTROS_OPERACIONAIS', docRev, {
+    numero: dadosDoc.numeroDocumento, payload: Object.assign({}, payload, { _registroId: registroId }), titulo: tipoDocumentoNome,
+    cliente: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', pdfId: htmlSalvo.pdfId || '',htmlId: htmlSalvo.htmlId, pdfUrl: pdfUrl, htmlUrl: htmlSalvo.htmlUrl
+  }, SGO_DocRev_sessao_(sessionId));
+  if (docRev.ehRevisao) {
+    try {
+      var origemReg = SGO_DocRev_payloadOrigem_(docRev);
+      var idAntigo = origemReg && origemReg._registroId;
+      for (var ra = 1; idAntigo && ra < dadosReg.length; ra++) {
+        if (String(dadosReg[ra][REGOP_COL_REGISTRO.ID]) === String(idAntigo) && String(dadosReg[ra][REGOP_COL_REGISTRO.STATUS_PENDENCIA]) === 'aberto') {
+          abaReg.getRange(ra + 1, REGOP_COL_REGISTRO.STATUS_PENDENCIA + 1).setValue('substituido');
+          break;
+        }
+      }
+    } catch (eSub) { /* a pendência antiga continua aberta; a lista mostra as duas */ }
   }
 
   // Integração Auvo: cria uma Tarefa concluída pra este atendimento. Só
@@ -492,6 +517,8 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
 
   var respostaRegOp = { ok: true, registroId: registroId, html: html, pdfUrl: pdfUrl, fileName: fileName, htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
   if (htmlSalvo.avisoHtml) respostaRegOp.avisoHtml = htmlSalvo.avisoHtml;
+  respostaRegOp.revisao = docRevR.rotulo;
+  if (!docRevR.ok) respostaRegOp.avisoHtml = (respostaRegOp.avisoHtml ? respostaRegOp.avisoHtml + ' ' : '') + docRevR.aviso;
   if (avisoPdf) respostaRegOp.avisoPdf = avisoPdf;
   return respostaRegOp;
 }

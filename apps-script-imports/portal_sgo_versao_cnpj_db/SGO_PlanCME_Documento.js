@@ -261,6 +261,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   const checklistQI = resultado.checklistQI || [];
   const assinaturas = PLANCME_CFG.ASSINATURAS_PADRAO || [];
   const numeroPlan = dados.numeroDocumento || ("PLC-" + Utilities.formatDate(agora, tz, "yyyyMMdd-HHmm"));
+  const revPlan = RelTecA4_revisao_(dados.revisao);
   const tituloCurto = "Planejamento técnico do CME";
   const empresa = PlanCMEDoc_empresa_();
   const num = RelTecA4_numerador_();
@@ -282,14 +283,14 @@ function PlanCME_montarDocumentoHtml_(dados) {
   // Identificador do arquivo salvo (lido por PlanCME_apiSalvarDocumento; não aparece na folha).
   html.push('<meta name="sgo-identificador" content="' + esc([dados.equipamento.tipo, dados.equipamento.serie || dados.equipamento.modelo].filter(Boolean).join(" ")) + '">');
   html.push('<title>Planejamento técnico ' + esc(numeroPlan) + ' — ' + esc(dados.cliente.razaoSocial || "Cliente") + '</title>');
-  html.push('<style>' + PlanCME_getCss_({ titulo: tituloCurto, numero: numeroPlan, revisao: "00" }) + '</style></head><body>');
+  html.push('<style>' + PlanCME_getCss_({ titulo: tituloCurto, numero: numeroPlan, revisao: revPlan }) + '</style></head><body>');
   html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   html.push('<main class="folha">');
 
-  html.push('<header class="abertura"><img src="' + PlanCMEDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numeroPlan) + ' · Revisão 00</div></header>');
+  html.push('<header class="abertura"><img src="' + PlanCMEDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numeroPlan) + ' · Revisão ' + esc(revPlan) + '</div></header>');
   html.push('<h1>Planejamento técnico de qualificação e quantitativo de insumos</h1>');
   html.push('<p class="subtitulo">' + esc(tipoProcesso) + (dados.cliente.razaoSocial ? ' — ' + esc(dados.cliente.razaoSocial) : '') + '</p>');
-  html.push(SGO_DocA4_tabelaIdent_([["Emissão", emissao], ["Revisão", "00"]], "ficha"));
+  html.push(SGO_DocA4_tabelaIdent_([["Emissão", emissao], ["Revisão", revPlan]], "ficha"));
   html.push('<!--sgo-sumario-->'); // sumário só se passar de 3 páginas (PlanCMEDoc_sumarioSeLongo_)
 
   // 1. Identificação (uma tabela só: cliente, equipamento e executante)
@@ -391,6 +392,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   html.push('<p>Este documento registra o planejamento técnico, a fundamentação do quantitativo de insumos e a orientação de E.R.U. para o escopo descrito na seção 2. Qualquer alteração de premissa segue o processo de E.R.U. da seção ' + (n - 1) + '.</p>');
   html.push(SGO_DocA4_assinaturas_(assinaturas));
   html.push('</section>');
+  html.push('<!--SGO_DOCREV-->');
 
   html.push('</main></body></html>');
   return html.join("\n");
@@ -400,10 +402,17 @@ function PlanCME_montarDocumentoHtml_(dados) {
  * Monta o documento e devolve o HTML (sem gravar). Com sumário, os números de página
  * já vêm preenchidos (duas passagens pelo PDF), para a tela mostrar o mesmo que será salvo.
  */
-function PlanCME_apiMontarDocumentoFinal(dados) {
+function PlanCME_apiMontarDocumentoFinal(dados, sessionId) {
   try {
-    const html = PlanCMEDoc_sumarioSeLongo_(PlanCME_montarDocumentoHtml_(dados), "Planejamento técnico");
-    return { ok: true, html: html };
+    // 21/10/2026: revisão (SGO_DocRevisao.js) — mesmo número na correção, histórico no documento e dados guardados.
+    dados = Object.assign({}, dados || {});
+    const docRev = SGO_DocRev_montar_("PLANEJAMENTO_CME", dados, sessionId, "");
+    if (docRev.modo === "BASE") delete dados.numeroDocumento; // cópia: número novo
+    dados.numeroDocumento = docRev.numero || SGO_DocRev_numeroLivre_("PLANEJAMENTO_CME", dados.numeroDocumento || ("PLC-" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd-HHmm")));
+    dados.revisao = docRev.revisao;
+    const montado = PlanCME_montarDocumentoHtml_(dados).replace("<!--SGO_DOCREV-->", SGO_DocRev_blocoHtml_(docRev));
+    const html = SGO_DocRev_finalizarMontagem_("PLANEJAMENTO_CME", docRev, dados, PlanCMEDoc_sumarioSeLongo_(montado, "Planejamento técnico"), dados.numeroDocumento, { semHistorico: true });
+    return { ok: true, html: html, revisao: docRev.rotulo };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
@@ -414,11 +423,12 @@ function PlanCME_apiMontarDocumentoFinal(dados) {
  * 14 dígitos; sem CNPJ, nome do cliente) dentro da pasta do módulo e registra na planilha.
  * Nome: "Planejamento tecnico CME - <número> - <equipamento> - <aaaa-MM-dd HHmm>".
  */
-function PlanCME_apiSalvarDocumento(payload) {
+function PlanCME_apiSalvarDocumento(payload, sessionId) {
   try {
     payload = payload || {};
-    const html = String(payload.html || "");
-    if (!html) throw new Error("Nenhum conteúdo de documento recebido para salvar.");
+    if (!payload.html) throw new Error("Nenhum conteúdo de documento recebido para salvar.");
+    const docRevS = SGO_DocRev_abrirSalvamento_(String(payload.html || ""));
+    const html = docRevS.html;
 
     const props = PropertiesService.getScriptProperties();
     let pastaId = props.getProperty("PLANCME_PASTA_PDF_ID");
@@ -434,7 +444,7 @@ function PlanCME_apiSalvarDocumento(payload) {
     const numero = (/Nº\s*(PLC-[0-9-]+)/.exec(html) || [])[1] || payload.numeroDocumento || ("PLC-" + Utilities.formatDate(new Date(), tz, "yyyyMMdd-HHmm"));
     const meta = /<meta name="sgo-identificador" content="([^"]*)">/.exec(html);
     const ident = String((meta && meta[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'")) || payload.cliente || "Equipamento").trim();
-    const nomeBase = "Planejamento tecnico CME - " + numero + " - " + ident.substring(0, 60) + " - " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmm");
+    const nomeBase = "Planejamento tecnico CME - " + SGO_DocRev_numeroComRevisao_(numero, docRevS.rev) + " - " + ident.substring(0, 60) + " - " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmm");
 
     const salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
     const arquivo = DriveApp.getFileById(salvo.pdfId);
@@ -443,8 +453,9 @@ function PlanCME_apiSalvarDocumento(payload) {
       cliente: { razaoSocial: payload.cliente || "" },
       planejamentoId: payload.planejamentoId || ""
     }, arquivo, "PLANEJAMENTO_TECNICO");
+    const docRevR = SGO_DocRev_registrarPendente_("PLANEJAMENTO_CME", docRevS.id, { numero: numero, titulo: ident, cliente: String(payload.cliente || ""), cnpj: String(payload.cnpj || ""), pdfId: salvo.pdfId, htmlId: salvo.htmlId, pdfUrl: salvo.pdfUrl, htmlUrl: salvo.htmlUrl }, SGO_DocRev_sessao_(sessionId));
 
-    return { ok: true, url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
+    return { ok: true, url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl(), revisao: docRevR.rotulo, avisoRevisao: docRevR.ok ? "" : docRevR.aviso };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao salvar o documento na pasta do cliente: " + e.message };
   }

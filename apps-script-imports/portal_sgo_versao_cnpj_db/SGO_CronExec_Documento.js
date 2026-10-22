@@ -159,6 +159,7 @@ function CronExec_montarDocumentoHtml_(dados) {
   const emissao = Utilities.formatDate(agora, tz, "dd/MM/yyyy HH:mm");
   const assinaturas = CRONEXEC_CFG.ASSINATURAS_PADRAO || [];
   const numeroCron = dados.numeroDocumento || ("CRN-" + Utilities.formatDate(agora, tz, "yyyyMMdd-HHmm"));
+  const revCron = RelTecA4_revisao_(dados.revisao);
   const tituloCurto = "Cronograma de execução";
   const esc = CronExec_escaparHtml_;
   const num = RelTecA4_numerador_();
@@ -175,13 +176,13 @@ function CronExec_montarDocumentoHtml_(dados) {
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
   html.push('<meta name="sgo-identificador" content="' + esc(numeroCron) + '">');
   html.push('<title>Cronograma de execução ' + esc(numeroCron) + ' — ' + esc(cliente.razaoSocial || "Cliente") + '</title>');
-  html.push('<style>' + CronExec_getCss_({ titulo: tituloCurto, numero: numeroCron, revisao: "00" }) + '</style></head><body>');
+  html.push('<style>' + CronExec_getCss_({ titulo: tituloCurto, numero: numeroCron, revisao: revCron }) + '</style></head><body>');
   html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   html.push('<main class="folha">');
-  html.push('<header class="abertura"><img src="' + CronExecDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numeroCron) + ' · Revisão 00</div></header>');
+  html.push('<header class="abertura"><img src="' + CronExecDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numeroCron) + ' · Revisão ' + esc(revCron) + '</div></header>');
   html.push('<h1>Cronograma de execução</h1>');
   html.push('<p class="subtitulo">Calibração e qualificação de equipamentos' + (cliente.razaoSocial ? ' — ' + esc(cliente.razaoSocial) : '') + '</p>');
-  html.push(SGO_DocA4_tabelaIdent_([["Emissão", emissao], ["Revisão", "00"], ["Período previsto", periodo],
+  html.push(SGO_DocA4_tabelaIdent_([["Emissão", emissao], ["Revisão", revCron], ["Período previsto", periodo],
     ["Grupos e unidades", grupos.length + (grupos.length === 1 ? " grupo" : " grupos") + ", " + totalUn + (totalUn === 1 ? " unidade" : " unidades")]], "ficha"));
   html.push('<!--sgo-sumario-->'); // sumário só se passar de 3 páginas (CronExecDoc_sumarioSeLongo_)
 
@@ -238,6 +239,7 @@ function CronExec_montarDocumentoHtml_(dados) {
   html.push(CronExecDoc_paragrafosHtml_(txt(textosIA.consideracoesFinais || "As datas são previsões e podem ser ajustadas em comum acordo com o cliente, conforme a disponibilidade dos equipamentos e da equipe. Alterações devem ser registradas em nova revisão deste cronograma.")));
   html.push(SGO_DocA4_assinaturas_(assinaturas));
   html.push('</section>');
+  html.push('<!--SGO_DOCREV-->');
 
   html.push('</main></body></html>');
   return html.join("\n");
@@ -247,10 +249,17 @@ function CronExec_montarDocumentoHtml_(dados) {
  * Monta o documento e retorna só o HTML (sem gravar) — o frontend abre o HTML numa nova
  * aba e só salva quando o usuário clica em "Salvar na pasta do cliente".
  */
-function CronExec_apiMontarDocumentoFinal(dados) {
+function CronExec_apiMontarDocumentoFinal(dados, sessionId) {
   try {
-    const html = CronExecDoc_sumarioSeLongo_(CronExec_montarDocumentoHtml_(dados), "Cronograma de execução");
-    return { ok: true, html: html };
+    // 21/10/2026: revisão (SGO_DocRevisao.js) — histórico no documento e dados guardados para corrigir depois.
+    dados = Object.assign({}, dados || {});
+    delete dados.htmlDocumento;
+    const docRev = SGO_DocRev_montar_("CRONOGRAMA_EXECUCAO", dados, sessionId, "");
+    if (docRev.numero) dados.numeroDocumento = docRev.numero;
+    dados.revisao = docRev.revisao;
+    const montado = CronExec_montarDocumentoHtml_(dados).replace("<!--SGO_DOCREV-->", SGO_DocRev_blocoHtml_(docRev));
+    const html = SGO_DocRev_finalizarMontagem_("CRONOGRAMA_EXECUCAO", docRev, dados, CronExecDoc_sumarioSeLongo_(montado, "Cronograma de execução"), dados.numeroDocumento, { semHistorico: true });
+    return { ok: true, html: html, revisao: docRev.rotulo };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
@@ -260,11 +269,12 @@ function CronExec_apiMontarDocumentoFinal(dados) {
  * Grava HTML + PDF na pasta do cliente (subpasta = CNPJ com 14 dígitos; sem CNPJ, nome)
  * e registra na planilha. Nome: "Cronograma de execucao - <número> - <cliente> - <aaaa-MM-dd HHmm>".
  */
-function CronExec_apiSalvarDocumento(payload) {
+function CronExec_apiSalvarDocumento(payload, sessionId) {
   try {
     payload = payload || {};
-    const html = String(payload.html || "");
-    if (!html) throw new Error("Nenhum conteúdo de documento recebido para salvar.");
+    if (!payload.html) throw new Error("Nenhum conteúdo de documento recebido para salvar.");
+    const docRevS = SGO_DocRev_abrirSalvamento_(String(payload.html || ""));
+    const html = docRevS.html;
 
     const props = PropertiesService.getScriptProperties();
     let pastaId = props.getProperty("CRONEXEC_PASTA_PDF_ID");
@@ -278,7 +288,7 @@ function CronExec_apiSalvarDocumento(payload) {
     const tz = Session.getScriptTimeZone();
     const numero = (/<meta name="sgo-identificador" content="([^"]*)">/.exec(html) || [])[1] || ("CRN-" + Utilities.formatDate(new Date(), tz, "yyyyMMdd-HHmm"));
     const ident = String(payload.cliente || "Cliente").trim().substring(0, 60);
-    const nomeBase = "Cronograma de execucao - " + numero + " - " + ident + " - " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmm");
+    const nomeBase = "Cronograma de execucao - " + SGO_DocRev_numeroComRevisao_(numero, docRevS.rev) + " - " + ident + " - " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmm");
 
     const salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
     const arquivo = DriveApp.getFileById(salvo.pdfId);
@@ -287,8 +297,9 @@ function CronExec_apiSalvarDocumento(payload) {
       cliente: { razaoSocial: payload.cliente || "" },
       cronogramaId: payload.cronogramaId || ""
     }, arquivo, "CRONOGRAMA_EXECUCAO");
+    const docRevR = SGO_DocRev_registrarPendente_("CRONOGRAMA_EXECUCAO", docRevS.id, { numero: numero, titulo: "Cronograma de execução", cliente: String(payload.cliente || ""), cnpj: String(payload.cnpj || ""), pdfId: salvo.pdfId, htmlId: salvo.htmlId, pdfUrl: salvo.pdfUrl, htmlUrl: salvo.htmlUrl }, SGO_DocRev_sessao_(sessionId));
 
-    return { ok: true, url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
+    return { ok: true, url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl(), revisao: docRevR.rotulo, avisoHtml: docRevR.ok ? "" : docRevR.aviso };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao salvar o documento na pasta do cliente: " + e.message };
   }

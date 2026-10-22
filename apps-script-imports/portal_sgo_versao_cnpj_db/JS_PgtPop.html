@@ -13,7 +13,7 @@
     if (!container) return;
 
     if (tplPgtPop_carregado_) {
-      if (typeof tplPgtPop_renderReal_ === 'function') tplPgtPop_renderReal_();
+      if (typeof tplPgtPop_renderReal_ === 'function') tplPgtPop_renderReal_(); tplPgtPop_ligarRevisao_();
       return;
     }
 
@@ -39,6 +39,7 @@
 
           if (typeof tplPgtPop_renderReal_ === 'function') {
             tplPgtPop_renderReal_();
+            tplPgtPop_ligarRevisao_();
           } else {
             console.error('renderTplPgtPop_: tplPgtPop_renderReal_ nao foi definida apos o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -53,5 +54,52 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .PgtPop_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). Na correção só o documento aberto é
+  // gerado de novo (sai a revisão seguinte do mesmo código, com o motivo no controle de revisões do documento);
+  // os outros documentos marcados na tela não são gerados nessa rodada.
+  function tplPgtPop_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'PGT_POP';
+    var GEROU = { ok: false };
+    function ehOAberto(payload) {
+      var g = SGO_DocRev.payloadAberto(M) || {};
+      if (String(payload.tipo || '').toUpperCase() !== String(g.tipo || '').toUpperCase()) return false;
+      if (String(g.tipo || '').toUpperCase() === 'PGT') return true;
+      var a = payload.pop || {}, b = g.pop || {};
+      return String(a.codigo || '') === String(b.codigo || '') && String(a.nome || '') === String(b.nome || '');
+    }
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplPgtPop_viewModulo', faixa: 'tplPgtPop_viewModulo', acao: 'Gerar Tudo', aprovacao: false,
+      dica: 'O hospital, quem elaborou, o roteiro e as imagens do documento voltaram e a tela está na etapa 4. Só o documento aberto é gerado de novo. O mesmo código no mesmo hospital sai como a revisão seguinte (o histórico de revisões já fica no próprio documento); para outro hospital, sai a primeira revisão.',
+      resumoAnexos: function (p) { var n = (p.imagens || []).filter(function (i) { return i && i.base64; }).length; return n ? n + ' imagem(ns) do documento de origem continuam anexadas.' : ''; },
+      limpar: function () { tplPgtPop_renderReal_(); tplPgtPop_ligarRevisao_(); },
+      aplicar: function (payload) { if (typeof tplPgtPop_aplicarRevisao_ === 'function') tplPgtPop_aplicarRevisao_(payload); }
+    });
+    SGO_DocRev.envolver('tplPgtPop_dispatch_', function (orig) {
+      return function (fn, payload) {
+        if (fn !== 'apiGerarDocumento' || !SGO_DocRev.ativo(M)) return orig.call(this, fn, payload);
+        if (!ehOAberto(payload || {})) return Promise.resolve({ ok: false, mensagem: 'não foi gerado de novo nesta rodada: na correção ou cópia só o documento aberto é gerado.' });
+        var g = SGO_DocRev.payloadAberto(M) || {};
+        var p = Object.assign({}, payload || {}, { _docRev: SGO_DocRev.pedido(M) });
+        if (!p.pgtId && g.pgtId) p.pgtId = g.pgtId;
+        if (String(p.tipo).toUpperCase() === 'POP' && (!p.imagens || !p.imagens.length) && g.imagens) p.imagens = g.imagens;
+        var pr = orig.call(this, fn, p);
+        if (pr && pr.then) pr.then(function (r) { if (r && r.ok) GEROU.ok = true; });
+        return pr;
+      };
+    });
+    SGO_DocRev.envolver('tplPgtPop_gerarTudo', function (orig) {
+      return function () {
+        var e = SGO_DocRev.validar(M);
+        if (e) { alert(e); return; }
+        GEROU.ok = false;
+        var ativo = !!SGO_DocRev.ativo(M);
+        var pr = orig.apply(this, arguments);
+        return Promise.resolve(pr).then(function (r) { if (ativo && GEROU.ok) SGO_DocRev.concluido(M); return r; });
+      };
+    });
+    SGO_DocRev.anexarPainel('tplPgtPop_viewModulo', M);
   }
 </script>

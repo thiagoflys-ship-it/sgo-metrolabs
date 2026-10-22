@@ -54,11 +54,29 @@ function criarDrive() {
   return { DriveApp, arquivos, pastas, blob };
 }
 
+/** Planilha em memória (abas com appendRow, getDataRange().getValues() e getRange(l, c).setValue). */
+function criarPlanilhas() {
+  const abas = {};
+  function aba(nome) {
+    const linhas = abas[nome] = abas[nome] || [['ID']];
+    return {
+      getName: () => nome,
+      appendRow(l) { linhas.push(l.slice()); return this; },
+      getDataRange: () => ({ getValues: () => linhas.map(l => l.slice()) }),
+      getLastRow: () => linhas.length,
+      getRange: (l, c) => ({ setValue(v) { linhas[l - 1][c - 1] = v; return this; }, getValue: () => linhas[l - 1][c - 1] })
+    };
+  }
+  const planilha = { getSheetByName: aba, insertSheet: aba };
+  return { abas, SpreadsheetApp: { openById: () => planilha } };
+}
+
 /** arquivosExtras: servidores dos geradores carregados depois do núcleo; extra: código JS de simulacros. */
 function criarAmbiente(opcoes) {
   opcoes = opcoes || {};
   const props = {};
   const drive = criarDrive();
+  const planilhas = criarPlanilhas();
   const sessoes = {
     tec: { perfil: 'TECNICO', nome: 'Técnico Teste', usuario: 'tec' },
     rt: { perfil: 'GESTOR', nome: 'Responsável Teste', usuario: 'rt' },
@@ -75,6 +93,8 @@ function criarAmbiente(opcoes) {
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
     CacheService: { getScriptCache: () => ({ get: () => null, put() {}, remove() {} }) },
     DriveApp: drive.DriveApp,
+    SpreadsheetApp: planilhas.SpreadsheetApp,
+    Logger: { log() {} },
     MimeType: { HTML: 'text/html', PDF: 'application/pdf', JSON: 'application/json' },
     exigirSessao: sid => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada.'); return sessoes[sid]; }
   };
@@ -83,7 +103,7 @@ function criarAmbiente(opcoes) {
   ctx.run(ler('SGO_DocRevisao.js'));
   for (const f of opcoes.arquivos || []) ctx.run(ler(f));
   if (opcoes.extra) ctx.run(opcoes.extra);
-  return { ctx, drive, props, run: ctx.run, fn: nome => ctx[nome] || vm.runInContext(nome, ctx), api: (sid, fn, payload) => JSON.parse(JSON.stringify(vm.runInContext('DocRev_api', ctx)({ sessionId: sid, fn, payload: payload || {} }))) };
+  return { ctx, drive, props, planilhas, run: ctx.run, fn: nome => ctx[nome] || vm.runInContext(nome, ctx), api: (sid, fn, payload) => JSON.parse(JSON.stringify(vm.runInContext('DocRev_api', ctx)({ sessionId: sid, fn, payload: payload || {} }))) };
 }
 
 module.exports = { criarAmbiente, ler, BASE };

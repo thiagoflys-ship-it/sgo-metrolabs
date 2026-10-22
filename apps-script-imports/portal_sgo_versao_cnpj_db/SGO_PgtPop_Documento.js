@@ -388,7 +388,7 @@ function PgtPop_gravarNaPasta_(registro, html) {
   const salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, PgtPop_nomeArquivo_(registro), html, { compartilhar: true });
   const arquivo = DriveApp.getFileById(salvo.pdfId);
   PgtPop_registrarDocumento_({ hospital: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', registroId: registro.registroId || '' }, arquivo, registro.tipo === 'POP' ? 'POP' : 'PGT');
-  return { url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl(), html: salvo.html };
+  return { url: salvo.pdfUrl, pdfId: salvo.pdfId, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl(), html: salvo.html };
 }
 
 /**

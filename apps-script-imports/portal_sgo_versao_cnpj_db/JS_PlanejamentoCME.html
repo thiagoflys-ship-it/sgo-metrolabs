@@ -12,7 +12,7 @@
     if (!container) return;
 
     if (tplPlanCME_carregado_) {
-      if (typeof tplPlanCME_renderReal_ === 'function') tplPlanCME_renderReal_();
+      if (typeof tplPlanCME_renderReal_ === 'function') tplPlanCME_renderReal_(); tplPlanCME_ligarRevisao_();
       return;
     }
 
@@ -46,6 +46,7 @@
 
           if (typeof tplPlanCME_renderReal_ === 'function') {
             tplPlanCME_renderReal_();
+            tplPlanCME_ligarRevisao_();
           } else {
             console.error('tplPlanCME: tplPlanCME_renderReal_ não foi definida após o eval.');
             container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada). Veja o Console (F12) para detalhes.</p>';
@@ -60,5 +61,33 @@
         container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo Planejamento CME: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .PlanCME_obterConteudoModulo();
+  }
+
+  // 21/10/2026: "Abrir para corrigir" e "Usar como base" (JS_DocRevisao.html). O planejamento guarda cliente,
+  // equipamento, escopo, receitas e observações; ao abrir, a tela vai à etapa 4 para calcular de novo e gerar.
+  function tplPlanCME_ligarRevisao_() {
+    if (typeof SGO_DocRev === 'undefined') return;
+    var M = 'PLANEJAMENTO_CME';
+    SGO_DocRev.registrar(M, {
+      raiz: 'tplPlanCME_viewModulo', faixa: 'tplPlanCME_viewModulo', acao: 'Gerar Documento', aprovacao: false,
+      dica: 'Cliente, equipamento, escopo, receitas e observações voltaram ao formulário e a tela está na etapa 4. Toque em "Calcular planejamento", confira o resultado e toque em "Gerar Documento"; depois salve na pasta do cliente: o número e a revisão saem no documento salvo.',
+      limpar: function () { tplPlanCME_renderReal_(); tplPlanCME_ligarRevisao_(); },
+      aplicar: function (payload, form, info, modo, aplicarCampos) {
+        aplicarCampos();
+        if (typeof tplPlanCME_aplicarRevisao_ === 'function') setTimeout(function () { tplPlanCME_aplicarRevisao_(payload); }, 50);
+      }
+    });
+    SGO_DocRev.envolver('tplPlanCME_gerarDocumento', function (orig) {
+      return function () { var e = SGO_DocRev.validar(M); if (e) { alert(e); return; } return orig.apply(this, arguments); };
+    });
+    SGO_DocRev.envolver('tplPlanCME_montarPayloadFinal_', function (orig) {
+      return function () { var p = orig.apply(this, arguments); p._docRev = SGO_DocRev.pedido(M); return p; };
+    });
+    SGO_DocRev.envolver('tplPlanCME_salvarDocumento', function (orig) {
+      return function () { var r = orig.apply(this, arguments); SGO_DocRev.concluido(M); return r; };
+    });
+    var view = document.getElementById('tplPlanCME_viewModulo');
+    var alvo = view ? (view.querySelector('.container') || view) : null;
+    if (alvo) SGO_DocRev.anexarPainel(alvo, M);
   }
 </script>

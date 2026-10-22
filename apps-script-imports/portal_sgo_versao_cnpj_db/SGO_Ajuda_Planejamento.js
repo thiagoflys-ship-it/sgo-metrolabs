@@ -38,6 +38,19 @@ function SGO_ajudaTelas_Planejamento_() {
           "Toque em \"Gerar Documento\". O documento abre em nova aba.",
           "Toque em \"Salvar na pasta do cliente\" para guardar o PDF. Sem isso o documento não fica registrado.",
           "Toque em \"Abrir WhatsApp\" para enviar o resumo. O link do documento só vai na mensagem se você salvou antes."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, em \"Documentos gerados: corrigir ou usar como base\", busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa, toque em \"Calcular planejamento\", depois em \"Gerar Documento\" e em \"Salvar na pasta do cliente\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Calcular planejamento\", \"Gerar Documento\" e \"Salvar na pasta do cliente\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -51,7 +64,10 @@ function SGO_ajudaTelas_Planejamento_() {
         { situacao: "O campo de receitas sumiu.", oQueFazer: "Sem QO nem QD não é preciso informar receitas." },
         { situacao: "Com QI e QO sem QD, apareceram 3 indicadores biológicos e 3 integradores por ciclo.", oQueFazer: "É a regra do sistema: são fixos no início, no meio e no fim da câmara. Confira se a QD estava mesmo desmarcada." },
         { situacao: "Voltei uma etapa e fiquei com medo de perder o cálculo.", oQueFazer: "\"Voltar\" não apaga o cálculo. Se nada mudou, \"Calcular planejamento\" só volta ao resultado. Se algum dado mudou, o sistema recalcula." },
-        { situacao: "Erro ao calcular com mensagem sobre a IA.", oQueFazer: "Foi uma falha temporária do texto. Toque em \"Calcular planejamento\" de novo." }
+        { situacao: "Erro ao calcular com mensagem sobre a IA.", oQueFazer: "Foi uma falha temporária do texto. Toque em \"Calcular planejamento\" de novo." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Documento\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Calcular, gerar e salvar planejamentos." },
@@ -100,6 +116,19 @@ function SGO_ajudaTelas_Planejamento_() {
           "Toque em \"Salvar na pasta do cliente\".",
           "Toque em \"Abrir WhatsApp\" para enviar ao cliente.",
           "Para ajustar algo, toque em \"Voltar aos Grupos\"."
+        ] },
+        { titulo: "Corrigir um documento já gerado (nova revisão)", itens: [
+          "No fim da tela, em \"Documentos gerados: corrigir ou usar como base\", busque pelo número, cliente ou TAG.",
+          "Na linha do documento, toque em \"Abrir para corrigir\". O formulário volta preenchido com tudo o que foi usado (dados digitados, textos, anexos e leituras), sem importar nada de novo.",
+          "No quadro amarelo \"Correção do documento\", no alto do formulário, escreva o motivo da revisão (ao menos 10 caracteres).",
+          "Altere só o que precisa, toque em \"Gerar Cronograma\" e, na etapa 5, em \"Abrir Documento\" e \"Salvar na pasta do cliente\". Sai a revisão seguinte (Rev. 01, 02...) com o mesmo número; o motivo, a data e o seu nome entram no histórico de revisões do documento.",
+          "A revisão anterior continua guardada na pasta do cliente, com a revisão no nome do arquivo, e passa a constar como \"Substituído pela Rev. NN\" na lista.",
+          "Para desistir, toque em \"Cancelar a correção e limpar o formulário\"."
+        ] },
+        { titulo: "Usar um documento como base para um novo", itens: [
+          "Na mesma lista, toque em \"Usar como base\" (por exemplo, o mesmo equipamento no ano seguinte).",
+          "O formulário volta preenchido. Confira datas, leituras e resultados, que são do serviço anterior.",
+          "Toque em \"Gerar Cronograma\", \"Abrir Documento\" e \"Salvar na pasta do cliente\": sai um documento novo, com número novo. O documento de origem não muda."
         ] }
       ],
       cores: [
@@ -111,7 +140,10 @@ function SGO_ajudaTelas_Planejamento_() {
         { situacao: "\"Trazer equipamentos do cadastro\" não encontrou o cliente.", oQueFazer: "O cliente não está no cadastro. Cadastre em \"Clientes\" ou acrescente os equipamentos à mão." },
         { situacao: "Aparece \"Adicione ao menos um equipamento na etapa 2 antes de sugerir os grupos.\"", oQueFazer: "Volte à etapa 2 e inclua os equipamentos." },
         { situacao: "Aparece que o navegador bloqueou a nova aba.", oQueFazer: "Libere janelas novas (pop-up) para o SGO+ e toque em \"Abrir Documento\" de novo. O \"Salvar na pasta do cliente\" já funciona." },
-        { situacao: "Aparece \"Abra o documento primeiro\".", oQueFazer: "Toque em \"Abrir Documento\" antes de salvar." }
+        { situacao: "Aparece \"Abra o documento primeiro\".", oQueFazer: "Toque em \"Abrir Documento\" antes de salvar." },
+        { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Cronograma\"." },
+        { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
+        { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Montar, gerar e salvar cronogramas." },
