@@ -148,16 +148,113 @@ vazio, maior que o teto, formato não aceito.
 
 Uma O.S. no mesmo formato do item de `os` de `Ast_appMeuDia`, para atualizar a tela depois de sincronizar.
 
+## 5a. Estado do documento e envio ao cliente (22/10/2026, etapa 2)
+
+Cada O.S. do `Ast_appMeuDia`, do `Ast_appOS` e do `os[]` da resposta do `Ast_appSincronizar` traz o campo `envio`
+(só acrescentado; sem ele, o aplicativo deduz pelo `relatorioUrl`):
+
+```json
+"envio": { "situacao": "PDF_GERADO", "pdfGerado": true, "relatorioUrl": "/arquivos/abc", "geradoEm": "2026-10-22T10:05:00", "revisao": 0,
+           "enviadoEm": "", "enviadoPor": "", "enviadoCanal": "", "enviadoPara": "", "podeEnviar": true,
+           "contatos": [{ "nome": "Fulano", "email": "fulano@cliente.exemplo", "origem": "Responsável da unidade", "sugerido": true }],
+           "texto": "Relatório gerado em 22/10/2026 10:05. Ainda não enviado ao cliente." }
+```
+
+`situacao`: `SEM_PDF` (O.S. aberta, ou encerrada com o relatório ainda em geração), `PDF_GERADO` (encerrada, PDF na
+pasta, ainda não enviado) ou `ENVIADO` (com `enviadoEm`, `enviadoPor`, `enviadoCanal` = `e-mail`, `enviadoPara`).
+`contatos`: contatos do cliente com e-mail (responsável da unidade, solicitante do chamado, cadastro do cliente,
+contatos cadastrados), `sugerido: true` nos que o aplicativo marca de saída. `podeEnviar`: o técnico responsável ou a
+gestão, com a O.S. encerrada e o PDF gerado.
+
+Evento `ENVIAR_CLIENTE` no `Ast_appSincronizar` (mesma fila, mesmo `idLocal`, idempotente):
+
+| tipo | dados | Regras |
+| --- | --- | --- |
+| `ENVIAR_CLIENTE` | `{ para: [{ nome, email }] ou [emails], mensagem (opcional), reenviar (opcional) }` | Só com a O.S. `ENCERRADA` e o PDF gerado (antes disso: recusado, não definitivo; "Tentar de novo" em Envios depois do Concluí). O servidor manda o PDF por e-mail pelo Enviar documento (registro em DOC_ENVIOS) e grava na O.S. quando, por quem, canal e para quem. O `idLocal` vira o pedido do Enviar documento: repetido, nada sai de novo. Já enviado e sem `reenviar`: aceito com a nota "já tinha sido enviado". E-mail incompleto (sem `nome@dominio`): recusado, não definitivo, com `corrigir`. Roda fora da trava da Assistência, depois dos outros eventos do lote. |
+
 ## 6. Garantias do servidor
 
 - Nada é apagado: resposta corrigida, peça removida e foto trocada ficam no histórico da O.S.
-- O.S. encerrada não aceita mais eventos (definitivo). Correção depois do encerramento é da gestão, na tela.
+- O.S. encerrada não aceita mais eventos (definitivo), exceto `ENVIAR_CLIENTE`. Correção depois do encerramento é da gestão, na tela ("Abrir para corrigir", com motivo: Rev. 01, 02...).
+- O relatório A4 é gerado uma vez só, no encerramento; o `relatorioUrl` não muda sem uma revisão com motivo.
 - A hora de cada marco no relatório A4 mostra a do aparelho e a do recebimento quando diferem mais de 5 minutos.
 - O técnico em atendimento (entre `CHEGUEI` e `CONCLUI`) aparece para o ponto e para a Frota pela fonte única de
   atendimentos (`SGO_Atendimentos_linhas_`).
 
+
+internet. Tudo o que a versão 1 tinha continua igual; o que entrou está abaixo. Nível: técnico (perfil Técnico ou área
+Técnica) ou gestão; exige a Assistência ligada (`DESLIGADA` como nas demais).
+
+existente). A fila do aparelho envia na ordem (cadastros, depois a O.S., depois os eventos) e troca o provisório pelo real nos
+itens pendentes assim que o servidor responde.
+
+### 7.1 `Ast_appMeuDia` traz mais
+
+- `versaoContrato: 2`.
+- `tipos`: tipos de serviço ativos com visita, cada um `{ codigo, nome, grupo, descricao, exige: { relato, assinatura, fotosMin,
+  qrOuSerie, checklist, relatoCampos }, checklist: { modeloId, versao, nome, perguntas: [...] } }`, para o aparelho montar a O.S.
+  provisória com o checklist certo sem internet.
+
+
+Busca no cadastro único, **sempre com limite** (`limite: 20` por lista; `total` diz quantos há). Nunca devolve a base inteira.
+Precisa de internet (a tela avisa).
+
+- `{ termo }` (2 letras ou 4 números): `clientes` por nome, razão social ou CNPJ; `unidades` cujo CNPJ bate (filial cadastrada
+  como unidade de outro cliente, com `clienteNome`); `equipamentos` por TAG, série ou patrimônio (3 caracteres ou mais), com
+  `clienteNome` e `unidadeNome`.
+- `{ clienteId }`: `cliente`, `unidades` do cliente e `equipamentos` do cliente; `{ clienteId, unidadeId }`: só da unidade.
+  `termo` filtra.
+- Formas: cliente `{ id, nome, razaoSocial, nomeFantasia, cnpj, telefone, email, endereco, ativo, criadoEmCampo }`; unidade
+  `{ id, clienteId, nome, cnpj, endereco, cidade, uf, responsavel, telefone, enderecoTexto, ativo, criadoEmCampo }`; equipamento
+  `{ id, clienteId, unidadeId, tipo, fabricante, modelo, serie, tag, setor, patrimonio, texto, ativo, criadoEmCampo, clienteNome,
+  unidadeNome }`. Inativos não entram.
+- Erros: `ENTRADA` (termo curto; cliente não encontrado), `SEM_ACESSO` (cliente do portal).
+
+
+Consulta pública do CNPJ, a mesma do cadastro de clientes (precisa de internet no servidor). Resposta
+`{ cnpj, consultado, jaCadastrado, razaoSocial, nomeFantasia, endereco, cidade, uf, cep, telefone, email, aviso }`.
+`jaCadastrado`: `null` ou `{ tipo: CLIENTE|UNIDADE, cliente, unidade, texto }` ("já cadastrado como ..."). Quando a consulta
+pública não responde, `consultado: false` e `aviso` dizem para preencher à mão; nunca é erro. CNPJ inválido: `ENTRADA`.
+
+
+Cadastro feito em campo. `tipo`: `CLIENTE`, `UNIDADE` ou `EQUIPAMENTO`. **Idempotente por `idLocal`** (o mesmo volta com
+`duplicado: true` e o mesmo registro). Cria pelas mesmas funções da tela Cadastros (maiúsculas, CNPJ válido, QR do
+
+**Nunca duplica.** Antes de criar, o servidor confere e, se já existe, devolve o existente com `existente: true` e
+`message: "Já cadastrado como ..."`:
+
+| tipo | `dados` | Duplicidade conferida |
+| --- | --- | --- |
+| `CLIENTE` | `{ nome*, razaoSocial, cnpj, endereco, contato, telefone, email }` | CNPJ igual a um cliente (ou a uma unidade: devolve o cliente dela e a unidade); nome igual (sem acento e sem caixa) |
+| `UNIDADE` | `{ clienteId*, nome*, cnpj, endereco, cidade, uf, responsavel, telefone, lat, lng, precisao }` | CNPJ da unidade igual (mesmo de outro cliente: a O.S. fica com o cliente dela, "vale o original"); nome igual no mesmo cliente. `lat`/`lng` (localização do aparelho) ficam na unidade |
+| `EQUIPAMENTO` | `{ clienteId*, unidadeId*, tipo*, fabricante, modelo, serie, tag, setor, patrimonio }` | série igual no mesmo cliente (ignorando pontuação; "N/A", "S/N" não contam); TAG igual no mesmo cliente |
+
+`clienteId` e `unidadeId` podem ser provisórios. Resposta: `{ tipo, id, duplicado, existente, message, cliente, unidades
+(CLIENTE), unidade, clienteId (UNIDADE), equipamento, clienteId, unidadeId (EQUIPAMENTO) }`. Erros `ENTRADA`: nome ou tipo curto,
+CNPJ inválido, cliente ou unidade não encontrados, quem não é técnico.
+
+
+local; decisão "visita"), cria a O.S. já no nome dele (AGENDADA para a hora do aparelho, duração padrão) e a atividade
+"Atender OS-...", numa trava só; a gestão recebe o AT01 "atendimento aberto em campo" (sem triagem pendente). Prioridade
+padrão P3. `tipoCodigo` precisa ser um tipo ativo com visita. Ids podem ser provisórios; vale o cadastro do equipamento
+(cliente e unidade dele).
+
+- **Idempotente por `idLocal`**: o mesmo volta `duplicado: true` com a mesma O.S.
+- **Mesmo equipamento com O.S. aberta no nome deste técnico**: devolve essa O.S. com `existente: true` ("continue nela");
+  nada é aberto em dobro.
+- Resposta: `{ duplicado, existente, os (formato do Meu dia), chamado: { id, numero }, message }`.
+- Erros `ENTRADA`: tipo inexistente ou sem visita, problema com menos de 10 letras, solicitante vazio, equipamento não
+  encontrado, quem não é técnico. `DESLIGADA` com a Assistência desligada.
+
+
+que apontavam para ela (com o que fazer). O número do pedido (`X-Pedido-Id`) do item é estável (`N`/`C` + idLocal + rodada +
+resumo da sessão).
+
 ## Mudanças
 
+- 22/10/2026 (etapa 2 do estudo): campo `envio` nas O.S. do `Ast_appMeuDia`, do `Ast_appOS` e do `os[]` do
+  `Ast_appSincronizar`; evento `ENVIAR_CLIENTE` na fila (seção 5a). Só acrescentado; o aplicativo anterior continua valendo.
+  acrescentado; o aplicativo da versão 1 continua valendo.
 - 21/10/2026: versão 1.
 - 21/10/2026 (ensaio integrado com o aplicativo): `tipo.exige.relatoCampos` em cada O.S. do `Ast_appMeuDia`: os campos do
   `RELATO` que o servidor exige para encerrar (`servicoRealizado` = relato ou serviço realizado com 10 letras ou mais;

@@ -87,63 +87,244 @@ function AstR_htmlOS_(os, opcoes) {
   }), { vazio: 'Sem registros.' }));
   corpo += '<p class="nota" style="margin-top:4mm">Marca de conferência do conteúdo: ' + Ast_esc_(o.marca || '') + '. Qualquer alteração no conteúdo deste relatório muda esta marca.</p>';
   return RelA4_documento_({ titulo: 'Relatório de atendimento técnico' + (rascunho ? ' (rascunho)' : ''), subtitulo: Ast_s_(os.CLIENTE_NOME), tituloCurto: 'Relatório da O.S.', tituloArquivo: 'Relatorio da OS',
-    numero: Ast_s_(os.NUMERO), revisao: Math.max(0, (Number(o.versao) || 1) - 1), identificacao: Ast_s_(os.EQUIPAMENTO_TEXTO) || Ast_s_(os.CLIENTE_NOME), rotuloIdentificacao: 'Equipamento',
+    // 22/10/2026: a revisão do cabeçalho é a revisão de verdade (0 na emissão; 1, 2... só com "Abrir para corrigir" e motivo), não a contagem de versões
+    numero: Ast_s_(os.NUMERO), revisao: Number(o.revisao) || 0, identificacao: Ast_s_(os.EQUIPAMENTO_TEXTO) || Ast_s_(os.CLIENTE_NOME), rotuloIdentificacao: 'Equipamento',
     ficha: [['Tipo de serviço', tipo.nome], ['Técnico', Ast_s_(os.TECNICO_NOME)], ['Situação', rascunho ? 'Rascunho' : 'Encerrada em ' + Ast_br_(os.ENCERRADA_EM)]], corpo: corpo, capa: false, sumario: false });
 }
 
 /**
- * Emite uma versão nova do relatório (nunca sobrescreve). opcoes: { aoEncerrar }. Encerrada: salva na pasta do equipamento,
- * registra no Arquivo de documentos e avisa o cliente. Nunca lança: { salvo, pdfUrl, pdfId, html, aviso, versao }.
+ * Registro do relatório encerrado no Arquivo de documentos (tipo "ORDEM DE SERVIÇO"). Com sessão de usuário, pelo
+ * módulo Documentos; sem sessão (rotina, gancho de outro módulo), pela identidade do sistema, direto na tabela, com os
+ * mesmos campos. 22/10/2026 (etapa 2): antes, o relatório fechado pela rotina não entrava no Arquivo. Nunca lança.
+ */
+function AstR_registrarNoArquivo_(eu, os, nomeArquivo, url) {
+  if (!Ast_s_(os.UNIDADE_ID) || !Ast_s_(url)) return false;
+  if (eu && eu.sessionId && typeof SGO_DOCUMENTOS !== 'undefined' && SGO_DOCUMENTOS.registrarDocumentoExistente) {
+    try { var rr = SGO_DOCUMENTOS.registrarDocumentoExistente(eu.sessionId, { CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID, EQUIPAMENTO_ID: os.EQUIPAMENTO_ID, TIPO_DOCUMENTO: 'ORDEM DE SERVIÇO', NOME_ARQUIVO: nomeArquivo, LINK_ARQUIVO: url, DATA_VENCIMENTO: '' }); if (rr && rr.success) return true; } catch (eR) { /* tenta pela identidade do sistema */ }
+  }
+  try {
+    var aba = (SGO_CFG.SHEETS && SGO_CFG.SHEETS.DOC_DOCUMENTOS) || 'DOC_DOCUMENTOS';
+    var reg = { CLIENTE_ID: Ast_s_(os.CLIENTE_ID), UNIDADE_ID: Ast_s_(os.UNIDADE_ID), EQUIPAMENTO_ID: Ast_s_(os.EQUIPAMENTO_ID), TIPO_DOCUMENTO: 'ORDEM DE SERVIÇO', NOME_ARQUIVO: Ast_up_(nomeArquivo),
+      LINK_ARQUIVO: Ast_s_(url), DATA_EMISSAO: Ast_agora_(), DATA_VENCIMENTO: '', STATUS: 'ATIVO', OBSERVACOES: 'Registrado pela ' + ((eu && eu.nome) || 'rotina da Assistência técnica') };
+    if (typeof SGO_DATA.gerarRegistroBase === 'function') reg = SGO_DATA.gerarRegistroBase(reg);
+    if (typeof SGO_DATA.normalizarObjetoParaSheet === 'function') reg = SGO_DATA.normalizarObjetoParaSheet(aba, reg);
+    SGO_DATA.insert(aba, reg);
+    try { SGO_DATA.log('DOCUMENTOS_REGISTRAR_EXISTENTE', (eu && eu.nome) || 'Rotina da Assistência', 'Relatório da O.S. registrado pela rotina: ' + nomeArquivo, 'DOCUMENTOS'); } catch (eL) {}
+    return true;
+  } catch (e) { console.error('Assistência, Arquivo de documentos: ' + ((e && e.message) || e)); return false; }
+}
+
+/**
+ * Emite o relatório da O.S. Nunca sobrescreve: cada emissão é uma versão (v1, v2...) e a O.S. encerrada tem UM relatório
+ * vigente. 22/10/2026 (etapa 2): toque repetido em "Relatório A4" numa O.S. encerrada NÃO gera versão nova: reabre a
+ * mesma (opcoes.reaproveitar); versão nova só com motivo, pela gestão ("Abrir para corrigir", opcoes.revisao e
+ * opcoes.motivo), ligada ao núcleo de revisões (SGO_DocRevisao). opcoes: { aoEncerrar, reaproveitar, revisao, motivo }.
+ * Encerrada: salva na pasta "4. Ordens de Serviço" do equipamento, registra no Arquivo de documentos (também sem sessão)
+ * e avisa o cliente (AT08, e-mail curto; o PDF vai pelo "Enviar ao cliente"). Nunca lança: { salvo, pdfUrl, pdfId, html, aviso, versao }.
  */
 function AstR_emitirRelatorioOS_(eu, osId, opcoes) {
   var o = opcoes || {};
   try {
     var os = Ast_porId_(AST_ABAS.OS, osId);
     if (!os) return { salvo: false, aviso: 'O.S. não encontrada' };
-    var versao = (Number(os.RELATORIO_VERSAO) || 0) + 1;
-    var marca = Ast_marca_(JSON.stringify([os.NUMERO, versao, os.RESPOSTAS_JSON, os.RELATO, os.SERVICO_REALIZADO, os.ASSINATURA_ARQUIVO_ID, os.QTD_FOTOS, os.QTD_PECAS, os.ENCERRADA_EM]));
-    var html = AstR_htmlOS_(os, { marca: marca, versao: versao });
     var rascunho = Ast_up_(os.SITUACAO) !== 'ENCERRADA';
-    var nome = 'Relatorio da OS - ' + Ast_s_(os.NUMERO) + ' v' + versao + (rascunho ? ' RASCUNHO' : '') + ' - ' + Ast_s_(os.CLIENTE_NOME).slice(0, 60) + ' - ' + Utilities.formatDate(new Date(), AST_FUSO, 'yyyy-MM-dd HHmm');
+    if (!rascunho && Ast_s_(os.RELATORIO_PDF_ID) && !o.revisao) {
+      // relatório vigente da O.S. encerrada: reabre o mesmo (nenhuma versão nova sem motivo)
+      return { salvo: true, reaproveitado: true, pdfUrl: Ast_s_(os.RELATORIO_PDF_URL), pdfId: Ast_s_(os.RELATORIO_PDF_ID), htmlId: Ast_s_(os.RELATORIO_HTML_ID), versao: Number(os.RELATORIO_VERSAO) || 1,
+        revisao: Number(os.RELATORIO_REVISAO) || 0, rascunho: false, registrado: true, emitidoEm: Ast_br_(os.RELATORIO_EM) };
+    }
+    var versao = (Number(os.RELATORIO_VERSAO) || 0) + 1;
+    var revisao = rascunho ? 0 : (o.revisao ? Math.max(1, (Number(os.RELATORIO_REVISAO) || 0) + 1) : 0);
+    var marca = Ast_marca_(JSON.stringify([os.NUMERO, versao, os.RESPOSTAS_JSON, os.RELATO, os.SERVICO_REALIZADO, os.ASSINATURA_ARQUIVO_ID, os.QTD_FOTOS, os.QTD_PECAS, os.ENCERRADA_EM]));
+    var rev = null;
+    if (revisao > 0 && typeof SGO_DocRev_historico_ === 'function') {
+      var hist = SGO_DocRev_historico_('ORDEM_SERVICO', Ast_s_(os.NUMERO)).filter(function (h) { return h.revisao < revisao; });
+      if (!hist.length) hist.push({ revisao: 0, rotulo: typeof SGO_DocRev_rotulo_ === 'function' ? SGO_DocRev_rotulo_(0) : 'Rev. 00', em: Ast_dia_(os.RELATORIO_EM) || Ast_dia_(os.ENCERRADA_EM), por: Ast_s_(os.ENCERRADA_POR_NOME) || 'Assistência técnica', motivo: 'Emissão inicial' });
+      hist.push({ revisao: revisao, rotulo: typeof SGO_DocRev_rotulo_ === 'function' ? SGO_DocRev_rotulo_(revisao) : 'Rev. ' + revisao, em: Ast_hoje_(), por: Ast_s_(eu && eu.nome), motivo: Ast_texto_(o.motivo, 500) });
+      rev = { modo: 'CORRIGIR', numero: Ast_s_(os.NUMERO), revisao: revisao, rotulo: typeof SGO_DocRev_rotulo_ === 'function' ? SGO_DocRev_rotulo_(revisao) : 'Rev. ' + revisao, motivo: Ast_texto_(o.motivo, 500), origemId: '', historico: hist, ehRevisao: true };
+    }
+    var html = AstR_htmlOS_(os, { marca: marca, versao: versao, revisao: revisao });
+    if (rev && typeof SGO_DocRev_injetarHtml_ === 'function') html = SGO_DocRev_injetarHtml_(html, rev);
+    var nome = 'Relatorio da OS - ' + Ast_s_(os.NUMERO) + (revisao > 0 ? ' Rev ' + (revisao < 10 ? '0' : '') + revisao : '') + ' v' + versao + (rascunho ? ' RASCUNHO' : '') + ' - ' + Ast_s_(os.CLIENTE_NOME).slice(0, 60) + ' - ' + Utilities.formatDate(new Date(), AST_FUSO, 'yyyy-MM-dd HHmm');
     var fin = typeof RelA4_finalizar_ === 'function' ? RelA4_finalizar_(html, nome) : { html: html, pdfBlob: null };
     html = null;
     var pasta = rascunho ? Ast_pastaPrivadaOS_(os.NUMERO) : Ast_pastaRelatorio_(os);
     var g = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nome, fin.html, fin.pdfBlob ? { compartilhar: !rascunho, pdfBlob: fin.pdfBlob } : { compartilhar: !rascunho });
     var pastaUrl = ''; try { pastaUrl = pasta.getUrl(); } catch (e) {}
     var agora = Ast_agora_();
-    var reg = false;
-    if (!rascunho && Ast_s_(os.UNIDADE_ID) && eu && eu.sessionId && typeof SGO_DOCUMENTOS !== 'undefined' && SGO_DOCUMENTOS.registrarDocumentoExistente) {
-      try { var rr = SGO_DOCUMENTOS.registrarDocumentoExistente(eu.sessionId, { CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID, EQUIPAMENTO_ID: os.EQUIPAMENTO_ID, TIPO_DOCUMENTO: 'ORDEM DE SERVIÇO', NOME_ARQUIVO: g.pdfNome || nome, LINK_ARQUIVO: g.pdfUrl, DATA_VENCIMENTO: '' }); reg = !!(rr && rr.success); } catch (eR) { reg = false; }
+    var reg = !rascunho && AstR_registrarNoArquivo_(eu, os, g.pdfNome || nome, g.pdfUrl);
+    var docRevId = '';
+    if (!rascunho && typeof SGO_DocRev_registrar_ === 'function') {
+      // núcleo comum de revisões (SGO_DocRevisao): a emissão inicial entra como Rev. 00; a correção, como a revisão seguinte, e a anterior fica substituída
+      try {
+        var cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(os.CLIENTE_ID)] || {}, eq = Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[Ast_s_(os.EQUIPAMENTO_ID)] || {};
+        var rr = SGO_DocRev_registrar_('ORDEM_SERVICO', rev || { modo: '', numero: Ast_s_(os.NUMERO), revisao: 0, motivo: '', ehRevisao: false },
+          { numero: Ast_s_(os.NUMERO), revisao: revisao, payload: { osId: Ast_s_(os.ID), relato: Ast_s_(os.RELATO), condicaoEncontrada: Ast_s_(os.CONDICAO_ENCONTRADA), causa: Ast_s_(os.CAUSA), servicoRealizado: Ast_s_(os.SERVICO_REALIZADO), testeFuncional: Ast_s_(os.TESTE_FUNCIONAL), recomendacoes: Ast_s_(os.RECOMENDACOES) },
+            titulo: 'Relatório de atendimento técnico', cliente: Ast_s_(os.CLIENTE_NOME), cnpj: Ast_s_(cli.CNPJ), tag: Ast_s_(eq.TAG), equipamentoId: Ast_s_(os.EQUIPAMENTO_ID), pdfId: g.pdfId, htmlId: g.htmlId, pdfUrl: g.pdfUrl, htmlUrl: g.htmlUrl, aprovacao: '' },
+          { nome: Ast_s_(eu && eu.nome), usuario: Ast_s_(eu && eu.login) });
+        docRevId = rr && rr.ok ? rr.id : '';
+      } catch (eD) { docRevId = ''; }
     }
-    Ast_inserir_(AST_ABAS.RELATORIOS, { OS_ID: os.ID, OS_NUMERO: os.NUMERO, VERSAO: versao, RASCUNHO: rascunho ? 'SIM' : '', PDF_ID: g.pdfId, PDF_URL: g.pdfUrl, HTML_ID: g.htmlId, PASTA_URL: pastaUrl, MARCA: marca,
-      EMITIDO_EM: agora, EMITIDO_POR_NOME: Ast_s_(eu && eu.nome), DOC_REGISTRADO: reg ? 'SIM' : '' });
+    Ast_inserir_(AST_ABAS.RELATORIOS, { OS_ID: os.ID, OS_NUMERO: os.NUMERO, VERSAO: versao, REVISAO: revisao, MOTIVO: revisao > 0 ? Ast_texto_(o.motivo, 500) : '', RASCUNHO: rascunho ? 'SIM' : '', PDF_ID: g.pdfId, PDF_URL: g.pdfUrl, HTML_ID: g.htmlId, PASTA_URL: pastaUrl, MARCA: marca,
+      EMITIDO_EM: agora, EMITIDO_POR_NOME: Ast_s_(eu && eu.nome), DOC_REGISTRADO: reg ? 'SIM' : '', DOCREV_ID: docRevId });
     if (!rascunho) {
-      Ast_atualizar_(AST_ABAS.OS, os.ID, { RELATORIO_VERSAO: versao, RELATORIO_PDF_ID: g.pdfId, RELATORIO_PDF_URL: g.pdfUrl, RELATORIO_HTML_ID: g.htmlId, RELATORIO_EM: agora, ATUALIZADO_EM: agora });
-      Ast_evento_('OS', os.ID, 'RELATORIO', eu, 'Relatório A4 v' + versao + ' salvo na pasta do equipamento' + (reg ? ' e no Arquivo de documentos' : ''), { numero: os.NUMERO });
+      var campos = { RELATORIO_VERSAO: versao, RELATORIO_REVISAO: revisao, RELATORIO_PDF_ID: g.pdfId, RELATORIO_PDF_URL: g.pdfUrl, RELATORIO_HTML_ID: g.htmlId, RELATORIO_EM: agora, ATUALIZADO_EM: agora };
+      if (revisao > 0 && Ast_s_(os.ENVIADO_CLIENTE_EM)) {
+        // a revisão corrigida ainda não foi ao cliente: o envio anterior fica no histórico e a pendência de envio volta
+        Ast_evento_('OS', os.ID, 'ENVIO_SUPERADO', eu, 'O envio de ' + Ast_br_(os.ENVIADO_CLIENTE_EM) + ' para ' + Ast_s_(os.ENVIADO_CLIENTE_PARA) + ' era da revisão anterior; a ' + rev.rotulo + ' precisa ser enviada de novo ao cliente.', { numero: os.NUMERO });
+        Object.assign(campos, { ENVIADO_CLIENTE_EM: '', ENVIADO_CLIENTE_POR_NOME: '', ENVIADO_CLIENTE_CANAL: '', ENVIADO_CLIENTE_PARA: '' });
+      }
+      Ast_atualizar_(AST_ABAS.OS, os.ID, campos);
+      Ast_evento_('OS', os.ID, revisao > 0 ? 'RELATORIO_REVISADO' : 'RELATORIO', eu, (revisao > 0 ? 'Relatório A4 ' + rev.rotulo + ' (v' + versao + ') emitido com o motivo: ' + Ast_texto_(o.motivo, 300) + '. A revisão anterior fica arquivada como substituída' : 'Relatório A4 v' + versao + ' salvo na pasta do equipamento') + (reg ? ' e registrado no Arquivo de documentos' : ''), { numero: os.NUMERO });
       if (o.aoEncerrar) {
         var c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || { ID: os.CHAMADO_ID, CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID };
-        Ast_avisarCliente_(c, 'Atendimento concluído: O.S. ' + os.NUMERO, 'Olá. O atendimento técnico ' + os.NUMERO + ' (' + Ast_s_(os.EQUIPAMENTO_TEXTO) + ') foi concluído em ' + Ast_br_(os.ENCERRADA_EM) +
-          '.\nO relatório do atendimento está no portal do cliente do SGO+ e no prontuário do equipamento (QR).\n\nMetrolabs — Assistência técnica', 'AT08');
+        Ast_avisarCliente_(c, 'Atendimento concluído: O.S. ' + os.NUMERO, 'Prezados,\n\nO atendimento técnico ' + os.NUMERO + ' (' + Ast_s_(os.EQUIPAMENTO_TEXTO) + ') foi concluído em ' + Ast_br_(os.ENCERRADA_EM) +
+          '.\nO relatório do atendimento segue por e-mail em seguida e fica disponível no portal do cliente do SGO+ e no prontuário do equipamento.\n\nMetrolabs — Assistência técnica', 'AT08');
       }
     } else Ast_atualizar_(AST_ABAS.OS, os.ID, { RELATORIO_VERSAO: versao, ATUALIZADO_EM: agora });
-    return { salvo: true, pdfUrl: g.pdfUrl, pdfId: g.pdfId, htmlUrl: g.htmlUrl, pastaUrl: pastaUrl, html: g.html || fin.html, versao: versao, rascunho: rascunho, registrado: reg };
+    return { salvo: true, pdfUrl: g.pdfUrl, pdfId: g.pdfId, htmlId: g.htmlId, htmlUrl: g.htmlUrl, pastaUrl: pastaUrl, html: g.html || fin.html, versao: versao, revisao: revisao, rascunho: rascunho, registrado: reg, emitidoEm: Ast_br_(agora) };
   } catch (e) {
     console.error('Assistência, relatório da O.S.: ' + ((e && e.message) || e));
     return { salvo: false, aviso: 'O relatório não foi salvo: ' + String((e && e.message) || e).replace(/[.\s]+$/, '') + '. A rotina tenta de novo; se continuar, avise o administrador.' };
   }
 }
 
-/** Relatório na tela (gera uma versão: rascunho enquanto aberta). */
+/** Relatório na tela: rascunho enquanto a O.S. está aberta (gera uma versão); encerrada, reabre o relatório vigente. */
 function AstR_relatorioTela_(eu, d) {
   var os = AstO_obter_(eu, d && d.osId, 'gerar o relatório');
   if (eu.cliente && Ast_up_(os.SITUACAO) !== 'ENCERRADA') throw new Error('Não foi possível abrir: o relatório fica disponível quando o atendimento é concluído');
   if (eu.cliente) return { pdfUrl: Ast_s_(os.RELATORIO_PDF_URL) };
   var g = AstR_emitirRelatorioOS_(eu, os.ID, {});
+  if (g.salvo && g.reaproveitado) {
+    return { pdfUrl: g.pdfUrl, pdfId: g.pdfId, rascunho: false, versao: g.versao, revisao: g.revisao, reaproveitado: true,
+      message: 'Relatório ' + (g.revisao > 0 ? 'Rev. ' + (g.revisao < 10 ? '0' : '') + g.revisao + ' ' : '') + 'da O.S. ' + os.NUMERO + ' emitido em ' + g.emitidoEm + '. Nenhuma versão nova foi gerada: para corrigir, a gestão usa "Abrir para corrigir" (com o motivo).' };
+  }
   var av = [];
   if (g.salvo) av.push({ tipo: g.rascunho ? 'alerta' : 'ok', html: (g.rascunho ? 'Rascunho v' + g.versao + ' (a O.S. ainda não foi encerrada; não envie ao cliente).' : 'Relatório v' + g.versao + ' salvo na pasta do equipamento.') +
     (g.pdfUrl ? ' <a href="' + Ast_esc_(g.pdfUrl) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + (!g.rascunho && g.pdfId && typeof SGO_DocSalvar_linkEnviar_ === 'function' ? SGO_DocSalvar_linkEnviar_(g.pdfId) : '') });
   else av.push({ tipo: 'alerta', html: Ast_esc_(g.aviso || 'O relatório não foi salvo.') });
   return { html: typeof RelA4_injetarAvisos_ === 'function' ? RelA4_injetarAvisos_(g.html || '', av) : (g.html || ''), pdfUrl: g.pdfUrl || '', pdfId: g.pdfId || '', rascunho: !!g.rascunho, versao: g.versao || 0 };
+}
+
+/**
+ * "Abrir para corrigir" (gestão, com motivo): corrige os textos do relato da O.S. encerrada e emite a revisão seguinte
+ * (Rev. 01, 02...) do mesmo número; a anterior fica arquivada como substituída. d: { osId, motivo, relato:{ condicaoEncontrada, causa, servicoRealizado, testeFuncional, recomendacoes, relato } }
+ */
+function AstR_corrigirRelatorio_(eu, d) {
+  Ast_exigir_(eu, 'GESTAO', 'corrigir o relatório da O.S.');
+  d = d || {};
+  var os = AstO_obter_(eu, d.osId, 'corrigir o relatório');
+  if (Ast_up_(os.SITUACAO) !== 'ENCERRADA') throw new Error('Não foi possível corrigir: a O.S. ' + os.NUMERO + ' ainda não foi encerrada. Corrija pelo próprio atendimento (aplicativo ou ficha da O.S.)');
+  if (!Ast_s_(os.RELATORIO_PDF_ID)) throw new Error('Não foi possível corrigir: a O.S. ' + os.NUMERO + ' ainda não tem o relatório emitido. Toque em "Relatório A4" primeiro');
+  var motivo = Ast_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível corrigir: escreva o motivo da revisão (pelo menos 10 letras). Ele aparece no histórico de revisões do documento');
+  var cr = {}, mapa = { relato: 'RELATO', condicaoEncontrada: 'CONDICAO_ENCONTRADA', causa: 'CAUSA', servicoRealizado: 'SERVICO_REALIZADO', testeFuncional: 'TESTE_FUNCIONAL', recomendacoes: 'RECOMENDACOES' }, rel = d.relato || {};
+  Object.keys(mapa).forEach(function (k) { if (rel[k] !== undefined && rel[k] !== null && Ast_texto_(rel[k], 4000) !== Ast_s_(os[mapa[k]])) cr[mapa[k]] = Ast_texto_(rel[k], 4000); });
+  var g = Ast_comTrava_(function () {
+    if (Object.keys(cr).length) {
+      cr.ATUALIZADO_EM = Ast_agora_();
+      Ast_atualizar_(AST_ABAS.OS, os.ID, cr);
+      Ast_evento_('OS', os.ID, 'CORRECAO', eu, 'Relato corrigido pela gestão (' + Object.keys(cr).filter(function (k) { return k !== 'ATUALIZADO_EM'; }).map(function (k) { return k.toLowerCase().replace(/_/g, ' '); }).join(', ') + '). Motivo: ' + motivo, { numero: os.NUMERO });
+    }
+    return AstR_emitirRelatorioOS_(eu, os.ID, { revisao: true, motivo: motivo });
+  });
+  if (!g.salvo) throw new Error('Não foi possível emitir a revisão: ' + String(g.aviso || '').replace(/[.\s]+$/, ''));
+  return { os: AstO_publico_(Ast_porId_(AST_ABAS.OS, os.ID), eu), pdfUrl: g.pdfUrl, versao: g.versao, revisao: g.revisao,
+    message: 'Relatório da O.S. ' + os.NUMERO + ' emitido como Rev. ' + (g.revisao < 10 ? '0' : '') + g.revisao + '. A revisão anterior fica arquivada como substituída. Envie a revisão ao cliente pelo botão "Enviar ao cliente".' };
+}
+
+// ------------------------------------------------------------
+// ENVIO DO RELATÓRIO AO CLIENTE (22/10/2026, etapa 2): o técnico no aplicativo ou a gestão na tela; sempre uma pessoa
+// ------------------------------------------------------------
+/** Contatos do cliente com e-mail (cadastro, unidade, contatos, acessos do portal) para o técnico escolher no aplicativo. */
+function AstR_contatosEnvio_(os) {
+  var lista = [], vistos = {};
+  var add = function (nome, email, origem, sugerido) {
+    email = Ast_s_(email).toLowerCase();
+    if (!/^[^\s@<>(),;:"\[\]]+@[^\s@<>(),;:"\[\]]+\.[a-z]{2,}$/i.test(email) || vistos[email]) return;
+    vistos[email] = true;
+    lista.push({ nome: Ast_s_(nome), email: email, origem: origem, sugerido: !!sugerido });
+  };
+  var cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(os.CLIENTE_ID)] || {}, un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(os.UNIDADE_ID)] || {};
+  var c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || {};
+  add(Ast_s_(un.RESPONSAVEL) || Ast_s_(un.NOME_UNIDADE), un.EMAIL, 'Responsável da unidade', true);
+  if (/@/.test(Ast_s_(c.CONTATO))) add(Ast_s_(c.SOLICITANTE), c.CONTATO, 'Solicitante do chamado', true);
+  add(Ast_s_(cli.CONTATO) || Ast_clienteNome_(cli), cli.EMAIL, 'Cadastro do cliente', !lista.length);
+  try {
+    Ast_ler_('CAD_CONTATOS').forEach(function (k) { if (Ast_s_(k.CLIENTE_ID) === Ast_s_(os.CLIENTE_ID) && Ast_up_(k.STATUS || 'ATIVO') === 'ATIVO') add(k.NOME, k.EMAIL, 'Contato do cliente' + (Ast_s_(k.CARGO) ? ' (' + Ast_s_(k.CARGO) + ')' : ''), false); });
+  } catch (e) {}
+  return lista.slice(0, 12);
+}
+/** Assunto e texto do e-mail ao cliente com o PDF do relatório (tom profissional; sem fabricante; assinatura da Metrolabs). */
+function AstR_textoEnvio_(os, eu) {
+  var c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || {}, rev = Number(os.RELATORIO_REVISAO) || 0;
+  var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(os.UNIDADE_ID)] || {};
+  var assunto = ('Relatório de atendimento técnico ' + Ast_s_(os.NUMERO) + (rev > 0 ? ' (Rev. ' + (rev < 10 ? '0' : '') + rev + ')' : '') + (Ast_s_(os.CHAMADO_NUMERO) ? ' | Chamado ' + Ast_s_(os.CHAMADO_NUMERO) : '') + ' | ' + Ast_s_(os.CLIENTE_NOME)).slice(0, 180);
+  var texto = 'Prezados(as),\n\n' +
+    'Encaminhamos em anexo o relatório de atendimento técnico ' + Ast_s_(os.NUMERO) + (rev > 0 ? ' (revisão ' + (rev < 10 ? '0' : '') + rev + ', que substitui a anterior)' : '') + ', referente ao chamado ' + (Ast_s_(os.CHAMADO_NUMERO) || 'registrado') +
+    (Ast_s_(os.EQUIPAMENTO_TEXTO) ? ', equipamento ' + Ast_s_(os.EQUIPAMENTO_TEXTO) : '') + (Ast_s_(un.NOME_UNIDADE) ? ' (' + Ast_s_(un.NOME_UNIDADE) + ')' : '') + '.\n\n' +
+    'O atendimento foi realizado por ' + Ast_s_(os.TECNICO_NOME) + (Ast_s_(os.CHEGOU_EM) ? ' em ' + Ast_brDia_(os.CHEGOU_EM) : '') + (Ast_s_(c.SINTOMA) ? ', em razão do problema relatado: ' + Ast_s_(c.SINTOMA).slice(0, 200) : '') +
+    '. O relatório traz a condição encontrada, o serviço realizado, o teste funcional, as peças aplicadas, as fotos e a assinatura de quem acompanhou o atendimento.\n\n' +
+    'Recomendamos arquivar o documento no prontuário do equipamento. Ele também fica disponível no portal do cliente do SGO+.\n\n' +
+    'Em caso de dúvida, estamos à disposição.\n\n' +
+    'Atenciosamente,\n' + (Ast_s_(eu && eu.nome) || 'Equipe Metrolabs') + '\nMetrolabs';
+  return { assunto: assunto, texto: texto };
+}
+/**
+ * Envia o PDF do relatório vigente ao cliente por e-mail pelo Enviar documento (registro em DOC_ENVIOS; a O.S. é
+ * marcada pelo gancho Assistencia_aoEnviarDocumento_). d: { osId, pedidoId, para:[{ nome, email }] | [emails], mensagem }.
+ * Idempotente por pedidoId. Técnico responsável ou gestão. Fora da trava da Assistência (o Enviar documento tem a sua).
+ */
+function AstR_enviarRelatorioCliente_(eu, d) {
+  d = d || {};
+  var os = AstO_obter_(eu, d.osId, 'enviar o relatório ao cliente');
+  AstO_exigirCampo_(eu, os, 'enviar o relatório ao cliente');
+  if (Ast_up_(os.SITUACAO) !== 'ENCERRADA' || !Ast_s_(os.RELATORIO_PDF_ID)) throw new Error('Não foi possível enviar: a O.S. ' + os.NUMERO + ' ainda não está encerrada com o relatório gerado. Conclua a O.S. (o relatório é gerado no encerramento) e envie de novo');
+  if (!eu.sessionId || typeof EnviarDoc_apiEnviar !== 'function') throw new Error('Não foi possível enviar: o Enviar documento não está disponível nesta sessão. Envie pela ficha da O.S. no SGO+ (botão "Enviar ao cliente")');
+  var pedidoId = Ast_s_(d.pedidoId).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  if (pedidoId.length < 8) pedidoId = ('envio-' + Ast_s_(os.ID) + '-' + Date.now()).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  var para = (Array.isArray(d.para) ? d.para : [d.para]).map(function (p) { return typeof p === 'string' ? { nome: '', email: p } : (p || {}); })
+    .map(function (p) { return { nome: Ast_texto_(p.nome, 120), email: Ast_s_(p.email).toLowerCase() }; }).filter(function (p) { return p.email; });
+  if (!para.length) throw new Error('Não foi possível enviar: escolha ou digite o e-mail do contato do cliente que vai receber o relatório');
+  var ruins = para.filter(function (p) { return !/^[^\s@<>(),;:"\[\]]+@[^\s@<>(),;:"\[\]]+\.[a-z]{2,}$/i.test(p.email); });
+  if (ruins.length) throw new Error('Não foi possível enviar: o e-mail "' + ruins[0].email + '" não está completo (nome@dominio). Corrija e envie de novo');
+  var t = AstR_textoEnvio_(os, eu), msg = Ast_texto_(d.mensagem, 8000) || t.texto;
+  var r = EnviarDoc_apiEnviar(eu.sessionId, { pedidoId: pedidoId, arquivoId: Ast_s_(os.RELATORIO_PDF_ID), htmlId: Ast_s_(os.RELATORIO_HTML_ID), incluirHtml: false,
+    dica: { clienteId: Ast_s_(os.CLIENTE_ID), numero: Ast_s_(os.NUMERO), equipamento: Ast_s_(os.EQUIPAMENTO_TEXTO), titulo: 'Relatório de atendimento técnico ' + Ast_s_(os.NUMERO) },
+    destinatarios: para, canais: { email: true, whatsapp: false }, assunto: t.assunto, mensagemEmail: msg });
+  if (!r || r.ok === false) throw new Error('Não foi possível enviar: ' + String((r && (r.erro || r.message)) || 'o Enviar documento não respondeu').replace(/[.\s]+$/, ''));
+  var falha = (r.itens || []).filter(function (i) { return i.situacao === 'FALHOU'; })[0];
+  if (!r.enviados && falha) throw new Error('Não foi possível enviar: ' + String(falha.motivo || 'o e-mail não saiu').replace(/[.\s]+$/, '') + '. Tente de novo; se continuar, a gestão envia pela ficha da O.S.');
+  Ast_memoLimpar_();
+  var atual = Ast_porId_(AST_ABAS.OS, os.ID) || os;
+  return { enviado: true, repetido: !!r.repetido, para: para.map(function (p) { return p.email; }), enviadoEm: Ast_br_(atual.ENVIADO_CLIENTE_EM), os: atual,
+    message: r.repetido ? 'Este envio já tinha sido feito; nada foi enviado de novo.' : 'Relatório da O.S. ' + os.NUMERO + ' enviado por e-mail para ' + para.map(function (p) { return p.email; }).join(', ') + '.' };
+}
+/**
+ * Gancho do Enviar documento (SGO_EnviarDoc.js), depois de cada envio: o relatório da O.S. e o orçamento do chamado
+ * passam a mostrar "enviado ao cliente em / por / canal / para". linhas: [{ arquivoId, canal, destino, destinoNome, quando, porNome }]. Nunca lança.
+ */
+function Assistencia_aoEnviarDocumento_(linhas) {
+  try {
+    if (!linhas || !linhas.length) return;
+    Ast_memoLimpar_();
+    if (typeof Pend_abaExiste_ === 'function' && !Pend_abaExiste_(AST_ABAS.OS)) return;
+    var oss = Ast_ler_(AST_ABAS.OS), orcs = Ast_ler_(AST_ABAS.ORCAMENTOS);
+    linhas.forEach(function (l) {
+      var arq = Ast_s_(l.arquivoId); if (!arq) return;
+      var quando = Ast_iso_(l.quando) || Ast_agora_(), para = Ast_texto_(l.destino, 500), canal = Ast_up_(l.canal) === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL', por = Ast_texto_(l.porNome, 120);
+      oss.filter(function (o) { return Ast_s_(o.RELATORIO_PDF_ID) === arq || Ast_s_(o.RELATORIO_HTML_ID) === arq; }).forEach(function (o) {
+        Ast_atualizar_(AST_ABAS.OS, o.ID, { ENVIADO_CLIENTE_EM: quando, ENVIADO_CLIENTE_POR_NOME: por, ENVIADO_CLIENTE_CANAL: canal, ENVIADO_CLIENTE_PARA: para, ATUALIZADO_EM: Ast_agora_() });
+        Ast_evento_('OS', o.ID, 'ENVIADO_CLIENTE', { id: Ast_s_(l.porId), nome: por }, 'Relatório enviado ao cliente por ' + (canal === 'EMAIL' ? 'e-mail' : 'WhatsApp') + ' para ' + para, { numero: o.NUMERO });
+        if (Ast_s_(o.CHAMADO_ID)) Ast_evento_('CHAMADO', o.CHAMADO_ID, 'ENVIADO_CLIENTE', { id: Ast_s_(l.porId), nome: por }, 'Relatório da O.S. ' + Ast_s_(o.NUMERO) + ' enviado ao cliente por ' + (canal === 'EMAIL' ? 'e-mail' : 'WhatsApp') + ' para ' + para, { numero: o.CHAMADO_NUMERO, publico: true });
+      });
+      orcs.filter(function (q) { return Ast_s_(q.PDF_ID) === arq; }).forEach(function (q) {
+        Ast_atualizar_(AST_ABAS.ORCAMENTOS, q.ID, { ENVIADO_EM: quando, ENVIADO_PARA: para, ATUALIZADO_EM: Ast_agora_() });
+        if (Ast_s_(q.CHAMADO_ID)) Ast_evento_('CHAMADO', q.CHAMADO_ID, 'ORCAMENTO_ENVIADO', { id: Ast_s_(l.porId), nome: por }, 'Orçamento ' + Ast_s_(q.NUMERO) + ' enviado ao cliente por ' + (canal === 'EMAIL' ? 'e-mail' : 'WhatsApp') + ' para ' + para, { numero: q.CHAMADO_NUMERO, publico: true });
+      });
+    });
+    if (typeof SGO_Pendencias_invalidar_ === 'function') { try { SGO_Pendencias_invalidar_(); } catch (e2) {} }
+  } catch (e) { console.error('Assistência, envio ao cliente: ' + ((e && e.message) || e)); }
 }
 
 // ------------------------------------------------------------
@@ -182,7 +363,7 @@ function AstR_orcPublico_(o, eu) {
   var itens = Ast_json_(o.ITENS_JSON, []).map(function (i) { var x = { tipo: Ast_up_(i.tipo) === 'PECA' ? 'PECA' : 'SERVICO', descricao: Ast_s_(i.descricao), quantidade: Number(i.quantidade) || 0, unidade: Ast_s_(i.unidade), codigo: Ast_s_(i.codigo) }; if (ver) { x.valorUnitario = Number(i.valorUnitario) || 0; x.total = Math.round(x.quantidade * x.valorUnitario * 100) / 100; } return x; });
   var r = { id: o.ID, numero: o.NUMERO, revisao: Number(o.REVISAO) || 0, chamadoId: o.CHAMADO_ID, chamadoNumero: o.CHAMADO_NUMERO, clienteNome: o.CLIENTE_NOME, situacao: Ast_up_(o.SITUACAO),
     situacaoNome: AST_ORC_SITUACOES[Ast_up_(o.SITUACAO)] || o.SITUACAO, itens: itens, validade: Ast_brDia_(o.VALIDADE), validadeIso: Ast_dia_(o.VALIDADE), condicoes: ver ? Ast_s_(o.CONDICOES) : '',
-    pdfUrl: Ast_s_(o.PDF_URL), pdfId: Ast_s_(o.PDF_ID), emitidoEm: Ast_br_(o.EMITIDO_EM), aceiteUrl: Ast_s_(o.ACEITE_URL), aceitePor: Ast_s_(o.ACEITE_POR), decididoEm: Ast_br_(o.DECIDIDO_EM),
+    pdfUrl: Ast_s_(o.PDF_URL), pdfId: Ast_s_(o.PDF_ID), emitidoEm: Ast_br_(o.EMITIDO_EM), enviadoEm: Ast_br_(o.ENVIADO_EM), enviadoPara: Ast_s_(o.ENVIADO_PARA), aceiteUrl: Ast_s_(o.ACEITE_URL), aceitePor: Ast_s_(o.ACEITE_POR), decididoEm: Ast_br_(o.DECIDIDO_EM),
     decisaoTexto: Ast_s_(o.DECISAO_TEXTO), requisicao: Ast_s_(o.REQUISICAO_ID), veValores: ver };
   if (ver) { r.valorTotal = Number(o.VALOR_TOTAL) || 0; r.valorTotalTxt = Ast_moeda_(o.VALOR_TOTAL); }
   return r;

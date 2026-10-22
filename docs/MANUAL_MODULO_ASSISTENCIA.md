@@ -87,7 +87,19 @@ Pedido do cliente pelo portal ou pelo QR entra em "Solicitações dos clientes":
 4. Reserve o veículo livre sugerido pela Frota, se precisar. A reserva fica no nome do técnico e ligada ao cliente.
 
 O técnico recebe a atividade "Atender OS-..." em Minhas atividades, com prazo no fim do atendimento; ela é concluída
-sozinha quando a O.S. fecha. Reagendar exige motivo e avisa o técnico (e o anterior, se mudou) e o cliente por e-mail.
+sozinha quando a O.S. fecha. O cliente recebe por e-mail "visita agendada" no agendamento, "visita reagendada" no
+reagendamento (que exige motivo e avisa também o técnico, e o anterior, se mudou) e "retorno agendado" quando a mesma
+O.S. volta à agenda depois da peça ("Liberar para agendar" + "Agendar", ou a volta automática de Compras).
+
+Contrato com prazo de chegada ao local (Regras da assistência > Contratos, coluna "chegada em minutos úteis"): a ficha
+do chamado mostra o selo "Chegada ao local até ..." ao lado do prazo de atendimento, fechado pelo "Cheguei" da O.S.
+
+Chamado crítico (P1) sem triagem concluída em 30 minutos: pendência própria, crítica, na Caixa de decisões da gestão e
+da Diretoria, com um aviso (uma vez por chamado).
+
+O.S. com documentação pendente (ou chamado aguardando peça) pode voltar à triagem pela gestão, com motivo, quando o
+técnico descobre em campo que precisa de orçamento ou de outro diagnóstico: "Voltar à triagem" na ficha do chamado. A
+O.S. fica pausada e volta à agenda quando a triagem decidir "planejar visita".
 
 Agenda dos técnicos: dia ou semana, com os atendimentos do SGO+ e do Auvo, reservas de veículo e ausências. "Rota do
 dia" mostra as paradas na ordem e o caminho no mapa; a gestão muda a ordem e o técnico vê a mesma no Meu dia.
@@ -102,8 +114,11 @@ O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Ass
 3. Relato: condição encontrada, causa, serviço realizado, teste funcional, recomendações e o número de série
    conferido (ou leitura do QR). Série diferente do cadastro é aceita, avisada à gestão e vira pendência até alguém
    conferir; o cadastro não muda sozinho.
-4. Peças aplicadas. Peça em falta abre o pedido em Compras e a O.S. fica aguardando peça; quando a peça chegar, a
-   gestão libera e reagenda a mesma O.S.
+4. Peças aplicadas. Peça em falta abre o pedido em Compras e a O.S. fica aguardando peça. Quando Compras recebe e
+   confere a peça, o chamado volta sozinho a "Planejado" com "peça disponível em ..." e entra na Caixa de decisões
+   como "retorno a agendar"; o técnico e a gestão são avisados e o cliente recebe o e-mail "peça chegou, retorno será
+   agendado". A gestão toca em "Agendar o retorno" (mesma O.S.) e o cliente recebe "retorno agendado para dd/mm".
+   Recebimento com divergência não devolve o chamado (só depois de "Divergência resolvida").
 5. Assinatura do cliente no quadro, com o nome (e o documento, se quiser). Sem o responsável: "Responsável ausente",
    com o nome de quem recebeu e a justificativa.
 6. Concluí: registra a conclusão.
@@ -121,8 +136,30 @@ equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; tam
 Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da
 hora do servidor), serviço, checklist, peças, fotos, assinaturas e linha do tempo. Antes do encerramento sai como
 rascunho e fica numa pasta privada. Encerrada, a versão é salva na pasta "4. Ordens de Serviço" do equipamento (a
-mesma do QR), registrada no Arquivo de documentos e aparece na ficha do equipamento e no portal do cliente. Nenhuma
-versão é sobrescrita. "Enviar ao cliente" usa o Enviar documento do SGO+.
+mesma do QR), registrada no Arquivo de documentos (também quando o encerramento vem pela rotina, sem sessão) e aparece
+na ficha do equipamento e no portal do cliente. Nenhuma versão é sobrescrita.
+
+O PDF é gerado **uma vez só**, no encerramento. "Abrir o PDF" numa O.S. encerrada reabre o mesmo documento; nenhuma
+versão nova nasce sem motivo. Correção depois do encerramento é da gestão: na ficha da O.S., bloco "Documento e envio",
+"Abrir para corrigir" (textos do relato e o motivo, com pelo menos 10 letras). Sai a revisão seguinte do mesmo número
+(Rev. 01, 02...), a anterior fica arquivada como substituída, o histórico de revisões entra no documento (registro
+comum de revisões do SGO+) e a revisão precisa ser enviada ao cliente de novo.
+
+## Documento e envio ao cliente
+
+O envio do PDF ao cliente é sempre ato de uma pessoa: o técnico, no aplicativo, ao concluir (O.S. encerrada > "Enviar ao
+cliente por e-mail", com os contatos do cadastro e o e-mail conferível), ou a gestão, na ficha da O.S. (Assistência
+técnica > Ordens de serviço > O.S. > bloco "Documento e envio" > "Enviar ao cliente", que abre o Enviar documento). O
+e-mail vai com o PDF anexado, o chamado no assunto e texto profissional assinado pela Metrolabs.
+
+A ficha da O.S. mostra a situação: "PDF gerado, ainda não enviado", ou "Enviado ao cliente em dd/mm/aaaa hh:mm por
+(quem) (e-mail) para (endereço)". O envio fica gravado na O.S. e no histórico do chamado. Sem envio em 1 dia útil, a
+pendência "relatório não enviado" entra na Caixa de decisões da gestão (antes disso cobra só o técnico, no Início).
+
+WhatsApp ao cliente continua fora: na janela "Enviar documento" o WhatsApp só aparece quando houver canal ativo de
+verdade; com o piloto do WhatsApp oficial ligado a opção vem desligada, com o porquê e o caminho (envie por e-mail).
+
+O cliente, em "Meus chamados", vê e baixa o PDF da O.S. encerrada.
 
 ## Orçamento do chamado
 
@@ -149,11 +186,17 @@ mensal da Diretoria, junto com os relatórios do Comercial e de Compras.
 
 ## Avisos
 
-Pela matriz de avisos (eventos AT01 a AT12): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado
-para a triagem, chamado crítico, reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto.
-WhatsApp só na exceção do chamado P1 ao gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do
-resumo do dia. O cliente recebe só e-mail (chamado recebido, visita reagendada, atendimento concluído) enquanto durar
-o piloto do WhatsApp.
+Pela matriz de avisos (eventos AT01 a AT15; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
+em Compras, chamado devolvido, ao técnico e à gestão no resumo do dia; AT15 = peça recebida e retorno agendado, ao
+cliente por e-mail): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado para a triagem, chamado
+crítico, reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto. WhatsApp só na exceção do chamado
+P1 ao gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do resumo do dia. O cliente recebe só
+e-mail (chamado recebido, visita agendada ou reagendada, atendimento concluído, peça recebida, retorno agendado)
+enquanto durar o piloto do WhatsApp; o PDF da O.S. vai pelo Enviar documento, por uma pessoa.
+
+Interruptor "Assistência do SGO+ ligada": desligado, vale também nas telas internas. Consultar continua; abrir chamado,
+triagem, agenda, registro de campo e orçamento ficam travados, com a mensagem explicando o porquê e o caminho para
+religar (Regras da assistência > Ligar). Nada é apagado.
 
 ## Regras da assistência
 
@@ -192,3 +235,9 @@ Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa 
 - "A O.S. é de outro técnico": só o técnico responsável ou a gestão da área Técnica registra.
 - A foto não subiu: verifique a conexão e salve de novo; as que já subiram não se repetem.
 - Cadastro de cliente com chamado aberto não muda de cliente em Vínculos: encerre ou cancele o chamado primeiro.
+- "Relatório ainda não enviado ao cliente" na Caixa de decisões: abra a O.S. em Ordens de serviço, bloco "Documento e
+  envio", e toque em "Enviar ao cliente" (ou peça ao técnico para enviar pelo aplicativo).
+- O WhatsApp aparece desligado na janela "Enviar documento": o piloto do WhatsApp oficial está ligado e o número
+  oficial ainda não envia documentos. Envie por e-mail.
+- Preciso corrigir um relatório já emitido: só a gestão, em "Abrir para corrigir", com o motivo; sai a Rev. 01 e ela
+  precisa ser enviada de novo ao cliente.

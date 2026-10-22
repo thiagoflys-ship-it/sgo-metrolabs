@@ -46,10 +46,32 @@ function Assistencia_fontePendencias_(add, ctx) {
         oQueFazer: 'Abra Assistência técnica > Chamados, toque no chamado ' + num + ', preencha a triagem e escolha o caminho (remoto, orçamento, peça ou visita).',
         tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(c.PRAZO_TRIAGEM_EM) } })));
     }
-    if (s === 'PLANEJADO') {
+    if (s === 'PLANEJADO' && Ast_s_(c.PECA_DISPONIVEL_EM)) {
+      // 22/10/2026 (etapa 3): a peça chegou em Compras e o chamado voltou sozinho: a gestão agenda o retorno
+      add(Pend_item_('ast_retorno', Object.assign({}, base, { id: 'AST:RETORNO:' + c.ID, paraUsuarios: triagem.ids, gravidade: p === 'P1' ? 'CRITICO' : 'ATENCAO', dias: null,
+        titulo: 'Agendar o retorno do chamado ' + num + ' (' + cli + '): peça disponível desde ' + Ast_br_(c.PECA_DISPONIVEL_EM),
+        detalhe: 'Peça ' + Ast_s_(c.PECA_DESCRICAO).slice(0, 120) + (Ast_s_(c.REQUISICAO_NUMERO) ? ' (pedido ' + Ast_s_(c.REQUISICAO_NUMERO) + ')' : '') + ' recebida e conferida por Compras. ' + AST_PRIORIDADES[p] + '. O cliente já foi avisado de que a peça chegou.',
+        oQueFazer: 'Abra o chamado ' + num + ' em Assistência técnica > Chamados e toque em "Agendar o retorno" (mesma O.S.; o técnico retira a peça com Compras). O cliente recebe a data por e-mail.', tela: AST_PEND_TELA('assistencia', c.ID) })));
+    } else if (s === 'PLANEJADO') {
       add(Pend_item_('ast_agendar', Object.assign({}, base, { id: 'AST:AGENDAR:' + c.ID, paraUsuarios: triagem.ids, gravidade: p === 'P1' ? 'CRITICO' : 'ATENCAO', dias: null,
         titulo: 'Agendar o atendimento do chamado ' + num + ' (' + cli + ')', detalhe: 'Triagem concluída: falta escolher técnico, data e duração. ' + AST_PRIORIDADES[p] + '.',
         oQueFazer: 'Abra o chamado ' + num + ' em Assistência técnica > Chamados e toque em "Agendar".', tela: AST_PEND_TELA('assistencia', c.ID) })));
+    }
+    if (p === 'P1' && (s === 'ABERTO' || s === 'EM_TRIAGEM') && !Ast_s_(c.TRIAGEM_FIM_EM)) {
+      // 22/10/2026: alerta próprio do P1 sem triagem em 30 minutos (relógio corrido desde a abertura; o P1 não espera o expediente)
+      var ab = Ast_ms_(c.ABERTO_EM);
+      if (ab !== null && agoraMs - ab > 30 * 60000) {
+        add(Pend_item_('ast_p1_triagem', Object.assign({}, base, { id: 'AST:P1:' + c.ID, paraUsuarios: triagem.ids.concat(Ast_diretoria_(us)), gravidade: 'CRITICO', dias: null, vencimento: Ast_br_(c.PRAZO_TRIAGEM_EM),
+          titulo: 'Chamado CRÍTICO ' + num + ' (' + cli + ') sem triagem há ' + Ast_duracaoTxt_((agoraMs - ab) / 60000),
+          detalhe: 'Aberto em ' + Ast_br_(c.ABERTO_EM) + '. Equipamento: ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 80) + '. ' + Ast_s_(c.SINTOMA).slice(0, 160),
+          oQueFazer: 'Abra o chamado ' + num + ' em Assistência técnica > Chamados, confirme os sintomas e o risco e escolha o caminho agora (P1 é equipamento parado que afeta o paciente).', tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: hoje } })));
+        if (!Ast_s_(c.P1_ALERTA_EM)) {
+          try {
+            Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { P1_ALERTA_EM: Ast_agora_(agoraMs) });
+            Ast_avisar_(triagem.ids.concat(Ast_diretoria_(us)), 'P1_SEM_TRIAGEM', 'Chamado CRÍTICO ' + num + ' sem triagem há mais de 30 minutos', Ast_s_(c.CLIENTE_NOME) + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 80) + '\nAberto em ' + Ast_br_(c.ABERTO_EM) + '. Faça a triagem agora em Assistência técnica > Chamados.', c.ID, { evento: 'AT02' });
+          } catch (eP1) { console.error('Assistência, alerta P1: ' + ((eP1 && eP1.message) || eP1)); }
+        }
+      }
     }
     var sla = Ast_slaEstado_(c, agoraMs, regras);
     if (sla.estado === 'ESTOURADO' || sla.estado === 'EM_RISCO') {
@@ -85,6 +107,18 @@ function Assistencia_fontePendencias_(add, ctx) {
           titulo: 'O.S. ' + num + ' em campo sem notícia do aparelho há mais de ' + AST_SEM_SINC_HORAS + ' horas', detalhe: 'Última atualização: ' + Ast_br_(Ast_agora_(ult)) + '. Pode ser a fila de envios parada no celular (sem internet).',
           oQueFazer: 'No aplicativo do técnico, abra "Envios" com internet e toque em "Enviar agora". Se já terminou, toque em "Concluí".', tela: AST_PEND_TELA('assistencia_os', o.ID), extra: { area: 'TECNICA' } }));
       }
+    }
+    if (s === 'ENCERRADA' && Ast_s_(o.RELATORIO_PDF_ID) && !Ast_s_(o.ENVIADO_CLIENTE_EM)) {
+      // 22/10/2026 (etapa 2): relatório gerado e ainda não enviado ao cliente: o técnico até 1 dia útil; depois, a gestão (Caixa de decisões)
+      var diaEnc = Ast_dia_(o.ENCERRADA_EM) || Ast_dia_(o.RELATORIO_EM) || hoje;
+      var diasSem = typeof Ges_diasUteisEntre_ === 'function' ? Ges_diasUteisEntre_(diaEnc, hoje) : 0;
+      var cobraGestao = diasSem >= 1;
+      add(Pend_item_(cobraGestao ? 'ast_sem_envio' : 'ast_enviar_cliente', { id: 'AST:ENVIO:' + o.ID, nome: num, publico: cobraGestao ? 'GESTAO' : 'PESSOA', paraUsuarios: cobraGestao ? triagem.ids.concat(tec ? [tec] : []) : [tec], responsavel: cobraGestao ? 'Gestão da área Técnica' : Ast_s_(o.TECNICO_NOME), responsavelId: cobraGestao ? '' : tec,
+        gravidade: cobraGestao ? 'CRITICO' : 'ATENCAO', dias: null, clienteId: Ast_s_(o.CLIENTE_ID),
+        titulo: 'Relatório da O.S. ' + num + ' (' + cli + ') ainda não enviado ao cliente' + (cobraGestao ? ' (encerrada há ' + diasSem + ' dia' + (diasSem === 1 ? '' : 's') + ' útil' + (diasSem === 1 ? '' : 'eis') + ')' : ''),
+        detalhe: 'O.S. encerrada em ' + Ast_br_(o.ENCERRADA_EM) + '; relatório gerado em ' + Ast_br_(o.RELATORIO_EM) + '. Técnico ' + Ast_s_(o.TECNICO_NOME) + '. O cliente só tem o documento depois do envio.',
+        oQueFazer: 'No aplicativo, abra a O.S. encerrada e toque em "Enviar ao cliente por e-mail" (contatos do cadastro). Ou em Assistência técnica > Ordens de serviço > ' + num + ' > Documento e envio > "Enviar ao cliente".',
+        oQueFazerOutro: 'Abra Assistência técnica > Ordens de serviço > ' + num + ' > Documento e envio e toque em "Enviar ao cliente" (ou cobre ' + Ast_s_(o.TECNICO_NOME) + ').', tela: AST_PEND_TELA('assistencia_os', o.ID), extra: { area: 'TECNICA' } }));
     }
     if (s === 'ENCERRADA' && Ast_sim_(o.SERIE_DIVERGENTE) && !Ast_s_(o.SERIE_TRATADA_EM)) {
       add(Pend_item_('ast_serie', { id: 'AST:SERIE:' + o.ID, nome: num, publico: 'GESTAO', responsavel: 'Gestão da área Técnica', gravidade: 'ATENCAO', dias: null, clienteId: Ast_s_(o.CLIENTE_ID),
@@ -446,6 +480,10 @@ var AST_ACOES = {
   anotar: function (eu, d) { return AstC_anotar_(eu, d); },
   triagem: function (eu, d) { return AstC_triagem_(eu, d); },
   retomar: function (eu, d) { return AstC_retomar_(eu, d); },
+  // 22/10/2026: volta à triagem com motivo (documentação pendente ou aguardando peça) e correção do relatório encerrado (revisão com motivo)
+  voltarTriagem: function (eu, d) { return AstC_voltarTriagem_(eu, d); },
+  corrigirRelatorio: function (eu, d) { return AstR_corrigirRelatorio_(eu, d); },
+  enviarRelatorio: function (eu, d) { var r = AstR_enviarRelatorioCliente_(eu, d); return { os: AstO_publico_(r.os, eu), enviado: r.enviado, repetido: r.repetido, message: r.message }; },
   encerrarRemoto: function (eu, d) { return AstC_encerrarRemoto_(eu, d); },
   cancelar: function (eu, d) { return AstC_cancelar_(eu, d); },
   aguardarPeca: function (eu, d) { Ast_exigir_(eu, 'GESTAO', 'marcar aguardando peça'); var c = AstC_obter_(eu, d && d.id, 'marcar aguardando peça'); var r = Ast_comTrava_(function () { return AstC_aguardarPeca_(eu, c, d || {}, {}); }); return { chamado: AstC_publico_(Ast_porId_(AST_ABAS.CHAMADOS, r.ID) || r, eu, Date.now()), message: 'Chamado ' + c.NUMERO + ' aguardando peça; o pedido de compra foi aberto em Compras.' }; },
@@ -521,6 +559,11 @@ var AST_ACOES = {
   portal: function (eu) { return AstP_portal_(eu); }
 };
 var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos'];
+/** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
+var AST_ACOES_DESLIGADA = ['abrir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento'];
+var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
+  agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.',
+  salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente' };
 
 /** google.script.run: Assistencia_api(sessionId, acao, dados). Nunca lança. */
 function Assistencia_api(sessionId, acao, dados) {
@@ -532,6 +575,12 @@ function Assistencia_api(sessionId, acao, dados) {
     if (eu.nivel === 'NENHUM') return { ok: false, semAcesso: true, message: 'Não foi possível abrir: a Assistência técnica é da equipe interna da Metrolabs e dos clientes com acesso ao portal.' };
     if (eu.cliente && AST_ACOES_CLIENTE.indexOf(acao) < 0) return { ok: false, semAcesso: true, message: 'Não foi possível concluir: esta parte da Assistência técnica é da equipe interna. Acompanhe os seus chamados em "Meus chamados".' };
     if (acao !== 'acesso') { try { Ast_garantirAbas_(); Ast_garantirSemente_(); } catch (e) {} }
+    // 22/10/2026: o interruptor "Assistência ligada" vale também nas telas internas: desligada, nada novo nasce (chamado, triagem, agenda,
+    // registro de campo), mas tudo continua visível; a mensagem diz o porquê e o caminho para religar
+    if (!eu.cliente && AST_ACOES_DESLIGADA.indexOf(Ast_s_(acao)) >= 0 && !Ast_ligada_()) {
+      return { ok: false, desligada: true, message: 'Não foi possível ' + (AST_ACOES_DESLIGADA_NOMES[Ast_s_(acao)] || 'concluir') + ': a Assistência técnica do SGO+ está desligada pela gestão (Regras da assistência). ' +
+        'Os chamados e as O.S. continuam visíveis; nada é apagado. Para religar, o Administrador, a Diretoria ou um gestor abre Assistência técnica > Regras da assistência e toca em "Ligar" (com o motivo). Enquanto isso, o atendimento novo segue pelo Auvo.' };
+    }
     var r = fn(eu, dados || {});
     return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
   } catch (e) {

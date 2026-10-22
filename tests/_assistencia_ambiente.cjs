@@ -18,7 +18,7 @@ const AREAS = [['DIRETORIA', 'Diretoria'], ['ADMINISTRATIVO', 'Administrativo'],
 
 const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO_Areas.js', 'SGO_Atividades.js', 'SGO_Atividades_Avisos.js', 'SGO_Alertas_Central.js',
   'SGO_Avisos_Matriz.js', 'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_QualifIA_Verificador.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js',
-  'SGO_EnviarDoc.js', 'SGO_Compras_Config.js', 'SGO_Compras_Cotacoes.js', 'SGO_Compras_Financeiro.js', 'SGO_Compras_Fornecedores.js', 'SGO_Compras_Painel.js', 'SGO_Compras_Pedido.js',
+  'SGO_EnviarDoc.js', 'SGO_DocRevisao.js', 'SGO_Compras_Config.js', 'SGO_Compras_Cotacoes.js', 'SGO_Compras_Financeiro.js', 'SGO_Compras_Fornecedores.js', 'SGO_Compras_Painel.js', 'SGO_Compras_Pedido.js',
   'SGO_Compras_Requisicoes.js', 'SGO_Pendencias_Compras.js', 'SGO_Qualidade_Auvo.js',
   'SGO_Assistencia_Agenda.js', 'SGO_Assistencia_App.js', 'SGO_Assistencia_Chamados.js', 'SGO_Assistencia_Config.js', 'SGO_Assistencia_Fonte.js', 'SGO_Assistencia_OS.js',
   'SGO_Assistencia_Painel.js', 'SGO_Assistencia_Questionarios.js', 'SGO_Assistencia_Relatorio.js', 'SGO_Pendencias_Assistencia.js'].filter((f) => fs.existsSync(path.join(pastaLegado, f)));
@@ -129,6 +129,10 @@ function ambiente(opcoes) {
       update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (!r) return false; Object.assign(r, d); return true; },
       insert: (t, d) => { const r = Object.assign({ ID: 'id' + (++seq), CRIADO_EM: new DataFalsa().toISOString() }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); },
       insertMany: (t, l) => { l.forEach((d) => (tabelas[t] = tabelas[t] || []).push(Object.assign({ ID: 'id' + (++seq), CRIADO_EM: new DataFalsa().toISOString() }, d))); },
+      // 22/10/2026: o que SGO_Clientes.js, SGO_Unidades.js e SGO_Equipamentos.js usam (cadastro em campo pelo aplicativo reaproveita as funções de criar)
+      remove: (t, id) => { const l = tabelas[t] || [], i = l.findIndex((x) => String(x.ID) === String(id)); if (i < 0) return false; l.splice(i, 1); return true; },
+      gerarRegistroBase: (extra) => Object.assign({ ID: 'id' + (++seq), CRIADO_EM: new DataFalsa().toISOString() }, extra || {}),
+      normalizarObjetoParaSheet: (t, obj) => Object.assign({}, obj || {}),
       log() {}
     },
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_CLIENTES: 'CAD_CLIENTES', CAD_UNIDADES: 'CAD_UNIDADES', CAD_EQUIPAMENTOS: 'CAD_EQUIPAMENTOS', CAD_CONDUTORES: 'CAD_CONDUTORES', CAD_TECNICOS: 'CAD_TECNICOS',

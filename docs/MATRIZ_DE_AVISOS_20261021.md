@@ -223,6 +223,31 @@ Cada linha é um evento que hoje gera aviso, com o arquivo e a linha do código 
 | S58 | Resumo diário do piloto<br>`SGO_WhatsappPiloto.js:429` | Responsável pelo sistema<br>E-mail às 18h | Diretoria (dono) | E-mail na hora | 1 por dia, durante o piloto | Continua avisando<br>Sugestão: às 17h, dentro do expediente. |
 
 
+#### Assistência técnica (nativa, 21/10/2026; etapas 2 e 3 em 22/10/2026)
+
+Eventos AT01 a AT15 registrados em `SGO_Pendencias_Assistencia.js` (todo envio passa por `SGO_notificar_` e pela matriz). O cliente recebe só e-mail enquanto durar o piloto; o PDF da O.S. nunca sai sozinho: vai pelo Enviar documento, por uma pessoa (técnico no aplicativo ou gestão na ficha da O.S.), e o envio fica gravado na O.S.
+
+| Nº | Evento e origem no código | Hoje: quem recebe e por onde | Quem deve receber | Canal proposto | Limite | Decisão |
+|---|---|---|---|---|---|---|
+| AT01 | Chamado novo para a triagem<br>`SGO_Assistencia_Chamados.js` | Gestor da área Técnica<br>Sistema; e-mail na hora | Gestor da área (Técnica) | Sistema + E-mail na hora | 1 por chamado | Continua avisando |
+| AT02 | Chamado crítico (P1) aberto; P1 sem triagem em 30 min (22/10)<br>`SGO_Assistencia_Chamados.js`; `SGO_Assistencia_Painel.js` | Gestor da área Técnica<br>Sistema; e-mail; WhatsApp 1 por dia | Gestor da área (Técnica); Diretoria no alerta dos 30 min | Sistema + E-mail na hora + WhatsApp na hora (expediente, CLT, 1 por dia) | 1 por chamado; o alerta dos 30 min 1 vez | Continua avisando<br>Pendência própria "P1 sem triagem" na Caixa de decisões. |
+| AT03 | Atendimento agendado para você<br>`SGO_Assistencia_Agenda.js` | Técnico<br>Sistema; resumo | Técnico | Sistema + E-mail no resumo + WhatsApp no resumo do dia | 1 por dia | Continua avisando |
+| AT04 | Reagendado, passado a outro técnico ou chamado de volta à triagem (22/10)<br>`SGO_Assistencia_Agenda.js`; `SGO_Assistencia_Chamados.js` | Técnico<br>Sistema; e-mail na hora | Técnico | Sistema + E-mail na hora | 1 por mudança | Continua avisando |
+| AT05 | O.S. cancelada<br>`SGO_Assistencia_Chamados.js` | Técnico | Técnico | Sistema + E-mail na hora | 1 por O.S. | Continua avisando |
+| AT06 | Reclamação de cliente para tratar<br>`SGO_Assistencia_Chamados.js` | Dono do caso | Dono do caso | Sistema + E-mail no resumo | No resumo | Continua avisando |
+| AT07 | Atendimento do pedido do Comercial concluído<br>`SGO_Assistencia_Chamados.js` | Vendedor | Vendedor | Sistema + E-mail no resumo | 1 por chamado | Continua avisando (informativo) |
+| AT08 | Ao cliente: chamado recebido, visita agendada (22/10) ou reagendada, atendimento concluído<br>`SGO_Assistencia_*.js` | Cliente<br>E-mail na hora | Cliente (externo) | E-mail na hora | 1 por evento | Continua avisando<br>WhatsApp ao cliente só depois do piloto. O e-mail de atendimento concluído não leva o PDF: o documento vai pelo Enviar documento. |
+| AT09 | Pedido de atendimento do cliente na fila<br>`SGO_Assistencia_Chamados.js` | Gestor da área Técnica | Gestor da área (Técnica) | Sistema + E-mail na hora | 1 por pedido | Continua avisando |
+| AT10 | Série do equipamento diferente do cadastro<br>`SGO_Assistencia_OS.js` | Gestor da área Técnica | Gestor da área (Técnica) | Sistema + E-mail no resumo | No resumo | Continua avisando |
+| AT11 | Falta de peça no atendimento<br>`SGO_Assistencia_OS.js` | Gestor da área Técnica | Gestor da área (Técnica) | Sistema + E-mail no resumo | No resumo | Continua avisando<br>O pedido de compra abre sozinho em Compras. |
+| AT12 | Orçamento do chamado pedido ou respondido<br>`SGO_Assistencia_Relatorio.js` | Gestor comercial; gestor da área Técnica | Gestor comercial; gestor da área Técnica | Sistema + E-mail no resumo | No resumo | Continua avisando |
+| AT13 | Cadastro criado em campo pelo técnico<br>`SGO_Assistencia_App.js` | Gestor da área Técnica | Gestor da área (Técnica) | Sistema + E-mail no resumo | No resumo | Continua avisando (etapa 1) |
+| AT14 | Peça disponível em Compras: chamado devolvido à Assistência, retorno a agendar (22/10)<br>`SGO_Assistencia_Chamados.js` (chamado por `SGO_Compras_Pedido.js` depois de soltar a trava de Compras) | Técnico responsável; gestor da área Técnica<br>Sistema; e-mail no resumo | Técnico responsável; gestor da área (Técnica) | Sistema + E-mail no resumo (WhatsApp interno só pelo piloto, no resumo) | 1 por pedido de compra | Continua avisando<br>O chamado volta sozinho a "Planejado"; pendência "retorno a agendar" na Caixa de decisões. |
+| AT15 | Ao cliente: peça recebida (retorno será agendado) e retorno técnico agendado para dd/mm (22/10)<br>`SGO_Assistencia_Chamados.js`; `SGO_Assistencia_Agenda.js` | Cliente<br>E-mail na hora | Cliente (externo) | E-mail na hora | 1 por evento | Continua avisando<br>Nada de WhatsApp ao cliente nesta etapa. |
+
+Pendências da Assistência na central e na Caixa de decisões (só sistema, escada da Caixa): triagem, agendar, prazo, orçamento parado, documentação pendente (técnico; 24 h depois a gestão), sem sincronização, série divergente, solicitação na fila, reclamação, O.S. de hoje, cadastro criado em campo e, desde 22/10: "relatório para enviar ao cliente" (técnico, até 1 dia útil), "O.S. encerrada há 1 dia útil sem envio ao cliente" (gestão), "retorno a agendar" (peça disponível) e "P1 sem triagem em 30 minutos" (gestão e Diretoria).
+
+
 ### 3.2 Pendências da central do SGO+ (já ficam só no sistema)
 
 Estes 64 tipos de pendência aparecem no Início, na central e, os que são decisão, na Caixa de decisões. Não mandam mensagem sozinhos: o e-mail e o WhatsApp da gestão saem só pela escada da Caixa (resumo das 08h00 e, parado há 2 dias úteis, o resumo do WhatsApp). A proposta muda apenas quem vê cada grupo.

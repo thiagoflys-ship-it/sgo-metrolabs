@@ -51,6 +51,9 @@ var ENVDOC_PERFIS_BLOQUEADOS = { CLIENTE: 1, RH: 1 };
  * INTERNO (sem cliente) ou BLOQUEADO (dado pessoal de colaborador). frase: parágrafo do e-mail padrão.
  */
 var ENVDOC_RAIZES = [
+  // 22/10/2026 (etapa 2): relatório da O.S. da Assistência técnica (pasta "4. Ordens de Serviço" do equipamento ou a pasta própria do módulo)
+  { rx: /^(4\. Ordens de Serviço|Assistência técnica - Relatórios)$/i, tipo: 'Relatório de atendimento técnico', classe: 'CLIENTE', frase: 'O relatório registra o atendimento técnico realizado: condição encontrada, serviço executado, teste funcional, peças, fotos e a assinatura de quem acompanhou. Recomendamos arquivá-lo no prontuário do equipamento.' },
+  { rx: /^Assistência técnica - Orçamentos$/i, tipo: 'Orçamento de assistência técnica', classe: 'CLIENTE', frase: 'O orçamento tem validade indicada no documento. A execução começa depois da aprovação por escrito.' },
   { rx: /^Autoclave - Laudos$/i, tipo: 'Relatório de ensaio da autoclave', classe: 'CLIENTE', frase: 'O relatório reúne os resultados do ensaio e a conclusão técnica. Recomendamos arquivá-lo no prontuário do equipamento.' },
   { rx: /^Lavadora - Laudos$/i, tipo: 'Relatório de ensaio da lavadora', classe: 'CLIENTE', frase: 'O relatório reúne os resultados do ensaio e a conclusão técnica. Recomendamos arquivá-lo no prontuário do equipamento.' },
   { rx: /^Cadeia de Frio - Laudos$/i, tipo: 'Relatório de qualificação térmica', classe: 'CLIENTE', frase: 'O relatório reúne os resultados da qualificação térmica e a conclusão técnica. Recomendamos arquivá-lo no prontuário do equipamento.' },
@@ -460,8 +463,13 @@ function EnviarDoc_canais_(eu) {
   var whats = { ok: false, texto: '' };
   var cred = typeof Notificar_credenciaisZapi_ === 'function' ? Notificar_credenciaisZapi_() : {};
   var zapiOk = !!(cred && cred.instancia && cred.token && cred.clientToken);
-  if (zapiOk) whats = { ok: true, texto: 'Sai pelo WhatsApp da empresa, com o documento anexado (não vai link). Há um intervalo de alguns segundos entre as mensagens para proteger o número da empresa.' };
-  else whats = { ok: false, texto: 'O WhatsApp da empresa para envio de documentos (Z-API) não está configurado. O que fazer: o responsável pelo sistema grava as 3 chaves da Z-API em Administração > Chaves e senhas. Depois volte aqui e envie de novo. Enquanto isso, use o e-mail.' };
+  // 22/10/2026: o WhatsApp só é oferecido quando o envio pode sair de verdade. Com o piloto do WhatsApp ligado (ou o provedor
+  // oficial escolhido) a Z-API está fora do sistema e o número oficial ainda não envia documentos: antes a janela mostrava a
+  // opção e o envio falhava em silêncio.
+  var zapiFora = typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_();
+  if (zapiFora) whats = { ok: false, motivo: 'PILOTO', texto: 'WhatsApp indisponível para documentos. Por quê: o piloto do WhatsApp oficial está ligado, a Z-API (que mandava o PDF) saiu do sistema e o número oficial ainda não envia documentos (só avisos por modelo aprovado). O que fazer: envie por e-mail; quando o envio de documentos pelo número oficial for ligado, a opção volta aqui sozinha.' };
+  else if (zapiOk) whats = { ok: true, texto: 'Sai pelo WhatsApp da empresa, com o documento anexado (não vai link). Há um intervalo de alguns segundos entre as mensagens para proteger o número da empresa.' };
+  else whats = { ok: false, motivo: 'SEM_CHAVES', texto: 'O WhatsApp da empresa para envio de documentos (Z-API) não está configurado. O que fazer: o responsável pelo sistema grava as 3 chaves da Z-API em Administração > Chaves e senhas. Depois volte aqui e envie de novo. Enquanto isso, use o e-mail.' };
   return { email: email, whatsapp: whats };
 }
 
@@ -777,8 +785,22 @@ function EnviarDoc_apiEnviar(sessionId, payload) {
       }
     });
     try { SGO_DATA.log('ENVDOC_ENVIAR', eu.usuario, doc.arquivo.nome + ': ' + planejadas.map(function (l) { return l.CANAL + ' ' + l.SITUACAO; }).join(', '), 'DOCUMENTOS'); } catch (e) {}
+    EnviarDoc_aposEnvio_(planejadas, eu);
     return EnviarDoc_respostaEnvio_(planejadas, false);
   });
+}
+
+/**
+ * 22/10/2026: gancho "depois do envio" por módulo (como o COMMAND fazia com OS_ENVIADA): o relatório da O.S. e o orçamento
+ * do chamado passam a mostrar "enviado ao cliente em / por / canal / para". Só os envios que saíram. Nunca lança.
+ */
+function EnviarDoc_aposEnvio_(linhas, eu) {
+  try {
+    var ok = (linhas || []).filter(function (l) { return l && l.SITUACAO === 'ENVIADO'; }).map(function (l) {
+      return { arquivoId: l.ARQUIVO_ID, canal: l.CANAL, destino: l.DESTINO, destinoNome: l.DESTINO_NOME, quando: l.QUANDO, porId: eu && eu.id, porNome: eu && eu.nome };
+    });
+    if (ok.length && typeof Assistencia_aoEnviarDocumento_ === 'function') Assistencia_aoEnviarDocumento_(ok);
+  } catch (e) { try { console.error('Enviar documento, gancho depois do envio: ' + ((e && e.message) || e)); } catch (x) {} }
 }
 
 function EnviarDoc_respostaEnvio_(linhas, repetido) {
@@ -820,6 +842,7 @@ function EnviarDoc_apiTentarDeNovo(sessionId, payload) {
     } finally { try { lock.releaseLock(); } catch (e) {} }
     try { EnviarDoc_executar_(linha, eu, anexos, plano); }
     catch (e) { var m = { SITUACAO: 'FALHOU', MOTIVO: String((e && e.message) || e).slice(0, 480), ATUALIZADO_EM: EnviarDoc_agoraIso_() }; try { SGO_DATA.update(ENVDOC_ABA, linha.ID, m); } catch (x) {} Object.assign(linha, m); }
+    EnviarDoc_aposEnvio_([linha], eu);
     return EnviarDoc_respostaEnvio_([linha], false);
   });
 }

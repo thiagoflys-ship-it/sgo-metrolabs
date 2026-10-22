@@ -49,7 +49,9 @@ var SGO_DOCREV_MODULOS = {
   PLANEJAMENTO_CME: 'Planejamento de CME',
   PGT_POP: 'PGT/POP',
   REGISTROS_OPERACIONAIS: 'Registros operacionais',
-  CRONOGRAMA_EXECUCAO: 'Cronograma de execução'
+  CRONOGRAMA_EXECUCAO: 'Cronograma de execução',
+  // 22/10/2026: relatório da O.S. da Assistência técnica (revisão com motivo pela gestão, "Abrir para corrigir" na ficha da O.S.)
+  ORDEM_SERVICO: 'Relatório de atendimento técnico (O.S.)'
 };
 
 /* ============================================================

@@ -44,7 +44,9 @@ var AST_COLUNAS = {
     'TRIAGEM_RESPONSAVEL_ID', 'TRIAGEM_RESPONSAVEL_NOME', 'TRIAGEM_JSON', 'TRIAGEM_INICIO_EM', 'TRIAGEM_FIM_EM', 'ACAO_DECIDIDA', 'ORIENTACAO_REMOTA',
     'ORCAMENTO_DESCRICAO', 'ORCAMENTO_ID', 'PECA_DESCRICAO', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'AGUARDANDO_MOTIVO', 'RETORNO_PREVISTO',
     'TECNICO_ID', 'TECNICO_NOME', 'AGENDADO_PARA', 'DURACAO_MIN', 'OS_ID', 'OS_NUMERO', 'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'CANCELADO_MOTIVO',
-    'CANCELADO_POR_NOME', 'REINCIDENTE', 'REINCIDENCIA_DE', 'CASO_ID', 'PROPOSTA_ID', 'SOLICITACAO_ID', 'PROXIMA_ACAO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'CANCELADO_POR_NOME', 'REINCIDENTE', 'REINCIDENCIA_DE', 'CASO_ID', 'PROPOSTA_ID', 'SOLICITACAO_ID', 'PROXIMA_ACAO',
+    // 22/10/2026 (etapas 2 e 3): peça disponível em Compras, prazo de chegada do contrato e alerta do P1 sem triagem
+    'PECA_DISPONIVEL_EM', 'CHEGADA_MIN_UTEIS', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_OS: ['ID', 'NUMERO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'SITUACAO', 'TIPO_CODIGO', 'TIPO_NOME', 'MODELO_CODIGO', 'MODELO_VERSAO', 'PERGUNTAS_JSON',
     'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO', 'ENDERECO', 'TECNICO_ID', 'TECNICO_NOME',
     'AGENDADO_PARA', 'DURACAO_MIN', 'ORDEM_DIA', 'PREPARO_JSON', 'ORIENTACAO', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'CHEGOU_LAT', 'CHEGOU_LNG',
@@ -52,7 +54,9 @@ var AST_COLUNAS = {
     'RESPOSTAS_JSON', 'RELATO', 'CONDICAO_ENCONTRADA', 'CAUSA', 'SERVICO_REALIZADO', 'TESTE_FUNCIONAL', 'RECOMENDACOES', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO',
     'SERIE_DIVERGENTE', 'IDENTIFICADO_POR', 'QTD_FOTOS', 'QTD_PECAS', 'AGUARDANDO_PECA', 'ASSINATURA_ARQUIVO_ID', 'ASSINATURA_NOME', 'ASSINATURA_DOCUMENTO',
     'ASSINATURA_EM', 'SEM_ASSINATURA_MOTIVO', 'SEM_ASSINATURA_RECEBIDO_POR', 'SEM_ASSINATURA_JUSTIFICATIVA', 'FALTAS', 'DOC_TECNICO_TIPO', 'DOC_TECNICO_REF',
-    'DOC_TECNICO_URL', 'RELATORIO_VERSAO', 'RELATORIO_PDF_ID', 'RELATORIO_PDF_URL', 'RELATORIO_HTML_ID', 'RELATORIO_EM', 'ENVIADO_CLIENTE_EM', 'RESERVA_ID',
+    'DOC_TECNICO_URL', 'RELATORIO_VERSAO', 'RELATORIO_PDF_ID', 'RELATORIO_PDF_URL', 'RELATORIO_HTML_ID', 'RELATORIO_EM', 'ENVIADO_CLIENTE_EM',
+    // 22/10/2026 (etapa 2): envio ao cliente gravado de verdade (quem, canal, para quem) e a revisão do relatório (Abrir para corrigir)
+    'ENVIADO_CLIENTE_POR_NOME', 'ENVIADO_CLIENTE_CANAL', 'ENVIADO_CLIENTE_PARA', 'RELATORIO_REVISAO', 'RESERVA_ID',
     'RESERVA_CODIGO', 'ATIVIDADE_ID', 'SERIE_TRATADA_EM', 'SERIE_TRATADA_POR_NOME', 'SERIE_TRATADA_TEXTO', 'ENCERRADA_EM', 'ENCERRADA_POR_NOME', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
   ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM'],
@@ -64,18 +68,18 @@ var AST_COLUNAS = {
   ATEC_CASOS: ['ID', 'NUMERO', 'TIPO', 'CLIENTE_ID', 'CLIENTE_NOME', 'CHAMADO_ID', 'OS_ID', 'DESCRICAO', 'DONO_ID', 'DONO_NOME', 'PRAZO', 'SITUACAO', 'CAUSA', 'ACAO',
     'RESPOSTA_CLIENTE', 'RESOLVIDO_EM', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_ORCAMENTOS: ['ID', 'NUMERO', 'REVISAO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'CLIENTE_ID', 'CLIENTE_NOME', 'ITENS_JSON', 'VALOR_TOTAL', 'VALIDADE', 'CONDICOES',
-    'SITUACAO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'ENVIADO_EM', 'ACEITE_ARQUIVO_ID', 'ACEITE_URL', 'ACEITE_NOME', 'ACEITE_POR',
+    'SITUACAO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'ENVIADO_EM', 'ENVIADO_PARA', 'ACEITE_ARQUIVO_ID', 'ACEITE_URL', 'ACEITE_NOME', 'ACEITE_POR',
     'DECIDIDO_EM', 'DECISAO_TEXTO', 'REQUISICAO_ID', 'COMERCIAL_ATIVIDADE_ID', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
-  ATEC_RELATORIOS: ['ID', 'OS_ID', 'OS_NUMERO', 'VERSAO', 'RASCUNHO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'PASTA_URL', 'MARCA', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'DOC_REGISTRADO', 'CRIADO_EM'],
+  ATEC_RELATORIOS: ['ID', 'OS_ID', 'OS_NUMERO', 'VERSAO', 'REVISAO', 'MOTIVO', 'RASCUNHO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'PASTA_URL', 'MARCA', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'DOC_REGISTRADO', 'DOCREV_ID', 'CRIADO_EM'],
   ATEC_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_ID', 'DATA', 'LIDO_EM', 'CRIADO_EM'],
   ATEC_ACERVO_EQUIP: ['ID', 'AUVO_TASK_ID', 'DATA_TAREFA', 'TIPO_TAREFA', 'TECNICO_NOME', 'FINALIZADA', 'CLIENTE_AUVO_ID', 'CLIENTE_ID_SGO', 'EQUIP_AUVO_ID',
     'EQUIPAMENTO_ID_SGO', 'RESUMO', 'QTD_ARQUIVOS', 'CRIADO_EM']
 };
 var AST_COLUNAS_TEXTO = {
   ATEC_CHAMADOS: ['NUMERO', 'ABERTO_EM', 'PAUSA_DESDE', 'PRAZO_TRIAGEM_EM', 'PRAZO_ATENDIMENTO_EM', 'TRIAGEM_INICIO_EM', 'TRIAGEM_FIM_EM', 'RETORNO_PREVISTO', 'AGENDADO_PARA',
-    'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO'],
+    'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM'],
   ATEC_OS: ['NUMERO', 'AGENDADO_PARA', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'INICIO_EM', 'CONCLUIU_EM', 'CONCLUIU_EM_APARELHO', 'ASSINATURA_EM', 'RELATORIO_EM',
-    'ENVIADO_CLIENTE_EM', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO'],
+    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO'],
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
@@ -111,7 +115,8 @@ var AST_TRANSICOES = {
   EM_EXECUCAO: ['PAUSADO', 'AGUARDANDO_CLIENTE', 'AGUARDANDO_PECA', 'DOC_PENDENTE', 'PLANEJADO'],
   PAUSADO: ['EM_EXECUCAO', 'AGUARDANDO_PECA', 'PLANEJADO'],
   AGUARDANDO_CLIENTE: ['EM_EXECUCAO', 'AGUARDANDO_PECA', 'PLANEJADO', 'CANCELADO'],
-  DOC_PENDENTE: ['ENCERRADO'],
+  // 22/10/2026: a O.S. com documentação pendente pode voltar à triagem (o técnico descobriu em campo que precisa de orçamento ou de outro diagnóstico), com motivo
+  DOC_PENDENTE: ['ENCERRADO', 'EM_TRIAGEM'],
   ENCERRADO: [],
   CANCELADO: []
 };
@@ -403,13 +408,13 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V2')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V3')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V2', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V3', '1', 21600); } catch (e) {}
 }
 function Ast_ler_(aba) {
   if (AST_MEMO[aba]) return AST_MEMO[aba];
@@ -537,8 +542,10 @@ function Ast_validarRegras_(r) {
   (r.contratos || []).forEach(function (c, i) {
     if (!Ast_s_(c.clienteId)) throw new Error('o contrato da linha ' + (i + 1) + ' está sem cliente. Escolha o cliente ou tire a linha e salve de novo');
     Object.keys(c.prazos || {}).forEach(function (p) {
-      var a = Ast_num_((c.prazos[p] || {}).atendimentoMin);
+      var a = Ast_num_((c.prazos[p] || {}).atendimentoMin), ch = (c.prazos[p] || {}).chegadaMin;
       if (!(a >= 30)) throw new Error('o contrato da linha ' + (i + 1) + ' tem prazo inválido na ' + p + '. Use pelo menos 30 minutos ou deixe em branco para valer o padrão');
+      // 22/10/2026: prazo de chegada ao local (o que o hospital mais cobra), opcional, nunca maior que o de atendimento
+      if (ch !== undefined && ch !== null && ch !== '' && !(Ast_num_(ch) >= 15 && Ast_num_(ch) <= a)) throw new Error('o contrato da linha ' + (i + 1) + ' tem prazo de chegada inválido na ' + p + ': use de 15 minutos até o prazo de atendimento, ou deixe em branco');
     });
   });
 }
@@ -553,7 +560,10 @@ function Ast_gravarRegras_(r, eu, motivo) {
   limpa.emRiscoFracao = Ast_num_(limpa.emRiscoFracao);
   limpa.contratos = (limpa.contratos || []).map(function (c) {
     var pz = {};
-    Object.keys(c.prazos || {}).forEach(function (p) { var a = Math.round(Ast_num_((c.prazos[p] || {}).atendimentoMin)); if (AST_PRIORIDADES[p] && a > 0) pz[p] = { atendimentoMin: a }; });
+    Object.keys(c.prazos || {}).forEach(function (p) {
+      var a = Math.round(Ast_num_((c.prazos[p] || {}).atendimentoMin)), ch = Math.round(Ast_num_((c.prazos[p] || {}).chegadaMin));
+      if (AST_PRIORIDADES[p] && a > 0) { pz[p] = { atendimentoMin: a }; if (ch > 0) pz[p].chegadaMin = ch; }
+    });
     return { clienteId: Ast_s_(c.clienteId), clienteNome: Ast_s_(c.clienteNome), prazos: pz, pausaPermitida: !!c.pausaPermitida, observacao: Ast_texto_(c.observacao, 300) };
   });
   limpa.ligada = limpa.ligada !== false;
@@ -777,11 +787,30 @@ function Ast_slaPara_(clienteId, prioridade, regras) {
   var base = regras.prazos[p] || AST_REGRAS_PADRAO.prazos[p];
   var c = (regras.contratos || []).filter(function (x) { return Ast_s_(x.clienteId) === Ast_s_(clienteId); })[0];
   if (c && c.prazos && c.prazos[p] && Number(c.prazos[p].atendimentoMin) > 0) {
-    var at = Number(c.prazos[p].atendimentoMin);
-    return { atendimentoMin: at, triagemMin: Math.min(Number(base.triagemMin) || 30, at), fonte: 'CONTRATO', pausaPermitida: !!c.pausaPermitida, observacao: Ast_s_(c.observacao) };
+    var at = Number(c.prazos[p].atendimentoMin), ch = Number(c.prazos[p].chegadaMin) || 0;
+    return { atendimentoMin: at, triagemMin: Math.min(Number(base.triagemMin) || 30, at), chegadaMin: ch > 0 ? ch : 0, fonte: 'CONTRATO', pausaPermitida: !!c.pausaPermitida, observacao: Ast_s_(c.observacao) };
   }
-  return { atendimentoMin: Number(base.atendimentoMin), triagemMin: Number(base.triagemMin), fonte: 'PADRAO', pausaPermitida: !!regras.pausaPermitidaPadrao, observacao: '' };
+  return { atendimentoMin: Number(base.atendimentoMin), triagemMin: Number(base.triagemMin), chegadaMin: 0, fonte: 'PADRAO', pausaPermitida: !!regras.pausaPermitidaPadrao, observacao: '' };
 }
+/**
+ * 22/10/2026: prazo de chegada ao local, só quando o contrato do cliente o define (CHEGADA_MIN_UTEIS > 0).
+ * { estado: EM_DIA | EM_RISCO | ESTOURADO | CUMPRIDO | FORA_DO_PRAZO | SEM_PRAZO, ate, texto }. chegouEm: a chegada da O.S.
+ */
+function Ast_chegadaEstado_(c, chegouEm, agoraMs) {
+  var total = Number(c.CHEGADA_MIN_UTEIS) || 0, aberto = Ast_ms_(c.ABERTO_EM);
+  if (!total || aberto === null) return { estado: 'SEM_PRAZO', ate: '', texto: '' };
+  agoraMs = agoraMs || Date.now();
+  var ateMs = Ast_ms_(c.PRAZO_CHEGADA_EM) !== null ? Ast_ms_(c.PRAZO_CHEGADA_EM) : Ast_somarMinUteis_(aberto, total), ate = Ast_agora_(ateMs);
+  var chegou = Ast_ms_(chegouEm);
+  if (['CANCELADO', 'RESOLVIDO_REMOTO'].indexOf(Ast_up_(c.SITUACAO)) >= 0 || (Ast_up_(c.SITUACAO) === 'ENCERRADO' && chegou === null)) return { estado: 'SEM_PRAZO', ate: ate, texto: '' };
+  if (chegou !== null) return chegou <= ateMs ? { estado: 'CUMPRIDO', ate: ate, texto: 'Chegada no prazo do contrato (' + Ast_br_(Ast_agora_(chegou)) + ')' } : { estado: 'FORA_DO_PRAZO', ate: ate, texto: 'Chegada fora do prazo do contrato (' + Ast_duracaoTxt_(Ast_minUteisEntre_(ateMs, chegou)) + ' úteis depois de ' + Ast_br_(ate) + ')' };
+  if (agoraMs > ateMs) return { estado: 'ESTOURADO', ate: ate, texto: 'Chegada ao local atrasada: o contrato pedia até ' + Ast_br_(ate) };
+  var resta = Ast_minUteisEntre_(agoraMs, ateMs);
+  if (resta <= total * 0.25) return { estado: 'EM_RISCO', ate: ate, texto: 'Chegada ao local em risco: resta ' + Ast_duracaoTxt_(resta) + ' úteis (contrato: até ' + Ast_br_(ate) + ')' };
+  return { estado: 'EM_DIA', ate: ate, texto: 'Chegada ao local até ' + Ast_br_(ate) + ' (contrato)' };
+}
+/** Identidade do sistema para as rotinas e os ganchos de outros módulos (sem sessão de usuário). */
+function Ast_sistema_(nome) { return { id: '', nome: nome || 'Rotina da Assistência', perfil: 'SISTEMA', gestao: true, interno: true, tecnico: false, cliente: false, sistema: true }; }
 /**
  * Estado do prazo de um chamado agora: { estado: EM_DIA | EM_RISCO | ESTOURADO | CUMPRIDO | FORA_DO_PRAZO | PAUSADO | SEM_PRAZO, ate, restaMin, texto }.
  * Atendimento = execução concluída (ATENDIDO_EM) ou resolvido remotamente. A pausa (aguardando cliente ou peça) só conta se o contrato permitir.

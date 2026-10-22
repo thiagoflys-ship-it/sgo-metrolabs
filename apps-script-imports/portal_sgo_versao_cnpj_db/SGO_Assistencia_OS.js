@@ -342,6 +342,25 @@ function AstO_docTecnicoEmitido_(os) {
   return achado;
 }
 
+/**
+ * 22/10/2026 (etapa 2): situação do documento e do envio ao cliente, para a ficha da O.S. (SGO+) e para o aplicativo.
+ * { situacao: SEM_PDF | PDF_GERADO | ENVIADO, pdfGerado, pdfUrl, pdfId, versao, revisao, geradoEm, enviadoEm, enviadoPor, enviadoCanal, enviadoPara, podeEnviar, contatos, texto }
+ */
+function AstO_envio_(os, eu) {
+  var s = Ast_up_(os.SITUACAO), temPdf = s === 'ENCERRADA' && !!Ast_s_(os.RELATORIO_PDF_ID), enviado = temPdf && !!Ast_s_(os.ENVIADO_CLIENTE_EM);
+  var rev = Number(os.RELATORIO_REVISAO) || 0, rot = rev > 0 ? ' (Rev. ' + (rev < 10 ? '0' : '') + rev + ')' : '';
+  var podeEnviar = temPdf && !!eu && !eu.cliente && (eu.gestao || Ast_s_(os.TECNICO_ID) === eu.id || (eu.interno && !eu.tecnico));
+  return {
+    situacao: enviado ? 'ENVIADO' : temPdf ? 'PDF_GERADO' : 'SEM_PDF', pdfGerado: temPdf, pdfUrl: temPdf ? Ast_s_(os.RELATORIO_PDF_URL) : '', pdfId: temPdf ? Ast_s_(os.RELATORIO_PDF_ID) : '',
+    versao: Number(os.RELATORIO_VERSAO) || 0, revisao: rev, geradoEm: temPdf ? Ast_br_(os.RELATORIO_EM) : '',
+    enviadoEm: enviado ? Ast_br_(os.ENVIADO_CLIENTE_EM) : '', enviadoPor: enviado ? Ast_s_(os.ENVIADO_CLIENTE_POR_NOME) : '', enviadoCanal: enviado ? (Ast_up_(os.ENVIADO_CLIENTE_CANAL) === 'WHATSAPP' ? 'WhatsApp' : 'e-mail') : '', enviadoPara: enviado ? Ast_s_(os.ENVIADO_CLIENTE_PARA) : '',
+    podeEnviar: podeEnviar, contatos: temPdf && podeEnviar && typeof AstR_contatosEnvio_ === 'function' ? AstR_contatosEnvio_(os) : [],
+    texto: enviado ? 'Enviado ao cliente em ' + Ast_br_(os.ENVIADO_CLIENTE_EM) + ' por ' + Ast_s_(os.ENVIADO_CLIENTE_POR_NOME) + ' (' + (Ast_up_(os.ENVIADO_CLIENTE_CANAL) === 'WHATSAPP' ? 'WhatsApp' : 'e-mail') + ') para ' + Ast_s_(os.ENVIADO_CLIENTE_PARA) + '.'
+      : temPdf ? 'Relatório' + rot + ' gerado em ' + Ast_br_(os.RELATORIO_EM) + '. Ainda não enviado ao cliente.'
+      : s === 'ENCERRADA' ? 'O relatório ainda está sendo gerado pela rotina. Atualize a tela em alguns minutos.' : 'O relatório A4 é gerado no encerramento da O.S.'
+  };
+}
+
 /** O.S. para a tela (técnico, gestão; o cliente usa o relatório emitido). Sem valores. */
 function AstO_publico_(os, eu) {
   var fotos = AstO_fotos_(os.ID), pecas = AstO_pecas_(os.ID), s = Ast_up_(os.SITUACAO), tipo = Ast_tipo_(os.TIPO_CODIGO);
@@ -367,7 +386,9 @@ function AstO_publico_(os, eu) {
     faltas: faltas, podeEncerrar: s === 'DOC_PENDENTE' && !faltas.length,
     docTecnico: Ast_s_(os.DOC_TECNICO_REF) ? { tipo: Ast_s_(os.DOC_TECNICO_TIPO), nome: Ast_s_(os.DOC_TECNICO_REF), url: Ast_s_(os.DOC_TECNICO_URL) } : null,
     documentoTecnicoTipo: tipo ? tipo.documentoTecnico : '', documentoTecnicoNome: tipo && tipo.documentoTecnico ? AST_DOCS_TECNICOS[tipo.documentoTecnico] : '',
-    relatorio: Ast_s_(os.RELATORIO_PDF_URL) ? { versao: Number(os.RELATORIO_VERSAO) || 0, url: Ast_s_(os.RELATORIO_PDF_URL), pdfId: Ast_s_(os.RELATORIO_PDF_ID), em: Ast_br_(os.RELATORIO_EM), enviadoEm: Ast_br_(os.ENVIADO_CLIENTE_EM) } : null,
+    relatorio: Ast_s_(os.RELATORIO_PDF_URL) ? { versao: Number(os.RELATORIO_VERSAO) || 0, revisao: Number(os.RELATORIO_REVISAO) || 0, url: Ast_s_(os.RELATORIO_PDF_URL), pdfId: Ast_s_(os.RELATORIO_PDF_ID), em: Ast_br_(os.RELATORIO_EM), enviadoEm: Ast_br_(os.ENVIADO_CLIENTE_EM) } : null,
+    // 22/10/2026 (etapa 2): bloco "Documento e envio" da ficha: situação do PDF e do envio ao cliente, contatos sugeridos e o que a pessoa pode fazer
+    envio: AstO_envio_(os, eu),
     reserva: Ast_s_(os.RESERVA_CODIGO), podeCampo: !!eu && (eu.gestao || Ast_s_(os.TECNICO_ID) === eu.id) && AST_OS_ABERTAS.indexOf(s) >= 0,
     eventos: Ast_ler_(AST_ABAS.EVENTOS).filter(function (e) { return Ast_up_(e.ENTIDADE) === 'OS' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.ID); }).sort(function (a, b) { return String(a.EM).localeCompare(String(b.EM)); })
       .map(function (e) { return { tipo: Ast_s_(e.TIPO), texto: Ast_s_(e.TEXTO), por: Ast_s_(e.USUARIO_NOME), em: Ast_br_(e.EM), emAparelho: Ast_br_(e.EM_APARELHO) }; })

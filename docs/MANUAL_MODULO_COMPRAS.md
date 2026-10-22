@@ -159,6 +159,10 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
 - Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos).
 - Recebida com divergência: o comprador, no sistema até resolver.
 - Peça disponível: quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail.
+- Peça disponível de um pedido ligado a um chamado da Assistência técnica (vínculo "CH-..."): Compras chama a
+  Assistência depois de soltar a própria trava; o chamado volta sozinho a "Planejado" como "retorno a agendar", o
+  técnico e a gestão da área Técnica são avisados (AT14) e o cliente recebe o e-mail "peça chegou, retorno será
+  agendado" (AT15). Recebimento com divergência não devolve o chamado; "Divergência resolvida" devolve (22/10/2026).
 - Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail.
 - Compra sem pedido: a Caixa de decisões da gestão até a ciência.
 - Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.

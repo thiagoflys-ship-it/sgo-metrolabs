@@ -61,8 +61,18 @@ function AstC_publico_(c, eu, agoraMs, regras) {
     osId: Ast_s_(c.OS_ID), osNumero: Ast_s_(c.OS_NUMERO), atendidoEm: Ast_br_(c.ATENDIDO_EM), encerradoEm: Ast_br_(c.ENCERRADO_EM), canceladoMotivo: Ast_s_(c.CANCELADO_MOTIVO),
     reincidente: Ast_sim_(c.REINCIDENTE), reincidenciaDe: Ast_s_(c.REINCIDENCIA_DE), proximaAcao: Ast_s_(c.PROXIMA_ACAO), terminal: AST_TERMINAIS.indexOf(s) >= 0,
     podeTriar: !!(eu && eu.gestao) && (s === 'ABERTO' || s === 'EM_TRIAGEM'), podeAgendar: !!(eu && eu.gestao) && (s === 'PLANEJADO' || s === 'AGENDADO'),
-    podeCancelar: !!(eu && eu.gestao) && (AST_TRANSICOES[s] || []).indexOf('CANCELADO') >= 0
+    podeCancelar: !!(eu && eu.gestao) && (AST_TRANSICOES[s] || []).indexOf('CANCELADO') >= 0,
+    // 22/10/2026 (etapa 3): peça disponível em Compras (retorno a agendar), chegada ao local pelo contrato e a volta à triagem da O.S. com documentação pendente
+    pecaDisponivelEm: Ast_br_(c.PECA_DISPONIVEL_EM), retornoAAgendar: s === 'PLANEJADO' && !!Ast_s_(c.PECA_DISPONIVEL_EM),
+    slaChegada: AstC_slaChegada_(c, agoraMs), podeVoltarTriagem: !!(eu && eu.gestao) && (s === 'DOC_PENDENTE' || s === 'AGUARDANDO_PECA')
   };
+}
+/** Selo de chegada ao local (só com prazo de chegada no contrato). Usa a chegada da O.S. do chamado. */
+function AstC_slaChegada_(c, agoraMs) {
+  if (!(Number(c.CHEGADA_MIN_UTEIS) > 0) || typeof Ast_chegadaEstado_ !== 'function') return null;
+  var os = Ast_s_(c.OS_ID) ? Ast_porId_(AST_ABAS.OS, c.OS_ID) : null;
+  var e = Ast_chegadaEstado_(c, os ? os.CHEGOU_EM : '', agoraMs);
+  return e.estado === 'SEM_PRAZO' ? null : { estado: e.estado, ate: Ast_br_(e.ate), texto: e.texto };
 }
 /** O que o cliente vê no portal: etapa, datas e o relatório emitido; sem técnico interno, sem prazos internos nem valores. */
 function AstC_publicoCliente_(c, os) {
@@ -158,6 +168,7 @@ function AstC_abrir_(eu, d, opcoes) {
       ABERTO_EM: agora, ABERTO_POR_ID: o.sistema ? '' : eu.id, ABERTO_POR_NOME: o.sistema ? (o.porNome || 'Sistema') : eu.nome,
       SLA_FONTE: sla.fonte, SLA_MIN_UTEIS: sla.atendimentoMin, TRIAGEM_MIN_UTEIS: sla.triagemMin, PAUSA_PERMITIDA: sla.pausaPermitida ? 'SIM' : '', PAUSA_DESDE: '', PAUSA_MIN: 0,
       PRAZO_TRIAGEM_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.triagemMin)), PRAZO_ATENDIMENTO_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.atendimentoMin)),
+      CHEGADA_MIN_UTEIS: sla.chegadaMin || 0, PRAZO_CHEGADA_EM: sla.chegadaMin ? Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.chegadaMin)) : '',
       TRIAGEM_RESPONSAVEL_ID: triagem.id, TRIAGEM_RESPONSAVEL_NOME: triagem.nome, TRIAGEM_JSON: '{}', REINCIDENTE: reinc ? 'SIM' : '', REINCIDENCIA_DE: reinc ? Ast_s_(reinc.NUMERO) : '',
       SOLICITACAO_ID: Ast_s_(d.solicitacaoId), PROPOSTA_ID: Ast_s_(d.propostaId), PROXIMA_ACAO: 'Fazer a triagem (' + (triagem.nome || 'gestão da área Técnica') + ')', ATUALIZADO_EM: agora
     });
@@ -220,7 +231,8 @@ function AstC_triagem_(eu, d) {
       var sla = Ast_slaPara_(c.CLIENTE_ID, p);
       var ab = Ast_ms_(c.ABERTO_EM);
       Object.assign(extra, { PRIORIDADE: p, PRIORIDADE_MOTIVO: mot, SLA_FONTE: sla.fonte, SLA_MIN_UTEIS: sla.atendimentoMin, TRIAGEM_MIN_UTEIS: sla.triagemMin, PAUSA_PERMITIDA: sla.pausaPermitida ? 'SIM' : '',
-        PRAZO_TRIAGEM_EM: Ast_agora_(Ast_somarMinUteis_(ab, sla.triagemMin)), PRAZO_ATENDIMENTO_EM: Ast_agora_(Ast_somarMinUteis_(ab, sla.atendimentoMin)) });
+        PRAZO_TRIAGEM_EM: Ast_agora_(Ast_somarMinUteis_(ab, sla.triagemMin)), PRAZO_ATENDIMENTO_EM: Ast_agora_(Ast_somarMinUteis_(ab, sla.atendimentoMin)),
+        CHEGADA_MIN_UTEIS: sla.chegadaMin || 0, PRAZO_CHEGADA_EM: sla.chegadaMin ? Ast_agora_(Ast_somarMinUteis_(ab, sla.chegadaMin)) : '' });
       Ast_evento_('CHAMADO', c.ID, 'PRIORIDADE', eu, mot, { numero: c.NUMERO, de: Ast_up_(c.PRIORIDADE), para: p });
     }
     if (Ast_s_(d.tipoCodigo)) {
@@ -304,6 +316,74 @@ function AstC_retomar_(eu, d) {
   return Ast_comTrava_(function () {
     c = AstC_mudar_(eu, c, 'PLANEJADO', { PROXIMA_ACAO: 'Agendar o atendimento (técnico, data e duração)' }, 'LIBERADO', t);
     return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Chamado ' + c.NUMERO + ' liberado para agendar.' };
+  });
+}
+
+/**
+ * 22/10/2026 (etapa 3): Compras recebeu e conferiu a peça (CmpP_disponivel_): o chamado que esperava por ela volta sozinho
+ * a "Planejado" com a anotação "peça disponível em ...", a gestão ganha a pendência "retorno a agendar", o técnico
+ * responsável e a gestão são avisados (AT14) e o cliente recebe o e-mail "peça chegou, retorno será agendado" (AT15).
+ * Chamada por Compras depois de soltar a trava dele (Cmp_depois_); aqui pega a trava da Assistência. Nunca lança.
+ * r: linha de CMP_REQUISICOES. Devolve { ok, numero } ou { ok:false, motivo }.
+ */
+function Assistencia_pecaDisponivel_(r, quem) {
+  try {
+    if (!r) return { ok: false, motivo: 'requisição não informada' };
+    Ast_memoLimpar_();
+    if (typeof Pend_abaExiste_ === 'function' && !Pend_abaExiste_(AST_ABAS.CHAMADOS)) return { ok: false, motivo: 'Assistência sem chamados' };
+    var reqId = Ast_s_(r.ID), reqNum = Ast_s_(r.NUMERO), ref = Ast_s_(r.OS_AUVO);
+    var c = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (x) { return (reqId && Ast_s_(x.REQUISICAO_ID) === reqId) || (ref && Ast_s_(x.NUMERO) === ref); })
+      .sort(function (a, b) { return (Ast_up_(b.SITUACAO) === 'AGUARDANDO_PECA' ? 1 : 0) - (Ast_up_(a.SITUACAO) === 'AGUARDANDO_PECA' ? 1 : 0); })[0];
+    if (!c) return { ok: false, motivo: 'nenhum chamado ligado ao pedido ' + reqNum };
+    var eu = (quem && quem.nome) ? { id: Ast_s_(quem.id), nome: 'Compras (' + quem.nome + ')', perfil: 'SISTEMA', gestao: true, interno: true } : Ast_sistema_('Compras');
+    var agora = Ast_agora_(), ja = Ast_s_(c.PECA_DISPONIVEL_EM);
+    var res = Ast_comTrava_(function () {
+      var atual = Ast_porId_(AST_ABAS.CHAMADOS, c.ID) || c, s = Ast_up_(atual.SITUACAO);
+      if (s !== 'AGUARDANDO_PECA') {
+        Ast_atualizar_(AST_ABAS.CHAMADOS, atual.ID, { PECA_DISPONIVEL_EM: ja || agora, ATUALIZADO_EM: agora });
+        Ast_evento_('CHAMADO', atual.ID, 'PECA_DISPONIVEL', eu, 'Peça do pedido ' + reqNum + ' disponível em Compras (o chamado estava "' + (AST_SITUACOES[s] || s) + '")', { numero: atual.NUMERO, publico: true });
+        return { c: atual, mudou: false };
+      }
+      var novo = AstC_mudar_(eu, atual, 'PLANEJADO', { PECA_DISPONIVEL_EM: agora, PROXIMA_ACAO: 'Peça disponível (pedido ' + reqNum + '): agendar o retorno do técnico' }, 'PECA_DISPONIVEL',
+        'Peça do pedido ' + reqNum + ' chegou e foi conferida por Compras: ' + Ast_s_(atual.PECA_DESCRICAO).slice(0, 200) + '. Agendar o retorno.');
+      var os = Ast_porId_(AST_ABAS.OS, novo.OS_ID);
+      if (os && Ast_up_(os.SITUACAO) === 'PAUSADA') Ast_evento_('OS', os.ID, 'PECA_DISPONIVEL', eu, 'Peça do pedido ' + reqNum + ' disponível: a O.S. volta a ser agendada para o retorno', { numero: os.NUMERO });
+      var us = Ast_usuarios_(), gest = Ast_gestoresTecnica_(us), tec = Ast_s_(novo.TECNICO_ID);
+      Ast_avisar_(gest.concat(tec ? [tec] : []), 'PECA_DISPONIVEL', 'Peça disponível: agendar o retorno do chamado ' + novo.NUMERO,
+        Ast_s_(novo.CLIENTE_NOME) + ' · ' + Ast_s_(novo.EQUIPAMENTO_TEXTO) + '\nPeça: ' + Ast_s_(novo.PECA_DESCRICAO).slice(0, 200) + ' (pedido ' + reqNum + ', conferido por Compras).\n' +
+        'Gestão: abra o chamado em Assistência técnica > Chamados e toque em "Agendar o retorno". Técnico: retire a peça com Compras antes do retorno.', novo.ID, { evento: 'AT14' });
+      return { c: novo, mudou: true };
+    });
+    if (res.mudou) {
+      Ast_avisarCliente_(res.c, 'Peça recebida: retorno técnico do chamado ' + res.c.NUMERO + ' será agendado',
+        'Prezados,\n\nA peça necessária para o atendimento do chamado ' + res.c.NUMERO + ' (' + Ast_s_(res.c.EQUIPAMENTO_TEXTO) + ') chegou e foi conferida pela Metrolabs.\n' +
+        'O retorno do técnico será agendado em seguida e a data será informada por e-mail.\n\nAcompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT15');
+    }
+    return { ok: true, numero: res.c.NUMERO, mudou: res.mudou };
+  } catch (e) { console.error('Compras -> Assistência (peça disponível): ' + ((e && e.message) || e)); return { ok: false, motivo: String((e && e.message) || e) }; }
+}
+
+/**
+ * 22/10/2026: O.S. com documentação pendente (ou chamado aguardando peça) volta à triagem com motivo: o técnico descobriu
+ * em campo que precisa de orçamento ou de outro diagnóstico. A O.S. fica pausada (a visita foi interrompida) e volta a ser
+ * agendada quando a triagem decidir "planejar visita". d: { id, motivo }
+ */
+function AstC_voltarTriagem_(eu, d) {
+  Ast_exigir_(eu, 'GESTAO', 'voltar o chamado à triagem');
+  var c = AstC_obter_(eu, d && d.id, 'voltar o chamado à triagem');
+  var s = Ast_up_(c.SITUACAO);
+  if ((AST_TRANSICOES[s] || []).indexOf('EM_TRIAGEM') < 0) throw new Error('Não foi possível voltar à triagem: o chamado ' + c.NUMERO + ' está "' + (AST_SITUACOES[s] || s) + '". Só chamado com documentação pendente, aguardando peça ou resolvido remotamente volta à triagem');
+  var motivo = Ast_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível voltar à triagem: escreva o motivo (pelo menos 10 letras), por exemplo "o técnico constatou que a placa precisa de orçamento". Ele fica no histórico');
+  return Ast_comTrava_(function () {
+    c = AstC_mudar_(eu, c, 'EM_TRIAGEM', { TRIAGEM_RESPONSAVEL_ID: eu.id, TRIAGEM_RESPONSAVEL_NOME: eu.nome, TRIAGEM_FIM_EM: '', ACAO_DECIDIDA: '', PROXIMA_ACAO: 'Refazer a triagem e decidir o caminho (orçamento, peça ou nova visita)' }, 'VOLTA_TRIAGEM', 'Voltou à triagem: ' + motivo);
+    var os = Ast_porId_(AST_ABAS.OS, c.OS_ID);
+    if (os && ['DOC_PENDENTE', 'PAUSADA', 'NO_LOCAL', 'EM_EXECUCAO'].indexOf(Ast_up_(os.SITUACAO)) >= 0) {
+      Ast_atualizar_(AST_ABAS.OS, os.ID, { SITUACAO: 'PAUSADA', FALTAS: '', ATUALIZADO_EM: Ast_agora_() });
+      Ast_evento_('OS', os.ID, 'VOLTA_TRIAGEM', eu, 'Visita interrompida: o chamado voltou à triagem (' + motivo + '). A O.S. fica pausada até a nova decisão.', { numero: os.NUMERO });
+      if (Ast_s_(os.TECNICO_ID)) Ast_avisar_(os.TECNICO_ID, 'VOLTA_TRIAGEM', 'O.S. ' + os.NUMERO + ' pausada: o chamado voltou à triagem', 'Motivo: ' + motivo + '. A gestão decide o caminho e, se houver nova visita, você recebe o agendamento.', os.ID, { autorId: eu.id, evento: 'AT04' });
+    }
+    return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Chamado ' + c.NUMERO + ' de volta à triagem. Preencha a triagem e escolha o caminho.' };
   });
 }
 

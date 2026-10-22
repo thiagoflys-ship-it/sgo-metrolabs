@@ -40,7 +40,7 @@ function AstApp_os_(os, eu, opcoes) {
   var o = opcoes || {};
   var cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(os.CLIENTE_ID)] || {}, un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(os.UNIDADE_ID)] || {};
   var eq = Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[Ast_s_(os.EQUIPAMENTO_ID)] || null, c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || {};
-  var tipo = Ast_tipo_(os.TIPO_CODIGO) || { codigo: Ast_up_(os.TIPO_CODIGO), nome: Ast_s_(os.TIPO_NOME), exige: { relato: true, assinatura: true, fotosMin: 0, qrOuSerie: false, checklist: false } };
+  var tipo = Ast_tipo_(os.TIPO_CODIGO) || { codigo: Ast_up_(os.TIPO_CODIGO), nome: Ast_s_(os.TIPO_NOME), exige: { relato: true, assinatura: true, fotosMin: 0, qrOuSerie: false, checklist: false }, grupo: '', semVisita: false };
   var fotos = AstO_fotos_(os.ID), pecas = AstO_pecas_(os.ID), resp = AstO_respostas_(os), s = Ast_up_(os.SITUACAO);
   var respostas = {};
   Object.keys(resp).forEach(function (k) { respostas[k] = resp[k] && resp[k].v; });
@@ -75,14 +75,49 @@ function AstApp_os_(os, eu, opcoes) {
       assinatura: Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.ASSINATURA_NOME), em: Ast_iso_(os.ASSINATURA_EM) } : (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? { semAssinatura: true, recebidoPor: Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) } : null) },
     historicoEquipamento: hist,
     pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os, fotos).map(function (x) { return 'falta ' + x; }) : [],
-    relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL)
+    relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL),
+    // 22/10/2026 (etapa 2): estado do documento e do envio ao cliente (só acrescentado; o aplicativo antigo continua valendo)
+    envio: AstApp_envio_(os, eu)
   };
 }
 
-function AstApp_resumoOs_(os) {
+/** Estado do envio ao cliente no formato do contrato (docs/API_APP_TECNICO.md, "envio"). */
+function AstApp_envio_(os, eu) {
+  var e = typeof AstO_envio_ === 'function' ? AstO_envio_(os, eu) : { situacao: 'SEM_PDF', contatos: [] };
+  return { situacao: e.situacao, pdfGerado: !!e.pdfGerado, relatorioUrl: e.pdfUrl || '', geradoEm: Ast_iso_(os.RELATORIO_EM), revisao: e.revisao || 0,
+    enviadoEm: Ast_iso_(os.ENVIADO_CLIENTE_EM), enviadoPor: e.enviadoPor || '', enviadoCanal: e.enviadoCanal || '', enviadoPara: e.enviadoPara || '', podeEnviar: !!e.podeEnviar,
+    contatos: (e.contatos || []).map(function (k) { return { nome: k.nome, email: k.email, origem: k.origem, sugerido: !!k.sugerido }; }), texto: e.texto || '' };
+}
+
+/**
+ * Evento ENVIAR_CLIENTE da fila do aparelho (22/10/2026, etapa 2): o técnico, no fim do atendimento, manda o PDF do
+ * relatório ao cliente por e-mail. Roda FORA da trava da Assistência (o Enviar documento tem a sua própria trava).
+ * Idempotente pelo idLocal (vira o pedidoId do Enviar documento). Devolve { ok, nota } ou { ok:false, motivo, corrigir, definitivo }.
+ */
+function AstApp_enviarCliente_(eu, ev) {
+  var d = ev.dados || {}, os = Ast_porId_(AST_ABAS.OS, ev.osId);
+  if (!os) return { ok: false, definitivo: true, motivo: 'a O.S. não existe mais no servidor', corrigir: 'Atualize o Meu dia; se a O.S. sumiu, fale com a gestão da área Técnica.' };
+  if (!eu.gestao && Ast_s_(os.TECNICO_ID) !== eu.id) return { ok: false, definitivo: true, motivo: 'a O.S. ' + os.NUMERO + ' é de ' + (Ast_s_(os.TECNICO_NOME) || 'outro técnico'), corrigir: 'Só o técnico responsável (ou a gestão) envia o relatório.' };
+  var s = Ast_up_(os.SITUACAO);
+  if (s === 'CANCELADA') return { ok: false, definitivo: true, motivo: 'a O.S. ' + os.NUMERO + ' foi cancelada', corrigir: 'Nada a enviar.' };
+  if (s !== 'ENCERRADA') return { ok: false, definitivo: false, motivo: 'a O.S. ' + os.NUMERO + ' ainda não está encerrada (' + (AST_OS_SITUACOES[s] || s) + ')', corrigir: 'Complete a documentação e toque em Concluí; o relatório é gerado no encerramento. Depois toque em "Tentar de novo" em Envios.' };
+  if (!Ast_s_(os.RELATORIO_PDF_ID)) return { ok: false, definitivo: false, motivo: 'o relatório da O.S. ' + os.NUMERO + ' ainda está sendo gerado', corrigir: 'Tente sincronizar de novo em alguns minutos.' };
+  if (Ast_s_(os.ENVIADO_CLIENTE_EM) && !Ast_sim_(d.reenviar)) return { ok: true, nota: 'o relatório já tinha sido enviado ao cliente em ' + Ast_br_(os.ENVIADO_CLIENTE_EM) + ' para ' + Ast_s_(os.ENVIADO_CLIENTE_PARA) };
+  try {
+    var r = AstR_enviarRelatorioCliente_(eu, { osId: os.ID, pedidoId: ev.idLocal, para: d.para || d.emails || [], mensagem: d.mensagem });
+    return { ok: true, nota: r.message };
+  } catch (e) {
+    var m = String((e && e.message) || e).replace(/^Não foi possível [^:]+:\s*/, '').replace(/[.\s]+$/, '');
+    var corrigivel = /não está completo|escolha ou digite/.test(m);
+    return { ok: false, definitivo: false, motivo: m, corrigir: corrigivel ? 'Corrija o e-mail do contato na O.S. e envie de novo.' : 'Tente de novo quando houver sinal; se continuar, a gestão envia pela ficha da O.S. no SGO+.' };
+  }
+}
+
+
+function AstApp_resumoOs_(os, eu) {
   var s = Ast_up_(os.SITUACAO);
   return { id: Ast_s_(os.ID), numero: Ast_s_(os.NUMERO), situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s, encerrada: s === 'ENCERRADA',
-    pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os).map(function (x) { return 'falta ' + x; }) : [], relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL) };
+    pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os).map(function (x) { return 'falta ' + x; }) : [], relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL), envio: AstApp_envio_(os, eu) };
 }
 
 /** Meu dia: O.S. do técnico no período e as que ficaram abertas de dias anteriores. */
@@ -101,9 +136,9 @@ function Ast_appMeuDia(sessionId, payload) {
       if (d >= dia && d <= ate) return s !== 'ENCERRADA' || d === dia;
       return d < dia && AST_OS_ABERTAS.indexOf(s) >= 0;
     }).sort(function (a, b) { return Ast_dia_(a.AGENDADO_PARA).localeCompare(Ast_dia_(b.AGENDADO_PARA)) || ((Number(a.ORDEM_DIA) || 99) - (Number(b.ORDEM_DIA) || 99)) || String(a.AGENDADO_PARA).localeCompare(String(b.AGENDADO_PARA)); });
-    var ordem = 0;
+    var ordem = 0, regras = Ast_regras_();
     return { versaoContrato: AST_APP_VERSAO, geradoEm: Ast_agora_(), dia: dia, ate: ate, tecnico: { id: tec.id, nome: tec.nome }, assistenciaLigada: Ast_ligada_(),
-      regras: { fotoMaxBytes: Number(Ast_regras_().fotos.maxBytes) || 2000000, fotoRecomendadaBytes: 300000, localizacaoSo: ['CHEGUEI', 'CONCLUI'],
+      regras: { fotoMaxBytes: Number(regras.fotos.maxBytes) || 2000000, fotoRecomendadaBytes: 300000, localizacaoSo: ['CHEGUEI', 'CONCLUI'],
         motivosSemAssinatura: Object.keys(AST_MOTIVOS_SEM_ASSINATURA).map(function (k) { return { codigo: k, nome: AST_MOTIVOS_SEM_ASSINATURA[k] }; }) },
       os: lista.map(function (o) { var x = AstApp_os_(o, eu); x.ordem = ++ordem; return x; }) };
   });
@@ -127,7 +162,7 @@ function Ast_appSincronizar(sessionId, payload) {
     if (eventos.length > AST_APP_MAX_EVENTOS) throw new Error('Não foi possível sincronizar: no máximo ' + AST_APP_MAX_EVENTOS + ' eventos por envio (vieram ' + eventos.length + '). Divida a fila em partes');
     var aparelho = Ast_texto_(JSON.stringify(p.aparelho || {}), 300);
     var recebidoEm = Ast_agora_();
-    var aceitos = [], recusados = [], tocadas = {}, linhas = [];
+    var aceitos = [], recusados = [], tocadas = {}, linhas = [], enviosCliente = [];
     var ordenados = eventos.map(function (e, i) { return { e: e || {}, i: i, ms: Ast_ms_((e || {}).em) }; })
       .sort(function (a, b) { return ((a.ms === null ? Infinity : a.ms) - (b.ms === null ? Infinity : b.ms)) || (a.i - b.i); });
     Ast_comTrava_(function () {
@@ -138,6 +173,8 @@ function Ast_appSincronizar(sessionId, payload) {
         var ev = x.e, idLocal = Ast_s_(ev.idLocal), tipo = Ast_up_(ev.tipo), osId = Ast_s_(ev.osId);
         if (!AST_RX_ID_LOCAL.test(idLocal)) { recusados.push({ idLocal: idLocal, tipo: tipo, osId: osId, definitivo: true, motivo: 'idLocal inválido (8 a 80 letras, números ou _.:-)', corrigir: 'Atualize o aplicativo.' }); return; }
         if (vistos[idLocal]) { aceitos.push({ idLocal: idLocal, tipo: tipo, osId: osId, duplicado: true }); return; }
+        // 22/10/2026 (etapa 2): o envio do relatório ao cliente roda depois da trava (o Enviar documento tem a sua própria)
+        if (tipo === 'ENVIAR_CLIENTE') { enviosCliente.push({ ev: ev, idLocal: idLocal, osId: osId }); return; }
         var r;
         try { r = AstO_aplicarEvento_(eu, { tipo: tipo, osId: osId, em: ev.em, dados: ev.dados || {}, idLocal: idLocal }, ctx); }
         catch (e) { r = { ok: false, definitivo: false, motivo: String((e && e.message) || e).replace(/^Não foi possível [^:]+:\s*/, ''), corrigir: 'Tente sincronizar de novo; se continuar, fale com a gestão.' }; }
@@ -154,8 +191,22 @@ function Ast_appSincronizar(sessionId, payload) {
       if (linhas.length) { SGO_DATA.insertMany(AST_ABAS.SYNC, linhas.map(function (l) { return Object.assign({ CRIADO_EM: recebidoEm }, l); })); delete AST_MEMO[AST_ABAS.SYNC]; }
       Object.keys(tocadas).forEach(function (id) { var o = Ast_porId_(AST_ABAS.OS, id); if (o && Ast_up_(o.SITUACAO) === 'DOC_PENDENTE') AstO_tentarEncerrar_(eu, id); });
     });
+    if (enviosCliente.length) {
+      // fora da trava: o encerramento (e o relatório) do lote acima já foram gravados; cada envio é idempotente pelo idLocal
+      var linhasEnvio = [];
+      enviosCliente.forEach(function (x) {
+        Ast_memoLimpar_();
+        var r = AstApp_enviarCliente_(eu, { osId: x.osId, dados: x.ev.dados || {}, idLocal: x.idLocal });
+        tocadas[x.osId] = true;
+        var linha = { ID_LOCAL: x.idLocal, PEDIDO_ID: pedidoId, OS_ID: x.osId, TIPO: 'ENVIAR_CLIENTE', TECNICO_ID: eu.id, EM_APARELHO: Ast_iso_(x.ev.em), RECEBIDO_EM: recebidoEm, APARELHO: aparelho };
+        if (r.ok) { aceitos.push({ idLocal: x.idLocal, tipo: 'ENVIAR_CLIENTE', osId: x.osId, duplicado: false, nota: r.nota || '' }); linhasEnvio.push(Object.assign(linha, { RESULTADO: 'ACEITO', MOTIVO: Ast_texto_(r.nota, 300) })); }
+        else { recusados.push({ idLocal: x.idLocal, tipo: 'ENVIAR_CLIENTE', osId: x.osId, definitivo: !!r.definitivo, motivo: r.motivo, corrigir: r.corrigir || '' }); linhasEnvio.push(Object.assign(linha, { RESULTADO: 'RECUSADO', MOTIVO: Ast_texto_(r.motivo, 300) })); }
+      });
+      try { SGO_DATA.insertMany(AST_ABAS.SYNC, linhasEnvio.map(function (l) { return Object.assign({ CRIADO_EM: recebidoEm }, l); })); delete AST_MEMO[AST_ABAS.SYNC]; } catch (eS) { console.error('Aplicativo do técnico, registro do envio: ' + ((eS && eS.message) || eS)); }
+      Ast_memoLimpar_();
+    }
     return { pedidoId: pedidoId, recebidoEm: recebidoEm, aceitos: aceitos, recusados: recusados,
-      os: Object.keys(tocadas).map(function (id) { return Ast_porId_(AST_ABAS.OS, id); }).filter(Boolean).filter(function (o) { return eu.gestao || Ast_s_(o.TECNICO_ID) === eu.id; }).map(AstApp_resumoOs_) };
+      os: Object.keys(tocadas).map(function (id) { return Ast_porId_(AST_ABAS.OS, id); }).filter(Boolean).filter(function (o) { return eu.gestao || Ast_s_(o.TECNICO_ID) === eu.id; }).map(function (o) { return AstApp_resumoOs_(o, eu); }) };
   });
 }
 
@@ -165,6 +216,6 @@ function Ast_appEnviarFoto(sessionId, payload) {
     var p = payload || {};
     var r = AstO_salvarFoto_(eu, p);
     var os = Ast_porId_(AST_ABAS.OS, r.os && r.os.ID) || r.os;
-    return { idLocal: Ast_s_(p.idLocal), duplicado: !!r.duplicado, foto: r.foto, os: AstApp_resumoOs_(os) };
+    return { idLocal: Ast_s_(p.idLocal), duplicado: !!r.duplicado, foto: r.foto, os: AstApp_resumoOs_(os, eu) };
   });
 }

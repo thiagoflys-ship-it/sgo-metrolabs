@@ -215,13 +215,25 @@ function Cmp_marca_(texto) {
   }
 }
 
+/**
+ * 22/10/2026: o que chama outro módulo com trava própria (Assistência, quando a peça fica disponível) roda DEPOIS de soltar
+ * a trava de Compras (Cmp_depois_), como a Assistência faz na ida (Ast_depois_). Pegar a trava de novo dentro da mesma
+ * chamada esperaria por si mesma no servidor próprio.
+ */
+var CMP_TRAVA = { n: 0, depois: [] };
+function Cmp_depois_(fn) { if (CMP_TRAVA.n > 0) CMP_TRAVA.depois.push(fn); else { try { fn(); } catch (e) { console.error('Compras (depois): ' + ((e && e.message) || e)); } } }
 function Cmp_comTrava_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(25000);
-  try { return fn(); } finally {
+  CMP_TRAVA.n++;
+  var ok = false;
+  try { var r = fn(); ok = true; return r; } finally {
+    CMP_TRAVA.n--;
     try { SpreadsheetApp.flush(); } catch (e) {}
     lock.releaseLock();
     if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+    var fila = CMP_TRAVA.depois; CMP_TRAVA.depois = [];
+    if (ok) fila.forEach(function (f) { try { f(); } catch (e3) { console.error('Compras (depois da trava): ' + ((e3 && e3.message) || e3)); } });
   }
 }
 

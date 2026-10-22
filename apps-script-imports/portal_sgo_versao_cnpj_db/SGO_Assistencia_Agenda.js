@@ -155,16 +155,26 @@ function AstA_agendar_(eu, d) {
     }
     return { os: os, c: c2 };
   });
-  if (reag) {
-    Ast_depois_(function () {
-      Ast_avisarCliente_(res.c, 'Visita técnica reagendada: chamado ' + c.NUMERO, 'Olá. A visita técnica do chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi reagendada para ' + Ast_br_(quando) +
-        '.\nMotivo: ' + motivo + '\n\nMetrolabs — Assistência técnica', 'AT08');
-    });
-  }
+  // 22/10/2026 (etapa 3): o cliente é avisado em todo agendamento: primeira visita, reagendamento e o retorno depois da peça
+  // (antes, "Retomar" + "Agendar" numa O.S. reaproveitada não avisava ninguém do lado do cliente)
+  var retorno = !reag && (!!osAtual || !!Ast_s_(c.PECA_DISPONIVEL_EM));
+  var rodape = '\n\nAcompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica';
+  Ast_depois_(function () {
+    if (reag) {
+      Ast_avisarCliente_(res.c, 'Visita técnica reagendada: chamado ' + c.NUMERO, 'Prezados,\n\nA visita técnica do chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi reagendada para ' + Ast_br_(quando) +
+        '.\nMotivo: ' + motivo + rodape, 'AT08');
+    } else if (retorno) {
+      Ast_avisarCliente_(res.c, 'Retorno técnico agendado: chamado ' + c.NUMERO + ' em ' + Ast_brDia_(quando), 'Prezados,\n\nO retorno do técnico para o chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi agendado para ' + Ast_br_(quando) +
+        (Ast_s_(c.PECA_DISPONIVEL_EM) ? ', com a peça ' + Ast_s_(c.PECA_DESCRICAO).slice(0, 150) + ' já recebida e conferida' : '') + '.\nTécnico: ' + tec.nome + '.' + rodape, 'AT15');
+    } else {
+      Ast_avisarCliente_(res.c, 'Visita técnica agendada: chamado ' + c.NUMERO + ' em ' + Ast_brDia_(quando), 'Prezados,\n\nA visita técnica do chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi agendada para ' + Ast_br_(quando) +
+        '.\nTécnico: ' + tec.nome + '. Previsão de duração: ' + Ast_duracaoTxt_(dur) + '.' + rodape, 'AT08');
+    }
+  });
   var sug = AstA_sugerirVeiculo_(tec.id, iniMs, fimMs, res.os);
   return { chamado: AstC_publico_(res.c, eu, Date.now()), os: typeof AstO_publico_ === 'function' ? AstO_publico_(Ast_porId_(AST_ABAS.OS, res.os.ID) || res.os, eu) : null,
     conflitos: conf, veiculoSugerido: sug,
-    message: (reag ? 'Atendimento reagendado' : 'Atendimento agendado') + ': ' + res.os.NUMERO + ' com ' + tec.nome + ' em ' + Ast_br_(quando) + '.' + (conf.length ? ' Conflito registrado e avisado à gestão.' : '') +
+    message: (reag ? 'Atendimento reagendado' : retorno ? 'Retorno agendado' : 'Atendimento agendado') + ': ' + res.os.NUMERO + ' com ' + tec.nome + ' em ' + Ast_br_(quando) + '. O cliente recebe o aviso por e-mail.' + (conf.length ? ' Conflito registrado e avisado à gestão.' : '') +
       (sug && sug.veiculo ? ' Veículo livre no horário: ' + sug.veiculo.rotulo + ' (toque em "Reservar veículo").' : '') };
 }
 

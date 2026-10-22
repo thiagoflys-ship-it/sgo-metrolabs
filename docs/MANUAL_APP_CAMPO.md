@@ -78,6 +78,14 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
 9. **Concluí**: só libera quando não falta nada. A tela diz em palavras o que falta (por exemplo: "1 foto (mínimo 2)",
    "A assinatura do cliente ou o motivo de não haver assinatura"). Ao concluir, o app pede a localização de novo, com o
    mesmo aviso. Depois de concluída, a O.S. não muda mais no celular; correções são feitas pela gestão na tela do SGO+.
+10. **Documento e envio** (depois que o servidor encerra a O.S.): o bloco "Documento e envio" aparece na O.S. e na tela
+   de conclusão com a situação do relatório: "PDF gerado, ainda não enviado ao cliente", "Enviado ao cliente em ...
+   para ..." ou "O relatório está sendo gerado". **Ver relatório** abre o PDF. **Enviar ao cliente por e-mail** abre a
+   tela de envio: os contatos do cadastro do cliente (responsável da unidade, solicitante, cadastro do cliente) vêm
+   marcados com o e-mail à vista para conferir; dá para acrescentar outro e-mail (confira com o cliente). Toque em
+   **Enviar**: o pedido entra na fila como qualquer registro (sem sinal, sobe depois) e o servidor manda o PDF num e-mail
+   da Metrolabs, com o número do chamado no assunto. A O.S. passa a mostrar "Enviado às ..."; o mesmo envio nunca sai
+   duas vezes. Sem envio em 1 dia útil, a gestão recebe a cobrança e pode enviar pela tela do SGO+.
 
 ## 4. Sem sinal (subsolo, centro cirúrgico, estrada)
 

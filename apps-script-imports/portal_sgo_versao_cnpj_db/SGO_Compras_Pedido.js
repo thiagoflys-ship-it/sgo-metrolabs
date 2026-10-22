@@ -241,6 +241,12 @@ function CmpP_disponivel_(r, eu, campos) {
   } catch (e) { console.error('Compras, atividade de entrega: ' + ((e && e.message) || e)); campos.ATIVIDADE_ID = ''; }
   SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, campos);
   Cmp_avisar_(r.SOLICITANTE_ID, 'DISPONIVEL', 'Peça disponível: ' + Cmp_s_(r.NUMERO), 'Chegou e foi conferido: "' + Cmp_s_(r.TITULO).slice(0, 90) + '". Retire com Compras (' + Cmp_s_(r.COMPRADOR_NOME) + ') ou confirme o recebimento em Compras > Meus pedidos de compra.', r.ID, { email: true, autorId: eu && eu.id });
+  // 22/10/2026 (etapa 3): pedido ligado a um chamado da Assistência técnica: a Assistência é chamada depois de soltar a trava
+  // de Compras e devolve o chamado a "Planejado" (retorno a agendar), avisando técnico, gestão e cliente (modelo do COMMAND)
+  if (Cmp_s_(r.OS_AUVO) && /^CH-\d{4}-\d+$/.test(Cmp_s_(r.OS_AUVO)) && typeof Assistencia_pecaDisponivel_ === 'function') {
+    var reqAst = Object.assign({}, r, campos), quemAst = { id: eu && eu.id, nome: eu && eu.nome };
+    Cmp_depois_(function () { Assistencia_pecaDisponivel_(reqAst, quemAst); });
+  }
   if (Cmp_s_(r.COMERCIAL_VENDEDOR_ID)) {
     Cmp_avisar_(r.COMERCIAL_VENDEDOR_ID, 'DISPONIVEL', 'Compra do pedido ' + Cmp_s_(r.PROPOSTA_NUMERO) + ' disponível (' + Cmp_s_(r.NUMERO) + ')', 'Os produtos comprados para o pedido aprovado ' + Cmp_s_(r.PROPOSTA_NUMERO) + ' chegaram e foram conferidos. Combine a entrega com o cliente.', r.ID, { email: true, autorId: eu && eu.id });
     CmpP_concluirComercial_(r, eu);
