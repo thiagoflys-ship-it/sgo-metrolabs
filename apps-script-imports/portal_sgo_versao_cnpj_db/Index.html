@@ -219,6 +219,14 @@
           </div>
         </div>
 
+        <div class="sidebar-section menu-grupo" data-grupo="automacao" id="menu-secao-automacao" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-automacao" onclick="Menu_alternarGrupo_('automacao')"><span class="menu-grupo-nome">Segurança predial</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-automacao">
+          <!-- 22/10/2026: Segurança e automação predial (JS_AutomacaoPredial.html / SGO_Automacao_Predial.js). Aparece para Administrador, Diretoria e quem tem permissão em algum dispositivo (AutPred_iniciar_); o servidor confere tudo. -->
+          <button type="button" class="menu-btn" data-mod="automacao_predial" data-busca="portao portoes fechadura porta diretoria smart life tuya automacao predial seguranca abrir destravar" id="menu-btn-automacao_predial" onclick="abrir('automacao_predial')" title="Portões e porta da Diretoria pelo SGO+"><span class="menu-btn-icon"><i class="fas fa-door-open" aria-hidden="true"></i></span>Segurança e automação predial</button>
+          </div>
+        </div>
+
         <div class="sidebar-section menu-grupo" data-grupo="gestao" id="menu-secao-gestao">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-gestao" onclick="Menu_alternarGrupo_('gestao')"><span class="menu-grupo-nome">Gestão</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-gestao">
@@ -302,6 +310,7 @@
 <?!= include('JS_Atividades'); ?>
 <?!= include('JS_Avisos'); ?>
 <?!= include('JS_Chaves'); ?>
+<?!= include('JS_AutomacaoPredial'); ?>
 <?!= include('JS_ModoPersonalizado'); ?>
 <?!= include('JS_WhatsappPiloto'); ?>
 <?!= include('JS_AvisosMatriz'); ?>

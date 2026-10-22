@@ -1,0 +1,359 @@
+<style>
+  /* SEGURANÇA E AUTOMAÇÃO PREDIAL (22/10/2026) — ver SGO_Automacao_Predial.js. */
+  .aut-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .aut-cartao { background: var(--card, #fff); border: 1px solid var(--border, #d9e0e7); border-radius: var(--radius, 10px); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .aut-cartao h4 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .aut-cartao.is-restrito { border-color: var(--bc-danger-line, #e5b4ae); }
+  .aut-linha { display: flex; gap: 8px; justify-content: space-between; font-size: 12.5px; border-bottom: 1px dashed var(--border, #eef1f4); padding: 3px 0; }
+  .aut-linha span:first-child { color: var(--muted, #52606d); flex: 0 0 38%; }
+  .aut-linha span:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+  .aut-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .aut-acoes .cadx-btn { min-height: 36px; }
+  .aut-unidade { margin: 18px 0 8px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  .aut-form { background: var(--bc-surface-2, #f4f6f8); border-radius: 8px; padding: 10px; margin-top: 8px; display: grid; gap: 6px; }
+  .aut-form label { font-size: 12px; font-weight: 700; }
+  .aut-form input, .aut-form select, .aut-form textarea { width: 100%; box-sizing: border-box; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border, #d9e0e7); border-radius: 6px; font-size: 14px; background: var(--card, #fff); }
+  .aut-form .aut-check { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+  .aut-form .aut-check input { width: auto; min-height: 0; }
+  .aut-abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .aut-abas button.is-ativa { background: var(--bc-text, #1f2933) !important; color: #fff !important; border-color: var(--bc-text, #1f2933) !important; }
+  .aut-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .aut-tabela th, .aut-tabela td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #eef1f4); vertical-align: top; }
+  .aut-tabela th { font-size: 11.5px; color: var(--muted, #52606d); text-transform: uppercase; letter-spacing: .02em; }
+  .aut-mono { font-family: var(--bc-mono, monospace); font-size: 11.5px; }
+  .aut-perigo { border: 1px solid var(--bc-danger-line, #d64545); background: var(--bc-danger-bg, #fff5f5); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; margin: 6px 0; }
+  @media (max-width: 760px) { .aut-cartoes { grid-template-columns: 1fr; } .aut-linha span:first-child { flex-basis: 45%; } .aut-tabela thead { display: none; } .aut-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .aut-tabela td { display: block; border: none; padding: 2px 4px; } }
+</style>
+
+<script>
+  // ==========================================================
+  // SEGURANÇA E AUTOMAÇÃO PREDIAL (22/10/2026)
+  // Servidor: SGO_Automacao_Predial.js (AutPred_api(sessionId, acao, dados)); nuvem: SGO_Automacao_Tuya.js.
+  // Ganchos na casca (JS_Core): AutPred_iniciar_ no login (menu para quem o servidor liberar), AutPred_parar_ no
+  // logout, abrir('automacao_predial') -> AutPred_render_. A tela NUNCA se atualiza sozinha: só depois de uma ação
+  // ou no botão "Atualizar" (formulário aberto nunca é apagado). Toda regra é conferida de novo no servidor.
+  // ==========================================================
+  var AUTP = { menu: false, adm: false, diretoria: false, dados: null, aba: "dispositivos", aberto: "", perms: null, aud: null, unidades: null, mensagem: "" };
+
+  function AutPred_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function AutPred_temMenu_() { return !!AUTP.menu; }
+  function AutPred_uuid_() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function AutPred_chamar_(acao, dados, ok, falha) {
+    google.script.run
+      .withSuccessHandler(function (r) { if (r && r.ok) { try { ok(r); } catch (e) { console.error("Automação " + acao + ":", e); falha("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); } } else falha((r && r.message) || "Não foi possível concluir. Tente de novo."); })
+      .withFailureHandler(function (e) { falha((e && e.message) || "Sem comunicação com o SGO+. Confira a internet e tente de novo; nada foi alterado."); })
+      .AutPred_api(SGO_getSessionId(), acao, dados || {});
+  }
+
+  // ---------- ciclo de vida ----------
+  function AutPred_mostrarMenu_() {
+    var g = document.getElementById("menu-secao-automacao"), b = document.getElementById("menu-btn-automacao_predial");
+    if (g) g.style.display = AUTP.menu ? "" : "none";
+    if (b) b.style.display = AUTP.menu ? "" : "none";
+  }
+  function AutPred_iniciar_() {
+    AUTP.menu = false; AUTP.dados = null;
+    AutPred_mostrarMenu_();
+    if (!SESSION) return;
+    AutPred_chamar_("iniciar", {}, function (r) { AUTP.menu = !!r.mostrarMenu; AUTP.adm = !!r.podeAdministrar; AUTP.diretoria = !!r.ehDiretoria; AutPred_mostrarMenu_(); }, function () { AUTP.menu = false; AutPred_mostrarMenu_(); });
+  }
+  function AutPred_parar_() { AUTP.menu = false; AUTP.dados = null; AUTP.perms = null; AUTP.aud = null; AutPred_mostrarMenu_(); }
+
+  // ---------- tela ----------
+  function AutPred_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Segurança e automação predial"); } catch (e) {} }
+    AUTP.aberto = ""; AUTP.mensagem = "";
+    div.innerHTML =
+      '<div class="module-shell cadx" id="autTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Segurança e automação predial</h2>' +
+          '<p class="content-subtitle">Portões e porta da Diretoria pela nuvem do Smart Life. Cada comando passa por: solicitado, aceito pela nuvem e execução confirmada pelo dispositivo.</p></div>' +
+          '<div class="module-header-right"><button type="button" class="cadx-btn cadx-btn-grande" id="autAtualizar" onclick="AutPred_carregar_()">Atualizar</button></div></div>' +
+        CadUI_ajuda_(
+          "<ul><li><b>Abrir portão</b> envia o comando pela nuvem. <b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
+          "<li>A <b>porta da Diretoria</b> só aparece para a Diretoria e só é destravada por diretor com a permissão \"Acionar\", com confirmação adicional (digitar ABRIR).</li>" +
+          "<li><b>Simulação</b>: enquanto a automação está desligada em Chaves e senhas ou o dispositivo não foi homologado pela Diretoria, o SGO+ registra o que teria feito e nada é enviado.</li>" +
+          "<li>Limites: 1 comando por dispositivo a cada 10 s, 5 por pessoa por minuto e nunca o mesmo comando enquanto o anterior está sem resultado. Tudo fica no registro inviolável.</li>" +
+          "<li>Esta tela não se atualiza sozinha: use \"Atualizar\".</li></ul>") +
+        '<div id="autMsg" aria-live="polite"></div>' +
+        '<div id="autCorpo">' + CadUI_esqueleto_(6) + "</div>" +
+      "</div>";
+    AutPred_carregar_();
+  }
+
+  function AutPred_msg_(html) { var m = document.getElementById("autMsg"); if (m) m.innerHTML = html || ""; }
+  function AutPred_faixa_(texto, tom) { return '<div class="cadx-faixa bc-faixa ' + (tom || "tom-info") + '" role="status">' + AutPred_esc_(texto) + "</div>"; }
+
+  function AutPred_carregar_(mensagem, tom) {
+    var btn = document.getElementById("autAtualizar");
+    if (btn) btn.disabled = true;
+    AutPred_chamar_("painel", {}, function (r) {
+      if (btn) btn.disabled = false;
+      AUTP.dados = r; AUTP.adm = !!r.podeAdministrar; AUTP.diretoria = !!r.ehDiretoria;
+      AutPred_desenhar_();
+      if (mensagem) AutPred_msg_(AutPred_faixa_(mensagem, tom || "tom-ok"));
+    }, function (m) {
+      if (btn) btn.disabled = false;
+      var c = document.getElementById("autCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não carregou.</strong>' + AutPred_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_carregar_()">Tentar de novo</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="irTelaInicial_()">Voltar ao Início</button></div></div>';
+    });
+  }
+
+  function AutPred_desenhar_() {
+    var c = document.getElementById("autCorpo"), d = AUTP.dados;
+    if (!c || !d) return;
+    var h = "";
+    var cfg = d.config || {};
+    if (!cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação): ' + AutPred_esc_((cfg.faltas || []).join("; ")) + ". O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya).</div>";
+    else h += '<div class="cadx-faixa bc-faixa tom-info">Automação ligada (região ' + AutPred_esc_(cfg.regiao) + "). Comandos reais só nos dispositivos homologados pela Diretoria; os demais ficam em simulação.</div>";
+    if (AUTP.adm) {
+      h += '<div class="aut-abas">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].map(function (a) {
+        return '<button type="button" class="cadx-btn cadx-btn-grande' + (AUTP.aba === a[0] ? " is-ativa" : "") + '" onclick="AutPred_aba_(\'' + a[0] + '\')">' + a[1] + "</button>";
+      }).join("") + "</div>";
+    }
+    h += '<div id="autAba"></div>';
+    c.innerHTML = h;
+    AutPred_desenharAba_();
+  }
+
+  function AutPred_aba_(aba) { AUTP.aba = aba; AUTP.aberto = ""; AutPred_desenhar_(); }
+
+  function AutPred_desenharAba_() {
+    var el = document.getElementById("autAba");
+    if (!el) return;
+    if (AUTP.aba === "permissoes" && AUTP.adm) { AutPred_desenharPermissoes_(el); return; }
+    if (AUTP.aba === "auditoria" && AUTP.adm) { AutPred_desenharAuditoria_(el); return; }
+    AutPred_desenharDispositivos_(el);
+  }
+
+  // ---------- dispositivos ----------
+  function AutPred_chipSituacao_(d) {
+    if (!d.ativo) return '<span class="cadx-selo bc-selo">Desativado</span>';
+    return (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
+      (d.restrito ? '<span class="cadx-selo bc-selo tom-perigo">Restrito à Diretoria</span>' : "") +
+      (d.modo === "REAL" ? '<span class="cadx-selo bc-selo tom-alerta">Comando real</span>' : '<span class="cadx-selo bc-selo tom-info">Simulação</span>');
+  }
+  function AutPred_linha_(a, b) { return b ? '<div class="aut-linha"><span>' + AutPred_esc_(a) + "</span><span>" + AutPred_esc_(b) + "</span></div>" : ""; }
+
+  function AutPred_desenharDispositivos_(el) {
+    var d = AUTP.dados, h = "";
+    if (AUTP.adm) {
+      h += '<div class="aut-acoes" style="margin:0 0 10px"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="autSinc" onclick="AutPred_sincronizar_()">Sincronizar com o Smart Life</button>' +
+        '<span class="cadx-sub">Lê os dispositivos da conta do Smart Life ligada ao projeto (só leitura; nenhum comando). Fechaduras entram restritas à Diretoria.</span></div>';
+      if (d.restritosOcultos) h += '<div class="cadx-faixa bc-faixa tom-info">' + d.restritosOcultos + ' dispositivo(s) restrito(s) à Diretoria não aparecem para o Administrador (nem nome, nem estado). A Diretoria administra e libera.</div>';
+    }
+    if (!d.unidades.length) {
+      h += '<div class="cadx-vazio bc-vazio"><strong>Nenhum dispositivo liberado para você.</strong>' +
+        (AUTP.adm ? "Clique em \"Sincronizar com o Smart Life\" para ler os portões e a fechadura da conta ligada ao projeto. Se a lista vier vazia, confira Chaves e senhas > Automação predial (Tuya) e o vínculo da conta do aplicativo no portal da Tuya." :
+          "Para ver ou abrir um portão, peça ao Administrador ou à Diretoria a permissão em Segurança e automação predial > Permissões." + (d.semPermissao ? " Há " + d.semPermissao + " dispositivo(s) cadastrado(s) sem permissão para você." : "")) + "</div>";
+      el.innerHTML = h; return;
+    }
+    d.unidades.forEach(function (u) {
+      h += '<h3 class="aut-unidade"><i class="fas fa-location-dot" aria-hidden="true"></i> ' + AutPred_esc_(u.nome) + ' <span class="cadx-sub">' + u.dispositivos.length + " dispositivo(s)</span></h3><div class=\"aut-cartoes\">" + u.dispositivos.map(AutPred_cartao_).join("") + "</div>";
+    });
+    if (d.ultimosComandos && d.ultimosComandos.length) {
+      h += '<h3 class="aut-unidade">Últimos comandos</h3>' + AutPred_tabelaComandos_(d.ultimosComandos, true);
+    }
+    el.innerHTML = h;
+  }
+
+  function AutPred_cartao_(d) {
+    var verbo = d.tipo === "FECHADURA" ? "Solicitar destravamento" : "Abrir portão";
+    var botoes = '<button type="button" class="cadx-btn" onclick="AutPred_estado_(\'' + d.id + '\')">Ler estado</button>' +
+      '<button type="button" class="cadx-btn" onclick="AutPred_historico_(\'' + d.id + '\')">Histórico</button>';
+    if (d.podeAcionar && d.ativo && d.compatOk) botoes = '<button type="button" class="cadx-btn cadx-btn-grande ' + (d.tipo === "FECHADURA" ? "cadx-btn-risco" : "cadx-btn-primario") + '" onclick="AutPred_pedir_(\'' + d.id + '\')">' + verbo + "</button>" + botoes;
+    if (AUTP.adm && (!d.restrito || AUTP.diretoria)) botoes += '<button type="button" class="cadx-btn" onclick="AutPred_editar_(\'' + d.id + '\')">Administrar</button>';
+    var aviso = "";
+    if (!d.compatOk) aviso = '<div class="cadx-faixa bc-faixa tom-alerta" style="margin-top:6px">' + AutPred_esc_(d.compatMotivo) + "</div>";
+    else if (!d.podeAcionar && d.motivoAcionar) aviso = '<div class="cadx-sub" style="margin-top:6px">Só consulta: ' + AutPred_esc_(d.motivoAcionar) + ".</div>";
+    if (d.modoMotivo) aviso += '<div class="cadx-sub" style="margin-top:6px">' + AutPred_esc_(d.modoMotivo) + "</div>";
+    return '<div class="aut-cartao' + (d.restrito ? " is-restrito" : "") + '" id="autD_' + d.id + '"><h4><i class="fas ' + (d.tipo === "FECHADURA" ? "fa-lock" : "fa-door-open") + '" aria-hidden="true"></i> ' + AutPred_esc_(d.nome) + "</h4><div>" + AutPred_chipSituacao_(d) + "</div>" +
+      AutPred_linha_("Tipo", d.tipoNome + (d.categoriaNome ? " (" + d.categoriaNome + ")" : "")) + AutPred_linha_("Localização", d.localizacao) +
+      AutPred_linha_("Estado", d.estado + (d.estadoEm ? " (lido " + d.estadoEm + ")" : "")) +
+      AutPred_linha_("Último comando", d.ultComandoEm ? d.ultComandoSituacao + " em " + d.ultComandoEm : "nenhum") +
+      AutPred_linha_("Homologação", d.homologado ? "homologado por " + d.homologadoPor + " em " + d.homologadoEm : "aguardando a Diretoria") +
+      aviso + '<div class="aut-acoes">' + botoes + '</div><div id="autF_' + d.id + '"></div></div>';
+  }
+
+  function AutPred_dispositivo_(id) {
+    var achado = null;
+    ((AUTP.dados && AUTP.dados.unidades) || []).forEach(function (u) { u.dispositivos.forEach(function (d) { if (d.id === id) achado = d; }); });
+    return achado;
+  }
+  function AutPred_form_(id, html) { var f = document.getElementById("autF_" + id); if (f) f.innerHTML = html; AUTP.aberto = html ? id : ""; }
+
+  function AutPred_estado_(id) {
+    AutPred_msg_('<div class="cadx-sub">Lendo o estado…</div>');
+    AutPred_chamar_("estado", { dispositivoId: id }, function (r) { AutPred_carregar_(r.mensagem, "tom-info"); }, function (m) { AutPred_msg_(AutPred_faixa_(m, "tom-perigo")); });
+  }
+
+  function AutPred_historico_(id) {
+    var d = AutPred_dispositivo_(id);
+    AutPred_form_(id, '<div class="cadx-sub">Carregando o histórico…</div>');
+    AutPred_chamar_("historico", { dispositivoId: id }, function (r) {
+      AutPred_form_(id, '<div class="aut-form"><label>Histórico de ' + AutPred_esc_(d ? d.nome : "") + " (" + r.comandos.length + " último(s))</label>" + (r.comandos.length ? AutPred_tabelaComandos_(r.comandos, false) : '<div class="cadx-sub">Nenhum comando registrado.</div>') +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn" onclick="AutPred_form_(\'' + id + '\', \'\')">Fechar</button></div></div>');
+    }, function (m) { AutPred_form_(id, AutPred_faixa_(m, "tom-perigo")); });
+  }
+
+  function AutPred_tomSituacao_(s) { return s === "CONFIRMADO" ? "tom-ok" : (s === "ACEITO" || s === "INCERTO") ? "tom-alerta" : (s === "SIMULADO" ? "tom-info" : "tom-perigo"); }
+  function AutPred_tabelaComandos_(lista, comDispositivo) {
+    return '<table class="aut-tabela"><thead><tr><th>Quando</th>' + (comDispositivo ? "<th>Dispositivo</th>" : "") + "<th>Quem</th><th>Comando</th><th>Situação</th><th>Detalhe</th><th></th></tr></thead><tbody>" + lista.map(function (c) {
+      return "<tr><td>" + AutPred_esc_(c.quando) + "</td>" + (comDispositivo ? "<td>" + AutPred_esc_(c.dispositivo) + (c.unidade ? '<div class="cadx-sub">' + AutPred_esc_(c.unidade) + "</div>" : "") + "</td>" : "") +
+        "<td>" + AutPred_esc_(c.solicitante) + '<div class="cadx-sub">' + AutPred_esc_(c.perfil) + "</div></td><td>" + AutPred_esc_(c.comando) + '<div class="cadx-sub">' + AutPred_esc_(c.modo === "SIMULACAO" ? "simulação" : "real") + "</div></td>" +
+        '<td><span class="cadx-selo bc-selo ' + AutPred_tomSituacao_(c.situacao) + '">' + AutPred_esc_(c.situacaoTexto) + "</span>" + (c.autorizacao === "NEGADO" ? '<div class="cadx-sub">' + AutPred_esc_(c.autorizacaoMotivo) + "</div>" : "") + "</td>" +
+        "<td>" + AutPred_esc_(c.detalhe || "") + (c.apiTid ? '<div class="aut-mono">tid ' + AutPred_esc_(c.apiTid) + "</div>" : "") + '<div class="aut-mono">op ' + AutPred_esc_(c.operacaoId) + "</div></td>" +
+        "<td>" + (c.podeConferir ? '<button type="button" class="cadx-btn" onclick="AutPred_conferir_(\'' + c.id + '\')">Conferir agora</button>' : "") + "</td></tr>";
+    }).join("") + "</tbody></table>";
+  }
+
+  function AutPred_conferir_(comandoId) {
+    AutPred_msg_('<div class="cadx-sub">Conferindo o estado do dispositivo…</div>');
+    AutPred_chamar_("conferir", { comandoId: comandoId }, function (r) { AutPred_carregar_(r.mensagem, r.comando && r.comando.situacao === "CONFIRMADO" ? "tom-ok" : "tom-alerta"); }, function (m) { AutPred_msg_(AutPred_faixa_(m, "tom-perigo")); });
+  }
+
+  // ---------- comando ----------
+  function AutPred_pedir_(id) {
+    var d = AutPred_dispositivo_(id);
+    if (!d) return;
+    var fech = d.tipo === "FECHADURA";
+    CadUI_confirmar_({
+      titulo: fech ? "Solicitar o destravamento da porta da Diretoria" : "Abrir " + d.nome, risco: fech, botao: fech ? "Confirmar o destravamento" : "Abrir agora",
+      texto: "<p>" + (fech ? "Você vai pedir o <b>destravamento</b> de <b>" + AutPred_esc_(d.nome) + "</b>" : "Você vai mandar <b>abrir</b> <b>" + AutPred_esc_(d.nome) + "</b>") + (d.unidade ? " (" + AutPred_esc_(d.unidade) + ")" : "") + ".</p>" +
+        (d.modo === "REAL" ? '<div class="aut-perigo">Comando real: o dispositivo vai receber o comando pela nuvem.</div>' : "<p>" + AutPred_esc_(d.modoMotivo || "Simulação: nada é enviado ao dispositivo.") + "</p>") +
+        (fech ? '<p>Confirmação adicional: digite <b>ABRIR</b> abaixo.</p><div class="cadx-campo"><input type="text" id="autConfirmacao" autocomplete="off" placeholder="Digite ABRIR"></div>' : "") +
+        "<p class=\"cadx-sub\">Fica registrado com o seu nome, a data e a hora. A nuvem aceitar não quer dizer porta aberta: espere a execução confirmada.</p>",
+      validar: function () { if (!fech) return ""; var v = document.getElementById("autConfirmacao"); return v && String(v.value || "").trim().toUpperCase() === "ABRIR" ? "" : "Digite ABRIR para confirmar."; },
+      aoConfirmar: function (valores, fechar, reabilitar) {
+        var conf = fech ? String((document.getElementById("autConfirmacao") || {}).value || "").trim().toUpperCase() : "";
+        var opId = AutPred_uuid_();
+        AutPred_chamar_("comando", { dispositivoId: id, operacaoId: opId, confirmacao: conf }, function (r) {
+          fechar();
+          var s = r.comando && r.comando.situacao;
+          AutPred_carregar_(r.texto, s === "CONFIRMADO" ? "tom-ok" : s === "SIMULADO" ? "tom-info" : "tom-alerta");
+        }, function (m) { fechar(); AutPred_carregar_(m, "tom-perigo"); });
+      }
+    });
+  }
+
+  // ---------- administração do dispositivo ----------
+  function AutPred_sincronizar_() {
+    var b = document.getElementById("autSinc");
+    if (b) { b.disabled = true; b.textContent = "Sincronizando…"; }
+    AutPred_msg_('<div class="cadx-sub">Lendo os dispositivos no Smart Life…</div>');
+    AutPred_chamar_("sincronizar", {}, function (r) { AUTP.dados = r; AutPred_desenhar_(); AutPred_msg_(AutPred_faixa_(r.mensagem, "tom-ok")); }, function (m) { if (b) { b.disabled = false; b.textContent = "Sincronizar com o Smart Life"; } AutPred_msg_(AutPred_faixa_(m, "tom-perigo")); });
+  }
+
+  function AutPred_editar_(id) {
+    var d = AutPred_dispositivo_(id);
+    if (!d) return;
+    var montar = function (unidades) {
+      var opc = '<option value="">Outra (digite abaixo)</option>' + (unidades || []).map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '"' + (u.id === d.unidadeId ? " selected" : "") + ">" + AutPred_esc_((u.cliente ? u.cliente + " — " : "") + u.nome + (u.cidade ? " (" + u.cidade + ")" : "")) + "</option>"; }).join("");
+      AutPred_form_(id, '<div class="aut-form">' +
+        '<label for="autNome_' + id + '">Nome no SGO+</label><input id="autNome_' + id + '" maxlength="80" value="' + AutPred_esc_(d.nome) + '">' +
+        '<label for="autUni_' + id + '">Unidade (cadastro de unidades)</label><select id="autUni_' + id + '">' + opc + "</select>" +
+        '<label for="autUniNome_' + id + '">Unidade (texto, quando não está no cadastro; ex.: METROLABS — MATRIZ GOIÂNIA)</label><input id="autUniNome_' + id + '" maxlength="120" value="' + AutPred_esc_(d.unidadeId ? "" : (d.unidade === "Sem unidade definida" ? "" : d.unidade)) + '">' +
+        '<label for="autLoc_' + id + '">Localização (ex.: entrada principal, estacionamento, 2º andar)</label><input id="autLoc_' + id + '" maxlength="120" value="' + AutPred_esc_(d.localizacao) + '">' +
+        (d.tipo !== "FECHADURA" ? '<label for="autCmd_' + id + '">Comando de abertura (JSON, só se o lido do Smart Life estiver errado)</label><input id="autCmd_' + id + '" class="aut-mono" value="' + AutPred_esc_(d.comandoAbrir) + '" placeholder=\'{"code":"switch_1","value":true}\'>' : "") +
+        '<label class="aut-check"><input type="checkbox" id="autAtivo_' + id + '"' + (d.ativo ? " checked" : "") + "> Ativo no SGO+ (desativado não recebe comando)</label>" +
+        (AUTP.diretoria ? '<label class="aut-check"><input type="checkbox" id="autRestrito_' + id + '"' + (d.restrito ? " checked" : "") + "> Restrito à Diretoria (só diretores veem e acionam)</label>" : "") +
+        '<div class="cadx-sub">Identificação no Smart Life: ' + AutPred_esc_(d.nomeProvedor) + " · " + AutPred_esc_(d.categoriaNome) + (d.produto ? " · " + AutPred_esc_(d.produto) : "") + ' · <span class="aut-mono">' + AutPred_esc_(d.deviceId) + "</span>" + (d.sincronizadoEm ? " · lido em " + AutPred_esc_(d.sincronizadoEm) : "") + "</div>" +
+        '<div class="cadx-sub">' + AutPred_esc_(d.compatMotivo) + "</div>" +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvar_(\'' + id + '\')">Gravar</button>' +
+        (AUTP.diretoria ? '<button type="button" class="cadx-btn cadx-btn-grande ' + (d.homologado ? "cadx-btn-risco" : "") + '" onclick="AutPred_homologar_(\'' + id + "'," + (d.homologado ? "false" : "true") + ')">' + (d.homologado ? "Retirar a homologação" : "Homologar (depois do teste presencial)") + "</button>" : "") +
+        '<button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_form_(\'' + id + '\', \'\')">Cancelar</button></div><div class="cadx-msg" id="autEdMsg_' + id + '"></div></div>');
+    };
+    if (AUTP.unidades) montar(AUTP.unidades);
+    else AutPred_chamar_("unidades", {}, function (r) { AUTP.unidades = r.unidades || []; montar(AUTP.unidades); }, function () { montar([]); });
+  }
+
+  function AutPred_salvar_(id) {
+    var v = function (p) { var e = document.getElementById(p + id); return e ? e.value : undefined; };
+    var ck = function (p) { var e = document.getElementById(p + id); return e ? !!e.checked : undefined; };
+    var dados = { id: id, nome: v("autNome_"), unidadeId: v("autUni_"), unidadeNome: v("autUniNome_"), localizacao: v("autLoc_"), ativo: ck("autAtivo_") };
+    if (v("autCmd_") !== undefined) dados.comandoAbrir = v("autCmd_");
+    if (AUTP.diretoria && ck("autRestrito_") !== undefined) dados.restrito = ck("autRestrito_");
+    var m = document.getElementById("autEdMsg_" + id);
+    if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
+    AutPred_chamar_("dispositivoSalvar", dados, function (r) { AutPred_carregar_(r.mensagem, "tom-ok"); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
+  }
+
+  function AutPred_homologar_(id, sim) {
+    var d = AutPred_dispositivo_(id);
+    CadUI_confirmar_({
+      titulo: sim ? "Homologar " + (d ? d.nome : "") : "Retirar a homologação", risco: true, botao: sim ? "Homologar" : "Retirar",
+      texto: sim ? "<p>Homologar libera o <b>comando real</b> neste dispositivo assim que a automação estiver ligada em Chaves e senhas. Só homologue depois do teste presencial com acompanhamento.</p><p>Digite <b>HOMOLOGAR</b>:</p><div class=\"cadx-campo\"><input type=\"text\" id=\"autHomConf\" autocomplete=\"off\" placeholder=\"Digite HOMOLOGAR\"></div>"
+        : "<p>O dispositivo volta à simulação: nenhum comando real sai até nova homologação.</p>",
+      motivo: { rotulo: sim ? "Como foi o teste presencial" : "Motivo", min: 8 },
+      validar: function () { if (!sim) return ""; var e = document.getElementById("autHomConf"); return e && String(e.value || "").trim().toUpperCase() === "HOMOLOGAR" ? "" : "Digite HOMOLOGAR para confirmar."; },
+      aoConfirmar: function (valores, fechar, reabilitar) {
+        var motivo = valores && valores.motivo !== undefined ? valores.motivo : String((document.getElementById("cadxDlgMotivo") || {}).value || "");
+        AutPred_chamar_("homologar", { id: id, homologado: sim, motivo: motivo, confirmacao: sim ? String((document.getElementById("autHomConf") || {}).value || "").trim().toUpperCase() : "" }, function (r) { fechar(); AutPred_carregar_(r.mensagem, "tom-ok"); }, reabilitar);
+      }
+    });
+  }
+
+  // ---------- permissões ----------
+  function AutPred_desenharPermissoes_(el) {
+    el.innerHTML = CadUI_esqueleto_(4);
+    AutPred_chamar_("permissoes", {}, function (r) {
+      AUTP.perms = r;
+      var opU = r.usuarios.map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '">' + AutPred_esc_(u.nome + " (" + u.login + ", " + u.perfil + ")") + "</option>"; }).join("");
+      var opD = r.dispositivos.map(function (d) { return '<option value="' + AutPred_esc_(d.id) + '">' + AutPred_esc_(d.nome + (d.unidade ? " — " + d.unidade : "") + (d.restrito ? " (restrito à Diretoria)" : "")) + "</option>"; }).join("");
+      var h = '<div class="aut-form"><label>Conceder permissão</label>' +
+        '<label for="autPU">Usuário</label><select id="autPU">' + opU + "</select>" +
+        '<label for="autPD">Dispositivo</label><select id="autPD">' + opD + "</select>" +
+        '<label for="autPP">Permissão</label><select id="autPP"><option value="VER">Ver estado e histórico</option><option value="ACIONAR">Acionar (abrir) e ver</option></select>' +
+        '<label for="autPF">Vigência até (opcional)</label><input type="date" id="autPF">' +
+        '<label for="autPM">Motivo</label><input id="autPM" maxlength="300" placeholder="Ex.: recebe entregas na portaria">' +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_conceder_()">Conceder</button></div><div class="cadx-msg" id="autPMsg"></div>' +
+        '<div class="cadx-sub">Administrador e Diretoria já veem e acionam os portões sem permissão individual. A porta da Diretoria só é liberada por um diretor, para usuários do perfil Diretoria. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo.</div></div>';
+      h += '<h3 class="aut-unidade">Permissões concedidas</h3>' + (r.permissoes.length ? '<table class="aut-tabela"><thead><tr><th>Usuário</th><th>Dispositivo</th><th>Permissão</th><th>Vigência</th><th>Concedida</th><th>Situação</th><th></th></tr></thead><tbody>' + r.permissoes.map(function (p) {
+        var sit = p.status === "ATIVA" ? (p.vencida ? '<span class="cadx-selo bc-selo tom-alerta">Vencida</span>' : '<span class="cadx-selo bc-selo tom-ok">Ativa</span>') : '<span class="cadx-selo bc-selo">Revogada' + (p.revogadaEm ? " em " + AutPred_esc_(p.revogadaEm) : "") + "</span>";
+        return "<tr><td>" + AutPred_esc_(p.usuario) + '<div class="cadx-sub">' + AutPred_esc_(p.login + " · " + p.perfil) + "</div></td><td>" + AutPred_esc_(p.dispositivo) + "</td><td>" + AutPred_esc_(p.permissaoTexto) + "</td><td>" + AutPred_esc_(p.vigenciaFim || "sem data de fim") + "</td><td>" + AutPred_esc_(p.concedidaPor + " em " + p.concedidaEm) + '<div class="cadx-sub">' + AutPred_esc_(p.motivo) + "</div></td><td>" + sit + "</td><td>" +
+          (p.status === "ATIVA" ? '<button type="button" class="cadx-btn cadx-btn-risco" onclick="AutPred_revogar_(\'' + p.id + '\')">Revogar</button>' : "") + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<div class="cadx-sub">Nenhuma permissão concedida.</div>');
+      el.innerHTML = h;
+    }, function (m) { el.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
+  }
+
+  function AutPred_conceder_() {
+    var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; };
+    var m = document.getElementById("autPMsg");
+    var dados = { usuarioId: g("autPU"), dispositivoId: g("autPD"), permissao: g("autPP"), vigenciaFim: g("autPF"), motivo: g("autPM") };
+    if (!dados.motivo || dados.motivo.length < 5) { if (m) { m.textContent = "Escreva o motivo (mínimo de 5 caracteres)."; m.className = "cadx-msg is-erro"; } return; }
+    if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
+    AutPred_chamar_("permissaoConceder", dados, function (r) { AutPred_msg_(AutPred_faixa_(r.mensagem, "tom-ok")); AutPred_desenharAba_(); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
+  }
+
+  function AutPred_revogar_(id) {
+    CadUI_confirmar_({ titulo: "Revogar a permissão", risco: true, botao: "Revogar", texto: "<p>A pessoa deixa de ver (e de acionar) o dispositivo na hora.</p>", motivo: { rotulo: "Motivo", min: 5 },
+      aoConfirmar: function (valores, fechar, reabilitar) {
+        var motivo = valores && valores.motivo !== undefined ? valores.motivo : String((document.getElementById("cadxDlgMotivo") || {}).value || "");
+        AutPred_chamar_("permissaoRevogar", { id: id, motivo: motivo }, function (r) { fechar(); AutPred_msg_(AutPred_faixa_(r.mensagem, "tom-ok")); AutPred_desenharAba_(); }, reabilitar);
+      } });
+  }
+
+  // ---------- auditoria ----------
+  function AutPred_desenharAuditoria_(el) {
+    el.innerHTML = '<div class="aut-acoes" style="margin-bottom:10px"><button type="button" class="cadx-btn cadx-btn-grande" id="autInteg" onclick="AutPred_integridade_()">Conferir a integridade do registro</button><span class="cadx-sub">Cada linha leva o resumo (SHA-256) da anterior: linha alterada ou apagada aparece aqui.</span></div><div id="autIntegRes"></div><div id="autAudLista">' + CadUI_esqueleto_(5) + "</div>";
+    AutPred_chamar_("auditoria", { limite: 200 }, function (r) {
+      var l = document.getElementById("autAudLista");
+      if (!l) return;
+      l.innerHTML = r.itens.length ? '<table class="aut-tabela"><thead><tr><th>Quando</th><th>Evento</th><th>Quem</th><th>Dispositivo</th><th>Resultado</th><th>Detalhe</th></tr></thead><tbody>' + r.itens.map(function (a) {
+        return "<tr><td>" + AutPred_esc_(a.quando) + '<div class="aut-mono">' + AutPred_esc_(a.hash) + "</div></td><td>" + AutPred_esc_(a.evento) + "</td><td>" + AutPred_esc_(a.usuario) + '<div class="cadx-sub">' + AutPred_esc_(a.perfil) + "</div></td><td>" + AutPred_esc_(a.dispositivo) + (a.unidade ? '<div class="cadx-sub">' + AutPred_esc_(a.unidade) + "</div>" : "") + "</td><td>" + AutPred_esc_(a.resultado) + "</td><td>" + AutPred_esc_(a.detalhe) + (a.operacaoId ? '<div class="aut-mono">op ' + AutPred_esc_(a.operacaoId) + "</div>" : "") + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<div class="cadx-sub">Nenhum registro ainda.</div>';
+    }, function (m) { var l = document.getElementById("autAudLista"); if (l) l.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
+  }
+
+  function AutPred_integridade_() {
+    var b = document.getElementById("autInteg"), r = document.getElementById("autIntegRes");
+    if (b) b.disabled = true;
+    AutPred_chamar_("integridade", {}, function (x) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(x.texto, x.ok ? "tom-ok" : "tom-perigo"); }, function (m) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
+  }
+</script>

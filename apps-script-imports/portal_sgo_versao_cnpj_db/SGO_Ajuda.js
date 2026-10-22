@@ -41,7 +41,9 @@ var SGO_AJUDA_NOMES = {
   // 21/10/2026: Assistência técnica nativa (SGO_Ajuda_Assistencia.js)
   assistencia: 'Chamados', assistencia_abrir: 'Abrir chamado', assistencia_os: 'Ordens de serviço', assistencia_agenda: 'Agenda dos técnicos',
   assistencia_solicitacoes: 'Solicitações dos clientes', assistencia_casos: 'Reclamações', assistencia_indicadores: 'Indicadores da assistência',
-  assistencia_regras: 'Regras da assistência', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados'
+  assistencia_regras: 'Regras da assistência', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados',
+  // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js)
+  automacao_predial: 'Segurança e automação predial'
 };
 
 /**
@@ -81,6 +83,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Assistente_ === 'function') fontes.push(['Assistente', SGO_ajudaTelas_Assistente_]);
   // 21/10/2026: Modo personalizado (SGO_Ajuda_ModoPersonalizado.js) — só o responsável técnico e o Administrador veem.
   if (typeof SGO_ajudaTelas_ModoPersonalizado_ === 'function') fontes.push(['ModoPersonalizado', SGO_ajudaTelas_ModoPersonalizado_]);
+  // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js).
+  if (typeof SGO_ajudaTelas_AutomacaoPredial_ === 'function') fontes.push(['AutomacaoPredial', SGO_ajudaTelas_AutomacaoPredial_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

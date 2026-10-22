@@ -33,6 +33,7 @@ const MAPA = {
   "MANUAL_MODULO_COMERCIAL.md": { tela: "comercial", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "COMERCIAL", "FINANCEIRO"] },
   "MANUAL_MODULO_COMPRAS.md": { tela: "compras_pedir" },
   "MANUAL_MODULO_ASSISTENCIA.md": { tela: "assistencia" },
+  "MANUAL_MODULO_AUTOMACAO_PREDIAL.md": { tela: "automacao_predial", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO", "TECNICO", "METROLOGIA", "COMERCIAL"] },
   "MANUAL_APP_CAMPO.md": { tela: "assistencia_os" },
   "MANUAL_MODULO_CERTIFICADO_CALIBRACAO.md": { tela: "certificado_calibracao" },
   "MANUAL_MODULO_CRONOGRAMA_EXECUCAO.md": { tela: "cronograma_execucao" },

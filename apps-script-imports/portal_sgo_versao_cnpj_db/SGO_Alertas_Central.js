@@ -69,7 +69,8 @@ var PEND_MODULOS = {
   avisos: 'Avisos',
   email: 'E-mail',
   comercial: 'Comercial',
-  ponto: 'Assistente do ponto'
+  ponto: 'Assistente do ponto',
+  automacao: 'Segurança e automação predial'
 };
 
 /**
@@ -109,6 +110,8 @@ var PEND_TIPOS = {
   frota_bloqueio_decidir: { modulo: 'frota', um: 'bloqueio da partida aguardando decisão (devolução fora da base)', varios: 'bloqueios da partida aguardando decisão (devoluções fora da base)', rotulo: 'Decidir', fazer: 'decida "Bloquear" ou "Não bloquear" em Frota > Rastreamento > Bloqueio da partida', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_bloqueio_esquecida: { modulo: 'frota', um: 'retirada esquecida (carro parado na base sem resposta do condutor)', varios: 'retiradas esquecidas (carros parados na base sem resposta do condutor)', rotulo: 'Retirada esquecida', fazer: 'encerre a retirada ou autorize a passagem em Frota > Rastreamento > Bloqueio da partida', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_bloqueio_fila: { modulo: 'frota', um: 'bloqueio da partida na fila do rastreador', varios: 'bloqueios da partida na fila do rastreador', rotulo: 'Bloqueio na fila', fazer: 'confira onde está o carro em Frota > Rastreamento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 22/10/2026: Segurança e automação predial (SGO_Automacao_Predial.js): a API aceitou o comando e o dispositivo não confirmou.
+  automacao_sem_confirmacao: { modulo: 'automacao', um: 'comando da automação predial sem confirmação do dispositivo', varios: 'comandos da automação predial sem confirmação do dispositivo', rotulo: 'Sem confirmação', fazer: 'confira no local e use "Conferir agora" em Segurança e automação predial', tela: { tipo: 'modulo', mod: 'automacao_predial' }, origem: 'AUTOMACAO' },
   frota_bloqueio_passagem: { modulo: 'frota', um: 'pedido para assumir um carro', varios: 'pedidos para assumir carros', rotulo: 'Passar o carro', fazer: 'autorize ou recuse em Frota > Rastreamento > Bloqueio da partida', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_bloqueio_odometro: { modulo: 'frota', um: 'odômetro do rastreador diferente do painel', varios: 'odômetros do rastreador diferentes do painel', rotulo: 'Odômetro', fazer: 'confira a foto do painel e acerte em Frota > Rastreamento > Bloqueio da partida', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   // 19/10/2026 (revisão da Frota): avaria na devolução sem caso aberto e multa com pagamento vencendo (SGO_Frota_Gestao.js).
@@ -1016,7 +1019,9 @@ var PEND_FONTES = [
   // 21/10/2026: Assistente do ponto (SGO_Ponto_Api.js): pedidos de ajuste do RH, pedido parado (Caixa de decisões) e avisos.
   { nome: 'Assistente do ponto', fn: function (add, ctx) { if (!ctx.cliente && typeof Ponto_fontePendencias_ === 'function') Ponto_fontePendencias_(add, ctx); } },
   // 20/10/2026: decisões da gestão que só a Caixa de decisões conhecia (SGO_Gestao_Decisoes.js).
-  { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } }
+  { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } },
+  // 22/10/2026: Segurança e automação predial (SGO_Automacao_Predial.js): comando aceito pela API sem confirmação do dispositivo.
+  { nome: 'automação predial', fn: function (add, ctx) { if (!ctx.cliente && typeof AutPred_fontePendencias_ === 'function') AutPred_fontePendencias_(add, ctx); } }
 ];
 
 function Pend_ordenar_(a, b) {

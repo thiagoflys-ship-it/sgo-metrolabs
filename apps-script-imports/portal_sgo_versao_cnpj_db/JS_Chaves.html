@@ -19,6 +19,7 @@
     "WhatsApp oficial (Meta)": { icone: "fa-comment-dots", teste: "whatsapp", provedor: "meta", obrig: [["META_WA_TOKEN", "META_WA_PHONE_ID"]], resumo: "Avisos por WhatsApp pelo número oficial, com modelos aprovados pela Meta." },
     "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp da empresa pela Z-API: avisos do SGO+ e do COMMAND com texto pronto (sem modelo a aprovar) e mensagens recebidas no COMMAND." },
     "Rastreador da frota": { icone: "fa-location-crosshairs", teste: "rastreador", obrig: [["RASTREADOR_TOKEN"]], resumo: "Posição e KM dos veículos pela API da iTracker (hoje somente leitura). O bloqueio da partida depende de a iTracker liberar o acesso com comandos." },
+    "Automação predial (Tuya)": { icone: "fa-door-open", teste: "tuya", obrig: [["TUYA_ACCESS_ID", "TUYA_ACCESS_SECRET"]], resumo: "Portões e porta da Diretoria pela nuvem do Smart Life (Tuya). Os comandos reais só saem com a integração ligada e o dispositivo homologado pela Diretoria em Segurança e automação predial." },
     "Relatórios técnicos": { icone: "fa-file-shield", obrig: [["SIMULADOR_ADMIN_SENHA"]], resumo: "Senha do Simulador dos relatórios de qualificação. O modo personalizado não tem senha aqui: cada responsável técnico designado em Configurações cria a própria senha em Qualificação e inspeção > Modo personalizado." },
     "COMMAND": { icone: "fa-tower-broadcast", obrig: [["PONTE_COMMAND_SEGREDO"]], resumo: "Segredo da ponte entre o SGO+ e o COMMAND." }
   };
@@ -27,7 +28,8 @@
     auvo: "Entra na API do Auvo com a chave e o token gravados.",
     email: "Envia um e-mail de teste para o e-mail do seu usuário.",
     whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto pronto (só para celular).",
-    rastreador: "Consulta a lista de veículos na iTracker (GET /devices) e mostra quantos encontrou, com número, nome e situação. Não envia comando e não mostra a chave."
+    rastreador: "Consulta a lista de veículos na iTracker (GET /devices) e mostra quantos encontrou, com número, nome e situação. Não envia comando e não mostra a chave.",
+    tuya: "Pede um token à Tuya com o Access ID e o Access Secret gravados e lista os dispositivos da conta do Smart Life ligada ao projeto. Não envia comando, não abre nada e não mostra as chaves."
   };
 
   function ChavesTela_esc_(v) { return CadUI_esc_(v); }
@@ -159,7 +161,7 @@
         '<div class="chvx-grupo-nome"><h3><i class="fas ' + (info.icone || "fa-key") + '" aria-hidden="true" style="color:var(--bc-text-3);width:20px"></i> ' + ChavesTela_esc_(g) + "</h3>" +
           '<div class="cadx-sub">' + ChavesTela_esc_(info.resumo || "") + "</div>" + (s.detalhe ? '<div class="cadx-sub" style="margin-top:3px">' + ChavesTela_esc_(s.detalhe) + "</div>" : "") + "</div>" +
         '<div class="chvx-grupo-acoes"><span class="cadx-selo bc-selo ' + s.tom + '">' + ChavesTela_esc_(s.texto) + "</span>" +
-          (teste && teste !== "whatsapp" ? '<button type="button" class="cadx-btn cadx-btn-grande" id="chvTestar_' + gid + '" onclick="event.preventDefault();ChavesTela_testar_(\'' + teste + "','" + gid + '\')">' + (teste === "rastreador" ? "Testar conexão" : "Testar") + "</button>" : "") +
+          (teste && teste !== "whatsapp" ? '<button type="button" class="cadx-btn cadx-btn-grande" id="chvTestar_' + gid + '" onclick="event.preventDefault();ChavesTela_testar_(\'' + teste + "','" + gid + '\')">' + (teste === "rastreador" || teste === "tuya" ? "Testar conexão" : "Testar") + "</button>" : "") +
           '<span class="cadx-sub">' + (aberto ? "" : "Configurar") + "</span></div>" +
       "</summary>" +
       '<div class="chvx-grupo-corpo">' +
@@ -335,14 +337,14 @@
     if (res) res.innerHTML = '<div class="cadx-sub">Testando…</div>';
     else { var det = document.querySelector('[data-chv-grupo="' + (grupo || "") + '"]'); if (det) det.open = true; }
     ChavesTela_chamar_("Chaves_apiTestar", payload, function (r) {
-      var lista = tipo === "rastreador" && r.dispositivos && r.dispositivos.length ? '<ul class="cadx-arvore" style="margin-top:8px">' + r.dispositivos.map(function (d) {
+      var lista = (tipo === "rastreador" || tipo === "tuya") && r.dispositivos && r.dispositivos.length ? '<ul class="cadx-arvore" style="margin-top:8px">' + r.dispositivos.map(function (d) {
         return '<li><div class="cadx-no"><span class="cadx-mono">ID ' + ChavesTela_esc_(d.id) + "</span><span>" + ChavesTela_esc_(d.nome || "sem nome") + '</span><span class="cadx-sub">' + ChavesTela_esc_(CadUI_maiusculaInicial_(d.situacao || "")) + "</span></div></li>";
       }).join("") + "</ul>" : "";
       CHV.resultados[gid] = '<div class="cadx-faixa bc-faixa ' + (r.funcionou ? "tom-ok" : "tom-perigo") + '">' + ChavesTela_esc_(r.texto) + "</div>" + lista;
       // a situação do grupo usa o teste gravado no servidor: recarrega a lista (sem valores)
       ChavesTela_chamar_("Chaves_apiListar", {}, function (l) { CHV.dados = l; ChavesTela_desenhar_(); }, function () { var el = document.getElementById("chvRes_" + gid); if (el) el.innerHTML = CHV.resultados[gid]; if (btn) btn.disabled = false; });
     }, function (m) {
-      if (btn) { btn.disabled = false; btn.textContent = tipo === "rastreador" ? "Testar conexão" : "Testar"; }
+      if (btn) { btn.disabled = false; btn.textContent = tipo === "rastreador" || tipo === "tuya" ? "Testar conexão" : "Testar"; }
       CHV.resultados[gid] = '<div class="cadx-faixa bc-faixa tom-perigo">' + ChavesTela_esc_(m) + "</div>";
       if (res) res.innerHTML = CHV.resultados[gid];
     });

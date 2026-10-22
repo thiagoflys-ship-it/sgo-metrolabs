@@ -36,7 +36,7 @@ var CHV_PREFIXO_ALTERADO = 'CHV_ALTERADO_';
 var CHV_MSG_EXCLUSIVO = 'Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.';
 
 // 17/10/2026: um grupo por integração (a tela mostra a situação e o teste de cada grupo).
-var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Relatórios técnicos', 'COMMAND'];
+var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Automação predial (Tuya)', 'Relatórios técnicos', 'COMMAND'];
 var CHV_PREFIXO_TESTE = 'CHV_TESTE_';
 var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
 
@@ -107,6 +107,15 @@ var CHV_ITENS = [
     ajuda: 'Deixe Desligado até a equipe ligar o piloto. Desligado, nenhum comando sai para os carros: cada veículo trabalha em simulação (o SGO+ registra o que teria feito). Ligado (com a chave dos comandos gravada), só os veículos em modo Ativo recebem comandos de verdade; o modo de cada veículo fica em Frota > Rastreamento > Bloqueio da partida. O bloqueio nunca é enviado com o carro andando.' },
   { chave: 'RASTREADOR_TOKEN_COMANDOS', grupo: 'Rastreador da frota', tipo: 'chave', nome: 'Chave de acesso dos comandos',
     ajuda: 'A chave nova que a iTracker enviou para os comandos: bloquear e liberar a partida e acertar o odômetro (ela também lê as posições). Grave aqui; não precisa preencher endereço de comando. Gravar a chave não liga o bloqueio: ele continua desligado até "Bloqueio da partida pelo SGO+" = Ligado. Nunca aparece na tela, em log, e-mail ou aviso.' },
+  // 22/10/2026: Segurança e automação predial — portões e porta da Diretoria pela nuvem do Smart Life (SGO_Automacao_Tuya.js).
+  { chave: 'TUYA_ACCESS_ID', grupo: 'Automação predial (Tuya)', tipo: 'chave', teste: 'tuya', nome: 'Tuya: Access ID do projeto cloud',
+    ajuda: 'No portal da Tuya (platform.tuya.com), entre com a conta de desenvolvedor da Metrolabs: Cloud > Development > abra o projeto > aba Overview > "Access ID/Client ID". O projeto precisa ter a conta do aplicativo Smart Life ligada (Devices > Link Tuya App Account, lendo o QR Code no Smart Life) e os serviços IoT Core, Authorization Token Management e, para a fechadura, Smart Lock Open Service autorizados (Service API). O centro de dados do projeto precisa ser o mesmo da conta do Smart Life (contas do Brasil: Western America).' },
+  { chave: 'TUYA_ACCESS_SECRET', grupo: 'Automação predial (Tuya)', tipo: 'senha', teste: 'tuya', nome: 'Tuya: Access Secret do projeto cloud',
+    ajuda: 'Na mesma aba Overview do projeto, "Access Secret/Client Secret" (clique em mostrar e copie). Assina cada chamada à Tuya; nunca aparece na tela, em log, e-mail ou aviso. Se a Tuya gerar um segredo novo, grave de novo aqui.' },
+  { chave: 'TUYA_REGIAO', grupo: 'Automação predial (Tuya)', tipo: 'aberto', teste: 'tuya', exemplo: 'us', opcoes: [['us', 'América (Oeste) — contas do Brasil'], ['ue', 'América (Leste)'], ['eu', 'Europa Central'], ['we', 'Europa Ocidental'], ['in', 'Índia'], ['cn', 'China'], ['sg', 'Singapura']], vazio: 'América (Oeste)', nome: 'Tuya: centro de dados do projeto',
+    ajuda: 'O "Data Center" escolhido ao criar o projeto cloud (aparece na aba Overview). Contas do Smart Life do Brasil ficam em Western America; se o teste de conexão disser que o token não veio, confira aqui.' },
+  { chave: 'TUYA_LIGADO', grupo: 'Automação predial (Tuya)', tipo: 'aberto', teste: 'tuya', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Automação predial ligada',
+    ajuda: 'Desligado: o SGO+ não faz nenhuma chamada à Tuya (o botão Testar conexão continua funcionando) e todo comando é registrado em simulação. Ligado: lê os dispositivos e os estados; os comandos só saem de verdade nos dispositivos homologados pela Diretoria em Segurança e automação predial. Deixe Desligado até a homologação.' },
   { chave: 'PONTE_COMMAND_SEGREDO', grupo: 'COMMAND', tipo: 'chave', nome: 'Segredo da ponte com o COMMAND',
     ajuda: 'O mesmo valor configurado no COMMAND para falar com o SGO+.' }
 ];
@@ -223,7 +232,14 @@ function Chaves_validarValor_(item, valor) {
   if (item.chave === 'AUVO_AVISAR_GESTAO' && !/^[A-Za-z0-9._@-]+([\s,;]+[A-Za-z0-9._@-]+)*$/.test(v)) {
     throw new Error('Não foi possível gravar: informe os logins separados por vírgula (ex.: joao, maria), sem outros sinais.');
   }
-  if ((item.chave === 'RASTREADOR_LIGADO' || item.chave === 'RASTREADOR_BLOQUEIO_LIGADO') && v !== '1' && v !== '0') {
+  if (item.chave === 'TUYA_REGIAO') {
+    v = v.toLowerCase();
+    if (!/^(us|ue|eu|we|in|cn|sg)$/.test(v)) throw new Error('Não foi possível gravar: escolha o centro de dados na lista (us, ue, eu, we, in, cn ou sg).');
+  }
+  if (item.chave === 'TUYA_ACCESS_ID' || item.chave === 'TUYA_ACCESS_SECRET') {
+    if (!/^[A-Za-z0-9._-]{8,80}$/.test(v)) throw new Error('Não foi possível gravar: copie só o valor (letras e números, sem espaços) da aba Overview do projeto no portal da Tuya.');
+  }
+  if ((item.chave === 'RASTREADOR_LIGADO' || item.chave === 'RASTREADOR_BLOQUEIO_LIGADO' || item.chave === 'TUYA_LIGADO') && v !== '1' && v !== '0') {
     throw new Error('Não foi possível gravar: este campo aceita só 1 (liga) ou 0 (desliga).');
   }
   if (item.chave === 'RASTREADOR_URL') {
@@ -257,6 +273,10 @@ function Chaves_aposAlterar_(chave) {
   if (chave === 'AUVO_API_KEY' || chave === 'AUVO_API_TOKEN') {
     try { if (typeof Auvo_invalidarTokenCache_ === 'function') Auvo_invalidarTokenCache_(); } catch (e) {}
   }
+  // Tuya: credencial ou região trocada = token guardado em memória não vale mais.
+  if (/^TUYA_/.test(chave)) {
+    try { if (typeof Tuya_esquecerToken_ === 'function') Tuya_esquecerToken_(); } catch (e) {}
+  }
   // Rastreador: credencial ou endereço trocado = sessão guardada não vale mais; ligado = garante a rotina de 2 minutos.
   if (/^RASTREADOR_/.test(chave)) {
     try { if (typeof Rastreador_esquecerSessao_ === 'function') Rastreador_esquecerSessao_(); } catch (e) {}
@@ -269,7 +289,7 @@ function Chaves_aposAlterar_(chave) {
 function Chaves_lista_() {
   var props = Chaves_lerTodas_();
   var p = PropertiesService.getScriptProperties(), testes = {};
-  ['gemini', 'auvo', 'email', 'whatsapp', 'rastreador'].forEach(function (t) {
+  ['gemini', 'auvo', 'email', 'whatsapp', 'rastreador', 'tuya'].forEach(function (t) {
     try { var j = p.getProperty(CHV_PREFIXO_TESTE + t); if (j) testes[t] = JSON.parse(j); } catch (e) {}
   });
   return { grupos: CHV_GRUPOS, itens: CHV_ITENS.map(function (it) { return Chaves_situacao_(it, props); }), testes: testes };
@@ -346,13 +366,14 @@ function Chaves_apiTestar(sessionId, payload) {
     else if (tipo === 'email') r = Chaves_testarEmail_(eu);
     else if (tipo === 'whatsapp') r = Chaves_testarWhatsapp_(p.telefone);
     else if (tipo === 'rastreador') r = typeof Rastreador_testarConexao_ === 'function' ? Rastreador_testarConexao_() : Chaves_falhou_('o módulo do rastreador não está carregado neste sistema', 'avise o suporte do SGO+.');
+    else if (tipo === 'tuya') r = typeof Tuya_testarConexao_ === 'function' ? Tuya_testarConexao_() : Chaves_falhou_('o módulo da automação predial não está carregado neste sistema', 'avise o suporte do SGO+.');
     else throw new Error('Não foi possível testar: tipo de teste desconhecido. Atualize a página (F5).');
     try { SGO_DATA.log('CHAVE_TESTADA', eu.usuario, 'Teste ' + tipo + ': ' + (r.funcionou ? 'funcionou' : 'não funcionou') + '.', 'CHAVES'); } catch (e) {}
     // 17/10/2026: a tela mostra "Com erro no teste" até a próxima troca de chave ou o próximo teste (o texto já vem sem segredo).
     try { PropertiesService.getScriptProperties().setProperty(CHV_PREFIXO_TESTE + tipo, JSON.stringify({ funcionou: !!r.funcionou, em: Chaves_agora_(), emBr: Chaves_dataBr_(Chaves_agora_()), texto: String(r.texto || '').slice(0, 400) })); } catch (e) {}
     var saida = { funcionou: !!r.funcionou, texto: String(r.texto || ''), tipo: tipo };
     // Rastreador: dispositivos encontrados (ID, nome e situação; nenhum segredo).
-    if (tipo === 'rastreador') saida.dispositivos = (r.dispositivos || []).map(function (d) { return { id: String(d.id), nome: String(d.nome || ''), situacao: String(d.situacao || '') }; });
+    if (tipo === 'rastreador' || tipo === 'tuya') saida.dispositivos = (r.dispositivos || []).map(function (d) { return { id: String(d.id), nome: String(d.nome || ''), situacao: String(d.situacao || '') }; });
     return saida;
   });
 }

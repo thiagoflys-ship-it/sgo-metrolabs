@@ -258,6 +258,7 @@
           if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
           if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
           if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
+          if (typeof AutPred_iniciar_ === "function") AutPred_iniciar_();
           if (typeof ModoPers_iniciar_ === "function") ModoPers_iniciar_();
           if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
           if (typeof AvisosMatriz_iniciar_ === "function") AvisosMatriz_iniciar_();
@@ -337,6 +338,7 @@
         if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
         if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
         if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
+        if (typeof AutPred_iniciar_ === "function") AutPred_iniciar_();
         if (typeof ModoPers_iniciar_ === "function") ModoPers_iniciar_();
         if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
         if (typeof AvisosMatriz_iniciar_ === "function") AvisosMatriz_iniciar_();
@@ -702,6 +704,7 @@
     if (typeof Atividades_parar_ === "function") Atividades_parar_();
     if (typeof AvisosTela_parar_ === "function") AvisosTela_parar_();
     if (typeof ChavesTela_parar_ === "function") ChavesTela_parar_();
+    if (typeof AutPred_parar_ === "function") AutPred_parar_();
     if (typeof ModoPers_parar_ === "function") ModoPers_parar_();
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
     if (typeof Comercial_parar_ === "function") Comercial_parar_();
@@ -760,7 +763,7 @@
   // Continuam fora: documentos técnicos, arquivo de documentos, inventário, Comercial (valores de venda), Integração Auvo,
   // Painel de qualidade, Configurações, Chaves e senhas e Matriz de avisos.
   var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "meus_avisos",
-    "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto"];
+    "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto", "automacao_predial"];
   // Rotina da empresa (cadastrar, editar e organizar): Administrador, Diretoria, Gestor, RH e Financeiro (SGO_ehGestaoRotina_ no servidor).
   function SGO_ehRotina_() { var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
@@ -981,6 +984,12 @@
     if (mod === "chaves") {
       ChavesTela_render_();
       atualizarBadgeModulo_("chaves");
+      return;
+    }
+
+    // SEGURANÇA E AUTOMAÇÃO PREDIAL (22/10/2026) — ver JS_AutomacaoPredial.html / SGO_Automacao_Predial.js. O servidor confere sessão e permissão em toda chamada.
+    if (mod === "automacao_predial" && typeof AutPred_render_ === "function") {
+      AutPred_render_();
       return;
     }
 
@@ -4492,6 +4501,7 @@
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
+    if (typeof AutPred_temMenu_ === "function" && AutPred_temMenu_()) itens.push({ icone: '<i class="fas fa-door-open" aria-hidden="true"></i>', legenda: "Segurança predial", mod: "automacao_predial" });
     // Perfil RH: só as telas do perfil. Usuários: a rotina da empresa (gestão, RH e Financeiro) tem o atalho no celular.
     if (SGO_ehRH_()) {
       for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }

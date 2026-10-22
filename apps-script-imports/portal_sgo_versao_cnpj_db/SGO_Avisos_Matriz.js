@@ -168,9 +168,11 @@ var MTZ_PADRAO = [
   { cod: 'S62', modulo: 'frota', evento: 'Retirada esquecida sem resposta do condutor', origem: 'SGO_Frota_Bloqueio.js', publico: 'Gestor da Frota', email: 'HORA', whatsapp: 'NAO', limite: '1 por retirada', obs: 'Fica na Caixa de decisões.', area: 'ADMINISTRATIVO' },
   { cod: 'S63', modulo: 'frota', evento: 'Bloqueio da partida na fila do rastreador (carro sem conexão)', origem: 'SGO_Frota_Bloqueio.js', publico: 'Gestor da Frota', email: 'HORA', whatsapp: 'NAO', limite: '1 por comando', area: 'ADMINISTRATIVO' },
   { cod: 'S64', modulo: 'frota', evento: 'Passar o carro: pedido e conclusão', origem: 'SGO_Frota_Bloqueio.js', publico: 'Quem passa e quem recebe', email: 'NAO', whatsapp: 'NAO', limite: '-', obs: 'Só no sistema.' },
-  { cod: 'S65', modulo: 'frota', evento: 'Relatório diário do piloto do bloqueio da partida (18h)', origem: 'SGO_Frota_Bloqueio.js', publico: 'Gestor da Frota; Diretoria (dono)', email: 'HORA', whatsapp: 'NAO', limite: '1 por dia', area: 'ADMINISTRATIVO' }
+  { cod: 'S65', modulo: 'frota', evento: 'Relatório diário do piloto do bloqueio da partida (18h)', origem: 'SGO_Frota_Bloqueio.js', publico: 'Gestor da Frota; Diretoria (dono)', email: 'HORA', whatsapp: 'NAO', limite: '1 por dia', area: 'ADMINISTRATIVO' },
+  // 22/10/2026: Segurança e automação predial (SGO_Automacao_Predial.js)
+  { cod: 'S66', modulo: 'automacao', evento: 'Automação predial: comando aceito pela API sem confirmação do dispositivo', origem: 'SGO_Automacao_Predial.js', publico: 'Diretoria; Administrador (só portões)', email: 'HORA', whatsapp: 'NAO', limite: '1 por comando', obs: 'Porta da Diretoria: só a Diretoria é avisada.', area: 'ADMINISTRATIVO' }
 ];
-var MTZ_MODULOS_NOMES = { atividades: 'Minhas atividades', gestao: 'Caixa de decisões', avisos: 'Avisos com ciência', comercial: 'Comercial', frota: 'Frota', conduta: 'Programa de conduta', auvo: 'Integração Auvo', bate_papo: 'Bate-papo', piloto: 'Piloto do WhatsApp' };
+var MTZ_MODULOS_NOMES = { atividades: 'Minhas atividades', gestao: 'Caixa de decisões', avisos: 'Avisos com ciência', comercial: 'Comercial', frota: 'Frota', conduta: 'Programa de conduta', auvo: 'Integração Auvo', bate_papo: 'Bate-papo', piloto: 'Piloto do WhatsApp', automacao: 'Segurança e automação predial' };
 // Avisos do Comercial (COM_AVISOS.TIPO) que saem por e-mail na hora; os demais vão no resumo do dia (S32).
 var MTZ_COMERCIAL_HORA = { APOIO_GESTAO: 'S23', RESPOSTA_APROVADA: 'S28', RESPOSTA_RECUSADA: 'S28' };
 // Origem sem evento -> evento da matriz (chamadas que não passam o código).
