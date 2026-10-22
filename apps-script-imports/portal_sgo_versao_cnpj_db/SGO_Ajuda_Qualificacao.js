@@ -296,7 +296,10 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Enviar os dados", itens: [
           "Em \"4. Dados do registrador\", digite a \"Identificação do registrador\" como está no cadastro de padrões (exemplo: DTL-04).",
           "Confira o \"Formato de data nos arquivos\" e, em \"Como enviar os dados\", escolha o arquivo do registrador ou \"Um arquivo por sensor\".",
-          "Toque em \"Pré-visualizar dados\" e confira o período importado e os sensores."
+          "Toque em \"Pré-visualizar dados\" e confira o período importado e os sensores.",
+          "Arquivo com uma aba por estudo (24 horas, abertura de porta, queda de energia) é aceito: a prévia mostra o período de cada aba e cada estudo usa a aba que contém o seu horário. Abas com o mesmo horário são recusadas.",
+          "A tela confere os dados enquanto você preenche: cada problema aparece em vermelho ao lado do campo e no quadro \"Conferência dos dados\", acima do resultado, antes de gerar.",
+          "Horário do evento entre duas leituras usa a leitura mais próxima. Horário colado da planilha (data e hora em colunas separadas) é aceito."
         ] },
         { titulo: "Relatório de ensaio (seção 6)", itens: [
           "Preencha o \"Número do relatório\". A revisão seguinte é atribuída sozinha quando o mesmo número é emitido de novo.",
@@ -336,7 +339,8 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Clico num campo marcado \"do cadastro\" (TAG, número de série, setor) e ele não deixa digitar.", oQueFazer: "Esses dados vêm do cadastro do equipamento. Ao clicar, a tela explica e mostra o botão: \"Escolher o equipamento\" (nenhum escolhido em Cliente e equipamento), \"Preencher no cadastro\" (o dado está vazio no cadastro) ou \"Abrir o cadastro de equipamentos\" (para corrigir um valor já gravado)." },
         { situacao: "Aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "O relatório usa esses dados e eles estão vazios no cadastro. Preencha no próprio quadro, pela placa ou pela etiqueta, e toque em \"Gravar no cadastro\" (ou use \"Buscar nos ensaios anteriores\" e confira). Só o que está vazio é gravado. Para trocar um valor já gravado, use Cadastros › Equipamentos › Editar." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\".", oQueFazer: "O documento só sai com o equipamento do cadastro. Escolha no quadro \"1. Cliente e equipamento\"." },
-        { situacao: "\"O registrador não está no cadastro de padrões\" ou \"estava vencido\".", oQueFazer: "Corrija a identificação na seção 4 ou atualize o certificado em Cadastros › Padrões de referência. Registrador vencido na data do ensaio exige repetir o ensaio." },
+        { situacao: "\"O registrador não está no cadastro de padrões\" ou \"estava vencido\".", oQueFazer: "Corrija a identificação na seção 4 ou, se o certificado foi renovado antes do ensaio, no menu Calibração › Padrões de referência procure o registrador, toque em Editar e atualize o número do certificado, a validade e o PDF. Registrador vencido na data do ensaio exige repetir o ensaio." },
+        { situacao: "\"O início do evento informado não está dentro das leituras do arquivo\".", oQueFazer: "A mensagem mostra o período importado (de cada aba, se o arquivo tiver várias) e a leitura mais próxima do horário digitado. Corrija o horário na seção 3 ou envie na seção 4 o arquivo que contém o evento (o estudo pode estar numa aba própria do mesmo arquivo)." },
         { situacao: "\"No início do evento havia sensor fora da faixa\".", oQueFazer: "O estudo de porta ou energia precisa começar com todos os sensores na faixa. Marque o início num horário em que todos já estavam na faixa (veja a prévia) ou repita o estudo." },
         { situacao: "\"Os dados mudaram desde o rascunho\".", oQueFazer: "Algo mudou no formulário ou no cadastro depois do rascunho. Toque em \"Gerar rascunho\" de novo." },
         { situacao: "O período importado está com dia e mês trocados.", oQueFazer: "Em \"Formato de data nos arquivos\", escolha o formato do registrador e pré-visualize de novo." },

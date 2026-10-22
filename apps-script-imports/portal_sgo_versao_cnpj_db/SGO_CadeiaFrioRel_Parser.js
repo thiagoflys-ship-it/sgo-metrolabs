@@ -29,7 +29,7 @@
 function CadeiaFrioRel_lerDadosEntradaRich_(payload) {
   payload=payload||{};
   const modoEntrada=String(payload.modoEntrada||'FILE_ID').toUpperCase();
-  let matrix,displayMatrix;
+  let matrix,displayMatrix,abas=null;
   if(modoEntrada==='COLAR') {
     matrix=CadeiaFrioRel_extrairDeTextoColadoRobustamente(payload.textoColado,payload.delimManual);
     displayMatrix=matrix;
@@ -42,7 +42,9 @@ function CadeiaFrioRel_lerDadosEntradaRich_(payload) {
     const bytes=blob?blob.getBytes():[];
     const zip=bytes.length>=4&&(bytes[0]&255)===80&&(bytes[1]&255)===75&&(bytes[2]&255)===3&&(bytes[3]&255)===4;
     if(zip||(/\.xlsx$/i.test(name)&&mime!==MimeType.GOOGLE_SHEETS)||mime==='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-      try {matrix=CadeiaFrioRel_lerXlsxOriginal_(blob);}catch(e){throw new Error('Arquivo '+name+': '+(e.message||e));}
+      // 21/10/2026: no arquivo único, cada estudo pode vir na sua aba (24 h, porta, energia); antes só a primeira aba era lida, em silêncio.
+      try {matrix=CadeiaFrioRel_lerXlsxOriginal_(blob,{variasAbas:!!payload.permitirVariasAbas});}catch(e){throw new Error('Arquivo '+name+': '+(e.message||e));}
+      if(matrix&&matrix.abas){abas=matrix.abas.map(function(a){return {nome:a.nome,matrix:a.matrix,displayMatrix:a.matrix};});matrix=abas[0].matrix;}
       displayMatrix=matrix;
     } else if(/\.(csv|txt|tsv)$/i.test(name)||/^(text\/csv|text\/plain|text\/tab-separated-values)$/.test(mime)) {
       matrix=CadeiaFrioRel_extrairDeTextoColadoRobustamente(CadeiaFrioRel_textoOriginal_(blob),payload.delimManual);displayMatrix=matrix;
@@ -56,29 +58,41 @@ function CadeiaFrioRel_lerDadosEntradaRich_(payload) {
         }catch(e){throw new Error('Não foi possível ler o arquivo '+name+' como Excel antigo (.xls). Abra-o no Excel e salve como .xlsx, sem apenas renomear. Detalhe: '+(e.message||e));}
       }
       try {
-        const ss=SpreadsheetApp.openById(ssId),range=ss.getSheets()[0].getDataRange(),tz=ss.getSpreadsheetTimeZone();
-        matrix=range.getValues();displayMatrix=range.getDisplayValues();
+        const ss=SpreadsheetApp.openById(ssId),tz=ss.getSpreadsheetTimeZone();
         // Datas nativas prevalecem sobre a formatação visual (que pode ocultar segundos).
-        matrix=matrix.map(function(row,r){return row.map(function(value,c){
-          if(value instanceof Date&&!isNaN(value.getTime())) {
-            const year=Number(CadeiaFrioRel_formatarDataRapida_(value,tz,'yyyy'));
-            const text=CadeiaFrioRel_formatarDataRapida_(value,tz,year<1901?'HH:mm:ss':'yyyy-MM-dd HH:mm:ss');
-            displayMatrix[r][c]=text;return text;
-          }
-          return value;
-        });});
+        const lerFolha=function(sheet){
+          const range=sheet.getDataRange(),disp=range.getDisplayValues();
+          const mat=range.getValues().map(function(row,r){return row.map(function(value,c){
+            if(value instanceof Date&&!isNaN(value.getTime())) {
+              const year=Number(CadeiaFrioRel_formatarDataRapida_(value,tz,'yyyy'));
+              const text=CadeiaFrioRel_formatarDataRapida_(value,tz,year<1901?'HH:mm:ss':'yyyy-MM-dd HH:mm:ss');
+              disp[r][c]=text;return text;
+            }
+            return value;
+          });});
+          return {nome:sheet.getName(),matrix:mat,displayMatrix:disp};
+        };
+        const folhas=ss.getSheets();
+        let lidas=[lerFolha(folhas[0])];
+        // 21/10/2026: no arquivo único, as abas com leituras (cada estudo na sua aba) entram todas; antes só a primeira.
+        if(payload.permitirVariasAbas&&folhas.length>1){
+          const comLeituras=folhas.map(lerFolha).filter(function(f){return f.matrix.length>2&&CadeiaFrioRel_abaTemLeituras_(f.displayMatrix);});
+          if(comLeituras.length>1)abas=comLeituras;else if(comLeituras.length===1)lidas=comLeituras;
+        }
+        matrix=(abas||lidas)[0].matrix;displayMatrix=(abas||lidas)[0].displayMatrix;
       } finally {if(temp)try{DriveApp.getFileById(ssId).setTrashed(true);}catch(e){}}
     }
   } else throw new Error('Modo de leitura inválido.');
   if(!matrix||matrix.length<2)throw new Error('Arquivo vazio ou sem registros suficientes.');
   if(matrix.length>CadeiaFrioRel_CFCFG.MAX_PARSE_ROWS)throw new Error('Arquivo excede o limite de linhas. Divida o estudo sem remover registros.');
+  if(abas)abas=abas.map(function(a){const t=CadeiaFrioRel_prepararTabelaDatas_(a.matrix,a.displayMatrix||a.matrix);return {nome:a.nome,matrix:t.matrix,displayMatrix:t.displayMatrix};});
   const table=CadeiaFrioRel_prepararTabelaDatas_(matrix,displayMatrix||matrix);
   matrix=table.matrix;displayMatrix=table.displayMatrix;
   const diagnostico=CadeiaFrioRel_diagnosticarEstruturaEntrada_(matrix,displayMatrix);
   diagnostico.modoEntrada=modoEntrada;
   diagnostico.dateStyleDetectado=diagnostico.detectedDateStyle;
   diagnostico.sensoresDetectados=diagnostico.qtdTemperaturas||0;
-  return {matrix:matrix,displayMatrix:displayMatrix,diagnostico:diagnostico};
+  return {matrix:matrix,displayMatrix:displayMatrix,diagnostico:diagnostico,abas:abas};
 }
 
 

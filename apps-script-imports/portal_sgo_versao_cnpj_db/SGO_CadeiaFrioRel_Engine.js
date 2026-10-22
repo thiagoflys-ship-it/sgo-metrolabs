@@ -401,8 +401,10 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
 
   // 21/10/2026: início do evento depois da última leitura não cai mais, em silêncio, na primeira
   // leitura da janela (que inclui a margem de contexto antes do evento): vira janelaInvalida (trava).
+  // 21/10/2026: horário entre duas leituras (intervalo do registrador) usa a leitura mais próxima; fora das leituras
+  // (além de um intervalo antes da primeira ou depois da última) continua trava, agora com o período importado.
   let idxInicioEvento = janelaEvento.inicioEvento
-    ? CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, janelaEvento.inicioEvento, '>=', null)
+    ? CadeiaFrioRel_cfLocalizarIndiceMaisProximo_(dados, janelaEvento.inicioEvento)
     : 0;
   const inicioForaDosDados = idxInicioEvento === null;
   if (inicioForaDosDados) idxInicioEvento = 0;
@@ -451,11 +453,13 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
     return (t !== null && isFinite(t) && CadeiaFrioRel_cfDesvioDaFaixa_(t, faixa) > 0) ? { sensor: 'S' + (s + 1), valor: CadeiaFrioRel_cfRound_(t, 2) } : null;
   }).filter(Boolean);
   if (inicioForaDosDados) {
+    const informado = String(janelaEvento.inicioEvento).replace(/\s+/g, ' ').trim();
     analise.janelaInvalida = {
       codigo: 'EVENTO_FORA_DOS_DADOS',
-      oQue: 'O início do evento informado (' + janelaEvento.inicioEvento + ') não está dentro das leituras do arquivo para o estudo "' + CadeiaFrioRel_cfLabelEstudoEngine_(tipoEstudo) + '".',
+      oQue: 'O início do evento informado (' + informado + ') não está dentro das leituras do arquivo para o estudo "' + CadeiaFrioRel_cfLabelEstudoEngine_(tipoEstudo) + '". ' +
+        CadeiaFrioRel_cfContextoHorarioForaTexto_(opcoes.dadosArquivo || dados, informado) + '.',
       porQue: 'Sem a leitura do início do evento não há como medir o tempo até sair da faixa nem a recuperação.',
-      comoCorrigir: 'Na seção 3 (Estudos do ensaio), confira a data e a hora do início do evento (dd/mm/aaaa hh:mm:ss) com o período importado mostrado na prévia dos dados.'
+      comoCorrigir: 'Na seção 3 (Estudos do ensaio), corrija a data e a hora do início do evento (dd/mm/aaaa hh:mm:ss) para um horário dentro das leituras; se o evento foi gravado em outro arquivo, envie esse arquivo na seção 4 (uma aba por estudo no mesmo arquivo também é aceita).'
     };
   }
 
@@ -868,6 +872,50 @@ function CadeiaFrioRel_cfLocalizarIndicePorTempo_(dados, alvo, comparador, fallb
   }
 
   return fallback === undefined ? null : fallback;
+}
+
+/**
+ * 21/10/2026: índice da leitura mais próxima do horário informado. Aceita o horário entre duas leituras
+ * (intervalo do registrador) e até um intervalo antes da primeira ou depois da última; fora disso, null.
+ * Empate entre duas leituras: fica a posterior.
+ */
+function CadeiaFrioRel_cfLocalizarIndiceMaisProximo_(dados, alvo) {
+  const alvoMs = CadeiaFrioRel_cfConverterTempoParaMs_(alvo);
+  if (!isFinite(alvoMs) || !dados || !dados.length) return null;
+  const ms = dados.map(function(r) { return CadeiaFrioRel_cfConverterTempoParaMs_(r.tempoDate || r.tempoStr); });
+  const validos = ms.filter(isFinite);
+  if (!validos.length) return null;
+  const folga = Math.max(1000, CadeiaFrioRel_cfEstimarDeltaMinutos_(dados) * 60000);
+  if (alvoMs < validos[0] - folga || alvoMs > validos[validos.length - 1] + folga) return null;
+  let melhor = null, menor = Infinity;
+  for (let i = 0; i < ms.length; i++) {
+    if (!isFinite(ms[i])) continue;
+    const d = Math.abs(ms[i] - alvoMs);
+    if (d < menor || (d === menor && ms[i] > alvoMs)) { menor = d; melhor = i; }
+  }
+  return melhor;
+}
+
+/** Texto para a trava de horário fora das leituras: período importado e a leitura mais próxima do horário informado. */
+function CadeiaFrioRel_cfContextoHorarioForaTexto_(dadosArquivo, informado) {
+  const dados = dadosArquivo || [];
+  if (!dados.length) return 'O arquivo não tem leituras';
+  const periodo = typeof CadeiaFrioRel_cfPeriodoImportadoTexto_ === 'function'
+    ? CadeiaFrioRel_cfPeriodoImportadoTexto_(dados)
+    : 'as leituras importadas vão de ' + dados[0].tempoStr + ' a ' + dados[dados.length - 1].tempoStr;
+  const alvoMs = CadeiaFrioRel_cfConverterTempoParaMs_(informado);
+  let texto = periodo.charAt(0).toUpperCase() + periodo.slice(1);
+  if (!isFinite(alvoMs)) return texto;
+  let melhor = -1, menor = Infinity;
+  dados.forEach(function(r, i) {
+    const m = CadeiaFrioRel_cfConverterTempoParaMs_(r.tempoDate || r.tempoStr);
+    if (isFinite(m) && Math.abs(m - alvoMs) < menor) { menor = Math.abs(m - alvoMs); melhor = i; }
+  });
+  if (melhor < 0) return texto;
+  const diffMin = Math.round(menor / 60000);
+  const quanto = diffMin >= 120 ? SGO_DocA4_num_(CadeiaFrioRel_cfRound_(menor / 3600000, 1), 1) + ' h' : (diffMin >= 1 ? diffMin + ' min' : Math.round(menor / 1000) + ' s');
+  const lado = CadeiaFrioRel_cfConverterTempoParaMs_(dados[melhor].tempoDate || dados[melhor].tempoStr) < alvoMs ? 'antes' : 'depois';
+  return texto + '; a leitura mais próxima do horário informado é ' + dados[melhor].tempoStr + (dados[melhor].aba ? ' (aba "' + dados[melhor].aba + '")' : '') + ', ' + quanto + ' ' + lado;
 }
 
 function CadeiaFrioRel_cfConverterTempoParaMs_(valor) {

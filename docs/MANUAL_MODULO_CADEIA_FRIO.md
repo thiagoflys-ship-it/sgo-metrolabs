@@ -1,5 +1,13 @@
 # Manual do Operador — Módulo Cadeia de Frio
 
+## O que mudou em 22/10/2026 (arquivo com várias abas e conferência na tela)
+
+- **Arquivo com uma aba por estudo.** O arquivo do registrador pode ter uma aba para cada estudo (por exemplo, "Ensaio 24h", "Porta Aberta" e "Queda de Energia"). Antes só a primeira aba era lida, e o estudo de porta ou de energia acusava "O início do evento informado não está dentro das leituras do arquivo". Agora todas as abas com leituras entram: a prévia mostra o período de cada aba e cada estudo usa a aba que contém o seu horário. Abas com o mesmo horário são recusadas, com o período de cada uma. Cabeçalhos como "ST-01 (C)" passaram a ser reconhecidos.
+- **Horário do evento entre duas leituras** usa a leitura mais próxima (também até um intervalo de leitura depois da última). Horário colado da planilha, com a data e a hora separadas por tabulação, é aceito.
+- **Horário fora das leituras:** a mensagem mostra o período importado (de cada aba) e a leitura mais próxima do horário digitado, com a distância (por exemplo, "10 min antes").
+- **Conferência enquanto preenche.** A tela confere os dados sem gerar nada: justificativa em branco aparece na hora, ao lado do campo; horários, sensores e registrador são conferidos pelo servidor logo depois de cada alteração e depois da prévia. Cada problema aparece em vermelho ao lado do campo e no quadro **Conferência dos dados**, acima do resultado, com o que fazer.
+- **Registrador vencido:** a mensagem diz a data do ensaio, a validade e o caminho: menu **Calibração › Padrões de referência**, procure o registrador, toque em **Editar** e atualize o número do certificado, a validade e o PDF do certificado novo. Se o certificado não foi renovado antes do ensaio, o ensaio precisa ser repetido com registrador calibrado. Havendo mais de um cadastro da mesma identificação, vale o válido na data do ensaio.
+
 ## O que mudou em 21/10/2026 (revisão completa no molde da autoclave)
 
 - **O ensaio começa pelo cadastro.** A seção 1 virou "Cliente e equipamento": busque o cliente, escolha a unidade e o equipamento. Cliente, CNPJ, endereço, TAG, número de série e local vêm do cadastro e ficam travados; marca e modelo não entram mais nos documentos. Equipamento de outro cliente é recusado.
@@ -165,7 +173,7 @@ Simula o que acontece quando um funcionário abre a porta do equipamento durante
 |---|---|---|---|
 | **Incluir estudo de abertura de porta neste laudo** (caixa de marcar) | Liga/desliga este bloco inteiro | Sem marcar, os campos abaixo ficam escondidos e não entram no laudo | Marque só se este teste foi realmente feito |
 | **Tipo de abertura** | Se a porta foi aberta parcialmente ou totalmente | Documenta como o teste foi conduzido — é só um metadado, não muda o cálculo | Escolha "Porta semiaberta" ou "Porta totalmente aberta" |
-| **Início do evento** | Hora exata em que a porta foi aberta | Marca, dentro do arquivo, onde está esse evento | Digite `dd/MM/aaaa HH:mm:ss` |
+| **Início do evento** | Hora exata em que a porta foi aberta | Marca, dentro do arquivo, onde está esse evento | Digite `dd/MM/aaaa HH:mm:ss`. Entre duas leituras, vale a leitura mais próxima. Fora das leituras, a tela mostra ao lado do campo o período importado e a leitura mais próxima |
 | **Fim do evento** (opcional) | Hora em que a porta foi fechada de novo | Ajuda a visualizar o evento no gráfico | Preencha se souber; pode deixar em branco |
 | **Tempo-alvo mínimo (min)** (opcional) | Quanto tempo, no mínimo, o equipamento precisa aguentar sem sair da faixa depois do evento | **Este é o campo que decide se o resultado é Aprovado/Reprovado ou só informativo** — veja o quadro abaixo | Preencha só se o protocolo do cliente definir um tempo-limite |
 
@@ -234,6 +242,10 @@ Aqui você diz ao sistema **de onde** vêm os dados de temperatura.
 | **ID / link do arquivo no Drive** | O caso mais comum: você já tem o arquivo exportado do datalogger (uma planilha/CSV) | Cole o link do Google Drive no campo, **ou** clique no campo de arquivo abaixo e escolha o arquivo direto do computador — o sistema faz o upload sozinho e preenche o link |
 | **Colar dados brutos** | Quando você tem os dados mas não quer subir um arquivo — por exemplo, copiou de outro programa | Cole o texto (cabeçalho + linhas, com colunas separadas por tab, vírgula ou ponto e vírgula) direto na caixa de texto |
 | **Um arquivo por sensor (datalogger individual)** | Quando cada sensor gravou seu **próprio** arquivo separado (dataloggers individuais, não um gravador central) | Volte à seção "Sensores": cada sensor marcado ganha seu próprio campo de link/upload. O sistema junta e alinha os horários de todos automaticamente |
+
+**Arquivo com várias abas:** se o registrador gravou cada estudo numa aba (24 horas, porta, energia), envie o arquivo como está. A prévia lista as abas com o período de cada uma e cada estudo usa a aba que contém o seu horário. Duas abas com o mesmo horário são recusadas.
+
+**Conferência dos dados:** depois da prévia e a cada campo alterado, a tela confere tudo o que impediria o documento (horários, sensores, justificativas, registrador) e mostra cada problema ao lado do campo e no quadro "Conferência dos dados", acima do resultado.
 
 **Pré-visualizar dados** (botão, mais abaixo nesta seção): depois de escolher o arquivo/dados, clique aqui para conferir, **antes de gerar o laudo final**, se o sistema está lendo os dados certos — ele mostra quantas linhas, quantos sensores e qual formato de data foi detectado, e uma prévia da tabela. **Use sempre antes de gerar o relatório**, é a forma mais rápida de pegar um arquivo errado antes de gastar tempo gerando um laudo que vai sair errado.
 
@@ -349,7 +361,9 @@ O sistema sugere 12 sensores (3 em equipamento com menos de 60 L, 12 no equipame
 | Bloco de estudo (ex.: Abertura de Porta) não aparece na tela | O perfil escolhido não usa esse estudo, segundo a norma (ex.: Caixa Térmica só tem Autonomia) | Confira a tabela da seção 6 deste manual — não é erro, é intencional |
 | Preenchi menos sensores que o sugerido e o sistema deixou gerar mesmo assim | Comportamento esperado — o número de sensores não bloqueia; vira "Desvio do método" no documento (ver seção 11) | Confira se o número usado está de acordo com o protocolo antes de entregar |
 | "Escolha o cliente, a unidade e o equipamento" | O documento só sai com o equipamento do cadastro | Escolha no quadro da seção 1 |
-| "O registrador ... não está no cadastro de padrões" ou "estava vencido" | Identificação digitada diferente do cadastro, ou certificado vencido na data do ensaio | Corrija a identificação ou o cadastro de padrões; vencido exige repetir o ensaio |
+| "O registrador ... não está no cadastro de padrões" ou "estava vencido" | Identificação digitada diferente do cadastro, ou certificado vencido na data do ensaio | Corrija a identificação na seção 4. Se o certificado foi renovado antes do ensaio: menu Calibração › Padrões de referência, procure o registrador, Editar, atualize número do certificado, validade e PDF. Sem renovação, o ensaio precisa ser repetido |
+| "O início do evento informado não está dentro das leituras do arquivo" | Horário digitado fora do período do arquivo, ou o evento está em outro arquivo | A mensagem mostra o período importado e a leitura mais próxima: corrija o horário na seção 3 ou envie o arquivo que contém o evento (pode ser uma aba própria do mesmo arquivo) |
+| "A umidade relativa foi marcada como não medida, sem a justificativa" | Campo "Por que a umidade não foi medida" vazio ou curto | Seção 3, bloco "Grandezas e estudos não realizados", ao lado de "Umidade relativa": escreva o motivo (ao menos 10 caracteres) |
 | "No início do evento havia sensor fora da faixa" | O estudo de porta ou energia começou antes de o equipamento voltar à faixa | Marque o início depois que todos os sensores voltaram à faixa, ou repita o estudo |
 | "Os dados mudaram desde o rascunho" | Algo mudou na tela ou no cadastro depois do rascunho | Toque em "Gerar rascunho" de novo |
 

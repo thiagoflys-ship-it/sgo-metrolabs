@@ -10,7 +10,12 @@ function CadeiaFrioRel_textoOriginal_(blob){
   const bytes=blob.getBytes(),a=(bytes[0]+256)%256,b=(bytes[1]+256)%256;
   return blob.getDataAsString(a===255&&b===254?'UTF-16LE':a===254&&b===255?'UTF-16BE':'UTF-8').replace(/^\uFEFF/,'');
 }
-function CadeiaFrioRel_lerXlsxOriginal_(blob){
+/** Cabeçalho de leituras: coluna de data/hora e coluna de sensor (21/10/2026: "ST-01 (C)", "S-01" e "T1 (°C)" também contam). */
+function CadeiaFrioRel_ehCabecalhoTempo_(v){return /^(data|date|hora|horario|time|tempo|timestamp|datetime|date.?time|data.?hora)$/.test(v);}
+function CadeiaFrioRel_ehCabecalhoSensor_(v){return /temper|temp|^s\d+$|^t\d+$|channel|canal|ch\d/.test(v)||/^(s|st|t|tp|ch|sensor)[\s\-_]?\d+\b/.test(v)||/\((°|º)?c\)/.test(v);}
+function CadeiaFrioRel_abaTemLeituras_(matrix){return matrix.slice(0,100).some(function(row){const r=row.map(CadeiaFrioRel_normalizarTextoComparacaoParser_);return r.some(CadeiaFrioRel_ehCabecalhoTempo_)&&r.some(CadeiaFrioRel_ehCabecalhoSensor_);});}
+/** opcoes.variasAbas (arquivo único do registrador, 21/10/2026): várias abas com leituras voltam como {abas:[{nome,matrix}]}, sem recusar. */
+function CadeiaFrioRel_lerXlsxOriginal_(blob,opcoes){
   const files={};Utilities.unzip(blob.copyBlob().setContentType('application/zip')).forEach(function(b){files[b.getName().replace(/^\//,'')]=b;});
   const ns=XmlService.getNamespace('http://schemas.openxmlformats.org/spreadsheetml/2006/main');
   function xml(name){if(!files[name])throw new Error('XLSX incompleto: '+name);return XmlService.parse(files[name].getDataAsString('UTF-8')).getRootElement();}
@@ -39,19 +44,16 @@ function CadeiaFrioRel_lerXlsxOriginal_(blob){
   const candidatas=[];let primeira=[];
   sheets.forEach(function(sheet,i){
     const matrix=lerAba(sheet);if(i===0)primeira=matrix;
-    const temCabecalho=matrix.slice(0,100).some(function(row){
-      const r=row.map(CadeiaFrioRel_normalizarTextoComparacaoParser_);
-      return r.some(v=>/^(data|date|hora|time|tempo|timestamp|datetime|date.?time|data.?hora)$/.test(v))&&r.some(v=>/temper|temp|^s\d+$|^t\d+$|channel|canal|ch\d/.test(v));
-    });
-    if(temCabecalho&&matrix.length>2)candidatas.push({nome:attr(sheet,'name'),matrix:matrix});
+    if(CadeiaFrioRel_abaTemLeituras_(matrix)&&matrix.length>2)candidatas.push({nome:attr(sheet,'name'),matrix:matrix});
   });
+  if(candidatas.length>1&&opcoes&&opcoes.variasAbas)return {abas:candidatas};
   if(candidatas.length>1)throw new Error('Mais de uma aba contém leituras: '+candidatas.map(x=>x.nome).join(', ')+'. Envie um arquivo com a aba do sensor desejado.');
   return candidatas.length?candidatas[0].matrix:primeira;
 }
 
 function CadeiaFrioRel_prepararTabelaDatas_(matrix,display){
   let header=-1;
-  for(let i=0;i<Math.min(matrix.length,100);i++){const r=(display[i]||matrix[i]).map(CadeiaFrioRel_normalizarTextoComparacaoParser_);const time=r.some(v=>/^(data|date|hora|time|tempo|timestamp|datetime|date.?time|data.?hora)$/.test(v));const sensor=r.some(v=>/temper|temp|^s\d+$|^t\d+$|channel|canal|ch\d/.test(v));if(time&&sensor){header=i;break;}}
+  for(let i=0;i<Math.min(matrix.length,100);i++){const r=(display[i]||matrix[i]).map(CadeiaFrioRel_normalizarTextoComparacaoParser_);const time=r.some(CadeiaFrioRel_ehCabecalhoTempo_);const sensor=r.some(CadeiaFrioRel_ehCabecalhoSensor_);if(time&&sensor){header=i;break;}}
   return {matrix:header>0?matrix.slice(header):matrix,displayMatrix:header>0?display.slice(header):display};
 }
 

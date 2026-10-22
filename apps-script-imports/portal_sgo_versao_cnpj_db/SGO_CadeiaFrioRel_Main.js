@@ -59,6 +59,7 @@ function CadeiaFrioRel_apiDispatch(req) {
   const allow = {
     apiPing: CadeiaFrioRel_apiPing,
     apiPreviewEntrada: CadeiaFrioRel_apiPreviewEntrada,
+    apiConferirDados: CadeiaFrioRel_apiConferirDados,
     apiSugerirRampaEstabilizacao: CadeiaFrioRel_apiSugerirRampaEstabilizacao,
     apiConverter: CadeiaFrioRel_apiConverter,
     apiUploadArquivo: CadeiaFrioRel_apiUploadArquivo,
@@ -338,10 +339,12 @@ function CadeiaFrioRel_apiPreviewEntrada(payload) {
     };
   }
 
-  const rich = CadeiaFrioRel_lerDadosEntradaRich_(payload);
+  const rich = CadeiaFrioRel_lerDadosEntradaRich_(Object.assign({}, payload, { permitirVariasAbas: true }));
   const nSensores = CadeiaFrioRel_cfClampIntMain_(payload.nSensores, 1, 60, CadeiaFrioRel_CFCFG.DEFAULT_N || 12);
   const dateStyle = String(payload.dateStyle || CadeiaFrioRel_CFCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase().trim();
-  const normalized=CadeiaFrioRel_normalizarMatrizParaAnalise(rich.matrix,rich.displayMatrix,nSensores,dateStyle);
+  // 21/10/2026: arquivo com uma aba por estudo: a prévia mostra o período de cada aba.
+  const normalized=(rich.abas&&rich.abas.length>1)?CadeiaFrioRel_cfJuntarAbas_(rich.abas,nSensores,dateStyle):CadeiaFrioRel_normalizarMatrizParaAnalise(rich.matrix,rich.displayMatrix,nSensores,dateStyle);
+  if(normalized._abas)(rich.diagnostico=rich.diagnostico||{}).abas=normalized._abas.map(function(a){return {nome:a.nome,inicio:a.inicio,fim:a.fim,leituras:a.leituras};});
   const header=['Data/hora ('+CadeiaFrioRel_CFCFG.TZ+')'];
   for(let i=0;i<nSensores;i++)header.push('S'+(i+1)+' (°C)');
   const preview=[header].concat(normalized.slice(0,CadeiaFrioRel_CFCFG.PREVIEW_ROWS||20).map(function(row){return [row.tempoStr].concat(row.temperaturas);}));
@@ -372,11 +375,13 @@ function CadeiaFrioRel_cfLerDadosCompletos_(payload, modoEntradaNormalizado, nSe
     const seriesPorSensor = CadeiaFrioRel_cfLerSeriesPorSensorArquivo_(payload, nSensores, sensoresAtivos, dateStyle);
     dadosCompletos = CadeiaFrioRel_cfMesclarSeriesPorSensor_(seriesPorSensor);
   } else {
-    const rich = CadeiaFrioRel_lerDadosEntradaRich_(payload);
+    const rich = CadeiaFrioRel_lerDadosEntradaRich_(Object.assign({}, payload, { permitirVariasAbas: true }));
     if (!rich || !rich.matrix || !rich.matrix.length) {
       throw new Error('Não foi possível ler os dados de entrada.');
     }
-    dadosCompletos = CadeiaFrioRel_normalizarMatrizParaAnalise(rich.matrix, rich.displayMatrix, nSensores, dateStyle);
+    dadosCompletos = (rich.abas && rich.abas.length > 1)
+      ? CadeiaFrioRel_cfJuntarAbas_(rich.abas, nSensores, dateStyle)
+      : CadeiaFrioRel_normalizarMatrizParaAnalise(rich.matrix, rich.displayMatrix, nSensores, dateStyle);
   }
 
   if (!dadosCompletos || !dadosCompletos.length) {
@@ -384,6 +389,70 @@ function CadeiaFrioRel_cfLerDadosCompletos_(payload, modoEntradaNormalizado, nSe
   }
 
   return dadosCompletos;
+}
+
+/**
+ * 21/10/2026: arquivo único com uma aba por estudo (24 h, abertura de porta, queda de energia).
+ * Cada aba é normalizada sozinha, as leituras ficam marcadas com o nome da aba e a lista sai em ordem
+ * de horário, com o resumo das abas em dadosCompletos._abas. Abas com horários sobrepostos são recusadas
+ * (o mesmo horário em duas abas misturaria leituras de estudos diferentes).
+ */
+function CadeiaFrioRel_cfJuntarAbas_(abas, nSensores, dateStyle) {
+  const partes = abas.map(function(a) {
+    let linhas;
+    try {
+      linhas = CadeiaFrioRel_normalizarMatrizParaAnalise(a.matrix, a.displayMatrix, nSensores, dateStyle);
+    } catch (e) {
+      throw new Error('Aba "' + a.nome + '" do arquivo do registrador: ' + (e.message || e));
+    }
+    linhas.forEach(function(l) { l.aba = a.nome; });
+    const ms = function(l) { return CadeiaFrioRel_cfConverterTempoParaMs_(l.tempoDate || l.tempoStr); };
+    return { nome: a.nome, linhas: linhas, inicioMs: ms(linhas[0]), fimMs: ms(linhas[linhas.length - 1]), inicio: linhas[0].tempoStr, fim: linhas[linhas.length - 1].tempoStr };
+  }).sort(function(x, y) { return x.inicioMs - y.inicioMs; });
+  for (let i = 1; i < partes.length; i++) {
+    if (partes[i].inicioMs <= partes[i - 1].fimMs) {
+      throw new Error('As abas "' + partes[i - 1].nome + '" (de ' + partes[i - 1].inicio + ' a ' + partes[i - 1].fim + ') e "' + partes[i].nome + '" (de ' + partes[i].inicio + ' a ' + partes[i].fim +
+        ') do arquivo do registrador têm leituras no mesmo período. Deixe no arquivo uma aba por estudo, sem repetir horários, ou envie só a aba do estudo.');
+    }
+  }
+  const todas = [];
+  partes.forEach(function(p) { p.linhas.forEach(function(l) { todas.push(l); }); });
+  todas._abas = partes.map(function(p) { return { nome: p.nome, inicio: p.inicio, fim: p.fim, inicioMs: p.inicioMs, fimMs: p.fimMs, leituras: p.linhas.length }; });
+  return todas;
+}
+
+/** Aba de cada estudo: evento → a aba que contém o início do evento; distribuição e autonomia → a que mais cobre a janela. */
+function CadeiaFrioRel_cfAbaDoEstudo_(abas, cfg) {
+  if (!abas || abas.length < 2) return null;
+  if (isFinite(cfg.inicioEventoMs)) {
+    const folga = 60000;
+    return abas.filter(function(a) { return cfg.inicioEventoMs >= a.inicioMs - folga && cfg.inicioEventoMs <= a.fimMs + folga; })[0] || null;
+  }
+  let melhor = null, maior = 0;
+  abas.forEach(function(a) {
+    const comum = Math.min(a.fimMs, cfg.janelaFimMs) - Math.max(a.inicioMs, cfg.janelaInicioMs);
+    if (comum > maior) { maior = comum; melhor = a; }
+  });
+  return melhor;
+}
+
+/** Leituras do estudo: as da sua aba (arquivo com várias abas) dentro da janela do estudo. */
+function CadeiaFrioRel_cfFatiaDoEstudo_(dadosCompletos, cfg) {
+  const aba = CadeiaFrioRel_cfAbaDoEstudo_(dadosCompletos._abas, cfg);
+  const base = aba ? dadosCompletos.filter(function(l) { return l.aba === aba.nome; }) : dadosCompletos;
+  const fatia = CadeiaFrioRel_cfFatiarDadosPorJanela_(base, cfg.janelaInicioMs, cfg.janelaFimMs);
+  if (aba) fatia.aba = aba.nome;
+  return fatia;
+}
+
+/** Período importado, em texto: "de dd/mm/aaaa hh:mm:ss a dd/mm/aaaa hh:mm:ss" e, com várias abas, o período de cada aba. */
+function CadeiaFrioRel_cfPeriodoImportadoTexto_(dadosCompletos) {
+  if (!dadosCompletos || !dadosCompletos.length) return 'o arquivo não tem leituras';
+  const abas = dadosCompletos._abas;
+  if (abas && abas.length > 1) {
+    return 'as leituras importadas estão em ' + abas.length + ' abas: ' + abas.map(function(a) { return '"' + a.nome + '" (de ' + a.inicio + ' a ' + a.fim + ')'; }).join('; ');
+  }
+  return 'as leituras importadas vão de ' + dadosCompletos[0].tempoStr + ' a ' + dadosCompletos[dadosCompletos.length - 1].tempoStr;
 }
 
 /**
@@ -420,8 +489,8 @@ function CadeiaFrioRel_apiSugerirRampaEstabilizacao(payload) {
   const modoEntradaNormalizado = String(payload.modoEntrada || 'FILE_ID').toUpperCase().trim();
   const dadosCompletos = CadeiaFrioRel_medirEtapa_('Leitura e normalização',function(){return CadeiaFrioRel_cfLerDadosCompletos_(payload, modoEntradaNormalizado, nSensores, sensoresAtivos, dateStyle, estudosConfig, faixa);});
 
-  const fatia = CadeiaFrioRel_cfFatiarDadosPorJanela_(dadosCompletos, cfgDist.janelaInicioMs, cfgDist.janelaFimMs);
-  if (!fatia.length) throw new Error('Nenhum dado encontrado na janela informada para o estudo de Distribuição.');
+  const fatia = CadeiaFrioRel_cfFatiaDoEstudo_(dadosCompletos, cfgDist);
+  if (!fatia.length) throw new Error('Nenhuma leitura do arquivo cai no período informado para o estudo de Distribuição (de ' + cfgDist.janelaInicio + ' a ' + cfgDist.janelaFim + '): ' + CadeiaFrioRel_cfPeriodoImportadoTexto_(dadosCompletos) + '.');
 
   const sugestao = CadeiaFrioRel_cfSugerirFimRampaEstabilizacao_(fatia, faixa, sensoresAtivos);
   return { ok: true, sugestao: sugestao };
@@ -468,9 +537,12 @@ function CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload) {
   const dadosCompletos = CadeiaFrioRel_cfLerDadosCompletos_(payload, modoEntradaNormalizado, nSensores, sensoresAtivos, dateStyle, estudosConfig, faixa);
 
   const analises = estudosConfig.map(function(cfg) {
-    const fatia = CadeiaFrioRel_cfFatiarDadosPorJanela_(dadosCompletos, cfg.janelaInicioMs, cfg.janelaFimMs);
+    const fatia = CadeiaFrioRel_cfFatiaDoEstudo_(dadosCompletos, cfg);
     if (!fatia.length) {
-      throw new Error('Nenhum dado encontrado na janela informada para o estudo "' + CadeiaFrioRel_cfLabelEstudo_(cfg.tipoEstudo) + '". Verifique os horários digitados.');
+      // 21/10/2026: a mensagem mostra o período importado, para conferir na hora o horário digitado.
+      throw new Error('Nenhuma leitura do arquivo cai no período informado para o estudo "' + CadeiaFrioRel_cfLabelEstudo_(cfg.tipoEstudo) + '" (' +
+        (cfg.inicioEvento ? 'início do evento ' + cfg.inicioEvento : 'de ' + cfg.janelaInicio + ' a ' + cfg.janelaFim) + '): ' + CadeiaFrioRel_cfPeriodoImportadoTexto_(dadosCompletos) +
+        '. Na seção 3 (Estudos do ensaio), corrija a data e a hora (dd/mm/aaaa hh:mm:ss) ou, na seção 4, envie o arquivo do registrador que contém esse período.');
     }
 
     let analise;
@@ -485,7 +557,9 @@ function CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload) {
         fimEvento: cfg.fimEvento
       }, cfg.tipoEstudo, {
         tipoAbertura: cfg.tipoAbertura,
-        tempoAlvoMinutos: cfg.tempoAlvoMinutos
+        tempoAlvoMinutos: cfg.tempoAlvoMinutos,
+        // 21/10/2026: para a trava de início fora das leituras dizer o período importado e a leitura mais próxima.
+        dadosArquivo: dadosCompletos
       });
     } else if (cfg.tipoEstudo === 'AUTONOMIA') {
       analise = CadeiaFrioRel_cfAnalisarAutonomia(fatia, faixa, sensoresAtivos, { tempoAlvoMinutos: cfg.tempoAlvoMinutos });
@@ -647,8 +721,8 @@ function CadeiaFrioRel_cfMontarConfigEstudos_(payload, perfilCfg) {
       tipoEstudo: tipoDist,
       janelaInicioMs: inicioMs,
       janelaFimMs: fimMs,
-      janelaInicio: dist.inicio,
-      janelaFim: dist.fim,
+      janelaInicio: CadeiaFrioRel_cfLimparHorario_(dist.inicio),
+      janelaFim: CadeiaFrioRel_cfLimparHorario_(dist.fim),
       resultadoDesejado: dist.resultadoDesejado,
       fimRampaEstabilizacao: String(dist.fimRampaEstabilizacao || '').trim()
     });
@@ -687,8 +761,8 @@ function CadeiaFrioRel_cfMontarConfigEstudos_(payload, perfilCfg) {
       tipoEstudo: 'AUTONOMIA',
       janelaInicioMs: inicioMs,
       janelaFimMs: fimMs,
-      janelaInicio: autonomia.inicio,
-      janelaFim: autonomia.fim,
+      janelaInicio: CadeiaFrioRel_cfLimparHorario_(autonomia.inicio),
+      janelaFim: CadeiaFrioRel_cfLimparHorario_(autonomia.fim),
       autonomiaEstimadaMinutos: CadeiaFrioRel_cfParseNumeroMain_(autonomia.autonomiaEstimadaMinutos, null),
       // 21/10/2026: autonomia mínima exigida (opcional): com ela o estudo aprova ou reprova.
       tempoAlvoMinutos: CadeiaFrioRel_cfParseNumeroMain_(autonomia.tempoAlvoMinutos, null)
@@ -697,6 +771,8 @@ function CadeiaFrioRel_cfMontarConfigEstudos_(payload, perfilCfg) {
 
   return out;
 }
+
+function CadeiaFrioRel_cfLimparHorario_(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
 
 function CadeiaFrioRel_cfMontarConfigEvento_(tipoEstudo, cfgEvento, margemMin) {
   const inicioEventoMs = CadeiaFrioRel_cfConverterTempoParaMs_(cfgEvento.inicioEvento);
@@ -721,8 +797,9 @@ function CadeiaFrioRel_cfMontarConfigEvento_(tipoEstudo, cfgEvento, margemMin) {
     janelaFimMs: (fimEventoMs !== null ? fimEventoMs : inicioEventoMs) + margemMs,
     inicioEventoMs: inicioEventoMs,
     fimEventoMs: fimEventoMs,
-    inicioEvento: cfgEvento.inicioEvento,
-    fimEvento: cfgEvento.fimEvento || '',
+    // 21/10/2026: horário colado da planilha (data e hora separadas por tabulação) sai com um espaço só nas mensagens e no documento.
+    inicioEvento: CadeiaFrioRel_cfLimparHorario_(cfgEvento.inicioEvento),
+    fimEvento: CadeiaFrioRel_cfLimparHorario_(cfgEvento.fimEvento),
     tipoAbertura: cfgEvento.tipoAbertura || null,
     tempoAlvoMinutos: cfgEvento.tempoAlvoMinutos,
     resultadoDesejado: cfgEvento.resultadoDesejado

@@ -305,21 +305,21 @@ function CadeiaFrioRel_qTravasRegistrador_(registradores, simulado) {
   var travas = [];
   var itens = (registradores && registradores.itens) || [];
   if (!itens.length) {
-    travas.push({ codigo: 'REGISTRADOR_NAO_INFORMADO', oQue: 'O registrador de dados usado no ensaio não foi informado.',
+    travas.push({ codigo: 'REGISTRADOR_NAO_INFORMADO', campo: 'certDataLogger', oQue: 'O registrador de dados usado no ensaio não foi informado.',
       porQue: 'Sem ele não há como demonstrar a rastreabilidade metrológica das temperaturas.',
       comoCorrigir: 'Preencha "Identificação do registrador" na seção 4 com a identificação cadastrada em Padrões de referência (ex.: DTL-01).' });
   }
   itens.forEach(function (it) {
     if (!it.encontrado) {
-      travas.push({ codigo: 'REGISTRADOR_NAO_CADASTRADO', oQue: 'O registrador "' + it.tag + '" não está no cadastro de padrões.',
+      travas.push({ codigo: 'REGISTRADOR_NAO_CADASTRADO', campo: 'certDataLogger', oQue: 'O registrador "' + it.tag + '" não está no cadastro de padrões.',
         porQue: 'Sem o cadastro não é possível conferir o certificado de calibração e a validade.',
         comoCorrigir: 'Cadastre o registrador em Cadastros › Padrões de referência (com o certificado e a validade) ou corrija a identificação digitada.' });
     } else if (it.conforme === false) {
-      travas.push({ codigo: 'REGISTRADOR_VENCIDO', oQue: 'O certificado de calibração do registrador ' + it.tag + ' (' + (it.certificado || 'sem número') + ') estava vencido na data do ensaio (validade ' + it.validade + ').',
+      travas.push({ codigo: 'REGISTRADOR_VENCIDO', campo: 'certDataLogger', oQue: 'O certificado de calibração do registrador ' + it.tag + ' (' + (it.certificado || 'sem número') + ') estava vencido na data do ensaio (' + (registradores.dataReferencia ? 'ensaio em ' + registradores.dataReferencia + ', ' : '') + 'validade ' + it.validade + ').',
         porQue: 'Medição feita com instrumento fora da validade de calibração não tem rastreabilidade.',
-        comoCorrigir: 'Se o certificado foi renovado antes do ensaio, atualize a validade em Padrões de referência; se não, o ensaio precisa ser repetido com registrador calibrado.' });
+        comoCorrigir: 'Se o certificado foi renovado antes do ensaio: no menu Calibração › Padrões de referência, procure ' + it.tag + ', clique em Editar, atualize o número do certificado, a validade (dd/mm/aaaa) e o PDF do certificado novo, salve e gere de novo. Se não foi renovado, o ensaio precisa ser repetido com registrador calibrado.' });
     } else if (it.conforme === null) {
-      travas.push({ codigo: 'REGISTRADOR_SEM_VALIDADE', oQue: 'O registrador ' + it.tag + ' está cadastrado sem a validade do certificado de calibração.',
+      travas.push({ codigo: 'REGISTRADOR_SEM_VALIDADE', campo: 'certDataLogger', oQue: 'O registrador ' + it.tag + ' está cadastrado sem a validade do certificado de calibração.',
         porQue: 'Sem a validade não dá para confirmar que a calibração cobria a data do ensaio.',
         comoCorrigir: 'Informe a validade do certificado em Cadastros › Padrões de referência.' });
     }
@@ -348,19 +348,19 @@ function CadeiaFrioRel_qGrandezas_(payload, perfilCfg, estudosTipos) {
   };
   var travas = [];
   if (!medida && out.umidade.justificativa.length < 10) {
-    travas.push({ codigo: 'GRANDEZA_SEM_JUSTIFICATIVA', oQue: 'A umidade relativa foi marcada como não medida, sem a justificativa.',
+    travas.push({ codigo: 'GRANDEZA_SEM_JUSTIFICATIVA', campo: 'umidadeJustificativa', oQue: 'A umidade relativa foi marcada como não medida, sem a justificativa.',
       porQue: 'O documento precisa dizer por que a grandeza ficou fora do ensaio (escopo e limitações).',
-      comoCorrigir: 'Na seção 3, em "Grandezas e estudos não realizados", escreva o motivo (ao menos 10 caracteres), por exemplo: "registrador só de temperatura; a umidade não é controlada neste equipamento".' });
+      comoCorrigir: 'Na seção 3 (Estudos do ensaio), no bloco "Grandezas e estudos não realizados", preencha o campo "Por que a umidade não foi medida", ao lado de "Umidade relativa" (ao menos 10 caracteres), por exemplo: "registrador só de temperatura; a umidade não é controlada neste equipamento".' });
   }
   if (medida && (out.umidade.min === null || out.umidade.max === null || out.umidade.min > out.umidade.max || out.umidade.min < 0 || out.umidade.max > 100)) {
-    travas.push({ codigo: 'UMIDADE_INCOMPLETA', oQue: 'A umidade relativa foi marcada como medida, mas a mínima e a máxima registradas não foram informadas corretamente (0 % a 100 %).',
+    travas.push({ codigo: 'UMIDADE_INCOMPLETA', campo: 'umidadeMin', oQue: 'A umidade relativa foi marcada como medida, mas a mínima e a máxima registradas não foram informadas corretamente (0 % a 100 %).',
       porQue: 'Sem os valores a grandeza não pode aparecer no documento.',
       comoCorrigir: 'Na seção 3, informe a umidade relativa mínima e máxima registradas pelo registrador, ou marque a umidade como não medida e justifique.' });
   }
   [['aberturaPorta', 'abertura de porta'], ['quedaEnergia', 'queda de energia']].forEach(function (par) {
     var x = out[par[0]];
     if (x.aplicavel && !x.realizado && x.justificativa.length < 10) {
-      travas.push({ codigo: 'ESTUDO_SEM_JUSTIFICATIVA', oQue: 'O estudo de ' + par[1] + ' está previsto para este tipo de equipamento e não foi incluído, sem a justificativa.',
+      travas.push({ codigo: 'ESTUDO_SEM_JUSTIFICATIVA', campo: par[0] === 'aberturaPorta' ? 'portaJustificativa' : 'energiaJustificativa', oQue: 'O estudo de ' + par[1] + ' está previsto para este tipo de equipamento e não foi incluído, sem a justificativa.',
         porQue: 'O documento precisa dizer por que o estudo ficou fora do ensaio (escopo e limitações).',
         comoCorrigir: 'Inclua o estudo na seção 3 ou escreva o motivo em "Grandezas e estudos não realizados" (ao menos 10 caracteres).' });
     }
@@ -591,7 +591,7 @@ function CadeiaFrioRel_qContexto_(payload, interno) {
   var q = CADEIAFRIO_QCFG.QUALIDADE_DADOS;
   var justSensores = CadeiaFrioRel_qS_(payload.justificativaSensores);
   if (desconsiderados.length && q.exigirJustificativaSensorDesconsiderado && justSensores.length < 10) {
-    travas.push({ codigo: 'SENSOR_DESCONSIDERADO_SEM_JUSTIFICATIVA', oQue: 'O(s) sensor(es) ' + desconsiderados.join(', ') + ' foi(ram) desmarcado(s) sem justificativa.',
+    travas.push({ codigo: 'SENSOR_DESCONSIDERADO_SEM_JUSTIFICATIVA', campo: 'justificativaSensores', oQue: 'O(s) sensor(es) ' + desconsiderados.join(', ') + ' foi(ram) desmarcado(s) sem justificativa.',
       porQue: 'A ABNT NBR 16328:2024 (seção 15) pede que todos os sensores instalados façam parte do relatório; desconsiderar um sensor só é aceito com o motivo registrado no documento.',
       comoCorrigir: 'Na seção 3, em "Justificativa dos sensores desconsiderados", escreva o motivo (ao menos 10 caracteres), por exemplo, a falha do sensor durante o ensaio; ou marque o sensor de novo.' });
   }

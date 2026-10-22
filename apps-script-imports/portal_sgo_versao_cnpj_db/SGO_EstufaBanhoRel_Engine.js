@@ -344,9 +344,22 @@ function EstufaBanhoRel_ebAnalisarEventoRuptura(dados, faixa, sensoresAtivos, ja
     throw new Error('Nenhum sensor ativo foi selecionado para análise.');
   }
   EstufaBanhoRel_ebValidarDadosSelecionados_(dados, ativos, 'Evento térmico');
-  const idxInicioEvento = janelaEvento.inicioEvento ? EstufaBanhoRel_ebLocalizarIndicePorTempo_(dados, janelaEvento.inicioEvento, '>=', null) : 0;
+  let idxInicioEvento = janelaEvento.inicioEvento ? EstufaBanhoRel_ebLocalizarIndicePorTempo_(dados, janelaEvento.inicioEvento, '>=', null) : 0;
   if (idxInicioEvento === null) {
-    throw new Error('Não foi possível localizar o horário de início do evento (' + janelaEvento.inicioEvento + ') nos dados importados.');
+    // 21/10/2026: até um intervalo de leitura depois da última leitura usa a leitura mais próxima; fora disso a mensagem
+    // mostra o período importado e a leitura mais próxima, para o técnico ver na hora o que digitou errado.
+    const alvoMs = EstufaBanhoRel_ebConverterTempoParaMs_(janelaEvento.inicioEvento);
+    const msDe = function (r) { return EstufaBanhoRel_ebConverterTempoParaMs_(r.tempoDate || r.tempoStr); };
+    const folga = Math.max(1000, EstufaBanhoRel_ebEstimarDeltaMinutos_(dados) * 60000);
+    const ultimo = dados.length - 1;
+    if (isFinite(alvoMs) && alvoMs > msDe(dados[ultimo]) && alvoMs <= msDe(dados[ultimo]) + folga) idxInicioEvento = ultimo;
+    else {
+      let maisProxima = 0;
+      dados.forEach(function (r, i) { if (Math.abs(msDe(r) - alvoMs) < Math.abs(msDe(dados[maisProxima]) - alvoMs)) maisProxima = i; });
+      throw new Error('O início do evento informado (' + String(janelaEvento.inicioEvento).replace(/\s+/g, ' ').trim() + ') não está dentro das leituras importadas para este estudo, que vão de ' +
+        dados[0].tempoStr + ' a ' + dados[ultimo].tempoStr + (isFinite(alvoMs) ? '; a leitura mais próxima é ' + dados[maisProxima].tempoStr : '') +
+        '. Corrija a data e a hora do início do evento (dd/mm/aaaa hh:mm:ss) ou envie o arquivo do registrador que contém o evento.');
+    }
   }
   const idxFimEvento = janelaEvento.fimEvento ? EstufaBanhoRel_ebLocalizarIndicePorTempo_(dados, janelaEvento.fimEvento, '<=', null) : null;
   if (janelaEvento.fimEvento && (idxFimEvento === null || idxFimEvento < idxInicioEvento)) throw new Error('Fim do evento fora do período importado ou anterior ao início.');

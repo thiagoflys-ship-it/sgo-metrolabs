@@ -720,6 +720,7 @@ function SGO_DocA4_registradores_(textoDtl, dataReferencia) {
     }
   } catch (e) { padroes = []; }
   var ref = SGO_DocA4_lerData_(dataReferencia) || new Date();
+  saida.dataReferencia = SGO_DocA4_lerData_(dataReferencia) ? SGO_DocA4_fmtData_(ref) : '';
   var tokens = texto.split(/[,;\/\n]+|\s+e\s+/i).map(function (t) { return t.trim(); }).filter(Boolean);
   var vistos = {};
   tokens.forEach(function (tok) {
@@ -727,10 +728,18 @@ function SGO_DocA4_registradores_(textoDtl, dataReferencia) {
     if (!n || vistos[n]) return;
     vistos[n] = true;
     var achado = null;
-    for (var i = 0; i < padroes.length && !achado; i++) {
-      var tp = SGO_DocA4_normTag_(padroes[i].TAG);
-      if (tp && tp === n) achado = padroes[i];
+    // 21/10/2026: com mais de um registro da mesma identificação (certificado renovado cadastrado à parte),
+    // vale o ativo válido na data do ensaio; entre vários, o de validade mais longa.
+    var iguais = padroes.filter(function (p) { var tp = SGO_DocA4_normTag_(p.TAG); return tp && tp === n; });
+    if (iguais.length > 1) {
+      var refDia = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate()).getTime();
+      var nota = function (p) {
+        var v = SGO_DocA4_lerData_(p.VALIDADE), ativo = !String(p.STATUS || '').trim() || String(p.STATUS).toUpperCase() === 'ATIVO';
+        return (ativo ? 2 : 0) + (v && v.getTime() >= refDia ? 4 : 0) + (v ? v.getTime() / 1e15 : 0);
+      };
+      iguais.sort(function (a, b) { return nota(b) - nota(a); });
     }
+    achado = iguais[0] || null;
     for (var j = 0; j < padroes.length && !achado; j++) {
       var tq = SGO_DocA4_normTag_(padroes[j].TAG);
       if (tq && tq.length >= 4 && n.indexOf(tq) !== -1) achado = padroes[j];

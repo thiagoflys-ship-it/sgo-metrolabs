@@ -1,5 +1,10 @@
 # Manual do Operador — Módulo Estufa + Banho-maria
 
+## O que mudou em 22/10/2026
+
+- **Horário do evento fora das leituras (abertura de porta, queda de energia):** a mensagem passou a mostrar o período importado para o estudo e a leitura mais próxima do horário digitado. Horário até um intervalo de leitura depois da última leitura usa a última leitura.
+- **Registrador vencido:** a mensagem diz o caminho para atualizar: menu Calibração › Padrões de referência, procure o registrador, Editar, e atualize o número do certificado, a validade e o PDF. Havendo mais de um cadastro da mesma identificação, vale o válido na data do ensaio.
+
 ## O que mudou em 21/10/2026 — documentos no modelo novo
 
 A qualificação da estufa, do banho-maria e da secadora passou a seguir o mesmo caminho da autoclave. Em resumo:
@@ -13,6 +18,7 @@ A qualificação da estufa, do banho-maria e da secadora passou a seguir o mesmo
 6. **Seção 5 — Documentos do ensaio e planilha de dados.** Preencha a identificação do registrador como está em Cadastros › Padrões de referência (ex.: DTL-01). O número do relatório é atribuído na emissão. "Gerar a planilha de dados" abre a minuta em outra aba (A4 deitado: critérios, resultados por sensor, gráficos, memória de cálculo e todas as leituras).
 7. **Seção 6 — Relatório de ensaio térmico (A4).** "Gerar rascunho" mostra o resultado, a tabela dos critérios e os textos: a análise de cada estudo, a conclusão técnica e a conclusão em linguagem simples. Os resultados são calculados pelo sistema; a redação automática é conferida e, se não passar, entra o texto padrão. Revise, veja a prévia e envie para aprovação.
 8. **Aprovação do responsável técnico.** O técnico usa "Enviar para aprovação". O responsável técnico confere a prévia em "7. Aguardando aprovação" e toca em "Aprovar e emitir" ou em "Devolver" com o motivo. O responsável técnico também pode emitir direto, marcando a confirmação. Reemitir o mesmo número gera uma nova revisão; a anterior continua guardada na pasta.
+   **Parâmetros personalizados (21/10/2026):** quando o responsável técnico define, para um tipo de equipamento ou para um cliente, um mínimo de sensores, uma duração mínima ou um intervalo de registro diferente da referência da norma, o rascunho, a planilha de dados e o relatório de ensaio trazem a seção "Parâmetros personalizados" (referência, valor usado, justificativa e quem definiu) e a linha "Parâmetros: Personalizados" na ficha. O técnico envia para aprovação normalmente; só o responsável técnico emite esse documento. Se a emissão disser que os dados ou os critérios mudaram, gere o rascunho de novo e envie outra vez.
 9. **Onde ficam os documentos.** HTML e PDF na pasta do equipamento, dentro da pasta do cliente (CNPJ › TAG - tipo › Qualificação), com os botões do PDF, da pasta e "Enviar ao cliente".
 10. **Seção 8 — Relatório de qualificação do equipamento.** Junta os relatórios de ensaio emitidos do equipamento com a verificação da instalação (lista própria de cada tipo de equipamento) e declara a qualificação de instalação, de operação e de desempenho, com a data da próxima requalificação. Uma não conformidade em qualquer ensaio ou item da instalação reprova. Emitido com a aprovação do responsável técnico, ele aparece na ficha do equipamento (aba Qualificações), no QR code do equipamento e nas pendências de requalificação.
 

@@ -91,7 +91,7 @@ function LavRel_lvTravasRegistrador_(registradores, simulado) {
     } else if (it.conforme === false) {
       travas.push({ codigo: 'REGISTRADOR_VENCIDO', oQue: 'O certificado de calibração do registrador ' + it.tag + ' (' + (it.certificado || 'sem número') + ') estava vencido na data do ensaio (validade ' + it.validade + ').',
         porQue: 'Medição feita com instrumento fora da validade de calibração não tem rastreabilidade.',
-        comoCorrigir: 'Se o certificado foi renovado antes do ensaio, atualize a validade em Padrões de referência; se não, o ensaio precisa ser repetido com registrador calibrado.' });
+        comoCorrigir: 'Se o certificado foi renovado antes do ensaio: no menu Calibração › Padrões de referência, procure ' + it.tag + ', clique em Editar, atualize o número do certificado, a validade (dd/mm/aaaa) e o PDF do certificado novo, salve e gere de novo. Se não foi renovado, o ensaio precisa ser repetido com registrador calibrado.' });
     } else if (it.conforme === null) {
       travas.push({ codigo: 'REGISTRADOR_SEM_VALIDADE', oQue: 'O registrador ' + it.tag + ' está cadastrado sem a validade do certificado de calibração.',
         porQue: 'Sem a validade não dá para confirmar que a calibração cobria a data do ensaio.',

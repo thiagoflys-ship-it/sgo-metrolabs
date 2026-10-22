@@ -96,6 +96,28 @@ function CadeiaFrioRel_exigirSemTravas_(travas) {
     travas.map(function (t, i) { return (i + 1) + ') ' + t.oQue + ' Por quê: ' + t.porQue + ' Como corrigir: ' + t.comoCorrigir; }).join(' '));
 }
 
+/**
+ * 21/10/2026: conferência antecipada (a tela chama enquanto o técnico preenche): roda a mesma análise e as
+ * mesmas travas da emissão, sem gerar nada, e devolve cada problema com o campo da tela (campo) ou o estudo
+ * (estudo), para aparecer ao lado do campo antes de "Gerar". Erro de leitura volta em "erro", sem lançar.
+ */
+function CadeiaFrioRel_apiConferirDados(payload) {
+  payload = payload || {};
+  var interno = {};
+  try {
+    var ctx = CadeiaFrioRel_qContexto_(payload, interno);
+    var dados = (interno.resultado && interno.resultado.dadosCompletos) || [];
+    return {
+      ok: true,
+      travas: (ctx.travas || []).map(function (t) { return { codigo: t.codigo, campo: t.campo || '', estudo: t.estudo || '', oQue: t.oQue, porQue: t.porQue, comoCorrigir: t.comoCorrigir }; }),
+      periodo: CadeiaFrioRel_cfPeriodoImportadoTexto_(dados),
+      abas: (dados._abas || []).map(function (a) { return { nome: a.nome, inicio: a.inicio, fim: a.fim, leituras: a.leituras }; })
+    };
+  } catch (e) {
+    return { ok: true, travas: [], erro: String((e && e.message) || e) };
+  }
+}
+
 function CadeiaFrioRel_assinaturaCtx_(ctx) { return SGO_DocSalvar_assinatura_(ctx); }
 
 /** Rascunho: análise, travas e textos (IA conferida ou padrão). */
