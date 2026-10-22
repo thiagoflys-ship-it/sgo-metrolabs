@@ -142,10 +142,10 @@ test('Vínculo gravado de novo responde "Vínculo já estava gravado" e não gra
   assert.equal(tabelas.REG_FROTA_AUDITORIA.length, 0);
 });
 
-test('Texto de acesso somente leitura: uma frase com o que funciona e o que não funciona, sem nome de empresa', () => {
+test('Texto sem a chave dos comandos: uma frase com o que funciona e o que não funciona, sem nome de empresa', () => {
   const { ctx } = ambiente();
   const t = ctx.RASTR_TEXTO_SOMENTE_LEITURA;
-  assert.match(t, /^Acesso somente leitura: funcionam .*; não funciona bloquear nem liberar a partida/);
+  assert.match(t, /^Sem a chave dos comandos: funcionam .*; o SGO\+ não envia bloquear nem liberar ao carro/);
   assert.equal((t.match(/\./g) || []).length, 1);
   assert.doesNotMatch(t, /iTracker/);
 });

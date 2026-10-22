@@ -10,17 +10,10 @@
  *   Só HTTPS (http apenas para testes em localhost), só os veículos da Metrolabs.
  *   O acesso liberado hoje é SOMENTE LEITURA (só GET): o SGO+ monitora (RASTR_TEXTO_SOMENTE_LEITURA).
  *
- * Bloqueio da partida (objetivo: a partida só libera com a retirada registrada no SGO+):
- *   o caminho completo continua aqui (seção COMANDOS), com as travas de segurança: nunca bloquear em
- *   movimento, só com ignição desligada e posição dos últimos 30 minutos, liberação de emergência pela
- *   gestão. Fica desligado enquanto a empresa do rastreador não liberar um acesso com comandos. Para encaixar a API
- *   de comando sem reescrever, o envio é configurável em Chaves e senhas:
- *     RASTREADOR_CMD_BLOQUEIO_URL / RASTREADOR_CMD_LIBERACAO_URL: endereço completo (https://...) ou
- *       caminho a partir da URL base (ex.: /commands); {deviceId} no endereço é trocado pelo ID.
- *       Envio: POST com corpo JSON { deviceId, type } (type = engineStop no bloqueio, engineResume na liberação).
- *     RASTREADOR_TOKEN_COMANDOS: chave própria dos comandos (vazio = a mesma chave de leitura).
- *   Os dois endereços vazios = aviso "acesso somente leitura"; preenchidos e com
- *   RASTREADOR_BLOQUEIO_LIGADO = 1, a retirada libera e a devolução bloqueia (com as travas).
+ * Bloqueio da partida (21/10/2026): todo comando ao carro (bloquear, liberar, hodômetro) mora em SGO_Frota_Bloqueio.js,
+ *   com a regra do estudo aprovado (POST /commands {"id":35|36,"deviceId"} da iTracker, chave RASTREADOR_TOKEN_COMANDOS).
+ *   Os endereços RASTREADOR_CMD_BLOQUEIO_URL / RASTREADOR_CMD_LIBERACAO_URL da versão anterior não têm mais efeito.
+ *   Aqui ficam só a leitura, os ganchos da retirada/devolução e a rotina, que chamam o módulo do bloqueio.
  *
  * Limites do rastreador: /positions no máximo a cada 30 segundos; 2 requisições por segundo por IP
  * (o SGO+ espaça as chamadas em 600 ms); HTTP 429 = espera (Retry-After, até 10 s) e tenta de
@@ -55,7 +48,7 @@
  *     alertas é retirado (Rastreador_limparRetencao_, uma vez por dia pela rotina);
  *   - só a gestão da Frota (ADMIN, DIRETORIA, GESTOR, RH, FINANCEIRO) vê localização; o técnico não vê, nem na retirada.
  *
- * Sem os endereços de comando, Rastreador_chamar_ recusa qualquer método que não seja GET.
+ * Sem a chave dos comandos (RASTREADOR_TOKEN_COMANDOS), Rastreador_chamar_ recusa qualquer método que não seja GET.
  *
  * Segurança: as chaves nunca vão para log, e-mail, tela ou retorno de API (Rastreador_limpar_).
  *
@@ -65,7 +58,7 @@
 var RASTR_URL_PADRAO = 'https://api.itrackergo.com.br/v1';
 var RASTR_URLS_ANTIGAS = ['https://acesso.itrackergo.com.br']; // padrão da versão de 17/10 (Traccar): vira a URL da API
 // 19/10/2026: uma frase com o que funciona e o que não funciona (o dono não entendia a tela).
-var RASTR_TEXTO_SOMENTE_LEITURA = 'Acesso somente leitura: funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada; não funciona bloquear nem liberar a partida pelo SGO+ (depende de a empresa do rastreador liberar o acesso com comandos).';
+var RASTR_TEXTO_SOMENTE_LEITURA = 'Sem a chave dos comandos: funcionam a localização, o aviso de uso sem registro, a conferência do KM, o ponto de chegada e a simulação do bloqueio; o SGO+ não envia bloquear nem liberar ao carro (Chaves e senhas > Rastreador da frota > "Chave de acesso dos comandos").';
 var RASTR_ABA_COMANDOS = 'REG_FROTA_RASTREADOR_COMANDOS';
 var RASTR_ABA_ALERTAS = 'REG_FROTA_RASTREADOR_ALERTAS';
 var RASTR_ABA_PONTOS = 'REG_FROTA_RASTREADOR_PONTOS';
@@ -127,12 +120,13 @@ function Rastreador_cfg_() {
   if (RASTR_URLS_ANTIGAS.indexOf(url.toLowerCase()) >= 0) url = RASTR_URL_PADRAO;
   var ret = parseInt(g('RASTREADOR_RETENCAO_DIAS'), 10);
   var pedido = g('RASTREADOR_BLOQUEIO_LIGADO') === '1';
-  var cmdBlq = g('RASTREADOR_CMD_BLOQUEIO_URL'), cmdLib = g('RASTREADOR_CMD_LIBERACAO_URL');
-  // Os dois endereços são exigidos: sem o de liberação não haveria como sair de uma emergência pelo SGO+.
-  var comandos = !!(cmdBlq && cmdLib);
+  // 21/10/2026 (carta da iTracker): comandos em POST /commands, com a chave própria dos comandos (que também lê e acerta o
+  // hodômetro). Os endereços de comando da versão anterior não são mais usados. Sem a chave de leitura, lê com a dos comandos.
+  var tokenComandos = g('RASTREADOR_TOKEN_COMANDOS');
+  var comandos = !!tokenComandos;
   return {
-    url: url, token: g('RASTREADOR_TOKEN'), tokenComandos: g('RASTREADOR_TOKEN_COMANDOS'),
-    cmdBloqueio: cmdBlq, cmdLiberacao: cmdLib, comandosIncompletos: !comandos && !!(cmdBlq || cmdLib),
+    url: url, token: g('RASTREADOR_TOKEN') || tokenComandos, tokenComandos: tokenComandos, tokenLeitura: g('RASTREADOR_TOKEN'),
+    comandosIncompletos: false,
     // usuário e senha da versão Traccar: não são mais usados; ficam aqui só para Rastreador_limpar_ tirá-los de qualquer texto.
     usuario: g('RASTREADOR_USUARIO'), senha: g('RASTREADOR_SENHA'),
     ligado: g('RASTREADOR_LIGADO') === '1',
@@ -231,7 +225,7 @@ function Rastreador_consulta_(params) {
 function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
   o = o || {};
   metodo = String(metodo || 'get').toLowerCase();
-  if (metodo !== 'get' && !c.comandos) throw Rastreador_erro_('o acesso ao rastreador é somente leitura; o SGO+ não envia nada além de consultas', false);
+  if (metodo !== 'get' && !(c.comandos && o.comando)) throw Rastreador_erro_('sem a chave dos comandos o acesso ao rastreador é somente leitura; o SGO+ não envia nada além de consultas', false);
   if (!Rastreador_temCredencial_(c)) {
     throw Rastreador_erro_('falta a chave de acesso do rastreador: o responsável pelo sistema grava a "Chave de acesso (Bearer)" (RASTREADOR_TOKEN) em Chaves e senhas > Rastreador da frota', false);
   }
@@ -240,6 +234,8 @@ function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
     throw Rastreador_erro_('o endereço do rastreador precisa começar com https:// (a empresa do rastreador só aceita HTTPS); o padrão é ' + RASTR_URL_PADRAO + '/', false);
   }
   var chave = o.comando && c.tokenComandos ? c.tokenComandos : c.token;
+  // 21/10/2026: escrita (comando, hodômetro) só com a chave dos comandos, nunca com a de leitura
+  if (metodo !== 'get' && chave !== c.tokenComandos) throw Rastreador_erro_('comando sem a chave dos comandos', false);
   var op = { method: metodo, muteHttpExceptions: true, followRedirects: false, headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' } };
   if (corpo !== undefined) { op.contentType = 'application/json'; op.payload = JSON.stringify(corpo); }
   for (var t = 0; ; t++) {
@@ -313,6 +309,8 @@ function Rastreador_posicao_(p) {
     deviceId: String(p.deviceId), quandoMs: ok ? quando.getTime() : 0, quandoTexto: ok ? Rastreador_agoraTexto_(quando) : '',
     kmh: nos === null ? null : Math.round(nos * RASTR_NOS_PARA_KMH * 10) / 10,
     ignicao: bool(a.ignition), movimento: bool(a.motion), odometroKm: odo === null ? null : Math.round(odo / 1000),
+    // 21/10/2026: relé do bloqueio da partida (true = bloqueada), para a conferência do SGO_Frota_Bloqueio.js
+    bloqueado: bool(a.blocked),
     valida: p.valid === false || p.valid === 'false' ? false : true,
     lat: lat, lon: lon, endereco: SGO_UTILS.safe(p.address),
     link: lat !== null && lon !== null ? 'https://www.google.com/maps?q=' + lat + ',' + lon : ''
@@ -747,26 +745,24 @@ function Rastreador_aposRetirada_(sessao, veiculoId, movId) {
     placa = SGO_UTILS.safe(veiculo.PLACA);
     var dev = SGO_UTILS.safe(veiculo.RASTREADOR_DEVICE_ID);
     if (!dev) return { ativo: false, semDispositivo: true };
-    // Nova retirada: bloqueio pendente da devolução anterior não vale mais (só existe com provedor com comandos).
-    Rastreador_cancelarPendentes_(veiculoId, 'BLOQUEAR', 'Nova retirada registrada antes de o bloqueio ser enviado.');
     var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
-    var km = null, erroLeitura = '';
+    var km = null, erroLeitura = '', pos = null;
     try {
-      var pos = Rastreador_lerPosicoes_(c, dev, { aceitarCacheSeg: 150 })[dev];
+      pos = Rastreador_lerPosicoes_(c, dev, { aceitarCacheSeg: 150 })[dev] || null;
       km = Rastreador_conferirKm_(mov, veiculo, 'SAIDA', pos, sessao);
       Rastreador_conexaoOk_();
     } catch (eLe) {
       erroLeitura = Rastreador_limpar_(eLe && eLe.message, c);
       if (!eLe.rastreadorIntervalo) Rastreador_falhaConexao_(erroLeitura);
     }
-    if (!c.bloqueio || SGO_UTILS.safeUpper(veiculo.RASTREADOR_ACEITA_BLOQUEIO) === 'NAO') {
-      return { ativo: true, bloqueio: false, km: Rastreador_kmParaTela_(km), liberado: null, texto: '' };
-    }
-    return Rastreador_liberarNaRetirada_(c, sessao, veiculo, movId, km, erroLeitura);
+    // 21/10/2026: liberação da partida pela regra nova (SGO_Frota_Bloqueio.js: modo do veículo, simulação, 202 = aguardando sinal)
+    var blq = typeof FrotaBlq_aoRetirar_ === 'function' ? FrotaBlq_aoRetirar_(FrotaBlq_cfg_(), sessao, veiculo, mov || { ID: movId }, pos) : { ativo: false };
+    return { ativo: true, bloqueio: !!blq.ativo, modoBloqueio: blq.modo || '', km: Rastreador_kmParaTela_(km), liberado: blq.ativo ? !!blq.liberado : null,
+      texto: blq.texto || '', aviso: blq.aviso || '', erroLeitura: erroLeitura };
   } catch (e) {
     var m = Rastreador_limpar_(e && e.message, c);
     console.error('Rastreador após retirada: ' + m);
-    return { ativo: true, bloqueio: !!c.bloqueio, liberado: c.bloqueio ? false : null, aviso: c.bloqueio ? 'Partida não liberada pelo rastreador: falha interna do SGO+ (' + m + '). Peça à gestão para liberar.' : '', texto: '' };
+    return { ativo: true, bloqueio: false, liberado: null, aviso: '', texto: '' };
   }
 }
 
@@ -778,12 +774,13 @@ function Rastreador_aposDevolucao_(sessao, veiculoId, movId) {
     var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId) || {};
     var dev = SGO_UTILS.safe(veiculo.RASTREADOR_DEVICE_ID);
     if (!dev) return { ativo: false, semDispositivo: true };
-    Rastreador_cancelarPendentes_(veiculoId, 'LIBERAR', 'Retirada devolvida antes de a liberação ser enviada.');
     var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
     var pos = null, erroLeitura = '', km = null;
     try {
       // com o bloqueio ligado a posição decide o comando: sempre leitura nova (nunca a guardada)
-      pos = Rastreador_lerPosicoes_(c, dev, c.bloqueio ? { fresco: true } : { aceitarCacheSeg: 60 })[dev] || null;
+      // a posição decide o bloqueio: leitura nova; dentro dos 30 s do limite, a guardada (o bloqueio exige posição de até 2 min)
+      try { pos = Rastreador_lerPosicoes_(c, dev, { fresco: true })[dev] || null; }
+      catch (eF) { if (!eF.rastreadorIntervalo) throw eF; pos = (Rastreador_posicoesGuardadas_(c, 60) || {})[dev] || null; }
       Rastreador_gravarChegada_(veiculo, movId, pos);
       km = Rastreador_conferirKm_(mov, veiculo, 'CHEGADA', pos, sessao);
       // sem o hodômetro da retirada (ou aparelho sem hodômetro), confere pela distância do período
@@ -793,8 +790,10 @@ function Rastreador_aposDevolucao_(sessao, veiculoId, movId) {
       erroLeitura = Rastreador_limpar_(eLe && eLe.message, c);
       if (!eLe.rastreadorIntervalo) Rastreador_falhaConexao_(erroLeitura);
     }
-    if (!c.bloqueio || SGO_UTILS.safeUpper(veiculo.RASTREADOR_ACEITA_BLOQUEIO) === 'NAO') return { ativo: true, bloqueio: false, km: Rastreador_kmParaTela_(km), texto: '' };
-    return Rastreador_bloquearNaDevolucao_(c, sessao, veiculo, movId, pos, km, erroLeitura);
+    // 21/10/2026: pedido de bloqueio pela regra nova (SGO_Frota_Bloqueio.js)
+    var pelaGestao = mov && SGO_UTILS.safe(mov.REGISTRO_GESTAO_CHEGADA) === 'SIM';
+    var blq = typeof FrotaBlq_aoDevolver_ === 'function' ? FrotaBlq_aoDevolver_(FrotaBlq_cfg_(), sessao, veiculo, mov || { ID: movId }, pos, pelaGestao) : { ativo: false };
+    return { ativo: true, bloqueio: !!blq.ativo, modoBloqueio: blq.modo || '', bloqueado: !!blq.bloqueado, km: Rastreador_kmParaTela_(km), texto: blq.texto || '' };
   } catch (e) {
     console.error('Rastreador após devolução: ' + Rastreador_limpar_(e && e.message, c));
     return { ativo: true, bloqueado: false, texto: '' };
@@ -857,12 +856,6 @@ function Rastreador_rodada_(o) {
     } catch (e) {
       out.erro = Rastreador_limpar_(e && e.message, c);
       Rastreador_falhaConexao_(out.erro);
-      if (c.comandos) {
-        Rastreador_pendentes_().forEach(function (cmd) {
-          SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, { MOTIVO: 'Aguardando: ' + out.erro + '.', ULTIMA_TENTATIVA_EM: SGO_UTILS.nowIso() });
-        });
-        Rastreador_verificarAtrasos_();
-      }
       return out;
     }
     Rastreador_conexaoOk_();
@@ -884,11 +877,10 @@ function Rastreador_rodada_(o) {
       if (isFinite(fim) && (!ultimaDevolucao[vid] || fim > ultimaDevolucao[vid])) ultimaDevolucao[vid] = fim;
     });
 
-    // 1) comandos pendentes: só com provedor com comandos; com o acesso atual, pendências antigas são canceladas.
-    if (!c.comandos) {
-      Rastreador_pendentes_().forEach(function (cmd) { Rastreador_encerrar_(cmd, 'CANCELADO', RASTR_TEXTO_SOMENTE_LEITURA); out.cancelados++; });
-    } else {
-      Rastreador_rodadaComandos_(c, out, porId, abertas, posicoes, inicio);
+    // 1) bloqueio e liberação da partida (21/10/2026): conferência de 2 minutos da regra nova (SGO_Frota_Bloqueio.js)
+    if (typeof FrotaBlq_rodada_ === 'function') {
+      var rb = FrotaBlq_rodada_(FrotaBlq_cfg_(), posicoes, veiculos, movs, inicio);
+      out.enviados = rb.enviados; out.simulados = rb.simulados; out.pendentes = rb.esperando;
     }
 
     // 2) uso sem registro, 3) KM e ponto de chegada que não foram lidos na hora da retirada/devolução
@@ -950,7 +942,6 @@ function Rastreador_rodada_(o) {
       });
     });
 
-    if (c.comandos) Rastreador_verificarAtrasos_();
     return out;
   } finally {
     try { cache.remove(RASTR_CACHE_RODADA); } catch (e) {}
@@ -1002,12 +993,7 @@ function Rastreador_limparRetencao_(forcar) {
 // endereços RASTREADOR_CMD_BLOQUEIO_URL e RASTREADOR_CMD_LIBERACAO_URL preenchidos (c.comandos). Sem eles
 // (acesso somente leitura de hoje) nada aqui envia, e Rastreador_chamar_ recusa qualquer método além de GET.
 // ------------------------------------------------------------
-/** Endereço do comando: absoluto ou caminho a partir da URL base; {deviceId} é trocado pelo ID do dispositivo. */
-function Rastreador_enderecoComando_(c, tipo, deviceId) {
-  var e = tipo === 'engineStop' ? c.cmdBloqueio : c.cmdLiberacao;
-  return String(e || '').split('{deviceId}').join(encodeURIComponent(String(deviceId)));
-}
-
+/** 21/10/2026: o envio de comandos saiu daqui (SGO_Frota_Bloqueio.js). Esta seção guarda só a regra de "parado" usada pela tela. */
 /** Pode bloquear? Só com posição recente, parado (abaixo de 5 km/h, sem movimento) e ignição desligada. */
 function Rastreador_avaliarParado_(pos) {
   if (!pos) return { pode: false, motivo: 'o rastreador não tem posição deste veículo' };
@@ -1030,137 +1016,15 @@ function Rastreador_avaliarParado_(pos) {
 }
 
 function Rastreador_exigirComandos_(c) {
-  if (!c.comandos) throw new Error(RASTR_TEXTO_SOMENTE_LEITURA + ' Nada foi enviado.');
-}
-
-/** Envia engineStop / engineResume. { ok, naFila, motivo, rede }. Nunca lança erro. */
-function Rastreador_enviar_(c, deviceId, tipo) {
-  if (!c.comandos) return { ok: false, motivo: RASTR_TEXTO_SOMENTE_LEITURA };
-  try {
-    var dev = /^\d+$/.test(String(deviceId)) ? Number(deviceId) : String(deviceId);
-    var res = Rastreador_chamar_(c, 'post', Rastreador_enderecoComando_(c, tipo, deviceId), [], { deviceId: dev, type: tipo }, { comando: true });
-    if (res.http === 200 || res.http === 201 || res.http === 204) return { ok: true, naFila: false, motivo: '' };
-    if (res.http === 202) return { ok: true, naFila: true, motivo: 'aceito pela plataforma e guardado na fila: o aparelho recebe quando se conectar' };
-    if (res.http === 401 || res.http === 403) return { ok: false, motivo: 'a empresa do rastreador recusou o comando por permissão (HTTP ' + res.http + '); a chave de comandos precisa poder bloquear e liberar (Chaves e senhas > Rastreador da frota)' };
-    if (res.http === 404) return { ok: false, motivo: 'a empresa do rastreador não reconheceu o endereço do comando (HTTP 404); confira o endereço do comando de ' + (tipo === 'engineStop' ? 'bloqueio' : 'liberação') + ' em Chaves e senhas' };
-    if (res.http === 429) return { ok: false, rede: true, motivo: 'a empresa do rastreador limitou as consultas (HTTP 429); o SGO+ tenta de novo na próxima rodada' };
-    if (res.http >= 400 && res.http < 500) return { ok: false, rede: res.http === 429, motivo: 'o rastreador recusou o comando (HTTP ' + res.http + (res.txt ? ': ' + Rastreador_limpar_(res.txt.slice(0, 160), c) : '') + ')' };
-    return { ok: false, rede: res.http >= 500, motivo: 'o rastreador respondeu HTTP ' + res.http + ' ao comando' };
-  } catch (e) {
-    return { ok: false, rede: !!(e && e.rastreadorRede), motivo: Rastreador_limpar_(e && e.message, c) };
-  }
-}
-
-function Rastreador_novoComando_(veiculo, acao, origem, movId, sessao, justificativa) {
-  var reg = SGO_DATA.normalizarObjetoParaSheet(RASTR_ABA_COMANDOS, SGO_DATA.gerarRegistroBase({
-    VEICULO_ID: SGO_UTILS.safe(veiculo.ID), PLACA: SGO_UTILS.safe(veiculo.PLACA), DEVICE_ID: SGO_UTILS.safe(veiculo.RASTREADOR_DEVICE_ID),
-    MOVIMENTACAO_ID: movId || '', ACAO: acao, ORIGEM: origem, SITUACAO: 'PENDENTE', PEDIDO_EM: SGO_UTILS.nowIso(),
-    PEDIDO_POR_ID: SGO_UTILS.safe(sessao && sessao.userId), PEDIDO_POR_NOME: SGO_UTILS.safe(sessao && (sessao.nome || sessao.usuario)),
-    JUSTIFICATIVA: justificativa || '', TENTATIVAS: 0, ULTIMA_TENTATIVA_EM: '', MOTIVO: '', ENVIADO_EM: '', ALERTA_ATRASO_EM: '', ENCERRADO_EM: '', ENCERRADO_MOTIVO: ''
-  }));
-  SGO_DATA.insert(RASTR_ABA_COMANDOS, reg);
-  return reg;
-}
-
-/** Uma tentativa de enviar o comando, respeitando as regras. Atualiza a linha. Devolve { enviado, naFila, motivo, rede }. */
-function Rastreador_tentar_(c, cmd, veiculo, pos, sessao) {
-  var acao = SGO_UTILS.safeUpper(cmd.ACAO);
-  var agora = SGO_UTILS.nowIso();
-  var upd = { ULTIMA_TENTATIVA_EM: agora };
-  var r;
-  if (acao === 'BLOQUEAR') {
-    var av = Rastreador_avaliarParado_(pos);
-    if (!av.pode) {
-      upd.MOTIVO = 'Aguardando: ' + av.motivo + '.';
-      SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, upd); Object.assign(cmd, upd);
-      return { enviado: false, motivo: av.motivo };
-    }
-    r = Rastreador_enviar_(c, cmd.DEVICE_ID, 'engineStop');
-  } else {
-    r = Rastreador_enviar_(c, cmd.DEVICE_ID, 'engineResume');
-  }
-  upd.TENTATIVAS = (Number(cmd.TENTATIVAS) || 0) + 1;
-  if (r.ok) {
-    upd.SITUACAO = 'ENVIADO'; upd.ENVIADO_EM = agora; upd.MOTIVO = r.naFila ? r.motivo : '';
-    upd.ENCERRADO_EM = agora; upd.ENCERRADO_MOTIVO = acao === 'BLOQUEAR' ? 'Bloqueio enviado com o veículo parado e a ignição desligada.' : 'Liberação enviada.';
-  } else {
-    upd.MOTIVO = 'Não enviado: ' + r.motivo + '.';
-  }
-  SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, upd); Object.assign(cmd, upd);
-  Frota_auditar_(sessao || RASTR_SISTEMA, {
-    acao: r.ok ? (acao === 'BLOQUEAR' ? 'RASTREADOR_BLOQUEIO_ENVIADO' : 'RASTREADOR_LIBERACAO_ENVIADA') : (acao === 'BLOQUEAR' ? 'RASTREADOR_BLOQUEIO_FALHOU' : 'RASTREADOR_LIBERACAO_FALHOU'),
-    veiculoId: SGO_UTILS.safe(cmd.VEICULO_ID), placa: SGO_UTILS.safe(cmd.PLACA), movimentacaoId: SGO_UTILS.safe(cmd.MOVIMENTACAO_ID),
-    campo: 'PARTIDA', depois: r.ok ? (acao === 'BLOQUEAR' ? 'BLOQUEADA' : 'LIBERADA') : '', justificativa: SGO_UTILS.safe(cmd.JUSTIFICATIVA),
-    detalhe: (acao === 'BLOQUEAR' ? 'Bloqueio da partida' : 'Liberação da partida') + ' do veículo ' + SGO_UTILS.safe(cmd.PLACA) + ' (dispositivo ' + SGO_UTILS.safe(cmd.DEVICE_ID) + ', pedido por ' +
-      (SGO_UTILS.safe(cmd.PEDIDO_POR_NOME) || 'rotina') + ' em ' + SGO_UTILS.safe(cmd.ORIGEM).toLowerCase() + '): ' + (r.ok ? 'enviado' + (r.naFila ? ' (na fila da plataforma)' : '') + '.' : 'não enviado, ' + r.motivo + '.') +
-      (acao === 'BLOQUEAR' && pos ? ' Posição usada: ' + pos.quandoTexto + ', ' + Rastreador_num_(pos.kmh, 0) + ' km/h, ignição ' + (pos.ignicao ? 'ligada' : 'desligada') + '.' : '')
-  });
-  return { enviado: !!r.ok, naFila: !!r.naFila, motivo: r.motivo || '', rede: !!r.rede };
-}
-
-/** Retirada com provedor com comandos: engineResume (falhou: a retirada vale, aviso e alerta à gestão; a rotina tenta de novo). */
-function Rastreador_liberarNaRetirada_(c, sessao, veiculo, movId, km, erroLeitura) {
-  var placa = SGO_UTILS.safe(veiculo.PLACA);
-  var cmd = Rastreador_novoComando_(veiculo, 'LIBERAR', 'RETIRADA', movId, sessao, '');
-  var r = Rastreador_tentar_(c, cmd, veiculo, null, sessao);
-  if (r.rede) Rastreador_falhaConexao_(r.motivo); else if (r.enviado) Rastreador_conexaoOk_();
-  if (r.enviado) return { ativo: true, bloqueio: true, liberado: true, km: Rastreador_kmParaTela_(km), texto: 'Partida liberada pelo rastreador.' + (r.naFila ? ' O comando está na fila da plataforma e chega ao veículo quando o aparelho se conectar.' : '') };
-  var aviso = 'Partida não liberada pelo rastreador: ' + r.motivo + '. Peça à gestão para liberar.';
-  Rastreador_avisarGestao_('Partida não liberada: veículo ' + placa,
-    'A retirada do veículo ' + placa + ' foi registrada por ' + SGO_UTILS.safe(sessao && (sessao.nome || sessao.usuario)) + ', mas o rastreador não liberou a partida (' + r.motivo + ').\n' +
-    'O condutor está aguardando. Libere em Frota > Rastreador > "Liberar partida" ou pelo aplicativo do rastreador. O SGO+ tenta de novo a cada 2 minutos enquanto a retirada estiver aberta.', cmd.ID, 'S36');
-  return { ativo: true, bloqueio: true, liberado: false, km: Rastreador_kmParaTela_(km), aviso: aviso, erroLeitura: erroLeitura };
-}
-
-/** Devolução com provedor com comandos: bloqueio PENDENTE, só enviado com o veículo parado e a ignição desligada. */
-function Rastreador_bloquearNaDevolucao_(c, sessao, veiculo, movId, pos, km, erroLeitura) {
-  var cmd = Rastreador_novoComando_(veiculo, 'BLOQUEAR', 'DEVOLUCAO', movId, sessao, '');
-  if (erroLeitura) {
-    SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, { MOTIVO: 'Aguardando: ' + erroLeitura + '.', ULTIMA_TENTATIVA_EM: SGO_UTILS.nowIso() });
-    return { ativo: true, bloqueio: true, bloqueado: false, km: Rastreador_kmParaTela_(km), texto: 'Bloqueio da partida pendente: o SGO+ envia quando o rastreador mostrar o veículo parado com a ignição desligada.' };
-  }
-  var r = Rastreador_tentar_(c, cmd, veiculo, pos, sessao);
-  if (r.enviado) return { ativo: true, bloqueio: true, bloqueado: true, km: Rastreador_kmParaTela_(km), texto: 'Partida bloqueada pelo rastreador.' };
-  return { ativo: true, bloqueio: true, bloqueado: false, km: Rastreador_kmParaTela_(km), texto: 'Bloqueio da partida pendente (' + r.motivo + '): o SGO+ envia sozinho quando o veículo estiver parado com a ignição desligada. Desligue o veículo normalmente.' };
-}
-
-/** Parte da rodada que trata os comandos pendentes (só provedor com comandos). */
-function Rastreador_rodadaComandos_(c, out, porId, abertas, posicoes, inicio) {
-  Rastreador_pendentes_().forEach(function (cmd) {
-    var v = porId[SGO_UTILS.safe(cmd.VEICULO_ID)];
-    var dev = v ? SGO_UTILS.safe(v.RASTREADOR_DEVICE_ID) : '';
-    if (!v || !dev || dev !== SGO_UTILS.safe(cmd.DEVICE_ID)) { Rastreador_encerrar_(cmd, 'CANCELADO', 'Veículo sem o mesmo dispositivo vinculado.'); out.cancelados++; return; }
-    var acao = SGO_UTILS.safeUpper(cmd.ACAO);
-    var aberta = abertas[SGO_UTILS.safe(v.ID)];
-    if (acao === 'BLOQUEAR' && !c.bloqueio) { Rastreador_encerrar_(cmd, 'CANCELADO', 'Comandos de bloqueio desligados em Chaves e senhas (RASTREADOR_BLOQUEIO_LIGADO).'); out.cancelados++; return; }
-    if (acao === 'BLOQUEAR' && SGO_UTILS.safeUpper(cmd.ORIGEM) === 'DEVOLUCAO' && aberta) { Rastreador_encerrar_(cmd, 'CANCELADO', 'Nova retirada registrada antes de o bloqueio ser enviado.'); out.cancelados++; return; }
-    if (acao === 'LIBERAR' && SGO_UTILS.safe(cmd.MOVIMENTACAO_ID) && (!aberta || SGO_UTILS.safe(aberta.ID) !== SGO_UTILS.safe(cmd.MOVIMENTACAO_ID))) {
-      Rastreador_encerrar_(cmd, 'CANCELADO', 'A retirada já foi devolvida.'); out.cancelados++; return;
-    }
-    if (Date.now() - inicio > RASTR_ORCAMENTO_RODADA_MS) { out.pendentes.push(SGO_UTILS.safe(cmd.PLACA)); return; }
-    var r = Rastreador_tentar_(c, cmd, v, posicoes[dev] || null, RASTR_SISTEMA);
-    if (r.enviado) out.enviados.push(acao + ' ' + SGO_UTILS.safe(cmd.PLACA)); else out.pendentes.push(acao + ' ' + SGO_UTILS.safe(cmd.PLACA) + ': ' + r.motivo);
-    if (r.rede) Rastreador_falhaConexao_(r.motivo);
-  });
-}
-
-function Rastreador_verificarAtrasos_() {
-  Rastreador_pendentes_(null, 'BLOQUEAR').forEach(function (cmd) {
-    var desde = new Date(SGO_UTILS.safe(cmd.PEDIDO_EM)).getTime();
-    if (!isFinite(desde) || Date.now() - desde < RASTR_MIN_BLOQUEIO_ATRASADO * 60000 || SGO_UTILS.safe(cmd.ALERTA_ATRASO_EM)) return;
-    SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, { ALERTA_ATRASO_EM: SGO_UTILS.nowIso() });
-    Frota_auditar_(RASTR_SISTEMA, { acao: 'RASTREADOR_BLOQUEIO_ATRASADO', veiculoId: SGO_UTILS.safe(cmd.VEICULO_ID), placa: SGO_UTILS.safe(cmd.PLACA), movimentacaoId: SGO_UTILS.safe(cmd.MOVIMENTACAO_ID),
-      campo: 'PARTIDA', detalhe: 'Bloqueio pendente há mais de ' + RASTR_MIN_BLOQUEIO_ATRASADO + ' minutos. ' + SGO_UTILS.safe(cmd.MOTIVO) });
-    Rastreador_avisarGestao_('Bloqueio da partida pendente: veículo ' + SGO_UTILS.safe(cmd.PLACA),
-      'O bloqueio da partida do veículo ' + SGO_UTILS.safe(cmd.PLACA) + ' foi pedido em ' + Rastreador_agoraTexto_(new Date(desde)) + ' e ainda não foi enviado.\n' + SGO_UTILS.safe(cmd.MOTIVO) +
-      '\n\nO SGO+ só bloqueia com o veículo parado e a ignição desligada. Confira onde está o veículo em Frota > Rastreador; se precisar, bloqueie pelo aplicativo do rastreador.', cmd.ID, 'S37');
-  });
+  if (!c.comandos) throw new Error('Falta gravar a "Chave de acesso dos comandos" em Chaves e senhas > Rastreador da frota. Nada foi enviado.');
 }
 
 // ------------------------------------------------------------
 // CENTRAL DE PENDÊNCIAS (chamado por Pend_fonteFrota_)
 // ------------------------------------------------------------
 function Rastreador_pendencias_(add, veiculos, condutores) {
+  // 21/10/2026: decisões do bloqueio da partida (fora da base, retirada esquecida, fila, passagem, odômetro)
+  if (typeof FrotaBlq_pendencias_ === 'function') { try { FrotaBlq_pendencias_(add); } catch (eB) { console.error('Pendências do bloqueio: ' + ((eB && eB.message) || eB)); } }
   if (!Pend_abaExiste_(RASTR_ABA_ALERTAS) && !Pend_abaExiste_(RASTR_ABA_COMANDOS)) return;
   if (Pend_abaExiste_(RASTR_ABA_ALERTAS)) Pend_ler_(RASTR_ABA_ALERTAS).forEach(function (a) {
     if (SGO_UTILS.safeUpper(a.SITUACAO) !== 'ABERTO') return;
@@ -1271,7 +1135,7 @@ function Frota_apiListarRastreador(sessionId) {
   Rastreador_exigirGestao_(sessionId);
   var c = Rastreador_cfg_();
   var props = PropertiesService.getScriptProperties();
-  var out = { ok: true, ligado: c.ligado, bloqueio: c.bloqueio, bloqueioPedido: c.bloqueioPedido, somenteLeitura: !c.comandos, textoSomenteLeitura: c.comandos ? '' : RASTR_TEXTO_SOMENTE_LEITURA,
+  var out = { ok: true, ligado: c.ligado, bloqueio: c.bloqueio, bloqueioPedido: c.bloqueioPedido, somenteLeitura: false, textoSomenteLeitura: '',
     comandosIncompletos: !!c.comandosIncompletos, provedor: c.provedor.nome, configurado: Rastreador_temCredencial_(c), retencaoDias: c.retencaoDias,
     endereco: c.url.replace(/^https?:\/\//, ''), ultimaRodada: '', ultimaLeituraOk: '', dispositivos: [], dispositivosErro: '', veiculos: [], comandos: [], alertas: [] };
   var ur = Number(props.getProperty(RASTR_PROP_ULTIMA_RODADA) || 0);
@@ -1399,62 +1263,20 @@ function Frota_apiRastreadorConferirComandos(sessionId, payload) {
   return { ok: true, placa: v.PLACA, aceitaBloqueio: aceita };
 }
 
-/** "Liberar partida" (gestão, com justificativa). Só com provedor com comandos; com o acesso atual é recusado com a explicação. */
+/** "Liberar partida" da tela antiga: agora é a liberação de emergência da regra nova (SGO_Frota_Bloqueio.js). */
 function Frota_apiRastreadorLiberar(sessionId, payload) {
-  var sessao = Rastreador_exigirGestao_(sessionId);
   payload = payload || {};
-  var c = Rastreador_cfg_();
-  Rastreador_exigirComandos_(c);
-  Rastreador_exigirLigado_(c, 'Nada foi enviado.');
-  var v = Rastreador_veiculo_(payload.veiculoId);
-  Rastreador_exigirDispositivo_(v);
-  var just = Frota_exigirJustificativa_(payload.justificativa, ['liberação da partida do veículo ' + v.PLACA + ' pela gestão'], 'condutor sem sinal no celular, retirada confirmada por telefone');
-  var cancelados = Rastreador_cancelarPendentes_(SGO_UTILS.safe(v.ID), 'BLOQUEAR', 'Partida liberada pela gestão (' + (sessao.nome || sessao.usuario) + ').');
-  Rastreador_cancelarPendentes_(SGO_UTILS.safe(v.ID), 'LIBERAR', 'Substituído pela liberação feita pela gestão.');
-  var aberta = Frota_veiculosComSituacao_().filter(function (x) { return SGO_UTILS.safe(x.ID) === SGO_UTILS.safe(v.ID); })[0] || {};
-  var cmd = Rastreador_novoComando_(v, 'LIBERAR', 'GESTAO', SGO_UTILS.safe(aberta.MOVIMENTACAO_ID), sessao, just);
-  Frota_auditar_(sessao, { acao: 'RASTREADOR_LIBERAR_GESTAO', veiculoId: SGO_UTILS.safe(v.ID), placa: SGO_UTILS.safe(v.PLACA), movimentacaoId: SGO_UTILS.safe(aberta.MOVIMENTACAO_ID),
-    campo: 'PARTIDA', depois: 'LIBERAR', justificativa: just, detalhe: 'Liberação da partida pedida pela gestão' + (cancelados ? '; bloqueio pendente cancelado' : '') + '.' });
-  var r = Rastreador_tentar_(c, cmd, v, null, sessao);
-  if (r.rede) Rastreador_falhaConexao_(r.motivo); else if (r.enviado) Rastreador_conexaoOk_();
-  if (!r.enviado) {
-    Rastreador_encerrar_(cmd, 'FALHOU', r.motivo);
-    throw new Error('A partida do veículo ' + v.PLACA + ' não foi liberada: ' + r.motivo + '. Tente de novo em alguns minutos ou libere pelo aplicativo do rastreador. O pedido ficou na trilha de auditoria.');
-  }
-  return { ok: true, placa: v.PLACA, texto: 'Partida do veículo ' + v.PLACA + ' liberada.' + (r.naFila ? ' O comando está na fila da plataforma e chega quando o aparelho se conectar.' : '') + (cancelados ? ' O bloqueio pendente foi cancelado.' : '') };
+  return Frota_apiBloqueioLiberarAgora(sessionId, { veiculoId: payload.veiculoId, motivo: payload.justificativa || payload.motivo });
 }
 
-/** "Bloquear agora" (gestão, com justificativa). Só com provedor com comandos; também só envia com o veículo parado e a ignição desligada. */
+/**
+ * "Bloquear agora" da tela antiga: desde 21/10/2026 o bloqueio manual é só o de roubo, pela Diretoria, com dupla
+ * confirmação (Frota > Rastreamento > Bloqueio da partida). O bloqueio do dia a dia sai sozinho depois da devolução.
+ */
 function Frota_apiRastreadorBloquear(sessionId, payload) {
-  var sessao = Rastreador_exigirGestao_(sessionId);
-  payload = payload || {};
-  var c = Rastreador_cfg_();
-  Rastreador_exigirComandos_(c);
-  Rastreador_exigirLigado_(c, 'Nada foi enviado.');
-  if (!c.bloqueio) throw new Error('Os comandos de bloqueio estão desligados no SGO+ (Chaves e senhas > Rastreador, RASTREADOR_BLOQUEIO_LIGADO): só o monitoramento está ativo. Nada foi enviado.');
-  var v = Rastreador_veiculo_(payload.veiculoId);
-  var dev = Rastreador_exigirDispositivo_(v);
-  if (SGO_UTILS.safeUpper(v.RASTREADOR_ACEITA_BLOQUEIO) === 'NAO') throw new Error('O dispositivo do veículo ' + v.PLACA + ' não aceita bloquear pela plataforma (conferido em Frota > Rastreador). Nada foi enviado.');
-  var just = Frota_exigirJustificativa_(payload.justificativa, ['bloqueio da partida do veículo ' + v.PLACA + ' pela gestão'], 'veículo devolvido sem registro, bloqueio até a conferência');
-  var jaPendente = Rastreador_pendentes_(SGO_UTILS.safe(v.ID), 'BLOQUEAR')[0];
-  if (jaPendente) {
-    return { ok: true, placa: v.PLACA, enviado: false, texto: 'Já existe um bloqueio pendente para o veículo ' + v.PLACA + ' desde ' + Rastreador_agoraTexto_(new Date(jaPendente.PEDIDO_EM)) + '. ' + SGO_UTILS.safe(jaPendente.MOTIVO) };
-  }
-  Rastreador_cancelarPendentes_(SGO_UTILS.safe(v.ID), 'LIBERAR', 'Bloqueio pedido pela gestão.');
-  var aberta = Frota_veiculosComSituacao_().filter(function (x) { return SGO_UTILS.safe(x.ID) === SGO_UTILS.safe(v.ID); })[0] || {};
-  var cmd = Rastreador_novoComando_(v, 'BLOQUEAR', 'GESTAO', SGO_UTILS.safe(aberta.MOVIMENTACAO_ID), sessao, just);
-  Frota_auditar_(sessao, { acao: 'RASTREADOR_BLOQUEAR_GESTAO', veiculoId: SGO_UTILS.safe(v.ID), placa: SGO_UTILS.safe(v.PLACA), movimentacaoId: SGO_UTILS.safe(aberta.MOVIMENTACAO_ID),
-    campo: 'PARTIDA', depois: 'BLOQUEAR', justificativa: just, detalhe: 'Bloqueio da partida pedido pela gestão' + (aberta.MOVIMENTACAO_ID ? ' com retirada aberta de ' + (aberta.CONDUTOR_NOME || 'condutor não localizado') : '') + '.' });
-  var pos = null, erroLeitura = '';
-  try { pos = Rastreador_lerPosicoes_(c, dev, { fresco: true })[dev] || null; Rastreador_conexaoOk_(); }
-  catch (e) { erroLeitura = Rastreador_limpar_(e && e.message, c); if (e && e.rastreadorRede) Rastreador_falhaConexao_(erroLeitura); }
-  if (erroLeitura) {
-    SGO_DATA.update(RASTR_ABA_COMANDOS, cmd.ID, { MOTIVO: 'Aguardando: ' + erroLeitura + '.', ULTIMA_TENTATIVA_EM: SGO_UTILS.nowIso() });
-    return { ok: true, placa: v.PLACA, enviado: false, texto: 'Bloqueio pendente: não foi possível ler a posição agora (' + erroLeitura + '). O SGO+ tenta de novo a cada 2 minutos e só envia com o veículo parado e a ignição desligada.' };
-  }
-  var r = Rastreador_tentar_(c, cmd, v, pos, sessao);
-  if (r.enviado) return { ok: true, placa: v.PLACA, enviado: true, texto: 'Partida do veículo ' + v.PLACA + ' bloqueada.' + (r.naFila ? ' O comando está na fila da plataforma.' : '') };
-  return { ok: true, placa: v.PLACA, enviado: false, texto: 'Bloqueio pendente (' + r.motivo + '). O SGO+ envia sozinho quando o veículo estiver parado com a ignição desligada; nunca em movimento.' };
+  Rastreador_exigirGestao_(sessionId);
+  throw new Error('O bloqueio manual mudou: o bloqueio do dia a dia sai sozinho depois da devolução (com o carro conectado, parado e desligado). ' +
+    'Em caso de roubo, a Diretoria usa "Bloqueio de roubo" em Frota > Rastreamento > Bloqueio da partida, com dupla confirmação. Nada foi enviado.');
 }
 
 function Frota_apiRastreadorConferirAlerta(sessionId, payload) {
@@ -1481,7 +1303,7 @@ function Frota_apiRastreadorAtualizarAgora(sessionId) {
   if (r.erro) throw new Error('Não foi possível ler o rastreador: ' + r.erro + '. A gestão recebeu o alerta de conexão; tente de novo em alguns minutos.');
   return { ok: true, texto: 'Rastreador lido: ' + r.posicoes + (r.posicoes === 1 ? ' posição' : ' posições') +
     (r.usoSemRegistro.length ? '; uso sem registro: ' + r.usoSemRegistro.join(', ') : '; nenhum uso sem registro') + (r.km.length ? '; KM conferido: ' + r.km.join(', ') : '') +
-    (c.comandos ? '; ' + r.enviados.length + (r.enviados.length === 1 ? ' comando enviado' : ' comandos enviados') + (r.pendentes.length ? '; ' + r.pendentes.length + ' pendente(s)' : '') : '') + '.' };
+    '; bloqueio da partida: ' + r.enviados.length + ' comando(s) enviado(s), ' + (r.simulados || []).length + ' simulado(s)' + (r.pendentes.length ? ', ' + r.pendentes.length + ' aguardando' : '') + '.' };
 }
 
 // ------------------------------------------------------------
@@ -1499,8 +1321,8 @@ function Rastreador_testarConexao_() {
       funcionou: true, total: lista.length,
       dispositivos: lista.map(function (d) { return { id: d.id, nome: d.nome, situacao: d.situacao === 'online' ? 'conectado' : (d.situacao === 'offline' ? 'desconectado' : (d.situacao ? 'sem informação' : '')) }; }),
       texto: 'Funcionou: a empresa do rastreador respondeu (' + c.url.replace(/^https?:\/\//, '') + ') e encontrou ' + lista.length + (lista.length === 1 ? ' veículo' : ' veículos') + '.' +
-        (c.comandos ? ' Endereços de comando preenchidos (o teste não envia comando); bloqueio da partida ' + (c.bloqueioPedido ? 'ligado.' : 'ainda desligado.')
-          : ' Acesso somente leitura: o SGO+ monitora, mas não bloqueia nem libera a partida.' + (c.comandosIncompletos ? ' Falta um dos dois endereços de comando (bloqueio e liberação).' : '')) + (c.ligado ? '' : ' O rastreador continua desligado no SGO+ até "Rastreador ligado no SGO+" = Ligado.')
+        (c.comandos ? ' Chave dos comandos gravada (o teste não envia comando); bloqueio da partida pelo SGO+ ' + (c.bloqueioPedido ? 'ligado.' : 'ainda desligado (os veículos trabalham em simulação).')
+          : ' Sem a chave dos comandos: o SGO+ monitora e simula, mas não bloqueia nem libera a partida.') + (c.ligado ? '' : ' O rastreador continua desligado no SGO+ até "Rastreador ligado no SGO+" = Ligado.')
     };
   } catch (e) {
     return { funcionou: false, texto: 'Não funcionou: ' + Rastreador_limpar_(e && e.message, c) + '.', dispositivos: [] };

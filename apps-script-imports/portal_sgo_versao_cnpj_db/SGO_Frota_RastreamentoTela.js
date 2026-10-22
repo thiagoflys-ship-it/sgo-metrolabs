@@ -156,6 +156,8 @@ function Frota_obterTelaRastreamento() {
   var t = { css: FROTAR_TELA_CSS, js: (typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() + '\n' : '') + '(' + FrotaR_telaNavegador_.toString() + ')();' };
   // 20/10/2026: a tela das reservas (SGO_Frota_ReservasTela.js) vem junto, na mesma chamada.
   if (typeof Frota_telaReservas_ === 'function') { var r = Frota_telaReservas_(); t.css += '\n' + r.css; t.js += '\n' + r.js; }
+  // 21/10/2026: a tela do bloqueio da partida (SGO_Frota_BloqueioTela.js), parte da aba Rastreamento.
+  if (typeof Frota_telaBloqueio_ === 'function') { var b = Frota_telaBloqueio_(); t.css += '\n' + b.css; t.js += '\n' + b.js; }
   return t;
 }
 
@@ -165,7 +167,7 @@ function FrotaR_telaNavegador_() {
   var LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
   var LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
   var CENTRO = [-16.6869, -49.2648];
-  var SUBS = [['mapa', 'Mapa ao vivo'], ['rotas', 'Rotas'], ['combustivel', 'Combustível e KM'], ['relatorios', 'Relatórios'], ['aparelhos', 'Aparelhos e alertas'], ['config', 'Privacidade e configuração']];
+  var SUBS = [['mapa', 'Mapa ao vivo'], ['rotas', 'Rotas'], ['combustivel', 'Combustível e KM'], ['relatorios', 'Relatórios'], ['aparelhos', 'Aparelhos e alertas'], ['bloqueio', 'Bloqueio da partida'], ['config', 'Privacidade e configuração']];
 
   function esc(v) { return tplFrota_esc(v); }
   // 21/10/2026: identificação dos veículos (apelido e base). O servidor manda rotuloVeiculo/identVeiculo em cada veículo;
@@ -266,6 +268,8 @@ function FrotaR_telaNavegador_() {
     else if (s === 'rotas') telaRotas(corpo);
     else if (s === 'combustivel') telaCombustivel(corpo);
     else if (s === 'relatorios') telaRelatorios(corpo);
+    // 21/10/2026: bloqueio e liberação da partida (SGO_Frota_BloqueioTela.js)
+    else if (s === 'bloqueio') { if (typeof window.tplFrotaBlq_montar_ === 'function') window.tplFrotaBlq_montar_(corpo); else corpo.innerHTML = '<p class="muted">A tela do bloqueio da partida não carregou. Atualize a página e abra de novo.</p>'; }
     else telaConfig(corpo);
   }
 

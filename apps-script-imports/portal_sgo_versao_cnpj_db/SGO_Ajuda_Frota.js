@@ -6,6 +6,8 @@
  * 20/10/2026: aba Rastreamento (mapa ao vivo, rotas, combustível e KM, relatórios, privacidade), Gantt e copiloto em Gestão e melhoria, comprovantes pedidos.
  * 20/10/2026: reservas de veículo (aba Reservas, devolução prevista na retirada, retirada bloqueada por reserva e liberação pela gestão).
  * 21/10/2026: identificação fácil dos veículos (apelido, base, "Sugerir apelido", escolha da base nas listas, mapa, reservas e Gantt).
+ * 21/10/2026, à noite: bloqueio e liberação da partida (passar o carro, assumir o carro, pergunta da retirada esquecida, devolução só
+ *   com o carro desligado; tela "Bloqueio da partida" da gestão em frota/bloqueio_da_partida). Rótulo: apelido e base na frente, cor como cadastrada.
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -22,7 +24,7 @@ function SGO_ajudaTelas_Frota_() {
         { titulo: "Retirar um veículo", itens: [
           "Toque em \"Frota\" no menu.",
           "Se aparecerem os botões das bases (\"Todas\", \"Goiânia\", \"Rio de Janeiro\"...), toque na sua base. A escolha fica guardada no aparelho.",
-          "Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis. O nome grande é o apelido do carro (ex.: Onça); embaixo vêm a placa, o modelo, a cor e a base.",
+          "Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis. O nome grande é o apelido do carro (ex.: Onça); embaixo vêm a base, a placa, o modelo e a cor.",
           "Olhe o número no painel do carro.",
           "Se for igual ao KM que já aparece, não mexa.",
           "Se for diferente, corrija o número e toque em \"Tirar foto do painel (obrigatória: KM diferente)\".",
@@ -35,6 +37,7 @@ function SGO_ajudaTelas_Frota_() {
           "Espere o aviso \"Retirada registrada\"."
         ] },
         { titulo: "Devolver o veículo", itens: [
+          "Estacione e DESLIGUE o carro antes. Com o carro ligado ou andando o SGO+ não aceita a devolução (o bloqueio da partida sai depois dela).",
           "Abra a Frota (ou o Início, no celular).",
           "Toque no botão verde \"Devolver\" com o apelido e a placa do veículo.",
           "Digite o KM que está no painel agora.",
@@ -43,6 +46,25 @@ function SGO_ajudaTelas_Frota_() {
           "Se quiser, abra \"Mais fotos e observações (opcional)\".",
           "Toque em \"Confirmar devolução\".",
           "Espere o aviso \"Devolução registrada\"."
+        ] },
+        { titulo: "Passar o carro para um colega (troca de condutor, sem devolver)", itens: [
+          "Use quando outra pessoa vai seguir com o carro (por exemplo, numa viagem a dois). Não devolva: a devolução pede o bloqueio da partida.",
+          "Embaixo do botão \"Devolver\", toque em \"Passar o ... para outra pessoa (sem devolver)\".",
+          "Escolha a pessoa. Só aparece quem tem autorização de dirigir (condutor ativo com CNH válida).",
+          "Se souber, digite o KM do painel. Toque em \"Passar o carro\".",
+          "Entregue a chave. Quando a pessoa tocar em \"Assumi o carro\" (com o KM do painel), o carro passa a ser dela. A partida continua liberada.",
+          "Sem internet: o pedido fica guardado no celular com a hora e vai sozinho quando a internet voltar."
+        ] },
+        { titulo: "Receber ou assumir um carro que está com outra pessoa", itens: [
+          "Se a pessoa já passou o carro para você: aparece o aviso \"... quer passar o ... para você\". Com a chave na mão, toque em \"Assumi o carro\" e digite o KM do painel.",
+          "Se você vai seguir com o carro e a pessoa não pediu: abra \"Em uso por outras pessoas\" e toque em \"Assumir o ...\". Digite o KM do painel. Quem está com o carro confirma no aplicativo (ou a gestão autoriza).",
+          "Até a confirmação o carro continua com a outra pessoa. Depois, você é quem devolve no fim."
+        ] },
+        { titulo: "Responder \"Você ainda está com o carro?\"", itens: [
+          "Aparece quando o carro está parado na base há mais de 1 hora com a retirada aberta no seu nome.",
+          "Já terminou: toque em \"Devolver\" e faça a devolução normal.",
+          "Ainda vai usar: toque em \"Continuar com ele\".",
+          "Sem resposta em 1 hora, a gestão é avisada e pode encerrar a retirada (só com o carro parado, desligado e na base)."
         ] },
         { titulo: "Continuar uma retirada que ficou pela metade", itens: [
           "Abra a Frota.",
@@ -69,7 +91,10 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Aviso vermelho \"Vencido\" (avisos da frota)", significado: "Documento, manutenção ou CNH com prazo vencido. A gestão precisa resolver." },
         { nome: "Aviso amarelo \"A vencer\"", significado: "Vence em até 30 dias." },
         { nome: "Aviso vermelho \"Multa a conferir\"", significado: "Chegou multa e o sistema não achou com certeza quem estava com o veículo. A gestão confere." },
-        { nome: "Aviso vermelho no topo sobre o rastreador", significado: "Só aparece quando a empresa do rastreador liberar o bloqueio da partida (hoje não há). A partida do veículo não foi liberada. A retirada já está registrada. Ligue para a gestão." }
+        { nome: "Aviso vermelho no topo sobre a partida", significado: "A liberação da partida ainda não chegou ao carro (por exemplo, o carro estava sem sinal). A retirada já está registrada. Tente ligar em alguns minutos; se não pegar, ligue para a gestão, que usa \"Liberar agora\"." },
+        { nome: "Aviso amarelo \"Você ainda está com o ...?\"", significado: "O carro está parado na base há mais de 1 hora com a retirada no seu nome. Responda \"Devolver\" ou \"Continuar com ele\"." },
+        { nome: "Aviso \"... quer passar o ... para você\" ou \"... pediu para assumir o ...\"", significado: "Um pedido de passar o carro esperando a sua confirmação." },
+        { nome: "Aviso \"Sem internet: esta é a tela de ...\"", significado: "O celular está sem internet. Passar e assumir o carro ficam guardados no celular e vão sozinhos depois." }
       ],
       problemas: [
         { situacao: "Deu erro ao confirmar, ou o sinal está fraco", oQueFazer: "Não saia da tela. O sistema tenta de novo sozinho. Se a tela pedir, toque de novo em \"Confirmar retirada\" ou \"Confirmar devolução\": as fotos já enviadas não são enviadas outra vez." },
@@ -84,7 +109,10 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "Dois carros iguais (mesmo modelo e cor)", oQueFazer: "Confira o apelido e a placa no cartão antes de tocar. O apelido também está na chave ou no painel do carro, se a gestão colou a etiqueta." },
         { situacao: "\"Nenhum veículo disponível agora\"", oQueFazer: "Todos estão em uso. Veja em \"Em uso por outras pessoas\". A lista se atualiza sozinha quando alguém devolver." },
         { situacao: "\"O veículo ... não está mais disponível. A lista foi atualizada.\"", oQueFazer: "Outra pessoa retirou antes. Escolha outro veículo." },
-        { situacao: "\"Partida não liberada pelo rastreador\" (só quando o bloqueio da partida estiver ligado)", oQueFazer: "A retirada já está registrada. Não registre de novo. Ligue para a gestão, que libera a partida." },
+        { situacao: "\"Liberação aguardando sinal do carro\" ou \"Partida não liberada agora\"", oQueFazer: "A retirada já está registrada. Não registre de novo. O SGO+ tenta de novo a cada 2 minutos. Se precisar sair já, ligue para a gestão, que usa \"Liberar agora\"." },
+        { situacao: "\"Devolução não registrada: o rastreador mostra o ... com a ignição ligada\" (ou andando)", oQueFazer: "Estacione, desligue o carro, espere 1 minuto e toque em \"Confirmar devolução\" de novo. Se outra pessoa vai seguir com o carro, use \"Passar o carro\" em vez de devolver." },
+        { situacao: "\"O veículo ... já está retirado por ...\" e você vai seguir com ele", oQueFazer: "Não faça retirada nova. Abra \"Em uso por outras pessoas\" e toque em \"Assumir o ...\"." },
+        { situacao: "\"... não pode receber o carro: CNH vencida\" (ou sem validade)", oQueFazer: "Só recebe o carro quem tem autorização de dirigir. A gestão atualiza a CNH em Frota > Veículos e condutores > Condutores." },
         { situacao: "\"Não foi possível carregar a frota agora\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\". Se continuar, avise o administrador." },
         { situacao: "\"Retirada não registrada: o veículo ... está reservado por ...\"", oQueFazer: "Outra pessoa reservou este veículo e a sua devolução prevista (mais a folga de 1 hora) passa do início da reserva dela. Toque num dos botões \"Retirar o ... em vez deste\" para levar um veículo livre, ou, se você devolve antes, corrija a devolução prevista e confirme de novo. Se precisar mesmo deste veículo, fale com a gestão: só ela libera, com justificativa, e quem reservou é avisado." },
         { situacao: "Cartão do veículo com \"Reservado para ...\"", oQueFazer: "O veículo pode ser retirado só se você devolver até o horário mostrado em \"devolva até\". Se não, escolha outro veículo." },
@@ -104,7 +132,9 @@ function SGO_ajudaTelas_Frota_() {
         { p: "Toquei duas vezes em confirmar. Ficou em dobro?", r: "Não. O botão vira \"Registrando…\" e fica desligado. Se o pedido se repetir, aparece \"já estava registrada\" e nada é gravado em dobro." },
         { p: "Para que serve a devolução prevista?", r: "Para proteger quem reservou o veículo depois de você. Se a devolução passar do início da próxima reserva, você recebe a cobrança no sistema e em Minhas atividades, e a gestão e quem reservou são avisados." },
         { p: "O que é o nome grande no cartão do veículo (Onça, Tucano...)?", r: "É o apelido do carro, para não confundir carros de mesmo modelo e cor. Cada veículo ativo tem um apelido diferente. Sem apelido, aparece a placa." },
-        { p: "Para que serve a vistoria na devolução?", r: "Para comparar com a saída. Se um item saiu OK e voltou com problema, fica claro que aconteceu durante o uso." }
+        { p: "Para que serve a vistoria na devolução?", r: "Para comparar com a saída. Se um item saiu OK e voltou com problema, fica claro que aconteceu durante o uso." },
+        { p: "O carro pode ser bloqueado comigo dirigindo?", r: "Não. Com a retirada aberta o carro fica liberado, mesmo em viagem de dias. O bloqueio só é pedido depois da devolução e só sai com o carro parado, desligado e com sinal." },
+        { p: "Vou trocar de condutor na viagem. Devolvo?", r: "Não. Use \"Passar o carro\": ninguém devolve e nenhum comando vai para o carro. Funciona até sem internet." }
       ]
     },
 
@@ -354,7 +384,7 @@ function SGO_ajudaTelas_Frota_() {
       "titulo": "Rastreador e bloqueio da partida",
       "paraQueServe": "Mostrar à gestão onde cada veículo está e se está andando. O SGO+ lê o rastreador a cada 2 minutos e: 1) avisa se um veículo andar sem retirada registrada; 2) confere o KM rodado de cada retirada com o que o rastreador mediu; 3) guarda o local onde o veículo parou na devolução.",
       "antesDeComecar": [
-        "Acesso somente leitura: funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada; não funciona bloquear nem liberar a partida pelo SGO+ (depende de a empresa do rastreador liberar o acesso com comandos).",
+        "O bloqueio e a liberação da partida ficam na parte \"Bloqueio da partida\" da aba Rastreamento (a regra, os modos de cada carro e o registro estão lá).",
         "O hodômetro do aparelho conta desde a instalação e não é o número do painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). O SGO+ compara o KM rodado, não esses números.",
         "Abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado: a tela mostra \"parado, ignição desligada\" e o SGO+ não trata como uso.",
         "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada, abaixo de 5 km/h e com posição recente.",
@@ -398,12 +428,10 @@ function SGO_ajudaTelas_Frota_() {
           ]
         },
         {
-          "titulo": "Quando o acesso com comandos estiver ligado: liberar ou bloquear a partida",
+          "titulo": "Liberar a partida em emergência",
           "itens": [
-            "Em \"Liberar ou bloquear a partida\", escolha o veículo e escreva a justificativa (pelo menos 15 letras).",
-            "Toque em \"Liberar partida\" ou em \"Bloquear agora\" e confirme.",
-            "Se o veículo estiver andando ou o GPS ainda oscilando, o bloqueio fica pendente até ele parar.",
-            "No celular: Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"."
+            "\"Liberar partida\" desta parte (e, no celular, Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\" > \"Liberar agora (emergência)\") faz a liberação de emergência: escreva o motivo e confirme.",
+            "\"Bloquear agora\" não envia mais nada: o bloqueio do dia a dia sai sozinho depois da devolução, e o bloqueio de roubo é da Diretoria, na parte \"Bloqueio da partida\"."
           ]
         }
       ],
@@ -438,7 +466,7 @@ function SGO_ajudaTelas_Frota_() {
         },
         {
           "nome": "Comando \"Pendente\", \"Enviado\", \"Cancelado\" ou \"Não enviado\"",
-          "significado": "Só com acesso com comandos. Pendente: esperando o veículo parar. Cancelado: uma nova retirada cancelou o bloqueio. Não enviado: tente de novo ou use o aplicativo do rastreador."
+          "significado": "Histórico da versão anterior (até 21/10/2026). Os comandos de agora ficam no registro da parte \"Bloqueio da partida\"."
         }
       ],
       "problemas": [
@@ -460,7 +488,7 @@ function SGO_ajudaTelas_Frota_() {
         },
         {
           "situacao": "Condutor diz \"Partida não liberada pelo rastreador\"",
-          "oQueFazer": "Só acontece com o acesso com comandos ligado. A retirada já está registrada. Libere a partida aqui ou no aplicativo do rastreador."
+          "oQueFazer": "A retirada já está registrada. Use \"Liberar agora\" na parte \"Bloqueio da partida\" (com o motivo) ou a central 24 h da iTracker."
         },
         {
           "situacao": "\"não tem aparelho do rastreador ligado\"",
@@ -493,7 +521,7 @@ function SGO_ajudaTelas_Frota_() {
       "antesDeComecar": [
         "O rastreador precisa estar configurado pelo responsável pelo sistema (Configurações > Chaves e senhas > Rastreador da frota). Sem isso, a tela diz \"Rastreador não configurado\" e o caminho para configurar.",
         "Cada veículo precisa estar ligado ao aparelho dele, na parte \"Aparelhos e alertas\".",
-        "O acesso ao rastreador é só de leitura: nada aqui bloqueia ou manda comando ao veículo.",
+        "Mapa, rotas, combustível e relatórios só leem o rastreador. Comandos ao carro (liberar, bloquear, odômetro) só na parte \"Bloqueio da partida\".",
         "Toda abertura do mapa, consulta de rota e relatório com localização fica registrada em \"Privacidade e configuração > Quem consultou\"."
       ],
       "passos": [
@@ -635,6 +663,97 @@ function SGO_ajudaTelas_Frota_() {
           "p": "Como é calculado o consumo?",
           "r": "Pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. A média do veículo é a mediana de todo o histórico dele."
         }
+      ]
+    },
+
+    "frota/bloqueio_da_partida": {
+      titulo: "Bloqueio da partida (Rastreamento > Bloqueio da partida)",
+      paraQueServe: "Garantir que o carro só pega com a retirada registrada no SGO+, sem nunca cortar o motor de quem está dirigindo. A retirada libera a partida; a devolução pede o bloqueio, que só sai com o carro conectado, parado e desligado. Aqui a gestão vê cada carro, decide os casos que o sistema não decide sozinho e acompanha o registro.",
+      antesDeComecar: [
+        "Só a gestão da Frota abre esta parte. \"Liberar agora\": Administrador, Diretoria, Gestor e RH. Odômetro: Gestor e Administrador. Bloqueio de roubo: só a Diretoria.",
+        "Modos de cada carro: Ativo (manda o comando de verdade), Simulação (faz tudo e só registra o que teria feito) e Desligado. Começo do piloto: o Onix em Ativo e os outros em Simulação.",
+        "Ativo só manda comando de verdade depois que o responsável pelo sistema grava a \"Chave de acesso dos comandos\" e liga \"Bloqueio da partida pelo SGO+\" em Chaves e senhas > Rastreador da frota. Até lá o cartão mostra \"Ativo aguardando liberação\" e o carro trabalha em simulação.",
+        "Configure a área de cada base (centro e raio) no fim da tela. Sem ela, toda devolução vai para a decisão da gestão.",
+        "Regras: com retirada aberta o carro fica liberado, mesmo em viagem de dias; o bloqueio nunca sai com o carro andando, ligado ou sem sinal; devolução fora da base não bloqueia sozinha; um bloqueio aceito com o carro sem conexão (fila do rastreador) é tratado como NÃO feito; a conferência a cada 2 minutos compara o que deveria estar com o relé do carro."
+      ],
+      passos: [
+        { titulo: "Ver como está cada carro", itens: [
+          "Abra Frota > Rastreamento > \"Bloqueio da partida\".",
+          "Cada cartão mostra o modo, a triagem do sinal, quem está com o carro, a partida no carro (liberada ou bloqueada), o sinal, a situação, a base, o último comando e o que está pendente.",
+          "A tela não se atualiza sozinha. Toque em \"Atualizar\" para ler de novo."
+        ] },
+        { titulo: "Decidir um carro devolvido fora da base", itens: [
+          "Em \"Decisões pendentes\", no cartão \"Devolvido fora da base: bloquear?\", toque em \"Bloquear\" ou \"Não bloquear\".",
+          "Escreva a justificativa e confirme.",
+          "\"Bloquear\" só sai com o carro conectado, parado e desligado. \"Não bloquear\" vale até a próxima retirada."
+        ] },
+        { titulo: "Retirada esquecida", itens: [
+          "Carro parado na base há 1 hora com retirada aberta: o SGO+ pergunta ao condutor. Sem resposta em mais 1 hora, aparece aqui e na Caixa de decisões.",
+          "Se alguém precisa do carro, prefira autorizar \"Passar o carro\" (o carro não é bloqueado).",
+          "Para encerrar: toque em \"Encerrar a retirada\", escreva a justificativa e confirme. Só funciona com o carro parado, desligado, na base e com sinal. O KM vem do rastreador e entra em \"KM a conferir\"; depois o bloqueio é pedido."
+        ] },
+        { titulo: "Autorizar ou recusar uma passagem do carro", itens: [
+          "Quando quem está com o carro não consegue confirmar no aplicativo, a passagem aparece em \"Decisões pendentes\".",
+          "Toque em \"Autorizar\", escreva a justificativa e confirme. Quem está envolvido não autoriza a si mesmo."
+        ] },
+        { titulo: "Liberar agora (emergência)", itens: [
+          "No cartão do carro, toque em \"Liberar agora\".",
+          "Escreva o motivo e toque em \"Liberar agora\". Vale 24 horas ou até a próxima devolução.",
+          "Se aparecer \"aguardando sinal\", o carro está sem conexão: ligue para a central 24 h da iTracker."
+        ] },
+        { titulo: "Bloqueio de roubo (só a Diretoria)", itens: [
+          "No cartão do carro, toque em \"Bloqueio de roubo\".",
+          "Escreva o motivo, marque \"Confirmo que é roubo ou furto\" e digite BLOQUEAR e a placa.",
+          "Com o carro andando, o SGO+ não envia e explica o risco. Para enviar mesmo assim, marque \"Aceito o risco\" e toque de novo.",
+          "Avise a central 24 h da iTracker e registre o boletim de ocorrência."
+        ] },
+        { titulo: "Acertar o odômetro do rastreador", itens: [
+          "Quando o KM do painel na devolução e o do rastreador diferem mais de 2% e mais de 50 km, aparece \"Odômetro diferente do painel\" (só no sistema).",
+          "Abra a foto do painel e confira o número.",
+          "Toque em \"Acertar o odômetro do rastreador\" (já vem o KM do painel), marque a confirmação e toque de novo.",
+          "Valor menor que o atual pede a segunda confirmação e o motivo. O carro precisa estar parado. Em Simulação o SGO+ só registra o que mandaria.",
+          "Numa revisão, use o mesmo botão no cartão do carro a qualquer momento."
+        ] },
+        { titulo: "Mudar o modo ou a triagem do sinal de um carro", itens: [
+          "Toque em \"Modo\", escolha Ativo, Simulação ou Desligado, escreva o motivo e grave.",
+          "Toque em \"Triagem do sinal\" para ver os locais onde o carro costuma ficar, a parte do tempo com sinal e o tempo até reconectar. \"Só avisa\" = o SGO+ nunca manda bloqueio para este carro (por exemplo, carro que dorme em garagem subterrânea). Pode deixar automática ou escolher, com motivo."
+        ] },
+        { titulo: "Configurar a área de uma base", itens: [
+          "No fim da tela, escolha a base.",
+          "Escolha um carro estacionado na base (usa a posição dele) ou digite a latitude e a longitude.",
+          "Confira o raio (padrão de 300 metros) e toque em \"Gravar a área\"."
+        ] },
+        { titulo: "Registro e relatório do dia", itens: [
+          "A tabela \"Registro\" mostra cada pedido, comando, simulação, confirmação e decisão, com quem, quando e a condição do carro. Nada pode ser apagado.",
+          "Toque em \"Conferir a integridade\": o SGO+ confere que nenhuma linha foi alterada ou apagada.",
+          "Toque em \"Relatório de hoje\" para ver o que aconteceu e o que a simulação teria feito. Às 18h o mesmo relatório vai por e-mail para a gestão da Frota e a Diretoria."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo vermelho \"Ativo\"", significado: "Comandos de verdade para este carro." },
+        { nome: "Selo azul \"Simulação\"", significado: "O SGO+ só registra o que teria feito." },
+        { nome: "Selo amarelo \"Ativo aguardando liberação\"", significado: "O carro está em Ativo, mas falta a chave dos comandos ou ligar o bloqueio em Chaves e senhas. Trabalha em simulação." },
+        { nome: "Selo \"Só avisa\"", significado: "Sinal fraco onde o carro costuma ficar: o SGO+ nunca manda bloqueio, só avisa." },
+        { nome: "Cartão com faixa vermelha em \"Decisões pendentes\"", significado: "Precisa da gestão." }
+      ],
+      problemas: [
+        { situacao: "\"Nenhum comando real sai agora\"", oQueFazer: "O responsável pelo sistema grava a chave e liga o bloqueio em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar\"." },
+        { situacao: "Pendência \"aguardando: o rastreador está sem sinal agora\"", oQueFazer: "Normal. O bloqueio sai sozinho quando o carro conectar, parado e desligado. Se demorar muito, confira onde está o carro no mapa." },
+        { situacao: "\"Bloqueio na fila do rastreador\"", oQueFazer: "O carro estava sem conexão. O SGO+ trata como não bloqueado. Se alguém vai usar o carro, a retirada manda a liberação logo em seguida." },
+        { situacao: "\"A retirada não foi encerrada: ...\"", oQueFazer: "A mensagem diz a condição que faltou (carro andando, ligado, fora da base ou sem sinal). Espere o carro ficar parado e desligado na base, ou autorize \"Passar o carro\"." },
+        { situacao: "\"Registro com problema\" na conferência", oQueFazer: "Alguém mexeu na planilha do registro. Avise o Administrador; a linha indicada mostra o que foi alterado." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver, decidir fora da base, encerrar retirada esquecida, autorizar passagem, mudar modo, triagem e áreas das bases." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH", pode: "Liberar agora (emergência)." },
+        { perfil: "ADMIN,GESTOR", pode: "Acertar o odômetro do rastreador." },
+        { perfil: "DIRETORIA", pode: "Bloqueio de roubo." },
+        { perfil: "TODOS", pode: "Passar o carro, assumir o carro e responder à pergunta da retirada esquecida, na tela normal da Frota." }
+      ],
+      perguntas: [
+        { p: "Por que não bloqueia logo depois da devolução?", r: "Porque o bloqueio só pode sair com o carro conectado no mesmo minuto, parado e desligado. Se o comando ficasse na fila do rastreador, ele poderia cortar o motor de quem saísse dirigindo depois." },
+        { p: "Por que um carro está em \"Só avisa\"?", r: "Pela triagem do sinal: onde ele costuma ficar, o sinal cai por muito tempo (garagem subterrânea, região sem cobertura). Um bloqueio enviado ali poderia ficar na fila e cair quando o carro saísse." },
+        { p: "O que a Simulação mostra?", r: "Tudo o que o SGO+ teria feito com o carro (liberar, bloquear, esperar, pedir decisão), no registro e no relatório das 18h, sem mandar nada ao carro." }
       ]
     },
 

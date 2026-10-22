@@ -115,7 +115,26 @@ function Frota_apiDispatch(req) {
     // 21/10/2026: identificação fácil dos veículos (SGO_Frota_Identificacao.js): apelido, base e sugestão de apelido
     apiListarIdentificacao: Frota_apiListarIdentificacao,
     apiListarSugestoesApelido: Frota_apiListarSugestoesApelido,
-    apiSalvarBasesFrota: Frota_apiSalvarBasesFrota
+    apiSalvarBasesFrota: Frota_apiSalvarBasesFrota,
+    // 21/10/2026: bloqueio e liberação da partida (SGO_Frota_Bloqueio.js). Passar o carro e a resposta da retirada
+    // esquecida: o próprio condutor; painel, decisões, modo, triagem, emergência, roubo, hodômetro e áreas: a gestão
+    // (as regras de cada perfil ficam lá).
+    apiBloqueioPainel: Frota_apiBloqueioPainel,
+    apiBloqueioModo: Frota_apiBloqueioModo,
+    apiBloqueioTriagem: Frota_apiBloqueioTriagem,
+    apiBloqueioDecidirForaBase: Frota_apiBloqueioDecidirForaBase,
+    apiBloqueioLiberarAgora: Frota_apiBloqueioLiberarAgora,
+    apiBloqueioEncerrarEmergencia: Frota_apiBloqueioEncerrarEmergencia,
+    apiBloqueioRoubo: Frota_apiBloqueioRoubo,
+    apiBloqueioHodometro: Frota_apiBloqueioHodometro,
+    apiBloqueioAreaBase: Frota_apiBloqueioAreaBase,
+    apiBloqueioIntegridade: Frota_apiBloqueioIntegridade,
+    apiBloqueioRelatorio: Frota_apiBloqueioRelatorio,
+    apiBloqueioEncerrarEsquecida: Frota_apiBloqueioEncerrarEsquecida,
+    apiBloqueioResponderEsquecida: Frota_apiBloqueioResponderEsquecida,
+    apiPassagemPedir: Frota_apiPassagemPedir,
+    apiPassagemConfirmar: Frota_apiPassagemConfirmar,
+    apiPassagemDecidir: Frota_apiPassagemDecidir
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -127,7 +146,7 @@ function Frota_apiDispatch(req) {
   if (typeof FrotaId_enfeitarResposta_ === 'function') resultado = FrotaId_enfeitarResposta_(resultado);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio|BloqueioPainel|BloqueioIntegridade|BloqueioRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -312,7 +331,7 @@ function Frota_apiInicioFrota(sessionId) {
   });
   var emAndamento = veiculos.filter(function(v) { return v.MOVIMENTACAO_ID; }).map(function(v) {
     return { id: SGO_UTILS.safe(v.MOVIMENTACAO_ID), veiculoId: SGO_UTILS.safe(v.ID), veiculoPlaca: SGO_UTILS.safe(v.PLACA), veiculoModelo: SGO_UTILS.safe(v.MODELO),
-      condutorNome: SGO_UTILS.safe(v.CONDUTOR_NOME), condutorId: SGO_UTILS.safe(v.CONDUTOR_ID), condutorUsuarioId: SGO_UTILS.safe(v.CONDUTOR_USUARIO_ID),
+      condutorNome: SGO_UTILS.safe(v.CONDUTOR_NOME), condutorId: SGO_UTILS.safe(v.CONDUTOR_ID), condutorUsuarioId: SGO_UTILS.safe(v.CONDUTOR_USUARIO_ID), veiculoKm: Frota_num_(v.KM_ATUAL, 0),
       dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: Frota_num_(v.KM_SAIDA, 0), finalidade: SGO_UTILS.safe(v.FINALIDADE),
       minha: !!meuId && SGO_UTILS.safe(v.CONDUTOR_USUARIO_ID) === meuId, foto: SGO_UTILS.safe(v.FOTO_MINIATURA_LINK) };
   });
@@ -330,7 +349,9 @@ function Frota_apiInicioFrota(sessionId) {
     alertas: alertas,
     reservas: reservas ? { minhas: reservas.minhas, folgaMin: reservas.folgaMin, antecipacaoMin: reservas.antecipacaoMin, agoraData: reservas.agoraData, agoraHora: reservas.agoraHora, fimExpediente: reservas.fimExpediente } : null,
     // 20/10/2026: aviso ao condutor de que o veículo é rastreado durante o uso (LGPD); null com o rastreador desligado
-    rastreamento: typeof FrotaR_avisoRetirada_ === 'function' ? FrotaR_avisoRetirada_() : null
+    rastreamento: typeof FrotaR_avisoRetirada_ === 'function' ? FrotaR_avisoRetirada_() : null,
+    // 21/10/2026: passar o carro (quem pode receber, pedidos para mim) e a pergunta da retirada esquecida
+    bloqueio: typeof FrotaBlq_inicio_ === 'function' ? FrotaBlq_inicio_(meuCondutor, emAndamento) : null
   };
 }
 
@@ -378,7 +399,8 @@ function Frota_validarVeiculoRetirada_(veiculo) {
     var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, aberto.CONDUTOR_ID) || {};
     var nome = SGO_UTILS.safe(c.NOME) || 'outro condutor';
     throw new Error('O veículo ' + veiculo.PLACA + ' já está retirado por ' + nome + ' desde ' + Frota_textoData_(aberto.DATA_SAIDA) + ' ' + Frota_textoHora_(aberto.HORA_SAIDA) +
-      '. Escolha outro veículo. Se ele já voltou, ' + nome + ' (ou a gestão) precisa registrar a devolução antes de uma nova retirada.');
+      '. Escolha outro veículo. Se ele já voltou, ' + nome + ' (ou a gestão) precisa registrar a devolução antes de uma nova retirada. ' +
+      'Se você vai seguir com o carro agora, toque em "Assumir o carro" na tela da Frota: ' + nome + ' confirma no aplicativo (ou a gestão autoriza) e o carro passa para você sem bloquear a partida.');
   }
   if (SGO_UTILS.safeUpper(veiculo.STATUS) === 'EM_USO') throw new Error('O veículo ' + veiculo.PLACA + ' está marcado como em uso. Atualize a tela; se continuar, avise a gestão.');
   if (['ATIVO', 'DISPONIVEL'].indexOf(SGO_UTILS.safeUpper(veiculo.STATUS)) < 0) throw new Error('O veículo ' + veiculo.PLACA + ' está indisponível para retirada (situação: ' + SGO_UTILS.safe(veiculo.STATUS).toLowerCase() + '). Escolha outro veículo ou fale com a gestão.');
@@ -492,6 +514,8 @@ function Frota_bootstrapSemTrava_() {
   if (typeof FrotaId_garantirColunas_ === 'function') FrotaId_garantirColunas_();
   // Rastreador (17/10/2026): vínculo no veículo, hodômetro na movimentação, comandos e alertas (SGO_Frota_Rastreador.js).
   if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
+  // 21/10/2026 (bloqueio da partida): estado por veículo, registro inviolável e passagens. Só tabelas e colunas novas.
+  if (typeof FrotaBlq_bootstrapSemTrava_ === 'function') FrotaBlq_bootstrapSemTrava_();
   // 20/10/2026 (rastreamento): pedidos de comprovante, trilha de consultas, HORA/ORIGEM no abastecimento e capacidade do tanque. Só colunas e tabelas novas.
   if (typeof FrotaR_garantirAbas_ === 'function') FrotaR_garantirAbas_();
   // 20/10/2026 (reservas): tabelas das reservas, eventos e avisos; devolução prevista e reserva na movimentação. Só colunas e tabelas novas.
@@ -1313,6 +1337,9 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
 
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID);
   if (!veiculo) throw new Error('Veículo não encontrado.');
+  // 21/10/2026 (bloqueio da partida, regra 2): só se devolve com o carro parado e desligado. Recusa só quando o rastreador
+  // mostra, numa posição de até 3 minutos, o carro ligado ou andando; sem sinal, a devolução passa e o bloqueio espera.
+  if (typeof FrotaBlq_conferirDevolucao_ === 'function') FrotaBlq_conferirDevolucao_(veiculo);
 
   // 17/10/2026 (decisão do dono): só o condutor da retirada devolve. A gestão
   // devolve no lugar dele (esqueceu) com justificativa, marca, auditoria e aviso.

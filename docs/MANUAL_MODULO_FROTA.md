@@ -43,7 +43,7 @@ Cada veículo e cada condutor são cadastrados uma vez só. Isso é feito pela g
 
 ### Apelido e base: como reconhecer cada carro
 
-Temos carros de mesmo modelo e cor, em Goiânia e no Rio de Janeiro. Por isso cada veículo pode ter um **apelido** (Onça, Tucano, Capivara...) e uma **base** (a cidade onde ele fica). Em todo lugar o veículo aparece assim: **Onça · PQB4394 · Onix branco · Goiânia** (nas listas apertadas, só **Onça · PQB4394**). Sem apelido, aparece a placa, como antes.
+Temos carros de mesmo modelo e cor, em Goiânia e no Rio de Janeiro. Por isso cada veículo pode ter um **apelido** (Onça, Tucano, Capivara...) e uma **base** (a cidade onde ele fica). Em todo lugar o veículo aparece assim: **Onça · Goiânia · ABC1D23 · ONIX 1.0 MT LS · Branca** (nas listas apertadas, **Onça · Goiânia · ABC1D23**). Apelido e base vêm na frente; o modelo aparece sem repetir a marca e a cor aparece como foi cadastrada (21/10/2026). Sem apelido: **Goiânia · ABC1D23**.
 
 - **Onde aparece:** lista e cartão de veículos, tela de retirar e devolver (computador e celular), reservas e agenda, mapa do rastreamento (nome do marcador), Gantt da frota, Kanban da gestão, multas, abastecimentos, manutenção, documentos, comprovantes, avisos do Início e Caixa de decisões, relatórios A4 da Frota e o COMMAND (Frota e Reservas).
 - **Apelido único:** dois veículos ativos não têm o mesmo apelido. Maiúscula, acento, hífen e espaço não contam ("Lobo-guará" e "lobo guara" são o mesmo). Veículo inativo não segura o nome, mas para reativá-lo com um nome que outro ativo já usa é preciso trocar o apelido antes.
@@ -100,6 +100,7 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 
 ## 6. Devolver veículo
 
+0. Estacione e **desligue o carro**. Com o carro ligado ou andando (o rastreador mostra), o SGO+ não aceita a devolução: o bloqueio da partida é pedido logo depois dela (seção 21).
 1. Abra a Frota (ou o Início, no celular).
 2. Toque no botão verde "Devolver" com a placa do veículo.
 3. Digite o KM que está no painel agora.
@@ -112,6 +113,8 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 > **Quem devolve:** só quem retirou. A gestão pode devolver no lugar da pessoa, com justificativa (seção 8). A pessoa recebe um aviso.
 
 > **Esqueceu de devolver?** Retirada aberta há mais de 12 horas aparece no Início como possível devolução esquecida, para você e para a gestão. Devolva assim que puder.
+
+> **Outra pessoa vai seguir com o carro?** Não devolva: use **Passar o carro** (seção 21). Ninguém devolve, nenhum comando vai para o carro e funciona até sem internet.
 
 > **KM muito alto:** se o KM rodado passar de 1.500 km, ou der média acima de 120 km/h, a devolução não é bloqueada. Confira se digitou certo. A gestão recebe o aviso para conferir.
 
@@ -279,7 +282,8 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | "Justificativa obrigatória" (gestão) | Escreva o motivo em "Justificativa", com pelo menos 15 letras |
 | "está no futuro" (gestão) | Corrija a data e a hora, ou deixe vazio para usar a hora atual |
 | "Anexe a foto ou o PDF do comprovante do abastecimento." | Anexe o comprovante e salve de novo |
-| "Partida não liberada pelo rastreador" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17) |
+| "Liberação aguardando sinal do carro" ou "Partida não liberada agora" | A retirada já está registrada. Tente ligar em alguns minutos; se não pegar, ligue para a gestão, que usa "Liberar agora" (seção 21) |
+| "Devolução não registrada: o rastreador mostra o ... com a ignição ligada" | Estacione, desligue, espere 1 minuto e confirme de novo. Se outra pessoa vai seguir com o carro, use "Passar o carro" (seção 21) |
 | "Não foi possível carregar a frota agora" | Confira a internet e toque em "Tentar de novo" |
 | O consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período |
 | "O apelido ... já é do veículo ..." | Escolha outro apelido ou toque em "Sugerir apelido" |
@@ -300,14 +304,15 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | Parada | Período em que o veículo ficou fora de uso |
 | Consumo (km/L) | Quantos quilômetros o veículo roda com 1 litro |
 | Cruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo |
-| Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos |
+| Bloqueio da partida | Comando do rastreador que corta a bomba de combustível. Só é enviado com o carro conectado, parado e desligado, nunca com retirada aberta (seção 21) |
+| Passar o carro | Troca de responsável sem devolução e sem comando ao carro |
 | Uso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador |
 | Apelido | Nome curto do carro (ex.: Onça), único entre os veículos ativos, para não confundir carros iguais |
 | Base | Cidade onde o carro fica (ex.: Goiânia, Rio de Janeiro). Filtra as listas, o mapa, as reservas e o Gantt |
 
 ## 17. Rastreador: monitoramento, localização e bloqueio da partida
 
-> **Hoje o acesso é somente leitura.** Funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada. Não funciona bloquear nem liberar a partida pelo SGO+: isso depende de a empresa do rastreador liberar o acesso com comandos. A retirada e a devolução funcionam normalmente.
+> **21/10/2026:** o bloqueio e a liberação da partida seguem a regra nova da seção 21 (Rastreamento > "Bloqueio da partida"). O que está abaixo sobre "acesso com comandos" é a versão anterior e vale só como histórico.
 
 ### Como a tela "Rastreador" está organizada
 
@@ -332,7 +337,7 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 - **KM do painel estimado:** no cartão do veículo aparece o KM do painel calculado pelo rastreador (hodômetro do aparelho mais a diferença fixa medida na última retirada). Serve só para a gestão perceber uso sem registro; não muda nenhum KM.
 - **Ponto de chegada:** na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, na aba "Rastreador".
 
-### Quando o acesso com comandos for liberado
+### Quando o acesso com comandos for liberado (versão anterior, substituída pela seção 21)
 
 O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, os endereços do comando de bloqueio e de liberação e liga o "Bloqueio da partida pelo SGO+". A partir daí:
 
@@ -502,6 +507,44 @@ As regras de tempo (folga, tolerância, antecipação, hora do lembrete, anteced
 - **Gantt da frota** (Gestão e melhoria): reservas na sub-linha "Planejado", retiradas na sub-linha "Realizado" de cada veículo.
 - **Copiloto**: sugere ação para veículo disputado, dia da semana de pico, reservas não utilizadas e atrasos recorrentes de um condutor, e liberações frequentes.
 - **COMMAND**: tela "Reservas de veículo" para quem tem a conta ligada ao SGO+ (minhas reservas, livres, reservar, cancelar; a gestão vê a agenda), pela ponte assinada, com as mesmas regras.
+
+## 21. Bloqueio e liberação da partida (21/10/2026)
+
+Regra aprovada pelo dono a partir do estudo de 12.000 situações simuladas: **a partida só pega com a retirada registrada, e o motor nunca é cortado com alguém dirigindo.**
+
+### A regra, em poucas linhas
+
+1. **Retirada aberta = carro liberado, sempre**, mesmo em viagem de dias. A retirada manda "liberar" ao rastreador e confere. Se o carro estiver sem sinal, aparece "liberação aguardando sinal" para o condutor e para a gestão.
+2. **Devolução só com o carro desligado e parado.** A devolução pede o bloqueio, que só é enviado quando o rastreador mostra, no mesmo minuto, o carro conectado, parado e desligado, sem retirada aberta. Senão o SGO+ espera e confere de novo a cada 2 minutos. Uma nova retirada cancela o pedido.
+3. **Devolução fora da base:** o SGO+ não bloqueia sozinho; a gestão decide na Caixa de decisões (bloquear ou não).
+4. **Passar o carro:** troca de responsável sem devolução e sem comando, só para quem tem autorização de dirigir (condutor ativo com CNH válida). Quem recebe toca em "Assumi o carro"; quem está com o carro confirma no aplicativo, ou a gestão autoriza.
+5. **Retirada esquecida:** carro parado na base há 1 hora com a retirada aberta = o SGO+ pergunta ao condutor ("Você ainda está com o ...? Devolver / Continuar"). Sem resposta em mais 1 hora, vai para a Caixa de decisões. A gestão só encerra com o carro parado, desligado, na base e com sinal. Enquanto aberta, ninguém retira esse carro: quem precisar pede "Assumir o carro".
+6. **Carro andando sem retirada:** nunca recebe bloqueio andando; a gestão é avisada na hora (uso sem registro).
+7. **Conferência a cada 2 minutos:** o que deveria estar (liberado ou bloqueado) contra o relé do carro; reenvia só nas condições seguras, respeitando o limite do rastreador e sem repetir o mesmo comando sem resultado.
+8. **Emergência:** "Liberar agora" (Administrador, Diretoria, Gestor e RH), com motivo, vale 24 horas ou até a devolução. Bloqueio de roubo só a Diretoria, com dupla confirmação; com o carro andando, só aceitando o risco de forma explícita.
+9. **Odômetro do rastreador:** se o KM do painel na devolução e o do rastreador diferirem mais de 2% e mais de 50 km, a gestão recebe o aviso (só no sistema). O Gestor ou o Administrador confere a foto e toca em "Acertar o odômetro do rastreador". O SGO+ nunca acerta sozinho.
+10. **Triagem do sinal:** pelo histórico das rotas, o SGO+ mede, em cada local onde o carro costuma ficar, a parte do tempo com sinal e quanto demora para reconectar. Carro que dorme onde o sinal cai fica em **Só avisa**: o SGO+ nunca manda bloqueio para ele.
+11. **Modos de cada carro:** **Ativo** (manda o comando de verdade), **Simulação** (faz tudo e registra o que teria feito, sem mandar nada) e **Desligado**. No piloto, o Onix começa em Ativo e os outros em Simulação. O Ativo só manda comando de verdade depois de o responsável pelo sistema gravar a "Chave de acesso dos comandos" e ligar "Bloqueio da partida pelo SGO+" (Chaves e senhas > Rastreador da frota).
+12. **Registro inviolável:** cada pedido, comando, simulação, confirmação e decisão fica gravado com quem, quando, a condição do carro e a resposta do rastreador. Cada linha leva o resumo da anterior; "Conferir a integridade" mostra se alguma foi alterada ou apagada. Às 18h, a gestão da Frota e a Diretoria recebem por e-mail o relatório do dia (o que aconteceu e o que a simulação teria feito).
+
+### Para o condutor (celular)
+
+- **Retirar e devolver:** como sempre. Antes de devolver, desligue o carro.
+- **Passar o carro:** embaixo do botão "Devolver", toque em "Passar o ... para outra pessoa (sem devolver)", escolha a pessoa e confirme. Entregue a chave.
+- **Assumi o carro:** quando alguém passar o carro para você, aparece o aviso; toque em "Assumi o carro" e digite o KM do painel.
+- **Assumir o carro:** se você vai seguir com um carro que está com outra pessoa, abra "Em uso por outras pessoas" e toque em "Assumir o ...". Quem está com ele confirma (ou a gestão autoriza).
+- **Sem internet:** passar e assumir ficam guardados no celular com a hora e vão sozinhos quando a internet voltar. A tela avisa quantos pedidos estão guardados.
+- **"Você ainda está com o ...?"**: toque em "Devolver" (se terminou) ou "Continuar com ele".
+
+### Para a gestão (Rastreamento > "Bloqueio da partida")
+
+- **Carros:** um cartão por carro com modo, triagem do sinal, quem está com ele, partida no carro (liberada ou bloqueada, lida no rastreador), sinal, situação, base, último comando e pendência. A tela não se atualiza sozinha: toque em "Atualizar".
+- **Decisões pendentes:** devolução fora da base (Bloquear / Não bloquear), retirada esquecida (Encerrar a retirada), passagem do carro (Autorizar / Recusar) e odômetro diferente do painel (Acertar o odômetro do rastreador). Todas pedem justificativa e também aparecem na Caixa de decisões.
+- **Áreas das bases:** escolha a base, use a posição de um carro estacionado nela (ou digite latitude e longitude), confira o raio (padrão de 300 m) e grave. Sem a área, toda devolução vai para a decisão da gestão.
+- **Registro e relatório:** "Conferir a integridade" e "Relatório de hoje".
+- **Celular da gestão:** Frota > "Opções da gestão" > "Partida do veículo (rastreador)" > "Liberar agora (emergência)".
+
+> **Por que o bloqueio não sai na hora da devolução?** Porque um comando aceito com o carro sem conexão fica na fila do rastreador e executa quando o carro reconecta, talvez com outra pessoa dirigindo. Por isso o SGO+ só manda com o carro conectado no mesmo minuto, parado e desligado, e trata o comando que ficou na fila como não executado.
 
 ## Enviar o documento por e-mail ou WhatsApp (20/10/2026)
 

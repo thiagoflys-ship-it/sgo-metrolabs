@@ -4,9 +4,11 @@
  * "Temos carros, modelos e cores iguais": cada veículo ganha um APELIDO
  * (nome de animal brasileiro, ex.: Onça, Tucano) e uma BASE (Goiânia, Rio
  * de Janeiro...). O veículo passa a aparecer em todo lugar como
- * "Onça · PQB4394 · Onix branco · Goiânia" (completo) ou "Onça · PQB4394"
- * (curto, em tabelas e listas apertadas). Sem apelido, aparece a placa,
- * como antes.
+ * "Onça · Goiânia · PQB4394 · ONIX 1.0 MT LS · Branca" (completo) ou
+ * "Onça · Goiânia · PQB4394" (curto). 21/10/2026, à noite (pedido do dono):
+ * apelido e base na frente; a cor no fim e como foi cadastrada (sem passar
+ * para minúscula); o modelo sem repetir a marca ("CHEVROLET/ONIX 1.0" com
+ * marca CHEVROLET vira "ONIX 1.0"). Sem apelido: "Goiânia · PQB4394".
  *
  *  - Colunas novas em CAD_VEICULOS: APELIDO e BASE (COR já existia). Só
  *    acrescentadas; nada é apagado nem reescrito.
@@ -100,19 +102,33 @@ function FrotaId_sugestoes_(quantos, veiculos, excluir) {
 }
 
 // ---------------- rótulo ----------------
-/** Rótulo do veículo. completo: "Onça · PQB4394 · Onix branco · Goiânia"; curto: "Onça · PQB4394". Sem apelido: a placa. */
+/** Modelo sem repetir a marca: "CHEVROLET/ONIX 1.0 MT LS" (marca CHEVROLET) -> "ONIX 1.0 MT LS"; também "FIAT MOBI LIKE FIAT". */
+function FrotaId_modeloLimpo_(modelo, marca) {
+  var m = FrotaId_s_(modelo), k = FrotaId_s_(marca);
+  if (!m || !k) return m;
+  var ku = FrotaId_chave_(k);
+  var semPrefixo = m.replace(/^([^\/\s-]+)\s*[\/\s-]\s*/, function (todo, primeira) { return FrotaId_chave_(primeira) === ku ? '' : todo; });
+  if (semPrefixo) m = semPrefixo;
+  var fim = /\s+([^\s]+)$/.exec(m);
+  if (fim && FrotaId_chave_(fim[1]) === ku && m.length > fim[0].length) m = m.slice(0, m.length - fim[0].length);
+  return FrotaId_s_(m);
+}
+
+/**
+ * Rótulo do veículo. curto: "Onça · Goiânia · PQB4394"; completo: "Onça · Goiânia · PQB4394 · ONIX 1.0 MT LS · Branca".
+ * Apelido e base na frente; a cor no fim, como cadastrada. Sem apelido: "Goiânia · PQB4394" (ou só a placa).
+ */
 function Frota_rotuloVeiculo_(v, completo) {
   v = v || {};
   var apelido = FrotaId_s_(v.APELIDO !== undefined ? v.APELIDO : v.apelido);
   var placa = FrotaId_s_(v.PLACA !== undefined ? v.PLACA : v.placa).toUpperCase();
-  var partes = [apelido, placa].filter(Boolean);
+  var base = FrotaId_s_(v.BASE !== undefined ? v.BASE : (v.baseFrota !== undefined ? v.baseFrota : v.base));
+  var partes = [apelido, base, placa].filter(Boolean);
   if (completo) {
-    var modelo = FrotaId_s_(v.MODELO !== undefined ? v.MODELO : v.modelo);
-    var cor = FrotaId_s_(v.COR !== undefined ? v.COR : v.cor).toLowerCase();
-    var base = FrotaId_s_(v.BASE !== undefined ? v.BASE : (v.baseFrota !== undefined ? v.baseFrota : v.base));
-    var mc = [modelo, cor].filter(Boolean).join(' ');
-    if (mc) partes.push(mc);
-    if (base) partes.push(base);
+    var modelo = FrotaId_modeloLimpo_(v.MODELO !== undefined ? v.MODELO : v.modelo, v.MARCA !== undefined ? v.MARCA : v.marca);
+    var cor = FrotaId_s_(v.COR !== undefined ? v.COR : v.cor);
+    if (modelo) partes.push(modelo);
+    if (cor) partes.push(cor);
   }
   return partes.join(' · ');
 }
@@ -122,9 +138,9 @@ function FrotaId_mapa_(veiculos) {
   var m = { porId: {}, porPlaca: {} };
   (veiculos || Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_VEICULOS)).forEach(function (v) {
     var info = { id: String(v.ID || ''), placa: FrotaId_s_(v.PLACA).toUpperCase(), apelido: FrotaId_s_(v.APELIDO), base: FrotaId_s_(v.BASE),
-      modelo: FrotaId_s_(v.MODELO), cor: FrotaId_s_(v.COR) };
-    info.rotulo = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa });
-    info.ident = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa, MODELO: info.modelo, COR: info.cor, BASE: info.base }, true);
+      modelo: FrotaId_s_(v.MODELO), marca: FrotaId_s_(v.MARCA), cor: FrotaId_s_(v.COR) };
+    info.rotulo = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa, BASE: info.base });
+    info.ident = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa, MODELO: info.modelo, MARCA: info.marca, COR: info.cor, BASE: info.base }, true);
     if (info.id) m.porId[info.id] = info;
     if (info.placa) m.porPlaca[FrotaId_chave_(info.placa)] = info;
   });
@@ -173,7 +189,8 @@ function FrotaId_enfeitarResposta_(res, mapa) {
         if (o.apelido === undefined) o.apelido = info.apelido;
         if (o.baseFrota === undefined) o.baseFrota = info.base;
         o.rotuloVeiculo = info.rotulo;
-        o.identVeiculo = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa, MODELO: o.modelo || info.modelo, COR: o.cor && !/^#/.test(o.cor) ? o.cor : info.cor, BASE: info.base }, true);
+        o.identVeiculo = Frota_rotuloVeiculo_({ APELIDO: info.apelido, PLACA: info.placa, MODELO: o.modelo || info.modelo, MARCA: o.marca || info.marca, COR: o.cor && !/^#/.test(o.cor) ? o.cor : info.cor, BASE: info.base }, true);
+        o.modeloLimpo = FrotaId_modeloLimpo_(o.modelo || info.modelo, o.marca || info.marca);
       }
     }
     if (typeof o.veiculoPlaca === 'string' && o.veiculoPlaca && o.veiculoRotulo === undefined) {
@@ -184,7 +201,7 @@ function FrotaId_enfeitarResposta_(res, mapa) {
     }
     if (typeof o.PLACA === 'string' && o.PLACA && o.ROTULO_VEICULO === undefined) {
       info = (o.ID && m.porId[String(o.ID)]) || m.porPlaca[FrotaId_chave_(o.PLACA)];
-      if (info) { o.ROTULO_VEICULO = info.rotulo; o.IDENT_VEICULO = info.ident; }
+      if (info) { o.ROTULO_VEICULO = info.rotulo; o.IDENT_VEICULO = info.ident; o.MODELO_LIMPO = FrotaId_modeloLimpo_(o.MODELO !== undefined ? o.MODELO : info.modelo, o.MARCA !== undefined ? o.MARCA : info.marca); }
     }
     for (var k in o) { if (Object.prototype.hasOwnProperty.call(o, k) && o[k] && typeof o[k] === 'object') andar(o[k], prof + 1); }
   };

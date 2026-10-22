@@ -141,13 +141,17 @@ test('Bases: padrão Goiânia e Rio de Janeiro; lista configurável; base em uso
   assert.equal(t.sugestoes.length, 0);
 });
 
-test('Rótulo: completo "Apelido · placa · modelo cor · base", curto "Apelido · placa"; sem apelido, a placa', () => {
+test('Rótulo (21/10 à noite): apelido e base na frente, "Apelido · base · placa"; completo com modelo sem a marca e a cor como cadastrada', () => {
   const { ctx } = ambiente(frota(), { atual: GESTORA });
   const v = frota().CAD_VEICULOS[0];
-  assert.equal(ctx.Frota_rotuloVeiculo_(v, true), 'Onça · TST1A11 · Onix branco · Goiânia');
-  assert.equal(ctx.Frota_rotuloVeiculo_(v), 'Onça · TST1A11');
-  assert.equal(ctx.Frota_rotuloVeiculo_(frota().CAD_VEICULOS[1]), 'TST2B22');
-  assert.equal(ctx.FrotaId_rotuloPorPlaca_('tst1a11'), 'Onça · TST1A11');
+  assert.equal(ctx.Frota_rotuloVeiculo_(v, true), 'Onça · Goiânia · TST1A11 · Onix · Branco');
+  assert.equal(ctx.Frota_rotuloVeiculo_(v), 'Onça · Goiânia · TST1A11');
+  assert.equal(ctx.Frota_rotuloVeiculo_(frota().CAD_VEICULOS[1]), 'Rio de Janeiro · TST2B22');
+  assert.equal(ctx.FrotaId_rotuloPorPlaca_('tst1a11'), 'Onça · Goiânia · TST1A11');
+  // a cor vai como cadastrada (o dono reclamou de "branca"/"preta" em minúsculo) e o modelo sem repetir a marca
+  assert.equal(ctx.Frota_rotuloVeiculo_({ APELIDO: 'Tucano', BASE: 'Goiânia', PLACA: 'TST9Z99', MODELO: 'CHEVROLET/ONIX 1.0 MT LS', MARCA: 'CHEVROLET', COR: 'PRETA' }, true), 'Tucano · Goiânia · TST9Z99 · ONIX 1.0 MT LS · PRETA');
+  assert.equal(ctx.FrotaId_modeloLimpo_('FIAT MOBI LIKE FIAT', 'FIAT'), 'MOBI LIKE');
+  assert.equal(ctx.FrotaId_modeloLimpo_('Onix', 'Chevrolet'), 'Onix');
   assert.equal(ctx.FrotaId_rotuloPorPlaca_('XYZ9999'), 'XYZ9999');
 });
 
@@ -161,24 +165,24 @@ test('Toda resposta da Frota (dispatch) ganha apelido, base e rótulo sem trocar
   const onca = r.veiculos.find((v) => v.id === 'v1') || null;
   const rio = r.veiculos.find((v) => v.id === 'v2');
   assert.equal(rio.placa, 'TST2B22');
-  assert.equal(rio.rotuloVeiculo, 'TST2B22');
+  assert.equal(rio.rotuloVeiculo, 'Rio de Janeiro · TST2B22');
   assert.equal(rio.baseFrota, 'Rio de Janeiro');
-  assert.equal(rio.identVeiculo, 'TST2B22 · Onix branco · Rio de Janeiro');
-  assert.equal(onca.rotuloVeiculo, 'Onça · TST1A11');
+  assert.equal(rio.identVeiculo, 'Rio de Janeiro · TST2B22 · Onix · Branco');
+  assert.equal(onca.rotuloVeiculo, 'Onça · Goiânia · TST1A11');
   assert.equal(onca.apelido, 'Onça');
   const mov = r.emAndamento[0];
   assert.equal(mov.veiculoPlaca, 'TST1A11');
-  assert.equal(mov.veiculoRotulo, 'Onça · TST1A11');
+  assert.equal(mov.veiculoRotulo, 'Onça · Goiânia · TST1A11');
   assert.equal(mov.veiculoBase, 'Goiânia');
   const lista = ctx.Frota_apiDispatch({ sessionId: 's', fn: 'apiListarVeiculosTodos' });
   const l1 = lista.items.find((v) => v.ID === 'v1');
   assert.equal(l1.PLACA, 'TST1A11');
-  assert.equal(l1.ROTULO_VEICULO, 'Onça · TST1A11');
-  assert.equal(l1.IDENT_VEICULO, 'Onça · TST1A11 · Onix branco · Goiânia');
+  assert.equal(l1.ROTULO_VEICULO, 'Onça · Goiânia · TST1A11');
+  assert.equal(l1.IDENT_VEICULO, 'Onça · Goiânia · TST1A11 · Onix · Branco');
   // a mesma regra serve à ponte do COMMAND
   const ponte = ctx.FrotaId_enfeitarResposta_({ ok: true, veiculos: [{ id: 'v1', placa: 'TST1A11', cor: '#1f5fa8' }], reservas: [{ codigo: 'RV-1', placa: 'TST1A11' }] });
-  assert.equal(ponte.veiculos[0].rotuloVeiculo, 'Onça · TST1A11');
-  assert.equal(ponte.veiculos[0].identVeiculo, 'Onça · TST1A11 · Onix branco · Goiânia', 'cor da situação (#...) não entra no rótulo');
+  assert.equal(ponte.veiculos[0].rotuloVeiculo, 'Onça · Goiânia · TST1A11');
+  assert.equal(ponte.veiculos[0].identVeiculo, 'Onça · Goiânia · TST1A11 · Onix · Branco', 'cor da situação (#...) não entra no rótulo');
   assert.equal(ponte.reservas[0].apelido, 'Onça');
 });
 
@@ -198,9 +202,11 @@ test('Tela da Frota: rótulo com apelido, filtro por base guardado no navegador 
     document: { getElementById: (id) => elementos[id] || null }, USER_CONTEXT: { perfil: 'GESTOR' } });
   vm.runInContext(js, ctx);
   vm.runInContext("frotaState.veiculosTodos = " + JSON.stringify(frota().CAD_VEICULOS) + "; frotaState.ident = { bases: ['Goiânia', 'Rio de Janeiro'] };", ctx);
-  assert.equal(ctx.tplFrota_rotuloVeic_({ ID: 'v1', PLACA: 'TST1A11' }, true), 'Onça · TST1A11 · Onix branco · Goiânia');
-  assert.equal(ctx.tplFrota_rotuloPlaca_('TST1A11'), 'Onça · TST1A11', 'pela placa, com o cadastro carregado');
-  assert.equal(ctx.tplFrota_rotuloPlaca_('TST2B22'), 'TST2B22', 'sem apelido, a placa');
+  assert.equal(ctx.tplFrota_rotuloVeic_({ ID: 'v1', PLACA: 'TST1A11' }, true), 'Onça · Goiânia · TST1A11 · Onix · Branco');
+  assert.equal(ctx.tplFrota_rotuloPlaca_('TST1A11'), 'Onça · Goiânia · TST1A11', 'pela placa, com o cadastro carregado');
+  assert.equal(ctx.tplFrota_rotuloPlaca_('TST2B22'), 'Rio de Janeiro · TST2B22', 'sem apelido, base e placa');
+  assert.equal(ctx.tplFrota_modeloLimpo_('CHEVROLET/ONIX 1.0 MT LS', 'CHEVROLET'), 'ONIX 1.0 MT LS', 'coluna Modelo, marca e cor sem repetir a marca');
+  assert.doesNotMatch(js, /String\(v\.COR\)\.toLowerCase\(\)/, 'cor como cadastrada');
   // filtro por base: escolha guardada; veículo sem base aparece em todas
   ctx.tplFrota_guardarBase_('Goiânia');
   assert.equal(guardado.sgo_frota_base, 'Goiânia');
@@ -242,16 +248,17 @@ test('Rastreamento, Gantt e Reservas: rótulo do veículo e filtro por base sobr
 
 test('Retirar e devolver (computador e celular): apelido grande, base para escolher e rótulo no botão Devolver', () => {
   const core = ler('JS_Core.html');
-  assert.match(core, /function fsTituloVeic_\(apelido, placa, detalhes\)/);
+  assert.match(core, /function fsTituloVeic_\(apelido, placa, detalhes, base\)/);
+  assert.doesNotMatch(core, /String\(v\.cor \|\| ""\)\.toLowerCase\(\)/, 'cor como cadastrada no celular');
   assert.match(core, /const livresBase = livres\.filter\(function \(v\) \{ return !baseSel \|\| !v\.baseFrota \|\| v\.baseFrota === baseSel; \}\);/);
   assert.match(core, /if \(acao === "base"\) \{ fsGuardarBase_\(id\); fsDesenharInicio_\(\); return; \}/);
   assert.match(core, /<b>Devolver ' \+ fsEsc_\(m\.veiculoRotulo \|\| m\.veiculoPlaca\)/);
   assert.match(core, /const FS_BASE_CHAVE = "sgo_frota_base";/, 'mesma chave da tela completa');
   // a função do título roda: apelido grande e a placa embaixo; sem apelido, a placa grande
-  const corpo = core.match(/function fsTituloVeic_\(apelido, placa, detalhes\) \{[\s\S]*?\n  \}/)[0];
+  const corpo = core.replace(/\r\n/g, '\n').match(/function fsTituloVeic_\(apelido, placa, detalhes, base\) \{[\s\S]*?\n  \}/)[0];
   const fsTituloVeic_ = new Function('fsEsc_', corpo + '; return fsTituloVeic_;')((x) => String(x));
-  assert.equal(fsTituloVeic_('Onça', 'TST1A11', ['Onix branco', 'Goiânia']), '<span class="fs-placa">Onça</span><span class="fs-modelo">TST1A11 · Onix branco · Goiânia</span>');
-  assert.equal(fsTituloVeic_('', 'TST2B22', ['Onix branco']), '<span class="fs-placa">TST2B22</span><span class="fs-modelo">Onix branco</span>');
+  assert.equal(fsTituloVeic_('Onça', 'TST1A11', ['Onix · Branco'], 'Goiânia'), '<span class="fs-placa">Onça</span><span class="fs-modelo">Goiânia · TST1A11 · Onix · Branco</span>');
+  assert.equal(fsTituloVeic_('', 'TST2B22', ['Onix · Branco']), '<span class="fs-placa">TST2B22</span><span class="fs-modelo">Onix · Branco</span>');
 });
 
 test('Relatório A4 e avisos: veículo com apelido; pasta do relatório continua pela placa', () => {

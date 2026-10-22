@@ -98,6 +98,7 @@ var GES_TIPOS = {
   frota_viagem_aberta: { prazo: 1 }, frota_km_conferir: { prazo: 2 }, frota_rastreador_uso: { prazo: 1 }, frota_rastreador_liberar: { prazo: 1 },
   frota_rastreador_bloqueio: { prazo: 1 }, frota_rastreador_conexao: { prazo: 2 }, frota_comprovante: { prazo: 2 }, frota_avaria: { prazo: 3 },
   frota_reserva_atraso: { prazo: 1 }, frota_reserva_problema: { prazo: 1 },
+  frota_bloqueio_decidir: { prazo: 1 }, frota_bloqueio_esquecida: { prazo: 1 }, frota_bloqueio_fila: { prazo: 1 }, frota_bloqueio_passagem: { prazo: 1 }, frota_bloqueio_odometro: { prazo: 3 },
   atividade_atrasada: { prazo: 2 }, aviso_leitura_atrasada: { prazo: 3 },
   conduta_sugestao: { prazo: 2 }, conduta_fechamento: { prazo: 3 }, conduta_homologar: { prazo: 3 }, conduta_julgar: { prazo: 5 }, conduta_missao: { prazo: 3 },
   atividade_justificativa: { prazo: 2, resolveNaCaixa: true }, frota_caso: { prazo: 5 }, plano_atrasado: { prazo: 2 }, frota_copiloto: { prazo: 5 },

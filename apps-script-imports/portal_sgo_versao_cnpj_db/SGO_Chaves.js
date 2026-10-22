@@ -100,14 +100,12 @@ var CHV_ITENS = [
     ajuda: 'Desligado: o SGO+ não faz nenhuma chamada ao rastreador (o botão Testar conexão continua funcionando). Ligado: lê as posições a cada 2 minutos, avisa o uso sem registro, confere o KM e guarda o ponto de chegada de cada devolução.' },
   { chave: 'RASTREADOR_RETENCAO_DIAS', grupo: 'Rastreador da frota', tipo: 'aberto', exemplo: '90', nome: 'Rastreador: dias de guarda da localização',
     ajuda: 'LGPD: por quantos dias o SGO+ guarda o ponto de chegada das devoluções e o local dos alertas. Depois disso a localização é apagada sozinha (uma vez por dia). Vazio = 90 dias. Aceita de 7 a 1825.' },
+  // 21/10/2026 (bloqueio da partida, SGO_Frota_Bloqueio.js): comandos em POST /commands da iTracker com a chave própria dos comandos;
+  // os endereços de comando da versão anterior saíram da tela (sem efeito; o valor antigo, se houver, fica guardado e é ignorado).
   { chave: 'RASTREADOR_BLOQUEIO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Bloqueio da partida pelo SGO+',
-    ajuda: 'Só funciona quando a iTracker liberar um acesso com comandos e os dois endereços de comando abaixo estiverem preenchidos; sem eles fica sem efeito (acesso somente leitura). Ligado, a retirada libera a partida e a devolução deixa o bloqueio pendente até o veículo estar parado com a ignição desligada (nunca em movimento).' },
-  { chave: 'RASTREADOR_CMD_BLOQUEIO_URL', grupo: 'Rastreador da frota', tipo: 'aberto', exemplo: '/commands', nome: 'Endereço do comando de bloqueio (opcional)',
-    ajuda: 'Preencha só quando a iTracker liberar o acesso com comandos. Endereço completo (https://...) ou caminho a partir do endereço da API (ex.: /commands). O SGO+ envia POST com {"deviceId", "type": "engineStop"}. Se o endereço tiver {deviceId}, o ID do veículo entra no lugar. Vazio = somente leitura.' },
-  { chave: 'RASTREADOR_CMD_LIBERACAO_URL', grupo: 'Rastreador da frota', tipo: 'aberto', exemplo: '/commands', nome: 'Endereço do comando de liberação (opcional)',
-    ajuda: 'O mesmo, para liberar a partida: POST com {"deviceId", "type": "engineResume"}. O bloqueio só funciona com os dois endereços preenchidos, para a gestão sempre conseguir liberar em emergência.' },
-  { chave: 'RASTREADOR_TOKEN_COMANDOS', grupo: 'Rastreador da frota', tipo: 'chave', nome: 'Chave de acesso dos comandos (opcional)',
-    ajuda: 'Se a iTracker mandar uma chave separada para os comandos, grave aqui. Vazio = os comandos usam a mesma chave de acesso (Bearer) das consultas.' },
+    ajuda: 'Deixe Desligado até a equipe ligar o piloto. Desligado, nenhum comando sai para os carros: cada veículo trabalha em simulação (o SGO+ registra o que teria feito). Ligado (com a chave dos comandos gravada), só os veículos em modo Ativo recebem comandos de verdade; o modo de cada veículo fica em Frota > Rastreamento > Bloqueio da partida. O bloqueio nunca é enviado com o carro andando.' },
+  { chave: 'RASTREADOR_TOKEN_COMANDOS', grupo: 'Rastreador da frota', tipo: 'chave', nome: 'Chave de acesso dos comandos',
+    ajuda: 'A chave nova que a iTracker enviou para os comandos: bloquear e liberar a partida e acertar o odômetro (ela também lê as posições). Grave aqui; não precisa preencher endereço de comando. Gravar a chave não liga o bloqueio: ele continua desligado até "Bloqueio da partida pelo SGO+" = Ligado. Nunca aparece na tela, em log, e-mail ou aviso.' },
   { chave: 'PONTE_COMMAND_SEGREDO', grupo: 'COMMAND', tipo: 'chave', nome: 'Segredo da ponte com o COMMAND',
     ajuda: 'O mesmo valor configurado no COMMAND para falar com o SGO+.' }
 ];
