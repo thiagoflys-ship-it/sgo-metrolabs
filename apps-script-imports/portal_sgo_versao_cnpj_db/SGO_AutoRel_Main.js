@@ -33,7 +33,11 @@ function AutoRel_apiDispatch(req) {
   // 20/10/2026 (fluxo cliente → unidade → equipamento): documento do ensaio só com o equipamento escolhido no cadastro;
   // cliente, CNPJ, endereço, TAG e nº de série passam a vir do cadastro (equipamento de outro cliente é recusado).
   // Relatório interno (dados reconstituídos) fica de fora. SGO_QualifEquipamento.js.
-  if (AUTOREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !payload.modoRelatorioSimulado && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
+  // 23/10/2026: a tela não manda modoRelatorioSimulado (o simulador é que marca), então o relatório interno
+  // é reconhecido pelo modo de entrada; com equipamento escolhido, a identificação continua vindo do cadastro.
+  const modoSimulado = ['SIMULADO_ADMIN', 'LEAK_TEST_RECONSTITUIDO'].indexOf(String(payload.modoEntrada || '').toUpperCase().trim()) >= 0;
+  const dispensaVinculo = payload.modoRelatorioSimulado || (modoSimulado && !payload.equipamentoId);
+  if (AUTOREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !dispensaVinculo && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
     payload = SGO_QEQ_aplicarVinculoPayload_(String(req.sessionId || ''), payload);
   }
 

@@ -15,6 +15,16 @@ function AutoRel_gerarDadosSimuladosAdmin_(payload, options) {
   const intervaloSeg = AutoRel_clampIntSeguro_(sim.intervaloSegundos, 10, 600, 30);
   const alvo = AutoRel_parseFloatSeguro_(sim.temperaturaAlvo || payload.setpoint || payload.motor, Number(payload.motor || 134));
 
+  // 23/10/2026: o ciclo do motor define o perfil. Baixa temperatura (55/60 °C) = processo com
+  // formaldeído nas 7 fases da fita do equipamento; os demais = vapor com pré-vácuo.
+  const cicloCfg = (AutoRel_UCFG.CICLOS || {})[String(Math.round(alvo))] || null;
+  const reprovar = String(sim.resultadoDesejado || 'APROVADO').toUpperCase().trim() === 'REPROVADO';
+  if (cicloCfg && cicloCfg.tipoProcesso === 'BAIXA_TEMPERATURA') {
+    return AutoRel_gerarDadosSimuladosFormaldeido_(payload, sim, cicloCfg, alvo, nSensores, intervaloSeg, reprovar);
+  }
+  // Patamar sempre dentro da faixa do ciclo (o motor exige todos os sensores >= tMin).
+  const tMinCiclo = cicloCfg && isFinite(Number(cicloCfg.tMin)) ? Number(cicloCfg.tMin) : alvo;
+
   const inicioCiclo = AutoRel_parseDataHoraSimulador_(sim.inicioCiclo);
   const fimCiclo = AutoRel_parseDataHoraSimulador_(sim.fimCiclo);
   const inicioExp = AutoRel_parseDataHoraSimulador_(sim.inicioEsterilizacao || sim.inicioExposicao);
@@ -50,9 +60,11 @@ function AutoRel_gerarDadosSimuladosAdmin_(payload, options) {
   const sensorOffsets = [];
   const sensorFase = [];
   for (let s = 0; s < nSensores; s++) {
-    sensorOffsets.push((rand() - 0.5) * 0.42);
+    sensorOffsets.push((rand() - 0.5) * 0.30);
     sensorFase.push(rand() * Math.PI * 2);
   }
+  // Reprovado: o sensor do meio (ponto frio) cai 1,2 °C entre 40% e 55% da esterilização.
+  const sensorFrio = reprovar ? Math.floor(nSensores / 2) : -1;
 
   const inicioMs = inicioCiclo.getTime();
   const fimMs = fimCiclo.getTime();
@@ -88,11 +100,13 @@ function AutoRel_gerarDadosSimuladosAdmin_(payload, options) {
       pressaoPulsoPositiva: pressaoPulsoPositiva,
       pressaoVacuoMin: pressaoVacuoMin,
       alvo: alvo,
+      tMin: tMinCiclo,
       rand: rand,
       idx: idx
     });
 
     const pressao = AutoRel_calcularPressaoSimulada_(ms, {
+      tempBase: tempBase,
       inicioMs: inicioMs,
       fimMs: fimMs,
       inicioExpMs: inicioExpMs,
@@ -110,11 +124,13 @@ function AutoRel_gerarDadosSimuladosAdmin_(payload, options) {
     });
 
     const temps = [];
+    const pExpAtual = (ms - inicioExpMs) / Math.max(1, fimExpMs - inicioExpMs);
     for (let s = 0; s < nSensores; s++) {
-      const ondaLenta = Math.sin((idx / 11) + sensorFase[s]) * 0.07;
+      const ondaLenta = Math.sin((idx / 11) + sensorFase[s]) * 0.05;
       const ruido = (rand() - 0.5) * AutoRel_obterAmplitudeRuidoTemp_(ms, inicioExpMs, fimExpMs);
       const ajusteBorda = AutoRel_calcularAjusteSensorBorda_(ms, inicioMs, fimMs, inicioExpMs, fimExpMs, s, nSensores);
-      temps.push(AutoRel_roundSimulador_(tempBase + sensorOffsets[s] + ondaLenta + ruido + ajusteBorda, 2));
+      const quedaFrio = (s === sensorFrio && pExpAtual >= 0.40 && pExpAtual <= 0.55) ? -1.2 : 0;
+      temps.push(AutoRel_roundSimulador_(tempBase + sensorOffsets[s] + ondaLenta + ruido + ajusteBorda + quedaFrio, 2));
     }
 
     rows.push({
@@ -143,10 +159,155 @@ function AutoRel_gerarDadosSimuladosAdmin_(payload, options) {
     fimSecagem: Utilities.formatDate(new Date(fimSecagemMs), AutoRel_UCFG.TZ, 'dd/MM/yyyy HH:mm:ss'),
     temperaturaAlvo: alvo,
     intervaloSegundos: intervaloSeg,
+    resultadoDesejado: reprovar ? 'REPROVADO' : 'APROVADO',
     linhasGeradas: rows.length
   };
 
   return rows;
+}
+
+/**
+ * Ciclo de baixa temperatura com formaldeído (23/10/2026), no desenho da fita impressa do
+ * equipamento (ciclo real de 60 °C por 60 min, 237 min no total): 1 verificação (vácuo mantido),
+ * 2 aquecimento, 3 condicionamento (pulsos de vapor e formaldeído), 4 esterilização (vapor
+ * saturado abaixo da atmosfera), 5 lavagem (pulsos), 6 secagem (vácuo profundo) e 7 aeração
+ * (entradas de ar até a pressão atmosférica). As durações vêm da tela, em minutos.
+ * Reprovado: um sensor (ponto frio) não atinge a temperatura de esterilização.
+ */
+var AUTOREL_SIM_FORMALDEIDO_FASES = [
+  { chave: 'verificacao', nome: 'Verificação', padraoMin: 15 },
+  { chave: 'aquecimento', nome: 'Aquecimento', padraoMin: 33 },
+  { chave: 'condicionamento', nome: 'Condicionamento', padraoMin: 33 },
+  { chave: 'esterilizacao', nome: 'Esterilização', padraoMin: 60 },
+  { chave: 'lavagem', nome: 'Lavagem', padraoMin: 34 },
+  { chave: 'secagem', nome: 'Secagem', padraoMin: 32 },
+  { chave: 'aeracao', nome: 'Aeração', padraoMin: 30 }
+];
+
+function AutoRel_gerarDadosSimuladosFormaldeido_(payload, sim, cicloCfg, alvo, nSensores, intervaloSeg, reprovar) {
+  const inicioCiclo = AutoRel_parseDataHoraSimulador_(sim.inicioCiclo);
+  if (!inicioCiclo) throw new Error('Informe a data e a hora de início do ciclo (ex.: 20/10/2026 23:15:57).');
+
+  const fasesIn = sim.fases || {};
+  const duracoes = AUTOREL_SIM_FORMALDEIDO_FASES.map(function(f) {
+    return AutoRel_clampIntSeguro_(fasesIn[f.chave], 1, 240, f.padraoMin);
+  });
+  const pulsosCond = AutoRel_clampIntSeguro_(sim.pulsosCondicionamento, 1, 12, 4);
+  if (duracoes[3] * 60 < intervaloSeg * 3) throw new Error('A esterilização do relatório interno deve conter pelo menos 3 leituras.');
+
+  // Semente só com o que o operador informou (o que é calculado abaixo não entra).
+  const seedBase = AutoRel_sementeSimulacaoDeterministica_(payload, {
+    processo: 'FORMALDEIDO', inicioCiclo: inicioCiclo.getTime(), duracoes: duracoes, pulsosCondicionamento: pulsosCond,
+    temperaturaAlvo: alvo, intervaloSegundos: intervaloSeg, resultadoDesejado: reprovar ? 'REPROVADO' : 'APROVADO'
+  }, 'SimuladorFormaldeido');
+  const rand = AutoRel_criarRandomSimulador_(seedBase);
+
+  const limites = [inicioCiclo.getTime()];
+  duracoes.forEach(function(m) { limites.push(limites[limites.length - 1] + m * 60000); });
+  const fmt = function(ms) { return Utilities.formatDate(new Date(ms), AutoRel_UCFG.TZ, 'dd/MM/yyyy HH:mm:ss'); };
+
+  const tMin = isFinite(Number(cicloCfg.tMin)) ? Number(cicloCfg.tMin) : alvo;
+  const tPatamar = Math.max(alvo, tMin) + 1.3; // a fita mostra a câmara 0,6 a 1,9 °C acima da programada
+  const sensorFrio = reprovar ? Math.floor(nSensores / 2) : -1;
+  const offsets = [], fasesSensor = [];
+  for (let s = 0; s < nSensores; s++) { offsets.push((rand() - 0.5) * 0.40); fasesSensor.push(rand() * Math.PI * 2); }
+
+  const rows = [];
+  for (let ms = limites[0], idx = 0; ms <= limites[7]; ms += intervaloSeg * 1000, idx++) {
+    let fase = 0;
+    while (fase < 6 && ms >= limites[fase + 1] && !(fase === 3 && ms === limites[4])) fase++; // a última leitura da esterilização ainda é esterilização
+    const p = AutoRel_limitarSimulador_((ms - limites[fase]) / Math.max(1, limites[fase + 1] - limites[fase]), 0, 1);
+    const naExposicao = ms >= limites[3] && ms <= limites[4];
+    const base = AutoRel_temperaturaFormaldeido_(fase, p, tPatamar, pulsosCond, idx);
+    const temps = [];
+    for (let s = 0; s < nSensores; s++) {
+      const onda = Math.sin(idx / 9 + fasesSensor[s]) * (naExposicao ? 0.12 : 0.2);
+      const ruido = (rand() - 0.5) * (naExposicao ? 0.16 : 0.3);
+      let t = base + offsets[s] * (naExposicao ? 1 : 1.5) + onda + ruido;
+      if (s === sensorFrio && naExposicao) t = Math.min(t, tMin - 0.8 + ruido);
+      temps.push(AutoRel_roundSimulador_(t, 2));
+    }
+    rows.push({
+      tempoStr: fmt(ms), tempoDate: new Date(ms), temperaturas: temps,
+      pressao: AutoRel_roundSimulador_(AutoRel_pressaoFormaldeido_(fase, p, base, pulsosCond, rand), 3)
+    });
+  }
+
+  // O motor lê a janela pelos campos do simulador (AutoRel_aplicarOverrideSimulacaoNoPayload_).
+  sim.inicioCiclo = fmt(limites[0]);
+  sim.fimCiclo = rows[rows.length - 1].tempoStr;
+  sim.inicioEsterilizacao = fmt(limites[3]);
+  sim.fimEsterilizacao = fmt(limites[4]);
+
+  payload.modoRelatorioSimulado = true;
+  payload._simulacaoMeta = {
+    origem: 'ANALISE_MANUAL_RECONSTITUIDA',
+    processo: 'FORMALDEIDO',
+    geradoEm: Utilities.formatDate(new Date(), AutoRel_UCFG.TZ, 'dd/MM/yyyy HH:mm:ss'),
+    operador: String(payload.operador || '').trim(),
+    inicioCiclo: sim.inicioCiclo,
+    fimCiclo: sim.fimCiclo,
+    inicioEsterilizacao: sim.inicioEsterilizacao,
+    fimEsterilizacao: sim.fimEsterilizacao,
+    fases: AUTOREL_SIM_FORMALDEIDO_FASES.map(function(f, i) { return { nome: f.nome, inicio: fmt(limites[i]), duracaoMin: duracoes[i] }; }),
+    duracaoTotalMin: duracoes.reduce(function(a, b) { return a + b; }, 0),
+    pulsosCondicionamento: pulsosCond,
+    temperaturaAlvo: alvo,
+    intervaloSegundos: intervaloSeg,
+    resultadoDesejado: reprovar ? 'REPROVADO' : 'APROVADO',
+    linhasGeradas: rows.length
+  };
+  return rows;
+}
+
+/** Temperatura de base da câmara por fase (fase 0 a 6, p = 0..1 dentro da fase). */
+function AutoRel_temperaturaFormaldeido_(fase, p, tPatamar, pulsos, idx) {
+  const pico = tPatamar - 1.9; // o condicionamento e a lavagem não chegam à temperatura de esterilização
+  switch (fase) {
+    case 0: return 44.6 + Math.sin(idx / 6) * 0.2;
+    case 1: return 44.8 + 3.2 * p;
+    case 2: {
+      if (p < 0.2) return 48 + (pico - 48) * (p / 0.2);
+      if (p > 0.9) return pico - 0.5 + (tPatamar - 0.6 - pico + 0.5) * ((p - 0.9) / 0.1);
+      const q = ((p - 0.2) / 0.7 * pulsos) % 1;
+      return pico - 3.6 * Math.sin(q * Math.PI);
+    }
+    case 3: return tPatamar + Math.sin(p * Math.PI * 3) * 0.15;
+    case 4: {
+      const q4 = (p * 3) % 1;
+      return pico - 4 * Math.sin(q4 * Math.PI) * (p < 0.95 ? 1 : 0.5);
+    }
+    case 5: return p < 0.15 ? pico - (pico - 42.5) * (p / 0.15) : 42.5 + 2 * ((p - 0.15) / 0.85);
+    default: return 46.6 + 2.6 * p;
+  }
+}
+
+/** Pressão absoluta da câmara (bar) por fase, como na fita: tudo abaixo da atmosfera até a aeração. */
+function AutoRel_pressaoFormaldeido_(fase, p, tBase, pulsos, rand) {
+  const ruido = (rand() - 0.5) * 0.006;
+  switch (fase) {
+    case 0: return (p < 0.05 ? 1.013 - (1.013 - 0.10) * (p / 0.05) : 0.10 + 0.006 * p) + ruido;
+    case 1: return 0.11 + ruido;
+    case 2: {
+      if (p > 0.9) return 0.15 + 0.05 * ((p - 0.9) / 0.1) + ruido;
+      const q = (p / 0.9 * pulsos) % 1;
+      return 0.13 + 0.07 * Math.sin(q * Math.PI) + ruido;
+    }
+    case 3: {
+      const ps = typeof SGO_QT_pSatVaporBar_ === 'function' ? SGO_QT_pSatVaporBar_(tBase) : null;
+      return (ps && isFinite(ps) ? ps : 0.205) + ruido;
+    }
+    case 4: {
+      const q4 = (p * 3) % 1;
+      return 0.15 + 0.045 * Math.sin(q4 * Math.PI) + ruido;
+    }
+    case 5: return (p < 0.15 ? 0.16 - 0.12 * (p / 0.15) : 0.04) + ruido / 3;
+    default: {
+      if (p > 0.95) return 0.84 + (1.013 - 0.84) * ((p - 0.95) / 0.05) + ruido;
+      const q6 = (p / 0.95 * 6) % 1, k = Math.floor(p / 0.95 * 6);
+      return 0.18 + (0.30 + 0.11 * k) * Math.sin(q6 * Math.PI) + ruido;
+    }
+  }
 }
 
 function AutoRel_validarSenhaSimuladorAdmin_(senhaInformada) {
@@ -200,15 +361,19 @@ function AutoRel_calcularTemperaturaBaseSimulada_(ms, ctx) {
     return ambiente + (52 - ambiente) * Math.pow(p, 0.75) + pulso;
   }
 
+  // 23/10/2026: a rampa termina 1,5 °C abaixo da temperatura mínima do ciclo e o patamar fica
+  // 0,55 °C acima dela, para todos os sensores entrarem na faixa na mesma leitura (equilíbrio)
+  // e nenhum sair dela durante a esterilização (o motor reprova um único sensor abaixo do mínimo).
+  const tMin = isFinite(Number(ctx.tMin)) ? Math.max(Number(ctx.tMin), alvo) : alvo;
   if (ms < ctx.inicioExpMs) {
     const p2 = AutoRel_limitarSimulador_((ms - ctx.fimPreVacuoMs) / rampaSpan, 0, 1);
     const curva = Math.pow(p2, 0.68);
-    return 52 + (alvo - 52 - 0.25) * curva + Math.sin(p2 * Math.PI * 4) * (1 - p2) * 0.9;
+    return 52 + (tMin - 1.5 - 52) * curva + Math.sin(p2 * Math.PI * 4) * (1 - p2) * 0.9;
   }
 
   if (ms <= ctx.fimExpMs) {
     const p3 = AutoRel_limitarSimulador_((ms - ctx.inicioExpMs) / Math.max(1, ctx.fimExpMs - ctx.inicioExpMs), 0, 1);
-    return alvo + 0.14 + Math.sin(p3 * Math.PI * 2.4) * 0.11 + p3 * 0.10;
+    return tMin + 0.55 + Math.sin(p3 * Math.PI * 2.4) * 0.08 + p3 * 0.10;
   }
 
   if (ms <= ctx.fimSecagemMs) {
@@ -253,6 +418,9 @@ function AutoRel_calcularPressaoSimulada_(ms, ctx) {
   }
 
   if (ms <= ctx.fimExpMs) {
+    // Vapor saturado na temperatura da câmara (critério "temperatura medida × vapor saturado").
+    const pSat = typeof SGO_QT_pSatVaporBar_ === 'function' ? SGO_QT_pSatVaporBar_(ctx.tempBase) : null;
+    if (pSat && isFinite(pSat)) return pSat + ruido / 2;
     const pExp = AutoRel_limitarSimulador_((ms - ctx.inicioExpMs) / Math.max(1, ctx.fimExpMs - ctx.inicioExpMs), 0, 1);
     return pVapor + Math.sin(pExp * Math.PI * 5) * 0.018 + ruido;
   }
@@ -277,12 +445,12 @@ function AutoRel_obterPressaoVaporAprox_(temp) {
 }
 
 function AutoRel_obterAmplitudeRuidoTemp_(ms, inicioExpMs, fimExpMs) {
-  if (ms >= inicioExpMs && ms <= fimExpMs) return 0.18;
+  if (ms >= inicioExpMs && ms <= fimExpMs) return 0.16;
   return 0.65;
 }
 
 function AutoRel_calcularAjusteSensorBorda_(ms, inicioMs, fimMs, inicioExpMs, fimExpMs, sensorIdx, totalSensores) {
-  const borda = (sensorIdx === 0 || sensorIdx === totalSensores - 1) ? -0.16 : 0;
+  const borda = (sensorIdx === 0 || sensorIdx === totalSensores - 1) ? -0.10 : 0;
   if (ms >= inicioExpMs && ms <= fimExpMs) return borda;
   const p = AutoRel_limitarSimulador_((ms - inicioMs) / Math.max(1, fimMs - inicioMs), 0, 1);
   return borda * (0.3 + 0.7 * Math.sin(p * Math.PI));

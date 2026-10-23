@@ -351,7 +351,8 @@ const AutoRel_UCFG = Object.freeze({
   SIMULADOR_ADMIN: Object.freeze({
     habilitado: true,
     senhaFallback: '', // SEGURANCA: fallback removido — configure em Script Properties > SIMULADOR_ADMIN_SENHA
-    intervaloSegundosDefault: 30
+    // 10 s: com 30 s o critério "tempo de equilíbrio" (≤ 15 s) do vapor sai "Não avaliado".
+    intervaloSegundosDefault: 10
   }),
 
   /****************************************************

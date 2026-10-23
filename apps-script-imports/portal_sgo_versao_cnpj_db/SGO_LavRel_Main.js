@@ -29,7 +29,10 @@ function LavRel_apiDispatch(req) {
   // 21/10/2026 (fluxo cliente → unidade → equipamento, molde da autoclave): documento do ensaio só com o
   // equipamento escolhido no cadastro; cliente, CNPJ, endereço, TAG e nº de série vêm do cadastro
   // (equipamento de outro cliente é recusado). Relatório interno (dados reconstituídos) fica de fora.
-  if (LAVREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !payload.modoRelatorioSimulado && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
+  // 23/10/2026: a tela não manda modoRelatorioSimulado (o servidor é que marca), então o relatório interno
+  // é reconhecido pelo modo de entrada; com equipamento escolhido, a identificação continua vindo do cadastro.
+  const dispensaVinculo = payload.modoRelatorioSimulado || (String(payload.modoEntrada || '').toUpperCase().trim() === 'SIMULADO_ADMIN' && !payload.equipamentoId);
+  if (LAVREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !dispensaVinculo && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
     payload = SGO_QEQ_aplicarVinculoPayload_(String(req.sessionId || ''), payload);
   }
 
