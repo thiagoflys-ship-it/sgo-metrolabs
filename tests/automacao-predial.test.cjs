@@ -71,7 +71,7 @@ function ambiente(o) {
         if (/shadow\/properties$/.test(u.pathname)) { api.leiturasSombra = (api.leiturasSombra || 0) + 1; return resposta(200, { success: true, result: { properties: [{ code: 'unlock_request', value: api.pedidoValor || 0, time: api.pedidoEm || Date.now() }, { code: 'doorbell', value: true, time: api.campainhaEm || 0 }, { code: 'closed_opened', value: api.fechAberta ? 'open' : 'closed', time: Date.now() }] } }); }
         if (api.pedido && /dev-fech-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.respostasPedido = api.respostasPedido || []).push(v); if (!(api.pedidoValor > 0)) return resposta(200, { success: false, code: 2008, msg: 'not in request window' }); if (v.value === true) api.fechAberta = true; api.pedidoValor = 0; return resposta(200, { success: true, result: true, tid: 'tid-r' }); }
         if (api.garagem && /dev-portao-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean', values: '{}' }, { code: 'door_control_1', type: 'Enum', values: '{"range":["open","close"]}' }] } });
-        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); api.portaoAberto = v.value !== 'close'; if (v.code === 'door_control_1') api.dc1 = v.value; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
+        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); if (!api.sensorLento) { api.portaoAberto = v.value !== 'close'; if (v.code === 'door_control_1') api.dc1 = v.value; } return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
         if (api.garagem && u.pathname === '/v1.0/devices/dev-portao-1') { api.leiturasGaragem = (api.leiturasGaragem || 0) + 1; return resposta(200, { success: true, result: { id: 'dev-portao-1', online: true, status: estadoGaragem() } }); }
         if (/\/functions$/.test(u.pathname)) return u.pathname.includes('fech') ? resposta(200, { success: true, result: { category: 'jtmspro', functions: api.remoto ? [{ code: 'remote_no_dp_key', type: 'Raw' }] : [{ code: 'unlock_temporary', type: 'Integer' }] } })
           : resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean' }] } });
@@ -418,7 +418,7 @@ test('idempotência e limites: o mesmo identificador não executa de novo; 10 s 
   const amb2 = ambiente();
   sincronizar(amb2);
   const q = amb2.disp('Portão principal');
-  amb2.tabelas.AUT_COMANDOS.push({ ID: 'ac', OPERACAO_ID: 'op-aceito-1', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 30000).toISOString(), SOLICITANTE_ID: 'uD', DISPOSITIVO_ID: q.ID, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'ACEITO' });
+  amb2.tabelas.AUT_COMANDOS.push({ ID: 'ac', OPERACAO_ID: 'op-aceito-1', COMANDO: 'ABRIR', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 30000).toISOString(), SOLICITANTE_ID: 'uD', DISPOSITIVO_ID: q.ID, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'ACEITO' });
   amb2.como(DONO);
   const r5 = amb2.abrir(q.ID, 'op-rep-00000009');
   assert.equal(r5.ok, false); assert.match(r5.message, /ainda está sem resultado/);
@@ -681,6 +681,45 @@ test('portões (23/10/2026): garagem com sensor já abre e fecha (sem escolha gr
   amb.como(DONO);
   assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').ultComandoRecente, false);
   assert.match(ler('JS_AutomacaoPredial.html'), /d\.ultComandoCodigo && d\.ultComandoRecente/);
+});
+
+test('garagem real (23/10/2026, 13:08): sensor lento e sem eco do door_control_1; abrir sem confirmação não trava o fechar; a confirmação vem depois pelo sensor (tela e rotina de 1 minuto)', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Portão principal');
+  const g = amb.disp('Portão principal');
+  amb.api.sensorLento = true; // a nuvem aceita, mas nem o sensor nem door_control_1 mudam dentro da espera do comando
+  amb.como(DONO);
+  let r = amb.abrir(g.ID, 'op-lento-00000001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'ACEITO');
+  assert.match(r.texto, /o portão está abrindo/); assert.ok(!/trate como não executado/.test(r.texto));
+  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S66').length, 0, 'portão no percurso não vira alarme para a gestão');
+  // 20 s depois: fechar é outro comando, não espera o resultado do abrir
+  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 20000).toISOString(); });
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-lento-00000002', acao: 'FECHAR' });
+  assert.equal(p.ok, true, p.message);
+  // abrir de novo continua esperando o resultado do abrir anterior
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-lento-00000003' }).message, /ainda está sem resultado/);
+  // o portão chega: a tela confirma pela leitura de posição
+  amb.api.portaoAberto = true;
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const t = amb.api_('portoes');
+  assert.equal(t.itens.find((x) => x.id === g.ID).ultComandoCodigo, 'CONFIRMADO');
+  const c1 = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-lento-00000001');
+  assert.equal(c1.SITUACAO, 'CONFIRMADO'); assert.match(c1.CONFIRMACAO_DETALHE, /sensor do portão informa aberto.*Confirmado pelo sensor às/);
+  // fechar real, sensor ainda aberto: "fechando"; a rotina de 1 minuto confirma quando o sensor fechar, sem tela aberta
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-lento-00000002', confirmacaoToken: p.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'ACEITO'); assert.match(r.texto, /o portão está fechando/);
+  amb.api.portaoAberto = false;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-lento-00000002').SITUACAO, 'CONFIRMADO');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.filter((a) => a.EVENTO === 'EXECUCAO_CONFIRMADA').length >= 2);
+  // regra pura: o eco do comando sem o sensor não confirma
+  const d = { TIPO: 'PORTAO', ACIONAMENTO: 'ABRIR_FECHAR' };
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_(d, 'FECHAR', [{ code: 'door_control_1', value: 'close' }, { code: 'doorcontact_state', value: true }]).confirmado, false);
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_(d, 'FECHAR', [{ code: 'doorcontact_state', value: false }]).confirmado, true);
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_({ TIPO: 'PORTAO', ACIONAMENTO: 'PULSO' }, 'ABRIR', [{ code: 'doorcontact_state', value: false }]), null, 'pulso: regra antiga');
 });
 
 test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… no percurso; a tela relê com leitura compartilhada e cede a vez quando o minuto está cheio', () => {

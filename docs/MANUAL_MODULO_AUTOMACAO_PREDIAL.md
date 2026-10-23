@@ -46,6 +46,8 @@ Nada para digitar: toque em "Abrir portão", "Fechar portão" ou "Destravar a po
 
 A nuvem aceitar não quer dizer porta aberta. Só a execução confirmada quer dizer isso.
 
+Portão com sensor e abrir e fechar (garagem), desde 23/10/2026: a execução é o sensor na posição pedida (aberto para abrir, fechado para fechar). O SGO+ relê o estado até três vezes (cerca de 8 segundos). Se o portão ainda está no percurso, a resposta é "Comando aceito: o portão está abrindo/fechando", sem aviso à gestão, e a confirmação vem depois, quando o sensor chegar: pela tela aberta (a cada 5 segundos) ou pela rotina de 1 minuto do servidor, por até 15 minutos. O selo da situação do último comando só aparece nesses 15 minutos.
+
 ## Simulação e comando real
 
 Enquanto a chave "Automação predial ligada" está Desligada em Chaves e senhas, ou o dispositivo não foi homologado pela Diretoria, o SGO+ trabalha em simulação: registra o que teria feito e nada sai do servidor. O cartão mostra o selo "Simulação" e o motivo.
@@ -57,7 +59,7 @@ O comando real exige as duas coisas: automação Ligada e dispositivo homologado
 - Cada clique gera um identificador de operação. O mesmo identificador nunca é executado duas vezes: a segunda chamada devolve o resultado da primeira.
 - No máximo 1 comando por dispositivo a cada 10 segundos.
 - No máximo 5 comandos por pessoa por minuto.
-- O mesmo dispositivo não recebe outro comando enquanto o anterior está sem resultado há menos de 60 segundos.
+- O mesmo comando não é repetido no dispositivo enquanto o anterior está sem resultado há menos de 60 segundos. Um comando diferente (por exemplo, fechar depois de abrir) só espera os 10 segundos.
 - No máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).
 - Todo comando exige o toque em "Sim, abrir agora" na janela (código de uso único de 60 segundos).
 

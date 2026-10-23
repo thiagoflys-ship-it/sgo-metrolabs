@@ -405,7 +405,7 @@
         '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
           (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") +
           // 23/10/2026: a situação do último comando só aparece enquanto vale "Conferir agora" (15 min); depois, só a hora
-          (d.ultComandoCodigo && d.ultComandoRecente ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : "") +
+          '<span data-aut-sit="' + AutPred_esc_(d.id) + '">' + AutPred_htmlSit_(d) + "</span>" +
           (d.ultComandoEm ? '<span class="cadx-sub">último: ' + AutPred_esc_(d.ultComandoEm) + "</span>" : "") + "</div>" +
         AutPred_htmlBotoesRapidos_(d, contexto) + "</div>";
     }).join("") + "</div>";
@@ -424,6 +424,8 @@
     var texto = e.codigo ? e.texto : "Posição: sem sensor";
     return '<div><span class="aut-posicao ' + cls + '" data-aut-posicao="' + AutPred_esc_(id) + '" role="status"><i class="fas ' + ic + '" aria-hidden="true"></i>' + AutPred_esc_(texto) + "</span></div>";
   }
+  /** Selo da situação do último comando: só enquanto vale o "Conferir agora" (15 min); a releitura da tela troca no lugar. */
+  function AutPred_htmlSit_(d) { return d.ultComandoCodigo && d.ultComandoRecente ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : ""; }
   function AutPred_pararPortoes_() { if (AUTP.portTimer) clearInterval(AUTP.portTimer); AUTP.portTimer = null; }
   function AutPred_iniciarPortoes_() {
     if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; }
@@ -438,6 +440,7 @@
         (r.itens || []).forEach(function (x) {
           var e = x.estadoPortao || {}, antes = AUTP.posicoes[x.id], agora = e.codigo || "";
           document.querySelectorAll('[data-aut-posicao="' + x.id + '"]').forEach(function (el) { el.parentNode.outerHTML = AutPred_htmlPosicao_(x.id, e); });
+          document.querySelectorAll('[data-aut-sit="' + x.id + '"]').forEach(function (el) { el.innerHTML = AutPred_htmlSit_(x); });
           AUTP.posicoes[x.id] = agora;
           if (antes !== undefined && antes !== agora && (agora === "ABERTO" || agora === "FECHADO")) {
             var d = AutPred_dispositivo_(x.id);

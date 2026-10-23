@@ -424,6 +424,27 @@ function AutPred_lerEstadoCompartilhado_(c, disp) {
   return true;
 }
 
+/**
+ * Confirmação tardia (23/10/2026): comando de portão aceito e ainda sem confirmação nos últimos 15 minutos é confirmado
+ * quando o sensor chega à posição pedida (o fechar da garagem leva mais que a espera do comando). Usa o estado já lido.
+ */
+function AutPred_confirmarTardio_(disp) {
+  var sit = AutPred_s_(disp.ULT_CMD_SITUACAO);
+  if (disp.TIPO === 'FECHADURA' || (sit !== 'ACEITO' && sit !== 'INCERTO') || !AutPred_s_(disp.ULT_CMD_ID)) return false;
+  if (Date.now() - AutPred_ms_(disp.ULT_CMD_EM) > AUT_CONFIRMACAO_JANELA_MIN * 60000) return false;
+  var cmd = AutPred_comandos_().filter(function (x) { return AutPred_s_(x.ID) === AutPred_s_(disp.ULT_CMD_ID); })[0];
+  if (!cmd || ['ACEITO', 'INCERTO'].indexOf(AutPred_s_(cmd.SITUACAO)) < 0) return false;
+  var r = AutPred_confirmarPeloSensor_(disp, cmd.COMANDO, AutPred_deJson_(disp.ESTADO_JSON, []));
+  if (!r || !r.confirmado) return false;
+  var agora = SGO_UTILS.nowIso();
+  var upd = { SITUACAO: 'CONFIRMADO', CONFIRMADO_EM: agora, ESTADO_DEPOIS_JSON: AutPred_s_(disp.ESTADO_JSON), CONFIRMACAO_DETALHE: r.detalhe + ' Confirmado pelo sensor às ' + AutPred_hora_(Date.now()) + '.', ATUALIZADO_EM: agora };
+  SGO_DATA.update(AUT_ABA_COMANDOS, cmd.ID, upd);
+  SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: 'CONFIRMADO', ATUALIZADO_EM: agora });
+  disp.ULT_CMD_SITUACAO = 'CONFIRMADO';
+  AutPred_auditar_({ evento: 'EXECUCAO_CONFIRMADA', quem: AUT_SISTEMA, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'CONFIRMADO', detalhe: upd.CONFIRMACAO_DETALHE });
+  return true;
+}
+
 /** Consulta leve da tela (a cada 5 s, enquanto ela está aberta): estado dos portões que a sessão vê. */
 function AutPred_estadosPortoes_(sessao) {
   var c = AutPred_cfg_(), perms = AutPred_permissoesDe_(sessao.userId), itens = [];
@@ -432,8 +453,10 @@ function AutPred_estadosPortoes_(sessao) {
     if (!AutPred_direitos_(sessao, d, perms).ver) return;
     var erro = '';
     if (c.podeLer && (AutPred_temSensor_(d) || AutPred_acionamento_(d) === 'ABRIR_FECHAR')) { try { AutPred_lerEstadoCompartilhado_(c, d); } catch (e) { erro = Tuya_limpar_(e && e.message, c); } }
+    try { AutPred_confirmarTardio_(d); } catch (eT) {}
     itens.push({ id: AutPred_s_(d.ID), online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estadoPortao: AutPred_estadoPortao_(d), estado: AutPred_estadoTexto_(d),
-      ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), erro: erro });
+      ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO),
+      ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000, erro: erro });
   });
   return { itens: itens, hora: AutPred_hora_(Date.now()) };
 }
@@ -455,15 +478,35 @@ function AutPred_confirmarPorEstado_(tipo, codigos, antes, depois, comandoAbrir)
   return { confirmado: false, detalhe: 'O dispositivo não informou mudança de estado (' + (lista.length ? lista.join(', ') : 'sem códigos de estado') + '). A API aceitou o comando, mas a execução não foi confirmada.' };
 }
 
-/** Relê o estado (e, na fechadura, os registros de abertura) e atualiza o comando. */
-function AutPred_conferirExecucao_(c, disp, cmd, quem) {
+/**
+ * Portão com sensor de posição e abrir/fechar (23/10/2026): a execução é o sensor na posição pedida (aberto para ABRIR,
+ * fechado para FECHAR), não o eco do comando. null quando a regra não se aplica. Função pura.
+ */
+function AutPred_confirmarPeloSensor_(disp, comando, estado) {
+  if (disp.TIPO === 'FECHADURA' || AutPred_acionamento_(disp) !== 'ABRIR_FECHAR') return null;
+  var acao = AutPred_s_(comando);
+  if (acao !== 'ABRIR' && acao !== 'FECHAR') return null;
+  var v;
+  (estado || []).forEach(function (s) { if (s && s.code === 'doorcontact_state') v = s.value; });
+  if (v === undefined) return null;
+  var quer = acao === 'ABRIR';
+  return v === quer ? { confirmado: true, detalhe: 'O sensor do portão informa ' + (quer ? 'aberto' : 'fechado') + '.' }
+    : { confirmado: false, emCurso: true, detalhe: 'A nuvem aceitou e o portão ainda não chegou: o sensor informa ' + (v ? 'aberto' : 'fechado') + '. O SGO+ confirma quando o sensor mudar.' };
+}
+
+/**
+ * Relê o estado (e, na fechadura, os registros de abertura) e atualiza o comando. silencioso = leitura intermediária:
+ * sem confirmação, não grava nem registra nada (a última leitura é que registra).
+ */
+function AutPred_conferirExecucao_(c, disp, cmd, quem, silencioso) {
   var antes = AutPred_deJson_(cmd.ESTADO_ANTES_JSON, []);
   var depois = [];
   try { depois = AutPred_lerEstado_(c, disp).status; } catch (e) {
     return { confirmado: false, detalhe: 'Não foi possível reler o estado: ' + Tuya_limpar_(e && e.message, c) };
   }
   var enviado = AutPred_deJson_(cmd.COMANDO_JSON, null);
-  var r = AutPred_confirmarPorEstado_(disp.TIPO, AutPred_s_(disp.ESTADO_CODIGOS).split(',').map(function (x) { return x.trim(); }).concat(['doorcontact_state']), antes, depois, enviado && enviado.code ? enviado : AutPred_deJson_(disp.COMANDO_ABRIR_JSON, null));
+  var r = AutPred_confirmarPeloSensor_(disp, cmd.COMANDO, depois) ||
+    AutPred_confirmarPorEstado_(disp.TIPO, AutPred_s_(disp.ESTADO_CODIGOS).split(',').map(function (x) { return x.trim(); }).concat(['doorcontact_state']), antes, depois, enviado && enviado.code ? enviado : AutPred_deJson_(disp.COMANDO_ABRIR_JSON, null));
   if (!r.confirmado && disp.TIPO === 'FECHADURA') {
     var regs = Tuya_fechaduraRegistros_(c, disp.DEVICE_ID, AutPred_ms_(cmd.QUANDO_EM) - 5000, Date.now());
     // modo pedido: só conta a abertura remota (unlock_app); digital, senha ou cartão de quem está na porta não confirmam o SGO+
@@ -474,6 +517,7 @@ function AutPred_conferirExecucao_(c, disp, cmd, quem) {
       r = pd && !pd.ativo && !regs.length ? { confirmado: true, detalhe: 'Pedido recusado: a fechadura encerrou o pedido sem abrir.' } : { confirmado: false, detalhe: 'A nuvem aceitou a recusa, mas o pedido ' + (regs.length ? 'terminou com abertura registrada.' : 'ainda aparece ativo.') };
     } else if (regs.length) r = { confirmado: true, detalhe: 'A fechadura registrou a abertura remota depois da solicitação (' + regs.length + ' registro(s)).' };
   }
+  if (!r.confirmado && silencioso) return r;
   var upd = { ESTADO_DEPOIS_JSON: AutPred_json_(depois), CONFIRMACAO_DETALHE: r.detalhe, ATUALIZADO_EM: SGO_UTILS.nowIso() };
   if (r.confirmado) { upd.SITUACAO = 'CONFIRMADO'; upd.CONFIRMADO_EM = SGO_UTILS.nowIso(); }
   SGO_DATA.update(AUT_ABA_COMANDOS, cmd.ID, upd);
@@ -488,8 +532,11 @@ function AutPred_conferirExecucao_(c, disp, cmd, quem) {
 // ------------------------------------------------------------
 function AutPred_comandos_() { return AutPred_ler_(AUT_ABA_COMANDOS); }
 
-/** Regras de frequência e repetição. Função pura: devolve '' (pode) ou o motivo. */
-function AutPred_podeAgora_(comandos, dispId, userId, agoraMs) {
+/**
+ * Regras de frequência e repetição. Função pura: devolve '' (pode) ou o motivo. comando (ABRIR, FECHAR, DESTRAVAR...):
+ * a espera pelo resultado do anterior vale só para repetir o MESMO comando (23/10/2026: abrir sem confirmação travava o fechar).
+ */
+function AutPred_podeAgora_(comandos, dispId, userId, agoraMs, comando) {
   var ultDisp = null, porUsuario = 0;
   (comandos || []).forEach(function (x) {
     var em = AutPred_ms_(x.QUANDO_EM);
@@ -502,7 +549,8 @@ function AutPred_podeAgora_(comandos, dispId, userId, agoraMs) {
     var dt = (agoraMs - AutPred_ms_(ultDisp.QUANDO_EM)) / 1000;
     if (dt < AUT_INTERVALO_DISPOSITIVO_S) return 'este dispositivo recebeu um comando há ' + Math.round(dt) + ' s (intervalo mínimo de ' + AUT_INTERVALO_DISPOSITIVO_S + ' s); aguarde';
     var sit = AutPred_s_(ultDisp.SITUACAO);
-    if ((sit === 'SOLICITADO' || sit === 'ACEITO') && dt < AUT_SEM_RESULTADO_S) return 'o comando anterior (' + AutPred_s_(ultDisp.QUANDO).slice(-5) + ') ainda está sem resultado; use "Conferir agora" ou aguarde ' + Math.ceil(AUT_SEM_RESULTADO_S - dt) + ' s';
+    var mesmo = !comando || AutPred_s_(ultDisp.COMANDO) === AutPred_s_(comando);
+    if (mesmo && (sit === 'SOLICITADO' || sit === 'ACEITO') && dt < AUT_SEM_RESULTADO_S) return 'o comando anterior (' + AutPred_s_(ultDisp.QUANDO).slice(-5) + ') ainda está sem resultado; use "Conferir agora" ou aguarde ' + Math.ceil(AUT_SEM_RESULTADO_S - dt) + ' s';
   }
   return '';
 }
@@ -606,6 +654,12 @@ function AutPred_rotinaPedidos() {
   var c = AutPred_cfg_();
   if (!c.podeLer || !AutPred_emUso_(c)) return { texto: 'automação desligada ou em implantação: nada lido' };
   var props = PropertiesService.getScriptProperties(), avisos = 0;
+  // 23/10/2026: portão aceito sem confirmação nos últimos 15 min é confirmado pelo sensor mesmo sem tela aberta
+  AutPred_dispositivos_().forEach(function (d) {
+    var sit = AutPred_s_(d.ULT_CMD_SITUACAO);
+    if (d.TIPO === 'FECHADURA' || (sit !== 'ACEITO' && sit !== 'INCERTO') || !AutPred_temSensor_(d) || Date.now() - AutPred_ms_(d.ULT_CMD_EM) > AUT_CONFIRMACAO_JANELA_MIN * 60000) return;
+    try { AutPred_lerEstado_(c, d); AutPred_confirmarTardio_(d); } catch (eT) {}
+  });
   AutPred_dispositivos_().forEach(function (d) {
     if (!AutPred_ehPedido_(d) || AutPred_s_(d.HOMOLOGADO).toUpperCase() !== 'SIM' || AutPred_s_(d.ATIVO).toUpperCase() === 'NAO') return;
     var p;
@@ -787,10 +841,10 @@ function AutPred_prepararComando_(sessao, dados) {
   if (!dir.acionar) throw new Error('Não foi possível ' + verbo + ': ' + dir.motivo + '.');
   if (AutPred_s_(disp.ATIVO).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': o dispositivo está desativado no SGO+ (o Administrador ou um diretor reativa em Administrar).');
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
-  var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now());
-  if (freq) throw new Error('Não foi possível ' + verbo + ' agora: ' + freq + '.');
   var c = AutPred_cfg_();
   var acaoP = AutPred_acaoPedida_(dados, disp);
+  var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now(), disp.TIPO === 'FECHADURA' ? (acaoP === 'RECUSAR' ? 'RECUSAR' : 'DESTRAVAR') : acaoP);
+  if (freq) throw new Error('Não foi possível ' + verbo + ' agora: ' + freq + '.');
   if (disp.TIPO !== 'FECHADURA' && !AutPred_comandoDaAcao_(disp, acaoP)) throw new Error(AutPred_textoSemAcao_(disp, acaoP));
   var pedido = null;
   if (AutPred_ehPedido_(disp) && c.podeLer) {
@@ -896,7 +950,7 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
     var jaResp = AutPred_respostaDoPedido_(comandos, disp.ID, pedido.pedidoId);
     if (jaResp) negar('este pedido de abertura já foi respondido por ' + AutPred_s_(jaResp.SOLICITANTE) + ' às ' + AutPred_s_(jaResp.QUANDO).slice(-5) + ' (' + AutPred_situacaoTexto_(jaResp.SITUACAO) + ')', 'PEDIDO_JA_RESPONDIDO');
   }
-  var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now());
+  var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now(), verbo);
   if (freq) negar(freq, 'COMANDO_LIMITE');
 
   // Estado "antes" lido agora na nuvem quando o comando é real: o guardado pode ser velho (ex.: o pulso do acionador já
@@ -942,10 +996,20 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   AutPred_gravarComando_(cmd, { SITUACAO: 'ACEITO', API_HTTP: String(r.http || ''), API_CODIGO: '0', API_TID: AutPred_s_(r.tid), API_RESPOSTA: AutPred_s_(r.resposta) });
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: 'ACEITO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
   AutPred_auditar_({ evento: 'COMANDO_ACEITO', quem: sessao, disp: disp, operacaoId: opId, resultado: 'ACEITO', detalhe: 'A API da Tuya aceitou o comando (HTTP ' + r.http + (r.tid ? ', tid ' + r.tid : '') + '). Aguardando a confirmação do dispositivo.' });
-  Utilities.sleep(AUT_CONFIRMACAO_ESPERA_MS);
-  var conf = AutPred_conferirExecucao_(c, disp, cmd, sessao);
-  if (!conf.confirmado) AutPred_avisarSemConfirmacao_(disp, cmd, sessao);
-  return { comando: AutPred_comandoParaTela_(cmd), texto: conf.confirmado ? 'Execução confirmada: ' + conf.detalhe : 'Comando aceito pela API, mas a execução ainda não foi confirmada pelo dispositivo. ' + conf.detalhe + ' Use "Conferir agora" em alguns segundos; se a porta não abriu, trate como não executado.' };
+  // 23/10/2026: o sensor do portão leva alguns segundos para mudar; até 3 leituras (cerca de 8 s) antes de responder.
+  // Se o portão ainda está no percurso (fechar da garagem), a confirmação vem depois pelo sensor (AutPred_confirmarTardio_).
+  var sensor = disp.TIPO !== 'FECHADURA' && AutPred_acionamento_(disp) === 'ABRIR_FECHAR' && AutPred_temSensor_(disp);
+  var esperas = sensor ? [AUT_CONFIRMACAO_ESPERA_MS, 2500, 3000] : [AUT_CONFIRMACAO_ESPERA_MS];
+  var conf = null;
+  for (var i = 0; i < esperas.length; i++) {
+    Utilities.sleep(esperas[i]);
+    conf = AutPred_conferirExecucao_(c, disp, cmd, sessao, i < esperas.length - 1);
+    if (conf.confirmado) break;
+  }
+  if (conf.confirmado) return { comando: AutPred_comandoParaTela_(cmd), texto: 'Execução confirmada: ' + conf.detalhe };
+  if (conf.emCurso) return { comando: AutPred_comandoParaTela_(cmd), texto: 'Comando aceito: o portão está ' + (verbo === 'FECHAR' ? 'fechando' : 'abrindo') + '. Acompanhe a posição no selo; o SGO+ confirma pelo sensor quando ele chegar.' };
+  AutPred_avisarSemConfirmacao_(disp, cmd, sessao);
+  return { comando: AutPred_comandoParaTela_(cmd), texto: 'Comando aceito pela API, mas a execução ainda não foi confirmada pelo dispositivo. ' + conf.detalhe + ' Use "Conferir agora" em alguns segundos; se a porta não abriu, trate como não executado.' };
 }
 
 /** Aviso à gestão (matriz S66) quando a API aceitou e o dispositivo não confirmou. Nunca derruba o comando. */

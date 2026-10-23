@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "34755389c3f9",
+ "versao": "c12ae9890652",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -809,7 +809,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "O caminho de um comando",
-     "texto": "1. Solicitado. O SGO+ confere a sessão, a permissão no dispositivo, o código da janela de confirmação, se o dispositivo está ativo e compatível, e os limites de frequência. Grava a solicitação com o identificador da operação. Se qualquer regra falha, a solicitação fica registrada como negada, com o motivo, e a tela explica o que fazer.\n2. Aceito. A nuvem da Tuya respondeu que recebeu o comando. O SGO+ grava o código HTTP, o código da resposta e o identificador da chamada (tid).\n3. Execução confirmada. O SGO+ espera alguns segundos, relê o estado do dispositivo e procura a mudança (ou, na fechadura, o registro de abertura). Encontrou: \"Execução confirmada\". Não encontrou: \"Aceito pela API, sem confirmação\": a gestão é avisada (evento S66 da matriz de avisos), o comando entra nas pendências do Início e o botão \"Conferir agora\" relê o estado por até 15 minutos.\n\nA nuvem aceitar não quer dizer porta aberta. Só a execução confirmada quer dizer isso."
+     "texto": "1. Solicitado. O SGO+ confere a sessão, a permissão no dispositivo, o código da janela de confirmação, se o dispositivo está ativo e compatível, e os limites de frequência. Grava a solicitação com o identificador da operação. Se qualquer regra falha, a solicitação fica registrada como negada, com o motivo, e a tela explica o que fazer.\n2. Aceito. A nuvem da Tuya respondeu que recebeu o comando. O SGO+ grava o código HTTP, o código da resposta e o identificador da chamada (tid).\n3. Execução confirmada. O SGO+ espera alguns segundos, relê o estado do dispositivo e procura a mudança (ou, na fechadura, o registro de abertura). Encontrou: \"Execução confirmada\". Não encontrou: \"Aceito pela API, sem confirmação\": a gestão é avisada (evento S66 da matriz de avisos), o comando entra nas pendências do Início e o botão \"Conferir agora\" relê o estado por até 15 minutos.\n\nA nuvem aceitar não quer dizer porta aberta. Só a execução confirmada quer dizer isso.\n\nPortão com sensor e abrir e fechar (garagem), desde 23/10/2026: a execução é o sensor na posição pedida (aberto para abrir, fechado para fechar). O SGO+ relê o estado até três vezes (cerca de 8 segundos). Se o portão ainda está no percurso, a resposta é \"Comando aceito: o portão está abrindo/fechando\", sem aviso à gestão, e a confirmação vem depois, quando o sensor chegar: pela tela aberta (a cada 5 segundos) ou pela rotina de 1 minuto do servidor, por até 15 minutos. O selo da situação do último comando só aparece nesses 15 minutos."
     },
     {
      "titulo": "Simulação e comando real",
@@ -817,7 +817,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Limites de proteção",
-     "texto": "Cada clique gera um identificador de operação. O mesmo identificador nunca é executado duas vezes: a segunda chamada devolve o resultado da primeira.\nNo máximo 1 comando por dispositivo a cada 10 segundos.\nNo máximo 5 comandos por pessoa por minuto.\nO mesmo dispositivo não recebe outro comando enquanto o anterior está sem resultado há menos de 60 segundos.\nNo máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).\nTodo comando exige o toque em \"Sim, abrir agora\" na janela (código de uso único de 60 segundos)."
+     "texto": "Cada clique gera um identificador de operação. O mesmo identificador nunca é executado duas vezes: a segunda chamada devolve o resultado da primeira.\nNo máximo 1 comando por dispositivo a cada 10 segundos.\nNo máximo 5 comandos por pessoa por minuto.\nO mesmo comando não é repetido no dispositivo enquanto o anterior está sem resultado há menos de 60 segundos. Um comando diferente (por exemplo, fechar depois de abrir) só espera os 10 segundos.\nNo máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).\nTodo comando exige o toque em \"Sim, abrir agora\" na janela (código de uso único de 60 segundos)."
     },
     {
      "titulo": "Dispositivos",
