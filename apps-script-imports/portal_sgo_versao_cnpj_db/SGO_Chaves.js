@@ -46,6 +46,10 @@ var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
  * teste: qual botão "Testar" aparece no item.
  */
 var CHV_ITENS = [
+  { chave: 'FROTA_KM_NOTURNO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Conferência automática do KM às 22h',
+    ajuda: 'Horário de Brasília. Um veículo por rodada do rastreador após 22h. Só ajusta o acumulador GPS dos veículos em modo Ativo, devolvidos, parados, desligados e com sinal, sem uso posterior à foto. Duas leituras da foto precisam confirmar o KM digitado; os demais casos ficam pendentes no painel da frota. Não altera o KM digitado pelo colaborador.' },
+  { chave: 'FROTA_KM_NOTURNO_IA_AUTORIZADA', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: [['1', 'Autorizado'], ['0', 'Não autorizado']], vazio: 'Não autorizado', nome: 'Autorizar leitura das fotos dos painéis pela IA',
+    ajuda: 'Autoriza enviar somente a foto do painel da última devolução ao Google Gemini, com a chave de IA já configurada. Sem esta autorização, a conferência automática não executa.' },
   { chave: 'GEMINI_API_KEY', grupo: 'Inteligência artificial', tipo: 'chave', teste: 'gemini', nome: 'Chave da IA (Gemini)',
     ajuda: 'Google AI Studio → Get API key. Usada nas interpretações técnicas, PGT/POP e leitura de documentos.' },
   { chave: 'AUVO_API_KEY', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: chave de acesso',
@@ -303,11 +307,16 @@ function Chaves_lista_() {
 // API
 // ------------------------------------------------------------
 
+/** Configuração de alarme: somente Admin e Diretoria, verificados no servidor. */
+function Chaves_adminAlarme_(s) {
+  return !!s && typeof AutPred_administra_ === 'function' && AutPred_administra_(s);
+}
+
 /** Usado pela casca para mostrar o item do menu. Nunca lança erro; não revela nada além de sim/não. */
 function Chaves_apiEhDono(sessionId, payload) {
   try {
     var v = validarSessao(sessionId);
-    return { ok: true, dono: !!(v && v.valid && Chaves_ehDonoUsuario_((v.data || {}).usuario)) };
+    return { ok: true, dono: !!(v && v.valid && Chaves_ehDonoUsuario_((v.data || {}).usuario)), alarme: !!(v && v.valid && Chaves_adminAlarme_(v.data)) };
   } catch (e) {
     return { ok: true, dono: false };
   }
@@ -315,8 +324,13 @@ function Chaves_apiEhDono(sessionId, payload) {
 
 function Chaves_apiListar(sessionId, payload) {
   return Chaves_resposta_(function () {
-    Chaves_exigirDono_(sessionId);
-    return Chaves_lista_();
+    var v = validarSessao(sessionId), s = v && v.valid && v.data;
+    if (!s) throw new Error('Sessão expirada. Entre novamente.');
+    var dono = Chaves_ehDonoUsuario_(s.usuario), alarme = Chaves_adminAlarme_(s);
+    if (!dono && !alarme) throw new Error('Acesso exclusivo de Admin e Diretoria.');
+    var r = dono ? Chaves_lista_() : { grupos: [], itens: [], testes: {} };
+    r.podeConfigurarAlarme = alarme;
+    return r;
   });
 }
 

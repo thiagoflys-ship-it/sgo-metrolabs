@@ -300,8 +300,11 @@ function Rastreador_posicao_(p) {
   var bool = function (v) { return v === true || v === 'true' ? true : (v === false || v === 'false' ? false : null); };
   var numero = function (v) { return v === null || v === undefined || v === '' || !isFinite(Number(v)) ? null : Number(v); };
   var nos = numero(p.speed);
-  var odo = numero(a.odometer);
-  if (odo === null) odo = numero(a.totalDistance);
+  // A calibração via /devices/{id}/accumulators altera totalDistance.
+  // odometer vem do aparelho e pode reaparecer com outro contador (Onix: 39 km
+  // contra 43.518 km acumulados). A leitura precisa seguir o contador calibrado.
+  var odo = numero(a.totalDistance);
+  if (odo === null) odo = numero(a.odometer);
   var quando = new Date(p.fixTime || p.deviceTime || p.serverTime || '');
   var ok = !isNaN(quando.getTime());
   var lat = numero(p.latitude), lon = numero(p.longitude);

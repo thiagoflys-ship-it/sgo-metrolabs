@@ -521,7 +521,10 @@ function lerSessaoAuth_(sessionId) {
 
     if (rawCache) {
       try {
-        return JSON.parse(rawCache);
+        const dataCache = JSON.parse(rawCache);
+        // A sessão pode ter sido renovada no banco por outra execução. Cache vencido
+        // nunca autoriza remover a cópia persistente: confira-a antes de encerrar.
+        if (dataCache && dataCache.sessionId === sessionKey && !sessaoExpiradaAuth_(dataCache)) return dataCache;
       } catch (e) {
         // segue para fallback
       }

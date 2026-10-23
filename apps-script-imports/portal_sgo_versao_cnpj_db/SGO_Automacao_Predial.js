@@ -156,9 +156,9 @@ function AutPred_comandosPortao_(d) {
 }
 
 /**
- * Módulo de pulso com sensor (23/10/2026, medido no histórico da garagem real): o módulo IGNORA door_control_1 vindo da
- * nuvem (12:42 a 13:34, nenhuma resposta) e responde só ao pulso switch_1, como o aplicativo Smart Life. O motor alterna:
- * o mesmo pulso abre o portão fechado e fecha o aberto. Abrir e fechar mandam o pulso; o sensor decide qual vale.
+ * Controle booleano com sensor. Comparação real com Smart Life em 23/10/2026:
+ * switch_1=true abre; switch_1=false fecha. door_control_1 pertence ao controle
+ * por voz (desativado neste módulo). A confirmação continua sendo pelo sensor.
  */
 function AutPred_pulsoComSensor_(d) {
   if (!d || d.TIPO === 'FECHADURA' || !AutPred_temSensor_(d)) return false;
@@ -225,7 +225,7 @@ function AutPred_travaPulsoSensor_(d, acao, estado, agoraMs) {
 /** Comando a enviar para a ação ('ABRIR' | 'FECHAR' | 'PARAR') no modo do portão; null = não disponível. */
 function AutPred_comandoDaAcao_(d, acao) {
   var cp = AutPred_comandosPortao_(d);
-  if (AutPred_acionamento_(d) === 'ABRIR_FECHAR' && AutPred_pulsoComSensor_(d)) return acao === 'PARAR' ? null : cp.abrir;
+  if (AutPred_acionamento_(d) === 'ABRIR_FECHAR' && AutPred_pulsoComSensor_(d)) return acao === 'PARAR' ? null : { code: cp.abrir.code, value: acao !== 'FECHAR' };
   if (AutPred_acionamento_(d) !== 'ABRIR_FECHAR') return acao === 'ABRIR' ? cp.abrir : null;
   if (acao === 'FECHAR') return cp.fechar;
   if (acao === 'PARAR') return cp.parar;
@@ -914,6 +914,21 @@ function AutPred_prepararComando_(sessao, dados) {
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
   var c = AutPred_cfg_();
   var acaoP = AutPred_acaoPedida_(dados, disp);
+  // O segundo toque depende da posição lida AGORA, não da linha guardada nem do rótulo no celular.
+  var alternar = AutPred_s_(dados.acao).toUpperCase() === 'ALTERNAR';
+  var alternavel = AutPred_pulsoComSensor_(disp) && AutPred_acionamento_(disp) === 'ABRIR_FECHAR';
+  if (alternar && !alternavel) throw new Error('Este dispositivo não usa o botão alternado da garagem.');
+  if (alternavel && AutPred_modo_(c, disp, acaoP).modo === 'REAL') {
+    try {
+      var atualP = AutPred_lerEstado_(c, disp);
+      if (!atualP.online || AutPred_sensorAberto_(atualP.status) === null) throw new Error('dispositivo offline ou sensor sem posição');
+    } catch (ePAtual) { throw new Error('Não foi possível consultar a posição atual da garagem. Nenhum pulso foi enviado; tente novamente.'); }
+  }
+  if (alternar) {
+    var abertoP = AutPred_sensorAberto_(AutPred_deJson_(disp.ESTADO_JSON, []));
+    if (abertoP === null) throw new Error('Não foi possível consultar a posição do portão. Nenhum pulso foi enviado.');
+    acaoP = abertoP ? 'FECHAR' : 'ABRIR';
+  }
   var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now(), disp.TIPO === 'FECHADURA' ? (acaoP === 'RECUSAR' ? 'RECUSAR' : 'DESTRAVAR') : acaoP);
   if (freq) throw new Error('Não foi possível ' + verbo + ' agora: ' + freq + '.');
   if (disp.TIPO !== 'FECHADURA' && !AutPred_comandoDaAcao_(disp, acaoP)) throw new Error(AutPred_textoSemAcao_(disp, acaoP));
@@ -929,7 +944,7 @@ function AutPred_prepararComando_(sessao, dados) {
   var modo = AutPred_modo_(c, disp, acaoP);
   var token = String(Utilities.getUuid()).replace(/-/g, '') + String(Utilities.getUuid()).replace(/-/g, '').slice(0, 8);
   CacheService.getScriptCache().put(AUT_CONF_PREFIXO + token, JSON.stringify({ u: AutPred_s_(sessao.userId), d: AutPred_s_(disp.ID), o: opId, a: acaoP, ate: Date.now() + AUT_CONF_VALIDADE_MS }), 120);
-  return { confirmacaoToken: token, validadeS: AUT_CONF_VALIDADE_MS / 1000, operacaoId: opId, modo: modo.modo, modoMotivo: modo.motivo, pedido: pedido,
+  return { confirmacaoToken: token, validadeS: AUT_CONF_VALIDADE_MS / 1000, operacaoId: opId, acao: acaoP, modo: modo.modo, modoMotivo: modo.motivo, pedido: pedido,
     dispositivo: AutPred_dispositivoParaTela_(disp, dir, sessao, c) };
 }
 
@@ -1029,7 +1044,15 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   // Estado "antes" lido agora na nuvem quando o comando é real: o guardado pode ser velho (ex.: o pulso do acionador já
   // voltou ao repouso depois do último comando) e faria a confirmação não ver a mudança. Se a leitura falhar, usa o guardado.
   var antes = AutPred_deJson_(disp.ESTADO_JSON, []);
-  if (modo.modo === 'REAL') { try { antes = AutPred_lerEstado_(c, disp).status; } catch (eAntes) {} }
+  if (modo.modo === 'REAL') {
+    var falhouLeituraAntes = false, leituraAntes = null;
+    try {
+      leituraAntes = AutPred_lerEstado_(c, disp); antes = leituraAntes.status;
+    } catch (eAntes) { falhouLeituraAntes = true; }
+    if (AutPred_pulsoComSensor_(disp) && AutPred_acionamento_(disp) === 'ABRIR_FECHAR' &&
+        (falhouLeituraAntes || !leituraAntes || !leituraAntes.online || AutPred_sensorAberto_(antes) === null))
+      negar('não foi possível consultar a posição atual da garagem; nenhum pulso foi enviado', 'COMANDO_POSICAO');
+  }
   var travaE = disp.TIPO !== 'FECHADURA' ? AutPred_travaPulsoSensor_(disp, acao, antes) : '';
   if (!travaE && modo.modo === 'REAL' && AutPred_pulsoComSensor_(disp) && AutPred_acionamento_(disp) === 'ABRIR_FECHAR') {
     var mudou = AutPred_sensorMudouEm_(c, disp), haS = (Date.now() - mudou) / 1000;
@@ -1179,17 +1202,29 @@ function AutPred_comandoParaTela_(c, locais) {
 
 function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
   var modo = AutPred_modo_(cfg, d);
-  return { id: AutPred_s_(d.ID), deviceId: AutPred_s_(d.DEVICE_ID), nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), nomeProvedor: AutPred_s_(d.NOME_PROVEDOR), categoria: AutPred_s_(d.CATEGORIA), categoriaNome: AutPred_s_(d.CATEGORIA_NOME),
+  var tela = { id: AutPred_s_(d.ID), deviceId: AutPred_s_(d.DEVICE_ID), nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), nomeProvedor: AutPred_s_(d.NOME_PROVEDOR), categoria: AutPred_s_(d.CATEGORIA), categoriaNome: AutPred_s_(d.CATEGORIA_NOME),
     produto: AutPred_s_(d.PRODUTO_NOME), tipo: AutPred_s_(d.TIPO), tipoNome: AutPred_tipoNome_(d.TIPO), unidadeId: AutPred_s_(d.UNIDADE_ID), unidade: AutPred_s_(d.UNIDADE_NOME) || 'Sem unidade definida', localizacao: AutPred_s_(d.LOCALIZACAO),
     restrito: AutPred_restrito_(d), homologado: AutPred_s_(d.HOMOLOGADO).toUpperCase() === 'SIM', homologadoPor: AutPred_s_(d.HOMOLOGADO_POR), homologadoEm: AutPred_dataBr_(d.HOMOLOGADO_EM), ativo: AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO',
     online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estado: AutPred_estadoTexto_(d), estadoEm: AutPred_dataBr_(d.ESTADO_EM), compatOk: AutPred_s_(d.COMPAT_OK).toUpperCase() === 'SIM', compatMotivo: AutPred_s_(d.COMPAT_MOTIVO),
     comandoAbrir: AutPred_s_(d.COMANDO_ABRIR_JSON), acionamento: AutPred_acionamento_(d), acionamentoSugerido: AutPred_comandosPortao_(d).sugestao,
     podeFechar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'FECHAR'), podeParar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'PARAR'), temFecharNaNuvem: !!AutPred_comandosPortao_(d).fechar,
+    pulsoAlternado: AutPred_pulsoComSensor_(d) && AutPred_acionamento_(d) === 'ABRIR_FECHAR',
     estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d), liberaEmS: AutPred_liberaEmS_(d), percursoS: d.TIPO !== 'FECHADURA' ? AutPred_percursoS_(d) : 0, percursoGravado: Number(d.PERCURSO_S) > 0,
     autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), podeAutoAbrir: AutPred_ehPedido_(d) && !!dir.acionar && AutPred_ehDiretor_(sessao),
     remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
     ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000,
     ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), podeVer: !!dir.ver, podeAcionar: !!dir.acionar, motivoAcionar: dir.motivo || '' };
+  // Somente os administradores recebem dados de configuração. A operação conserva
+  // as capacidades já calculadas pelo servidor, posição, temporização e permissões.
+  if (!AutPred_administra_(sessao)) {
+    ['deviceId', 'nomeProvedor', 'categoria', 'categoriaNome', 'produto', 'unidadeId',
+      'homologadoPor', 'homologadoEm', 'comandoAbrir', 'acionamentoSugerido',
+      'temFecharNaNuvem', 'percursoGravado', 'autoAbrirPor', 'autoAbrirEm',
+      'sincronizadoEm', 'modoMotivo'].forEach(function (k) { delete tela[k]; });
+    tela.compatMotivo = tela.compatOk ? '' : 'Dispositivo indisponível para acionamento. Procure a administração.';
+  }
+  return tela;
+
 }
 
 /** Registro do período para a tela e a exportação: só dispositivos que a sessão vê. dados = { de, ate (aaaa-mm-dd), dispositivoId, pessoaId }. */
@@ -1541,7 +1576,7 @@ function AutPred_painel_(sessao) {
   return {
     agora: AutPred_agoraTexto_(), unidades: unidades, total: visiveis.length, totalCadastrados: todos.length,
     restritosOcultos: AutPred_ehAdmin_(sessao) ? restritosOcultos : 0, semPermissao: AutPred_administra_(sessao) ? 0 : semPermissao,
-    config: { ligado: c.ligado, temCredencial: c.temCredencial, podeLer: c.podeLer, faltas: c.faltas, regiao: c.regiaoNome },
+    config: AutPred_administra_(sessao) ? { ligado: c.ligado, temCredencial: c.temCredencial, podeLer: c.podeLer, faltas: c.faltas, regiao: c.regiaoNome } : { ligado: c.ligado, podeLer: c.podeLer },
     podeAdministrar: AutPred_administra_(sessao), ehDiretoria: AutPred_ehDiretor_(sessao), ehDono: AutPred_ehDono_(sessao), ehAdmin: AutPred_ehAdmin_(sessao), ultimosComandos: ultimos,
     rapido: AutPred_rapidos_(sessao, c), emUso: AutPred_emUso_(c)
   };

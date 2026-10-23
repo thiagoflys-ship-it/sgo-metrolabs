@@ -698,6 +698,7 @@ function FrotaBlq_rodada_(c, posicoes, veiculos, movs, inicio) {
     });
     try { FrotaBlq_triagemDiaria_(veiculos, estados); } catch (eT) { console.error('Bloqueio, triagem: ' + ((eT && eT.message) || eT)); }
     try { FrotaBlq_relatorioDiario_(); } catch (eR) { console.error('Bloqueio, relatório: ' + ((eR && eR.message) || eR)); }
+    try { if (typeof FrotaKm_rodada_ === 'function' && Date.now() - (inicio || agora) < 30000) FrotaKm_rodada_(c, posicoes, veiculos, movs, estados, conexoes); } catch (eK) { console.error('Conferência noturna: ' + ((eK && eK.message) || eK)); }
   } catch (e) { out.erros++; console.error('Bloqueio, rodada: ' + ((e && e.message) || e)); }
   return out;
 }
@@ -1485,6 +1486,7 @@ function Frota_apiBloqueioPainel(sessionId, payload) {
     config: { rastreadorLigado: c.ligado, chaveComandos: !!c.tokenComandos, bloqueioLigado: c.bloqueioPedido, podeEnviar: c.podeEnviar, faltas: c.faltasEnvio },
     perfil: perfil, podeLiberar: ['ADMIN', 'DIRETORIA', 'GESTOR', 'RH'].indexOf(perfil) >= 0, podeRoubo: perfil === 'DIRETORIA', podeOdometro: FBLQ_ODO_PERFIS.indexOf(perfil) >= 0,
     modos: FBLQ_MODOS, veiculos: lista, passagens: passagens, eventos: eventos,
+    kmNoturno: typeof FrotaKm_painel_ === 'function' ? FrotaKm_painel_() : null,
     bases: typeof FrotaId_bases_ === 'function' ? FrotaId_bases_() : [], areas: areas, raioPadrao: FBLQ_RAIO_BASE_PADRAO_M
   };
 }
@@ -1592,7 +1594,7 @@ function FrotaBlq_pendencias_(add) {
     add(Pend_item_('frota_bloqueio_odometro', { id: 'FROTA:BLQ:ODO:' + Pend_s_(e.ODO_DIVERGENCIA_MOV_ID), nome: r, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: Pend_s_(e.ODO_DIVERGENCIA_EM).slice(0, 10),
       responsavel: 'Gestão da frota', titulo: 'Odômetro do rastreador diferente do painel: ' + r,
       detalhe: 'Na devolução o painel marcava ' + Frota_kmTexto_(e.ODO_PAINEL_KM) + ' km e o rastreador ' + Frota_kmTexto_(e.ODO_RASTREADOR_KM) + ' km.' + (Pend_s_(e.ODO_FOTO) ? ' Foto do painel: ' + Pend_s_(e.ODO_FOTO) : ''),
-      oQueFazer: 'Confira a foto do painel; se o KM digitado estiver certo, toque em "Acertar o odômetro do rastreador" em Frota > Rastreamento > Bloqueio da partida (Gestor ou Administrador). O SGO+ nunca acerta sozinho.',
+      oQueFazer: 'Confira a foto do painel em Frota > Rastreamento > Bloqueio da partida. A rotina das 22h só ajusta veículos ativos com foto confirmada, devolvidos, parados e desligados, sem uso posterior à foto. Casos pendentes exigem conferência da gestão.',
       textoEstavel: 'O odômetro do rastreador do veículo \'' + pl + '\' está diferente do painel.' }));
   });
   if (!Pend_abaExiste_(FBLQ_ABA_PASSAGENS)) return;

@@ -78,6 +78,37 @@
   #app #conteudo .aut-rapido-btn, #autJanela .aut-janela-botoes button { min-height: 56px !important; height: 56px; white-space: nowrap; }
   @media (max-width: 760px) { .aut-rapido-grade { grid-template-columns: 1fr; } #autTela .module-header .content-subtitle { display: none; } }
   @media (max-width: 760px) { .aut-cartoes { grid-template-columns: 1fr; } .aut-linha span:first-child { flex-basis: 45%; } .aut-tabela thead { display: none; } .aut-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .aut-tabela td { display: block; border: none; padding: 2px 4px; } }
+/* Controles cotidianos: leitura clara, ações consistentes, sem formulários. */
+.aut-rapido { margin: 0 0 26px; }
+.aut-rapido-cab { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:14px; }
+.aut-rapido-cab h3 { margin:0; font-size:18px; letter-spacing:-.025em; color:#243347; }
+.aut-rapido-cab p { margin:5px 0 0; color:#697586; font-size:12px; line-height:1.5; }
+.aut-rapido-grade { grid-template-columns:repeat(auto-fit,minmax(245px,1fr)); gap:16px; }
+.aut-rapido-item { padding:20px; border:1px solid #e1e7ed; border-radius:14px; gap:12px; box-shadow:0 3px 12px rgba(30,48,65,.035); min-width:0; }
+.aut-rapido-item.is-restrito { border-color:#e1e7ed; }
+.aut-rapido-titulo { display:flex; align-items:center; gap:12px; min-height:42px; }
+.aut-rapido-icone { width:40px; height:40px; border-radius:11px; background:#eef5f2; color:#24704e; display:grid; place-items:center; font-size:17px; flex:none; }
+.aut-rapido-nome { font-size:15px; color:#243347; font-weight:650; line-height:1.4; }
+.aut-rapido-tipo { margin-top:2px; font-size:11px; color:#748195; font-weight:400; }
+.aut-rapido-estado { font-size:11px; gap:6px; color:#748195; }
+.aut-rapido-estado .cadx-sub { font-size:11px; }
+.aut-posicao { border-radius:7px; font-size:13px; padding:5px 9px; gap:6px; }
+.aut-posicao.is-fechado { background:#eef7f1; border-color:#d4e8db; color:#286044; }
+.aut-posicao.is-aberto { background:#fff7e9; border-color:#f0dfb9; color:#8a621c; }
+#app #conteudo .aut-rapido-btn { min-height:46px !important; height:auto; padding:12px; font-size:14px; border-radius:9px; background:#236c4a; border-color:#236c4a; gap:8px; }
+#app #conteudo .aut-rapido-btn:hover { background:#1b563b; }
+#app #conteudo .aut-rapido-btn.is-porta { background:#263e58; border-color:#263e58; }
+.aut-rapido-item .aut-botoes-portao { margin-top:auto; }
+.aut-rapido-item .aut-botoes-portao .cadx-sub { font-size:11px; color:#748195; line-height:1.5; }
+.aut-rapido-item .aut-pedido { font-size:12px; line-height:1.65; color:#697586; }
+.aut-operacao-nota { font-size:11px; color:#748195; padding-top:10px; border-top:1px solid #eef1f4; }
+.intelbras-operacao { background:#fff; border:1px solid #e1e7ed; border-radius:14px; padding:20px; margin:0 0 24px; }
+.intelbras-operacao h3 { margin:0 0 6px; color:#243347; font-size:17px; }
+.intelbras-operacao p { color:#697586; font-size:12px; line-height:1.6; }
+.intelbras-operacao #intelbrasEstado { display:inline-block; padding:7px 11px; border-radius:8px; background:#eef5f2; color:#286044; font-size:14px; }
+.intelbras-operacao details { margin-top:14px; font-size:12px; color:#697586; }
+@media(max-width:760px) { .aut-rapido-cab { align-items:flex-start; } .aut-rapido-grade { grid-template-columns:1fr; } .aut-rapido-item { padding:17px; } }
+
 </style>
 
 <script>
@@ -138,11 +169,12 @@
     div.innerHTML =
       '<div class="module-shell cadx" id="autTela">' +
         '<div id="autRapido" class="aut-rapido"></div>' +
+        '<section id="intelbrasPainel" class="intelbras-operacao cadx-card" aria-live="polite"></section>' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Segurança e automação predial</h2>' +
           '<p class="content-subtitle">Portões e porta da Diretoria pela nuvem do Smart Life. Cada comando passa por: solicitado, aceito pela nuvem e execução confirmada pelo dispositivo.</p></div>' +
           '<div class="module-header-right"><button type="button" class="cadx-btn cadx-btn-grande" id="autAtualizar" onclick="AutPred_carregar_()">Atualizar</button></div></div>' +
         CadUI_ajuda_(
-          "<ul><li><b>Portões</b>: toda a equipe vê, abre e fecha. Toque em \"Abrir portão\" ou \"Fechar portão\", confira o nome na janela e toque em \"Sim\". Nada para digitar.</li>" +
+          "<ul><li><b>Portões</b>: toda a equipe vê e aciona. Na garagem, use <b>Abrir / fechar portão</b>: o mesmo botão abre o fechado e fecha o aberto, como no Smart Life. A posição é consultada antes da janela; confira a ação e o nome e toque em \"Sim\". Aguarde o fim do percurso antes de tocar novamente.</li>" +
           "<li>O selo grande mostra a posição do portão (<b>Aberto</b>, <b>Fechado</b>, <b>Abrindo…</b>, <b>Fechando…</b>), relida a cada 5 segundos enquanto a tela está aberta. Quando a posição muda, aparece um aviso no topo.</li>" +
           "<li><b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
           "<li>A <b>porta da Diretoria</b> só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele. Ela abre quando tocam a campainha: toque em \"Abrir agora\" ou marque <b>\"Abrir automaticamente quando tocarem a campainha\"</b> (desmarcado, volta ao \"Abrir agora\").</li>" +
@@ -153,6 +185,7 @@
         '<div id="autCorpo">' + CadUI_esqueleto_(6) + "</div>" +
       "</div>";
     AutPred_carregar_();
+    Alarme_carregar_();
   }
 
   function AutPred_msg_(html) { var m = document.getElementById("autMsg"); if (m) m.innerHTML = html || ""; }
@@ -181,8 +214,8 @@
     if (!c || !d) return;
     var h = "";
     var cfg = d.config || {};
-    if (!cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação): ' + AutPred_esc_((cfg.faltas || []).join("; ")) + ". O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya).</div>";
-    else h += '<div class="cadx-faixa bc-faixa tom-info">Automação ligada (região ' + AutPred_esc_(cfg.regiao) + "). Comandos reais só nos dispositivos homologados pela Diretoria; os demais ficam em simulação.</div>";
+    if (AUTP.adm && !cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação): ' + AutPred_esc_((cfg.faltas || []).join("; ")) + ". O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya).</div>";
+    else if (AUTP.adm) h += '<div class="cadx-faixa bc-faixa tom-info">Automação ligada (região ' + AutPred_esc_(cfg.regiao) + "). Comandos reais só nos dispositivos homologados pela Diretoria; os demais ficam em simulação.</div>";
     if (AUTP.adm) {
       h += '<div class="aut-abas">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].map(function (a) {
         return '<button type="button" class="cadx-btn cadx-btn-grande' + (AUTP.aba === a[0] ? " is-ativa" : "") + '" onclick="AutPred_aba_(\'' + a[0] + '\')">' + a[1] + "</button>";
@@ -239,6 +272,7 @@
     var botoes = '<button type="button" class="cadx-btn" onclick="AutPred_estado_(\'' + d.id + '\')">Ler estado</button>' +
       '<button type="button" class="cadx-btn" onclick="AutPred_historico_(\'' + d.id + '\')">Histórico</button>';
     if (d.podeAcionar && d.ativo && d.compatOk && d.remotoFechadura === "PEDIDO") aviso0 = '<div class="cadx-sub" style="margin-top:6px">Abertura remota só quando tocam a campainha: durante o pedido, o botão "Abrir agora" aparece no bloco do topo.</div>';
+    else if (d.podeAcionar && d.ativo && d.compatOk && d.pulsoAlternado) botoes = AutPred_btnAcao_(d.id, "modulo", "ALTERNAR", "Abrir / fechar portão", "cadx-btn cadx-btn-grande cadx-btn-primario", "") + botoes;
     else if (d.podeAcionar && d.ativo && d.compatOk) botoes = AutPred_btnAcao_(d.id, "modulo", "ABRIR", verbo, "cadx-btn cadx-btn-grande " + (d.tipo === "FECHADURA" ? "cadx-btn-risco" : "cadx-btn-primario"), "") + (d.podeFechar ? AutPred_btnAcao_(d.id, "modulo", "FECHAR", "Fechar portão", "cadx-btn cadx-btn-grande", "") : "") + (d.podeParar ? AutPred_btnAcao_(d.id, "modulo", "PARAR", "Parar", "cadx-btn cadx-btn-grande", "") : "") + botoes;
     if (AUTP.adm && (!d.restrito || AUTP.diretoria)) botoes += '<button type="button" class="cadx-btn" onclick="AutPred_editar_(\'' + d.id + '\')">Administrar</button>';
     var aviso = "";
@@ -250,7 +284,7 @@
       AutPred_linha_("Tipo", d.tipoNome + (d.categoriaNome ? " (" + d.categoriaNome + ")" : "")) + AutPred_linha_("Localização", d.localizacao) +
       AutPred_linha_("Estado", d.estado + (d.estadoEm ? " (lido " + d.estadoEm + ")" : "")) +
       AutPred_linha_("Último comando", d.ultComandoEm ? d.ultComandoSituacao + " em " + d.ultComandoEm : "nenhum") +
-      AutPred_linha_("Homologação", d.homologado ? "homologado por " + d.homologadoPor + " em " + d.homologadoEm : "aguardando a Diretoria") +
+      (AUTP.adm ? AutPred_linha_("Homologação", d.homologado ? "homologado por " + d.homologadoPor + " em " + d.homologadoEm : "aguardando a Diretoria") : "") +
       aviso0 + aviso + '<div class="aut-acoes">' + botoes + '</div><div id="autF_' + d.id + '"></div></div>';
   }
 
@@ -387,20 +421,26 @@
   // ---------- comando ----------
   // ---------- botões rápidos (topo do módulo e Início) ----------
   function AutPred_tomSit_(c) { return c === "CONFIRMADO" ? "tom-ok" : (c === "ACEITO" || c === "INCERTO") ? "tom-alerta" : c === "SIMULADO" ? "tom-info" : c ? "tom-perigo" : ""; }
+  function AutPred_tituloRapido_(d) {
+    var nome = d.nome || 'Acesso';
+    if (/diretoria|smart lock/i.test(nome)) nome = 'Porta da Diretoria';
+    else if (nome === nome.toUpperCase()) nome = nome.toLowerCase().replace(/(^|\s)([a-zà-ú])/g, function(_,a,b){return a+b.toUpperCase();});
+    return '<div class="aut-rapido-titulo"><span class="aut-rapido-icone"><i class="fas ' + (d.tipo === 'FECHADURA' ? 'fa-lock' : 'fa-door-open') + '" aria-hidden="true"></i></span><div><div class="aut-rapido-nome">' + AutPred_esc_(nome) + '</div><div class="aut-rapido-tipo">' + (d.tipo === 'FECHADURA' ? 'Acesso da Diretoria' : d.pulsoAlternado ? 'Garagem' : 'Acesso de pedestres') + '</div></div></div>';
+  }
   function AutPred_desenharRapido_(el, lista, contexto) {
     if (!el) return;
     lista = lista || [];
     if (!lista.length) { el.innerHTML = ""; return; }
-    el.innerHTML = '<h3><i class="fas fa-door-open" aria-hidden="true"></i> Abrir agora</h3><div class="aut-rapido-grade">' + lista.map(function (d) {
+    el.innerHTML = '<div class="aut-rapido-cab"><div><h3>Acessos e segurança</h3><p>Controle os acessos e acompanhe o estado dos equipamentos.</p></div></div><div class="aut-rapido-grade">' + lista.map(function (d) {
       var porta = d.tipo === "FECHADURA";
       if (d.remotoFechadura === "PEDIDO") {
-        return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '" data-aut-pedido="' + AutPred_esc_(d.id) + '"><div class="aut-rapido-nome">' + AutPred_esc_(d.nome) + "</div>" +
+        return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '" data-aut-pedido="' + AutPred_esc_(d.id) + '">' + AutPred_tituloRapido_(d) +
           '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
             (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") + "</div>" +
           '<div class="aut-pedido-area" id="autPedArea_' + contexto + "_" + d.id + '">' + AutPred_htmlPedido_(d.id, contexto) + "</div>" +
-          (d.podeAutoAbrir ? AutPred_htmlAuto_(d) : (d.autoAbrir ? '<div class="cadx-sub">Abertura automática ligada' + (d.autoAbrirPor ? " por " + AutPred_esc_(d.autoAbrirPor) : "") + ": a porta abre sozinha quando tocam a campainha.</div>" : "")) + "</div>";
+          (d.autoAbrir ? '<div class="cadx-sub">Abertura automática ligada</div>' : "") + "</div>";
       }
-      return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '"><div class="aut-rapido-nome">' + AutPred_esc_(d.nome) + "</div>" +
+      return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '">' + AutPred_tituloRapido_(d) +
         AutPred_htmlPosicao_(d.id, d.estadoPortao) +
         '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
           (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") +
@@ -468,30 +508,6 @@
   }
 
   // ---------- abertura automática pela campainha (23/10/2026, decisão do dono) ----------
-  function AutPred_htmlAuto_(d) {
-    return '<label class="aut-auto' + (d.autoAbrir ? " is-ligada" : "") + '"><input type="checkbox" id="autAuto_' + AutPred_esc_(d.id) + '"' + (d.autoAbrir ? " checked" : "") +
-      ' onchange="AutPred_alternarAuto_(' + JSON.stringify(String(d.id)).replace(/"/g, "'") + ', this)"><span>Abrir automaticamente quando tocarem a campainha' +
-      '<div class="aut-auto-sub">' + (d.autoAbrir ? "Ligada" + (d.autoAbrirPor ? " por " + AutPred_esc_(d.autoAbrirPor) : "") + (d.autoAbrirEm ? " em " + AutPred_esc_(d.autoAbrirEm) : "") + ": a porta abre sozinha quando tocam e quem pode destravar recebe o aviso. Desmarque para voltar ao \"Abrir agora\"."
-        : "Desmarcada: a porta só abre quando alguém toca em \"Abrir agora\" durante o pedido.") + "</div></span></label>";
-  }
-  function AutPred_alternarAuto_(id, el) {
-    var ligar = !!el.checked, d = AutPred_dispositivo_(id) || {};
-    el.checked = !ligar; // só muda de verdade quando o servidor gravar
-    var enviar = function (fechar, reabilitar) {
-      el.disabled = true;
-      AutPred_chamar_("autoAbrir", { id: id, ligado: ligar }, function (r) {
-        if (fechar) fechar();
-        el.disabled = false;
-        AutPred_aplicarPainel_(r);
-      }, function (m) { el.disabled = false; if (reabilitar) reabilitar(m); else AutPred_avisoPosicao_(m, "tom-perigo"); });
-    };
-    if (!ligar) { enviar(null, null); return; }
-    CadUI_confirmar_({
-      titulo: "Ligar a abertura automática: " + (d.nome || "porta"), risco: true, botao: "Ligar",
-      texto: "<p>Com a opção ligada, <b>quando alguém tocar a campainha, o SGO+ abre a porta sozinho</b>, sem ninguém confirmar. Cada abertura fica no registro e quem pode destravar recebe o aviso.</p><p>Para voltar ao \"Abrir agora\", desmarque a opção.</p>",
-      aoConfirmar: function (valores, fechar, reabilitar) { enviar(fechar, reabilitar); }
-    });
-  }
   /** Painel devolvido por uma ação: redesenha o módulo (ou só os botões do Início). */
   function AutPred_aplicarPainel_(r) {
     AUTP.rapido = r.rapido || AUTP.rapido;
@@ -506,7 +522,7 @@
     var b = document.createElement("button");
     b.type = "button";
     b.className = classe;
-    if (acao === "ABRIR") b.id = (contexto === "modulo" ? "autBtnC_" : "autBtnR_" + contexto + "_") + id;
+    if (acao === "ABRIR" || acao === "ALTERNAR") b.id = (contexto === "modulo" ? "autBtnC_" : "autBtnR_" + contexto + "_") + id;
     b.setAttribute("onclick", "AutPred_pedir_(" + JSON.stringify(String(id)).replace(/"/g, "'") + ", '" + contexto + "', this, '" + acao + "')");
     b.innerHTML = (icone ? '<i class="fas ' + icone + '" aria-hidden="true"></i>' : "") + AutPred_esc_(rotulo);
     // 23/10/2026: portão de pulso no percurso: o botão mostra "Aguarde N s" e volta sozinho (AutPred_contarLibera_)
@@ -530,6 +546,7 @@
   function AutPred_htmlBotoesRapidos_(d, contexto) {
     var porta = d.tipo === "FECHADURA";
     if (porta) return AutPred_btnAcao_(d.id, contexto, "ABRIR", "Destravar a porta", "aut-rapido-btn is-porta", "fa-lock-open");
+    if (d.pulsoAlternado) return AutPred_btnAcao_(d.id, contexto, "ALTERNAR", "Abrir / fechar portão", "aut-rapido-btn", "fa-door-open") + '<div class="cadx-sub">Mesmo botão para abrir e fechar, como no Smart Life. Aguarde o fim do percurso.</div>';
     var abrirB = AutPred_btnAcao_(d.id, contexto, "ABRIR", "Abrir portão", "aut-rapido-btn", "fa-door-open");
     if (!d.podeFechar) return abrirB + '<div class="cadx-sub">Pulso: fecha manualmente.</div>';
     return '<div class="aut-botoes-portao">' + abrirB + AutPred_btnAcao_(d.id, contexto, "FECHAR", "Fechar portão", "aut-rapido-btn is-fechar", "fa-door-closed") +
@@ -557,9 +574,9 @@
         (p.autoAbrir ? '<div class="aut-pedido">Abertura automática ligada: o SGO+ está abrindo a porta. Se não abrir em alguns segundos, use "Abrir agora".</div>' : "") +
         '<div class="aut-pedido-botoes">' + AutPred_btnPedido_(id, contexto, "ABRIR") + AutPred_btnPedido_(id, contexto, "RECUSAR") + "</div>";
     }
-    if (p && p.respondido) return '<div class="aut-pedido">Último pedido ' + AutPred_esc_(p.respondido) + '. A abertura remota só vale quando tocam a campainha.</div>';
+    if (p && p.respondido) return '<div class="aut-pedido">Último pedido ' + AutPred_esc_(p.respondido) + '.</div>';
     if (p && p.erro) return '<div class="aut-pedido">Não foi possível ler o pedido agora: ' + AutPred_esc_(p.erro) + "</div>";
-    return '<div class="aut-pedido">Sem pedido agora. A abertura remota só vale quando tocam a campainha: o botão "Abrir agora" aparece aqui durante o pedido.</div>';
+    return '<div class="aut-pedido">Aguardando campainha. O botão de abertura aparece quando alguém toca.</div>';
   }
   function AutPred_redesenharPedidos_() {
     document.querySelectorAll('[id^="autPedArea_"]').forEach(function (el) {
@@ -633,7 +650,7 @@
     // 22/10/2026: duplo toque não gera duas operações (um preparo ou uma janela por vez; o "Sim" trava no primeiro toque)
     if (AUTP.preparando || document.getElementById("autJanela")) return;
     AUTP.preparando = true;
-    acao = ["FECHAR", "PARAR", "RECUSAR"].indexOf(acao) >= 0 ? acao : "ABRIR";
+    acao = ["FECHAR", "PARAR", "RECUSAR", "ALTERNAR"].indexOf(acao) >= 0 ? acao : "ABRIR";
     var resposta = acao === "RECUSAR" ? "RECUSAR" : "";
     contexto = contexto || "modulo";
     var rotulo = btn ? btn.innerHTML : "";
@@ -652,6 +669,7 @@
       AUTP.preparando = false;
       voltar();
       var d = p.dispositivo || AutPred_dispositivo_(id) || {};
+      if (acao === "ALTERNAR") acao = p.acao === "FECHAR" ? "FECHAR" : "ABRIR";
       var porta = d.tipo === "FECHADURA";
       AutPred_janela_({
         pergunta: { RECUSAR: "Recusar o pedido de abertura?", FECHAR: "Fechar agora?", PARAR: "Parar o portão agora?" }[acao] || (porta ? "Destravar a porta agora?" : "Abrir agora?"), nome: d.nome,
@@ -807,4 +825,72 @@
     if (b) b.disabled = true;
     AutPred_chamar_("integridade", {}, function (x) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(x.texto, x.ok ? "tom-ok" : "tom-perigo"); }, function (m) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
   }
+
+// ANM 24 Net: comunicação no servidor próprio. A senha nunca é devolvida pela API.
+  var ALARME_UI = { ocupado: false, painel: null, liberaAte: 0, timer: null };
+  function Alarme_contar_() {
+    var el=document.getElementById('intelbrasPainel');
+    if(!el){if(ALARME_UI.timer)clearInterval(ALARME_UI.timer);ALARME_UI.timer=null;return;}
+    var s=Math.max(0,Math.ceil((ALARME_UI.liberaAte-Date.now())/1000));
+    el.querySelectorAll('[data-alarme-comando]').forEach(function(b){
+      b.disabled=ALARME_UI.ocupado||s>0;
+      b.textContent=b.getAttribute('data-rotulo')+(s>0?' · Aguarde '+s+' s':ALARME_UI.ocupado?' · Aguarde…':'');
+    });
+    if(!s&&ALARME_UI.timer){clearInterval(ALARME_UI.timer);ALARME_UI.timer=null;}
+  }
+  function Alarme_iniciarContagem_() {
+    Alarme_contar_();
+    if(ALARME_UI.liberaAte>Date.now()&&!ALARME_UI.timer)ALARME_UI.timer=setInterval(Alarme_contar_,250);
+  }
+  function Alarme_chamar_(acao, dados, ok) {
+    if (ALARME_UI.ocupado) return;
+    ALARME_UI.ocupado = true;
+    var el = document.getElementById('intelbrasPainel');
+    if (el) el.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+    function fim() { ALARME_UI.ocupado=false; if(el)el.querySelectorAll('button').forEach(function(b){b.disabled=false;}); Alarme_iniciarContagem_(); }
+    function erro(m) {
+      fim();
+      var msg=document.getElementById('intelbrasMsg'), estado=document.getElementById('intelbrasEstado');
+      if(estado)estado.textContent='Sem leitura atual';
+      if(msg)msg.textContent=m;
+    }
+    google.script.run.withSuccessHandler(function(r){
+      fim(); if(!r || !r.ok){erro((r&&r.message)||'Não foi possível concluir.');return;} ok(r);
+    }).withFailureHandler(function(){erro('Sem resposta do SGO+. Se enviou um comando, consulte o estado antes de tentar novamente.');})
+      .Alarme_api(SGO_getSessionId(),acao,dados||{});
+  }
+  function Alarme_carregar_() {
+    var e=document.getElementById('intelbrasPainel'); if(!e)return;
+    e.innerHTML='<h3>Alarme Intelbras</h3><p id="intelbrasEstado">Consultando configuração…</p><p id="intelbrasMsg" role="status"></p>';
+    Alarme_chamar_('painel',{},Alarme_desenhar_);
+  }
+  function Alarme_desenhar_(r) {
+    var el=document.getElementById('intelbrasPainel');if(!el)return;
+    ALARME_UI.painel=r;
+    if(typeof r.liberaEmS==='number')ALARME_UI.liberaAte=Date.now()+Math.max(0,r.liberaEmS)*1000;
+    var esc=AutPred_esc_, estado=r.estado||(r.resultado&&r.resultado.estado);
+    var texto=estado ? (estado.disparado?'Disparado':estado.armado?'Armado':'Desarmado') : r.configurado?'Estado ainda não consultado':'Aguardando configuração';
+    var h='<h3>'+esc(r.nome||'Alarme Intelbras')+'</h3><p>Intelbras ANM 24 Net · '+(r.ligado?'Comandos habilitados':'Comandos desligados')+'</p>'+
+      '<strong id="intelbrasEstado">'+esc(texto)+'</strong>'+
+      (estado?'<p>Última leitura: '+esc(new Date(estado.lidoEm).toLocaleString('pt-BR'))+'</p>':'')+
+      '<p id="intelbrasMsg" role="status">'+esc((r.resultado&&r.resultado.detalhe)||r.mensagem||'')+'</p><div class="aut-acoes">';
+    if(r.configurado&&(r.ligado||r.podeConfigurar))h+='<button type="button" class="cadx-btn cadx-btn-grande" onclick="Alarme_estado_()">Consultar estado</button>';
+    if(r.ligado)h+='<button type="button" class="aut-rapido-btn" data-alarme-comando="ARMAR" data-rotulo="Ativar alarme" onclick="Alarme_preparar_(\'ARMAR\')">Ativar alarme</button><button type="button" class="aut-rapido-btn" data-alarme-comando="DESARMAR" data-rotulo="Desativar alarme" onclick="Alarme_preparar_(\'DESARMAR\')">Desativar alarme</button>';
+    h+='</div>';
+    if(r.ligado)h+='<p class="cadx-sub">Intervalo mínimo de '+esc(r.intervaloS||10)+' segundos entre ativar e desativar. A contagem aparece nos botões após o comando.</p>';
+    if(r.historico&&r.historico.length){h+='<details><summary>Histórico do alarme</summary><ul>'+r.historico.map(function(x){return '<li>'+esc(new Date(x.quando).toLocaleString('pt-BR'))+' · '+esc(x.usuario_nome)+' · '+esc(x.acao)+' · '+esc(x.situacao)+' — '+esc(x.detalhe)+'</li>';}).join('')+'</ul></details>';}
+    el.innerHTML=h;
+    Alarme_iniciarContagem_();
+  }
+  function Alarme_estado_(){Alarme_chamar_('estado',{},Alarme_desenhar_);}
+  function Alarme_preparar_(comando){
+    if(ALARME_UI.ocupado||ALARME_UI.liberaAte>Date.now())return;
+    var operacao=AutPred_uuid_();
+    Alarme_chamar_('preparar',{comando:comando,operacao:operacao},function(r){
+      if(!window.confirm((comando==='ARMAR'?'Armar':'Desarmar')+' o alarme '+r.nome+' agora?'))return;
+      ALARME_UI.liberaAte=Date.now()+10000;Alarme_iniciarContagem_();
+      Alarme_chamar_('comandar',{comando:comando,operacao:operacao,token:r.token},Alarme_desenhar_);
+    });
+  }
+
 </script>

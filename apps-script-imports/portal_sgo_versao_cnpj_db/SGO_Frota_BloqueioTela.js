@@ -78,6 +78,13 @@ function FrotaBlq_telaNavegador_() {
     var cfg = d.config;
     var h = cfg.podeEnviar ? infoHtml('Comandos reais ligados: os carros em modo Ativo recebem bloquear e liberar de verdade.')
       : '<div class="frr-faixa alerta"><strong>Nenhum comando real sai agora</strong> (todos os carros trabalham em simulação): ' + esc(cfg.faltas.join('; ')) + '. O responsável pelo sistema liga em Chaves e senhas > Rastreador da frota.</div>';
+    if (d.kmNoturno) {
+      var kn = d.kmNoturno;
+      h += '<section class="fbq-form" aria-label="Conferência noturna de KM"><strong>Conferência noturna de KM · ' + esc(kn.horario) + '</strong><p>' + (kn.ligado ? 'Ligada. Ajuste somente com foto confirmada, veículo devolvido, parado e desligado, sem uso posterior à foto.' : 'Desligada. O responsável pode ligar em Chaves e senhas > Rastreador da frota.') + '</p>';
+      if (kn.dia) h += '<p class="muted">Última rodada: ' + esc(kn.dia) + '</p>' + kn.resultados.map(function (r) { return '<p><strong>' + esc(r.placa) + ' · ' + esc(r.situacao) + '</strong><br>' + esc(r.motivo) + '</p>'; }).join('');
+      else h += '<p class="muted">Primeira conferência programada para depois das 22h.</p>';
+      h += '</section>';
+    }
     // decisões pendentes
     var pend = [];
     d.veiculos.forEach(function (v, i) {

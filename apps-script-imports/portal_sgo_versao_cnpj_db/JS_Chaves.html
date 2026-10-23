@@ -9,7 +9,7 @@
   // Ganchos na casca (JS_Core): ChavesTela_iniciar_ no login, ChavesTela_parar_ no
   // logout, abrir('chaves') -> ChavesTela_render_.
   // ==========================================================
-  var CHV = { dono: false, dados: null, abertos: {}, resultados: {} };
+  var CHV = { dono: false, alarme: false, dados: null, abertos: {}, resultados: {} };
 
   // Integrações: o que é obrigatório para estar "Configurada" e qual teste usar.
   var CHV_INTEGRACOES = {
@@ -33,7 +33,7 @@
   };
 
   function ChavesTela_esc_(v) { return CadUI_esc_(v); }
-  function ChavesTela_ehDono_() { return !!CHV.dono; }
+  function ChavesTela_ehDono_() { return !!(CHV.dono || CHV.alarme); }
 
   function ChavesTela_chamar_(fn, payload, ok, erro) {
     google.script.run
@@ -48,17 +48,17 @@
   }
 
   // ---------- ciclo de vida ----------
-  function ChavesTela_mostrarMenu_() { var b = document.getElementById("menu-btn-chaves"); if (b) b.style.display = CHV.dono ? "" : "none"; }
+  function ChavesTela_mostrarMenu_() { var b = document.getElementById("menu-btn-chaves"); if (b) b.style.display = (CHV.dono || CHV.alarme) ? "" : "none"; }
   function ChavesTela_iniciar_() {
-    CHV.dono = false; CHV.dados = null;
+    CHV.dono = false; CHV.alarme = false; CHV.dados = null;
     ChavesTela_mostrarMenu_();
     if (!SESSION) return;
     google.script.run
-      .withSuccessHandler(function (res) { CHV.dono = !!(res && res.ok && res.dono); ChavesTela_mostrarMenu_(); })
-      .withFailureHandler(function () { CHV.dono = false; ChavesTela_mostrarMenu_(); })
+      .withSuccessHandler(function (res) { CHV.dono = !!(res && res.ok && res.dono); CHV.alarme = !!(res && res.ok && res.alarme); ChavesTela_mostrarMenu_(); })
+      .withFailureHandler(function () { CHV.dono = false; CHV.alarme = false; ChavesTela_mostrarMenu_(); })
       .Chaves_apiEhDono(SGO_getSessionId(), {});
   }
-  function ChavesTela_parar_() { CHV.dono = false; CHV.dados = null; CHV.resultados = {}; ChavesTela_mostrarMenu_(); }
+  function ChavesTela_parar_() { CHV.dono = false; CHV.alarme = false; CHV.dados = null; CHV.resultados = {}; ChavesTela_mostrarMenu_(); }
 
   // ---------- tela ----------
   function ChavesTela_render_() {
@@ -68,7 +68,7 @@
     div.innerHTML =
       '<div class="module-shell cadx" id="chvTela">' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Chaves e senhas</h2>' +
-          '<p class="content-subtitle">Chaves das integrações e senhas administrativas, agrupadas por integração. Exclusivo do responsável pelo sistema.</p></div><div class="module-header-right"></div></div>' +
+          '<p class="content-subtitle">Chaves das integrações e senhas administrativas, agrupadas por integração. Configurações restritas conforme as permissões do seu usuário.</p></div><div class="module-header-right"></div></div>' +
         CadUI_ajuda_(
           "<ul><li><b>O valor gravado nunca aparece de novo.</b> Das chaves de API aparecem só os 4 últimos caracteres; das senhas, nada. Para trocar, grave outro valor por cima.</li>" +
           "<li><b>Configurada</b> = os campos obrigatórios da integração estão gravados. <b>Com erro no teste</b> = o último teste não funcionou e nenhuma chave da integração mudou depois dele. <b>Falta configurar</b> = algum campo obrigatório está vazio.</li>" +
@@ -134,7 +134,9 @@
       var n = conta(x[0]);
       return '<button type="button" class="cadx-num bc-resumo-item ' + x[2] + (n === 0 ? " is-zero" : "") + '" onclick="ChavesTela_irPara_(\'' + x[0] + '\')"><span class="cadx-num-valor bc-resumo-num">' + n + '</span><span class="cadx-num-rotulo bc-resumo-rot">' + x[1] + "</span></button>";
     }).join("");
-    c.innerHTML = grupos.map(function (g) { return ChavesTela_htmlGrupo_(g, sit[g]); }).join("");
+    c.innerHTML = (CHV.dados.podeConfigurarAlarme ? '<section class="chvx-grupo" id="chvAlarme"></section><section class="chvx-grupo" id="chvPredial"></section>' : "") + grupos.map(function (g) { return ChavesTela_htmlGrupo_(g, sit[g]); }).join("");
+    if (CHV.dados.podeConfigurarAlarme) { ChavesAlarme_chamar_("configuracao", {}); ChavesPredial_carregar_(); }
+    if (res && !grupos.length) res.innerHTML = "";
     c.querySelectorAll("[data-chv-grupo]").forEach(function (det) {
       det.addEventListener("toggle", function () { CHV.abertos[det.getAttribute("data-chv-grupo")] = det.open; });
     });
@@ -349,4 +351,65 @@
       if (res) res.innerHTML = CHV.resultados[gid];
     });
   }
+  var CHV_ALARME = { ocupado: false, painel: null };
+  function ChavesAlarme_chamar_(acao, dados) {
+    if (CHV_ALARME.ocupado) return;
+    var el = document.getElementById('chvAlarme'); if (!el) return;
+    CHV_ALARME.ocupado = true;
+    el.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    function fim() { CHV_ALARME.ocupado = false; el.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); }
+    function erro(m) { fim(); var msg = document.getElementById('chvAlarmeMsg'); if (!msg) { el.innerHTML = '<h3>Alarme Intelbras</h3><p id="chvAlarmeMsg" role="alert"></p><button type="button" class="cadx-btn" onclick="ChavesAlarme_chamar_(\'configuracao\',{})">Tentar novamente</button>'; msg = document.getElementById('chvAlarmeMsg'); } msg.textContent = m; }
+    google.script.run.withSuccessHandler(function (r) { fim(); if (!r || !r.ok) { erro(r && r.message || 'Não foi possível concluir.'); return; } ChavesAlarme_desenhar_(r); })
+      .withFailureHandler(function () { erro('Sem resposta do servidor. Consulte a configuração antes de tentar novamente.'); })
+      .Alarme_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function ChavesAlarme_desenhar_(r) {
+    var el = document.getElementById('chvAlarme'); if (!el || !r.podeConfigurar) return;
+    CHV_ALARME.painel = r;
+    var esc = ChavesTela_esc_, estado = r.estado;
+    el.innerHTML = '<div class="chvx-grupo-cab"><div><h3><i class="fas fa-shield-halved" aria-hidden="true"></i> Alarme Intelbras</h3><p class="cadx-sub">ANM 24 Net · conexão pela nuvem Intelbras com MAC e senha remota</p></div><span class="cadx-selo '+(r.ligado?'tom-ok':'tom-alerta')+'">'+(r.ligado?'Comandos habilitados':'Comandos desligados')+'</span></div>'+
+      '<div class="chvx-grupo-corpo"><p id="chvAlarmeMsg" role="status">'+esc(r.mensagem || (r.configurado?'Credenciais gravadas no cofre.':'Cadastre a central para começar.'))+(estado?' '+esc(estado.disparado?'Central em disparo.':estado.armado?'Central armada.':'Central desarmada.'):'')+'</p>'+
+      '<div class="chvx-item"><div><div class="chvx-item-nome">Central e credenciais</div><p class="cadx-sub">MAC e senha nunca retornam à tela. Deixe esses campos vazios para manter o valor gravado. Salvar desliga os comandos.</p></div><form id="chvAlarmeForm" onsubmit="event.preventDefault();ChavesAlarme_salvar_()"><div class="chvx-linha">'+
+      '<label>Nome<input id="chvAlarmeNome" maxlength="80" value="'+esc(r.nome||'Alarme')+'"></label>'+
+      '<label>MAC da central<input id="chvAlarmeMac" autocomplete="off" spellcheck="false" placeholder="'+(r.configurado?'MAC gravado — vazio mantém':'AA:BB:CC:DD:EE:FF')+'"></label>'+
+      '<label>Senha remota<input id="chvAlarmeSenha" type="password" autocomplete="new-password" inputmode="numeric" maxlength="6" placeholder="'+(r.configurado?'Senha gravada — vazio mantém':'4 a 6 dígitos')+'"></label>'+
+      '<label>Porta da nuvem<select id="chvAlarmePorta"><option value="9016"'+(r.porta===9016?' selected':'')+'>9016</option><option value="9015"'+(r.porta===9015?' selected':'')+'>9015</option></select></label></div>'+
+      '<div class="chvx-linha" style="margin-top:12px"><button type="submit" class="cadx-btn cadx-btn-primario">Salvar configuração</button>'+
+      (r.configurado?'<button type="button" class="cadx-btn" onclick="ChavesAlarme_chamar_(\'estado\',{})">Testar leitura</button><button type="button" class="cadx-btn" onclick="ChavesAlarme_habilitar_()">'+(r.ligado?'Desligar comandos':'Habilitar arme e desarme')+'</button>':'')+'</div></form></div>'+
+      '<details class="chvx-ajuda-item"><summary>Como funciona a integração</summary><p>Utiliza o protocolo da central pela nuvem Intelbras, baseado na integração independente homeassistant-intelbras-amt. O token push é usado para notificações do aplicativo; não substitui a senha remota de controle. Testar leitura consulta o estado sem armar nem desarmar. Os comandos cotidianos ficam em Segurança e automação predial.</p></details></div>';
+  }
+  function ChavesAlarme_salvar_() {
+    if (CHV_ALARME.ocupado) return;
+    var v = function (id) { return document.getElementById(id).value; };
+    var dados = { nome: v('chvAlarmeNome'), mac: v('chvAlarmeMac'), senha: v('chvAlarmeSenha'), porta: Number(v('chvAlarmePorta')) };
+    ChavesAlarme_chamar_('salvar', dados);
+    document.getElementById('chvAlarmeSenha').value = '';
+    document.getElementById('chvAlarmeMac').value = '';
+  }
+  function ChavesAlarme_habilitar_() {
+    var ligado = CHV_ALARME.painel && CHV_ALARME.painel.ligado;
+    if (!window.confirm(ligado?'Desligar os comandos do alarme no SGO+?':'Habilitar arme e desarme para a equipe interna? Uma leitura válida da central será exigida.')) return;
+    ChavesAlarme_chamar_(ligado?'desligar':'habilitar', {});
+  }
+
+  function ChavesPredial_carregar_() {
+    var el = document.getElementById('chvPredial'); if (!el) return;
+    AutPred_chamar_('painel', {}, function (r) {
+      if (!r.podeAdministrar) { el.innerHTML = ''; return; }
+      var lista = [];
+      (r.unidades || []).forEach(function (u) { (u.dispositivos || []).forEach(function (d) { if (d.podeAutoAbrir) lista.push(d); }); });
+      if (!lista.length) { el.innerHTML = ''; return; }
+      var esc = ChavesTela_esc_;
+      el.innerHTML = '<div class="chvx-grupo-cab"><div><h3>Segurança predial</h3><p class="cadx-sub">Abertura automática das portas autorizadas</p></div></div><div class="chvx-grupo-corpo">'+lista.map(function (d) {
+        return '<div class="chvx-item"><div><div class="chvx-item-nome">'+esc(d.nome)+'</div><p class="cadx-sub">Quando ligada, a porta abre sozinha ao tocar a campainha, sem confirmação. A permissão para destravar continua sendo verificada.</p></div><div><button type="button" class="cadx-btn" data-chv-auto="'+esc(d.id)+'" data-ligado="'+(d.autoAbrir?'1':'0')+'" onclick="ChavesPredial_auto_(this)">'+(d.autoAbrir?'Desligar abertura automática':'Ligar abertura automática')+'</button><p class="cadx-sub">'+(d.autoAbrir?'Ligada':'Desligada')+(d.autoAbrirPor?' · alterada por '+esc(d.autoAbrirPor):'')+(d.autoAbrirEm?' em '+esc(d.autoAbrirEm):'')+'</p></div></div>';
+      }).join('')+'<p id="chvPredialMsg" role="status"></p></div>';
+    }, function (m) { el.textContent = m; });
+  }
+  function ChavesPredial_auto_(botao) {
+    var ligar = botao.getAttribute('data-ligado') !== '1', id = botao.getAttribute('data-chv-auto');
+    if (ligar && !window.confirm('Ligar a abertura automática desta porta? Sempre que tocarem a campainha, o SGO+ abrirá a porta sozinho.')) return;
+    botao.disabled = true;
+    AutPred_chamar_('autoAbrir', { id: id, ligado: ligar }, function () { ChavesPredial_carregar_(); }, function (m) { botao.disabled = false; var msg = document.getElementById('chvPredialMsg'); if (msg) msg.textContent = m; });
+  }
+
 </script>

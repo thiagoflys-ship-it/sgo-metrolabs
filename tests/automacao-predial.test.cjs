@@ -71,7 +71,7 @@ function ambiente(o) {
         if (/shadow\/properties$/.test(u.pathname)) { api.leiturasSombra = (api.leiturasSombra || 0) + 1; return resposta(200, { success: true, result: { properties: [{ code: 'unlock_request', value: api.pedidoValor || 0, time: api.pedidoEm || Date.now() }, { code: 'doorbell', value: true, time: api.campainhaEm || 0 }, { code: 'closed_opened', value: api.fechAberta ? 'open' : 'closed', time: Date.now() }] } }); }
         if (api.pedido && /dev-fech-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.respostasPedido = api.respostasPedido || []).push(v); if (!(api.pedidoValor > 0)) return resposta(200, { success: false, code: 2008, msg: 'not in request window' }); if (v.value === true) api.fechAberta = true; api.pedidoValor = 0; return resposta(200, { success: true, result: true, tid: 'tid-r' }); }
         if (api.garagem && /dev-portao-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean', values: '{}' }, { code: 'door_control_1', type: 'Enum', values: '{"range":["open","close"]}' }] } });
-        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); if (v.code === 'door_control_1') api.dc1 = v.value; else if (v.code === 'switch_1' && v.value === true && !api.sensorLento) api.portaoAberto = !api.portaoAberto; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
+        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); if (v.code === 'door_control_1') api.dc1 = v.value; else if (v.code === 'switch_1' && typeof v.value === 'boolean' && !api.sensorLento) api.portaoAberto = v.value; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
         if (api.garagem && u.pathname === '/v1.0/devices/dev-portao-1') { api.leiturasGaragem = (api.leiturasGaragem || 0) + 1; return resposta(200, { success: true, result: { id: 'dev-portao-1', online: true, status: estadoGaragem() } }); }
         if (/\/functions$/.test(u.pathname)) return u.pathname.includes('fech') ? resposta(200, { success: true, result: { category: 'jtmspro', functions: api.remoto ? [{ code: 'remote_no_dp_key', type: 'Raw' }] : [{ code: 'unlock_temporary', type: 'Integer' }] } })
           : resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean' }] } });
@@ -124,6 +124,49 @@ function ambiente(o) {
 
 function sincronizar(amb) { amb.como(DONO); const r = amb.api_('sincronizar'); assert.equal(r.ok, true, r.message); return r; }
 const nomes = (p) => p.unidades.flatMap((u) => u.dispositivos.map((d) => d.nome));
+
+test('garagem: preparar fechar relê a posição real quando a posição guardada está velha', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  assert.equal(JSON.parse(g.ESTADO_JSON).find(x=>x.code==='doorcontact_state').value,false);
+  amb.api.portaoAberto=true; // abriu por controle físico/Smart Life, sem reler a tela
+  const p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-sensor-velho-001',acao:'FECHAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');assert.equal(amb.comandosApi().length,0);
+});
+
+test('garagem: botão alternado resolve abrir e fechar no servidor, usa true para abrir e false para fechar e não muda o pedestre', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  let p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-alternar-abrir-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'ABRIR');
+  let r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-alternar-abrir-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,true,r.message);amb.envelhecer();
+  p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-alternar-fechar-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');
+  r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-alternar-fechar-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,true,r.message);assert.deepEqual(amb.api.cmdGaragem,[{code:'switch_1',value:true},{code:'switch_1',value:false}]);
+  const ped=amb.disp('Portão secundário');
+  assert.equal(amb.api_('preparar',{dispositivoId:ped.ID,operacaoId:'op-pedestre-alternar-001',acao:'ALTERNAR'}).ok,false);
+});
+
+test('garagem: leitura falha ou posição muda durante confirmação não envia pulso contrário', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  amb.api.portaoAberto=true;
+  const p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-mudou-sensor-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');
+  amb.api.portaoAberto=false;
+  const r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-mudou-sensor-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,false);assert.match(r.message,/já está fechado/);assert.equal(amb.api.cmdGaragem,undefined);
+  amb.api.falhaRede=true;
+  const erro=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-rede-falha-001',acao:'ALTERNAR'});
+  assert.equal(erro.ok,false);assert.match(erro.message,/posição atual/);assert.equal(amb.api.cmdGaragem,undefined);
+  amb.api.falhaRede=false;amb.api.portaoAberto=true;
+  const p2=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-rede-cai-confirmacao-001',acao:'ALTERNAR'});
+  assert.equal(p2.ok,true,p2.message);amb.api.falhaRede=true;
+  const r2=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-rede-cai-confirmacao-001',acao:p2.acao,confirmacaoToken:p2.confirmacaoToken});
+  assert.equal(r2.ok,false);assert.match(r2.message,/posição atual/);assert.equal(amb.api.cmdGaragem,undefined);
+});
 
 test('quem é diretor: perfil Diretoria, vínculo Diretoria ou responsável pelo sistema; Administrador comum e Gestor não', () => {
   const amb = ambiente();
@@ -624,14 +667,54 @@ test('abertura automática pela campainha (23/10/2026): só quem destrava liga; 
   for (let i = 0; i < 4; i++) { limparPedido(amb); amb.ctx.AutPred_rotinaRapida(); }
   assert.equal(amb.tabelas.AUT_COMANDOS.filter((c) => c.ORIGEM === 'AUTOMATICO' && c.SITUACAO === 'RECUSADO').length, 2);
   assert.ok(amb.notificacoes.some((x) => x.evento === 'S68' && /não abriu sozinha/.test(x.titulo) && /Abrir agora/.test(x.texto)));
-  // a tela: caixa de marcar só para quem pode, com confirmação ao ligar
-  const tela = ler('JS_AutomacaoPredial.html');
-  assert.match(tela, /Abrir automaticamente quando tocarem a campainha/);
-  assert.match(tela, /AutPred_chamar_\("autoAbrir"/);
+  // Configuração concentrada em Chaves e senhas; não aparece na tela operacional.
+  const tela = ler('JS_Chaves.html');
+  assert.match(tela, /Ligar abertura automática/);
+  assert.match(tela, /AutPred_chamar_\('autoAbrir'/);
+  assert.doesNotMatch(ler('JS_AutomacaoPredial.html'), /id="autAuto_/);
+});
+
+test('payload público omite configuração técnica sem mudar capacidades, posição ou comandos', () => {
+  const amb = ambiente(); amb.api.garagem = true; sincronizar(amb); amb.homologar('Portão principal');
+  const g = amb.disp('Portão principal');
+  const privados = ['deviceId', 'nomeProvedor', 'categoria', 'categoriaNome', 'produto', 'unidadeId', 'homologadoPor', 'homologadoEm', 'comandoAbrir', 'acionamentoSugerido', 'temFecharNaNuvem', 'percursoGravado', 'autoAbrirPor', 'autoAbrirEm', 'sincronizadoEm', 'modoMotivo'];
+  const publicos = ['id', 'nome', 'tipo', 'online', 'ativo', 'compatOk', 'podeAcionar', 'podeFechar', 'podeParar', 'pulsoAlternado', 'estadoPortao', 'liberaEmS', 'percursoS', 'acionamento'];
+  amb.como(DONO);
+  const referencia = amb.api_('painel').unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID);
+  for (const usuario of [DONO, ADM2, DIR, DIRV]) {
+    amb.como(usuario);
+    const p = amb.api_('painel');
+    assert.equal(p.ok, true, p.message);
+    assert.ok(Object.hasOwn(p.config, 'faltas'));
+    assert.ok(Object.hasOwn(p.config, 'regiao'));
+    const d = p.unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID);
+    for (const k of privados) assert.ok(Object.hasOwn(d, k), `${usuario.usuario}: ${k}`);
+  }
+  for (const usuario of [TEC, GESTOR]) {
+    amb.como(usuario);
+    const p = amb.api_('painel');
+    assert.equal(p.ok, true, p.message);
+    assert.deepEqual(Object.keys(p.config).sort(), ['ligado', 'podeLer']);
+    const dispositivos = [p.unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID), amb.api_('rapido').itens.find(d => d.id === g.ID), amb.api_('estado', { dispositivoId: g.ID }).dispositivo];
+    for (const d of dispositivos) {
+      for (const k of privados) assert.ok(!Object.hasOwn(d, k), `${usuario.usuario}: ${k} oculto`);
+      for (const k of publicos) assert.deepEqual(d[k], referencia[k], `${usuario.usuario}: ${k} operacional preservado`);
+    }
+    const posicao = amb.api_('portoes');
+    assert.equal(posicao.ok, true, posicao.message);
+    assert.ok(posicao.itens.some(d => d.id === g.ID));
+    assert.ok(!posicao.itens.some(d => d.id === amb.disp('Porta da Diretoria').ID));
+  }
+  amb.como(TEC);
+  const r = amb.abrir(g.ID, 'op-payload-publico-001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.situacao, 'CONFIRMADO');
+  for (const k of privados) assert.ok(!Object.hasOwn(r.dispositivo, k));
+  assert.equal(amb.comandosApi().at(-1).corpo.commands[0].value, true);
 });
 
 // ---------------------------------------------------------------- abrir e fechar (garagem) x pulso (pedestre)
-test('portões (23/10/2026, histórico real): a garagem ignora door_control_1 e responde só ao pulso; abrir e fechar mandam o pulso, o sensor decide qual vale; pedestre só abrir', () => {
+test('portões: garagem usa switch_1 true para abrir e false para fechar como no Smart Life; confirmação pelo sensor; pedestre só abrir', () => {
   const amb = ambiente();
   amb.api.garagem = true;
   sincronizar(amb);
@@ -671,7 +754,7 @@ test('portões (23/10/2026, histórico real): a garagem ignora door_control_1 e 
   const pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000006', acao: 'FECHAR' });
   r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000006', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.comando, 'FECHAR'); assert.equal(r.comando.modo, 'REAL'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
-  assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }, { code: 'switch_1', value: true }]), 'door_control_1 nunca é enviado');
+  assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }, { code: 'switch_1', value: false }]), 'door_control_1 nunca é enviado');
   assert.equal(amb.api.portaoAberto, false);
   // a posição "em movimento" depois de fechar segue o comando do SGO+, não o door_control_1 guardado na nuvem
   assert.equal(amb.disp('Portão principal').ULT_CMD_COMANDO, 'FECHAR');

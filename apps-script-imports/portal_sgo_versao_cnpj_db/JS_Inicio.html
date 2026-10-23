@@ -194,11 +194,10 @@
     // Total = pendências (não cartões): o mesmo número do Painel de qualidade e da janela ao entrar.
     var r = res.resumo || { total: res.total || 0, criticos: 0 };
     var total = Number(r.total) || 0, criticos = Number(r.criticos) || 0;
-    if (resumo) resumo.textContent = total === 0 ? "Nada pendente para você hoje." :
-      (total === 1 ? "Há 1 pendência" : "Há " + Inicio_num_(total) + " pendências") +
-      (criticos ? " (" + Inicio_num_(criticos) + (criticos === 1 ? " crítica" : " críticas") + ")" : "") + " para você.";
+    if (resumo) resumo.textContent = total ? "Confira suas prioridades e os acessos rápidos abaixo." : "Tudo em dia. Seus acessos rápidos estão abaixo.";
     var html = "";
     if (n) {
+      html += '<div class="inicio-prioridades-cab"><div><span class="inicio-secao-sobre">SEU DIA NO SGO+</span><h3>Prioridades do dia</h3></div><div class="inicio-prioridades-totais"><span class="inicio-total"><strong>' + Inicio_num_(total) + '</strong> pendências</span>' + (criticos ? '<span class="inicio-total is-critico"><strong>' + Inicio_num_(criticos) + '</strong> críticas</span>' : '') + '</div></div>';
       html += '<div class="inicio-faixa-lista">' + itens.slice(0, 4).map(function (it, i) {
         var nivel = INICIO_ICONES[it.nivel] ? it.nivel : "info";
         return '<button type="button" class="inicio-pend inicio-pend--' + nivel + '" onclick="Inicio_abrirPendencia_(' + i + ')">' +
@@ -207,8 +206,8 @@
           '<span class="inicio-pend-detalhe">' + Inicio_esc_(it.detalhe) + '</span>' +
         '</button>';
       }).join("") + '</div>';
-      html += '<div class="inicio-faixa-nota">' + (n > 4 ? 'Mostrando os 4 grupos mais urgentes de ' + n + '. ' : '') +
-        '<button type="button" class="inicio-ver-todas" onclick="Inicio_abrirTodas_()" style="background:none;border:0;padding:0;color:var(--primary,#1d4ed8);font-weight:700;cursor:pointer;text-decoration:underline">Ver todas as pendências (' + Inicio_num_(total) + ')</button></div>';
+      html += '<div class="inicio-faixa-rodape"><span>' + (n > 4 ? '4 de ' + n + ' grupos, por prioridade' : 'Pendências organizadas por prioridade') + '</span>' +
+        '<button type="button" class="inicio-ver-todas" onclick="Inicio_abrirTodas_()">Ver todas as pendências (' + Inicio_num_(total) + ')</button></div>';
     }
     if (res.naoVerificado && res.naoVerificado.length) {
       html += '<div class="inicio-faixa-nota">Não foi possível verificar agora: ' + Inicio_esc_(res.naoVerificado.join(", ")) + '. Atualize a página para tentar de novo.</div>';
