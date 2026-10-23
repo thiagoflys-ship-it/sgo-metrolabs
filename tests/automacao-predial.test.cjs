@@ -670,6 +670,17 @@ test('portões (23/10/2026): garagem com sensor já abre e fecha (sem escolha gr
   assert.equal(d.podeFechar, false); assert.equal(d.acionamento, 'PULSO');
   assert.match(ler('JS_AutomacaoPredial.html'), /Pulso: fecha manualmente/);
   assert.ok(!/Homologar o fechar/.test(ler('JS_AutomacaoPredial.html')), 'sem homologação separada do fechar na tela');
+  // 23/10/2026 (dono): pedestre real tem sensor e door_control_1 como a garagem, mas é só abrir; o nome decide sem escolha gravada
+  const igualGaragem = { FUNCOES_JSON: amb.disp('Portão principal').FUNCOES_JSON, ESTADO_JSON: amb.disp('Portão principal').ESTADO_JSON };
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO PEDESTRE' }, igualGaragem)), 'PULSO');
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO GARAGEM' }, igualGaragem)), 'ABRIR_FECHAR');
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO PEDESTRE', ACIONAMENTO: 'ABRIR_FECHAR' }, igualGaragem)), 'ABRIR_FECHAR', 'a escolha gravada vence');
+  // a situação antiga do último comando não fica na tela depois dos 15 minutos
+  amb.envelhecer();
+  const g2 = amb.tabelas.AUT_DISPOSITIVOS.find((x) => x.NOME === 'Portão principal'); g2.ULT_CMD_EM = new Date(Date.now() - 3600000).toISOString();
+  amb.como(DONO);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').ultComandoRecente, false);
+  assert.match(ler('JS_AutomacaoPredial.html'), /d\.ultComandoCodigo && d\.ultComandoRecente/);
 });
 
 test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… no percurso; a tela relê com leitura compartilhada e cede a vez quando o minuto está cheio', () => {

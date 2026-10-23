@@ -50,7 +50,8 @@
   .aut-pedido { font-size: 13.5px; line-height: 1.4; color: var(--muted, #52606d); }
   .aut-pedido.is-ativo { color: var(--bc-danger, #a32a1f); font-weight: 700; font-size: 15px; }
   .aut-pedido-botoes { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
-  .aut-botoes-portao { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* 23/10/2026: lado a lado só quando cabe (celular); no cartão estreito do computador, um embaixo do outro, sem cortar */
+  .aut-botoes-portao { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
   .aut-rapido-btn.is-fechar { background: #1f3a5f; border-color: #1f3a5f; }
   /* 23/10/2026: posição do portão (Aberto/Fechado/Abrindo/Fechando) grande, relida a cada 5 s com a tela aberta */
   .aut-posicao { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border, #d9e0e7); background: var(--bc-surface-2, #f4f6f8); }
@@ -403,7 +404,8 @@
         AutPred_htmlPosicao_(d.id, d.estadoPortao) +
         '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
           (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") +
-          (d.ultComandoCodigo ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : "") +
+          // 23/10/2026: a situação do último comando só aparece enquanto vale "Conferir agora" (15 min); depois, só a hora
+          (d.ultComandoCodigo && d.ultComandoRecente ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : "") +
           (d.ultComandoEm ? '<span class="cadx-sub">último: ' + AutPred_esc_(d.ultComandoEm) + "</span>" : "") + "</div>" +
         AutPred_htmlBotoesRapidos_(d, contexto) + "</div>";
     }).join("") + "</div>";

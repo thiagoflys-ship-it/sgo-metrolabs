@@ -131,6 +131,9 @@ function AutPred_temSensor_(d) { return (AutPred_deJson_(d && d.ESTADO_JSON, [])
 function AutPred_acionamento_(d) {
   var a = AutPred_s_(d && d.ACIONAMENTO).toUpperCase();
   if (a === 'ABRIR_FECHAR' || a === 'PULSO') return a;
+  // 23/10/2026 (dono): o pedestre é só abrir (fecha à mão), mesmo com sensor e door_control_1 na nuvem, iguais aos da
+  // garagem; sem escolha gravada, o nome decide
+  if (/pedestre/i.test(AutPred_s_(d && (d.NOME || d.NOME_PROVEDOR)))) return 'PULSO';
   return AutPred_comandosPortao_(d).fechar && AutPred_temSensor_(d) ? 'ABRIR_FECHAR' : 'PULSO';
 }
 
@@ -1042,6 +1045,7 @@ function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
     estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d),
     autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), podeAutoAbrir: AutPred_ehPedido_(d) && !!dir.acionar && AutPred_ehDiretor_(sessao),
     remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
+    ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000,
     ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), podeVer: !!dir.ver, podeAcionar: !!dir.acionar, motivoAcionar: dir.motivo || '' };
 }
 
