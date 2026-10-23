@@ -60,7 +60,10 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         ] },
         { titulo: "Abrir e fechar o portão da garagem", itens: [
           "Portão com abrir e fechar mostra dois botões: \"Abrir portão\" e \"Fechar portão\". Os dois pedem a mesma confirmação na janela.",
-          "O portão com sensor de posição e fechar pela nuvem (garagem) já vem com abrir e fechar. Portão de pulso sem sensor (por exemplo, o de pedestre) só tem \"Abrir portão\": ele fecha manualmente.",
+          "A garagem funciona como no aplicativo Smart Life: o SGO+ manda um pulso ao motor, e o mesmo pulso abre o portão fechado e fecha o aberto. O sensor de posição decide qual botão vale.",
+          "\"Abrir portão\" só funciona com o portão fechado, e \"Fechar portão\" só com ele aberto. No caso contrário, o SGO+ recusa e explica, porque um pulso faria o oposto do pedido.",
+          "Enquanto o portão está no percurso (o tempo configurado no próprio portão, 20 segundos na garagem), um novo toque é recusado com o tempo que falta: um pulso no meio do caminho pararia ou inverteria o portão.",
+          "O portão de pedestre só tem \"Abrir portão\": o pulso solta a fechadura e ele fecha à mão.",
           "O Administrador ou um diretor pode mudar em \"Administrar\" > \"Acionamento\": \"Pulso (só abrir; fecha manualmente)\" ou \"Portão com abrir e fechar\". A tela mostra a sugestão pela leitura do dispositivo.",
           "O fechar vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade."
         ] },

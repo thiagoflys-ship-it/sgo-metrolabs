@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "c12ae9890652",
+ "versao": "ef678d1a0e59",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -817,7 +817,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Limites de proteção",
-     "texto": "Cada clique gera um identificador de operação. O mesmo identificador nunca é executado duas vezes: a segunda chamada devolve o resultado da primeira.\nNo máximo 1 comando por dispositivo a cada 10 segundos.\nNo máximo 5 comandos por pessoa por minuto.\nO mesmo comando não é repetido no dispositivo enquanto o anterior está sem resultado há menos de 60 segundos. Um comando diferente (por exemplo, fechar depois de abrir) só espera os 10 segundos.\nNo máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).\nTodo comando exige o toque em \"Sim, abrir agora\" na janela (código de uso único de 60 segundos)."
+     "texto": "Cada clique gera um identificador de operação. O mesmo identificador nunca é executado duas vezes: a segunda chamada devolve o resultado da primeira.\nNo máximo 1 comando por dispositivo a cada 10 segundos.\nNo máximo 5 comandos por pessoa por minuto.\nNa fechadura, o mesmo comando não é repetido enquanto o anterior está sem resultado há menos de 60 segundos. Nos portões vale o intervalo de 10 segundos e, na garagem, o percurso do portão.\nNo máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).\nTodo comando exige o toque em \"Sim, abrir agora\" na janela (código de uso único de 60 segundos)."
     },
     {
      "titulo": "Dispositivos",
@@ -836,8 +836,12 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Desmarque quando não quiser esse comportamento."
     },
     {
-     "titulo": "Portões: abrir e fechar ou pulso",
-     "texto": "Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso com dois comandos na nuvem: switch_1 (pulso) e door_control_1 (abrir ou fechar); o da garagem tem sensor de portão (doorcontact_state). Nenhum aceita parar.\n\nAcionamento (corrigido em 23/10/2026; antes, o portão só abria até alguém escolher o tipo e homologar o fechar à parte):\nSem escolha gravada, o portão que tem sensor de posição e fechar pela nuvem (a garagem) já vem como \"Portão com abrir e fechar\": botões \"Abrir portão\" e \"Fechar portão\" (door_control_1 open e close), como no aplicativo Smart Life.\nSem sensor (o de pedestre), continua \"Pulso (só abrir; fecha manualmente)\": só o botão \"Abrir portão\" (pulso).\nO Administrador ou um diretor pode mudar em Administrar > Acionamento; a escolha gravada vale sobre a sugestão.\n\nO fechar segue as mesmas proteções do abrir (janela com código de uso único, limites, registro e confirmação pelo sensor) e vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade."
+     "titulo": "Portões: abrir e fechar ou pulso (parte 1)",
+     "texto": "Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso com dois comandos na nuvem: switch_1 (pulso) e door_control_1 (abrir ou fechar); o da garagem tem sensor de portão (doorcontact_state). Nenhum aceita parar.\n\nComo a garagem é acionada (medido no histórico do próprio módulo em 23/10/2026): o módulo \"MINI MODULO PULSO PARA GARAGEM C/ SENSOR\" responde só ao pulso switch_1, que é o que o aplicativo Smart Life manda. O comando door_control_1 (abrir/fechar) vindo da nuvem é aceito pela Tuya e ignorado pelo módulo (das 12:42 às 13:34 de 23/10, nenhuma resposta). O motor alterna: o mesmo pulso abre o portão fechado e fecha o aberto. Por isso, no SGO+:\n\"Abrir portão\" e \"Fechar portão\" mandam o pulso; o sensor decide qual vale: abrir só com o portão fechado, fechar só com ele aberto (no caso contrário, a recusa explica que o pulso faria o oposto).\nDurante o percurso (door_time_1 do próprio portão; 20 segundos na garagem), outro toque é recusado com o tempo que falta, porque um pulso no meio do caminho pararia ou inverteria o portão.\n\"Abrindo…\" e \"Fechando…\" seguem o último comando enviado pelo SGO+ e o percurso; \"Aberto\" e \"Fechado\" vêm do sensor.\nPortão sem sensor (pulso simples): só \"Abrir portão\"; no portão de pulso não há espera pelo resultado do anterior, só o intervalo de 10 segundos."
+    },
+    {
+     "titulo": "Portões: abrir e fechar ou pulso (parte 2)",
+     "texto": "Acionamento (corrigido em 23/10/2026; antes, o portão só abria até alguém escolher o tipo e homologar o fechar à parte):\nSem escolha gravada, o portão que tem sensor de posição (a garagem) já vem como \"Portão com abrir e fechar\": botões \"Abrir portão\" e \"Fechar portão\", com o pulso e a trava pelo sensor descritos acima. Portão com \"pedestre\" no nome fica só com \"Abrir portão\" (decisão do dono: fecha à mão).\nSem sensor (o de pedestre), continua \"Pulso (só abrir; fecha manualmente)\": só o botão \"Abrir portão\" (pulso).\nO Administrador ou um diretor pode mudar em Administrar > Acionamento; a escolha gravada vale sobre a sugestão.\n\nO fechar segue as mesmas proteções do abrir (janela com código de uso único, limites, registro e confirmação pelo sensor) e vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade."
     },
     {
      "titulo": "Permissões",
