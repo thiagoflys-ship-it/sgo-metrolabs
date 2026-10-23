@@ -200,6 +200,14 @@ function AutPred_sensorMudouEm_(c, disp) {
  * Proteção do pulso com sensor (função pura): '' = pode; senão o motivo. Em movimento (dentro do percurso depois do último
  * comando) não manda outro pulso (pararia ou inverteria o portão); abrir só fechado, fechar só aberto.
  */
+/** Segundos até o próximo pulso ser aceito (fim do percurso do último comando); 0 = liberado. A tela conta no botão. */
+function AutPred_liberaEmS_(d, agoraMs) {
+  if (!AutPred_pulsoComSensor_(d) || AutPred_acionamento_(d) !== 'ABRIR_FECHAR') return 0;
+  if (['SOLICITADO', 'ACEITO', 'CONFIRMADO'].indexOf(AutPred_s_(d.ULT_CMD_SITUACAO)) < 0) return 0;
+  var ult = AutPred_ms_(d.ULT_CMD_EM);
+  return ult ? Math.max(0, Math.ceil(AutPred_percursoS_(d) + 2 - ((agoraMs || Date.now()) - ult) / 1000)) : 0;
+}
+
 function AutPred_travaPulsoSensor_(d, acao, estado, agoraMs) {
   if (!AutPred_pulsoComSensor_(d) || AutPred_acionamento_(d) !== 'ABRIR_FECHAR') return '';
   agoraMs = agoraMs || Date.now();
@@ -446,7 +454,7 @@ function AutPred_estadoTexto_(disp) {
 // Aberto/Fechado pelo sensor de posição (doorcontact_state); Abrindo…/Fechando… durante o percurso (tr_timecon, ou 30 s)
 // depois de um comando de abrir/fechar. A tela aberta relê a cada 5 s pela leitura compartilhada (AutPred_estadosPortoes_).
 // ------------------------------------------------------------
-var AUT_PERCURSO_PADRAO_S = 45;   // 23/10/2026: a garagem real leva cerca de 40 s
+var AUT_PERCURSO_PADRAO_S = 60;   // 23/10/2026, medido na garagem real: pulso de fechar às 15:06:22, sensor fechado às 15:07:16 (~55 s)
 var AUT_SENSOR_ASSENTAR_S = 5;   // o sensor oscila ao passar o portão; depois de mudar, espera 5 s antes de confiar
 var AUT_ESTADO_CACHE = 'AUT_ESTADO_';
 var AUT_ESTADO_CACHE_MS = 4500;
@@ -518,7 +526,7 @@ function AutPred_estadosPortoes_(sessao) {
     try { AutPred_confirmarTardio_(d); } catch (eT) {}
     itens.push({ id: AutPred_s_(d.ID), online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estadoPortao: AutPred_estadoPortao_(d), estado: AutPred_estadoTexto_(d),
       ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO),
-      ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000, erro: erro });
+      ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000, liberaEmS: AutPred_liberaEmS_(d), erro: erro });
   });
   return { itens: itens, hora: AutPred_hora_(Date.now()) };
 }
@@ -1177,7 +1185,7 @@ function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
     online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estado: AutPred_estadoTexto_(d), estadoEm: AutPred_dataBr_(d.ESTADO_EM), compatOk: AutPred_s_(d.COMPAT_OK).toUpperCase() === 'SIM', compatMotivo: AutPred_s_(d.COMPAT_MOTIVO),
     comandoAbrir: AutPred_s_(d.COMANDO_ABRIR_JSON), acionamento: AutPred_acionamento_(d), acionamentoSugerido: AutPred_comandosPortao_(d).sugestao,
     podeFechar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'FECHAR'), podeParar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'PARAR'), temFecharNaNuvem: !!AutPred_comandosPortao_(d).fechar,
-    estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d), percursoS: d.TIPO !== 'FECHADURA' ? AutPred_percursoS_(d) : 0, percursoGravado: Number(d.PERCURSO_S) > 0,
+    estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d), liberaEmS: AutPred_liberaEmS_(d), percursoS: d.TIPO !== 'FECHADURA' ? AutPred_percursoS_(d) : 0, percursoGravado: Number(d.PERCURSO_S) > 0,
     autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), podeAutoAbrir: AutPred_ehPedido_(d) && !!dir.acionar && AutPred_ehDiretor_(sessao),
     remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
     ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000,

@@ -409,7 +409,8 @@
           (d.ultComandoEm ? '<span class="cadx-sub">último: ' + AutPred_esc_(d.ultComandoEm) + "</span>" : "") + "</div>" +
         AutPred_htmlBotoesRapidos_(d, contexto) + "</div>";
     }).join("") + "</div>";
-    lista.forEach(function (d) { if (d.estadoPortao && AUTP.posicoes[d.id] === undefined) AUTP.posicoes[d.id] = d.estadoPortao.codigo || ""; });
+    lista.forEach(function (d) { if (d.estadoPortao && AUTP.posicoes[d.id] === undefined) AUTP.posicoes[d.id] = d.estadoPortao.codigo || ""; if (d.tipo !== "FECHADURA") AutPred_marcarLibera_(d.id, d.liberaEmS || 0); });
+    AutPred_iniciarLibera_();
     AutPred_iniciarPedidos_();
     AutPred_iniciarPortoes_();
   }
@@ -430,8 +431,9 @@
   function AutPred_iniciarPortoes_() {
     if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; }
     if (AUTP.portTimer) return;
-    var consultando = false;
-    AUTP.portTimer = setInterval(function () {
+    var consultando = false, primeira = true;
+    // 23/10/2026: a primeira leitura sai na hora (antes, a tela mostrava a última posição guardada por até 5 s)
+    var tickPortoes = function () {
       if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; } // a tela fechou
       if (document.hidden || consultando) return;
       consultando = true;
@@ -441,14 +443,18 @@
           var e = x.estadoPortao || {}, antes = AUTP.posicoes[x.id], agora = e.codigo || "";
           document.querySelectorAll('[data-aut-posicao="' + x.id + '"]').forEach(function (el) { el.parentNode.outerHTML = AutPred_htmlPosicao_(x.id, e); });
           document.querySelectorAll('[data-aut-sit="' + x.id + '"]').forEach(function (el) { el.innerHTML = AutPred_htmlSit_(x); });
+          AutPred_marcarLibera_(x.id, x.liberaEmS || 0);
           AUTP.posicoes[x.id] = agora;
-          if (antes !== undefined && antes !== agora && (agora === "ABERTO" || agora === "FECHADO")) {
+          if (!primeira && antes !== undefined && antes !== agora && (agora === "ABERTO" || agora === "FECHADO")) {
             var d = AutPred_dispositivo_(x.id);
             AutPred_avisoPosicao_((d ? d.nome : "Portão") + (agora === "ABERTO" ? " abriu" : " fechou") + " às " + (r.hora || ""), agora === "ABERTO" ? "tom-alerta" : "tom-ok");
           }
         });
+        primeira = false; // a primeira leitura só acerta a posição guardada, sem aviso de mudança
       }, function () { consultando = false; });
-    }, 5000);
+    };
+    AUTP.portTimer = setInterval(tickPortoes, 5000);
+    tickPortoes();
   }
   function AutPred_avisoPosicao_(texto, tom) {
     var ini = document.getElementById("autInicio");
@@ -503,8 +509,24 @@
     if (acao === "ABRIR") b.id = (contexto === "modulo" ? "autBtnC_" : "autBtnR_" + contexto + "_") + id;
     b.setAttribute("onclick", "AutPred_pedir_(" + JSON.stringify(String(id)).replace(/"/g, "'") + ", '" + contexto + "', this, '" + acao + "')");
     b.innerHTML = (icone ? '<i class="fas ' + icone + '" aria-hidden="true"></i>' : "") + AutPred_esc_(rotulo);
+    // 23/10/2026: portão de pulso no percurso: o botão mostra "Aguarde N s" e volta sozinho (AutPred_contarLibera_)
+    b.setAttribute("data-aut-gate", String(id));
+    b.setAttribute("data-rotulo", b.innerHTML);
     return b.outerHTML;
   }
+  /** id -> hora (ms) em que o próximo pulso fica liberado; vem do servidor em segundos (liberaEmS). */
+  function AutPred_marcarLibera_(id, s) { AUTP.libera = AUTP.libera || {}; AUTP.libera[id] = s > 0 ? Date.now() + s * 1000 : 0; }
+  function AutPred_contarLibera_() {
+    var botoes = document.querySelectorAll("[data-aut-gate]");
+    if (!botoes.length) { if (AUTP.liberaTimer) clearInterval(AUTP.liberaTimer); AUTP.liberaTimer = null; return; }
+    botoes.forEach(function (b) {
+      if (b.textContent === "Aguarde…") return; // preparando um comando
+      var falta = Math.ceil((((AUTP.libera || {})[b.getAttribute("data-aut-gate")] || 0) - Date.now()) / 1000);
+      if (falta > 0) { b.disabled = true; b.textContent = "Aguarde " + falta + " s"; }
+      else if (b.disabled && /^Aguarde \d+ s$/.test(b.textContent)) { b.disabled = false; b.innerHTML = b.getAttribute("data-rotulo"); }
+    });
+  }
+  function AutPred_iniciarLibera_() { AutPred_contarLibera_(); if (!AUTP.liberaTimer) AUTP.liberaTimer = setInterval(AutPred_contarLibera_, 1000); }
   function AutPred_htmlBotoesRapidos_(d, contexto) {
     var porta = d.tipo === "FECHADURA";
     if (porta) return AutPred_btnAcao_(d.id, contexto, "ABRIR", "Destravar a porta", "aut-rapido-btn is-porta", "fa-lock-open");

@@ -647,14 +647,19 @@ test('portões (23/10/2026, histórico real): a garagem ignora door_control_1 e 
   let r = amb.abrir(g.ID, 'op-fech-0000002');
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
   assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }]), 'abrir = pulso, como o aplicativo');
-  // no percurso (padrão 45 s; a garagem real leva ~40 s): nenhum pulso novo; aos 29 s (o caso real das 14:19) também não
+  // no percurso (padrão 60 s; a garagem real leva ~55 s): nenhum pulso novo; aos 29 s (o caso real das 14:19) também não
   amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 29000).toISOString(); });
   amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 29000).toISOString(); });
-  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000029', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde 1[0-9] s/);
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000029', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde 3[0-9] s/);
   amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 15000).toISOString(); });
   amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 15000).toISOString(); });
   assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde \d+ s/);
+  // a tela recebe quanto falta para liberar o próximo pulso e conta no botão
+  const lib = amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').liberaEmS;
+  assert.ok(lib >= 46 && lib <= 48, 'liberaEmS ' + lib); // último comando há 15 s: 60 + 2 - 15
+  assert.match(ler('JS_AutomacaoPredial.html'), /"Aguarde " \+ falta \+ " s"/);
   amb.envelhecer();
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').liberaEmS, 0);
   // aberto: "Abrir" é recusado (o pulso fecharia)
   assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004' }).message, /já está aberto pelo sensor; um pulso agora o fecharia/);
   // token de abrir não serve para fechar
@@ -771,7 +776,7 @@ test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… n
   assert.equal(e([{ code: 'doorcontact_state', value: true }], velho('FECHAR')).codigo, 'ABERTO', 'passou o percurso: o sensor manda');
   assert.equal(e([{ code: 'doorcontact_state', value: true }], Object.assign({ PERCURSO_S: 2 }, recente('ABRIR'))).codigo, 'ABERTO', 'percurso gravado em Administrar');
   // 23/10/2026: o módulo informa door_time_1 = 20, mas a garagem leva ~40 s; sem tempo gravado vale o maior entre o módulo e 45 s
-  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 45);
+  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 60);
   assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 60 }]) }), 60);
   assert.equal(amb.ctx.AutPred_percursoS_({ PERCURSO_S: 38, ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 38);
   assert.equal(e([{ code: 'switch_1', value: false }], Object.assign({ ACIONAMENTO: 'PULSO' }, recente('ABRIR'))).codigo, '', 'pedestre sem sensor');
