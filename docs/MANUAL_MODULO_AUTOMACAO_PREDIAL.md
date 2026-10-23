@@ -10,19 +10,35 @@ O módulo foi construído sobre o que o SGO+ já tinha: a sessão e os perfis de
 
 ## Quem faz o quê
 
-Diretoria: vê e abre os portões; vê a porta da Diretoria e solicita o destravamento quando tem a permissão "Acionar" concedida por um diretor; sincroniza com o Smart Life; administra os dispositivos; homologa cada dispositivo depois do teste presencial; concede e revoga permissões, inclusive da porta; consulta toda a auditoria.
+Quem é diretor (decisão do dono, 22/10/2026): quem tem o perfil Diretoria, ou o vínculo de trabalho Diretoria no cadastro de usuários (Administração > Usuários), ou é o responsável pelo sistema. Uma regra só, conferida no servidor.
 
-Administrador: vê e abre os portões; sincroniza; administra os portões; concede e revoga permissões dos portões; consulta a auditoria dos portões. Não vê a porta da Diretoria (só a contagem de dispositivos restritos).
+Diretores: veem e abrem os portões; veem a porta da Diretoria; sincronizam com o Smart Life; administram os dispositivos; homologam cada dispositivo depois do teste presencial; concedem e revogam permissões dos portões; consultam toda a auditoria.
 
-Demais perfis internos (Gestor, RH, Financeiro, Técnico, Metrologia, Comercial): só o que foi concedido por dispositivo. "Ver estado e histórico" mostra o cartão e o histórico; "Acionar (abrir) e ver" permite abrir. A permissão pode ter data de fim.
+Porta da Diretoria ("minha sala é para o meu login ter acesso, os demais não", dono): o responsável pelo sistema destrava por padrão, sem permissão gravada. Outro diretor só destrava se o responsável pelo sistema conceder a permissão "Acionar" (com vigência, se quiser) em Permissões; só ele concede e revoga a permissão da porta, e só para diretores.
+
+Administrador que não é diretor: vê e abre os portões; sincroniza; administra os portões; concede e revoga permissões dos portões; consulta a auditoria dos portões. Não vê a porta da Diretoria (só a contagem de dispositivos restritos).
+
+Demais perfis internos (Gestor, RH, Financeiro, Técnico, Metrologia, Comercial): depois da implantação, só o que foi concedido por dispositivo. "Ver estado e histórico" mostra o cartão e o histórico; "Acionar (abrir) e ver" permite abrir. A permissão pode ter data de fim.
+
+Implantação: enquanto a automação está Desligada em Chaves e senhas ou nenhum dispositivo foi homologado, o item "Segurança predial" do menu, os atalhos e a própria tela são só do Administrador e dos diretores; o servidor recusa os demais com a explicação. Depois, aparecem também para quem tem permissão em algum dispositivo.
 
 Cliente: não acessa.
 
 Todas as regras são conferidas no servidor em cada chamada. A tela só mostra o que o servidor devolve; a porta da Diretoria nem chega ao navegador de quem não é Diretoria.
 
+## Abrir em um toque (celular e computador)
+
+Quem pode abrir algum portão (ou a porta) vê os botões grandes:
+
+- No celular: atalho "Portões" no Início, que abre a tela com o bloco "Abrir agora" no topo, um botão de pelo menos 56 px por dispositivo, com o estado ao lado (Online ou Offline, último comando e a situação: "Execução confirmada", "Aceito, sem confirmação", "Simulado").
+- No computador: os mesmos botões no Início e no topo da tela do módulo.
+- Quem não pode acionar nenhum dispositivo não vê o atalho nem os botões.
+
+Nada para digitar: toque em "Abrir portão" (ou "Destravar a porta"), confira o nome na janela grande e toque em "Sim, abrir agora" (ou "Cancelar"). A janela leva um código de uso único, válido por 60 segundos, emitido pelo servidor para o seu usuário, aquele dispositivo e aquela solicitação; sem ele (por exemplo, uma chamada direta sem passar pela janela) o servidor recusa e registra.
+
 ## O caminho de um comando
 
-1. Solicitado. O SGO+ confere a sessão, a permissão no dispositivo, a confirmação adicional (fechadura), se o dispositivo está ativo e compatível, e os limites de frequência. Grava a solicitação com o identificador da operação. Se qualquer regra falha, a solicitação fica registrada como negada, com o motivo, e a tela explica o que fazer.
+1. Solicitado. O SGO+ confere a sessão, a permissão no dispositivo, o código da janela de confirmação, se o dispositivo está ativo e compatível, e os limites de frequência. Grava a solicitação com o identificador da operação. Se qualquer regra falha, a solicitação fica registrada como negada, com o motivo, e a tela explica o que fazer.
 2. Aceito. A nuvem da Tuya respondeu que recebeu o comando. O SGO+ grava o código HTTP, o código da resposta e o identificador da chamada (tid).
 3. Execução confirmada. O SGO+ espera alguns segundos, relê o estado do dispositivo e procura a mudança (ou, na fechadura, o registro de abertura). Encontrou: "Execução confirmada". Não encontrou: "Aceito pela API, sem confirmação": a gestão é avisada (evento S66 da matriz de avisos), o comando entra nas pendências do Início e o botão "Conferir agora" relê o estado por até 15 minutos.
 
@@ -32,7 +48,7 @@ A nuvem aceitar não quer dizer porta aberta. Só a execução confirmada quer d
 
 Enquanto a chave "Automação predial ligada" está Desligada em Chaves e senhas, ou o dispositivo não foi homologado pela Diretoria, o SGO+ trabalha em simulação: registra o que teria feito e nada sai do servidor. O cartão mostra o selo "Simulação" e o motivo.
 
-O comando real exige as duas coisas: automação Ligada e dispositivo homologado. A homologação é feita pela Diretoria, no cartão, em "Administrar" > "Homologar (depois do teste presencial)", com a descrição do teste e a palavra HOMOLOGAR. Pode ser retirada a qualquer momento, com motivo.
+O comando real exige as duas coisas: automação Ligada e dispositivo homologado. A homologação é feita por um diretor, no cartão, em "Administrar" > "Homologar (depois do teste presencial)", com a descrição do teste (nada mais para digitar). Pode ser retirada a qualquer momento, com motivo.
 
 ## Limites de proteção
 
@@ -41,7 +57,7 @@ O comando real exige as duas coisas: automação Ligada e dispositivo homologado
 - No máximo 5 comandos por pessoa por minuto.
 - O mesmo dispositivo não recebe outro comando enquanto o anterior está sem resultado há menos de 60 segundos.
 - No máximo 30 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas.
-- A porta da Diretoria exige digitar ABRIR na confirmação, além do clique.
+- Todo comando exige o toque em "Sim, abrir agora" na janela (código de uso único de 60 segundos).
 
 ## Dispositivos
 
@@ -53,27 +69,27 @@ A sincronização só lê. Ela identifica a categoria do produto e os comandos q
 - Fechaduras (residencial, residencial Pro, controle de acesso, hotel, comercial, com câmera, cofre): destravamento só pelo fluxo de bilhete temporário da nuvem (Smart Lock Open API), e só quando o modelo oferece abertura remota pela nuvem. Se não oferece, o cartão diz "Não disponível pela API" com o porquê; a abertura continua pelo aplicativo Smart Life ou na própria porta, e o SGO+ mostra o estado e os registros quando a nuvem os fornece.
 - Outras categorias: só consulta.
 
-Fechaduras entram restritas à Diretoria. Só a Diretoria marca ou desmarca "Restrito à Diretoria".
+Fechaduras entram restritas à Diretoria. Só um diretor marca ou desmarca "Restrito à Diretoria".
 
 "Administrar" permite trocar o nome no SGO+, escolher a unidade (do cadastro de unidades ou em texto, por exemplo METROLABS — MATRIZ GOIÂNIA), a localização, desativar o dispositivo e, nos portões, ajustar o comando de abertura. Nada é apagado: dispositivo removido do Smart Life continua no cadastro, e o Administrador o desativa.
 
 ## Permissões
 
-Aba Permissões (Administrador e Diretoria). Escolha o usuário interno ativo, o dispositivo, a permissão ("Ver estado e histórico" ou "Acionar (abrir) e ver"), a data de fim (opcional) e o motivo. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo. "Revogar" tira a permissão na hora, com motivo.
+Aba Permissões (Administrador e diretores). Escolha o usuário interno ativo, o dispositivo, a permissão ("Ver estado e histórico" ou "Acionar (abrir) e ver"), a data de fim (opcional) e o motivo. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo. "Revogar" tira a permissão na hora, com motivo.
 
-A porta da Diretoria só é liberada por um diretor, para usuários do perfil Diretoria, e só com "Acionar" o diretor consegue solicitar o destravamento. Administrador e Diretoria já veem e acionam os portões sem permissão individual.
+A porta da Diretoria só é liberada pelo responsável pelo sistema, e só para diretores; ele próprio destrava por padrão. A tela de Permissões explica isso numa faixa própria. Administrador e diretores já veem e acionam os portões sem permissão individual.
 
 Toda concessão e revogação entra na auditoria e no log do sistema, com quem, quando e o motivo.
 
 ## Auditoria
 
-Aba Auditoria (Administrador e Diretoria). Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, confirmação ausente), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, integridade conferida.
+Aba Auditoria (Administrador e diretores). Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, sem a confirmação da janela), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, integridade conferida.
 
-Cada linha leva o resumo SHA-256 da linha anterior. "Conferir a integridade do registro" percorre a corrente: linha alterada ou apagada aparece com o número e a hora. O Administrador não vê os eventos da porta da Diretoria.
+Cada linha leva o resumo SHA-256 da linha anterior. "Conferir a integridade do registro" percorre a corrente: linha alterada ou apagada aparece com o número e a hora. O Administrador que não é diretor não vê os eventos da porta da Diretoria.
 
 ## Chaves e senhas: configuração das credenciais
 
-Exclusivo do responsável pelo sistema. Grupo "Automação predial (Tuya)":
+Exclusivo do responsável pelo sistema. O passo a passo para leigo, tela por tela, está no Guia de acesso à Tuya (docs/GUIA_ACESSO_TUYA_SMARTLIFE.md e o documento A4 em Documentos/METROLABS_AUTOMACAO_PREDIAL). Grupo "Automação predial (Tuya)":
 
 1. No portal da Tuya (platform.tuya.com), entre com a conta de desenvolvedor da Metrolabs e abra Cloud > Development. Crie (ou abra) o projeto cloud. Centro de dados: o mesmo da conta do Smart Life (contas do Brasil: Western America).
 2. Em Devices > Link Tuya App Account > Add App Account, leia o QR Code com o aplicativo Smart Life da conta que tem os portões e a fechadura. Os dispositivos aparecem na lista do projeto.

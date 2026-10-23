@@ -15,7 +15,8 @@
  *     autorizado), concedida só por DIRETORIA a usuários DIRETORIA.
  *  4. Comando: identificador da operação (idempotente: o mesmo id devolve o mesmo resultado, nunca executa de novo);
  *     no máximo 1 comando por dispositivo a cada AUT_INTERVALO_DISPOSITIVO_S, AUT_LIMITE_USUARIO_MIN por pessoa por
- *     minuto e nunca o mesmo comando enquanto o anterior está sem resultado; fechadura só com a confirmação "ABRIR".
+ *     minuto e nunca o mesmo comando enquanto o anterior está sem resultado; todo comando só com a confirmação da janela
+ *     ("Sim, abrir agora"): token de uso único de 60 s emitido pelo servidor (AutPred_prepararComando_), sem nada digitado.
  *  5. COMANDO SOLICITADO -> COMANDO ACEITO (a API disse success) -> EXECUÇÃO CONFIRMADA (o estado do dispositivo mudou
  *     ou o registro da fechadura mostra a abertura). A API aceitar NÃO é porta aberta: fica "aceito, sem confirmação".
  *  6. Execução real só com TUYA_LIGADO = 1 E o dispositivo HOMOLOGADO = SIM pela Diretoria. Antes disso, SIMULAÇÃO:
@@ -65,10 +66,33 @@ function AutPred_json_(v) { try { return v === undefined ? '' : JSON.stringify(v
 function AutPred_deJson_(s, padrao) { try { var j = JSON.parse(AutPred_s_(s) || 'null'); return j === null || j === undefined ? padrao : j; } catch (e) { return padrao; } }
 function AutPred_nome_(s) { return AutPred_s_(s && (s.nome || s.usuario)) || 'sistema'; }
 function AutPred_perfil_(s) { return AutPred_s_(s && s.perfil).toUpperCase(); }
-function AutPred_ehDiretoria_(s) { return AutPred_perfil_(s) === 'DIRETORIA'; }
+/** Responsável pelo sistema (SGO_DONOS, SGO_Chaves.js), pelo login. */
+function AutPred_ehDonoLogin_(login) {
+  try { return typeof Chaves_ehDonoUsuario_ === 'function' && !!Chaves_ehDonoUsuario_(login); } catch (e) { return false; }
+}
+function AutPred_ehDono_(s) { return AutPred_ehDonoLogin_(s && s.usuario); }
+/** Linha de CAD_USUARIOS é de diretor? Mesma regra de AutPred_ehDiretor_. */
+function AutPred_usuarioEhDiretor_(u) {
+  return !!u && (AutPred_s_(u.PERFIL).toUpperCase() === 'DIRETORIA' || AutPred_s_(u.VINCULO_TRABALHO).toUpperCase() === 'DIRETORIA' || AutPred_ehDonoLogin_(u.USUARIO));
+}
+/**
+ * QUEM É DIRETOR (decisão do dono, 22/10/2026) — helper único do módulo: perfil DIRETORIA, OU vínculo de trabalho
+ * DIRETORIA no cadastro de usuários (SGO_Usuarios.js, 7b5dcdf), OU responsável pelo sistema (SGO_DONOS). O vínculo
+ * não está na sessão: é lido do cadastro uma vez por chamada.
+ */
+function AutPred_ehDiretor_(s) {
+  if (!s) return false;
+  if (s._autDiretor !== undefined) return s._autDiretor;
+  var r = AutPred_perfil_(s) === 'DIRETORIA' || AutPred_ehDono_(s);
+  if (!r && s.userId) {
+    try { var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, s.userId); r = !!(u && AutPred_s_(u.VINCULO_TRABALHO).toUpperCase() === 'DIRETORIA'); } catch (e) {}
+  }
+  try { s._autDiretor = r; } catch (e2) {}
+  return r;
+}
 function AutPred_ehAdmin_(s) { return AutPred_perfil_(s) === 'ADMIN'; }
-/** Administra o módulo: Administrador e Diretoria (o Gestor não entra aqui de propósito). */
-function AutPred_administra_(s) { return AutPred_ehAdmin_(s) || AutPred_ehDiretoria_(s); }
+/** Administra o módulo: Administrador e diretores (o Gestor não entra aqui de propósito). */
+function AutPred_administra_(s) { return AutPred_ehAdmin_(s) || AutPred_ehDiretor_(s); }
 function AutPred_restrito_(d) { return AutPred_s_(d && d.RESTRITO_DIRETORIA).toUpperCase() === 'SIM'; }
 function AutPred_ler_(aba) {
   try { if (!SGO_DATA.getDB().getSheetByName(aba)) return []; } catch (e) { return []; }
@@ -163,15 +187,17 @@ function AutPred_permissoesDe_(userId, lista) {
 
 /**
  * O que a sessão pode no dispositivo: { ver, acionar, motivo }. Função pura sobre sessão + dispositivo + permissões.
- * Restrito à Diretoria: só DIRETORIA vê; acionar só com permissão ACIONAR expressa. Portão: ADMIN/DIRETORIA tudo;
- * os demais pelo que foi concedido.
+ * Restrito à Diretoria: só diretor vê (AutPred_ehDiretor_); o responsável pelo sistema aciona por padrão ("minha sala
+ * é para o meu login ter acesso", dono, 22/10/2026); os outros diretores só com a permissão ACIONAR que ele concede.
+ * Portão: Administrador e diretores tudo; os demais pelo que foi concedido.
  */
 function AutPred_direitos_(sessao, disp, perms) {
   var perm = AutPred_s_((perms || {})[AutPred_s_(disp.ID)]).toUpperCase();
   if (AutPred_restrito_(disp)) {
-    if (!AutPred_ehDiretoria_(sessao)) return { ver: false, acionar: false, motivo: 'dispositivo restrito à Diretoria' };
+    if (!AutPred_ehDiretor_(sessao)) return { ver: false, acionar: false, motivo: 'dispositivo restrito à Diretoria' };
+    if (AutPred_ehDono_(sessao)) return { ver: true, acionar: true, motivo: '', padraoDono: true };
     if (perm === 'ACIONAR') return { ver: true, acionar: true, motivo: '' };
-    return { ver: true, acionar: false, motivo: 'a porta da Diretoria só é destravada por usuário expressamente autorizado: peça a um diretor para conceder a permissão "Acionar" em Permissões' };
+    return { ver: true, acionar: false, motivo: 'a porta da Diretoria é destravada pelo responsável pelo sistema; outro diretor só destrava se ele conceder a permissão "Acionar" em Segurança e automação predial > Permissões' };
   }
   if (AutPred_administra_(sessao)) return { ver: true, acionar: true, motivo: '' };
   if (perm === 'ACIONAR') return { ver: true, acionar: true, motivo: '' };
@@ -365,8 +391,55 @@ function AutPred_gravarComando_(cmd, upd) {
   Object.assign(cmd, upd);
 }
 
+// ------------------------------------------------------------
+// CONFIRMAÇÃO SEM DIGITAR (22/10/2026, decisão do dono): token de uso único da janela
+// ------------------------------------------------------------
+var AUT_CONF_PREFIXO = 'AUT_CONF_';
+var AUT_CONF_VALIDADE_MS = 60000;
+
 /**
- * Executa (ou simula) a abertura. dados = { dispositivoId, operacaoId, confirmacao }.
+ * Toque em "Abrir portão" / "Destravar a porta": confere tudo o que o comando conferiria (sem gravar nada) e, se puder,
+ * emite o token da janela de confirmação. dados = { dispositivoId, operacaoId }. Recusa com o motivo antes de abrir a janela.
+ */
+function AutPred_prepararComando_(sessao, dados) {
+  dados = dados || {};
+  var opId = AutPred_s_(dados.operacaoId);
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(opId)) throw new Error('Não foi possível preparar o comando: a solicitação veio sem o identificador da operação. Atualize a página (F5) e tente de novo.');
+  AutPred_bootstrap_();
+  var comandos = AutPred_comandos_();
+  if (comandos.some(function (x) { return AutPred_s_(x.OPERACAO_ID) === opId; })) throw new Error('Esta solicitação já foi processada. Toque de novo no botão para um comando novo.');
+  var disp = AutPred_dispositivo_(dados.dispositivoId);
+  var dir = AutPred_direitos_(sessao, disp, AutPred_permissoesDe_(sessao.userId));
+  if (!dir.ver) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você. Clique em "Atualizar"; se precisar dele, peça ao Administrador ou à Diretoria.');
+  var verbo = disp.TIPO === 'FECHADURA' ? 'destravar' : 'abrir';
+  if (!dir.acionar) throw new Error('Não foi possível ' + verbo + ': ' + dir.motivo + '.');
+  if (AutPred_s_(disp.ATIVO).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': o dispositivo está desativado no SGO+ (o Administrador ou um diretor reativa em Administrar).');
+  if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
+  var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now());
+  if (freq) throw new Error('Não foi possível ' + verbo + ' agora: ' + freq + '.');
+  var c = AutPred_cfg_();
+  var modo = AutPred_modo_(c, disp);
+  var token = String(Utilities.getUuid()).replace(/-/g, '') + String(Utilities.getUuid()).replace(/-/g, '').slice(0, 8);
+  CacheService.getScriptCache().put(AUT_CONF_PREFIXO + token, JSON.stringify({ u: AutPred_s_(sessao.userId), d: AutPred_s_(disp.ID), o: opId, ate: Date.now() + AUT_CONF_VALIDADE_MS }), 120);
+  return { confirmacaoToken: token, validadeS: AUT_CONF_VALIDADE_MS / 1000, operacaoId: opId, modo: modo.modo, modoMotivo: modo.motivo,
+    dispositivo: AutPred_dispositivoParaTela_(disp, dir, sessao, c) };
+}
+
+/** Confere e consome (uso único) o token da janela. { ok, motivo }. */
+function AutPred_consumirConfirmacao_(token, sessao, disp, opId) {
+  var motivo = 'a confirmação na janela não foi feita ou venceu (vale 60 segundos); toque de novo no botão e confirme em "Sim, abrir agora"';
+  token = AutPred_s_(token);
+  if (!/^[a-f0-9]{20,80}$/i.test(token)) return { ok: false, motivo: motivo };
+  var cache = CacheService.getScriptCache(), j = null;
+  try { j = JSON.parse(cache.get(AUT_CONF_PREFIXO + token) || 'null'); } catch (e) { j = null; }
+  try { cache.remove(AUT_CONF_PREFIXO + token); } catch (e2) {}
+  if (!j || !(Number(j.ate) >= Date.now())) return { ok: false, motivo: motivo };
+  if (j.u !== AutPred_s_(sessao.userId) || j.d !== AutPred_s_(disp.ID) || j.o !== AutPred_s_(opId)) return { ok: false, motivo: 'a confirmação não é deste usuário, deste dispositivo ou desta solicitação; toque de novo no botão e confirme na janela' };
+  return { ok: true };
+}
+
+/**
+ * Executa (ou simula) a abertura. dados = { dispositivoId, operacaoId, confirmacaoToken }.
  * Devolve { comando (registro), texto }. Lança erro com o quê/por quê/o que fazer quando recusa antes de registrar.
  */
 function AutPred_executar_(sessao, dados) {
@@ -398,7 +471,10 @@ function AutPred_executar_(sessao, dados) {
   };
   if (!dir.acionar) negar(dir.motivo, 'COMANDO_NAO_AUTORIZADO');
   if (AutPred_s_(disp.ATIVO).toUpperCase() !== 'SIM') negar('o dispositivo está desativado no SGO+ (Administrador ou Diretoria reativa em Administrar dispositivos)');
-  if (disp.TIPO === 'FECHADURA' && AutPred_s_(dados.confirmacao).toUpperCase() !== 'ABRIR') negar('a porta da Diretoria exige a confirmação adicional: digite ABRIR na caixa de confirmação e confirme de novo');
+  // 22/10/2026 (dono): sem digitar. A confirmação é o toque em "Sim, abrir agora" na janela, que só existe com o token de uso
+  // único emitido por prepararComando (60 s, ligado ao usuário, ao dispositivo e ao id da operação). Chamada direta sem a janela = recusada.
+  var conf = AutPred_consumirConfirmacao_(dados.confirmacaoToken, sessao, disp, opId);
+  if (!conf.ok) negar(conf.motivo, 'COMANDO_SEM_CONFIRMACAO');
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') negar('não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
   var freq = AutPred_podeAgora_(comandos, disp.ID, sessao.userId, Date.now());
   if (freq) negar(freq, 'COMANDO_LIMITE');
@@ -408,7 +484,7 @@ function AutPred_executar_(sessao, dados) {
   var antes = AutPred_deJson_(disp.ESTADO_JSON, []);
   if (modo.modo === 'REAL') { try { antes = AutPred_lerEstado_(c, disp).status; } catch (eAntes) {} }
   var cmd = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase(Object.assign({}, base, {
-    AUTORIZACAO: 'AUTORIZADO', AUTORIZACAO_MOTIVO: dir.motivo || (AutPred_administra_(sessao) && !AutPred_restrito_(disp) ? 'perfil ' + AutPred_perfil_(sessao) : 'permissão individual ACIONAR'),
+    AUTORIZACAO: 'AUTORIZADO', AUTORIZACAO_MOTIVO: dir.padraoDono ? 'responsável pelo sistema (padrão da porta da Diretoria)' : (AutPred_administra_(sessao) && !AutPred_restrito_(disp) ? (AutPred_ehDiretor_(sessao) ? 'diretor' : 'perfil ' + AutPred_perfil_(sessao)) : 'permissão individual ACIONAR'),
     SITUACAO: 'SOLICITADO', ESTADO_ANTES_JSON: AutPred_json_(antes), ATUALIZADO_EM: SGO_UTILS.nowIso()
   }))));
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_ID: cmd.ID, ULT_CMD_EM: cmd.QUANDO_EM, ULT_CMD_SITUACAO: 'SOLICITADO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
@@ -467,7 +543,7 @@ function AutPred_usuariosGestao_(soDiretoria) {
     SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) {
       var p = AutPred_s_(u.PERFIL).toUpperCase();
       if (AutPred_s_(u.STATUS).toUpperCase() !== 'ATIVO') return;
-      if (p === 'DIRETORIA' || (!soDiretoria && p === 'ADMIN')) out.push(AutPred_s_(u.ID));
+      if (AutPred_usuarioEhDiretor_(u) || (!soDiretoria && p === 'ADMIN')) out.push(AutPred_s_(u.ID));
     });
   } catch (e) {}
   return out;
@@ -493,15 +569,15 @@ function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
     restrito: AutPred_restrito_(d), homologado: AutPred_s_(d.HOMOLOGADO).toUpperCase() === 'SIM', homologadoPor: AutPred_s_(d.HOMOLOGADO_POR), homologadoEm: AutPred_dataBr_(d.HOMOLOGADO_EM), ativo: AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO',
     online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estado: AutPred_estadoTexto_(d), estadoEm: AutPred_dataBr_(d.ESTADO_EM), compatOk: AutPred_s_(d.COMPAT_OK).toUpperCase() === 'SIM', compatMotivo: AutPred_s_(d.COMPAT_MOTIVO),
     comandoAbrir: AutPred_s_(d.COMANDO_ABRIR_JSON), remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
-    ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), podeVer: !!dir.ver, podeAcionar: !!dir.acionar, motivoAcionar: dir.motivo || '' };
+    ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), podeVer: !!dir.ver, podeAcionar: !!dir.acionar, motivoAcionar: dir.motivo || '' };
 }
 
 // ------------------------------------------------------------
 // ADMINISTRAÇÃO (dispositivo, permissões)
 // ------------------------------------------------------------
 function AutPred_exigirAdministrador_(sessao, disp) {
-  if (!AutPred_administra_(sessao)) throw new Error('Não foi possível continuar: administrar dispositivos e permissões é do Administrador e da Diretoria. Se precisar de uma alteração, peça a um deles.');
-  if (disp && AutPred_restrito_(disp) && !AutPred_ehDiretoria_(sessao)) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você.');
+  if (!AutPred_administra_(sessao)) throw new Error('Não foi possível continuar: administrar dispositivos e permissões é do Administrador e dos diretores. Se precisar de uma alteração, peça a um deles.');
+  if (disp && AutPred_restrito_(disp) && !AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você.');
 }
 
 function AutPred_salvarDispositivo_(sessao, dados) {
@@ -523,7 +599,7 @@ function AutPred_salvarDispositivo_(sessao, dados) {
   if (dados.localizacao !== undefined) { var loc = AutPred_s_(dados.localizacao).slice(0, 120); if (loc !== AutPred_s_(disp.LOCALIZACAO)) { upd.LOCALIZACAO = loc; mudancas.push('localização: "' + AutPred_s_(disp.LOCALIZACAO) + '" -> "' + loc + '"'); } }
   if (dados.ativo !== undefined) { var at = dados.ativo ? 'SIM' : 'NAO'; if (at !== AutPred_s_(disp.ATIVO).toUpperCase()) { upd.ATIVO = at; mudancas.push(at === 'SIM' ? 'reativado' : 'desativado'); } }
   if (dados.restrito !== undefined) {
-    if (!AutPred_ehDiretoria_(sessao)) throw new Error('Não foi possível gravar: só a Diretoria marca ou desmarca "Restrito à Diretoria".');
+    if (!AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível gravar: só um diretor marca ou desmarca "Restrito à Diretoria".');
     var rs = dados.restrito ? 'SIM' : 'NAO';
     if (rs !== (AutPred_restrito_(disp) ? 'SIM' : 'NAO')) { upd.RESTRITO_DIRETORIA = rs; mudancas.push(rs === 'SIM' ? 'passou a restrito à Diretoria' : 'deixou de ser restrito à Diretoria'); }
   }
@@ -548,12 +624,11 @@ function AutPred_salvarDispositivo_(sessao, dados) {
 /** Homologação pela Diretoria (depois do teste presencial): libera a execução real quando a integração está ligada. */
 function AutPred_homologar_(sessao, dados) {
   dados = dados || {};
-  if (!AutPred_ehDiretoria_(sessao)) throw new Error('Não foi possível homologar: só a Diretoria homologa um dispositivo, depois do teste presencial. Peça a um diretor.');
+  if (!AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível homologar: só um diretor homologa um dispositivo, depois do teste presencial. Peça a um diretor.');
   var disp = AutPred_dispositivo_(dados.id);
   var motivo = AutPred_s_(dados.motivo);
   if (motivo.length < 8) throw new Error('Não foi possível homologar: escreva como foi o teste presencial (mínimo de 8 caracteres).');
   var sim = !!dados.homologado;
-  if (sim && AutPred_s_(dados.confirmacao).toUpperCase() !== 'HOMOLOGAR') throw new Error('Não foi possível homologar: digite HOMOLOGAR na confirmação.');
   var upd = { HOMOLOGADO: sim ? 'SIM' : 'NAO', HOMOLOGADO_POR: AutPred_nome_(sessao), HOMOLOGADO_EM: SGO_UTILS.nowIso(), ATUALIZADO_EM: SGO_UTILS.nowIso() };
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
   AutPred_auditar_({ evento: sim ? 'DISPOSITIVO_HOMOLOGADO' : 'HOMOLOGACAO_RETIRADA', quem: sessao, disp: Object.assign({}, disp, upd), resultado: 'OK', detalhe: motivo });
@@ -563,7 +638,7 @@ function AutPred_homologar_(sessao, dados) {
 
 function AutPred_usuariosInternos_() {
   return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) { return AutPred_s_(u.STATUS).toUpperCase() === 'ATIVO' && AUT_PERFIS_INTERNOS.indexOf(AutPred_s_(u.PERFIL).toUpperCase()) >= 0; })
-    .map(function (u) { return { id: AutPred_s_(u.ID), login: AutPred_s_(u.USUARIO), nome: AutPred_s_(u.NOME) || AutPred_s_(u.USUARIO), perfil: AutPred_s_(u.PERFIL).toUpperCase() }; })
+    .map(function (u) { return { id: AutPred_s_(u.ID), login: AutPred_s_(u.USUARIO), nome: AutPred_s_(u.NOME) || AutPred_s_(u.USUARIO), perfil: AutPred_s_(u.PERFIL).toUpperCase(), diretor: AutPred_usuarioEhDiretor_(u), dono: AutPred_ehDonoLogin_(u.USUARIO) }; })
     .sort(function (a, b) { return a.nome.localeCompare(b.nome); });
 }
 
@@ -575,7 +650,12 @@ function AutPred_conceder_(sessao, dados) {
   if (!AUT_PERMISSOES_VALIDAS[perm]) throw new Error('Não foi possível conceder: a permissão precisa ser "Ver" ou "Acionar".');
   var u = AutPred_usuariosInternos_().filter(function (x) { return x.id === AutPred_s_(dados.usuarioId); })[0];
   if (!u) throw new Error('Não foi possível conceder: escolha um usuário interno ativo da lista.');
-  if (AutPred_restrito_(disp) && u.perfil !== 'DIRETORIA') throw new Error('Não foi possível conceder: a porta da Diretoria só pode ser liberada para usuários do perfil Diretoria.');
+  if (AutPred_restrito_(disp)) {
+    // "Minha sala é para o meu login ter acesso, os demais não" (dono, 22/10/2026): só o responsável pelo sistema libera a porta, e só para diretor.
+    if (!AutPred_ehDono_(sessao)) throw new Error('Não foi possível conceder: a porta da Diretoria só é liberada pelo responsável pelo sistema. Peça a ele em Segurança e automação predial > Permissões.');
+    if (u.dono) throw new Error('Não foi possível conceder: o responsável pelo sistema já destrava a porta da Diretoria por padrão; não precisa de permissão.');
+    if (!u.diretor) throw new Error('Não foi possível conceder: a porta da Diretoria só pode ser liberada para diretores (perfil Diretoria ou vínculo de trabalho Diretoria no cadastro de usuários).');
+  }
   var motivo = AutPred_s_(dados.motivo);
   if (motivo.length < 5) throw new Error('Não foi possível conceder: escreva o motivo (mínimo de 5 caracteres). Fica registrado com o seu nome.');
   var fim = '';
@@ -607,6 +687,7 @@ function AutPred_revogar_(sessao, dados) {
   if (!p) throw new Error('Não foi possível revogar: a permissão não foi encontrada. Clique em "Atualizar".');
   var disp = AutPred_dispositivo_(p.DISPOSITIVO_ID);
   AutPred_exigirAdministrador_(sessao, disp);
+  if (AutPred_restrito_(disp) && !AutPred_ehDono_(sessao)) throw new Error('Não foi possível revogar: a permissão da porta da Diretoria é do responsável pelo sistema. Peça a ele.');
   if (AutPred_s_(p.STATUS) !== 'ATIVA') return { mensagem: 'A permissão já estava revogada.' };
   var motivo = AutPred_s_(dados.motivo);
   if (motivo.length < 5) throw new Error('Não foi possível revogar: escreva o motivo (mínimo de 5 caracteres).');
@@ -655,11 +736,20 @@ function AutPred_api(sessionId, acao, dados) {
     dados = dados || {};
     acao = String(acao || '');
     var adm = AutPred_administra_(sessao);
+    var cfgApi = AutPred_cfg_();
+    var emUso = AutPred_emUso_(cfgApi);
     if (acao === 'iniciar') {
       var pm = AutPred_permissoesDe_(sessao.userId);
-      return { mostrarMenu: adm || AutPred_ehDiretoria_(sessao) || Object.keys(pm).length > 0, podeAdministrar: adm, ehDiretoria: AutPred_ehDiretoria_(sessao) };
+      var permite = adm || (emUso && Object.keys(pm).length > 0);
+      var rapidos = permite ? AutPred_rapidos_(sessao, cfgApi) : [];
+      return { mostrarMenu: permite, podeAcionar: rapidos.length > 0, podeAdministrar: adm, ehDiretoria: AutPred_ehDiretor_(sessao), emUso: emUso };
     }
+    // 22/10/2026 (dono): em produção o módulo entra desligado. Até a automação estar ligada e algum dispositivo homologado, só o
+    // Administrador e os diretores usam o módulo (implantação); depois, também quem tem permissão. O servidor confere, não só o menu.
+    if (!adm && !emUso) throw new Error('Não foi possível abrir: a Segurança e automação predial ainda está em implantação (até a homologação dos dispositivos, só o Administrador e os diretores usam). Use o menu para voltar ao Início; a gestão avisa quando for liberada.');
     if (acao === 'painel') return AutPred_painel_(sessao);
+    if (acao === 'rapido') return { itens: AutPred_rapidos_(sessao, cfgApi), emUso: emUso, config: { ligado: cfgApi.ligado, podeLer: cfgApi.podeLer }, agora: AutPred_agoraTexto_() };
+    if (acao === 'preparar') return AutPred_prepararComando_(sessao, dados);
     if (acao === 'sincronizar') { AutPred_exigirAdministrador_(sessao); var r = AutPred_sincronizar_(sessao); var p = AutPred_painel_(sessao); p.mensagem = 'Sincronizado com o Smart Life: ' + r.lidos + ' dispositivo(s) lido(s), ' + r.novos + ' novo(s), ' + r.atualizados + ' atualizado(s).' + (r.problemas.length ? ' Problemas: ' + r.problemas.join('; ') : ''); return p; }
     if (acao === 'estado') {
       var v = AutPred_dispositivoVisivel_(sessao, dados.dispositivoId);
@@ -690,7 +780,7 @@ function AutPred_api(sessionId, acao, dados) {
     if (acao === 'homologar') return AutPred_homologar_(sessao, dados);
     if (acao === 'permissoes') {
       AutPred_exigirAdministrador_(sessao);
-      var dirPerm = AutPred_ehDiretoria_(sessao);
+      var dirPerm = AutPred_ehDiretor_(sessao);
       var disps = AutPred_dispositivos_().filter(function (d) { return dirPerm || !AutPred_restrito_(d); });
       var ids = {};
       disps.forEach(function (d) { ids[AutPred_s_(d.ID)] = true; });
@@ -701,7 +791,7 @@ function AutPred_api(sessionId, acao, dados) {
     if (acao === 'permissaoRevogar') return AutPred_revogar_(sessao, dados);
     if (acao === 'auditoria') {
       AutPred_exigirAdministrador_(sessao);
-      var dirAud = AutPred_ehDiretoria_(sessao);
+      var dirAud = AutPred_ehDiretor_(sessao);
       var itens = AutPred_ler_(AUT_ABA_AUDITORIA).filter(function (r) { return dirAud || AutPred_s_(r.RESTRITO) !== 'SIM'; })
         .sort(function (a, b) { return AutPred_ms_(b.QUANDO_EM) - AutPred_ms_(a.QUANDO_EM); }).slice(0, Math.min(500, Number(dados.limite) || 200))
         .map(function (r) { return { id: AutPred_s_(r.ID), quando: AutPred_s_(r.QUANDO), evento: AutPred_s_(r.EVENTO), usuario: AutPred_s_(r.USUARIO), perfil: AutPred_s_(r.PERFIL), unidade: AutPred_s_(r.UNIDADE), dispositivo: AutPred_s_(r.DISPOSITIVO_NOME), resultado: AutPred_s_(r.RESULTADO), detalhe: AutPred_s_(r.DETALHE), operacaoId: AutPred_s_(r.OPERACAO_ID), hash: AutPred_s_(r.HASH).slice(0, 12) }; });
@@ -718,6 +808,29 @@ function AutPred_api(sessionId, acao, dados) {
     }
     throw new Error('Não foi possível continuar: ação desconhecida. Atualize a página (F5) e tente de novo.');
   });
+}
+
+/**
+ * Em uso (decisão do dono, 22/10/2026): automação ligada E pelo menos um dispositivo ativo homologado pela Diretoria.
+ * Antes disso o módulo é só do Administrador e dos diretores (menu, atalhos e servidor).
+ */
+function AutPred_emUso_(c) {
+  c = c || AutPred_cfg_();
+  if (!c.ligado) return false;
+  return AutPred_dispositivos_().some(function (d) { return AutPred_s_(d.HOMOLOGADO).toUpperCase() === 'SIM' && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
+}
+
+/** Botões rápidos: dispositivos que a sessão pode acionar agora (ativo, compatível), portões primeiro. */
+function AutPred_rapidos_(sessao, c) {
+  c = c || AutPred_cfg_();
+  var perms = AutPred_permissoesDe_(sessao.userId);
+  var out = [];
+  AutPred_dispositivos_().forEach(function (d) {
+    if (AutPred_s_(d.ATIVO).toUpperCase() === 'NAO' || AutPred_s_(d.COMPAT_OK).toUpperCase() !== 'SIM') return;
+    var dir = AutPred_direitos_(sessao, d, perms);
+    if (dir.acionar) out.push(AutPred_dispositivoParaTela_(d, dir, sessao, c));
+  });
+  return out.sort(function (a, b) { return (a.tipo === 'FECHADURA' ? 1 : 0) - (b.tipo === 'FECHADURA' ? 1 : 0) || a.nome.localeCompare(b.nome); });
 }
 
 /** Painel: dispositivos visíveis agrupados por unidade, configuração e direitos. Nada restrito sai para quem não é Diretoria. */
@@ -742,6 +855,7 @@ function AutPred_painel_(sessao) {
     agora: AutPred_agoraTexto_(), unidades: unidades, total: visiveis.length, totalCadastrados: todos.length,
     restritosOcultos: AutPred_ehAdmin_(sessao) ? restritosOcultos : 0, semPermissao: AutPred_administra_(sessao) ? 0 : semPermissao,
     config: { ligado: c.ligado, temCredencial: c.temCredencial, podeLer: c.podeLer, faltas: c.faltas, regiao: c.regiaoNome },
-    podeAdministrar: AutPred_administra_(sessao), ehDiretoria: AutPred_ehDiretoria_(sessao), ehAdmin: AutPred_ehAdmin_(sessao), ultimosComandos: ultimos
+    podeAdministrar: AutPred_administra_(sessao), ehDiretoria: AutPred_ehDiretor_(sessao), ehDono: AutPred_ehDono_(sessao), ehAdmin: AutPred_ehAdmin_(sessao), ultimosComandos: ultimos,
+    rapido: AutPred_rapidos_(sessao, c), emUso: AutPred_emUso_(c)
   };
 }

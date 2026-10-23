@@ -879,6 +879,8 @@
       carregarFarolCondutaDashboard_();
       carregarSituacaoFrotaUI_();
       if (typeof Inicio_carregarPendencias_ === "function") Inicio_carregarPendencias_();
+      // 22/10/2026: botões grandes dos portões no Início do computador (JS_AutomacaoPredial.html), só para quem pode abrir.
+      if (typeof AutPred_atalhoInicio_ === "function") AutPred_atalhoInicio_();
       return;
     }
 
@@ -4467,6 +4469,8 @@
     const isCliente = !!(USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE");
 
     const itens = [];
+    // 22/10/2026 (dono): "Portões" em primeiro, só para quem pode abrir algum portão ou a porta agora (o servidor decide em AutPred_iniciar_).
+    if (!isCliente && typeof AutPred_temAcionar_ === "function" && AutPred_temAcionar_()) itens.push({ icone: '<i class="fas fa-door-open" aria-hidden="true"></i>', legenda: "Portões", mod: "automacao_predial" });
     if (!isCliente) {
       itens.push({ icone: '<i class="fas fa-list-check" aria-hidden="true"></i>', legenda: "Minhas atividades", mod: "minhas_atividades" });
       // 20/10/2026: Caixa de decisões para a gestão (o que depende dela, de todos os módulos).
@@ -4501,7 +4505,6 @@
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
-    if (typeof AutPred_temMenu_ === "function" && AutPred_temMenu_()) itens.push({ icone: '<i class="fas fa-door-open" aria-hidden="true"></i>', legenda: "Segurança predial", mod: "automacao_predial" });
     // Perfil RH: só as telas do perfil. Usuários: a rotina da empresa (gestão, RH e Financeiro) tem o atalho no celular.
     if (SGO_ehRH_()) {
       for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }

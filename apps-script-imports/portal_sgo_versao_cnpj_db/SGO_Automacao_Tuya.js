@@ -8,7 +8,7 @@
  * CREDENCIAIS (Chaves e senhas > Automação predial (Tuya); nunca no código, nunca na tela):
  *   TUYA_ACCESS_ID      Access ID / Client ID do projeto cloud (platform.tuya.com > Cloud > projeto > Overview)
  *   TUYA_ACCESS_SECRET  Access Secret do mesmo projeto
- *   TUYA_REGIAO         centro de dados do projeto (us, ue, eu, we, in, cn, sg); contas do Brasil costumam ser "us"
+ *   TUYA_REGIAO         centro de dados do projeto (us, ue, eu, we, in, cn, sg); Brasil: "us" (Western America) ou "ue" (Eastern America, contas mais novas: mudança da Tuya de 25/11/2025)
  *   TUYA_LIGADO         0 = nenhuma chamada sai do SGO+ (o botão Testar conexão continua funcionando); 1 = ligado
  *   TUYA_ENDPOINT       (sem tela) endereço alternativo só para ensaio local (https:// ou http://localhost)
  *
@@ -46,8 +46,8 @@
  ****************************************************/
 
 var TUYA_REGIOES = [
-  ['us', 'https://openapi.tuyaus.com', 'América (Oeste) — padrão das contas do Brasil'],
-  ['ue', 'https://openapi-ueaz.tuyaus.com', 'América (Leste)'],
+  ['us', 'https://openapi.tuyaus.com', 'Western America (América Oeste)'],
+  ['ue', 'https://openapi-ueaz.tuyaus.com', 'Eastern America (América Leste)'],
   ['eu', 'https://openapi.tuyaeu.com', 'Europa Central'],
   ['we', 'https://openapi-weaz.tuyaeu.com', 'Europa Ocidental'],
   ['in', 'https://openapi.tuyain.com', 'Índia'],

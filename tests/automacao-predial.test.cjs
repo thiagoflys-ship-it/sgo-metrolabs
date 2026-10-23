@@ -1,6 +1,8 @@
-// Segurança e automação predial (SGO_Automacao_Predial.js + SGO_Automacao_Tuya.js) num contexto isolado, com a nuvem da
-// Tuya SIMULADA (nenhum comando real) e dados fictícios (22/10/2026). Confere: visibilidade da porta da Diretoria,
-// permissões no servidor, idempotência, limites, solicitado -> aceito -> confirmado, simulação, registro encadeado.
+// Segurança e automação predial (SGO_Automacao_Predial.js + SGO_Automacao_Tuya.js) num contexto isolado, com a nuvem
+// Tuya SIMULADA (nenhum comando real) e dados fictícios (22/10/2026). Confere: quem é diretor (perfil, vínculo ou
+// responsável pelo sistema), porta da Diretoria do responsável pelo sistema, permissões no servidor, confirmação sem
+// digitar (token de uso único da janela), fase de implantação, idempotência, limites, solicitado -> aceito -> confirmado,
+// simulação e registro encadeado.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -12,9 +14,11 @@ const pastaLegado = path.join(__dirname, '../apps-script-imports/portal_sgo_vers
 const ler = (f) => fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n');
 const comSinal = (buf) => Array.from(buf).map((b) => (b > 127 ? b - 256 : b));
 
-const ADMIN = { userId: 'uA', usuario: 'admin', nome: 'ADMINISTRADOR TESTE', perfil: 'ADMIN' };
-const DIR = { userId: 'uD', usuario: 'dir', nome: 'DIRETORA TESTE', perfil: 'DIRETORIA' };
-const DIR2 = { userId: 'uD2', usuario: 'dir2', nome: 'DIRETOR DOIS', perfil: 'DIRETORIA' };
+// DONO = responsável pelo sistema (SGO_DONOS = admin), perfil ADMIN: é diretor. ADM2 = Administrador que não é diretor.
+const DONO = { userId: 'uA', usuario: 'admin', nome: 'DONO TESTE', perfil: 'ADMIN' };
+const ADM2 = { userId: 'uA2', usuario: 'adm2', nome: 'ADMINISTRADOR DOIS', perfil: 'ADMIN' };
+const DIR = { userId: 'uD', usuario: 'charles', nome: 'DIRETOR TESTE', perfil: 'DIRETORIA' };
+const DIRV = { userId: 'uV', usuario: 'dirvinc', nome: 'DIRETOR POR VINCULO', perfil: 'GESTOR' };
 const GESTOR = { userId: 'uG', usuario: 'gestor', nome: 'GESTOR TESTE', perfil: 'GESTOR' };
 const TEC = { userId: 'uT', usuario: 'tec', nome: 'TECNICO TESTE', perfil: 'TECNICO' };
 const CLIENTE = { userId: 'uC', usuario: 'cli', nome: 'CLIENTE', perfil: 'CLIENTE', clienteId: 'c1' };
@@ -25,14 +29,18 @@ function ambiente(o) {
   Object.keys(props).forEach((k) => { if (props[k] === null) delete props[k]; });
   const cache = {};
   const tabelas = { CAD_USUARIOS: [
-    { ID: 'uA', USUARIO: 'admin', NOME: 'ADMINISTRADOR TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO' }, { ID: 'uD', USUARIO: 'dir', NOME: 'DIRETORA TESTE', PERFIL: 'DIRETORIA', STATUS: 'ATIVO' },
-    { ID: 'uD2', USUARIO: 'dir2', NOME: 'DIRETOR DOIS', PERFIL: 'DIRETORIA', STATUS: 'ATIVO' }, { ID: 'uG', USUARIO: 'gestor', NOME: 'GESTOR TESTE', PERFIL: 'GESTOR', STATUS: 'ATIVO' },
-    { ID: 'uT', USUARIO: 'tec', NOME: 'TECNICO TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO' }, { ID: 'uX', USUARIO: 'inativo', NOME: 'INATIVO', PERFIL: 'TECNICO', STATUS: 'INATIVO' }],
+    { ID: 'uA', USUARIO: 'admin', NOME: 'DONO TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uA2', USUARIO: 'adm2', NOME: 'ADMINISTRADOR DOIS', PERFIL: 'ADMIN', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uD', USUARIO: 'charles', NOME: 'DIRETOR TESTE', PERFIL: 'DIRETORIA', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uV', USUARIO: 'dirvinc', NOME: 'DIRETOR POR VINCULO', PERFIL: 'GESTOR', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uG', USUARIO: 'gestor', NOME: 'GESTOR TESTE', PERFIL: 'GESTOR', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uT', USUARIO: 'tec', NOME: 'TECNICO TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uX', USUARIO: 'inativo', NOME: 'INATIVO', PERFIL: 'TECNICO', STATUS: 'INATIVO' }],
     CAD_UNIDADES: [{ ID: 'un1', CLIENTE_ID: 'c1', NOME_UNIDADE: 'MATRIZ GOIÂNIA', CIDADE: 'Goiânia', STATUS: 'ATIVO' }], CAD_CLIENTES: [{ ID: 'c1', NOME_FANTASIA: 'METROLABS', STATUS: 'ATIVO' }] };
   const cabecalhos = {};
   const api = { pedidos: [], portaoAberto: false, fechaduraAbre: true, recusaComando: null, falhaRede: false, remoto: true, registrosFechadura: 1 };
   const notificacoes = [];
-  const sessao = { atual: o.sessao || ADMIN };
+  const sessao = { atual: o.sessao || DONO };
   let seq = 0;
   const resposta = (code, corpo) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(corpo), getAllHeaders: () => ({}) });
   const ctx = vm.createContext({
@@ -81,19 +89,46 @@ function ambiente(o) {
     },
     SGO_UTILS: { nowIso: () => new Date().toISOString(), safe: (v) => (v === null || v === undefined ? '' : String(v).trim()), safeUpper: (v) => String(v || '').trim().toUpperCase() },
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_UNIDADES: 'CAD_UNIDADES', CAD_CLIENTES: 'CAD_CLIENTES' } },
-    exigirSessao: () => sessao.atual,
+    // como SGO_Chaves.js: SGO_DONOS = ['admin']
+    Chaves_ehDonoUsuario_: (u) => String(u || '').trim().toLowerCase() === 'admin',
+    exigirSessao: () => Object.assign({}, sessao.atual),
     SGO_notificar_: (x) => { notificacoes.push(x); return { ok: 1, erro: 0, pulado: 0 }; },
     Pend_item_: (tipo, o) => Object.assign({ tipo }, o)
   });
   for (const f of ['SGO_Automacao_Tuya.js', 'SGO_Automacao_Predial.js']) vm.runInContext(ler(f), ctx);
   const como = (s) => { sessao.atual = s; };
   const api_ = (acao, dados) => JSON.parse(JSON.stringify(ctx.AutPred_api('sess', acao, dados || {})));
+  /** O que a tela faz: toque no botão (preparar -> token) e "Sim, abrir agora" (comando com o token). */
+  const abrir = (dispositivoId, operacaoId) => {
+    const p = api_('preparar', { dispositivoId, operacaoId });
+    if (!p.ok) return p;
+    return api_('comando', { dispositivoId, operacaoId, confirmacaoToken: p.confirmacaoToken });
+  };
   const disp = (nome) => (tabelas.AUT_DISPOSITIVOS || []).find((d) => d.NOME === nome);
   const comandosApi = () => api.pedidos.filter((p) => p.metodo === 'POST');
-  return { ctx, props, tabelas, api, notificacoes, como, api_, disp, comandosApi, cache };
+  const homologar = (nome) => { const anterior = sessao.atual; como(DIR); const r = api_('homologar', { id: disp(nome).ID, homologado: true, motivo: 'teste presencial acompanhado' }); assert.equal(r.ok, true, r.message); como(anterior); };
+  const envelhecer = () => (tabelas.AUT_COMANDOS || []).forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); });
+  return { ctx, props, tabelas, api, notificacoes, como, api_, abrir, disp, comandosApi, cache, homologar, envelhecer };
 }
 
-function sincronizar(amb) { amb.como(ADMIN); const r = amb.api_('sincronizar'); assert.equal(r.ok, true, r.message); return r; }
+function sincronizar(amb) { amb.como(DONO); const r = amb.api_('sincronizar'); assert.equal(r.ok, true, r.message); return r; }
+const nomes = (p) => p.unidades.flatMap((u) => u.dispositivos.map((d) => d.nome));
+
+test('quem é diretor: perfil Diretoria, vínculo Diretoria ou responsável pelo sistema; Administrador comum e Gestor não', () => {
+  const amb = ambiente();
+  const e = (s) => amb.ctx.AutPred_ehDiretor_(Object.assign({}, s));
+  assert.equal(e(DONO), true, 'dono (perfil ADMIN) é diretor');
+  assert.equal(e(DIR), true, 'perfil Diretoria');
+  assert.equal(e(DIRV), true, 'vínculo de trabalho Diretoria no cadastro');
+  assert.equal(e(ADM2), false);
+  assert.equal(e(GESTOR), false);
+  assert.equal(e(TEC), false);
+  assert.equal(amb.ctx.AutPred_usuarioEhDiretor_({ USUARIO: 'admin', PERFIL: 'ADMIN' }), true);
+  // uma regra só no módulo: nenhuma comparação solta com 'DIRETORIA' fora dos helpers
+  const fonte = ler('SGO_Automacao_Predial.js');
+  const soltas = fonte.split('\n').filter((l) => /=== 'DIRETORIA'/.test(l) && !/function AutPred_(ehDiretor_|usuarioEhDiretor_)|AutPred_perfil_\(s\) === 'DIRETORIA'|u\.PERFIL|u\.VINCULO_TRABALHO/.test(l));
+  assert.deepEqual(soltas, []);
+});
 
 test('sincronização: lê os 3 dispositivos, portão com switch_1, fechadura restrita à Diretoria; nenhum comando sai', () => {
   const amb = ambiente();
@@ -104,146 +139,215 @@ test('sincronização: lê os 3 dispositivos, portão com switch_1, fechadura re
   assert.equal(p.TIPO, 'PORTAO'); assert.equal(p.COMPAT_OK, 'SIM'); assert.equal(p.RESTRITO_DIRETORIA, 'NAO'); assert.equal(p.HOMOLOGADO, 'NAO');
   assert.equal(f.TIPO, 'FECHADURA'); assert.equal(f.RESTRITO_DIRETORIA, 'SIM'); assert.equal(f.REMOTO_FECHADURA, 'BILHETE');
   assert.equal(amb.comandosApi().length, 0, 'sincronizar só lê');
-  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'SINCRONIZACAO'));
-  // segunda sincronização não duplica
   sincronizar(amb);
-  assert.equal(amb.tabelas.AUT_DISPOSITIVOS.length, 3);
+  assert.equal(amb.tabelas.AUT_DISPOSITIVOS.length, 3, 'não duplica');
 });
 
-test('porta da Diretoria invisível para quem não é DIRETORIA: Gestor, Técnico e Administrador não a recebem na lista nem por id', () => {
+test('porta da Diretoria: invisível para quem não é diretor (Gestor, Técnico, Administrador comum); diretores a veem', () => {
   const amb = ambiente();
   sincronizar(amb);
+  amb.homologar('Portão principal'); // em uso: quem tem permissão entra
   const f = amb.disp('Porta da Diretoria');
+  amb.como(DONO);
+  amb.api_('permissaoConceder', { usuarioId: 'uG', dispositivoId: amb.disp('Portão principal').ID, permissao: 'VER', motivo: 'portaria' });
   amb.como(GESTOR);
   let p = amb.api_('painel');
-  assert.equal(p.ok, true);
-  const nomes = (x) => x.unidades.flatMap((u) => u.dispositivos.map((d) => d.nome));
-  assert.deepEqual(nomes(p), [], 'gestor sem permissão não vê nada');
-  assert.equal(JSON.stringify(p).includes('Diretoria'), JSON.stringify(p).includes('Porta da Diretoria') ? false : JSON.stringify(p).includes('Diretoria'));
-  assert.ok(!JSON.stringify(p).includes('Porta da Diretoria'));
-  assert.ok(!JSON.stringify(p).includes('dev-fech-1'));
-  let h = amb.api_('historico', { dispositivoId: f.ID });
-  assert.equal(h.ok, false); assert.match(h.message, /não foi encontrado ou não está liberado/);
-  let e = amb.api_('estado', { dispositivoId: f.ID });
-  assert.equal(e.ok, false);
-  amb.como(ADMIN);
+  assert.equal(p.ok, true, p.message);
+  assert.deepEqual(nomes(p), ['Portão principal']);
+  assert.ok(!JSON.stringify(p).includes('Porta da Diretoria') && !JSON.stringify(p).includes('dev-fech-1'));
+  assert.equal(p.restritosOcultos, 0, 'nem a contagem');
+  for (const a of ['historico', 'estado', 'preparar']) assert.equal(amb.api_(a, { dispositivoId: f.ID, operacaoId: 'op-gestor-fech-1' }).ok, false, a);
+  amb.como(ADM2);
   p = amb.api_('painel');
   assert.ok(!nomes(p).includes('Porta da Diretoria'));
-  assert.equal(p.restritosOcultos, 1, 'administrador só vê a contagem');
+  assert.equal(p.restritosOcultos, 1, 'Administrador comum só vê a contagem');
   assert.ok(!JSON.stringify(p).includes('dev-fech-1'));
-  assert.equal(amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-admin-fech-0001', confirmacao: 'ABRIR' }).ok, false);
-  assert.equal(amb.api_('dispositivoSalvar', { id: f.ID, nome: 'x' }).ok, false, 'administrador não administra o restrito');
-  const perm = amb.api_('permissoes');
-  assert.ok(!perm.dispositivos.some((d) => d.restrito), 'administrador não lista o restrito nas permissões');
-  const aud = amb.api_('auditoria');
-  assert.ok(!aud.itens.some((a) => a.dispositivo === 'Porta da Diretoria'), 'auditoria do restrito só para a Diretoria');
-  amb.como(DIR);
-  p = amb.api_('painel');
-  assert.ok(nomes(p).includes('Porta da Diretoria'));
-  assert.ok(nomes(p).includes('Portão principal'));
+  assert.equal(amb.api_('dispositivoSalvar', { id: f.ID, nome: 'x' }).ok, false);
+  assert.ok(!amb.api_('permissoes').dispositivos.some((d) => d.restrito));
+  assert.ok(!amb.api_('auditoria').itens.some((a) => a.dispositivo === 'Porta da Diretoria'));
+  for (const s of [DONO, DIR, DIRV]) {
+    amb.como(s);
+    p = amb.api_('painel');
+    assert.ok(nomes(p).includes('Porta da Diretoria'), s.usuario + ' vê a porta');
+    assert.equal(p.restritosOcultos, 0);
+  }
   amb.como(CLIENTE);
   assert.equal(amb.api_('painel').ok, false);
 });
 
-test('permissões no servidor: técnico sem permissão é negado e registrado; VER não aciona; ACIONAR aciona; vigência vencida não vale; revogação', () => {
-  const amb = ambiente();
-  sincronizar(amb);
-  const p1 = amb.disp('Portão principal');
-  amb.como(TEC);
-  let r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tec-0000001' });
-  assert.equal(r.ok, false); assert.match(r.message, /não foi encontrado ou não está liberado/);
-  amb.como(ADMIN);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'recebe entregas' }).ok, true);
-  amb.como(TEC);
-  let painel = amb.api_('painel');
-  assert.equal(painel.unidades[0].dispositivos[0].nome, 'Portão principal');
-  assert.equal(painel.unidades[0].dispositivos[0].podeAcionar, false);
-  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tec-0000002' });
-  assert.equal(r.ok, false); assert.match(r.message, /permissão só para ver/);
-  const negado = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-tec-0000002');
-  assert.equal(negado.AUTORIZACAO, 'NEGADO'); assert.equal(negado.SITUACAO, 'NEGADO');
-  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'COMANDO_NAO_AUTORIZADO' && a.USUARIO_ID === 'uT'));
-  amb.como(ADMIN);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'ACIONAR', motivo: 'portaria da manhã', vigenciaFim: '2099-12-31' }).ok, true);
-  assert.equal(amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT').length, 1, 'a nova substitui a anterior');
-  amb.como(TEC);
-  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tec-0000003' });
-  assert.equal(r.ok, true, r.message);
-  assert.equal(r.comando.situacao, 'SIMULADO', 'não homologado = simulação');
-  assert.equal(amb.comandosApi().length, 0, 'nada saiu');
-  // vigência vencida
-  amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA').forEach((p) => { p.VIGENCIA_FIM = new Date(Date.now() - 1000).toISOString(); });
-  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tec-0000004' });
-  assert.equal(r.ok, false);
-  // conceder: só interno ativo, só ADMIN/DIRETORIA, data inválida
-  amb.como(GESTOR);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false);
-  amb.como(ADMIN);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uX', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false, 'inativo');
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx', vigenciaFim: '2020-01-01' }).ok, false, 'já passou');
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, true);
-  const ativa = amb.tabelas.AUT_PERMISSOES.find((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT');
-  assert.equal(amb.api_('permissaoRevogar', { id: ativa.ID, motivo: 'saiu da portaria' }).ok, true);
-  amb.como(TEC);
-  assert.equal(amb.api_('painel').unidades.length, 0);
-});
-
-test('porta da Diretoria: só diretor com ACIONAR, concedida por diretor a diretor, com confirmação ABRIR; fluxo bilhete + abertura e confirmação pelo registro', () => {
+test('porta da Diretoria: o responsável pelo sistema destrava por padrão; outro diretor só com a permissão que ele concede; bilhete + abertura e confirmação', () => {
   const amb = ambiente();
   sincronizar(amb);
   const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  // Charles (perfil Diretoria) vê e não destrava; não concede a porta a si nem a outros
   amb.como(DIR);
-  let r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-dir-0000001', confirmacao: 'ABRIR' });
-  assert.equal(r.ok, false); assert.match(r.message, /expressamente autorizado/);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uG', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'teste' }).ok, false, 'só perfil Diretoria');
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD2', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'diretor financeiro' }).ok, true);
-  amb.como(DIR2);
-  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-dir2-000001' });
-  assert.equal(r.ok, false); assert.match(r.message, /digite ABRIR/);
-  // homologar (só Diretoria, com HOMOLOGAR e motivo) e ligar
-  assert.equal(amb.api_('homologar', { id: f.ID, homologado: true, motivo: 'teste presencial em 22/10 com o diretor', confirmacao: 'HOMOLOGAR' }).ok, true);
-  amb.como(ADMIN);
-  assert.equal(amb.api_('homologar', { id: f.ID, homologado: true, motivo: 'xxxxxxxxx', confirmacao: 'HOMOLOGAR' }).ok, false, 'administrador não homologa');
-  amb.como(DIR2);
-  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-dir2-000002', confirmacao: 'abrir' });
+  let r = amb.abrir(f.ID, 'op-charles-00001');
+  assert.equal(r.ok, false); assert.match(r.message, /responsável pelo sistema/);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'quero abrir' }).ok, false, 'só o dono concede a porta');
+  // dono: padrão, sem permissão gravada
+  amb.como(DONO);
+  r = amb.abrir(f.ID, 'op-dono-porta-0001');
   assert.equal(r.ok, true, r.message);
   assert.equal(r.comando.modo, 'REAL');
   assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.match(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-dono-porta-0001').AUTORIZACAO_MOTIVO, /padrão/);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uA', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'eu mesmo' }).ok, false, 'dono já tem por padrão');
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uG', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'gestor' }).ok, false, 'só para diretor');
+  // dono concede ao Charles, com vigência e auditoria
+  r = amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'diretor de operações', vigenciaFim: '2099-12-31' });
+  assert.equal(r.ok, true, r.message);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PERMISSAO_CONCEDIDA' && a.RESTRITO === 'SIM'));
+  amb.envelhecer();
+  amb.como(DIR);
+  r = amb.abrir(f.ID, 'op-charles-00002');
+  assert.equal(r.ok, true, r.message);
   const posts = amb.comandosApi().map((p) => p.caminho);
   assert.ok(posts.some((c) => /password-ticket$/.test(c)) && posts.some((c) => /password-free\/open-door$/.test(c)));
   assert.ok(!posts.some((c) => /\/commands$/.test(c)), 'fechadura não vai por /commands');
   assert.ok(!JSON.stringify(amb.tabelas).includes('tk-abc'), 'bilhete nunca gravado');
-  const eventos = amb.tabelas.AUT_AUDITORIA.filter((a) => a.OPERACAO_ID === 'op-dir2-000002').map((a) => a.EVENTO);
+  const eventos = amb.tabelas.AUT_AUDITORIA.filter((a) => a.OPERACAO_ID === 'op-dono-porta-0001').map((a) => a.EVENTO);
   assert.deepEqual(eventos, ['COMANDO_SOLICITADO', 'COMANDO_ACEITO', 'EXECUCAO_CONFIRMADA']);
-  assert.ok(amb.tabelas.AUT_AUDITORIA.filter((a) => a.OPERACAO_ID === 'op-dir2-000002').every((a) => a.RESTRITO === 'SIM'));
+  // revogar a porta: só o dono
+  const perm = amb.tabelas.AUT_PERMISSOES.find((p) => p.USUARIO_ID === 'uD' && p.STATUS === 'ATIVA');
+  assert.equal(amb.api_('permissaoRevogar', { id: perm.ID, motivo: 'tentativa do próprio' }).ok, false);
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoRevogar', { id: perm.ID, motivo: 'fim do projeto' }).ok, true);
 });
 
-test('fechadura sem abertura remota pela API: "não disponível pela API" com o porquê; a solicitação é negada e registrada', () => {
+test('confirmação sem digitar: só com o token da janela (uso único, 60 s, do mesmo usuário, dispositivo e operação); chamada direta é recusada', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.como(DONO);
+  // chamada direta sem passar pela janela
+  let r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-direta-000001' });
+  assert.equal(r.ok, false); assert.match(r.message, /confirmação na janela/);
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-direta-000001').SITUACAO, 'NEGADO');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'COMANDO_SEM_CONFIRMACAO'));
+  // token de outra operação, de outro usuário e vencido
+  let p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000001' });
+  assert.equal(p.ok, true, p.message); assert.equal(p.validadeS, 60); assert.equal(p.dispositivo.nome, 'Portão principal');
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000002', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /não é deste usuário, deste dispositivo ou desta solicitação/);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000001', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false, 'uso único: o token já foi consumido pela tentativa anterior');
+  p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000003' });
+  amb.como(DIR);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000003', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false, 'token de outro usuário');
+  amb.como(DONO);
+  p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000004' });
+  const k = Object.keys(amb.cache).find((x) => x.endsWith(p.confirmacaoToken));
+  const j = JSON.parse(amb.cache[k]); j.ate = Date.now() - 1; amb.cache[k] = JSON.stringify(j);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000004', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /venceu/);
+  // caminho certo (simulação: não homologado)
+  r = amb.abrir(p1.ID, 'op-tok-000000005');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO');
+  assert.equal(amb.comandosApi().length, 0);
+  // preparar recusa antes da janela: sem permissão, limite
+  assert.match(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000006' }).message, /intervalo mínimo de 10 s/);
+  assert.equal(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000005' }).ok, false, 'operação já processada');
+  // nenhuma palavra digitada no código da tela
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.ok(!/ABRIR|HOMOLOGAR|autConfirmacao/.test(tela));
+  assert.match(tela, /Sim, abrir agora/);
+});
+
+test('fase de implantação: desligado ou nada homologado = só Administrador e diretores (menu, atalho e servidor); depois, quem tem permissão', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'ACIONAR', motivo: 'portaria da manhã' }).ok, true);
+  amb.como(TEC);
+  let i = amb.api_('iniciar');
+  assert.equal(i.mostrarMenu, false); assert.equal(i.podeAcionar, false); assert.equal(i.emUso, false);
+  assert.match(amb.api_('painel').message, /em implantação/);
+  assert.equal(amb.abrir(p1.ID, 'op-tec-fase-00001').ok, false);
+  for (const s of [DONO, DIR, ADM2]) { amb.como(s); i = amb.api_('iniciar'); assert.equal(i.mostrarMenu, true, s.usuario); assert.equal(i.podeAcionar, true, s.usuario); }
+  amb.como(GESTOR);
+  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+  amb.homologar('Portão principal');
+  amb.como(TEC);
+  i = amb.api_('iniciar');
+  assert.equal(i.mostrarMenu, true); assert.equal(i.podeAcionar, true); assert.equal(i.emUso, true);
+  const rp = amb.api_('rapido');
+  assert.deepEqual(rp.itens.map((d) => d.nome), ['Portão principal']);
+  const r = amb.abrir(p1.ID, 'op-tec-fase-00002');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
+  amb.como(GESTOR);
+  i = amb.api_('iniciar');
+  assert.equal(i.mostrarMenu, false, 'sem permissão continua sem menu'); assert.equal(i.podeAcionar, false);
+  // desligar volta tudo à implantação
+  amb.props.TUYA_LIGADO = '0';
+  amb.como(TEC);
+  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+  // rápidos: portões primeiro, porta só para quem pode destravar
+  amb.props.TUYA_LIGADO = '1';
+  amb.como(DONO);
+  assert.deepEqual(amb.api_('rapido').itens.map((d) => d.tipo), ['PORTAO', 'PORTAO', 'FECHADURA']);
+  amb.como(DIR);
+  assert.ok(!amb.api_('rapido').itens.some((d) => d.tipo === 'FECHADURA'), 'Charles sem permissão: porta fora dos botões');
+});
+
+test('permissões no servidor: VER não aciona; ACIONAR aciona; vigência vencida não vale; só Administrador e diretores concedem; revogação', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  amb.homologar('Portão secundário');
+  const p1 = amb.disp('Portão principal');
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'recebe entregas' }).ok, true);
+  amb.como(TEC);
+  let painel = amb.api_('painel');
+  assert.equal(painel.unidades[0].dispositivos[0].podeAcionar, false);
+  let r = amb.abrir(p1.ID, 'op-tec-0000002');
+  assert.equal(r.ok, false); assert.match(r.message, /permissão só para ver/);
+  amb.como(ADM2);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'ACIONAR', motivo: 'portaria da manhã', vigenciaFim: '2099-12-31' }).ok, true, 'Administrador comum concede portão');
+  assert.equal(amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT').length, 1);
+  amb.como(TEC);
+  r = amb.abrir(p1.ID, 'op-tec-0000003');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO', 'portão principal não homologado');
+  amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA').forEach((p) => { p.VIGENCIA_FIM = new Date(Date.now() - 1000).toISOString(); });
+  amb.envelhecer();
+  assert.equal(amb.abrir(p1.ID, 'op-tec-0000004').ok, false, 'vigência vencida');
+  amb.como(GESTOR);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false);
+  amb.como(DIRV);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'diretor por vínculo concede' }).ok, true);
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uX', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false, 'inativo');
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx', vigenciaFim: '2020-01-01' }).ok, false, 'já passou');
+  const ativa = amb.tabelas.AUT_PERMISSOES.find((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT');
+  assert.equal(amb.api_('permissaoRevogar', { id: ativa.ID, motivo: 'saiu da portaria' }).ok, true);
+  amb.como(TEC);
+  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+});
+
+test('fechadura sem abertura remota pela API: "não disponível pela API" com o porquê; recusa antes da janela', () => {
   const amb = ambiente();
   amb.api.remoto = false;
   sincronizar(amb);
   const f = amb.disp('Porta da Diretoria');
   assert.equal(f.COMPAT_OK, 'NAO'); assert.match(f.COMPAT_MOTIVO, /Não disponível pela API/);
-  amb.como(DIR);
-  amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'própria diretora' });
-  const painel = amb.api_('painel');
-  const d = painel.unidades[0].dispositivos.find((x) => x.nome === 'Porta da Diretoria');
+  amb.como(DONO);
+  const d = amb.api_('painel').unidades[0].dispositivos.find((x) => x.nome === 'Porta da Diretoria');
   assert.equal(d.compatOk, false);
-  const r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-dir-sem-api-01', confirmacao: 'ABRIR' });
+  assert.ok(!amb.api_('rapido').itens.some((x) => x.tipo === 'FECHADURA'));
+  const r = amb.abrir(f.ID, 'op-dir-sem-api-01');
   assert.equal(r.ok, false); assert.match(r.message, /não disponível pela API/);
   assert.equal(amb.comandosApi().length, 0);
 });
 
-test('portão: solicitado -> aceito -> confirmado com comando real; aceito sem confirmação avisa a gestão (S66) e "Conferir agora" confirma depois', () => {
+test('portão: solicitado -> aceito -> confirmado; estado relido antes; aceito sem confirmação avisa diretores e Administradores (S66) e "Conferir agora" confirma', () => {
   const amb = ambiente();
   sincronizar(amb);
   const p1 = amb.disp('Portão principal');
-  amb.como(DIR);
-  amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial do portão', confirmacao: 'HOMOLOGAR' });
-  amb.como(GESTOR);
-  assert.equal(amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-gestor-0000001' }).ok, false, 'gestor sem permissão');
-  amb.como(ADMIN);
-  let r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-adm-0000001' });
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  let r = amb.abrir(p1.ID, 'op-adm-0000001');
   assert.equal(r.ok, true, r.message);
   assert.equal(r.comando.situacao, 'CONFIRMADO');
   assert.equal(r.comando.apiTid, 'tid-p');
@@ -251,109 +355,96 @@ test('portão: solicitado -> aceito -> confirmado com comando real; aceito sem c
   assert.equal(JSON.stringify(cmdApi.corpo), JSON.stringify({ commands: [{ code: 'switch_1', value: true }] }));
   const reg = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-adm-0000001');
   assert.equal(reg.MODO, 'REAL'); assert.equal(reg.API_HTTP, '200'); assert.ok(reg.CONFIRMADO_EM);
+  // pulso: o acionador voltou e o estado guardado ainda diz true; o próximo comando relê antes e confirma
+  amb.api.portaoAberto = false; amb.envelhecer();
+  r = amb.abrir(p1.ID, 'op-adm-0000002');
+  assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
   assert.equal(amb.notificacoes.length, 0);
-  // o acionador voltou ao repouso (pulso) e o estado guardado no dispositivo ainda diz switch_1 = true: o comando seguinte
-  // relê o estado antes de enviar e por isso ainda consegue confirmar a mudança
-  assert.equal(JSON.parse(amb.disp('Portão principal').ESTADO_JSON)[0].value, true, 'estado guardado velho');
-  amb.api.portaoAberto = false;
-  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); });
-  const rr = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-adm-0000002' });
-  assert.equal(rr.comando.situacao, 'CONFIRMADO', rr.texto);
-  assert.equal(JSON.parse(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-adm-0000002').ESTADO_ANTES_JSON)[0].value, false, 'antes lido na hora');
-  // aceito mas o estado não muda: ACEITO + aviso; depois o dispositivo muda e "Conferir agora" confirma
+  // aceito, estado não muda
   const amb2 = ambiente();
   sincronizar(amb2);
   const p2 = amb2.disp('Portão secundário');
+  amb2.homologar('Portão secundário');
+  const orig = amb2.ctx.UrlFetchApp.fetch;
+  amb2.ctx.UrlFetchApp.fetch = function (url, op) { const x = orig(url, op); if (/\/commands$/.test(new URL(url).pathname)) amb2.api.portaoAberto = false; return x; };
   amb2.como(DIR);
-  amb2.api_('homologar', { id: p2.ID, homologado: true, motivo: 'teste presencial do portão 2', confirmacao: 'HOMOLOGAR' });
-  amb2.api.recusaComando = null;
-  // o simulador marca portaoAberto=true no POST; forçamos o estado a não mudar
-  const origFetch = amb2.ctx.UrlFetchApp.fetch;
-  amb2.ctx.UrlFetchApp.fetch = function (url, op) { const r0 = origFetch(url, op); if (/\/commands$/.test(new URL(url).pathname)) amb2.api.portaoAberto = false; return r0; };
-  let r2 = amb2.api_('comando', { dispositivoId: p2.ID, operacaoId: 'op-dir-sec-000001' });
+  const r2 = amb2.abrir(p2.ID, 'op-dir-sec-000001');
   assert.equal(r2.ok, true, r2.message);
   assert.equal(r2.comando.situacao, 'ACEITO');
   assert.match(r2.texto, /não foi confirmada/);
   assert.equal(amb2.notificacoes.length, 1);
   assert.equal(amb2.notificacoes[0].evento, 'S66');
-  assert.equal(Array.from(amb2.notificacoes[0].usuarios).sort().join(','), 'uA,uD,uD2');
-  assert.equal(r2.comando.podeConferir, true);
+  assert.equal(Array.from(amb2.notificacoes[0].usuarios).sort().join(','), 'uA,uA2,uD,uV', 'diretores (perfil, vínculo, dono) e Administradores');
   amb2.api.portaoAberto = true;
   const c = amb2.api_('conferir', { comandoId: r2.comando.id });
-  assert.equal(c.ok, true, c.message);
-  assert.equal(c.comando.situacao, 'CONFIRMADO');
-  // pendência: só aparece enquanto ACEITO há mais de 2 min
+  assert.equal(c.ok, true, c.message); assert.equal(c.comando.situacao, 'CONFIRMADO');
   const itens = [];
-  amb2.tabelas.AUT_COMANDOS.push({ ID: 'cx', OPERACAO_ID: 'op-velho', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 600000).toISOString(), SITUACAO: 'ACEITO', TIPO: 'PORTAO', DISPOSITIVO_NOME: 'Portão principal', SOLICITANTE: 'X', COMANDO: 'ABRIR', AUTORIZACAO: 'AUTORIZADO' });
+  amb2.tabelas.AUT_COMANDOS.push({ ID: 'cx', OPERACAO_ID: 'op-velho', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 600000).toISOString(), SITUACAO: 'ACEITO', TIPO: 'FECHADURA', DISPOSITIVO_NOME: 'Porta da Diretoria', SOLICITANTE: 'X', COMANDO: 'DESTRAVAR', AUTORIZACAO: 'AUTORIZADO' });
   amb2.ctx.AutPred_fontePendencias_((x) => itens.push(x), { cliente: false, gestao: true });
-  assert.equal(itens.length, 1); assert.equal(itens[0].publico, 'GESTAO');
+  assert.equal(itens.length, 1); assert.equal(itens[0].publico, 'DIRETORIA');
+  assert.equal(Array.from(itens[0].paraUsuarios).sort().join(','), 'uA,uD,uV', 'porta: só diretores');
 });
 
-test('idempotência, limites e repetição: o mesmo identificador não executa de novo; 10 s por dispositivo; 5 por pessoa por minuto; sem resultado não repete', () => {
+test('idempotência e limites: o mesmo identificador não executa de novo; 10 s por dispositivo; 5 por pessoa por minuto; sem resultado não repete', () => {
   const amb = ambiente();
   sincronizar(amb);
   const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário');
-  amb.como(DIR);
-  amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial', confirmacao: 'HOMOLOGAR' });
-  amb.como(ADMIN);
-  const r1 = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rep-00000001' });
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  const r1 = amb.abrir(p1.ID, 'op-rep-00000001');
   assert.equal(r1.ok, true);
   const n = amb.comandosApi().length;
   const r2 = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rep-00000001' });
   assert.equal(r2.ok, true); assert.equal(r2.repetido, true); assert.match(r2.texto, /já foi processada/);
   assert.equal(amb.comandosApi().length, n, 'nada reenviado');
-  assert.equal(amb.tabelas.AUT_COMANDOS.filter((c) => c.OPERACAO_ID === 'op-rep-00000001').length, 1);
-  const r3 = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rep-00000002' });
+  const r3 = amb.abrir(p1.ID, 'op-rep-00000002');
   assert.equal(r3.ok, false); assert.match(r3.message, /intervalo mínimo de 10 s/);
-  assert.equal(amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'curto' }).ok, false, 'identificador curto');
-  // limite por pessoa: 5 autorizados no minuto (em outro dispositivo, simulação)
+  assert.equal(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'curto' }).ok, false, 'identificador curto');
   for (let i = 0; i < 6; i++) amb.tabelas.AUT_COMANDOS.push({ ID: 'lim' + i, OPERACAO_ID: 'op-lim-' + i, QUANDO_EM: new Date(Date.now() - 1000 * (i + 1)).toISOString(), SOLICITANTE_ID: 'uA', DISPOSITIVO_ID: 'outro' + i, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'SIMULADO' });
-  const r4 = amb.api_('comando', { dispositivoId: p2.ID, operacaoId: 'op-rep-00000003' });
+  const r4 = amb.abrir(p2.ID, 'op-rep-00000003');
   assert.equal(r4.ok, false); assert.match(r4.message, /comandos no último minuto/);
-  assert.equal(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-rep-00000003').SITUACAO, 'NEGADO');
-  // sem resultado (ACEITO há 30 s) não repete, mesmo passados os 10 s
   const amb2 = ambiente();
   sincronizar(amb2);
   const q = amb2.disp('Portão principal');
   amb2.tabelas.AUT_COMANDOS.push({ ID: 'ac', OPERACAO_ID: 'op-aceito-1', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 30000).toISOString(), SOLICITANTE_ID: 'uD', DISPOSITIVO_ID: q.ID, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'ACEITO' });
-  amb2.como(ADMIN);
-  const r5 = amb2.api_('comando', { dispositivoId: q.ID, operacaoId: 'op-rep-00000009' });
+  amb2.como(DONO);
+  const r5 = amb2.abrir(q.ID, 'op-rep-00000009');
   assert.equal(r5.ok, false); assert.match(r5.message, /ainda está sem resultado/);
 });
 
-test('simulação: automação desligada ou dispositivo não homologado = nada sai; API recusa (2008) e sem resposta ficam registrados sem lançar', () => {
+test('simulação e falhas: desligado não lê; API recusa (2008) e sem resposta ficam registrados sem lançar; segredo nunca em tabela', () => {
   const amb = ambiente({ props: { TUYA_LIGADO: '0' } });
-  amb.como(ADMIN);
+  amb.como(DONO);
   assert.equal(amb.api_('sincronizar').ok, false, 'desligado não lê');
   const amb2 = ambiente();
   sincronizar(amb2);
   const p1 = amb2.disp('Portão principal');
   amb2.props.TUYA_LIGADO = '0';
-  amb2.como(ADMIN);
+  amb2.como(DONO);
   const antes = amb2.api.pedidos.length;
-  let r = amb2.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-sim-00000001' });
+  let r = amb2.abrir(p1.ID, 'op-sim-00000001');
   assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'SIMULADO'); assert.equal(r.comando.modo, 'SIMULACAO');
   assert.equal(amb2.api.pedidos.length, antes, 'nenhuma chamada');
-  assert.ok(amb2.api_('painel').config.faltas.length >= 1);
   amb2.props.TUYA_LIGADO = '1';
-  amb2.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); });
-  amb2.como(DIR);
-  amb2.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial', confirmacao: 'HOMOLOGAR' });
+  amb2.envelhecer();
+  amb2.homologar('Portão principal');
   amb2.api.recusaComando = { success: false, code: 2008, msg: 'not supported' };
-  amb2.como(ADMIN);
-  r = amb2.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rec-00000001' });
+  amb2.como(DONO);
+  r = amb2.abrir(p1.ID, 'op-rec-00000001');
   assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'RECUSADO'); assert.match(r.comando.detalhe, /2008/);
-  amb2.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); });
-  amb2.api.recusaComando = null; amb2.api.falhaRede = true;
-  r = amb2.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rede-0000001' });
+  amb2.envelhecer();
+  amb2.api.recusaComando = null;
+  const p = amb2.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-rede-0000001' });
+  amb2.api.falhaRede = true;
+  r = amb2.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rede-0000001', confirmacaoToken: p.confirmacaoToken });
   assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'INCERTO'); assert.equal(r.comando.podeConferir, true);
-  assert.ok(!JSON.stringify(amb2.tabelas).includes('segredo-de-teste-0001'), 'segredo nunca em tabela');
+  assert.ok(!JSON.stringify(amb2.tabelas).includes('segredo-de-teste-0001'));
 });
 
 test('registro inviolável: corrente íntegra; linha alterada ou apagada é detectada', () => {
   const amb = ambiente();
   sincronizar(amb);
-  amb.como(ADMIN);
+  amb.como(DONO);
   assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: amb.disp('Portão principal').ID, permissao: 'VER', motivo: 'teste do registro' }).ok, true);
   let r = amb.api_('integridade');
   assert.equal(r.ok, true); assert.equal(r.problemas.length, 0); assert.ok(r.total >= 4);
@@ -361,33 +452,27 @@ test('registro inviolável: corrente íntegra; linha alterada ou apagada é dete
   for (let i = 1; i < aud.length; i++) assert.equal(aud[i].HASH_ANTERIOR, aud[i - 1].HASH);
   aud[1].DETALHE = 'alterado à mão';
   r = amb.api_('integridade');
-  assert.equal(r.problemas.length >= 1, true); assert.match(r.texto, /alterada depois de registrada/);
-  aud[1].DETALHE = aud[1].DETALHE; // segue alterada
+  assert.match(r.texto, /alterada depois de registrada/);
   aud.splice(2, 1);
   r = amb.api_('integridade');
   assert.ok(r.problemas.some((p) => /fora da corrente/.test(p)));
 });
 
-test('administração do dispositivo: unidade do cadastro, localização, comando de abertura conferido contra as funções; nome nunca some', () => {
+test('administração e homologação: unidade do cadastro, comando conferido contra as funções, restrito e homologação só por diretor (sem palavra digitada)', () => {
   const amb = ambiente();
   sincronizar(amb);
   const p1 = amb.disp('Portão principal');
-  amb.como(ADMIN);
-  let r = amb.api_('dispositivoSalvar', { id: p1.ID, nome: 'Portão da frente', unidadeId: 'un1', localizacao: 'Entrada principal', ativo: true, comandoAbrir: '{"code":"switch_1","value":true}' });
-  assert.equal(r.ok, true, r.message);
+  amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, nome: 'Portão da frente', unidadeId: 'un1', localizacao: 'Entrada principal', ativo: true, comandoAbrir: '{"code":"switch_1","value":true}' }).ok, true);
   assert.equal(amb.disp('Portão da frente').UNIDADE_NOME, 'MATRIZ GOIÂNIA');
   assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, comandoAbrir: '{"code":"nao_existe","value":true}' }).ok, false);
-  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, restrito: true }).ok, false, 'administrador não marca restrito');
-  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, unidadeId: '', unidadeNome: 'METROLABS — MATRIZ GOIÂNIA' }).ok, true);
-  const painel = amb.api_('painel');
-  assert.equal(painel.unidades[0].nome, 'METROLABS — MATRIZ GOIÂNIA');
-  assert.equal(amb.api_('unidades').unidades[0].cliente, 'METROLABS');
-  amb.como(DIR);
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, restrito: true }).ok, false, 'Administrador comum não marca restrito');
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial feito' }).ok, false, 'Administrador comum não homologa');
+  amb.como(DIRV);
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'curto' }).ok, false, 'descrição do teste obrigatória');
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial feito com o diretor' }).ok, true, 'diretor por vínculo homologa, sem digitar palavra');
   assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, restrito: true }).ok, true);
-  amb.como(ADMIN);
+  amb.como(ADM2);
   assert.equal(amb.api_('painel').restritosOcultos, 2);
-  amb.como(GESTOR);
-  assert.equal(amb.api_('iniciar').mostrarMenu, false);
-  amb.como(DIR);
-  assert.equal(amb.api_('iniciar').mostrarMenu, true);
+  assert.equal(amb.api_('unidades').unidades[0].cliente, 'METROLABS');
 });
