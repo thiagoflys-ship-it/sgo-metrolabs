@@ -35,8 +35,8 @@ var AUT_COLUNAS_DISPOSITIVOS = ['ID', 'PROVEDOR', 'DEVICE_ID', 'NOME', 'NOME_PRO
   'UNIDADE_ID', 'UNIDADE_NOME', 'LOCALIZACAO', 'RESTRITO_DIRETORIA', 'HOMOLOGADO', 'HOMOLOGADO_POR', 'HOMOLOGADO_EM', 'ATIVO',
   'ONLINE', 'ESTADO_JSON', 'ESTADO_EM', 'FUNCOES_JSON', 'COMANDO_ABRIR_JSON', 'ESTADO_CODIGOS', 'COMPAT_OK', 'COMPAT_MOTIVO', 'REMOTO_FECHADURA',
   'ULT_CMD_ID', 'ULT_CMD_EM', 'ULT_CMD_SITUACAO', 'SINCRONIZADO_EM', 'ATUALIZADO_EM', 'CRIADO_EM',
-  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO'];
-var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO'];
+  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S'];
+var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S'];
 var AUT_COLUNAS_PERMISSOES = ['ID', 'USUARIO_ID', 'USUARIO_LOGIN', 'USUARIO_NOME', 'USUARIO_PERFIL', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'PERMISSAO',
   'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CONCEDIDA_POR_ID', 'CONCEDIDA_POR', 'CONCEDIDA_EM', 'MOTIVO', 'STATUS', 'REVOGADA_POR', 'REVOGADA_EM', 'REVOGADA_MOTIVO', 'CRIADO_EM'];
 var AUT_COLUNAS_COMANDOS = ['ID', 'OPERACAO_ID', 'QUANDO', 'QUANDO_EM', 'SOLICITANTE_ID', 'SOLICITANTE', 'PERFIL', 'UNIDADE', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'TIPO',
@@ -171,11 +171,30 @@ function AutPred_sensorAberto_(estado) {
   (estado || []).forEach(function (x) { if (x && x.code === 'doorcontact_state') v = x.value === true; });
   return v;
 }
-/** Tempo de percurso do portão em segundos: door_time_1 do próprio módulo (ou tr_timecon), padrão 30. */
+/**
+ * Tempo de percurso do portão em segundos. 23/10/2026, medido na garagem real: o módulo informa door_time_1 = 20, mas o
+ * portão leva cerca de 40 s (14:20:01 pulso de fechar, 14:20:41 sensor fechado); um pulso aos 29 s parou o motor. Vale o
+ * tempo gravado em Administrar (PERCURSO_S); sem ele, o maior entre o informado pelo módulo e 45 s.
+ */
 function AutPred_percursoS_(d) {
+  var gravado = Number(d && d.PERCURSO_S);
+  if (gravado > 0) return gravado;
   var m = {};
   (AutPred_deJson_(d && d.ESTADO_JSON, []) || []).forEach(function (x) { if (x && x.code) m[x.code] = x.value; });
-  return Number(m.door_time_1) > 0 ? Number(m.door_time_1) : (Number(m.tr_timecon) > 0 ? Number(m.tr_timecon) : AUT_PERCURSO_PADRAO_S);
+  return Math.max(Number(m.door_time_1) || 0, Number(m.tr_timecon) || 0, AUT_PERCURSO_PADRAO_S);
+}
+/**
+ * Hora (ms) da última mudança do sensor de posição, pela sombra do dispositivo (cada ponto vem com a hora). 23/10/2026: o
+ * sensor oscila (aberto/fechado no mesmo segundo) quando o portão passa por ele; logo depois de mudar, a posição não é confiável.
+ * 0 quando a nuvem não informa. Só leitura.
+ */
+function AutPred_sensorMudouEm_(c, disp) {
+  try {
+    var r = Tuya_chamar_(c, 'GET', '/v2.0/cloud/thing/' + encodeURIComponent(AutPred_s_(disp.DEVICE_ID)) + '/shadow/properties', { codes: 'doorcontact_state' });
+    var props = (r.j && r.j.success === true && r.j.result && r.j.result.properties) || [];
+    var p = props.filter(function (x) { return x && x.code === 'doorcontact_state'; })[0];
+    return p ? Number(p.time) || 0 : 0;
+  } catch (e) { return 0; }
 }
 /**
  * Proteção do pulso com sensor (função pura): '' = pode; senão o motivo. Em movimento (dentro do percurso depois do último
@@ -427,7 +446,8 @@ function AutPred_estadoTexto_(disp) {
 // Aberto/Fechado pelo sensor de posição (doorcontact_state); Abrindo…/Fechando… durante o percurso (tr_timecon, ou 30 s)
 // depois de um comando de abrir/fechar. A tela aberta relê a cada 5 s pela leitura compartilhada (AutPred_estadosPortoes_).
 // ------------------------------------------------------------
-var AUT_PERCURSO_PADRAO_S = 30;
+var AUT_PERCURSO_PADRAO_S = 45;   // 23/10/2026: a garagem real leva cerca de 40 s
+var AUT_SENSOR_ASSENTAR_S = 5;   // o sensor oscila ao passar o portão; depois de mudar, espera 5 s antes de confiar
 var AUT_ESTADO_CACHE = 'AUT_ESTADO_';
 var AUT_ESTADO_CACHE_MS = 4500;
 var AUT_ESTADO_RESERVA = 70;   // a tela não lê se o minuto já tem 70 chamadas à Tuya: a folga fica para os comandos e a abertura automática
@@ -1003,6 +1023,10 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   var antes = AutPred_deJson_(disp.ESTADO_JSON, []);
   if (modo.modo === 'REAL') { try { antes = AutPred_lerEstado_(c, disp).status; } catch (eAntes) {} }
   var travaE = disp.TIPO !== 'FECHADURA' ? AutPred_travaPulsoSensor_(disp, acao, antes) : '';
+  if (!travaE && modo.modo === 'REAL' && AutPred_pulsoComSensor_(disp) && AutPred_acionamento_(disp) === 'ABRIR_FECHAR') {
+    var mudou = AutPred_sensorMudouEm_(c, disp), haS = (Date.now() - mudou) / 1000;
+    if (mudou && haS >= 0 && haS < AUT_SENSOR_ASSENTAR_S) travaE = 'o sensor do portão acabou de mudar (o portão está passando por ele); a posição ainda não é confiável. Aguarde ' + Math.ceil(AUT_SENSOR_ASSENTAR_S - haS) + ' s';
+  }
   if (travaE) negar(travaE, 'COMANDO_POSICAO');
   var cmd = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase(Object.assign({}, base, {
     AUTORIZACAO: 'AUTORIZADO', AUTORIZACAO_MOTIVO: dir.padraoDono ? 'responsável pelo sistema (padrão da porta da Diretoria)' : (!AutPred_restrito_(disp) ? (AutPred_ehDiretor_(sessao) ? 'diretor' : 'perfil ' + AutPred_perfil_(sessao) + ' (portões liberados à equipe interna)') : 'permissão individual ACIONAR'),
@@ -1153,7 +1177,7 @@ function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
     online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estado: AutPred_estadoTexto_(d), estadoEm: AutPred_dataBr_(d.ESTADO_EM), compatOk: AutPred_s_(d.COMPAT_OK).toUpperCase() === 'SIM', compatMotivo: AutPred_s_(d.COMPAT_MOTIVO),
     comandoAbrir: AutPred_s_(d.COMANDO_ABRIR_JSON), acionamento: AutPred_acionamento_(d), acionamentoSugerido: AutPred_comandosPortao_(d).sugestao,
     podeFechar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'FECHAR'), podeParar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'PARAR'), temFecharNaNuvem: !!AutPred_comandosPortao_(d).fechar,
-    estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d),
+    estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d), percursoS: d.TIPO !== 'FECHADURA' ? AutPred_percursoS_(d) : 0, percursoGravado: Number(d.PERCURSO_S) > 0,
     autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), podeAutoAbrir: AutPred_ehPedido_(d) && !!dir.acionar && AutPred_ehDiretor_(sessao),
     remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
     ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000,
@@ -1231,6 +1255,11 @@ function AutPred_salvarDispositivo_(sessao, dados) {
   }
   if (dados.localizacao !== undefined) { var loc = AutPred_s_(dados.localizacao).slice(0, 120); if (loc !== AutPred_s_(disp.LOCALIZACAO)) { upd.LOCALIZACAO = loc; mudancas.push('localização: "' + AutPred_s_(disp.LOCALIZACAO) + '" -> "' + loc + '"'); } }
   if (dados.ativo !== undefined) { var at = dados.ativo ? 'SIM' : 'NAO'; if (at !== (AutPred_s_(disp.ATIVO).toUpperCase() === 'NAO' ? 'NAO' : 'SIM')) { upd.ATIVO = at; mudancas.push(at === 'SIM' ? 'reativado' : 'desativado'); } }
+  if (dados.percursoS !== undefined && disp.TIPO !== 'FECHADURA' && AutPred_s_(dados.percursoS) !== '') {
+    var ps = Math.round(Number(dados.percursoS));
+    if (!(ps >= 5 && ps <= 180)) throw new Error('Não foi possível gravar: o tempo de percurso precisa ser de 5 a 180 segundos (o tempo que o portão leva para abrir ou fechar por completo).');
+    if (ps !== Number(disp.PERCURSO_S || 0)) { upd.PERCURSO_S = ps; mudancas.push('tempo de percurso: ' + ps + ' s'); }
+  }
   if (dados.acionamento !== undefined && disp.TIPO !== 'FECHADURA') {
     var ac = AutPred_s_(dados.acionamento).toUpperCase() === 'ABRIR_FECHAR' ? 'ABRIR_FECHAR' : 'PULSO';
     if (ac === 'ABRIR_FECHAR' && !AutPred_comandosPortao_(disp).fechar) throw new Error('Não foi possível gravar: este dispositivo não informa um comando de fechar pela nuvem (door_control_1 ou control com "close"). Deixe como "Pulso (só abrir)".');

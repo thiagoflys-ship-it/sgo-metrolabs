@@ -674,6 +674,8 @@
         '<label for="autLoc_' + id + '">Localização (ex.: entrada principal, estacionamento, 2º andar)</label><input id="autLoc_' + id + '" maxlength="120" value="' + AutPred_esc_(d.localizacao) + '">' +
         (d.tipo !== "FECHADURA" ? '<label for="autCmd_' + id + '">Comando de abertura (JSON, só se o lido do Smart Life estiver errado)</label><input id="autCmd_' + id + '" class="aut-mono" value="' + AutPred_esc_(d.comandoAbrir) + '" placeholder=\'{"code":"switch_1","value":true}\'>' : "") +
         (d.tipo !== "FECHADURA" ? '<label for="autAcion_' + id + '">Acionamento</label><select id="autAcion_' + id + '"><option value="PULSO"' + (d.acionamento !== "ABRIR_FECHAR" ? " selected" : "") + '>Pulso (só abrir; fecha manualmente)</option>' + (d.temFecharNaNuvem ? '<option value="ABRIR_FECHAR"' + (d.acionamento === "ABRIR_FECHAR" ? " selected" : "") + '>Portão com abrir e fechar</option>' : "") + "</select>" + '<div class="cadx-sub">Sugestão pela leitura do dispositivo: ' + (d.acionamentoSugerido === "ABRIR_FECHAR" ? "aceita abrir e fechar pela nuvem" : "só pulso") + (d.temSensor ? " (tem sensor de posição)" : " (sem sensor de posição)") + '. Sem escolha gravada, o portão com sensor e fechar pela nuvem já abre e fecha. Portão que fecha puxando à mão fica como "Pulso". O fechar vale com a mesma homologação do abrir.</div>' : "") +
+        (d.tipo !== "FECHADURA" ? '<label for="autPerc_' + id + '">Tempo de percurso do portão (segundos)</label><input id="autPerc_' + id + '" type="number" min="5" max="180" step="1" value="' + AutPred_esc_(d.percursoS || "") + '" data-original="' + AutPred_esc_(d.percursoS || "") + '">' +
+          '<div class="cadx-sub">Quanto tempo o portão leva para abrir ou fechar por completo (cronometre no local). Nesse tempo o SGO+ não manda outro pulso: um pulso no meio do caminho para o motor. ' + (d.percursoGravado ? "Gravado em Administrar." : "Padrão do SGO+ (45 s), ainda não cronometrado.") + "</div>" : "") +
         '<label class="aut-check"><input type="checkbox" id="autAtivo_' + id + '"' + (d.ativo ? " checked" : "") + "> Ativo no SGO+ (desativado não recebe comando)</label>" +
         (AUTP.diretoria ? '<label class="aut-check"><input type="checkbox" id="autRestrito_' + id + '"' + (d.restrito ? " checked" : "") + "> Restrito à Diretoria (só diretores veem e acionam)</label>" : "") +
         '<div class="cadx-sub">Identificação no Smart Life: ' + AutPred_esc_(d.nomeProvedor) + " · " + AutPred_esc_(d.categoriaNome) + (d.produto ? " · " + AutPred_esc_(d.produto) : "") + ' · <span class="aut-mono">' + AutPred_esc_(d.deviceId) + "</span>" + (d.sincronizadoEm ? " · lido em " + AutPred_esc_(d.sincronizadoEm) : "") + "</div>" +
@@ -691,6 +693,8 @@
     var ck = function (p) { var e = document.getElementById(p + id); return e ? !!e.checked : undefined; };
     var dados = { id: id, nome: v("autNome_"), unidadeId: v("autUni_"), unidadeNome: v("autUniNome_"), localizacao: v("autLoc_"), ativo: ck("autAtivo_") };
     if (v("autAcion_") !== undefined) dados.acionamento = v("autAcion_");
+    var perc = document.getElementById("autPerc_" + id);
+    if (perc && perc.value !== perc.getAttribute("data-original")) dados.percursoS = perc.value;
     if (v("autCmd_") !== undefined) dados.comandoAbrir = v("autCmd_");
     if (AUTP.diretoria && ck("autRestrito_") !== undefined) dados.restrito = ck("autRestrito_");
     var m = document.getElementById("autEdMsg_" + id);

@@ -647,7 +647,10 @@ test('portões (23/10/2026, histórico real): a garagem ignora door_control_1 e 
   let r = amb.abrir(g.ID, 'op-fech-0000002');
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
   assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }]), 'abrir = pulso, como o aplicativo');
-  // no percurso (door_time_1 do portão, padrão 30 s): nenhum pulso novo
+  // no percurso (padrão 45 s; a garagem real leva ~40 s): nenhum pulso novo; aos 29 s (o caso real das 14:19) também não
+  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 29000).toISOString(); });
+  amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 29000).toISOString(); });
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000029', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde 1[0-9] s/);
   amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 15000).toISOString(); });
   amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 15000).toISOString(); });
   assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde \d+ s/);
@@ -667,8 +670,22 @@ test('portões (23/10/2026, histórico real): a garagem ignora door_control_1 e 
   assert.equal(amb.api.portaoAberto, false);
   // a posição "em movimento" depois de fechar segue o comando do SGO+, não o door_control_1 guardado na nuvem
   assert.equal(amb.disp('Portão principal').ULT_CMD_COMANDO, 'FECHAR');
-  // escolha gravada vence a sugestão: "Pulso" volta a só abrir, sem trava de posição
+  // sensor que acabou de mudar (o portão passando por ele): recusa e pede alguns segundos
+  amb.envelhecer();
+  const origS = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { const u = new URL(url); if (/dev-portao-1\/shadow\/properties$/.test(u.pathname)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ success: true, result: { properties: [{ code: 'doorcontact_state', value: false, time: Date.now() - 1000 }] } }), getAllHeaders: () => ({}) }; return origS(url, op); };
+  amb.como(DONO);
+  r = amb.abrir(g.ID, 'op-fech-0000007');
+  assert.equal(r.ok, false); assert.match(r.message, /sensor do portão acabou de mudar.*Aguarde \d s/);
+  assert.equal(amb.api.cmdGaragem.length, 2, 'nenhum pulso saiu');
+  amb.ctx.UrlFetchApp.fetch = origS;
+  // tempo de percurso gravado em Administrar (5 a 180 s)
   amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, percursoS: '2' }).ok, false);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, percursoS: '40' }).ok, true);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').percursoS, 40);
+  assert.match(ler('JS_AutomacaoPredial.html'), /Tempo de percurso do portão \(segundos\)/);
+  // escolha gravada vence a sugestão: "Pulso" volta a só abrir, sem trava de posição
   assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'PULSO' }).ok, true);
   assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').podeFechar, false);
   assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'ABRIR_FECHAR' }).ok, true);
@@ -752,7 +769,11 @@ test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… n
   assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'open' }], recente('FECHAR')).codigo, 'FECHANDO', 'o door_control_1 da nuvem não manda');
   assert.equal(e([{ code: 'doorcontact_state', value: false }], recente('FECHAR')).codigo, 'FECHADO', 'fechou: o sensor manda');
   assert.equal(e([{ code: 'doorcontact_state', value: true }], velho('FECHAR')).codigo, 'ABERTO', 'passou o percurso: o sensor manda');
-  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_time_1', value: 2 }], recente('ABRIR')).codigo, 'ABERTO', 'percurso do próprio portão (door_time_1)');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }], Object.assign({ PERCURSO_S: 2 }, recente('ABRIR'))).codigo, 'ABERTO', 'percurso gravado em Administrar');
+  // 23/10/2026: o módulo informa door_time_1 = 20, mas a garagem leva ~40 s; sem tempo gravado vale o maior entre o módulo e 45 s
+  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 45);
+  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 60 }]) }), 60);
+  assert.equal(amb.ctx.AutPred_percursoS_({ PERCURSO_S: 38, ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 38);
   assert.equal(e([{ code: 'switch_1', value: false }], Object.assign({ ACIONAMENTO: 'PULSO' }, recente('ABRIR'))).codigo, '', 'pedestre sem sensor');
   // consulta da tela: lê a garagem (sensor) e não o pedestre; várias telas em 4,5 s = uma leitura
   amb.homologar('Portão principal');

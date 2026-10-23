@@ -102,7 +102,8 @@ Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso c
 
 Como a garagem é acionada (medido no histórico do próprio módulo em 23/10/2026): o módulo "MINI MODULO PULSO PARA GARAGEM C/ SENSOR" responde só ao pulso switch_1, que é o que o aplicativo Smart Life manda. O comando door_control_1 (abrir/fechar) vindo da nuvem é aceito pela Tuya e ignorado pelo módulo (das 12:42 às 13:34 de 23/10, nenhuma resposta). O motor alterna: o mesmo pulso abre o portão fechado e fecha o aberto. Por isso, no SGO+:
 - "Abrir portão" e "Fechar portão" mandam o pulso; o sensor decide qual vale: abrir só com o portão fechado, fechar só com ele aberto (no caso contrário, a recusa explica que o pulso faria o oposto).
-- Durante o percurso (door_time_1 do próprio portão; 20 segundos na garagem), outro toque é recusado com o tempo que falta, porque um pulso no meio do caminho pararia ou inverteria o portão.
+- Durante o percurso, outro toque é recusado com o tempo que falta, porque um pulso no meio do caminho para o motor (medido em 23/10/2026: pulso de fechar aos 29 s da abertura não fechou; o fechar leva cerca de 40 s). O tempo vale o gravado em Administrar > "Tempo de percurso do portão (segundos)" (5 a 180); sem ele, o maior entre o informado pelo módulo (door_time_1 = 20 na garagem, curto demais) e 45 segundos.
+- Logo depois de o sensor mudar (o portão passando por ele), o sensor oscila entre aberto e fechado no mesmo segundo. O SGO+ lê a hora da última mudança na nuvem e, se foi há menos de 5 segundos, recusa e pede para aguardar.
 - "Abrindo…" e "Fechando…" seguem o último comando enviado pelo SGO+ e o percurso; "Aberto" e "Fechado" vêm do sensor.
 - Portão sem sensor (pulso simples): só "Abrir portão"; no portão de pulso não há espera pelo resultado do anterior, só o intervalo de 10 segundos.
 
