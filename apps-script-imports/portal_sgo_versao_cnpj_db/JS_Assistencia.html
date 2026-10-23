@@ -472,10 +472,10 @@
       }).join("") + '</tbody></table>';
       var botoes = '';
       if (o.veValores && o.situacao === "RASCUNHO") botoes += '<button type="button" class="btn-secondary" data-orc-editar="' + At_esc_(o.id) + '">Preencher valores</button><button type="button" class="btn-primary" data-orc-emitir="' + At_esc_(o.id) + '">Emitir o A4</button>';
-      if (o.veValores && o.situacao === "EMITIDO") botoes += (o.pdfId ? '<button type="button" class="btn-secondary" data-orc-enviar="' + At_esc_(o.pdfId) + '">Enviar ao cliente</button>' : '') + '<button type="button" class="btn-primary" data-orc-decidir="' + At_esc_(o.id) + '">Registrar a resposta do cliente</button>';
-      if (o.veValores && (o.situacao === "EMITIDO" || o.situacao === "RECUSADO")) botoes += '<button type="button" class="btn-secondary" data-orc-revisar="' + At_esc_(o.id) + '">Nova revisão</button>';
+      if (o.veValores && o.situacao === "EMITIDO") botoes += (o.pdfId ? '<button type="button" class="btn-primary" data-orc-enviar="' + At_esc_(o.id) + '">Enviar com link de aceite</button>' : '') + '<button type="button" class="btn-secondary" data-orc-decidir="' + At_esc_(o.id) + '">Registrar a resposta do cliente</button>';
+      if (o.veValores && (o.situacao === "EMITIDO" || o.situacao === "RECUSADO" || o.situacao === "AJUSTE")) botoes += '<button type="button" class="btn-secondary" data-orc-revisar="' + At_esc_(o.id) + '">Nova revisão</button>';
       return '<div class="at-card"><p class="at-card-tit">' + At_esc_(o.numero) + ' rev. ' + At_esc_(o.revisao) + ' · ' + At_esc_(o.situacaoNome) + (o.veValores && o.valorTotalTxt ? ' · ' + At_esc_(o.valorTotalTxt) : '') + '</p>' + itens +
-        (o.pdfUrl ? '<p class="at-txt"><a href="' + At_esc_(o.pdfUrl) + '" target="_blank" rel="noopener">Abrir o orçamento A4</a></p>' : '') + (o.aceiteUrl ? '<p class="at-txt"><a href="' + At_esc_(o.aceiteUrl) + '" target="_blank" rel="noopener">Aceite do cliente</a> (' + At_esc_(o.aceitePor) + ', ' + At_esc_(o.decididoEm) + ')</p>' : '') +
+        (o.pdfUrl ? '<p class="at-txt"><a href="' + At_esc_(o.pdfUrl) + '" target="_blank" rel="noopener">Abrir o orçamento A4</a></p>' : '') + (o.aceiteUrl && (!o.aceiteCanal || o.aceiteCanal === "MANUAL") ? '<p class="at-txt"><a href="' + At_esc_(o.aceiteUrl) + '" target="_blank" rel="noopener">Aceite do cliente</a> (' + At_esc_(o.aceitePor) + ', ' + At_esc_(o.decididoEm) + ')</p>' : '') + At_blocoAceite_(o) +
         (o.decisaoTexto ? '<p class="at-meta">' + At_esc_(o.decisaoTexto) + '</p>' : '') + (!o.veValores ? '<p class="at-meta">Valores ficam com a gestão, o Comercial e o Financeiro.</p>' : '') + '<div class="at-acoes">' + botoes + '</div></div>';
     }).join("");
   }
@@ -483,7 +483,20 @@
     var achar = function (id) { return r.orcamentos.filter(function (o) { return o.id === id; })[0]; };
     corpo.querySelectorAll("[data-orc-editar]").forEach(function (b) { b.onclick = function () { At_editarOrcamento_(achar(b.getAttribute("data-orc-editar")), reabrir); }; });
     corpo.querySelectorAll("[data-orc-emitir]").forEach(function (b) { b.onclick = function () { At_chamar_("emitirOrcamento", { id: b.getAttribute("data-orc-emitir") }, function (x) { reabrir(x.message); if (x.html) At_abrirHtml_(x.html); }, null, { carregando: "Emitindo o orçamento…" }); }; });
-    corpo.querySelectorAll("[data-orc-enviar]").forEach(function (b) { b.onclick = function () { if (window.SGO_EnviarDoc) SGO_EnviarDoc.abrir({ arquivoId: b.getAttribute("data-orc-enviar") }); }; });
+    corpo.querySelectorAll("[data-orc-enviar]").forEach(function (b) { b.onclick = function () { At_enviarOrcamento_(b.getAttribute("data-orc-enviar"), reabrir); }; });
+    corpo.querySelectorAll("[data-orc-copiar]").forEach(function (b) {
+      b.onclick = function () {
+        if (!confirm("Gerar um link novo para copiar? O link enviado antes deixa de funcionar (um link por envio).")) return;
+        At_chamar_("orcLinkCopiar", { id: b.getAttribute("data-orc-copiar") }, function (x) {
+          var ov = At_modal_("Link de aceite do orçamento", '<p class="at-txt">' + At_esc_(x.message) + '</p>' + At_campo_("Link (válido até " + x.validoAte + ")", '<input id="atOrcLink" readonly value="' + At_esc_(x.url) + '">', "Mande pelo meio que o cliente usa. Quem tiver o link vê o orçamento e pode responder; envie só à pessoa certa.") + '<div id="atOrcLinkMsg"></div>',
+            '<button type="button" class="btn-secondary" data-x>Fechar</button><button type="button" class="btn-primary" data-ok>Copiar</button>');
+          ov.querySelector("[data-x]").onclick = function () { ov.remove(); reabrir(x.message); };
+          ov.querySelector("[data-ok]").onclick = function () { var i = At_$_("atOrcLink"); i.select(); var feito = function () { At_msg_("atOrcLinkMsg", "Link copiado.", "ok"); }; try { navigator.clipboard.writeText(x.url).then(feito, function () { document.execCommand("copy"); feito(); }); } catch (e) { document.execCommand("copy"); feito(); } };
+        }, null, { carregando: "Gerando o link…" });
+      };
+    });
+    corpo.querySelectorAll("[data-orc-invalidar]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Invalidar o link de aceite", "Quem abrir o link vê que ele não está mais disponível e o contato da Metrolabs. Para o cliente responder depois, envie de novo (gera outro link).", "Motivo", 5, function (tx, ov) { At_chamar_("orcLinkInvalidar", { id: b.getAttribute("data-orc-invalidar"), motivo: tx }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Invalidar"); }; });
+    corpo.querySelectorAll("[data-orc-comprovante]").forEach(function (b) { b.onclick = function () { At_chamar_("orcComprovante", { id: b.getAttribute("data-orc-comprovante") }, function (x) { reabrir(x.message); }, null, { carregando: "Gerando o comprovante…" }); }; });
     corpo.querySelectorAll("[data-orc-revisar]").forEach(function (b) { b.onclick = function () { At_chamar_("revisarOrcamento", { id: b.getAttribute("data-orc-revisar") }, function (x) { reabrir(x.message); }); }; });
     corpo.querySelectorAll("[data-orc-decidir]").forEach(function (b) {
       b.onclick = function () {
@@ -499,6 +512,42 @@
               function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atDecMsg", m); }, { carregando: "Registrando…" });
           });
         };
+      };
+    });
+  }
+  /** Bloco "Aceite do cliente" (22/10/2026, etapa 4): situação do link, resposta registrada e comprovante. */
+  function At_blocoAceite_(o) {
+    var a = o.aceite; if (!a) return "";
+    var l = a.link, r = a.resposta, h = '<div class="at-caixa"><h3>Aceite do cliente</h3>';
+    if (l) {
+      h += '<p class="at-meta">Link: <b>' + At_esc_(l.situacaoNome) + '</b> · ' + At_esc_(l.canal) + (l.enviadoPara && l.canal === "E-mail" ? ' para ' + At_esc_(l.enviadoPara) : '') + ' em ' + At_esc_(l.criadoEm) + (l.porNome ? ' por ' + At_esc_(l.porNome) : '') + ' · válido até ' + At_esc_(l.validoAte) + (a.envios > 1 ? ' · ' + a.envios + ' envios no total' : '') + '</p>' +
+        '<p class="at-meta">' + (l.vistoEm ? 'Visto pelo cliente em ' + At_esc_(l.vistoEm) + (l.vistas > 1 ? ' (' + l.vistas + ' vezes; a última em ' + At_esc_(l.vistoUltimoEm) + ')' : '') + '.' : 'O cliente ainda não abriu o link.') + (l.respondidoEm ? ' Respondido em ' + At_esc_(l.respondidoEm) + '.' : '') + (l.fimMotivo ? ' ' + At_esc_(l.fimMotivo) + (l.fimEm ? ' (' + At_esc_(l.fimEm) + ')' : '') + '.' : '') + '</p>';
+    } else if (a.podeEnviar) h += '<p class="at-meta">Ainda sem link. Use "Enviar com link de aceite": o cliente aprova, pede ajuste ou recusa pelo link, sem login (o link vale ' + a.validadeDias + ' dias). Quem responde por telefone ou e-mail continua em "Registrar a resposta do cliente".</p>';
+    if (r) h += '<p class="at-txt"><b>' + At_esc_(r.decisaoNome) + '</b> por ' + At_esc_(r.nome) + (r.cargo ? ' (' + At_esc_(r.cargo) + ')' : '') + ' em ' + At_esc_(r.em) + ' · ' + At_esc_(r.canal) + (r.ip ? ', IP ' + At_esc_(r.ip) : '') + ' · ' + At_esc_(r.email) + (r.documento ? ' · CPF ' + At_esc_(r.documento) : '') + (r.assinatura ? ' · assinado na tela' : '') + '</p>' +
+      (r.texto ? '<p class="at-meta">' + At_esc_(r.texto) + '</p>' : '') +
+      '<p class="at-meta">Protocolo ' + At_esc_(r.protocolo) + ' · registro ' + (r.integro ? 'íntegro' : '<b>com divergência no resumo: avise o administrador</b>') + ' · conteúdo do orçamento ' + (r.conteudoConfere ? 'igual ao aceito' : '<b>diferente do aceito</b>') + '</p>';
+    if (a.comprovanteUrl) h += '<p class="at-txt"><a href="' + At_esc_(a.comprovanteUrl) + '" target="_blank" rel="noopener">Abrir o comprovante de aprovação (PDF)</a></p>';
+    var bt = (a.podeEnviar ? '<button type="button" class="btn-secondary" data-orc-copiar="' + At_esc_(o.id) + '">Gerar e copiar link</button>' : '') +
+      (a.podeInvalidar ? '<button type="button" class="btn-secondary" data-orc-invalidar="' + At_esc_(o.id) + '">Invalidar link</button>' : '') +
+      (a.podeGerarComprovante ? '<button type="button" class="btn-primary" data-orc-comprovante="' + At_esc_(o.id) + '">Gerar o comprovante</button>' : '');
+    return h + (bt ? '<div class="at-acoes">' + bt + '</div>' : '') + '</div>';
+  }
+  /** Envio do orçamento por e-mail com o link de aceite (contatos do cliente, texto editável, PDF anexado). */
+  function At_enviarOrcamento_(id, reabrir) {
+    At_chamar_("previaEnvioOrcamento", { id: id }, function (p) {
+      var cont = (p.contatos || []).map(function (k) { return '<label class="at-check"><input type="checkbox" data-orc-para="' + At_esc_(k.email) + '" data-nome="' + At_esc_(k.nome) + '"' + (k.sugerido ? " checked" : "") + '> ' + At_esc_(k.nome || k.email) + ' · ' + At_esc_(k.email) + ' <span class="at-meta">(' + At_esc_(k.origem) + ')</span></label>'; }).join("");
+      var ov = At_modal_("Enviar o orçamento com link de aceite", (p.aviso ? '<div class="at-faixa aviso">' + At_esc_(p.aviso) + '</div>' : '') +
+        At_campo_("Para quem", cont || '<p class="at-meta">Nenhum e-mail no cadastro do cliente. Digite abaixo.</p>') + At_campo_("Outro e-mail", '<input id="atOrcOutro" type="email" maxlength="160" placeholder="nome@cliente.com.br">') +
+        At_campo_("Assunto", '<input id="atOrcAss" maxlength="180" value="' + At_esc_(p.assunto) + '">') +
+        At_campo_("Mensagem", '<textarea id="atOrcTxt" rows="12" maxlength="8000">' + At_esc_(p.texto) + '</textarea>', "O link entra no lugar de " + p.marca + ". O PDF do orçamento vai em anexo. O link vale " + p.validadeDias + " dias e só o último envio funciona: enviar de novo troca o link.") + '<div id="atOrcEnvMsg"></div>',
+        '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Enviar</button>', 720);
+      var pedido = "orc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () {
+        var para = []; ov.querySelectorAll("[data-orc-para]").forEach(function (c) { if (c.checked) para.push({ nome: c.getAttribute("data-nome"), email: c.getAttribute("data-orc-para") }); });
+        var outro = At_$_("atOrcOutro").value.trim(); if (outro) para.push({ nome: "", email: outro });
+        if (!para.length) { At_msg_("atOrcEnvMsg", "Escolha ou digite pelo menos um e-mail do cliente.", "aviso"); return; }
+        At_chamar_("enviarOrcamento", { id: id, para: para, assunto: At_$_("atOrcAss").value, mensagem: At_$_("atOrcTxt").value, pedidoId: pedido }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atOrcEnvMsg", m); }, { carregando: "Enviando…" });
       };
     });
   }
@@ -931,7 +980,8 @@
         ["P1", "P2", "P3", "P4"].map(function (p) { return '<tr><td data-r="Prioridade">' + p + '</td><td data-r="Atendimento"><input data-pz="' + p + '|atendimentoMin" type="number" step="0.5" min="0.5" value="' + h2(g.prazos[p].atendimentoMin) + '"' + dis + '></td><td data-r="Triagem"><input data-pz="' + p + '|triagemMin" type="number" step="0.25" min="0.1" value="' + h2(g.prazos[p].triagemMin) + '"' + dis + '></td></tr>'; }).join("") +
         '</tbody></table><p class="at-meta">Padrão: P1 4 h úteis, P2 1 dia útil (9,5 h), P3 3 dias úteis, P4 7 dias úteis. O contrato do cliente prevalece.</p>' +
         '<div class="at-grade4">' + At_campo_("Em risco quando resta (fração)", '<input id="atRgRisco" type="number" step="0.05" min="0.05" max="0.9" value="' + At_esc_(g.emRiscoFracao) + '"' + dis + '>') + At_campo_("Documentação pendente vira cobrança da gestão após (h)", '<input id="atRgDoc" type="number" min="1" value="' + At_esc_(g.docPendenteHoras) + '"' + dis + '>') +
-        At_campo_("Reincidência: mesmo equipamento em (dias)", '<input id="atRgReinc" type="number" min="1" value="' + At_esc_(g.reincidenciaDias) + '"' + dis + '>') + At_campo_("Duração padrão da visita (min)", '<input id="atRgDur" type="number" min="15" step="15" value="' + At_esc_(g.agenda.duracaoPadraoMin) + '"' + dis + '>') + '</div>' +
+        At_campo_("Reincidência: mesmo equipamento em (dias)", '<input id="atRgReinc" type="number" min="1" value="' + At_esc_(g.reincidenciaDias) + '"' + dis + '>') + At_campo_("Duração padrão da visita (min)", '<input id="atRgDur" type="number" min="15" step="15" value="' + At_esc_(g.agenda.duracaoPadraoMin) + '"' + dis + '>') +
+          At_campo_("Link de aceite do orçamento vale (dias)", '<input id="atRgLink" type="number" min="1" max="90" value="' + At_esc_((g.orcamentoLink || {}).dias || 30) + '"' + dis + '>') + '</div>' +
         [["atRgPausa", "Prazo pausa ao aguardar cliente ou peça (sem contrato)", g.pausaPermitidaPadrao], ["atRgAss", "Assinatura do cliente obrigatória para encerrar (exceção: responsável ausente)", g.assinatura.obrigatoria], ["atRgCmp", "Peça em falta abre pedido em Compras", g.pecas.faltaAbreCompras],
           ["atRgWaP1", "WhatsApp ao gestor no chamado P1 (exceção da matriz de avisos)", g.avisos.whatsappP1Gestor], ["atRgMailCli", "E-mail ao cliente (chamado recebido, reagendado e concluído)", g.avisos.emailCliente], ["atRgWaCli", "WhatsApp ao cliente (só depois do piloto)", g.avisos.whatsappCliente], ["atRgRelMes", "Relatório mensal A4", g.relatorioMensal.ligado]]
           .map(function (x) { return '<label class="at-check"><input type="checkbox" id="' + x[0] + '"' + (x[2] ? " checked" : "") + dis + '> ' + At_esc_(x[1]) + '</label>'; }).join("") +
@@ -951,7 +1001,7 @@
       At_$_("atRgSalvar").onclick = function () {
         var nova = JSON.parse(JSON.stringify(g));
         c.querySelectorAll("[data-pz]").forEach(function (x) { var k = x.getAttribute("data-pz").split("|"); nova.prazos[k[0]][k[1]] = Math.round(Number(String(x.value).replace(",", ".")) * 60); });
-        nova.emRiscoFracao = Number(At_$_("atRgRisco").value); nova.docPendenteHoras = Number(At_$_("atRgDoc").value); nova.reincidenciaDias = Number(At_$_("atRgReinc").value); nova.agenda.duracaoPadraoMin = Number(At_$_("atRgDur").value);
+        nova.emRiscoFracao = Number(At_$_("atRgRisco").value); nova.docPendenteHoras = Number(At_$_("atRgDoc").value); nova.reincidenciaDias = Number(At_$_("atRgReinc").value); nova.agenda.duracaoPadraoMin = Number(At_$_("atRgDur").value); nova.orcamentoLink = { dias: Number(At_$_("atRgLink").value) };
         nova.pausaPermitidaPadrao = At_$_("atRgPausa").checked; nova.assinatura.obrigatoria = At_$_("atRgAss").checked; nova.pecas.faltaAbreCompras = At_$_("atRgCmp").checked;
         nova.avisos.whatsappP1Gestor = At_$_("atRgWaP1").checked; nova.avisos.emailCliente = At_$_("atRgMailCli").checked; nova.avisos.whatsappCliente = At_$_("atRgWaCli").checked; nova.relatorioMensal.ligado = At_$_("atRgRelMes").checked;
         nova.localizacao.distanciaAvisoMetros = Number(At_$_("atRgDist").value); nova.fotos.maxBytes = Math.round(Number(At_$_("atRgFoto").value) * 1000000);
@@ -1046,12 +1096,61 @@
   // =========================================================
   // PORTAL DO CLIENTE (Meus chamados)
   // =========================================================
+  /** Orçamentos do cliente no portal (22/10/2026, etapa 4): ver os valores e responder sem o link do e-mail. */
+  function At_portalOrcamentos_(lista) {
+    if (!lista.length) return "";
+    return '<div class="at-sec">Orçamentos</div><div class="at-lista">' + lista.map(function (o) {
+      var it = o.itens.map(function (i) { return '<tr><td data-r="Item">' + At_esc_(i.descricao) + '</td><td class="n" data-r="Qtd.">' + At_esc_(i.quantidadeTxt) + '</td><td class="n" data-r="Total">' + At_esc_(i.totalTxt) + '</td></tr>'; }).join("");
+      var est = o.estado === "ABERTO" ? '<div class="at-acoes"><button type="button" class="btn-primary" data-po-orc="' + At_esc_(o.id) + '" data-dec="APROVADO">Aprovar</button><button type="button" class="btn-secondary" data-po-orc="' + At_esc_(o.id) + '" data-dec="AJUSTE">Pedir ajuste</button><button type="button" class="btn-secondary" data-po-orc="' + At_esc_(o.id) + '" data-dec="RECUSADO">Recusar</button></div>'
+        : o.estado === "VENCIDO" ? '<div class="at-faixa aviso">Orçamento vencido em ' + At_esc_(o.validade) + '. Para seguir, peça uma revisão à Metrolabs.</div>'
+        : '<p class="at-txt"><b>' + At_esc_(o.resposta.decisaoNome) + '</b> em ' + At_esc_(o.resposta.em) + ' por ' + At_esc_(o.resposta.por) + ' (' + At_esc_(o.resposta.canal) + ').</p>';
+      return '<div class="at-card"><p class="at-card-tit">' + At_esc_(o.numero) + ' rev. ' + At_esc_(o.revisao) + ' · chamado ' + At_esc_(o.chamadoNumero) + ' · ' + At_esc_(o.totalTxt) + '</p><p class="at-meta">' + At_esc_(o.equipamento) + (o.unidade ? ' · ' + At_esc_(o.unidade) : '') + ' · validade ' + At_esc_(o.validade) + '</p>' +
+        '<table class="at-tabela"><thead><tr><th>Item</th><th class="n">Qtd.</th><th class="n">Total</th></tr></thead><tbody>' + it + '</tbody></table>' + (o.condicoes ? '<p class="at-meta">Condições: ' + At_esc_(o.condicoes) + '</p>' : '') +
+        (o.pdfUrl ? '<p class="at-txt"><a href="' + At_esc_(o.pdfUrl) + '" target="_blank" rel="noopener">Baixar o orçamento em PDF</a></p>' : '') + est + '</div>';
+    }).join("") + '</div>';
+  }
+  /** Resposta do cliente no portal: aprovar (nome, cargo, CPF opcional, e-mail, "li e concordo" e assinatura), pedir ajuste ou recusar. */
+  function At_responderOrcamento_(o, dec, depois) {
+    if (!o) return;
+    var eu = (AT.ini && AT.ini.eu) || {}, apr = dec === "APROVADO";
+    var tit = apr ? "Aprovar o orçamento " + o.numero : dec === "AJUSTE" ? "Pedir ajuste no orçamento " + o.numero : "Recusar o orçamento " + o.numero;
+    var ov = At_modal_(tit, '<p class="at-txt">Total ' + At_esc_(o.totalTxt) + ' · validade ' + At_esc_(o.validade) + '. A resposta fica registrada com data e hora e não pode ser trocada depois.</p>' +
+      '<div class="at-grade2">' + At_campo_("Nome completo", '<input id="atPoNome" maxlength="120" autocomplete="name" value="' + At_esc_(eu.nome || "") + '">') + At_campo_("E-mail para a confirmação", '<input id="atPoEmail" type="email" maxlength="160" autocomplete="email">') + '</div>' +
+      (apr ? '<div class="at-grade2">' + At_campo_("Cargo ou função", '<input id="atPoCargo" maxlength="80">') + At_campo_("CPF (opcional)", '<input id="atPoDoc" inputmode="numeric" maxlength="14">') + '</div>' +
+        At_campo_("Assinatura (com o dedo ou o mouse)", '<canvas id="atPoQuadro" style="display:block;width:100%;height:180px;background:#fff;border:2px dashed #9DA29C;border-radius:8px;touch-action:none"></canvas>', "") + '<div class="at-acoes"><button type="button" class="btn-secondary" id="atPoLimpar">Limpar a assinatura</button></div>' +
+        '<label class="at-check"><input type="checkbox" id="atPoConc"> Li o orçamento ' + At_esc_(o.numero) + ' e concordo com os itens, os valores e as condições.</label>'
+        : At_campo_(dec === "AJUSTE" ? "O que precisa mudar" : "Motivo da recusa", '<textarea id="atPoTexto" maxlength="1500"></textarea>')) + '<div id="atPoRespMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + (apr ? "Aprovar" : dec === "AJUSTE" ? "Pedir ajuste" : "Recusar") + '</button>', 640);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    var q = apr ? At_quadro_(At_$_("atPoQuadro")) : null;
+    if (q) At_$_("atPoLimpar").onclick = q.limpar;
+    ov.querySelector("[data-ok]").onclick = function () {
+      var d = { id: o.id, decisao: dec, nome: At_$_("atPoNome").value, email: At_$_("atPoEmail").value, navegador: navigator.userAgent };
+      if (apr) { d.cargo = At_$_("atPoCargo").value; d.documento = At_$_("atPoDoc").value; d.concordo = At_$_("atPoConc").checked; d.assinatura = q.tracos ? q.imagem() : ""; }
+      else d.texto = At_$_("atPoTexto").value;
+      At_chamar_("responderOrcamento", d, function (x) { ov.remove(); alert(x.message + " Protocolo: " + x.protocolo + "."); depois(); }, function (m) { At_msg_("atPoRespMsg", m); }, { carregando: "Registrando…" });
+    };
+  }
+  /** Quadro de assinatura (o mesmo desenho do aplicativo de campo): traço preto, fundo branco, PNG reduzido. */
+  function At_quadro_(c) {
+    var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)), q = { tracos: 0 }, ult = null;
+    var prep = function () { var r = c.getBoundingClientRect(); c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.lineWidth = 2.6 * dpr; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#000"; q.tracos = 0; };
+    var pt = function (e) { var r = c.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr }; };
+    setTimeout(prep, 0);
+    c.addEventListener("pointerdown", function (e) { e.preventDefault(); try { c.setPointerCapture(e.pointerId); } catch (x) {} ult = pt(e); var g = c.getContext("2d"); g.beginPath(); g.arc(ult.x, ult.y, 1.2 * dpr, 0, Math.PI * 2); g.fillStyle = "#000"; g.fill(); q.tracos++; });
+    c.addEventListener("pointermove", function (e) { if (!ult) return; e.preventDefault(); var p = pt(e), g = c.getContext("2d"); g.beginPath(); g.moveTo(ult.x, ult.y); g.lineTo(p.x, p.y); g.stroke(); ult = p; q.tracos++; });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { c.addEventListener(ev, function () { ult = null; }); });
+    q.limpar = prep;
+    q.imagem = function () { var larguras = [600, 420, 300]; for (var i = 0; i < larguras.length; i++) { var k = Math.min(1, larguras[i] / c.width), s = document.createElement("canvas"); s.width = Math.round(c.width * k); s.height = Math.round(c.height * k); var g = s.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, s.width, s.height); g.drawImage(c, 0, 0, s.width, s.height); var u = s.toDataURL("image/png"); if (u.length <= 200000) return u; } return ""; };
+    return q;
+  }
   function At_renderPortal_(div) {
     div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Meus chamados", "Peça atendimento técnico para os seus equipamentos e acompanhe cada pedido até o relatório.", '<button type="button" class="btn-primary" id="atPoNovo">Pedir atendimento</button>') + '<div id="atPoCorpo"><div class="at-vazio">Carregando…</div></div></div>';
     At_chamar_("portal", {}, function (r) {
       var c = At_$_("atPoCorpo"); if (!c) return;
       AT.portal = r;
       var h = (r.pedidos.length ? '<div class="at-sec">Pedidos em análise</div><div class="at-lista">' + r.pedidos.map(function (p) { return '<div class="at-card"><p class="at-card-tit">' + At_esc_(p.numero) + ' · ' + At_esc_(p.equipamentoTexto) + '</p><p class="at-meta">Enviado em ' + At_esc_(p.em) + '. A equipe técnica confere e abre o chamado.</p><p class="at-txt">' + At_esc_(p.descricao) + '</p></div>'; }).join("") + '</div>' : '') +
+        At_portalOrcamentos_(r.orcamentos || []) +
         '<div class="at-sec">Chamados</div>' + (r.chamados.length ? '<div class="at-lista">' + r.chamados.map(function (ch) {
           return '<div class="at-card' + (ch.cancelado ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(ch.numero) + ' · ' + At_esc_(ch.equipamentoTexto) + '</p><p class="at-meta">Aberto em ' + At_esc_(ch.abertoEm) + (ch.unidadeNome ? ' · ' + At_esc_(ch.unidadeNome) : '') + '</p>' +
             (ch.cancelado ? '<p class="at-txt">Cancelado.</p>' : '<div class="at-etapas">' + ch.etapas.map(function (e, i) { return '<span class="' + (i + 1 <= ch.etapa ? "feita" : "") + '">' + At_esc_(e) + '</span>'; }).join("") + '</div>') +
@@ -1059,6 +1158,7 @@
         }).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado ainda.</div>') +
         '<div class="at-sec">Relatórios emitidos</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
       c.innerHTML = h;
+      c.querySelectorAll("[data-po-orc]").forEach(function (b) { b.onclick = function () { At_responderOrcamento_((r.orcamentos || []).filter(function (o) { return o.id === b.getAttribute("data-po-orc"); })[0], b.getAttribute("data-dec"), function () { At_renderPortal_(div); }); }; });
     }, function (m) { At_msg_("atPoCorpo", m); });
     At_$_("atPoNovo").onclick = function () {
       var eqs = (AT.portal && AT.portal.equipamentos) || [];

@@ -424,7 +424,8 @@ function EnviarDoc_aplicarNome_(texto, nome) {
 
 function EnviarDoc_htmlEmail_(texto, eu, anexos, modo) {
   var corpo = String(texto || '').replace(/\r\n?/g, '\n').split(/\n{2,}/).map(function (p) {
-    return '<p style="margin:0 0 12px">' + EnviarDoc_esc_(p).replace(/\n/g, '<br>') + '</p>';
+    // 22/10/2026: endereço https vira link clicável (link de aceite do orçamento da Assistência e qualquer outro digitado)
+    return '<p style="margin:0 0 12px">' + EnviarDoc_esc_(p).replace(/\n/g, '<br>').replace(/https:\/\/[^\s<"']+/g, function (u) { return '<a href="' + u + '" style="color:#1F6B2A;font-weight:bold">' + u + '</a>'; }) + '</p>';
   }).join('');
   var lista = (anexos || []).map(function (a) { return '<li>' + EnviarDoc_esc_(a.nome) + '</li>'; }).join('');
   var rodape = modo === 'SISTEMA'

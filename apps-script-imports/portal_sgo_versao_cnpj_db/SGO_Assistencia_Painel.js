@@ -34,6 +34,10 @@ function Assistencia_fontePendencias_(add, ctx) {
   Ast_memoLimpar_();
   var agoraMs = Date.now(), regras = Ast_regras_(), us = Ast_usuarios_(), hoje = Ast_hoje_();
   var triagem = Ast_triagemPara_(us);
+  // orçamento vigente de cada chamado (o mais novo que não foi substituído) e o Comercial que acompanha a resposta
+  var orcPorChamado = {}, orcCom = null;
+  Ast_ler_(AST_ABAS.ORCAMENTOS).forEach(function (o) { if (Ast_up_(o.SITUACAO) !== 'SUBSTITUIDO') orcPorChamado[Ast_s_(o.CHAMADO_ID)] = o; });
+  try { orcCom = AstR_comercialPara_(); } catch (eCom) { orcCom = null; }
   Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) {
     var s = Ast_up_(c.SITUACAO), num = Ast_s_(c.NUMERO), cli = Ast_s_(c.CLIENTE_NOME).slice(0, 50), p = Ast_up_(c.PRIORIDADE);
     if (AST_TERMINAIS.indexOf(s) >= 0) return;
@@ -79,7 +83,16 @@ function Assistencia_fontePendencias_(add, ctx) {
         titulo: 'Prazo ' + (sla.estado === 'ESTOURADO' ? 'estourado' : 'em risco') + ': chamado ' + num + ' (' + cli + ')', detalhe: sla.texto + '. Situação: ' + (AST_SITUACOES[s] || s) + '. ' + Ast_s_(c.PROXIMA_ACAO),
         oQueFazer: 'Abra o chamado ' + num + ' e resolva o próximo passo: ' + (Ast_s_(c.PROXIMA_ACAO) || 'veja na ficha') + '.', tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(sla.ate) } })));
     }
-    if (s === 'AGUARDANDO_ORCAMENTO') {
+    // 22/10/2026 (etapa 4): o cliente recusou ou pediu ajuste (link, portal ou registro manual): a gestão decide
+    var orcAtual = s === 'AGUARDANDO_ORCAMENTO' ? orcPorChamado[Ast_s_(c.ID)] : null, sitOrc = orcAtual ? Ast_up_(orcAtual.SITUACAO) : '';
+    if (sitOrc === 'RECUSADO' || sitOrc === 'AJUSTE') {
+      var recusa = sitOrc === 'RECUSADO';
+      add(Pend_item_(recusa ? 'ast_orc_recusado' : 'ast_orc_ajuste', Object.assign({}, base, { id: 'AST:ORCRESP:' + orcAtual.ID, paraUsuarios: triagem.ids.concat(orcCom ? [orcCom.id] : []), gravidade: 'ATENCAO', dias: null,
+        titulo: (recusa ? 'Orçamento recusado pelo cliente: chamado ' : 'Cliente pediu ajuste no orçamento: chamado ') + num + ' (' + cli + ')',
+        detalhe: 'Orçamento ' + Ast_s_(orcAtual.NUMERO) + ' rev. ' + (Number(orcAtual.REVISAO) || 0) + ', respondido em ' + Ast_br_(orcAtual.DECIDIDO_EM) + ' por ' + Ast_s_(orcAtual.ACEITE_POR) + '. ' + (recusa ? 'Motivo: ' : 'Ajuste pedido: ') + Ast_s_(orcAtual.DECISAO_TEXTO).slice(0, 220),
+        oQueFazer: recusa ? 'Abra o chamado ' + num + ' em Assistência técnica > Chamados e decida: negociar (Nova revisão do orçamento), cobrar a visita ou encerrar o chamado (com o motivo).' : 'Abra o chamado ' + num + ' em Assistência técnica > Chamados > Orçamento, faça a Nova revisão com o ajuste, emita e envie de novo com o link.',
+        tela: AST_PEND_TELA('assistencia', c.ID) })));
+    } else if (s === 'AGUARDANDO_ORCAMENTO') {
       var desde = Ast_dia_(c.TRIAGEM_FIM_EM) || Ast_dia_(c.ABERTO_EM);
       var parado = typeof Ges_diasUteisEntre_ === 'function' ? Ges_diasUteisEntre_(desde, hoje) : 0;
       if (parado >= 2) add(Pend_item_('ast_orcamento', Object.assign({}, base, { id: 'AST:ORC:' + c.ID, gravidade: 'ATENCAO', dias: null,
@@ -429,7 +442,8 @@ function AstP_portal_(eu) {
   var equipamentos = Ast_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) { return Ast_s_(e.CLIENTE_ID) === cid && Ast_up_(e.STATUS || 'ATIVO') === 'ATIVO'; })
     .map(function (e) { var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(e.UNIDADE_ID)] || {}; return { id: e.ID, texto: Ast_equipTexto_(e), unidadeId: Ast_s_(e.UNIDADE_ID), unidade: Ast_s_(un.NOME_UNIDADE) }; })
     .sort(function (a, b) { return a.texto.localeCompare(b.texto, 'pt-BR'); });
-  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]) };
+  var orcamentos = typeof AstL_portalOrcamentos_ === 'function' ? AstL_portalOrcamentos_(eu) : [];
+  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, orcamentos: orcamentos, cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]) };
 }
 
 // ------------------------------------------------------------
@@ -532,6 +546,13 @@ var AST_ACOES = {
   emitirOrcamento: function (eu, d) { return AstR_emitirOrcamento_(eu, d); },
   revisarOrcamento: function (eu, d) { return AstR_revisarOrcamento_(eu, d); },
   decidirOrcamento: function (eu, d) { return AstR_decidirOrcamento_(eu, d); },
+  // 22/10/2026 (etapa 4): envio com link de aceite, link para copiar, invalidar e comprovante; o cliente responde no portal
+  previaEnvioOrcamento: function (eu, d) { return AstL_previaEnvio_(eu, d); },
+  enviarOrcamento: function (eu, d) { return AstL_enviar_(eu, d); },
+  orcLinkCopiar: function (eu, d) { return AstL_copiar_(eu, d); },
+  orcLinkInvalidar: function (eu, d) { return AstL_invalidar_(eu, d); },
+  orcComprovante: function (eu, d) { return AstL_comprovanteDeNovo_(eu, d); },
+  responderOrcamento: function (eu, d) { return AstL_responderPortal_(eu, d); },
   // indicadores
   indicadores: function (eu, d) {
     Ast_exigir_(eu, 'INTERNO', 'ver os indicadores');
@@ -570,12 +591,12 @@ var AST_ACOES = {
   // portal do cliente
   portal: function (eu) { return AstP_portal_(eu); }
 };
-var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos'];
+var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento'];
 /** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
-var AST_ACOES_DESLIGADA = ['abrir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento'];
+var AST_ACOES_DESLIGADA = ['abrir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
 var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
   agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.',
-  salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente' };
+  salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente', enviarOrcamento: 'enviar o orçamento com o link de aceite', orcLinkCopiar: 'gerar o link de aceite' };
 
 /** google.script.run: Assistencia_api(sessionId, acao, dados). Nunca lança. */
 function Assistencia_api(sessionId, acao, dados) {

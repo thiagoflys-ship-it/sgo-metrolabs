@@ -290,6 +290,17 @@ function AstC_ligarPedidoCompra_(eu, c, p) {
   return req;
 }
 
+/** Identidade do Compras de um usuário ativo (sem sessão), para o pedido que nasce da aprovação do cliente pelo link. */
+function AstC_cmpComo_(usuarioId) {
+  if (!Ast_s_(usuarioId) || typeof Cmp_nivelDe_ !== 'function') return null;
+  var u = null;
+  try { u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, usuarioId); } catch (e) { u = null; }
+  if (!u || Ast_up_(u.STATUS || 'ATIVO') !== 'ATIVO') return null;
+  var eu = { id: Ast_s_(u.ID), nome: Ast_s_(u.NOME) || Ast_s_(u.USUARIO), login: Ast_s_(u.USUARIO), perfil: Ast_up_(u.PERFIL), area: Ast_up_(u.AREA), email: Ast_s_(u.EMAIL).toLowerCase() };
+  var n = Cmp_nivelDe_(eu);
+  Object.keys(n).forEach(function (k) { eu[k] = n[k]; });
+  return eu;
+}
 /** Pedido de peça no Compras nativo (vínculo ao cliente e ao chamado). Devolve { id, numero } ou { aviso }. Nunca lança. */
 function AstC_pedirPecaCompras_(eu, c, p) {
   var regras = Ast_regras_();
@@ -297,7 +308,8 @@ function AstC_pedirPecaCompras_(eu, c, p) {
   if (typeof CmpR_salvar_ !== 'function' || typeof Cmp_eu_ !== 'function') return { aviso: 'Compras não está disponível neste servidor' };
   try {
     if (typeof Cmp_garantirAbas_ === 'function') Cmp_garantirAbas_();
-    var euCmp = eu.sessionId ? Cmp_eu_(eu.sessionId) : null;
+    // 22/10/2026 (etapa 4): aprovação pelo link do cliente não tem sessão; o pedido sai em nome de quem enviou o orçamento
+    var euCmp = eu.sessionId ? Cmp_eu_(eu.sessionId) : AstC_cmpComo_(eu.comoUsuarioId);
     if (!euCmp) return { aviso: 'sem sessão para abrir o pedido de compra' };
     var qtd = Ast_num_(p.quantidade); if (!(qtd > 0)) qtd = 1;
     var r = CmpR_salvar_(euCmp, { urgencia: p.urgencia || 'ALTA', finalidade: 'Peça para o chamado ' + c.NUMERO + (p.osNumero ? ' (O.S. ' + p.osNumero + ')' : '') + ' de ' + Ast_s_(c.CLIENTE_NOME) + ': ' + Ast_s_(c.SINTOMA).slice(0, 120),

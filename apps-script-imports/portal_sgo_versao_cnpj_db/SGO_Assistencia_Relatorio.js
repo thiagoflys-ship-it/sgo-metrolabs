@@ -340,7 +340,7 @@ function AstR_comercialPara_() {
 }
 /** A triagem pediu orçamento: cria o rascunho e a atividade do Comercial (sem valores). Chamar dentro da trava. */
 function AstR_pedirOrcamento_(eu, c, descricao) {
-  var ja = Ast_ler_(AST_ABAS.ORCAMENTOS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === Ast_s_(c.ID) && ['RASCUNHO', 'EMITIDO'].indexOf(Ast_up_(o.SITUACAO)) >= 0; })[0];
+  var ja = Ast_ler_(AST_ABAS.ORCAMENTOS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === Ast_s_(c.ID) && ['RASCUNHO', 'EMITIDO', 'AJUSTE'].indexOf(Ast_up_(o.SITUACAO)) >= 0; })[0];
   if (ja) return ja;
   var o = Ast_inserir_(AST_ABAS.ORCAMENTOS, { NUMERO: Ast_proximoNumero_('OA', AST_ABAS.ORCAMENTOS), REVISAO: 0, CHAMADO_ID: c.ID, CHAMADO_NUMERO: c.NUMERO, CLIENTE_ID: c.CLIENTE_ID, CLIENTE_NOME: c.CLIENTE_NOME,
     ITENS_JSON: JSON.stringify([{ tipo: 'SERVICO', descricao: Ast_texto_(descricao, 300), quantidade: 1, unidade: 'serv.', valorUnitario: 0 }]), VALOR_TOTAL: 0,
@@ -364,8 +364,10 @@ function AstR_orcPublico_(o, eu) {
   var r = { id: o.ID, numero: o.NUMERO, revisao: Number(o.REVISAO) || 0, chamadoId: o.CHAMADO_ID, chamadoNumero: o.CHAMADO_NUMERO, clienteNome: o.CLIENTE_NOME, situacao: Ast_up_(o.SITUACAO),
     situacaoNome: AST_ORC_SITUACOES[Ast_up_(o.SITUACAO)] || o.SITUACAO, itens: itens, validade: Ast_brDia_(o.VALIDADE), validadeIso: Ast_dia_(o.VALIDADE), condicoes: ver ? Ast_s_(o.CONDICOES) : '',
     pdfUrl: Ast_s_(o.PDF_URL), pdfId: Ast_s_(o.PDF_ID), emitidoEm: Ast_br_(o.EMITIDO_EM), enviadoEm: Ast_br_(o.ENVIADO_EM), enviadoPara: Ast_s_(o.ENVIADO_PARA), aceiteUrl: Ast_s_(o.ACEITE_URL), aceitePor: Ast_s_(o.ACEITE_POR), decididoEm: Ast_br_(o.DECIDIDO_EM),
-    decisaoTexto: Ast_s_(o.DECISAO_TEXTO), requisicao: Ast_s_(o.REQUISICAO_ID), veValores: ver };
+    decisaoTexto: Ast_s_(o.DECISAO_TEXTO), requisicao: Ast_s_(o.REQUISICAO_ID), veValores: ver, aceiteCanal: Ast_s_(o.ACEITE_CANAL) };
   if (ver) { r.valorTotal = Number(o.VALOR_TOTAL) || 0; r.valorTotalTxt = Ast_moeda_(o.VALOR_TOTAL); }
+  // 22/10/2026 (etapa 4): situação do link de aceite e a resposta registrada (só para quem vê valores)
+  if (ver && typeof AstL_aceiteTela_ === 'function') { try { r.aceite = AstL_aceiteTela_(o); } catch (e) { r.aceite = null; } }
   return r;
 }
 function AstR_orcamentosDoChamado_(eu, c) {
@@ -421,18 +423,21 @@ function AstR_emitirOrcamento_(eu, d) {
   Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, campos);
   if (c.ID) Ast_evento_('CHAMADO', c.ID, 'ORCAMENTO', eu, 'Orçamento ' + o.NUMERO + ' emitido; aguarda a resposta do cliente', { numero: c.NUMERO, publico: true });
   return { orcamento: AstR_orcPublico_(Object.assign({}, o, campos), eu), html: g.html || fin.html,
-    message: 'Orçamento ' + o.NUMERO + ' emitido. Envie ao cliente pelo botão "Enviar ao cliente" e registre a resposta com o aceite anexado.' };
+    message: 'Orçamento ' + o.NUMERO + ' emitido. Envie ao cliente pelo botão "Enviar com link de aceite": o cliente aprova, recusa ou pede ajuste pelo link. Quem responder por telefone ou e-mail tem a resposta registrada em "Registrar a resposta do cliente", com o aceite anexado.' };
 }
 /** Nova revisão do orçamento emitido (a anterior fica como substituída). */
 function AstR_revisarOrcamento_(eu, d) {
   Ast_exigir_(eu, 'VALORES', 'revisar o orçamento');
   var o = Ast_porId_(AST_ABAS.ORCAMENTOS, d && d.id);
-  if (!o || ['EMITIDO', 'RECUSADO'].indexOf(Ast_up_(o.SITUACAO)) < 0) throw new Error('Não foi possível revisar: só orçamento emitido ou recusado ganha revisão');
+  if (!o || ['EMITIDO', 'RECUSADO', 'AJUSTE'].indexOf(Ast_up_(o.SITUACAO)) < 0) throw new Error('Não foi possível revisar: só orçamento emitido, recusado ou com pedido de ajuste ganha revisão');
   var r = Ast_comTrava_(function () {
     Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, { SITUACAO: 'SUBSTITUIDO', ATUALIZADO_EM: Ast_agora_() });
+    // a revisão nova revoga o link de aceite da anterior (etapa 4)
+    if (typeof AstL_encerrarLinks_ === 'function') AstL_encerrarLinks_(o.ID, 'SUBSTITUIDO', 'Orçamento substituído pela revisão ' + ((Number(o.REVISAO) || 0) + 1));
     return Ast_inserir_(AST_ABAS.ORCAMENTOS, { NUMERO: o.NUMERO, REVISAO: (Number(o.REVISAO) || 0) + 1, CHAMADO_ID: o.CHAMADO_ID, CHAMADO_NUMERO: o.CHAMADO_NUMERO, CLIENTE_ID: o.CLIENTE_ID, CLIENTE_NOME: o.CLIENTE_NOME,
       ITENS_JSON: o.ITENS_JSON, VALOR_TOTAL: o.VALOR_TOTAL, VALIDADE: Ast_somarDias_(Ast_hoje_(), 15), CONDICOES: o.CONDICOES, SITUACAO: 'RASCUNHO', COMERCIAL_ATIVIDADE_ID: o.COMERCIAL_ATIVIDADE_ID, POR_ID: eu.id, POR_NOME: eu.nome, ATUALIZADO_EM: Ast_agora_() });
   });
+  if (Ast_s_(r.CHAMADO_ID)) Ast_atualizar_(AST_ABAS.CHAMADOS, r.CHAMADO_ID, { ORCAMENTO_ID: r.ID });
   return { orcamento: AstR_orcPublico_(r, eu), message: 'Revisão ' + r.REVISAO + ' do orçamento ' + r.NUMERO + ' aberta em rascunho.' };
 }
 /**
@@ -460,31 +465,62 @@ function AstR_decidirOrcamento_(eu, d) {
     Ast_privado_(f);
     arq = { id: f.getId(), url: f.getUrl(), nome: nomeA };
   } else if (txt.length < 5) throw new Error('Não foi possível registrar: escreva o motivo da recusa informado pelo cliente');
+  var res = AstR_aplicarDecisao_(eu, o, { decisao: dec, por: por, texto: txt, arquivo: arq, comprarPecas: d.comprarPecas !== false, canal: 'MANUAL' });
+  return { message: 'Resposta registrada: orçamento ' + o.NUMERO + ' ' + (dec === 'APROVADO' ? 'aprovado' + (res.comprar ? ' e peças pedidas a Compras' : '; agende o atendimento') : 'recusado; decida entre nova revisão e cancelar o chamado') + '.',
+    chamado: res.c ? AstC_publico_(res.c, eu, Date.now()) : null };
+}
+/**
+ * Núcleo único da resposta do cliente (22/10/2026, etapa 4): a mesma para o registro manual com anexo, o link de aceite e o
+ * portal "Meus chamados". x: { decisao: APROVADO|RECUSADO|AJUSTE, por, texto, arquivo:{ id, url, nome }|null, comprarPecas, canal: MANUAL|LINK|PORTAL, registroId }.
+ * Confere de novo dentro da trava que o orçamento ainda está emitido (resposta única). Aprovado: chamado a "Planejado" ou
+ * "Aguardando peça" com um pedido em Compras por peça; recusado e ajuste: o chamado fica aguardando a decisão da gestão.
+ */
+function AstR_aplicarDecisao_(eu, o, x) {
+  var dec = Ast_up_(x.decisao), por = Ast_s_(x.por), txt = Ast_s_(x.texto), arq = x.arquivo || null, canal = Ast_up_(x.canal) || 'MANUAL';
   var itens = Ast_json_(o.ITENS_JSON, []), pecas = itens.filter(function (i) { return Ast_up_(i.tipo) === 'PECA'; });
-  var comprar = dec === 'APROVADO' && pecas.length && d.comprarPecas !== false;
+  var comprar = !!(dec === 'APROVADO' && pecas.length && x.comprarPecas !== false);
+  var pelo = canal === 'LINK' ? ' pelo link do orçamento' : canal === 'PORTAL' ? ' pelo portal do cliente' : '';
   var res = Ast_comTrava_(function () {
-    var campos = { SITUACAO: dec, ACEITE_POR: por, DECISAO_TEXTO: txt, DECIDIDO_EM: Ast_agora_(), ATUALIZADO_EM: Ast_agora_() };
+    delete AST_MEMO[AST_ABAS.ORCAMENTOS];
+    var atual = Ast_porId_(AST_ABAS.ORCAMENTOS, o.ID);
+    if (!atual || Ast_up_(atual.SITUACAO) !== 'EMITIDO') throw new Error('Não foi possível registrar: o orçamento ' + o.NUMERO + ' já foi respondido ou substituído (' + (AST_ORC_SITUACOES[Ast_up_(atual && atual.SITUACAO)] || 'não encontrado') + '). Atualize a ficha do chamado');
+    var campos = { SITUACAO: dec, ACEITE_POR: por, DECISAO_TEXTO: txt, DECIDIDO_EM: Ast_agora_(), ACEITE_CANAL: canal, ACEITE_REGISTRO_ID: Ast_s_(x.registroId), ATUALIZADO_EM: Ast_agora_() };
     if (arq) Object.assign(campos, { ACEITE_ARQUIVO_ID: arq.id, ACEITE_URL: arq.url, ACEITE_NOME: arq.nome });
     Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, campos);
     var c = Ast_porId_(AST_ABAS.CHAMADOS, o.CHAMADO_ID);
     if (c && Ast_up_(c.SITUACAO) === 'AGUARDANDO_ORCAMENTO') {
       if (dec === 'APROVADO') {
         if (comprar) {
-          c = AstC_mudar_(eu, c, 'AGUARDANDO_PECA', { PECA_DESCRICAO: pecas.map(function (p) { return p.quantidade + ' × ' + p.descricao; }).join('; ').slice(0, 500), PROXIMA_ACAO: 'Aguardar as peças do orçamento aprovado e agendar' }, 'ORCAMENTO_APROVADO', 'Orçamento ' + o.NUMERO + ' aprovado por ' + por + '; peças pedidas a Compras');
+          c = AstC_mudar_(eu, c, 'AGUARDANDO_PECA', { PECA_DESCRICAO: pecas.map(function (p) { return p.quantidade + ' × ' + p.descricao; }).join('; ').slice(0, 500), PROXIMA_ACAO: 'Aguardar as peças do orçamento aprovado e agendar' }, 'ORCAMENTO_APROVADO', 'Orçamento ' + o.NUMERO + ' aprovado por ' + por + pelo + '; peças pedidas a Compras');
           var cc = c;
           pecas.forEach(function (p) { Ast_depois_(function () { AstC_ligarPedidoCompra_(eu, cc, { descricao: p.descricao, codigo: p.codigo, quantidade: p.quantidade, urgencia: 'ALTA' }); }); });
-        } else c = AstC_mudar_(eu, c, 'PLANEJADO', { PROXIMA_ACAO: 'Agendar o atendimento (orçamento aprovado)' }, 'ORCAMENTO_APROVADO', 'Orçamento ' + o.NUMERO + ' aprovado por ' + por);
+        } else c = AstC_mudar_(eu, c, 'PLANEJADO', { PROXIMA_ACAO: 'Agendar o atendimento (orçamento aprovado)' }, 'ORCAMENTO_APROVADO', 'Orçamento ' + o.NUMERO + ' aprovado por ' + por + pelo);
+      } else if (dec === 'AJUSTE') {
+        Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { PROXIMA_ACAO: 'Cliente pediu ajuste no orçamento: faça a nova revisão e envie de novo', ATUALIZADO_EM: Ast_agora_() });
+        Ast_evento_('CHAMADO', c.ID, 'ORCAMENTO_AJUSTE', eu, 'Ajuste pedido no orçamento ' + o.NUMERO + ' por ' + por + pelo + ': ' + txt, { numero: c.NUMERO, publico: true });
+        c = Ast_porId_(AST_ABAS.CHAMADOS, c.ID) || c;
       } else {
-        Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { PROXIMA_ACAO: 'Cliente recusou o orçamento: fazer nova revisão ou cancelar o chamado', ATUALIZADO_EM: Ast_agora_() });
-        Ast_evento_('CHAMADO', c.ID, 'ORCAMENTO_RECUSADO', eu, 'Orçamento ' + o.NUMERO + ' recusado por ' + por + ': ' + txt, { numero: c.NUMERO, publico: true });
+        Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { PROXIMA_ACAO: 'Cliente recusou o orçamento: decidir entre negociar (nova revisão), cobrar a visita ou encerrar o chamado', ATUALIZADO_EM: Ast_agora_() });
+        Ast_evento_('CHAMADO', c.ID, 'ORCAMENTO_RECUSADO', eu, 'Orçamento ' + o.NUMERO + ' recusado por ' + por + pelo + ': ' + txt, { numero: c.NUMERO, publico: true });
+        c = Ast_porId_(AST_ABAS.CHAMADOS, c.ID) || c;
       }
     }
-    Ast_mudarAtividade_(o.COMERCIAL_ATIVIDADE_ID, 'Concluída', 'Orçamento ' + o.NUMERO + ' ' + (dec === 'APROVADO' ? 'aprovado' : 'recusado') + ' pelo cliente (' + por + ').');
-    if (c) Ast_avisar_(Ast_gestoresTecnica_(), 'ORCAMENTO_' + dec, 'Orçamento ' + (dec === 'APROVADO' ? 'aprovado' : 'recusado') + ': ' + c.NUMERO, 'Cliente ' + Ast_s_(c.CLIENTE_NOME) + ' · respondeu ' + por + (txt ? ': ' + txt : '') + '. ' + Ast_s_(c.PROXIMA_ACAO), c.ID, { autorId: eu.id, evento: 'AT12' });
+    if (dec !== 'AJUSTE') Ast_mudarAtividade_(o.COMERCIAL_ATIVIDADE_ID, 'Concluída', 'Orçamento ' + o.NUMERO + ' ' + (dec === 'APROVADO' ? 'aprovado' : 'recusado') + ' pelo cliente (' + por + ')' + pelo + '.');
+    if (c) {
+      var nomeDec = dec === 'APROVADO' ? 'aprovado' : dec === 'AJUSTE' ? 'com pedido de ajuste' : 'recusado';
+      var dest = Ast_gestoresTecnica_(), ev = 'AT12';
+      if (canal !== 'MANUAL') {
+        // 22/10/2026 (etapa 4): resposta do próprio cliente pelo link ou pelo portal avisa a gestão, o Comercial e o técnico do chamado
+        var com = AstR_comercialPara_();
+        if (com) dest = dest.concat([com.id]);
+        if (Ast_s_(c.TECNICO_ID)) dest = dest.concat([Ast_s_(c.TECNICO_ID)]);
+        ev = dec === 'APROVADO' ? 'AT16' : 'AT17';
+      }
+      Ast_avisar_(dest, 'ORCAMENTO_' + dec, 'Orçamento ' + nomeDec + pelo + ': ' + c.NUMERO, 'Cliente ' + Ast_s_(c.CLIENTE_NOME) + ' · respondeu ' + por + (txt ? ': ' + txt : '') + '. ' + Ast_s_(c.PROXIMA_ACAO), c.ID, { autorId: eu.id, evento: ev });
+    }
     return { c: c };
   });
-  return { message: 'Resposta registrada: orçamento ' + o.NUMERO + ' ' + (dec === 'APROVADO' ? 'aprovado' + (comprar ? ' e peças pedidas a Compras' : '; agende o atendimento') : 'recusado; decida entre nova revisão e cancelar o chamado') + '.',
-    chamado: res.c ? AstC_publico_(res.c, eu, Date.now()) : null };
+  return { c: res.c, comprar: comprar };
 }
 
 // ------------------------------------------------------------

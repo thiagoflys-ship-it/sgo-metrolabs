@@ -6,7 +6,7 @@
  * só acrescentando o que ainda não existe. O nome do arquivo vem depois deles na ordem de carga (alfabética); as funções
  * de aviso e de pendência chamam o registro de novo antes de usar, por segurança.
  *
- * Eventos da matriz (AT01 a AT12): sistema na hora; e-mail na hora só no que tem prazo curto (triagem, chamado crítico,
+ * Eventos da matriz (AT01 a AT17): sistema na hora; e-mail na hora só no que tem prazo curto (triagem, chamado crítico,
  * reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto; WhatsApp só na exceção do chamado P1 ao
  * gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do resumo do dia do técnico; o cliente recebe
  * só e-mail enquanto durar o piloto.
@@ -31,11 +31,14 @@ var AST_PEND_TIPOS = {
   ast_enviar_cliente: { modulo: 'assistencia', um: 'relatório de O.S. para enviar ao cliente', varios: 'relatórios de O.S. para enviar ao cliente', rotulo: 'Enviar ao cliente', fazer: 'envie pelo aplicativo (O.S. encerrada > Enviar ao cliente) ou em Assistência técnica > Ordens de serviço > Documento e envio', tela: { tipo: 'assistencia', mod: 'assistencia_os' }, origem: 'ASSISTENCIA' },
   ast_sem_envio: { modulo: 'assistencia', um: 'O.S. encerrada há 1 dia útil sem envio ao cliente', varios: 'O.S. encerradas há 1 dia útil sem envio ao cliente', rotulo: 'Relatório não enviado', fazer: 'envie o relatório ao cliente em Assistência técnica > Ordens de serviço > Documento e envio', tela: { tipo: 'assistencia', mod: 'assistencia_os' }, origem: 'ASSISTENCIA' },
   ast_retorno: { modulo: 'assistencia', um: 'peça disponível: retorno a agendar', varios: 'peças disponíveis: retornos a agendar', rotulo: 'Agendar o retorno', fazer: 'agende o retorno em Assistência técnica > Chamados (a peça já está com Compras)', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
+  // 22/10/2026 (etapa 4): resposta do cliente ao orçamento que pede decisão da gestão (pelo link, pelo portal ou registrada à mão)
+  ast_orc_recusado: { modulo: 'assistencia', um: 'orçamento recusado pelo cliente para decidir', varios: 'orçamentos recusados pelo cliente para decidir', rotulo: 'Orçamento recusado', fazer: 'decida em Assistência técnica > Chamados: negociar (nova revisão), cobrar a visita ou encerrar', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
+  ast_orc_ajuste: { modulo: 'assistencia', um: 'pedido de ajuste no orçamento para revisar', varios: 'pedidos de ajuste em orçamentos para revisar', rotulo: 'Ajustar o orçamento', fazer: 'faça a nova revisão em Assistência técnica > Chamados > Orçamento e envie de novo com o link', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
   ast_p1_triagem: { modulo: 'assistencia', um: 'chamado crítico (P1) sem triagem há mais de 30 minutos', varios: 'chamados críticos (P1) sem triagem há mais de 30 minutos', rotulo: 'P1 sem triagem', fazer: 'faça a triagem agora em Assistência técnica > Chamados', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' }
 };
 /** Decisões da gestão na Caixa (prazo em dias úteis quando o item não traz o próprio). */
 var AST_GES_TIPOS = { ast_triagem: { prazo: 1 }, ast_agendar: { prazo: 1 }, ast_sla: { prazo: 1 }, ast_orcamento: { prazo: 1 }, ast_doc_pendente_gestao: { prazo: 1 }, ast_sem_sinc: { prazo: 1 },
-  ast_serie: { prazo: 2 }, ast_solicitacao: { prazo: 1 }, ast_caso: { prazo: 2 }, ast_cadastro_campo: { prazo: 2 }, ast_sem_envio: { prazo: 1 }, ast_retorno: { prazo: 1 }, ast_p1_triagem: { prazo: 1 } };
+  ast_serie: { prazo: 2 }, ast_solicitacao: { prazo: 1 }, ast_caso: { prazo: 2 }, ast_cadastro_campo: { prazo: 2 }, ast_sem_envio: { prazo: 1 }, ast_retorno: { prazo: 1 }, ast_p1_triagem: { prazo: 1 }, ast_orc_recusado: { prazo: 2 }, ast_orc_ajuste: { prazo: 1 } };
 
 var AST_MTZ_EVENTOS = [
   { cod: 'AT01', modulo: 'assistencia', evento: 'Chamado novo para a triagem', origem: 'SGO_Assistencia_Chamados.js', publico: 'Gestor da área (Técnica)', email: 'HORA', whatsapp: 'NAO', limite: '1 por chamado', obs: 'A triagem tem prazo em horas; fora do expediente, vai no primeiro horário.', area: 'TECNICA', obrigatorio: true },
@@ -53,7 +56,10 @@ var AST_MTZ_EVENTOS = [
   { cod: 'AT13', modulo: 'assistencia', evento: 'Cadastro criado em campo pelo técnico (cliente, unidade ou equipamento)', origem: 'SGO_Assistencia_App.js', publico: 'Gestor da área (Técnica)', email: 'RESUMO', whatsapp: 'NAO', limite: 'No resumo do dia', obs: 'O cadastro entra marcado "criado em campo"; a gestão confere vínculo e repetição (vale o original).', area: 'TECNICA' },
   // 22/10/2026 (etapa 3): Compras devolve o chamado quando a peça chega; o cliente sabe que a peça chegou e quando é o retorno
   { cod: 'AT14', modulo: 'assistencia', evento: 'Peça disponível em Compras: chamado devolvido à Assistência, retorno a agendar', origem: 'SGO_Assistencia_Chamados.js (chamado por SGO_Compras_Pedido.js)', publico: 'Gestor da área (Técnica); técnico responsável', email: 'RESUMO', whatsapp: 'NAO', limite: '1 por pedido de compra', obs: 'O chamado volta sozinho a "Planejado" e entra na Caixa de decisões como "retorno a agendar". WhatsApp interno só pelo piloto e no resumo do dia.', area: 'TECNICA' },
-  { cod: 'AT15', modulo: 'assistencia', evento: 'Peça recebida e retorno técnico agendado (ao cliente)', origem: 'SGO_Assistencia_Chamados.js; SGO_Assistencia_Agenda.js', publico: 'Cliente (externo)', email: 'HORA', whatsapp: 'NAO', limite: '1 por evento', obs: 'Dois e-mails: "peça chegou, retorno será agendado" e "retorno agendado para dd/mm". Nada de WhatsApp ao cliente nesta etapa.' }
+  { cod: 'AT15', modulo: 'assistencia', evento: 'Peça recebida e retorno técnico agendado (ao cliente)', origem: 'SGO_Assistencia_Chamados.js; SGO_Assistencia_Agenda.js', publico: 'Cliente (externo)', email: 'HORA', whatsapp: 'NAO', limite: '1 por evento', obs: 'Dois e-mails: "peça chegou, retorno será agendado" e "retorno agendado para dd/mm". Nada de WhatsApp ao cliente nesta etapa.' },
+  // 22/10/2026 (etapa 4): o próprio cliente responde o orçamento pelo link (sem login) ou pelo portal "Meus chamados"
+  { cod: 'AT16', modulo: 'assistencia', evento: 'Orçamento aprovado pelo cliente pelo link ou pelo portal', origem: 'SGO_Assistencia_Aceite.js; SGO_Assistencia_Relatorio.js', publico: 'Gestor da área (Técnica); gestor comercial; técnico do chamado', email: 'HORA', whatsapp: 'NAO', limite: '1 por orçamento', obs: 'O chamado vai sozinho a "Planejado" (ou "Aguardando peça", com o pedido em Compras). O cliente recebe o comprovante de aprovação por e-mail; nada de WhatsApp ao cliente.', area: 'TECNICA' },
+  { cod: 'AT17', modulo: 'assistencia', evento: 'Orçamento recusado ou com pedido de ajuste pelo cliente (link ou portal)', origem: 'SGO_Assistencia_Aceite.js; SGO_Assistencia_Relatorio.js', publico: 'Gestor da área (Técnica); gestor comercial; técnico do chamado', email: 'HORA', whatsapp: 'NAO', limite: '1 por resposta', obs: 'Entra na Caixa de decisões: recusa (negociar, cobrar a visita ou encerrar) ou ajuste (nova revisão e novo envio).', area: 'TECNICA' }
 ];
 
 function Assistencia_registrarTipos_() {

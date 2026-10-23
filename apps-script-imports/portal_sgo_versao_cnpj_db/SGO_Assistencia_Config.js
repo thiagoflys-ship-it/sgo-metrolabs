@@ -31,7 +31,9 @@ var AST_OFFSET_MIN = -180; // Brasília sem horário de verão (desde 2019)
 var AST_ABAS = {
   CONFIG: 'ATEC_CONFIG', TIPOS: 'ATEC_TIPOS', MODELOS: 'ATEC_MODELOS', CHAMADOS: 'ATEC_CHAMADOS', OS: 'ATEC_OS', EVENTOS: 'ATEC_EVENTOS',
   FOTOS: 'ATEC_FOTOS', PECAS: 'ATEC_PECAS', SYNC: 'ATEC_SYNC', SOLICITACOES: 'ATEC_SOLICITACOES', CASOS: 'ATEC_CASOS',
-  ORCAMENTOS: 'ATEC_ORCAMENTOS', RELATORIOS: 'ATEC_RELATORIOS', AVISOS: 'ATEC_AVISOS', ACERVO_EQUIP: 'ATEC_ACERVO_EQUIP'
+  ORCAMENTOS: 'ATEC_ORCAMENTOS', RELATORIOS: 'ATEC_RELATORIOS', AVISOS: 'ATEC_AVISOS', ACERVO_EQUIP: 'ATEC_ACERVO_EQUIP',
+  // 22/10/2026 (etapa 4): link de aceite do orçamento (só o resumo do token) e a trilha só-inclusão das respostas do cliente
+  ORC_LINKS: 'ATEC_ORC_LINKS', ORC_ACEITES: 'ATEC_ORC_ACEITES'
 };
 var AST_COLUNAS = {
   ATEC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -70,7 +72,11 @@ var AST_COLUNAS = {
     'RESPOSTA_CLIENTE', 'RESOLVIDO_EM', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_ORCAMENTOS: ['ID', 'NUMERO', 'REVISAO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'CLIENTE_ID', 'CLIENTE_NOME', 'ITENS_JSON', 'VALOR_TOTAL', 'VALIDADE', 'CONDICOES',
     'SITUACAO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'ENVIADO_EM', 'ENVIADO_PARA', 'ACEITE_ARQUIVO_ID', 'ACEITE_URL', 'ACEITE_NOME', 'ACEITE_POR',
-    'DECIDIDO_EM', 'DECISAO_TEXTO', 'REQUISICAO_ID', 'COMERCIAL_ATIVIDADE_ID', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'DECIDIDO_EM', 'DECISAO_TEXTO', 'REQUISICAO_ID', 'COMERCIAL_ATIVIDADE_ID', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM', 'ACEITE_CANAL', 'ACEITE_REGISTRO_ID'],
+  ATEC_ORC_LINKS: ['ID', 'ORCAMENTO_ID', 'ORCAMENTO_NUMERO', 'REVISAO', 'CHAMADO_ID', 'CLIENTE_ID', 'TOKEN_SHA256', 'CONTEUDO_SHA256', 'PEDIDO_ID', 'CANAL', 'ENVIADO_PARA', 'VALIDO_ATE',
+    'SITUACAO', 'FIM_EM', 'FIM_MOTIVO', 'VISTO_EM', 'VISTO_ULTIMO_EM', 'VISTAS', 'RESPONDIDO_EM', 'CONTATO_EMAIL', 'POR_ID', 'POR_NOME', 'CRIADO_EM'],
+  ATEC_ORC_ACEITES: ['ID', 'ORCAMENTO_ID', 'ORCAMENTO_NUMERO', 'REVISAO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'CLIENTE_ID', 'LINK_ID', 'CANAL', 'DECISAO', 'NOME', 'CARGO', 'DOCUMENTO', 'EMAIL',
+    'TEXTO', 'IP', 'NAVEGADOR', 'USUARIO_ID', 'EM', 'ASSINATURA_ARQUIVO_ID', 'ASSINATURA_SHA256', 'CONTEUDO_SHA256', 'PDF_SHA256', 'VALOR_TOTAL', 'ANTERIOR_SHA256', 'REGISTRO_SHA256', 'CRIADO_EM'],
   ATEC_RELATORIOS: ['ID', 'OS_ID', 'OS_NUMERO', 'VERSAO', 'REVISAO', 'MOTIVO', 'RASCUNHO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'PASTA_URL', 'MARCA', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'DOC_REGISTRADO', 'DOCREV_ID', 'CRIADO_EM'],
   ATEC_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_ID', 'DATA', 'LIDO_EM', 'CRIADO_EM'],
   ATEC_ACERVO_EQUIP: ['ID', 'AUVO_TASK_ID', 'DATA_TAREFA', 'TIPO_TAREFA', 'TECNICO_NOME', 'FINALIZADA', 'CLIENTE_AUVO_ID', 'CLIENTE_ID_SGO', 'EQUIP_AUVO_ID',
@@ -84,7 +90,9 @@ var AST_COLUNAS_TEXTO = {
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
-  ATEC_ACERVO_EQUIP: ['AUVO_TASK_ID', 'DATA_TAREFA']
+  ATEC_ACERVO_EQUIP: ['AUVO_TASK_ID', 'DATA_TAREFA'],
+  ATEC_ORC_LINKS: ['TOKEN_SHA256', 'CONTEUDO_SHA256', 'VALIDO_ATE', 'FIM_EM', 'VISTO_EM', 'VISTO_ULTIMO_EM', 'RESPONDIDO_EM', 'PEDIDO_ID'],
+  ATEC_ORC_ACEITES: ['EM', 'DOCUMENTO', 'IP', 'ASSINATURA_SHA256', 'CONTEUDO_SHA256', 'PDF_SHA256', 'ANTERIOR_SHA256', 'REGISTRO_SHA256']
 };
 
 // ------------------------------------------------------------
@@ -159,7 +167,7 @@ var AST_DOCS_TECNICOS = { '': 'Nenhum', CERTCAL: 'Certificado de calibração', 
   DECLARACAO: 'Declaração de execução de serviço', QIQO: 'Relatório QI/QO/QD', NR13: 'Laudo NR-13' };
 var AST_CASO_TIPOS = { RECLAMACAO: 'Reclamação do cliente', PROBLEMA: 'Problema recorrente' };
 var AST_CASO_SITUACOES = { ABERTO: 'Aberto', EM_TRATAMENTO: 'Em tratamento', RESOLVIDO: 'Resolvido' };
-var AST_ORC_SITUACOES = { RASCUNHO: 'Rascunho', EMITIDO: 'Emitido (aguarda o cliente)', APROVADO: 'Aprovado pelo cliente', RECUSADO: 'Recusado pelo cliente', SUBSTITUIDO: 'Substituído por revisão' };
+var AST_ORC_SITUACOES = { RASCUNHO: 'Rascunho', EMITIDO: 'Emitido (aguarda o cliente)', APROVADO: 'Aprovado pelo cliente', RECUSADO: 'Recusado pelo cliente', AJUSTE: 'Cliente pediu ajuste', SUBSTITUIDO: 'Substituído por revisão' };
 
 /**
  * REGRAS PADRÃO (decididas pelo dono em 21/10/2026: "use os padrões, tudo configurável"). Editáveis em Assistência técnica >
@@ -186,7 +194,9 @@ var AST_REGRAS_PADRAO = {
   pecas: { faltaAbreCompras: true },
   agenda: { duracaoPadraoMin: 90 },
   avisos: { whatsappP1Gestor: true, emailCliente: true, whatsappCliente: false },
-  relatorioMensal: { ligado: true }
+  relatorioMensal: { ligado: true },
+  // 22/10/2026 (etapa 4): validade do link de aceite do orçamento, em dias corridos (1 a 90)
+  orcamentoLink: { dias: 30 }
 };
 
 /**
@@ -409,13 +419,13 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V3')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V4')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V3', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V4', '1', 21600); } catch (e) {}
 }
 function Ast_ler_(aba) {
   if (AST_MEMO[aba]) return AST_MEMO[aba];
@@ -538,6 +548,8 @@ function Ast_validarRegras_(r) {
   if (r.prazos.P1.atendimentoMin > r.prazos.P2.atendimentoMin || r.prazos.P2.atendimentoMin > r.prazos.P3.atendimentoMin || r.prazos.P3.atendimentoMin > r.prazos.P4.atendimentoMin) {
     throw new Error('os prazos de atendimento precisam crescer de P1 (crítica) para P4 (baixa). Corrija e salve de novo');
   }
+  var dl = Ast_num_((r.orcamentoLink || {}).dias);
+  if (!(dl >= 1 && dl <= 90)) throw new Error('a validade do link de aceite do orçamento precisa ser de 1 a 90 dias (padrão 30). Corrija e salve de novo');
   var f = Ast_num_(r.emRiscoFracao);
   if (!(f > 0 && f < 1)) throw new Error('"em risco" precisa ser uma fração entre 0 e 1 (padrão 0,25 = resta um quarto do prazo). Corrija e salve de novo');
   (r.contratos || []).forEach(function (c, i) {

@@ -180,10 +180,48 @@ O cliente, em "Meus chamados", vê e baixa o PDF da O.S. encerrada.
 ## Orçamento do chamado
 
 1. A triagem escolhe "Precisa de orçamento"; o Comercial recebe a atividade.
-2. Em Chamados > chamado > Orçamento: "Preencher valores" (peças e serviços), "Emitir o A4" e "Enviar ao cliente".
-3. Resposta do cliente: "Aprovado" exige o aceite anexado (e-mail salvo em PDF, foto do orçamento assinado ou PDF).
-   Aprovado, o chamado vai para "Planejado" (ou "Aguardando peça", com as peças pedidas a Compras). Recusado, a gestão
-   decide entre nova revisão e cancelar.
+2. Em Chamados > chamado > Orçamento: "Preencher valores" (peças e serviços) e "Emitir o A4".
+3. "Enviar com link de aceite": escolha os contatos do cliente (ou digite outro e-mail), confira o texto e toque em
+   "Enviar". O e-mail leva o PDF em anexo e o link "Ver e responder o orçamento". O link vale 30 dias (Regras da
+   assistência > "Link de aceite do orçamento vale (dias)", de 1 a 90) e é um por envio: enviar de novo cria outro e o
+   anterior deixa de funcionar. O sistema guarda só o resumo do link; nem a gestão consegue ver o link de novo.
+4. O cliente abre o link no celular ou no computador, sem login, e vê o orçamento (itens, valores, total, validade,
+   condições e o PDF para baixar). Ele escolhe:
+   - Aprovar: nome completo, cargo, CPF (opcional), e-mail, "Li e concordo" e a assinatura no quadro, com o dedo ou o
+     mouse.
+   - Pedir ajuste: nome, e-mail e o que precisa mudar.
+   - Recusar: nome, e-mail e o motivo (obrigatório).
+   A resposta é única: depois dela, o link mostra "Respondido em ... por ..." e não aceita outra. Orçamento vencido
+   mostra o aviso e não aprova (o cliente ainda pode pedir ajuste). Link vencido, invalidado ou trocado mostra "Link
+   indisponível" e o contato da Metrolabs.
+5. O que acontece com a resposta (o mesmo caminho do registro manual):
+   - Aprovado: o orçamento fica "Aprovado pelo cliente" e o chamado vai a "Planejado" (falta agendar) ou, com peça, a
+     "Aguardando peça", com um pedido em Compras por peça, em nome de quem enviou o orçamento. Gera o "Comprovante de
+     aprovação" (A4 em HTML e PDF, na pasta do cliente em "Assistência técnica - Orçamentos"), ligado ao orçamento como
+     o aceite. O cliente recebe a confirmação por e-mail com o comprovante.
+   - Recusado: o orçamento fica "Recusado pelo cliente" com o motivo; o chamado continua aguardando orçamento e entra
+     na Caixa de decisões como "orçamento recusado pelo cliente para decidir": negociar (Nova revisão), cobrar a visita
+     ou encerrar o chamado.
+   - Ajuste pedido: o orçamento fica "Cliente pediu ajuste"; a Caixa de decisões mostra "pedido de ajuste no orçamento
+     para revisar". Faça a Nova revisão, emita e envie de novo (o link da revisão anterior deixa de funcionar).
+   A gestão da área Técnica, o gestor comercial e o técnico do chamado são avisados (AT16 aprovado, AT17 recusa ou
+   ajuste). Ao cliente vai só e-mail; nada de WhatsApp.
+6. Bloco "Aceite do cliente" na ficha do orçamento (quem vê valores): situação do link (enviado em, para quem, válido
+   até, visto em e quantas vezes, respondido em), a resposta registrada (quem, cargo, e-mail, CPF mascarado, data e
+   hora do servidor, meio, IP, assinatura, protocolo, "registro íntegro" e "conteúdo igual ao aceito") e o comprovante.
+   Botões: "Gerar e copiar link" (cria outro link para mandar por outro meio; o anterior deixa de funcionar),
+   "Invalidar link" (com o motivo; por exemplo, enviado ao contato errado) e, se o comprovante não saiu na hora,
+   "Gerar o comprovante".
+7. Registro manual: quem responde por telefone, e-mail ou documento assinado continua em "Registrar a resposta do
+   cliente", com o aceite anexado.
+8. O cliente com acesso ao portal também responde em "Meus chamados" > Orçamentos, sem o link: os mesmos campos, a
+   mesma assinatura e o mesmo registro (meio "Portal do cliente").
+
+Prova do aceite: cada resposta fica numa trilha só de inclusão, com data e hora do servidor, endereço de rede (IP),
+navegador, nome, cargo, CPF, e-mail, a assinatura (imagem guardada na pasta privada), o resumo SHA-256 do conteúdo do
+orçamento mostrado ao cliente (itens, valores, condições e validade), o resumo do PDF e o resumo do próprio registro,
+encadeado ao anterior. Se o orçamento mudasse depois do envio do link, a resposta seria recusada e nada seria
+registrado.
 
 O técnico não vê valores.
 
@@ -202,9 +240,10 @@ mensal da Diretoria, junto com os relatórios do Comercial e de Compras.
 
 ## Avisos
 
-Pela matriz de avisos (eventos AT01 a AT15; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
+Pela matriz de avisos (eventos AT01 a AT17; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
 em Compras, chamado devolvido, ao técnico e à gestão no resumo do dia; AT15 = peça recebida e retorno agendado, ao
-cliente por e-mail): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado para a triagem, chamado
+cliente por e-mail; AT16 = orçamento aprovado pelo cliente pelo link ou pelo portal e AT17 = recusa ou pedido de
+ajuste, à gestão da área Técnica, ao gestor comercial e ao técnico do chamado, por e-mail na hora): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado para a triagem, chamado
 crítico, reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto. WhatsApp só na exceção do chamado
 P1 ao gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do resumo do dia. O cliente recebe só
 e-mail (chamado recebido, visita agendada ou reagendada, atendimento concluído, peça recebida, retorno agendado)
@@ -247,6 +286,13 @@ Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa 
 ## Problemas comuns
 
 - "Esse caminho não é permitido": siga o "Próximo passo" indicado na ficha do chamado.
+- O cliente diz que o link do orçamento mostra "Link indisponível": o link venceu, foi invalidado ou um envio mais novo
+  o trocou. Envie de novo em Chamados > chamado > Orçamento > "Enviar com link de aceite" (ou "Gerar e copiar link").
+  Se o orçamento já venceu, faça a Nova revisão antes.
+- O cliente aprovou pelo link mas o comprovante não aparece: toque em "Gerar o comprovante" no bloco "Aceite do
+  cliente". A aprovação já vale; só o documento é gerado de novo.
+- O cliente respondeu errado pelo link: a resposta é única e não se apaga. Para recusa ou ajuste, faça a Nova revisão
+  e envie de novo; para aprovação indevida, registre a conversa no chamado e trate com a gestão.
 - O técnico não aparece na lista: ajuste o perfil (Técnico) ou a área (Técnica) em Administração > Usuários.
 - "A O.S. é de outro técnico": só o técnico responsável ou a gestão da área Técnica registra.
 - A foto não subiu: verifique a conexão e salve de novo; as que já subiram não se repetem.
