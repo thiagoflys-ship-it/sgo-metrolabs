@@ -43,6 +43,8 @@ function ambiente(o) {
   const sessao = { atual: o.sessao || DONO };
   let seq = 0;
   const resposta = (code, corpo) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(corpo), getAllHeaders: () => ({}) });
+  // garagem real (22/10/2026): switch_1, door_control_1 (open/close) e o sensor de posição doorcontact_state
+  const estadoGaragem = () => (api.garagem ? [{ code: 'switch_1', value: false }, { code: 'door_control_1', value: api.dc1 || 'close' }, { code: 'doorcontact_state', value: !!api.portaoAberto }] : [{ code: 'switch_1', value: false }]);
   const ctx = vm.createContext({
     console,
     Utilities: criarUtilities({ DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
@@ -59,7 +61,7 @@ function ambiente(o) {
         if (api.falhaRede) throw new Error('ECONNRESET');
         if (u.pathname === '/v1.0/token') return resposta(200, { success: true, result: { access_token: 'tok-1', refresh_token: 'ref-1', expire_time: 7200, uid: 'uid-app' } });
         if (u.pathname === '/v1.0/iot-01/associated-users/devices') return resposta(200, { success: true, result: { has_more: false, devices: [
-          { id: 'dev-portao-1', name: 'Portão principal', category: 'ckmkzq', product_name: 'Abridor', online: true, status: [{ code: 'switch_1', value: false }] },
+          { id: 'dev-portao-1', name: 'Portão principal', category: 'ckmkzq', product_name: 'Abridor', online: true, status: estadoGaragem() },
           { id: 'dev-portao-2', name: 'Portão secundário', category: 'ckmkzq', product_name: 'Abridor', online: true, status: [{ code: 'switch_1', value: false }] },
           { id: 'dev-fech-1', name: 'Porta da Diretoria', category: 'jtmspro', product_name: 'Fechadura', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: false }] }
         ] } });
@@ -69,7 +71,8 @@ function ambiente(o) {
         if (/shadow\/properties$/.test(u.pathname)) { api.leiturasSombra = (api.leiturasSombra || 0) + 1; return resposta(200, { success: true, result: { properties: [{ code: 'unlock_request', value: api.pedidoValor || 0, time: api.pedidoEm || Date.now() }, { code: 'doorbell', value: true, time: api.campainhaEm || 0 }, { code: 'closed_opened', value: api.fechAberta ? 'open' : 'closed', time: Date.now() }] } }); }
         if (api.pedido && /dev-fech-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.respostasPedido = api.respostasPedido || []).push(v); if (!(api.pedidoValor > 0)) return resposta(200, { success: false, code: 2008, msg: 'not in request window' }); if (v.value === true) api.fechAberta = true; api.pedidoValor = 0; return resposta(200, { success: true, result: true, tid: 'tid-r' }); }
         if (api.garagem && /dev-portao-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean', values: '{}' }, { code: 'door_control_1', type: 'Enum', values: '{"range":["open","close"]}' }] } });
-        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); api.portaoAberto = v.value !== 'close'; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
+        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); api.portaoAberto = v.value !== 'close'; if (v.code === 'door_control_1') api.dc1 = v.value; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
+        if (api.garagem && u.pathname === '/v1.0/devices/dev-portao-1') { api.leiturasGaragem = (api.leiturasGaragem || 0) + 1; return resposta(200, { success: true, result: { id: 'dev-portao-1', online: true, status: estadoGaragem() } }); }
         if (/\/functions$/.test(u.pathname)) return u.pathname.includes('fech') ? resposta(200, { success: true, result: { category: 'jtmspro', functions: api.remoto ? [{ code: 'remote_no_dp_key', type: 'Raw' }] : [{ code: 'unlock_temporary', type: 'Integer' }] } })
           : resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean' }] } });
         if (/door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: api.remoto ? [{ remote_unlock_type: 'remoteUnlockWithoutPwd', open: true }] : [] });
@@ -154,14 +157,12 @@ test('sincronização: lê os 3 dispositivos, portão com switch_1, fechadura re
 test('porta da Diretoria: invisível para quem não é diretor (Gestor, Técnico, Administrador comum); diretores a veem', () => {
   const amb = ambiente();
   sincronizar(amb);
-  amb.homologar('Portão principal'); // em uso: quem tem permissão entra
+  amb.homologar('Portão principal'); // em uso: toda a equipe entra
   const f = amb.disp('Porta da Diretoria');
-  amb.como(DONO);
-  amb.api_('permissaoConceder', { usuarioId: 'uG', dispositivoId: amb.disp('Portão principal').ID, permissao: 'VER', motivo: 'portaria' });
   amb.como(GESTOR);
   let p = amb.api_('painel');
   assert.equal(p.ok, true, p.message);
-  assert.deepEqual(nomes(p), ['Portão principal']);
+  assert.deepEqual(nomes(p).sort(), ['Portão principal', 'Portão secundário'], 'portões de toda a equipe; a porta não');
   assert.ok(!JSON.stringify(p).includes('Porta da Diretoria') && !JSON.stringify(p).includes('dev-fech-1'));
   assert.equal(p.restritosOcultos, 0, 'nem a contagem');
   for (const a of ['historico', 'estado', 'preparar']) assert.equal(amb.api_(a, { dispositivoId: f.ID, operacaoId: 'op-gestor-fech-1' }).ok, false, a);
@@ -263,12 +264,10 @@ test('confirmação sem digitar: só com o token da janela (uso único, 60 s, do
   assert.match(tela, /Sim, abrir agora/);
 });
 
-test('fase de implantação: desligado ou nada homologado = só Administrador e diretores (menu, atalho e servidor); depois, quem tem permissão', () => {
+test('fase de implantação: desligado ou nada homologado = só Administrador e diretores (menu, atalho e servidor); depois, toda a equipe interna', () => {
   const amb = ambiente();
   sincronizar(amb);
   const p1 = amb.disp('Portão principal');
-  amb.como(DONO);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'ACIONAR', motivo: 'portaria da manhã' }).ok, true);
   amb.como(TEC);
   let i = amb.api_('iniciar');
   assert.equal(i.mostrarMenu, false); assert.equal(i.podeAcionar, false); assert.equal(i.emUso, false);
@@ -278,16 +277,19 @@ test('fase de implantação: desligado ou nada homologado = só Administrador e 
   amb.como(GESTOR);
   assert.equal(amb.api_('iniciar').mostrarMenu, false);
   amb.homologar('Portão principal');
+  // 23/10/2026 (dono): "os colaboradores no celular não estão vendo Portões" — em uso, todos os perfis internos recebem o atalho
+  for (const s of [TEC, GESTOR]) {
+    amb.como(s);
+    i = amb.api_('iniciar');
+    assert.equal(i.mostrarMenu, true, s.usuario); assert.equal(i.podeAcionar, true, s.usuario); assert.equal(i.emUso, true);
+    assert.deepEqual(amb.api_('rapido').itens.map((d) => d.nome), ['Portão principal', 'Portão secundário'], s.usuario + ': os dois portões, sem a porta');
+  }
   amb.como(TEC);
-  i = amb.api_('iniciar');
-  assert.equal(i.mostrarMenu, true); assert.equal(i.podeAcionar, true); assert.equal(i.emUso, true);
-  const rp = amb.api_('rapido');
-  assert.deepEqual(rp.itens.map((d) => d.nome), ['Portão principal']);
   const r = amb.abrir(p1.ID, 'op-tec-fase-00002');
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
-  amb.como(GESTOR);
-  i = amb.api_('iniciar');
-  assert.equal(i.mostrarMenu, false, 'sem permissão continua sem menu'); assert.equal(i.podeAcionar, false);
+  assert.match(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-tec-fase-00002').AUTORIZACAO_MOTIVO, /perfil TECNICO/);
+  amb.como(CLIENTE);
+  assert.equal(amb.api_('iniciar').ok, false, 'cliente fora');
   // desligar volta tudo à implantação
   amb.props.TUYA_LIGADO = '0';
   amb.como(TEC);
@@ -300,38 +302,40 @@ test('fase de implantação: desligado ou nada homologado = só Administrador e 
   assert.ok(!amb.api_('rapido').itens.some((d) => d.tipo === 'FECHADURA'), 'Charles sem permissão: porta fora dos botões');
 });
 
-test('permissões no servidor: VER não aciona; ACIONAR aciona; vigência vencida não vale; só Administrador e diretores concedem; revogação', () => {
+test('portões de toda a equipe (23/10/2026): colaborador abre e fecha sem permissão; permissão individual só na porta (vigência vale); no registro o colaborador vê só os próprios comandos', () => {
   const amb = ambiente();
   sincronizar(amb);
   amb.homologar('Portão secundário');
-  const p1 = amb.disp('Portão principal');
-  amb.como(DONO);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'recebe entregas' }).ok, true);
+  const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário'), f = amb.disp('Porta da Diretoria');
   amb.como(TEC);
-  let painel = amb.api_('painel');
-  assert.equal(painel.unidades[0].dispositivos[0].podeAcionar, false);
-  let r = amb.abrir(p1.ID, 'op-tec-0000002');
-  assert.equal(r.ok, false); assert.match(r.message, /permissão só para ver/);
-  amb.como(ADM2);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'ACIONAR', motivo: 'portaria da manhã', vigenciaFim: '2099-12-31' }).ok, true, 'Administrador comum concede portão');
-  assert.equal(amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT').length, 1);
-  amb.como(TEC);
-  r = amb.abrir(p1.ID, 'op-tec-0000003');
-  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO', 'portão principal não homologado');
-  amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA').forEach((p) => { p.VIGENCIA_FIM = new Date(Date.now() - 1000).toISOString(); });
-  amb.envelhecer();
-  assert.equal(amb.abrir(p1.ID, 'op-tec-0000004').ok, false, 'vigência vencida');
+  const painel = amb.api_('painel');
+  assert.ok(painel.unidades[0].dispositivos.every((d) => d.podeAcionar), 'colaborador aciona os portões');
+  assert.ok(!nomes(painel).includes('Porta da Diretoria'));
+  let r = amb.abrir(p2.ID, 'op-tec-0000002');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
   amb.como(GESTOR);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false);
-  amb.como(DIRV);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'diretor por vínculo concede' }).ok, true);
-  amb.como(DONO);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uX', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx' }).ok, false, 'inativo');
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'xxxxx', vigenciaFim: '2020-01-01' }).ok, false, 'já passou');
-  const ativa = amb.tabelas.AUT_PERMISSOES.find((p) => p.STATUS === 'ATIVA' && p.USUARIO_ID === 'uT');
-  assert.equal(amb.api_('permissaoRevogar', { id: ativa.ID, motivo: 'saiu da portaria' }).ok, true);
+  assert.equal(amb.abrir(p1.ID, 'op-ges-0000001').comando.situacao, 'SIMULADO', 'portão principal não homologado');
+  // registro e histórico: o colaborador vê só os dele; Administrador e diretores veem todos
   amb.como(TEC);
-  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+  assert.deepEqual(amb.api_('registro', {}).itens.map((c) => c.operacaoId), ['op-tec-0000002']);
+  assert.deepEqual(amb.api_('historico', { dispositivoId: p1.ID }).comandos.map((c) => c.operacaoId), []);
+  assert.ok(amb.api_('painel').ultimosComandos.every((c) => c.solicitanteId === 'uT'));
+  for (const s of [ADM2, DIR]) { amb.como(s); assert.deepEqual(amb.api_('registro', {}).itens.map((c) => c.operacaoId).sort(), ['op-ges-0000001', 'op-tec-0000002'], s.usuario); }
+  // permissão individual em portão: não existe mais
+  amb.como(DONO);
+  r = amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'recebe entregas' });
+  assert.equal(r.ok, false); assert.match(r.message, /liberados para toda a equipe interna/);
+  assert.deepEqual(amb.api_('permissoes').dispositivos.map((d) => d.nome), ['Porta da Diretoria'], 'só a porta na lista');
+  amb.como(ADM2);
+  assert.deepEqual(amb.api_('permissoes').dispositivos, [], 'Administrador comum: nada a conceder');
+  // porta: vigência vencida não vale
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'diretor de operações' }).ok, true);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'xxxxx', vigenciaFim: '2020-01-01' }).ok, false, 'já passou');
+  amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA').forEach((p) => { p.VIGENCIA_FIM = new Date(Date.now() - 1000).toISOString(); });
+  amb.como(DIR);
+  assert.equal(amb.abrir(f.ID, 'op-dir-venc-00001').ok, false, 'vigência vencida');
 });
 
 test('fechadura sem abertura remota pela API: "não disponível pela API" com o porquê; recusa antes da janela', () => {
@@ -453,7 +457,7 @@ test('registro inviolável: corrente íntegra; linha alterada ou apagada é dete
   const amb = ambiente();
   sincronizar(amb);
   amb.como(DONO);
-  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: amb.disp('Portão principal').ID, permissao: 'VER', motivo: 'teste do registro' }).ok, true);
+  assert.equal(amb.api_('dispositivoSalvar', { id: amb.disp('Portão principal').ID, localizacao: 'teste do registro' }).ok, true);
   let r = amb.api_('integridade');
   assert.equal(r.ok, true); assert.equal(r.problemas.length, 0); assert.ok(r.total >= 4);
   const aud = amb.tabelas.AUT_AUDITORIA;
@@ -557,53 +561,154 @@ test('campainha: pedido que termina entre o toque e o "Sim" é recusado com a ex
   assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PEDIDO_CAMPAINHA'));
 });
 
+test('abertura automática pela campainha (23/10/2026): só quem destrava liga; a rotina rápida abre uma vez por pedido, avisa (S68) e registra; desmarcada volta ao "Abrir agora"', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  // sem a opção, a rotina rápida não lê nada
+  const n0 = amb.api.leiturasSombra || 0;
+  tocar(amb, 40);
+  assert.equal(amb.ctx.AutPred_rotinaRapida().texto, 'abertura automática desligada');
+  assert.equal(amb.api.leiturasSombra || 0, n0, 'nada lido');
+  // quem não destrava não liga: Charles (diretor sem "Acionar"), Gestor e Administrador comum
+  for (const s of [DIR, GESTOR, ADM2]) { amb.como(s); assert.equal(amb.api_('autoAbrir', { id: f.ID, ligado: true }).ok, false, s.usuario); }
+  amb.como(DONO);
+  assert.equal(amb.api_('autoAbrir', { id: amb.disp('Portão principal').ID, ligado: true }).ok, false, 'só na fechadura da campainha');
+  let r = amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /abre a porta sozinho/);
+  assert.equal(amb.props.AUT_AUTO_ABRIR_LIGADO, '1', 'sinal para a rotina rápida do servidor');
+  assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM'); assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR_POR, 'DONO TESTE');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'AUTO_ABRIR_LIGADA'));
+  const lock = amb.api_('rapido').itens.find((d) => d.tipo === 'FECHADURA');
+  assert.equal(lock.autoAbrir, true); assert.equal(lock.podeAutoAbrir, true);
+  // a campainha toca: a rotina rápida responde "abrir" sozinha, uma vez
+  tocar(amb, 40);
+  r = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(r.abertas, 1);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const cmd = amb.tabelas.AUT_COMANDOS.find((c) => c.ORIGEM === 'AUTOMATICO');
+  assert.equal(cmd.SOLICITANTE, 'Abertura automática'); assert.equal(cmd.COMANDO, 'DESTRAVAR'); assert.equal(cmd.SITUACAO, 'CONFIRMADO', cmd.CONFIRMACAO_DETALHE);
+  assert.match(cmd.AUTORIZACAO_MOTIVO, /ligada por DONO TESTE/);
+  const aviso = amb.notificacoes.filter((x) => x.evento === 'S68' && /aberta automaticamente/.test(x.titulo));
+  assert.equal(aviso.length, 1); assert.equal(Array.from(aviso[0].usuarios).join(','), 'uA'); assert.match(aviso[0].texto, /confirmou a abertura/);
+  // mesmo pedido: nem a rotina rápida nem a de 1 minuto respondem de novo; a tela mostra "aberto automaticamente"
+  amb.api.pedidoValor = 30; amb.api.pedidoEm = Date.now(); limparPedido(amb);
+  assert.equal(amb.ctx.AutPred_rotinaRapida().abertas, 0);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.respostasPedido.length, 1, 'uma resposta por pedido');
+  assert.ok(!amb.notificacoes.some((x) => x.evento === 'S67'), 'com a opção ligada, não pede "Abrir agora"');
+  limparPedido(amb);
+  assert.match(amb.api_('pedido').itens[0].respondido, /^aberto automaticamente às/);
+  // registro legível
+  const reg = amb.api_('registro', {}).itens.find((c) => c.origemTexto === 'Abertura automática (campainha)');
+  assert.ok(reg); assert.match(reg.resultadoTexto, /^Destravado — confirmado pela fechadura/);
+  // desmarcar: volta ao fluxo manual (a rotina não lê nada; a de 1 minuto avisa S67)
+  r = amb.api_('autoAbrir', { id: f.ID, ligado: false });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(amb.props.AUT_AUTO_ABRIR_LIGADO, undefined);
+  amb.envelhecer(); tocar(amb, 50); amb.api.campainhaEm = Date.now() - 200;
+  assert.equal(amb.ctx.AutPred_rotinaRapida().texto, 'abertura automática desligada');
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.respostasPedido.length, 1, 'nada respondido sozinho');
+  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S67').length, 1);
+  // falha na nuvem: avisa e tenta no máximo 2 vezes por pedido
+  amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 100;
+  const orig = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { if (/dev-fech-1\/commands$/.test(new URL(url).pathname)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ success: false, code: 2001, msg: 'device is offline' }), getAllHeaders: () => ({}) }; return orig(url, op); };
+  for (let i = 0; i < 4; i++) { limparPedido(amb); amb.ctx.AutPred_rotinaRapida(); }
+  assert.equal(amb.tabelas.AUT_COMANDOS.filter((c) => c.ORIGEM === 'AUTOMATICO' && c.SITUACAO === 'RECUSADO').length, 2);
+  assert.ok(amb.notificacoes.some((x) => x.evento === 'S68' && /não abriu sozinha/.test(x.titulo) && /Abrir agora/.test(x.texto)));
+  // a tela: caixa de marcar só para quem pode, com confirmação ao ligar
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.match(tela, /Abrir automaticamente quando tocarem a campainha/);
+  assert.match(tela, /AutPred_chamar_\("autoAbrir"/);
+});
+
 // ---------------------------------------------------------------- abrir e fechar (garagem) x pulso (pedestre)
-test('portões: pulso só abre (fecha manualmente); garagem com abrir e fechar escolhida pela administração; fechar tem homologação própria e token próprio', () => {
+test('portões (23/10/2026): garagem com sensor já abre e fecha (sem escolha gravada); o fechar vale com a homologação do abrir; token próprio; pedestre continua pulso', () => {
   const amb = ambiente();
   amb.api.garagem = true;
   sincronizar(amb);
   const g = amb.disp('Portão principal'), ped = amb.disp('Portão secundário');
   amb.como(DONO);
   let d = amb.api_('painel').unidades[0].dispositivos.find((x) => x.nome === 'Portão principal');
-  assert.equal(d.acionamento, 'PULSO', 'o que já existe continua pulso'); assert.equal(d.acionamentoSugerido, 'ABRIR_FECHAR'); assert.equal(d.podeFechar, false);
-  let r = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000001', acao: 'FECHAR' });
-  assert.equal(r.ok, false); assert.match(r.message, /Pulso \(só abrir\)" e fecha manualmente/);
+  assert.equal(d.acionamento, 'ABRIR_FECHAR', 'sensor + door_control_1 = abrir e fechar'); assert.equal(d.temSensor, true); assert.equal(d.podeFechar, true);
+  assert.equal(d.estadoPortao.codigo, 'FECHADO');
   assert.equal(amb.api_('dispositivoSalvar', { id: ped.ID, acionamento: 'ABRIR_FECHAR' }).ok, false, 'pedestre sem fechar na nuvem');
-  amb.como(ADM2);
-  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'ABRIR_FECHAR' }).ok, true);
-  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'DISPOSITIVO_ALTERADO' && /abrir e fechar/.test(a.DETALHE)));
+  // antes da homologação: abrir e fechar em simulação
+  let pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000001', acao: 'FECHAR' });
+  let r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000001', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.comando.situacao, 'SIMULADO'); assert.equal((amb.api.cmdGaragem || []).length, 0);
   amb.homologar('Portão principal');
-  amb.como(DONO);
+  amb.envelhecer();
   d = amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal');
-  assert.equal(d.podeFechar, true); assert.equal(d.modo, 'REAL'); assert.equal(d.modoFechar, 'SIMULACAO');
-  // fechar antes da homologação do fechar: simulação, nada sai
+  assert.equal(d.podeFechar, true); assert.equal(d.modo, 'REAL');
   r = amb.abrir(g.ID, 'op-fech-0000002');
-  assert.equal(r.ok, true); assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'door_control_1', value: 'open' }]), 'abrir no modo abrir e fechar = door_control_1 open');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'door_control_1', value: 'open' }]), 'abrir = door_control_1 open');
   amb.envelhecer();
-  const pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', acao: 'FECHAR' });
-  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
-  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO'); assert.match(r.texto, /fechar deste portão ainda não foi homologado/);
-  assert.equal(amb.api.cmdGaragem.length, 1, 'fechar não saiu');
-  // homologar o fechar: só diretor, depois do abrir
-  amb.como(ADM2);
-  assert.equal(amb.api_('homologar', { id: g.ID, homologado: true, motivo: 'teste do fechar feito', comando: 'FECHAR' }).ok, false);
-  amb.como(DIR);
-  assert.equal(amb.api_('homologar', { id: g.ID, homologado: true, motivo: 'teste presencial do fechar acompanhado', comando: 'FECHAR' }).ok, true);
-  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'DISPOSITIVO_HOMOLOGADO_FECHAR'));
-  amb.como(DONO); amb.envelhecer();
   // token de abrir não serve para fechar
-  const pa = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004' });
-  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004', confirmacaoToken: pa.confirmacaoToken, acao: 'FECHAR' });
-  assert.equal(r.ok, false);
+  const pa = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003' });
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', confirmacaoToken: pa.confirmacaoToken, acao: 'FECHAR' }).ok, false);
   amb.envelhecer();
-  const pf2 = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', acao: 'FECHAR' });
-  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', confirmacaoToken: pf2.confirmacaoToken, acao: 'FECHAR' });
+  // colaborador fecha, real, com a mesma homologação do abrir
+  amb.como(TEC);
+  pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004', acao: 'FECHAR' });
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.comando, 'FECHAR'); assert.equal(r.comando.modo, 'REAL'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
   assert.equal(JSON.stringify(amb.api.cmdGaragem.slice(-1)), JSON.stringify([{ code: 'door_control_1', value: 'close' }]));
+  // escolha gravada vence a sugestão: "Pulso" volta a só abrir
+  amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'PULSO' }).ok, true);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').podeFechar, false);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'ABRIR_FECHAR' }).ok, true);
   // pedestre continua só abrir (switch_1 pulso), sem fechar
   d = amb.api_('rapido').itens.find((x) => x.nome === 'Portão secundário');
   assert.equal(d.podeFechar, false); assert.equal(d.acionamento, 'PULSO');
   assert.match(ler('JS_AutomacaoPredial.html'), /Pulso: fecha manualmente/);
+  assert.ok(!/Homologar o fechar/.test(ler('JS_AutomacaoPredial.html')), 'sem homologação separada do fechar na tela');
+});
+
+test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… no percurso; a tela relê com leitura compartilhada e cede a vez quando o minuto está cheio', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  const e = (estado, extra) => amb.ctx.AutPred_estadoPortao_(Object.assign({ ACIONAMENTO: 'ABRIR_FECHAR', ESTADO_JSON: JSON.stringify(estado) }, extra || {}), Date.now());
+  const recente = { ULT_CMD_EM: new Date(Date.now() - 5000).toISOString(), ULT_CMD_SITUACAO: 'CONFIRMADO' };
+  const velho = { ULT_CMD_EM: new Date(Date.now() - 120000).toISOString(), ULT_CMD_SITUACAO: 'CONFIRMADO' };
+  assert.equal(e([{ code: 'doorcontact_state', value: true }]).codigo, 'ABERTO');
+  assert.equal(e([{ code: 'doorcontact_state', value: false }]).codigo, 'FECHADO');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'open' }], recente).codigo, 'ABRINDO');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'close' }], recente).codigo, 'FECHANDO');
+  assert.equal(e([{ code: 'doorcontact_state', value: false }, { code: 'door_control_1', value: 'close' }], recente).codigo, 'FECHADO', 'fechou: o sensor manda');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'close' }], velho).codigo, 'ABERTO', 'passou o percurso: o sensor manda');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'open' }, { code: 'tr_timecon', value: 2 }], recente).codigo, 'ABERTO', 'percurso do próprio portão');
+  assert.equal(e([{ code: 'switch_1', value: false }], Object.assign({ ACIONAMENTO: 'PULSO' }, recente)).codigo, '', 'pedestre sem sensor');
+  // consulta da tela: lê a garagem (sensor) e não o pedestre; várias telas em 4,5 s = uma leitura
+  amb.homologar('Portão principal');
+  amb.como(TEC);
+  amb.api.portaoAberto = true;
+  let r = amb.api_('portoes');
+  assert.equal(r.ok, true, r.message);
+  const gar = r.itens.find((x) => x.id === amb.disp('Portão principal').ID);
+  assert.equal(gar.estadoPortao.codigo, 'ABERTO');
+  assert.equal(amb.disp('Portão principal').ESTADO_JSON.includes('"doorcontact_state","value":true'), true, 'mudança gravada');
+  const n0 = amb.api.leiturasGaragem;
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem, n0, 'leitura compartilhada');
+  assert.ok(!r.itens.some((x) => x.id === amb.disp('Porta da Diretoria').ID), 'sem a porta');
+  // minuto cheio: a tela não lê (a folga fica para os comandos e a abertura automática)
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  amb.cache['TUYA_CHAMADAS_MIN_' + Math.floor(Date.now() / 60000)] = '75';
+  amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem, n0, 'cedeu a vez');
+  // a tela troca só os selos no lugar e avisa quando a posição muda
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.match(tela, /AutPred_chamar_\("portoes"/);
+  assert.match(tela, /abriu" : " fechou"/);
 });
 
 // ---------------------------------------------------------------- registro de rastreabilidade legível

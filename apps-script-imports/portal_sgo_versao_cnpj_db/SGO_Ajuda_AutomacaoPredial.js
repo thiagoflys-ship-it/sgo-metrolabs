@@ -6,27 +6,31 @@
  *   a porta da Diretoria é do responsável pelo sistema (os outros diretores só com a permissão dele); nada para digitar
  *   (janela "Sim, abrir agora"); botões grandes no topo, atalho "Portões" no celular e botões no Início do computador;
  *   até a homologação, o módulo é só do Administrador e dos diretores.
+ * 23/10/2026, pedidos do dono: portões liberados para toda a equipe (ver, abrir e fechar; a porta continua só dos diretores);
+ *   garagem com sensor já abre e fecha (o fechar vale com a homologação do abrir); posição Aberto/Fechado/Abrindo/Fechando
+ *   relida a cada 5 s com aviso na mudança; "Abrir automaticamente quando tocarem a campainha" na porta da Diretoria.
  */
 function SGO_ajudaTelas_AutomacaoPredial_() {
   return {
     "automacao_predial": {
       titulo: "Segurança e automação predial",
-      paraQueServe: "Abre os portões da empresa e, para a Diretoria, destrava a porta da Diretoria pelo SGO+, usando a nuvem do aplicativo Smart Life. Cada comando fica registrado com quem pediu, quando, o que a nuvem respondeu e se o dispositivo confirmou.",
+      paraQueServe: "Abre e fecha os portões da empresa e, para a Diretoria, destrava a porta da Diretoria pelo SGO+, usando a nuvem do aplicativo Smart Life. Mostra se o portão está aberto ou fechado. Cada comando fica registrado com quem pediu, quando, o que a nuvem respondeu e se o dispositivo confirmou.",
       antesDeComecar: [
         "O responsável pelo sistema precisa ter gravado as credenciais da Tuya em Administração > Chaves e senhas > Automação predial (Tuya) e tocado em \"Testar conexão\" (passo a passo no Guia de acesso à Tuya).",
-        "Enquanto a automação está Desligada ou nenhum dispositivo foi homologado, a tela é só do Administrador e dos diretores (implantação). Depois aparece também para quem tem permissão.",
+        "Enquanto a automação está Desligada ou nenhum dispositivo foi homologado, a tela é só do Administrador e dos diretores (implantação). Depois aparece para toda a equipe interna.",
         "Diretor, para o SGO+, é quem tem o perfil Diretoria, o vínculo de trabalho Diretoria no cadastro de usuários, ou é o responsável pelo sistema.",
-        "Para ver ou abrir um portão você precisa ser Administrador ou diretor, ou ter recebido a permissão \"Ver\" ou \"Acionar\" naquele portão.",
+        "Os portões são de toda a equipe interna: qualquer colaborador vê, abre e fecha, sem permissão individual.",
         "A porta da Diretoria só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele.",
         "Enquanto o dispositivo não foi homologado pela Diretoria, tudo trabalha em simulação: o SGO+ registra o que teria feito e nada é enviado."
       ],
       passos: [
-        { titulo: "Abrir um portão (celular ou computador)", itens: [
+        { titulo: "Abrir ou fechar um portão (celular ou computador)", itens: [
           "No celular, toque em \"Portões\" no Início. No computador, use os botões grandes do Início ou toque em \"Segurança e automação predial\" no menu (grupo Segurança predial).",
-          "No bloco \"Abrir agora\", confira o estado ao lado do nome: \"Online\" e o último comando.",
-          "Toque em \"Abrir portão\".",
+          "No bloco \"Abrir agora\", confira a posição do portão no selo grande (\"Aberto\", \"Fechado\", \"Abrindo…\" ou \"Fechando…\") e, ao lado, \"Online\" e o último comando.",
+          "Toque em \"Abrir portão\" ou em \"Fechar portão\".",
           "Na janela, confira o nome do portão.",
-          "Toque em \"Sim, abrir agora\". Não há nada para digitar.",
+          "Toque em \"Sim, abrir agora\" (ou \"Sim, fechar agora\"). Não há nada para digitar.",
+          "Com a tela aberta, a posição é relida a cada 5 segundos. Quando o portão abre ou fecha (pelo SGO+, pelo controle ou pelo aplicativo), aparece no topo o aviso \"Portão ... abriu às hh:mm:ss\" ou \"fechou às hh:mm:ss\".",
           "Espere a faixa de resultado: \"Execução confirmada\" quer dizer que o dispositivo informou a mudança.",
           "Se aparecer \"aceito pela API, mas a execução ainda não foi confirmada\", olhe o portão e toque em \"Conferir agora\" na lista de comandos. Se não abriu, trate como não executado."
         ] },
@@ -46,11 +50,19 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Quem pode destravar a porta recebe o aviso \"Pedido de abertura\" no sistema (e no WhatsApp, se estiver liberado no piloto). O aviso pode chegar perto do fim do tempo: com a tela aberta, o pedido aparece em até 3 segundos.",
           "Cada pedido aceita uma resposta só. Se o tempo acabar antes do \"Sim\", o SGO+ explica e nada é enviado."
         ] },
+        { titulo: "Abertura automática quando tocam a campainha (quem destrava a porta)", itens: [
+          "No bloco da Porta da Diretoria, marque \"Abrir automaticamente quando tocarem a campainha\".",
+          "Na janela, leia o aviso e toque em \"Ligar\". A caixa fica marcada e mostra quem ligou e quando.",
+          "Com a opção ligada, quando tocarem a campainha o SGO+ abre a porta sozinho em poucos segundos, sem ninguém confirmar. Quem pode destravar recebe o aviso \"Porta aberta automaticamente\".",
+          "Se a nuvem não aceitar, chega o aviso \"não abriu sozinha\": se ainda der tempo, toque em \"Abrir agora\".",
+          "Para voltar ao jeito de antes, desmarque a caixa: a porta só abre por \"Abrir agora\" durante o pedido.",
+          "Ligar e desligar ficam na auditoria; cada abertura automática aparece no registro com a origem \"Abertura automática (campainha)\"."
+        ] },
         { titulo: "Abrir e fechar o portão da garagem", itens: [
           "Portão com abrir e fechar mostra dois botões: \"Abrir portão\" e \"Fechar portão\". Os dois pedem a mesma confirmação na janela.",
-          "Portão de pulso (por exemplo, o de pedestre) só tem \"Abrir portão\": ele fecha manualmente.",
-          "Quem escolhe o tipo é o Administrador ou um diretor, em \"Administrar\" > \"Acionamento\": \"Pulso (só abrir; fecha manualmente)\" ou \"Portão com abrir e fechar\". A tela mostra a sugestão pela leitura do dispositivo.",
-          "O fechar tem homologação própria: um diretor toca em \"Homologar o fechar (depois do teste presencial)\". Até lá, \"Fechar portão\" trabalha em simulação."
+          "O portão com sensor de posição e fechar pela nuvem (garagem) já vem com abrir e fechar. Portão de pulso sem sensor (por exemplo, o de pedestre) só tem \"Abrir portão\": ele fecha manualmente.",
+          "O Administrador ou um diretor pode mudar em \"Administrar\" > \"Acionamento\": \"Pulso (só abrir; fecha manualmente)\" ou \"Portão com abrir e fechar\". A tela mostra a sugestão pela leitura do dispositivo.",
+          "O fechar vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade."
         ] },
         { titulo: "Ler o estado e ver o histórico", itens: [
           "No cartão do dispositivo, toque em \"Ler estado\" para reler o estado na nuvem agora.",
@@ -77,9 +89,9 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Com a automação Ligada em Chaves e senhas, os comandos deste dispositivo passam a ser reais.",
           "Para voltar à simulação, toque em \"Retirar a homologação\" com o motivo."
         ] },
-        { titulo: "Conceder ou revogar permissão (Administrador e diretores)", itens: [
-          "Toque na aba \"Permissões\".",
-          "Escolha o usuário, o dispositivo e a permissão: \"Ver estado e histórico\" ou \"Acionar (abrir) e ver\".",
+        { titulo: "Liberar a porta da Diretoria para outro diretor (responsável pelo sistema)", itens: [
+          "Toque na aba \"Permissões\". Os portões não aparecem aqui: são de toda a equipe interna.",
+          "Escolha o diretor e a permissão \"Acionar (abrir) e ver\".",
           "Se quiser, informe a data de fim da vigência.",
           "Escreva o motivo e toque em \"Conceder\".",
           "Para tirar, toque em \"Revogar\" na linha da permissão e escreva o motivo.",
@@ -91,7 +103,8 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Toque numa linha para abrir os \"Detalhes técnicos\" (comando enviado, identificações e resposta da nuvem). Toque de novo para fechar.",
           "Escolha o dispositivo, a pessoa e o período e toque em \"Filtrar\".",
           "Para arquivar, toque em \"Exportar planilha\" (abre no Excel) ou \"Imprimir ou salvar PDF\" (na janela de impressão, escolha \"Salvar como PDF\").",
-          "No celular, cada comando aparece num cartão: hora, quem, ação e resultado."
+          "No celular, cada comando aparece num cartão: hora, quem, ação e resultado.",
+          "Cada colaborador vê no registro só os próprios comandos. O Administrador e os diretores veem os de todos."
         ] },
         { titulo: "Consultar a auditoria (Administrador e diretores)", itens: [
           "Toque na aba \"Auditoria\".",
@@ -101,7 +114,11 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         ] }
       ],
       cores: [
-        { nome: "Botão verde \"Abrir portão\" e vermelho \"Destravar a porta\"", significado: "Abrem a janela de confirmação. Só aparecem para quem pode acionar aquele dispositivo." },
+        { nome: "Botão verde \"Abrir portão\", azul-escuro \"Fechar portão\" e vermelho \"Destravar a porta\"", significado: "Abrem a janela de confirmação. Só aparecem para quem pode acionar aquele dispositivo." },
+        { nome: "Selo grande laranja \"Aberto\"", significado: "O sensor do portão informa que ele está aberto." },
+        { nome: "Selo grande verde \"Fechado\"", significado: "O sensor do portão informa que ele está fechado." },
+        { nome: "Selo grande azul \"Abrindo…\" ou \"Fechando…\"", significado: "O portão recebeu o comando e está no percurso. Ao chegar, o selo vira \"Aberto\" ou \"Fechado\"." },
+        { nome: "Selo \"Posição: sem sensor\"", significado: "O portão não tem sensor de posição (por exemplo, o de pedestre): confira pelo último comando ou no local." },
         { nome: "Selo verde \"Online\"", significado: "A nuvem informa que o dispositivo está ligado à internet." },
         { nome: "Selo vermelho \"Offline\"", significado: "O dispositivo está sem internet: o comando não vai chegar. Confira a energia e a rede sem fio." },
         { nome: "Selo vermelho \"Restrito à Diretoria\"", significado: "Só os diretores veem. Os demais perfis não veem este cartão." },
@@ -112,7 +129,9 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { nome: "Situação \"Recusado pela API\" ou \"Negado pelo SGO+\" (vermelho)", significado: "O comando não foi executado; o detalhe diz o porquê." }
       ],
       problemas: [
-        { situacao: "O item do menu e o atalho \"Portões\" não aparecem", oQueFazer: "Enquanto a automação está em implantação, só o Administrador e os diretores veem. Depois, só quem tem permissão em algum dispositivo. Peça a permissão ao Administrador ou a um diretor." },
+        { situacao: "O item do menu e o atalho \"Portões\" não aparecem", oQueFazer: "Enquanto a automação está em implantação (desligada ou sem portão homologado), só o Administrador e os diretores veem. Depois, aparece para toda a equipe interna: saia e entre de novo no SGO+. Se continuar sem aparecer, avise o Administrador." },
+        { situacao: "\"Fechar portão\" não aparece", oQueFazer: "O portão está como \"Pulso (só abrir)\". Se ele fecha pela nuvem no aplicativo Smart Life, o Administrador ou um diretor escolhe \"Portão com abrir e fechar\" em \"Administrar\" > \"Acionamento\"." },
+        { situacao: "A abertura automática está ligada e a porta não abriu", oQueFazer: "Veja o aviso \"não abriu sozinha\" e o registro (motivo, por exemplo fechadura sem internet). Se ainda der tempo, toque em \"Abrir agora\". Confira também se a fechadura está homologada: sem homologação, tudo é simulação." },
         { situacao: "Aparece \"Nenhum comando real sai agora\"", oQueFazer: "É esperado até a homologação. O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya); um diretor homologa cada dispositivo depois do teste presencial." },
         { situacao: "\"a confirmação na janela não foi feita ou venceu\"", oQueFazer: "A janela vale 60 segundos. Toque de novo no botão e, na janela, em \"Sim, abrir agora\"." },
         { situacao: "A sincronização diz \"código 1106\" ou \"28841105\"", oQueFazer: "No portal da Tuya, confira se a conta do Smart Life está ligada ao projeto e se os serviços estão autorizados (Guia de acesso à Tuya). Depois sincronize de novo." },
@@ -122,15 +141,16 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { situacao: "Fechadura com \"Não disponível pela API\"", oQueFazer: "O modelo não oferece abertura remota pela nuvem. Use o aplicativo Smart Life ou a própria porta." }
       ],
       quemPode: [
-        { perfil: "DIRETORIA", pode: "Diretores (perfil Diretoria, vínculo Diretoria ou responsável pelo sistema): ver e abrir portões, ver a porta da Diretoria, sincronizar, administrar, homologar, conceder permissões dos portões e consultar toda a auditoria. Destravar a porta: o responsável pelo sistema por padrão; os outros diretores com a permissão dele." },
-        { perfil: "ADMIN", pode: "Ver e abrir portões, sincronizar, administrar os portões, conceder permissões dos portões e consultar a auditoria dos portões. Se não for diretor, não vê a porta da Diretoria." },
-        { perfil: "GESTOR,RH,FINANCEIRO,TECNICO,METROLOGIA,COMERCIAL", pode: "Depois da implantação, só o que foi concedido por dispositivo: \"Ver\" (estado e histórico) ou \"Acionar\" (abrir e ver), dentro da vigência. Quem tem o vínculo Diretoria no cadastro é diretor." },
+        { perfil: "DIRETORIA", pode: "Diretores (perfil Diretoria, vínculo Diretoria ou responsável pelo sistema): ver, abrir e fechar portões, ver a porta da Diretoria, sincronizar, administrar, homologar e consultar todo o registro e toda a auditoria. Destravar a porta e ligar a abertura automática: o responsável pelo sistema por padrão; os outros diretores com a permissão dele." },
+        { perfil: "ADMIN", pode: "Ver, abrir e fechar portões, sincronizar, administrar os portões e consultar o registro e a auditoria dos portões. Se não for diretor, não vê a porta da Diretoria." },
+        { perfil: "GESTOR,RH,FINANCEIRO,TECNICO,METROLOGIA,COMERCIAL", pode: "Depois da implantação: ver, abrir e fechar os portões (atalho \"Portões\" no celular) e ver no registro os próprios comandos. Não veem a porta da Diretoria. Quem tem o vínculo Diretoria no cadastro é diretor." },
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
       perguntas: [
         { p: "A nuvem aceitou; a porta está aberta?", r: "Não necessariamente. Só \"Execução confirmada\" quer dizer que o dispositivo informou a mudança. Se ficou \"aceito, sem confirmação\", olhe o local e use \"Conferir agora\"." },
         { p: "Preciso digitar alguma coisa para abrir?", r: "Não. Toque no botão e, na janela, em \"Sim, abrir agora\". A janela vale 60 segundos e só serve para aquele toque." },
-        { p: "Posso abrir pelo celular?", r: "Sim: atalho \"Portões\" no Início do celular, com os botões grandes de cada portão que você pode abrir." },
+        { p: "Posso abrir pelo celular?", r: "Sim: atalho \"Portões\" no Início do celular, com os botões grandes de abrir e fechar e a posição de cada portão." },
+        { p: "A abertura automática abre para qualquer pessoa que tocar a campainha?", r: "Sim, enquanto estiver ligada: a porta abre sem ninguém confirmar. Por isso só quem destrava a porta liga a opção, cada abertura é registrada e avisada. Desmarque quando não quiser esse comportamento." },
         { p: "Onde ficam as senhas da fechadura?", r: "Em lugar nenhum do SGO+. O destravamento usa um bilhete temporário da nuvem, que não é gravado. As credenciais da Tuya ficam em Chaves e senhas, fora de qualquer planilha." },
         { p: "O que acontece se eu tocar duas vezes?", r: "Cada toque gera um identificador de operação. O mesmo identificador nunca é executado duas vezes, e o dispositivo não recebe outro comando antes de 10 s." }
       ],

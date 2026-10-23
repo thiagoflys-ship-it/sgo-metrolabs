@@ -250,6 +250,16 @@ Eventos AT01 a AT17 registrados em `SGO_Pendencias_Assistencia.js` (todo envio p
 Pendências da Assistência na central e na Caixa de decisões (só sistema, escada da Caixa): triagem, agendar, prazo, orçamento parado, documentação pendente (técnico; 24 h depois a gestão), sem sincronização, série divergente, solicitação na fila, reclamação, O.S. de hoje, cadastro criado em campo e, desde 22/10: "relatório para enviar ao cliente" (técnico, até 1 dia útil), "O.S. encerrada há 1 dia útil sem envio ao cliente" (gestão), "retorno a agendar" (peça disponível) e "P1 sem triagem em 30 minutos" (gestão e Diretoria); na etapa 4, "orçamento recusado pelo cliente para decidir" e "pedido de ajuste no orçamento para revisar" (gestão da área Técnica e Comercial).
 
 
+#### Segurança e automação predial (22 e 23/10/2026)
+
+Eventos em `SGO_Automacao_Predial.js`, todos por `SGO_notificar_`. A porta da Diretoria só avisa quem pode destravá-la (`AutPred_quemDestrava_`).
+
+| Nº | Evento e origem no código | Hoje: quem recebe e por onde | Quem deve receber | Canal proposto | Limite | Decisão |
+|---|---|---|---|---|---|---|
+| S66 | Comando aceito pela nuvem e não confirmado pelo dispositivo<br>`AutPred_avisarSemConfirmacao_` | Diretores; Administradores (só nos portões)<br>Sistema; e-mail na hora | Diretores; Administradores nos portões | Sistema + E-mail na hora | 1 por comando | Novo (22/10)<br>Também entra nas pendências do Início por 24 h. |
+| S67 | Campainha da porta da Diretoria tocou: pedido de abertura ativo<br>`AutPred_rotinaPedidos` | Quem pode destravar a porta<br>Sistema; WhatsApp só no piloto | Quem pode destravar a porta | Sistema (+ WhatsApp no piloto) | 1 por toque da campainha | Novo (22/10)<br>Não sai com a abertura automática ligada. |
+| S68 | Abertura automática da porta: aberta sozinha, não abriu sozinha, ou opção ligada ou desligada por outra pessoa<br>`AutPred_abrirAutomatico_`; `AutPred_definirAutoAbrir_` | Quem pode destravar a porta<br>Sistema; WhatsApp só no piloto (abertura); sistema (ligar e desligar) | Quem pode destravar a porta | Sistema (+ WhatsApp no piloto) | 1 por pedido da campainha; 1 por mudança da opção | Novo (23/10)<br>Pedido do dono: abertura automática quando tocarem a campainha. |
+
 ### 3.2 Pendências da central do SGO+ (já ficam só no sistema)
 
 Estes 64 tipos de pendência aparecem no Início, na central e, os que são decisão, na Caixa de decisões. Não mandam mensagem sozinhos: o e-mail e o WhatsApp da gestão saem só pela escada da Caixa (resumo das 08h00 e, parado há 2 dias úteis, o resumo do WhatsApp). A proposta muda apenas quem vê cada grupo.

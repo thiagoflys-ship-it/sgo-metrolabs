@@ -1,6 +1,6 @@
 # Manual do módulo Segurança e automação predial do SGO+
 
-Versão de 22/10/2026. Tela: Segurança predial > Segurança e automação predial (abas Dispositivos, Permissões e Auditoria para a administração). Credenciais em Administração > Chaves e senhas > Automação predial (Tuya).
+Versão de 23/10/2026 (portões de toda a equipe, abrir e fechar com posição do portão, abertura automática pela campainha). Tela: Segurança predial > Segurança e automação predial (abas Dispositivos, Permissões e Auditoria para a administração). Credenciais em Administração > Chaves e senhas > Automação predial (Tuya).
 
 ## Para que serve
 
@@ -12,15 +12,15 @@ O módulo foi construído sobre o que o SGO+ já tinha: a sessão e os perfis de
 
 Quem é diretor (decisão do dono, 22/10/2026): quem tem o perfil Diretoria, ou o vínculo de trabalho Diretoria no cadastro de usuários (Administração > Usuários), ou é o responsável pelo sistema. Uma regra só, conferida no servidor.
 
-Diretores: veem e abrem os portões; veem a porta da Diretoria; sincronizam com o Smart Life; administram os dispositivos; homologam cada dispositivo depois do teste presencial; concedem e revogam permissões dos portões; consultam toda a auditoria.
+Diretores: veem, abrem e fecham os portões; veem a porta da Diretoria; sincronizam com o Smart Life; administram os dispositivos; homologam cada dispositivo depois do teste presencial; consultam todo o registro e toda a auditoria.
 
-Porta da Diretoria ("minha sala é para o meu login ter acesso, os demais não", dono): o responsável pelo sistema destrava por padrão, sem permissão gravada. Outro diretor só destrava se o responsável pelo sistema conceder a permissão "Acionar" (com vigência, se quiser) em Permissões; só ele concede e revoga a permissão da porta, e só para diretores.
+Porta da Diretoria ("minha sala é para o meu login ter acesso, os demais não", dono): o responsável pelo sistema destrava por padrão, sem permissão gravada. Outro diretor só destrava se o responsável pelo sistema conceder a permissão "Acionar" (com vigência, se quiser) em Permissões; só ele concede e revoga a permissão da porta, e só para diretores. Quem destrava a porta também liga e desliga a abertura automática pela campainha.
 
-Administrador que não é diretor: vê e abre os portões; sincroniza; administra os portões; concede e revoga permissões dos portões; consulta a auditoria dos portões. Não vê a porta da Diretoria (só a contagem de dispositivos restritos).
+Administrador que não é diretor: vê, abre e fecha os portões; sincroniza; administra os portões; consulta o registro e a auditoria dos portões. Não vê a porta da Diretoria (só a contagem de dispositivos restritos).
 
-Demais perfis internos (Gestor, RH, Financeiro, Técnico, Metrologia, Comercial): depois da implantação, só o que foi concedido por dispositivo. "Ver estado e histórico" mostra o cartão e o histórico; "Acionar (abrir) e ver" permite abrir. A permissão pode ter data de fim.
+Demais perfis internos (Gestor, RH, Financeiro, Técnico, Metrologia, Comercial), decisão do dono de 23/10/2026: depois da implantação, veem, abrem e fecham os portões, sem permissão individual (atalho "Portões" no Início do celular). No registro de rastreabilidade, cada um vê só os próprios comandos. A porta da Diretoria continua oculta para eles.
 
-Implantação: enquanto a automação está Desligada em Chaves e senhas ou nenhum dispositivo foi homologado, o item "Segurança predial" do menu, os atalhos e a própria tela são só do Administrador e dos diretores; o servidor recusa os demais com a explicação. Depois, aparecem também para quem tem permissão em algum dispositivo.
+Implantação: enquanto a automação está Desligada em Chaves e senhas ou nenhum dispositivo foi homologado, o item "Segurança predial" do menu, os atalhos e a própria tela são só do Administrador e dos diretores; o servidor recusa os demais com a explicação. Depois, aparecem para toda a equipe interna.
 
 Cliente: não acessa.
 
@@ -30,11 +30,13 @@ Todas as regras são conferidas no servidor em cada chamada. A tela só mostra o
 
 Quem pode abrir algum portão (ou a porta) vê os botões grandes:
 
-- No celular: atalho "Portões" no Início, que abre a tela com o bloco "Abrir agora" no topo, um botão de pelo menos 56 px por dispositivo, com o estado ao lado (Online ou Offline, último comando e a situação: "Execução confirmada", "Aceito, sem confirmação", "Simulado").
+- No celular: atalho "Portões" no Início, que abre a tela com o bloco "Abrir agora" no topo, botões de pelo menos 56 px por dispositivo ("Abrir portão" e, no portão com abrir e fechar, "Fechar portão"), com a posição em selo grande e o estado ao lado (Online ou Offline, último comando e a situação: "Execução confirmada", "Aceito, sem confirmação", "Simulado").
 - No computador: os mesmos botões no Início e no topo da tela do módulo.
 - Quem não pode acionar nenhum dispositivo não vê o atalho nem os botões.
 
-Nada para digitar: toque em "Abrir portão" (ou "Destravar a porta"), confira o nome na janela grande e toque em "Sim, abrir agora" (ou "Cancelar"). A janela leva um código de uso único, válido por 60 segundos, emitido pelo servidor para o seu usuário, aquele dispositivo e aquela solicitação; sem ele (por exemplo, uma chamada direta sem passar pela janela) o servidor recusa e registra.
+Posição do portão: o selo grande mostra "Aberto" (laranja) ou "Fechado" (verde) pelo sensor do portão e "Abrindo…" ou "Fechando…" (azul) durante o percurso depois de um comando (o tempo de percurso informado pelo portão, ou 30 segundos). Com a tela aberta, o SGO+ relê a posição a cada 5 segundos (leitura compartilhada entre todas as telas; quando o minuto já tem muitas chamadas à nuvem, a tela cede a vez aos comandos) e só troca os selos, sem redesenhar a tela. Quando a posição muda, por qualquer meio (SGO+, controle remoto ou aplicativo), aparece no topo o aviso "Portão ... abriu às hh:mm:ss" ou "fechou às hh:mm:ss". Portão sem sensor (pedestre) mostra "Posição: sem sensor".
+
+Nada para digitar: toque em "Abrir portão", "Fechar portão" ou "Destravar a porta", confira o nome na janela grande e toque em "Sim, abrir agora" ou "Sim, fechar agora" (ou "Cancelar"). A janela leva um código de uso único, válido por 60 segundos, emitido pelo servidor para o seu usuário, aquele dispositivo e aquela solicitação; sem ele (por exemplo, uma chamada direta sem passar pela janela) o servidor recusa e registra.
 
 ## O caminho de um comando
 
@@ -56,7 +58,7 @@ O comando real exige as duas coisas: automação Ligada e dispositivo homologado
 - No máximo 1 comando por dispositivo a cada 10 segundos.
 - No máximo 5 comandos por pessoa por minuto.
 - O mesmo dispositivo não recebe outro comando enquanto o anterior está sem resultado há menos de 60 segundos.
-- No máximo 30 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas.
+- No máximo 90 chamadas por minuto à nuvem da Tuya, com 300 milissegundos entre chamadas (campainha, abertura automática e posição dos portões cabem aqui; a leitura de posição para a tela para quando o minuto passa de 70 chamadas).
 - Todo comando exige o toque em "Sim, abrir agora" na janela (código de uso único de 60 segundos).
 
 ## Dispositivos
@@ -81,27 +83,41 @@ No SGO+: com a tela Segurança predial ou o Início aberto, quem pode destravar 
 
 A tela consulta a fechadura a cada 3 segundos só enquanto está aberta, e a leitura é compartilhada entre as telas (uma chamada a cada 2,5 segundos, no máximo). Uma rotina do servidor, a cada minuto, avisa quem pode destravar (evento S67: no sistema; WhatsApp só para quem está liberado no piloto). Como o pedido dura cerca de 60 a 90 segundos, o aviso pode chegar perto do fim: para atender, deixe a tela aberta.
 
+## Porta da Diretoria: abertura automática pela campainha
+
+Pedido do dono (23/10/2026): uma opção para os diretores marcarem "abrir automaticamente quando alguém tocar a campainha"; desmarcada, tudo continua como acima.
+
+- Quem liga e desliga: quem destrava a porta (o responsável pelo sistema, ou o diretor com a permissão "Acionar" dele). A caixa "Abrir automaticamente quando tocarem a campainha" fica no bloco da porta, no topo da tela e no Início. Ao ligar, uma janela explica que a porta vai abrir sem ninguém confirmar; ao desligar, não há janela.
+- Como funciona: com a opção ligada, o servidor consulta o pedido da fechadura a cada 3 segundos (rotina rápida do servidor, que só roda enquanto há porta com a opção ligada) e responde "abrir" (reply_unlock_request = true) sozinho, uma vez por pedido. A rotina de 1 minuto faz o mesmo como reserva. A resposta passa pela mesma trava e pelo mesmo registro dos comandos manuais e é confirmada pelo registro de abertura remota da fechadura.
+- Avisos (evento S68): "Porta aberta automaticamente" a quem pode destravar, dizendo se a fechadura confirmou; "não abriu sozinha" quando a nuvem recusa (com a sugestão de tocar em "Abrir agora" se ainda der tempo; no máximo 2 tentativas por pedido); e, a quem pode destravar, quando outra pessoa liga ou desliga a opção. Com a opção ligada, o aviso S67 ("toque em Abrir agora") não é enviado.
+- Registro: cada abertura automática entra no registro de rastreabilidade com "Quem: Abertura automática" e a origem "Abertura automática (campainha)"; a autorização guarda quem ligou a opção e quando. Ligar e desligar entram na auditoria.
+- Simulação: com a automação desligada ou a fechadura sem homologação, a abertura automática só registra o que teria feito.
+- Atenção: enquanto ligada, a porta abre para qualquer pessoa que tocar a campainha. Desmarque quando não quiser esse comportamento.
+
 ## Portões: abrir e fechar ou pulso
 
-Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso com dois comandos na nuvem: switch_1 (pulso) e door_control_1 (abrir ou fechar); o da garagem tem sensor de portão. Nenhum aceita parar.
+Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso com dois comandos na nuvem: switch_1 (pulso) e door_control_1 (abrir ou fechar); o da garagem tem sensor de portão (doorcontact_state). Nenhum aceita parar.
 
-Em Administrar > Acionamento, o Administrador ou um diretor escolhe:
-- "Pulso (só abrir; fecha manualmente)": só o botão "Abrir portão" (pulso). Use no portão de pedestre, que fecha puxando.
-- "Portão com abrir e fechar": botões "Abrir portão" e "Fechar portão" (door_control_1 open e close). Use na garagem.
+Acionamento (corrigido em 23/10/2026; antes, o portão só abria até alguém escolher o tipo e homologar o fechar à parte):
+- Sem escolha gravada, o portão que tem sensor de posição e fechar pela nuvem (a garagem) já vem como "Portão com abrir e fechar": botões "Abrir portão" e "Fechar portão" (door_control_1 open e close), como no aplicativo Smart Life.
+- Sem sensor (o de pedestre), continua "Pulso (só abrir; fecha manualmente)": só o botão "Abrir portão" (pulso).
+- O Administrador ou um diretor pode mudar em Administrar > Acionamento; a escolha gravada vale sobre a sugestão.
 
-O que já existia continua como pulso até a escolha. O fechar segue as mesmas proteções do abrir (permissão Acionar, janela com código de uso único, limites, registro e confirmação) e tem homologação própria: até um diretor tocar em "Homologar o fechar (depois do teste presencial)", o "Fechar portão" trabalha em simulação.
+O fechar segue as mesmas proteções do abrir (janela com código de uso único, limites, registro e confirmação pelo sensor) e vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade.
 
 ## Permissões
 
-Aba Permissões (Administrador e diretores). Escolha o usuário interno ativo, o dispositivo, a permissão ("Ver estado e histórico" ou "Acionar (abrir) e ver"), a data de fim (opcional) e o motivo. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo. "Revogar" tira a permissão na hora, com motivo.
+Portões: toda a equipe interna vê, abre e fecha, sem permissão individual (decisão do dono, 23/10/2026). A aba Permissões passou a tratar só da porta da Diretoria.
 
-A porta da Diretoria só é liberada pelo responsável pelo sistema, e só para diretores; ele próprio destrava por padrão. A tela de Permissões explica isso numa faixa própria. Administrador e diretores já veem e acionam os portões sem permissão individual.
+Porta da Diretoria: só o responsável pelo sistema libera, e só para diretores; ele próprio destrava por padrão. Na aba Permissões, escolha o diretor, a permissão "Acionar (abrir) e ver", a data de fim (opcional) e o motivo. Uma permissão nova substitui a anterior do mesmo usuário. "Revogar" tira a permissão na hora, com motivo.
 
 Toda concessão e revogação entra na auditoria e no log do sistema, com quem, quando e o motivo.
 
 ## Registro de rastreabilidade
 
-Na tela do módulo, "Registro de rastreabilidade" mostra os comandos por dia (Hoje, Ontem, data), em linguagem simples: Quando (dd/mm/aaaa hh:mm:ss) · Dispositivo (nome e local) · Quem · Ação (Abrir, Fechar, Parar, Destravar, Recusar pedido) · Resultado · Origem (Celular, Computador, Atalho no Início).
+Na tela do módulo, "Registro de rastreabilidade" mostra os comandos por dia (Hoje, Ontem, data), em linguagem simples: Quando (dd/mm/aaaa hh:mm:ss) · Dispositivo (nome e local) · Quem · Ação (Abrir, Fechar, Parar, Destravar, Recusar pedido) · Resultado · Origem (Celular, Computador, Atalho no Início, Abertura automática (campainha)).
+
+O Administrador e os diretores veem os comandos de todos; cada colaborador vê só os próprios (no registro, no histórico do dispositivo e nos últimos comandos).
 
 Resultados: "Aberto — confirmado pelo portão às hh:mm:ss" (verde); "Enviado — portão não confirmou" (amarelo, com "Conferir agora"); "Recusado — motivo curto", por exemplo "aguarde 10 s entre comandos", "sem permissão", "fora da janela da campainha", "sem a confirmação na janela" (vermelho); "Teste — nada enviado (portão ainda não homologado)" ou "(automação desligada)" (azul); "Falhou — a nuvem recusou o comando".
 
@@ -111,7 +127,7 @@ Duplo toque: o comando agora confere o limite e grava a solicitação sob a trav
 
 ## Auditoria
 
-Aba Auditoria (Administrador e diretores). Cada linha diz em uma frase o que aconteceu, por dia; os detalhes técnicos (evento, resultado, operação e resumo SHA-256) ficam recolhidos ao tocar na linha. Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, sem a confirmação da janela), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, integridade conferida.
+Aba Auditoria (Administrador e diretores). Cada linha diz em uma frase o que aconteceu, por dia; os detalhes técnicos (evento, resultado, operação e resumo SHA-256) ficam recolhidos ao tocar na linha. Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, sem a confirmação da janela), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, abertura automática ligada ou desligada, integridade conferida.
 
 Cada linha leva o resumo SHA-256 da linha anterior. "Conferir a integridade do registro" percorre a corrente: linha alterada ou apagada aparece com o número e a hora. O Administrador que não é diretor não vê os eventos da porta da Diretoria.
 
@@ -132,7 +148,10 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 ## Problemas comuns
 
 - "Nenhum comando real sai agora": esperado até a homologação; veja "Simulação e comando real".
-- "Nenhum dispositivo liberado para você": peça a permissão ao Administrador ou à Diretoria; o Administrador sincroniza.
+- "Nenhum dispositivo liberado para você": ainda não há portão ativo; o Administrador sincroniza com o Smart Life.
+- O atalho "Portões" não aparece para um colaborador: a automação ainda está em implantação (desligada ou sem portão homologado). Depois da homologação, saia e entre de novo no SGO+.
+- "Fechar portão" não aparece: o portão está como "Pulso (só abrir)"; se ele fecha pela nuvem no aplicativo, mude em Administrar > Acionamento.
+- Abertura automática ligada e a porta não abriu: veja o aviso "não abriu sozinha" e o registro (por exemplo, fechadura sem internet); se ainda der tempo, toque em "Abrir agora".
 - "código 1106" ou "28841105": conta do aplicativo não ligada ao projeto ou serviço não autorizado no portal da Tuya.
 - "28841002": período de teste do IoT Core vencido; peça a extensão no portal.
 - "Offline": o dispositivo está sem internet; o comando não chega. Confira energia e rede sem fio.

@@ -52,6 +52,15 @@
   .aut-pedido-botoes { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
   .aut-botoes-portao { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .aut-rapido-btn.is-fechar { background: #1f3a5f; border-color: #1f3a5f; }
+  /* 23/10/2026: posição do portão (Aberto/Fechado/Abrindo/Fechando) grande, relida a cada 5 s com a tela aberta */
+  .aut-posicao { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border, #d9e0e7); background: var(--bc-surface-2, #f4f6f8); }
+  .aut-posicao.is-aberto { background: #fff4e5; border-color: #e3a24a; color: #8a4b00; }
+  .aut-posicao.is-fechado { background: #eaf6ec; border-color: #7cbf86; color: #1f6b2a; }
+  .aut-posicao.is-movendo { background: #e8f0fb; border-color: #8fb0dd; color: #1f3a5f; }
+  .aut-auto { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 600; padding: 8px 10px; border: 1px solid var(--border, #d9e0e7); border-radius: 8px; cursor: pointer; }
+  .aut-auto input { width: 22px; height: 22px; min-height: 0 !important; margin: 0; flex: 0 0 auto; }
+  .aut-auto.is-ligada { border-color: var(--bc-danger-line, #e5b4ae); background: var(--bc-danger-bg, #fff5f5); }
+  .aut-auto-sub { font-size: 12.5px; font-weight: 400; color: var(--muted, #52606d); margin-top: 2px; }
   .aut-rapido-btn.is-recusar { background: #fff; color: var(--text, #1f2933); border-color: var(--border, #c7d0d9); }
   .aut-janela-fundo { position: fixed; inset: 0; background: rgba(15, 23, 32, .55); z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .aut-janela { background: #fff; border-radius: 14px; max-width: 460px; width: 100%; padding: 20px; box-shadow: 0 18px 48px rgba(0,0,0,.28); display: flex; flex-direction: column; gap: 12px; }
@@ -75,10 +84,11 @@
   // SEGURANÇA E AUTOMAÇÃO PREDIAL (22/10/2026)
   // Servidor: SGO_Automacao_Predial.js (AutPred_api(sessionId, acao, dados)); nuvem: SGO_Automacao_Tuya.js.
   // Ganchos na casca (JS_Core): AutPred_iniciar_ no login (menu para quem o servidor liberar), AutPred_parar_ no
-  // logout, abrir('automacao_predial') -> AutPred_render_. A tela NUNCA se atualiza sozinha: só depois de uma ação
-  // ou no botão "Atualizar" (formulário aberto nunca é apagado). Toda regra é conferida de novo no servidor.
+  // logout, abrir('automacao_predial') -> AutPred_render_. A tela não se redesenha sozinha: só depois de uma ação
+  // ou no botão "Atualizar" (formulário aberto nunca é apagado). Só os selos de posição dos portões e o pedido da
+  // campainha são trocados no lugar, enquanto a tela está aberta. Toda regra é conferida de novo no servidor.
   // ==========================================================
-  var AUTP = { pedidos: {}, pedTimer: null, pedRelogio: null, pedLidoEm: 0, menu: false, acionar: false, adm: false, diretoria: false, dados: null, rapido: [], aba: "dispositivos", aberto: "", perms: null, aud: null, unidades: null, mensagem: "" };
+  var AUTP = { pedidos: {}, pedTimer: null, pedRelogio: null, pedLidoEm: 0, portTimer: null, posicoes: {}, menu: false, acionar: false, adm: false, diretoria: false, dados: null, rapido: [], aba: "dispositivos", aberto: "", perms: null, aud: null, unidades: null, mensagem: "" };
 
   function AutPred_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function AutPred_temMenu_() { return !!AUTP.menu; }
@@ -116,7 +126,7 @@
       } catch (e) { console.error("Automação predial, atalho:", e); }
     }, function () { AUTP.menu = false; AutPred_mostrarMenu_(); });
   }
-  function AutPred_parar_() { AutPred_pararPedidos_(); AUTP.menu = false; AUTP.acionar = false; AUTP.rapido = []; AUTP.dados = null; AUTP.perms = null; AUTP.aud = null; AutPred_mostrarMenu_(); }
+  function AutPred_parar_() { AutPred_pararPedidos_(); AutPred_pararPortoes_(); AUTP.menu = false; AUTP.acionar = false; AUTP.rapido = []; AUTP.dados = null; AUTP.perms = null; AUTP.aud = null; AutPred_mostrarMenu_(); }
 
   // ---------- tela ----------
   function AutPred_render_() {
@@ -131,12 +141,13 @@
           '<p class="content-subtitle">Portões e porta da Diretoria pela nuvem do Smart Life. Cada comando passa por: solicitado, aceito pela nuvem e execução confirmada pelo dispositivo.</p></div>' +
           '<div class="module-header-right"><button type="button" class="cadx-btn cadx-btn-grande" id="autAtualizar" onclick="AutPred_carregar_()">Atualizar</button></div></div>' +
         CadUI_ajuda_(
-          "<ul><li><b>Abrir portão</b> envia o comando pela nuvem. <b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
-          "<li>A <b>porta da Diretoria</b> só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele.</li>" +
-          "<li>Os botões grandes do topo abrem na hora: toque, confira o nome na janela e toque em \"Sim, abrir agora\". Nada para digitar.</li>" +
+          "<ul><li><b>Portões</b>: toda a equipe vê, abre e fecha. Toque em \"Abrir portão\" ou \"Fechar portão\", confira o nome na janela e toque em \"Sim\". Nada para digitar.</li>" +
+          "<li>O selo grande mostra a posição do portão (<b>Aberto</b>, <b>Fechado</b>, <b>Abrindo…</b>, <b>Fechando…</b>), relida a cada 5 segundos enquanto a tela está aberta. Quando a posição muda, aparece um aviso no topo.</li>" +
+          "<li><b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
+          "<li>A <b>porta da Diretoria</b> só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele. Ela abre quando tocam a campainha: toque em \"Abrir agora\" ou marque <b>\"Abrir automaticamente quando tocarem a campainha\"</b> (desmarcado, volta ao \"Abrir agora\").</li>" +
           "<li><b>Simulação</b>: enquanto a automação está desligada em Chaves e senhas ou o dispositivo não foi homologado pela Diretoria, o SGO+ registra o que teria feito e nada é enviado.</li>" +
-          "<li>Limites: 1 comando por dispositivo a cada 10 s, 5 por pessoa por minuto e nunca o mesmo comando enquanto o anterior está sem resultado. Tudo fica no registro inviolável.</li>" +
-          "<li>Esta tela não se atualiza sozinha: use \"Atualizar\".</li></ul>") +
+          "<li>Limites: 1 comando por dispositivo a cada 10 s, 5 por pessoa por minuto e nunca o mesmo comando enquanto o anterior está sem resultado. Tudo fica no registro inviolável; cada colaborador vê no registro os próprios comandos.</li>" +
+          "<li>Os cartões e o registro não se atualizam sozinhos: use \"Atualizar\".</li></ul>") +
         '<div id="autMsg" aria-live="polite"></div>' +
         '<div id="autCorpo">' + CadUI_esqueleto_(6) + "</div>" +
       "</div>";
@@ -210,7 +221,7 @@
     if (!d.unidades.length) {
       h += '<div class="cadx-vazio bc-vazio"><strong>Nenhum dispositivo liberado para você.</strong>' +
         (AUTP.adm ? "Clique em \"Sincronizar com o Smart Life\" para ler os portões e a fechadura da conta ligada ao projeto. Se a lista vier vazia, confira Chaves e senhas > Automação predial (Tuya) e o vínculo da conta do aplicativo no portal da Tuya." :
-          "Para ver ou abrir um portão, peça ao Administrador ou à Diretoria a permissão em Segurança e automação predial > Permissões." + (d.semPermissao ? " Há " + d.semPermissao + " dispositivo(s) cadastrado(s) sem permissão para você." : "")) + "</div>";
+          "Ainda não há portão ativo no SGO+. Se você precisa abrir um portão por aqui, avise o Administrador ou a Diretoria.") + "</div>";
       el.innerHTML = h; return;
     }
     d.unidades.forEach(function (u) {
@@ -234,6 +245,7 @@
     else if (!d.podeAcionar && d.motivoAcionar) aviso = '<div class="cadx-sub" style="margin-top:6px">Só consulta: ' + AutPred_esc_(d.motivoAcionar) + ".</div>";
     if (d.modoMotivo) aviso += '<div class="cadx-sub" style="margin-top:6px">' + AutPred_esc_(d.modoMotivo) + "</div>";
     return '<div class="aut-cartao' + (d.restrito ? " is-restrito" : "") + '" id="autD_' + d.id + '"><h4><i class="fas ' + (d.tipo === "FECHADURA" ? "fa-lock" : "fa-door-open") + '" aria-hidden="true"></i> ' + AutPred_esc_(d.nome) + "</h4><div>" + AutPred_chipSituacao_(d) + "</div>" +
+      (d.tipo !== "FECHADURA" ? AutPred_htmlPosicao_(d.id, d.estadoPortao) : "") +
       AutPred_linha_("Tipo", d.tipoNome + (d.categoriaNome ? " (" + d.categoriaNome + ")" : "")) + AutPred_linha_("Localização", d.localizacao) +
       AutPred_linha_("Estado", d.estado + (d.estadoEm ? " (lido " + d.estadoEm + ")" : "")) +
       AutPred_linha_("Último comando", d.ultComandoEm ? d.ultComandoSituacao + " em " + d.ultComandoEm : "nenhum") +
@@ -384,16 +396,98 @@
         return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '" data-aut-pedido="' + AutPred_esc_(d.id) + '"><div class="aut-rapido-nome">' + AutPred_esc_(d.nome) + "</div>" +
           '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
             (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") + "</div>" +
-          '<div class="aut-pedido-area" id="autPedArea_' + contexto + "_" + d.id + '">' + AutPred_htmlPedido_(d.id, contexto) + "</div></div>";
+          '<div class="aut-pedido-area" id="autPedArea_' + contexto + "_" + d.id + '">' + AutPred_htmlPedido_(d.id, contexto) + "</div>" +
+          (d.podeAutoAbrir ? AutPred_htmlAuto_(d) : (d.autoAbrir ? '<div class="cadx-sub">Abertura automática ligada' + (d.autoAbrirPor ? " por " + AutPred_esc_(d.autoAbrirPor) : "") + ": a porta abre sozinha quando tocam a campainha.</div>" : "")) + "</div>";
       }
       return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '"><div class="aut-rapido-nome">' + AutPred_esc_(d.nome) + "</div>" +
+        AutPred_htmlPosicao_(d.id, d.estadoPortao) +
         '<div class="aut-rapido-estado">' + (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
           (d.modo === "SIMULACAO" ? '<span class="cadx-selo bc-selo tom-info">Simulação</span>' : "") +
           (d.ultComandoCodigo ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : "") +
           (d.ultComandoEm ? '<span class="cadx-sub">último: ' + AutPred_esc_(d.ultComandoEm) + "</span>" : "") + "</div>" +
         AutPred_htmlBotoesRapidos_(d, contexto) + "</div>";
     }).join("") + "</div>";
+    lista.forEach(function (d) { if (d.estadoPortao && AUTP.posicoes[d.id] === undefined) AUTP.posicoes[d.id] = d.estadoPortao.codigo || ""; });
     AutPred_iniciarPedidos_();
+    AutPred_iniciarPortoes_();
+  }
+
+  // ---------- posição do portão (23/10/2026, dono: "no Smart Life mostra abrindo e fechando e avisa que o portão abriu") ----------
+  // Com a tela aberta, o SGO+ relê a cada 5 s (leitura compartilhada no servidor) e troca só os selos no lugar; quando a
+  // posição muda, mostra o aviso no topo. Para quando a tela fecha ou fica em segundo plano.
+  function AutPred_htmlPosicao_(id, e) {
+    e = e || {};
+    var cls = { ABERTO: "is-aberto", FECHADO: "is-fechado", ABRINDO: "is-movendo", FECHANDO: "is-movendo" }[e.codigo] || "";
+    var ic = { ABERTO: "fa-door-open", FECHADO: "fa-door-closed", ABRINDO: "fa-arrows-left-right", FECHANDO: "fa-arrows-left-right" }[e.codigo] || "fa-circle-question";
+    var texto = e.codigo ? e.texto : "Posição: sem sensor";
+    return '<div><span class="aut-posicao ' + cls + '" data-aut-posicao="' + AutPred_esc_(id) + '" role="status"><i class="fas ' + ic + '" aria-hidden="true"></i>' + AutPred_esc_(texto) + "</span></div>";
+  }
+  function AutPred_pararPortoes_() { if (AUTP.portTimer) clearInterval(AUTP.portTimer); AUTP.portTimer = null; }
+  function AutPred_iniciarPortoes_() {
+    if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; }
+    if (AUTP.portTimer) return;
+    var consultando = false;
+    AUTP.portTimer = setInterval(function () {
+      if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; } // a tela fechou
+      if (document.hidden || consultando) return;
+      consultando = true;
+      AutPred_chamar_("portoes", {}, function (r) {
+        consultando = false;
+        (r.itens || []).forEach(function (x) {
+          var e = x.estadoPortao || {}, antes = AUTP.posicoes[x.id], agora = e.codigo || "";
+          document.querySelectorAll('[data-aut-posicao="' + x.id + '"]').forEach(function (el) { el.parentNode.outerHTML = AutPred_htmlPosicao_(x.id, e); });
+          AUTP.posicoes[x.id] = agora;
+          if (antes !== undefined && antes !== agora && (agora === "ABERTO" || agora === "FECHADO")) {
+            var d = AutPred_dispositivo_(x.id);
+            AutPred_avisoPosicao_((d ? d.nome : "Portão") + (agora === "ABERTO" ? " abriu" : " fechou") + " às " + (r.hora || ""), agora === "ABERTO" ? "tom-alerta" : "tom-ok");
+          }
+        });
+      }, function () { consultando = false; });
+    }, 5000);
+  }
+  function AutPred_avisoPosicao_(texto, tom) {
+    var ini = document.getElementById("autInicio");
+    if (ini && !document.getElementById("autTela")) {
+      var m = ini.querySelector(".aut-inicio-msg");
+      if (!m) { m = document.createElement("div"); m.className = "aut-inicio-msg"; ini.insertBefore(m, ini.firstChild); }
+      m.innerHTML = AutPred_faixa_(texto, tom);
+      return;
+    }
+    AutPred_msg_(AutPred_faixa_(texto, tom));
+  }
+
+  // ---------- abertura automática pela campainha (23/10/2026, decisão do dono) ----------
+  function AutPred_htmlAuto_(d) {
+    return '<label class="aut-auto' + (d.autoAbrir ? " is-ligada" : "") + '"><input type="checkbox" id="autAuto_' + AutPred_esc_(d.id) + '"' + (d.autoAbrir ? " checked" : "") +
+      ' onchange="AutPred_alternarAuto_(' + JSON.stringify(String(d.id)).replace(/"/g, "'") + ', this)"><span>Abrir automaticamente quando tocarem a campainha' +
+      '<div class="aut-auto-sub">' + (d.autoAbrir ? "Ligada" + (d.autoAbrirPor ? " por " + AutPred_esc_(d.autoAbrirPor) : "") + (d.autoAbrirEm ? " em " + AutPred_esc_(d.autoAbrirEm) : "") + ": a porta abre sozinha quando tocam e quem pode destravar recebe o aviso. Desmarque para voltar ao \"Abrir agora\"."
+        : "Desmarcada: a porta só abre quando alguém toca em \"Abrir agora\" durante o pedido.") + "</div></span></label>";
+  }
+  function AutPred_alternarAuto_(id, el) {
+    var ligar = !!el.checked, d = AutPred_dispositivo_(id) || {};
+    el.checked = !ligar; // só muda de verdade quando o servidor gravar
+    var enviar = function (fechar, reabilitar) {
+      el.disabled = true;
+      AutPred_chamar_("autoAbrir", { id: id, ligado: ligar }, function (r) {
+        if (fechar) fechar();
+        el.disabled = false;
+        AutPred_aplicarPainel_(r);
+      }, function (m) { el.disabled = false; if (reabilitar) reabilitar(m); else AutPred_avisoPosicao_(m, "tom-perigo"); });
+    };
+    if (!ligar) { enviar(null, null); return; }
+    CadUI_confirmar_({
+      titulo: "Ligar a abertura automática: " + (d.nome || "porta"), risco: true, botao: "Ligar",
+      texto: "<p>Com a opção ligada, <b>quando alguém tocar a campainha, o SGO+ abre a porta sozinho</b>, sem ninguém confirmar. Cada abertura fica no registro e quem pode destravar recebe o aviso.</p><p>Para voltar ao \"Abrir agora\", desmarque a opção.</p>",
+      aoConfirmar: function (valores, fechar, reabilitar) { enviar(fechar, reabilitar); }
+    });
+  }
+  /** Painel devolvido por uma ação: redesenha o módulo (ou só os botões do Início). */
+  function AutPred_aplicarPainel_(r) {
+    AUTP.rapido = r.rapido || AUTP.rapido;
+    AUTP.acionar = AUTP.rapido.length > 0;
+    if (document.getElementById("autTela")) { AUTP.dados = r; AutPred_desenhar_(); AutPred_desenharRapido_(document.getElementById("autRapido"), AUTP.rapido, "modulo"); }
+    else AutPred_desenharRapido_(document.getElementById("autInicio"), AUTP.rapido, "inicio");
+    if (r.mensagem) AutPred_avisoPosicao_(r.mensagem, "tom-ok");
   }
 
   // ---------- abrir e fechar (22/10/2026: garagem com abrir e fechar; pedestre só pulso, fecha manualmente) ----------
@@ -412,16 +506,7 @@
     var abrirB = AutPred_btnAcao_(d.id, contexto, "ABRIR", "Abrir portão", "aut-rapido-btn", "fa-door-open");
     if (!d.podeFechar) return abrirB + '<div class="cadx-sub">Pulso: fecha manualmente.</div>';
     return '<div class="aut-botoes-portao">' + abrirB + AutPred_btnAcao_(d.id, contexto, "FECHAR", "Fechar portão", "aut-rapido-btn is-fechar", "fa-door-closed") +
-      (d.podeParar ? AutPred_btnAcao_(d.id, contexto, "PARAR", "Parar", "aut-rapido-btn is-recusar", "") : "") + "</div>" +
-      (d.modoFechar === "SIMULACAO" && d.modo === "REAL" ? '<div class="cadx-sub">Fechar em simulação até a homologação do fechar.</div>' : "");
-  }
-  function AutPred_btnHomologarFechar_(id, homologado) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "cadx-btn cadx-btn-grande" + (homologado ? " cadx-btn-risco" : "");
-    b.setAttribute("onclick", "AutPred_homologar_(" + JSON.stringify(String(id)).replace(/"/g, "'") + ", " + (homologado ? "false" : "true") + ", 'FECHAR')");
-    b.textContent = homologado ? "Retirar a homologação do fechar" : "Homologar o fechar (depois do teste presencial)";
-    return b.outerHTML;
+      (d.podeParar ? AutPred_btnAcao_(d.id, contexto, "PARAR", "Parar", "aut-rapido-btn is-recusar", "") : "") + "</div>";
   }
   // ---------- pedido de abertura pela campainha (fechadura da Porta da Diretoria) ----------
   // A fechadura só aceita abertura remota enquanto a campainha está chamando (até 90 s). Com a tela aberta, o SGO+ consulta
@@ -442,6 +527,7 @@
     var n = AutPred_restante_(p);
     if (p && p.ativo && n > 0) {
       return '<div class="aut-pedido is-ativo" role="alert">Campainha tocou' + (p.campainhaTexto ? " às " + AutPred_esc_(p.campainhaTexto) : "") + " — pedido válido por " + n + " s</div>" +
+        (p.autoAbrir ? '<div class="aut-pedido">Abertura automática ligada: o SGO+ está abrindo a porta. Se não abrir em alguns segundos, use "Abrir agora".</div>' : "") +
         '<div class="aut-pedido-botoes">' + AutPred_btnPedido_(id, contexto, "ABRIR") + AutPred_btnPedido_(id, contexto, "RECUSAR") + "</div>";
     }
     if (p && p.respondido) return '<div class="aut-pedido">Último pedido ' + AutPred_esc_(p.respondido) + '. A abertura remota só vale quando tocam a campainha.</div>';
@@ -582,14 +668,13 @@
         '<label for="autUniNome_' + id + '">Unidade (texto, quando não está no cadastro; ex.: METROLABS — MATRIZ GOIÂNIA)</label><input id="autUniNome_' + id + '" maxlength="120" value="' + AutPred_esc_(d.unidadeId ? "" : (d.unidade === "Sem unidade definida" ? "" : d.unidade)) + '">' +
         '<label for="autLoc_' + id + '">Localização (ex.: entrada principal, estacionamento, 2º andar)</label><input id="autLoc_' + id + '" maxlength="120" value="' + AutPred_esc_(d.localizacao) + '">' +
         (d.tipo !== "FECHADURA" ? '<label for="autCmd_' + id + '">Comando de abertura (JSON, só se o lido do Smart Life estiver errado)</label><input id="autCmd_' + id + '" class="aut-mono" value="' + AutPred_esc_(d.comandoAbrir) + '" placeholder=\'{"code":"switch_1","value":true}\'>' : "") +
-        (d.tipo !== "FECHADURA" ? '<label for="autAcion_' + id + '">Acionamento</label><select id="autAcion_' + id + '"><option value="PULSO"' + (d.acionamento !== "ABRIR_FECHAR" ? " selected" : "") + '>Pulso (só abrir; fecha manualmente)</option>' + (d.temFecharNaNuvem ? '<option value="ABRIR_FECHAR"' + (d.acionamento === "ABRIR_FECHAR" ? " selected" : "") + '>Portão com abrir e fechar</option>' : "") + "</select>" + '<div class="cadx-sub">Sugestão pela leitura do dispositivo: ' + (d.acionamentoSugerido === "ABRIR_FECHAR" ? "aceita abrir e fechar pela nuvem" : "só pulso") + '. A escolha é sua: portão que fecha puxando à mão fica como "Pulso". O fechar tem homologação própria.</div>' : "") +
+        (d.tipo !== "FECHADURA" ? '<label for="autAcion_' + id + '">Acionamento</label><select id="autAcion_' + id + '"><option value="PULSO"' + (d.acionamento !== "ABRIR_FECHAR" ? " selected" : "") + '>Pulso (só abrir; fecha manualmente)</option>' + (d.temFecharNaNuvem ? '<option value="ABRIR_FECHAR"' + (d.acionamento === "ABRIR_FECHAR" ? " selected" : "") + '>Portão com abrir e fechar</option>' : "") + "</select>" + '<div class="cadx-sub">Sugestão pela leitura do dispositivo: ' + (d.acionamentoSugerido === "ABRIR_FECHAR" ? "aceita abrir e fechar pela nuvem" : "só pulso") + (d.temSensor ? " (tem sensor de posição)" : " (sem sensor de posição)") + '. Sem escolha gravada, o portão com sensor e fechar pela nuvem já abre e fecha. Portão que fecha puxando à mão fica como "Pulso". O fechar vale com a mesma homologação do abrir.</div>' : "") +
         '<label class="aut-check"><input type="checkbox" id="autAtivo_' + id + '"' + (d.ativo ? " checked" : "") + "> Ativo no SGO+ (desativado não recebe comando)</label>" +
         (AUTP.diretoria ? '<label class="aut-check"><input type="checkbox" id="autRestrito_' + id + '"' + (d.restrito ? " checked" : "") + "> Restrito à Diretoria (só diretores veem e acionam)</label>" : "") +
         '<div class="cadx-sub">Identificação no Smart Life: ' + AutPred_esc_(d.nomeProvedor) + " · " + AutPred_esc_(d.categoriaNome) + (d.produto ? " · " + AutPred_esc_(d.produto) : "") + ' · <span class="aut-mono">' + AutPred_esc_(d.deviceId) + "</span>" + (d.sincronizadoEm ? " · lido em " + AutPred_esc_(d.sincronizadoEm) : "") + "</div>" +
         '<div class="cadx-sub">' + AutPred_esc_(d.compatMotivo) + "</div>" +
         '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvar_(\'' + id + '\')">Gravar</button>' +
         (AUTP.diretoria ? '<button type="button" class="cadx-btn cadx-btn-grande ' + (d.homologado ? "cadx-btn-risco" : "") + '" onclick="AutPred_homologar_(\'' + id + "'," + (d.homologado ? "false" : "true") + ')">' + (d.homologado ? "Retirar a homologação" : "Homologar (depois do teste presencial)") + "</button>" : "") +
-        (AUTP.diretoria && d.podeFechar ? AutPred_btnHomologarFechar_(id, d.homologadoFechar) : "") +
         '<button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_form_(\'' + id + '\', \'\')">Cancelar</button></div><div class="cadx-msg" id="autEdMsg_' + id + '"></div></div>');
     };
     if (AUTP.unidades) montar(AUTP.unidades);
@@ -612,7 +697,7 @@
     var d = AutPred_dispositivo_(id);
     CadUI_confirmar_({
       titulo: (sim ? "Homologar " : "Retirar a homologação ") + (comando === "FECHAR" ? "do fechar: " : (sim ? "" : "de ")) + (d ? d.nome : ""), risco: true, botao: sim ? "Homologar" : "Retirar",
-      texto: sim ? "<p>Homologar libera o <b>comando real</b> neste dispositivo assim que a automação estiver ligada em Chaves e senhas. Só homologue depois do teste presencial com acompanhamento.</p>"
+      texto: sim ? "<p>Homologar libera o <b>comando real</b> neste dispositivo (no portão, abrir e fechar) assim que a automação estiver ligada em Chaves e senhas. Só homologue depois do teste presencial com acompanhamento.</p>"
         : "<p>O dispositivo volta à simulação: nenhum comando real sai até nova homologação.</p>",
       motivo: { rotulo: sim ? "Como foi o teste presencial" : "Motivo", min: 8 },
       aoConfirmar: function (valores, fechar, reabilitar) {
@@ -629,15 +714,17 @@
       AUTP.perms = r;
       var opU = r.usuarios.map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '">' + AutPred_esc_(u.nome + " (" + u.login + ", " + u.perfil + (u.dono ? ", responsável pelo sistema" : u.diretor ? ", diretor" : "") + ")") + "</option>"; }).join("");
       var opD = r.dispositivos.map(function (d) { return '<option value="' + AutPred_esc_(d.id) + '">' + AutPred_esc_(d.nome + (d.unidade ? " — " + d.unidade : "") + (d.restrito ? " (porta da Diretoria: só o responsável pelo sistema libera, só para diretores)" : "")) + "</option>"; }).join("");
-      var h = '<div class="aut-form"><label>Conceder permissão</label>' +
+      var portoesTexto = '<div class="cadx-faixa bc-faixa tom-info"><b>Portões:</b> toda a equipe interna vê, abre e fecha, sem permissão individual. No registro, cada colaborador vê só os próprios comandos; o Administrador e os diretores veem todos.</div>';
+      if (!r.dispositivos.length) { el.innerHTML = portoesTexto + '<div class="cadx-sub" style="margin-top:8px">A permissão individual só existe para a porta da Diretoria, e só o responsável pelo sistema concede, a diretores.</div>'; return; }
+      var h = portoesTexto + '<div class="aut-form"><label>Conceder permissão na porta da Diretoria</label>' +
         '<label for="autPU">Usuário</label><select id="autPU">' + opU + "</select>" +
         '<label for="autPD">Dispositivo</label><select id="autPD">' + opD + "</select>" +
         '<label for="autPP">Permissão</label><select id="autPP"><option value="VER">Ver estado e histórico</option><option value="ACIONAR">Acionar (abrir) e ver</option></select>' +
         '<label for="autPF">Vigência até (opcional)</label><input type="date" id="autPF">' +
-        '<label for="autPM">Motivo</label><input id="autPM" maxlength="300" placeholder="Ex.: recebe entregas na portaria">' +
+        '<label for="autPM">Motivo</label><input id="autPM" maxlength="300" placeholder="Ex.: diretor de operações">' +
         '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_conceder_()">Conceder</button></div><div class="cadx-msg" id="autPMsg"></div>' +
         '<div class="cadx-faixa bc-faixa tom-info" style="margin-top:6px"><b>Porta da Diretoria:</b> só os diretores a veem. O responsável pelo sistema destrava por padrão (não precisa de permissão). Outro diretor só destrava se o responsável pelo sistema conceder aqui a permissão "Acionar", com vigência se quiser; a concessão e a revogação ficam na auditoria.</div>' +
-        '<div class="cadx-sub">Portões: o Administrador e os diretores já veem e abrem sem permissão individual; os demais só com "Ver" ou "Acionar" concedido aqui. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo.</div></div>';
+        '<div class="cadx-sub">Uma permissão nova substitui a anterior do mesmo usuário.</div></div>';
       h += '<h3 class="aut-unidade">Permissões concedidas</h3>' + (r.permissoes.length ? '<table class="aut-tabela"><thead><tr><th>Usuário</th><th>Dispositivo</th><th>Permissão</th><th>Vigência</th><th>Concedida</th><th>Situação</th><th></th></tr></thead><tbody>' + r.permissoes.map(function (p) {
         var sit = p.status === "ATIVA" ? (p.vencida ? '<span class="cadx-selo bc-selo tom-alerta">Vencida</span>' : '<span class="cadx-selo bc-selo tom-ok">Ativa</span>') : '<span class="cadx-selo bc-selo">Revogada' + (p.revogadaEm ? " em " + AutPred_esc_(p.revogadaEm) : "") + "</span>";
         return "<tr><td>" + AutPred_esc_(p.usuario) + '<div class="cadx-sub">' + AutPred_esc_(p.login + " · " + p.perfil) + "</div></td><td>" + AutPred_esc_(p.dispositivo) + "</td><td>" + AutPred_esc_(p.permissaoTexto) + "</td><td>" + AutPred_esc_(p.vigenciaFim || "sem data de fim") + "</td><td>" + AutPred_esc_(p.concedidaPor + " em " + p.concedidaEm) + '<div class="cadx-sub">' + AutPred_esc_(p.motivo) + "</div></td><td>" + sit + "</td><td>" +

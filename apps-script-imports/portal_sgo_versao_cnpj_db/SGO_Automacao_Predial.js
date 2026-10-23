@@ -9,10 +9,10 @@
  *  2. Dispositivo RESTRITO À DIRETORIA (fechaduras entram assim na sincronização): só o perfil DIRETORIA o vê, lista,
  *     consulta ou aciona. Para os demais ele não existe (nem nome, nem estado, nem histórico). O Administrador vê
  *     apenas a contagem "n restrito(s) à Diretoria", sem dados.
- *  3. Portões: Administrador e Diretoria veem e acionam. Os outros perfis só com permissão individual por dispositivo
- *     (VER = estado e histórico; ACIONAR = também abrir), com vigência, concedida por ADMIN (portões) ou DIRETORIA (tudo)
- *     e registrada. A porta da Diretoria exige permissão ACIONAR mesmo para a Diretoria (usuário expressamente
- *     autorizado), concedida só por DIRETORIA a usuários DIRETORIA.
+ *  3. Portões: toda a equipe interna vê, abre e fecha (23/10/2026, dono: "os colaboradores no celular não estão vendo
+ *     Portões; somente a porta da Diretoria fica oculta para eles"). No registro, o colaborador vê só os próprios
+ *     comandos; o Administrador e os diretores veem todos. A porta da Diretoria exige permissão ACIONAR mesmo para a
+ *     Diretoria (usuário expressamente autorizado), concedida só pelo responsável pelo sistema a diretores.
  *  4. Comando: identificador da operação (idempotente: o mesmo id devolve o mesmo resultado, nunca executa de novo);
  *     no máximo 1 comando por dispositivo a cada AUT_INTERVALO_DISPOSITIVO_S, AUT_LIMITE_USUARIO_MIN por pessoa por
  *     minuto e nunca o mesmo comando enquanto o anterior está sem resultado; todo comando só com a confirmação da janela
@@ -35,8 +35,8 @@ var AUT_COLUNAS_DISPOSITIVOS = ['ID', 'PROVEDOR', 'DEVICE_ID', 'NOME', 'NOME_PRO
   'UNIDADE_ID', 'UNIDADE_NOME', 'LOCALIZACAO', 'RESTRITO_DIRETORIA', 'HOMOLOGADO', 'HOMOLOGADO_POR', 'HOMOLOGADO_EM', 'ATIVO',
   'ONLINE', 'ESTADO_JSON', 'ESTADO_EM', 'FUNCOES_JSON', 'COMANDO_ABRIR_JSON', 'ESTADO_CODIGOS', 'COMPAT_OK', 'COMPAT_MOTIVO', 'REMOTO_FECHADURA',
   'ULT_CMD_ID', 'ULT_CMD_EM', 'ULT_CMD_SITUACAO', 'SINCRONIZADO_EM', 'ATUALIZADO_EM', 'CRIADO_EM',
-  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM'];
-var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM'];
+  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM'];
+var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM'];
 var AUT_COLUNAS_PERMISSOES = ['ID', 'USUARIO_ID', 'USUARIO_LOGIN', 'USUARIO_NOME', 'USUARIO_PERFIL', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'PERMISSAO',
   'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CONCEDIDA_POR_ID', 'CONCEDIDA_POR', 'CONCEDIDA_EM', 'MOTIVO', 'STATUS', 'REVOGADA_POR', 'REVOGADA_EM', 'REVOGADA_MOTIVO', 'CRIADO_EM'];
 var AUT_COLUNAS_COMANDOS = ['ID', 'OPERACAO_ID', 'QUANDO', 'QUANDO_EM', 'SOLICITANTE_ID', 'SOLICITANTE', 'PERFIL', 'UNIDADE', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'TIPO',
@@ -121,10 +121,18 @@ function AutPred_bootstrap_() {
 // ABRIR E FECHAR (22/10/2026, dono: "o portão da GARAGEM tem que ter abrir e fechar; o de PEDESTRE é só um pulso")
 // Medido em produção, só leitura: os dois portões são módulos de pulso (categoria ckmkzq) com switch_1 (pulso) e
 // door_control_1 (open/close); o da garagem tem o sensor doorcontact_state. Nenhum aceita "stop".
-// ACIONAMENTO: 'PULSO' (só abrir; fecha manualmente) ou 'ABRIR_FECHAR'. Vazio = PULSO (como estava). A escolha é do
-// Administrador ou de um diretor em Administrar; a tela mostra a sugestão da descoberta.
+// ACIONAMENTO: 'PULSO' (só abrir; fecha manualmente) ou 'ABRIR_FECHAR'. A escolha é do Administrador ou de um diretor em
+// Administrar; a tela mostra a sugestão da descoberta.
+// 23/10/2026 (dono: "o portão só abre e não fecha; no Smart Life ele mostra abrindo e fechando"): sem escolha gravada, o
+// portão com sensor de posição (doorcontact_state) e fechar pela nuvem já entra com abrir e fechar, como no aplicativo;
+// sem sensor (pedestre) continua pulso. O fechar passa a valer com a mesma homologação do abrir.
 // ------------------------------------------------------------
-function AutPred_acionamento_(d) { return AutPred_s_(d && d.ACIONAMENTO).toUpperCase() === 'ABRIR_FECHAR' ? 'ABRIR_FECHAR' : 'PULSO'; }
+function AutPred_temSensor_(d) { return (AutPred_deJson_(d && d.ESTADO_JSON, []) || []).some(function (s) { return s && s.code === 'doorcontact_state'; }); }
+function AutPred_acionamento_(d) {
+  var a = AutPred_s_(d && d.ACIONAMENTO).toUpperCase();
+  if (a === 'ABRIR_FECHAR' || a === 'PULSO') return a;
+  return AutPred_comandosPortao_(d).fechar && AutPred_temSensor_(d) ? 'ABRIR_FECHAR' : 'PULSO';
+}
 
 /** Função pura: comandos que o portão aceita, pelas funções lidas da nuvem. { abrir, fechar, parar } (cada um {code, value} ou null). */
 function AutPred_comandosPortao_(d) {
@@ -232,7 +240,7 @@ function AutPred_permissoesDe_(userId, lista) {
  * O que a sessão pode no dispositivo: { ver, acionar, motivo }. Função pura sobre sessão + dispositivo + permissões.
  * Restrito à Diretoria: só diretor vê (AutPred_ehDiretor_); o responsável pelo sistema aciona por padrão ("minha sala
  * é para o meu login ter acesso", dono, 22/10/2026); os outros diretores só com a permissão ACIONAR que ele concede.
- * Portão: Administrador e diretores tudo; os demais pelo que foi concedido.
+ * Portão: toda a equipe interna vê, abre e fecha (23/10/2026; o cliente nem entra no módulo, AutPred_sessao_).
  */
 function AutPred_direitos_(sessao, disp, perms) {
   var perm = AutPred_s_((perms || {})[AutPred_s_(disp.ID)]).toUpperCase();
@@ -242,11 +250,12 @@ function AutPred_direitos_(sessao, disp, perms) {
     if (perm === 'ACIONAR') return { ver: true, acionar: true, motivo: '' };
     return { ver: true, acionar: false, motivo: 'a porta da Diretoria é destravada pelo responsável pelo sistema; outro diretor só destrava se ele conceder a permissão "Acionar" em Segurança e automação predial > Permissões' };
   }
-  if (AutPred_administra_(sessao)) return { ver: true, acionar: true, motivo: '' };
-  if (perm === 'ACIONAR') return { ver: true, acionar: true, motivo: '' };
-  if (perm === 'VER') return { ver: true, acionar: false, motivo: 'você tem permissão só para ver este dispositivo; para abrir, peça ao Administrador ou à Diretoria a permissão "Acionar"' };
-  return { ver: false, acionar: false, motivo: 'você não tem permissão neste dispositivo; peça ao Administrador ou à Diretoria' };
+  if (AutPred_perfil_(sessao) === 'CLIENTE') return { ver: false, acionar: false, motivo: 'área da equipe interna' };
+  return { ver: true, acionar: true, motivo: '' };
 }
+
+/** Registro: o colaborador vê só os próprios comandos; o Administrador e os diretores veem todos (23/10/2026). */
+function AutPred_veComando_(sessao, c) { return AutPred_administra_(sessao) || (!!AutPred_s_(sessao && sessao.userId) && AutPred_s_(c.SOLICITANTE_ID) === AutPred_s_(sessao.userId)); }
 
 function AutPred_dispositivos_() { return AutPred_ler_(AUT_ABA_DISPOSITIVOS); }
 function AutPred_dispositivo_(id) {
@@ -279,7 +288,7 @@ function AutPred_cfg_() {
 function AutPred_modo_(c, disp, acao) {
   if (!c.podeLer) return { modo: 'SIMULACAO', motivo: 'Simulação: ' + c.faltas.join('; ') + '. O SGO+ registra o que teria feito e nada sai do servidor.' };
   if (AutPred_s_(disp.HOMOLOGADO).toUpperCase() !== 'SIM') return { modo: 'SIMULACAO', motivo: 'Simulação: este dispositivo ainda não foi homologado pela Diretoria (botão "Homologar" na administração, depois do teste presencial). Nada sai do servidor.' };
-  if ((acao === 'FECHAR' || acao === 'PARAR') && AutPred_s_(disp.HOMOLOGADO_FECHAR).toUpperCase() !== 'SIM') return { modo: 'SIMULACAO', motivo: 'Simulação: o fechar deste portão ainda não foi homologado (Administrar > "Homologar o fechar", depois do teste presencial). Nada sai do servidor.' };
+  // 23/10/2026: o fechar vale com a mesma homologação do abrir (a homologação própria do fechar deixava o portão só abrindo)
   return { modo: 'REAL', motivo: '' };
 }
 
@@ -359,6 +368,7 @@ function AutPred_estadoTexto_(disp) {
     if (!partes.length) partes.push('a fechadura não informa o estado pela API');
   } else {
     if (m.doorcontact_state !== undefined) partes.push(m.doorcontact_state === true ? 'aberto (sensor)' : 'fechado (sensor)');
+    if (m.door_control_1 !== undefined) partes.push('último comando: ' + ({ open: 'abrir', close: 'fechar' }[String(m.door_control_1)] || m.door_control_1));
     if (m.control !== undefined) partes.push('último comando: ' + m.control);
     if (m.switch_1 !== undefined) partes.push(m.switch_1 === true ? 'acionador ligado' : 'acionador em repouso');
     else if (m.switch !== undefined) partes.push(m.switch === true ? 'acionador ligado' : 'acionador em repouso');
@@ -366,6 +376,63 @@ function AutPred_estadoTexto_(disp) {
     if (!partes.length) partes.push(st && st.length ? 'estado sem tradução' : 'estado não informado');
   }
   return partes.join(', ');
+}
+
+// ------------------------------------------------------------
+// ESTADO DO PORTÃO NA TELA (23/10/2026, dono: "no Smart Life ele mostra abrindo e fechando e avisa que o portão abriu")
+// Aberto/Fechado pelo sensor de posição (doorcontact_state); Abrindo…/Fechando… durante o percurso (tr_timecon, ou 30 s)
+// depois de um comando de abrir/fechar. A tela aberta relê a cada 5 s pela leitura compartilhada (AutPred_estadosPortoes_).
+// ------------------------------------------------------------
+var AUT_PERCURSO_PADRAO_S = 30;
+var AUT_ESTADO_CACHE = 'AUT_ESTADO_';
+var AUT_ESTADO_CACHE_MS = 4500;
+var AUT_ESTADO_RESERVA = 70;   // a tela não lê se o minuto já tem 70 chamadas à Tuya: a folga fica para os comandos e a abertura automática
+
+/** { codigo: 'ABERTO'|'FECHADO'|'ABRINDO'|'FECHANDO'|'', texto, sensor }. Função pura (agoraMs para os testes). */
+function AutPred_estadoPortao_(d, agoraMs) {
+  agoraMs = agoraMs || Date.now();
+  var m = {};
+  (AutPred_deJson_(d && d.ESTADO_JSON, []) || []).forEach(function (s) { if (s && s.code) m[s.code] = s.value; });
+  var sensor = m.doorcontact_state !== undefined;
+  var alvo = String(m.door_control_1 !== undefined ? m.door_control_1 : (m.control !== undefined ? m.control : ''));
+  var percurso = Number(m.tr_timecon) > 0 ? Number(m.tr_timecon) : AUT_PERCURSO_PADRAO_S;
+  var ult = AutPred_ms_(d && d.ULT_CMD_EM);
+  var emCurso = AutPred_acionamento_(d) === 'ABRIR_FECHAR' && ult > 0 && agoraMs - ult >= 0 && agoraMs - ult < (percurso + 5) * 1000 &&
+    ['SOLICITADO', 'ACEITO', 'CONFIRMADO'].indexOf(AutPred_s_(d.ULT_CMD_SITUACAO)) >= 0;
+  if (emCurso && alvo === 'open' && !(sensor && m.doorcontact_state === true && agoraMs - ult >= percurso * 1000)) return { codigo: 'ABRINDO', texto: 'Abrindo…', sensor: sensor };
+  if (emCurso && alvo === 'close' && !(sensor && m.doorcontact_state === false)) return { codigo: 'FECHANDO', texto: 'Fechando…', sensor: sensor };
+  if (sensor) return m.doorcontact_state === true ? { codigo: 'ABERTO', texto: 'Aberto', sensor: true } : { codigo: 'FECHADO', texto: 'Fechado', sensor: true };
+  return { codigo: '', texto: 'sem sensor de posição', sensor: false };
+}
+
+/** Relê o estado para a tela, com leitura compartilhada de 4,5 s entre todas as telas; grava só quando mudou. */
+function AutPred_lerEstadoCompartilhado_(c, disp) {
+  var k = AUT_ESTADO_CACHE + AutPred_s_(disp.DEVICE_ID), cache = null;
+  try { cache = CacheService.getScriptCache(); if (Date.now() - Number(cache.get(k) || 0) <= AUT_ESTADO_CACHE_MS) return false; } catch (e) {}
+  if (typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AUT_ESTADO_RESERVA) return false;
+  try { if (cache) cache.put(k, String(Date.now()), 60); } catch (e2) {}
+  var d = Tuya_dispositivo_(c, disp.DEVICE_ID);
+  var upd = { ONLINE: d.online ? 'SIM' : 'NAO', ESTADO_JSON: AutPred_json_(d.status) };
+  if (upd.ONLINE !== AutPred_s_(disp.ONLINE) || upd.ESTADO_JSON !== AutPred_s_(disp.ESTADO_JSON)) {
+    upd.ESTADO_EM = SGO_UTILS.nowIso(); upd.ATUALIZADO_EM = SGO_UTILS.nowIso();
+    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
+  }
+  Object.assign(disp, upd);
+  return true;
+}
+
+/** Consulta leve da tela (a cada 5 s, enquanto ela está aberta): estado dos portões que a sessão vê. */
+function AutPred_estadosPortoes_(sessao) {
+  var c = AutPred_cfg_(), perms = AutPred_permissoesDe_(sessao.userId), itens = [];
+  AutPred_dispositivos_().forEach(function (d) {
+    if (d.TIPO === 'FECHADURA' || AutPred_s_(d.ATIVO).toUpperCase() === 'NAO') return;
+    if (!AutPred_direitos_(sessao, d, perms).ver) return;
+    var erro = '';
+    if (c.podeLer && (AutPred_temSensor_(d) || AutPred_acionamento_(d) === 'ABRIR_FECHAR')) { try { AutPred_lerEstadoCompartilhado_(c, d); } catch (e) { erro = Tuya_limpar_(e && e.message, c); } }
+    itens.push({ id: AutPred_s_(d.ID), online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estadoPortao: AutPred_estadoPortao_(d), estado: AutPred_estadoTexto_(d),
+      ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), erro: erro });
+  });
+  return { itens: itens, hora: AutPred_hora_(Date.now()) };
 }
 
 /** Compara o estado antes e depois nos códigos relevantes. { confirmado, detalhe } — função pura. */
@@ -499,8 +566,10 @@ function AutPred_pedidosDaSessao_(sessao) {
     var p;
     try { p = AutPred_pedidoFechadura_(c, d); } catch (e) { itens.push({ id: AutPred_s_(d.ID), erro: Tuya_limpar_(e && e.message, c) }); return; }
     var resp = AutPred_respostaDoPedido_(AutPred_comandos_(), d.ID, p.pedidoId);
+    var auto = resp && AutPred_s_(resp.ORIGEM) === 'AUTOMATICO';
     itens.push({ id: AutPred_s_(d.ID), nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), ativo: p.ativo && !resp, restanteS: p.restanteS, campainhaTexto: p.campainhaTexto, pedidoId: p.pedidoId,
-      respondido: resp ? (AutPred_s_(resp.COMANDO) === 'RECUSAR' ? 'recusado' : 'aberto') + ' por ' + AutPred_s_(resp.SOLICITANTE) + ' às ' + AutPred_s_(resp.QUANDO).slice(-5) : '', porta: p.porta });
+      respondido: resp ? (auto ? 'aberto automaticamente' : (AutPred_s_(resp.COMANDO) === 'RECUSAR' ? 'recusado' : 'aberto') + ' por ' + AutPred_s_(resp.SOLICITANTE)) + ' às ' + AutPred_s_(resp.QUANDO).slice(-5) : '', porta: p.porta,
+      autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM) });
   });
   return { itens: itens };
 }
@@ -538,7 +607,10 @@ function AutPred_rotinaPedidos() {
     if (!AutPred_ehPedido_(d) || AutPred_s_(d.HOMOLOGADO).toUpperCase() !== 'SIM' || AutPred_s_(d.ATIVO).toUpperCase() === 'NAO') return;
     var p;
     try { p = AutPred_pedidoFechadura_(c, d); } catch (e) { return; }
-    if (!p.ativo || props.getProperty(AUT_PROP_PEDIDO_AVISADO + d.ID) === p.pedidoId) return;
+    if (!p.ativo) return;
+    // abertura automática ligada: esta rotina é a reserva da rotina rápida (no Google, a única); a resposta é uma por pedido
+    if (AutPred_autoAbrir_(d)) { if (!AutPred_respostaDoPedido_(AutPred_comandos_(), d.ID, p.pedidoId) && AutPred_abrirAutomatico_(c, d, p)) avisos++; return; }
+    if (props.getProperty(AUT_PROP_PEDIDO_AVISADO + d.ID) === p.pedidoId) return;
     props.setProperty(AUT_PROP_PEDIDO_AVISADO + d.ID, p.pedidoId);
     var nome = AutPred_s_(d.NOME || d.NOME_PROVEDOR);
     AutPred_auditar_({ evento: 'PEDIDO_CAMPAINHA', quem: AUT_SISTEMA, disp: d, operacaoId: p.pedidoId, resultado: 'AVISADO', detalhe: 'A campainha tocou' + (p.campainhaTexto ? ' às ' + p.campainhaTexto : '') + '; pedido de abertura ativo por ' + p.restanteS + ' s.' });
@@ -559,6 +631,133 @@ function AutPred_garantirRotina_() {
     ScriptApp.newTrigger(AUT_FUNCAO_ROTINA).timeBased().everyMinutes(1).create();
     return 'instalada';
   } catch (e) { return 'não instalada: ' + ((e && e.message) || e); }
+}
+
+// ------------------------------------------------------------
+// ABERTURA AUTOMÁTICA PELA CAMPAINHA (23/10/2026, dono: "uma opção para os diretores marcarem abertura automática quando
+// alguém tocar a campainha; quando desmarcar, continua da forma que construiu")
+// Marcada por quem destrava a porta (AUTO_ABRIR = SIM). O servidor consulta o pedido a cada 3 s (AutPred_rotinaRapida,
+// chamada pela rotina rápida do servidor só enquanto AUT_AUTO_ABRIR_LIGADO = 1) e responde "abrir" sozinho, uma vez por
+// pedido, com o registro e o aviso S68 a quem pode destravar. A rotina de 1 minuto faz o mesmo como reserva.
+// ------------------------------------------------------------
+var AUT_PROP_AUTO_LIGADO = 'AUT_AUTO_ABRIR_LIGADO';
+var AUT_AUTOMATICO = { userId: '', usuario: 'sistema', nome: 'Abertura automática', perfil: 'SISTEMA' };
+var AUT_AUTO_TENTATIVAS = 2;   // por pedido (a 2ª só se a 1ª falhou na nuvem)
+
+function AutPred_autoAbrir_(d) { return AutPred_s_(d && d.AUTO_ABRIR).toUpperCase() === 'SIM'; }
+
+/** Sinal lido pelo servidor (tabela de propriedades) para chamar a rotina rápida só quando há porta com a opção ligada. */
+function AutPred_atualizarSinalAuto_() {
+  var algum = AutPred_dispositivos_().some(function (d) { return AutPred_autoAbrir_(d) && AutPred_ehPedido_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
+  var p = PropertiesService.getScriptProperties();
+  if (algum) p.setProperty(AUT_PROP_AUTO_LIGADO, '1'); else p.deleteProperty(AUT_PROP_AUTO_LIGADO);
+  return algum;
+}
+
+/** Liga ou desliga. dados = { id, ligado }. Só quem destrava a porta (o responsável pelo sistema ou o diretor com "Acionar"). */
+function AutPred_definirAutoAbrir_(sessao, dados) {
+  dados = dados || {};
+  var disp = AutPred_dispositivo_(dados.id);
+  var dir = AutPred_direitos_(sessao, disp, AutPred_permissoesDe_(sessao.userId));
+  if (!dir.ver) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você. Clique em "Atualizar".');
+  if (!AutPred_ehPedido_(disp)) throw new Error('Não foi possível gravar: a abertura automática só existe na fechadura que abre pela campainha.');
+  if (!dir.acionar || !AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível gravar: só quem destrava a porta liga ou desliga a abertura automática (' + (dir.motivo || 'diretor com a permissão "Acionar"') + ').');
+  var ligar = !!dados.ligado, nome = AutPred_s_(disp.NOME || disp.NOME_PROVEDOR);
+  if (ligar === AutPred_autoAbrir_(disp)) return { mensagem: 'A abertura automática já estava ' + (ligar ? 'ligada' : 'desligada') + '.' };
+  var upd = { AUTO_ABRIR: ligar ? 'SIM' : 'NAO', AUTO_ABRIR_POR: AutPred_nome_(sessao), AUTO_ABRIR_EM: SGO_UTILS.nowIso(), ATUALIZADO_EM: SGO_UTILS.nowIso() };
+  SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
+  Object.assign(disp, upd);
+  AutPred_atualizarSinalAuto_();
+  if (ligar) AutPred_garantirRotina_();
+  AutPred_auditar_({ evento: ligar ? 'AUTO_ABRIR_LIGADA' : 'AUTO_ABRIR_DESLIGADA', quem: sessao, disp: disp, resultado: 'OK',
+    detalhe: ligar ? 'Abertura automática pela campainha ligada: a porta abre sozinha quando tocarem.' : 'Abertura automática desligada: a porta só abre por "Abrir agora".' });
+  try {
+    var outros = AutPred_quemDestrava_(disp).filter(function (id) { return id !== AutPred_s_(sessao.userId); });
+    if (outros.length && typeof SGO_notificar_ === 'function') SGO_notificar_({ usuarios: outros, titulo: 'Abertura automática ' + (ligar ? 'ligada' : 'desligada') + ' na ' + nome, canais: ['sgo'], origem: 'AUTOMACAO', refId: disp.ID, evento: 'S68',
+      texto: AutPred_nome_(sessao) + (ligar ? ' ligou a abertura automática da ' + nome + ': quando tocarem a campainha, o SGO+ abre a porta sozinho.' : ' desligou a abertura automática da ' + nome + ': a porta volta a abrir só por "Abrir agora".') });
+  } catch (eN) {}
+  var modo = AutPred_modo_(AutPred_cfg_(), disp, 'ABRIR');
+  return { mensagem: ligar ? 'Abertura automática ligada: quando tocarem a campainha da ' + nome + ', o SGO+ abre a porta sozinho e avisa quem pode destravar.' + (modo.modo === 'SIMULACAO' ? ' ' + modo.motivo : '')
+    : 'Abertura automática desligada: a porta só abre quando alguém toca em "Abrir agora" durante o pedido.' };
+}
+
+/** Rotina rápida do servidor (a cada 3 s, só com AUT_AUTO_ABRIR_LIGADO = 1). Nada lido nem enviado sem porta com a opção ligada. */
+function AutPred_rotinaRapida() {
+  if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
+  if (PropertiesService.getScriptProperties().getProperty(AUT_PROP_AUTO_LIGADO) !== '1') return { texto: 'abertura automática desligada' };
+  var c = AutPred_cfg_();
+  if (!c.podeLer) return { texto: 'automação desligada: nada lido' };
+  var abertas = 0;
+  AutPred_dispositivos_().forEach(function (d) {
+    if (!AutPred_autoAbrir_(d) || !AutPred_ehPedido_(d) || AutPred_s_(d.ATIVO).toUpperCase() === 'NAO') return;
+    var p;
+    try { p = AutPred_pedidoFechadura_(c, d); } catch (e) { return; }
+    if (!p.ativo || AutPred_respostaDoPedido_(AutPred_comandos_(), d.ID, p.pedidoId)) return;
+    if (AutPred_abrirAutomatico_(c, d, p)) abertas++;
+  });
+  return { abertas: abertas };
+}
+
+/**
+ * Responde "abrir" ao pedido da campainha em nome da abertura automática. Conferência e gravação sob a trava do script
+ * (uma resposta por pedido, mesmo com a rotina rápida e a de 1 minuto ao mesmo tempo). Devolve o comando ou null.
+ */
+function AutPred_abrirAutomatico_(c, disp, pedido) {
+  var trava = null;
+  try { trava = LockService.getScriptLock(); trava.waitLock(10000); } catch (e) { trava = null; }
+  var soltar = function () { if (trava) { try { trava.releaseLock(); } catch (e2) {} trava = null; } };
+  var cmd, modo, nome = AutPred_s_(disp.NOME || disp.NOME_PROVEDOR);
+  try {
+    AutPred_bootstrap_();
+    var comandos = AutPred_comandos_();
+    if (AutPred_respostaDoPedido_(comandos, disp.ID, pedido.pedidoId)) return null;
+    var prefixo = 'auto-' + pedido.pedidoId + '-' + AutPred_s_(disp.ID) + '-';
+    var tentativas = comandos.filter(function (x) { return AutPred_s_(x.OPERACAO_ID).indexOf(prefixo) === 0; }).length;
+    if (tentativas >= AUT_AUTO_TENTATIVAS) return null;
+    modo = AutPred_modo_(c, disp, 'ABRIR');
+    cmd = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase({
+      OPERACAO_ID: prefixo + (tentativas + 1), QUANDO: AutPred_agoraTexto_(), QUANDO_EM: SGO_UTILS.nowIso(), SOLICITANTE_ID: '', SOLICITANTE: AUT_AUTOMATICO.nome, PERFIL: AUT_AUTOMATICO.perfil,
+      UNIDADE: AutPred_s_(disp.UNIDADE_NOME), DISPOSITIVO_ID: AutPred_s_(disp.ID), DEVICE_ID: AutPred_s_(disp.DEVICE_ID), DISPOSITIVO_NOME: nome, TIPO: AutPred_s_(disp.TIPO),
+      COMANDO: 'DESTRAVAR', COMANDO_JSON: AutPred_json_({ code: 'reply_unlock_request', value: true }), MODO: modo.modo, AUTORIZACAO: 'AUTORIZADO',
+      AUTORIZACAO_MOTIVO: 'abertura automática pela campainha, ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + (disp.AUTO_ABRIR_EM ? ' em ' + AutPred_dataBr_(disp.AUTO_ABRIR_EM) : ''),
+      SITUACAO: 'SOLICITADO', ESTADO_ANTES_JSON: AutPred_s_(disp.ESTADO_JSON), CORRELACAO: pedido.pedidoId, ORIGEM: 'AUTOMATICO', ATUALIZADO_EM: SGO_UTILS.nowIso()
+    })));
+    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_ID: cmd.ID, ULT_CMD_EM: cmd.QUANDO_EM, ULT_CMD_SITUACAO: 'SOLICITADO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
+  } finally { soltar(); }
+  var quando = pedido.campainhaTexto ? ' às ' + pedido.campainhaTexto : '';
+  AutPred_auditar_({ evento: 'COMANDO_SOLICITADO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'AUTORIZADO', detalhe: 'Abertura automática: a campainha tocou' + quando + ' (' + modo.modo + ').' + (modo.motivo ? ' ' + modo.motivo : '') });
+  var avisar = function (titulo, texto) {
+    try {
+      if (typeof SGO_notificar_ === 'function') SGO_notificar_({ usuarios: AutPred_quemDestrava_(disp), titulo: titulo, canais: ['sgo', 'whatsapp'], origem: 'AUTOMACAO', refId: cmd.ID, evento: 'S68', texto: texto,
+        textoWhatsapp: 'SGO+: ' + texto });
+    } catch (eN) { console.error('Automação predial, aviso da abertura automática: ' + ((eN && eN.message) || eN)); }
+  };
+  if (modo.modo === 'SIMULACAO') {
+    AutPred_gravarComando_(cmd, { SITUACAO: 'SIMULADO', CONFIRMACAO_DETALHE: 'Simulação: a abertura automática teria respondido "abrir" ao pedido da campainha. Nada foi enviado. ' + modo.motivo });
+    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: 'SIMULADO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
+    AutPred_auditar_({ evento: 'COMANDO_SIMULADO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'SIMULADO', detalhe: cmd.CONFIRMACAO_DETALHE });
+    avisar('Campainha da ' + nome + ' (teste)', 'A campainha da ' + nome + ' tocou' + quando + '. Abertura automática em simulação: nada foi enviado à fechadura. ' + modo.motivo);
+    return cmd;
+  }
+  var r;
+  try { r = Tuya_enviarComando_(c, disp.DEVICE_ID, [{ code: 'reply_unlock_request', value: true }]); }
+  catch (e) { r = { aceito: false, http: e && e.tuyaHttp || 0, codigo: e && e.tuyaCodigo || 0, msg: Tuya_limpar_(e && e.message, c), resposta: '', incerto: !!(e && e.tuyaRede) }; }
+  if (!r.aceito) {
+    var sit = r.incerto ? 'INCERTO' : 'RECUSADO';
+    AutPred_gravarComando_(cmd, { SITUACAO: sit, API_HTTP: r.http ? String(r.http) : '', API_CODIGO: r.codigo ? String(r.codigo) : '', API_TID: AutPred_s_(r.tid), API_RESPOSTA: AutPred_s_(r.resposta), CONFIRMACAO_DETALHE: r.msg });
+    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: sit, ATUALIZADO_EM: SGO_UTILS.nowIso() });
+    AutPred_auditar_({ evento: 'COMANDO_RECUSADO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: sit, detalhe: r.msg, dados: { http: r.http, codigo: r.codigo, tid: r.tid } });
+    avisar('Campainha da ' + nome + ': não abriu sozinha', 'A campainha da ' + nome + ' tocou' + quando + ' e a abertura automática não conseguiu abrir (' + r.msg + '). Se ainda der tempo, toque em "Abrir agora" em Segurança predial.');
+    return cmd;
+  }
+  AutPred_gravarComando_(cmd, { SITUACAO: 'ACEITO', API_HTTP: String(r.http || ''), API_CODIGO: '0', API_TID: AutPred_s_(r.tid), API_RESPOSTA: AutPred_s_(r.resposta) });
+  SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: 'ACEITO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
+  AutPred_auditar_({ evento: 'COMANDO_ACEITO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'ACEITO', detalhe: 'A API da Tuya aceitou a resposta ao pedido (HTTP ' + r.http + (r.tid ? ', tid ' + r.tid : '') + '). Aguardando a confirmação da fechadura.' });
+  Utilities.sleep(AUT_CONFIRMACAO_ESPERA_MS);
+  var conf = AutPred_conferirExecucao_(c, disp, cmd, AUT_AUTOMATICO);
+  avisar('Porta aberta automaticamente: ' + nome, 'A campainha da ' + nome + ' tocou' + quando + ' e o SGO+ abriu a porta automaticamente (abertura automática ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + '). ' +
+    (conf.confirmado ? 'A fechadura confirmou a abertura.' : 'A fechadura ainda não confirmou: confira no local.'));
+  return cmd;
 }
 
 // ------------------------------------------------------------
@@ -702,7 +901,7 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   var antes = AutPred_deJson_(disp.ESTADO_JSON, []);
   if (modo.modo === 'REAL') { try { antes = AutPred_lerEstado_(c, disp).status; } catch (eAntes) {} }
   var cmd = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase(Object.assign({}, base, {
-    AUTORIZACAO: 'AUTORIZADO', AUTORIZACAO_MOTIVO: dir.padraoDono ? 'responsável pelo sistema (padrão da porta da Diretoria)' : (AutPred_administra_(sessao) && !AutPred_restrito_(disp) ? (AutPred_ehDiretor_(sessao) ? 'diretor' : 'perfil ' + AutPred_perfil_(sessao)) : 'permissão individual ACIONAR'),
+    AUTORIZACAO: 'AUTORIZADO', AUTORIZACAO_MOTIVO: dir.padraoDono ? 'responsável pelo sistema (padrão da porta da Diretoria)' : (!AutPred_restrito_(disp) ? (AutPred_ehDiretor_(sessao) ? 'diretor' : 'perfil ' + AutPred_perfil_(sessao) + ' (portões liberados à equipe interna)') : 'permissão individual ACIONAR'),
     SITUACAO: 'SOLICITADO', ESTADO_ANTES_JSON: AutPred_json_(antes), ATUALIZADO_EM: SGO_UTILS.nowIso()
   }))));
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_ID: cmd.ID, ULT_CMD_EM: cmd.QUANDO_EM, ULT_CMD_SITUACAO: 'SOLICITADO', ATUALIZADO_EM: SGO_UTILS.nowIso() });
@@ -780,7 +979,7 @@ function AutPred_situacaoTexto_(s) {
 // A tabela mostra quando, dispositivo, quem, ação, resultado em frase curta e origem; o técnico (JSON, código de função,
 // identificadores, resposta da nuvem) fica guardado e aparece só recolhido em "Detalhes técnicos".
 // ------------------------------------------------------------
-var AUT_ORIGENS = { CELULAR: 'Celular', COMPUTADOR: 'Computador', ATALHO_INICIO: 'Atalho no Início', ATALHO_PORTOES: 'Atalho Portões' };
+var AUT_ORIGENS = { CELULAR: 'Celular', COMPUTADOR: 'Computador', ATALHO_INICIO: 'Atalho no Início', ATALHO_PORTOES: 'Atalho Portões', AUTOMATICO: 'Abertura automática (campainha)' };
 function AutPred_origem_(o) { o = AutPred_s_(o).toUpperCase(); return AUT_ORIGENS[o] ? o : ''; }
 function AutPred_quandoCompleto_(iso) { var t = AutPred_ms_(iso); return t ? Utilities.formatDate(new Date(t), AUT_FUSO, 'dd/MM/yyyy HH:mm:ss') : ''; }
 function AutPred_diaChave_(iso) { var t = AutPred_ms_(iso); return t ? Utilities.formatDate(new Date(t), AUT_FUSO, 'yyyy-MM-dd') : ''; }
@@ -840,7 +1039,9 @@ function AutPred_dispositivoParaTela_(d, dir, sessao, cfg) {
     online: AutPred_s_(d.ONLINE).toUpperCase() === 'SIM', estado: AutPred_estadoTexto_(d), estadoEm: AutPred_dataBr_(d.ESTADO_EM), compatOk: AutPred_s_(d.COMPAT_OK).toUpperCase() === 'SIM', compatMotivo: AutPred_s_(d.COMPAT_MOTIVO),
     comandoAbrir: AutPred_s_(d.COMANDO_ABRIR_JSON), acionamento: AutPred_acionamento_(d), acionamentoSugerido: AutPred_comandosPortao_(d).sugestao,
     podeFechar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'FECHAR'), podeParar: d.TIPO !== 'FECHADURA' && !!AutPred_comandoDaAcao_(d, 'PARAR'), temFecharNaNuvem: !!AutPred_comandosPortao_(d).fechar,
-    homologadoFechar: AutPred_s_(d.HOMOLOGADO_FECHAR).toUpperCase() === 'SIM', modoFechar: d.TIPO !== 'FECHADURA' ? AutPred_modo_(cfg, d, 'FECHAR').modo : '', remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
+    estadoPortao: d.TIPO !== 'FECHADURA' ? AutPred_estadoPortao_(d) : null, temSensor: AutPred_temSensor_(d),
+    autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), podeAutoAbrir: AutPred_ehPedido_(d) && !!dir.acionar && AutPred_ehDiretor_(sessao),
+    remotoFechadura: AutPred_s_(d.REMOTO_FECHADURA), modo: modo.modo, modoMotivo: modo.motivo, sincronizadoEm: AutPred_dataBr_(d.SINCRONIZADO_EM),
     ultComandoEm: AutPred_dataBr_(d.ULT_CMD_EM), ultComandoSituacao: AutPred_situacaoTexto_(d.ULT_CMD_SITUACAO), ultComandoCodigo: AutPred_s_(d.ULT_CMD_SITUACAO), podeVer: !!dir.ver, podeAcionar: !!dir.acionar, motivoAcionar: dir.motivo || '' };
 }
 
@@ -855,7 +1056,7 @@ function AutPred_registro_(sessao, dados) {
   });
   var data = function (t, fim) { var m = AutPred_s_(t).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), fim ? 23 : 0, fim ? 59 : 0, fim ? 59 : 0).getTime() : 0; };
   var de = data(dados.de, false) || Date.now() - 7 * 86400000, ate = data(dados.ate, true) || Date.now() + 60000;
-  var todos = AutPred_comandos_().filter(function (c) { return vis[AutPred_s_(c.DISPOSITIVO_ID)]; });
+  var todos = AutPred_comandos_().filter(function (c) { return vis[AutPred_s_(c.DISPOSITIVO_ID)] && AutPred_veComando_(sessao, c); });
   var pessoas = {};
   todos.forEach(function (c) { if (c.SOLICITANTE_ID) pessoas[AutPred_s_(c.SOLICITANTE_ID)] = AutPred_s_(c.SOLICITANTE); });
   var lista = todos.filter(function (c) {
@@ -880,7 +1081,8 @@ function AutPred_eventoLegivel_(r) {
     DISPOSITIVO_HOMOLOGADO: 'Homologou o dispositivo', DISPOSITIVO_HOMOLOGADO_FECHAR: 'Homologou o fechar', HOMOLOGACAO_RETIRADA: 'Retirou a homologação', HOMOLOGACAO_RETIRADA_FECHAR: 'Retirou a homologação do fechar',
     COMANDO_SOLICITADO: 'Pediu o comando', COMANDO_ACEITO: 'A nuvem aceitou o comando', EXECUCAO_CONFIRMADA: 'O dispositivo confirmou a execução', EXECUCAO_NAO_CONFIRMADA: 'O dispositivo não confirmou a execução',
     COMANDO_SIMULADO: 'Teste: nada enviado', COMANDO_RECUSADO: 'A nuvem recusou o comando', ESTADO_CONSULTADO: 'Leu o estado do dispositivo', PERMISSAO_CONCEDIDA: 'Concedeu permissão',
-    PERMISSAO_REVOGADA: 'Revogou permissão', INTEGRIDADE_CONFERIDA: 'Conferiu a integridade do registro', PEDIDO_CAMPAINHA: 'A campainha tocou: pedido de abertura' };
+    PERMISSAO_REVOGADA: 'Revogou permissão', INTEGRIDADE_CONFERIDA: 'Conferiu a integridade do registro', PEDIDO_CAMPAINHA: 'A campainha tocou: pedido de abertura',
+    AUTO_ABRIR_LIGADA: 'Ligou a abertura automática pela campainha', AUTO_ABRIR_DESLIGADA: 'Desligou a abertura automática pela campainha' };
   if (/^(COMANDO_NEGADO|COMANDO_NAO_AUTORIZADO|COMANDO_LIMITE|COMANDO_SEM_CONFIRMACAO|PEDIDO_EXPIRADO|PEDIDO_JA_RESPONDIDO|COMANDO_NAO_DISPONIVEL)$/.test(e)) return 'Recusado: ' + AutPred_motivoCurto_(d);
   var frase = mapa[e] || e;
   // concessões, revogações e homologações: o motivo escrito pela pessoa é legível e fica junto
@@ -913,7 +1115,7 @@ function AutPred_salvarDispositivo_(sessao, dados) {
     if (uid !== AutPred_s_(disp.UNIDADE_ID) || unome !== AutPred_s_(disp.UNIDADE_NOME)) { upd.UNIDADE_ID = uid; upd.UNIDADE_NOME = unome; mudancas.push('unidade: "' + AutPred_s_(disp.UNIDADE_NOME) + '" -> "' + unome + '"'); }
   }
   if (dados.localizacao !== undefined) { var loc = AutPred_s_(dados.localizacao).slice(0, 120); if (loc !== AutPred_s_(disp.LOCALIZACAO)) { upd.LOCALIZACAO = loc; mudancas.push('localização: "' + AutPred_s_(disp.LOCALIZACAO) + '" -> "' + loc + '"'); } }
-  if (dados.ativo !== undefined) { var at = dados.ativo ? 'SIM' : 'NAO'; if (at !== AutPred_s_(disp.ATIVO).toUpperCase()) { upd.ATIVO = at; mudancas.push(at === 'SIM' ? 'reativado' : 'desativado'); } }
+  if (dados.ativo !== undefined) { var at = dados.ativo ? 'SIM' : 'NAO'; if (at !== (AutPred_s_(disp.ATIVO).toUpperCase() === 'NAO' ? 'NAO' : 'SIM')) { upd.ATIVO = at; mudancas.push(at === 'SIM' ? 'reativado' : 'desativado'); } }
   if (dados.acionamento !== undefined && disp.TIPO !== 'FECHADURA') {
     var ac = AutPred_s_(dados.acionamento).toUpperCase() === 'ABRIR_FECHAR' ? 'ABRIR_FECHAR' : 'PULSO';
     if (ac === 'ABRIR_FECHAR' && !AutPred_comandosPortao_(disp).fechar) throw new Error('Não foi possível gravar: este dispositivo não informa um comando de fechar pela nuvem (door_control_1 ou control com "close"). Deixe como "Pulso (só abrir)".');
@@ -938,6 +1140,7 @@ function AutPred_salvarDispositivo_(sessao, dados) {
   if (!mudancas.length) return { mensagem: 'Nada mudou.' };
   upd.ATUALIZADO_EM = SGO_UTILS.nowIso();
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
+  if (upd.ATIVO) AutPred_atualizarSinalAuto_();
   AutPred_auditar_({ evento: 'DISPOSITIVO_ALTERADO', quem: sessao, disp: Object.assign({}, disp, upd), resultado: 'OK', detalhe: mudancas.join('; ') });
   return { mensagem: 'Dispositivo gravado: ' + mudancas.join('; ') + '.' };
 }
@@ -976,6 +1179,7 @@ function AutPred_conceder_(sessao, dados) {
   if (!AUT_PERMISSOES_VALIDAS[perm]) throw new Error('Não foi possível conceder: a permissão precisa ser "Ver" ou "Acionar".');
   var u = AutPred_usuariosInternos_().filter(function (x) { return x.id === AutPred_s_(dados.usuarioId); })[0];
   if (!u) throw new Error('Não foi possível conceder: escolha um usuário interno ativo da lista.');
+  if (!AutPred_restrito_(disp)) throw new Error('Não é preciso conceder: os portões são liberados para toda a equipe interna (ver, abrir e fechar). A permissão individual só existe para a porta da Diretoria.');
   if (AutPred_restrito_(disp)) {
     // "Minha sala é para o meu login ter acesso, os demais não" (dono, 22/10/2026): só o responsável pelo sistema libera a porta, e só para diretor.
     if (!AutPred_ehDono_(sessao)) throw new Error('Não foi possível conceder: a porta da Diretoria só é liberada pelo responsável pelo sistema. Peça a ele em Segurança e automação predial > Permissões.');
@@ -1065,9 +1269,9 @@ function AutPred_api(sessionId, acao, dados) {
     var cfgApi = AutPred_cfg_();
     var emUso = AutPred_emUso_(cfgApi);
     if (acao === 'iniciar') {
-      var pm = AutPred_permissoesDe_(sessao.userId);
-      var permite = adm || (emUso && Object.keys(pm).length > 0);
-      var rapidos = permite ? AutPred_rapidos_(sessao, cfgApi) : [];
+      // 23/10/2026: em uso, toda a equipe interna recebe o menu e o atalho "Portões" (portões liberados a todos)
+      var rapidos = adm || emUso ? AutPred_rapidos_(sessao, cfgApi) : [];
+      var permite = adm || rapidos.length > 0;
       return { mostrarMenu: permite, podeAcionar: rapidos.length > 0, podeAdministrar: adm, ehDiretoria: AutPred_ehDiretor_(sessao), emUso: emUso };
     }
     // 22/10/2026 (dono): em produção o módulo entra desligado. Até a automação estar ligada e algum dispositivo homologado, só o
@@ -1077,6 +1281,8 @@ function AutPred_api(sessionId, acao, dados) {
     if (acao === 'rapido') return { itens: AutPred_rapidos_(sessao, cfgApi), emUso: emUso, config: { ligado: cfgApi.ligado, podeLer: cfgApi.podeLer }, agora: AutPred_agoraTexto_() };
     if (acao === 'preparar') return AutPred_prepararComando_(sessao, dados);
     if (acao === 'pedido') return AutPred_pedidosDaSessao_(sessao);
+    if (acao === 'portoes') return AutPred_estadosPortoes_(sessao);
+    if (acao === 'autoAbrir') { var ma = AutPred_definirAutoAbrir_(sessao, dados); var pa = AutPred_painel_(sessao); pa.mensagem = ma.mensagem; return pa; }
     if (acao === 'sincronizar') { AutPred_exigirAdministrador_(sessao); var r = AutPred_sincronizar_(sessao); var p = AutPred_painel_(sessao); p.mensagem = 'Sincronizado com o Smart Life: ' + r.lidos + ' dispositivo(s) lido(s), ' + r.novos + ' novo(s), ' + r.atualizados + ' atualizado(s).' + (r.problemas.length ? ' Problemas: ' + r.problemas.join('; ') : ''); return p; }
     if (acao === 'estado') {
       var v = AutPred_dispositivoVisivel_(sessao, dados.dispositivoId);
@@ -1100,7 +1306,7 @@ function AutPred_api(sessionId, acao, dados) {
     if (acao === 'registro') return AutPred_registro_(sessao, dados);
     if (acao === 'historico') {
       var vh = AutPred_dispositivoVisivel_(sessao, dados.dispositivoId);
-      var lista = AutPred_comandos_().filter(function (x) { return AutPred_s_(x.DISPOSITIVO_ID) === AutPred_s_(vh.disp.ID); })
+      var lista = AutPred_comandos_().filter(function (x) { return AutPred_s_(x.DISPOSITIVO_ID) === AutPred_s_(vh.disp.ID) && AutPred_veComando_(sessao, x); })
         .sort(function (a, b) { return AutPred_ms_(b.QUANDO_EM) - AutPred_ms_(a.QUANDO_EM); }).slice(0, AUT_HISTORICO_MAX).map(function (c) { var lc = {}; lc[AutPred_s_(vh.disp.ID)] = AutPred_s_(vh.disp.LOCALIZACAO); return AutPred_comandoParaTela_(c, lc); });
       return { comandos: lista, dispositivo: AutPred_dispositivoParaTela_(vh.disp, vh.direitos, sessao, AutPred_cfg_()) };
     }
@@ -1108,8 +1314,9 @@ function AutPred_api(sessionId, acao, dados) {
     if (acao === 'homologar') return AutPred_homologar_(sessao, dados);
     if (acao === 'permissoes') {
       AutPred_exigirAdministrador_(sessao);
+      // 23/10/2026: portões são de toda a equipe; a permissão individual ficou só para a porta da Diretoria
       var dirPerm = AutPred_ehDiretor_(sessao);
-      var disps = AutPred_dispositivos_().filter(function (d) { return dirPerm || !AutPred_restrito_(d); });
+      var disps = AutPred_dispositivos_().filter(function (d) { return dirPerm && AutPred_restrito_(d); });
       var ids = {};
       disps.forEach(function (d) { ids[AutPred_s_(d.ID)] = true; });
       return { usuarios: AutPred_usuariosInternos_(), dispositivos: disps.map(function (d) { return { id: AutPred_s_(d.ID), nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), restrito: AutPred_restrito_(d), unidade: AutPred_s_(d.UNIDADE_NOME) }; }),
@@ -1177,7 +1384,7 @@ function AutPred_painel_(sessao) {
   var porUnidade = {};
   visiveis.forEach(function (d) { (porUnidade[d.unidade] = porUnidade[d.unidade] || []).push(d); });
   var unidades = Object.keys(porUnidade).sort().map(function (u) { return { nome: u, dispositivos: porUnidade[u].sort(function (a, b) { return a.nome.localeCompare(b.nome); }) }; });
-  var ultimos = AutPred_comandos_().filter(function (x) { return visiveis.some(function (d) { return d.id === AutPred_s_(x.DISPOSITIVO_ID); }); })
+  var ultimos = AutPred_comandos_().filter(function (x) { return AutPred_veComando_(sessao, x) && visiveis.some(function (d) { return d.id === AutPred_s_(x.DISPOSITIVO_ID); }); })
     .sort(function (a, b) { return AutPred_ms_(b.QUANDO_EM) - AutPred_ms_(a.QUANDO_EM); }).slice(0, 12).map(AutPred_comandoParaTela_);
   return {
     agora: AutPred_agoraTexto_(), unidades: unidades, total: visiveis.length, totalCadastrados: todos.length,

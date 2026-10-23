@@ -41,7 +41,7 @@
  *   28841001 sem plano · 28841002 plano (trial) vencido · 28841101/28841106 API não assinada ·
  *   28841104 cota esgotada · 28841105 projeto sem autorização para a API
  *
- * LIMITES: no mínimo 300 ms entre chamadas e no máximo 30 por minuto, contando todas as execuções (cache do script).
+ * LIMITES: no mínimo 300 ms entre chamadas e no máximo TUYA_LIMITE_MINUTO (90) por minuto, contando todas as execuções (cache do script).
  * Token em cache de memória do servidor (CacheService), nunca em planilha; renovado 60 s antes de vencer e em 1010/1011/1400.
  ****************************************************/
 
@@ -59,7 +59,7 @@ var TUYA_CACHE_TOKEN = 'TUYA_TOKEN_V1';
 var TUYA_CACHE_ULTIMA = 'TUYA_ULTIMA_CHAMADA_MS';
 var TUYA_CACHE_MINUTO = 'TUYA_CHAMADAS_MIN_';
 var TUYA_ESPACO_MS = 300;
-var TUYA_LIMITE_MINUTO = 60;              // 22/10/2026: a leitura do pedido da campainha (a cada 3 s, compartilhada) cabe aqui
+var TUYA_LIMITE_MINUTO = 90;              // 23/10/2026: campainha (3 s, compartilhada) + abertura automática + estado dos portões na tela (5 s)
 var TUYA_TOKEN_FOLGA_S = 60;
 var TUYA_SHA256_VAZIO = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
@@ -172,6 +172,10 @@ function Tuya_vez_() {
     cache.put(k, String(n + 1), 120);
   } catch (e) {}
   return true;
+}
+/** Chamadas já feitas neste minuto (para leituras de tela que cedem a vez aos comandos). */
+function Tuya_chamadasNoMinuto_() {
+  try { return Number(CacheService.getScriptCache().get(TUYA_CACHE_MINUTO + Math.floor(Date.now() / 60000)) || 0); } catch (e) { return 0; }
 }
 
 // ------------------------------------------------------------
