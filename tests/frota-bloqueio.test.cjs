@@ -567,6 +567,24 @@ test('Aba de estado criada antes da medição pela conexão (produção, 22/10):
   assert.ok(est.CON_ULTIMO_EM && est.CON_INICIO && est.CON_RESUMO, 'conexão gravada');
 });
 
+test('Produção 22/10 22:22: relé lido BLOQUEADO com a hora da posição antiga (rastreador dormindo) confirma e encerra o pedido; sem aviso falso de 10 min', () => {
+  const a = ambiente();
+  const m = a.fechar(a.abrir('v1', 'cA'));
+  a.ctx.FrotaBlq_aoDevolver_(a.cfg(), TEC_A, a.veic('v1'), m, a.posicao('1039', { min: 300 }), false);
+  a.rodada();
+  assert.deepEqual(a.comandos().map((c) => c.corpo.id), [35], 'bloqueio enviado');
+  assert.equal(a.estado('v1').PEDIDO_ACAO, 'BLOQUEAR');
+  // o relé muda, mas a posição continua com a hora de 5 h atrás (economia do rastreador)
+  a.posicao('1039', { min: 300, blocked: true });
+  a.rodada();
+  const e = a.estado('v1');
+  assert.equal(e.RELE_REAL, 'BLOQUEADO');
+  assert.equal(e.ULT_CMD_RESULTADO, 'CONFIRMADO');
+  assert.equal(e.PEDIDO_ACAO, '', 'pedido encerrado');
+  assert.ok(!a.eventos().some((x) => x.TIPO === 'AVISO' && /sem confirmação do relé/.test(x.DETALHE)), 'sem aviso falso');
+  assert.equal(a.comandos().length, 1, 'nada reenviado');
+});
+
 test('Padrão real (22/10): carro desligado há horas e aparelho online = bloqueio sai; aparelho offline ou posição de ignição ligada mais recente = não sai', () => {
   // devolvido há 5 h; última posição com a ignição desligada 5 h atrás (economia), /devices "online" com contato há 1 min
   const a = ambiente();

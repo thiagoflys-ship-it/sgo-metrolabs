@@ -715,7 +715,11 @@ function FrotaBlq_atualizarRele_(c, v, est, pos, agora) {
     upd.RELE_REAL = rele; upd.RELE_REAL_EM = new Date(pos.quandoMs || agora).toISOString();
     // simulação começa do relé real quando ainda não tem estado próprio
     if (!FrotaBlq_s_(est.RELE_SIMULADO)) upd.RELE_SIMULADO = rele;
-    if (ult && ['ENTREGUE', 'INCERTO', 'NA_FILA'].indexOf(ult.resultado) >= 0 && pos.quandoMs > ult.emMs && rele === (ult.acao === 'BLOQUEAR' ? 'BLOQUEADO' : 'LIBERADO')) {
+    // Confirma com posição posterior ao comando OU com a mudança do relé vista depois do comando: com o carro
+    // desligado o rastreador manda o estado novo do relé com a hora da última posição (antiga), e a confirmação
+    // nunca chegava (produção, 22/10/2026 22:22: relé BLOQUEADO lido, pedido ficou aberto e virou aviso falso).
+    var mudouAgora = !!ult && rele !== FrotaBlq_s_(est.RELE_REAL) && agora > ult.emMs;
+    if (ult && ['ENTREGUE', 'INCERTO', 'NA_FILA'].indexOf(ult.resultado) >= 0 && (pos.quandoMs > ult.emMs || mudouAgora) && rele === (ult.acao === 'BLOQUEAR' ? 'BLOQUEADO' : 'LIBERADO')) {
       upd.ULT_CMD_RESULTADO = 'CONFIRMADO'; upd.ULT_CMD_CONFIRMADO_EM = new Date(pos.quandoMs).toISOString();
       if (ult.acao === 'BLOQUEAR' && est.PEDIDO_ACAO) FrotaBlq_encerrarPedido_(est, v, 'CONFIRMADO', 'bloqueio confirmado pelo relé', FBLQ_SISTEMA);
     }
@@ -726,6 +730,11 @@ function FrotaBlq_atualizarRele_(c, v, est, pos, agora) {
       var res = FrotaBlq_resultadoApi_(c, FrotaBlq_s_(v.RASTREADOR_DEVICE_ID), ult.emMs - 60000, agora);
       upd.ULT_CMD_CONSULTADO_EM = new Date(agora).toISOString();
       if (res) FrotaBlq_evento_({ veiculo: v, modo: 'ATIVO', tipo: 'CONFIRMACAO', acao: ult.acao, origem: 'COMMAND_RESULT', quem: FBLQ_SISTEMA, resposta: res, detalhe: 'Resultado do comando informado pelo aparelho: ' + res + '.' });
+      // "RELAY 1 OK" (ou outro resultado com OK) é o próprio aparelho confirmando a execução
+      if (res && /\bOK\b/i.test(res)) {
+        upd.ULT_CMD_RESULTADO = 'CONFIRMADO'; upd.ULT_CMD_CONFIRMADO_EM = new Date(agora).toISOString();
+        if (ult.acao === 'BLOQUEAR' && est.PEDIDO_ACAO) FrotaBlq_encerrarPedido_(est, v, 'CONFIRMADO', 'bloqueio confirmado pelo aparelho (' + res + ')', FBLQ_SISTEMA);
+      }
     } else if (idade >= FBLQ_SEM_CONFIRMACAO_MS) {
       upd.ULT_CMD_RESULTADO = 'SEM_CONFIRMACAO';
       FrotaBlq_evento_({ veiculo: v, modo: 'ATIVO', tipo: 'AVISO', acao: ult.acao, origem: 'CONFERENCIA', quem: FBLQ_SISTEMA, detalhe: 'Comando entregue sem confirmação do relé em 10 minutos; a conferência pode reenviar nas condições seguras.' });
