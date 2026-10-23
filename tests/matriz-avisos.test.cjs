@@ -17,12 +17,12 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const c = amb.ctx;
   const r = c.SGO_AvisosMatriz_api('s_dir', 'carregar', {});
   assert.equal(r.ok, true, r.message);
-  assert.equal(r.regras.length, 66);
+  assert.equal(r.regras.length, 67);
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');
   assert.equal(por.S55.decisao, 'HISTORICO');
-  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44']);
+  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67']); // S67 (22/10/2026): campainha da Porta da Diretoria, pedido do dono
   assert.equal(por.S56.whatsapp, 'NAO', 'WhatsApp ao cliente só depois do piloto');
   assert.deepEqual(JSON.parse(JSON.stringify(r.cfg)), { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true });
   // só Administrador e Diretoria

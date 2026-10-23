@@ -73,6 +73,24 @@ Fechaduras entram restritas à Diretoria. Só um diretor marca ou desmarca "Rest
 
 "Administrar" permite trocar o nome no SGO+, escolher a unidade (do cadastro de unidades ou em texto, por exemplo METROLABS — MATRIZ GOIÂNIA), a localização, desativar o dispositivo e, nos portões, ajustar o comando de abertura. Nada é apagado: dispositivo removido do Smart Life continua no cadastro, e o Administrador o desativa.
 
+## Porta da Diretoria: abrir quando tocam a campainha
+
+A fechadura da Porta da Diretoria (Wifi Smart Lock, conferida em 22/10/2026 só com leitura) não tem abertura remota livre pela nuvem. Ela abre um pedido quando tocam a campainha: o ponto unlock_request conta o tempo do pedido (até 90 segundos) e, só nessa janela, a nuvem aceita a resposta reply_unlock_request (abrir ou recusar). É o mesmo botão que o aplicativo Smart Life mostra.
+
+No SGO+: com a tela Segurança predial ou o Início aberto, quem pode destravar a porta vê, em até 3 segundos, "Campainha tocou às hh:mm:ss — pedido válido por N s", com a contagem e os botões "Abrir agora" e "Recusar" (com a janela de confirmação e o código de uso único). Fora do pedido não há botão. Cada pedido aceita uma resposta só; se o tempo acabar antes do "Sim", o SGO+ recusa com a explicação e nada é enviado. A abertura é confirmada pelo registro de abertura remota da própria fechadura (unlock_app) ou pela porta aberta (closed_opened); digital, senha ou cartão de quem está na porta não contam como confirmação do SGO+.
+
+A tela consulta a fechadura a cada 3 segundos só enquanto está aberta, e a leitura é compartilhada entre as telas (uma chamada a cada 2,5 segundos, no máximo). Uma rotina do servidor, a cada minuto, avisa quem pode destravar (evento S67: no sistema; WhatsApp só para quem está liberado no piloto). Como o pedido dura cerca de 60 a 90 segundos, o aviso pode chegar perto do fim: para atender, deixe a tela aberta.
+
+## Portões: abrir e fechar ou pulso
+
+Os dois portões conferidos em 22/10/2026 (só leitura) são módulos de pulso com dois comandos na nuvem: switch_1 (pulso) e door_control_1 (abrir ou fechar); o da garagem tem sensor de portão. Nenhum aceita parar.
+
+Em Administrar > Acionamento, o Administrador ou um diretor escolhe:
+- "Pulso (só abrir; fecha manualmente)": só o botão "Abrir portão" (pulso). Use no portão de pedestre, que fecha puxando.
+- "Portão com abrir e fechar": botões "Abrir portão" e "Fechar portão" (door_control_1 open e close). Use na garagem.
+
+O que já existia continua como pulso até a escolha. O fechar segue as mesmas proteções do abrir (permissão Acionar, janela com código de uso único, limites, registro e confirmação) e tem homologação própria: até um diretor tocar em "Homologar o fechar (depois do teste presencial)", o "Fechar portão" trabalha em simulação.
+
 ## Permissões
 
 Aba Permissões (Administrador e diretores). Escolha o usuário interno ativo, o dispositivo, a permissão ("Ver estado e histórico" ou "Acionar (abrir) e ver"), a data de fim (opcional) e o motivo. Uma permissão nova substitui a anterior do mesmo usuário no mesmo dispositivo. "Revogar" tira a permissão na hora, com motivo.
@@ -81,9 +99,19 @@ A porta da Diretoria só é liberada pelo responsável pelo sistema, e só para 
 
 Toda concessão e revogação entra na auditoria e no log do sistema, com quem, quando e o motivo.
 
+## Registro de rastreabilidade
+
+Na tela do módulo, "Registro de rastreabilidade" mostra os comandos por dia (Hoje, Ontem, data), em linguagem simples: Quando (dd/mm/aaaa hh:mm:ss) · Dispositivo (nome e local) · Quem · Ação (Abrir, Fechar, Parar, Destravar, Recusar pedido) · Resultado · Origem (Celular, Computador, Atalho no Início).
+
+Resultados: "Aberto — confirmado pelo portão às hh:mm:ss" (verde); "Enviado — portão não confirmou" (amarelo, com "Conferir agora"); "Recusado — motivo curto", por exemplo "aguarde 10 s entre comandos", "sem permissão", "fora da janela da campainha", "sem a confirmação na janela" (vermelho); "Teste — nada enviado (portão ainda não homologado)" ou "(automação desligada)" (azul); "Falhou — a nuvem recusou o comando".
+
+Nada de código, comando JSON ou identificação na tabela: esses dados ficam guardados e aparecem só em "Detalhes técnicos", ao tocar na linha. Filtros por dispositivo, pessoa e período; "Exportar planilha" (arquivo CSV que o Excel abre) e "Imprimir ou salvar PDF" (A4) para a Diretoria arquivar. No celular, cartões compactos.
+
+Duplo toque: o comando agora confere o limite e grava a solicitação sob a trava do servidor, e a tela só deixa um preparo e uma janela por vez (o "Sim" trava no primeiro toque). Antes, dois toques quase juntos podiam gerar duas linhas no mesmo segundo.
+
 ## Auditoria
 
-Aba Auditoria (Administrador e diretores). Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, sem a confirmação da janela), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, integridade conferida.
+Aba Auditoria (Administrador e diretores). Cada linha diz em uma frase o que aconteceu, por dia; os detalhes técnicos (evento, resultado, operação e resumo SHA-256) ficam recolhidos ao tocar na linha. Lista os eventos: sincronização, dispositivo descoberto ou alterado, homologação, comando solicitado, aceito, execução confirmada ou não, comando negado (sem permissão, limite, sem a confirmação da janela), comando recusado pela nuvem, estado consultado, permissão concedida ou revogada, integridade conferida.
 
 Cada linha leva o resumo SHA-256 da linha anterior. "Conferir a integridade do registro" percorre a corrente: linha alterada ou apagada aparece com o número e a hora. O Administrador que não é diretor não vê os eventos da porta da Diretoria.
 

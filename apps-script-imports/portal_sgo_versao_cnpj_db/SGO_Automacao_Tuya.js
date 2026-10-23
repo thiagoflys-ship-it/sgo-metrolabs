@@ -59,7 +59,7 @@ var TUYA_CACHE_TOKEN = 'TUYA_TOKEN_V1';
 var TUYA_CACHE_ULTIMA = 'TUYA_ULTIMA_CHAMADA_MS';
 var TUYA_CACHE_MINUTO = 'TUYA_CHAMADAS_MIN_';
 var TUYA_ESPACO_MS = 300;
-var TUYA_LIMITE_MINUTO = 30;
+var TUYA_LIMITE_MINUTO = 60;              // 22/10/2026: a leitura do pedido da campainha (a cada 3 s, compartilhada) cabe aqui
 var TUYA_TOKEN_FOLGA_S = 60;
 var TUYA_SHA256_VAZIO = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
@@ -420,6 +420,13 @@ function Tuya_compatibilidade_(categoria, funcoes, metodosRemotos) {
     if (metodo.length || remoto) {
       out.ok = true; out.remotoFechadura = 'BILHETE';
       out.motivo = 'Destravamento remoto pelo bilhete temporário da API (Smart Lock Open API); o SGO+ só confirma a abertura pelo registro da própria fechadura.';
+    } else if (tem('reply_unlock_request')) {
+      // 22/10/2026, medido na fechadura real (Wifi Smart Lock, categoria ms): sem abertura remota livre; quando tocam a
+      // campainha, unlock_request conta o tempo (até 90 s, de 2 em 2 s) e a nuvem aceita a resposta reply_unlock_request
+      // (true abre, false recusa) só dentro dessa janela, como o botão do aplicativo Smart Life.
+      out.ok = true; out.remotoFechadura = 'PEDIDO';
+      out.estadoCodigos = ['closed_opened']; // ponto só de estado (não está nas funções): porta aberta confirma a abertura
+      out.motivo = 'Abertura remota só quando tocam a campainha: o SGO+ mostra o pedido de abertura e responde a ele (reply_unlock_request) dentro do tempo que a fechadura dá. Fora disso, não há abertura pela nuvem.';
     } else {
       out.remotoFechadura = 'NAO';
       out.motivo = 'Não disponível pela API: este modelo de fechadura não oferece abertura remota pela nuvem (sem os pontos remote_no_dp_key/remote_no_dp_setkey/unlock_remote e sem método de abertura remota ligado). A abertura continua só pelo aplicativo Smart Life ou na própria porta; o SGO+ mostra o estado e os registros quando a API os fornece.';

@@ -276,6 +276,10 @@ function Chaves_aposAlterar_(chave) {
   // Tuya: credencial ou região trocada = token guardado em memória não vale mais.
   if (/^TUYA_/.test(chave)) {
     try { if (typeof Tuya_esquecerToken_ === 'function') Tuya_esquecerToken_(); } catch (e) {}
+    // 22/10/2026: ligada = garante a rotina de 1 minuto que avisa o pedido de abertura da campainha (SGO_Automacao_Predial.js)
+    if (chave === 'TUYA_LIGADO' && String(PropertiesService.getScriptProperties().getProperty(chave) || '') === '1') {
+      try { if (typeof AutPred_garantirRotina_ === 'function') AutPred_garantirRotina_(); } catch (e2) {}
+    }
   }
   // Rastreador: credencial ou endereço trocado = sessão guardada não vale mais; ligado = garante a rotina de 2 minutos.
   if (/^RASTREADOR_/.test(chave)) {

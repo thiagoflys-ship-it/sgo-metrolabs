@@ -120,13 +120,13 @@ test('erros traduzidos: 1106 e 28841105 dizem o que fazer no portal; sem respost
   try { ctx.Tuya_estado_(c, 'dev-portao-1'); assert.fail('devia falhar'); } catch (e) { assert.ok(e.tuyaRede, 'erro de rede marcado'); assert.ok(/sem resposta da Tuya/.test(e.message)); }
 });
 
-test('limite de frequência: a 31ª chamada do minuto não sai', () => {
+test('limite de frequência: a 61ª chamada do minuto não sai (60 por minuto desde 22/10/2026, para a leitura da campainha)', () => {
   const { ctx, api } = ambiente();
   const c = ctx.Tuya_cfg_();
-  for (let i = 0; i < 30; i++) ctx.Tuya_chamarBruto_(c, 'GET', '/v1.0/token', { grant_type: 1 }, undefined, { semToken: true });
-  assert.equal(api.pedidos.length, 30);
+  for (let i = 0; i < 60; i++) ctx.Tuya_chamarBruto_(c, 'GET', '/v1.0/token', { grant_type: 1 }, undefined, { semToken: true });
+  assert.equal(api.pedidos.length, 60);
   assert.throws(() => ctx.Tuya_chamarBruto_(c, 'GET', '/v1.0/token', { grant_type: 1 }, undefined, { semToken: true }), /limite de chamadas/);
-  assert.equal(api.pedidos.length, 30);
+  assert.equal(api.pedidos.length, 60);
 });
 
 test('descoberta: lista, comandos e matriz de compatibilidade (portão = switch_1; fechadura sem abertura remota = não disponível pela API)', () => {

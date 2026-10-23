@@ -38,6 +38,20 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Se o botão não aparece para você, peça ao responsável pelo sistema a permissão \"Acionar\" da porta.",
           "Se o cartão disser \"Não disponível pela API\", o modelo da fechadura não aceita abertura remota pela nuvem: abra pelo aplicativo Smart Life ou na própria porta."
         ] },
+        { titulo: "Abrir a porta quando tocam a campainha (fechadura da Porta da Diretoria)", itens: [
+          "A fechadura da Porta da Diretoria só aceita abertura remota enquanto a campainha está chamando (cerca de 60 a 90 segundos), como o botão do aplicativo Smart Life.",
+          "Deixe a tela Segurança predial (ou o Início) aberta. Quando tocam a campainha, aparece \"Campainha tocou às hh:mm:ss — pedido válido por N s\", com a contagem.",
+          "Toque em \"Abrir agora\" e, na janela, em \"Sim, abrir agora\". Para não abrir, toque em \"Recusar\" e em \"Sim, recusar\".",
+          "Fora do pedido não há botão: a abertura remota só vale quando tocam a campainha.",
+          "Quem pode destravar a porta recebe o aviso \"Pedido de abertura\" no sistema (e no WhatsApp, se estiver liberado no piloto). O aviso pode chegar perto do fim do tempo: com a tela aberta, o pedido aparece em até 3 segundos.",
+          "Cada pedido aceita uma resposta só. Se o tempo acabar antes do \"Sim\", o SGO+ explica e nada é enviado."
+        ] },
+        { titulo: "Abrir e fechar o portão da garagem", itens: [
+          "Portão com abrir e fechar mostra dois botões: \"Abrir portão\" e \"Fechar portão\". Os dois pedem a mesma confirmação na janela.",
+          "Portão de pulso (por exemplo, o de pedestre) só tem \"Abrir portão\": ele fecha manualmente.",
+          "Quem escolhe o tipo é o Administrador ou um diretor, em \"Administrar\" > \"Acionamento\": \"Pulso (só abrir; fecha manualmente)\" ou \"Portão com abrir e fechar\". A tela mostra a sugestão pela leitura do dispositivo.",
+          "O fechar tem homologação própria: um diretor toca em \"Homologar o fechar (depois do teste presencial)\". Até lá, \"Fechar portão\" trabalha em simulação."
+        ] },
         { titulo: "Ler o estado e ver o histórico", itens: [
           "No cartão do dispositivo, toque em \"Ler estado\" para reler o estado na nuvem agora.",
           "Toque em \"Histórico\" para ver os últimos comandos daquele dispositivo: quem pediu, quando, situação e detalhe.",
@@ -71,9 +85,17 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Para tirar, toque em \"Revogar\" na linha da permissão e escreva o motivo.",
           "A porta da Diretoria só é liberada pelo responsável pelo sistema, e só para diretores. Ele próprio não precisa de permissão."
         ] },
+        { titulo: "Consultar o registro de rastreabilidade", itens: [
+          "Na tela, desça até \"Registro de rastreabilidade\". Os comandos aparecem por dia (\"Hoje\", \"Ontem\", data), com: quando, dispositivo, quem, ação, resultado e origem (celular, computador ou atalho no Início).",
+          "O resultado vem numa frase curta com cor: verde \"Aberto — confirmado pelo portão às hh:mm:ss\", amarelo \"Enviado — portão não confirmou\" (com \"Conferir agora\"), vermelho \"Recusado — motivo\" e azul \"Teste — nada enviado\" (portão ainda não homologado ou automação desligada).",
+          "Toque numa linha para abrir os \"Detalhes técnicos\" (comando enviado, identificações e resposta da nuvem). Toque de novo para fechar.",
+          "Escolha o dispositivo, a pessoa e o período e toque em \"Filtrar\".",
+          "Para arquivar, toque em \"Exportar planilha\" (abre no Excel) ou \"Imprimir ou salvar PDF\" (na janela de impressão, escolha \"Salvar como PDF\").",
+          "No celular, cada comando aparece num cartão: hora, quem, ação e resultado."
+        ] },
         { titulo: "Consultar a auditoria (Administrador e diretores)", itens: [
           "Toque na aba \"Auditoria\".",
-          "Leia os eventos: sincronização, comando solicitado, aceito, execução confirmada ou não, negado (sem permissão, sem a confirmação da janela, limite), permissão concedida ou revogada, homologação.",
+          "Cada linha diz em uma frase o que aconteceu (por exemplo, \"O dispositivo confirmou a execução\" ou \"Recusado: aguarde 10 s entre comandos\"). Toque na linha para ver os detalhes técnicos.",
           "Toque em \"Conferir a integridade do registro\". \"Registro íntegro\" quer dizer que nenhuma linha foi alterada ou apagada.",
           "O Administrador que não é diretor não vê os eventos da porta da Diretoria."
         ] }

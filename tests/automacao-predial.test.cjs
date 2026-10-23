@@ -63,12 +63,19 @@ function ambiente(o) {
           { id: 'dev-portao-2', name: 'Portão secundário', category: 'ckmkzq', product_name: 'Abridor', online: true, status: [{ code: 'switch_1', value: false }] },
           { id: 'dev-fech-1', name: 'Porta da Diretoria', category: 'jtmspro', product_name: 'Fechadura', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: false }] }
         ] } });
+        // 22/10/2026: fechadura real em modo pedido (campainha) e garagem com door_control_1 (open/close), como lidos em produção
+        if (api.pedido && /dev-fech-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ms', functions: [{ code: 'reply_unlock_request', type: 'Boolean', values: '{}' }] } });
+        if (api.pedido && /door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: [] });
+        if (/shadow\/properties$/.test(u.pathname)) { api.leiturasSombra = (api.leiturasSombra || 0) + 1; return resposta(200, { success: true, result: { properties: [{ code: 'unlock_request', value: api.pedidoValor || 0, time: api.pedidoEm || Date.now() }, { code: 'doorbell', value: true, time: api.campainhaEm || 0 }, { code: 'closed_opened', value: api.fechAberta ? 'open' : 'closed', time: Date.now() }] } }); }
+        if (api.pedido && /dev-fech-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.respostasPedido = api.respostasPedido || []).push(v); if (!(api.pedidoValor > 0)) return resposta(200, { success: false, code: 2008, msg: 'not in request window' }); if (v.value === true) api.fechAberta = true; api.pedidoValor = 0; return resposta(200, { success: true, result: true, tid: 'tid-r' }); }
+        if (api.garagem && /dev-portao-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean', values: '{}' }, { code: 'door_control_1', type: 'Enum', values: '{"range":["open","close"]}' }] } });
+        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); api.portaoAberto = v.value !== 'close'; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
         if (/\/functions$/.test(u.pathname)) return u.pathname.includes('fech') ? resposta(200, { success: true, result: { category: 'jtmspro', functions: api.remoto ? [{ code: 'remote_no_dp_key', type: 'Raw' }] : [{ code: 'unlock_temporary', type: 'Integer' }] } })
           : resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean' }] } });
         if (/door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: api.remoto ? [{ remote_unlock_type: 'remoteUnlockWithoutPwd', open: true }] : [] });
         if (/door-lock\/password-ticket$/.test(u.pathname)) return resposta(200, { success: true, result: { ticket_id: 'tk-abc', ticket_key: 'xx' } });
         if (/password-free\/open-door$/.test(u.pathname)) { if (api.fechaduraAbre) api.fechAberta = true; return resposta(200, { success: true, result: true, tid: 'tid-f' }); }
-        if (/door-lock\/open-logs$/.test(u.pathname)) return resposta(200, { success: true, result: { records: Array.from({ length: api.fechAberta ? api.registrosFechadura : 0 }, () => ({ unlock_name: 'remote' })) } });
+        if (/door-lock\/open-logs$/.test(u.pathname)) return resposta(200, { success: true, result: { records: Array.from({ length: api.fechAberta ? api.registrosFechadura : 0 }, () => (api.pedido ? { status: { code: 'unlock_app', value: '0' }, unlock_name: '' } : { unlock_name: 'remote' })) } });
         if (/\/commands$/.test(u.pathname)) { if (api.recusaComando) return resposta(200, api.recusaComando); api.portaoAberto = true; return resposta(200, { success: true, result: true, tid: 'tid-p' }); }
         if (/\/status$/.test(u.pathname)) return resposta(200, { success: true, result: [{ code: 'switch_1', value: api.portaoAberto }] });
         if (u.pathname === '/v1.0/devices/dev-fech-1') return resposta(200, { success: true, result: { id: 'dev-fech-1', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: !!api.fechAberta }] } });
@@ -76,6 +83,7 @@ function ambiente(o) {
         return resposta(200, { success: false, code: 2010, msg: 'device not exist' });
       }
     },
+    CertCal_garantirColuna_: (t, c) => { if (cabecalhos[t] && cabecalhos[t].indexOf(c) < 0) cabecalhos[t].push(c); },
     CertCal_garantirTabela_: (t, cols) => { if (!tabelas[t]) { tabelas[t] = []; cabecalhos[t] = (cols || []).slice(); } },
     SGO_DATA: {
       getDB: () => ({ getSheetByName: (n) => (tabelas[n] ? {} : null) }),
@@ -251,7 +259,7 @@ test('confirmação sem digitar: só com o token da janela (uso único, 60 s, do
   assert.equal(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000005' }).ok, false, 'operação já processada');
   // nenhuma palavra digitada no código da tela
   const tela = ler('JS_AutomacaoPredial.html');
-  assert.ok(!/ABRIR|HOMOLOGAR|autConfirmacao/.test(tela));
+  assert.ok(!/Digite ABRIR|HOMOLOGAR|autConfirmacao|autHomConf/.test(tela), 'nada para digitar');
   assert.match(tela, /Sim, abrir agora/);
 });
 
@@ -475,4 +483,171 @@ test('administração e homologação: unidade do cadastro, comando conferido co
   amb.como(ADM2);
   assert.equal(amb.api_('painel').restritosOcultos, 2);
   assert.equal(amb.api_('unidades').unidades[0].cliente, 'METROLABS');
+});
+
+// ---------------------------------------------------------------- campainha (fechadura real: unlock_request + reply_unlock_request)
+const limparPedido = (amb) => Object.keys(amb.cache).filter((k) => k.includes('AUT_PEDIDO_')).forEach((k) => { delete amb.cache[k]; });
+const tocar = (amb, segundos) => { amb.api.pedidoValor = segundos; amb.api.pedidoEm = Date.now(); amb.api.campainhaEm = Date.now() - 1000; limparPedido(amb); };
+
+test('campainha: modo pedido detectado; sem pedido não há botão nem janela; com pedido a resposta abre pelo reply_unlock_request e confirma pelo registro', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  assert.equal(f.REMOTO_FECHADURA, 'PEDIDO'); assert.equal(f.COMPAT_OK, 'SIM'); assert.match(f.COMPAT_MOTIVO, /só quando tocam a campainha/);
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  assert.ok(amb.api_('rapido').itens.some((d) => d.remotoFechadura === 'PEDIDO'), 'a porta aparece nos botões rápidos (o botão só durante o pedido)');
+  let p = amb.api_('pedido');
+  assert.equal(p.itens.length, 1); assert.equal(p.itens[0].ativo, false);
+  let r = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-000001' });
+  assert.equal(r.ok, false); assert.match(r.message, /não há pedido de abertura ativo.*campainha/);
+  tocar(amb, 40);
+  p = amb.api_('pedido');
+  assert.equal(p.itens[0].ativo, true); assert.ok(p.itens[0].restanteS >= 39 && p.itens[0].restanteS <= 40); assert.match(p.itens[0].campainhaTexto, /^\d\d:\d\d:\d\d$/);
+  // a leitura é compartilhada: várias telas dentro de 2,5 s = uma chamada à nuvem
+  const n0 = amb.api.leiturasSombra; amb.api_('pedido'); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, n0, 'cache de 2,5 s');
+  r = amb.abrir(f.ID, 'op-camp-000002');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const reg = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-camp-000002');
+  assert.equal(reg.COMANDO, 'DESTRAVAR'); assert.match(reg.CORRELACAO, /^P\d+/); assert.match(reg.CONFIRMACAO_DETALHE, /abertura remota|destravada|closed_opened/);
+  assert.ok(!amb.comandosApi().some((x) => /password-ticket|open-door/.test(x.caminho)), 'não usa o bilhete');
+  // o mesmo pedido não é respondido de novo
+  amb.api.pedidoValor = 30; amb.api.pedidoEm = Date.now(); limparPedido(amb); amb.envelhecer();
+  r = amb.abrir(f.ID, 'op-camp-000003');
+  assert.equal(r.ok, false); assert.match(r.message, /já foi respondido/);
+});
+
+test('campainha: pedido que termina entre o toque e o "Sim" é recusado com a explicação; recusar responde false; token de abrir não serve para recusar; rotina avisa uma vez', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  tocar(amb, 20);
+  const p = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-exp-001' });
+  assert.equal(p.ok, true, p.message);
+  amb.api.pedidoValor = 0; limparPedido(amb);
+  let r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-exp-001', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /não há pedido de abertura ativo/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PEDIDO_EXPIRADO'));
+  assert.equal((amb.api.respostasPedido || []).length, 0, 'nada enviado');
+  // recusar
+  amb.envelhecer(); tocar(amb, 50); amb.api.campainhaEm = Date.now() - 500;
+  const pa = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-001' });
+  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-001', confirmacaoToken: pa.confirmacaoToken, resposta: 'RECUSAR' });
+  assert.equal(r.ok, false, 'token emitido para abrir não serve para recusar');
+  const pr = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-002', resposta: 'RECUSAR' });
+  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-002', confirmacaoToken: pr.confirmacaoToken, resposta: 'RECUSAR' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.comando, 'RECUSAR'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.respostasPedido.slice(-1)), JSON.stringify([{ code: 'reply_unlock_request', value: false }]));
+  assert.equal(amb.api.fechAberta, undefined, 'recusa não abre');
+  // rotina de 1 minuto: avisa quem pode destravar, uma vez por toque
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 300;
+  amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaPedidos();
+  const avisos = amb.notificacoes.filter((x) => x.evento === 'S67');
+  assert.equal(avisos.length, 1);
+  assert.equal(Array.from(avisos[0].usuarios).join(','), 'uA', 'só quem pode destravar (o responsável pelo sistema)');
+  assert.match(avisos[0].texto, /campainha.*Abrir agora/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PEDIDO_CAMPAINHA'));
+});
+
+// ---------------------------------------------------------------- abrir e fechar (garagem) x pulso (pedestre)
+test('portões: pulso só abre (fecha manualmente); garagem com abrir e fechar escolhida pela administração; fechar tem homologação própria e token próprio', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  const g = amb.disp('Portão principal'), ped = amb.disp('Portão secundário');
+  amb.como(DONO);
+  let d = amb.api_('painel').unidades[0].dispositivos.find((x) => x.nome === 'Portão principal');
+  assert.equal(d.acionamento, 'PULSO', 'o que já existe continua pulso'); assert.equal(d.acionamentoSugerido, 'ABRIR_FECHAR'); assert.equal(d.podeFechar, false);
+  let r = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000001', acao: 'FECHAR' });
+  assert.equal(r.ok, false); assert.match(r.message, /Pulso \(só abrir\)" e fecha manualmente/);
+  assert.equal(amb.api_('dispositivoSalvar', { id: ped.ID, acionamento: 'ABRIR_FECHAR' }).ok, false, 'pedestre sem fechar na nuvem');
+  amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'ABRIR_FECHAR' }).ok, true);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'DISPOSITIVO_ALTERADO' && /abrir e fechar/.test(a.DETALHE)));
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  d = amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal');
+  assert.equal(d.podeFechar, true); assert.equal(d.modo, 'REAL'); assert.equal(d.modoFechar, 'SIMULACAO');
+  // fechar antes da homologação do fechar: simulação, nada sai
+  r = amb.abrir(g.ID, 'op-fech-0000002');
+  assert.equal(r.ok, true); assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'door_control_1', value: 'open' }]), 'abrir no modo abrir e fechar = door_control_1 open');
+  amb.envelhecer();
+  const pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', acao: 'FECHAR' });
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO'); assert.match(r.texto, /fechar deste portão ainda não foi homologado/);
+  assert.equal(amb.api.cmdGaragem.length, 1, 'fechar não saiu');
+  // homologar o fechar: só diretor, depois do abrir
+  amb.como(ADM2);
+  assert.equal(amb.api_('homologar', { id: g.ID, homologado: true, motivo: 'teste do fechar feito', comando: 'FECHAR' }).ok, false);
+  amb.como(DIR);
+  assert.equal(amb.api_('homologar', { id: g.ID, homologado: true, motivo: 'teste presencial do fechar acompanhado', comando: 'FECHAR' }).ok, true);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'DISPOSITIVO_HOMOLOGADO_FECHAR'));
+  amb.como(DONO); amb.envelhecer();
+  // token de abrir não serve para fechar
+  const pa = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004' });
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004', confirmacaoToken: pa.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, false);
+  amb.envelhecer();
+  const pf2 = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', acao: 'FECHAR' });
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', confirmacaoToken: pf2.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.comando, 'FECHAR'); assert.equal(r.comando.modo, 'REAL'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.cmdGaragem.slice(-1)), JSON.stringify([{ code: 'door_control_1', value: 'close' }]));
+  // pedestre continua só abrir (switch_1 pulso), sem fechar
+  d = amb.api_('rapido').itens.find((x) => x.nome === 'Portão secundário');
+  assert.equal(d.podeFechar, false); assert.equal(d.acionamento, 'PULSO');
+  assert.match(ler('JS_AutomacaoPredial.html'), /Pulso: fecha manualmente/);
+});
+
+// ---------------------------------------------------------------- registro de rastreabilidade legível
+test('registro legível: frase curta por resultado, sem JSON nem códigos fora dos detalhes técnicos; filtros por dispositivo e pessoa; origem; auditoria em frase', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário');
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  const ab = (id, op, origem) => { const p = amb.api_('preparar', { dispositivoId: id, operacaoId: op }); return amb.api_('comando', { dispositivoId: id, operacaoId: op, confirmacaoToken: p.confirmacaoToken, origem }); };
+  const p3 = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-reg-00000003' }); // janela aberta antes do primeiro comando
+  assert.equal(ab(p1.ID, 'op-reg-00000001', 'CELULAR').comando.situacao, 'CONFIRMADO');
+  assert.equal(ab(p2.ID, 'op-reg-00000002', 'COMPUTADOR').comando.situacao, 'SIMULADO');
+  assert.equal(amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-reg-00000003', confirmacaoToken: p3.confirmacaoToken, origem: 'ATALHO_INICIO' }).ok, false, 'intervalo de 10 s');
+  amb.como(DIR); amb.envelhecer();
+  assert.equal(ab(p2.ID, 'op-reg-00000004', 'COMPUTADOR').comando.situacao, 'SIMULADO');
+  amb.como(DONO);
+  const r = amb.api_('registro', {});
+  assert.equal(r.ok, true, r.message);
+  const por = Object.fromEntries(r.itens.map((c) => [c.operacaoId, c]));
+  assert.match(por['op-reg-00000001'].resultadoTexto, /^Aberto — confirmado pelo portão às \d\d:\d\d:\d\d$/);
+  assert.equal(por['op-reg-00000001'].resultadoTom, 'ok');
+  assert.equal(por['op-reg-00000001'].origemTexto, 'Celular');
+  assert.equal(por['op-reg-00000001'].acaoTexto, 'Abrir');
+  assert.match(por['op-reg-00000001'].quandoCompleto, /^\d\d\/\d\d\/\d{4} \d\d:\d\d:\d\d$/);
+  assert.equal(por['op-reg-00000002'].resultadoTexto, 'Teste — nada enviado (portão ainda não homologado)');
+  assert.equal(por['op-reg-00000003'].resultadoTexto, 'Recusado — aguarde 10 s entre comandos');
+  assert.equal(por['op-reg-00000003'].origemTexto, 'Atalho no Início');
+  // nada técnico nos campos que a tabela mostra
+  const visiveis = r.itens.map((c) => [c.quandoCompleto, c.dispositivo, c.local, c.solicitante, c.acaoTexto, c.resultadoTexto, c.origemTexto].join(' ')).join(' ');
+  assert.ok(!/switch_1|code|\{|dev-|op-reg|tid/.test(visiveis), visiveis);
+  assert.match(por['op-reg-00000001'].tecnico.comando, /switch_1/, 'o técnico fica guardado');
+  // filtros
+  assert.deepEqual(amb.api_('registro', { dispositivoId: p2.ID }).itens.map((c) => c.operacaoId).sort(), ['op-reg-00000002', 'op-reg-00000004']);
+  assert.deepEqual(amb.api_('registro', { pessoaId: 'uD' }).itens.map((c) => c.operacaoId), ['op-reg-00000004']);
+  assert.ok(r.pessoas.some((x) => x.id === 'uD') && r.dispositivos.length === 3);
+  assert.equal(amb.api_('registro', { de: '2020-01-01', ate: '2020-01-31' }).itens.length, 0);
+  // quem não vê a porta não vê os comandos dela no registro; auditoria em frase
+  const aud = amb.api_('auditoria');
+  assert.ok(aud.itens.some((a) => a.frase === 'O dispositivo confirmou a execução'));
+  assert.ok(aud.itens.some((a) => a.frase === 'Recusado: aguarde 10 s entre comandos'));
+  assert.ok(aud.itens.every((a) => !/^[A-Z_]+$/.test(a.frase)), 'nenhum código de evento cru');
+  // duplo toque: conferir e gravar sob a trava do script; a tela trava o preparo e a janela
+  const fonte = ler('SGO_Automacao_Predial.js');
+  assert.match(fonte, /function AutPred_executar_\(sessao, dados\) \{\s*var trava = null;\s*try \{ trava = LockService\.getScriptLock\(\); trava\.waitLock/);
+  assert.match(ler('JS_AutomacaoPredial.html'), /if \(AUTP\.preparando \|\| document\.getElementById\("autJanela"\)\) return;/);
 });
