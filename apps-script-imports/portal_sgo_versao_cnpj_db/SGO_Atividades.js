@@ -1039,7 +1039,10 @@ function Atividades_apiPainelEquipe(sessionId, payload) {
         porModulo: Object.keys(porModulo).map(function (k) { return porModulo[k]; }).sort(function (a, b) { return b.abertas - a.abertas; }),
         porSistema: porSistema
       },
-      justificativas: justificativas
+      justificativas: justificativas,
+      // 26/10/2026: o Gantt da equipe usa o empilhamento comum (SGO_Gantt_Layout.js), o mesmo da Frota: texto só
+      // quando cabe inteiro, nunca cortado nem por cima de outra barra ou da faixa de atraso.
+      ganttJs: typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() : ''
     };
   });
 }

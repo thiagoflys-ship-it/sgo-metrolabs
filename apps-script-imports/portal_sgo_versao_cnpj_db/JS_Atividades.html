@@ -1000,6 +1000,7 @@
 
   function Atividades_carregarEquipe_(comAviso) {
     Atividades_chamar_("Atividades_apiPainelEquipe", {}, function (res) {
+      if (res.ganttJs && !window.SGOGantt) { try { window.eval(res.ganttJs); } catch (e) {} }
       ATV.equipe = res;
       if (ATV.tela === "equipe") Atividades_desenharEquipe_();
     }, function (m) {
@@ -1202,20 +1203,48 @@
     var dias = Math.round((fim - ini) / 86400000) + 1;
     var rotuloW = 230, W = Math.max(largura - 2, rotuloW + dias * 22), area = W - rotuloW - 10;
     var pxDia = area / dias, linhaH = 26, cabH = 40;
-    var x = function (iso) { var d = Atividades_parse_(iso); if (!d) return rotuloW; var v = rotuloW + ((d - ini) / 86400000) * pxDia; return Math.max(rotuloW, Math.min(rotuloW + area, v)); };
+    var xm = function (ms) { var v = rotuloW + ((ms - ini) / 86400000) * pxDia; return Math.max(rotuloW, Math.min(rotuloW + area, v)); };
+    var ms = function (iso) { var d = Atividades_parse_(iso); return d ? d.getTime() : ini.getTime(); };
+    var x = function (iso) { var d = Atividades_parse_(iso); return d ? xm(d.getTime()) : rotuloW; };
+    // 26/10/2026: empilhamento e texto pelo Gantt comum (SGO_Gantt_Layout.js, o mesmo da Frota). Cada atividade ocupa
+    // da data de início até o fim do que se desenha (prazo, previsão adiada ou atraso). O texto, medido de verdade, fica
+    // dentro da barra só se couber inteiro, à direita se houver espaço até a próxima, senão só no balão: nunca cortado,
+    // nunca por cima de outra barra.
+    var fonte = "700 10.5px " + (getComputedStyle(document.body).fontFamily || "sans-serif");
+    var cv = document.createElement("canvas").getContext("2d"); cv.font = fonte;
+    var medir = function (t) { return cv.measureText(String(t || "")).width; };
+    /** Maior começo do título (palavras inteiras + "…") que cabe dentro da barra; vazio em barra estreita (o título fica no balão). */
+    var encurtar = function (titulo, w) {
+      if (w < 56) return "";
+      var palavras = String(titulo || "").split(/\s+/), t = "";
+      for (var i = 0; i < palavras.length; i++) { var c = (t ? t + " " : "") + palavras[i]; if (medir(c + "…") + 12 > w) break; t = c; }
+      return t ? t + "…" : "";
+    };
+    var fimVisual = function (a) { return Math.max(ms(a.PRAZO), ms(a.PREVISAO_ATUAL || a.PRAZO), ms(Atividades_fimBarra_(a))); };
+    var arrumar = function (lista) {
+      var evs = lista.map(function (a) { return { ini: ms(Atividades_inicioBarra_(a)), fim: fimVisual(a), rotulo: a.TITULO, curto: a.TITULO, atv: a }; });
+      if (window.SGOGantt) {
+        var r = window.SGOGantt.empilhar(evs, { x: xm, larguraMin: 8, medir: medir, pad: 12, folga: 6, foraMax: 260, limite: rotuloW + area, ehMarco: function () { return false; } });
+        var fx = []; for (var i = 0; i < r.faixas; i++) fx.push([]);
+        r.itens.forEach(function (it) {
+          var texto = it.texto, pos = it.posTexto;
+          if (!texto) { texto = encurtar(it.item.rotulo, it.w); pos = "dentro"; } // barra larga sem espaço fora: começo do título, dentro dela
+          fx[it.faixa].push({ a: it.item.atv, texto: texto, pos: pos });
+        });
+        return fx;
+      }
+      // sem o Gantt comum: uma atividade por sub-linha, texto só se couber inteiro dentro da barra
+      return evs.map(function (e) { var w = xm(e.fim) - xm(e.ini); return [{ a: e.atv, texto: medir(e.rotulo) + 12 <= w ? e.rotulo : encurtar(e.rotulo, w), pos: "dentro" }]; });
+    };
     var ordenados = itens.slice().sort(function (a, b) { return Atividades_inicioBarra_(a) < Atividades_inicioBarra_(b) ? -1 : 1; });
-    var linhas = []; // {rotulo, sub, itens:[], grupo}
+    var linhas = []; // {rotulo, sub, itens:[{a, texto, pos}], grupo}
     if (f.agrupar === "atividade") {
-      ordenados.forEach(function (a) { linhas.push({ rotulo: a.TITULO, sub: a.RESPONSAVEL_NOME, itens: [a] }); });
+      ordenados.forEach(function (a) { linhas.push({ rotulo: a.TITULO, sub: a.RESPONSAVEL_NOME, itens: arrumar([a])[0] }); });
     } else {
       var grupos = {}, ordem = [];
-      ordenados.forEach(function (a) { var k = a.RESPONSAVEL_ID; if (!grupos[k]) { grupos[k] = { nome: a.RESPONSAVEL_NOME, faixas: [] }; ordem.push(k); } var g = grupos[k];
-        var i0 = Atividades_inicioBarra_(a), placed = false;
-        for (var i = 0; i < g.faixas.length && !placed; i++) { if (g.faixas[i].fim < i0) { g.faixas[i].itens.push(a); g.faixas[i].fim = Atividades_fimBarra_(a); placed = true; } }
-        if (!placed) g.faixas.push({ fim: Atividades_fimBarra_(a), itens: [a] });
-      });
+      ordenados.forEach(function (a) { var k = a.RESPONSAVEL_ID; if (!grupos[k]) { grupos[k] = { nome: a.RESPONSAVEL_NOME, lista: [] }; ordem.push(k); } grupos[k].lista.push(a); });
       ordem.sort(function (p, q) { return grupos[p].nome.localeCompare(grupos[q].nome); }).forEach(function (k) {
-        grupos[k].faixas.forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].nome : "", sub: i === 0 ? Atividades_pl_(grupos[k].faixas.reduce(function (s, z) { return s + z.itens.length; }, 0), "atividade", "atividades") : "", itens: fx.itens, grupo: i === 0 }); });
+        arrumar(grupos[k].lista).forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].nome : "", sub: i === 0 ? Atividades_pl_(grupos[k].lista.length, "atividade", "atividades") : "", itens: fx, grupo: i === 0 }); });
       });
     }
     var H = cabH + linhas.length * linhaH + 10;
@@ -1244,7 +1273,8 @@
         s.push('<text x="8" y="' + (y + 12) + '" font-size="12" font-weight="700" fill="var(--text)">' + Atividades_esc_(rot) + "</text>");
         if (ln.sub) s.push('<text x="8" y="' + (y + 23) + '" font-size="10" fill="var(--muted)">' + Atividades_esc_(ln.sub) + "</text>");
       }
-      ln.itens.forEach(function (a) {
+      ln.itens.forEach(function (el) {
+        var a = el.a;
         var x0 = x(Atividades_inicioBarra_(a)), xp = x(a.PRAZO), xprev = x(a.PREVISAO_ATUAL), xf = x(Atividades_fimBarra_(a));
         var venc = Atividades_vencida_(a), cor = ATV_CORES[a.SITUACAO] || "#888";
         var by = y + 5, bh = linhaH - 10;
@@ -1258,12 +1288,9 @@
         if (venc && xf > Math.max(xp, xprev) + 0.5) s.push('<rect x="' + Math.max(xp, xprev).toFixed(1) + '" y="' + by + '" width="' + (xf - Math.max(xp, xprev)).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.55)"/>');
         if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM > a.PRAZO && xf > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xf - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.35)"/>');
         if (a.AGORA_DESDE && Atividades_aberta_(a)) s.push('<circle cx="' + (x0 + 6).toFixed(1) + '" cy="' + (by + bh / 2) + '" r="3.5" fill="#fff"/>');
-        var larg = Math.max(wBase, xf - x0);
-        if (f.agrupar !== "atividade" || larg > 60) {
-          var maxC = Math.floor((larg - 14) / 6.2);
-          var t = String(a.TITULO); if (maxC > 3 && t.length > maxC) t = t.slice(0, maxC - 1) + "…";
-          if (maxC > 3) s.push('<text x="' + (x0 + (a.AGORA_DESDE ? 13 : 5)).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" fill="#fff" font-weight="700" pointer-events="none">' + Atividades_esc_(t) + "</text>");
-        }
+        // texto por último, por cima das faixas: dentro com contorno escuro (legível também sobre a listra e o atraso); fora, na cor do texto
+        if (el.texto && el.pos === "dentro") s.push('<text x="' + (x0 + (a.AGORA_DESDE ? 13 : 6)).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="#fff" stroke="rgba(15,23,42,.55)" stroke-width="3" stroke-linejoin="round" paint-order="stroke" pointer-events="none">' + Atividades_esc_(el.texto) + "</text>");
+        else if (el.texto && el.pos === "fora") s.push('<text x="' + (Math.max(xp, xprev, xf, x0 + 8) + 5).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="var(--text)" pointer-events="none">' + Atividades_esc_(el.texto) + "</text>");
         s.push("</g>");
       });
     });

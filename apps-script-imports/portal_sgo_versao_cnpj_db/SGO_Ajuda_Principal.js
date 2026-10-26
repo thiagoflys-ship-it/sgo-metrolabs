@@ -593,6 +593,7 @@ function SGO_ajudaTelas_Principal_() {
       ],
       perguntas: [
         { p: "O gestor é avisado da justificativa?", r: "Quem lançou a atividade é avisado. A justificativa também aparece em \"Justificativas recentes\"." },
+        { p: "Por que o nome de algumas atividades aparece ao lado da barra ou termina em \"…\" no Gantt?", r: "O nome fica dentro da barra quando cabe inteiro. Se não cabe, vai para o lado direito quando há espaço até a próxima atividade; senão aparece o começo do nome com \"…\" dentro da barra. Atividades que se cruzam no tempo ficam em linhas separadas, nunca uma por cima da outra. Passe o mouse ou toque na barra para ver o nome completo, as datas e a situação." },
         { p: "Por que não vejo uma atividade que um colega citou?", r: "Ela pode ser restrita ou do Programa de conduta. Essas só aparecem para os envolvidos e para a gestão." },
         { p: "As atividades do COMMAND aparecem aqui?", r: "Sim. A lista é a mesma nos dois sistemas. As lançadas pelo COMMAND têm o selo \"COMMAND\"." },
         { p: "Como vejo o que cada pessoa está fazendo?", r: "No bloco \"Agora\". A coluna \"Há\" mostra há quanto tempo a atividade está marcada." },
