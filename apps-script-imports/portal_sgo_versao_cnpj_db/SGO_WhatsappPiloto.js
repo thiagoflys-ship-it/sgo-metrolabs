@@ -32,6 +32,16 @@ var WAP_AREAS = ['ADMIN', 'DIRETORIA', 'GESTOR', 'TECNICO', 'METROLOGIA', 'COMER
 var WAP_FUSO = 'America/Sao_Paulo';
 var WAP_MOTIVO_PESSOA = 'Retida pelo piloto do WhatsApp: esta pessoa não está na lista do piloto (o aviso segue no sistema e por e-mail).';
 var WAP_MOTIVO_EXTERNO = 'Retida pelo piloto do WhatsApp: cliente e contato externo não recebem WhatsApp durante o piloto (o aviso segue por e-mail, quando houver).';
+// 26/10/2026 (piloto 2.0, decisão do dono): para cada pessoa da lista, a gestão escolhe o que ela recebe pelo WhatsApp.
+// Pessoa sem escolha gravada (ou liberada pela área) recebe todos os grupos. O grupo de cada mensagem vem da origem e da
+// categoria (SGO_waPilotoGrupoDe_); o que a pessoa não recebe fica RETIDO, com o motivo, e segue no sistema e no e-mail.
+var WAP_GRUPOS = [
+  { codigo: 'PONTO', nome: 'Ponto', descricao: 'Lembretes do ponto (só CLT)' },
+  { codigo: 'GERAIS', nome: 'Avisos gerais', descricao: 'Comunicados da gestão e do RH' },
+  { codigo: 'ATIVIDADES', nome: 'Atividades e pendências', descricao: 'Minhas atividades, decisões, resumo do dia e bate-papo' },
+  { codigo: 'SETOR', nome: 'Avisos do setor', descricao: 'Frota, Comercial, Compras, Assistência, Conduta, Auvo e Segurança predial' }
+];
+var WAP_GRUPOS_COD = WAP_GRUPOS.map(function (g) { return g.codigo; });
 var WAP_SITUACOES = { OK: 'Enviada', ENVIADO: 'Enviada', RETIDO: 'Retida pelo piloto', BLOQUEADO: 'Bloqueada pelo servidor', ERRO: 'Falhou', FALHOU: 'Falhou', PULADO: 'Não enviada (regra do módulo)' };
 
 /** Chave do telefone sem o 9: 55 + DDD + 8 últimos dígitos ("5562999990001" e "556299990001" dão "556299990001"). */
@@ -68,15 +78,37 @@ function SGO_waPilotoCfg_() {
   var j = null;
   try { j = bruto ? JSON.parse(bruto) : null; } catch (e) { j = null; }
   if (!j || typeof j !== 'object') {
-    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], gravado: false, atualizadoEm: '', atualizadoPor: '' };
+    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], grupos: {}, gravado: false, atualizadoEm: '', atualizadoPor: '' };
   }
   return {
     ligado: j.ligado !== false,
     usuarios: SGO_waPilotoLista_(j.usuarios),
+    grupos: SGO_waPilotoGruposLimpos_(j.grupos),
     areas: SGO_waPilotoLista_(j.areas).map(function (a) { return a.toUpperCase(); }).filter(function (a) { return WAP_AREAS.indexOf(a) >= 0; }),
     telefones: SGO_waPilotoLista_(j.telefones).map(SGO_waPilotoCanon_).filter(Boolean),
     gravado: true, atualizadoEm: String(j.atualizadoEm || ''), atualizadoPor: String(j.atualizadoPor || '')
   };
+}
+
+/** { id: [códigos de WAP_GRUPOS] } só com códigos válidos; lista vazia some (vale "todos"). */
+function SGO_waPilotoGruposLimpos_(g) {
+  var out = {};
+  if (!g || typeof g !== 'object') return out;
+  Object.keys(g).forEach(function (id) {
+    var l = SGO_waPilotoLista_(g[id]).map(function (x) { return x.toUpperCase(); }).filter(function (x) { return WAP_GRUPOS_COD.indexOf(x) >= 0; });
+    if (l.length) out[String(id)] = l;
+  });
+  return out;
+}
+
+/** Grupo da mensagem pela origem e categoria ('' = mensagem do próprio piloto, como o teste: não depende de grupo). */
+function SGO_waPilotoGrupoDe_(ctx) {
+  var cat = String((ctx && ctx.categoria) || '').toUpperCase(), org = String((ctx && ctx.origem) || '').toUpperCase();
+  if (org === 'WA_PILOTO') return '';
+  if (cat === 'PONTO' || org.indexOf('PONTO') === 0) return 'PONTO';
+  if (org === 'AVISOS') return 'GERAIS';
+  if (cat === 'ATIVIDADES' || cat === 'GESTAO' || cat === 'RESUMO_DIA' || org.indexOf('ATIVIDADES') === 0 || org.indexOf('GESTAO') === 0 || org === 'RESUMO_DIA' || org === 'BATE_PAPO') return 'ATIVIDADES';
+  return 'SETOR';
 }
 
 /** Pessoa interna liberada? (na lista ou com o perfil de uma área liberada) */
@@ -91,7 +123,7 @@ function SGO_waPilotoPessoaLiberada_(cfg, contato) {
  * Motivo para NÃO mandar WhatsApp a este destinatário ('' = pode). contato = item de Notificar_contatos_
  * (ou contato externo do SGO_notificar_, com externo = true). Nunca lança erro: na dúvida, retém.
  */
-function SGO_waPilotoMotivo_(contato, cfg) {
+function SGO_waPilotoMotivo_(contato, cfg, ctx) {
   try {
     cfg = cfg || SGO_waPilotoCfg_();
     if (!cfg.ligado) return '';
@@ -99,7 +131,14 @@ function SGO_waPilotoMotivo_(contato, cfg) {
       var k = SGO_waPilotoCanon_(contato.telefone);
       return k && SGO_waPilotoTelefones_(cfg).indexOf(k) >= 0 ? '' : WAP_MOTIVO_EXTERNO;
     }
-    return SGO_waPilotoPessoaLiberada_(cfg, contato) ? '' : WAP_MOTIVO_PESSOA;
+    if (!SGO_waPilotoPessoaLiberada_(cfg, contato)) return WAP_MOTIVO_PESSOA;
+    // piloto 2.0: o que esta pessoa recebe (sem escolha gravada = tudo)
+    var grupo = SGO_waPilotoGrupoDe_(ctx), escolhidos = (cfg.grupos || {})[String(contato.id)];
+    if (grupo && escolhidos && escolhidos.indexOf(grupo) < 0) {
+      var g = WAP_GRUPOS.filter(function (x) { return x.codigo === grupo; })[0];
+      return 'Retida pelo piloto do WhatsApp: esta pessoa não recebe "' + (g ? g.nome : grupo) + '" pelo WhatsApp (escolha da gestão em Administração > Piloto do WhatsApp; o aviso segue no sistema e por e-mail).';
+    }
+    return '';
   } catch (e) {
     return 'Retida pelo piloto do WhatsApp (não foi possível conferir a lista: ' + String((e && e.message) || e).slice(0, 120) + ').';
   }
@@ -165,7 +204,7 @@ function SGO_waPilotoSincronizar_(forcar) {
 function SGO_waPilotoGravarProp_(cfg, telefones, por) {
   var agora = Utilities.formatDate(new Date(), WAP_FUSO, "yyyy-MM-dd'T'HH:mm:ss");
   PropertiesService.getScriptProperties().setProperty(WAP_PROP, JSON.stringify({
-    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones,
+    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones, grupos: cfg.grupos || {},
     atualizadoEm: agora, atualizadoPor: String(por || '').slice(0, 80)
   }));
 }
@@ -236,7 +275,8 @@ function SGO_waPilotoCarregar_(eu) {
       id: id, nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: c.perfil,
       vinculo: String(u.VINCULO_TRABALHO || '').replace(/\s+/g, '').toUpperCase(),
       celular: cel ? SGO_waPilotoFone_(cel, eu.admin) : '', temCelular: !!cel, temEmail: !!(c.email && c.email.indexOf('@') > 0),
-      naLista: cfg.usuarios.indexOf(id) >= 0, porArea: cfg.areas.indexOf(c.perfil) >= 0, dono: donos.indexOf(id) >= 0
+      naLista: cfg.usuarios.indexOf(id) >= 0, porArea: cfg.areas.indexOf(c.perfil) >= 0, dono: donos.indexOf(id) >= 0,
+      grupos: (cfg.grupos || {})[id] || WAP_GRUPOS_COD.slice()
     };
   }).sort(function (a, b) { return (b.naLista - a.naLista) || a.nome.localeCompare(b.nome, 'pt-BR'); });
   var pv = Notificar_provedorWhatsapp_();
@@ -247,7 +287,7 @@ function SGO_waPilotoCarregar_(eu) {
   var prov = String(PropertiesService.getScriptProperties().getProperty('WHATSAPP_PROVEDOR') || '').trim().toLowerCase();
   return {
     ligado: cfg.ligado, gravado: cfg.gravado, atualizadoEm: cfg.atualizadoEm, atualizadoPor: cfg.atualizadoPor,
-    usuarios: cfg.usuarios, areas: cfg.areas, areasPossiveis: WAP_AREAS.slice(),
+    usuarios: cfg.usuarios, areas: cfg.areas, areasPossiveis: WAP_AREAS.slice(), gruposPossiveis: WAP_GRUPOS.slice(),
     pessoas: pessoas, liberadas: pessoas.filter(function (p) { return p.naLista || p.porArea; }).length,
     provedorEscolhido: prov || '(vazio)', provedorEmUso: pv.provedor === 'meta' ? 'WhatsApp oficial (Meta)' : pv.provedor === 'zapi' ? 'Z-API' : 'nenhum',
     provedorMotivo: pv.provedor ? '' : String(pv.motivo || ''), zapiFora: SGO_waZapiFora_(), modelos: modelos, admin: eu.admin, ligaDesliga: !!eu.ligaDesliga
@@ -270,7 +310,19 @@ function SGO_waPilotoGravar_(eu, d) {
   if (areas.some(function (a) { return WAP_AREAS.indexOf(a) < 0; })) throw new Error('Área desconhecida. Atualize a tela e tente de novo.');
   var ligado = d.ligado !== false;
   if (ligado && !usuarios.length && !areas.length) throw new Error('Com o piloto ligado, marque pelo menos uma pessoa (ou desligue o piloto).');
-  var cfg = { ligado: ligado, usuarios: usuarios, areas: areas };
+  // piloto 2.0: o que cada pessoa marcada recebe; todos os grupos marcados = nada gravado (vale "tudo")
+  var gruposIn = d.grupos && typeof d.grupos === 'object' ? d.grupos : {}, grupos = {};
+  usuarios.forEach(function (id) {
+    if (!(id in gruposIn)) return;
+    var l = SGO_waPilotoLista_(gruposIn[id]).map(function (x) { return x.toUpperCase(); });
+    if (l.some(function (x) { return WAP_GRUPOS_COD.indexOf(x) < 0; })) throw new Error('Tipo de aviso desconhecido. Atualize a tela e tente de novo.');
+    if (!l.length) {
+      var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, id);
+      throw new Error('Não foi possível gravar: ' + ((u && (u.NOME || u.USUARIO)) || 'uma pessoa marcada') + ' está sem nenhum tipo de aviso marcado. Marque pelo menos um tipo (Ponto, Avisos gerais, Atividades e pendências ou Avisos do setor) ou desmarque a pessoa.');
+    }
+    if (l.length < WAP_GRUPOS_COD.length) grupos[id] = l;
+  });
+  var cfg = { ligado: ligado, usuarios: usuarios, areas: areas, grupos: grupos };
   var tel = SGO_waPilotoTelefones_(cfg);
   SGO_waPilotoGravarProp_(cfg, tel, eu.usuario);
   try { CacheService.getScriptCache().remove('WAP_SYNC_V1'); } catch (e) {}
@@ -279,6 +331,32 @@ function SGO_waPilotoGravar_(eu, d) {
   var r = SGO_waPilotoCarregar_(eu);
   r.mensagem = ligado ? 'Piloto gravado: ' + r.liberadas + ' pessoa(s) recebem WhatsApp; as demais recebem no sistema e por e-mail.' : 'Piloto desligado: o WhatsApp oficial volta a valer para todos, com as regras de cada módulo.';
   return r;
+}
+
+/**
+ * Mensagem de teste (26/10/2026) para uma pessoa liberada no piloto: confere de ponta a ponta o celular, o modelo
+ * da Meta e a lista do servidor. Vai pelo aviso geral (sgo_aviso_geral), com a origem do piloto (fora da matriz e
+ * dos grupos). No máximo um teste por pessoa a cada 2 minutos. d: { usuarioId }.
+ */
+function SGO_waPilotoTestar_(eu, d) {
+  var id = String((d && d.usuarioId) || '').trim();
+  var u = id ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, id) : null;
+  if (!u || SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') throw new Error('Não foi possível testar: a pessoa não está ativa no cadastro. Atualize a tela.');
+  var nome = SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO);
+  var cfg = SGO_waPilotoCfg_();
+  if (cfg.ligado && !SGO_waPilotoPessoaLiberada_(cfg, { id: id, perfil: SGO_UTILS.safeUpper(u.PERFIL) })) {
+    throw new Error('Não foi possível testar: ' + nome + ' não está no piloto. Marque a pessoa, toque em "Gravar" e teste de novo.');
+  }
+  var cache = null, chave = 'WAP_TESTE_' + id;
+  try { cache = CacheService.getScriptCache(); } catch (e) { cache = null; }
+  if (cache && cache.get(chave)) throw new Error('Já foi mandado um teste para ' + nome + ' há menos de 2 minutos. Aguarde a mensagem chegar antes de testar de novo.');
+  var hora = Utilities.formatDate(new Date(), WAP_FUSO, 'HH:mm');
+  var r = SGO_notificar_({ usuarios: [id], canais: ['whatsapp'], origem: 'WA_PILOTO', refId: 'TESTE-' + id + '-' + Date.now(),
+    titulo: 'Mensagem de teste do SGO+',
+    texto: 'Teste do WhatsApp do sistema pedido por ' + eu.nome + ' às ' + hora + '. Se esta mensagem chegou, os avisos do SGO+ vão chegar para você por aqui. Não precisa responder.' });
+  if (cache) { try { cache.put(chave, '1', 120); } catch (e) {} }
+  if (r && r.ok) return { mensagem: 'Teste enviado para ' + nome + ' às ' + hora + '. Peça para a pessoa confirmar que chegou; o envio aparece em "O que saiu, foi retido ou falhou".' };
+  throw new Error('O teste para ' + nome + ' não saiu: ' + String((r && r.motivo) || 'sem resposta do WhatsApp') + ' Confira em "O que saiu, foi retido ou falhou".');
 }
 
 /** Dia 'yyyy-MM-dd' (fuso da empresa) de um valor de data. */
@@ -367,6 +445,7 @@ function SGO_WaPiloto_api(sessionId, acao, dados) {
     if (acao === 'carregar') { SGO_waPilotoSincronizar_(false); SGO_waPilotoGarantirGatilho_(); r = SGO_waPilotoCarregar_(eu); }
     else if (acao === 'gravar') r = SGO_waPilotoGravar_(eu, d);
     else if (acao === 'relatorio') r = SGO_waPilotoRelatorio_(eu, d);
+    else if (acao === 'testar') r = SGO_waPilotoTestar_(eu, d);
     else throw new Error('Ação desconhecida na tela Piloto do WhatsApp. Atualize a página e tente de novo.');
     return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r)));
   } catch (e) {

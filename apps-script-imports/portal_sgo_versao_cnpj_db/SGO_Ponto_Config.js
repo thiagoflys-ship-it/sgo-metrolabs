@@ -340,7 +340,7 @@ function Ponto_motivoFora_(u, pessoa, pilotoCfg, cfg) {
   if (u.vinculo === 'DIRETORIA') return 'DIRETORIA';   // 22/10/2026: Diretoria não bate ponto, como PJ
   if (u.vinculo !== 'CLT') return 'SEM_VINCULO';
   if (pessoa && Pto_s_(pessoa.PARTICIPA) && !Pto_verdade_(pessoa.PARTICIPA)) return 'NAO_PARTICIPA';
-  if (pilotoCfg && pilotoCfg.ligado && typeof SGO_waPilotoMotivo_ === 'function' && SGO_waPilotoMotivo_({ id: u.id, perfil: u.perfil, telefone: u.celular }, pilotoCfg)) return 'FORA_PILOTO';
+  if (pilotoCfg && pilotoCfg.ligado && typeof SGO_waPilotoMotivo_ === 'function' && SGO_waPilotoMotivo_({ id: u.id, perfil: u.perfil, telefone: u.celular }, pilotoCfg, { categoria: 'PONTO', origem: 'PONTO' })) return 'FORA_PILOTO'; // 26/10/2026: e com o grupo "Ponto" marcado
   if (!u.celular && !(cfg && cfg.emailReserva && u.email)) return 'SEM_CONTATO';
   return '';
 }

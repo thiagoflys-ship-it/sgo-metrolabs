@@ -19,6 +19,10 @@
   .wap-filtros input, .wap-filtros select, .wap-busca { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--card); color: var(--text); max-width: 100%; }
   .wap-busca { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
   .wap-motivo { font-size: 12px; color: var(--muted); word-break: break-word; }
+  .wap-grupos { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-top: 6px; }
+  .wap-grupos label { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; }
+  .wap-grupos input { width: 16px; height: 16px; margin: 0; }
+  .wap-testar { min-height: 32px; padding: 4px 10px; font-size: 12.5px; }
   .wap-modelos { font-size: 12.5px; }
   .wap-modelos div { padding: 3px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   @media (max-width: 700px) { .wap-tabela thead { display: none; } .wap-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .wap-tabela td { display: block; border: none; padding: 2px 4px; } }
@@ -67,6 +71,8 @@
         (typeof CadUI_ajuda_ === "function" ? CadUI_ajuda_(
           "<ul><li><b>Piloto ligado</b>: só as pessoas marcadas recebem WhatsApp. As demais recebem os mesmos avisos no sistema e por e-mail.</li>" +
           "<li><b>Cliente e contato externo</b> não recebem WhatsApp durante o piloto (Atendente de IA, avisos do Auvo, orçamento do chamado).</li>" +
+          "<li><b>O que cada pessoa recebe</b>: marque, para cada pessoa, os tipos de aviso que vão pelo WhatsApp (Ponto, Avisos gerais, Atividades e pendências, Avisos do setor). O que ficar desmarcado continua no sistema e no e-mail.</li>" +
+          "<li><b>Mandar teste</b>: depois de gravar, manda uma mensagem de teste para a pessoa. Se chegou, os avisos do sistema vão chegar para ela.</li>" +
           "<li><b>A Z-API está fora</b>: o WhatsApp do sistema é o oficial (Meta). Nenhuma mensagem sai pela Z-API.</li>" +
           "<li>O servidor confere a mesma lista em toda mensagem, venha do SGO+ ou do COMMAND.</li></ul>") : "") +
         '<div id="wapCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(5) : "Carregando...") + '</div>' +
@@ -105,8 +111,15 @@
       '<div class="wap-pessoas" id="wapPessoas">' + d.pessoas.map(function (p) {
         var obs = [rotArea[p.perfil] || p.perfil, ({ CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" })[p.vinculo] || (p.vinculo ? "vínculo " + p.vinculo : "vínculo não informado"), p.temCelular ? "celular " + p.celular : "sem celular válido (não recebe WhatsApp)", p.temEmail ? "com e-mail" : "sem e-mail"];
         if (p.dono) obs.push("responsável pelo sistema");
-        return '<label class="wap-pessoa" data-nome="' + esc(String(p.nome).toLowerCase()) + '"><input type="checkbox" class="wap-chk" value="' + esc(p.id) + '"' + (marcados[p.id] ? " checked" : "") + '>' +
-          '<span><b>' + esc(p.nome) + '</b>' + (p.porArea && !marcados[p.id] ? ' <span class="wap-sit ok">liberada pela área</span>' : '') + '<br><span class="q">' + esc(obs.join(" · ")) + '</span></span></label>';
+        // 26/10/2026 (piloto 2.0): o que a pessoa marcada recebe e o teste de envio
+        var gr = (d.gruposPossiveis || []).map(function (gp) {
+          var on = (p.grupos || []).indexOf(gp.codigo) >= 0;
+          return '<label title="' + esc(gp.descricao) + '"><input type="checkbox" class="wap-grupo" data-pessoa="' + esc(p.id) + '" value="' + esc(gp.codigo) + '"' + (on ? " checked" : "") + '> ' + esc(gp.nome) + '</label>';
+        }).join("");
+        return '<div class="wap-pessoa" data-nome="' + esc(String(p.nome).toLowerCase()) + '"><input type="checkbox" class="wap-chk" id="wapP_' + esc(p.id) + '" value="' + esc(p.id) + '"' + (marcados[p.id] ? " checked" : "") + ' onchange="WaPiloto_mostrarGrupos_(this)">' +
+          '<span style="flex:1;min-width:0"><label for="wapP_' + esc(p.id) + '"><b>' + esc(p.nome) + '</b></label>' + (p.porArea && !marcados[p.id] ? ' <span class="wap-sit ok">liberada pela área</span>' : '') + '<br><span class="q">' + esc(obs.join(" · ")) + '</span>' +
+          '<span class="wap-grupos" id="wapG_' + esc(p.id) + '"' + (marcados[p.id] ? "" : ' style="display:none"') + '><span class="q">Recebe pelo WhatsApp:</span> ' + gr +
+          (p.temCelular ? ' <button type="button" class="cadx-btn wap-testar" onclick="WaPiloto_testar_(\'' + esc(p.id) + '\', this)">Mandar teste</button>' : '') + '</span></span></div>';
       }).join("") + '</div>' +
       '<details style="margin-top:10px"><summary>Liberar uma área inteira (depois do piloto)</summary><div class="wap-areas" style="margin-top:8px">' + d.areasPossiveis.map(function (a) {
         return '<label><input type="checkbox" class="wap-area" value="' + esc(a) + '"' + (areas[a] ? " checked" : "") + '> ' + esc(rotArea[a] || a) + '</label>';
@@ -126,16 +139,41 @@
     document.querySelectorAll("#wapPessoas .wap-pessoa").forEach(function (el) { el.style.display = !q || el.getAttribute("data-nome").indexOf(q) >= 0 ? "" : "none"; });
   }
 
+  function WaPiloto_mostrarGrupos_(chk) {
+    var g = document.getElementById("wapG_" + chk.value);
+    if (g) g.style.display = chk.checked ? "" : "none";
+  }
+
+  /** Mensagem de teste para uma pessoa do piloto (grave antes, se acabou de marcar). */
+  function WaPiloto_testar_(id, btn) {
+    var msg = document.getElementById("wapMsg");
+    if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+    WaPiloto_chamar_("testar", { usuarioId: id }, function (r) {
+      if (btn) { btn.disabled = false; btn.textContent = "Mandar teste"; }
+      if (msg) msg.textContent = r.mensagem || "Teste enviado.";
+      WaPiloto_relatorio_();
+    }, function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Mandar teste"; }
+      if (msg) msg.textContent = e;
+      WaPiloto_relatorio_();
+    });
+  }
+
   function WaPiloto_gravar_() {
     var btn = document.getElementById("wapGravar"), msg = document.getElementById("wapMsg");
-    var usuarios = [], areas = [];
-    document.querySelectorAll("#wapPessoas .wap-chk").forEach(function (el) { if (el.checked) usuarios.push(el.value); });
+    var usuarios = [], areas = [], grupos = {};
+    document.querySelectorAll("#wapPessoas .wap-chk").forEach(function (el) {
+      if (!el.checked) return;
+      usuarios.push(el.value);
+      grupos[el.value] = [];
+      document.querySelectorAll('.wap-grupo[data-pessoa="' + el.value + '"]').forEach(function (g) { if (g.checked) grupos[el.value].push(g.value); });
+    });
     document.querySelectorAll(".wap-area").forEach(function (el) { if (el.checked) areas.push(el.value); });
     var ligado = !!(document.getElementById("wapLigado") || {}).checked;
     if (!ligado && !confirm("Desligar o piloto libera o WhatsApp oficial para TODAS as pessoas (com as regras de cada módulo). Confirma?")) return;
     if (btn) { btn.disabled = true; btn.textContent = "Gravando..."; }
     if (msg) msg.textContent = "";
-    WaPiloto_chamar_("gravar", { ligado: ligado, usuarios: usuarios, areas: areas }, function (r) {
+    WaPiloto_chamar_("gravar", { ligado: ligado, usuarios: usuarios, areas: areas, grupos: grupos }, function (r) {
       WAP.dados = r; WaPiloto_desenhar_(); WaPiloto_relatorio_();
       var m = document.getElementById("wapMsg"); if (m) m.textContent = r.mensagem || "Gravado.";
     }, function (e) {

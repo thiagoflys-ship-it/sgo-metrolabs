@@ -115,6 +115,41 @@ test('lista gravada pela tela: quem está na lista recebe, quem não está fica 
   assert.deepEqual(situacoes(a, 'whatsapp').sort(), ['u_m3:OK', 'u_tec:RETIDO']);
 });
 
+test('piloto 2.0 (26/10/2026): para cada pessoa, o que ela recebe; o resto fica RETIDO com o motivo; teste só para quem está no piloto', () => {
+  const a = ambiente({ props: Object.assign({}, META) });
+  // Tiago só recebe "Atividades e pendências"; Ana (sem escolha) recebe tudo
+  let g = a.ctx.SGO_WaPiloto_api('s_dono', 'gravar', { ligado: true, usuarios: ['u_adm', 'u_tec'], grupos: { u_tec: ['ATIVIDADES'], u_adm: ['PONTO', 'GERAIS', 'ATIVIDADES', 'SETOR'] } });
+  assert.equal(g.ok, true, g.message);
+  const cfg = JSON.parse(a.props.WA_PILOTO);
+  assert.deepEqual(cfg.grupos, { u_tec: ['ATIVIDADES'] }); // todos marcados = nada gravado (vale tudo)
+  assert.deepEqual(Array.from(g.pessoas.find((p) => p.id === 'u_tec').grupos), ['ATIVIDADES']);
+  assert.equal(g.gruposPossiveis.length, 4);
+  a.tabelas.NTF_ENVIOS.length = 0;
+  a.ctx.SGO_notificar_(aviso(['u_adm', 'u_tec'], { canais: ['whatsapp'], origem: 'AVISOS' }));                       // aviso geral
+  a.ctx.SGO_notificar_(aviso(['u_tec'], { canais: ['whatsapp'], origem: 'FROTA', refId: 'F1' }));                    // setor
+  a.ctx.SGO_notificar_(aviso(['u_tec'], { canais: ['whatsapp'], origem: 'ATIVIDADES', categoria: '', refId: 'AT1' }));  // atividades
+  assert.deepEqual(situacoes(a, 'whatsapp'), ['u_adm:OK', 'u_tec:RETIDO', 'u_tec:RETIDO', 'u_tec:OK']);
+  assert.match(a.tabelas.NTF_ENVIOS[1].MOTIVO, /não recebe "Avisos gerais" pelo WhatsApp/);
+  assert.match(a.tabelas.NTF_ENVIOS[2].MOTIVO, /não recebe "Avisos do setor"/);
+  // classificação das origens
+  const G = (o) => a.ctx.SGO_waPilotoGrupoDe_(o);
+  assert.equal(G({ categoria: 'PONTO' }), 'PONTO'); assert.equal(G({ origem: 'AVISOS' }), 'GERAIS'); assert.equal(G({ origem: 'RESUMO_DIA' }), 'ATIVIDADES');
+  assert.equal(G({ origem: 'GESTAO_RESUMO' }), 'ATIVIDADES'); assert.equal(G({ origem: 'COMPRAS' }), 'SETOR'); assert.equal(G({ origem: 'WA_PILOTO' }), '');
+  // pessoa marcada sem nenhum tipo: recusa com o que fazer
+  g = a.ctx.SGO_WaPiloto_api('s_dono', 'gravar', { ligado: true, usuarios: ['u_adm', 'u_tec'], grupos: { u_tec: [] } });
+  assert.equal(g.ok, false); assert.match(g.message, /TIAGO TECNICO está sem nenhum tipo de aviso marcado/);
+  // teste: sai para quem está no piloto (mesmo sem o grupo da mensagem), uma vez a cada 2 minutos; quem não está é recusado
+  const antes = a.metas().length;
+  let t = a.ctx.SGO_WaPiloto_api('s_dono', 'testar', { usuarioId: 'u_tec' });
+  assert.equal(t.ok, true, t.message); assert.match(t.mensagem, /Teste enviado para TIAGO TECNICO/);
+  assert.equal(a.metas().length, antes + 1);
+  t = a.ctx.SGO_WaPiloto_api('s_dono', 'testar', { usuarioId: 'u_tec' });
+  assert.equal(t.ok, false); assert.match(t.message, /há menos de 2 minutos/);
+  t = a.ctx.SGO_WaPiloto_api('s_dono', 'testar', { usuarioId: 'u_m3' });
+  assert.equal(t.ok, false); assert.match(t.message, /não está no piloto/);
+  assert.equal(a.ctx.SGO_WaPiloto_api('s_tec', 'testar', { usuarioId: 'u_tec' }).ok, false); // técnico não usa a tela
+});
+
 test('cliente e contato externo ficam retidos durante o piloto, salvo telefone da lista (com ou sem o 9)', () => {
   const a = ambiente({ props: Object.assign({}, META) });
   a.ctx.SGO_WaPiloto_api('s_dono', 'gravar', { ligado: true, usuarios: ['u_adm', 'u_tec'] });

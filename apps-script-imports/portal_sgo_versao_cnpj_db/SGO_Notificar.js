@@ -745,7 +745,7 @@ function SGO_notificar_(opcoes) {
           // 21/10/2026: piloto do WhatsApp — só as pessoas da lista recebem; as demais ficam RETIDO (sistema e e-mail seguem)
           if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function') {
             if (pilotoCfg === null) { SGO_waPilotoSincronizar_(false); pilotoCfg = SGO_waPilotoCfg_(); }
-            var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg);
+            var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg, { categoria: categoria, origem: origem }); // 26/10/2026: e o grupo que a pessoa recebe
             if (barradoPiloto) { registrar(uid, c.nome, canal, c.telefone, 'RETIDO', barradoPiloto); return; }
           }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;

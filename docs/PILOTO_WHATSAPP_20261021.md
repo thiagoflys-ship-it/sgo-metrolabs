@@ -40,9 +40,13 @@ Sem a lista gravada, o servidor não deixa sair nenhuma mensagem.
 3. No bloco "Quem recebe pelo WhatsApp", deixe "Piloto ligado" marcado.
 4. Marque as pessoas do piloto: você, as duas pessoas da equipe definidas para a primeira semana e o técnico escolhido. Use o campo de busca para achar pelo nome. O sistema não traz nomes gravados no código: a escolha é feita aqui.
 5. Confira, abaixo do nome, se cada pessoa tem celular válido. Sem celular, a pessoa recebe só no sistema e por e-mail. O celular fica em Administração > Usuários > Celular.
-6. Toque em "Gravar". A mensagem abaixo do botão diz quantas pessoas recebem pelo WhatsApp.
+6. Abaixo de cada pessoa marcada, em "Recebe pelo WhatsApp", deixe marcado só o que ela deve receber: Ponto, Avisos gerais, Atividades e pendências e Avisos do setor (26/10/2026). O que ficar desmarcado continua no sistema e no e-mail.
+7. Toque em "Gravar". A mensagem abaixo do botão diz quantas pessoas recebem pelo WhatsApp.
+8. Toque em "Mandar teste" ao lado de cada pessoa e peça para ela confirmar que chegou.
 
 Sem nada gravado, vale a lista padrão: só o responsável pelo sistema.
+
+Desde 26/10/2026, CLT e PJ recebem pelo WhatsApp tudo o que estiver marcado, menos o ponto, que vai só para CLT.
 
 ## O que cada pessoa da lista vai receber
 

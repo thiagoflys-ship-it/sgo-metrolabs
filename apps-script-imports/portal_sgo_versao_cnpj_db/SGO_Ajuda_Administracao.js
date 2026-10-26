@@ -591,7 +591,14 @@ function SGO_ajudaTelas_Administracao_() {
           "No bloco \"Quem recebe pelo WhatsApp\", deixe \"Piloto ligado\" marcado.",
           "Marque as pessoas do piloto. Use o campo de busca para achar pelo nome.",
           "Confira, abaixo do nome, se a pessoa tem celular válido.",
+          "Abaixo de cada pessoa marcada, em \"Recebe pelo WhatsApp\", deixe marcado só o que ela deve receber: Ponto (lembretes, só CLT), Avisos gerais (comunicados), Atividades e pendências (atividades, decisões, resumo do dia e bate-papo) e Avisos do setor (Frota, Comercial, Compras, Assistência, Conduta, Auvo e Segurança predial). O que ficar desmarcado continua no sistema e no e-mail.",
           "Toque em \"Gravar\". A mensagem abaixo do botão diz quantas pessoas recebem pelo WhatsApp."
+        ] },
+        { titulo: "Testar o WhatsApp de uma pessoa", itens: [
+          "Depois de gravar, toque em \"Mandar teste\" ao lado da pessoa.",
+          "Peça para a pessoa confirmar que a mensagem chegou.",
+          "Confira o envio em \"O que saiu, foi retido ou falhou\". Se não saiu, a mensagem abaixo do botão diz o motivo (celular, modelo da Meta ou pagamento).",
+          "Dá para mandar um teste por pessoa a cada 2 minutos."
         ] },
         { titulo: "Acompanhar o dia", itens: [
           "No bloco \"O que saiu, foi retido ou falhou\", escolha o dia e, se quiser, a pessoa.",
@@ -608,7 +615,7 @@ function SGO_ajudaTelas_Administracao_() {
       ],
       cores: [
         { nome: "Selo verde \"Enviada\"", significado: "A Meta aceitou a mensagem." },
-        { nome: "Selo cinza \"Retida pelo piloto\"", significado: "A pessoa não está na lista, ou é cliente ou contato externo. O aviso ficou no sistema e no e-mail." },
+        { nome: "Selo cinza \"Retida pelo piloto\"", significado: "A pessoa não está na lista, o tipo de aviso está desmarcado para ela, ou é cliente ou contato externo. O aviso ficou no sistema e no e-mail." },
         { nome: "Selo vermelho \"Bloqueada pelo servidor\"", significado: "O servidor barrou o envio: número fora da lista ou tentativa pela Z-API. Nada saiu." },
         { nome: "Selo vermelho \"Falhou\"", significado: "A Meta recusou. O motivo diz o que fazer (modelo não aprovado, pagamento, número sem WhatsApp)." },
         { nome: "Selo amarelo \"Não enviada (regra do módulo)\"", significado: "A regra do módulo segurou: fora do expediente, limite de uma por dia, PJ, sem celular ou modelo não aprovado." }
