@@ -412,8 +412,22 @@ function Atividades_usuariosAtivos_() {
     .filter(function (u) {
       return SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE';
     })
-    .map(function (u) { return { id: String(u.ID), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: SGO_UTILS.safeUpper(u.PERFIL) }; })
+    .map(function (u) {
+      return { id: String(u.ID), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: SGO_UTILS.safeUpper(u.PERFIL),
+        dono: typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(u.USUARIO) };
+    })
     .sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+}
+
+/**
+ * 26/10/2026 (pedido do dono): o responsável pelo sistema (SGO_DONOS, SGO_Chaves.js) só recebe atividade lançada
+ * por ele mesmo. Nenhuma pessoa, de nenhum perfil, lança ou passa atividade para ele; as rotinas automáticas
+ * (perfil SISTEMA: Assistência, Comercial) continuam, porque não são uma pessoa mandando tarefa.
+ */
+function Atividades_exigirPodeAtribuir_(eu, resp, acao) {
+  if (!resp || !resp.dono || resp.id === eu.id || eu.perfil === 'SISTEMA') return;
+  throw new Error('Não foi possível ' + acao + ': ' + resp.nome + ' é o responsável pelo sistema e só ele lança atividades para si. ' +
+    'Escolha outra pessoa como responsável ou, se precisar de algo dele, fale diretamente com ele.');
 }
 
 function Atividades_historico_(atividadeId) {
@@ -483,6 +497,9 @@ function Atividades_apiOpcoes(sessionId, payload) {
     var eu = Atividades_sessao_(sessionId);
     var usuarios = Atividades_usuariosAtivos_();
     if (!eu.gestor) usuarios = usuarios.filter(function (u) { return u.id === eu.id; });
+    // O responsável pelo sistema só aparece na lista para ele mesmo (Atividades_exigirPodeAtribuir_).
+    usuarios = usuarios.filter(function (u) { return !u.dono || u.id === eu.id; })
+      .map(function (u) { return { id: u.id, nome: u.nome, perfil: u.perfil }; });
     if (!usuarios.some(function (u) { return u.id === eu.id; })) usuarios.unshift({ id: eu.id, nome: eu.nome, perfil: eu.perfil });
     var clientes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES)
       .filter(function (c) { return SGO_UTILS.safeUpper(c.STATUS || 'ATIVO') === 'ATIVO'; })
@@ -566,6 +583,7 @@ function Atividades_apiCriar(sessionId, payload) {
       Atividades_exigirGestor_(eu, 'lançar atividade para outra pessoa');
       var resp = Atividades_usuariosAtivos_().filter(function (u) { return u.id === respId; })[0];
       if (!resp) throw new Error('Não foi possível lançar a atividade: o responsável escolhido não está ativo no SGO+. Escolha outra pessoa na lista ou reative o usuário em Administração.');
+      Atividades_exigirPodeAtribuir_(eu, resp, 'lançar a atividade');
       respNome = resp.nome;
     }
 
@@ -706,6 +724,7 @@ function Atividades_apiEditar(sessionId, payload) {
           Atividades_exigirGestor_(eu, 'trocar o responsável da atividade');
           novoResp = Atividades_usuariosAtivos_().filter(function (x) { return x.id === respId; })[0];
           if (!novoResp) throw new Error('Não foi possível salvar a atividade: o responsável escolhido não está ativo no SGO+. Escolha outra pessoa na lista ou reative o usuário em Administração.');
+          Atividades_exigirPodeAtribuir_(eu, novoResp, 'passar a atividade');
           dados.RESPONSAVEL_ID = novoResp.id; dados.RESPONSAVEL_NOME = novoResp.nome;
           dados.AGORA_DESDE = ''; // quem estava executando deixa de ser o responsável
         }

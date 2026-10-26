@@ -418,10 +418,11 @@ function SGO_ajudaTelas_Principal_() {
         { situacao: "Aparece \"Não foi possível editar a atividade: ela foi lançada por\"", oQueFazer: "Só um gestor ou quem lançou a atividade para si mesmo pode editar. Comente na atividade ou peça a um gestor." },
         { situacao: "Aparece \"Não foi possível cancelar: só quem lançou a atividade ou um gestor pode cancelar.\"", oQueFazer: "Comente o motivo na atividade e avise quem lançou." },
         { situacao: "Aparece \"Não foi possível marcar \"fazendo agora\": só o responsável\"", oQueFazer: "Só o responsável marca o que está executando. Confira se a atividade é sua." },
+        { situacao: "Aparece \"é o responsável pelo sistema e só ele lança atividades para si\"", oQueFazer: "O responsável pelo sistema não recebe atividades lançadas por outras pessoas. Escolha outra pessoa como responsável ou fale diretamente com ele." },
         { situacao: "A tela ficou com a mensagem de erro e o botão \"Tentar de novo\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\". Nada foi alterado." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Lançar atividade para qualquer pessoa, editar, trocar o responsável, mudar o prazo (replanejar), reabrir e cancelar qualquer atividade. Atividade restrita (Programa de conduta) de outra pessoa: o Financeiro não vê nem altera." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Lançar atividade para qualquer pessoa (menos o responsável pelo sistema, que só recebe as que ele mesmo lança), editar, trocar o responsável, mudar o prazo (replanejar), reabrir e cancelar qualquer atividade. Atividade restrita (Programa de conduta) de outra pessoa: o Financeiro não vê nem altera." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Lançar atividades para si, mudar a situação, comentar, registrar andamento e justificar atraso das próprias atividades. Edita e cancela só as que lançou para si." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
