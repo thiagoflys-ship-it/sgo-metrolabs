@@ -265,9 +265,10 @@ const SGO_CLIENTES = (() => {
 
     // Cadastro com vínculos (unidades, equipamentos, documentos...) não é apagado:
     // a regra vem de SGO_DATA.exigirSemVinculos_ e a mensagem já diz o que fazer.
+    // 26/10/2026: os contatos do próprio cliente (CAD_CONTATOS) não impedem: ficam inativos depois da exclusão.
     let ok;
     try {
-      ok = SGO_DATA.remove(SHEET_NAME, clienteId);
+      ok = SGO_DATA.remove(SHEET_NAME, clienteId, { ignorarVinculos: ['CAD_CONTATOS'] });
     } catch (eVinculo) {
       const msg = String((eVinculo && eVinculo.message) || eVinculo);
       if (/possui vínculos/.test(msg)) return { success: false, message: "Não foi possível excluir o cliente: " + msg.charAt(0).toLowerCase() + msg.slice(1) };
@@ -278,11 +279,14 @@ const SGO_CLIENTES = (() => {
       return { success: false, message: "Não foi possível excluir o cliente." };
     }
 
-    SGO_DATA.log("CLIENTES_EXCLUIR", sessao.usuario, "Cliente excluído ID=" + clienteId, "CLIENTES");
+    let contatos = 0;
+    try { contatos = SGO_DATA.inativarContatosDe_('CLIENTE_ID', clienteId); } catch (eC) { console.error('Contatos do cliente excluído: ' + ((eC && eC.message) || eC)); }
+
+    SGO_DATA.log("CLIENTES_EXCLUIR", sessao.usuario, "Cliente excluído ID=" + clienteId + (contatos ? "; " + contatos + " contato(s) inativado(s)" : ""), "CLIENTES");
 
     return {
       success: true,
-      message: "Cliente excluído com sucesso."
+      message: "Cliente excluído com sucesso." + (contatos ? " " + contatos + (contatos === 1 ? " contato dele ficou inativo" : " contatos dele ficaram inativos") + " na lista de contatos (não foram apagados)." : "")
     };
   }
 

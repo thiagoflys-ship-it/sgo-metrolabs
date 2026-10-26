@@ -91,7 +91,7 @@ function SGO_ajudaTelas_Cadastros_() {
             "Toque em \"Mais\" na linha do cliente ou em \"Mais ações\" no painel.",
             "Para tirar de uso sem perder nada, toque em \"Inativar cliente\" e confirme. Unidades, equipamentos e documentos continuam guardados.",
             "Para voltar a atender, toque em \"Reativar cliente\" e confirme. As unidades inativas continuam inativas até serem reativadas uma a uma.",
-            "Para apagar de vez, toque em \"Excluir cliente\" e depois em \"Excluir definitivamente\". Só a gestão exclui, e só cadastro sem nada ligado.",
+            "Para apagar de vez, toque em \"Excluir cliente\" e depois em \"Excluir definitivamente\". Só a gestão exclui, e só cadastro sem unidade, equipamento, documento ou negociação ligados. Os contatos do cliente não impedem: ficam inativos na lista de contatos (não são apagados).",
             "Para juntar dois cadastros do mesmo CNPJ, toque em \"Juntar cadastro repetido (Vínculos)\". Só a gestão usa essa opção."
           ]
         },
@@ -224,7 +224,7 @@ function SGO_ajudaTelas_Cadastros_() {
             "Toque em \"Mais\" na linha ou em \"Mais ações\" no painel.",
             "Toque em \"Inativar unidade\" e confirme. Equipamentos e documentos continuam guardados.",
             "Para voltar a usar, toque em \"Reativar unidade\" e confirme. O cliente da unidade precisa estar ativo.",
-            "Para apagar de vez, toque em \"Excluir unidade\" e depois em \"Excluir definitivamente\". Só a gestão exclui, e só unidade sem equipamento nem documento.",
+            "Para apagar de vez, toque em \"Excluir unidade\" e depois em \"Excluir definitivamente\". Só a gestão exclui, e só unidade sem equipamento nem documento. Os contatos da unidade não impedem: ficam inativos na lista de contatos (não são apagados).",
             "Para mudar de cliente, toque em \"Transferir para outro cliente (Vínculos)\". Só a gestão usa essa opção."
           ]
         },
@@ -548,6 +548,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "Aparece \"O destino escolhido está inativo.\"", oQueFazer: "Escolha um destino ativo, ou reative o destino antes, e refaça." },
         { situacao: "Aparece \"o cliente não tem CNPJ válido\" ao criar a unidade principal.", oQueFazer: "Toque em \"Abrir o cadastro\", informe o CNPJ do cliente, salve e tente de novo." },
         { situacao: "Unidade com nome ou CNPJ de outra empresa pendurada no cliente errado.", oQueFazer: "Escolha a unidade como origem, a ação Desvincular (ou Transferir, se já sabe o cliente certo), escreva o motivo e toque em \"Conferir o impacto\". A ligação da unidade com o Auvo continua guardada com ela; os equipamentos e documentos acompanham só quando há cliente novo." },
+        { situacao: "Quero excluir um cliente que só tem contatos.", oQueFazer: "Escolha o cliente, a ação Excluir e toque em \"Conferir o impacto\". Os contatos do cliente ficam inativos (nada é apagado). Se houver unidade, equipamento ou documento ligado, a prévia pede Inativar ou Consolidar." },
         { situacao: "Quero excluir uma unidade que só tem a ligação com o Auvo ou um contato.", oQueFazer: "Escolha a unidade, a ação Excluir e toque em \"Conferir o impacto\". Se a ligação com o Auvo foi criada pelo SGO+, ela fica guardada como de cadastro excluído e o contato da unidade fica inativo (nada é apagado). Se a unidade é o cadastro original de um cliente do Auvo, ou se o Auvo tem atendimento nesse cliente, a prévia pede Inativar ou Consolidar." },
         { situacao: "Aparece \"Excluir de vez é feito por Administrador, Diretoria ou Gestor.\"", oQueFazer: "Use a ação Inativar, ou peça a um deles informando o cadastro e o motivo." },
         { situacao: "Não aparecem as ações nem o botão de prévia.", oQueFazer: "Seu perfil não é da gestão. Peça a um Gestor, Diretoria ou Administrador, informando o cadastro e o motivo." },

@@ -251,11 +251,12 @@ const SGO_VINCULOS = (() => {
       const originais=proprios.filter(m=>/:AUVOID:/.test(text(m.CHAVE))&&text(m.AUVO_ID)).map(m=>text(m.AUVO_ID));
       const presos=[...new Set(originais.concat(spec.tipo==='UNIDADE'?comTarefa:[]))];
       const nomeTela={AUVO_SYNC:'Integração com o Auvo',AUVO_TAREFAS:'Atendimentos do Auvo',CAD_CLIENTES:'Clientes',CAD_UNIDADES:'Unidades',CAD_EQUIPAMENTOS:'Equipamentos',CAD_CONTATOS:'Contatos',DOC_DOCUMENTOS:'Arquivo de documentos',CERT_CALIBRACAO:'Certificados de calibração',NR13_LAUDOS:'Laudos NR-13'};
-      const contatosDaUnidade=spec.tipo==='UNIDADE'?base(snapshot,'CAD_CONTATOS').filter(k=>text(k.UNIDADE_ID)===spec.origem):[];
+      // 26/10/2026: os contatos do próprio cliente também ficam inativos (antes só os da unidade; o cliente com contato não saía)
+      const contatosDaUnidade=spec.tipo==='UNIDADE'?base(snapshot,'CAD_CONTATOS').filter(k=>text(k.UNIDADE_ID)===spec.origem):spec.tipo==='CLIENTE'?base(snapshot,'CAD_CONTATOS').filter(k=>text(k.CLIENTE_ID)===spec.origem):[];
       const refs=[];Object.keys(snapshot.tables).forEach(n=>base(snapshot,n).forEach(r=>{
         if(n===table&&text(r.ID)===spec.origem)return;
         if(n==='AUVO_SYNC'&&proprios.includes(r))return;
-        if(n==='CAD_CONTATOS'&&contatosDaUnidade.includes(r)&&text(r.CLIENTE_ID)!==spec.origem)return;
+        if(n==='CAD_CONTATOS'&&contatosDaUnidade.includes(r))return;
         if(Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|ENTIDADE_ID)$/.test(k)&&text(r[k]).split(',').includes(spec.origem)))refs.push(n);
       }));
       if(refs.length) blocks.push('Não dá para excluir: ainda há registros ligados a este cadastro em '+[...new Set(refs)].map(n=>nomeTela[n]||n).join(', ')+'. Para tirar de uso sem perder o histórico, use a ação Inativar; se for o mesmo cadastro de outro registro, use Consolidar.');
@@ -264,7 +265,7 @@ const SGO_VINCULOS = (() => {
         proprios.forEach(m=>change('AUVO_SYNC',m,'STATUS','CADASTRO_EXCLUIDO'));
         contatosDaUnidade.filter(k=>text(k.STATUS||'ATIVO').toUpperCase()==='ATIVO').forEach(k=>{change('CAD_CONTATOS',k,'STATUS','INATIVO');contatosTratados[text(k.ID)]=k;});
         if(nAuvo.length)warnings.push('A ligação deste cadastro com o Auvo (cliente Auvo nº '+nAuvo.join(', ')+') fica guardada como de cadastro excluído, para consulta. Se esse cliente não existe de fato, exclua ou inative também no Auvo; se o Auvo abrir tarefa nele, ela aparece pendente em Integração Auvo.');
-        if(Object.keys(contatosTratados).length)warnings.push(Object.keys(contatosTratados).length+' contato(s) desta unidade ficam inativos na lista de contatos (não são apagados). Se a pessoa continua sendo contato do cliente, reative e escolha a unidade certa.');
+        if(Object.keys(contatosTratados).length)warnings.push(Object.keys(contatosTratados).length+' contato(s) '+(spec.tipo==='CLIENTE'?'deste cliente':'desta unidade')+' ficam inativos na lista de contatos (não são apagados). Se a pessoa continua sendo contato do cliente, reative e escolha a unidade certa.');
       }
       changes.push({table:table,id:spec.origem,row:source._row,field:'__DELETE__',before:source,after:''});
     }

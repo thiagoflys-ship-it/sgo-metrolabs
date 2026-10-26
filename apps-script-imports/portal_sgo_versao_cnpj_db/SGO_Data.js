@@ -354,13 +354,14 @@ const SGO_DATA = {
     };
   },
 
-  remove(nome, id) {
+  // opcoes.ignorarVinculos: abas que não impedem a exclusão (quem chama trata esses registros; ex.: contatos do cliente)
+  remove(nome, id, opcoes) {
     const sheet = SGO_DATA.getSheet(nome);
     const rowIndex = SGO_DATA.findIndexById(nome, id);
 
     if (rowIndex < 2) return false;
 
-    SGO_DATA.exigirSemVinculos_(nome, id);
+    SGO_DATA.exigirSemVinculos_(nome, id, opcoes && opcoes.ignorarVinculos);
     sheet.deleteRow(rowIndex);
     return true;
   },
@@ -612,19 +613,36 @@ SGO_DATA.validarCadastroUnico_ = function(nome, candidato, pendentes, ignorarId)
   if (lista.some(function(r) { return String(r.ID) !== String(ignorarId || '') && iguais(candidato,r); })) throw new Error('Já existe cadastro com esta identificação em ' + nome + '. Localize e edite o registro existente.');
 };
 
-SGO_DATA.exigirSemVinculos_ = function(nome, id) {
+SGO_DATA.exigirSemVinculos_ = function(nome, id, ignorar) {
   const campo = nome === 'CAD_CLIENTES' ? 'CLIENTE_ID' : nome === 'CAD_UNIDADES' ? 'UNIDADE_ID' : '';
   if (!campo) return;
   const alvo = String(id);
   const relacionados = [];
+  const pular = Array.isArray(ignorar) ? ignorar : [];
   SGO_DATA.getDB().getSheets().forEach(function(sheet) {
     const titulo = sheet.getName();
-    if (titulo === nome || /^(SYS_LOGS|BK_)/.test(titulo) || sheet.getLastRow() < 2) return;
+    if (titulo === nome || pular.indexOf(titulo) >= 0 || /^(SYS_LOGS|BK_)/.test(titulo) || sheet.getLastRow() < 2) return;
     const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
     const indices = headers.map(function(h,i) { return h === campo || (campo === 'CLIENTE_ID' && h === 'CLIENTE_ID_SGO') || (titulo === 'AUVO_SYNC' && h === 'ENTIDADE_ID') ? i : -1; }).filter(function(i) { return i >= 0; });
     if (indices.some(function(i) { return sheet.getRange(2,i+1,sheet.getLastRow()-1,1).getValues().some(function(r) { return String(r[0]) === alvo; }); })) relacionados.push(titulo);
   });
   if (relacionados.length) throw new Error('Este cadastro possui vínculos em ' + relacionados.join(', ') + '. Transfira os vínculos antes de excluir, ou inative o cadastro.');
+};
+
+/**
+ * 26/10/2026 (erro relatado pela equipe): contato (CAD_CONTATOS) do próprio cliente ou da unidade não impede mais a
+ * exclusão do cadastro. Na exclusão, os contatos ficam INATIVOS (não são apagados: histórico preservado), como já fazia
+ * a exclusão de unidade em Cadastros > Vínculos. campo: CLIENTE_ID ou UNIDADE_ID. Devolve quantos foram inativados.
+ */
+SGO_DATA.inativarContatosDe_ = function(campo, id) {
+  if (!SGO_DATA.getDB().getSheetByName('CAD_CONTATOS')) return 0;
+  let n = 0;
+  SGO_DATA.getAll('CAD_CONTATOS').forEach(function(k) {
+    if (String(k[campo] || '') !== String(id) || SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') !== 'ATIVO') return;
+    SGO_DATA.update('CAD_CONTATOS', k.ID, { STATUS: 'INATIVO' });
+    n++;
+  });
+  return n;
 };
 
 SGO_DATA.validarRelacaoCadastro_ = function(nome, dados) {

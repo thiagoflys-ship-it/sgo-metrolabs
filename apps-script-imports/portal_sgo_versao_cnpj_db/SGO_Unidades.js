@@ -314,12 +314,13 @@ const SGO_UNIDADES = (() => {
     // a regra vem de SGO_DATA.exigirSemVinculos_ e a mensagem já diz o que fazer.
     let ok;
     try {
-      ok = SGO_DATA.remove(SHEET_NAME, unidadeId);
+      // 26/10/2026: os contatos da unidade (CAD_CONTATOS) não impedem: ficam inativos depois da exclusão.
+      ok = SGO_DATA.remove(SHEET_NAME, unidadeId, { ignorarVinculos: ['CAD_CONTATOS'] });
     } catch (eVinculo) {
       const msg = String((eVinculo && eVinculo.message) || eVinculo);
-      // 21/10/2026: quando o que prende a unidade é a ligação com o Auvo ou um contato, a exclusão segura (com prévia,
-      // ligação do Auvo guardada e contato inativado) é feita em Cadastros > Vínculos.
-      if (/possui vínculos/.test(msg)) return { success: false, message: "Não foi possível excluir a unidade: " + msg.charAt(0).toLowerCase() + msg.slice(1) + (/AUVO_SYNC|CAD_CONTATOS/.test(msg) ? " Se o que prende a unidade é só a ligação com o Auvo (AUVO_SYNC) ou um contato (CAD_CONTATOS), exclua por Cadastros > Vínculos: escolha a unidade, a ação Excluir e clique em Conferir impacto; a prévia mostra o que acontece com a ligação e com o contato antes de confirmar." : "") };
+      // 21/10/2026: quando o que prende a unidade é a ligação com o Auvo, a exclusão segura (com prévia e ligação do
+      // Auvo guardada) é feita em Cadastros > Vínculos.
+      if (/possui vínculos/.test(msg)) return { success: false, message: "Não foi possível excluir a unidade: " + msg.charAt(0).toLowerCase() + msg.slice(1) + (/AUVO_SYNC/.test(msg) ? " Se o que prende a unidade é só a ligação com o Auvo (AUVO_SYNC), exclua por Cadastros > Vínculos: escolha a unidade, a ação Excluir e clique em Conferir impacto; a prévia mostra o que acontece com a ligação antes de confirmar." : "") };
       throw eVinculo;
     }
 
@@ -327,11 +328,14 @@ const SGO_UNIDADES = (() => {
       return { success: false, message: "Não foi possível excluir a unidade." };
     }
 
-    SGO_DATA.log("UNIDADES_EXCLUIR", sessao.usuario, "Unidade excluída ID=" + unidadeId, "UNIDADES");
+    let contatos = 0;
+    try { contatos = SGO_DATA.inativarContatosDe_('UNIDADE_ID', unidadeId); } catch (eC) { console.error('Contatos da unidade excluída: ' + ((eC && eC.message) || eC)); }
+
+    SGO_DATA.log("UNIDADES_EXCLUIR", sessao.usuario, "Unidade excluída ID=" + unidadeId + (contatos ? "; " + contatos + " contato(s) inativado(s)" : ""), "UNIDADES");
 
     return {
       success: true,
-      message: "Unidade excluída com sucesso."
+      message: "Unidade excluída com sucesso." + (contatos ? " " + contatos + (contatos === 1 ? " contato dela ficou inativo" : " contatos dela ficaram inativos") + " na lista de contatos (não foram apagados)." : "")
     };
   }
 

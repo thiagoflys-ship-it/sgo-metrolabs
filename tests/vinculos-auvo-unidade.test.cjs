@@ -113,6 +113,19 @@ test('excluir com outro registro ligado continua impedido, com nome de tela da t
   assert.ok(p.blocks.some((b) => /Arquivo de documentos/.test(b) && /Inativar/.test(b)), p.blocks.join(' | '));
 });
 
+test('excluir cliente que só tem contatos (26/10/2026, erro relatado pela equipe): permitido, contatos do cliente inativados (sem apagar)', () => {
+  const s = snap({ CAD_CONTATOS: [{ ID: 'k1', CLIENTE_ID: 'cA', UNIDADE_ID: 'uX', STATUS: 'ATIVO' }, { ID: 'k2', CLIENTE_ID: 'cB', UNIDADE_ID: '', STATUS: 'ATIVO' }, { ID: 'k3', CLIENTE_ID: 'cB', UNIDADE_ID: '', STATUS: 'INATIVO' }] });
+  s.tables.AUVO_SYNC = s.tables.AUVO_SYNC.filter((m) => m.ENTIDADE_ID !== 'cB');
+  const p = plano(s, 'EXCLUIR', { tipo: 'CLIENTE', origem: 'cB', motivo: 'Cliente duplicado, o correto já existe' });
+  assert.deepEqual(p.blocks, [], p.blocks.join(' | '));
+  assert.ok(p.changes.some((c) => c.table === 'CAD_CLIENTES' && c.id === 'cB' && c.field === '__DELETE__'));
+  assert.deepEqual(mud(p, 'CAD_CONTATOS').map((c) => [c.id, c.field, c.after]), [['k2', 'STATUS', 'INATIVO']]);
+  assert.ok(p.warnings.some((w) => /contato\(s\) deste cliente ficam inativos/.test(w)), p.warnings.join(' | '));
+  // cliente com unidade continua impedido
+  const p2 = plano(snap(), 'EXCLUIR', { tipo: 'CLIENTE', origem: 'cA', motivo: 'Teste de cliente com unidade' });
+  assert.ok(p2.blocks.some((b) => /Unidades/.test(b)), p2.blocks.join(' | '));
+});
+
 test('consolidar unidades com o mesmo CNPJ: contato vai para a unidade de destino', () => {
   const s = snap();
   s.tables.CAD_UNIDADES.push({ _row: 4, ID: 'uY', CLIENTE_ID: 'cB', NOME_UNIDADE: 'BETA SEDE', CNPJ_UNIDADE: '44555666000181', STATUS: 'ATIVO' });
@@ -128,4 +141,7 @@ test('excluir de vez fica com Administrador, Diretoria e Gestor (prévia e confi
   assert.match(v, /exigirExcluir\(sessionId,permit\.spec&&permit\.spec\.acao\)/);
   assert.match(v, /text\(acao\)==='EXCLUIR'&&!isAdminSession\(sessionId\)/);
   assert.match(fs.readFileSync(path.join(pasta, 'SGO_Unidades.js'), 'utf8'), /exclua por Cadastros > Vínculos/);
+  // 26/10/2026: Cadastros > Clientes e Unidades: contato do próprio cadastro não impede; fica inativo depois
+  assert.match(fs.readFileSync(path.join(pasta, 'SGO_Clientes.js'), 'utf8'), /SGO_DATA\.remove\(SHEET_NAME, clienteId, \{ ignorarVinculos: \['CAD_CONTATOS'\] \}\)[\s\S]*inativarContatosDe_\('CLIENTE_ID', clienteId\)/);
+  assert.match(fs.readFileSync(path.join(pasta, 'SGO_Unidades.js'), 'utf8'), /SGO_DATA\.remove\(SHEET_NAME, unidadeId, \{ ignorarVinculos: \['CAD_CONTATOS'\] \}\)[\s\S]*inativarContatosDe_\('UNIDADE_ID', unidadeId\)/);
 });

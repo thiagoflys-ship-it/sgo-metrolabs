@@ -670,8 +670,15 @@ function Chaves_apiModelosSituacao(sessionId, payload) {
  * Devolve { funcionou, texto, itens: [{ nome, resultado: 'cadastrado'|'ja_existe'|'erro'|'nao_tentado', texto }] }.
  */
 function Chaves_apiModelosCadastrar(sessionId, payload) {
-  return Chaves_resposta_(function () {
-    var eu = Chaves_exigirDono_(sessionId);
+  return Chaves_resposta_(function () { return Chaves_modelosCadastrar_(Chaves_exigirDono_(sessionId)); });
+}
+
+/**
+ * 26/10/2026: o cadastro em si, sem sessão do navegador, para o script do servidor (sgo_servidor
+ * scripts/cadastrar_modelos_meta.ts, pedido do dono) fazer o mesmo que o botão. eu: { usuario } para o registro.
+ */
+function Chaves_modelosCadastrar_(eu) {
+  {
     var cred = Chaves_credMetaGestao_();
     var nomes = Object.keys(NTF_MODELOS_META);
     var existentes = {};
@@ -724,5 +731,15 @@ function Chaves_apiModelosCadastrar(sessionId, payload) {
       texto: (falhou ? 'Concluído com problemas: ' : 'Concluído: ') + conta.cadastrado + ' enviado(s) para análise, ' + conta.ja_existe + ' já cadastrado(s)' +
         (falhou ? ', ' + falhou + ' com erro (veja abaixo).' : '. A aprovação sai em minutos ou até 24 h; acompanhe em "Situação dos modelos".')
     };
-  });
+  }
+}
+
+/** 26/10/2026: "Situação dos modelos" sem sessão do navegador (script do servidor); guarda a situação como o botão. */
+function Chaves_modelosSituacao_() {
+  var l = Chaves_metaListarModelos_(Chaves_credMetaGestao_());
+  if (!l.ok) return { funcionou: false, texto: 'Não foi possível ler os modelos: ' + l.motivo, itens: [] };
+  var s = Chaves_situacaoModelos_(l.lista);
+  if (typeof SGO_waModelosGuardar_ === 'function') SGO_waModelosGuardar_(s.itens);
+  s.funcionou = true;
+  return s;
 }
