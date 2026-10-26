@@ -38,7 +38,8 @@ function SGO_ajudaTelas_Comercial_() {
       quemPode: quem,
       perguntas: [
         { p: 'Vou receber cobrança no WhatsApp a cada hora?', r: 'Não. O Comercial não manda WhatsApp. Cada retorno ao cliente é uma atividade em Minhas atividades: o sistema cobra até resolver, o e-mail sai no expediente e o WhatsApp só no resumo diário das atividades. Atrasado há 2 dias úteis, o retorno entra na Caixa de decisões do gestor comercial.' },
-        { p: 'A gestora pode mandar a mensagem por mim?', r: 'Não. Ela escreve a sugestão; você copia, revisa e envia.' }
+        { p: 'A gestora pode mandar a mensagem por mim?', r: 'Não. Ela escreve a sugestão; você copia, revisa e envia.' },
+        { p: 'O que são as oportunidades CRM-0001, CRM-0002... e a atividade "Revisar oportunidade do CRM"?', r: 'São os negócios trazidos do CRM antigo em 26/10/2026. Os que estavam abertos e tiveram movimento nos últimos 60 dias continuam abertos: fale com o cliente, registre o contato na oportunidade e marque o próximo passo (a atividade é concluída). Os parados há mais tempo entraram como perdidos; se algum ainda vale, peça a reabertura. Os orçamentos do CRM estão nas propostas com o número ORC-...' }
       ],
       secoesManual: [
         { titulo: 'Como a gestora comercial trabalha', paragrafos: [

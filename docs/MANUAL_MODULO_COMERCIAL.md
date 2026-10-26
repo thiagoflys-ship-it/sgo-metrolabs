@@ -104,6 +104,18 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui.
 
+## Dados trazidos do CRM antigo
+
+Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do SGO+:
+
+- Empresas: as que já eram clientes (pelo CNPJ) foram reaproveitadas; as demais viraram clientes em Cadastros > Clientes, com a origem "CRM". Empresa com CNPJ inválido no CRM (dígito errado ou CPF) entrou sem CNPJ: complete em Cadastros > Clientes.
+- Negócios: viraram oportunidades com o código CRM-0001, CRM-0002... no mesmo funil e etapa. Ganhos e perdidos entram encerrados. Os abertos com movimento nos últimos 60 dias continuam abertos, com a atividade "Revisar oportunidade do CRM" para o vendedor no dia útil seguinte: confirme com o cliente se ainda vale e registre o contato. Os abertos parados há mais de 60 dias entraram como perdidos ("Falha de acompanhamento"); se algum ainda vale, peça a reabertura.
+- Vendedores do CRM sem usuário no SGO+ tiveram os negócios passados para a Mônica Souza; o nome original está nas observações da oportunidade.
+- Orçamentos: viraram propostas com o número do CRM (ORC-...). Aprovados e recusados mantêm a situação; aprovados antigos não entram como "pedido sem passagem aos setores". Rascunho de negócio encerrado (ou substituído por um mais recente) aparece como proposta cancelada, só como histórico. Os PDFs e assinaturas do CRM não estavam no backup.
+- Produtos: os itens do CRM estão em Produtos e serviços, com o código (SKU) do CRM.
+- Funil "Aluguel de equipamentos": acrescentado na Metodologia com as etapas do CRM.
+- Notas e tarefas do CRM estão no histórico da oportunidade; ligações e reuniões, nos contatos registrados.
+
 ## Problemas comuns
 
 - "Ainda não dá para mover" (quadro ou ficha): falta algo exigido pela metodologia para sair da etapa. A janela diz o quê e onde resolver; resolva e mova de novo.
