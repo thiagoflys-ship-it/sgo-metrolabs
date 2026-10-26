@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "16075232ca23",
+ "versao": "adb7d5977830",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -2341,7 +2341,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "O que mudou até 17/10/2026",
-     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nNome, cargo e registro de quem elaborou ficam na etapa 1. \"Avançar\" confere razão social, responsável técnico e \"Elaborado por\".\nSem IA, o PGT e os POPs sem roteiro não são gerados (nada é gravado e a revisão continua a mesma). O POP com roteiro sai com texto padrão."
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nNome, cargo e registro de quem elaborou ficam na etapa 1. \"Avançar\" confere razão social, responsável técnico e \"Elaborado por\".\nCada documento é redigido pela IA como por um especialista sênior no assunto dele: o POP pelo tema do POP; o PGT, parte por parte, pelo tema das seções daquela parte. As regras continuam: nada de dado do hospital que não foi informado, nada de norma fora da base normativa, nada de marca ou fabricante.\nSe a IA devolver um texto incompleto ou fora do formato, o sistema tenta de novo (até 3 vezes) e depois passa ao modelo reserva, antes de dizer que não gerou.\nSem IA, o PGT e os POPs sem roteiro não são gerados (nada é gravado e a revisão continua a mesma). O POP com roteiro sai com texto padrão."
     },
     {
      "titulo": "Como usar este manual",

@@ -113,6 +113,22 @@ var PGTPOPIA_REGRAS_PGT =
   "(nenhum outro PGT/POP), a não ser que o CONTEXTO deste bloco especificamente peça pra listar os POPs e " +
   "documentos do hospital (só o bloco de fechamento pede isso).";
 
+/**
+ * (26/10/2026, pedido do dono) Todo documento é escrito como por um especialista
+ * sênior no assunto específico dele, além do engenheiro clínico: o POP pelo tema do
+ * POP, cada bloco do PGT pelo tema das seções do bloco. As regras absolutas valem
+ * igual (sem inventar dado do hospital, só a base normativa informada, sem fabricante).
+ */
+function PgtPopIA_especialista_(assunto) {
+  return "ESPECIALISTA RESPONSÁVEL PELA REDAÇÃO: escreva como um especialista sênior no assunto \"" +
+    String(assunto || "").trim() + "\", com anos de prática de campo em estabelecimentos de saúde, além " +
+    "da visão de engenharia clínica. Domine os riscos, os pontos críticos, os erros mais comuns, os " +
+    "critérios de aceitação e as boas práticas próprias deste assunto, e use a terminologia técnica correta " +
+    "dele. O conhecimento de especialista aprofunda o conteúdo técnico, mas não autoriza quebrar as regras " +
+    "absolutas: nada de dado do hospital que não esteja no CONTEXTO, nada de norma fora da BASE NORMATIVA " +
+    "informada e nada de marca ou fabricante.";
+}
+
 function PgtPopIA_montarInstrucaoFormato_(temImagens, qtdImagens) {
   var linhas = [];
   linhas.push(
@@ -262,6 +278,7 @@ function PgtPop_gerarTextoIA_(tipo, hospital, roteiro, pop, imagens) {
 
   var prompt =
     PGTPOPIA_REGRAS_BASE + "\n\n" +
+    PgtPopIA_especialista_(tipo === 'PGT' ? "gestão de tecnologias em saúde (PGTS)" : pop.nome) + "\n\n" +
     "TAREFA: escreva o documento completo descrito no CONTEXTO abaixo, no padrão real de POP/PGT da Metrolabs " +
     "(ver regra 6 sobre tom).\n\n" +
     "CONTEXTO REAL (única fonte de fatos permitida sobre o hospital):\n" + contextoLinhas.join("\n") + "\n\n" +
@@ -532,6 +549,7 @@ function PgtPop_gerarTextoPGT_(hospital, roteiro, imagens, popsRelacionados, aoI
 
     var prompt =
       PGTPOPIA_REGRAS_PGT + "\n\n" +
+      PgtPopIA_especialista_(bloco.nome + " (" + bloco.secoes.map(function (s) { return s.replace(/\s*\(.*$/, ''); }).join("; ") + ")") + "\n\n" +
       "TAREFA: escreva SOMENTE as seções deste bloco (ver regra 5), com a profundidade e extensão pedidas na " +
       "regra 6. Não repita conteúdo de outros blocos do PGTS.\n\n" +
       "CONTEXTO REAL (única fonte de fatos permitida sobre o hospital):\n" + contextoLinhas.join("\n") + "\n\n" +

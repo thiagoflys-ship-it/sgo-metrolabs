@@ -11,6 +11,8 @@
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
 - Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
 - Nome, cargo e registro de quem elaborou ficam na etapa 1. "Avançar" confere razão social, responsável técnico e "Elaborado por".
+- Cada documento é redigido pela IA como por um especialista sênior no assunto dele: o POP pelo tema do POP; o PGT, parte por parte, pelo tema das seções daquela parte. As regras continuam: nada de dado do hospital que não foi informado, nada de norma fora da base normativa, nada de marca ou fabricante.
+- Se a IA devolver um texto incompleto ou fora do formato, o sistema tenta de novo (até 3 vezes) e depois passa ao modelo reserva, antes de dizer que não gerou.
 - Sem IA, o PGT e os POPs sem roteiro não são gerados (nada é gravado e a revisão continua a mesma). O POP com roteiro sai com texto padrão.
 
 

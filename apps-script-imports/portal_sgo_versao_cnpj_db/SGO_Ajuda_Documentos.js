@@ -90,6 +90,7 @@ function SGO_ajudaTelas_Documentos_() {
         "PGT é o plano geral de como o cliente gerencia os equipamentos de saúde. POP é o passo a passo de uma tarefa específica.",
         "Tenha o CNPJ do cliente, o porte, o número de leitos e o responsável técnico do cliente.",
         "Tenha nome, cargo e registro profissional de quem elaborou o documento.",
+        "Cada documento é redigido pela IA como por um especialista sênior no assunto dele (o tema do POP; no PGT, o tema de cada parte), sem inventar dado do cliente nem citar norma fora da base informada.",
         "A geração depende da IA. Sem a IA, o PGT e os POPs sem roteiro não são gerados; o POP com roteiro sai com texto padrão."
       ],
       passos: [
@@ -139,7 +140,7 @@ function SGO_ajudaTelas_Documentos_() {
       ],
       problemas: [
         { situacao: "\"Avançar\" não passa da etapa 1.", oQueFazer: "Preencha a razão social, o responsável técnico e o \"Elaborado por\". O campo que falta recebe o foco." },
-        { situacao: "O PGT não foi gerado e a mensagem diz que nada foi gravado.", oQueFazer: "A IA não respondeu. A revisão continua a mesma. Tente mais tarde ou peça ao administrador para conferir a chave em \"Chaves e senhas\"." },
+        { situacao: "O PGT não foi gerado e a mensagem diz que nada foi gravado.", oQueFazer: "A IA não respondeu ou devolveu o texto incompleto mesmo depois de tentar de novo e de passar ao modelo reserva. A revisão continua a mesma. Os POPs já gerados ficam salvos. Tente mais tarde ou peça ao administrador para conferir a chave em \"Chaves e senhas\"." },
         { situacao: "O navegador bloqueou a nova aba.", oQueFazer: "Libere janelas novas (pop-up) para o SGO+ e toque de novo em \"Abrir\"." },
         { situacao: "Tentei salvar sem abrir o documento.", oQueFazer: "Toque primeiro em \"Abrir\" e depois em \"Salvar na pasta do cliente\"." },
         { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Tudo\"." },

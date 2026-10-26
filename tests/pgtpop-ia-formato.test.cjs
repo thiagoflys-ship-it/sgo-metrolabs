@@ -63,3 +63,18 @@ test('sempre fora do formato: erro diz que tentou os dois modelos; o reserva rec
   c2.PgtPop_gerarTextoPGT_(hospital, '', [], [], null);
   assert.ok(ch2.every((c) => c.modelo === 'gemini-2.5-flash' && c.tokens === 32768));
 });
+
+test('todo documento vai à IA com o especialista do assunto: o POP pelo tema dele, o PGT parte por parte', () => {
+  const prompts = [];
+  const { ctx } = ambiente([{ texto: certo('Escopo') }]);
+  const fetchOrig = ctx.UrlFetchApp.fetch;
+  ctx.UrlFetchApp.fetch = (url, op) => { prompts.push(JSON.parse(op.payload).contents[0].parts[0].text); return fetchOrig(url, op); };
+  ctx.PgtPop_gerarTextoIA_('POP', hospital, '', { nome: 'Distribuição de Gases Medicinais' }, []);
+  assert.match(prompts[0], /especialista sênior no assunto "Distribuição de Gases Medicinais"/);
+  assert.match(prompts[0], /nada de norma fora da BASE NORMATIVA/);
+  prompts.length = 0;
+  ctx.PgtPop_gerarTextoPGT_(hospital, '', [], [], null);
+  assert.equal(prompts.length, 6);
+  assert.match(prompts[2], /especialista sênior no assunto "Requisitos Específicos I — Planejamento até Instalação \(Requisitos Específicos: Planejamento e Seleção; Requisitos Específicos: Aquisição;/);
+  assert.ok(prompts.every((p) => /ESPECIALISTA RESPONSÁVEL PELA REDAÇÃO/.test(p)));
+});
