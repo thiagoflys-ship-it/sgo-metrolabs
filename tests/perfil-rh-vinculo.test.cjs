@@ -224,15 +224,16 @@ test('DIRETORIA: WhatsApp de atividades, gestão e Frota só se a gestão libera
   assert.equal(s.Notificar_motivoGestaoWhatsapp_(dir, {}, new Date()), '');
   assert.equal(s.Notificar_motivoFrotaReservasWhatsapp_(dir, {}, new Date()), '');
   assert.match(s.Notificar_motivoAtividadesWhatsapp_({ id: 'u2', vinculo: 'PJ' }, {}, new Date()), /^PJ: /);
-  // A configuração real (SGO_Atividades_Avisos.js) aceita DIRETORIA na lista e descarta o que não existe; o padrão segue só CLT.
+  // A configuração real (SGO_Atividades_Avisos.js) aceita DIRETORIA na lista e descarta o que não existe. Desde 26/10/2026 o padrão
+  // é CLT e PJ, e a configuração gravada antes dessa decisão ganha o PJ uma vez.
   const atv = ler('SGO_Atividades_Avisos.js');
   const ctx = { PropertiesService: { getScriptProperties: () => ({ getProperty: () => JSON.stringify({ vinculosWhatsapp: ['clt', 'DIRETORIA', 'ESTAGIO'] }) }) }, SGO_expedienteHoraValida_: () => false };
   vm.createContext(ctx);
   vm.runInContext(atv.match(/var ATV_AVISOS_CFG_PADRAO[\s\S]*?var ATV_VINCULOS_OPCOES = [^\n]*\n/)[0], ctx);
   vm.runInContext(atv.match(/function Atividades_avisosCfg_\(\) \{[\s\S]*?\n\}\n/)[0], ctx);
   assert.deepEqual(j(ctx.ATV_VINCULOS_OPCOES), ['CLT', 'PJ', 'DIRETORIA', 'VAZIO']);
-  assert.deepEqual(j(ctx.Atividades_avisosCfg_().vinculosWhatsapp), ['CLT', 'DIRETORIA']);
-  assert.deepEqual(j(ctx.ATV_AVISOS_CFG_PADRAO.vinculosWhatsapp), ['CLT']);
+  assert.deepEqual(j(ctx.Atividades_avisosCfg_().vinculosWhatsapp), ['CLT', 'DIRETORIA', 'PJ']);
+  assert.deepEqual(j(ctx.ATV_AVISOS_CFG_PADRAO.vinculosWhatsapp), ['CLT', 'PJ']);
 });
 
 test('DIRETORIA: o Assistente do ponto não lembra (como PJ), com texto próprio', () => {

@@ -52,7 +52,7 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
 
 // ------------------------------------------------------------------ PJ sem WhatsApp em todas as fontes
 test('vínculo: PJ e vínculo vazio nunca recebem WhatsApp, venha de onde vier (Frota, Avisos, Conduta, Auvo, Comercial, bate-papo, resumo); só CLT', () => {
-  const amb = ambiente();
+  const amb = ambiente({ props: { ATV_AVISOS_CFG: JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'], pjDecisao20261026: true }) } });
   const fontes = [
     { origem: 'FROTA', evento: 'S35' }, { origem: 'FROTA', evento: 'S36' }, { origem: 'FROTA_RESERVAS', evento: 'S41', categoria: 'FROTA_RESERVAS' },
     { origem: 'FROTA_RESERVAS', evento: 'S44', categoria: 'FROTA_RESERVAS' }, { origem: 'AVISOS', evento: 'S19' }, { origem: 'CONDUTA', evento: 'S51' },
@@ -211,7 +211,7 @@ test('resumo do dia único: um e-mail por pessoa a partir das 08:00 juntando ati
 
 // ------------------------------------------------------------------ resumo do dia (WhatsApp)
 test('resumo do dia no WhatsApp: a partir das 09:30, só CLT, só quem não abriu o sistema, só com item para hoje, atrasado ou decisão parada; preferência e ponto respeitados', () => {
-  const amb = ambiente({ agora: em(TER('09:00')) });
+  const amb = ambiente({ props: { ATV_AVISOS_CFG: JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'], pjDecisao20261026: true }) },  agora: em(TER('09:00')) });
   const c = amb.ctx;
   atividade(amb, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');   // atrasada
   atividade(amb, 'a2', 'u_pj', 'PAULO PJ TESTE', '2026-10-16T18:00');         // atrasada, mas PJ
@@ -296,7 +296,7 @@ test('gestor da área: Frota vai ao gestor do Administrativo; área sem gestor v
 
 // ------------------------------------------------------------------ Meus avisos
 test('Meus avisos: só a própria pessoa altera; 12:00 atrasa o e-mail; silenciar Comercial tira do resumo; travados com motivo; prévia sem enviar', () => {
-  const amb = ambiente({ agora: em(SEG('10:00')) });
+  const amb = ambiente({ props: { ATV_AVISOS_CFG: JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'], pjDecisao20261026: true }) },  agora: em(SEG('10:00')) });
   const c = amb.ctx;
   const meu = c.SGO_MeusAvisos_api('s_tec', 'carregar', {});
   assert.equal(meu.ok, true); assert.equal(meu.whatsLiberado, true);

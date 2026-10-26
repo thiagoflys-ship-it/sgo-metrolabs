@@ -228,7 +228,7 @@ test('e-mail diário: um por pessoa da gestão por dia útil, a partir das 08:00
 
 // ------------------------------------------------------------------ WhatsApp
 test('WhatsApp: só com item parado há 2 dias úteis, um por dia somando atividades e gestão, vínculo liberado, nunca à noite', () => {
-  const amb = ambiente({ agora: em('2026-10-19T10:00:00-03:00') });
+  const amb = ambiente({ props: { ATV_AVISOS_CFG: JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'], pjDecisao20261026: true }) },  agora: em('2026-10-19T10:00:00-03:00') });
   atividadeAtrasada(amb, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
   atividadeAtrasada(amb, 'a2', 'u_met', 'MARA METROLOGIA TESTE', '2026-10-16T18:00'); // Metrologia sem gestor: reserva da Diretoria
   amb.tabelas.ATV_ATIVIDADES.push({ ID: 'a3', TITULO: 'Atividade nova do gestor', RESPONSAVEL_ID: 'u_gt', RESPONSAVEL_NOME: 'GIL GESTOR TESTE', CRIADO_POR_ID: 'u_dir', PRAZO: '2026-10-21T15:00', PREVISAO_ATUAL: '2026-10-21T15:00', SITUACAO: 'A fazer' });

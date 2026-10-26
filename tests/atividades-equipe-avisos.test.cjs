@@ -144,14 +144,22 @@ test('WhatsApp de atividades: só em dia útil e no horário; nunca à noite, fi
   }
 });
 
-test('WhatsApp de atividades: PJ e vínculo vazio não recebem (padrão só CLT); a configuração pode incluir', () => {
+test('WhatsApp de atividades: CLT e PJ recebem por padrão (26/10/2026); vínculo vazio não; a tela pode tirar o PJ; ponto só CLT', () => {
   const amb = ambiente();
   const enviar = (uid) => amb.ctx.SGO_notificar_({ usuarios: [uid], canais: ['whatsapp'], categoria: 'ATIVIDADES', origem: 'ATIVIDADES_RESUMO', refId: 'x' + uid, titulo: 'Resumo', texto: 'x',
     modelo: { nome: 'sgo_atividade_atribuida', parametros: ['@NOME', 'A', 'B', '@LINK'] } });
-  let r = enviar('u_pj'); assert.equal(r.ok, 0); assert.match(r.motivo, /^PJ/);
-  r = enviar('u_sem'); assert.equal(r.ok, 0); assert.match(r.motivo, /vínculo de trabalho não informado/);
-  amb.props.ATV_AVISOS_CFG = JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT', 'PJ'] });
   assert.equal(enviar('u_pj').ok, 1);
+  let r = enviar('u_sem'); assert.equal(r.ok, 0); assert.match(r.motivo, /vínculo de trabalho não informado/);
+  // configuração gravada antes da decisão (só CLT): o PJ entra uma vez
+  amb.props.ATV_AVISOS_CFG = JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'] });
+  assert.deepEqual(Array.from(amb.ctx.Atividades_avisosCfg_().vinculosWhatsapp), ['CLT', 'PJ']);
+  // gravada depois pela tela sem o PJ: vale a tela
+  amb.props.ATV_AVISOS_CFG = JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'], pjDecisao20261026: true });
+  r = enviar('u_pj'); assert.equal(r.ok, 0); assert.match(r.motivo, /^PJ/);
+  // o ponto nunca vai para PJ
+  amb.props.ATV_AVISOS_CFG = JSON.stringify({ whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT', 'PJ'], pjDecisao20261026: true });
+  r = amb.ctx.SGO_notificar_({ usuarios: ['u_pj'], canais: ['whatsapp'], categoria: 'PONTO', origem: 'PONTO', refId: 'p1', titulo: 'Ponto', texto: 'x' });
+  assert.equal(r.ok, 0);
   assert.equal(enviar('u_sem').ok, 0);
   // categoria PONTO segue a regra própria; mensagem sem categoria não é afetada
   assert.equal(amb.ctx.SGO_notificar_({ usuarios: ['u_sem'], canais: ['whatsapp'], origem: 'AVISOS', refId: 'a', titulo: 'Aviso', texto: 'z' }).ok, 1);
@@ -388,7 +396,7 @@ test('configuração de avisos: só Admin e Diretoria; hora do resumo dentro do 
   const amb = ambiente();
   assert.equal(amb.ctx.Atividades_apiConfigAvisos('s_ges', {}).ok, false);
   let r = amb.ctx.Atividades_apiConfigAvisos('s_adm', {});
-  assert.equal(r.ok, true); assert.equal(r.avisos.horaResumo, '09:00'); assert.deepEqual(JSON.parse(JSON.stringify(r.avisos.vinculosWhatsapp)), ['CLT']);
+  assert.equal(r.ok, true); assert.equal(r.avisos.horaResumo, '09:00'); assert.deepEqual(JSON.parse(JSON.stringify(r.avisos.vinculosWhatsapp)), ['CLT', 'PJ']);
   r = amb.ctx.Atividades_apiConfigAvisos('s_adm', { salvar: { expediente: { ini: '08:00', fim: '17:30', dias: [1, 2, 3, 4, 5] }, avisos: { whatsappResumo: true, horaResumo: '18:00', vinculosWhatsapp: ['CLT'] } } });
   assert.equal(r.ok, false); assert.match(r.message, /dentro do horário de trabalho/);
   r = amb.ctx.Atividades_apiConfigAvisos('s_adm', { salvar: { expediente: { ini: '07:30', fim: '17:00', dias: [1, 2, 3, 4, 5], feriados: '20/01' }, avisos: { whatsappResumo: false, horaResumo: '08:00', vinculosWhatsapp: ['CLT', 'PJ'] } } });

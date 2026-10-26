@@ -566,7 +566,7 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Toque em \"Avisos e horários\", no alto da tela.",
             "Confira o horário de trabalho, os dias de trabalho e os feriados estaduais, municipais e de recesso.",
-            "Confira quem recebe o resumo pelo WhatsApp (padrão: só CLT; PJ e Diretoria só se a gestão marcar). As horas do resumo do dia ficam em Administração > Matriz de avisos.",
+            "Confira quem recebe o resumo pelo WhatsApp (padrão: CLT e PJ; Diretoria só se a gestão marcar; o ponto vai só para CLT). As horas do resumo do dia ficam em Administração > Matriz de avisos.",
             "Toque em \"Salvar\".",
             "Em \"Resumos de hoje\", veja para quem o resumo saiu, quem não tinha novidade e o motivo de quem não recebeu."
           ]

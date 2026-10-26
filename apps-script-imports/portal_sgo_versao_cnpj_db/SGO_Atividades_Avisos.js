@@ -34,7 +34,9 @@
  * (Admin e Diretoria). Registro de cada resumo do dia: aba ATV_RESUMOS.
  ****************************************************/
 
-var ATV_AVISOS_CFG_PADRAO = { whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT'] };
+// 26/10/2026 (decisão do dono): PJ também recebe pelo WhatsApp tudo, menos o ponto (o assistente do ponto tem regra
+// própria, só CLT: SGO_Ponto_*.js e categoria PONTO em SGO_Notificar.js).
+var ATV_AVISOS_CFG_PADRAO = { whatsappResumo: true, horaResumo: '09:00', vinculosWhatsapp: ['CLT', 'PJ'] };
 // 22/10/2026: DIRETORIA entrou como opção (padrão continua só CLT; a Diretoria recebe WhatsApp só se a gestão marcar).
 var ATV_VINCULOS_OPCOES = ['CLT', 'PJ', 'DIRETORIA', 'VAZIO'];
 var ATV_MODELO_RESUMO = 'sgo_atividades_resumo_dia';
@@ -65,6 +67,8 @@ function Atividades_avisosCfg_() {
     if (g.whatsappResumo === false) c.whatsappResumo = false;
     if (SGO_expedienteHoraValida_(g.horaResumo)) c.horaResumo = g.horaResumo;
     if (Array.isArray(g.vinculosWhatsapp)) c.vinculosWhatsapp = g.vinculosWhatsapp.map(function (v) { return String(v).toUpperCase(); }).filter(function (v) { return ATV_VINCULOS_OPCOES.indexOf(v) >= 0; });
+    // configuração gravada antes de 26/10/2026: o PJ entra uma vez pela decisão do dono; gravada depois, vale a tela
+    if (!g.pjDecisao20261026 && c.vinculosWhatsapp.indexOf('PJ') < 0) c.vinculosWhatsapp.push('PJ');
   }
   return c;
 }
@@ -299,7 +303,7 @@ function Atividades_apiConfigAvisos(sessionId, payload) {
       if (!SGO_expedienteHoraValida_(hora)) throw new Error('Não foi possível salvar: a hora do resumo precisa estar no formato HH:MM (por exemplo 09:00).');
       if (hora < exp.ini || hora >= exp.fim) throw new Error('Não foi possível salvar: a hora do resumo (' + hora + ') precisa ficar dentro do horário de trabalho (' + exp.ini + ' a ' + exp.fim + ').');
       var vinc = (Array.isArray(a.vinculosWhatsapp) ? a.vinculosWhatsapp : []).map(function (v) { return String(v).toUpperCase(); }).filter(function (v, i, l) { return ATV_VINCULOS_OPCOES.indexOf(v) >= 0 && l.indexOf(v) === i; });
-      var cfg = { whatsappResumo: a.whatsappResumo !== false, horaResumo: hora, vinculosWhatsapp: vinc };
+      var cfg = { whatsappResumo: a.whatsappResumo !== false, horaResumo: hora, vinculosWhatsapp: vinc, pjDecisao20261026: true };
       PropertiesService.getScriptProperties().setProperty('ATV_AVISOS_CFG', JSON.stringify(cfg));
       try { SGO_DATA.log('ATIVIDADES_AVISOS_CFG', eu.usuario, 'Avisos e horários: ' + JSON.stringify({ expediente: { ini: exp.ini, fim: exp.fim, dias: exp.dias, feriados: exp.feriados }, avisos: cfg }).slice(0, 900), 'ATIVIDADES'); } catch (e) {}
     }

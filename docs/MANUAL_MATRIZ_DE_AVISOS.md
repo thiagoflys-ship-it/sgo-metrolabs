@@ -13,8 +13,8 @@ Define, para cada aviso que o sistema manda, quem recebe e por qual canal. Uma t
 | Sistema | Todo aviso (Início, central de pendências, Caixa de decisões, sino). Cobra até ser resolvido. | Na hora, sempre |
 | E-mail de resumo do dia | Um e-mail por pessoa com o que espera por ela: atividades, decisões (gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo | A partir das 08:00 do dia útil (ou 12:00, se a pessoa escolher), só se houver algo |
 | E-mail na hora | O que exige ciência (avisos), o que muda algo de hoje (reserva cancelada ou trocada, lembrete da reserva, cliente respondeu a proposta, pedido de apoio, atividade com prazo para hoje) | Na hora, no expediente; fora dele, sai agrupado na primeira rodada do expediente seguinte |
-| WhatsApp de resumo do dia | Só contagens: atividades atrasadas, para hoje e novas, decisões paradas, avisos para confirmar, mensagens não lidas | A partir das 09:30 do dia útil, só CLT, só se a pessoa ainda não abriu o sistema, só se há item para hoje, atrasado ou decisão parada; durante o piloto, só quem está na lista do piloto |
-| WhatsApp na hora | Só as quatro exceções da Frota | No expediente, só CLT, uma por pessoa por dia em cada exceção |
+| WhatsApp de resumo do dia | Só contagens: atividades atrasadas, para hoje e novas, decisões paradas, avisos para confirmar, mensagens não lidas | A partir das 09:30 do dia útil, só CLT e PJ, só se a pessoa ainda não abriu o sistema, só se há item para hoje, atrasado ou decisão parada; durante o piloto, só quem está na lista do piloto |
+| WhatsApp na hora | Só as quatro exceções da Frota | No expediente, só CLT e PJ, uma por pessoa por dia em cada exceção |
 
 As quatro exceções do WhatsApp na hora: partida não liberada pelo rastreador (gestor da Frota); veículo em uso sem registro, só no expediente (gestor da Frota; fora do expediente vai no resumo do dia seguinte); devolução atrasada com reserva no mesmo dia (quem está com o veículo); reserva de hoje liberada a outra pessoa (quem reservou).
 
@@ -22,7 +22,7 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 
 ## 3. Regras gerais que valem para todo envio
 
-- WhatsApp só para vínculo CLT (Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). PJ, Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.
+- WhatsApp para vínculo CLT e PJ (decisão de 26/10/2026; Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). Os lembretes do ponto vão só para CLT. Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.
 - WhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.
 - Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).
 - Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).
@@ -47,7 +47,7 @@ Travas: WhatsApp na hora só nos eventos aprovados como exceção; evento obriga
 ## 5. Meus avisos (cada pessoa)
 
 1. Abra Menu › Principal › Meus avisos.
-2. Marque ou desmarque o WhatsApp de resumo do dia (só para CLT).
+2. Marque ou desmarque o WhatsApp de resumo do dia (para CLT e PJ).
 3. Escolha a hora do e-mail de resumo: 08:00 ou 12:00.
 4. Se quiser, receba no e-mail de resumo os avisos informativos (comentário, atividade concluída, venda ganha), que continuam no sistema.
 5. Se quiser, tire do e-mail de resumo os avisos do Comercial, da Frota ou do Auvo (continuam no sistema).
