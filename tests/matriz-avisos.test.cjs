@@ -17,7 +17,7 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const c = amb.ctx;
   const r = c.SGO_AvisosMatriz_api('s_dir', 'carregar', {});
   assert.equal(r.ok, true, r.message);
-  assert.equal(r.regras.length, 70); // 26/10/2026: S69 (vence hoje) e S70 (aviso urgente)
+  assert.equal(r.regras.length, 72); // 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras) e VC01 (vencimentos)
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');
@@ -492,4 +492,26 @@ test('atividade vence hoje (S69): desligada por padrão; ligada, um aviso por at
   c.Atividades_enviarWhatsFila_();
   assert.equal(amb.whats.filter((w) => w.corpo.to === '5562999990013').length, 1);
   assert.equal(c.Atividades_notificarVenceHoje_(), 0, 'uma vez por dia');
+});
+
+test('avisos por setor (26/10/2026): CP01 de Compras ganha o WhatsApp quando marcado na hora; VC01 vencimentos do dia no resumo, uma vez por dia', () => {
+  const amb = ambiente({ agora: em(SEG('10:00')) });
+  const c = amb.ctx;
+  const por = Object.fromEntries(c.SGO_AvisosMatriz_api('s_dir', 'carregar', {}).regras.map((x) => [x.cod, x]));
+  assert.equal(por.CP01.whatsapp, 'NAO'); assert.equal(por.VC01.email, 'RESUMO');
+  // Compras pede só e-mail; sem marcar, nada pelo WhatsApp
+  notificar(amb, { usuarios: ['u_tec'], canais: ['email'], origem: 'COMPRAS', categoria: 'COMPRAS', titulo: 'Requisição aprovada' });
+  assert.equal(amb.whats.length, 0);
+  assert.equal(c.SGO_AvisosMatriz_api('s_adm', 'salvarRegra', { cod: 'CP01', email: 'HORA', whatsapp: 'HORA', decisao: 'AVISA', motivo: 'piloto de Compras' }).ok, true);
+  notificar(amb, { usuarios: ['u_tec'], canais: ['email'], origem: 'COMPRAS', categoria: 'COMPRAS', titulo: 'Requisição aprovada 2' });
+  assert.equal(amb.whats.length, 1, 'WhatsApp acrescentado pela matriz');
+  assert.equal(amb.tabelas.NTF_ENVIOS.filter((l) => l.CANAL === 'whatsapp').pop().EVENTO, 'CP01');
+  // vencimentos: a central (simulada) diz o que cada pessoa enxerga
+  c.Pend_resposta_ = (ctx) => ({ itens: ctx.userId === 'u_gt' ? [{ tipo: 'padrao_vencendo', titulo: 'Padrão TERM-01 vence em 5 dias', dias: 5 }, { tipo: 'padrao_vencendo', titulo: 'Padrão TERM-02 vence em 40 dias', dias: 40 }, { tipo: 'atividade_atrasada', titulo: 'outra coisa', dias: -1 }] : [] });
+  const r = c.Setores_vencimentosDia_(new Date());
+  assert.equal(r.pessoas, 1);
+  const fila = amb.tabelas.NTF_RESUMO_FILA.filter((l) => l.EVENTO === 'VC01');
+  assert.equal(fila.length, 1); assert.equal(fila[0].USUARIO_ID, 'u_gt');
+  assert.match(fila[0].TEXTO, /TERM-01/); assert.ok(!/TERM-02/.test(fila[0].TEXTO), 'só até 7 dias');
+  assert.match(c.Setores_vencimentosDia_(new Date()).fora, /já feito hoje/);
 });

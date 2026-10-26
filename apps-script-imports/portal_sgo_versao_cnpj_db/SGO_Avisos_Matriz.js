@@ -267,6 +267,8 @@ function Mtz_invalidar_() { try { CacheService.getScriptCache().remove('MTZ_MUDA
 
 /** Regras em vigor: { cod: regra }. Nunca lança (sem leitura, vale o padrão aprovado). */
 function Mtz_regras_() {
+  // eventos dos setores (SGO_Avisos_Setores.js) entram mesmo que o arquivo carregue depois deste
+  if (typeof Setores_registrarEventos_ === 'function') Setores_registrarEventos_();
   var mud = {};
   try { mud = Mtz_mudancas_(); } catch (e) { mud = {}; }
   var mapa = {};
@@ -483,6 +485,9 @@ function SGO_avisoMatrizPreparar_(o, ids, canais) {
     var saida = { canais: canais.slice(), evento: evento, semEmail: {}, historico: !!(regra && regra.decisao === 'HISTORICO') };
     if (!regra) return saida;
     if (saida.historico) { saida.canais = canais.filter(function (c) { return c !== 'email' && c !== 'whatsapp'; }); return saida; }
+    // 26/10/2026: evento marcado "na hora" pela gestão vai também pelo WhatsApp, mesmo que o módulo tenha pedido só sistema
+    // ou e-mail (a regra do WhatsApp em SGO_avisoMotivoWhatsapp_ confere expediente, vínculo, piloto e teto). o.semWhatsapp barra.
+    if (regra.whatsapp === 'HORA' && !o.semWhatsapp && saida.canais.indexOf('whatsapp') < 0 && (saida.canais.indexOf('email') >= 0 || saida.canais.indexOf('sgo') >= 0)) saida.canais.push('whatsapp');
     if (canais.indexOf('email') < 0) return saida;
     var internos = ids.filter(function (id) { return String(id).indexOf('EXT:') !== 0; });
     var modo = regra.email;
@@ -814,6 +819,8 @@ function SGO_resumoDiaRodada_(quando) {
   var cfg = Mtz_cfg_();
   var primeiraHora = cfg.horaEmail < cfg.horaWhats ? cfg.horaEmail : cfg.horaWhats;
   if (ex.hora < primeiraHora) { r.fora = 'antes da hora do resumo (' + primeiraHora + ')'; return r; }
+  // 26/10/2026: vencimentos do dia (VC01, SGO_Avisos_Setores.js) entram na fila antes de montar o resumo
+  if (typeof Setores_vencimentosDia_ === 'function') r.vencimentos = Setores_vencimentosDia_(quando);
   // duas rotinas ao mesmo tempo (gestão a cada 15 min e atividades de hora em hora) não fazem o resumo duas vezes
   var cacheTrava = null;
   try { cacheTrava = CacheService.getScriptCache(); if (cacheTrava.get('MTZ_RODADA_EM_CURSO')) { r.fora = 'outra rodada do resumo em andamento'; return r; } cacheTrava.put('MTZ_RODADA_EM_CURSO', '1', 300); } catch (e) { cacheTrava = null; }
