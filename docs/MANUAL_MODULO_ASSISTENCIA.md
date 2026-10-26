@@ -303,3 +303,11 @@ Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa 
   oficial ainda não envia documentos. Envie por e-mail.
 - Preciso corrigir um relatório já emitido: só a gestão, em "Abrir para corrigir", com o motivo; sai a Rev. 01 e ela
   precisa ser enviada de novo ao cliente.
+
+## Agenda única com Atividades da equipe (26/10/2026)
+
+- Toda O.S. agendada cria sozinha a atividade do técnico em Minhas atividades, ligada à O.S. (OS_ID). Quem manda é a O.S.: reagendar, encerrar ou cancelar muda a atividade sozinha; ninguém conclui, edita ou justifica essa atividade à mão.
+- A atividade da O.S. não conta atraso em Atividades (nem aviso de atraso, escalonamento por prioridade, central de pendências ou avaliação do gestor): o prazo do cliente é acompanhado aqui, na Assistência.
+- Em Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem "Abrir a O.S.".
+- Nova atividade > "É serviço técnico em cliente" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.
+- Aplicativo do técnico: o Meu dia mostra também "Minhas atividades" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios.

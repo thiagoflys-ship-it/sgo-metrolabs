@@ -902,7 +902,7 @@ function Ast_criarAtividade_(o, aoCriar) {
     if (typeof Atividades_garantirAbas_ === 'function') Atividades_garantirAbas_();
     var r = Ast_comoSistema_(function (t) {
       return Atividades_apiCriar(t, { titulo: Ast_texto_(o.titulo, 200), descricao: Ast_texto_(o.descricao, 4000), prazo: o.prazo, prioridade: o.prioridade || 'Normal', responsavelId: o.responsavelId,
-        modulo: 'assistencia', moduloNome: 'Assistência técnica', clienteId: o.clienteId || '', unidadeId: o.unidadeId || '', porQue: o.porQue || '', onde: o.onde || '', como: o.como || '' });
+        modulo: 'assistencia', moduloNome: 'Assistência técnica', osId: o.osId || '', clienteId: o.clienteId || '', unidadeId: o.unidadeId || '', porQue: o.porQue || '', onde: o.onde || '', como: o.como || '' });
     });
     return r && r.ok && r.item ? Ast_s_(r.item.ID) : '';
   } catch (e) { console.error('Assistência, atividade: ' + ((e && e.message) || e)); return ''; }

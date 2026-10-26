@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "400d32a1a7dc",
+ "versao": "16075232ca23",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -673,6 +673,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Problemas comuns",
      "texto": "\"Esse caminho não é permitido\": siga o \"Próximo passo\" indicado na ficha do chamado.\nO cliente diz que o link do orçamento mostra \"Link indisponível\": o link venceu, foi invalidado ou um envio mais novo\n o trocou. Envie de novo em Chamados > chamado > Orçamento > \"Enviar com link de aceite\" (ou \"Gerar e copiar link\").\n Se o orçamento já venceu, faça a Nova revisão antes.\nO cliente aprovou pelo link mas o comprovante não aparece: toque em \"Gerar o comprovante\" no bloco \"Aceite do\n cliente\". A aprovação já vale; só o documento é gerado de novo.\nO cliente respondeu errado pelo link: a resposta é única e não se apaga. Para recusa ou ajuste, faça a Nova revisão\n e envie de novo; para aprovação indevida, registre a conversa no chamado e trate com a gestão.\nO técnico não aparece na lista: ajuste o perfil (Técnico) ou a área (Técnica) em Administração > Usuários.\n\"A O.S. é de outro técnico\": só o técnico responsável ou a gestão da área Técnica registra.\nA foto não subiu: verifique a conexão e salve de novo; as que já subiram não se repetem.\nCadastro de cliente com chamado aberto não muda de cliente em Vínculos: encerre ou cancele o chamado primeiro.\n\"Relatório ainda não enviado ao cliente\" na Caixa de decisões: abra a O.S. em Ordens de serviço, bloco \"Documento e\n envio\", e toque em \"Enviar ao cliente\" (ou peça ao técnico para enviar pelo aplicativo).\nO WhatsApp aparece desligado na janela \"Enviar documento\": o piloto do WhatsApp oficial está ligado e o número\n oficial ainda não envia documentos. Envie por e-mail.\nPreciso corrigir um relatório já emitido: só a gestão, em \"Abrir para corrigir\", com o motivo; sai a Rev. 01 e ela\n precisa ser enviada de novo ao cliente."
+    },
+    {
+     "titulo": "Agenda única com Atividades da equipe (26/10/2026)",
+     "texto": "Toda O.S. agendada cria sozinha a atividade do técnico em Minhas atividades, ligada à O.S. (OS_ID). Quem manda é a O.S.: reagendar, encerrar ou cancelar muda a atividade sozinha; ninguém conclui, edita ou justifica essa atividade à mão.\nA atividade da O.S. não conta atraso em Atividades (nem aviso de atraso, escalonamento por prioridade, central de pendências ou avaliação do gestor): o prazo do cliente é acompanhado aqui, na Assistência.\nEm Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem \"Abrir a O.S.\".\nNova atividade > \"É serviço técnico em cliente\" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.\nAplicativo do técnico: o Meu dia mostra também \"Minhas atividades\" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios."
     }
    ]
   },

@@ -284,7 +284,7 @@ function Ges_textoAtividadesDe_(uid) {
   if (typeof Atividades_todas_ !== 'function') return 'veja em Minhas atividades';
   var agora = Atividades_agora_(), hoje = agora.slice(0, 10), atr = 0, hj = 0;
   Atividades_todas_().forEach(function (a) {
-    if (a.RESPONSAVEL_ID !== uid || !Atividades_aberta_(a) || !a.PREVISAO_ATUAL) return;
+    if (a.RESPONSAVEL_ID !== uid || !Atividades_aberta_(a) || !a.PREVISAO_ATUAL || (typeof Atividades_daOS_ === 'function' && Atividades_daOS_(a))) return;
     if (a.PREVISAO_ATUAL < agora) atr++; else if (a.PREVISAO_ATUAL.slice(0, 10) === hoje) hj++;
   });
   if (!atr && !hj) return 'nenhuma atrasada ou para hoje';

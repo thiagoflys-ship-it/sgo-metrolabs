@@ -97,6 +97,8 @@
   .atv-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
   .atv-hist-item { margin-bottom: 10px; font-size: 12.5px; }
   .atv-hist-item .q { color: var(--muted); font-size: 11.5px; }
+  .atv-selo-os { background: #e8f0fc; color: #1f4f9a; border: 1px solid #b9cdf0; }
+  .atv-leg-cor { display: inline-block; width: 12px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 2px; }
   .atv-hist-item.JUSTIFICATIVA { border-left: 3px solid var(--warning); padding-left: 8px; margin-left: -15px; }
   .atv-just-card { border: 1px solid var(--danger); border-left: 4px solid var(--danger); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: var(--danger-bg); }
   .atv-just-card .t { font-weight: 800; margin-bottom: 4px; }
@@ -204,7 +206,8 @@
     return "há " + dias + (dias === 1 ? " dia" : " dias") + (h % 24 ? " " + (h % 24) + " h" : "");
   }
   function Atividades_aberta_(a) { return a.SITUACAO !== "Concluída" && a.SITUACAO !== "Cancelada"; }
-  function Atividades_vencida_(a) { return Atividades_aberta_(a) && a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < Atividades_agoraIso_(); }
+  // 26/10/2026: atendimento de O.S. (OS_ID) e atendimento do Auvo não contam atraso aqui: o prazo é acompanhado na Assistência técnica
+  function Atividades_vencida_(a) { return Atividades_aberta_(a) && !a.OS_ID && !a._auvo && a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < Atividades_agoraIso_(); }
   function Atividades_seloHtml_(a) {
     if (!Atividades_aberta_(a)) {
       if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM && a.PRAZO) return a.CONCLUIDA_EM <= a.PRAZO ? '<span class="atv-selo neutro">No prazo</span>' : '<span class="atv-selo neutro">Com atraso</span>';
@@ -220,6 +223,7 @@
   function Atividades_meuId_() { return USER_CONTEXT ? String(USER_CONTEXT.id || USER_CONTEXT.userId || "") : ""; }
   /** Mesma regra do servidor (Atividades_podeEditar_): gestão qualquer uma; demais, só a que lançaram para si. */
   function Atividades_podeEditar_(a, eu) {
+    if (a && (a.OS_ID || a._auvo)) return false; // 26/10/2026: muda pela O.S. (Assistência técnica)
     if (a && a.PODE_EDITAR !== undefined) return !!a.PODE_EDITAR;
     var id = eu && eu.id ? String(eu.id) : Atividades_meuId_();
     var gestor = eu && eu.gestor !== undefined ? !!eu.gestor : Atividades_ehGestor_();
@@ -227,6 +231,7 @@
   }
   /** Mesma regra do servidor (Atividades_podeAlterar_): responsável, quem lançou e gestão mudam a situação; os demais só veem. */
   function Atividades_podeAlterar_(a) {
+    if (a && (a.OS_ID || a._auvo)) return false; // 26/10/2026: a situação muda pela O.S. (Assistência técnica)
     if (a && a.PODE_ALTERAR !== undefined) return !!a.PODE_ALTERAR;
     var id = Atividades_meuId_();
     return Atividades_ehGestor_() || (!!id && (a.RESPONSAVEL_ID === id || a.CRIADO_POR_ID === id));
@@ -236,6 +241,9 @@
     var s = "";
     if (a.SISTEMA_ORIGEM === "COMMAND") s += ' <span class="atv-selo neutro" title="Lançada pelo METROLABS COMMAND">COMMAND</span>';
     if (a.RESTRITA === "SIM") s += ' <span class="atv-selo neutro" title="Só o responsável, quem lançou e a gestão veem">Restrita</span>';
+    // 26/10/2026 (agenda única): atendimento de O.S. e do Auvo
+    if (a.OS_ID) s += ' <span class="atv-selo atv-selo-os" title="Atendimento de O.S. da Assistência técnica: muda sozinho pela O.S. (agendar, reagendar, encerrar, cancelar) e não conta atraso aqui">O.S.' + (a.OS_NUMERO ? ' ' + Atividades_esc_(a.OS_NUMERO) : "") + (a.OS_SITUACAO_NOME ? ' · ' + Atividades_esc_(a.OS_SITUACAO_NOME) : "") + "</span>";
+    if (a._auvo) s += ' <span class="atv-selo neutro" title="Atendimento registrado no Auvo (só consulta)">Auvo</span>';
     return s;
   }
   function Atividades_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
@@ -494,6 +502,13 @@
   }
 
   // ---------- detalhe ----------
+  /** 26/10/2026: abre a O.S. na Assistência técnica (atendimento ligado à atividade). */
+  function Atividades_abrirOS_(osId) {
+    var ov = document.getElementById("atvDetalheOverlay"); if (ov) ov.remove();
+    if (typeof Assistencia_irPara_ === "function") Assistencia_irPara_({ mod: "assistencia_os", id: osId });
+    else if (typeof abrir === "function") abrir("assistencia_os");
+  }
+
   function Atividades_abrirDetalhe_(id) {
     Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) {
       var a = res.item, eu = res.eu;
@@ -523,7 +538,9 @@
       var corpo =
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">' + Atividades_sitHtml_(a.SITUACAO) + " " + Atividades_seloHtml_(a) +
           (a.AGORA_DESDE ? '<span class="atv-selo emdia"><i class="fas fa-person-digging" aria-hidden="true"></i> Fazendo agora ' + Atividades_duracao_(a.AGORA_DESDE) + "</span>" : "") + Atividades_selosOrigemHtml_(a) + "</div>" +
-        (!podeAlt ? '<div class="atv-msg" style="border:1px solid var(--border);background:var(--bc-surface-3);color:var(--text)">Você acompanha esta atividade. Mudar a situação, comentar e registrar andamento é do responsável (' + Atividades_esc_(a.RESPONSAVEL_NOME) + '), de quem lançou e da gestão.</div>' : "") +
+        (a.OS_ID ? '<div class="atv-msg" style="border:1px solid var(--border);background:var(--bc-surface-3);color:var(--text)">Atendimento da O.S. ' + Atividades_esc_(a.OS_NUMERO || '') + ' (Assistência técnica). A situação, o horário e o técnico mudam pela O.S.: agendar, reagendar, encerrar ou cancelar. Ela não conta atraso em Atividades; o prazo do cliente é acompanhado na Assistência. ' +
+          '<button type="button" class="btn-secondary atv-mini" style="margin-top:6px" onclick="Atividades_abrirOS_(\'' + Atividades_esc_(a.OS_ID) + '\')">Abrir a O.S.</button></div>' : "") +
+        (!podeAlt && !a.OS_ID ? '<div class="atv-msg" style="border:1px solid var(--border);background:var(--bc-surface-3);color:var(--text)">Você acompanha esta atividade. Mudar a situação, comentar e registrar andamento é do responsável (' + Atividades_esc_(a.RESPONSAVEL_NOME) + '), de quem lançou e da gestão.</div>' : "") +
         (a.DESCRICAO ? '<p style="white-space:pre-wrap;margin-top:0">' + Atividades_esc_(a.DESCRICAO) + "</p>" : "") +
         '<dl class="atv-det-grade">' +
           linha("Responsável", Atividades_esc_(a.RESPONSAVEL_NOME)) + linha("Lançada por", Atividades_esc_(a.CRIADO_POR_NOME)) +
@@ -542,7 +559,7 @@
         "</dl>" +
         (aberta && (souResp || eu.gestor) ? '<div class="atv-campo" style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" placeholder="0 a 100" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div><button type="button" class="btn-secondary atv-mini" style="height:36px!important" onclick="Atividades_salvarPercentual_(\'' + a.ID + '\')">Gravar andamento</button></div>' : "") +
         '<div class="atv-acoes" style="margin-bottom:14px">' + acoes.join("") + "</div>" +
-        (podeAlt ? '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre um andamento, dúvida ou combinado"></textarea></div>' +
+        (podeAlt || (a.OS_ID && a.PODE_ALTERAR) ? '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre um andamento, dúvida ou combinado"></textarea></div>' +
         '<div style="text-align:right;margin-bottom:14px"><button type="button" class="btn-secondary atv-mini" onclick="Atividades_comentar_(\'' + a.ID + '\', this)">Comentar</button></div>' : "") +
         '<h4 style="margin:0 0 8px;font-size:13px">Histórico</h4><div class="atv-hist">' + hist + "</div>";
       var ov = Atividades_modal_(Atividades_esc_(a.TITULO), corpo, "", { id: "atvDetalheOverlay", largura: 700 });
@@ -592,6 +609,8 @@
         '<div id="atvFormMsg"></div>' + avisoEd +
         '<div class="atv-campo"><label for="atvF_titulo">Título *</label><input id="atvF_titulo" type="text" maxlength="200" placeholder="O que precisa ser feito"></div>' +
         '<div class="atv-campo"><label for="atvF_desc">Descrição</label><textarea id="atvF_desc" maxlength="4000" placeholder="Detalhes, critérios de pronto, contatos"></textarea></div>' +
+        (ed ? "" : '<label class="atv-check"><input type="checkbox" id="atvF_servico" disabled onchange="Atividades_alternarServico_()"> É serviço técnico em cliente (abre a O.S. na Assistência técnica, agendada ao técnico)</label>' +
+          '<div id="atvF_servicoMotivo" class="atv-sub" style="margin:-4px 0 10px">Conferindo se você pode abrir serviço técnico...</div><div id="atvF_servicoArea" hidden></div>') +
         '<div class="atv-grade2">' +
           '<div class="atv-campo"><label for="atvF_resp">Responsável *</label><select id="atvF_resp"' + (eu.gestor ? "" : " disabled title=\"Somente Gestor, Admin e Diretoria " + (ed ? "trocam o responsável" : "lançam atividade para outra pessoa") + ".\"") + ">" + pessoas + "</select>" +
             (eu.gestor ? (ed ? '<div class="atv-sub">Ao trocar, o novo responsável é avisado e a troca fica no histórico.</div>' : "") : '<div class="atv-sub">' + (ed ? "Só a gestão troca o responsável." : "Você lança atividades só para você. Para outra pessoa, peça a um gestor.") + "</div>") + "</div>" +
@@ -629,7 +648,8 @@
       }
       ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
       ov.querySelector('[data-x="ok"]').onclick = function () { Atividades_enviarFormulario_(ov); };
-      SGO_montarBuscaClienteLike_("atvF_cli", op.clientes, function (idCli) { Atividades_carregarUnidades_(idCli); });
+      SGO_montarBuscaClienteLike_("atvF_cli", op.clientes, function (idCli) { Atividades_carregarUnidades_(idCli); Atividades_servicoCarregarEquip_(idCli); });
+      if (!ed) Atividades_servicoConferir_();
       if (ed && ed.CLIENTE_ID) {
         SGO_prefillBuscaClienteLike_("atvF_cli", ed.CLIENTE_ID, ed.CLIENTE_NOME);
         Atividades_carregarUnidades_(ed.CLIENTE_ID, ed.UNIDADE_ID, ed.UNIDADE_NOME);
@@ -641,6 +661,112 @@
   /** Abre a edição a partir da lista: busca a versão atual no servidor antes de preencher. */
   function Atividades_editarPorId_(id) {
     Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) { Atividades_abrirFormulario_({ editar: res.item }); }, null, { carregando: "Abrindo atividade..." });
+  }
+
+  // ---------- Nova atividade: "É serviço técnico em cliente" (26/10/2026, agenda única) ----------
+  // Só quem agenda na Assistência técnica; abre chamado (Interno) + triagem "Planejar visita" + O.S. agendada ao técnico.
+  // A atividade do técnico nasce sozinha no agendamento, ligada à O.S. (não se lança duas vezes).
+  function Atividades_servicoConferir_() {
+    var aplicar = function (op) {
+      var chk = document.getElementById("atvF_servico"), mot = document.getElementById("atvF_servicoMotivo");
+      if (!chk || !mot) return;
+      chk.disabled = !op.podeServico;
+      mot.textContent = op.podeServico ? "Para preventiva, retorno ou visita que a empresa inicia. Chamado do cliente continua pela triagem da Assistência técnica." : op.motivo;
+    };
+    if (ATV.servicoOpcoes) return aplicar(ATV.servicoOpcoes);
+    Atividades_chamar_("Atividades_apiServicoOpcoes", {}, function (op) { ATV.servicoOpcoes = op; aplicar(op); },
+      function () { var mot = document.getElementById("atvF_servicoMotivo"); if (mot) mot.textContent = "Não foi possível conferir agora; lance como tarefa interna ou tente de novo."; }, { silencioso: true });
+  }
+  function Atividades_alternarServico_() {
+    var ov = document.getElementById("atvFormOverlay"); if (!ov) return;
+    var lig = ov.querySelector("#atvF_servico").checked, area = ov.querySelector("#atvF_servicoArea"), op = ATV.servicoOpcoes || { tipos: [], tecnicos: [], preparo: [] };
+    // com a caixa marcada, quem manda é a O.S.: o prazo, o responsável e o módulo vêm dela
+    ["atvF_resp", "atvF_ini", "atvF_prazo", "atvF_mod"].forEach(function (id) { var c = ov.querySelector("#" + id); if (c && c.closest(".atv-campo")) c.closest(".atv-campo").hidden = lig; });
+    ["atvF_restrita"].forEach(function (id) { var c = ov.querySelector("#" + id); if (c && c.closest("label")) c.closest("label").hidden = lig; });
+    var w = ov.querySelector(".atv-5w2h"); if (w) w.hidden = lig;
+    area.hidden = !lig;
+    if (!lig) { area.innerHTML = ""; return; }
+    var opc = function (l, vazio) { return '<option value="">' + vazio + "</option>" + l.map(function (x) { return '<option value="' + Atividades_esc_(x.v) + '">' + Atividades_esc_(x.t) + "</option>"; }).join(""); };
+    var amanha = new Date(); amanha.setDate(amanha.getDate() + 1); amanha.setHours(8, 0, 0, 0);
+    area.innerHTML = '<div class="atv-caixa" style="margin:4px 0 12px"><h3>Serviço técnico</h3>' +
+      '<div class="atv-sub" style="margin-bottom:8px">O título e a descrição vão para o chamado e para o técnico. Escolha o cliente e a unidade abaixo, nos campos de sempre.</div>' +
+      '<div class="atv-grade2">' +
+        '<div class="atv-campo"><label for="atvS_tec">Técnico *</label><select id="atvS_tec">' + opc(op.tecnicos.map(function (t) { return { v: t.id, t: t.nome }; }), "Escolha o técnico") + "</select></div>" +
+        '<div class="atv-campo"><label for="atvS_tipo">Tipo de serviço *</label><select id="atvS_tipo">' + opc(op.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), "Escolha o tipo") + "</select></div>" +
+        '<div class="atv-campo"><label for="atvS_ini">Data e hora do atendimento *</label><input id="atvS_ini" type="datetime-local" value="' + Atividades_esc_(Atividades_iso_(amanha)) + '"></div>' +
+        '<div class="atv-campo"><label for="atvS_dur">Duração estimada (minutos) *</label><input id="atvS_dur" type="number" min="15" max="1440" step="15" value="' + Atividades_esc_(op.duracaoPadraoMin || 90) + '"></div>' +
+      "</div>" +
+      '<div class="atv-campo"><label for="atvS_eq">Equipamento *</label><select id="atvS_eq" onchange="Atividades_servicoEquipEscolhido_()"><option value="">Escolha o cliente primeiro</option></select></div>' +
+      '<div class="atv-campo"><label>Preparo (obrigatório para agendar) *</label>' +
+        op.preparo.map(function (k) { return '<label class="atv-check"><input type="checkbox" data-preparo="' + Atividades_esc_(k.chave) + '"> ' + Atividades_esc_(k.nome.charAt(0).toUpperCase() + k.nome.slice(1)) + "</label>"; }).join("") +
+        '<label class="atv-check"><input type="checkbox" id="atvS_pecas"> Peças separadas</label>' +
+        '<input id="atvS_pecasJust" type="text" maxlength="500" placeholder="Sem peça? Escreva por quê (ex.: visita preventiva, sem peça)"></div>' +
+      '<div class="atv-grade2">' +
+        '<div class="atv-campo"><label for="atvS_risco">Avaliação de risco *</label><input id="atvS_risco" type="text" maxlength="500" placeholder="Ex.: baixo, equipamento desligado na chegada"></div>' +
+        '<div class="atv-campo"><label for="atvS_ori">Orientação ao técnico</label><input id="atvS_ori" type="text" maxlength="1500" placeholder="Opcional"></div>' +
+      "</div>" +
+      '<div id="atvS_confirmar"></div></div>';
+    var cli = ov.querySelector("#atvF_cli"); if (cli && cli.value) Atividades_servicoCarregarEquip_(cli.value);
+  }
+  function Atividades_servicoCarregarEquip_(clienteId) {
+    var sel = document.getElementById("atvS_eq"); if (!sel) return;
+    if (!clienteId) { sel.innerHTML = '<option value="">Escolha o cliente primeiro</option>'; return; }
+    sel.innerHTML = '<option value="">Carregando...</option>';
+    Atividades_chamar_("Atividades_apiServicoEquipamentos", { clienteId: clienteId }, function (r) {
+      ATV.servicoEquip = r.equipamentos || [];
+      Atividades_servicoDesenharEquip_();
+      var u = document.getElementById("atvF_uni"); if (u) u.onchange = Atividades_servicoDesenharEquip_;
+    }, function (m) { var s2 = document.getElementById("atvS_eq"); if (s2) s2.innerHTML = '<option value="">' + Atividades_esc_(m) + "</option>"; }, { silencioso: true });
+  }
+  function Atividades_servicoDesenharEquip_() {
+    var sel = document.getElementById("atvS_eq"); if (!sel) return;
+    var un = (document.getElementById("atvF_uni") || {}).value || "";
+    var l = (ATV.servicoEquip || []).filter(function (e) { return !un || e.unidadeId === un; });
+    sel.innerHTML = '<option value="">' + (l.length ? "Escolha o equipamento" : "Nenhum equipamento ativo" + (un ? " nesta unidade" : " neste cliente")) + "</option>" +
+      l.map(function (e) { return '<option value="' + Atividades_esc_(e.id) + '" data-un="' + Atividades_esc_(e.unidadeId || "") + '">' + Atividades_esc_(e.texto) + "</option>"; }).join("");
+  }
+  function Atividades_servicoEquipEscolhido_() {
+    var sel = document.getElementById("atvS_eq"), u = document.getElementById("atvF_uni");
+    var o = sel && sel.options[sel.selectedIndex];
+    if (o && o.getAttribute("data-un") && u && !u.value) u.value = o.getAttribute("data-un");
+  }
+  function Atividades_enviarServico_(ov, d, erro) {
+    var v = function (id) { var el = ov.querySelector("#" + id); return el ? String(el.value || "").trim() : ""; };
+    var verbo = "abrir o serviço técnico";
+    if (!d.clienteId) return erro("Não foi possível " + verbo + ": escolha o cliente na lista.", "atvF_cli_busca");
+    if (!v("atvS_tec")) return erro("Não foi possível " + verbo + ": escolha o técnico.", "atvS_tec");
+    if (!v("atvS_tipo")) return erro("Não foi possível " + verbo + ": escolha o tipo de serviço.", "atvS_tipo");
+    if (!v("atvS_ini")) return erro("Não foi possível " + verbo + ": informe a data e a hora do atendimento.", "atvS_ini");
+    if (!v("atvS_eq")) return erro("Não foi possível " + verbo + ": escolha o equipamento.", "atvS_eq");
+    var preparo = { pecas: ov.querySelector("#atvS_pecas").checked, pecasJustificativa: v("atvS_pecasJust"), risco: v("atvS_risco") };
+    ov.querySelectorAll("[data-preparo]").forEach(function (c) { preparo[c.getAttribute("data-preparo")] = c.checked; });
+    var outro = ov.querySelector("#atvS_outroServico"), mesmoAssim = ov.querySelector("#atvS_mesmoAssim");
+    var selEq = ov.querySelector("#atvS_eq"), opEq = selEq.options[selEq.selectedIndex];
+    var payload = { clienteId: d.clienteId, unidadeId: v("atvF_uni") || (opEq ? opEq.getAttribute("data-un") || "" : ""),
+      equipamentoId: v("atvS_eq"), descricao: d.titulo + (d.descricao ? "\n" + d.descricao : ""), prioridade: d.prioridade, tipoCodigo: v("atvS_tipo"), tecnicoId: v("atvS_tec"),
+      inicio: v("atvS_ini"), duracaoMin: Number(v("atvS_dur")), preparo: preparo, orientacao: v("atvS_ori"),
+      confirmarDuplicado: !!(outro && outro.checked), confirmarConflito: !!(mesmoAssim && mesmoAssim.checked), motivoConflito: v("atvS_motivoConflito") };
+    var botao = ov.querySelector('[data-x="ok"]'); botao.disabled = true;
+    Atividades_chamar_("Atividades_apiServicoCriar", payload, function (res) {
+      botao.disabled = false;
+      var conf = ov.querySelector("#atvS_confirmar");
+      if (res.duplicado) {
+        conf.innerHTML = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">' + Atividades_esc_(res.message) + "</div>" +
+          '<label class="atv-check"><input type="checkbox" id="atvS_outroServico"> É outro serviço (abrir mesmo assim)</label>';
+        conf.scrollIntoView({ block: "nearest" });
+        return;
+      }
+      if (res.conflito) {
+        conf.innerHTML = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">' + Atividades_esc_(res.message) + "</div>" +
+          '<label class="atv-check"><input type="checkbox" id="atvS_mesmoAssim"> Agendar mesmo assim</label>' +
+          '<div class="atv-campo"><label for="atvS_motivoConflito">Motivo (fica no histórico e a gestão é avisada)</label><input id="atvS_motivoConflito" type="text" maxlength="500"></div>';
+        conf.scrollIntoView({ block: "nearest" });
+        return;
+      }
+      ov.remove();
+      frotaToastEnvio_(true, "Serviço técnico aberto", res.message || "");
+      Atividades_aposAlterar_();
+    }, function (m) { botao.disabled = false; erro(m); }, { carregando: "Abrindo o serviço técnico..." });
   }
 
   function Atividades_carregarUnidades_(clienteId, selecionarId, selecionarNome) {
@@ -675,6 +801,8 @@
     if (!d.prazo) return erro("Não foi possível " + verbo + ": o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em " + botaoNome + " de novo.", "atvF_prazo");
     if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível " + verbo + ": o início previsto está depois do prazo. Ajuste uma das datas e clique em " + botaoNome + " de novo.", "atvF_ini");
     if (v("atvF_cli_busca") && !d.clienteId) return erro("Não foi possível " + verbo + ": o cliente digitado não foi escolhido na lista. Clique no nome do cliente na lista que aparece, ou apague o campo.", "atvF_cli_busca");
+    var chkS = ov.querySelector("#atvF_servico");
+    if (!editId && chkS && chkS.checked) return Atividades_enviarServico_(ov, d, erro);
     var botao = ov.querySelector('[data-x="ok"]'); botao.disabled = true;
     if (editId) {
       d.id = editId;
@@ -742,7 +870,7 @@
       if (s === "Concluída") doCol = doCol.sort(function (a, b) { return a.CONCLUIDA_EM < b.CONCLUIDA_EM ? 1 : -1; }).slice(0, 30);
       var cards = doCol.map(function (a) {
         var venc = Atividades_vencida_(a), alt = Atividades_podeAlterar_(a);
-        return '<div class="atv-kcard' + (venc ? " vencida" : "") + (alt ? "" : " so-ver") + '" draggable="' + (alt ? "true" : "false") + '" data-id="' + Atividades_esc_(a.ID) + '" style="border-left-color:' + ATV_CORES[a.SITUACAO] + '"' + (alt ? "" : ' title="Você acompanha esta atividade; quem altera é o responsável, quem lançou e a gestão"') + ">" +
+        return '<div class="atv-kcard' + (venc ? " vencida" : "") + (alt ? "" : " so-ver") + '" draggable="' + (alt ? "true" : "false") + '" data-id="' + Atividades_esc_(a.ID) + '" style="border-left-color:' + ATV_CORES[a.SITUACAO] + '"' + (alt ? "" : ' title="' + (a.OS_ID ? "Atendimento de O.S.: a situação muda pela O.S. em Assistência técnica (encerrar, reagendar, cancelar)" : "Você acompanha esta atividade; quem altera é o responsável, quem lançou e a gestão") + '"') + ">" +
           '<div class="atv-kcard-tit">' + Atividades_esc_(a.TITULO) + Atividades_selosOrigemHtml_(a) + "</div>" +
           '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", o.semModulo ? "" : Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" +
           (a.PERCENTUAL !== "" && a.PERCENTUAL !== undefined ? '<div class="atv-barra-prog"><div style="width:' + Number(a.PERCENTUAL) + '%"></div></div>' : "") +
@@ -773,6 +901,7 @@
         var a = porId[id]; var nova = col.dataset.sit;
         ATV.arrastando = "";
         if (!a || a.SITUACAO === nova) return;
+        if (a.OS_ID) { alert("Não foi possível mudar a situação: esta atividade é o atendimento da O.S. " + (a.OS_NUMERO || "") + " e muda pela O.S. Abra a O.S. em Assistência técnica para encerrar, reagendar ou cancelar."); return; }
         if (!Atividades_podeAlterar_(a)) { alert("Não foi possível mudar a situação: esta atividade é de " + (a.RESPONSAVEL_NOME || "outra pessoa") + ". Só o responsável, quem lançou e a gestão mudam a situação; você acompanha."); return; }
         Atividades_mudarSituacao_(id, nova);
       });
@@ -1065,6 +1194,24 @@
     });
   }
 
+  /** 26/10/2026: atividade de O.S. desenhada no horário da O.S. (quem manda é a O.S.). */
+  function Atividades_paraGantt_(a) {
+    if (!a.OS_ID || !a.OS_INICIO) return a;
+    return Object.assign({}, a, { INICIO_PREVISTO: a.OS_INICIO, PRAZO: a.OS_FIM || a.OS_INICIO, PREVISAO_ATUAL: a.OS_FIM || a.OS_INICIO, CONCLUIDA_EM: "" });
+  }
+  /** Atendimentos do Auvo do painel com os mesmos filtros (pessoa, módulo, sistema, período), no formato das barras. */
+  function Atividades_auvoFiltrados_() {
+    var r = ATV.equipe, f = ATV.equipeFiltros;
+    if (!r || !r.auvo || !r.auvo.length) return [];
+    if (f.modulo && f.modulo !== "assistencia") return [];
+    if (f.sistema && f.sistema !== "SGO+") return [];
+    var de = f.de ? f.de + "T00:00" : "", ate = f.ate ? f.ate + "T23:59" : "";
+    return r.auvo.filter(function (t) { return (!f.pessoa || t.RESPONSAVEL_ID === f.pessoa) && (!de || t.FIM >= de) && (!ate || t.INICIO <= ate); }).map(function (t) {
+      return { ID: t.ID, _auvo: true, TAREFA: t.TAREFA, TITULO: t.TITULO, RESPONSAVEL_ID: t.RESPONSAVEL_ID, RESPONSAVEL_NOME: t.RESPONSAVEL_NOME, INICIO_PREVISTO: t.INICIO, PRAZO: t.FIM, PREVISAO_ATUAL: t.FIM,
+        SITUACAO: t.FINALIZADA ? "Concluída" : "A fazer", PERCENTUAL: "", CONCLUIDA_EM: "", CRIADO_EM: t.INICIO, MODULO: "assistencia", SISTEMA_ORIGEM: "SGO+" };
+    });
+  }
+
   function Atividades_inicioBarra_(a) {
     var c = Atividades_parse_(a.CRIADO_EM);
     var cands = [a.INICIO_PREVISTO, a.INICIADA_EM, c ? Atividades_iso_(c) : ""].filter(Boolean);
@@ -1092,7 +1239,10 @@
       return;
     }
     if (ATV.equipeAba === "indicadores") { corpo.innerHTML = Atividades_indicadoresHtml_(); return; }
-    corpo.innerHTML = Atividades_ganttHtml_(Atividades_itensEquipeFiltrados_(true), corpo.clientWidth || 1000);
+    // 26/10/2026 (agenda única): atendimento de O.S. no horário da O.S. (azul) e atendimentos do Auvo (cinza, só consulta)
+    var itensG = Atividades_itensEquipeFiltrados_(true).map(Atividades_paraGantt_).concat(Atividades_auvoFiltrados_());
+    corpo.innerHTML = Atividades_ganttHtml_(itensG, corpo.clientWidth || 1000) +
+      '<div class="atv-legenda"><span class="atv-leg-cor" style="background:#2f6fd6"></span> Atendimento de O.S. (Assistência técnica, no horário agendado; muda pela O.S.) · <span class="atv-leg-cor" style="background:#8a96a3"></span> Atendimento do Auvo (só consulta) · as demais cores são a situação da atividade.</div>';
     corpo.querySelectorAll("[data-atv]").forEach(function (g) { g.addEventListener("click", function () { Atividades_abrirDetalhe_(g.getAttribute("data-atv")); }); });
   }
 
@@ -1276,17 +1426,19 @@
       ln.itens.forEach(function (el) {
         var a = el.a;
         var x0 = x(Atividades_inicioBarra_(a)), xp = x(a.PRAZO), xprev = x(a.PREVISAO_ATUAL), xf = x(Atividades_fimBarra_(a));
-        var venc = Atividades_vencida_(a), cor = ATV_CORES[a.SITUACAO] || "#888";
+        var venc = Atividades_vencida_(a), cor = a._auvo ? "#8a96a3" : a.OS_ID ? "#2f6fd6" : (ATV_CORES[a.SITUACAO] || "#888");
         var by = y + 5, bh = linhaH - 10;
         var tip = a.TITULO + " — " + a.RESPONSAVEL_NOME + "\nSituação: " + a.SITUACAO + (venc ? " (vencida)" : "") + "\nInício: " + Atividades_br_(Atividades_inicioBarra_(a)) + "\nPrazo: " + Atividades_br_(a.PRAZO) +
-          (a.PREVISAO_ATUAL !== a.PRAZO ? "\nPrevisão atual: " + Atividades_br_(a.PREVISAO_ATUAL) : "") + (a.CONCLUIDA_EM ? "\nConcluída em: " + Atividades_br_(a.CONCLUIDA_EM) : "") + (a.PERCENTUAL !== "" ? "\nAndamento: " + a.PERCENTUAL + "%" : "") + (a.SISTEMA_ORIGEM === "COMMAND" ? "\nLançada no COMMAND" : "");
-        s.push('<g data-atv="' + Atividades_esc_(a.ID) + '" style="cursor:pointer"><title>' + Atividades_esc_(tip) + "</title>");
+          (a.PREVISAO_ATUAL !== a.PRAZO ? "\nPrevisão atual: " + Atividades_br_(a.PREVISAO_ATUAL) : "") + (a.CONCLUIDA_EM ? "\nConcluída em: " + Atividades_br_(a.CONCLUIDA_EM) : "") + (a.PERCENTUAL !== "" ? "\nAndamento: " + a.PERCENTUAL + "%" : "") + (a.SISTEMA_ORIGEM === "COMMAND" ? "\nLançada no COMMAND" : "") +
+          (a.OS_ID ? "\nO.S. " + (a.OS_NUMERO || "") + (a.OS_SITUACAO_NOME ? " · " + a.OS_SITUACAO_NOME : "") + "\nMuda pela O.S. (Assistência técnica); não conta atraso aqui" : "") +
+          (a._auvo ? "\nAtendimento do Auvo" + (a.TAREFA ? " nº " + a.TAREFA : "") + " (só consulta)" : "");
+        s.push(a._auvo ? '<g data-auvo="' + Atividades_esc_(a.ID) + '"><title>' + Atividades_esc_(tip) + "</title>" : '<g data-atv="' + Atividades_esc_(a.ID) + '" style="cursor:pointer"><title>' + Atividades_esc_(tip) + "</title>");
         var wBase = Math.max(8, xp - x0);
         s.push('<rect x="' + x0.toFixed(1) + '" y="' + by + '" width="' + wBase.toFixed(1) + '" height="' + bh + '" rx="3" fill="' + cor + '"' + (venc ? ' stroke="#e05252" stroke-width="2"' : "") + "/>");
         if (a.PERCENTUAL !== "" && Number(a.PERCENTUAL) > 0 && Atividades_aberta_(a)) s.push('<rect x="' + x0.toFixed(1) + '" y="' + (by + bh - 4) + '" width="' + (wBase * Number(a.PERCENTUAL) / 100).toFixed(1) + '" height="4" fill="rgba(255,255,255,.75)"/>');
         if (xprev > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xprev - xp).toFixed(1) + '" height="' + bh + '" fill="url(#atvListra)" stroke="#c2953f" stroke-width="1"/>');
         if (venc && xf > Math.max(xp, xprev) + 0.5) s.push('<rect x="' + Math.max(xp, xprev).toFixed(1) + '" y="' + by + '" width="' + (xf - Math.max(xp, xprev)).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.55)"/>');
-        if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM > a.PRAZO && xf > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xf - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.35)"/>');
+        if (a.SITUACAO === "Concluída" && !a.OS_ID && !a._auvo && a.CONCLUIDA_EM > a.PRAZO && xf > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xf - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.35)"/>');
         if (a.AGORA_DESDE && Atividades_aberta_(a)) s.push('<circle cx="' + (x0 + 6).toFixed(1) + '" cy="' + (by + bh / 2) + '" r="3.5" fill="#fff"/>');
         // texto por último, por cima das faixas: dentro com contorno escuro (legível também sobre a listra e o atraso); fora, na cor do texto
         if (el.texto && el.pos === "dentro") s.push('<text x="' + (x0 + (a.AGORA_DESDE ? 13 : 6)).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="#fff" stroke="rgba(15,23,42,.55)" stroke-width="3" stroke-linejoin="round" paint-order="stroke" pointer-events="none">' + Atividades_esc_(el.texto) + "</text>");

@@ -793,7 +793,8 @@ function Pend_fonteAtividades_(add, ctx) {
   if (!Pend_abaExiste_(abas.ATIVIDADES)) return;
   var agora = Atividades_agora_(), hoje = agora.slice(0, 10);
   Atividades_todas_().forEach(function (a) {
-    if (!Atividades_aberta_(a) || !a.PREVISAO_ATUAL || !a.RESPONSAVEL_ID) return;
+    // 26/10/2026: atendimento de O.S. (atividade criada pela Assistência) é cobrado pela O.S., não aqui
+    if (!Atividades_aberta_(a) || !a.PREVISAO_ATUAL || !a.RESPONSAVEL_ID || (typeof Atividades_daOS_ === 'function' && Atividades_daOS_(a))) return;
     var resp = Pend_s_(a.RESPONSAVEL_NOME) || 'responsável não identificado';
     var prev = Atividades_dataBr_(a.PREVISAO_ATUAL);
     if (a.PREVISAO_ATUAL < agora) {

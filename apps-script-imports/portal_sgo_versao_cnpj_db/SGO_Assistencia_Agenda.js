@@ -147,7 +147,7 @@ function AstA_agendar_(eu, d) {
     if (os.ATIVIDADE_ID) Ast_editarAtividade_(os.ATIVIDADE_ID, { prazo: prazoAtv, responsavelId: tec.id, motivo: motivo || 'Agendamento atualizado' });
     else {
       var osId = os.ID;
-      Ast_criarAtividade_({ responsavelId: tec.id, titulo: 'Atender ' + os.NUMERO + ' · ' + Ast_s_(c.CLIENTE_NOME), prazo: prazoAtv, prioridade: Ast_up_(c.PRIORIDADE) === 'P1' ? 'Urgente' : 'Alta',
+      Ast_criarAtividade_({ osId: osId, responsavelId: tec.id, titulo: 'Atender ' + os.NUMERO + ' · ' + Ast_s_(c.CLIENTE_NOME), prazo: prazoAtv, prioridade: Ast_up_(c.PRIORIDADE) === 'P1' ? 'Urgente' : 'Alta',
         descricao: tipo.nome + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO) + '\nProblema: ' + Ast_s_(c.SINTOMA).slice(0, 500) + '\nEndereço: ' + (Ast_endereco_(un, cli) || 'ver no cadastro') +
           '\n\nA atividade é concluída sozinha quando a O.S. fecha com a documentação completa.', clienteId: c.CLIENTE_ID, unidadeId: c.UNIDADE_ID,
         porQue: 'Chamado ' + c.NUMERO + ' (' + AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] + ').', onde: Ast_endereco_(un, cli), como: 'Pelo aplicativo do técnico (Meu dia) ou em Assistência técnica > Minhas O.S.' },

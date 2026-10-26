@@ -166,6 +166,9 @@ function Ast_appMeuDia(sessionId, payload) {
         prioridades: Object.keys(AST_PRIORIDADES).map(function (k) { return { codigo: k, nome: AST_PRIORIDADES[k] }; }),
         paradas: Object.keys(AST_PARADA).map(function (k) { return { codigo: k, nome: AST_PARADA[k] }; }) },
       tipos: AstApp_tipos_(),
+      // 26/10/2026 (agenda única, etapa 3): atividades internas do técnico (SGO_Assistencia_AppAtividades.js)
+      atividades: tecId === eu.id && typeof AstApp_atividades_ === 'function' ? AstApp_atividades_(eu) : [],
+      motivosAtraso: typeof AstApp_motivosAtraso_ === 'function' ? AstApp_motivosAtraso_() : [],
       os: lista.map(function (o) { var x = AstApp_os_(o, eu); x.ordem = ++ordem; return x; }) };
   });
 }
@@ -188,7 +191,7 @@ function Ast_appSincronizar(sessionId, payload) {
     if (eventos.length > AST_APP_MAX_EVENTOS) throw new Error('Não foi possível sincronizar: no máximo ' + AST_APP_MAX_EVENTOS + ' eventos por envio (vieram ' + eventos.length + '). Divida a fila em partes');
     var aparelho = Ast_texto_(JSON.stringify(p.aparelho || {}), 300);
     var recebidoEm = Ast_agora_();
-    var aceitos = [], recusados = [], tocadas = {}, linhas = [], enviosCliente = [];
+    var aceitos = [], recusados = [], tocadas = {}, linhas = [], enviosCliente = [], atvEventos = [];
     var ordenados = eventos.map(function (e, i) { return { e: e || {}, i: i, ms: Ast_ms_((e || {}).em) }; })
       .sort(function (a, b) { return ((a.ms === null ? Infinity : a.ms) - (b.ms === null ? Infinity : b.ms)) || (a.i - b.i); });
     Ast_comTrava_(function () {
@@ -202,6 +205,8 @@ function Ast_appSincronizar(sessionId, payload) {
         if (vistos[idLocal]) { aceitos.push({ idLocal: idLocal, tipo: tipo, osId: osId, duplicado: true }); return; }
         // 22/10/2026 (etapa 2): o envio do relatório ao cliente roda depois da trava (o Enviar documento tem a sua própria)
         if (tipo === 'ENVIAR_CLIENTE') { enviosCliente.push({ ev: ev, idLocal: idLocal, osId: osId }); return; }
+        // 26/10/2026: atividade interna (Minhas atividades no aplicativo): roda depois da trava, pela API das atividades
+        if (typeof AST_APP_ATV_TIPOS !== 'undefined' && AST_APP_ATV_TIPOS.indexOf(tipo) >= 0) { atvEventos.push({ ev: ev, idLocal: idLocal, tipo: tipo }); return; }
         var r;
         try { r = AstO_aplicarEvento_(eu, { tipo: tipo, osId: osId, em: ev.em, dados: ev.dados || {}, idLocal: idLocal }, ctx); }
         catch (e) { r = { ok: false, definitivo: false, motivo: String((e && e.message) || e).replace(/^Não foi possível [^:]+:\s*/, ''), corrigir: 'Tente sincronizar de novo; se continuar, fale com a gestão.' }; }
@@ -232,7 +237,23 @@ function Ast_appSincronizar(sessionId, payload) {
       try { SGO_DATA.insertMany(AST_ABAS.SYNC, linhasEnvio.map(function (l) { return Object.assign({ CRIADO_EM: recebidoEm }, l); })); delete AST_MEMO[AST_ABAS.SYNC]; } catch (eS) { console.error('Aplicativo do técnico, registro do envio: ' + ((eS && eS.message) || eS)); }
       Ast_memoLimpar_();
     }
+    if (atvEventos.length) {
+      var linhasAtv = [];
+      atvEventos.forEach(function (x) {
+        var r;
+        try { r = AstApp_aplicarAtividade_(sessionId, eu, x.tipo, x.ev.dados || {}); }
+        catch (eA) { r = { ok: false, definitivo: false, motivo: String((eA && eA.message) || eA).slice(0, 300), corrigir: 'O app tenta de novo sozinho.' }; }
+        var linhaA = { ID_LOCAL: x.idLocal, PEDIDO_ID: pedidoId, OS_ID: '', TIPO: x.tipo, TECNICO_ID: eu.id, EM_APARELHO: Ast_iso_(x.ev.em), RECEBIDO_EM: recebidoEm, APARELHO: aparelho };
+        if (r.ok) { aceitos.push({ idLocal: x.idLocal, tipo: x.tipo, osId: '', duplicado: false, nota: r.nota || '' }); linhasAtv.push(Object.assign(linhaA, { RESULTADO: 'ACEITO', MOTIVO: Ast_texto_(r.nota, 300) })); }
+        else {
+          recusados.push({ idLocal: x.idLocal, tipo: x.tipo, osId: '', definitivo: !!r.definitivo, motivo: r.motivo, corrigir: r.corrigir || '' });
+          if (r.definitivo) linhasAtv.push(Object.assign(linhaA, { RESULTADO: 'RECUSADO', MOTIVO: Ast_texto_(r.motivo, 300) }));
+        }
+      });
+      try { if (linhasAtv.length) { SGO_DATA.insertMany(AST_ABAS.SYNC, linhasAtv.map(function (l) { return Object.assign({ CRIADO_EM: recebidoEm }, l); })); delete AST_MEMO[AST_ABAS.SYNC]; } } catch (eS2) { console.error('Aplicativo do técnico, registro das atividades: ' + ((eS2 && eS2.message) || eS2)); }
+    }
     return { pedidoId: pedidoId, recebidoEm: recebidoEm, aceitos: aceitos, recusados: recusados,
+      atividades: atvEventos.length && typeof AstApp_atividades_ === 'function' ? AstApp_atividades_(eu) : undefined,
       os: Object.keys(tocadas).map(function (id) { return Ast_porId_(AST_ABAS.OS, id); }).filter(Boolean).filter(function (o) { return eu.gestao || Ast_s_(o.TECNICO_ID) === eu.id; }).map(function (o) { return AstApp_resumoOs_(o, eu); }) };
   });
 }
@@ -565,7 +586,7 @@ function Ast_appAbrirOS(sessionId, payload) {
       c = AstC_mudar_(eu, c, 'AGENDADO', { TECNICO_ID: eu.id, TECNICO_NOME: eu.nome, AGENDADO_PARA: hora, DURACAO_MIN: dur, TIPO_CODIGO: tipo.codigo, OS_ID: os.ID, OS_NUMERO: os.NUMERO,
         PROXIMA_ACAO: 'Atendimento em campo com ' + eu.nome + ' (O.S. ' + os.NUMERO + ', aberta em campo)' }, 'AGENDADO', eu.nome + ' · ' + Ast_br_(hora) + ' · aberta em campo');
       var osId = os.ID;
-      Ast_criarAtividade_({ responsavelId: eu.id, titulo: 'Atender ' + os.NUMERO + ' · ' + Ast_s_(c.CLIENTE_NOME), prazo: Ast_agora_(Ast_ms_(hora) + dur * 60000).slice(0, 16), prioridade: Ast_up_(c.PRIORIDADE) === 'P1' ? 'Urgente' : 'Alta',
+      Ast_criarAtividade_({ osId: osId, responsavelId: eu.id, titulo: 'Atender ' + os.NUMERO + ' · ' + Ast_s_(c.CLIENTE_NOME), prazo: Ast_agora_(Ast_ms_(hora) + dur * 60000).slice(0, 16), prioridade: Ast_up_(c.PRIORIDADE) === 'P1' ? 'Urgente' : 'Alta',
         descricao: tipo.nome + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO) + '\nProblema: ' + Ast_s_(c.SINTOMA).slice(0, 500) + '\nAberta em campo pelo técnico, fora da agenda.\n\nA atividade é concluída sozinha quando a O.S. fecha com a documentação completa.',
         clienteId: c.CLIENTE_ID, unidadeId: c.UNIDADE_ID, porQue: 'Chamado ' + c.NUMERO + ' (' + AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] + '), aberto em campo.', onde: Ast_endereco_(un, cli), como: 'Pelo aplicativo do técnico (Meu dia).' },
         function (idAtv) { Ast_atualizar_(AST_ABAS.OS, osId, { ATIVIDADE_ID: idAtv }); });

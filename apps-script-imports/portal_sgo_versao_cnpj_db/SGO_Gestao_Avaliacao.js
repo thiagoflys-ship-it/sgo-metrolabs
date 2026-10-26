@@ -475,7 +475,8 @@ function Ges_relatorioAtividades_(comp, quem) {
   var pessoa = function (id) { var u = us[id]; return porPessoa[id] = porPessoa[id] || { nome: u ? u.nome : 'pessoa não identificada', area: u ? u.areaNome : '', comPrazo: 0, noPrazo: 0, comAtraso: 0, abertasAtrasadas: 0, justificativas: 0 }; };
   todas.forEach(function (a) {
     if (Ges_s_(a.CRIADO_EM).slice(0, 7) === comp || Ges_dia_(a.CRIADO_EM).slice(0, 7) === comp) lancadas++;
-    if (a.SITUACAO === 'Cancelada' || !a.PRAZO || !a.RESPONSAVEL_ID) return;
+    // 26/10/2026: atendimento de O.S. não conta no indicador de atividades (tem prazo e indicador próprios na Assistência)
+    if (a.SITUACAO === 'Cancelada' || !a.PRAZO || !a.RESPONSAVEL_ID || (typeof Atividades_daOS_ === 'function' && Atividades_daOS_(a))) return;
     var p = a.PRAZO.slice(0, 10);
     if (p < ini || p > fim) return;
     var x = pessoa(a.RESPONSAVEL_ID);

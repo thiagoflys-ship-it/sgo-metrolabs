@@ -313,6 +313,14 @@ function SGO_ajudaTelas_Principal_() {
       ],
       passos: [
         {
+          titulo: "Atendimento de O.S. (selo azul \"O.S.\")",
+          itens: [
+            "A atividade \"Atender OS-...\" é o seu atendimento de uma O.S. da Assistência técnica. Ela muda sozinha pela O.S.: não dá para concluir, editar ou justificar por aqui.",
+            "Execute pelo aplicativo do técnico (Meu dia) ou em Assistência técnica > Minhas O.S. Quando a O.S. fecha, a atividade é concluída sozinha.",
+            "Ela não conta atraso em Minhas atividades. Você pode comentar normalmente."
+          ]
+        },
+        {
           titulo: "Lançar uma atividade",
           itens: [
             "Toque em \"Nova atividade\".",
@@ -522,6 +530,30 @@ function SGO_ajudaTelas_Principal_() {
             "No bloco \"Justificativas recentes\" (para a gestão) ou \"Justificativas das suas atividades\" (para os demais), leia os motivos de atraso e as novas previsões.",
             "Toque no título de uma atividade para abrir o detalhe.",
             "Toque em \"Atualizar\" para buscar os dados agora."
+          ]
+        },
+        {
+          titulo: "Atendimento de O.S. e do Auvo (agenda única, 26/10/2026)",
+          itens: [
+            "Toda O.S. agendada na Assistência técnica cria sozinha a atividade do técnico (\"Atender OS-...\"), com o selo azul \"O.S.\" e a situação da O.S.",
+            "No Gantt, o atendimento aparece em azul, no horário agendado da O.S. Os atendimentos do Auvo aparecem em cinza, só para consulta.",
+            "Quem manda é a O.S.: reagendar, encerrar ou cancelar a O.S. muda a atividade sozinha. O.S. cancelada sai da agenda.",
+            "A atividade da O.S. não conta atraso nem entra nos indicadores de atividades: o prazo do cliente é acompanhado na Assistência técnica.",
+            "No Kanban o cartão da O.S. é só para consulta: não dá para arrastar. Abra o detalhe e toque em \"Abrir a O.S.\" para ir à Assistência técnica.",
+            "Para ver a agenda de uma pessoa (atividades e O.S. juntas), escolha a pessoa no filtro e o Gantt por colaborador."
+          ]
+        },
+        {
+          titulo: "Abrir serviço técnico pela Nova atividade",
+          itens: [
+            "Só para quem agenda na Assistência técnica (gestão da área Técnica, Diretoria e Administrador). Para os demais a caixa aparece apagada, com o motivo.",
+            "Em \"Nova atividade\", escreva o título e a descrição do serviço e marque \"É serviço técnico em cliente\".",
+            "Escolha o cliente e a unidade. Depois escolha o técnico, o tipo de serviço, a data e a hora, a duração e o equipamento.",
+            "Marque o preparo (ferramentas, instrumentos, acesso e documentação), as peças (ou escreva por que não precisa) e a avaliação de risco.",
+            "Toque em \"Salvar atividade\". O sistema abre o chamado, faz a triagem como visita planejada e agenda a O.S. A atividade do técnico nasce sozinha.",
+            "Se o equipamento já tem chamado aberto, a tela pergunta se é um deles. Se for outro serviço, marque \"É outro serviço\" e salve de novo.",
+            "Se o técnico já tem compromisso no horário, a tela avisa. Escolha outro horário, ou marque \"Agendar mesmo assim\" e escreva o motivo.",
+            "Chamado que veio do cliente continua pela triagem da Assistência técnica. Esta opção é para preventiva, retorno ou visita que a empresa inicia."
           ]
         },
         {

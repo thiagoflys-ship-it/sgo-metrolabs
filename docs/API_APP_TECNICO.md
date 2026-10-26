@@ -279,3 +279,12 @@ resumo da sessão).
 - 21/10/2026 (ensaio integrado com o aplicativo): `tipo.exige.relatoCampos` em cada O.S. do `Ast_appMeuDia`: os campos do
   `RELATO` que o servidor exige para encerrar (`servicoRealizado` = relato ou serviço realizado com 10 letras ou mais;
   `condicaoEncontrada` e `testeFuncional` com 3 ou mais). Campo novo, só acrescentado; o aplicativo antigo continua valendo.
+
+## Minhas atividades (26/10/2026)
+
+- `Ast_appMeuDia` devolve também `atividades` (só do próprio técnico; vazio quando a gestão consulta outro técnico) e `motivosAtraso`. Cada atividade: `{ id, titulo, descricao, prioridade, situacao, prazo, prazoOriginal, atrasada, venceHoje, cliente, modulo, lancadaPor, justificativas, motivoAguardando, versao }`. Fica de fora o atendimento de O.S. (é a própria O.S.).
+- Eventos novos no `Ast_appSincronizar` (no lote, `osId` = `"ATV:<id>"`, idempotentes pelo `idLocal`):
+  - `ATV_SITUACAO` `{ atividadeId, situacao: "Em andamento"|"Aguardando"|"Concluída", observacao, motivo, versao }`
+  - `ATV_JUSTIFICAR` `{ atividadeId, motivo, categoria, novaPrevisao, versao }`
+  - `ATV_COMENTAR` `{ atividadeId, texto }`
+- Aplicados pela mesma API da tela (Atividades_api*), com a sessão do técnico. Se outra pessoa mudou a atividade depois da `versao` (ATUALIZADO_EM visto no aparelho), situação e justificativa são recusadas em definitivo com o motivo; comentário sempre entra. A resposta traz `atividades` atualizadas quando houve evento de atividade.
