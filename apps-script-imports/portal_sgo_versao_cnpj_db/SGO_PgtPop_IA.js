@@ -32,8 +32,12 @@ var PGTPOPIA_TOKENS = 16384; // o POP com o raciocínio (thinking) ligado podia 
 // reportou o PGT "muito resumido", e o teto de tokens de uma única
 // chamada dividido por 28 seções matematicamente força texto raso.
 // Cada bloco cobre só 3-6 seções, então ganha bem mais espaço cada.
-var PGTPOPIA_TOKENS_PGT = 16384;
+// (26/10/2026) 32.768: o bloco 1 (glossário de 40-50 termos + 3 seções longas) com o
+// raciocínio ligado chegava perto de 16.384 e voltava cortado.
+var PGTPOPIA_TOKENS_PGT = 32768;
 var PGTPOPIA_MODELOS_FALLBACK = ["gemini-2.5-flash", "gemini-2.0-flash"];
+// Teto de saída de cada modelo: pedir acima disso faz a API recusar a chamada.
+var PGTPOPIA_TETO_MODELO = { "gemini-2.0-flash": 8192 };
 var PGTPOPIA_MAX_TENTATIVAS = 3;
 var PGTPOPIA_DELAYS_MS = [800, 1600];
 
@@ -136,7 +140,7 @@ function PgtPopIA_montarInstrucaoFormato_(temImagens, qtdImagens) {
   return linhas.join("\n");
 }
 
-function PgtPopIA_extrair_(texto, temImagens, qtdImagens) {
+function PgtPopIA_extrair_(texto, temImagens, qtdImagens, tituloPadrao) {
   var limpo = String(texto || "")
     .replace(/\r\n/g, "\n")
     .replace(/^```[a-z]*\s*/i, "")
@@ -167,6 +171,21 @@ function PgtPopIA_extrair_(texto, temImagens, qtdImagens) {
 
   var titulo = acharBloco(PGTPOPIA_MARC_TITULO);
   var corpo = acharBloco(PGTPOPIA_MARC_CORPO);
+  // (26/10/2026) A IA às vezes esquece a marca do título ou do corpo e manda o texto
+  // com as seções certas. Vale o texto quando há seções "## ... ##" e o título vem do
+  // sistema (o PGT nem usa o título da IA; o POP usa o nome escolhido).
+  if (!corpo && /^##[^#\n]+##[ \t]*$/m.test(limpo)) {
+    var semMarcas = limpo; // o corpo começa na primeira seção; o título, se veio, fica antes dela
+    var idxPrimeira = semMarcas.search(/^##[^#\n]+##[ \t]*$/m);
+    var idxCorte = semMarcas.length;
+    todos.forEach(function (m) {
+      if (m === PGTPOPIA_MARC_TITULO || m === PGTPOPIA_MARC_CORPO) return;
+      var i = semMarcas.indexOf(m, idxPrimeira);
+      if (i !== -1 && i < idxCorte) idxCorte = i;
+    });
+    corpo = semMarcas.slice(idxPrimeira, idxCorte).trim();
+  }
+  if (!titulo && corpo && tituloPadrao) titulo = tituloPadrao;
   if (!titulo || !corpo) {
     throw new Error("A IA retornou o documento incompleto (título ou corpo ausente). Provável corte por limite de tokens — tente gerar novamente.");
   }
@@ -253,7 +272,8 @@ function PgtPop_gerarTextoIA_(tipo, hospital, roteiro, pop, imagens) {
     parts.push({ inline_data: { mime_type: img.mimeType || 'image/jpeg', data: img.base64 } });
   });
 
-  var resultadoPop = PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS, temImagens, imagens.length, imagens);
+  var tituloPadrao = tipo === 'PGT' ? "Plano de Gerenciamento de Tecnologias em Saúde (PGTS)" : ("Procedimento Operacional Padrão — " + pop.nome);
+  var resultadoPop = PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS, temImagens, imagens.length, imagens, tituloPadrao);
   // (2026-10-16) Mesma rede de segurança contra markdown residual que o PGT
   // já usa (PgtPopIA_removerMarkdownResidual_) — o POP não tinha.
   resultadoPop.textoGerado = PgtPopIA_removerMarkdownResidual_(resultadoPop.textoGerado);
@@ -267,7 +287,7 @@ function PgtPop_gerarTextoIA_(tipo, hospital, roteiro, pop, imagens) {
  * mesmo formato de sempre ou lança exceção com o erro de todos os
  * modelos tentados.
  */
-function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdImagens, imagens) {
+function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdImagens, imagens, tituloPadrao) {
   var errosPorModelo = [];
   for (var mi = 0; mi < PGTPOPIA_MODELOS_FALLBACK.length; mi++) {
     var modelo = PGTPOPIA_MODELOS_FALLBACK[mi];
@@ -283,7 +303,7 @@ function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdIma
         muteHttpExceptions: true,
         payload: JSON.stringify({
           contents: [{ role: "user", parts: parts }],
-          generationConfig: { temperature: 0.25, topP: 0.95, maxOutputTokens: tokens }
+          generationConfig: { temperature: 0.25, topP: 0.95, maxOutputTokens: Math.min(tokens, PGTPOPIA_TETO_MODELO[modelo] || tokens) }
         })
       });
 
@@ -293,11 +313,16 @@ function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdIma
 
       if (codigo === 200) {
         var cand = corpoResp.candidates && corpoResp.candidates[0];
-        if (cand && cand.finishReason === 'MAX_TOKENS') { erroModelo = 'resposta da IA incompleta'; break; }
+        if (cand && cand.finishReason === 'MAX_TOKENS') { erroModelo = 'resposta da IA cortada no limite de tamanho'; break; }
         var partesResp = cand && cand.content && cand.content.parts;
-        var texto = (partesResp || []).map(function (p) { return p && p.text ? p.text : ""; }).join("").trim();
-        if (!texto) { erroModelo = "resposta vazia"; break; }
-        var extraido = PgtPopIA_extrair_(texto, temImagens, qtdImagens);
+        // (26/10/2026) Só o texto da resposta: as partes de raciocínio (thought) não entram no documento.
+        var texto = (partesResp || []).map(function (p) { return p && p.text && !p.thought ? p.text : ""; }).join("").trim();
+        if (!texto) { erroModelo = "resposta vazia"; continue; }
+        // (26/10/2026) Resposta fora do formato tenta de novo (mesmo modelo, depois o reserva)
+        // em vez de parar a geração inteira na primeira vez.
+        var extraido;
+        try { extraido = PgtPopIA_extrair_(texto, temImagens, qtdImagens, tituloPadrao); }
+        catch (eFmt) { erroModelo = 'a IA devolveu o documento incompleto ou fora do formato'; continue; }
         var imagensComInterpretacao = (imagens || []).map(function (img, i) {
           return {
             base64: img.base64,
@@ -517,7 +542,7 @@ function PgtPop_gerarTextoPGT_(hospital, roteiro, imagens, popsRelacionados, aoI
       parts.push({ inline_data: { mime_type: img.mimeType || 'image/jpeg', data: img.base64 } });
     });
 
-    var resultado = PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS_PGT, temImagens, imagensDoBloco.length, imagensDoBloco);
+    var resultado = PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS_PGT, temImagens, imagensDoBloco.length, imagensDoBloco, tituloFinal);
 
     corposFinal.push(PgtPopIA_removerMarkdownResidual_(resultado.textoGerado));
     if (resultado.imagensComInterpretacao && resultado.imagensComInterpretacao.length) {
