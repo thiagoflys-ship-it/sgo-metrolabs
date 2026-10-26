@@ -32,7 +32,8 @@
 
 var AVS_FUSO = 'America/Sao_Paulo';
 var AVS_PASTA_NOME = 'SGO+ Avisos';
-var AVS_IMPORTANCIAS = ['Normal', 'Importante'];
+// 26/10/2026: 'Urgente' vai também pelo WhatsApp na hora (matriz S70: expediente, piloto, teto diário).
+var AVS_IMPORTANCIAS = ['Normal', 'Importante', 'Urgente'];
 var AVS_MAX_ANEXOS = 6;
 var AVS_MAX_BYTES_ARQUIVO = 10 * 1024 * 1024;
 var AVS_MAX_BYTES_TOTAL = 20 * 1024 * 1024;
@@ -301,7 +302,7 @@ function Avisos_apiPendentes(sessionId, payload) {
     var anexos = meus.length ? Avisos_anexosPorAviso_() : {};
     // Importantes primeiro, depois os mais antigos (ordem de leitura).
     meus.sort(function (a, b) {
-      if (a.IMPORTANCIA !== b.IMPORTANCIA) return a.IMPORTANCIA === 'Importante' ? -1 : 1;
+      if (a.IMPORTANCIA !== b.IMPORTANCIA) return ({ Urgente: 0, Importante: 1, Normal: 2 }[a.IMPORTANCIA] || 2) - ({ Urgente: 0, Importante: 1, Normal: 2 }[b.IMPORTANCIA] || 2);
       return a.PUBLICADO_EM < b.PUBLICADO_EM ? -1 : a.PUBLICADO_EM > b.PUBLICADO_EM ? 1 : 0;
     });
     if (p.exibir && meus.length) {
@@ -468,8 +469,8 @@ function Avisos_apiPublicar(sessionId, payload) {
 
 /** Texto do e-mail (aviso completo) e do WhatsApp (resumo + endereço). */
 function Avisos_mensagem_(a, ids, reenvio) {
-  var importante = a.IMPORTANCIA === 'Importante';
-  var titulo = (reenvio ? 'Lembrete de aviso' : (importante ? 'Aviso importante' : 'Novo aviso')) + ': ' + a.TITULO;
+  var importante = a.IMPORTANCIA === 'Importante', urgente = a.IMPORTANCIA === 'Urgente';
+  var titulo = (reenvio ? 'Lembrete de aviso' : (urgente ? 'Aviso urgente' : importante ? 'Aviso importante' : 'Novo aviso')) + ': ' + a.TITULO;
   var prazoTxt = a.PRAZO_CIENCIA ? 'Prazo para confirmar a leitura: ' + Avisos_dataBr_(a.PRAZO_CIENCIA) + '.' : '';
   var anexosTxt = a.QTD_ANEXOS ? 'Este aviso tem ' + a.QTD_ANEXOS + ' anexo(s); veja no SGO+.' : '';
   var texto = (reenvio ? 'Você ainda não confirmou a leitura deste aviso.\n\n' : '') +
@@ -486,6 +487,8 @@ function Avisos_mensagem_(a, ids, reenvio) {
   if (resumoMeta.length + extrasMeta.length > 600) resumoMeta = resumoMeta.slice(0, Math.max(0, 597 - extrasMeta.length)).replace(/\s+$/, '') + '...';
   var modelo = { nome: 'sgo_aviso_geral', parametros: [titulo, (resumoMeta + extrasMeta).trim(), '@LINK'] };
   // 21/10/2026 (matriz de avisos, S19/S20): sistema + e-mail na hora; sem WhatsApp avulso (a contagem vai no resumo do dia).
+  // 26/10/2026: o urgente (S70) também vai pelo WhatsApp na hora; a matriz confere expediente, piloto e teto
+  if (urgente && !reenvio) return { usuarios: ids, titulo: titulo, texto: texto, textoWhatsapp: whats, modelo: modelo, canais: ['sgo', 'email', 'whatsapp'], origem: 'AVISOS', refId: a.ID, evento: 'S70' };
   return { usuarios: ids, titulo: titulo, texto: texto, textoWhatsapp: whats, modelo: modelo, canais: ['sgo', 'email'], origem: 'AVISOS', refId: a.ID, evento: reenvio ? 'S20' : 'S19' };
 }
 

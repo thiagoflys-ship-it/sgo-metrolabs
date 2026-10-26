@@ -738,7 +738,7 @@ function SGO_ajudaTelas_Principal_() {
             "Toque em \"Novo aviso\".",
             "Escreva o \"Título\" (mínimo 3 letras).",
             "Escreva o \"Texto\". As quebras de linha são mantidas.",
-            "Escolha a \"Importância\": Normal ou Importante.",
+            "Escolha a \"Importância\": Normal, Importante ou Urgente. Urgente vai também pelo WhatsApp na hora (no expediente, para quem está liberado no piloto); use só quando a equipe precisa saber já.",
             "Escolha o \"Prazo para ciência\", se quiser.",
             "Em \"Público\", escolha \"Todos os usuários ativos\", \"Por perfil\" ou \"Pessoas escolhidas\" e marque quem recebe.",
             "Em \"Anexos\", escolha imagens ou documentos, se precisar. Toque em \"Tirar\" para retirar um arquivo da lista.",
@@ -760,7 +760,7 @@ function SGO_ajudaTelas_Principal_() {
         }
       ],
       cores: [
-        { nome: "Selo vermelho \"Importante\"", significado: "Aviso marcado como importante pela gestão." },
+        { nome: "Selo vermelho \"Importante\" ou \"Urgente\"", significado: "Aviso marcado como importante ou urgente pela gestão. O urgente também foi pelo WhatsApp." },
         { nome: "Selo cinza \"Normal\" na janela", significado: "Aviso de importância normal." },
         { nome: "Selo amarelo \"Aguardando sua ciência\"", significado: "Você ainda não confirmou a leitura." },
         { nome: "Selo verde \"Lido em\"", significado: "Você confirmou a leitura na data e hora mostradas." },

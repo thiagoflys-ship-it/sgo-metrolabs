@@ -215,17 +215,40 @@ function Atividades_comTrava_(fn) {
 // Aqui ficam só os destinatários a conferir; se a chamada falhar, nada é enviado agora
 // (o aviso já gravado sai na rotina de hora em hora, no expediente).
 var ATV_FILA_NTF = [];
+// 26/10/2026 (plano de avisos aprovado pelo dono): WhatsApp "na hora" dos eventos das atividades marcados na matriz de
+// avisos. Guardado durante a trava e enviado depois, como o e-mail; o notificador confere expediente, vínculo, piloto e teto.
+var ATV_FILA_WA = [];
 
 function Atividades_enviarFila_() {
   var fila = ATV_FILA_NTF;
   ATV_FILA_NTF = [];
+  Atividades_enviarWhatsFila_();
   if (!fila.length) return;
   try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(fila); }
   catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
 }
 
+function Atividades_enviarWhatsFila_() {
+  var fila = ATV_FILA_WA;
+  ATV_FILA_WA = [];
+  fila.forEach(function (w) {
+    try {
+      SGO_notificar_({ usuarios: [w.dest], canais: ['whatsapp'], evento: w.evento, origem: 'ATIVIDADES', refId: w.atividadeId + ':' + w.tipo + ':' + w.dia,
+        titulo: w.titulo, texto: w.texto });
+    } catch (e) { console.error('Atividades WhatsApp: ' + ((e && e.message) || e)); }
+  });
+}
+
+/** Evento da matriz de avisos de um aviso das atividades (pelo tipo e, no tipo NOVA, pelo título). */
+function Atividades_eventoMatriz_(tipo, titulo) {
+  var t = String(tipo || '').toUpperCase();
+  if (t === 'NOVA') return /devolvida/i.test(titulo) ? 'S09' : /passada para você/i.test(titulo) ? 'S02' : 'S01';
+  return { RESPONSAVEL: 'S03', REPLANEJAMENTO: 'S04', CONCLUIDA: 'S05', AGUARDANDO: 'S05', COMENTARIO: 'S06', JUSTIFICATIVA: 'S07', ATRASO: 'S08', VENCE_HOJE: 'S69' }[t] || '';
+}
+
 function Atividades_resposta_(fn) {
   ATV_FILA_NTF = [];
+  ATV_FILA_WA = [];
   try {
     var r = fn();
     var saida = JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
@@ -233,6 +256,7 @@ function Atividades_resposta_(fn) {
     return saida;
   } catch (e) {
     ATV_FILA_NTF = [];
+    ATV_FILA_WA = [];
     return { ok: false, message: String((e && e.message) || e) };
   }
 }
@@ -273,6 +297,32 @@ function Atividades_notificarAtrasos_() {
   return avisar.length;
 }
 
+/**
+ * 26/10/2026: "Atividade vence hoje" (matriz S69). Só quando a gestão liga o evento (e-mail ou WhatsApp) e só no
+ * expediente: um aviso por atividade no dia do prazo (previsão atual), para o responsável.
+ */
+function Atividades_notificarVenceHoje_() {
+  var regra = typeof SGO_avisoRegra_ === 'function' ? SGO_avisoRegra_('S69') : null;
+  if (!regra || (regra.email === 'NAO' && regra.whatsapp === 'NAO') || regra.decisao === 'HISTORICO') return 0;
+  var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(new Date()) : { dentro: true };
+  if (!ex.dentro) return 0;
+  var agora = Atividades_agora_(), hoje = agora.slice(0, 10), n = 0;
+  var ja = {};
+  SGO_DATA.getAll(Atividades_abas_().AVISOS).forEach(function (v) { if (String(v.TIPO) === 'VENCE_HOJE' && String(v.DATA || '').slice(0, 10) === hoje) ja[String(v.ATIVIDADE_ID)] = true; });
+  Atividades_comTrava_(function () {
+    Atividades_todas_().forEach(function (a) {
+      if (!Atividades_aberta_(a) || !a.RESPONSAVEL_ID || ja[a.ID]) return;
+      var prev = String(a.PREVISAO_ATUAL || a.PRAZO || '');
+      if (prev.slice(0, 10) !== hoje || prev <= agora) return;
+      Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'VENCE_HOJE', 'Atividade vence hoje: ' + a.TITULO,
+        'A atividade "' + a.TITULO + '" vence hoje às ' + prev.slice(11, 16) + '. Conclua, ou registre o andamento e, se precisar, a justificativa com a nova previsão.',
+        { email: regra.email !== 'NAO', lido: true });
+      n++;
+    });
+  });
+  return n;
+}
+
 function Atividades_verificarAtrasosTalvez_() {
   try {
     var cache = CacheService.getScriptCache();
@@ -303,8 +353,11 @@ function Atividades_rotinaAtrasos() {
   if (!SGO_execucaoInterna_()) return 0;
   Atividades_garantirAbas_();
   ATV_FILA_NTF = [];
+  ATV_FILA_WA = [];
   var n = Atividades_notificarAtrasos_();
+  try { Atividades_notificarVenceHoje_(); } catch (e) { console.error('Atividades vence hoje: ' + ((e && e.message) || e)); }
   ATV_FILA_NTF = [];
+  Atividades_enviarWhatsFila_();
   // e-mails guardados (inclusive os que chegaram fora do expediente) e o resumo diário do WhatsApp
   try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(null); } catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
   // 21/10/2026: resumo do dia ÚNICO (matriz de avisos, SGO_Avisos_Matriz.js) no lugar do resumo de atividades; a rotina da
@@ -479,6 +532,12 @@ function Atividades_avisar_(destinatarioId, atividadeId, tipo, titulo, texto, op
     EMAIL_SITUACAO: o.email ? 'PENDENTE' : '', EMAIL_EM: '', EMAIL_MOTIVO: ''
   });
   if (o.email && ATV_FILA_NTF.indexOf(String(destinatarioId)) < 0) ATV_FILA_NTF.push(String(destinatarioId));
+  // 26/10/2026: evento marcado "WhatsApp na hora" na matriz de avisos -> fila do WhatsApp (sai depois da trava)
+  var evento = o.evento || Atividades_eventoMatriz_(tipo, titulo);
+  var regra = evento && typeof SGO_avisoRegra_ === 'function' ? SGO_avisoRegra_(evento) : null;
+  if (regra && regra.whatsapp === 'HORA' && regra.decisao !== 'HISTORICO') {
+    ATV_FILA_WA.push({ dest: String(destinatarioId), atividadeId: atividadeId, tipo: tipo, evento: evento, dia: agora.slice(0, 10), titulo: Atividades_texto_(titulo, 180), texto: Atividades_texto_(texto, 1500) });
+  }
 }
 
 function Atividades_gravar_(id, dados) {

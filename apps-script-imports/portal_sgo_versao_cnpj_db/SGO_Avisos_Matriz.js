@@ -70,7 +70,9 @@ var MTZ_COLUNAS = {
   NTF_PREFERENCIAS: ['ID', 'USUARIO_ID', 'USUARIO_NOME', 'PREFS_JSON', 'ALTERADO_EM', 'CRIADO_EM']
 };
 var MTZ_TEXTO = { NTF_REGRAS: ['ALTERADO_EM'], NTF_RESUMO_FILA: ['QUANDO', 'ENVIADO_EM'], NTF_RESUMOS: ['DIA', 'AVALIADO_EM'], NTF_PREFERENCIAS: ['ALTERADO_EM'] };
-var MTZ_CFG_PADRAO = { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true };
+// 26/10/2026: whatsTetoDia = quantos WhatsApp "na hora" cada pessoa recebe por dia, somando os eventos marcados "na hora"
+// (as quatro exceções da Frota e a campainha, whatsHoraPermitido, ficam fora da conta; o ponto e o resumo do dia também).
+var MTZ_CFG_PADRAO = { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true, whatsTetoDia: 3 };
 var MTZ_FILA_VALIDADE_DIAS = 7;       // item guardado há mais que isto não sai mais (fica PULADO com o motivo)
 var MTZ_PONTO_JANELA_MIN = 10;        // o resumo do WhatsApp não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa
 var MTZ_MAX_ITENS_EMAIL = 30;
@@ -174,7 +176,10 @@ var MTZ_PADRAO = [
   // 22/10/2026: a campainha da fechadura abre um pedido de abertura de cerca de 60 a 90 s; o aviso só serve se chegar na hora.
   { cod: 'S67', modulo: 'automacao', evento: 'Automação predial: pedido de abertura pela campainha da Porta da Diretoria', origem: 'SGO_Automacao_Predial.js', publico: 'Quem pode destravar a porta (responsável pelo sistema e diretores autorizados)', email: 'NAO', whatsapp: 'HORA', limite: '1 por toque da campainha', obs: 'No sistema sempre; WhatsApp só para quem está liberado no piloto. O pedido vale cerca de 60 a 90 segundos.', area: 'ADMINISTRATIVO', whatsHoraPermitido: true },
   // 23/10/2026 (dono): abertura automática da porta quando tocam a campainha; quem pode destravar sabe na hora que a porta abriu
-  { cod: 'S68', modulo: 'automacao', evento: 'Automação predial: abertura automática da Porta da Diretoria (aberta sozinha, não abriu, opção ligada ou desligada)', origem: 'SGO_Automacao_Predial.js', publico: 'Quem pode destravar a porta (responsável pelo sistema e diretores autorizados)', email: 'NAO', whatsapp: 'HORA', limite: '1 por pedido da campainha; 1 por mudança da opção', obs: 'No sistema sempre; WhatsApp só para quem está liberado no piloto (ligar e desligar: só no sistema).', area: 'ADMINISTRATIVO', whatsHoraPermitido: true }
+  { cod: 'S68', modulo: 'automacao', evento: 'Automação predial: abertura automática da Porta da Diretoria (aberta sozinha, não abriu, opção ligada ou desligada)', origem: 'SGO_Automacao_Predial.js', publico: 'Quem pode destravar a porta (responsável pelo sistema e diretores autorizados)', email: 'NAO', whatsapp: 'HORA', limite: '1 por pedido da campainha; 1 por mudança da opção', obs: 'No sistema sempre; WhatsApp só para quem está liberado no piloto (ligar e desligar: só no sistema).', area: 'ADMINISTRATIVO', whatsHoraPermitido: true },
+  // 26/10/2026 (plano de avisos aprovado pelo dono): "vence hoje" (individual, desligado até a gestão marcar) e comunicado urgente.
+  { cod: 'S69', modulo: 'atividades', evento: 'Atividade vence hoje', origem: 'SGO_Atividades_Avisos.js', publico: 'Responsável', email: 'NAO', whatsapp: 'NAO', limite: '1 por atividade por dia', obs: 'Na primeira rodada do expediente do dia do prazo. Desligado por padrão: o resumo do dia já conta o que vence hoje. Marque "na hora" para avisar pelo WhatsApp.' },
+  { cod: 'S70', modulo: 'avisos', evento: 'Aviso urgente publicado pela gestão ou RH', origem: 'SGO_Avisos.js', publico: 'Público escolhido', email: 'HORA', whatsapp: 'HORA', limite: 'Teto de WhatsApp na hora por pessoa por dia', obs: 'Quem publica escolhe a importância "Urgente". Só no expediente; fora dele, no sistema e no e-mail.' }
 ];
 var MTZ_MODULOS_NOMES = { atividades: 'Minhas atividades', gestao: 'Caixa de decisões', avisos: 'Avisos com ciência', comercial: 'Comercial', frota: 'Frota', conduta: 'Programa de conduta', auvo: 'Integração Auvo', bate_papo: 'Bate-papo', piloto: 'Piloto do WhatsApp', automacao: 'Segurança e automação predial' };
 // Avisos do Comercial (COM_AVISOS.TIPO) que saem por e-mail na hora; os demais vão no resumo do dia (S32).
@@ -235,7 +240,7 @@ function Mtz_normRegra_(base) {
   r.decisao = MTZ_DECISOES.indexOf(Mtz_up_(r.decisao)) >= 0 ? Mtz_up_(r.decisao) : 'AVISA';
   r.email = MTZ_CANAIS_EMAIL.indexOf(Mtz_up_(r.email)) >= 0 ? Mtz_up_(r.email) : 'NAO';
   r.whatsapp = MTZ_CANAIS_WHATS.indexOf(Mtz_up_(r.whatsapp)) >= 0 ? Mtz_up_(r.whatsapp) : 'NAO';
-  if (r.whatsapp === 'HORA' && !r.whatsHoraPermitido) r.whatsapp = 'NAO';
+  // 26/10/2026: "na hora" vale para qualquer evento marcado pela gestão (antes só as exceções whatsHoraPermitido)
   if (r.decisao === 'HISTORICO') { r.email = 'NAO'; r.whatsapp = 'NAO'; }
   r.area = Mtz_up_(r.area);
   return r;
@@ -291,6 +296,8 @@ function Mtz_cfg_() {
   if (hv(g.horaWhats)) c.horaWhats = g.horaWhats;
   if (g.whatsResumo === false) c.whatsResumo = false;
   if (g.centralPorArea === false) c.centralPorArea = false;
+  var teto = Number(g.whatsTetoDia);
+  if (teto >= 1 && teto <= 10 && Math.round(teto) === teto) c.whatsTetoDia = teto;
   return c;
 }
 
@@ -532,16 +539,24 @@ function SGO_avisoMotivoWhatsapp_(c, ctx) {
       : (v ? 'Vínculo ' + v + ' fora da lista do WhatsApp (Atividades da equipe > Avisos e horários).' : 'Vínculo de trabalho não informado (Administração > Usuários > Vínculo): o aviso segue no sistema e por e-mail.');
   }
   if (resumoDia) return '';
-  if (!regra || regra.whatsapp !== 'HORA' || !regra.whatsHoraPermitido) {
+  if (!regra || regra.whatsapp !== 'HORA') {
     return 'Matriz de avisos: este aviso não vai pelo WhatsApp' + (evento ? ' (' + evento + ')' : '') + '. Fica no sistema e no e-mail' + (regra && regra.whatsapp === 'RESUMO' ? ', e entra na contagem do resumo do dia' : '') + '.';
   }
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(new Date()) : { dentro: true };
   if (!ex.dentro) return 'Fora do expediente (' + ex.motivo + '): WhatsApp na hora só no expediente' + (regra.foraExpediente === 'RESUMO' ? '; o aviso vai no resumo do dia seguinte' : '') + '.';
   var hoje = Mtz_hoje_(), uid = String(c.id || '');
-  var ja = Mtz_ler_(Notificar_aba_()).some(function (r) {
-    return Mtz_s_(r.USUARIO_ID) === uid && Mtz_up_(r.EVENTO) === evento && Mtz_s_(r.CANAL).toLowerCase() === 'whatsapp' && Mtz_up_(r.SITUACAO) === 'OK' && Mtz_iso_(r.QUANDO).slice(0, 10) === hoje;
+  var hojeOk = Mtz_ler_(Notificar_aba_()).filter(function (r) {
+    return Mtz_s_(r.USUARIO_ID) === uid && Mtz_s_(r.CANAL).toLowerCase() === 'whatsapp' && Mtz_up_(r.SITUACAO) === 'OK' && Mtz_iso_(r.QUANDO).slice(0, 10) === hoje;
   });
-  if (ja) return 'Limite da matriz de avisos: um WhatsApp por pessoa por dia nesta exceção (' + evento + ') já enviado hoje; o aviso segue no sistema.';
+  if (regra.whatsHoraPermitido) {
+    // exceções aprovadas (Frota, campainha): uma por pessoa por dia em cada uma, fora do teto
+    if (hojeOk.some(function (r) { return Mtz_up_(r.EVENTO) === evento; })) return 'Limite da matriz de avisos: um WhatsApp por pessoa por dia nesta exceção (' + evento + ') já enviado hoje; o aviso segue no sistema.';
+    return '';
+  }
+  // 26/10/2026: demais eventos marcados "na hora" somam no teto diário da pessoa
+  var regras = Mtz_regras_(), teto = Mtz_cfg_().whatsTetoDia;
+  var usados = hojeOk.filter(function (r) { var rg = regras[Mtz_up_(r.EVENTO)]; return rg && rg.whatsapp === 'HORA' && !rg.whatsHoraPermitido; }).length;
+  if (usados >= teto) return 'Limite da matriz de avisos: esta pessoa já recebeu hoje ' + usados + ' WhatsApp na hora (teto de ' + teto + ' por dia); o aviso segue no sistema e no e-mail.';
   return '';
 }
 
@@ -1098,7 +1113,7 @@ function SGO_AvisosMatriz_api(sessionId, acao, dados) {
       else {
         depois = { email: Mtz_up_(d.email), whatsapp: Mtz_up_(d.whatsapp), decisao: Mtz_up_(d.decisao) || 'AVISA', area: Mtz_up_(d.area) };
         if (MTZ_CANAIS_EMAIL.indexOf(depois.email) < 0 || MTZ_CANAIS_WHATS.indexOf(depois.whatsapp) < 0 || MTZ_DECISOES.indexOf(depois.decisao) < 0) throw new Error('Não foi possível salvar: escolha o canal do e-mail, o do WhatsApp e a decisão nas listas da tela e toque em Salvar de novo.');
-        if (depois.whatsapp === 'HORA' && !base.whatsHoraPermitido) throw new Error('Não foi possível salvar: WhatsApp na hora só vale para as exceções aprovadas pelo dono (partida não liberada, uso sem registro, devolução atrasada com reserva no mesmo dia, reserva de hoje liberada a outra pessoa e, depois do piloto, o aviso ao cliente). Para este evento use "Na contagem do WhatsApp do dia" ou "Sem WhatsApp".');
+        // 26/10/2026: "na hora" liberado para qualquer evento (teto diário em Mtz_cfg_().whatsTetoDia)
         if (base.obrigatorio && (depois.decisao === 'HISTORICO' || (base.email !== 'NAO' && depois.email === 'NAO') || (base.whatsapp === 'HORA' && depois.whatsapp !== 'HORA'))) {
           throw new Error('Não foi possível salvar: ' + cod + ' (' + base.evento + ') é obrigatório pela matriz aprovada pelo dono e não pode deixar de avisar. Você pode trocar entre "na hora" e "no resumo", mas não desligar. Se a regra precisa mudar, leve ao dono.');
         }
@@ -1115,7 +1130,12 @@ function SGO_AvisosMatriz_api(sessionId, acao, dados) {
       var exp = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : { ini: '08:00', fim: '17:30' };
       if (d.horaEmail < exp.ini || d.horaWhats < exp.ini || d.horaEmail >= exp.fim || d.horaWhats >= exp.fim) throw new Error('Não foi possível salvar: as horas do resumo precisam ficar dentro do expediente (' + exp.ini + ' a ' + exp.fim + '). O expediente fica em Atividades da equipe > Avisos e horários.');
       var antesCfg = Mtz_cfg_();
-      var novo = { horaEmail: d.horaEmail, horaWhats: d.horaWhats, whatsResumo: d.whatsResumo !== false, centralPorArea: d.centralPorArea !== false };
+      var novo = { horaEmail: d.horaEmail, horaWhats: d.horaWhats, whatsResumo: d.whatsResumo !== false, centralPorArea: d.centralPorArea !== false, whatsTetoDia: antesCfg.whatsTetoDia };
+      if (d.whatsTetoDia !== undefined && d.whatsTetoDia !== '') {
+        var tt = Number(d.whatsTetoDia);
+        if (!(tt >= 1 && tt <= 10 && Math.round(tt) === tt)) throw new Error('Não foi possível salvar: o teto de WhatsApp na hora por pessoa por dia precisa ser um número inteiro de 1 a 10.');
+        novo.whatsTetoDia = tt;
+      }
       Mtz_trava_(function () { Mtz_gravarMudanca_(eu, 'CONFIG', antesCfg, novo, mot); });
       return { ok: true, cfg: Mtz_cfg_(), message: 'Horários do resumo salvos. A mudança está na trilha.' };
     }

@@ -17,20 +17,19 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const c = amb.ctx;
   const r = c.SGO_AvisosMatriz_api('s_dir', 'carregar', {});
   assert.equal(r.ok, true, r.message);
-  assert.equal(r.regras.length, 68);
+  assert.equal(r.regras.length, 70); // 26/10/2026: S69 (vence hoje) e S70 (aviso urgente)
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');
   assert.equal(por.S55.decisao, 'HISTORICO');
-  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67', 'S68']); // S67 (22/10/2026): campainha da Porta da Diretoria; S68 (23/10/2026): abertura automática; pedidos do dono
+  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67', 'S68', 'S70']); // S70 (26/10/2026): aviso urgente; S67 (22/10/2026): campainha da Porta da Diretoria; S68 (23/10/2026): abertura automática; pedidos do dono
   assert.equal(por.S56.whatsapp, 'NAO', 'WhatsApp ao cliente só depois do piloto');
-  assert.deepEqual(JSON.parse(JSON.stringify(r.cfg)), { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true });
+  assert.deepEqual(JSON.parse(JSON.stringify(r.cfg)), { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true, whatsTetoDia: 3 });
   // só Administrador e Diretoria
   assert.match(c.SGO_AvisosMatriz_api('s_gt', 'carregar', {}).message, /Administrador e da Diretoria.*Meus avisos/);
   // sem motivo, recusa
   assert.match(c.SGO_AvisosMatriz_api('s_dir', 'salvarRegra', { cod: 'S33', email: 'HORA', whatsapp: 'NAO', decisao: 'AVISA', motivo: 'x' }).message, /motivo/);
-  // WhatsApp na hora fora das exceções, recusa com o caminho
-  assert.match(c.SGO_AvisosMatriz_api('s_dir', 'salvarRegra', { cod: 'S33', email: 'RESUMO', whatsapp: 'HORA', decisao: 'AVISA', motivo: 'teste de trava' }).message, /exceções aprovadas pelo dono/);
+  // 26/10/2026: WhatsApp na hora pode ser marcado em qualquer evento (teto diário; ver o teste do teto)
   // obrigatório não desliga
   assert.match(c.SGO_AvisosMatriz_api('s_dir', 'salvarRegra', { cod: 'S19', email: 'NAO', whatsapp: 'RESUMO', decisao: 'AVISA', motivo: 'teste de trava' }).message, /obrigatório/);
   assert.match(c.SGO_AvisosMatriz_api('s_dir', 'salvarRegra', { cod: 'S36', email: 'NAO', whatsapp: 'NAO', decisao: 'AVISA', motivo: 'teste de trava' }).message, /obrigatório/);
@@ -442,4 +441,55 @@ test('resumo do dia: item que está na Caixa de decisões não se repete em "Out
   assert.equal(m.texto.split('Aprovar a compra REQ-2026-0001').length - 1, 1, 'a compra aparece uma vez só');
   assert.match(m.texto, /OUTRAS PENDÊNCIAS SUAS[\s\S]*Oportunidade de teste sem próximo passo/, 'o que não está na Caixa continua');
   assert.equal(m.contagens.outros, 1);
+});
+
+// ------------------------------------------------------------------ 26/10/2026: WhatsApp na hora por evento, teto e aviso urgente
+test('na hora por evento (26/10/2026): marcado pela gestão, só no expediente, teto de 3 por pessoa por dia; exceções fora do teto; aviso urgente', () => {
+  const amb = ambiente({ agora: em(SEG('10:00')) });
+  const c = amb.ctx;
+  const wTec = () => amb.whats.filter((w) => w.corpo.to === '5562999990013').length;
+  // padrão: nova atividade não vai na hora
+  assert.equal(c.Atividades_apiCriar('s_gt', { titulo: 'Antes de marcar', prazo: '2026-10-20T18:00', responsavelId: 'u_tec' }).ok, true);
+  assert.equal(wTec(), 0);
+  // a gestão marca S01 (nova atividade) "na hora"
+  const s = c.SGO_AvisosMatriz_api('s_adm', 'salvarRegra', { cod: 'S01', email: 'RESUMO', whatsapp: 'HORA', decisao: 'AVISA', motivo: 'piloto de avisos individuais' });
+  assert.equal(s.ok, true, s.message);
+  for (let i = 1; i <= 4; i++) assert.equal(c.Atividades_apiCriar('s_gt', { titulo: 'Atividade ' + i, prazo: '2026-10-20T18:00', responsavelId: 'u_tec' }).ok, true);
+  assert.equal(wTec(), 3, 'teto de 3 por dia');
+  const pulada = amb.tabelas.NTF_ENVIOS.filter((l) => l.USUARIO_ID === 'u_tec' && l.CANAL === 'whatsapp' && l.SITUACAO === 'PULADO').pop();
+  assert.match(pulada.MOTIVO, /teto de 3 por dia/);
+  assert.equal(pulada.EVENTO, 'S01');
+  // exceção aprovada (Frota) não conta no teto
+  notificar(amb, { usuarios: ['u_tec'], canais: ['whatsapp'], origem: 'FROTA', evento: 'S36' });
+  assert.equal(wTec(), 4);
+  // teto configurável (1 a 10) com motivo
+  assert.match(c.SGO_AvisosMatriz_api('s_dir', 'salvarCfg', { horaEmail: '08:00', horaWhats: '09:30', whatsTetoDia: 20, motivo: 'teste do teto' }).message, /de 1 a 10/);
+  assert.equal(c.SGO_AvisosMatriz_api('s_dir', 'salvarCfg', { horaEmail: '08:00', horaWhats: '09:30', whatsTetoDia: 5, motivo: 'teste do teto' }).ok, true);
+  assert.equal(c.Mtz_cfg_().whatsTetoDia, 5);
+  assert.equal(c.Atividades_apiCriar('s_gt', { titulo: 'Depois do teto novo', prazo: '2026-10-20T18:00', responsavelId: 'u_tec' }).ok, true);
+  assert.equal(wTec(), 5);
+  // fora do expediente: não sai na hora
+  amb.mudar(SEG('20:00'));
+  assert.equal(c.Atividades_apiCriar('s_gt', { titulo: 'À noite', prazo: '2026-10-21T18:00', responsavelId: 'u_pj' }).ok, true);
+  const noite = amb.tabelas.NTF_ENVIOS.filter((l) => l.USUARIO_ID === 'u_pj' && l.CANAL === 'whatsapp').pop();
+  assert.equal(noite.SITUACAO, 'PULADO'); assert.match(noite.MOTIVO, /Fora do expediente/);
+  // aviso urgente: e-mail e WhatsApp na hora (S70), PJ incluído
+  amb.mudar(TER('10:00'));
+  const pub = c.Avisos_apiPublicar('s_dir', { titulo: 'Urgente de teste', texto: 'Texto urgente de teste.', importancia: 'Urgente', publicoTipo: 'PESSOAS', pessoas: ['u_tec', 'u_pj'] });
+  assert.equal(pub.ok, true, pub.message);
+  const urg = amb.tabelas.NTF_ENVIOS.filter((l) => l.EVENTO === 'S70' && l.CANAL === 'whatsapp').map((l) => l.USUARIO_ID + ':' + l.SITUACAO).sort();
+  assert.deepEqual(urg, ['u_pj:OK', 'u_tec:OK']);
+  assert.ok(amb.whats.some((w) => w.corpo.template && /urgente/i.test(JSON.stringify(w.corpo.template))));
+});
+
+test('atividade vence hoje (S69): desligada por padrão; ligada, um aviso por atividade no dia do prazo, no expediente', () => {
+  const amb = ambiente({ agora: em(SEG('09:00')) });
+  const c = amb.ctx;
+  assert.equal(c.Atividades_apiCriar('s_gt', { titulo: 'Entrega de hoje', prazo: '2026-10-19T17:00', responsavelId: 'u_tec' }).ok, true);
+  assert.equal(c.Atividades_notificarVenceHoje_(), 0, 'desligado por padrão');
+  assert.equal(c.SGO_AvisosMatriz_api('s_adm', 'salvarRegra', { cod: 'S69', email: 'NAO', whatsapp: 'HORA', decisao: 'AVISA', motivo: 'piloto do vence hoje' }).ok, true);
+  assert.equal(c.Atividades_notificarVenceHoje_(), 1);
+  c.Atividades_enviarWhatsFila_();
+  assert.equal(amb.whats.filter((w) => w.corpo.to === '5562999990013').length, 1);
+  assert.equal(c.Atividades_notificarVenceHoje_(), 0, 'uma vez por dia');
 });

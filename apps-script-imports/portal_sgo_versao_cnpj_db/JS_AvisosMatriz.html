@@ -90,11 +90,12 @@
     var cfg = d.cfg;
     var horarios = '<div class="mtz-bloco"><h3>Resumo do dia e filtro por área</h3>' +
       '<div class="mtz-linha" style="margin-bottom:8px"><span class="mtz-sit ok">E-mail de resumo: ' + esc(cfg.horaEmail) + '</span><span class="mtz-sit ' + (cfg.whatsResumo ? "ok" : "neutro") + '">WhatsApp de resumo: ' + (cfg.whatsResumo ? esc(cfg.horaWhats) : "desligado") + '</span>' +
-      '<span class="mtz-sit ' + (cfg.centralPorArea ? "ok" : "neutro") + '">Central por área: ' + (cfg.centralPorArea ? "ligada" : "desligada") + '</span><span class="mtz-sit neutro">Expediente: ' + esc(d.expediente.ini) + ' a ' + esc(d.expediente.fim) + '</span></div>' +
+      '<span class="mtz-sit ' + (cfg.centralPorArea ? "ok" : "neutro") + '">Central por área: ' + (cfg.centralPorArea ? "ligada" : "desligada") + '</span><span class="mtz-sit neutro">WhatsApp na hora: até ' + esc(cfg.whatsTetoDia || 3) + ' por pessoa por dia</span><span class="mtz-sit neutro">Expediente: ' + esc(d.expediente.ini) + ' a ' + esc(d.expediente.fim) + '</span></div>' +
       '<details><summary>Alterar horários</summary><div class="mtz-campos" style="margin-top:8px">' +
         '<label>Hora do e-mail de resumo<input type="time" id="mtzHoraEmail" value="' + esc(cfg.horaEmail) + '"></label>' +
-        '<label>Hora do WhatsApp de resumo<input type="time" id="mtzHoraWhats" value="' + esc(cfg.horaWhats) + '"></label></div>' +
-        '<label class="mtz-check"><input type="checkbox" id="mtzWhatsResumo"' + (cfg.whatsResumo ? " checked" : "") + '> Mandar o WhatsApp de resumo do dia (só CLT, só quem não abriu o sistema, só o piloto enquanto ele durar)</label>' +
+        '<label>Hora do WhatsApp de resumo<input type="time" id="mtzHoraWhats" value="' + esc(cfg.horaWhats) + '"></label>' +
+        '<label>WhatsApp na hora por pessoa por dia (1 a 10)<input type="number" id="mtzTeto" min="1" max="10" step="1" value="' + esc(cfg.whatsTetoDia || 3) + '"></label></div>' +
+        '<label class="mtz-check"><input type="checkbox" id="mtzWhatsResumo"' + (cfg.whatsResumo ? " checked" : "") + '> Mandar o WhatsApp de resumo do dia (CLT e PJ, só quem não abriu o sistema, só o piloto enquanto ele durar)</label>' +
         '<label class="mtz-check"><input type="checkbox" id="mtzCentralArea"' + (cfg.centralPorArea ? " checked" : "") + '> Central de pendências por área (o gestor vê o da sua área e o que é dele; a Diretoria vê tudo)</label>' +
         '<div class="mtz-campos"><label style="flex:1 1 260px">Motivo da mudança<input type="text" id="mtzCfgMotivo" placeholder="por exemplo: pedido do dono em reunião"></label>' +
         '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarCfg_()">Salvar horários</button></div><span id="mtzCfgMsg" class="mtz-q" role="status"></span>' +
@@ -142,7 +143,7 @@
       return Object.keys(rotulos).filter(function (k) { return !permitidos || permitidos.indexOf(k) >= 0 || k === valor; }).map(function (k) { return '<option value="' + k + '"' + (k === valor ? " selected" : "") + '>' + esc(rotulos[k]) + '</option>'; }).join("");
     };
     alvo.innerHTML = lista.map(function (r) {
-      var whatsPerm = r.whatsHoraPermitido ? null : ["NAO", "RESUMO"];
+      var whatsPerm = null; // 26/10/2026: "na hora" pode ser marcado em qualquer evento (teto diário por pessoa)
       return '<div class="mtz-regra" data-cod="' + esc(r.cod) + '"><div class="cab"><span class="cod">' + esc(r.cod) + '</span><b>' + esc(r.evento) + '</b>' +
         (r.obrigatorio ? ' <span class="mtz-sit neutro">Obrigatório</span>' : '') + (r.alterada ? ' <span class="mtz-sit alerta">Alterada</span>' : '') + (r.decisao === "HISTORICO" ? ' <span class="mtz-sit neutro">Vira histórico</span>' : '') + '</div>' +
         '<div class="mtz-q">' + esc(r.moduloNome) + ' · Quem recebe: ' + esc(r.publico) + (r.area ? ' (área ' + esc(r.area) + ')' : '') + ' · Limite: ' + esc(r.limite) + (r.obs ? ' · ' + esc(r.obs) : '') + ' · Origem: ' + esc(r.origem) + '</div>' +
@@ -170,7 +171,7 @@
   function AvisosMatriz_salvarCfg_() {
     var msg = document.getElementById("mtzCfgMsg");
     var dados = { horaEmail: document.getElementById("mtzHoraEmail").value, horaWhats: document.getElementById("mtzHoraWhats").value,
-      whatsResumo: document.getElementById("mtzWhatsResumo").checked, centralPorArea: document.getElementById("mtzCentralArea").checked, motivo: document.getElementById("mtzCfgMotivo").value };
+      whatsResumo: document.getElementById("mtzWhatsResumo").checked, whatsTetoDia: document.getElementById("mtzTeto").value, centralPorArea: document.getElementById("mtzCentralArea").checked, motivo: document.getElementById("mtzCfgMotivo").value };
     if (msg) msg.textContent = "Salvando...";
     Mtz_chamar_("SGO_AvisosMatriz_api", "salvarCfg", dados, function (r) {
       Mtz_chamar_("SGO_AvisosMatriz_api", "carregar", {}, function (r2) { MTZ.dados = r2; AvisosMatriz_desenhar_(); var m2 = document.getElementById("mtzCfgMsg"); if (m2) m2.textContent = r.message; }, function () {});

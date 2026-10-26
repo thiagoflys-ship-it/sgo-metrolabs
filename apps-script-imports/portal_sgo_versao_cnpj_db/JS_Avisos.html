@@ -224,7 +224,7 @@
         '<div class="atv-modal-cab"><div>' +
           '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px">Aviso da gestão' + (total > 1 ? " · " + (AVT.idx + 1) + " de " + total : "") + "</div>" +
           '<h3 id="avsTitulo">' + AvisosTela_esc_(a.TITULO) + "</h3></div>" +
-          '<span class="avs-selo ' + (a.IMPORTANCIA === "Importante" ? "importante" : "normal") + '">' + AvisosTela_esc_(a.IMPORTANCIA) + "</span></div>" +
+          '<span class="avs-selo ' + ((a.IMPORTANCIA === "Importante" || a.IMPORTANCIA === "Urgente") ? "importante" : "normal") + '">' + AvisosTela_esc_(a.IMPORTANCIA) + "</span></div>" +
         '<div class="atv-modal-corpo">' +
           '<div class="avs-meta">Publicado por ' + AvisosTela_esc_(a.PUBLICADO_POR_NOME || "gestão") + " em " + AvisosTela_br_(a.PUBLICADO_EM) +
             (a.PRAZO_CIENCIA ? ' · <strong style="color:' + (a.PRAZO_VENCIDO ? "var(--danger)" : "inherit") + '">Confirme a leitura até ' + AvisosTela_br_(a.PRAZO_CIENCIA) + (a.PRAZO_VENCIDO ? " (prazo vencido)" : "") + "</strong>" : "") + "</div>" +
@@ -315,7 +315,7 @@
     if (!itens.length) return '<div class="atv-vazio">Nenhum aviso para você por enquanto.</div>';
     return '<div class="avs-lista">' + itens.map(function (a, i) {
       var pend = !a.CIENTE_EM;
-      return '<div class="avs-card' + (pend ? " pendente" : "") + (a.IMPORTANCIA === "Importante" ? " importante" : "") + '">' +
+      return '<div class="avs-card' + (pend ? " pendente" : "") + ((a.IMPORTANCIA === "Importante" || a.IMPORTANCIA === "Urgente") ? " importante" : "") + '">' +
         '<div style="min-width:0;flex:1">' +
           '<div class="avs-card-tit">' + AvisosTela_esc_(a.TITULO) + "</div>" +
           '<div class="avs-card-txt">' + AvisosTela_esc_(a.TEXTO) + "</div>" +
@@ -324,7 +324,7 @@
         "</div>" +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
-            (a.IMPORTANCIA === "Importante" ? '<span class="avs-selo importante">Importante</span>' : "") +
+            ((a.IMPORTANCIA === "Importante" || a.IMPORTANCIA === "Urgente") ? '<span class="avs-selo importante">' + AvisosTela_esc_(a.IMPORTANCIA) + '</span>' : "") +
             (pend ? '<span class="avs-selo pendente">Aguardando sua ciência</span>' : '<span class="avs-selo lido">Lido em ' + AvisosTela_br_(a.CIENTE_EM) + "</span>") +
           "</div>" +
           '<button type="button" class="' + (pend ? "btn-primary" : "btn-secondary") + ' atv-mini" onclick="AvisosTela_abrirMeu_(' + i + ')">' + (pend ? "Ler e confirmar" : "Abrir") + "</button>" +
@@ -347,7 +347,7 @@
         var publico = a.PUBLICO_TIPO === "PERFIS" ? "Perfis: " + a.PUBLICO_PERFIS.split(",").join(", ") : a.PUBLICO_TIPO === "PESSOAS" ? "Pessoas escolhidas" : "Todos os usuários";
         return "<tr>" +
           '<td><div style="font-weight:700">' + AvisosTela_esc_(a.TITULO) + "</div>" +
-            '<div class="atv-sub">' + (a.IMPORTANCIA === "Importante" ? '<span class="avs-selo importante">Importante</span> ' : "") + (arq ? '<span class="avs-selo arquivado">Arquivado em ' + AvisosTela_br_(a.ARQUIVADO_EM) + "</span> " : "") + AvisosTela_esc_(publico) + (a.QTD_ANEXOS ? " · " + a.QTD_ANEXOS + " anexo(s)" : "") + "</div></td>" +
+            '<div class="atv-sub">' + ((a.IMPORTANCIA === "Importante" || a.IMPORTANCIA === "Urgente") ? '<span class="avs-selo importante">' + AvisosTela_esc_(a.IMPORTANCIA) + '</span> ' : "") + (arq ? '<span class="avs-selo arquivado">Arquivado em ' + AvisosTela_br_(a.ARQUIVADO_EM) + "</span> " : "") + AvisosTela_esc_(publico) + (a.QTD_ANEXOS ? " · " + a.QTD_ANEXOS + " anexo(s)" : "") + "</div></td>" +
           "<td>" + AvisosTela_br_(a.PUBLICADO_EM) + '<div class="atv-sub">' + AvisosTela_esc_(a.PUBLICADO_POR_NOME) + "</div>" + (a.QTD_REENVIOS ? '<div class="atv-sub">Reenviado ' + a.QTD_REENVIOS + "x (último " + AvisosTela_br_(a.ULTIMO_REENVIO_EM) + ")</div>" : "") + "</td>" +
           "<td>" + (a.PRAZO_CIENCIA ? AvisosTela_br_(a.PRAZO_CIENCIA) + (a.PRAZO_VENCIDO && faltam ? '<div class="atv-sub" style="color:var(--danger)">vencido, ' + faltam + " sem ler</div>" : "") : '<span class="atv-sub">sem prazo</span>') + "</td>" +
           '<td><strong>' + a.lidos + " de " + a.total + "</strong> leram" + '<div class="avs-prog"><div style="width:' + perc + '%"></div></div></td>' +
@@ -433,7 +433,7 @@
             '<div class="atv-campo"><label for="avsF_titulo">Título</label><input id="avsF_titulo" type="text" maxlength="160" placeholder="Assunto do aviso"></div>' +
             '<div class="atv-campo"><label for="avsF_texto">Texto</label><textarea id="avsF_texto" rows="7" maxlength="20000" placeholder="Mensagem completa. As quebras de linha são mantidas."></textarea></div>' +
             '<div class="atv-grade2">' +
-              '<div class="atv-campo"><label for="avsF_imp">Importância</label><select id="avsF_imp">' + res.importancias.map(function (i) { return '<option value="' + i + '">' + i + "</option>"; }).join("") + "</select></div>" +
+              '<div class="atv-campo"><label for="avsF_imp">Importância</label><select id="avsF_imp">' + res.importancias.map(function (i) { return '<option value="' + i + '">' + i + "</option>"; }).join("") + "</select><div class=\"atv-sub\">Urgente: além do sistema e do e-mail, vai pelo WhatsApp na hora, no expediente, para quem está liberado no piloto.</div></div>" +
               '<div class="atv-campo"><label for="avsF_prazo">Prazo para ciência (opcional)</label><input id="avsF_prazo" type="date" min="' + res.hoje + '"></div>' +
             "</div>" +
             '<div class="atv-campo"><label>Público</label><div class="avs-publico">' +

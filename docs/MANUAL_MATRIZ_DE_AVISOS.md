@@ -14,7 +14,7 @@ Define, para cada aviso que o sistema manda, quem recebe e por qual canal. Uma t
 | E-mail de resumo do dia | Um e-mail por pessoa com o que espera por ela: atividades, decisões (gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo | A partir das 08:00 do dia útil (ou 12:00, se a pessoa escolher), só se houver algo |
 | E-mail na hora | O que exige ciência (avisos), o que muda algo de hoje (reserva cancelada ou trocada, lembrete da reserva, cliente respondeu a proposta, pedido de apoio, atividade com prazo para hoje) | Na hora, no expediente; fora dele, sai agrupado na primeira rodada do expediente seguinte |
 | WhatsApp de resumo do dia | Só contagens: atividades atrasadas, para hoje e novas, decisões paradas, avisos para confirmar, mensagens não lidas | A partir das 09:30 do dia útil, só CLT e PJ, só se a pessoa ainda não abriu o sistema, só se há item para hoje, atrasado ou decisão parada; durante o piloto, só quem está na lista do piloto |
-| WhatsApp na hora | Só as quatro exceções da Frota | No expediente, só CLT e PJ, uma por pessoa por dia em cada exceção |
+| WhatsApp na hora | As quatro exceções da Frota, a campainha, o aviso urgente (S70) e todo evento que a gestão marcar "Na hora" na matriz (26/10/2026) | No expediente, só CLT e PJ; as exceções da Frota e a campainha, uma por pessoa por dia em cada uma; os demais eventos somam até 3 por pessoa por dia (teto ajustável em Alterar horários, de 1 a 10) |
 
 As quatro exceções do WhatsApp na hora: partida não liberada pelo rastreador (gestor da Frota); veículo em uso sem registro, só no expediente (gestor da Frota; fora do expediente vai no resumo do dia seguinte); devolução atrasada com reserva no mesmo dia (quem está com o veículo); reserva de hoje liberada a outra pessoa (quem reservou).
 
@@ -23,7 +23,8 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 ## 3. Regras gerais que valem para todo envio
 
 - WhatsApp para vínculo CLT e PJ (decisão de 26/10/2026; Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). Os lembretes do ponto vão só para CLT. Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo.
-- WhatsApp avulso acabou: fora do resumo do dia e das quatro exceções, o envio fica PULADO em Notificações enviadas, com o motivo.
+- WhatsApp na hora só nos eventos marcados "Na hora" na matriz (desde 26/10/2026, qualquer evento pode ser marcado pelo Administrador ou pela Diretoria, com motivo). Fora deles e do resumo do dia, o envio fica PULADO em Notificações enviadas, com o motivo. Passou do teto do dia, o aviso fica no sistema e no e-mail.
+- Eventos novos (26/10/2026): S69 "Atividade vence hoje" (desligado até a gestão marcar; sai uma vez por atividade, na primeira rodada do expediente do dia do prazo) e S70 "Aviso urgente" (quem publica um aviso escolhe a importância Urgente: vai também pelo WhatsApp na hora).
 - Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).
 - Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).
 - Gestor da área no lugar de "toda a gestão": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.
