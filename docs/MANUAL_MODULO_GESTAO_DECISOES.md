@@ -90,6 +90,10 @@ Relatório A4 "Desempenho da gestão" (todos, para a Diretoria; ou só o do gest
 | Atividade sem responsável | atividade aberta com responsável inativo, apagado ou vazio volta para quem lançou (ou para o gestor da área, ou para a Diretoria), com histórico e aviso |
 | Relatórios do mês | gerados no primeiro dia útil do mês e enviados à Diretoria |
 | Copiloto da Frota | a lista das sugestões de alta gravidade sem decisão é atualizada a cada 3 horas para a caixa |
+| Escalonamento por prioridade (26/10/2026) | atividade atrasada sobe em horas corridas depois da previsão vencer: nível 1 o responsável, nível 2 o gestor da área (e quem lançou, se for da gestão; sem ninguém, a Diretoria), nível 3 a Diretoria. Padrão: Urgente 15 min, 1 h e 4 h; Alta 1, 4 e 24 h; Normal 4, 24 e 72 h; Baixa 24, 72 e 168 h. Uma vez por nível, atividade e previsão; só no expediente (o que passou fora dele sai no começo do expediente, só o nível mais alto); uma mensagem por pessoa por rodada; eventos S71, S72 e S73 da matriz de avisos (e-mail na hora; WhatsApp só se marcado). Fica no histórico da atividade e em GES_ENVIOS (SEDNA_ESCALA) |
+| Resumo do dia da gestão (26/10/2026) | a partir das 08:30, uma vez por dia, no Início de cada pessoa da gestão: atrasadas e que vencem hoje da equipe (áreas em que é responsável e o que lançou; Diretoria vê tudo), por onde começar, as dela e a central de pendências. Texto pelas regras; com a chave da IA, a IA reescreve (até 3 pessoas por rodada) e só vale se passar no verificador (números e nomes só dos dados, sem formatação nem menção a IA) |
+
+Os prazos do escalonamento, a hora do resumo e a IA ficam em Regras e responsáveis (Administrador e Diretoria). Código: SGO_Sedna.js, chamado pela rotina de 15 minutos.
 
 ## 8. Rotina
 

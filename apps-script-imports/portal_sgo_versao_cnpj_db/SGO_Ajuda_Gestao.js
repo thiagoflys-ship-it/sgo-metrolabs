@@ -61,6 +61,19 @@ function SGO_ajudaTelas_Gestao_() {
           'Manutenção preventiva prevista pela data ou pela quilometragem vira atividade do gestor da Frota em Minhas atividades (entra na agenda e no Gantt), uma por veículo e tipo a cada 60 dias.',
           'Atividade aberta com responsável inativo ou sem responsável volta para quem lançou (ou para o gestor da área), com histórico e aviso.',
           'Relatórios do mês (Desempenho da gestão, Frota, Programa de conduta e Atividades da equipe) são gerados no primeiro dia útil do mês e enviados à Diretoria.'
+        ] },
+        { titulo: 'Atividade atrasada: escalonamento por prioridade (26/10/2026)', paragrafos: [
+          'Além da escada da caixa (contada em dias úteis), a atividade atrasada sobe pela prioridade, em horas corridas depois da previsão vencer. Padrão: Urgente com 15 minutos avisa o responsável, com 1 hora o gestor da área e com 4 horas a Diretoria; Alta com 1, 4 e 24 horas; Normal com 4, 24 e 72 horas; Baixa com 24, 72 e 168 horas.',
+          'Gestor da área: os responsáveis da área da pessoa e da área do módulo, e quem lançou a atividade se for da gestão. Sem ninguém, vai à Diretoria. Ninguém recebe como gestor a cobrança da própria atividade. Atividade restrita (Programa de conduta) só vai a quem vê as restritas.',
+          'Cada nível avisa uma vez por atividade e por previsão. Só no horário de trabalho: o que venceu à noite ou no fim de semana sai no começo do expediente, já no nível mais alto alcançado. Nova previsão (justificativa de atraso) recomeça a contagem.',
+          'Cada pessoa recebe uma mensagem por rodada com tudo o que subiu para ela, no sistema e por e-mail. O WhatsApp só sai se a gestão marcar "na hora" os eventos S71, S72 e S73 em Administração > Matriz de avisos. O escalonamento fica no histórico da atividade ("Cobrança escalada pela prioridade").',
+          'Os prazos são definidos pelo Administrador ou pela Diretoria em "Regras e responsáveis".'
+        ] },
+        { titulo: 'Resumo do dia da gestão (26/10/2026)', paragrafos: [
+          'Todo dia útil, a partir das 08:30, cada pessoa da gestão (Administrador, Diretoria, Gestor, RH e Financeiro) vê no Início um resumo: atividades atrasadas e que vencem hoje da equipe dela, por onde começar (as mais urgentes e mais atrasadas), as atividades dela e a central de pendências.',
+          'A equipe é a das áreas em que a pessoa é responsável, mais as atividades que ela lançou. A Diretoria vê a empresa toda.',
+          'O texto sai pelas regras do sistema. Com a chave da IA cadastrada (Administração > Chaves e senhas), a IA reescreve o texto; ele só vale se passar na conferência (números e nomes só dos dados do sistema, sem formatação). Se não passar, vale o texto das regras.',
+          'A hora e a IA são definidas em "Regras e responsáveis".'
         ] }
       ]
     },
@@ -69,9 +82,13 @@ function SGO_ajudaTelas_Gestao_() {
       paraQueServe: 'Define quem é o gestor responsável por cada área, a área usada por cada módulo, a escada de cobrança e as automações.',
       passos: [
         { titulo: 'Escolher os responsáveis', itens: ['Em "Gestor responsável por área", marque uma ou mais pessoas em cada área.', 'Deixe em branco a área que a Diretoria acompanha diretamente.', 'Toque em "Salvar regras".'] },
-        { titulo: 'Ajustar a escada', itens: ['Escolha a hora do e-mail diário (dentro do horário de trabalho).', 'Escolha depois de quantos dias úteis parado o item entra no WhatsApp e vai para a Diretoria.', 'Toque em "Salvar regras".'] }
+        { titulo: 'Ajustar a escada', itens: ['Escolha a hora do e-mail diário (dentro do horário de trabalho).', 'Escolha depois de quantos dias úteis parado o item entra no WhatsApp e vai para a Diretoria.', 'Toque em "Salvar regras".'] },
+        { titulo: 'Ajustar o escalonamento por prioridade', itens: ['Vá à caixa "Atividade atrasada: escalonamento por prioridade".', 'Deixe marcado "Escalonar as atividades atrasadas" (desmarque para parar).', 'Em cada prioridade, escreva as horas para o responsável, o gestor da área e a Diretoria. Use números crescentes, de 0,25 (15 minutos) a 720.', 'Toque em "Salvar regras".'] },
+        { titulo: 'Ajustar o resumo do dia', itens: ['Na mesma caixa, em "Resumo do dia da gestão", marque ou desmarque "Mostrar o resumo do dia no Início".', 'Escolha a hora (dentro do horário de trabalho).', 'Marque ou desmarque o texto reescrito pela IA.', 'Toque em "Salvar regras".'] }
       ],
       problemas: [
+        { situacao: 'Aparece "as horas do escalonamento da prioridade ... precisam ser três números crescentes".', oQueFazer: 'Em cada linha, a hora do gestor da área tem de ser maior que a do responsável, e a da Diretoria maior que a do gestor, entre 0,25 e 720. Corrija e salve de novo.' },
+        { situacao: 'Aparece "a hora do resumo do dia precisa ficar dentro do horário de trabalho".', oQueFazer: 'Escolha uma hora entre o início e o fim do expediente (Atividades da equipe > Avisos e horários) e salve de novo.' },
         { situacao: 'Aparece "a hora do envio precisa ficar dentro do horário de trabalho".', oQueFazer: 'Escolha uma hora entre o início e o fim do expediente (Atividades da equipe > Avisos e horários) e salve de novo.' },
         { situacao: 'Aparece "a Diretoria precisa entrar depois do WhatsApp".', oQueFazer: 'O número de dias úteis da Diretoria tem de ser maior que o do WhatsApp. Corrija e salve de novo.' }
       ],

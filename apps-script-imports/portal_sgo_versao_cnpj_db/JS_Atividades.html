@@ -504,7 +504,7 @@
       var aberta = Atividades_aberta_(a), podeAlt = Atividades_podeAlterar_(a);
       var linha = function (r, v) { return v ? "<dt>" + r + "</dt><dd>" + v + "</dd>" : ""; };
       var hist = (res.historico || []).map(function (h) {
-        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", EDICAO: "Editada", REPLANEJAMENTO: "Replanejada pela gestão", RESPONSAVEL: "Responsável alterado", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
+        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", EDICAO: "Editada", REPLANEJAMENTO: "Replanejada pela gestão", RESPONSAVEL: "Responsável alterado", ESCALONAMENTO: "Cobrança escalada pela prioridade", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
         return '<div class="atv-hist-item ' + Atividades_esc_(h.TIPO) + '"><div><b>' + titulo + '</b></div>' +
           (h.TIPO === "JUSTIFICATIVA" && h.CATEGORIA ? "<div>Motivo: " + Atividades_esc_(h.CATEGORIA) + "</div>" : "") +
           (h.OCULTO ? '<div class="atv-sub">O texto da justificativa fica visível para o responsável, para quem lançou e para a gestão.</div>' : "") +

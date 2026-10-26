@@ -87,6 +87,8 @@ function Ges_rodada_(quando) {
   if (typeof Comercial_rotina_ === 'function') passo('comercial', function () { return Comercial_rotina_(quando); });
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando) : { dentro: true, hora: '09:00', dia: Ges_hoje_() };
   if (!ex.dentro) { r.fora = ex.motivo; return r; }
+  // 26/10/2026 (fase 5 do plano de avisos): escalonamento das atividades por prioridade e resumo do dia da gestão (SGO_Sedna.js)
+  if (typeof Sedna_rodada_ === 'function') passo('sedna', function () { return Sedna_rodada_(ex); });
   if (cfg.automacoes.cnhCondutor) passo('cnh', function () { return Ges_autoCnhCondutor_(ex); });
   if (cfg.escada.mensal && cfg.automacoes.relatoriosMensais) passo('mensal', function () { return Ges_relatoriosMensais_(ex); });
   if (cfg.escada.semanal) passo('semanal', function () { return Ges_relatorioSemanalDoDia_(ex); });

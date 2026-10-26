@@ -17,7 +17,7 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const c = amb.ctx;
   const r = c.SGO_AvisosMatriz_api('s_dir', 'carregar', {});
   assert.equal(r.ok, true, r.message);
-  assert.equal(r.regras.length, 72); // 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras) e VC01 (vencimentos)
+  assert.equal(r.regras.length, 75); // 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras), VC01 (vencimentos) e S71-S73 (escalonamento por prioridade)
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');

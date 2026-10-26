@@ -49,7 +49,9 @@ function Inicio_apiPendencias(sessionId) {
       pendencias: r.itens,             // lista completa para "Ver todas"
       geradoEm: r.geradoEm,
       cortado: !!r.cortado,
-      naoVerificado: r.naoVerificado || []
+      naoVerificado: r.naoVerificado || [],
+      // 26/10/2026: resumo do dia da gestão (SGO_Sedna.js), só para a gestão e só o de hoje
+      briefing: typeof Sedna_briefingDaSessao_ === 'function' ? Sedna_briefingDaSessao_(sessionId) : null
     }));
   } catch (e) {
     return { ok: false, message: 'Não foi possível verificar as pendências: ' + String((e && e.message) || e).replace(/[.\s]+$/, '') + '. O restante do Início continua valendo; atualize a página para tentar de novo.' };

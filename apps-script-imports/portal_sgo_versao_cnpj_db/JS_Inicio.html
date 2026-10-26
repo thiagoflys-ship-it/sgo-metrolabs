@@ -196,6 +196,11 @@
     var total = Number(r.total) || 0, criticos = Number(r.criticos) || 0;
     if (resumo) resumo.textContent = total ? "Confira suas prioridades e os acessos rápidos abaixo." : "Tudo em dia. Seus acessos rápidos estão abaixo.";
     var html = "";
+    // 26/10/2026: resumo do dia da gestão (uma vez por dia, a partir da hora definida em Caixa de decisões > Regras e responsáveis)
+    if (res.briefing && res.briefing.texto) {
+      html += '<div class="inicio-briefing" role="note"><span class="inicio-secao-sobre">RESUMO DO DIA' + (res.briefing.hora ? ' · ' + Inicio_esc_(res.briefing.hora) : '') + '</span>' +
+        String(res.briefing.texto).split(/\n+/).map(function (l) { return '<p>' + Inicio_esc_(l) + '</p>'; }).join("") + '</div>';
+    }
     if (n) {
       html += '<div class="inicio-prioridades-cab"><div><span class="inicio-secao-sobre">SEU DIA NO SGO+</span><h3>Prioridades do dia</h3></div><div class="inicio-prioridades-totais"><span class="inicio-total"><strong>' + Inicio_num_(total) + '</strong> pendências</span>' + (criticos ? '<span class="inicio-total is-critico"><strong>' + Inicio_num_(criticos) + '</strong> críticas</span>' : '') + '</div></div>';
       html += '<div class="inicio-faixa-lista">' + itens.slice(0, 4).map(function (it, i) {

@@ -32,6 +32,15 @@ function SGO_ajudaTelas_Principal_() {
           ]
         },
         {
+          titulo: "Ler o resumo do dia (gestão)",
+          itens: [
+            "Para Administrador, Diretoria, Gestor, RH e Financeiro: todo dia útil, a partir das 08:30, aparece no alto o quadro \"RESUMO DO DIA\".",
+            "Leia por onde começar: as atividades da equipe mais urgentes e mais atrasadas, com quem está cada uma.",
+            "Confira também as suas atividades e o total da central de pendências.",
+            "O resumo é feito uma vez por dia. A hora e as regras ficam em Caixa de decisões > Regras e responsáveis (escalonamento por prioridade e resumo do dia)."
+          ]
+        },
+        {
           titulo: "Ver a lista completa de pendências",
           itens: [
             "Toque em \"Ver todas as pendências (N)\", abaixo dos cartões.",

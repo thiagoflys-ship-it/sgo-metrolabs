@@ -269,6 +269,8 @@ function Mtz_invalidar_() { try { CacheService.getScriptCache().remove('MTZ_MUDA
 function Mtz_regras_() {
   // eventos dos setores (SGO_Avisos_Setores.js) entram mesmo que o arquivo carregue depois deste
   if (typeof Setores_registrarEventos_ === 'function') Setores_registrarEventos_();
+  // 26/10/2026: escalonamento das atividades por prioridade (SGO_Sedna.js): S71, S72 e S73
+  if (typeof Sedna_registrarEventos_ === 'function') Sedna_registrarEventos_();
   var mud = {};
   try { mud = Mtz_mudancas_(); } catch (e) { mud = {}; }
   var mapa = {};

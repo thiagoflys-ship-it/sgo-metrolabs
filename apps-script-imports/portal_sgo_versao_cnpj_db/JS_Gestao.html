@@ -43,6 +43,10 @@
   .gd-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
   .gd-linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 12.5px; }
   .gd-linha input[type=number], .gd-linha input[type=time], .gd-linha select { min-height: 36px; max-width: 180px; }
+  .gd-tabela-rolagem { overflow-x: auto; }
+  .gd-sedna { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+  .gd-sedna th, .gd-sedna td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  .gd-sedna input[type=number] { width: 80px; min-height: 34px; }
   .gd-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .gd-tabela th, .gd-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
   .gd-tabela td.n, .gd-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -275,9 +279,37 @@
         chk("gdMensal", "Relatórios do mês à Diretoria (primeiro dia útil do mês)", e.mensal) + '</div>' +
       '<div class="gd-caixa" style="margin-top:14px"><h3>Automações</h3>' +
         chk("gdAutoCnh", "CNH: avisar o condutor com 30, 15 e 7 dias", au.cnhCondutor) + chk("gdAutoMan", "Manutenção prevista vira atividade do gestor da Frota", au.manutencaoAgenda) +
-        chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div></div></div>' +
+        chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div>' +
+      Gestao_htmlSedna_(r.sedna, dis, chk, hora) + '</div></div>' +
       '<div class="gd-acoes">' + (r.podeConfigurar ? '<button type="button" class="btn-primary" id="gdSalvarRegras" onclick="Gestao_salvarRegras_()">Salvar regras</button>' : '') +
       '<button type="button" class="btn-secondary" onclick="Gestao_renderCaixa_()">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
+  }
+
+  // 26/10/2026: escalonamento das atividades atrasadas por prioridade e resumo do dia da gestão (SGO_Sedna.js)
+  var GD_SEDNA_PRI = ["Urgente", "Alta", "Normal", "Baixa"];
+  function Gestao_htmlSedna_(sd, dis, chk, hora) {
+    if (!sd) return "";
+    var linhas = GD_SEDNA_PRI.map(function (p) {
+      var h = (sd.escalonamento.horas || {})[p] || [];
+      return '<tr><th scope="row">' + Gestao_esc_(p) + '</th>' + [0, 1, 2].map(function (i) {
+        return '<td><input type="number" step="0.25" min="0.25" max="720" data-gd-sed="' + p + '" data-gd-sed-i="' + i + '" value="' + Gestao_esc_(h[i]) + '" aria-label="' + Gestao_esc_(p + ", " + ["responsável", "gestor da área", "Diretoria"][i] + " (horas)") + '"' + dis + '></td>';
+      }).join("") + '</tr>';
+    }).join("");
+    return '<div class="gd-caixa" style="margin-top:14px"><h3>Atividade atrasada: escalonamento por prioridade</h3>' +
+      '<p class="gd-meta">Horas corridas depois da previsão vencer. Cada nível avisa uma vez por atividade e por previsão, só no horário de trabalho (o que passar à noite sai no começo do expediente). Canais em Administração > Matriz de avisos (S71, S72 e S73).</p>' +
+      chk("gdSedEsc", "Escalonar as atividades atrasadas", sd.escalonamento.ligado) +
+      '<div class="gd-tabela-rolagem"><table class="gd-sedna"><thead><tr><th scope="col">Prioridade</th><th scope="col">Responsável</th><th scope="col">Gestor da área</th><th scope="col">Diretoria</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+      '<h3 style="margin-top:14px">Resumo do dia da gestão</h3><p class="gd-meta">No Início de cada pessoa da gestão, uma vez por dia: o que começar primeiro, atrasadas da equipe, as dela e a central de pendências.</p>' +
+      chk("gdSedBrief", "Mostrar o resumo do dia no Início", sd.briefing.ligado) + hora("gdSedHora", "A partir de que hora", sd.briefing.hora) +
+      chk("gdSedIA", "Texto reescrito pela IA (conferido com os dados; se não passar, vale o texto das regras)", sd.briefing.ia) + '</div>';
+  }
+
+  function Gestao_lerSedna_() {
+    if (!document.getElementById("gdSedEsc")) return null;
+    var horas = {};
+    GD_SEDNA_PRI.forEach(function (p) { horas[p] = [0, 1, 2].map(function (i) { var e = document.querySelector('[data-gd-sed="' + p + '"][data-gd-sed-i="' + i + '"]'); return e ? Number(String(e.value).replace(",", ".")) : NaN; }); });
+    var ck = function (id) { var e = document.getElementById(id); return !!(e && e.checked); };
+    return { escalonamento: { ligado: ck("gdSedEsc"), horas: horas }, briefing: { ligado: ck("gdSedBrief"), hora: (document.getElementById("gdSedHora") || {}).value || "", ia: ck("gdSedIA") } };
   }
 
   function Gestao_salvarRegras_() {
@@ -289,7 +321,7 @@
     if (bt) bt.disabled = true;
     Gestao_chamar_("Gestao_apiConfig", { salvar: { gestoresPorArea: gpa, areaPorModulo: apm,
       escada: { emailDiario: ck("gdEmail"), horaEmail: v("gdHoraEmail"), whatsapp: ck("gdWhats"), whatsDiasUteis: Number(v("gdWhatsDias")), diretoriaDiasUteis: Number(v("gdDirDias")), semanal: ck("gdSemanal"), horaSemanal: v("gdHoraSemanal"), mensal: ck("gdMensal") },
-      automacoes: { cnhCondutor: ck("gdAutoCnh"), manutencaoAgenda: ck("gdAutoMan"), atividadeSemResponsavel: ck("gdAutoSem"), relatoriosMensais: ck("gdAutoRel") } } }, function (res) {
+      automacoes: { cnhCondutor: ck("gdAutoCnh"), manutencaoAgenda: ck("gdAutoMan"), atividadeSemResponsavel: ck("gdAutoSem"), relatoriosMensais: ck("gdAutoRel") }, sedna: Gestao_lerSedna_() } }, function (res) {
       GD.regras = res; Gestao_desenharRegras_();
       var s2 = document.getElementById("gdRegrasSt"); if (s2) s2.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
     }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });

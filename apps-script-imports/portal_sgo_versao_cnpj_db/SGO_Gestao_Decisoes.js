@@ -852,13 +852,17 @@ function Gestao_apiConfig(sessionId, payload) {
         semanal: e.semanal !== false, horaSemanal: e.horaSemanal || GES_CFG_PADRAO.escada.horaSemanal, mensal: e.mensal !== false };
       var au = v.automacoes || {};
       atual.automacoes = {}; Object.keys(GES_CFG_PADRAO.automacoes).forEach(function (k) { atual.automacoes[k] = au[k] !== false; });
+      // 26/10/2026: escalonamento por prioridade e resumo do dia (SGO_Sedna.js); valida antes de gravar qualquer coisa
+      var sedna = v.sedna && typeof Sedna_cfgSalvar_ === 'function' ? Sedna_cfgSalvar_(v.sedna) : null;
       Ges_cfgGravar_(atual);
+      if (sedna) { try { SGO_DATA.log('GESTAO_REGRAS', s.usuario, 'Escalonamento e resumo do dia: ' + JSON.stringify(sedna).slice(0, 1000), 'GESTAO'); } catch (eS) {} }
       try { SGO_DATA.log('GESTAO_REGRAS', s.usuario, 'Caixa de decisões: ' + JSON.stringify({ gestoresPorArea: gpa, areaPorModulo: apm, escada: atual.escada, automacoes: atual.automacoes }).slice(0, 1500), 'GESTAO'); } catch (eL) {}
       try { CacheService.getScriptCache().remove('GES_SINC_RECENTE'); } catch (eC) {}
     }
     var cfg = Ges_cfg_();
     return {
       podeConfigurar: Ges_podeConfigurar_(s), cfg: { gestoresPorArea: cfg.gestoresPorArea, areaPorModulo: cfg.areaPorModulo, escada: cfg.escada, automacoes: cfg.automacoes },
+      sedna: typeof Sedna_cfg_ === 'function' ? Sedna_cfg_() : null,
       areaPadrao: GES_AREA_MODULO_PADRAO, modulos: GES_MODULOS_CONFIG.map(function (m) { return { chave: m[0], nome: m[1] }; }),
       areas: areas.map(function (a) { return { codigo: a.CODIGO, nome: a.NOME }; }),
       // 21/10/2026: RH e Financeiro também podem ser responsáveis de uma área (rotina da empresa).

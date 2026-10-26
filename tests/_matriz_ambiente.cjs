@@ -14,7 +14,7 @@ const AREAS = [['DIRETORIA', 'Diretoria'], ['ADMINISTRATIVO', 'Administrativo'],
 
 const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO_Areas.js', 'SGO_Atividades.js', 'SGO_Atividades_Avisos.js', 'SGO_PonteCommand.js',
   'SGO_Alertas_Central.js', 'SGO_DocA4.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js',
-  'SGO_Avisos.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Setores.js'];
+  'SGO_Avisos.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Setores.js', 'SGO_Sedna.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};
