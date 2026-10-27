@@ -46,6 +46,18 @@ function SGO_ajudaTelas_Auvo_() {
           "Toque em \"Salvar\".",
           "A cobrança fica registrada no Painel de qualidade e o técnico vê o aviso ao entrar no SGO+."
         ] },
+        { titulo: "Enviar ao Auvo a correção de um cliente", itens: [
+          "Corrija o cliente no SGO+ primeiro (Cadastros > Clientes ou Vínculos).",
+          "No quadro \"Enviar correção de cliente para o Auvo (SGO+ → Auvo)\", digite pelo menos 2 letras do nome ou o CNPJ e toque em \"Buscar\".",
+          "Na linha do cliente, toque em \"Sincronizar\" e confirme a pergunta.",
+          "Caixa verde \"Cliente enviado para o Auvo\": pronto. Confira o selo da coluna \"Situação\"."
+        ] },
+        { titulo: "Enviar ao Auvo as unidades e os equipamentos que faltam", itens: [
+          "No quadro \"Enviar cadastro pendente para o Auvo (SGO+ → Auvo)\", toque em \"Simular (não grava nada)\".",
+          "Leia a prévia: quantas unidades e equipamentos faltam enviar. Nada foi gravado ainda.",
+          "Se estiver certo, toque em \"Confirmar e enviar de verdade\" e confirme a pergunta.",
+          "Espere a mensagem de conclusão. Os equipamentos vão em lotes."
+        ] },
         { titulo: "Gerar o relatório de atendimentos (A4)", itens: [
           "Vá ao quadro \"Relatório de atendimentos (A4)\".",
           "Escolha o período: \"Últimos 7 dias\", \"Últimos 30 dias\" ou \"Últimos 90 dias\".",
@@ -87,8 +99,8 @@ function SGO_ajudaTelas_Auvo_() {
         { situacao: "\"Acesso restrito a Gestor/Administrador\"", oQueFazer: "Seu perfil não usa esta tela. Suas O.S. continuam no aplicativo do Auvo. Fale com a gestão se precisar." }
       ],
       quemPode: [
-        { perfil: "ADMIN", pode: "Tudo. Só o Administrador usa as ferramentas de implantação: enviar clientes e técnicos ao Auvo, importação completa, auditoria do cadastro e envio de cadastro pendente." },
-        { perfil: "GESTOR,DIRETORIA", pode: "Testar a conexão, sincronizar os atendimentos, ver e atualizar as pendências, cobrar técnicos e gerar o relatório." },
+        { perfil: "ADMIN", pode: "Tudo. Só o Administrador usa as ferramentas de implantação: envio em lote, técnicos, importação completa e auditoria do cadastro." },
+        { perfil: "GESTOR,DIRETORIA", pode: "Testar a conexão, sincronizar os atendimentos, enviar ao Auvo a correção de um cliente e o cadastro pendente, ver e atualizar as pendências, cobrar técnicos e gerar o relatório." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não usam esta tela. O técnico trabalha no aplicativo do Auvo e vê as cobranças da gestão ao entrar no SGO+." }
       ],
       perguntas: [
@@ -102,25 +114,19 @@ function SGO_ajudaTelas_Auvo_() {
 
     "auvo/ferramentas_de_implantacao": {
       titulo: "Ferramentas de implantação (só Administrador)",
-      paraQueServe: "Ferramentas raras, usadas na implantação ou para corrigir cadastro. Quem não é Administrador vê só uma frase dizendo que elas ficam com o Administrador.",
+      paraQueServe: "Ferramentas raras, usadas na implantação: envio em lote, técnicos, importação completa e auditoria. Enviar a correção de um cliente e o cadastro pendente ficam no painel principal, para toda a gestão. Quem não é Administrador vê só uma frase dizendo que as ferramentas de implantação ficam com o Administrador.",
       antesDeComecar: [
         "Toque em \"Mostrar ferramentas de implantação (administrador)\" para abrir. Toque em \"Ocultar ferramentas de implantação\" para fechar.",
         "Sempre use \"Simular (não grava nada)\" antes de confirmar."
       ],
       passos: [
-        { titulo: "Enviar um cliente ao Auvo", itens: [
-          "No quadro \"Consultar cliente (SGO+ → Auvo)\", digite pelo menos 2 letras do nome ou o CNPJ.",
-          "Toque em \"Buscar\".",
-          "Na linha do cliente, toque em \"Sincronizar\".",
-          "Confira o selo da coluna \"Situação\"."
-        ] },
         { titulo: "Enviar um técnico ao Auvo", itens: [
           "No quadro \"Consultar técnico / usuário (SGO+ → Auvo)\", digite o nome e toque em \"Buscar\".",
           "Se a pessoa não tiver e-mail, digite o e-mail no campo e toque em \"Salvar\". O Auvo exige e-mail.",
           "Toque em \"Sincronizar\"."
         ] },
         { titulo: "Enviar todos de uma vez (lote)", itens: [
-          "Toque em \"Sincronizar todos os clientes ativos (lote)\" ou em \"Sincronizar todos (lote)\".",
+          "Toque em \"Sincronizar todos os clientes ativos (lote, administrador)\", no quadro de enviar correção de cliente, ou em \"Sincronizar todos (lote)\", no quadro de técnicos.",
           "Leia a pergunta de confirmação e confirme.",
           "Confira quantos foram enviados e quantos deram erro."
         ] },
@@ -135,12 +141,6 @@ function SGO_ajudaTelas_Auvo_() {
           "Se estiver certo, toque em \"Confirmar e executar de verdade\".",
           "A importação anda em lotes e continua sozinha. Pode fechar a tela.",
           "Se aparecer a caixa amarela \"Importação parada\", siga o que ela diz e toque em \"Retomar sincronização em andamento\"."
-        ] },
-        { titulo: "Enviar ao Auvo o cadastro que ficou pendente", itens: [
-          "No quadro \"Enviar cadastro pendente para o Auvo (SGO+ → Auvo)\", toque em \"Simular (não grava nada)\".",
-          "Confira quantas unidades e equipamentos faltam enviar.",
-          "Toque em \"Confirmar e enviar de verdade\".",
-          "Espere a mensagem \"Envio concluído.\""
         ] }
       ],
       problemas: [
@@ -151,7 +151,7 @@ function SGO_ajudaTelas_Auvo_() {
       ],
       quemPode: [
         { perfil: "ADMIN", pode: "Usar todas as ferramentas de implantação." },
-        { perfil: "GESTOR,DIRETORIA", pode: "Não usam. Pedem ao Administrador." }
+        { perfil: "GESTOR,DIRETORIA", pode: "Não usam estas ferramentas. Enviar a correção de um cliente e o cadastro pendente eles fazem no painel principal." }
       ]
     },
     // 21/10/2026: etapa 0 da Assistência técnica (SGO_AuvoAcervo.js, docs/ACERVO_AUVO.md).

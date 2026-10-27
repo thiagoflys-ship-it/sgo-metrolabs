@@ -253,8 +253,10 @@ function tplAuvo_renderClientesTabela_(items) {
 }
 
 function tplAuvo_sincronizarCliente(id) {
+  if (!confirm('Enviar o cadastro deste cliente para o Auvo? Se ele já existe lá, os dados do Auvo serão atualizados com os do SGO+.')) return;
+  document.getElementById('tplAuvo_clientesResultado').innerHTML = '<div class="alert-box info">Enviando para o Auvo...</div>';
   tplAuvo_chamarApi('apiSincronizarCliente', { clienteId: id })
-    .then(function() { tplAuvo_buscarClientes(); })
+    .then(function() { tplAuvo_msg('tplAuvo_clientesResultado', 'success', 'Cliente enviado para o Auvo. A situação na lista abaixo foi atualizada.'); tplAuvo_buscarClientes(); })
     .catch(function(err) { tplAuvo_erro('tplAuvo_clientesResultado', err); });
 }
 
@@ -771,6 +773,7 @@ function tplAuvo_renderSimulacaoEnvio_(res) {
 }
 
 function tplAuvo_confirmarEnvioCadastro() {
+  if (!confirm('Enviar ao Auvo as unidades e os equipamentos pendentes mostrados na prévia?')) return;
   document.getElementById('tplAuvo_envioResultado').innerHTML = '<div class="alert-box info">Enviando Unidades pendentes...</div>';
   tplAuvo_chamarApi('apiEnviarUnidadesPendentes', {})
     .then(function(resUnidades) {
@@ -824,7 +827,7 @@ function tplAuvo_manualHtml_() {
   function ir(id, txt) { return '<li><a onclick="document.getElementById(\\'' + id + '\\').scrollIntoView({behavior:\\'smooth\\'})">' + txt + '</a></li>'; }
   return \`<div class="wrap manual-wrap">
 <h1>Integração Auvo — Manual do operador</h1>
-<p class="subtitulo">Uso diário pela gestão (Gestor, Administrador e Diretoria). Ferramentas de implantação só pelo Administrador.</p>
+<p class="subtitulo">Uso diário pela gestão (Gestor, Administrador e Diretoria), incluindo enviar ao Auvo a correção de um cliente e o cadastro pendente. Ferramentas de implantação só pelo Administrador.</p>
 
 <div class="toc"><h2>Índice</h2><ol>\` +
     ir('ma-1', 'O que esta tela faz') +
@@ -894,11 +897,17 @@ function tplAuvo_manualHtml_() {
 <h2 id="ma-7">7. Tarefas criadas sozinhas pelo SGO+</h2>
 <p>Ao emitir certificado de calibração, laudo NR-13, registro operacional ou PGT e POP, o SGO+ cria uma tarefa concluída no Auvo. O cliente e o técnico são enviados na hora, se ainda não estiverem lá. Se o Auvo falhar, o documento sai do mesmo jeito.</p>
 
-<h2 id="ma-8">8. Ferramentas de implantação (Administrador)</h2>
-<p>Toque em "Mostrar ferramentas de implantação (administrador)". Use sempre "Simular (não grava nada)" antes de confirmar.</p>
-<h3>Enviar cliente ou técnico ao Auvo</h3>
+<h2 id="ma-8">8. Enviar correções ao Auvo e ferramentas de implantação</h2>
+<h3>Enviar a correção de um cliente (toda a gestão)</h3>
 <ol>
-<li>Em "Consultar cliente (SGO+ → Auvo)" ou "Consultar técnico / usuário (SGO+ → Auvo)", digite pelo menos 2 letras e toque em "Buscar".</li>
+<li>Corrija o cliente no SGO+ (Cadastros &gt; Clientes ou Vínculos).</li>
+<li>Em "Enviar correção de cliente para o Auvo (SGO+ → Auvo)", digite pelo menos 2 letras do nome ou o CNPJ e toque em "Buscar".</li>
+<li>Toque em "Sincronizar" na linha do cliente e confirme. O cadastro do SGO+ vai para o Auvo (cria ou atualiza lá).</li>
+</ol>
+<p>O envio de unidades e equipamentos pendentes (fim desta seção) também é de toda a gestão. As ferramentas abaixo, não: toque em "Mostrar ferramentas de implantação (administrador)". Use sempre "Simular (não grava nada)" antes de confirmar.</p>
+<h3>Enviar técnico ao Auvo e envio em lote (Administrador)</h3>
+<ol>
+<li>Em "Consultar técnico / usuário (SGO+ → Auvo)", digite pelo menos 2 letras e toque em "Buscar".</li>
 <li>Se o técnico não tiver e-mail, preencha e toque em "Salvar". O Auvo exige e-mail.</li>
 <li>Toque em "Sincronizar" na linha. Para todos de uma vez, use o botão de lote e confirme.</li>
 </ol>
@@ -912,7 +921,7 @@ function tplAuvo_manualHtml_() {
 <li>Se aparecer "Importação parada", siga o que a caixa diz e toque em "Retomar sincronização em andamento".</li>
 </ol>
 <div class="callout"><strong>Regras que protegem o cadastro:</strong> os 8 primeiros números do CNPJ agrupam o cliente e suas unidades. Nada é duplicado. Cadastro feito no SGO+ é protegido: só ganha a ligação com o Auvo. Campo já preenchido não é trocado.</div>
-<h3>Enviar cadastro pendente (SGO+ → Auvo)</h3>
+<h3>Enviar cadastro pendente (SGO+ → Auvo, toda a gestão)</h3>
 <ol>
 <li>Em "Enviar cadastro pendente para o Auvo (SGO+ → Auvo)", toque em "Simular (não grava nada)".</li>
 <li>Confira quantas unidades e equipamentos faltam.</li>
@@ -1019,24 +1028,35 @@ function tplAuvo_paintPainel_() {
       '<div id="tplAuvo_relatorioResultado"></div>' +
     '</div>' +
 
-    (!ehAdminAuvo ? '<p class="muted" style="margin-top:4px">As ferramentas de implantação (envio em lote, importação completa, auditoria do cadastro e envio de cadastro pendente) ficam com o Administrador.</p>' : '') +
+    // 26/10/2026 (pedido do dono): enviar a correção de um cliente e o cadastro pendente é da gestão.
+    '<div class="panel">' +
+      '<h2>Enviar correção de cliente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
+      '<p class="muted">Depois de corrigir um cliente no SGO+, busque pelo nome ou CNPJ e toque em "Sincronizar": ' +
+      'o cadastro do SGO+ vai para o Auvo (cria ou atualiza lá). Um cliente por vez.</p>' +
+      '<div class="busca-linha">' +
+        '<input type="text" id="tplAuvo_buscaClienteInput" placeholder="Nome ou CNPJ do cliente..." onkeydown="if(event.key===\\'Enter\\')tplAuvo_buscarClientes()">' +
+        '<button type="button" class="btn btn-sm" onclick="tplAuvo_buscarClientes()">Buscar</button>' +
+      '</div>' +
+      (ehAdminAuvo ? '<button type="button" class="btn btn-sm" style="margin-top:10px" onclick="tplAuvo_sincronizarTodosClientes()">Sincronizar todos os clientes ativos (lote, administrador)</button>' : '') +
+      '<div id="tplAuvo_clientesResultado"></div>' +
+      '<table class="tabela-resultado"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Situação</th><th>Último erro</th><th></th></tr></thead>' +
+      '<tbody id="tplAuvo_clientesBody"><tr><td colspan="5" class="muted">Busque um cliente acima.</td></tr></tbody></table>' +
+    '</div>' +
+
+    '<div class="panel">' +
+      '<h2>Enviar cadastro pendente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
+      '<p class="muted">Garante que Unidade/Equipamento que já existem no SGO+ também existam no Auvo (Cliente/Técnico já ' +
+      'sincronizam sozinhos quando geram um documento). Cada Unidade vira um Cliente próprio no Auvo; Equipamento fica ' +
+      'vinculado à Unidade dele. Só envia o que ainda falta lá. <strong>Sempre rode "Simular" primeiro.</strong> Documento não é enviado retroativamente — ' +
+      'só os gerados a partir de agora entram automaticamente.</p>' +
+      '<button type="button" class="btn btn-sm" onclick="tplAuvo_simularEnvioCadastro()">Simular (não grava nada)</button>' +
+      '<div id="tplAuvo_envioResultado"></div>' +
+    '</div>' +
+
+    (!ehAdminAuvo ? '<p class="muted" style="margin-top:4px">As ferramentas de implantação (envio em lote, técnicos, importação completa e auditoria do cadastro) ficam com o Administrador.</p>' : '') +
     (!ehAdminAuvo ? '' : '<button type="button" id="tplAuvo_avancadoBtn" class="btn avancado-toggle-btn" onclick="tplAuvo_toggleAvancado()">Mostrar ferramentas de implantação (administrador)</button>' +
 
     '<div id="tplAuvo_avancado" style="display:none;margin-top:14px">' +
-
-      '<div class="panel">' +
-        '<h2>Consultar cliente (SGO+ &rarr; Auvo)</h2>' +
-        '<p class="muted">Busca em vez de listar tudo — a base de clientes só cresce. O botão "Sincronizar" manda ' +
-        'o cadastro do SGO+ para o Auvo (criando ou atualizando lá).</p>' +
-        '<div class="busca-linha">' +
-          '<input type="text" id="tplAuvo_buscaClienteInput" placeholder="Nome ou CNPJ do cliente..." onkeydown="if(event.key===\\'Enter\\')tplAuvo_buscarClientes()">' +
-          '<button type="button" class="btn btn-sm" onclick="tplAuvo_buscarClientes()">Buscar</button>' +
-        '</div>' +
-        '<button type="button" class="btn btn-sm" style="margin-top:10px" onclick="tplAuvo_sincronizarTodosClientes()">Sincronizar todos os clientes ativos (lote)</button>' +
-        '<div id="tplAuvo_clientesResultado"></div>' +
-        '<table class="tabela-resultado"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Situação</th><th>Último erro</th><th></th></tr></thead>' +
-        '<tbody id="tplAuvo_clientesBody"><tr><td colspan="5" class="muted">Busque um cliente acima.</td></tr></tbody></table>' +
-      '</div>' +
 
       '<div class="panel">' +
         '<h2>Consultar técnico / usuário (SGO+ &rarr; Auvo)</h2>' +
@@ -1069,16 +1089,6 @@ function tplAuvo_paintPainel_() {
         '<button type="button" class="btn btn-sm" onclick="tplAuvo_simularSincReversa()">Simular (não grava nada)</button> ' +
         '<button type="button" class="btn btn-sm" onclick="tplAuvo_continuarSincReversa()">Retomar sincronização em andamento</button>' +
         '<div id="tplAuvo_reversoResultado"></div>' +
-      '</div>' +
-
-      '<div class="panel">' +
-        '<h2>Enviar cadastro pendente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
-        '<p class="muted">Garante que Unidade/Equipamento que já existem no SGO+ também existam no Auvo (Cliente/Técnico já ' +
-        'sincronizam sozinhos quando geram um documento). Cada Unidade vira um Cliente próprio no Auvo; Equipamento fica ' +
-        'vinculado à Unidade dele. <strong>Sempre rode "Simular" primeiro.</strong> Documento não é enviado retroativamente — ' +
-        'só os gerados a partir de agora entram automaticamente.</p>' +
-        '<button type="button" class="btn btn-sm" onclick="tplAuvo_simularEnvioCadastro()">Simular (não grava nada)</button>' +
-        '<div id="tplAuvo_envioResultado"></div>' +
       '</div>' +
 
     '</div>') +

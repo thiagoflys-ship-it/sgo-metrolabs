@@ -759,13 +759,15 @@ function Auvo_apiDispatch(req) {
   // Fase 2 (16/10): as ferramentas de implantação (envio em lote, importação completa, auditoria
   // e envio de cadastro pendente) gravam muito no Auvo ou no SGO+ de uma vez: só o Administrador.
   // O uso diário (conexão, sincronização automática, pendências e relatório) continua para a gestão.
+  // 26/10/2026 (pedido do dono): enviar ao Auvo a correção de UM cliente (buscar e sincronizar) e o
+  // cadastro pendente (simular antes; só o que falta lá) também é da gestão, para o Gestor não
+  // depender do Administrador depois de corrigir um cadastro. Lote, importação e auditoria seguem só do Administrador.
   var soAdmin = {
     apiListarClientesParaSync: 1, apiListarUsuariosParaSync: 1, apiDefinirEmailUsuario: 1,
-    apiSincronizarCliente: 1, apiSincronizarTecnico: 1, apiSincronizarTodosClientes: 1, apiSincronizarTodosTecnicos: 1,
-    apiBuscarClienteParaSync: 1, apiBuscarTecnicoParaSync: 1,
+    apiSincronizarTecnico: 1, apiSincronizarTodosClientes: 1, apiSincronizarTodosTecnicos: 1,
+    apiBuscarTecnicoParaSync: 1,
     apiSimularSincronizacaoReversa: 1, apiIniciarSincronizacaoReversa: 1, apiContinuarSincronizacaoReversa: 1,
-    apiStatusSincronizacaoReversa: 1, apiAtivarSincronizacaoDiaria: 1, apiAuditarNomesParecidos: 1,
-    apiSimularEnvioCadastro: 1, apiEnviarUnidadesPendentes: 1, apiIniciarEnvioEquipamentos: 1, apiContinuarEnvioEquipamentos: 1
+    apiStatusSincronizacaoReversa: 1, apiAtivarSincronizacaoDiaria: 1, apiAuditarNomesParecidos: 1
   };
   if (soAdmin[fn]) {
     var sessaoAuvo = validarSessao(String(req.sessionId || ''));
