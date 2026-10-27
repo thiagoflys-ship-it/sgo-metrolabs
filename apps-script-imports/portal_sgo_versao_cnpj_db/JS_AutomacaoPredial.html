@@ -517,7 +517,7 @@
     if (AUTP.portAtivo) return;
     AUTP.portAtivo = true;
     var consultando = false, primeira = true;
-    // 27/10/2026: ritmo dado pelo servidor (proximaS: 3 s no percurso, 10 s com eventos, 30 s parado sem eventos); a
+    // 27/10/2026: ritmo dado pelo servidor (proximaS: 3 s no percurso, 10 s parado); a
     // consulta à tela não gasta cota da Tuya (quem decide reler na nuvem é o servidor, com leitura compartilhada)
     var agendar = function (s) { if (!AUTP.portAtivo) return; if (AUTP.portTimer) clearTimeout(AUTP.portTimer); AUTP.portTimer = setTimeout(tickPortoes, Math.max(2, Number(s) || 30) * 1000); };
     AUTP.portAgendar = agendar;
@@ -657,7 +657,7 @@
     if (AUTP.pedAtivo) return;
     AUTP.pedAtivo = true;
     var consultando = false;
-    // 27/10/2026: ritmo do servidor (proximaS: 3 s com eventos, que não gastam cota; 15 s na consulta econômica, em que a
+    // 27/10/2026: ritmo do servidor (proximaS: 3 s com eventos, que não gastam cota; 10 s sem eventos, em que a
     // leitura na nuvem é compartilhada e vale por consultaIntervaloS); para com a aba em segundo plano
     var agendar = function (s) { if (!AUTP.pedAtivo) return; if (AUTP.pedTimer) clearTimeout(AUTP.pedTimer); AUTP.pedTimer = setTimeout(tick, Math.max(3, Number(s) || 15) * 1000); };
     var tick = function () {
@@ -919,12 +919,39 @@
         (i.situacao !== "ok" && i.oQueFazer ? '<div class="cadx-sub">O que fazer: ' + esc(i.oQueFazer) + "</div>" : "") +
         (i.incidente ? '<div class="cadx-sub">Incidente ' + esc(i.incidente) + (i.avisado ? " · gestão avisada" : "") + "</div>" : "") + "</div>";
     }).join("") + "</div>";
+    // 27/10/2026: nuvem (bloqueio com a próxima conferência, recuperação gradual), fechaduras (caminho e validação informativa) e orçamento
+    var nv = r.nuvem || {};
+    if (nv.bloqueio) h += AutPred_faixa_("Nuvem bloqueada desde " + nv.bloqueio.desde + ": nada é enviado. Próxima conferência automática às " + nv.bloqueio.proximaSonda + " (recuo de " + nv.bloqueio.recuoMin + " min" + (nv.bloqueio.rebloqueio ? "; voltou a bloquear depois de uma volta" : "") + "). Um pedido de pessoa a cada 10 min também confere.", "tom-perigo");
+    else if (nv.recuperacaoAte) h += AutPred_faixa_("A nuvem voltou: recuperação gradual até " + nv.recuperacaoAte + " (primeiros 30 min só comandos de pessoas e eventos; depois, leituras automáticas com teto de 20 por minuto).", "tom-alerta");
+    if ((r.fechaduras || []).length) {
+      h += '<h3 class="aut-unidade">Abertura automática da porta</h3><div class="aut-saude-uso">' + r.fechaduras.map(function (f) {
+        return '<div class="aut-saude-caixa"><b>' + esc(f.nome) + "</b><div>Abertura automática: " + (f.autoAbrir ? "ligada" + (f.autoAbrirPor ? " por " + esc(f.autoAbrirPor) : "") : "desligada") + "</div>" +
+          "<div>Campainha acompanhada: " + esc(f.caminhoTexto) + "</div>" +
+          (f.responsavel && !f.responsavel.ok ? '<div class="cadx-sub">Atenção: ' + esc(f.responsavel.motivo) + ". Um diretor que destrava a porta decide se desliga ou liga de novo.</div>" : "") +
+          '<div class="cadx-sub">Validação por eventos (informativa, não bloqueia nada): ' + (f.validado ? "validada em " + esc(f.validadoEm) + " por " + esc(f.validadoPor) + ". " + esc(f.validadoDetalhe)
+            : "ainda não. " + (f.eventoRecebido ? "Último pedido recebido por evento: " + esc(f.pedidoEventoEm || "nenhum") + ". " : "Nenhum evento desta fechadura chegou. ") +
+              "Como validar: 1) confira acima que os eventos da Tuya estão chegando; 2) peça para tocarem a campainha; 3) com o pedido na tela, toque em \"Abrir agora\" e confirme; 4) quando a fechadura confirmar a abertura, a validação fica gravada aqui.") + "</div></div>";
+      }).join("") + "</div>";
+    }
+    var o = r.orcamento || {};
+    h += '<h3 class="aut-unidade">Orçamento da cota</h3><div class="aut-saude-caixa">' + (o.confirmado
+      ? "<b>Confirmado" + (o.por ? " por " + esc(o.por) : "") + (o.em ? " em " + esc(o.em) : "") + ":</b> " + esc(AutPred_milhar_(o.valor)) + " chamadas " + (o.periodo === "UNICO" ? "no pacote único de " + esc(o.inicio) + " a " + esc(o.fim) : "por mês") + " (limite do pacote: " + esc(AutPred_milhar_(o.limitePacote)) + ")."
+      : "<b>" + esc(o.avisoProvisorio) + ".</b> Referência provisória: pacote de " + esc(AutPred_milhar_(o.limitePacote)) + " chamadas por mês e orçamento de " + esc(AutPred_milhar_(o.valor)) + " (50%). Nada fica mais lento por isso.") +
+      '<div class="cadx-sub">Teto do dia: ' + esc(AutPred_milhar_(o.tetoDia)) + " chamadas (hoje: " + esc(AutPred_milhar_(o.diaUsado)) + "). Sem eventos, a posição dos portões parados é relida a cada 20 s; acima da média do dia, a cada 60 s; acima do teto, a cada 120 s. Comandos, eventos e abertura automática não mudam.</div>" +
+      (o.podeConfirmar ? '<div class="cadx-sub">' + esc(o.passos) + "</div>" + '<div class="aut-form" id="autOrcForm">' +
+        '<label for="autOLim">Limite de chamadas do pacote (painel da Tuya)</label><input id="autOLim" inputmode="numeric" value="' + esc(AutPred_milhar_(o.limitePacote)) + '" oninput="AutPred_sugerirOrcamento_()">' +
+        '<label for="autOPer">Período do pacote</label><select id="autOPer"><option value="MENSAL"' + (o.periodo !== "UNICO" ? " selected" : "") + '>Renova todo mês</option><option value="UNICO"' + (o.periodo === "UNICO" ? " selected" : "") + ">Pacote único (com início e fim)</option></select>" +
+        '<label for="autOIni">Início (pacote único)</label><input id="autOIni" type="date"><label for="autOFim">Fim (pacote único)</label><input id="autOFim" type="date">' +
+        '<label for="autOVal">Orçamento (sugestão: metade do limite)</label><input id="autOVal" inputmode="numeric" oninput="this.setAttribute(\'data-mexeu\', \'1\')" value="' + esc(AutPred_milhar_(o.confirmado ? o.valor : o.sugestao)) + '">' +
+        '<label for="autOJa">Já usado no período, como mostra o painel (opcional)</label><input id="autOJa" inputmode="numeric">' +
+        '<label for="autOMot">Motivo</label><input id="autOMot" maxlength="300" placeholder="Ex.: limite conferido no painel em 27/10">' +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_confirmarOrcamento_()">Confirmar orçamento</button></div><div class="cadx-msg" id="autOMsg"></div></div>' : "") + "</div>";
     var pct = Number(u.pct) || 0, cor = pct >= u.economicoPct ? "is-vermelho" : pct >= u.avisoPct ? "is-amarelo" : "";
     var lista = function (l) { return l && l.length ? "<ul>" + l.map(function (x) { return "<li>" + esc(x.origem) + ": " + esc(AutPred_milhar_(x.total)) + "</li>"; }).join("") + "</ul>" : '<div class="cadx-sub">Nenhuma chamada.</div>'; };
     h += '<h3 class="aut-unidade">Consumo da cota da Tuya</h3><div class="aut-saude-uso">' +
       '<div class="aut-saude-caixa"><b>No mês: ' + esc(AutPred_milhar_(u.mes)) + " de " + esc(AutPred_milhar_(u.orcamento)) + " chamadas (" + esc(String(pct).replace(".", ",")) + "%)</b>" +
         '<div class="aut-saude-barra ' + cor + '" role="img" aria-label="' + esc(String(pct).replace(".", ",")) + '% do orçamento"><span style="width:' + Math.min(100, pct) + '%"></span><i class="aut-saude-marca" style="left:' + esc(u.avisoPct) + '%"></i><i class="aut-saude-marca" style="left:' + esc(u.economicoPct) + '%"></i></div>' +
-        '<div class="cadx-sub">Aviso em ' + esc(u.avisoPct) + "%; modo econômico automático em " + esc(u.economicoPct) + "%. No ritmo atual, o mês fecha em cerca de " + esc(AutPred_milhar_(u.projecaoMes)) + " chamadas.</div></div>" +
+        '<div class="cadx-sub">' + (u.provisorio ? "Orçamento provisório. " : "") + "Aviso em " + esc(u.avisoPct) + "%; modo econômico de emergência em " + esc(u.economicoPct) + "%" + (u.provisorio ? " do limite do pacote" : "") + ". No ritmo atual, o mês fecha em cerca de " + esc(AutPred_milhar_(u.projecaoMes)) + " chamadas.</div></div>" +
       '<div class="aut-saude-caixa"><b>Hoje: ' + esc(AutPred_milhar_(u.dia)) + " chamadas</b> (ontem: " + esc(AutPred_milhar_(u.ontem)) + ")" + lista(u.porOrigemDia) + "</div>" +
       '<div class="aut-saude-caixa"><b>No mês, por origem</b>' + lista(u.porOrigemMes) + "</div>" +
       '<div class="aut-saude-caixa"><b>Eventos da Tuya</b><div>' + esc((r.eventos || {}).texto) + '</div><div class="cadx-sub">Mensagens recebidas: ' + esc(AutPred_milhar_(u.mensagensDia)) + " hoje, " + esc(AutPred_milhar_(u.mensagensMes)) + " no mês (cota de mensagens à parte da cota de chamadas).</div></div>" +
@@ -934,19 +961,19 @@
     if (u.ultimoErro) h += '<div class="cadx-sub" style="margin-top:6px">Último erro da Tuya: ' + esc(u.ultimoErro) + "</div>";
     var e = r.economico || {};
     h += '<h3 class="aut-unidade">Modo econômico</h3><div class="aut-saude-caixa">' + (e.ligado
-      ? "<b>Ligado desde " + esc(e.desde) + "</b> (" + esc(e.motivo) + "). Só saem os comandos pedidos por pessoas e a abertura automática por evento; a posição dos portões e a campainha não são relidas sozinhas. Volta ao normal na virada do mês." +
+      ? "<b>Ligado desde " + esc(e.desde) + "</b> (" + esc(e.motivo) + "). Continuam: comandos de pessoas, eventos da Tuya e a abertura automática por evento. Ficam mais lentos, sem eventos: a posição dos portões (use \"Ler estado\") e a campainha e a abertura automática (use \"Verificar campainha agora\" ou o aplicativo Smart Life). Volta ao normal no período novo." +
         (r.podeSairEconomico ? '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-risco" onclick="AutPred_sairEconomico_()">Sair do modo econômico</button></div>' : '<div class="cadx-sub">Só um diretor pode sair do modo econômico antes da virada do mês.</div>')
-      : "Desligado. O SGO+ liga sozinho quando o consumo do mês chega a " + esc(u.economicoPct) + "% do orçamento.") + "</div>";
+      : "Desligado. É só para emergência: o SGO+ liga sozinho quando o consumo chega a " + esc(u.economicoPct) + "% do orçamento confirmado (ou do limite do pacote, enquanto o orçamento é provisório).") + "</div>";
     var c = r.cfg || {};
     if (r.podeConfigurar) {
       var dias = [["1", "Seg"], ["2", "Ter"], ["3", "Qua"], ["4", "Qui"], ["5", "Sex"], ["6", "Sáb"], ["0", "Dom"]];
-      h += '<h3 class="aut-unidade">Orçamento e consulta econômica (diretores)</h3><div class="aut-form" id="autSaudeCfg">' +
-        '<label for="autSOrc">Orçamento de chamadas por mês (plano da Tuya; o plano de teste tem 26.000)</label><input id="autSOrc" inputmode="numeric" value="' + esc(AutPred_milhar_(c.orcamentoMes)) + '">' +
-        '<label for="autSIni">Consulta econômica (sem eventos da Tuya): início</label><input id="autSIni" type="time" value="' + esc(c.consultaInicio) + '">' +
-        '<label for="autSFim">Fim</label><input id="autSFim" type="time" value="' + esc(c.consultaFim) + '">' +
-        '<label for="autSInt">Intervalo entre leituras da campainha (segundos, 60 a 1.800)</label><input id="autSInt" type="number" min="60" max="1800" step="10" value="' + esc(c.consultaIntervaloS) + '">' +
+      h += '<h3 class="aut-unidade">Consulta sem eventos (diretores)</h3><div class="aut-form" id="autSaudeCfg">' +
+        '<label for="autSIni">Consulta da fechadura sem eventos (abertura automática, aviso e telas): início</label><input id="autSIni" type="time" value="' + esc(c.consultaInicio) + '">' +
+        '<label for="autSFim">Fim (24 horas: 00:00 às 23:59)</label><input id="autSFim" type="time" value="' + esc(c.consultaFim) + '">' +
+        '<label for="autSInt">Intervalo da consulta da fechadura (segundos, 30 a 85; menor que os ~90 s do pedido)</label><input id="autSInt" type="number" min="30" max="85" step="5" value="' + esc(c.consultaIntervaloS) + '">' +
         '<label>Dias da consulta</label><div class="aut-acoes">' + dias.map(function (d) { return '<label class="aut-check"><input type="checkbox" data-aut-sdia="' + d[0] + '"' + ((c.consultaDias || []).indexOf(Number(d[0])) >= 0 ? " checked" : "") + "> " + d[1] + "</label>"; }).join("") + "</div>" +
-        '<div class="cadx-sub">Cada leitura da campainha gasta 1 chamada: 10 horas a cada 120 s são cerca de 300 chamadas por dia. Com o serviço de mensagens da Tuya ligado, a campainha chega por evento e não gasta chamada.</div>' +
+        '<label for="autSPar">Posição do portão parado sem eventos, com tela aberta (segundos, 10 a 600)</label><input id="autSPar" type="number" min="10" max="600" step="5" value="' + esc(c.portaoParadoS) + '">' +
+        '<div class="cadx-sub">Cada leitura da fechadura gasta 1 chamada: a cada 60 s, 10 horas em 22 dias úteis são cerca de 13.200 por mês; 24 horas todos os dias, cerca de 43.200 (acima do orçamento provisório de 26.950). Com o serviço de mensagens da Tuya ligado, a campainha e os portões chegam por evento e não gastam chamada.</div>' +
         '<label for="autSMot">Motivo da mudança</label><input id="autSMot" maxlength="300" placeholder="Ex.: plano pago assinado em 27/10">' +
         '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvarSaudeCfg_()">Gravar</button></div><div class="cadx-msg" id="autSMsg"></div></div>';
     }
@@ -966,11 +993,26 @@
         AutPred_chamar_("saudeSairEconomico", { motivo: motivo }, function (r) { fechar(); AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, reabilitar);
       } });
   }
+  /** 27/10/2026: sugestão do orçamento = metade do limite do pacote (só enquanto a pessoa não mexeu no orçamento). */
+  function AutPred_sugerirOrcamento_() {
+    var l = document.getElementById("autOLim"), v = document.getElementById("autOVal");
+    if (!l || !v || v.getAttribute("data-mexeu") === "1") return;
+    var n = Number(String(l.value || "").replace(/\./g, "").replace(",", "."));
+    if (n > 0) v.value = AutPred_milhar_(Math.floor(n / 2));
+  }
+  function AutPred_confirmarOrcamento_() {
+    var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; };
+    var m = document.getElementById("autOMsg");
+    var dados = { limitePacote: g("autOLim"), periodo: g("autOPer"), inicio: g("autOIni"), fim: g("autOFim"), orcamento: g("autOVal"), jaUsado: g("autOJa"), motivo: g("autOMot") };
+    if (!dados.motivo || dados.motivo.length < 5) { if (m) { m.textContent = "Escreva o motivo (mínimo de 5 caracteres)."; m.className = "cadx-msg is-erro"; } return; }
+    if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
+    AutPred_chamar_("saudeOrcamento", dados, function (r) { AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
+  }
   function AutPred_salvarSaudeCfg_() {
     var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; };
     var m = document.getElementById("autSMsg");
     var dias = []; document.querySelectorAll("[data-aut-sdia]").forEach(function (c) { if (c.checked) dias.push(Number(c.getAttribute("data-aut-sdia"))); });
-    var dados = { orcamentoMes: g("autSOrc"), consultaInicio: g("autSIni"), consultaFim: g("autSFim"), consultaIntervaloS: g("autSInt"), consultaDias: dias, motivo: g("autSMot") };
+    var dados = { consultaInicio: g("autSIni"), consultaFim: g("autSFim"), consultaIntervaloS: g("autSInt"), portaoParadoS: g("autSPar"), consultaDias: dias, motivo: g("autSMot") };
     if (!dados.motivo || dados.motivo.length < 5) { if (m) { m.textContent = "Escreva o motivo (mínimo de 5 caracteres)."; m.className = "cadx-msg is-erro"; } return; }
     if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
     AutPred_chamar_("saudeCfg", dados, function (r) { AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });

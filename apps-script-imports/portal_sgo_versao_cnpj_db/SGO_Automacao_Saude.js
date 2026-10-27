@@ -11,9 +11,15 @@
  *     o servidor confere (alarme Intelbras, rotinas, eventos da Tuya, o próprio servidor). Aqui ela confere a Tuya SEM gastar
  *     chamada à toa: usa o contador, o último erro, o bloqueio e a idade da última resposta; chamada real (lista de
  *     dispositivos) no máximo 1 vez por hora, na janela de consulta, e só se nenhuma outra chamada deu certo na última hora.
- *     Orçamento da cota (AUT_SAUDE_CFG.orcamentoMes, padrão 26.000 chamadas/mês = Trial Edition): 70% aviso; 90% MODO
- *     ECONÔMICO automático (AUT_ECONOMICO: só comandos pedidos por pessoa e a abertura automática por evento; leituras
- *     automáticas e consulta da campainha param). Sai na virada do mês ou quando a Diretoria sai ou ajusta o orçamento.
+ *     Orçamento da cota (27/10/2026, dono: nada de 26.000 automático): sem orçamento CONFIRMADO por um diretor ou pelo
+ *     Administrador (limite do pacote, período mensal ou único com início e fim, orçamento = valor escolhido, sugestão 50% do
+ *     limite), o SGO+ fica no modo econômico. Com ele: 70% aviso; 90% MODO ECONÔMICO automático (AUT_ECONOMICO: só comandos
+ *     pedidos por pessoa e a abertura automática por evento; leituras automáticas param); teto do dia = 2 vezes a cota diária
+ *     média do período. Sai no período novo ou quando a Diretoria sai ou ajusta o orçamento.
+ *     Bloqueio (cota, plano): a sonda verifica a volta com UMA chamada, no horário do recuo (15 min, 30 min, 1 h, depois de
+ *     hora em hora; só no expediente); a volta abre 60 min de recuperação (SGO_Automacao_Tuya.js, Tuya_portao_).
+ *     Abertura automática da porta: item próprio; suspensa (sem eventos vivos, sem evento da fechadura, sem validação por
+ *     eventos ou nuvem bloqueada) vira incidente com aviso único e aviso de normalização.
  *     Autocorreção: renovar o token, repetir falha passageira com recuo; o servidor reinstala rotina parada e reconecta os
  *     eventos. Cada ação vira linha em AUT_INCIDENTES.
  *  2. Incidente: falha que não se corrige avisa o responsável pelo sistema e a Diretoria (SGO_notificar_, evento S74 da
@@ -42,12 +48,13 @@ var AUT_TEXTO_SEM_RESPOSTA = 'A nuvem dos portões não respondeu agora: tente d
 var AUT_SAUDE_NOMES = {
   tuya_nuvem: 'Nuvem dos portões e da porta (Tuya)', tuya_dispositivos: 'Portões e porta conectados à internet', tuya_cota: 'Consumo da cota da Tuya',
   tuya_economico: 'Modo econômico', tuya_mensagens: 'Eventos da Tuya (serviço de mensagens)', alarme: 'Central de alarme Intelbras',
+  auto_abertura: 'Abertura automática da porta (campainha)',
   agendador: 'Rotinas agendadas do servidor', rotina_minuto: 'Rotina de 1 minuto da automação', rotina_rapida: 'Abertura automática (rotina rápida)',
   servidor: 'Servidor do SGO+', sentinela: 'Sentinela'
 };
 var AUT_SAUDE_TOM = { ok: 'verde', atencao: 'amarelo', falha: 'vermelho', desligado: 'cinza' };
 var AUT_ORIGENS_USO = { COMANDO: 'Comandos de pessoas', MANUAL: 'Leituras pedidas na tela', TELA: 'Releitura automática das telas', AUTOMATICA: 'Consultas das rotinas',
-  EVENTO: 'Abertura automática por evento', SENTINELA: 'Sentinela', SINCRONIZAR: 'Sincronização', TOKEN: 'Token de acesso', OUTRA: 'Outras' };
+  EVENTO: 'Abertura automática (resposta à campainha)', SENTINELA: 'Sentinela', SINCRONIZAR: 'Sincronização', TOKEN: 'Token de acesso', OUTRA: 'Outras' };
 
 // ------------------------------------------------------------
 // FALHA DA NUVEM NA TELA DA EQUIPE
@@ -60,6 +67,13 @@ var AUT_ORIGENS_USO = { COMANDO: 'Comandos de pessoas', MANUAL: 'Leituras pedida
 function AutPred_erroNuvem_(e, padrao, sessao) {
   if (!e) return new Error(padrao || 'Não foi possível concluir. Tente de novo.');
   if (e.autAmigavel) return e;
+  // 27/10/2026: nuvem bloqueada (cota ou plano): o SGO+ nem enviou; a equipe vê o "fora do ar", a gestão o detalhe
+  if (e.tuyaBloqueioLocal) {
+    AutPred_registrarFalhaNuvem_({ codigo: e.tuyaCodigo, http: 0, incerto: false, msg: e.message });
+    var xb = new Error(AutPred_textoForaDoAr_() + (sessao && AutPred_administra_(sessao) ? ' Detalhe para a gestão: ' + Tuya_textoErro_(e.tuyaCodigo, '', 0, 'a chamada') + ' ' + Tuya_limpar_(e.message) + '.' : ''));
+    xb.autAmigavel = true; xb.foraDoAr = true;
+    return xb;
+  }
   if (e.tuyaPausa) { var p = new Error('Leitura automática pausada: ' + String(e.message || '').replace(/^leitura automática pausada: /, '') + '. Toque em "Ler estado" para ler agora.'); p.autAmigavel = true; return p; }
   var temTuya = !!(e.tuyaCodigo || e.tuyaHttp || e.tuyaRede);
   var tipo = temTuya ? Tuya_tipoFalha_(e.tuyaCodigo, e.tuyaHttp, e.tuyaRede) : '';
@@ -210,7 +224,147 @@ function AutPred_propJson_(k, padrao) { try { var v = JSON.parse(PropertiesServi
 function AutPred_horaCurta_(ms) { return ms ? Utilities.formatDate(new Date(ms), AUT_FUSO, 'dd/MM HH:mm') : ''; }
 function AutPred_milhar_(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 
-/** Itens da Tuya. Chamada real só na conferência de hora em hora (ou para renovar o token quando ele falhou). */
+// ------------------------------------------------------------
+// ORÇAMENTO DA COTA (27/10/2026, dono: "não usar automaticamente 26.000"; depois: "sem confirmação não pode degradar")
+// Contexto real: o painel da Tuya mostra "Free of charge within monthly usage limits of $0.20" e o pacote "Cloud Develop Base
+// Resource Trial" cortou em 53.909 chamadas CLOUD_API_FOREIGN; a documentação diz que a cota do Trial renova todo mês (o
+// serviço fica suspenso até a renovação). Referência PROVISÓRIA: limite de ~53.900 por mês e orçamento de 50% (26.950),
+// marcada "provisório — confirmar no painel" até um diretor ou o Administrador confirmar (limite do pacote, período mensal
+// ou pacote único com início e fim, orçamento escolhido). Sem confirmação o SGO+ opera normalmente (nada de modo econômico
+// por falta de confirmação). Modo econômico só como emergência: 90% do orçamento confirmado, ou 90% do LIMITE de
+// referência enquanto provisório. Consumo do dia acima da média diária: a releitura dos portões parados (sem eventos) passa
+// a 60 s; acima do teto do dia (2 vezes a média), 120 s e aviso na Saúde; comandos, eventos e abertura automática não mudam.
+// ------------------------------------------------------------
+var AUT_ORC_TETO_FATOR = 2;     // teto do dia = 2 vezes a cota diária média do período (nunca gastar tudo num dia)
+var AUT_ORC_TETO_MIN = 50;
+var AUT_ORC_REF_LIMITE = 53900; // pacote Trial cortou em 53.909 chamadas (27/10/2026); renova por mês segundo a documentação
+var AUT_ORC_REF_VALOR = 26950;  // 50% do limite de referência
+var AUT_ORC_PASSOS = 'No painel da Tuya (platform.tuya.com), entre com a conta de desenvolvedor da Metrolabs; abra Cloud › Cloud Services (ou My Services) › IoT Core e veja o pacote em uso (resource pack): o limite de chamadas de API, se ele renova todo mês ou se é único, e as datas de início e fim. Depois, em Segurança predial › Saúde da infraestrutura › Orçamento da cota, informe o limite, o período e o orçamento (sugestão: metade do limite) e grave com o motivo.';
+
+function AutPred_diaUtc_(ymd) { var m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : 0; }
+function AutPred_dataCurta_(ymd) { var m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+
+/** Orçamento gravado e válido, ou null (função pura sobre AUT_SAUDE_CFG.orcamento). */
+function AutPred_orcamentoNormalizar_(o) {
+  if (!o || typeof o !== 'object' || o.confirmado !== true) return null;
+  var valor = Math.round(Number(o.valor)), limite = Math.round(Number(o.limitePacote));
+  if (!(valor >= 100) || !(limite >= valor)) return null;
+  var periodo = o.periodo === 'UNICO' ? 'UNICO' : 'MENSAL', ini = String(o.inicio || ''), fim = String(o.fim || '');
+  if (periodo === 'UNICO' && !(AutPred_diaUtc_(ini) && AutPred_diaUtc_(fim) && ini <= fim)) return null;
+  return { confirmado: true, valor: valor, limitePacote: limite, periodo: periodo, inicio: periodo === 'UNICO' ? ini : '', fim: periodo === 'UNICO' ? fim : '',
+    jaUsado: Math.max(0, Math.round(Number(o.jaUsado) || 0)), mesConfirmacao: String(o.mesConfirmacao || ''), mesBase: Math.max(0, Number(o.mesBase) || 0),
+    por: String(o.por || ''), em: Number(o.em) || 0, motivo: String(o.motivo || '') };
+}
+
+/**
+ * Orçamento agora: { confirmado, provisorio, avisoProvisorio, chave (período: "aaaa-mm" ou "U<início>"), periodo, valor,
+ * limitePacote, usado, pct, pctLimite, tetoDia, diaUsado, diasPeriodo, inicio, fim, texto }. Sem confirmação (ou com o pacote
+ * único fora das datas), vale a referência provisória mensal. Função pura com cfg, u e agoraMs (os testes passam).
+ */
+function AutPred_orcamentoAgora_(cfg, u, agoraMs) {
+  cfg = cfg || AutPred_saudeCfg_(); u = u || Tuya_uso_(); agoraMs = agoraMs || Date.now();
+  var hoje = Tuya_diaDe_(agoraMs), mes = hoje.slice(0, 7), o = cfg.orcamento;
+  var a = Number(mes.slice(0, 4)), m = Number(mes.slice(5, 7));
+  var r = { confirmado: false, provisorio: false, avisoProvisorio: '', chave: mes, periodo: 'MENSAL', valor: AUT_ORC_REF_VALOR, limitePacote: AUT_ORC_REF_LIMITE, usado: u.mesTotal,
+    diaUsado: u.diaTotal, diasPeriodo: new Date(Date.UTC(a, m, 0)).getUTCDate(), inicio: '', fim: '' };
+  var foraDoPacote = o && o.periodo === 'UNICO' && (hoje < o.inicio || hoje > o.fim);
+  if (!o || foraDoPacote) {
+    r.provisorio = true;
+    r.avisoProvisorio = foraDoPacote ? (hoje < o.inicio ? 'O pacote confirmado só começa em ' + AutPred_dataCurta_(o.inicio) : 'O período do pacote confirmado terminou em ' + AutPred_dataCurta_(o.fim)) + ': vale a referência provisória até confirmar o pacote em uso'
+      : 'Orçamento provisório — confirmar no painel da Tuya o limite do pacote';
+  } else {
+    r.confirmado = true;
+    Object.assign(r, { periodo: o.periodo, valor: o.valor, limitePacote: o.limitePacote, inicio: o.inicio, fim: o.fim, por: o.por, em: o.em });
+    if (o.periodo === 'UNICO') {
+      r.chave = 'U' + o.inicio;
+      r.diasPeriodo = Math.round((AutPred_diaUtc_(o.fim) - AutPred_diaUtc_(o.inicio)) / 86400000) + 1;
+      r.usado = o.jaUsado + (u.periodo && u.periodo.chave === r.chave ? Number(u.periodo.total) || 0 : 0);
+    } else {
+      // "já usado" (lido no painel da Tuya na confirmação) inclui o que o SGO+ contou até ali: soma só o que veio depois
+      r.usado = o.jaUsado && o.mesConfirmacao === mes ? o.jaUsado + Math.max(0, u.mesTotal - o.mesBase) : u.mesTotal;
+    }
+  }
+  r.pct = Math.floor(r.usado / r.valor * 1000) / 10;
+  r.pctLimite = Math.floor(r.usado / r.limitePacote * 1000) / 10;
+  r.tetoDia = Math.max(AUT_ORC_TETO_MIN, Math.ceil(r.valor / Math.max(1, r.diasPeriodo) * AUT_ORC_TETO_FATOR));
+  r.texto = AutPred_milhar_(r.usado) + ' de ' + AutPred_milhar_(r.valor) + ' chamadas ' + (r.periodo === 'UNICO' ? 'no pacote (' + AutPred_dataCurta_(r.inicio) + ' a ' + AutPred_dataCurta_(r.fim) + ')' : 'no mês') +
+    ' (' + r.pct + '%)' + (r.provisorio ? ' — orçamento provisório, confirmar no painel' : '');
+  return r;
+}
+
+/** Emergência perto de esgotar: 90% do orçamento confirmado; provisório, 90% do limite de referência (nunca por falta de confirmação). */
+function AutPred_orcamentoEmergencia_(cfg, orc) { return orc.confirmado ? orc.pct >= cfg.economicoPct : orc.pctLimite >= cfg.economicoPct; }
+/** Passou do teto do dia: a releitura dos portões parados fica mais espaçada (60 s). */
+function AutPred_acimaDoTetoDia_(orc) { orc = orc || AutPred_orcamentoAgora_(); return !!orc.tetoDia && orc.diaUsado >= orc.tetoDia; }
+
+/**
+ * Confirmação do orçamento (diretor ou Administrador), com o limite do pacote lido no painel da Tuya. dados = { limitePacote,
+ * periodo: MENSAL|UNICO, inicio, fim (aaaa-mm-dd; obrigatórios no único), orcamento, jaUsado (opcional), motivo }.
+ */
+function AutPred_saudeOrcamento_(sessao, dados) {
+  AutPred_exigirSaude_(sessao);
+  dados = dados || {};
+  var num = function (v) { return Math.round(Number(String(v === undefined || v === null ? '' : v).replace(/\./g, '').replace(',', '.'))); };
+  var motivo = AutPred_s_(dados.motivo);
+  if (motivo.length < 5) throw new Error('Não foi possível confirmar o orçamento: escreva o motivo (mínimo de 5 caracteres). Fica registrado com o seu nome.');
+  var limite = num(dados.limitePacote), valor = num(dados.orcamento), ja = AutPred_s_(dados.jaUsado) ? num(dados.jaUsado) : 0;
+  if (!(limite >= 100 && limite <= 100000000)) throw new Error('Não foi possível confirmar o orçamento: informe o limite de chamadas do pacote, como aparece no painel da Tuya (Cloud › Cloud Services › IoT Core). ' + AUT_ORC_PASSOS);
+  if (!(valor >= 100 && valor <= limite)) throw new Error('Não foi possível confirmar o orçamento: o orçamento precisa ficar entre 100 e o limite do pacote (' + AutPred_milhar_(limite) + '). Sugestão: ' + AutPred_milhar_(Math.floor(limite / 2)) + ' (metade do limite), para sobrar folga.');
+  if (!(ja >= 0 && ja <= limite)) throw new Error('Não foi possível confirmar o orçamento: o consumo já usado precisa ficar entre 0 e o limite do pacote.');
+  var periodo = AutPred_s_(dados.periodo).toUpperCase() === 'UNICO' ? 'UNICO' : 'MENSAL', ini = AutPred_s_(dados.inicio), fim = AutPred_s_(dados.fim), hoje = Tuya_diaDe_();
+  if (periodo === 'UNICO') {
+    if (!AutPred_diaUtc_(ini) || !AutPred_diaUtc_(fim) || ini > fim) throw new Error('Não foi possível confirmar o orçamento: no pacote único, informe a data de início e a de fim (a do painel da Tuya), com o início antes do fim.');
+    if (fim < hoje) throw new Error('Não foi possível confirmar o orçamento: o pacote informado já terminou (' + AutPred_dataCurta_(fim) + '). Confira no painel da Tuya o pacote em uso.');
+  }
+  var props = PropertiesService.getScriptProperties();
+  var atual = AutPred_propJson_(AUT_SAUDE_CFG, {}) || {};
+  var u = Tuya_uso_();
+  atual.orcamento = { confirmado: true, limitePacote: limite, periodo: periodo, inicio: periodo === 'UNICO' ? ini : '', fim: periodo === 'UNICO' ? fim : '', valor: valor, jaUsado: ja,
+    mesConfirmacao: hoje.slice(0, 7), mesBase: u.mesTotal, por: AutPred_nome_(sessao), em: Date.now(), motivo: motivo.slice(0, 300) };
+  props.setProperty(AUT_SAUDE_CFG, JSON.stringify(atual));
+  // pacote único: o consumo do período é somado a partir de agora (o "já usado" do painel cobre o que veio antes)
+  u.periodo = periodo === 'UNICO' ? { chave: 'U' + ini, inicio: ini, fim: fim, total: 0 } : null;
+  Tuya_usoGravar_(u);
+  var texto = 'Orçamento confirmado: ' + AutPred_milhar_(valor) + ' chamadas ' + (periodo === 'UNICO' ? 'no pacote único de ' + AutPred_dataCurta_(ini) + ' a ' + AutPred_dataCurta_(fim) : 'por mês') +
+    ' (limite do pacote: ' + AutPred_milhar_(limite) + (ja ? '; já usado: ' + AutPred_milhar_(ja) : '') + '). Motivo: ' + motivo;
+  AutPred_saudeLinha_({ chave: 'tuya_cota', evento: 'ACAO_MANUAL', situacao: 'ok', texto: texto + ' Por ' + AutPred_nome_(sessao) + '.', acao: 'orçamento confirmado', por: AutPred_nome_(sessao) });
+  AutPred_auditar_({ evento: 'ORCAMENTO_CONFIRMADO', quem: sessao, resultado: 'OK', detalhe: texto });
+  var cfg = AutPred_saudeCfg_(), orc = AutPred_orcamentoAgora_(cfg), extra = '';
+  var ecoGravado = AutPred_propJson_(TUYA_PROP_ECONOMICO, null);
+  if (ecoGravado && !AutPred_orcamentoEmergencia_(cfg, orc)) {
+    props.deleteProperty(TUYA_PROP_ECONOMICO);
+    extra = ' Com o orçamento confirmado, o consumo ficou abaixo de ' + cfg.economicoPct + '% e o modo econômico foi desligado.';
+  }
+  AutPred_saudeProcessar_([AutPred_itemCota_(cfg, orc)]);
+  return Object.assign(AutPred_saudePainel_(sessao), { mensagem: texto + extra });
+}
+
+/** Item "Consumo da cota" da sentinela. Provisório é informação (amarelo sem incidente): nada fica mais lento por isso. */
+function AutPred_itemCota_(cfg, orc) {
+  var prov = orc.provisorio ? ' ' + orc.avisoProvisorio + '. ' + AUT_ORC_PASSOS : '';
+  if (orc.pct >= cfg.avisoPct) return { chave: 'tuya_cota', situacao: 'atencao', incidente: true, texto: 'Consumo da cota da Tuya em ' + orc.pct + '%: ' + orc.texto,
+    porque: 'Orçamento ' + (orc.provisorio ? 'provisório' : 'confirmado') + ' de ' + AutPred_milhar_(orc.valor) + ' chamadas (' + (orc.periodo === 'UNICO' ? 'pacote único' : 'por mês') + '; limite do pacote ' + AutPred_milhar_(orc.limitePacote) + '). Aviso em ' + cfg.avisoPct + '%; modo econômico de emergência em ' + cfg.economicoPct + '%' + (orc.provisorio ? ' do limite' : '') + '.',
+    oQueFazer: 'Acompanhe em Segurança predial › Saúde da infraestrutura e veja em "Chamadas por origem" o que mais gasta. Para mais folga, ligue o serviço de mensagens da Tuya ou amplie o pacote.' + prov };
+  if (AutPred_acimaDoTetoDia_(orc)) return { chave: 'tuya_cota', situacao: 'atencao', avisar: false, texto: 'Acima do teto do dia: ' + AutPred_milhar_(orc.diaUsado) + ' de ' + AutPred_milhar_(orc.tetoDia) + ' chamadas hoje (' + orc.texto + ')',
+    porque: 'O teto do dia é ' + AUT_ORC_TETO_FATOR + ' vezes a média diária do orçamento, para não gastar tudo num dia. Até a virada do dia, a posição dos portões parados (sem eventos) é relida a cada 120 s (acima da média diária, 60 s); comandos, eventos e a abertura automática não mudam.',
+    oQueFazer: 'Veja em "Chamadas por origem" o que mais gastou hoje.' + prov };
+  if (orc.provisorio) return { chave: 'tuya_cota', situacao: 'atencao', avisar: false, texto: orc.texto, porque: orc.avisoProvisorio + '. O SGO+ funciona normalmente com a referência provisória (pacote de cerca de 53.900 chamadas por mês, orçamento de 50%).', oQueFazer: AUT_ORC_PASSOS };
+  return { chave: 'tuya_cota', situacao: 'ok', texto: orc.texto + ' · teto do dia ' + AutPred_milhar_(orc.tetoDia) };
+}
+
+/**
+ * Sonda do bloqueio: UMA chamada barata (detalhe de um dispositivo) para ver se a Tuya voltou. Só a SENTINELA e só no horário
+ * do recuo (Tuya_portao_). Sem token guardado, o pedido do token vai antes (mais uma chamada). Nunca envia comando.
+ */
+function AutPred_sondaNuvem_(c) {
+  var lista = AutPred_dispositivos_().filter(function (d) { return AutPred_s_(d.DEVICE_ID) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
+  lista.sort(function (a, b) { return (AutPred_s_(b.HOMOLOGADO) === 'SIM' ? 1 : 0) - (AutPred_s_(a.HOMOLOGADO) === 'SIM' ? 1 : 0); });
+  if (lista.length) return Tuya_dispositivo_(c, lista[0].DEVICE_ID);
+  var r = Tuya_exigirOk_(Tuya_chamar_(c, 'GET', '/v1.0/iot-01/associated-users/devices', { size: 1 }), c, 'a conferência da nuvem');
+  return r.result;
+}
+
+/** Itens da Tuya. Chamada real só na sonda do bloqueio ou na conferência de hora em hora (ou para renovar o token quando ele falhou). */
 function AutPred_sentinelaTuya_(agoraMs) {
   agoraMs = agoraMs || Date.now();
   var props = PropertiesService.getScriptProperties();
@@ -218,48 +372,68 @@ function AutPred_sentinelaTuya_(agoraMs) {
   var u = Tuya_uso_();
   var ligada = c.temCredencial && c.ligado;
 
-  // modo econômico: virada do mês, entrada automática em economicoPct
-  var mes = AutPred_mesAtual_(), ecoBruto = AutPred_propJson_(TUYA_PROP_ECONOMICO, null), acoesEco = [];
-  if (ecoBruto && ecoBruto.mes !== mes) { props.deleteProperty(TUYA_PROP_ECONOMICO); acoesEco.push({ texto: 'Modo econômico desligado na virada do mês (cota nova).', ok: true }); }
-  var pct = Math.floor(u.mesTotal / cfg.orcamentoMes * 1000) / 10;
+  // modo econômico: período novo do orçamento (virada do mês ou pacote novo), entrada automática em economicoPct
+  var orc = AutPred_orcamentoAgora_(cfg, u, agoraMs), ecoBruto = AutPred_propJson_(TUYA_PROP_ECONOMICO, null), acoesEco = [];
+  if (ecoBruto && ecoBruto.mes !== orc.chave) { props.deleteProperty(TUYA_PROP_ECONOMICO); acoesEco.push({ texto: orc.periodo === 'UNICO' ? 'Modo econômico desligado: período novo do pacote.' : 'Modo econômico desligado na virada do mês (cota nova).', ok: true }); }
   var dispensa = AutPred_propJson_(AUT_PROP_DISPENSA, null);
-  var dispensado = !!(dispensa && dispensa.mes === mes);
-  if (pct >= cfg.economicoPct && !Tuya_economico_() && !dispensado) {
-    props.setProperty(TUYA_PROP_ECONOMICO, JSON.stringify({ mes: mes, desde: agoraMs, por: 'Sentinela', motivo: 'automático: ' + AutPred_milhar_(u.mesTotal) + ' de ' + AutPred_milhar_(cfg.orcamentoMes) + ' chamadas no mês (' + pct + '%)' }));
-    acoesEco.push({ texto: 'Modo econômico ligado automaticamente: ' + AutPred_milhar_(u.mesTotal) + ' de ' + AutPred_milhar_(cfg.orcamentoMes) + ' chamadas no mês (' + pct + '%). Leituras automáticas e consulta da campainha pausadas; comandos de pessoas continuam.', ok: true });
+  var dispensado = !!(dispensa && dispensa.mes === orc.chave);
+  if (AutPred_orcamentoEmergencia_(cfg, orc) && !AutPred_propJson_(TUYA_PROP_ECONOMICO, null) && !dispensado) {
+    props.setProperty(TUYA_PROP_ECONOMICO, JSON.stringify({ mes: orc.chave, desde: agoraMs, por: 'Sentinela', motivo: 'automático: ' + orc.texto }));
+    acoesEco.push({ texto: 'Modo econômico ligado automaticamente: ' + orc.texto + '. Leituras automáticas pausadas; comandos de pessoas e eventos continuam.', ok: true });
   }
   var eco = Tuya_economico_();
 
   if (!ligada) {
     itens.push({ chave: 'tuya_nuvem', situacao: 'desligado', texto: 'Automação predial desligada no SGO+ (Chaves e senhas)', porque: (c.faltas || []).join('; '), oQueFazer: 'Nada a fazer enquanto a automação estiver desligada.' });
   } else {
-    // autocorreção: token recusado (1010/1011/1400) -> pede outro (1 chamada)
+    // autocorreção: token recusado (1010/1011/1400) -> pede outro (1 chamada); com bloqueio, não (a sonda cuida)
     var e = u.ultimoErro, recente = e && Number(e.em) > u.ultimoOkEm && agoraMs - Number(e.em) < AUT_ERRO_RECENTE_MS;
-    if (recente && e.tipo === 'TOKEN') {
+    if (recente && e.tipo === 'TOKEN' && !u.bloqueio) {
       try { Tuya_esquecerToken_(); Tuya_comOrigem_('SENTINELA', function () { Tuya_token_(c, true); }); acoes.push({ texto: 'Token de acesso da Tuya renovado automaticamente.', ok: true }); }
       catch (eT) { acoes.push({ texto: 'Tentou renovar o token de acesso da Tuya: ' + Tuya_limpar_(eT && eT.message, c), ok: false }); }
       u = Tuya_uso_();
     }
-    // conferência real: no máximo 1 por hora e só na janela. Com a nuvem normal, só se nenhuma chamada deu certo na última
-    // hora e sem modo econômico; com bloqueio ou falha da nuvem depois do último sucesso, para ver se ela voltou.
-    var sondaEm = Number(props.getProperty(AUT_PROP_SONDA) || 0), lista = null;
-    var falhaAberta = !!u.bloqueio || !!(recente && Tuya_falhaDaNuvem_(e.tipo));
-    var devido = agoraMs - sondaEm >= AUT_SONDA_MS && AutPred_naJanela_(cfg, agoraMs) && (falhaAberta || (agoraMs - u.ultimoOkEm >= AUT_SONDA_MS && !eco));
-    if (devido) {
-      props.setProperty(AUT_PROP_SONDA, String(agoraMs));
-      for (var t = 0; t < 2 && !lista; t++) {
-        try { lista = Tuya_comOrigem_('SENTINELA', function () { return Tuya_listarDispositivos_(c); }); }
-        catch (eS) {
-          if (!(eS && eS.tuyaRede) || t === 1) break;
-          acoes.push({ texto: 'Conferência da Tuya sem resposta; repetida depois de 2 segundos.', ok: true });
-          Utilities.sleep(2000);
-        }
+    var lista = null, fase = Tuya_fase_(u, agoraMs);
+    if (u.bloqueio) {
+      // 27/10/2026 (dono): bloqueado, só a sonda, com UMA chamada, no horário do recuo e no expediente; nunca repetida aqui
+      if (agoraMs >= Number(u.bloqueio.proximaSondaEm || 0) && AutPred_naJanela_(cfg, agoraMs)) {
+        var sondaOk = false;
+        try { Tuya_comOrigem_('SENTINELA', function () { return AutPred_sondaNuvem_(c); }); sondaOk = true; } catch (eSo) {}
+        u = Tuya_uso_();
+        acoes.push(sondaOk && !u.bloqueio ? { texto: 'Sonda da nuvem: a Tuya voltou a responder. Recuperação gradual de 60 minutos começou.', ok: true }
+          : { texto: 'Sonda da nuvem: a Tuya continua recusando' + (u.bloqueio ? '; próxima conferência às ' + AutPred_horaCurta_(Number(u.bloqueio.proximaSondaEm)) + ' (recuo de ' + Math.round(Number(u.bloqueio.recuoMs) / 60000) + ' min)' : '') + '.', ok: false });
       }
-      u = Tuya_uso_();
+    } else if (fase === 'NORMAL') {
+      // conferência real com a nuvem normal: no máximo 1 por hora, na janela, sem modo econômico e só se nenhuma chamada deu
+      // certo na última hora (ou se a última falha foi da nuvem inteira)
+      var sondaEm = Number(props.getProperty(AUT_PROP_SONDA) || 0);
+      var falhaAberta = !!(recente && Tuya_falhaDaNuvem_(e.tipo));
+      var devido = agoraMs - sondaEm >= AUT_SONDA_MS && AutPred_naJanela_(cfg, agoraMs) && !eco && (falhaAberta || agoraMs - u.ultimoOkEm >= AUT_SONDA_MS);
+      if (devido) {
+        props.setProperty(AUT_PROP_SONDA, String(agoraMs));
+        for (var t = 0; t < 2 && !lista; t++) {
+          try { lista = Tuya_comOrigem_('SENTINELA', function () { return Tuya_listarDispositivos_(c); }); }
+          catch (eS) {
+            // só falha passageira (sem resposta, 429, 5xx) é repetida; código de bloqueio nunca
+            if (!(eS && eS.tuyaRede) || t === 1) break;
+            acoes.push({ texto: 'Conferência da Tuya sem resposta; repetida depois de 2 segundos.', ok: true });
+            Utilities.sleep(2000);
+          }
+        }
+        u = Tuya_uso_();
+      }
     }
     e = u.ultimoErro; recente = e && Number(e.em) > u.ultimoOkEm && agoraMs - Number(e.em) < AUT_ERRO_RECENTE_MS;
+    fase = Tuya_fase_(u, agoraMs);
     var item;
-    if (u.bloqueio) item = AutPred_itemNuvem_(u.bloqueio.tipo, u.bloqueio.codigo, u.bloqueio.texto);
+    if (u.bloqueio) {
+      item = AutPred_itemNuvem_(u.bloqueio.tipo, u.bloqueio.codigo, u.bloqueio.texto);
+      item.porque += ' Nada é enviado à Tuya enquanto isso. Próxima conferência automática às ' + AutPred_horaCurta_(Number(u.bloqueio.proximaSondaEm)) + ' (recuo de ' + Math.round(Number(u.bloqueio.recuoMs) / 60000) + ' min' + (u.bloqueio.rebloqueio ? '; voltou a bloquear depois de uma volta, o recuo dobrou' : '') + ').';
+    } else if (fase === 'RECUPERACAO_1' || fase === 'RECUPERACAO_2') {
+      item = { chave: 'tuya_nuvem', situacao: 'atencao', texto: 'A nuvem voltou às ' + AutPred_horaCurta_(Number(u.recuperacao.desde)) + ': em recuperação até ' + AutPred_horaCurta_(Number(u.recuperacao.ate)),
+        porque: 'Depois de um bloqueio o SGO+ volta aos poucos: nos primeiros 30 minutos só saem comandos de pessoas e eventos; depois, as leituras automáticas, com no máximo ' + TUYA_LIMITE_MINUTO_RECUPERACAO + ' chamadas por minuto. Se a Tuya recusar de novo, o bloqueio volta na hora e a próxima conferência espera o dobro.',
+        oQueFazer: 'Nada a fazer. Se o bloqueio voltar, confira o pacote no painel da Tuya.' };
+    }
     else if (recente && Tuya_falhaDaNuvem_(e.tipo)) item = AutPred_itemNuvem_(e.tipo, e.codigo, e.texto);
     else item = { chave: 'tuya_nuvem', situacao: 'ok', texto: 'Respondendo' + (u.ultimoOkEm ? ' (última resposta em ' + AutPred_horaCurta_(u.ultimoOkEm) + ')' : ''), porque: '', oQueFazer: '' };
     item.acoes = acoes;
@@ -281,17 +455,40 @@ function AutPred_sentinelaTuya_(agoraMs) {
       : { chave: 'tuya_dispositivos', situacao: 'ok', texto: 'Todos os dispositivos homologados conectados' + (lista ? ' (conferido agora)' : '') });
   }
 
-  // cota
-  var base = AutPred_milhar_(u.mesTotal) + ' de ' + AutPred_milhar_(cfg.orcamentoMes) + ' chamadas no mês (' + pct + '%)';
-  if (pct >= cfg.avisoPct) itens.push({ chave: 'tuya_cota', situacao: 'atencao', incidente: true, texto: 'Consumo da cota da Tuya em ' + pct + '%: ' + base,
-    porque: 'O orçamento configurado é de ' + AutPred_milhar_(cfg.orcamentoMes) + ' chamadas por mês (plano da Tuya). Aviso em ' + cfg.avisoPct + '%; modo econômico automático em ' + cfg.economicoPct + '%.',
-    oQueFazer: 'Acompanhe em Segurança predial › Saúde da infraestrutura. Para mais folga, ligue o serviço de mensagens da Tuya (a campainha deixa de ser consultada) ou assine um plano maior e ajuste o orçamento na tela.' });
-  else itens.push({ chave: 'tuya_cota', situacao: 'ok', texto: base });
+  // cota (orçamento confirmado ou provisório) e modo econômico de emergência
+  itens.push(AutPred_itemCota_(cfg, AutPred_orcamentoAgora_(cfg, Tuya_uso_(), agoraMs)));
   if (eco) itens.push({ chave: 'tuya_economico', situacao: 'atencao', incidente: true, acoes: acoesEco, texto: 'Modo econômico ligado (' + AutPred_s_(eco.motivo) + ')',
-    porque: 'O consumo do mês chegou a ' + cfg.economicoPct + '% do orçamento. Para não esgotar a cota, só saem os comandos pedidos por pessoas e a abertura automática por evento.',
-    oQueFazer: 'A posição dos portões e a campainha não são relidas sozinhas: use "Ler estado" e "Verificar campainha agora". Volta ao normal na virada do mês; a Diretoria pode sair antes em Saúde da infraestrutura.' });
-  else itens.push({ chave: 'tuya_economico', situacao: 'ok', acoes: acoesEco, texto: dispensado ? 'Desligado pela Diretoria neste mês (' + AutPred_s_(dispensa.por) + ')' : 'Desligado' });
+    porque: 'O consumo chegou a ' + cfg.economicoPct + '% (emergência, perto de esgotar o pacote). Continuam: comandos pedidos por pessoas, os eventos da Tuya e a abertura automática por evento.',
+    oQueFazer: 'Ficam mais lentos: a posição dos portões sem eventos (use "Ler estado") e, sem eventos, a campainha e a abertura automática (use "Verificar campainha agora" ou o aplicativo Smart Life). Volta ao normal no período novo; a Diretoria pode sair antes em Saúde da infraestrutura.' });
+  else itens.push({ chave: 'tuya_economico', situacao: 'ok', acoes: acoesEco, texto: dispensado ? 'Desligado pela Diretoria neste período (' + AutPred_s_(dispensa.por) + ')' : 'Desligado' });
+  itens.push(AutPred_itemAutoAbertura_(agoraMs));
   return itens;
+}
+
+/**
+ * Item "Abertura automática da porta" (27/10/2026, dono: a preferência da Diretoria nunca é apagada nem suspensa). Mostra por
+ * qual caminho ela está funcionando: eventos (zero consulta) ou consulta da fechadura a cada 60 s (sem eventos), e a
+ * validação por eventos, que é só informativa. Sem nome do dispositivo (o Administrador vê a Saúde e não vê a porta).
+ */
+function AutPred_itemAutoAbertura_(agoraMs) {
+  var lista = AutPred_dispositivos_().filter(function (d) { return AutPred_autoAbrir_(d) && AutPred_ehPedido_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
+  if (!lista.length) return { chave: 'auto_abertura', situacao: 'desligado', texto: 'Abertura automática desligada' };
+  var cfg = AutPred_saudeCfg_(), textos = [], semCaminho = [], semDireito = [];
+  lista.forEach(function (d) {
+    var cam = AutPred_caminhoFechadura_(d, cfg, agoraMs);
+    if (cam.via === 'EVENTOS') textos.push('Ligada: pelos eventos da Tuya (na hora, sem consulta)');
+    else if (cam.via === 'CONSULTA') textos.push('Ligada: sem eventos, pela consulta da fechadura a cada ' + cam.intervaloS + ' s (abre em até ' + cam.intervaloS + ' s depois do toque)');
+    else { textos.push('Ligada, mas sem eventos e sem consulta agora (' + cam.motivo + ')'); semCaminho.push(cam.motivo); }
+    var resp = AutPred_autoResponsavel_(d);
+    if (!resp.ok) { textos.push('atenção: ' + resp.motivo); semDireito.push(resp.motivo); }
+    textos.push(AutPred_eventosValidado_(d) ? 'validada por eventos em ' + AutPred_dataBr_(d.EVENTOS_VALIDADO_EM) + ' (informativo)' : 'ainda não validada por eventos (informativo)');
+  });
+  if (!semCaminho.length && !semDireito.length) return { chave: 'auto_abertura', situacao: 'ok', texto: textos.join('; ') };
+  return { chave: 'auto_abertura', situacao: 'atencao', incidente: true, confirmar: semDireito.length ? 1 : 2, texto: textos.join('; '),
+    porque: (semCaminho.length ? 'Sem os eventos da Tuya, a porta só abre sozinha pela consulta da fechadura, que agora não roda: ' + semCaminho.join('; ') + '. ' : '') +
+      (semDireito.length ? 'A abertura automática continua agindo, mas ' + semDireito.join('; ') + '. ' : '') + 'A preferência da Diretoria continua ligada.',
+    oQueFazer: (semCaminho.length ? 'Quando tocarem a campainha, use "Verificar campainha agora" e "Abrir agora", ou o aplicativo Smart Life. Para voltar ao normal: ligue o serviço de mensagens da Tuya (manual do módulo) ou ajuste o horário da consulta em Saúde da infraestrutura. ' : '') +
+      (semDireito.length ? 'Um diretor que destrava a porta decide: desligar e ligar de novo (fica no nome dele) ou desligar.' : '') };
 }
 
 /** Item vindo do servidor, só com os campos conhecidos (nada de texto livre além do previsto). */
@@ -343,9 +540,23 @@ function AutPred_saudePainel_(sessao) {
   var diasNoMes = new Date(Date.UTC(ano, mesN, 0)).getUTCDate();
   var dias = Object.keys(u.porDia || {}).sort().slice(-14).map(function (k) { return { dia: k.slice(8, 10) + '/' + k.slice(5, 7), total: Number(u.porDia[k]) || 0 }; });
   var porOrigem = function (m) { return Object.keys(m || {}).sort(function (a, b) { return (m[b] || 0) - (m[a] || 0); }).map(function (k) { return { origem: AUT_ORIGENS_USO[k] || k, total: Number(m[k]) || 0 }; }); };
+  var orc = AutPred_orcamentoAgora_(cfg, u), fase = Tuya_fase_(u);
+  // 27/10/2026: fechaduras (só para diretores: o Administrador não vê a porta da Diretoria)
+  var fechaduras = !AutPred_ehDiretor_(sessao) ? [] : AutPred_dispositivos_().filter(function (d) { return AutPred_ehPedido_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; }).map(function (d) {
+    var cam = AutPred_caminhoFechadura_(d, cfg), ev = AutPred_eventoGuardado_(d.DEVICE_ID), pe = AutPred_pedidoEventoEm_(ev);
+    return { nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR),
+      caminho: cam.via, caminhoTexto: cam.via === 'EVENTOS' ? 'Pelos eventos da Tuya (na hora, sem consulta)' : cam.via === 'CONSULTA' ? 'Sem eventos: consulta da fechadura a cada ' + cam.intervaloS + ' s' : 'Sem eventos e sem consulta agora (' + cam.motivo + ')',
+      validado: AutPred_eventosValidado_(d), validadoEm: AutPred_dataBr_(d.EVENTOS_VALIDADO_EM), validadoPor: AutPred_s_(d.EVENTOS_VALIDADO_POR), validadoDetalhe: AutPred_s_(d.EVENTOS_VALIDADO_DETALHE),
+      eventoRecebido: !!ev, pedidoEventoEm: pe ? AutPred_horaCurta_(pe) : '', responsavel: AutPred_autoAbrir_(d) ? AutPred_autoResponsavel_(d) : { ok: true, motivo: '' } };
+  });
   return {
-    agora: AutPred_agoraTexto_(), sentinelaEm: est.em ? AutPred_horaCurta_(Number(est.em)) : '', itens: itens,
-    uso: { dia: u.diaTotal, ontem: u.ontemTotal, mes: u.mesTotal, orcamento: cfg.orcamentoMes, pct: Math.floor(u.mesTotal / cfg.orcamentoMes * 1000) / 10,
+    agora: AutPred_agoraTexto_(), sentinelaEm: est.em ? AutPred_horaCurta_(Number(est.em)) : '', itens: itens, fechaduras: fechaduras,
+    orcamento: { confirmado: orc.confirmado, provisorio: orc.provisorio, avisoProvisorio: orc.avisoProvisorio, periodo: orc.periodo, valor: orc.valor, limitePacote: orc.limitePacote,
+      inicio: AutPred_dataCurta_(orc.inicio), fim: AutPred_dataCurta_(orc.fim), usado: orc.usado, pct: orc.pct, tetoDia: orc.tetoDia, diaUsado: orc.diaUsado, texto: orc.texto, por: AutPred_s_(orc.por),
+      em: orc.em ? AutPred_horaCurta_(orc.em) : '', sugestao: Math.floor(orc.limitePacote / 2), passos: AUT_ORC_PASSOS, podeConfirmar: AutPred_administra_(sessao) },
+    nuvem: { fase: fase, bloqueio: u.bloqueio ? { desde: AutPred_horaCurta_(Number(u.bloqueio.desde)), proximaSonda: AutPred_horaCurta_(Number(u.bloqueio.proximaSondaEm)), recuoMin: Math.round(Number(u.bloqueio.recuoMs) / 60000), sondas: Number(u.bloqueio.sondas) || 0, rebloqueio: !!u.bloqueio.rebloqueio } : null,
+      recuperacaoAte: u.recuperacao && fase !== 'NORMAL' ? AutPred_horaCurta_(Number(u.recuperacao.ate)) : '' },
+    uso: { dia: u.diaTotal, ontem: u.ontemTotal, mes: u.mesTotal, orcamento: orc.valor, pct: orc.pct, provisorio: orc.provisorio,
       projecaoMes: diaMes ? Math.round(u.mesTotal / diaMes * diasNoMes) : 0, avisoPct: cfg.avisoPct, economicoPct: cfg.economicoPct,
       porOrigemDia: porOrigem(u.diaPor), porOrigemMes: porOrigem(u.mesPor), dias: dias,
       mensagensDia: Number(msg.mensagensDia) || 0, mensagensMes: Number(msg.mensagensMes) || 0,
@@ -368,42 +579,41 @@ function AutPred_saudeSairEconomico_(sessao, dados) {
   var eco = Tuya_economico_(), props = PropertiesService.getScriptProperties();
   if (!eco) return Object.assign(AutPred_saudePainel_(sessao), { mensagem: 'O modo econômico já estava desligado.' });
   props.deleteProperty(TUYA_PROP_ECONOMICO);
-  props.setProperty(AUT_PROP_DISPENSA, JSON.stringify({ mes: AutPred_mesAtual_(), por: AutPred_nome_(sessao), em: Date.now(), motivo: motivo.slice(0, 300) }));
+  props.setProperty(AUT_PROP_DISPENSA, JSON.stringify({ mes: AutPred_orcamentoAgora_().chave, por: AutPred_nome_(sessao), em: Date.now(), motivo: motivo.slice(0, 300) }));
   AutPred_saudeLinha_({ chave: 'tuya_economico', evento: 'ACAO_MANUAL', situacao: 'ok', texto: 'Modo econômico desligado por ' + AutPred_nome_(sessao) + '. Motivo: ' + motivo, acao: 'sair do modo econômico', por: AutPred_nome_(sessao) });
   AutPred_auditar_({ evento: 'MODO_ECONOMICO_DESLIGADO', quem: sessao, resultado: 'OK', detalhe: 'Saiu do modo econômico. Motivo: ' + motivo });
   AutPred_saudeProcessar_([{ chave: 'tuya_economico', situacao: 'ok', texto: 'Desligado pela Diretoria (' + AutPred_nome_(sessao) + ')' }]);
   return Object.assign(AutPred_saudePainel_(sessao), { mensagem: 'Modo econômico desligado. As leituras automáticas voltam agora e, neste mês, o SGO+ não religa o modo sozinho; o aviso de consumo continua.' });
 }
 
-/** Orçamento da cota e janela da consulta econômica (diretor). */
+/**
+ * Consulta sem eventos (diretor): horário e dias da consulta da fechadura, intervalo dela (30 a 85 s, sempre menor que a
+ * janela de ~90 s do pedido) e intervalo da posição do portão parado com tela visível (10 a 600 s). O orçamento é à parte
+ * (AutPred_saudeOrcamento_) e é preservado aqui.
+ */
 function AutPred_saudeSalvarCfg_(sessao, dados) {
   AutPred_exigirSaude_(sessao);
-  if (!AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível gravar: só um diretor muda o orçamento e a consulta econômica.');
+  if (!AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível gravar: só um diretor muda o horário e os intervalos da consulta sem eventos.');
   dados = dados || {};
   var motivo = AutPred_s_(dados.motivo);
   if (motivo.length < 5) throw new Error('Não foi possível gravar: escreva o motivo (mínimo de 5 caracteres).');
-  var orc = Math.round(Number(String(dados.orcamentoMes || '').replace(/\./g, '').replace(',', '.')));
-  if (!(orc >= 1000 && orc <= 100000000)) throw new Error('Não foi possível gravar: o orçamento precisa ser o número de chamadas por mês do plano da Tuya (de 1.000 para cima; o plano de teste tem 26.000).');
   var iv = Math.round(Number(dados.consultaIntervaloS));
-  if (!(iv >= 60 && iv <= 1800)) throw new Error('Não foi possível gravar: o intervalo da consulta econômica precisa ser de 60 a 1.800 segundos.');
+  if (!(iv >= 30 && iv <= 85)) throw new Error('Não foi possível gravar: o intervalo da consulta da fechadura precisa ser de 30 a 85 segundos (menor que os cerca de 90 segundos do pedido da campainha, para nenhum toque passar sem ser visto).');
+  var pp = AutPred_s_(dados.portaoParadoS) ? Math.round(Number(dados.portaoParadoS)) : AutPred_saudeCfg_().portaoParadoS;
+  if (!(pp >= 10 && pp <= 600)) throw new Error('Não foi possível gravar: o intervalo da posição do portão parado precisa ser de 10 a 600 segundos.');
   var ini = AutPred_s_(dados.consultaInicio), fim = AutPred_s_(dados.consultaFim);
-  if (!/^\d{2}:\d{2}$/.test(ini) || !/^\d{2}:\d{2}$/.test(fim) || ini >= fim) throw new Error('Não foi possível gravar: informe o início e o fim da janela no formato hh:mm, com o início antes do fim.');
+  if (!/^\d{2}:\d{2}$/.test(ini) || !/^\d{2}:\d{2}$/.test(fim) || ini >= fim) throw new Error('Não foi possível gravar: informe o início e o fim do horário no formato hh:mm, com o início antes do fim (24 horas: 00:00 às 23:59).');
   var diasSem = (Array.isArray(dados.consultaDias) ? dados.consultaDias : []).map(Number).filter(function (n) { return n >= 0 && n <= 6; });
-  if (!diasSem.length) throw new Error('Não foi possível gravar: marque pelo menos um dia da semana para a consulta econômica.');
-  var atual = AutPred_saudeCfg_();
-  var novo = { orcamentoMes: orc, avisoPct: atual.avisoPct, economicoPct: atual.economicoPct, consultaInicio: ini, consultaFim: fim, consultaDias: diasSem, consultaIntervaloS: iv };
+  if (!diasSem.length) throw new Error('Não foi possível gravar: marque pelo menos um dia da semana para a consulta da fechadura.');
   var props = PropertiesService.getScriptProperties();
-  props.setProperty(AUT_SAUDE_CFG, JSON.stringify(novo));
-  var texto = 'Orçamento ' + AutPred_milhar_(orc) + ' chamadas/mês; consulta econômica das ' + ini + ' às ' + fim + ', a cada ' + iv + ' s. Motivo: ' + motivo;
+  var bruto = AutPred_propJson_(AUT_SAUDE_CFG, {}) || {};
+  Object.assign(bruto, { consultaInicio: ini, consultaFim: fim, consultaDias: diasSem, consultaIntervaloS: iv, portaoParadoS: pp });
+  delete bruto.orcamentoMes;
+  props.setProperty(AUT_SAUDE_CFG, JSON.stringify(bruto));
+  var horas = AutPred_horasJanela_(ini, fim) * diasSem.length;
+  var texto = 'Consulta da fechadura sem eventos das ' + ini + ' às ' + fim + ' (' + diasSem.length + ' dia(s) da semana), a cada ' + iv + ' s (cerca de ' + AutPred_milhar_(horas * 3600 / iv * 4.3) + ' chamadas por mês); portão parado a cada ' + pp + ' s com tela visível. Motivo: ' + motivo;
   AutPred_saudeLinha_({ chave: 'tuya_cota', evento: 'ACAO_MANUAL', situacao: 'ok', texto: 'Configuração alterada por ' + AutPred_nome_(sessao) + ': ' + texto, acao: 'configuração', por: AutPred_nome_(sessao) });
   AutPred_auditar_({ evento: 'SAUDE_CONFIGURADA', quem: sessao, resultado: 'OK', detalhe: texto });
-  // "volta ao normal quando a gestão ajustar": com o orçamento novo abaixo do limite, o modo econômico sai
-  var u = Tuya_uso_(), extra = '';
-  if (Tuya_economico_() && u.mesTotal / orc * 100 < atual.economicoPct) {
-    props.deleteProperty(TUYA_PROP_ECONOMICO);
-    AutPred_saudeLinha_({ chave: 'tuya_economico', evento: 'ACAO_MANUAL', situacao: 'ok', texto: 'Modo econômico desligado pelo orçamento novo.', acao: 'orçamento ajustado', por: AutPred_nome_(sessao) });
-    AutPred_saudeProcessar_([{ chave: 'tuya_economico', situacao: 'ok', texto: 'Desligado: orçamento ajustado por ' + AutPred_nome_(sessao) }]);
-    extra = ' Com o orçamento novo, o consumo ficou abaixo de ' + atual.economicoPct + '% e o modo econômico foi desligado.';
-  }
-  return Object.assign(AutPred_saudePainel_(sessao), { mensagem: 'Configuração gravada.' + extra });
+  return Object.assign(AutPred_saudePainel_(sessao), { mensagem: 'Configuração gravada. ' + texto });
 }
+function AutPred_horasJanela_(ini, fim) { var m = function (t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)); }; return Math.max(0, (m(fim) - m(ini) + (fim === '23:59' ? 1 : 0)) / 60); }

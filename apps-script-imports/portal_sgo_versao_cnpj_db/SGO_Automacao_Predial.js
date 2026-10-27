@@ -35,8 +35,11 @@ var AUT_COLUNAS_DISPOSITIVOS = ['ID', 'PROVEDOR', 'DEVICE_ID', 'NOME', 'NOME_PRO
   'UNIDADE_ID', 'UNIDADE_NOME', 'LOCALIZACAO', 'RESTRITO_DIRETORIA', 'HOMOLOGADO', 'HOMOLOGADO_POR', 'HOMOLOGADO_EM', 'ATIVO',
   'ONLINE', 'ESTADO_JSON', 'ESTADO_EM', 'FUNCOES_JSON', 'COMANDO_ABRIR_JSON', 'ESTADO_CODIGOS', 'COMPAT_OK', 'COMPAT_MOTIVO', 'REMOTO_FECHADURA',
   'ULT_CMD_ID', 'ULT_CMD_EM', 'ULT_CMD_SITUACAO', 'SINCRONIZADO_EM', 'ATUALIZADO_EM', 'CRIADO_EM',
-  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S'];
-var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S'];
+  'ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S',
+  'AUTO_ABRIR_POR_ID', 'EVENTOS_VALIDADO', 'EVENTOS_VALIDADO_EM', 'EVENTOS_VALIDADO_POR', 'EVENTOS_VALIDADO_DETALHE'];
+var AUT_COLUNAS_NOVAS_20261022 = ['ACIONAMENTO', 'HOMOLOGADO_FECHAR', 'HOMOLOGADO_FECHAR_POR', 'HOMOLOGADO_FECHAR_EM', 'AUTO_ABRIR', 'AUTO_ABRIR_POR', 'AUTO_ABRIR_EM', 'ULT_CMD_COMANDO', 'PERCURSO_S',
+  // 27/10/2026: quem ligou a abertura automática (id) e a validação por eventos (informativa)
+  'AUTO_ABRIR_POR_ID', 'EVENTOS_VALIDADO', 'EVENTOS_VALIDADO_EM', 'EVENTOS_VALIDADO_POR', 'EVENTOS_VALIDADO_DETALHE'];
 var AUT_COLUNAS_PERMISSOES = ['ID', 'USUARIO_ID', 'USUARIO_LOGIN', 'USUARIO_NOME', 'USUARIO_PERFIL', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'PERMISSAO',
   'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CONCEDIDA_POR_ID', 'CONCEDIDA_POR', 'CONCEDIDA_EM', 'MOTIVO', 'STATUS', 'REVOGADA_POR', 'REVOGADA_EM', 'REVOGADA_MOTIVO', 'CRIADO_EM'];
 var AUT_COLUNAS_COMANDOS = ['ID', 'OPERACAO_ID', 'QUANDO', 'QUANDO_EM', 'SOLICITANTE_ID', 'SOLICITANTE', 'PERFIL', 'UNIDADE', 'DISPOSITIVO_ID', 'DEVICE_ID', 'DISPOSITIVO_NOME', 'TIPO',
@@ -457,8 +460,8 @@ function AutPred_estadoTexto_(disp) {
 var AUT_PERCURSO_PADRAO_S = 60;   // 23/10/2026, medido na garagem real: pulso de fechar às 15:06:22, sensor fechado às 15:07:16 (~55 s)
 var AUT_SENSOR_ASSENTAR_S = 5;   // o sensor oscila ao passar o portão; depois de mudar, espera 5 s antes de confiar
 var AUT_ESTADO_CACHE = 'AUT_ESTADO_';
-var AUT_ESTADO_CACHE_MS = 8000;        // portão em movimento (logo depois de um comando): leitura compartilhada a cada 8 s (27/10/2026; antes 4,5 s)
-var AUT_ESTADO_OCIOSO_MS = 600000;     // 27/10/2026: portão parado e sem eventos da Tuya: a nuvem é relida no máximo a cada 10 min
+var AUT_ESTADO_CACHE_MS = 4000;        // portão em movimento (percurso de um comando + 15 s): leitura compartilhada a cada 4 s (27/10/2026, dono: não ficar mais lento que os 4,5 s originais)
+var AUT_ESTADO_TETO_S = 60;            // acima do teto do dia: portão parado relido a cada 60 s (em vez de portaoParadoS)
 var AUT_ESTADO_RESERVA = 70;   // a tela não lê se o minuto já tem 70 chamadas à Tuya: a folga fica para os comandos e a abertura automática
 
 /** { codigo: 'ABERTO'|'FECHADO'|'ABRINDO'|'FECHANDO'|'', texto, sensor }. Função pura (agoraMs para os testes). */
@@ -486,19 +489,38 @@ function AutPred_emMovimento_(disp, agoraMs) {
 }
 
 /**
- * Relê o estado para a tela; grava só quando mudou. 27/10/2026 (cota da Tuya): com eventos da Tuya chegando, usa o que o
- * servidor recebeu (nenhuma chamada); sem eventos, leitura compartilhada entre todas as telas a cada 8 s só no percurso
- * de um comando e a cada 10 min com o portão parado; no modo econômico ou com a cota esgotada, não lê.
+ * Intervalo da leitura compartilhada do portão parado sem eventos (ms), adaptado ao consumo do dia: portaoParadoS (20 s);
+ * passou da média diária do orçamento, 60 s; passou do teto do dia (2 vezes a média), 120 s. Comandos não mudam.
+ */
+function AutPred_portaoParadoMs_() {
+  var cfg = AutPred_saudeCfg_(), s = cfg.portaoParadoS;
+  try {
+    if (typeof AutPred_orcamentoAgora_ === 'function') {
+      var o = AutPred_orcamentoAgora_(cfg);
+      if (o.tetoDia && o.diaUsado >= o.tetoDia) s = Math.max(s, AUT_ESTADO_TETO_S * 2);
+      else if (o.diaUsado >= Math.ceil(o.valor / Math.max(1, o.diasPeriodo))) s = Math.max(s, AUT_ESTADO_TETO_S);
+    }
+  } catch (e) {}
+  return s * 1000;
+}
+/** Folga do minuto para os comandos: a tela não lê se o minuto já tem 70 chamadas (10 na recuperação depois de um bloqueio). */
+function AutPred_reservaMinuto_() { return Tuya_fase_(Tuya_uso_()) === 'NORMAL' ? AUT_ESTADO_RESERVA : Math.floor(TUYA_LIMITE_MINUTO_RECUPERACAO / 2); }
+
+/**
+ * Relê o estado para a tela; grava só quando mudou. 27/10/2026 (cota da Tuya; depois, dono: "preservar a experiência"): com
+ * eventos da Tuya chegando, usa o que o servidor recebeu (nenhuma chamada); sem eventos, UMA leitura central compartilhada
+ * por todas as telas visíveis: a cada 4 s no percurso de um comando (+15 s) e a cada portaoParadoS (20 s) com o portão
+ * parado. Só lê quando alguma tela visível pede (aba escondida não consulta). Bloqueio, recuperação e modo econômico pausam.
  * Devolve 'evento', true (leu a nuvem) ou false (usou o guardado).
  */
 function AutPred_lerEstadoCompartilhado_(c, disp) {
   var ev = AutPred_eventoDisp_(disp.DEVICE_ID);
   if (ev) { AutPred_aplicarEvento_(disp, ev, true); return 'evento'; }
   var k = AUT_ESTADO_CACHE + AutPred_s_(disp.DEVICE_ID), cache = null;
-  var limite = AutPred_emMovimento_(disp) ? AUT_ESTADO_CACHE_MS : AUT_ESTADO_OCIOSO_MS;
-  try { cache = CacheService.getScriptCache(); if (Date.now() - Number(cache.get(k) || 0) <= limite) return false; } catch (e) {}
+  var limite = AutPred_emMovimento_(disp) ? AUT_ESTADO_CACHE_MS : AutPred_portaoParadoMs_();
+  try { cache = CacheService.getScriptCache(); if (Date.now() - Number(cache.get(k) || 0) < limite) return false; } catch (e) {}
   if (Tuya_motivoPausa_('TELA')) return false;
-  if (typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AUT_ESTADO_RESERVA) return false;
+  if (typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AutPred_reservaMinuto_()) return false;
   try { if (cache) cache.put(k, String(Date.now()), 900); } catch (e2) {}
   var d = Tuya_comOrigem_('TELA', function () { return Tuya_dispositivo_(c, disp.DEVICE_ID); });
   var upd = { ONLINE: d.online ? 'SIM' : 'NAO', ESTADO_JSON: AutPred_json_(d.status) };
@@ -553,7 +575,7 @@ function AutPred_estadosPortoes_(sessao) {
       ultComandoRecente: Date.now() - AutPred_ms_(d.ULT_CMD_EM) < AUT_CONFIRMACAO_JANELA_MIN * 60000, liberaEmS: AutPred_liberaEmS_(d), erro: erro, fonte: fonte,
       estadoLidoEm: AutPred_dataBr_(d.ESTADO_EM) });
   });
-  return { itens: itens, hora: AutPred_hora_(Date.now()), proximaS: movendo ? 3 : (comEventos ? 10 : 30), infra: AutPred_infraTela_() };
+  return { itens: itens, hora: AutPred_hora_(Date.now()), proximaS: movendo ? 3 : 10, infra: AutPred_infraTela_() };
 }
 
 /** Compara o estado antes e depois nos códigos relevantes. { confirmado, detalhe } — função pura. */
@@ -619,6 +641,7 @@ function AutPred_conferirExecucao_(c, disp, cmd, quem, silencioso) {
   Object.assign(cmd, upd);
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_SITUACAO: cmd.SITUACAO, ATUALIZADO_EM: SGO_UTILS.nowIso() });
   AutPred_auditar_({ evento: r.confirmado ? 'EXECUCAO_CONFIRMADA' : 'EXECUCAO_NAO_CONFIRMADA', quem: quem, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: r.confirmado ? 'CONFIRMADO' : 'SEM_CONFIRMACAO', detalhe: r.detalhe });
+  if (r.confirmado) AutPred_validarPorEventos_(disp, cmd); // 27/10/2026: informativo (Saúde da infraestrutura)
   return r;
 }
 
@@ -675,7 +698,8 @@ function AutPred_hora_(ms) { return ms ? Utilities.formatDate(new Date(ms), AUT_
 function AutPred_pedidoAgora_(g, agoraMs) {
   agoraMs = agoraMs || Date.now();
   g = g || {};
-  var valor = Number(g.valor) || 0, em = Number(g.valorEm) || 0;
+  // 27/10/2026: o pedido nunca vale mais que a janela da fechadura (valor fora do normal não estica o prazo)
+  var valor = Math.min(AUT_PEDIDO_MAX_S, Number(g.valor) || 0), em = Number(g.valorEm) || 0;
   var restante = valor > 0 ? Math.max(0, Math.floor(valor - (agoraMs - em) / 1000)) : 0;
   var camp = Number(g.campainhaEm) || 0;
   var campRecente = camp && em && Math.abs(em - camp) <= 120000;
@@ -690,25 +714,35 @@ function AutPred_pedidoAgora_(g, agoraMs) {
 //   TUYA_MSG_ESTADO    { conectado, vivoEm (ms), desde, mensagensDia, mensagensMes, erro } — atualizado a cada minuto
 //   TUYA_EVT_<device>  { props: { code: { value, time } }, online, onlineEm, recebidoEm, primeiroEm }
 // Com a conexão viva e pelo menos um evento já recebido daquele dispositivo, o SGO+ usa o que chegou e não chama a nuvem.
-// Sem isso, cai na CONSULTA ECONÔMICA: só na janela configurada (AUT_SAUDE_CFG, padrão dias úteis 08:00-18:00) e no
-// máximo uma leitura a cada consultaIntervaloS (padrão 120 s), compartilhada por telas, rotina rápida e rotina de 1 minuto.
-// Nunca volta à leitura a cada 3 s.
+// Sem isso, cai na CONSULTA da fechadura: só no horário configurado (AUT_SAUDE_CFG, padrão dias úteis 08:00-18:00) e no
+// máximo uma leitura a cada consultaIntervaloS (27/10/2026, dono: 60 s, menor que a janela de ~90 s do pedido, para a
+// abertura automática e o aviso S67 continuarem sem eventos), compartilhada por telas, rotina rápida e rotina de 1 minuto.
+// Volta a zero consulta assim que os eventos chegam. Nunca volta à leitura a cada 3 s.
 // ------------------------------------------------------------
 var AUT_MSG_ESTADO = 'TUYA_MSG_ESTADO';
 var AUT_EVT_PREFIXO = 'TUYA_EVT_';
 var AUT_MSG_VIVO_MS = 180000;
 var AUT_SAUDE_CFG = 'AUT_SAUDE_CFG';
-var AUT_SAUDE_PADRAO = { orcamentoMes: 26000, avisoPct: 70, economicoPct: 90, consultaInicio: '08:00', consultaFim: '18:00', consultaDias: [1, 2, 3, 4, 5], consultaIntervaloS: 120 };
+// 27/10/2026 (dono: "nada que funcionava pode ficar mais lento; o único problema era o consumo"):
+//   consultaIntervaloS  consulta da fechadura SEM eventos (abertura automática, aviso S67 e telas, leitura única
+//                       compartilhada): 60 s, sempre menor que a janela do pedido (~90 s), de 30 a 85 s. Só no horário
+//                       configurado (padrão: dias úteis, 08:00 às 18:00; 24 h não cabe no orçamento provisório, ver manual).
+//   portaoParadoS       posição do portão parado SEM eventos, com alguma tela visível: 20 s (60 s acima do teto do dia);
+//                       no percurso de um comando, 4 s. Ninguém olhando = nenhuma leitura (salvo a confirmação do comando).
+//   orcamento           confirmado pela gestão (SGO_Automacao_Saude.js); sem ele, referência provisória (sem degradar nada).
+var AUT_SAUDE_PADRAO = { avisoPct: 70, economicoPct: 90, consultaInicio: '08:00', consultaFim: '18:00', consultaDias: [1, 2, 3, 4, 5], consultaIntervaloS: 60, portaoParadoS: 20, orcamento: null };
+var AUT_PEDIDO_MAX_S = 90;              // o pedido da campainha dura até 90 s (medido em 22/10/2026)
 
 function AutPred_saudeCfg_() {
   var g = {};
   try { g = JSON.parse(PropertiesService.getScriptProperties().getProperty(AUT_SAUDE_CFG) || '{}') || {}; } catch (e) { g = {}; }
   var c = {};
   Object.keys(AUT_SAUDE_PADRAO).forEach(function (k) { c[k] = g[k] !== undefined && g[k] !== null && g[k] !== '' ? g[k] : AUT_SAUDE_PADRAO[k]; });
-  c.orcamentoMes = Math.max(1000, Math.round(Number(c.orcamentoMes) || AUT_SAUDE_PADRAO.orcamentoMes));
+  c.orcamento = typeof AutPred_orcamentoNormalizar_ === 'function' ? AutPred_orcamentoNormalizar_(g.orcamento) : null;
   c.avisoPct = Math.min(99, Math.max(10, Number(c.avisoPct) || 70));
   c.economicoPct = Math.min(100, Math.max(c.avisoPct + 1, Number(c.economicoPct) || 90));
-  c.consultaIntervaloS = Math.min(1800, Math.max(60, Math.round(Number(c.consultaIntervaloS) || 120)));
+  c.consultaIntervaloS = Math.min(85, Math.max(30, Math.round(Number(c.consultaIntervaloS) || 60)));
+  c.portaoParadoS = Math.min(600, Math.max(10, Math.round(Number(c.portaoParadoS) || 20)));
   if (!/^\d{2}:\d{2}$/.test(String(c.consultaInicio))) c.consultaInicio = AUT_SAUDE_PADRAO.consultaInicio;
   if (!/^\d{2}:\d{2}$/.test(String(c.consultaFim))) c.consultaFim = AUT_SAUDE_PADRAO.consultaFim;
   c.consultaDias = Array.isArray(c.consultaDias) ? c.consultaDias.map(Number).filter(function (n) { return n >= 0 && n <= 6; }) : AUT_SAUDE_PADRAO.consultaDias.slice();
@@ -731,6 +765,36 @@ function AutPred_consultaAutomatica_() {
   if (pausa) return { ok: false, motivo: 'consulta automática pausada: ' + pausa, intervaloMs: cfg.consultaIntervaloS * 1000 };
   if (!AutPred_naJanela_(cfg)) return { ok: false, motivo: 'fora da janela de consulta (' + cfg.consultaInicio + ' às ' + cfg.consultaFim + ')', intervaloMs: cfg.consultaIntervaloS * 1000 };
   return { ok: true, motivo: '', intervaloMs: cfg.consultaIntervaloS * 1000 };
+}
+
+/**
+ * Por onde a fechadura é acompanhada agora: { via: 'EVENTOS' | 'CONSULTA' | 'NENHUM', intervaloS, motivo }. EVENTOS = zero
+ * consulta; CONSULTA = leitura compartilhada a cada consultaIntervaloS (abertura automática, aviso S67 e telas); NENHUM =
+ * sem eventos e fora do horário da consulta, ou consulta pausada (bloqueio, recuperação, modo econômico).
+ */
+function AutPred_caminhoFechadura_(d, cfg, agoraMs) {
+  cfg = cfg || AutPred_saudeCfg_();
+  if (AutPred_eventoDisp_(d && d.DEVICE_ID)) return { via: 'EVENTOS', intervaloS: 0, motivo: '' };
+  var pausa = Tuya_motivoPausa_('AUTOMATICA');
+  if (pausa) return { via: 'NENHUM', intervaloS: cfg.consultaIntervaloS, motivo: 'consulta pausada: ' + pausa };
+  if (!AutPred_naJanela_(cfg, agoraMs)) return { via: 'NENHUM', intervaloS: cfg.consultaIntervaloS, motivo: 'fora do horário da consulta (' + cfg.consultaInicio + ' às ' + cfg.consultaFim + ')' };
+  return { via: 'CONSULTA', intervaloS: cfg.consultaIntervaloS, motivo: '' };
+}
+
+/**
+ * Quem ligou a abertura automática ainda pode destravar a porta? { ok, motivo }. 27/10/2026: só INFORMA (Saúde); a decisão
+ * de desligar é da Diretoria. Sem id gravado (ligada antes de 27/10/2026), procura pelo nome.
+ */
+function AutPred_autoResponsavel_(d) {
+  try {
+    var id = AutPred_s_(d.AUTO_ABRIR_POR_ID), nome = AutPred_s_(d.AUTO_ABRIR_POR);
+    var us = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) { return id ? AutPred_s_(u.ID) === id : AutPred_s_(u.NOME) === nome; });
+    var u = us.length === 1 ? us[0] : null;
+    if (!u || AutPred_s_(u.STATUS).toUpperCase() !== 'ATIVO') return { ok: false, motivo: 'quem ligou a opção (' + (nome || 'sem nome') + ') não está ativo no SGO+' };
+    var s = { userId: AutPred_s_(u.ID), usuario: AutPred_s_(u.USUARIO), perfil: AutPred_s_(u.PERFIL) };
+    if (!AutPred_direitos_(s, d, AutPred_permissoesDe_(s.userId)).acionar) return { ok: false, motivo: 'quem ligou a opção (' + nome + ') não pode mais destravar a porta' };
+    return { ok: true, motivo: '' };
+  } catch (e) { return { ok: true, motivo: '' }; }
 }
 
 function AutPred_msgEstado_() {
@@ -764,10 +828,50 @@ function AutPred_aplicarEvento_(disp, ev, gravar) {
   return mudou;
 }
 
-/** Pedido da campainha a partir dos eventos (mesmo formato de AutPred_pedidoAgora_). */
+/**
+ * Pedido da campainha a partir dos eventos (mesmo formato de AutPred_pedidoAgora_, com fonte = 'EVENTO').
+ * 27/10/2026 (proteção contra mensagem antiga ou reentregue depois de uma reconexão): vale só com a hora do próprio ponto
+ * (nunca a hora em que o servidor recebeu), o prazo conta dessa hora e nunca passa de 90 s; hora no futuro não vale.
+ */
 function AutPred_pedidoDoEvento_(ev) {
   var p = ev.props || {}, u = p.unlock_request || { value: 0, time: 0 }, db = p.doorbell || {}, co = p.closed_opened || {};
-  return AutPred_pedidoAgora_({ lidoMs: Date.now(), valor: Number(u.value) || 0, valorEm: Number(u.time) || Number(ev.recebidoEm) || 0, campainhaEm: Number(db.time) || 0, porta: AutPred_s_(co.value) });
+  var t = Number(u.time) || 0, agora = Date.now();
+  var valido = t > 0 && t <= agora + 5000 && agora - t <= AUT_PEDIDO_MAX_S * 1000;
+  var r = AutPred_pedidoAgora_({ lidoMs: agora, valor: valido ? Number(u.value) || 0 : 0, valorEm: t, campainhaEm: Number(db.time) || 0, porta: AutPred_s_(co.value) });
+  r.fonte = 'EVENTO';
+  return r;
+}
+
+/** Hora (ms) do último pedido da campainha recebido por evento desta fechadura (0 = nenhum). Informativo e validação. */
+function AutPred_pedidoEventoEm_(ev) {
+  if (!ev) return 0;
+  var p = ev.props || {}, u = p.unlock_request || {}, db = p.doorbell || {};
+  return Math.max(Number(ev.pedidoEm) || 0, Number(u.value) > 0 ? Number(u.time) || 0 : 0, db.value ? Number(db.time) || 0 : 0);
+}
+/** Eventos guardados do dispositivo, mesmo com a conexão parada agora (informativo). */
+function AutPred_eventoGuardado_(deviceId) {
+  try { var e = JSON.parse(PropertiesService.getScriptProperties().getProperty(AUT_EVT_PREFIXO + AutPred_s_(deviceId)) || 'null'); return e && e.props ? e : null; } catch (x) { return null; }
+}
+function AutPred_eventosValidado_(d) { return AutPred_s_(d && d.EVENTOS_VALIDADO).toUpperCase() === 'SIM'; }
+
+/**
+ * Validação por eventos (27/10/2026; dono, depois: só INFORMATIVA, não trava nada): (a) o SGO+ recebeu desta fechadura,
+ * pelo serviço de mensagens, o pedido da campainha e (b) a resposta "abrir" pedida por uma pessoa autorizada durante esse
+ * pedido foi confirmada pela fechadura. A conexão viva sozinha não conta. Grava EVENTOS_VALIDADO* e a auditoria.
+ */
+function AutPred_validarPorEventos_(disp, cmd) {
+  try {
+    if (!AutPred_ehPedido_(disp) || AutPred_eventosValidado_(disp)) return false;
+    if (AutPred_s_(cmd.COMANDO) !== 'DESTRAVAR' || AutPred_s_(cmd.ORIGEM) === 'AUTOMATICO' || !AutPred_s_(cmd.SOLICITANTE_ID) || AutPred_s_(cmd.MODO) !== 'REAL' || AutPred_s_(cmd.AUTORIZACAO) !== 'AUTORIZADO') return false;
+    var pe = AutPred_pedidoEventoEm_(AutPred_eventoGuardado_(disp.DEVICE_ID)), t = AutPred_ms_(cmd.QUANDO_EM);
+    if (!pe || pe > t + 5000 || t - pe > (AUT_PEDIDO_MAX_S + 5) * 1000) return false;
+    var agora = SGO_UTILS.nowIso(), detalhe = 'Pedido da campainha recebido por evento às ' + AutPred_hora_(pe) + '; resposta "abrir" de ' + AutPred_s_(cmd.SOLICITANTE) + ' às ' + AutPred_hora_(t) + ' confirmada pela fechadura.';
+    var upd = { EVENTOS_VALIDADO: 'SIM', EVENTOS_VALIDADO_EM: agora, EVENTOS_VALIDADO_POR: AutPred_s_(cmd.SOLICITANTE), EVENTOS_VALIDADO_DETALHE: detalhe, ATUALIZADO_EM: agora };
+    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
+    Object.assign(disp, upd);
+    AutPred_auditar_({ evento: 'EVENTOS_VALIDADOS', quem: { userId: AutPred_s_(cmd.SOLICITANTE_ID), nome: AutPred_s_(cmd.SOLICITANTE), perfil: AutPred_s_(cmd.PERFIL) }, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'OK', detalhe: detalhe });
+    return true;
+  } catch (e) { console.error('Automação predial, validação por eventos: ' + ((e && e.message) || e)); return false; }
 }
 
 /** Lê o pedido na nuvem (sombra do dispositivo, com a hora de cada ponto); guarda 2,5 s para todas as telas. Só leitura. */
@@ -776,7 +880,7 @@ function AutPred_pedidoFechadura_(c, disp, maxIdadeMs) {
   // 27/10/2026: com eventos da Tuya, o pedido vem do que o servidor recebeu (nenhuma chamada); o comando (0) relê na nuvem
   if (lim !== 0) { var ev = AutPred_eventoDisp_(disp.DEVICE_ID); if (ev) return AutPred_pedidoDoEvento_(ev); }
   var k = AUT_PEDIDO_CACHE + AutPred_s_(disp.DEVICE_ID), cache = null;
-  try { cache = CacheService.getScriptCache(); var g0 = JSON.parse(cache.get(k) || 'null'); if (g0 && Date.now() - g0.lidoMs <= lim) return AutPred_pedidoAgora_(g0); } catch (e) {}
+  try { cache = CacheService.getScriptCache(); var g0 = JSON.parse(cache.get(k) || 'null'); if (g0 && Date.now() - g0.lidoMs <= lim) return Object.assign(AutPred_pedidoAgora_(g0), { fonte: 'CONSULTA' }); } catch (e) {}
   var props = {}, agora = Date.now();
   var r = Tuya_chamar_(c, 'GET', '/v2.0/cloud/thing/' + encodeURIComponent(AutPred_s_(disp.DEVICE_ID)) + '/shadow/properties', {});
   if (r.j && r.j.success === true && r.j.result) {
@@ -786,9 +890,9 @@ function AutPred_pedidoFechadura_(c, disp, maxIdadeMs) {
   }
   var u = props.unlock_request || { value: 0, time: 0 }, db = props.doorbell || {}, co = props.closed_opened || {};
   var g = { lidoMs: Date.now(), valor: Number(u.value) || 0, valorEm: Number(u.time) || agora, campainhaEm: Number(db.time) || 0, porta: AutPred_s_(co.value) };
-  // 27/10/2026: guardado por até 15 min (a consulta econômica usa a mesma leitura por consultaIntervaloS)
+  // 27/10/2026: guardado por até 15 min (a consulta sem eventos usa a mesma leitura por consultaIntervaloS)
   try { if (cache) cache.put(k, JSON.stringify(g), 900); } catch (e2) {}
-  return AutPred_pedidoAgora_(g);
+  return Object.assign(AutPred_pedidoAgora_(g), { fonte: 'CONSULTA' });
 }
 
 /**
@@ -810,7 +914,11 @@ function AutPred_pedidosDaSessao_(sessao, agora) {
       var pausa = agora ? '' : Tuya_motivoPausa_('TELA');
       if (pausa) { fonte = 'pausada'; p = null; }
       else {
-        try { p = Tuya_comOrigem_(agora ? 'MANUAL' : 'TELA', function () { return AutPred_pedidoFechadura_(c, d, agora ? AUT_PEDIDO_CACHE_MS : cfg.consultaIntervaloS * 1000); }); }
+        // 27/10/2026: "Verificar campainha agora" (pessoa): no máximo 1 leitura por fechadura a cada 10 s (dentro disso, vale a
+        // leitura recente, de qualquer pessoa) e 30 por hora; a tela usa a leitura compartilhada de consultaIntervaloS
+        if (agora && !AutPred_verificacaoLiberada_(d)) { itens.push({ id: AutPred_s_(d.ID), nome: AutPred_s_(d.NOME || d.NOME_PROVEDOR), ativo: false, fonte: 'limite', autoAbrir: AutPred_autoAbrir_(d),
+          aviso: 'Limite de ' + AUT_VERIF_HORA + ' verificações por hora desta fechadura atingido (proteção da cota). Use o aplicativo Smart Life; a consulta automática continua.' }); return; }
+        try { p = Tuya_comOrigem_(agora ? 'MANUAL' : 'TELA', function () { return AutPred_pedidoFechadura_(c, d, agora ? AUT_VERIF_INTERVALO_MS : cfg.consultaIntervaloS * 1000); }); }
         catch (e) { itens.push({ id: AutPred_s_(d.ID), erro: AutPred_erroNuvem_(e, 'Não foi possível ler a campainha agora. Toque em "Verificar campainha agora" em alguns segundos; se continuar, use o aplicativo Smart Life.', sessao).message, fonte: fonte }); return; }
       }
     }
@@ -824,7 +932,21 @@ function AutPred_pedidosDaSessao_(sessao, agora) {
       autoAbrir: AutPred_autoAbrir_(d), autoAbrirPor: AutPred_s_(d.AUTO_ABRIR_POR), autoAbrirEm: AutPred_dataBr_(d.AUTO_ABRIR_EM), fonte: fonte,
       aviso: fonte === 'consulta' ? 'A campainha aparece aqui com até ' + cfg.consultaIntervaloS + ' s de atraso (serviço de mensagens da Tuya não ativo). Se alguém tocou, use "Verificar campainha agora".' : '' });
   });
-  return { itens: itens, fonte: fonteGeral, proximaS: fonteGeral === 'eventos' ? 3 : 15, infra: AutPred_infraTela_() };
+  return { itens: itens, fonte: fonteGeral, proximaS: fonteGeral === 'eventos' ? 3 : 10, infra: AutPred_infraTela_() };
+}
+
+var AUT_VERIF_INTERVALO_MS = 10000;   // "Verificar campainha agora": 1 leitura por fechadura a cada 10 s
+var AUT_VERIF_HORA = 30;              // e no máximo 30 leituras por hora por fechadura
+/** Conta a verificação pedida pela pessoa (só quando vai sair leitura nova); falso quando a hora já tem o teto. */
+function AutPred_verificacaoLiberada_(d) {
+  try {
+    var cache = CacheService.getScriptCache(), g = JSON.parse(cache.get(AUT_PEDIDO_CACHE + AutPred_s_(d.DEVICE_ID)) || 'null');
+    if (g && Date.now() - Number(g.lidoMs) <= AUT_VERIF_INTERVALO_MS) return true; // usa a leitura recente, sem chamada
+    var k = 'AUT_VERIF_H_' + AutPred_s_(d.DEVICE_ID) + '_' + Math.floor(Date.now() / 3600000), n = Number(cache.get(k) || 0);
+    if (n >= AUT_VERIF_HORA) return false;
+    cache.put(k, String(n + 1), 3700);
+  } catch (e) {}
+  return true;
 }
 
 /** Comando já autorizado para este pedido (um pedido = uma resposta). */
@@ -962,10 +1084,12 @@ function AutPred_definirAutoAbrir_(sessao, dados) {
   var dir = AutPred_direitos_(sessao, disp, AutPred_permissoesDe_(sessao.userId));
   if (!dir.ver) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você. Clique em "Atualizar".');
   if (!AutPred_ehPedido_(disp)) throw new Error('Não foi possível gravar: a abertura automática só existe na fechadura que abre pela campainha.');
+  if (!dir.acionar || !AutPred_ehDiretor_(sessao)) AutPred_auditar_({ evento: 'AUTO_ABRIR_NEGADA', quem: sessao, disp: disp, resultado: 'NEGADO', detalhe: 'Tentou ' + (dados.ligado ? 'ligar' : 'desligar') + ' a abertura automática sem poder destravar a porta.' });
   if (!dir.acionar || !AutPred_ehDiretor_(sessao)) throw new Error('Não foi possível gravar: só quem destrava a porta liga ou desliga a abertura automática (' + (dir.motivo || 'diretor com a permissão "Acionar"') + ').');
   var ligar = !!dados.ligado, nome = AutPred_s_(disp.NOME || disp.NOME_PROVEDOR);
   if (ligar === AutPred_autoAbrir_(disp)) return { mensagem: 'A abertura automática já estava ' + (ligar ? 'ligada' : 'desligada') + '.' };
-  var upd = { AUTO_ABRIR: ligar ? 'SIM' : 'NAO', AUTO_ABRIR_POR: AutPred_nome_(sessao), AUTO_ABRIR_EM: SGO_UTILS.nowIso(), ATUALIZADO_EM: SGO_UTILS.nowIso() };
+  AutPred_bootstrap_();
+  var upd = { AUTO_ABRIR: ligar ? 'SIM' : 'NAO', AUTO_ABRIR_POR: AutPred_nome_(sessao), AUTO_ABRIR_POR_ID: AutPred_s_(sessao.userId), AUTO_ABRIR_EM: SGO_UTILS.nowIso(), ATUALIZADO_EM: SGO_UTILS.nowIso() };
   SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, upd);
   Object.assign(disp, upd);
   AutPred_atualizarSinalAuto_();
@@ -1014,28 +1138,45 @@ function AutPred_rotinaRapida() {
  * (uma resposta por pedido, mesmo com a rotina rápida e a de 1 minuto ao mesmo tempo). Devolve o comando ou null.
  */
 function AutPred_abrirAutomatico_(c, disp, pedido) {
+  // 27/10/2026 (segurança): só a resposta reply_unlock_request, só com pedido ATIVO lido agora (evento ou consulta da
+  // fechadura), dentro da janela do pedido e com a opção ligada; nunca outro comando de destravar
+  if (!pedido || !pedido.ativo || !(pedido.restanteS > 0) || !pedido.pedidoId || (pedido.fonte !== 'EVENTO' && pedido.fonte !== 'CONSULTA')) return null;
+  if (!AutPred_autoAbrir_(disp) || !AutPred_ehPedido_(disp)) return null;
   var trava = null;
   try { trava = LockService.getScriptLock(); trava.waitLock(10000); } catch (e) { trava = null; }
   var soltar = function () { if (trava) { try { trava.releaseLock(); } catch (e2) {} trava = null; } };
-  var cmd, modo, nome = AutPred_s_(disp.NOME || disp.NOME_PROVEDOR);
+  var cmd, modo, nome = AutPred_s_(disp.NOME || disp.NOME_PROVEDOR), bloqueio = '';
   try {
     AutPred_bootstrap_();
     var comandos = AutPred_comandos_();
     if (AutPred_respostaDoPedido_(comandos, disp.ID, pedido.pedidoId)) return null;
     var prefixo = 'auto-' + pedido.pedidoId + '-' + AutPred_s_(disp.ID) + '-';
-    var tentativas = comandos.filter(function (x) { return AutPred_s_(x.OPERACAO_ID).indexOf(prefixo) === 0; }).length;
-    if (tentativas >= AUT_AUTO_TENTATIVAS) return null;
+    var anteriores = comandos.filter(function (x) { return AutPred_s_(x.OPERACAO_ID).indexOf(prefixo) === 0; });
+    var tentativas = anteriores.length;
+    // nuvem bloqueada: uma linha NEGADO por pedido (registro e aviso), nenhuma chamada e nenhuma repetição
+    if (tentativas >= AUT_AUTO_TENTATIVAS || anteriores.some(function (x) { return AutPred_s_(x.SITUACAO) === 'NEGADO'; })) return null;
     modo = AutPred_modo_(c, disp, 'ABRIR');
+    if (modo.modo === 'REAL') { var uB = Tuya_uso_(); if (uB.bloqueio) bloqueio = Tuya_motivoPausa_('EVENTO'); }
     cmd = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase({
       OPERACAO_ID: prefixo + (tentativas + 1), QUANDO: AutPred_agoraTexto_(), QUANDO_EM: SGO_UTILS.nowIso(), SOLICITANTE_ID: '', SOLICITANTE: AUT_AUTOMATICO.nome, PERFIL: AUT_AUTOMATICO.perfil,
       UNIDADE: AutPred_s_(disp.UNIDADE_NOME), DISPOSITIVO_ID: AutPred_s_(disp.ID), DEVICE_ID: AutPred_s_(disp.DEVICE_ID), DISPOSITIVO_NOME: nome, TIPO: AutPred_s_(disp.TIPO),
-      COMANDO: 'DESTRAVAR', COMANDO_JSON: AutPred_json_({ code: 'reply_unlock_request', value: true }), MODO: modo.modo, AUTORIZACAO: 'AUTORIZADO',
-      AUTORIZACAO_MOTIVO: 'abertura automática pela campainha, ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + (disp.AUTO_ABRIR_EM ? ' em ' + AutPred_dataBr_(disp.AUTO_ABRIR_EM) : ''),
-      SITUACAO: 'SOLICITADO', ESTADO_ANTES_JSON: AutPred_s_(disp.ESTADO_JSON), CORRELACAO: pedido.pedidoId, ORIGEM: 'AUTOMATICO', ATUALIZADO_EM: SGO_UTILS.nowIso()
+      COMANDO: 'DESTRAVAR', COMANDO_JSON: AutPred_json_({ code: 'reply_unlock_request', value: true }), MODO: modo.modo, AUTORIZACAO: bloqueio ? 'NEGADO' : 'AUTORIZADO',
+      AUTORIZACAO_MOTIVO: bloqueio ? 'nuvem da Tuya bloqueada: ' + bloqueio : 'abertura automática pela campainha (' + (pedido.fonte === 'EVENTO' ? 'evento da Tuya' : 'consulta da fechadura, sem eventos') + '), ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + (disp.AUTO_ABRIR_EM ? ' em ' + AutPred_dataBr_(disp.AUTO_ABRIR_EM) : ''),
+      SITUACAO: bloqueio ? 'NEGADO' : 'SOLICITADO', ESTADO_ANTES_JSON: AutPred_s_(disp.ESTADO_JSON), CORRELACAO: pedido.pedidoId, ORIGEM: 'AUTOMATICO', ATUALIZADO_EM: SGO_UTILS.nowIso()
     })));
-    SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_ID: cmd.ID, ULT_CMD_EM: cmd.QUANDO_EM, ULT_CMD_SITUACAO: 'SOLICITADO', ULT_CMD_COMANDO: AutPred_s_(cmd.COMANDO), ATUALIZADO_EM: SGO_UTILS.nowIso() });
+    if (!bloqueio) SGO_DATA.update(AUT_ABA_DISPOSITIVOS, disp.ID, { ULT_CMD_ID: cmd.ID, ULT_CMD_EM: cmd.QUANDO_EM, ULT_CMD_SITUACAO: 'SOLICITADO', ULT_CMD_COMANDO: AutPred_s_(cmd.COMANDO), ATUALIZADO_EM: SGO_UTILS.nowIso() });
   } finally { soltar(); }
   var quando = pedido.campainhaTexto ? ' às ' + pedido.campainhaTexto : '';
+  if (bloqueio) {
+    // 27/10/2026: a preferência continua ligada; nada sai para a nuvem bloqueada e quem destrava sabe na hora
+    AutPred_auditar_({ evento: 'COMANDO_BLOQUEADO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'NEGADO', detalhe: 'Abertura automática não enviada: ' + bloqueio + '.' });
+    try {
+      if (typeof SGO_notificar_ === 'function') SGO_notificar_({ usuarios: AutPred_quemDestrava_(disp), titulo: 'Campainha da ' + nome + ': não abriu sozinha', canais: ['sgo', 'whatsapp'], origem: 'AUTOMACAO', refId: cmd.ID, evento: 'S68',
+        texto: 'A campainha da ' + nome + ' tocou' + quando + ' e a abertura automática não pôde abrir: a nuvem da Tuya está bloqueada (cota ou plano). Abra pelo aplicativo Smart Life. A abertura automática continua ligada e volta sozinha quando a nuvem voltar.',
+        textoWhatsapp: 'SGO+: campainha da ' + nome + quando + '. Abertura automática sem nuvem agora: abra pelo aplicativo Smart Life.' });
+    } catch (eN) {}
+    return cmd;
+  }
   AutPred_auditar_({ evento: 'COMANDO_SOLICITADO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'AUTORIZADO', detalhe: 'Abertura automática: a campainha tocou' + quando + ' (' + modo.modo + ').' + (modo.motivo ? ' ' + modo.motivo : '') });
   var avisar = function (titulo, texto) {
     try {
@@ -1067,7 +1208,9 @@ function AutPred_abrirAutomatico_(c, disp, pedido) {
   AutPred_auditar_({ evento: 'COMANDO_ACEITO', quem: AUT_AUTOMATICO, disp: disp, operacaoId: cmd.OPERACAO_ID, resultado: 'ACEITO', detalhe: 'A API da Tuya aceitou a resposta ao pedido (HTTP ' + r.http + (r.tid ? ', tid ' + r.tid : '') + '). Aguardando a confirmação da fechadura.' });
   Utilities.sleep(AUT_CONFIRMACAO_ESPERA_MS);
   var conf = AutPred_conferirExecucao_(c, disp, cmd, AUT_AUTOMATICO);
-  avisar('Porta aberta automaticamente: ' + nome, 'A campainha da ' + nome + ' tocou' + quando + ' e o SGO+ abriu a porta automaticamente (abertura automática ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + '). ' +
+  // 27/10/2026: aceito pela nuvem não é porta aberta; o título só diz "aberta" com a confirmação da fechadura
+  avisar(conf.confirmado ? 'Porta aberta automaticamente: ' + nome : 'Abertura automática enviada, sem confirmação: ' + nome,
+    'A campainha da ' + nome + ' tocou' + quando + (conf.confirmado ? ' e o SGO+ abriu a porta automaticamente' : ' e o SGO+ enviou a abertura automática') + ' (abertura automática ligada por ' + (AutPred_s_(disp.AUTO_ABRIR_POR) || 'um diretor') + '). ' +
     (conf.confirmado ? 'A fechadura confirmou a abertura.' : 'A fechadura ainda não confirmou: confira no local.'));
   return cmd;
 }
@@ -1098,6 +1241,14 @@ function AutPred_prepararComando_(sessao, dados) {
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
   var c = AutPred_cfg_();
   var acaoP = AutPred_acaoPedida_(dados, disp);
+  // 27/10/2026: nuvem bloqueada e sem a vez da sonda: recusa já no toque, com registro (nenhuma janela de confirmação)
+  var bloqP = AutPred_modo_(c, disp, acaoP).modo === 'REAL' ? AutPred_bloqueioParaPessoa_() : '';
+  if (bloqP) {
+    AutPred_auditar_({ evento: 'COMANDO_BLOQUEADO', quem: sessao, disp: disp, operacaoId: opId, resultado: 'NEGADO', detalhe: 'Nada enviado: ' + bloqP + '.', dados: { origem: AutPred_origem_(dados.origem) } });
+    var eB = new Error(AutPred_textoForaDoAr_() + ' Nada foi enviado.' + (AutPred_administra_(sessao) ? ' Detalhe para a gestão: ' + Tuya_textoErro_((Tuya_uso_().bloqueio || {}).codigo, '', 0, 'a chamada') + '; ' + bloqP + '.' : ''));
+    eB.autAmigavel = true; eB.foraDoAr = true;
+    throw eB;
+  }
   // O segundo toque depende da posição lida AGORA, não da linha guardada nem do rótulo no celular.
   var alternar = AutPred_s_(dados.acao).toUpperCase() === 'ALTERNAR';
   var alternavel = AutPred_pulsoComSensor_(disp) && AutPred_acionamento_(disp) === 'ABRIR_FECHAR';
@@ -1196,7 +1347,9 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   var verbo = disp.TIPO === 'FECHADURA' ? (recusar ? 'RECUSAR' : 'DESTRAVAR') : acao;
   var cmdPortao = disp.TIPO === 'FECHADURA' ? null : AutPred_comandoDaAcao_(disp, acao);
   var pedido = null;
-  if (pedidoModo && c.podeLer) { try { pedido = AutPred_pedidoFechadura_(c, disp, 0); } catch (eP) { pedido = { ativo: false, erro: Tuya_limpar_(eP && eP.message, c) }; } }
+  // 27/10/2026: nuvem bloqueada (cota ou plano) e sem a vez da sonda: nada sai; registro NEGADO com o motivo (mais abaixo)
+  var bloqueioNuvem = modo.modo === 'REAL' ? AutPred_bloqueioParaPessoa_() : '';
+  if (pedidoModo && c.podeLer && !bloqueioNuvem) { try { pedido = AutPred_pedidoFechadura_(c, disp, 0); } catch (eP) { pedido = { ativo: false, erro: Tuya_limpar_(eP && eP.message, c) }; } }
   var base = {
     OPERACAO_ID: opId, QUANDO: AutPred_agoraTexto_(), QUANDO_EM: SGO_UTILS.nowIso(), SOLICITANTE_ID: AutPred_s_(sessao.userId), SOLICITANTE: AutPred_nome_(sessao), PERFIL: AutPred_perfil_(sessao),
     UNIDADE: AutPred_s_(disp.UNIDADE_NOME), DISPOSITIVO_ID: AutPred_s_(disp.ID), DEVICE_ID: AutPred_s_(disp.DEVICE_ID), DISPOSITIVO_NOME: AutPred_s_(disp.NOME || disp.NOME_PROVEDOR), TIPO: AutPred_s_(disp.TIPO),
@@ -1217,6 +1370,13 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   if (!conf.ok) negar(conf.motivo, 'COMANDO_SEM_CONFIRMACAO');
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') negar('não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
   if (disp.TIPO !== 'FECHADURA' && !cmdPortao) negar(AutPred_textoSemAcao_(disp, acao).replace(/^Não foi possível [^:]+: /, ''), 'COMANDO_NAO_DISPONIVEL');
+  if (bloqueioNuvem) {
+    var regB = SGO_DATA.insert(AUT_ABA_COMANDOS, SGO_DATA.normalizarObjetoParaSheet(AUT_ABA_COMANDOS, SGO_DATA.gerarRegistroBase(Object.assign({}, base, { AUTORIZACAO: 'NEGADO', AUTORIZACAO_MOTIVO: 'nuvem da Tuya bloqueada: ' + bloqueioNuvem, SITUACAO: 'NEGADO', ATUALIZADO_EM: SGO_UTILS.nowIso() }))));
+    AutPred_auditar_({ evento: 'COMANDO_BLOQUEADO', quem: sessao, disp: disp, operacaoId: opId, resultado: 'NEGADO', detalhe: 'Nada enviado: ' + bloqueioNuvem + '.', dados: { origem: base.ORIGEM } });
+    AutPred_registrarFalhaNuvem_({ codigo: (Tuya_uso_().bloqueio || {}).codigo, http: 0, incerto: false, msg: bloqueioNuvem });
+    var bq = Tuya_uso_().bloqueio || {};
+    return { comando: AutPred_comandoParaTela_(regB), foraDoAr: true, texto: AutPred_textoForaDoAr_() + ' Nada foi enviado.' + (AutPred_administra_(sessao) ? ' Detalhe para a gestão: ' + Tuya_textoErro_(bq.codigo, '', 0, 'a chamada') + '; ' + bloqueioNuvem + '.' : '') };
+  }
   if (pedidoModo && c.podeLer) {
     if (!pedido || !pedido.ativo) negar('não há pedido de abertura ativo' + (pedido && pedido.erro ? ' (' + pedido.erro + ')' : '') + ': a abertura remota da porta só vale enquanto a campainha está chamando (cerca de 60 a 90 segundos). Peça para tocarem a campainha e toque em "Abrir agora" dentro do tempo', 'PEDIDO_EXPIRADO');
     var jaResp = AutPred_respostaDoPedido_(comandos, disp.ID, pedido.pedidoId);
@@ -1301,6 +1461,9 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   return { comando: AutPred_comandoParaTela_(cmd), texto: 'Comando aceito pela API, mas a execução ainda não foi confirmada pelo dispositivo. ' + conf.detalhe + ' Use "Conferir agora" em alguns segundos; se a porta não abriu, trate como não executado.' };
 }
 
+/** Nuvem bloqueada para um pedido de pessoa agora ('' = pode tentar: sem bloqueio, ou é a vez da sonda de pessoa). */
+function AutPred_bloqueioParaPessoa_() { return Tuya_uso_().bloqueio ? Tuya_motivoPausa_('COMANDO') : ''; }
+
 /** Aviso à gestão (matriz S66) quando a API aceitou e o dispositivo não confirmou. Nunca derruba o comando. */
 function AutPred_avisarSemConfirmacao_(disp, cmd, quem) {
   try {
@@ -1345,7 +1508,7 @@ var AUT_FEITO_TEXTO = { ABRIR: 'Aberto', FECHAR: 'Fechado', PARAR: 'Parado', DES
 /** Motivo de recusa em poucas palavras, a partir do texto completo guardado. Função pura. */
 function AutPred_motivoCurto_(t) {
   t = AutPred_s_(t);
-  var regras = [[/intervalo mínimo/i, 'aguarde 10 s entre comandos'], [/no último minuto/i, 'muitos comandos em 1 minuto'], [/sem resultado/i, 'comando anterior ainda sem resultado'],
+  var regras = [[/nuvem da Tuya bloqueada|cota de chamadas da Tuya acabou|plano do projeto na Tuya/i, 'nuvem bloqueada (cota ou plano), nada enviado'], [/intervalo mínimo/i, 'aguarde 10 s entre comandos'], [/no último minuto/i, 'muitos comandos em 1 minuto'], [/sem resultado/i, 'comando anterior ainda sem resultado'],
     [/confirmação na janela|não é deste usuário/i, 'sem a confirmação na janela'], [/pedido de abertura ativo|enquanto a campainha/i, 'fora da janela da campainha'],
     [/já foi respondido/i, 'pedido da campainha já respondido'], [/desativado/i, 'dispositivo desativado no SGO+'], [/Pulso \(só abrir\)|fecha manualmente/i, 'portão só abre (pulso)'],
     [/não disponível pela API|não aceita este comando/i, 'comando não disponível pela nuvem'], [/em movimento/i, 'portão em movimento'], [/já está aberto|já está fechado/i, 'portão já estava nessa posição'], [/sensor do portão não informou/i, 'sem leitura do sensor'], [/permissão|responsável pelo sistema|não está liberado|restrito/i, 'sem permissão'],
@@ -1452,8 +1615,9 @@ function AutPred_eventoLegivel_(r) {
     COMANDO_SIMULADO: 'Teste: nada enviado', COMANDO_RECUSADO: 'A nuvem recusou o comando', ESTADO_CONSULTADO: 'Leu o estado do dispositivo', PERMISSAO_CONCEDIDA: 'Concedeu permissão',
     PERMISSAO_REVOGADA: 'Revogou permissão', INTEGRIDADE_CONFERIDA: 'Conferiu a integridade do registro', PEDIDO_CAMPAINHA: 'A campainha tocou: pedido de abertura',
     AUTO_ABRIR_LIGADA: 'Ligou a abertura automática pela campainha', AUTO_ABRIR_DESLIGADA: 'Desligou a abertura automática pela campainha',
-    MODO_ECONOMICO_DESLIGADO: 'Saiu do modo econômico da cota da Tuya', SAUDE_CONFIGURADA: 'Alterou o orçamento da cota e a consulta econômica' };
-  if (/^(COMANDO_NEGADO|COMANDO_NAO_AUTORIZADO|COMANDO_LIMITE|COMANDO_SEM_CONFIRMACAO|COMANDO_POSICAO|PEDIDO_EXPIRADO|PEDIDO_JA_RESPONDIDO|COMANDO_NAO_DISPONIVEL)$/.test(e)) return 'Recusado: ' + AutPred_motivoCurto_(d);
+    MODO_ECONOMICO_DESLIGADO: 'Saiu do modo econômico da cota da Tuya', SAUDE_CONFIGURADA: 'Alterou a consulta sem eventos (horário e intervalos)',
+    ORCAMENTO_CONFIRMADO: 'Confirmou o orçamento da cota da Tuya', EVENTOS_VALIDADOS: 'Fechadura validada por eventos (informativo)', AUTO_ABRIR_NEGADA: 'Recusado: ligar ou desligar a abertura automática sem poder destravar' };
+  if (/^(COMANDO_BLOQUEADO|COMANDO_NEGADO|COMANDO_NAO_AUTORIZADO|COMANDO_LIMITE|COMANDO_SEM_CONFIRMACAO|COMANDO_POSICAO|PEDIDO_EXPIRADO|PEDIDO_JA_RESPONDIDO|COMANDO_NAO_DISPONIVEL)$/.test(e)) return 'Recusado: ' + AutPred_motivoCurto_(d);
   var frase = mapa[e] || e;
   // concessões, revogações e homologações: o motivo escrito pela pessoa é legível e fica junto
   if (/^PERMISSAO_|HOMOLOGA/.test(e) && d) frase += ': ' + d.slice(0, 160);
@@ -1636,7 +1800,7 @@ function AutPred_resposta_(fn) {
 }
 
 // Origem das chamadas à nuvem por ação da tela (consumo da cota, 27/10/2026); o que não está aqui conta como TELA.
-var AUT_ORIGEM_ACAO = { estado: 'MANUAL', pedidoAgora: 'MANUAL', sincronizar: 'SINCRONIZAR', preparar: 'COMANDO', comando: 'COMANDO', conferir: 'COMANDO' };
+var AUT_ORIGEM_ACAO = { estado: 'MANUAL', pedidoAgora: 'MANUAL', sincronizar: 'SINCRONIZAR', preparar: 'COMANDO', comando: 'COMANDO', conferir: 'COMANDO', saudeOrcamento: 'TELA' };
 
 function AutPred_api(sessionId, acao, dados) {
   return AutPred_resposta_(function () {
@@ -1674,6 +1838,7 @@ function AutPred_apiAgir_(sessionId, acao, dados, ref) {
     if (acao === 'saude') return AutPred_saudePainel_(sessao);
     if (acao === 'saudeSairEconomico') return AutPred_saudeSairEconomico_(sessao, dados);
     if (acao === 'saudeCfg') return AutPred_saudeSalvarCfg_(sessao, dados);
+    if (acao === 'saudeOrcamento') return AutPred_saudeOrcamento_(sessao, dados);
     if (acao === 'autoAbrir') { var ma = AutPred_definirAutoAbrir_(sessao, dados); var pa = AutPred_painel_(sessao); pa.mensagem = ma.mensagem; return pa; }
     if (acao === 'sincronizar') { AutPred_exigirAdministrador_(sessao); var r = AutPred_sincronizar_(sessao); var p = AutPred_painel_(sessao); p.mensagem = 'Sincronizado com o Smart Life: ' + r.lidos + ' dispositivo(s) lido(s), ' + r.novos + ' novo(s), ' + r.atualizados + ' atualizado(s).' + (r.problemas.length ? ' Problemas: ' + r.problemas.join('; ') : ''); return p; }
     if (acao === 'estado') {

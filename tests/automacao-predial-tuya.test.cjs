@@ -116,6 +116,11 @@ test('erros traduzidos: 1106 e 28841105 dizem o que fazer no portal; sem respost
   assert.throws(() => ctx.Tuya_estado_(c, 'dev-y'), /28841105.*Go to Authorize/);
   api.respostas['/v1.0/devices/dev-z/status'] = () => ({ success: false, code: 28841002, msg: 'expired' });
   assert.throws(() => ctx.Tuya_estado_(c, 'dev-z'), /trial.*venceu/);
+  // 27/10/2026: plano vencido marca o bloqueio; a chamada seguinte (sem origem de pessoa) nem sai
+  const n0 = api.pedidos.length;
+  assert.throws(() => ctx.Tuya_estado_(c, 'dev-portao-1'), (e) => e.tuyaBloqueioLocal === true && e.tuyaCodigo === 28841002);
+  assert.equal(api.pedidos.length, n0);
+  ctx.Tuya_usoGravar_({});
   api.falhaRede = true;
   try { ctx.Tuya_estado_(c, 'dev-portao-1'); assert.fail('devia falhar'); } catch (e) { assert.ok(e.tuyaRede, 'erro de rede marcado'); assert.ok(/sem resposta da Tuya/.test(e.message)); }
 });

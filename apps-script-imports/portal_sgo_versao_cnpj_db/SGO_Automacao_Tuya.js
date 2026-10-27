@@ -50,7 +50,19 @@
  * TELA (releitura automática das telas), AUTOMATICA (consultas das rotinas), EVENTO (abertura automática disparada por
  * evento da Tuya), SENTINELA, SINCRONIZAR e TOKEN. Cota esgotada ou plano vencido (28841004, 28841104, 28841002, 28841001)
  * marca o bloqueio: enquanto ele vale, e no modo econômico (AUT_ECONOMICO), as origens TELA e AUTOMATICA não chamam a nuvem.
- * Qualquer resposta com sucesso tira o bloqueio.
+ *
+ * RECUPERAÇÃO DEPOIS DO BLOQUEIO (27/10/2026, decisão do dono: "nunca voltar de uma vez"). Tuya_portao_ decide antes de cada
+ * chamada sair (a chamada recusada aqui não sai, não gasta cota e não é repetida):
+ *   BLOQUEIO       nenhuma chamada automática (TELA, AUTOMATICA, EVENTO, OUTRA). Só a SONDA verifica a volta, com UMA chamada:
+ *                  a da sentinela no horário marcado (recuo de 15 min, 30 min, 1 h e depois de hora em hora; a sentinela só
+ *                  sonda no expediente) ou um pedido de pessoa (COMANDO, MANUAL, SINCRONIZAR) no máximo a cada 10 min. A sonda
+ *                  libera as chamadas da mesma operação por 30 s, até a primeira recusa. Sonda recusada com código de bloqueio:
+ *                  o recuo dobra (teto de 1 h). Token que responde não conta como volta (a cota é da API de negócio).
+ *   RECUPERACAO_1  primeiros 30 min depois da volta: só pessoas, eventos e sentinela; leituras automáticas continuam paradas.
+ *   RECUPERACAO_2  30 a 60 min: leituras automáticas voltam com teto de 20 chamadas por minuto (no total).
+ *   NORMAL         teto de 90 por minuto.
+ * Disjuntor: código de bloqueio de novo na recuperação, ou até 24 h depois da volta, rebloqueia na hora e o primeiro recuo
+ * dobra (15 -> 30 -> 60 min). Toda chamada que sai é contada, inclusive as recusadas pela Tuya (ela pode cobrá-las).
  ****************************************************/
 
 var TUYA_REGIOES = [
@@ -77,6 +89,16 @@ var TUYA_CODIGOS_BLOQUEIO = { 28841004: 'COTA', 28841104: 'COTA', 28841002: 'PLA
 var TUYA_CODIGOS_CREDENCIAL = { 1004: 1, 1106: 1, 28841101: 1, 28841105: 1, 28841106: 1 };
 var TUYA_ORIGENS_PAUSAVEIS = { TELA: 1, AUTOMATICA: 1 };
 var Tuya_origemAtual_ = '';
+// 27/10/2026 (dono): recuperação depois do bloqueio (cota esgotada ou plano vencido)
+var TUYA_RECUOS_MS = [900000, 1800000, 3600000];   // sonda da sentinela: 15 min, 30 min, 1 h; depois de hora em hora
+var TUYA_RECUO_MAX_MS = 3600000;
+var TUYA_RECUPERACAO_MS = 3600000;                 // 60 min de recuperação depois da volta
+var TUYA_RECUPERACAO_FASE1_MS = 1800000;           // primeiros 30 min: só pessoas, eventos e sentinela
+var TUYA_DISJUNTOR_MS = 86400000;                  // bloqueio de novo até 24 h depois da volta: o primeiro recuo dobra
+var TUYA_SONDA_PESSOA_MS = 600000;                 // bloqueado: um pedido de pessoa a cada 10 min serve de sonda
+var TUYA_SONDA_VALE_MS = 30000;                    // a sonda vale para as chamadas da mesma operação por 30 s, até a primeira recusa
+var TUYA_LIMITE_MINUTO_RECUPERACAO = 20;
+var TUYA_ORIGENS_PESSOA = { COMANDO: 1, MANUAL: 1, SINCRONIZAR: 1 };
 
 // Categorias da Tuya (código do produto) que o módulo reconhece. Portões e acessos: comando de abertura;
 // fechaduras: só pelo fluxo de bilhete das Smart Lock Open APIs, quando o modelo aceita abertura remota.
@@ -178,12 +200,13 @@ function Tuya_esperarVez_() {
   if (falta > 0) Utilities.sleep(Math.min(falta, TUYA_ESPACO_MS));
   try { if (cache) cache.put(TUYA_CACHE_ULTIMA, String(Date.now()), 60); } catch (e2) {}
 }
-/** Falso quando o minuto já tem TUYA_LIMITE_MINUTO chamadas (a chamada não sai). */
-function Tuya_vez_() {
+/** Falso quando o minuto já tem o teto de chamadas (TUYA_LIMITE_MINUTO; 20 na recuperação): a chamada não sai. */
+function Tuya_vez_(limite) {
+  limite = Number(limite) || TUYA_LIMITE_MINUTO;
   try {
     var cache = CacheService.getScriptCache(), k = TUYA_CACHE_MINUTO + Math.floor(Date.now() / 60000);
     var n = Number(cache.get(k) || 0);
-    if (n >= TUYA_LIMITE_MINUTO) return false;
+    if (n >= limite) return false;
     cache.put(k, String(n + 1), 120);
   } catch (e) {}
   return true;
@@ -222,7 +245,9 @@ function Tuya_usoNormalizar_(u, agoraMs) {
   u = u && typeof u === 'object' ? u : {};
   var dia = Tuya_diaDe_(agoraMs), mes = dia.slice(0, 7);
   var out = { dia: dia, diaTotal: 0, diaPor: {}, mes: mes, mesTotal: 0, mesPor: {}, ontemTotal: 0, porDia: {},
-    ultimoOkEm: Number(u.ultimoOkEm) || 0, ultimoErro: u.ultimoErro || null, bloqueio: u.bloqueio || null };
+    ultimoOkEm: Number(u.ultimoOkEm) || 0, ultimoErro: u.ultimoErro || null, bloqueio: u.bloqueio || null,
+    // 27/10/2026: recuperação depois do bloqueio, disjuntor e consumo do pacote único (período com início e fim)
+    recuperacao: u.recuperacao || null, voltouEm: Number(u.voltouEm) || 0, recuoInicialMs: Number(u.recuoInicialMs) || 0, periodo: u.periodo || null };
   Object.keys(u.porDia || {}).forEach(function (k) { if (k.slice(0, 7) === mes || k >= Tuya_diaDe_((agoraMs || Date.now()) - 35 * 86400000)) out.porDia[k] = Number(u.porDia[k]) || 0; });
   if (u.dia === dia) { out.diaTotal = Number(u.diaTotal) || 0; out.diaPor = u.diaPor || {}; out.ontemTotal = Number(u.ontemTotal) || 0; }
   else if (u.dia === Tuya_diaDe_((agoraMs || Date.now()) - 86400000)) out.ontemTotal = Number(u.diaTotal) || 0;
@@ -238,40 +263,122 @@ function Tuya_uso_() {
 }
 function Tuya_usoGravar_(u) { try { PropertiesService.getScriptProperties().setProperty(TUYA_PROP_USO, JSON.stringify(u)); } catch (e) {} }
 
-/** Conta uma chamada que saiu. r = { ok, codigo, http, rede, texto }. Nunca lança erro. */
+/**
+ * Conta uma chamada que saiu (inclusive a recusada pela Tuya: ela pode cobrá-la). r = { ok, codigo, http, rede, texto }.
+ * 27/10/2026: o token que responde não tira o bloqueio nem conta como "nuvem respondendo" (a cota é da API de negócio).
+ * Nunca lança erro.
+ */
 function Tuya_usoRegistrar_(origem, r) {
   try {
     var u = Tuya_uso_(), o = String(origem || 'OUTRA');
     u.diaTotal++; u.mesTotal++;
     u.diaPor[o] = (Number(u.diaPor[o]) || 0) + 1; u.mesPor[o] = (Number(u.mesPor[o]) || 0) + 1;
     u.porDia[u.dia] = u.diaTotal;
+    if (u.periodo && u.dia >= String(u.periodo.inicio || '') && u.dia <= String(u.periodo.fim || '')) u.periodo.total = (Number(u.periodo.total) || 0) + 1;
     var agora = Date.now();
-    if (r && r.ok) { u.ultimoOkEm = agora; u.bloqueio = null; }
+    if (r && r.ok) { if (o !== 'TOKEN') { u.ultimoOkEm = agora; Tuya_aoVoltar_(u, agora); } }
     else if (r) {
       var tipo = Tuya_tipoFalha_(r.codigo, r.http, r.rede);
       u.ultimoErro = { codigo: Number(r.codigo) || 0, http: Number(r.http) || 0, tipo: tipo, texto: String(r.texto || '').slice(0, 300), em: agora, origem: o };
-      if (TUYA_CODIGOS_BLOQUEIO[Number(r.codigo) || 0]) u.bloqueio = { tipo: tipo, codigo: Number(r.codigo), desde: (u.bloqueio && u.bloqueio.desde) || agora, texto: String(r.texto || '').slice(0, 300) };
+      if (TUYA_CODIGOS_BLOQUEIO[Number(r.codigo) || 0]) Tuya_aoBloquear_(u, tipo, Number(r.codigo), String(r.texto || '').slice(0, 300), agora);
     }
     Tuya_usoGravar_(u);
   } catch (e) {}
 }
 
-/** Modo econômico vigente (AUT_ECONOMICO, só no mês em que foi ligado). */
+/** Próximo recuo da sonda: 15 min -> 30 min -> 1 h -> 1 h (função pura). */
+function Tuya_proximoRecuo_(ms) { return Math.min(TUYA_RECUO_MAX_MS, Math.max(TUYA_RECUOS_MS[0], (Number(ms) || TUYA_RECUOS_MS[0]) * 2)); }
+
+/**
+ * Código de bloqueio recebido (função pura sobre o consumo u). Sem bloqueio: marca agora, com o primeiro recuo (15 min; o
+ * dobro do anterior quando é rebloqueio na recuperação ou até 24 h depois da volta = disjuntor). Já bloqueado: a sonda em
+ * curso falhou, o recuo dobra e a próxima conferência fica marcada.
+ */
+function Tuya_aoBloquear_(u, tipo, codigo, texto, agora) {
+  var b = u.bloqueio;
+  if (b) {
+    b.tipo = tipo; b.codigo = codigo; b.texto = texto; b.ultimaFalhaEm = agora;
+    if (b.sondaEm && !(Number(b.sondaFalhouEm) >= Number(b.sondaEm))) {
+      b.sondaFalhouEm = agora; b.sondas = (Number(b.sondas) || 0) + 1;
+      b.recuoMs = Tuya_proximoRecuo_(b.recuoMs);
+      b.proximaSondaEm = agora + b.recuoMs;
+    }
+    return u;
+  }
+  var rebloqueio = !!(u.recuperacao && agora < Number(u.recuperacao.ate)) || !!(u.voltouEm && agora - u.voltouEm < TUYA_DISJUNTOR_MS);
+  var inicial = rebloqueio ? Tuya_proximoRecuo_(u.recuoInicialMs || TUYA_RECUOS_MS[0]) : TUYA_RECUOS_MS[0];
+  u.recuoInicialMs = inicial;
+  u.recuperacao = null;
+  u.bloqueio = { tipo: tipo, codigo: codigo, desde: agora, texto: texto, ultimaFalhaEm: agora, recuoMs: inicial, proximaSondaEm: agora + inicial, sondas: 0, rebloqueio: rebloqueio };
+  return u;
+}
+
+/** Resposta com sucesso de uma chamada de negócio: com bloqueio, começa a recuperação (60 min) em vez de voltar de uma vez. */
+function Tuya_aoVoltar_(u, agora) {
+  if (!u.bloqueio) return u;
+  u.recuperacao = { desde: agora, ate: agora + TUYA_RECUPERACAO_MS, bloqueioDesde: Number(u.bloqueio.desde) || 0, tipo: u.bloqueio.tipo, codigo: u.bloqueio.codigo, sondas: Number(u.bloqueio.sondas) || 0 };
+  u.voltouEm = agora;
+  u.bloqueio = null;
+  return u;
+}
+
+/** Fase da nuvem: NORMAL | BLOQUEIO | RECUPERACAO_1 | RECUPERACAO_2 (função pura sobre o consumo). */
+function Tuya_fase_(u, agoraMs) {
+  agoraMs = agoraMs || Date.now();
+  if (u && u.bloqueio) return 'BLOQUEIO';
+  var r = u && u.recuperacao;
+  if (r && agoraMs < Number(r.ate)) return agoraMs - Number(r.desde) < TUYA_RECUPERACAO_FASE1_MS ? 'RECUPERACAO_1' : 'RECUPERACAO_2';
+  return 'NORMAL';
+}
+/** Teto de chamadas por minuto na fase (90 normal; 20 na recuperação e na sonda). */
+function Tuya_limiteMinuto_(fase) { return fase === 'NORMAL' ? TUYA_LIMITE_MINUTO : TUYA_LIMITE_MINUTO_RECUPERACAO; }
+
+/**
+ * Modo econômico vigente (AUT_ECONOMICO, só no período do orçamento em que foi ligado: o mês, ou o pacote único). 27/10/2026
+ * (dono): é só emergência perto de esgotar (90% do orçamento); orçamento não confirmado NÃO liga o modo econômico.
+ */
 function Tuya_economico_() {
+  var chave = Tuya_diaDe_().slice(0, 7);
+  try { if (typeof AutPred_orcamentoAgora_ === 'function') chave = AutPred_orcamentoAgora_().chave || chave; } catch (eO) {}
   try {
     var e = JSON.parse(PropertiesService.getScriptProperties().getProperty(TUYA_PROP_ECONOMICO) || 'null');
-    return e && e.mes === Tuya_diaDe_().slice(0, 7) ? e : null;
+    return e && e.mes === chave ? e : null;
   } catch (x) { return null; }
 }
 
-/** Motivo para não chamar a nuvem nesta origem ('' = pode). Só TELA e AUTOMATICA são pausadas; pessoa sempre tenta. */
-function Tuya_motivoPausa_(origem) {
-  if (!TUYA_ORIGENS_PAUSAVEIS[String(origem || '')]) return '';
-  var u = Tuya_uso_();
-  if (u.bloqueio) return u.bloqueio.tipo === 'PLANO' ? 'o plano do projeto na Tuya está vencido' : 'a cota de chamadas da Tuya acabou';
-  if (Tuya_economico_()) return 'o modo econômico está ligado (consumo da cota perto do limite do mês)';
+function Tuya_hora_(ms) { try { return Utilities.formatDate(new Date(ms), 'America/Sao_Paulo', 'HH:mm'); } catch (e) { return ''; } }
+
+/**
+ * Esta origem pode chamar a nuvem agora? '' = pode; senão o motivo (frase para a tela). consumir = toma a vez da sonda
+ * (só em Tuya_chamarBruto_). Regras no cabeçalho (BLOQUEIO, RECUPERACAO_1, RECUPERACAO_2, modo econômico).
+ */
+function Tuya_portao_(origem, consumir, agoraMs) {
+  origem = String(origem || ''); agoraMs = agoraMs || Date.now();
+  var u = Tuya_uso_(), fase = Tuya_fase_(u, agoraMs), pessoa = !!TUYA_ORIGENS_PESSOA[origem];
+  if (fase === 'BLOQUEIO') {
+    var b = u.bloqueio;
+    var nome = b.tipo === 'PLANO' ? 'o plano do projeto na Tuya está vencido' : 'a cota de chamadas da Tuya acabou';
+    var sondaViva = Number(b.sondaEm) && agoraMs - Number(b.sondaEm) < TUYA_SONDA_VALE_MS && !(Number(b.ultimaFalhaEm) >= Number(b.sondaEm));
+    if (sondaViva && (pessoa || origem === 'SENTINELA')) return '';
+    var devida = origem === 'SENTINELA' ? agoraMs >= Number(b.proximaSondaEm || 0) : (pessoa ? agoraMs - Number(b.ultimaSondaPessoaEm || 0) >= TUYA_SONDA_PESSOA_MS : false);
+    if (devida) {
+      if (consumir) {
+        b.sondaEm = agoraMs; b.sondaOrigem = origem;
+        if (pessoa) b.ultimaSondaPessoaEm = agoraMs; else b.proximaSondaEm = agoraMs + (Number(b.recuoMs) || TUYA_RECUOS_MS[0]);
+        Tuya_usoGravar_(u);
+      }
+      return '';
+    }
+    return nome + '; nada é enviado até a nuvem voltar (próxima conferência automática às ' + Tuya_hora_(Number(b.proximaSondaEm) || agoraMs) + ')';
+  }
+  if (!TUYA_ORIGENS_PAUSAVEIS[origem]) return '';
+  if (fase === 'RECUPERACAO_1') return 'a nuvem da Tuya voltou há pouco e o SGO+ retoma aos poucos (leituras automáticas a partir das ' + Tuya_hora_(Number(u.recuperacao.desde) + TUYA_RECUPERACAO_FASE1_MS) + ')';
+  if (Tuya_economico_()) return 'o modo econômico está ligado (consumo da cota perto do limite)';
   return '';
 }
+
+/** Motivo para não chamar a nuvem nesta origem ('' = pode), sem tomar a vez da sonda. */
+function Tuya_motivoPausa_(origem) { return Tuya_portao_(origem, false); }
 
 // ------------------------------------------------------------
 // TOKEN (cache de memória; nunca em planilha)
@@ -318,9 +425,17 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   o = o || {};
   if (!c.temCredencial) throw Tuya_erro_('faltam as credenciais da Tuya (Chaves e senhas > Automação predial (Tuya))', 0, 0, false);
   if (!/^https:\/\//i.test(c.url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(c.url)) throw Tuya_erro_('o endereço da Tuya precisa começar com https://', 0, 0, false);
-  var pausa = Tuya_motivoPausa_(Tuya_origemAtual_);
-  if (pausa) { var ep = Tuya_erro_('leitura automática pausada: ' + pausa, 0, 0, false); ep.tuyaPausa = true; throw ep; }
-  if (!Tuya_vez_()) throw Tuya_erro_('limite de chamadas à Tuya neste minuto (' + TUYA_LIMITE_MINUTO + '); aguarde um minuto e tente de novo', 0, 0, true);
+  // 27/10/2026: bloqueio, recuperação e modo econômico decidem antes de a chamada sair (a recusada aqui não sai nem gasta cota)
+  var pausa = Tuya_portao_(Tuya_origemAtual_, true);
+  if (pausa) {
+    var uP = Tuya_uso_(), ep;
+    if (uP.bloqueio) { ep = Tuya_erro_(pausa, uP.bloqueio.codigo, 0, false); ep.tuyaBloqueioLocal = true; }
+    else ep = Tuya_erro_('leitura automática pausada: ' + pausa, 0, 0, false);
+    ep.tuyaPausa = true;
+    throw ep;
+  }
+  var limiteMin = Tuya_limiteMinuto_(Tuya_fase_(Tuya_uso_()));
+  if (!Tuya_vez_(limiteMin)) throw Tuya_erro_('limite de chamadas à Tuya neste minuto (' + limiteMin + '); aguarde um minuto e tente de novo', 0, 0, true);
   metodo = String(metodo || 'GET').toUpperCase();
   var corpoTexto = corpo === undefined || corpo === null ? '' : JSON.stringify(corpo);
   var accessToken = '';
@@ -399,7 +514,8 @@ function Tuya_exigirOk_(r, c, oQue) {
   if (j && j.success === true) return j;
   var cod = j && j.code !== undefined ? Number(j.code) : 0;
   var msg = Tuya_limpar_(j && j.msg ? j.msg : (j ? '' : String(r.txt || '').slice(0, 120)), c);
-  var rede = h === 429 || h >= 500 || cod === 28841104;
+  // 27/10/2026: 28841104 (cota) não é falha passageira: nada a repete automaticamente
+  var rede = h === 429 || h >= 500;
   throw Tuya_erro_(Tuya_textoErro_(cod, msg, h, oQue), cod, h, rede);
 }
 

@@ -969,10 +969,16 @@ test('cota esgotada (caso real 28841004): equipe vê "fora do ar" e usa o contro
   assert.match(avisos[0].texto, /^O quê: Cota da Tuya esgotada.*Por quê: .*28841004.*O que fazer: Renove em iot\.tuya\.com › Cloud › Cloud Services › IoT Core/);
   assert.equal(uso(amb).bloqueio.tipo, 'COTA'); assert.equal(uso(amb).ultimoErro.codigo, 28841004);
   assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ABERTO' && x.CHAVE === 'tuya_nuvem'));
-  // a gestão vê o detalhe técnico; a mesma falha não avisa de novo
+  // 27/10/2026: o comando do TEC foi a sonda de pessoa (a recusa conta no consumo); o seguinte nem sai (registro e auditoria)
+  assert.ok(uso(amb).bloqueio.sondas >= 1, 'sonda de pessoa recusada dobra o recuo');
+  assert.equal(uso(amb).bloqueio.recuoMs, 1800000);
   amb.envelhecer(); amb.como(DONO);
+  const n00 = amb.api.pedidos.length;
   r = amb.abrir(ped.ID, 'op-cota-0000002');
-  assert.match(r.texto, /fora do ar.*Detalhe para a gestão: .*28841004/);
+  assert.equal(r.ok, false);
+  assert.match(r.message, /fora do ar.*Nada foi enviado.*Detalhe para a gestão: .*28841004/);
+  assert.equal(amb.api.pedidos.length, n00, 'bloqueado: nenhuma chamada sai');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_BLOQUEADO' && x.USUARIO === 'DONO TESTE' && x.OPERACAO_ID === 'op-cota-0000002'));
   assert.equal(s74(amb).length, 1, 'um aviso por incidente');
   // telas: faixa para a equipe; nenhuma leitura automática sai com a cota esgotada
   amb.como(TEC);
@@ -983,9 +989,16 @@ test('cota esgotada (caso real 28841004): equipe vê "fora do ar" e usa o contro
   const pt = amb.api_('portoes');
   assert.equal(pt.ok, true, pt.message);
   assert.equal(amb.api.pedidos.length, n0, 'tela não relê com a cota esgotada');
-  // a cota volta: a sentinela confere (1 chamada por hora, na janela) e avisa a normalização
+  // a cota volta: antes do horário do recuo a sentinela não chama; no horário, UMA chamada (sonda) e avisa a normalização
   voltar();
+  const nS = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, nS, 'sem sonda antes do recuo');
+  const ub = uso(amb); ub.bloqueio.proximaSondaEm = Date.now() - 1; amb.props.TUYA_USO_V1 = JSON.stringify(ub);
   const s = amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, nS + 1, 'sonda com uma chamada');
+  assert.equal(amb.api.pedidos.at(-1).metodo, 'GET', 'a sonda só lê; sentinela nunca envia comando');
+  assert.ok(uso(amb).recuperacao && uso(amb).recuperacao.ate > Date.now(), 'recuperação gradual de 60 min');
   assert.ok(s.itens >= 4);
   assert.equal(uso(amb).bloqueio, null);
   const norm = s74(amb).filter((x) => /normalizado/.test(x.titulo));
@@ -1003,6 +1016,10 @@ test('orçamento da cota: 70% avisa (sem WhatsApp); 90% liga o modo econômico (
   sincronizar(amb);
   amb.homologar('Portão principal'); amb.homologar('Porta da Diretoria');
   const mes = amb.ctx.Tuya_diaDe_().slice(0, 7);
+  // 27/10/2026: orçamento confirmado pela gestão (mensal, 26.000 de um pacote de 53.900)
+  amb.como(DIR);
+  const oc = amb.api_('saudeOrcamento', { limitePacote: '53.900', periodo: 'MENSAL', orcamento: '26.000', motivo: 'conferido no painel' });
+  assert.equal(oc.ok, true, oc.message); assert.equal(oc.orcamento.confirmado, true); assert.equal(oc.orcamento.valor, 26000);
   const fixarUso = (n) => { const u = uso(amb); u.mes = mes; u.mesTotal = n; amb.props.TUYA_USO_V1 = JSON.stringify(u); };
   fixarUso(18300); // 70,3% de 26.000
   amb.ctx.AutPred_sentinela({ itens: [] });
@@ -1055,9 +1072,12 @@ test('orçamento da cota: 70% avisa (sem WhatsApp); 90% liga o modo econômico (
   assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => /virada do mês/.test(x.TEXTO)));
   // configuração (diretor): orçamento maior tira do modo econômico
   amb.props.AUT_ECONOMICO = JSON.stringify({ mes, desde: Date.now(), motivo: 'automático', por: 'Sentinela' });
-  sd = amb.api_('saudeCfg', { orcamentoMes: '100.000', consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 120, consultaDias: [1, 2, 3, 4, 5], motivo: 'plano pago assinado' });
+  sd = amb.api_('saudeOrcamento', { limitePacote: '200.000', periodo: 'MENSAL', orcamento: '100.000', motivo: 'plano pago assinado' });
   assert.equal(sd.ok, true, sd.message); assert.match(sd.mensagem, /modo econômico foi desligado/); assert.equal(sd.uso.orcamento, 100000);
-  amb.como(ADM2); assert.match(amb.api_('saudeCfg', { orcamentoMes: '50000', motivo: 'teste adm' }).message, /só um diretor/);
+  sd = amb.api_('saudeCfg', { consultaInicio: '00:00', consultaFim: '23:59', consultaIntervaloS: 60, portaoParadoS: 20, consultaDias: [0, 1, 2, 3, 4, 5, 6], motivo: 'consulta 24 horas' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.cfg.consultaIntervaloS, 60); assert.equal(sd.orcamento.valor, 100000, 'a consulta não mexe no orçamento');
+  assert.match(amb.api_('saudeCfg', { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 120, consultaDias: [1], motivo: 'intervalo maior que a janela' }).message, /30 a 85 segundos/);
+  amb.como(ADM2); assert.match(amb.api_('saudeCfg', { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 60, consultaDias: [1], motivo: 'teste adm' }).message, /só um diretor/);
 });
 
 test('eventos da Tuya: a campainha abre pela abertura automática sem ler a nuvem; portão pelo evento; sem eventos, consulta econômica compartilhada (nunca a cada 3 s) e só na janela', () => {
@@ -1139,4 +1159,264 @@ test('sentinela: item do servidor só vira incidente depois das rodadas pedidas;
   assert.match(tela, /document\.visibilityState === "hidden"/);
   assert.match(tela, /agendar\(r\.proximaS\)/);
   assert.doesNotMatch(tela, /setInterval\(tickPortoes|setInterval\(tick, 3000\)/, 'sem consulta fixa a cada 3 ou 5 s');
+});
+
+// ---------------------------------------------------------------- 27/10/2026, decisões do dono (segunda rodada): preservar tudo,
+// otimizar o consumo. Sem eventos, a fechadura é consultada a cada 60 s (menor que a janela de ~90 s do pedido), numa leitura
+// compartilhada pela abertura automática, pelo aviso S67 e pelas telas; com eventos, zero consulta. Validação por eventos é só
+// informativa. Bloqueio: sonda com recuo, recuperação gradual e disjuntor. Orçamento provisório não degrada nada.
+const eventosVivos = (amb) => { amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now(), desde: Date.now() - 60000 }); };
+const evFechadura = (amb, seg, t) => { const em = t || Date.now(); amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: seg, time: em }, doorbell: { value: true, time: em - 300 } }, recebidoEm: Date.now(), primeiroEm: Date.now(), pedidoEm: seg > 0 ? em : 0 }); };
+const prepararPorta = (amb) => { amb.api.pedido = true; sincronizar(amb); amb.homologar('Porta da Diretoria'); amb.como(DONO); return amb.disp('Porta da Diretoria'); };
+const bloquear = (amb, extra) => { const u = uso(amb); u.bloqueio = Object.assign({ tipo: 'COTA', codigo: 28841004, desde: Date.now(), ultimaFalhaEm: Date.now(), recuoMs: 900000, proximaSondaEm: Date.now() + 900000 }, extra || {}); amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+
+test('sem eventos: abertura automática pela consulta da fechadura a cada 60 s (uma leitura compartilhada), sem trava de validação; com eventos, zero consulta', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  // ligar não depende de validação por eventos (a preferência é da Diretoria)
+  const lg = amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  assert.equal(lg.ok, true, lg.message); assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR_POR_ID, 'uA');
+  assert.equal(amb.ctx.AutPred_caminhoFechadura_(amb.disp('Porta da Diretoria')).via, 'CONSULTA');
+  assert.equal(amb.ctx.AutPred_saudeCfg_().consultaIntervaloS, 60, 'menor que a janela de ~90 s do pedido');
+  tocar(amb, 80);
+  const s0 = amb.api.leiturasSombra || 0;
+  const r = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(r.abertas, 1, 'abriu sem eventos');
+  const cmd = amb.tabelas.AUT_COMANDOS.find((c) => c.ORIGEM === 'AUTOMATICO');
+  assert.match(cmd.AUTORIZACAO_MOTIVO, /consulta da fechadura, sem eventos/); assert.equal(cmd.SITUACAO, 'CONFIRMADO', 'confirmado pela fechadura, não só aceito');
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const s1 = amb.api.leiturasSombra;
+  assert.equal(s1 - s0, 1, 'uma leitura do pedido');
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida(); // um minuto de rotina rápida (3 s)
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'rotina rápida, rotina de 1 minuto e tela usam a mesma leitura');
+  assert.equal(amb.api.respostasPedido.length, 1, 'uma resposta por pedido');
+  // com eventos chegando: nenhuma consulta da fechadura
+  eventosVivos(amb); evFechadura(amb, 0);
+  limparPedido(amb);
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida();
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'com eventos, zero consulta');
+  assert.equal(amb.ctx.AutPred_caminhoFechadura_(amb.disp('Porta da Diretoria')).via, 'EVENTOS');
+  // fora do horário configurado e sem eventos: nada é lido sozinho; a preferência continua ligada
+  delete amb.props.TUYA_MSG_ESTADO;
+  amb.props.AUT_SAUDE_CFG = JSON.stringify({ consultaInicio: '00:00', consultaFim: '00:01', consultaDias: [] });
+  amb.envelhecer(); tocar(amb, 60);
+  amb.ctx.AutPred_rotinaRapida(); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.leiturasSombra, s1, 'fora do horário nada é lido');
+  assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM', 'a preferência nunca é apagada');
+  const it = amb.ctx.AutPred_itemAutoAbertura_(Date.now());
+  assert.equal(it.situacao, 'atencao'); assert.match(it.texto, /sem eventos e sem consulta agora \(fora do horário/);
+  assert.ok(!/Porta da Diretoria/.test(JSON.stringify(it)), 'sem o nome da porta (o Administrador vê a Saúde)');
+});
+
+test('sem eventos e sem abertura automática: o aviso S67 sai da mesma leitura compartilhada (sem chamada extra), uma vez por toque', () => {
+  const amb = ambiente();
+  prepararPorta(amb);
+  tocar(amb, 70);
+  const s0 = amb.api.leiturasSombra || 0;
+  amb.ctx.AutPred_rotinaPedidos();
+  amb.api_('pedido'); amb.api_('pedido'); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.leiturasSombra - s0, 1, 'uma leitura para aviso e telas');
+  const s67 = amb.notificacoes.filter((x) => x.evento === 'S67');
+  assert.equal(s67.length, 1); assert.match(s67[0].texto, /Abrir agora/);
+  const p = amb.api_('pedido');
+  assert.equal(p.itens[0].ativo, true); assert.equal(p.proximaS, 10);
+  // "Verificar campainha agora": usa a leitura dos últimos 10 s; teto de 30 por hora por fechadura
+  const s1 = amb.api.leiturasSombra;
+  amb.api_('pedidoAgora'); amb.api_('pedidoAgora');
+  assert.equal(amb.api.leiturasSombra, s1, 'leitura recente vale para todos');
+  const hora = Math.floor(Date.now() / 3600000);
+  amb.cache['AUT_VERIF_H_dev-fech-1_' + hora] = '30'; limparPedido(amb);
+  const lim = amb.api_('pedidoAgora');
+  assert.match(lim.itens[0].aviso, /Limite de 30 verificações por hora/); assert.equal(amb.api.leiturasSombra, s1);
+});
+
+test('eventos antigos, reentregues, sem hora ou com hora no futuro não abrem; o prazo do pedido nunca passa de 90 s', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  eventosVivos(amb);
+  const casos = [[40, Date.now() - 300000, 'reentregue de 5 min atrás'], [40, Date.now() + 120000, 'hora no futuro'], [9999, Date.now() - 100000, 'valor fora do normal']];
+  for (const [seg, t, nome] of casos) {
+    evFechadura(amb, seg, t);
+    assert.equal(amb.ctx.AutPred_pedidoDoEvento_(JSON.parse(amb.props['TUYA_EVT_dev-fech-1'])).ativo, false, nome);
+    amb.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb.ctx.AutPred_rotinaRapida();
+  }
+  amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: 40 } }, recebidoEm: Date.now() });
+  assert.equal(amb.ctx.AutPred_pedidoDoEvento_(JSON.parse(amb.props['TUYA_EVT_dev-fech-1'])).ativo, false, 'sem a hora do ponto, a hora de recebimento não vale');
+  amb.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal((amb.api.respostasPedido || []).length, 0, 'nada respondido');
+  assert.ok(!(amb.tabelas.AUT_COMANDOS || []).some((c) => c.ORIGEM === 'AUTOMATICO'));
+  // pedido verdadeiro por evento: abre uma vez; o mesmo evento reentregue não abre de novo
+  evFechadura(amb, 40); amb.api.pedidoValor = 40; amb.api.pedidoEm = Date.now();
+  assert.equal(amb.ctx.AutPred_aoEventoTuya('dev-fech-1').tratado, true);
+  amb.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb.ctx.AutPred_rotinaRapida();
+  assert.equal(amb.api.respostasPedido.length, 1);
+  assert.equal(amb.ctx.AutPred_pedidoAgora_({ valor: 500, valorEm: Date.now() }).restanteS, 90, 'prazo limitado a 90 s');
+});
+
+test('validação por eventos é informativa: gravada quando o pedido chegou por evento e o "Abrir agora" foi confirmado; aparece na Saúde só para diretores', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  eventosVivos(amb); evFechadura(amb, 50); tocar(amb, 50);
+  const r = amb.abrir(f.ID, 'op-valida-00001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
+  const d = amb.disp('Porta da Diretoria');
+  assert.equal(d.EVENTOS_VALIDADO, 'SIM'); assert.equal(d.EVENTOS_VALIDADO_POR, 'DONO TESTE'); assert.match(d.EVENTOS_VALIDADO_DETALHE, /recebido por evento/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'EVENTOS_VALIDADOS'));
+  const sd = amb.api_('saude');
+  assert.equal(sd.fechaduras.length, 1); assert.equal(sd.fechaduras[0].validado, true); assert.equal(sd.fechaduras[0].caminho, 'EVENTOS');
+  amb.como(ADM2);
+  const sa = amb.api_('saude');
+  assert.equal(sa.ok, true, sa.message); assert.equal(sa.fechaduras.length, 0, 'o Administrador não vê a porta da Diretoria');
+  // sem evento do pedido (só a consulta), a abertura manual não valida
+  const amb2 = ambiente();
+  const f2 = prepararPorta(amb2);
+  tocar(amb2, 50);
+  assert.equal(amb2.abrir(f2.ID, 'op-valida-00002').comando.situacao, 'CONFIRMADO');
+  assert.notEqual(amb2.disp('Porta da Diretoria').EVENTOS_VALIDADO, 'SIM', 'conexão ou consulta sozinhas não validam');
+});
+
+test('bloqueio: sonda com recuo 15 -> 30 -> 60 -> 60 min; volta com recuperação gradual (30 min sem leituras automáticas, depois teto de 20 por minuto); disjuntor dobra o recuo; recusas contadas', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  const voltar = cotaEsgotada(amb);
+  amb.como(DONO);
+  const g = amb.disp('Portão principal');
+  const d0 = uso(amb).diaTotal;
+  amb.api_('estado', { dispositivoId: g.ID }); // a chamada recusada marca o bloqueio
+  let u = uso(amb);
+  assert.equal(u.bloqueio.recuoMs, 900000); assert.ok(u.bloqueio.proximaSondaEm - Date.now() > 890000);
+  assert.ok(u.diaTotal > d0 && u.ultimoErro.codigo === 28841004, 'a recusa da Tuya conta no consumo');
+  // nada automático sai: telas, rotinas, eventos, sentinela antes do horário
+  const n0 = amb.api.pedidos.length;
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  amb.api_('portoes'); amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaRapida(); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, n0, 'bloqueado: nenhuma chamada automática');
+  // sondas da sentinela recusadas: o recuo dobra até 1 h e fica de hora em hora
+  const forcarSonda = () => { const x = uso(amb); if (x.bloqueio) { x.bloqueio.proximaSondaEm = Date.now() - 1; amb.props.TUYA_USO_V1 = JSON.stringify(x); } amb.ctx.AutPred_sentinela({ itens: [] }); return (uso(amb).bloqueio || {}).recuoMs; };
+  assert.deepEqual([forcarSonda(), forcarSonda(), forcarSonda()], [1800000, 3600000, 3600000]);
+  assert.equal(amb.api.pedidos.length, n0 + 3, 'uma chamada por sonda, nunca repetida');
+  // volta: recuperação; nos primeiros 30 min a tela não lê sozinha, comando de pessoa sai
+  voltar(); forcarSonda();
+  u = uso(amb);
+  assert.equal(u.bloqueio, null); assert.equal(amb.ctx.Tuya_fase_(u), 'RECUPERACAO_1');
+  assert.match(amb.ctx.Tuya_motivoPausa_('TELA'), /retoma aos poucos/);
+  assert.equal(amb.ctx.Tuya_motivoPausa_('COMANDO'), '');
+  // 30 a 60 min: leituras automáticas voltam com teto de 20 por minuto
+  u.recuperacao.desde = Date.now() - 31 * 60000; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.Tuya_fase_(uso(amb)), 'RECUPERACAO_2'); assert.equal(amb.ctx.Tuya_motivoPausa_('TELA'), '');
+  assert.equal(amb.ctx.Tuya_limiteMinuto_('RECUPERACAO_2'), 20); assert.equal(amb.ctx.AutPred_reservaMinuto_(), 10);
+  // disjuntor: recusa de novo na recuperação = bloqueio na hora com o primeiro recuo dobrado
+  const voltar2 = cotaEsgotada(amb);
+  Object.keys(amb.cache).forEach((k) => { if (k.startsWith('TUYA_CHAMADAS_MIN_')) delete amb.cache[k]; });
+  amb.api_('estado', { dispositivoId: g.ID });
+  u = uso(amb);
+  assert.equal(u.bloqueio.rebloqueio, true); assert.equal(u.bloqueio.recuoMs, 1800000);
+  voltar2();
+});
+
+test('comando de pessoa recusado por bloqueio: registro NEGADO em AUT_COMANDOS e COMANDO_BLOQUEADO na auditoria (usuário, dispositivo, operação, origem), nada enviado; abertura automática bloqueada registra uma vez e mantém a preferência', () => {
+  const amb = ambiente();
+  sincronizar(amb); amb.homologar('Portão secundário');
+  const ped = amb.disp('Portão secundário');
+  amb.como(TEC);
+  const p = amb.api_('preparar', { dispositivoId: ped.ID, operacaoId: 'op-bloq-0000001', origem: 'CELULAR' });
+  assert.equal(p.ok, true, p.message);
+  // a nuvem bloqueia entre o toque e o "Sim" (sonda de pessoa já usada há pouco)
+  bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
+  const n0 = amb.api.pedidos.length;
+  const r = amb.api_('comando', { dispositivoId: ped.ID, operacaoId: 'op-bloq-0000001', confirmacaoToken: p.confirmacaoToken, origem: 'CELULAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.foraDoAr, true);
+  assert.equal(r.texto.indexOf('Portões pelo SGO+ fora do ar no momento'), 0); assert.ok(!/28841004/.test(r.texto), 'colaborador não vê código');
+  assert.equal(amb.api.pedidos.length, n0, 'nada enviado');
+  const c = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-bloq-0000001');
+  assert.equal(c.SITUACAO, 'NEGADO'); assert.equal(c.SOLICITANTE, 'TECNICO TESTE'); assert.equal(c.ORIGEM, 'CELULAR'); assert.match(c.AUTORIZACAO_MOTIVO, /nuvem da Tuya bloqueada/);
+  const a = amb.tabelas.AUT_AUDITORIA.find((x) => x.EVENTO === 'COMANDO_BLOQUEADO');
+  assert.equal(a.USUARIO, 'TECNICO TESTE'); assert.equal(a.DISPOSITIVO_ID, ped.ID); assert.equal(a.OPERACAO_ID, 'op-bloq-0000001'); assert.match(a.DADOS_JSON, /CELULAR/);
+  assert.equal(amb.api_('registro', {}).itens.find((x) => x.operacaoId === 'op-bloq-0000001').resultadoTexto, 'Recusado — nuvem bloqueada (cota ou plano), nada enviado');
+  // abertura automática por evento com a nuvem bloqueada: uma linha NEGADO por pedido, aviso S68, nenhuma chamada, preferência mantida
+  const amb2 = ambiente();
+  const f = prepararPorta(amb2);
+  amb2.api_('autoAbrir', { id: f.ID, ligado: true });
+  eventosVivos(amb2); evFechadura(amb2, 60);
+  bloquear(amb2);
+  const m0 = amb2.api.pedidos.length;
+  amb2.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb2.ctx.AutPred_rotinaRapida(); amb2.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal(amb2.api.pedidos.length, m0, 'nenhuma chamada');
+  const auto = amb2.tabelas.AUT_COMANDOS.filter((x) => x.ORIGEM === 'AUTOMATICO');
+  assert.equal(auto.length, 1); assert.equal(auto[0].SITUACAO, 'NEGADO');
+  assert.ok(amb2.notificacoes.some((x) => x.evento === 'S68' && /não abriu sozinha/.test(x.titulo) && /Smart Life/.test(x.texto)));
+  assert.equal(amb2.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM');
+});
+
+test('orçamento: sem confirmação vale a referência provisória (53.900 por mês, orçamento 26.950) sem modo econômico; pacote único com início e fim; teto do dia espaça só os portões parados', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  let sd = amb.api_('saude');
+  assert.equal(sd.orcamento.confirmado, false); assert.equal(sd.orcamento.provisorio, true); assert.equal(sd.orcamento.valor, 26950); assert.equal(sd.orcamento.sugestao, 26950);
+  assert.match(sd.orcamento.avisoProvisorio, /provisório — confirmar no painel/);
+  assert.equal(amb.ctx.Tuya_economico_(), null, 'sem confirmação não entra em modo econômico');
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  const cota = JSON.parse(amb.props.AUT_SAUDE_ESTADO).itens.find((i) => i.chave === 'tuya_cota');
+  assert.equal(cota.situacao, 'atencao'); assert.match(cota.texto, /provisório/); assert.equal(s74(amb).length, 0, 'provisório não avisa como incidente');
+  // portão parado: leitura compartilhada a cada 20 s (tela visível); várias telas = uma leitura
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const l0 = amb.api.leiturasGaragem || 0;
+  amb.api_('portoes'); amb.como(TEC); amb.api_('portoes'); amb.como(DONO); amb.api_('portoes');
+  assert.equal((amb.api.leiturasGaragem || 0) - l0, 1, 'uma leitura central');
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 20000);
+  // emergência: 90% do LIMITE de referência liga o modo econômico (não 90% do orçamento provisório)
+  const mes = amb.ctx.Tuya_diaDe_().slice(0, 7);
+  const fixar = (n) => { const u = uso(amb); u.mes = mes; u.mesTotal = n; amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+  fixar(30000); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined, '30.000 é 111% do provisório, mas 56% do limite');
+  fixar(48600); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.ok(amb.props.AUT_ECONOMICO, '90% do limite de referência');
+  delete amb.props.AUT_ECONOMICO; fixar(10);
+  // pacote único: datas obrigatórias, "já usado" do painel e soma a partir da confirmação
+  assert.match(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'UNICO', orcamento: '27000', motivo: 'pacote único' }).message, /data de início e a de fim/);
+  assert.match(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'MENSAL', orcamento: '60000', motivo: 'acima do limite' }).message, /Sugestão: 26\.950/);
+  const hoje = amb.ctx.Tuya_diaDe_(), fim = amb.ctx.Tuya_diaDe_(Date.now() + 29 * 86400000);
+  sd = amb.api_('saudeOrcamento', { limitePacote: '53.900', periodo: 'UNICO', inicio: hoje, fim, orcamento: '27.000', jaUsado: '1.000', motivo: 'pacote único conferido' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.orcamento.periodo, 'UNICO'); assert.equal(sd.orcamento.usado, 1000);
+  assert.equal(sd.orcamento.tetoDia, Math.ceil(27000 / 30 * 2));
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'ORCAMENTO_CONFIRMADO'));
+  const g = amb.disp('Portão principal');
+  amb.api_('estado', { dispositivoId: g.ID });
+  assert.ok(amb.ctx.AutPred_orcamentoAgora_().usado > 1000, 'consumo do pacote somado desde a confirmação');
+  // o Administrador também confirma; o Gestor não
+  amb.como(GESTOR); assert.equal(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'MENSAL', orcamento: '20000', motivo: 'gestor tenta' }).ok, false);
+  // pacote vencido: volta à referência provisória (sem degradar)
+  const cfgv = JSON.parse(amb.props.AUT_SAUDE_CFG); cfgv.orcamento.inicio = '2026-01-01'; cfgv.orcamento.fim = '2026-01-31'; amb.props.AUT_SAUDE_CFG = JSON.stringify(cfgv);
+  const ov = amb.ctx.AutPred_orcamentoAgora_();
+  assert.equal(ov.provisorio, true); assert.match(ov.avisoProvisorio, /terminou em 31\/01\/2026/); assert.equal(amb.ctx.Tuya_economico_(), null);
+  // acima da média diária: portões parados a cada 60 s; acima do teto do dia: 120 s; comando e telas não são bloqueados
+  const u = uso(amb); u.diaTotal = Math.ceil(ov.valor / ov.diasPeriodo) + 1; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 60000);
+  u.diaTotal = ov.tetoDia + 1; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 120000);
+  assert.equal(amb.ctx.Tuya_motivoPausa_('COMANDO'), ''); assert.equal(amb.ctx.Tuya_motivoPausa_('TELA'), '');
+});
+
+test('portão em movimento depois de um comando: leitura compartilhada a cada 4 s durante o percurso; a tela pede a cada 3 s', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  const g = amb.disp('Portão principal');
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-mov-00000001', acao: 'ALTERNAR' });
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-mov-00000001', confirmacaoToken: p.confirmacaoToken, acao: 'ALTERNAR' }).ok, true);
+  const pt = amb.api_('portoes');
+  assert.equal(pt.proximaS, 3);
+  assert.equal(amb.ctx.AUT_ESTADO_CACHE_MS, 4000);
+  amb.cache['AUT_ESTADO_dev-portao-1'] = String(Date.now() - 4500);
+  const l0 = amb.api.leiturasGaragem;
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem - l0, 1, 'passados 4 s, uma leitura para todas as telas');
 });

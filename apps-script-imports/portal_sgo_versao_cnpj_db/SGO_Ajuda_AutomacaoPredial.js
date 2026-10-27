@@ -11,6 +11,9 @@
  *   relida a cada 5 s com aviso na mudança; "Abrir automaticamente quando tocarem a campainha" na porta da Diretoria.
  * 27/10/2026 (cota da Tuya esgotada às 07:45, código 28841004): eventos da Tuya, consulta econômica, releitura da tela no ritmo do
  *   servidor e só com a aba visível, faixa "Portões pelo SGO+ fora do ar" para a equipe, sentinela e aba "Saúde da infraestrutura".
+ * 27/10/2026, tarde (dono: "nada que funcionava pode ficar mais lento; o único problema era o consumo"): fechadura sem eventos a
+ *   cada 60 s, portões numa leitura central (20 s parado, 4 s no percurso), recuperação gradual depois do bloqueio, orçamento
+ *   provisório e confirmação do pacote, validação por eventos só informativa.
  */
 function SGO_ajudaTelas_AutomacaoPredial_() {
   return {
@@ -51,7 +54,7 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Toque em \"Abrir agora\" e, na janela, em \"Sim, abrir agora\". Para não abrir, toque em \"Recusar\" e em \"Sim, recusar\".",
           "Fora do pedido não há botão: a abertura remota só vale quando tocam a campainha.",
           "Quem pode destravar a porta recebe o aviso \"Pedido de abertura\" no sistema (e no WhatsApp, se estiver liberado no piloto). O aviso pode chegar perto do fim do tempo: com a tela aberta e os eventos da Tuya ligados, o pedido aparece em segundos.",
-          "Sem os eventos da Tuya, a campainha aparece com até 2 minutos de atraso (consulta econômica) e a tela mostra o aviso. Se alguém tocou, toque em \"Verificar campainha agora\": o SGO+ lê a fechadura na hora.",
+          "Sem os eventos da Tuya, a campainha aparece com até 60 segundos de atraso (consulta da fechadura no horário configurado) e a tela mostra o aviso. Se alguém tocou, toque em \"Verificar campainha agora\": o SGO+ lê a fechadura na hora (uma leitura a cada 10 segundos vale para todos; até 30 por hora).",
           "Cada pedido aceita uma resposta só. Se o tempo acabar antes do \"Sim\", o SGO+ explica e nada é enviado."
         ] },
         { titulo: "Abertura automática quando tocam a campainha (quem destrava a porta)", itens: [
@@ -61,20 +64,26 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Se a nuvem não aceitar, chega o aviso \"não abriu sozinha\": se ainda der tempo, toque em \"Abrir agora\".",
           "Para voltar ao jeito de antes, desmarque a caixa: a porta só abre por \"Abrir agora\" durante o pedido.",
           "Ligar e desligar ficam na auditoria; cada abertura automática aparece no registro com a origem \"Abertura automática (campainha)\".",
-          "Com os eventos da Tuya, a porta abre em segundos depois do toque. Sem eles, a abertura automática consulta a fechadura só na janela de consulta (padrão: dias úteis, das 08:00 às 18:00) e no máximo a cada 2 minutos: um toque curto pode passar sem abrir; use \"Abrir agora\"."
+          "Com os eventos da Tuya, a porta abre em segundos depois do toque. Sem eles, a abertura automática continua pela consulta da fechadura a cada 60 segundos no horário configurado (padrão: dias úteis, das 08:00 às 18:00): abre em média 30 segundos depois do toque, no máximo 60. Fora desse horário e sem eventos, use o aplicativo Smart Life.",
+          "O aviso \"Porta aberta automaticamente\" só chega com a confirmação da fechadura; sem ela, chega \"Abertura automática enviada, sem confirmação\": confira no local.",
+          "A opção que você ligou nunca é desligada pelo SGO+, nem com a nuvem fora do ar: quando a nuvem volta, ela volta a agir."
         ] },
         { titulo: "Quando aparece \"Portões pelo SGO+ fora do ar no momento\" (toda a equipe)", itens: [
           "Use o controle do portão ou o aplicativo Smart Life. A porta da Diretoria abre pelo aplicativo Smart Life ou na própria porta.",
+          "Nada foi enviado ao portão: o pedido fica no registro como \"Recusado — nuvem bloqueada\". Nenhum comando aparece como concluído.",
           "A gestão já foi avisada pelo SGO+ (no sistema, por e-mail e por WhatsApp): não é preciso ligar para ninguém.",
           "O alarme não depende da nuvem dos portões: o bloco \"Alarme Intelbras\" continua funcionando.",
           "Quando a nuvem voltar, a faixa some sozinha e os botões voltam a funcionar."
         ] },
         { titulo: "Saúde da infraestrutura (Diretoria e Administrador)", itens: [
           "Toque na aba \"Saúde da infraestrutura\".",
-          "Cada cartão mostra um item conferido pela sentinela a cada 5 minutos: nuvem dos portões (Tuya), portões e porta conectados, consumo da cota, modo econômico, eventos da Tuya, central de alarme Intelbras, rotinas do servidor e o próprio servidor. Verde = normal, amarelo = atenção, vermelho = falha, cinza = desligado; em amarelo e vermelho, o cartão diz o porquê e o que fazer.",
-          "Em \"Consumo da cota da Tuya\": chamadas de hoje e do mês, a porcentagem do orçamento (marcas em 70% e 90%), a previsão para o fim do mês, as chamadas por origem e as mensagens de eventos recebidas (cota à parte).",
-          "Modo econômico: o SGO+ liga sozinho em 90% do orçamento. Um diretor pode sair antes da virada do mês em \"Sair do modo econômico\", com o motivo; neste mês ele não religa sozinho.",
-          "Diretores ajustam o orçamento (o plano de teste da Tuya tem 26.000 chamadas por mês) e a consulta econômica (janela, dias e intervalo), com o motivo. Orçamento novo abaixo do limite tira do modo econômico.",
+          "Cada cartão mostra um item conferido pela sentinela a cada 5 minutos: nuvem dos portões (Tuya), portões e porta conectados, consumo da cota, modo econômico, eventos da Tuya, abertura automática da porta, central de alarme Intelbras, rotinas do servidor e o próprio servidor. Verde = normal, amarelo = atenção, vermelho = falha, cinza = desligado; em amarelo e vermelho, o cartão diz o porquê e o que fazer.",
+          "Nuvem bloqueada (cota ou plano): a faixa vermelha mostra a próxima conferência automática (15 minutos, depois 30, 1 hora e de hora em hora). Quando a nuvem volta, a faixa amarela mostra a recuperação gradual de 60 minutos.",
+          "\"Abertura automática da porta\" (só diretores): por onde a campainha é acompanhada agora (eventos ou consulta de 60 s) e a validação por eventos, que é só informativa, com o passo a passo para validar.",
+          "\"Orçamento da cota\": enquanto ninguém confirma, vale a referência provisória (pacote de cerca de 53.900 chamadas por mês, orçamento de 26.950) e nada fica mais lento. Para confirmar (diretor ou Administrador): veja o pacote no painel da Tuya (Cloud › Cloud Services › IoT Core), informe o limite, se renova todo mês ou é único (com início e fim), o orçamento (a tela sugere metade do limite) e o motivo, e toque em \"Confirmar orçamento\".",
+          "Em \"Consumo da cota da Tuya\": chamadas de hoje e do mês, a porcentagem do orçamento, a previsão para o fim do mês, as chamadas por origem e as mensagens de eventos recebidas (cota à parte).",
+          "Modo econômico (emergência): o SGO+ liga sozinho em 90% do orçamento confirmado (ou do limite do pacote, enquanto provisório). Comandos de pessoas, eventos e a abertura automática por evento continuam. Um diretor pode sair antes em \"Sair do modo econômico\", com o motivo.",
+          "Diretores ajustam a consulta sem eventos (horário e dias da consulta da fechadura, intervalo de 30 a 85 segundos e intervalo do portão parado), com o motivo.",
           "\"Histórico de incidentes\" lista a abertura de cada incidente, as ações automáticas (token renovado, rotina reinstalada, eventos reconectados), os avisos enviados e a normalização.",
           "Nada se atualiza sozinho nesta aba: toque em \"Atualizar\"."
         ] },
@@ -154,13 +163,14 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { nome: "Situação \"Aceito pela API, sem confirmação\" (laranja)", significado: "A nuvem recebeu o comando, mas o dispositivo não confirmou. Não considere aberto." },
         { nome: "Situação \"Recusado pela API\" ou \"Negado pelo SGO+\" (vermelho)", significado: "O comando não foi executado; o detalhe diz o porquê." },
         { nome: "Faixa vermelha \"Portões pelo SGO+ fora do ar no momento\"", significado: "A nuvem da Tuya não atende (cota, plano ou credenciais). Use o controle ou o aplicativo Smart Life; a gestão já foi avisada." },
-        { nome: "Faixa amarela \"Economia da nuvem ligada\"", significado: "Modo econômico: a posição e a campainha não são relidas sozinhas. Use \"Ler estado\" e \"Verificar campainha agora\" e confira no local." },
+        { nome: "Faixa amarela \"Economia da nuvem ligada\"", significado: "Modo econômico de emergência: sem eventos, a posição e a campainha não são relidas sozinhas. Use \"Ler estado\" e \"Verificar campainha agora\" e confira no local." },
+        { nome: "Resultado \"Recusado — nuvem bloqueada (cota ou plano), nada enviado\"", significado: "A nuvem da Tuya estava bloqueada: o SGO+ não enviou nada. Use o controle ou o aplicativo Smart Life." },
         { nome: "Cartões verde, amarelo, vermelho e cinza (Saúde da infraestrutura)", significado: "Normal, atenção, falha e desligado." }
       ],
       problemas: [
         { situacao: "O item do menu e o atalho \"Portões\" não aparecem", oQueFazer: "Enquanto a automação está em implantação (desligada ou sem portão homologado), só o Administrador e os diretores veem. Depois, aparece para toda a equipe interna: saia e entre de novo no SGO+. Se continuar sem aparecer, avise o Administrador." },
         { situacao: "\"Fechar portão\" não aparece", oQueFazer: "O portão está como \"Pulso (só abrir)\". Se ele fecha pela nuvem no aplicativo Smart Life, o Administrador ou um diretor escolhe \"Portão com abrir e fechar\" em \"Administrar\" > \"Acionamento\"." },
-        { situacao: "A abertura automática está ligada e a porta não abriu", oQueFazer: "Veja o aviso \"não abriu sozinha\" e o registro (motivo, por exemplo fechadura sem internet). Se ainda der tempo, toque em \"Abrir agora\". Confira também se a fechadura está homologada: sem homologação, tudo é simulação." },
+        { situacao: "A abertura automática está ligada e a porta não abriu", oQueFazer: "Veja o aviso \"não abriu sozinha\" e o registro (motivo, por exemplo fechadura sem internet ou nuvem bloqueada). Se ainda der tempo, toque em \"Abrir agora\" ou use o aplicativo Smart Life. Sem eventos, ela abre em até 60 segundos e só no horário configurado (Saúde da infraestrutura mostra o caminho atual). Confira também se a fechadura está homologada: sem homologação, tudo é simulação." },
         { situacao: "Aparece \"Nenhum comando real sai agora\"", oQueFazer: "É esperado até a homologação. O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya); um diretor homologa cada dispositivo depois do teste presencial." },
         { situacao: "\"a confirmação na janela não foi feita ou venceu\"", oQueFazer: "A janela vale 60 segundos. Toque de novo no botão e, na janela, em \"Sim, abrir agora\"." },
         { situacao: "A sincronização diz \"código 1106\" ou \"28841105\"", oQueFazer: "No portal da Tuya, confira se a conta do Smart Life está ligada ao projeto e se os serviços estão autorizados (Guia de acesso à Tuya). Depois sincronize de novo." },
@@ -169,12 +179,13 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { situacao: "\"o comando anterior ainda está sem resultado\"", oQueFazer: "Toque em \"Conferir agora\" na lista de últimos comandos; se o portão não abriu, espere o tempo indicado e tente de novo." },
         { situacao: "Fechadura com \"Não disponível pela API\"", oQueFazer: "O modelo não oferece abertura remota pela nuvem. Use o aplicativo Smart Life ou a própria porta." },
         { situacao: "\"Portões pelo SGO+ fora do ar no momento\"", oQueFazer: "Use o controle ou o aplicativo Smart Life. A gestão foi avisada. Para a gestão: veja o cartão vermelho em Saúde da infraestrutura (o quê, por quê e o que fazer)." },
-        { situacao: "Cota da Tuya esgotada (código 28841004, \"quota of Trial Edition is used up\")", oQueFazer: "O responsável pelo sistema renova em iot.tuya.com › Cloud › Cloud Services › IoT Core (estender o período de teste ou assinar um plano). O SGO+ volta sozinho quando a Tuya responder: a sentinela confere de hora em hora e avisa a normalização." },
-        { situacao: "A posição do portão demora a mudar ou a campainha aparece atrasada", oQueFazer: "Os eventos da Tuya não estão ligados (cartão \"Eventos da Tuya\" em amarelo): use \"Ler estado\" e \"Verificar campainha agora\". O responsável pelo sistema liga o serviço de mensagens no portal da Tuya (manual do módulo)." }
+        { situacao: "Cota da Tuya esgotada (código 28841004, \"quota of Trial Edition is used up\")", oQueFazer: "O responsável pelo sistema renova em iot.tuya.com › Cloud › Cloud Services › IoT Core (estender o período de teste ou assinar um plano). O SGO+ volta sozinho quando a Tuya responder: a sentinela confere com uma chamada 15 minutos depois, depois 30, 1 hora e de hora em hora; a volta é gradual (60 minutos) e a normalização é avisada." },
+        { situacao: "A posição do portão demora a mudar ou a campainha aparece atrasada", oQueFazer: "Os eventos da Tuya não estão ligados (cartão \"Eventos da Tuya\" em amarelo): a posição parada leva até 20 segundos (60 ou 120 nos dias de consumo alto) e a campainha até 60. Use \"Ler estado\" e \"Verificar campainha agora\". O responsável pelo sistema liga o serviço de mensagens no portal da Tuya (manual do módulo)." },
+        { situacao: "\"Orçamento provisório — confirmar no painel\"", oQueFazer: "Nada está mais lento. Um diretor ou o Administrador confirma o pacote em Saúde da infraestrutura › Orçamento da cota (passo a passo na tela)." }
       ],
       quemPode: [
-        { perfil: "DIRETORIA", pode: "Diretores (perfil Diretoria, vínculo Diretoria ou responsável pelo sistema): ver, abrir e fechar portões, ver a porta da Diretoria, sincronizar, administrar, homologar e consultar todo o registro e toda a auditoria; Saúde da infraestrutura com sair do modo econômico e ajustar o orçamento. Destravar a porta e ligar a abertura automática: o responsável pelo sistema por padrão; os outros diretores com a permissão dele." },
-        { perfil: "ADMIN", pode: "Ver, abrir e fechar portões, sincronizar, administrar os portões, consultar o registro e a auditoria dos portões e ver a Saúde da infraestrutura (sem sair do modo econômico nem mudar o orçamento). Se não for diretor, não vê a porta da Diretoria." },
+        { perfil: "DIRETORIA", pode: "Diretores (perfil Diretoria, vínculo Diretoria ou responsável pelo sistema): ver, abrir e fechar portões, ver a porta da Diretoria, sincronizar, administrar, homologar e consultar todo o registro e toda a auditoria; Saúde da infraestrutura com sair do modo econômico, confirmar o orçamento e ajustar a consulta sem eventos. Destravar a porta e ligar a abertura automática: o responsável pelo sistema por padrão; os outros diretores com a permissão dele." },
+        { perfil: "ADMIN", pode: "Ver, abrir e fechar portões, sincronizar, administrar os portões, consultar o registro e a auditoria dos portões e ver a Saúde da infraestrutura e confirmar o orçamento da cota (sem sair do modo econômico nem mudar a consulta sem eventos). Se não for diretor, não vê a porta da Diretoria." },
         { perfil: "GESTOR,RH,FINANCEIRO,TECNICO,METROLOGIA,COMERCIAL", pode: "Depois da implantação: ver, abrir e fechar os portões (atalho \"Portões\" no celular) e ver no registro os próprios comandos. Não veem a porta da Diretoria. Quem tem o vínculo Diretoria no cadastro é diretor." },
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
@@ -185,7 +196,7 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { p: "A abertura automática abre para qualquer pessoa que tocar a campainha?", r: "Sim, enquanto estiver ligada: a porta abre sem ninguém confirmar. Por isso só quem destrava a porta liga a opção, cada abertura é registrada e avisada. Desmarque quando não quiser esse comportamento." },
         { p: "Onde ficam as senhas da fechadura?", r: "Em lugar nenhum do SGO+. O destravamento usa um bilhete temporário da nuvem, que não é gravado. As credenciais da Tuya ficam em Chaves e senhas, fora de qualquer planilha." },
         { p: "Os portões pararam: o alarme parou junto?", r: "Não. O alarme fala com a central pelo servidor do SGO+, sem a nuvem da Tuya. Cada item aparece separado em Saúde da infraestrutura." },
-        { p: "Por que a posição não muda na hora com o portão parado?", r: "Para não gastar a cota da Tuya: sem os eventos da Tuya, a posição do portão parado é relida no máximo a cada 10 minutos. Durante o percurso de um comando, a cada poucos segundos. \"Ler estado\" lê na hora." },
+        { p: "Por que a posição não muda na hora com o portão parado?", r: "Com os eventos da Tuya, muda na hora. Sem eles, uma leitura central vale para todas as telas abertas: a cada 20 segundos com o portão parado (60 ou 120 nos dias de consumo alto) e a cada 4 segundos no percurso de um comando. \"Ler estado\" lê na hora." },
         { p: "O que acontece se eu tocar duas vezes?", r: "Cada toque gera um identificador de operação. O mesmo identificador nunca é executado duas vezes, e o dispositivo não recebe outro comando antes de 10 s." }
       ],
       secoesManual: [
@@ -197,9 +208,9 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Cada passo entra no registro inviolável AUT_AUDITORIA, encadeado por SHA-256."
         ] },
         { titulo: "Cota da Tuya e sentinela (27/10/2026)", paragrafos: [
-          "A nuvem da Tuya conta cada chamada do SGO+ (plano de teste: 26.000 por mês). O SGO+ conta as chamadas por dia, por mês e por origem e mostra em Saúde da infraestrutura.",
-          "Com os eventos da Tuya (serviço de mensagens), a campainha e a posição chegam sem gastar chamada. Sem eles, consulta econômica: só na janela configurada e no máximo uma leitura a cada 2 minutos, compartilhada por todas as telas e rotinas.",
-          "A sentinela confere tudo a cada 5 minutos usando o que já sabe; chamada real à Tuya só uma vez por hora no expediente, e só se nenhuma outra deu certo na última hora. Em 70% do orçamento avisa; em 90% liga o modo econômico; falha que não se corrige avisa o responsável pelo sistema e a Diretoria uma vez (evento S74) e de novo quando normaliza."
+          "A nuvem da Tuya conta cada chamada do SGO+ (pacote de teste: cortou em 53.909 chamadas no mês; referência provisória de 53.900 por mês e orçamento de 26.950 até a gestão confirmar). O SGO+ conta as chamadas por dia, por mês e por origem, inclusive as recusadas, e mostra em Saúde da infraestrutura.",
+          "Com os eventos da Tuya (serviço de mensagens), a campainha e a posição chegam sem gastar chamada. Sem eles, nada para: a fechadura é consultada a cada 60 segundos no horário configurado e os portões numa leitura central para as telas visíveis.",
+          "Nuvem bloqueada: nada automático sai; a sentinela confere a volta com uma chamada (15 minutos, 30, 1 hora, de hora em hora) e a volta é gradual em 60 minutos. A sentinela nunca envia comando. Em 70% do orçamento avisa; em 90% liga o modo econômico de emergência; falha que não se corrige avisa o responsável pelo sistema e a Diretoria uma vez (evento S74) e de novo quando normaliza."
         ] }
       ]
     }
