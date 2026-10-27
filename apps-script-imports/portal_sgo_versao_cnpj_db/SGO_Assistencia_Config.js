@@ -48,7 +48,11 @@ var AST_COLUNAS = {
     'TECNICO_ID', 'TECNICO_NOME', 'AGENDADO_PARA', 'DURACAO_MIN', 'OS_ID', 'OS_NUMERO', 'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'CANCELADO_MOTIVO',
     'CANCELADO_POR_NOME', 'REINCIDENTE', 'REINCIDENCIA_DE', 'CASO_ID', 'PROPOSTA_ID', 'SOLICITACAO_ID', 'PROXIMA_ACAO', 'ABERTA_EM_CAMPO',
     // 22/10/2026 (etapas 2 e 3): peça disponível em Compras, prazo de chegada do contrato e alerta do P1 sem triagem
-    'PECA_DISPONIVEL_EM', 'CHEGADA_MIN_UTEIS', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'PECA_DISPONIVEL_EM', 'CHEGADA_MIN_UTEIS', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM',
+    // 27/10/2026: triagem com fila livre (quem assumiu e quando; quando foi liberado para qualquer colaborador) e exclusão lógica
+    // de chamado de teste ou simulação (nada é apagado: EXCLUIDO_EM preenchido tira o chamado das listas; restaurar limpa só EXCLUIDO_EM)
+    'ASSUMIDO_POR_ID', 'ASSUMIDO_POR_NOME', 'ASSUMIDO_EM', 'FILA_LIVRE_EM', 'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_ID', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO',
+    'RESTAURADO_EM', 'RESTAURADO_POR_NOME', 'RESTAURADO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_OS: ['ID', 'NUMERO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'SITUACAO', 'TIPO_CODIGO', 'TIPO_NOME', 'MODELO_CODIGO', 'MODELO_VERSAO', 'PERGUNTAS_JSON',
     'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO', 'ENDERECO', 'TECNICO_ID', 'TECNICO_NOME',
     'AGENDADO_PARA', 'DURACAO_MIN', 'ORDEM_DIA', 'PREPARO_JSON', 'ORIENTACAO', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'CHEGOU_LAT', 'CHEGOU_LNG',
@@ -59,7 +63,9 @@ var AST_COLUNAS = {
     'DOC_TECNICO_URL', 'RELATORIO_VERSAO', 'RELATORIO_PDF_ID', 'RELATORIO_PDF_URL', 'RELATORIO_HTML_ID', 'RELATORIO_EM', 'ENVIADO_CLIENTE_EM',
     // 22/10/2026 (etapa 2): envio ao cliente gravado de verdade (quem, canal, para quem) e a revisão do relatório (Abrir para corrigir)
     'ENVIADO_CLIENTE_POR_NOME', 'ENVIADO_CLIENTE_CANAL', 'ENVIADO_CLIENTE_PARA', 'RELATORIO_REVISAO', 'RESERVA_ID',
-    'RESERVA_CODIGO', 'ATIVIDADE_ID', 'SERIE_TRATADA_EM', 'SERIE_TRATADA_POR_NOME', 'SERIE_TRATADA_TEXTO', 'ENCERRADA_EM', 'ENCERRADA_POR_NOME', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'ULTIMA_SINC_EM', 'ABERTA_EM_CAMPO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'RESERVA_CODIGO', 'ATIVIDADE_ID', 'SERIE_TRATADA_EM', 'SERIE_TRATADA_POR_NOME', 'SERIE_TRATADA_TEXTO', 'ENCERRADA_EM', 'ENCERRADA_POR_NOME', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'ULTIMA_SINC_EM', 'ABERTA_EM_CAMPO',
+    // 27/10/2026: O.S. de chamado excluído (teste ou simulação) sai junto, pela mesma exclusão (EXCLUSAO_ID); nada é apagado
+    'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
   ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM'],
   ATEC_PECAS: ['ID', 'OS_ID', 'ID_LOCAL', 'DESCRICAO', 'CODIGO', 'QUANTIDADE', 'UNIDADE', 'SITUACAO', 'URGENCIA', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'ATIVA', 'REMOVIDA_EM',
@@ -72,7 +78,8 @@ var AST_COLUNAS = {
     'RESPOSTA_CLIENTE', 'RESOLVIDO_EM', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_ORCAMENTOS: ['ID', 'NUMERO', 'REVISAO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'CLIENTE_ID', 'CLIENTE_NOME', 'ITENS_JSON', 'VALOR_TOTAL', 'VALIDADE', 'CONDICOES',
     'SITUACAO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'ENVIADO_EM', 'ENVIADO_PARA', 'ACEITE_ARQUIVO_ID', 'ACEITE_URL', 'ACEITE_NOME', 'ACEITE_POR',
-    'DECIDIDO_EM', 'DECISAO_TEXTO', 'REQUISICAO_ID', 'COMERCIAL_ATIVIDADE_ID', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM', 'ACEITE_CANAL', 'ACEITE_REGISTRO_ID'],
+    'DECIDIDO_EM', 'DECISAO_TEXTO', 'REQUISICAO_ID', 'COMERCIAL_ATIVIDADE_ID', 'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM', 'ACEITE_CANAL', 'ACEITE_REGISTRO_ID',
+    'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO'],
   ATEC_ORC_LINKS: ['ID', 'ORCAMENTO_ID', 'ORCAMENTO_NUMERO', 'REVISAO', 'CHAMADO_ID', 'CLIENTE_ID', 'TOKEN_SHA256', 'CONTEUDO_SHA256', 'PEDIDO_ID', 'CANAL', 'ENVIADO_PARA', 'VALIDO_ATE',
     'SITUACAO', 'FIM_EM', 'FIM_MOTIVO', 'VISTO_EM', 'VISTO_ULTIMO_EM', 'VISTAS', 'RESPONDIDO_EM', 'CONTATO_EMAIL', 'POR_ID', 'POR_NOME', 'CRIADO_EM'],
   ATEC_ORC_ACEITES: ['ID', 'ORCAMENTO_ID', 'ORCAMENTO_NUMERO', 'REVISAO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'CLIENTE_ID', 'LINK_ID', 'CANAL', 'DECISAO', 'NOME', 'CARGO', 'DOCUMENTO', 'EMAIL',
@@ -84,11 +91,12 @@ var AST_COLUNAS = {
 };
 var AST_COLUNAS_TEXTO = {
   ATEC_CHAMADOS: ['NUMERO', 'ABERTO_EM', 'PAUSA_DESDE', 'PRAZO_TRIAGEM_EM', 'PRAZO_ATENDIMENTO_EM', 'TRIAGEM_INICIO_EM', 'TRIAGEM_FIM_EM', 'RETORNO_PREVISTO', 'AGENDADO_PARA',
-    'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM'],
+    'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ASSUMIDO_EM', 'FILA_LIVRE_EM',
+    'EXCLUIDO_EM', 'RESTAURADO_EM'],
   ATEC_OS: ['NUMERO', 'AGENDADO_PARA', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'INICIO_EM', 'CONCLUIU_EM', 'CONCLUIU_EM_APARELHO', 'ASSINATURA_EM', 'RELATORIO_EM',
-    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO'],
+    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM'],
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
-  ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM'],
+  ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM', 'EXCLUIDO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
   ATEC_ACERVO_EQUIP: ['AUVO_TASK_ID', 'DATA_TAREFA'],
   ATEC_ORC_LINKS: ['TOKEN_SHA256', 'CONTEUDO_SHA256', 'VALIDO_ATE', 'FIM_EM', 'VISTO_EM', 'VISTO_ULTIMO_EM', 'RESPONDIDO_EM', 'PEDIDO_ID'],
@@ -196,7 +204,11 @@ var AST_REGRAS_PADRAO = {
   avisos: { whatsappP1Gestor: true, emailCliente: true, whatsappCliente: false },
   relatorioMensal: { ligado: true },
   // 22/10/2026 (etapa 4): validade do link de aceite do orçamento, em dias corridos (1 a 90)
-  orcamentoLink: { dias: 30 }
+  orcamentoLink: { dias: 30 },
+  // 27/10/2026 (decisão do dono, "Alerta + fila livre"): quem faz a triagem (lista vazia = como antes: Caixa de decisões >
+  // Regras e responsáveis da área Técnica; sem ninguém lá, o Gestor da área Técnica; sem ele, a Diretoria) e, passados
+  // filaLivreMin minutos úteis (expediente) sem ninguém assumir, o chamado fica na fila livre para qualquer colaborador
+  triagem: { responsaveis: [], filaLivreLigada: true, filaLivreMin: 30 }
 };
 
 /**
@@ -419,21 +431,38 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V4')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V5')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V4', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V5', '1', 21600); } catch (e) {}
+}
+/**
+ * 27/10/2026: chamado de teste ou simulação excluído pela gestão (EXCLUIDO_EM preenchido) e as O.S. e orçamentos que saíram
+ * junto não aparecem em lista, contador, pendência, indicador, agenda, aplicativo, portal nem na fonte única de atendimentos:
+ * todo leitor da Assistência passa por Ast_ler_. Só a lista de excluídos, a restauração e a numeração leem tudo (Ast_lerTudo_).
+ */
+var AST_ABAS_COM_EXCLUSAO = ['ATEC_CHAMADOS', 'ATEC_OS', 'ATEC_ORCAMENTOS'];
+function Ast_excluido_(r) { return !!(r && Ast_s_(r.EXCLUIDO_EM)); }
+function Ast_lerCru_(aba) {
+  try { return SGO_DATA.getAll(aba) || []; } catch (e) { if (/Aba não encontrada|não encontrad/i.test(String((e && e.message) || e))) return []; throw e; }
+}
+function Ast_lerTudo_(aba) {
+  var k = '__tudo_' + aba;
+  if (!AST_MEMO[k]) AST_MEMO[k] = Ast_lerCru_(aba);
+  return AST_MEMO[k];
 }
 function Ast_ler_(aba) {
   if (AST_MEMO[aba]) return AST_MEMO[aba];
-  var l;
-  try { l = SGO_DATA.getAll(aba) || []; } catch (e) { if (/Aba não encontrada|não encontrad/i.test(String((e && e.message) || e))) l = []; else throw e; }
+  // leitura nova sempre que a cópia da aba foi descartada (quem grava direto apaga AST_MEMO[aba]); a cópia "tudo" acompanha
+  var l = Ast_lerCru_(aba);
+  if (AST_ABAS_COM_EXCLUSAO.indexOf(aba) >= 0) { AST_MEMO['__tudo_' + aba] = l; l = l.filter(function (r) { return !Ast_excluido_(r); }); }
   AST_MEMO[aba] = l;
   return l;
 }
+function Ast_memoTirar_(aba) { delete AST_MEMO[aba]; delete AST_MEMO['__tudo_' + aba]; delete AST_MEMO['__mapa_' + aba]; }
 function Ast_porId_(aba, id) {
   id = Ast_s_(id);
   if (!id) return null;
@@ -443,13 +472,13 @@ function Ast_porId_(aba, id) {
 }
 function Ast_inserir_(aba, d) {
   var r = SGO_DATA.insert(aba, Object.assign({ CRIADO_EM: Ast_agora_() }, d));
-  delete AST_MEMO[aba];
+  Ast_memoTirar_(aba);
   if (aba === AST_ABAS.OS && typeof SGO_Atendimentos_invalidar_ === 'function') SGO_Atendimentos_invalidar_();
   return r;
 }
 function Ast_atualizar_(aba, id, d) {
   var r = SGO_DATA.update(aba, id, d);
-  delete AST_MEMO[aba];
+  Ast_memoTirar_(aba);
   if (aba === AST_ABAS.OS && typeof SGO_Atendimentos_invalidar_ === 'function') SGO_Atendimentos_invalidar_();
   return r;
 }
@@ -495,7 +524,7 @@ function Ast_proximoNumero_(sigla, aba) {
   var chave = 'ATEC_SEQ_' + sigla + '_' + ano, props = PropertiesService.getScriptProperties();
   var seq = Number(props.getProperty(chave)) || 0;
   var re = new RegExp('^' + sigla + '-' + ano + '-(\\d+)$');
-  Ast_ler_(aba).forEach(function (r) { var m = re.exec(Ast_s_(r.NUMERO)); if (m && Number(m[1]) > seq) seq = Number(m[1]); });
+  Ast_lerTudo_(aba).forEach(function (r) { var m = re.exec(Ast_s_(r.NUMERO)); if (m && Number(m[1]) > seq) seq = Number(m[1]); }); // excluídos também: número nunca se repete
   seq++;
   props.setProperty(chave, String(seq));
   var n = String(seq);
@@ -552,6 +581,8 @@ function Ast_validarRegras_(r) {
   if (!(dl >= 1 && dl <= 90)) throw new Error('a validade do link de aceite do orçamento precisa ser de 1 a 90 dias (padrão 30). Corrija e salve de novo');
   var f = Ast_num_(r.emRiscoFracao);
   if (!(f > 0 && f < 1)) throw new Error('"em risco" precisa ser uma fração entre 0 e 1 (padrão 0,25 = resta um quarto do prazo). Corrija e salve de novo');
+  var fl = Ast_num_((r.triagem || {}).filaLivreMin);
+  if (!(fl >= 5 && fl <= 480)) throw new Error('o tempo até a fila livre da triagem precisa ser de 5 a 480 minutos úteis (padrão 30). Corrija e salve de novo');
   (r.contratos || []).forEach(function (c, i) {
     if (!Ast_s_(c.clienteId)) throw new Error('o contrato da linha ' + (i + 1) + ' está sem cliente. Escolha o cliente ou tire a linha e salve de novo');
     Object.keys(c.prazos || {}).forEach(function (p) {
@@ -580,6 +611,18 @@ function Ast_gravarRegras_(r, eu, motivo) {
     return { clienteId: Ast_s_(c.clienteId), clienteNome: Ast_s_(c.clienteNome), prazos: pz, pausaPermitida: !!c.pausaPermitida, observacao: Ast_texto_(c.observacao, 300) };
   });
   limpa.ligada = limpa.ligada !== false;
+  // 27/10/2026: responsáveis pela triagem só da equipe interna ativa (cliente e conta do sistema fora); sem repetição
+  var tr = limpa.triagem || {}, usT = Ast_usuarios_(), vistosT = {};
+  limpa.triagem = {
+    responsaveis: (Array.isArray(tr.responsaveis) ? tr.responsaveis : []).map(Ast_s_).filter(function (id) {
+      var u = usT[id];
+      if (!u || vistosT[id]) return false;
+      if (!u.ativo || u.cliente || Ast_ehContaSistema_(u)) throw new Error((u.nome || 'Uma pessoa') + ' não pode ficar com a triagem: ' + (!u.ativo ? 'o usuário está inativo' : u.cliente ? 'é login de cliente' : 'é conta do sistema') + '. Tire da lista e salve de novo');
+      vistosT[id] = true; return true;
+    }),
+    filaLivreLigada: tr.filaLivreLigada !== false,
+    filaLivreMin: Math.round(Ast_num_(tr.filaLivreMin))
+  };
   Ast_validarRegras_(limpa);
   var versao = (Number(atual.versao) || 1) + 1;
   Ast_inserir_(AST_ABAS.CONFIG, { CHAVE: 'REGRAS', VALOR_JSON: JSON.stringify(limpa), VERSAO: versao, MOTIVO: Ast_texto_(motivo, 500),
@@ -707,9 +750,16 @@ function Ast_diretoria_(us) {
   if (!ids.length) ids = Object.keys(us).filter(function (id) { return us[id].ativo && us[id].perfil === 'ADMIN'; });
   return ids;
 }
-/** Quem faz a triagem: o gestor da área Técnica; sem gestor, a Diretoria. */
+/**
+ * Quem faz a triagem. 27/10/2026: primeiro a lista das Regras da assistência (Triagem e fila livre), configurável pela
+ * gestão; vazia (ou só gente inativa), vale o de antes: os responsáveis da área Técnica na Caixa de decisões (é assim que a
+ * Bruna recebe hoje), senão o Gestor da área Técnica, senão a Diretoria.
+ */
 function Ast_triagemPara_(us) {
   us = us || Ast_usuarios_();
+  var cfg = [];
+  try { cfg = ((Ast_regras_().triagem || {}).responsaveis || []).map(Ast_s_).filter(function (id) { return us[id] && us[id].ativo && !us[id].cliente; }); } catch (e) { cfg = []; }
+  if (cfg.length) return { id: cfg[0], nome: us[cfg[0]].nome, ids: cfg, nomes: cfg.map(function (id) { return us[id].nome; }), motivo: 'responsáveis pela triagem nas Regras da assistência', configurado: true };
   var g = Ast_gestoresTecnica_(us);
   if (g.length) return { id: g[0], nome: us[g[0]].nome, ids: g, motivo: 'gestor da área Técnica' };
   var d = Ast_diretoria_(us);
@@ -739,6 +789,8 @@ function Ast_nivelDe_(u) {
     gestor: perfil === 'GESTOR' || gestao,
     // Regras da assistência: Administrador, Diretoria e Gestor (pedido do dono, 21/10/2026)
     regras: admin || diretoria || perfil === 'GESTOR',
+    // 27/10/2026 (decisão do dono): excluir chamado de teste ou simulação, ver os excluídos e restaurar: só Gestor, Diretoria e Administrador
+    excluir: admin || diretoria || perfil === 'GESTOR',
     // valores do orçamento: gestão, Comercial, Financeiro e Diretoria (o técnico não vê valor)
     valores: gestao || comercial || financeiro || perfil === 'GESTOR'
   });
@@ -756,9 +808,10 @@ function Ast_eu_(sessionId) {
 /** Trava de acesso com a mensagem completa (o quê, por quê, o que fazer). */
 function Ast_exigir_(eu, nivel, acao) {
   var ok = nivel === 'GESTAO' ? eu.gestao : nivel === 'INTERNO' ? eu.interno : nivel === 'REGRAS' ? eu.regras : nivel === 'VALORES' ? eu.valores :
-    nivel === 'ADMIN' ? eu.perfil === 'ADMIN' : nivel === 'CLIENTE' ? eu.cliente : false;
+    nivel === 'ADMIN' ? eu.perfil === 'ADMIN' : nivel === 'CLIENTE' ? eu.cliente : nivel === 'EXCLUIR' ? !!eu.excluir : false;
   if (ok) return eu;
   var porque = {
+    EXCLUIR: 'excluir chamado de teste ou simulação, ver os excluídos e restaurar é só do Gestor, da Diretoria e do Administrador. Se o chamado foi aberto como teste ou por engano, peça a um deles (o motivo fica registrado); se é um atendimento real que não vai acontecer, o caminho é cancelar',
     GESTAO: 'esta ação é da gestão da área Técnica (gestor da área Técnica, Diretoria ou Administrador). Se você coordena a equipe de campo, peça ao Administrador para colocar você como responsável da área Técnica em Caixa de decisões > Regras e responsáveis',
     INTERNO: 'a Assistência técnica é da equipe interna da Metrolabs. Clientes acompanham os chamados em "Meus chamados"',
     REGRAS: 'as Regras da assistência (prazos, contratos, tipos de O.S. e checklists) são alteradas pelo Administrador, pela Diretoria e pelos gestores',

@@ -44,11 +44,23 @@ function Assistencia_fontePendencias_(add, ctx) {
     var base = { nome: num, publico: 'GESTAO', paraUsuarios: [], responsavel: 'Gestão da área Técnica', clienteId: Ast_s_(c.CLIENTE_ID), extra: { area: 'TECNICA' } };
     if (s === 'ABERTO' || s === 'EM_TRIAGEM') {
       var pt = Ast_ms_(c.PRAZO_TRIAGEM_EM), venc = pt !== null && agoraMs > pt;
-      add(Pend_item_('ast_triagem', Object.assign({}, base, { id: 'AST:TRIAGEM:' + c.ID, paraUsuarios: triagem.ids, gravidade: p === 'P1' || venc ? 'CRITICO' : 'ATENCAO', dias: null, vencimento: Ast_br_(c.PRAZO_TRIAGEM_EM),
-        titulo: (p === 'P1' ? 'Chamado CRÍTICO ' : 'Triagem do chamado ') + num + ' (' + cli + ')' + (venc ? ': prazo de triagem vencido' : ''),
-        detalhe: AST_PRIORIDADES[p] + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 80) + '. Problema: ' + Ast_s_(c.SINTOMA).slice(0, 160) + ' Prazo da triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '.',
-        oQueFazer: 'Abra Assistência técnica > Chamados, toque no chamado ' + num + ', preencha a triagem e escolha o caminho (remoto, orçamento, peça ou visita).',
+      // 27/10/2026: "chamado pendente de triagem" para quem faz a triagem, quem assumiu e a gestão; sem ninguém em N minutos úteis: fila livre
+      var est = AstC_estadoTriagem_(c, agoraMs, regras), comQuem = s === 'EM_TRIAGEM' ? (Ast_s_(c.ASSUMIDO_POR_NOME) || Ast_s_(c.TRIAGEM_RESPONSAVEL_NOME)) : '';
+      var paraT = triagem.ids.concat(Ast_gestoresTecnica_(us)).concat(s === 'EM_TRIAGEM' && Ast_s_(c.TRIAGEM_RESPONSAVEL_ID) ? [Ast_s_(c.TRIAGEM_RESPONSAVEL_ID)] : []);
+      add(Pend_item_('ast_triagem', Object.assign({}, base, { id: 'AST:TRIAGEM:' + c.ID, paraUsuarios: paraT, gravidade: p === 'P1' || venc ? 'CRITICO' : 'ATENCAO', dias: null, vencimento: Ast_br_(c.PRAZO_TRIAGEM_EM),
+        titulo: (p === 'P1' ? 'Chamado CRÍTICO pendente de triagem: ' : 'Chamado pendente de triagem: ') + num + ' (' + cli + ')' + (venc ? ': prazo de triagem vencido' : ''),
+        detalhe: AST_PRIORIDADES[p] + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 80) + '. Problema: ' + Ast_s_(c.SINTOMA).slice(0, 160) + ' Prazo da triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '.' +
+          (comQuem ? ' Assumido por ' + comQuem + (Ast_s_(c.ASSUMIDO_EM) ? ' em ' + Ast_br_(c.ASSUMIDO_EM) : '') + '.' : est.filaLivre ? ' Ninguém assumiu em ' + est.min + ' minutos úteis: está na fila livre.' :
+            est.livreEmMs !== null ? ' Se ninguém assumir até ' + Ast_br_(Ast_agora_(est.livreEmMs)) + ', vai para a fila livre.' : ''),
+        oQueFazer: 'Abra Assistência técnica > Chamados > Triagem, toque no chamado ' + num + ', toque em "Assumir chamado" (ou já preencha a triagem) e escolha o caminho (remoto, orçamento, peça ou visita).',
         tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(c.PRAZO_TRIAGEM_EM) } })));
+      if (est.filaLivre) {
+        // fila livre: aparece também para os técnicos (qualquer colaborador interno pode assumir pela tela)
+        add(Pend_item_('ast_fila_livre', Object.assign({}, base, { id: 'AST:FILA:' + c.ID, publico: 'PESSOA', paraUsuarios: Ast_tecnicos_(us).map(function (t) { return t.id; }), responsavel: 'Qualquer colaborador', gravidade: p === 'P1' ? 'CRITICO' : 'ATENCAO', dias: null,
+          titulo: 'Chamado aguardando triagem na fila livre: ' + num + ' (' + cli + ')',
+          detalhe: AST_PRIORIDADES[p] + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 80) + '. Aberto em ' + Ast_br_(c.ABERTO_EM) + '; ninguém assumiu em ' + est.min + ' minutos úteis.',
+          oQueFazer: 'Se puder, abra Assistência técnica > Chamados > Fila livre e toque em "Assumir chamado". Se já está em outro atendimento, não precisa fazer nada.', tela: AST_PEND_TELA('assistencia', c.ID) })));
+      }
     }
     if (s === 'PLANEJADO' && Ast_s_(c.PECA_DISPONIVEL_EM)) {
       // 22/10/2026 (etapa 3): a peça chegou em Compras e o chamado voltou sozinho: a gestão agenda o retorno
@@ -178,7 +190,8 @@ function Assistencia_fontePendencias_(add, ctx) {
 // ------------------------------------------------------------
 // ROTINA
 // ------------------------------------------------------------
-function Assistencia_rotinaGatilho() { return Assistencia_rotina_(new Date(), false); }
+// 27/10/2026: a fila livre da triagem é conferida a cada rodada do gatilho (15 minutos), antes do limite de uma vez por hora do resto
+function Assistencia_rotinaGatilho() { try { Ast_memoLimpar_(); AstC_filaLivreVerificar_(); } catch (e) {} return Assistencia_rotina_(new Date(), false); }
 function Assistencia_garantirRotina_() {
   var tem = false;
   try { tem = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === AST_FUNCAO_ROTINA; }); } catch (e) {}
@@ -366,7 +379,11 @@ function AstP_regrasTela_(eu, d) {
     .sort(function (a, b) { return b.versao - a.versao; });
   var us = Ast_usuarios_(), triagem = Ast_triagemPara_(us);
   return { regras: Ast_regras_(), padrao: AST_REGRAS_PADRAO, podeEditar: eu.regras, versoes: versoes, tipos: Ast_tipos_(true), modelos: Ast_modelos_(true), tiposPergunta: AST_TIPOS_PERGUNTA, docsTecnicos: AST_DOCS_TECNICOS,
-    tecnicos: Ast_tecnicos_(us).map(function (t) { return { id: t.id, nome: t.nome, perfil: t.perfil, area: t.area }; }), triagem: { nome: triagem.nome, motivo: triagem.motivo },
+    tecnicos: Ast_tecnicos_(us).map(function (t) { return { id: t.id, nome: t.nome, perfil: t.perfil, area: t.area }; }),
+    triagem: { nome: triagem.nome, motivo: triagem.motivo, ids: triagem.ids, nomes: triagem.ids.map(function (id) { return us[id] ? us[id].nome : id; }), configurado: !!triagem.configurado },
+    // 27/10/2026: quem pode ficar com a triagem (equipe interna ativa; cliente e conta do sistema fora)
+    internos: Object.keys(us).map(function (id) { return us[id]; }).filter(function (u) { return u.ativo && !u.cliente && !Ast_ehContaSistema_(u); })
+      .map(function (u) { return { id: u.id, nome: u.nome, perfil: u.perfil, area: u.area }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }),
     clientes: (eu.regras ? Ast_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).filter(function (c) { return Ast_up_(c.STATUS || 'ATIVO') === 'ATIVO'; }).map(function (c) { return { id: c.ID, nome: Ast_clienteNome_(c) }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }).slice(0, 3000) : []) };
 }
 /** Tipo de O.S. (criar ou editar; nunca apaga: inativa). d: { tipo:{ codigo?, nome, grupo, descricao, exige:{...}, modeloCodigo, documentoTecnico, semVisita, ativo }, motivo } */
@@ -450,7 +467,7 @@ function AstP_portal_(eu) {
 // CHAMADA ÚNICA DA TELA
 // ------------------------------------------------------------
 function AstP_inicio_(eu) {
-  var base = { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, interno: eu.interno, cliente: eu.cliente, podeRegras: eu.regras, valores: eu.valores, admin: eu.perfil === 'ADMIN', diretoria: eu.diretoria,
+  var base = { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, interno: eu.interno, cliente: eu.cliente, podeRegras: eu.regras, podeExcluir: !!eu.excluir, valores: eu.valores, admin: eu.perfil === 'ADMIN', diretoria: eu.diretoria,
     eu: { id: eu.id, nome: eu.nome }, ligada: Ast_ligada_() };
   if (eu.cliente) return base;
   var us = Ast_usuarios_();
@@ -492,8 +509,20 @@ function AstP_buscarCadastro_(eu, d) {
 }
 
 var AST_ACOES = {
-  iniciar: function (eu) { var b = AstP_inicio_(eu); if (!eu.cliente) { try { if (eu.gestao) Assistencia_garantirRotina_(); Assistencia_rotina_(new Date(), false); } catch (e) {} } return b; },
-  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, cliente: eu.cliente, podeRegras: eu.regras, admin: eu.perfil === 'ADMIN', ligada: Ast_ligada_() }; },
+  iniciar: function (eu) { if (!eu.cliente) { AstC_filaLivreVerificar_(); Ast_memoLimpar_(); } var b = AstP_inicio_(eu); if (!eu.cliente) { try { if (eu.gestao) Assistencia_garantirRotina_(); Assistencia_rotina_(new Date(), false); } catch (e) {} } return b; },
+  acesso: function (eu) {
+    var r = { nivel: eu.nivel, gestao: eu.gestao, tecnico: eu.tecnico, cliente: eu.cliente, podeRegras: eu.regras, podeExcluir: !!eu.excluir, admin: eu.perfil === 'ADMIN', ligada: Ast_ligada_() };
+    if (!eu.cliente) { try { r.triagem = AstC_contadorTriagem_(eu); } catch (e) { r.triagem = null; } }
+    return r;
+  },
+  // 27/10/2026: contador do menu (pendentes de triagem e fila livre); confere a fila livre de passagem. Só lê na tela; não redesenha formulário
+  contadorTriagem: function (eu) { Ast_exigir_(eu, 'INTERNO', 'ver a fila de triagem'); AstC_filaLivreVerificar_(); Ast_memoLimpar_(); return { triagem: AstC_contadorTriagem_(eu) }; },
+  assumir: function (eu, d) { return AstC_assumir_(eu, d); },
+  // 27/10/2026: exclusão lógica de chamado de teste ou simulação (Gestor, Diretoria e Administrador), lista dos excluídos e restauração
+  previaExclusao: function (eu, d) { return AstC_previaExclusao_(eu, d); },
+  excluir: function (eu, d) { return AstC_excluir_(eu, d); },
+  excluidos: function (eu, d) { return AstC_excluidos_(eu, d); },
+  restaurar: function (eu, d) { return AstC_restaurar_(eu, d); },
   avisosLidos: function (eu) { return { marcados: AstP_avisosLidos_(eu) }; },
   buscarCadastro: function (eu, d) { return AstP_buscarCadastro_(eu, d); },
   // cadastros criados em campo pelo técnico (etapa 1, 22/10/2026): lista e conferência pela gestão
@@ -501,7 +530,7 @@ var AST_ACOES = {
   cadastroConferido: function (eu, d) { return AstApp_cadastroConferido_(eu, d); },
   // chamados
   abrir: function (eu, d) { return AstC_abrir_(eu, d); },
-  lista: function (eu, d) { return AstC_lista_(eu, d); },
+  lista: function (eu, d) { if (!eu.cliente) { AstC_filaLivreVerificar_(); Ast_memoLimpar_(); } return AstC_lista_(eu, d); },
   chamado: function (eu, d) { return AstC_detalhe_(eu, d && d.id); },
   anotar: function (eu, d) { return AstC_anotar_(eu, d); },
   triagem: function (eu, d) { return AstC_triagem_(eu, d); },
@@ -593,8 +622,8 @@ var AST_ACOES = {
 };
 var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento'];
 /** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
-var AST_ACOES_DESLIGADA = ['abrir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
-var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
+var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
+var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', assumir: 'assumir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
   agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.',
   salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente', enviarOrcamento: 'enviar o orçamento com o link de aceite', orcLinkCopiar: 'gerar o link de aceite' };
 

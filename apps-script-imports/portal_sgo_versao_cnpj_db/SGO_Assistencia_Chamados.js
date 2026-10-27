@@ -17,8 +17,144 @@ function AstC_obter_(eu, id, acao) {
 function AstC_podeVer_(eu, c) {
   if (eu.cliente) return !!eu.clienteId && Ast_s_(c.CLIENTE_ID) === eu.clienteId;
   if (eu.gestao || (eu.interno && !eu.tecnico)) return true;
-  if (eu.tecnico) return Ast_s_(c.TECNICO_ID) === eu.id || Ast_s_(c.ABERTO_POR_ID) === eu.id || Ast_s_(c.TRIAGEM_RESPONSAVEL_ID) === eu.id;
+  if (eu.tecnico) return Ast_s_(c.TECNICO_ID) === eu.id || Ast_s_(c.ABERTO_POR_ID) === eu.id || Ast_s_(c.TRIAGEM_RESPONSAVEL_ID) === eu.id ||
+    Ast_s_(c.ASSUMIDO_POR_ID) === eu.id || (function () { var est = AstC_estadoTriagem_(c); return est.filaLivre || (est.pendente && AstC_ehDaTriagem_(eu)); })(); // 27/10/2026: fila livre da triagem
   return false;
+}
+
+// ------------------------------------------------------------
+// TRIAGEM COM ALERTA E FILA LIVRE (27/10/2026, decisão do dono: "Alerta + fila livre")
+// Chamado novo fica reservado para quem faz a triagem (Ast_triagemPara_: Regras da assistência; senão a Caixa de decisões)
+// e a gestão é avisada. Passados N minutos úteis (Regras da assistência > Triagem e fila livre; padrão 30) sem ninguém
+// assumir, o chamado entra na fila livre: qualquer colaborador interno toca em "Assumir chamado" e faz a triagem. Quem
+// assumiu e quando ficam no chamado (ASSUMIDO_*) e no histórico. Começar a triagem também é assumir.
+// ------------------------------------------------------------
+function AstC_triagemCfg_(regras) {
+  var t = ((regras || Ast_regras_()) || {}).triagem || {};
+  var min = Number(t.filaLivreMin);
+  return { ligada: t.filaLivreLigada !== false, min: min >= 5 ? min : 30 };
+}
+/** Quem faz a triagem, uma vez por chamada (a lista inteira usa o mesmo). */
+function AstC_triagemMemo_() { if (!AST_MEMO.__triagem) AST_MEMO.__triagem = Ast_triagemPara_(); return AST_MEMO.__triagem; }
+function AstC_ehDaTriagem_(eu) { return !!(eu && eu.id) && (AstC_triagemMemo_().ids || []).indexOf(Ast_s_(eu.id)) >= 0; }
+/** { pendente (aberto e ninguém assumiu), assumido, filaLivre, livreEmMs (quando entra/entrou na fila livre), min, ligada } */
+function AstC_estadoTriagem_(c, agoraMs, regras) {
+  var s = Ast_up_(c.SITUACAO), cfg = AstC_triagemCfg_(regras);
+  var assumido = !!(Ast_s_(c.ASSUMIDO_POR_ID) || Ast_s_(c.ASSUMIDO_POR_NOME));
+  var pendente = s === 'ABERTO' && !assumido;
+  var ab = Ast_ms_(c.ABERTO_EM);
+  var livreEm = pendente && cfg.ligada && ab !== null ? Ast_somarMinUteis_(ab, cfg.min) : null;
+  return { pendente: pendente, assumido: assumido, filaLivre: livreEm !== null && (agoraMs || Date.now()) >= livreEm, livreEmMs: livreEm, min: cfg.min, ligada: cfg.ligada };
+}
+/** Fazer a triagem: gestão; no chamado aberto, quem é da triagem; em triagem, quem assumiu. */
+function AstC_podeTriar_(eu, c) {
+  if (!eu || eu.cliente || !eu.interno) return false;
+  var s = Ast_up_(c.SITUACAO);
+  if (s !== 'ABERTO' && s !== 'EM_TRIAGEM') return false;
+  if (eu.gestao) return true;
+  if (s === 'ABERTO') return AstC_ehDaTriagem_(eu);
+  return Ast_s_(c.TRIAGEM_RESPONSAVEL_ID) === eu.id || Ast_s_(c.ASSUMIDO_POR_ID) === eu.id;
+}
+/** Assumir: gestão e quem é da triagem a qualquer hora; os demais colaboradores internos quando o chamado está na fila livre. */
+function AstC_podeAssumir_(eu, c, est) {
+  est = est || AstC_estadoTriagem_(c);
+  if (!eu || eu.cliente || !eu.interno || !est.pendente) return false;
+  return !!eu.gestao || AstC_ehDaTriagem_(eu) || est.filaLivre;
+}
+/** Por que não pode assumir ou fazer a triagem (o quê, por quê, o que fazer). */
+function AstC_motivoReserva_(c, est, acao) {
+  var tri = AstC_triagemMemo_(), quem = (tri.nomes || [tri.nome]).filter(Boolean).join(', ') || 'a gestão da área Técnica';
+  if (est.pendente && est.livreEmMs !== null) return 'Não foi possível ' + acao + ': o chamado ' + c.NUMERO + ' está reservado para a triagem de ' + quem + ' até ' + Ast_br_(Ast_agora_(est.livreEmMs)) +
+    ' (' + est.min + ' minutos úteis depois da abertura). Depois disso, se ninguém assumir, ele entra na fila livre e qualquer colaborador pode assumir. Se é urgente, fale com ' + quem + ' ou com a gestão da área Técnica';
+  if (est.pendente) return 'Não foi possível ' + acao + ': a triagem do chamado ' + c.NUMERO + ' é de ' + quem + ' (a fila livre está desligada nas Regras da assistência). Fale com a gestão da área Técnica se precisar';
+  return 'Não foi possível ' + acao + ': a triagem do chamado ' + c.NUMERO + ' está com ' + (Ast_s_(c.ASSUMIDO_POR_NOME) || Ast_s_(c.TRIAGEM_RESPONSAVEL_NOME) || 'outra pessoa') +
+    (Ast_s_(c.ASSUMIDO_EM) ? ' desde ' + Ast_br_(c.ASSUMIDO_EM) : '') + '. Fale com essa pessoa ou com a gestão da área Técnica';
+}
+/** Técnicos ativos sem atendimento em andamento agora (não estão a caminho nem no cliente): os "disponíveis" da fila livre. */
+function AstC_disponiveis_(us) {
+  var ocupados = {};
+  Ast_ler_(AST_ABAS.OS).forEach(function (o) { if (['EM_DESLOCAMENTO', 'NO_LOCAL', 'EM_EXECUCAO'].indexOf(Ast_up_(o.SITUACAO)) >= 0) ocupados[Ast_s_(o.TECNICO_ID)] = true; });
+  return Ast_tecnicos_(us).filter(function (t) { return !ocupados[t.id]; }).map(function (t) { return t.id; });
+}
+/** Chamado assumido (pela fila livre ou por quem é da triagem): vai a "Em triagem" com quem assumiu. d: { id } */
+function AstC_assumir_(eu, d) {
+  Ast_exigir_(eu, 'INTERNO', 'assumir o chamado');
+  // quem chegou pela fila livre e encontrou o chamado já assumido por outro colega fica sabendo por quem e quando
+  var cx = Ast_porId_(AST_ABAS.CHAMADOS, d && d.id);
+  if (cx && !AstC_podeVer_(eu, cx) && Ast_s_(cx.FILA_LIVRE_EM) && Ast_s_(cx.ASSUMIDO_POR_NOME)) throw new Error('Não foi possível assumir: o chamado ' + cx.NUMERO + ' já foi assumido por ' + Ast_s_(cx.ASSUMIDO_POR_NOME) + ' em ' + Ast_br_(cx.ASSUMIDO_EM) + '. Atualize a lista; nada foi alterado');
+  var c0 = AstC_obter_(eu, d && d.id, 'assumir o chamado');
+  var res = Ast_comTrava_(function () {
+    Ast_memoTirar_(AST_ABAS.CHAMADOS);
+    var c = Ast_porId_(AST_ABAS.CHAMADOS, c0.ID);
+    if (!c) throw new Error('Não foi possível assumir: o chamado não está mais na lista (pode ter sido excluído pela gestão). Atualize a lista');
+    var s = Ast_up_(c.SITUACAO), est = AstC_estadoTriagem_(c);
+    if (s !== 'ABERTO' || est.assumido) throw new Error('Não foi possível assumir: o chamado ' + c.NUMERO + (s === 'ABERTO' || s === 'EM_TRIAGEM' ? ' já foi assumido por ' + (Ast_s_(c.ASSUMIDO_POR_NOME) || Ast_s_(c.TRIAGEM_RESPONSAVEL_NOME) || 'outra pessoa') +
+      (Ast_s_(c.ASSUMIDO_EM) ? ' em ' + Ast_br_(c.ASSUMIDO_EM) : '') : ' já passou da triagem ("' + (AST_SITUACOES[s] || s) + '")') + '. Atualize a lista; nada foi alterado');
+    if (!AstC_podeAssumir_(eu, c, est)) throw new Error(AstC_motivoReserva_(c, est, 'assumir'));
+    var agora = Ast_agora_(), pelaFila = est.filaLivre && !eu.gestao && !AstC_ehDaTriagem_(eu);
+    var novo = AstC_mudar_(eu, c, 'EM_TRIAGEM', { TRIAGEM_RESPONSAVEL_ID: eu.id, TRIAGEM_RESPONSAVEL_NOME: eu.nome, TRIAGEM_INICIO_EM: agora, ASSUMIDO_POR_ID: eu.id, ASSUMIDO_POR_NOME: eu.nome, ASSUMIDO_EM: agora,
+      PROXIMA_ACAO: 'Fazer a triagem (assumido por ' + eu.nome + ')' }, 'ASSUMIDO', 'Chamado assumido por ' + eu.nome + (pelaFila ? ' na fila livre' : '') + ' em ' + Ast_br_(agora) + '.');
+    return { c: novo, pelaFila: pelaFila };
+  });
+  if (res.pelaFila) {
+    var tri = AstC_triagemMemo_();
+    Ast_avisar_(tri.ids, 'TRIAGEM_ASSUMIDA', 'Chamado ' + res.c.NUMERO + ' assumido por ' + eu.nome + ' na fila livre', Ast_s_(res.c.CLIENTE_NOME) + ' · ' + Ast_s_(res.c.EQUIPAMENTO_TEXTO).slice(0, 80) +
+      '\nA triagem agora está com ' + eu.nome + '. Nada a fazer; acompanhe em Assistência técnica > Chamados.', res.c.ID, { autorId: eu.id });
+  }
+  return { chamado: AstC_publico_(res.c, eu, Date.now()), message: 'Você assumiu o chamado ' + res.c.NUMERO + '. Faça a triagem abaixo: confirme os sintomas, o risco e o diagnóstico preliminar e escolha o caminho.' };
+}
+/**
+ * Rotina (de 15 em 15 minutos e a cada abertura da lista): chamado aberto há N minutos úteis sem ninguém assumir entra na
+ * fila livre uma vez (FILA_LIVRE_EM); avisa no sistema os técnicos disponíveis, quem faz a triagem e a gestão (AT19; e-mail e
+ * WhatsApp só se a matriz de avisos mandar). Nunca lança.
+ */
+function AstC_filaLivreVerificar_(agoraMs) {
+  try {
+    if (typeof Pend_abaExiste_ === 'function' && !Pend_abaExiste_(AST_ABAS.CHAMADOS)) return { liberados: 0 };
+    if (!Ast_ligada_()) return { liberados: 0, fora: 'Assistência desligada' };
+    agoraMs = agoraMs || Date.now();
+    var regras = Ast_regras_();
+    if (!AstC_triagemCfg_(regras).ligada) return { liberados: 0, fora: 'fila livre desligada' };
+    var candidatos = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (c) { return !Ast_s_(c.FILA_LIVRE_EM) && AstC_estadoTriagem_(c, agoraMs, regras).filaLivre; });
+    if (!candidatos.length) return { liberados: 0 };
+    var sis = Ast_sistema_('Rotina da Assistência');
+    var feitos = Ast_comTrava_(function () {
+      Ast_memoTirar_(AST_ABAS.CHAMADOS);
+      var l = [];
+      candidatos.forEach(function (c0) {
+        var c = Ast_porId_(AST_ABAS.CHAMADOS, c0.ID);
+        if (!c || Ast_s_(c.FILA_LIVRE_EM) || !AstC_estadoTriagem_(c, agoraMs, regras).filaLivre) return;
+        var campos = { FILA_LIVRE_EM: Ast_agora_(agoraMs), PROXIMA_ACAO: 'Fazer a triagem: chamado na fila livre (qualquer colaborador pode assumir)', ATUALIZADO_EM: Ast_agora_(agoraMs) };
+        Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, campos);
+        Ast_evento_('CHAMADO', c.ID, 'FILA_LIVRE', sis, 'Ninguém assumiu a triagem em ' + AstC_triagemCfg_(regras).min + ' minutos úteis: o chamado entrou na fila livre (qualquer colaborador pode assumir).', { numero: c.NUMERO });
+        l.push(Object.assign({}, c, campos));
+      });
+      return l;
+    });
+    if (feitos.length) {
+      var us = Ast_usuarios_(), tri = Ast_triagemPara_(us);
+      var dest = AstC_disponiveis_(us).concat(tri.ids, Ast_gestoresTecnica_(us), Ast_diretoria_(us));
+      feitos.forEach(function (c) {
+        Ast_avisar_(dest, 'FILA_LIVRE', 'Chamado aguardando triagem: ' + c.NUMERO + ' (' + Ast_s_(c.CLIENTE_NOME).slice(0, 60) + ')',
+          AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] + ' · ' + Ast_s_(c.EQUIPAMENTO_TEXTO).slice(0, 100) + '\nProblema: ' + Ast_s_(c.SINTOMA).slice(0, 200) +
+          '\nAberto em ' + Ast_br_(c.ABERTO_EM) + ' e ainda sem triagem. Ficou disponível para qualquer colaborador: se puder, abra Assistência técnica > Chamados > Triagem e toque em "Assumir chamado". Se já está em outro atendimento, não precisa fazer nada.',
+          c.ID, { evento: 'AT19' });
+      });
+    }
+    return { liberados: feitos.length };
+  } catch (e) { console.error('Assistência, fila livre da triagem: ' + ((e && e.message) || e)); return { liberados: 0, erro: String((e && e.message) || e) }; }
+}
+/** Contador de triagem para o menu e a faixa da tela: o que a pessoa pode assumir agora. */
+function AstC_contadorTriagem_(eu) {
+  var agoraMs = Date.now(), regras = Ast_regras_(), r = { pendentes: 0, filaLivre: 0, paraMim: 0, emTriagemComigo: 0 };
+  if (!eu || eu.cliente || !eu.interno) return r;
+  Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) {
+    var est = AstC_estadoTriagem_(c, agoraMs, regras);
+    if (est.pendente) { r.pendentes++; if (est.filaLivre) r.filaLivre++; if (AstC_podeAssumir_(eu, c, est)) r.paraMim++; }
+    if (Ast_up_(c.SITUACAO) === 'EM_TRIAGEM' && Ast_s_(c.TRIAGEM_RESPONSAVEL_ID) === eu.id) r.emTriagemComigo++;
+  });
+  r.minutos = AstC_triagemCfg_(regras).min; r.ligada = AstC_triagemCfg_(regras).ligada;
+  return r;
 }
 
 /** Muda a situação conferindo a tabela de transições, cuida da pausa do prazo e grava o evento. */
@@ -46,8 +182,13 @@ function AstC_mudar_(eu, c, para, campos, tipoEvento, texto, extra) {
 
 /** Chamado para a tela (sem valores; o portal do cliente usa AstC_publicoCliente_). */
 function AstC_publico_(c, eu, agoraMs, regras) {
-  var sla = Ast_slaEstado_(c, agoraMs, regras), s = Ast_up_(c.SITUACAO);
+  var sla = Ast_slaEstado_(c, agoraMs, regras), s = Ast_up_(c.SITUACAO), est = AstC_estadoTriagem_(c, agoraMs, regras);
   return {
+    // 27/10/2026: triagem com fila livre e exclusão de chamado de teste (Gestor, Diretoria e Administrador)
+    pendenteTriagem: est.pendente, filaLivre: est.filaLivre, filaLivreAs: est.livreEmMs !== null ? Ast_br_(Ast_agora_(est.livreEmMs)) : '', filaLivreMin: est.min,
+    assumidoPor: Ast_s_(c.ASSUMIDO_POR_NOME), assumidoEm: Ast_br_(c.ASSUMIDO_EM), podeAssumir: AstC_podeAssumir_(eu, c, est),
+    podeExcluir: !!(eu && eu.excluir), excluido: Ast_excluido_(c), excluidoEm: Ast_br_(c.EXCLUIDO_EM), excluidoPor: Ast_s_(c.EXCLUIDO_POR_NOME), excluidoMotivo: Ast_s_(c.EXCLUIDO_MOTIVO),
+    restauradoEm: Ast_br_(c.RESTAURADO_EM), restauradoPor: Ast_s_(c.RESTAURADO_POR_NOME),
     id: Ast_s_(c.ID), numero: Ast_s_(c.NUMERO), situacao: s, situacaoNome: AST_SITUACOES[s] || s, canal: Ast_up_(c.CANAL), canalNome: AST_CANAIS[Ast_up_(c.CANAL)] || Ast_s_(c.CANAL),
     clienteId: Ast_s_(c.CLIENTE_ID), clienteNome: Ast_s_(c.CLIENTE_NOME), unidadeId: Ast_s_(c.UNIDADE_ID), unidadeNome: Ast_s_(c.UNIDADE_NOME),
     equipamentoId: Ast_s_(c.EQUIPAMENTO_ID), equipamentoTexto: Ast_s_(c.EQUIPAMENTO_TEXTO), equipNaoIdentificado: Ast_sim_(c.EQUIP_NAO_IDENTIFICADO),
@@ -61,7 +202,7 @@ function AstC_publico_(c, eu, agoraMs, regras) {
     osId: Ast_s_(c.OS_ID), osNumero: Ast_s_(c.OS_NUMERO), atendidoEm: Ast_br_(c.ATENDIDO_EM), encerradoEm: Ast_br_(c.ENCERRADO_EM), canceladoMotivo: Ast_s_(c.CANCELADO_MOTIVO),
     reincidente: Ast_sim_(c.REINCIDENTE), reincidenciaDe: Ast_s_(c.REINCIDENCIA_DE), proximaAcao: Ast_s_(c.PROXIMA_ACAO), terminal: AST_TERMINAIS.indexOf(s) >= 0,
     abertaEmCampo: Ast_sim_(c.ABERTA_EM_CAMPO),
-    podeTriar: !!(eu && eu.gestao) && (s === 'ABERTO' || s === 'EM_TRIAGEM'), podeAgendar: !!(eu && eu.gestao) && (s === 'PLANEJADO' || s === 'AGENDADO'),
+    podeTriar: AstC_podeTriar_(eu, c), podeAgendar: !!(eu && eu.gestao) && (s === 'PLANEJADO' || s === 'AGENDADO'),
     podeCancelar: !!(eu && eu.gestao) && (AST_TRANSICOES[s] || []).indexOf('CANCELADO') >= 0,
     // 22/10/2026 (etapa 3): peça disponível em Compras (retorno a agendar), chegada ao local pelo contrato e a volta à triagem da O.S. com documentação pendente
     pecaDisponivelEm: Ast_br_(c.PECA_DISPONIVEL_EM), retornoAAgendar: s === 'PLANEJADO' && !!Ast_s_(c.PECA_DISPONIVEL_EM),
@@ -182,13 +323,21 @@ function AstC_abrir_(eu, d, opcoes) {
   var tit = (prioridade === 'P1' ? 'Chamado CRÍTICO ' : o.campo ? 'Atendimento aberto em campo ' : 'Chamado novo ') + c.NUMERO + ': ' + Ast_clienteNome_(v.cli);
   var txt = AST_PRIORIDADES[prioridade] + ' · ' + (v.eq ? Ast_equipTexto_(v.eq) : 'equipamento não identificado: ' + descEq) + '\nProblema: ' + sintoma.slice(0, 400) +
     (o.campo ? '\nAberto pelo técnico ' + eu.nome + ' no aplicativo, fora da agenda: a triagem foi feita em campo e a O.S. já está em andamento. Acompanhe em Assistência técnica > Chamados (selo "Aberta em campo").'
-      : '\nPrazo de triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '. Faça a triagem em Assistência técnica > Chamados (ou pela Caixa de decisões).');
+      : '\nPrazo de triagem: ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + '. Faça a triagem em Assistência técnica > Chamados (ou pela Caixa de decisões).' +
+        (AstC_triagemCfg_(regras).ligada ? ' Se ninguém assumir em ' + AstC_triagemCfg_(regras).min + ' minutos úteis, o chamado entra na fila livre e qualquer colaborador pode assumir.' : ''));
   Ast_avisar_(triagem.ids, 'CHAMADO_NOVO', tit, txt, c.ID, { evento: prioridade === 'P1' && regras.avisos.whatsappP1Gestor ? 'AT02' : 'AT01', autorId: o.sistema ? '' : eu.id });
+  if (!o.campo) {
+    // 27/10/2026: a gestão (Gestor da área Técnica e Diretoria) também vê o alerta "chamado pendente de triagem" (AT18: só no sistema, salvo a matriz mandar)
+    var usA = Ast_usuarios_(), gestA = Ast_gestoresTecnica_(usA).concat(Ast_diretoria_(usA)).filter(function (id) { return triagem.ids.indexOf(id) < 0; });
+    Ast_avisar_(gestA, 'TRIAGEM_PENDENTE', 'Chamado pendente de triagem: ' + c.NUMERO + ' (' + Ast_clienteNome_(v.cli) + ')',
+      AST_PRIORIDADES[prioridade] + ' · ' + (v.eq ? Ast_equipTexto_(v.eq) : descEq) + '\nA triagem é de ' + (triagem.nome || 'ninguém definido') + ' (prazo ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + ').' +
+      ' Acompanhe em Assistência técnica > Chamados > Triagem; a gestão pode assumir a qualquer momento.', c.ID, { evento: 'AT18', autorId: o.sistema ? '' : eu.id });
+  }
   if (canal === 'PORTAL' || canal === 'QR' || canal === 'EMAIL' || canal === 'TELEFONE') {
     Ast_avisarCliente_(c, 'Recebemos o seu chamado ' + c.NUMERO, 'Olá. Registramos o seu pedido de atendimento técnico ' + c.NUMERO + ' (' + (v.eq ? Ast_equipTexto_(v.eq) : descEq) + ').\nProblema informado: ' +
       sintoma.slice(0, 300) + '\nNossa equipe técnica vai analisar e retornar com o agendamento. Acompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT08');
   }
-  return { chamado: AstC_publico_(c, eu, Date.now(), regras), message: 'Chamado ' + c.NUMERO + ' aberto. ' + (triagem.nome ? 'A triagem é de ' + triagem.nome + ' (prazo ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + ').' : 'Defina o responsável pela área Técnica em Caixa de decisões > Regras e responsáveis.') +
+  return { chamado: AstC_publico_(c, eu, Date.now(), regras), message: 'Chamado ' + c.NUMERO + ' aberto. ' + (triagem.nome ? 'A triagem é de ' + triagem.nome + ' (prazo ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + ').' : 'Defina quem faz a triagem em Regras da assistência > Triagem e fila livre (ou o responsável da área Técnica em Caixa de decisões > Regras e responsáveis).') +
     (reinc ? ' Atenção: reincidência do chamado ' + reinc.NUMERO + '.' : '') };
 }
 
@@ -210,13 +359,24 @@ function AstC_anotar_(eu, d) {
  * Sem acao: só grava o checklist (e começa a triagem). Com acao: confere o mínimo e decide o caminho.
  */
 function AstC_triagem_(eu, d) {
-  Ast_exigir_(eu, 'GESTAO', 'fazer a triagem');
+  // 27/10/2026: além da gestão, faz a triagem quem é da triagem (Regras da assistência) e quem assumiu o chamado na fila livre
+  if (!eu || eu.cliente || !eu.interno) Ast_exigir_(eu || {}, 'GESTAO', 'fazer a triagem');
   d = d || {};
   var c = AstC_obter_(eu, d.id, 'fazer a triagem');
   var s = Ast_up_(c.SITUACAO);
   if (s !== 'ABERTO' && s !== 'EM_TRIAGEM') throw new Error('Não foi possível fazer a triagem: o chamado ' + c.NUMERO + ' já passou da triagem ("' + (AST_SITUACOES[s] || s) + '"). Siga pelo próximo passo indicado na ficha');
+  if (!AstC_podeTriar_(eu, c)) {
+    var est = AstC_estadoTriagem_(c);
+    if (est.pendente && est.filaLivre) throw new Error('Não foi possível fazer a triagem: o chamado ' + c.NUMERO + ' está na fila livre. Toque em "Assumir chamado" primeiro (fica registrado que você assumiu e quando); depois preencha a triagem');
+    throw new Error(AstC_motivoReserva_(c, est, 'fazer a triagem'));
+  }
   return Ast_comTrava_(function () {
-    if (s === 'ABERTO') c = AstC_mudar_(eu, c, 'EM_TRIAGEM', { TRIAGEM_RESPONSAVEL_ID: eu.id, TRIAGEM_RESPONSAVEL_NOME: eu.nome, TRIAGEM_INICIO_EM: Ast_agora_(), PROXIMA_ACAO: 'Concluir a triagem e decidir o caminho' }, 'TRIAGEM_INICIADA', 'Triagem iniciada por ' + eu.nome);
+    if (s === 'ABERTO') {
+      var agoraT = Ast_agora_();
+      // começar a triagem é assumir o chamado (quem e quando ficam registrados)
+      c = AstC_mudar_(eu, c, 'EM_TRIAGEM', { TRIAGEM_RESPONSAVEL_ID: eu.id, TRIAGEM_RESPONSAVEL_NOME: eu.nome, TRIAGEM_INICIO_EM: agoraT, PROXIMA_ACAO: 'Concluir a triagem e decidir o caminho',
+        ASSUMIDO_POR_ID: Ast_s_(c.ASSUMIDO_POR_ID) || eu.id, ASSUMIDO_POR_NOME: Ast_s_(c.ASSUMIDO_POR_NOME) || eu.nome, ASSUMIDO_EM: Ast_s_(c.ASSUMIDO_EM) || agoraT }, 'TRIAGEM_INICIADA', 'Triagem iniciada (chamado assumido) por ' + eu.nome);
+    }
     var ck = Ast_json_(c.TRIAGEM_JSON, {}), entrada = d.checklist || {}, mudou = false;
     AST_TRIAGEM_ITENS.forEach(function (it) { if (entrada[it.k] !== undefined) { var v = Ast_texto_(entrada[it.k], 1000); if (v !== (ck[it.k] || '')) { ck[it.k] = v; mudou = true; } } });
     var extra = {};
@@ -434,6 +594,142 @@ function AstC_cancelar_(eu, d) {
   });
 }
 
+// ------------------------------------------------------------
+// EXCLUSÃO DE CHAMADO DE TESTE OU SIMULAÇÃO (27/10/2026, decisão do dono)
+// Só Gestor, Diretoria e Administrador; motivo obrigatório; confirmação depois de ver os vínculos e o efeito. Exclusão
+// lógica: EXCLUIDO_EM preenchido tira o chamado (e as O.S. e orçamentos dele, pela mesma EXCLUSAO_ID) de listas, contadores,
+// pendências, indicadores, agenda, aplicativo, portal do cliente e fonte única de atendimentos (Ast_ler_). Nada é apagado
+// do banco; a auditoria (histórico do chamado em ATEC_EVENTOS) guarda quem, quando e o motivo. A gestão vê os excluídos e
+// restaura (Chamados > Excluídos).
+// ------------------------------------------------------------
+/** Vínculos do chamado e o efeito da exclusão em cada um: [{ tipo, texto, efeito, alerta }]. */
+function AstC_vinculosExclusao_(c) {
+  var v = [], cid = Ast_s_(c.ID);
+  var oss = Ast_lerTudo_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === cid && !Ast_excluido_(o); });
+  oss.forEach(function (o) {
+    var s = Ast_up_(o.SITUACAO), campo = ['EM_DESLOCAMENTO', 'NO_LOCAL', 'EM_EXECUCAO', 'PAUSADA', 'DOC_PENDENTE'].indexOf(s) >= 0;
+    var efeito = 'Sai junto: some da agenda, do aplicativo do técnico (Meu dia), de Minhas O.S., do histórico do equipamento e da fonte única de atendimentos (qualidade, Conduta, Frota).';
+    if (Ast_s_(o.ATIVIDADE_ID) && AST_OS_ABERTAS.indexOf(s) >= 0) efeito += ' A atividade dela em Minhas atividades é cancelada.';
+    if (Ast_s_(o.RELATORIO_PDF_ID)) efeito += ' O relatório já gerado continua guardado no Drive (nada é apagado).';
+    if (Ast_s_(o.ENVIADO_CLIENTE_EM)) efeito += ' Atenção: o relatório já foi enviado ao cliente em ' + Ast_br_(o.ENVIADO_CLIENTE_EM) + '; a exclusão não desfaz esse envio.';
+    if (campo) efeito += ' Atenção: a O.S. está em andamento com o técnico; o que ele enviar do celular para ela passa a ser recusado. Avise o técnico antes.';
+    v.push({ tipo: 'OS', texto: 'O.S. ' + Ast_s_(o.NUMERO) + ' (' + (AST_OS_SITUACOES[s] || s) + (Ast_s_(o.TECNICO_NOME) ? ', técnico ' + Ast_s_(o.TECNICO_NOME) : '') + (Ast_s_(o.AGENDADO_PARA) ? ', ' + Ast_br_(o.AGENDADO_PARA) : '') + ')',
+      efeito: efeito, alerta: campo || !!Ast_s_(o.ENVIADO_CLIENTE_EM) || s === 'ENCERRADA' });
+  });
+  var osIds = oss.map(function (o) { return Ast_s_(o.ID); });
+  var pecas = Ast_ler_(AST_ABAS.PECAS).filter(function (p) { return osIds.indexOf(Ast_s_(p.OS_ID)) >= 0 && Ast_up_(p.ATIVA || 'SIM') !== 'NAO'; });
+  if (pecas.length) v.push({ tipo: 'PECAS', texto: Ast_plural_(pecas.length, 'peça lançada', 'peças lançadas') + ' na O.S.', efeito: 'Ficam registradas na O.S. excluída (nada é apagado); não entram em indicador.', alerta: false });
+  Ast_lerTudo_(AST_ABAS.ORCAMENTOS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === cid && !Ast_excluido_(o) && Ast_up_(o.SITUACAO) !== 'SUBSTITUIDO'; }).forEach(function (o) {
+    var s = Ast_up_(o.SITUACAO);
+    v.push({ tipo: 'ORCAMENTO', texto: 'Orçamento ' + Ast_s_(o.NUMERO) + ' rev. ' + (Number(o.REVISAO) || 0) + ' (' + (AST_ORC_SITUACOES[s] || s) + ')',
+      efeito: 'Sai junto (com as revisões anteriores).' + (Ast_s_(o.ENVIADO_EM) ? ' O link de aceite enviado ao cliente deixa de abrir o orçamento.' : '') + (s === 'APROVADO' ? ' Atenção: o cliente já aprovou este orçamento.' : ''),
+      alerta: s === 'APROVADO' || !!Ast_s_(o.ENVIADO_EM) });
+  });
+  if (Ast_s_(c.REQUISICAO_NUMERO)) v.push({ tipo: 'COMPRAS', texto: 'Pedido de compra ' + Ast_s_(c.REQUISICAO_NUMERO) + ' (Compras)', efeito: 'Não é cancelado sozinho. Se a peça não vai mais ser comprada, cancele o pedido em Compras com o motivo.', alerta: true });
+  if (Ast_s_(c.CASO_ID)) {
+    var k = Ast_porId_(AST_ABAS.CASOS, c.CASO_ID);
+    v.push({ tipo: 'CASO', texto: 'Reclamação ' + Ast_s_(k && k.NUMERO) + (k ? ' (' + (AST_CASO_SITUACOES[Ast_up_(k.SITUACAO)] || k.SITUACAO) + ')' : ''), efeito: 'Continua em Reclamações; trate ou resolva lá.', alerta: !!(k && Ast_up_(k.SITUACAO) !== 'RESOLVIDO') });
+  }
+  if (Ast_s_(c.SOLICITACAO_ID)) v.push({ tipo: 'SOLICITACAO', texto: 'Pedido do cliente ' + Ast_s_(c.ORIGEM_REF), efeito: 'Continua na fila como "convertido" (histórico); o cliente não vê mais o chamado no portal.', alerta: false });
+  if (Ast_s_(c.PROPOSTA_ID)) v.push({ tipo: 'COMERCIAL', texto: 'Pedido aprovado do Comercial ' + Ast_s_(c.ORIGEM_REF), efeito: 'A proposta no Comercial não muda. Se o serviço vendido ainda precisa de atendimento, abra um chamado novo.', alerta: true });
+  if (/^AUVO /i.test(Ast_s_(c.ORIGEM_REF))) v.push({ tipo: 'AUVO', texto: 'Tarefa ' + Ast_s_(c.ORIGEM_REF).replace(/^AUVO\s*/i, '') + ' do Auvo (transição)', efeito: 'Nada muda no Auvo; o destino registrado na Transição do Auvo continua.', alerta: false });
+  if (['PORTAL', 'QR', 'EMAIL', 'TELEFONE'].indexOf(Ast_up_(c.CANAL)) >= 0) v.push({ tipo: 'CLIENTE', texto: 'Cliente ' + Ast_s_(c.CLIENTE_NOME) + ' (canal: ' + (AST_CANAIS[Ast_up_(c.CANAL)] || c.CANAL) + ')',
+    efeito: 'Os e-mails já enviados ao cliente não voltam; o chamado some de "Meus chamados" no portal.', alerta: false });
+  return v;
+}
+function AstC_exclusaoResumo_(c) { return { id: Ast_s_(c.ID), numero: Ast_s_(c.NUMERO), situacaoNome: AST_SITUACOES[Ast_up_(c.SITUACAO)] || Ast_s_(c.SITUACAO), clienteNome: Ast_s_(c.CLIENTE_NOME), equipamentoTexto: Ast_s_(c.EQUIPAMENTO_TEXTO), abertoEm: Ast_br_(c.ABERTO_EM) }; }
+/** Prévia: o que vai acontecer (a tela mostra antes de pedir o motivo e a confirmação). d: { id } */
+function AstC_previaExclusao_(eu, d) {
+  Ast_exigir_(eu, 'EXCLUIR', 'excluir o chamado');
+  var c = AstC_obter_(eu, d && d.id, 'excluir o chamado');
+  var v = AstC_vinculosExclusao_(c);
+  return { chamado: AstC_exclusaoResumo_(c), vinculos: v, temAlerta: v.some(function (x) { return x.alerta; }),
+    message: v.length ? 'O chamado ' + c.NUMERO + ' tem ' + Ast_plural_(v.length, 'vínculo', 'vínculos') + '. Leia o efeito de cada um antes de excluir.' : 'O chamado ' + c.NUMERO + ' não tem O.S., orçamento, pedido de compra nem outro vínculo: a exclusão só o tira das listas.' };
+}
+/** d: { id, motivo, confirmado: true, vinculosVistos: quantos vínculos a prévia mostrou } */
+function AstC_excluir_(eu, d) {
+  Ast_exigir_(eu, 'EXCLUIR', 'excluir o chamado');
+  d = d || {};
+  var c0 = AstC_obter_(eu, d.id, 'excluir o chamado');
+  var motivo = Ast_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível excluir: escreva o motivo (pelo menos 10 letras), por exemplo "chamado de teste aberto no treinamento da equipe". Ele fica na auditoria com o seu nome');
+  if (d.confirmado !== true) throw new Error('Não foi possível excluir: falta a confirmação. Abra a exclusão, leia os vínculos e o efeito e toque em "Excluir o chamado"; nada foi alterado');
+  var res = Ast_comTrava_(function () {
+    [AST_ABAS.CHAMADOS, AST_ABAS.OS, AST_ABAS.ORCAMENTOS].forEach(Ast_memoTirar_);
+    var c = Ast_porId_(AST_ABAS.CHAMADOS, c0.ID);
+    if (!c) throw new Error('Não foi possível excluir: o chamado ' + c0.NUMERO + ' já foi excluído por outra pessoa. Veja em Chamados > Excluídos');
+    var vinc = AstC_vinculosExclusao_(c);
+    if (d.vinculosVistos !== undefined && Number(d.vinculosVistos) !== vinc.length) throw new Error('Não foi possível excluir: os vínculos do chamado ' + c.NUMERO + ' mudaram desde que você abriu a janela (agora são ' + vinc.length + '). Abra a exclusão de novo e leia o efeito; nada foi alterado');
+    var agora = Ast_agora_(), exId = 'EXC-' + agora.replace(/\D/g, '') + '-' + Ast_s_(c.NUMERO);
+    var marca = { EXCLUSAO_ID: exId, EXCLUIDO_EM: agora, EXCLUIDO_POR_NOME: eu.nome, EXCLUIDO_MOTIVO: 'Chamado ' + c.NUMERO + ' excluído (teste ou simulação): ' + motivo };
+    Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { EXCLUSAO_ID: exId, EXCLUIDO_EM: agora, EXCLUIDO_POR_ID: eu.id, EXCLUIDO_POR_NOME: eu.nome, EXCLUIDO_MOTIVO: motivo, ATUALIZADO_EM: agora });
+    Ast_evento_('CHAMADO', c.ID, 'EXCLUSAO', eu, 'Chamado excluído (teste ou simulação) por ' + eu.nome + ' em ' + Ast_br_(agora) + '. Motivo: ' + motivo +
+      (vinc.length ? '. Vínculos no momento: ' + vinc.map(function (x) { return x.texto; }).join('; ') : '. Sem vínculos') + '.', { numero: c.NUMERO, de: AST_SITUACOES[Ast_up_(c.SITUACAO)] || c.SITUACAO, para: 'Excluído' });
+    var refs = [Ast_s_(c.ID)], nOs = [];
+    Ast_lerTudo_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === Ast_s_(c.ID) && !Ast_excluido_(o); }).forEach(function (o) {
+      Ast_atualizar_(AST_ABAS.OS, o.ID, marca);
+      Ast_evento_('OS', o.ID, 'EXCLUSAO', eu, 'O.S. excluída junto com o chamado ' + c.NUMERO + ' (teste ou simulação). Motivo: ' + motivo, { numero: o.NUMERO });
+      if (Ast_s_(o.ATIVIDADE_ID) && AST_OS_ABERTAS.indexOf(Ast_up_(o.SITUACAO)) >= 0) Ast_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'O.S. ' + o.NUMERO + ' saiu junto com o chamado ' + c.NUMERO + ', excluído pela gestão (teste ou simulação): ' + motivo);
+      refs.push(Ast_s_(o.ID)); nOs.push(Ast_s_(o.NUMERO));
+    });
+    var nOrc = 0;
+    Ast_lerTudo_(AST_ABAS.ORCAMENTOS).filter(function (o) { return Ast_s_(o.CHAMADO_ID) === Ast_s_(c.ID) && !Ast_excluido_(o); }).forEach(function (o) { Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, marca); refs.push(Ast_s_(o.ID)); nOrc++; });
+    // avisos ainda não lidos sobre o chamado e o que saiu junto: marcados como lidos (não cobram mais ninguém)
+    Ast_ler_(AST_ABAS.AVISOS).forEach(function (a) { if (refs.indexOf(Ast_s_(a.REF_ID)) >= 0 && !Ast_s_(a.LIDO_EM)) SGO_DATA.update(AST_ABAS.AVISOS, a.ID, { LIDO_EM: agora }); });
+    Ast_memoTirar_(AST_ABAS.AVISOS);
+    return { c: c, nOs: nOs, nOrc: nOrc, vinc: vinc };
+  });
+  return { excluido: AstC_exclusaoResumo_(res.c), message: 'Chamado ' + res.c.NUMERO + ' excluído' + (res.nOs.length ? ', junto com a O.S. ' + res.nOs.join(', ') : '') + (res.nOrc ? (res.nOs.length ? ' e ' : ', junto com ') + Ast_plural_(res.nOrc, 'orçamento', 'orçamentos') : '') +
+    '. Ele saiu das listas, contadores, pendências, indicadores e do portal do cliente. Nada foi apagado: a gestão vê e restaura em Chamados > Excluídos.' +
+    (res.vinc.some(function (x) { return x.tipo === 'COMPRAS'; }) ? ' Lembre: o pedido de compra continua em Compras.' : '') };
+}
+/** Lista dos excluídos (Gestor, Diretoria e Administrador). */
+function AstC_excluidos_(eu, f) {
+  Ast_exigir_(eu, 'EXCLUIR', 'ver os chamados excluídos');
+  f = f || {};
+  var busca = Ast_semAcento_(f.busca), agoraMs = Date.now(), regras = Ast_regras_();
+  var lista = Ast_lerTudo_(AST_ABAS.CHAMADOS).filter(function (c) {
+    if (!Ast_excluido_(c)) return false;
+    return !busca || Ast_semAcento_([c.NUMERO, c.CLIENTE_NOME, c.UNIDADE_NOME, c.EQUIPAMENTO_TEXTO, c.SINTOMA, c.EXCLUIDO_MOTIVO, c.EXCLUIDO_POR_NOME].join(' ')).indexOf(busca) >= 0;
+  }).sort(function (a, b) { return String(b.EXCLUIDO_EM).localeCompare(String(a.EXCLUIDO_EM)); }).map(function (c) {
+    var p = AstC_publico_(c, eu, agoraMs, regras);
+    p.osExcluidas = Ast_lerTudo_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.EXCLUSAO_ID) && Ast_s_(o.EXCLUSAO_ID) === Ast_s_(c.EXCLUSAO_ID); }).map(function (o) { return Ast_s_(o.NUMERO); });
+    p.podeAssumir = false; p.podeTriar = false; p.podeAgendar = false; p.podeCancelar = false; p.podeVoltarTriagem = false;
+    return p;
+  });
+  var base = AstC_lista_(eu, { grupo: 'ABERTOS', limite: 1 });
+  return { chamados: lista, total: lista.length, contagem: base.contagem, excluidos: true, podeVerExcluidos: true };
+}
+/** Restaura o chamado (e o que saiu junto na mesma exclusão). d: { id, motivo } */
+function AstC_restaurar_(eu, d) {
+  Ast_exigir_(eu, 'EXCLUIR', 'restaurar o chamado');
+  d = d || {};
+  var motivo = Ast_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível restaurar: escreva o motivo (pelo menos 10 letras), por exemplo "excluído por engano, é atendimento real". Fica na auditoria com o seu nome');
+  var res = Ast_comTrava_(function () {
+    [AST_ABAS.CHAMADOS, AST_ABAS.OS, AST_ABAS.ORCAMENTOS].forEach(Ast_memoTirar_);
+    var c = Ast_lerTudo_(AST_ABAS.CHAMADOS).filter(function (x) { return Ast_s_(x.ID) === Ast_s_(d.id); })[0];
+    if (!c) throw new Error('Não foi possível restaurar: o chamado não foi encontrado. Atualize a lista de excluídos');
+    if (!Ast_excluido_(c)) throw new Error('Não foi possível restaurar: o chamado ' + c.NUMERO + ' não está excluído (alguém já restaurou). Atualize a lista');
+    var agora = Ast_agora_(), exId = Ast_s_(c.EXCLUSAO_ID), volta = { EXCLUIDO_EM: '', RESTAURADO_EM: agora, RESTAURADO_POR_NOME: eu.nome, RESTAURADO_MOTIVO: motivo, ATUALIZADO_EM: agora };
+    Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, volta);
+    Ast_evento_('CHAMADO', c.ID, 'RESTAURACAO', eu, 'Chamado restaurado por ' + eu.nome + ' em ' + Ast_br_(agora) + ' (estava excluído desde ' + Ast_br_(c.EXCLUIDO_EM) + ' por ' + Ast_s_(c.EXCLUIDO_POR_NOME) + '). Motivo: ' + motivo, { numero: c.NUMERO, de: 'Excluído', para: AST_SITUACOES[Ast_up_(c.SITUACAO)] || c.SITUACAO });
+    var nOs = [], comAtv = [];
+    if (exId) {
+      Ast_lerTudo_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.EXCLUSAO_ID) === exId && Ast_excluido_(o); }).forEach(function (o) {
+        Ast_atualizar_(AST_ABAS.OS, o.ID, { EXCLUIDO_EM: '', ATUALIZADO_EM: agora });
+        Ast_evento_('OS', o.ID, 'RESTAURACAO', eu, 'O.S. restaurada junto com o chamado ' + c.NUMERO + '. Motivo: ' + motivo, { numero: o.NUMERO });
+        nOs.push(Ast_s_(o.NUMERO));
+        if (Ast_s_(o.ATIVIDADE_ID) && AST_OS_ABERTAS.indexOf(Ast_up_(o.SITUACAO)) >= 0) comAtv.push(Ast_s_(o.NUMERO));
+      });
+      Ast_lerTudo_(AST_ABAS.ORCAMENTOS).filter(function (o) { return Ast_s_(o.EXCLUSAO_ID) === exId && Ast_excluido_(o); }).forEach(function (o) { Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, { EXCLUIDO_EM: '', ATUALIZADO_EM: agora }); });
+    }
+    return { c: Object.assign({}, c, volta), nOs: nOs, comAtv: comAtv };
+  });
+  return { chamado: AstC_publico_(res.c, eu, Date.now()), message: 'Chamado ' + res.c.NUMERO + ' restaurado' + (res.nOs.length ? ' com a O.S. ' + res.nOs.join(', ') : '') + ': volta às listas na situação que tinha (' + (AST_SITUACOES[Ast_up_(res.c.SITUACAO)] || res.c.SITUACAO) + ').' +
+    (res.comAtv.length ? ' A atividade da O.S. em Minhas atividades foi cancelada na exclusão e não volta sozinha: se o atendimento vale, reagende pela ficha do chamado.' : '') };
+}
+
 /** Ao encerrar: vendedor do pedido do Comercial avisado; caso ligado lembrado. */
 function AstC_aoEncerrar_(eu, c) {
   if (Ast_s_(c.PROPOSTA_ID) && typeof COM_ABAS !== 'undefined') {
@@ -457,9 +753,13 @@ var AST_GRUPOS_LISTA = {
 };
 function AstC_lista_(eu, f) {
   f = f || {};
+  if (Ast_up_(f.grupo) === 'EXCLUIDOS') return AstC_excluidos_(eu, f);
   var grupo = AST_GRUPOS_LISTA[Ast_up_(f.grupo)] || AST_GRUPOS_LISTA.ABERTOS, busca = Ast_semAcento_(f.busca), agoraMs = Date.now(), regras = Ast_regras_();
+  var soFila = Ast_up_(f.grupo) === 'FILA_LIVRE';
+  if (soFila) grupo = AST_GRUPOS_LISTA.TRIAGEM;
   var lista = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (c) {
     if (!AstC_podeVer_(eu, c) || !grupo(Ast_up_(c.SITUACAO))) return false;
+    if (soFila && !AstC_estadoTriagem_(c, agoraMs, regras).filaLivre) return false;
     if (f.clienteId && Ast_s_(c.CLIENTE_ID) !== Ast_s_(f.clienteId)) return false;
     if (f.prioridade && Ast_up_(c.PRIORIDADE) !== Ast_up_(f.prioridade)) return false;
     if (f.tecnicoId && Ast_s_(c.TECNICO_ID) !== Ast_s_(f.tecnicoId)) return false;
@@ -471,18 +771,21 @@ function AstC_lista_(eu, f) {
     var x = (ordemSla[a.sla.estado] === undefined ? 9 : ordemSla[a.sla.estado]) - (ordemSla[b.sla.estado] === undefined ? 9 : ordemSla[b.sla.estado]);
     return x || a.prioridade.localeCompare(b.prioridade) || String(b.numero).localeCompare(String(a.numero));
   });
-  var cont = { triagem: 0, estourados: 0, emRisco: 0, p1: 0, docPendente: 0 };
+  var cont = { triagem: 0, estourados: 0, emRisco: 0, p1: 0, docPendente: 0, pendentesTriagem: 0, filaLivre: 0, paraMim: 0 };
   Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) {
     if (!AstC_podeVer_(eu, c)) return;
     var s = Ast_up_(c.SITUACAO);
     if (AST_TERMINAIS.indexOf(s) >= 0) return;
     if (s === 'ABERTO' || s === 'EM_TRIAGEM') cont.triagem++;
+    var est = AstC_estadoTriagem_(c, agoraMs, regras);
+    if (est.pendente) { cont.pendentesTriagem++; if (est.filaLivre) cont.filaLivre++; if (AstC_podeAssumir_(eu, c, est)) cont.paraMim++; }
     if (Ast_up_(c.PRIORIDADE) === 'P1') cont.p1++;
     if (s === 'DOC_PENDENTE') cont.docPendente++;
     var e = Ast_slaEstado_(c, agoraMs, regras).estado;
     if (e === 'ESTOURADO') cont.estourados++; else if (e === 'EM_RISCO') cont.emRisco++;
   });
-  return { chamados: lista.slice(0, Number(f.limite) || 300), total: lista.length, contagem: cont };
+  cont.filaLivreMin = AstC_triagemCfg_(regras).min; cont.filaLivreLigada = AstC_triagemCfg_(regras).ligada;
+  return { chamados: lista.slice(0, Number(f.limite) || 300), total: lista.length, contagem: cont, podeVerExcluidos: !!eu.excluir };
 }
 
 function AstC_detalhe_(eu, id) {

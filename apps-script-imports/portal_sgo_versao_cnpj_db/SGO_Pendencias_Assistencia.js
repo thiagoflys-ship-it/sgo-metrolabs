@@ -6,7 +6,7 @@
  * só acrescentando o que ainda não existe. O nome do arquivo vem depois deles na ordem de carga (alfabética); as funções
  * de aviso e de pendência chamam o registro de novo antes de usar, por segurança.
  *
- * Eventos da matriz (AT01 a AT17): sistema na hora; e-mail na hora só no que tem prazo curto (triagem, chamado crítico,
+ * Eventos da matriz (AT01 a AT19; AT18 e AT19 de 27/10/2026, só no sistema de partida): sistema na hora; e-mail na hora só no que tem prazo curto (triagem, chamado crítico,
  * reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto; WhatsApp só na exceção do chamado P1 ao
  * gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do resumo do dia do técnico; o cliente recebe
  * só e-mail enquanto durar o piloto.
@@ -34,7 +34,9 @@ var AST_PEND_TIPOS = {
   // 22/10/2026 (etapa 4): resposta do cliente ao orçamento que pede decisão da gestão (pelo link, pelo portal ou registrada à mão)
   ast_orc_recusado: { modulo: 'assistencia', um: 'orçamento recusado pelo cliente para decidir', varios: 'orçamentos recusados pelo cliente para decidir', rotulo: 'Orçamento recusado', fazer: 'decida em Assistência técnica > Chamados: negociar (nova revisão), cobrar a visita ou encerrar', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
   ast_orc_ajuste: { modulo: 'assistencia', um: 'pedido de ajuste no orçamento para revisar', varios: 'pedidos de ajuste em orçamentos para revisar', rotulo: 'Ajustar o orçamento', fazer: 'faça a nova revisão em Assistência técnica > Chamados > Orçamento e envie de novo com o link', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
-  ast_p1_triagem: { modulo: 'assistencia', um: 'chamado crítico (P1) sem triagem há mais de 30 minutos', varios: 'chamados críticos (P1) sem triagem há mais de 30 minutos', rotulo: 'P1 sem triagem', fazer: 'faça a triagem agora em Assistência técnica > Chamados', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' }
+  ast_p1_triagem: { modulo: 'assistencia', um: 'chamado crítico (P1) sem triagem há mais de 30 minutos', varios: 'chamados críticos (P1) sem triagem há mais de 30 minutos', rotulo: 'P1 sem triagem', fazer: 'faça a triagem agora em Assistência técnica > Chamados', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' },
+  // 27/10/2026 ("Alerta + fila livre"): ninguém assumiu a triagem no tempo das Regras da assistência; qualquer colaborador pode assumir
+  ast_fila_livre: { modulo: 'assistencia', um: 'chamado aguardando triagem na fila livre', varios: 'chamados aguardando triagem na fila livre', rotulo: 'Fila livre', fazer: 'se puder, assuma em Assistência técnica > Chamados > Fila livre', tela: { tipo: 'assistencia', mod: 'assistencia' }, origem: 'ASSISTENCIA' }
 };
 /** Decisões da gestão na Caixa (prazo em dias úteis quando o item não traz o próprio). */
 var AST_GES_TIPOS = { ast_triagem: { prazo: 1 }, ast_agendar: { prazo: 1 }, ast_sla: { prazo: 1 }, ast_orcamento: { prazo: 1 }, ast_doc_pendente_gestao: { prazo: 1 }, ast_sem_sinc: { prazo: 1 },
@@ -59,7 +61,10 @@ var AST_MTZ_EVENTOS = [
   { cod: 'AT15', modulo: 'assistencia', evento: 'Peça recebida e retorno técnico agendado (ao cliente)', origem: 'SGO_Assistencia_Chamados.js; SGO_Assistencia_Agenda.js', publico: 'Cliente (externo)', email: 'HORA', whatsapp: 'NAO', limite: '1 por evento', obs: 'Dois e-mails: "peça chegou, retorno será agendado" e "retorno agendado para dd/mm". Nada de WhatsApp ao cliente nesta etapa.' },
   // 22/10/2026 (etapa 4): o próprio cliente responde o orçamento pelo link (sem login) ou pelo portal "Meus chamados"
   { cod: 'AT16', modulo: 'assistencia', evento: 'Orçamento aprovado pelo cliente pelo link ou pelo portal', origem: 'SGO_Assistencia_Aceite.js; SGO_Assistencia_Relatorio.js', publico: 'Gestor da área (Técnica); gestor comercial; técnico do chamado', email: 'HORA', whatsapp: 'NAO', limite: '1 por orçamento', obs: 'O chamado vai sozinho a "Planejado" (ou "Aguardando peça", com o pedido em Compras). O cliente recebe o comprovante de aprovação por e-mail; nada de WhatsApp ao cliente.', area: 'TECNICA' },
-  { cod: 'AT17', modulo: 'assistencia', evento: 'Orçamento recusado ou com pedido de ajuste pelo cliente (link ou portal)', origem: 'SGO_Assistencia_Aceite.js; SGO_Assistencia_Relatorio.js', publico: 'Gestor da área (Técnica); gestor comercial; técnico do chamado', email: 'HORA', whatsapp: 'NAO', limite: '1 por resposta', obs: 'Entra na Caixa de decisões: recusa (negociar, cobrar a visita ou encerrar) ou ajuste (nova revisão e novo envio).', area: 'TECNICA' }
+  { cod: 'AT17', modulo: 'assistencia', evento: 'Orçamento recusado ou com pedido de ajuste pelo cliente (link ou portal)', origem: 'SGO_Assistencia_Aceite.js; SGO_Assistencia_Relatorio.js', publico: 'Gestor da área (Técnica); gestor comercial; técnico do chamado', email: 'HORA', whatsapp: 'NAO', limite: '1 por resposta', obs: 'Entra na Caixa de decisões: recusa (negociar, cobrar a visita ou encerrar) ou ajuste (nova revisão e novo envio).', area: 'TECNICA' },
+  // 27/10/2026 (decisão do dono, "Alerta + fila livre"): alerta no sistema; e-mail e WhatsApp desligados de partida (a gestão liga aqui, se quiser)
+  { cod: 'AT18', modulo: 'assistencia', evento: 'Chamado pendente de triagem (acompanhamento da gestão)', origem: 'SGO_Assistencia_Chamados.js', publico: 'Gestor da área (Técnica); Diretoria', email: 'NAO', whatsapp: 'NAO', limite: '1 por chamado', obs: 'Só no sistema: aviso na Assistência, central de pendências e contador do menu. Quem faz a triagem recebe o AT01 (com e-mail).', area: 'TECNICA' },
+  { cod: 'AT19', modulo: 'assistencia', evento: 'Chamado sem triagem liberado na fila livre (qualquer colaborador pode assumir)', origem: 'SGO_Assistencia_Chamados.js (rotina de 15 minutos)', publico: 'Técnicos disponíveis; quem faz a triagem; gestão da área Técnica; Diretoria', email: 'NAO', whatsapp: 'NAO', limite: '1 por chamado', obs: 'Só no sistema. Acontece depois do tempo das Regras da assistência (padrão 30 minutos úteis), sempre no expediente. Se a gestão ligar o WhatsApp, vale a regra da matriz: só CLT, piloto, expediente e teto do dia; mensagem curta, sem cobrança.', area: 'TECNICA' }
 ];
 
 function Assistencia_registrarTipos_() {

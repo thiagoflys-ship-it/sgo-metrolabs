@@ -481,7 +481,7 @@ function AstR_aplicarDecisao_(eu, o, x) {
   var comprar = !!(dec === 'APROVADO' && pecas.length && x.comprarPecas !== false);
   var pelo = canal === 'LINK' ? ' pelo link do orçamento' : canal === 'PORTAL' ? ' pelo portal do cliente' : '';
   var res = Ast_comTrava_(function () {
-    delete AST_MEMO[AST_ABAS.ORCAMENTOS];
+    Ast_memoTirar_(AST_ABAS.ORCAMENTOS);
     var atual = Ast_porId_(AST_ABAS.ORCAMENTOS, o.ID);
     if (!atual || Ast_up_(atual.SITUACAO) !== 'EMITIDO') throw new Error('Não foi possível registrar: o orçamento ' + o.NUMERO + ' já foi respondido ou substituído (' + (AST_ORC_SITUACOES[Ast_up_(atual && atual.SITUACAO)] || 'não encontrado') + '). Atualize a ficha do chamado');
     var campos = { SITUACAO: dec, ACEITE_POR: por, DECISAO_TEXTO: txt, DECIDIDO_EM: Ast_agora_(), ACEITE_CANAL: canal, ACEITE_REGISTRO_ID: Ast_s_(x.registroId), ATUALIZADO_EM: Ast_agora_() };

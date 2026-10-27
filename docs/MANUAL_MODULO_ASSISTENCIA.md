@@ -13,12 +13,14 @@ relatório A4, salvo na pasta do equipamento e enviado ao cliente.
 
 ## Quem faz o quê
 
-- Equipe interna: abre chamado (telefone, e-mail, presencial) e acompanha.
+- Equipe interna: abre chamado (telefone, e-mail, presencial) e acompanha. Na fila livre, qualquer colaborador assume
+  o chamado ("Assumir chamado") e faz a triagem dele.
 - Técnico: registra as próprias O.S. Não vê valores de orçamento.
 - Gestor da área Técnica: triagem, agenda, reagendamento, cancelamento, série divergente, indicadores. Sem gestor da
   área Técnica configurado em Caixa de decisões > Regras e responsáveis, a triagem vai para a Diretoria.
 - Comercial e Financeiro: preenchem, emitem e registram a resposta do orçamento do chamado.
-- Administrador, Diretoria e Gestor: alteram as Regras da assistência.
+- Administrador, Diretoria e Gestor: alteram as Regras da assistência (inclusive quem faz a triagem e a fila livre),
+  excluem chamado de teste ou simulação (com motivo) e restauram os excluídos.
 - Administrador: marca "Auvo desligado" quando os seis critérios estão cumpridos.
 - Cliente: em "Meus chamados" pede atendimento para os próprios equipamentos e baixa os relatórios.
 
@@ -83,6 +85,35 @@ o cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem intern
 - Equipamento que já tem O.S. aberta com o mesmo técnico: o aplicativo continua nela.
 
 ## Triagem
+
+### Chamado pendente de triagem e fila livre (27/10/2026)
+
+Decisão do dono: "Alerta + fila livre".
+
+- Quem faz a triagem: as pessoas marcadas em Regras da assistência > Triagem e fila livre. Sem ninguém marcado, vale o
+  de antes: o responsável da área Técnica em Caixa de decisões > Regras e responsáveis (é assim que a triagem chega à
+  Bruna hoje); sem ele, o Gestor da área Técnica; sem ele, a Diretoria.
+- Chamado novo nasce "Pendente de triagem". Quem faz a triagem recebe o aviso de sempre (AT01, no sistema e por e-mail)
+  com a hora em que o chamado vai para a fila livre. A gestão (Gestor da área Técnica e Diretoria) recebe o alerta
+  "Chamado pendente de triagem" (AT18, só no sistema). Na central de pendências o item se chama "Chamado pendente de
+  triagem" e diz até quando está reservado.
+- Contador: o número ao lado de "Chamados" no menu mostra quantos chamados a pessoa pode assumir agora (vermelho quando
+  há fila livre); ele se atualiza a cada 5 minutos com a aba aberta, sem mexer em nenhuma tela. Na lista, a faixa do alto
+  mostra os pendentes e quantos estão na fila livre, com os botões "Ver a triagem" e "Ver a fila livre".
+- Fila livre: se ninguém assumir em 30 minutos úteis (configurável de 5 a 480; conta só o expediente, então o chamado
+  aberto às 17:20 entra na fila às 08:20 do dia útil seguinte), o chamado entra na fila livre. Uma vez por chamado, os
+  técnicos disponíveis (sem atendimento em andamento), quem faz a triagem e a gestão recebem o aviso no sistema (AT19).
+  A mensagem é curta: "se puder, assuma; se já está em outro atendimento, não precisa fazer nada". E-mail e WhatsApp do
+  AT19 começam desligados na matriz de avisos; se a gestão ligar o WhatsApp, valem as regras da matriz (CLT, piloto,
+  expediente e teto do dia).
+- "Assumir chamado" (na lista e na ficha, botão grande para o celular): o chamado vai para "Em triagem" com quem assumiu
+  e quando (selo "Assumido por ... em ..." e histórico). Quem fazia a triagem é avisado no sistema quando outra pessoa
+  assume pela fila livre. Dois colegas não assumem o mesmo chamado: o segundo vê "já foi assumido por ... em ...".
+- Quem faz a triagem e a gestão podem assumir a qualquer momento; começar a preencher a triagem também é assumir.
+  Antes da fila livre, os demais colaboradores veem "reservado para a triagem de ... até ...".
+- A conferência da fila livre roda com o gatilho da Assistência (de 15 em 15 minutos) e a cada abertura da lista.
+
+### Preencher a triagem
 
 1. Abra o chamado e preencha os sintomas confirmados, o risco de continuar usando e o diagnóstico preliminar.
 2. Mude a prioridade se precisar (com o motivo; o prazo é recalculado).
@@ -240,7 +271,8 @@ mensal da Diretoria, junto com os relatórios do Comercial e de Compras.
 
 ## Avisos
 
-Pela matriz de avisos (eventos AT01 a AT17; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
+Pela matriz de avisos (eventos AT01 a AT19; AT18 = chamado pendente de triagem, à gestão, só no sistema; AT19 = chamado
+sem triagem liberado na fila livre, aos técnicos disponíveis, a quem faz a triagem e à gestão, só no sistema; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
 em Compras, chamado devolvido, ao técnico e à gestão no resumo do dia; AT15 = peça recebida e retorno agendado, ao
 cliente por e-mail; AT16 = orçamento aprovado pelo cliente pelo link ou pelo portal e AT17 = recusa ou pedido de
 ajuste, à gestão da área Técnica, ao gestor comercial e ao técnico do chamado, por e-mail na hora): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado para a triagem, chamado
@@ -255,7 +287,7 @@ religar (Regras da assistência > Ligar). Nada é apagado.
 
 ## Regras da assistência
 
-Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,
+Triagem e fila livre (quem faz a triagem, fila livre ligada e o tempo em minutos úteis, padrão 30). Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,
 tamanho máximo da foto, peça em falta abrindo pedido em Compras, avisos ao cliente, relatório mensal e o interruptor
 "Assistência do SGO+ ligada". Tipos de serviço (29, vindos dos 30 tipos do Auvo) e modelos de checklist (editáveis;
 "Trazer os questionários do Auvo" cria os modelos a partir dos 13 questionários copiados no acervo). Quando a lista de questionários do acervo veio vazia, "Montar os checklists a partir das tarefas do Auvo" (e a rotina, de hora em hora) lê as tarefas copiadas em lotes e monta um modelo por questionário, com as perguntas na ordem mais frequente e o tipo de resposta inferido das respostas (foto, assinatura, sim ou não, número, opção, texto). Esses modelos nascem inativos: revise e marque "Ativo" no editor do modelo. Cada mudança
@@ -283,7 +315,37 @@ Os seis critérios do projeto, cada um com o que o sistema mediu e a confirmaç�
 Com os seis cumpridos, o Administrador marca "Auvo desligado". É o registro da decisão: nada é desligado sozinho.
 Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa nos geradores e cancele o contrato.
 
+## Excluir chamado de teste ou simulação (27/10/2026)
+
+Decisão do dono: só Gestor, Diretoria e Administrador; motivo obrigatório; confirmação antes; nada é apagado.
+
+1. Na ficha do chamado, toque em "Excluir (teste ou simulação)". Atendimento real que não vai acontecer se cancela
+   (o cliente vê o cancelamento); a exclusão é só para teste ou simulação.
+2. A janela lista cada vínculo e o efeito da exclusão nele:
+   - O.S.: sai junto (agenda, aplicativo do técnico, Minhas O.S., histórico do equipamento e fonte única de
+     atendimentos); a atividade dela em Minhas atividades é cancelada; o relatório já gerado continua no Drive; se o
+     relatório já foi enviado ao cliente ou a O.S. está em andamento com o técnico, a janela destaca em vermelho.
+   - Orçamento: sai junto; o link de aceite enviado ao cliente deixa de abrir o orçamento.
+   - Pedido de compra: não é cancelado sozinho; cancele em Compras se a peça não vai mais ser comprada.
+   - Reclamação, pedido do cliente, pedido aprovado do Comercial e tarefa do Auvo: continuam onde estão; nada muda no Auvo.
+   - Cliente: os e-mails já enviados não voltam; o chamado some de "Meus chamados".
+3. Escreva o motivo (pelo menos 10 letras), marque "Li os vínculos e o efeito" e toque em "Excluir o chamado". Se os
+   vínculos mudaram enquanto a janela estava aberta, o sistema pede para abrir de novo.
+
+O chamado (e as O.S. e orçamentos dele) sai de listas, contadores, pendências, indicadores, agenda, aplicativo, portal
+do cliente e fonte única de atendimentos. A auditoria (histórico do chamado) guarda quem excluiu, quando e o motivo; os
+avisos ainda não lidos sobre ele deixam de cobrar. O número do chamado não é reaproveitado.
+
+Excluídos: aba "Excluídos" em Chamados (Gestor, Diretoria e Administrador), com quem excluiu, quando, o motivo e o que
+saiu junto. "Restaurar" pede o motivo e devolve o chamado, a O.S. e o orçamento da mesma exclusão, na situação que
+tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o atendimento vale, reagende pela ficha.
+
 ## Problemas comuns
+
+- "Reservado para a triagem de ... até ...": o chamado ainda está no tempo de quem faz a triagem. Depois do horário,
+  se ninguém assumir, ele vai para a fila livre. Se é urgente, fale com quem faz a triagem ou com a gestão.
+- "Já foi assumido por ... em ...": outro colega assumiu antes; atualize a lista.
+- Não encontro um chamado: veja se ele foi excluído (aba "Excluídos", só Gestor, Diretoria e Administrador).
 
 - "Esse caminho não é permitido": siga o "Próximo passo" indicado na ficha do chamado.
 - O cliente diz que o link do orçamento mostra "Link indisponível": o link venceu, foi invalidado ou um envio mais novo

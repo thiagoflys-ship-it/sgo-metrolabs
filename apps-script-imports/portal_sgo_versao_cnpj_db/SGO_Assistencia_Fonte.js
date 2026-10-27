@@ -53,7 +53,8 @@ function SGO_Atendimentos_linhas_(opcoes) {
   var agora = Date.now();
   if (!AST_FONTE_MEMO || agora - AST_FONTE_MEMO.em > 5000 || agora < AST_FONTE_MEMO.em) {
     var auvo = SGO_CFG.SHEETS.AUVO_TAREFAS ? AstF_lerAba_(SGO_CFG.SHEETS.AUVO_TAREFAS).map(function (t) { return Object.assign({ ORIGEM: 'AUVO' }, t); }) : [];
-    var sgo = AstF_lerAba_(AST_ABAS.OS).map(AstF_linhaDaOs_);
+    // 27/10/2026: O.S. de chamado excluído (teste ou simulação) fica fora da fonte única (histórico, qualidade, Conduta, Frota, ponto)
+    var sgo = AstF_lerAba_(AST_ABAS.OS).filter(function (o) { return !Ast_s_(o.EXCLUIDO_EM); }).map(AstF_linhaDaOs_);
     AST_FONTE_MEMO = { em: agora, auvo: auvo, sgo: sgo };
   }
   var semCanc = o.semCanceladas !== false;

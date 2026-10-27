@@ -65,6 +65,13 @@
   .at-etapas span { flex: 1 1 80px; text-align: center; font-size: 11px; padding: 4px; border-radius: 6px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
   .at-etapas span.feita { background: var(--success-bg); color: var(--success); border-color: var(--success); font-weight: 700; }
   .at-wrap-tabela { overflow-x: auto; max-width: 100%; }
+  /* 27/10/2026: triagem com fila livre e exclusão de chamado de teste (botões de 44 px, como no Auvo) */
+  .at-btn44 { min-height: 44px; }
+  .at-tri { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--warning); border-radius: 8px; background: var(--card); font-size: 13px; }
+  .at-tri.zero { border-left-color: var(--success); } .at-tri.fila { border-left-color: var(--danger); }
+  .at-tri b.n { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .at-vinc { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12.5px; background: var(--card); overflow-wrap: anywhere; }
+  .at-vinc.alerta { border-left: 4px solid var(--danger); background: var(--danger-bg); }
   @media (max-width: 900px) {
     .at-grade2, .at-grade3 { grid-template-columns: 1fr; }
     .at-grade4, .at-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -197,9 +204,44 @@
   function Assistencia_iniciar_() {
     var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
     if (!p) { Assistencia_mostrarMenu_(null); return; }
-    At_chamar_("acesso", {}, function (r) { Assistencia_mostrarMenu_(r); }, function () { Assistencia_mostrarMenu_(null); });
+    At_chamar_("acesso", {}, function (r) {
+      Assistencia_mostrarMenu_(r);
+      // 27/10/2026: contador de triagem no menu "Chamados", atualizado a cada 5 minutos só com a aba visível (só o número; nenhuma tela é redesenhada)
+      At_badgeTriagem_(r && r.triagem);
+      if (AT.timerBadge) clearInterval(AT.timerBadge);
+      if (r && !r.cliente) AT.timerBadge = setInterval(At_atualizarBadge_, 5 * 60 * 1000);
+    }, function () { Assistencia_mostrarMenu_(null); });
   }
-  function Assistencia_parar_() { AT.ini = null; Assistencia_mostrarMenu_(null); }
+  function Assistencia_parar_() { AT.ini = null; if (AT.timerBadge) { clearInterval(AT.timerBadge); AT.timerBadge = null; } At_badgeTriagem_(null); Assistencia_mostrarMenu_(null); }
+  /** Badge do menu: quantos chamados a pessoa pode assumir agora (vermelho quando há fila livre). */
+  function At_badgeTriagem_(t) {
+    AT.triagem = t || null;
+    var b = At_$_("menuBadgeAssistencia");
+    if (b) {
+      var n = t ? (t.paraMim || 0) : 0;
+      b.textContent = n ? String(n) : "";
+      b.title = n ? n + (n === 1 ? " chamado pendente de triagem" : " chamados pendentes de triagem") + (t.filaLivre ? " (" + t.filaLivre + " na fila livre)" : "") : "";
+      b.classList.toggle("is-visible", !!n);
+      b.style.background = t && t.filaLivre ? "var(--danger)" : "";
+    }
+    var f = At_$_("atTriFaixa");
+    if (f) f.innerHTML = At_faixaTriagem_(t);
+  }
+  function At_atualizarBadge_() {
+    if (typeof document !== "undefined" && document.visibilityState && document.visibilityState !== "visible") return;
+    if (typeof SGO_getSessionId === "function" && !SGO_getSessionId()) return;
+    At_chamar_("contadorTriagem", {}, function (r) { At_badgeTriagem_(r.triagem); }, function () {});
+  }
+  /** Faixa "pendentes de triagem" no alto da lista de chamados (só texto e um botão de filtro; nunca mexe em formulário). */
+  function At_faixaTriagem_(t) {
+    if (!t) return "";
+    var n = t.pendentes || 0;
+    if (!n) return '<div class="at-tri zero"><span>Nenhum chamado pendente de triagem.</span></div>';
+    return '<div class="at-tri' + (t.filaLivre ? " fila" : "") + '"><span><b class="n">' + At_esc_(n) + '</b> ' + (n === 1 ? "chamado pendente de triagem" : "chamados pendentes de triagem") +
+      (t.filaLivre ? ' · <b>' + At_esc_(t.filaLivre) + ' na fila livre</b> (ninguém assumiu em ' + At_esc_(t.minutos || 30) + ' minutos úteis: qualquer colaborador pode assumir)' : (t.ligada === false ? '' : ' · se ninguém assumir em ' + At_esc_(t.minutos || 30) + ' minutos úteis, vai para a fila livre')) + '</span>' +
+      '<span class="at-acoes" style="margin:0"><button type="button" class="btn-secondary at-btn44" onclick="At_irGrupo_(\'TRIAGEM\')">Ver a triagem</button>' + (t.filaLivre ? '<button type="button" class="btn-primary at-btn44" onclick="At_irGrupo_(\'FILA_LIVRE\')">Ver a fila livre</button>' : '') + '</span></div>';
+  }
+  function At_irGrupo_(g) { AT.filtro.grupo = g; var div = At_$_("conteudo"); if (div && AT.mod === "assistencia") At_renderChamados_(div); else abrir("assistencia"); }
   function Assistencia_mostrarMenu_(r) {
     var grupo = At_$_("menu-secao-assistencia");
     if (grupo) grupo.style.display = r ? "" : "none";
@@ -264,8 +306,9 @@
     var ini = AT.ini;
     div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Chamados de assistência técnica", "Cada pedido de atendimento: triagem, prazo, agenda, O.S. e relatório. Em uso junto com o Auvo: atendimento novo nasce aqui.",
       '<button type="button" class="btn-primary" onclick="abrir(\'assistencia_abrir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Abrir chamado</button><button type="button" class="btn-secondary" id="atAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
-      At_avisosRecentes_() + '<div id="atCadCampo"></div><div id="atKpis"></div>' +
-      '<div class="at-tabs" id="atGrupos">' + [["ABERTOS", "Em aberto"], ["TRIAGEM", "Triagem"], ["AGUARDANDO", "Aguardando"], ["CAMPO", "Em campo"], ["ENCERRADOS", "Encerrados"], ["TODOS", "Todos"]].map(function (g) {
+      At_avisosRecentes_() + '<div id="atTriFaixa">' + At_faixaTriagem_(AT.triagem) + '</div><div id="atCadCampo"></div><div id="atKpis"></div>' +
+      '<div class="at-tabs" id="atGrupos">' + [["ABERTOS", "Em aberto"], ["TRIAGEM", "Triagem"], ["FILA_LIVRE", "Fila livre"], ["AGUARDANDO", "Aguardando"], ["CAMPO", "Em campo"], ["ENCERRADOS", "Encerrados"], ["TODOS", "Todos"]]
+        .concat(ini.podeExcluir ? [["EXCLUIDOS", "Excluídos"]] : []).map(function (g) {
         return '<button type="button" class="at-tab' + (AT.filtro.grupo === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
       '<div class="at-filtros"><div><label for="atBusca">Buscar</label><input id="atBusca" type="search" placeholder="Número, cliente, equipamento, técnico" value="' + At_esc_(AT.filtro.busca) + '"></div>' +
       '<div><label for="atPrio">Prioridade</label><select id="atPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), AT.filtro.prioridade, "Todas") + '</select></div></div><div id="atLista"><div class="at-vazio">Carregando…</div></div></div>';
@@ -300,22 +343,73 @@
   function At_carregarChamados_() {
     At_chamar_("lista", AT.filtro, function (r) {
       var k = r.contagem || {};
+      // 27/10/2026: contador de pendentes de triagem (faixa no alto e badge do menu)
+      At_badgeTriagem_({ pendentes: k.pendentesTriagem || 0, filaLivre: k.filaLivre || 0, paraMim: k.paraMim || 0, minutos: k.filaLivreMin, ligada: k.filaLivreLigada });
       var kp = At_$_("atKpis");
-      if (kp) kp.innerHTML = '<div class="at-kpis">' + [[k.triagem, "Aguardando triagem", k.triagem ? "aviso" : "ok"], [k.estourados, "Prazo estourado", k.estourados ? "critico" : "ok"], [k.emRisco, "Prazo em risco", k.emRisco ? "aviso" : "ok"],
+      if (kp) kp.innerHTML = '<div class="at-kpis">' + [[k.pendentesTriagem, "Pendentes de triagem" + (k.filaLivre ? " (" + k.filaLivre + " na fila livre)" : ""), k.filaLivre ? "critico" : k.pendentesTriagem ? "aviso" : "ok"], [k.estourados, "Prazo estourado", k.estourados ? "critico" : "ok"], [k.emRisco, "Prazo em risco", k.emRisco ? "aviso" : "ok"],
         [k.docPendente, "Documentação pendente", k.docPendente ? "aviso" : "ok"]].map(function (x) { return '<div class="at-kpi ' + x[2] + '"><span class="v">' + At_esc_(x[0] || 0) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>';
       var l = At_$_("atLista"); if (!l) return;
-      l.innerHTML = r.chamados.length ? '<div class="at-lista">' + r.chamados.map(At_cardChamado_).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado neste filtro.</div>';
+      var vazio = { FILA_LIVRE: "Nenhum chamado na fila livre: todo chamado novo foi assumido a tempo.", EXCLUIDOS: "Nenhum chamado excluído." }[AT.filtro.grupo] || "Nenhum chamado neste filtro.";
+      l.innerHTML = (r.excluidos ? '<div class="at-faixa">Chamados de teste ou simulação excluídos pela gestão. Nada foi apagado: eles só saíram das listas, contadores, pendências, indicadores e do portal do cliente. "Restaurar" devolve o chamado (e a O.S. que saiu junto) com o motivo registrado.</div>' : '') +
+        (r.chamados.length ? '<div class="at-lista">' + r.chamados.map(r.excluidos ? At_cardExcluido_ : At_cardChamado_).join("") + '</div>' : '<div class="at-vazio">' + At_esc_(vazio) + '</div>');
       l.querySelectorAll("[data-ch]").forEach(function (c) { c.onclick = function () { At_abrirChamado_(c.getAttribute("data-ch")); }; });
+      l.querySelectorAll("[data-assumir]").forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); At_assumir_(b.getAttribute("data-assumir"), b.getAttribute("data-num")); }; });
+      l.querySelectorAll("[data-restaurar]").forEach(function (b) { b.onclick = function () { At_restaurar_(b.getAttribute("data-restaurar"), b.getAttribute("data-num")); }; });
     }, function (m) { At_msg_("atLista", m); });
+  }
+  /** "Assumir chamado": fica registrado quem assumiu e quando; abre a ficha com a triagem. */
+  function At_assumir_(id, numero) {
+    if (!confirm("Assumir o chamado " + (numero || "") + "? A triagem passa a ser sua e fica registrado que você assumiu agora.")) return;
+    At_chamar_("assumir", { id: id }, function (x) { At_carregarChamados_(); At_abrirChamado_(id, x.message); }, function (m) { alert(m); At_carregarChamados_(); }, { carregando: "Assumindo o chamado…" });
+  }
+  function At_cardExcluido_(c) {
+    return '<div class="at-card fim"><p class="at-card-tit">' + At_esc_(c.numero) + ' · ' + At_esc_(c.clienteNome) + '</p>' +
+      '<p class="at-meta">' + At_esc_(c.equipamentoTexto || "Equipamento não identificado") + ' · aberto em ' + At_esc_(c.abertoEm) + ' · situação quando excluído: ' + At_esc_(c.situacaoNome) + '</p>' +
+      '<div>' + At_selo_("vermelho", "Excluído em " + c.excluidoEm + " por " + c.excluidoPor) + (c.osExcluidas && c.osExcluidas.length ? At_selo_("cinza", "Saiu junto: " + c.osExcluidas.join(", ")) : "") + (c.restauradoEm ? At_selo_("cinza", "Já restaurado antes em " + c.restauradoEm) : "") + '</div>' +
+      '<p class="at-txt"><b>Motivo:</b> ' + At_esc_(c.excluidoMotivo) + '</p><p class="at-meta">' + At_esc_(String(c.sintoma || "").slice(0, 160)) + '</p>' +
+      '<div class="at-acoes"><button type="button" class="btn-secondary at-btn44" data-restaurar="' + At_esc_(c.id) + '" data-num="' + At_esc_(c.numero) + '">Restaurar</button></div></div>';
+  }
+  function At_restaurar_(id, numero) {
+    At_pedirTexto_("Restaurar o chamado " + numero, "O chamado volta às listas na situação que tinha, junto com a O.S. e o orçamento que saíram na mesma exclusão. A restauração fica na auditoria com o seu nome.", "Motivo da restauração", 10,
+      function (t, ov) { At_chamar_("restaurar", { id: id, motivo: t }, function (x) { ov.remove(); alert(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }, { carregando: "Restaurando…" }); }, "Restaurar");
+  }
+  /** Exclusão de chamado de teste ou simulação: mostra os vínculos e o efeito, pede o motivo e a confirmação. */
+  function At_excluir_(c) {
+    At_chamar_("previaExclusao", { id: c.id }, function (p) {
+      var v = p.vinculos || [];
+      var corpo = '<div class="at-faixa aviso">Use só para chamado de <b>teste ou simulação</b>. Atendimento real que não vai acontecer se <b>cancela</b> (o cliente vê o cancelamento). Nada é apagado do banco: o chamado sai das listas, contadores, pendências, indicadores e do portal do cliente, e a gestão pode restaurar em Chamados &gt; Excluídos.</div>' +
+        '<p class="at-txt"><b>' + At_esc_(p.chamado.numero) + '</b> · ' + At_esc_(p.chamado.clienteNome) + ' · ' + At_esc_(p.chamado.situacaoNome) + ' · aberto em ' + At_esc_(p.chamado.abertoEm) + '</p>' +
+        '<div class="at-sec">' + (v.length ? 'Vínculos e o efeito da exclusão em cada um' : 'Vínculos') + '</div>' +
+        (v.length ? v.map(function (x) { return '<div class="at-vinc' + (x.alerta ? " alerta" : "") + '"><b>' + At_esc_(x.texto) + '</b><br>' + At_esc_(x.efeito) + '</div>'; }).join("") : '<p class="at-meta">' + At_esc_(p.message) + '</p>') +
+        At_campo_("Motivo da exclusão", '<textarea id="atExcMot" maxlength="500" placeholder="Ex.: chamado de teste aberto no treinamento da equipe"></textarea>', "Pelo menos 10 letras. Fica na auditoria com o seu nome, a data e a hora.") +
+        '<label class="at-check"><input type="checkbox" id="atExcCiente"> Li os vínculos e o efeito acima e confirmo que este chamado é de teste ou simulação.</label><div id="atExcMsg"></div>';
+      var ov = At_modal_("Excluir o chamado " + p.chamado.numero, corpo, '<button type="button" class="btn-secondary at-btn44" data-x>Voltar</button><button type="button" class="btn-primary at-btn44" data-ok style="background:var(--danger);border-color:var(--danger)">Excluir o chamado</button>', 640);
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () {
+        var mot = At_$_("atExcMot").value.trim();
+        if (mot.length < 10) { At_msg_("atExcMsg", "Escreva o motivo (pelo menos 10 letras): ele fica na auditoria.", "aviso"); return; }
+        if (!At_$_("atExcCiente").checked) { At_msg_("atExcMsg", "Marque a confirmação depois de ler os vínculos e o efeito.", "aviso"); return; }
+        At_chamar_("excluir", { id: c.id, motivo: mot, confirmado: true, vinculosVistos: v.length }, function (x) {
+          ov.remove(); var g = At_$_("atGaveta"); if (g) g.remove(); alert(x.message); At_carregarChamados_();
+        }, function (m) { At_msg_("atExcMsg", m); }, { carregando: "Excluindo…" });
+      };
+    }, null, { carregando: "Conferindo os vínculos do chamado…" });
   }
   function At_cardChamado_(c) {
     var cls = c.terminal ? "fim" : (c.prioridade === "P1" ? "p1" : c.prioridade === "P2" ? "p2" : "");
     return '<div class="at-card clicavel ' + cls + '" data-ch="' + At_esc_(c.id) + '" tabindex="0"><p class="at-card-tit">' + At_esc_(c.numero) + ' · ' + At_esc_(c.clienteNome) + (c.unidadeNome ? ' (' + At_esc_(c.unidadeNome) + ')' : '') + '</p>' +
       '<p class="at-meta">' + At_esc_(c.equipamentoTexto || "Equipamento não identificado") + ' · aberto em ' + At_esc_(c.abertoEm) + ' (' + At_esc_(c.canalNome) + ')</p>' +
       '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : c.prioridade === "P2" ? "laranja" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) +
-      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + '</div>' +
+      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + At_seloTriagem_(c) + '</div>' +
       '<p class="at-txt">' + At_esc_(String(c.sintoma || "").slice(0, 180)) + '</p>' + (c.proximaAcao ? '<p class="at-meta"><b>Próximo passo:</b> ' + At_esc_(c.proximaAcao) + '</p>' : '') +
-      (c.tecnicoNome ? '<p class="at-meta">Técnico: ' + At_esc_(c.tecnicoNome) + (c.agendadoPara ? ' · ' + At_esc_(c.agendadoPara) : '') + '</p>' : '') + '</div>';
+      (c.tecnicoNome ? '<p class="at-meta">Técnico: ' + At_esc_(c.tecnicoNome) + (c.agendadoPara ? ' · ' + At_esc_(c.agendadoPara) : '') + '</p>' : '') +
+      (c.podeAssumir ? '<div class="at-acoes"><button type="button" class="btn-primary at-btn44" data-assumir="' + At_esc_(c.id) + '" data-num="' + At_esc_(c.numero) + '">Assumir chamado</button></div>' : '') + '</div>';
+  }
+  /** 27/10/2026: selo da triagem (pendente, reservado até, fila livre, assumido por). */
+  function At_seloTriagem_(c) {
+    if (c.pendenteTriagem) return c.filaLivre ? At_selo_("vermelho", "Fila livre: qualquer colaborador pode assumir") : At_selo_("laranja", "Pendente de triagem" + (c.filaLivreAs ? " · fila livre às " + c.filaLivreAs.slice(11) + (c.filaLivreAs.slice(0, 10) !== c.abertoEm.slice(0, 10) ? " de " + c.filaLivreAs.slice(0, 5) : "") : ""));
+    if (c.situacao === "EM_TRIAGEM" && c.assumidoPor) return At_selo_("azul", "Assumido por " + c.assumidoPor + (c.assumidoEm ? " em " + c.assumidoEm : ""));
+    return "";
   }
 
   function At_abrirChamado_(id, msg, tipo) {
@@ -328,6 +422,11 @@
       '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
       (c.abertaEmCampo ? '<div class="at-faixa">Aberta em campo pelo técnico, fora da agenda: a triagem foi feita no local e a O.S. nasceu em andamento. Confira o cadastro (selo "criado em campo") e o chamado; se for repetido, use Cadastros > Vínculos.</div>' : '') +
       (c.proximaAcao ? '<div class="at-faixa">Próximo passo: ' + At_esc_(c.proximaAcao) + '</div>' : '') +
+      // 27/10/2026: triagem com fila livre: reservado até, fila livre ou quem assumiu; "Assumir chamado" para quem pode
+      (c.pendenteTriagem ? '<div class="at-faixa ' + (c.filaLivre ? "erro" : "aviso") + '"><b>Chamado pendente de triagem.</b> ' +
+        (c.filaLivre ? 'Ninguém assumiu em ' + At_esc_(c.filaLivreMin) + ' minutos úteis: está na fila livre e qualquer colaborador pode assumir.' : 'Reservado para a triagem de ' + At_esc_(c.triagemResponsavel || "quem faz a triagem") + (c.filaLivreAs ? ' até ' + At_esc_(c.filaLivreAs) + '; depois disso, se ninguém assumir, vai para a fila livre.' : '.')) +
+        (c.podeAssumir ? '<div class="at-acoes"><button type="button" class="btn-primary at-btn44" id="atAssumir">Assumir chamado</button></div>' : '') + '</div>' : '') +
+      (c.situacao === "EM_TRIAGEM" && c.assumidoPor ? '<div class="at-faixa">Triagem assumida por <b>' + At_esc_(c.assumidoPor) + '</b>' + (c.assumidoEm ? ' em ' + At_esc_(c.assumidoEm) : '') + '.</div>' : '') +
       // 22/10/2026 (etapa 3): a peça chegou em Compras e o chamado voltou sozinho: a gestão agenda o retorno (o cliente já sabe que a peça chegou)
       (c.retornoAAgendar ? '<div class="at-faixa ok"><b>Peça disponível desde ' + At_esc_(c.pecaDisponivelEm) + ' (conferida por Compras).</b> Agende o retorno do técnico no quadro "Agendar o retorno" abaixo: a mesma O.S. volta para a agenda e o cliente recebe a data por e-mail. O técnico retira a peça com Compras antes de sair.</div>' : '') +
       (c.slaChegada && !c.terminal ? '<div class="at-faixa' + (c.slaChegada.estado === "ESTOURADO" || c.slaChegada.estado === "FORA_DO_PRAZO" ? " erro" : c.slaChegada.estado === "EM_RISCO" ? " aviso" : "") + '">' + At_esc_(c.slaChegada.texto) + '</div>' : '') +
@@ -349,7 +448,8 @@
     if (r.historicoEquipamento && r.historicoEquipamento.length) h += '<div class="at-sec">Histórico do equipamento</div>' + At_listaHistorico_(r.historicoEquipamento);
     h += '<div class="at-sec">Histórico do chamado</div><div class="at-hist">' + (r.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto || ((e.de || "") + " → " + (e.para || ""))) + '</div>'; }).join("") + '</div>';
     h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAnotar">Registrar contato ou observação</button><button type="button" class="btn-secondary" id="atReclamar">Registrar reclamação</button>' +
-      (c.podeCancelar ? '<button type="button" class="btn-secondary" id="atCancelar" style="color:var(--danger)">Cancelar o chamado</button>' : '') + '</div>';
+      (c.podeCancelar ? '<button type="button" class="btn-secondary" id="atCancelar" style="color:var(--danger)">Cancelar o chamado</button>' : '') +
+      (c.podeExcluir ? '<button type="button" class="btn-secondary at-btn44" id="atExcluir" style="color:var(--danger)" title="Só para chamado de teste ou simulação; nada é apagado e a gestão pode restaurar">Excluir (teste ou simulação)</button>' : '') + '</div>';
     var g = At_gaveta_("Chamado " + c.numero, h), corpo = g.querySelector("#atGavetaCorpo");
     var reabrir = function (m, t) { At_abrirChamado_(c.id, m, t); };
     if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);
@@ -359,6 +459,8 @@
     if ((b = corpo.querySelector("#atRetomar"))) b.onclick = function () { At_pedirTexto_("Liberar para agendar", "O chamado volta para \"Planejado\" e a gestão agenda o atendimento. Ao agendar, o cliente recebe a data por e-mail.", "O que aconteceu (peça chegou, orçamento aprovado...)", 5, function (t, ov) { At_chamar_("retomar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
     if ((b = corpo.querySelector("#atVoltarTriagem"))) b.onclick = function () { At_pedirTexto_("Voltar o chamado à triagem", "Use quando o técnico descobriu em campo que precisa de orçamento ou de outro diagnóstico. A O.S. fica pausada (a visita foi interrompida) e volta para a agenda quando a triagem decidir \"planejar visita\". O técnico é avisado.", "Motivo", 10, function (t, ov) { At_chamar_("voltarTriagem", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Voltar à triagem"); };
     if ((b = corpo.querySelector("#atAbrirOs"))) b.onclick = function () { At_abrirOs_(r.os.id); };
+    if ((b = corpo.querySelector("#atAssumir"))) b.onclick = function () { At_assumir_(c.id, c.numero); };
+    if ((b = corpo.querySelector("#atExcluir"))) b.onclick = function () { At_excluir_(c); };
     corpo.querySelector("#atAnotar").onclick = function () { At_pedirTexto_("Registrar no histórico", "Ligação do cliente, e-mail recebido ou observação. Fica no histórico do chamado.", "O que aconteceu", 5, function (t, ov) { At_chamar_("anotar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Registrar"); };
     corpo.querySelector("#atReclamar").onclick = function () { At_pedirTexto_("Registrar reclamação do cliente", "A reclamação vira um caso com dono e prazo (Assistência técnica > Reclamações).", "O que o cliente reclamou", 10, function (t, ov) { At_chamar_("salvarCaso", { chamadoId: c.id, clienteId: c.clienteId, tipo: "RECLAMACAO", descricao: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Registrar"); };
     if ((b = corpo.querySelector("#atCancelar"))) b.onclick = function () { At_pedirTexto_("Cancelar o chamado " + c.numero, "O cancelamento fica no histórico e o cliente vê que foi cancelado. Se houver O.S. aberta, ela também é cancelada.", "Motivo", 10, function (t, ov) { At_chamar_("cancelar", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Cancelar o chamado"); };
@@ -976,6 +1078,14 @@
       var h2 = function (m) { return (Math.round(Number(m) / 6) / 10).toString(); };
       var h = '<div class="at-caixa"><h3>Assistência do SGO+</h3><p class="at-txt">' + (g.ligada ? At_selo_("verde", "Ligada") + ' Uso em paralelo ao Auvo: atendimento novo nasce no SGO+.' : At_selo_("vermelho", "Desligada") + ' O aplicativo do técnico não recebe O.S. novas; nada é apagado.') + '</p>' +
         (ed ? '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRgLigar">' + (g.ligada ? "Desligar" : "Ligar") + '</button></div>' : '') + '<p class="at-meta">Triagem: ' + At_esc_(r.triagem.nome || "ninguém") + ' (' + At_esc_(r.triagem.motivo) + '). Técnicos: ' + At_esc_(r.tecnicos.map(function (t) { return t.nome; }).join(", ") || "nenhum") + '.</p></div>';
+      // 27/10/2026: quem faz a triagem (configurável pela gestão) e a fila livre
+      var trg = g.triagem || { responsaveis: [], filaLivreLigada: true, filaLivreMin: 30 }, marcados = (trg.responsaveis || []).map(String);
+      h += '<div class="at-caixa"><h3>Triagem e fila livre</h3><p class="at-meta">Hoje a triagem é de <b>' + At_esc_((r.triagem.nomes || []).join(", ") || r.triagem.nome || "ninguém") + '</b> (' + At_esc_(r.triagem.motivo) + '). ' +
+        'Marque abaixo quem faz a triagem; sem ninguém marcado, vale o responsável da área Técnica em Caixa de decisões &gt; Regras e responsáveis (senão o Gestor da área Técnica; senão a Diretoria). A gestão recebe o alerta "chamado pendente de triagem" de todo chamado novo.</p>' +
+        '<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:10px">' + (r.internos || []).map(function (u) {
+          return '<label class="at-check"><input type="checkbox" data-trresp="' + At_esc_(u.id) + '"' + (marcados.indexOf(String(u.id)) >= 0 ? " checked" : "") + dis + '> ' + At_esc_(u.nome) + ' <span class="at-meta">(' + At_esc_([u.perfil, u.area].filter(Boolean).join(", ")) + ')</span></label>'; }).join("") + '</div>' +
+        '<label class="at-check"><input type="checkbox" id="atRgFila"' + (trg.filaLivreLigada !== false ? " checked" : "") + dis + '> Fila livre ligada: se ninguém assumir no tempo abaixo, qualquer colaborador pode assumir o chamado ("Assumir chamado")</label>' +
+        '<div class="at-grade2">' + At_campo_("Tempo até a fila livre (minutos úteis do expediente)", '<input id="atRgFilaMin" type="number" min="5" max="480" step="5" value="' + At_esc_(trg.filaLivreMin || 30) + '"' + dis + '>', "Padrão 30. Conta só o horário de trabalho: chamado aberto à noite entra na fila livre 30 minutos depois da abertura do expediente seguinte.") + '</div></div>';
       h += '<div class="at-caixa"><h3>Prazos por prioridade (horas úteis do expediente)</h3><table class="at-tabela"><thead><tr><th>Prioridade</th><th>Prazo de atendimento (h)</th><th>Prazo de triagem (h)</th></tr></thead><tbody>' +
         ["P1", "P2", "P3", "P4"].map(function (p) { return '<tr><td data-r="Prioridade">' + p + '</td><td data-r="Atendimento"><input data-pz="' + p + '|atendimentoMin" type="number" step="0.5" min="0.5" value="' + h2(g.prazos[p].atendimentoMin) + '"' + dis + '></td><td data-r="Triagem"><input data-pz="' + p + '|triagemMin" type="number" step="0.25" min="0.1" value="' + h2(g.prazos[p].triagemMin) + '"' + dis + '></td></tr>'; }).join("") +
         '</tbody></table><p class="at-meta">Padrão: P1 4 h úteis, P2 1 dia útil (9,5 h), P3 3 dias úteis, P4 7 dias úteis. O contrato do cliente prevalece.</p>' +
@@ -1005,6 +1115,8 @@
         nova.pausaPermitidaPadrao = At_$_("atRgPausa").checked; nova.assinatura.obrigatoria = At_$_("atRgAss").checked; nova.pecas.faltaAbreCompras = At_$_("atRgCmp").checked;
         nova.avisos.whatsappP1Gestor = At_$_("atRgWaP1").checked; nova.avisos.emailCliente = At_$_("atRgMailCli").checked; nova.avisos.whatsappCliente = At_$_("atRgWaCli").checked; nova.relatorioMensal.ligado = At_$_("atRgRelMes").checked;
         nova.localizacao.distanciaAvisoMetros = Number(At_$_("atRgDist").value); nova.fotos.maxBytes = Math.round(Number(At_$_("atRgFoto").value) * 1000000);
+        nova.triagem = { responsaveis: Array.prototype.map.call(c.querySelectorAll("[data-trresp]:checked"), function (x) { return x.getAttribute("data-trresp"); }),
+          filaLivreLigada: At_$_("atRgFila").checked, filaLivreMin: Number(At_$_("atRgFilaMin").value) };
         nova.contratos = [];
         c.querySelectorAll("[data-contrato]").forEach(function (l) {
           var cid = l.querySelector("[data-c=cliente]").value; if (!cid) return;

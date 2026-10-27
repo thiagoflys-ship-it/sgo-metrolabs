@@ -245,7 +245,7 @@ function AstL_responder_(o, l, d, ctx) {
   var registro = null, ja = null;
   try {
     Ast_comTrava_(function () {
-      delete AST_MEMO[AST_ABAS.ORCAMENTOS]; delete AST_MEMO[AST_ABAS.ORC_LINKS]; delete AST_MEMO[AST_ABAS.ORC_ACEITES];
+      Ast_memoTirar_(AST_ABAS.ORCAMENTOS); delete AST_MEMO[AST_ABAS.ORC_LINKS]; delete AST_MEMO[AST_ABAS.ORC_ACEITES];
       var atual = Ast_porId_(AST_ABAS.ORCAMENTOS, o.ID);
       if (!atual || Ast_up_(atual.SITUACAO) !== 'EMITIDO') { ja = atual || o; throw new Error('RESPONDIDO'); }
       if (l) { var lAtual = Ast_porId_(AST_ABAS.ORC_LINKS, l.ID); if (!lAtual || Ast_up_(lAtual.SITUACAO) !== 'ATIVO') { ja = atual; throw new Error('RESPONDIDO'); } }

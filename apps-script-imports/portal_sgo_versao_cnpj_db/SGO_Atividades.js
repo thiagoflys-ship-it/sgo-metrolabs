@@ -1156,6 +1156,7 @@ function Atividades_comDadosDaOS_(itens) {
     if (!o) return true;
     var sit = String(o.SITUACAO || '').toUpperCase();
     if (sit === 'CANCELADA') return false;
+    if (String(o.EXCLUIDO_EM || '').trim()) return false; // 27/10/2026: O.S. de chamado excluído (teste ou simulação) sai da agenda
     var ini = Atividades_normData_(o.AGENDADO_PARA, '08:00');
     var dur = Number(o.DURACAO_MIN) || 90;
     a.OS_NUMERO = String(o.NUMERO || ''); a.OS_SITUACAO = sit; a.OS_SITUACAO_NOME = nomes[sit] || sit;
