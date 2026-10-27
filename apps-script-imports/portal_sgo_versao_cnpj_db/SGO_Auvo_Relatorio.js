@@ -139,6 +139,7 @@ function AuvoRel_pendencias_(tecnicosIds) {
     Auvo_pendBootstrap_();
     var filtro = Array.isArray(tecnicosIds) ? tecnicosIds.map(String).filter(Boolean) : [];
     var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_PENDENCIAS).filter(function (p) {
+      if (!Auvo_pendDentroDaJanela_(p)) return false;
       if (!filtro.length) return true;
       var chave = SGO_UTILS.safe(p.TECNICO_ID_SGO) ? 'sgo:' + SGO_UTILS.safe(p.TECNICO_ID_SGO) : (SGO_UTILS.safe(p.TECNICO_AUVO_ID) ? 'auvo:' + SGO_UTILS.safe(p.TECNICO_AUVO_ID) : '');
       return filtro.indexOf(chave) !== -1;

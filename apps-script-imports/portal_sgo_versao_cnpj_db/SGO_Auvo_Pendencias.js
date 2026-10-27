@@ -18,7 +18,9 @@
  ****************************************************/
 
 var AUVO_PEND_CFG = {
-  JANELA_DIAS: 1095, // ~3 anos — margem sobre os 2 anos já validados no estudo de 2026-08-31
+  // 27/10/2026, decisão do dono: O.S. aberta há mais de 1 ano não serve mais para cobrança e sai da
+  // lista (antes 1095 dias). No Auvo nada é apagado; para voltar a ver as antigas, aumente este número.
+  JANELA_DIAS: 365,
   PAGE_SIZE: 100,
   ORCAMENTO_MS: 4.5 * 60 * 1000, // Apps Script mata em 6min; para com folga e continua depois
   CHECKPOINT_KEY: 'AUVO_PEND_CHECKPOINT',
@@ -42,6 +44,14 @@ function Auvo_pendTemEvidencia_(tarefa) {
     return (q.answers || []).length > 0;
   });
   return !!(tarefa.report) || temQuestionario || !!tarefa.checkInDate || !!tarefa.signatureUrl;
+}
+
+// Linha gravada ainda dentro da janela (conta pela data da tarefa, não pelo DIAS_ABERTA gravado, que fica
+// parado até a próxima rodada). Sem data legível a linha fica: não dá para dizer que é antiga.
+function Auvo_pendDentroDaJanela_(p, agora) {
+  var d = new Date(SGO_UTILS.safe(p && p.TASK_DATE));
+  if (isNaN(d.getTime())) return true;
+  return ((agora || new Date()).getTime() - d.getTime()) / 86400000 <= AUVO_PEND_CFG.JANELA_DIAS;
 }
 
 function Auvo_pendResolverNomeTecnico_(tecnicoIdSgo, nomeAuvo, auvoId) {
@@ -260,7 +270,8 @@ function Auvo_apiStatusSincronizacaoDiariaPendencias(sessionId) {
 function Auvo_apiListarPendencias(sessionId) {
   Auvo_exigirAdmin_(sessionId);
   Auvo_pendBootstrap_();
-  var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_PENDENCIAS);
+  var agora = new Date();
+  var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_PENDENCIAS).filter(function(p) { return Auvo_pendDentroDaJanela_(p, agora); });
   itens.sort(function(a, b) { return Number(b.DIAS_ABERTA || 0) - Number(a.DIAS_ABERTA || 0); });
 
   var contagemOcorrencias = (typeof Qualidade_contarOcorrenciasAbertasPorPessoa_ === 'function')

@@ -892,7 +892,7 @@ function tplAuvo_manualHtml_() {
 <li>Para cobrar o técnico, toque em "Cobrar", confira a "Descrição" e toque em "Salvar".</li>
 </ol>
 <p>A cobrança fica registrada no Painel de qualidade. Para atualizar a lista todo dia sozinho, ligue "Atualizar automaticamente todo dia às 5h".</p>
-<p>"Aberta há N dias" conta desde a data da tarefa no Auvo até a última atualização da lista. A busca olha até cerca de 3 anos para trás, de propósito: O.S. esquecidas há mais de 2 anos aparecem com centenas de dias e devem ser encerradas no Auvo (ou cobradas).</p>
+<p>"Aberta há N dias" conta desde a data da tarefa no Auvo até a última atualização da lista. A lista mostra só O.S. abertas há até 1 ano (decisão da direção em 27/10/2026): as mais antigas saem da lista, do relatório e da central de pendências. No Auvo nada é apagado; se quiser limpar o próprio Auvo, encerre a O.S. lá.</p>
 <p>No celular, cada O.S. aparece como um cartão, com o nome do campo acima do valor ("Técnico responsável", "Tarefa", "Pendência", "Cobranças") e os botões "Ver no Auvo" e "Cobrar" embaixo, na largura do cartão. As outras tabelas da tela (clientes, usuários, auditoria e amostras) seguem o mesmo formato.</p>
 <div class="callout"><strong>"Atualização em andamento em segundo plano..."</strong> quer dizer que a varredura é grande e continua sozinha. Volte em alguns minutos e toque em "Atualizar agora" de novo.</div>
 

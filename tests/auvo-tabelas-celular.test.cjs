@@ -104,5 +104,5 @@ test('ajuda e manual explicam o cartão no celular e a contagem de dias', () => 
   assert.match(ajuda, /Aberta há N dias/);
   const html = tela();
   assert.match(html, /No celular, cada O\.S\. aparece como um cartão/);
-  assert.match(html, /cerca de 3 anos para trás/);
+  assert.match(html, /abertas há até 1 ano/);
 });

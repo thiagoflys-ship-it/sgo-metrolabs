@@ -39,7 +39,7 @@ function SGO_ajudaTelas_Auvo_() {
           "Para ver só as mais graves, escolha \"Só sem evidência de execução\".",
           "Toque em \"Filtrar\".",
           "Para encerrar uma O.S., toque em \"Ver no Auvo\" e encerre no próprio Auvo. O SGO+ não consegue encerrar a O.S. (o Auvo não permite).",
-          "\"Aberta há N dias\" conta desde a data da tarefa no Auvo. A busca olha até cerca de 3 anos para trás, então O.S. esquecidas há muito tempo aparecem com centenas de dias: é a data real da tarefa no Auvo."
+          "\"Aberta há N dias\" conta desde a data da tarefa no Auvo. A lista mostra só O.S. abertas há até 1 ano: as mais antigas saem da lista, das cobranças e da central de pendências (no Auvo nada é apagado)."
         ] },
         { titulo: "Cobrar um técnico por uma O.S. aberta", itens: [
           "Na linha da O.S., toque em \"Cobrar\".",

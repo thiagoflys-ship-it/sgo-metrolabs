@@ -945,6 +945,8 @@ function Pend_fonteAuvo_(add, ctx) {
     Pend_ler_(SGO_CFG.SHEETS.AUVO_PENDENCIAS).forEach(function (p) {
       var os = Pend_s_(p.AUVO_TASK_ID);
       if (!os) return;
+      if (typeof Auvo_pendDentroDaJanela_ === 'function' && !Auvo_pendDentroDaJanela_(p)) return; // mais de 1 ano: fora da lista
+
       var tecId = Pend_s_(p.TECNICO_ID_SGO), tec = Pend_s_(p.TECNICO_NOME) || 'técnico não identificado';
       var dias = Number(p.DIAS_ABERTA) || 0, evid = SGO_UTILS.safeUpper(p.TEM_EVIDENCIA) === 'SIM';
       var url = Pend_s_(p.TASK_URL);
