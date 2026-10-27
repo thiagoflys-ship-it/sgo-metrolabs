@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "ff605bdd1757",
+ "versao": "13dbaea88c0b",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -134,7 +134,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Atualizado em 20/10/2026. O mesmo balão de conversas aparece no SGO+ e no COMMAND; quem está num sistema conversa\ncom quem está no outro. Dentro do balão, o ícone de interrogação abre \"Como usar esta tela\" com este mesmo conteúdo,\nresumido."
+     "texto": "Atualizado em 27/10/2026 (envio de imagens no SGO+). O mesmo balão de conversas aparece no SGO+ e no COMMAND; quem está num sistema conversa\ncom quem está no outro. Dentro do balão, o ícone de interrogação abre \"Como usar esta tela\" com este mesmo conteúdo,\nresumido."
     },
     {
      "titulo": "Para que serve",
@@ -147,6 +147,14 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Conversas e grupos (parte 2)",
      "texto": "Minha área: abre a conversa de todas as pessoas da sua área no cadastro do SGO+ (Administração › Usuários › Área,\nos códigos de Administração › Usuários › Áreas). Quem muda de área entra e sai sozinho, sem ninguém editar. Se o\nbotão não aparece, sua área ainda não foi preenchida. As conversas de setor antigas (pelo perfil de acesso) continuam\ncomo estavam.\n\nChamar alguém com @: na caixa de mensagem de um grupo, escreva @ e o começo do nome e escolha a pessoa na lista\n(Enter escolhe o primeiro). Só quem é chamado assim pode receber aviso fora do sistema."
+    },
+    {
+     "titulo": "2A. Enviar imagem (só no SGO+) (parte 1)",
+     "texto": "Serve para mostrar visualmente o assunto (uma tela do sistema, a foto de um equipamento, uma etiqueta). Junto de cada\nenvio aparece o aviso:\nImagens devem servir para ilustrar o assunto, sempre acompanhadas de uma explicação escrita. O envio de prints de\nconversas ou de mensagens sem contexto, que dificultem o entendimento, não é permitido. O uso inadequado poderá levar\nà desativação deste recurso para todos.\n\nComo enviar:\n1. Abra a conversa. Ao lado da caixa de mensagem, toque no botão de imagem (galeria ou arquivo do computador). No\n celular aparece também o botão da câmera. No computador também dá para colar um print (Ctrl+V) na caixa de mensagem\n ou arrastar a imagem para dentro da conversa.\n2. A imagem aparece acima da caixa, com o tamanho e o aviso. Confira.\n3. Escreva na caixa a explicação: o que a imagem mostra e por que você está enviando. É obrigatória (pelo menos 10\n caracteres, com letras; no máximo 1.000).\n4. Toque em Enviar. «Tirar» desiste da imagem. Se a internet cair ou der erro, a imagem e o texto continuam ali; leia a\n mensagem em vermelho e toque em Enviar de novo. A atualização automática do balão não apaga o que está sendo\n preparado.\n\nVer e baixar: na conversa aparece a miniatura com a explicação embaixo. Toque nela para ver em tamanho maior;\n«Baixar» salva a imagem (no celular, se ela abrir em outra aba, segure sobre a imagem e escolha Salvar imagem). Esc ou\n«Fechar» volta para a conversa."
+    },
+    {
+     "titulo": "2A. Enviar imagem (só no SGO+) (parte 2)",
+     "texto": "Limites:\nFormatos: PNG, JPG e WEBP. HEIC (formato do iPhone) só onde o navegador consegue abrir; se não abrir, escolha a foto\n pela câmera ou pela galeria do celular (o iPhone converte sozinho para JPG) ou mude em Ajustes › Câmera › Formatos\n para «Mais compatível».\nArquivo de até 25 MB no aparelho. Antes de enviar, o próprio navegador reduz a imagem: no máximo 1.600 px no maior\n lado e cerca de 500 KB (o servidor recusa acima de 700 KB). Uma imagem por mensagem.\nAté 30 imagens por pessoa por hora.\n\nQuem vê: só quem participa da conversa em que a imagem foi enviada. Quem sai ou é removido do grupo deixa de ver.\nA imagem não tem link: não abre por endereço, não aparece nas pastas de arquivos do servidor e não pode ser anexada a\ne-mail pelo número do arquivo. No COMMAND a mensagem aparece só como texto (\"Imagem: explicação\"); para ver a imagem,\nabra a conversa no SGO+. No aviso fora do sistema (WhatsApp ou e-mail) também vai só \"Imagem: explicação\".\n\nDesligar para todos (Diretoria e Administrador): engrenagem do balão (Preferências) → \"Envio de imagens (Diretoria\ne Administração)\" → desmarque \"Permitir o envio de imagens no bate-papo para todos\", escreva o motivo (obrigatório,\npelo menos 10 caracteres) → «Salvar» → confirme. Ligado é o padrão. Desligado, ninguém envia imagem nova; quem tentar\nvê o botão apagado e, ao tocar, a mensagem com desde quando, por quem e o motivo. As imagens já enviadas continuam\nvisíveis para quem é da conversa. Para religar, marque de novo e salve. A tela mostra a situação, a última alteração\n(quem, quando e motivo) e o histórico das últimas mudanças."
     },
     {
      "titulo": "Aviso no WhatsApp quando você está fora do sistema",
@@ -162,11 +170,11 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Erros comuns",
-     "texto": "Mensagem | O que fazer\"Só quem criou o grupo e a gestão mudam os participantes e o nome.\" | Peça a quem criou o grupo (selo \"criou o grupo\" em Participantes).\n\"Sua área ainda não está no cadastro…\" | A gestão preenche a área em SGO+ › Administração › Usuários.\n\"A conversa de área é só de quem está na área…\" | Crie um grupo e use «Marcar a área inteira».\n\"O grupo precisa de pelo menos duas pessoas…\" | Adicione alguém antes de remover, ou use «Sair do grupo».\n\"Para sair do grupo, use o botão «Sair do grupo».\" | Você tentou se remover pela lista; use o botão de sair.\nNão recebi aviso no WhatsApp | Confira: era direta ou @ seu? estava em horário de trabalho? passou o limite da hora? é PJ (vai por e-mail)? o aviso está ligado em Preferências? o celular está no cadastro?"
+     "texto": "Mensagem | O que fazer\"Só quem criou o grupo e a gestão mudam os participantes e o nome.\" | Peça a quem criou o grupo (selo \"criou o grupo\" em Participantes).\n\"Sua área ainda não está no cadastro…\" | A gestão preenche a área em SGO+ › Administração › Usuários.\n\"A conversa de área é só de quem está na área…\" | Crie um grupo e use «Marcar a área inteira».\n\"O grupo precisa de pelo menos duas pessoas…\" | Adicione alguém antes de remover, ou use «Sair do grupo».\n\"Para sair do grupo, use o botão «Sair do grupo».\" | Você tentou se remover pela lista; use o botão de sair.\n\"Escreva a explicação da imagem…\" | Escreva na caixa de mensagem o que a imagem mostra e por quê (pelo menos 10 caracteres) e toque em Enviar.\n\"A imagem … não é PNG, JPG nem WEBP\" / \"… está em HEIC\" | Escolha outra imagem; no iPhone, pela câmera ou pela galeria; no computador, salve como JPG.\n\"O envio de imagens está desligado para todos…\" | A Diretoria desligou (a mensagem diz quando, por quem e o motivo). Explique por escrito ou fale com a Diretoria.\n\"Você já enviou 30 imagens na última hora…\" | Espere alguns minutos ou mande por e-mail.\n\"Você não participa da conversa desta imagem.\" | Você saiu ou foi tirado da conversa; peça a quem criou o grupo.\nNão recebi aviso no WhatsApp | Confira: era direta ou @ seu? estava em horário de trabalho? passou o limite da hora? é PJ (vai por e-mail)? o aviso está ligado em Preferências? o celular está no cadastro?"
     },
     {
      "titulo": "Quem pode o quê",
-     "texto": "Quem | PodeTodos | Conversar, criar grupo, ver participantes das próprias conversas, sair de grupo, falar com a própria área e com todos, ligar ou desligar o próprio aviso fora do sistema.\nQuem criou o grupo | Adicionar, remover e mudar o nome do grupo.\nGestão | O mesmo em qualquer grupo em que esteja; publicar comunicados; ler \"Recebidas pelo WhatsApp\".\nAdministrador | Ligar os avisos fora do sistema, ajustar minutos e limites, ver os últimos envios e respostas."
+     "texto": "Quem | PodeTodos | Conversar, criar grupo, ver participantes das próprias conversas, sair de grupo, falar com a própria área e com todos, ligar ou desligar o próprio aviso fora do sistema.\nQuem criou o grupo | Adicionar, remover e mudar o nome do grupo.\nGestão | O mesmo em qualquer grupo em que esteja; publicar comunicados; ler \"Recebidas pelo WhatsApp\".\nAdministrador | Ligar os avisos fora do sistema, ajustar minutos e limites, ver os últimos envios e respostas.\nDiretoria e Administrador (SGO+) | Ligar ou desligar o envio de imagens para todos, com motivo; fica registrado quem mudou e quando.\nTodos no SGO+ | Enviar imagem com explicação, ver e baixar as imagens das conversas de que participam."
     }
    ]
   },

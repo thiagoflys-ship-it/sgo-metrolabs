@@ -325,7 +325,8 @@
 <?!= include('JS_Assistente'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
 <script>
-  window.COM_CFG = { sistema: "SGO", outro: "COMMAND",
+  // imagens: o SGO+ tem comImagemApi (SGO_ComunicacaoImagens.js); no COMMAND fica sem, e a imagem aparece só como "Imagem: explicação"
+  window.COM_CFG = { sistema: "SGO", outro: "COMMAND", imagens: true,
     token: function () { try { return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } } };
 </script>
 <?!= include('ComunicacaoWidget'); ?>

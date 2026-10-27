@@ -1,6 +1,6 @@
 # Manual do bate-papo (Comunicação do SGO+ e do COMMAND)
 
-Atualizado em 20/10/2026. O mesmo balão de conversas aparece no SGO+ e no COMMAND; quem está num sistema conversa
+Atualizado em 27/10/2026 (envio de imagens no SGO+). O mesmo balão de conversas aparece no SGO+ e no COMMAND; quem está num sistema conversa
 com quem está no outro. Dentro do balão, o ícone de interrogação abre "Como usar esta tela" com este mesmo conteúdo,
 resumido.
 
@@ -43,6 +43,50 @@ como estavam.
 
 **Chamar alguém com @:** na caixa de mensagem de um grupo, escreva @ e o começo do nome e escolha a pessoa na lista
 (Enter escolhe o primeiro). Só quem é chamado assim pode receber aviso fora do sistema.
+
+## 2A. Enviar imagem (só no SGO+)
+
+Serve para mostrar visualmente o assunto (uma tela do sistema, a foto de um equipamento, uma etiqueta). Junto de cada
+envio aparece o aviso:
+
+> Imagens devem servir para ilustrar o assunto, sempre acompanhadas de uma explicação escrita. O envio de prints de
+> conversas ou de mensagens sem contexto, que dificultem o entendimento, não é permitido. O uso inadequado poderá levar
+> à desativação deste recurso para todos.
+
+**Como enviar:**
+1. Abra a conversa. Ao lado da caixa de mensagem, toque no botão de imagem (galeria ou arquivo do computador). No
+   celular aparece também o botão da câmera. No computador também dá para colar um print (Ctrl+V) na caixa de mensagem
+   ou arrastar a imagem para dentro da conversa.
+2. A imagem aparece acima da caixa, com o tamanho e o aviso. Confira.
+3. Escreva na caixa a explicação: o que a imagem mostra e por que você está enviando. É obrigatória (pelo menos 10
+   caracteres, com letras; no máximo 1.000).
+4. Toque em Enviar. «Tirar» desiste da imagem. Se a internet cair ou der erro, a imagem e o texto continuam ali; leia a
+   mensagem em vermelho e toque em Enviar de novo. A atualização automática do balão não apaga o que está sendo
+   preparado.
+
+**Ver e baixar:** na conversa aparece a miniatura com a explicação embaixo. Toque nela para ver em tamanho maior;
+«Baixar» salva a imagem (no celular, se ela abrir em outra aba, segure sobre a imagem e escolha Salvar imagem). Esc ou
+«Fechar» volta para a conversa.
+
+**Limites:**
+- Formatos: PNG, JPG e WEBP. HEIC (formato do iPhone) só onde o navegador consegue abrir; se não abrir, escolha a foto
+  pela câmera ou pela galeria do celular (o iPhone converte sozinho para JPG) ou mude em Ajustes › Câmera › Formatos
+  para «Mais compatível».
+- Arquivo de até 25 MB no aparelho. Antes de enviar, o próprio navegador reduz a imagem: no máximo 1.600 px no maior
+  lado e cerca de 500 KB (o servidor recusa acima de 700 KB). Uma imagem por mensagem.
+- Até 30 imagens por pessoa por hora.
+
+**Quem vê:** só quem participa da conversa em que a imagem foi enviada. Quem sai ou é removido do grupo deixa de ver.
+A imagem não tem link: não abre por endereço, não aparece nas pastas de arquivos do servidor e não pode ser anexada a
+e-mail pelo número do arquivo. No COMMAND a mensagem aparece só como texto ("Imagem: explicação"); para ver a imagem,
+abra a conversa no SGO+. No aviso fora do sistema (WhatsApp ou e-mail) também vai só "Imagem: explicação".
+
+**Desligar para todos (Diretoria e Administrador):** engrenagem do balão (Preferências) → "Envio de imagens (Diretoria
+e Administração)" → desmarque "Permitir o envio de imagens no bate-papo para todos", escreva o motivo (obrigatório,
+pelo menos 10 caracteres) → «Salvar» → confirme. Ligado é o padrão. Desligado, ninguém envia imagem nova; quem tentar
+vê o botão apagado e, ao tocar, a mensagem com desde quando, por quem e o motivo. As imagens já enviadas continuam
+visíveis para quem é da conversa. Para religar, marque de novo e salve. A tela mostra a situação, a última alteração
+(quem, quando e motivo) e o histórico das últimas mudanças.
 
 ## 3. Aviso no WhatsApp quando você está fora do sistema
 
@@ -109,6 +153,11 @@ Antes de ligar:
 | "A conversa de área é só de quem está na área…" | Crie um grupo e use «Marcar a área inteira». |
 | "O grupo precisa de pelo menos duas pessoas…" | Adicione alguém antes de remover, ou use «Sair do grupo». |
 | "Para sair do grupo, use o botão «Sair do grupo»." | Você tentou se remover pela lista; use o botão de sair. |
+| "Escreva a explicação da imagem…" | Escreva na caixa de mensagem o que a imagem mostra e por quê (pelo menos 10 caracteres) e toque em Enviar. |
+| "A imagem … não é PNG, JPG nem WEBP" / "… está em HEIC" | Escolha outra imagem; no iPhone, pela câmera ou pela galeria; no computador, salve como JPG. |
+| "O envio de imagens está desligado para todos…" | A Diretoria desligou (a mensagem diz quando, por quem e o motivo). Explique por escrito ou fale com a Diretoria. |
+| "Você já enviou 30 imagens na última hora…" | Espere alguns minutos ou mande por e-mail. |
+| "Você não participa da conversa desta imagem." | Você saiu ou foi tirado da conversa; peça a quem criou o grupo. |
 | Não recebi aviso no WhatsApp | Confira: era direta ou @ seu? estava em horário de trabalho? passou o limite da hora? é PJ (vai por e-mail)? o aviso está ligado em Preferências? o celular está no cadastro? |
 
 ## 7. Quem pode o quê
@@ -119,3 +168,5 @@ Antes de ligar:
 | Quem criou o grupo | Adicionar, remover e mudar o nome do grupo. |
 | Gestão | O mesmo em qualquer grupo em que esteja; publicar comunicados; ler "Recebidas pelo WhatsApp". |
 | Administrador | Ligar os avisos fora do sistema, ajustar minutos e limites, ver os últimos envios e respostas. |
+| Diretoria e Administrador (SGO+) | Ligar ou desligar o envio de imagens para todos, com motivo; fica registrado quem mudou e quando. |
+| Todos no SGO+ | Enviar imagem com explicação, ver e baixar as imagens das conversas de que participam. |

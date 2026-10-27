@@ -97,7 +97,9 @@ function comUsuarioDoToken_(token) {
   if (!id) throw new Error("COM: SESSAO");
   return sgoComComArea_({ id: id, login: String(data.usuario || ""), nome: String(data.nome || data.usuario || ""), setor: sgoComSetor_(perfil),
     // gestão = os mesmos perfis de isAdminPerfilAuth_ (SGO_Auth.js); antes a Diretoria ficava de fora.
-    admin: perfil === "ADMIN", gestao: perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA" });
+    admin: perfil === "ADMIN", gestao: perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA",
+    // Diretoria: liga e desliga o envio de imagens do bate-papo para todos (SGO_ComunicacaoImagens.js), junto com o Administrador
+    diretoria: perfil === "DIRETORIA" });
 }
 
 /** Usuários ativos do SGO+ (sem os do Portal do Cliente). */

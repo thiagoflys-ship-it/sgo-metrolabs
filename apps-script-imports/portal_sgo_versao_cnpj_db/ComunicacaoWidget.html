@@ -98,6 +98,31 @@
   .comw-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
   .comw-tabela td { border-bottom: 1px solid var(--comw-borda); padding: 5px 4px; vertical-align: top; }
   .comw-btn.comw-perigo { background: var(--comw-card2); color: var(--comw-verm); border: 1px solid var(--comw-verm); }
+  /* imagens no bate-papo (só onde o sistema liga: COM_CFG.imagens) */
+  .comw-anexar { flex: none; width: 44px; min-height: 44px; border-radius: 6px; border: 1px solid var(--comw-borda); background: var(--comw-card2); color: var(--comw-txt); cursor: pointer; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; }
+  .comw-anexar:hover, .comw-anexar:focus-visible { border-color: var(--comw-azul); outline: none; }
+  .comw-anexar.comw-off { opacity: .5; }
+  .comw-anexar.comw-cam { display: none; }
+  .comw-compor .comw-btn.comw-verde { min-height: 44px; }
+  .comw-imgprev { border: 1px solid var(--comw-borda); border-radius: 8px; background: var(--comw-card2); padding: 8px; margin-bottom: 6px; }
+  .comw-imgprev .comw-linha { align-items: flex-start; }
+  .comw-imgprev img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--comw-borda); background: #fff; flex: none; }
+  .comw-imgaviso { background: var(--bc-warn-bg); border: 1px solid var(--bc-warn-line); color: var(--comw-txt); border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-top: 6px; }
+  .comw-imgerro { color: var(--comw-verm); font-size: 12px; margin-top: 6px; }
+  .comw-imgmini { display: block; padding: 0; margin-top: 4px; border: 1px solid var(--comw-borda); border-radius: 8px; background: var(--comw-card2); cursor: zoom-in; overflow: hidden; min-width: 120px; min-height: 60px; max-width: 100%; }
+  .comw-imgmini img { display: block; max-width: 240px; max-height: 240px; width: auto; height: auto; }
+  .comw-imgmini span { display: block; padding: 18px 12px; font-size: 12px; color: var(--comw-mut); }
+  .comw-imgmini:focus-visible { outline: 2px solid var(--comw-azul); outline-offset: 2px; }
+  .comw-visor { position: fixed; inset: 0; z-index: 2147483003; background: rgba(15,17,16,.92); display: flex; flex-direction: column; color: #fff;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+  .comw-visor[hidden] { display: none; }
+  .comw-visor-cab { display: flex; gap: 8px; align-items: center; padding: 10px 12px; flex-wrap: wrap; }
+  .comw-visor-cab .comw-cresce { font-size: 13px; overflow-wrap: anywhere; }
+  .comw-visor-cab .comw-btn, .comw-visor-cab a.comw-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  .comw-visor-img { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px; overflow: auto; }
+  .comw-visor-img img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; }
+  .comw-painel.comw-arrastando { outline: 3px dashed var(--comw-azul); outline-offset: -6px; }
+  @media (pointer: coarse) { .comw-anexar.comw-cam { display: inline-flex; } }
   @media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
     /* celular (também deitado): botão colado na borda direita, no meio da tela (não cobre botões de salvar
        do rodapé), com 44 px de toque e fora da área do entalhe */
@@ -118,7 +143,11 @@
   var ST = { token: "", d: null, conv: {}, ordem: [], msgs: {}, mais: {}, antes: {}, aberta: null, aba: "conversas", pessoas: null, setores: [], areas: [],
     avisos: [], comunicados: [], cursores: null, parado: "", semBanco: false, timer: null, ocupado: false, aberto: false, tela: "lista",
     toasts: [], tituloBase: "", piscando: null, ultimoErro: 0,
-    sel: {}, grupoTit: "", part: null, prefs: null, cfgWa: null, trilha: null, sugIds: {}, voltarPara: "lista" };
+    sel: {}, grupoTit: "", part: null, prefs: null, cfgWa: null, trilha: null, sugIds: {}, voltarPara: "lista",
+    // imagens (só com COM_CFG.imagens): estado = regras do servidor; pend = imagem em composição por conversa (a atualização
+    // automática nunca apaga); cache = miniatura/imagem já recebidas por id; pedindo = ids com miniatura a caminho
+    img: { estado: null, pend: {}, cache: {}, pedindo: {}, motivo: "" } };
+  var IMG = !!CFG.imagens;
   // telas com formulário: a atualização automática (novidades a cada 25 s) só mexe nos contadores, nunca redesenha o que está sendo preenchido
   var FORMULARIOS = { nova: 1, grupo: 1, revisar: 1, adicionar: 1, participantes: 1, preferencias: 1, publicar: 1, ajuda: 1 };
   var raiz, botao, qt, painel, corpo, pe, abas, toasts, viva;
@@ -150,10 +179,13 @@
   function anunciar(t) { if (viva) { viva.textContent = ""; setTimeout(function () { viva.textContent = t; }, 30); } }
 
   /* ---------------- servidor ---------------- */
-  function api(acao, dados, ok, falha) {
+  function api(acao, dados, ok, falha) { chamar("comApi", acao, dados, ok, falha); }
+  /** Imagens do bate-papo: outra função do servidor (comImagemApi, SGO_ComunicacaoImagens.js), mesmo protocolo. */
+  function apiImg(acao, dados, ok, falha) { chamar("comImagemApi", acao, dados, ok, falha); }
+  function chamar(funcao, acao, dados, ok, falha) {
     var tk = ST.token;
     if (!tk || !window.google || !google.script || !google.script.run) return falha && falha("Sem conexão.");
-    google.script.run.withSuccessHandler(function (r) {
+    var run = google.script.run.withSuccessHandler(function (r) {
       if (tk !== ST.token) return;   // trocou de usuário no meio
       if (!r || !r.ok) {
         var erro = (r && r.erro) || "Falha inesperada.";
@@ -164,8 +196,10 @@
       }
       ST.semBanco = false;
       ok && ok(r);
-    }).withFailureHandler(function (e) { falha ? (console.error("Comunicação: falha de servidor", e), falha("Sem conexão com o servidor. Verifique a conexão e tente de novo.")) : toastErro("Sem conexão com o servidor."); })
-      .comApi(tk, acao, dados || {});
+    }).withFailureHandler(function (e) { falha ? (console.error("Comunicação: falha de servidor", e), falha("Sem conexão com o servidor. Verifique a conexão e tente de novo.")) : toastErro("Sem conexão com o servidor."); });
+    // só duas funções do servidor: comApi (as duas casas) e comImagemApi (só onde o sistema liga as imagens: SGO+)
+    if (funcao === "comImagemApi" && IMG) run.comImagemApi(tk, acao, dados || {});
+    else run.comApi(tk, acao, dados || {});
   }
   function toastErro(msg) {
     if (Date.now() - ST.ultimoErro < 4000) return;
@@ -179,6 +213,7 @@
     if (tk !== ST.token) {
       ST.token = tk; ST.parado = ""; ST.d = null; ST.conv = {}; ST.ordem = []; ST.msgs = {}; ST.aberta = null; ST.cursores = null; ST.pessoas = null;
       ST.avisos = []; ST.comunicados = []; ST.tela = "lista";
+      ST.img = { estado: null, pend: {}, cache: {}, pedindo: {}, motivo: "" }; fecharVisor();
       fecharToasts(true);
       clearTimeout(ST.timer);
       if (!tk) { raiz.hidden = true; fechar(); atualizarTitulo(0); return; }
@@ -202,6 +237,7 @@
       (r.conversas || []).forEach(function (c) { ST.conv[c.conversa_id] = c; ST.ordem.push(c.conversa_id); });
       ST.avisos = r.avisos || []; ST.comunicados = r.comunicados || [];
       desenhar(); agendar();
+      estadoImagens();
     }, function () { desenhar(); agendar(120000); });
   }
   function novidades() {
@@ -394,6 +430,7 @@
   function abrirConversa(id) {
     ST.aba = "conversas"; ST.aberta = id; ST.tela = "conversa";
     desenhar();
+    estadoImagens();   // a gestão pode ter ligado ou desligado o envio de imagens
     api("conversa", { conversa_id: id, limite: 50 }, function (r) {
       ST.conv[id] = ST.conv[id] || r.conversa;
       var ja = ST.msgs[id] || [];
@@ -439,21 +476,26 @@
         var minha = m.de_pessoa === eu.pessoa_id && m.de_sistema !== "WHATSAPP";
         var rot = m.de_sistema === "WHATSAPP" ? (m.de_pessoa === eu.pessoa_id ? "Você" : m.de_nome) + " (pelo WhatsApp)" : (minha ? "Você" : m.de_nome);
         return "<div class='comw-msg" + (minha ? " comw-minha" : "") + "'><div class='comw-de'><b>" + h(rot) + "</b>" + tagSis(m.de_sistema) + "<span>" + h(quando(m.criado_em)) + "</span></div>" +
-          "<div class='comw-txt'>" + h(m.texto) + "</div>" + linkRef(m) + "</div>";
+          (ehImagem(m) ? miniaturaHtml(m) : "<div class='comw-txt'>" + h(m.texto) + "</div>" + linkRef(m)) + "</div>";
       }).join("") + "</div>";
     }
     var perto = corpo.scrollHeight - corpo.scrollTop - corpo.clientHeight < 80, antes = corpo.scrollTop;
     corpo.innerHTML = html;
     if (perto) corpo.scrollTop = corpo.scrollHeight; else corpo.scrollTop = antes;
+    pedirMiniaturas();
     pe.hidden = false;
-    if (pe.getAttribute("data-conv") === id) return;   // a caixa de texto não é recriada: nada do que está sendo digitado se perde
+    if (pe.getAttribute("data-conv") === id) return;   // a caixa de texto (e a imagem em composição) não é recriada: nada do que está sendo feito se perde
     pe.setAttribute("data-conv", id);
     ST.sugIds = {};
     pe.innerHTML = "<div class='comw-sug' id='comw-sug' hidden role='listbox' aria-label='Pessoas para mencionar'></div>" +
-      "<div class='comw-compor'><label class='comw-sr' for='comw-texto'>Mensagem</label><textarea id='comw-texto' rows='2' maxlength='4000' placeholder='" +
+      "<div id='comw-imgprev'></div>" +
+      "<div class='comw-compor'><span id='comw-anexos' style='display:flex;gap:6px'></span><label class='comw-sr' for='comw-texto'>Mensagem</label><textarea id='comw-texto' rows='2' maxlength='4000' placeholder='" +
       (temPart ? "Mensagem (@ chama alguém; Enter envia)" : "Mensagem (Enter envia, Shift+Enter quebra linha)") + "'></textarea>" +
       "<button type='button' class='comw-btn comw-verde' data-acao='enviar' aria-label='Enviar mensagem'>Enviar</button></div>";
+    pe.querySelector("textarea").setAttribute("data-ph", pe.querySelector("textarea").getAttribute("placeholder"));
+    desenharAnexo();
     var ta = pe.querySelector("textarea");
+    ta.addEventListener("paste", colarImagem);
     ta.value = lsGet(rascChave(id)) || "";
     var t;
     ta.addEventListener("input", function () {
@@ -510,9 +552,228 @@
     return "";
   }
   function rolarFim() { setTimeout(function () { corpo.scrollTop = corpo.scrollHeight; }, 20); }
+
+  /* ---- imagens (só onde o sistema liga: COM_CFG.imagens; servidor: comImagemApi) ---- */
+  var IMG_TIPO = "COM_IMAGEM", IMG_PREFIXO = /^Imagem:\s*/;
+  var IMG_TIPOS_OK = /^image\/(png|jpe?g|pjpeg|webp|heic|heif)$/i, IMG_EXT_OK = /\.(png|jpe?g|webp|heic|heif)$/i;
+  var IMG_MSG_HEIC = "Esta foto está em HEIC (formato do iPhone) e este navegador não consegue abri-la. O que fazer: no celular, escolha a foto pelo botão da câmera ou pela galeria (o iPhone converte sozinho para JPG) ou mude em Ajustes › Câmera › Formatos para «Mais compatível»; no computador, abra a foto e salve como JPG.";
+  function ehImagem(m) { return IMG && m && m.ref_tipo === IMG_TIPO && !!m.ref_id && !m.ref_sistema; }
+  function legendaDe(m) { return String(m.texto || "").replace(IMG_PREFIXO, ""); }
+  function dataOk(d) { return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(String(d || "")); }
+  function kbDe(d) { var i = String(d).indexOf(","); return Math.ceil((String(d).length - i - 1) * 3 / 4 / 1024); }
+  function estadoImagens(depois) {
+    if (!IMG || !ST.token) return;
+    apiImg("estado", {}, function (r) {
+      var antes = ST.img.estado; ST.img.estado = r;
+      if (!antes || antes.ligado !== r.ligado) desenharAnexo();
+      if (depois) depois();
+    }, function () { });
+  }
+  function desligadaMsg() {
+    var e = ST.img.estado || {};
+    return "O envio de imagens está desligado para todos" + (e.alterado_em ? " desde " + quando(e.alterado_em) : "") + (e.alterado_por ? ", por " + e.alterado_por : "") + "." +
+      (e.motivo ? " Motivo: " + e.motivo + "." : "") + " O que fazer: explique por escrito na mensagem; se precisar mesmo mostrar uma imagem, fale com a Diretoria.";
+  }
+  function miniaturaConteudo(id, leg) {
+    var cx = ST.img.cache[id] || {};
+    if (cx.mini) return "<img src='" + h(cx.mini) + "' alt='Imagem enviada: " + h(leg.slice(0, 120)) + "' loading='lazy'>";
+    if (cx.erro) return "<span>" + h(cx.erro) + "</span>";
+    return "<span>Carregando a imagem…</span>";
+  }
+  function miniaturaHtml(m) {
+    var leg = legendaDe(m);
+    return "<button type='button' class='comw-imgmini' data-img='" + h(m.ref_id) + "' data-leg='" + h(leg) + "' aria-label='Abrir a imagem em tamanho maior: " + h(leg.slice(0, 80)) + "'>" +
+      miniaturaConteudo(m.ref_id, leg) + "</button><div class='comw-txt'>" + h(leg) + "</div>";
+  }
+  /** Miniaturas que faltam na conversa aberta: um pedido por vez (até 24), só o quadrinho da imagem é trocado (sem redesenhar a conversa). */
+  function pedirMiniaturas() {
+    if (!IMG || !corpo) return;
+    var ids = [];
+    Array.prototype.forEach.call(corpo.querySelectorAll("[data-img]"), function (b) {
+      var id = b.getAttribute("data-img"), cx = ST.img.cache[id];
+      if ((!cx || (!cx.mini && !cx.erro)) && !ST.img.pedindo[id] && ids.indexOf(id) < 0) ids.push(id);
+    });
+    if (!ids.length) return;
+    ids = ids.slice(0, 24);
+    ids.forEach(function (id) { ST.img.pedindo[id] = 1; });
+    apiImg("miniaturas", { ids: ids }, function (r) {
+      ids.forEach(function (id) {
+        delete ST.img.pedindo[id];
+        var x = (r.miniaturas || {})[id] || {}, cx = ST.img.cache[id] = ST.img.cache[id] || {};
+        if (x.data && dataOk(x.data)) cx.mini = x.data; else cx.erro = x.erro || "Imagem indisponível.";
+        Array.prototype.forEach.call(corpo.querySelectorAll("[data-img]"), function (b) { if (b.getAttribute("data-img") === id) b.innerHTML = miniaturaConteudo(id, b.getAttribute("data-leg") || ""); });
+      });
+      pedirMiniaturas();
+    }, function () { ids.forEach(function (id) { delete ST.img.pedindo[id]; }); });
+  }
+  /** Botões de anexar e a imagem em composição (fora da caixa de texto: nada do que está escrito é recriado). */
+  function desenharAnexo() {
+    if (!IMG || !pe) return;
+    var alvo = pe.querySelector("#comw-anexos"), prev = pe.querySelector("#comw-imgprev"), ta = pe.querySelector("textarea");
+    if (!alvo || !prev) return;
+    var e = ST.img.estado, id = ST.aberta, p = id && ST.img.pend[id];
+    if (!e) { alvo.innerHTML = ""; prev.innerHTML = ""; return; }
+    if (!alvo.getAttribute("data-pronto") || alvo.getAttribute("data-ligado") !== String(e.ligado)) {
+      var dica = e.ligado ? "Anexar imagem (PNG, JPG ou WEBP; também dá para colar com Ctrl+V ou arrastar). " + e.aviso : desligadaMsg();
+      alvo.innerHTML = "<button type='button' class='comw-anexar" + (e.ligado ? "" : " comw-off") + "' data-acao='anexarImg' title='" + h(dica) + "' aria-label='" + h(e.ligado ? "Anexar imagem da galeria ou do computador" : "Envio de imagens desligado: saiba por quê") + "'><i class='fas fa-image' aria-hidden='true'></i></button>" +
+        (e.ligado ? "<button type='button' class='comw-anexar comw-cam' data-acao='cameraImg' aria-label='Tirar foto com a câmera' title='Tirar foto com a câmera'><i class='fas fa-camera' aria-hidden='true'></i></button>" : "") +
+        "<input type='file' id='comw-arq' accept='image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif' hidden>" +
+        "<input type='file' id='comw-cam' accept='image/*' capture='environment' hidden>";
+      alvo.setAttribute("data-pronto", "1"); alvo.setAttribute("data-ligado", String(e.ligado));
+      ["comw-arq", "comw-cam"].forEach(function (k) {
+        var inp = alvo.querySelector("#" + k);
+        inp.addEventListener("change", function () { var f = inp.files && inp.files[0]; inp.value = ""; if (f) escolherArquivo(f); });
+      });
+    }
+    var erro = ST.img.erro && ST.img.erroConv === id ? ST.img.erro : "";
+    if (!p) {
+      prev.innerHTML = erro ? "<div class='comw-imgprev'><div class='comw-imgerro' role='alert'>" + h(erro) + "</div></div>" : "";
+      if (ta && ta.getAttribute("data-ph")) ta.setAttribute("placeholder", ta.getAttribute("data-ph"));
+      return;
+    }
+    prev.innerHTML = "<div class='comw-imgprev' role='group' aria-label='Imagem pronta para enviar'><div class='comw-linha'>" +
+      "<img src='" + h(p.mini) + "' alt='Pré-visualização da imagem que será enviada'>" +
+      "<div class='comw-cresce'><b>Imagem pronta para enviar</b><div class='comw-mut'>" + p.w + " × " + p.h + " px · " + p.kb + " KB" + (p.ow && (p.ow !== p.w || p.oh !== p.h) ? " (reduzida de " + p.ow + " × " + p.oh + ")" : "") +
+      ". Escreva a explicação na caixa abaixo e toque em Enviar.</div></div>" +
+      "<button type='button' class='comw-btn comw-sec' data-acao='tirarImg' style='min-height:44px' aria-label='Tirar a imagem e não enviar'>Tirar</button></div>" +
+      "<div class='comw-imgaviso' role='note'><b>Atenção:</b> " + h(e.aviso) + "</div>" +
+      (e.ligado ? "" : "<div class='comw-imgerro' role='alert'>" + h(desligadaMsg()) + "</div>") +
+      (erro ? "<div class='comw-imgerro' role='alert'>" + h(erro) + "</div>" : "") + "</div>";
+    if (ta) ta.setAttribute("placeholder", "Explicação da imagem (obrigatória, pelo menos " + e.limites.legendaMin + " caracteres)");
+  }
+  function mostrarErroImg(msg) { ST.img.erro = msg || ""; ST.img.erroConv = ST.aberta; desenharAnexo(); }
+  function escolherArquivo(f) {
+    var id = ST.aberta, e = ST.img.estado;
+    if (!IMG || !id || !f) return;
+    if (!e) { estadoImagens(); return toastErro("Carregando as regras de envio de imagem; tente de novo em alguns segundos."); }
+    if (!e.ligado) return mostrarErroImg(desligadaMsg());
+    if (ST.img.pend[id] && ST.img.pend[id].enviando) return;
+    mostrarErroImg("");
+    anunciar("Preparando a imagem…");
+    prepararImagem(f, e.limites, function (r) {
+      ST.img.pend[id] = r;
+      if (ST.aberta === id) { desenharAnexo(); var ta = pe.querySelector("textarea"); if (ta) ta.focus(); }
+      anunciar("Imagem pronta. Escreva a explicação e toque em Enviar.");
+    }, function (msg) { if (ST.aberta === id) mostrarErroImg(msg); else toastErro(msg); });
+  }
+  /** Abre a imagem no próprio navegador (HEIC só onde o navegador sabe abrir) e reduz: maior lado até ladoMax e cerca de alvoKB em JPEG. */
+  function prepararImagem(f, L, pronto, erro) {
+    var nome = String(f.name || "imagem"), tipo = String(f.type || ""), heic = /hei[cf]/i.test(tipo) || /\.hei[cf]$/i.test(nome);
+    if (!IMG_TIPOS_OK.test(tipo) && !IMG_EXT_OK.test(nome))
+      return erro("O arquivo «" + nome + "» não é imagem PNG, JPG, WEBP ou HEIC. Por quê: o bate-papo só aceita imagens. O que fazer: escolha uma foto ou um print nesses formatos; documento vai por e-mail.");
+    if (f.size > L.arquivoMaxMB * 1048576)
+      return erro("A imagem tem " + (f.size / 1048576).toFixed(1).replace(".", ",") + " MB; o limite é " + L.arquivoMaxMB + " MB antes da redução. O que fazer: recorte a imagem ou tire um print só da parte que interessa.");
+    var url = "";
+    try { url = URL.createObjectURL(f); } catch (x) { return erro("Não foi possível ler a imagem neste navegador. O que fazer: atualize a página e tente de novo."); }
+    var im = new Image();
+    im.onload = function () {
+      var r = null;
+      try { r = reduzirImagem(im, L); } catch (x) { r = null; }
+      try { URL.revokeObjectURL(url); } catch (x) { }
+      if (!r) return erro("Não foi possível reduzir esta imagem para o limite de " + L.maxKB + " KB. O que fazer: recorte a imagem ou tire um print só da parte que interessa.");
+      r.nome = nome; pronto(r);
+    };
+    im.onerror = function () {
+      try { URL.revokeObjectURL(url); } catch (x) { }
+      erro(heic ? IMG_MSG_HEIC : "Não foi possível abrir esta imagem neste navegador (arquivo danificado ou formato diferente do nome). O que fazer: tire um print da tela ou salve a imagem como JPG ou PNG e escolha de novo.");
+    };
+    im.src = url;
+  }
+  function reduzirImagem(im, L) {
+    var w = im.naturalWidth || im.width, hh = im.naturalHeight || im.height;
+    if (!w || !hh) return null;
+    var gerar = function (lado, q) {
+      var e = Math.min(1, lado / Math.max(w, hh)), cw = Math.max(1, Math.round(w * e)), ch = Math.max(1, Math.round(hh * e));
+      var c = document.createElement("canvas"); c.width = cw; c.height = ch;
+      var x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, cw, ch); x.drawImage(im, 0, 0, cw, ch);   // fundo branco: PNG transparente não fica preto
+      var d = c.toDataURL("image/jpeg", q);
+      return { data: d, w: cw, h: ch, kb: kbDe(d) };
+    };
+    var lado = L.ladoMax, q = 0.85, r = gerar(lado, q);
+    for (var t = 0; t < 12 && r.kb > L.alvoKB; t++) { if (q > 0.62) q -= 0.08; else lado = Math.round(lado * 0.8); r = gerar(lado, q); }
+    if (r.kb > L.maxKB || !dataOk(r.data)) return null;
+    var mq = 0.72, mini = gerar(L.miniLado, mq);
+    for (var k = 0; k < 4 && mini.kb > L.miniMaxKB; k++) { mq -= 0.12; mini = gerar(L.miniLado, mq); }
+    return { data: r.data, w: r.w, h: r.h, kb: r.kb, mini: mini.data, ow: w, oh: hh };
+  }
+  /** Ctrl+V de um print: anexa a imagem (texto colado junto continua indo para a caixa). */
+  function colarImagem(ev) {
+    if (!IMG || !ev.clipboardData) return;
+    var it = ev.clipboardData.items || [], f = null, temTexto = false;
+    for (var i = 0; i < it.length; i++) {
+      if (it[i].kind === "file" && /^image\//.test(it[i].type) && !f) f = it[i].getAsFile();
+      if (it[i].kind === "string" && it[i].type === "text/plain") temTexto = true;
+    }
+    if (!f) return;
+    if (!temTexto) ev.preventDefault();
+    escolherArquivo(f);
+  }
+  function tirarImagem() { delete ST.img.pend[ST.aberta]; mostrarErroImg(""); anunciar("Imagem retirada."); var ta = pe.querySelector("textarea"); if (ta) ta.focus(); }
+  /** Mensagem que este navegador acabou de enviar: entra na conversa, na prévia da lista e no topo. */
+  function registrarEnviada(id, m) {
+    var lista = ST.msgs[id] = ST.msgs[id] || [];
+    if (!lista.some(function (x) { return x.msg_id === m.msg_id; })) lista.push(m);
+    var c = ST.conv[id]; if (c) { c.ultima = { de_nome: m.de_nome, de_sistema: m.de_sistema, texto: String(m.texto).slice(0, 140), criado_em: m.criado_em }; }
+    ST.ordem = [id].concat(ST.ordem.filter(function (x) { return x !== id; }));
+  }
+  function enviarImagem() {
+    var id = ST.aberta, p = ST.img.pend[id], ta = pe.querySelector("textarea"), bt = pe.querySelector("[data-acao='enviar']"), e = ST.img.estado;
+    if (!p || p.enviando || !ta) return;
+    var L = (e && e.limites) || { legendaMin: 10, legendaMax: 1000 }, leg = ta.value.replace(/\s+/g, " ").trim();
+    if (leg.length < L.legendaMin || !/[A-Za-zÀ-ÿ]/.test(leg)) {
+      mostrarErroImg("Escreva a explicação da imagem na caixa de mensagem (pelo menos " + L.legendaMin + " caracteres" + (leg.length ? "; agora são " + leg.length : "") + "). Por quê: imagem sem explicação dificulta o entendimento e não é permitida. O que fazer: diga o que a imagem mostra e por que você está enviando.");
+      ta.focus(); return;
+    }
+    if (leg.length > L.legendaMax) { mostrarErroImg("Explicação muito longa: o limite é " + L.legendaMax + " caracteres (agora são " + leg.length + "). O que fazer: resuma e mande o restante numa mensagem de texto logo depois."); ta.focus(); return; }
+    lsSet(rascChave(id), ta.value);
+    var texto = ta.value;
+    p.enviando = true; bt.disabled = true; bt.textContent = "Enviando…"; ST.img.erro = "";
+    apiImg("enviar", { conversa_id: id, legenda: texto, imagem: p.data, miniatura: p.mini, mencoes: Object.keys(ST.sugIds || {}) }, function (r) {
+      var m = r.mensagem;
+      delete ST.img.pend[id]; lsDel(rascChave(id)); ST.sugIds = {};
+      ST.img.cache[m.ref_id] = { mini: p.mini, full: { data: p.data, w: p.w, h: p.h, tipo: "image/jpeg", criado_em: m.criado_em } };
+      registrarEnviada(id, m);
+      bt.disabled = false; bt.textContent = "Enviar";
+      if (ST.aberta === id) { var t2 = pe.querySelector("textarea"); if (t2 && t2.value === texto) t2.value = ""; desenharAnexo(); desenhar(); rolarFim(); if (t2) t2.focus(); }
+      anunciar("Imagem enviada.");
+      agendar(4000);
+    }, function (erro) {
+      p.enviando = false; bt.disabled = false; bt.textContent = "Enviar";
+      if (ST.aberta === id) mostrarErroImg(erro + " A imagem e o texto continuam aqui; corrija e toque em Enviar de novo."); else toastErro(erro);
+      if (/desligad/i.test(erro)) estadoImagens();
+    });
+  }
+  /* visor: imagem em tamanho maior, por cima de tudo (a atualização automática não mexe nele) */
+  var visor = null;
+  function abrirVisor(id, leg) {
+    if (!visor) return;
+    ST.img.visorId = id;
+    var cx = ST.img.cache[id] = ST.img.cache[id] || {};
+    var desenharVisor = function () {
+      if (ST.img.visorId !== id) return;
+      var full = cx.full, src = full ? full.data : cx.mini, ext = full && full.tipo === "image/png" ? "png" : full && full.tipo === "image/webp" ? "webp" : "jpg";
+      var dt = full && full.criado_em ? new Date(full.criado_em) : new Date(), dois = function (n) { return ("0" + n).slice(-2); };
+      var arq = "imagem-bate-papo-" + dt.getFullYear() + dois(dt.getMonth() + 1) + dois(dt.getDate()) + "-" + dois(dt.getHours()) + dois(dt.getMinutes()) + "." + ext;
+      visor.innerHTML = "<div class='comw-visor-cab'><div class='comw-cresce'><b>Imagem</b><div>" + h(leg) + "</div>" +
+        (full ? "<div style='opacity:.75;font-size:12px'>" + (full.w && full.h ? full.w + " × " + full.h + " px. " : "") + "No celular, se «Baixar» abrir a imagem em outra aba, segure sobre ela e escolha Salvar imagem.</div>" : "") + "</div>" +
+        (full ? "<a class='comw-btn comw-sec' href='" + h(full.data) + "' download='" + h(arq) + "' aria-label='Baixar a imagem'><i class='fas fa-download' aria-hidden='true'></i>&nbsp;Baixar</a>" : "") +
+        "<button type='button' class='comw-btn' data-v='fechar' aria-label='Fechar a imagem (Esc)'>Fechar</button></div>" +
+        "<div class='comw-visor-img'>" + (src ? "<img src='" + h(src) + "' alt='" + h("Imagem: " + leg.slice(0, 160)) + "'>" : "") +
+        (!full ? "<div style='position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:13px'>" + h(cx.erroFull || "Carregando a imagem em tamanho maior…") + "</div>" : "") + "</div>";
+      var f = visor.querySelector("[data-v='fechar']"); if (f) f.focus();
+    };
+    visor.hidden = false;
+    desenharVisor();
+    if (!cx.full) apiImg("imagem", { id: id }, function (r) {
+      if (r.imagem && dataOk(r.imagem.data)) { cx.full = r.imagem; delete cx.erroFull; } else cx.erroFull = "Imagem indisponível.";
+      desenharVisor();
+    }, function (erro) { cx.erroFull = erro; desenharVisor(); });
+  }
+  function fecharVisor() { if (visor) { visor.hidden = true; visor.innerHTML = ""; } if (ST.img) ST.img.visorId = null; }
   function enviar() {
     var id = ST.aberta, ta = pe.querySelector("textarea"), bt = pe.querySelector("[data-acao='enviar']");
     if (!ta || !id) return;
+    if (IMG && ST.img.pend[id]) return enviarImagem();
     var texto = ta.value;
     if (!texto.trim()) return;
     if (texto.length > 4000) return toastErro("Mensagem muito longa: o limite é 4000 caracteres.");
@@ -716,6 +977,38 @@
     ST.prefs = null; ST.cfgWa = null; ST.trilha = null; ir("preferencias");
     api("preferencias", {}, function (r) { ST.prefs = r; if (ST.tela === "preferencias") desenhar(); }, toastErro);
     if (ST.d.eu.admin) api("configWhatsapp", {}, function (r) { ST.cfgWa = r; if (ST.tela === "preferencias") desenhar(); }, function () { });
+    ST.img.erroCfg = "";
+    estadoImagens(function () { if (ST.tela === "preferencias" && ST.img.estado && ST.img.estado.pode_configurar) desenhar(); });
+  }
+  /** Diretoria e Administração: ligar ou desligar o envio de imagens para todos (motivo obrigatório para desligar). */
+  function htmlCfgImagens() {
+    var e = ST.img.estado;
+    if (!IMG || !e || !e.pode_configurar) return "";
+    var hist = (e.historico || []).map(function (x) {
+      return "<tr><td>" + h(quando(x.em)) + "</td><td>" + (x.ligado ? "Ligou" : "Desligou") + " — " + h(x.por) + (x.motivo ? "<div class='comw-mut'>" + h(x.motivo) + "</div>" : "") + "</td></tr>";
+    }).join("");
+    return "<h3 style='font-size:14px;margin:16px 0 4px'>Envio de imagens (Diretoria e Administração)</h3><div class='comw-form'>" +
+      "<p class='comw-mut' style='margin:0'>Situação: <b>" + (e.ligado ? "ligado para todos" : "desligado para todos") + "</b>" +
+      (e.alterado_por ? ". Última alteração: " + h(e.alterado_por) + ", " + h(quando(e.alterado_em)) + (e.motivo ? ". Motivo: " + h(e.motivo) : "") : " (padrão)") + ".</p>" +
+      "<label class='comw-chk' style='margin-top:8px'><input type='checkbox' id='comw-imgl'" + (e.ligado ? " checked" : "") + "> Permitir o envio de imagens no bate-papo para todos</label>" +
+      "<label for='comw-imgm'>Motivo (obrigatório para desligar; aparece para quem tentar enviar imagem e fica no histórico)</label><textarea id='comw-imgm' rows='2' maxlength='300'></textarea>" +
+      "<p class='comw-mut'>Aviso mostrado junto de cada envio: «" + h(e.aviso) + "» Desligado, ninguém envia imagem nova; as imagens já enviadas continuam visíveis para quem é da conversa.</p>" +
+      (ST.img.erroCfg ? "<div class='comw-imgerro' role='alert'>" + h(ST.img.erroCfg) + "</div>" : "") +
+      "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='salvarCfgImg'>Salvar</button></div>" +
+      (hist ? "<table class='comw-tabela' aria-label='Histórico do envio de imagens'><tbody>" + hist + "</tbody></table>" : "") + "</div>";
+  }
+  function salvarCfgImg() {
+    var l = document.getElementById("comw-imgl"), mo = document.getElementById("comw-imgm");
+    if (!l || !mo) return;
+    var ligar = !!l.checked, motivo = mo.value.trim();
+    if (!ligar && motivo.length < 10) { ST.img.erroCfg = "Escreva o motivo para desligar (pelo menos 10 caracteres). Por quê: ele aparece para quem tentar enviar imagem e fica no histórico. O que fazer: descreva o uso inadequado ou a razão da decisão."; ST.img.motivo = mo.value; desenhar(); return; }
+    if (!ligar && !window.confirm("Desligar o envio de imagens para todos? Ninguém poderá enviar imagem nova até a Diretoria ou o Administrador ligar de novo. As imagens já enviadas continuam visíveis.")) return;
+    apiImg("configurar", { ligado: ligar, motivo: motivo }, function (r) {
+      ST.img.estado = r; ST.img.motivo = ""; ST.img.erroCfg = "";
+      if (ST.tela === "preferencias") desenhar();
+      desenharAnexo();
+      toast({ titulo: "Envio de imagens", texto: r.ligado ? "Ligado para todos." : "Desligado para todos. As imagens já enviadas continuam visíveis.", prioridade: "INFO" });
+    }, function (erro) { ST.img.erroCfg = erro; ST.img.motivo = mo.value; if (ST.tela === "preferencias") desenhar(); });
   }
   function telaPreferencias() {
     var p = ST.prefs, a = ST.cfgWa, eu = ST.d.eu;
@@ -750,7 +1043,10 @@
         }).join("") + "</tbody></table>";
       }
     }
+    html += htmlCfgImagens();
     corpo.innerHTML = html;
+    var mo = document.getElementById("comw-imgm");
+    if (mo) { mo.value = ST.img.motivo || ""; mo.addEventListener("input", function () { ST.img.motivo = mo.value; }); }
   }
   function salvarPref() {
     var x = document.getElementById("comw-wa"); if (!x) return;
@@ -776,11 +1072,17 @@
       "Sai só em dia útil e no horário de trabalho; o que chegar à noite ou no fim de semana vai junto, num aviso só, no começo do expediente seguinte. Quem é PJ (ou sem vínculo no cadastro) recebe por e-mail. " +
       "Para não receber, abra «Preferências» (ícone de engrenagem) e desmarque o aviso.</p>" +
       "<h3>Responder pelo WhatsApp</h3><p>Responda o próprio aviso (segure a mensagem e toque em Responder): a resposta entra na mesma conversa, marcada «pelo WhatsApp». Mensagem nova, sem responder a um aviso, vai para a última conversa direta avisada nas últimas 24 horas; se não houver, vai para «Recebidas pelo WhatsApp», que a gestão lê e encaminha. Fotos e áudios chegam como aviso («Fulano enviou uma foto pelo WhatsApp»); o arquivo fica no celular de quem enviou.</p>" +
+      (IMG ? "<h3>Enviar imagem</h3><ol><li>Na conversa, toque no botão de imagem ao lado da caixa de mensagem (no celular também aparece o da câmera), cole um print com Ctrl+V ou arraste a imagem para a conversa.</li>" +
+        "<li>Confira a imagem que aparece acima da caixa e leia o aviso.</li><li>Escreva na caixa a explicação: o que a imagem mostra e por que você está enviando (obrigatória, pelo menos 10 caracteres).</li><li>Toque em Enviar. «Tirar» desiste da imagem.</li></ol>" +
+        "<p><b>Aviso:</b> " + h((ST.img.estado && ST.img.estado.aviso) || "Imagens devem servir para ilustrar o assunto, sempre acompanhadas de uma explicação escrita. O envio de prints de conversas ou de mensagens sem contexto, que dificultem o entendimento, não é permitido. O uso inadequado poderá levar à desativação deste recurso para todos.") + "</p>" +
+        "<p>Formatos: PNG, JPG e WEBP (HEIC do iPhone só onde o navegador abre; senão, escolha pela câmera ou pela galeria). O sistema reduz a imagem antes de enviar (até 1600 px e cerca de 500 KB), uma imagem por mensagem, até 30 por hora. Toque na miniatura para ver em tamanho maior e baixar. Só quem participa da conversa vê a imagem; quem sai do grupo deixa de ver. A imagem não abre por link e não aparece no COMMAND (lá aparece só «Imagem: explicação»).</p>" +
+        "<p>Se o botão de imagem aparece apagado, a Diretoria desligou o envio para todos: toque nele para ver quando e por quê.</p>" : "") +
       "<h3>Cores e selos</h3><ul><li>Faixa verde à esquerda: conversa com mensagem que você não leu.</li><li>Selo SGO+, COMMAND ou WhatsApp: de onde a mensagem veio.</li><li>Linha tracejada no meio da conversa: mudança de participantes ou de nome.</li></ul>" +
       "<h3>Erros comuns</h3><ul><li>«Só quem criou o grupo e a gestão mudam os participantes»: peça a quem criou (aparece com o selo «criou o grupo» em Participantes).</li>" +
       "<li>«Sua área ainda não está no cadastro»: a gestão preenche em SGO+ › Administração › Usuários › Área.</li><li>Mensagem não enviou: o texto fica guardado na caixa; confira a internet e toque em Enviar de novo.</li></ul>" +
       "<h3>Quem pode o quê</h3><ul><li>Todos: conversar, criar grupo, ver participantes das próprias conversas, sair de grupo, ligar ou desligar o próprio aviso fora do sistema.</li>" +
-      "<li>Quem criou o grupo e a gestão: adicionar, remover e mudar o nome do grupo.</li><li>Gestão: publicar comunicados e ler «Recebidas pelo WhatsApp».</li><li>Administração: ligar os avisos fora do sistema, ajustar minutos e limites e ver os últimos envios e respostas.</li></ul></div>";
+      "<li>Quem criou o grupo e a gestão: adicionar, remover e mudar o nome do grupo.</li><li>Gestão: publicar comunicados e ler «Recebidas pelo WhatsApp».</li><li>Administração: ligar os avisos fora do sistema, ajustar minutos e limites e ver os últimos envios e respostas.</li>" +
+      (IMG ? "<li>Diretoria e Administração: ligar ou desligar o envio de imagens para todos, com motivo (Preferências › Envio de imagens). Fica registrado quem mudou e quando.</li>" : "") + "</ul></div>";
   }
 
   /* ---- avisos e comunicados ---- */
@@ -861,13 +1163,30 @@
     toasts = el("div", "comw-toasts");
     viva = el("div", "comw-sr"); viva.setAttribute("aria-live", "polite");
     raiz.appendChild(botao); raiz.appendChild(painel); raiz.appendChild(toasts); raiz.appendChild(viva);
+    if (IMG) {
+      visor = el("div", "comw-visor"); visor.hidden = true; visor.setAttribute("role", "dialog"); visor.setAttribute("aria-modal", "true"); visor.setAttribute("aria-label", "Imagem do bate-papo em tamanho maior");
+      visor.addEventListener("click", function (e) { if (e.target === visor || e.target.classList.contains("comw-visor-img") || (e.target.closest && e.target.closest("[data-v='fechar']"))) fecharVisor(); });
+      raiz.appendChild(visor);
+      // arrastar e soltar uma imagem na conversa aberta (computador)
+      var podeSoltar = function (e) { return ST.aberta && ST.tela === "conversa" && ST.aba === "conversas" && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0; };
+      painel.addEventListener("dragover", function (e) { if (!podeSoltar(e)) return; e.preventDefault(); painel.classList.add("comw-arrastando"); });
+      painel.addEventListener("dragleave", function (e) { if (!e.relatedTarget || !painel.contains(e.relatedTarget)) painel.classList.remove("comw-arrastando"); });
+      painel.addEventListener("drop", function (e) {
+        painel.classList.remove("comw-arrastando");
+        if (!podeSoltar(e)) return;
+        e.preventDefault();
+        var fs = e.dataTransfer.files;
+        if (fs && fs.length) { escolherArquivo(fs[0]); if (fs.length > 1) toast({ titulo: "Uma imagem por mensagem", texto: "Só a primeira foi anexada. Envie as outras uma de cada vez, cada uma com a sua explicação.", prioridade: "INFO" }); }
+      });
+    }
     document.body.appendChild(raiz);
     corpo = painel.querySelector(".comw-corpo"); pe = painel.querySelector(".comw-pe"); abas = painel.querySelector(".comw-abas");
     botao.addEventListener("click", alternar);
     painel.querySelector(".comw-som").addEventListener("click", trocarSom);
     painel.addEventListener("click", function (e) {
-      var t = e.target.closest ? e.target.closest("[data-acao],[data-conv],[data-aba],[data-pessoa],[data-ciente],[data-local],[data-remover],[data-mencao]") : null;
+      var t = e.target.closest ? e.target.closest("[data-acao],[data-conv],[data-aba],[data-pessoa],[data-ciente],[data-local],[data-remover],[data-mencao],[data-img]") : null;
       if (!t || !painel.contains(t)) return;
+      if (t.getAttribute("data-img")) return abrirVisor(t.getAttribute("data-img"), t.getAttribute("data-leg") || "");
       if (t.getAttribute("data-mencao")) return escolherMencao(t.getAttribute("data-mencao"), t.getAttribute("data-nome"));
       if (t.getAttribute("data-remover")) {
         var nm = t.getAttribute("data-nome");
@@ -890,6 +1209,10 @@
       else if (a === "voltarGrupo") ir("grupo");
       else if (a === "criarGrupo") criarGrupo();
       else if (a === "enviar") enviar();
+      else if (a === "anexarImg") { if (ST.img.estado && !ST.img.estado.ligado) mostrarErroImg(desligadaMsg()); else { var ia = document.getElementById("comw-arq"); if (ia) ia.click(); } }
+      else if (a === "cameraImg") { var ic = document.getElementById("comw-cam"); if (ic) ic.click(); }
+      else if (a === "tirarImg") tirarImagem();
+      else if (a === "salvarCfgImg") salvarCfgImg();
       else if (a === "anteriores") anteriores();
       else if (a === "participantes") abrirParticipantes();
       else if (a === "voltarConversa") { ST.part = null; ir("conversa"); if (ST.aberta) lerConversa(ST.aberta); }
@@ -916,7 +1239,11 @@
       else if (a === "publicar") { carregarPessoas(function () { ir("publicar"); }); }
       else if (a === "enviarComunicado") publicar();
     });
-    document.addEventListener("keydown", function (e) { if ((e.key === "Escape" || e.key === "Esc") && ST.aberto) { fechar(); botao.focus(); } });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" && e.key !== "Esc") return;
+      if (visor && !visor.hidden) { fecharVisor(); return; }   // Esc fecha primeiro a imagem aberta
+      if (ST.aberto) { fechar(); botao.focus(); }
+    });
     document.addEventListener("visibilitychange", function () {
       atualizarTitulo(contagens().total);
       if (!document.hidden && ST.d && !ST.parado) { agendar(800); if (ST.aberto && ST.aberta && ST.tela === "conversa") lerConversa(ST.aberta); }
