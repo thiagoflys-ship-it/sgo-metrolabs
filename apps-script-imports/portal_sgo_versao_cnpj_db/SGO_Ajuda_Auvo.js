@@ -12,7 +12,7 @@ function SGO_ajudaTelas_Auvo_() {
         "Esta tela é só da gestão: Administrador, Gestor e Diretoria. O técnico continua usando o aplicativo do Auvo.",
         "As chaves do Auvo precisam estar gravadas pelo Administrador em \"Chaves e senhas\" (grupo Auvo).",
         "Para o relatório com texto de análise, a chave da IA também precisa estar gravada em \"Chaves e senhas\".",
-        "No celular a tela abre igual à do computador, mas os avisos de atendimento no canto da tela só aparecem no computador."
+        "No celular as tabelas da tela viram cartões: cada linha é um cartão, com o nome do campo acima do valor e os botões embaixo, na largura do cartão. Os avisos de atendimento no canto da tela só aparecem no computador."
       ],
       passos: [
         { titulo: "Conferir se o Auvo está conectado", itens: [
@@ -38,7 +38,8 @@ function SGO_ajudaTelas_Auvo_() {
           "Para ver só um técnico, escolha o nome em \"Todos os técnicos\".",
           "Para ver só as mais graves, escolha \"Só sem evidência de execução\".",
           "Toque em \"Filtrar\".",
-          "Para encerrar uma O.S., toque em \"Ver no Auvo\" e encerre no próprio Auvo. O SGO+ não consegue encerrar a O.S. (o Auvo não permite)."
+          "Para encerrar uma O.S., toque em \"Ver no Auvo\" e encerre no próprio Auvo. O SGO+ não consegue encerrar a O.S. (o Auvo não permite).",
+          "\"Aberta há N dias\" conta desde a data da tarefa no Auvo. A busca olha até cerca de 3 anos para trás, então O.S. esquecidas há muito tempo aparecem com centenas de dias: é a data real da tarefa no Auvo."
         ] },
         { titulo: "Cobrar um técnico por uma O.S. aberta", itens: [
           "Na linha da O.S., toque em \"Cobrar\".",

@@ -126,7 +126,23 @@ var AUVO_CONTEUDO_MODULO = `<style>
 @media (max-width: 640px) {
   #tplAuvoContainer .wrap { padding: 10px; }
   #tplAuvoContainer .header-card { flex-direction: column; align-items: flex-start; }
-  #tplAuvoContainer table.tabela-resultado { display: block; overflow-x: auto; }
+}
+/* 27/10/2026 (print do dono no iPhone): no celular cada linha das tabelas vira um cartão, com o nome da coluna
+   acima do valor (data-rot, mesmo padrão da Frota > Rastreamento). Nada quebra letra a letra e os botões ficam
+   com 44 px de altura. No computador a tabela continua igual. */
+@media (max-width: 760px) {
+  #tplAuvoContainer table.tabela-resultado thead { display: none; }
+  #tplAuvoContainer table.tabela-resultado, #tplAuvoContainer table.tabela-resultado tbody,
+  #tplAuvoContainer table.tabela-resultado tr, #tplAuvoContainer table.tabela-resultado td { display: block; width: 100%; box-sizing: border-box; }
+  #tplAuvoContainer table.tabela-resultado { font-size: 13px; }
+  #tplAuvoContainer table.tabela-resultado tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; padding: 6px 12px; background: var(--card); }
+  #tplAuvoContainer table.tabela-resultado td { border: 0; padding: 5px 0; overflow-wrap: anywhere; word-break: normal; }
+  #tplAuvoContainer table.tabela-resultado td[data-rot]::before { content: attr(data-rot); display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  #tplAuvoContainer table.tabela-resultado td[data-rot=""]::before { display: none; }
+  #tplAuvoContainer table.tabela-resultado td.celula-acoes { padding-top: 8px; }
+  #tplAuvoContainer table.tabela-resultado .tabela-acoes { display: flex; width: 100%; justify-content: stretch; }
+  #tplAuvoContainer table.tabela-resultado .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  #tplAuvoContainer table.tabela-resultado .tabela-acoes .btn, #tplAuvoContainer table.tabela-resultado td.celula-acoes > .btn { flex: 1 1 auto; width: 100%; }
 }
 </style>
 <script>
@@ -243,11 +259,11 @@ function tplAuvo_renderClientesTabela_(items) {
   }
   body.innerHTML = items.map(function(c) {
     return '<tr>' +
-      '<td>' + tplAuvo_esc(c.nome) + '</td>' +
-      '<td>' + tplAuvo_esc(c.cnpj) + '</td>' +
-      '<td><span class="status-pill ' + tplAuvo_esc(c.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(c.status)) + '</span></td>' +
-      '<td class="muted">' + tplAuvo_esc(c.ultimoErro) + '</td>' +
-      '<td><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarCliente(\\'' + c.id + '\\')">Sincronizar</button></td>' +
+      '<td data-rot="Cliente">' + tplAuvo_esc(c.nome) + '</td>' +
+      '<td data-rot="CNPJ">' + tplAuvo_esc(c.cnpj) + '</td>' +
+      '<td data-rot="Situação"><span class="status-pill ' + tplAuvo_esc(c.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(c.status)) + '</span></td>' +
+      '<td class="muted" data-rot="' + (c.ultimoErro ? 'Último erro' : '') + '">' + tplAuvo_esc(c.ultimoErro) + '</td>' +
+      '<td class="celula-acoes" data-rot=""><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarCliente(\\'' + c.id + '\\')">Sincronizar</button></td>' +
       '</tr>';
   }).join('');
 }
@@ -299,12 +315,12 @@ function tplAuvo_renderTecnicosTabela_(items) {
       : '<input type="text" id="tplAuvo_email_' + u.id + '" placeholder="email@exemplo.com" style="width:160px">' +
         ' <button type="button" class="btn btn-sm" onclick="tplAuvo_salvarEmail(\\'' + u.id + '\\')">Salvar</button>';
     return '<tr>' +
-      '<td>' + tplAuvo_esc(u.nome) + '</td>' +
-      '<td>' + tplAuvo_esc(u.perfil) + '</td>' +
-      '<td>' + campoEmail + '</td>' +
-      '<td><span class="status-pill ' + tplAuvo_esc(u.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(u.status)) + '</span></td>' +
-      '<td class="muted">' + tplAuvo_esc(u.ultimoErro) + '</td>' +
-      '<td><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarTecnico(\\'' + u.id + '\\')">Sincronizar</button></td>' +
+      '<td data-rot="Nome">' + tplAuvo_esc(u.nome) + '</td>' +
+      '<td data-rot="Perfil">' + tplAuvo_esc(u.perfil) + '</td>' +
+      '<td data-rot="E-mail">' + campoEmail + '</td>' +
+      '<td data-rot="Situação"><span class="status-pill ' + tplAuvo_esc(u.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(u.status)) + '</span></td>' +
+      '<td class="muted" data-rot="' + (u.ultimoErro ? 'Último erro' : '') + '">' + tplAuvo_esc(u.ultimoErro) + '</td>' +
+      '<td class="celula-acoes" data-rot=""><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarTecnico(\\'' + u.id + '\\')">Sincronizar</button></td>' +
       '</tr>';
   }).join('');
 }
@@ -356,7 +372,7 @@ function tplAuvo_renderAuditoriaNomes_(res) {
       return tplAuvo_esc(it.nome) + ' <span class="muted">(CNPJ ' + tplAuvo_esc(it.cnpjRaiz) + ', ' + it.qtdUnidadesAuvo + ' unidade(s) no Auvo)</span>';
     }).join('<br>');
     var tipoLabel = a.tipo === 'NOME_IDENTICO_CNPJ_DIFERENTE' ? 'Nome idêntico, CNPJ diferente' : 'Nome parecido';
-    return '<tr><td>' + a.similaridade + '%</td><td>' + tipoLabel + '</td><td>' + nomes + '</td></tr>';
+    return '<tr><td data-rot="Similaridade">' + a.similaridade + '%</td><td data-rot="Tipo">' + tipoLabel + '</td><td data-rot="Nomes (CNPJ raiz)">' + nomes + '</td></tr>';
   }).join('');
   el.innerHTML = '<div class="alert-box warning">' + res.totalAchados + ' possível(is) duplicata(s) por nome, em ' + res.totalGruposAnalisados + ' cliente(s) analisado(s) — isso é SÓ leitura, nada foi alterado. Confira cada caso e decida se é a mesma empresa (juntar) ou empresas diferentes (manter).</div>' +
     '<table class="tabela-resultado"><thead><tr><th>Similaridade</th><th>Tipo</th><th>Nomes (CNPJ raiz)</th></tr></thead><tbody>' + linhas + '</tbody></table>';
@@ -539,11 +555,11 @@ function tplAuvo_renderPendenciasTabela_(itens) {
           tplAuvo_esc(i.DIAS_ABERTA).replace(/'/g, '&#39;') + '&#39;)">Cobrar</button>')
       : '<span class="muted" title="Esse técnico não tem login no SGO+ — a cobrança fica sem como notificar">Sem login</span>';
     return '<tr>' +
-      '<td>' + tplAuvo_esc(i.TECNICO_NOME) + '</td>' +
-      '<td>' + tarefaTxt + '</td>' +
-      '<td>' + pendenciaTxt + '</td>' +
-      '<td>' + (Number(i.OCORRENCIAS_ABERTAS) > 0 ? ('<span class="status-pill PENDENTE">' + i.OCORRENCIAS_ABERTAS + '</span>') : '<span class="muted">—</span>') + '</td>' +
-      '<td><div class="tabela-acoes">' + verNoAuvo + cobrarBtn + '</div></td>' +
+      '<td data-rot="Técnico responsável">' + tplAuvo_esc(i.TECNICO_NOME) + '</td>' +
+      '<td data-rot="Tarefa">' + tarefaTxt + '</td>' +
+      '<td data-rot="Pendência">' + pendenciaTxt + '</td>' +
+      '<td data-rot="Cobranças">' + (Number(i.OCORRENCIAS_ABERTAS) > 0 ? ('<span class="status-pill PENDENTE">' + i.OCORRENCIAS_ABERTAS + '</span>') : '<span class="muted">—</span>') + '</td>' +
+      '<td class="celula-acoes" data-rot=""><div class="tabela-acoes">' + verNoAuvo + cobrarBtn + '</div></td>' +
       '</tr>';
   }).join('');
 }
@@ -683,7 +699,7 @@ function tplAuvo_simularSincReversa() {
 function tplAuvo_renderSimulacao_(res) {
   var c = res.clientes, e = res.equipamentos;
   var amostra = (c.amostraGrupos || []).map(function(g) {
-    return '<tr><td>' + tplAuvo_esc(g.cnpjRaiz) + '</td><td>' + g.qtdUnidades + '</td><td>' + tplAuvo_esc(g.nomes.join(' / ')) + '</td></tr>';
+    return '<tr><td data-rot="CNPJ raiz">' + tplAuvo_esc(g.cnpjRaiz) + '</td><td data-rot="Qtd. unidades">' + g.qtdUnidades + '</td><td data-rot="Nomes (Auvo)">' + tplAuvo_esc(g.nomes.join(' / ')) + '</td></tr>';
   }).join('');
   var protegidos = c.clientesProtegidos || 0;
   var protegidosAmostra = (c.amostraProtegidos || []).map(function(p) {
@@ -752,10 +768,10 @@ function tplAuvo_simularEnvioCadastro() {
 function tplAuvo_renderSimulacaoEnvio_(res) {
   var u = res.unidades, e = res.equipamentos;
   var amostraU = (res.amostraUnidades || []).map(function(x) {
-    return '<tr><td>' + tplAuvo_esc(x.nome) + '</td><td>' + tplAuvo_esc(x.cnpj || '-') + '</td></tr>';
+    return '<tr><td data-rot="Unidade">' + tplAuvo_esc(x.nome) + '</td><td data-rot="CNPJ">' + tplAuvo_esc(x.cnpj || '-') + '</td></tr>';
   }).join('');
   var amostraE = (res.amostraEquipamentos || []).map(function(x) {
-    return '<tr><td>' + tplAuvo_esc(x.tipo || '-') + '</td><td>' + tplAuvo_esc(x.tag || '-') + '</td></tr>';
+    return '<tr><td data-rot="Equipamento">' + tplAuvo_esc(x.tipo || '-') + '</td><td data-rot="TAG">' + tplAuvo_esc(x.tag || '-') + '</td></tr>';
   }).join('');
 
   var html = '<div class="alert-box warning">' +
@@ -876,6 +892,8 @@ function tplAuvo_manualHtml_() {
 <li>Para cobrar o técnico, toque em "Cobrar", confira a "Descrição" e toque em "Salvar".</li>
 </ol>
 <p>A cobrança fica registrada no Painel de qualidade. Para atualizar a lista todo dia sozinho, ligue "Atualizar automaticamente todo dia às 5h".</p>
+<p>"Aberta há N dias" conta desde a data da tarefa no Auvo até a última atualização da lista. A busca olha até cerca de 3 anos para trás, de propósito: O.S. esquecidas há mais de 2 anos aparecem com centenas de dias e devem ser encerradas no Auvo (ou cobradas).</p>
+<p>No celular, cada O.S. aparece como um cartão, com o nome do campo acima do valor ("Técnico responsável", "Tarefa", "Pendência", "Cobranças") e os botões "Ver no Auvo" e "Cobrar" embaixo, na largura do cartão. As outras tabelas da tela (clientes, usuários, auditoria e amostras) seguem o mesmo formato.</p>
 <div class="callout"><strong>"Atualização em andamento em segundo plano..."</strong> quer dizer que a varredura é grande e continua sozinha. Volte em alguns minutos e toque em "Atualizar agora" de novo.</div>
 
 <h2 id="ma-5">5. Relatório de atendimentos (A4)</h2>
