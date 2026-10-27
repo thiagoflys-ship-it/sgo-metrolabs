@@ -92,19 +92,26 @@ function ComOpo_mapaAtividades_() {
 }
 
 /** Lista para a tela. filtro: { situacao: 'ABERTA'|'GANHA'|'PERDIDA'|'TODAS', responsavelId, clienteId, funil, busca } */
-function ComOpo_listar_(eu, filtro) {
+// 27/10/2026: busca sem acento e por partes (Com_casaBusca_), também no contato, no responsável e nas observações
+// (o CRM importado guarda ali o vendedor de origem). info.foraDoFiltro: quantas a busca acha em outras situações,
+// para a tela oferecer "ver em todas" em vez de dizer só "nenhuma" (a maioria das oportunidades já está ganha ou perdida).
+function ComOpo_textoBusca_(o) {
+  return [Com_s_(o.CODIGO), Com_s_(o.TITULO), Com_s_(o.CLIENTE_NOME), Com_s_(o.UNIDADE_NOME), Com_s_(o.CONTATO_NOME), Com_s_(o.RESPONSAVEL_NOME), Com_s_(o.ORIGEM), Com_s_(o.OBSERVACOES)];
+}
+function ComOpo_listar_(eu, filtro, info) {
   Com_exigir_(eu, 'VENDEDOR', 'ver as oportunidades');
   var f = filtro || {}, ctx = { met: Com_metodologia_(), agora: Com_agora_(), atividades: ComOpo_mapaAtividades_() };
-  var sit = Com_up_(f.situacao) || 'ABERTA', busca = Com_s_(f.busca).toLowerCase();
+  var sit = Com_up_(f.situacao) || 'ABERTA', termos = Com_termosBusca_(f.busca), fora = 0;
   var l = Com_ler_(COM_ABAS.OPORTUNIDADES).filter(function (o) {
     if (!ComOpo_podeVer_(eu, o)) return false;
-    if (sit !== 'TODAS' && Com_up_(o.SITUACAO || 'ABERTA') !== sit) return false;
     if (f.responsavelId && eu.gestao && Com_s_(o.RESPONSAVEL_ID) !== Com_s_(f.responsavelId)) return false;
     if (f.clienteId && Com_s_(o.CLIENTE_ID) !== Com_s_(f.clienteId)) return false;
     if (f.funil && Com_s_(o.FUNIL) !== Com_s_(f.funil)) return false;
-    if (busca && (Com_s_(o.TITULO) + ' ' + Com_s_(o.CLIENTE_NOME) + ' ' + Com_s_(o.CODIGO) + ' ' + Com_s_(o.UNIDADE_NOME)).toLowerCase().indexOf(busca) < 0) return false;
+    if (termos.length && !Com_casaBusca_(termos, ComOpo_textoBusca_(o))) return false;
+    if (sit !== 'TODAS' && Com_up_(o.SITUACAO || 'ABERTA') !== sit) { if (termos.length) fora++; return false; }
     return true;
   }).map(function (o) { return ComOpo_paraTela_(eu, o, ctx); });
+  if (info) info.foraDoFiltro = fora;
   l.sort(function (a, b) { return (b.semProxima - a.semProxima) || (b.atrasada - a.atrasada) || (b.parada - a.parada) || String(a.proximaEm).localeCompare(String(b.proximaEm)); });
   return l;
 }

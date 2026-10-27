@@ -54,7 +54,8 @@ function SGO_ajudaTelas_Comercial_() {
       paraQueServe: 'Cada venda, do primeiro contato ao pedido. A oportunidade nasce ligada ao cliente, à unidade, ao contato e, quando fizer sentido, aos equipamentos do cadastro único, e anda pelas etapas do funil (Engenharia ou Produtos). Toda oportunidade aberta tem próxima ação com data, que vira atividade em Minhas atividades.',
       antesDeComecar: ['O cliente precisa estar em Cadastros > Clientes (com a unidade, se tiver).', 'O contato do cliente pode ser cadastrado na própria oportunidade (botão "Novo contato").'],
       passos: [
-        { titulo: 'Criar uma oportunidade', itens: ['Toque em "Nova oportunidade".', 'Busque o cliente pelo nome ou CNPJ e escolha a unidade e o contato.', 'Escreva o título (o que o cliente precisa), escolha funil, etapa, origem e informe o valor estimado.', 'Preencha a próxima ação (o que fazer e quando) e toque em "Criar oportunidade". A atividade aparece em Minhas atividades.'] },
+        { titulo: 'Buscar uma oportunidade', itens: ['Escreva no campo "Buscar" parte do cliente, da unidade, do título, do código ou do contato. A busca ignora acentos e maiúsculas e aceita as palavras em qualquer ordem.', 'Ela respeita o filtro "Situação" (o padrão é "Abertas"). Se achar oportunidades ganhas ou perdidas, a tela avisa quantas são; toque em "Ver em todas as situações".'] },
+        { titulo: 'Criar uma oportunidade', itens: ['Toque em "Nova oportunidade".', 'Busque o cliente pelo nome, pela razão social, pelo CNPJ ou pelo nome da unidade (sem precisar de acento) e escolha a unidade e o contato.', 'Escreva o título (o que o cliente precisa), escolha funil, etapa, origem e informe o valor estimado.', 'Preencha a próxima ação (o que fazer e quando) e toque em "Criar oportunidade". A atividade aparece em Minhas atividades.'] },
         { titulo: 'Registrar um contato com o cliente', itens: ['Abra a oportunidade e toque em "Registrar contato".', 'Diga como foi, se o cliente respondeu e o que aconteceu.', 'Marque a próxima ação. A atividade anterior é concluída e a nova é criada.'] },
         { titulo: 'Mudar de etapa', itens: ['Toque em "Mudar etapa", escolha a etapa e toque em "Continuar".', 'Marque os itens da lista da etapa que foram feitos de verdade. Para voltar de etapa, escreva o motivo.', 'Se faltar algo exigido pela metodologia, a janela diz o quê e onde resolver; a oportunidade fica onde estava. O mesmo vale no Quadro do funil.'] },
         { titulo: 'Pedir o próximo passo à gestora', itens: ['Toque em "Próximo passo da gestora".', 'Ela sugere o passo, o porquê, perguntas para o cliente e os textos de WhatsApp e e-mail.', 'Copie, revise e envie você mesmo. Depois registre o contato.'] },
@@ -99,7 +100,8 @@ function SGO_ajudaTelas_Comercial_() {
       problemas: [
         { situacao: 'Não consigo editar a proposta.', oQueFazer: 'Só o rascunho é editado. Antes do envio use "Voltar para rascunho"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte).' },
         { situacao: '"A revisão encontrou..." ao concluir.', oQueFazer: 'A gestora encontrou algo que impede o envio (sem escopo, sem preço, sem forma de pagamento, validade vencida). Corrija no rascunho e conclua de novo.' },
-        { situacao: 'A proposta não mudou para "Enviada" depois do envio.', oQueFazer: 'Toque em "Já enviei: atualizar". Se enviou por outro meio, use "Entregue por outro meio" e conte como foi.' }
+        { situacao: 'A proposta não mudou para "Enviada" depois do envio.', oQueFazer: 'Toque em "Já enviei: atualizar". Se enviou por outro meio, use "Entregue por outro meio" e conte como foi.' },
+        { situacao: 'A busca não acha a proposta.', oQueFazer: 'A busca procura no número, cliente, unidade, contato, responsável, título e nos itens, sem acento e por partes. Ela respeita o filtro "Situação" (o padrão é "Em andamento"): se achar propostas em outras situações, a tela avisa quantas são; toque em "Ver em todas as situações". O vendedor vê só as próprias.' }
       ],
       quemPode: quem,
       perguntas: [
@@ -122,13 +124,24 @@ function SGO_ajudaTelas_Comercial_() {
     'comercial_catalogo': {
       titulo: 'Produtos e serviços',
       paraQueServe: 'Catálogo usado nas propostas: código, nome, tipo (serviço, produto, contrato), unidade, preço de venda e, opcionalmente, o custo (só a gestão vê). Padroniza preços e descrições.',
-      antesDeComecar: ['O catálogo começa vazio. Enquanto a lista de preços oficial não chega, as propostas aceitam itens digitados.'],
-      passos: [{ titulo: 'Cadastrar um item (gestão comercial)', itens: ['Toque em "Novo item".', 'Preencha código, tipo, nome, descrição, unidade e preço. O custo é opcional.', 'Toque em "Salvar". Para tirar da escolha, use "Arquivar" (o item nunca é apagado).'] }],
+      antesDeComecar: ['Os itens do CRM antigo já estão no catálogo, com o código do CRM. Item que ainda não está no catálogo pode ser digitado na proposta ("Acrescentar item").'],
+      passos: [
+        { titulo: 'Buscar um produto ou serviço', itens: ['Escreva no campo "Buscar no catálogo" parte do código, do nome, da descrição ou da categoria (por exemplo "fonte 9v" ou "CRM-DF8F").', 'A busca é feita no banco do SGO+, ignora acentos e maiúsculas e aceita as palavras em qualquer ordem.', 'Se quiser, filtre por tipo, categoria e (gestão) situação. A linha acima da lista diz quantos itens foram encontrados.', 'A tela mostra até 200 itens, os mais parecidos primeiro. Se houver mais, escreva mais uma palavra ou o código para afinar. "Limpar" volta à lista completa.'] },
+        { titulo: 'Cadastrar um item (gestão comercial)', itens: ['Toque em "Novo item".', 'Preencha código, tipo, nome, descrição, unidade e preço. O custo é opcional.', 'Toque em "Salvar". Para tirar da escolha, use "Arquivar" (o item nunca é apagado).'] }
+      ],
       cores: [{ nome: 'Linha apagada "(arquivado)"', significado: 'Não aparece mais para as propostas novas.' }],
-      problemas: [{ situacao: '"O código já é do item..."', oQueFazer: 'Cada código é único. Use outro código ou edite o item existente.' }],
+      problemas: [
+        { situacao: '"O código já é do item..."', oQueFazer: 'Cada código é único. Use outro código ou edite o item existente.' },
+        { situacao: '"Nenhum item com..." na busca.', oQueFazer: 'Confira a grafia, use outra palavra do nome ou o código, e confira o tipo, a categoria e a situação (o item pode estar arquivado). Toque em "Limpar" para ver tudo. Se o item não existe, a gestão cadastra em "Novo item".' },
+        { situacao: '"Mostrando os 200 mais parecidos".', oQueFazer: 'A busca achou mais de 200 itens. Escreva mais uma palavra do nome ou o código para afinar.' }
+      ],
       quemPode: quem,
-      perguntas: [{ p: 'Mudar o preço muda as propostas antigas?', r: 'Não. Cada proposta guarda o preço do momento em que o item entrou.' }],
-      secoesManual: []
+      perguntas: [
+        { p: 'Mudar o preço muda as propostas antigas?', r: 'Não. Cada proposta guarda o preço do momento em que o item entrou.' },
+        { p: 'Preciso escrever o nome inteiro, com acento?', r: 'Não. "ventilometro digital" acha "Ventilômetro Digital Eletrônico"; parte do código também serve.' },
+        { p: 'Na proposta dá para buscar no catálogo?', r: 'Sim. "Do catálogo" abre a mesma busca, só com os itens ativos, 50 por vez.' }
+      ],
+      secoesManual: [{ titulo: 'Como a busca funciona no Comercial', paragrafos: ['Em Oportunidades, Propostas, Quadro do funil, Gantt, Produtos e serviços e na escolha do cliente a busca ignora acentos, cedilha e maiúsculas, aceita parte das palavras em qualquer ordem e números sem pontuação (CNPJ só com os dígitos, PROP-2026-0001).', 'Propostas são procuradas também nos itens (descrição e código do produto); oportunidades, também no contato, no responsável e nas observações; clientes, também nos nomes das unidades.'] }]
     },
     'comercial_painel': {
       titulo: 'Painel comercial',

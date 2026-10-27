@@ -277,13 +277,27 @@ function Com_avisosDe_(eu) {
 /** Clientes para a escolha (busca no cadastro único). */
 function Com_buscarClientes_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'buscar clientes');
-  var q = Com_s_(d && d.busca).toLowerCase(), dig = q.replace(/\D/g, '');
-  if (q.length < 2) return [];
-  return Com_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).filter(function (c) {
-    if (Com_up_(c.STATUS || 'ATIVO') === 'INATIVO') return false;
-    var t = (Com_s_(c.NOME_FANTASIA) + ' ' + Com_s_(c.RAZAO_SOCIAL)).toLowerCase();
-    return t.indexOf(q) >= 0 || (dig.length >= 4 && Com_s_(c.CNPJ).replace(/\D/g, '').indexOf(dig) >= 0);
-  }).slice(0, 30).map(function (c) { return { id: Com_s_(c.ID), nome: Com_s_(c.NOME_FANTASIA) || Com_s_(c.RAZAO_SOCIAL), razao: Com_s_(c.RAZAO_SOCIAL), cnpj: Com_s_(c.CNPJ) }; });
+  // 27/10/2026: sem acento e por partes (Com_casaBusca_); o nome da unidade também acha o cliente ("Uruaçu" acha o IMED da unidade).
+  var termos = Com_termosBusca_(d && d.busca);
+  if (termos.join('').length < 2) return [];
+  var unidadesPorCliente = {};
+  try {
+    Com_ler_(SGO_CFG.SHEETS.CAD_UNIDADES).forEach(function (u) {
+      if (Com_up_(u.STATUS || 'ATIVO') !== 'ATIVO') return;
+      var cid = Com_s_(u.CLIENTE_ID);
+      (unidadesPorCliente[cid] = unidadesPorCliente[cid] || []).push(Com_s_(u.NOME_UNIDADE) + ' ' + Com_s_(u.CIDADE));
+    });
+  } catch (e) {}
+  var achados = [];
+  Com_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) {
+    if (Com_up_(c.STATUS || 'ATIVO') === 'INATIVO') return;
+    var proprio = [Com_s_(c.NOME_FANTASIA), Com_s_(c.RAZAO_SOCIAL), Com_s_(c.CNPJ)];
+    if (Com_casaBusca_(termos, proprio)) { achados.push({ c: c, peso: Com_normBusca_(c.NOME_FANTASIA || c.RAZAO_SOCIAL).indexOf(termos[0]) === 0 ? 0 : 1 }); return; }
+    var un = (unidadesPorCliente[Com_s_(c.ID)] || []).filter(function (t) { return Com_casaBusca_(termos, proprio.concat([t])); })[0];
+    if (un) achados.push({ c: c, peso: 2, unidade: un });
+  });
+  achados.sort(function (a, b) { return (a.peso - b.peso) || String(a.c.NOME_FANTASIA || a.c.RAZAO_SOCIAL).localeCompare(String(b.c.NOME_FANTASIA || b.c.RAZAO_SOCIAL), 'pt-BR'); });
+  return achados.slice(0, 30).map(function (x) { var c = x.c; return { id: Com_s_(c.ID), nome: Com_s_(c.NOME_FANTASIA) || Com_s_(c.RAZAO_SOCIAL), razao: Com_s_(c.RAZAO_SOCIAL), cnpj: Com_s_(c.CNPJ), unidade: x.unidade ? Com_s_(x.unidade) : '' }; });
 }
 
 function Com_unidadesEquip_(eu, d) {
@@ -341,7 +355,7 @@ var COM_ACOES = {
   doCliente: function (eu, sid, d) { return Com_doCliente_(eu, d); },
   salvarContato: function (eu, sid, d) { return { contato: ComCt_salvar_(eu, d), message: 'Contato salvo.' }; },
   inativarContato: function (eu, sid, d) { return ComCt_inativar_(eu, d && d.id, d && d.motivo); },
-  oportunidades: function (eu, sid, d) { return { oportunidades: ComOpo_listar_(eu, d) }; },
+  oportunidades: function (eu, sid, d) { var info = {}; var l = ComOpo_listar_(eu, d, info); return { oportunidades: l, foraDoFiltro: info.foraDoFiltro || 0 }; },
   oportunidade: function (eu, sid, d) { return ComOpo_detalhe_(eu, d && d.id); },
   salvarOportunidade: function (eu, sid, d) { return ComOpo_salvar_(eu, sid, d); },
   moverEtapa: function (eu, sid, d) { return ComOpo_moverEtapa_(eu, sid, d); },
@@ -356,10 +370,10 @@ var COM_ACOES = {
   perder: function (eu, sid, d) { return ComOpo_perder_(eu, d); },
   pedirReabertura: function (eu, sid, d) { return ComOpo_pedirReabertura_(eu, d); },
   reabrir: function (eu, sid, d) { return ComOpo_reabrir_(eu, sid, d); },
-  catalogo: function (eu, sid, d) { return { produtos: ComP_catalogo_(eu, d && d.incluirArquivados) }; },
+  catalogo: function (eu, sid, d) { return ComP_catalogo_(eu, d); },
   salvarProduto: function (eu, sid, d) { return ComP_salvarProduto_(eu, d); },
   arquivarProduto: function (eu, sid, d) { return ComP_arquivarProduto_(eu, d); },
-  propostas: function (eu, sid, d) { return { propostas: ComP_listar_(eu, d) }; },
+  propostas: function (eu, sid, d) { var info = {}; var l = ComP_listar_(eu, d, info); return { propostas: l, foraDoFiltro: info.foraDoFiltro || 0 }; },
   proposta: function (eu, sid, d) { return { proposta: ComP_detalhe_(eu, d && d.id) }; },
   novaProposta: function (eu, sid, d) { return ComP_nova_(eu, d); },
   salvarProposta: function (eu, sid, d) { return ComP_salvar_(eu, d); },

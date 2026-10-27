@@ -76,7 +76,8 @@ function ComQ_selecionar_(eu, b, fl) {
     if (!ComOpo_podeVer_(eu, o)) return false;
     if (fl.funil && Com_s_(o.FUNIL) !== fl.funil) return false;
     if (fl.responsavelId && Com_s_(o.RESPONSAVEL_ID) !== fl.responsavelId) return false;
-    if (fl.busca && (Com_s_(o.CLIENTE_NOME) + ' ' + Com_s_(o.UNIDADE_NOME) + ' ' + Com_s_(o.TITULO) + ' ' + Com_s_(o.CODIGO)).toLowerCase().indexOf(fl.busca) < 0) return false;
+    // 27/10/2026: sem acento e por partes, igual à lista de oportunidades
+    if (fl.busca && !Com_casaBusca_(Com_termosBusca_(fl.busca), ComOpo_textoBusca_(o))) return false;
     if (fl.area && ComQ_areasDe_(o, b).indexOf(fl.area) < 0) return false;
     var iv = ComQ_intervalo_(o, b.hoje);
     return iv.inicio <= fl.ate && iv.ate >= fl.de;

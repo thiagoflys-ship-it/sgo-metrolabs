@@ -42,7 +42,7 @@ Regras: toda oportunidade aberta tem próxima ação com data; parada há 10 dia
 
 Comercial > Quadro do funil mostra as oportunidades em colunas, uma por etapa do funil escolhido (Engenharia ou Produtos), mais as ganhas e as perdidas do período. Cada coluna mostra a quantidade e, para quem vê valores, o valor em aberto. Cada cartão traz o cliente, o título, o código, o valor (para quem vê valores), a próxima ação e a data, há quantos dias está sem contato e na etapa, a previsão de fechamento e os selos (proposta, desconto aguardando aprovação, parada, retorno atrasado, tempo acima da meta, pedido sem passagem).
 
-Filtros: funil, vendedor (gestão), cliente (nome, título ou código), área (tipo do equipamento ligado ou categoria do serviço no catálogo) e período ("De" e "Até"; padrão: 90 dias para trás e 90 para frente). A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período; as ganhas e perdidas aparecem pela data em que foram encerradas (as 30 mais recentes).
+Filtros: funil, vendedor (gestão), busca (cliente, unidade, título, código ou contato; veja "Como a busca funciona no Comercial"), área (tipo do equipamento ligado ou categoria do serviço no catálogo) e período ("De" e "Até"; padrão: 90 dias para trás e 90 para frente). A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período; as ganhas e perdidas aparecem pela data em que foram encerradas (as 30 mais recentes).
 
 Para mudar de etapa, arraste o cartão para outra coluna ou toque em "Mover para" (no celular, o botão substitui o arrastar). Nada é gravado ao soltar: o sistema confere os critérios de saída da metodologia e abre a janela de confirmação, a mesma da ficha da oportunidade. Soltar em "Ganhas" pede a proposta enviada e o arquivo do aceite do cliente (a aprovação fica registrada na proposta e a oportunidade é marcada como ganha; depois passe o pedido aos setores). Sem proposta enviada, a janela explica o caminho e a oportunidade continua onde estava. Soltar em "Perdidas" pede o motivo da lista e o aprendizado. Oportunidade encerrada não muda de coluna: o vendedor pede a reabertura na ficha.
 
@@ -90,7 +90,23 @@ O Financeiro vê o valor, a condição de pagamento e os dados de faturamento em
 
 ## Produtos e serviços
 
-O catálogo começa vazio. A gestão cadastra código, nome, tipo, unidade, preço e, se quiser, o custo (só a gestão vê). Item arquivado sai da escolha das propostas novas e nunca é apagado. Enquanto a lista de preços oficial não chega, as propostas aceitam itens digitados.
+A gestão cadastra código, nome, tipo, unidade, preço e, se quiser, o custo (só a gestão vê). Item arquivado sai da escolha das propostas novas e nunca é apagado. Item que ainda não está no catálogo pode ser digitado na proposta ("Acrescentar item").
+
+Buscar no catálogo: escreva no campo "Buscar no catálogo" parte do código, do nome, da descrição ou da categoria (por exemplo "fonte 9v" ou "CRM-DF8F"). A busca é feita no banco do SGO+, ignora acentos e maiúsculas e aceita as palavras em qualquer ordem. Filtre também por tipo (serviço, produto, contrato), categoria e, para a gestão, situação (ativos, arquivados ou os dois). A linha acima da lista diz quantos itens foram encontrados de quantos há no catálogo. A tela mostra até 200 itens, os mais parecidos primeiro (código igual, começo do código ou do nome); se houver mais, ela avisa: escreva mais uma palavra ou o código para afinar. "Limpar" volta à lista completa.
+
+Na proposta, o botão "Do catálogo" abre a mesma busca (só itens ativos, 50 por vez).
+
+## Como a busca funciona no Comercial
+
+Em Oportunidades, Propostas, Quadro do funil, Gantt, Produtos e serviços e na escolha do cliente, a busca:
+
+- ignora acentos, cedilha e maiúsculas ("uruacu" acha "Uruaçu"; "fundacao" acha "FUNDAÇÃO");
+- aceita parte das palavras, em qualquer ordem ("pio fund" acha "Fundação Pio XII");
+- aceita números sem pontuação (CNPJ só com os dígitos, "2026 0001" ou "PROP-2026-0001").
+
+Onde ela procura: oportunidades no código, título, cliente, unidade, contato, responsável, origem e observações (o vendedor do CRM antigo está nas observações); propostas no número, cliente, unidade, contato, responsável, título e nos itens (descrição e código do produto ou serviço); clientes no nome fantasia, razão social, CNPJ e nos nomes e cidades das unidades.
+
+A busca respeita o filtro "Situação". Se ela também achar oportunidades ou propostas em outras situações (por exemplo, ganhas, perdidas, aprovadas ou canceladas), a tela avisa quantas são e oferece "Ver em todas as situações".
 
 ## Painel e relatório mensal
 
@@ -123,5 +139,7 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 
 - "Escolha em qual unidade é a oportunidade": o cliente tem unidades; documentos, equipamentos e pastas do SGO+ são por unidade.
 - "A próxima ação não pode ficar no passado": o que já foi feito se registra em "Registrar contato".
+- A busca não acha a proposta ou a oportunidade: confira o filtro "Situação" (o padrão mostra só as em andamento ou abertas); quando a busca acha itens em outras situações, a tela avisa e oferece "Ver em todas as situações". O vendedor vê só as próprias; a gestão comercial vê todas.
+- O produto não aparece no catálogo: busque por outra palavra do nome ou pelo código; confira o tipo, a categoria e, para a gestão, a situação (o item pode estar arquivado). Toque em "Limpar" para voltar à lista completa.
 - A proposta não ficou "Enviada": toque em "Já enviei: atualizar"; se enviou por outro meio, use "Entregue por outro meio".
 - "Quem pediu não aprova o próprio desconto": a decisão é de outro gestor comercial ou da Diretoria.

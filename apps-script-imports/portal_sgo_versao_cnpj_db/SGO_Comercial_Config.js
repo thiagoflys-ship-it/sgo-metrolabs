@@ -220,6 +220,24 @@ var COM_METODOLOGIA_PADRAO = {
 // ------------------------------------------------------------
 function Com_s_(v) { return v === null || v === undefined ? '' : String(v).trim(); }
 function Com_up_(v) { return Com_s_(v).toUpperCase(); }
+// BUSCA (27/10/2026): os cadastros misturam "FUNDACAO" e "FUNDAÇÃO", "URUACU" e "Uruaçu"; a busca antiga só passava para
+// minúsculas e exigia o texto inteiro, na ordem, e por isso "não achava nada". Agora: sem acento, sem maiúscula, sem
+// pontuação, por partes (todas as palavras digitadas, em qualquer ordem) e números também sem pontuação (CNPJ, PROP-2026-0001).
+function Com_normBusca_(v) {
+  var s = Com_s_(v).toLowerCase();
+  try { s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (e) {}
+  return s.replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function Com_termosBusca_(q) { var n = Com_normBusca_(q); return n ? n.split(' ') : []; }
+/** true quando todas as palavras de termos (Com_termosBusca_) aparecem no texto (string ou lista de partes). */
+function Com_casaBusca_(termos, texto) {
+  if (!termos || !termos.length) return true;
+  var n = Com_normBusca_(Array.isArray(texto) ? texto.join(' ') : texto);
+  if (!n) return false;
+  var t = n + ' ' + n.replace(/ /g, '');
+  for (var i = 0; i < termos.length; i++) if (t.indexOf(termos[i]) < 0) return false;
+  return true;
+}
 function Com_agora_() { return Utilities.formatDate(new Date(), COM_FUSO, "yyyy-MM-dd'T'HH:mm"); }
 function Com_hoje_() { return Utilities.formatDate(new Date(), COM_FUSO, 'yyyy-MM-dd'); }
 function Com_2_(n) { return (n < 10 ? '0' : '') + n; }

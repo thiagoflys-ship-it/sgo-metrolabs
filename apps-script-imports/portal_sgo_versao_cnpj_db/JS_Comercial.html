@@ -132,9 +132,15 @@
   function Com_chamar_(acao, dados, ok, erro, opcoes) {
     var o = opcoes || {};
     if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    // 27/10/2026: buscas com "chave" — só vale a resposta do último pedido. Antes, uma resposta atrasada de um texto
+    // antigo podia chegar depois e apagar o resultado do texto novo (parecia que a busca "não achava").
+    var vez = 0;
+    if (o.chave) { CM.vez = CM.vez || {}; vez = CM.vez[o.chave] = (CM.vez[o.chave] || 0) + 1; }
+    var velha = function () { return o.chave && CM.vez && CM.vez[o.chave] !== vez; };
     var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
-    var falhou = function (m) { fim(); if (erro) erro(m); else alert(m); };
+    var falhou = function (m) { fim(); if (velha()) return; if (erro) erro(m); else alert(m); };
     google.script.run.withSuccessHandler(function (r) {
+      if (velha()) { fim(); return; }
       if (!r || !r.ok) { falhou((r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
       fim();
       try { if (ok) ok(r); } catch (e) { console.error("Comercial " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
@@ -322,7 +328,7 @@
       '<div class="cm-filtros"><div><label>Situação</label><select id="cmFSit">' + Com_opcoes_([{ v: "ABERTA", t: "Abertas" }, { v: "GANHA", t: "Ganhas" }, { v: "PERDIDA", t: "Perdidas" }, { v: "TODAS", t: "Todas" }], f.situacao) + '</select></div>' +
       '<div><label>Funil</label><select id="cmFFunil">' + Com_opcoes_(funis, f.funil, "Todos") + '</select></div>' +
       (ini.gestao ? '<div><label>Responsável</label><select id="cmFResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
-      '<div style="flex:1 1 200px"><label>Buscar</label><input id="cmFBusca" placeholder="Cliente, título ou código" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmOpos"><div class="cm-vazio">Carregando…</div></div></div>';
+      '<div style="flex:1 1 200px"><label for="cmFBusca">Buscar</label><input id="cmFBusca" type="search" placeholder="Cliente, unidade, título, código ou contato" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmOpos"><div class="cm-vazio">Carregando…</div></div></div>';
     Com_$_("cmVisao").onclick = function () { CM.visao = CM.visao === "quadro" ? "lista" : "quadro"; Comercial_renderOportunidades_(div); };
     Com_$_("cmNovaOpo2").onclick = function () { Comercial_formOportunidade_(null); };
     var ler = function () { f.situacao = Com_$_("cmFSit").value; f.funil = Com_$_("cmFFunil").value; f.busca = Com_$_("cmFBusca").value; if (Com_$_("cmFResp")) f.responsavelId = Com_$_("cmFResp").value; Comercial_carregarOpos_(); };
@@ -331,11 +337,21 @@
     Comercial_carregarOpos_();
   }
 
+  /** 27/10/2026: a busca achou itens em outras situações; diz quantos e oferece ver todos (operador nunca fica no "nenhuma"). */
+  function Com_avisoForaFiltro_(alvo, n, nomeItens, aoVerTodas) {
+    if (!n) return "";
+    setTimeout(function () { var b = alvo.querySelector("[data-cm-todas]"); if (b) b.onclick = aoVerTodas; }, 0);
+    return '<div class="cm-faixa aviso">A busca também achou ' + n + ' ' + Com_esc_(nomeItens) + ' em outras situações, que o filtro "Situação" está escondendo. <button type="button" class="btn-secondary" data-cm-todas style="margin-left:6px">Ver em todas as situações</button></div>';
+  }
   function Comercial_carregarOpos_() {
+    var alvoIni = Com_$_("cmOpos");
+    if (alvoIni && CM.filtro.busca) alvoIni.innerHTML = '<div class="cm-vazio">Buscando…</div>';
     Com_chamar_("oportunidades", CM.filtro, function (r) {
       var alvo = Com_$_("cmOpos"); if (!alvo) return;
       var l = r.oportunidades;
-      if (!l.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhuma oportunidade com estes filtros. Toque em "Nova oportunidade" para começar.</div>'; return; }
+      var verTodas = function () { CM.filtro.situacao = "TODAS"; if (Com_$_("cmFSit")) Com_$_("cmFSit").value = "TODAS"; Comercial_carregarOpos_(); };
+      var fora = Com_avisoForaFiltro_(alvo, r.foraDoFiltro, r.foraDoFiltro === 1 ? "oportunidade" : "oportunidades", verTodas);
+      if (!l.length) { alvo.innerHTML = fora + '<div class="cm-vazio">' + (CM.filtro.busca ? 'Nenhuma oportunidade ' + (fora ? 'nesta situação ' : '') + 'com "' + Com_esc_(CM.filtro.busca) + '". A busca ignora acentos e maiúsculas e aceita parte do nome; confira a grafia ou apague a busca.' : 'Nenhuma oportunidade com estes filtros. Toque em "Nova oportunidade" para começar.') + '</div>'; return; }
       var mini = function (o) {
         return '<div class="cm-mini" data-opo="' + Com_esc_(o.id) + '"><b>' + Com_esc_(o.cliente) + '</b>' + Com_esc_(o.titulo) + '<div class="cm-meta" style="margin:4px 0 2px">' + Com_esc_(o.codigo) + (o.valorTxt ? ' · ' + Com_esc_(o.valorTxt) : '') + (CM.ini.gestao ? ' · ' + Com_esc_(o.responsavel) : '') + '</div>' +
           (o.situacao === "ABERTA" ? '<div class="cm-meta">Próxima: ' + Com_esc_(o.proximaAcao || "—") + (o.proximaEm ? ' (' + Com_esc_(o.proximaEm) + ')' : '') + '</div>' : '') + Com_selosOpo_(o) + '</div>';
@@ -350,9 +366,10 @@
             return '<div class="cm-coluna"><h4>' + Com_esc_(e.nome) + '<span>' + e.probabilidade + '% · ' + c.length + '</span></h4>' + c.map(mini).join("") + '</div>';
           }).join("") + '</div>';
         }).join("") || '<div class="cm-vazio">Nenhuma oportunidade aberta.</div>';
-      } else alvo.innerHTML = '<div class="cm-lista">' + l.map(mini).join("") + '</div>';
+        alvo.innerHTML = fora + alvo.innerHTML;
+      } else alvo.innerHTML = fora + '<div class="cm-lista">' + l.map(mini).join("") + '</div>';
       alvo.querySelectorAll("[data-opo]").forEach(function (c) { c.onclick = function () { Comercial_abrirOportunidade_(c.getAttribute("data-opo")); }; });
-    }, function (m) { Com_msg_("cmOpos", m); });
+    }, function (m) { Com_msg_("cmOpos", m); }, { chave: "opos" });
   }
 
   /** Escolha de cliente, unidade, contato e equipamentos (cadastro único). */
@@ -385,9 +402,10 @@
       t = setTimeout(function () {
         if (q.length < 2) { Com_$_("cmCliRes").innerHTML = ""; return; }
         Com_chamar_("clientes", { busca: q }, function (r) {
-          Com_$_("cmCliRes").innerHTML = r.clientes.length ? '<div class="cm-lista" style="gap:4px;margin-top:6px">' + r.clientes.map(function (c) { return '<div class="cm-mini" data-cli="' + Com_esc_(c.id) + '" data-nome="' + Com_esc_(c.nome) + '"><b>' + Com_esc_(c.nome) + '</b>' + Com_esc_(c.cnpj || "sem CNPJ") + '</div>'; }).join("") + '</div>' : '<div class="cm-meta" style="margin-top:6px">Nenhum cliente encontrado. Cadastre em Cadastros > Clientes.</div>';
+          if (!Com_$_("cmCliRes")) return;
+          Com_$_("cmCliRes").innerHTML = r.clientes.length ? '<div class="cm-lista" style="gap:4px;margin-top:6px">' + r.clientes.map(function (c) { return '<div class="cm-mini" data-cli="' + Com_esc_(c.id) + '" data-nome="' + Com_esc_(c.nome) + '"><b>' + Com_esc_(c.nome) + '</b>' + Com_esc_(c.cnpj || "sem CNPJ") + (c.unidade ? ' · unidade ' + Com_esc_(c.unidade) : '') + '</div>'; }).join("") + '</div>' : '<div class="cm-meta" style="margin-top:6px">Nenhum cliente ativo com "' + Com_esc_(q) + '" no nome, na razão social, no CNPJ ou nas unidades. A busca ignora acentos e aceita parte do nome. Se o cliente ainda não existe, cadastre em Cadastros > Clientes e volte aqui.</div>';
           Com_$_("cmCliRes").querySelectorAll("[data-cli]").forEach(function (el) { el.onclick = function () { st.clienteId = el.getAttribute("data-cli"); st.clienteNome = el.getAttribute("data-nome"); Com_$_("cmCliBusca").value = st.clienteNome; Com_$_("cmCliRes").innerHTML = ""; atual = {}; carregar(st.clienteId); }; });
-        });
+        }, function (m) { if (Com_$_("cmCliRes")) Com_msg_("cmCliRes", m); }, { chave: "clientes" });
       }, 350);
     };
     if (st.clienteId) carregar(st.clienteId);
@@ -554,7 +572,7 @@
       '<div class="cm-faixa">Para criar uma proposta, abra a oportunidade e toque em "Nova proposta": a proposta nasce ligada ao cliente, à unidade e ao contato dela.</div>' +
       '<div class="cm-filtros"><div><label>Situação</label><select id="cmPSit">' + Com_opcoes_(sits, f.situacao) + '</select></div>' +
       (ini.gestao ? '<div><label>Responsável</label><select id="cmPResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
-      '<div style="flex:1 1 200px"><label>Buscar</label><input id="cmPBusca" placeholder="Número, cliente ou título" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmProps"><div class="cm-vazio">Carregando…</div></div></div>';
+      '<div style="flex:1 1 200px"><label for="cmPBusca">Buscar</label><input id="cmPBusca" type="search" placeholder="Número, cliente, título, contato ou produto da proposta" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmProps"><div class="cm-vazio">Carregando…</div></div></div>';
     var ler = function () { f.situacao = Com_$_("cmPSit").value; f.busca = Com_$_("cmPBusca").value; if (Com_$_("cmPResp")) f.responsavelId = Com_$_("cmPResp").value; Comercial_carregarProps_(); };
     Com_$_("cmPSit").onchange = ler; if (Com_$_("cmPResp")) Com_$_("cmPResp").onchange = ler;
     var t = null; Com_$_("cmPBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 400); };
@@ -563,14 +581,18 @@
   }
 
   function Comercial_carregarProps_() {
+    var alvoIni = Com_$_("cmProps");
+    if (alvoIni && CM.filtroProp.busca) alvoIni.innerHTML = '<div class="cm-vazio">Buscando…</div>';
     Com_chamar_("propostas", CM.filtroProp, function (r) {
       var alvo = Com_$_("cmProps"); if (!alvo) return;
-      if (!r.propostas.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhuma proposta com estes filtros.</div>'; return; }
-      alvo.innerHTML = '<div class="cm-lista">' + r.propostas.map(function (p) {
+      var verTodas = function () { CM.filtroProp.situacao = "TODAS"; if (Com_$_("cmPSit")) Com_$_("cmPSit").value = "TODAS"; Comercial_carregarProps_(); };
+      var fora = Com_avisoForaFiltro_(alvo, r.foraDoFiltro, r.foraDoFiltro === 1 ? "proposta" : "propostas", verTodas);
+      if (!r.propostas.length) { alvo.innerHTML = fora + '<div class="cm-vazio">' + (CM.filtroProp.busca ? 'Nenhuma proposta ' + (fora ? 'nesta situação ' : '') + 'com "' + Com_esc_(CM.filtroProp.busca) + '". A busca ignora acentos e maiúsculas, aceita parte do texto e procura também nos itens da proposta; confira a grafia ou apague a busca.' : 'Nenhuma proposta com estes filtros.') + '</div>'; return; }
+      alvo.innerHTML = fora + '<div class="cm-lista">' + r.propostas.map(function (p) {
         return '<div class="cm-mini" data-prop="' + Com_esc_(p.id) + '"><b>' + Com_esc_(p.rotulo) + ' · ' + Com_esc_(p.cliente) + '</b>' + Com_esc_(p.titulo) + '<div class="cm-meta" style="margin:4px 0 2px">' + (p.totalTxt ? Com_esc_(p.totalTxt) + ' · ' : '') + 'válida até ' + Com_esc_(p.validaAte) + (CM.ini.gestao ? ' · ' + Com_esc_(p.responsavel) : '') + '</div>' + Com_seloProp_(p) + '</div>';
       }).join("") + '</div>';
       alvo.querySelectorAll("[data-prop]").forEach(function (c) { c.onclick = function () { Comercial_abrirProposta_(c.getAttribute("data-prop")); }; });
-    }, function (m) { Com_msg_("cmProps", m); });
+    }, function (m) { Com_msg_("cmProps", m); }, { chave: "props" });
   }
 
   function Comercial_abrirProposta_(id, aviso) {
@@ -715,12 +737,27 @@
     Com_chamar_("cliente", { clienteId: p.clienteId }, function (r) { CM.equipProp = r.equipamentos.filter(function (e) { return !p.unidadeId || !e.unidadeId || e.unidadeId === p.unidadeId; }); Comercial_desenharItens_(); }, function () {});
     Comercial_desenharItens_();
     Com_$_("cmAddItem").onclick = function () { Comercial_lerItens_(); CM.itens.push({ tipo: "SERVICO", descricao: "", quantidade: 1, unidade: "un.", precoUnitario: "" }); Comercial_desenharItens_(); };
+    // 27/10/2026: "Do catálogo" com busca no banco (mesma busca da aba Produtos e serviços), 50 itens por vez.
     Com_$_("cmAddCat").onclick = function () {
-      Com_chamar_("catalogo", {}, function (r) {
-        if (!r.produtos.length) { alert("O catálogo está vazio. A gestão cadastra os produtos e serviços em Comercial > Produtos e serviços; enquanto isso, use \"Acrescentar item\"."); return; }
-        var ov = Com_modal_("Escolher do catálogo", '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + '</div>'; }).join("") + '</div>', '', 560);
-        ov.querySelectorAll("[data-k]").forEach(function (el) { el.onclick = function () { var x = r.produtos[+el.getAttribute("data-k")]; Comercial_lerItens_(); CM.itens.push({ produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao, quantidade: 1, unidade: x.unidade, precoUnitario: x.preco, precoTabela: x.preco }); ov.remove(); Comercial_desenharItens_(); }; });
-      });
+      var ov = Com_modal_("Escolher do catálogo", '<div class="cm-campo"><label for="cmEscBusca">Buscar no catálogo</label><input id="cmEscBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria"></div><p class="cm-meta" id="cmEscInfo" aria-live="polite">Carregando o catálogo…</p><div id="cmEscRes"></div>', '', 560);
+      var buscar = function () {
+        var q = Com_$_("cmEscBusca") ? Com_$_("cmEscBusca").value : "";
+        Com_chamar_("catalogo", { busca: q, situacao: "ATIVOS", limite: 50 }, function (r) {
+          var res = Com_$_("cmEscRes"), inf = Com_$_("cmEscInfo"); if (!res) return;
+          if (!r.total) { inf.textContent = ""; res.innerHTML = '<div class="cm-vazio">O catálogo está vazio. A gestão cadastra os produtos e serviços em Comercial > Produtos e serviços; enquanto isso, feche esta janela e use "Acrescentar item".</div>'; return; }
+          inf.textContent = r.produtos.length ? (r.limitado ? "Mostrando " + r.produtos.length + " de " + Number(r.encontrados).toLocaleString("pt-BR") + " itens; escreva mais para afinar." : Number(r.encontrados).toLocaleString("pt-BR") + (r.encontrados === 1 ? " item." : " itens.")) : "";
+          res.innerHTML = r.produtos.length ? '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '" tabindex="0" role="button"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + '</div>'; }).join("") + '</div>'
+            : '<div class="cm-vazio">Nenhum item ativo com "' + Com_esc_(q) + '". A busca ignora acentos e aceita parte das palavras; confira a grafia ou use "Acrescentar item" para digitar o item.</div>';
+          res.querySelectorAll("[data-k]").forEach(function (el) {
+            el.onclick = function () { var x = r.produtos[+el.getAttribute("data-k")]; Comercial_lerItens_(); CM.itens.push({ produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao, quantidade: 1, unidade: x.unidade, precoUnitario: x.preco, precoTabela: x.preco }); ov.remove(); Comercial_desenharItens_(); };
+            el.onkeydown = function (e) { if (e.key === "Enter") el.onclick(); };
+          });
+        }, function (m) { if (Com_$_("cmEscInfo")) Com_$_("cmEscInfo").textContent = ""; if (Com_$_("cmEscRes")) Com_msg_("cmEscRes", m); }, { chave: "catalogoEscolha" });
+      };
+      var t = null;
+      Com_$_("cmEscBusca").oninput = function () { clearTimeout(t); t = setTimeout(buscar, 350); };
+      Com_$_("cmEscBusca").focus();
+      buscar();
     };
     var dsc = Com_$_("cmPrDesc"); if (dsc) dsc.oninput = Comercial_totais_;
   }
@@ -785,21 +822,50 @@
   // =========================================================
   // CATÁLOGO
   // =========================================================
+  // 27/10/2026: busca no banco (Comercial_api 'catalogo' com busca, tipo, categoria e situação), sem acento e por partes,
+  // mostrando até 200 itens dos mais parecidos (o catálogo tem mais de 1.300 itens importados do CRM).
+  var COM_CAT_LIMITE = 200;
   function Comercial_renderCatalogo_(div) {
-    var ini = CM.ini;
-    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + ((ini.gestao || ini.catalogo) ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
-      (ini.gestao || ini.catalogo) ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') + '<div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
+    var ini = CM.ini, gere = !!(ini.gestao || ini.catalogo);
+    var f = CM.filtroCat = CM.filtroCat || { busca: "", tipo: "", categoria: "", situacao: "TODOS" };
+    var tipos = Object.keys(ini.tiposItem || {}).map(function (k) { return { v: k, t: ini.tiposItem[k] }; });
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + (gere ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
+      gere ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') +
+      '<div class="cm-filtros" role="search"><div style="flex:2 1 260px"><label for="cmCatBusca">Buscar no catálogo</label><input id="cmCatBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria (ex.: fonte 9v, CRM-DF8F)" value="' + Com_esc_(f.busca) + '"></div>' +
+      '<div><label for="cmCatTipo">Tipo</label><select id="cmCatTipo">' + Com_opcoes_(tipos, f.tipo, "Todos") + '</select></div>' +
+      '<div><label for="cmCatCateg">Categoria</label><select id="cmCatCateg">' + Com_opcoes_(f.categoria ? [f.categoria] : [], f.categoria, "Todas") + '</select></div>' +
+      (gere ? '<div><label for="cmCatSit">Situação</label><select id="cmCatSit">' + Com_opcoes_([{ v: "TODOS", t: "Ativos e arquivados" }, { v: "ATIVOS", t: "Só ativos" }, { v: "ARQUIVADOS", t: "Só arquivados" }], f.situacao) + '</select></div>' : '') +
+      '<div><button type="button" class="btn-secondary" id="cmCatLimpar">Limpar</button></div></div>' +
+      '<p class="cm-meta" id="cmCatInfo" aria-live="polite"></p><div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
     if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
-    Com_chamar_("catalogo", { incluirArquivados: (ini.gestao || ini.catalogo) }, function (r) {
-      var alvo = Com_$_("cmCat");
-      if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + ((ini.gestao || ini.catalogo) ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
+    var ler = function () { f.busca = Com_$_("cmCatBusca").value; f.tipo = Com_$_("cmCatTipo").value; f.categoria = Com_$_("cmCatCateg").value; if (Com_$_("cmCatSit")) f.situacao = Com_$_("cmCatSit").value; Comercial_carregarCatalogo_(); };
+    var t = null;
+    Com_$_("cmCatBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 350); };
+    Com_$_("cmCatBusca").onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); clearTimeout(t); ler(); } };
+    ["cmCatTipo", "cmCatCateg", "cmCatSit"].forEach(function (id) { var el = Com_$_(id); if (el) el.onchange = ler; });
+    Com_$_("cmCatLimpar").onclick = function () { f.busca = ""; f.tipo = ""; f.categoria = ""; f.situacao = "TODOS"; Comercial_renderCatalogo_(div); };
+    Comercial_carregarCatalogo_();
+  }
+  function Comercial_carregarCatalogo_() {
+    var ini = CM.ini, gere = !!(ini.gestao || ini.catalogo), f = CM.filtroCat || {};
+    var info = Com_$_("cmCatInfo"); if (info) info.textContent = f.busca ? "Buscando no catálogo…" : "Carregando o catálogo…";
+    Com_chamar_("catalogo", { incluirArquivados: gere, busca: f.busca || "", tipo: f.tipo || "", categoria: f.categoria || "", situacao: gere ? (f.situacao || "TODOS") : "ATIVOS", limite: COM_CAT_LIMITE }, function (r) {
+      var alvo = Com_$_("cmCat"); if (!alvo) return;
+      var sel = Com_$_("cmCatCateg");
+      if (sel) sel.innerHTML = Com_opcoes_(r.categorias || [], f.categoria, "Todas");
+      var filtrando = !!(f.busca || f.tipo || f.categoria || (gere && f.situacao && f.situacao !== "TODOS"));
+      var inf = Com_$_("cmCatInfo");
+      if (inf) inf.textContent = !r.total ? "" : (filtrando ? (r.encontrados === 1 ? "1 item encontrado" : Number(r.encontrados).toLocaleString("pt-BR") + " itens encontrados") + " de " + Number(r.total).toLocaleString("pt-BR") + " no catálogo" : Number(r.total).toLocaleString("pt-BR") + " itens no catálogo") +
+        (r.limitado ? ". Mostrando os " + r.produtos.length + " mais parecidos com a busca; escreva mais uma palavra do nome ou o código para afinar." : (r.total ? "." : ""));
+      if (!r.total) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (gere ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
+      if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum item' + (f.busca ? ' com "' + Com_esc_(f.busca) + '"' : '') + ' com estes filtros. A busca ignora acentos e maiúsculas, aceita parte das palavras e procura no código, no nome, na descrição e na categoria. Confira a grafia, mude o tipo ou a categoria, ou toque em "Limpar".' + (gere ? ' Se o item não existe, cadastre em "Novo item".' : '') + '</div>'; return; }
       alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + ((ini.gestao || ini.catalogo) ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
         return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
           ((ini.gestao || ini.catalogo) ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
       }).join("") + '</tbody></table>';
       alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
-      alvo.querySelectorAll("[data-arq]").forEach(function (b) { b.onclick = function () { var p = r.produtos[+b.getAttribute("data-arq")]; Com_chamar_("arquivarProduto", { id: p.id, reativar: !p.ativo }, function (x) { alert(x.message); Comercial_renderCatalogo_(div); }); }; });
-    }, function (m) { Com_msg_("cmCat", m); });
+      alvo.querySelectorAll("[data-arq]").forEach(function (b) { b.onclick = function () { var p = r.produtos[+b.getAttribute("data-arq")]; Com_chamar_("arquivarProduto", { id: p.id, reativar: !p.ativo }, function (x) { alert(x.message); Comercial_carregarCatalogo_(); }); }; });
+    }, function (m) { var inf = Com_$_("cmCatInfo"); if (inf) inf.textContent = ""; Com_msg_("cmCat", m); }, { chave: "catalogo" });
   }
   function Comercial_formProduto_(p) {
     var tipos = Object.keys(CM.ini.tiposItem).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
@@ -945,7 +1011,7 @@
     return '<div class="cm-filtros">' +
       '<div><label for="cmQFunil">Funil</label><select id="cmQFunil">' + Com_opcoes_(funis, tela === "kanban" ? (f.funil || ini.funis[0].codigo) : f.funil, tela === "kanban" ? undefined : "Todos") + '</select></div>' +
       (ini.gestao ? '<div><label for="cmQResp">Vendedor</label><select id="cmQResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
-      '<div style="flex:1 1 180px"><label for="cmQBusca">Cliente</label><input id="cmQBusca" placeholder="Nome do cliente, título ou código" value="' + Com_esc_(f.busca || "") + '"></div>' +
+      '<div style="flex:1 1 180px"><label for="cmQBusca">Buscar</label><input id="cmQBusca" type="search" placeholder="Cliente, unidade, título, código ou contato" value="' + Com_esc_(f.busca || "") + '"></div>' +
       '<div><label for="cmQArea">Área</label><select id="cmQArea">' + Com_opcoes_((CM.areasQ || []).map(function (a) { return { v: a, t: a }; }), f.area, "Todas") + '</select></div>' +
       '<div><label for="cmQDe">De</label><input type="date" id="cmQDe" value="' + Com_esc_(f.de) + '"></div>' +
       '<div><label for="cmQAte">Até</label><input type="date" id="cmQAte" value="' + Com_esc_(f.ate) + '"></div>' +
@@ -998,7 +1064,7 @@
       Com_msg_("cmkMsg", "");
       Comercial_desenharLeitura_(r.leitura, r, null);
       Comercial_desenharQuadro_(r);
-    }, function (m) { Com_msg_("cmkMsg", m); });
+    }, function (m) { Com_msg_("cmkMsg", m); }, { chave: "quadro" });
   }
 
   function Comercial_desenharLeitura_(leitura, q, ia) {
@@ -1231,7 +1297,7 @@
       alvo.innerHTML = Comercial_ganttHtml_(r, alvo.clientWidth || 1000);
       alvo.querySelectorAll("[data-cmg]").forEach(function (g) { g.addEventListener("click", function () { Comercial_ganttDetalhe_(g.getAttribute("data-cmg")); }); });
       alvo.querySelectorAll("[data-cmg-lista]").forEach(function (b) { b.onclick = function () { Comercial_ganttDetalhe_(b.getAttribute("data-cmg-lista")); }; });
-    }, function (m) { Com_msg_("cmgMsg", m); });
+    }, function (m) { Com_msg_("cmgMsg", m); }, { chave: "gantt" });
   }
 
   var CMG_CORES = { ABERTA: "#5b8fb9", GANHA: "#4f9f75", PERDIDA: "#8a96a8" };

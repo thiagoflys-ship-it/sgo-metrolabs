@@ -40,10 +40,44 @@ function ComP_produtoParaTela_(p, eu) {
   return t;
 }
 
-function ComP_catalogo_(eu, incluirArquivados) {
+/** Catálogo (COM_PRODUTOS). d: { incluirArquivados, busca, tipo, categoria, situacao ('ATIVOS'|'ARQUIVADOS'|'TODOS'), limite }.
+ * 27/10/2026: com 1.330 itens importados do CRM a lista inteira não servia para achar nada; a busca vem do banco, sem acento e
+ * por partes, no código, nome, descrição, categoria, tipo e unidade; resultados mais parecidos primeiro (código igual, começo do
+ * código ou do nome). Devolve { produtos, total (itens que a pessoa pode ver), encontrados, limitado, categorias }. */
+function ComP_catalogo_(eu, d) {
   if (!eu.catalogo) Com_exigir_(eu, 'VENDEDOR', 'ver o catálogo');
-  return Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return incluirArquivados ? (eu.gestao || eu.catalogo) : Com_up_(p.ATIVO || 'SIM') !== 'NAO'; })
-    .map(function (p) { return ComP_produtoParaTela_(p, eu); }).sort(function (a, b) { return (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  d = d || {};
+  var gere = !!(eu.gestao || eu.catalogo), incluirArq = !!d.incluirArquivados && gere;
+  // antes, quem não era da gestão e pedia os arquivados recebia a lista vazia; agora recebe os ativos
+  var visiveis = Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Com_s_(p.ID) || Com_s_(p.NOME); }).filter(function (p) { return incluirArq || Com_up_(p.ATIVO || 'SIM') !== 'NAO'; });
+  var categorias = {};
+  visiveis.forEach(function (p) { var c = Com_s_(p.CATEGORIA); if (c) categorias[c] = 1; });
+  var termos = Com_termosBusca_(d.busca), tipo = Com_up_(d.tipo), cat = Com_normBusca_(d.categoria), sit = Com_up_(d.situacao) || 'TODOS';
+  var achados = visiveis.filter(function (p) {
+    if (tipo && Com_up_(p.TIPO || 'SERVICO') !== tipo) return false;
+    if (cat && Com_normBusca_(p.CATEGORIA) !== cat) return false;
+    var ativo = Com_up_(p.ATIVO || 'SIM') !== 'NAO';
+    if (sit === 'ATIVOS' && !ativo) return false;
+    if (sit === 'ARQUIVADOS' && ativo) return false;
+    return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA), COM_TIPOS_ITEM[Com_up_(p.TIPO)] || '', Com_s_(p.UNIDADE_MEDIDA)]);
+  }).map(function (p) { return ComP_produtoParaTela_(p, eu); });
+  var q = termos.join(' '), qJunto = termos.join('');
+  var peso = function (x) {
+    if (!termos.length) return 0;
+    var cod = Com_normBusca_(x.codigo), nome = Com_normBusca_(x.nome);
+    if (cod === q || cod.replace(/ /g, '') === qJunto) return 0;
+    if (cod.indexOf(q) === 0 || cod.replace(/ /g, '').indexOf(qJunto) === 0) return 1;
+    if (nome.indexOf(q) === 0) return 2;
+    if (Com_casaBusca_(termos, [x.codigo, x.nome])) return 3;
+    return 4; // achou só na descrição, categoria ou tipo
+  };
+  achados.forEach(function (x) { x._peso = peso(x); });
+  achados.sort(function (a, b) { return (a._peso - b._peso) || (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  achados.forEach(function (x) { delete x._peso; });
+  var limite = Math.max(0, Math.min(2000, Math.floor(Number(d.limite) || 0)));
+  var lista = limite && achados.length > limite ? achados.slice(0, limite) : achados;
+  return { produtos: lista, total: visiveis.length, encontrados: achados.length, limitado: lista.length < achados.length,
+    categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }) };
 }
 
 /** Gestão cadastra ou altera. d: { id?, codigo, nome, tipo, categoria, unidade, descricao, preco, custo } */
@@ -205,20 +239,31 @@ function ComP_dadosFaturamento_(p) {
 }
 
 /** filtro: { situacao ('ABERTAS' padrão | 'TODAS' | código), oportunidadeId, responsavelId, busca } */
-function ComP_listar_(eu, filtro) {
+// 27/10/2026: busca sem acento e por partes (Com_casaBusca_) no número, cliente, unidade, contato, responsável, título
+// e nos itens (descrição e código do produto ou serviço). info.foraDoFiltro: quantas a busca acha em outras situações
+// (a maior parte das propostas importadas está cancelada ou aprovada, fora de "Em andamento").
+function ComP_textoBusca_(p) {
+  var t = [Com_s_(p.NUMERO), ComP_rotulo_(p), Com_s_(p.CLIENTE_NOME), Com_s_(p.UNIDADE_NOME), Com_s_(p.CONTATO_NOME), Com_s_(p.RESPONSAVEL_NOME), Com_s_(p.TITULO)];
+  var itens = Com_json_(p.ITENS_JSON, []);
+  if (Array.isArray(itens)) itens.forEach(function (i) { if (i) t.push(Com_s_(i.descricao), Com_s_(i.codigo)); });
+  return t;
+}
+function ComP_listar_(eu, filtro, info) {
   Com_exigir_(eu, 'FINANCEIRO', 'ver as propostas');
-  var f = filtro || {}, sit = Com_up_(f.situacao) || (eu.financeiro ? 'APROVADA' : 'ABERTAS'), busca = Com_s_(f.busca).toLowerCase();
+  var f = filtro || {}, sit = Com_up_(f.situacao) || (eu.financeiro ? 'APROVADA' : 'ABERTAS'), termos = Com_termosBusca_(f.busca), fora = 0;
   ComP_sincronizarEnvios_();
   var abertas = ['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'];
-  return Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) {
+  var l = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) {
     if (!ComP_podeVer_(eu, p)) return false;
-    var s = Com_up_(p.SITUACAO);
-    if (sit === 'ABERTAS' ? abertas.indexOf(s) < 0 : (sit !== 'TODAS' && s !== sit)) return false;
     if (f.oportunidadeId && Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(f.oportunidadeId)) return false;
     if (f.responsavelId && eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== Com_s_(f.responsavelId)) return false;
-    if (busca && (Com_s_(p.NUMERO) + ' ' + Com_s_(p.CLIENTE_NOME) + ' ' + Com_s_(p.TITULO)).toLowerCase().indexOf(busca) < 0) return false;
+    if (termos.length && !Com_casaBusca_(termos, ComP_textoBusca_(p))) return false;
+    var s = Com_up_(p.SITUACAO);
+    if (sit === 'ABERTAS' ? abertas.indexOf(s) < 0 : (sit !== 'TODAS' && s !== sit)) { if (termos.length) fora++; return false; }
     return true;
-  }).map(function (p) { return ComP_paraTela_(eu, p, false); })
+  });
+  if (info) info.foraDoFiltro = fora;
+  return l.map(function (p) { return ComP_paraTela_(eu, p, false); })
     .sort(function (a, b) { return String(b.numero + b.revisao).localeCompare(String(a.numero + a.revisao)); });
 }
 
