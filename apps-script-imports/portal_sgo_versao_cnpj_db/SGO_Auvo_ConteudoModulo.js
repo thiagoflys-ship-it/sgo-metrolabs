@@ -272,7 +272,13 @@ function tplAuvo_sincronizarCliente(id) {
   if (!confirm('Enviar o cadastro deste cliente para o Auvo? Se ele já existe lá, os dados do Auvo serão atualizados com os do SGO+.')) return;
   document.getElementById('tplAuvo_clientesResultado').innerHTML = '<div class="alert-box info">Enviando para o Auvo...</div>';
   tplAuvo_chamarApi('apiSincronizarCliente', { clienteId: id })
-    .then(function() { tplAuvo_msg('tplAuvo_clientesResultado', 'success', 'Cliente enviado para o Auvo. A situação na lista abaixo foi atualizada.'); tplAuvo_buscarClientes(); })
+    .then(function(res) {
+      // 27/10/2026: diz se o cliente foi ligado a um que já existia no Auvo, criado ou atualizado
+      var texto = (res && res.mensagem) ? tplAuvo_esc(res.mensagem) : 'Cliente enviado para o Auvo.';
+      var aviso = res && ((res.repetidos && res.repetidos.length) || res.externalIdEmOutro);
+      tplAuvo_msg('tplAuvo_clientesResultado', aviso ? 'warning' : 'success', texto + ' A situação na lista abaixo foi atualizada.');
+      tplAuvo_buscarClientes();
+    })
     .catch(function(err) { tplAuvo_erro('tplAuvo_clientesResultado', err); });
 }
 
@@ -758,58 +764,122 @@ function tplAuvo_processarLoteReverso_(res) {
 }
 
 // ---------------- Envio de cadastro pendente (Portal -> Auvo) ----------------
-function tplAuvo_simularEnvioCadastro() {
-  document.getElementById('tplAuvo_envioResultado').innerHTML = '<div class="alert-box info">Calculando o que está pendente...</div>';
-  tplAuvo_chamarApi('apiSimularEnvioCadastro', {})
+// 27/10/2026 (perguntas do gestor): a prévia mostra os pendentes por cliente/unidade, quantos
+// seriam criados, ligados a um que já existe no Auvo ou atualizados, e quantos estão sem TAG.
+// O envio pode ser de todos, de um cliente ou de uma unidade dele (o escopo vale até o fim do envio).
+var tplAuvo_filtroEnvio_ = { clienteId: '', unidadeId: '' };
+
+function tplAuvo_simularEnvioCadastro(filtro) {
+  if (filtro) tplAuvo_filtroEnvio_ = { clienteId: filtro.clienteId || '', unidadeId: filtro.unidadeId || '' };
+  document.getElementById('tplAuvo_envioResultado').innerHTML = '<div class="alert-box info">Calculando o que está pendente e conferindo no Auvo... (a primeira vez pode levar alguns minutos)</div>';
+  tplAuvo_chamarApi('apiSimularEnvioCadastro', tplAuvo_filtroEnvio_)
     .then(function(res) { tplAuvo_renderSimulacaoEnvio_(res); })
     .catch(function(err) { tplAuvo_erro('tplAuvo_envioResultado', err); });
 }
 
+function tplAuvo_escolherClienteEnvio_(sel) {
+  tplAuvo_simularEnvioCadastro({ clienteId: sel.value, unidadeId: '' });
+}
+
+function tplAuvo_escolherUnidadeEnvio_(sel) {
+  tplAuvo_simularEnvioCadastro({ clienteId: tplAuvo_filtroEnvio_.clienteId, unidadeId: sel.value });
+}
+
+function tplAuvo_rotuloAcaoEnvio_(acao) {
+  return { criar: 'Criar no Auvo', ligar: 'Já existe no Auvo: ligar', atualizar: 'Mover para o cliente certo', aConferir: 'A conferir', semVinculo: 'Sem cliente/unidade' }[acao] || acao;
+}
+
 function tplAuvo_renderSimulacaoEnvio_(res) {
-  var u = res.unidades, e = res.equipamentos;
+  var u = res.unidades, e = res.equipamentos, f = res.filtro || {};
+  tplAuvo_filtroEnvio_ = { clienteId: f.clienteId || '', unidadeId: f.unidadeId || '' };
+
+  var opcoesCli = '<option value="">Todos os clientes</option>' + (res.clientes || []).map(function(c) {
+    var n = c.pendentes + c.atualizar;
+    return '<option value="' + tplAuvo_esc(c.id) + '"' + (c.id === f.clienteId ? ' selected' : '') + '>' + tplAuvo_esc(c.nome) + ' (' + n + ')</option>';
+  }).join('');
+  var seletor = '<div class="busca-linha" style="flex-wrap:wrap;gap:8px">' +
+    '<label class="muted" for="tplAuvo_envioCliente">Enviar para:</label>' +
+    '<select id="tplAuvo_envioCliente" onchange="tplAuvo_escolherClienteEnvio_(this)">' + opcoesCli + '</select>' +
+    (f.clienteId ? ('<select id="tplAuvo_envioUnidade" onchange="tplAuvo_escolherUnidadeEnvio_(this)"><option value="">Todas as unidades deste cliente</option>' +
+      (res.unidadesDoCliente || []).map(function(x) {
+        return '<option value="' + tplAuvo_esc(x.id) + '"' + (x.id === f.unidadeId ? ' selected' : '') + '>' + tplAuvo_esc(x.nome) + '</option>';
+      }).join('') + '</select>') : '') +
+    '</div>';
+
+  var grupos = (res.grupos || []).map(function(g) {
+    return '<tr><td data-rot="Cliente">' + tplAuvo_esc(g.cliente) + '</td>' +
+      '<td data-rot="Unidade">' + tplAuvo_esc(g.unidade) + '</td>' +
+      '<td data-rot="Pendentes">' + g.pendentes + '</td>' +
+      '<td data-rot="Criar">' + g.criar + '</td>' +
+      '<td data-rot="Ligar a existente">' + g.ligar + '</td>' +
+      '<td data-rot="Mover p/ cliente certo">' + g.atualizar + '</td>' +
+      '<td data-rot="Sem TAG">' + g.semTag + '</td>' +
+      (f.clienteId ? '' : '<td class="celula-acoes" data-rot=""><button type="button" class="btn btn-sm" data-cli="' + tplAuvo_esc(g.clienteId) + '" onclick="tplAuvo_simularEnvioCadastro({ clienteId: this.getAttribute(&quot;data-cli&quot;) })">Só este cliente</button></td>') +
+      '</tr>';
+  }).join('');
+
   var amostraU = (res.amostraUnidades || []).map(function(x) {
     return '<tr><td data-rot="Unidade">' + tplAuvo_esc(x.nome) + '</td><td data-rot="CNPJ">' + tplAuvo_esc(x.cnpj || '-') + '</td></tr>';
   }).join('');
   var amostraE = (res.amostraEquipamentos || []).map(function(x) {
-    return '<tr><td data-rot="Equipamento">' + tplAuvo_esc(x.tipo || '-') + '</td><td data-rot="TAG">' + tplAuvo_esc(x.tag || '-') + '</td></tr>';
+    return '<tr><td data-rot="Equipamento">' + tplAuvo_esc(x.tipo || '-') + '</td>' +
+      '<td data-rot="TAG">' + (x.semTag ? '<span class="muted">sem TAG</span>' : tplAuvo_esc(x.tag)) + '</td>' +
+      '<td data-rot="Vai ao Auvo como">' + tplAuvo_esc(x.identificador) + '</td>' +
+      '<td data-rot="Cliente / unidade">' + tplAuvo_esc(x.cliente) + ' › ' + tplAuvo_esc(x.unidade) + '</td>' +
+      '<td data-rot="O que acontece">' + tplAuvo_esc(tplAuvo_rotuloAcaoEnvio_(x.acao)) + '</td></tr>';
   }).join('');
 
-  var html = '<div class="alert-box warning">' +
-    '<strong>Prévia — nada foi gravado ainda.</strong><br><br>' +
+  var temAlgo = u.pendentes || e.pendentes || e.atualizar;
+  var html = seletor +
+    '<div class="alert-box warning">' +
+    '<strong>Prévia — nada foi gravado ainda.</strong> Escopo: <strong>' + tplAuvo_esc(f.rotulo || 'todos os clientes') + '</strong>.<br><br>' +
     '<strong>Unidades:</strong> ' + u.total + ' ativa(s), ' + u.pendentes + ' pendente(s) de envio.<br>' +
-    '<strong>Equipamentos:</strong> ' + e.total + ' ativo(s), ' + e.pendentes + ' pendente(s) de envio' +
-    (e.semVinculo ? (', ' + e.semVinculo + ' sem Cliente/Unidade vinculado (não é possível enviar sem um pai — ficarão marcados com erro).') : '.') +
+    '<strong>Equipamentos:</strong> ' + e.total + ' ativo(s), ' + e.pendentes + ' pendente(s) de envio:<br>' +
+    '&bull; ' + e.criar + ' seriam <strong>criados</strong> no Auvo (não existem lá);<br>' +
+    '&bull; ' + e.ligar + ' já existem no Auvo e seriam <strong>ligados</strong> ao existente (sem duplicar) e atualizados;<br>' +
+    (e.aConferir ? ('&bull; ' + e.aConferir + ' a conferir no envio (o Auvo não respondeu agora);<br>') : '') +
+    (e.semVinculo ? ('&bull; ' + e.semVinculo + ' sem cliente/unidade no SGO+: não podem ir (ficam marcados com erro). Corrija o cadastro do equipamento;<br>') : '') +
+    '&bull; ' + e.semTag + ' dos pendentes estão <strong>sem TAG</strong> (N/P, N/A, "-", vazio...): vão com o nº de série, o patrimônio ou o código do SGO+ como identificador.<br>' +
+    (e.atualizar ? ('<strong>Já ligados, mas no cliente errado do Auvo:</strong> ' + e.atualizar + ' seriam <strong>atualizados</strong> (movidos para o cliente original do Auvo).') : '') +
     '</div>' +
+    (res.avisoAuvo ? ('<div class="alert-box warning">' + tplAuvo_esc(res.avisoAuvo) + '</div>') : '') +
+    (grupos ? ('<table class="tabela-resultado"><thead><tr><th>Cliente</th><th>Unidade</th><th>Pendentes</th><th>Criar</th><th>Ligar a existente</th><th>Mover p/ cliente certo</th><th>Sem TAG</th>' + (f.clienteId ? '' : '<th></th>') + '</tr></thead><tbody>' + grupos + '</tbody></table>') : '') +
     (amostraU ? ('<table class="tabela-resultado"><thead><tr><th>Unidade (amostra)</th><th>CNPJ</th></tr></thead><tbody>' + amostraU + '</tbody></table>') : '') +
-    (amostraE ? ('<table class="tabela-resultado"><thead><tr><th>Equipamento (amostra)</th><th>TAG</th></tr></thead><tbody>' + amostraE + '</tbody></table>') : '') +
-    ((u.pendentes || e.pendentes) ? '<button type="button" class="btn btn-primary" onclick="tplAuvo_confirmarEnvioCadastro()">Confirmar e enviar de verdade</button>' :
-      '<div class="alert-box success">Nada pendente — Unidades e Equipamentos ativos já estão todos no Auvo.</div>');
+    (amostraE ? ('<table class="tabela-resultado"><thead><tr><th>Equipamento (amostra)</th><th>TAG</th><th>Vai ao Auvo como</th><th>Cliente / unidade</th><th>O que acontece</th></tr></thead><tbody>' + amostraE + '</tbody></table>') : '') +
+    (temAlgo ? '<button type="button" class="btn btn-primary" style="margin-top:10px" onclick="tplAuvo_confirmarEnvioCadastro()">Confirmar e enviar de verdade (' + tplAuvo_esc(f.rotulo || 'todos os clientes') + ')</button>' :
+      '<div class="alert-box success">Nada pendente neste escopo — unidades e equipamentos ativos já estão no Auvo.</div>');
 
   document.getElementById('tplAuvo_envioResultado').innerHTML = html;
 }
 
 function tplAuvo_confirmarEnvioCadastro() {
-  if (!confirm('Enviar ao Auvo as unidades e os equipamentos pendentes mostrados na prévia?')) return;
-  document.getElementById('tplAuvo_envioResultado').innerHTML = '<div class="alert-box info">Enviando Unidades pendentes...</div>';
-  tplAuvo_chamarApi('apiEnviarUnidadesPendentes', {})
+  var sel = document.getElementById('tplAuvo_envioCliente');
+  var escopo = (sel && sel.value) ? sel.options[sel.selectedIndex].text : 'todos os clientes';
+  if (!confirm('Enviar ao Auvo o que está pendente em: ' + escopo + '? Equipamento que já existe lá é ligado e atualizado, sem criar outro.')) return;
+  var filtro = tplAuvo_filtroEnvio_;
+  document.getElementById('tplAuvo_envioResultado').innerHTML = '<div class="alert-box info">Enviando unidades pendentes...</div>';
+  tplAuvo_chamarApi('apiEnviarUnidadesPendentes', filtro)
     .then(function(resUnidades) {
       var el = document.getElementById('tplAuvo_envioResultado');
       var linhaU = '<div class="alert-box ' + (resUnidades.erros && resUnidades.erros.length ? 'warning' : 'success') + '">' +
-        'Unidades: ' + resUnidades.sincronizadas + ' de ' + resUnidades.total + ' enviada(s).' +
+        'Unidades: ' + resUnidades.sincronizadas + ' de ' + resUnidades.total + ' enviada(s)' +
+        (resUnidades.ligadas ? (' (' + resUnidades.ligadas + ' já existiam no Auvo e foram ligadas, sem duplicar)') : '') + '.' +
         (resUnidades.erros && resUnidades.erros.length ? ('<br>' + resUnidades.erros.slice(0, 5).map(tplAuvo_esc).join('<br>')) : '') +
         '</div>';
-      if (el) el.innerHTML = linhaU + '<div class="alert-box info">Enviando Equipamentos (em lotes)...</div>';
-      return tplAuvo_chamarApi('apiIniciarEnvioEquipamentos', {}).then(function(res) { tplAuvo_processarLoteEnvio_(res, linhaU); });
+      if (el) el.innerHTML = linhaU + '<div class="alert-box info">Enviando equipamentos (em lotes)...</div>';
+      return tplAuvo_chamarApi('apiIniciarEnvioEquipamentos', filtro).then(function(res) { tplAuvo_processarLoteEnvio_(res, linhaU); });
     })
     .catch(function(err) { tplAuvo_erro('tplAuvo_envioResultado', err); });
 }
 
 function tplAuvo_processarLoteEnvio_(res, prefixoHtml) {
   var linha = (prefixoHtml || '') + '<div class="alert-box ' + (res.concluido ? 'success' : 'info') + '">' +
-    'Equipamentos: ' + res.indiceAtual + ' de ' + res.totalAtivos + ' processado(s) — ' +
-    res.criados + ' criado(s), ' + res.atualizados + ' atualizado(s), ' + (res.vinculados || 0) + ' reconhecido(s) já cadastrado(s) no Auvo (sem duplicar), ' +
-    (res.desambiguados ? (res.desambiguados + ' criado(s) com TAG+série (TAG já usada por outro cliente no Auvo), ') : '') +
-    res.jaMapeados + ' já mapeado(s), ' + res.semVinculo + ' sem vínculo.' +
+    'Equipamentos (' + tplAuvo_esc((res.filtro && res.filtro.rotulo) || 'todos os clientes') + '): ' + res.indiceAtual + ' de ' + res.totalAtivos + ' conferido(s) — ' +
+    res.criados + ' criado(s), ' + (res.vinculados || 0) + ' já existiam no Auvo e foram ligados (sem duplicar), ' +
+    res.atualizados + ' atualizado(s) (movidos para o cliente certo), ' +
+    (res.desambiguados ? (res.desambiguados + ' criado(s) com identificador + série (o identificador já era usado por outro cliente no Auvo), ') : '') +
+    res.jaMapeados + ' já estavam certos, ' + res.semVinculo + ' sem vínculo' +
+    (res.semTag ? (', ' + res.semTag + ' sem TAG enviados com série/patrimônio/código') : '') + '.' +
     (res.erros && res.erros.length ? ('<br><span style="color:var(--danger)">' + res.erros.length + ' erro(s): ' + res.erros.slice(0, 5).map(tplAuvo_esc).join(' | ') + '</span>') : '') +
     '</div>';
 
@@ -817,10 +887,10 @@ function tplAuvo_processarLoteEnvio_(res, prefixoHtml) {
   if (el) el.innerHTML = linha;
 
   if (res.concluido) {
-    if (el) el.innerHTML += '<div class="alert-box success">Envio concluído.</div>';
+    if (el) el.innerHTML += '<div class="alert-box success">Envio concluído. Toque em "Simular" de novo para conferir o que sobrou.</div>';
     return;
   }
-  // continua automaticamente enquanto a tela estiver aberta (lote seguinte)
+  // continua automaticamente enquanto a tela estiver aberta (lote seguinte, mesmo escopo)
   tplAuvo_chamarApi('apiContinuarEnvioEquipamentos', {}).then(function(res2) { tplAuvo_processarLoteEnvio_(res2, ''); }).catch(function(err) { tplAuvo_erro('tplAuvo_envioResultado', err); });
 }
 
@@ -921,7 +991,9 @@ function tplAuvo_manualHtml_() {
 <li>Corrija o cliente no SGO+ (Cadastros &gt; Clientes ou Vínculos).</li>
 <li>Em "Enviar correção de cliente para o Auvo (SGO+ → Auvo)", digite pelo menos 2 letras do nome ou o CNPJ e toque em "Buscar".</li>
 <li>Toque em "Sincronizar" na linha do cliente e confirme. O cadastro do SGO+ vai para o Auvo (cria ou atualiza lá).</li>
+<li>Leia a caixa de resultado: "já existia no Auvo (nº ...) ... ligou este cadastro a ele" quer dizer que nada foi criado; o SGO+ passou a usar o cliente que já estava lá.</li>
 </ol>
+<p><strong>Como o SGO+ evita cliente repetido no Auvo:</strong> antes de criar, procura no Auvo pelo código do SGO+ (o "código externo" do Auvo) e pelo CNPJ completo. Se achar, liga e atualiza. Se houver mais de um com o mesmo CNPJ, vale o original: o que já estava ligado a este cadastro pela importação do Auvo; senão o ativo mais antigo (menor número). Se o Auvo responder "External id already exists", o SGO+ procura na lista inteira de clientes do Auvo e faz o mesmo, em vez de parar. Os repetidos aparecem na caixa amarela com o número; quem administra o Auvo pode desativá-los lá (o SGO+ não apaga nada no Auvo). Se o cliente do Auvo já estiver ligado a outro cadastro do SGO+, nada é enviado e a caixa diz o que conferir em "Vínculos".</p>
 <p>O envio de unidades e equipamentos pendentes (fim desta seção) também é de toda a gestão. As ferramentas abaixo, não: toque em "Mostrar ferramentas de implantação (administrador)". Use sempre "Simular (não grava nada)" antes de confirmar.</p>
 <h3>Enviar técnico ao Auvo e envio em lote (Administrador)</h3>
 <ol>
@@ -942,10 +1014,13 @@ function tplAuvo_manualHtml_() {
 <h3>Enviar cadastro pendente (SGO+ → Auvo, toda a gestão)</h3>
 <ol>
 <li>Em "Enviar cadastro pendente para o Auvo (SGO+ → Auvo)", toque em "Simular (não grava nada)".</li>
-<li>Confira quantas unidades e equipamentos faltam.</li>
-<li>Toque em "Confirmar e enviar de verdade" e espere "Envio concluído.".</li>
+<li>Leia a prévia. Ela mostra, por cliente e unidade, quantos equipamentos seriam <strong>criados</strong> (não existem no Auvo), <strong>ligados</strong> a um que já existe lá (sem duplicar) e <strong>atualizados</strong> (já ligados, mas pendurados num cliente repetido do Auvo: são movidos para o cliente original), e quantos estão <strong>sem TAG</strong>.</li>
+<li>Para enviar só um cliente, escolha-o em "Enviar para:" (ou toque em "Só este cliente" na linha). Com o cliente escolhido, dá para escolher uma unidade dele. A prévia é refeita para esse escopo.</li>
+<li>Toque em "Confirmar e enviar de verdade (...)". O nome entre parênteses é o escopo. Espere "Envio concluído." e simule de novo para conferir o que sobrou.</li>
 </ol>
-<p>Cada unidade vira um cliente no Auvo. Equipamento sem unidade não pode ser enviado.</p>
+<p>Cada unidade vira um cliente no Auvo. Equipamento sem cliente nem unidade não pode ser enviado. A primeira prévia do dia pode levar alguns minutos: o SGO+ lê a lista de equipamentos do Auvo (fica guardada por 6 horas).</p>
+<p><strong>Como o envio reconhece equipamento que já existe no Auvo:</strong> pelo código do SGO+ gravado lá; pela TAG válida no mesmo cliente do Auvo; ou pelo nº de série no mesmo cliente. Se dois equipamentos lá tiverem a mesma TAG ou série, nenhum é escolhido no chute e o item é tratado como novo. O cliente do Auvo de cada equipamento segue a regra do original (ex.: IMED usa os clientes antigos do Auvo, não os repetidos).</p>
+<p><strong>Equipamento sem TAG:</strong> "N/P", "NP", "N/A", "-", "S/N", "SEM TAG", "0", "X" ou vazio não são TAG. Nunca servem para identificar nem para achar duplicidade. No Auvo, o equipamento aparece com o nome do tipo e o identificador "Série &lt;nº de série&gt;"; sem série, "Patrimônio &lt;nº&gt;"; sem nenhum dos dois, "SGO-" e os 8 primeiros caracteres do código do SGO+ (sempre o mesmo para o mesmo equipamento). Quando o equipamento sem TAG é ligado a um que já existe no Auvo, o identificador que está lá é mantido. Para ficar melhor, preencha a TAG ou a série no cadastro do equipamento antes de enviar.</p>
 
 <h2 id="ma-9">9. Cores e selos</h2>
 <table>
@@ -966,6 +1041,9 @@ function tplAuvo_manualHtml_() {
 <tr><td>"Limite de requisições do Auvo atingido"</td><td>Espere alguns minutos e tente de novo</td></tr>
 <tr><td>"Auvo temporariamente indisponível" ou "Falha ao comunicar com o Auvo"</td><td>Tente mais tarde. Nada se perde</td></tr>
 <tr><td>"não tem e-mail cadastrado"</td><td>Preencha o e-mail do técnico nas ferramentas de implantação e sincronize de novo</td></tr>
+<tr><td>"já existia no Auvo (nº ...)" em caixa amarela, com "repetido(s)"</td><td>Deu certo: o SGO+ usa o original. Peça a quem administra o Auvo para desativar os números repetidos citados (nada é apagado pelo SGO+)</td></tr>
+<tr><td>"Não enviado ao Auvo: o Auvo já tem este cadastro ... ligado a outro"</td><td>O cliente do Auvo pertence a outro cadastro do SGO+. Confira em "Vínculos" se é o mesmo local, junte ou corrija e sincronize de novo</td></tr>
+<tr><td>"Não foi possível consultar o Auvo agora" na prévia</td><td>A prévia não conseguiu ler o Auvo. Pode enviar (o envio confere cada item antes de criar) ou simular de novo mais tarde</td></tr>
 <tr><td>Mensagem com "painel do gestor" ou "painel de vínculos"</td><td>Há cliente ou unidade repetidos ou ligados errado. Corrija em "Vínculos" e sincronize de novo</td></tr>
 <tr><td>"Chave GEMINI_API_KEY não configurada"</td><td>O Administrador grava a chave da IA em "Chaves e senhas"</td></tr>
 <tr><td>"A janela do relatório foi fechada antes de terminar"</td><td>Gere de novo e deixe a aba aberta</td></tr>
@@ -1050,7 +1128,7 @@ function tplAuvo_paintPainel_() {
     '<div class="panel">' +
       '<h2>Enviar correção de cliente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
       '<p class="muted">Depois de corrigir um cliente no SGO+, busque pelo nome ou CNPJ e toque em "Sincronizar": ' +
-      'o cadastro do SGO+ vai para o Auvo (cria ou atualiza lá). Um cliente por vez.</p>' +
+      'o cadastro do SGO+ vai para o Auvo (atualiza lá; se já existir no Auvo com o mesmo código ou CNPJ, liga ao existente em vez de criar outro). Um cliente por vez.</p>' +
       '<div class="busca-linha">' +
         '<input type="text" id="tplAuvo_buscaClienteInput" placeholder="Nome ou CNPJ do cliente..." onkeydown="if(event.key===\\'Enter\\')tplAuvo_buscarClientes()">' +
         '<button type="button" class="btn btn-sm" onclick="tplAuvo_buscarClientes()">Buscar</button>' +
@@ -1065,9 +1143,10 @@ function tplAuvo_paintPainel_() {
       '<h2>Enviar cadastro pendente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
       '<p class="muted">Garante que Unidade/Equipamento que já existem no SGO+ também existam no Auvo (Cliente/Técnico já ' +
       'sincronizam sozinhos quando geram um documento). Cada Unidade vira um Cliente próprio no Auvo; Equipamento fica ' +
-      'vinculado à Unidade dele. Só envia o que ainda falta lá. <strong>Sempre rode "Simular" primeiro.</strong> Documento não é enviado retroativamente — ' +
+      'vinculado à Unidade dele. Só envia o que ainda falta lá; o que já existe no Auvo é ligado, sem duplicar. Dá para enviar todos ou só um cliente (ou uma unidade). ' +
+      'Equipamento sem TAG (N/P, N/A, "-"...) vai com o nº de série, o patrimônio ou o código do SGO+. <strong>Sempre rode "Simular" primeiro.</strong> Documento não é enviado retroativamente — ' +
       'só os gerados a partir de agora entram automaticamente.</p>' +
-      '<button type="button" class="btn btn-sm" onclick="tplAuvo_simularEnvioCadastro()">Simular (não grava nada)</button>' +
+      '<button type="button" class="btn btn-sm" onclick="tplAuvo_simularEnvioCadastro({})">Simular (não grava nada)</button>' +
       '<div id="tplAuvo_envioResultado"></div>' +
     '</div>' +
 

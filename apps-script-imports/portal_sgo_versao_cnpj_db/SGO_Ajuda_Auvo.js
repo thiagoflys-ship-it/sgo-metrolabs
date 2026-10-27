@@ -51,13 +51,17 @@ function SGO_ajudaTelas_Auvo_() {
           "Corrija o cliente no SGO+ primeiro (Cadastros > Clientes ou Vínculos).",
           "No quadro \"Enviar correção de cliente para o Auvo (SGO+ → Auvo)\", digite pelo menos 2 letras do nome ou o CNPJ e toque em \"Buscar\".",
           "Na linha do cliente, toque em \"Sincronizar\" e confirme a pergunta.",
-          "Caixa verde \"Cliente enviado para o Auvo\": pronto. Confira o selo da coluna \"Situação\"."
+          "Caixa verde: pronto. Confira o selo da coluna \"Situação\".",
+          "\"Já existia no Auvo (nº ...) ... ligou este cadastro a ele\": o cliente já estava no Auvo (mesmo código do SGO+ ou mesmo CNPJ). Nada foi criado; o SGO+ passou a usar o original.",
+          "Caixa amarela citando cadastros \"repetidos\": deu certo, mas o Auvo tem cópias desse cliente. Peça a quem administra o Auvo para desativar os números citados. O SGO+ não apaga nada no Auvo."
         ] },
         { titulo: "Enviar ao Auvo as unidades e os equipamentos que faltam", itens: [
-          "No quadro \"Enviar cadastro pendente para o Auvo (SGO+ → Auvo)\", toque em \"Simular (não grava nada)\".",
-          "Leia a prévia: quantas unidades e equipamentos faltam enviar. Nada foi gravado ainda.",
-          "Se estiver certo, toque em \"Confirmar e enviar de verdade\" e confirme a pergunta.",
-          "Espere a mensagem de conclusão. Os equipamentos vão em lotes."
+          "No quadro \"Enviar cadastro pendente para o Auvo (SGO+ → Auvo)\", toque em \"Simular (não grava nada)\". A primeira prévia do dia pode levar alguns minutos.",
+          "Leia a prévia. Por cliente e unidade ela mostra quantos equipamentos seriam criados, ligados a um que já existe no Auvo (sem duplicar), atualizados (movidos do cliente repetido para o original) e quantos estão sem TAG. Nada foi gravado ainda.",
+          "Para enviar só um cliente, escolha-o em \"Enviar para:\" ou toque em \"Só este cliente\" na linha. Depois, se quiser, escolha uma unidade dele.",
+          "Toque em \"Confirmar e enviar de verdade (...)\" e confirme. O nome entre parênteses é o escopo do envio.",
+          "Espere \"Envio concluído.\". Os equipamentos vão em lotes. Simule de novo para conferir o que sobrou.",
+          "Sem TAG (N/P, NP, N/A, \"-\", S/N, vazio...) não é TAG: o equipamento vai ao Auvo com o identificador \"Série [nº]\", \"Patrimônio [nº]\" ou \"SGO-[código]\", nessa ordem. Preencha a TAG ou a série no cadastro para ficar melhor."
         ] },
         { titulo: "Gerar o relatório de atendimentos (A4)", itens: [
           "Vá ao quadro \"Relatório de atendimentos (A4)\".",
@@ -97,6 +101,8 @@ function SGO_ajudaTelas_Auvo_() {
         { situacao: "\"A janela do relatório foi fechada antes de terminar\"", oQueFazer: "Gere de novo e deixe a aba aberta até o relatório aparecer." },
         { situacao: "\"Chave GEMINI_API_KEY não configurada\"", oQueFazer: "Peça ao Administrador para gravar a chave da IA em \"Chaves e senhas\"." },
         { situacao: "Mensagem sobre vínculo de cliente, unidade ou CNPJ (\"Resolva no painel do gestor\", \"Confira o painel de vínculos\")", oQueFazer: "Há cadastro repetido ou ligado ao cliente errado. Abra \"Vínculos\" no menu e corrija. Depois sincronize de novo." },
+        { situacao: "\"Não enviado ao Auvo: o Auvo já tem este cadastro ... ligado a outro\"", oQueFazer: "O cliente do Auvo com esse CNPJ já pertence a outro cadastro do SGO+. Confira em \"Vínculos\" se é o mesmo local; junte ou corrija e toque em \"Sincronizar\" de novo. Nada foi gravado no Auvo." },
+        { situacao: "\"Não foi possível consultar o Auvo agora\" na prévia do cadastro pendente", oQueFazer: "A prévia não leu o Auvo. Pode enviar mesmo assim (o envio confere cada equipamento antes de criar) ou simular de novo mais tarde." },
         { situacao: "\"Acesso restrito a Gestor/Administrador\"", oQueFazer: "Seu perfil não usa esta tela. Suas O.S. continuam no aplicativo do Auvo. Fale com a gestão se precisar." }
       ],
       quemPode: [

@@ -281,8 +281,35 @@ function Auvo_obterMapeamento_(tipo, entidadeId) {
   // Só quando há UM original: vários originais ligados ao mesmo cadastro = cadastro ainda
   // desorganizado (ex.: filiais penduradas num cliente só) — aí fica o comportamento antigo
   // até o gestor organizar no painel de Vínculos.
-  var doAuvo = achados.filter(function(m) { return /:AUVOID:/.test(String(m.CHAVE || '')) && SGO_UTILS.safe(m.AUVO_ID); });
-  return (doAuvo.length === 1 ? doAuvo[0] : achados[0]) || null;
+  return Auvo_escolherMapeamento_(achados);
+}
+
+// 27/10/2026 (IMED - URUAÇU, "External id already exists"): com várias linhas para o mesmo
+// cadastro, a primeira da lista podia ser uma linha de erro SEM número do Auvo (gravada por
+// uma tentativa anterior que falhou). O SGO+ achava que o cadastro "nunca foi enviado" e
+// tentava CRIAR de novo no Auvo. Linha sem número do Auvo só vale quando não há outra.
+function Auvo_escolherMapeamento_(achados) {
+  achados = achados || [];
+  var comId = achados.filter(function(m) { return SGO_UTILS.safe(m.AUVO_ID); });
+  var doAuvo = comId.filter(function(m) { return /:AUVOID:/.test(String(m.CHAVE || '')); });
+  return (doAuvo.length === 1 ? doAuvo[0] : (comId[0] || achados[0])) || null;
+}
+
+// Índice em memória de AUVO_SYNC por "TIPO:ENTIDADE_ID", com a mesma escolha de
+// Auvo_obterMapeamento_ — para quem consulta centenas de cadastros de uma vez
+// (simulação e envio de equipamentos) sem reler a aba a cada item.
+function Auvo_indiceMapeamentosPorEntidade_() {
+  var grupos = {};
+  SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC).forEach(function(m) {
+    var k = SGO_UTILS.safeUpper(m.ENTIDADE_TIPO) + ':' + SGO_UTILS.safe(m.ENTIDADE_ID);
+    (grupos[k] = grupos[k] || []).push(m);
+  });
+  var indice = {};
+  Object.keys(grupos).forEach(function(k) { indice[k] = Auvo_escolherMapeamento_(grupos[k]); });
+  return {
+    obter: function(tipo, entidadeId) { return indice[SGO_UTILS.safeUpper(tipo) + ':' + SGO_UTILS.safe(entidadeId)] || null; },
+    linhas: function() { return [].concat.apply([], Object.keys(grupos).map(function(k) { return grupos[k]; })); }
+  };
 }
 
 // Atualiza o mesmo registro que Auvo_obterMapeamento_ acharia (qualquer
@@ -341,20 +368,208 @@ function Auvo_sincronizarCliente_(clienteId) {
 
   try {
     if (mapeamento && mapeamento.AUVO_ID) {
-      Auvo_apiFetch_('patch', AUVO_CFG.ENDPOINTS.CUSTOMERS + '/' + mapeamento.AUVO_ID, payload);
+      var rp = Auvo_patchCustomer_(mapeamento.AUVO_ID, payload);
       Auvo_gravarMapeamento_('CLIENTE', clienteId, mapeamento.AUVO_ID, AUVO_CFG.STATUS.OK, '');
-      return { ok: true, auvoId: mapeamento.AUVO_ID, acao: 'atualizado' };
+      return { ok: true, auvoId: mapeamento.AUVO_ID, acao: 'atualizado', mensagem: Auvo_mensagemCustomer_('cliente', 'atualizado', mapeamento.AUVO_ID, rp) };
     }
-
-    var resp = Auvo_apiFetch_('post', AUVO_CFG.ENDPOINTS.CUSTOMERS, payload);
-    var auvoId = Auvo_extrairId_(resp);
-    if (!auvoId) throw new Error('Auvo não retornou um ID pro cliente criado.');
-    Auvo_gravarMapeamento_('CLIENTE', clienteId, auvoId, AUVO_CFG.STATUS.OK, '');
-    return { ok: true, auvoId: auvoId, acao: 'criado' };
+    return Auvo_ligarOuCriarCustomer_('CLIENTE', clienteId, payload);
   } catch (e) {
     Auvo_gravarMapeamento_('CLIENTE', clienteId, mapeamento && mapeamento.AUVO_ID, AUVO_CFG.STATUS.ERRO, e.message);
     throw e;
   }
+}
+
+// ------------------------------------------------------------
+// RECONHECER CLIENTE / UNIDADE QUE JÁ EXISTE NO AUVO (27/10/2026)
+//
+// Caso real: o gestor sincronizou IMED - URUAÇU e o Auvo respondeu
+// "ExternalId: External id already exists" (HTTP 400). O SGO+ não tinha
+// ligação com número do Auvo para o cadastro e ia direto ao POST (criar),
+// mas o Auvo já tinha um cliente carregando o código do SGO+ (externalId).
+// Regra agora, para Cliente e Unidade (cada Unidade é um cliente no Auvo):
+//  1. Antes de criar, procura no Auvo pelo código do SGO+ (externalId) e
+//     pelo CNPJ completo. Achou: liga (AUVO_SYNC) e atualiza, sem criar.
+//  2. Com mais de um no Auvo, vale o original: o que já estava ligado a este
+//     cadastro pela importação do Auvo; senão o ativo mais antigo (menor número).
+//  3. Se o POST ainda assim voltar "already exists", varre a lista completa
+//     de clientes do Auvo e faz o mesmo. Nunca cria cliente repetido.
+//  4. Cliente do Auvo ligado no SGO+ a OUTRO cadastro não é tomado: para,
+//     dizendo o quê, por quê e o que fazer. Nada é apagado no Auvo.
+// ------------------------------------------------------------
+function Auvo_ehErroJaExiste_(msg) {
+  return /already exist|duplicat|j[aá] existe/i.test(String(msg || ''));
+}
+
+function Auvo_ehErroExternalIdJaExiste_(msg) {
+  return /external\s*id/i.test(String(msg || '')) && Auvo_ehErroJaExiste_(msg);
+}
+
+// PATCH de Cliente/Unidade. Se o Auvo recusar só porque o código do SGO+ (externalId) já está em
+// outro cliente lá (um repetido antigo), repete sem mexer no externalId: o vínculo de verdade é a
+// aba AUVO_SYNC, e os demais dados chegam do mesmo jeito.
+function Auvo_patchCustomer_(auvoId, payload) {
+  try {
+    Auvo_apiFetch_('patch', AUVO_CFG.ENDPOINTS.CUSTOMERS + '/' + auvoId, payload);
+    return { semExternalId: false };
+  } catch (e) {
+    if (!Auvo_ehErroExternalIdJaExiste_(e.message) || !payload || !('externalId' in payload)) throw e;
+    var semExt = Object.assign({}, payload);
+    delete semExt.externalId;
+    Auvo_apiFetch_('patch', AUVO_CFG.ENDPOINTS.CUSTOMERS + '/' + auvoId, semExt);
+    return { semExternalId: true };
+  }
+}
+
+function Auvo_cpfCnpjComparavel_(v) {
+  var d = SGO_UTILS.onlyDigits(v);
+  if (!d) return '';
+  if (d.length === 11) return d;
+  return Auvo_normalizarCnpjCpfParaEnvio_(d);
+}
+
+// Busca direcionada em /customers com paramFilter. Não confia no filtro do Auvo (pode ser
+// "contém" ou ser ignorado): confere de novo, campo a campo, antes de aceitar cada um.
+function Auvo_buscarCustomersFiltrados_(filtro, confere) {
+  var qs = 'paramFilter=' + encodeURIComponent(JSON.stringify(filtro));
+  var achados = [];
+  for (var pagina = 1; pagina <= 3; pagina++) {
+    var resp = Auvo_apiFetch_('get', AUVO_CFG.ENDPOINTS.CUSTOMERS + '?page=' + pagina + '&pageSize=' + AUVO_CFG.PAGE_SIZE_MAX + '&' + qs, null);
+    var lote = (resp && resp.result && resp.result.entityList) || [];
+    lote.forEach(function(c) { if (confere(c)) achados.push(c); });
+    var paginacao = resp && resp.result && resp.result.pagedSearchReturnData;
+    var total = paginacao ? paginacao.totalItems : lote.length;
+    if (lote.length === 0 || pagina * AUVO_CFG.PAGE_SIZE_MAX >= total) break;
+  }
+  return achados;
+}
+
+function Auvo_procurarCustomerExistente_(tipo, entidadeId, payload, varreduraCompleta) {
+  var ext = SGO_UTILS.safe(payload && payload.externalId);
+  var doc = Auvo_cpfCnpjComparavel_(payload && payload.cpfCnpj);
+  if (doc && doc.length !== 11 && doc.length !== 14) doc = '';
+  var confere = function(c) {
+    return !!c && ((ext && SGO_UTILS.safe(c.externalId) === ext) || (doc && Auvo_cpfCnpjComparavel_(c.cpfCnpj) === doc));
+  };
+  var lista;
+  if (varreduraCompleta) {
+    lista = Auvo_listarTudoPaginado_(AUVO_CFG.ENDPOINTS.CUSTOMERS).filter(confere);
+  } else {
+    lista = ext ? Auvo_buscarCustomersFiltrados_({ externalId: ext }, confere) : [];
+    if (doc) lista = lista.concat(Auvo_buscarCustomersFiltrados_({ cpfCnpj: doc }, confere));
+    // o Auvo pode guardar o CNPJ com pontuação; o filtro dele compara texto
+    if (doc.length === 14 && !lista.some(function(c) { return Auvo_cpfCnpjComparavel_(c.cpfCnpj) === doc; })) {
+      var formatado = doc.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      lista = lista.concat(Auvo_buscarCustomersFiltrados_({ cpfCnpj: formatado }, confere));
+    }
+  }
+  var vistos = {};
+  lista = lista.filter(function(c) { var k = String(c.id); if (vistos[k]) return false; vistos[k] = 1; return true; });
+  return Auvo_escolherCustomerExistente_(tipo, entidadeId, lista, ext, SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC));
+}
+
+// Puro (testável): decide qual cliente do Auvo adotar entre os encontrados.
+function Auvo_escolherCustomerExistente_(tipo, entidadeId, lista, ext, linhasSync) {
+  var tipoU = SGO_UTILS.safeUpper(tipo);
+  var alvo = SGO_UTILS.safe(entidadeId);
+  var donos = {}, originalDeste = {};
+  (linhasSync || []).forEach(function(m) {
+    if (SGO_UTILS.safeUpper(m.ENTIDADE_TIPO) !== tipoU || !SGO_UTILS.safe(m.AUVO_ID)) return;
+    if (SGO_UTILS.safeUpper(m.STATUS) === 'CADASTRO_EXCLUIDO') return;
+    var a = SGO_UTILS.safe(m.AUVO_ID), dono = SGO_UTILS.safe(m.ENTIDADE_ID);
+    (donos[a] = donos[a] || {})[dono] = 1;
+    if (dono === alvo && /:AUVOID:/.test(String(m.CHAVE || ''))) originalDeste[a] = 1;
+  });
+  lista = lista || [];
+  if (!lista.length) return { customer: null };
+  var deOutro = function(c) { var d = donos[String(c.id)]; return !!d && Object.keys(d).some(function(x) { return x !== alvo; }); };
+  var livres = lista.filter(function(c) { return !deOutro(c); });
+  if (!livres.length) {
+    var c0 = lista[0];
+    var outros = Object.keys(donos[String(c0.id)] || {}).filter(function(x) { return x !== alvo; });
+    return {
+      customer: null,
+      bloqueio: 'Não enviado ao Auvo: o Auvo já tem este cadastro (cliente nº ' + c0.id + (c0.description ? ', "' + SGO_UTILS.safe(c0.description) + '"' : '') +
+        '), mas no SGO+ ele está ligado a outro ' + (tipoU === 'UNIDADE' ? 'unidade' : 'cliente') + ' (código ' + outros.join(', ') + '). ' +
+        'Por quê: criar outro no Auvo duplicaria o cliente, e tomar o de outro cadastro trocaria os atendimentos de lugar. ' +
+        'O que fazer: abra "Vínculos" no menu e confira se estes dois cadastros do SGO+ são o mesmo local (junte-os) ou não; depois toque em "Sincronizar" de novo. ' +
+        'Nada foi gravado no Auvo.'
+    };
+  }
+  var num = function(c) { var n = Number(c.id); return isNaN(n) ? Infinity : n; };
+  livres.sort(function(a, b) {
+    var oa = originalDeste[String(a.id)] ? 0 : 1, ob = originalDeste[String(b.id)] ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    var aa = a.active === false ? 1 : 0, ab = b.active === false ? 1 : 0;
+    if (aa !== ab) return aa - ab;
+    return num(a) - num(b);
+  });
+  var escolhido = livres[0];
+  var donoExt = ext ? lista.filter(function(c) { return SGO_UTILS.safe(c.externalId) === ext; })[0] : null;
+  var extEscolhido = SGO_UTILS.safe(escolhido.externalId);
+  return {
+    customer: escolhido,
+    // só grava o código do SGO+ no escolhido se ele estiver livre lá (sem código ou já com o nosso)
+    manterExternalId: !extEscolhido || extEscolhido === ext ? !(donoExt && String(donoExt.id) !== String(escolhido.id)) : false,
+    externalIdEmOutro: donoExt && String(donoExt.id) !== String(escolhido.id) ? String(donoExt.id) : '',
+    repetidos: livres.slice(1).map(function(c) { return String(c.id); })
+  };
+}
+
+function Auvo_adotarCustomer_(tipo, entidadeId, payload, achado) {
+  var auvoId = String(achado.customer.id);
+  var envio = Object.assign({}, payload);
+  if (!achado.manterExternalId) delete envio.externalId;
+  var rp = Auvo_patchCustomer_(auvoId, envio);
+  Auvo_gravarMapeamento_(tipo, entidadeId, auvoId, AUVO_CFG.STATUS.OK, '');
+  return {
+    ok: true, auvoId: auvoId, acao: 'ligado',
+    externalIdEmOutro: achado.externalIdEmOutro || '', repetidos: achado.repetidos || [],
+    mensagem: Auvo_mensagemCustomer_(SGO_UTILS.safeUpper(tipo) === 'UNIDADE' ? 'unidade' : 'cliente', 'ligado', auvoId, rp, achado)
+  };
+}
+
+function Auvo_mensagemCustomer_(rotulo, acao, auvoId, rp, achado) {
+  var msg;
+  if (acao === 'ligado') msg = 'O ' + rotulo + ' já existia no Auvo (nº ' + auvoId + '). O SGO+ ligou este cadastro a ele e enviou a correção. Nada foi criado em duplicidade.';
+  else if (acao === 'criado') msg = 'O ' + rotulo + ' não existia no Auvo e foi criado lá (nº ' + auvoId + ').';
+  else msg = 'Correção enviada ao Auvo (' + rotulo + ' nº ' + auvoId + ').';
+  var repetidos = [];
+  if (achado && achado.externalIdEmOutro) repetidos.push(achado.externalIdEmOutro);
+  (achado && achado.repetidos || []).forEach(function(r) { if (repetidos.indexOf(r) === -1) repetidos.push(r); });
+  if (repetidos.length) {
+    msg += ' Atenção: o Auvo tem outro(s) cadastro(s) repetido(s) deste ' + rotulo + ' (nº ' + repetidos.join(', ') + '). ' +
+      'O SGO+ usa só o nº ' + auvoId + '; os repetidos podem ser desativados no Auvo por quem administra o Auvo (o SGO+ não apaga nada).';
+  } else if (rp && rp.semExternalId) {
+    msg += ' O código do SGO+ continua guardado em outro cliente do Auvo (repetido); o SGO+ usa só o nº ' + auvoId + '.';
+  }
+  return msg;
+}
+
+function Auvo_ligarOuCriarCustomer_(tipo, entidadeId, payload) {
+  var rotulo = SGO_UTILS.safeUpper(tipo) === 'UNIDADE' ? 'unidade' : 'cliente';
+  var achado = Auvo_procurarCustomerExistente_(tipo, entidadeId, payload, false);
+  if (achado.bloqueio) throw new Error(achado.bloqueio);
+  if (achado.customer) return Auvo_adotarCustomer_(tipo, entidadeId, payload, achado);
+
+  var resp;
+  try {
+    resp = Auvo_apiFetch_('post', AUVO_CFG.ENDPOINTS.CUSTOMERS, payload);
+  } catch (e) {
+    if (!Auvo_ehErroJaExiste_(e.message)) throw e;
+    // a busca direcionada não achou, mas o Auvo diz que já existe: varre a lista completa
+    var achado2 = Auvo_procurarCustomerExistente_(tipo, entidadeId, payload, true);
+    if (achado2.bloqueio) throw new Error(achado2.bloqueio);
+    if (achado2.customer) return Auvo_adotarCustomer_(tipo, entidadeId, payload, achado2);
+    throw new Error('Não enviado ao Auvo: o Auvo respondeu que este ' + rotulo + ' já existe lá ("' + e.message + '"), ' +
+      'mas não foi possível achar qual é pelo código do SGO+ (' + SGO_UTILS.safe(payload.externalId) + ') nem pelo CNPJ. ' +
+      'Por quê: para não criar um cliente repetido, o SGO+ não cria nada sem saber qual é o cadastro de lá. ' +
+      'O que fazer: no Auvo, procure o cliente pelo nome ou CNPJ e anote o "código interno" e o "código externo"; ' +
+      'passe os dois ao Administrador do SGO+, que faz a ligação. Nada foi gravado no Auvo.');
+  }
+  var auvoId = Auvo_extrairId_(resp);
+  if (!auvoId) throw new Error('Auvo não retornou um ID pro ' + rotulo + ' criado.');
+  Auvo_gravarMapeamento_(tipo, entidadeId, auvoId, AUVO_CFG.STATUS.OK, '');
+  return { ok: true, auvoId: auvoId, acao: 'criado', mensagem: Auvo_mensagemCustomer_(rotulo, 'criado', auvoId) };
 }
 
 /**
