@@ -34,8 +34,9 @@ function ambiente(opcoes) {
     CAD_CLIENTES: [
       { ID: 'c_hosp', RAZAO_SOCIAL: 'HOSPITAL TESTE LTDA', NOME_FANTASIA: 'Hospital Teste', EMAIL: 'compras@hospital-teste.com.br', STATUS: 'ATIVO' },
       { ID: 'c_cli', RAZAO_SOCIAL: 'CLINICA TESTE', NOME_FANTASIA: 'Clínica Teste', EMAIL: 'contato.clinica@gmail.com', STATUS: 'ATIVO' }
-    ]
+    ].concat(o.clientesExtras || [])
   };
+  if (o.contatos) tabelas.CAD_CONTATOS = o.contatos;
   let seq = 0;
   const props = {}, cache = {}, emails = [], chamadas = [];
   const sessoes = {
@@ -82,6 +83,8 @@ function ambiente(opcoes) {
         case 'resumo': return { total: 2, totalCompartilhadas: 0, contas: [{ id: 'p_ana', tipo: 'pessoal' }], novas: [{ conta: 'p_ana', uid: 5, de: 'Compras', deEndereco: 'compras@hospital-teste.com.br', assunto: 'Recente' }] };
         case 'compartilhadasAdmin': return [];
         case 'compartilhadaSalvar': return { ok: true, id: 'c_novo' };
+        case 'assinaturas': return { lista: [{ id: 's_1', nome: 'Completa', html: '<div class="sgo-assinatura">x</div>' }], padraoNova: 's_1', padraoResposta: '' };
+        case 'assinaturaSalvar': case 'assinaturaRemover': case 'assinaturaPadroes': return { ok: true, id: 's_1', assinaturas: { lista: [], padraoNova: '', padraoResposta: '' } };
         default: return { ok: true };
       }
     }
@@ -317,4 +320,87 @@ test('casca da tela: menu, include, rota, celular, ajuda registrada; textos sem 
   assert.match(tela, /default-src 'none'/);
   const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
   for (const t of [tela, ler('SGO_Email.js'), ler('SGO_Ajuda_Email.js')]) assert.ok(!emoji.test(t), 'sem emoji');
+});
+
+// 27/10/2026 — filtro "De cliente" mostrava tudo como IMPERIAL HOSPITALAR (produção: 10 clientes com
+// EMAIL = administrativo@metrolabs.com.br, o último da lista ficava dono do endereço interno).
+test('filtro "De cliente": endereço da empresa nunca é cliente; endereço de vários clientes fica ambíguo; domínio público nunca identifica', () => {
+  const imperialEtc = ['GOYAZ HOSPITALAR', 'HOSPITAL OFTALMOCENTER', 'IMPERIAL HOSPITALAR'].map((n, i) => ({ ID: 'c_aux' + i, RAZAO_SOCIAL: n, NOME_FANTASIA: n, EMAIL: 'administrativo@metrolabs.com.br', STATUS: 'ATIVO' }));
+  const amb = ambiente({
+    clientesExtras: imperialEtc.concat([
+      { ID: 'c_sc1', NOME_FANTASIA: 'SANTA CASA TESTE A', EMAIL: 'compras05@grupo-teste.org.br', STATUS: 'ATIVO' },
+      { ID: 'c_sc2', NOME_FANTASIA: 'SANTA CASA TESTE B', EMAIL: 'compras05@grupo-teste.org.br', STATUS: 'ATIVO' },
+      { ID: 'c_yah', NOME_FANTASIA: 'POSTO TESTE', EMAIL: 'posto.teste@yahoo.com.ar; vendas1@metrolabs.com.br', STATUS: 'ATIVO' }
+    ]),
+    contatos: [
+      { ID: 'k1', CLIENTE_ID: 'c_hosp', EMAIL: 'joana.contato@hotmail.es', STATUS: 'ATIVO' },
+      { ID: 'k2', CLIENTE_ID: 'c_cli', EMAIL: 'beatriz@metrolabs.com.br', STATUS: 'ATIVO' }
+    ]
+  });
+  const c = amb.ctx;
+  assert.equal(c.Email_clienteDe_('administrativo@metrolabs.com.br'), null);
+  assert.equal(c.Email_clienteDe_('Administrativo <ADMINISTRATIVO@metrolabs.com.br>'), null);
+  assert.equal(c.Email_clienteDe_('vendas1@metrolabs.com.br'), null);
+  assert.equal(c.Email_clienteDe_('beatriz@metrolabs.com.br'), null, 'contato com e-mail interno também não vira cliente');
+  const amb2 = c.Email_clienteDe_('compras05@grupo-teste.org.br');
+  assert.equal(amb2.ambiguo, true);
+  assert.equal(amb2.id, '');
+  assert.deepEqual(Array.from(amb2.opcoes, (x) => x.id).sort(), ['c_sc1', 'c_sc2']);
+  assert.match(amb2.nome, /SANTA CASA TESTE A ou SANTA CASA TESTE B/);
+  assert.equal(c.Email_clienteDe_('outra.pessoa@grupo-teste.org.br'), null, 'domínio de dois clientes não identifica');
+  assert.equal(c.Email_clienteDe_('posto.teste@yahoo.com.ar').id, 'c_yah', 'endereço exato de provedor público vale');
+  assert.equal(c.Email_clienteDe_('qualquer@yahoo.com.ar'), null, 'variação de país do provedor público não vale como domínio');
+  assert.equal(c.Email_clienteDe_('joana.contato@hotmail.es').id, 'c_hosp');
+  assert.equal(c.Email_clienteDe_('fulano@hotmail.es'), null);
+  for (const d of ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com.br', 'uol.com.br', 'bol.com.br', 'terra.com.br', 'live.com', 'outlook.com.br', 'hotmail.es']) assert.equal(c.Email_dominioPublico_(d), true, d);
+  assert.equal(c.Email_dominioPublico_('hospital-teste.com.br'), false);
+  const f = c.Email_filtroClientes_();
+  assert.ok(!f.enderecos.some((e) => /@metrolabs\.com\.br$/.test(e)), 'nenhum endereço da empresa no filtro');
+  assert.ok(!f.dominios.some((d) => c.Email_dominioPublico_(d) || /metrolabs/.test(d)));
+  assert.ok(f.enderecos.includes('compras05@grupo-teste.org.br'), 'ambíguo continua sendo de cliente no filtro');
+  assert.ok(!f.dominios.includes('grupo-teste.org.br'));
+});
+
+test('assinaturas pela tela: a situação traz as assinaturas; salvar manda só o necessário; anexos da original e do rascunho passam ao servidor', () => {
+  const amb = ambiente();
+  const s = amb.ctx.Email_apiSituacao('s_ana');
+  assert.equal(s.ok, true, s.message);
+  assert.equal(s.assinaturas.padraoNova, 's_1');
+  const r = amb.ctx.Email_apiAssinaturaSalvar('s_ana', { nome: '  Completa ', texto: '<p>Ana</p>', imagem: { base64: 'data:image/png;base64,QUJD' }, largura: '250', posicao: 'acima', usuarioId: 'u_bia' });
+  assert.equal(r.ok, true, r.message);
+  const ch = amb.chamadas.at(-1);
+  assert.equal(ch.acao, 'assinaturaSalvar');
+  assert.equal(ch.usuario.id, 'u_ana');
+  assert.deepEqual(ch.dados.imagem, { base64: 'QUJD' });
+  assert.equal(ch.dados.nome, 'Completa');
+  assert.equal(ch.dados.largura, 250);
+  assert.equal(ch.dados.posicao, 'acima');
+  assert.equal(amb.ctx.Email_apiAssinaturaPadroes('s_ana', { nova: 's_1' }).ok, true);
+  assert.deepEqual(amb.chamadas.at(-1).dados, { nova: 's_1' });
+  assert.equal(amb.ctx.Email_apiAssinaturaRemover('s_ana', 's_1').ok, true);
+  // envio: anexos da original escolhidos e anexos do rascunho (só com o rascunho)
+  amb.ctx.Email_apiEnviar('s_ana', { para: 'x@hospital-teste.com.br', assunto: 'Enc', html: '<p>a</p>', encaminhando: { pasta: 'INBOX', uid: 7 }, anexosOriginais: ['2', 3], anexosDoRascunho: ['2'] });
+  let d = amb.servidor.enviados.at(-1).dados;
+  assert.deepEqual(d.anexosOriginais, ['2', '3']);
+  assert.equal(d.anexosDoRascunho, undefined, 'sem rascunho, nada de anexo de rascunho');
+  amb.ctx.Email_apiEnviar('s_ana', { para: 'x@hospital-teste.com.br', assunto: 'R', html: '<p>a</p>', rascunhoUid: 9, anexosDoRascunho: ['2'] });
+  d = amb.servidor.enviados.at(-1).dados;
+  assert.deepEqual(d.anexosDoRascunho, ['2']);
+  assert.equal(d.anexosOriginais, undefined, 'sem escolha, o servidor decide como antes (encaminhar leva todos)');
+});
+
+test('tela: seletor de assinatura no editor, arrastar e soltar, limites por arquivo e total, anexos da original, imagem PNG/JPG reduzida', () => {
+  const tela = ler('JS_Email.html');
+  assert.match(tela, /id="emAssSel" aria-label="Assinatura"/);
+  assert.match(tela, /function Email_trocarAssinatura_\(/);
+  assert.match(tela, /\.sgo-assinatura, \.em-assinatura/);
+  assert.match(tela, /addEventListener\("drop"/);
+  assert.match(tela, /o limite por arquivo é/);
+  assert.match(tela, /Manter os anexos da mensagem original/);
+  assert.match(tela, /accept="image\/png,image\/jpeg"/);
+  assert.match(tela, /function Email_reduzirImagem_\(/);
+  assert.match(tela, /Mensagens novas/);
+  assert.match(tela, /Respostas e encaminhamentos/);
+  // a atualização automática não redesenha a janela de escrever (rascunho com anexos não se perde)
+  assert.match(tela, /function Email_emEdicao_\(\) \{\s*if \(EM\.comp \|\| document\.querySelector\("\.em-overlay"\)\) return true;/);
 });

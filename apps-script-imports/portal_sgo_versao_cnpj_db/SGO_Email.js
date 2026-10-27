@@ -9,8 +9,10 @@
  *   - caixa, senha e leitura: no servidor próprio (global SGO_EMAIL → sgo_servidor/src/servicos/emailPessoal.ts).
  *     A senha é cifrada com a chave do servidor assim que chega e NUNCA volta para cá nem para a tela. Este arquivo
  *     só repassa o usuário que a sessão validou: ninguém (nem Administrador, nem Gestão) abre a caixa de outra pessoa.
- *   - cliente: o remetente é comparado com CAD_CLIENTES.EMAIL (endereço exato) e com o domínio do e-mail do
- *     cliente (se não for provedor público como gmail.com); "Registrar no cliente" grava EML_CLIENTE_REGISTROS.
+ *   - cliente: o remetente é comparado com CAD_CLIENTES.EMAIL e CAD_CONTATOS.EMAIL (endereço exato) e com o domínio do
+ *     e-mail do cliente (se não for provedor público como gmail.com e se for de um cliente só); endereço @metrolabs
+ *     nunca é cliente; endereço de mais de um cliente fica ambíguo (27/10/2026); "Registrar no cliente" grava EML_CLIENTE_REGISTROS.
+ *   - assinaturas (27/10/2026): várias por pessoa, com imagem; o servidor embute a imagem por Content-ID no envio.
  *   - pendências: Email_pendencias_ é fonte da central (SGO_Alertas_Central.js, PEND_FONTES):
  *       email_cliente_nao_lido      e-mail de cliente não lido há mais de N horas úteis (padrão 4) — só a própria pessoa;
  *       email_cliente_sem_resposta  lido e sem resposta há mais de M horas úteis (padrão 8) — só a própria pessoa;
@@ -77,50 +79,86 @@ function Email_resposta_(fn) {
 /* ------------------------------------------------------------
  * CLIENTES: quem é o remetente
  * ------------------------------------------------------------ */
+/** Provedor público (gmail, hotmail, outlook, yahoo, uol, bol, terra...): o domínio nunca identifica cliente. */
+function Email_dominioPublico_(dom) {
+  var d = Email_s_(dom).toLowerCase();
+  if (!d) return true;
+  if (EMAIL_DOMINIOS_PUBLICOS.indexOf(d) >= 0) return true;
+  // variações de país e de serviço do mesmo provedor (yahoo.com.ar, hotmail.es, outlook.pt, live.com.br, uol.com, bol.com...)
+  return /^(gmail|googlemail|hotmail|outlook|live|msn|yahoo|ymail|rocketmail|bol|uol|terra|ig|superig|icloud|me|mac|globo|globomail|r7|zipmail|protonmail|proton|aol|gmx|yandex|zoho|mail|email|oi|ibest|click21|pop|itelefonica|veloxmail|brturbo)\.[a-z]{2,4}(\.[a-z]{2})?$/.test(d);
+}
+/** Endereço da própria empresa (@metrolabs.com.br e subdomínios): é colega, nunca cliente — nem pelo endereço exato. */
+function Email_dominioProprio_(dom) { return /(^|\.)metrolabs\.com\.br$/.test(Email_s_(dom).toLowerCase()); }
+
+/**
+ * 27/10/2026 (filtro "De cliente" mostrava tudo como IMPERIAL HOSPITALAR): na produção, 10 clientes importados do Auvo
+ * têm EMAIL = administrativo@metrolabs.com.br (e 4, vendas1@metrolabs.com.br). O índice gravava o endereço exato antes
+ * de excluir o domínio da empresa, e cada cliente sobrescrevia o anterior: o último da lista (IMPERIAL HOSPITALAR) ficava
+ * dono do endereço interno, e todo e-mail interno vindo de administrativo@ virava "Cliente: IMPERIAL HOSPITALAR".
+ * Agora: endereço da empresa nunca é cliente; endereço cadastrado em mais de um cliente fica "ambíguo" (mostra os nomes,
+ * não escolhe um sozinho); domínio só se for próprio do cliente (nunca provedor público) e de um cliente só.
+ */
 var EMAIL_INDICE_CLIENTES = null;
 function Email_indiceClientes_() {
   if (EMAIL_INDICE_CLIENTES) return EMAIL_INDICE_CLIENTES;
   var porEndereco = {}, porDominio = {}, dominiosAmbiguos = {};
+  var valido = function (e) { return /^[^@\s,;<>]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(e); };
+  var guardar = function (e, id, nome) {
+    var atual = porEndereco[e] || (porEndereco[e] = []);
+    if (!atual.some(function (x) { return x.id === id; })) atual.push({ id: id, nome: nome });
+  };
   var lista = [];
   try { lista = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES) || []; } catch (e) { lista = []; }
   lista.forEach(function (c) {
     if (SGO_UTILS.safeUpper(c.STATUS || 'ATIVO') === 'INATIVO') return;
-    var nome = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL) || Email_s_(c.ID);
+    var id = Email_s_(c.ID), nome = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL) || id;
+    if (!id) return;
     Email_s_(c.EMAIL).toLowerCase().split(/[\s,;]+/).forEach(function (e) {
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return;
-      porEndereco[e] = { id: Email_s_(c.ID), nome: nome };
+      if (!valido(e)) return;
       var dom = e.split('@')[1];
-      if (EMAIL_DOMINIOS_PUBLICOS.indexOf(dom) >= 0 || /(^|\.)metrolabs\.com\.br$/.test(dom)) return;
-      if (porDominio[dom] && porDominio[dom].id !== Email_s_(c.ID)) dominiosAmbiguos[dom] = true;
-      porDominio[dom] = { id: Email_s_(c.ID), nome: nome };
+      if (Email_dominioProprio_(dom)) return;
+      guardar(e, id, nome);
+      if (Email_dominioPublico_(dom)) return;
+      if (porDominio[dom] && porDominio[dom].id !== id) dominiosAmbiguos[dom] = true;
+      porDominio[dom] = { id: id, nome: nome };
     });
   });
   // 21/10/2026: e-mails dos contatos do cliente (CAD_CONTATOS, Comercial) também identificam o cliente (endereço exato).
   try {
     var nomesCli = {};
-    lista.forEach(function (c) { nomesCli[Email_s_(c.ID)] = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL) || Email_s_(c.ID); });
+    lista.forEach(function (c) { if (SGO_UTILS.safeUpper(c.STATUS || 'ATIVO') !== 'INATIVO') nomesCli[Email_s_(c.ID)] = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL) || Email_s_(c.ID); });
     (SGO_DATA.getAll('CAD_CONTATOS') || []).forEach(function (k) {
       var e = Email_s_(k.EMAIL).toLowerCase(), cid = Email_s_(k.CLIENTE_ID);
-      if (!nomesCli[cid] || SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') !== 'ATIVO' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) || porEndereco[e]) return;
-      porEndereco[e] = { id: cid, nome: nomesCli[cid] };
+      if (!nomesCli[cid] || SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') !== 'ATIVO' || !valido(e) || Email_dominioProprio_(e.split('@')[1])) return;
+      guardar(e, cid, nomesCli[cid]);
     });
   } catch (e) {}
   Object.keys(dominiosAmbiguos).forEach(function (d) { delete porDominio[d]; });
   EMAIL_INDICE_CLIENTES = { porEndereco: porEndereco, porDominio: porDominio };
   return EMAIL_INDICE_CLIENTES;
 }
-/** Cliente do remetente: { id, nome, por: 'endereco'|'dominio' } ou null. */
+/**
+ * Cliente do remetente: { id, nome, por: 'endereco'|'dominio' } ou null.
+ * Endereço cadastrado em mais de um cliente: { id: '', nome: 'A ou B', por: 'endereco', ambiguo: true, opcoes: [{ id, nome }] }.
+ */
 function Email_clienteDe_(endereco) {
   var e = Email_s_(endereco).toLowerCase();
-  if (!e) return null;
-  var idx = Email_indiceClientes_();
-  if (idx.porEndereco[e]) return { id: idx.porEndereco[e].id, nome: idx.porEndereco[e].nome, por: 'endereco' };
-  var d = idx.porDominio[e.split('@')[1] || ''];
+  var m = /<([^>]+)>/.exec(e); if (m) e = m[1].trim();
+  if (!e || e.indexOf('@') < 0) return null;
+  var dom = e.split('@')[1] || '';
+  if (Email_dominioProprio_(dom)) return null;
+  var idx = Email_indiceClientes_(), l = idx.porEndereco[e];
+  if (l && l.length === 1) return { id: l[0].id, nome: l[0].nome, por: 'endereco' };
+  if (l && l.length > 1) {
+    var nomes = l.map(function (x) { return x.nome; });
+    return { id: '', nome: nomes.slice(0, 3).join(' ou ') + (nomes.length > 3 ? ' (+' + (nomes.length - 3) + ')' : ''), por: 'endereco', ambiguo: true, opcoes: l.map(function (x) { return { id: x.id, nome: x.nome }; }) };
+  }
+  var d = Email_dominioPublico_(dom) ? null : idx.porDominio[dom];
   return d ? { id: d.id, nome: d.nome, por: 'dominio' } : null;
 }
 function Email_filtroClientes_() {
   var idx = Email_indiceClientes_();
-  return { enderecos: Object.keys(idx.porEndereco), dominios: Object.keys(idx.porDominio) };
+  return { enderecos: Object.keys(idx.porEndereco), dominios: Object.keys(idx.porDominio).filter(function (d) { return !Email_dominioPublico_(d) && !Email_dominioProprio_(d); }) };
 }
 
 /* ------------------------------------------------------------
@@ -161,7 +199,36 @@ function Email_apiSituacao(sessionId) {
     var eu = Email_eu_(sessionId);
     if (!Email_disponivel_()) return { disponivel: false, motivo: EMAIL_MSG_SEM_SERVIDOR, eu: { nome: eu.nome, email: eu.email, admin: eu.admin } };
     var s = Email_chamar_(eu, 'situacao');
-    return { disponivel: true, situacao: s, eu: { nome: eu.nome, email: eu.email, admin: eu.admin }, config: Email_config_() };
+    var ass = null;
+    try { ass = Email_chamar_(eu, 'assinaturas'); } catch (e) { ass = { lista: [], padraoNova: '', padraoResposta: '', erro: String((e && e.message) || e) }; }
+    return { disponivel: true, situacao: s, assinaturas: ass, eu: { nome: eu.nome, email: eu.email, admin: eu.admin }, config: Email_config_() };
+  });
+}
+
+/* ------------------------------------------------------------
+ * ASSINATURAS (27/10/2026): várias por pessoa, texto e imagem; padrão para nova e para resposta.
+ * Ficam no servidor (email_assinaturas), por pessoa: desconectar a caixa não apaga. Cada gravação muda UMA assinatura
+ * (as outras ficam como estão). A imagem chega aqui já reduzida pela tela; o servidor confere formato e tamanho.
+ * ------------------------------------------------------------ */
+function Email_apiAssinaturas(sessionId) {
+  return Email_resposta_(function () { return { assinaturas: Email_chamar_(Email_eu_(sessionId), 'assinaturas') }; });
+}
+function Email_apiAssinaturaSalvar(sessionId, payload) {
+  return Email_resposta_(function () {
+    var p = payload || {};
+    var img = p.imagem && p.imagem.base64 ? { base64: String(p.imagem.base64).replace(/^data:[^,]*,/, '') } : null;
+    var r = Email_chamar_(Email_eu_(sessionId), 'assinaturaSalvar', { id: Email_s_(p.id) || undefined, nome: Email_s_(p.nome), texto: String(p.texto || ''), imagem: img,
+      manterImagem: p.manterImagem === true, largura: Number(p.largura) || 0, posicao: p.posicao === 'acima' ? 'acima' : 'abaixo' });
+    return { id: r.id, assinaturas: r.assinaturas };
+  });
+}
+function Email_apiAssinaturaRemover(sessionId, id) {
+  return Email_resposta_(function () { return { assinaturas: Email_chamar_(Email_eu_(sessionId), 'assinaturaRemover', { id: Email_s_(id) }).assinaturas }; });
+}
+function Email_apiAssinaturaPadroes(sessionId, payload) {
+  return Email_resposta_(function () {
+    var p = payload || {};
+    return { assinaturas: Email_chamar_(Email_eu_(sessionId), 'assinaturaPadroes', { nova: p.nova === undefined ? undefined : Email_s_(p.nova), resposta: p.resposta === undefined ? undefined : Email_s_(p.resposta) }).assinaturas };
   });
 }
 
@@ -255,6 +322,9 @@ function Email_mensagemDaTela_(payload) {
     anexos: (p.anexos || []).map(function (a) { return { nome: Email_s_(a.nome) || 'anexo', tipo: Email_s_(a.tipo) || 'application/octet-stream', base64: String(a.base64 || '') }; }),
     respondendo: p.respondendo && p.respondendo.uid ? { pasta: String(p.respondendo.pasta || 'INBOX'), uid: Number(p.respondendo.uid) } : undefined,
     encaminhando: p.encaminhando && p.encaminhando.uid ? { pasta: String(p.encaminhando.pasta || 'INBOX'), uid: Number(p.encaminhando.uid) } : undefined,
+    // 27/10/2026: quais anexos da mensagem original vão junto (ausente no encaminhar = todos, como antes) e os do rascunho reaberto
+    anexosOriginais: Array.isArray(p.anexosOriginais) ? p.anexosOriginais.map(String).slice(0, 50) : undefined,
+    anexosDoRascunho: Array.isArray(p.anexosDoRascunho) && Number(p.rascunhoUid) ? p.anexosDoRascunho.map(String).slice(0, 50) : undefined,
     rascunhoUid: Number(p.rascunhoUid) || undefined
   };
 }
@@ -280,7 +350,9 @@ function Email_apiRegistrarNoCliente(sessionId, payload) {
   return Email_resposta_(function () {
     var eu = Email_eu_(sessionId), p = payload || {};
     var m = Email_chamar_(eu, 'ler', { conta: p.conta || '', pasta: p.pasta || 'INBOX', uid: Number(p.uid), marcarLida: false });
-    var clienteId = Email_s_(p.clienteId) || (Email_clienteDe_(m.deEndereco) || {}).id;
+    var achado = Email_clienteDe_(m.deEndereco);
+    var clienteId = Email_s_(p.clienteId) || (achado || {}).id;
+    if (!clienteId && achado && achado.ambiguo) throw new Error('Escolha o cliente: o remetente ' + m.deEndereco + ' está cadastrado em mais de um cliente (' + achado.nome + '), e o sistema não escolhe sozinho. Se o e-mail é de um cliente só, corrija o cadastro dos outros em Cadastros > Clientes.');
     if (!clienteId) throw new Error('Escolha o cliente: o remetente ' + m.deEndereco + ' não está no cadastro de nenhum cliente. Se for um contato novo, cadastre o e-mail em Cadastros > Clientes e tente de novo.');
     var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, clienteId);
     if (!c) throw new Error('Cliente não encontrado no cadastro. Atualize a tela e escolha de novo.');

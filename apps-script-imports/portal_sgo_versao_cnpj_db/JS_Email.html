@@ -79,6 +79,24 @@
     .em-linha { grid-template-columns: minmax(0, 1fr); gap: 2px; }
     .em-tabela-rolar { overflow-x: auto; }
   }
+  /* 27/10/2026: assinaturas com imagem e anexos (arrastar e soltar, anexos da original) */
+  .em-ass-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 8px 0; background: var(--card); }
+  .em-ass-topo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .em-ass-previa { border: 1px dashed var(--border); border-radius: 6px; padding: 8px 10px; background: #fff; color: #1f2a24; font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: auto; overflow-wrap: anywhere; min-height: 32px; }
+  .em-ass-previa img { max-width: 100%; height: auto; }
+  .em-editor .sgo-assinatura img, .em-editor img { max-width: 100%; height: auto; }
+  .em-barra select { min-height: 34px; max-width: 100%; width: auto; }
+  .em-barra .em-sep { flex: 1 1 auto; }
+  .em-botao-arquivo { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; min-height: 38px; padding: 0 12px; }
+  .em-anexar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 8px; padding: 8px; border: 1px dashed var(--border); border-radius: 8px; }
+  .em-anexos-comp { display: grid; gap: 4px; margin: 6px 0; }
+  .em-anexo-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 12.5px; min-height: 36px; }
+  .em-anexo-linha .nome { overflow-wrap: anywhere; min-width: 0; flex: 1 1 160px; }
+  .em-anexo-linha label { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; }
+  .em-anexo-linha button { min-height: 30px; padding: 0 10px; width: auto !important; }
+  .em-overlay.em-soltar .em-janela { outline: 3px dashed var(--info, #1f5fa8); outline-offset: -6px; }
+  .em-soltar-aviso { display: none; }
+  .em-overlay.em-soltar .em-soltar-aviso { display: block; }
   .em-pastas-celular { display: none; margin-bottom: 8px; }
   .em-pastas-celular select { width: 100%; min-height: 42px; }
 </style>
@@ -290,7 +308,7 @@
     }
     var sel = EM.aberta ? EM.aberta.uid : null;
     el.innerHTML = r.itens.map(function (it) {
-      var selos = (it.cliente ? '<span class="em-selo cli" title="Remetente do cadastro de clientes">Cliente: ' + Email_esc_(it.cliente.nome) + '</span>' : "") +
+      var selos = (it.cliente ? '<span class="em-selo cli" title="' + (it.cliente.ambiguo ? "Endereço cadastrado em mais de um cliente" : it.cliente.por === "dominio" ? "Pelo domínio do e-mail do cliente" : "Remetente do cadastro de clientes") + '">Cliente: ' + Email_esc_(it.cliente.nome) + '</span>' : "") +
         (it.temAnexo ? '<span class="em-selo anx"><i class="fas fa-paperclip" aria-hidden="true"></i> anexo</span>' : "") +
         (it.respondida ? '<span class="em-selo resp">Respondida</span>' : "") +
         (it.tratamento ? '<span class="em-selo trat">' + (it.tratamento.situacao === "respondida" ? "Respondida por " : "Respondendo: ") + Email_esc_(it.tratamento.nome) + '</span>' : "");
@@ -332,7 +350,10 @@
     if (!m || !el) return;
     var lix = Email_especial_(m.pasta) === "lixeira";
     var destinos = EM.pastas.filter(function (p) { return p.caminho !== m.pasta; });
-    var cli = m.cliente ? '<div class="em-faixa ok"><b>Cliente: ' + Email_esc_(m.cliente.nome) + '</b>' + (m.cliente.por === "dominio" ? " (pelo domínio do e-mail)" : "") +
+    var cli = m.cliente && m.cliente.ambiguo ? '<div class="em-faixa aviso">Este endereço está no cadastro de mais de um cliente: <b>' + Email_esc_((m.cliente.opcoes || []).map(function (x) { return x.nome; }).join(", ")) + '</b>. O sistema não escolhe sozinho. ' +
+        (m.registrado ? '<span class="em-dica">Registrado no cliente ' + Email_esc_(m.registrado.cliente) + ' por ' + Email_esc_(m.registrado.por) + '.</span>' : '<button type="button" class="btn-secondary" onclick="Email_registrar_()">Registrar no cliente</button>') +
+        '<div class="em-dica">Se o e-mail é de um cliente só, corrija o e-mail dos outros em Cadastros &gt; Clientes.</div></div>'
+      : m.cliente ? '<div class="em-faixa ok"><b>Cliente: ' + Email_esc_(m.cliente.nome) + '</b>' + (m.cliente.por === "dominio" ? " (pelo domínio do e-mail)" : "") +
         ' &nbsp;<button type="button" class="btn-secondary" onclick="Email_abrirCliente_(\'' + Email_esc_(m.cliente.id) + '\')">Abrir cadastro</button>' +
         (m.registrado ? ' &nbsp;<span class="em-dica">Registrado no cliente ' + Email_esc_(m.registrado.cliente) + ' por ' + Email_esc_(m.registrado.por) + '.</span>' : ' <button type="button" class="btn-secondary" onclick="Email_registrar_()">Registrar no cliente</button>') + '</div>'
       : '<div class="em-dica" style="margin-bottom:6px">Remetente fora do cadastro de clientes. <button type="button" class="btn-secondary" onclick="Email_registrar_()">Registrar no cliente</button></div>';
@@ -469,7 +490,8 @@
         var outros = (m.paraLista || []).concat(m.ccLista || []).filter(function (e) { return e && e !== eu && para.toLowerCase().indexOf(e) < 0; });
         cc = outros.join(", ");
       }
-      Email_escrever_({ para: para, cc: cc, assunto: /^re:/i.test(m.assunto) ? m.assunto : "Re: " + m.assunto, citacao: Email_citacao_(m), respondendo: { pasta: m.pasta, uid: m.uid, messageId: m.messageId } });
+      Email_escrever_({ para: para, cc: cc, assunto: /^re:/i.test(m.assunto) ? m.assunto : "Re: " + m.assunto, citacao: Email_citacao_(m), respondendo: { pasta: m.pasta, uid: m.uid, messageId: m.messageId },
+        originais: (m.anexos || []).map(function (a) { return { parte: a.parte, nome: a.nome, tamanho: a.tamanho }; }) });
     };
     if ((Email_contaAtual_() || {}).tipo === "compartilhada" && m.messageId) {
       Email_chamar_("Email_apiTratar", [{ conta: EM.conta, messageId: m.messageId, situacao: "respondendo" }], function (r) {
@@ -482,7 +504,7 @@
     var m = EM.aberta; if (!m) return;
     Email_escrever_({ assunto: /^(fwd?|enc):/i.test(m.assunto) ? m.assunto : "Enc: " + m.assunto,
       citacao: '<p><br></p><blockquote>---------- Mensagem encaminhada ----------<br>De: ' + Email_esc_(m.de) + '<br>Data: ' + Email_esc_(Email_dataLonga_(m.data)) + '<br>Assunto: ' + Email_esc_(m.assunto) + '<br>Para: ' + Email_esc_(m.para) + '<br><br>' + Email_esc_(String(m.texto || "")).replace(/\n/g, "<br>") + '</blockquote>',
-      encaminhando: { pasta: m.pasta, uid: m.uid, anexos: (m.anexos || []).map(function (a) { return a.nome; }) } });
+      encaminhando: { pasta: m.pasta, uid: m.uid, anexos: (m.anexos || []).map(function (a) { return { parte: a.parte, nome: a.nome, tamanho: a.tamanho }; }) } });
   }
 
   /**
@@ -498,9 +520,16 @@
     var conta = o.conta || EM.conta || contas[0].id;
     var c = contas.filter(function (x) { return x.id === conta; })[0] || contas[0];
     var lim = s.limites || {};
-    EM.comp = { conta: c.id, anexos: [], respondendo: o.respondendo || null, encaminhando: o.encaminhando || null, rascunhoUid: o.rascunho ? o.rascunho.uid : null, sujo: false };
     var r = o.rascunho || null;
-    var corpoInicial = r ? r.html : (o.html || "<p><br></p>") + (c.assinatura ? '<div class="em-assinatura"><br>' + c.assinatura + '</div>' : "") + (o.citacao || "");
+    // 27/10/2026: anexos da mensagem original (encaminhar: marcados; responder: desmarcados, como no Outlook) e do rascunho reaberto
+    var origLista = (o.encaminhando && o.encaminhando.anexos) || o.originais || [];
+    var originais = origLista.map(function (a) { return typeof a === "string" ? { parte: "", nome: a, tamanho: 0, incluir: true } : { parte: String(a.parte || ""), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0, incluir: !!o.encaminhando }; });
+    var resposta = !!(o.respondendo || o.encaminhando);
+    var assId = r ? "__manter" : Email_assinaturaPadraoDe_(c, resposta);
+    EM.comp = { conta: c.id, anexos: [], respondendo: o.respondendo || null, encaminhando: o.encaminhando ? { pasta: o.encaminhando.pasta, uid: o.encaminhando.uid } : null, rascunhoUid: r ? r.uid : null, sujo: false,
+      originais: originais, doRascunho: r ? (r.anexos || []).map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }) : [], resposta: resposta, assinatura: assId };
+    var assHtml = r ? "" : Email_assinaturaHtml_(assId, c);
+    var corpoInicial = r ? r.html : (o.html || "<p><br></p>") + (assHtml ? "<div><br></div>" + assHtml : "") + (o.citacao || "");
     Email_janela_('<h3>' + (o.respondendo ? "Responder" : o.encaminhando ? "Encaminhar" : r ? "Continuar rascunho" : "Escrever e-mail") + '</h3>' +
       (contas.length > 1 ? '<div class="em-linha"><label for="emDe">De</label><select id="emDe" onchange="Email_trocarRemetente_(this.value)" style="min-height:38px">' + contas.map(function (x) { return '<option value="' + Email_esc_(x.id) + '"' + (x.id === c.id ? " selected" : "") + '>' + Email_esc_(x.endereco) + (x.tipo === "compartilhada" ? " (compartilhada)" : "") + '</option>'; }).join("") + '</select></div>'
         : '<div class="em-linha"><label>De</label><div style="font-size:13px;overflow-wrap:anywhere">' + Email_esc_(c.endereco) + '</div></div>') +
@@ -513,54 +542,156 @@
         '<button type="button" class="btn-secondary" title="Itálico" onclick="Email_formatar_(\'italic\')"><i>I</i></button>' +
         '<button type="button" class="btn-secondary" title="Sublinhado" onclick="Email_formatar_(\'underline\')"><u>S</u></button>' +
         '<button type="button" class="btn-secondary" title="Lista" onclick="Email_formatar_(\'insertUnorderedList\')"><i class="fas fa-list-ul" aria-hidden="true"></i></button>' +
-        '<button type="button" class="btn-secondary" title="Link" onclick="Email_link_()"><i class="fas fa-link" aria-hidden="true"></i></button></div>' +
+        '<button type="button" class="btn-secondary" title="Link" onclick="Email_link_()"><i class="fas fa-link" aria-hidden="true"></i></button>' +
+        '<span class="em-sep"></span>' +
+        '<select id="emAssSel" aria-label="Assinatura" title="Assinatura: troca a assinatura que está no fim do texto" onchange="Email_trocarAssinatura_(this.value)">' + Email_opcoesAssinatura_(c, assId, !!r) + '</select></div>' +
       '<div class="em-editor" id="emEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Texto da mensagem">' + corpoInicial + '</div>' +
-      '<div style="margin-top:8px"><label class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:38px;padding:0 12px"><i class="fas fa-paperclip" aria-hidden="true"></i> Anexar arquivo<input type="file" multiple style="display:none" onchange="Email_anexar_(this)"></label>' +
-        ' <span class="em-dica">Até ' + (lim.anexosMb || 18) + ' MB somados por mensagem.</span></div>' +
-      '<div id="emAnexosComp" class="em-anexos">' + (o.encaminhando && o.encaminhando.anexos && o.encaminhando.anexos.length ? o.encaminhando.anexos.map(function (n) { return '<span class="em-anexo">' + Email_esc_(n) + ' (da mensagem original)</span>'; }).join("") : "") + '</div>' +
+      '<div class="em-anexar"><label class="btn-secondary em-botao-arquivo"><i class="fas fa-paperclip" aria-hidden="true"></i> Anexar arquivo<input type="file" multiple style="display:none" onchange="Email_anexar_(this)"></label>' +
+        '<span class="em-dica">ou arraste os arquivos para esta janela. Até ' + Email_limiteArquivoMb_() + ' MB por arquivo, ' + (lim.anexosMb || 18) + ' MB somados e ' + (lim.anexosMax || 20) + ' arquivos por mensagem.</span>' +
+        '<span class="em-dica em-soltar-aviso"><b>Solte os arquivos para anexar.</b></span></div>' +
+      '<div id="emAnexosComp" class="em-anexos-comp"></div>' +
       '<div id="emCompMsg"></div>' +
       '<div class="em-rodape"><span class="em-dica">Limite: ' + (lim.mensagensHora || 30) + ' mensagens ou ' + (lim.destinatariosHora || 100) + ' destinatários por hora; até ' + (lim.destinatariosMensagem || 50) + ' por mensagem.</span>' +
       '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="Email_descartar_()">Descartar</button><button type="button" class="btn-secondary" onclick="Email_salvarRascunho_()">Salvar rascunho</button><button type="button" class="btn-primary" id="emBtnEnviar" onclick="Email_enviar_()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar</button></span></div>');
     var ed = document.getElementById("emEditor");
     ed.addEventListener("input", function () { if (EM.comp) EM.comp.sujo = true; });
     ["emPara", "emCc", "emCco", "emAssunto"].forEach(function (id) { var i = document.getElementById(id); if (i) i.addEventListener("input", function () { if (EM.comp) EM.comp.sujo = true; }); });
+    Email_soltarArquivos_(document.getElementById("emOverlay"));
+    Email_desenharAnexosComp_();
     setTimeout(function () { var p = document.getElementById(o.para || r ? "emEditor" : "emPara"); if (p) p.focus(); }, 50);
   }
   function Email_escreverPara_(o) { EM.aba = "caixa"; if (window.SGO_MODULO_ATUAL !== "email") abrir("email"); Email_escrever_(o || {}); }
-  function Email_trocarRemetente_(id) { if (EM.comp) EM.comp.conta = id; }
-  function Email_formatar_(cmd) { document.getElementById("emEditor").focus(); try { document.execCommand(cmd, false, null); } catch (e) {} }
-  function Email_link_() { var u = prompt("Endereço do link (começando com https://):", "https://"); if (!u || !/^https?:\/\//i.test(u)) return; document.getElementById("emEditor").focus(); try { document.execCommand("createLink", false, u); } catch (e) {} }
-  function Email_anexar_(input) {
-    var lim = ((EM.sit.situacao.limites || {}).anexosMb || 18) * 1048576;
-    var arquivos = Array.prototype.slice.call(input.files || []);
-    input.value = "";
+  /** Trocar a caixa "De": como no Outlook, a assinatura passa a ser a padrão daquela caixa (se a pessoa não escolheu manter a do rascunho). */
+  function Email_trocarRemetente_(id) {
+    if (!EM.comp) return;
+    EM.comp.conta = id;
+    var c = Email_contaPorId_(id), sel = document.getElementById("emAssSel");
+    if (EM.comp.assinatura === "__manter") { if (sel) sel.innerHTML = Email_opcoesAssinatura_(c, "__manter", true); return; }
+    var novo = Email_assinaturaPadraoDe_(c, EM.comp.resposta);
+    if (sel) sel.innerHTML = Email_opcoesAssinatura_(c, novo, false);
+    Email_trocarAssinatura_(novo);
+  }
+  function Email_formatar_(cmd, alvo) { var ed = document.getElementById(alvo || "emEditor"); if (ed) ed.focus(); try { document.execCommand(cmd, false, null); } catch (e) {} }
+  function Email_link_(alvo) { var u = prompt("Endereço do link (começando com https://):", "https://"); if (!u || !/^https?:\/\//i.test(u)) return; var ed = document.getElementById(alvo || "emEditor"); if (ed) ed.focus(); try { document.execCommand("createLink", false, u); } catch (e) {} }
+
+  // ---------------- assinatura na janela de escrever (27/10/2026) ----------------
+  function Email_ass_() { return (EM.sit && EM.sit.assinaturas) || { lista: [], padraoNova: "", padraoResposta: "" }; }
+  function Email_limites_() { return (EM.sit && EM.sit.situacao && EM.sit.situacao.limites) || {}; }
+  function Email_limiteArquivoMb_() { var l = Email_limites_(); return Math.min(l.anexoArquivoMb || 15, l.anexosMb || 18); }
+  function Email_contaPorId_(id) { var s = EM.sit && EM.sit.situacao; if (!s) return null; return (s.pessoal ? [s.pessoal] : []).concat(s.compartilhadas || []).filter(function (x) { return x.id === id; })[0] || null; }
+  /** Padrão: caixa compartilhada com assinatura própria usa a dela; senão, a padrão da pessoa (nova ou resposta). */
+  function Email_assinaturaPadraoDe_(c, resposta) {
+    if (c && c.tipo === "compartilhada" && c.assinatura) return "__caixa";
+    var a = Email_ass_();
+    if (a.lista.length) return (resposta ? a.padraoResposta : a.padraoNova) || "";
+    return c && c.tipo === "pessoal" && c.assinatura ? "__caixa" : "";
+  }
+  function Email_assinaturaHtml_(id, c) {
+    if (!id || id === "__manter") return "";
+    if (id === "__caixa") return c && c.assinatura ? '<div class="sgo-assinatura">' + c.assinatura + '</div>' : "";
+    var x = Email_ass_().lista.filter(function (s) { return s.id === id; })[0];
+    return x ? x.html : "";
+  }
+  function Email_opcoesAssinatura_(c, sel, rascunho) {
+    var a = Email_ass_(), op = function (v, t) { return '<option value="' + Email_esc_(v) + '"' + (v === sel ? " selected" : "") + '>' + Email_esc_(t) + '</option>'; };
+    return (rascunho ? op("__manter", "Assinatura: a que está no texto") : "") + op("", "Assinatura: nenhuma") +
+      a.lista.map(function (x) { return op(x.id, "Assinatura: " + x.nome); }).join("") +
+      (c && c.assinatura && (c.tipo === "compartilhada" || !a.lista.length) ? op("__caixa", c.tipo === "compartilhada" ? "Assinatura da caixa " + c.endereco : "Assinatura guardada da caixa") : "");
+  }
+  /** Troca (ou tira) a assinatura do texto, como o seletor "Assinatura" do Outlook. Fica antes do texto citado da resposta. */
+  function Email_trocarAssinatura_(id) {
+    var ed = document.getElementById("emEditor"); if (!ed || !EM.comp) return;
+    if (id === "__manter") { EM.comp.assinatura = id; return; }
+    var html = Email_assinaturaHtml_(id, Email_contaPorId_(EM.comp.conta));
+    var atual = ed.querySelector(".sgo-assinatura, .em-assinatura");
+    if (atual) {
+      if (html) atual.outerHTML = html; else atual.parentNode.removeChild(atual);
+    } else if (html) {
+      var citacao = null;
+      for (var i = 0; i < ed.children.length; i++) if (ed.children[i].tagName === "BLOCKQUOTE") { citacao = ed.children[i]; break; }
+      if (citacao) citacao.insertAdjacentHTML("beforebegin", "<div><br></div>" + html); else ed.insertAdjacentHTML("beforeend", "<div><br></div>" + html);
+    }
+    EM.comp.assinatura = id; EM.comp.sujo = true;
+  }
+
+  // ---------------- anexos na janela de escrever (27/10/2026) ----------------
+  /** Arrastar e soltar arquivos na janela (o navegador não abre o arquivo por cima do rascunho). */
+  function Email_soltarArquivos_(ov) {
+    if (!ov) return;
+    var temArquivo = function (ev) { var t = ev.dataTransfer && ev.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t, "Files") >= 0; };
+    ov.addEventListener("dragover", function (ev) { if (!temArquivo(ev)) return; ev.preventDefault(); ev.dataTransfer.dropEffect = "copy"; ov.classList.add("em-soltar"); });
+    ov.addEventListener("dragleave", function (ev) { if (!ev.relatedTarget || !ov.contains(ev.relatedTarget)) ov.classList.remove("em-soltar"); });
+    ov.addEventListener("drop", function (ev) { if (!temArquivo(ev)) return; ev.preventDefault(); ov.classList.remove("em-soltar"); Email_anexarArquivos_(ev.dataTransfer.files); });
+  }
+  function Email_anexar_(input) { var l = Array.prototype.slice.call(input.files || []); input.value = ""; Email_anexarArquivos_(l); }
+  function Email_totalComp_() {
+    var c = EM.comp; if (!c) return 0;
+    var s = function (l, f) { return l.filter(f || function () { return true; }).reduce(function (t, a) { return t + (Number(a.tamanho) || 0); }, 0); };
+    return s(c.anexos) + s(c.doRascunho) + s(c.originais, function (a) { return a.incluir; });
+  }
+  function Email_anexarArquivos_(lista) {
+    if (!EM.comp) return;
+    var lim = Email_limites_(), MB = 1048576, maxArq = Email_limiteArquivoMb_() * MB, maxTot = (lim.anexosMb || 18) * MB, maxQtd = lim.anexosMax || 20;
+    var arquivos = Array.prototype.slice.call(lista || []), erros = [];
     var ler = function (i) {
-      if (i >= arquivos.length) { Email_desenharAnexosComp_(); return; }
+      if (!EM.comp) return;
+      if (i >= arquivos.length) { Email_desenharAnexosComp_(); if (erros.length) Email_msgComp_("erro", erros.join(" ")); else Email_msgComp_("", ""); return; }
       var f = arquivos[i];
-      var total = EM.comp.anexos.reduce(function (s, a) { return s + a.tamanho; }, 0);
-      if (total + f.size > lim) { alert("O arquivo " + f.name + " (" + Email_tamanho_(f.size) + ") passa do limite de " + Math.round(lim / 1048576) + " MB somados por mensagem. Mande em outra mensagem ou compacte o arquivo."); ler(i + 1); return; }
+      if (!f.size && !f.type) { erros.push("«" + f.name + "» parece uma pasta ou um arquivo vazio: o e-mail anexa arquivos, não pastas. Compacte a pasta num .zip e anexe o .zip."); ler(i + 1); return; }
+      if (f.size > maxArq) { erros.push("O arquivo «" + f.name + "» tem " + Email_tamanho_(f.size) + "; o limite por arquivo é " + Math.round(maxArq / MB) + " MB (acima disso Gmail e Outlook costumam recusar a mensagem). Compacte, divida em partes ou mande um link de compartilhamento."); ler(i + 1); return; }
+      if (EM.comp.anexos.length >= maxQtd) { erros.push("Limite de " + maxQtd + " arquivos por mensagem: «" + f.name + "» não foi anexado. Junte os arquivos num .zip ou mande em outra mensagem."); ler(i + 1); return; }
+      if (Email_totalComp_() + f.size > maxTot) { erros.push("«" + f.name + "» (" + Email_tamanho_(f.size) + ") passaria de " + Math.round(maxTot / MB) + " MB somados por mensagem. Tire algum anexo, compacte ou mande em outra mensagem."); ler(i + 1); return; }
       var r = new FileReader();
-      r.onload = function () { EM.comp.anexos.push({ nome: f.name, tipo: f.type || "application/octet-stream", tamanho: f.size, base64: String(r.result).split(",")[1] || "" }); EM.comp.sujo = true; ler(i + 1); };
-      r.onerror = function () { alert("Não consegui ler o arquivo " + f.name + ". Tente de novo."); ler(i + 1); };
+      r.onload = function () { if (!EM.comp) return; EM.comp.anexos.push({ nome: f.name, tipo: f.type || "application/octet-stream", tamanho: f.size, base64: String(r.result).split(",")[1] || "" }); EM.comp.sujo = true; Email_desenharAnexosComp_(); ler(i + 1); };
+      r.onerror = function () { erros.push("Não consegui ler o arquivo «" + f.name + "» (ele pode estar aberto em outro programa ou ter sido movido). Feche o arquivo e anexe de novo."); ler(i + 1); };
       r.readAsDataURL(f);
     };
     ler(0);
   }
   function Email_desenharAnexosComp_() {
-    var el = document.getElementById("emAnexosComp"); if (!el || !EM.comp) return;
-    el.innerHTML = EM.comp.anexos.map(function (a, i) { return '<span class="em-anexo">' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ') <button type="button" class="btn-secondary" style="min-height:28px;padding:0 8px" title="Tirar anexo" onclick="Email_tirarAnexo_(' + i + ')">Tirar</button></span>'; }).join("") +
-      (EM.comp.encaminhando && EM.comp.encaminhando.anexos ? EM.comp.encaminhando.anexos.map(function (n) { return '<span class="em-anexo">' + Email_esc_(n) + ' (da mensagem original)</span>'; }).join("") : "");
+    var el = document.getElementById("emAnexosComp"), c = EM.comp; if (!el || !c) return;
+    var lim = Email_limites_(), h = "";
+    if (c.originais.length) {
+      var todos = c.originais.every(function (a) { return a.incluir; }), escolhe = c.originais.every(function (a) { return a.parte; });
+      h += '<div class="em-anexo-linha"><label><input type="checkbox"' + (todos ? " checked" : "") + (escolhe ? "" : " disabled") + ' onchange="Email_originaisTodos_(this.checked)"> ' +
+        (c.encaminhando ? "Manter os anexos da mensagem original" : "Incluir os anexos da mensagem original") + '</label></div>' +
+        c.originais.map(function (a, i) {
+          return '<div class="em-anexo-linha"><label class="nome"><input type="checkbox"' + (a.incluir ? " checked" : "") + (a.parte ? "" : " disabled") + ' onchange="Email_originalIncluir_(' + i + ',this.checked)"> <i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + (a.tamanho ? " (" + Email_tamanho_(a.tamanho) + ")" : "") + ' <span class="em-dica">da mensagem original</span></label></div>';
+        }).join("");
+    }
+    h += c.doRascunho.map(function (a, i) {
+      return '<div class="em-anexo-linha"><span class="nome"><i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ') <span class="em-dica">guardado no rascunho</span></span><button type="button" class="btn-secondary" title="Tirar anexo" onclick="Email_tirarAnexoRascunho_(' + i + ')">Tirar</button></div>';
+    }).join("") + c.anexos.map(function (a, i) {
+      return '<div class="em-anexo-linha"><span class="nome"><i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ')</span><button type="button" class="btn-secondary" title="Tirar anexo" onclick="Email_tirarAnexo_(' + i + ')">Tirar</button></div>';
+    }).join("");
+    var total = Email_totalComp_();
+    if (total || c.anexos.length || c.doRascunho.length) h += '<div class="em-dica">Total dos anexos: ' + Email_tamanho_(total) + ' de ' + (lim.anexosMb || 18) + ' MB por mensagem.</div>';
+    el.innerHTML = h;
   }
-  function Email_tirarAnexo_(i) { EM.comp.anexos.splice(i, 1); Email_desenharAnexosComp_(); }
+  function Email_originaisTodos_(v) { if (!EM.comp) return; EM.comp.originais.forEach(function (a) { if (a.parte) a.incluir = !!v; }); Email_conferirTotalOriginais_(); }
+  function Email_originalIncluir_(i, v) { if (!EM.comp || !EM.comp.originais[i]) return; EM.comp.originais[i].incluir = !!v; Email_conferirTotalOriginais_(); }
+  function Email_conferirTotalOriginais_() {
+    EM.comp.sujo = true;
+    var max = (Email_limites_().anexosMb || 18) * 1048576;
+    Email_desenharAnexosComp_();
+    if (Email_totalComp_() > max) Email_msgComp_("erro", "Com os anexos da mensagem original a mensagem passa de " + Math.round(max / 1048576) + " MB somados. Desmarque algum anexo da original ou tire um anexo seu antes de enviar.");
+    else Email_msgComp_("", "");
+  }
+  function Email_tirarAnexo_(i) { if (!EM.comp) return; EM.comp.anexos.splice(i, 1); EM.comp.sujo = true; Email_desenharAnexosComp_(); }
+  function Email_tirarAnexoRascunho_(i) { if (!EM.comp) return; EM.comp.doRascunho.splice(i, 1); EM.comp.sujo = true; Email_desenharAnexosComp_(); }
   function Email_dadosComp_() {
-    return { conta: EM.comp.conta, para: document.getElementById("emPara").value, cc: document.getElementById("emCc").value, cco: document.getElementById("emCco").value,
+    var c = EM.comp, escolhe = c.originais.length && c.originais.every(function (a) { return a.parte; });
+    return { conta: c.conta, para: document.getElementById("emPara").value, cc: document.getElementById("emCc").value, cco: document.getElementById("emCco").value,
       assunto: document.getElementById("emAssunto").value, html: document.getElementById("emEditor").innerHTML,
-      anexos: EM.comp.anexos.map(function (a) { return { nome: a.nome, tipo: a.tipo, base64: a.base64 }; }),
-      respondendo: EM.comp.respondendo, encaminhando: EM.comp.encaminhando, rascunhoUid: EM.comp.rascunhoUid };
+      anexos: c.anexos.map(function (a) { return { nome: a.nome, tipo: a.tipo, base64: a.base64 }; }),
+      anexosOriginais: escolhe ? c.originais.filter(function (a) { return a.incluir; }).map(function (a) { return a.parte; }) : undefined,
+      anexosDoRascunho: c.rascunhoUid ? c.doRascunho.map(function (a) { return a.parte; }) : undefined,
+      respondendo: c.respondendo, encaminhando: c.encaminhando, rascunhoUid: c.rascunhoUid };
   }
-  function Email_msgComp_(tipo, texto) { var el = document.getElementById("emCompMsg"); if (el) el.innerHTML = '<div class="em-msg ' + tipo + '">' + Email_esc_(texto) + '</div>'; }
+  function Email_msgComp_(tipo, texto) { var el = document.getElementById("emCompMsg"); if (el) el.innerHTML = texto ? '<div class="em-msg ' + tipo + '">' + Email_esc_(texto) + '</div>' : ""; }
   function Email_enviar_() {
-    var d = Email_dadosComp_();
+    var d = Email_dadosComp_(), maxTot = (Email_limites_().anexosMb || 18) * 1048576;
+    if (Email_totalComp_() > maxTot) { Email_msgComp_("erro", "Os anexos somam " + Email_tamanho_(Email_totalComp_()) + " e o limite é " + Math.round(maxTot / 1048576) + " MB por mensagem (acima disso Gmail e Outlook costumam recusar). Tire algum anexo ou desmarque anexos da mensagem original e envie de novo."); return; }
     if (!d.para.trim()) { Email_msgComp_("erro", "Informe o destinatário no campo Para."); document.getElementById("emPara").focus(); return; }
     if (!d.assunto.trim()) { Email_msgComp_("erro", "Escreva o assunto antes de enviar."); document.getElementById("emAssunto").focus(); return; }
     var btn = document.getElementById("emBtnEnviar"); if (btn) btn.disabled = true;
@@ -572,7 +703,14 @@
     }, function (msg) { if (btn) btn.disabled = false; Email_msgComp_("erro", msg); }, { carregando: "Enviando..." });
   }
   function Email_salvarRascunho_() {
-    Email_chamar_("Email_apiRascunho", [Email_dadosComp_()], function (r) { EM.comp.rascunhoUid = r.rascunho.uid; EM.comp.sujo = false; Email_msgComp_("ok", "Rascunho salvo na pasta Rascunhos da caixa (" + new Date().toLocaleTimeString("pt-BR").slice(0, 5) + ")."); },
+    Email_chamar_("Email_apiRascunho", [Email_dadosComp_()], function (r) {
+        if (!EM.comp) return;
+        var rs = r.rascunho || {};
+        // os anexos passam a morar no rascunho guardado: a janela manda só as partes dele (nada é enviado duas vezes)
+        if (rs.uid && Array.isArray(rs.anexos)) { EM.comp.doRascunho = rs.anexos.map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }); EM.comp.anexos = []; Email_desenharAnexosComp_(); }
+        EM.comp.rascunhoUid = rs.uid || EM.comp.rascunhoUid; EM.comp.sujo = false;
+        Email_msgComp_("ok", "Rascunho salvo na pasta Rascunhos da caixa (" + new Date().toLocaleTimeString("pt-BR").slice(0, 5) + ")." + (EM.comp.originais.some(function (a) { return a.incluir; }) ? " Os anexos da mensagem original não ficam no rascunho: eles vão no envio, com esta janela aberta." : ""));
+      },
       function (msg) { Email_msgComp_("erro", msg); }, { carregando: "Salvando rascunho..." });
   }
   function Email_descartar_() {
@@ -596,7 +734,8 @@
         '<div><label for="emEnd">Endereço da sua caixa</label><input type="email" id="emEnd" autocomplete="username" value="' + Email_esc_(eu.email || "") + '" placeholder="nome@metrolabs.com.br"></div>' +
         '<div><label for="emSenha">Senha da caixa</label><input type="password" id="emSenha" autocomplete="current-password"><div class="em-dica">A mesma senha que você usa no webmail. Não é a senha do SGO+. Se não sabe, peça ao responsável pelos e-mails da empresa.</div></div>' +
         servidor + '<div id="emConMsg"></div><div><button type="button" class="btn-primary" onclick="Email_conectar_()"><i class="fas fa-plug" aria-hidden="true"></i>&nbsp;Testar e conectar</button></div></div></div>' +
-        (s.compartilhadas.length ? '<div class="em-faixa ok">Você tem acesso a ' + s.compartilhadas.length + ' caixa(s) compartilhada(s): ' + Email_esc_(s.compartilhadas.map(function (c) { return c.endereco; }).join(", ")) + '. Elas aparecem na aba «Caixa de e-mail».</div>' : "");
+        (s.compartilhadas.length ? '<div class="em-faixa ok">Você tem acesso a ' + s.compartilhadas.length + ' caixa(s) compartilhada(s): ' + Email_esc_(s.compartilhadas.map(function (c) { return c.endereco; }).join(", ")) + '. Elas aparecem na aba «Caixa de e-mail».</div>' : "") +
+        Email_caixaAssinaturas_();
       return;
     }
     alvo.innerHTML = '<div class="em-caixa"><h3>Minha caixa</h3>' +
@@ -605,9 +744,174 @@
       '<div class="em-acoes"><button type="button" class="btn-secondary" onclick="Email_mostrarTrocaSenha_()">Trocar a senha guardada</button>' +
       '<button type="button" class="btn-secondary" onclick="Email_desconectar_()"><i class="fas fa-plug-circle-xmark" aria-hidden="true"></i>&nbsp;Desconectar</button></div>' +
       '<div id="emTroca" style="display:none" class="em-form"><div><label for="emSenha">Senha atual da caixa</label><input type="password" id="emSenha" autocomplete="current-password"></div><div id="emConMsg"></div><div><button type="button" class="btn-primary" onclick="Email_conectar_(\'' + Email_esc_(p.endereco) + '\')">Testar e gravar a senha nova</button></div></div></div>' +
-      '<div class="em-caixa"><h3>Assinatura</h3><div class="em-dica" style="margin-bottom:6px">Entra sozinha no fim de cada e-mail que você escreve por aqui. Use o padrão da empresa: nome, área, Metrolabs, telefone.</div>' +
-      '<div class="em-editor" id="emAssEd" contenteditable="true" aria-label="Assinatura">' + (p.assinatura || Email_assinaturaPadrao_()) + '</div>' +
-      '<div id="emAssMsg"></div><div class="em-acoes"><button type="button" class="btn-primary" onclick="Email_salvarAssinatura_()">Salvar assinatura</button><button type="button" class="btn-secondary" onclick="document.getElementById(\'emAssEd\').innerHTML=Email_assinaturaPadrao_()">Voltar ao padrão</button></div></div>';
+      Email_caixaAssinaturas_();
+  }
+
+  // ---------------- assinaturas: gerenciar (27/10/2026) ----------------
+  /** Lista de assinaturas da pessoa, padrões (nova e resposta) e botões de criar/editar/apagar, como em Outlook > Assinaturas. */
+  function Email_caixaAssinaturas_() {
+    var a = Email_ass_(), lim = Email_limites_();
+    var opc = function (sel) { return '<option value="">(sem assinatura)</option>' + a.lista.map(function (x) { return '<option value="' + Email_esc_(x.id) + '"' + (x.id === sel ? " selected" : "") + '>' + Email_esc_(x.nome) + '</option>'; }).join(""); };
+    return '<div class="em-caixa" id="emAssCaixa"><h3>Assinaturas</h3>' +
+      '<div class="em-dica" style="margin-bottom:8px">Como no Outlook: crie uma ou mais assinaturas (texto, imagem ou os dois) e escolha qual entra sozinha nas mensagens novas e qual entra nas respostas e encaminhamentos. Na hora de escrever, troque pelo seletor «Assinatura» na barra do editor. A imagem vai embutida na própria mensagem: o cliente vê sem baixar nada e sem entrar em site.</div>' +
+      (a.erro ? '<div class="em-msg erro">Não consegui carregar as suas assinaturas agora (' + Email_esc_(a.erro) + '). Clique em Atualizar no alto da tela.</div>' : "") +
+      (a.migrada ? '<div class="em-faixa">A assinatura que você já usava aparece como «Minha assinatura». Edite à vontade, acrescente uma imagem ou crie outras.</div>' : "") +
+      (a.lista.length ? '<div class="em-form" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));max-width:none;margin-bottom:6px">' +
+        '<div><label for="emAssPadNova">Mensagens novas</label><select id="emAssPadNova" style="width:100%;min-height:40px" onchange="Email_salvarPadroesAss_()">' + opc(a.padraoNova) + '</select></div>' +
+        '<div><label for="emAssPadResp">Respostas e encaminhamentos</label><select id="emAssPadResp" style="width:100%;min-height:40px" onchange="Email_salvarPadroesAss_()">' + opc(a.padraoResposta) + '</select></div></div>' : "") +
+      '<div id="emAssMsg"></div>' +
+      (a.lista.length ? a.lista.map(function (x) {
+        var marcas = (x.id === a.padraoNova ? '<span class="em-selo resp">Padrão: novas</span>' : "") + (x.id === a.padraoResposta ? '<span class="em-selo resp">Padrão: respostas</span>' : "");
+        return '<div class="em-ass-item"><div class="em-ass-topo"><b>' + Email_esc_(x.nome) + '</b>' + marcas + '</div><div class="em-ass-previa">' + x.html + '</div>' +
+          '<div class="em-acoes"><button type="button" class="btn-secondary" onclick="Email_editarAssinatura_(\'' + Email_esc_(x.id) + '\')"><i class="fas fa-pen" aria-hidden="true"></i>&nbsp;Editar</button>' +
+          '<button type="button" class="btn-secondary" onclick="Email_apagarAssinatura_(\'' + Email_esc_(x.id) + '\')"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;Apagar</button></div></div>';
+      }).join("") : '<div class="em-vazio">Nenhuma assinatura ainda. Clique em «Nova assinatura».</div>') +
+      '<div class="em-acoes">' + (a.lista.length >= (lim.assinaturasMax || 10) ? '<span class="em-dica">Limite de ' + (lim.assinaturasMax || 10) + ' assinaturas: apague uma que não usa mais para criar outra.</span>' :
+        '<button type="button" class="btn-primary" onclick="Email_editarAssinatura_(null)"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova assinatura</button>') + '</div></div>';
+  }
+  /** Mesma montagem do servidor (htmlDaAssinatura), para a pré-visualização antes de salvar. */
+  function Email_htmlAssinatura_(texto, img, largura, posicao, nome) {
+    var im = "";
+    if (img) {
+      var w = Math.max(1, Math.round(largura)), h = Math.max(1, Math.round(largura * img.h / Math.max(1, img.w)));
+      im = '<div><img src="data:' + img.tipo + ';base64,' + img.base64 + '" alt="' + Email_esc_(nome || "Assinatura") + '" width="' + w + '" height="' + h + '" style="width:' + w + 'px;max-width:100%;height:auto;border:0;display:block"></div>';
+    }
+    var t = texto ? "<div>" + texto + "</div>" : "";
+    return '<div class="sgo-assinatura">' + (posicao === "acima" ? im + t : t + im) + "</div>";
+  }
+  function Email_textoAssinaturaEd_() {
+    var ed = document.getElementById("emAssTexto"); if (!ed) return "";
+    return (String(ed.textContent || "").trim() || ed.querySelector("img")) ? ed.innerHTML : "";
+  }
+  function Email_editarAssinatura_(id) {
+    var a = Email_ass_(), x = id ? a.lista.filter(function (s) { return s.id === id; })[0] : null, lim = Email_limites_();
+    if (id && !x) { alert("Esta assinatura não existe mais (pode ter sido apagada em outra janela). Clique em Atualizar."); return; }
+    EM.assEd = { id: x ? x.id : "", imagem: x && x.imagem ? { tipo: x.imagem.tipo, base64: x.imagem.base64, w: x.imagem.w, h: x.imagem.h, nova: false } : null,
+      largura: x && x.largura ? x.largura : 300, posicao: x ? x.posicao : "abaixo" };
+    var texto = x ? x.texto : (a.lista.length ? "" : Email_assinaturaPadrao_());
+    var botao = function (cmd, t, h) { return '<button type="button" class="btn-secondary" title="' + t + '" onclick="Email_formatar_(\'' + cmd + '\',\'emAssTexto\')">' + h + '</button>'; };
+    Email_janela_('<h3>' + (x ? "Editar assinatura" : "Nova assinatura") + '</h3><div class="em-form" style="max-width:none">' +
+      '<div><label for="emAssNome">Nome da assinatura</label><input type="text" id="emAssNome" maxlength="60" value="' + Email_esc_(x ? x.nome : (a.lista.length ? "" : "Completa")) + '" placeholder="Completa, Respostas, Comercial..."></div>' +
+      '<div><label for="emAssTexto">Texto (opcional)</label><div class="em-barra" role="toolbar" aria-label="Formatação da assinatura">' + botao("bold", "Negrito", "<b>N</b>") + botao("italic", "Itálico", "<i>I</i>") + botao("underline", "Sublinhado", "<u>S</u>") +
+        '<button type="button" class="btn-secondary" title="Link" onclick="Email_link_(\'emAssTexto\')"><i class="fas fa-link" aria-hidden="true"></i></button></div>' +
+        '<div class="em-editor" id="emAssTexto" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Texto da assinatura" style="min-height:90px">' + texto + '</div>' +
+        '<div class="em-dica">Nome, cargo, área, Metrolabs, telefone. Imagem não vai aqui: use o campo Imagem abaixo.</div></div>' +
+      '<div><label>Imagem (opcional)</label><div class="em-acoes" style="margin:0"><label class="btn-secondary em-botao-arquivo"><i class="fas fa-image" aria-hidden="true"></i> Escolher imagem<input type="file" id="emAssArq" accept="image/png,image/jpeg" style="display:none" onchange="Email_imagemAssinatura_(this)"></label>' +
+        '<button type="button" class="btn-secondary" id="emAssTirarImg" onclick="Email_tirarImagemAss_()">Tirar imagem</button></div>' +
+        '<div class="em-dica">PNG ou JPG de até 5 MB (logotipo, cartão de visita, selo). O sistema reduz a imagem para até ' + (lim.assinaturaImagemKb || 300) + ' KB, para o e-mail não ficar pesado.</div><div id="emAssImgInfo" class="em-dica"></div></div>' +
+      '<div id="emAssLargBox"><label for="emAssLarg">Largura exibida da imagem: <span id="emAssLargTxt"></span> px</label>' +
+        '<div style="display:flex;gap:8px;align-items:center"><input type="range" id="emAssLarg" min="40" max="700" step="10" style="flex:1 1 auto;min-width:0" oninput="Email_larguraAss_(this.value)"><input type="number" id="emAssLargN" min="40" max="700" style="width:90px;min-height:38px" onchange="Email_larguraAss_(this.value)" aria-label="Largura em pixels"></div>' +
+        '<div class="em-dica">O comum é de 200 a 400 px. A largura não passa do tamanho real da imagem; no celular do cliente ela encolhe para caber na tela.</div></div>' +
+      '<div id="emAssPosBox"><label for="emAssPos">Posição da imagem</label><select id="emAssPos" style="min-height:40px" onchange="EM.assEd.posicao=this.value;Email_previaAss_()"><option value="abaixo"' + (EM.assEd.posicao !== "acima" ? " selected" : "") + '>Abaixo do texto</option><option value="acima"' + (EM.assEd.posicao === "acima" ? " selected" : "") + '>Acima do texto</option></select></div>' +
+      '<div><label>Pré-visualização</label><div class="em-ass-previa" id="emAssPrevia"></div></div>' +
+      '<div id="emAssEdMsg"></div></div>' +
+      '<div class="em-rodape"><span></span><span><button type="button" class="btn-secondary" onclick="Email_fecharJanela_()">Cancelar</button> <button type="button" class="btn-primary" id="emAssSalvarBtn" onclick="Email_salvarAssinaturaEd_()">Salvar assinatura</button></span></div>');
+    document.getElementById("emAssTexto").addEventListener("input", Email_previaAss_);
+    Email_ajustarLarguraAss_();
+    Email_previaAss_();
+  }
+  function Email_msgAssEd_(tipo, texto) { var el = document.getElementById("emAssEdMsg"); if (el) el.innerHTML = texto ? '<div class="em-msg ' + tipo + '">' + Email_esc_(texto) + '</div>' : ""; }
+  function Email_ajustarLarguraAss_() {
+    var e = EM.assEd, box = document.getElementById("emAssLargBox"), pos = document.getElementById("emAssPosBox"), tirar = document.getElementById("emAssTirarImg"), info = document.getElementById("emAssImgInfo");
+    if (!e || !box) return;
+    box.style.display = e.imagem ? "" : "none"; if (pos) pos.style.display = e.imagem ? "" : "none"; if (tirar) tirar.style.display = e.imagem ? "" : "none";
+    if (!e.imagem) { if (info) info.textContent = ""; return; }
+    var max = Math.max(40, Math.min(700, e.imagem.w));
+    e.largura = Math.max(40, Math.min(max, Math.round(e.largura || 300)));
+    var r = document.getElementById("emAssLarg"), n = document.getElementById("emAssLargN");
+    r.max = String(max); n.max = String(max); r.value = String(e.largura); n.value = String(e.largura);
+    document.getElementById("emAssLargTxt").textContent = String(e.largura);
+    if (info) info.textContent = "Imagem: " + e.imagem.w + " × " + e.imagem.h + " px, " + Email_tamanho_(Math.floor(e.imagem.base64.length * 0.75)) + (e.imagem.nova ? " (nova, ainda não salva)" : "") + ".";
+  }
+  function Email_larguraAss_(v) { if (!EM.assEd) return; EM.assEd.largura = Number(v) || 300; Email_ajustarLarguraAss_(); Email_previaAss_(); }
+  function Email_previaAss_() {
+    var e = EM.assEd, el = document.getElementById("emAssPrevia"); if (!e || !el) return;
+    var html = Email_htmlAssinatura_(Email_textoAssinaturaEd_(), e.imagem, e.largura, e.posicao, (document.getElementById("emAssNome") || {}).value);
+    el.innerHTML = Email_textoAssinaturaEd_() || e.imagem ? html : '<span class="em-dica">A assinatura está vazia.</span>';
+  }
+  function Email_tirarImagemAss_() { if (!EM.assEd) return; EM.assEd.imagem = null; Email_ajustarLarguraAss_(); Email_previaAss_(); }
+  function Email_imagemAssinatura_(input) {
+    var f = (input.files || [])[0]; input.value = "";
+    if (!f || !EM.assEd) return;
+    var maxKb = Email_limites_().assinaturaImagemKb || 300;
+    if (!/^image\/(png|jpeg)$/i.test(f.type || "")) { Email_msgAssEd_("erro", "A imagem «" + f.name + "» não é PNG nem JPG. Salve a imagem num desses formatos (no Paint: Salvar como > PNG) e escolha de novo."); return; }
+    if (f.size > 5 * 1048576) { Email_msgAssEd_("erro", "A imagem «" + f.name + "» tem " + Email_tamanho_(f.size) + "; o limite para escolher é 5 MB. Recorte ou exporte a imagem menor e escolha de novo."); return; }
+    Email_msgAssEd_("", "");
+    Email_reduzirImagem_(f, maxKb, function (erro, img) {
+      if (erro) { Email_msgAssEd_("erro", erro); return; }
+      if (!EM.assEd) return;
+      var tinha = !!EM.assEd.imagem;
+      EM.assEd.imagem = { tipo: img.tipo, base64: img.base64, w: img.w, h: img.h, nova: true };
+      if (!tinha) EM.assEd.largura = Math.min(img.w, 300);
+      Email_ajustarLarguraAss_(); Email_previaAss_();
+    });
+  }
+  /**
+   * Reduz a imagem no próprio navegador (até 1000 px de largura e até maxKb). Pequena e já no tamanho: vai como está
+   * (mantém a transparência do PNG). Senão, PNG reduzido; se ainda passar, JPG com fundo branco em qualidade decrescente.
+   */
+  function Email_reduzirImagem_(file, maxKb, pronto) {
+    var leitor = new FileReader();
+    leitor.onerror = function () { pronto("Não consegui ler a imagem «" + file.name + "». Tente de novo ou escolha outro arquivo."); };
+    leitor.onload = function () {
+      var dataUrl = String(leitor.result || ""), img = new Image();
+      img.onerror = function () { pronto("O arquivo «" + file.name + "» não abriu como imagem (pode estar corrompido). Salve de novo como PNG ou JPG e escolha outra vez."); };
+      img.onload = function () {
+        var w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height, limite = maxKb * 1024;
+        if (!w0 || !h0) { pronto("Não consegui ler o tamanho da imagem «" + file.name + "». Salve de novo como PNG ou JPG e escolha outra vez."); return; }
+        var tipoOrig = /png/i.test(file.type) ? "image/png" : "image/jpeg";
+        if (file.size <= limite && w0 <= 1000) { pronto(null, { tipo: tipoOrig, base64: dataUrl.split(",")[1] || "", w: w0, h: h0 }); return; }
+        var larguras = [1000, 800, 600, 400, 300].filter(function (l, i, arr) { return l <= w0 || i === arr.length - 1; });
+        if (w0 < 1000 && larguras.indexOf(w0) < 0) larguras.unshift(w0);
+        var tentar = function (w, tipo, q) {
+          var h = Math.max(1, Math.round(h0 * w / w0)), cv = document.createElement("canvas");
+          cv.width = w; cv.height = h;
+          var ctx = cv.getContext("2d");
+          if (tipo === "image/jpeg") { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h); }
+          ctx.drawImage(img, 0, 0, w, h);
+          var b64 = cv.toDataURL(tipo, q).split(",")[1] || "";
+          return { tipo: tipo, base64: b64, w: w, h: h, bytes: Math.floor(b64.length * 0.75) };
+        };
+        try {
+          for (var i = 0; i < larguras.length; i++) {
+            var w = Math.min(larguras[i], w0);
+            var opcoes = (tipoOrig === "image/png" ? [["image/png", undefined]] : []).concat([["image/jpeg", 0.9], ["image/jpeg", 0.8], ["image/jpeg", 0.7]]);
+            for (var k = 0; k < opcoes.length; k++) {
+              var r = tentar(w, opcoes[k][0], opcoes[k][1]);
+              if (r.bytes <= limite) { pronto(null, r); return; }
+            }
+          }
+        } catch (e) { pronto("Não consegui reduzir a imagem «" + file.name + "» neste navegador (" + (e && e.message ? e.message : e) + "). Reduza a imagem num editor e escolha de novo."); return; }
+        pronto("Mesmo reduzida, a imagem «" + file.name + "» passa de " + maxKb + " KB. Recorte as bordas ou use uma imagem mais simples (logotipo em PNG costuma ficar bem pequeno) e escolha de novo.");
+      };
+      img.src = dataUrl;
+    };
+    leitor.readAsDataURL(file);
+  }
+  function Email_salvarAssinaturaEd_() {
+    var e = EM.assEd; if (!e) return;
+    var nome = (document.getElementById("emAssNome").value || "").trim(), texto = Email_textoAssinaturaEd_();
+    if (!nome) { Email_msgAssEd_("erro", "Dê um nome à assinatura (por exemplo «Completa» ou «Respostas»), para escolher depois na hora de escrever."); document.getElementById("emAssNome").focus(); return; }
+    if (!texto && !e.imagem) { Email_msgAssEd_("erro", "A assinatura está vazia: escreva o texto, escolha uma imagem, ou os dois."); return; }
+    var btn = document.getElementById("emAssSalvarBtn"); if (btn) btn.disabled = true;
+    Email_chamar_("Email_apiAssinaturaSalvar", [{ id: e.id, nome: nome, texto: texto, imagem: e.imagem && e.imagem.nova ? { base64: e.imagem.base64 } : null, manterImagem: !!(e.imagem && !e.imagem.nova), largura: e.imagem ? e.largura : 0, posicao: e.posicao }], function (r) {
+      EM.sit.assinaturas = r.assinaturas; EM.assEd = null;
+      Email_fecharJanela_();
+      if (EM.aba === "minha" && document.getElementById("emAba")) Email_renderMinha_();
+      var m = document.getElementById("emAssMsg"); if (m) m.innerHTML = '<div class="em-msg ok">Assinatura «' + Email_esc_(nome) + '» salva. Ela aparece no seletor «Assinatura» da janela de escrever.</div>';
+    }, function (msg) { if (btn) btn.disabled = false; Email_msgAssEd_("erro", msg); }, { carregando: "Salvando a assinatura..." });
+  }
+  function Email_apagarAssinatura_(id) {
+    var x = Email_ass_().lista.filter(function (s) { return s.id === id; })[0]; if (!x) return;
+    if (!confirm("Apagar a assinatura «" + x.nome + "»? As mensagens já enviadas não mudam.")) return;
+    Email_chamar_("Email_apiAssinaturaRemover", [id], function (r) { EM.sit.assinaturas = r.assinaturas; Email_renderMinha_(); }, null, { carregando: "Apagando..." });
+  }
+  function Email_salvarPadroesAss_() {
+    var nova = document.getElementById("emAssPadNova").value, resp = document.getElementById("emAssPadResp").value;
+    Email_chamar_("Email_apiAssinaturaPadroes", [{ nova: nova, resposta: resp }], function (r) {
+      EM.sit.assinaturas = r.assinaturas; Email_renderMinha_();
+      var m = document.getElementById("emAssMsg"); if (m) m.innerHTML = '<div class="em-msg ok">Padrões salvos: entram nas próximas mensagens que você escrever.</div>';
+    }, function (msg) { var m = document.getElementById("emAssMsg"); if (m) m.innerHTML = '<div class="em-msg erro">' + Email_esc_(msg) + '</div>'; });
   }
   function Email_mostrarTrocaSenha_() { var t = document.getElementById("emTroca"); if (t) { t.style.display = ""; document.getElementById("emSenha").focus(); } }
   function Email_conectar_(endereco) {
@@ -622,12 +926,6 @@
   function Email_desconectar_() {
     if (!confirm("Desconectar o seu e-mail do SGO+? A senha guardada é apagada do servidor e o sistema para de avisar e-mail novo. As mensagens continuam na sua caixa (webmail e celular).")) return;
     Email_chamar_("Email_apiDesconectar", [], function () { EM.conta = ""; EM.aba = "minha"; Email_render_(); Email_verificar_(); }, null, { carregando: "Desconectando..." });
-  }
-  function Email_salvarAssinatura_() {
-    Email_chamar_("Email_apiAssinatura", [{ html: document.getElementById("emAssEd").innerHTML }], function (r) {
-      if (EM.sit.situacao.pessoal) EM.sit.situacao.pessoal.assinatura = r.assinatura;
-      document.getElementById("emAssMsg").innerHTML = '<div class="em-msg ok">Assinatura salva. Ela entra nos próximos e-mails que você escrever.</div>';
-    }, function (m) { document.getElementById("emAssMsg").innerHTML = '<div class="em-msg erro">' + Email_esc_(m) + '</div>'; });
   }
 
   // ---------------- aba Caixas compartilhadas (Administrador) ----------------
