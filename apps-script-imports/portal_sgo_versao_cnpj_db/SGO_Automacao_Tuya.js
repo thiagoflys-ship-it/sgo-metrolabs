@@ -43,6 +43,14 @@
  *
  * LIMITES: no mínimo 300 ms entre chamadas e no máximo TUYA_LIMITE_MINUTO (90) por minuto, contando todas as execuções (cache do script).
  * Token em cache de memória do servidor (CacheService), nunca em planilha; renovado 60 s antes de vencer e em 1010/1011/1400.
+ *
+ * CONSUMO DA COTA (27/10/2026, depois de a cota do plano de teste acabar às 07:45 com o código 28841004): toda chamada que
+ * sai é contada por dia e por mês, com a origem (TUYA_PROP_USO, propriedade do script; nada de segredo). A origem da chamada
+ * em curso vem de Tuya_comOrigem_(origem, fn): COMANDO (pedido por pessoa), MANUAL ("Ler estado", "Verificar campainha"),
+ * TELA (releitura automática das telas), AUTOMATICA (consultas das rotinas), EVENTO (abertura automática disparada por
+ * evento da Tuya), SENTINELA, SINCRONIZAR e TOKEN. Cota esgotada ou plano vencido (28841004, 28841104, 28841002, 28841001)
+ * marca o bloqueio: enquanto ele vale, e no modo econômico (AUT_ECONOMICO), as origens TELA e AUTOMATICA não chamam a nuvem.
+ * Qualquer resposta com sucesso tira o bloqueio.
  ****************************************************/
 
 var TUYA_REGIOES = [
@@ -62,6 +70,13 @@ var TUYA_ESPACO_MS = 300;
 var TUYA_LIMITE_MINUTO = 90;              // 23/10/2026: campainha (3 s, compartilhada) + abertura automática + estado dos portões na tela (5 s)
 var TUYA_TOKEN_FOLGA_S = 60;
 var TUYA_SHA256_VAZIO = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+var TUYA_PROP_USO = 'TUYA_USO_V1';
+var TUYA_PROP_ECONOMICO = 'AUT_ECONOMICO';
+// Códigos que querem dizer "a nuvem não atende este projeto agora" (não é falha do dispositivo nem passageira)
+var TUYA_CODIGOS_BLOQUEIO = { 28841004: 'COTA', 28841104: 'COTA', 28841002: 'PLANO', 28841001: 'PLANO' };
+var TUYA_CODIGOS_CREDENCIAL = { 1004: 1, 1106: 1, 28841101: 1, 28841105: 1, 28841106: 1 };
+var TUYA_ORIGENS_PAUSAVEIS = { TELA: 1, AUTOMATICA: 1 };
+var Tuya_origemAtual_ = '';
 
 // Categorias da Tuya (código do produto) que o módulo reconhece. Portões e acessos: comando de abertura;
 // fechaduras: só pelo fluxo de bilhete das Smart Lock Open APIs, quando o modelo aceita abertura remota.
@@ -179,6 +194,86 @@ function Tuya_chamadasNoMinuto_() {
 }
 
 // ------------------------------------------------------------
+// CONSUMO DA COTA (27/10/2026): contador por dia e por mês, último erro, bloqueio e pausa das leituras automáticas
+// ------------------------------------------------------------
+/** Roda fn com a origem marcada (conta no consumo e decide se a chamada pode ser pausada). */
+function Tuya_comOrigem_(origem, fn) {
+  var antes = Tuya_origemAtual_;
+  Tuya_origemAtual_ = String(origem || '');
+  try { return fn(); } finally { Tuya_origemAtual_ = antes; }
+}
+function Tuya_diaDe_(ms) { return Utilities.formatDate(new Date(ms || Date.now()), 'America/Sao_Paulo', 'yyyy-MM-dd'); }
+
+/** Tipo da falha pela resposta: COTA | PLANO | CREDENCIAL | TOKEN | REDE | DISPOSITIVO | '' (função pura). */
+function Tuya_tipoFalha_(codigo, http, rede) {
+  codigo = Number(codigo) || 0; http = Number(http) || 0;
+  if (TUYA_CODIGOS_BLOQUEIO[codigo]) return TUYA_CODIGOS_BLOQUEIO[codigo];
+  if (TUYA_CODIGOS_CREDENCIAL[codigo] || http === 401 || http === 403) return 'CREDENCIAL';
+  if (codigo === 1010 || codigo === 1011 || codigo === 1400) return 'TOKEN';
+  if (rede || http === 429 || http >= 500) return 'REDE';
+  if (codigo === 2001 || codigo === 2008 || codigo === 2009 || codigo === 2010) return 'DISPOSITIVO';
+  return codigo ? 'OUTRO' : '';
+}
+/** A falha é da nuvem inteira (nenhum portão funciona pelo SGO+), não de um dispositivo. */
+function Tuya_falhaDaNuvem_(tipo) { return tipo === 'COTA' || tipo === 'PLANO' || tipo === 'CREDENCIAL' || tipo === 'REDE'; }
+
+/** Consumo guardado, já virado para o dia e o mês de agora (função pura sobre o texto da propriedade). */
+function Tuya_usoNormalizar_(u, agoraMs) {
+  u = u && typeof u === 'object' ? u : {};
+  var dia = Tuya_diaDe_(agoraMs), mes = dia.slice(0, 7);
+  var out = { dia: dia, diaTotal: 0, diaPor: {}, mes: mes, mesTotal: 0, mesPor: {}, ontemTotal: 0, porDia: {},
+    ultimoOkEm: Number(u.ultimoOkEm) || 0, ultimoErro: u.ultimoErro || null, bloqueio: u.bloqueio || null };
+  Object.keys(u.porDia || {}).forEach(function (k) { if (k.slice(0, 7) === mes || k >= Tuya_diaDe_((agoraMs || Date.now()) - 35 * 86400000)) out.porDia[k] = Number(u.porDia[k]) || 0; });
+  if (u.dia === dia) { out.diaTotal = Number(u.diaTotal) || 0; out.diaPor = u.diaPor || {}; out.ontemTotal = Number(u.ontemTotal) || 0; }
+  else if (u.dia === Tuya_diaDe_((agoraMs || Date.now()) - 86400000)) out.ontemTotal = Number(u.diaTotal) || 0;
+  if (u.mes === mes) { out.mesTotal = Number(u.mesTotal) || 0; out.mesPor = u.mesPor || {}; }
+  return out;
+}
+function Tuya_uso_() {
+  var t = null;
+  try { t = PropertiesService.getScriptProperties().getProperty(TUYA_PROP_USO); } catch (e) {}
+  var u = null;
+  try { u = JSON.parse(t || 'null'); } catch (e2) { u = null; }
+  return Tuya_usoNormalizar_(u, Date.now());
+}
+function Tuya_usoGravar_(u) { try { PropertiesService.getScriptProperties().setProperty(TUYA_PROP_USO, JSON.stringify(u)); } catch (e) {} }
+
+/** Conta uma chamada que saiu. r = { ok, codigo, http, rede, texto }. Nunca lança erro. */
+function Tuya_usoRegistrar_(origem, r) {
+  try {
+    var u = Tuya_uso_(), o = String(origem || 'OUTRA');
+    u.diaTotal++; u.mesTotal++;
+    u.diaPor[o] = (Number(u.diaPor[o]) || 0) + 1; u.mesPor[o] = (Number(u.mesPor[o]) || 0) + 1;
+    u.porDia[u.dia] = u.diaTotal;
+    var agora = Date.now();
+    if (r && r.ok) { u.ultimoOkEm = agora; u.bloqueio = null; }
+    else if (r) {
+      var tipo = Tuya_tipoFalha_(r.codigo, r.http, r.rede);
+      u.ultimoErro = { codigo: Number(r.codigo) || 0, http: Number(r.http) || 0, tipo: tipo, texto: String(r.texto || '').slice(0, 300), em: agora, origem: o };
+      if (TUYA_CODIGOS_BLOQUEIO[Number(r.codigo) || 0]) u.bloqueio = { tipo: tipo, codigo: Number(r.codigo), desde: (u.bloqueio && u.bloqueio.desde) || agora, texto: String(r.texto || '').slice(0, 300) };
+    }
+    Tuya_usoGravar_(u);
+  } catch (e) {}
+}
+
+/** Modo econômico vigente (AUT_ECONOMICO, só no mês em que foi ligado). */
+function Tuya_economico_() {
+  try {
+    var e = JSON.parse(PropertiesService.getScriptProperties().getProperty(TUYA_PROP_ECONOMICO) || 'null');
+    return e && e.mes === Tuya_diaDe_().slice(0, 7) ? e : null;
+  } catch (x) { return null; }
+}
+
+/** Motivo para não chamar a nuvem nesta origem ('' = pode). Só TELA e AUTOMATICA são pausadas; pessoa sempre tenta. */
+function Tuya_motivoPausa_(origem) {
+  if (!TUYA_ORIGENS_PAUSAVEIS[String(origem || '')]) return '';
+  var u = Tuya_uso_();
+  if (u.bloqueio) return u.bloqueio.tipo === 'PLANO' ? 'o plano do projeto na Tuya está vencido' : 'a cota de chamadas da Tuya acabou';
+  if (Tuya_economico_()) return 'o modo econômico está ligado (consumo da cota perto do limite do mês)';
+  return '';
+}
+
+// ------------------------------------------------------------
 // TOKEN (cache de memória; nunca em planilha)
 // ------------------------------------------------------------
 function Tuya_tokenGuardado_() {
@@ -223,6 +318,8 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   o = o || {};
   if (!c.temCredencial) throw Tuya_erro_('faltam as credenciais da Tuya (Chaves e senhas > Automação predial (Tuya))', 0, 0, false);
   if (!/^https:\/\//i.test(c.url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(c.url)) throw Tuya_erro_('o endereço da Tuya precisa começar com https://', 0, 0, false);
+  var pausa = Tuya_motivoPausa_(Tuya_origemAtual_);
+  if (pausa) { var ep = Tuya_erro_('leitura automática pausada: ' + pausa, 0, 0, false); ep.tuyaPausa = true; throw ep; }
   if (!Tuya_vez_()) throw Tuya_erro_('limite de chamadas à Tuya neste minuto (' + TUYA_LIMITE_MINUTO + '); aguarde um minuto e tente de novo', 0, 0, true);
   metodo = String(metodo || 'GET').toUpperCase();
   var corpoTexto = corpo === undefined || corpo === null ? '' : JSON.stringify(corpo);
@@ -235,13 +332,20 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   var op = { method: metodo.toLowerCase(), muteHttpExceptions: true, followRedirects: false, headers: headers };
   if (corpoTexto) { op.contentType = 'application/json'; op.payload = corpoTexto; }
   Tuya_esperarVez_();
-  var r;
+  var r, origemUso = o.semToken ? 'TOKEN' : (Tuya_origemAtual_ || 'OUTRA');
   try { r = UrlFetchApp.fetch(c.url + ass.caminhoCompleto, op); }
-  catch (e) { throw Tuya_erro_('sem resposta da Tuya (' + Tuya_limpar_(e && e.message, c) + ')', 0, 0, true); }
+  catch (e) {
+    var textoRede = 'sem resposta da Tuya (' + Tuya_limpar_(e && e.message, c) + ')';
+    Tuya_usoRegistrar_(origemUso, { ok: false, codigo: 0, http: 0, rede: true, texto: textoRede });
+    throw Tuya_erro_(textoRede, 0, 0, true);
+  }
   var http = r.getResponseCode(), txt = '';
   try { txt = String(r.getContentText() || ''); } catch (e2) {}
   var j = null;
   try { j = JSON.parse(txt); } catch (e3) {}
+  var okUso = !!(j && j.success === true), codUso = j && j.code !== undefined ? Number(j.code) : 0;
+  Tuya_usoRegistrar_(origemUso, { ok: okUso, codigo: codUso, http: http, rede: http === 429 || http >= 500,
+    texto: okUso ? '' : Tuya_limpar_(j && j.msg ? j.msg : String(txt || '').slice(0, 120), c) });
   return { http: http, txt: txt, j: j };
 }
 
@@ -278,6 +382,8 @@ function Tuya_textoErro_(cod, msg, http, oQue) {
     28841101: 'a API pedida não está assinada no projeto cloud (código 28841101); no portal da Tuya, Cloud > projeto > Service API, acrescente o serviço (IoT Core, Authorization Token Management, Smart Lock Open Service)',
     28841106: 'a API pedida não está assinada no projeto cloud (código 28841106); no portal da Tuya, Cloud > projeto > Service API, acrescente o serviço',
     28841104: 'a cota de chamadas desta API na Tuya esgotou (código 28841104); aguarde a renovação da cota ou amplie o plano no portal da Tuya',
+    // 27/10/2026, resposta real desde as 07:45: {"code":28841004,"msg":"No permissions. Your quota of Trial Edition is used up."}
+    28841004: 'a cota de chamadas do plano de teste (Trial Edition) da Tuya acabou (código 28841004); renove em iot.tuya.com › Cloud › Cloud Services › IoT Core (estender o período de teste ou assinar um plano)',
     28841105: 'o projeto cloud não está autorizado a usar esta API (código 28841105); no portal da Tuya, Cloud > projeto > Service API > Go to Authorize, autorize o serviço'
   };
   if (mapa[cod]) return mapa[cod];
@@ -453,7 +559,8 @@ function Tuya_compatibilidade_(categoria, funcoes, metodosRemotos) {
 // ------------------------------------------------------------
 // TESTE DE CONEXÃO (Chaves e senhas): token e contagem de dispositivos; nenhum comando
 // ------------------------------------------------------------
-function Tuya_testarConexao_() {
+function Tuya_testarConexao_() { return Tuya_comOrigem_('MANUAL', Tuya_testarConexaoAgora_); }
+function Tuya_testarConexaoAgora_() {
   var c = Tuya_cfg_();
   var falta = [];
   if (!c.accessId) falta.push('TUYA_ACCESS_ID');

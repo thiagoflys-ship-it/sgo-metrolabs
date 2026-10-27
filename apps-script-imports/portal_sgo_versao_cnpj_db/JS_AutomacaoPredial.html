@@ -108,6 +108,25 @@
 .intelbras-operacao #intelbrasEstado { display:inline-block; padding:7px 11px; border-radius:8px; background:#eef5f2; color:#286044; font-size:14px; }
 .intelbras-operacao details { margin-top:14px; font-size:12px; color:#697586; }
 @media(max-width:760px) { .aut-rapido-cab { align-items:flex-start; } .aut-rapido-grade { grid-template-columns:1fr; } .aut-rapido-item { padding:17px; } }
+/* 27/10/2026: situação da nuvem para a equipe e aba "Saúde da infraestrutura" (Diretoria e Administrador) */
+.aut-infra:empty { display:none; }
+.aut-infra { margin:0 0 12px; }
+.aut-saude-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; margin:8px 0 16px; }
+.aut-saude-item { border:1px solid var(--border,#d9e0e7); border-left-width:6px; border-radius:10px; padding:10px 12px; background:var(--card,#fff); display:flex; flex-direction:column; gap:4px; font-size:13px; min-width:0; overflow-wrap:anywhere; }
+.aut-saude-item.is-verde { border-left-color:#2f8f4e; }
+.aut-saude-item.is-amarelo { border-left-color:#d49a1f; }
+.aut-saude-item.is-vermelho { border-left-color:#c0392b; background:#fff8f7; }
+.aut-saude-item.is-cinza { border-left-color:#9aa5b1; }
+.aut-saude-cab { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-weight:700; }
+.aut-saude-barra { position:relative; height:14px; border-radius:7px; background:var(--bc-surface-2,#eef1f4); overflow:hidden; margin:6px 0; }
+.aut-saude-barra > span { position:absolute; left:0; top:0; bottom:0; background:#2f8f4e; }
+.aut-saude-barra.is-amarelo > span { background:#d49a1f; }
+.aut-saude-barra.is-vermelho > span { background:#c0392b; }
+.aut-saude-marca { position:absolute; top:0; bottom:0; width:2px; background:#52606d; }
+.aut-saude-uso { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+.aut-saude-caixa { border:1px solid var(--border,#d9e0e7); border-radius:10px; padding:10px 12px; font-size:13px; background:var(--card,#fff); min-width:0; }
+.aut-saude-caixa ul { margin:4px 0 0; padding-left:18px; }
+.aut-saude-dias { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12px; color:var(--muted,#52606d); }
 
 </style>
 
@@ -120,7 +139,9 @@
   // ou no botão "Atualizar" (formulário aberto nunca é apagado). Só os selos de posição dos portões e o pedido da
   // campainha são trocados no lugar, enquanto a tela está aberta. Toda regra é conferida de novo no servidor.
   // ==========================================================
-  var AUTP = { pedidos: {}, pedTimer: null, pedRelogio: null, pedLidoEm: 0, portTimer: null, posicoes: {}, menu: false, acionar: false, adm: false, diretoria: false, dados: null, rapido: [], aba: "dispositivos", aberto: "", perms: null, aud: null, unidades: null, mensagem: "" };
+  // 27/10/2026 (cota da Tuya): as consultas da tela seguem o ritmo que o servidor devolve (proximaS) e param com a aba em
+  // segundo plano (document.visibilityState); voltam na hora quando a aba aparece. infra = situação da nuvem para a equipe.
+  var AUTP = { pedidos: {}, pedTimer: null, pedRelogio: null, pedLidoEm: 0, pedAtivo: false, pedTick: null, portTimer: null, portAtivo: false, portTick: null, posicoes: {}, menu: false, acionar: false, adm: false, diretoria: false, dados: null, rapido: [], aba: "dispositivos", aberto: "", perms: null, aud: null, unidades: null, mensagem: "", infra: null, saude: null };
 
   function AutPred_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function AutPred_temMenu_() { return !!AUTP.menu; }
@@ -175,7 +196,8 @@
           '<div class="module-header-right"><button type="button" class="cadx-btn cadx-btn-grande" id="autAtualizar" onclick="AutPred_carregar_()">Atualizar</button></div></div>' +
         CadUI_ajuda_(
           "<ul><li><b>Portões</b>: toda a equipe vê e aciona. Na garagem, use <b>Abrir / fechar portão</b>: o mesmo botão abre o fechado e fecha o aberto, como no Smart Life. A posição é consultada antes da janela; confira a ação e o nome e toque em \"Sim\". Aguarde o fim do percurso antes de tocar novamente.</li>" +
-          "<li>O selo grande mostra a posição do portão (<b>Aberto</b>, <b>Fechado</b>, <b>Abrindo…</b>, <b>Fechando…</b>), relida a cada 5 segundos enquanto a tela está aberta. Quando a posição muda, aparece um aviso no topo.</li>" +
+          "<li>O selo grande mostra a posição do portão (<b>Aberto</b>, <b>Fechado</b>, <b>Abrindo…</b>, <b>Fechando…</b>). Com a tela aberta e visível, ela é atualizada a cada poucos segundos durante o percurso de um comando e com menos frequência com o portão parado (economia da nuvem da Tuya). Para ler agora, use \"Ler estado\". Quando a posição muda, aparece um aviso no topo.</li>" +
+          "<li>Se aparecer <b>\"Portões pelo SGO+ fora do ar no momento\"</b>, use o controle ou o aplicativo Smart Life: a gestão é avisada sozinha. O alarme não depende dessa nuvem.</li>" +
           "<li><b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
           "<li>A <b>porta da Diretoria</b> só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele. Ela abre quando tocam a campainha: toque em \"Abrir agora\" ou marque <b>\"Abrir automaticamente quando tocarem a campainha\"</b> (desmarcado, volta ao \"Abrir agora\").</li>" +
           "<li><b>Simulação</b>: enquanto a automação está desligada em Chaves e senhas ou o dispositivo não foi homologado pela Diretoria, o SGO+ registra o que teria feito e nada é enviado.</li>" +
@@ -197,7 +219,7 @@
     AutPred_chamar_("painel", {}, function (r) {
       if (btn) btn.disabled = false;
       AUTP.dados = r; AUTP.adm = !!r.podeAdministrar; AUTP.diretoria = !!r.ehDiretoria; AUTP.rapido = r.rapido || [];
-      AUTP.acionar = AUTP.rapido.length > 0;
+      AUTP.acionar = AUTP.rapido.length > 0; AUTP.infra = r.infra || null;
       AutPred_desenhar_();
       AutPred_desenharRapido_(document.getElementById("autRapido"), AUTP.rapido, "modulo");
       if (!mensagem && typeof CadUI_movel_ === "function" && CadUI_movel_()) try { window.scrollTo(0, 0); } catch (e) {}
@@ -217,7 +239,7 @@
     if (AUTP.adm && !cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação): ' + AutPred_esc_((cfg.faltas || []).join("; ")) + ". O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya).</div>";
     else if (AUTP.adm) h += '<div class="cadx-faixa bc-faixa tom-info">Automação ligada (região ' + AutPred_esc_(cfg.regiao) + "). Comandos reais só nos dispositivos homologados pela Diretoria; os demais ficam em simulação.</div>";
     if (AUTP.adm) {
-      h += '<div class="aut-abas">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].map(function (a) {
+      h += '<div class="aut-abas">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].concat(d.podeVerSaude ? [["saude", "Saúde da infraestrutura"]] : []).map(function (a) {
         return '<button type="button" class="cadx-btn cadx-btn-grande' + (AUTP.aba === a[0] ? " is-ativa" : "") + '" onclick="AutPred_aba_(\'' + a[0] + '\')">' + a[1] + "</button>";
       }).join("") + "</div>";
     }
@@ -233,6 +255,7 @@
     if (!el) return;
     if (AUTP.aba === "permissoes" && AUTP.adm) { AutPred_desenharPermissoes_(el); return; }
     if (AUTP.aba === "auditoria" && AUTP.adm) { AutPred_desenharAuditoria_(el); return; }
+    if (AUTP.aba === "saude" && AUTP.adm && AUTP.dados && AUTP.dados.podeVerSaude) { AutPred_desenharSaude_(el); return; }
     AutPred_desenharDispositivos_(el);
   }
 
@@ -431,7 +454,7 @@
     if (!el) return;
     lista = lista || [];
     if (!lista.length) { el.innerHTML = ""; return; }
-    el.innerHTML = '<div class="aut-rapido-cab"><div><h3>Acessos e segurança</h3><p>Controle os acessos e acompanhe o estado dos equipamentos.</p></div></div><div class="aut-rapido-grade">' + lista.map(function (d) {
+    el.innerHTML = '<div class="aut-rapido-cab"><div><h3>Acessos e segurança</h3><p>Controle os acessos e acompanhe o estado dos equipamentos.</p></div></div><div class="aut-infra" role="status"></div><div class="aut-rapido-grade">' + lista.map(function (d) {
       var porta = d.tipo === "FECHADURA";
       if (d.remotoFechadura === "PEDIDO") {
         return '<div class="aut-rapido-item' + (d.restrito ? " is-restrito" : "") + '" data-aut-pedido="' + AutPred_esc_(d.id) + '">' + AutPred_tituloRapido_(d) +
@@ -451,9 +474,30 @@
     }).join("") + "</div>";
     lista.forEach(function (d) { if (d.estadoPortao && AUTP.posicoes[d.id] === undefined) AUTP.posicoes[d.id] = d.estadoPortao.codigo || ""; if (d.tipo !== "FECHADURA") AutPred_marcarLibera_(d.id, d.liberaEmS || 0); });
     AutPred_iniciarLibera_();
+    AutPred_mostrarInfra_(AUTP.infra);
     AutPred_iniciarPedidos_();
     AutPred_iniciarPortoes_();
+    // depois de um comando a tela é redesenhada: a próxima leitura da posição sai logo (o servidor acelera no percurso)
+    if (AUTP.portAgendar) AUTP.portAgendar(2);
   }
+
+  // ---------- situação da nuvem para a equipe (27/10/2026) ----------
+  // Falha da nuvem da Tuya (cota, plano, credencial) não aparece como erro técnico: a faixa diz o que fazer, e o alarme,
+  // que não depende dessa nuvem, segue no bloco dele.
+  function AutPred_mostrarInfra_(infra) {
+    if (infra) AUTP.infra = infra;
+    var i = AUTP.infra || {}, h = "";
+    if (i.portoesForaDoAr) h = '<div class="cadx-faixa bc-faixa tom-perigo" role="alert"><strong>' + AutPred_esc_(i.texto) + "</strong>" + (i.alarmeTexto ? " " + AutPred_esc_(i.alarmeTexto) : "") + "</div>";
+    else if (i.economico) h = '<div class="cadx-faixa bc-faixa tom-alerta">Economia da nuvem ligada: a posição dos portões e a campainha não são relidas sozinhas. Toque em "Ler estado" ou em "Verificar campainha agora" e confira no local antes de fechar.</div>';
+    document.querySelectorAll(".aut-infra").forEach(function (el) { if (el.innerHTML !== h) el.innerHTML = h; });
+  }
+  /** Aba de volta à frente: as consultas paradas voltam na hora. */
+  function AutPred_aoVoltarVisivel_() {
+    if (document.visibilityState === "hidden") return;
+    if (AUTP.portAtivo && !AUTP.portTimer && AUTP.portTick) AUTP.portTick();
+    if (AUTP.pedAtivo && !AUTP.pedTimer && AUTP.pedTick) AUTP.pedTick();
+  }
+  if (!window.AUTP_VISIVEL_LIGADO) { window.AUTP_VISIVEL_LIGADO = true; document.addEventListener("visibilitychange", AutPred_aoVoltarVisivel_); }
 
   // ---------- posição do portão (23/10/2026, dono: "no Smart Life mostra abrindo e fechando e avisa que o portão abriu") ----------
   // Com a tela aberta, o SGO+ relê a cada 5 s (leitura compartilhada no servidor) e troca só os selos no lugar; quando a
@@ -467,18 +511,27 @@
   }
   /** Selo da situação do último comando: só enquanto vale o "Conferir agora" (15 min); a releitura da tela troca no lugar. */
   function AutPred_htmlSit_(d) { return d.ultComandoCodigo && d.ultComandoRecente ? '<span class="cadx-selo bc-selo ' + AutPred_tomSit_(d.ultComandoCodigo) + '">' + AutPred_esc_(d.ultComandoSituacao) + "</span>" : ""; }
-  function AutPred_pararPortoes_() { if (AUTP.portTimer) clearInterval(AUTP.portTimer); AUTP.portTimer = null; }
+  function AutPred_pararPortoes_() { if (AUTP.portTimer) clearTimeout(AUTP.portTimer); AUTP.portTimer = null; AUTP.portAtivo = false; AUTP.portAgendar = null; }
   function AutPred_iniciarPortoes_() {
     if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; }
-    if (AUTP.portTimer) return;
+    if (AUTP.portAtivo) return;
+    AUTP.portAtivo = true;
     var consultando = false, primeira = true;
+    // 27/10/2026: ritmo dado pelo servidor (proximaS: 3 s no percurso, 10 s com eventos, 30 s parado sem eventos); a
+    // consulta à tela não gasta cota da Tuya (quem decide reler na nuvem é o servidor, com leitura compartilhada)
+    var agendar = function (s) { if (!AUTP.portAtivo) return; if (AUTP.portTimer) clearTimeout(AUTP.portTimer); AUTP.portTimer = setTimeout(tickPortoes, Math.max(2, Number(s) || 30) * 1000); };
+    AUTP.portAgendar = agendar;
     // 23/10/2026: a primeira leitura sai na hora (antes, a tela mostrava a última posição guardada por até 5 s)
     var tickPortoes = function () {
+      AUTP.portTimer = null;
       if (!document.querySelector("[data-aut-posicao]")) { AutPred_pararPortoes_(); return; } // a tela fechou
-      if (document.hidden || consultando) return;
+      if (document.visibilityState === "hidden") return; // aba em segundo plano: para; volta em AutPred_aoVoltarVisivel_
+      if (consultando) return;
       consultando = true;
       AutPred_chamar_("portoes", {}, function (r) {
         consultando = false;
+        AutPred_mostrarInfra_(r.infra);
+        agendar(r.proximaS);
         (r.itens || []).forEach(function (x) {
           var e = x.estadoPortao || {}, antes = AUTP.posicoes[x.id], agora = e.codigo || "";
           document.querySelectorAll('[data-aut-posicao="' + x.id + '"]').forEach(function (el) { el.parentNode.outerHTML = AutPred_htmlPosicao_(x.id, e); });
@@ -491,9 +544,9 @@
           }
         });
         primeira = false; // a primeira leitura só acerta a posição guardada, sem aviso de mudança
-      }, function () { consultando = false; });
+      }, function () { consultando = false; agendar(30); });
     };
-    AUTP.portTimer = setInterval(tickPortoes, 5000);
+    AUTP.portTick = tickPortoes;
     tickPortoes();
   }
   function AutPred_avisoPosicao_(texto, tom) {
@@ -574,9 +627,21 @@
         (p.autoAbrir ? '<div class="aut-pedido">Abertura automática ligada: o SGO+ está abrindo a porta. Se não abrir em alguns segundos, use "Abrir agora".</div>' : "") +
         '<div class="aut-pedido-botoes">' + AutPred_btnPedido_(id, contexto, "ABRIR") + AutPred_btnPedido_(id, contexto, "RECUSAR") + "</div>";
     }
-    if (p && p.respondido) return '<div class="aut-pedido">Último pedido ' + AutPred_esc_(p.respondido) + '.</div>';
-    if (p && p.erro) return '<div class="aut-pedido">Não foi possível ler o pedido agora: ' + AutPred_esc_(p.erro) + "</div>";
-    return '<div class="aut-pedido">Aguardando campainha. O botão de abertura aparece quando alguém toca.</div>';
+    // 27/10/2026: sem eventos da Tuya, a campainha chega com atraso (consulta econômica) ou fica pausada (modo econômico)
+    var verificar = p && p.fonte !== "eventos" ? '<button type="button" class="aut-rapido-btn is-recusar" onclick="AutPred_verificarCampainha_(this)">Verificar campainha agora</button>' : "";
+    if (p && p.respondido) return '<div class="aut-pedido">Último pedido ' + AutPred_esc_(p.respondido) + ".</div>" + (p.aviso ? '<div class="aut-pedido">' + AutPred_esc_(p.aviso) + "</div>" : "") + verificar;
+    if (p && p.erro) return '<div class="aut-pedido">' + AutPred_esc_(p.erro) + "</div>" + verificar;
+    if (p && p.aviso) return '<div class="aut-pedido">' + AutPred_esc_(p.aviso) + "</div>" + verificar;
+    return '<div class="aut-pedido">Aguardando campainha. O botão de abertura aparece quando alguém toca.</div>' + verificar;
+  }
+  /** "Verificar campainha agora": uma leitura pedida pela pessoa (vale até no modo econômico). */
+  function AutPred_verificarCampainha_(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = "Verificando…"; }
+    AutPred_chamar_("pedidoAgora", {}, function (r) {
+      AUTP.pedLidoEm = Date.now(); AUTP.pedidos = {}; (r.itens || []).forEach(function (x) { AUTP.pedidos[x.id] = x; });
+      AutPred_mostrarInfra_(r.infra);
+      AutPred_redesenharPedidos_();
+    }, function (m) { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = "Verificar campainha agora"; } AutPred_avisoPosicao_(m, "tom-perigo"); });
   }
   function AutPred_redesenharPedidos_() {
     document.querySelectorAll('[id^="autPedArea_"]').forEach(function (el) {
@@ -585,23 +650,31 @@
       el.innerHTML = AutPred_htmlPedido_(id, contexto);
     });
   }
-  function AutPred_pararPedidos_() { if (AUTP.pedTimer) clearInterval(AUTP.pedTimer); if (AUTP.pedRelogio) clearInterval(AUTP.pedRelogio); AUTP.pedTimer = null; AUTP.pedRelogio = null; }
+  function AutPred_pararPedidos_() { if (AUTP.pedTimer) clearTimeout(AUTP.pedTimer); if (AUTP.pedRelogio) clearInterval(AUTP.pedRelogio); AUTP.pedTimer = null; AUTP.pedRelogio = null; AUTP.pedAtivo = false; }
   function AutPred_iniciarPedidos_() {
     var tem = (AUTP.rapido || []).some(function (d) { return d.remotoFechadura === "PEDIDO"; });
     if (!tem) { AutPred_pararPedidos_(); return; }
-    if (AUTP.pedTimer) return;
+    if (AUTP.pedAtivo) return;
+    AUTP.pedAtivo = true;
     var consultando = false;
+    // 27/10/2026: ritmo do servidor (proximaS: 3 s com eventos, que não gastam cota; 15 s na consulta econômica, em que a
+    // leitura na nuvem é compartilhada e vale por consultaIntervaloS); para com a aba em segundo plano
+    var agendar = function (s) { if (!AUTP.pedAtivo) return; if (AUTP.pedTimer) clearTimeout(AUTP.pedTimer); AUTP.pedTimer = setTimeout(tick, Math.max(3, Number(s) || 15) * 1000); };
     var tick = function () {
+      AUTP.pedTimer = null;
       if (!document.querySelector('[id^="autPedArea_"]')) { AutPred_pararPedidos_(); return; } // a tela fechou
-      if (document.hidden || consultando) return;
+      if (document.visibilityState === "hidden") return; // volta em AutPred_aoVoltarVisivel_
+      if (consultando) return;
       consultando = true;
       AutPred_chamar_("pedido", {}, function (r) {
         consultando = false; AUTP.pedLidoEm = Date.now();
         AUTP.pedidos = {}; (r.itens || []).forEach(function (x) { AUTP.pedidos[x.id] = x; });
+        AutPred_mostrarInfra_(r.infra);
         AutPred_redesenharPedidos_();
-      }, function () { consultando = false; });
+        agendar(r.proximaS);
+      }, function () { consultando = false; agendar(15); });
     };
-    AUTP.pedTimer = setInterval(tick, 3000);
+    AUTP.pedTick = tick;
     AUTP.pedRelogio = setInterval(function () { if (Object.keys(AUTP.pedidos).some(function (k) { return AUTP.pedidos[k].ativo; })) AutPred_redesenharPedidos_(); }, 1000);
     tick();
   }
@@ -614,7 +687,7 @@
     var sec = document.createElement("section");
     sec.id = "autInicio"; sec.className = "aut-inicio aut-rapido";
     faixa.parentNode.insertBefore(sec, faixa.nextSibling);
-    AutPred_chamar_("rapido", {}, function (r) { AUTP.rapido = r.itens || []; AutPred_desenharRapido_(document.getElementById("autInicio"), AUTP.rapido, "inicio"); },
+    AutPred_chamar_("rapido", {}, function (r) { AUTP.rapido = r.itens || []; AUTP.infra = r.infra || AUTP.infra; AutPred_desenharRapido_(document.getElementById("autInicio"), AUTP.rapido, "inicio"); },
       function () { var e = document.getElementById("autInicio"); if (e) e.remove(); });
   }
 
@@ -681,9 +754,9 @@
             origem: contexto === "inicio" ? "ATALHO_INICIO" : (typeof CadUI_movel_ === "function" && CadUI_movel_() ? "CELULAR" : "COMPUTADOR") }, function (r) {
             AutPred_fecharJanela_();
             var sit = r.comando && r.comando.situacao;
-            var tom = sit === "CONFIRMADO" ? "tom-ok" : sit === "SIMULADO" ? "tom-info" : "tom-alerta";
+            var tom = r.foraDoAr ? "tom-perigo" : sit === "CONFIRMADO" ? "tom-ok" : sit === "SIMULADO" ? "tom-info" : "tom-alerta";
             if (contexto === "inicio") {
-              AutPred_chamar_("rapido", {}, function (x) { AUTP.rapido = x.itens || []; AutPred_desenharRapido_(document.getElementById("autInicio"), AUTP.rapido, "inicio"); avisar(r.texto, tom); }, function () { avisar(r.texto, tom); });
+              AutPred_chamar_("rapido", {}, function (x) { AUTP.rapido = x.itens || []; AUTP.infra = x.infra || AUTP.infra; AutPred_desenharRapido_(document.getElementById("autInicio"), AUTP.rapido, "inicio"); avisar(r.texto, tom); }, function () { avisar(r.texto, tom); });
             } else AutPred_carregar_(r.texto, tom);
           }, function (m) {
             AutPred_fecharJanela_();
@@ -824,6 +897,83 @@
     var b = document.getElementById("autInteg"), r = document.getElementById("autIntegRes");
     if (b) b.disabled = true;
     AutPred_chamar_("integridade", {}, function (x) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(x.texto, x.ok ? "tom-ok" : "tom-perigo"); }, function (m) { if (b) b.disabled = false; if (r) r.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
+  }
+
+  // ---------- saúde da infraestrutura (27/10/2026; Diretoria e Administrador) ----------
+  // Desenhada só ao abrir a aba ou tocar em "Atualizar" (nada se redesenha sozinho: o formulário da configuração fica intacto).
+  var AUT_SAUDE_ROTULO = { verde: "Normal", amarelo: "Atenção", vermelho: "Falha", cinza: "Desligado" };
+  var AUT_SAUDE_SELO = { verde: "tom-ok", amarelo: "tom-alerta", vermelho: "tom-perigo", cinza: "" };
+  function AutPred_milhar_(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function AutPred_desenharSaude_(el, mensagem) {
+    el.innerHTML = CadUI_esqueleto_(5);
+    AutPred_chamar_("saude", {}, function (r) { AUTP.saude = r; AutPred_htmlSaude_(el, r, mensagem || r.mensagem); }, function (m) { el.innerHTML = AutPred_faixa_(m, "tom-perigo"); });
+  }
+  function AutPred_htmlSaude_(el, r, mensagem) {
+    var esc = AutPred_esc_, u = r.uso || {}, h = "";
+    if (mensagem) h += AutPred_faixa_(mensagem, "tom-ok");
+    h += '<div class="aut-acoes" style="margin:0 0 6px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_desenharAba_()">Atualizar</button>' +
+      '<span class="cadx-sub">A sentinela confere a cada 5 minutos' + (r.sentinelaEm ? " (última: " + esc(r.sentinelaEm) + ")" : "") + ". Falha que não se corrige sozinha avisa o responsável pelo sistema e a Diretoria uma vez, e de novo quando normaliza.</span></div>";
+    h += '<div class="aut-saude-grade">' + (r.itens || []).map(function (i) {
+      return '<div class="aut-saude-item is-' + esc(i.tom) + '"><div class="aut-saude-cab"><span class="cadx-selo bc-selo ' + (AUT_SAUDE_SELO[i.tom] || "") + '">' + esc(AUT_SAUDE_ROTULO[i.tom] || i.situacao) + "</span>" + esc(i.nome) + "</div>" +
+        "<div>" + esc(i.texto) + "</div>" + (i.situacao !== "ok" && i.porque ? '<div class="cadx-sub">Por quê: ' + esc(i.porque) + "</div>" : "") +
+        (i.situacao !== "ok" && i.oQueFazer ? '<div class="cadx-sub">O que fazer: ' + esc(i.oQueFazer) + "</div>" : "") +
+        (i.incidente ? '<div class="cadx-sub">Incidente ' + esc(i.incidente) + (i.avisado ? " · gestão avisada" : "") + "</div>" : "") + "</div>";
+    }).join("") + "</div>";
+    var pct = Number(u.pct) || 0, cor = pct >= u.economicoPct ? "is-vermelho" : pct >= u.avisoPct ? "is-amarelo" : "";
+    var lista = function (l) { return l && l.length ? "<ul>" + l.map(function (x) { return "<li>" + esc(x.origem) + ": " + esc(AutPred_milhar_(x.total)) + "</li>"; }).join("") + "</ul>" : '<div class="cadx-sub">Nenhuma chamada.</div>'; };
+    h += '<h3 class="aut-unidade">Consumo da cota da Tuya</h3><div class="aut-saude-uso">' +
+      '<div class="aut-saude-caixa"><b>No mês: ' + esc(AutPred_milhar_(u.mes)) + " de " + esc(AutPred_milhar_(u.orcamento)) + " chamadas (" + esc(String(pct).replace(".", ",")) + "%)</b>" +
+        '<div class="aut-saude-barra ' + cor + '" role="img" aria-label="' + esc(String(pct).replace(".", ",")) + '% do orçamento"><span style="width:' + Math.min(100, pct) + '%"></span><i class="aut-saude-marca" style="left:' + esc(u.avisoPct) + '%"></i><i class="aut-saude-marca" style="left:' + esc(u.economicoPct) + '%"></i></div>' +
+        '<div class="cadx-sub">Aviso em ' + esc(u.avisoPct) + "%; modo econômico automático em " + esc(u.economicoPct) + "%. No ritmo atual, o mês fecha em cerca de " + esc(AutPred_milhar_(u.projecaoMes)) + " chamadas.</div></div>" +
+      '<div class="aut-saude-caixa"><b>Hoje: ' + esc(AutPred_milhar_(u.dia)) + " chamadas</b> (ontem: " + esc(AutPred_milhar_(u.ontem)) + ")" + lista(u.porOrigemDia) + "</div>" +
+      '<div class="aut-saude-caixa"><b>No mês, por origem</b>' + lista(u.porOrigemMes) + "</div>" +
+      '<div class="aut-saude-caixa"><b>Eventos da Tuya</b><div>' + esc((r.eventos || {}).texto) + '</div><div class="cadx-sub">Mensagens recebidas: ' + esc(AutPred_milhar_(u.mensagensDia)) + " hoje, " + esc(AutPred_milhar_(u.mensagensMes)) + " no mês (cota de mensagens à parte da cota de chamadas).</div></div>" +
+      "</div>";
+    if (u.dias && u.dias.length) h += '<div class="aut-saude-dias">Chamadas por dia: ' + u.dias.map(function (d) { return "<span>" + esc(d.dia) + ": " + esc(AutPred_milhar_(d.total)) + "</span>"; }).join("") + "</div>";
+    if (u.bloqueio) h += AutPred_faixa_("Bloqueio da nuvem: " + u.bloqueio, "tom-perigo");
+    if (u.ultimoErro) h += '<div class="cadx-sub" style="margin-top:6px">Último erro da Tuya: ' + esc(u.ultimoErro) + "</div>";
+    var e = r.economico || {};
+    h += '<h3 class="aut-unidade">Modo econômico</h3><div class="aut-saude-caixa">' + (e.ligado
+      ? "<b>Ligado desde " + esc(e.desde) + "</b> (" + esc(e.motivo) + "). Só saem os comandos pedidos por pessoas e a abertura automática por evento; a posição dos portões e a campainha não são relidas sozinhas. Volta ao normal na virada do mês." +
+        (r.podeSairEconomico ? '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-risco" onclick="AutPred_sairEconomico_()">Sair do modo econômico</button></div>' : '<div class="cadx-sub">Só um diretor pode sair do modo econômico antes da virada do mês.</div>')
+      : "Desligado. O SGO+ liga sozinho quando o consumo do mês chega a " + esc(u.economicoPct) + "% do orçamento.") + "</div>";
+    var c = r.cfg || {};
+    if (r.podeConfigurar) {
+      var dias = [["1", "Seg"], ["2", "Ter"], ["3", "Qua"], ["4", "Qui"], ["5", "Sex"], ["6", "Sáb"], ["0", "Dom"]];
+      h += '<h3 class="aut-unidade">Orçamento e consulta econômica (diretores)</h3><div class="aut-form" id="autSaudeCfg">' +
+        '<label for="autSOrc">Orçamento de chamadas por mês (plano da Tuya; o plano de teste tem 26.000)</label><input id="autSOrc" inputmode="numeric" value="' + esc(AutPred_milhar_(c.orcamentoMes)) + '">' +
+        '<label for="autSIni">Consulta econômica (sem eventos da Tuya): início</label><input id="autSIni" type="time" value="' + esc(c.consultaInicio) + '">' +
+        '<label for="autSFim">Fim</label><input id="autSFim" type="time" value="' + esc(c.consultaFim) + '">' +
+        '<label for="autSInt">Intervalo entre leituras da campainha (segundos, 60 a 1.800)</label><input id="autSInt" type="number" min="60" max="1800" step="10" value="' + esc(c.consultaIntervaloS) + '">' +
+        '<label>Dias da consulta</label><div class="aut-acoes">' + dias.map(function (d) { return '<label class="aut-check"><input type="checkbox" data-aut-sdia="' + d[0] + '"' + ((c.consultaDias || []).indexOf(Number(d[0])) >= 0 ? " checked" : "") + "> " + d[1] + "</label>"; }).join("") + "</div>" +
+        '<div class="cadx-sub">Cada leitura da campainha gasta 1 chamada: 10 horas a cada 120 s são cerca de 300 chamadas por dia. Com o serviço de mensagens da Tuya ligado, a campainha chega por evento e não gasta chamada.</div>' +
+        '<label for="autSMot">Motivo da mudança</label><input id="autSMot" maxlength="300" placeholder="Ex.: plano pago assinado em 27/10">' +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvarSaudeCfg_()">Gravar</button></div><div class="cadx-msg" id="autSMsg"></div></div>';
+    }
+    var inc = r.incidentes || [];
+    h += '<h3 class="aut-unidade">Histórico de incidentes</h3>' + (inc.length ? '<table class="aut-tabela"><thead><tr><th>Quando</th><th>Item</th><th>O que aconteceu</th><th>Detalhe</th></tr></thead><tbody>' + inc.map(function (x) {
+      return "<tr><td>" + esc(x.quando) + "</td><td>" + esc(x.item) + "</td><td>" + esc(x.evento) + (x.por && x.por !== "Sentinela" ? '<div class="cadx-sub">' + esc(x.por) + "</div>" : "") + "</td><td>" + esc(x.texto) +
+        (x.oQueFazer ? '<div class="cadx-sub">O que fazer: ' + esc(x.oQueFazer) + "</div>" : "") + "</td></tr>";
+    }).join("") + "</tbody></table>" : '<div class="cadx-sub">Nenhum incidente registrado.</div>');
+    el.innerHTML = h;
+  }
+  function AutPred_sairEconomico_() {
+    CadUI_confirmar_({ titulo: "Sair do modo econômico", risco: true, botao: "Sair do modo econômico",
+      texto: "<p>As leituras automáticas (posição dos portões e campainha) voltam agora e podem esgotar a cota da Tuya antes da virada do mês. Neste mês o SGO+ não religa o modo sozinho; o aviso de consumo continua.</p>",
+      motivo: { rotulo: "Motivo", min: 5 },
+      aoConfirmar: function (valores, fechar, reabilitar) {
+        var motivo = valores && valores.motivo !== undefined ? valores.motivo : String((document.getElementById("cadxDlgMotivo") || {}).value || "");
+        AutPred_chamar_("saudeSairEconomico", { motivo: motivo }, function (r) { fechar(); AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, reabilitar);
+      } });
+  }
+  function AutPred_salvarSaudeCfg_() {
+    var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; };
+    var m = document.getElementById("autSMsg");
+    var dias = []; document.querySelectorAll("[data-aut-sdia]").forEach(function (c) { if (c.checked) dias.push(Number(c.getAttribute("data-aut-sdia"))); });
+    var dados = { orcamentoMes: g("autSOrc"), consultaInicio: g("autSIni"), consultaFim: g("autSFim"), consultaIntervaloS: g("autSInt"), consultaDias: dias, motivo: g("autSMot") };
+    if (!dados.motivo || dados.motivo.length < 5) { if (m) { m.textContent = "Escreva o motivo (mínimo de 5 caracteres)."; m.className = "cadx-msg is-erro"; } return; }
+    if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
+    AutPred_chamar_("saudeCfg", dados, function (r) { AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
   }
 
 // ANM 24 Net: comunicação no servidor próprio. A senha nunca é devolvida pela API.

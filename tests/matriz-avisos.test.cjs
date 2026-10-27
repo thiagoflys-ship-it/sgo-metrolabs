@@ -17,12 +17,12 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const c = amb.ctx;
   const r = c.SGO_AvisosMatriz_api('s_dir', 'carregar', {});
   assert.equal(r.ok, true, r.message);
-  assert.equal(r.regras.length, 75); // 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras), VC01 (vencimentos) e S71-S73 (escalonamento por prioridade)
+  assert.equal(r.regras.length, 76); // 27/10/2026: S74 (sentinela da infraestrutura); 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras), VC01 (vencimentos) e S71-S73 (escalonamento por prioridade)
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');
   assert.equal(por.S55.decisao, 'HISTORICO');
-  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67', 'S68', 'S70']); // S70 (26/10/2026): aviso urgente; S67 (22/10/2026): campainha da Porta da Diretoria; S68 (23/10/2026): abertura automática; pedidos do dono
+  assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67', 'S68', 'S70', 'S74']); // S74 (27/10/2026): falha da infraestrutura que não se corrigiu; S70 (26/10/2026): aviso urgente; S67 (22/10/2026): campainha da Porta da Diretoria; S68 (23/10/2026): abertura automática; pedidos do dono
   assert.equal(por.S56.whatsapp, 'NAO', 'WhatsApp ao cliente só depois do piloto');
   assert.deepEqual(JSON.parse(JSON.stringify(r.cfg)), { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true, whatsTetoDia: 3 });
   // só Administrador e Diretoria

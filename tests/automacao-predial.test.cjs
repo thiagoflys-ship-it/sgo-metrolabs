@@ -25,7 +25,9 @@ const CLIENTE = { userId: 'uC', usuario: 'cli', nome: 'CLIENTE', perfil: 'CLIENT
 
 function ambiente(o) {
   o = o || {};
-  const props = Object.assign({ TUYA_ACCESS_ID: 'id-de-teste-0001', TUYA_ACCESS_SECRET: 'segredo-de-teste-0001', TUYA_REGIAO: 'us', TUYA_LIGADO: '1', TUYA_ENDPOINT: 'http://localhost:8199' }, o.props || {});
+  const props = Object.assign({ TUYA_ACCESS_ID: 'id-de-teste-0001', TUYA_ACCESS_SECRET: 'segredo-de-teste-0001', TUYA_REGIAO: 'us', TUYA_LIGADO: '1', TUYA_ENDPOINT: 'http://localhost:8199',
+    // 27/10/2026: consulta econômica liberada o dia todo nos testes (a janela real é conferida no teste da cota)
+    AUT_SAUDE_CFG: JSON.stringify({ consultaInicio: '00:00', consultaFim: '23:59', consultaDias: [0, 1, 2, 3, 4, 5, 6] }) }, o.props || {});
   Object.keys(props).forEach((k) => { if (props[k] === null) delete props[k]; });
   const cache = {};
   const tabelas = { CAD_USUARIOS: [
@@ -106,7 +108,7 @@ function ambiente(o) {
     SGO_notificar_: (x) => { notificacoes.push(x); return { ok: 1, erro: 0, pulado: 0 }; },
     Pend_item_: (tipo, o) => Object.assign({ tipo }, o)
   });
-  for (const f of ['SGO_Automacao_Tuya.js', 'SGO_Automacao_Predial.js']) vm.runInContext(ler(f), ctx);
+  for (const f of ['SGO_Automacao_Tuya.js', 'SGO_Automacao_Predial.js', 'SGO_Automacao_Saude.js']) vm.runInContext(ler(f), ctx);
   const como = (s) => { sessao.atual = s; };
   const api_ = (acao, dados) => JSON.parse(JSON.stringify(ctx.AutPred_api('sess', acao, dados || {})));
   /** O que a tela faz: toque no botão (preparar -> token) e "Sim, abrir agora" (comando com o token). */
@@ -931,4 +933,210 @@ test('registro legível: frase curta por resultado, sem JSON nem códigos fora d
   const fonte = ler('SGO_Automacao_Predial.js');
   assert.match(fonte, /function AutPred_executar_\(sessao, dados\) \{\s*var trava = null;\s*try \{ trava = LockService\.getScriptLock\(\); trava\.waitLock/);
   assert.match(ler('JS_AutomacaoPredial.html'), /if \(AUTP\.preparando \|\| document\.getElementById\("autJanela"\)\) return;/);
+});
+
+// ---------------------------------------------------------------- cota da Tuya, eventos e sentinela (27/10/2026)
+// Caso real: desde as 07:45 de 27/10/2026 toda chamada voltava {"code":28841004,"msg":"No permissions. Your quota of Trial
+// Edition is used up.","success":false} com HTTP 200; a abertura automática lia a fechadura a cada 3 s o dia todo.
+const COTA_REAL = { code: 28841004, msg: 'No permissions. Your quota of Trial Edition is used up.', success: false, t: 1793000000000, tid: 'tid-cota' };
+const cotaEsgotada = (amb) => {
+  const orig = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { amb.api.pedidos.push({ metodo: String(op.method).toUpperCase(), caminho: new URL(url).pathname, corpo: null }); if (new URL(url).pathname === '/v1.0/token') return orig(url, op); return { getResponseCode: () => 200, getContentText: () => JSON.stringify(COTA_REAL), getAllHeaders: () => ({}) }; };
+  return () => { amb.ctx.UrlFetchApp.fetch = orig; };
+};
+const uso = (amb) => JSON.parse(amb.props.TUYA_USO_V1 || '{}');
+const s74 = (amb) => amb.notificacoes.filter((x) => x.evento === 'S74');
+
+test('cota esgotada (caso real 28841004): equipe vê "fora do ar" e usa o controle; gestão avisada uma vez (S74, WhatsApp); leituras automáticas param; sentinela vê a volta e avisa a normalização', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Portão secundário'); amb.homologar('Portão principal');
+  const ped = amb.disp('Portão secundário');
+  // contador por origem: sincronização, token e comandos contam
+  assert.ok(uso(amb).diaPor.SINCRONIZAR >= 1 && uso(amb).diaPor.TOKEN >= 1, JSON.stringify(uso(amb).diaPor));
+  const voltar = cotaEsgotada(amb);
+  amb.como(TEC);
+  let r = amb.abrir(ped.ID, 'op-cota-0000001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.texto, 'Portões pelo SGO+ fora do ar no momento: use o controle ou o aplicativo Smart Life. A gestão já foi avisada.');
+  assert.equal(r.foraDoAr, true); assert.equal(r.comando.situacao, 'RECUSADO');
+  assert.ok(!/28841004|Trial|quota/i.test(r.texto), 'nada técnico para o colaborador');
+  let avisos = s74(amb);
+  assert.equal(avisos.length, 1);
+  assert.deepEqual(Array.from(avisos[0].usuarios).sort(), ['uA', 'uD', 'uV'], 'responsável pelo sistema e Diretoria');
+  assert.deepEqual(Array.from(avisos[0].canais), ['sgo', 'email', 'whatsapp']);
+  assert.match(avisos[0].texto, /^O quê: Cota da Tuya esgotada.*Por quê: .*28841004.*O que fazer: Renove em iot\.tuya\.com › Cloud › Cloud Services › IoT Core/);
+  assert.equal(uso(amb).bloqueio.tipo, 'COTA'); assert.equal(uso(amb).ultimoErro.codigo, 28841004);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ABERTO' && x.CHAVE === 'tuya_nuvem'));
+  // a gestão vê o detalhe técnico; a mesma falha não avisa de novo
+  amb.envelhecer(); amb.como(DONO);
+  r = amb.abrir(ped.ID, 'op-cota-0000002');
+  assert.match(r.texto, /fora do ar.*Detalhe para a gestão: .*28841004/);
+  assert.equal(s74(amb).length, 1, 'um aviso por incidente');
+  // telas: faixa para a equipe; nenhuma leitura automática sai com a cota esgotada
+  amb.como(TEC);
+  const rap = amb.api_('rapido');
+  assert.equal(rap.infra.portoesForaDoAr, true); assert.match(rap.infra.alarmeTexto, /alarme não depende/);
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const n0 = amb.api.pedidos.length;
+  const pt = amb.api_('portoes');
+  assert.equal(pt.ok, true, pt.message);
+  assert.equal(amb.api.pedidos.length, n0, 'tela não relê com a cota esgotada');
+  // a cota volta: a sentinela confere (1 chamada por hora, na janela) e avisa a normalização
+  voltar();
+  const s = amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.ok(s.itens >= 4);
+  assert.equal(uso(amb).bloqueio, null);
+  const norm = s74(amb).filter((x) => /normalizado/.test(x.titulo));
+  assert.equal(norm.length, 1); assert.match(norm[0].texto, /Antes: Cota da Tuya esgotada/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'NORMALIZADO' && x.CHAVE === 'tuya_nuvem'));
+  // a conferência não se repete na mesma hora (sentinela não gasta chamada à toa)
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] }); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, n1, 'sem chamada nas rodadas seguintes');
+});
+
+test('orçamento da cota: 70% avisa (sem WhatsApp); 90% liga o modo econômico (leituras automáticas param, comando de pessoa sai); Diretoria sai com motivo; virada do mês desliga', () => {
+  const amb = ambiente();
+  amb.api.garagem = true; amb.api.pedido = true;
+  sincronizar(amb);
+  amb.homologar('Portão principal'); amb.homologar('Porta da Diretoria');
+  const mes = amb.ctx.Tuya_diaDe_().slice(0, 7);
+  const fixarUso = (n) => { const u = uso(amb); u.mes = mes; u.mesTotal = n; amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+  fixarUso(18300); // 70,3% de 26.000
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  let a = s74(amb);
+  assert.equal(a.length, 1); assert.match(a[0].titulo, /Consumo da cota da Tuya em 70\.3%/); assert.deepEqual(Array.from(a[0].canais), ['sgo', 'email']);
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  fixarUso(23500); // 90,3%
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  const eco = JSON.parse(amb.props.AUT_ECONOMICO);
+  assert.equal(eco.mes, mes); assert.match(eco.motivo, /23\.500 de 26\.000/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ACAO_AUTOMATICA' && /Modo econômico ligado automaticamente/.test(x.TEXTO)));
+  // modo econômico: a tela não relê a garagem nem a campainha; a pessoa ainda pode verificar e comandar
+  amb.como(DONO);
+  Object.keys(amb.cache).forEach((k) => { if (/AUT_ESTADO_|AUT_PEDIDO_/.test(k)) delete amb.cache[k]; });
+  const n0 = amb.api.pedidos.length;
+  assert.equal(amb.api_('portoes').infra.economico, true);
+  const pe = amb.api_('pedido');
+  assert.equal(pe.itens[0].pausada, true); assert.match(pe.itens[0].aviso, /Verificar campainha agora/);
+  assert.equal(amb.ctx.AutPred_rotinaPedidos().avisos, 0);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma leitura automática no modo econômico');
+  tocar(amb, 40);
+  const pa = amb.api_('pedidoAgora');
+  assert.equal(pa.itens[0].ativo, true, 'verificação pedida pela pessoa sai');
+  amb.envelhecer();
+  const g = amb.disp('Portão principal');
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-eco-00000001', acao: 'ALTERNAR' });
+  assert.equal(p.ok, true, p.message);
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-eco-00000001', confirmacaoToken: p.confirmacaoToken, acao: 'ALTERNAR' }).ok, true, 'comando de pessoa continua');
+  // tela da saúde: Diretoria e Administrador; só diretor sai do modo econômico
+  amb.como(GESTOR); assert.match(amb.api_('saude').message, /Diretoria e do Administrador/);
+  amb.como(ADM2);
+  let sd = amb.api_('saude');
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.economico.ligado, true); assert.equal(sd.podeSairEconomico, false);
+  assert.ok(sd.itens.some((i) => i.chave === 'tuya_economico' && i.tom === 'amarelo'));
+  assert.equal(sd.uso.mes, uso(amb).mesTotal); assert.equal(sd.uso.orcamento, 26000);
+  assert.match(amb.api_('saudeSairEconomico', { motivo: 'teste do administrador' }).message, /só um diretor/);
+  amb.como(DIR);
+  assert.match(amb.api_('saudeSairEconomico', { motivo: 'x' }).message, /motivo/);
+  sd = amb.api_('saudeSairEconomico', { motivo: 'visita de cliente hoje' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.economico.ligado, false);
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined, 'neste mês não religa sozinho');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'MODO_ECONOMICO_DESLIGADO'));
+  // virada do mês: modo econômico de um mês anterior não vale e é desligado com registro
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes: '2026-09', desde: 1, motivo: 'automático', por: 'Sentinela' });
+  assert.equal(amb.ctx.Tuya_economico_(), null);
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => /virada do mês/.test(x.TEXTO)));
+  // configuração (diretor): orçamento maior tira do modo econômico
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes, desde: Date.now(), motivo: 'automático', por: 'Sentinela' });
+  sd = amb.api_('saudeCfg', { orcamentoMes: '100.000', consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 120, consultaDias: [1, 2, 3, 4, 5], motivo: 'plano pago assinado' });
+  assert.equal(sd.ok, true, sd.message); assert.match(sd.mensagem, /modo econômico foi desligado/); assert.equal(sd.uso.orcamento, 100000);
+  amb.como(ADM2); assert.match(amb.api_('saudeCfg', { orcamentoMes: '50000', motivo: 'teste adm' }).message, /só um diretor/);
+});
+
+test('eventos da Tuya: a campainha abre pela abertura automática sem ler a nuvem; portão pelo evento; sem eventos, consulta econômica compartilhada (nunca a cada 3 s) e só na janela', () => {
+  const amb = ambiente();
+  amb.api.pedido = true; amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Porta da Diretoria'); amb.homologar('Portão principal');
+  const f = amb.disp('Porta da Diretoria');
+  amb.como(DONO);
+  assert.equal(amb.api_('autoAbrir', { id: f.ID, ligado: true }).ok, true);
+  // servidor conectado ao serviço de mensagens e evento da fechadura recebido
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now(), desde: Date.now() - 60000, mensagensDia: 3, mensagensMes: 40 });
+  const evFech = (seg) => { amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: seg, time: Date.now() }, doorbell: { value: true, time: Date.now() - 500 } }, recebidoEm: Date.now(), primeiroEm: Date.now() }); };
+  evFech(40); amb.api.pedidoValor = 40; amb.api.pedidoEm = Date.now();
+  const sombra0 = amb.api.leiturasSombra || 0;
+  const r = amb.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal(r.tratado, true);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  assert.equal(amb.api.leiturasSombra || 0, sombra0, 'o pedido veio do evento, sem ler a sombra');
+  assert.equal(amb.ctx.AutPred_rotinaRapida().abertas, 0, 'uma resposta por pedido');
+  assert.equal(amb.api.leiturasSombra || 0, sombra0, 'rotina rápida com eventos não lê a nuvem');
+  assert.equal(amb.api_('pedido').fonte, 'eventos');
+  // portão pelo evento: posição sem chamada
+  amb.props['TUYA_EVT_dev-portao-1'] = JSON.stringify({ props: { doorcontact_state: { value: true, time: Date.now() } }, online: true, recebidoEm: Date.now() });
+  const gar0 = amb.api.leiturasGaragem || 0;
+  const pt = amb.api_('portoes');
+  const gar = pt.itens.find((x) => x.id === amb.disp('Portão principal').ID);
+  assert.equal(gar.estadoPortao.codigo, 'ABERTO'); assert.equal(gar.fonte, 'eventos'); assert.equal(pt.proximaS, 10);
+  assert.equal(amb.api.leiturasGaragem || 0, gar0, 'posição pelo evento, sem chamada');
+  // conexão parada há mais de 3 min: volta à consulta econômica, compartilhada por 120 s
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now() - 600000 });
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 200;
+  amb.ctx.AutPred_rotinaRapida();
+  const s1 = amb.api.leiturasSombra;
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida(); // um minuto de rotina rápida (3 s)
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'a leitura vale por 120 s para todos');
+  // janela da consulta econômica (padrão: dias úteis, 08:00 às 18:00, horário de Brasília)
+  const cfg = JSON.parse(JSON.stringify(amb.ctx.AUT_SAUDE_PADRAO));
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T10:00:00-03:00')), true, 'segunda 10:00');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T07:59:00-03:00')), false, 'segunda 07:59');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T18:00:00-03:00')), false, 'segunda 18:00');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-24T10:00:00-03:00')), false, 'sábado');
+  // fora da janela, as rotinas não consultam
+  amb.props.AUT_SAUDE_CFG = JSON.stringify({ consultaInicio: '00:00', consultaFim: '00:01', consultaDias: [] });
+  limparPedido(amb);
+  const s2 = amb.api.leiturasSombra;
+  amb.ctx.AutPred_rotinaPedidos();
+  const rr = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(amb.api.leiturasSombra, s2, 'fora da janela nada é lido');
+  assert.match(rr.consulta, /^fora da janela/);
+});
+
+test('sentinela: item do servidor só vira incidente depois das rodadas pedidas; aviso uma vez; normalização avisada; ação automática registrada; chave desconhecida ignorada', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const alarmeFalha = { chave: 'alarme', situacao: 'falha', texto: 'Central de alarme sem resposta', porque: 'Duas tentativas sem resposta.', oQueFazer: 'Confira a energia e a internet da central.', confirmar: 2, critico: true };
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha, { chave: 'qualquer', situacao: 'falha', texto: 'x' }] });
+  assert.equal(s74(amb).length, 0, 'primeira rodada: ainda não');
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha] });
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha] });
+  let a = s74(amb);
+  assert.equal(a.length, 1); assert.match(a[0].titulo, /Central de alarme sem resposta/); assert.deepEqual(Array.from(a[0].canais), ['sgo', 'email', 'whatsapp']);
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [{ chave: 'rotina_minuto', situacao: 'ok', texto: 'Instalada', acoes: [{ texto: 'Rotina de 1 minuto da automação reinstalada.', ok: true }] }, { chave: 'alarme', situacao: 'ok', texto: 'Central respondeu: desarmada' }] });
+  a = s74(amb);
+  assert.equal(a.length, 2); assert.match(a[1].titulo, /normalizado: Central de alarme Intelbras/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ACAO_AUTOMATICA' && /reinstalada/.test(x.TEXTO)));
+  assert.ok(!amb.tabelas.AUT_INCIDENTES.some((x) => x.CHAVE === 'qualquer'));
+  amb.como(DONO);
+  const sd = amb.api_('saude');
+  assert.ok(sd.itens.some((i) => i.chave === 'alarme' && i.tom === 'verde'));
+  assert.ok(sd.incidentes.some((x) => x.evento === 'Incidente aberto' && x.item === 'Central de alarme Intelbras'));
+  // nenhum segredo nos incidentes nem no consumo
+  const tudo = JSON.stringify(amb.tabelas.AUT_INCIDENTES) + amb.props.TUYA_USO_V1 + (amb.props.AUT_SAUDE_ESTADO || '');
+  assert.ok(!tudo.includes('segredo-de-teste-0001') && !tudo.includes('tok-1'));
+  // tela: aba, ritmo dado pelo servidor e aba oculta
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.match(tela, /\["saude", "Saúde da infraestrutura"\]/);
+  assert.match(tela, /document\.visibilityState === "hidden"/);
+  assert.match(tela, /agendar\(r\.proximaS\)/);
+  assert.doesNotMatch(tela, /setInterval\(tickPortoes|setInterval\(tick, 3000\)/, 'sem consulta fixa a cada 3 ou 5 s');
 });
