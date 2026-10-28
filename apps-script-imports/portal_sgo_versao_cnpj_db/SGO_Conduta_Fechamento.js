@@ -102,8 +102,18 @@ function Conduta_pendenciasCompetencia_(competencia) {
   });
 }
 
+/**
+ * 28/10/2026 (sigilo do envolvido): para quem não é da Diretoria nem o Gestor de Qualidade, a linha de cada pessoa
+ * sai só com o que vai para a folha (bônus, incentivo, missões); o placar individual e as gravíssimas do mês, que
+ * mostram quem teve ocorrência, ficam de fora.
+ */
+function Conduta_linhaSemOcorrencias_(l) {
+  return { colaboradorId: l.colaboradorId, nome: l.nome, qtdMissoesElegiveis: l.qtdMissoesElegiveis, recebeBonus: l.recebeBonus,
+    valorBonus: l.valorBonus, valorIncentivo: l.valorIncentivo, valorSimuladoBonus: l.valorSimuladoBonus, valorSimuladoIncentivo: l.valorSimuladoIncentivo };
+}
+
 function Conduta_apiPreviaFechamento(sessionId, payload) {
-  Conduta_exigirGestor_(sessionId);
+  var sessaoP = Conduta_exigirGestor_(sessionId);
   var competencia = Conduta_validarCompetencia_((payload || {}).competencia);
   // 2026-10-15 (auditoria): a prévia aplica os prazos vencidos, igual ao fechamento real.
   Conduta_processarPrazosVencidos_();
@@ -113,6 +123,9 @@ function Conduta_apiPreviaFechamento(sessionId, payload) {
     return Conduta_soComp_(f.COMPETENCIA) === competencia;
   });
   var fechamentoCongelado = !!fechamento && (fechamento.CONGELADO === true || SGO_UTILS.safeUpper(fechamento.CONGELADO) === 'TRUE');
+  if (!Conduta_veIdentidade_(sessaoP)) {
+    apurado = Object.assign({}, apurado, { porColaborador: (apurado.porColaborador || []).map(Conduta_linhaSemOcorrencias_), ocorrenciasGGDoMes: [] });
+  }
   return { competencia: competencia, resultado: apurado, pendencias: pendencias,
     fechamentoCongelado: fechamentoCongelado, fechamentoData: fechamento ? Conduta_soData_(fechamento.FECHADO_EM) : '',
     missoesPendentes: Conduta_missoesPendentesCompetencia_(competencia).map(function (m) { return { id: m.ID, destino: m.DESTINO, data: Conduta_soData_(m.DATA) }; }),
@@ -212,6 +225,7 @@ function Conduta_apiObterFechamento(sessionId, payload) {
   // 2026-10-15 (auditoria): o resultado individual de todos fica com a gestão;
   // cada pessoa da equipe vê só a própria linha.
   var gestorF = Conduta_podeConsultarTodos_(sessionId); // gestão ou RH (consulta)
+  var veOcorrencias = isAdminSession(sessionId) && Conduta_veIdentidade_(sessaoF); // 28/10/2026: sigilo do envolvido
   var fechamento = SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO)
     .find(function (f) { return Conduta_soComp_(f.COMPETENCIA) === Conduta_soComp_(payload.competencia); });
   if (!fechamento) return null;
@@ -221,6 +235,7 @@ function Conduta_apiObterFechamento(sessionId, payload) {
     congelado: fechamento.CONGELADO, fechadoEm: Conduta_soData_(fechamento.FECHADO_EM),
     fechadoPor: fechamento.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático' : fechamento.FECHADO_POR, observacao: fechamento.OBSERVACAO || '',
     porColaborador: JSON.parse(fechamento.RESULTADO_JSON || '[]').filter(function (l) { return gestorF || String(l.colaboradorId) === String(sessaoF.userId); })
+      .map(function (l) { return veOcorrencias || String(l.colaboradorId) === String(sessaoF.userId) ? l : Conduta_linhaSemOcorrencias_(l); })
   };
 }
 

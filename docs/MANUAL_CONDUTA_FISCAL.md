@@ -6,7 +6,9 @@ Registro com evidência, homologação, julgamento, missões, ausências, fecham
 
 Gestão, neste programa, é Administrador, Gestor e Diretoria. A gestão faz tudo o que a equipe faz e mais as decisões. Leia também o Manual do colaborador.
 
-Perfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausências, os meses fechados, os relatórios e os extratos. O RH registra ocorrência como qualquer colaborador, mas não homologa, não julga, não aprova nem recusa missão, não registra ausência e não fecha o mês: essas decisões continuam com a gestão. (19/10/2026)
+Perfil RH: consulta as missões, as ausências, os meses fechados (com os valores de cada pessoa) e os relatórios semanais. O RH registra ocorrência como qualquer colaborador e não homologa, não julga, não aprova nem recusa missão, não registra ausência e não fecha o mês. Pelo sigilo do colaborador, o RH não vê quem é o envolvido nas ocorrências dos outros. (19/10/2026; sigilo em 28/10/2026)
+
+> Sigilo do colaborador (28/10/2026, decisão da direção): quem é o envolvido numa ocorrência ou numa sugestão de ocorrência só a Diretoria e o Gestor de Qualidade sabem, além da própria pessoa e de quem registrou. Só eles veem todas as ocorrências, homologam, julgam, decidem as sugestões, usam "Qualidade e planos" e geram o extrato de outra pessoa e o relatório da equipe. Os demais gestores e o RH veem só as ocorrências que registraram e as em seu nome; na Caixa de decisões e no Início esses itens não aparecem para eles. Na prévia e no fechamento do mês, quem não é da Diretoria nem da Qualidade vê a linha de cada pessoa só com os valores (bônus, incentivo e missões), sem o placar nem as gravíssimas.
 
 > Regra de ouro: quem registrou a ocorrência nunca decide sobre ela, e quem é o envolvido também não. Exceção (19/10/2026, decisão da direção): a Diretoria, e o responsável pelo sistema, decide a ocorrência em que é a envolvida, com fundamentação obrigatória (pelo menos 15 caracteres, também para aprovar); fica gravado "Decisão da Diretoria sobre ocorrência em que é envolvida" no histórico da ocorrência, na auditoria e no extrato, e a lista mostra o selo "Decisão da Diretoria". Rejeitar uma ocorrência sempre pede a fundamentação. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer.
 
@@ -19,8 +21,8 @@ Perfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausê
 | Reconhecimentos | Elogiar uma pessoa, um grupo ou um departamento |
 | Missões | Registrar viagens de serviço que geram incentivo |
 | Ausências | Ver férias e afastamentos (quem registra é a gestão) |
-| Sugestões | Aceitar ou descartar o que os outros módulos encontraram (gestão; o RH consulta) |
-| Qualidade e planos | Kanban das ocorrências, análise de causa, planos 5W2H com PDCA e indicadores por área (gestão; o RH consulta) |
+| Sugestões | Aceitar ou descartar o que os outros módulos encontraram (Diretoria e Gestor de Qualidade) |
+| Qualidade e planos | Kanban das ocorrências, análise de causa, planos 5W2H com PDCA e indicadores por área (Diretoria e Gestor de Qualidade) |
 | Fechamentos | Ver os meses fechados e o relatório de cada um |
 | Relatórios e extratos | Gerar o seu extrato do mês e abrir os relatórios semanais |
 | Manuais e documentos | Ler os manuais, os guias e os documentos originais |
@@ -93,7 +95,7 @@ Como ler o farol, de cima para baixo: a cor do farol e o selo da situação do b
 ### Homologar
 
 1. Na linha com selo "Registrada", toque em "Homologar".
-2. Leia o resumo: envolvido, ocorrência, nível, data, quem registrou e a foto.
+2. Leia o resumo: envolvido, ocorrência, nível, data, quem registrou e a foto (toque em "Ver a foto": ela abre por cima da janela, com "Baixar" e "Fechar"). "Não identificado" no envolvido quer dizer que quem registrou não sabia quem foi: a ocorrência conta só no resultado da equipe.
 3. Para confirmar, toque em "Aprovar".
 4. Para rejeitar, escreva a fundamentação no campo "Fundamentação" e toque em "Rejeitar" (sem ela, a rejeição não é aceita). Se a ocorrência é sua e você é da Diretoria, a fundamentação é obrigatória também para aprovar.
 
@@ -188,8 +190,8 @@ Relatório do mês (20/10/2026): o número é o do mês (por exemplo, CND-202609
 
 ## 8. Relatórios e extratos
 
-- "Extrato do colaborador": escolha a pessoa e a competência e toque em "Gerar extrato em A4". A gestão gera o de qualquer pessoa.
-- "Relatório da equipe" (gestão, Diretoria e RH): escolha o mês em "De" e "Até" (até 12 meses) e toque em "Gerar relatório da equipe". Sai em A4 deitado, com uma linha por colaborador (área, ocorrências, pontos, reconhecimentos, missões, ciência dos avisos e situação do bônus) e os totais por área. Quem está sem área no cadastro aparece como "Área não informada"; para corrigir, informe a área em Administração > Usuários e gere de novo. O documento tem o resultado de cada pessoa e não deve ser publicado para a equipe.
+- "Extrato do colaborador": escolha a pessoa e a competência e toque em "Gerar extrato em A4". O de outra pessoa só a Diretoria e o Gestor de Qualidade geram.
+- "Relatório da equipe" (Diretoria e Gestor de Qualidade, pelo sigilo do colaborador): escolha o mês em "De" e "Até" (até 12 meses) e toque em "Gerar relatório da equipe". Sai em A4 deitado, com uma linha por colaborador (área, ocorrências, pontos, reconhecimentos, missões, ciência dos avisos e situação do bônus) e os totais por área. Quem está sem área no cadastro aparece como "Área não informada"; para corrigir, informe a área em Administração > Usuários e gere de novo. O documento tem o resultado de cada pessoa e não deve ser publicado para a equipe.
 - "Relatório semanal para toda a equipe": escolha "Semana terminando em" e toque em "Gerar os 7 dias em A4". Para gerar sozinho todo domingo às 18h, toque em "Ativar geração todo domingo".
 - "Prestação de contas das missões": escolha a competência e toque em "Gerar missões em A4". Serve para o Financeiro conferir e a Diretoria aprovar.
 
@@ -249,4 +251,5 @@ Na aba "Ocorrências", o quadro "Automação de prazos" deve estar "LIGADA". Ass
 - Não registre e decida a mesma ocorrência. O sistema bloqueia.
 - Respeite os prazos. Ocorrência registrada e não homologada em 3 dias úteis é descartada.
 - Mexa no catálogo de ocorrências só com decisão formal.
-- Ocorrências e cobranças são vistas só pelo envolvido, por quem registrou e pela gestão. Não comente fora disso.
+- Ocorrências e cobranças são vistas só pelo envolvido, por quem registrou, pela Diretoria e pelo Gestor de Qualidade. Não comente fora disso: o programa existe para educar, não para expor ninguém nem criar culpados pelo bônus.
+- Fotografe só o objeto e o local, nunca a pessoa. A foto não tem link: abre dentro do SGO+, no botão "Ver a foto" (ou "Ver a foto anexada", no celular), só para quem está na ocorrência, para a Diretoria e para o Gestor de Qualidade.

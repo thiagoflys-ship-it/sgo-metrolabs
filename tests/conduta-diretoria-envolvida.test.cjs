@@ -14,9 +14,17 @@ const FUND = 'Fato confirmado pela agenda e pelo relato do cliente.';
 
 function ambiente(sessao, registros) {
   const logs = [];
-  const tabelas = { qual_ocorrencia: registros.ocorrencias || [], qual_missao: registros.missoes || [], qual_fechamento: [] };
+  // 28/10/2026 (sigilo do envolvido): o Gestor e o Administrador destes casos são da área QUALIDADE (decidem ocorrência).
+  const usuarios = registros.usuarios || [
+    { ID: 'u_ges', USUARIO: 'joao.gestor', PERFIL: 'GESTOR', AREA: 'QUALIDADE', STATUS: 'ATIVO' },
+    { ID: 'u_adm2', USUARIO: 'outro.admin', PERFIL: 'ADMIN', AREA: 'QUALIDADE', STATUS: 'ATIVO' },
+    { ID: 'u_dir', USUARIO: 'maria.diretoria', PERFIL: 'DIRETORIA', AREA: 'DIRETORIA', STATUS: 'ATIVO' },
+    { ID: 'u_admin', USUARIO: 'admin', PERFIL: 'ADMIN', AREA: 'DIRETORIA', STATUS: 'ATIVO' }
+  ];
+  const tabelas = { qual_ocorrencia: registros.ocorrencias || [], qual_missao: registros.missoes || [], qual_fechamento: [], CAD_USUARIOS: usuarios };
   const ctx = vm.createContext({
     console,
+    SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS' } },
     SGO_DATA: {
       getAll: t => tabelas[t] || [],
       getById: (t, id) => (tabelas[t] || []).find(r => String(r.ID) === String(id)) || null,

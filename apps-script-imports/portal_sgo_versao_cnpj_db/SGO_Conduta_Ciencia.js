@@ -162,7 +162,7 @@ function Conduta_avisosVigentes_() {
         'O demérito é coletivo: cada ponto reduz o índice de conduta de toda a equipe e pode tirar o bônus de todos.'
       ],
       colaboradorId: String(o.COLABORADOR_ID || ''),
-      contaSistema: Conduta_ehContaGenerica_(colab),
+      contaSistema: !o.COLABORADOR_ID || Conduta_ehContaGenerica_(colab),
       prazoContestacao: Conduta_soData_(o.PRAZO_CONTESTACAO), status: st, legenda: o.FOTO_LEGENDA || ''
     });
   });
@@ -221,7 +221,7 @@ function Conduta_apiObterAvisos(sessionId) {
       linhas.unshift('Esta ocorrência foi lançada em seu nome.' + (a.status === 'HOMOLOGADA' && a.prazoContestacao ? ' Se não concordar, conteste no módulo Conduta até ' + Conduta_dataBr_(a.prazoContestacao) + '.' : ''));
       if (a.legenda) linhas.push('Registro do fiscal: ' + a.legenda);
     } else if (a.tipo === 'OCORRENCIA' && a.contaSistema) {
-      linhas.push('Lançada sem pessoa identificada (conta do sistema).');
+      linhas.push('Lançada sem pessoa identificada: conta no resultado da equipe.');
     }
     return { tipo: a.tipo, ref: a.ref, titulo: a.titulo, linhas: linhas, minha: minha, competencia: a.competencia };
   });

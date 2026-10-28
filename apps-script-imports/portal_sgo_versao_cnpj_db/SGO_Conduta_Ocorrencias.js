@@ -34,6 +34,7 @@ function Conduta_apiDispatch(req) {
   // 2026-10-15: garante a rotina diária (prazos + fechamento automático) e o
   // saneamento único de 15/10 — leve: só lê propriedades na maioria das chamadas.
   try { Conduta_garantirRotina_(); } catch (eRotina) { SGO_DATA.log('CONDUTA_ROTINA_FALHA', 'sistema', String(eRotina && eRotina.message || eRotina), 'CONDUTA'); }
+  try { Conduta_restringirFotosAntigas_(); } catch (eFotos) { console.error('Conduta, fotos antigas: ' + ((eFotos && eFotos.message) || eFotos)); }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 
@@ -49,6 +50,9 @@ function Conduta_apiDispatch(req) {
     apiObterMaterialBiblioteca: Conduta_apiObterMaterialBiblioteca,
 
     apiUploadFoto: Conduta_apiUploadFoto,
+    // 28/10/2026: foto da evidência dentro da tela (sem link) e o que a pessoa pode ver por sigilo do envolvido
+    apiObterFotoOcorrencia: Conduta_apiObterFotoOcorrencia,
+    apiObterSigilo: Conduta_apiObterSigilo,
     apiRegistrarOcorrencia: Conduta_apiRegistrarOcorrencia,
     apiListarOcorrencias: Conduta_apiListarOcorrencias,
     apiHomologarOcorrencia: Conduta_apiHomologarOcorrencia,
@@ -151,9 +155,49 @@ function Conduta_podeConsultarTodos_(sessionId) {
   try { var s = exigirSessao(sessionId); return typeof SGO_ehPerfilRH_ === 'function' && SGO_ehPerfilRH_(s && s.perfil); } catch (e) { return false; }
 }
 
+/** Valor da tela para ocorrência sem pessoa identificada (28/10/2026). */
+var CONDUTA_NAO_IDENTIFICADO = 'NAO_IDENTIFICADO';
+
 function Conduta_exigirGestor_(sessionId) {
   if (!isAdminSession(sessionId)) throw new Error('Acesso restrito a Gestor/Administrador/Diretoria.');
   return exigirSessao(sessionId);
+}
+
+// ------------------------------------------------------------
+// SIGILO DO ENVOLVIDO (28/10/2026, decisão do dono)
+// Quem é a pessoa de uma ocorrência (ou de uma sugestão de ocorrência) só a
+// Diretoria (perfil DIRETORIA ou dono do sistema) e o Gestor de Qualidade
+// (Gestor ou Administrador com área QUALIDADE) sabem; além da própria pessoa e
+// de quem registrou, que já sabe. Os demais gestores e o RH não veem o nome,
+// não homologam nem julgam: o objetivo do programa é educar, sem expor
+// ninguém nem criar culpados pelo bônus coletivo.
+// ------------------------------------------------------------
+/** Linha de CAD_USUARIOS: a pessoa pode saber quem é o envolvido? */
+function Conduta_veIdentidadeUsuario_(u) {
+  if (!u || SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') return false;
+  var perfil = SGO_UTILS.safeUpper(u.PERFIL);
+  if (perfil === 'DIRETORIA') return true;
+  try { if (typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(u.USUARIO)) return true; } catch (e) { /* segue */ }
+  if (perfil !== 'GESTOR' && perfil !== 'ADMIN') return false;
+  var area = typeof SGO_areaDoUsuario_ === 'function' ? SGO_areaDoUsuario_(u, {}).codigo : SGO_UTILS.safeUpper(u.AREA);
+  return area === 'QUALIDADE';
+}
+
+/** Sessão: a pessoa logada pode saber quem é o envolvido? */
+function Conduta_veIdentidade_(sessao) {
+  if (!sessao) return false;
+  if (Conduta_ehDiretoriaOuDono_(sessao)) return true;
+  return Conduta_veIdentidadeUsuario_(SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, String(sessao.userId || '')));
+}
+
+/** Decidir ocorrência ou sugestão (homologar, julgar, aceitar, descartar): Diretoria e Gestor de Qualidade. */
+function Conduta_exigirDecisor_(sessionId, acao) {
+  var sessao = Conduta_exigirGestor_(sessionId);
+  if (!Conduta_veIdentidade_(sessao)) {
+    throw new Error('Não foi possível ' + acao + ': por sigilo do colaborador, quem decide as ocorrências do Programa de conduta é a Diretoria e o Gestor de Qualidade. ' +
+      'Se você soube de um caso, registre a ocorrência; a decisão fica com eles.');
+  }
+  return sessao;
 }
 
 // ------------------------------------------------------------
@@ -398,8 +442,75 @@ function Conduta_uploadFoto_(base64, mimeType, nomeArquivoSugerido) {
 
   var blob = Utilities.newBlob(Utilities.base64Decode(dadosBase64), mimeType || 'image/jpeg', nomeArquivo);
   var arquivo = Conduta_obterPastaFotos_().createFile(blob);
-  arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // 28/10/2026: era "qualquer pessoa com o link"; evidência de ocorrência não circula por link.
+  Conduta_restringirFoto_(arquivo);
   return arquivo.getUrl();
+}
+
+/** Marca o arquivo como RESTRITO (o servidor não entrega por link, nem com sessão); no Google, privado. */
+function Conduta_restringirFoto_(arquivo) {
+  try { arquivo.setSharing('RESTRITO', 'SISTEMA'); }
+  catch (e) { try { arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (x) { /* fica como está */ } }
+}
+
+/** ID do arquivo a partir do FOTO_URL gravado (/arquivos/<id>, drive.google.com/file/d/<id>, ?id=<id>). */
+function Conduta_idFoto_(url) {
+  var s = String(url || '');
+  var m = /\/arquivos\/([A-Za-z0-9_-]{10,})/.exec(s) || /\/file\/d\/([A-Za-z0-9_-]{10,})/.exec(s) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(s);
+  return m ? m[1] : '';
+}
+
+/** Quem pode ver a ocorrência (e a foto): o envolvido, quem registrou, a Diretoria e o Gestor de Qualidade. */
+function Conduta_podeVerOcorrencia_(sessionId, sessao, oc) {
+  var eu = String(sessao.userId);
+  if (String(oc.COLABORADOR_ID) === eu || String(oc.FISCAL_ID) === eu) return true;
+  return isAdminSession(sessionId) && Conduta_veIdentidade_(sessao);
+}
+
+/** Foto da evidência em data: para a tela (SGO_verImagem_ em JS_Core). O ID do arquivo nunca vai ao navegador. */
+function Conduta_apiObterFotoOcorrencia(sessionId, payload) {
+  var sessao = Conduta_exigirEquipe_(sessionId);
+  var oc = SGO_DATA.getById(CONDUTA_SHEETS.OCORRENCIA, String((payload || {}).id || ''));
+  if (!oc) throw new Error('Não foi possível abrir a foto: a ocorrência não foi encontrada. Recarregue a lista e tente de novo.');
+  if (!Conduta_podeVerOcorrencia_(sessionId, sessao, oc)) {
+    throw new Error('Não foi possível abrir a foto: por sigilo do colaborador, a evidência só abre para quem está na ocorrência, para a Diretoria e para o Gestor de Qualidade.');
+  }
+  var id = Conduta_idFoto_(oc.FOTO_URL);
+  if (!id) throw new Error('Não foi possível abrir a foto: esta ocorrência não tem foto anexada.');
+  var f = null;
+  try { f = DriveApp.getFileById(id); } catch (e) { f = null; }
+  if (!f) throw new Error('Não foi possível abrir a foto: o arquivo não foi encontrado no servidor. Avise o Administrador, informando o código ' + (oc.TIPO_CODIGO || '') + ' e a data do fato.');
+  var bytes = f.getBlob().getBytes();
+  if (bytes.length > CONDUTA_FOTO_MAX_BYTES) throw new Error('Não foi possível abrir a foto: o arquivo tem mais de 8 MB. Avise o Administrador.');
+  var tipo = String(f.getMimeType() || '');
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(tipo)) tipo = 'image/jpeg';
+  return { success: true, data: 'data:' + tipo + ';base64,' + Utilities.base64Encode(bytes), nome: String(f.getName() || 'evidencia.jpg'),
+    legenda: SGO_UTILS.safe(oc.FOTO_LEGENDA), codigo: SGO_UTILS.safe(oc.TIPO_CODIGO) };
+}
+var CONDUTA_FOTO_MAX_BYTES = 8 * 1024 * 1024;
+
+/** O que a tela precisa saber para explicar o sigilo (só leitura). */
+function Conduta_apiObterSigilo(sessionId) {
+  var sessao = Conduta_exigirEquipe_(sessionId);
+  return { success: true, veIdentidade: isAdminSession(sessionId) && Conduta_veIdentidade_(sessao) };
+}
+
+/**
+ * Saneamento único (28/10/2026): as fotos gravadas até hoje eram "qualquer pessoa com o link".
+ * Marca cada uma como RESTRITO. Flag CONDUTA_FOTOS_RESTRITAS_20261028; repete só o que falhar.
+ */
+function Conduta_restringirFotosAntigas_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('CONDUTA_FOTOS_RESTRITAS_20261028')) return { jaFeito: true };
+  var feitas = 0, falhas = 0;
+  SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
+    var id = Conduta_idFoto_(o.FOTO_URL);
+    if (!id) return;
+    try { Conduta_restringirFoto_(DriveApp.getFileById(id)); feitas++; } catch (e) { falhas++; }
+  });
+  if (!falhas) props.setProperty('CONDUTA_FOTOS_RESTRITAS_20261028', new Date().toISOString());
+  SGO_DATA.log('CONDUTA_FOTOS_RESTRITAS', 'sistema', feitas + ' foto(s) de evidência sem link público' + (falhas ? '; ' + falhas + ' falha(s), tenta de novo na próxima chamada' : ''), 'CONDUTA');
+  return { feitas: feitas, falhas: falhas };
 }
 
 function Conduta_apiUploadFoto(sessionId, payload) {
@@ -429,10 +540,15 @@ function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
   opcoes = opcoes || {};
   var tipo = Conduta_buscarTipoOcorrencia_(payload.tipoCodigo);
   var colaboradorId = String(payload.colaboradorId || '').trim();
-  if (!colaboradorId) throw new Error('Informe o colaborador envolvido.');
+  if (!colaboradorId) throw new Error('Informe o colaborador envolvido. Se ninguém sabe quem foi, escolha "Não identificado".');
+  // 28/10/2026 (dono): "Não identificado" quando não se sabe quem foi. Fica sem COLABORADOR_ID:
+  // conta no D da equipe (Conduta_calcularDCompetencia_ soma toda FIRME), sem reincidência, placar,
+  // bônus individual nem contestação de ninguém.
+  var naoIdentificado = colaboradorId === CONDUTA_NAO_IDENTIFICADO;
+  if (naoIdentificado) colaboradorId = '';
   // 2026-10-15: as ocorrências de setembro foram lançadas na conta genérica
   // "Administrador" — não é uma pessoa, não aparece no placar de ninguém.
-  var colaboradorUsuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, colaboradorId);
+  var colaboradorUsuario = naoIdentificado ? { STATUS: 'ATIVO', PERFIL: '' } : SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, colaboradorId);
   if (!colaboradorUsuario) throw new Error('Colaborador não encontrado.');
   if (Conduta_ehContaGenerica_(colaboradorUsuario)) throw new Error('Escolha a pessoa envolvida: a conta "' + (colaboradorUsuario.NOME || colaboradorUsuario.USUARIO) + '" é uma conta do sistema, não um colaborador.');
   // 19/10/2026 (pente fino): a lista da tela já trazia só a equipe ativa, mas o servidor aceitava
@@ -457,7 +573,7 @@ function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
   var descricao = String(payload.descricao || '').trim().slice(0, 2000);
 
   var janelaDias = Number(parametros.JANELA_REINCIDENCIA_DIAS) || 90;
-  var ultimaFirme = Conduta_ultimaFirmeMesmoTipo_(colaboradorId, tipo.CODIGO, dataFato);
+  var ultimaFirme = naoIdentificado ? null : Conduta_ultimaFirmeMesmoTipo_(colaboradorId, tipo.CODIGO, dataFato);
   var aplicado = CondutaCalculo.aplicarNivel(
     { nivel: tipo.NIVEL, reincidivel: (SGO_UTILS.safeUpper(tipo.REINCIDIVEL) === 'TRUE' || tipo.REINCIDIVEL === true) },
     ultimaFirme, dataFato, janelaDias
@@ -496,10 +612,12 @@ function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
 function Conduta_apiListarOcorrencias(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
-  // não-gestor só vê as próprias (fiscal ou envolvido); o RH consulta todas, sem homologar nem julgar
-  var podeDecidir = isAdminSession(sessionId);
+  // 28/10/2026 (sigilo do envolvido): todas as ocorrências só para a Diretoria e o Gestor de Qualidade,
+  // que também são os únicos que decidem. Os demais (outros gestores e o RH inclusive) veem só as
+  // próprias: as que registraram e as em que são o envolvido.
+  var podeDecidir = isAdminSession(sessionId) && Conduta_veIdentidade_(sessao);
   var souDiretoria = podeDecidir && Conduta_ehDiretoriaOuDono_(sessao);
-  var somenteMinhas = !podeDecidir && !Conduta_podeConsultarTodos_(sessionId);
+  var somenteMinhas = !podeDecidir;
 
   // CORREÇÃO 2026-09-24: a tela decidia às cegas. Quem homologava via só
   // "M03 · 24/09 · REGISTRADA" -- sem saber DE QUEM era, O QUE tinha
@@ -527,7 +645,8 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
       return String(o.FISCAL_ID) === String(sessao.userId) || String(o.COLABORADOR_ID) === String(sessao.userId);
     }
     return true;
-  }).map(function (o) {
+  }).map(function (lido) {
+    var o = Object.assign({}, lido); // 28/10/2026: cópia (FOTO_URL sai do objeto da tela, nunca do lido)
     // Normaliza o que sai para a tela: sem isso a data chegava crua como
     // '2026-09-24T00:00:00' quando a célula virou Date no Sheets (e
     // '2026-09-24' quando continuou texto) -- duas linhas da MESMA lista
@@ -569,18 +688,21 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     o.PODE_RECORRER = statusO === 'FIRME' && !Conduta_soData_(o.RECURSO_EM) && (o.SOU_O_COLABORADOR || podeDecidir) && !o.PRAZO_RECURSO_VENCIDO;
     // Contexto para quem decide (e para quem se defende saber do que é acusado)
     var d = descricoes[SGO_UTILS.safeUpper(o.TIPO_CODIGO)] || {};
-    o.COLABORADOR_NOME = nomes[String(o.COLABORADOR_ID)] || o.COLABORADOR_ID || '';
+    o.COLABORADOR_NOME = o.COLABORADOR_ID ? (nomes[String(o.COLABORADOR_ID)] || o.COLABORADOR_ID) : 'Não identificado';
     o.FISCAL_NOME = nomes[String(o.FISCAL_ID)] || o.FISCAL_ID || '';
     o.TIPO_DESCRICAO = d.descricao || '';
     o.TIPO_GRUPO = d.grupo || '';
     // 19/10/2026: área do envolvido (CAD_USUARIOS.AREA) e o caminho até a origem da sugestão.
-    var ar = areasCol[String(o.COLABORADOR_ID)] || { codigo: '', nome: 'Sem área definida' };
+    var ar = areasCol[String(o.COLABORADOR_ID)] || { codigo: '', nome: o.COLABORADOR_ID ? 'Sem área definida' : '' };
     o.COLABORADOR_AREA = ar.codigo;
     o.COLABORADOR_AREA_NOME = ar.nome;
     o.DESCRICAO = SGO_UTILS.safe(o.DESCRICAO);
     o.ORIGEM_ROTULO = SGO_UTILS.safe(o.ORIGEM_ROTULO);
     o.ORIGEM_TELA = SGO_UTILS.safe(o.ORIGEM_TELA);
     o.ORIGEM_LINK = SGO_UTILS.safe(o.ORIGEM_LINK);
+    // 28/10/2026: o endereço da foto não vai mais à tela; ela abre por apiObterFotoOcorrencia.
+    o.TEM_FOTO = !!Conduta_idFoto_(o.FOTO_URL);
+    delete o.FOTO_URL;
     return o;
   }).sort(function (a, b) { return String(b.DATA_FATO).localeCompare(String(a.DATA_FATO)); });
 }
@@ -589,7 +711,7 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
 // HOMOLOGAÇÃO
 // ------------------------------------------------------------
 function Conduta_apiHomologarOcorrencia(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'homologar');
   payload = payload || {};
   var oc = SGO_DATA.getById(CONDUTA_SHEETS.OCORRENCIA, payload.id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
@@ -662,8 +784,8 @@ function Conduta_apiContestarOcorrencia(sessionId, payload) {
   payload = payload || {};
   var oc = SGO_DATA.getById(CONDUTA_SHEETS.OCORRENCIA, payload.id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
-  if (String(oc.COLABORADOR_ID) !== String(sessao.userId) && !isAdminSession(sessionId)) {
-    throw new Error('Só o colaborador envolvido (ou um Gestor/Administrador em nome dele) pode contestar.');
+  if (String(oc.COLABORADOR_ID) !== String(sessao.userId) && !(isAdminSession(sessionId) && Conduta_veIdentidade_(sessao))) {
+    throw new Error('Só o colaborador envolvido (ou a Diretoria e o Gestor de Qualidade em nome dele) pode contestar.');
   }
   if (SGO_UTILS.safeUpper(oc.STATUS) !== 'HOMOLOGADA') throw new Error('Só é possível contestar uma ocorrência HOMOLOGADA (ainda dentro do prazo).');
   if (oc.PRAZO_CONTESTACAO && Conduta_soData_(oc.PRAZO_CONTESTACAO) < Conduta_hojeISO_()) throw new Error('Prazo de contestação já venceu.');
@@ -688,7 +810,7 @@ function Conduta_apiContestarOcorrencia(sessionId, payload) {
 // JULGAMENTO (contestação OU recurso, mesmo mecanismo: ANULAR ou MANTER)
 // ------------------------------------------------------------
 function Conduta_apiJulgarOcorrencia(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'julgar');
   payload = payload || {};
   var oc = SGO_DATA.getById(CONDUTA_SHEETS.OCORRENCIA, payload.id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
@@ -752,8 +874,8 @@ function Conduta_apiRecorrerOcorrencia(sessionId, payload) {
   payload = payload || {};
   var oc = SGO_DATA.getById(CONDUTA_SHEETS.OCORRENCIA, payload.id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
-  if (String(oc.COLABORADOR_ID) !== String(sessao.userId) && !isAdminSession(sessionId)) {
-    throw new Error('Só o colaborador envolvido (ou um Gestor/Administrador em nome dele) pode recorrer.');
+  if (String(oc.COLABORADOR_ID) !== String(sessao.userId) && !(isAdminSession(sessionId) && Conduta_veIdentidade_(sessao))) {
+    throw new Error('Só o colaborador envolvido (ou a Diretoria e o Gestor de Qualidade em nome dele) pode recorrer.');
   }
   if (SGO_UTILS.safeUpper(oc.STATUS) !== 'FIRME') throw new Error('Só é possível recorrer de uma ocorrência FIRME (ainda dentro do prazo de recurso).');
   if (Conduta_soData_(oc.RECURSO_EM)) throw new Error('O recurso desta ocorrência já foi julgado — não cabe novo recurso.');

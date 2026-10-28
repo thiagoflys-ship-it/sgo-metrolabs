@@ -175,8 +175,9 @@ function Conduta_apiGerarExtratoColaborador(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
   var alvo = String(payload.colaboradorId || '').trim() || String(sessao.userId);
-  if (alvo !== String(sessao.userId) && !Conduta_podeConsultarTodos_(sessionId)) {
-    throw new Error('Você pode gerar só o seu próprio extrato. O extrato de outra pessoa fica com a gestão e o RH.');
+  // 28/10/2026 (sigilo do envolvido): o extrato mostra as ocorrências da pessoa; o de outra pessoa fica com a Diretoria e o Gestor de Qualidade.
+  if (alvo !== String(sessao.userId) && !(isAdminSession(sessionId) && Conduta_veIdentidade_(sessao))) {
+    throw new Error('Você pode gerar só o seu próprio extrato. Por sigilo do colaborador, o extrato de outra pessoa (que mostra as ocorrências dela) fica com a Diretoria e o Gestor de Qualidade.');
   }
   var competencia = Conduta_validarCompetencia_(payload.competencia);
   if (competencia > Conduta_competenciaDe_(Conduta_hojeISO_())) throw new Error('A competência escolhida ainda não começou. Escolha o mês atual ou um mês anterior.');

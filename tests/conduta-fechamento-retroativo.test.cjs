@@ -8,10 +8,12 @@ function ambiente(ocorrencias = []) {
   let liberado = 0;
   const fechamentos = [];
   const ctx = vm.createContext({
+    SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS' } },
     // CONDUTA_SHEETS e SGO_UTILS reais (SGO_Conduta_Setup.js, SGO_Utilis.js), carregados abaixo como em produção.
     SGO_DATA: {
       getAll: tabela => tabela === 'qual_ocorrencia' ? ocorrencias : tabela === 'qual_fechamento' ? fechamentos : [],
       insert: (_, registro) => { fechamentos.push(registro); return registro; },
+      getById: () => null,
       log() {}
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { liberado++; } }) }
@@ -69,6 +71,7 @@ test('homologação outubro preserva competência e data setembro e concede praz
   ctx.SGO_DATA.getById = () => oc;
   ctx.SGO_DATA.update = (_, id, campos) => Object.assign(oc, campos);
   ctx.Conduta_obterParametros_ = () => ({ PRAZO_CONTESTACAO_DIAS_UTEIS: 3 });
+  ctx.Conduta_veIdentidade_ = () => true; // quem homologa é a Diretoria ou o Gestor de Qualidade (28/10/2026)
   ctx.Conduta_apiHomologarOcorrencia('s', { id: 3, decisao: 'APROVAR' });
   assert.equal(oc.DATA_FATO, '2026-09-30');
   assert.equal(oc.COMPETENCIA, '2026-09');

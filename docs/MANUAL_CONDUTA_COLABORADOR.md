@@ -72,11 +72,11 @@ Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização en
 
 1. Abra a aba "Ocorrências" (no celular, toque em "Registrar ocorrência").
 2. Toque em "+ Registrar ocorrência".
-3. Escolha o "Colaborador envolvido".
+3. Escolha o "Colaborador envolvido". Se ninguém sabe quem foi, escolha "Não identificado (não se sabe quem foi)". A ocorrência conta no resultado da equipe, sem o nome de ninguém, e não conta reincidência para uma pessoa.
 4. Em "Tipo", busque pelo código ou pela descrição e escolha.
 5. Preencha a "Data do fato". O prazo é de até 2 dias úteis depois do fato.
 6. Em "O que aconteceu", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres).
-7. Se tiver, anexe a foto e escreva a "Legenda da foto".
+7. Se tiver, anexe a foto e escreva a "Legenda da foto". Fotografe só o objeto e o local, nunca a pessoa. A foto não tem link: abre dentro do SGO+, no botão "Ver a foto" (ou "Ver a foto anexada", no celular), só para quem está na ocorrência, para a Diretoria e para o Gestor de Qualidade.
 8. Toque em "Registrar".
 9. A ocorrência vai para a homologação da gestão.
 
@@ -100,7 +100,7 @@ Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização en
 | Julgar a contestação (gestão) | 5 | O julgamento nunca é automático |
 | Recorrer (uma vez só) | 2 depois de mantida | A ocorrência continua firme |
 
-Você vê as ocorrências que registrou e as que são em seu nome. Quando uma ocorrência em seu nome é homologada, aparece um aviso ao entrar no SGO+, com o selo "Requer sua ação".
+Você vê as ocorrências que registrou e as que são em seu nome. Ninguém da equipe vê o seu nome numa ocorrência: o aviso que vai para todos diz o que aconteceu, sem dizer quem foi. Quem sabe é você, quem registrou, a Diretoria e o Gestor de Qualidade. Quando uma ocorrência em seu nome é homologada, aparece um aviso ao entrar no SGO+, com o selo "Requer sua ação".
 
 ### Contestar uma ocorrência em seu nome
 

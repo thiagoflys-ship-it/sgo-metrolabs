@@ -9,10 +9,10 @@ function SGO_ajudaTelas_Conduta_() {
       titulo: "Programa de conduta",
       paraQueServe: "Mede a conduta da equipe como um time. As ocorrências confirmadas tiram pontos do índice do mês. Se o mês fecha no verde, toda a equipe recebe o bônus. Aqui também ficam os reconhecimentos, as missões, as ausências, os fechamentos e os relatórios.",
       antesDeComecar: [
-        "A tela tem as abas \"Farol do mês\", \"Ocorrências\", \"Reconhecimentos\", \"Missões\", \"Ausências\", \"Fechamentos\", \"Relatórios e extratos\" e \"Manuais e documentos\". A gestão e o RH também veem \"Sugestões\" e \"Qualidade e planos\".",
+        "A tela tem as abas \"Farol do mês\", \"Ocorrências\", \"Reconhecimentos\", \"Missões\", \"Ausências\", \"Fechamentos\", \"Relatórios e extratos\" e \"Manuais e documentos\". A Diretoria e o Gestor de Qualidade também veem \"Sugestões\" e \"Qualidade e planos\". Por sigilo do colaborador (28/10/2026), quem é o envolvido numa ocorrência só eles sabem, além da própria pessoa e de quem registrou.",
         "A área de cada pessoa (Comercial, Técnica/Campo, Financeiro...) vem do cadastro do usuário, em Administração > Usuários. Quem está sem área aparece como \"Sem área definida\".",
         "No topo de cada aba há o link \"Manual do colaborador\" (ou \"Manual do gestor\", para a gestão). Ele abre o manual já na parte daquela aba.",
-        "No celular a tela é mais simples: farol, \"Registrar ocorrência\", \"Reconhecer colega\", \"Registrar missão\", suas ocorrências e suas missões. A gestão e o RH têm também \"Sugestões de ocorrência\" e \"Kanban, planos de ação e indicadores\". O restante fica no computador.",
+        "No celular a tela é mais simples: farol, \"Registrar ocorrência\", \"Reconhecer colega\", \"Registrar missão\", suas ocorrências e suas missões. A Diretoria e o Gestor de Qualidade têm também \"Sugestões de ocorrência\" e \"Kanban, planos de ação e indicadores\". O restante fica no computador.",
         "Gestão, neste programa, é Administrador, Gestor e Diretoria."
       ],
       passos: [
@@ -28,11 +28,11 @@ function SGO_ajudaTelas_Conduta_() {
         { titulo: "Registrar uma ocorrência", itens: [
           "Abra a aba \"Ocorrências\".",
           "Toque em \"+ Registrar ocorrência\".",
-          "Escolha o \"Colaborador envolvido\".",
+          "Escolha o \"Colaborador envolvido\". Se ninguém sabe quem foi, escolha \"Não identificado\": conta no resultado da equipe, sem o nome de ninguém.",
           "Em \"Tipo\", busque pelo código ou pela descrição e escolha.",
           "Preencha a \"Data do fato\". O prazo é de até 2 dias úteis depois do fato.",
           "Em \"O que aconteceu\", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres). É o que a gestão lê para homologar.",
-          "Se tiver, anexe a foto e escreva a legenda.",
+          "Se tiver, anexe a foto e escreva a legenda. Fotografe só o objeto e o local, nunca a pessoa: a foto não tem link e abre só para quem está na ocorrência, a Diretoria e o Gestor de Qualidade.",
           "Toque em \"Registrar\".",
           "A ocorrência vai para a homologação da gestão."
         ] },
@@ -99,13 +99,15 @@ function SGO_ajudaTelas_Conduta_() {
         { situacao: "\"Já existe missão lançada para este destino, nesta data, com este executante.\"", oQueFazer: "A missão já está registrada. Confira a lista." },
         { situacao: "\"Nenhum destino cadastrado para missões\" (celular)", oQueFazer: "Peça à gestão para cadastrar o destino no computador, em Missões." },
         { situacao: "\"Acesso restrito a Gestor/Administrador/Diretoria.\"", oQueFazer: "Esta ação é da gestão. Peça a ela." },
-        { situacao: "\"Você pode gerar só o seu próprio extrato.\"", oQueFazer: "O extrato de outra pessoa fica com a gestão." },
+        { situacao: "\"Você pode gerar só o seu próprio extrato.\"", oQueFazer: "Por sigilo do colaborador, o extrato de outra pessoa fica com a Diretoria e o Gestor de Qualidade." },
+        { situacao: "\"Não foi possível abrir a foto: por sigilo do colaborador...\"", oQueFazer: "A evidência abre só para quem está na ocorrência, a Diretoria e o Gestor de Qualidade. Se precisa ver, peça a eles." },
+        { situacao: "Sou gestor e não vejo as ocorrências dos outros", oQueFazer: "É o sigilo do colaborador (decisão da direção, 28/10/2026): você vê as que registrou e as em seu nome. A decisão das demais fica com a Diretoria e o Gestor de Qualidade; o resultado da equipe está no farol." },
         { situacao: "\"Esta ação já está sendo processada.\"", oQueFazer: "Espere terminar. Não toque de novo." }
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Ver o farol, registrar ocorrência, reconhecer colegas, registrar missão, contestar e recorrer das próprias ocorrências, gerar o próprio extrato, ver os fechamentos e os relatórios semanais e ler os manuais." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: homologar e julgar (nunca a ocorrência que registrou; a ocorrência em que é o envolvido só a Diretoria decide, com fundamentação), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões, gerar o extrato de qualquer pessoa e cuidar da automação de prazos." },
-        { perfil: "RH", pode: "Tudo da equipe. Também consulta, de todas as pessoas: ocorrências, missões, ausências, meses fechados, relatórios, extratos, sugestões, Kanban, planos de ação e indicadores. Não homologa, não julga, não decide missões nem sugestões, não registra ausências e não fecha o mês." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também, só a Diretoria e o Gestor de Qualidade (sigilo do colaborador): ver todas as ocorrências, homologar e julgar (nunca a ocorrência que registrou; a ocorrência em que é o envolvido só a Diretoria decide, com fundamentação), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões e cuidar da automação de prazos. O extrato de outra pessoa e o relatório da equipe são só da Diretoria e do Gestor de Qualidade." },
+        { perfil: "RH", pode: "Tudo da equipe. Também consulta missões, ausências, meses fechados (com os valores de cada pessoa) e relatórios semanais. Pelo sigilo do colaborador, não vê quem é o envolvido nas ocorrências dos outros, nem sugestões, Kanban, extratos de outras pessoas e o relatório da equipe. Não homologa, não julga, não decide missões, não registra ausências e não fecha o mês." },
         { perfil: "CLIENTE", pode: "Não usa o programa." }
       ],
       perguntas: [
@@ -114,12 +116,12 @@ function SGO_ajudaTelas_Conduta_() {
         { p: "Como o índice é calculado?", r: "Índice = 100 menos (pontos de demérito divididos pelo número de pessoas) vezes 5. Quem está de férias ou afastado sai da conta." },
         { p: "Quanto vale cada nível?", r: "Leve 2 pontos, leve reincidente 5, média 8, média reincidente 15, grave 30. A gravíssima cancela o bônus do mês." },
         { p: "O incentivo de missão depende do farol?", r: "Não. A missão aprovada paga o incentivo mesmo com o farol vermelho. Só perde quem tem gravíssima própria no mês." },
-        { p: "Quem vê as ocorrências?", r: "O envolvido, quem registrou e a gestão. Os reconhecimentos são vistos por toda a equipe." }
+        { p: "Quem vê as ocorrências?", r: "O envolvido, quem registrou, a Diretoria e o Gestor de Qualidade (sigilo do colaborador, 28/10/2026). O aviso para a equipe diz o que aconteceu, sem dizer quem foi. Os reconhecimentos são vistos por toda a equipe." }
       ]
     },
 
     "conduta/sugestoes": {
-      titulo: "Sugestões de ocorrência (gestão e RH)",
+      titulo: "Sugestões de ocorrência (Diretoria e Gestor de Qualidade)",
       paraQueServe: "Junta numa fila o que os outros módulos encontraram e pode virar ocorrência: multa com condutor identificado, avaria na devolução, devolução ou retirada registrada pela gestão e KM a conferir (Frota); O.S. finalizada sem foto, sem relato ou sem check-out e O.S. aberta há dias (Auvo); cobrança do Painel de qualidade; três ou mais atividades atrasadas no mês (Minhas atividades); ciência de aviso vencida (Avisos); resumo do terceiro esquecimento de ponto (COMMAND, só informativo). Nada vira ocorrência sem a gestão aceitar.",
       antesDeComecar: [
         "A busca nos módulos é automática: todo dia às 6h e quando a aba é aberta (no máximo a cada 3 horas). O botão \"Buscar sugestões agora\" faz na hora.",
@@ -150,14 +152,14 @@ function SGO_ajudaTelas_Conduta_() {
         { nome: "\"Sem código sugerido\"", significado: "O catálogo não tem um código próprio para o caso: escolha o código ao aceitar, ou descarte." }
       ],
       problemas: [
-        { situacao: "\"A sugestão é sobre você\"", oQueFazer: "Quem é o envolvido não decide. Peça a outra pessoa da gestão." },
+        { situacao: "\"A sugestão é sobre você\"", oQueFazer: "Quem é o envolvido não decide. Peça à Diretoria ou ao Gestor de Qualidade." },
         { situacao: "\"Prazo de registro ... já venceu\"", oQueFazer: "O caso foi encontrado há mais de 2 dias úteis. Descarte com o motivo \"fora do prazo\"." },
         { situacao: "\"O mês de ... já foi fechado\"", oQueFazer: "O fato é de um mês congelado. Descarte com o motivo; o fechamento não é refeito." },
         { situacao: "Aviso \"multa(s) com condutor sem login\" ou \"O.S. sem técnico ligado\"", oQueFazer: "Ligue o condutor a um usuário em Frota > Veículos e condutores > Condutores > Editar, ou vincule o técnico em Integração Auvo. A sugestão aparece na próxima busca." }
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver, buscar agora, aceitar e descartar (nunca a sugestão sobre si)." },
-        { perfil: "RH", pode: "Ver as sugestões e o histórico. Não aceita nem descarta." },
+        { perfil: "RH", pode: "Não vê a aba (sigilo do colaborador, 28/10/2026). Quem decide é a Diretoria e o Gestor de Qualidade." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não vê a aba. Sugestão não é acusação: a pessoa só fica sabendo quando a ocorrência é registrada e homologada." }
       ]
     },
@@ -209,7 +211,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver tudo, fazer análises, criar e conduzir os planos." },
-        { perfil: "RH", pode: "Ver o Kanban de toda a equipe, os planos, as análises e os indicadores. Não cria nem altera." },
+        { perfil: "RH", pode: "Não vê a aba (sigilo do colaborador, 28/10/2026): Kanban, planos, análises e indicadores são da Diretoria e do Gestor de Qualidade." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não vê a aba. Quem é responsável por uma ação a recebe em Minhas atividades." }
       ]
     },
@@ -220,7 +222,7 @@ function SGO_ajudaTelas_Conduta_() {
       passos: [
         { titulo: "Homologar uma ocorrência", itens: [
           "Na linha com selo \"Registrada\", toque em \"Homologar\".",
-          "Leia o resumo e abra a foto, se houver.",
+          "Leia o resumo e toque em \"Ver a foto\", se houver: ela abre por cima da janela, com \"Baixar\" e \"Fechar\". \"Não identificado\" no envolvido quer dizer que quem registrou não sabia quem foi.",
           "Para confirmar, toque em \"Aprovar\".",
           "Para rejeitar, escreva a fundamentação e toque em \"Rejeitar\". Sem fundamentação, a rejeição não é aceita."
         ] },
@@ -246,7 +248,8 @@ function SGO_ajudaTelas_Conduta_() {
         { nome: "\"Você registrou — outro gestor homologa\"", significado: "Quem registrou não decide. Peça a outra pessoa da gestão." }
       ],
       problemas: [
-        { situacao: "\"Você é o fiscal que registrou esta ocorrência\" ou \"Você é o colaborador envolvido\"", oQueFazer: "Peça a outra pessoa da gestão para decidir. A Diretoria decide a ocorrência em que é envolvida, mas nunca a que ela mesma registrou." },
+        { situacao: "\"Você é o fiscal que registrou esta ocorrência\" ou \"Você é o colaborador envolvido\"", oQueFazer: "Peça à Diretoria ou ao Gestor de Qualidade para decidir. A Diretoria decide a ocorrência em que é envolvida, mas nunca a que ela mesma registrou." },
+        { situacao: "\"Não foi possível homologar (ou julgar): por sigilo do colaborador...\"", oQueFazer: "Quem decide as ocorrências é a Diretoria e o Gestor de Qualidade. Se você soube de um caso, registre a ocorrência; a decisão fica com eles." },
         { situacao: "\"Você é a pessoa envolvida nesta ocorrência e decide como Diretoria: escreva a fundamentação\"", oQueFazer: "Escreva a fundamentação no campo de texto da janela, com pelo menos 15 caracteres, e toque de novo na decisão." },
         { situacao: "Automação \"DESLIGADA\"", oQueFazer: "Nenhuma ocorrência fica firme sozinha e o mês não é contado. Toque em \"Ligar agora\"." }
       ],
@@ -254,7 +257,7 @@ function SGO_ajudaTelas_Conduta_() {
         { p: "Quais são os prazos?", r: "Registro: 2 dias úteis após o fato. Homologação: 3 dias úteis (sem decisão, é descartada). Contestação: 3 dias úteis (sem contestação, fica firme). Julgamento: 5 dias úteis. Recurso: 2 dias úteis após manter, uma vez só." }
       ],
       quemPode: [
-        { perfil: "RH", pode: "Ver as ocorrências de todas as pessoas e registrar ocorrência, como qualquer colaborador. Não homologa, não julga e não processa prazos." },
+        { perfil: "RH", pode: "Ver as ocorrências que registrou e as em seu nome, e registrar ocorrência como qualquer colaborador (sigilo do colaborador, 28/10/2026). Não homologa, não julga e não processa prazos." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Homologar, julgar, processar prazos e ligar ou desligar a automação." },
         { perfil: "DIRETORIA", pode: "Também homologar e julgar a ocorrência em que é a envolvida, com fundamentação obrigatória. Vale também para o responsável pelo sistema." }
       ]
@@ -355,7 +358,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Consultar a prévia, fechar e gerar o relatório de novo." },
-        { perfil: "RH", pode: "Ver os meses fechados com o resultado de todas as pessoas e abrir o relatório. Não consulta a prévia e não fecha o mês." },
+        { perfil: "RH", pode: "Ver os meses fechados com os valores de cada pessoa (bônus, incentivo e missões, sem o placar de ocorrências) e abrir o relatório. Não consulta a prévia e não fecha o mês." },
         { perfil: "TODOS", pode: "Ver a lista de meses fechados e o relatório." }
       ]
     },
@@ -364,12 +367,12 @@ function SGO_ajudaTelas_Conduta_() {
       titulo: "Relatórios e extratos",
       paraQueServe: "Gera o extrato de cada pessoa, o relatório da equipe com todos os colaboradores, o relatório semanal e a prestação de contas das missões, todos em A4.",
       passos: [
-        { titulo: "Gerar o relatório da equipe (gestão, Diretoria e RH)", itens: [
+        { titulo: "Gerar o relatório da equipe (Diretoria e Gestor de Qualidade)", itens: [
           "Em \"Relatório da equipe\", escolha o mês em \"De\" e em \"Até\" (o mesmo mês, ou um intervalo de até 12 meses).",
           "Toque em \"Gerar relatório da equipe\". O relatório abre em A4 deitado numa aba nova.",
           "Traz uma linha por colaborador (área, ocorrências firmes e em andamento, pontos, reconhecimentos, missões elegíveis, incentivo, ciência dos avisos e situação do bônus) e os totais por área. O gráfico por área só aparece com quatro ou mais áreas com pontos.",
           "Quem está sem área no cadastro aparece como \"Área não informada\", nunca fica de fora. Para corrigir, a gestão informa a área no cadastro da pessoa, em Administração > Usuários, e gera o relatório de novo.",
-          "O documento tem o resultado de cada pessoa: é de consulta da gestão, da Diretoria e do RH e não deve ser publicado para a equipe."
+          "O documento tem as ocorrências de cada pessoa: por sigilo do colaborador, é da Diretoria e do Gestor de Qualidade e não deve ser publicado nem passado adiante."
         ] },
         { titulo: "Gerar o relatório semanal (gestão)", itens: [
           "Em \"Relatório semanal para toda a equipe\", escolha \"Semana terminando em\".",
@@ -396,8 +399,8 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Gerar o próprio extrato e abrir os relatórios semanais." },
-        { perfil: "RH", pode: "Gerar o extrato de qualquer pessoa e o relatório da equipe, e abrir os relatórios semanais e de missões. Não gera o relatório semanal nem o de missões." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o extrato de qualquer pessoa, o relatório da equipe, o relatório semanal e o de missões." }
+        { perfil: "RH", pode: "Gerar o próprio extrato e abrir os relatórios semanais e de missões. O extrato de outra pessoa e o relatório da equipe são da Diretoria e do Gestor de Qualidade (sigilo do colaborador)." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o relatório semanal e o de missões. O extrato de qualquer pessoa e o relatório da equipe: só a Diretoria e o Gestor de Qualidade." }
       ]
     },
 

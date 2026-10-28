@@ -337,7 +337,9 @@ function Ges_rotear_(it, cfg, us) {
     r.motivo = 'Envolve alguém da gestão: a decisão é da Diretoria.';
     return r;
   }
-  var lista = ((cfg.gestoresPorArea || {})[area] || []).filter(function (id) { return us[id] && us[id].ativo && naoPode.indexOf(id) < 0; });
+  var lista = ((cfg.gestoresPorArea || {})[area] || []).filter(function (id) { return us[id] && us[id].ativo && naoPode.indexOf(id) < 0 && (!ex.sigilo || Ges_veSigilo_(us[id])); });
+  // sigilo sem gestor de Qualidade configurado: o Gestor de Qualidade do cadastro (perfil Gestor, área QUALIDADE)
+  if (!lista.length && ex.sigilo) lista = Object.keys(us).filter(function (id) { return Ges_veSigilo_(us[id]) && !us[id].diretoria && naoPode.indexOf(id) < 0; });
   if (lista.length) { r.ids = lista; r.motivo = 'Gestor responsável pela área ' + r.areaNome + '.'; return r; }
   r.ids = Ges_diretoria_(us, naoPode); r.reserva = true;
   r.motivo = area ? 'A área ' + r.areaNome + ' não tem gestor responsável configurado (ou o único é a pessoa envolvida): reserva da Diretoria.' : 'Item sem área: reserva da Diretoria.';
@@ -348,11 +350,21 @@ function Ges_rotear_(it, cfg, us) {
 // FONTES NOVAS DA CENTRAL (decisões que a central ainda não conhecia)
 // Registrada em PEND_FONTES (SGO_Alertas_Central.js), só para a gestão.
 // ------------------------------------------------------------
+/**
+ * 28/10/2026 (sigilo do envolvido, decisão do dono): ocorrência e sugestão de ocorrência do Programa de conduta só
+ * para a Diretoria e o Gestor de Qualidade (mesma regra de Conduta_veIdentidadeUsuario_). Os demais da gestão não
+ * veem o item nem em "todas", e ele vai para o Gestor de Qualidade (ou a Diretoria), não para o gestor da área.
+ */
+function Ges_veSigilo_(u) {
+  return !!(u && u.ativo && !u.sistema && (u.diretoria || ((u.perfil === 'GESTOR' || u.perfil === 'ADMIN') && Ges_up_(u.area) === 'QUALIDADE')));
+}
+
 function Ges_nomeDe_(us, id) { var u = us[Ges_s_(id)]; return u ? u.nome : (Ges_s_(id) || 'pessoa não identificada'); }
 
 function Gestao_fontePendencias_(add, ctx) {
   if (!ctx || !ctx.gestao || ctx.cliente || typeof Pend_item_ !== 'function') return;
   var us = Ges_usuarios_(), hoje = Ges_hoje_(), areaFrota = Ges_areaDoModulo_('frota', Ges_cfg_());
+  var veSigilo = !!ctx.interno || !ctx.userId || Ges_veSigilo_(us[Ges_s_(ctx.userId)]);
   var cfgExp = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null;
   var grav = function (prazo) { return prazo && prazo < hoje ? 'CRITICO' : 'ATENCAO'; };
   var resolvidosNaCaixa = {};
@@ -360,7 +372,7 @@ function Gestao_fontePendencias_(add, ctx) {
 
   // Programa de conduta: homologar, julgar e aprovar missões
   if (typeof CONDUTA_SHEETS !== 'undefined') {
-    Ges_ler_(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
+    if (veSigilo) Ges_ler_(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
       var st = Ges_up_(o.STATUS), colab = Ges_s_(o.COLABORADOR_ID), nome = Ges_nomeDe_(us, colab);
       if (st === 'REGISTRADA') {
         var pz = Ges_dia_(o.PRAZO_HOMOLOGACAO);
@@ -370,7 +382,7 @@ function Gestao_fontePendencias_(add, ctx) {
           titulo: 'Homologar a ocorrência ' + Ges_s_(o.TIPO_CODIGO) + ' de ' + nome + ' (fato em ' + Ges_brDia_(o.DATA_FATO) + ')',
           detalhe: 'Registrada por ' + Ges_nomeDe_(us, o.FISCAL_ID) + '. ' + (pz ? 'Prazo de homologação: ' + Ges_brDia_(pz) + '; sem decisão até lá, a ocorrência é descartada pelo sistema.' : ''),
           oQueFazer: 'Abra Programa de conduta > Ocorrências, leia o que aconteceu e homologue ou rejeite com a fundamentação. Quem registrou não homologa.',
-          extra: { prazo: pz, naoPode: [Ges_s_(o.FISCAL_ID), colab], desde: Ges_iso_(o.CRIADO_EM) }
+          extra: { prazo: pz, naoPode: [Ges_s_(o.FISCAL_ID), colab], desde: Ges_iso_(o.CRIADO_EM), area: 'QUALIDADE', sigilo: true }
         }));
       } else if (st === 'CONTESTADA' || st === 'EM_RECURSO') {
         var pj = Ges_dia_(o.PRAZO_JULGAMENTO);
@@ -380,7 +392,7 @@ function Gestao_fontePendencias_(add, ctx) {
           titulo: (st === 'EM_RECURSO' ? 'Julgar o recurso' : 'Julgar a contestação') + ' de ' + nome + ' (ocorrência ' + Ges_s_(o.TIPO_CODIGO) + ')',
           detalhe: 'A defesa está na ocorrência. ' + (pj ? 'Prazo de julgamento: ' + Ges_brDia_(pj) + '.' : '') + ' Enquanto não for julgada, a ocorrência fica suspensa e o mês não fecha sozinho.',
           oQueFazer: 'Abra Programa de conduta > Ocorrências, leia a defesa e julgue (anular ou manter) com a fundamentação.',
-          extra: { prazo: pj, naoPode: [Ges_s_(o.FISCAL_ID), colab], desde: Ges_iso_(o.CONTESTADA_EM || o.RECURSO_EM) }
+          extra: { prazo: pj, naoPode: [Ges_s_(o.FISCAL_ID), colab], desde: Ges_iso_(o.CONTESTADA_EM || o.RECURSO_EM), area: 'QUALIDADE', sigilo: true }
         }));
       }
     });
@@ -403,7 +415,7 @@ function Gestao_fontePendencias_(add, ctx) {
   if (typeof CNDQ_SHEETS !== 'undefined') {
     var prazoReg = 2;
     try { prazoReg = Number((Conduta_obterParametros_() || {}).PRAZO_REGISTRO_DIAS_UTEIS) || 2; } catch (e) {}
-    Ges_ler_(CNDQ_SHEETS.SUGESTAO).forEach(function (s) {
+    if (veSigilo) Ges_ler_(CNDQ_SHEETS.SUGESTAO).forEach(function (s) {
       if (Ges_up_(s.STATUS) !== 'PENDENTE') return;
       var colab = Ges_s_(s.COLABORADOR_ID), nome = Ges_nomeDe_(us, colab) || Ges_s_(s.COLABORADOR_NOME);
       var detectada = Ges_dia_(s.DETECTADA_EM) || hoje, pz = Ges_somarDiasUteis_(detectada, prazoReg, cfgExp);
@@ -414,7 +426,7 @@ function Gestao_fontePendencias_(add, ctx) {
         titulo: 'Sugestão de ocorrência: ' + (Ges_s_(s.TITULO) || 'sem título').slice(0, 120),
         detalhe: 'Envolve ' + nome + '. ' + (Ges_s_(s.DETALHE) || '').slice(0, 220) + (s.INFORMATIVA === 'SIM' ? '' : ' Prazo de registro: ' + Ges_brDia_(pz) + '.'),
         oQueFazer: 'Abra Programa de conduta > Sugestões, confira a origem e aceite (vira ocorrência) ou descarte com o motivo.' + (daGestao ? ' Sugestão sobre gestor: só a Diretoria decide.' : ''),
-        extra: { prazo: pz, naoPode: [colab], soDiretoria: daGestao, desde: detectada }
+        extra: { prazo: pz, naoPode: [colab], soDiretoria: daGestao, desde: detectada, area: 'QUALIDADE', sigilo: true }
       }));
     });
   }
@@ -639,7 +651,7 @@ function Ges_caixa_() {
       prazoVencido: et.prazoVencido, diasParado: et.diasParado, etapa: et.etapa, etapaTexto: et.etapaTexto, pausadoAte: Ges_brDia_(et.pausadoAte),
       providencia: Ges_s_(reg.PROVIDENCIA_TEXTO), providenciaPor: Ges_s_(reg.PROVIDENCIA_POR_NOME), providenciaEm: Ges_br_(reg.PROVIDENCIA_EM), providencias: Number(reg.PROVIDENCIAS) || 0,
       escalado: !!Ges_s_(reg.ESCALADO_EM) || et.etapa === 'DIRETORIA', acompanhamento: et.etapa === 'ACOMPANHAMENTO', resolveNaCaixa: !!t.resolveNaCaixa,
-      soDiretoria: it.publico === 'DIRETORIA'
+      soDiretoria: it.publico === 'DIRETORIA', sigilo: !!ex.sigilo
     };
   });
   var ordemEt = { DIRETORIA: 0, WHATSAPP: 1, EMAIL: 2, NA_HORA: 3, PAUSADO: 4, ACOMPANHAMENTO: 5 };
@@ -727,6 +739,8 @@ function Ges_montarCaixa_(s, p) {
   var cx = Ges_caixa_(), uid = Ges_s_(s.userId), us = cx.us, cfg = cx.cfg;
   // item só da Diretoria (sugestão sobre gestor, da avaliação): os demais da gestão não veem nem na lista geral
   if (!Ges_ehDiretoriaSessao_(s)) cx.itens = cx.itens.filter(function (i) { return !i.soDiretoria; });
+  // 28/10/2026: ocorrência do Programa de conduta (com o nome do envolvido) só para a Diretoria e o Gestor de Qualidade
+  if (!Ges_veSigilo_(us[uid])) cx.itens = cx.itens.filter(function (i) { return !i.sigilo || i.responsaveis.indexOf(uid) >= 0; });
   // RH e Financeiro (rotina): só os itens das áreas em que são responsáveis, também em "todas" e "escalados".
   if (!Ges_ehGestaoPerfil_(s.perfil)) cx.itens = cx.itens.filter(function (i) { return i.responsaveis.indexOf(uid) >= 0; });
   var minhas = Ges_meusItens_(cx.itens, uid, us);

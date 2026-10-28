@@ -132,8 +132,10 @@ function Cndq_pessoa_(sessao) { return { id: String(sessao.userId || ''), nome: 
 
 function Cndq_exigirConsulta_(sessionId) {
   var s = Conduta_exigirEquipe_(sessionId);
-  if (!Conduta_podeConsultarTodos_(sessionId)) {
-    throw new Error('Esta parte do Programa de conduta (sugestões, planos de ação e indicadores) é da gestão e do RH. Suas ocorrências estão na aba Ocorrências.');
+  // 28/10/2026 (sigilo do envolvido): sugestões, planos e indicadores falam de pessoas (e área de uma pessoa só
+  // identifica quem foi): ficam com a Diretoria e o Gestor de Qualidade.
+  if (!(isAdminSession(sessionId) && Conduta_veIdentidade_(s))) {
+    throw new Error('Esta parte do Programa de conduta (sugestões, planos de ação e indicadores) fica com a Diretoria e o Gestor de Qualidade, por sigilo do colaborador. Suas ocorrências estão na aba Ocorrências; o resultado da equipe, no farol.');
   }
   return s;
 }
@@ -442,7 +444,7 @@ function Conduta_apiListarSugestoes(sessionId, payload) {
   payload = payload || {};
   var coleta = Cndq_coletarSeAntigo_(sessao.usuario);
   var usuarios = Cndq_usuarios_(), nomes = Cndq_nomesAreas_();
-  var podeDecidir = isAdminSession(sessionId);
+  var podeDecidir = isAdminSession(sessionId) && Conduta_veIdentidade_(sessao);
   var filtro = SGO_UTILS.safeUpper(payload.status || 'PENDENTE');
   // 20/10/2026: sugestão vinda da avaliação do gestor só aparece para a Diretoria (perfil Diretoria ou dono).
   var veGestao = Conduta_ehDiretoriaOuDono_(sessao);
@@ -486,7 +488,7 @@ function Cndq_exigirDiretoriaSeGestao_(s, sessao) {
 }
 
 function Conduta_apiAceitarSugestao(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'aceitar a sugestão');
   payload = payload || {};
   var s = SGO_DATA.getById(CNDQ_SHEETS.SUGESTAO, String(payload.id || ''));
   if (!s) throw new Error('A sugestão não foi encontrada: atualize a lista de sugestões.');
@@ -515,7 +517,7 @@ function Conduta_apiAceitarSugestao(sessionId, payload) {
 }
 
 function Conduta_apiDescartarSugestao(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'descartar a sugestão');
   payload = payload || {};
   var s = SGO_DATA.getById(CNDQ_SHEETS.SUGESTAO, String(payload.id || ''));
   if (!s) throw new Error('A sugestão não foi encontrada: atualize a lista de sugestões.');
@@ -576,7 +578,7 @@ function Cndq_analiseParaTela_(a) {
 }
 
 function Conduta_apiSalvarAnaliseCausa(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'salvar a análise de causa');
   payload = payload || {};
   var ocorrenciaId = SGO_UTILS.safe(payload.ocorrenciaId), tipoCodigo = SGO_UTILS.safeUpper(payload.tipoCodigo);
   var oc = null;
@@ -675,7 +677,7 @@ function Cndq_validarData_(v, rotulo) {
 }
 
 function Conduta_apiCriarPlanoAcao(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'criar o plano de ação');
   payload = payload || {};
   var oc = null, tipoCodigo = SGO_UTILS.safeUpper(payload.tipoCodigo), origemTipo = 'LIVRE';
   if (payload.ocorrenciaId) {
@@ -711,7 +713,7 @@ function Conduta_apiCriarPlanoAcao(sessionId, payload) {
 }
 
 function Conduta_apiAdicionarAcaoPlano(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'acrescentar a ação');
   payload = payload || {};
   var p = SGO_DATA.getById(CNDQ_SHEETS.PLANO, String(payload.planoId || ''));
   if (!p) throw new Error('O plano não foi encontrado: atualize a tela.');
@@ -740,7 +742,7 @@ function Conduta_apiAdicionarAcaoPlano(sessionId, payload) {
  * - Cancelar: qualquer fase aberta, com motivo. Nada é apagado.
  */
 function Conduta_apiAvancarPlano(sessionId, payload) {
-  var sessao = Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirDecisor_(sessionId, 'avançar o plano');
   payload = payload || {};
   var p = SGO_DATA.getById(CNDQ_SHEETS.PLANO, String(payload.planoId || ''));
   if (!p) throw new Error('O plano não foi encontrado: atualize a tela.');
@@ -795,7 +797,7 @@ function Cndq_exigePlano_(o) {
 function Conduta_apiKanbanQualidade(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
-  var todos = Conduta_podeConsultarTodos_(sessionId);
+  var todos = isAdminSession(sessionId) && Conduta_veIdentidade_(sessao); // 28/10/2026: sigilo do envolvido
   var dias = Math.min(Math.max(Number(payload.dias) || 90, 7), 400);
   var desde = Cndq_menosDias_(dias);
   var usuarios = Cndq_usuarios_(), nomes = Cndq_nomesAreas_();
@@ -838,7 +840,7 @@ function Conduta_apiKanbanQualidade(sessionId, payload) {
   });
   Object.keys(cols).forEach(function (k) { cols[k].sort(function (a, b) { return b.DATA_FATO.localeCompare(a.DATA_FATO); }); });
   return { ok: true, colunas: CNDQ_COLUNAS.map(function (c) { return { id: c.id, nome: c.nome, ajuda: c.ajuda, itens: cols[c.id] }; }),
-    encerradasSemEfeito: encerradas, dias: dias, podeGerir: isAdminSession(sessionId), consultaTodos: todos };
+    encerradasSemEfeito: encerradas, dias: dias, podeGerir: todos, consultaTodos: todos };
 }
 
 // ------------------------------------------------------------
@@ -854,7 +856,7 @@ function Conduta_apiListarPlanos(sessionId, payload) {
     .filter(function (p) { return payload.todos || ['CONCLUIDO', 'CANCELADO'].indexOf(p.FASE) < 0 || p.CONCLUIDO_EM >= Cndq_menosDias_(90); })
     .sort(function (a, b) { return b.CODIGO.localeCompare(a.CODIGO); });
   var analises = Cndq_ler_(CNDQ_SHEETS.ANALISE).map(Cndq_analiseParaTela_).sort(function (a, b) { return b.ATUALIZADO_EM.localeCompare(a.ATUALIZADO_EM); });
-  return { ok: true, planos: planos, analises: analises, fases: CNDQ_FASES, ishikawa: CNDQ_ISHIKAWA, podeGerir: isAdminSession(sessionId) };
+  return { ok: true, planos: planos, analises: analises, fases: CNDQ_FASES, ishikawa: CNDQ_ISHIKAWA, podeGerir: true };
 }
 
 /**

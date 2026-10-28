@@ -4679,6 +4679,55 @@
   let MOBILE_CONDUTA_EVENTOS_POS = null;
   let MOBILE_CONDUTA_OCORRENCIAS = [];
 
+  // 28/10/2026: a foto da evidência abre aqui mesmo, por cima da tela (antes era um link para outra aba, que no
+  // celular e em alguns navegadores não abria). A imagem vem em data: pela API, só para quem pode ver a ocorrência.
+  function SGO_verImagem_(dataUrl, titulo, legenda, nomeArquivo) {
+    const antigo = document.getElementById("sgoVerImagem");
+    if (antigo) antigo.remove();
+    const ov = document.createElement("div");
+    ov.id = "sgoVerImagem";
+    ov.setAttribute("role", "dialog");
+    ov.setAttribute("aria-modal", "true");
+    ov.setAttribute("aria-label", titulo || "Imagem");
+    ov.style.cssText = "position:fixed;inset:0;z-index:10000;background:rgba(20,22,21,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px";
+    ov.innerHTML =
+      '<div style="color:#fff;font-weight:700;font-size:14px;text-align:center;max-width:96vw">' + escapeHtml_(titulo || "Imagem") + "</div>" +
+      '<img alt="' + escapeHtml_(legenda || titulo || "Imagem") + '" style="max-width:96vw;max-height:72vh;object-fit:contain;background:#fff;border-radius:6px">' +
+      (legenda ? '<div style="color:#e8ebe9;font-size:12.5px;text-align:center;max-width:96vw;white-space:pre-wrap">' + escapeHtml_(legenda) + "</div>" : "") +
+      '<div style="display:flex;gap:10px">' +
+        '<a data-x="baixar" style="min-height:44px;min-width:96px;display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#1c1f1d;border-radius:6px;font-weight:700;font-size:14px;text-decoration:none;padding:0 16px">Baixar</a>' +
+        '<button type="button" data-x="fechar" style="min-height:44px;min-width:96px;border:0;border-radius:6px;background:#1f7a4d;color:#fff;font-weight:700;font-size:14px;padding:0 16px">Fechar</button>' +
+      "</div>";
+    ov.querySelector("img").src = dataUrl;
+    const baixar = ov.querySelector('[data-x="baixar"]');
+    baixar.href = dataUrl;
+    baixar.setAttribute("download", nomeArquivo || "evidencia.jpg");
+    const fechar = function () { ov.remove(); document.removeEventListener("keydown", tecla, true); };
+    const tecla = function (e) { if (e.key === "Escape") { e.stopPropagation(); fechar(); } };
+    ov.querySelector('[data-x="fechar"]').onclick = fechar;
+    ov.addEventListener("click", function (e) { if (e.target === ov) fechar(); });
+    document.addEventListener("keydown", tecla, true);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-x="fechar"]').focus();
+  }
+
+  /** Foto da evidência de uma ocorrência do Programa de conduta (tela do computador e do celular). */
+  function SGO_condutaVerFoto_(ocorrenciaId) {
+    if (typeof SGO_iniciarCarregamento_ === "function") SGO_iniciarCarregamento_("Abrindo a foto...");
+    const fim = function () { if (typeof SGO_finalizarCarregamento_ === "function") SGO_finalizarCarregamento_(); };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        fim();
+        if (!r || !r.data) return alert("Não foi possível abrir a foto: a resposta veio vazia. Tente de novo; se continuar, avise o Administrador.");
+        SGO_verImagem_(r.data, "Evidência da ocorrência" + (r.codigo ? " " + r.codigo : ""), r.legenda || "", r.nome || "evidencia.jpg");
+      })
+      .withFailureHandler(function (err) {
+        fim();
+        alert(String((err && err.message) || err || "Não foi possível abrir a foto."));
+      })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterFotoOcorrencia", payload: { id: ocorrenciaId } });
+  }
+
   function mobileCondutaDataBR_(v) {
     const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
     return m ? (m[3] + "/" + m[2] + "/" + m[1]) : String(v || "");
@@ -4699,7 +4748,7 @@
           '<div><strong>' + escapeHtml_(oc.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(oc.DATA_FATO)) + '</div>' +
           (oc.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(oc.TIPO_DESCRICAO) + '</div>' : "") +
           (prazo ? '<div class="mobile-card-subtitulo">Prazo para responder: até ' + escapeHtml_(mobileCondutaDataBR_(prazo)) + '</div>' : "") +
-          (oc.FOTO_URL ? '<div class="mobile-card-subtitulo"><a href="' + escapeHtml_(oc.FOTO_URL) + '" target="_blank" rel="noopener">ver foto anexada</a></div>' : "") +
+          (oc.TEM_FOTO ? '<div class="mobile-card-subtitulo"><button type="button" class="mobile-btn-cancelar" style="min-height:44px" onclick="SGO_condutaVerFoto_(\'' + escapeHtml_(oc.ID) + '\')">Ver a foto anexada</button></div>' : "") +
         '</div>' +
         mobileFieldHtml_(modo === "CONTESTAR" ? "Sua contestação *" : "Motivo do recurso *",
           '<textarea id="mob_cond_defesa" rows="5" placeholder="Explique o que aconteceu do seu ponto de vista."></textarea>') +
@@ -5056,12 +5105,14 @@
     mobileCondutaCarregarListasBase_(function () {
       div.innerHTML =
         '<div class="mobile-form">' +
-          mobileFieldHtml_("Colaborador envolvido *", '<select id="mob_cond_colaborador">' + mobileCondutaOptionsColegas_() + '</select>') +
+          // 28/10/2026 (dono): "Não identificado" quando não se sabe quem foi (conta no resultado da equipe, sem nome).
+          mobileFieldHtml_("Colaborador envolvido *", '<select id="mob_cond_colaborador">' + mobileCondutaOptionsColegas_().replace('</option>', '</option><option value="NAO_IDENTIFICADO">Não identificado (não se sabe quem foi)</option>') + '</select>') +
           mobileFieldHtml_("Tipo de ocorrência *", '<select id="mob_cond_tipo">' + mobileCondutaOptionsCatalogo_() + '</select>') +
           mobileFieldHtml_("Data do fato *", '<input type="date" id="mob_cond_data" value="' + mobileCondutaDataHoje_() + '">') +
           // 19/10/2026: o que aconteceu (antes só havia a legenda da foto, e sem foto quem homologava não sabia do fato).
           mobileFieldHtml_("O que aconteceu *", '<textarea id="mob_cond_descricao" rows="3" maxlength="2000" placeholder="Onde, quando e o que foi visto. Fatos, sem opinião."></textarea>') +
           mobileFieldHtml_("Foto (opcional)", '<input type="file" accept="image/*" capture="environment" id="mob_cond_foto" onchange="mobileCondutaPreverFoto_(this,\'mob_cond_foto_preview\')">' +
+            '<div class="mobile-card-subtitulo">Fotografe só o objeto e o local, nunca a pessoa. A foto só abre para quem está na ocorrência, para a Diretoria e para o Gestor de Qualidade.</div>' +
             '<div id="mob_cond_foto_preview" style="margin-top:8px"></div>') +
           mobileFieldHtml_("Legenda da foto", '<input type="text" id="mob_cond_foto_legenda" placeholder="Descreva o que a foto mostra">') +
           '<div class="mobile-form-actions">' +

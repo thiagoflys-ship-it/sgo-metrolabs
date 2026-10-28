@@ -196,7 +196,8 @@ function CondutaEq_html_(x) {
 
 function Conduta_apiGerarRelatorioEquipe(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
-  if (!Conduta_podeConsultarTodos_(sessionId)) throw new Error('O relatório da equipe tem o resultado de cada pessoa e fica com a gestão, a Diretoria e o RH. Para o seu resultado, use "Gerar extrato em A4".');
+  // 28/10/2026 (sigilo do envolvido): mostra as ocorrências de cada pessoa; fica com a Diretoria e o Gestor de Qualidade.
+  if (!(isAdminSession(sessionId) && Conduta_veIdentidade_(sessao))) throw new Error('O relatório da equipe mostra as ocorrências de cada pessoa e, por sigilo do colaborador, fica com a Diretoria e o Gestor de Qualidade. Para o seu resultado, use "Gerar extrato em A4"; os valores do mês estão no fechamento.');
   payload = payload || {};
   var inicio = Conduta_validarCompetencia_(payload.inicio || payload.competencia);
   var fim = Conduta_validarCompetencia_(payload.fim || inicio);

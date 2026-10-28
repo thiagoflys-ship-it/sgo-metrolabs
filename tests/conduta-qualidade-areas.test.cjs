@@ -164,6 +164,7 @@ test('sugestões: multa com condutor identificado vira sugestão (nunca ocorrên
 test('sugestões: aceitar registra a ocorrência com a origem e o prazo contado da descoberta; envolvido não decide; descarte pede motivo', () => {
   const sessao = { atual: GESTOR };
   const { ctx, tabelas } = ambiente(dados(), sessao);
+  ctx.Conduta_veIdentidade_ = () => true; // 28/10/2026: quem decide é a Diretoria ou o Gestor de Qualidade (sigilo); aqui o foco é outro
   ctx.Cndq_menosDias_ = () => '2026-08-20';
   ctx.Conduta_coletarSugestoes_('gil');
   const multa = tabelas.qual_sugestao.find((x) => x.CHAVE === 'FROTA|MULTA|m1');
@@ -193,7 +194,7 @@ test('sugestões: aceitar registra a ocorrência com a origem e o prazo contado 
   assert.throws(() => ctx.Conduta_apiAceitarSugestao('s', { id: 'sy' }), /Prazo de registro/);
   // técnico não aceita nem lista
   sessao.atual = { userId: 'u_tec', usuario: 'tiago', perfil: 'TECNICO' };
-  assert.throws(() => ctx.Conduta_apiListarSugestoes('s', {}), /gestão e do RH/);
+  assert.throws(() => ctx.Conduta_apiListarSugestoes('s', {}), /Diretoria e o Gestor de Qualidade/);
 });
 
 test('sugestões: KM a conferir resolvido sai da fila como SUPERADA; registro manual recusa cliente e inativo', () => {
@@ -217,6 +218,7 @@ test('plano 5W2H: a ação vira atividade do módulo conduta; PDCA só avança c
   const sessao = { atual: GESTOR };
   const oc = { ID: 'oc1', TIPO_CODIGO: 'VEI-06', COLABORADOR_ID: 'u_tec', FISCAL_ID: 'u_ges2', DATA_FATO: '2026-10-01', STATUS: 'FIRME', NIVEL_APLICADO: 'G', PRAZO_RECURSO: '2026-10-08' };
   const { ctx, tabelas, atividadesCriadas } = ambiente(dados({ qual_ocorrencia: [oc] }), sessao);
+  ctx.Conduta_veIdentidade_ = () => true; // 28/10/2026: quem decide é a Diretoria ou o Gestor de Qualidade (sigilo); aqui o foco é outro
   assert.throws(() => ctx.Conduta_apiCriarPlanoAcao('s', { ocorrenciaId: 'oc1', oQue: 'Treinar', porQue: 'Falta de atenção', como: 'Curto', quando: '2026-11-10', quemId: 'u_tec' }), /Como/);
   const r = ctx.Conduta_apiCriarPlanoAcao('s', { ocorrenciaId: 'oc1', oQue: 'Treinar direção defensiva', porQue: 'Excesso de velocidade recorrente', como: 'Curso de 4 horas com instrutor', quando: '2026-11-10', quemId: 'u_tec' });
   assert.equal(r.success, true);
@@ -251,6 +253,7 @@ test('plano 5W2H: a ação vira atividade do módulo conduta; PDCA só avança c
 test('análise de causa: 5 Porquês exige 3 respostas e a causa raiz; Ishikawa opcional', () => {
   const sessao = { atual: GESTOR };
   const { ctx, tabelas } = ambiente(dados(), sessao);
+  ctx.Conduta_veIdentidade_ = () => true; // 28/10/2026: quem decide é a Diretoria ou o Gestor de Qualidade (sigilo); aqui o foco é outro
   assert.throws(() => ctx.Conduta_apiSalvarAnaliseCausa('s', { tipoCodigo: 'CAM-01', problema: 'O.S. sem foto em 4 visitas', porques: ['a', 'b'], causaRaiz: 'Celular sem espaço' }), /3 porquês/);
   const r = ctx.Conduta_apiSalvarAnaliseCausa('s', { tipoCodigo: 'CAM-01', problema: 'O.S. sem foto em 4 visitas', porques: ['Foto não subiu', 'Sem internet', 'App não guarda offline'], causaRaiz: 'Aplicativo sem modo offline configurado', ishikawa: { MAQUINA: 'Celular antigo', METODO: '' } });
   assert.equal(r.success, true);
@@ -258,7 +261,8 @@ test('análise de causa: 5 Porquês exige 3 respostas e a causa raiz; Ishikawa o
 });
 
 test('Kanban e indicadores: colunas pelo fluxo, plano recomendado para grave/reincidente, reincidência e tempo de homologação por área', () => {
-  const sessao = { atual: RH };
+  // 28/10/2026 (sigilo do envolvido): Kanban e indicadores são do Gestor de Qualidade (GABY) e da Diretoria.
+  const sessao = { atual: GESTOR2 };
   const ocs = [
     { ID: 'a', TIPO_CODIGO: 'VEI-04', COLABORADOR_ID: 'u_tec', DATA_FATO: '2026-10-10', STATUS: 'REGISTRADA', CRIADO_EM: '2026-10-10' },
     { ID: 'b', TIPO_CODIGO: 'VEI-04', COLABORADOR_ID: 'u_tec', DATA_FATO: '2026-10-05', STATUS: 'CONTESTADA', CRIADO_EM: '2026-10-05', HOMOLOGADA_EM: '2026-10-07', PRAZO_HOMOLOGACAO: '2026-10-08' },
@@ -275,7 +279,7 @@ test('Kanban e indicadores: colunas pelo fluxo, plano recomendado para grave/rei
   assert.equal(k.encerradasSemEfeito, 1);
   assert.equal(k.colunas[2].itens.find((i) => i.ID === 'c').EXIGE_PLANO, 'grave');
   assert.equal(k.colunas[2].itens.find((i) => i.ID === 'e').EXIGE_PLANO, 'reincidente');
-  assert.equal(k.podeGerir, false, 'RH só consulta');
+  assert.equal(k.podeGerir, true, 'Gestor de Qualidade gere');
   const ind = ctx.Conduta_apiIndicadoresQualidade('s', { dias: 90 });
   const com = ind.areas.find((a) => a.area === 'COMERCIAL');
   assert.equal(com.firmes, 2);
@@ -285,4 +289,12 @@ test('Kanban e indicadores: colunas pelo fluxo, plano recomendado para grave/rei
   assert.equal(tec.homologacaoNoPrazoPct, 100);
   assert.equal(ind.semArea, 0, 'FABIO ganhou Financeiro pela coluna antiga SETOR');
   assert.equal(ind.areas.find((a) => a.area === 'FINANCEIRO').pessoas, 1);
+  // RH e gestor de outra área: Kanban só com as próprias (nenhuma aqui) e indicadores recusados com o motivo
+  for (const outro of [RH, GESTOR]) {
+    sessao.atual = outro;
+    const k2 = ctx.Conduta_apiKanbanQualidade('s', { dias: 90 });
+    assert.equal(k2.colunas.reduce((s, c) => s + c.itens.length, 0), 0);
+    assert.equal(k2.podeGerir, false);
+    assert.throws(() => ctx.Conduta_apiIndicadoresQualidade('s', { dias: 90 }), /sigilo do colaborador/);
+  }
 });

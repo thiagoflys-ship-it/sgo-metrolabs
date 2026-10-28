@@ -47,7 +47,8 @@ function ambiente(opcoes) {
     s_ga: { userId: 'u_ga', usuario: 'ana', nome: 'ANA GESTORA TESTE', perfil: 'GESTOR' },
     s_tec: { userId: 'u_tec', usuario: 'tiago', nome: 'TIAGO TECNICO TESTE', perfil: 'TECNICO' },
     s_adm: { userId: 'u_adm', usuario: 'admin', nome: 'Administrador', perfil: 'ADMIN' },
-    s_rh: { userId: 'u_rh', usuario: 'rita', nome: 'RITA RH TESTE', perfil: 'RH' }
+    s_rh: { userId: 'u_rh', usuario: 'rita', nome: 'RITA RH TESTE', perfil: 'RH' },
+    s_gq: { userId: 'u_gq', usuario: 'quintino', nome: 'QUINTINO QUALIDADE TESTE', perfil: 'GESTOR' }
   };
   const utilities = criarUtilities({
     computeHmacSha256Signature: (v, k) => Array.from(crypto.createHmac('sha256', String(k)).update(String(v), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b))
@@ -124,8 +125,11 @@ test('quem recebe: gestor da área da pessoa; ninguém decide sobre si; área se
   assert.equal(met.reserva, true);
   assert.match(met.motivoRota, /Metrologia não tem gestor responsável/);
   assert.match(dir.itens.find((i) => i.id === 'CONDUTA:OC:oc2').motivoRota, /Envolve alguém da gestão/);
-  // toda a gestão vê a lista inteira (só leitura do que é de outro); técnico e RH não abrem
-  assert.equal(caixaDe(amb, 's_ga', 'todas').itens.length, 5);
+  // toda a gestão vê a lista inteira (só leitura do que é de outro); técnico e RH não abrem.
+  // 28/10/2026 (sigilo do envolvido): as 2 ocorrências só a Diretoria e o Gestor de Qualidade veem, nem em "todas".
+  assert.equal(caixaDe(amb, 's_ga', 'todas').itens.length, 3);
+  assert.equal(caixaDe(amb, 's_dir', 'todas').itens.length, 5);
+  assert.ok(!amb.ctx.SGO_Pendencias_listar('s_ga', { semCache: true }).itens.some((i) => i.tipo === 'conduta_homologar'), 'gestora de outra área não vê no Início');
   assert.match(amb.ctx.Gestao_apiCaixa('s_tec', {}).message, /Caixa de decisões é da gestão/);
   assert.equal(amb.ctx.Gestao_apiCaixa('s_rh', {}).ok, false);
   // o item novo também aparece no Início da gestão (central de pendências), não no do técnico
@@ -133,6 +137,22 @@ test('quem recebe: gestor da área da pessoa; ninguém decide sobre si; área se
   assert.ok(inicioDir.itens.some((i) => i.tipo === 'conduta_homologar'));
   const inicioTec = amb.ctx.SGO_Pendencias_listar('s_tec', { semCache: true });
   assert.ok(!inicioTec.itens.some((i) => i.tipo === 'conduta_homologar'));
+});
+
+test('sigilo do envolvido (28/10/2026): ocorrência vai para o Gestor de Qualidade, não para o gestor da área; fiscal Qualidade cai na Diretoria', () => {
+  const amb = ambiente();
+  amb.tabelas.CAD_USUARIOS.push({ ID: 'u_gq', USUARIO: 'quintino', NOME: 'QUINTINO QUALIDADE TESTE', PERFIL: 'GESTOR', STATUS: 'ATIVO', EMAIL: 'q@exemplo.test', AREA: 'QUALIDADE' });
+  amb.tabelas.qual_ocorrencia.push({ ID: 'oc1', TIPO_CODIGO: 'TEC-01', COLABORADOR_ID: 'u_tec', FISCAL_ID: 'u_met', STATUS: 'REGISTRADA', DATA_FATO: '2026-10-16', PRAZO_HOMOLOGACAO: '2026-10-21' });
+  amb.tabelas.qual_ocorrencia.push({ ID: 'oc2', TIPO_CODIGO: 'TEC-01', COLABORADOR_ID: 'u_tec', FISCAL_ID: 'u_gq', STATUS: 'REGISTRADA', DATA_FATO: '2026-10-16', PRAZO_HOMOLOGACAO: '2026-10-21' });
+  const caixaQ = amb.ctx.Gestao_apiCaixa('s_gq', { filtro: 'minhas' });
+  assert.equal(caixaQ.ok, true, caixaQ.message);
+  assert.deepEqual(caixaQ.itens.map((i) => i.id), ['CONDUTA:OC:oc1'], 'Qualidade recebe a ocorrência; a que ele registrou não');
+  const gil = amb.ctx.Gestao_apiCaixa('s_gt', { filtro: 'todas' });
+  assert.ok(!gil.itens.some((i) => /^CONDUTA:OC:/.test(i.id)), 'o gestor da área do técnico não vê nem em todas');
+  const dir = amb.ctx.Gestao_apiCaixa('s_dir', { filtro: 'minhas' });
+  assert.ok(dir.itens.some((i) => i.id === 'CONDUTA:OC:oc2'), 'Diretoria decide a que o Gestor de Qualidade registrou');
+  assert.ok(!amb.ctx.SGO_Pendencias_listar('s_gt', { semCache: true }).itens.some((i) => i.tipo === 'conduta_homologar'));
+  assert.ok(amb.ctx.SGO_Pendencias_listar('s_gq', { semCache: true }).itens.some((i) => i.tipo === 'conduta_homologar'));
 });
 
 // ------------------------------------------------------------------ escada
@@ -442,10 +462,11 @@ test('falha grave recorrente vira sugestão no Programa de conduta só para a Di
   assert.ok(!amb.ctx.SGO_Pendencias_listar('s_gt', { semCache: true }).itens.some((i) => i.id === 'CONDUTA:SUG:' + s.ID));
   // Programa de conduta: só a Diretoria decide a sugestão vinda da avaliação
   const stubs = "function Conduta_exigirGestor_(sid){ var s = exigirSessao(sid); if (['ADMIN','GESTOR','DIRETORIA'].indexOf(s.perfil) < 0) throw new Error('restrito'); return s; }" +
+    "function Conduta_exigirDecisor_(sid, acao){ var s = Conduta_exigirGestor_(sid); if (s.perfil !== 'DIRETORIA') throw new Error('Não foi possível ' + acao + ': por sigilo do colaborador, quem decide é a Diretoria e o Gestor de Qualidade.'); return s; }" +
     "function Conduta_ehDiretoriaOuDono_(s){ return !!s && s.perfil === 'DIRETORIA'; } function Conduta_setup_(){} function Conduta_obterParametros_(){ return {}; } function Conduta_hojeISO_(){ return '2026-11-03'; }";
   vm.runInContext(stubs, amb.ctx);
   vm.runInContext(fs.readFileSync(path.join(pastaLegado, 'SGO_Conduta_Qualidade.js'), 'utf8').replace(/\r\n/g, '\n'), amb.ctx);
-  assert.throws(() => amb.ctx.Conduta_apiDescartarSugestao('s_ga', { id: s.ID, motivo: 'Tentativa de outra gestora sem poder' }), /só a Diretoria decide/);
+  assert.throws(() => amb.ctx.Conduta_apiDescartarSugestao('s_ga', { id: s.ID, motivo: 'Tentativa de outra gestora sem poder' }), /sigilo do colaborador|só a Diretoria decide/);
   const d = amb.ctx.Conduta_apiDescartarSugestao('s_dir', { id: s.ID, motivo: 'Conversado com o gestor; plano de melhoria acordado' });
   assert.equal(d.success, true);
 });
