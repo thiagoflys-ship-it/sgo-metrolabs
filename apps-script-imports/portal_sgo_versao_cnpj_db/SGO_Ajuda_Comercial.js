@@ -17,6 +17,7 @@ function SGO_ajudaTelas_Comercial_() {
       paraQueServe: 'Mostra o que fazer hoje, em ordem de prioridade, segundo a metodologia comercial da empresa: oportunidades sem próxima ação, retornos atrasados ou de hoje, oportunidades paradas ou esfriando, propostas sem resposta ou perto de vencer, pedidos aprovados sem passagem aos setores. Quem monta a lista é a gestora comercial do sistema, que conhece as regras escritas pela gestão. Para a gestão, mostra o panorama da equipe e as decisões pendentes.',
       antesDeComecar: [
         'A gestora comercial só sugere: ela não envia nada ao cliente, não aprova desconto e não muda etapa. Quem decide e envia é você.',
+        'No celular, a barra de seções no topo de cada tela do Comercial (Hoje, Oportunidades, Propostas, Pedidos, Produtos, Quadro, Gantt, Painel e Metodologia) leva a todas as telas; arraste a barra para o lado para ver as outras. Cada pessoa vê só as seções que pode usar.',
         'Todo dia útil, no começo do expediente, a lista é montada para cada vendedor. A tela sempre confere a situação de agora: o que você já resolveu sai da lista.',
         'Sem a chave da IA, a lista é a mesma, com os textos padrão das regras.'
       ],
@@ -131,6 +132,7 @@ function SGO_ajudaTelas_Comercial_() {
       ],
       cores: [{ nome: 'Linha apagada "(arquivado)"', significado: 'Não aparece mais para as propostas novas.' }],
       problemas: [
+        { situacao: 'No celular não acho Produtos e serviços.', oQueFazer: 'Entre no Comercial pela tela inicial e toque em "Produtos" na barra de seções do topo (arraste a barra para o lado se não aparecer). Se a barra não tiver "Produtos", o seu perfil não usa o catálogo: peça ao Administrador.' },
         { situacao: '"O código já é do item..."', oQueFazer: 'Cada código é único. Use outro código ou edite o item existente.' },
         { situacao: '"Nenhum item com..." na busca.', oQueFazer: 'Confira a grafia, use outra palavra do nome ou o código, e confira o tipo, a categoria e a situação (o item pode estar arquivado). Toque em "Limpar" para ver tudo. Se o item não existe, a gestão cadastra em "Novo item".' },
         { situacao: '"Mostrando os 200 mais parecidos".', oQueFazer: 'A busca achou mais de 200 itens. Escreva mais uma palavra do nome ou o código para afinar.' }

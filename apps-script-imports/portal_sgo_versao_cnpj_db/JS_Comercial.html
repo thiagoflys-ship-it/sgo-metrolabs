@@ -24,6 +24,12 @@
   .cm-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .cm-selo.laranja { color: var(--warning); background: var(--warning-bg); }
   .cm-selo.verde { color: var(--success); background: var(--success-bg); } .cm-selo.azul { color: var(--info, #1f5fa8); } .cm-selo.cinza { color: var(--muted); }
   .cm-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  /* 28/10/2026: no celular o menu lateral fica escondido; a barra de seções leva a todas as telas do Comercial */
+  .cm-nav-mob { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 2px 10px; margin: 0 0 4px; }
+  .cm-nav-mob::-webkit-scrollbar { display: none; }
+  .cm-nav-mob-btn { flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--text); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  .cm-nav-mob-btn.ativo { background: var(--info, #1f5fa8); border-color: var(--info, #1f5fa8); color: #fff; }
+  .cm-nav-mob-btn:focus-visible { outline: 3px solid var(--info, #1f5fa8); outline-offset: 2px; }
   .cm-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
   .cm-filtros select, .cm-filtros input { min-height: 40px; max-width: 100%; }
   .cm-quadro { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
@@ -161,16 +167,37 @@
     var grupo = Com_$_("menu-secao-comercial");
     if (grupo) grupo.style.display = nivel === "NENHUM" ? "none" : "";
     document.querySelectorAll("#menu-grupo-itens-comercial .menu-btn").forEach(function (b) {
-      var m = b.getAttribute("data-mod"), ver = nivel !== "NENHUM";
-      // 21/10/2026: o Financeiro vê os pedidos aprovados e mantém o catálogo (preços e custos).
-      if (nivel === "FINANCEIRO") ver = m === "comercial_pedidos" || m === "comercial_catalogo";
-      if (m === "comercial_metodologia") ver = ver && nivel !== "FINANCEIRO";
-      b.style.display = ver ? "" : "none";
+      b.style.display = Com_modVisivel_(b.getAttribute("data-mod"), nivel) ? "" : "none";
     });
     if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
     // o acesso chega depois do login: a tela inicial do celular ganha o atalho do Comercial quando ele chega
     if (nivel !== "NENHUM" && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
   }
+
+  // Quem vê cada tela do Comercial (a mesma regra no menu do computador e na barra do celular).
+  // 21/10/2026: o Financeiro vê os pedidos aprovados e mantém o catálogo (preços e custos); o resto do Comercial é da equipe.
+  function Com_modVisivel_(m, nivel) {
+    if (!nivel || nivel === "NENHUM") return false;
+    if (nivel === "FINANCEIRO") return m === "comercial_pedidos" || m === "comercial_catalogo";
+    return true;
+  }
+
+  // 28/10/2026 (dono: "no celular as mesmas ferramentas do comercial aparecem?"; equipe: "não consegue ver nada sobre produto").
+  // Causa: no celular o menu lateral fica escondido e o atalho "Comercial" da tela inicial só abria a tela Hoje; Produtos e
+  // serviços, Pedidos, Quadro, Gantt, Painel e Metodologia não tinham caminho (só pela lupa). Agora toda tela do Comercial no
+  // celular abre com a barra de seções, com as mesmas regras do menu do computador.
+  var CM_NAV = [["comercial", "Hoje"], ["comercial_oportunidades", "Oportunidades"], ["comercial_propostas", "Propostas"], ["comercial_pedidos", "Pedidos"],
+    ["comercial_catalogo", "Produtos"], ["comercial_kanban", "Quadro"], ["comercial_gantt", "Gantt"], ["comercial_painel", "Painel"], ["comercial_metodologia", "Metodologia"]];
+  function Com_navMobileHtml_(mod, nivel) {
+    var itens = CM_NAV.filter(function (x) { return Com_modVisivel_(x[0], nivel); });
+    if (itens.length < 2) return "";
+    return '<nav class="cm-nav-mob" aria-label="Seções do Comercial">' + itens.map(function (x) {
+      var at = x[0] === mod;
+      return '<button type="button" class="cm-nav-mob-btn' + (at ? " ativo" : "") + '"' + (at ? ' aria-current="page"' : "") + ' data-cm-nav="' + x[0] + '">' + Com_esc_(x[1]) + "</button>";
+    }).join("") + "</nav>";
+  }
+  /** Onde as telas do Comercial desenham: no celular, abaixo da barra de seções; no computador, a área de conteúdo. */
+  function Com_corpo_() { return Com_$_("cmCorpoMob") || Com_$_("conteudo"); }
 
   function Comercial_garantirInicio_(cb) {
     if (CM.ini) { cb(CM.ini); return; }
@@ -195,9 +222,19 @@
         return;
       }
       if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos" && mod !== "comercial_catalogo") mod = "comercial_pedidos";
+      // celular: barra de seções no topo e a tela abaixo dela (cmCorpoMob); trocar de tela some com a barra junto
+      var corpo = div, nav = ehMobileModo_() ? Com_navMobileHtml_(mod, ini.nivel) : "";
+      if (nav) {
+        div.innerHTML = nav + '<div id="cmCorpoMob"></div>';
+        corpo = Com_$_("cmCorpoMob");
+        div.querySelectorAll("[data-cm-nav]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-cm-nav"); if (m !== mod) abrir(m); }; });
+        // a seção aberta fica no meio da barra (as vizinhas aparecem dos dois lados)
+        var ativo = div.querySelector(".cm-nav-mob-btn.ativo"), barra = ativo && ativo.parentNode;
+        if (barra && ativo.getBoundingClientRect) { var nb = barra.getBoundingClientRect(), ab = ativo.getBoundingClientRect(); barra.scrollLeft += (ab.left - nb.left) - (nb.width - ab.width) / 2; }
+      }
       var mapa = { comercial: Comercial_renderHoje_, comercial_oportunidades: Comercial_renderOportunidades_, comercial_propostas: Comercial_renderPropostas_, comercial_pedidos: Comercial_renderPedidos_,
         comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_, comercial_kanban: Comercial_renderKanban_, comercial_gantt: Comercial_renderGantt_ };
-      (mapa[mod] || Comercial_renderHoje_)(div, alvo || {});
+      (mapa[mod] || Comercial_renderHoje_)(corpo, alvo || {});
       if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) Com_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
     });
   }
@@ -878,7 +915,7 @@
     ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
     ov.querySelector('[data-x="ok"]').onclick = function () {
       Com_chamar_("salvarProduto", { id: p.id || "", codigo: Com_$_("cmPdCod").value, tipo: Com_$_("cmPdTipo").value, nome: Com_$_("cmPdNome").value, descricao: Com_$_("cmPdDesc").value, unidade: Com_$_("cmPdUn").value, preco: Com_$_("cmPdPreco").value, custo: Com_$_("cmPdCusto").value, categoria: Com_$_("cmPdCat").value },
-        function () { ov.remove(); Comercial_renderCatalogo_(Com_$_("conteudo")); }, function (m) { Com_msg_("cmPdMsg", m); });
+        function () { ov.remove(); Comercial_renderCatalogo_(Com_corpo_()); }, function (m) { Com_msg_("cmPdMsg", m); });
     };
   }
 

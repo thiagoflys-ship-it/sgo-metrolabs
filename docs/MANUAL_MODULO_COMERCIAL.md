@@ -96,6 +96,10 @@ Buscar no catálogo: escreva no campo "Buscar no catálogo" parte do código, do
 
 Na proposta, o botão "Do catálogo" abre a mesma busca (só itens ativos, 50 por vez).
 
+## Comercial no celular
+
+No celular o menu lateral fica escondido. Toque em "Comercial" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Pedidos, Produtos, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo.
+
 ## Como a busca funciona no Comercial
 
 Em Oportunidades, Propostas, Quadro do funil, Gantt, Produtos e serviços e na escolha do cliente, a busca:
