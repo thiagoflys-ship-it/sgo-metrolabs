@@ -1255,7 +1255,9 @@ test('eventos antigos, reentregues, sem hora ou com hora no futuro não abrem; o
   assert.equal(amb.ctx.AutPred_aoEventoTuya('dev-fech-1').tratado, true);
   amb.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb.ctx.AutPred_rotinaRapida();
   assert.equal(amb.api.respostasPedido.length, 1);
-  assert.equal(amb.ctx.AutPred_pedidoAgora_({ valor: 500, valorEm: Date.now() }).restanteS, 90, 'prazo limitado a 90 s');
+  // o relógio é lido de novo dentro da função: na virada de 1 s o restante cai para 89 (o que importa é nunca passar de 90)
+  const restante = amb.ctx.AutPred_pedidoAgora_({ valor: 500, valorEm: Date.now() }).restanteS;
+  assert.ok(restante <= 90 && restante >= 89, 'prazo limitado a 90 s (veio ' + restante + ')');
 });
 
 test('validação por eventos é informativa: gravada quando o pedido chegou por evento e o "Abrir agora" foi confirmado; aparece na Saúde só para diretores', () => {
