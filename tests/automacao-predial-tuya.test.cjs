@@ -128,6 +128,8 @@ test('erros traduzidos: 1106 e 28841105 dizem o que fazer no portal; sem respost
 test('limite de frequência: a 91ª chamada do minuto não sai (90 por minuto desde 23/10/2026: campainha, abertura automática e estado dos portões)', () => {
   const { ctx, api } = ambiente();
   const c = ctx.Tuya_cfg_();
+  // a contagem é por minuto do relógio: começa longe da virada, senão as 90 chamadas caem em dois minutos (falha intermitente)
+  while (Date.now() % 60000 > 55000) { /* espera até 5 s */ }
   for (let i = 0; i < 90; i++) ctx.Tuya_chamarBruto_(c, 'GET', '/v1.0/token', { grant_type: 1 }, undefined, { semToken: true });
   assert.equal(api.pedidos.length, 90);
   assert.equal(ctx.Tuya_chamadasNoMinuto_(), 90);
