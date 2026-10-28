@@ -48,6 +48,8 @@ function ambiente(o) {
   // garagem real (22/10/2026): switch_1, door_control_1 (open/close) e o sensor de posição doorcontact_state
   const estadoGaragem = () => (api.garagem ? [{ code: 'switch_1', value: false }, { code: 'door_control_1', value: api.dc1 || 'close' }, { code: 'doorcontact_state', value: !!api.portaoAberto }] : [{ code: 'switch_1', value: false }]);
   const ctx = vm.createContext({
+    // 27/10/2026: globais extras do teste (ex.: SGO_PORTOES_LOCAIS, a ponte local dos portões no servidor próprio)
+    ...(o.globais || {}),
     console,
     Utilities: criarUtilities({ DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
       computeDigest: (alg, txt) => comSinal(crypto.createHash('sha256').update(String(txt), 'utf8').digest()),
@@ -1419,4 +1421,118 @@ test('portão em movimento depois de um comando: leitura compartilhada a cada 4 
   const l0 = amb.api.leiturasGaragem;
   amb.api_('portoes'); amb.api_('portoes');
   assert.equal(amb.api.leiturasGaragem - l0, 1, 'passados 4 s, uma leitura para todas as telas');
+});
+
+// ---------------------------------------------------------------- ponte local dos portões (27/10/2026)
+// Simulacro de SGO_PORTOES_LOCAIS (servidor próprio): os módulos respondem na rede local; a ponte grava
+// PORTOES_LOCAL_ESTADO e TUYA_EVT_<devId> como o serviço do servidor (src/servicos/portoesLocais.ts).
+function ponteSimulada() {
+  const pt = { amb: null, comandos: [], incerto: false, recusa: null, vivo: true, online: { 'dev-portao-1': true, 'dev-portao-2': true },
+    props: { 'dev-portao-1': { switch_1: false, door_control_1: 'close', doorcontact_state: false }, 'dev-portao-2': { switch_1: false } }, tempos: {} };
+  // hora de cada ponto = hora da última MUDANÇA (como o servidor guarda); começa há 1 min
+  pt.hora = (id, k) => (pt.tempos[id + '.' + k] = pt.tempos[id + '.' + k] || Date.now() - 60000);
+  pt.mudar = (id, k, v) => { if (pt.props[id][k] !== v) { pt.props[id][k] = v; pt.tempos[id + '.' + k] = Date.now(); } };
+  pt.gravar = () => {
+    const agora = Date.now(), disp = {};
+    Object.keys(pt.online).forEach((id) => {
+      disp[id] = { online: pt.online[id] };
+      const props = {}; Object.keys(pt.props[id]).forEach((k) => { props[k] = { value: pt.props[id][k], time: pt.hora(id, k) }; });
+      pt.amb.props['TUYA_EVT_' + id] = JSON.stringify({ props, online: pt.online[id], recebidoEm: agora, primeiroEm: agora });
+    });
+    pt.amb.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: pt.vivo ? agora : agora - 120000, dispositivos: disp });
+  };
+  pt.api = {
+    chamar(acao, d) {
+      const p = pt.props[d.devId];
+      if (acao === 'estado') {
+        if (!p) return { ok: false };
+        const props = {}; Object.keys(p).forEach((k) => { props[k] = { value: p[k], time: pt.hora(d.devId, k) }; });
+        return { ok: true, online: pt.online[d.devId] === true, props };
+      }
+      if (acao === 'comando') {
+        pt.comandos.push(JSON.parse(JSON.stringify(d)));
+        if (pt.incerto) return { aceito: false, incerto: true, msg: 'sem resposta do módulo do portão em 10 s' };
+        if (pt.recusa) return { aceito: false, codigo: 2001, msg: pt.recusa };
+        d.comandos.forEach((c) => { pt.mudar(d.devId, c.code, c.value); if (c.code === 'switch_1' && 'doorcontact_state' in p) pt.mudar(d.devId, 'doorcontact_state', c.value === true); });
+        pt.gravar();
+        return { aceito: true, id: 'c' + pt.comandos.length };
+      }
+      throw new Error('ação desconhecida: ' + acao);
+    }
+  };
+  return pt;
+}
+function comPonte(o) {
+  const pt = ponteSimulada();
+  const amb = ambiente(Object.assign({}, o, { globais: { SGO_PORTOES_LOCAIS: pt.api } }));
+  pt.amb = amb; amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal'); amb.homologar('Portão secundário');
+  pt.gravar();
+  return { amb, pt };
+}
+
+test('ponte local: com a nuvem bloqueada, portão da ponte abre e confirma pelo sensor sem chamar a nuvem; faixa "fora do ar" some; registro e auditoria preservados', () => {
+  const { amb, pt } = comPonte();
+  bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
+  const g = amb.disp('Portão principal');
+  amb.como(TEC);
+  const n0 = amb.api.pedidos.length;
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, false, 'todos os portões na ponte: sem faixa de fora do ar');
+  const r = amb.abrir(g.ID, 'op-local-0000001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.deepEqual(pt.comandos, [{ devId: 'dev-portao-1', comandos: [{ code: 'switch_1', value: true }] }]);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem (nem token)');
+  const c = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-local-0000001');
+  assert.equal(c.SOLICITANTE, 'TECNICO TESTE'); assert.match(String(c.API_TID), /^local-/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_ACEITO' && x.OPERACAO_ID === 'op-local-0000001'));
+  // pedestre também pela ponte (só abrir)
+  const ped = amb.disp('Portão secundário'); amb.envelhecer();
+  const r2 = amb.abrir(ped.ID, 'op-local-0000002');
+  assert.equal(r2.ok, true, r2.message);
+  assert.deepEqual(pt.comandos[1], { devId: 'dev-portao-2', comandos: [{ code: 'switch_1', value: true }] });
+  assert.equal(amb.api.pedidos.length, n0);
+});
+
+test('ponte local: sem notícia há 90 s ou portão offline volta tudo como antes; entregue sem resposta fica INCERTO e nunca cai para a nuvem; recusa do módulo fica RECUSADO', () => {
+  let { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal');
+  amb.como(DONO);
+  // ponte calada: com a nuvem bloqueada, comportamento antigo (fora do ar, nada enviado, nada na ponte)
+  pt.vivo = false; pt.gravar(); bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, true);
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-semponte1' });
+  assert.equal(p.ok, false); assert.match(p.message, /fora do ar/); assert.equal(pt.comandos.length, 0);
+  // ponte viva, mas o pedestre offline nela: o pedestre não é da ponte e a faixa continua (nem todos os portões atendidos)
+  pt.vivo = true; pt.online['dev-portao-2'] = false; pt.gravar();
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, true);
+  // INCERTO: entregue ao celular e o módulo não respondeu; nada pela nuvem
+  ({ amb, pt } = comPonte());
+  const g2 = amb.disp('Portão principal'); amb.como(DONO);
+  const n0 = amb.comandosApi().length;
+  pt.incerto = true;
+  let r = amb.abrir(g2.ID, 'op-local-incerto01');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'INCERTO');
+  assert.equal(amb.comandosApi().length, n0, 'comando nunca cai para a nuvem'); assert.equal(pt.comandos.length, 1, 'não repete sozinho');
+  // recusa do módulo
+  pt.incerto = false; pt.recusa = 'o módulo não respondeu na rede local'; amb.envelhecer();
+  r = amb.abrir(g2.ID, 'op-local-recusa001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'RECUSADO'); assert.match(r.texto, /ponte local/);
+  assert.equal(amb.comandosApi().length, n0);
+});
+
+test('ponte local: posição pela ponte sem leitura da nuvem; sem SGO_PORTOES_LOCAIS (Google) nada muda', () => {
+  const { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal'); amb.como(DONO);
+  const n0 = amb.api.pedidos.length;
+  pt.mudar('dev-portao-1', 'doorcontact_state', true); pt.tempos['dev-portao-1.doorcontact_state'] -= 30000; pt.gravar();
+  const r = amb.api_('portoes');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.itens.find((x) => x.id === g.ID).estadoPortao.codigo, 'ABERTO');
+  assert.ok(amb.disp('Portão principal').ESTADO_JSON.includes('"doorcontact_state","value":true'), 'mudança gravada');
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.pedidos.length, n0, 'posição veio da ponte (nenhuma leitura da nuvem)');
+  // ambiente do Google (sem a global): Tuya_localAtende_ é sempre falso, mesmo com a propriedade gravada
+  const amb2 = ambiente(); amb2.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: Date.now(), dispositivos: { 'dev-portao-1': { online: true } } });
+  assert.equal(amb2.ctx.Tuya_localAtende_('dev-portao-1'), false);
+  assert.equal(amb2.ctx.Tuya_local_('POST', '/v1.0/devices/dev-portao-1/commands', {}, { commands: [] }), null);
 });

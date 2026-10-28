@@ -804,7 +804,8 @@ function AutPred_eventosVivos_(m) { m = m || AutPred_msgEstado_(); return !!m.co
 
 /** Eventos do dispositivo que valem agora (conexão viva e algum evento já recebido dele), ou null. */
 function AutPred_eventoDisp_(deviceId) {
-  if (!AutPred_s_(deviceId) || !AutPred_eventosVivos_()) return null;
+  // 27/10/2026: a ponte local dos portões grava no mesmo formato; com ela viva, o portão também é acompanhado sem chamada
+  if (!AutPred_s_(deviceId) || !(AutPred_eventosVivos_() || (typeof Tuya_localAtende_ === 'function' && Tuya_localAtende_(deviceId)))) return null;
   try {
     var e = JSON.parse(PropertiesService.getScriptProperties().getProperty(AUT_EVT_PREFIXO + AutPred_s_(deviceId)) || 'null');
     return e && e.props ? e : null;
@@ -1242,7 +1243,7 @@ function AutPred_prepararComando_(sessao, dados) {
   var c = AutPred_cfg_();
   var acaoP = AutPred_acaoPedida_(dados, disp);
   // 27/10/2026: nuvem bloqueada e sem a vez da sonda: recusa já no toque, com registro (nenhuma janela de confirmação)
-  var bloqP = AutPred_modo_(c, disp, acaoP).modo === 'REAL' ? AutPred_bloqueioParaPessoa_() : '';
+  var bloqP = AutPred_modo_(c, disp, acaoP).modo === 'REAL' ? AutPred_bloqueioParaPessoa_(disp) : '';
   if (bloqP) {
     AutPred_auditar_({ evento: 'COMANDO_BLOQUEADO', quem: sessao, disp: disp, operacaoId: opId, resultado: 'NEGADO', detalhe: 'Nada enviado: ' + bloqP + '.', dados: { origem: AutPred_origem_(dados.origem) } });
     var eB = new Error(AutPred_textoForaDoAr_() + ' Nada foi enviado.' + (AutPred_administra_(sessao) ? ' Detalhe para a gestão: ' + Tuya_textoErro_((Tuya_uso_().bloqueio || {}).codigo, '', 0, 'a chamada') + '; ' + bloqP + '.' : ''));
@@ -1348,7 +1349,7 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
   var cmdPortao = disp.TIPO === 'FECHADURA' ? null : AutPred_comandoDaAcao_(disp, acao);
   var pedido = null;
   // 27/10/2026: nuvem bloqueada (cota ou plano) e sem a vez da sonda: nada sai; registro NEGADO com o motivo (mais abaixo)
-  var bloqueioNuvem = modo.modo === 'REAL' ? AutPred_bloqueioParaPessoa_() : '';
+  var bloqueioNuvem = modo.modo === 'REAL' ? AutPred_bloqueioParaPessoa_(disp) : '';
   if (pedidoModo && c.podeLer && !bloqueioNuvem) { try { pedido = AutPred_pedidoFechadura_(c, disp, 0); } catch (eP) { pedido = { ativo: false, erro: Tuya_limpar_(eP && eP.message, c) }; } }
   var base = {
     OPERACAO_ID: opId, QUANDO: AutPred_agoraTexto_(), QUANDO_EM: SGO_UTILS.nowIso(), SOLICITANTE_ID: AutPred_s_(sessao.userId), SOLICITANTE: AutPred_nome_(sessao), PERFIL: AutPred_perfil_(sessao),
@@ -1462,7 +1463,11 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
 }
 
 /** Nuvem bloqueada para um pedido de pessoa agora ('' = pode tentar: sem bloqueio, ou é a vez da sonda de pessoa). */
-function AutPred_bloqueioParaPessoa_() { return Tuya_uso_().bloqueio ? Tuya_motivoPausa_('COMANDO') : ''; }
+function AutPred_bloqueioParaPessoa_(disp) {
+  // 27/10/2026: portão atendido pela ponte local não depende da nuvem (nem da cota)
+  if (disp && typeof Tuya_localAtende_ === 'function' && Tuya_localAtende_(disp.DEVICE_ID)) return '';
+  return Tuya_uso_().bloqueio ? Tuya_motivoPausa_('COMANDO') : '';
+}
 
 /** Aviso à gestão (matriz S66) quando a API aceitou e o dispositivo não confirmou. Nunca derruba o comando. */
 function AutPred_avisarSemConfirmacao_(disp, cmd, quem) {

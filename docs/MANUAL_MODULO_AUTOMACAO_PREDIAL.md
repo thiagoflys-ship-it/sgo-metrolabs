@@ -244,3 +244,20 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 - "Offline": o dispositivo está sem internet; o comando não chega. Confira energia e rede sem fio.
 - "intervalo mínimo de 10 s", "comandos no último minuto", "ainda está sem resultado": limites de proteção; aguarde ou use "Conferir agora".
 - Fechadura "Não disponível pela API": o modelo não aceita abertura remota pela nuvem; use o aplicativo Smart Life ou a própria porta.
+
+## Ponte local dos portões (27/10/2026)
+
+**Por quê:** a cota do plano de teste da Tuya acabou em 27/10/2026 às 07:45 e os portões pararam pelo SGO+. Os módulos dos dois portões (protocolo Tuya 3.5) aceitam controle direto pela rede da empresa, validado com leitura autenticada nos dois.
+
+**Como funciona:** um celular Android na rede da empresa (Termux + agente `portoes_local/ponte/agente_ponte.py`) mantém conexão local com os módulos e fala com o servidor do SGO+ só por HTTPS de saída, assinado (`/ponte-portoes/estado`, `/fila`, `/resultado`; `src/servicos/portoesLocais.ts`). No legado, `Tuya_local_` (em `SGO_Automacao_Tuya.js`) atende comando, estado, detalhe e sombra dos portões da ponte, e o estado chega em `TUYA_EVT_<dispositivo>`, no mesmo formato dos eventos da nuvem.
+
+**Regras:**
+- Portão com a ponte viva (notícia nos últimos 90 s) e online por ela é atendido **só** pela ponte. O comando nunca cai para a nuvem, para evitar pulso em dobro.
+- A nuvem bloqueada (cota ou plano) não barra os portões da ponte. A faixa "fora do ar" só aparece se algum portão ativo estiver fora da ponte.
+- Comando não buscado pelo celular em 6 s: nada é enviado (recusado). Entregue e sem resposta em 10 s: **INCERTO**, sem repetição.
+- A hora de cada ponto é a da última **mudança**, para a regra de "sensor que acabou de mudar" continuar valendo.
+- Lista de dispositivos, funções e a fechadura continuam pela nuvem.
+
+**Saúde:** item "Ponte local dos portões". Celular calado vira falha crítica, com incidente e aviso; módulo sem resposta na rede local vira atenção.
+
+**Instalação e recuperação:** `portoes_local/LEIAME.md`.

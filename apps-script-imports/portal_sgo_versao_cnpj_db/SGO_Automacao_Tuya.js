@@ -464,8 +464,11 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   return { http: http, txt: txt, j: j };
 }
 
-/** Chamada de negócio: assina com o token e, em token vencido ou inválido (1010/1011/1400), renova uma vez e repete. */
+/** Chamada de negócio: assina com o token e, em token vencido ou inválido (1010/1011/1400), renova uma vez e repete.
+ *  27/10/2026: portão atendido pela ponte local (Tuya_local_) não chega à nuvem: nem cota, nem bloqueio, nem token. */
 function Tuya_chamar_(c, metodo, caminho, query, corpo) {
+  var local = Tuya_local_(metodo, caminho, query, corpo);
+  if (local) return local;
   var r = Tuya_chamarBruto_(c, metodo, caminho, query, corpo, {});
   var cod = r.j && r.j.code !== undefined ? Number(r.j.code) : 0;
   if (r.j && r.j.success === false && (cod === 1010 || cod === 1011 || cod === 1400)) {
@@ -473,6 +476,78 @@ function Tuya_chamar_(c, metodo, caminho, query, corpo) {
     r = Tuya_chamarBruto_(c, metodo, caminho, query, corpo, { token: Tuya_token_(c, true) });
   }
   return r;
+}
+
+// ------------------------------------------------------------
+// PONTE LOCAL DOS PORTÕES (27/10/2026: cota da Tuya esgotada; dono: "voltar a funcionar sem depender da nuvem")
+//
+// Um celular Android na rede da empresa (agente portoes_local/ponte) fala com os módulos dos portões pelo protocolo LOCAL
+// da Tuya (3.5, cifrado com a chave local de cada módulo) e com o servidor do SGO+ por HTTPS de saída, assinado (HMAC).
+// Nenhuma porta aberta no roteador; os módulos nunca ficam expostos à internet. O Smart Life continua funcionando.
+//
+// O servidor (src/servicos/portoesLocais.ts) grava PORTOES_LOCAL_ESTADO { vivoEm, dispositivos: { <devId>: { online } } }
+// e os pontos de cada portão em TUYA_EVT_<devId> (o mesmo formato dos eventos da nuvem, então tela, confirmação pelo sensor
+// e rotina usam o que chegou, sem chamada). Os comandos passam por SGO_PORTOES_LOCAIS (global só no servidor próprio).
+//
+// Regra: dispositivo com a ponte viva e online por ela é atendido SÓ pela ponte. Comando nunca cai para a nuvem (evita
+// pulso em dobro); sem a ponte, tudo volta a ser exatamente como antes (nuvem, cota e bloqueio). Funções da nuvem que a
+// ponte não faz (lista de dispositivos, functions, fechadura) continuam pela nuvem.
+// ------------------------------------------------------------
+var TUYA_LOCAL_ESTADO = 'PORTOES_LOCAL_ESTADO';
+var TUYA_LOCAL_VIVO_MS = 90000;            // a ponte informa a cada 20 s; 90 s sem notícia = não atende
+var TUYA_LOCAL_RECUSA = 90001;             // código próprio: recusa vinda da ponte local (o texto é o da ponte, não o de um código da Tuya)
+
+function Tuya_localEstado_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(TUYA_LOCAL_ESTADO) || 'null'); } catch (e) { return null; }
+}
+
+/** A ponte local atende este dispositivo agora? (servidor próprio, ponte viva e dispositivo online por ela) */
+function Tuya_localAtende_(deviceId) {
+  if (typeof SGO_PORTOES_LOCAIS === 'undefined' || !deviceId) return false;
+  var e = Tuya_localEstado_();
+  if (!e || Date.now() - Number(e.vivoEm || 0) > TUYA_LOCAL_VIVO_MS) return false;
+  var d = e.dispositivos && e.dispositivos[String(deviceId)];
+  return !!(d && d.online === true);
+}
+
+/** Resposta no formato de Tuya_chamarBruto_ ({ http, txt, j }). */
+function Tuya_localResposta_(j) { return { http: 200, txt: JSON.stringify(j), j: j }; }
+
+/**
+ * Atende pela ponte local, ou null (segue para a nuvem). Caminhos atendidos:
+ *   POST /v1.0/devices/{id}/commands             comando (fila da ponte; resposta do módulo em até ~10 s)
+ *   GET  /v1.0/devices/{id}/status               estado
+ *   GET  /v1.0/devices/{id}                      detalhe (online + estado)
+ *   GET  /v2.0/cloud/thing/{id}/shadow/properties sombra (ponto, valor e hora; filtro "codes")
+ */
+function Tuya_local_(metodo, caminho, query, corpo) {
+  var m = /^\/(v1\.0\/devices|v2\.0\/cloud\/thing)\/([^\/?]+)(\/[a-z\/-]+)?$/.exec(String(caminho || ''));
+  if (!m) return null;
+  var dev = decodeURIComponent(m[2]), resto = m[3] || '', v1 = m[1] === 'v1.0/devices';
+  metodo = String(metodo || 'GET').toUpperCase();
+  var tipo = v1 && metodo === 'POST' && resto === '/commands' ? 'comando'
+    : v1 && metodo === 'GET' && resto === '/status' ? 'status'
+    : v1 && metodo === 'GET' && resto === '' ? 'detalhe'
+    : !v1 && metodo === 'GET' && resto === '/shadow/properties' ? 'sombra' : '';
+  if (!tipo || !Tuya_localAtende_(dev)) return null;
+  if (tipo === 'comando') {
+    var cmds = (corpo && Array.isArray(corpo.commands) ? corpo.commands : []).map(function (x) { return { code: String(x && x.code || ''), value: x ? x.value : null }; });
+    var r = SGO_PORTOES_LOCAIS.chamar('comando', { devId: dev, comandos: cmds });
+    r = r || {};
+    // entregue ao celular e sem resposta do módulo: não se sabe se o portão recebeu (INCERTO; nunca repete sozinho)
+    if (r.incerto) throw Tuya_erro_('ponte local: ' + (r.msg || 'sem resposta do módulo do portão'), 0, 0, true);
+    if (r.aceito) return Tuya_localResposta_({ success: true, result: true, t: Date.now(), tid: 'local-' + String(r.id || '') });
+    return Tuya_localResposta_({ success: false, code: TUYA_LOCAL_RECUSA, msg: 'ponte local: ' + (r.msg || 'o módulo do portão não aceitou o comando'), t: Date.now() });
+  }
+  var e = SGO_PORTOES_LOCAIS.chamar('estado', { devId: dev }) || {};
+  if (!e.ok) return null;
+  var props = e.props || {}, codigos = Object.keys(props);
+  var lista = codigos.map(function (k) { return { code: k, value: props[k].value }; });
+  if (tipo === 'status') return Tuya_localResposta_({ success: true, result: lista, t: Date.now() });
+  if (tipo === 'detalhe') return Tuya_localResposta_({ success: true, result: { id: dev, online: e.online === true, status: lista }, t: Date.now() });
+  var filtro = query && query.codes ? String(query.codes).split(',').map(function (x) { return x.trim(); }) : null;
+  var sombra = codigos.filter(function (k) { return !filtro || filtro.indexOf(k) >= 0; }).map(function (k) { return { code: k, value: props[k].value, time: Number(props[k].time) || 0 }; });
+  return Tuya_localResposta_({ success: true, result: { properties: sombra }, t: Date.now() });
 }
 
 /** Texto do erro por código da Tuya: o quê, por quê e o que fazer. */
@@ -501,6 +576,7 @@ function Tuya_textoErro_(cod, msg, http, oQue) {
     28841004: 'a cota de chamadas do plano de teste (Trial Edition) da Tuya acabou (código 28841004); renove em iot.tuya.com › Cloud › Cloud Services › IoT Core (estender o período de teste ou assinar um plano)',
     28841105: 'o projeto cloud não está autorizado a usar esta API (código 28841105); no portal da Tuya, Cloud > projeto > Service API > Go to Authorize, autorize o serviço'
   };
+  if (cod === TUYA_LOCAL_RECUSA) return msg || 'ponte local: o módulo do portão não aceitou o comando';
   if (mapa[cod]) return mapa[cod];
   if (http === 429) return 'a Tuya recusou por excesso de chamadas (HTTP 429); aguarde um minuto e tente de novo';
   if (http >= 500) return 'a plataforma da Tuya respondeu com erro interno (HTTP ' + http + ') em ' + oQue + '; tente de novo em alguns minutos';

@@ -48,6 +48,7 @@ var AUT_TEXTO_SEM_RESPOSTA = 'A nuvem dos portões não respondeu agora: tente d
 var AUT_SAUDE_NOMES = {
   tuya_nuvem: 'Nuvem dos portões e da porta (Tuya)', tuya_dispositivos: 'Portões e porta conectados à internet', tuya_cota: 'Consumo da cota da Tuya',
   tuya_economico: 'Modo econômico', tuya_mensagens: 'Eventos da Tuya (serviço de mensagens)', alarme: 'Central de alarme Intelbras',
+  ponte_portoes: 'Ponte local dos portões (celular na rede da empresa)',
   auto_abertura: 'Abertura automática da porta (campainha)',
   agendador: 'Rotinas agendadas do servidor', rotina_minuto: 'Rotina de 1 minuto da automação', rotina_rapida: 'Abertura automática (rotina rápida)',
   servidor: 'Servidor do SGO+', sentinela: 'Sentinela'
@@ -111,6 +112,13 @@ function AutPred_registrarFalhaNuvem_(r) {
 function AutPred_infraTela_() {
   var u = Tuya_uso_(), ab = AutPred_saudeAbertos_().tuya_nuvem;
   var fora = !!u.bloqueio || !!(ab && ab.id && ab.critico);
+  // 27/10/2026: com a nuvem fora, os portões seguem pelo SGO+ se TODOS os portões ativos estiverem na ponte local
+  if (fora && typeof Tuya_localAtende_ === 'function') {
+    try {
+      var portoes = AutPred_dispositivos_().filter(function (d) { return d.TIPO !== 'FECHADURA' && AutPred_s_(d.ATIVO).toUpperCase() === 'SIM'; });
+      if (portoes.length && portoes.every(function (d) { return Tuya_localAtende_(d.DEVICE_ID); })) fora = false;
+    } catch (eL) {}
+  }
   return { portoesForaDoAr: fora, texto: fora ? AutPred_textoForaDoAr_() : '', economico: !!Tuya_economico_(),
     alarmeTexto: fora ? 'O alarme não depende da nuvem dos portões e continua funcionando pelo bloco "Alarme Intelbras".' : '' };
 }
