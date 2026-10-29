@@ -8,8 +8,9 @@
  *      prioridade   nível 1 (responsável)   nível 2 (gestor da área)   nível 3 (Diretoria)
  *      Urgente      15 min                   1 h                        4 h
  *      Alta         1 h                      4 h                        24 h
- *      Normal       4 h                      24 h                       72 h
+ *      Normal       8 h                      48 h                       120 h (5 dias)
  *      Baixa        24 h                     72 h                       168 h
+ *    (Normal afrouxada pelo dono em 29/10/2026; antes 4, 24 e 72 h. Vale para quem não gravou outra política.)
  *    Editável em Caixa de decisões > Regras e responsáveis (Administrador e Diretoria). Cada nível vale uma vez por
  *    atividade e por previsão (nova previsão = nova contagem); quem passou de vários níveis fora do expediente recebe só
  *    o mais alto. Gestor da área: os responsáveis da área da pessoa (e da área do módulo) e quem lançou, se for da gestão;
@@ -32,7 +33,7 @@
 var SEDNA_CFG_PROP = 'SEDNA_CFG';
 var SEDNA_PRIORIDADES = ['Urgente', 'Alta', 'Normal', 'Baixa'];
 var SEDNA_CFG_PADRAO = {
-  escalonamento: { ligado: true, horas: { Urgente: [0.25, 1, 4], Alta: [1, 4, 24], Normal: [4, 24, 72], Baixa: [24, 72, 168] } },
+  escalonamento: { ligado: true, horas: { Urgente: [0.25, 1, 4], Alta: [1, 4, 24], Normal: [8, 48, 120], Baixa: [24, 72, 168] } },
   briefing: { ligado: true, hora: '08:30', ia: true }
 };
 var SEDNA_EVENTO_NIVEL = { 1: 'S71', 2: 'S72', 3: 'S73' };
@@ -229,12 +230,39 @@ function Sedna_escopo_(u, us, gcfg, todas) {
   });
 }
 
+/**
+ * Vence hoje e ainda não venceu. 29/10/2026: com a mesma régua da atrasada (Atividades_vencida_), a atividade de O.S. da
+ * Assistência fica de fora: quem manda nela é a O.S. (agendada para hoje não é prazo da pessoa), e antes ela entrava em
+ * "vencem hoje" mas nunca em "atrasadas".
+ */
+function Sedna_venceHoje_(a, agora) {
+  if (!Atividades_aberta_(a) || (typeof Atividades_daOS_ === 'function' && Atividades_daOS_(a))) return false;
+  var p = String(a.PREVISAO_ATUAL || '');
+  return p.slice(0, 10) === agora.slice(0, 10) && p >= agora;
+}
+
+/**
+ * Maiores grupos da central de pendências, do maior para o menor, com o nome do tipo ("justificativas de atraso para
+ * avaliar"). 29/10/2026: antes saíam os três primeiros grupos na ordem da central (gravidade), com o rótulo curto: o
+ * resumo dizia "Maiores grupos: Fazer a triagem (1), Uso sem registro (4), Bloqueia emissão (76)" com 741 pendências,
+ * e os grupos de centenas (justificativas de atraso a avaliar, O.S. do Auvo sem vínculo) ficavam de fora.
+ */
+function Sedna_maioresGrupos_(grupos, n) {
+  return (grupos || []).map(function (g, i) { return { g: g, i: i }; })
+    .sort(function (x, y) { return (Number(y.g.qtd) || 0) - (Number(x.g.qtd) || 0) || x.i - y.i; })
+    .slice(0, n || 3)
+    .map(function (x) {
+      var g = x.g, qtd = Number(g.qtd) || 0, t = typeof PEND_TIPOS !== 'undefined' ? PEND_TIPOS[g.tipo] : null;
+      return { grupo: t ? (qtd === 1 ? t.um : t.varios) : String(g.rotulo || ''), qtd: qtd };
+    });
+}
+
 /** Fatos do resumo (só números, títulos e primeiros nomes que a pessoa já enxerga no sistema). */
 function Sedna_fatos_(u, us, gcfg, todas, agora) {
   var hoje = agora.slice(0, 10), minAgora = Sedna_minutos_(agora);
   var equipe = Sedna_escopo_(u, us, gcfg, todas);
   var atrasadas = equipe.filter(function (a) { return Atividades_vencida_(a, agora); });
-  var venceHoje = equipe.filter(function (a) { var p = String(a.PREVISAO_ATUAL || ''); return p.slice(0, 10) === hoje && p >= agora; });
+  var venceHoje = equipe.filter(function (a) { return Sedna_venceHoje_(a, agora); });
   var porPri = {};
   atrasadas.forEach(function (a) { var p = Sedna_prioridade_(a); porPri[p] = (porPri[p] || 0) + 1; });
   var comecar = atrasadas.map(function (a) { return { a: a, pri: Sedna_prioridade_(a), min: minAgora - Sedna_minutos_(a.PREVISAO_ATUAL) }; })
@@ -244,13 +272,13 @@ function Sedna_fatos_(u, us, gcfg, todas, agora) {
   var f = {
     nome: Sedna_primeiroNome_(u.nome), dia: Ges_brDia_(hoje),
     equipe: { atrasadas: atrasadas.length, porPrioridade: porPri, vencemHoje: venceHoje.length, comecarPor: comecar },
-    suas: { atrasadas: minhas.filter(function (a) { return Atividades_vencida_(a, agora); }).length, vencemHoje: minhas.filter(function (a) { var p = String(a.PREVISAO_ATUAL || ''); return p.slice(0, 10) === hoje && p >= agora; }).length },
+    suas: { atrasadas: minhas.filter(function (a) { return Atividades_vencida_(a, agora); }).length, vencemHoje: minhas.filter(function (a) { return Sedna_venceHoje_(a, agora); }).length },
     pendencias: null
   };
   try {
     if (typeof Pend_contextoDaSessao_ === 'function' && typeof Pend_resposta_ === 'function') {
       var pr = Pend_resposta_(Pend_contextoDaSessao_({ userId: u.id, perfil: u.perfil, nome: u.nome, usuario: u.login }), {});
-      f.pendencias = { total: Number(pr.resumo.total) || 0, criticas: Number(pr.resumo.criticos) || 0, maiores: (pr.grupos || []).slice(0, 3).map(function (g) { return { grupo: g.rotulo, qtd: g.qtd }; }) };
+      f.pendencias = { total: Number(pr.resumo.total) || 0, criticas: Number(pr.resumo.criticos) || 0, maiores: Sedna_maioresGrupos_(pr.grupos, 3) };
     }
   } catch (e) { f.pendencias = null; }
   return f;
@@ -272,7 +300,7 @@ function Sedna_textoRegras_(f) {
   if (f.suas.atrasadas || f.suas.vencemHoje) l.push('Suas atividades: ' + [f.suas.atrasadas ? Sedna_plural_(f.suas.atrasadas, 'atrasada', 'atrasadas') : '', f.suas.vencemHoje ? Sedna_plural_(f.suas.vencemHoje, 'vence hoje', 'vencem hoje') : ''].filter(Boolean).join(' e ') + '.');
   if (f.pendencias && f.pendencias.total) {
     l.push('Central de pendências: ' + Sedna_plural_(f.pendencias.total, 'pendência', 'pendências') + (f.pendencias.criticas ? ', ' + Sedna_plural_(f.pendencias.criticas, 'crítica', 'críticas') : '') +
-      (f.pendencias.maiores.length ? '. Maiores grupos: ' + f.pendencias.maiores.map(function (g) { return g.grupo + ' (' + g.qtd + ')'; }).join(', ') : '') + '.');
+      (f.pendencias.maiores.length ? '. Maiores grupos: ' + f.pendencias.maiores.map(function (g) { return g.qtd + ' ' + g.grupo; }).join('; ') : '') + '.');
   }
   return l.join('\n');
 }

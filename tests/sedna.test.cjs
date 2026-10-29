@@ -15,7 +15,7 @@ test('escalonamento: prazos por prioridade, cada nível uma vez por previsão, o
   const c = amb.ctx;
   atividade(amb, 'urg', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T09:30', { PRIORIDADE: 'Urgente', CRIADO_POR_ID: 'u_tec' });   // 30 min: nível 1
   atividade(amb, 'alta', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T05:00', { PRIORIDADE: 'Alta', CRIADO_POR_ID: 'u_tec' });    // 5 h: nível 2
-  atividade(amb, 'norm', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T09:00', { PRIORIDADE: 'Normal', CRIADO_POR_ID: 'u_tec' });  // 73 h: nível 3
+  atividade(amb, 'norm', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-14T09:00', { PRIORIDADE: 'Normal', CRIADO_POR_ID: 'u_tec' });  // 121 h: nível 3 (Normal 8/48/120 h desde 29/10/2026)
   atividade(amb, 'baixa', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T08:00', { PRIORIDADE: 'Baixa', CRIADO_POR_ID: 'u_tec' });  // 2 h: nada
   atividade(amb, 'met', 'u_met', 'MARA METROLOGIA TESTE', '2026-10-19T05:00', { PRIORIDADE: 'Alta', CRIADO_POR_ID: 'u_met' });  // área sem gestor: Diretoria
   const r = c.Sedna_escalonar_();
@@ -166,4 +166,68 @@ test('tela: Início mostra o resumo, regras com a política, histórico com o r�
   assert.match(ler('SGO_Gestao_Escada.js'), /passo\('sedna'/);
   assert.match(ler('SGO_Ajuda_Gestao.js'), /escalonamento por prioridade/i);
   assert.match(ler('SGO_Ajuda_Principal.js'), /RESUMO DO DIA/);
+});
+
+test('prazos da Normal afrouxados pelo dono (29/10/2026): 8 h responsável, 48 h gestor da área, 120 h Diretoria; política gravada continua valendo', () => {
+  const amb = ambiente(); // segunda 19/10/2026, 10:00
+  const c = amb.ctx;
+  assert.deepEqual(Array.from(c.Sedna_cfg_().escalonamento.horas.Normal), [8, 48, 120]);
+  assert.deepEqual(Array.from(c.Sedna_cfg_().escalonamento.horas.Alta), [1, 4, 24], 'as outras prioridades ficam iguais');
+  assert.deepEqual(Array.from(c.Sedna_cfg_().escalonamento.horas.Urgente), [0.25, 1, 4]);
+  assert.deepEqual(Array.from(c.Sedna_cfg_().escalonamento.horas.Baixa), [24, 72, 168]);
+  atividade(amb, 'n7', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T03:00', { CRIADO_POR_ID: 'u_tec' });   // 7 h: nada (antes já ia ao responsável)
+  atividade(amb, 'n8', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T02:00', { CRIADO_POR_ID: 'u_tec' });   // 8 h: responsável
+  atividade(amb, 'n30', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-18T04:00', { CRIADO_POR_ID: 'u_tec' });  // 30 h: responsável (antes gestor)
+  atividade(amb, 'n50', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-17T08:00', { CRIADO_POR_ID: 'u_tec' });  // 50 h: gestor da área
+  atividade(amb, 'n100', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-15T06:00', { CRIADO_POR_ID: 'u_tec' }); // 100 h: gestor (antes Diretoria)
+  atividade(amb, 'n120', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-14T10:00', { CRIADO_POR_ID: 'u_tec' }); // 120 h: Diretoria
+  c.Sedna_escalonar_();
+  const nivel = Object.fromEntries(escalas(amb).map((e) => [e.REFERENCIA.split('|')[0], e.REFERENCIA.split('|')[2]]));
+  assert.deepEqual(nivel, { n8: '1', n30: '1', n50: '2', n100: '2', n120: '3' });
+  const tiago = emailsPara(amb, 'tiago@');
+  assert.match(tiago[0].body || tiago[0].htmlBody || '', /vai ao gestor da área em 40 horas/, 'n8: faltam 40 h para as 48 h');
+  // política gravada pela gestão (Regras e responsáveis) continua valendo
+  const amb2 = ambiente({ props: { SEDNA_CFG: JSON.stringify({ escalonamento: { ligado: true, horas: { Normal: [4, 24, 72] } } }) } });
+  assert.deepEqual(Array.from(amb2.ctx.Sedna_cfg_().escalonamento.horas.Normal), [4, 24, 72]);
+  const ler = (f) => fs.readFileSync(path.join(pastaLegado, f), 'utf8');
+  assert.match(ler('SGO_Ajuda_Gestao.js'), /Normal com 8, 48 e 120 horas/);
+  assert.doesNotMatch(ler('SGO_Ajuda_Gestao.js'), /Normal com 4, 24 e 72 horas;/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../docs/MANUAL_MODULO_GESTAO_DECISOES.md'), 'utf8'), /Normal 8, 48 e 120 h/);
+});
+
+test('resumo do dia: "maiores grupos" são os maiores de verdade, com o nome do tipo (antes: os 3 primeiros na ordem da central)', () => {
+  const amb = ambiente();
+  const c = amb.ctx;
+  // ordem da central (gravidade), como em produção em 28/10/2026
+  const grupos = [
+    { tipo: 'ast_triagem', rotulo: 'Fazer a triagem', qtd: 1 }, { tipo: 'frota_rastreador_uso', rotulo: 'Uso sem registro', qtd: 4 },
+    { tipo: 'padrao_vencido', rotulo: 'Bloqueia emissão', qtd: 76 }, { tipo: 'atividade_justificativa', rotulo: 'Avaliar', qtd: 261 },
+    { tipo: 'auvo_sem_vinculo', rotulo: 'Revisar', qtd: 259 }, { tipo: 'auvo_os_aberta', rotulo: 'Revisar', qtd: 168 }
+  ];
+  const m = JSON.parse(JSON.stringify(c.Sedna_maioresGrupos_(grupos, 3)));
+  assert.deepEqual(m, [{ grupo: 'justificativas de atraso para avaliar', qtd: 261 }, { grupo: 'O.S. do Auvo sem vínculo de cadastro', qtd: 259 }, { grupo: 'O.S. abertas no Auvo', qtd: 168 }]);
+  assert.equal(c.Sedna_maioresGrupos_([{ tipo: 'padrao_vencido', qtd: 1 }], 3)[0].grupo, 'padrão de referência vencido', 'singular');
+  const f = { nome: 'Dora', dia: '19/10/2026', equipe: { atrasadas: 0, porPrioridade: {}, vencemHoje: 0, comecarPor: [] }, suas: { atrasadas: 0, vencemHoje: 0 },
+    pendencias: { total: 741, criticas: 118, maiores: m } };
+  assert.match(c.Sedna_textoRegras_(f), /Central de pendências: 741 pendências, 118 críticas. Maiores grupos: 261 justificativas de atraso para avaliar; 259 O.S. do Auvo sem vínculo de cadastro; 168 O.S. abertas no Auvo./);
+  // pelo caminho real: a central do teste também sai em ordem de tamanho
+  for (let i = 0; i < 3; i++) atividade(amb, 'j' + i, 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T09:00', { CRIADO_POR_ID: 'u_tec' });
+  const us = c.Ges_usuarios_(), fr = c.Sedna_fatos_(us.u_dir, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());
+  const qtds = fr.pendencias.maiores.map((g) => g.qtd);
+  assert.deepEqual(qtds.slice().sort((x, y) => y - x), qtds, 'do maior para o menor');
+});
+
+test('resumo do dia: atividade de O.S. da Assistência não conta como "vence hoje" (mesma régua da atrasada)', () => {
+  const amb = ambiente(); // 19/10/2026 10:00
+  const c = amb.ctx;
+  atividade(amb, 'os1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T15:00', { OS_ID: 'OS-1' });
+  atividade(amb, 'os2', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T08:00', { OS_ID: 'OS-2' });
+  atividade(amb, 'hj', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T16:00');
+  atividade(amb, 'ok', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T17:00', { SITUACAO: 'Concluída' });
+  const us = c.Ges_usuarios_(), f = c.Sedna_fatos_(us.u_gt, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());
+  assert.equal(f.equipe.vencemHoje, 1, 'só a "hj"; a O.S. de hoje e a concluída ficam de fora');
+  assert.equal(f.equipe.atrasadas, 0, 'O.S. vencida também não conta como atrasada');
+  atividade(amb, 'minha', 'u_gt', 'GIL GESTOR TESTE', '2026-10-19T15:00', { OS_ID: 'OS-3' });
+  const f2 = c.Sedna_fatos_(us.u_gt, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());
+  assert.equal(f2.suas.vencemHoje, 0);
 });

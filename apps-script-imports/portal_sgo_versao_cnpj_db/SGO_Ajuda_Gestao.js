@@ -63,7 +63,7 @@ function SGO_ajudaTelas_Gestao_() {
           'Relatórios do mês (Desempenho da gestão, Frota, Programa de conduta e Atividades da equipe) são gerados no primeiro dia útil do mês e enviados à Diretoria.'
         ] },
         { titulo: 'Atividade atrasada: escalonamento por prioridade (26/10/2026)', paragrafos: [
-          'Além da escada da caixa (contada em dias úteis), a atividade atrasada sobe pela prioridade, em horas corridas depois da previsão vencer. Padrão: Urgente com 15 minutos avisa o responsável, com 1 hora o gestor da área e com 4 horas a Diretoria; Alta com 1, 4 e 24 horas; Normal com 4, 24 e 72 horas; Baixa com 24, 72 e 168 horas.',
+          'Além da escada da caixa (contada em dias úteis), a atividade atrasada sobe pela prioridade, em horas corridas depois da previsão vencer. Padrão: Urgente com 15 minutos avisa o responsável, com 1 hora o gestor da área e com 4 horas a Diretoria; Alta com 1, 4 e 24 horas; Normal com 8, 48 e 120 horas (5 dias; afrouxada pelo dono em 29/10/2026, antes 4, 24 e 72); Baixa com 24, 72 e 168 horas.',
           'Gestor da área: os responsáveis da área da pessoa e da área do módulo, e quem lançou a atividade se for da gestão. Sem ninguém, vai à Diretoria. Ninguém recebe como gestor a cobrança da própria atividade. Atividade restrita (Programa de conduta) só vai a quem vê as restritas.',
           'Cada nível avisa uma vez por atividade e por previsão. Só no horário de trabalho: o que venceu à noite ou no fim de semana sai no começo do expediente, já no nível mais alto alcançado. Nova previsão (justificativa de atraso) recomeça a contagem.',
           'Cada pessoa recebe uma mensagem por rodada com tudo o que subiu para ela, no sistema e por e-mail. O WhatsApp só sai se a gestão marcar "na hora" os eventos S71, S72 e S73 em Administração > Matriz de avisos. O escalonamento fica no histórico da atividade ("Cobrança escalada pela prioridade").',
@@ -72,6 +72,7 @@ function SGO_ajudaTelas_Gestao_() {
         { titulo: 'Resumo do dia da gestão (26/10/2026)', paragrafos: [
           'Todo dia útil, a partir das 08:30, cada pessoa da gestão (Administrador, Diretoria, Gestor, RH e Financeiro) vê no Início um resumo: atividades atrasadas e que vencem hoje da equipe dela, por onde começar (as mais urgentes e mais atrasadas), as atividades dela e a central de pendências.',
           'A equipe é a das áreas em que a pessoa é responsável, mais as atividades que ela lançou. A Diretoria vê a empresa toda.',
+          'A atividade de O.S. da Assistência técnica não conta como atrasada nem como "vence hoje": quem manda nela é a O.S. Da central de pendências saem o total, as críticas e os três maiores grupos, do maior para o menor, com o nome do que é (por exemplo "76 padrões de referência vencidos"). Para baixar um grupo, abra a central no Início e resolva na tela indicada em cada cartão.',
           'O texto sai pelas regras do sistema. Com a chave da IA cadastrada (Administração > Chaves e senhas), a IA reescreve o texto; ele só vale se passar na conferência (números e nomes só dos dados do sistema, sem formatação). Se não passar, vale o texto das regras.',
           'A hora e a IA são definidas em "Regras e responsáveis".'
         ] }
