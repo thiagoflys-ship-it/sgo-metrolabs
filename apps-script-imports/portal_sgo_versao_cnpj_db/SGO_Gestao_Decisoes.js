@@ -435,8 +435,18 @@ function Gestao_fontePendencias_(add, ctx) {
     var corte = Ges_somarDias_(hoje, -30);
     var porAtv = {};
     try { (typeof Atividades_todas_ === 'function' ? Atividades_todas_() : []).forEach(function (a) { porAtv[Ges_s_(a.ID)] = a; }); } catch (e) {}
+    // 29/10/2026: só a justificativa mais recente de cada atividade, e nada de atividade concluída ou cancelada
+    // (contava uma pendência por linha do histórico: 261 na caixa da Diretoria, para 121 atividades de verdade)
+    var ultimaJust = {};
     Ges_ler_(Atividades_abas_().HISTORICO).forEach(function (h) {
       if (Ges_up_(h.TIPO) !== 'JUSTIFICATIVA') return;
+      var k = Ges_s_(h.ATIVIDADE_ID), atual = ultimaJust[k];
+      var chave = Ges_s_(Ges_iso_(h.DATA)) + '|' + Ges_s_(Ges_iso_(h.CRIADO_EM));
+      if (!atual || chave >= atual.chave) ultimaJust[k] = { chave: chave, h: h };
+    });
+    Object.keys(ultimaJust).map(function (k) { return ultimaJust[k].h; }).forEach(function (h) {
+      var sit = Ges_s_((porAtv[Ges_s_(h.ATIVIDADE_ID)] || {}).SITUACAO);
+      if (sit === 'Concluída' || sit === 'Cancelada') return;
       var dia = Ges_dia_(h.DATA);
       if (!dia || dia < corte) return;
       var id = 'ATV:JUST:' + Ges_s_(h.ID);

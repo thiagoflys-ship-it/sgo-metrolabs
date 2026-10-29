@@ -308,6 +308,20 @@ test('providência: só o responsável (ou a Diretoria), texto e data obrigatór
   assert.ok(!caixaDe(amb, 's_gt').itens.some((i) => i.id === just.id));
 });
 
+test('justificativas: só a mais recente de cada atividade entra na caixa, e atividade concluída ou cancelada não entra (29/10/2026: 261 pendências para 121 atividades)', () => {
+  const amb = ambiente();
+  atividadeAtrasada(amb, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
+  atividadeAtrasada(amb, 'a2', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
+  const j = (id, atv, data, texto) => amb.tabelas.ATV_HISTORICO.push({ ID: id, ATIVIDADE_ID: atv, TIPO: 'JUSTIFICATIVA', USUARIO_ID: 'u_tec', USUARIO_NOME: 'TIAGO TECNICO TESTE', DATA: data, TEXTO: texto, CATEGORIA: 'Outro', PREVISAO_NOVA: '2026-10-23T18:00' });
+  j('h1', 'a1', '2026-10-17T09:00', 'Primeira justificativa de teste.');
+  j('h2', 'a1', '2026-10-19T09:00', 'Segunda justificativa de teste.');
+  j('h3', 'a2', '2026-10-19T09:00', 'Justificativa da atividade que foi concluída.');
+  amb.tabelas.ATV_ATIVIDADES.find((a) => a.ID === 'a2').SITUACAO = 'Concluída';
+  amb.ctx.Ges_sincronizar_();
+  const just = caixaDe(amb, 's_gt').itens.filter((i) => i.tipo === 'atividade_justificativa');
+  assert.deepEqual(just.map((i) => i.id), ['ATV:JUST:h2']);
+});
+
 // ------------------------------------------------------------------ avaliação
 test('avaliação do gestor: prazo, tempo médio, vencidos, escalonamentos, acesso, revertidas, equipe, planos, nota e farol', () => {
   const amb = ambiente({ agora: em('2026-11-03T10:00:00-03:00'),
