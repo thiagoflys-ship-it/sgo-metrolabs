@@ -74,6 +74,15 @@
   .cm-item-dif { display: block; font-size: 11.5px; margin-top: 3px; min-height: 1em; }
   .cm-politica { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin: 6px 0 2px; }
   .cm-politica i { display: block; height: 100%; }
+  /* 29/10/2026: custos da viagem e do frete (checklist da precificação) */
+  .cm-cv-linha { display: grid; grid-template-columns: 1.5fr 1.5fr .9fr 1.6fr .8fr; gap: 6px 10px; align-items: end; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+  .cm-cv-linha .cm-campo { margin: 0; }
+  .cm-cv-linha .nome { font-size: 12.5px; font-weight: 700; } .cm-cv-linha .nome span { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .cm-cv-linha .tot { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; }
+  .cm-cv-linha.auto { opacity: .8; }
+  .cm-cv-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cm-cv-res { border-left: 4px solid var(--info, #1f5fa8); }
+  .cm-cv-res.erro { border-left-color: var(--danger); } .cm-cv-res.ok { border-left-color: var(--success); }
   .cm-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
   .cm-sec { margin: 14px 0 6px; font-size: 13px; font-weight: 800; color: var(--text-strong, var(--text)); }
   .cm-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 4px 0; }
@@ -122,6 +131,9 @@
     .cm-det dt { margin-top: 6px; }
     .cm-itens .cm-item { grid-template-columns: 1fr 1fr; }
     .cm-itens .cm-item .cm-desc { grid-column: 1 / -1; }
+    .cm-cv-linha { grid-template-columns: 1fr 1fr; }
+    .cm-cv-linha .nome, .cm-cv-linha .mot { grid-column: 1 / -1; }
+    .cm-cv-linha .tot { text-align: left; }
     .cm-tabela thead { display: none; }
     .cm-tabela, .cm-tabela tbody, .cm-tabela tr, .cm-tabela td { display: block; width: 100%; box-sizing: border-box; }
     .cm-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
@@ -339,7 +351,7 @@
         '<p class="cm-txt"><b>Por quê:</b> ' + Com_esc_(i.porque) + '</p><p class="cm-txt"><b>Próximo passo:</b> ' + Com_esc_(i.acao) + '</p>' +
         (i.tambem && i.tambem.length ? '<p class="cm-meta">Também: ' + Com_esc_(i.tambem.join("; ")) + '</p>' : '') +
         (i.mensagem ? '<div class="cm-msg">' + Com_esc_(i.mensagem) + '</div>' : '') +
-        '<div class="cm-acoes">' + (i.ref && i.ref.id ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Abrir</button>' : (i.ref && i.ref.tipo === "oportunidades" ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Ver oportunidades</button>' : '')) +
+        '<div class="cm-acoes">' + (i.ref && i.ref.id ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Abrir</button>' : (i.ref && i.ref.tipo === "oportunidades" ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Ver oportunidades</button>' : (i.ref && i.ref.tipo === "metodologia" ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Abrir a política</button>' : (i.ref && i.ref.tipo === "catalogo" ? '<button type="button" class="btn-primary" data-abrir="' + k + '">Abrir o catálogo</button>' : '')))) +
         (i.mensagem ? '<button type="button" class="btn-secondary" data-copiar="' + k + '">Copiar mensagem</button>' : '') +
         (!i.decisao ? '<button type="button" class="btn-secondary" data-feito="' + k + '">Feito</button><button type="button" class="btn-secondary" data-naose="' + k + '">Não se aplica</button>' : '') + '</div></div>';
     }).join("") + '</div>';
@@ -348,7 +360,7 @@
     if (ini.avisos && ini.avisos.length) h += '<div class="cm-caixa" style="margin-top:14px"><h3>Avisos recentes do Comercial</h3>' + ini.avisos.map(function (a) { return '<p class="cm-txt"><b>' + Com_esc_(a.titulo) + '</b> <span class="cm-meta">' + Com_esc_(a.em) + '</span><br>' + Com_esc_(a.texto) + '</p>'; }).join("") + '</div>';
     alvo.innerHTML = h;
     var itens = r.itens;
-    alvo.querySelectorAll("[data-abrir]").forEach(function (b) { b.onclick = function () { var i = itens[+b.getAttribute("data-abrir")]; if (i.ref.tipo === "proposta") { abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(i.ref.id); }, 400); } else if (i.ref.tipo === "oportunidade") Comercial_abrirOportunidade_(i.ref.id); else { if (i.ref.responsavelId) CM.filtro.responsavelId = i.ref.responsavelId; abrir("comercial_oportunidades"); } }; });
+    alvo.querySelectorAll("[data-abrir]").forEach(function (b) { b.onclick = function () { var i = itens[+b.getAttribute("data-abrir")]; if (i.ref.tipo === "proposta") { abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(i.ref.id); }, 400); } else if (i.ref.tipo === "oportunidade") Comercial_abrirOportunidade_(i.ref.id); else if (i.ref.tipo === "metodologia") abrir("comercial_metodologia"); else if (i.ref.tipo === "catalogo") { CM.filtroCat = { busca: "", tipo: "", categoria: "", situacao: "SEM_REAJUSTE" }; abrir("comercial_catalogo"); } else { if (i.ref.responsavelId) CM.filtro.responsavelId = i.ref.responsavelId; abrir("comercial_oportunidades"); } }; });
     alvo.querySelectorAll("[data-copiar]").forEach(function (b) { b.onclick = function () { Com_copiar_(itens[+b.getAttribute("data-copiar")].mensagem, b); }; });
     var decidir = function (k, decisao, motivo) { var i = itens[k]; Com_chamar_("decidirSugestao", { chave: i.chave, regra: i.regra, decisao: decisao, motivo: motivo || "", ref: i.ref }, function () { i.decisao = decisao; var c = Com_$_("cmItem" + k); if (c) { c.classList.add("feito"); c.querySelectorAll("[data-feito],[data-naose]").forEach(function (x) { x.remove(); }); } }); };
     alvo.querySelectorAll("[data-feito]").forEach(function (b) { b.onclick = function () { decidir(+b.getAttribute("data-feito"), "FEITO"); }; });
@@ -652,7 +664,7 @@
     g.querySelector("h3").textContent = p.rotulo + " · " + p.cliente;
     var b = function (acao, texto, cls) { return '<button type="button" class="' + (cls || "btn-secondary") + '" data-acao="' + acao + '">' + texto + '</button>'; };
     var h = (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '') + '<p class="cm-card-tit" style="font-size:15px">' + Com_esc_(p.titulo) + '</p><p>' + Com_seloProp_(p) + '</p>';
-    var passosSit = { RASCUNHO: "Monte os itens, o escopo e as condições e toque em Concluir. A gestora revisa a proposta e a política de desconto é conferida.", AGUARDANDO_APROVACAO: "Aguardando o gestor comercial decidir o desconto (Caixa de decisões). A proposta não pode ser enviada até lá.",
+    var passosSit = { RASCUNHO: "Monte os itens, o escopo e as condições e toque em Concluir. A gestora revisa a proposta e a política de desconto é conferida.", AGUARDANDO_APROVACAO: p.decisaoSoDiretoria ? "Aguardando a Diretoria: a margem ficou abaixo da mínima da política de precificação. A proposta não pode ser enviada até a decisão." : "Aguardando o gestor comercial decidir o desconto (Caixa de decisões). A proposta não pode ser enviada até lá.",
       PRONTA: p.pdfId ? "Documento na pasta do cliente. Toque em Enviar ao cliente." : "Toque em Gerar documento para salvar a folha A4 na pasta do cliente.", ENVIADA: "Aguardando a resposta do cliente. Registre a aprovação (com o aceite anexado) ou a recusa.",
       APROVADA: p.pedidoSituacao === "SEM_PASSAGEM" || !p.pedidoSituacao ? "Pedido aprovado: passe aos setores." : p.pedidoSituacao === "CONCLUIDO" ? "Todos os setores concluíram." : "Pedido com os setores: acompanhe abaixo.",
       VENCIDA: "Venceu sem resposta: renove com nova revisão ou registre a resposta do cliente.", RECUSADA: "Recusada: faça nova revisão ou registre a perda na oportunidade." };
@@ -676,6 +688,7 @@
       p.itens.map(function (i) { return '<tr><td data-r="Item"><b>' + Com_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<br><span class="cm-meta">' + Com_esc_(i.equipamentoTexto) + '</span>' : '') + '</td><td class="n" data-r="Qtd.">' + Com_esc_(String(i.quantidade).replace(".", ",")) + '</td><td data-r="Un.">' + Com_esc_(i.unidade) + '</td>' +
         (p.totalTxt ? '<td class="n" data-r="Preço unit.">' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '</td><td class="n" data-r="Total">' + Com_esc_(Comercial_moeda_(i.total)) + '</td>' : '') + '</tr>'; }).join("") + '</tbody></table>' +
       (p.escopo ? '<p class="cm-sec">Descrição (escopo)</p><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(p.escopo) + '</p>' : '');
+    if (!p.editavel && p.deslocamento && p.deslocamento.preenchido) h += Comercial_resumoCustos_(p.deslocamento);
     // 28/10/2026: termos e condições da contratação (fixos no documento; congelados quando o documento é gerado)
     if (p.termos && p.termos.texto) h += '<details class="cm-caixa"><summary><b>Termos e condições da contratação</b> <span class="cm-meta">versão ' + Com_esc_(p.termos.versao) +
       (p.termos.congelado ? ' · guardada no documento desta proposta' : p.termos.foraDoDocumento ? ' · o documento gerado antes de 28/10/2026 não trazia esta seção; gere de novo (antes do envio) ou faça nova revisão' : ' · em vigor; fica guardada quando o documento for gerado') + '</span></summary>' +
@@ -690,7 +703,8 @@
       if (["RASCUNHO", "AGUARDANDO_APROVACAO", "PRONTA", "ENVIADA", "VENCIDA"].indexOf(s) >= 0) acoes.push(b("cancelar", "Cancelar proposta"));
       if (s === "APROVADA" && p.pedidoSituacao !== "CONCLUIDO") acoes.push(b("passar", "Passar aos setores", p.pedidoSituacao === "SEM_PASSAGEM" || !p.pedidoSituacao ? "btn-primary" : "btn-secondary"));
     }
-    if (p.podeDecidirDesconto) acoes.push(b("aprovarDesc", "Aprovar o desconto", "btn-primary"), b("negarDesc", "Negar o desconto"));
+    if (p.podeDecidirDesconto) { if (p.podeAprovarDesconto) acoes.push(b("aprovarDesc", p.decisaoSoDiretoria ? "Aprovar (Diretoria)" : "Aprovar o desconto", "btn-primary")); acoes.push(b("negarDesc", p.decisaoSoDiretoria ? "Negar (volta ao vendedor)" : "Negar o desconto")); }
+    if (p.podeDecidirDesconto && !p.podeAprovarDesconto) h += '<div class="cm-faixa aviso">A margem desta proposta ficou abaixo da mínima da política de precificação: só a Diretoria aprova. Você pode negar (a proposta volta para o vendedor ajustar preço, escopo ou repasse da viagem).</div>';
     if (p.pdfUrl) acoes.push('<a class="btn-secondary" href="' + Com_esc_(p.htmlUrl || p.pdfUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Abrir a folha A4</a>');
     h += '<div class="cm-acoes">' + acoes.join("") + '</div><div id="cmPropAcao"></div>';
     if (p.descontoMotivo && s === "AGUARDANDO_APROVACAO") h += '<div class="cm-faixa aviso">Motivo do pedido de desconto: ' + Com_esc_(p.descontoMotivo) + '</div>';
@@ -711,12 +725,12 @@
         acao.salvar(function (x) {
           var pedir = x.politica && !x.politica.dentro;
           if (pedir && !ini.gestao) {
-            area.innerHTML = '<div class="cm-caixa"><h3>Pedido de aprovação do desconto</h3><p class="cm-txt">' + Com_esc_(x.politica.motivos.join("; ")) + '. A proposta vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão.</p>' +
+            area.innerHTML = '<div class="cm-caixa"><h3>Pedido de aprovação' + (x.politica.exigeDiretoria ? ' à Diretoria' : ' do desconto') + '</h3><p class="cm-txt">' + Com_esc_(x.politica.motivos.join("; ")) + '. A proposta vai para ' + (x.politica.exigeDiretoria ? 'a Diretoria' : 'a Caixa de decisões do gestor comercial') + ' e só pode ser enviada depois da decisão.' + (x.politica.exigeDiretoria ? ' Se preferir, ajuste o preço dos serviços ou o repasse da viagem e conclua de novo.' : '') + '</p>' +
               Com_campo_("Por que este desconto é necessário?", '<textarea id="cmJust" maxlength="1000"></textarea>') + '<div id="cmJMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmJOk">Pedir aprovação</button></div></div>';
             Com_$_("cmJOk").onclick = function () { Com_chamar_("concluirProposta", { id: p.id, justificativa: Com_$_("cmJust").value }, function (y) { recarregar(y.message); }, function (m) { Com_msg_("cmJMsg", m); }); };
             return;
           }
-          var just = pedir ? window.prompt("A proposta passa do limite de desconto. Como gestão comercial, escreva o motivo da exceção (fica registrado):") : "";
+          var just = pedir ? window.prompt(x.politica.exigeDiretoria && !ini.diretoria ? "A margem ficou abaixo da mínima: a proposta vai para a Diretoria. Escreva por que este preço é necessário:" : "A proposta passa da política (" + x.politica.motivos.join("; ") + "). Escreva o motivo da exceção (fica registrado):") : "";
           if (pedir && !just) return;
           Com_chamar_("concluirProposta", { id: p.id, justificativa: just || "" }, function (y) { recarregar(y.message + (y.alertas && y.alertas.length ? " Alertas: " + y.alertas.join("; ") + "." : "")); }, function (m) { Com_msg_(area, m); });
         });
@@ -762,6 +776,7 @@
       negarDesc: function () { var m = window.prompt("Por que o desconto não foi aprovado? O que o vendedor pode oferecer no lugar?"); if (m) Com_chamar_("decidirDesconto", { id: p.id, aprovar: false, texto: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); }
     };
     corpo.querySelectorAll("[data-acao]").forEach(function (el) { el.onclick = function () { acao[el.getAttribute("data-acao")](); }; });
+    if (p.editavel) Comercial_ligarCustos_(function () { acao.salvar(); });
   }
 
   function Comercial_moeda_(v) { return "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -786,12 +801,17 @@
       '<p class="cm-sec">Itens</p><div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
       '<div class="cm-grade3" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
       Com_campo_("Validade (dias)", '<input id="cmPrVal" inputmode="numeric" value="' + Com_esc_(p.validadeDias || CM.ini.validadePadrao) + '">') + Com_campo_("Contato (A/C)", '<select id="cmPrCt">' + Com_opcoes_((p.contatosCliente || []).map(function (c) { return { v: c.id, t: c.nome }; }), p.contatoId) + '</select>') + '</div>' +
-      '<div id="cmPrTotais" class="cm-meta"></div><p class="cm-sec">Condições comerciais</p><div class="cm-grade2">' + Object.keys(rotCond).map(function (k) { return Com_campo_(rotCond[k], '<textarea data-cond="' + k + '" maxlength="2000"' + (k === "gerais" ? ' style="min-height:90px"' : '') + '>' + Com_esc_(cond[k] || "") + '</textarea>'); }).join("") + '</div>' +
+      '<div id="cmItensAuto"></div><div id="cmPrTotais" class="cm-meta"></div>' + Comercial_editorCustos_(p) + '<p class="cm-sec">Condições comerciais</p><div class="cm-grade2">' + Object.keys(rotCond).map(function (k) { return Com_campo_(rotCond[k], '<textarea data-cond="' + k + '" maxlength="2000"' + (k === "gerais" ? ' style="min-height:90px"' : '') + '>' + Com_esc_(cond[k] || "") + '</textarea>'); }).join("") + '</div>' +
       '<details><summary class="cm-meta">Apresentação (texto de abertura)</summary>' + Com_campo_("Apresentação", '<textarea id="cmPrApr" maxlength="4000" style="min-height:120px">' + Com_esc_(p.apresentacao) + '</textarea>') + '</details></div>';
   }
 
   function Comercial_ligarEditor_(p) {
-    CM.itens = (p.itens || []).map(function (i) { return Object.assign({}, i); });
+    // 29/10/2026: os itens automáticos (viagem e frete) não entram na edição: o servidor refaz a cada gravação
+    CM.itens = (p.itens || []).filter(function (i) { return !i.auto; }).map(function (i) { return Object.assign({}, i); });
+    CM.itensAuto = (p.itens || []).filter(function (i) { return i.auto; });
+    CM.refsCustos = (p.deslocamento && p.deslocamento.referencias) || [];
+    var ia = Com_$_("cmItensAuto");
+    if (ia) ia.innerHTML = CM.itensAuto.map(function (i) { return '<div class="cm-faixa"><span class="cm-selo azul">Automático</span><b>' + Com_esc_(i.descricao) + '</b> · ' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '<br><span class="cm-meta">Calculado pelos "Custos da viagem e do frete" abaixo e refeito a cada vez que o rascunho é salvo. ' + Com_esc_(i.detalhe || "") + '</span></div>'; }).join("");
     CM.equipProp = [];
     Com_chamar_("cliente", { clienteId: p.clienteId }, function (r) { CM.equipProp = r.equipamentos.filter(function (e) { return !p.unidadeId || !e.unidadeId || e.unidadeId === p.unidadeId; }); Comercial_desenharItens_(); }, function () {});
     Comercial_desenharItens_();
@@ -894,6 +914,7 @@
   function Comercial_totais_() {
     Comercial_lerItens_();
     var sub = 0, bruto = 0;
+    (CM.itensAuto || []).forEach(function (i) { var t = (Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0); sub += t; bruto += t; });
     CM.itens.forEach(function (i, k) {
       var q = Comercial_num_(i.quantidade), pu = Comercial_num_(i.precoUnitario), pt = Number(i.precoTabela) || 0; sub += q * pu; bruto += q * Math.max(pu, pt || pu);
       var dif = Com_$_("cmItDif" + k); if (!dif) return;
@@ -911,7 +932,116 @@
     var cond = {};
     document.querySelectorAll("[data-cond]").forEach(function (x) { cond[x.getAttribute("data-cond")] = x.value; });
     return { id: p.id, titulo: Com_$_("cmPrTit").value, tipoOrcamento: Com_$_("cmPrTipo") ? Com_$_("cmPrTipo").value : undefined, escopo: Com_$_("cmPrEsc").value, apresentacao: Com_$_("cmPrApr").value, contatoId: Com_$_("cmPrCt").value, descontoGeral: Com_$_("cmPrDesc").value || "0",
-      validadeDias: Com_$_("cmPrVal").value, condicoes: cond, itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "" }; }) };
+      validadeDias: Com_$_("cmPrVal").value, condicoes: cond, deslocamento: Comercial_lerCustos_(), itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "" }; }) };
+  }
+
+  // =========================================================
+  // CUSTOS DA VIAGEM E DO FRETE (29/10/2026, especialista em precificação)
+  // Quem calcula é o servidor (SGO_Comercial_Precificacao.js): a tela lê os campos e mostra o cálculo que volta ao salvar
+  // ("Calcular" salva o rascunho). Valor em branco = valor da política (a dica cinza). Linha em "não se aplica" automático
+  // (0 km, sem pernoite, trecho abaixo do mínimo da Conduta, veículo da empresa) aparece com o motivo e volta marcada "auto".
+  // =========================================================
+  function Comercial_valorBr_(v) { return v === null || v === undefined || v === "" ? "" : String(v).replace(".", ","); }
+  function Comercial_semAcento_(v) { var t = String(v || "").toLowerCase(); try { t = t.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) {} return t.replace(/[^a-z0-9]+/g, " ").trim(); }
+  function Comercial_editorCustos_(p) {
+    var d = p.deslocamento; if (!d || !d.dados) return "";
+    var dd = d.dados, v = dd.viagem || {}, pol = d.politica || {}, sug = d.sugestao || {}, tp = p.tipoOrcamento || "SERVICOS";
+    var exV = tp !== "PRODUTOS" || v.ha === true, exF = tp !== "SERVICOS";
+    var ha = v.ha === true ? "SIM" : v.ha === false ? "NAO" : "";
+    var calc = {}; ((d.calculo && d.calculo.linhas) || []).forEach(function (l) { calc[l.codigo] = l; });
+    var dica = function (x) { return x === null || x === undefined ? "sem valor na política" : "política: " + Comercial_valorBr_(x); };
+    var inp = function (campo, valor, rotulo, ph, extra) { return '<div class="cm-campo"><label>' + Com_esc_(rotulo) + '</label><input data-cvf="' + campo + '"' + (extra || ' inputmode="decimal"') + ' value="' + Com_esc_(Comercial_valorBr_(valor)) + '" placeholder="' + Com_esc_(ph || "") + '"></div>'; };
+    var h = '<div class="cm-caixa" id="cmCustos"><h3>Custos da viagem e do frete (checklist obrigatório)</h3>' +
+      '<p class="cm-meta">Todo custo de campo entra no preço: km rodado (ida e volta), pedágios, alimentação, diárias, hospedagem, o benefício do Programa de conduta de cada colaborador e, fora do veículo da empresa, o combustível ou a passagem. Cada linha precisa de valor ou de "não se aplica" com o motivo; sem isso a proposta não conclui. Valor em branco usa o da política. O cliente vê só "Despesas de deslocamento e estadia" (ou nada, se diluído): o benefício da Conduta nunca aparece com esse nome.</p>';
+    h += Com_campo_("Há viagem para executar o serviço?", '<select id="cmCvHa">' + Com_opcoes_([{ v: "SIM", t: "Sim: calcular os custos da viagem" }, { v: "NAO", t: "Não há viagem (informe o motivo)" }], ha, exV ? "Escolha (obrigatório)" : "Não se aplica: proposta só de produto") + '</select>');
+    h += '<div id="cmCvNao"' + (ha === "NAO" ? "" : " hidden") + '>' + Com_campo_("Por que não há viagem?", '<input id="cmCvMotSem" maxlength="500" value="' + Com_esc_(v.motivoSem || "") + '" placeholder="Ex.: serviço no laboratório da Metrolabs; o cliente envia o equipamento">') + '</div>';
+    var temKm = v.kmTrecho !== null && v.kmTrecho !== undefined, temSug = sug.kmTrecho !== null && sug.kmTrecho !== undefined;
+    var km = temKm ? v.kmTrecho : (temSug ? sug.kmTrecho : ""), kmFonte = temKm ? (v.kmFonte || "DIGITADO") : (sug.kmFonte || "DIGITADO");
+    h += '<div id="cmCvSim"' + (ha === "SIM" ? "" : " hidden") + '>' +
+      '<div class="cm-grade3">' + Com_campo_("Técnicos", '<input id="cmCvTec" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.TECNICO || 0 : 0) + '">') + Com_campo_("Engenheiros", '<input id="cmCvEng" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.ENGENHEIRO || 0 : 0) + '">') +
+      Com_campo_("Transporte", '<select id="cmCvTr">' + Com_opcoes_(Object.keys(d.transportes || {}).map(function (k) { return { v: k, t: d.transportes[k] }; }), v.transporte || "VEICULO_EMPRESA") + '</select>') + '</div>' +
+      '<div class="cm-grade3">' + Com_campo_("Origem", '<input id="cmCvOri" maxlength="200" value="' + Com_esc_(v.origem || pol.origemPadrao || "") + '">') +
+      Com_campo_("Destino (cidade/UF ou endereço)", '<input id="cmCvDest" maxlength="300" list="cmCvRefs" value="' + Com_esc_(v.destino || sug.destino || "") + '"><datalist id="cmCvRefs">' + (d.referencias || []).map(function (r) { return '<option value="' + Com_esc_(r.destino) + '">' + Com_esc_(Comercial_valorBr_(r.km) + " km") + '</option>'; }).join("") + '</datalist>') +
+      Com_campo_("Km do trecho (só a ida)", '<input id="cmCvKm" inputmode="decimal" data-fonte="' + Com_esc_(kmFonte) + '" value="' + Com_esc_(Comercial_valorBr_(km)) + '">', sug.referencia ? "Referência do Programa de conduta: " + sug.referencia + ", " + Comercial_valorBr_(sug.kmTrecho) + " km a partir da sede." : "Sem referência na tabela de distâncias da Conduta: digite o km. 0 = atendimento na mesma cidade.") + '</div>' +
+      '<div class="cm-grade3">' + Com_campo_("Viagens", '<input id="cmCvVg" inputmode="numeric" value="' + Com_esc_(v.viagens || 1) + '">', "Mais de uma para contrato com visitas") + Com_campo_("Dias por viagem", '<input id="cmCvDias" inputmode="numeric" value="' + Com_esc_(v.dias || 1) + '">') + Com_campo_("Noites por viagem", '<input id="cmCvNoi" inputmode="numeric" value="' + Com_esc_(v.noites || 0) + '">') + '</div>';
+    (d.linhas || []).forEach(function (L) {
+      var l = (v.linhas || {})[L.codigo] || {}, c = calc[L.codigo] || {}, auto = !!l.auto, vals;
+      if (L.codigo === "DIARIA" || L.codigo === "HORAS") {
+        var vv = l.valor || {}, ff = l.fonteFuncao || {}, pv = (L.codigo === "DIARIA" ? pol.diariaPessoaDia : pol.horaDeslocamento) || {};
+        vals = '<div class="cm-cv-duo">' + inp("valorTecnico", ff.TECNICO === "VENDEDOR" ? vv.TECNICO : "", "Técnico (R$)", dica(pv.TECNICO)) + inp("valorEngenheiro", ff.ENGENHEIRO === "VENDEDOR" ? vv.ENGENHEIRO : "", "Engenheiro (R$)", dica(pv.ENGENHEIRO)) + '</div>' +
+          (L.codigo === "HORAS" ? inp("horas", l.horasFonte === "VENDEDOR" ? l.horas : "", "Horas por viagem", "cálculo: " + Comercial_valorBr_(l.horas || 0) + " h") : "");
+      } else if (L.codigo === "OUTROS") {
+        vals = '<div class="cm-cv-duo">' + inp("valor", l.valor, "Valor total (R$)", "") + inp("descricao", l.descricao, "O que é", "Ex.: táxi do aeroporto", ' maxlength="200"') + '</div>';
+      } else {
+        var ph = L.codigo === "KM" ? dica(pol.valorKm) : L.codigo === "ALIMENTACAO" ? dica(pol.alimentacaoPessoaDia) : L.codigo === "HOSPEDAGEM" ? dica(pol.hospedagemPessoaNoite) : L.codigo === "CONDUTA" ? "Programa de conduta: " + Comercial_valorBr_(d.beneficio && d.beneficio.valor) : "informe o valor";
+        vals = inp("valor", l.fonte === "VENDEDOR" ? l.valor : "", "Valor (R$)", ph);
+      }
+      var nsa = auto ? '<div class="cm-campo"><label>Não se aplica</label><span class="cm-selo cinza">automático</span></div>'
+        : '<div class="cm-campo"><label class="cm-check"><input type="checkbox" data-cvf="nsa"' + (l.nsa ? " checked" : "") + '> Não se aplica</label></div>';
+      var mot = auto ? '<div class="cm-campo mot"><span class="cm-meta">' + Com_esc_(l.motivo || "") + '</span></div>'
+        : '<div class="cm-campo mot"><label>Motivo (se não se aplica)</label><input data-cvf="motivo" maxlength="300" value="' + Com_esc_(l.nsa ? l.motivo || "" : "") + '"></div>';
+      h += '<div class="cm-cv-linha' + (auto ? " auto" : "") + '" data-cvl="' + Com_esc_(L.codigo) + '" data-auto="' + (auto ? 1 : 0) + '"><div class="nome">' + Com_esc_(L.nome) + '<span>' + Com_esc_(L.unidade + (L.obrigatoria ? "" : " · opcional") + (c.quantidadeTxt ? " · " + c.quantidadeTxt : "")) + '</span></div>' +
+        vals + nsa + mot + '<div class="tot">' + Com_esc_(c.totalTxt || "") + '</div></div>';
+    });
+    h += Com_campo_("Como o custo entra no preço", '<select id="cmCvRep">' + Com_opcoes_(Object.keys(d.repasses || {}).map(function (k) { return { v: k, t: d.repasses[k] }; }), dd.repasse || pol.repassePadrao) + '</select>', 'Item separado: o cliente vê "Despesas de deslocamento e estadia" com o custo mais impostos. Diluído: nenhum item a mais; aumente o preço dos serviços (a tela mostra quanto).') + '</div>';
+    var fr = dd.frete || {};
+    if (exF || Number(fr.valor) > 0 || fr.nsa) h += '<p class="cm-sec">Frete e entrega dos produtos</p><div class="cm-cv-linha"><div class="nome">Frete e entrega<span>custo total da entrega</span></div>' +
+      '<div class="cm-campo"><label>Valor (R$)</label><input data-cff="valor" inputmode="decimal" value="' + Com_esc_(Comercial_valorBr_(fr.valor)) + '"></div>' +
+      '<div class="cm-campo"><label class="cm-check"><input type="checkbox" data-cff="nsa"' + (fr.nsa ? " checked" : "") + '> Não se aplica</label></div>' +
+      '<div class="cm-campo mot"><label>Motivo (se não se aplica)</label><input data-cff="motivo" maxlength="300" value="' + Com_esc_(fr.nsa ? fr.motivo || "" : "") + '" placeholder="Ex.: cliente retira; vai junto com a visita técnica"></div><div class="tot">' + Com_esc_(d.custoFreteTxt || "") + '</div></div>';
+    h += Comercial_resultadoCustos_(d) + '<div class="cm-acoes"><button type="button" class="btn-secondary" id="cmCvCalc"><i class="fas fa-calculator" aria-hidden="true"></i>&nbsp;Calcular (salva o rascunho)</button></div></div>';
+    return h;
+  }
+  /** Resultado do cálculo (o que voltou do servidor): custo, repasse, margem e o que falta no checklist. */
+  function Comercial_resultadoCustos_(d) {
+    var ck = d.checklist || { faltas: [] }, c = d.calculo || {}, dd = d.dados || {};
+    var h = '<div class="cm-faixa cm-cv-res ' + (ck.ok ? "ok" : "erro") + '">' +
+      (c.ha ? '<b>Custo da viagem: ' + Com_esc_(c.custoTxt) + '</b> (' + Com_esc_(c.pessoas + (c.pessoas === 1 ? " pessoa" : " pessoas")) + (c.beneficio ? "; inclui " + Com_esc_(c.beneficioTxt) + " do benefício do Programa de conduta" : "") + ')' : (dd.viagem && dd.viagem.ha === false ? "Sem viagem: " + Com_esc_(dd.viagem.motivoSem || "") : "Viagem ainda não informada.")) +
+      (dd.repasse === "ITEM" && d.precoRepasse ? '<br>Item "Despesas de deslocamento e estadia" na proposta: <b>' + Com_esc_(d.precoRepasseTxt) + '</b> (custo mais impostos, arredondado).' : "") +
+      (dd.repasse === "DILUIDO" && d.diluir ? '<br>Diluído: aumente o preço dos serviços em pelo menos <b>' + Com_esc_(d.diluirTxt) + '</b> (custo mais impostos).' : "") +
+      (d.custoFrete ? '<br>Frete e entrega: ' + Com_esc_(d.custoFreteTxt) + (dd.repasse === "ITEM" ? " (item próprio na proposta)" : "") + '.' : "") +
+      (d.margem ? '<br>Margem: ' + Com_esc_(d.margem.situacaoTxt) + (d.margem.completa ? "" : " (há itens sem custo no catálogo)") + '.' : "") +
+      (ck.ok ? '<br>Checklist de custos completo.' : '<br><b>Falta no checklist (a proposta não conclui):</b><ul style="margin:4px 0 0 18px">' + ck.faltas.map(function (x) { return '<li>' + Com_esc_(x.texto) + '</li>'; }).join("") + '</ul>') +
+      (d.politica && d.politica.incompleta && d.politica.incompleta.length ? '<br><span class="cm-meta">A política de precificação ainda não tem: ' + Com_esc_(d.politica.incompleta.join(", ")) + ' (a Diretoria preenche em Metodologia).</span>' : "") + '</div>';
+    if (d.analiseTxt) {
+      var a = d.analiseTxt, an = d.analise || {};
+      h += '<div class="cm-faixa' + (an.abaixoMin ? " erro" : an.abaixoAlvo ? " aviso" : " ok") + '"><b>Precificação (só gestão):</b> preço ' + Com_esc_(a.total) + ' · custo ' + Com_esc_(a.custoTotal) + ' (itens ' + Com_esc_(a.custoItens) + ', viagem e frete ' + Com_esc_(a.custoDeslocamento) + ') · impostos ' + Com_esc_(a.impostos) + ' (' + Com_esc_(a.impostosPct) + ')' +
+        ' · <b>margem ' + Com_esc_(a.margem) + '</b> (mínima ' + Com_esc_(a.minima) + ', alvo ' + Com_esc_(a.alvo) + ')' + (an.completa ? "" : '. Margem parcial: ' + an.itensSemCusto + ' item(ns) sem custo no catálogo') +
+        (a.precoMinimo ? '. Preço mínimo ' + Com_esc_(a.precoMinimo) + (a.precoAlvo ? ', preço alvo ' + Com_esc_(a.precoAlvo) : '') : '') + (a.naoRepassado && an.naoRepassado > 0.009 ? '. Custo de viagem não repassado (desconto sobre o item): ' + Com_esc_(a.naoRepassado) : '') + '.</div>';
+    }
+    return h;
+  }
+  /** Resumo dos custos fora do rascunho (vendedor, gestão e Financeiro). */
+  function Comercial_resumoCustos_(d) {
+    var c = d.calculo || {};
+    var h = '<p class="cm-sec">Custos da viagem e do frete</p>';
+    if (c.ha) h += '<table class="cm-tabela"><thead><tr><th>Linha</th><th>Quantidade</th><th>Valor</th><th class="n">Total</th></tr></thead><tbody>' + c.linhas.map(function (l) {
+      return '<tr><td data-r="Linha">' + Com_esc_(l.nome) + '</td><td data-r="Quantidade">' + Com_esc_(l.quantidadeTxt) + '</td><td data-r="Valor">' + Com_esc_(l.nsa ? "Não se aplica: " + l.motivo : l.valorTxt) + '</td><td class="n" data-r="Total">' + Com_esc_(l.totalTxt) + '</td></tr>'; }).join("") + '</tbody></table>';
+    return h + Comercial_resultadoCustos_(d);
+  }
+  function Comercial_lerCustos_() {
+    if (!Com_$_("cmCustos")) return undefined;
+    var g = function (id) { var e = Com_$_(id); return e ? e.value : undefined; };
+    var linhas = {};
+    document.querySelectorAll("#cmCustos [data-cvl]").forEach(function (row) {
+      var o = {};
+      row.querySelectorAll("[data-cvf]").forEach(function (x) { o[x.getAttribute("data-cvf")] = x.type === "checkbox" ? x.checked : x.value; });
+      if (row.getAttribute("data-auto") === "1") o.auto = true;
+      linhas[row.getAttribute("data-cvl")] = o;
+    });
+    var frete = {};
+    document.querySelectorAll("#cmCustos [data-cff]").forEach(function (x) { frete[x.getAttribute("data-cff")] = x.type === "checkbox" ? x.checked : x.value; });
+    var km = Com_$_("cmCvKm");
+    return { viagem: { ha: g("cmCvHa"), motivoSem: g("cmCvMotSem"), tecnicos: g("cmCvTec"), engenheiros: g("cmCvEng"), transporte: g("cmCvTr"), origem: g("cmCvOri"), destino: g("cmCvDest"), kmTrecho: g("cmCvKm"),
+      kmFonte: km ? km.getAttribute("data-fonte") || "DIGITADO" : "DIGITADO", viagens: g("cmCvVg"), dias: g("cmCvDias"), noites: g("cmCvNoi"), linhas: linhas }, frete: Object.keys(frete).length ? frete : undefined, repasse: g("cmCvRep") };
+  }
+  function Comercial_ligarCustos_(calcular) {
+    var ha = Com_$_("cmCvHa"); if (!ha) return;
+    ha.onchange = function () { Com_$_("cmCvSim").hidden = ha.value !== "SIM"; Com_$_("cmCvNao").hidden = ha.value !== "NAO"; };
+    var dest = Com_$_("cmCvDest"), km = Com_$_("cmCvKm");
+    if (dest) dest.onchange = function () { var r = (CM.refsCustos || []).filter(function (x) { return Comercial_semAcento_(x.destino) === Comercial_semAcento_(dest.value); })[0]; if (r && km) { km.value = Comercial_valorBr_(r.km); km.setAttribute("data-fonte", "REFERENCIA_CONDUTA"); } };
+    if (km) km.oninput = function () { km.setAttribute("data-fonte", "DIGITADO"); };
+    var bt = Com_$_("cmCvCalc"); if (bt) bt.onclick = calcular;
   }
 
   // =========================================================
@@ -947,14 +1077,18 @@
     var f = CM.filtroCat = CM.filtroCat || { busca: "", tipo: "", categoria: "", situacao: "TODOS" };
     var tipos = Object.keys(ini.tiposItem || {}).map(function (k) { return { v: k, t: ini.tiposItem[k] }; });
     div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + (gere ? "; o custo é opcional e só a gestão vê." : ". A gestão comercial cadastra e altera."),
-      gere ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '') +
+      (gere ? '<button type="button" class="btn-secondary" id="cmReajHist"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i>&nbsp;Histórico de reajustes</button>' : '') +
+      (ini.podePrecificacao ? '<button type="button" class="btn-secondary" id="cmReajustar"><i class="fas fa-percent" aria-hidden="true"></i>&nbsp;Reajustar preços</button>' : '') +
+      (gere ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '')) +
       '<div class="cm-filtros" role="search"><div style="flex:2 1 260px"><label for="cmCatBusca">Buscar no catálogo</label><input id="cmCatBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria (ex.: fonte 9v, CRM-DF8F)" value="' + Com_esc_(f.busca) + '"></div>' +
       '<div><label for="cmCatTipo">Tipo</label><select id="cmCatTipo">' + Com_opcoes_(tipos, f.tipo, "Todos") + '</select></div>' +
       '<div><label for="cmCatCateg">Categoria</label><select id="cmCatCateg">' + Com_opcoes_(f.categoria ? [f.categoria] : [], f.categoria, "Todas") + '</select></div>' +
-      (gere ? '<div><label for="cmCatSit">Situação</label><select id="cmCatSit">' + Com_opcoes_([{ v: "TODOS", t: "Ativos e arquivados" }, { v: "ATIVOS", t: "Só ativos" }, { v: "ARQUIVADOS", t: "Só arquivados" }, { v: "DUPLICADOS", t: "Possíveis duplicados (mesmo nome)" }], f.situacao) + '</select></div>' : '') +
+      (gere ? '<div><label for="cmCatSit">Situação</label><select id="cmCatSit">' + Com_opcoes_([{ v: "TODOS", t: "Ativos e arquivados" }, { v: "ATIVOS", t: "Só ativos" }, { v: "ARQUIVADOS", t: "Só arquivados" }, { v: "DUPLICADOS", t: "Possíveis duplicados (mesmo nome)" }, { v: "SEM_REAJUSTE", t: "Sem reajuste há mais de " + (CM.reajusteMeses || 12) + " meses" }], f.situacao) + '</select></div>' : '') +
       '<div><button type="button" class="btn-secondary" id="cmCatLimpar">Limpar</button></div></div>' +
       '<p class="cm-meta" id="cmCatInfo" aria-live="polite"></p><div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
     if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
+    if (Com_$_("cmReajustar")) Com_$_("cmReajustar").onclick = function () { Comercial_reajusteJanela_(); };
+    if (Com_$_("cmReajHist")) Com_$_("cmReajHist").onclick = function () { Comercial_reajustesHistorico_(); };
     var ler = function () { f.busca = Com_$_("cmCatBusca").value; f.tipo = Com_$_("cmCatTipo").value; f.categoria = Com_$_("cmCatCateg").value; if (Com_$_("cmCatSit")) f.situacao = Com_$_("cmCatSit").value; Comercial_carregarCatalogo_(); };
     var t = null;
     Com_$_("cmCatBusca").oninput = function () { clearTimeout(t); t = setTimeout(ler, 350); };
@@ -970,15 +1104,17 @@
       var alvo = Com_$_("cmCat"); if (!alvo) return;
       var sel = Com_$_("cmCatCateg");
       if (sel) sel.innerHTML = Com_opcoes_(r.categorias || [], f.categoria, "Todas");
+      CM.catCategorias = r.categorias || []; CM.reajusteMeses = r.reajusteMeses || 12;
       var filtrando = !!(f.busca || f.tipo || f.categoria || (gere && f.situacao && f.situacao !== "TODOS"));
       var inf = Com_$_("cmCatInfo");
       if (inf) inf.textContent = !r.total ? "" : (filtrando ? (r.encontrados === 1 ? "1 item encontrado" : Number(r.encontrados).toLocaleString("pt-BR") + " itens encontrados") + " de " + Number(r.total).toLocaleString("pt-BR") + " no catálogo" : Number(r.total).toLocaleString("pt-BR") + " itens no catálogo") +
         (r.limitado ? ". Mostrando os " + r.produtos.length + " mais parecidos com a busca; escreva mais uma palavra do nome ou o código para afinar." : (r.total ? "." : "")) +
-        (gere && r.duplicados && f.situacao !== "DUPLICADOS" ? " Atenção: " + r.duplicados + (r.duplicados === 1 ? " nome aparece" : " nomes aparecem") + " em mais de um item ativo (veja em Situação > Possíveis duplicados e arquive o que sobra)." : "");
+        (gere && r.duplicados && f.situacao !== "DUPLICADOS" ? " Atenção: " + r.duplicados + (r.duplicados === 1 ? " nome aparece" : " nomes aparecem") + " em mais de um item ativo (veja em Situação > Possíveis duplicados e arquive o que sobra)." : "") +
+        (gere && r.semReajuste && f.situacao !== "SEM_REAJUSTE" ? " " + Number(r.semReajuste).toLocaleString("pt-BR") + (r.semReajuste === 1 ? " item está" : " itens estão") + " sem reajuste há mais de " + r.reajusteMeses + " meses (Situação > Sem reajuste)." : "");
       if (!r.total) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (gere ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
       if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum item' + (f.busca ? ' com "' + Com_esc_(f.busca) + '"' : '') + ' com estes filtros. A busca ignora acentos e maiúsculas, aceita parte das palavras e procura no código, no nome, na descrição e na categoria. Confira a grafia, mude o tipo ou a categoria, ou toque em "Limpar".' + (gere ? ' Se o item não existe, cadastre em "Novo item".' : '') + '</div>'; return; }
       alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + ((ini.gestao || ini.catalogo) ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
-        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.duplicado ? ' <span class="cm-selo laranja" title="Outro item ativo tem o mesmo nome">mesmo nome de outro item</span>' : '') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
+        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.duplicado ? ' <span class="cm-selo laranja" title="Outro item ativo tem o mesmo nome">mesmo nome de outro item</span>' : '') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + (p.precoDesde ? '<br><span class="cm-meta">desde ' + Com_esc_(p.precoDesde) + '</span>' : '') + (p.semReajuste ? '<br><span class="cm-selo laranja">sem reajuste</span>' : '') + '</td>' +
           ((ini.gestao || ini.catalogo) ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
       }).join("") + '</tbody></table>';
       alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
@@ -999,6 +1135,123 @@
       Com_chamar_("salvarProduto", { id: p.id || "", codigo: Com_$_("cmPdCod").value, tipo: Com_$_("cmPdTipo").value, nome: Com_$_("cmPdNome").value, descricao: Com_$_("cmPdDesc").value, unidade: Com_$_("cmPdUn").value, preco: Com_$_("cmPdPreco").value, custo: Com_$_("cmPdCusto").value, categoria: Com_$_("cmPdCat").value },
         function () { ov.remove(); Comercial_renderCatalogo_(Com_corpo_()); }, function (m) { Com_msg_("cmPdMsg", m); });
     };
+  }
+
+  // =========================================================
+  // POLÍTICA DE PRECIFICAÇÃO, REAJUSTE DO CATÁLOGO E O QUADRO DO PAINEL (29/10/2026)
+  // Servidor: SGO_Comercial_Precificacao.js. A política só é editada pela Diretoria e pelo Administrador (o servidor confere).
+  // =========================================================
+  /** Número da tela para a política: em branco = null (sem padrão); texto que não é número segue como veio (o servidor recusa e diz o quê). */
+  function Comercial_numOuNulo_(t) {
+    var s = String(t == null ? "" : t).trim().replace(/R\$|%|\s/g, "");
+    if (!s) return null;
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(",", ".");
+    var n = Number(s);
+    return isFinite(n) ? n : String(t);
+  }
+  function Comercial_caixaPrecificacao_(r) {
+    var p = r.metodologia.precificacao; if (!p) return "";
+    var ed = !!r.podeEditarPrecificacao, dis = ed ? "" : " disabled", x = r.precificacao || {}, b = x.beneficio || {};
+    var res = !!r.precificacaoReservada;
+    var num = function (id, v, rot, aj, reservado) { return Com_campo_(rot, '<input id="' + id + '" inputmode="decimal" value="' + Com_esc_(reservado ? "" : Comercial_valorBr_(v)) + '"' + (reservado ? ' placeholder="só a gestão vê"' : '') + dis + '>', aj); };
+    var dia = p.diariaPessoaDia || {}, hora = p.horaDeslocamento || {}, bc = p.beneficioConduta || {};
+    return '<div class="cm-caixa" id="cmMPrec"><h3>Política de precificação (acréscimos e reajuste)</h3>' +
+      '<p class="cm-meta">Vale para os custos da viagem e do frete das propostas, para a margem (que trava abaixo da mínima e vai para a Diretoria) e para o alerta de reajuste do catálogo. Campo em branco = sem padrão: o vendedor informa o valor em cada proposta e a gestora aponta a política incompleta. ' +
+      (ed ? 'Cada gravação é uma versão nova da metodologia, com o motivo.' : 'Só a Diretoria e o Administrador mudam esta política.') + '</p>' +
+      (x.incompleta && x.incompleta.length && !res ? '<div class="cm-faixa aviso">Falta preencher: ' + Com_esc_(x.incompleta.join(", ")) + '.</div>' : '') +
+      '<p class="cm-sec">Viagem</p><div class="cm-grade3">' + Com_campo_("Origem padrão", '<input id="cmPrOri" maxlength="200" value="' + Com_esc_(p.origemPadrao || "") + '"' + dis + '>') +
+      num("cmPrKm", p.valorKm, "Valor por km rodado (R$)", "Ida e volta = km do trecho x 2. Cobre o veículo da empresa (combustível, desgaste, manutenção).") + num("cmPrVel", p.velocidadeMediaKmh, "Velocidade média (km/h)", "Estima as horas de deslocamento") + '</div>' +
+      '<div class="cm-grade3">' + num("cmPrAli", p.alimentacaoPessoaDia, "Alimentação por pessoa por dia (R$)") + num("cmPrHosp", p.hospedagemPessoaNoite, "Hospedagem por pessoa por noite (R$)") + Com_campo_("Como o custo entra no preço (padrão)", '<select id="cmPrRep"' + dis + '>' + Com_opcoes_(Object.keys(x.repasses || { ITEM: "Item separado", DILUIDO: "Diluído" }).map(function (k) { return { v: k, t: (x.repasses || {})[k] || k }; }), p.repassePadrao || "ITEM") + '</select>') + '</div>' +
+      '<div class="cm-grade2">' + num("cmPrDiaT", dia.TECNICO, "Diária do técnico por dia (R$)") + num("cmPrDiaE", dia.ENGENHEIRO, "Diária do engenheiro por dia (R$)") + num("cmPrHrT", hora.TECNICO, "Hora de deslocamento do técnico (R$, opcional)") + num("cmPrHrE", hora.ENGENHEIRO, "Hora de deslocamento do engenheiro (R$, opcional)") + '</div>' +
+      '<p class="cm-sec">Benefício do Programa de conduta</p><p class="cm-txt">Em vigor: ' + Com_esc_("R$ " + Comercial_valorBr_(b.valor)) + ' por colaborador por viagem, a partir de ' + Com_esc_(Comercial_valorBr_(b.kmMinimo)) + ' km de trecho (fonte: ' + Com_esc_(b.fonte || "") + '). Quem muda é o Programa de conduta (parâmetros do programa). Os campos abaixo só valem se o programa não responder.</p>' +
+      '<div class="cm-grade2">' + num("cmPrBenV", bc.valorPorColaborador, "Reserva: valor por colaborador (R$)") + num("cmPrBenK", bc.kmMinimoTrecho, "Reserva: km mínimo do trecho") + '</div>' +
+      '<p class="cm-sec">Acréscimos e margem</p><div class="cm-grade2">' + num("cmPrImp", p.impostosPct, "Impostos sobre o faturamento (%)", "", res) + num("cmPrMin", p.margemMinPct, "Margem mínima depois de impostos (%)", "Abaixo dela, só a Diretoria aprova", res) +
+      num("cmPrAlvo", p.margemAlvoPct, "Margem alvo (%)", "", res) + num("cmPrMDes", p.margemDeslocamentoPct, "Margem sobre o deslocamento (%)", "0 = repassa só o custo e os impostos", res) + '</div>' +
+      '<div class="cm-grade2">' + num("cmPrArr", p.arredondarPara, "Arredondar o item de deslocamento para cima a múltiplos de (R$)", "0 = centavos") + num("cmPrReaj", p.reajusteAlertaMeses, "Avisar item do catálogo sem reajuste há mais de (meses)") + '</div>' +
+      Com_campo_("Texto da política (a gestora usa)", '<textarea id="cmPrTxt" style="min-height:80px"' + dis + '>' + Com_esc_(p.texto || "") + '</textarea>') + '</div>';
+  }
+  function Comercial_lerPrecificacao_(atual) {
+    var v = function (id) { var el = Com_$_(id); return el ? el.value : ""; }, n = Comercial_numOuNulo_;
+    return Object.assign({}, atual || {}, { origemPadrao: v("cmPrOri"), valorKm: n(v("cmPrKm")), velocidadeMediaKmh: n(v("cmPrVel")), alimentacaoPessoaDia: n(v("cmPrAli")), hospedagemPessoaNoite: n(v("cmPrHosp")),
+      diariaPessoaDia: { TECNICO: n(v("cmPrDiaT")), ENGENHEIRO: n(v("cmPrDiaE")) }, horaDeslocamento: { TECNICO: n(v("cmPrHrT")), ENGENHEIRO: n(v("cmPrHrE")) },
+      beneficioConduta: { valorPorColaborador: n(v("cmPrBenV")), kmMinimoTrecho: n(v("cmPrBenK")) }, impostosPct: n(v("cmPrImp")), margemMinPct: n(v("cmPrMin")), margemAlvoPct: n(v("cmPrAlvo")),
+      margemDeslocamentoPct: n(v("cmPrMDes")) === null ? 0 : n(v("cmPrMDes")), arredondarPara: n(v("cmPrArr")), repassePadrao: v("cmPrRep") || "ITEM", reajusteAlertaMeses: n(v("cmPrReaj")), texto: v("cmPrTxt") });
+  }
+
+  /** Reajuste do catálogo (Diretoria): seleção, percentual, índice, vigência, prévia e aplicar. */
+  function Comercial_reajusteJanela_() {
+    var tipos = Object.keys(CM.ini.tiposItem || {}).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
+    var meses = CM.reajusteMeses || 12;
+    var ov = Com_modal_("Reajustar preços do catálogo",
+      '<p class="cm-meta">O reajuste muda o preço de venda dos itens ativos escolhidos. As propostas já salvas guardam o preço antigo. Veja a prévia antes de aplicar; o último reajuste pode ser desfeito em "Histórico de reajustes".</p>' +
+      Com_campo_("Quais itens", '<select id="cmRjModo">' + Com_opcoes_([{ v: "TODOS", t: "Todos os itens ativos" }, { v: "TIPO", t: "Por tipo" }, { v: "CATEGORIA", t: "Por categoria" }, { v: "BUSCA", t: "Pela busca (nome ou código)" }, { v: "SEM_REAJUSTE", t: "Os sem reajuste há mais de " + meses + " meses" }], "TODOS") + '</select>') +
+      '<div id="cmRjTipoC" hidden>' + Com_campo_("Tipo", '<select id="cmRjTipo">' + Com_opcoes_(tipos, "SERVICO") + '</select>') + '</div>' +
+      '<div id="cmRjCatC" hidden>' + Com_campo_("Categoria", '<select id="cmRjCat">' + Com_opcoes_(CM.catCategorias || [], "", "Escolha") + '</select>') + '</div>' +
+      '<div id="cmRjBusC" hidden>' + Com_campo_("Busca", '<input id="cmRjBusca" maxlength="120" placeholder="Ex.: qualificação autoclave">') + '</div>' +
+      '<div class="cm-grade3">' + Com_campo_("Percentual (%)", '<input id="cmRjPct" inputmode="decimal" placeholder="Ex.: 4,5">', "Negativo para redução") + Com_campo_("Índice (opcional)", '<input id="cmRjInd" maxlength="120" placeholder="Ex.: IPCA 12 meses">') +
+      Com_campo_("Vigência", '<input id="cmRjVig" type="date" value="' + Com_hojeIso_(0) + '">', "Hoje aplica agora; data futura agenda") + '</div>' +
+      '<div class="cm-grade2">' + Com_campo_("Arredondar o preço novo", '<select id="cmRjArr">' + Com_opcoes_([{ v: "0.01", t: "Centavos" }, { v: "1", t: "R$ 1,00" }, { v: "5", t: "R$ 5,00" }, { v: "10", t: "R$ 10,00" }], "0.01") + '</select>') +
+      Com_campo_("Motivo (obrigatório)", '<input id="cmRjMot" maxlength="500" placeholder="Ex.: reajuste anual dos serviços pelo IPCA">') + '</div>' +
+      '<div id="cmRjMsg"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmRjPrev">Ver a prévia</button></div><div id="cmRjPrevia"></div>', "", 760);
+    var modo = Com_$_("cmRjModo");
+    modo.onchange = function () { Com_$_("cmRjTipoC").hidden = modo.value !== "TIPO"; Com_$_("cmRjCatC").hidden = modo.value !== "CATEGORIA"; Com_$_("cmRjBusC").hidden = modo.value !== "BUSCA"; Com_$_("cmRjPrevia").innerHTML = ""; };
+    var dados = function () { return { selecao: { modo: modo.value, tipo: Com_$_("cmRjTipo").value, categoria: Com_$_("cmRjCat").value, busca: Com_$_("cmRjBusca").value }, percentual: Com_$_("cmRjPct").value, indice: Com_$_("cmRjInd").value,
+      vigencia: Com_$_("cmRjVig").value, arredondarPara: Com_$_("cmRjArr").value, motivo: Com_$_("cmRjMot").value }; };
+    Com_$_("cmRjPrev").onclick = function () {
+      var d = dados();
+      Com_msg_("cmRjMsg", "");
+      Com_chamar_("reajustePrevia", d, function (r) {
+        var alvo = Com_$_("cmRjPrevia"); if (!alvo) return;
+        alvo.innerHTML = '<div class="cm-faixa">' + Com_esc_(r.qtd + (r.qtd === 1 ? " item" : " itens")) + ' com ' + Com_esc_(r.percentualTxt) + ' · soma dos preços de ' + Com_esc_(r.somaAntesTxt) + ' para ' + Com_esc_(r.somaDepoisTxt) + ' · vigência ' + Com_esc_(r.vigencia) + (r.agendado ? ' (agendado: a rotina aplica no dia)' : ' (aplica agora)') +
+          (r.ignorados ? '. ' + r.ignorados + ' item(ns) sem preço ficam de fora' : '') + (r.mostrando < r.qtd ? '. Mostrando os ' + r.mostrando + ' primeiros' : '') + '.</div>' +
+          '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th class="n">Preço atual</th><th class="n">Preço novo</th><th>Desde</th></tr></thead><tbody>' + r.linhas.map(function (x) {
+            return '<tr><td data-r="Código">' + Com_esc_(x.codigo) + '</td><td data-r="Nome">' + Com_esc_(x.nome) + '</td><td class="n" data-r="Atual">' + Com_esc_(x.precoAtualTxt) + '</td><td class="n" data-r="Novo"><b>' + Com_esc_(x.precoNovoTxt) + '</b></td><td data-r="Desde">' + Com_esc_(x.desde) + '</td></tr>'; }).join("") + '</tbody></table>' +
+          '<div class="cm-acoes"><button type="button" class="btn-primary" id="cmRjOk">' + (r.agendado ? "Agendar o reajuste" : "Aplicar o reajuste") + '</button></div>';
+        Com_$_("cmRjOk").onclick = function () {
+          if (!confirm((r.agendado ? "Agendar" : "Aplicar") + " o reajuste de " + r.percentualTxt + " em " + r.qtd + (r.qtd === 1 ? " item" : " itens") + "?")) return;
+          Com_chamar_("reajusteAplicar", Object.assign(dados(), { marca: r.marca }), function (x) { ov.remove(); alert(x.message); Comercial_carregarCatalogo_(); }, function (m) { Com_msg_("cmRjMsg", m); }, { carregando: "Aplicando o reajuste…" });
+        };
+      }, function (m) { Com_$_("cmRjPrevia").innerHTML = ""; Com_msg_("cmRjMsg", m); }, { carregando: "Montando a prévia…" });
+    };
+  }
+
+  /** Histórico dos reajustes e "desfazer o último" (Diretoria). */
+  function Comercial_reajustesHistorico_() {
+    var ov = Com_modal_("Histórico de reajustes", '<div id="cmRjHist"><div class="cm-vazio">Carregando…</div></div>', "", 760);
+    var carregar = function () {
+      Com_chamar_("reajustes", {}, function (r) {
+        var alvo = Com_$_("cmRjHist"); if (!alvo) return;
+        if (!r.lotes.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum reajuste em lote ainda. Itens sem reajuste há mais de ' + r.alertaMeses + ' meses aparecem em Situação > Sem reajuste.</div>'; return; }
+        var sit = function (l) { return Object.keys(l.situacoes).map(function (k) { return { APLICADO: "aplicado", AGENDADO: "agendado", DESFEITO: "desfeito", CANCELADO: "cancelado", MANTIDO: "mantido (preço mudou depois)", IGNORADO: "ignorado (item arquivado)" }[k] + ": " + l.situacoes[k]; }).join(" · "); };
+        alvo.innerHTML = (r.desfazivel ? '<div class="cm-acoes" style="margin-bottom:10px"><button type="button" class="btn-secondary" id="cmRjDesf">Desfazer o último reajuste (' + Com_esc_(r.desfazivel) + ')</button></div><div id="cmRjDMsg"></div>' : '') +
+          r.lotes.map(function (l) { return '<details class="cm-caixa"><summary><b>' + Com_esc_(l.lote) + '</b> · ' + Com_esc_(l.percentualTxt) + (l.indice ? ' (' + Com_esc_(l.indice) + ')' : '') + ' · ' + l.qtd + ' item(ns) · vigência ' + Com_esc_(l.vigencia) + ' · ' + Com_esc_(l.em) + ' por ' + Com_esc_(l.por) + '</summary>' +
+            '<p class="cm-txt">Motivo: ' + Com_esc_(l.motivo) + '<br>' + Com_esc_(sit(l)) + (l.desfeitoEm ? '<br>Desfeito em ' + Com_esc_(l.desfeitoEm) + ' por ' + Com_esc_(l.desfeitoPor) : '') + '</p>' +
+            '<table class="cm-tabela"><tbody>' + l.itens.map(function (i) { return '<tr><td data-r="Código">' + Com_esc_(i.codigo) + '</td><td data-r="Nome">' + Com_esc_(i.nome) + '</td><td class="n" data-r="De">' + Com_esc_(i.de) + '</td><td class="n" data-r="Para">' + Com_esc_(i.para) + '</td></tr>'; }).join("") + '</tbody></table></details>'; }).join("");
+        var bt = Com_$_("cmRjDesf");
+        if (bt) bt.onclick = function () {
+          var m = window.prompt("Por que desfazer o " + r.desfazivel + "? (os itens voltam ao preço anterior; item com preço mudado depois fica como está)");
+          if (m) Com_chamar_("reajusteDesfazer", { lote: r.desfazivel, motivo: m }, function (x) { alert(x.message); carregar(); Comercial_carregarCatalogo_(); }, function (e) { Com_msg_("cmRjDMsg", e); });
+        };
+      }, function (m) { Com_msg_("cmRjHist", m); });
+    };
+    carregar();
+  }
+
+  /** Quadro "Precificação e estratégia" do Painel (gestão). */
+  function Comercial_quadroPrecificacao_(q) {
+    if (q.erro) return '<div class="cm-faixa erro">Precificação e estratégia: ' + Com_esc_(q.erro) + '</div>';
+    var kpi = function (v, t, c) { return '<div class="cm-kpi ' + (c || "") + '"><span class="v">' + Com_esc_(v) + '</span><span class="r">' + Com_esc_(t) + '</span></div>'; };
+    return '<div class="cm-caixa"><h3>Precificação e estratégia</h3><p class="cm-meta">Propostas enviadas no mês (a fotografia gravada ao concluir) e o catálogo de agora. Margem depois de impostos e dos custos da viagem; mínima ' + Com_esc_(q.margemMinTxt) + ', alvo ' + Com_esc_(q.margemAlvoTxt) + '.</p>' +
+      '<div class="cm-kpis">' + kpi(q.margemMediaTxt, "Margem média (" + q.comMargem + " com custo completo)") + kpi(String(q.abaixoMin.length), "Enviadas abaixo da margem mínima", q.abaixoMin.length ? "critico" : "ok") +
+      kpi(q.custoViagemTxt, "Custo de viagem nas enviadas (" + q.viagens + ")") + kpi(q.repassadoItemTxt, "Repassado em item próprio", "ok") + kpi(q.diluidoTxt, "Diluído no preço dos serviços") +
+      kpi(q.naoRepassadoTxt, "Custo de viagem não repassado", q.naoRepassado > 0 ? "critico" : "ok") + kpi(q.beneficioTxt, "Benefício da Conduta previsto (custo interno)") +
+      kpi(String(q.semReajuste), "Itens sem reajuste há mais de " + q.reajusteMeses + " meses", q.semReajuste ? "aviso" : "ok") + '</div>' +
+      (q.semCalculo ? '<p class="cm-txt">' + q.semCalculo + ' proposta(s) de serviço enviada(s) sem o cálculo da viagem (anteriores ao checklist ou sem registro).</p>' : '') +
+      (q.abertasComProblema ? '<p class="cm-txt">' + q.abertasComProblema + ' proposta(s) em andamento com problema de precificação (veja o panorama em Hoje).</p>' : '') +
+      (q.reajustesAgendados ? '<p class="cm-txt">Reajustes agendados: ' + q.reajustesAgendados + ' item(ns).</p>' : '') +
+      (q.abaixoMin.length ? '<p class="cm-sec">Abaixo da margem mínima</p>' + q.abaixoMin.map(function (x) { return '<p class="cm-txt">' + Com_esc_(x.rotulo + " · " + x.cliente + " · margem " + x.margemTxt + (x.decisao ? " · decisão de " + x.decisao : "")) + '</p>'; }).join("") : '') +
+      (q.estrategia.length ? '<p class="cm-sec">O que a especialista recomenda</p><ul style="margin:0 0 0 18px;font-size:13px">' + q.estrategia.map(function (x) { return '<li>' + Com_esc_(x) + '</li>'; }).join("") + '</ul>' : '<p class="cm-meta">Nada a ajustar pelas regras de precificação neste mês.</p>') + '</div>';
   }
 
   // =========================================================
@@ -1027,6 +1280,7 @@
         i.funil.map(function (e) { return '<tr><td data-r="Funil">' + Com_esc_(e.funil) + '</td><td data-r="Etapa">' + Com_esc_(e.etapa) + ' (' + e.probabilidade + '%)</td><td class="n" data-r="Oportunidades">' + e.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(e.valor)) + '</td><td class="n" data-r="Ponderado">' + Com_esc_(Comercial_moeda_(e.ponderado)) + '</td></tr>'; }).join("") + '</tbody></table></div>';
       var perdas = i.perdasPorMotivo.filter(function (m) { return m.qtd; });
       h += '<div class="cm-caixa"><h3>Perdas por motivo</h3>' + (perdas.length ? '<table class="cm-tabela"><tbody>' + perdas.map(function (m) { return '<tr><td data-r="Motivo">' + Com_esc_(m.motivo) + '</td><td class="n" data-r="Quantidade">' + m.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(m.valor)) + '</td></tr>'; }).join("") + '</tbody></table>' : '<p class="cm-meta">Nenhuma perda no mês.</p>') + '</div>';
+      if (r.precificacao) h += Comercial_quadroPrecificacao_(r.precificacao);
       h += '<div class="cm-caixa"><h3>Propostas</h3><p class="cm-txt">Enviadas ' + i.propostas.enviadas + ' · aprovadas ' + i.propostas.aprovadas + ' · recusadas ' + i.propostas.recusadas + ' · vencidas sem resposta ' + i.propostas.vencidas + ' · desconto médio ' + Com_esc_(i.propostas.descontoMedioTxt) + ' · tempo médio até a 1ª proposta ' + Com_esc_(i.tempoPrimeiraPropostaTxt) + '</p></div>';
       if (i.porVendedor && i.porVendedor.length) h += '<div class="cm-caixa"><h3>Por vendedor</h3><table class="cm-tabela"><thead><tr><th>Vendedor</th><th class="n">Abertas</th><th class="n">Sem próxima ação</th><th class="n">Paradas</th><th class="n">Ganhas</th><th class="n">Valor ganho</th><th class="n">Perdidas</th></tr></thead><tbody>' +
         i.porVendedor.map(function (v) { return '<tr><td data-r="Vendedor"><b>' + Com_esc_(v.nome) + '</b></td><td class="n" data-r="Abertas">' + v.abertas + '</td><td class="n" data-r="Sem próxima ação">' + v.semProxima + '</td><td class="n" data-r="Paradas">' + v.paradas + '</td><td class="n" data-r="Ganhas">' + v.ganhas + '</td><td class="n" data-r="Valor ganho">' + Com_esc_(Comercial_moeda_(v.valorGanho)) + '</td><td class="n" data-r="Perdidas">' + v.perdidas + '</td></tr>'; }).join("") + '</tbody></table></div>';
@@ -1038,7 +1292,7 @@
   // METODOLOGIA (a "cartilha" da gestora comercial)
   // =========================================================
   function Comercial_renderMetodologia_(div) {
-    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Metodologia comercial", "As regras que a gestora comercial segue: funis e etapas, qualificação, cadência, estratégias, objeções, política de desconto, modelo da proposta e pós-venda. Quem escreve é a gestão; cada versão fica no histórico.") + '<div id="cmMet"><div class="cm-vazio">Carregando…</div></div></div>';
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Metodologia comercial", "As regras que a gestora comercial segue: funis e etapas, qualificação, cadência, estratégias, objeções, política de precificação e de desconto, modelo da proposta e pós-venda. Quem escreve é a gestão; cada versão fica no histórico.") + '<div id="cmMet"><div class="cm-vazio">Carregando…</div></div></div>';
     Com_chamar_("metodologia", {}, function (r) { Comercial_desenharMetodologia_(r); }, function (m) { Com_msg_("cmMet", m); });
   }
   function Comercial_desenharMetodologia_(r) {
@@ -1066,6 +1320,7 @@
     h += '<div class="cm-caixa"><h3>Estratégias, objeções e mensagens</h3>' + Com_campo_("Estratégias quando o cliente não responde (código | título | texto)", ta("cmMEstr", m.estrategias.map(function (e) { return e.codigo + " | " + e.titulo + " | " + e.texto; }).join("\n"), 120)) +
       Com_campo_("Objeções (objeção | resposta)", ta("cmMObj", m.objecoes.map(function (o) { return o.objecao + " | " + o.resposta; }).join("\n"), 120)) +
       Object.keys(m.modelosMensagem).map(function (k) { return Com_campo_("Modelo de mensagem: " + k + " (use {nome}, {assunto}, {eu}, {proposta})", ta("cmMMsg_" + k, m.modelosMensagem[k], 70)); }).join("") + '</div>';
+    h += Comercial_caixaPrecificacao_(r);
     h += '<div class="cm-caixa"><h3>Política de desconto</h3><div class="cm-grade2">' + num("cmMDesc", m.politica.descontoMaxPct, "Desconto máximo sem aprovação (%)") + num("cmMMarg", m.politica.margemMinPct, "Margem mínima quando o item tem custo (%)", "0 = não confere margem") + '</div>' + Com_campo_("Texto da política", ta("cmMPolTxt", m.politica.texto, 70)) + '</div>';
     var pr = m.proposta;
     h += '<div class="cm-caixa"><h3>Modelo da proposta</h3><p class="cm-meta">Quando o modelo oficial da empresa chegar, os textos entram aqui. Valem para as propostas novas.</p>' + num("cmMVal", pr.validadeDias, "Validade padrão (dias)") + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
@@ -1119,6 +1374,7 @@
         n.proposta.validadeDias = Number(v("cmMVal")); n.proposta.apresentacao = v("cmMPApr"); Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta.condicoes[k] = v("cmMPC_" + k); }); n.proposta.responsabilidades = v("cmMPResp"); n.proposta.textoAceite = v("cmMPAceite");
         ["Produto", "Misto"].forEach(function (x) { n.proposta["apresentacao" + x] = v("cmMPApr" + x); n.proposta["condicoes" + x] = {}; Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta["condicoes" + x][k] = v("cmMPC" + x + "_" + k); }); n.proposta["responsabilidades" + x] = v("cmMPResp" + x); n.proposta["textoAceite" + x] = v("cmMPAceite" + x); });
         if (r.podeEditarTermos) { n.proposta.termos = v("cmMPTermos"); n.proposta.termosConcordancia = v("cmMPTermosConc"); }
+        if (r.podeEditarPrecificacao) n.precificacao = Comercial_lerPrecificacao_(m.precificacao);
         Object.keys(CM.ini.setores).forEach(function (s) { n.posVenda[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; n.posVenda[s].checklist = ls("cmMPVC_" + s); n.posVenda.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
         n.posVenda.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;
         n.gestores = Array.prototype.map.call(document.querySelectorAll("[data-gestor]:checked"), function (x) { return x.getAttribute("data-gestor"); });

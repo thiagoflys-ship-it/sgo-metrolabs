@@ -873,7 +873,8 @@ function Assistencia_doPedidoComercial_(p, o) {
     Ast_memoLimpar_();
     if (!Ast_ligada_()) return { ok: false, motivo: 'Assistência do SGO+ desligada' };
     Ast_garantirAbas_();
-    var itens = Ast_json_(p.ITENS_JSON, []).filter(function (i) { return Ast_up_(i.tipo) !== 'PRODUTO'; });
+    // 29/10/2026: o item automático "Despesas de deslocamento e estadia" (SGO_Comercial_Precificacao.js) não é serviço técnico
+    var itens = Ast_json_(p.ITENS_JSON, []).filter(function (i) { return Ast_up_(i.tipo) !== 'PRODUTO' && !i.auto; });
     var comEq = itens.filter(function (i) { return Ast_s_(i.equipamentoId); });
     var eqId = comEq.length === 1 ? Ast_s_(comEq[0].equipamentoId) : '';
     var desc = itens.map(function (i) { return (i.quantidade || 1) + ' × ' + Ast_s_(i.descricao) + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : ''); }).join('; ');

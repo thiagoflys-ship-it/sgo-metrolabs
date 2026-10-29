@@ -8,7 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { ambiente, oportunidadeDeTeste } = require('./_comercial_ambiente.cjs');
+const { ambiente, oportunidadeDeTeste, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
@@ -27,7 +27,7 @@ const CLAUSULAS_CRM = 'Observações\n1.\tDO OBJETO: Contratação de Comerciali
 function proposta(amb, extra) {
   const { oportunidade } = oportunidadeDeTeste(amb);
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
-  ok(amb.api('s_vera', 'salvarProposta', Object.assign({ id: np.proposta.id, escopo: '',
+  ok(amb.api('s_vera', 'salvarProposta', Object.assign({ deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: '',
     itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00', equipamentoId: 'eq1' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'A combinar', garantia: '90 dias' } }, extra || {})));
   return { oportunidade, id: np.proposta.id };
 }
@@ -133,7 +133,7 @@ test('item da proposta escolhe do catálogo: preço de tabela guardado, preço d
   assert.equal(cat.produtos[0].custo, undefined, 'vendedor não vê o custo');
   const { oportunidade } = oportunidadeDeTeste(amb);
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
-  const s = ok(amb.api('s_vera', 'salvarProposta', { id: np.proposta.id, escopo: '', condicoes: { pagamento: 'Boleto', prazoExecucao: '10 dias' },
+  const s = ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: '', condicoes: { pagamento: 'Boleto', prazoExecucao: '10 dias' },
     itens: [{ produtoId: prod.id, descricao: 'Fonte chaveada 9V 2A', quantidade: 2, unidade: 'un', precoUnitario: '60,00' },
       { descricao: 'Instalação no local', tipo: 'SERVICO', quantidade: 1, precoUnitario: '150,00' }] }));
   const itens = JSON.parse(amb.tabelas.COM_PROPOSTAS.find((x) => x.ID === np.proposta.id).ITENS_JSON);
@@ -151,7 +151,7 @@ test('item da proposta escolhe do catálogo: preço de tabela guardado, preço d
   ok(amb.api('s_vera', 'concluirProposta', { id: np.proposta.id }));
   // abaixo da tabela conta como desconto na política (limite 15%): 40,00 sobre 55,00 = 27%
   const np2 = ok(amb.api('s_vera', 'novaRevisao', { id: np.proposta.id })).proposta;
-  const s2 = ok(amb.api('s_vera', 'salvarProposta', { id: np2.id, itens: [{ produtoId: prod.id, descricao: 'Fonte chaveada 9V 2A', quantidade: 1, precoUnitario: '40,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: '10 dias' } }));
+  const s2 = ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np2.id, itens: [{ produtoId: prod.id, descricao: 'Fonte chaveada 9V 2A', quantidade: 1, precoUnitario: '40,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: '10 dias' } }));
   assert.equal(s2.politica.dentro, false);
   // tela: a escolha do catálogo no próprio item (busca enquanto digita) e o "Tornar avulso"
   const js = fs.readFileSync(path.join(pasta, 'JS_Comercial.html'), 'utf8');

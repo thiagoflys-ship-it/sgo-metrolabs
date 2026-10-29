@@ -5,7 +5,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, oportunidadeDeTeste } = require('./_comercial_ambiente.cjs');
+const { ambiente, oportunidadeDeTeste, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 const textoDe = (html) => html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -17,7 +17,7 @@ function cenario(itens, extra) {
   const { oportunidade } = oportunidadeDeTeste(amb);
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
   const it = { P: { produtoId: prod.id, descricao: prod.nome, quantidade: 3, unidade: 'un', precoUnitario: '420,00' }, S: { produtoId: serv.id, descricao: serv.nome, quantidade: 1, precoUnitario: '4.500,00', equipamentoId: 'eq1' } };
-  const salvo = ok(amb.api('s_vera', 'salvarProposta', Object.assign({ id: np.proposta.id, escopo: '', itens: itens.map((k) => it[k]) }, extra || {})));
+  const salvo = ok(amb.api('s_vera', 'salvarProposta', Object.assign({ deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: '', itens: itens.map((k) => it[k]) }, extra || {})));
   return { amb, id: np.proposta.id, salvo, itens: itens.map((k) => it[k]) };
 }
 function gerar(amb, id) {

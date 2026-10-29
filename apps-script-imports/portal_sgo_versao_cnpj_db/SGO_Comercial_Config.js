@@ -21,6 +21,7 @@
  *   SGO_Comercial_Gestora.js        a gestora comercial: lista do dia, próximo passo, revisão da proposta, análise, perguntas
  *   SGO_Comercial_Painel.js         indicadores, pendências (central e Caixa de decisões), rotina e a chamada única da tela
  *   SGO_Comercial_Quadro.js         quadro Kanban do funil, Gantt comercial e tempo por etapa (21/10/2026)
+ *   SGO_Comercial_Precificacao.js   política de precificação, custos da viagem (checklist), margem e alçada, reajuste do catálogo (29/10/2026)
  *   SGO_Ajuda_Comercial.js          ajuda "Como usar esta tela"
  *   JS_Comercial.html               telas
  *
@@ -42,7 +43,9 @@
 var COM_FUSO = 'America/Sao_Paulo';
 var COM_ABAS = {
   CONFIG: 'COM_CONFIG', OPORTUNIDADES: 'COM_OPORTUNIDADES', CONTATOS_REG: 'COM_CONTATOS_REGISTRO', HISTORICO: 'COM_HISTORICO',
-  PRODUTOS: 'COM_PRODUTOS', PROPOSTAS: 'COM_PROPOSTAS', SUGESTOES: 'COM_IA_SUGESTOES', DIA: 'COM_DIA', AVISOS: 'COM_AVISOS', CONTATOS: 'CAD_CONTATOS'
+  PRODUTOS: 'COM_PRODUTOS', PROPOSTAS: 'COM_PROPOSTAS', SUGESTOES: 'COM_IA_SUGESTOES', DIA: 'COM_DIA', AVISOS: 'COM_AVISOS', CONTATOS: 'CAD_CONTATOS',
+  // 29/10/2026: histórico dos reajustes de preço do catálogo (um registro por item por lote; desfazer o último lote)
+  REAJUSTES: 'COM_REAJUSTES'
 };
 var COM_COLUNAS = {
   COM_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -55,7 +58,9 @@ var COM_COLUNAS = {
     'CRITERIOS_JSON'],
   COM_CONTATOS_REGISTRO: ['ID', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'TIPO', 'RESPONDEU', 'RESUMO', 'CONTATO_ID', 'CONTATO_NOME', 'ESTRATEGIA', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'TIPO', 'DE', 'PARA', 'TEXTO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
-  COM_PRODUTOS: ['ID', 'CODIGO', 'NOME', 'TIPO', 'CATEGORIA', 'UNIDADE_MEDIDA', 'DESCRICAO', 'PRECO', 'CUSTO', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  COM_PRODUTOS: ['ID', 'CODIGO', 'NOME', 'TIPO', 'CATEGORIA', 'UNIDADE_MEDIDA', 'DESCRICAO', 'PRECO', 'CUSTO', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 29/10/2026: data do último preço (mudança no cadastro ou reajuste); vazio = desde o cadastro (CRIADO_EM)
+    'PRECO_DESDE'],
   COM_PROPOSTAS: ['ID', 'NUMERO', 'REVISAO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'VALIDA_ATE',
     'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL', 'SITUACAO',
@@ -65,7 +70,12 @@ var COM_COLUNAS = {
     'ACEITE_ARQUIVO_ID', 'ACEITE_ARQUIVO_NOME', 'ACEITE_ARQUIVO_URL', 'PEDIDO_SITUACAO', 'PASSAGEM_EM', 'PASSAGEM_JSON', 'PASSAGEM_CONCLUIDA_EM',
     'REVISAO_DE', 'SUBSTITUIDA_POR', 'CANCELADA_MOTIVO', 'REVISAO_GESTORA_JSON', 'ATUALIZADO_EM', 'CRIADO_POR_ID', 'CRIADO_EM',
     // 28/10/2026: tipo de orçamento escolhido pelo vendedor (SERVICOS | PRODUTOS | MISTO); vazio = automático pelos itens (MODELO)
-    'TIPO_ORCAMENTO'],
+    'TIPO_ORCAMENTO',
+    // 29/10/2026: custos da viagem e do frete (checklist do vendedor, SGO_Comercial_Precificacao.js) e a fotografia da
+    // precificação ao concluir (custo, impostos, margem, repasse da viagem) para o painel e a gestora
+    'DESLOCAMENTO_JSON', 'PRECIFICACAO_JSON'],
+  COM_REAJUSTES: ['ID', 'LOTE', 'PRODUTO_ID', 'CODIGO', 'NOME', 'PRECO_ANTERIOR', 'PRECO_NOVO', 'PRECO_DESDE_ANTERIOR', 'PERCENTUAL', 'ARREDONDAR_PARA', 'INDICE', 'VIGENCIA', 'MOTIVO', 'SITUACAO',
+    'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'DESFEITO_POR_NOME', 'DESFEITO_MOTIVO', 'CRIADO_EM'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
   COM_DIA: ['ID', 'DIA', 'USUARIO_ID', 'USUARIO_NOME', 'PAPEL', 'ITENS_JSON', 'RESUMO', 'ORIGEM', 'AVISO', 'GERADO_EM', 'CRIADO_EM'],
   COM_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_TIPO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM'],
@@ -76,7 +86,8 @@ var COM_COLUNAS_TEXTO = {
   COM_OPORTUNIDADES: ['ETAPA_DESDE', 'ULTIMO_CONTATO_EM', 'PROXIMA_ACAO_EM', 'GANHA_EM', 'PERDIDA_EM', 'REABERTURA_PEDIDA_EM', 'PREVISAO_FECHAMENTO', 'ATUALIZADO_EM', 'CODIGO'],
   COM_PROPOSTAS: ['VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
-  COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM']
+  COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
+  COM_PRODUTOS: ['PRECO_DESDE'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
 var COM_SITUACOES_OPO = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
@@ -256,6 +267,35 @@ var COM_METODOLOGIA_PADRAO = {
     destinatarios: { TECNICA: [], COMPRAS: [], FINANCEIRO: [] },
     pedidoParadoDiasUteis: 1
   },
+  /**
+   * 29/10/2026 — POLÍTICA DE PRECIFICAÇÃO (pedido do dono: "calcular o deslocamento de 1 ou 2 técnicos ou engenheiros; R$ 2,50
+   * por km rodado, mais pedágios, alimentação e combustíveis, mais diária; o benefício do programa de conduta, R$ 300 por
+   * viagem por colaborador, tem que ser repassado; política de acréscimos e de reajuste"). Só a Diretoria e o Administrador
+   * mudam (Com_metodologiaTela_); cada gravação é uma versão da metodologia, com o motivo. Valor sem padrão conhecido fica
+   * VAZIO (null): o checklist da proposta cobra o valor da viagem e a gestora aponta a política incompleta. Regras em
+   * SGO_Comercial_Precificacao.js. O benefício do Programa de conduta vem dos parâmetros do próprio programa
+   * (VALOR_INCENTIVO_MISSAO e MISSAO_KM_MINIMO); os números abaixo só valem se o programa não estiver disponível.
+   */
+  precificacao: {
+    origemPadrao: 'Goiânia/GO',
+    // ida e volta = km do trecho x 2. Cobre o veículo da empresa (combustível, desgaste, manutenção e seguro). Pedágio,
+    // alimentação, diárias e hospedagem são linhas à parte; "combustível adicional" só quando não é veículo da empresa.
+    valorKm: 2.5,
+    velocidadeMediaKmh: 70,
+    alimentacaoPessoaDia: null,
+    diariaPessoaDia: { TECNICO: null, ENGENHEIRO: null },
+    hospedagemPessoaNoite: null,
+    horaDeslocamento: { TECNICO: null, ENGENHEIRO: null },
+    beneficioConduta: { valorPorColaborador: 300, kmMinimoTrecho: 200 },
+    impostosPct: null,
+    margemMinPct: null,
+    margemAlvoPct: null,
+    margemDeslocamentoPct: 0,
+    arredondarPara: 10,
+    repassePadrao: 'ITEM',
+    reajusteAlertaMeses: 12,
+    texto: 'Todo serviço em campo leva o custo da viagem ao preço: km rodado (ida e volta), pedágios, alimentação, diárias, hospedagem, o benefício do Programa de conduta de cada colaborador e, quando não for veículo da empresa, o combustível ou a passagem. O custo entra como item próprio da proposta ("Despesas de deslocamento e estadia") ou diluído no preço dos serviços; nos dois casos fica registrado. O item de deslocamento repassa o custo mais os impostos sobre o faturamento. Proposta abaixo da margem mínima só segue com aprovação da Diretoria. Os preços do catálogo são reajustados pelo menos uma vez a cada 12 meses, pelo índice que a Diretoria informar.'
+  },
   referencias: { metaMensal: 600000, ticketServicos: 3817.64, ticketContratos: 10000, primeiraRespostaHoras: 24, higieneMetaPct: 100 },
   gestores: [],
   // cobrança sutil: WhatsApp nunca pelo Comercial (o retorno é atividade, e a atividade já entra no resumo diário).
@@ -366,13 +406,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V3')) return; } catch (e) {}
+  // V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V4')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V3', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V4', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {
@@ -462,6 +503,8 @@ function Com_validarMetodologia_(m) {
     var cc = m.proposta && m.proposta[k];
     if (cc !== undefined && cc !== null && (typeof cc !== 'object' || Array.isArray(cc))) throw new Error('as condições padrão do modelo de ' + (k === 'condicoesProduto' ? 'produto' : 'serviço e produto') + ' vieram num formato inválido. Atualize a tela e salve de novo');
   });
+  // 29/10/2026: política de precificação (SGO_Comercial_Precificacao.js)
+  if (m.precificacao !== undefined && typeof ComPr_validarPolitica_ === 'function') ComPr_validarPolitica_(m.precificacao);
 }
 
 /**

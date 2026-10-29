@@ -32,12 +32,18 @@ var COM_TIPOS_ITEM = { SERVICO: 'Serviço', PRODUTO: 'Produto', CONTRATO: 'Contr
 // ------------------------------------------------------------
 // CATÁLOGO
 // ------------------------------------------------------------
-function ComP_produtoParaTela_(p, eu) {
+function ComP_produtoParaTela_(p, eu, corteReajuste) {
   var t = { id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), tipo: Com_up_(p.TIPO) || 'SERVICO', tipoNome: COM_TIPOS_ITEM[Com_up_(p.TIPO)] || 'Serviço',
     categoria: Com_s_(p.CATEGORIA), unidade: Com_s_(p.UNIDADE_MEDIDA) || 'un.', descricao: Com_s_(p.DESCRICAO), preco: Number(p.PRECO) || 0, precoTxt: Com_moeda_(p.PRECO),
     ativo: Com_up_(p.ATIVO || 'SIM') !== 'NAO', atualizadoPor: Com_s_(p.ATUALIZADO_POR_NOME), atualizadoEm: Com_br_(p.ATUALIZADO_EM),
     origem: /importa[çc][ãa]o do crm/i.test(Com_s_(p.ATUALIZADO_POR_NOME)) || /^CRM-/i.test(Com_s_(p.CODIGO)) ? 'CRM' : '' };
   if (eu && eu.veCusto) { t.custo = Com_s_(p.CUSTO) === '' ? null : Number(p.CUSTO) || 0; t.custoTxt = t.custo === null ? '' : Com_moeda_(t.custo); }
+  // 29/10/2026: data do último preço (reajuste ou edição); "sem reajuste" pela política de precificação
+  if (eu && (eu.gestao || eu.catalogo) && typeof ComPr_desdePreco_ === 'function') {
+    var desde = ComPr_desdePreco_(p), lim = corteReajuste || ComPr_corteMeses_(12);
+    t.precoDesde = Com_brDia_(desde);
+    t.semReajuste = t.ativo && t.preco > 0 && !!desde && desde < lim;
+  }
   return t;
 }
 
@@ -57,8 +63,12 @@ function ComP_catalogo_(eu, d) {
   // 28/10/2026: "Possíveis duplicados" (gestão): itens ATIVOS com o mesmo nome (sem acento, maiúscula e pontuação). Na
   // importação do CRM, 25 nomes vieram em mais de um código (53 itens, produção em 28/10/2026); a gestão confere e arquiva o que sobra.
   var mesmoNome = ComP_nomesRepetidos_(visiveis);
-  if (sit === 'DUPLICADOS' && !gere) sit = 'ATIVOS';
+  if ((sit === 'DUPLICADOS' || sit === 'SEM_REAJUSTE') && !gere) sit = 'ATIVOS';
+  // 29/10/2026: "Sem reajuste há mais de N meses" (política de precificação; padrão 12)
+  var mesesReaj = typeof ComPr_politica_ === 'function' ? (ComPr_politica_().reajusteAlertaMeses || 12) : 12;
+  var corte = typeof ComPr_corteMeses_ === 'function' ? ComPr_corteMeses_(mesesReaj) : '';
   var achados = visiveis.filter(function (p) {
+    if (sit === 'SEM_REAJUSTE') { var dd = typeof ComPr_desdePreco_ === 'function' ? ComPr_desdePreco_(p) : ''; if (!(Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Number(p.PRECO) > 0 && dd && dd < corte)) return false; }
     if (tipo && Com_up_(p.TIPO || 'SERVICO') !== tipo) return false;
     if (cat && Com_normBusca_(p.CATEGORIA) !== cat) return false;
     var ativo = Com_up_(p.ATIVO || 'SIM') !== 'NAO';
@@ -66,7 +76,7 @@ function ComP_catalogo_(eu, d) {
     if (sit === 'ARQUIVADOS' && ativo) return false;
     if (sit === 'DUPLICADOS' && !(ativo && mesmoNome[Com_normBusca_(p.NOME)] > 1)) return false;
     return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA), COM_TIPOS_ITEM[Com_up_(p.TIPO)] || '', Com_s_(p.UNIDADE_MEDIDA)]);
-  }).map(function (p) { return ComP_produtoParaTela_(p, eu); });
+  }).map(function (p) { return ComP_produtoParaTela_(p, eu, corte); });
   var q = termos.join(' '), qJunto = termos.join('');
   var peso = function (x) {
     if (!termos.length) return 0;
@@ -83,8 +93,11 @@ function ComP_catalogo_(eu, d) {
   var limite = Math.max(0, Math.min(2000, Math.floor(Number(d.limite) || 0)));
   var lista = limite && achados.length > limite ? achados.slice(0, limite) : achados;
   var dupGrupos = 0; Object.keys(mesmoNome).forEach(function (k) { if (mesmoNome[k] > 1) dupGrupos++; });
+  var semReaj = 0;
+  if (gere && corte && typeof ComPr_desdePreco_ === 'function') visiveis.forEach(function (p) { var dd = ComPr_desdePreco_(p); if (Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Number(p.PRECO) > 0 && dd && dd < corte) semReaj++; });
   return { produtos: lista, total: visiveis.length, encontrados: achados.length, limitado: lista.length < achados.length,
-    categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }), duplicados: gere ? dupGrupos : 0 };
+    categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }), duplicados: gere ? dupGrupos : 0,
+    semReajuste: semReaj, reajusteMeses: mesesReaj, podeReajustar: typeof ComPr_podeReajustar_ === 'function' && ComPr_podeReajustar_(eu) };
 }
 
 /** { nomeNormalizado: quantidade de itens ATIVOS com esse nome } */
@@ -124,11 +137,13 @@ function ComP_salvarProduto_(eu, d) {
     if (Com_s_(d.id)) {
       var atual = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id));
       if (!atual) throw new Error('Não foi possível salvar: o item não existe mais. Atualize o catálogo');
+      // 29/10/2026: preço mudado à mão também conta como reajuste do item (data do último preço)
+      if (Math.abs((Number(atual.PRECO) || 0) - campos.PRECO) > 0.004) campos.PRECO_DESDE = Com_hoje_();
       SGO_DATA.update(COM_ABAS.PRODUTOS, atual.ID, campos);
       Com_historico_('PRODUTO', atual.ID, 'EDICAO', eu, { texto: 'Preço ' + Com_moeda_(atual.PRECO) + ' para ' + Com_moeda_(preco) + (Com_s_(atual.NOME) !== nome ? '; nome alterado' : '') });
       reg = Object.assign({}, atual, campos);
     } else {
-      campos.ATIVO = 'SIM';
+      campos.ATIVO = 'SIM'; campos.PRECO_DESDE = Com_hoje_();
       reg = SGO_DATA.insert(COM_ABAS.PRODUTOS, campos);
       Com_historico_('PRODUTO', reg.ID, 'CRIACAO', eu, { texto: nome + ' (' + codigo + ')' });
     }
@@ -187,13 +202,27 @@ function ComP_limiteDe_(uid, met) {
   return v >= 0 ? v : Number(met.politica.descontoMaxPct) || 0;
 }
 
-/** { dentro, motivos[], limite, margemMin }. */
-function ComP_avaliarPolitica_(calc, uid, met) {
+/**
+ * { dentro, motivos[], limite, margemMin, exigeDiretoria }. 29/10/2026: analise (ComPr_analise_, opcional) traz a margem da
+ * política de precificação (depois de impostos e da viagem): abaixo da mínima, a proposta vai para a mesma aprovação do
+ * desconto, mas só a Diretoria (ou o Administrador) aprova.
+ */
+function ComP_avaliarPolitica_(calc, uid, met, analise) {
   met = met || Com_metodologia_();
-  var limite = ComP_limiteDe_(uid, met), mm = Number(met.politica.margemMinPct) || 0, motivos = [];
+  var limite = ComP_limiteDe_(uid, met), mm = Number(met.politica.margemMinPct) || 0, motivos = [], exigeDiretoria = false;
   if (calc.descontoPct > limite + 1e-9) motivos.push('desconto de ' + Com_pct_(calc.descontoPct) + ' acima do limite de ' + Com_pct_(limite, 0) + ' sem aprovação');
   if (mm > 0 && calc.margemPct !== null && calc.margemPct < mm - 1e-9) motivos.push('margem de ' + Com_pct_(calc.margemPct) + ' abaixo da mínima de ' + Com_pct_(mm, 0));
-  return { dentro: !motivos.length, motivos: motivos, limite: limite, margemMin: mm };
+  if (analise && analise.abaixoMin) {
+    motivos.push('margem de ' + Com_pct_(analise.margemPct) + ' (depois de impostos e dos custos da viagem' + (analise.completa ? '' : ', sem o custo de ' + Com_plural_(analise.itensSemCusto, 'item', 'itens')) + ') abaixo da mínima de ' + Com_pct_(analise.margemMinPct, 1) + ' da política de precificação; só a Diretoria aprova');
+    exigeDiretoria = true;
+  }
+  return { dentro: !motivos.length, motivos: motivos, limite: limite, margemMin: mm, exigeDiretoria: exigeDiretoria };
+}
+
+/** Análise de precificação de uma linha (ou null se o módulo não estiver carregado). */
+function ComP_analise_(p, itens) {
+  if (typeof ComPr_daProposta_ !== 'function') return null;
+  try { return ComPr_daProposta_(p, null, itens).analise; } catch (e) { console.error('Comercial, precificação: ' + ((e && e.message) || e)); return null; }
 }
 
 // ------------------------------------------------------------
@@ -285,13 +314,17 @@ function ComP_paraTela_(eu, p, completo) {
       foraDoDocumento: !tm.congelado && !!Com_s_(p.GERADA_EM) }; t.condicoes = Com_json_(p.CONDICOES_JSON, {}); t.modelo = Com_s_(p.MODELO);
     t.itens = itens.map(function (i) {
       var o = { ordem: i.ordem, produtoId: i.produtoId || '', codigo: i.codigo || '', tipo: i.tipo || 'SERVICO', descricao: i.descricao || '', detalhe: i.detalhe || '',
-        equipamentoId: i.equipamentoId || '', equipamentoTexto: i.equipamentoTexto || '', unidade: i.unidade || 'un.', quantidade: Number(i.quantidade) || 0 };
+        equipamentoId: i.equipamentoId || '', equipamentoTexto: i.equipamentoTexto || '', unidade: i.unidade || 'un.', quantidade: Number(i.quantidade) || 0, auto: i.auto || '' };
       if (eu.veValores) { o.precoUnitario = Number(i.precoUnitario) || 0; o.precoTabela = Number(i.precoTabela) || 0; o.total = Com_r2_((Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0)); o.precoDiferente = !!i.precoDiferente; }
       if (eu.veCusto && i.custoUnitario !== undefined && i.custoUnitario !== null && i.custoUnitario !== '') o.custoUnitario = Number(i.custoUnitario);
       return o;
     });
     t.revisaoGestora = Com_json_(p.REVISAO_GESTORA_JSON, null);
     if (eu.financeiro || eu.gestao) t.faturamento = ComP_dadosFaturamento_(p);
+    // 29/10/2026: custos da viagem e do frete (checklist), repasse e margem (a margem em número só para quem vê custo)
+    if (eu.veValores && typeof ComPr_paraTela_ === 'function') {
+      try { t.deslocamento = ComPr_paraTela_(eu, p, itens, t.editavel); } catch (eD) { t.deslocamentoErro = String((eD && eD.message) || eD); }
+    }
   }
   return t;
 }
@@ -344,12 +377,16 @@ function ComP_detalhe_(eu, id) {
     .map(function (h) { return { em: Com_br_(h.DATA), tipo: Com_s_(h.TIPO), de: Com_s_(h.DE), para: Com_s_(h.PARA), texto: Com_s_(h.TEXTO), por: Com_s_(h.USUARIO_NOME) }; });
   t.revisoes = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.NUMERO) === t.numero && Com_s_(x.ID) !== t.id && ComP_podeVer_(eu, x); })
     .map(function (x) { return { id: Com_s_(x.ID), rotulo: ComP_rotulo_(x), situacaoNome: COM_SITUACOES_PROP[Com_up_(x.SITUACAO)] || '' }; });
+  var pol = null;
   if (eu.veValores) {
-    var calc = ComP_calcular_(Com_json_(p.ITENS_JSON, []), p.DESCONTO_GERAL);
-    var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), met);
-    t.politica = { limite: pol.limite, limiteTxt: Com_pct_(pol.limite, 0), dentro: pol.dentro, motivos: pol.motivos, descontoPctTxt: Com_pct_(calc.descontoPct) };
+    var itensD = Com_json_(p.ITENS_JSON, []);
+    var calc = ComP_calcular_(itensD, p.DESCONTO_GERAL);
+    pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), met, ComP_analise_(p, itensD));
+    t.politica = { limite: pol.limite, limiteTxt: Com_pct_(pol.limite, 0), dentro: pol.dentro, motivos: pol.motivos, descontoPctTxt: Com_pct_(calc.descontoPct), exigeDiretoria: pol.exigeDiretoria };
   }
   t.podeDecidirDesconto = eu.gestao && t.situacao === 'AGUARDANDO_APROVACAO' && (t.responsavelId !== eu.id || eu.diretoria);
+  t.podeAprovarDesconto = t.podeDecidirDesconto && (!(pol && pol.exigeDiretoria) || eu.diretoria || eu.perfil === 'ADMIN');
+  t.decisaoSoDiretoria = !!(pol && pol.exigeDiretoria);
   t.contatosCliente = (eu.gestao || eu.vendedor) ? ComCt_listar_(t.clienteId, t.unidadeId) : [];
   if (t.passagem && t.passagem.length) t.passagem = ComP_situacaoPassagem_(t.passagem);
   t.motivosRecusa = met.motivosPerda;
@@ -397,7 +434,8 @@ function ComP_itensDaTela_(lista, prop, eu) {
 
 function ComP_modeloDosItens_(itens) {
   var t = {};
-  itens.forEach(function (i) { t[i.tipo === 'PRODUTO' ? 'P' : 'S'] = true; });
+  // 29/10/2026: o item automático da viagem ou do frete não decide o tipo de orçamento
+  itens.forEach(function (i) { if (!i.auto) t[i.tipo === 'PRODUTO' ? 'P' : 'S'] = true; });
   return t.P && t.S ? 'MISTO' : (t.P ? 'PRODUTOS' : 'SERVICOS');
 }
 
@@ -410,7 +448,7 @@ var COM_TIPOS_ORCAMENTO = { SERVICOS: 'Serviço', PRODUTOS: 'Produto', MISTO: 'S
 function ComP_tipoOrcamento_(p, itens) {
   itens = itens || Com_json_(p && p.ITENS_JSON, []) || [];
   var escolhido = COM_TIPOS_ORCAMENTO[Com_up_(p && p.TIPO_ORCAMENTO)] ? Com_up_(p.TIPO_ORCAMENTO) : '';
-  var sugerido = itens.length ? ComP_modeloDosItens_(itens) : (COM_TIPOS_ORCAMENTO[Com_up_(p && p.MODELO)] ? Com_up_(p.MODELO) : 'SERVICOS');
+  var sugerido = itens.some(function (i) { return i && !i.auto; }) ? ComP_modeloDosItens_(itens) : (COM_TIPOS_ORCAMENTO[Com_up_(p && p.MODELO)] ? Com_up_(p.MODELO) : 'SERVICOS');
   var tipo = escolhido || sugerido;
   return { tipo: tipo, nome: COM_TIPOS_ORCAMENTO[tipo], escolhido: escolhido, sugerido: sugerido };
 }
@@ -476,7 +514,16 @@ function ComP_salvar_(eu, d) {
     var p = ComP_obter_(eu, d.id, 'salvar a proposta');
     if (Com_up_(p.SITUACAO) !== 'RASCUNHO') throw new Error('Não foi possível salvar: a proposta ' + ComP_rotulo_(p) + ' está "' + COM_SITUACOES_PROP[Com_up_(p.SITUACAO)] + '". Só o rascunho é editado: use "Voltar para rascunho" (antes do envio) ou "Nova revisão" (depois do envio)');
     if (!eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== eu.id) throw new Error('Não foi possível salvar: a proposta é de ' + p.RESPONSAVEL_NOME);
-    var itens = ComP_itensDaTela_(d.itens, p, eu);
+    // 29/10/2026: custos da viagem e do frete (SGO_Comercial_Precificacao.js). Os itens automáticos ("Despesas de deslocamento
+    // e estadia", "Frete e entrega") são refeitos aqui a cada gravação a partir do cálculo: a tela não manda nem muda esses itens.
+    var polPr = typeof ComPr_politica_ === 'function' ? ComPr_politica_() : null;
+    var itens = ComP_itensDaTela_((d.itens || []).filter(function (i) { return !(i && i.auto); }), p, eu);
+    var desl = null, deslAnt = Com_json_(p.DESLOCAMENTO_JSON, null);
+    if (polPr && (d.deslocamento !== undefined || deslAnt)) {
+      desl = ComPr_normalizar_(d.deslocamento, deslAnt, polPr, { eu: eu });
+      itens = itens.concat(ComPr_itensAuto_(desl, polPr));
+      itens.forEach(function (i, k) { i.ordem = k + 1; });
+    }
     var liquido = itens.reduce(function (s, i) { return s + i.quantidade * i.precoUnitario; }, 0);
     var dg = Com_s_(d.descontoPct) !== '' && Com_s_(d.descontoGeral) === '' ? liquido * (Com_num_(d.descontoPct) || 0) / 100 : Com_num_(d.descontoGeral);
     if (!(dg >= 0)) dg = 0;
@@ -504,6 +551,7 @@ function ComP_salvar_(eu, d) {
     var trocados = ComP_trocarTextosDoModelo_(tipoNovo.tipo, campos, cond);
     campos.CONDICOES_JSON = JSON.stringify(cond);
     if (ct) { campos.CONTATO_ID = ct.ID; campos.CONTATO_NOME = Com_s_(ct.NOME); }
+    if (desl) campos.DESLOCAMENTO_JSON = JSON.stringify(desl);
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
     var avisoTipo = '';
     if (tipoNovo.tipo !== tipoAntes.tipo || tipoEsc !== Com_up_(p.TIPO_ORCAMENTO)) {
@@ -515,9 +563,16 @@ function ComP_salvar_(eu, d) {
       (difs.length ? ' Preço diferente do catálogo: ' + difs.slice(0, 10).map(function (i) { return (i.codigo || i.descricao.slice(0, 40)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (difs.length > 10 ? '; e mais ' + (difs.length - 10) : '') + '.' : '') +
       (avulsos ? ' ' + Com_plural_(avulsos, 'item avulso', 'itens avulsos') + ' (fora do catálogo).' : '') });
     var novo = Object.assign({}, p, campos);
-    var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID));
-    return { proposta: ComP_paraTela_(eu, novo, true), politica: { dentro: pol.dentro, motivos: pol.motivos },
-      message: 'Rascunho salvo.' + avisoTipo + (pol.dentro ? '' : ' Atenção: ' + pol.motivos.join('; ') + '. Ao concluir, a proposta vai para a aprovação do gestor comercial.') };
+    var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), null, ComP_analise_(novo, itens));
+    if (desl) {
+      var cv = ComPr_calcularViagem_(desl, polPr), cvAnt = deslAnt ? ComPr_calcularViagem_(deslAnt, polPr) : { custo: -1 };
+      if (cv.ha && (Math.abs(cv.custo - cvAnt.custo) > 0.004 || !deslAnt || deslAnt.repasse !== desl.repasse)) Com_historico_('PROPOSTA', p.ID, 'CUSTOS_VIAGEM', eu, { texto: 'Custos da viagem: ' + Com_moeda_(cv.custo) + ' (' + Com_plural_(cv.pessoas, 'pessoa', 'pessoas') + ', ' + Com_plural_(desl.viagem.viagens, 'viagem', 'viagens') + ', ' +
+        (desl.viagem.kmTrecho === null ? 'km a informar' : desl.viagem.kmTrecho + ' km o trecho') + '); repasse: ' + (desl.repasse === 'ITEM' ? 'item separado' : 'diluído nos serviços') + '.' });
+    }
+    var ck = desl || polPr ? (typeof ComPr_checklist_ === 'function' ? ComPr_checklist_(desl, tipoNovo.tipo, polPr) : { ok: true, faltas: [] }) : { ok: true, faltas: [] };
+    return { proposta: ComP_paraTela_(eu, novo, true), politica: { dentro: pol.dentro, motivos: pol.motivos, exigeDiretoria: pol.exigeDiretoria }, checklist: ck,
+      message: 'Rascunho salvo.' + avisoTipo + (pol.dentro ? '' : ' Atenção: ' + pol.motivos.join('; ') + '. Ao concluir, a proposta vai para a aprovação ' + (pol.exigeDiretoria ? 'da Diretoria.' : 'do gestor comercial.')) +
+        (ck.ok ? '' : ' Custos da viagem e do frete: ' + Com_plural_(ck.faltas.length, 'item do checklist falta', 'itens do checklist faltam') + ' (a proposta só conclui com o checklist completo).') };
   });
 }
 
@@ -533,23 +588,38 @@ function ComP_concluir_(eu, d) {
     if (Com_up_(p.SITUACAO) !== 'RASCUNHO') throw new Error('Não foi possível concluir: a proposta ' + ComP_rotulo_(p) + ' não está em rascunho');
     var rev = typeof ComG_revisarPropostaRegras_ === 'function' ? ComG_revisarPropostaRegras_(p) : { erros: [], alertas: [] };
     if (rev.erros.length) throw new Error('Não foi possível concluir a proposta ' + ComP_rotulo_(p) + '. A revisão encontrou: ' + rev.erros.join('; ') + '. Corrija no rascunho e toque em Concluir de novo');
-    var calc = ComP_calcular_(Com_json_(p.ITENS_JSON, []), p.DESCONTO_GERAL);
-    var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID));
+    var itensC = Com_json_(p.ITENS_JSON, []);
+    var calc = ComP_calcular_(itensC, p.DESCONTO_GERAL);
+    // 29/10/2026: margem da política de precificação (impostos e viagem) entra na mesma alçada; abaixo da mínima, só a Diretoria
+    var xPr = typeof ComPr_daProposta_ === 'function' ? ComPr_daProposta_(p, null, itensC) : null;
+    var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), null, xPr && xPr.analise);
     var agora = Com_agora_(), campos = { REVISAO_GESTORA_JSON: JSON.stringify({ em: agora, erros: rev.erros, alertas: rev.alertas }), ATUALIZADO_EM: agora };
+    if (xPr) campos.PRECIFICACAO_JSON = JSON.stringify(ComPr_fotografia_(xPr, ComPr_politica_()));
+    var podeExcecao = eu.gestao && (Com_s_(p.RESPONSAVEL_ID) !== eu.id || eu.diretoria || eu.perfil === 'ADMIN') && (!pol.exigeDiretoria || eu.diretoria || eu.perfil === 'ADMIN');
     var msg;
     if (pol.dentro) {
       campos.SITUACAO = 'PRONTA'; campos.DESCONTO_SITUACAO = 'DENTRO';
       msg = 'Proposta pronta. Toque em "Gerar documento" para salvar a folha A4 na pasta do cliente e depois em "Enviar ao cliente".';
-    } else if (eu.gestao && (Com_s_(p.RESPONSAVEL_ID) !== eu.id || eu.diretoria || eu.perfil === 'ADMIN')) {
+    } else if (podeExcecao) {
       var just = Com_texto_(d.justificativa, 1000);
-      if (just.length < 10) throw new Error('Não foi possível concluir: ' + pol.motivos.join('; ') + '. Como gestão comercial, você pode passar do limite, mas o motivo da exceção fica registrado. Escreva o motivo (pelo menos 10 letras) e toque em Concluir de novo');
-      campos.SITUACAO = 'PRONTA'; campos.DESCONTO_SITUACAO = 'EXCECAO_GESTAO'; campos.DESCONTO_MOTIVO = just; campos.DESCONTO_DECISAO_POR_ID = eu.id; campos.DESCONTO_DECISAO_POR_NOME = eu.nome; campos.DESCONTO_DECISAO_EM = agora; campos.DESCONTO_DECISAO_TEXTO = 'Exceção da gestão comercial: ' + just;
-      msg = 'Proposta pronta, com a exceção da gestão registrada.';
+      if (just.length < 10) throw new Error('Não foi possível concluir: ' + pol.motivos.join('; ') + '. Como ' + (pol.exigeDiretoria ? 'Diretoria' : 'gestão comercial') + ', você pode passar do limite, mas o motivo da exceção fica registrado. Escreva o motivo (pelo menos 10 letras) e toque em Concluir de novo');
+      campos.SITUACAO = 'PRONTA'; campos.DESCONTO_SITUACAO = 'EXCECAO_GESTAO'; campos.DESCONTO_MOTIVO = just; campos.DESCONTO_DECISAO_POR_ID = eu.id; campos.DESCONTO_DECISAO_POR_NOME = eu.nome; campos.DESCONTO_DECISAO_EM = agora;
+      campos.DESCONTO_DECISAO_TEXTO = (pol.exigeDiretoria ? 'Exceção da Diretoria (margem abaixo da mínima): ' : 'Exceção da gestão comercial: ') + just;
+      msg = 'Proposta pronta, com a exceção ' + (pol.exigeDiretoria ? 'da Diretoria' : 'da gestão') + ' registrada.';
     } else {
       var j = Com_texto_(d.justificativa, 1000);
-      if (j.length < 10) throw new Error('A proposta tem ' + pol.motivos.join(' e ') + '. Ela pode seguir, mas precisa da aprovação do gestor comercial antes do envio. Escreva por que este desconto é necessário (pelo menos 10 letras, por exemplo "Cliente com 3 propostas de concorrentes; contrato anual") e toque em Concluir de novo');
+      var quem = pol.exigeDiretoria ? 'da Diretoria (a margem ficou abaixo da mínima da política de precificação)' : 'do gestor comercial';
+      if (j.length < 10) throw new Error('A proposta tem ' + pol.motivos.join(' e ') + '. Ela pode seguir, mas precisa da aprovação ' + quem + ' antes do envio. Escreva por que ' + (pol.exigeDiretoria ? 'este preço' : 'este desconto') + ' é necessário (pelo menos 10 letras, por exemplo "Cliente com 3 propostas de concorrentes; contrato anual") e toque em Concluir de novo' +
+        (pol.exigeDiretoria ? '. Se preferir, ajuste o preço dos serviços ou o repasse da viagem e conclua de novo' : ''));
       campos.SITUACAO = 'AGUARDANDO_APROVACAO'; campos.DESCONTO_SITUACAO = 'PEDIDO'; campos.DESCONTO_MOTIVO = j; campos.DESCONTO_PEDIDO_EM = agora;
-      msg = 'Pedido de aprovação enviado à gestão comercial (Caixa de decisões). A proposta não pode ser enviada até a decisão; você é avisado no sistema.';
+      msg = pol.exigeDiretoria ? 'Pedido de aprovação enviado à Diretoria (margem abaixo da mínima). A proposta não pode ser enviada até a decisão; você é avisado no sistema.'
+        : 'Pedido de aprovação enviado à gestão comercial (Caixa de decisões). A proposta não pode ser enviada até a decisão; você é avisado no sistema.';
+      if (pol.exigeDiretoria) {
+        var usD = Com_usuarios_();
+        Object.keys(usD).filter(function (id) { return usD[id].ativo && (usD[id].perfil === 'DIRETORIA' || Com_ehDono_(usD[id].login)) && id !== eu.id; }).forEach(function (id) {
+          Com_avisar_(id, 'MARGEM_DIRETORIA', 'Margem abaixo da mínima: ' + ComP_rotulo_(p) + ' aguarda a sua decisão', Com_s_(p.CLIENTE_NOME) + ': ' + eu.nome + ' pediu aprovação. Motivo: ' + j + ' Abra a proposta em Comercial > Propostas e aprove ou negue com a fundamentação.', { tipo: 'proposta', id: p.ID }, { email: true });
+        });
+      }
     }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
     Com_historico_('PROPOSTA', p.ID, campos.SITUACAO, eu, { de: 'Rascunho', para: COM_SITUACOES_PROP[campos.SITUACAO], texto: (pol.dentro ? 'Dentro da política (' + Com_pct_(calc.descontoPct) + ').' : pol.motivos.join('; ') + '. ' + (campos.DESCONTO_MOTIVO || '')) + (rev.alertas.length ? ' Alertas da revisão: ' + rev.alertas.join('; ') : '') });
@@ -567,6 +637,12 @@ function ComP_decidirDesconto_(eu, d) {
     var p = ComP_obter_(eu, d.id, 'decidir o desconto');
     if (Com_up_(p.SITUACAO) !== 'AGUARDANDO_APROVACAO') throw new Error('Não foi possível decidir: a proposta ' + ComP_rotulo_(p) + ' não está aguardando aprovação (situação: ' + COM_SITUACOES_PROP[Com_up_(p.SITUACAO)] + ')');
     if (Com_s_(p.RESPONSAVEL_ID) === eu.id && !eu.diretoria) throw new Error('Não foi possível decidir: a proposta é sua. Quem decide o seu desconto é outro gestor comercial ou a Diretoria');
+    // 29/10/2026: margem abaixo da mínima da política de precificação: só a Diretoria (ou o Administrador) aprova
+    if (d.aprovar === true && !(eu.diretoria || eu.perfil === 'ADMIN')) {
+      var itensDD = Com_json_(p.ITENS_JSON, []);
+      var polDD = ComP_avaliarPolitica_(ComP_calcular_(itensDD, p.DESCONTO_GERAL), Com_s_(p.RESPONSAVEL_ID), null, ComP_analise_(p, itensDD));
+      if (polDD.exigeDiretoria) throw new Error('Não foi possível aprovar: a margem da proposta ficou abaixo da mínima da política de precificação, e essa exceção é da Diretoria. Você pode negar (a proposta volta para o vendedor ajustar) ou pedir à Diretoria para decidir');
+    }
     var agora = Com_agora_(), aprovar = d.aprovar === true;
     var campos = { SITUACAO: aprovar ? 'PRONTA' : 'RASCUNHO', DESCONTO_SITUACAO: aprovar ? 'APROVADO' : 'NEGADO', DESCONTO_DECISAO_POR_ID: eu.id, DESCONTO_DECISAO_POR_NOME: eu.nome,
       DESCONTO_DECISAO_EM: agora, DESCONTO_DECISAO_TEXTO: texto, ATUALIZADO_EM: agora };
@@ -743,8 +819,9 @@ function ComP_novaRevisao_(eu, d) {
     var maior = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.NUMERO) === Com_s_(p.NUMERO); }).reduce(function (m, x) { return Math.max(m, Number(x.REVISAO) || 0); }, 0);
     var met = Com_metodologia_(), val = Number(p.VALIDADE_DIAS) || Number(met.proposta.validadeDias) || 15, agora = Com_agora_();
     var copia = {};
+    // 29/10/2026: a revisão leva os custos da viagem e do frete (DESLOCAMENTO_JSON); o checklist é conferido de novo ao concluir
     ['NUMERO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TIPO_ORCAMENTO', 'TITULO', 'ESCOPO', 'APRESENTACAO',
-      'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL'].forEach(function (k) { copia[k] = p[k]; });
+      'DESLOCAMENTO_JSON', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL'].forEach(function (k) { copia[k] = p[k]; });
     copia.REVISAO = maior + 1; copia.SITUACAO = 'RASCUNHO'; copia.DESCONTO_SITUACAO = 'DENTRO'; copia.VALIDA_ATE = Com_somarDias_(Com_hoje_(), val); copia.REVISAO_DE = p.ID; copia.PEDIDO_SITUACAO = '';
     copia.ATUALIZADO_EM = agora; copia.CRIADO_POR_ID = eu.id;
     var nova = SGO_DATA.insert(COM_ABAS.PROPOSTAS, copia);
@@ -864,7 +941,7 @@ function ComP_registrarResposta_(eu, sessionId, d) {
 /** Setores obrigatórios pelos itens: serviço ou contrato -> Área técnica; produto -> Compras; Financeiro sempre. */
 function ComP_setoresObrigatorios_(p) {
   var s = { FINANCEIRO: true };
-  Com_json_(p.ITENS_JSON, []).forEach(function (i) { if (i.tipo === 'PRODUTO') s.COMPRAS = true; else s.TECNICA = true; });
+  Com_json_(p.ITENS_JSON, []).forEach(function (i) { if (i.auto) return; if (i.tipo === 'PRODUTO') s.COMPRAS = true; else s.TECNICA = true; });
   return Object.keys(s);
 }
 
@@ -933,7 +1010,7 @@ function ComP_passarSetores_(eu, d) {
     pedidos = pedidos.filter(function (s, i, l) { return l.indexOf(s) === i && jaSet.indexOf(s) < 0; });
     if (!pedidos.length) throw new Error('Não foi possível passar: os setores escolhidos já receberam este pedido. Acompanhe o andamento na proposta');
     var obs = Com_texto_(d.observacao, 1500);
-    var itensTxt = Com_json_(p.ITENS_JSON, []).map(function (i) { return '- ' + i.quantidade + ' ' + (i.unidade || 'un.') + ' · ' + i.descricao + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : ''); }).join('\n');
+    var itensTxt = Com_json_(p.ITENS_JSON, []).filter(function (i) { return !i.auto; }).map(function (i) { return '- ' + i.quantidade + ' ' + (i.unidade || 'un.') + ' · ' + i.descricao + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : ''); }).join('\n');
     var cond = Com_json_(p.CONDICOES_JSON, {}) || {};
     var hoje = Com_hoje_(), novos = [];
     pedidos.forEach(function (s) {
@@ -943,6 +1020,8 @@ function ComP_passarSetores_(eu, d) {
         'Lista de conferência:\n' + (cfgS.checklist || []).map(function (c) { return '[ ] ' + c; }).join('\n') + '\n\nItens do pedido:\n' + itensTxt +
         (s === 'TECNICA' && cond.prazoExecucao ? '\n\nPrazo de execução combinado: ' + cond.prazoExecucao : '') +
         (s === 'FINANCEIRO' ? '\n\nValor, condição de pagamento e dados de faturamento: Comercial > Pedidos aprovados > ' + ComP_rotulo_(p) + '.' : '') +
+        // 29/10/2026: viagem prevista na proposta (equipe, destino, dias), sem valores
+        ((s === 'TECNICA' || s === 'FINANCEIRO') && typeof ComPr_resumoSemValor_ === 'function' && ComPr_resumoSemValor_(p, s) ? '\n\n' + ComPr_resumoSemValor_(p, s) : '') +
         (obs ? '\n\nObservação do vendedor: ' + obs : '') + '\n\nAo concluir, conte o que foi feito (número da O.S., do pedido de compra ou da nota fiscal).';
       var atv = Com_criarAtividade_({ responsavelId: r.id, titulo: 'Pedido aprovado ' + ComP_rotulo_(p) + ' · ' + COM_SETORES[s] + ': ' + Com_s_(p.CLIENTE_NOME), descricao: desc, prazo: prazo, prioridade: 'Alta',
         modulo: cfgS.modulo || 'comercial', moduloNome: cfgS.modulo === 'cronograma_execucao' ? 'Cronograma de execução' : 'Comercial', clienteId: Com_s_(p.CLIENTE_ID), unidadeId: Com_s_(p.UNIDADE_ID),

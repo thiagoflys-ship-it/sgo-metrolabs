@@ -3,14 +3,14 @@
 // e a rotina. Código real num contexto isolado (tests/_comercial_ambiente.cjs). Só dados de teste.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, oportunidadeDeTeste, em } = require('./_comercial_ambiente.cjs');
+const { ambiente, oportunidadeDeTeste, em, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 
 function propostaPronta(amb, desconto) {
   const { oportunidade } = oportunidadeDeTeste(amb);
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
-  ok(amb.api('s_vera', 'salvarProposta', { id: np.proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', descontoPct: desconto || '',
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', descontoPct: desconto || '',
     itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00', equipamentoId: 'eq1' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
   return { oportunidade, proposta: np.proposta };
 }
@@ -115,7 +115,7 @@ test('desconto acima do limite: vai para a Caixa de decisões do gestor comercia
   amb.cache.GES_SINC_RECENTE = undefined; delete amb.cache.GES_SINC_RECENTE;
   assert.ok(!amb.ctx.Gestao_apiCaixa('s_gaspar', {}).itens.some((i) => i.tipo === 'comercial_desconto'));
   // dentro da política fica pronta direto
-  ok(amb.api('s_vera', 'salvarProposta', { id: proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', descontoPct: '10', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', descontoPct: '10', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
   assert.equal(ok(amb.api('s_vera', 'concluirProposta', { id: proposta.id })).proposta.situacao, 'PRONTA');
 });
 
@@ -124,14 +124,14 @@ test('desconto pelo preço de tabela do catálogo e margem mínima configurada',
   const { oportunidade } = oportunidadeDeTeste(amb);
   const prod = ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'QT-AC', nome: 'Qualificação térmica', tipo: 'SERVICO', preco: '5.000,00', custo: '4.000,00' })).produto;
   const p = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id })).proposta;
-  const s = ok(amb.api('s_vera', 'salvarProposta', { id: p.id, escopo: 'Qualificação térmica completa da autoclave, com relatório final.', itens: [{ produtoId: prod.id, descricao: 'Qualificação térmica', quantidade: 1, precoUnitario: '4.000,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar' } }));
+  const s = ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p.id, escopo: 'Qualificação térmica completa da autoclave, com relatório final.', itens: [{ produtoId: prod.id, descricao: 'Qualificação térmica', quantidade: 1, precoUnitario: '4.000,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar' } }));
   assert.equal(s.politica.dentro, false, 'preço digitado 20% abaixo da tabela conta como desconto');
   const met = amb.ctx.Com_metodologia_();
   assert.equal(met.politica.descontoMaxPct, 15);
   // margem mínima: 30%, com custo 4.000 e preço 4.600 (desconto 8%) a margem fica 13%
   const nova = JSON.parse(JSON.stringify(met)); nova.politica.margemMinPct = 30;
   ok(amb.api('s_gaspar', 'metodologia', { salvar: nova, motivo: 'Margem mínima de teste' }));
-  const s2 = ok(amb.api('s_vera', 'salvarProposta', { id: p.id, escopo: 'Qualificação térmica completa da autoclave, com relatório final.', itens: [{ produtoId: prod.id, descricao: 'Qualificação térmica', quantidade: 1, precoUnitario: '4.600,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar' } }));
+  const s2 = ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p.id, escopo: 'Qualificação térmica completa da autoclave, com relatório final.', itens: [{ produtoId: prod.id, descricao: 'Qualificação térmica', quantidade: 1, precoUnitario: '4.600,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar' } }));
   assert.equal(s2.politica.dentro, false);
   assert.match(s2.politica.motivos.join(' '), /margem de 13,0% abaixo da mínima de 30%/);
   assert.equal(amb.api('s_vera', 'metodologia', { salvar: nova, motivo: 'tentativa do vendedor' }).ok, false, 'vendedor não muda a metodologia');
@@ -310,7 +310,7 @@ test('revisão da proposta pela gestora: erros impedem concluir; alertas de cada
   const ct = ok(amb.api('s_vera', 'salvarContato', { clienteId: 'c2', nome: 'Beto Compras Teste', email: 'beto@beta.exemplo.test' })).contato;
   const o2 = ok(amb.api('s_vera', 'salvarOportunidade', { titulo: 'Lavadora', clienteId: 'c2', contatoId: ct.id, funil: 'ENGENHARIA', origem: 'Indicação', valor: '2000', proxima: { acao: 'Ligar para o Beto', data: '2026-10-20' } })).oportunidade;
   const p2 = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: o2.id })).proposta;
-  ok(amb.api('s_vera', 'salvarProposta', { id: p2.id, escopo: 'Qualificação da lavadora termodesinfectora da CME, com relatório.', itens: [{ descricao: 'Qualificação de lavadora', quantidade: 1, precoUnitario: '2.000,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p2.id, escopo: 'Qualificação da lavadora termodesinfectora da CME, com relatório.', itens: [{ descricao: 'Qualificação de lavadora', quantidade: 1, precoUnitario: '2.000,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
   const r2 = ok(amb.api('s_vera', 'revisarProposta', { id: p2.id }));
   assert.equal(r2.erros.length, 0, r2.erros.join('; '));
   assert.ok(r2.alertas.some((a) => /sem CNPJ completo/.test(a)));
@@ -349,7 +349,7 @@ test('contatos: o contato antigo do cliente e o responsável da unidade viram co
 test('rotina: vence a proposta sem resposta, cria a atividade de validade perto do vencimento, roda no máximo uma vez por hora e monta a lista do dia', () => {
   const amb = ambiente();
   const { proposta } = propostaPronta(amb);
-  ok(amb.api('s_vera', 'salvarProposta', { id: proposta.id, validadeDias: '3', escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: proposta.id, validadeDias: '3', escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
   ok(amb.api('s_vera', 'concluirProposta', { id: proposta.id }));
   ok(amb.api('s_vera', 'gerarDocumento', { id: proposta.id }));
   ok(amb.api('s_vera', 'marcarEnviada', { id: proposta.id, como: 'Entregue em mãos na reunião com a CME' }));
@@ -391,12 +391,12 @@ test('banco novo: a primeira oportunidade cria as abas de Minhas atividades; sal
   const { oportunidade } = oportunidadeDeTeste(amb);
   assert.ok(Array.isArray(amb.tabelas.ATV_ATIVIDADES) && amb.tabelas.ATV_ATIVIDADES.length === 1, 'atividade criada mesmo sem a aba existir antes');
   const p = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id })).proposta;
-  ok(amb.api('s_vera', 'salvarProposta', { id: p.id, itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p.id, itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
   const reg = amb.tabelas.COM_PROPOSTAS.find((x) => x.ID === p.id);
   assert.match(reg.APRESENTACAO, /agradece a oportunidade/);
   assert.match(JSON.parse(reg.CONDICOES_JSON).pagamento, /Boleto/);
   // o retorno criado pela própria vendedora ao enviar não gera aviso de "nova atividade" para ela
-  ok(amb.api('s_vera', 'salvarProposta', { id: p.id, escopo: 'Escopo de teste com mais de trinta letras para a revisão.', itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p.id, escopo: 'Escopo de teste com mais de trinta letras para a revisão.', itens: [{ descricao: 'Item de teste', quantidade: 1, precoUnitario: '100' }] }));
   ok(amb.api('s_vera', 'concluirProposta', { id: p.id }));
   ok(amb.api('s_vera', 'gerarDocumento', { id: p.id }));
   ok(amb.api('s_vera', 'marcarEnviada', { id: p.id, como: 'Entregue em mãos (teste)' }));

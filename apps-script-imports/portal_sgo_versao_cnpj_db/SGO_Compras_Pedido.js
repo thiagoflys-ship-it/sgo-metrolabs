@@ -374,7 +374,8 @@ function CmpP_entregar_(eu, d) {
 function Compras_doPedidoComercial_(p, info) {
   info = info || {};
   if (!p || Cmp_up_(p.SITUACAO) !== 'APROVADA') return '';
-  var produtos = Cmp_json_(p.ITENS_JSON, []).filter(function (i) { return Cmp_up_(i.tipo) === 'PRODUTO'; });
+  // 29/10/2026: o item automático "Frete e entrega" da proposta (custo de frete, SGO_Comercial_Precificacao.js) não é produto a comprar
+  var produtos = Cmp_json_(p.ITENS_JSON, []).filter(function (i) { return Cmp_up_(i.tipo) === 'PRODUTO' && !i.auto; });
   if (!produtos.length) return '';
   try { Cmp_garantirAbas_(); } catch (e) {}
   var ja = Cmp_ler_(CMP_ABAS.REQUISICOES).filter(function (r) { return Cmp_s_(r.PROPOSTA_ID) === Cmp_s_(p.ID) && Cmp_up_(r.ORIGEM) === 'COMERCIAL'; })[0];

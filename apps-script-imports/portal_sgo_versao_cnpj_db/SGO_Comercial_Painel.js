@@ -95,7 +95,10 @@ function Com_painel_(eu, d) {
   var vid = eu.gestao ? Com_s_(d.vendedorId) : eu.id;
   var ind = Com_indicadores_(comp, vid);
   if (!eu.gestao) delete ind.porVendedor;
-  return { indicadores: ind, competencia: comp, vendedorId: vid, equipe: eu.gestao ? Com_equipeComercial_() : [] };
+  // 29/10/2026: quadro "Precificação e estratégia" (gestão): margem, propostas abaixo da mínima, viagem repassada x não repassada, reajustes
+  var prec = null;
+  if (eu.gestao && typeof ComPr_quadroPainel_ === 'function') { try { prec = ComPr_quadroPainel_(comp, vid); } catch (e) { prec = { erro: String((e && e.message) || e) }; } }
+  return { indicadores: ind, competencia: comp, vendedorId: vid, equipe: eu.gestao ? Com_equipeComercial_() : [], precificacao: prec };
 }
 
 // ------------------------------------------------------------
@@ -170,11 +173,13 @@ function Comercial_fontePendencias_(add, ctx) {
   });
   Com_ler_(COM_ABAS.PROPOSTAS).forEach(function (p) {
     var s = Com_up_(p.SITUACAO), resp = Com_s_(p.RESPONSAVEL_ID), nome = Com_s_(p.RESPONSAVEL_NOME), rot = ComP_rotulo_(p);
+    // 29/10/2026: margem abaixo da mínima da política de precificação: a decisão é da Diretoria
+    var soDir = s === 'AGUARDANDO_APROVACAO' && typeof ComPr_daProposta_ === 'function' && (function () { try { return ComPr_daProposta_(p, null).analise.abaixoMin; } catch (e) { return false; } })();
     if (s === 'AGUARDANDO_APROVACAO') add(Pend_item_('comercial_desconto', {
       id: 'COM:DESC:' + p.ID, nome: rot, publico: 'GESTAO', responsavel: nome, responsavelId: resp, gravidade: 'ATENCAO', dias: null,
       titulo: 'Desconto da proposta ' + rot + ' (' + Com_s_(p.CLIENTE_NOME) + ') aguardando aprovação',
-      detalhe: 'Pedido de ' + nome + ' em ' + Com_br_(p.DESCONTO_PEDIDO_EM) + '. Motivo: ' + Com_s_(p.DESCONTO_MOTIVO).slice(0, 200) + ' A proposta não pode ser enviada até a decisão.',
-      oQueFazer: 'Abra a proposta em Comercial > Propostas, confira a política e aprove ou negue com a fundamentação. Quem pediu não aprova o próprio desconto.',
+      detalhe: 'Pedido de ' + nome + ' em ' + Com_br_(p.DESCONTO_PEDIDO_EM) + '. Motivo: ' + Com_s_(p.DESCONTO_MOTIVO).slice(0, 200) + ' A proposta não pode ser enviada até a decisão.' + (soDir ? ' A margem ficou abaixo da mínima da política de precificação: só a Diretoria aprova.' : ''),
+      oQueFazer: 'Abra a proposta em Comercial > Propostas, confira a política e aprove ou negue com a fundamentação. Quem pediu não aprova o próprio desconto.' + (soDir ? ' Margem abaixo da mínima: a aprovação é da Diretoria (o gestor comercial pode negar).' : ''),
       tela: tela('propostas', Com_s_(p.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(resp), naoPode: [resp], desde: Com_dia_(p.DESCONTO_PEDIDO_EM) }
     }));
     if (s === 'APROVADA' && (!Com_s_(p.PEDIDO_SITUACAO) || Com_up_(p.PEDIDO_SITUACAO) === 'SEM_PASSAGEM')) {
@@ -223,6 +228,8 @@ function Comercial_rotina_(quando, forcar) {
   passo('passagens', ComP_acompanharPassagens_);
   passo('emails', Com_enviarEmailsPendentes_);
   passo('contatos', ComCt_migrarUmaVez_);
+  // 29/10/2026: reajustes de preço agendados que chegaram à vigência
+  if (typeof ComPr_rotinaReajustes_ === 'function') passo('reajustes', ComPr_rotinaReajustes_);
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando || new Date()) : { dentro: true };
   if (ex.dentro) passo('listaDoDia', function () { return Com_listasDoDia_(); });
   return r;
@@ -255,6 +262,8 @@ function Com_inicio_(eu) {
   base.origens = met.origens; base.motivosPerda = met.motivosPerda; base.regraPerda = met.regraPerda; base.tiposContato = COM_TIPOS_CONTATO; base.papeisContato = COM_PAPEIS_CONTATO;
   base.estrategias = met.estrategias; base.qualificacao = met.qualificacao.itens; base.situacoesProposta = COM_SITUACOES_PROP; base.tiposItem = COM_TIPOS_ITEM; base.setores = COM_SETORES;
   base.politica = { descontoMaxPct: ComP_limiteDe_(eu.id, met), margemMinPct: met.politica.margemMinPct };
+  // 29/10/2026: política de precificação (só Diretoria e Administrador mudam) e reajuste do catálogo
+  base.podePrecificacao = !!(eu.diretoria || eu.perfil === 'ADMIN');
   base.validadePadrao = met.proposta.validadeDias;
   base.equipe = eu.gestao ? Com_equipeComercial_() : [];
   base.iaDisponivel = ComG_iaDisponivel_();
@@ -332,11 +341,22 @@ function Com_metodologiaTela_(eu, d) {
     var normT = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
     var mexeu = ['termos', 'termosConcordancia'].some(function (k) { return novoP[k] !== undefined && normT(novoP[k]) !== normT(atualP[k]); });
     if (mexeu && !(eu.diretoria || eu.perfil === 'ADMIN')) throw new Error('Não foi possível salvar: os termos e condições da contratação (cláusulas do contrato) só são alterados pela Diretoria ou pelo Administrador. Desfaça a mudança nesses textos (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria');
+    // 29/10/2026: política de precificação (valores da viagem, impostos, margens, reajuste): só a Diretoria e o Administrador
+    if (d.salvar.precificacao !== undefined && typeof ComPr_politicaCanonica_ === 'function' && ComPr_politicaCanonica_(d.salvar.precificacao) !== ComPr_politicaCanonica_(Com_metodologia_().precificacao) && !(eu.diretoria || eu.perfil === 'ADMIN'))
+      throw new Error('Não foi possível salvar: a política de precificação (km, diárias, alimentação, hospedagem, impostos, margens e reajuste) só é alterada pela Diretoria ou pelo Administrador. Desfaça a mudança nesses campos (ou atualize a tela) e salve de novo; para mudar a política, peça à Diretoria');
     var v = Com_comTrava_(function () { Com_garantirAbas_(); return Com_gravarMetodologia_(d.salvar, eu, motivo); });
     return { metodologia: Com_metodologia_(), termos: Com_termosVigentes_(), message: 'Metodologia salva (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.' };
   }
   var r = { metodologia: Com_metodologia_(), podeEditar: eu.gestao, padrao: eu.gestao ? COM_METODOLOGIA_PADRAO : null,
-    podeEditarTermos: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')), termos: Com_termosVigentes_() };
+    podeEditarTermos: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')), termos: Com_termosVigentes_(),
+    podeEditarPrecificacao: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')) };
+  if (typeof ComPr_politica_ === 'function') { var polT = ComPr_politica_(); r.precificacao = { beneficio: ComPr_beneficio_(polT), incompleta: ComPr_politicaIncompleta_(polT).map(function (f) { return f.nome; }), repasses: COM_PR_REPASSES }; }
+  // quem não vê custo (vendedor) vê os valores da viagem, mas não impostos nem margens da política
+  if (!eu.veCusto && r.metodologia && r.metodologia.precificacao) {
+    r.metodologia = Com_copia_(r.metodologia);
+    ['impostosPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    r.precificacaoReservada = true;
+  }
   if (eu.gestao) {
     r.aprendizado = ComG_aprendizado_();
     r.versoes = Com_ler_(COM_ABAS.CONFIG).filter(function (c) { return Com_s_(c.CHAVE) === 'METODOLOGIA'; }).map(function (c) { return { versao: Number(c.VERSAO), em: Com_br_(c.ATUALIZADO_EM), por: Com_s_(c.ATUALIZADO_POR_NOME), motivo: Com_s_(c.MOTIVO) }; })
@@ -402,7 +422,12 @@ var COM_ACOES = {
     var g = Comercial_relatorioMes_(comp, eu.nome);
     return { html: typeof RelA4_injetarAvisos_ === 'function' ? RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_({ salvo: g.salvo, pdfUrl: g.pdfUrl, pastaUrl: g.pastaUrl, aviso: g.salvo ? '' : g.aviso }, [{ aviso: g.salvo ? g.aviso : '' }])) : g.html, salvo: g.salvo, pdfUrl: g.pdfUrl };
   },
-  metodologia: function (eu, sid, d) { return Com_metodologiaTela_(eu, d); }
+  metodologia: function (eu, sid, d) { return Com_metodologiaTela_(eu, d); },
+  // 29/10/2026: reajuste do catálogo (SGO_Comercial_Precificacao.js): prévia, aplicar (ou agendar), histórico e desfazer o último
+  reajustePrevia: function (eu, sid, d) { var r = ComPr_previaReajuste_(eu, d); delete r._todas; return r; },
+  reajusteAplicar: function (eu, sid, d) { return ComPr_aplicarReajuste_(eu, d); },
+  reajustes: function (eu, sid, d) { return ComPr_historicoReajustes_(eu); },
+  reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); }
 };
 
 /** google.script.run: Comercial_api(sessionId, acao, dados). Nunca lança. */

@@ -148,6 +148,8 @@ function ComG_itensVendedor_(uid, ctx) {
         porque: 'Toda recusa tem um próximo passo.', acao: 'Entenda a recusa e decida: nova revisão ou registrar a perda.' });
     }
   });
+  // 29/10/2026: rascunhos com o checklist de custos da viagem ou do frete incompleto (especialista em precificação)
+  if (typeof ComPr_itensVendedor_ === 'function') { try { ComPr_itensVendedor_(props, ComPr_politica_(met)).forEach(add); } catch (ePr) { console.error('Comercial, gestora (precificação): ' + ((ePr && ePr.message) || ePr)); } }
   if (abertas.length < 5) add({ chave: 'FUNIL_BAIXO:' + uid, regra: 'FUNIL_BAIXO', prioridade: 5, titulo: 'Funil com ' + Com_plural_(abertas.length, 'oportunidade aberta', 'oportunidades abertas'), ref: { tipo: 'oportunidades' },
     porque: 'Com menos de 5 oportunidades abertas a meta fica dependente de poucas vendas.', acao: 'Prospecte contas do perfil atendido (' + Com_s_(met.qualificacao.perfilCliente).split(';')[0] + ') e cadastre as novas oportunidades.' });
   // proposta sem resposta cujo retorno já está na lista da oportunidade: a mensagem vai para esse item (sem repetir)
@@ -208,6 +210,8 @@ function ComG_panorama_(ctx) {
     if (du >= (Number(met.posVenda.pedidoParadoDiasUteis) || 1)) itens.push({ chave: 'PEDIDO:' + p.ID, regra: 'PEDIDO_PARADO', prioridade: 1, titulo: ComP_rotulo_(p) + ' · ' + Com_s_(p.CLIENTE_NOME) + ': aprovado há ' + du + ' dia(s) útil(eis) sem passagem aos setores', ref: { tipo: 'proposta', id: Com_s_(p.ID) },
       porque: 'Pedido aprovado sem passagem: é aqui que se perde o elo entre vender e executar.', acao: 'Cobre de ' + ComG_primeiroNome_(p.RESPONSAVEL_NOME) + ' a passagem hoje (Propostas > Passar aos setores).' });
   });
+  // 29/10/2026: especialista em precificação: política incompleta, propostas com custo de viagem fora ou margem baixa, catálogo sem reajuste
+  if (typeof ComPr_itensGestora_ === 'function') { try { itens = itens.concat(ComPr_itensGestora_({ met: met, propostas: props })); } catch (ePr) { console.error('Comercial, gestora (precificação): ' + ((ePr && ePr.message) || ePr)); } }
   itens.sort(function (a, b) { return a.prioridade - b.prioridade; });
   itens.forEach(function (i) { i.prioridadeNome = COM_G_PRIORIDADE[i.prioridade]; });
   return { itens: itens, equipe: Object.keys(equipe).map(function (k) { var e = equipe[k]; e.valorAbertoTxt = Com_moeda_(e.valorAberto); return e; }).filter(function (e) { return e.abertas; })
@@ -232,6 +236,7 @@ function ComG_metodologiaTexto_(met) {
   l.push('ESTRATÉGIAS QUANDO NÃO RESPONDE: ' + met.estrategias.map(function (e) { return e.titulo + ' (' + e.texto + ')'; }).join(' | '));
   l.push('OBJEÇÕES: ' + met.objecoes.map(function (o) { return '"' + o.objecao + '": ' + o.resposta; }).join(' | '));
   l.push('POLÍTICA DE DESCONTO: ' + met.politica.texto);
+  if (met.precificacao && Com_s_(met.precificacao.texto)) l.push('POLÍTICA DE PRECIFICAÇÃO: ' + Com_s_(met.precificacao.texto));
   l.push('PERDA: ' + met.regraPerda + ' Motivos: ' + met.motivosPerda.join('; '));
   return l.join('\n');
 }
@@ -640,7 +645,7 @@ function ComG_revisarPropostaRegras_(p) {
   // termos e condições). Escopo curto deixou de impedir a conclusão: vira alerta.
   var escopo = typeof ComP_escopo_ === 'function' ? ComP_escopo_(p) : Com_s_(p.ESCOPO);
   if (servico && escopo.length < 30) alertas.push('a descrição (escopo) está em branco ou curta: o documento diz "Conforme os itens da tabela"; se o serviço precisa de detalhe (onde, o que o cliente recebe), escreva na descrição');
-  var avulsos = itens.filter(function (i) { return !i.produtoId; });
+  var avulsos = itens.filter(function (i) { return !i.produtoId && !i.auto; });
   if (avulsos.length) alertas.push(Com_plural_(avulsos.length, 'item avulso', 'itens avulsos') + ' (fora do catálogo de Produtos e serviços): confira a descrição e o preço' + (avulsos.length <= 3 ? ' (' + avulsos.map(function (i) { return Com_s_(i.descricao).slice(0, 40); }).join('; ') + ')' : ''));
   var acima = itens.filter(function (i) { return i.produtoId && Number(i.precoTabela) > 0 && Number(i.precoUnitario) > Number(i.precoTabela) + 0.004; });
   if (acima.length) alertas.push('preço acima da tabela do catálogo em ' + acima.slice(0, 3).map(function (i) { return (Com_s_(i.codigo) || Com_s_(i.descricao).slice(0, 30)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (acima.length > 3 ? ' e mais ' + (acima.length - 3) : ''));
@@ -657,8 +662,21 @@ function ComG_revisarPropostaRegras_(p) {
   var ct = Com_s_(p.CONTATO_ID) ? SGO_DATA.getById(COM_ABAS.CONTATOS, Com_s_(p.CONTATO_ID)) : null;
   if (!ct) alertas.push('a proposta não tem contato do cliente (A/C)');
   else if (!Com_s_(ct.EMAIL)) alertas.push('o contato ' + Com_s_(ct.NOME) + ' está sem e-mail: o envio pelo e-mail vai pedir outro endereço');
-  var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), met);
+  // 29/10/2026: especialista em precificação (SGO_Comercial_Precificacao.js): checklist de custos da viagem e do frete,
+  // margem depois de impostos e da viagem, benefício do Programa de conduta e desconto sobre o deslocamento
+  var xPr = typeof ComPr_daProposta_ === 'function' ? ComPr_daProposta_(p, null, itens) : null;
+  var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), met, xPr && xPr.analise);
   if (!pol.dentro && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0 && Com_up_(p.SITUACAO) === 'PRONTA') erros.push('a proposta tem ' + pol.motivos.join(' e ') + ' sem aprovação registrada');
+  if (xPr) {
+    var legado = !Com_s_(p.DESLOCAMENTO_JSON) && Com_up_(p.SITUACAO) !== 'RASCUNHO';
+    if (!xPr.checklist.ok) {
+      if (legado) alertas.push('proposta concluída antes do checklist de custos da viagem e do frete (29/10/2026): confira se o custo de campo está no preço; numa nova revisão o checklist é cobrado');
+      else erros.push('o checklist de custos está incompleto (' + xPr.checklist.faltas.map(function (f) { return f.texto; }).join('; ') + '). Todo custo de campo precisa entrar no preço ou ficar registrado como "não se aplica" com o motivo: preencha "Custos da viagem e do frete" no rascunho');
+    }
+    var polPr = ComPr_politica_(met);
+    ComPr_problemas_(p, polPr, xPr).forEach(function (q) { if (['CHECKLIST', 'VIAGEM_SEM_CALCULO', 'MARGEM_MINIMA'].indexOf(q.regra) < 0) alertas.push(q.texto); });
+    if (xPr.analise.semImpostos && Number(p.TOTAL) > 0 && polPr.margemMinPct !== null) alertas.push('a política de precificação ainda não tem o percentual de impostos: a margem está calculada sem impostos (maior do que é)');
+  }
   if (calc.itensSemCusto && Number(met.politica.margemMinPct) > 0) alertas.push(Com_plural_(calc.itensSemCusto, 'item sem custo cadastrado ficou fora da conta de margem', 'itens sem custo cadastrado ficaram fora da conta de margem'));
   if (pol.dentro && calc.descontoPct > 0.6 * pol.limite && pol.limite > 0) alertas.push('desconto de ' + Com_pct_(calc.descontoPct) + ' perto do limite: a metodologia pede vender valor técnico, não desconto');
   var outra = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.OPORTUNIDADE_ID) === Com_s_(p.OPORTUNIDADE_ID) && Com_s_(x.ID) !== Com_s_(p.ID) && Com_up_(x.SITUACAO) === 'ENVIADA' && Com_s_(x.NUMERO) !== Com_s_(p.NUMERO); })[0];

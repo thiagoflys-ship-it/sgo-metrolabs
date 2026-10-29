@@ -2,7 +2,7 @@
 // Código real num contexto isolado (tests/_comercial_ambiente.cjs), relógio fixo (não depende da hora real). Só dados de teste.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, oportunidadeDeTeste } = require('./_comercial_ambiente.cjs');
+const { ambiente, oportunidadeDeTeste, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 const LISTA_ENG1 = ['Hospital ou clínica no perfil de cliente (CME, engenharia clínica, centro cirúrgico, UTI)', 'Dor técnica identificada', 'Decisor técnico e financeiro mapeados', 'Origem e dono registrados'];
@@ -18,7 +18,7 @@ function decisor(amb, o, sid) {
 }
 function enviarProposta(amb, oportunidadeId) {
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId }));
-  ok(amb.api('s_vera', 'salvarProposta', { id: np.proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.',
+  ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: 'Qualificação térmica (QI, QO e QD) da autoclave da CME, com relatório e certificados.',
     itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '4.500,00', equipamentoId: 'eq1' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'A combinar', garantia: '90 dias' } }));
   ok(amb.api('s_vera', 'concluirProposta', { id: np.proposta.id }));
   ok(amb.api('s_vera', 'gerarDocumento', { id: np.proposta.id }));
