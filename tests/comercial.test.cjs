@@ -37,7 +37,10 @@ test('permissões: técnico, metrologia e RH não abrem o Comercial; Financeiro 
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'QT-AC', nome: 'Qualificação térmica de autoclave', tipo: 'SERVICO', preco: '5.000,00', custo: '2.000,00' }));
   assert.equal(ok(amb.api('s_vera', 'catalogo')).produtos[0].custo, undefined, 'vendedor não vê custo');
   assert.equal(ok(amb.api('s_gaspar', 'catalogo')).produtos[0].custo, 2000);
-  assert.equal(amb.api('s_vera', 'salvarProduto', { codigo: 'X', nome: 'Teste', preco: 1 }).ok, false, 'vendedor não mantém catálogo');
+  // 29/10/2026 (pedido do dono): o vendedor mantém o catálogo com limites (sem custo); detalhes em comercial-catalogo-equipe-exclusao.test.cjs
+  assert.equal(amb.api('s_vera', 'salvarProduto', { codigo: 'X', nome: 'Teste', preco: 1, custo: '0,50' }).ok, false, 'vendedor não informa custo');
+  assert.equal(amb.api('s_vera', 'salvarProduto', { codigo: 'X', nome: 'Teste', preco: 1 }).ok, true, 'vendedor cadastra item sem custo');
+  assert.equal(amb.api('s_tiago', 'salvarProduto', { codigo: 'Y', nome: 'Teste técnico', preco: 1 }).ok, false, 'técnico não mantém catálogo');
 });
 
 test('valores nunca saem do Comercial: atividades, avisos e pendências sem R$', () => {

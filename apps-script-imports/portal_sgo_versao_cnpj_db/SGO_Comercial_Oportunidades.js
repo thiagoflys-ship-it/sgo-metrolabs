@@ -300,7 +300,7 @@ function ComOpo_criteriosMudanca_(o, destino, ctx, confirmados) {
     }
   }
   var regs = ctx.contatosReg ? ctx.contatosReg.filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); }) : Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); });
-  var props = (ctx.propostas || Com_ler_(COM_ABAS.PROPOSTAS)).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  var props = (ctx.propostas || ComP_lerPropostas_()).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); });
   var qual = Com_json_(o.QUALIFICACAO_JSON, {}) || {};
   var itemDecisor = (met.qualificacao.itens || []).filter(function (q) { return q.codigo === 'DECISOR'; })[0];
   if (av.exigirDecisor !== false && itemDecisor && !Com_s_(qual.DECISOR)) r.faltas.push({ codigo: 'DECISOR', texto: 'O decisor não está mapeado (qualificação: ' + itemDecisor.nome + ').', oQueFazer: 'Abra a oportunidade, toque em "Editar" e preencha "' + itemDecisor.nome + '" (quem valida, quem aprova e quem assina). Depois mova de novo.' });
@@ -438,7 +438,7 @@ function ComOpo_ganhar_(eu, d) {
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { SITUACAO: 'GANHA', GANHA_EM: agora, PROXIMA_ACAO: 'Passar o pedido aprovado aos setores', ATUALIZADO_EM: agora });
     Com_historico_('OPORTUNIDADE', o.ID, 'GANHA', eu, { de: 'Aberta', para: 'Ganha', texto: Com_texto_(d.texto, 1000) || 'Venda ganha.' });
     Com_idsGestaoComercial_([eu.id]).forEach(function (gid) { Com_avisar_(gid, 'GANHA', 'Venda ganha: ' + o.CODIGO, eu.nome + ' ganhou a oportunidade ' + o.CODIGO + ' (' + Com_s_(o.CLIENTE_NOME) + ').', { tipo: 'oportunidade', id: o.ID }); });
-    var aprovada = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && Com_up_(p.SITUACAO) === 'APROVADA'; })[0];
+    var aprovada = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && Com_up_(p.SITUACAO) === 'APROVADA'; })[0];
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'GANHA', GANHA_EM: agora })), propostaAprovadaId: aprovada ? Com_s_(aprovada.ID) : '',
       message: 'Venda ganha. ' + (aprovada ? 'Agora passe o pedido aprovado aos setores (Propostas > ' + aprovada.NUMERO + ' > Passar aos setores).' : 'Registre a resposta do cliente na proposta e passe o pedido aos setores.') };
   });
@@ -459,7 +459,7 @@ function ComOpo_perder_(eu, d) {
     var agora = Com_agora_();
     if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Oportunidade perdida: ' + motivo + '.');
     var canceladas = 0;
-    Com_ler_(COM_ABAS.PROPOSTAS).forEach(function (p) {
+    ComP_lerPropostas_().forEach(function (p) {
       if (Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(o.ID)) return;
       var s = Com_up_(p.SITUACAO);
       if (['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'].indexOf(s) < 0) return;
@@ -532,7 +532,7 @@ function ComOpo_detalhe_(eu, id) {
   var hist = Com_ler_(COM_ABAS.HISTORICO).filter(function (h) { return Com_s_(h.ENTIDADE) === 'OPORTUNIDADE' && Com_s_(h.ENTIDADE_ID) === t.id; })
     .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); })
     .map(function (h) { return { em: Com_br_(h.DATA), tipo: Com_s_(h.TIPO), de: Com_s_(h.DE), para: Com_s_(h.PARA), texto: Com_s_(h.TEXTO), por: Com_s_(h.USUARIO_NOME) }; });
-  var propostas = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; })
+  var propostas = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; })
     .sort(function (a, b) { return String(b.CRIADO_EM).localeCompare(String(a.CRIADO_EM)); })
     .map(function (p) { return { id: Com_s_(p.ID), numero: Com_s_(p.NUMERO), revisao: typeof SGO_DocA4_revisao_ === 'function' ? SGO_DocA4_revisao_(p.REVISAO) : Com_s_(p.REVISAO), situacao: Com_up_(p.SITUACAO), situacaoNome: COM_SITUACOES_PROP[Com_up_(p.SITUACAO)] || '', total: eu.veValores ? Com_moeda_(p.TOTAL) : '' }; });
   var atv = Com_atividade_(o.ATIVIDADE_ID);

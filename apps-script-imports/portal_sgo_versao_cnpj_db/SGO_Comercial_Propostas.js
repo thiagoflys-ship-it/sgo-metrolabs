@@ -3,6 +3,14 @@
  *
  * Catálogo (COM_PRODUTOS): começa vazio; a gestão cadastra (código, nome, tipo, unidade, preço; custo opcional,
  * visto só pela gestão). Item arquivado sai da escolha, nunca do banco.
+ * 29/10/2026 (pedido do dono): o vendedor também cadastra e altera (descrição, unidade, categoria e preço), com limites:
+ * preço nunca abaixo do custo cadastrado; redução acima da alçada de desconto dele (acumulada desde o último preço
+ * definido pela gestão) vira pedido para a gestão comercial ou a Diretoria (Caixa de decisões); aumento grava direto;
+ * não vê nem altera o custo; só arquiva (reativar é da gestão). Toda mudança de preço fica em COM_HISTORICO (de, para,
+ * quem, quando).
+ * 29/10/2026: proposta que nunca foi ao cliente pode ser EXCLUÍDA pelo responsável ou pela gestão (motivo obrigatório):
+ * SITUACAO EXCLUIDA + EXCLUIDA_EM; sai das listas, do quadro, do painel e da gestora; o registro e o histórico ficam e o
+ * número não é reaproveitado. Proposta já enviada só é cancelada (com motivo).
  *
  * Proposta (COM_PROPOSTAS, itens em ITENS_JSON):
  *  - Número anual PROP-2026-0001 (decisão do dono; a solicitação de orçamento dos padrões continua com ORC-),
@@ -38,6 +46,11 @@ function ComP_produtoParaTela_(p, eu, corteReajuste) {
     ativo: Com_up_(p.ATIVO || 'SIM') !== 'NAO', atualizadoPor: Com_s_(p.ATUALIZADO_POR_NOME), atualizadoEm: Com_br_(p.ATUALIZADO_EM),
     origem: /importa[çc][ãa]o do crm/i.test(Com_s_(p.ATUALIZADO_POR_NOME)) || /^CRM-/i.test(Com_s_(p.CODIGO)) ? 'CRM' : '' };
   if (eu && eu.veCusto) { t.custo = Com_s_(p.CUSTO) === '' ? null : Number(p.CUSTO) || 0; t.custoTxt = t.custo === null ? '' : Com_moeda_(t.custo); }
+  // 29/10/2026: redução de preço pedida pelo vendedor (acima da alçada) e a última decisão
+  var sitPed = Com_up_(p.PRECO_PEDIDO_SITUACAO);
+  if (sitPed === 'PENDENTE') t.precoPedido = { preco: Number(p.PRECO_PEDIDO) || 0, precoTxt: Com_moeda_(p.PRECO_PEDIDO), por: Com_s_(p.PRECO_PEDIDO_POR_NOME), porId: Com_s_(p.PRECO_PEDIDO_POR_ID),
+    em: Com_br_(p.PRECO_PEDIDO_EM), motivo: Com_s_(p.PRECO_PEDIDO_MOTIVO), podeDecidir: !!(eu && eu.gestao && Com_s_(p.PRECO_PEDIDO_POR_ID) !== Com_s_(eu.id)) };
+  else if (sitPed === 'APROVADO' || sitPed === 'NEGADO') t.precoDecisao = { situacao: sitPed, precoTxt: Com_moeda_(p.PRECO_PEDIDO), por: Com_s_(p.PRECO_DECISAO_POR_NOME), em: Com_br_(p.PRECO_DECISAO_EM), texto: Com_s_(p.PRECO_DECISAO_TEXTO), pedidoPor: Com_s_(p.PRECO_PEDIDO_POR_NOME) };
   // 29/10/2026: data do último preço (reajuste ou edição); "sem reajuste" pela política de precificação
   if (eu && (eu.gestao || eu.catalogo) && typeof ComPr_desdePreco_ === 'function') {
     var desde = ComPr_desdePreco_(p), lim = corteReajuste || ComPr_corteMeses_(12);
@@ -64,6 +77,8 @@ function ComP_catalogo_(eu, d) {
   // importação do CRM, 25 nomes vieram em mais de um código (53 itens, produção em 28/10/2026); a gestão confere e arquiva o que sobra.
   var mesmoNome = ComP_nomesRepetidos_(visiveis);
   if ((sit === 'DUPLICADOS' || sit === 'SEM_REAJUSTE') && !gere) sit = 'ATIVOS';
+  // 29/10/2026: preço aguardando aprovação (redução pedida pelo vendedor acima da alçada)
+  var pendente = function (p) { return Com_up_(p.PRECO_PEDIDO_SITUACAO) === 'PENDENTE'; };
   // 29/10/2026: "Sem reajuste há mais de N meses" (política de precificação; padrão 12)
   var mesesReaj = typeof ComPr_politica_ === 'function' ? (ComPr_politica_().reajusteAlertaMeses || 12) : 12;
   var corte = typeof ComPr_corteMeses_ === 'function' ? ComPr_corteMeses_(mesesReaj) : '';
@@ -75,6 +90,7 @@ function ComP_catalogo_(eu, d) {
     if (sit === 'ATIVOS' && !ativo) return false;
     if (sit === 'ARQUIVADOS' && ativo) return false;
     if (sit === 'DUPLICADOS' && !(ativo && mesmoNome[Com_normBusca_(p.NOME)] > 1)) return false;
+    if (sit === 'PRECO_PENDENTE' && !pendente(p)) return false;
     return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA), COM_TIPOS_ITEM[Com_up_(p.TIPO)] || '', Com_s_(p.UNIDADE_MEDIDA)]);
   }).map(function (p) { return ComP_produtoParaTela_(p, eu, corte); });
   var q = termos.join(' '), qJunto = termos.join('');
@@ -97,7 +113,8 @@ function ComP_catalogo_(eu, d) {
   if (gere && corte && typeof ComPr_desdePreco_ === 'function') visiveis.forEach(function (p) { var dd = ComPr_desdePreco_(p); if (Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Number(p.PRECO) > 0 && dd && dd < corte) semReaj++; });
   return { produtos: lista, total: visiveis.length, encontrados: achados.length, limitado: lista.length < achados.length,
     categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }), duplicados: gere ? dupGrupos : 0,
-    semReajuste: semReaj, reajusteMeses: mesesReaj, podeReajustar: typeof ComPr_podeReajustar_ === 'function' && ComPr_podeReajustar_(eu) };
+    semReajuste: semReaj, reajusteMeses: mesesReaj, podeReajustar: typeof ComPr_podeReajustar_ === 'function' && ComPr_podeReajustar_(eu),
+    precosPendentes: visiveis.filter(pendente).length, podeCadastrar: !!(eu.catalogo || eu.catalogoVenda), acessoLimitado: !!eu.catalogoVenda, alcadaPreco: eu.catalogoVenda ? ComP_alcadaPreco_(eu) : null };
 }
 
 /** { nomeNormalizado: quantidade de itens ATIVOS com esse nome } */
@@ -107,9 +124,34 @@ function ComP_nomesRepetidos_(lista) {
   return m;
 }
 
-/** Gestão cadastra ou altera. d: { id?, codigo, nome, tipo, categoria, unidade, descricao, preco, custo } */
+/** Alçada do vendedor para reduzir preço do catálogo: a alçada de desconto dele na metodologia (por vendedor ou a geral); sem número, 10%. */
+function ComP_alcadaPreco_(eu, met) {
+  var v = ComP_limiteDe_(Com_s_(eu && eu.id), met);
+  return typeof v === 'number' && isFinite(v) && v >= 0 ? v : 10;
+}
+
+/** Base da alçada de preço: o maior entre o preço atual e o preço antes da primeira redução feita pelo vendedor. */
+function ComP_basePreco_(p) { return Math.max(Number(p && p.PRECO) || 0, Number(p && p.PRECO_REFERENCIA) || 0); }
+
+/** Avisa a gestão comercial (e, sem ela, a Diretoria ou o Administrador) do pedido de preço. Sem R$ (avisos não levam valor). */
+function ComP_avisarPedidoPreco_(eu, p, reducao) {
+  try {
+    Com_idsGestaoComercial_([Com_s_(eu.id)]).forEach(function (id) {
+      Com_avisar_(id, 'PRECO_PEDIDO', 'Preço do catálogo aguardando a sua decisão: ' + Com_s_(p.CODIGO), eu.nome + ' pediu para reduzir em ' + Com_pct_(reducao) + ' o preço de venda de "' + Com_s_(p.NOME) +
+        '" (acima da alçada do vendedor). Abra Comercial > Produtos e serviços, Situação "Preço aguardando aprovação", e aprove ou negue com a fundamentação.', { tipo: 'catalogo', id: Com_s_(p.ID) });
+    });
+  } catch (e) { console.error('Comercial, aviso do preço: ' + ((e && e.message) || e)); }
+}
+
+/**
+ * Cadastra ou altera. d: { id?, codigo, nome, tipo, categoria, unidade, descricao, preco, custo, motivoPreco }
+ * Gestão e Financeiro: tudo, sem limite. Vendedor (29/10/2026): cadastra item novo; no item existente altera descrição,
+ * unidade, categoria e preço de venda (código, nome e tipo ficam com a gestão); não informa custo; preço nunca abaixo do
+ * custo cadastrado; redução acima da alçada (acumulada sobre PRECO_REFERENCIA) não grava o preço: vira pedido pendente.
+ */
 function ComP_salvarProduto_(eu, d) {
-  if (!eu.catalogo) Com_exigir_(eu, 'GESTAO', 'salvar o produto ou serviço');
+  if (!eu.catalogo && !eu.catalogoVenda) Com_exigir_(eu, 'GESTAO', 'salvar o produto ou serviço');
+  var limitado = !eu.catalogo;
   d = d || {};
   var nome = Com_texto_(d.nome, 200);
   if (nome.length < 3) throw new Error('Não foi possível salvar: escreva o nome do produto ou serviço (pelo menos 3 letras)');
@@ -118,48 +160,127 @@ function ComP_salvarProduto_(eu, d) {
   var tipo = COM_TIPOS_ITEM[Com_up_(d.tipo)] ? Com_up_(d.tipo) : 'SERVICO';
   var preco = Com_num_(d.preco);
   if (!(preco >= 0)) throw new Error('Não foi possível salvar: informe o preço de venda (por exemplo 1.250,00)');
-  var custo = Com_s_(d.custo) === '' ? '' : Com_num_(d.custo);
+  if (limitado && Com_s_(d.custo) !== '') throw new Error('Não foi possível salvar: o custo do item é cadastrado pela gestão comercial ou pelo Financeiro. Deixe o custo em branco e salve de novo; se o item precisa de custo, peça a um deles');
+  var custo = limitado || Com_s_(d.custo) === '' ? '' : Com_num_(d.custo);
   if (custo !== '' && !(custo >= 0)) throw new Error('Não foi possível salvar: o custo precisa ser um valor (por exemplo 600,00) ou ficar em branco');
   return Com_comTrava_(function () {
     Com_garantirAbas_();
     var outro = Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Com_up_(p.CODIGO) === codigo && Com_s_(p.ID) !== Com_s_(d.id); })[0];
     if (outro) throw new Error('Não foi possível salvar: o código ' + codigo + ' já é do item "' + Com_s_(outro.NOME) + '". Use outro código ou edite aquele item');
+    var atual = Com_s_(d.id) ? SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id)) : null;
+    if (Com_s_(d.id) && !atual) throw new Error('Não foi possível salvar: o item não existe mais. Atualize o catálogo');
+    if (atual && limitado) {
+      var mudou = [];
+      if (Com_up_(atual.CODIGO) !== codigo) mudou.push('o código');
+      if (Com_normBusca_(atual.NOME) !== Com_normBusca_(nome)) mudou.push('o nome');
+      if ((Com_up_(atual.TIPO) || 'SERVICO') !== tipo) mudou.push('o tipo');
+      if (mudou.length) throw new Error('Não foi possível salvar: ' + mudou.join(', ').replace(/, ([^,]*)$/, ' e $1') + ' de um item já cadastrado ' + (mudou.length > 1 ? 'são alterados' : 'é alterado') + ' pela gestão comercial ou pelo Financeiro (identificam o item nas propostas). Você pode mudar a descrição, a unidade, a categoria e o preço de venda. Se o item está errado, arquive-o e cadastre o certo');
+    }
     // 28/10/2026: cadastro único. Item novo (ou nome alterado) com o mesmo nome de outro item ativo vira duplicidade na
     // escolha das propostas. O que já veio repetido do CRM continua editável sem trocar o nome.
-    var atualNome = Com_s_(d.id) ? Com_s_((SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id)) || {}).NOME) : '';
+    var atualNome = atual ? Com_s_(atual.NOME) : '';
     if (Com_normBusca_(atualNome) !== Com_normBusca_(nome)) {
       var xara = Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Com_s_(p.ID) !== Com_s_(d.id) && Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Com_normBusca_(p.NOME) === Com_normBusca_(nome); })[0];
       if (xara) throw new Error('Não foi possível salvar: já existe o item ativo "' + Com_s_(xara.NOME) + '" (código ' + Com_s_(xara.CODIGO) + ', ' + Com_moeda_(xara.PRECO) + '). O catálogo é um cadastro único: edite aquele item (preço, descrição, unidade) ou, se for outro produto, diferencie o nome (modelo, tamanho ou capacidade)');
     }
+    var agora = Com_agora_();
     var campos = { CODIGO: codigo, NOME: nome, TIPO: tipo, CATEGORIA: Com_texto_(d.categoria, 80), UNIDADE_MEDIDA: Com_texto_(d.unidade, 20) || 'un.', DESCRICAO: Com_texto_(d.descricao, 2000),
-      PRECO: Com_r2_(preco), CUSTO: custo === '' ? '' : Com_r2_(custo), ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() };
-    var reg;
-    if (Com_s_(d.id)) {
-      var atual = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id));
-      if (!atual) throw new Error('Não foi possível salvar: o item não existe mais. Atualize o catálogo');
+      PRECO: Com_r2_(preco), CUSTO: custo === '' ? '' : Com_r2_(custo), ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora };
+    if (limitado) delete campos.CUSTO; // o vendedor nunca mexe no custo (nem apaga)
+    var reg, pedido = null, msg = 'Item ' + codigo + ' salvo no catálogo.';
+    if (atual) {
+      var antes = Com_r2_(Number(atual.PRECO) || 0), mudouPreco = Math.abs(antes - campos.PRECO) > 0.004;
+      if (limitado && mudouPreco) {
+        var custoAt = Com_s_(atual.CUSTO) === '' ? null : Number(atual.CUSTO) || 0;
+        if (custoAt !== null && campos.PRECO < custoAt - 0.004) throw new Error('Não foi possível salvar: o preço de venda de ' + Com_moeda_(campos.PRECO) + ' ficou abaixo do custo cadastrado deste item (o custo é visto só pela gestão e pelo Financeiro). Vender abaixo do custo é decisão da gestão comercial ou da Diretoria: mantenha um preço maior ou peça a um deles. Nada foi gravado');
+        var base = ComP_basePreco_(atual), alcada = ComP_alcadaPreco_(eu);
+        var reducao = base > 0 && campos.PRECO < base - 0.004 ? Math.round((base - campos.PRECO) / base * 10000) / 100 : 0;
+        if (campos.PRECO < antes && reducao > alcada + 1e-9) {
+          var pend = Com_up_(atual.PRECO_PEDIDO_SITUACAO) === 'PENDENTE';
+          if (pend && Com_s_(atual.PRECO_PEDIDO_POR_ID) !== Com_s_(eu.id)) throw new Error('Não foi possível pedir a redução: o preço deste item já aguarda a decisão sobre o pedido de ' + Com_s_(atual.PRECO_PEDIDO_POR_NOME) + ' (' + Com_br_(atual.PRECO_PEDIDO_EM) + '). Aguarde a decisão da gestão comercial ou da Diretoria (Caixa de decisões) e salve de novo depois. Nada foi gravado');
+          var motivo = Com_texto_(d.motivoPreco, 500);
+          if (motivo.length < 10) throw new Error('A redução de ' + Com_pct_(reducao) + ' no preço (de ' + Com_moeda_(base) + ' para ' + Com_moeda_(campos.PRECO) + ') passa da sua alçada de ' + Com_pct_(alcada, 0) + '. O preço novo pode ser pedido, mas só vale depois da aprovação da Diretoria ou da gestão comercial. Escreva o motivo da redução (pelo menos 10 letras) em "Motivo da mudança de preço" e salve de novo. Nada foi gravado ainda');
+          pedido = { preco: campos.PRECO, reducao: reducao, motivo: motivo, substitui: pend };
+          campos.PRECO = antes; // o preço atual continua valendo até a decisão
+          campos.PRECO_PEDIDO = pedido.preco; campos.PRECO_PEDIDO_SITUACAO = 'PENDENTE'; campos.PRECO_PEDIDO_POR_ID = eu.id; campos.PRECO_PEDIDO_POR_NOME = eu.nome; campos.PRECO_PEDIDO_EM = agora; campos.PRECO_PEDIDO_MOTIVO = motivo;
+          campos.PRECO_DECISAO_POR_NOME = ''; campos.PRECO_DECISAO_EM = ''; campos.PRECO_DECISAO_TEXTO = '';
+          mudouPreco = false;
+        } else if (campos.PRECO < antes) {
+          if (!(Number(atual.PRECO_REFERENCIA) > 0)) campos.PRECO_REFERENCIA = base; // de onde a redução partiu (a alçada conta o acumulado)
+        } else if (Number(atual.PRECO_REFERENCIA) > 0 && campos.PRECO >= Number(atual.PRECO_REFERENCIA) - 0.004) campos.PRECO_REFERENCIA = '';
+      } else if (mudouPreco) campos.PRECO_REFERENCIA = ''; // preço da gestão ou do Financeiro é a nova referência
       // 29/10/2026: preço mudado à mão também conta como reajuste do item (data do último preço)
-      if (Math.abs((Number(atual.PRECO) || 0) - campos.PRECO) > 0.004) campos.PRECO_DESDE = Com_hoje_();
+      if (mudouPreco) campos.PRECO_DESDE = Com_hoje_();
       SGO_DATA.update(COM_ABAS.PRODUTOS, atual.ID, campos);
-      Com_historico_('PRODUTO', atual.ID, 'EDICAO', eu, { texto: 'Preço ' + Com_moeda_(atual.PRECO) + ' para ' + Com_moeda_(preco) + (Com_s_(atual.NOME) !== nome ? '; nome alterado' : '') });
+      if (mudouPreco) Com_historico_('PRODUTO', atual.ID, 'PRECO', eu, { de: Com_moeda_(antes), para: Com_moeda_(campos.PRECO), texto: 'Preço de venda de ' + codigo + ' alterado de ' + Com_moeda_(antes) + ' para ' + Com_moeda_(campos.PRECO) + (limitado ? ' (equipe comercial, dentro da alçada)' : '') + '.' + (Com_s_(d.motivoPreco) ? ' Motivo: ' + Com_texto_(d.motivoPreco, 500) : '') });
+      if (pedido) Com_historico_('PRODUTO', atual.ID, 'PRECO_PEDIDO', eu, { de: Com_moeda_(antes), para: Com_moeda_(pedido.preco), texto: 'Pedido de redução do preço de venda de ' + codigo + ' de ' + Com_moeda_(antes) + ' para ' + Com_moeda_(pedido.preco) + ' (' + Com_pct_(pedido.reducao) + ', acima da alçada) aguardando aprovação' + (pedido.substitui ? '; substitui o pedido anterior' : '') + '. Motivo: ' + pedido.motivo });
+      var rotulos = { CATEGORIA: 'categoria', UNIDADE_MEDIDA: 'unidade', DESCRICAO: 'descrição', NOME: 'nome', CODIGO: 'código', TIPO: 'tipo', CUSTO: 'custo' };
+      var outros = Object.keys(rotulos).filter(function (k) { return campos[k] !== undefined && Com_s_(campos[k]) !== Com_s_(atual[k]); });
+      if (outros.length) Com_historico_('PRODUTO', atual.ID, 'EDICAO', eu, { texto: 'Alterado: ' + outros.map(function (k) { return rotulos[k]; }).join(', ') + '.' });
       reg = Object.assign({}, atual, campos);
+      if (pedido) {
+        ComP_avisarPedidoPreco_(eu, reg, pedido.reducao);
+        msg = 'Item ' + codigo + ' salvo. O preço novo de ' + Com_moeda_(pedido.preco) + ' (redução de ' + Com_pct_(pedido.reducao) + ') passa da sua alçada de ' + Com_pct_(ComP_alcadaPreco_(eu), 0) +
+          ': está aguardando aprovação da Diretoria ou da gestão comercial (Caixa de decisões). Até a decisão, as propostas usam o preço atual de ' + Com_moeda_(antes) + '. Você recebe o aviso da decisão no sistema.';
+      }
     } else {
       campos.ATIVO = 'SIM'; campos.PRECO_DESDE = Com_hoje_();
       reg = SGO_DATA.insert(COM_ABAS.PRODUTOS, campos);
-      Com_historico_('PRODUTO', reg.ID, 'CRIACAO', eu, { texto: nome + ' (' + codigo + ')' });
+      Com_historico_('PRODUTO', reg.ID, 'CRIACAO', eu, { para: Com_moeda_(campos.PRECO), texto: nome + ' (' + codigo + ') cadastrado com preço de venda de ' + Com_moeda_(campos.PRECO) + (limitado ? ' pela equipe comercial' : '') + '.' });
     }
-    return { produto: ComP_produtoParaTela_(reg, eu), message: 'Item ' + codigo + ' salvo no catálogo.' };
+    return { produto: ComP_produtoParaTela_(reg, eu), pendente: !!pedido, message: msg };
   });
 }
 
+/** Gestão decide a redução de preço pedida pelo vendedor. d: { id, aprovar (bool), texto (>= 10) } */
+function ComP_decidirPreco_(eu, d) {
+  Com_exigir_(eu, 'GESTAO', 'decidir o preço do item');
+  d = d || {};
+  var texto = Com_texto_(d.texto, 1000);
+  if (texto.length < 10) throw new Error('Não foi possível registrar a decisão: escreva a fundamentação (pelo menos 10 letras). Ela fica no histórico do item e o vendedor recebe o aviso');
+  return Com_comTrava_(function () {
+    var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id));
+    if (!p) throw new Error('Não foi possível decidir: o item não existe mais. Atualize o catálogo');
+    if (Com_up_(p.PRECO_PEDIDO_SITUACAO) !== 'PENDENTE') throw new Error('Não foi possível decidir: o preço do item ' + Com_s_(p.CODIGO) + ' não tem pedido aguardando aprovação (já foi decidido). Atualize o catálogo');
+    if (Com_s_(p.PRECO_PEDIDO_POR_ID) === eu.id) throw new Error('Não foi possível decidir: o pedido é seu. Quem decide é outra pessoa da gestão comercial ou a Diretoria');
+    var agora = Com_agora_(), aprovar = d.aprovar === true, antes = Number(p.PRECO) || 0, novo = Number(p.PRECO_PEDIDO) || 0;
+    var campos = { PRECO_PEDIDO_SITUACAO: aprovar ? 'APROVADO' : 'NEGADO', PRECO_DECISAO_POR_NOME: eu.nome, PRECO_DECISAO_EM: agora, PRECO_DECISAO_TEXTO: texto, ATUALIZADO_EM: agora };
+    if (aprovar) { campos.PRECO = Com_r2_(novo); campos.PRECO_DESDE = Com_hoje_(); campos.PRECO_REFERENCIA = ''; campos.ATUALIZADO_POR_NOME = eu.nome + ' (aprovou o pedido de ' + Com_s_(p.PRECO_PEDIDO_POR_NOME) + ')'; }
+    SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, campos);
+    Com_historico_('PRODUTO', p.ID, aprovar ? 'PRECO_APROVADO' : 'PRECO_NEGADO', eu, { de: Com_moeda_(antes), para: Com_moeda_(aprovar ? novo : antes),
+      texto: (aprovar ? 'Redução aprovada: preço de venda de ' + Com_s_(p.CODIGO) + ' de ' + Com_moeda_(antes) + ' para ' + Com_moeda_(novo) : 'Redução negada: o preço de venda de ' + Com_s_(p.CODIGO) + ' continua ' + Com_moeda_(antes) + ' (pedido: ' + Com_moeda_(novo) + ')') +
+        '. Pedido de ' + Com_s_(p.PRECO_PEDIDO_POR_NOME) + '. Fundamentação: ' + texto });
+    var red = antes > 0 ? Math.round((antes - novo) / antes * 10000) / 100 : 0;
+    Com_avisar_(p.PRECO_PEDIDO_POR_ID, aprovar ? 'PRECO_APROVADO' : 'PRECO_NEGADO', (aprovar ? 'Preço aprovado: ' : 'Preço não aprovado: ') + Com_s_(p.CODIGO),
+      eu.nome + (aprovar ? ' aprovou a redução de ' + Com_pct_(red) + ' no preço de "' + Com_s_(p.NOME) + '"; o preço novo já vale para as propostas montadas daqui em diante. ' : ' não aprovou a redução de ' + Com_pct_(red) + ' no preço de "' + Com_s_(p.NOME) + '"; o preço atual continua valendo. ') + 'Fundamentação: ' + texto, { tipo: 'catalogo', id: Com_s_(p.ID) });
+    return { produto: ComP_produtoParaTela_(Object.assign({}, p, campos), eu), message: aprovar ? 'Preço aprovado: o item ' + Com_s_(p.CODIGO) + ' passou a ' + Com_moeda_(novo) + '. O vendedor foi avisado.' : 'Redução negada: o item ' + Com_s_(p.CODIGO) + ' continua com ' + Com_moeda_(antes) + '. O vendedor foi avisado.' };
+  });
+}
+
+/** Histórico de preço e de cadastro de um item (quem, quando, de quanto para quanto), mais recente primeiro. */
+function ComP_historicoProduto_(eu, d) {
+  if (!eu.catalogo && !eu.catalogoVenda) Com_exigir_(eu, 'GESTAO', 'ver o histórico do item');
+  var id = Com_s_(d && d.id);
+  var l = Com_ler_(COM_ABAS.HISTORICO).filter(function (h) { return Com_s_(h.ENTIDADE) === 'PRODUTO' && Com_s_(h.ENTIDADE_ID) === id; });
+  // os reajustes do catálogo (SGO_Comercial_Precificacao.js) ficam em COM_REAJUSTES
+  Com_ler_(COM_ABAS.REAJUSTES).filter(function (r) { return Com_s_(r.PRODUTO_ID) === id && ['APLICADO', 'DESFEITO'].indexOf(Com_up_(r.SITUACAO)) >= 0; }).forEach(function (r) {
+    l.push({ TIPO: 'REAJUSTE', DE: Com_moeda_(r.PRECO_ANTERIOR), PARA: Com_moeda_(r.PRECO_NOVO), TEXTO: 'Reajuste do catálogo ' + Com_s_(r.LOTE) + ': de ' + Com_moeda_(r.PRECO_ANTERIOR) + ' para ' + Com_moeda_(r.PRECO_NOVO) + (Com_up_(r.SITUACAO) === 'DESFEITO' ? ' (desfeito em ' + Com_br_(r.DESFEITO_EM) + ')' : '') + '.', USUARIO_NOME: Com_s_(r.USUARIO_NOME), DATA: Com_s_(r.APLICADO_EM) || Com_s_(r.DATA) });
+  });
+  return { historico: l.sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); }).slice(0, 60)
+    .map(function (h) { return { em: Com_br_(h.DATA), tipo: Com_s_(h.TIPO), de: Com_s_(h.DE), para: Com_s_(h.PARA), texto: Com_s_(h.TEXTO), por: Com_s_(h.USUARIO_NOME) }; }) };
+}
+
 function ComP_arquivarProduto_(eu, d) {
-  if (!eu.catalogo) Com_exigir_(eu, 'GESTAO', 'arquivar o item');
+  if (!eu.catalogo && !eu.catalogoVenda) Com_exigir_(eu, 'GESTAO', 'arquivar o item');
   return Com_comTrava_(function () {
     var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d && d.id));
     if (!p) throw new Error('Não foi possível arquivar: o item não existe mais. Atualize o catálogo');
     var ativo = !(d && d.reativar);
+    // 29/10/2026: o vendedor não exclui nem reativa: só arquiva (o item sai da escolha das propostas novas)
+    if (!ativo && !eu.catalogo) throw new Error('Não foi possível reativar: reativar um item arquivado é da gestão comercial ou do Financeiro. Peça a um deles; o item continua no catálogo, só fora da escolha das propostas');
     SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, { ATIVO: ativo ? 'NAO' : 'SIM', ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() });
     Com_historico_('PRODUTO', p.ID, ativo ? 'ARQUIVADO' : 'REATIVADO', eu, { texto: Com_texto_(d && d.motivo, 300) });
-    return { message: ativo ? 'Item arquivado: não aparece mais na escolha das propostas (as propostas antigas continuam como estão).' : 'Item reativado.' };
+    return { message: ativo ? 'Item arquivado: não aparece mais na escolha das propostas (as propostas antigas continuam como estão).' + (eu.catalogo ? '' : ' Para reativar, peça à gestão comercial ou ao Financeiro.') : 'Item reativado.' };
   });
 }
 
@@ -239,6 +360,8 @@ function ComP_podeVer_(eu, p) {
 function ComP_obter_(eu, id, acao) {
   var p = SGO_DATA.getById(COM_ABAS.PROPOSTAS, Com_s_(id));
   if (!p) throw new Error('Não foi possível ' + acao + ': a proposta não foi encontrada. Atualize a lista de propostas');
+  if (ComP_excluida_(p)) throw new Error('Não foi possível ' + acao + ': a proposta ' + ComP_rotulo_(p) + ' foi excluída em ' + Com_br_(p.EXCLUIDA_EM) + ' por ' + (Com_s_(p.EXCLUIDA_POR_NOME) || 'alguém da equipe') +
+    ' (motivo: ' + Com_s_(p.EXCLUIDA_MOTIVO) + '). Ela não aparece mais nas listas; o registro fica no histórico da oportunidade. Atualize a lista de propostas');
   if (!ComP_podeVer_(eu, p)) throw new Error('Não foi possível ' + acao + ': a proposta ' + Com_s_(p.NUMERO) + ' é de ' + (Com_s_(p.RESPONSAVEL_NOME) || 'outra pessoa') + '. O vendedor vê só as próprias; o Financeiro vê só as aprovadas');
   return p;
 }
@@ -352,7 +475,7 @@ function ComP_listar_(eu, filtro, info) {
   var f = filtro || {}, sit = Com_up_(f.situacao) || (eu.financeiro ? 'APROVADA' : 'ABERTAS'), termos = Com_termosBusca_(f.busca), fora = 0;
   ComP_sincronizarEnvios_();
   var abertas = ['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'];
-  var l = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) {
+  var l = ComP_lerPropostas_().filter(function (p) {
     if (!ComP_podeVer_(eu, p)) return false;
     if (f.oportunidadeId && Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(f.oportunidadeId)) return false;
     if (f.responsavelId && eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== Com_s_(f.responsavelId)) return false;
@@ -375,7 +498,7 @@ function ComP_detalhe_(eu, id) {
   t.historico = Com_ler_(COM_ABAS.HISTORICO).filter(function (h) { return Com_s_(h.ENTIDADE) === 'PROPOSTA' && Com_s_(h.ENTIDADE_ID) === t.id; })
     .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); }).slice(0, 60)
     .map(function (h) { return { em: Com_br_(h.DATA), tipo: Com_s_(h.TIPO), de: Com_s_(h.DE), para: Com_s_(h.PARA), texto: Com_s_(h.TEXTO), por: Com_s_(h.USUARIO_NOME) }; });
-  t.revisoes = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.NUMERO) === t.numero && Com_s_(x.ID) !== t.id && ComP_podeVer_(eu, x); })
+  t.revisoes = ComP_lerPropostas_().filter(function (x) { return Com_s_(x.NUMERO) === t.numero && Com_s_(x.ID) !== t.id && ComP_podeVer_(eu, x); })
     .map(function (x) { return { id: Com_s_(x.ID), rotulo: ComP_rotulo_(x), situacaoNome: COM_SITUACOES_PROP[Com_up_(x.SITUACAO)] || '' }; });
   var pol = null;
   if (eu.veValores) {
@@ -390,6 +513,8 @@ function ComP_detalhe_(eu, id) {
   t.contatosCliente = (eu.gestao || eu.vendedor) ? ComCt_listar_(t.clienteId, t.unidadeId) : [];
   if (t.passagem && t.passagem.length) t.passagem = ComP_situacaoPassagem_(t.passagem);
   t.motivosRecusa = met.motivosPerda;
+  // 29/10/2026: excluir (nunca foi ao cliente) ou só cancelar (já foi); a tela mostra o botão e, sem ele, o porquê
+  if (eu.gestao || eu.vendedor) { var pe = ComP_podeExcluir_(eu, p); t.podeExcluir = pe.pode; if (!pe.pode && (eu.gestao || t.responsavelId === eu.id)) t.motivoSemExcluir = pe.motivo; }
   return t;
 }
 
@@ -655,12 +780,15 @@ function ComP_decidirDesconto_(eu, d) {
 }
 
 /** Voltar para rascunho (antes do envio). */
+// 29/10/2026: é o "Editar" da proposta aguardando aprovação ou pronta (ainda não enviada). Só o responsável ou a gestão.
 function ComP_voltarRascunho_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'voltar a proposta para rascunho');
+  ComP_sincronizarEnvios_(); // envio registrado há pouco pelo "Enviar documento" conta
   return Com_comTrava_(function () {
     var p = ComP_obter_(eu, d && d.id, 'voltar para rascunho');
     var s = Com_up_(p.SITUACAO);
-    if (['AGUARDANDO_APROVACAO', 'PRONTA'].indexOf(s) < 0) throw new Error('Não foi possível voltar para rascunho: a proposta está "' + COM_SITUACOES_PROP[s] + '". Depois do envio, use "Nova revisão"');
+    if (['AGUARDANDO_APROVACAO', 'PRONTA'].indexOf(s) < 0) throw new Error('Não foi possível editar: a proposta está "' + (COM_SITUACOES_PROP[s] || s) + '". ' + (s === 'RASCUNHO' ? 'O rascunho já está aberto para edição' : 'Depois do envio ao cliente, use "Nova revisão" (o número continua o mesmo)'));
+    if (!eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== eu.id) throw new Error('Não foi possível editar: a proposta é de ' + p.RESPONSAVEL_NOME + '. Só o responsável ou a gestão comercial editam');
     var campos = { SITUACAO: 'RASCUNHO', DESCONTO_SITUACAO: 'DENTRO', DESCONTO_PEDIDO_EM: '', ATUALIZADO_EM: Com_agora_() };
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
     Com_historico_('PROPOSTA', p.ID, 'RASCUNHO', eu, { de: COM_SITUACOES_PROP[s], para: 'Rascunho', texto: 'Voltou para rascunho' + (Com_s_(p.PDF_ID) ? ' (o documento gerado antes continua na pasta; ao gerar de novo, sai um arquivo novo)' : '') + '.' });
@@ -846,9 +974,96 @@ function ComP_cancelar_(eu, d) {
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { SITUACAO: 'CANCELADA', CANCELADA_MOTIVO: motivo, ATUALIZADO_EM: Com_agora_() });
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta cancelada: ' + motivo);
     Com_historico_('PROPOSTA', p.ID, 'CANCELADA', eu, { de: COM_SITUACOES_PROP[s], para: 'Cancelada', texto: motivo });
-    return { message: 'Proposta cancelada. Ela continua no histórico da oportunidade.' };
+    return { message: 'Proposta cancelada: saiu do funil e das propostas em andamento. Ela continua no histórico da oportunidade e no filtro "Cancelada".' };
   });
 }
+
+
+// ------------------------------------------------------------
+// EXCLUSÃO (proposta que nunca foi ao cliente) — 29/10/2026
+// ------------------------------------------------------------
+/**
+ * A proposta já foi ao cliente? Vale o envio registrado na proposta (ENVIADA_EM, situação depois do envio) e qualquer
+ * envio do documento dela pela janela "Enviar documento" (DOC_ENVIOS: e-mail, WhatsApp ou link). { enviada, como }
+ */
+function ComP_foiEnviada_(p) {
+  if (Com_s_(p.ENVIADA_EM)) return { enviada: true, como: 'enviada em ' + Com_br_(p.ENVIADA_EM) + (Com_s_(p.ENVIO_COMO) ? ' (' + Com_s_(p.ENVIO_COMO) + ')' : '') };
+  var s = Com_up_(p.SITUACAO);
+  if (['ENVIADA', 'APROVADA', 'RECUSADA', 'VENCIDA'].indexOf(s) >= 0) return { enviada: true, como: 'situação "' + COM_SITUACOES_PROP[s] + '"' };
+  var ids = [Com_s_(p.PDF_ID), Com_s_(p.HTML_ID)].filter(Boolean);
+  if (ids.length) {
+    var e = Com_ler_(typeof ENVDOC_ABA !== 'undefined' ? ENVDOC_ABA : 'DOC_ENVIOS').filter(function (r) { return ids.indexOf(Com_s_(r.ARQUIVO_ID)) >= 0 && Com_up_(r.SITUACAO) === 'ENVIADO'; })[0];
+    if (e) return { enviada: true, como: 'o documento saiu pelo "Enviar documento" (' + (Com_up_(e.CANAL) === 'WHATSAPP' ? 'WhatsApp' : Com_up_(e.CANAL) === 'EMAIL' ? 'e-mail' : Com_s_(e.CANAL).toLowerCase() || 'envio') + ' para ' + Com_s_(e.DESTINO_NOME || e.DESTINO) + (Com_iso_(e.QUANDO) ? ' em ' + Com_br_(e.QUANDO) : '') + ')' };
+  }
+  return { enviada: false, como: '' };
+}
+
+var COM_PROP_EXCLUIVEIS = ['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'CANCELADA'];
+
+/** Pode excluir? { pode, motivo (por que não, com o que fazer) }. Quem: o responsável pela proposta ou a gestão. */
+function ComP_podeExcluir_(eu, p) {
+  if (!eu || !(eu.gestao || eu.vendedor)) return { pode: false, motivo: 'Excluir proposta é da equipe comercial (o responsável pela proposta) e da gestão comercial.' };
+  if (!eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== eu.id) return { pode: false, motivo: 'A proposta é de ' + (Com_s_(p.RESPONSAVEL_NOME) || 'outra pessoa') + ': só o responsável ou a gestão comercial excluem.' };
+  var env = ComP_foiEnviada_(p);
+  var s = Com_up_(p.SITUACAO);
+  if (env.enviada) return { pode: false, motivo: 'A proposta já foi ao cliente (' + env.como + '): documento que o cliente recebeu não é excluído. ' +
+    (s === 'CANCELADA' ? 'Ela já está cancelada: fora do funil, fica só no histórico e no filtro "Cancelada".' : ['APROVADA', 'RECUSADA', 'SUBSTITUIDA'].indexOf(s) >= 0 ? 'Ela fica no histórico da oportunidade.' : 'Use "Cancelar proposta" (com o motivo); ela sai do funil e fica no histórico.') };
+  if (s === 'SUBSTITUIDA') return { pode: false, motivo: 'Esta revisão foi substituída por outra e faz parte da sequência de revisões da proposta. Para desfazer a revisão nova, abra a revisão nova e exclua aquela.' };
+  if (COM_PROP_EXCLUIVEIS.indexOf(s) < 0) return { pode: false, motivo: 'A proposta está "' + (COM_SITUACOES_PROP[s] || s) + '" e não pode ser excluída.' };
+  return { pode: true, motivo: '' };
+}
+
+/** Situação da revisão anterior antes de ser substituída (pelo histórico; sem registro, pela data de envio). */
+function ComP_situacaoAntesDaRevisao_(ant) {
+  var nomes = {};
+  Object.keys(COM_SITUACOES_PROP).forEach(function (k) { nomes[COM_SITUACOES_PROP[k]] = k; });
+  var h = Com_ler_(COM_ABAS.HISTORICO).filter(function (x) { return Com_s_(x.ENTIDADE) === 'PROPOSTA' && Com_s_(x.ENTIDADE_ID) === Com_s_(ant.ID) && Com_s_(x.TIPO) === 'SUBSTITUIDA'; })
+    .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); })[0];
+  var s = h ? nomes[Com_s_(h.DE)] : '';
+  if (!s || s === 'SUBSTITUIDA') s = Com_s_(ant.ENVIADA_EM) ? 'ENVIADA' : 'RASCUNHO';
+  if (s === 'ENVIADA' && Com_dia_(ant.VALIDA_ATE) && Com_dia_(ant.VALIDA_ATE) < Com_hoje_()) s = 'VENCIDA';
+  return s;
+}
+
+/**
+ * Excluir proposta que nunca foi ao cliente. d: { id, motivo (>= 10 letras) }.
+ * Exclusão lógica: SITUACAO EXCLUIDA + EXCLUIDA_EM/POR/MOTIVO (o número não volta a ser usado). Registro no histórico da
+ * proposta e da oportunidade. Revisão nova excluída devolve a anterior à situação que ela tinha.
+ */
+function ComP_excluir_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'excluir a proposta');
+  d = d || {};
+  var motivo = Com_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível excluir: escreva o motivo (pelo menos 10 letras, por exemplo "Proposta montada com o cliente errado"). O motivo fica registrado no histórico da oportunidade');
+  ComP_sincronizarEnvios_(); // envio registrado há pouco pelo "Enviar documento" conta
+  return Com_comTrava_(function () {
+    var p = ComP_obter_(eu, d.id, 'excluir a proposta');
+    var pe = ComP_podeExcluir_(eu, p);
+    if (!pe.pode) throw new Error('Não foi possível excluir a proposta ' + ComP_rotulo_(p) + ': ' + pe.motivo.replace(/\.$/, ''));
+    var s = Com_up_(p.SITUACAO), agora = Com_agora_(), rot = ComP_rotulo_(p);
+    SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { SITUACAO: 'EXCLUIDA', EXCLUIDA_EM: agora, EXCLUIDA_POR_ID: eu.id, EXCLUIDA_POR_NOME: eu.nome, EXCLUIDA_MOTIVO: motivo, ATUALIZADO_EM: agora });
+    var texto = 'Proposta ' + rot + ' excluída por ' + eu.nome + ' em ' + Com_br_(agora) + ' (nunca foi enviada ao cliente; estava "' + (COM_SITUACOES_PROP[s] || s) + '"). Motivo: ' + motivo + ' O número ' + Com_s_(p.NUMERO) + ' não volta a ser usado.';
+    Com_historico_('PROPOSTA', p.ID, 'EXCLUIDA', eu, { de: COM_SITUACOES_PROP[s] || s, para: 'Excluída', texto: texto });
+    if (Com_s_(p.OPORTUNIDADE_ID)) Com_historico_('OPORTUNIDADE', p.OPORTUNIDADE_ID, 'PROPOSTA_EXCLUIDA', eu, { texto: texto });
+    if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta ' + rot + ' excluída: ' + motivo);
+    var extra = '';
+    var ant = Com_s_(p.REVISAO_DE) ? SGO_DATA.getById(COM_ABAS.PROPOSTAS, Com_s_(p.REVISAO_DE)) : null;
+    if (ant && Com_s_(ant.SUBSTITUIDA_POR) === Com_s_(p.ID)) {
+      var volta = { SUBSTITUIDA_POR: '', ATUALIZADO_EM: agora };
+      if (Com_up_(ant.SITUACAO) === 'SUBSTITUIDA') volta.SITUACAO = ComP_situacaoAntesDaRevisao_(ant);
+      SGO_DATA.update(COM_ABAS.PROPOSTAS, ant.ID, volta);
+      var sitAnt = COM_SITUACOES_PROP[volta.SITUACAO || Com_up_(ant.SITUACAO)] || '';
+      Com_historico_('PROPOSTA', ant.ID, 'REVISAO_EXCLUIDA', eu, { de: volta.SITUACAO ? 'Substituída' : sitAnt, para: sitAnt, texto: 'A revisão ' + rot + ' foi excluída; esta volta a ser a proposta em vigor (' + sitAnt.toLowerCase() + ').' });
+      extra = ' A ' + ComP_rotulo_(ant) + ' voltou a ser a proposta em vigor (' + sitAnt.toLowerCase() + ').' + (Com_s_(ant.ENVIADA_EM) ? ' O retorno ao cliente sobre ela não volta sozinho: marque a próxima ação na oportunidade.' : '');
+    }
+    return { message: 'Proposta ' + rot + ' excluída: saiu das listas, do quadro e do painel. O registro (quem, quando e o motivo) fica no histórico da oportunidade.' + extra +
+      (Com_s_(p.PDF_ID) ? ' O documento gerado continua guardado na pasta do cliente, mas não foi enviado e não vale como proposta.' : '') };
+  });
+}
+
+/** Propostas que valem (sem as excluídas). Leitura para listas, quadro, painel e gestora. */
+function ComP_excluida_(p) { return Com_up_(p && p.SITUACAO) === 'EXCLUIDA' || !!Com_s_(p && p.EXCLUIDA_EM); }
+function ComP_lerPropostas_() { return Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return !ComP_excluida_(p); }); }
 
 // ------------------------------------------------------------
 // RESPOSTA DO CLIENTE

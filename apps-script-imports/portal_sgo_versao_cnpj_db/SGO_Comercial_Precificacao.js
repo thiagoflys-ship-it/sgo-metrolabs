@@ -786,7 +786,7 @@ function ComPr_itensGestora_(ctx) {
   var inc = ComPr_politicaIncompleta_(pol);
   if (inc.length) itens.push({ chave: 'POLITICA_PRECOS', regra: 'POLITICA_INCOMPLETA', prioridade: 2, titulo: 'Política de precificação incompleta: ' + inc.map(function (f) { return f.nome; }).join(', '), ref: { tipo: 'metodologia' },
     porque: 'Sem esses valores o vendedor preenche cada proposta à mão e a margem não é conferida' + (pol.impostosPct === null ? ' (sem impostos, a margem sai maior do que é)' : '') + '.', acao: 'Peça à Diretoria para preencher em Comercial > Metodologia > Política de precificação.' });
-  (ctx.propostas || Com_ler_(COM_ABAS.PROPOSTAS)).forEach(function (p) {
+  (ctx.propostas || ComP_lerPropostas_()).forEach(function (p) {
     var s = Com_up_(p.SITUACAO);
     // rascunho é do vendedor (lista dele); proposta concluída antes do checklist (29/10/2026, sem DESLOCAMENTO_JSON) não é
     // reavaliada aqui (o painel conta como "sem cálculo da viagem")
@@ -809,7 +809,7 @@ function ComPr_itensGestora_(ctx) {
 /** Quadro "Precificação e estratégia" do painel (gestão). comp 'aaaa-mm'; vendedorId opcional. */
 function ComPr_quadroPainel_(comp, vendedorId) {
   var pol = ComPr_politica_();
-  var props = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return !vendedorId || Com_s_(p.RESPONSAVEL_ID) === vendedorId; });
+  var props = ComP_lerPropostas_().filter(function (p) { return !vendedorId || Com_s_(p.RESPONSAVEL_ID) === vendedorId; });
   var noMes = function (v) { return Com_dia_(v).slice(0, 7) === comp; };
   var r = { enviadas: 0, comMargem: 0, margemMedia: null, abaixoMin: [], abaixoAlvo: 0, viagens: 0, custoViagem: 0, repassadoItem: 0, diluido: 0, naoRepassado: 0, beneficio: 0, semCalculo: 0, abertasComProblema: 0 };
   var somaM = 0;

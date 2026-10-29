@@ -108,6 +108,7 @@ var GES_TIPOS = {
   email_cliente_parado: { prazo: 1 },
   // 21/10/2026: Comercial nativo (SGO_Comercial_Painel.js). A decisão é tomada na tela do Comercial; a caixa mostra, cobra e leva até lá.
   comercial_sem_proxima: { prazo: 1 }, comercial_desconto: { prazo: 1 }, comercial_reabertura: { prazo: 2 }, comercial_pedido_parado: { prazo: 1 },
+  comercial_preco: { prazo: 1 }, // 29/10/2026: preço do catálogo reduzido pelo vendedor acima da alçada
   // 21/10/2026: Assistente do ponto (SGO_Ponto_Api.js). Pedido de ajuste pendente há 2 dias úteis: vai à gestão da área RH (sem gestor, a Diretoria).
   ponto_ajuste_parado: { prazo: 1 }
 };

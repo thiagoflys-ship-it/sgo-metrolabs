@@ -81,7 +81,7 @@ function ComG_itensVendedor_(uid, ctx) {
   var met = ctx.met || Com_metodologia_(), agora = ctx.agora || Com_agora_(), hoje = agora.slice(0, 10), c = met.cadencia;
   var atvs = ctx.atividades || ComOpo_mapaAtividades_();
   var ops = (ctx.oportunidades || Com_ler_(COM_ABAS.OPORTUNIDADES)).filter(function (o) { return Com_s_(o.RESPONSAVEL_ID) === uid; });
-  var props = (ctx.propostas || Com_ler_(COM_ABAS.PROPOSTAS)).filter(function (p) { return Com_s_(p.RESPONSAVEL_ID) === uid; });
+  var props = (ctx.propostas || ComP_lerPropostas_()).filter(function (p) { return Com_s_(p.RESPONSAVEL_ID) === uid; });
   var regs = ctx.contatosReg || Com_ler_(COM_ABAS.CONTATOS_REG);
   var contatosCli = ctx.contatosCli || {};
   if (!ctx.contatosCli) Com_ler_(COM_ABAS.CONTATOS).forEach(function (k) { if (Com_up_(k.STATUS || 'ATIVO') === 'ATIVO') contatosCli[Com_s_(k.CLIENTE_ID)] = (contatosCli[Com_s_(k.CLIENTE_ID)] || 0) + 1; });
@@ -178,7 +178,7 @@ function ComG_itensVendedor_(uid, ctx) {
 function ComG_panorama_(ctx) {
   ctx = ctx || {};
   var met = ctx.met || Com_metodologia_(), agora = ctx.agora || Com_agora_(), hoje = agora.slice(0, 10);
-  var atvs = ctx.atividades || ComOpo_mapaAtividades_(), ops = ctx.oportunidades || Com_ler_(COM_ABAS.OPORTUNIDADES), props = ctx.propostas || Com_ler_(COM_ABAS.PROPOSTAS);
+  var atvs = ctx.atividades || ComOpo_mapaAtividades_(), ops = ctx.oportunidades || Com_ler_(COM_ABAS.OPORTUNIDADES), props = ctx.propostas || ComP_lerPropostas_();
   var regs = ctx.contatosReg || Com_ler_(COM_ABAS.CONTATOS_REG);
   var equipe = {}, itens = [];
   ops.forEach(function (o) {
@@ -325,7 +325,7 @@ function ComG_refinarComIA_(itens, papel, met) {
 // "O QUE FAZER HOJE" (tela e rotina)
 // ------------------------------------------------------------
 function ComG_ctx_() {
-  return { met: Com_metodologia_(), agora: Com_agora_(), atividades: ComOpo_mapaAtividades_(), oportunidades: Com_ler_(COM_ABAS.OPORTUNIDADES), propostas: Com_ler_(COM_ABAS.PROPOSTAS), contatosReg: Com_ler_(COM_ABAS.CONTATOS_REG) };
+  return { met: Com_metodologia_(), agora: Com_agora_(), atividades: ComOpo_mapaAtividades_(), oportunidades: Com_ler_(COM_ABAS.OPORTUNIDADES), propostas: ComP_lerPropostas_(), contatosReg: Com_ler_(COM_ABAS.CONTATOS_REG) };
 }
 
 /** Gera e grava a lista do dia de uma pessoa (rotina da manhã ou pedido na tela). comIA: tenta a IA. */
@@ -424,7 +424,7 @@ function ComG_aprendizado_() {
 function ComG_sugestoesDaOportunidade_(eu, o, t, contatos) {
   var met = Com_metodologia_(), l = [];
   if (t.situacao !== 'ABERTA') return l;
-  var temProp = Com_ler_(COM_ABAS.PROPOSTAS).some(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id && Com_up_(p.SITUACAO) === 'ENVIADA'; });
+  var temProp = ComP_lerPropostas_().some(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id && Com_up_(p.SITUACAO) === 'ENVIADA'; });
   if (t.mudarEstrategia || t.parada) {
     var est = ComG_estrategia_(o, contatos.map(function (c) { return { TIPO: Object.keys(COM_TIPOS_CONTATO).filter(function (k) { return COM_TIPOS_CONTATO[k] === c.tipo; })[0] }; }), temProp, (ComCt_listar_(t.clienteId) || []).length, met);
     l.push({ tipo: 'ESTRATEGIA', titulo: 'Mude a estratégia: ' + est.titulo, texto: est.detalhe + ' ' + est.texto });
@@ -473,7 +473,7 @@ function ComG_contextoOportunidade_(eu, o) {
   var met = Com_metodologia_(), t = ComOpo_paraTela_(eu, o, { met: met });
   if (t.situacao !== 'ABERTA') throw new Error('Não foi possível: a oportunidade ' + t.codigo + ' está encerrada');
   var regs = Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === t.id; }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
-  var props = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; });
+  var props = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; });
   var enviada = props.filter(function (p) { return Com_up_(p.SITUACAO) === 'ENVIADA'; })[0];
   var etapa = Com_etapa_(t.funil, t.etapa, met) || {};
   var nome = ComG_primeiroNome_(t.contato), eunome = ComG_primeiroNome_(eu.nome);
@@ -679,7 +679,7 @@ function ComG_revisarPropostaRegras_(p) {
   }
   if (calc.itensSemCusto && Number(met.politica.margemMinPct) > 0) alertas.push(Com_plural_(calc.itensSemCusto, 'item sem custo cadastrado ficou fora da conta de margem', 'itens sem custo cadastrado ficaram fora da conta de margem'));
   if (pol.dentro && calc.descontoPct > 0.6 * pol.limite && pol.limite > 0) alertas.push('desconto de ' + Com_pct_(calc.descontoPct) + ' perto do limite: a metodologia pede vender valor técnico, não desconto');
-  var outra = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.OPORTUNIDADE_ID) === Com_s_(p.OPORTUNIDADE_ID) && Com_s_(x.ID) !== Com_s_(p.ID) && Com_up_(x.SITUACAO) === 'ENVIADA' && Com_s_(x.NUMERO) !== Com_s_(p.NUMERO); })[0];
+  var outra = ComP_lerPropostas_().filter(function (x) { return Com_s_(x.OPORTUNIDADE_ID) === Com_s_(p.OPORTUNIDADE_ID) && Com_s_(x.ID) !== Com_s_(p.ID) && Com_up_(x.SITUACAO) === 'ENVIADA' && Com_s_(x.NUMERO) !== Com_s_(p.NUMERO); })[0];
   if (outra) alertas.push('já existe a ' + ComP_rotulo_(outra) + ' enviada nesta oportunidade (duas propostas abertas confundem o cliente)');
   var eqsOpo = o ? Com_s_(o.EQUIPAMENTOS_IDS).split(',').filter(Boolean) : [];
   var eqsItens = itens.map(function (i) { return i.equipamentoId; }).filter(Boolean);

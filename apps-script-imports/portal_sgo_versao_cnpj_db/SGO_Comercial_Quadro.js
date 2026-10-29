@@ -28,7 +28,7 @@ var COM_Q_FECHADAS_MAX = 30;
 function ComQ_base_() {
   var met = Com_metodologia_(), agora = Com_agora_();
   var b = { met: met, agora: agora, hoje: agora.slice(0, 10), atividades: ComOpo_mapaAtividades_(), oportunidades: Com_ler_(COM_ABAS.OPORTUNIDADES),
-    propostas: Com_ler_(COM_ABAS.PROPOSTAS), contatosReg: Com_ler_(COM_ABAS.CONTATOS_REG), historico: Com_ler_(COM_ABAS.HISTORICO), equipamentos: {}, produtos: {} };
+    propostas: ComP_lerPropostas_(), contatosReg: Com_ler_(COM_ABAS.CONTATOS_REG), historico: Com_ler_(COM_ABAS.HISTORICO), equipamentos: {}, produtos: {} };
   Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { b.equipamentos[Com_s_(e.ID)] = e; });
   Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) { b.produtos[Com_s_(p.ID)] = p; });
   b.propsPorOpo = {};

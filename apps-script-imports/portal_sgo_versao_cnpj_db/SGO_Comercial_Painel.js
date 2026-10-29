@@ -30,7 +30,7 @@ var COM_ROTINA_PROP = 'COM_ROTINA_ULTIMA';
 /** Indicadores de uma competência 'aaaa-mm' (gestão: equipe toda; vendedorId: só ele). Sem Date cru. */
 function Com_indicadores_(comp, vendedorId) {
   var met = Com_metodologia_(), agora = Com_agora_(), atvs = ComOpo_mapaAtividades_();
-  var ops = Com_ler_(COM_ABAS.OPORTUNIDADES), props = Com_ler_(COM_ABAS.PROPOSTAS);
+  var ops = Com_ler_(COM_ABAS.OPORTUNIDADES), props = ComP_lerPropostas_();
   if (vendedorId) { ops = ops.filter(function (o) { return Com_s_(o.RESPONSAVEL_ID) === vendedorId; }); props = props.filter(function (p) { return Com_s_(p.RESPONSAVEL_ID) === vendedorId; }); }
   var noMes = function (v) { return Com_dia_(v).slice(0, 7) === comp; };
   var r = { competencia: comp, ganho: { qtd: 0, valor: 0 }, perdido: { qtd: 0, valor: 0 }, aberto: { qtd: 0, valor: 0, ponderado: 0 }, novas: 0, emDia: 0,
@@ -171,7 +171,20 @@ function Comercial_fontePendencias_(add, ctx) {
       }));
     }
   });
-  Com_ler_(COM_ABAS.PROPOSTAS).forEach(function (p) {
+  // 29/10/2026: redução de preço do catálogo pedida pelo vendedor acima da alçada (sem R$: pendência não leva valor)
+  if (PEND_TIPOS.comercial_preco) Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
+    if (Com_up_(p.PRECO_PEDIDO_SITUACAO) !== 'PENDENTE') return;
+    var quem = Com_s_(p.PRECO_PEDIDO_POR_ID), nomeQ = Com_s_(p.PRECO_PEDIDO_POR_NOME), base = ComP_basePreco_(p), novo = Number(p.PRECO_PEDIDO) || 0;
+    var red = base > 0 ? Math.round((base - novo) / base * 1000) / 10 : 0;
+    add(Pend_item_('comercial_preco', {
+      id: 'COM:PRECO:' + p.ID, nome: Com_s_(p.CODIGO), publico: 'GESTAO', responsavel: nomeQ, responsavelId: quem, gravidade: 'ATENCAO', dias: null,
+      titulo: 'Preço do item ' + Com_s_(p.CODIGO) + ' (' + Com_s_(p.NOME).slice(0, 60) + ') aguardando aprovação',
+      detalhe: 'Pedido de ' + nomeQ + ' em ' + Com_br_(p.PRECO_PEDIDO_EM) + ': reduzir o preço de venda em ' + Com_pct_(red) + ' sobre o preço de referência do item (acima da alçada do vendedor). Motivo: ' + Com_s_(p.PRECO_PEDIDO_MOTIVO).slice(0, 200) + ' Até a decisão, as propostas usam o preço atual.',
+      oQueFazer: 'Abra Comercial > Produtos e serviços (Situação "Preço aguardando aprovação"), confira o item e aprove ou negue com a fundamentação. Quem pediu não decide.',
+      tela: tela('catalogo', Com_s_(p.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(quem), naoPode: [quem], desde: Com_dia_(p.PRECO_PEDIDO_EM) }
+    }));
+  });
+  ComP_lerPropostas_().forEach(function (p) {
     var s = Com_up_(p.SITUACAO), resp = Com_s_(p.RESPONSAVEL_ID), nome = Com_s_(p.RESPONSAVEL_NOME), rot = ComP_rotulo_(p);
     // 29/10/2026: margem abaixo da mínima da política de precificação: a decisão é da Diretoria
     var soDir = s === 'AGUARDANDO_APROVACAO' && typeof ComPr_daProposta_ === 'function' && (function () { try { return ComPr_daProposta_(p, null).analise.abaixoMin; } catch (e) { return false; } })();
@@ -204,7 +217,7 @@ function Comercial_fontePendencias_(add, ctx) {
       add(Pend_item_('comercial_aviso', {
         id: 'COM:AVISO:' + v.ID, nome: Com_s_(v.TITULO).slice(0, 40), publico: 'PESSOA', paraUsuarios: [ctx.userId], responsavel: ctx.nome, responsavelId: ctx.userId, gravidade: 'INFO', dias: null,
         titulo: Com_s_(v.TITULO), detalhe: Com_s_(v.TEXTO).slice(0, 220), oQueFazer: 'Abra o Comercial: o aviso fica marcado como lido ao aparecer na tela.',
-        tela: Com_s_(v.REF_ID) ? tela(Com_s_(v.REF_TIPO) === 'proposta' ? 'propostas' : 'oportunidades', Com_s_(v.REF_ID)) : tela('hoje', '')
+        tela: Com_s_(v.REF_ID) ? tela(Com_s_(v.REF_TIPO) === 'proposta' ? 'propostas' : Com_s_(v.REF_TIPO) === 'catalogo' ? 'catalogo' : 'oportunidades', Com_s_(v.REF_ID)) : tela('hoje', '')
       }));
     });
   }
@@ -256,12 +269,14 @@ function Com_listasDoDia_() {
 // ------------------------------------------------------------
 function Com_inicio_(eu) {
   var met = Com_metodologia_();
-  var base = { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, veCusto: eu.veCusto, catalogo: !!eu.catalogo, diretoria: eu.diretoria, eu: { id: eu.id, nome: eu.nome } };
+  var base = { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, veCusto: eu.veCusto, catalogo: !!eu.catalogo, catalogoVenda: !!eu.catalogoVenda, diretoria: eu.diretoria, eu: { id: eu.id, nome: eu.nome } };
   if (eu.nivel === 'NENHUM') return base;
   base.funis = met.funis.map(function (f) { return { codigo: f.codigo, nome: f.nome, descricao: f.descricao, etapas: f.etapas.map(function (e) { return { codigo: e.codigo, nome: e.nome, probabilidade: e.probabilidade, maxDias: e.maxDias, criterio: e.criterio }; }) }; });
   base.origens = met.origens; base.motivosPerda = met.motivosPerda; base.regraPerda = met.regraPerda; base.tiposContato = COM_TIPOS_CONTATO; base.papeisContato = COM_PAPEIS_CONTATO;
   base.estrategias = met.estrategias; base.qualificacao = met.qualificacao.itens; base.situacoesProposta = COM_SITUACOES_PROP; base.tiposItem = COM_TIPOS_ITEM; base.setores = COM_SETORES;
   base.politica = { descontoMaxPct: ComP_limiteDe_(eu.id, met), margemMinPct: met.politica.margemMinPct };
+  // 29/10/2026: alçada do vendedor para reduzir preço do catálogo sem aprovação
+  if (eu.catalogoVenda) base.alcadaPreco = ComP_alcadaPreco_(eu, met);
   // 29/10/2026: política de precificação (só Diretoria e Administrador mudam) e reajuste do catálogo
   base.podePrecificacao = !!(eu.diretoria || eu.perfil === 'ADMIN');
   base.validadePadrao = met.proposta.validadeDias;
@@ -325,7 +340,7 @@ function Com_doCliente_(eu, d) {
   if (eu.nivel === 'NENHUM') return { semAcesso: true };
   var cid = Com_s_(d && d.clienteId);
   var ops = Com_ler_(COM_ABAS.OPORTUNIDADES).filter(function (o) { return Com_s_(o.CLIENTE_ID) === cid && ComOpo_podeVer_(eu, o); }).map(function (o) { return ComOpo_paraTela_(eu, o); });
-  var props = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (p) { return Com_s_(p.CLIENTE_ID) === cid && ComP_podeVer_(eu, p); }).map(function (p) { return ComP_paraTela_(eu, p, false); });
+  var props = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.CLIENTE_ID) === cid && ComP_podeVer_(eu, p); }).map(function (p) { return ComP_paraTela_(eu, p, false); });
   return { oportunidades: ops, propostas: props, contatos: ComCt_podeVer_(eu) ? ComCt_listar_(cid, '', false) : [] };
 }
 
@@ -369,7 +384,7 @@ function Com_metodologiaTela_(eu, d) {
 
 var COM_ACOES = {
   iniciar: function (eu) { var b = Com_inicio_(eu); if (eu.nivel !== 'NENHUM') { try { Com_garantirAbas_(); ComCt_migrarUmaVez_(); } catch (e) {} b.avisos = Com_avisosDe_(eu); } return b; },
-  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, catalogo: !!eu.catalogo }; },
+  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, catalogo: !!eu.catalogo, catalogoVenda: !!eu.catalogoVenda }; },
   avisosLidos: function (eu) { return { marcados: Com_marcarAvisosLidos_(eu) }; },
   hoje: function (eu, sid, d) { return ComG_hoje_(eu, d); },
   decidirSugestao: function (eu, sid, d) { return ComG_decidirSugestao_(eu, d); },
@@ -399,6 +414,9 @@ var COM_ACOES = {
   catalogo: function (eu, sid, d) { return ComP_catalogo_(eu, d); },
   salvarProduto: function (eu, sid, d) { return ComP_salvarProduto_(eu, d); },
   arquivarProduto: function (eu, sid, d) { return ComP_arquivarProduto_(eu, d); },
+  // 29/10/2026: redução de preço acima da alçada do vendedor (aprovar ou negar) e o histórico de preço do item
+  decidirPreco: function (eu, sid, d) { return ComP_decidirPreco_(eu, d); },
+  historicoProduto: function (eu, sid, d) { return ComP_historicoProduto_(eu, d); },
   propostas: function (eu, sid, d) { var info = {}; var l = ComP_listar_(eu, d, info); return { propostas: l, foraDoFiltro: info.foraDoFiltro || 0 }; },
   proposta: function (eu, sid, d) { return { proposta: ComP_detalhe_(eu, d && d.id) }; },
   novaProposta: function (eu, sid, d) { return ComP_nova_(eu, d); },
@@ -411,6 +429,8 @@ var COM_ACOES = {
   sincronizarEnvios: function (eu) { Com_exigir_(eu, 'VENDEDOR', 'conferir os envios'); return { atualizadas: ComP_sincronizarEnvios_() }; },
   novaRevisao: function (eu, sid, d) { return ComP_novaRevisao_(eu, d); },
   cancelarProposta: function (eu, sid, d) { return ComP_cancelar_(eu, d); },
+  // 29/10/2026: proposta que nunca foi ao cliente pode ser excluída (responsável ou gestão, com motivo)
+  excluirProposta: function (eu, sid, d) { return ComP_excluir_(eu, d); },
   respostaCliente: function (eu, sid, d) { return ComP_registrarResposta_(eu, sid, d); },
   opcoesPassagem: function (eu, sid, d) { return ComP_opcoesPassagem_(eu, d); },
   passarSetores: function (eu, sid, d) { return ComP_passarSetores_(eu, d); },

@@ -10,8 +10,8 @@ A gestora comercial do sistema conhece a metodologia que a gestão escreve (funi
 
 ## Quem usa
 
-- Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas.
-- Gestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto, mantém o catálogo e a metodologia.
+- Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas; edita e exclui a própria proposta que ainda não foi ao cliente. No catálogo de Produtos e serviços cadastra itens e altera descrição, unidade, categoria e preço de venda, com limites (veja "Catálogo pela equipe comercial").
+- Gestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto e a redução de preço do catálogo pedida pelo vendedor, exclui proposta não enviada, mantém o catálogo e a metodologia.
 - Diretoria e Administrador: além do que a gestão comercial faz, só eles mudam a política de precificação, aprovam proposta abaixo da margem mínima e reajustam os preços do catálogo em lote.
 - Financeiro: perfil Financeiro ou área Financeiro. Vê os pedidos aprovados, com o valor e os dados de faturamento, e mantém o catálogo de Produtos e serviços (preço e custo). O RH não vê o Comercial.
 - Técnico, Metrologia, RH e gestores de outras áreas não veem o Comercial nem valores. Quando recebem a parte deles de um pedido aprovado, é uma atividade em Minhas atividades, sem valor.
@@ -79,7 +79,14 @@ Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verif
 6. Toque em "Enviar ao cliente" e envie pela janela "Enviar documento": por e-mail (PDF anexado) e/ou pelo WhatsApp oficial da Metrolabs (o PDF vai na própria mensagem, com o texto do modelo aprovado pela Meta; o texto não é editado). Depois toque em "Já enviei: atualizar". A proposta fica "Enviada", a oportunidade vai para a etapa de proposta e o retorno ao cliente vira atividade para o 2º dia útil.
 7. Quando o cliente responder, toque em "Registrar resposta do cliente". Aprovação exige o arquivo do aceite (e-mail salvo em PDF, pedido de compra ou proposta assinada), que fica na pasta do cliente; o histórico registra quem lançou e a versão dos termos e condições que foi no documento ("aprovado por fora"). Recusa exige o motivo.
 
-Só o rascunho é editado. Antes do envio use "Voltar para rascunho"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina.
+Só o rascunho é editado. Antes do envio use "Editar (volta para rascunho)"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina. Editam a proposta o responsável por ela e a gestão comercial.
+
+### Proposta errada: editar, excluir ou cancelar
+
+- Rascunho: edite e salve. Aguardando aprovação ou pronta (ainda não enviada): "Editar (volta para rascunho)", corrija e conclua de novo (a política de desconto é conferida outra vez).
+- Excluir proposta: só a que nunca foi ao cliente, isto é, sem envio registrado (e-mail ou WhatsApp pelo "Enviar documento", link, "Entregue por outro meio"). Rascunho, aguardando aprovação, pronta (mesmo com o documento gerado) e cancelada antes de qualquer envio podem ser excluídas pelo responsável pela proposta ou pela gestão comercial, com confirmação e motivo (pelo menos 10 letras). A proposta sai das listas (inclusive de "Todas"), do quadro do funil, do Gantt, do painel e da lista do dia; o registro continua no banco, e o histórico da oportunidade guarda quem excluiu, quando, o número e o motivo. O número não volta a ser usado. Se o documento tinha sido gerado, ele continua na pasta do cliente, mas não vale como proposta. Revisão nova excluída antes do envio devolve a revisão anterior à situação que ela tinha (por exemplo "Enviada ao cliente"); o retorno ao cliente dela não volta sozinho, marque a próxima ação na oportunidade.
+- Já foi ao cliente: não é excluída, porque o cliente recebeu o documento. Use "Cancelar proposta" com o motivo: ela sai do funil (cartão do quadro, propostas em andamento, lista do dia) e fica só no histórico e no filtro "Cancelada". Para mudar o que foi enviado, faça "Nova revisão".
+- Sem o botão "Excluir proposta", a tela diz o motivo embaixo dos botões.
 
 O custo e a margem nunca vão para o cliente: aparecem só na tela da gestão.
 
@@ -164,6 +171,21 @@ Buscar no catálogo: escreva no campo "Buscar no catálogo" parte do código, do
 
 Na proposta, o campo "Produto ou serviço" de cada item busca enquanto você digita (itens ativos, os 8 mais parecidos); o botão "Do catálogo" abre a mesma busca numa janela (50 por vez).
 
+### Catálogo pela equipe comercial (com limites)
+
+Como a equipe é pequena e nem sempre há gestor comercial, a equipe comercial mantém o catálogo, com estes limites (o servidor confere em toda gravação):
+
+- Cadastra item novo (código, tipo, nome, descrição, unidade, categoria e preço de venda). O custo não aparece para a equipe comercial; quem cadastra o custo é a gestão comercial ou o Financeiro.
+- No item já cadastrado, altera descrição, unidade, categoria e preço de venda. Código, nome e tipo ficam com a gestão e o Financeiro (identificam o item nas propostas); item errado: arquive e cadastre o certo.
+- Preço nunca abaixo do custo cadastrado (a mensagem não mostra o custo).
+- Aumento de preço grava na hora. Redução dentro da alçada grava; a alçada é a mesma do desconto nas propostas (Metodologia > Política de desconto, por vendedor ou a geral, padrão 15%; sem número configurado, 10%) e soma as reduções desde o último preço definido pela gestão, pelo Financeiro ou por reajuste.
+- Redução acima da alçada não grava o preço: com o motivo escrito em "Motivo da mudança de preço", vira pedido "aguardando aprovação da Diretoria". O pedido entra na Caixa de decisões da gestão comercial ("Preço do item ... aguardando aprovação", sem valores), e a gestão recebe o aviso. Até a decisão, as propostas usam o preço atual. Um item tem um pedido por vez.
+- A gestão decide em Produtos e serviços > Situação "Preço aguardando aprovação" > "Decidir o preço" (vê o preço atual, o pedido, o custo e o motivo), com a fundamentação. Quem pediu não decide e recebe o aviso da decisão.
+- A equipe comercial não exclui item: arquiva (sai da escolha das propostas novas; as antigas ficam como estão). Reativar é da gestão comercial ou do Financeiro.
+- Toda mudança de preço fica no "Histórico do preço" do item (no Editar): quem, quando, de quanto para quanto, inclusive pedido, aprovação, negativa e reajuste em lote.
+
+A gestão comercial e o Financeiro continuam sem esses limites.
+
 ### Reajuste de preços (Diretoria e Administrador)
 
 - "Reajustar preços": escolha os itens (todos os ativos, por tipo, por categoria, pela busca ou os sem reajuste há mais de 12 meses), o percentual (negativo para redução), o índice (por exemplo IPCA de 12 meses, informado à mão), a vigência (hoje aplica agora; data futura agenda e a rotina aplica no dia), o arredondamento (centavos, R$ 1, R$ 5 ou R$ 10) e o motivo.
@@ -231,3 +253,8 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - "A política de precificação só é alterada pela Diretoria ou pelo Administrador": desfaça a mudança nesses campos (ou atualize a tela) e salve de novo.
 - "O reajuste de preços do catálogo é da Diretoria": a gestão e o Financeiro continuam editando item por item; o lote é da Diretoria.
 - "O catálogo ou a seleção mudou desde a prévia": toque em "Ver a prévia" de novo e aplique.
+- "A redução ... passa da sua alçada" (catálogo): escreva o motivo em "Motivo da mudança de preço" e salve; o preço vai para a aprovação da Diretoria ou da gestão comercial. Ou reduza menos.
+- "Ficou abaixo do custo cadastrado deste item": mantenha um preço maior; preço abaixo do custo é decisão da gestão comercial ou da Diretoria.
+- "Reativar um item arquivado é da gestão": peça à gestão comercial ou ao Financeiro.
+- "Não foi possível excluir ... já foi ao cliente": use "Cancelar proposta" com o motivo; ela sai do funil e fica no histórico.
+- "A proposta ... foi excluída em ...": alguém excluiu (a mensagem diz quem, quando e o motivo); atualize a lista e, se a oportunidade continua, faça "Nova proposta".

@@ -29,7 +29,8 @@
  *   GESTAO      Administrador, Diretoria, dono do sistema, Gestor com área Comercial no cadastro e quem a
  *               metodologia ou a Caixa de decisões (gestoresPorArea.COMERCIAL) lista como gestor comercial.
  *               Vê tudo, inclusive custo e margem; aprova desconto (pela tela, a Caixa leva até lá).
- *   VENDEDOR    perfil Comercial ou área Comercial no cadastro: só as próprias oportunidades e propostas.
+ *   VENDEDOR    perfil Comercial ou área Comercial no cadastro: só as próprias oportunidades e propostas. Desde 29/10/2026
+ *               cadastra e altera itens do catálogo com limites (SGO_Comercial_Propostas.js › ComP_salvarProduto_).
  *   FINANCEIRO  perfil Financeiro ou área Financeiro: só os pedidos aprovados (com valor, para faturar).
  *   NENHUM      Técnico, Metrologia, RH, Cliente e demais gestores: não veem o módulo nem valores. As
  *               atividades que os setores recebem não levam valor.
@@ -60,7 +61,12 @@ var COM_COLUNAS = {
   COM_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'TIPO', 'DE', 'PARA', 'TEXTO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_PRODUTOS: ['ID', 'CODIGO', 'NOME', 'TIPO', 'CATEGORIA', 'UNIDADE_MEDIDA', 'DESCRICAO', 'PRECO', 'CUSTO', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
     // 29/10/2026: data do último preço (mudança no cadastro ou reajuste); vazio = desde o cadastro (CRIADO_EM)
-    'PRECO_DESDE'],
+    'PRECO_DESDE',
+    // 29/10/2026 (pedido do dono): a equipe comercial mantém o catálogo com limites. PRECO_REFERENCIA = preço antes da
+    // primeira redução feita pelo vendedor (a alçada conta a redução acumulada sobre ele; vazio = o preço atual). Redução
+    // acima da alçada vira pedido (PRECO_PEDIDO*) que a gestão comercial ou a Diretoria aprova ou nega.
+    'PRECO_REFERENCIA', 'PRECO_PEDIDO', 'PRECO_PEDIDO_SITUACAO', 'PRECO_PEDIDO_POR_ID', 'PRECO_PEDIDO_POR_NOME', 'PRECO_PEDIDO_EM', 'PRECO_PEDIDO_MOTIVO',
+    'PRECO_DECISAO_POR_NOME', 'PRECO_DECISAO_EM', 'PRECO_DECISAO_TEXTO'],
   COM_PROPOSTAS: ['ID', 'NUMERO', 'REVISAO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'VALIDA_ATE',
     'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL', 'SITUACAO',
@@ -73,7 +79,10 @@ var COM_COLUNAS = {
     'TIPO_ORCAMENTO',
     // 29/10/2026: custos da viagem e do frete (checklist do vendedor, SGO_Comercial_Precificacao.js) e a fotografia da
     // precificação ao concluir (custo, impostos, margem, repasse da viagem) para o painel e a gestora
-    'DESLOCAMENTO_JSON', 'PRECIFICACAO_JSON'],
+    'DESLOCAMENTO_JSON', 'PRECIFICACAO_JSON',
+    // 29/10/2026 (pedido do dono): proposta que nunca foi ao cliente pode ser excluída (SITUACAO EXCLUIDA; o registro fica
+    // no banco e no histórico, o número não volta a ser usado; some das listas, do quadro, do painel e da gestora)
+    'EXCLUIDA_EM', 'EXCLUIDA_POR_ID', 'EXCLUIDA_POR_NOME', 'EXCLUIDA_MOTIVO'],
   COM_REAJUSTES: ['ID', 'LOTE', 'PRODUTO_ID', 'CODIGO', 'NOME', 'PRECO_ANTERIOR', 'PRECO_NOVO', 'PRECO_DESDE_ANTERIOR', 'PERCENTUAL', 'ARREDONDAR_PARA', 'INDICE', 'VIGENCIA', 'MOTIVO', 'SITUACAO',
     'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'DESFEITO_POR_NOME', 'DESFEITO_MOTIVO', 'CRIADO_EM'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
@@ -84,10 +93,10 @@ var COM_COLUNAS = {
 };
 var COM_COLUNAS_TEXTO = {
   COM_OPORTUNIDADES: ['ETAPA_DESDE', 'ULTIMO_CONTATO_EM', 'PROXIMA_ACAO_EM', 'GANHA_EM', 'PERDIDA_EM', 'REABERTURA_PEDIDA_EM', 'PREVISAO_FECHAMENTO', 'ATUALIZADO_EM', 'CODIGO'],
-  COM_PROPOSTAS: ['VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
+  COM_PROPOSTAS: ['EXCLUIDA_EM', 'VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
   COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
-  COM_PRODUTOS: ['PRECO_DESDE'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
+  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
 var COM_SITUACOES_OPO = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
@@ -588,7 +597,12 @@ function Com_nivelDe_(u, gestoresCfg) {
   // 21/10/2026 (pedido do dono): o catálogo de produtos e serviços (preço e custo) é mantido também pelo Financeiro. O RH não
   // entra no Comercial (não vê valores de venda).
   var catalogo = gestao || financeiro;
-  return { nivel: nivel, gestao: gestao, vendedor: vendedor, financeiro: financeiro, veValores: nivel !== 'NENHUM', veCusto: catalogo, catalogo: catalogo, diretoria: diretoria };
+  // 29/10/2026 (pedido do dono: "dar permissão para a Mônica cadastrar produto, preços e serviços"; sem gestor comercial na
+  // equipe): o vendedor cadastra item novo e altera descrição, unidade, categoria e preço de venda, com limites (nunca abaixo
+  // do custo; redução acima da alçada vai para aprovação; não vê nem altera o custo; só arquiva). catalogo continua sendo o
+  // acesso completo (gestão e Financeiro); catalogoVenda é o acesso limitado do vendedor.
+  var catalogoVenda = vendedor && !catalogo;
+  return { nivel: nivel, gestao: gestao, vendedor: vendedor, financeiro: financeiro, veValores: nivel !== 'NENHUM', veCusto: catalogo, catalogo: catalogo, catalogoVenda: catalogoVenda, diretoria: diretoria };
 }
 
 /** Quem está chamando (sessão), com o nível no Comercial. Não lança por falta de acesso: quem chama decide. */
