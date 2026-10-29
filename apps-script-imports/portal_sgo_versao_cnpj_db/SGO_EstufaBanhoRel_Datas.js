@@ -34,15 +34,16 @@ function EstufaBanhoRel_lerXlsxOriginal_(blob,payload){
   if(!rel||attr(rel,'TargetMode')==='External')throw new Error('Aba XLSX inválida.');
   const target=attr(rel,'Target'),sheetPath=target.charAt(0)==='/'?target.slice(1):'xl/'+target.replace(/^\.\//,'');
   const shared=files['xl/sharedStrings.xml']?xml('xl/sharedStrings.xml').getChildren('si',ns).map(text):[];
-  const custom={},styles=[];
-  if(files['xl/styles.xml']){const st=xml('xl/styles.xml'),nf=st.getChild('numFmts',ns),xf=st.getChild('cellXfs',ns);if(nf)nf.getChildren('numFmt',ns).forEach(function(f){custom[attr(f,'numFmtId')]=attr(f,'formatCode');});if(xf)xf.getChildren('xf',ns).forEach(function(f){const id=+attr(f,'numFmtId'),fmt=(custom[id]||'').replace(/"[^"]*"|\\.|\[[^\]]*\]/g,'');styles.push((id>=14&&id<=22)||(id>=45&&id<=47)||/[ydhs]/i.test(fmt));});}
+  // soHora (29/10/2026, mesma correção da Cadeia Fria): hora arrastada no Excel passa de 24:00; célula só de hora vale a hora do dia.
+  const custom={},styles=[],soHora=[];
+  if(files['xl/styles.xml']){const st=xml('xl/styles.xml'),nf=st.getChild('numFmts',ns),xf=st.getChild('cellXfs',ns);if(nf)nf.getChildren('numFmt',ns).forEach(function(f){custom[attr(f,'numFmtId')]=attr(f,'formatCode');});if(xf)xf.getChildren('xf',ns).forEach(function(f){const id=+attr(f,'numFmtId'),fmt=(custom[id]||'').replace(/"[^"]*"|\\.|\[[^\]]*\]/g,'');styles.push((id>=14&&id<=22)||(id>=45&&id<=47)||/[ydhs]/i.test(fmt));soHora.push((id>=18&&id<=21)||(id>=45&&id<=47)||(id>=164&&/[hs]/i.test(fmt)&&!/[yd]/i.test(fmt)));});}
   const data=xml(sheetPath).getChild('sheetData',ns);if(!data)throw new Error('Aba XLSX sem dados.');
   const rows=data.getChildren('row',ns);if(rows.length>EstufaBanhoRel_EBCFG.MAX_PARSE_ROWS)throw new Error('Arquivo excede o limite de linhas; divida o estudo sem remover registros.');
   return rows.map(function(row){const values=[];row.getChildren('c',ns).forEach(function(cell){const ref=attr(cell,'r'),letters=(ref.match(/^[A-Z]+/)||[''])[0];let col=0;for(let i=0;i<letters.length;i++)col=col*26+letters.charCodeAt(i)-64;col=col?col-1:values.length;if(col>250)throw new Error('XLSX excede 251 colunas.');while(values.length<=col)values.push('');const type=attr(cell,'t'),v=cell.getChild('v',ns),raw=v?v.getText():'';
     if(type==='s')values[col]=shared[Number(raw)]||'';
     else if(type==='inlineStr')values[col]=text(cell.getChild('is',ns));
     else if(type==='str'||type==='d'||type==='e')values[col]=raw;
-    else if(raw!==''){const n=Number(raw);if(!isFinite(n)){values[col]=raw;return;}if(styles[+attr(cell,'s')]){if(n>=0&&n<1){const seconds=Math.round(n*86400);values[col]=[Math.floor(seconds/3600)%24,Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');}else{const dt=EstufaBanhoRel_dataSerialFiel_(n+(date1904?1462:0));if(!dt)throw new Error('Data Excel fora do intervalo aceito na célula '+ref);values[col]=Utilities.formatDate(dt,EstufaBanhoRel_EBCFG.TZ,'yyyy-MM-dd HH:mm:ss');}}else values[col]=n;}
+    else if(raw!==''){const n=Number(raw);if(!isFinite(n)){values[col]=raw;return;}if(styles[+attr(cell,'s')]){if(n>=0&&(n<1||soHora[+attr(cell,'s')])){const seconds=Math.round(n*86400)%86400;values[col]=[Math.floor(seconds/3600)%24,Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');}else{const dt=EstufaBanhoRel_dataSerialFiel_(n+(date1904?1462:0));if(!dt)throw new Error('Data Excel fora do intervalo aceito na célula '+ref);values[col]=Utilities.formatDate(dt,EstufaBanhoRel_EBCFG.TZ,'yyyy-MM-dd HH:mm:ss');}}else values[col]=n;}
   });return values;}).filter(function(r){return r.some(v=>v!=='');});
 }
 function EstufaBanhoRel_prepararTabelaDatas_(matrix,display){

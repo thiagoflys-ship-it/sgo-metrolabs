@@ -23,8 +23,9 @@ function CadeiaFrioRel_lerXlsxOriginal_(blob,opcoes){
   function text(e){if(!e)return '';return e.getChildren().map(function(c){return c.getName()==='t'?c.getText():text(c);}).join('');}
   const wb=xml('xl/workbook.xml'),pr=wb.getChild('workbookPr',ns),date1904=pr&&/^(1|true)$/.test(attr(pr,'date1904'));
   const shared=files['xl/sharedStrings.xml']?xml('xl/sharedStrings.xml').getChildren('si',ns).map(text):[];
-  const custom={},styles=[];
-  if(files['xl/styles.xml']){const st=xml('xl/styles.xml'),nf=st.getChild('numFmts',ns),xf=st.getChild('cellXfs',ns);if(nf)nf.getChildren('numFmt',ns).forEach(function(f){custom[attr(f,'numFmtId')]=attr(f,'formatCode');});if(xf)xf.getChildren('xf',ns).forEach(function(f){const id=+attr(f,'numFmtId'),fmt=(custom[id]||'').replace(/"[^"]*"|\\.|\[[^\]]*\]/g,'');styles.push((id>=14&&id<=22)||(id>=45&&id<=47)||/[ydhs]/i.test(fmt));});}
+  // soHora (29/10/2026, "TESTES FRIGOBAR SF.xlsx"): hora arrastada no Excel passa de 24:00 (1,0007 = 24:01); célula só de hora vale a hora do dia e a data vem da coluna de data.
+  const custom={},styles=[],soHora=[];
+  if(files['xl/styles.xml']){const st=xml('xl/styles.xml'),nf=st.getChild('numFmts',ns),xf=st.getChild('cellXfs',ns);if(nf)nf.getChildren('numFmt',ns).forEach(function(f){custom[attr(f,'numFmtId')]=attr(f,'formatCode');});if(xf)xf.getChildren('xf',ns).forEach(function(f){const id=+attr(f,'numFmtId'),fmt=(custom[id]||'').replace(/"[^"]*"|\\.|\[[^\]]*\]/g,'');styles.push((id>=14&&id<=22)||(id>=45&&id<=47)||/[ydhs]/i.test(fmt));soHora.push((id>=18&&id<=21)||(id>=45&&id<=47)||(id>=164&&/[hs]/i.test(fmt)&&!/[yd]/i.test(fmt)));});}
   const sheets=wb.getChild('sheets',ns).getChildren('sheet',ns);
   if(!sheets.length)throw new Error('XLSX sem aba.');
   function lerAba(sheet){
@@ -38,7 +39,7 @@ function CadeiaFrioRel_lerXlsxOriginal_(blob,opcoes){
     if(type==='s')values[col]=shared[Number(raw)]||'';
     else if(type==='inlineStr')values[col]=text(cell.getChild('is',ns));
     else if(type==='str'||type==='d'||type==='e')values[col]=raw;
-    else if(raw!==''){const n=Number(raw);if(!isFinite(n)){values[col]=raw;return;}if(styles[+attr(cell,'s')]){if(n>=0&&n<1){const seconds=Math.round(n*86400);values[col]=[Math.floor(seconds/3600)%24,Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');}else{const text=CadeiaFrioRel_serialTexto_(n+(date1904?1462:0));if(!text)throw new Error('Data Excel fora do intervalo aceito na célula '+ref);values[col]=text;}}else values[col]=n;}
+    else if(raw!==''){const n=Number(raw);if(!isFinite(n)){values[col]=raw;return;}if(styles[+attr(cell,'s')]){if(n>=0&&(n<1||soHora[+attr(cell,'s')])){const seconds=Math.round(n*86400)%86400;values[col]=[Math.floor(seconds/3600)%24,Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');}else{const text=CadeiaFrioRel_serialTexto_(n+(date1904?1462:0));if(!text)throw new Error('Data Excel fora do intervalo aceito na célula '+ref);values[col]=text;}}else values[col]=n;}
   });return values;}).filter(function(r){return r.some(v=>v!=='');});
   }
   const candidatas=[];let primeira=[];

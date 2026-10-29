@@ -398,7 +398,7 @@ function CadeiaFrioRel_cfLerDadosCompletos_(payload, modoEntradaNormalizado, nSe
  * (o mesmo horário em duas abas misturaria leituras de estudos diferentes).
  */
 function CadeiaFrioRel_cfJuntarAbas_(abas, nSensores, dateStyle) {
-  const partes = abas.map(function(a) {
+  let partes = abas.map(function(a) {
     let linhas;
     try {
       linhas = CadeiaFrioRel_normalizarMatrizParaAnalise(a.matrix, a.displayMatrix, nSensores, dateStyle);
@@ -409,6 +409,18 @@ function CadeiaFrioRel_cfJuntarAbas_(abas, nSensores, dateStyle) {
     const ms = function(l) { return CadeiaFrioRel_cfConverterTempoParaMs_(l.tempoDate || l.tempoStr); };
     return { nome: a.nome, linhas: linhas, inicioMs: ms(linhas[0]), fimMs: ms(linhas[linhas.length - 1]), inicio: linhas[0].tempoStr, fim: linhas[linhas.length - 1].tempoStr };
   }).sort(function(x, y) { return x.inicioMs - y.inicioMs; });
+  // 29/10/2026 ("TESTES FRIGOBAR SF.xlsx"): aba que é cópia de um trecho de outra (mesmos horários, mesmas leituras)
+  // não mistura estudos; sai da junção e o estudo usa a aba maior, com as mesmas leituras. Qualquer diferença continua recusada.
+  const chave = function(l) { return CadeiaFrioRel_cfConverterTempoParaMs_(l.tempoDate || l.tempoStr) + '|' + JSON.stringify(l.temperaturas); };
+  const copias = partes.filter(function(p) {
+    return partes.some(function(q) {
+      if (q === p || q.inicioMs > p.inicioMs || q.fimMs < p.fimMs || q.linhas.length <= p.linhas.length) return false;
+      const deQ = {};
+      q.linhas.forEach(function(l) { deQ[chave(l)] = 1; });
+      return p.linhas.every(function(l) { return deQ[chave(l)]; });
+    });
+  });
+  if (copias.length) partes = partes.filter(function(p) { return copias.indexOf(p) < 0; });
   for (let i = 1; i < partes.length; i++) {
     if (partes[i].inicioMs <= partes[i - 1].fimMs) {
       throw new Error('As abas "' + partes[i - 1].nome + '" (de ' + partes[i - 1].inicio + ' a ' + partes[i - 1].fim + ') e "' + partes[i].nome + '" (de ' + partes[i].inicio + ' a ' + partes[i].fim +
