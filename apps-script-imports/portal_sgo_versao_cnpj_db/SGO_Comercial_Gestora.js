@@ -634,7 +634,14 @@ function ComG_revisarPropostaRegras_(p) {
   if (Math.abs(calc.total - (Number(p.TOTAL) || 0)) > 0.01) erros.push('o total gravado não confere com os itens (salve o rascunho de novo)');
   if (!(calc.total > 0)) erros.push('o total da proposta precisa ser maior que zero');
   var servico = itens.some(function (i) { return i.tipo !== 'PRODUTO'; });
-  if (servico && Com_s_(p.ESCOPO).length < 30) erros.push('o escopo está vazio ou curto demais (descreva o que será feito, onde e o que o cliente recebe)');
+  // 28/10/2026 (dono): a descrição da proposta fica em branco e só se escreve quando precisar (as cláusulas vão fixas nos
+  // termos e condições). Escopo curto deixou de impedir a conclusão: vira alerta.
+  var escopo = typeof ComP_escopo_ === 'function' ? ComP_escopo_(p) : Com_s_(p.ESCOPO);
+  if (servico && escopo.length < 30) alertas.push('a descrição (escopo) está em branco ou curta: o documento diz "Conforme os itens da tabela"; se o serviço precisa de detalhe (onde, o que o cliente recebe), escreva na descrição');
+  var avulsos = itens.filter(function (i) { return !i.produtoId; });
+  if (avulsos.length) alertas.push(Com_plural_(avulsos.length, 'item avulso', 'itens avulsos') + ' (fora do catálogo de Produtos e serviços): confira a descrição e o preço' + (avulsos.length <= 3 ? ' (' + avulsos.map(function (i) { return Com_s_(i.descricao).slice(0, 40); }).join('; ') + ')' : ''));
+  var acima = itens.filter(function (i) { return i.produtoId && Number(i.precoTabela) > 0 && Number(i.precoUnitario) > Number(i.precoTabela) + 0.004; });
+  if (acima.length) alertas.push('preço acima da tabela do catálogo em ' + acima.slice(0, 3).map(function (i) { return (Com_s_(i.codigo) || Com_s_(i.descricao).slice(0, 30)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (acima.length > 3 ? ' e mais ' + (acima.length - 3) : ''));
   if (!Com_s_(cond.pagamento)) erros.push('falta a forma de pagamento');
   if (!Com_s_(cond.prazoExecucao)) erros.push('falta o prazo de ' + (servico ? 'execução' : 'entrega'));
   if (servico && !Com_s_(cond.garantia)) alertas.push('a garantia está em branco');
@@ -668,7 +675,7 @@ function ComG_revisarProposta_(eu, d) {
   var obs = [], origem = 'REGRAS', aviso = '';
   if (!d || d.comIA !== false) {
     var itens = Com_json_(p.ITENS_JSON, []).map(function (i) { return { tipo: COM_TIPOS_ITEM[i.tipo], descricao: i.descricao, detalhe: i.detalhe, equipamento: i.equipamentoTexto, quantidade: i.quantidade, unidade: i.unidade, precoUnitario: Com_moeda_(i.precoUnitario) }; });
-    var fatos = { proposta: ComP_rotulo_(p), titulo: Com_s_(p.TITULO), escopo: Com_s_(p.ESCOPO).slice(0, 3000), itens: itens, condicoes: Com_json_(p.CONDICOES_JSON, {}), total: Com_moeda_(p.TOTAL), desconto: Com_pct_(p.DESCONTO_PCT), validaAte: Com_brDia_(p.VALIDA_ATE), cliente: Com_s_(p.CLIENTE_NOME), unidade: Com_s_(p.UNIDADE_NOME), regras: { erros: r.erros, alertas: r.alertas } };
+    var fatos = { proposta: ComP_rotulo_(p), titulo: Com_s_(p.TITULO), escopo: (typeof ComP_escopo_ === 'function' ? ComP_escopo_(p) : Com_s_(p.ESCOPO)).slice(0, 3000), itens: itens, condicoes: Com_json_(p.CONDICOES_JSON, {}), total: Com_moeda_(p.TOTAL), desconto: Com_pct_(p.DESCONTO_PCT), validaAte: Com_brDia_(p.VALIDA_ATE), cliente: Com_s_(p.CLIENTE_NOME), unidade: Com_s_(p.UNIDADE_NOME), regras: { erros: r.erros, alertas: r.alertas } };
     var prompt = ComG_regrasPrompt_() + '\n\nMETODOLOGIA:\n' + ComG_metodologiaTexto_(Com_metodologia_()) + '\n\nPROPOSTA (fatos):\n' + JSON.stringify(fatos) +
       '\n\nTAREFA: revise a proposta antes do envio como gestora comercial: coerência entre escopo e itens, clareza das condições, se a proposta mostra a dor do cliente e o valor técnico, e o que pode gerar dúvida ou objeção. Não repita os erros e alertas já listados pelas regras. ' +
       'Até 5 observações curtas e acionáveis. Formato: {"observacoes":["..."]}';

@@ -35,7 +35,8 @@ var COM_TIPOS_ITEM = { SERVICO: 'Serviço', PRODUTO: 'Produto', CONTRATO: 'Contr
 function ComP_produtoParaTela_(p, eu) {
   var t = { id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), tipo: Com_up_(p.TIPO) || 'SERVICO', tipoNome: COM_TIPOS_ITEM[Com_up_(p.TIPO)] || 'Serviço',
     categoria: Com_s_(p.CATEGORIA), unidade: Com_s_(p.UNIDADE_MEDIDA) || 'un.', descricao: Com_s_(p.DESCRICAO), preco: Number(p.PRECO) || 0, precoTxt: Com_moeda_(p.PRECO),
-    ativo: Com_up_(p.ATIVO || 'SIM') !== 'NAO' };
+    ativo: Com_up_(p.ATIVO || 'SIM') !== 'NAO', atualizadoPor: Com_s_(p.ATUALIZADO_POR_NOME), atualizadoEm: Com_br_(p.ATUALIZADO_EM),
+    origem: /importa[çc][ãa]o do crm/i.test(Com_s_(p.ATUALIZADO_POR_NOME)) || /^CRM-/i.test(Com_s_(p.CODIGO)) ? 'CRM' : '' };
   if (eu && eu.veCusto) { t.custo = Com_s_(p.CUSTO) === '' ? null : Number(p.CUSTO) || 0; t.custoTxt = t.custo === null ? '' : Com_moeda_(t.custo); }
   return t;
 }
@@ -53,12 +54,17 @@ function ComP_catalogo_(eu, d) {
   var categorias = {};
   visiveis.forEach(function (p) { var c = Com_s_(p.CATEGORIA); if (c) categorias[c] = 1; });
   var termos = Com_termosBusca_(d.busca), tipo = Com_up_(d.tipo), cat = Com_normBusca_(d.categoria), sit = Com_up_(d.situacao) || 'TODOS';
+  // 28/10/2026: "Possíveis duplicados" (gestão): itens ATIVOS com o mesmo nome (sem acento, maiúscula e pontuação). Na
+  // importação do CRM, 25 nomes vieram em mais de um código (53 itens, produção em 28/10/2026); a gestão confere e arquiva o que sobra.
+  var mesmoNome = ComP_nomesRepetidos_(visiveis);
+  if (sit === 'DUPLICADOS' && !gere) sit = 'ATIVOS';
   var achados = visiveis.filter(function (p) {
     if (tipo && Com_up_(p.TIPO || 'SERVICO') !== tipo) return false;
     if (cat && Com_normBusca_(p.CATEGORIA) !== cat) return false;
     var ativo = Com_up_(p.ATIVO || 'SIM') !== 'NAO';
     if (sit === 'ATIVOS' && !ativo) return false;
     if (sit === 'ARQUIVADOS' && ativo) return false;
+    if (sit === 'DUPLICADOS' && !(ativo && mesmoNome[Com_normBusca_(p.NOME)] > 1)) return false;
     return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA), COM_TIPOS_ITEM[Com_up_(p.TIPO)] || '', Com_s_(p.UNIDADE_MEDIDA)]);
   }).map(function (p) { return ComP_produtoParaTela_(p, eu); });
   var q = termos.join(' '), qJunto = termos.join('');
@@ -71,13 +77,21 @@ function ComP_catalogo_(eu, d) {
     if (Com_casaBusca_(termos, [x.codigo, x.nome])) return 3;
     return 4; // achou só na descrição, categoria ou tipo
   };
-  achados.forEach(function (x) { x._peso = peso(x); });
-  achados.sort(function (a, b) { return (a._peso - b._peso) || (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  achados.forEach(function (x) { x._peso = sit === 'DUPLICADOS' ? 0 : peso(x); if (gere && x.ativo && mesmoNome[Com_normBusca_(x.nome)] > 1) x.duplicado = true; });
+  achados.sort(function (a, b) { return (a._peso - b._peso) || (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR') || a.codigo.localeCompare(b.codigo, 'pt-BR'); });
   achados.forEach(function (x) { delete x._peso; });
   var limite = Math.max(0, Math.min(2000, Math.floor(Number(d.limite) || 0)));
   var lista = limite && achados.length > limite ? achados.slice(0, limite) : achados;
+  var dupGrupos = 0; Object.keys(mesmoNome).forEach(function (k) { if (mesmoNome[k] > 1) dupGrupos++; });
   return { produtos: lista, total: visiveis.length, encontrados: achados.length, limitado: lista.length < achados.length,
-    categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }) };
+    categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }), duplicados: gere ? dupGrupos : 0 };
+}
+
+/** { nomeNormalizado: quantidade de itens ATIVOS com esse nome } */
+function ComP_nomesRepetidos_(lista) {
+  var m = {};
+  (lista || []).forEach(function (p) { if (Com_up_(p.ATIVO || 'SIM') === 'NAO') return; var k = Com_normBusca_(p.NOME); if (k) m[k] = (m[k] || 0) + 1; });
+  return m;
 }
 
 /** Gestão cadastra ou altera. d: { id?, codigo, nome, tipo, categoria, unidade, descricao, preco, custo } */
@@ -97,6 +111,13 @@ function ComP_salvarProduto_(eu, d) {
     Com_garantirAbas_();
     var outro = Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Com_up_(p.CODIGO) === codigo && Com_s_(p.ID) !== Com_s_(d.id); })[0];
     if (outro) throw new Error('Não foi possível salvar: o código ' + codigo + ' já é do item "' + Com_s_(outro.NOME) + '". Use outro código ou edite aquele item');
+    // 28/10/2026: cadastro único. Item novo (ou nome alterado) com o mesmo nome de outro item ativo vira duplicidade na
+    // escolha das propostas. O que já veio repetido do CRM continua editável sem trocar o nome.
+    var atualNome = Com_s_(d.id) ? Com_s_((SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id)) || {}).NOME) : '';
+    if (Com_normBusca_(atualNome) !== Com_normBusca_(nome)) {
+      var xara = Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Com_s_(p.ID) !== Com_s_(d.id) && Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Com_normBusca_(p.NOME) === Com_normBusca_(nome); })[0];
+      if (xara) throw new Error('Não foi possível salvar: já existe o item ativo "' + Com_s_(xara.NOME) + '" (código ' + Com_s_(xara.CODIGO) + ', ' + Com_moeda_(xara.PRECO) + '). O catálogo é um cadastro único: edite aquele item (preço, descrição, unidade) ou, se for outro produto, diferencie o nome (modelo, tamanho ou capacidade)');
+    }
     var campos = { CODIGO: codigo, NOME: nome, TIPO: tipo, CATEGORIA: Com_texto_(d.categoria, 80), UNIDADE_MEDIDA: Com_texto_(d.unidade, 20) || 'un.', DESCRICAO: Com_texto_(d.descricao, 2000),
       PRECO: Com_r2_(preco), CUSTO: custo === '' ? '' : Com_r2_(custo), ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() };
     var reg;
@@ -193,6 +214,45 @@ function ComP_obter_(eu, id, acao) {
   return p;
 }
 
+/**
+ * 28/10/2026: as cláusulas fixas ("1. DO OBJETO ... testemunhas.") que os vendedores colavam na descrição dos orçamentos do
+ * CRM (859 das 971 propostas importadas) agora vão fixas na seção "Termos e condições da contratação". Ao abrir, editar ou
+ * gerar o documento, o bloco sai da descrição para não sair duas vezes; o que vem antes e depois (texto próprio, "Condições:",
+ * "Frete:", "Entrega:") fica. Só sai quando o bloco é essencialmente o texto padrão (palavras em comum >= 95%); texto
+ * cortado no fim (a importação limitou a 4.000 letras) conta pelo trecho que existe. O banco não é alterado aqui: a
+ * descrição só muda se o vendedor salvar o rascunho. { texto, tinha }.
+ */
+function ComP_separarTermosLegado_(texto) {
+  var s = Com_s_(texto).replace(/\r\n?/g, '\n');
+  var ini = /(?:observa[çc][õo]es\s*:?\s*)?(?:\d+\s*)?[.)\-]?\s*do objeto\s*:/i.exec(s);
+  if (!ini) return { texto: s, tinha: false };
+  var re = /testemunhas\s*\.?/ig;
+  re.lastIndex = ini.index;
+  var fim = re.exec(s), ate = fim ? fim.index + fim[0].length : s.length;
+  var palavras = function (t) { return Com_normBusca_(t).split(' ').filter(Boolean); };
+  var bloco = palavras(s.slice(ini.index, ate));
+  if (bloco[0] === 'observacoes') bloco.shift();
+  if (bloco.length < 40) return { texto: s, tinha: false };
+  var conta = {}, comum = 0;
+  palavras(COM_METODOLOGIA_PADRAO.proposta.termos).forEach(function (w) { conta[w] = (conta[w] || 0) + 1; });
+  var total = 0; Object.keys(conta).forEach(function (k) { total += conta[k]; });
+  bloco.forEach(function (w) { if (conta[w] > 0) { conta[w]--; comum++; } });
+  var sim = fim ? 2 * comum / (total + bloco.length) : comum / bloco.length;
+  if (sim < 0.95) return { texto: s, tinha: false };
+  var resto = (s.slice(0, ini.index) + '\n' + s.slice(ate)).replace(/\n[ \t]*[-_=]{5,}[ \t]*(?=\n|$)/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+  return { texto: resto, tinha: true };
+}
+/** Descrição (ESCOPO) sem o bloco antigo das cláusulas. */
+function ComP_escopo_(p) { return ComP_separarTermosLegado_(p && p.ESCOPO).texto; }
+
+/** Termos da proposta: os congelados no documento gerado; sem documento, os vigentes. { versao, texto, concordancia, congelado } */
+function ComP_termosDa_(p) {
+  var c = Com_json_(p && p.CONGELADO_JSON, null);
+  if (c && c.termos && typeof c.termos.texto === 'string') return Object.assign({ congelado: true }, c.termos);
+  var v = Com_termosVigentes_();
+  return { versao: v.versao, texto: v.texto, concordancia: v.concordancia, desde: v.desde, congelado: false };
+}
+
 function ComP_rotulo_(p) { return Com_s_(p.NUMERO) + ' rev.' + (typeof SGO_DocA4_revisao_ === 'function' ? SGO_DocA4_revisao_(p.REVISAO) : Com_s_(p.REVISAO)); }
 
 function ComP_paraTela_(eu, p, completo) {
@@ -216,11 +276,15 @@ function ComP_paraTela_(eu, p, completo) {
   }
   if (eu.veCusto && Com_s_(p.MARGEM_PCT) !== '') { t.margemPct = Number(p.MARGEM_PCT); t.margemTxt = Com_pct_(p.MARGEM_PCT); t.custoTxt = Com_moeda_(p.CUSTO_TOTAL); }
   if (completo) {
-    t.escopo = Com_s_(p.ESCOPO); t.apresentacao = Com_s_(p.APRESENTACAO); t.condicoes = Com_json_(p.CONDICOES_JSON, {}); t.modelo = Com_s_(p.MODELO);
+    var sep = ComP_separarTermosLegado_(p.ESCOPO);
+    t.escopo = sep.texto; t.escopoTermosLegado = sep.tinha; t.apresentacao = Com_s_(p.APRESENTACAO);
+    var tm = ComP_termosDa_(p);
+    t.termos = { versao: tm.versao, texto: tm.texto, concordancia: tm.concordancia, congelado: !!tm.congelado,
+      foraDoDocumento: !tm.congelado && !!Com_s_(p.GERADA_EM) }; t.condicoes = Com_json_(p.CONDICOES_JSON, {}); t.modelo = Com_s_(p.MODELO);
     t.itens = itens.map(function (i) {
       var o = { ordem: i.ordem, produtoId: i.produtoId || '', codigo: i.codigo || '', tipo: i.tipo || 'SERVICO', descricao: i.descricao || '', detalhe: i.detalhe || '',
         equipamentoId: i.equipamentoId || '', equipamentoTexto: i.equipamentoTexto || '', unidade: i.unidade || 'un.', quantidade: Number(i.quantidade) || 0 };
-      if (eu.veValores) { o.precoUnitario = Number(i.precoUnitario) || 0; o.precoTabela = Number(i.precoTabela) || 0; o.total = Com_r2_((Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0)); }
+      if (eu.veValores) { o.precoUnitario = Number(i.precoUnitario) || 0; o.precoTabela = Number(i.precoTabela) || 0; o.total = Com_r2_((Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0)); o.precoDiferente = !!i.precoDiferente; }
       if (eu.veCusto && i.custoUnitario !== undefined && i.custoUnitario !== null && i.custoUnitario !== '') o.custoUnitario = Number(i.custoUnitario);
       return o;
     });
@@ -322,6 +386,9 @@ function ComP_itensDaTela_(lista, prop, eu) {
       quantidade: q, precoUnitario: Com_r2_(pu),
       precoTabela: p ? (ant && ant.precoTabela !== undefined ? Number(ant.precoTabela) : Number(p.PRECO) || 0) : 0,
       custoUnitario: p && Com_s_(p.CUSTO) !== '' ? (ant && ant.custoUnitario !== undefined ? ant.custoUnitario : Number(p.CUSTO)) : null };
+    // 28/10/2026: preço diferente da tabela do catálogo fica marcado no item (e no histórico, ComP_salvar_); abaixo da
+    // tabela já conta como desconto na política. Item sem catálogo (avulso) não tem tabela para comparar.
+    item.precoDiferente = !!(p && item.precoTabela > 0 && Math.abs(item.precoUnitario - item.precoTabela) > 0.004);
     return item;
   });
 }
@@ -384,7 +451,10 @@ function ComP_salvar_(eu, d) {
       ATUALIZADO_EM: Com_agora_() };
     if (ct) { campos.CONTATO_ID = ct.ID; campos.CONTATO_NOME = Com_s_(ct.NOME); }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
-    Com_historico_('PROPOSTA', p.ID, 'RASCUNHO', eu, { texto: Com_plural_(itens.length, 'item', 'itens') + '; total ' + Com_moeda_(calc.total) + '; desconto ' + Com_pct_(calc.descontoPct) + '.' });
+    var difs = itens.filter(function (i) { return i.precoDiferente; }), avulsos = itens.filter(function (i) { return !i.produtoId; }).length;
+    Com_historico_('PROPOSTA', p.ID, 'RASCUNHO', eu, { texto: Com_plural_(itens.length, 'item', 'itens') + '; total ' + Com_moeda_(calc.total) + '; desconto ' + Com_pct_(calc.descontoPct) + '.' +
+      (difs.length ? ' Preço diferente do catálogo: ' + difs.slice(0, 10).map(function (i) { return (i.codigo || i.descricao.slice(0, 40)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (difs.length > 10 ? '; e mais ' + (difs.length - 10) : '') + '.' : '') +
+      (avulsos ? ' ' + Com_plural_(avulsos, 'item avulso', 'itens avulsos') + ' (fora do catálogo).' : '') });
     var novo = Object.assign({}, p, campos);
     var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID));
     return { proposta: ComP_paraTela_(eu, novo, true), politica: { dentro: pol.dentro, motivos: pol.motivos },
@@ -494,8 +564,12 @@ function ComP_gerarDocumento_(eu, d) {
   var rev = typeof ComG_revisarPropostaRegras_ === 'function' ? ComG_revisarPropostaRegras_(p) : { erros: [], alertas: [] };
   if (rev.erros.length) throw new Error('Não foi possível gerar o documento: ' + rev.erros.join('; ') + '. Volte para rascunho, corrija e conclua de novo');
   var cong = ComP_congelar_(p);
-  var conteudo = { numero: p.NUMERO, revisao: p.REVISAO, itens: Com_json_(p.ITENS_JSON, []), condicoes: Com_json_(p.CONDICOES_JSON, {}), escopo: Com_s_(p.ESCOPO), apresentacao: Com_s_(p.APRESENTACAO),
-    total: Number(p.TOTAL), desconto: Number(p.DESCONTO_GERAL), validaAte: Com_dia_(p.VALIDA_ATE), cliente: cong.cliente, unidade: cong.unidade, contato: cong.contato };
+  // 28/10/2026: os termos e condições vigentes vão congelados no documento (a versão e o texto). O documento só é gerado
+  // antes do envio (proposta pronta); depois de enviada, a proposta guarda esta cópia, e mudar o padrão não a altera.
+  var tv = Com_termosVigentes_();
+  cong.termos = { versao: tv.versao, texto: tv.texto, concordancia: tv.concordancia, desde: tv.desde };
+  var conteudo = { numero: p.NUMERO, revisao: p.REVISAO, itens: Com_json_(p.ITENS_JSON, []), condicoes: Com_json_(p.CONDICOES_JSON, {}), escopo: ComP_escopo_(p), apresentacao: Com_s_(p.APRESENTACAO),
+    total: Number(p.TOTAL), desconto: Number(p.DESCONTO_GERAL), validaAte: Com_dia_(p.VALIDA_ATE), cliente: cong.cliente, unidade: cong.unidade, contato: cong.contato, termos: cong.termos };
   var marca = Com_marca_(JSON.stringify(conteudo));
   var html = ComDoc_propostaHtml_(p, cong, marca);
   var nome = 'Proposta comercial - ' + ComP_rotulo_(p) + ' - ' + (cong.cliente.fantasia || cong.cliente.razao || 'cliente') + ' - ' + Utilities.formatDate(new Date(), COM_FUSO, 'yyyy-MM-dd HHmm');
@@ -513,7 +587,8 @@ function ComP_gerarDocumento_(eu, d) {
     var campos = { CONGELADO_JSON: JSON.stringify(cong), MARCA_CONTEUDO: marca, PDF_ID: g.pdfId, HTML_ID: g.htmlId, PDF_URL: g.pdfUrl, HTML_URL: g.htmlUrl, PASTA_URL: pastaUrl,
       ARQUIVO_NOME: g.pdfNome, GERADA_EM: Com_agora_(), ATUALIZADO_EM: Com_agora_() };
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
-    Com_historico_('PROPOSTA', p.ID, 'DOCUMENTO', eu, { texto: 'Folha A4 salva na pasta do cliente: ' + g.pdfNome + '. Marca de conferência ' + marca.slice(0, 16) + '.' });
+    Com_historico_('PROPOSTA', p.ID, 'DOCUMENTO', eu, { texto: 'Folha A4 salva na pasta do cliente: ' + g.pdfNome + '. Marca de conferência ' + marca.slice(0, 16) + '.' +
+      (Com_s_(cong.termos.texto) ? ' Termos e condições da contratação: versão ' + cong.termos.versao + ' (fica com esta proposta).' : '') });
     return { proposta: ComP_paraTela_(eu, Object.assign({}, atual, campos), true), alertas: rev.alertas, pdfId: g.pdfId, htmlId: g.htmlId,
       message: 'Documento salvo na pasta do cliente (PDF e HTML A4). Agora toque em "Enviar ao cliente".' };
   });
@@ -547,7 +622,9 @@ function ComP_aoEnviar_(p, quando, como, eu) {
       CONTATO_ID: Com_s_(p.CONTATO_ID), CONTATO_NOME: Com_s_(p.CONTATO_NOME), USUARIO_ID: quem.id, USUARIO_NOME: quem.nome, DATA: campos.ENVIADA_EM });
   }
   SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
-  Com_historico_('PROPOSTA', p.ID, 'ENVIADA', quem, { de: 'Pronta para enviar', para: 'Enviada ao cliente', texto: Com_texto_(como, 300) });
+  var tmE = ComP_termosDa_(p);
+  Com_historico_('PROPOSTA', p.ID, 'ENVIADA', quem, { de: 'Pronta para enviar', para: 'Enviada ao cliente', texto: Com_texto_(como, 300) +
+    (tmE.congelado ? (Com_s_(tmE.texto) ? '. Termos e condições da contratação enviados no documento: versão ' + tmE.versao + '.' : '') : '. Documento gerado antes dos termos fixos (sem a seção de termos e condições).') });
   return campos;
 }
 
@@ -683,7 +760,12 @@ function ComP_registrarResposta_(eu, sessionId, d) {
     if (salvo) { campos.ACEITE_ARQUIVO_ID = salvo.id; campos.ACEITE_ARQUIVO_NOME = salvo.nome; campos.ACEITE_ARQUIVO_URL = salvo.url; campos.PEDIDO_SITUACAO = 'SEM_PASSAGEM'; }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Concluída', 'Cliente ' + (resp === 'APROVADA' ? 'aprovou' : 'recusou') + ' a proposta.');
-    Com_historico_('PROPOSTA', p.ID, resp, eu, { de: COM_SITUACOES_PROP[s0], para: COM_SITUACOES_PROP[resp], texto: (resp === 'RECUSADA' ? Com_s_(d.motivo) + '. ' : '') + texto + (salvo ? ' Aceite: ' + salvo.nome + '.' : '') });
+    // 28/10/2026: o Comercial não tem aprovação pelo link nem pelo portal; a aprovação é registrada pelo vendedor, com o aceite
+    // anexado. O histórico diz qual versão dos termos e condições o cliente recebeu no documento.
+    var tmR = ComP_termosDa_(p);
+    var notaTermos = resp !== 'APROVADA' ? '' : (tmR.congelado && Com_s_(tmR.texto) ? ' Aprovado por fora (registro de ' + eu.nome + '): termos e condições da contratação da versão ' + tmR.versao + ' enviados no documento.'
+      : ' Aprovado por fora (registro de ' + eu.nome + '): o documento enviado é anterior aos termos fixos e não trazia a seção de termos e condições.');
+    Com_historico_('PROPOSTA', p.ID, resp, eu, { de: COM_SITUACOES_PROP[s0], para: COM_SITUACOES_PROP[resp], texto: (resp === 'RECUSADA' ? Com_s_(d.motivo) + '. ' : '') + texto + (salvo ? ' Aceite: ' + salvo.nome + '.' : '') + notaTermos });
     var o = SGO_DATA.getById(COM_ABAS.OPORTUNIDADES, Com_s_(p.OPORTUNIDADE_ID));
     if (o) {
       SGO_DATA.insert(COM_ABAS.CONTATOS_REG, { OPORTUNIDADE_ID: o.ID, CLIENTE_ID: o.CLIENTE_ID, TIPO: 'EMAIL', RESPONDEU: 'SIM', RESUMO: 'Cliente ' + (resp === 'APROVADA' ? 'aprovou' : 'recusou') + ' a proposta ' + ComP_rotulo_(p) + '. ' + texto,

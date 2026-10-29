@@ -46,7 +46,7 @@ Documentos ligados (inventário de 20/10/2026):
 2. Passo 1, documento e anexos: confira o PDF ("Conferir o documento"). Se quiser, marque "Incluir a cópia em HTML" e "Anexar outros documentos deste cliente" (só aparecem os da pasta do mesmo cliente; no máximo 5).
 3. Passo 2, por onde enviar: marque E-mail, WhatsApp ou os dois.
 4. Passo 3, para quem: os contatos do cliente do documento já aparecem (cadastro do cliente, responsável das unidades, acessos do cliente ao SGO+ e quem já recebeu documento desse cliente). Os três primeiros vêm marcados. Para outro destinatário, preencha nome, e-mail e/ou celular e toque em "Acrescentar". O campo "Cópia do e-mail (Cc)" é opcional.
-5. Passo 4, mensagem: o assunto e os textos já vêm prontos, com o nome do documento, o número, o cliente e o equipamento quando houver. No WhatsApp, "{nome}" vira o primeiro nome de cada destinatário.
+5. Passo 4, mensagem: o assunto e os textos já vêm prontos, com o nome do documento, o número, o cliente e o equipamento quando houver. No WhatsApp o texto é o do modelo aprovado pela Meta (fixo, não editável): "{nome}" vira o primeiro nome de cada destinatário (sem nome, o nome do cliente).
 6. Toque em "Revisar e enviar" e confira a pré-visualização do e-mail (de, responder para, para, cópia, assunto, anexos e texto) e do WhatsApp.
 7. Toque em "Confirmar e enviar". Cada destinatário aparece como "Enviado" ou "Falhou", com o motivo.
 
@@ -57,7 +57,7 @@ Documentos ligados (inventário de 20/10/2026):
 - **Dado pessoal de colaborador** (Programa de conduta, avaliação da gestão, cópias privadas de certificado): não sai por e-mail nem por WhatsApp (LGPD). A janela explica e não envia.
 - **Quem envia**: Administrador, Diretoria, Gestor, Técnico, Metrologia, Comercial e Financeiro. O cliente (portal) e o RH não enviam.
 - **E-mail**: quando o e-mail integrado do usuário existir (`SGO_Email_enviarComoUsuario_`), sai pela caixa da pessoa; sem ela, sai pela caixa do sistema da Metrolabs com o nome da pessoa e "responder para" o e-mail do cadastro dela. Usuário sem e-mail no cadastro: a janela avisa que a resposta vai para a caixa do sistema. Limite: 20 endereços e 18 MB de anexos por envio.
-- **WhatsApp**: pelo WhatsApp da empresa (Z-API), com o documento na própria mensagem (base64, sem link público). Respeita a proteção do número (intervalo de alguns segundos entre mensagens e limites por hora, por dia e por celular, somados com o COMMAND). Só celular (DDD + 9 + 8 dígitos); telefone fixo aparece marcado "(sem WhatsApp)". Limite: 8 celulares e 15 MB por arquivo.
+- **WhatsApp** (28/10/2026): pelo WhatsApp oficial da Metrolabs (Meta). O PDF vai primeiro para a Meta e sai na própria mensagem, no modelo aprovado `sgo_documento_cliente` ("Olá, {nome}. A Metrolabs enviou o documento em anexo: ... Em caso de dúvida, responda esta mensagem ou fale com ..."); nunca vai link público. Mensagem iniciada pela empresa só por modelo aprovado: o texto não é editado (texto livre vai por e-mail). Só PDF: a cópia em HTML vai só por e-mail. É ação de uma pessoa: o envio ao cliente sai mesmo com o piloto do WhatsApp ligado (o servidor libera só este modelo, só do SGO+ e só com o PDF); os avisos automáticos ao cliente continuam retidos pelo piloto. Só celular (DDD + 9 + 8 dígitos); telefone fixo aparece marcado "(sem WhatsApp)". Limite: 8 celulares e 15 MB por arquivo.
 - **Horário**: fora do horário comercial (dias úteis, horário de Avisos e horários) a janela mostra o aviso, mas o envio continua liberado; o envio fica marcado "fora do horário comercial" no histórico.
 - **Sem envio duplicado**: cada confirmação leva um número de pedido; o mesmo pedido nunca é enviado duas vezes (duplo clique, conexão que repete). O botão fica desabilitado durante o envio.
 - **Nada é apagado**: "Tentar de novo" cria um envio novo ligado ao que falhou; o que falhou continua no histórico com o motivo.
@@ -73,9 +73,9 @@ Onde consultar: na janela ("Envios anteriores deste documento"), em Cadastros > 
 | O que aconteceu | O que fazer |
 |---|---|
 | Lista de destinatários vazia | O cadastro do cliente não tem e-mail nem celular. Digite e toque em "Acrescentar"; depois complete o contato em Cadastros > Clientes ou na unidade. |
-| WhatsApp desligado na janela | O WhatsApp da empresa não está configurado: o responsável grava as chaves da Z-API em Administração > Chaves e senhas. Enquanto isso, use o e-mail. |
-| "Falhou" com limite por hora ou por dia | Proteção do número da empresa. Espere e toque em "Tentar de novo", ou envie por e-mail. |
-| "Falhou" com WhatsApp desconectado | O celular da empresa precisa ler de novo o QR Code no painel da Z-API. Depois toque em "Tentar de novo". |
+| WhatsApp desligado na janela | A janela diz o porquê: o WhatsApp oficial (Meta) não está configurado (o responsável grava as chaves em Administração > Chaves e senhas) ou o modelo `sgo_documento_cliente` ainda não foi aprovado pela Meta (o responsável cadastra em Chaves e senhas > "Cadastrar modelos na Meta" e confere em "Situação dos modelos"). Enquanto isso, use o e-mail. |
+| "Falhou" com "modelo ainda não está aprovado na Meta" | O modelo do documento não foi aprovado (ou não foi cadastrado). Envie por e-mail e avise o responsável pelo sistema. |
+| "Falhou" com "A Meta não aceitou o PDF" | Confira se o arquivo abre e tem menos de 15 MB; gere de novo e toque em "Tentar de novo", ou envie por e-mail. |
 | "Este documento não é enviado pelo sistema" | Documento com dado pessoal de colaborador. Entregue pessoalmente ou peça orientação à Diretoria. |
 | "A tela indicou outro cliente" | O arquivo está na pasta de outro cliente. Confira o documento antes de enviar. |
 
@@ -84,5 +84,5 @@ Onde consultar: na janela ("Envios anteriores deste documento"), em Cadastros > 
 - Chamadas da tela: `EnviarDoc_apiConferir`, `EnviarDoc_apiPreparar`, `EnviarDoc_apiEnviar`, `EnviarDoc_apiTentarDeNovo`, `EnviarDoc_apiHistorico`, `EnviarDoc_apiEnvios`, `EnviarDoc_apiDocumentosDoCliente`.
 - A barra "Documento salvo" vem de uma observação passiva das respostas do `google.script.run` (o módulo não precisa mudar): se a resposta traz o link de um arquivo salvo, o servidor confere qual é o documento. Para ligar um botão explícito em qualquer tela: `SGO_EnviarDoc.abrir({ arquivoId | url, htmlId, docDocumentoId, dica: { clienteId, numero, equipamento } })` ou o atributo `data-sgo-enviar="<id ou link>"`.
 - Pasta raiz nova de módulo: acrescentar em `ENVDOC_RAIZES` (tipo, classe e frase do e-mail).
-- WhatsApp: se a equipe da Z-API criar `SGO_zapiEnviarDocumento_(telefone, { nome, mime, base64, legenda }, { tipo })`, ela é usada no lugar do envio próprio (`send-document`).
+- WhatsApp oficial: `EnviarDoc_metaMidia_` (POST `/<PHONE_ID>/media`, multipart montado à mão) e `EnviarDoc_metaDocumento_` (modelo `sgo_documento_cliente`, `NTF_MODELOS_META` em `SGO_Notificar.js`, cabeçalho DOCUMENT). Cadastro do modelo com PDF de exemplo pela Resumable Upload API (`Chaves_metaHandleExemplo_`; `META_WA_APP_ID` opcional). Exceção do piloto no servidor: `sgo_servidor/src/servicos/whatsappPiloto.ts`, regra 4 (`MODELOS_ACAO_HUMANA`). Texto do modelo em `sgo_servidor/docs/MODELOS_WHATSAPP_META.md`.
 - Testes: `tests/enviar-documento.test.cjs`.

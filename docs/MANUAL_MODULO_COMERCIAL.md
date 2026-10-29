@@ -71,16 +71,25 @@ Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verif
 ## Propostas
 
 1. Na oportunidade, toque em "Nova proposta". O número é PROP-ano-número (por exemplo PROP-2026-0001), revisão 00.
-2. Escreva o escopo, acrescente os itens (do catálogo ou digitados) e confira as condições e a validade.
+2. Acrescente os itens: em "Acrescentar item", comece a digitar o nome ou o código no campo "Produto ou serviço" e escolha da lista (itens ativos de Produtos e serviços); código, tipo, descrição, unidade e preço de tabela entram sozinhos. "Do catálogo" abre a mesma busca numa janela. Item fora do catálogo fica "Avulso (fora do catálogo)"; "Tornar avulso" desliga um item do catálogo. O preço pode ser ajustado: abaixo da tabela conta como desconto na política e o item mostra a diferença; preço diferente da tabela fica no histórico da proposta (tabela e praticado). Confira as condições e a validade. A descrição (escopo) é opcional: só o que for específico desta proposta.
 3. Toque em "Revisão da gestora" para ver o que impede o envio e os alertas.
 4. Toque em "Concluir". Dentro da política de desconto (padrão: até 15% sobre o preço de tabela), a proposta fica pronta. Acima do limite, escreva o motivo: ela vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão.
-5. Toque em "Gerar documento": a folha A4 (PDF e HTML) é salva na pasta do cliente, em Comercial - Propostas, com os dados do cliente congelados e a marca de conferência do conteúdo.
-6. Toque em "Enviar ao cliente" e envie pela janela "Enviar documento". Depois toque em "Já enviei: atualizar". A proposta fica "Enviada", a oportunidade vai para a etapa de proposta e o retorno ao cliente vira atividade para o 2º dia útil.
-7. Quando o cliente responder, toque em "Registrar resposta do cliente". Aprovação exige o arquivo do aceite (e-mail salvo em PDF, pedido de compra ou proposta assinada), que fica na pasta do cliente. Recusa exige o motivo.
+5. Toque em "Gerar documento": a folha A4 (PDF e HTML) é salva na pasta do cliente, em Comercial - Propostas, com os dados do cliente congelados, os termos e condições da contratação na versão em vigor e a marca de conferência do conteúdo.
+6. Toque em "Enviar ao cliente" e envie pela janela "Enviar documento": por e-mail (PDF anexado) e/ou pelo WhatsApp oficial da Metrolabs (o PDF vai na própria mensagem, com o texto do modelo aprovado pela Meta; o texto não é editado). Depois toque em "Já enviei: atualizar". A proposta fica "Enviada", a oportunidade vai para a etapa de proposta e o retorno ao cliente vira atividade para o 2º dia útil.
+7. Quando o cliente responder, toque em "Registrar resposta do cliente". Aprovação exige o arquivo do aceite (e-mail salvo em PDF, pedido de compra ou proposta assinada), que fica na pasta do cliente; o histórico registra quem lançou e a versão dos termos e condições que foi no documento ("aprovado por fora"). Recusa exige o motivo.
 
 Só o rascunho é editado. Antes do envio use "Voltar para rascunho"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina.
 
 O custo e a margem nunca vão para o cliente: aparecem só na tela da gestão.
+
+### Termos e condições da contratação
+
+As cláusulas do contrato (1. Do objeto, 2. Do prazo de entrega, 3. Da forma de recebimento, 4. Das sanções, 5. Da validade de assinatura eletrônica, 6. Da desistência, 7. Da constituição do título, 8. Do foro de eleição e o fecho "Por estarem assim justos e contratados...") vão fixas em toda proposta, na seção "Termos e condições da contratação", logo acima de "Validade e aceite" (a última frase fica junto das assinaturas). Texto justificado, uma cláusula por parágrafo, com o título da cláusula em negrito, seguido da frase de concordância: "A aprovação desta proposta, por assinatura, por resposta por escrito ou por pedido de compra, implica a concordância integral com os termos e condições acima." Condições de pagamento, frete e prazo de entrega continuam nos campos de Condições comerciais de cada proposta.
+
+- Quem muda: só a Diretoria e o Administrador, em Metodologia comercial > "Termos e condições da contratação" (o gestor comercial salva o resto da metodologia, mas não as cláusulas).
+- Versão: cada mudança do texto é uma versão nova dos termos (1, 2, 3...). Ao gerar o documento, a proposta guarda a versão em vigor (texto e número); a proposta enviada não muda quando o padrão muda. Nova revisão gera com a versão em vigor.
+- Aprovação: o Comercial não tem aprovação do cliente por link nem pelo portal; a aprovação é registrada pelo vendedor com o aceite anexado, e o histórico diz a versão dos termos enviada no documento.
+- Propostas trazidas do CRM: as cláusulas estavam coladas na descrição. Ao abrir ou gerar, o bloco das cláusulas sai da descrição (a tela avisa) e fica só o restante ("Condições", "Frete", "Entrega"). O banco não é alterado só por abrir; ao salvar o rascunho, a descrição fica como aparece na tela.
 
 ## Pedido aprovado e setores
 
@@ -90,11 +99,13 @@ O Financeiro vê o valor, a condição de pagamento e os dados de faturamento em
 
 ## Produtos e serviços
 
-A gestão cadastra código, nome, tipo, unidade, preço e, se quiser, o custo (só a gestão vê). Item arquivado sai da escolha das propostas novas e nunca é apagado. Item que ainda não está no catálogo pode ser digitado na proposta ("Acrescentar item").
+Cadastro único de produtos e serviços: é o mesmo onde entraram os itens do CRM antigo (1.329 itens importados em 26/10/2026) e o que a proposta usa ao escolher o item. A gestão cadastra código, nome, tipo, categoria, unidade, preço e, se quiser, o custo (só a gestão vê). Item arquivado sai da escolha das propostas novas e nunca é apagado. Item que ainda não está no catálogo pode ficar avulso na proposta. O catálogo não aceita dois itens ativos com o mesmo nome (sem acento e maiúscula): o sistema diz qual item já existe para editar aquele ou diferenciar o nome. Na edição aparece quem alterou por último e quando; o preço novo vale para as propostas montadas depois (as já salvas guardam o preço de tabela da época).
+
+Possíveis duplicados (gestão): em "Situação", escolha "Possíveis duplicados (mesmo nome)". Aparecem os itens ativos com o mesmo nome de outro (na importação, 25 nomes (sem contar acento, maiúscula e pontuação) vieram com mais de um código, 53 itens). Compare código, preço e descrição e arquive o que sobra. Na lista, o item repetido tem o selo laranja "mesmo nome de outro item".
 
 Buscar no catálogo: escreva no campo "Buscar no catálogo" parte do código, do nome, da descrição ou da categoria (por exemplo "fonte 9v" ou "CRM-DF8F"). A busca é feita no banco do SGO+, ignora acentos e maiúsculas e aceita as palavras em qualquer ordem. Filtre também por tipo (serviço, produto, contrato), categoria e, para a gestão, situação (ativos, arquivados ou os dois). A linha acima da lista diz quantos itens foram encontrados de quantos há no catálogo. A tela mostra até 200 itens, os mais parecidos primeiro (código igual, começo do código ou do nome); se houver mais, ela avisa: escreva mais uma palavra ou o código para afinar. "Limpar" volta à lista completa.
 
-Na proposta, o botão "Do catálogo" abre a mesma busca (só itens ativos, 50 por vez).
+Na proposta, o campo "Produto ou serviço" de cada item busca enquanto você digita (itens ativos, os 8 mais parecidos); o botão "Do catálogo" abre a mesma busca numa janela (50 por vez).
 
 ## Comercial no celular
 
@@ -122,7 +133,7 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 ## Metodologia comercial
 
-É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui.
+É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui. Os termos e condições da contratação também ficam aqui, mas só a Diretoria e o Administrador mudam (veja Propostas > Termos e condições da contratação).
 
 ## Dados trazidos do CRM antigo
 
@@ -132,7 +143,7 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - Negócios: viraram oportunidades com o código CRM-0001, CRM-0002... no mesmo funil e etapa. Ganhos e perdidos entram encerrados. Os abertos com movimento nos últimos 60 dias continuam abertos, com a atividade "Revisar oportunidade do CRM" para o vendedor no dia útil seguinte: confirme com o cliente se ainda vale e registre o contato. Os abertos parados há mais de 60 dias entraram como perdidos ("Falha de acompanhamento"); se algum ainda vale, peça a reabertura.
 - Vendedores do CRM sem usuário no SGO+ tiveram os negócios passados para a Mônica Souza; o nome original está nas observações da oportunidade.
 - Orçamentos: viraram propostas com o número do CRM (ORC-...). Aprovados e recusados mantêm a situação; aprovados antigos não entram como "pedido sem passagem aos setores". Rascunho de negócio encerrado (ou substituído por um mais recente) aparece como proposta cancelada, só como histórico. Os PDFs e assinaturas do CRM não estavam no backup.
-- Produtos: os itens do CRM estão em Produtos e serviços, com o código (SKU) do CRM.
+- Produtos: os itens do CRM estão em Produtos e serviços (mesmo cadastro da tela e das propostas), com o código (SKU) do CRM ou CRM-xxxxxxxx; os itens das propostas importadas apontam para eles. Repetidos de nome: veja "Possíveis duplicados".
 - Funil "Aluguel de equipamentos": acrescentado na Metodologia com as etapas do CRM.
 - Notas e tarefas do CRM estão no histórico da oportunidade; ligações e reuniões, nos contatos registrados.
 
@@ -146,4 +157,7 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - A busca não acha a proposta ou a oportunidade: confira o filtro "Situação" (o padrão mostra só as em andamento ou abertas); quando a busca acha itens em outras situações, a tela avisa e oferece "Ver em todas as situações". O vendedor vê só as próprias; a gestão comercial vê todas.
 - O produto não aparece no catálogo: busque por outra palavra do nome ou pelo código; confira o tipo, a categoria e, para a gestão, a situação (o item pode estar arquivado). Toque em "Limpar" para voltar à lista completa.
 - A proposta não ficou "Enviada": toque em "Já enviei: atualizar"; se enviou por outro meio, use "Entregue por outro meio".
+- WhatsApp desligado na janela "Enviar documento": a janela diz o porquê (WhatsApp oficial não configurado ou modelo do documento ainda não aprovado pela Meta). Envie por e-mail enquanto isso.
+- "Já existe o item ativo..." ao salvar um produto: outro item ativo tem o mesmo nome; edite aquele ou diferencie o nome.
+- "Os termos e condições da contratação só são alterados pela Diretoria ou pelo Administrador": desfaça a mudança nas cláusulas (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria.
 - "Quem pediu não aprova o próprio desconto": a decisão é de outro gestor comercial ou da Diretoria.

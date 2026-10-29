@@ -341,8 +341,21 @@ var NTF_MODELOS_META = {
     texto: 'Olá, {{1}}. Lembrete do ponto: a sua saída é às {{2}}.\n\nAo bater o ponto, toque em "Confirmar".\n\nO registro oficial é o do relógio ou do aplicativo de ponto; este lembrete não substitui a batida.\n\nMetrolabs — SGO+',
     exemplos: ['Maria', '18:00'],
     botao: { texto: 'Confirmar', url: 'https://sgo.metrolabs.com.br/?ponto={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?ponto=v1.20261021.0123456789abcdef0123.0123456789abcdef0123456789abcdef' }
+  },
+  // 28/10/2026: documento enviado ao cliente por uma PESSOA na janela "Enviar documento" (SGO_EnviarDoc.js): proposta
+  // comercial, certificado, relatório, laudo. O PDF vai no cabeçalho (DOCUMENT), enviado antes à Meta (/media), nunca link
+  // público. Só a janela usa este modelo; o servidor deixa passar só ele para contato fora da lista do piloto do WhatsApp
+  // (sgo_servidor servicos/whatsappPiloto.ts, MODELOS_ACAO_HUMANA). Aviso automático nunca usa este modelo.
+  sgo_documento_cliente: {
+    uso: 'Enviar documento: PDF enviado por uma pessoa a um cliente (nome do contato, documento, quem enviou; PDF no cabeçalho)',
+    limites: [60, 200, 80],
+    cabecalho: 'DOCUMENT',
+    texto: 'Olá, {{1}}. A Metrolabs enviou o documento em anexo: {{2}}.\n\nEm caso de dúvida, responda esta mensagem ou fale com {{3}}.\n\nMetrolabs — SGO+',
+    exemplos: ['Ana', 'Proposta comercial PROP-2026-0001 rev.00', 'Vera, do Comercial']
   }
 };
+/** Modelos enviados só por ação de uma pessoa (nunca por aviso automático). Lista igual à do servidor (MODELOS_ACAO_HUMANA). */
+var NTF_MODELOS_ACAO_HUMANA = ['sgo_documento_cliente'];
 
 /** Confere um modelo contra as regras da Meta. Devolve a lista de problemas (vazia = ok). */
 function Notificar_validarModeloMeta_(nome, def) {
@@ -374,16 +387,26 @@ function Notificar_validarModeloMeta_(nome, def) {
     if (!/^https:\/\/\S+$/.test(String(b.exemplo || '')) || String(b.exemplo).indexOf(String(b.url || '').replace('{{1}}', '')) !== 0) erros.push('exemplo da URL do botão ausente ou fora do endereço');
   }
   if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(t)) erros.push('emoji no texto');
+  if (def.cabecalho && def.cabecalho !== 'DOCUMENT') erros.push('cabeçalho ' + def.cabecalho + ' não suportado (só DOCUMENT)');
   return erros;
 }
 
-/** Corpo do POST /<WABA_ID>/message_templates para cadastrar um dos modelos fixos. */
-function Notificar_corpoCadastroMeta_(nomeModelo) {
+/**
+ * Corpo do POST /<WABA_ID>/message_templates para cadastrar um dos modelos fixos.
+ * extra.handleExemplo (28/10/2026): modelo com cabeçalho DOCUMENT exige um PDF de exemplo, enviado antes pela Resumable
+ * Upload API (Chaves_metaHandleExemplo_); sem ele, o cadastro não é tentado.
+ */
+function Notificar_corpoCadastroMeta_(nomeModelo, extra) {
   var def = Object.prototype.hasOwnProperty.call(NTF_MODELOS_META, nomeModelo) ? NTF_MODELOS_META[nomeModelo] : null;
   if (!def) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
   var erros = Notificar_validarModeloMeta_(nomeModelo, def);
   if (erros.length) throw new Error('O modelo ' + nomeModelo + ' está fora das regras da Meta: ' + erros.join('; ') + '.');
   var comps = [{ type: 'BODY', text: def.texto, example: { body_text: [def.exemplos.slice()] } }];
+  if (def.cabecalho === 'DOCUMENT') {
+    var h = extra && extra.handleExemplo ? String(extra.handleExemplo) : '';
+    if (!h) throw new Error('O modelo ' + nomeModelo + ' leva o PDF no cabeçalho e a Meta pede um PDF de exemplo no cadastro; o envio do exemplo não aconteceu.');
+    comps.unshift({ type: 'HEADER', format: 'DOCUMENT', example: { header_handle: [h] } });
+  }
   if (def.botao) comps.push({ type: 'BUTTONS', buttons: [{ type: 'URL', text: def.botao.texto, url: def.botao.url, example: [def.botao.exemplo] }] });
   return {
     name: nomeModelo,
@@ -411,13 +434,19 @@ function Notificar_primeiroNome_(nome) {
  * Pedido do envio por modelo: { url, corpo }. Lança erro se o modelo não for um dos fixos ou faltar variável.
  * botao (21/10/2026): texto que completa a URL do botão de link do modelo (obrigatório quando o modelo tem botão).
  */
-function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros, botao) {
+function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros, botao, cabecalho) {
   var def = Object.prototype.hasOwnProperty.call(NTF_MODELOS_META, nomeModelo) ? NTF_MODELOS_META[nomeModelo] : null;
   var limites = def && def.limites;
   if (!limites) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
   var ps = parametros || [];
   if (ps.length !== limites.length) throw new Error('O modelo ' + nomeModelo + ' tem ' + limites.length + ' variáveis; vieram ' + ps.length + '.');
   var comps = [{ type: 'body', parameters: ps.map(function (v, i) { return { type: 'text', text: Notificar_paramMeta_(v, limites[i]) }; }) }];
+  // 28/10/2026: cabeçalho DOCUMENT: { id (mídia enviada à Meta), nome do arquivo }
+  if (def.cabecalho === 'DOCUMENT') {
+    var midia = cabecalho && String(cabecalho.id || '').trim();
+    if (!midia) throw new Error('O modelo ' + nomeModelo + ' leva o documento no cabeçalho e o arquivo não foi enviado à Meta.');
+    comps.unshift({ type: 'header', parameters: [{ type: 'document', document: { id: midia, filename: String(cabecalho.nome || 'documento.pdf').slice(0, 240) } }] });
+  }
   if (def.botao) {
     var b = String(botao === null || botao === undefined ? '' : botao).trim();
     if (!b || /[\s{}]/.test(b)) throw new Error('O modelo ' + nomeModelo + ' tem botão de link e o complemento da URL veio vazio ou inválido.');
@@ -494,8 +523,8 @@ var NTF_META_DICAS = {
 };
 
 /** Envia um modelo. Devolve { ok, id } ou { ok:false, motivo } com o código e a mensagem da Meta. */
-function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros, botao) {
-  var ped = Notificar_montarPedidoMeta_(cred.phoneId, telefone, nomeModelo, parametros, botao);
+function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros, botao, cabecalho) {
+  var ped = Notificar_montarPedidoMeta_(cred.phoneId, telefone, nomeModelo, parametros, botao, cabecalho);
   var r = UrlFetchApp.fetch(ped.url, {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { Authorization: 'Bearer ' + cred.token },

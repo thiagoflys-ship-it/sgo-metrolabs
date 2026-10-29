@@ -21,7 +21,7 @@ function ComDoc_esc_(s) { return typeof RelA4_esc_ === 'function' ? RelA4_esc_(s
 
 /** Telefone brasileiro legível: (62) 99999-0000 / (62) 3333-0000; outro formato passa como está. */
 function ComDoc_fone_(f) {
-  var d = Com_s_(f).replace(/D/g, '').replace(/^55(?=d{10,11}$)/, '');
+  var d = Com_s_(f).replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
   if (d.length === 11) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
   if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
   return Com_s_(f);
@@ -30,6 +30,20 @@ function ComDoc_fone_(f) {
 function ComDoc_cnpj_(c) {
   var d = Com_s_(c).replace(/\D/g, '');
   return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : Com_s_(c);
+}
+
+/**
+ * Cláusulas em parágrafos justificados, uma por linha do texto (sem virar lista: a numeração é parte da cláusula); o título da
+ * cláusula em negrito ("1. DO OBJETO:"). Depois, a frase de concordância e a versão dos termos.
+ */
+function ComDoc_termosHtml_(tm) {
+  var paras = Com_s_(tm.texto).replace(/\r\n?/g, '\n').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+    var m = /^(\d+\.\s+(?:[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ\/-]{2,}(?:\s+|(?=:)))+:?)([\s\S]*)$/.exec(l);
+    return '<p style="text-align:justify;margin:0 0 2.2mm">' + (m ? '<b>' + ComDoc_esc_(m[1].trim()) + '</b> ' + ComDoc_esc_(m[2].trim()) : ComDoc_esc_(l)) + '</p>';
+  }).join('');
+  return '<div class="analise">' + paras + '</div>' +
+    (Com_s_(tm.concordancia) ? '<p style="text-align:justify;margin:3mm 0 0"><b>' + ComDoc_esc_(tm.concordancia) + '</b></p>' : '') +
+    '<p class="nota" style="margin-top:2mm">Termos e condições da contratação, versão ' + ComDoc_esc_(String(tm.versao || 1)) + '.</p>';
 }
 
 /** HTML A4 da proposta (sem salvar). p: linha de COM_PROPOSTAS; cong: dados congelados; marca: conferência. */
@@ -51,7 +65,7 @@ function ComDoc_propostaHtml_(p, cong, marca) {
     ['Empresa', empresa.nome + (empresa.cnpj ? ' · CNPJ ' + empresa.cnpj : ''), { largo: true }]
   ]));
   if (Com_s_(p.APRESENTACAO)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(p.APRESENTACAO));
-  corpo += RelA4_secao_(temServico ? 'Escopo' : 'Resumo do fornecimento', RelA4_paragrafos_(Com_s_(p.ESCOPO) || 'Conforme os itens da tabela a seguir.'));
+  corpo += RelA4_secao_(temServico ? 'Escopo' : 'Resumo do fornecimento', RelA4_paragrafos_(ComP_escopo_(p) || 'Conforme os itens da tabela a seguir.'));
   var linhas = itens.map(function (i, k) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
     var desc = '<b>' + ComDoc_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<span class="sub">Equipamento: ' + ComDoc_esc_(i.equipamentoTexto) + '</span>' : '') + (i.detalhe ? '<span class="sub">' + ComDoc_esc_(i.detalhe) + '</span>' : '');
@@ -73,6 +87,10 @@ function ComDoc_propostaHtml_(p, cong, marca) {
   if (Com_s_(cond.observacoes)) condHtml += RelA4_subsecao_('Observações', RelA4_paragrafos_(cond.observacoes));
   corpo += RelA4_secao_('Condições comerciais', condHtml || '<p>A combinar.</p>');
   if (Com_s_(met.proposta.responsabilidades)) corpo += RelA4_secao_('Responsabilidades', RelA4_paragrafos_(met.proposta.responsabilidades));
+  // 28/10/2026: termos e condições da contratação (cláusulas do contrato), congelados no documento (cong.termos), logo acima
+  // de "Validade e aceite": a última frase ("firmam o presente instrumento") fica junto das assinaturas.
+  var tm = cong.termos || (typeof Com_termosVigentes_ === 'function' ? Com_termosVigentes_() : null);
+  if (tm && Com_s_(tm.texto)) corpo += RelA4_secao_('Termos e condições da contratação', ComDoc_termosHtml_(tm));
   var aceite = '<p>Esta proposta é válida até ' + ComDoc_esc_(validaAte) + '. ' + ComDoc_esc_(met.proposta.textoAceite) + '</p>' +
     '<div class="assinaturas manter">' +
     '<div class="assinatura"><div class="img"></div><div class="linha">' + ComDoc_esc_(vd.nome || Com_s_(p.RESPONSAVEL_NOME)) + '</div><div class="cargo">pela ' + ComDoc_esc_(empresa.nome) + '</div></div>' +

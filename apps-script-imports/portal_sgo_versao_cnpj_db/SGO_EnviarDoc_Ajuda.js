@@ -57,7 +57,7 @@ function SGO_ajudaComplementos_(todas, ordem) {
     });
     t.passos = passos;
     var probs = Array.isArray(t.problemas) ? t.problemas.slice() : [];
-    probs.push({ situacao: 'O envio do documento aparece como "Falhou"', oQueFazer: 'Leia o motivo ao lado (ex.: e-mail inválido, celular sem WhatsApp, WhatsApp da empresa desconectado), corrija e toque em "Tentar de novo". Os envios ficam em Arquivo de documentos > "Envios de documentos".' });
+    probs.push({ situacao: 'O envio do documento aparece como "Falhou"', oQueFazer: 'Leia o motivo ao lado (ex.: e-mail inválido, celular sem WhatsApp, modelo do WhatsApp ainda não aprovado pela Meta), corrija e toque em "Tentar de novo". Os envios ficam em Arquivo de documentos > "Envios de documentos".' });
     t.problemas = probs;
   });
 }
@@ -70,7 +70,8 @@ function SGO_ajudaTelas_EnviarDoc_() {
       antesDeComecar: [
         'O documento precisa estar salvo (aparece a barra "Documento salvo" ou o link do PDF na tela).',
         'Para sugerir destinatários, o cadastro do cliente (Cadastros > Clientes) ou da unidade precisa ter e-mail ou celular de contato.',
-        'O WhatsApp só aparece liberado quando o WhatsApp da empresa está configurado em Administração > Chaves e senhas.',
+        'O WhatsApp sai pelo WhatsApp oficial da Metrolabs (Meta) e só aparece liberado quando ele está configurado em Administração > Chaves e senhas e o modelo de mensagem do documento está aprovado pela Meta.',
+        'Pelo WhatsApp oficial o texto da mensagem é fixo (modelo aprovado pela Meta: nome do contato, documento e quem enviou) e vai só PDF. Para escrever um texto livre ou mandar a cópia em HTML, use o e-mail.',
         'Nada é enviado sozinho: o envio só acontece quando você toca em "Confirmar e enviar".'
       ],
       passos: [
@@ -86,7 +87,7 @@ function SGO_ajudaTelas_EnviarDoc_() {
           'Aguarde o resultado: cada destinatário aparece como "Enviado" ou "Falhou", com o motivo.'
         ] },
         { titulo: 'Tentar de novo um envio que falhou', itens: [
-          'Leia o motivo da falha e resolva (por exemplo, corrija o e-mail no cadastro ou peça para reconectar o WhatsApp da empresa).',
+          'Leia o motivo da falha e resolva (por exemplo, corrija o e-mail ou o celular no cadastro).',
           'Toque em "Tentar de novo" na linha do envio. O mesmo documento e a mesma mensagem são enviados de novo; o envio que falhou continua no histórico.'
         ] },
         { titulo: 'Consultar o que já foi enviado', itens: [
@@ -96,16 +97,16 @@ function SGO_ajudaTelas_EnviarDoc_() {
         ] }
       ],
       cores: [
-        { nome: 'Selo verde "Enviado"', significado: 'O e-mail foi entregue à caixa de saída do sistema (ou ao seu e-mail integrado) ou o WhatsApp aceitou a mensagem com o documento.' },
+        { nome: 'Selo verde "Enviado"', significado: 'O e-mail foi entregue à caixa de saída do sistema (ou ao seu e-mail integrado) ou o WhatsApp oficial aceitou a mensagem com o PDF.' },
         { nome: 'Selo vermelho "Falhou"', significado: 'Não foi enviado. O motivo aparece logo abaixo e o botão "Tentar de novo" fica disponível.' },
-        { nome: 'Selo amarelo "Enviando"', significado: 'O envio está em andamento (o WhatsApp espera alguns segundos entre uma mensagem e outra para proteger o número da empresa).' },
+        { nome: 'Selo amarelo "Enviando"', significado: 'O envio está em andamento (no WhatsApp, o PDF vai primeiro para a Meta e depois sai a mensagem).' },
         { nome: 'Faixa amarela "Fora do horário comercial"', significado: 'O envio continua liberado, mas o cliente pode só ver a mensagem no próximo dia útil.' },
         { nome: 'Faixa azul "Documento interno"', significado: 'O documento não está na pasta de um cliente. Confira se ele pode sair da Metrolabs antes de enviar.' },
         { nome: 'Etiqueta "(sem WhatsApp)" no telefone', significado: 'O número é fixo ou está incompleto: só recebe por e-mail. Corrija o celular no cadastro do cliente para usar o WhatsApp.' }
       ],
       problemas: [
         { situacao: 'A lista de destinatários vem vazia', oQueFazer: 'O cadastro do cliente não tem e-mail nem celular. Digite o destinatário e toque em "Acrescentar". Para as próximas vezes, complete o contato em Cadastros > Clientes (ou na unidade).' },
-        { situacao: 'O WhatsApp aparece desligado', oQueFazer: 'O WhatsApp da empresa não está configurado. Peça ao responsável pelo sistema para gravar as chaves da Z-API em Administração > Chaves e senhas. Enquanto isso, envie por e-mail.' },
+        { situacao: 'O WhatsApp aparece desligado', oQueFazer: 'A janela diz o porquê: o WhatsApp oficial não está configurado (o responsável pelo sistema grava as chaves da Meta em Administração > Chaves e senhas) ou o modelo de mensagem do documento ainda não foi aprovado pela Meta (o responsável cadastra em Chaves e senhas > "Cadastrar modelos na Meta"). Enquanto isso, envie por e-mail.' },
         { situacao: 'Aparece "Este documento não é enviado pelo sistema"', oQueFazer: 'O documento tem dados pessoais de colaboradores (Programa de conduta, avaliação da gestão). Ele não sai do SGO+ por e-mail ou WhatsApp. Entregue pessoalmente ou peça orientação à Diretoria.' },
         { situacao: 'Aparece "A tela indicou outro cliente"', oQueFazer: 'O arquivo está gravado na pasta de outro cliente. Os contatos sugeridos são do cliente da pasta. Confira se o documento é o certo antes de enviar.' },
         { situacao: 'Falhou com "limite de mensagens por hora"', oQueFazer: 'É a proteção do número da empresa contra bloqueio. Espere a próxima hora e toque em "Tentar de novo", ou envie por e-mail.' },
@@ -121,8 +122,8 @@ function SGO_ajudaTelas_EnviarDoc_() {
         { p: 'O cliente recebe um link ou o arquivo?', r: 'Recebe o arquivo. No e-mail o PDF vai anexado; no WhatsApp o documento vai na própria mensagem. Nenhum link público é criado.' },
         { p: 'De qual e-mail sai?', r: 'Quando o seu e-mail integrado estiver ligado, sai pelo seu e-mail. Até lá, sai pela caixa do sistema da Metrolabs com o seu nome e com "responder para" o seu e-mail do cadastro.' },
         { p: 'Posso enviar para alguém que não está no cadastro?', r: 'Sim. Preencha nome, e-mail e/ou celular e toque em "Acrescentar". O contato fica sugerido nos próximos envios para o mesmo cliente.' },
-        { p: 'O que o "{nome}" faz na mensagem do WhatsApp?', r: 'Vira o primeiro nome de cada destinatário. Sem nome, a saudação fica sem ele.' },
-        { p: 'Por que o WhatsApp demora alguns segundos?', r: 'O sistema espera um intervalo entre uma mensagem e outra e limita a quantidade por hora e por dia, para o WhatsApp da empresa não ser bloqueado por envio em massa.' }
+        { p: 'O que o "{nome}" faz na mensagem do WhatsApp?', r: 'Vira o primeiro nome de cada destinatário. Sem nome, entra o nome do cliente.' },
+        { p: 'Por que não consigo mudar o texto do WhatsApp?', r: 'Mensagem iniciada pela empresa no WhatsApp oficial só pode usar modelo aprovado pela Meta. O modelo do documento leva o nome do contato, o documento e quem enviou. Para um texto livre, use o e-mail.' }
       ]
     }
   };

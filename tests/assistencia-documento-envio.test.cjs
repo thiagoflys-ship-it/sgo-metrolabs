@@ -200,9 +200,10 @@ test('WhatsApp na janela Enviar documento só quando há canal ativo: sem chaves
   assert.equal(c1.email.ok, true);
   assert.equal(c1.whatsapp.ok, false); assert.equal(c1.whatsapp.motivo, 'SEM_CHAVES');
   amb.ctx.SGO_waZapiFora_ = () => true;
+  // 28/10/2026: com a Z-API fora, o documento sai pelo WhatsApp oficial (Meta); sem as chaves da Meta, a opção vem desligada com o porquê
   const c2 = amb.ctx.EnviarDoc_canais_({ nome: 'Gil' });
-  assert.equal(c2.whatsapp.ok, false); assert.equal(c2.whatsapp.motivo, 'PILOTO');
-  assert.match(c2.whatsapp.texto, /piloto do WhatsApp oficial/); assert.match(c2.whatsapp.texto, /envie por e-mail/i);
+  assert.equal(c2.whatsapp.ok, false); assert.equal(c2.whatsapp.motivo, 'SEM_CHAVES');
+  assert.match(c2.whatsapp.texto, /META_WA_TOKEN/); assert.match(c2.whatsapp.texto, /Z-API está desligada/); assert.match(c2.whatsapp.texto, /envie por e-mail/i);
 });
 
 test('orçamento do chamado: o envio pelo Enviar documento grava "enviado em" e "para" no orçamento e no histórico do chamado', () => {

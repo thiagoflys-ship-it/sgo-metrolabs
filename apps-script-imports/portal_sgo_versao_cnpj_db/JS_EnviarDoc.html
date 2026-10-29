@@ -216,6 +216,9 @@
       E.canalWhats = false;
       E.assunto = r.textos.assunto; E.txtEmail = r.textos.email; E.txtWhats = r.textos.whatsapp; E.cc = "";
     }
+    // 28/10/2026: WhatsApp oficial (Meta): o texto é o do modelo aprovado (fixo); a mensagem não é editada
+    var whatsModelo = r.canais.whatsapp.provedor === "meta";
+    if (whatsModelo) E.txtWhats = r.textos.whatsappModelo || E.txtWhats;
     var h = "";
     if (r.horario && r.horario.fora) h += '<div class="bc-faixa bc-faixa-aviso"><b>Fora do horário comercial.</b> ' + esc(r.horario.texto) + "</div>";
     (r.avisos || []).forEach(function (a) { h += '<div class="bc-faixa tom-info">' + esc(a) + "</div>"; });
@@ -245,8 +248,8 @@
     h += '<section class="envdoc-sec"><h4><span><span class="envdoc-num">4</span>Mensagem</span></h4>' +
       '<div id="envdocMsgEmail"' + (E.canalEmail ? "" : " hidden") + '><label class="envdoc-campo"><span>Assunto do e-mail</span><input id="envdocAssunto" maxlength="180" value="' + esc(E.assunto) + '"></label>' +
       '<label class="envdoc-campo"><span>Texto do e-mail</span><textarea id="envdocTxtEmail">' + esc(E.txtEmail) + "</textarea></label></div>" +
-      '<div id="envdocMsgWhats"' + (E.canalWhats ? "" : " hidden") + '><label class="envdoc-campo"><span>Texto do WhatsApp (vai junto com o documento)</span><textarea id="envdocTxtWhats" style="min-height:120px">' + esc(E.txtWhats) + "</textarea></label>" +
-      '<p class="envdoc-nota">Onde estiver escrito {nome}, entra o primeiro nome de cada destinatário.</p></div>' +
+      '<div id="envdocMsgWhats"' + (E.canalWhats ? "" : " hidden") + '><label class="envdoc-campo"><span>' + (whatsModelo ? "Texto do WhatsApp (modelo aprovado pela Meta; não pode ser alterado)" : "Texto do WhatsApp (vai junto com o documento)") + '</span><textarea id="envdocTxtWhats" style="min-height:120px"' + (whatsModelo ? " readonly" : "") + ">" + esc(E.txtWhats) + "</textarea></label>" +
+      '<p class="envdoc-nota">' + (whatsModelo ? "O PDF vai na própria mensagem. {nome} vira o primeiro nome de cada destinatário (sem nome, o nome do cliente). Para escrever um texto livre, use o e-mail." : "Onde estiver escrito {nome}, entra o primeiro nome de cada destinatário.") + "</p></div>" +
       (!E.canalEmail && !E.canalWhats ? '<p class="envdoc-nota">Marque E-mail e/ou WhatsApp no passo 2 para escrever a mensagem.</p>' : "") + "</section>";
     // histórico
     h += '<section class="envdoc-sec"><details class="envdoc-detalhes"' + ((r.historico || []).length ? "" : "") + "><summary>Envios anteriores deste documento (" + (r.historico || []).length + ")</summary>" + htmlHistorico(r.historico || [], "doc") + "</details></section>";
@@ -389,7 +392,7 @@
       h += '<section class="envdoc-sec"><h4><span><i class="fab fa-whatsapp" aria-hidden="true"></i>&nbsp; WhatsApp para ' + ws.length + (ws.length === 1 ? " pessoa" : " pessoas") + "</span></h4>" +
         '<p class="envdoc-nota" style="margin:0 0 6px">' + esc(ws.map(function (c) { return c.equipe ? c.nome + " (celular do cadastro)" : (c.nome ? c.nome + " " : "") + (c.telefone || foneBr(c.celular)); }).join("; ")) + "</p>" +
         '<div class="envdoc-prev"><div class="envdoc-wa"><div class="envdoc-wa-balao">' + anexos.map(function (a) { return '<div class="envdoc-wa-doc"><i class="fas fa-file-pdf" aria-hidden="true" style="color:#a3261b"></i> ' + esc(a) + "</div>"; }).join("") +
-        esc(aplicarNome(E.txtWhats, exemplo.nome)) + '</div></div></div><p class="envdoc-nota">Exemplo com o primeiro destinatário. Entre uma mensagem e outra há um intervalo de alguns segundos (proteção do número da empresa): o envio pode levar até um minuto.</p></section>';
+        esc(aplicarNome(E.txtWhats, exemplo.nome)) + '</div></div></div><p class="envdoc-nota">Exemplo com o primeiro destinatário. ' + (r.canais.whatsapp.provedor === "meta" ? "O PDF vai na mensagem, pelo WhatsApp oficial da Metrolabs." : "Entre uma mensagem e outra há um intervalo de alguns segundos (proteção do número da empresa): o envio pode levar até um minuto.") + '</p></section>';
     }
     corpo(h);
     rodape('<span class="envdoc-rodape-esq">' + esc(d.titulo) + '</span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc._voltar()">Voltar e corrigir</button><button type="button" class="btn-primary" id="envdocConfirmar" onclick="SGO_EnviarDoc._confirmar()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Confirmar e enviar</button>');

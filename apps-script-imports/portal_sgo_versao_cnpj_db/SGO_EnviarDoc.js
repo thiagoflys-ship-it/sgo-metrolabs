@@ -18,8 +18,11 @@
  *  - E-mail: SGO_Email_enviarComoUsuario_({ usuarioId, para, cc, assunto, html, anexos }) quando existir (e-mail
  *    integrado, outra equipe); enquanto não existir, ou se ela responder semCaixa, sai pela caixa do sistema
  *    (MailApp) com "responder para" o e-mail do usuário.
- *  - WhatsApp: Z-API, documento em base64 (send-document), nunca link público; respeita a fila e os limites de
- *    proteção do número (SGO_zapiReservar_, SGO_Zapi.js). Usa SGO_zapiEnviarDocumento_ se a equipe da Z-API criar.
+ *  - WhatsApp (28/10/2026): o oficial da Meta (a Z-API está desligada desde o piloto). O PDF vai para a Meta (/media) e
+ *    sai no cabeçalho do modelo aprovado sgo_documento_cliente (texto fixo: nome do contato, documento, quem enviou);
+ *    nunca link público. Só PDF (a cópia em HTML vai por e-mail). É ação da pessoa que envia: o servidor libera este
+ *    modelo para o cliente mesmo com o piloto ligado (sgo_servidor servicos/whatsappPiloto.ts). O caminho antigo pela
+ *    Z-API (base64, send-document) fica só para WHATSAPP_PROVEDOR = zapi com o piloto desligado.
  *    Fora do horário comercial a janela avisa, mas o envio continua sendo do usuário.
  *  - Registro: DOC_ENVIOS, uma linha por e-mail (todos os endereços juntos) e uma por celular, com quem, quando,
  *    para quem, canal, situação ENVIANDO / ENVIADO / FALHOU e motivo. "Tentar de novo" cria uma linha nova ligada
@@ -68,7 +71,7 @@ var ENVDOC_RAIZES = [
   { rx: /^METROLABS_CRONEXEC_SISTEMA$/i, tipo: 'Cronograma de execução', classe: 'CLIENTE', frase: 'As datas podem ser ajustadas em comum acordo com a equipe da unidade.' },
   { rx: /^METROLABS_REGOP_SISTEMA$/i, tipo: 'Registro operacional', classe: 'CLIENTE', frase: 'Recomendamos arquivar o registro junto à documentação da unidade.' },
   // 21/10/2026: Comercial nativo (SGO_Comercial_Propostas.js): proposta ao cliente; o relatório mensal é interno.
-  { rx: /^Comercial - Propostas$/i, tipo: 'Proposta comercial', classe: 'CLIENTE', frase: 'A proposta apresenta o escopo, os valores e as condições comerciais. Para aprovar, basta responder a este e-mail confirmando o aceite ou enviar o pedido de compra.' },
+  { rx: /^Comercial - Propostas$/i, tipo: 'Proposta comercial', classe: 'CLIENTE', frase: 'A proposta apresenta o escopo, os valores, as condições comerciais e os termos e condições da contratação. Para aprovar, basta responder a este e-mail confirmando o aceite ou enviar o pedido de compra; a aprovação implica a concordância com os termos e condições descritos na proposta.' },
   { rx: /^Comercial - Relat/i, tipo: 'Relatório do Comercial', classe: 'INTERNO' },
   // 21/10/2026: Compras nativo (SGO_Compras_Pedido.js): pedido de compra ao fornecedor; o relatório mensal é interno.
   { rx: /^Compras - Pedidos de compra$/i, tipo: 'Pedido de compra', classe: 'FORNECEDOR', frase: 'Pedimos a confirmação do recebimento deste pedido e da data de entrega. Favor citar o número do pedido na nota fiscal.' },
@@ -412,7 +415,9 @@ function EnviarDoc_textos_(doc, eu) {
   var whats = 'Olá, {nome}.\n\n' +
     'Segue o documento "' + ident + '"' + sobre + ', emitido pela Metrolabs.\n\n' +
     'Em caso de dúvida, responda esta mensagem.\n\n' + (eu.nome ? EnviarDoc_primeiroNome_(eu.nome) + ' | ' : '') + 'Metrolabs';
-  return { assunto: assunto.slice(0, 180), email: email, whatsapp: whats };
+  // 28/10/2026: texto do modelo do WhatsApp oficial (fixo; {nome} vira o primeiro nome de cada destinatário)
+  var modelo = typeof NTF_MODELOS_META !== 'undefined' && NTF_MODELOS_META[ENVDOC_MODELO_META] ? EnviarDoc_textoModelo_(['{nome}', EnviarDoc_ident_(doc.titulo, doc.numero), EnviarDoc_remetente_(eu)]) : '';
+  return { assunto: assunto.slice(0, 180), email: email, whatsapp: whats, whatsappModelo: modelo };
 }
 
 /** "{nome}" vira o primeiro nome; sem nome, a saudação fica sem ele. */
@@ -461,17 +466,87 @@ function EnviarDoc_canais_(eu) {
       ? 'Sai pelo seu e-mail (e-mail integrado do SGO+); se a sua caixa não estiver ligada, sai pela caixa do sistema com resposta para você.'
       : 'Sai pela caixa de e-mail do sistema da Metrolabs' + (eu.email ? ', com "responder para" ' + eu.email + ': a resposta do cliente chega para você.' : '. Seu cadastro não tem e-mail: a resposta do cliente vai para a caixa do sistema. Para receber as respostas, peça ao administrador para preencher o seu e-mail em Usuários.')
   };
-  var whats = { ok: false, texto: '' };
-  var cred = typeof Notificar_credenciaisZapi_ === 'function' ? Notificar_credenciaisZapi_() : {};
-  var zapiOk = !!(cred && cred.instancia && cred.token && cred.clientToken);
-  // 22/10/2026: o WhatsApp só é oferecido quando o envio pode sair de verdade. Com o piloto do WhatsApp ligado (ou o provedor
-  // oficial escolhido) a Z-API está fora do sistema e o número oficial ainda não envia documentos: antes a janela mostrava a
-  // opção e o envio falhava em silêncio.
-  var zapiFora = typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_();
-  if (zapiFora) whats = { ok: false, motivo: 'PILOTO', texto: 'WhatsApp indisponível para documentos. Por quê: o piloto do WhatsApp oficial está ligado, a Z-API (que mandava o PDF) saiu do sistema e o número oficial ainda não envia documentos (só avisos por modelo aprovado). O que fazer: envie por e-mail; quando o envio de documentos pelo número oficial for ligado, a opção volta aqui sozinha.' };
-  else if (zapiOk) whats = { ok: true, texto: 'Sai pelo WhatsApp da empresa, com o documento anexado (não vai link). Há um intervalo de alguns segundos entre as mensagens para proteger o número da empresa.' };
-  else whats = { ok: false, motivo: 'SEM_CHAVES', texto: 'O WhatsApp da empresa para envio de documentos (Z-API) não está configurado. O que fazer: o responsável pelo sistema grava as 3 chaves da Z-API em Administração > Chaves e senhas. Depois volte aqui e envie de novo. Enquanto isso, use o e-mail.' };
+  // 22/10/2026: o WhatsApp só é oferecido quando o envio pode sair de verdade.
+  // 28/10/2026: o WhatsApp do sistema é o oficial (Meta; a Z-API está desligada). O documento sai pelo modelo
+  // sgo_documento_cliente (PDF no cabeçalho, enviado antes à Meta; nunca link público). Mensagem iniciada pela empresa só
+  // por modelo aprovado: o texto é o do modelo, sem edição. É ação de uma pessoa (o vendedor, o técnico): o servidor deixa
+  // este modelo passar para o cliente mesmo com o piloto do WhatsApp ligado; avisos automáticos continuam retidos.
+  var prov = typeof Notificar_provedorWhatsapp_ === 'function' ? Notificar_provedorWhatsapp_() : { provedor: '', motivo: 'WhatsApp não configurado.' };
+  var whats;
+  if (prov.provedor === 'meta') {
+    var st = typeof SGO_waModeloSituacao_ === 'function' ? SGO_waModeloSituacao_(ENVDOC_MODELO_META) : '';
+    if (st && st !== 'APPROVED') whats = { ok: false, motivo: 'MODELO', provedor: 'meta', texto: 'WhatsApp indisponível para documentos. Por quê: o modelo de mensagem "' + ENVDOC_MODELO_META + '" (documento ao cliente) ' + (st === 'NAO_CADASTRADO' ? 'ainda não foi cadastrado na Meta' : 'não está aprovado na Meta (situação: ' + st + ')') + '. O que fazer: envie por e-mail; o responsável pelo sistema cadastra o modelo em Administração > Chaves e senhas > "Cadastrar modelos na Meta" e, aprovado, a opção volta aqui sozinha.' };
+    else whats = { ok: true, provedor: 'meta', texto: 'Sai pelo WhatsApp oficial da Metrolabs, com o PDF na própria mensagem (não vai link). A mensagem segue o modelo aprovado pela Meta: o texto é fixo, com o nome do contato e do documento.' };
+  } else if (prov.provedor === 'zapi') {
+    whats = { ok: true, provedor: 'zapi', texto: 'Sai pelo WhatsApp da empresa, com o documento anexado (não vai link). Há um intervalo de alguns segundos entre as mensagens para proteger o número da empresa.' };
+  } else {
+    whats = { ok: false, motivo: 'SEM_CHAVES', texto: 'WhatsApp indisponível para documentos. Por quê: ' + String(prov.motivo || 'o WhatsApp do sistema não está configurado.') + ' O que fazer: envie por e-mail; o responsável pelo sistema configura o WhatsApp oficial em Administração > Chaves e senhas e a opção volta aqui sozinha.' };
+  }
   return { email: email, whatsapp: whats };
+}
+
+/* ============================================================ WhatsApp oficial (Meta): documento por modelo */
+
+var ENVDOC_MODELO_META = 'sgo_documento_cliente';
+
+/** "Proposta comercial PROP-2026-0001 rev.00" (título e número, sem repetir). */
+function EnviarDoc_ident_(titulo, numero) {
+  var t = EnviarDoc_s_(titulo), n = EnviarDoc_s_(numero);
+  return t + (n && t.indexOf(n) < 0 ? ' (nº ' + n + ')' : '');
+}
+/** Quem enviou, para o cliente saber com quem falar: "Vera (vera@...)" ou só o primeiro nome. */
+function EnviarDoc_remetente_(eu) {
+  var p = EnviarDoc_primeiroNome_(eu && eu.nome) || 'a equipe da Metrolabs';
+  return (eu && eu.email ? p + ' (' + eu.email + ')' : p).slice(0, 80);
+}
+/** Variáveis do modelo: nome do contato (sem nome: o cliente), documento, remetente. */
+function EnviarDoc_paramsModelo_(nomeContato, nomeCliente, ident, eu) {
+  return [EnviarDoc_primeiroNome_(nomeContato) || EnviarDoc_s_(nomeCliente) || 'cliente', ident, EnviarDoc_remetente_(eu)];
+}
+/** Texto que o cliente vê (o do modelo, com as variáveis). */
+function EnviarDoc_textoModelo_(params) {
+  var def = typeof NTF_MODELOS_META !== 'undefined' ? NTF_MODELOS_META[ENVDOC_MODELO_META] : null;
+  var t = def ? def.texto : '';
+  return t.replace(/\{\{(\d+)\}\}/g, function (m, i) { var v = params[Number(i) - 1]; return typeof Notificar_paramMeta_ === 'function' ? Notificar_paramMeta_(v, def.limites[Number(i) - 1]) : String(v || ''); });
+}
+
+/** PDF para a Meta (POST /<PHONE_ID>/media, multipart montado à mão: o mesmo corpo vale no Google e no servidor). { ok, id } | { ok:false, motivo }. */
+function EnviarDoc_metaMidia_(cred, anexo) {
+  var b = 'SGOMeta' + Date.now() + Math.floor(Math.random() * 1e9);
+  var nome = String(anexo.nome || 'documento.pdf').replace(/["\r\n\\]/g, '');
+  var ini = '--' + b + '\r\nContent-Disposition: form-data; name="messaging_product"\r\n\r\nwhatsapp\r\n' +
+    '--' + b + '\r\nContent-Disposition: form-data; name="type"\r\n\r\napplication/pdf\r\n' +
+    '--' + b + '\r\nContent-Disposition: form-data; name="file"; filename="' + nome + '"\r\nContent-Type: application/pdf\r\n\r\n';
+  var bytes = [].concat(Utilities.newBlob(ini).getBytes(), anexo.blob.getBytes(), Utilities.newBlob('\r\n--' + b + '--\r\n').getBytes());
+  var r = UrlFetchApp.fetch('https://graph.facebook.com/' + NTF_META_VERSAO + '/' + encodeURIComponent(cred.phoneId) + '/media', {
+    method: 'post', muteHttpExceptions: true, contentType: 'multipart/form-data; boundary=' + b, headers: { Authorization: 'Bearer ' + cred.token }, payload: bytes });
+  var j = {};
+  try { j = JSON.parse(r.getContentText() || '{}') || {}; } catch (e) { j = {}; }
+  if (r.getResponseCode() >= 200 && r.getResponseCode() < 300 && j.id) return { ok: true, id: String(j.id) };
+  var er = j.error || {};
+  return { ok: false, motivo: 'A Meta não aceitou o PDF (HTTP ' + r.getResponseCode() + (er.code !== undefined ? ', código ' + er.code : '') + '): ' + String(er.message || r.getContentText() || '').slice(0, 200) + '. Confira se o arquivo abre, tem menos de ' + ENVDOC_LIMITES.whatsMb + ' MB, e tente de novo; se repetir, envie por e-mail.' };
+}
+
+/** Documento pelo WhatsApp oficial: PDF para a Meta e o modelo com o PDF no cabeçalho. Nunca lança. */
+function EnviarDoc_metaDocumento_(telefone, anexo, params) {
+  var prov = typeof Notificar_provedorWhatsapp_ === 'function' ? Notificar_provedorWhatsapp_() : {};
+  if (prov.provedor !== 'meta') return { ok: false, motivo: 'WhatsApp oficial indisponível: ' + String(prov.motivo || 'não configurado') + ' Envie por e-mail.' };
+  var cred = prov.cred, limpar = function (m) { return typeof Notificar_limparSegredos_ === 'function' ? Notificar_limparSegredos_(m, [cred.token]) : String(m).slice(0, 400); };
+  try {
+    var fone = EnviarDoc_celular_(telefone);
+    if (!fone) return { ok: false, motivo: 'Número sem WhatsApp válido (precisa de DDD + 9 + 8 dígitos; telefone fixo não recebe). Corrija o número e tente de novo.' };
+    if (!EnviarDoc_ehPdf_(anexo.nome, anexo.mime)) return { ok: false, motivo: 'Pelo WhatsApp oficial vai só PDF ("' + anexo.nome + '" não é PDF). Envie este arquivo por e-mail.' };
+    var m = EnviarDoc_metaMidia_(cred, anexo);
+    if (!m.ok) return { ok: false, motivo: limpar(m.motivo) };
+    var r = Notificar_enviarMeta_(cred, fone, ENVDOC_MODELO_META, params, '', { id: m.id, nome: anexo.nome });
+    if (r.ok) return { ok: true, id: r.id };
+    var mot = String(r.motivo || '');
+    if (/c[óo]digo 132001/.test(mot)) mot = 'O modelo de mensagem "' + ENVDOC_MODELO_META + '" ainda não está aprovado na Meta (o responsável pelo sistema cadastra em Administração > Chaves e senhas > "Cadastrar modelos na Meta"). Envie por e-mail. Detalhe: ' + mot;
+    else if (/piloto/i.test(mot)) mot = 'O servidor do SGO+ reteve o envio: ' + mot + ' Envie por e-mail e avise o responsável pelo sistema.';
+    return { ok: false, motivo: limpar(mot) };
+  } catch (e) {
+    return { ok: false, motivo: limpar('Sem comunicação com o WhatsApp oficial: ' + String((e && e.message) || e) + '. Tente de novo ou envie por e-mail.') };
+  }
 }
 
 /* ============================================================ API: conferir, preparar */
@@ -599,7 +674,7 @@ function EnviarDoc_enviarEmail_(eu, para, cc, assunto, texto, anexos) {
 /** Documento pela Z-API (base64). Nunca lança: { ok, id } | { ok:false, motivo }. */
 function EnviarDoc_zapiDocumento_(telefone, anexo, legenda) {
   // 21/10/2026: Z-API fora do sistema (piloto do WhatsApp ou provedor meta): documento só por e-mail
-  if (typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_()) return { ok: false, motivo: 'O WhatsApp de documentos está desligado: a Z-API saiu do sistema e o WhatsApp oficial só manda avisos por modelo aprovado. Envie este documento por e-mail.' };
+  if (typeof SGO_waZapiFora_ === 'function' && SGO_waZapiFora_()) return { ok: false, motivo: 'WhatsApp indisponível: a Z-API está desligada (o WhatsApp do sistema é o oficial, da Meta) e o WhatsApp oficial não está configurado (Administração > Chaves e senhas). Envie este documento por e-mail.' };
   if (typeof SGO_zapiEnviarDocumento_ === 'function') {
     try { return SGO_zapiEnviarDocumento_(telefone, { nome: anexo.nome, mime: anexo.mime, base64: Utilities.base64Encode(anexo.blob.getBytes()), legenda: legenda }, { tipo: 'AVISO' }) || { ok: false, motivo: 'sem resposta do envio' }; }
     catch (e) { return { ok: false, motivo: String((e && e.message) || e).slice(0, 300) }; }
@@ -700,17 +775,22 @@ function EnviarDoc_executar_(linha, eu, anexos, plano) {
     r = EnviarDoc_enviarEmail_(eu, plano.para, plano.cc, linha.ASSUNTO, linha.MENSAGEM, anexos);
   } else {
     r = { ok: true, id: '' };
-    var ids = [];
+    var ids = [], pulados = [];
+    var meta = linha.MODO === 'META' || (linha.MODO !== 'ZAPI' && typeof Notificar_provedorWhatsapp_ === 'function' && Notificar_provedorWhatsapp_().provedor === 'meta');
+    linha.MODO = meta ? 'META' : 'ZAPI';
     for (var i = 0; i < anexos.length; i++) {
       if (anexos[i].tamanho > ENVDOC_LIMITES.whatsMb * 1048576) { r = { ok: false, motivo: 'O arquivo "' + anexos[i].nome + '" passa de ' + ENVDOC_LIMITES.whatsMb + ' MB, limite do WhatsApp. Envie por e-mail.' }; break; }
-      var x = EnviarDoc_zapiDocumento_(linha.DESTINO, anexos[i], i === 0 ? linha.MENSAGEM : '');
+      // WhatsApp oficial: só PDF (a cópia em HTML vai só por e-mail); cada PDF numa mensagem do modelo
+      if (meta && i > 0 && !EnviarDoc_ehPdf_(anexos[i].nome, anexos[i].mime)) { pulados.push(anexos[i].nome); continue; }
+      var x = meta ? EnviarDoc_metaDocumento_(linha.DESTINO, anexos[i], EnviarDoc_paramsModelo_(linha.DESTINO_NOME, linha.CLIENTE_NOME, i === 0 ? EnviarDoc_ident_(linha.DOC_TITULO, linha.DOC_NUMERO) : EnviarDoc_semExt_(anexos[i].nome), eu))
+        : EnviarDoc_zapiDocumento_(linha.DESTINO, anexos[i], i === 0 ? linha.MENSAGEM : '');
       if (!x.ok) { r = { ok: false, motivo: (i > 0 ? 'O primeiro arquivo foi entregue, mas "' + anexos[i].nome + '" não: ' : '') + x.motivo }; break; }
       if (x.id) ids.push(x.id);
     }
-    if (r.ok) r.id = ids.join(',');
+    if (r.ok) { r.id = ids.join(','); if (pulados.length) r.nota = 'Pelo WhatsApp oficial vai só PDF: ' + pulados.join(', ') + ' não foi (envie por e-mail).'; }
   }
-  var mudar = { SITUACAO: r.ok ? 'ENVIADO' : 'FALHOU', MOTIVO: r.ok ? (r.modo === 'SISTEMA' ? 'Na fila de saída do e-mail do sistema' + (eu.email ? ' (responder para ' + eu.email + ')' : '') : '') : String(r.motivo || 'falha sem detalhe').slice(0, 480),
-    PROVEDOR_ID: String(r.id || '').slice(0, 200), MODO: linha.CANAL === 'EMAIL' ? (r.modo || '') : 'ZAPI', ATUALIZADO_EM: EnviarDoc_agoraIso_() };
+  var mudar = { SITUACAO: r.ok ? 'ENVIADO' : 'FALHOU', MOTIVO: r.ok ? (r.modo === 'SISTEMA' ? 'Na fila de saída do e-mail do sistema' + (eu.email ? ' (responder para ' + eu.email + ')' : '') : (r.nota || '')) : String(r.motivo || 'falha sem detalhe').slice(0, 480),
+    PROVEDOR_ID: String(r.id || '').slice(0, 200), MODO: linha.CANAL === 'EMAIL' ? (r.modo || '') : (linha.MODO === 'META' ? 'META' : 'ZAPI'), ATUALIZADO_EM: EnviarDoc_agoraIso_() };
   try { SGO_DATA.update(ENVDOC_ABA, linha.ID, mudar); } catch (e) {}
   Object.keys(mudar).forEach(function (k) { linha[k] = mudar[k]; });
   return linha;
@@ -763,7 +843,11 @@ function EnviarDoc_apiEnviar(sessionId, payload) {
       if (dest.whats.length > ENVDOC_LIMITES.destinosWhats) throw new Error('No máximo ' + ENVDOC_LIMITES.destinosWhats + ' celulares por envio pelo WhatsApp (proteção do número da empresa). Envie em partes.');
       var assunto = EnviarDoc_s_(payload.assunto).slice(0, 180), txtEmail = String(payload.mensagemEmail || '').trim(), txtWhats = String(payload.mensagemWhatsapp || '').trim();
       if (canais.email && (!assunto || !txtEmail)) throw new Error('Preencha o assunto e a mensagem do e-mail antes de enviar.');
-      if (canais.whatsapp && !txtWhats) throw new Error('Preencha a mensagem do WhatsApp antes de enviar.');
+      // 28/10/2026: WhatsApp oficial (Meta): o texto é o do modelo aprovado; a mensagem digitada não vale para ele
+      // (canal indisponível: a linha fica registrada como falha, com o porquê e o caminho, como antes)
+      var cw = canais.whatsapp ? EnviarDoc_canais_(eu).whatsapp : null;
+      var viaMeta = !!(cw && cw.provedor === 'meta');
+      if (canais.whatsapp && !viaMeta && !txtWhats) throw new Error('Preencha a mensagem do WhatsApp antes de enviar.');
       var horario = EnviarDoc_horario_(), agora = EnviarDoc_agoraIso_(), base = EnviarDoc_linhaBase_(doc, eu, anexos, horario);
       if (canais.email) {
         plano.para = dest.emails.map(function (x) { return x.email; }); plano.cc = cc;
@@ -772,8 +856,9 @@ function EnviarDoc_apiEnviar(sessionId, payload) {
           SITUACAO: 'ENVIANDO', QUANDO: agora, ATUALIZADO_EM: agora }));
       }
       dest.whats.forEach(function (w) {
-        planejadas.push(Object.assign({}, base, { PEDIDO_ID: pedidoId, CANAL: 'WHATSAPP', DESTINO: w.celular, DESTINO_NOME: w.nome, ASSUNTO: assunto,
-          MENSAGEM: EnviarDoc_aplicarNome_(txtWhats, w.nome).slice(0, 3000), SITUACAO: 'ENVIANDO', QUANDO: agora, ATUALIZADO_EM: agora }));
+        planejadas.push(Object.assign({}, base, { PEDIDO_ID: pedidoId, CANAL: 'WHATSAPP', DESTINO: w.celular, DESTINO_NOME: w.nome, ASSUNTO: assunto, MODO: viaMeta ? 'META' : 'ZAPI',
+          MENSAGEM: (viaMeta ? EnviarDoc_textoModelo_(EnviarDoc_paramsModelo_(w.nome, base.CLIENTE_NOME, EnviarDoc_ident_(doc.titulo, doc.numero), eu)) : EnviarDoc_aplicarNome_(txtWhats, w.nome)).slice(0, 3000),
+          SITUACAO: 'ENVIANDO', QUANDO: agora, ATUALIZADO_EM: agora }));
       });
       planejadas = planejadas.map(function (l) { return SGO_DATA.insert(ENVDOC_ABA, l); });
     } finally { try { lock.releaseLock(); } catch (e) {} }

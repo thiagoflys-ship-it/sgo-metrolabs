@@ -199,7 +199,23 @@ var COM_METODOLOGIA_PADRAO = {
       gerais: 'Serviços, peças ou materiais não descritos nesta proposta serão orçados à parte e só executados com aprovação do cliente.\nAs datas de execução serão agendadas em comum acordo após o aceite.\nO aceite desta proposta formaliza o pedido nas condições aqui descritas.'
     },
     responsabilidades: 'Da Metrolabs:\n- Executar os serviços descritos nesta proposta com equipe técnica qualificada e instrumentos calibrados e rastreáveis.\n- Emitir os documentos técnicos correspondentes (relatórios, certificados ou ordens de serviço).\n- Comunicar previamente qualquer necessidade fora do escopo, com orçamento à parte.\n- Manter sigilo sobre as informações do cliente.\nDo cliente:\n- Disponibilizar os equipamentos, o acesso às áreas e um responsável para acompanhar a execução nas datas combinadas.\n- Fornecer as utilidades necessárias (energia, água, vapor, ar comprimido), quando aplicável.\n- Informar previamente regras de acesso, integração de segurança e documentos exigidos.\n- Efetuar os pagamentos nas condições acordadas.',
-    textoAceite: 'Após essa data, os preços e as condições podem ser revistos e uma nova revisão será emitida. Ao aprovar, o cliente declara que leu e concorda com o escopo, os valores e as condições desta proposta e autoriza a execução nos termos aqui descritos.'
+    textoAceite: 'Após essa data, os preços e as condições podem ser revistos e uma nova revisão será emitida. Ao aprovar, o cliente declara que leu e concorda com o escopo, os valores e as condições desta proposta e autoriza a execução nos termos aqui descritos.',
+    // 28/10/2026 (dono): as cláusulas que os vendedores colavam na descrição de cada orçamento do CRM são os TERMOS DO CONTRATO.
+    // Ficam fixas no documento, na seção "Termos e condições da contratação" (texto justificado, logo acima de "Validade e
+    // aceite"); a descrição da proposta fica em branco para o que for específico. Editáveis pela gestão em Metodologia >
+    // Proposta; cada mudança do texto é uma versão nova (Com_termosVigentes_) e o documento gerado congela a versão vigente
+    // (CONGELADO_JSON.termos): mudar o padrão depois não altera proposta já enviada. Condições, frete e entrega continuam
+    // nos campos da proposta (Condições comerciais), não aqui.
+    termos: '1. DO OBJETO: Contratação de Comercialização de PRODUTOS E SERVIÇOS EM EQUIPAMENTOS MÉDICO-HOSPITALARES, conforme descrição, quantidade e valor acima.\n' +
+      '2. DO PRAZO DE ENTREGA: Uma vez que todas as condições propícias para a realização da entrega estiverem plenamente atendidas, a CONTRATANTE compromete-se a concluir a entrega do(s) item(ns) conforme delineado neste Termo de Referência, dentro de um prazo de 10 a 30 dias, iniciando-se a contagem a partir da data de assinatura desta minuta.\n' +
+      '3. DA FORMA DE RECEBIMENTO: O valor referente ao(s) item(ns) descrito(s) na cláusula 1 será faturado por meio de nota fiscal pela CONTRATADA, que se compromete a disponibilizá-lo dentro do prazo estipulado para pagamento, contendo o montante acordado e a data de vencimento correspondente.\n' +
+      '4. DAS SANÇÕES Havendo inadimplemento do pagamento estabelecido na cláusula 1, incidirá uma multa de 30% (trinta por cento) sobre o valor total do contrato, acrescida de atualização pelo IGPDI-DI/FGV e juros moratórios de 1% (um por cento) ao mês, a partir da data do descumprimento. Além disso, a CONTRATADA reserva-se o direito de incluir o nome da CONTRATANTE em órgãos e/ou serviços de cadastro de proteção ao crédito (SPC/SERASA/PROTESTO), tornando o débito integralmente exigível, sem necessidade de qualquer outro ato ou notificação, sem prejuízo das perdas e danos decorrentes da negligência no cumprimento de suas obrigações. Caso requeira a intervenção do DEPARTAMENTO JURÍDICO da CONTRATADA, serão acrescidos honorários advocatícios à base de 20% (vinte por cento) sobre o valor total apurado, englobando, inclusive, multas, juros, atualização e correção monetária e custas judiciais, todos encargos devidos pela CONTRATANTE.\n' +
+      '5. DA VALIDADE DE ASSINATURA ELETRÔNICA: Se necessário, as partes expressamente concordam em utilizar e reconhecem como válida a comprovação de autoria e integridade dos termos ora acordados, certificados por meio da plataforma DocuSign (www.docusign.com), por meio dos endereços eletrônicos das partes. A formalização das avenças na maneira supra acordada será suficiente para a validade e integral vinculação das partes ao presente instrumento, constituindo-o como título executivo extrajudicial, na forma da lei;\n' +
+      '6. DA DESISTÊNCIA: Em caso de desistência por parte da contratante após a assinatura desta proposta, A contratante concorda em pagar uma multa no valor de 30% do total da proposta acordada, como compensação pelos custos administrativos e possíveis perdas incorridas pela parte contratada.\n' +
+      '7. DA CONSTITUIÇÃO DO TÍTULO: Esta minuta CONSTITUI TÍTULO EXECUTIVO EXTRAJUDICIAL, nos termos do artigo 784, inciso III, do Código de Processo Civil em vigor.\n' +
+      '8. DO FORO DE ELEIÇÃO: Para dirimir quaisquer controvérsias oriundas do presente contrato, as partes elegem o foro da Comarca de Goiânia, Goiás.\n' +
+      'Por estarem assim justos e contratados, firmam o presente instrumento, em duas vias de igual teor, juntamente com 02 (duas) testemunhas.',
+    termosConcordancia: 'A aprovação desta proposta, por assinatura, por resposta por escrito ou por pedido de compra, implica a concordância integral com os termos e condições acima.'
   },
   posVenda: {
     TECNICA: { prazoDiasUteis: 2, modulo: 'cronograma_execucao', checklist: ['Conferir o escopo e os itens vendidos', 'Abrir o processo: contrato, ordem de serviço ou ordem de metrologia', 'Agendar a execução com o cliente', 'Definir a equipe e a logística da viagem'] },
@@ -407,6 +423,32 @@ function Com_validarMetodologia_(m) {
   if (!(Com_num_(c.propostaEscalaDiaUtil) > Com_num_(c.propostaLembreteDiaUtil))) throw new Error('a gestão entra depois do lembrete ao vendedor nas propostas sem resposta. Corrija em Cadência e salve de novo');
   var v = Com_num_(m.proposta && m.proposta.validadeDias);
   if (!(v >= 1 && v <= 365)) throw new Error('a validade padrão da proposta fica entre 1 e 365 dias. Corrija e salve de novo');
+  var tt = m.proposta && m.proposta.termos;
+  if (tt !== undefined && tt !== null && typeof tt !== 'string') throw new Error('os termos e condições da contratação vieram num formato inválido. Atualize a tela e salve de novo');
+  if (Com_s_(tt).length > 20000) throw new Error('os termos e condições da contratação passam de 20.000 caracteres. Resuma o texto e salve de novo');
+  if (Com_s_(tt) && Com_s_(tt).length < 40) throw new Error('os termos e condições da contratação estão curtos demais (menos de 40 letras). Escreva as cláusulas completas ou recarregue o padrão e salve de novo');
+}
+
+/**
+ * 28/10/2026: termos e condições da contratação em vigor, com a VERSÃO dos termos (não a da metodologia): começa em 1
+ * (texto padrão) e sobe a cada gravação da metodologia que muda o texto dos termos. { versao, texto, concordancia,
+ * desde, por }. Nunca lança.
+ */
+function Com_termosVigentes_() {
+  var padrao = COM_METODOLOGIA_PADRAO.proposta;
+  var r = { versao: 1, texto: Com_texto_(padrao.termos), concordancia: Com_texto_(padrao.termosConcordancia), desde: '', por: '' };
+  var norm = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
+  try {
+    var linhas = Com_ler_(COM_ABAS.CONFIG).filter(function (x) { return Com_s_(x.CHAVE) === 'METODOLOGIA'; })
+      .sort(function (a, b) { return (Number(a.VERSAO) || 0) - (Number(b.VERSAO) || 0); });
+    linhas.forEach(function (l) {
+      var pr = (Com_json_(l.VALOR_JSON, {}) || {}).proposta || {};
+      if (typeof pr.termosConcordancia === 'string') r.concordancia = Com_texto_(pr.termosConcordancia);
+      if (typeof pr.termos !== 'string' || norm(pr.termos) === norm(r.texto)) return;
+      r.versao++; r.texto = Com_texto_(pr.termos); r.desde = Com_br_(l.ATUALIZADO_EM); r.por = Com_s_(l.ATUALIZADO_POR_NOME);
+    });
+  } catch (e) { /* sem histórico legível: vale o padrão */ }
+  return r;
 }
 
 function Com_gravarMetodologia_(m, eu, motivo) {

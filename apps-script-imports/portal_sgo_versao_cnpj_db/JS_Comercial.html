@@ -62,6 +62,16 @@
   .cm-hist div { margin-bottom: 9px; font-size: 12.5px; } .cm-hist .q { color: var(--muted); font-size: 11.5px; }
   .cm-itens .cm-item { display: grid; grid-template-columns: 2.2fr .6fr .6fr 1fr 1.4fr auto; gap: 6px; align-items: end; padding: 8px 0; border-bottom: 1px dashed var(--border); }
   .cm-itens .cm-item .cm-campo { margin: 0; }
+  /* 28/10/2026: escolha do produto do catálogo no próprio item (busca enquanto digita) */
+  .cm-itens .cm-prod { position: relative; }
+  .cm-sug { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; max-height: 300px; overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.15); margin-top: 2px; }
+  .cm-sug-op { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); padding: 8px 10px; min-height: 44px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .cm-sug-op b { display: block; font-size: 13px; }
+  .cm-sug-op:hover, .cm-sug-op.ativo { background: var(--bg); }
+  .cm-sug-nota { padding: 8px 10px; font-size: 12px; color: var(--muted); }
+  .cm-item-orig { font-size: 11.5px; color: var(--muted); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .cm-item-orig button { min-height: 28px; padding: 2px 8px; font-size: 11.5px; }
+  .cm-item-dif { display: block; font-size: 11.5px; margin-top: 3px; min-height: 1em; }
   .cm-politica { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin: 6px 0 2px; }
   .cm-politica i { display: block; height: 100%; }
   .cm-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
@@ -665,7 +675,11 @@
     else h += '<p class="cm-sec">Itens</p><table class="cm-tabela"><thead><tr><th>Descrição</th><th class="n">Qtd.</th><th>Un.</th>' + (p.totalTxt ? '<th class="n">Preço unit.</th><th class="n">Total</th>' : '') + '</tr></thead><tbody>' +
       p.itens.map(function (i) { return '<tr><td data-r="Item"><b>' + Com_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<br><span class="cm-meta">' + Com_esc_(i.equipamentoTexto) + '</span>' : '') + '</td><td class="n" data-r="Qtd.">' + Com_esc_(String(i.quantidade).replace(".", ",")) + '</td><td data-r="Un.">' + Com_esc_(i.unidade) + '</td>' +
         (p.totalTxt ? '<td class="n" data-r="Preço unit.">' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '</td><td class="n" data-r="Total">' + Com_esc_(Comercial_moeda_(i.total)) + '</td>' : '') + '</tr>'; }).join("") + '</tbody></table>' +
-      (p.escopo ? '<p class="cm-sec">Escopo</p><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(p.escopo) + '</p>' : '');
+      (p.escopo ? '<p class="cm-sec">Descrição (escopo)</p><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(p.escopo) + '</p>' : '');
+    // 28/10/2026: termos e condições da contratação (fixos no documento; congelados quando o documento é gerado)
+    if (p.termos && p.termos.texto) h += '<details class="cm-caixa"><summary><b>Termos e condições da contratação</b> <span class="cm-meta">versão ' + Com_esc_(p.termos.versao) +
+      (p.termos.congelado ? ' · guardada no documento desta proposta' : p.termos.foraDoDocumento ? ' · o documento gerado antes de 28/10/2026 não trazia esta seção; gere de novo (antes do envio) ou faça nova revisão' : ' · em vigor; fica guardada quando o documento for gerado') + '</span></summary>' +
+      '<div class="cm-txt" style="white-space:pre-wrap;text-align:justify;margin-top:8px">' + Com_esc_(p.termos.texto) + '</div>' + (p.termos.concordancia ? '<p class="cm-txt"><b>' + Com_esc_(p.termos.concordancia) + '</b></p>' : '') + '</details>';
     var acoes = [];
     if (meu && !ini.financeiro) {
       if (s === "RASCUNHO" && p.editavel) acoes.push(b("salvar", "Salvar rascunho"), b("revisar", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Revisão da gestora'), b("concluir", "Concluir", "btn-primary"));
@@ -760,7 +774,8 @@
     var cond = p.condicoes || {};
     var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: "Prazo de execução ou entrega", garantia: "Garantia", frete: "Frete", impostos: "Impostos", local: "Local de execução ou entrega", gerais: "Condições gerais", observacoes: "Observações" };
     return '<div class="cm-caixa"><h3>Rascunho</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
-      Com_campo_("Escopo (o que será feito, onde e o que o cliente recebe)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:110px">' + Com_esc_(p.escopo) + '</textarea>') +
+      (p.escopoTermosLegado ? '<div class="cm-faixa">As cláusulas que estavam na descrição (texto do CRM antigo) saíram daqui: agora vão fixas no documento, na seção "Termos e condições da contratação". Ficou só o restante. Ao salvar o rascunho, a descrição é gravada assim.</div>' : '') +
+      Com_campo_("Descrição (opcional: só o que for específico desta proposta)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:90px" placeholder="Deixe em branco se os itens já dizem tudo. Os termos e condições da contratação vão fixos no documento.">' + Com_esc_(p.escopo) + '</textarea>') +
       '<p class="cm-sec">Itens</p><div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
       '<div class="cm-grade3" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
       Com_campo_("Validade (dias)", '<input id="cmPrVal" inputmode="numeric" value="' + Com_esc_(p.validadeDias || CM.ini.validadePadrao) + '">') + Com_campo_("Contato (A/C)", '<select id="cmPrCt">' + Com_opcoes_((p.contatosCliente || []).map(function (c) { return { v: c.id, t: c.nome }; }), p.contatoId) + '</select>') + '</div>' +
@@ -801,18 +816,69 @@
   function Comercial_desenharItens_() {
     var alvo = Com_$_("cmItens"); if (!alvo) return;
     var tipos = Object.keys(CM.ini.tiposItem).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
+    // 28/10/2026 (dono): o item escolhe o produto ou serviço do catálogo (Produtos e serviços, o mesmo cadastro importado do
+    // CRM): ao digitar no campo, aparecem os itens ativos mais parecidos; escolher preenche código, tipo, descrição, unidade
+    // e preço de tabela. Item sem catálogo continua possível ("avulso"). Preço diferente da tabela aparece no item e fica
+    // registrado no histórico ao salvar; abaixo da tabela conta como desconto na política.
     alvo.innerHTML = CM.itens.length ? CM.itens.map(function (i, k) {
-      return '<div class="cm-item" data-i="' + k + '"><div class="cm-campo cm-desc"><label>Descrição' + (i.codigo ? ' (' + Com_esc_(i.codigo) + ')' : '') + '</label><input data-f="descricao" maxlength="400" value="' + Com_esc_(i.descricao) + '"></div>' +
+      var cat = !!i.produtoId;
+      return '<div class="cm-item" data-i="' + k + '"><div class="cm-campo cm-desc cm-prod"><label for="cmItD' + k + '">' + (cat ? "Produto ou serviço do catálogo" : "Produto ou serviço (digite para buscar no catálogo)") + '</label>' +
+        '<input id="cmItD' + k + '" data-f="descricao" maxlength="400" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="cmSug' + k + '" value="' + Com_esc_(i.descricao) + '"' + (cat ? '' : ' placeholder="Nome ou código do produto (ex.: fonte 9v, QT-AUTOCLAVE)"') + '>' +
+        '<div class="cm-sug" id="cmSug' + k + '" role="listbox" hidden></div>' +
+        '<div class="cm-item-orig">' + (cat ? '<span class="cm-selo verde">Catálogo ' + Com_esc_(i.codigo || "") + '</span><button type="button" class="btn-secondary" data-avulso="' + k + '" title="Desliga este item do catálogo (o texto e o preço ficam como estão)">Tornar avulso</button>'
+          : '<span class="cm-selo cinza">Avulso (fora do catálogo)</span>') + '</div></div>' +
         '<div class="cm-campo"><label>Qtd.</label><input data-f="quantidade" inputmode="decimal" value="' + Com_esc_(String(i.quantidade).replace(".", ",")) + '"></div>' +
         '<div class="cm-campo"><label>Un.</label><input data-f="unidade" maxlength="20" value="' + Com_esc_(i.unidade || "un.") + '"></div>' +
-        '<div class="cm-campo"><label>Preço unit. (R$)' + (i.precoTabela ? ' · tabela ' + Com_esc_(Comercial_moeda_(i.precoTabela)) : '') + '</label><input data-f="precoUnitario" inputmode="decimal" value="' + Com_esc_(i.precoUnitario === "" ? "" : String(i.precoUnitario).replace(".", ",")) + '"></div>' +
+        '<div class="cm-campo"><label>Preço unit. (R$)' + (Number(i.precoTabela) > 0 ? ' · tabela ' + Com_esc_(Comercial_moeda_(i.precoTabela)) : '') + '</label><input data-f="precoUnitario" inputmode="decimal" value="' + Com_esc_(i.precoUnitario === "" || i.precoUnitario === undefined ? "" : String(i.precoUnitario).replace(".", ",")) + '"><span class="cm-item-dif" id="cmItDif' + k + '" aria-live="polite"></span></div>' +
         '<div class="cm-campo"><label>Equipamento</label><select data-f="equipamentoId">' + Com_opcoes_((CM.equipProp || []).map(function (e) { return { v: e.id, t: e.texto }; }), i.equipamentoId, "Nenhum") + '</select></div>' +
         '<button type="button" class="btn-secondary" data-rem="' + k + '" aria-label="Tirar o item">Tirar</button>' +
         '<div class="cm-campo cm-desc"><label>Tipo</label><select data-f="tipo">' + Com_opcoes_(tipos, i.tipo) + '</select></div></div>';
     }).join("") : '<p class="cm-meta">Nenhum item. Toque em "Acrescentar item" ou "Do catálogo".</p>';
     alvo.querySelectorAll("[data-rem]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); CM.itens.splice(+b.getAttribute("data-rem"), 1); Comercial_desenharItens_(); }; });
+    alvo.querySelectorAll("[data-avulso]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); var i = CM.itens[+b.getAttribute("data-avulso")]; if (!i) return; i.produtoId = ""; i.codigo = ""; i.precoTabela = 0; Comercial_desenharItens_(); }; });
     alvo.querySelectorAll("input,select").forEach(function (x) { x.oninput = Comercial_totais_; x.onchange = Comercial_totais_; });
+    alvo.querySelectorAll("input[data-f=descricao]").forEach(function (x) { Comercial_ligarBuscaItem_(x, +x.closest("[data-i]").getAttribute("data-i")); });
     Comercial_totais_();
+  }
+  /** Produto do catálogo escolhido no item: código, tipo, descrição, detalhe, unidade e preço de tabela. */
+  function Comercial_aplicarProduto_(k, x) {
+    Comercial_lerItens_();
+    var i = CM.itens[k]; if (!i) return;
+    Object.assign(i, { produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao || "", unidade: x.unidade || "un.", precoUnitario: x.preco, precoTabela: x.preco });
+    Comercial_desenharItens_();
+    var q = Com_$_("cmItens") && Com_$_("cmItens").querySelector('[data-i="' + k + '"] input[data-f=quantidade]'); if (q) q.focus();
+  }
+  /** Busca no catálogo enquanto digita (item avulso): 8 itens ativos mais parecidos; setas, Enter e Esc no teclado. */
+  function Comercial_ligarBuscaItem_(inp, k) {
+    var lista = Com_$_("cmSug" + k), t = null, achados = [], ativo = -1;
+    var fechar = function () { if (lista) { lista.hidden = true; lista.innerHTML = ""; } inp.setAttribute("aria-expanded", "false"); ativo = -1; };
+    var marcar = function (n) { var ops = lista.querySelectorAll(".cm-sug-op"); ops.forEach(function (o, j) { o.classList.toggle("ativo", j === n); o.setAttribute("aria-selected", j === n ? "true" : "false"); }); ativo = n; if (ops[n]) ops[n].scrollIntoView({ block: "nearest" }); };
+    var buscar = function () {
+      var it = CM.itens[k], q = inp.value.trim();
+      if (!it || it.produtoId || q.length < 2) { fechar(); return; }
+      Com_chamar_("catalogo", { busca: q, situacao: "ATIVOS", limite: 8 }, function (r) {
+        if (document.activeElement !== inp || inp.value.trim() !== q) return;
+        achados = r.produtos || [];
+        lista.innerHTML = achados.length ? achados.map(function (x, j) { return '<button type="button" class="cm-sug-op" role="option" aria-selected="false" data-j="' + j + '"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + (x.preco > 0 ? x.precoTxt : "sem preço no catálogo") + " / " + x.unidade) + '</button>'; }).join("") +
+            (r.limitado ? '<div class="cm-sug-nota">Mais ' + (Number(r.encontrados) - achados.length).toLocaleString("pt-BR") + ' itens parecidos: escreva mais uma palavra ou o código.</div>' : '')
+          : '<div class="cm-sug-nota">Nenhum item ativo do catálogo com "' + Com_esc_(q) + '". O item fica avulso (fora do catálogo); confira o preço.</div>';
+        lista.hidden = false; inp.setAttribute("aria-expanded", "true"); ativo = -1;
+        lista.querySelectorAll(".cm-sug-op").forEach(function (b) {
+          b.onmousedown = function (e) { e.preventDefault(); };
+          b.onclick = function () { var x = achados[+b.getAttribute("data-j")]; fechar(); Comercial_aplicarProduto_(k, x); };
+        });
+      }, function () { fechar(); }, { chave: "catalogoItem" });
+    };
+    inp.addEventListener("input", function () { clearTimeout(t); t = setTimeout(buscar, 300); });
+    inp.addEventListener("keydown", function (e) {
+      if (!lista || lista.hidden) return;
+      var n = lista.querySelectorAll(".cm-sug-op").length;
+      if (e.key === "ArrowDown" && n) { e.preventDefault(); marcar((ativo + 1) % n); }
+      else if (e.key === "ArrowUp" && n) { e.preventDefault(); marcar((ativo - 1 + n) % n); }
+      else if (e.key === "Enter" && ativo >= 0 && achados[ativo]) { e.preventDefault(); var x = achados[ativo]; fechar(); Comercial_aplicarProduto_(k, x); }
+      else if (e.key === "Escape") { e.preventDefault(); fechar(); }
+    });
+    inp.addEventListener("blur", function () { setTimeout(fechar, 150); });
   }
   function Comercial_num_(v) { var s = String(v == null ? "" : v).replace(/R\$|\s/g, ""); if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(",", "."); var n = Number(s); return isFinite(n) ? n : 0; }
   function Comercial_lerItens_() {
@@ -821,7 +887,14 @@
   function Comercial_totais_() {
     Comercial_lerItens_();
     var sub = 0, bruto = 0;
-    CM.itens.forEach(function (i) { var q = Comercial_num_(i.quantidade), pu = Comercial_num_(i.precoUnitario), pt = Number(i.precoTabela) || 0; sub += q * pu; bruto += q * Math.max(pu, pt || pu); });
+    CM.itens.forEach(function (i, k) {
+      var q = Comercial_num_(i.quantidade), pu = Comercial_num_(i.precoUnitario), pt = Number(i.precoTabela) || 0; sub += q * pu; bruto += q * Math.max(pu, pt || pu);
+      var dif = Com_$_("cmItDif" + k); if (!dif) return;
+      if (!i.produtoId || !(pt > 0) || Math.abs(pu - pt) < 0.005 || String(i.precoUnitario).trim() === "") { dif.textContent = ""; return; }
+      var pc = (pu - pt) / pt * 100;
+      dif.textContent = (pu < pt ? "Abaixo da tabela (" : "Acima da tabela (+") + pc.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%)" + (pu < pt ? ": conta como desconto" : "");
+      dif.style.color = pu < pt ? "var(--warning)" : "var(--muted)";
+    });
     var dg = Comercial_num_(Com_$_("cmPrDesc") ? Com_$_("cmPrDesc").value : 0), tot = sub - dg;
     var pct = bruto > 0 ? (bruto - tot) / bruto * 100 : 0;
     var el = Com_$_("cmPrTotais"); if (el) el.innerHTML = 'Subtotal ' + Com_esc_(Comercial_moeda_(sub)) + ' · desconto ' + Com_esc_(Comercial_moeda_(dg)) + ' · <b>total ' + Com_esc_(Comercial_moeda_(tot)) + '</b> · ' + pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + '% sobre a tabela (limite sem aprovação: ' + CM.ini.politica.descontoMaxPct + '%)';
@@ -871,7 +944,7 @@
       '<div class="cm-filtros" role="search"><div style="flex:2 1 260px"><label for="cmCatBusca">Buscar no catálogo</label><input id="cmCatBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria (ex.: fonte 9v, CRM-DF8F)" value="' + Com_esc_(f.busca) + '"></div>' +
       '<div><label for="cmCatTipo">Tipo</label><select id="cmCatTipo">' + Com_opcoes_(tipos, f.tipo, "Todos") + '</select></div>' +
       '<div><label for="cmCatCateg">Categoria</label><select id="cmCatCateg">' + Com_opcoes_(f.categoria ? [f.categoria] : [], f.categoria, "Todas") + '</select></div>' +
-      (gere ? '<div><label for="cmCatSit">Situação</label><select id="cmCatSit">' + Com_opcoes_([{ v: "TODOS", t: "Ativos e arquivados" }, { v: "ATIVOS", t: "Só ativos" }, { v: "ARQUIVADOS", t: "Só arquivados" }], f.situacao) + '</select></div>' : '') +
+      (gere ? '<div><label for="cmCatSit">Situação</label><select id="cmCatSit">' + Com_opcoes_([{ v: "TODOS", t: "Ativos e arquivados" }, { v: "ATIVOS", t: "Só ativos" }, { v: "ARQUIVADOS", t: "Só arquivados" }, { v: "DUPLICADOS", t: "Possíveis duplicados (mesmo nome)" }], f.situacao) + '</select></div>' : '') +
       '<div><button type="button" class="btn-secondary" id="cmCatLimpar">Limpar</button></div></div>' +
       '<p class="cm-meta" id="cmCatInfo" aria-live="polite"></p><div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
     if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
@@ -893,11 +966,12 @@
       var filtrando = !!(f.busca || f.tipo || f.categoria || (gere && f.situacao && f.situacao !== "TODOS"));
       var inf = Com_$_("cmCatInfo");
       if (inf) inf.textContent = !r.total ? "" : (filtrando ? (r.encontrados === 1 ? "1 item encontrado" : Number(r.encontrados).toLocaleString("pt-BR") + " itens encontrados") + " de " + Number(r.total).toLocaleString("pt-BR") + " no catálogo" : Number(r.total).toLocaleString("pt-BR") + " itens no catálogo") +
-        (r.limitado ? ". Mostrando os " + r.produtos.length + " mais parecidos com a busca; escreva mais uma palavra do nome ou o código para afinar." : (r.total ? "." : ""));
+        (r.limitado ? ". Mostrando os " + r.produtos.length + " mais parecidos com a busca; escreva mais uma palavra do nome ou o código para afinar." : (r.total ? "." : "")) +
+        (gere && r.duplicados && f.situacao !== "DUPLICADOS" ? " Atenção: " + r.duplicados + (r.duplicados === 1 ? " nome aparece" : " nomes aparecem") + " em mais de um item ativo (veja em Situação > Possíveis duplicados e arquive o que sobra)." : "");
       if (!r.total) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (gere ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
       if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum item' + (f.busca ? ' com "' + Com_esc_(f.busca) + '"' : '') + ' com estes filtros. A busca ignora acentos e maiúsculas, aceita parte das palavras e procura no código, no nome, na descrição e na categoria. Confira a grafia, mude o tipo ou a categoria, ou toque em "Limpar".' + (gere ? ' Se o item não existe, cadastre em "Novo item".' : '') + '</div>'; return; }
       alvo.innerHTML = '<table class="cm-tabela"><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Un.</th><th class="n">Preço</th>' + ((ini.gestao || ini.catalogo) ? '<th class="n">Custo</th><th></th>' : '') + '</tr></thead><tbody>' + r.produtos.map(function (p, k) {
-        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
+        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.duplicado ? ' <span class="cm-selo laranja" title="Outro item ativo tem o mesmo nome">mesmo nome de outro item</span>' : '') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + '</td>' +
           ((ini.gestao || ini.catalogo) ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td><td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button> <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button></td>' : '') + '</tr>';
       }).join("") + '</tbody></table>';
       alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
@@ -910,7 +984,8 @@
       '<div class="cm-grade2">' + Com_campo_("Código", '<input id="cmPdCod" maxlength="40" value="' + Com_esc_(p.codigo || "") + '">') + Com_campo_("Tipo", '<select id="cmPdTipo">' + Com_opcoes_(tipos, p.tipo) + '</select>') + '</div>' +
       Com_campo_("Nome", '<input id="cmPdNome" maxlength="200" value="' + Com_esc_(p.nome || "") + '">') + Com_campo_("Descrição (vai para a proposta)", '<textarea id="cmPdDesc" maxlength="2000">' + Com_esc_(p.descricao || "") + '</textarea>') +
       '<div class="cm-grade3">' + Com_campo_("Unidade", '<input id="cmPdUn" maxlength="20" value="' + Com_esc_(p.unidade || "un.") + '">') + Com_campo_("Preço de venda (R$)", '<input id="cmPdPreco" inputmode="decimal" value="' + Com_esc_(p.preco !== undefined ? String(p.preco).replace(".", ",") : "") + '">') +
-      Com_campo_("Custo (R$, opcional)", '<input id="cmPdCusto" inputmode="decimal" value="' + Com_esc_(p.custo !== null && p.custo !== undefined ? String(p.custo).replace(".", ",") : "") + '">', "Só a gestão vê; usado na margem") + '</div>' + Com_campo_("Categoria", '<input id="cmPdCat" maxlength="80" value="' + Com_esc_(p.categoria || "") + '">') + '<div id="cmPdMsg"></div>',
+      Com_campo_("Custo (R$, opcional)", '<input id="cmPdCusto" inputmode="decimal" value="' + Com_esc_(p.custo !== null && p.custo !== undefined ? String(p.custo).replace(".", ",") : "") + '">', "Só a gestão vê; usado na margem") + '</div>' + Com_campo_("Categoria", '<input id="cmPdCat" maxlength="80" value="' + Com_esc_(p.categoria || "") + '">') +
+      (p.id ? '<p class="cm-meta">' + (p.origem === "CRM" ? 'Item trazido do CRM antigo. ' : '') + (p.atualizadoPor ? 'Última alteração: ' + Com_esc_(p.atualizadoPor) + (p.atualizadoEm ? ' em ' + Com_esc_(p.atualizadoEm) : '') + '. ' : '') + 'O preço novo vale para as propostas montadas daqui em diante; as propostas já salvas guardam o preço de tabela da época.</p>' : '') + '<div id="cmPdMsg"></div>',
       '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Salvar</button>', 600);
     ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
     ov.querySelector('[data-x="ok"]').onclick = function () {
@@ -988,6 +1063,13 @@
     var pr = m.proposta;
     h += '<div class="cm-caixa"><h3>Modelo da proposta</h3><p class="cm-meta">Quando o modelo oficial da empresa chegar, os textos entram aqui. Valem para as propostas novas.</p>' + num("cmMVal", pr.validadeDias, "Validade padrão (dias)") + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
       '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC_" + k, pr.condicoes[k], 60)); }).join("") + '</div>' + Com_campo_("Responsabilidades", ta("cmMPResp", pr.responsabilidades, 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite", pr.textoAceite, 60)) + '</div>';
+    // 28/10/2026: termos e condições da contratação (cláusulas fixas do documento), versionados; só Diretoria e Administrador mudam
+    var tv = r.termos || {}, edT = ed && r.podeEditarTermos, disT = edT ? "" : " disabled";
+    h += '<div class="cm-caixa"><h3>Termos e condições da contratação</h3><p class="cm-meta">Vão fixos em toda proposta, na seção "Termos e condições da contratação", logo acima das assinaturas (texto justificado, uma cláusula por linha). ' +
+      'Versão em vigor: ' + Com_esc_(tv.versao || 1) + (tv.desde ? ' (desde ' + Com_esc_(tv.desde) + (tv.por ? ', ' + Com_esc_(tv.por) : '') + ')' : ' (texto padrão)') + '. Cada mudança do texto é uma versão nova; a proposta guarda a versão que estava em vigor quando o documento foi gerado, e mudar aqui não altera proposta já enviada.' +
+      (ed && !edT ? ' Só a Diretoria e o Administrador mudam estes textos.' : '') + '</p>' +
+      Com_campo_("Cláusulas (uma por linha)", '<textarea id="cmMPTermos"' + disT + ' style="min-height:260px">' + Com_esc_(pr.termos || "") + '</textarea>') +
+      Com_campo_("Frase de concordância (sai em negrito depois das cláusulas)", '<textarea id="cmMPTermosConc"' + disT + ' style="min-height:50px">' + Com_esc_(pr.termosConcordancia || "") + '</textarea>') + '</div>';
     var pv = m.posVenda;
     var pessoas = (r.equipeSgo || []).map(function (u) { return { v: u.id, t: u.nome }; });
     h += '<div class="cm-caixa"><h3>Pós-venda (passagem aos setores)</h3>' + Object.keys(CM.ini.setores).map(function (s) {
@@ -1020,11 +1102,12 @@
         Object.keys(m.modelosMensagem).forEach(function (k) { n.modelosMensagem[k] = v("cmMMsg_" + k); });
         n.politica.descontoMaxPct = Number(String(v("cmMDesc")).replace(",", ".")); n.politica.margemMinPct = Number(String(v("cmMMarg")).replace(",", ".")); n.politica.texto = v("cmMPolTxt");
         n.proposta.validadeDias = Number(v("cmMVal")); n.proposta.apresentacao = v("cmMPApr"); Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta.condicoes[k] = v("cmMPC_" + k); }); n.proposta.responsabilidades = v("cmMPResp"); n.proposta.textoAceite = v("cmMPAceite");
+        if (r.podeEditarTermos) { n.proposta.termos = v("cmMPTermos"); n.proposta.termosConcordancia = v("cmMPTermosConc"); }
         Object.keys(CM.ini.setores).forEach(function (s) { n.posVenda[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; n.posVenda[s].checklist = ls("cmMPVC_" + s); n.posVenda.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
         n.posVenda.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;
         n.gestores = Array.prototype.map.call(document.querySelectorAll("[data-gestor]:checked"), function (x) { return x.getAttribute("data-gestor"); });
         delete n.versao; delete n.atualizadaEm; delete n.atualizadaPor;
-        Com_chamar_("metodologia", { salvar: n, motivo: v("cmMMotivo") }, function (x) { CM.ini = null; Comercial_garantirInicio_(function () {}); Comercial_desenharMetodologia_(Object.assign(r, { metodologia: x.metodologia })); Com_msg_("cmMMsg", x.message, "ok"); }, function (e) { Com_msg_("cmMMsg", e); });
+        Com_chamar_("metodologia", { salvar: n, motivo: v("cmMMotivo") }, function (x) { CM.ini = null; Comercial_garantirInicio_(function () {}); Comercial_desenharMetodologia_(Object.assign(r, { metodologia: x.metodologia, termos: x.termos || r.termos })); Com_msg_("cmMMsg", x.message, "ok"); }, function (e) { Com_msg_("cmMMsg", e); });
       } catch (e) { Com_msg_("cmMMsg", "Não foi possível ler a metodologia da tela: " + (e && e.message ? e.message : e) + ". Confira o formato das linhas (campos separados por |)."); }
     };
   }

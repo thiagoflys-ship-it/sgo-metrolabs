@@ -155,7 +155,7 @@ test('proposta A4: salva em Comercial - Propostas/<CNPJ> (HTML e PDF), dados con
   assert.match(html, /11\.222\.333\/0001-81/);
   assert.match(html, /Coordenadora da CME/);
   assert.doesNotMatch(html, /FABRICANTE X/, 'fabricante do equipamento não vai para a proposta');
-  assert.doesNotMatch(html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' '), /[Cc]usto|[Mm]argem/, 'sem custo nem margem no texto');
+  assert.doesNotMatch(html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' '), /\b[Cc]usto\b|\b[Mm]argem\b/, 'sem custo nem margem no texto (os termos falam em "custos administrativos" e "custas judiciais", que não são o custo do item)');
   const reg = amb.tabelas.COM_PROPOSTAS.find((p) => p.ID === proposta.id);
   assert.equal(JSON.parse(reg.CONGELADO_JSON).cliente.razao, 'HOSPITAL TESTE ALFA LTDA');
   assert.equal(amb.ctx.EnviarDoc_raiz_([{ nome: '11222333000181' }, { nome: 'Comercial - Propostas' }]).classe, 'CLIENTE');

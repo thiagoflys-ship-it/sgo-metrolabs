@@ -694,8 +694,17 @@ function Chaves_modelosCadastrar_(eu) {
         itens.push({ nome: nome, resultado: 'ja_existe', texto: 'Já cadastrado (' + (CHV_STATUS_MODELO[st] || st || 'sem situação') + ').' });
         return;
       }
-      var corpo;
-      try { corpo = Notificar_corpoCadastroMeta_(nome); }
+      var corpo, extra = {};
+      // 28/10/2026: modelo com o PDF no cabeçalho (sgo_documento_cliente): a Meta pede um PDF de exemplo, enviado antes
+      if (NTF_MODELOS_META[nome].cabecalho === 'DOCUMENT') {
+        try { extra.handleExemplo = Chaves_metaHandleExemplo_(cred); }
+        catch (e) {
+          itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: o modelo leva o PDF no cabeçalho e o envio do PDF de exemplo à Meta falhou (' + Notificar_limparSegredos_(e && e.message, [cred.token]) +
+            '). O que fazer: grave META_WA_APP_ID (identificação do aplicativo da Meta) e clique de novo, ou cadastre pelo Gerenciador do WhatsApp com o texto de MODELOS_WHATSAPP_META.md (cabeçalho Documento, categoria Utilidade, pt_BR).' });
+          return;
+        }
+      }
+      try { corpo = Notificar_corpoCadastroMeta_(nome, extra); }
       catch (e) { itens.push({ nome: nome, resultado: 'erro', texto: String(e.message) + ' Avise o suporte do SGO+.' }); return; }
       var r;
       try { r = Chaves_chamarMeta_(cred, Chaves_urlGraph_(encodeURIComponent(cred.wabaId) + '/message_templates'), 'post', corpo); }
@@ -732,6 +741,47 @@ function Chaves_modelosCadastrar_(eu) {
         (falhou ? ', ' + falhou + ' com erro (veja abaixo).' : '. A aprovação sai em minutos ou até 24 h; acompanhe em "Situação dos modelos".')
     };
   }
+}
+
+/** PDF de uma página, só texto ASCII (exemplo do cabeçalho DOCUMENT no cadastro do modelo). */
+function Chaves_pdfExemplo_() {
+  var cont = 'BT /F1 16 Tf 72 760 Td (Metrolabs - documento de exemplo) Tj ET';
+  var objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length ' + cont.length + ' >>\nstream\n' + cont + '\nendstream', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  var s = '%PDF-1.4\n', pos = [];
+  objs.forEach(function (o, i) { pos.push(s.length); s += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  var xref = s.length;
+  s += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + pos.map(function (p) { return ('0000000000' + p).slice(-10) + ' 00000 n \n'; }).join('');
+  s += 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
+  return s;
+}
+
+/**
+ * 28/10/2026: "handle" de um PDF de exemplo pela Resumable Upload API da Meta (exigido no cadastro de modelo com cabeçalho
+ * DOCUMENT): app id (META_WA_APP_ID ou debug_token do próprio token) -> sessão de upload -> envio do arquivo -> { h }.
+ * Lança erro com o motivo (sem o token).
+ */
+function Chaves_metaHandleExemplo_(cred) {
+  var app = String(PropertiesService.getScriptProperties().getProperty('META_WA_APP_ID') || '').replace(/\D/g, '');
+  if (!app) {
+    var d = Chaves_chamarMeta_(cred, Chaves_urlGraph_('debug_token?input_token=' + encodeURIComponent(cred.token)), 'get', null);
+    app = String((d.j && d.j.data && d.j.data.app_id) || '').replace(/\D/g, '');
+    if (!app) throw new Error('não foi possível descobrir o aplicativo da Meta pelo token (HTTP ' + d.http + ')');
+  }
+  var pdf = Chaves_pdfExemplo_();
+  var s = Chaves_chamarMeta_(cred, Chaves_urlGraph_(app + '/uploads?file_name=exemplo_documento.pdf&file_length=' + pdf.length + '&file_type=application%2Fpdf'), 'post', null);
+  var sessao = String((s.j && s.j.id) || '');
+  if (!/^upload:/.test(sessao)) throw new Error('a Meta não abriu o envio do exemplo (HTTP ' + s.http + (s.j && s.j.error ? ': ' + String(s.j.error.message || '').slice(0, 160) : '') + ')');
+  var r;
+  try {
+    r = UrlFetchApp.fetch('https://graph.facebook.com/' + NTF_META_VERSAO + '/' + sessao, { method: 'post', muteHttpExceptions: true, contentType: 'application/pdf',
+      headers: { Authorization: 'OAuth ' + cred.token, file_offset: '0' }, payload: Utilities.newBlob(pdf, 'application/pdf', 'exemplo_documento.pdf').getBytes() });
+  } catch (e) { throw new Error('sem resposta da Meta no envio do exemplo (' + Chaves_semSegredos_(e && e.message, [cred.token]) + ')'); }
+  var j = null;
+  try { j = JSON.parse(String(r.getContentText() || '')); } catch (e) {}
+  if (!(j && j.h)) throw new Error('a Meta não devolveu o exemplo (HTTP ' + r.getResponseCode() + (j && j.error ? ': ' + String(j.error.message || '').slice(0, 160) : '') + ')');
+  return String(j.h);
 }
 
 /** 26/10/2026: "Situação dos modelos" sem sessão do navegador (script do servidor); guarda a situação como o botão. */

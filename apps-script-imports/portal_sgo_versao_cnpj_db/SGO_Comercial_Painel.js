@@ -327,10 +327,16 @@ function Com_metodologiaTela_(eu, d) {
     Com_exigir_(eu, 'GESTAO', 'salvar a metodologia');
     var motivo = Com_texto_(d.motivo, 500);
     if (motivo.length < 10) throw new Error('Não foi possível salvar: escreva o que mudou e por quê (pelo menos 10 letras). Cada versão fica no histórico');
+    // 28/10/2026: termos e condições da contratação são cláusulas de contrato: só a Diretoria e o Administrador mudam
+    var atualP = Com_metodologia_().proposta, novoP = (d.salvar && d.salvar.proposta) || {};
+    var normT = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
+    var mexeu = ['termos', 'termosConcordancia'].some(function (k) { return novoP[k] !== undefined && normT(novoP[k]) !== normT(atualP[k]); });
+    if (mexeu && !(eu.diretoria || eu.perfil === 'ADMIN')) throw new Error('Não foi possível salvar: os termos e condições da contratação (cláusulas do contrato) só são alterados pela Diretoria ou pelo Administrador. Desfaça a mudança nesses textos (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria');
     var v = Com_comTrava_(function () { Com_garantirAbas_(); return Com_gravarMetodologia_(d.salvar, eu, motivo); });
-    return { metodologia: Com_metodologia_(), message: 'Metodologia salva (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.' };
+    return { metodologia: Com_metodologia_(), termos: Com_termosVigentes_(), message: 'Metodologia salva (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.' };
   }
-  var r = { metodologia: Com_metodologia_(), podeEditar: eu.gestao, padrao: eu.gestao ? COM_METODOLOGIA_PADRAO : null };
+  var r = { metodologia: Com_metodologia_(), podeEditar: eu.gestao, padrao: eu.gestao ? COM_METODOLOGIA_PADRAO : null,
+    podeEditarTermos: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')), termos: Com_termosVigentes_() };
   if (eu.gestao) {
     r.aprendizado = ComG_aprendizado_();
     r.versoes = Com_ler_(COM_ABAS.CONFIG).filter(function (c) { return Com_s_(c.CHAVE) === 'METODOLOGIA'; }).map(function (c) { return { versao: Number(c.VERSAO), em: Com_br_(c.ATUALIZADO_EM), por: Com_s_(c.ATUALIZADO_POR_NOME), motivo: Com_s_(c.MOTIVO) }; })
