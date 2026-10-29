@@ -419,9 +419,13 @@
     }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
   }
 
+  // 29/10/2026: relatórios da empresa (SGO_Gestao_RelatoriosEmpresa.js): quem recebe, ligar/desligar e envio de teste
   function Gestao_desenharRelatorios_() {
-    var c = document.getElementById("gdDesCorpo");
-    c.innerHTML = '<div class="gd-vazio">Carregando a lista...</div>';
+    var corpo = document.getElementById("gdDesCorpo");
+    corpo.innerHTML = '<div id="gdEmpresa"><div class="gd-vazio">Carregando os relatórios da empresa...</div></div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Relatórios gerados pela rotina</h3><div id="gdRelLista"><div class="gd-vazio">Carregando a lista...</div></div></div>';
+    Gestao_carregarRelEmpresa_();
+    var c = document.getElementById("gdRelLista");
     Gestao_chamar_("Gestao_apiRelatoriosGerados", {}, function (res) {
       if (!res.itens.length) { c.innerHTML = '<div class="gd-vazio">Os relatórios automáticos aparecem aqui depois do primeiro dia útil da semana (semanal) e do mês (mensais).</div>'; return; }
       c.innerHTML = '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Relatório</th><th>Gerado em</th><th>Situação</th><th></th></tr></thead><tbody>' + res.itens.map(function (r) {
@@ -429,6 +433,63 @@
           (r.link && /^https?:\/\//i.test(r.link) ? '<a href="' + Gestao_esc_(r.link) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + '</td></tr>';
       }).join("") + '</tbody></table></div>';
     }, function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_carregarRelEmpresa_(payload, aviso) {
+    var c = document.getElementById("gdEmpresa");
+    if (!c) return;
+    Gestao_chamar_("Gestao_apiRelatoriosEmpresa", payload || {}, function (res) {
+      GD.relEmp = res;
+      Gestao_desenharRelEmpresa_(res.message || aviso || "", "ok");
+    }, function (m) {
+      if (GD.relEmp && payload && payload.salvar) { Gestao_desenharRelEmpresa_(m, "erro"); return; }
+      c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>';
+    }, payload && payload.salvar ? { carregando: "Salvando a lista" } : {});
+  }
+
+  function Gestao_desenharRelEmpresa_(msg, tipoMsg) {
+    var r = GD.relEmp, c = document.getElementById("gdEmpresa");
+    if (!r || !c) return;
+    var dis = r.podeConfigurar ? "" : " disabled";
+    var pessoa = function (p) {
+      return '<label><input type="checkbox" class="gdEmpDest" value="' + Gestao_esc_(p.id) + '"' + (p.marcado ? " checked" : "") + dis + '> ' + Gestao_esc_(p.nome) +
+        ' <span class="gd-meta">(' + Gestao_esc_(p.perfil) + (p.area ? ", " + Gestao_esc_(p.area) : "") + (p.diretoria ? ", Diretoria" : p.veNomes ? ", vê nomes da Conduta" : "") + ')</span></label>';
+    };
+    var hist = (r.historico || []).slice(0, 25);
+    c.innerHTML = '<div class="gd-caixa"><h3>Relatórios da empresa</h3>' +
+      '<p class="gd-txt">No primeiro dia útil da semana (a partir das ' + Gestao_esc_(r.hora) + ') e no primeiro dia útil do mês, o SGO+ gera sozinho os relatórios e manda um e-mail só para cada pessoa da lista. ' +
+      'Semanal: gestão, Programa de conduta (equipe e missões), Frota, Comercial e SEDNA da semana anterior. Mensal: Saúde da empresa (primeira página), os mensais da gestão e o fechamento do Programa de conduta. ' +
+      'O e-mail sai quando tudo fica pronto ou às ' + Gestao_esc_(r.horaLimite) + ', com o que ficou pronto e o motivo do resto.</p>' +
+      '<p class="gd-meta">Próximo pacote semanal: ' + Gestao_esc_(r.proximoSemanal || "—") + '. Próximo mensal: ' + Gestao_esc_(r.proximoMensal || "—") + '. Relatório com nomes do Programa de conduta vai só para quem vê o envolvido (Diretoria e Gestor de Qualidade); a avaliação dos gestores, só para a Diretoria.</p>' +
+      (msg ? '<div class="gd-msg ' + (tipoMsg === "erro" ? "erro" : "ok") + '">' + Gestao_esc_(msg) + '</div>' : '') +
+      '<div class="gd-linha"><label for="gdEmpLigado">Enviar os relatórios da empresa em e-mail próprio (desligado: os links voltam ao e-mail diário da Diretoria)</label><input type="checkbox" id="gdEmpLigado"' + (r.ligado ? " checked" : "") + dis + '></div>' +
+      '<label class="gd-meta" style="display:block;margin:8px 0 4px;font-weight:700">Quem recebe os relatórios da empresa' + (r.padrao ? " (padrão: Diretoria e gestor da Qualidade)" : "") + '</label>' +
+      '<div class="gd-checks">' + (r.candidatos || []).map(pessoa).join("") + '</div>' +
+      (r.atualizadoPor ? '<p class="gd-meta">Última alteração: ' + Gestao_esc_(r.atualizadoPor) + ' em ' + Gestao_esc_(r.atualizadoEm) + '.</p>' : '') +
+      (r.podeConfigurar ? '<div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_salvarRelEmpresa_(false)">Salvar lista</button><button type="button" class="btn-secondary" onclick="Gestao_salvarRelEmpresa_(true)">Voltar ao padrão</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_testeRelEmpresa_(\'semanal\')">Gerar e enviar agora (teste): semanal</button><button type="button" class="btn-secondary" onclick="Gestao_testeRelEmpresa_(\'mensal\')">Gerar e enviar agora (teste): mensal</button></div>' +
+        '<p class="gd-meta">O teste gera o que ainda falta e manda o pacote só para você (pode levar alguns minutos). Não conta como envio do pacote de verdade.</p>'
+        : '<p class="gd-meta">Só a Diretoria e o Administrador mudam a lista.</p>') +
+      '<div id="gdEmpSt"></div>' +
+      (hist.length ? '<div class="gd-tabela-rolar" style="margin-top:10px"><table class="gd-tabela"><thead><tr><th>Dia</th><th>Pacote</th><th>O quê</th><th>Situação</th><th></th></tr></thead><tbody>' + hist.map(function (h) {
+        return '<tr><td>' + Gestao_esc_(h.dia) + '</td><td>' + Gestao_esc_(h.referencia) + '</td><td>' + Gestao_esc_(h.tipo) + ': ' + Gestao_esc_(h.nome) + (h.motivo && h.situacao !== "OK" ? '<div class="gd-meta">' + Gestao_esc_(h.motivo) + '</div>' : '') + '</td><td>' +
+          Gestao_esc_(h.situacao === "OK" ? "Feito" : h.situacao === "SEM_DADO" ? "Sem dado" : h.situacao === "PULADO" ? "Não saiu" : "Falhou") + '</td><td>' +
+          (h.link && /^https?:\/\//i.test(h.link) ? '<a href="' + Gestao_esc_(h.link) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>' : '<p class="gd-meta">Nenhum pacote gerado ainda.</p>') + '</div>';
+  }
+
+  function Gestao_salvarRelEmpresa_(padrao) {
+    var ids = Array.prototype.slice.call(document.querySelectorAll(".gdEmpDest")).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+    var ligado = !!(document.getElementById("gdEmpLigado") || {}).checked;
+    Gestao_carregarRelEmpresa_({ salvar: { ligado: ligado, destinatarios: padrao ? [] : ids, padrao: !!padrao } });
+  }
+
+  function Gestao_testeRelEmpresa_(tipo) {
+    var st = document.getElementById("gdEmpSt");
+    if (st) st.innerHTML = '<div class="gd-msg ok">Gerando e enviando o pacote de teste. Pode levar alguns minutos; não feche a tela.</div>';
+    Gestao_chamar_("Gestao_apiRelatoriosEmpresaTeste", { tipo: tipo }, function (res) {
+      Gestao_carregarRelEmpresa_(null, res.message);
+    }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Gerando o pacote de teste" });
   }
 
   function Gestao_gerarRelatorio_(tipo, gestorId) {

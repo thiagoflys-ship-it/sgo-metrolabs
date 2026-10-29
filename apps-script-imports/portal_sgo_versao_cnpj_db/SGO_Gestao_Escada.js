@@ -40,6 +40,13 @@
  * Cada envio continua registrado em GES_ENVIOS (EMAIL_GESTOR, EMAIL_DIRETORIA,
  * WHATS_GESTOR), para a escada e a avaliação do gestor. Ges_emailsDiarios_ e
  * Gestao_whatsDiario_ ficam como reserva quando a matriz não está carregada.
+ *
+ * RELATÓRIOS DA EMPRESA (29/10/2026, SGO_Gestao_RelatoriosEmpresa.js): com o envio
+ * ligado, os relatórios dos itens 5 e 6 (e os novos da semana e do mês, com a
+ * "Saúde da empresa") vão num e-mail próprio para a lista "Quem recebe os
+ * relatórios da empresa". O e-mail diário da Diretoria deixa de levar os links
+ * (diz só que o pacote vai à parte) e não espera mais a hora-limite: o mesmo
+ * relatório nunca chega duas vezes à mesma pessoa no mesmo dia.
  ****************************************************/
 
 var GES_FUNCAO_ROTINA = 'Gestao_rotinaDecisoes';
@@ -92,6 +99,8 @@ function Ges_rodada_(quando) {
   if (cfg.automacoes.cnhCondutor) passo('cnh', function () { return Ges_autoCnhCondutor_(ex); });
   if (cfg.escada.mensal && cfg.automacoes.relatoriosMensais) passo('mensal', function () { return Ges_relatoriosMensais_(ex); });
   if (cfg.escada.semanal) passo('semanal', function () { return Ges_relatorioSemanalDoDia_(ex); });
+  // 29/10/2026: pacote semanal e mensal dos relatórios da empresa (um relatório por rodada; e-mail próprio aos destinatários)
+  if (typeof RelEmp_rodada_ === 'function') passo('empresa', function () { return RelEmp_rodada_(ex); });
   // 21/10/2026: resumo do dia único (matriz de avisos) no lugar do e-mail diário e do WhatsApp da gestão
   if (typeof SGO_resumoDiaRodada_ === 'function') { passo('resumoDia', function () { return SGO_resumoDiaRodada_(quando); }); return r; }
   if (cfg.escada.emailDiario) passo('emails', function () { return Ges_emailsDiarios_(ex); });
@@ -211,6 +220,7 @@ function Ges_textoDiretoria_(cx, ex, relatorios) {
   }
   (relatorios || []).forEach(function (r, k) {
     if (!k) linhas.push('RELATÓRIOS');
+    if (r.nota) { linhas.push('- ' + r.nome + ': ' + r.aviso); return; }
     linhas.push('- ' + r.nome + (r.link ? ': ' + r.link : ' (veja em Desempenho da gestão > Relatórios)') + (r.aviso ? ' — ' + r.aviso : ''));
   });
   if (!linhas.length) return null;
@@ -362,6 +372,12 @@ function Ges_relatorioComprasMes_(comp) {
 /** Relatórios que o e-mail da Diretoria de hoje leva: { lista: [{nome, link, aviso}], pendente }. */
 function Ges_relatoriosDoDia_(envios, dia, cfgExp) {
   var cfg = Ges_cfg_(), lista = [], pendente = false;
+  // 29/10/2026: com os relatórios da empresa ligados, os links vão no e-mail próprio do pacote (nunca duas vezes no mesmo dia)
+  if (typeof RelEmp_notaDoDia_ === 'function') {
+    var nota = null;
+    try { nota = RelEmp_notaDoDia_(dia, cfgExp); } catch (eN) { nota = null; }
+    if (nota) return { lista: nota.dia ? [nota] : [], pendente: false, pacote: true };
+  }
   if (cfg.escada.semanal && Ges_ehDiaDoSemanal_(dia, cfgExp)) {
     var s = envios.filter(function (e) { return Ges_up_(e.TIPO) === 'SEMANAL' && Ges_s_(e.DIA).slice(0, 10) === dia; })[0];
     if (s) lista.push({ nome: 'Relatório semanal da gestão', link: Ges_s_(s.LINK), aviso: Ges_up_(s.SITUACAO) === 'OK' ? '' : Ges_s_(s.MOTIVO) });
@@ -383,10 +399,16 @@ function Ges_relatorioSemanalDoDia_(ex) {
   if (ex.hora < cfg.escada.horaSemanal || !Ges_ehDiaDoSemanal_(ex.dia, cfgExp)) return { fora: 'não é a hora do semanal' };
   var envios = Ges_envios_();
   if (envios.some(function (e) { return Ges_up_(e.TIPO) === 'SEMANAL' && Ges_s_(e.DIA).slice(0, 10) === ex.dia; })) return { feito: true };
+  var g = Ges_gerarSemanal_(ex.dia);
+  return { gerado: !!g.salvo };
+}
+
+/** Gera o relatório semanal da gestão (semana anterior à do dia) e registra em GES_ENVIOS (TIPO SEMANAL). Também usado pelo pacote da empresa. */
+function Ges_gerarSemanal_(dia) {
   var g = { salvo: false, aviso: 'relatório semanal indisponível' };
   try { g = Ges_relatorioSemanal_({ nome: 'Rotina automática' }); } catch (e) { g = { salvo: false, aviso: String((e && e.message) || e) }; }
-  Ges_registrarEnvio_({ tipo: 'SEMANAL', uid: '', nome: 'Diretoria', dia: ex.dia, ref: 'semana de ' + Ges_brDia_(ex.dia), situacao: g.salvo ? 'OK' : 'ERRO', motivo: g.aviso || '', link: g.link || '' });
-  return { gerado: !!g.salvo };
+  Ges_registrarEnvio_({ tipo: 'SEMANAL', uid: '', nome: 'Diretoria', dia: dia, ref: 'semana de ' + Ges_brDia_(dia), situacao: g.salvo ? 'OK' : 'ERRO', motivo: g.aviso || '', link: g.link || '' });
+  return g;
 }
 
 /** Um relatório por rodada (a geração de PDF é demorada); o e-mail da Diretoria sai quando todos ficaram prontos. */
@@ -396,18 +418,28 @@ function Ges_relatoriosMensais_(ex) {
   var comp = Ges_competenciaAnterior_(ex.dia), envios = Ges_envios_();
   var falta = Ges_relatoriosMensaisLista_().filter(function (rel) { return !envios.some(function (e) { return Ges_up_(e.TIPO) === 'MENSAL' && Ges_s_(e.REFERENCIA) === comp + '|' + rel[0]; }); })[0];
   if (!falta) return { feito: true };
+  var g = Ges_gerarMensal_(comp, falta[0], ex.dia);
+  return { gerado: falta[0], salvo: !!(g && g.salvo) };
+}
+
+/**
+ * Gera um relatório mensal da lista (chave GESTAO, FROTA, CONDUTA, COMERCIAL, COMPRAS, ASSISTENCIA ou ATIVIDADES) e registra
+ * em GES_ENVIOS (TIPO MENSAL, referência "competência|chave"). Usado pela rotina e pelo pacote dos relatórios da empresa,
+ * então o mesmo relatório nunca é gerado duas vezes no mês.
+ */
+function Ges_gerarMensal_(comp, chave, dia) {
   var g;
   try {
-    if (falta[0] === 'GESTAO') { Ges_congelarAvaliacoes_(comp); try { Ges_sugestoesConduta_(comp); } catch (eS) { console.error('Gestão, sugestão ao Programa de conduta: ' + ((eS && eS.message) || eS)); } g = Ges_relatorioDesempenho_(comp, { nome: 'Rotina automática' }); }
-    else if (falta[0] === 'FROTA') g = Ges_relatorioFrotaMes_(comp);
-    else if (falta[0] === 'CONDUTA') g = Ges_relatorioCondutaMes_(comp);
-    else if (falta[0] === 'COMERCIAL') g = typeof Comercial_relatorioMes_ === 'function' ? Comercial_relatorioMes_(comp, 'Rotina automática') : { salvo: false, aviso: 'Comercial indisponível' };
-    else if (falta[0] === 'COMPRAS') g = Ges_relatorioComprasMes_(comp);
-    else if (falta[0] === 'ASSISTENCIA') g = Assistencia_relatorioMesParaGestao_(comp);
+    if (chave === 'GESTAO') { Ges_congelarAvaliacoes_(comp); try { Ges_sugestoesConduta_(comp); } catch (eS) { console.error('Gestão, sugestão ao Programa de conduta: ' + ((eS && eS.message) || eS)); } g = Ges_relatorioDesempenho_(comp, { nome: 'Rotina automática' }); }
+    else if (chave === 'FROTA') g = Ges_relatorioFrotaMes_(comp);
+    else if (chave === 'CONDUTA') g = Ges_relatorioCondutaMes_(comp);
+    else if (chave === 'COMERCIAL') g = typeof Comercial_relatorioMes_ === 'function' ? Comercial_relatorioMes_(comp, 'Rotina automática') : { salvo: false, aviso: 'Comercial indisponível' };
+    else if (chave === 'COMPRAS') g = Ges_relatorioComprasMes_(comp);
+    else if (chave === 'ASSISTENCIA') g = Assistencia_relatorioMesParaGestao_(comp);
     else g = Ges_relatorioAtividades_(comp, { nome: 'Rotina automática' });
   } catch (e) { g = { salvo: false, aviso: String((e && e.message) || e).slice(0, 300) }; }
-  Ges_registrarEnvio_({ tipo: 'MENSAL', uid: '', nome: 'Diretoria', dia: ex.dia, ref: comp + '|' + falta[0], situacao: g && g.salvo ? 'OK' : 'ERRO', motivo: (g && g.aviso) || '', link: (g && g.link) || '' });
-  return { gerado: falta[0], salvo: !!(g && g.salvo) };
+  Ges_registrarEnvio_({ tipo: 'MENSAL', uid: '', nome: 'Diretoria', dia: dia || Ges_hoje_(), ref: comp + '|' + chave, situacao: g && g.salvo ? 'OK' : 'ERRO', motivo: (g && g.aviso) || '', link: (g && g.link) || '' });
+  return g || { salvo: false };
 }
 
 /** Frota do mês (relatório geral do módulo, sem sessão). */

@@ -106,7 +106,8 @@ function SGO_ajudaTelas_Gestao_() {
       passos: [
         { titulo: 'Ver a avaliação', itens: ['Toque em "Desempenho da gestão" no menu (grupo Gestão).', 'Escolha o mês.', 'Leia a nota, o farol e cada indicador. A barra embaixo de cada indicador é a nota daquele componente.'] },
         { titulo: 'Gerar o relatório A4', itens: ['Gestor: toque em "Gerar meu relatório A4".', 'Diretoria: toque em "Gerar relatório A4 do mês" (todos ou o gestor escolhido em "Gestor").', 'A cópia em PDF e HTML fica guardada na pasta "Gestão - Relatórios".'] },
-        { titulo: 'Mudar os pesos (Diretoria)', itens: ['Abra a aba "Regra da nota".', 'Ajuste os pesos e as faixas do farol.', 'Toque em "Salvar pesos". O mês em curso usa os pesos novos; meses fechados não mudam.'] }
+        { titulo: 'Mudar os pesos (Diretoria)', itens: ['Abra a aba "Regra da nota".', 'Ajuste os pesos e as faixas do farol.', 'Toque em "Salvar pesos". O mês em curso usa os pesos novos; meses fechados não mudam.'] },
+        { titulo: 'Relatórios da empresa (Diretoria)', itens: ['Abra a aba "Relatórios". O bloco "Relatórios da empresa" mostra quem recebe, os próximos envios e o histórico.', 'Marque quem recebe e toque em "Salvar lista". "Voltar ao padrão" deixa a Diretoria e o gestor da Qualidade.', 'No primeiro dia útil da semana, a partir das 08:00, sai um e-mail com os relatórios da semana anterior: gestão, Programa de conduta (equipe e missões), Frota, Comercial e SEDNA. No primeiro dia útil do mês sai o pacote do mês anterior, que começa pela "Saúde da empresa".', 'O e-mail sai quando tudo fica pronto ou às 10:30, com o que ficou pronto e o motivo do que faltou.', 'Para conferir sem esperar, toque em "Gerar e enviar agora (teste)": o pacote vai só para você.'] }
       ],
       cores: [
         { nome: 'Farol verde', significado: 'Nota a partir de 85 (padrão).' },
@@ -120,12 +121,14 @@ function SGO_ajudaTelas_Gestao_() {
       ],
       quemPode: [
         { perfil: 'GESTOR', pode: 'Ver e imprimir a própria avaliação.' },
-        { perfil: 'DIRETORIA', pode: 'Ver todos os gestores, gerar os relatórios, ver os relatórios automáticos e mudar os pesos.' },
+        { perfil: 'DIRETORIA', pode: 'Ver todos os gestores, gerar os relatórios, ver os relatórios automáticos, mudar os pesos e definir quem recebe os relatórios da empresa.' },
         { perfil: 'ADMIN', pode: 'Ver a própria avaliação se responder por uma área. O dono do sistema vê como Diretoria.' }
       ],
       perguntas: [
         { p: 'A nota pune quem recebe muitos itens?', r: 'Não diretamente: o prazo é medido em percentual e o tempo é a média. O que tira nota é decidir fora do prazo, deixar vencer, deixar chegar à Diretoria e ficar sem acessar.' },
-        { p: 'Registrar providência conta como decisão?', r: 'Conta como primeira ação. Depois, o item precisa ser resolvido na tela de origem; se ficar parado de novo, volta a subir a escada.' }
+        { p: 'Registrar providência conta como decisão?', r: 'Conta como primeira ação. Depois, o item precisa ser resolvido na tela de origem; se ficar parado de novo, volta a subir a escada.' },
+        { p: 'Por que alguém da lista não recebeu um dos relatórios da empresa?', r: 'Cada relatório segue a regra de acesso da tela: o que traz nomes do Programa de conduta vai só para a Diretoria e o Gestor de Qualidade, e a avaliação dos gestores (Desempenho e Semanal da gestão) só para a Diretoria. O e-mail diz o que não foi e por quê.' },
+        { p: 'Como é calculado o índice da "Saúde da empresa"?', r: 'De 0 a 100, por área: média das decisões da Caixa tomadas no prazo e das atividades concluídas no prazo no mês. O Programa de conduta entra com o índice de conduta do mês. O índice geral é a média das linhas com dado. Área sem dado aparece como "sem dado" (não vale zero). A regra completa vai no próprio documento.' }
       ]
     }
   };

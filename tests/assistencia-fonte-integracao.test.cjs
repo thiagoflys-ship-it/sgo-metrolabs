@@ -58,7 +58,8 @@ test('Vínculos, Frota, Início, ficha do equipamento e e-mail mensal: ligados �
   assert.match(ler('SGO_Qualidade_Auvo.js'), /fonteUnica \? SGO_Atendimentos_linhas_\(\) : SGO_DATA\.getAll\(aba\)/);
   const g = ler('SGO_Gestao_Escada.js');
   assert.match(g, /\['ASSISTENCIA', 'Assistência técnica'\]/);
-  assert.match(g, /falta\[0\] === 'ASSISTENCIA'\) g = Assistencia_relatorioMesParaGestao_\(comp\)/);
+  // 29/10/2026: a geração de cada mensal passou para Ges_gerarMensal_ (também usada pelo pacote dos relatórios da empresa)
+  assert.match(g, /chave === 'ASSISTENCIA'\) g = Assistencia_relatorioMesParaGestao_\(comp\)/);
   assert.match(ler('SGO_Comercial_Propostas.js'), /s === 'TECNICA' && typeof Assistencia_doPedidoComercial_ === 'function'/);
 });
 
