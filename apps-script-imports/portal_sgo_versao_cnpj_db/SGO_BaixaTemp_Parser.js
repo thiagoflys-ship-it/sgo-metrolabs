@@ -192,6 +192,8 @@ function BaixaTempParser_unidadePressao_(nome) {
 function BaixaTempParser_papelPorNome_(nome) {
   var n = BaixaTempParser_norm_(nome);
   if (!n) return '';
+  // 29/10/2026: número da linha do registrador ("Não." no arquivo do datalogger, "Nº", "Item"...) não é sensor.
+  if (/^(n|no|nao|n[º°o]|num|numero|item|indice|index|seq|sequencia|#|id|registro|reg|amostra|linha|record)\.?$/.test(n)) return 'IGNORAR';
   if (/data.?(e|\/|_|-)?.?hora|date.?time|timestamp|data hora/.test(n)) return 'DATAHORA';
   if (/decorrid|elapsed|tempo\s*\((s|seg|min)|^seg(undos)?$|^tempo \(s\)$/.test(n)) return 'DECORRIDO';
   if (/^(data|date|dia)\b/.test(n)) return 'DATA';

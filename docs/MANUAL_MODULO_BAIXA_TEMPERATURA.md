@@ -72,7 +72,7 @@ Planilha (XLSX, XLS, ODS, Planilha Google: primeira aba) e texto (CSV, TXT, TSV,
 
 ### 5.2 Prévia e colunas
 
-O sistema propõe o papel de cada coluna pelo cabeçalho (Data, Hora, T1, ST-01, Pressão...). Corrija na prévia quando precisar e toque em "Ler de novo com as colunas abaixo". Linhas sem horário ou sem temperatura válida, horários repetidos e leituras fora de ordem são tratados e informados nos avisos.
+O sistema propõe o papel de cada coluna pelo cabeçalho (Data, Hora, T1, ST-01, Pressão...). A coluna com o número da linha do registrador ("Não.", "Nº", "Item") fica como "Ignorar" e não vira sensor. Corrija na prévia quando precisar e toque em "Ler de novo com as colunas abaixo". Linhas sem horário ou sem temperatura válida, horários repetidos e leituras fora de ordem são tratados e informados nos avisos.
 
 ### 5.3 Um arquivo por sensor
 

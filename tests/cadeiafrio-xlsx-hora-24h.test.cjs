@@ -118,3 +118,37 @@ test('aba no mesmo período com uma leitura diferente continua recusada', () => 
   const env = ambienteComAbas([abaMin('ENSAIO 24H', T0, 1497, temp), abaMin('PORTA ABERTA', PORTA, 31, d => (d.getMinutes() === 40 ? '9.9' : temp(d)))]);
   assert.throws(() => env.fn('CadeiaFrioRel_cfExecutarAnaliseCompleta_')(payload()), /"ENSAIO 24H".*"PORTA ABERTA".*mesmo período/);
 });
+
+// Arquivo do datalogger de um sensor (29/10/2026, modelo mais usado pela equipe): uma aba "Lista", colunas
+// "Não." (número da linha) | "Tempo" (texto aaaa-mm-dd hh:mm:ss) | "Temperatura°C" (texto com vírgula), nome .xls com XLSX dentro.
+function matrizDatalogger(n) {
+  const m = [['Não.', 'Tempo', 'Temperatura°C']], t0 = Date.UTC(2026, 8, 15, 15, 21, 43);
+  for (let k = 0; k < n; k++) {
+    const d = new Date(t0 + k * 60000);
+    m.push([String(k + 1), d.toISOString().slice(0, 10) + ' ' + d.toISOString().slice(11, 19), (18.9 + (k % 9) / 10).toFixed(1).replace('.', ',')]);
+  }
+  return m;
+}
+const L = require('./_lavadora_ambiente.cjs');
+const A = require('./_autoclave_ambiente.cjs');
+const B = require('./_baixatemp_ambiente.cjs');
+
+test('datalogger de um sensor (Não. | Tempo | Temperatura°C): todos os módulos leem a temperatura e não usam o número da linha', () => {
+  const m = matrizDatalogger(200);
+  const conferir = (nome, l) => {
+    assert.equal(l.length, 200, nome);
+    assert.equal(l[0].tempoStr, '15/09/2026 15:21:43', nome);
+    assert.equal(JSON.stringify(l[0].temperaturas), '[18.9]', nome);
+    assert.equal(l[199].tempoStr, '15/09/2026 18:40:43', nome);
+  };
+  conferir('Cadeia de frio', C.criarAmbiente().fn('CadeiaFrioRel_normalizarMatrizParaAnalise')(m, m, 1, 'AUTO'));
+  conferir('Estufa/Banho-maria', E.criarAmbiente().fn('EstufaBanhoRel_normalizarMatrizParaAnalise')(m, m, 1, 'AUTO'));
+  conferir('Autoclave', A.criarAmbiente().fn('AutoRel_normalizarMatrizParaAnalise')(m, m, 1, 'AUTO'));
+  conferir('Lavadora', L.criarAmbiente().fn('LavRel_normalizarMatrizParaAnalise')(m, m, 1, 'AUTO'));
+  const P = B.criarAmbiente().ctx;
+  const prop = P.BaixaTempParser_proporMapa_(m, true);
+  assert.equal(JSON.stringify(prop.colunas.map(c => c.papel)), '["IGNORAR","DATAHORA","TEMPERATURA"]', 'Baixa temperatura: "Não." não é sensor');
+  const s = P.BaixaTempParser_normalizar_(m, P.BaixaTempParser_mapaDeColunas_(prop.colunas), { linhaCabecalho: prop.linhaCabecalho, decimalVirgula: true, estiloData: 'AUTO' });
+  assert.equal(s.tempos.length, 200);
+  assert.equal(P.BaixaTempParser_fmtDataHora_(s.tempos[0]), '15/09/2026 15:21:43');
+});

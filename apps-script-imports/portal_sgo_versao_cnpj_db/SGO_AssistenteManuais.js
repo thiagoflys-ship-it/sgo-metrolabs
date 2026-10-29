@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "ffd1572a36f7",
+ "versao": "590a4426b095",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -1029,7 +1029,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Leitura dos arquivos do registrador > Prévia e colunas",
-     "texto": "O sistema propõe o papel de cada coluna pelo cabeçalho (Data, Hora, T1, ST-01, Pressão...). Corrija na prévia quando precisar e toque em \"Ler de novo com as colunas abaixo\". Linhas sem horário ou sem temperatura válida, horários repetidos e leituras fora de ordem são tratados e informados nos avisos."
+     "texto": "O sistema propõe o papel de cada coluna pelo cabeçalho (Data, Hora, T1, ST-01, Pressão...). A coluna com o número da linha do registrador (\"Não.\", \"Nº\", \"Item\") fica como \"Ignorar\" e não vira sensor. Corrija na prévia quando precisar e toque em \"Ler de novo com as colunas abaixo\". Linhas sem horário ou sem temperatura válida, horários repetidos e leituras fora de ordem são tratados e informados nos avisos."
     },
     {
      "titulo": "Leitura dos arquivos do registrador > Um arquivo por sensor",
