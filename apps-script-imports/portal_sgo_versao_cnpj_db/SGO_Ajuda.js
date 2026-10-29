@@ -29,7 +29,7 @@ var SGO_AJUDA_NOMES = {
   reg_op: 'Registros operacionais', planejamento_cme: 'Planejamento CME', cronograma_execucao: 'Cronograma de execução',
   auvo: 'Integração Auvo', frota: 'Frota', qualidade: 'Painel de qualidade', conduta: 'Programa de conduta',
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
-  vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
+  vinculos: 'Vínculos', cadastro_correcoes: 'Correções de cadastro', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
   chaves: 'Chaves e senhas', modo_personalizado: 'Modo personalizado', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
   assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp',
   comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',

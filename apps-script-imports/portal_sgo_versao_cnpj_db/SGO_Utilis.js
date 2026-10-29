@@ -105,6 +105,24 @@ const SGO_UTILS = {
     return true;
   },
 
+  // 29/10/2026 (cadastro completo de cliente): CPF para cliente pessoa física, com os dois dígitos verificadores.
+  isCpf(v) {
+    const cpf = SGO_UTILS.onlyDigits(v);
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+    const dv = function (n) {
+      let soma = 0;
+      for (let i = 0; i < n; i++) soma += Number(cpf.charAt(i)) * (n + 1 - i);
+      const r = (soma * 10) % 11;
+      return r === 10 ? 0 : r;
+    };
+    return dv(9) === Number(cpf.charAt(9)) && dv(10) === Number(cpf.charAt(10));
+  },
+
+  formatCpf(v) {
+    const cpf = SGO_UTILS.onlyDigits(v);
+    return cpf.length === 11 ? cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4") : SGO_UTILS.safe(v);
+  },
+
   /* =========================
      NORMALIZAÇÃO E FORMATAÇÃO
   ========================== */

@@ -66,7 +66,9 @@ var COM_COLUNAS = {
     // primeira redução feita pelo vendedor (a alçada conta a redução acumulada sobre ele; vazio = o preço atual). Redução
     // acima da alçada vira pedido (PRECO_PEDIDO*) que a gestão comercial ou a Diretoria aprova ou nega.
     'PRECO_REFERENCIA', 'PRECO_PEDIDO', 'PRECO_PEDIDO_SITUACAO', 'PRECO_PEDIDO_POR_ID', 'PRECO_PEDIDO_POR_NOME', 'PRECO_PEDIDO_EM', 'PRECO_PEDIDO_MOTIVO',
-    'PRECO_DECISAO_POR_NOME', 'PRECO_DECISAO_EM', 'PRECO_DECISAO_TEXTO'],
+    'PRECO_DECISAO_POR_NOME', 'PRECO_DECISAO_EM', 'PRECO_DECISAO_TEXTO',
+    // 29/10/2026 (Correções de cadastro): item repetido juntado em outro fica arquivado com a marca de para onde foi (nunca apagado)
+    'JUNTADO_COM_ID', 'JUNTADO_EM', 'JUNTADO_POR_NOME'],
   COM_PROPOSTAS: ['ID', 'NUMERO', 'REVISAO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'VALIDA_ATE',
     'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL', 'SITUACAO',
@@ -96,7 +98,7 @@ var COM_COLUNAS_TEXTO = {
   COM_PROPOSTAS: ['EXCLUIDA_EM', 'VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
   COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
-  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
+  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
 var COM_SITUACOES_OPO = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
@@ -415,14 +417,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  // V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V4')) return; } catch (e) {}
+  // V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V5')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V4', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V5', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {

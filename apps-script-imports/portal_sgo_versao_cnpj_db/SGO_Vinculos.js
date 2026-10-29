@@ -91,7 +91,9 @@ const SGO_VINCULOS = (() => {
     return {success:true,clientes:cs.slice(0,30).map(c=>({ID:text(c.ID),label:label(c),STATUS:c.STATUS,unidades:units.filter(u=>text(u.CLIENTE_ID)===text(c.ID)).map(u=>({ID:text(u.ID),label:label(u),STATUS:u.STATUS}))})),unidades:units.filter(u=>us.includes(u)||ids.has(text(u.CLIENTE_ID))).slice(0,60).map(u=>({ID:text(u.ID),label:label(u),STATUS:u.STATUS,CLIENTE_ID:text(u.CLIENTE_ID),cliente:label(clients.find(c=>text(c.ID)===text(u.CLIENTE_ID)))}))};
   }
   function build(snapshot,input) {
-    const spec={tipo:text(input.tipo),acao:text(input.acao),origem:text(input.origem),destino:text(input.destino),motivo:text(input.motivo)};
+    // 29/10/2026: semCnpj = juntar cadastro repetido cuja ORIGEM não tem CNPJ (cadastro antigo); só chega aqui pela tela
+    // Correções de cadastro, da Diretoria ou do Administrador (preview tira a marca dos demais).
+    const spec={tipo:text(input.tipo),acao:text(input.acao),origem:text(input.origem),destino:text(input.destino),motivo:text(input.motivo),semCnpj:input.semCnpj===true};
     if(!TABLES[spec.tipo] || !['TRANSFERIR','DESVINCULAR','CONSOLIDAR','INATIVAR','REATIVAR','EXCLUIR'].includes(spec.acao)) throw new Error('Escolha o tipo (Cliente, Unidade ou Equipamento) e a ação antes de clicar em Conferir impacto.');
     if(spec.motivo.length<8 || spec.motivo.length>1000) throw new Error('Escreva o motivo da mudança (de 8 a 1.000 caracteres). Ele fica registrado na auditoria.');
     const table=TABLES[spec.tipo],source=get(snapshot,table,spec.origem);
@@ -129,6 +131,16 @@ const SGO_VINCULOS = (() => {
         contatosTratados[text(k.ID)]=k;
       });
     }
+    // 29/10/2026 (junção de cadastros repetidos): oportunidades, propostas e contatos registrados do Comercial acompanham o
+    // cliente (ou a unidade) que fica, na consolidação. Antes travavam a junção ("o painel não sabe ajustá-los").
+    const COMERCIAL_ACOMPANHA=['COM_OPORTUNIDADES','COM_PROPOSTAS','COM_CONTATOS_REGISTRO'];
+    const comercialTratados={};
+    function moverComercial(filtro,campos) {
+      COMERCIAL_ACOMPANHA.forEach(n=>base(snapshot,n).filter(filtro).forEach(r=>{
+        Object.keys(campos).forEach(f=>{if(snapshot.schema[n]&&snapshot.schema[n].headers.includes(f))change(n,r,f,campos[f]);});
+        comercialTratados[n+':'+text(r.ID)]=1;
+      }));
+    }
     const avisosAuvo=[];
     function moveUnit(u,clientId) {
       change('CAD_UNIDADES',u,'CLIENTE_ID',clientId);
@@ -165,18 +177,22 @@ const SGO_VINCULOS = (() => {
     if(spec.acao==='CONSOLIDAR') {
       target=get(snapshot,table,spec.destino);if(!active(target))throw new Error('O cadastro de destino está inativo. Escolha um destino ativo, ou reative-o antes (ação Reativar), e refaça.');
       if(spec.tipo==='CLIENTE') {
-        if(!digits(source.CNPJ)||digits(source.CNPJ)!==digits(target.CNPJ))throw new Error('Só dá para consolidar clientes com o mesmo CNPJ. Filiais (CNPJ diferente) são clientes separados: para levar uma unidade de um cliente para outro, use Tipo Unidade → Transferir.');
+        // 29/10/2026: origem sem CNPJ (cadastro antigo) pode ser juntada pela Diretoria ou pelo Administrador (tela Correções
+        // de cadastro). Dois CNPJs diferentes continuam sendo clientes separados.
+        if(!(spec.semCnpj&&!digits(source.CNPJ))&&(!digits(source.CNPJ)||digits(source.CNPJ)!==digits(target.CNPJ)))throw new Error('Só dá para consolidar clientes com o mesmo CNPJ. Filiais (CNPJ diferente) são clientes separados: para levar uma unidade de um cliente para outro, use Tipo Unidade → Transferir.');
         base(snapshot,'CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===spec.origem).forEach(u=>moveUnit(u,target.ID));
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.CLIENTE_ID)===spec.origem).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.ID));
         moverDocs(d=>text(d.CLIENTE_ID)===spec.origem,text(target.ID),null);
         moverContatos(k=>text(k.CLIENTE_ID)===spec.origem,{CLIENTE_ID:text(target.ID)});
+        moverComercial(r=>text(r.CLIENTE_ID)===spec.origem,{CLIENTE_ID:text(target.ID)});
       } else if(spec.tipo==='UNIDADE') {
-        if(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE))throw new Error('Só dá para consolidar unidades com o mesmo CNPJ (o mesmo local). Se for outro local, use Transferir. Se for o mesmo local e o CNPJ estiver errado, corrija o CNPJ (botão Abrir / editar cadastro) e refaça.');
+        if(!(spec.semCnpj&&!digits(source.CNPJ_UNIDADE))&&(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE)))throw new Error('Só dá para consolidar unidades com o mesmo CNPJ (o mesmo local). Se for outro local, use Transferir. Se for o mesmo local e o CNPJ estiver errado, corrija o CNPJ (botão Abrir / editar cadastro) e refaça.');
         if(!active(get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID)))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');
         moveUnit(source,target.CLIENTE_ID);
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===spec.origem).forEach(e=>{change('CAD_EQUIPAMENTOS',e,'UNIDADE_ID',target.ID);change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.CLIENTE_ID);});
         moverDocs(d=>text(d.UNIDADE_ID)===spec.origem,text(target.CLIENTE_ID),text(target.ID));
         moverContatos(k=>text(k.UNIDADE_ID)===spec.origem,{CLIENTE_ID:text(target.CLIENTE_ID),UNIDADE_ID:text(target.ID)});
+        moverComercial(r=>text(r.UNIDADE_ID)===spec.origem,{CLIENTE_ID:text(target.CLIENTE_ID),UNIDADE_ID:text(target.ID)});
       } else {
         if(text(source.CLIENTE_ID)!==text(target.CLIENTE_ID)||text(source.TAG).toUpperCase()!==text(target.TAG).toUpperCase()||!text(source.TAG)||/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(source.TAG).toUpperCase()))throw new Error('Só dá para consolidar equipamentos do mesmo cliente e com a mesma TAG real (TAGs como S/N ou N/A não servem). Confira a TAG dos dois (botão Abrir / editar cadastro) e refaça.');
         if(text(source.SERIE)&&text(target.SERIE)&&text(source.SERIE)!==text(target.SERIE))throw new Error('Os dois equipamentos têm números de série diferentes, então não são o mesmo equipamento. Se um número estiver errado, corrija (botão Abrir / editar cadastro) e refaça; se forem equipamentos diferentes, não consolide.');
@@ -194,7 +210,7 @@ const SGO_VINCULOS = (() => {
     const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS','ATEC_CHAMADOS','ATEC_OS','ATEC_SOLICITACOES','ATEC_CASOS','ATEC_ORCAMENTOS','ATEC_ACERVO_EQUIP','CAD_CONTATOS'];
     // 21/10/2026: na exclusão as referências são conferidas no bloco EXCLUIR (abaixo), com o caminho para resolver.
     Object.keys(snapshot.tables).filter(n=>spec.acao!=='EXCLUIR'&&!Object.values(TABLES).includes(n)&&n!=='AUVO_SYNC').forEach(name=>{
-      const matches=base(snapshot,name).filter(r=>Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO)$/.test(k)&&text(r[k]).split(',').some(id=>affected.has(id.trim()))));
+      const matches=base(snapshot,name).filter(r=>!comercialTratados[name+':'+text(r.ID)]&&Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO)$/.test(k)&&text(r[k]).split(',').some(id=>affected.has(id.trim()))));
       if(!matches.length)return;
       if(knownHistorical.includes(name)) {
         const ficam=name==='DOC_DOCUMENTOS'?matches.filter(r=>!docsMovidos[text(r.ID)]).length:name==='CAD_CONTATOS'?matches.filter(r=>!contatosTratados[text(r.ID)]).length:matches.length;
@@ -284,6 +300,8 @@ const SGO_VINCULOS = (() => {
   }
   function preview(sessionId,input) {
     const user=staff(sessionId,true);exigirExcluir(sessionId,input&&input.acao);
+    // 29/10/2026: juntar origem sem CNPJ é da Diretoria e do Administrador (tela Correções de cadastro)
+    if(input&&input.semCnpj&&!(typeof CadQ_podeJuntar_==='function'&&CadQ_podeJuntar_(user)))input=Object.assign({},input,{semCnpj:false});
     const snapshot=read(),plan=build(snapshot,input),token=Utilities.getUuid();
     if(!plan.blocks.length) CacheService.getScriptCache().put('vinc:'+token,JSON.stringify({session:sessionId,user:user.usuario,spec:plan.spec,hash:hash(snapshot)}),600);
     function display(c,value){const name={CLIENTE_ID:'CAD_CLIENTES',UNIDADE_ID:'CAD_UNIDADES'}[c.field];return name&&value?label(get(snapshot,name,value))+' ('+value+')':value;}
@@ -339,13 +357,23 @@ const SGO_VINCULOS = (() => {
     const lock=LockService.getScriptLock(),owner=!lock.hasLock();if(owner)lock.waitLock(30000);
     try {
       const c=SGO_DATA.getById('CAD_CLIENTES',clienteId);if(!active(c))throw new Error('Cliente não encontrado ou inativo.');
-      const cnpj=digits(c.CNPJ);if(!cnpj||!SGO_UTILS.isCnpj(cnpj))throw new Error('Não foi possível criar a unidade principal: o cliente não tem CNPJ válido. Clique em Abrir / editar cadastro, informe o CNPJ do cliente, salve e tente de novo.');
+      const cnpj=digits(c.CNPJ);
+      // 29/10/2026: cliente pessoa física (CPF válido, sem CNPJ) tem unidade principal sem CNPJ, com o endereço do cliente.
+      if(!cnpj&&typeof SGO_UTILS.isCpf==='function'&&SGO_UTILS.isCpf(c.CPF)){
+        const jaTem=SGO_DATA.getAll('CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===text(c.ID)&&active(u));
+        if(jaTem.length)return {success:true,item:jaTem[0],message:'Unidade principal já cadastrada: '+label(jaTem[0])};
+        const rPf=SGO_UNIDADES.criar(sessionId,{CLIENTE_ID:c.ID,NOME_UNIDADE:c.NOME_FANTASIA||c.RAZAO_SOCIAL||'Unidade principal',CNPJ_UNIDADE:'',ENDERECO:c.ENDERECO,CIDADE:c.CIDADE||extra.CIDADE||'',UF:c.UF||extra.UF||'',RESPONSAVEL:c.CONTATO,TELEFONE:c.TELEFONE,CIENTE:extra.CIENTE});
+        if(!rPf.success)throw new Error(rPf.message);
+        return {success:true,item:rPf.item||SGO_DATA.getAll('CAD_UNIDADES').find(u=>text(u.CLIENTE_ID)===text(c.ID)),message:'Unidade principal criada e vinculada ao cliente.'};
+      }
+      if(!cnpj||!SGO_UTILS.isCnpj(cnpj))throw new Error('Não foi possível criar a unidade principal: o cliente não tem CNPJ válido. Clique em Abrir / editar cadastro, informe o CNPJ do cliente, salve e tente de novo.');
       const existing=SGO_DATA.getAll('CAD_UNIDADES').filter(u=>digits(u.CNPJ_UNIDADE)===cnpj);
       if(existing.length) {
         if(existing.length===1&&text(existing[0].CLIENTE_ID)===text(c.ID)&&active(existing[0]))return {success:true,item:existing[0],message:'Unidade principal já cadastrada: '+label(existing[0])};
         throw new Error('Este CNPJ já aparece em unidade cadastrada. Consulte os vínculos antes de criar: '+existing.map(u=>label(u)+' / cliente: '+label(SGO_DATA.getById('CAD_CLIENTES',u.CLIENTE_ID))).join('; '));
       }
-      const result=SGO_UNIDADES.criar(sessionId,{CLIENTE_ID:c.ID,NOME_UNIDADE:c.NOME_FANTASIA||c.RAZAO_SOCIAL||'Unidade principal',CNPJ_UNIDADE:cnpj,ENDERECO:c.ENDERECO,CIDADE:extra.CIDADE||'',UF:extra.UF||'',RESPONSAVEL:c.CONTATO,TELEFONE:c.TELEFONE});
+      // 29/10/2026: cidade e UF vêm do cadastro do cliente (endereço em partes); o "Ciente" do cliente vale para a unidade criada junto.
+      const result=SGO_UNIDADES.criar(sessionId,{CLIENTE_ID:c.ID,NOME_UNIDADE:c.NOME_FANTASIA||c.RAZAO_SOCIAL||'Unidade principal',CNPJ_UNIDADE:cnpj,ENDERECO:c.ENDERECO,CIDADE:c.CIDADE||extra.CIDADE||'',UF:c.UF||extra.UF||'',RESPONSAVEL:c.CONTATO,TELEFONE:c.TELEFONE,CIENTE:extra.CIENTE});
       if(!result.success)throw new Error(result.message);
       const created=SGO_DATA.getAll('CAD_UNIDADES').find(u=>text(u.CLIENTE_ID)===text(c.ID)&&digits(u.CNPJ_UNIDADE)===cnpj);
       return {success:true,item:created,message:'Unidade principal criada e vinculada ao cliente.'};
@@ -356,7 +384,9 @@ const SGO_VINCULOS = (() => {
     const withUnit=payload.CRIAR_UNIDADE_PRINCIPAL!==false;
     const lock=LockService.getScriptLock(),owner=!lock.hasLock();if(owner)lock.waitLock(30000);
     try {
-      if(withUnit) {
+      // 29/10/2026: cliente pessoa física (CPF válido, sem CNPJ) também ganha a unidade principal (sem CNPJ).
+      const pessoaFisica=!SGO_UTILS.normalizeCnpj(payload.CNPJ)&&typeof SGO_UTILS.isCpf==='function'&&SGO_UTILS.isCpf(payload.CPF);
+      if(withUnit&&!pessoaFisica) {
         const cnpj=SGO_UTILS.normalizeCnpj(payload.CNPJ);
         if(!SGO_UTILS.isCnpj(cnpj))return {success:false,message:'Informe um CNPJ válido para cadastrar cliente com unidade principal.'};
         const matches=SGO_DATA.getAll('CAD_UNIDADES').filter(u=>digits(u.CNPJ_UNIDADE)===cnpj);

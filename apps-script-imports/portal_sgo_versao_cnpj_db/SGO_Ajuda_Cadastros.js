@@ -4,6 +4,8 @@
  * Telas: Clientes, Unidades, Equipamentos, Vínculos e Arquivo de documentos
  * (redesenhadas em 17/10/2026: JS_Cadastros.html, JS_Equipamentos.html,
  * JS_Vinculos.html e JS_Admin.html). Inventário é de outra frente.
+ * 29/10/2026: cadastro completo e "Ciente" em Clientes e Unidades; tela Correções de cadastro
+ * (JS_CadastroCorrecoes.html, SGO_CadastroQualidade.js).
  */
 function SGO_ajudaTelas_Cadastros_() {
   return {
@@ -12,8 +14,10 @@ function SGO_ajudaTelas_Cadastros_() {
     // =====================================================================
     "clientes": {
       titulo: "Clientes",
-      paraQueServe: "Cadastra as empresas atendidas pela Metrolabs. Cada cliente é um CNPJ. Pelo cliente você chega às unidades, aos equipamentos e aos documentos dele.",
+      paraQueServe: "Cadastra as empresas atendidas pela Metrolabs. Cada cliente é um CNPJ (ou, para pessoa física, um CPF). Pelo cliente você chega às unidades, aos equipamentos e aos documentos dele.",
       antesDeComecar: [
+        "Peça ao cliente os dados completos e corretos: CNPJ (ou CPF), razão social, endereço com CEP, número, bairro, cidade e UF, e o contato responsável com nome, e-mail e telefone. Não use informação buscada na internet: cadastro incompleto ou errado causa problema depois (nota fiscal, certificado, cobrança e documentos com dados errados).",
+        "Sem esses dados o cadastro não salva. Para salvar também é obrigatório marcar \"Ciente — os dados foram informados pelo cliente\": fica registrado o seu nome, a data e a hora.",
         "Tenha em mãos o CNPJ da empresa. Com ele o sistema confere se a empresa já está cadastrada e busca os dados na Receita.",
         "Saiba se o cliente tem atendimento no próprio endereço. Nesse caso, ele precisa da unidade principal (mesmo CNPJ e endereço).",
         "Os locais atendidos ficam em \"Unidades\". Os equipamentos ficam ligados a uma unidade.",
@@ -30,9 +34,12 @@ function SGO_ajudaTelas_Cadastros_() {
             "Toque em \"Preencher pela Receita\".",
             "Confira o aviso no canto da tela. Ele diz quantos campos foram preenchidos e quais ficaram como você digitou.",
             "Confira a razão social. Ela é obrigatória.",
-            "Preencha o endereço, a pessoa de contato, o e-mail e o telefone com DDD.",
+            "Cliente pessoa física: deixe o CNPJ em branco e preencha o CPF.",
+            "Preencha o endereço em partes: CEP, logradouro, número (S/N quando não houver), complemento, bairro, cidade e UF. Todos são obrigatórios, menos o complemento.",
+            "Preencha o contato responsável: nome, e-mail e telefone com DDD. Os três são obrigatórios.",
             "Deixe marcada a opção de criar a unidade principal. Desmarque só se o cliente apenas agrupa outras unidades e não tem atendimento próprio.",
-            "Toque em \"Cadastrar cliente\".",
+            "Confira os dados com o que o cliente informou e marque \"Ciente — os dados foram informados pelo cliente\".",
+            "Toque em \"Cadastrar cliente\". Se faltar algo, cada campo que falta aparece marcado em vermelho, com o que fazer.",
             "Confira o aviso \"Cliente ... cadastrado. Unidade principal criada.\" O painel do cliente abre em seguida."
           ]
         },
@@ -63,6 +70,8 @@ function SGO_ajudaTelas_Cadastros_() {
           itens: [
             "Toque em \"Editar\" na linha do cliente ou no rodapé do painel.",
             "Altere só o que precisa. Os campos que você não mexer ficam como estão.",
+            "Cadastro antigo incompleto: ele continua funcionando (propostas, O.S. e certificados não param), mas para salvar uma alteração é preciso completar o que está marcado. O endereço antigo, num campo só, aparece embaixo do logradouro para conferência.",
+            "Marque \"Ciente — os dados foram informados pelo cliente\".",
             "Toque em \"Salvar alterações\".",
             "Para desistir, toque em \"Cancelar\". Se houver algo digitado, o sistema pergunta se pode fechar sem salvar."
           ]
@@ -110,7 +119,8 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Número verde \"Ativos\"", significado: "Clientes em uso. Toque para ver só eles." },
         { nome: "Número \"Inativos\"", significado: "Clientes tirados de uso, com o histórico guardado." },
         { nome: "Número amarelo \"Sem unidade\"", significado: "Cliente ativo sem nenhuma unidade ativa. Ele não recebe atendimento nem documento." },
-        { nome: "Número amarelo \"Cadastro incompleto\"", significado: "Falta CNPJ, endereço ou um meio de contato (e-mail ou telefone)." },
+        { nome: "Número amarelo \"Cadastro incompleto\"", significado: "Falta CNPJ ou CPF válido, razão social, parte do endereço (CEP, logradouro, número, bairro, cidade, UF) ou o contato responsável com e-mail e telefone." },
+        { nome: "Faixa amarela \"Atenção\" no formulário", significado: "Aviso fixo: os dados devem ser pedidos ao cliente, completos e corretos, sem informação buscada na internet." },
         { nome: "Número vermelho \"Documento vencido ou vencendo\"", significado: "O cliente tem documento vencido ou que vence em até 30 dias." },
         { nome: "Número em cinza claro", significado: "O grupo está vazio (zero)." },
         { nome: "Selo verde \"Ativo\"", significado: "O cliente está em uso." },
@@ -130,7 +140,11 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "Aparece \"CNPJ inválido: confira os números\".", oQueFazer: "Confira os 14 números. Os dois últimos são o dígito verificador e costumam denunciar um número trocado." },
         { situacao: "Aparece \"Informe o CNPJ para criar a unidade principal, ou desmarque a unidade principal\".", oQueFazer: "Digite o CNPJ. Se o cliente for só um agrupador de outras unidades, desmarque a opção da unidade principal." },
         { situacao: "Aparece \"Este estabelecimento já está cadastrado como unidade\".", oQueFazer: "O CNPJ já é de uma unidade de outro cliente. Peça à gestão para conferir em \"Vínculos\", ou desmarque a unidade principal se for só um agrupador." },
-        { situacao: "Aparece \"Informe a razão social.\"", oQueFazer: "Preencha a razão social. É o único campo sempre obrigatório." },
+        { situacao: "Aparece \"Informe a razão social.\"", oQueFazer: "Preencha a razão social." },
+        { situacao: "Aparece \"Não foi possível cadastrar: o cadastro precisa estar completo. Falta: ...\"", oQueFazer: "Os campos que faltam ficam marcados. Peça esses dados ao cliente, preencha e salve de novo. Nada foi gravado." },
+        { situacao: "Aparece \"Este cadastro é antigo e está incompleto: para salvar a alteração, complete: ...\"", oQueFazer: "O cadastro continua funcionando. Para salvar a alteração, peça ao cliente o que falta e complete os campos marcados." },
+        { situacao: "Aparece \"marque Ciente — os dados foram informados pelo cliente\".", oQueFazer: "Confira os dados com o que o cliente informou, marque a caixa no fim do formulário e salve de novo." },
+        { situacao: "Aparece \"CPF inválido\".", oQueFazer: "Confira os 11 números com o cliente. Os dois últimos são o dígito verificador." },
         { situacao: "Aparece \"E-mail inválido\" ou \"Telefone com DDD: 10 ou 11 números.\"", oQueFazer: "Corrija o formato: nome@empresa.com.br e telefone com DDD, por exemplo (19) 3333-0000." },
         { situacao: "\"Preencher pela Receita\" avisa \"CNPJ não encontrado\" ou que os serviços estão fora do ar.", oQueFazer: "Confira o número. Se estiver certo, preencha os campos à mão ou tente de novo em alguns minutos. Nada do que você digitou foi perdido." },
         { situacao: "\"Excluir cliente\" aparece apagado.", oQueFazer: "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador). Peça a eles, ou use \"Inativar cliente\"." },
@@ -147,7 +161,8 @@ function SGO_ajudaTelas_Cadastros_() {
       perguntas: [
         { p: "Qual a diferença entre cliente e unidade?", r: "O cliente é a empresa (o CNPJ). A unidade é o local atendido: matriz, filial ou anexo. Todo equipamento e todo documento ficam numa unidade." },
         { p: "Inativar apaga alguma coisa?", r: "Não. O cliente sai das listas de novos atendimentos e certificados, mas unidades, equipamentos e documentos continuam guardados. Para voltar, use \"Reativar cliente\"." },
-        { p: "\"Preencher pela Receita\" apaga o que eu já digitei?", r: "Não. Ele só preenche campos vazios e avisa quais ficaram como você digitou." },
+        { p: "\"Preencher pela Receita\" apaga o que eu já digitei?", r: "Não. Ele só preenche campos vazios e avisa quais ficaram como você digitou. Confira com o cliente o que veio da Receita antes de marcar o Ciente." },
+        { p: "Para que serve o \"Ciente\"?", r: "Registra quem conferiu os dados com o cliente e quando. Se um dado errado causar problema, a rastreabilidade mostra quem cadastrou e quem deu o Ciente. Os erros aparecem em Correções de cadastro e no relatório da Diretoria." },
         { p: "Por que os nomes aparecem em letras maiúsculas?", r: "O sistema grava os cadastros em maiúsculas para manter o padrão das listas e dos documentos." },
         { p: "Como levo uma unidade para outro cliente?", r: "Pela tela \"Vínculos\", com o tipo Unidade e a ação Transferir. Só a gestão faz essa troca. Equipamentos e documentos acompanham." }
       ]
@@ -162,6 +177,8 @@ function SGO_ajudaTelas_Cadastros_() {
       antesDeComecar: [
         "O cliente precisa estar cadastrado e ativo. Só clientes ativos aparecem na escolha.",
         "Tenha o CNPJ do local, se houver. Na unidade principal pode ser o mesmo CNPJ do cliente.",
+        "Cidade e UF são obrigatórias. Peça os dados ao cliente; não use informação buscada na internet.",
+        "Para salvar é obrigatório marcar \"Ciente — os dados foram informados pelo cliente\" (fica registrado o seu nome, a data e a hora).",
         "Para o perfil Cliente, esta tela mostra só as unidades da própria empresa, sem edição."
       ],
       passos: [
@@ -175,8 +192,9 @@ function SGO_ajudaTelas_Cadastros_() {
             "Digite o CNPJ da unidade, se houver.",
             "Toque em \"Preencher pela Receita\" para buscar nome, endereço, cidade, UF e telefone.",
             "Confira o nome da unidade. Ele é obrigatório.",
-            "Confira endereço, cidade e UF. Sem eles a unidade fica como \"Cadastro incompleto\".",
+            "Confira endereço, cidade e UF. Cidade e UF são obrigatórias para salvar; sem endereço a unidade fica como \"Cadastro incompleto\".",
             "Preencha o responsável no local e o telefone.",
+            "Marque \"Ciente — os dados foram informados pelo cliente\".",
             "Toque em \"Cadastrar unidade\"."
           ]
         },
@@ -434,6 +452,95 @@ function SGO_ajudaTelas_Cadastros_() {
         { p: "Para que serve o QR Code?", r: "A etiqueta colada no equipamento leva ao cadastro dele no sistema, com os documentos e a seção Qualificação (relatório vigente, validade e revisões), sem precisar procurar pela TAG." },
         { p: "Por que o relatório de qualificação apareceu sozinho no equipamento?", r: "Porque os módulos de qualificação começam pelo cadastro (cliente, unidade e equipamento). Ao emitir, o relatório vai para a pasta do equipamento, dentro da pasta do cliente, e entra no Arquivo de documentos ligado ao equipamento." },
         { p: "Como mudo o equipamento de unidade?", r: "Pela tela \"Vínculos\", com o tipo Equipamento e a ação Transferir. Só a gestão faz. Os documentos do equipamento acompanham." }
+      ]
+    },
+
+    // =====================================================================
+    // CORREÇÕES DE CADASTRO (29/10/2026)
+    // =====================================================================
+    "cadastro_correcoes": {
+      titulo: "Correções de cadastro",
+      paraQueServe: "Mostra os clientes, as unidades e os itens do catálogo (produtos e serviços) com dado errado, incompleto ou repetido, e leva à correção. A Diretoria e o Administrador juntam os repetidos e veem o relatório \"Qualidade dos cadastros\".",
+      antesDeComecar: [
+        "Os dados devem ser pedidos ao cliente, completos e corretos. Não use informação buscada na internet.",
+        "Você vê os problemas dos cadastros que você mesmo fez. A Diretoria e o Administrador veem os de toda a empresa.",
+        "Itens do catálogo aparecem para quem trabalha no catálogo do Comercial. Preço abaixo do custo só aparece para quem vê o custo.",
+        "Cadastro com problema continua funcionando: propostas, O.S. e certificados não param. Só para salvar uma alteração nele é preciso completar."
+      ],
+      passos: [
+        {
+          titulo: "Ver o que corrigir",
+          itens: [
+            "Toque em \"Correções de cadastro\" no menu, grupo Cadastros.",
+            "Toque em um número do topo para ver só aquele grupo: Clientes a completar, Unidades a completar, Produtos e serviços ou Possíveis duplicados.",
+            "Use a busca ou o filtro \"Cadastrado por\" para achar um cadastro.",
+            "Cada linha mostra o problema, desde quando, quem cadastrou e quem deu o Ciente."
+          ]
+        },
+        {
+          titulo: "Corrigir um cadastro",
+          itens: [
+            "Toque em \"Corrigir\" na linha.",
+            "Cliente e unidade: o formulário abre com os campos que faltam marcados em vermelho.",
+            "Peça ao cliente os dados que faltam e preencha.",
+            "Marque \"Ciente — os dados foram informados pelo cliente\" e salve.",
+            "Item do catálogo: abre Comercial > Produtos e serviços já filtrado pelo código; toque em \"Editar\" na linha do item."
+          ]
+        },
+        {
+          titulo: "Juntar cadastros repetidos (Diretoria e Administrador)",
+          itens: [
+            "Na linha do possível duplicado, toque em \"Juntar\".",
+            "Escolha qual cadastro fica. Se só um dos dois tem CNPJ, escolha esse.",
+            "Toque em \"Ver a prévia\".",
+            "Na tabela, escolha para cada campo o valor que fica: o do cadastro que fica ou o do que sai.",
+            "Confira o que vai para o cadastro que fica (unidades, equipamentos, documentos, contatos, oportunidades e propostas) e o que fica no cadastro original (certificados, laudos e atendimentos).",
+            "Se aparecer \"Não dá para juntar agora\", resolva o que está escrito e toque em Juntar de novo.",
+            "Escreva o motivo e toque em \"Juntar agora\". O cadastro que sai fica inativo com a marca \"juntado com\"; nada é apagado."
+          ]
+        },
+        {
+          titulo: "Marcar \"Não é duplicado\" (Diretoria e Administrador)",
+          itens: [
+            "Toque em \"Mais\" na linha do possível duplicado.",
+            "Toque em \"Não é duplicado\".",
+            "Escreva o motivo (por exemplo, filial em outra cidade) e confirme. O par sai da lista e não volta."
+          ]
+        },
+        {
+          titulo: "Relatório \"Qualidade dos cadastros\" (Diretoria e Administrador)",
+          itens: [
+            "Toque em \"Qualidade dos cadastros\", no alto da tela.",
+            "Escolha o período (De e Até) e toque em \"Gerar\".",
+            "Confira, por pessoa: quantos cadastros fez, quantos estão com erro hoje, quantos têm o Ciente, quantos ela corrigiu e quantos dela foram corrigidos por outros.",
+            "Use a lista \"Correções feitas depois do cadastro\" para orientar a equipe."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Número amarelo \"Clientes a completar\"", significado: "Cliente sem CNPJ ou CPF válido, sem endereço completo ou sem o contato responsável com e-mail e telefone." },
+        { nome: "Número amarelo \"Unidades a completar\"", significado: "Unidade sem cidade ou UF, ou com CNPJ inválido." },
+        { nome: "Número amarelo \"Produtos e serviços\"", significado: "Item ativo do catálogo sem preço, sem unidade ou, para quem vê o custo, com preço abaixo do custo." },
+        { nome: "Número vermelho \"Possíveis duplicados\"", significado: "Mesmo CNPJ ou CPF, ou nome muito parecido (sem acento, pontuação e palavras como LTDA, ME, EIRELI). No catálogo, itens ativos com o mesmo nome." },
+        { nome: "Opção apagada \"Juntar os dois\"", significado: "Só a Diretoria e o Administrador juntam. Também fica apagada quando os dois têm CNPJs diferentes (são empresas ou filiais diferentes)." }
+      ],
+      problemas: [
+        { situacao: "O cliente que eu cadastrei não aparece aqui.", oQueFazer: "Então ele está completo. Cadastros anteriores a 29/10/2026 não têm quem cadastrou registrado e aparecem só para a Diretoria e o Administrador." },
+        { situacao: "Aparece \"Os dois têm CNPJs diferentes\".", oQueFazer: "Não são o mesmo cadastro. Se um CNPJ está errado, corrija-o. Se forem filiais ou empresas diferentes, marque \"Não é duplicado\"." },
+        { situacao: "Aparece \"Escolha como fica o cadastro com o CNPJ\".", oQueFazer: "Toque em Juntar de novo e escolha como \"fica\" o cadastro que tem o CNPJ." },
+        { situacao: "Aparece \"Não dá para juntar agora\" com uma tabela do sistema.", oQueFazer: "Há registro ligado que a junção não sabe levar. Nada foi alterado. Avise o administrador do sistema informando a tabela e os dois cadastros." },
+        { situacao: "Aparece \"A prévia vale 10 minutos e expirou\".", oQueFazer: "Toque em Juntar de novo para refazer a prévia e confirme logo em seguida." },
+        { situacao: "Aparece \"o item que sai tem pedido de redução de preço aguardando decisão\".", oQueFazer: "Decida o pedido em Comercial > Produtos e serviços (Situação \"Preço aguardando aprovação\") e volte para juntar." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN,DIRETORIA", pode: "Ver os problemas de toda a empresa, corrigir, juntar repetidos, marcar \"Não é duplicado\" e ver o relatório \"Qualidade dos cadastros\"." },
+        { perfil: "GESTOR,RH,FINANCEIRO,TECNICO,METROLOGIA,COMERCIAL", pode: "Ver e corrigir os problemas dos cadastros que fez. Juntar e o relatório ficam com a Diretoria e o Administrador." },
+        { perfil: "CLIENTE", pode: "Não vê esta tela." }
+      ],
+      perguntas: [
+        { p: "Juntar apaga algum cadastro?", r: "Não. O cadastro que sai fica inativo com a marca \"juntado com\" e o histórico guardado. No catálogo, o item que sai fica arquivado e não pode ser reativado." },
+        { p: "O que vai para o cadastro que fica?", r: "Unidades, equipamentos, documentos do Arquivo, contatos, a ligação com o Auvo, oportunidades, propostas e contatos registrados do Comercial. Certificados, laudos NR-13 e atendimentos ficam no cadastro original, como em Vínculos. No catálogo, as propostas e os itens de compra passam a apontar o item que fica; preço e descrição já gravados nas propostas não mudam." },
+        { p: "Onde fica registrado quem corrigiu?", r: "No histórico dos cadastros: cada criação, alteração com Ciente, junção e \"Não é duplicado\" guarda quem fez, quando e os campos que mudaram (de e para). O relatório \"Qualidade dos cadastros\" resume por pessoa." }
       ]
     },
 

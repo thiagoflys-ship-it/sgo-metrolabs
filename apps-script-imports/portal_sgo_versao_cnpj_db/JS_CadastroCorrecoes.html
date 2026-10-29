@@ -1,0 +1,250 @@
+<script>
+  // =====================================================================
+  // CORREÇÕES DE CADASTRO (29/10/2026, pedido do dono: "um campo para mostrar erros de clientes e produtos
+  // cadastrados errados ou duplicados, onde mostra para tomar a ação de correção").
+  // Abre por abrir('cadastro_correcoes') (menu Cadastros). Usa o motor das telas de cadastro (JS_Cadastros › CadTela_*).
+  // Servidor (SGO_CadastroQualidade.js): cadastroCorrecoes, cadastroNaoDuplicado, cadastroJuntarPrevia, cadastroJuntar,
+  // cadastroQualidadeRelatorio. Diretoria e Administrador veem tudo, juntam duplicados e veem o relatório
+  // "Qualidade dos cadastros"; os demais veem os problemas dos cadastros que eles mesmos fizeram e corrigem.
+  // =====================================================================
+  var CADCOR_TIPOS = { CLIENTE: "Cliente", UNIDADE: "Unidade", PRODUTO: "Produto ou serviço" };
+  var CADCOR_TABELAS = { CAD_CLIENTES: "Clientes", CAD_UNIDADES: "Unidades", CAD_EQUIPAMENTOS: "Equipamentos", CAD_CONTATOS: "Contatos", DOC_DOCUMENTOS: "Arquivo de documentos",
+    AUVO_SYNC: "Integração com o Auvo", COM_OPORTUNIDADES: "Oportunidades (Comercial)", COM_PROPOSTAS: "Propostas (Comercial)", COM_CONTATOS_REGISTRO: "Contatos registrados (Comercial)" };
+  function CadCor_pode_() { var p = CadUI_perfil_(); return p === "ADMIN" || p === "DIRETORIA" || !!(CADUI.telas.correcoes && CADUI.telas.correcoes.extra && CADUI.telas.correcoes.extra.podeJuntar); }
+  function CadCor_quem_(r) {
+    if (!r) return "";
+    return (r.criadoPor ? CadUI_esc_(r.criadoPor) : '<span class="cadx-sub">Não registrado</span>') +
+      '<div class="cadx-sub">' + (r.cienteEm ? "Ciente: " + CadUI_esc_(r.cientePor || "") + " em " + CadUI_esc_(CadUI_dataHora_(r.cienteEm)) : "Sem ciente registrado") + "</div>";
+  }
+  function CadCor_faltam_(it) {
+    var out = [], visto = {};
+    (it.problemas || []).forEach(function (p) { (p.campos || []).forEach(function (c) { if (!visto[c]) { visto[c] = 1; out.push({ campo: c, texto: p.texto + "." }); } }); });
+    return out;
+  }
+
+  function renderCadastroCorrecoesModulo_() {
+    var podeVer = !CadUI_ehCliente_();
+    if (!podeVer) { var d = document.getElementById("conteudo"); if (d) d.innerHTML = '<div class="module-shell"><h2 class="content-title">Correções de cadastro</h2><p class="content-subtitle">Esta tela é da equipe interna da Metrolabs.</p></div>'; return; }
+    CadTela_montar_({
+      chave: "correcoes", titulo: "Correções de cadastro", nomeItens: ["correção", "correções"],
+      subtitulo: CadCor_pode_() ? "Clientes, unidades e itens do catálogo com dado errado, incompleto ou repetido, de toda a empresa. Corrija ou junte os repetidos." : "Os cadastros que você fez e precisam de correção. Clique em Corrigir para completar o que falta.",
+      idBusca: "correcoesPesquisa", buscaPlaceholder: "Buscar por nome, CNPJ, CPF, código, problema ou quem cadastrou",
+      ajuda:
+        "<p>" + CadUI_esc_(CADQ_TXT_AVISO) + "</p>" +
+        "<ul><li><b>A completar</b>: cliente sem CNPJ ou CPF válido, sem endereço completo (CEP, logradouro, número, bairro, cidade, UF) ou sem o contato responsável com e-mail e telefone; unidade sem cidade ou UF; item do catálogo sem preço ou sem unidade" + (CadCor_pode_() ? " e, para quem vê custo, com preço abaixo do custo" : "") + ". O cadastro continua funcionando; para salvar uma alteração nele, é preciso completar.</li>" +
+        "<li><b>Corrigir</b> abre o cadastro com os campos que faltam marcados. Para salvar, marque <i>" + CadUI_esc_(CADQ_TXT_CIENTE) + "</i>.</li>" +
+        "<li><b>Possível duplicado</b>: mesmo CNPJ ou CPF, ou nome muito parecido (sem acento, pontuação e palavras como LTDA, ME, EIRELI). Dois CNPJs diferentes não são duplicados (são empresas ou filiais diferentes).</li>" +
+        "<li><b>Juntar</b> (Diretoria e Administrador): prévia lado a lado; você escolhe qual cadastro fica e, campo a campo, qual valor fica. Tudo o que está ligado ao que sai vai para o que fica; o que sai fica inativo com a marca \"juntado com\" (nunca é apagado). <b>Não é duplicado</b> tira o par da lista.</li>" +
+        "<li>Diretoria e Administrador veem todos os cadastros e o relatório <b>Qualidade dos cadastros</b>; os demais veem os cadastros que eles mesmos fizeram.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "clientes", rotulo: "Clientes a completar", tom: "tom-alerta", filtro: function (it) { return it.tipo === "CLIENTE" && !it.duplicado; } },
+        { id: "unidades", rotulo: "Unidades a completar", tom: "tom-alerta", filtro: function (it) { return it.tipo === "UNIDADE" && !it.duplicado; } },
+        { id: "produtos", rotulo: "Produtos e serviços", tom: "tom-alerta", filtro: function (it) { return it.tipo === "PRODUTO" && !it.duplicado; } },
+        { id: "duplicados", rotulo: "Possíveis duplicados", tom: "tom-perigo", filtro: function (it) { return !!it.duplicado; } }
+      ],
+      filtros: [
+        { id: "tipo", rotulo: "Todos os tipos", opcoes: function () { return [["CLIENTE", "Clientes"], ["UNIDADE", "Unidades"], ["PRODUTO", "Produtos e serviços"]]; }, aplicar: function (it, v) { return it.tipo === v; } },
+        { id: "quem", rotulo: "Cadastrado por (todos)", opcoes: function (its) {
+            var m = {}; its.forEach(function (it) { [it.registro, it.a, it.b].forEach(function (r) { if (r) m[r.criadoPor || "(não registrado)"] = 1; }); });
+            return Object.keys(m).sort(function (a, b) { return a.localeCompare(b, "pt-BR"); }).map(function (k) { return [k, k]; });
+          }, aplicar: function (it, v) { return [it.registro, it.a, it.b].some(function (r) { return r && (r.criadoPor || "(não registrado)") === v; }); } }
+      ],
+      ordenar: [
+        { id: "recentes", rotulo: "Mais recentes primeiro", fn: function (a, b) { return String(b.desde || "").localeCompare(String(a.desde || "")); } },
+        { id: "antigos", rotulo: "Mais antigos primeiro", fn: function (a, b) { return String(a.desde || "").localeCompare(String(b.desde || "")); } }
+      ],
+      texto: function (it) { return [CADCOR_TIPOS[it.tipo], (it.problemasTexto || []).join(" "), it.cliente].concat([it.registro, it.a, it.b].filter(Boolean).map(function (r) { return [r.nome, r.doc, r.codigo, r.criadoPor].join(" "); })).join(" "); },
+      acao: null,
+      vazioTitulo: "Nenhum cadastro para corrigir.", vazio: CadCor_pode_() ? "Clientes, unidades e catálogo sem erro, sem dado faltando e sem repetido." : "Os cadastros que você fez estão completos.",
+      colunas: [
+        { titulo: "Cadastro", html: function (it) {
+            if (it.duplicado) return '<div class="cadx-tit">' + CadUI_esc_(it.a.nome) + '</div><div class="cadx-sub">' + CadUI_esc_(it.a.doc) + "</div>" +
+              '<div class="cadx-tit" style="margin-top:4px">' + CadUI_esc_(it.b.nome) + '</div><div class="cadx-sub">' + CadUI_esc_(it.b.doc) + '</div><div class="cadx-sub">' + CadUI_esc_(CADCOR_TIPOS[it.tipo]) + "s repetidos</div>";
+            return '<div class="cadx-tit">' + CadUI_esc_(it.registro.nome) + '</div><div class="cadx-sub">' + CadUI_esc_(CADCOR_TIPOS[it.tipo] + (it.cliente ? " de " + it.cliente : "") + " · " + it.registro.doc) + "</div>";
+          } },
+        { titulo: "Problema", html: function (it) { return '<ul class="cadx-lista-curta">' + (it.problemasTexto || []).map(function (t) { return "<li>" + CadUI_esc_(t) + "</li>"; }).join("") + "</ul>" + (it.bloqueioJuntar ? '<div class="cadx-sub">' + CadUI_esc_(it.bloqueioJuntar) + "</div>" : ""); } },
+        { titulo: "Desde", html: function (it) { return it.desde ? CadUI_esc_(CadUI_data_(it.desde)) : '<span class="cadx-sub">Sem data</span>'; } },
+        { titulo: "Quem cadastrou", html: function (it) { return it.duplicado ? CadCor_quem_(it.a) + '<div style="margin-top:4px"></div>' + CadCor_quem_(it.b) : CadCor_quem_(it.registro); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (it) { return CadTela_botoesLinha_("correcoes", it); } }
+      ],
+      cartao: function (it) {
+        var nome = it.duplicado ? it.a.nome + " × " + it.b.nome : it.registro.nome;
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(nome) + '</div><div class="cadx-sub">' + CadUI_esc_(CADCOR_TIPOS[it.tipo]) + "</div></div></div>" +
+          '<div class="cadx-cartao-linhas">' + (it.problemasTexto || []).map(function (t) { return "<span>" + CadUI_esc_(t) + "</span>"; }).join("") + "</div>";
+      },
+      botaoPrincipal: function (it) {
+        if (!it.duplicado) return { texto: "Corrigir", acao: "corrigir" };
+        return it.podeJuntar ? { texto: "Juntar", acao: "juntar" } : { texto: "Ver", acao: "abrir" };
+      },
+      acoesExtras: { corrigir: function (it) { CadCor_corrigir_(it.tipo, it.registro, CadCor_faltam_(it)); }, juntar: function (it) { CadCor_juntar_(it); } },
+      editar: null,
+      mais: function (it) {
+        if (!it.duplicado) return [];
+        var pode = CadCor_pode_();
+        return [
+          { texto: "Corrigir " + it.a.nome, icone: "fa-pen", acao: function () { CadCor_corrigir_(it.tipo, it.a, []); } },
+          { texto: "Corrigir " + it.b.nome, icone: "fa-pen", acao: function () { CadCor_corrigir_(it.tipo, it.b, []); } },
+          "-",
+          { texto: "Juntar os dois", icone: "fa-object-group", desabilitado: !it.podeJuntar, nota: !pode ? "Só a Diretoria e o Administrador." : (it.bloqueioJuntar || ""), acao: function () { CadCor_juntar_(it); } },
+          { texto: "Não é duplicado", icone: "fa-check", desabilitado: !pode, nota: pode ? "" : "Só a Diretoria e o Administrador.", acao: function () { CadCor_naoDuplicado_(it); } }
+        ];
+      },
+      abrir: function (it) { CadCor_detalhe_(it); },
+      carregar: function (ok, erro) {
+        CadUI_chamar_("cadastroCorrecoes", [], function (res) {
+          ok(res.items || [], { podeJuntar: !!res.podeJuntar, veProdutos: !!res.veProdutos, veCusto: !!res.veCusto, escopo: res.escopo });
+          CadCor_botaoRelatorio_();
+        }, erro);
+      }
+    });
+  }
+
+  /** Botão do relatório no cabeçalho (Diretoria e Administrador; o servidor confere). */
+  function CadCor_botaoRelatorio_() {
+    var dir = document.querySelector("#cadxTela_correcoes .module-header-right");
+    if (!dir || !CadCor_pode_() || document.getElementById("cadCorRelBtn")) return;
+    dir.innerHTML = '<button type="button" class="btn-secondary" id="cadCorRelBtn"><i class="fas fa-chart-column" aria-hidden="true"></i>&nbsp;Qualidade dos cadastros</button>';
+    document.getElementById("cadCorRelBtn").onclick = function () { CadCor_relatorio_(); };
+  }
+
+  /** Corrigir: abre o cadastro na própria tela, com os campos que faltam marcados. */
+  function CadCor_corrigir_(tipo, r, faltam) {
+    if (!r || !r.id) return;
+    if (tipo === "CLIENTE") { clientesEditar_(r.id, { faltam: faltam }); return; }
+    if (tipo === "UNIDADE") { unidadesEditar_(r.id, { faltam: faltam }); return; }
+    // item do catálogo: abre Comercial > Produtos e serviços já filtrado pelo código (o Editar fica na linha do item)
+    try { if (typeof CM !== "undefined" && CM) CM.filtroCat = { busca: r.codigo || r.nome || "", tipo: "", categoria: "", situacao: "TODOS" }; } catch (e) {}
+    CadUI_aviso_("Abrindo o catálogo no item " + (r.codigo || r.nome) + ". Clique em Editar na linha do item para corrigir.", "ok");
+    abrir("comercial_catalogo");
+  }
+
+  function CadCor_detalhe_(it) {
+    var lado = function (r, rot) {
+      return '<section class="cadx-sec"><h4 class="cadx-sec-tit">' + CadUI_esc_(rot) + "</h4>" + CadUI_dados_([["Nome", r.nome], ["Identificação", r.doc], ["Cadastrado em", CadUI_dataHora_(r.criadoEm)], ["Cadastrado por", r.criadoPor || "Não registrado"],
+        ["Ciente", r.cienteEm ? CadUI_dataHora_(r.cienteEm) + " por " + (r.cientePor || "") : "Sem ciente registrado"]].concat(r.cliente ? [["Cliente", r.cliente]] : []).concat(r.preco !== undefined ? [["Preço", "R$ " + Number(r.preco || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })]] : [])) + "</section>";
+    };
+    CadUI_painelAbrir_({
+      chave: "correcoes", id: it.ID, titulo: it.duplicado ? "Possível duplicado" : it.registro.nome, sub: CadUI_esc_(CADCOR_TIPOS[it.tipo]),
+      corpo: function () {
+        return '<div class="cadx-faixa bc-faixa tom-alerta">' + (it.problemasTexto || []).map(CadUI_esc_).join("<br>") + "</div>" +
+          (it.bloqueioJuntar ? '<div class="cadx-faixa bc-faixa">' + CadUI_esc_(it.bloqueioJuntar) + "</div>" : "") +
+          (it.duplicado ? lado(it.a, "Cadastro 1") + lado(it.b, "Cadastro 2") : lado(it.registro, "Cadastro"));
+      },
+      rodape: it.duplicado
+        ? (it.podeJuntar ? '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="cadCorJuntarBtn">Juntar</button>' : "")
+        : '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="cadCorCorrigirBtn">Corrigir</button>',
+      depois: function (p) {
+        var bj = p.querySelector("#cadCorJuntarBtn"), bc = p.querySelector("#cadCorCorrigirBtn");
+        if (bj) bj.onclick = function () { CadCor_juntar_(it); };
+        if (bc) bc.onclick = function () { CadCor_corrigir_(it.tipo, it.registro, CadCor_faltam_(it)); };
+      }
+    });
+  }
+
+  function CadCor_naoDuplicado_(it) {
+    CadUI_confirmar_({
+      titulo: "Não é duplicado", botao: "Confirmar: não é duplicado", risco: false,
+      texto: "<p><b>" + CadUI_esc_(it.a.nome) + "</b> e <b>" + CadUI_esc_(it.b.nome) + "</b> são cadastros diferentes? O par sai da lista e não volta. A marca fica no histórico com o seu nome.</p>",
+      motivo: { rotulo: "Por que não é duplicado", min: 8, placeholder: "Ex.: filial em outra cidade, com CNPJ próprio" },
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("cadastroNaoDuplicado", [{ tipo: it.tipo, chave: it.chave, motivo: v.motivo, nomes: it.a.nome + " × " + it.b.nome }], function (res) {
+          fechar(); CadUI_painelFechar_(); CadUI_aviso_(res.message, "ok"); CadTela_carregar_("correcoes");
+        }, function (msg) { reabilitar(msg); });
+      }
+    });
+  }
+
+  // ---------- juntar: 1) qual fica; 2) prévia lado a lado com o valor de cada campo; 3) confirmar ----------
+  function CadCor_juntar_(it) {
+    if (!it.podeJuntar) { CadUI_aviso_(it.bloqueioJuntar || "Juntar cadastros repetidos é da Diretoria e do Administrador.", "alerta"); return; }
+    var opc = function (r, k) {
+      return '<label class="cadx-marcar" style="margin:6px 0"><input type="radio" name="cadCorFica" value="' + k + '"' + (k === "a" ? " checked" : "") + "> <span><b>" + CadUI_esc_(r.nome) + "</b> · " + CadUI_esc_(r.doc) +
+        '<br><span class="cadx-sub">Cadastrado em ' + CadUI_esc_(CadUI_data_(r.criadoEm) || "data não registrada") + (r.criadoPor ? " por " + CadUI_esc_(r.criadoPor) : "") + "</span></span></label>";
+    };
+    CadUI_confirmar_({
+      titulo: "Juntar cadastros repetidos", botao: "Ver a prévia", risco: false,
+      texto: "<p>Escolha qual cadastro <b>fica</b>. O outro fica inativo com a marca \"juntado com\" e tudo o que está ligado a ele vai para o que fica. Na próxima tela você escolhe, campo a campo, qual valor fica.</p>" +
+        (it.tipo === "CLIENTE" || it.tipo === "UNIDADE" ? '<p class="cadx-dica">Se só um dos dois tem CNPJ, escolha esse como o que fica.</p>' : ""),
+      extraHtml: '<div class="cadx-campo is-inteiro">' + opc(it.a, "a") + opc(it.b, "b") + "</div>",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        var marcado = document.querySelector('input[name="cadCorFica"]:checked');
+        var fica = marcado && marcado.value === "b" ? it.b : it.a, sai = fica === it.a ? it.b : it.a;
+        CadUI_chamar_("cadastroJuntarPrevia", [{ tipo: it.tipo, ficaId: fica.id, saiId: sai.id }], function (res) { fechar(); CadCor_juntarPrevia_(it, res); }, function (msg) { reabilitar(msg); });
+      }
+    });
+  }
+
+  function CadCor_juntarPrevia_(it, pv) {
+    var bloq = pv.bloqueios || [];
+    var linhas = (pv.campos || []).map(function (c) {
+      var nome = "cadCorV_" + c.campo;
+      if (c.iguais) return "<tr><td>" + CadUI_esc_(c.nome) + '</td><td colspan="2">' + (CadUI_esc_(c.fica) || '<span class="cadx-sub">(vazio nos dois)</span>') + "</td></tr>";
+      var vazioFica = !c.fica;
+      return "<tr><td>" + CadUI_esc_(c.nome) + "</td>" +
+        '<td><label class="cadx-marcar"><input type="radio" name="' + nome + '" value="FICA"' + (vazioFica ? "" : " checked") + "> <span>" + (CadUI_esc_(c.fica) || '<span class="cadx-sub">(vazio)</span>') + "</span></label></td>" +
+        '<td><label class="cadx-marcar"><input type="radio" name="' + nome + '" value="SAI"' + (vazioFica ? " checked" : "") + "> <span>" + (CadUI_esc_(c.sai) || '<span class="cadx-sub">(vazio)</span>') + "</span></label></td></tr>";
+    }).join("");
+    var acomp = (pv.acompanham || []).filter(function (a) { return a.qtd; }).map(function (a) { return "<li>" + CadUI_esc_(a.nome || CADCOR_TABELAS[a.tabela] || a.tabela) + ": " + CadUI_num_(a.qtd) + "</li>"; }).join("");
+    var hist = Object.keys(pv.historico || {}).map(function (t) { return "<li>" + CadUI_esc_(CADCOR_TABELAS[t] || (typeof vincTabela_ === "function" ? vincTabela_(t) : t)) + ": " + CadUI_num_(pv.historico[t]) + "</li>"; }).join("");
+    CadUI_confirmar_({
+      titulo: "Prévia da junção", botao: "Juntar agora", risco: true,
+      texto: "<p>Fica: <b>" + CadUI_esc_(pv.fica.nome) + "</b> (" + CadUI_esc_(pv.fica.doc) + ")<br>Sai (fica inativo, com a marca \"juntado com\"): <b>" + CadUI_esc_(pv.sai.nome) + "</b> (" + CadUI_esc_(pv.sai.doc) + ")</p>" +
+        (bloq.length ? '<div class="cadx-faixa bc-faixa tom-perigo"><b>Não dá para juntar agora:</b><ul>' + bloq.map(function (b) { return "<li>" + CadUI_esc_(b) + "</li>"; }).join("") + "</ul>Nada foi alterado. Resolva o que está acima e clique em Juntar de novo.</div>" : "") +
+        ((pv.avisos || []).length ? '<div class="cadx-faixa bc-faixa tom-alerta">' + pv.avisos.map(CadUI_esc_).join("<br>") + "</div>" : "") +
+        (linhas ? '<p><b>Escolha o valor que fica em cada campo</b> (a identificação, CNPJ ou CPF, é a do cadastro que fica):</p><div class="cadx-tabela-caixa"><table class="cadx-tabela bc-tabela"><thead><tr><th>Campo</th><th>Do que fica</th><th>Do que sai</th></tr></thead><tbody>' + linhas + "</tbody></table></div>" : "") +
+        (acomp ? "<p><b>Vai para o cadastro que fica:</b></p><ul>" + acomp + "</ul>" : "") +
+        (hist ? "<p><b>Fica no cadastro original</b> (histórico: certificados, laudos, atendimentos):</p><ul>" + hist + "</ul>" : ""),
+      motivo: bloq.length ? null : { rotulo: "Motivo da junção", min: 8, placeholder: "Ex.: mesmo hospital cadastrado duas vezes pelo CRM" },
+      validar: function () { return bloq.length ? "Há algo que impede a junção (veja acima). Nada foi alterado." : ""; },
+      aoConfirmar: function (v, fechar, reabilitar) {
+        var valores = {};
+        (pv.campos || []).forEach(function (c) { var m = document.querySelector('input[name="cadCorV_' + c.campo + '"]:checked'); if (m) valores[c.campo] = m.value; });
+        CadUI_chamar_("cadastroJuntar", [{ tipo: pv.tipo, ficaId: pv.fica.id, saiId: pv.sai.id, token: pv.token, valores: valores, motivo: v.motivo }], function (res) {
+          fechar(); CadUI_painelFechar_(); CadUI_aviso_(res.message, "ok"); CadTela_carregar_("correcoes");
+        }, function (msg) { reabilitar(msg); });
+      }
+    });
+  }
+
+  // ---------- relatório "Qualidade dos cadastros" (Diretoria e Administrador) ----------
+  function CadCor_relatorio_(de, ate) {
+    var hoje = new Date(), ini = new Date(hoje.getTime() - 90 * 86400000);
+    var iso = function (d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); };
+    de = de || iso(ini); ate = ate || iso(hoje);
+    var cfg = {
+      chave: "correcoes", id: "__relatorio", titulo: "Qualidade dos cadastros", sub: "Erros por pessoa no período, quem deu Ciente e as correções feitas depois.",
+      corpo: function () {
+        return '<div class="cadx-campos"><div class="cadx-campo"><label for="cadCorDe">De</label><input type="date" id="cadCorDe" value="' + de + '"></div>' +
+          '<div class="cadx-campo"><label for="cadCorAte">Até</label><input type="date" id="cadCorAte" value="' + ate + '"></div>' +
+          '<div class="cadx-campo"><label>&nbsp;</label><button type="button" class="cadx-btn cadx-btn-grande" id="cadCorGerar">Gerar</button></div></div>' +
+          '<div id="cadCorRel">' + CadUI_esqueleto_(6) + "</div>";
+      },
+      depois: function (p) {
+        p.querySelector("#cadCorGerar").onclick = function () { CadCor_relatorio_(p.querySelector("#cadCorDe").value, p.querySelector("#cadCorAte").value); };
+        CadUI_chamar_("cadastroQualidadeRelatorio", [{ de: de, ate: ate }], function (r) { var alvo = document.getElementById("cadCorRel"); if (alvo) alvo.innerHTML = CadCor_htmlRelatorio_(r); },
+          function (msg) { var alvo = document.getElementById("cadCorRel"); if (alvo) alvo.innerHTML = '<div class="cadx-faixa bc-faixa tom-perigo">' + CadUI_esc_(msg) + "</div>"; });
+      }
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+  function CadCor_htmlRelatorio_(r) {
+    var t = r.totais || {}, pct = function (a, b) { return b ? Math.round(a / b * 100).toLocaleString("pt-BR") + "%" : "—"; };
+    var h = '<section class="cadx-sec"><h4 class="cadx-sec-tit">Resumo de ' + CadUI_esc_(CadUI_data_(r.de)) + " a " + CadUI_esc_(CadUI_data_(r.ate)) + "</h4>" +
+      CadUI_dados_([["Cadastros feitos no período (clientes e unidades)", CadUI_num_(t.cadastros)], ["Com erro ou incompletos hoje", CadUI_num_(t.comProblema) + " (" + pct(t.comProblema, t.cadastros) + ")"],
+        ["Com Ciente registrado", CadUI_num_(t.comCiente) + " (" + pct(t.comCiente, t.cadastros) + ")"], ["Correções feitas no período", CadUI_num_(t.correcoes)]]) + "</section>";
+    var ps = r.pessoas || [];
+    h += '<section class="cadx-sec"><h4 class="cadx-sec-tit">Por pessoa</h4>' + (ps.length ? '<div class="cadx-tabela-caixa"><table class="cadx-tabela bc-tabela"><thead><tr><th>Pessoa</th><th class="cadx-col-num">Cadastrou</th><th class="cadx-col-num">Com erro hoje</th><th class="cadx-col-num">Com Ciente</th><th class="cadx-col-num">Corrigiu os próprios</th><th class="cadx-col-num">Corrigiu de outros</th><th class="cadx-col-num">Corrigidos por outros</th><th>Erros mais comuns</th></tr></thead><tbody>' +
+      ps.map(function (p) {
+        return "<tr><td>" + CadUI_esc_(p.nome) + '</td><td class="cadx-col-num">' + CadUI_num_(p.cadastrou) + '</td><td class="cadx-col-num">' + CadUI_num_(p.cadastrouComProblema) + '</td><td class="cadx-col-num">' + CadUI_num_(p.comCiente) +
+          '</td><td class="cadx-col-num">' + CadUI_num_(p.corrigiuProprios) + '</td><td class="cadx-col-num">' + CadUI_num_(p.corrigiuDeOutros) + '</td><td class="cadx-col-num">' + CadUI_num_(p.corrigidosPorOutros) + "</td><td>" +
+          CadUI_esc_((p.problemas || []).slice(0, 3).map(function (x) { return x.texto + " (" + x.qtd + ")"; }).join("; ")) + "</td></tr>";
+      }).join("") + "</tbody></table></div>" : '<div class="cadx-vazio bc-vazio">Nenhum cadastro nem correção no período.</div>') + "</section>";
+    var cs = r.correcoes || [];
+    h += '<section class="cadx-sec"><h4 class="cadx-sec-tit">Correções feitas depois do cadastro</h4>' + (cs.length ? '<ul class="cadx-lista-curta">' + cs.slice(0, 100).map(function (c) {
+      return "<li><b>" + CadUI_esc_(CadUI_dataHora_(c.data)) + "</b> · " + CadUI_esc_(c.quem) + " corrigiu " + CadUI_esc_((CADCOR_TIPOS[c.tipo] || c.tipo).toLowerCase() + " " + c.cadastro) + " (cadastrado por " + CadUI_esc_(c.cadastrou) + "): " + CadUI_esc_((c.resolvidos || []).length) + " problema(s) resolvido(s)</li>";
+    }).join("") + "</ul>" : '<div class="cadx-vazio bc-vazio">Nenhuma correção registrada no período.</div>') + "</section>" +
+      '<p class="cadx-dica">Cadastros anteriores a 29/10/2026 aparecem como "Não registrado" em quem cadastrou. O relatório mostra a situação de hoje de cada cadastro feito no período.</p>';
+    return h;
+  }
+</script>

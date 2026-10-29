@@ -120,9 +120,15 @@ function CadPainel_montar_(sessionId, tipo) {
       var eqs = b.E.filter(function (e) { return CadPainel_txt_(e.CLIENTE_ID) === id && CadPainel_ativo_(e); });
       var dc = docsC[id] || { total: 0, vencidos: 0, vencendo: 0 };
       var faltam = [];
-      if (!CadPainel_txt_(c.CNPJ)) faltam.push('CNPJ');
-      if (!CadPainel_txt_(c.ENDERECO)) faltam.push('endereço');
-      if (!CadPainel_txt_(c.EMAIL) && !CadPainel_txt_(c.TELEFONE)) faltam.push('e-mail ou telefone');
+      // 29/10/2026 (cadastro completo): a regra é a mesma que a tela exige para salvar (SGO_CadastroQualidade.js);
+      // QUALIDADE leva os campos para o formulário marcar o que falta.
+      var qual = typeof CadQ_problemasCliente_ === 'function' ? CadQ_problemasCliente_(c) : null;
+      if (qual) qual.forEach(function (p) { faltam.push(p.texto); });
+      else {
+        if (!CadPainel_txt_(c.CNPJ)) faltam.push('CNPJ');
+        if (!CadPainel_txt_(c.ENDERECO)) faltam.push('endereço');
+        if (!CadPainel_txt_(c.EMAIL) && !CadPainel_txt_(c.TELEFONE)) faltam.push('e-mail ou telefone');
+      }
       var pend = [];
       var ativo = CadPainel_ativo_(c);
       if (ativo && !uns.some(CadPainel_ativo_)) pend.push('sem_unidade');
@@ -132,7 +138,7 @@ function CadPainel_montar_(sessionId, tipo) {
       return Object.assign(CadPainel_limpo_(c), {
         QTD_UNIDADES: uns.filter(CadPainel_ativo_).length, QTD_UNIDADES_TOTAL: uns.length,
         QTD_EQUIPAMENTOS: eqs.length, QTD_DOCUMENTOS: dc.total, DOCS_VENCIDOS: dc.vencidos, DOCS_VENCENDO: dc.vencendo,
-        FALTAM: faltam, PENDENCIAS: pend
+        FALTAM: faltam, PENDENCIAS: pend, QUALIDADE: qual ? CadQ_faltam_(qual) : []
       });
     });
     itens.sort(function (a, x) { return (CadPainel_ativo_(x) - CadPainel_ativo_(a)) || CadPainel_txt_(a.RAZAO_SOCIAL).localeCompare(CadPainel_txt_(x.RAZAO_SOCIAL), 'pt-BR'); });
@@ -146,6 +152,9 @@ function CadPainel_montar_(sessionId, tipo) {
       var faltam = [];
       if (!CadPainel_txt_(u.ENDERECO)) faltam.push('endereço');
       if (!CadPainel_txt_(u.CIDADE) || !CadPainel_txt_(u.UF)) faltam.push('cidade/UF');
+      // 29/10/2026: cidade e UF são obrigatórias para salvar a unidade (SGO_CadastroQualidade.js); o formulário marca os campos
+      var qualU = typeof CadQ_problemasUnidade_ === 'function' ? CadQ_problemasUnidade_(u) : [];
+      if (qualU.some(function (p) { return p.codigo === 'CNPJ_INVALIDO'; })) faltam.push('CNPJ válido');
       var pend = [];
       var ativo = CadPainel_ativo_(u);
       if (ativo && !CadPainel_ativo_(cli)) pend.push('vinculo_pendente');
@@ -155,7 +164,7 @@ function CadPainel_montar_(sessionId, tipo) {
       return Object.assign(CadPainel_limpo_(u), {
         CLIENTE_NOME: CadPainel_nomeCliente_(cli), CLIENTE_STATUS: cli ? CadPainel_up_(cli.STATUS) : '',
         QTD_EQUIPAMENTOS: eqs.length, QTD_DOCUMENTOS: du.total, DOCS_VENCIDOS: du.vencidos, DOCS_VENCENDO: du.vencendo,
-        FALTAM: faltam, PENDENCIAS: pend
+        FALTAM: faltam, PENDENCIAS: pend, QUALIDADE: qualU.length ? CadQ_faltam_(qualU) : []
       });
     });
     itens.sort(function (a, x) { return (CadPainel_ativo_(x) - CadPainel_ativo_(a)) || (a.CLIENTE_NOME + a.NOME_UNIDADE).localeCompare(x.CLIENTE_NOME + x.NOME_UNIDADE, 'pt-BR'); });

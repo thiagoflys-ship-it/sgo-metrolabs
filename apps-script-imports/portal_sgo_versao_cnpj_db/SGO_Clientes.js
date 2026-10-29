@@ -89,17 +89,40 @@ const SGO_CLIENTES = (() => {
       return { success: false, message: "Já existe cliente cadastrado com este CNPJ." };
     }
 
+    if (existeCpfDuplicado_(dados.CPF, "")) {
+      return { success: false, message: "Já existe cliente cadastrado com este CPF." };
+    }
+
+    // 29/10/2026 (cadastro completo): colunas novas (CPF, endereço em partes, quem cadastrou e o "Ciente") só são
+    // acrescentadas; nenhum dado existente muda. Quem chama sem as colunas continua gravando o que já gravava.
+    if (typeof CadQ_garantirColunas_ === "function") { try { CadQ_garantirColunas_(); } catch (eCol) { console.error("Colunas do cadastro: " + ((eCol && eCol.message) || eCol)); } }
+    const agoraCad = SGO_UTILS.nowIso();
+    const quemCad = SGO_UTILS.safe(sessao.nome || sessao.usuario);
     const registro = SGO_DATA.normalizarObjetoParaSheet(
       SHEET_NAME,
       SGO_DATA.gerarRegistroBase({
         RAZAO_SOCIAL: dados.RAZAO_SOCIAL,
         NOME_FANTASIA: dados.NOME_FANTASIA,
         CNPJ: dados.CNPJ,
-        ENDERECO: dados.ENDERECO, // <- Adicionado (Faltava preencher o banco)
+        CPF: dados.CPF,
+        ENDERECO: compoeEndereco_(dados) || dados.ENDERECO, // <- Adicionado (Faltava preencher o banco)
+        CEP: dados.CEP,
+        LOGRADOURO: dados.LOGRADOURO,
+        NUMERO: dados.NUMERO,
+        COMPLEMENTO: dados.COMPLEMENTO,
+        BAIRRO: dados.BAIRRO,
+        CIDADE: dados.CIDADE,
+        UF: dados.UF,
         CONTATO: dados.CONTATO,
         EMAIL: dados.EMAIL,
         TELEFONE: dados.TELEFONE,
-        STATUS: STATUS_ATIVO
+        STATUS: STATUS_ATIVO,
+        CRIADO_POR_ID: SGO_UTILS.safe(sessao.userId),
+        CRIADO_POR_NOME: quemCad,
+        ATUALIZADO_POR_NOME: quemCad,
+        ATUALIZADO_EM: agoraCad,
+        CIENTE_POR_NOME: cienteDe_(payload) ? quemCad : "",
+        CIENTE_EM: cienteDe_(payload) ? agoraCad : ""
       })
     );
 
@@ -132,8 +155,7 @@ const SGO_CLIENTES = (() => {
     }
 
     // Merge: campo ausente no pedido mantém o valor atual (não apaga).
-    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
-      ["RAZAO_SOCIAL", "NOME_FANTASIA", "CNPJ", "ENDERECO", "CONTATO", "EMAIL", "TELEFONE"]);
+    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload, CAMPOS_EDITAVEIS);
     const erros = validarPayload_(dados, false);
 
     if (erros.length) {
@@ -144,18 +166,25 @@ const SGO_CLIENTES = (() => {
       return { success: false, message: "Já existe outro cliente cadastrado com este CNPJ." };
     }
 
-    const novosDados = Object.assign({}, atual, {
+    if (dados.CPF && existeCpfDuplicado_(dados.CPF, clienteId)) {
+      return { success: false, message: "Já existe outro cliente cadastrado com este CPF." };
+    }
+
+    // 29/10/2026: endereço em partes. Quando o pedido traz as partes, o ENDERECO (lido pelos documentos e pelos
+    // outros módulos) passa a ser montado delas; sem as partes no pedido, o ENDERECO fica como estava.
+    const mandouPartes = ["CEP", "LOGRADOURO", "NUMERO", "COMPLEMENTO", "BAIRRO", "CIDADE", "UF"].some(function (k) { return Object.prototype.hasOwnProperty.call(payload || {}, k); });
+    if (mandouPartes && compoeEndereco_(dados)) dados.ENDERECO = compoeEndereco_(dados);
+    if (typeof CadQ_garantirColunas_ === "function") { try { CadQ_garantirColunas_(); } catch (eCol) { console.error("Colunas do cadastro: " + ((eCol && eCol.message) || eCol)); } }
+    const agoraAlt = SGO_UTILS.nowIso();
+    const quemAlt = SGO_UTILS.safe(sessao.nome || sessao.usuario);
+
+    const novosDados = Object.assign({}, atual, dados, {
       ID: clienteId,
-      RAZAO_SOCIAL: dados.RAZAO_SOCIAL,
-      NOME_FANTASIA: dados.NOME_FANTASIA,
-      CNPJ: dados.CNPJ,
-      ENDERECO: dados.ENDERECO, // <- Adicionado (Faltava preencher o banco)
-      CONTATO: dados.CONTATO,
-      EMAIL: dados.EMAIL,
-      TELEFONE: dados.TELEFONE,
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
-      CRIADO_EM: atual.CRIADO_EM
-    });
+      CRIADO_EM: atual.CRIADO_EM,
+      ATUALIZADO_POR_NOME: quemAlt,
+      ATUALIZADO_EM: agoraAlt
+    }, cienteDe_(payload) ? { CIENTE_POR_NOME: quemAlt, CIENTE_EM: agoraAlt } : {});
 
     const ok = SGO_DATA.update(SHEET_NAME, clienteId, novosDados);
 
@@ -349,6 +378,29 @@ const SGO_CLIENTES = (() => {
     return SGO_UTILS.isEmail(valor);
   }
 
+  // 29/10/2026: CPF (cliente pessoa física) e o endereço em partes entram nos campos editáveis (com merge).
+  const CAMPOS_EDITAVEIS = ["RAZAO_SOCIAL", "NOME_FANTASIA", "CNPJ", "CPF", "ENDERECO", "CEP", "LOGRADOURO", "NUMERO", "COMPLEMENTO", "BAIRRO", "CIDADE", "UF", "CONTATO", "EMAIL", "TELEFONE"];
+
+  function cienteDe_(payload) {
+    const v = payload && payload.CIENTE;
+    return v === true || SGO_UTILS.safeUpper(v) === "SIM" || SGO_UTILS.safeUpper(v) === "TRUE";
+  }
+
+  function formatarCep_(v) {
+    const d = SGO_UTILS.onlyDigits(v);
+    return d.length === 8 ? d.slice(0, 5) + "-" + d.slice(5) : SGO_UTILS.safe(v);
+  }
+
+  /** ENDERECO montado das partes (o que os documentos e os outros módulos leem). Vazio sem logradouro. */
+  function compoeEndereco_(d) {
+    d = d || {};
+    const rua = SGO_UTILS.safe(d.LOGRADOURO);
+    if (!rua) return "";
+    const linha = rua + (SGO_UTILS.safe(d.NUMERO) ? ", " + SGO_UTILS.safe(d.NUMERO) : "") + (SGO_UTILS.safe(d.COMPLEMENTO) ? " - " + SGO_UTILS.safe(d.COMPLEMENTO) : "");
+    const cidade = SGO_UTILS.safe(d.CIDADE) + (SGO_UTILS.safe(d.UF) ? "/" + SGO_UTILS.safe(d.UF) : "");
+    return [linha, SGO_UTILS.safe(d.BAIRRO), cidade, SGO_UTILS.safe(d.CEP) ? "CEP " + SGO_UTILS.safe(d.CEP) : ""].filter(Boolean).join(" - ");
+  }
+
   function normalizarPayload_(payload) {
     payload = payload || {};
 
@@ -356,7 +408,16 @@ const SGO_CLIENTES = (() => {
       RAZAO_SOCIAL: SGO_UTILS.safeUpper(payload.RAZAO_SOCIAL), // Força tudo maiúsculo no banco
       NOME_FANTASIA: SGO_UTILS.safeUpper(payload.NOME_FANTASIA),
       CNPJ: normalizarCnpj_(payload.CNPJ),
+      // CPF com pontuação (texto): o zero da frente não se perde na planilha
+      CPF: SGO_UTILS.onlyDigits(payload.CPF) ? (typeof SGO_UTILS.formatCpf === "function" ? SGO_UTILS.formatCpf(payload.CPF) : SGO_UTILS.onlyDigits(payload.CPF)) : "",
       ENDERECO: SGO_UTILS.safeUpper(payload.ENDERECO), // Capturado para preencher a coluna nova do banco
+      CEP: formatarCep_(payload.CEP),
+      LOGRADOURO: SGO_UTILS.safeUpper(payload.LOGRADOURO),
+      NUMERO: SGO_UTILS.safeUpper(payload.NUMERO),
+      COMPLEMENTO: SGO_UTILS.safeUpper(payload.COMPLEMENTO),
+      BAIRRO: SGO_UTILS.safeUpper(payload.BAIRRO),
+      CIDADE: SGO_UTILS.safeUpper(payload.CIDADE),
+      UF: SGO_UTILS.safeUpper(payload.UF),
       CONTATO: SGO_UTILS.safeUpper(payload.CONTATO),
       EMAIL: SGO_UTILS.safeLower(payload.EMAIL),
       TELEFONE: SGO_UTILS.onlyDigits(payload.TELEFONE) // Salva só números, UI formata depois
@@ -379,7 +440,23 @@ const SGO_CLIENTES = (() => {
       erros.push("O CNPJ informado não é válido.");
     }
 
+    if (dados.CPF && typeof SGO_UTILS.isCpf === "function" && !SGO_UTILS.isCpf(dados.CPF)) {
+      erros.push("O CPF informado não é válido.");
+    }
+
+    if (dados.UF && !/^[A-Z]{2}$/.test(dados.UF)) {
+      erros.push("UF deve conter 2 letras.");
+    }
+
     return erros;
+  }
+
+  function existeCpfDuplicado_(cpf, idIgnorado) {
+    const alvo = SGO_UTILS.onlyDigits(cpf);
+    if (!alvo) return false;
+    return SGO_DATA.getAll(SHEET_NAME).some(function (r) {
+      return SGO_UTILS.onlyDigits(r.CPF) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado);
+    });
   }
 
   function existeCnpjDuplicado_(cnpj, idIgnorado) {
@@ -404,7 +481,10 @@ const SGO_CLIENTES = (() => {
     inativar,
     reativar,
     excluir,
-    pesquisar
+    pesquisar,
+    _compoeEndereco: compoeEndereco_,
+    _normalizar: normalizarPayload_,
+    CAMPOS_EDITAVEIS: CAMPOS_EDITAVEIS
   };
 })();
 
@@ -417,11 +497,13 @@ function clientesListar(sessionId) {
 function clientesObter(sessionId, id) { 
   try { return JSON.parse(JSON.stringify(SGO_CLIENTES.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('carregar o cliente', e) }; }
 }
-function clientesCriar(sessionId, payload) { 
-  try { return JSON.parse(JSON.stringify(SGO_VINCULOS.createClient(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar o cliente', e) }; }
+// 29/10/2026 (pedido do dono): a tela de Clientes (computador e celular) só salva cadastro completo e com o "Ciente — os
+// dados foram informados pelo cliente"; quem, quando e o que mudou vão para o histórico (SGO_CadastroQualidade.js).
+function clientesCriar(sessionId, payload) {
+  try { return JSON.parse(JSON.stringify(typeof CadQ_salvarCliente_ === 'function' ? CadQ_salvarCliente_(sessionId, '', payload) : SGO_VINCULOS.createClient(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar o cliente', e) }; }
 }
-function clientesAtualizar(sessionId, id, payload) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o cliente', e) }; }
+function clientesAtualizar(sessionId, id, payload) {
+  try { return JSON.parse(JSON.stringify(typeof CadQ_salvarCliente_ === 'function' ? CadQ_salvarCliente_(sessionId, id, payload) : SGO_CLIENTES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o cliente', e) }; }
 }
 function clientesInativar(sessionId, id) { 
   try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.inativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o cliente', e) }; }

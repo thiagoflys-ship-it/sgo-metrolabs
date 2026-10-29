@@ -244,6 +244,8 @@
           <button type="button" class="menu-btn" data-mod="unidades" data-busca="unidade filial local endereco" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span>Unidades</button>
           <button type="button" class="menu-btn" data-mod="equipamentos" data-busca="equipamento tag serie qr code prontuario" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-industry" aria-hidden="true"></i></span>Equipamentos</button>
           <button type="button" class="menu-btn" data-mod="vinculos" data-busca="vinculos cliente unidade equipamento auvo transferir consolidar desvincular auditoria" id="menu-btn-vinculos" onclick="abrir('vinculos')" title="Vínculos entre cliente, unidade, equipamento e documentos"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          <!-- 29/10/2026: Correções de cadastro (JS_CadastroCorrecoes.html / SGO_CadastroQualidade.js): erros, cadastros a completar e repetidos de clientes, unidades e catálogo. Equipe interna; o servidor recorta por perfil. -->
+          <button type="button" class="menu-btn" data-mod="cadastro_correcoes" data-busca="correcoes cadastro erros duplicados repetidos incompleto completar juntar ciente qualidade dos cadastros" id="menu-btn-cadastro_correcoes" onclick="abrir('cadastro_correcoes')" title="Cadastros com erro, incompletos ou repetidos"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Correções de cadastro</button>
           <button type="button" class="menu-btn" data-mod="documentos" data-busca="documentos arquivo anexos nbr 15943 relatorios certificados contratos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Arquivo de documentos</button>
           <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
           </div>
@@ -284,6 +286,7 @@
 <?!= include('JS_Equipamentos'); ?>
 <?!= include('JS_Cadastros'); ?>
 <?!= include('JS_Vinculos'); ?>
+<?!= include('JS_CadastroCorrecoes'); ?>
 <?!= include('JS_QualifVinculo'); ?>
 <?!= include('JS_DocRevisao'); ?>
 <?!= include('JS_TemplateAutoclave'); ?>

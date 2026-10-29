@@ -763,7 +763,7 @@
   // Continuam fora: documentos técnicos, arquivo de documentos, inventário, Comercial (valores de venda), Integração Auvo,
   // Painel de qualidade, Configurações, Chaves e senhas e Matriz de avisos.
   var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "meus_avisos",
-    "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto", "automacao_predial"];
+    "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto", "automacao_predial", "cadastro_correcoes"];
   // Rotina da empresa (cadastrar, editar e organizar): Administrador, Diretoria, Gestor, RH e Financeiro (SGO_ehGestaoRotina_ no servidor).
   function SGO_ehRotina_() { var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
@@ -785,7 +785,7 @@
     if (secaoAdmin) secaoAdmin.style.display = isCliente ? "none" : "block";
 
     // Menu agrupado (JS_Inicio.html): grupos e atalhos novos seguem a mesma regra.
-    ["menu-secao-calibracao", "menu-secao-documentos", "menu-secao-planejamento", "menu-secao-gestao", "menu-btn-vinculos"].forEach(function (id) {
+    ["menu-secao-calibracao", "menu-secao-documentos", "menu-secao-planejamento", "menu-secao-gestao", "menu-btn-vinculos", "menu-btn-cadastro_correcoes"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.style.display = isCliente ? "none" : "";
     });
@@ -828,7 +828,7 @@
       if (divRh) divRh.innerHTML =
         '<div class="module-shell"><h2 class="content-title">Tela fora do perfil RH</h2>' +
         '<p class="content-subtitle">O perfil RH faz a rotina da empresa: Início, Minhas atividades, Atividades da equipe, Avisos, Frota, Programa de conduta (consulta de toda a equipe), Usuários, ' +
-        'Clientes, Unidades, Equipamentos, Vínculos, Caixa de decisões, Assistente do ponto, Regras de compras e Piloto do WhatsApp. ' +
+        'Clientes, Unidades, Equipamentos, Vínculos, Correções de cadastro, Caixa de decisões, Assistente do ponto, Regras de compras e Piloto do WhatsApp. ' +
         'Documentos técnicos, Comercial, Configurações e Chaves e senhas ficam com a equipe técnica, a equipe comercial e o Administrador. Se precisar de algo daqui, peça à gestão.</p>' +
         '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
       return;
@@ -1129,6 +1129,13 @@
     if (mod === "vinculos") {
       renderVinculosModulo_();
       atualizarBadgeModulo_("vinculos");
+      return;
+    }
+
+    // 29/10/2026: Correções de cadastro (JS_CadastroCorrecoes.html): erros, a completar e repetidos de clientes, unidades e catálogo
+    if (mod === "cadastro_correcoes" && typeof renderCadastroCorrecoesModulo_ === "function") {
+      renderCadastroCorrecoesModulo_();
+      atualizarBadgeModulo_("cadastro_correcoes");
       return;
     }
 
@@ -5269,6 +5276,11 @@
     else handler.clientesListar(SESSION);
   }
 
+  // 29/10/2026 (pedido do dono): aviso fixo e "Ciente" nos cadastros de cliente e unidade do celular (mesmos textos de JS_Cadastros)
+  var MOBILE_CADQ_CIENTE = "Ciente — os dados foram informados pelo cliente";
+  function mobileCadqAvisoHtml_() { return '<div class="mobile-card-subtitulo" role="note" style="margin-bottom:8px"><b>Atenção.</b> Os dados devem ser pedidos ao cliente, completos e corretos. Não use informação buscada na internet. Cadastro incompleto ou errado pode causar problemas futuros (nota fiscal, certificado, cobrança e documentos com dados errados).</div>'; }
+  function mobileCadqCienteHtml_(id) { return '<label style="display:block;margin:10px 0"><input type="checkbox" id="' + id + '"> <b>' + escapeHtml_(MOBILE_CADQ_CIENTE) + '</b> (obrigatório para salvar; fica registrado com o seu nome, a data e a hora)</label>'; }
+
   function renderMobileFormClientes_(id) {
     MOBILE_NAV = { modulo: "clientes", tela: "form" };
     atualizarTituloMobile_(id ? "Editar Cliente" : "Novo Cliente");
@@ -5278,15 +5290,24 @@
     if (!div) return;
 
     div.innerHTML =
-      '<div class="mobile-form">' +
+      '<div class="mobile-form">' + mobileCadqAvisoHtml_() +
         mobileFieldHtml_("Razão social *", '<input type="text" id="mob_cli_razao">') +
         mobileFieldHtml_("Nome fantasia", '<input type="text" id="mob_cli_fantasia">') +
-        mobileFieldHtml_("CNPJ", '<input type="text" id="mob_cli_cnpj" placeholder="00.000.000/0000-00">') +
+        mobileFieldHtml_("CNPJ *", '<input type="text" id="mob_cli_cnpj" inputmode="numeric" placeholder="00.000.000/0000-00">') +
+        mobileFieldHtml_("CPF (só pessoa física, sem CNPJ)", '<input type="text" id="mob_cli_cpf" inputmode="numeric" placeholder="000.000.000-00">') +
         (!id ? '<label><input type="checkbox" id="mob_cli_principal" checked> Criar unidade principal com os mesmos dados</label>' : '') +
-        mobileFieldHtml_("Endereço", '<input type="text" id="mob_cli_endereco">') +
-        mobileFieldHtml_("Contato", '<input type="text" id="mob_cli_contato">') +
-        mobileFieldHtml_("E-mail", '<input type="email" id="mob_cli_email">') +
-        mobileFieldHtml_("Telefone", '<input type="tel" id="mob_cli_telefone">') +
+        mobileFieldHtml_("CEP *", '<input type="text" id="mob_cli_cep" inputmode="numeric" maxlength="9" placeholder="00000-000">') +
+        mobileFieldHtml_("Logradouro *", '<input type="text" id="mob_cli_logradouro" placeholder="Rua, avenida">') +
+        mobileFieldHtml_("Número *", '<input type="text" id="mob_cli_numero" placeholder="Ex.: 1500 ou S/N">') +
+        mobileFieldHtml_("Complemento", '<input type="text" id="mob_cli_complemento">') +
+        mobileFieldHtml_("Bairro *", '<input type="text" id="mob_cli_bairro">') +
+        mobileFieldHtml_("Cidade *", '<input type="text" id="mob_cli_cidade">') +
+        mobileFieldHtml_("UF *", '<input type="text" id="mob_cli_uf" maxlength="2">') +
+        '<div class="mobile-card-subtitulo" id="mob_cli_end_antigo"></div>' +
+        mobileFieldHtml_("Contato responsável *", '<input type="text" id="mob_cli_contato">') +
+        mobileFieldHtml_("E-mail *", '<input type="email" id="mob_cli_email">') +
+        mobileFieldHtml_("Telefone com DDD *", '<input type="tel" id="mob_cli_telefone">') +
+        mobileCadqCienteHtml_("mob_cli_ciente") +
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
           '<button type="button" class="mobile-btn-salvar" onclick="mobileClientesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
@@ -5305,7 +5326,16 @@
           setValue_("mob_cli_razao", it.RAZAO_SOCIAL);
           setValue_("mob_cli_fantasia", it.NOME_FANTASIA);
           setValue_("mob_cli_cnpj", it.CNPJ);
-          setValue_("mob_cli_endereco", it.ENDERECO);
+          setValue_("mob_cli_cpf", it.CPF);
+          setValue_("mob_cli_cep", it.CEP);
+          setValue_("mob_cli_logradouro", it.LOGRADOURO);
+          setValue_("mob_cli_numero", it.NUMERO);
+          setValue_("mob_cli_complemento", it.COMPLEMENTO);
+          setValue_("mob_cli_bairro", it.BAIRRO);
+          setValue_("mob_cli_cidade", it.CIDADE);
+          setValue_("mob_cli_uf", it.UF);
+          const endAnt = document.getElementById("mob_cli_end_antigo");
+          if (endAnt && it.ENDERECO && !it.LOGRADOURO) endAnt.textContent = "Endereço antigo (num campo só): " + it.ENDERECO + ". Confirme com o cliente e preencha as partes.";
           setValue_("mob_cli_contato", it.CONTATO);
           setValue_("mob_cli_email", it.EMAIL);
           setValue_("mob_cli_telefone", it.TELEFONE);
@@ -5333,14 +5363,29 @@
       RAZAO_SOCIAL: getValue_("mob_cli_razao"),
       NOME_FANTASIA: getValue_("mob_cli_fantasia"),
       CNPJ: getValue_("mob_cli_cnpj"),
-      ENDERECO: getValue_("mob_cli_endereco"),
+      CPF: getValue_("mob_cli_cpf"),
+      CEP: getValue_("mob_cli_cep"),
+      LOGRADOURO: getValue_("mob_cli_logradouro"),
+      NUMERO: getValue_("mob_cli_numero"),
+      COMPLEMENTO: getValue_("mob_cli_complemento"),
+      BAIRRO: getValue_("mob_cli_bairro"),
+      CIDADE: getValue_("mob_cli_cidade"),
+      UF: String(getValue_("mob_cli_uf") || "").toUpperCase(),
       CONTATO: getValue_("mob_cli_contato"),
       EMAIL: getValue_("mob_cli_email"),
-      TELEFONE: getValue_("mob_cli_telefone")
+      TELEFONE: getValue_("mob_cli_telefone"),
+      CIENTE: !!(document.getElementById("mob_cli_ciente") && document.getElementById("mob_cli_ciente").checked),
+      ORIGEM_TELA: MOBILE_CERTCAL_RETORNO === "cliente" ? "Celular > Certificado de calibração (novo cliente)" : "Celular > Clientes"
     };
 
+    // 29/10/2026 (pedido do dono): cadastro completo e "Ciente" obrigatórios, como no computador (o servidor confere de novo
+    // e diz o que falta). O cliente novo do assistente do certificado passa pela mesma regra.
     if (!payload.RAZAO_SOCIAL) return alert("Informe a razão social.");
-    // CNPJ opcional, como no computador (JS_Cadastros › clientesSalvar_) e no servidor.
+    const faltaMob = [];
+    if (!String(payload.CNPJ || "").replace(/\D/g, "") && !String(payload.CPF || "").replace(/\D/g, "")) faltaMob.push("CNPJ ou CPF");
+    [["CEP", "CEP"], ["LOGRADOURO", "logradouro"], ["NUMERO", "número"], ["BAIRRO", "bairro"], ["CIDADE", "cidade"], ["UF", "UF"], ["CONTATO", "contato responsável"], ["EMAIL", "e-mail"], ["TELEFONE", "telefone"]].forEach(function (c) { if (!String(payload[c[0]] || "").trim()) faltaMob.push(c[1]); });
+    if (faltaMob.length) return alert("Cadastro incompleto. Falta: " + faltaMob.join(", ") + ". Peça esses dados ao cliente e salve de novo.");
+    if (!payload.CIENTE) return alert('Marque "' + MOBILE_CADQ_CIENTE + '" para salvar.');
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
@@ -5360,14 +5405,9 @@
     const falha = function (err) { SGO_finalizarCarregamento_(); alert("Erro de conexão ao salvar."); console.error(err); };
 
     SGO_iniciarCarregamento_();
-    if (!id && MOBILE_CERTCAL_RETORNO === 'cliente') {
-      mobileCertCalChamarApi_('apiCriarClienteComUnidade', {
-        razaoSocial: payload.RAZAO_SOCIAL, nomeFantasia: payload.NOME_FANTASIA,
-        cnpj: payload.CNPJ, endereco: payload.ENDERECO, contato: payload.CONTATO,
-        email: payload.EMAIL, telefone: payload.TELEFONE
-      }).then(function(res) { sucesso({success:res.ok,item:res.cliente}); }).catch(falha);
-      return;
-    }
+    // 29/10/2026: o cliente novo do assistente do certificado também vai por clientesCriar (cadastro completo, Ciente e
+    // histórico; a unidade principal é criada junto, como antes pela apiCriarClienteComUnidade)
+    if (!id && MOBILE_CERTCAL_RETORNO === 'cliente') payload.CRIAR_UNIDADE_PRINCIPAL = true;
     if (id) {
       google.script.run.withSuccessHandler(sucesso).withFailureHandler(falha).clientesAtualizar(SESSION, id, payload);
     } else {
@@ -5416,15 +5456,16 @@
     if (!div) return;
 
     div.innerHTML =
-      '<div class="mobile-form">' +
+      '<div class="mobile-form">' + mobileCadqAvisoHtml_() +
         mobileFieldHtml_("Cliente *", '<select id="mob_uni_cliente"><option value="">Carregando...</option></select>') +
         mobileFieldHtml_("Nome da unidade *", '<input type="text" id="mob_uni_nome">') +
         mobileFieldHtml_("CNPJ da unidade", '<input type="text" id="mob_uni_cnpj">') +
         mobileFieldHtml_("Endereço", '<input type="text" id="mob_uni_endereco">') +
-        mobileFieldHtml_("Cidade", '<input type="text" id="mob_uni_cidade">') +
-        mobileFieldHtml_("UF", '<input type="text" id="mob_uni_uf" maxlength="2">') +
+        mobileFieldHtml_("Cidade *", '<input type="text" id="mob_uni_cidade">') +
+        mobileFieldHtml_("UF *", '<input type="text" id="mob_uni_uf" maxlength="2">') +
         mobileFieldHtml_("Responsável", '<input type="text" id="mob_uni_responsavel">') +
         mobileFieldHtml_("Telefone", '<input type="tel" id="mob_uni_telefone">') +
+        mobileCadqCienteHtml_("mob_uni_ciente") +
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
           '<button type="button" class="mobile-btn-salvar" onclick="mobileUnidadesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
@@ -5479,11 +5520,16 @@
       CIDADE: getValue_("mob_uni_cidade"),
       UF: getValue_("mob_uni_uf"),
       RESPONSAVEL: getValue_("mob_uni_responsavel"),
-      TELEFONE: getValue_("mob_uni_telefone")
+      TELEFONE: getValue_("mob_uni_telefone"),
+      CIENTE: !!(document.getElementById("mob_uni_ciente") && document.getElementById("mob_uni_ciente").checked),
+      ORIGEM_TELA: "Celular > Unidades"
     };
 
     if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
     if (!payload.NOME_UNIDADE) return alert("Informe o nome da unidade.");
+    // 29/10/2026: cidade, UF e o "Ciente" obrigatórios (o servidor confere de novo)
+    if (!String(payload.CIDADE || "").trim() || !String(payload.UF || "").trim()) return alert("Informe a cidade e a UF da unidade (peça ao cliente).");
+    if (!payload.CIENTE) return alert('Marque "' + MOBILE_CADQ_CIENTE + '" para salvar.');
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
@@ -5918,6 +5964,7 @@
       equipamentos: "Equipamentos",
       documentos: "Arquivo de documentos",
       vinculos: "Vínculos",
+      cadastro_correcoes: "Correções de cadastro",
       usuarios: "Usuários",
       admin: "Configurações",
       minhas_atividades: "Minhas atividades",

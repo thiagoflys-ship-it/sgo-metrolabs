@@ -278,6 +278,8 @@ function ComP_arquivarProduto_(eu, d) {
     var ativo = !(d && d.reativar);
     // 29/10/2026: o vendedor não exclui nem reativa: só arquiva (o item sai da escolha das propostas novas)
     if (!ativo && !eu.catalogo) throw new Error('Não foi possível reativar: reativar um item arquivado é da gestão comercial ou do Financeiro. Peça a um deles; o item continua no catálogo, só fora da escolha das propostas');
+    // 29/10/2026: item repetido que foi juntado em outro (Cadastros > Correções de cadastro) não volta: reativar recriaria a duplicidade
+    if (!ativo && Com_s_(p.JUNTADO_COM_ID)) { var dest = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(p.JUNTADO_COM_ID)); throw new Error('Não foi possível reativar: este item foi juntado em ' + (dest ? '"' + Com_s_(dest.NOME) + '" (código ' + Com_s_(dest.CODIGO) + ')' : 'outro item') + ' em ' + Com_br_(p.JUNTADO_EM) + (Com_s_(p.JUNTADO_POR_NOME) ? ' por ' + Com_s_(p.JUNTADO_POR_NOME) : '') + '. Use o item que ficou; se a junção foi um erro, cadastre o item de novo com um nome que o diferencie') }
     SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, { ATIVO: ativo ? 'NAO' : 'SIM', ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() });
     Com_historico_('PRODUTO', p.ID, ativo ? 'ARQUIVADO' : 'REATIVADO', eu, { texto: Com_texto_(d && d.motivo, 300) });
     return { message: ativo ? 'Item arquivado: não aparece mais na escolha das propostas (as propostas antigas continuam como estão).' + (eu.catalogo ? '' : ' Para reativar, peça à gestão comercial ou ao Financeiro.') : 'Item reativado.' };

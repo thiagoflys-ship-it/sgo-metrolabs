@@ -114,6 +114,11 @@ const SGO_UNIDADES = (() => {
       return { success: false, message: "Já existe unidade cadastrada com este CNPJ: " + encontrados.map(u=>u.label+' / cliente: '+u.cliente).join('; ') + '. Consulte o painel de vínculos para reutilizar ou solicitar a correção ao gestor.' };
     }
 
+    // 29/10/2026 (cadastro completo): quem cadastrou e o "Ciente" (colunas só acrescentadas; SGO_CadastroQualidade.js)
+    if (typeof CadQ_garantirColunas_ === "function") { try { CadQ_garantirColunas_(); } catch (eCol) { console.error("Colunas do cadastro: " + ((eCol && eCol.message) || eCol)); } }
+    const agoraCad = SGO_UTILS.nowIso();
+    const quemCad = SGO_UTILS.safe(sessao.nome || sessao.usuario);
+    const ciente = !!payload && (payload.CIENTE === true || SGO_UTILS.safeUpper(payload.CIENTE) === "SIM");
     const registro = SGO_DATA.normalizarObjetoParaSheet(
       SHEET_NAME,
       SGO_DATA.gerarRegistroBase({
@@ -125,7 +130,13 @@ const SGO_UNIDADES = (() => {
         UF: dados.UF,
         RESPONSAVEL: dados.RESPONSAVEL,
         TELEFONE: dados.TELEFONE,
-        STATUS: STATUS_ATIVO
+        STATUS: STATUS_ATIVO,
+        CRIADO_POR_ID: SGO_UTILS.safe(sessao.userId),
+        CRIADO_POR_NOME: quemCad,
+        ATUALIZADO_POR_NOME: quemCad,
+        ATUALIZADO_EM: agoraCad,
+        CIENTE_POR_NOME: ciente ? quemCad : "",
+        CIENTE_EM: ciente ? agoraCad : ""
       })
     );
 
@@ -134,7 +145,8 @@ const SGO_UNIDADES = (() => {
 
     return {
       success: true,
-      message: "Unidade cadastrada com sucesso."
+      message: "Unidade cadastrada com sucesso.",
+      item: registro
     };
   }
 
@@ -195,6 +207,12 @@ const SGO_UNIDADES = (() => {
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
+    // 29/10/2026: quem alterou por último e o "Ciente" (colunas acrescentadas por SGO_CadastroQualidade.js)
+    if (typeof CadQ_garantirColunas_ === "function") { try { CadQ_garantirColunas_(); } catch (eCol) { console.error("Colunas do cadastro: " + ((eCol && eCol.message) || eCol)); } }
+    const agoraAlt = SGO_UTILS.nowIso(), quemAlt = SGO_UTILS.safe(sessao.nome || sessao.usuario);
+    novosDados.ATUALIZADO_POR_NOME = quemAlt;
+    novosDados.ATUALIZADO_EM = agoraAlt;
+    if (payload && (payload.CIENTE === true || SGO_UTILS.safeUpper(payload.CIENTE) === "SIM")) { novosDados.CIENTE_POR_NOME = quemAlt; novosDados.CIENTE_EM = agoraAlt; }
 
     const ok = SGO_DATA.update(SHEET_NAME, unidadeId, novosDados);
 
@@ -523,11 +541,13 @@ function unidadesListar(sessionId) {
 function unidadesObter(sessionId, id) {
   try { return JSON.parse(JSON.stringify(SGO_UNIDADES.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('carregar a unidade', e) }; }
 }
+// 29/10/2026 (pedido do dono): a tela de Unidades só salva com cidade e UF e com o "Ciente — os dados foram informados
+// pelo cliente"; quem, quando e o que mudou vão para o histórico (SGO_CadastroQualidade.js).
 function unidadesCriar(sessionId, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar a unidade', e) }; }
+  try { return JSON.parse(JSON.stringify(typeof CadQ_salvarUnidade_ === 'function' ? CadQ_salvarUnidade_(sessionId, '', payload) : SGO_UNIDADES.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar a unidade', e) }; }
 }
 function unidadesAtualizar(sessionId, id, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar a unidade', e) }; }
+  try { return JSON.parse(JSON.stringify(typeof CadQ_salvarUnidade_ === 'function' ? CadQ_salvarUnidade_(sessionId, id, payload) : SGO_UNIDADES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar a unidade', e) }; }
 }
 function unidadesInativar(sessionId, id) {
   try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.inativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar a unidade', e) }; }
