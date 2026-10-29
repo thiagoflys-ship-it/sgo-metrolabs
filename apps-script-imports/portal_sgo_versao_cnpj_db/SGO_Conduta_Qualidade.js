@@ -513,7 +513,8 @@ function Conduta_apiAceitarSugestao(sessionId, payload) {
     DECIDIDA_EM: SGO_UTILS.nowIso(), OCORRENCIA_ID: r.item.ID, MOTIVO: String(payload.motivo || '').trim() });
   SGO_DATA.log('CONDUTA_SUGESTAO_ACEITA', sessao.usuario, 'Sugestão ' + s.ID + ' (' + s.ORIGEM_MODULO + '/' + s.ORIGEM_TIPO + ', origem ' + s.ORIGEM_ID + ') virou a ocorrência ' + r.item.ID + ' (' + tipoCodigo + ')', 'CONDUTA');
   return { success: true, ocorrenciaId: r.item.ID,
-    message: 'Ocorrência registrada com você como fiscal. Ela segue o fluxo normal: outra pessoa da gestão homologa (Ocorrências), e o colaborador pode contestar.' };
+    message: r.homologadaNoRegistro ? 'Ocorrência registrada com você como fiscal e já homologada (lançada pela Diretoria ou pela Administração, não passa por homologação). O colaborador pode contestar no prazo.' :
+      'Ocorrência registrada com você como fiscal. Ela segue o fluxo normal: outra pessoa da gestão homologa (Ocorrências), e o colaborador pode contestar.' };
 }
 
 function Conduta_apiDescartarSugestao(sessionId, payload) {

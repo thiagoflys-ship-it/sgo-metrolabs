@@ -34,7 +34,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Em \"O que aconteceu\", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres). É o que a gestão lê para homologar.",
           "Se tiver, anexe a foto e escreva a legenda. Fotografe só o objeto e o local, nunca a pessoa: a foto não tem link e abre só para quem está na ocorrência, a Diretoria e o Gestor de Qualidade.",
           "Toque em \"Registrar\".",
-          "A ocorrência vai para a homologação da gestão."
+          "A ocorrência vai para a homologação da gestão. Registrada pela Diretoria ou pelo responsável pelo sistema, já nasce homologada (no histórico: \"Homologada no registro\"), e o envolvido continua com o prazo para contestar."
         ] },
         { titulo: "Reconhecer um colega", itens: [
           "Abra a aba \"Reconhecimentos\".",
@@ -112,6 +112,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       perguntas: [
         { p: "Outro módulo pode lançar ocorrência sozinho?", r: "Não. Frota, Auvo, Painel de qualidade, Minhas atividades, Avisos e o ponto do COMMAND só geram sugestões. A ocorrência só existe quando alguém da gestão aceita a sugestão, e depois segue o fluxo normal (homologação por outra pessoa, contestação, julgamento)." },
+        { p: "Ocorrência registrada pela Diretoria precisa de homologação?", r: "Não. Registrada pela Diretoria ou pelo responsável pelo sistema, ela já nasce homologada (Homologada no registro) e não vai para a Caixa de decisões. O envolvido recebe o aviso e pode contestar no prazo; quem julga é outra pessoa da Diretoria ou o Gestor de Qualidade. Gestor e Administrador comum continuam com a homologação." },
         { p: "Uma ocorrência registrada já tira ponto?", r: "Não. Só conta quando fica \"Firme\": depois de homologada e sem contestação no prazo, ou mantida no julgamento." },
         { p: "Como o índice é calculado?", r: "Índice = 100 menos (pontos de demérito divididos pelo número de pessoas) vezes 5. Quem está de férias ou afastado sai da conta." },
         { p: "Quanto vale cada nível?", r: "Leve 2 pontos, leve reincidente 5, média 8, média reincidente 15, grave 30. A gravíssima cancela o bônus do mês." },
@@ -221,6 +222,7 @@ function SGO_ajudaTelas_Conduta_() {
       paraQueServe: "A gestão confirma ou rejeita cada ocorrência e julga as defesas. Os prazos correm sozinhos quando a automação está ligada.",
       passos: [
         { titulo: "Homologar uma ocorrência", itens: [
+          "Ocorrência registrada pela Diretoria ou pelo responsável pelo sistema já nasce homologada (Homologada no registro): não passa por aqui nem pela Caixa de decisões. A contestação dela é julgada por outra pessoa da Diretoria ou pelo Gestor de Qualidade.",
           "Na linha com selo \"Registrada\", toque em \"Homologar\".",
           "Leia o resumo e toque em \"Ver a foto\", se houver: ela abre por cima da janela, com \"Baixar\" e \"Fechar\". \"Não identificado\" no envolvido quer dizer que quem registrou não sabia quem foi.",
           "Para confirmar, toque em \"Aprovar\".",

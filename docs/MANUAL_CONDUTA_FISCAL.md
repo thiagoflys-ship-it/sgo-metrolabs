@@ -12,6 +12,8 @@ Perfil RH: consulta as missões, as ausências, os meses fechados (com os valore
 
 > Regra de ouro: quem registrou a ocorrência nunca decide sobre ela, e quem é o envolvido também não. Exceção (19/10/2026, decisão da direção): a Diretoria, e o responsável pelo sistema, decide a ocorrência em que é a envolvida, com fundamentação obrigatória (pelo menos 15 caracteres, também para aprovar); fica gravado "Decisão da Diretoria sobre ocorrência em que é envolvida" no histórico da ocorrência, na auditoria e no extrato, e a lista mostra o selo "Decisão da Diretoria". Rejeitar uma ocorrência sempre pede a fundamentação. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer.
 
+> Registro da Diretoria ou da Administração (28/10/2026, decisão da direção): ocorrência registrada pela Diretoria ou pelo responsável pelo sistema já nasce homologada (selo "Homologada"), sem passar pela homologação nem pela Caixa de decisões. O histórico guarda "Homologada no registro: lançada pela Diretoria (ou pela Administração)", com quem e quando. O resto não muda: o envolvido recebe o aviso, tem o prazo para contestar e pode recorrer; quem julga a contestação é outra pessoa da Diretoria ou o Gestor de Qualidade (quem registrou não julga); a ocorrência fica firme no fim do prazo e só então conta. Se a ocorrência registrada pela Diretoria é dela mesma, o campo "O que aconteceu" é a fundamentação (pelo menos 15 caracteres) e fica a marca "Decisão da Diretoria sobre ocorrência em que é envolvida". Gestor, Gestor de Qualidade e Administrador comum continuam com a homologação.
+
 ## 1. Qual aba usar
 
 | Aba | Para que serve |
@@ -93,6 +95,8 @@ Como ler o farol, de cima para baixo: a cor do farol e o selo da situação do b
 | Recorrer (uma vez só) | 2 depois de mantida | A ocorrência continua firme |
 
 ### Homologar
+
+Ocorrência registrada pela Diretoria ou pelo responsável pelo sistema já nasce homologada: não aparece para homologar (veja o aviso no início deste manual).
 
 1. Na linha com selo "Registrada", toque em "Homologar".
 2. Leia o resumo: envolvido, ocorrência, nível, data, quem registrou e a foto (toque em "Ver a foto": ela abre por cima da janela, com "Baixar" e "Fechar"). "Não identificado" no envolvido quer dizer que quem registrou não sabia quem foi: a ocorrência conta só no resultado da equipe.

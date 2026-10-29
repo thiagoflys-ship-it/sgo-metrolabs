@@ -19,6 +19,10 @@
  * ANULADA não entram em D nem no placar. CONTESTADA / EM_RECURSO ficam
  * suspensas (fora de D) até decisão — regra explícita do briefing.
  *
+ * 28/10/2026 (dono): ocorrência registrada pela Diretoria ou pelo dono do
+ * sistema já nasce HOMOLOGADA (sem homologação nem Caixa de decisões); o
+ * resto do fluxo (contestação, recurso, FIRME) é o mesmo.
+ *
  * Regra 12 (não negociável): quem homologa/julga não pode ser a mesma
  * pessoa que registrou a ocorrência como fiscal — bloqueado com
  * mensagem clara (não existe reatribuição automática pra outro gestor).
@@ -214,6 +218,8 @@ function Conduta_exigirDecisor_(sessionId, acao) {
 var CONDUTA_MARCA_DIRETORIA_OCORRENCIA = 'Decisão da Diretoria sobre ocorrência em que é envolvida';
 var CONDUTA_MARCA_DIRETORIA_MISSAO = 'Decisão da Diretoria sobre missão em que é envolvida';
 var CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN = 15;
+// 28/10/2026: marca do histórico da ocorrência que a Diretoria ou o dono registrou (já nasce homologada).
+var CONDUTA_MARCA_HOMOLOGADA_NO_REGISTRO = 'Homologada no registro: lançada pela Diretoria ou pela Administração';
 
 /** Perfil DIRETORIA ou dono do sistema (SGO_DONOS). */
 function Conduta_ehDiretoriaOuDono_(sessao) {
@@ -492,7 +498,8 @@ var CONDUTA_FOTO_MAX_BYTES = 8 * 1024 * 1024;
 /** O que a tela precisa saber para explicar o sigilo (só leitura). */
 function Conduta_apiObterSigilo(sessionId) {
   var sessao = Conduta_exigirEquipe_(sessionId);
-  return { success: true, veIdentidade: isAdminSession(sessionId) && Conduta_veIdentidade_(sessao) };
+  // 28/10/2026: registraHomologada = o registro desta pessoa já nasce homologado (Diretoria ou dono); a tela avisa no formulário.
+  return { success: true, veIdentidade: isAdminSession(sessionId) && Conduta_veIdentidade_(sessao), registraHomologada: Conduta_ehDiretoriaOuDono_(sessao) };
 }
 
 /**
@@ -581,7 +588,36 @@ function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
 
   var prazoHomologacaoDias = Number(parametros.PRAZO_HOMOLOGACAO_DIAS_UTEIS) || 3;
 
-  var registro = SGO_DATA.insert(CONDUTA_SHEETS.OCORRENCIA, {
+  // 28/10/2026 (dono: "quando um diretor ou eu (Adm) registrar, não precisa de ninguém homologar a decisão dele, e pronto"):
+  // registro da Diretoria (perfil DIRETORIA) ou do dono do sistema (SGO_DONOS, a conta "admin") já nasce HOMOLOGADA, no mesmo
+  // estado que teria depois da homologação (HOMOLOGADA_EM/POR e prazo de contestação). Não entra na Caixa de decisões nem
+  // fica pendente de homologação. O resto segue igual: ciência, contestação e recurso (julgados por outra pessoa da
+  // Diretoria ou pelo Gestor de Qualidade: a Regra 12 continua), FIRME no fim do prazo (só FIRME conta no D e no placar),
+  // sigilo do envolvido e "Não identificado". Administrador comum e Gestor continuam com a homologação.
+  // Conflito de interesse: a Diretoria registrando contra si mesma segue a regra de 19/10 (decide o que é dela com
+  // fundamentação e a marca gravada): aqui a fundamentação é a descrição do fato, com o mesmo mínimo.
+  var homologaNoRegistro = Conduta_ehDiretoriaOuDono_(sessao);
+  var propria = homologaNoRegistro && !naoIdentificado && String(colaboradorId) === String(sessao.userId);
+  if (propria && descricao.length < CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN) {
+    throw new Error('Você é a pessoa envolvida e registra como Diretoria: a ocorrência já nasce homologada, por isso o campo "O que aconteceu" é a fundamentação. ' +
+      'Escreva pelo menos ' + CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN + ' caracteres e toque em Registrar de novo. Ela fica gravada no histórico e no extrato.');
+  }
+  var homolog = {};
+  if (homologaNoRegistro) {
+    var prazoContestacaoDias = Number(parametros.PRAZO_CONTESTACAO_DIAS_UTEIS) || 3;
+    var quem = SGO_UTILS.safeUpper(sessao.perfil) === 'DIRETORIA' ? 'pela Diretoria' : 'pela Administração';
+    var textoHom = 'Homologada no registro: lançada ' + quem + ' (' + String(sessao.nome || sessao.usuario || '') + ', ' + Conduta_agoraBr_() + '). Não passa por homologação.' +
+      (propria ? ' Fundamentação (ocorrência própria): ' + descricao : '');
+    var marcaHom = propria ? CONDUTA_MARCA_DIRETORIA_OCORRENCIA : CONDUTA_MARCA_HOMOLOGADA_NO_REGISTRO;
+    homolog = {
+      STATUS: 'HOMOLOGADA', HOMOLOGADA_EM: Conduta_hojeISO_(), HOMOLOGADA_POR: sessao.userId, PRAZO_HOMOLOGACAO: '',
+      PRAZO_CONTESTACAO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoContestacaoDias),
+      HISTORICO_JSON: Conduta_historicoAcrescentar_({}, sessao, 'HOMOLOGACAO_NO_REGISTRO', 'APROVAR', textoHom, marcaHom)
+    };
+    if (propria) homolog.DECISAO_DIRETORIA = CONDUTA_MARCA_DIRETORIA_OCORRENCIA;
+  }
+
+  var registro = SGO_DATA.insert(CONDUTA_SHEETS.OCORRENCIA, Object.assign({
     TIPO_CODIGO: tipo.CODIGO,
     COLABORADOR_ID: colaboradorId,
     FISCAL_ID: sessao.userId,
@@ -604,9 +640,22 @@ function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
     ORIGEM_TELA: (opcoes.origem && opcoes.origem.ORIGEM_TELA) || '',
     ORIGEM_LINK: (opcoes.origem && opcoes.origem.ORIGEM_LINK) || '',
     SUGESTAO_ID: (opcoes.origem && opcoes.origem.SUGESTAO_ID) || ''
-  });
+  }, homolog));
 
-  return { success: true, item: registro };
+  if (homologaNoRegistro) {
+    Conduta_auditarDecisao_(sessao, registro, 'HOMOLOGADA', textoHom, propria ? CONDUTA_MARCA_DIRETORIA_OCORRENCIA : '');
+    return { success: true, item: registro, homologadaNoRegistro: true, prazoContestacao: homolog.PRAZO_CONTESTACAO,
+      message: 'Ocorrência registrada e já homologada: lançada ' + quem + ', não passa por homologação nem pela Caixa de decisões. ' +
+        (naoIdentificado ? 'Sem pessoa identificada, conta no resultado da equipe quando ficar firme.' :
+          'O colaborador vê a ocorrência e pode contestar até ' + Conduta_dataBr_(homolog.PRAZO_CONTESTACAO) + '; a contestação é julgada por outra pessoa da Diretoria ou pelo Gestor de Qualidade. Sem contestação, ela fica firme e passa a contar.') };
+  }
+  return { success: true, item: registro, homologadaNoRegistro: false,
+    message: 'Ocorrência registrada. Ela segue para a homologação da Diretoria ou do Gestor de Qualidade (quem registrou não homologa); sem decisão até ' + Conduta_dataBr_(registro.PRAZO_HOMOLOGACAO) + ', é descartada pelo sistema.' };
+}
+
+/** Data e hora de agora em pt-BR (dd/mm/aaaa hh:mm), para o histórico. */
+function Conduta_agoraBr_() {
+  try { return Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'); } catch (e) { return Conduta_dataBr_(Conduta_hojeISO_()); }
 }
 
 function Conduta_apiListarOcorrencias(sessionId, payload) {

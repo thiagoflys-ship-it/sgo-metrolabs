@@ -5155,7 +5155,7 @@
       // o overlay e a trava de duplo toque agora são do mobileCondutaChamarApi_
       mobileCondutaChamarApi_("apiRegistrarOcorrencia", payload, function (res) {
         if (!res || !res.success) return alert((res && res.message) || "Não foi possível registrar. Tente de novo.");
-        alert("Ocorrência registrada — segue pra homologação do gestor.");
+        alert((res && res.message) || "Ocorrência registrada. Ela segue para a homologação da Diretoria ou do Gestor de Qualidade.");
         renderMobileConduta_();
       }, function (err) {
         console.error("Falha ao registrar ocorrência:", err);

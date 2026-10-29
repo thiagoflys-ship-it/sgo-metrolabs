@@ -78,7 +78,7 @@ Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização en
 6. Em "O que aconteceu", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres).
 7. Se tiver, anexe a foto e escreva a "Legenda da foto". Fotografe só o objeto e o local, nunca a pessoa. A foto não tem link: abre dentro do SGO+, no botão "Ver a foto" (ou "Ver a foto anexada", no celular), só para quem está na ocorrência, para a Diretoria e para o Gestor de Qualidade.
 8. Toque em "Registrar".
-9. A ocorrência vai para a homologação da gestão.
+9. A ocorrência vai para a homologação da gestão. Registrada pela Diretoria ou pelo responsável pelo sistema, ela já nasce homologada (no histórico: "Homologada no registro"); o envolvido continua com o prazo para contestar.
 
 > Registre o fato, não a pessoa. Escreva o que viu, onde e quando. Foto ajuda a gestão a decidir.
 
