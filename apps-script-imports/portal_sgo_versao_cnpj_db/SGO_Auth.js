@@ -173,6 +173,19 @@ function login(usuario, senha) {
           };
         }
 
+        // 29/10/2026 (módulo Representação): a conta REPRESENTADA precisa estar ligada a uma representada ativa.
+        let repIdDb = "", repPapelDb = "";
+        if (perfilDb === "REPRESENTADA") {
+          const repU = lerUsuarioSessaoAuth_(id) || {};
+          repIdDb = SGO_UTILS.safe(repU.REPRESENTADA_ID);
+          repPapelDb = SGO_UTILS.safeUpper(repU.REPRESENTACAO_PAPEL);
+          const motivoRep = motivoRepresentadaAuth_(repIdDb);
+          if (motivoRep) {
+            registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: perfilDb, detalhe: motivoRep });
+            return { success: false, message: motivoRep };
+          }
+        }
+
         const agora = new Date();
         const agoraIso = SGO_UTILS.nowIso(); // Usando a função padronizada do UTILS
         const sessionId = gerarSessionIdAuth_();
@@ -187,6 +200,7 @@ function login(usuario, senha) {
           perfil: perfilDb,
           status: statusDb,
           clienteId: clienteIdDb, // Salva o ID do cliente na sessão para regras de visualização
+          representadaId: repIdDb, representacaoPapel: repPapelDb,
           loginAt: agoraIso,
           lastAccessAt: agoraIso,
           expiresAt: expiresAtIso
@@ -208,7 +222,9 @@ function login(usuario, senha) {
             usuario: usuarioDb,
             nome: nomeDb,
             perfil: perfilDb,
-            clienteId: clienteIdDb
+            clienteId: clienteIdDb,
+            representadaId: repIdDb,
+            representacaoPapel: repPapelDb
           }
         };
       }
@@ -278,6 +294,8 @@ function validarSessao(sessionId) {
       if (cadastro) {
         data.perfil = SGO_UTILS.safeUpper(cadastro.PERFIL);
         data.clienteId = SGO_UTILS.safe(cadastro.CLIENTE_ID);
+        data.representadaId = SGO_UTILS.safe(cadastro.REPRESENTADA_ID);
+        data.representacaoPapel = SGO_UTILS.safeUpper(cadastro.REPRESENTACAO_PAPEL);
         data.nome = SGO_UTILS.safe(cadastro.NOME) || data.nome;
         data.usuario = normalizarTextoAuth_(cadastro.USUARIO) || data.usuario;
         data.conferidoEm = new Date().toISOString();
@@ -311,7 +329,11 @@ function validarSessao(sessionId) {
 function lerUsuarioSessaoAuth_(userId) {
   try {
     const alvo = SGO_UTILS.safe(userId);
-    const achado = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).find(function (u) { return SGO_UTILS.safe(u.ID) === alvo; });
+    // 29/10/2026: inclui as contas REPRESENTADA (SGO_DATA.getAll as esconde fora de Usuários e do módulo Representação)
+    const antes = typeof SGO_DATA_REP_VISIVEL === "undefined" ? false : SGO_DATA_REP_VISIVEL;
+    SGO_DATA_REP_VISIVEL = true;
+    let achado;
+    try { achado = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).find(function (u) { return SGO_UTILS.safe(u.ID) === alvo; }); } finally { SGO_DATA_REP_VISIVEL = antes; }
     return achado || null;
   } catch (e) {
     return false;
@@ -381,7 +403,26 @@ function exigirSessao(sessionId) {
     throw new Error(validacao.message || "Sessão inválida ou expirada.");
   }
 
+  // 29/10/2026 (módulo Representação): a sessão REPRESENTADA só vale dentro da entrada do módulo (Representacao_api
+  // liga SGO_REP_MODULO). Em qualquer outra função do SGO+ é recusada, mesmo que a chamada chegue lá.
+  if (SGO_UTILS.safeUpper(validacao.data && validacao.data.perfil) === "REPRESENTADA" && !(typeof SGO_REP_MODULO !== "undefined" && SGO_REP_MODULO === true)) {
+    throw new Error(MSG_REPRESENTADA_AUTH);
+  }
+
   return validacao.data;
+}
+
+var MSG_REPRESENTADA_AUTH = "Acesso negado: o seu usuário é de representada e usa só o módulo Representação. Abra o menu Representação.";
+
+/** Motivo para recusar a entrada da conta REPRESENTADA ("" = pode entrar). */
+function motivoRepresentadaAuth_(representadaId) {
+  const rid = SGO_UTILS.safe(representadaId);
+  if (!rid) return "Não foi possível entrar: o seu usuário de representada não está ligado a nenhuma empresa. Fale com a Metrolabs para corrigir o acesso.";
+  let rep = null;
+  try { rep = SGO_DATA.getById("REP_REPRESENTADAS", rid); } catch (e) { rep = null; }
+  if (!rep) return "Não foi possível entrar: a empresa ligada ao seu usuário não foi encontrada. Fale com a Metrolabs para corrigir o acesso.";
+  if (SGO_UTILS.safeUpper(rep.SITUACAO || "ATIVA") !== "ATIVA") return "Não foi possível entrar: o acesso da " + SGO_UTILS.safe(rep.NOME) + " está suspenso pela Metrolabs. Fale com a Metrolabs.";
+  return "";
 }
 
 /**
@@ -391,6 +432,7 @@ function exigirSessao(sessionId) {
 function isAdminSession(sessionId) {
   const validacao = validarSessao(sessionId);
   if (!validacao.valid) return false;
+  if (SGO_UTILS.safeUpper(validacao.data && validacao.data.perfil) === "REPRESENTADA") return false;
   return isAdminPerfilAuth_(validacao.data && validacao.data.perfil);
 }
 

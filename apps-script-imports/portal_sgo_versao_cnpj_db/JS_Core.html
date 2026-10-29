@@ -246,6 +246,7 @@
 
           exibirAppLogado_();
           aplicarContextoUsuario_();
+          if (SGO_ehRepresentada_()) { SGO_iniciarRepresentada_(); return; }
           resetarOciosidade_();
           iniciarMonitorOciosidade_();
           iniciarPollingAuvo_();
@@ -325,6 +326,7 @@
 
         exibirAppLogado_();
         aplicarContextoUsuario_();
+        if (SGO_ehRepresentada_()) { SGO_iniciarRepresentada_(); return; }
         resetarOciosidade_();
         iniciarMonitorOciosidade_();
         iniciarPollingAuvo_();
@@ -498,6 +500,7 @@
   });
 
   function irTelaInicial_() {
+    if (SGO_ehRepresentada_()) { abrir("representacao"); return; }
     if (ehMobileModo_()) {
       abrir("mobile_home");
     } else {
@@ -768,6 +771,15 @@
   function SGO_ehRotina_() { var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
   function SGO_telaLiberadaRH_(mod) { return !SGO_ehRH_() || SGO_TELAS_RH.indexOf(String(mod || "")) >= 0; }
+  // PERFIL REPRESENTADA (29/10/2026, módulo Representação): a pessoa da representada (Brasmedical) entra pelo login normal
+  // e vê só o módulo Representação. As rotinas de fundo do SGO+ (avisos, alertas, bate-papo, atividades) não são ligadas
+  // para ela; o servidor também recusa qualquer outra função (lista fechada por perfil no servidor e exigirSessao no legado).
+  var SGO_TELAS_REPRESENTADA = ["representacao"];
+  function SGO_ehRepresentada_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "REPRESENTADA"); }
+  function SGO_iniciarRepresentada_() {
+    try { resetarOciosidade_(); iniciarMonitorOciosidade_(); } catch (e) {}
+    abrir("representacao");
+  }
 
   function aplicarRegrasDeAcesso_() {
     if (!USER_CONTEXT) return;
@@ -804,6 +816,16 @@
     });
     const btnUsuarios = document.querySelector("#menu-btn-usuarios");
     if (btnUsuarios) btnUsuarios.style.display = SGO_ehRotina_() ? "" : "none";
+    // Perfil REPRESENTADA: só o módulo Representação no menu (os grupos vazios somem sozinhos).
+    const grupoRep = document.getElementById("menu-secao-representacao");
+    if (grupoRep) grupoRep.style.display = isCliente ? "none" : "";
+    if (SGO_ehRepresentada_()) {
+      document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
+        const mod = btn.getAttribute("data-mod");
+        btn.style.display = mod && SGO_TELAS_REPRESENTADA.indexOf(mod) >= 0 ? "" : "none";
+      });
+      document.querySelectorAll("#menu .menu-grupo").forEach(function (g) { g.style.display = g.id === "menu-secao-representacao" ? "" : "none"; });
+    }
     // Perfil RH: tudo que não é do RH some do menu (os grupos vazios somem sozinhos).
     if (SGO_ehRH_()) {
       document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
@@ -822,6 +844,8 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    // Perfil REPRESENTADA: qualquer outra tela (atalho, busca, link antigo) leva ao módulo Representação.
+    if (SGO_ehRepresentada_() && SGO_TELAS_REPRESENTADA.indexOf(String(mod || "")) < 0) mod = "representacao";
     // Perfil RH: tela fora do perfil (busca, atalho antigo, link) mostra o motivo e o caminho de volta.
     if (!SGO_telaLiberadaRH_(mod)) {
       const divRh = document.getElementById("conteudo");
@@ -939,6 +963,13 @@
     // ASSISTENTE DO PONTO NATIVO (2026-10-21) — ver JS_Ponto.html / SGO_Ponto_*.js. O servidor confere o papel em toda chamada.
     if (mod === "ponto" && typeof Ponto_render_ === "function") {
       Ponto_render_();
+      return;
+    }
+
+    // MÓDULO REPRESENTAÇÃO (29/10/2026) — JS_Representacao.html / SGO_Representacao*.js. Mesmo módulo para a representada
+    // (visão dela) e para a Metrolabs (visão interna); o servidor decide pela sessão.
+    if (mod === "representacao" && typeof Representacao_render_ === "function") {
+      Representacao_render_();
       return;
     }
 
@@ -7997,6 +8028,8 @@
   // Põe o botão no cabeçalho da tela; sem cabeçalho, numa faixa curta no topo do conteúdo.
   // Telas que montam o cabeçalho depois (resposta do servidor) recebem o botão quando ele aparece.
   function Ajuda_garantirBotao_() {
+    // 29/10/2026: o perfil Representada lê a ajuda na aba "Como usar" do próprio módulo (versão sem termos internos)
+    if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return;
     if (!SESSION) return;
     const cont = document.getElementById("conteudo");
     if (!cont) return;

@@ -18,6 +18,7 @@ function SGO_ajudaTelas_Administracao_() {
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
         "Para um usuário do perfil Cliente, a empresa dele precisa estar cadastrada e ativa em Clientes.",
+        "Para a pessoa de uma empresa representada (Brasmedical), use o perfil Representada: escolha a representada (cadastrada em Representação > Representadas) e o papel dela (administrador da representada, atendente, financeiro de garantia ou leitura). Essa conta vê só o módulo Representação e não aparece nas listas de pessoas do SGO+ (responsáveis, avisos, bate-papo).",
         "Combine a senha inicial com a pessoa por um canal seguro. Nunca envie a senha em grupo ou por mensagem aberta."
       ],
       passos: [
@@ -147,6 +148,7 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "Aparece \"Use só letras sem acento, números, ponto, hífen ou sublinhado.\"", oQueFazer: "Tire acentos, espaços e outros sinais do login. Exemplo: joao.silva." },
         { situacao: "Aparece \"E-mail inválido: confira o formato (nome@empresa.com.br).\"", oQueFazer: "Confira se o e-mail tem @ e o domínio completo, sem espaço." },
         { situacao: "Aparece \"Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.\"", oQueFazer: "Digite o DDD e o número completo. Se a pessoa não tem celular, deixe o campo vazio." },
+        { situacao: "Aparece \"Escolha a representada desta conta.\" ou \"Escolha o papel na representada.\"", oQueFazer: "Com o perfil Representada, escolha a empresa em \"Representada (empresa)\" e o papel. Se a empresa não aparece, cadastre em Representação > Representadas (ela precisa estar ativa)." },
         { situacao: "Aparece \"Escolha a empresa do usuário Cliente.\"", oQueFazer: "Com o perfil Cliente, escolha a empresa na lista \"Empresa (cliente)\". Se a empresa não aparece, ela não está ativa em Clientes: peça o cadastro dela primeiro." },
         { situacao: "Aparece \"A senha inicial precisa ter pelo menos 6 caracteres.\" ou \"A senha nova precisa ter pelo menos 6 caracteres.\"", oQueFazer: "Digite uma senha com 6 caracteres ou mais." },
         { situacao: "Aparece \"As duas senhas não são iguais. Digite de novo.\"", oQueFazer: "Digite a mesma senha nos dois campos da janela \"Redefinir a senha\"." },
@@ -171,6 +173,7 @@ function SGO_ajudaTelas_Administracao_() {
         { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão (Gestor, RH ou Financeiro)." },
         { perfil: "TODOS", pode: "Ninguém muda o próprio perfil: o campo fica travado na própria conta." },
         { perfil: "CLIENTE", pode: "Não usa esta tela. Para acesso de mais alguém da sua empresa, peça à Metrolabs." },
+        { perfil: "REPRESENTADA", pode: "Não usa esta tela. Para incluir ou tirar alguém da equipe, escreve à Metrolabs pelo Canal geral do módulo Representação." },
         { perfil: "TODOS", pode: "Ninguém inativa ou exclui a própria conta. O sistema nunca fica sem um Administrador ativo." }
       ],
       perguntas: [
@@ -180,7 +183,8 @@ function SGO_ajudaTelas_Administracao_() {
         { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Use \"Mais\" e depois \"Redefinir senha\"." },
         { p: "Por que aparece \"Nunca entrou\" para quem já usou o sistema?", r: "O último acesso vem do registro recente de entradas. Uma entrada muito antiga pode não aparecer. Quando a pessoa entrar de novo, a data é atualizada." },
         { p: "Quando o perfil novo começa a valer?", r: "Em até 5 minutos ou no próximo login da pessoa." },
-        { p: "O que o perfil Cliente vê?", r: "Só os dados da empresa escolhida em \"Empresa (cliente)\"." }
+        { p: "O que o perfil Cliente vê?", r: "Só os dados da empresa escolhida em \"Empresa (cliente)\"." },
+        { p: "O que o perfil Representada vê?", r: "Só o módulo Representação, com os pedidos, chamados, equipamentos e conversas da representada escolhida. O resto do SGO+ recusa essa conta." }
       ]
     },
 

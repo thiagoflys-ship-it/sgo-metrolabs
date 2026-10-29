@@ -74,12 +74,15 @@ const SGO_USUARIOS = (() => {
   function garantirColunaCelular_() {
     try {
       const cache = CacheService.getScriptCache();
-      if (cache.get("USR_CELULAR_OK_V3")) return;
+      if (cache.get("USR_CELULAR_OK_V4")) return;
       // EMAIL também: o cadastro exige e-mail, mas a coluna só nascia quando a
       // integração Auvo rodava — sem ela o e-mail era descartado em silêncio e
       // toda edição seguinte falhava com "E-mail é obrigatório".
       CertCal_garantirColuna_(SHEET_NAME, "EMAIL");
       CertCal_garantirColuna_(SHEET_NAME, "CELULAR");
+      // 29/10/2026 (módulo Representação): conta da representada ligada à empresa e o papel dela
+      CertCal_garantirColuna_(SHEET_NAME, "REPRESENTADA_ID");
+      CertCal_garantirColuna_(SHEET_NAME, "REPRESENTACAO_PAPEL");
       CertCal_forcarColunaTexto_(SHEET_NAME, "CELULAR");
       // Vínculo de trabalho (19/10/2026): acrescenta a coluna no fim, sem apagar nada.
       CertCal_garantirColuna_(SHEET_NAME, "VINCULO_TRABALHO");
@@ -238,11 +241,13 @@ const SGO_USUARIOS = (() => {
         NOME: dados.NOME,
         PERFIL: dados.PERFIL,
         CLIENTE_ID: dados.PERFIL === "CLIENTE" ? dados.CLIENTE_ID : "",
+        REPRESENTADA_ID: dados.PERFIL === "REPRESENTADA" ? dados.REPRESENTADA_ID : "",
+        REPRESENTACAO_PAPEL: dados.PERFIL === "REPRESENTADA" ? dados.REPRESENTACAO_PAPEL : "",
         EMAIL: dados.EMAIL,
         CELULAR: dados.CELULAR || "",
         VINCULO_TRABALHO: dados.VINCULO_TRABALHO || "",
         // Sem a chave AREA no pedido (cadastro por outra tela ou pela ponte), a área vem do perfil quando ele a diz.
-        AREA: dados.PERFIL === "CLIENTE" ? "" : (dados.AREA !== undefined ? (dados.AREA || "") : ((typeof AREAS_POR_PERFIL !== "undefined" && AREAS_POR_PERFIL[dados.PERFIL]) || "")),
+        AREA: dados.PERFIL === "CLIENTE" || dados.PERFIL === "REPRESENTADA" ? "" : (dados.AREA !== undefined ? (dados.AREA || "") : ((typeof AREAS_POR_PERFIL !== "undefined" && AREAS_POR_PERFIL[dados.PERFIL]) || "")),
         STATUS: STATUS_ATIVO
       })
     );
@@ -276,7 +281,7 @@ const SGO_USUARIOS = (() => {
     payload = payload || {};
     const normal = normalizarPayload_(payload);
     // Merge: campo ausente no pedido mantém o valor atual (não apaga).
-    const dados = SGO_DATA.mesclarCampos_(atual, normal, payload, ["USUARIO", "NOME", "PERFIL", "CLIENTE_ID", "EMAIL"]);
+    const dados = SGO_DATA.mesclarCampos_(atual, normal, payload, ["USUARIO", "NOME", "PERFIL", "CLIENTE_ID", "REPRESENTADA_ID", "REPRESENTACAO_PAPEL", "EMAIL"]);
     dados.USUARIO = SGO_UTILS.safeLower(dados.USUARIO);
     dados.PERFIL = SGO_UTILS.safeUpper(dados.PERFIL);
     dados.EMAIL = SGO_UTILS.safeLower(dados.EMAIL);
@@ -315,12 +320,14 @@ const SGO_USUARIOS = (() => {
       NOME: dados.NOME,
       PERFIL: dados.PERFIL,
       CLIENTE_ID: dados.PERFIL === "CLIENTE" ? dados.CLIENTE_ID : "",
+      REPRESENTADA_ID: dados.PERFIL === "REPRESENTADA" ? dados.REPRESENTADA_ID : "",
+      REPRESENTACAO_PAPEL: dados.PERFIL === "REPRESENTADA" ? dados.REPRESENTACAO_PAPEL : "",
       EMAIL: dados.EMAIL,
       CELULAR: dados.CELULAR === undefined ? SGO_UTILS.safe(atual.CELULAR) : dados.CELULAR,
       // Sem a chave no pedido (redefinir senha, por exemplo) o vínculo fica como está.
       VINCULO_TRABALHO: dados.VINCULO_TRABALHO === undefined ? SGO_UTILS.safeUpper(atual.VINCULO_TRABALHO) : dados.VINCULO_TRABALHO,
       // Área: mesma regra (sem a chave no pedido, fica como está).
-      AREA: dados.PERFIL === "CLIENTE" ? "" : (dados.AREA === undefined ? SGO_UTILS.safeUpper(atual.AREA) : dados.AREA),
+      AREA: dados.PERFIL === "CLIENTE" || dados.PERFIL === "REPRESENTADA" ? "" : (dados.AREA === undefined ? SGO_UTILS.safeUpper(atual.AREA) : dados.AREA),
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
@@ -452,6 +459,8 @@ const SGO_USUARIOS = (() => {
       NOME: SGO_UTILS.safeUpper(payload.NOME), // Força o nome completo para maiúsculo
       PERFIL: SGO_UTILS.safeUpper(payload.PERFIL),
       CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
+      REPRESENTADA_ID: SGO_UTILS.safe(payload.REPRESENTADA_ID),
+      REPRESENTACAO_PAPEL: SGO_UTILS.safeUpper(payload.REPRESENTACAO_PAPEL),
       EMAIL: SGO_UTILS.safeLower(payload.EMAIL).trim(),
       // Sem a chave CELULAR no pedido = "não mexer" (undefined), não "apagar".
       CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined,
@@ -473,6 +482,12 @@ const SGO_USUARIOS = (() => {
       erros.push("Perfil de acesso inválido.");
     }
     if (dados.PERFIL === "CLIENTE" && !dados.CLIENTE_ID) erros.push("Vínculo de cliente é obrigatório para este perfil.");
+    // 29/10/2026 (módulo Representação): a conta da representada precisa da empresa (Representação > Representadas) e do papel
+    if (dados.PERFIL === "REPRESENTADA") {
+      if (!dados.REPRESENTADA_ID) erros.push("Escolha a representada (empresa) desta conta. Se ela não aparece, cadastre em Representação > Representadas.");
+      else { let rp = null; try { rp = SGO_DATA.getById("REP_REPRESENTADAS", dados.REPRESENTADA_ID); } catch (eRp) { rp = null; } if (!rp) erros.push("A representada escolhida não foi encontrada. Atualize a tela e escolha de novo."); }
+      if (["ADMIN", "ATENDENTE", "FINANCEIRO", "LEITURA"].indexOf(dados.REPRESENTACAO_PAPEL) < 0) erros.push("Escolha o papel na representada (administrador, atendente, financeiro de garantia ou leitura).");
+    }
     if (!dados.EMAIL) {
       erros.push("E-mail é obrigatório — usado como identidade do usuário no Portal.");
     } else if (dados.EMAIL.indexOf("@") === -1 || dados.EMAIL.indexOf(".") === -1) {
@@ -510,15 +525,15 @@ const SGO_USUARIOS = (() => {
 /* =========================
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
-function usuariosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosListar(sessionId) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosObter(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosCriar(sessionId, payload) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosAtualizar(sessionId, id, payload) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosInativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosReativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosExcluir(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosPesquisar(sessionId, termo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosListarClientesAtivos(sessionId) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 
 /* =========================
    CADASTROS E ADMINISTRAÇÃO 17/10 — tela Usuários
@@ -599,6 +614,8 @@ function Usuarios_saneamentoVinculoDiretoria_() {
 }
 
 function usuariosPainel(sessionId) {
+  // 29/10/2026: a tela Usuários lista também as contas REPRESENTADA (SGO_DATA.getAll as esconde no resto do SGO+)
+  SGO_DATA_REP_VISIVEL = true;
   try {
     var sessao = exigirSessao(sessionId);
     var base = SGO_USUARIOS.pesquisar(sessionId, "");
@@ -618,6 +635,8 @@ function usuariosPainel(sessionId) {
     try { Areas_garantir_(); areasAtivas = Areas_todas_().filter(function (a) { return a.ATIVO; }); nomesAreas = Areas_mapaNomes_(); } catch (eAr) { console.warn("Áreas: " + ((eAr && eAr.message) || eAr)); }
     var clientes = {};
     try { SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[SGO_UTILS.safe(c.ID)] = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL); }); } catch (e) {}
+    var representadas = {}, listaRepresentadas = [];
+    try { SGO_DATA.getAll("REP_REPRESENTADAS").forEach(function (r) { representadas[SGO_UTILS.safe(r.ID)] = SGO_UTILS.safe(r.NOME); if (SGO_UTILS.safeUpper(r.SITUACAO || "ATIVA") === "ATIVA") listaRepresentadas.push({ ID: SGO_UTILS.safe(r.ID), NOME: SGO_UTILS.safe(r.NOME) }); }); } catch (eRep) {}
     var ativosAdmin = (base.items || []).filter(function (u) { return SGO_UTILS.safeUpper(u.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO"; }).length;
     var itens = (base.items || []).map(function (u) {
       var o = {};
@@ -625,6 +644,7 @@ function usuariosPainel(sessionId) {
       var perfil = SGO_UTILS.safeUpper(u.PERFIL);
       o.ULTIMO_ACESSO = acessos[SGO_UTILS.safeLower(u.USUARIO)] || "";
       o.CLIENTE_NOME = perfil === "CLIENTE" ? (clientes[SGO_UTILS.safe(u.CLIENTE_ID)] || "") : "";
+      o.REPRESENTADA_NOME = perfil === "REPRESENTADA" ? (representadas[SGO_UTILS.safe(u.REPRESENTADA_ID)] || "") : "";
       o.SEM_CELULAR = !String(u.CELULAR || "").replace(/\D/g, "");
       o.EU = SGO_UTILS.safe(u.ID) === SGO_UTILS.safe(sessao.userId);
       // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
@@ -633,7 +653,7 @@ function usuariosPainel(sessionId) {
       o.VINCULO_ROTULO = SGO_rotuloVinculo_(o.VINCULO_TRABALHO);
       // 22/10/2026: conta da Diretoria (ou do responsável pelo sistema) sem vínculo: a tela sugere "Diretoria".
       o.VINCULO_SUGERIDO = Usuarios_vinculoSugerido_(u);
-      var ar = perfil === "CLIENTE" ? { codigo: "", nome: "" } : (typeof SGO_areaDoUsuario_ === "function" ? SGO_areaDoUsuario_(u, nomesAreas) : { codigo: SGO_UTILS.safeUpper(u.AREA), nome: SGO_UTILS.safe(u.AREA) });
+      var ar = perfil === "CLIENTE" || perfil === "REPRESENTADA" ? { codigo: "", nome: "" } : (typeof SGO_areaDoUsuario_ === "function" ? SGO_areaDoUsuario_(u, nomesAreas) : { codigo: SGO_UTILS.safeUpper(u.AREA), nome: SGO_UTILS.safe(u.AREA) });
       o.AREA = ar.codigo;
       o.AREA_NOME = ar.codigo ? ar.nome : "";
       o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
@@ -645,6 +665,7 @@ function usuariosPainel(sessionId) {
     });
     return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir, podeExcluir: podeExcluir,
       areas: areasAtivas, podeGerirAreas: SGO_podeConsultarPessoas_(sessao.perfil),
+      representadas: listaRepresentadas, papeisRepresentacao: [["ADMIN", "Administrador da representada"], ["ATENDENTE", "Atendente"], ["FINANCEIRO", "Financeiro de garantia"], ["LEITURA", "Leitura"]],
       perfis: (SGO_CFG.PROFILES || []).filter(function (p) { var k = SGO_UTILS.safeUpper(p); return (souAdmin || k !== "ADMIN") && (podeDarDiretoria || k !== "DIRETORIA"); }) }));
   } catch (e) {
     return { success: false, message: SGO_textoFalhaOperador_("carregar os usuários", e) };

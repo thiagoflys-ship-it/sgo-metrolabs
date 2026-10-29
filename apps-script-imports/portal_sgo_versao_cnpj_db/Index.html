@@ -219,6 +219,14 @@
           </div>
         </div>
 
+        <!-- 29/10/2026: módulo Representação (JS_Representacao.html / SGO_Representacao*.js): a representada (perfil REPRESENTADA) vê só este grupo; a Metrolabs trata pedidos, conversas, representadas e catálogo. -->
+        <div class="sidebar-section menu-grupo" data-grupo="representacao" id="menu-secao-representacao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-representacao" onclick="Menu_alternarGrupo_('representacao')"><span class="menu-grupo-nome">Representação</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-representacao">
+          <button type="button" class="menu-btn" data-mod="representacao" data-busca="representacao representada brasmedical garantia pedido de atendimento parceiro conversa" id="menu-btn-representacao" onclick="abrir('representacao')"><span class="menu-btn-icon"><i class="fas fa-handshake" aria-hidden="true"></i></span>Representação</button>
+          </div>
+        </div>
+
         <div class="sidebar-section menu-grupo" data-grupo="automacao" id="menu-secao-automacao" style="display:none;">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-automacao" onclick="Menu_alternarGrupo_('automacao')"><span class="menu-grupo-nome">Segurança predial</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-automacao">
@@ -323,6 +331,7 @@
 <?!= include('JS_Comercial'); ?>
 <?!= include('JS_Compras'); ?>
 <?!= include('JS_Assistencia'); ?>
+<?!= include('JS_Representacao'); ?>
 <?!= include('JS_Ponto'); ?>
 <?!= include('JS_Email'); ?>
 <?!= include('JS_Assistente'); ?>
@@ -330,7 +339,8 @@
 <script>
   // imagens: o SGO+ tem comImagemApi (SGO_ComunicacaoImagens.js); no COMMAND fica sem, e a imagem aparece só como "Imagem: explicação"
   window.COM_CFG = { sistema: "SGO", outro: "COMMAND", imagens: true,
-    token: function () { try { return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } } };
+    // 29/10/2026: o perfil Representada não usa o bate-papo interno (a conversa com ela é no módulo Representação)
+    token: function () { try { if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return ""; return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } } };
 </script>
 <?!= include('ComunicacaoWidget'); ?>
 <!-- Assistente "Tire sua dúvida" (componente comum SGO+ e COMMAND). ASSIST_CFG vem de JS_Assistente, antes deste include. -->

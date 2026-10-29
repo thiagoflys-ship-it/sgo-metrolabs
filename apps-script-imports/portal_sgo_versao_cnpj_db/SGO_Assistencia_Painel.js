@@ -191,7 +191,7 @@ function Assistencia_fontePendencias_(add, ctx) {
 // ROTINA
 // ------------------------------------------------------------
 // 27/10/2026: a fila livre da triagem é conferida a cada rodada do gatilho (15 minutos), antes do limite de uma vez por hora do resto
-function Assistencia_rotinaGatilho() { try { Ast_memoLimpar_(); AstC_filaLivreVerificar_(); } catch (e) {} return Assistencia_rotina_(new Date(), false); }
+function Assistencia_rotinaGatilho() { try { Ast_memoLimpar_(); AstC_filaLivreVerificar_(); } catch (e) {} try { if (typeof Representacao_rotina_ === 'function') Representacao_rotina_(); } catch (e2) {} return Assistencia_rotina_(new Date(), false); }
 function Assistencia_garantirRotina_() {
   var tem = false;
   try { tem = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === AST_FUNCAO_ROTINA; }); } catch (e) {}
@@ -481,6 +481,8 @@ function AstP_inicio_(eu) {
     .map(function (v) { return { titulo: Ast_s_(v.TITULO), texto: Ast_s_(v.TEXTO), em: Ast_br_(v.DATA), novo: !Ast_s_(v.LIDO_EM), refId: Ast_s_(v.REF_ID) }; });
   base.solicitacoesNovas = Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (s) { return Ast_up_(s.SITUACAO) === 'NOVA'; }).length;
   try { base.cadastrosCampo = typeof AstApp_cadastrosCampo_ === 'function' ? AstApp_cadastrosCampo_().length : 0; } catch (e) { base.cadastrosCampo = 0; }
+  // 29/10/2026: representadas para o filtro e o selo da lista (módulo Representação)
+  try { base.representadas = typeof RepI_representadas_ === 'function' ? RepI_representadas_().map(function (r) { return { id: r.id, nome: r.nome }; }) : []; } catch (e) { base.representadas = []; }
   return base;
 }
 function AstP_avisosLidos_(eu) {
@@ -546,6 +548,8 @@ var AST_ACOES = {
   solicitacoes: function (eu, d) { return AstC_solicitacoes_(eu, d); },
   converter: function (eu, d) { return AstC_converter_(eu, d); },
   descartar: function (eu, d) { return AstC_descartar_(eu, d); },
+  complemento: function (eu, d) { return AstC_complemento_(eu, d); },
+  representacao: function (eu, d) { return typeof RepI_chamado_ === 'function' ? RepI_chamado_(eu, d) : { representacao: null }; },
   casos: function (eu, d) { return AstC_casos_(eu, d); },
   salvarCaso: function (eu, d) { return AstC_salvarCaso_(eu, d); },
   // agenda

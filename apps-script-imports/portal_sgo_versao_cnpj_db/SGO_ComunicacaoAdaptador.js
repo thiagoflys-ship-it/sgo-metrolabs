@@ -27,7 +27,9 @@ function sgoComSetor_(perfil) {
 }
 
 function sgoComEhCliente_(perfil, clienteId) {
-  return String(perfil || "").trim().toUpperCase() === "CLIENTE" || !!String(clienteId || "").trim();
+  // 29/10/2026: a representada também fica fora do bate-papo interno (conversa com ela é no módulo Representação)
+  var p = String(perfil || "").trim().toUpperCase();
+  return p === "CLIENTE" || p === "REPRESENTADA" || !!String(clienteId || "").trim();
 }
 
 /**

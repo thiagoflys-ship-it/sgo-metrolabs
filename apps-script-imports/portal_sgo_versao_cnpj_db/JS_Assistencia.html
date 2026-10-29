@@ -16,7 +16,7 @@
   .at-acoes button, .at-acoes a.btn-secondary { min-height: 40px; }
   .at-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
   .at-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .at-selo.laranja { color: var(--warning); background: var(--warning-bg); }
-  .at-selo.verde { color: var(--success); background: var(--success-bg); } .at-selo.azul { color: var(--info, #1f5fa8); } .at-selo.cinza { color: var(--muted); }
+  .at-selo.verde { color: var(--success); background: var(--success-bg); } .at-selo.azul { color: var(--info, #1f5fa8); } .at-selo.cinza { color: var(--muted); } .at-selo.roxo { color: #6b21a8; background: #f3e8ff; }
   .at-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
   .at-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
   .at-filtros select, .at-filtros input { min-height: 40px; max-width: 100%; }
@@ -311,12 +311,16 @@
         .concat(ini.podeExcluir ? [["EXCLUIDOS", "Excluídos"]] : []).map(function (g) {
         return '<button type="button" class="at-tab' + (AT.filtro.grupo === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
       '<div class="at-filtros"><div><label for="atBusca">Buscar</label><input id="atBusca" type="search" placeholder="Número, cliente, equipamento, técnico" value="' + At_esc_(AT.filtro.busca) + '"></div>' +
-      '<div><label for="atPrio">Prioridade</label><select id="atPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), AT.filtro.prioridade, "Todas") + '</select></div></div><div id="atLista"><div class="at-vazio">Carregando…</div></div></div>';
+      '<div><label for="atPrio">Prioridade</label><select id="atPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), AT.filtro.prioridade, "Todas") + '</select></div>' +
+      // 29/10/2026 (módulo Representação): filtro pela representada (Brasmedical)
+      ((ini.representadas || []).length ? '<div><label for="atRep">Representação</label><select id="atRep">' + At_opcoes_([{ v: "TODAS", t: "Só de representadas" }].concat(ini.representadas.map(function (r) { return { v: r.id, t: r.nome }; })), AT.filtro.representadaId, "Todos os chamados") + '</select></div>' : '') +
+      '</div><div id="atLista"><div class="at-vazio">Carregando…</div></div></div>';
     At_$_("atAtualizar").onclick = function () { At_carregarChamados_(); };
     div.querySelectorAll("#atGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.filtro.grupo = b.getAttribute("data-g"); At_renderChamados_(div); }; });
     var t = null;
     At_$_("atBusca").oninput = function () { clearTimeout(t); t = setTimeout(function () { AT.filtro.busca = At_$_("atBusca").value; At_carregarChamados_(); }, 400); };
     At_$_("atPrio").onchange = function () { AT.filtro.prioridade = At_$_("atPrio").value; At_carregarChamados_(); };
+    if (At_$_("atRep")) At_$_("atRep").onchange = function () { AT.filtro.representadaId = At_$_("atRep").value; At_carregarChamados_(); };
     At_carregarChamados_();
     At_cadastrosCampo_();
   }
@@ -400,7 +404,7 @@
     return '<div class="at-card clicavel ' + cls + '" data-ch="' + At_esc_(c.id) + '" tabindex="0"><p class="at-card-tit">' + At_esc_(c.numero) + ' · ' + At_esc_(c.clienteNome) + (c.unidadeNome ? ' (' + At_esc_(c.unidadeNome) + ')' : '') + '</p>' +
       '<p class="at-meta">' + At_esc_(c.equipamentoTexto || "Equipamento não identificado") + ' · aberto em ' + At_esc_(c.abertoEm) + ' (' + At_esc_(c.canalNome) + ')</p>' +
       '<div>' + At_selo_(AT_COR_SIT[c.situacao], c.situacaoNome) + At_selo_(c.prioridade === "P1" ? "vermelho" : c.prioridade === "P2" ? "laranja" : "azul", c.prioridadeNome) + (c.terminal ? "" : At_seloSla_(c.sla)) +
-      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + At_seloTriagem_(c) + '</div>' +
+      (c.reincidente ? At_selo_("laranja", "Reincidência de " + c.reincidenciaDe) : "") + (c.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + (c.osNumero ? At_selo_("cinza", c.osNumero) : "") + At_seloTriagem_(c) + (c.representadaNome ? At_selo_("roxo", c.representadaNome) : "") + '</div>' +
       '<p class="at-txt">' + At_esc_(String(c.sintoma || "").slice(0, 180)) + '</p>' + (c.proximaAcao ? '<p class="at-meta"><b>Próximo passo:</b> ' + At_esc_(c.proximaAcao) + '</p>' : '') +
       (c.tecnicoNome ? '<p class="at-meta">Técnico: ' + At_esc_(c.tecnicoNome) + (c.agendadoPara ? ' · ' + At_esc_(c.agendadoPara) : '') + '</p>' : '') +
       (c.podeAssumir ? '<div class="at-acoes"><button type="button" class="btn-primary at-btn44" data-assumir="' + At_esc_(c.id) + '" data-num="' + At_esc_(c.numero) + '">Assumir chamado</button></div>' : '') + '</div>';
@@ -446,12 +450,24 @@
     if (r.os) h += '<div class="at-sec">Ordem de serviço</div><div class="at-card clicavel" id="atAbrirOs"><p class="at-card-tit">' + At_esc_(r.os.numero) + ' · ' + At_esc_(r.os.situacaoNome) + '</p><p class="at-meta">' + At_esc_(r.os.tipo.nome || "") + ' · ' + At_esc_(r.os.tecnicoNome) + ' · ' + At_esc_(r.os.agendadoPara) + '</p>' +
       (r.os.faltas && r.os.faltas.length ? '<p class="at-txt">Falta: ' + At_esc_(r.os.faltas.join("; ")) + '</p>' : '') + (r.os.relatorio ? '<p class="at-txt"><a href="' + At_esc_(r.os.relatorio.url) + '" target="_blank" rel="noopener">Relatório A4' + (r.os.relatorio.revisao ? " Rev. " + (r.os.relatorio.revisao < 10 ? "0" : "") + r.os.relatorio.revisao : "") + '</a>' + (r.os.envio ? ' · ' + At_esc_(r.os.envio.texto) : '') + '</p>' : '') + '</div>';
     if (r.historicoEquipamento && r.historicoEquipamento.length) h += '<div class="at-sec">Histórico do equipamento</div>' + At_listaHistorico_(r.historicoEquipamento);
+    // 29/10/2026 (módulo Representação): parte "Representação" da ficha (relato, contato, arquivos e conversa com a representada)
+    if (c.representadaId) h += '<div class="at-sec">Representação: ' + At_esc_(c.representadaNome) + '</div><div id="atRepFicha" class="at-caixa"><p class="at-meta">Carregando…</p></div>';
     h += '<div class="at-sec">Histórico do chamado</div><div class="at-hist">' + (r.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto || ((e.de || "") + " → " + (e.para || ""))) + '</div>'; }).join("") + '</div>';
     h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAnotar">Registrar contato ou observação</button><button type="button" class="btn-secondary" id="atReclamar">Registrar reclamação</button>' +
       (c.podeCancelar ? '<button type="button" class="btn-secondary" id="atCancelar" style="color:var(--danger)">Cancelar o chamado</button>' : '') +
       (c.podeExcluir ? '<button type="button" class="btn-secondary at-btn44" id="atExcluir" style="color:var(--danger)" title="Só para chamado de teste ou simulação; nada é apagado e a gestão pode restaurar">Excluir (teste ou simulação)</button>' : '') + '</div>';
     var g = At_gaveta_("Chamado " + c.numero, h), corpo = g.querySelector("#atGavetaCorpo");
     var reabrir = function (m, t) { At_abrirChamado_(c.id, m, t); };
+    if (c.representadaId && corpo.querySelector("#atRepFicha")) At_chamar_("representacao", { id: c.id }, function (x) {
+      var el = corpo.querySelector("#atRepFicha"), rp = x.representacao; if (!el || !rp) return;
+      var s = rp.solicitacao || {}, rel = s.relato || {};
+      el.innerHTML = '<p class="at-txt"><b>' + At_esc_(rp.representadaNome) + '</b>' + (rp.protocolo ? ' · protocolo ' + At_esc_(rp.protocolo) : '') + (rp.enquadramento ? ' · enquadramento pretendido: ' + At_esc_(rp.enquadramento) : '') + ' · a representada vê a etapa "' + At_esc_(rp.etapaRepresentada) + '"</p>' +
+        (s.numero ? '<p class="at-meta">Pedido ' + At_esc_(s.numero) + ' por ' + At_esc_(s.por) + ' · setor ' + At_esc_(s.setor) + ' · contato no local ' + At_esc_([s.contatoNome, s.contatoTelefone, s.contatoEmail].filter(Boolean).join(" · ")) + '</p>' : '') +
+        (rel.sintoma ? '<p class="at-txt">Código de erro: ' + At_esc_(rel.naoExibe ? "não exibe" : rel.codigoErro) + ' · risco: ' + At_esc_(rel.risco) + ' · já tentado: ' + At_esc_(rel.tentado) + '</p>' : '') +
+        (rp.anexos.length ? '<p class="at-txt">' + rp.anexos.map(function (a) { return '<a href="' + At_esc_(a.url) + '" target="_blank" rel="noopener">' + At_esc_(a.tipoNome + " · " + a.nome) + '</a>'; }).join(" · ") + '</p>' : '') +
+        '<p class="at-meta">' + rp.mensagens.length + ' mensagem(ns) na conversa' + (rp.mensagens.length ? '; última: ' + At_esc_(rp.mensagens[rp.mensagens.length - 1].autor + " em " + rp.mensagens[rp.mensagens.length - 1].em) : '') + '. Responda em Representação > Conversas (com nota interna, se precisar).</p>' +
+        '<div class="at-acoes"><button type="button" class="btn-secondary" onclick="abrir(\'representacao\')">Abrir o módulo Representação</button></div>';
+    }, function () {});
     if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);
     if (c.podeAgendar) At_ligarAgendar_(c, corpo, reabrir, r);
     var b;
@@ -994,7 +1010,11 @@
       var l = At_$_("atSolLista"); if (!l) return;
       l.innerHTML = r.solicitacoes.length ? '<div class="at-lista">' + r.solicitacoes.map(function (s) {
         return '<div class="at-card' + (s.parada === "TOTAL" ? " p1" : "") + '"><p class="at-card-tit">' + At_esc_(s.numero) + ' · ' + At_esc_(s.clienteNome) + '</p><p class="at-meta">' + At_esc_(s.em) + ' · ' + At_esc_(s.origemNome) + ' · ' + At_esc_(s.solicitante) + (s.contato ? ' · ' + At_esc_(s.contato) : '') + '</p>' +
-          '<p class="at-txt"><b>' + At_esc_(s.equipamentoTexto || "Equipamento não informado") + '</b><br>' + At_esc_(s.descricao) + '</p><div class="at-acoes"><button type="button" class="btn-primary" data-conv="' + At_esc_(s.id) + '">Abrir chamado</button><button type="button" class="btn-secondary" data-desc="' + At_esc_(s.id) + '">Descartar</button></div></div>';
+          (s.representadaNome ? '<div>' + At_selo_("roxo", s.representadaNome) + (s.situacao === "COMPLEMENTO" ? At_selo_("laranja", "Complemento pedido: aguardando a representada") : "") + '</div>' : '') +
+          '<p class="at-txt"><b>' + At_esc_(s.equipamentoTexto || "Equipamento não informado") + '</b><br>' + At_esc_(s.descricao) + '</p>' + (s.complementoPergunta ? '<p class="at-meta">Complemento pedido: ' + At_esc_(s.complementoPergunta) + (s.complementoResposta ? ' · Resposta: ' + At_esc_(s.complementoResposta) : '') + '</p>' : '') +
+          '<div class="at-acoes"><button type="button" class="btn-primary" data-conv="' + At_esc_(s.id) + '">' + (s.representadaNome ? "Aceitar (vira chamado)" : "Abrir chamado") + '</button>' +
+          (s.representadaNome && s.situacao === "NOVA" ? '<button type="button" class="btn-secondary" data-comp="' + At_esc_(s.id) + '">Pedir complemento</button>' : '') +
+          '<button type="button" class="btn-secondary" data-desc="' + At_esc_(s.id) + '">' + (s.representadaNome ? "Recusar com motivo" : "Descartar") + '</button></div></div>';
       }).join("") + '</div>' : '<div class="at-vazio">Nenhuma solicitação nova.</div>';
       l.querySelectorAll("[data-conv]").forEach(function (b) {
         b.onclick = function () {
@@ -1006,6 +1026,7 @@
           ov.querySelector("[data-ok]").onclick = function () { conv(false); };
         };
       });
+      l.querySelectorAll("[data-comp]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Pedir complemento à representada", "O pedido volta para a representada com a sua pergunta; o prazo de aceite fica pausado até ela responder.", "O que falta", 10, function (t, ov) { At_chamar_("complemento", { solicitacaoId: b.getAttribute("data-comp"), pergunta: t }, function () { ov.remove(); At_renderSolicitacoes_(div); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Pedir complemento"); }; });
       l.querySelectorAll("[data-desc]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Descartar a solicitação", "Ela sai da fila e o motivo fica registrado.", "Motivo", 10, function (t, ov) { At_chamar_("descartar", { solicitacaoId: b.getAttribute("data-desc"), motivo: t }, function () { ov.remove(); At_renderSolicitacoes_(div); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Descartar"); }; });
     }, function (m) { At_msg_("atSolLista", m); });
   }
@@ -1086,6 +1107,11 @@
           return '<label class="at-check"><input type="checkbox" data-trresp="' + At_esc_(u.id) + '"' + (marcados.indexOf(String(u.id)) >= 0 ? " checked" : "") + dis + '> ' + At_esc_(u.nome) + ' <span class="at-meta">(' + At_esc_([u.perfil, u.area].filter(Boolean).join(", ")) + ')</span></label>'; }).join("") + '</div>' +
         '<label class="at-check"><input type="checkbox" id="atRgFila"' + (trg.filaLivreLigada !== false ? " checked" : "") + dis + '> Fila livre ligada: se ninguém assumir no tempo abaixo, qualquer colaborador pode assumir o chamado ("Assumir chamado")</label>' +
         '<div class="at-grade2">' + At_campo_("Tempo até a fila livre (minutos úteis do expediente)", '<input id="atRgFilaMin" type="number" min="5" max="480" step="5" value="' + At_esc_(trg.filaLivreMin || 30) + '"' + dis + '>', "Padrão 30. Conta só o horário de trabalho: chamado aberto à noite entra na fila livre 30 minutos depois da abertura do expediente seguinte.") + '</div></div>';
+      // 29/10/2026 (módulo Representação): responsáveis pela representação (recebem pedidos, alertas de prazo de aceite e mensagens)
+      var rpr = ((g.representacao || {}).responsaveis || []).map(String);
+      h += '<div class="at-caixa"><h3>Representação</h3><p class="at-meta">Quem responde pela conta da representada (Brasmedical): recebe os pedidos do módulo Representação, o alerta a 75% do prazo de aceite e as mensagens. Sem ninguém marcado, vale quem faz a triagem. Os prazos de cada representada ficam em Representação &gt; Representadas.</p>' +
+        '<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:10px">' + (r.internos || []).map(function (u) {
+          return '<label class="at-check"><input type="checkbox" data-rpresp="' + At_esc_(u.id) + '"' + (rpr.indexOf(String(u.id)) >= 0 ? " checked" : "") + dis + '> ' + At_esc_(u.nome) + ' <span class="at-meta">(' + At_esc_([u.perfil, u.area].filter(Boolean).join(", ")) + ')</span></label>'; }).join("") + '</div></div>';
       h += '<div class="at-caixa"><h3>Prazos por prioridade (horas úteis do expediente)</h3><table class="at-tabela"><thead><tr><th>Prioridade</th><th>Prazo de atendimento (h)</th><th>Prazo de triagem (h)</th></tr></thead><tbody>' +
         ["P1", "P2", "P3", "P4"].map(function (p) { return '<tr><td data-r="Prioridade">' + p + '</td><td data-r="Atendimento"><input data-pz="' + p + '|atendimentoMin" type="number" step="0.5" min="0.5" value="' + h2(g.prazos[p].atendimentoMin) + '"' + dis + '></td><td data-r="Triagem"><input data-pz="' + p + '|triagemMin" type="number" step="0.25" min="0.1" value="' + h2(g.prazos[p].triagemMin) + '"' + dis + '></td></tr>'; }).join("") +
         '</tbody></table><p class="at-meta">Padrão: P1 4 h úteis, P2 1 dia útil (9,5 h), P3 3 dias úteis, P4 7 dias úteis. O contrato do cliente prevalece.</p>' +
@@ -1117,6 +1143,7 @@
         nova.localizacao.distanciaAvisoMetros = Number(At_$_("atRgDist").value); nova.fotos.maxBytes = Math.round(Number(At_$_("atRgFoto").value) * 1000000);
         nova.triagem = { responsaveis: Array.prototype.map.call(c.querySelectorAll("[data-trresp]:checked"), function (x) { return x.getAttribute("data-trresp"); }),
           filaLivreLigada: At_$_("atRgFila").checked, filaLivreMin: Number(At_$_("atRgFilaMin").value) };
+        nova.representacao = { responsaveis: Array.prototype.map.call(c.querySelectorAll("[data-rpresp]:checked"), function (x) { return x.getAttribute("data-rpresp"); }) };
         nova.contratos = [];
         c.querySelectorAll("[data-contrato]").forEach(function (l) {
           var cid = l.querySelector("[data-c=cliente]").value; if (!cid) return;

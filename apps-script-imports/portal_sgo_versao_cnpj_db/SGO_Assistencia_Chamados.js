@@ -202,6 +202,8 @@ function AstC_publico_(c, eu, agoraMs, regras) {
     osId: Ast_s_(c.OS_ID), osNumero: Ast_s_(c.OS_NUMERO), atendidoEm: Ast_br_(c.ATENDIDO_EM), encerradoEm: Ast_br_(c.ENCERRADO_EM), canceladoMotivo: Ast_s_(c.CANCELADO_MOTIVO),
     reincidente: Ast_sim_(c.REINCIDENTE), reincidenciaDe: Ast_s_(c.REINCIDENCIA_DE), proximaAcao: Ast_s_(c.PROXIMA_ACAO), terminal: AST_TERMINAIS.indexOf(s) >= 0,
     abertaEmCampo: Ast_sim_(c.ABERTA_EM_CAMPO),
+    // 29/10/2026: marca da representada (filtro e selo na lista; parte "Representação" na ficha)
+    representadaId: Ast_s_(c.REPRESENTADA_ID), representadaNome: Ast_s_(c.REPRESENTADA_NOME), protocoloRepresentada: Ast_s_(c.PROTOCOLO_REPRESENTADA),
     podeTriar: AstC_podeTriar_(eu, c), podeAgendar: !!(eu && eu.gestao) && (s === 'PLANEJADO' || s === 'AGENDADO'),
     podeCancelar: !!(eu && eu.gestao) && (AST_TRANSICOES[s] || []).indexOf('CANCELADO') >= 0,
     // 22/10/2026 (etapa 3): peça disponível em Compras (retorno a agendar), chegada ao local pelo contrato e a volta à triagem da O.S. com documentação pendente
@@ -312,7 +314,10 @@ function AstC_abrir_(eu, d, opcoes) {
       PRAZO_TRIAGEM_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.triagemMin)), PRAZO_ATENDIMENTO_EM: Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.atendimentoMin)),
       CHEGADA_MIN_UTEIS: sla.chegadaMin || 0, PRAZO_CHEGADA_EM: sla.chegadaMin ? Ast_agora_(Ast_somarMinUteis_(agoraMs, sla.chegadaMin)) : '',
       TRIAGEM_RESPONSAVEL_ID: triagem.id, TRIAGEM_RESPONSAVEL_NOME: triagem.nome, TRIAGEM_JSON: '{}', REINCIDENTE: reinc ? 'SIM' : '', REINCIDENCIA_DE: reinc ? Ast_s_(reinc.NUMERO) : '',
-      SOLICITACAO_ID: Ast_s_(d.solicitacaoId), PROPOSTA_ID: Ast_s_(d.propostaId), PROXIMA_ACAO: o.campo ? 'Atendimento em campo com ' + eu.nome + ' (triagem feita em campo)' : 'Fazer a triagem (' + (triagem.nome || 'gestão da área Técnica') + ')',
+      SOLICITACAO_ID: Ast_s_(d.solicitacaoId), PROPOSTA_ID: Ast_s_(d.propostaId),
+      // 29/10/2026 (módulo Representação): chamado nascido de pedido da representada (só pela conversão da solicitação)
+      REPRESENTADA_ID: Ast_s_(o.representada && o.representada.id), REPRESENTADA_NOME: Ast_s_(o.representada && o.representada.nome),
+      PROTOCOLO_REPRESENTADA: Ast_s_(o.representada && o.representada.protocolo), ENQUADRAMENTO_PRETENDIDO: Ast_s_(o.representada && o.representada.enquadramento), PROXIMA_ACAO: o.campo ? 'Atendimento em campo com ' + eu.nome + ' (triagem feita em campo)' : 'Fazer a triagem (' + (triagem.nome || 'gestão da área Técnica') + ')',
       ABERTA_EM_CAMPO: o.campo ? 'SIM' : '', ATUALIZADO_EM: agora
     });
   });
@@ -763,6 +768,7 @@ function AstC_lista_(eu, f) {
     if (f.clienteId && Ast_s_(c.CLIENTE_ID) !== Ast_s_(f.clienteId)) return false;
     if (f.prioridade && Ast_up_(c.PRIORIDADE) !== Ast_up_(f.prioridade)) return false;
     if (f.tecnicoId && Ast_s_(c.TECNICO_ID) !== Ast_s_(f.tecnicoId)) return false;
+    if (f.representadaId && (f.representadaId === 'TODAS' ? !Ast_s_(c.REPRESENTADA_ID) : Ast_s_(c.REPRESENTADA_ID) !== Ast_s_(f.representadaId))) return false;
     if (busca && Ast_semAcento_([c.NUMERO, c.CLIENTE_NOME, c.UNIDADE_NOME, c.EQUIPAMENTO_TEXTO, c.SINTOMA, c.SOLICITANTE, c.TECNICO_NOME, c.OS_NUMERO].join(' ')).indexOf(busca) < 0) return false;
     return true;
   }).map(function (c) { return AstC_publico_(c, eu, agoraMs, regras); });
@@ -835,33 +841,64 @@ function AstC_solicitar_(eu, d) {
 function AstC_solicitacoes_(eu, f) {
   Ast_exigir_(eu, 'INTERNO', 'ver as solicitações');
   var so = Ast_up_((f || {}).situacao) || 'NOVA';
-  return { solicitacoes: Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (s) { return so === 'TODAS' || Ast_up_(s.SITUACAO) === so; })
+  // 29/10/2026: "NOVA" mostra também os pedidos da representada com complemento pedido (ainda na fila)
+  return { solicitacoes: Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (s) { var x = Ast_up_(s.SITUACAO); return so === 'TODAS' || x === so || (so === 'NOVA' && x === 'COMPLEMENTO'); })
     .sort(function (a, b) { return String(b.CRIADO_EM).localeCompare(String(a.CRIADO_EM)); })
     .map(function (s) { return { id: s.ID, numero: s.NUMERO, origem: Ast_up_(s.ORIGEM), origemNome: AST_CANAIS[Ast_up_(s.ORIGEM)] || s.ORIGEM, clienteId: s.CLIENTE_ID, clienteNome: s.CLIENTE_NOME,
       unidadeId: s.UNIDADE_ID, equipamentoId: s.EQUIPAMENTO_ID, equipamentoTexto: s.EQUIPAMENTO_TEXTO, solicitante: s.SOLICITANTE, contato: s.CONTATO, descricao: s.DESCRICAO, parada: s.PARADA,
-      situacao: Ast_up_(s.SITUACAO), chamadoNumero: s.CHAMADO_NUMERO, descarteMotivo: s.DESCARTE_MOTIVO, em: Ast_br_(s.CRIADO_EM) }; }) };
+      situacao: Ast_up_(s.SITUACAO), chamadoNumero: s.CHAMADO_NUMERO, descarteMotivo: s.DESCARTE_MOTIVO, em: Ast_br_(s.CRIADO_EM),
+      representadaId: Ast_s_(s.REPRESENTADA_ID), representadaNome: Ast_s_(s.REPRESENTADA_NOME), complementoPergunta: Ast_s_(s.COMPLEMENTO_PERGUNTA), complementoResposta: Ast_s_(s.COMPLEMENTO_RESPOSTA) }; }) };
 }
 /** Converte a solicitação em chamado (o atendente confere prioridade e equipamento). d: campos do chamado + solicitacaoId. */
 function AstC_converter_(eu, d) {
   Ast_exigir_(eu, 'INTERNO', 'converter a solicitação');
   var s = Ast_porId_(AST_ABAS.SOLICITACOES, d && d.solicitacaoId);
   if (!s) throw new Error('Não foi possível converter: a solicitação não foi encontrada. Atualize a fila');
-  if (Ast_up_(s.SITUACAO) !== 'NOVA') throw new Error('Não foi possível converter: a solicitação ' + s.NUMERO + ' já foi tratada (' + (s.CHAMADO_NUMERO ? 'virou o chamado ' + s.CHAMADO_NUMERO : 'descartada') + ')');
+  var rep = Ast_s_(s.REPRESENTADA_ID);
+  // 29/10/2026: pedido da representada com complemento pedido também pode ser aceito (a Metrolabs decide que já basta)
+  if (Ast_up_(s.SITUACAO) !== 'NOVA' && !(rep && Ast_up_(s.SITUACAO) === 'COMPLEMENTO')) throw new Error('Não foi possível converter: a solicitação ' + s.NUMERO + ' já foi tratada (' + (s.CHAMADO_NUMERO ? 'virou o chamado ' + s.CHAMADO_NUMERO : Ast_up_(s.SITUACAO) === 'CANCELADA' ? 'cancelada pela representada' : 'descartada') + ')');
   var dd = Object.assign({ clienteId: s.CLIENTE_ID, unidadeId: s.UNIDADE_ID, equipamentoId: s.EQUIPAMENTO_ID, equipNaoIdentificado: !s.EQUIPAMENTO_ID, equipamentoDescricao: s.EQUIPAMENTO_TEXTO,
-    sintoma: s.DESCRICAO, solicitante: s.SOLICITANTE, contato: s.CONTATO, parada: s.PARADA, canal: Ast_up_(s.ORIGEM), origemRef: s.NUMERO }, d || {}, { solicitacaoId: s.ID });
-  var r = AstC_abrir_(eu, dd);
+    sintoma: s.DESCRICAO, solicitante: s.SOLICITANTE, contato: s.CONTATO, parada: s.PARADA, canal: rep ? 'REPRESENTACAO' : Ast_up_(s.ORIGEM), origemRef: s.NUMERO }, d || {}, { solicitacaoId: s.ID });
+  if (rep && !AST_PRIORIDADES[Ast_up_(dd.prioridade)]) dd.prioridade = Ast_up_(s.PARADA) === 'TOTAL' ? 'P2' : 'P3';
+  var r = AstC_abrir_(eu, dd, rep ? { representada: { id: rep, nome: s.REPRESENTADA_NOME, protocolo: s.PROTOCOLO_REPRESENTADA, enquadramento: s.ENQUADRAMENTO_PRETENDIDO } } : {});
   if (r.duplicado) return r;
-  Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'CONVERTIDA', CHAMADO_ID: r.chamado.id, CHAMADO_NUMERO: r.chamado.numero, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_() });
+  Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'CONVERTIDA', CHAMADO_ID: r.chamado.id, CHAMADO_NUMERO: r.chamado.numero, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_(), PAUSA_DESDE: '' });
+  if (rep) {
+    Ast_evento_('SOLICITACAO', s.ID, 'ACEITE', eu, 'Pedido aceito pela Metrolabs: virou o chamado ' + r.chamado.numero + '.', { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Aceito' });
+    if (typeof Rep_avisarRepresentada_ === 'function') Rep_avisarRepresentada_(rep, s.POR_ID, 'Pedido ' + s.NUMERO + ' aceito: chamado ' + r.chamado.numero, 'A Metrolabs aceitou o pedido ' + s.NUMERO + ' (' + Ast_s_(s.CLIENTE_NOME) + ', ' + Ast_s_(s.EQUIPAMENTO_TEXTO) + '). Ele virou o chamado ' + r.chamado.numero + '.', r.chamado.id, 'RP06');
+  }
   return r;
 }
 function AstC_descartar_(eu, d) {
   Ast_exigir_(eu, 'INTERNO', 'descartar a solicitação');
   var s = Ast_porId_(AST_ABAS.SOLICITACOES, d && d.solicitacaoId);
-  if (!s || Ast_up_(s.SITUACAO) !== 'NOVA') throw new Error('Não foi possível descartar: a solicitação não está mais na fila. Atualize a tela');
+  var rep = s ? Ast_s_(s.REPRESENTADA_ID) : '';
+  if (!s || !(Ast_up_(s.SITUACAO) === 'NOVA' || (rep && Ast_up_(s.SITUACAO) === 'COMPLEMENTO'))) throw new Error('Não foi possível descartar: a solicitação não está mais na fila. Atualize a tela');
   var m = Ast_texto_(d.motivo, 500);
-  if (m.length < 10) throw new Error('Não foi possível descartar: escreva o motivo (pelo menos 10 letras), por exemplo "repetida do chamado CH-2026-0005"');
-  Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'DESCARTADA', DESCARTE_MOTIVO: m, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_() });
+  if (m.length < 10) throw new Error('Não foi possível ' + (rep ? 'recusar' : 'descartar') + ': escreva o motivo (pelo menos 10 letras), por exemplo ' + (rep ? '"o equipamento não é da representada" ou "cliente fora da área de atendimento"' : '"repetida do chamado CH-2026-0005"'));
+  Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'DESCARTADA', DESCARTE_MOTIVO: m, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_(), PAUSA_DESDE: '' });
+  if (rep) {
+    // 29/10/2026: a representada vê o motivo da recusa e é avisada por e-mail
+    Ast_evento_('SOLICITACAO', s.ID, 'RECUSA', eu, 'Pedido recusado pela Metrolabs: ' + m, { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Recusado' });
+    if (typeof Rep_avisarRepresentada_ === 'function') Rep_avisarRepresentada_(rep, s.POR_ID, 'Pedido ' + s.NUMERO + ' recusado', 'A Metrolabs recusou o pedido ' + s.NUMERO + ' (' + Ast_s_(s.CLIENTE_NOME) + '). Motivo: ' + m + '\nSe houver engano, responda pela conversa do pedido.', s.ID, 'RP06');
+    return { message: 'Pedido ' + s.NUMERO + ' recusado. A representada vê o motivo e foi avisada por e-mail.' };
+  }
   return { message: 'Solicitação ' + s.NUMERO + ' descartada.' };
+}
+/**
+ * 29/10/2026 (módulo Representação): pedir complemento ao pedido da representada. O pedido volta para ela com a pergunta
+ * (situação COMPLEMENTO) e o prazo de aceite fica pausado até a resposta.
+ */
+function AstC_complemento_(eu, d) {
+  Ast_exigir_(eu, 'INTERNO', 'pedir complemento');
+  var s = Ast_porId_(AST_ABAS.SOLICITACOES, d && d.solicitacaoId);
+  if (!s || !Ast_s_(s.REPRESENTADA_ID) || Ast_up_(s.SITUACAO) !== 'NOVA') throw new Error('Não foi possível pedir complemento: o pedido não está na fila (só pedido de representada ainda não tratado). Atualize a tela');
+  var p = Ast_texto_(d.pergunta, 2000);
+  if (p.length < 10) throw new Error('Não foi possível pedir complemento: escreva o que falta (pelo menos 10 letras), por exemplo "envie a foto do visor com o código de erro"');
+  Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'COMPLEMENTO', COMPLEMENTO_PERGUNTA: p, COMPLEMENTO_EM: Ast_agora_(), COMPLEMENTO_POR_NOME: eu.nome, PAUSA_DESDE: Ast_agora_(), ATUALIZADO_EM: Ast_agora_() });
+  Ast_evento_('SOLICITACAO', s.ID, 'COMPLEMENTO', eu, 'A Metrolabs pediu complemento: ' + p, { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Complemento pedido' });
+  if (typeof Rep_avisarRepresentada_ === 'function') Rep_avisarRepresentada_(s.REPRESENTADA_ID, s.POR_ID, 'Pedido ' + s.NUMERO + ': a Metrolabs pediu complemento', 'Para seguir com o pedido ' + s.NUMERO + ' (' + Ast_s_(s.CLIENTE_NOME) + '), a Metrolabs precisa de: ' + p, s.ID, 'RP06');
+  return { message: 'Complemento pedido. O prazo de aceite fica pausado até a representada responder.' };
 }
 
 // ------------------------------------------------------------

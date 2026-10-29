@@ -62,7 +62,10 @@ const SGO_CFG = (() => {
       // técnico nem abre Chaves e senhas ou Configurações. Regras em SGO_Auth.js
       // (SGO_ehPerfilRH_ / SGO_bloquearRH_ / SGO_podeConsultarPessoas_).
       "RH",
-      "CLIENTE"
+      "CLIENTE",
+      // REPRESENTADA (29/10/2026): pessoa de empresa representada (Brasmedical). Ligada a CAD_USUARIOS.REPRESENTADA_ID,
+      // usa só o módulo Representação (SGO_Representacao.js); o resto do SGO+ recusa esta sessão (SGO_Auth.js › exigirSessao).
+      "REPRESENTADA"
     ],
 
     /* =========================

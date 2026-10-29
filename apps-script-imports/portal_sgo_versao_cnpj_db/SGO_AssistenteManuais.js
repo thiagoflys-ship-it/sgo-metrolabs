@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "bcdd53731c72",
+ "versao": "290f7285dc96",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -733,6 +733,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Agenda única com Atividades da equipe (26/10/2026)",
      "texto": "Toda O.S. agendada cria sozinha a atividade do técnico em Minhas atividades, ligada à O.S. (OS_ID). Quem manda é a O.S.: reagendar, encerrar ou cancelar muda a atividade sozinha; ninguém conclui, edita ou justifica essa atividade à mão.\nA atividade da O.S. não conta atraso em Atividades (nem aviso de atraso, escalonamento por prioridade, central de pendências ou avaliação do gestor): o prazo do cliente é acompanhado aqui, na Assistência.\nEm Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem \"Abrir a O.S.\".\nNova atividade > \"É serviço técnico em cliente\" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.\nAplicativo do técnico: o Meu dia mostra também \"Minhas atividades\" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios."
+    },
+    {
+     "titulo": "Chamados de representada (módulo Representação, 29/10/2026)",
+     "texto": "A empresa representada (Brasmedical) entra no SGO+ com o perfil \"Representada\" e usa só o módulo Representação. O pedido dela entra na fila de Solicitações dos clientes com o selo roxo da representada e o prazo de aceite (4 horas úteis no padrão, configurável em Representação > Representadas).\nNa fila: \"Aceitar (vira chamado)\", \"Pedir complemento\" (o pedido volta para a representada e o prazo de aceite pausa até a resposta) ou \"Recusar com motivo\" (a representada vê o motivo). A representada recebe e-mail nas três saídas.\nO chamado aceito leva a representada (REPRESENTADA_ID), o protocolo dela e o enquadramento pretendido, e segue a triagem, a agenda, a O.S. e o relatório de sempre. O canal aparece como \"Representação\".\nLista de chamados: filtro \"Representação\" (só de representadas ou de uma delas) e selo roxo com o nome. Ficha: parte \"Representação\" com relato completo, contato no local, arquivos e número de mensagens; a conversa fica em Representação > Conversas.\nLinha do tempo com três públicos: interno (sem marca), representada e cliente final. O que a equipe registra com público para o cliente aparece também para a representada; o resto é interno.\nRegras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.\nAlertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).\nDetalhes no Manual do módulo Representação."
     }
    ]
   },
@@ -3050,6 +3054,120 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "O que mudou em 22/10/2026 (identificação completa e vários padrões)",
      "texto": "Identificação do equipamento completa. Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro \"Cliente e equipamento\", em \"Gravar no cadastro\" (só grava o que está vazio). Linha vazia não aparece no documento.\nVários padrões de referência. No quadro \"Padrões de referência utilizados (opcional)\", abaixo de \"Buscar no cadastro\", toque em \"Escolher padrões\" e marque todos os padrões usados (sem limite). O documento traz uma tabela com cada um (fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza). Padrão fora do cadastro, sem validade ou vencido na data do serviço impede a geração, com a explicação. O fabricante (marca) passa a vir do cadastro, como o modelo.\nDocumentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_REPRESENTACAO.md",
+   "titulo": "Manual do módulo Representação",
+   "tela": "representacao",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR",
+    "TECNICO",
+    "METROLOGIA",
+    "COMERCIAL",
+    "FINANCEIRO",
+    "RH"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Metrolabs · SGO+ · versão de 29/10/2026 · equipe da Metrolabs"
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O módulo Representação é a área do SGO+ em que a empresa representada (Brasmedical) aciona a Metrolabs para atendimento técnico aos clientes finais dos equipamentos dela e acompanha cada pedido até o encerramento. Do lado da Metrolabs, o mesmo módulo reúne a fila de pedidos, as conversas com a representada, o cadastro da representada e o catálogo de modelos. O pedido aceito vira chamado da Assistência técnica, com a marca da representada, e segue a triagem, a agenda, a O.S., o aplicativo do técnico e o relatório de sempre."
+    },
+    {
+     "titulo": "Como a representada entra",
+     "texto": "A pessoa da representada entra pelo login normal do SGO+, com usuário e senha, no perfil \"Representada\".\nA conta é criada em Administração > Usuários: perfil Representada, a representada (empresa) e o papel dela: administrador da representada, atendente, financeiro de garantia ou leitura.\nO perfil Representada vê só o módulo Representação. O servidor recusa qualquer outra função do SGO+ para essa sessão, e a conta não aparece nas listas de pessoas (responsáveis, avisos internos, bate-papo, conduta, ponto, atividades).\nRepresentada inativa (Representação > Representadas) ou conta sem representada: a pessoa não entra, e a mensagem diz o motivo.\nNão há troca da própria senha pela pessoa nesta etapa: a senha é definida e redefinida em Administração > Usuários, como para as demais contas."
+    },
+    {
+     "titulo": "Primeira configuração",
+     "texto": "1. Representação > Representadas > \"Nova representada\": nome, CNPJ, contrato, vigência, contato e prazos.\n2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis.\n3. Opções: consulta de CNPJ na base pública da Receita ao cadastrar cliente (ligada no padrão) e cancelamento pela representada antes da visita, com motivo (ligado no padrão).\n4. Representação > Catálogo de modelos: código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série. Sem modelo, a representada não cadastra equipamento.\n5. Assistência técnica > Regras da assistência > Representação: marque quem responde pela conta da representada. Sem ninguém marcado, vale quem faz a triagem.\n6. Administração > Usuários: crie as contas da representada."
+    },
+    {
+     "titulo": "Pedidos",
+     "texto": "A aba \"Pedidos\" mostra a fila: representada, cliente, cidade, equipamento e o prazo de aceite (verde em dia, amarelo em risco, vermelho vencido, cinza pausado).\nAceitar: escolha a prioridade (sem escolha, P2 para equipamento parado e P3 para os demais) e, se souber, o tipo de serviço. Vira chamado CH-AAAA-NNNN com a representada, o protocolo dela e o enquadramento pretendido. A representada recebe e-mail.\nPedir complemento: o pedido volta para a representada com a pergunta e o prazo de aceite fica pausado até a resposta.\nRecusar com motivo: a representada vê o motivo e recebe e-mail.\nOs mesmos botões aparecem em Assistência técnica > Solicitações dos clientes, com o selo roxo da representada."
+    },
+    {
+     "titulo": "Alertas de prazo",
+     "texto": "Marco | Quem recebe | OndePedido novo | Responsável pela representação (sem ninguém, quem faz a triagem) | Aviso na Assistência e e-mail na hora (RP01; RP02 se o equipamento está parado)\n75% do prazo de aceite | Responsável pela representação | Central de pendências e e-mail uma vez (RP07)\nPrazo de aceite vencido | Responsável e gestão da área Técnica | Central de pendências, Caixa de decisões e e-mail uma vez (RP07)\nChamado sem registro em 3 dias úteis | Responsável pela representação | Central de pendências, Caixa de decisões e e-mail uma vez por período parado (RP08)\nO tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (Administração > Matriz de avisos, módulo Representação); nesta etapa nada sai pelo WhatsApp."
+    },
+    {
+     "titulo": "Conversas",
+     "texto": "Cada pedido e cada chamado tem conversa própria; cada representada tem um canal geral.\nA mensagem da Metrolabs vai por e-mail à representada (quem abriu o pedido e o administrador dela).\n\"Nota interna\" fica só com a equipe (amarela, tracejada). Nada é apagado.\nA mensagem da representada avisa o responsável pela representação e o técnico do chamado."
+    },
+    {
+     "titulo": "Na Assistência técnica",
+     "texto": "Filtro \"Representação\" na lista de chamados e selo roxo com o nome da representada.\nParte \"Representação\" na ficha do chamado: protocolo, enquadramento pretendido, relato completo (código de erro, risco, o que já foi tentado), contato no local, arquivos e número de mensagens.\nLinha do tempo com três públicos: interno (sem marca), representada e cliente final. O que é registrado para o cliente final aparece também para a representada."
+    },
+    {
+     "titulo": "O que a representada vê e o que nunca vê",
+     "texto": "Vê: os pedidos e chamados da empresa dela, a etapa (Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado, Cancelado), a data e o técnico da visita, a linha do tempo pública, os arquivos que ela enviou, a conversa e os equipamentos dos pedidos dela e os que ela cadastrou.\nBusca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, com limite de 20 buscas em 15 minutos (contando achou e não achou). Série cadastrada em outro cliente: a tela pede para falar com a Metrolabs, sem dizer qual cliente.\nNunca vê: outros clientes, outras representadas, notas internas, valores, registros internos do chamado, o restante do SGO+."
+    },
+    {
+     "titulo": "Cadastros feitos pela representada",
+     "texto": "Cliente completo (CNPJ ou CPF válido, endereço em partes, contato com e-mail e telefone) com \"Ciente\"; unidade com cidade e UF.\nEquipamento com modelo do catálogo, série, data de instalação, nota fiscal de venda (número, data e arquivo), revenda, setor, patrimônio e foto da etiqueta. Garantia calculada: data da instalação (ou da nota) mais os meses do modelo.\nTudo fica com a origem \"REPRESENTADA\", quem cadastrou e o \"Ciente\" com data e hora, e entra em Cadastros > Correções de cadastro e no histórico dos cadastros."
+    },
+    {
+     "titulo": "Registro de ações",
+     "texto": "A aba \"Registro de ações\" mostra buscas, cadastros, pedidos e cancelamentos das representadas, com nome, data e hora. O administrador da representada vê o da própria equipe."
+    },
+    {
+     "titulo": "Próximas etapas do projeto (ainda não estão no módulo)",
+     "texto": "Marcos da visita, impedimentos, relatório e aceite do encerramento pela representada; remessa de peças com rastreio; garantia, tabela de preços e custos; fechamento mensal; painéis, Gantt e Kanban da carteira; andamento automático por e-mail ao cliente final e à representada com link público só daquele chamado; consulta automática de rastreio (Correios primeiro, com a chave configurada em Chaves e senhas; sem chave, rastreio manual); relatório final A4."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_REPRESENTACAO_EMPRESA_REPRESENTADA.md",
+   "titulo": "Manual da área da representada no SGO+ Metrolabs",
+   "tela": "representacao",
+   "perfis": [
+    "REPRESENTADA",
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Metrolabs · versão de 29/10/2026 · para a equipe da empresa representada"
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Nesta área você pede atendimento técnico da Metrolabs para os clientes finais dos equipamentos que a sua empresa representa e acompanha cada pedido até o encerramento, com a linha do tempo, os arquivos e a conversa com a Metrolabs."
+    },
+    {
+     "titulo": "Entrar",
+     "texto": "Abra o endereço do SGO+ informado pela Metrolabs e entre com o seu usuário e a sua senha.\nO acesso é pessoal. Não compartilhe a senha. Tudo o que é feito fica registrado com o seu nome, a data e a hora.\nPara incluir ou tirar uma pessoa da sua equipe, ou para trocar a senha, escreva para a Metrolabs no Canal geral."
+    },
+    {
+     "titulo": "Pedir um atendimento (parte 1)",
+     "texto": "1. Toque em \"Novo pedido\".\n2. Cliente: digite o CNPJ ou o CPF completo e toque em \"Buscar\". Não há busca por nome.\nAchou: escolha a unidade onde está o equipamento. Se a unidade não está na lista, cadastre (nome, cidade e UF).\nNão achou: preencha o cadastro completo com os dados informados pelo cliente ou pela nota fiscal: razão social, endereço (CEP, logradouro, número, bairro, cidade, UF) e o contato responsável com nome, e-mail e telefone. O botão da base pública da Receita preenche a razão social e o endereço; o contato precisa vir do cliente. Marque \"Ciente\".\n3. Equipamento: digite o número de série como está na etiqueta e toque em \"Buscar\".\nNão achou: escolha o modelo, confira a série, informe a data da instalação e a nota fiscal de venda (número, data e arquivo, se tiver), a revenda, o setor e o patrimônio do cliente, envie a foto da etiqueta e marque \"Ciente\". A garantia é calculada pelo modelo a partir da instalação ou da nota fiscal.\nSe aparecer que a série já está cadastrada em outro cliente, escreva no Canal geral para a Metrolabs conferir.\n4. Relato: setor, contato no local (nome, telefone e e-mail), sintoma com pelo menos 30 letras, quando começou, código de erro do visor (ou marque que não exibe), se o equipamento está parado, o risco de continuar usando, o que já foi tentado e o enquadramento pretendido (garantia, fora de garantia ou não sei). Se a sua empresa usa número de protocolo, informe.\n5. Arquivos: pelo menos 1 foto do equipamento e 1 da etiqueta de série. As fotos são reduzidas no seu aparelho para até 2 MB. Vídeo é opcional, até 50 MB. Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais.\n6. Toque em \"Enviar o pedido à Metrolabs\". A tela diz até quando a Metrolabs responde (no padrão, 4 horas úteis)."
+    },
+    {
+     "titulo": "Pedir um atendimento (parte 2)",
+     "texto": "Se faltar alguma informação, o pedido não é enviado e a tela marca cada campo que falta."
+    },
+    {
+     "titulo": "Acompanhar",
+     "texto": "\"Chamados\" mostra os pedidos e chamados com a etapa: Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado ou Cancelado.\nNa ficha: a linha do tempo, os arquivos, a conversa e, quando a visita é agendada, a data e o técnico.\nComplemento pedido: responda na própria ficha, com fotos se precisar. O pedido volta para a Metrolabs.\nAntes da visita, o pedido ou o chamado pode ser cancelado com o motivo.\nVocê recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa."
+    },
+    {
+     "titulo": "Conversar",
+     "texto": "Cada pedido e cada chamado tem a própria conversa. Assuntos gerais vão no \"Canal geral\".\nFora do horário de trabalho da Metrolabs, a resposta vem no próximo horário útil.\nNada é apagado: para corrigir, escreva uma mensagem nova."
+    },
+    {
+     "titulo": "Papéis da sua equipe",
+     "texto": "Papel | PodeAdministrador da representada | Tudo, mais ver a equipe com acesso e as ações registradas\nAtendente | Buscar e cadastrar cliente e equipamento, pedir atendimento, conversar e cancelar antes da visita\nFinanceiro de garantia | Consultar e conversar\nLeitura | Só consultar"
+    },
+    {
+     "titulo": "Dúvidas frequentes",
+     "texto": "Por que não há busca por nome? Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é pelo CNPJ ou CPF completo.\nAparece \"Muitas buscas seguidas\": espere o tempo indicado e busque de novo com o documento ou a série conferidos.\nO modelo não aparece na lista: peça à Metrolabs, pelo Canal geral, para incluir no catálogo.\nO relatório final no portal, o aceite do encerramento, as peças e os custos entram nas próximas etapas; enquanto isso, combine pela conversa do chamado."
     }
    ]
   }

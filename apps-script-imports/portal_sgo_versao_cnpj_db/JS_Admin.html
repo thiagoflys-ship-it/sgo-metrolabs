@@ -13,8 +13,9 @@
 
   function SGO_rotuloPerfil_(p) {
     var k = String(p || "").toUpperCase();
-    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH", CLIENTE: "Cliente" })[k] || p;
+    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH", CLIENTE: "Cliente", REPRESENTADA: "Representada" })[k] || p;
   }
+  function Usuarios_rotuloPapelRep_(k) { return ({ ADMIN: "Administrador da representada", ATENDENTE: "Atendente", FINANCEIRO: "Financeiro de garantia", LEITURA: "Leitura" })[String(k || "").toUpperCase()] || "Papel não informado"; }
   // Vínculo de trabalho (19/10/2026): CAD_USUARIOS.VINCULO_TRABALHO = "CLT", "PJ", "DIRETORIA" (22/10/2026) ou vazio.
   var USUARIOS_VINCULOS = [["CLT", "CLT"], ["PJ", "PJ"], ["DIRETORIA", "Diretoria"]];
   function Usuarios_rotuloVinculo_(v) { var k = String(v || "").replace(/\s+/g, "").toUpperCase(); var o = USUARIOS_VINCULOS.filter(function (x) { return x[0] === k; })[0]; return o ? o[1] : "Não informado"; }
@@ -375,7 +376,7 @@
       vazioTitulo: "Nenhum usuário além de você.", vazio: "Clique em Novo usuário para dar acesso a alguém.",
       colunas: [
         { titulo: "Usuário", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + (u.EU ? ' <span class="cadx-chip tom-info">Você</span>' : "") + '</div><div class="cadx-sub cadx-mono">' + CadUI_esc_(u.USUARIO) + "</div>"; } },
-        { titulo: "Perfil", html: function (u) { return CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + (u.CLIENTE_NOME ? '<div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME) + "</div>" : ""); } },
+        { titulo: "Perfil", html: function (u) { return CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + (u.CLIENTE_NOME || u.REPRESENTADA_NOME ? '<div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME || u.REPRESENTADA_NOME) + "</div>" : ""); } },
         { titulo: "Área", html: function (u) { return Usuarios_seloArea_(u); } },
         { titulo: "Vínculo", html: function (u) { return Usuarios_seloVinculo_(u); } },
         { titulo: "E-mail", html: function (u) { return u.EMAIL ? CadUI_esc_(u.EMAIL) : '<span class="cadx-chip tom-alerta">Sem e-mail</span>'; } },
@@ -442,7 +443,7 @@
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["Login", u.USUARIO]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["E-mail", u.EMAIL], ["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" ? "Não se aplica (cliente)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, u.REPRESENTADA_NOME ? ["Representada", u.REPRESENTADA_NOME + " · " + Usuarios_rotuloPapelRep_(u.REPRESENTACAO_PAPEL)] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
       },
       depois: function (p) {
         var mais = p.querySelector("#cadxPainelMais");
@@ -522,6 +523,13 @@
           CadUI_campo_({ id: "usr_perfil", rotulo: "Perfil de acesso", obrigatorio: true, tipo: "select", valor: String(u.PERFIL || "").toUpperCase(), opcoes: [["", "Escolha o perfil"]].concat(perfis.map(function (p) { return [String(p).toUpperCase(), SGO_rotuloPerfil_(p)]; })),
             dica: souAdmin ? "Diretoria: perfil da direção da empresa. Além do que o Gestor faz, decide no Programa de conduta a ocorrência em que é a envolvida, com fundamentação." : "O perfil Administrador só é dado por outro Administrador; o perfil Diretoria, por Administrador ou Diretoria." }),
           '<div id="usr_cliente_bloco" hidden>' + CadUI_campo_({ id: "usr_cliente_id", rotulo: "Empresa (cliente)", obrigatorio: true, tipo: "select", opcoes: [["", "Carregando os clientes…"]], dica: "O perfil Cliente só vê os dados desta empresa." }) + "</div>",
+          // 29/10/2026 (módulo Representação): conta de pessoa da representada (Brasmedical): empresa e papel
+          '<div id="usr_rep_bloco" hidden>' + CadUI_campo_({ id: "usr_representada_id", rotulo: "Representada (empresa)", obrigatorio: true, tipo: "select", valor: u.REPRESENTADA_ID || "",
+            opcoes: [["", "Escolha a representada"]].concat(((st.extra && st.extra.representadas) || []).map(function (r) { return [r.ID, r.NOME]; })),
+            dica: "O perfil Representada usa só o módulo Representação e vê só os pedidos e chamados desta empresa. Se ela não aparece, cadastre em Representação > Representadas." }) +
+            CadUI_campo_({ id: "usr_rep_papel", rotulo: "Papel na representada", obrigatorio: true, tipo: "select", valor: String(u.REPRESENTACAO_PAPEL || "").toUpperCase(),
+            opcoes: [["", "Escolha o papel"]].concat((st.extra && st.extra.papeisRepresentacao) || []),
+            dica: "Administrador e Atendente abrem pedidos e cadastram; Financeiro de garantia acompanha e conversa; Leitura só consulta." }) + "</div>",
           novo ? CadUI_campo_({ id: "usr_senha", rotulo: "Senha inicial", tipo: "password", obrigatorio: true, inteiro: true, attrs: ' autocomplete="new-password"', dica: "Mínimo de 6 caracteres. Combine com a pessoa por um canal seguro." })
                : '<p class="cadx-dica" style="grid-column:1/-1">Para trocar a senha, use Mais › Redefinir senha.</p>'
         ]) +
@@ -531,7 +539,8 @@
       depois: function (p) {
         CadUI_ligarFormulario_(p);
         var perfilSel = p.querySelector("#usr_perfil"), bloco = p.querySelector("#usr_cliente_bloco");
-        var atualizarCliente = function () { bloco.hidden = perfilSel.value !== "CLIENTE"; };
+        var blocoRep = p.querySelector("#usr_rep_bloco");
+        var atualizarCliente = function () { bloco.hidden = perfilSel.value !== "CLIENTE"; if (blocoRep) blocoRep.hidden = perfilSel.value !== "REPRESENTADA"; };
         perfilSel.addEventListener("change", atualizarCliente);
         atualizarCliente();
         // 21/10/2026: ninguém muda o próprio perfil (o servidor também recusa).
@@ -564,7 +573,8 @@
   function Usuarios_salvar_(id) {
     var novo = !id;
     var cel = usuariosCelularDigitos_(getValue_("usr_celular"));
-    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo"), AREA: getValue_("usr_perfil") === "CLIENTE" ? "" : getValue_("usr_area") };
+    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo"), AREA: getValue_("usr_perfil") === "CLIENTE" || getValue_("usr_perfil") === "REPRESENTADA" ? "" : getValue_("usr_area"),
+      REPRESENTADA_ID: getValue_("usr_perfil") === "REPRESENTADA" ? getValue_("usr_representada_id") : "", REPRESENTACAO_PAPEL: getValue_("usr_perfil") === "REPRESENTADA" ? getValue_("usr_rep_papel") : "" };
     if (novo) p.SENHA = (document.getElementById("usr_senha") || {}).value || "";
     var erros = {};
     if (!p.NOME) erros.usr_nome = "Informe o nome completo.";
@@ -576,8 +586,10 @@
     if (cel === null) erros.usr_celular = "Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.";
     if (!p.PERFIL) erros.usr_perfil = "Escolha o perfil de acesso.";
     if (p.PERFIL === "CLIENTE" && !p.CLIENTE_ID) erros.usr_cliente_id = "Escolha a empresa do usuário Cliente.";
+    if (p.PERFIL === "REPRESENTADA" && !p.REPRESENTADA_ID) erros.usr_representada_id = "Escolha a representada desta conta.";
+    if (p.PERFIL === "REPRESENTADA" && !p.REPRESENTACAO_PAPEL) erros.usr_rep_papel = "Escolha o papel na representada.";
     if (novo && p.SENHA.length < 6) erros.usr_senha = "A senha inicial precisa ter pelo menos 6 caracteres.";
-    if (!CadUI_mostrarErros_(erros, ["usr_nome", "usr_usuario", "usr_email", "usr_celular", "usr_perfil", "usr_cliente_id", "usr_senha"])) return;
+    if (!CadUI_mostrarErros_(erros, ["usr_nome", "usr_usuario", "usr_email", "usr_celular", "usr_perfil", "usr_cliente_id", "usr_representada_id", "usr_rep_papel", "usr_senha"])) return;
     CadUI_salvando_(true);
     CadUI_chamar_(novo ? "usuariosCriar" : "usuariosAtualizar", novo ? [p] : [id, p], function (res) {
       CadUI_painelSujo_(false);

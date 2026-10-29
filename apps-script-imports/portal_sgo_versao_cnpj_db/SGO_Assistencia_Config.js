@@ -157,7 +157,9 @@ var AST_OS_OCUPA_AGENDA = ['AGENDADA', 'EM_DESLOCAMENTO', 'NO_LOCAL', 'EM_EXECUC
 var AST_PRIORIDADES = { P1: 'P1 — Crítica', P2: 'P2 — Alta', P3: 'P3 — Normal', P4: 'P4 — Baixa' };
 var AST_PARADA = { TOTAL: 'Parada total', PARCIAL: 'Parada parcial', NAO: 'Sem parada' };
 var AST_CANAIS = { INTERNO: 'Tela interna', TELEFONE: 'Telefone', EMAIL: 'E-mail recebido', PORTAL: 'Portal do cliente', QR: 'QR do equipamento',
-  COMERCIAL: 'Pedido aprovado do Comercial', PRESENCIAL: 'Presencial', CONTRATO: 'Preventiva do contrato' };
+  COMERCIAL: 'Pedido aprovado do Comercial', PRESENCIAL: 'Presencial', CONTRATO: 'Preventiva do contrato',
+  // 29/10/2026: pedido aberto pela representada no módulo Representação (SGO_Representacao.js)
+  REPRESENTACAO: 'Representação' };
 var AST_ACOES_TRIAGEM = { RESOLVIDO_REMOTO: 'Resolvido remotamente', AGUARDANDO_ORCAMENTO: 'Precisa de orçamento', AGUARDANDO_PECA: 'Precisa de peça', PLANEJADO: 'Planejar visita' };
 /** Checklist de triagem (reduzido do COMMAND: 9 itens viraram 6). */
 var AST_TRIAGEM_ITENS = [
@@ -208,7 +210,10 @@ var AST_REGRAS_PADRAO = {
   // 27/10/2026 (decisão do dono, "Alerta + fila livre"): quem faz a triagem (lista vazia = como antes: Caixa de decisões >
   // Regras e responsáveis da área Técnica; sem ninguém lá, o Gestor da área Técnica; sem ele, a Diretoria) e, passados
   // filaLivreMin minutos úteis (expediente) sem ninguém assumir, o chamado fica na fila livre para qualquer colaborador
-  triagem: { responsaveis: [], filaLivreLigada: true, filaLivreMin: 30 }
+  triagem: { responsaveis: [], filaLivreLigada: true, filaLivreMin: 30 },
+  // 29/10/2026 (módulo Representação): quem responde pela conta da representada e recebe os pedidos, os alertas de prazo
+  // de aceite e as mensagens. Lista vazia: quem faz a triagem. Prazos de cada representada ficam no cadastro dela.
+  representacao: { responsaveis: [] }
 };
 
 /**
@@ -513,7 +518,9 @@ function Ast_evento_(entidade, id, tipo, eu, texto, extra) {
   var e = extra || {};
   try {
     Ast_inserir_(AST_ABAS.EVENTOS, { ENTIDADE: entidade, ENTIDADE_ID: Ast_s_(id), NUMERO: Ast_s_(e.numero), TIPO: tipo, DE: Ast_texto_(e.de, 300), PARA: Ast_texto_(e.para, 300),
-      TEXTO: Ast_texto_(texto, 4000), PUBLICO: e.publico ? 'SIM' : '', USUARIO_ID: Ast_s_(eu && eu.id), USUARIO_NOME: Ast_s_(eu && eu.nome), EM: Ast_agora_(),
+      // 29/10/2026: PUBLICO com três valores — '' (interno), 'REPRESENTADA' (a representada vê; o cliente final não) e 'SIM'
+      // (cliente final; a representada também vê). publico: true continua valendo como 'SIM'.
+      TEXTO: Ast_texto_(texto, 4000), PUBLICO: e.publico === 'REPRESENTADA' ? 'REPRESENTADA' : e.publico ? 'SIM' : '', USUARIO_ID: Ast_s_(eu && eu.id), USUARIO_NOME: Ast_s_(eu && eu.nome), EM: Ast_agora_(),
       EM_APARELHO: Ast_iso_(e.emAparelho), ID_LOCAL: Ast_s_(e.idLocal) });
   } catch (x) { console.error('Assistência, histórico: ' + ((x && x.message) || x)); }
 }
@@ -623,6 +630,14 @@ function Ast_gravarRegras_(r, eu, motivo) {
     filaLivreLigada: tr.filaLivreLigada !== false,
     filaLivreMin: Math.round(Ast_num_(tr.filaLivreMin))
   };
+  // 29/10/2026: responsáveis pela representação, só da equipe interna ativa
+  var rp = limpa.representacao || {}, vistosR = {};
+  limpa.representacao = { responsaveis: (Array.isArray(rp.responsaveis) ? rp.responsaveis : []).map(Ast_s_).filter(function (id) {
+    var u = usT[id];
+    if (!u || vistosR[id]) return false;
+    if (!u.ativo || u.cliente || Ast_ehContaSistema_(u)) throw new Error((u.nome || 'Uma pessoa') + ' não pode ser responsável pela representação: ' + (!u.ativo ? 'o usuário está inativo' : u.cliente ? 'é login de cliente ou de representada' : 'é conta do sistema') + '. Tire da lista e salve de novo');
+    vistosR[id] = true; return true;
+  }) };
   Ast_validarRegras_(limpa);
   var versao = (Number(atual.versao) || 1) + 1;
   Ast_inserir_(AST_ABAS.CONFIG, { CHAVE: 'REGRAS', VALOR_JSON: JSON.stringify(limpa), VERSAO: versao, MOTIVO: Ast_texto_(motivo, 500),
@@ -718,7 +733,7 @@ function Ast_usuarios_() {
     var perfil = Ast_up_(u.PERFIL);
     if (!perfil || perfil === 'AUVO_SYNC') return;
     mapa[Ast_s_(u.ID)] = { id: Ast_s_(u.ID), nome: Ast_s_(u.NOME) || Ast_s_(u.USUARIO), login: Ast_s_(u.USUARIO), perfil: perfil, area: Ast_up_(u.AREA),
-      email: Ast_s_(u.EMAIL).toLowerCase(), ativo: Ast_up_(u.STATUS || 'ATIVO') === 'ATIVO', clienteId: Ast_s_(u.CLIENTE_ID), cliente: perfil === 'CLIENTE' };
+      email: Ast_s_(u.EMAIL).toLowerCase(), ativo: Ast_up_(u.STATUS || 'ATIVO') === 'ATIVO', clienteId: Ast_s_(u.CLIENTE_ID), cliente: perfil === 'CLIENTE' || perfil === 'REPRESENTADA' };
   });
   AST_MEMO.__usuarios = mapa;
   return mapa;
@@ -777,6 +792,9 @@ function Ast_nivelDe_(u) {
   var base = { nivel: 'NENHUM', gestao: false, tecnico: false, interno: false, cliente: false, regras: false, valores: false, admin: false, diretoria: false, comercial: false };
   if (!perfil || perfil === 'AUVO_SYNC') return base;
   if (perfil === 'CLIENTE') return Object.assign(base, { nivel: 'CLIENTE', cliente: true });
+  // 29/10/2026: a representada nunca é tratada como colaborador (antes todo perfil desconhecido caía como INTERNO).
+  // Ela usa só o módulo Representação (SGO_Representacao.js), que lê os chamados dela pelo escopo próprio.
+  if (perfil === 'REPRESENTADA') return base;
   var diretoria = perfil === 'DIRETORIA' || Ast_ehDono_(u && u.login), admin = perfil === 'ADMIN';
   var respTecnica = false;
   try { respTecnica = ((((typeof Ges_cfg_ === 'function' ? Ges_cfg_().gestoresPorArea : {}) || {}).TECNICA) || []).map(Ast_s_).indexOf(id) >= 0; } catch (e) { respTecnica = false; }

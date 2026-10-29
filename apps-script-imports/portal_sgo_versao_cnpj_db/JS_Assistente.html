@@ -11,7 +11,7 @@
 
   window.ASSIST_CFG = {
     sistema: "SGO+",
-    ativo: function () { return !!(SESSION && USER_CONTEXT && Assistente_perfil_() && Assistente_perfil_() !== "CLIENTE"); },
+    ativo: function () { return !!(SESSION && USER_CONTEXT && Assistente_perfil_() && Assistente_perfil_() !== "CLIENTE" && Assistente_perfil_() !== "REPRESENTADA"); }, // 29/10/2026: a representada lê a ajuda dentro do módulo
     chamar: function (acao, dados, ok, falha) {
       google.script.run.withSuccessHandler(ok).withFailureHandler(falha).SGO_Assist_api(SGO_getSessionId(), acao, dados || {});
     },

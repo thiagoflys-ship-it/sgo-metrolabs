@@ -15,7 +15,7 @@
 
 var SGO_AJUDA_PERFIS = {
   ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico',
-  METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', RH: 'RH', CLIENTE: 'Cliente', TODOS: 'Todos'
+  METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', RH: 'RH', CLIENTE: 'Cliente', REPRESENTADA: 'Representada', TODOS: 'Todos'
 };
 
 /** Nome de cada tela (igual ao menu), para o título quando a ajuda ainda não existe. */
@@ -43,7 +43,9 @@ var SGO_AJUDA_NOMES = {
   assistencia_solicitacoes: 'Solicitações dos clientes', assistencia_casos: 'Reclamações', assistencia_indicadores: 'Indicadores da assistência',
   assistencia_regras: 'Regras da assistência', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados',
   // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js)
-  automacao_predial: 'Segurança e automação predial'
+  automacao_predial: 'Segurança e automação predial',
+  // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js)
+  representacao: 'Representação'
 };
 
 /**
@@ -85,6 +87,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_ModoPersonalizado_ === 'function') fontes.push(['ModoPersonalizado', SGO_ajudaTelas_ModoPersonalizado_]);
   // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js).
   if (typeof SGO_ajudaTelas_AutomacaoPredial_ === 'function') fontes.push(['AutomacaoPredial', SGO_ajudaTelas_AutomacaoPredial_]);
+  // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js).
+  if (typeof SGO_ajudaTelas_Representacao_ === 'function') fontes.push(['Representacao', SGO_ajudaTelas_Representacao_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

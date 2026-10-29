@@ -86,8 +86,14 @@ const SGO_DATA = {
     });
 
     const result = [];
+    // 29/10/2026 (módulo Representação): contas REPRESENTADA ficam fora das listas de usuários do SGO+ (responsáveis,
+    // avisos, bate-papo, conduta, ponto, atividades). Só Usuários, o login e o módulo Representação as leem, ligando
+    // SGO_DATA_REP_VISIVEL durante a chamada.
+    const esconderRep = nome === "CAD_USUARIOS" && !(typeof SGO_DATA_REP_VISIVEL !== "undefined" && SGO_DATA_REP_VISIVEL === true);
+    const colPerfil = esconderRep ? headers.indexOf("PERFIL") : -1;
 
     for (let i = 1; i < dados.length; i++) {
+      if (colPerfil >= 0 && String(dados[i][colPerfil] || "").trim().toUpperCase() === "REPRESENTADA") continue;
       const row = {};
       let linhaVazia = true;
 

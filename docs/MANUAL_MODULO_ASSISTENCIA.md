@@ -373,3 +373,14 @@ tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o aten
 - Em Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem "Abrir a O.S.".
 - Nova atividade > "É serviço técnico em cliente" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.
 - Aplicativo do técnico: o Meu dia mostra também "Minhas atividades" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios.
+
+## Chamados de representada (módulo Representação, 29/10/2026)
+
+- A empresa representada (Brasmedical) entra no SGO+ com o perfil "Representada" e usa só o módulo Representação. O pedido dela entra na fila de Solicitações dos clientes com o selo roxo da representada e o prazo de aceite (4 horas úteis no padrão, configurável em Representação > Representadas).
+- Na fila: "Aceitar (vira chamado)", "Pedir complemento" (o pedido volta para a representada e o prazo de aceite pausa até a resposta) ou "Recusar com motivo" (a representada vê o motivo). A representada recebe e-mail nas três saídas.
+- O chamado aceito leva a representada (REPRESENTADA_ID), o protocolo dela e o enquadramento pretendido, e segue a triagem, a agenda, a O.S. e o relatório de sempre. O canal aparece como "Representação".
+- Lista de chamados: filtro "Representação" (só de representadas ou de uma delas) e selo roxo com o nome. Ficha: parte "Representação" com relato completo, contato no local, arquivos e número de mensagens; a conversa fica em Representação > Conversas.
+- Linha do tempo com três públicos: interno (sem marca), representada e cliente final. O que a equipe registra com público para o cliente aparece também para a representada; o resto é interno.
+- Regras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.
+- Alertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).
+- Detalhes no Manual do módulo Representação.
