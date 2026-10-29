@@ -633,7 +633,9 @@ function ComG_revisarPropostaRegras_(p) {
   var calc = ComP_calcular_(itens, p.DESCONTO_GERAL);
   if (Math.abs(calc.total - (Number(p.TOTAL) || 0)) > 0.01) erros.push('o total gravado não confere com os itens (salve o rascunho de novo)');
   if (!(calc.total > 0)) erros.push('o total da proposta precisa ser maior que zero');
-  var servico = itens.some(function (i) { return i.tipo !== 'PRODUTO'; });
+  // 28/10/2026: pelo tipo de orçamento (escolhido pelo vendedor ou automático pelos itens)
+  var tipoOrc = typeof ComP_tipoOrcamento_ === 'function' ? ComP_tipoOrcamento_(p, itens).tipo : (itens.some(function (i) { return i.tipo !== 'PRODUTO'; }) ? 'SERVICOS' : 'PRODUTOS');
+  var servico = tipoOrc !== 'PRODUTOS';
   // 28/10/2026 (dono): a descrição da proposta fica em branco e só se escreve quando precisar (as cláusulas vão fixas nos
   // termos e condições). Escopo curto deixou de impedir a conclusão: vira alerta.
   var escopo = typeof ComP_escopo_ === 'function' ? ComP_escopo_(p) : Com_s_(p.ESCOPO);
@@ -643,7 +645,7 @@ function ComG_revisarPropostaRegras_(p) {
   var acima = itens.filter(function (i) { return i.produtoId && Number(i.precoTabela) > 0 && Number(i.precoUnitario) > Number(i.precoTabela) + 0.004; });
   if (acima.length) alertas.push('preço acima da tabela do catálogo em ' + acima.slice(0, 3).map(function (i) { return (Com_s_(i.codigo) || Com_s_(i.descricao).slice(0, 30)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (acima.length > 3 ? ' e mais ' + (acima.length - 3) : ''));
   if (!Com_s_(cond.pagamento)) erros.push('falta a forma de pagamento');
-  if (!Com_s_(cond.prazoExecucao)) erros.push('falta o prazo de ' + (servico ? 'execução' : 'entrega'));
+  if (!Com_s_(cond.prazoExecucao)) erros.push('falta o prazo de ' + (tipoOrc === 'MISTO' ? 'execução e de entrega' : servico ? 'execução' : 'entrega'));
   if (servico && !Com_s_(cond.garantia)) alertas.push('a garantia está em branco');
   if (Com_dia_(p.VALIDA_ATE) && Com_dia_(p.VALIDA_ATE) < Com_hoje_()) erros.push('a validade já passou (' + Com_brDia_(p.VALIDA_ATE) + ')');
   var o = SGO_DATA.getById(COM_ABAS.OPORTUNIDADES, Com_s_(p.OPORTUNIDADE_ID));

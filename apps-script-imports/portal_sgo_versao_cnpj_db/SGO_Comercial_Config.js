@@ -63,7 +63,9 @@ var COM_COLUNAS = {
     'CONGELADO_JSON', 'MARCA_CONTEUDO', 'PDF_ID', 'HTML_ID', 'PDF_URL', 'HTML_URL', 'PASTA_URL', 'ARQUIVO_NOME', 'GERADA_EM',
     'ENVIADA_EM', 'ENVIO_COMO', 'RETORNO_ATIVIDADE_ID', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'RESPOSTA_POR_NOME', 'RESPOSTA_TEXTO', 'MOTIVO_RECUSA',
     'ACEITE_ARQUIVO_ID', 'ACEITE_ARQUIVO_NOME', 'ACEITE_ARQUIVO_URL', 'PEDIDO_SITUACAO', 'PASSAGEM_EM', 'PASSAGEM_JSON', 'PASSAGEM_CONCLUIDA_EM',
-    'REVISAO_DE', 'SUBSTITUIDA_POR', 'CANCELADA_MOTIVO', 'REVISAO_GESTORA_JSON', 'ATUALIZADO_EM', 'CRIADO_POR_ID', 'CRIADO_EM'],
+    'REVISAO_DE', 'SUBSTITUIDA_POR', 'CANCELADA_MOTIVO', 'REVISAO_GESTORA_JSON', 'ATUALIZADO_EM', 'CRIADO_POR_ID', 'CRIADO_EM',
+    // 28/10/2026: tipo de orçamento escolhido pelo vendedor (SERVICOS | PRODUTOS | MISTO); vazio = automático pelos itens (MODELO)
+    'TIPO_ORCAMENTO'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
   COM_DIA: ['ID', 'DIA', 'USUARIO_ID', 'USUARIO_NOME', 'PAPEL', 'ITENS_JSON', 'RESUMO', 'ORIGEM', 'AVISO', 'GERADO_EM', 'CRIADO_EM'],
   COM_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_TIPO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM'],
@@ -200,6 +202,35 @@ var COM_METODOLOGIA_PADRAO = {
     },
     responsabilidades: 'Da Metrolabs:\n- Executar os serviços descritos nesta proposta com equipe técnica qualificada e instrumentos calibrados e rastreáveis.\n- Emitir os documentos técnicos correspondentes (relatórios, certificados ou ordens de serviço).\n- Comunicar previamente qualquer necessidade fora do escopo, com orçamento à parte.\n- Manter sigilo sobre as informações do cliente.\nDo cliente:\n- Disponibilizar os equipamentos, o acesso às áreas e um responsável para acompanhar a execução nas datas combinadas.\n- Fornecer as utilidades necessárias (energia, água, vapor, ar comprimido), quando aplicável.\n- Informar previamente regras de acesso, integração de segurança e documentos exigidos.\n- Efetuar os pagamentos nas condições acordadas.',
     textoAceite: 'Após essa data, os preços e as condições podem ser revistos e uma nova revisão será emitida. Ao aprovar, o cliente declara que leu e concorda com o escopo, os valores e as condições desta proposta e autoriza a execução nos termos aqui descritos.',
+    // 28/10/2026 (dono: "faz um modelo para serviço e um modelo para produto; selecionou o tipo de orçamento, já muda os
+    // dizeres"): os textos acima são o modelo de SERVIÇO (como sempre foram). Abaixo, os modelos de PRODUTO (fornecimento) e
+    // MISTO (serviço e produto na mesma proposta), editáveis em Metodologia > Modelo da proposta do mesmo jeito. Condição que
+    // faltar no modelo de produto ou misto vale a do serviço (Com_modeloProposta_). Os termos e condições da contratação são
+    // os mesmos nos três modelos.
+    apresentacaoProduto: 'Prezados(as),\n\nA Metrolabs agradece a oportunidade e apresenta a seguir a sua proposta de fornecimento. Atuamos em engenharia clínica hospitalar e fornecemos produtos, peças, acessórios e instrumentos para equipamentos médico-hospitalares, com procedência conhecida, nota fiscal e o apoio técnico da nossa equipe na escolha e no uso.\n\nFicamos à disposição para esclarecer qualquer ponto desta proposta.',
+    condicoesProduto: {
+      pagamento: 'Boleto bancário com vencimento em 28 dias após a emissão da nota fiscal.',
+      prazoExecucao: 'A combinar após o aceite da proposta.',
+      garantia: 'Contra defeito de fabricação, nas condições de garantia de cada produto, contadas da data da nota fiscal.',
+      frete: 'A combinar.',
+      impostos: 'Inclusos no preço.',
+      local: 'No endereço da unidade do cliente indicada nesta proposta.',
+      gerais: 'Produtos, peças, materiais ou serviços não descritos nesta proposta serão orçados à parte e só fornecidos com aprovação do cliente.\nA entrega será combinada com o cliente após o aceite e acompanhada da nota fiscal.\nO aceite desta proposta formaliza o pedido nas condições aqui descritas.'
+    },
+    responsabilidadesProduto: 'Da Metrolabs:\n- Fornecer os produtos conforme descritos nesta proposta (descrição, quantidade e especificação).\n- Entregar os produtos acompanhados da nota fiscal.\n- Garantir os produtos contra defeito de fabricação, nas condições de garantia informadas nesta proposta.\n- Manter sigilo sobre as informações do cliente.\nDo cliente:\n- Receber e conferir os produtos no ato da entrega (quantidade, descrição e estado da embalagem).\n- Comunicar à Metrolabs qualquer divergência ou avaria em até 2 (dois) dias úteis após o recebimento, com o registro do ocorrido.\n- Efetuar os pagamentos nas condições acordadas.',
+    textoAceiteProduto: 'Após essa data, os preços e as condições podem ser revistos e uma nova revisão será emitida. Ao aprovar, o cliente declara que leu e concorda com a descrição, os valores e as condições desta proposta e autoriza o fornecimento nos termos aqui descritos.',
+    apresentacaoMisto: 'Prezados(as),\n\nA Metrolabs agradece a oportunidade e apresenta a seguir a sua proposta técnica e comercial, com os serviços e os produtos descritos. Atuamos em engenharia clínica hospitalar (manutenção preventiva e corretiva, calibração, qualificação e validação de equipamentos médico-hospitalares, e fornecimento de produtos, peças e acessórios) com equipe técnica própria, instrumentos rastreáveis e foco na segurança do paciente e na conformidade com as normas sanitárias.\n\nFicamos à disposição para esclarecer qualquer ponto desta proposta.',
+    condicoesMisto: {
+      pagamento: 'Boleto bancário com vencimento em 28 dias após a emissão da nota fiscal.',
+      prazoExecucao: 'A combinar após o aceite da proposta.',
+      garantia: '90 dias para os serviços executados; produtos contra defeito de fabricação, nas condições de garantia de cada produto.',
+      frete: 'A combinar.',
+      impostos: 'Inclusos no preço.',
+      local: 'Serviços nas instalações do cliente; produtos entregues no endereço da unidade indicada nesta proposta.',
+      gerais: 'Serviços, produtos, peças ou materiais não descritos nesta proposta serão orçados à parte e só executados ou fornecidos com aprovação do cliente.\nAs datas de execução e de entrega serão combinadas com o cliente após o aceite.\nO aceite desta proposta formaliza o pedido nas condições aqui descritas.'
+    },
+    responsabilidadesMisto: 'Da Metrolabs:\n- Executar os serviços descritos nesta proposta com equipe técnica qualificada e instrumentos calibrados e rastreáveis, e emitir os documentos técnicos correspondentes.\n- Fornecer os produtos conforme descritos, entregues com nota fiscal e garantidos contra defeito de fabricação nas condições informadas.\n- Comunicar previamente qualquer necessidade fora do escopo, com orçamento à parte.\n- Manter sigilo sobre as informações do cliente.\nDo cliente:\n- Disponibilizar os equipamentos, o acesso às áreas e um responsável para acompanhar a execução nas datas combinadas.\n- Receber e conferir os produtos no ato da entrega e comunicar divergência ou avaria em até 2 (dois) dias úteis.\n- Efetuar os pagamentos nas condições acordadas.',
+    textoAceiteMisto: 'Após essa data, os preços e as condições podem ser revistos e uma nova revisão será emitida. Ao aprovar, o cliente declara que leu e concorda com o escopo, os valores e as condições desta proposta e autoriza a execução dos serviços e o fornecimento dos produtos nos termos aqui descritos.',
     // 28/10/2026 (dono): as cláusulas que os vendedores colavam na descrição de cada orçamento do CRM são os TERMOS DO CONTRATO.
     // Ficam fixas no documento, na seção "Termos e condições da contratação" (texto justificado, logo acima de "Validade e
     // aceite"); a descrição da proposta fica em branco para o que for específico. Editáveis pela gestão em Metodologia >
@@ -335,13 +366,13 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V2')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V3')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V2', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V3', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {
@@ -427,6 +458,10 @@ function Com_validarMetodologia_(m) {
   if (tt !== undefined && tt !== null && typeof tt !== 'string') throw new Error('os termos e condições da contratação vieram num formato inválido. Atualize a tela e salve de novo');
   if (Com_s_(tt).length > 20000) throw new Error('os termos e condições da contratação passam de 20.000 caracteres. Resuma o texto e salve de novo');
   if (Com_s_(tt) && Com_s_(tt).length < 40) throw new Error('os termos e condições da contratação estão curtos demais (menos de 40 letras). Escreva as cláusulas completas ou recarregue o padrão e salve de novo');
+  ['condicoesProduto', 'condicoesMisto'].forEach(function (k) {
+    var cc = m.proposta && m.proposta[k];
+    if (cc !== undefined && cc !== null && (typeof cc !== 'object' || Array.isArray(cc))) throw new Error('as condições padrão do modelo de ' + (k === 'condicoesProduto' ? 'produto' : 'serviço e produto') + ' vieram num formato inválido. Atualize a tela e salve de novo');
+  });
 }
 
 /**

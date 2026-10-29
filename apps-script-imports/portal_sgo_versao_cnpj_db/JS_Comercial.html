@@ -660,7 +660,7 @@
     if (p.descontoSituacao === "NEGADO" && s === "RASCUNHO") h += '<div class="cm-faixa erro">Desconto não aprovado por ' + Com_esc_(p.descontoDecisaoPor) + ': ' + Com_esc_(p.descontoDecisao) + '</div>';
     if (p.descontoSituacao === "APROVADO" || p.descontoSituacao === "EXCECAO_GESTAO") h += '<div class="cm-faixa ok">' + Com_esc_(p.descontoDecisao || "Desconto aprovado") + (p.descontoDecisaoPor ? ' (' + Com_esc_(p.descontoDecisaoPor) + ')' : '') + '</div>';
     h += '<dl class="cm-det"><dt>Cliente</dt><dd>' + Com_esc_(p.cliente) + (p.unidade ? ' · ' + Com_esc_(p.unidade) : '') + '</dd><dt>A/C</dt><dd>' + Com_esc_(p.contato || "—") + '</dd><dt>Responsável</dt><dd>' + Com_esc_(p.responsavel) + '</dd>' +
-      '<dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
+      '<dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.tipoOrcamentoNome ? '<dt>Tipo de orçamento</dt><dd>' + Com_esc_(p.tipoOrcamentoNome) + (p.tipoOrcamentoEscolhido ? '' : ' (automático pelos itens)') + '</dd>' : '') + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
       (p.margemTxt ? '<dt>Margem (só gestão)</dt><dd>' + Com_esc_(p.margemTxt) + ' · custo ' + Com_esc_(p.custoTxt) + '</dd>' : '') + (p.enviadaEm ? '<dt>Enviada</dt><dd>' + Com_esc_(p.enviadaEm) + ' · ' + Com_esc_(p.envioComo) + '</dd>' : '') +
       (p.respostaEm ? '<dt>Resposta</dt><dd>' + Com_esc_(p.respostaEm) + ' · ' + Com_esc_(p.respostaTexto) + (p.motivoRecusa ? ' (' + Com_esc_(p.motivoRecusa) + ')' : '') + (p.aceiteNome ? '<br>Aceite: ' + Com_esc_(p.aceiteNome) : '') + '</dd>' : '') +
       (p.faturamento ? '<dt>Faturamento</dt><dd>' + Com_esc_(p.faturamento.razao) + ' · CNPJ ' + Com_esc_(p.faturamento.cnpj || "não informado") + '<br>' + Com_esc_(p.faturamento.endereco || "endereço não informado") + '<br>Pagamento: ' + Com_esc_(p.faturamento.pagamento || "—") + '</dd>' : '') + '</dl>';
@@ -700,6 +700,7 @@
     if (p.historico) h += '<p class="cm-sec">Histórico</p><div class="cm-hist">' + p.historico.map(function (x) { return '<div>' + Com_esc_(x.texto || x.tipo) + '<div class="q">' + Com_esc_(x.em) + ' · ' + Com_esc_(x.por) + '</div></div>'; }).join("") + '</div>';
     corpo.innerHTML = h;
     if (p.editavel) Comercial_ligarEditor_(p);
+    if (p.editavel && Com_$_("cmPrTipo")) Com_$_("cmPrTipo").onchange = function () { acao.salvar(); };
     corpo.querySelectorAll("[data-rev]").forEach(function (el) { el.onclick = function () { Comercial_abrirProposta_(el.getAttribute("data-rev")); }; });
     var area = Com_$_("cmPropAcao");
     var recarregar = function (msg) { Comercial_aposAlterar_(); Com_chamar_("proposta", { id: p.id }, function (x) { Comercial_desenharProposta_(g, x.proposta, msg); }); };
@@ -772,8 +773,14 @@
 
   function Comercial_editorProposta_(p) {
     var cond = p.condicoes || {};
-    var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: "Prazo de execução ou entrega", garantia: "Garantia", frete: "Frete", impostos: "Impostos", local: "Local de execução ou entrega", gerais: "Condições gerais", observacoes: "Observações" };
+    // 28/10/2026: tipo de orçamento (modelo do documento). Os rótulos acompanham o tipo; trocar o tipo salva o rascunho e troca os
+    // textos que ainda são o padrão de outro modelo (o servidor decide; o que o vendedor escreveu fica).
+    var tp = p.tipoOrcamento || "SERVICOS", tipos = p.tiposOrcamento || { SERVICOS: "Serviço", PRODUTOS: "Produto", MISTO: "Serviço e produto (misto)" };
+    var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: tp === "PRODUTOS" ? "Prazo de entrega" : tp === "MISTO" ? "Prazo de execução e de entrega" : "Prazo de execução ou entrega", garantia: "Garantia", frete: "Frete", impostos: "Impostos",
+      local: tp === "PRODUTOS" ? "Local de entrega (o documento acrescenta o endereço da unidade)" : tp === "MISTO" ? "Local de execução e de entrega" : "Local de execução ou entrega", gerais: "Condições gerais", observacoes: "Observações" };
+    var opTipo = [{ v: "", t: "Automático pelos itens (agora: " + (tipos[p.tipoOrcamentoSugerido] || "Serviço") + ")" }].concat(Object.keys(tipos).map(function (k) { return { v: k, t: tipos[k] }; }));
     return '<div class="cm-caixa"><h3>Rascunho</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
+      Com_campo_("Tipo de orçamento", '<select id="cmPrTipo">' + Com_opcoes_(opTipo, p.tipoOrcamentoEscolhido || "") + '</select>', "Muda os dizeres do documento (apresentação, prazo, local, responsabilidades e aceite). Ao trocar, o rascunho é salvo e os textos padrão passam para o modelo escolhido; o que você escreveu fica.") +
       (p.escopoTermosLegado ? '<div class="cm-faixa">As cláusulas que estavam na descrição (texto do CRM antigo) saíram daqui: agora vão fixas no documento, na seção "Termos e condições da contratação". Ficou só o restante. Ao salvar o rascunho, a descrição é gravada assim.</div>' : '') +
       Com_campo_("Descrição (opcional: só o que for específico desta proposta)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:90px" placeholder="Deixe em branco se os itens já dizem tudo. Os termos e condições da contratação vão fixos no documento.">' + Com_esc_(p.escopo) + '</textarea>') +
       '<p class="cm-sec">Itens</p><div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
@@ -903,7 +910,7 @@
     Comercial_lerItens_();
     var cond = {};
     document.querySelectorAll("[data-cond]").forEach(function (x) { cond[x.getAttribute("data-cond")] = x.value; });
-    return { id: p.id, titulo: Com_$_("cmPrTit").value, escopo: Com_$_("cmPrEsc").value, apresentacao: Com_$_("cmPrApr").value, contatoId: Com_$_("cmPrCt").value, descontoGeral: Com_$_("cmPrDesc").value || "0",
+    return { id: p.id, titulo: Com_$_("cmPrTit").value, tipoOrcamento: Com_$_("cmPrTipo") ? Com_$_("cmPrTipo").value : undefined, escopo: Com_$_("cmPrEsc").value, apresentacao: Com_$_("cmPrApr").value, contatoId: Com_$_("cmPrCt").value, descontoGeral: Com_$_("cmPrDesc").value || "0",
       validadeDias: Com_$_("cmPrVal").value, condicoes: cond, itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "" }; }) };
   }
 
@@ -1063,6 +1070,14 @@
     var pr = m.proposta;
     h += '<div class="cm-caixa"><h3>Modelo da proposta</h3><p class="cm-meta">Quando o modelo oficial da empresa chegar, os textos entram aqui. Valem para as propostas novas.</p>' + num("cmMVal", pr.validadeDias, "Validade padrão (dias)") + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
       '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC_" + k, pr.condicoes[k], 60)); }).join("") + '</div>' + Com_campo_("Responsabilidades", ta("cmMPResp", pr.responsabilidades, 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite", pr.textoAceite, 60)) + '</div>';
+    // 28/10/2026: modelos de produto e de serviço e produto (misto). Os textos acima são o modelo de serviço.
+    [["Produto", "Modelo da proposta de produto (fornecimento)", "Vale quando o tipo de orçamento é Produto. O documento usa \"Resumo do fornecimento\", \"Prazo de entrega\" e \"Local de entrega\" (com o endereço da unidade)."],
+     ["Misto", "Modelo da proposta de serviço e produto (misto)", "Vale quando a proposta tem serviços e produtos (ou o vendedor escolhe Misto)."]].forEach(function (x) {
+      var cs = pr["condicoes" + x[0]] || {};
+      h += '<div class="cm-caixa"><h3>' + x[1] + '</h3><p class="cm-meta">' + Com_esc_(x[2]) + ' Os textos acima são o modelo de serviço; os termos e condições da contratação são os mesmos nos três modelos.</p>' + Com_campo_("Apresentação", ta("cmMPApr" + x[0], pr["apresentacao" + x[0]] || "", 120)) +
+        '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC" + x[0] + "_" + k, cs[k] !== undefined ? cs[k] : pr.condicoes[k], 60)); }).join("") + '</div>' +
+        Com_campo_("Responsabilidades", ta("cmMPResp" + x[0], pr["responsabilidades" + x[0]] || "", 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite" + x[0], pr["textoAceite" + x[0]] || "", 60)) + '</div>';
+    });
     // 28/10/2026: termos e condições da contratação (cláusulas fixas do documento), versionados; só Diretoria e Administrador mudam
     var tv = r.termos || {}, edT = ed && r.podeEditarTermos, disT = edT ? "" : " disabled";
     h += '<div class="cm-caixa"><h3>Termos e condições da contratação</h3><p class="cm-meta">Vão fixos em toda proposta, na seção "Termos e condições da contratação", logo acima das assinaturas (texto justificado, uma cláusula por linha). ' +
@@ -1102,6 +1117,7 @@
         Object.keys(m.modelosMensagem).forEach(function (k) { n.modelosMensagem[k] = v("cmMMsg_" + k); });
         n.politica.descontoMaxPct = Number(String(v("cmMDesc")).replace(",", ".")); n.politica.margemMinPct = Number(String(v("cmMMarg")).replace(",", ".")); n.politica.texto = v("cmMPolTxt");
         n.proposta.validadeDias = Number(v("cmMVal")); n.proposta.apresentacao = v("cmMPApr"); Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta.condicoes[k] = v("cmMPC_" + k); }); n.proposta.responsabilidades = v("cmMPResp"); n.proposta.textoAceite = v("cmMPAceite");
+        ["Produto", "Misto"].forEach(function (x) { n.proposta["apresentacao" + x] = v("cmMPApr" + x); n.proposta["condicoes" + x] = {}; Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta["condicoes" + x][k] = v("cmMPC" + x + "_" + k); }); n.proposta["responsabilidades" + x] = v("cmMPResp" + x); n.proposta["textoAceite" + x] = v("cmMPAceite" + x); });
         if (r.podeEditarTermos) { n.proposta.termos = v("cmMPTermos"); n.proposta.termosConcordancia = v("cmMPTermosConc"); }
         Object.keys(CM.ini.setores).forEach(function (s) { n.posVenda[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; n.posVenda[s].checklist = ls("cmMPVC_" + s); n.posVenda.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
         n.posVenda.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;

@@ -270,6 +270,8 @@ function ComP_paraTela_(eu, p, completo) {
     pedidoSituacao: Com_up_(p.PEDIDO_SITUACAO), passagem: Com_json_(p.PASSAGEM_JSON, []), canceladaMotivo: Com_s_(p.CANCELADA_MOTIVO), criadaEm: Com_brDia_(p.CRIADO_EM),
     editavel: s === 'RASCUNHO' && (eu.gestao || Com_s_(p.RESPONSAVEL_ID) === eu.id), qtdItens: itens.length
   };
+  var to = ComP_tipoOrcamento_(p, itens);
+  t.tipoOrcamento = to.tipo; t.tipoOrcamentoNome = to.nome; t.tipoOrcamentoEscolhido = to.escolhido; t.tipoOrcamentoSugerido = to.sugerido; t.tiposOrcamento = COM_TIPOS_ORCAMENTO;
   if (eu.veValores) {
     t.subtotal = Number(p.SUBTOTAL) || 0; t.descontoGeral = Number(p.DESCONTO_GERAL) || 0; t.total = Number(p.TOTAL) || 0; t.descontoPct = Number(p.DESCONTO_PCT) || 0;
     t.totalTxt = Com_moeda_(p.TOTAL); t.subtotalTxt = Com_moeda_(p.SUBTOTAL); t.descontoTxt = Com_moeda_(p.DESCONTO_GERAL); t.descontoPctTxt = Com_pct_(p.DESCONTO_PCT);
@@ -399,6 +401,50 @@ function ComP_modeloDosItens_(itens) {
   return t.P && t.S ? 'MISTO' : (t.P ? 'PRODUTOS' : 'SERVICOS');
 }
 
+/**
+ * 28/10/2026 (dono): tipo de orçamento. O vendedor escolhe Serviço, Produto ou Serviço e produto (misto); sem escolha, vale o
+ * automático pelos itens (como era: só produto = Produto; produto e serviço = Misto; senão Serviço). Proposta antiga (sem a
+ * coluna TIPO_ORCAMENTO) deduz pelos itens. Devolve { tipo, nome, escolhido ('' = automático), sugerido }.
+ */
+var COM_TIPOS_ORCAMENTO = { SERVICOS: 'Serviço', PRODUTOS: 'Produto', MISTO: 'Serviço e produto (misto)' };
+function ComP_tipoOrcamento_(p, itens) {
+  itens = itens || Com_json_(p && p.ITENS_JSON, []) || [];
+  var escolhido = COM_TIPOS_ORCAMENTO[Com_up_(p && p.TIPO_ORCAMENTO)] ? Com_up_(p.TIPO_ORCAMENTO) : '';
+  var sugerido = itens.length ? ComP_modeloDosItens_(itens) : (COM_TIPOS_ORCAMENTO[Com_up_(p && p.MODELO)] ? Com_up_(p.MODELO) : 'SERVICOS');
+  var tipo = escolhido || sugerido;
+  return { tipo: tipo, nome: COM_TIPOS_ORCAMENTO[tipo], escolhido: escolhido, sugerido: sugerido };
+}
+
+/**
+ * Textos padrão do modelo (metodologia): { apresentacao, condicoes{}, responsabilidades, textoAceite }. SERVICOS usa os
+ * textos de sempre; PRODUTOS e MISTO, as versões próprias (condição ausente no modelo vale a do serviço).
+ */
+function Com_modeloProposta_(tipo, met) {
+  var pr = (met || Com_metodologia_()).proposta || {};
+  var suf = tipo === 'PRODUTOS' ? 'Produto' : (tipo === 'MISTO' ? 'Misto' : '');
+  var cond = Com_copia_(pr.condicoes || {});
+  if (suf && pr['condicoes' + suf] && typeof pr['condicoes' + suf] === 'object') Object.keys(pr['condicoes' + suf]).forEach(function (k) { cond[k] = pr['condicoes' + suf][k]; });
+  var t = function (k) { return suf && typeof pr[k + suf] === 'string' && Com_s_(pr[k + suf]) ? pr[k + suf] : Com_s_(pr[k]); };
+  return { apresentacao: t('apresentacao'), condicoes: cond, responsabilidades: t('responsabilidades'), textoAceite: t('textoAceite') };
+}
+
+/**
+ * Troca para o modelo do tipo os textos da proposta que ainda são o padrão de OUTRO modelo (apresentação e cada condição).
+ * Texto mexido pelo vendedor (diferente de todos os padrões) e campo em branco ficam como estão. Devolve a lista do que trocou.
+ */
+function ComP_trocarTextosDoModelo_(tipo, campos, cond, met) {
+  var norm = function (s) { return Com_s_(s).replace(/\s+/g, ' ').trim(); };
+  var alvo = Com_modeloProposta_(tipo, met), outros = Object.keys(COM_TIPOS_ORCAMENTO).filter(function (k) { return k !== tipo; }).map(function (k) { return Com_modeloProposta_(k, met); });
+  var trocou = [];
+  var ehDeOutro = function (v, pega) { var n = norm(v); return !!n && outros.some(function (m) { var x = norm(pega(m)); return x === n && x !== norm(pega(alvo)); }); };
+  if (ehDeOutro(campos.APRESENTACAO, function (m) { return m.apresentacao; })) { campos.APRESENTACAO = alvo.apresentacao; trocou.push('apresentação'); }
+  var rot = { pagamento: 'pagamento', prazoExecucao: 'prazo', garantia: 'garantia', frete: 'frete', impostos: 'impostos', local: 'local', gerais: 'condições gerais' };
+  Object.keys(alvo.condicoes).forEach(function (k) {
+    if (ehDeOutro(cond[k], function (m) { return m.condicoes[k]; })) { cond[k] = Com_s_(alvo.condicoes[k]); trocou.push(rot[k] || k); }
+  });
+  return trocou;
+}
+
 /** Nova proposta a partir da oportunidade aberta. d: { oportunidadeId } */
 function ComP_nova_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'criar a proposta');
@@ -445,12 +491,25 @@ function ComP_salvar_(eu, d) {
     Object.keys(padrao).concat(['observacoes']).forEach(function (k) { var v = (d.condicoes || {})[k]; cond[k] = v === undefined ? Com_s_(condAtual[k]) : Com_texto_(v, 2000); });
     var ct = Com_s_(d.contatoId) ? SGO_DATA.getById(COM_ABAS.CONTATOS, Com_s_(d.contatoId)) : null;
     if (Com_s_(d.contatoId) && (!ct || Com_s_(ct.CLIENTE_ID) !== Com_s_(p.CLIENTE_ID))) throw new Error('Não foi possível salvar: o contato escolhido não é deste cliente. Escolha de novo');
+    // 28/10/2026: tipo de orçamento (Serviço | Produto | Misto; '' ou AUTO = automático pelos itens). Não veio: fica como estava.
+    var tipoEsc = d.tipoOrcamento === undefined ? Com_up_(p.TIPO_ORCAMENTO) : Com_up_(d.tipoOrcamento);
+    if (tipoEsc === 'AUTO' || tipoEsc === 'AUTOMATICO') tipoEsc = '';
+    if (tipoEsc && !COM_TIPOS_ORCAMENTO[tipoEsc]) throw new Error('Não foi possível salvar: o tipo de orçamento "' + tipoEsc + '" não existe. Escolha Serviço, Produto, Serviço e produto (misto) ou Automático pelos itens');
+    var tipoAntes = ComP_tipoOrcamento_(p), tipoNovo = ComP_tipoOrcamento_({ TIPO_ORCAMENTO: tipoEsc, MODELO: p.MODELO }, itens);
     var campos = { TITULO: Com_texto_(d.titulo, 200) || Com_s_(p.TITULO), ESCOPO: d.escopo === undefined ? Com_s_(p.ESCOPO) : Com_texto_(d.escopo, 8000), APRESENTACAO: d.apresentacao === undefined ? Com_s_(p.APRESENTACAO) : Com_texto_(d.apresentacao, 4000), ITENS_JSON: JSON.stringify(itens),
-      CONDICOES_JSON: JSON.stringify(cond), VALIDADE_DIAS: val, VALIDA_ATE: Com_somarDias_(Com_hoje_(), val), MODELO: ComP_modeloDosItens_(itens),
+      CONDICOES_JSON: '', VALIDADE_DIAS: val, VALIDA_ATE: Com_somarDias_(Com_hoje_(), val), MODELO: tipoNovo.tipo, TIPO_ORCAMENTO: tipoEsc,
       SUBTOTAL: calc.subtotal, DESCONTO_GERAL: calc.descontoGeral, TOTAL: calc.total, DESCONTO_PCT: calc.descontoPct, MARGEM_PCT: calc.margemPct === null ? '' : calc.margemPct, CUSTO_TOTAL: calc.custoTotal,
       ATUALIZADO_EM: Com_agora_() };
+    // texto que ainda é o padrão de outro modelo vira o padrão do modelo do tipo (o que o vendedor escreveu fica)
+    var trocados = ComP_trocarTextosDoModelo_(tipoNovo.tipo, campos, cond);
+    campos.CONDICOES_JSON = JSON.stringify(cond);
     if (ct) { campos.CONTATO_ID = ct.ID; campos.CONTATO_NOME = Com_s_(ct.NOME); }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
+    var avisoTipo = '';
+    if (tipoNovo.tipo !== tipoAntes.tipo || tipoEsc !== Com_up_(p.TIPO_ORCAMENTO)) {
+      avisoTipo = ' Tipo de orçamento: ' + tipoNovo.nome + (tipoEsc ? '' : ' (automático pelos itens)') + '.' + (trocados.length ? ' Textos padrão trocados para o modelo de ' + tipoNovo.nome.toLowerCase() + ': ' + trocados.join(', ') + '.' : '');
+      Com_historico_('PROPOSTA', p.ID, 'TIPO_ORCAMENTO', eu, { de: tipoAntes.nome, para: tipoNovo.nome, texto: Com_s_(avisoTipo) });
+    } else if (trocados.length) avisoTipo = ' Textos padrão ajustados ao modelo de ' + tipoNovo.nome.toLowerCase() + ': ' + trocados.join(', ') + '.';
     var difs = itens.filter(function (i) { return i.precoDiferente; }), avulsos = itens.filter(function (i) { return !i.produtoId; }).length;
     Com_historico_('PROPOSTA', p.ID, 'RASCUNHO', eu, { texto: Com_plural_(itens.length, 'item', 'itens') + '; total ' + Com_moeda_(calc.total) + '; desconto ' + Com_pct_(calc.descontoPct) + '.' +
       (difs.length ? ' Preço diferente do catálogo: ' + difs.slice(0, 10).map(function (i) { return (i.codigo || i.descricao.slice(0, 40)) + ' (tabela ' + Com_moeda_(i.precoTabela) + ', proposta ' + Com_moeda_(i.precoUnitario) + ')'; }).join('; ') + (difs.length > 10 ? '; e mais ' + (difs.length - 10) : '') + '.' : '') +
@@ -458,7 +517,7 @@ function ComP_salvar_(eu, d) {
     var novo = Object.assign({}, p, campos);
     var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID));
     return { proposta: ComP_paraTela_(eu, novo, true), politica: { dentro: pol.dentro, motivos: pol.motivos },
-      message: 'Rascunho salvo.' + (pol.dentro ? '' : ' Atenção: ' + pol.motivos.join('; ') + '. Ao concluir, a proposta vai para a aprovação do gestor comercial.') };
+      message: 'Rascunho salvo.' + avisoTipo + (pol.dentro ? '' : ' Atenção: ' + pol.motivos.join('; ') + '. Ao concluir, a proposta vai para a aprovação do gestor comercial.') };
   });
 }
 
@@ -568,7 +627,7 @@ function ComP_gerarDocumento_(eu, d) {
   // antes do envio (proposta pronta); depois de enviada, a proposta guarda esta cópia, e mudar o padrão não a altera.
   var tv = Com_termosVigentes_();
   cong.termos = { versao: tv.versao, texto: tv.texto, concordancia: tv.concordancia, desde: tv.desde };
-  var conteudo = { numero: p.NUMERO, revisao: p.REVISAO, itens: Com_json_(p.ITENS_JSON, []), condicoes: Com_json_(p.CONDICOES_JSON, {}), escopo: ComP_escopo_(p), apresentacao: Com_s_(p.APRESENTACAO),
+  var conteudo = { numero: p.NUMERO, revisao: p.REVISAO, itens: Com_json_(p.ITENS_JSON, []), condicoes: Com_json_(p.CONDICOES_JSON, {}), escopo: ComP_escopo_(p), apresentacao: Com_s_(p.APRESENTACAO), tipoOrcamento: ComP_tipoOrcamento_(p).tipo,
     total: Number(p.TOTAL), desconto: Number(p.DESCONTO_GERAL), validaAte: Com_dia_(p.VALIDA_ATE), cliente: cong.cliente, unidade: cong.unidade, contato: cong.contato, termos: cong.termos };
   var marca = Com_marca_(JSON.stringify(conteudo));
   var html = ComDoc_propostaHtml_(p, cong, marca);
@@ -684,7 +743,7 @@ function ComP_novaRevisao_(eu, d) {
     var maior = Com_ler_(COM_ABAS.PROPOSTAS).filter(function (x) { return Com_s_(x.NUMERO) === Com_s_(p.NUMERO); }).reduce(function (m, x) { return Math.max(m, Number(x.REVISAO) || 0); }, 0);
     var met = Com_metodologia_(), val = Number(p.VALIDADE_DIAS) || Number(met.proposta.validadeDias) || 15, agora = Com_agora_();
     var copia = {};
-    ['NUMERO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO',
+    ['NUMERO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TIPO_ORCAMENTO', 'TITULO', 'ESCOPO', 'APRESENTACAO',
       'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL'].forEach(function (k) { copia[k] = p[k]; });
     copia.REVISAO = maior + 1; copia.SITUACAO = 'RASCUNHO'; copia.DESCONTO_SITUACAO = 'DENTRO'; copia.VALIDA_ATE = Com_somarDias_(Com_hoje_(), val); copia.REVISAO_DE = p.ID; copia.PEDIDO_SITUACAO = '';
     copia.ATUALIZADO_EM = agora; copia.CRIADO_POR_ID = eu.id;

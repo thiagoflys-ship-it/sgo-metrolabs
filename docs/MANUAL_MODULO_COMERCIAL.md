@@ -71,7 +71,7 @@ Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verif
 ## Propostas
 
 1. Na oportunidade, toque em "Nova proposta". O número é PROP-ano-número (por exemplo PROP-2026-0001), revisão 00.
-2. Acrescente os itens: em "Acrescentar item", comece a digitar o nome ou o código no campo "Produto ou serviço" e escolha da lista (itens ativos de Produtos e serviços); código, tipo, descrição, unidade e preço de tabela entram sozinhos. "Do catálogo" abre a mesma busca numa janela. Item fora do catálogo fica "Avulso (fora do catálogo)"; "Tornar avulso" desliga um item do catálogo. O preço pode ser ajustado: abaixo da tabela conta como desconto na política e o item mostra a diferença; preço diferente da tabela fica no histórico da proposta (tabela e praticado). Confira as condições e a validade. A descrição (escopo) é opcional: só o que for específico desta proposta.
+2. Acrescente os itens: em "Acrescentar item", comece a digitar o nome ou o código no campo "Produto ou serviço" e escolha da lista (itens ativos de Produtos e serviços); código, tipo, descrição, unidade e preço de tabela entram sozinhos. "Do catálogo" abre a mesma busca numa janela. Item fora do catálogo fica "Avulso (fora do catálogo)"; "Tornar avulso" desliga um item do catálogo. O preço pode ser ajustado: abaixo da tabela conta como desconto na política e o item mostra a diferença; preço diferente da tabela fica no histórico da proposta (tabela e praticado). Confira as condições e a validade. A descrição (escopo) é opcional: só o que for específico desta proposta. Confira o "Tipo de orçamento" (veja abaixo).
 3. Toque em "Revisão da gestora" para ver o que impede o envio e os alertas.
 4. Toque em "Concluir". Dentro da política de desconto (padrão: até 15% sobre o preço de tabela), a proposta fica pronta. Acima do limite, escreva o motivo: ela vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão.
 5. Toque em "Gerar documento": a folha A4 (PDF e HTML) é salva na pasta do cliente, em Comercial - Propostas, com os dados do cliente congelados, os termos e condições da contratação na versão em vigor e a marca de conferência do conteúdo.
@@ -81,6 +81,17 @@ Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verif
 Só o rascunho é editado. Antes do envio use "Voltar para rascunho"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina.
 
 O custo e a margem nunca vão para o cliente: aparecem só na tela da gestão.
+
+### Tipo de orçamento: modelo de serviço, de produto ou misto
+
+No rascunho, o campo "Tipo de orçamento" escolhe o modelo do documento: Serviço, Produto ou Serviço e produto (misto). Sem escolha, vale "Automático pelos itens" (só produtos = Produto; produtos e serviços = Misto; senão Serviço), como era antes. Proposta antiga, de antes do campo, segue pelos itens.
+
+- Serviço: como sempre foi (Escopo, Prazo de execução, Local de execução ou entrega, responsabilidades de execução).
+- Produto: "Resumo do fornecimento" no lugar de "Escopo"; "Prazo de entrega"; "Local de entrega" com o endereço da unidade (o documento acrescenta "Endereço de entrega: unidade, endereço" quando o texto não o traz); apresentação de fornecimento; condições gerais sem "datas de execução"; responsabilidades da Metrolabs (fornecer conforme descrito, entregar com nota fiscal, garantia contra defeito de fabricação nas condições informadas) e do cliente (receber e conferir na entrega, comunicar divergência ou avaria em até 2 dias úteis, pagar nas condições acordadas); aceite que autoriza o fornecimento.
+- Misto: textos enxutos que cobrem os dois (prazo e local de execução e de entrega, responsabilidades de execução e de fornecimento).
+- Nos três: os termos e condições da contratação são os mesmos, e o código do produto do catálogo sai embaixo da descrição do item, em letra menor.
+- Trocar o tipo salva o rascunho e passa para o padrão do novo modelo os textos que ainda eram o padrão de outro (apresentação e cada condição); o que o vendedor escreveu fica. A troca fica no histórico da proposta. A revisão da gestora segue o tipo (por exemplo, "falta o prazo de entrega" no de produto).
+- Os textos de cada modelo ficam em Metodologia comercial > Modelo da proposta (serviço), Modelo da proposta de produto e Modelo da proposta de serviço e produto (misto), editáveis pela gestão comercial.
 
 ### Termos e condições da contratação
 
@@ -133,7 +144,7 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 ## Metodologia comercial
 
-É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui. Os termos e condições da contratação também ficam aqui, mas só a Diretoria e o Administrador mudam (veja Propostas > Termos e condições da contratação).
+É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui, em três modelos: serviço, produto e serviço e produto (misto); o vendedor escolhe o tipo de orçamento na proposta. Os termos e condições da contratação também ficam aqui, mas só a Diretoria e o Administrador mudam (veja Propostas > Termos e condições da contratação).
 
 ## Dados trazidos do CRM antigo
 

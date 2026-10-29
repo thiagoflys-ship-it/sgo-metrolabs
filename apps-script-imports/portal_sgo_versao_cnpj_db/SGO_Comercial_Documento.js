@@ -7,7 +7,10 @@
  *
  * Proposta: retrato. Conteúdo: dados do cliente e da unidade, responsável pela proposta, apresentação, escopo,
  * itens (Tabela), condições comerciais, responsabilidades, validade e aceite (assinaturas) e a marca de
- * conferência do conteúdo. Nunca leva custo nem margem. O modelo (textos padrão, condições, validade) vem da
+ * conferência do conteúdo. Nunca leva custo nem margem. 28/10/2026: três modelos pelo tipo de orçamento (ComP_tipoOrcamento_):
+ * SERVIÇO (como sempre foi), PRODUTO (fornecimento: resumo do fornecimento, prazo e local de entrega com o endereço da unidade,
+ * responsabilidades de fornecimento) e MISTO (textos que cobrem os dois); os termos e condições da contratação são os mesmos.
+ * O código do produto do catálogo sai embaixo da descrição do item, em letra menor, nos três modelos. O modelo (textos padrão, condições, validade) vem da
  * metodologia, editável pela gestão; quando o dono mandar o modelo oficial, os textos entram lá.
  *
  * Relatório mensal: indicadores do funil, ganhos e perdas, perdas por motivo, propostas, por vendedor e a
@@ -52,7 +55,8 @@ function ComDoc_propostaHtml_(p, cong, marca) {
   var rotulo = ComP_rotulo_(p), validaAte = Com_brDia_(p.VALIDA_ATE), empresa = typeof RelA4_empresa_ === 'function' ? RelA4_empresa_() : { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
   var cli = cong.cliente || {}, un = cong.unidade || {}, ct = cong.contato || {}, vd = cong.vendedor || {};
   var endereco = [un.endereco || cli.endereco, [un.cidade, un.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ');
-  var temServico = itens.some(function (i) { return i.tipo !== 'PRODUTO'; });
+  var tipo = ComP_tipoOrcamento_(p, itens).tipo, modelo = Com_modeloProposta_(tipo, met);
+  var ehProduto = tipo === 'PRODUTOS', ehMisto = tipo === 'MISTO';
   var corpo = '';
   corpo += RelA4_secao_('Dados do cliente', RelA4_identificacao_([
     ['Razão social', cli.razao], ['CNPJ', ComDoc_cnpj_(un.cnpj || cli.cnpj)],
@@ -65,10 +69,10 @@ function ComDoc_propostaHtml_(p, cong, marca) {
     ['Empresa', empresa.nome + (empresa.cnpj ? ' · CNPJ ' + empresa.cnpj : ''), { largo: true }]
   ]));
   if (Com_s_(p.APRESENTACAO)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(p.APRESENTACAO));
-  corpo += RelA4_secao_(temServico ? 'Escopo' : 'Resumo do fornecimento', RelA4_paragrafos_(ComP_escopo_(p) || 'Conforme os itens da tabela a seguir.'));
+  corpo += RelA4_secao_(ehProduto ? 'Resumo do fornecimento' : 'Escopo', RelA4_paragrafos_(ComP_escopo_(p) || 'Conforme os itens da tabela a seguir.'));
   var linhas = itens.map(function (i, k) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
-    var desc = '<b>' + ComDoc_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<span class="sub">Equipamento: ' + ComDoc_esc_(i.equipamentoTexto) + '</span>' : '') + (i.detalhe ? '<span class="sub">' + ComDoc_esc_(i.detalhe) + '</span>' : '');
+    var desc = '<b>' + ComDoc_esc_(i.descricao) + '</b>' + (Com_s_(i.codigo) ? '<span class="sub">Código: ' + ComDoc_esc_(i.codigo) + '</span>' : '') + (i.equipamentoTexto ? '<span class="sub">Equipamento: ' + ComDoc_esc_(i.equipamentoTexto) + '</span>' : '') + (i.detalhe ? '<span class="sub">' + ComDoc_esc_(i.detalhe) + '</span>' : '');
     return [String(k + 1), COM_TIPOS_ITEM[i.tipo] || 'Serviço', { html: desc }, SGO_DocA4_num_(q, Math.round(q) === q ? 0 : 2), i.unidade || 'un.', Com_moeda_(pu), Com_moeda_(q * pu)];
   });
   var cols = [{ t: 'Nº', cen: true, w: '7mm' }, { t: 'Tipo', w: '17mm' }, { t: 'Descrição' }, { t: 'Qtd.', num: true }, { t: 'Un.', cen: true }, { t: 'Preço unit.', num: true }, { t: 'Total', num: true }];
@@ -80,18 +84,21 @@ function ComDoc_propostaHtml_(p, cong, marca) {
     return '<tr' + (k === resumo.length - 1 ? ' class="total"' : '') + '><th>' + ComDoc_esc_(r[0]) + '</th><td class="num">' + ComDoc_esc_(r[1]) + '</td></tr>';
   }).join('') + '</tbody></table>';
   corpo += RelA4_secao_('Itens e valores', tabela);
-  var c = [['Forma de pagamento', cond.pagamento], [temServico ? 'Prazo de execução' : 'Prazo de entrega', cond.prazoExecucao], ['Garantia', cond.garantia], ['Frete', cond.frete],
-    ['Impostos', cond.impostos], ['Local de execução ou entrega', cond.local]].filter(function (x) { return Com_s_(x[1]); });
+  // produto: "Local de entrega" com o endereço da unidade (quando o texto ainda não o traz)
+  var local = Com_s_(cond.local);
+  if (ehProduto && endereco && local.indexOf(Com_s_(un.endereco || cli.endereco)) < 0) local = (local ? local + ' ' : '') + 'Endereço de entrega: ' + [un.nome, endereco].filter(Boolean).join(', ') + '.';
+  var c = [['Forma de pagamento', cond.pagamento], [ehProduto ? 'Prazo de entrega' : ehMisto ? 'Prazo de execução e de entrega' : 'Prazo de execução', cond.prazoExecucao], ['Garantia', cond.garantia], ['Frete', cond.frete],
+    ['Impostos', cond.impostos], [ehProduto ? 'Local de entrega' : ehMisto ? 'Local de execução e de entrega' : 'Local de execução ou entrega', local]].filter(function (x) { return Com_s_(x[1]); });
   var condHtml = c.length ? RelA4_identificacao_(c.map(function (x, k) { return [x[0], x[1], { largo: true }]; })) : '';
   if (Com_s_(cond.gerais)) condHtml += RelA4_subsecao_('Condições gerais', RelA4_paragrafos_(Com_s_(cond.gerais).split('\n').map(function (l) { return l.trim() ? '- ' + l.replace(/^[-•]\s*/, '') : ''; }).join('\n')));
   if (Com_s_(cond.observacoes)) condHtml += RelA4_subsecao_('Observações', RelA4_paragrafos_(cond.observacoes));
   corpo += RelA4_secao_('Condições comerciais', condHtml || '<p>A combinar.</p>');
-  if (Com_s_(met.proposta.responsabilidades)) corpo += RelA4_secao_('Responsabilidades', RelA4_paragrafos_(met.proposta.responsabilidades));
+  if (Com_s_(modelo.responsabilidades)) corpo += RelA4_secao_('Responsabilidades', RelA4_paragrafos_(modelo.responsabilidades));
   // 28/10/2026: termos e condições da contratação (cláusulas do contrato), congelados no documento (cong.termos), logo acima
   // de "Validade e aceite": a última frase ("firmam o presente instrumento") fica junto das assinaturas.
   var tm = cong.termos || (typeof Com_termosVigentes_ === 'function' ? Com_termosVigentes_() : null);
   if (tm && Com_s_(tm.texto)) corpo += RelA4_secao_('Termos e condições da contratação', ComDoc_termosHtml_(tm));
-  var aceite = '<p>Esta proposta é válida até ' + ComDoc_esc_(validaAte) + '. ' + ComDoc_esc_(met.proposta.textoAceite) + '</p>' +
+  var aceite = '<p>Esta proposta é válida até ' + ComDoc_esc_(validaAte) + '. ' + ComDoc_esc_(modelo.textoAceite) + '</p>' +
     '<div class="assinaturas manter">' +
     '<div class="assinatura"><div class="img"></div><div class="linha">' + ComDoc_esc_(vd.nome || Com_s_(p.RESPONSAVEL_NOME)) + '</div><div class="cargo">pela ' + ComDoc_esc_(empresa.nome) + '</div></div>' +
     '<div class="assinatura"><div class="img"></div><div class="linha">Aceite do cliente</div><div class="cargo">Nome, CPF ou CNPJ, cargo e data</div></div></div>' +
