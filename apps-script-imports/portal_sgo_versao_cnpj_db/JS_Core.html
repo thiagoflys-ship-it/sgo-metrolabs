@@ -6399,6 +6399,7 @@
   // ==========================================
   let AUVO_POLL_INTERVAL = null;
   let AUVO_POLL_DESDE = null;
+  let AUVO_POLL_FALHAS = 0;
 
   function iniciarPollingAuvo_() {
     if (AUVO_POLL_INTERVAL) return;
@@ -6409,6 +6410,7 @@
     if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) === -1) return;
 
     AUVO_POLL_DESDE = new Date().toISOString();
+    AUVO_POLL_FALHAS = 0;
     AUVO_POLL_INTERVAL = setInterval(verificarEventosAuvo_, 45000);
   }
 
@@ -6427,8 +6429,13 @@
           tocarNotificacaoAuvo_();
         }
         if (res.agora) AUVO_POLL_DESDE = res.agora;
+        AUVO_POLL_FALHAS = 0;
       })
-      .withFailureHandler(function (err) { console.error("Falha ao verificar eventos Auvo:", err); })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao verificar eventos Auvo:", err);
+        // 30/10/2026: aba esquecida com a sessão vencida recusava a cada 45s para sempre; 3 recusas seguidas param o acompanhamento.
+        if (++AUVO_POLL_FALHAS >= 3) pararPollingAuvo_();
+      })
       .Auvo_apiDispatch({ sessionId: SESSION, fn: "apiVerificarNovosEventos", payload: { desde: AUVO_POLL_DESDE } });
   }
 
@@ -6500,6 +6507,7 @@
   // ------------------------------------------------------------
   let FROTA_POLL_INTERVAL = null;
   let FROTA_POLL_DESDE = null;
+  let FROTA_POLL_FALHAS = 0;
 
   function iniciarPollingFrota_() {
     if (FROTA_POLL_INTERVAL) return;
@@ -6509,6 +6517,7 @@
     if (!SGO_ehRotina_()) return;
 
     FROTA_POLL_DESDE = new Date().toISOString();
+    FROTA_POLL_FALHAS = 0;
     FROTA_POLL_INTERVAL = setInterval(verificarEventosFrota_, 45000);
   }
 
@@ -6527,8 +6536,13 @@
           tocarNotificacaoFrota_();
         }
         if (res.agora) FROTA_POLL_DESDE = res.agora;
+        FROTA_POLL_FALHAS = 0;
       })
-      .withFailureHandler(function (err) { console.error("Falha ao verificar eventos Frota:", err); })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao verificar eventos Frota:", err);
+        // Mesmo motivo do Auvo acima (30/10/2026).
+        if (++FROTA_POLL_FALHAS >= 3) pararPollingFrota_();
+      })
       .Frota_apiDispatch({ sessionId: SESSION, fn: "apiVerificarNovosEventos", payload: { desde: FROTA_POLL_DESDE } });
   }
 
