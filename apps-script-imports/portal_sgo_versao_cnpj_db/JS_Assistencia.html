@@ -1283,20 +1283,61 @@
     q.imagem = function () { var larguras = [600, 420, 300]; for (var i = 0; i < larguras.length; i++) { var k = Math.min(1, larguras[i] / c.width), s = document.createElement("canvas"); s.width = Math.round(c.width * k); s.height = Math.round(c.height * k); var g = s.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, s.width, s.height); g.drawImage(c, 0, 0, s.width, s.height); var u = s.toDataURL("image/png"); if (u.length <= 200000) return u; } return ""; };
     return q;
   }
+  /** Painel do cliente: toque num cartão ou barra mostra o chamado na aba Lista (o cliente não tem outra ficha). */
+  function At_portalMostrar_(tipo, id) {
+    var b = document.querySelector('#atPoAbas [data-pna-aba="lista"]'); if (b) b.click();
+    var el = At_$_("atPoCh_" + id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.borderColor = "var(--info, #1f5fa8)"; setTimeout(function () { el.style.borderColor = ""; }, 2500); }
+  }
   function At_renderPortal_(div) {
-    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Meus chamados", "Peça atendimento técnico para os seus equipamentos e acompanhe cada pedido até o relatório.", '<button type="button" class="btn-primary" id="atPoNovo">Pedir atendimento</button>') + '<div id="atPoCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Meus chamados", "Peça atendimento técnico para os seus equipamentos e acompanhe cada pedido até o relatório.", '<button type="button" class="btn-secondary" id="atPoAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-primary" id="atPoNovo">Pedir atendimento</button>') + '<div id="atPoCorpo"><div class="at-vazio">Carregando…</div></div></div>';
+    At_$_("atPoAtualizar").onclick = function () { At_renderPortal_(div); };
     At_chamar_("portal", {}, function (r) {
       var c = At_$_("atPoCorpo"); if (!c) return;
       AT.portal = r;
-      var h = (r.pedidos.length ? '<div class="at-sec">Pedidos em análise</div><div class="at-lista">' + r.pedidos.map(function (p) { return '<div class="at-card"><p class="at-card-tit">' + At_esc_(p.numero) + ' · ' + At_esc_(p.equipamentoTexto) + '</p><p class="at-meta">Enviado em ' + At_esc_(p.em) + '. A equipe técnica confere e abre o chamado.</p><p class="at-txt">' + At_esc_(p.descricao) + '</p></div>'; }).join("") + '</div>' : '') +
-        At_portalOrcamentos_(r.orcamentos || []) +
+      if (typeof PnA_prepararGantt_ === "function") PnA_prepararGantt_(r.ganttJs);
+      // 29/10/2026: painel do cliente (índices, Kanban das 5 etapas e Gantt; JS_PainelAtendimento.html), só com os chamados dele
+      var p = r.painel, k = p ? p.indices : null, temPainel = !!(p && typeof PnA_indHtml_ === "function");
+      var lista = (r.pedidos.length ? '<div class="at-sec">Pedidos em análise</div><div class="at-lista">' + r.pedidos.map(function (pd) { return '<div class="at-card"><p class="at-card-tit">' + At_esc_(pd.numero) + ' · ' + At_esc_(pd.equipamentoTexto) + '</p><p class="at-meta">Enviado em ' + At_esc_(pd.em) + '. A equipe técnica confere e abre o chamado.</p><p class="at-txt">' + At_esc_(pd.descricao) + '</p></div>'; }).join("") + '</div>' : '') +
         '<div class="at-sec">Chamados</div>' + (r.chamados.length ? '<div class="at-lista">' + r.chamados.map(function (ch) {
-          return '<div class="at-card' + (ch.cancelado ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(ch.numero) + ' · ' + At_esc_(ch.equipamentoTexto) + '</p><p class="at-meta">Aberto em ' + At_esc_(ch.abertoEm) + (ch.unidadeNome ? ' · ' + At_esc_(ch.unidadeNome) : '') + '</p>' +
+          return '<div class="at-card' + (ch.cancelado ? " fim" : "") + '" id="atPoCh_' + At_esc_(ch.id) + '"><p class="at-card-tit">' + At_esc_(ch.numero) + ' · ' + At_esc_(ch.equipamentoTexto) + '</p><p class="at-meta">Aberto em ' + At_esc_(ch.abertoEm) + (ch.unidadeNome ? ' · ' + At_esc_(ch.unidadeNome) : '') + '</p>' +
             (ch.cancelado ? '<p class="at-txt">Cancelado.</p>' : '<div class="at-etapas">' + ch.etapas.map(function (e, i) { return '<span class="' + (i + 1 <= ch.etapa ? "feita" : "") + '">' + At_esc_(e) + '</span>'; }).join("") + '</div>') +
             '<p class="at-txt">' + At_esc_(ch.sintoma) + '</p>' + (ch.agendadoPara ? '<p class="at-meta">Visita agendada para ' + At_esc_(ch.agendadoPara) + '.</p>' : '') + (ch.relatorioUrl ? '<a href="' + At_esc_(ch.relatorioUrl) + '" target="_blank" rel="noopener">Baixar o relatório do atendimento (' + At_esc_(ch.osNumero) + ')</a>' : '') + '</div>';
         }).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado ainda.</div>') +
         '<div class="at-sec">Relatórios emitidos</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
-      c.innerHTML = h;
+      if (!temPainel) { c.innerHTML = At_portalOrcamentos_(r.orcamentos || []) + lista; }
+      else {
+        var md = k.minDia;
+        c.innerHTML = PnA_indHtml_([
+          { v: PnA_num_(k.abertos), l: "Abertos", sub: k.emAnalise + " em análise · " + k.visitaAgendada + " com visita agendada", title: "Chamados que ainda não foram concluídos nem cancelados, mais os pedidos que a equipe técnica ainda está conferindo." },
+          { v: PnA_num_(k.emAtendimento), l: "Em atendimento agora", sub: "Técnico no local ou serviço em andamento" },
+          { v: k.proximaVisita ? k.proximaVisita.quando : "—", l: "Próxima visita", sub: k.proximaVisita ? k.proximaVisita.numero + " · " + k.proximaVisita.equipamento : "Nenhuma visita agendada" },
+          { v: PnA_num_(k.concluidos), l: "Concluídos (" + k.dias + " dias)", sub: "Tempo médio até a conclusão: " + PnA_tempo_(k.mediaConclusaoMin, md), title: "Chamados concluídos nos últimos " + k.dias + " dias. Tempo médio: da abertura do chamado à conclusão, em horas úteis do expediente da Metrolabs." }
+        ]) + At_portalOrcamentos_(r.orcamentos || []) + PnA_abasHtml_("atPoAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["lista", "Lista e relatórios"]], AT.portalAba || "kanban") + '<div id="atPoAba"></div>';
+        var desenhar = function (a) {
+          AT.portalAba = a;
+          var el = At_$_("atPoAba"); if (!el) return;
+          var irPara = function (tipo, id) { At_portalMostrar_(tipo, id); };
+          if (a === "lista") { el.innerHTML = lista; return; }
+          if (a === "gantt") {
+            el.innerHTML = PnA_ganttHtml_(p.gantt, { largura: el.clientWidth || 1000, dias: 90, diasFrente: 21, agoraMs: p.agoraMs, comPrazo: false,
+              cor: function (x) { return PNA_COR_ETAPA_CLIENTE[x.etapa] || "#8a96a8"; }, rotulo: function (x) { return x.numero + " · " + x.equipamento; },
+              linha: function (x) { return { rotulo: x.numero, sub: x.equipamento }; },
+              tip: function (x) { return x.numero + " · " + x.equipamento + "\nEtapa: " + x.etapaNome + "\nAberto em " + x.abertoEm + (x.agendadoPara ? "\nVisita agendada: " + x.agendadoPara : "") + (x.conclusaoMs ? "\nConcluído em " + PnA_br_(x.conclusaoMs) : ""); },
+              legenda: [1, 2, 3, 4, 5].map(function (n) { return '<span><i style="background:' + PNA_COR_ETAPA_CLIENTE[n] + '"></i>' + At_esc_((p.kanban[n - 1] || {}).nome || "") + "</span>"; }).join("") + '<span><i style="background:#fff;border:1.5px solid #1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Visita agendada</span><span><i style="background:#1E4F7A;width:3px"></i>Hoje</span>' }) +
+              '<div class="atv-legenda">Cada barra vai da abertura do pedido até a conclusão (ou até hoje, se ainda está aberto). A cor é a etapa. Toque numa barra para ver o chamado na lista.</div>';
+            PnA_ligar_(el, irPara); return;
+          }
+          el.innerHTML = PnA_kanbanHtml_(p.kanban, { vazio: "Nenhum chamado ainda. Use \"Pedir atendimento\" para chamar a equipe técnica.", cor: function (x) { return PNA_COR_ETAPA_CLIENTE[x.etapa] || "var(--muted)"; },
+            legenda: "Um cartão por pedido ou chamado, na etapa em que está. A etapa muda sozinha conforme o atendimento. Concluídos: últimos 30 dias.",
+            cartao: function (x) { return '<div class="atv-kcard-tit">' + At_esc_(x.numero) + (x.pedido ? ' <span class="at-selo cinza">Pedido</span>' : '') + '</div><div class="atv-sub">' + At_esc_([x.equipamento, x.unidade].filter(Boolean).join(" · ")) + '</div>' +
+              '<div class="atv-kcard-rod"><span class="atv-sub">Aberto em ' + At_esc_(String(x.abertoEm).slice(0, 10)) + '</span>' + (x.agendadoPara ? '<span class="at-selo azul">Visita ' + At_esc_(x.agendadoPara) + '</span>' : '') + (x.situacaoCampo ? '<span class="at-selo azul">' + At_esc_(x.situacaoCampo) + '</span>' : '') + '</div>' +
+              (x.relatorioUrl ? '<div class="atv-sub"><a href="' + At_esc_(x.relatorioUrl) + '" target="_blank" rel="noopener" data-pna-acao="rel">Relatório ' + At_esc_(x.osNumero) + '</a></div>' : ''); } });
+          PnA_ligar_(el, irPara);
+        };
+        PnA_ligarAbas_("atPoAbas", desenhar);
+        desenhar(AT.portalAba || "kanban");
+      }
       c.querySelectorAll("[data-po-orc]").forEach(function (b) { b.onclick = function () { At_responderOrcamento_((r.orcamentos || []).filter(function (o) { return o.id === b.getAttribute("data-po-orc"); })[0], b.getAttribute("data-dec"), function () { At_renderPortal_(div); }); }; });
     }, function (m) { At_msg_("atPoCorpo", m); });
     At_$_("atPoNovo").onclick = function () {

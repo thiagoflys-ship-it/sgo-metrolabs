@@ -3,14 +3,17 @@
   // MÓDULO REPRESENTAÇÃO (29/10/2026). Pedido do dono: área para a representada (Brasmedical) acionar a Metrolabs e
   // acompanhar os chamados, "um módulo do SGO". Abre por abrir('representacao').
   // Servidor: Representacao_api(sessionId, acao, dados) em SGO_Representacao.js. O servidor decide a visão pela sessão:
-  //  - perfil REPRESENTADA: Início, Novo pedido (busca por CNPJ/CPF completo e série exata, cadastro com "Ciente",
-  //    relato e anexos), Chamados (etapas, linha do tempo, conversa, complemento, cancelamento), Equipamentos, Canal geral
-  //    e Equipe (administrador da representada);
-  //  - equipe da Metrolabs: Pedidos (aceitar, pedir complemento, recusar), Conversas (com nota interna), Representadas,
-  //    Catálogo de modelos, Usuários e Registro de ações.
-  // A tela só esconde botões; quem confere papel, escopo e campos obrigatórios é o servidor.
+  //  - perfil REPRESENTADA: Painel (índices, Kanban e Gantt), Novo pedido (busca por CNPJ/CPF completo e série exata,
+  //    cadastro com "Ciente", relato e anexos), Chamados (etapas, marcos, linha do tempo, conversa, complemento,
+  //    cancelamento), Equipamentos, Canal geral e Equipe (administrador da representada);
+  //  - equipe da Metrolabs: Painel (SLA, fila, carga, Kanban e Gantt), Pedidos (aceitar, pedir complemento, recusar),
+  //    Conversas (com nota interna), Representadas, Catálogo de modelos, Usuários e Registro de ações.
+  // 29/10/2026 (crítica do dono: "quero página igual à do SGO+"): a tela usa os componentes do SGO+ (cabeçalho do módulo,
+  // abas e cartões da Assistência, índices, Kanban e Gantt da agenda única; JS_PainelAtendimento.html). Nenhum estilo próprio.
+  // A tela só esconde botões; quem confere papel, escopo e campos obrigatórios é o servidor. Não se redesenha sozinha:
+  // recarrega depois de cada ação ou no botão "Atualizar" (nunca apaga o que está sendo digitado).
   // =====================================================================
-  var RP = { ini: null, externo: false, aba: "", pedido: null, cliente: null, unidadeId: "", equip: null };
+  var RP = { ini: null, externo: false, aba: "", pedido: null, cliente: null, unidadeId: "", equip: null, painel: null, painelAba: "kanban", dias: 90, janela: 30, agrupar: "", repPainel: "" };
   function Rp_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Rp_$_(id) { return document.getElementById(id); }
   function Rp_chamar_(acao, dados, ok, erro, carregando) {
@@ -18,76 +21,193 @@
     var fim = function () { if (carregando && typeof SGO_finalizarCarregamento_ === "function") SGO_finalizarCarregamento_(); };
     google.script.run.withSuccessHandler(function (r) {
       fim();
-      if (r && r.ok) ok(r); else (erro || function (m) { alert(m); })((r && r.message) || "Não foi possível concluir. Tente de novo.", r || {});
+      if (r && r.ok) { try { ok(r); } catch (e) { (erro || function (m) { alert(m); })("A tela não conseguiu mostrar a resposta (" + ((e && e.message) || e) + "). Atualize a página (F5); nada foi perdido no servidor.", {}); } }
+      else (erro || function (m) { alert(m); })((r && r.message) || "Não foi possível concluir. Tente de novo.", r || {});
     }).withFailureHandler(function (e) { fim(); (erro || function (m) { alert(m); })("Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado.", {}); })
       .Representacao_api(SESSION, acao, dados || {});
   }
-  function Rp_msg_(id, texto, tipo) { var el = Rp_$_(id); if (el) el.innerHTML = texto ? '<div class="rp-faixa ' + (tipo || "erro") + '">' + Rp_esc_(texto) + "</div>" : ""; }
+  function Rp_msg_(id, texto, tipo) { var el = typeof id === "string" ? Rp_$_(id) : id; if (el) el.innerHTML = texto ? '<div class="at-faixa ' + (tipo || "erro") + '">' + Rp_esc_(texto) + "</div>" : ""; }
   function Rp_erroCampos_(r) {
-    document.querySelectorAll(".rp-campo .rp-erro").forEach(function (e) { e.remove(); });
-    (r && r.faltam || []).forEach(function (f) { var el = Rp_$_("rp_" + f.campo); if (el && el.parentNode) { var d = document.createElement("div"); d.className = "rp-erro"; d.textContent = f.texto; el.parentNode.appendChild(d); } });
+    document.querySelectorAll(".at-campo .rp-erro").forEach(function (e) { e.remove(); });
+    (r && r.faltam || []).forEach(function (f) { var el = Rp_$_("rp_" + f.campo); if (el && el.parentNode) { var d = document.createElement("div"); d.className = "at-ajuda-campo rp-erro"; d.style.color = "var(--danger)"; d.textContent = f.texto; el.parentNode.appendChild(d); } });
   }
-  function Rp_campo_(rotulo, html, dica) { return '<div class="rp-campo"><label>' + Rp_esc_(rotulo) + "</label>" + html + (dica ? '<div class="rp-dica">' + Rp_esc_(dica) + "</div>" : "") + "</div>"; }
+  function Rp_campo_(rotulo, html, dica) { return '<div class="at-campo"><label>' + Rp_esc_(rotulo) + "</label>" + html + (dica ? '<div class="at-ajuda-campo">' + Rp_esc_(dica) + "</div>" : "") + "</div>"; }
   function Rp_input_(id, ph, tipo, extra) { return '<input id="rp_' + id + '" type="' + (tipo || "text") + '"' + (ph ? ' placeholder="' + Rp_esc_(ph) + '"' : "") + (extra || "") + ">"; }
   function Rp_select_(id, pares, vazio) { return '<select id="rp_' + id + '">' + (vazio ? '<option value="">' + Rp_esc_(vazio) + "</option>" : "") + pares.map(function (p) { return '<option value="' + Rp_esc_(p[0]) + '">' + Rp_esc_(p[1]) + "</option>"; }).join("") + "</select>"; }
   function Rp_val_(id) { var el = Rp_$_("rp_" + id); return el ? (el.type === "checkbox" ? el.checked : String(el.value || "").trim()) : ""; }
-  function Rp_selo_(n, nome) { var cor = n === 3 || n === 12 ? "cinza" : n === 2 || n === 9 ? "aviso" : n >= 10 ? "ok" : "azul"; return '<span class="rp-selo ' + cor + '">' + Rp_esc_(nome) + "</span>"; }
-  function Rp_estilo_() {
-    if (Rp_$_("rpEstilo")) return;
-    var st = document.createElement("style"); st.id = "rpEstilo";
-    st.textContent = ".rp-abas{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}.rp-aba{border:1px solid var(--border);background:#fff;border-radius:18px;padding:6px 14px;cursor:pointer}.rp-aba.ativa{background:var(--metro-blue);color:#fff;border-color:var(--metro-blue)}" +
-      ".rp-caixa{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}.rp-caixa h3{margin:0 0 10px;font-size:16px}.rp-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}" +
-      ".rp-campo{display:flex;flex-direction:column;gap:4px}.rp-campo label{font-weight:600;font-size:13px}.rp-campo input,.rp-campo select,.rp-campo textarea{padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit}.rp-campo textarea{min-height:70px}" +
-      ".rp-dica{font-size:12px;color:var(--muted)}.rp-erro{font-size:12px;color:#b91c1c}.rp-faixa{padding:8px 12px;border-radius:6px;margin:8px 0}.rp-faixa.erro{background:#fee2e2;color:#991b1b}.rp-faixa.ok{background:#dcfce7;color:#166534}.rp-faixa.aviso{background:#fef3c7;color:#92400e}" +
-      ".rp-selo{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}.rp-selo.azul{background:#dbeafe;color:#1e40af}.rp-selo.ok{background:#dcfce7;color:#166534}.rp-selo.aviso{background:#fef3c7;color:#92400e}.rp-selo.cinza{background:#e5e7eb;color:#374151}.rp-selo.perigo{background:#fee2e2;color:#991b1b}" +
-      ".rp-item{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;background:#fff}.rp-item:hover{border-color:var(--metro-blue)}.rp-meta{font-size:12px;color:var(--muted)}" +
-      ".rp-botoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.rp-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:8px 14px;cursor:pointer}.rp-btn.pri{background:var(--metro-blue);color:#fff;border-color:var(--metro-blue)}.rp-btn.perigo{color:#b91c1c}" +
-      ".rp-msgs{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}.rp-msg{padding:8px 10px;border-radius:8px;background:#f3f4f6;max-width:85%}.rp-msg.METROLABS{background:#dbeafe;align-self:flex-end}.rp-msg.interna{background:#fef3c7;border:1px dashed #d97706}" +
-      ".rp-etapas{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.rp-etapas span{font-size:11px;padding:3px 7px;border-radius:10px;background:#f3f4f6;color:#6b7280}.rp-etapas span.atual{background:var(--metro-blue);color:#fff}.rp-tl div{border-left:3px solid var(--border);padding:4px 10px;margin-left:4px}";
-    document.head.appendChild(st);
+  function Rp_selo_(n, nome) { var cor = n === 3 || n === 12 ? "cinza" : n === 2 || n === 9 || n === 5 || n === 6 ? "laranja" : n >= 10 ? "verde" : "azul"; return '<span class="at-selo ' + cor + '">' + Rp_esc_(nome) + "</span>"; }
+  function Rp_btn_(id, texto, pri, extra) { return '<button type="button" class="' + (pri ? "btn-primary" : "btn-secondary") + ' at-btn44" id="' + id + '"' + (extra || "") + ">" + texto + "</button>"; }
+  function Rp_btnPerigo_(id, texto) { return Rp_btn_(id, texto, false, ' style="color:var(--danger);border-color:var(--danger)"'); }
+  function Rp_cab_(titulo, sub, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Rp_esc_(titulo) + '</h2><p class="content-subtitle" id="rpSub">' + Rp_esc_(sub) + "</p></div>" +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + (botoes || "") + "</div></div>";
   }
+  function Rp_pedirTexto_(titulo, explicacao, rotulo, minimo, ok, botao) {
+    if (typeof At_pedirTexto_ === "function") return At_pedirTexto_(titulo, explicacao, rotulo, minimo, ok, botao);
+    var t = prompt(explicacao); if (t !== null) ok(String(t).trim(), { remove: function () {} });
+  }
+
   function Representacao_render_() {
-    Rp_estilo_();
     var div = Rp_$_("conteudo"); if (!div) return;
-    div.innerHTML = '<div class="module-shell"><h2 class="content-title">Representação</h2><p class="content-subtitle" id="rpSub">Carregando…</p><div id="rpAbas" class="rp-abas"></div><div id="rpMsg"></div><div id="rpCorpo"></div></div>';
     var externo = SGO_ehRepresentada_();
+    div.innerHTML = '<div class="module-shell">' + Rp_cab_("Representação", "Carregando…", '<button type="button" class="btn-secondary" id="rpAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div id="rpAbas" class="at-tabs"></div><div id="rpMsg"></div><div id="rpCorpo"></div></div>';
+    Rp_$_("rpAtualizar").onclick = function () { if (RP.ini) Rp_irAba_(RP.aba || (RP.externo ? "painel" : "painel")); };
     Rp_chamar_(externo ? "inicio" : "iniciar", {}, function (r) {
       RP.ini = r; RP.externo = externo;
       Rp_$_("rpSub").textContent = externo ? (r.representada.nome + " · " + r.eu.nome + " (" + r.eu.papelNome + "). Acione a Metrolabs e acompanhe os atendimentos aos seus clientes.") :
-        "Pedidos e conversas das representadas (Brasmedical), cadastro da representada e do catálogo de modelos. Os chamados aceitos seguem na Assistência técnica, com a marca da representada.";
+        "Pedidos e conversas das representadas, cadastro da representada e do catálogo de modelos. Os chamados aceitos seguem na Assistência técnica, com a marca da representada.";
+      if (typeof ehMobileModo_ === "function" && ehMobileModo_() && typeof atualizarTituloMobile_ === "function") atualizarTituloMobile_("Representação");
       Rp_montarAbas_();
     }, function (m) { Rp_$_("rpSub").textContent = ""; Rp_msg_("rpMsg", m); });
   }
   function Rp_montarAbas_() {
-    var abas = RP.externo ? [["inicio", "Início"]].concat(RP.ini.eu.perm.abrir ? [["novo", "Novo pedido"]] : []).concat([["chamados", "Chamados"], ["equipamentos", "Equipamentos"], ["geral", "Canal geral"]]).concat(RP.ini.eu.perm.equipe ? [["equipe", "Equipe"]] : []).concat([["ajuda", "Como usar"]])
-      : [["pedidos", "Pedidos"], ["conversas", "Conversas"], ["representadas", "Representadas"], ["modelos", "Catálogo de modelos"], ["usuarios", "Usuários"], ["acessos", "Registro de ações"], ["ajuda", "Como usar"]];
-    Rp_$_("rpAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="rp-aba" data-a="' + a[0] + '">' + Rp_esc_(a[1]) + "</button>"; }).join("");
-    Rp_$_("rpAbas").querySelectorAll(".rp-aba").forEach(function (b) { b.onclick = function () { Rp_irAba_(b.getAttribute("data-a")); }; });
+    var abas = RP.externo ? [["painel", "Painel"]].concat(RP.ini.eu.perm.abrir ? [["novo", "Novo pedido"]] : []).concat([["chamados", "Chamados"], ["equipamentos", "Equipamentos"], ["geral", "Canal geral"]]).concat(RP.ini.eu.perm.equipe ? [["equipe", "Equipe"]] : []).concat([["ajuda", "Como usar"]])
+      : [["painel", "Painel"], ["pedidos", "Pedidos"], ["conversas", "Conversas"], ["representadas", "Representadas"], ["modelos", "Catálogo de modelos"], ["usuarios", "Usuários"], ["acessos", "Registro de ações"], ["ajuda", "Como usar"]];
+    Rp_$_("rpAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="at-tab" data-a="' + a[0] + '">' + Rp_esc_(a[1]) + "</button>"; }).join("");
+    Rp_$_("rpAbas").querySelectorAll(".at-tab").forEach(function (b) { b.onclick = function () { Rp_irAba_(b.getAttribute("data-a")); }; });
     Rp_irAba_(abas[0][0]);
   }
   function Rp_irAba_(a) {
     RP.aba = a; Rp_msg_("rpMsg", "");
-    document.querySelectorAll("#rpAbas .rp-aba").forEach(function (b) { b.classList.toggle("ativa", b.getAttribute("data-a") === a); });
-    var c = Rp_$_("rpCorpo"); c.innerHTML = '<p class="rp-meta">Carregando…</p>';
-    var mapa = { inicio: Rp_inicio_, novo: Rp_novo_, chamados: Rp_chamados_, equipamentos: Rp_equipamentos_, geral: function (el) { Rp_conversa_(el, "GERAL", "", "Canal geral com a Metrolabs"); }, equipe: Rp_equipe_, ajuda: Rp_ajuda_,
+    document.querySelectorAll("#rpAbas .at-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-a") === a); });
+    var c = Rp_$_("rpCorpo"); c.innerHTML = '<div class="at-vazio">Carregando…</div>';
+    var mapa = { painel: RP.externo ? Rp_painel_ : RpI_painel_, inicio: Rp_painel_, novo: Rp_novo_, chamados: Rp_chamados_, equipamentos: Rp_equipamentos_, geral: function (el) { el.innerHTML = '<div class="at-caixa" id="rpConvGeral"></div>'; Rp_conversa_(Rp_$_("rpConvGeral"), "GERAL", "", "Canal geral com a Metrolabs"); }, equipe: Rp_equipe_, ajuda: Rp_ajuda_,
       pedidos: RpI_pedidos_, conversas: RpI_conversas_, representadas: RpI_representadas_, modelos: RpI_modelos_, usuarios: RpI_usuarios_, acessos: RpI_acessos_ };
-    (mapa[a] || Rp_inicio_)(c);
+    (mapa[a] || mapa.painel)(c);
+  }
+
+  // ---------------- painel (representada e Metrolabs) ----------------
+  /** Barra de filtros do painel (mesmo componente da agenda única: atv-barra). */
+  function Rp_barraPainel_(interno) {
+    var opt = function (v, t, atual) { return '<option value="' + v + '"' + (String(v) === String(atual) ? " selected" : "") + ">" + Rp_esc_(t) + "</option>"; };
+    return '<div class="atv-barra">' +
+      (interno ? '<div><label for="rpPnRep">Representada</label><select id="rpPnRep">' + opt("", "Todas", RP.repPainel) + RP.ini.representadas.map(function (r) { return opt(r.id, r.nome, RP.repPainel); }).join("") + "</select></div>" : "") +
+      '<div><label for="rpPnDias">Período dos índices</label><select id="rpPnDias">' + [30, 90, 180, 365].map(function (d) { return opt(d, "Últimos " + d + " dias", RP.dias); }).join("") + "</select></div>" +
+      '<div id="rpPnJanelaCampo"' + (RP.painelAba === "gantt" ? "" : ' style="display:none"') + '><label for="rpPnJanela">Gantt: janela</label><select id="rpPnJanela">' + [[14, "Últimas 2 semanas"], [30, "Últimos 30 dias"], [90, "Últimos 90 dias"], [180, "Últimos 180 dias"]].map(function (d) { return opt(d[0], d[1], RP.janela); }).join("") + "</select></div>" +
+      '<div id="rpPnAgruparCampo"' + (RP.painelAba === "gantt" ? "" : ' style="display:none"') + '><label for="rpPnAgrupar">Gantt por</label><select id="rpPnAgrupar">' + opt("", "Chamado", RP.agrupar) + opt("cliente", "Cliente", RP.agrupar) +
+        (interno ? opt("tecnico", "Técnico", RP.agrupar) + opt("representada", "Representada", RP.agrupar) : "") + "</select></div>" +
+      "</div>";
+  }
+  function Rp_painelCarregar_(c, interno) {
+    var d = { dias: RP.dias }; if (interno) d.representadaId = RP.repPainel;
+    Rp_chamar_("painel", d, function (r) {
+      PnA_prepararGantt_(r.ganttJs);
+      RP.painel = r.painel;
+      Rp_painelDesenhar_(c, interno);
+    }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
+  }
+  function Rp_painel_(c) { Rp_painelCarregar_(c, false); }
+  function RpI_painel_(c) { Rp_painelCarregar_(c, true); }
+  function Rp_painelDesenhar_(c, interno) {
+    var p = RP.painel, k = p.indices, md = k.minDia;
+    var cards = interno ? [
+      { v: PnA_num_(k.fila.length), l: "Pedidos na fila (aguardando o aceite)", sub: k.fila.filter(function (f) { return f.prazo.estado === "VENCIDO"; }).length + " com o prazo de aceite vencido", alerta: k.fila.some(function (f) { return f.prazo.estado === "VENCIDO"; }), title: "Pedidos enviados ou com complemento respondido que ainda não foram aceitos nem recusados." },
+      { v: PnA_pct_(k.aceite.pct), l: "Aceite no prazo (" + k.dias + " dias)", sub: k.aceite.total ? k.aceite.noPrazo + " de " + k.aceite.total + " · média " + PnA_tempo_(k.aceite.mediaMin, md) : "Nenhum aceite no período", title: "Pedidos aceitos no período cujo aceite levou até o prazo da representada (padrão 4 h úteis), descontado o tempo de espera do complemento." },
+      { v: PnA_pct_(k.primeiroContato.pct), l: "Primeiro contato no prazo", sub: k.primeiroContato.total ? k.primeiroContato.noPrazo + " de " + k.primeiroContato.total + " · média " + PnA_tempo_(k.primeiroContato.mediaMin, md) : (k.primeiroContato.semRegistro ? k.primeiroContato.semRegistro + " aceito(s) sem registro ainda" : "Nenhum no período"), title: "Do aceite ao primeiro registro da Metrolabs no chamado (triagem assumida ou iniciada, ou mensagem à representada), padrão 8 h úteis." },
+      { v: PnA_num_(k.vencidos), l: "Prazo vencido agora", sub: PnA_num_(k.emRisco) + " em risco", alerta: k.vencidos > 0 },
+      { v: PnA_num_(k.abertos), l: "Pedidos e chamados abertos", sub: k.aguardandoMetrolabs + " com a Metrolabs · " + k.aguardandoRepresentada + " com a representada · " + k.aguardandoCliente + " com o cliente" },
+      { v: PnA_tempo_(k.visita.mediaMin, md), l: "Tempo médio até a visita", sub: k.visita.total ? k.visita.total + " visita(s) no período, do envio à chegada do técnico" : "Nenhuma visita no período" },
+      { v: PnA_tempo_(k.conclusao.mediaMin, md), l: "Tempo médio até a conclusão", sub: k.conclusao.total ? k.conclusao.total + " concluído(s) no período, do envio à conclusão" : "Nenhum concluído no período" },
+      { v: PnA_pct_(k.reincidencia.pct), l: "Reincidência (" + k.dias + " dias)", sub: k.reincidencia.reincidentes + " de " + k.reincidencia.chamados + " chamados: mesmo equipamento em até 90 dias", alerta: k.reincidencia.reincidentes > 0 }
+    ] : [
+      { v: PnA_num_(k.abertos), l: "Pedidos e chamados abertos", sub: k.enviadosPeriodo + " enviados nos últimos " + k.dias + " dias" },
+      { v: PnA_num_(k.aguardandoMetrolabs), l: "Aguardando a Metrolabs", sub: PnA_num_(k.vencidos) + " com prazo vencido · " + PnA_num_(k.emRisco) + " em risco", alerta: k.vencidos > 0 },
+      { v: PnA_num_(k.aguardandoRepresentada), l: "Aguardando a sua empresa", sub: k.aguardandoRepresentada ? "Complemento pedido: responda para o prazo voltar a contar" : "Nada pendente com vocês", alerta: k.aguardandoRepresentada > 0 },
+      { v: PnA_num_(k.aguardandoCliente), l: "Aguardando o cliente final", sub: "Aprovação de orçamento ou retorno do cliente" },
+      { v: PnA_pct_(k.aceite.pct), l: "Aceitos no prazo (" + k.dias + " dias)", sub: k.aceite.total ? k.aceite.noPrazo + " de " + k.aceite.total + " aceitos" : "Nenhum aceite no período", title: "Pedidos aceitos no período em até o prazo combinado (padrão 4 h úteis), descontado o tempo em que o pedido esperou o complemento da sua empresa." },
+      { v: PnA_tempo_(k.aceite.mediaMin, md), l: "Tempo médio até o aceite", sub: "Do envio do pedido ao aceite" },
+      { v: PnA_tempo_(k.visita.mediaMin, md), l: "Tempo médio até a visita", sub: k.visita.total ? "Do envio à chegada do técnico (" + k.visita.total + ")" : "Nenhuma visita no período" },
+      { v: PnA_tempo_(k.conclusao.mediaMin, md), l: "Tempo médio até a conclusão", sub: k.conclusao.total ? "Do envio à conclusão (" + k.conclusao.total + ")" : "Nenhum concluído no período" }
+    ];
+    var pend = !interno && p.pendencias.length ? '<div class="at-faixa aviso"><b>Pendências da sua empresa (' + p.pendencias.length + ').</b> A Metrolabs pediu complemento; enquanto vocês não respondem, o prazo de aceite fica pausado.' +
+      p.pendencias.map(function (x) { return '<div class="at-card clicavel" style="margin-top:8px" data-pna-tipo="' + Rp_esc_(x.tipo) + '" data-pna-id="' + Rp_esc_(x.id) + '" tabindex="0"><p class="at-card-tit">' + Rp_esc_(x.numero + " · " + x.clienteNome) + '</p><p class="at-txt">' + Rp_esc_(x.pergunta) + '</p><p class="at-meta">Pedido em ' + Rp_esc_(x.desde) + " · esperando há " + Rp_esc_(PnA_tempo_(x.esperaMin, md)) + '</p><div class="at-acoes"><button type="button" class="btn-primary at-btn44">Responder agora</button></div></div>'; }).join("") + "</div>" : "";
+    c.innerHTML = Rp_barraPainel_(interno) + '<p class="atv-sub" style="margin:-6px 0 10px">Índices de ' + Rp_esc_(k.de) + " a " + Rp_esc_(k.ate) + ". Tempos em horas úteis do expediente da Metrolabs. Toque num índice e segure (ou passe o mouse) para ver como é contado.</p>" +
+      pend + PnA_indHtml_(cards) + PnA_abasHtml_("rpPnAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["indicadores", "Indicadores"]], RP.painelAba) + '<div id="rpPnCorpo"></div>';
+    var recarregar = function () { Rp_painelCarregar_(c, interno); };
+    Rp_$_("rpPnDias").onchange = function () { RP.dias = Number(Rp_$_("rpPnDias").value); recarregar(); };
+    if (Rp_$_("rpPnRep")) Rp_$_("rpPnRep").onchange = function () { RP.repPainel = Rp_$_("rpPnRep").value; recarregar(); };
+    Rp_$_("rpPnJanela").onchange = function () { RP.janela = Number(Rp_$_("rpPnJanela").value); Rp_painelCorpo_(interno); };
+    Rp_$_("rpPnAgrupar").onchange = function () { RP.agrupar = Rp_$_("rpPnAgrupar").value; Rp_painelCorpo_(interno); };
+    PnA_ligarAbas_("rpPnAbas", function (a) { RP.painelAba = a; Rp_$_("rpPnJanelaCampo").style.display = Rp_$_("rpPnAgruparCampo").style.display = a === "gantt" ? "" : "none"; Rp_painelCorpo_(interno); });
+    PnA_ligar_(c.querySelector(".at-faixa.aviso"), function (t, id) { Rp_ficha_(t, id); });
+    Rp_painelCorpo_(interno);
+  }
+  function Rp_abrirDoPainel_(interno, tipo, id) {
+    if (!interno) return Rp_ficha_(tipo, id);
+    if (tipo === "SOLICITACAO") return RpI_abrirPedidoPorId_(id);
+    if (typeof Assistencia_irPara_ === "function") Assistencia_irPara_({ mod: "assistencia", id: id });
+  }
+  function Rp_cartaoHtml_(x, interno) {
+    var prazo = x.prazo && x.prazo.estado !== "SEM_PRAZO" ? '<span class="at-selo ' + PNA_SELO_PRAZO[x.prazo.estado] + '" title="' + Rp_esc_(x.prazo.texto || "") + '">' + Rp_esc_(PNA_NOME_PRAZO[x.prazo.estado]) + "</span>" : "";
+    var dela = x.comQuem === "REPRESENTADA" ? '<span class="at-selo laranja">' + (interno ? "Com a representada" : "Depende de você") + "</span>" : x.comQuem === "CLIENTE" ? '<span class="at-selo cinza">Com o cliente final</span>' : "";
+    return '<div class="atv-kcard-tit">' + Rp_esc_(x.numero) + (x.pedidoNumero && x.tipo === "CHAMADO" ? ' <span class="atv-sub">(' + Rp_esc_(x.pedidoNumero) + ")</span>" : "") + "</div>" +
+      '<div class="atv-sub">' + Rp_esc_([interno ? x.representadaNome : "", x.clienteNome, x.cidade].filter(Boolean).join(" · ")) + "</div>" +
+      '<div class="atv-sub">' + Rp_esc_(x.equipamento) + "</div>" +
+      '<div class="atv-kcard-rod"><span class="atv-sub">' + Rp_esc_((x.prioridadePrevista ? "" : x.prioridade + " · ") + "enviado " + String(x.enviado).slice(0, 10)) + "</span>" + prazo + "</div>" +
+      (dela || x.reincidente || (x.tecnico && x.etapa >= 7) ? '<div class="atv-kcard-rod" style="justify-content:flex-start">' + dela + (x.reincidente ? '<span class="at-selo roxo">Reincidente</span>' : "") + (x.tecnico && x.etapa >= 7 ? '<span class="atv-sub">Técnico: ' + Rp_esc_(x.tecnico) + "</span>" : "") + "</div>" : "") +
+      (!interno && x.podeResponder && RP.ini.eu.perm.abrir ? '<div class="pna-kcard-acao"><button type="button" class="btn-primary" data-pna-acao="responder" data-pna-tipo="' + Rp_esc_(x.tipo) + '" data-pna-id="' + Rp_esc_(x.id) + '">Responder o complemento</button></div>' : "");
+  }
+  function Rp_painelCorpo_(interno) {
+    var corpo = Rp_$_("rpPnCorpo"); if (!corpo || !RP.painel) return;
+    var p = RP.painel, k = p.indices, md = k.minDia, abrirX = function (t, id) { Rp_abrirDoPainel_(interno, t, id); };
+    if (RP.painelAba === "kanban") {
+      corpo.innerHTML = PnA_kanbanHtml_(p.kanban, { cartao: function (x) { return Rp_cartaoHtml_(x, interno); }, cor: function (x) { return PNA_COR_PRAZO[x.prazo.estado] || "var(--muted)"; },
+        vazio: interno ? "Nenhum pedido ou chamado de representada." : "Nenhum pedido ainda." + (RP.ini.eu.perm.abrir ? " Use Novo pedido para acionar a Metrolabs." : ""),
+        legenda: interno ? "Um cartão por pedido ou chamado, na etapa que a representada vê. A cor da borda é o prazo (aceite para o pedido; atendimento para o chamado). Toque para abrir: o pedido abre aqui; o chamado abre na Assistência técnica, onde a etapa muda pelas regras do atendimento. Colunas fechadas mostram os últimos 30 dias." :
+          "Um cartão por pedido ou chamado, na etapa em que está. A cor da borda é o prazo. A etapa muda pelo atendimento da Metrolabs; você age nos cartões marcados \"Depende de você\". Toque para abrir a ficha. Colunas fechadas mostram os últimos 30 dias." });
+      PnA_ligar_(corpo, abrirX, function (acao, t, id) { if (acao === "responder") Rp_ficha_(t, id); });
+      return;
+    }
+    if (RP.painelAba === "gantt") {
+      var ag = RP.agrupar, grupo = !ag ? null : function (x) {
+        if (ag === "cliente") return { chave: x.clienteNome, rotulo: x.clienteNome };
+        if (ag === "tecnico") return { chave: x.tecnico || "~", rotulo: x.tecnico || "Sem técnico definido" };
+        return { chave: x.representadaNome, rotulo: x.representadaNome };
+      };
+      corpo.innerHTML = PnA_ganttHtml_(p.gantt, { largura: corpo.clientWidth || 1000, dias: RP.janela, diasFrente: 14, agoraMs: p.agoraMs, agrupar: grupo, comPrazo: true,
+        cor: function (x) { return PNA_COR_PRAZO[x.prazo.estado] || "#8a96a8"; },
+        rotulo: function (x) { return x.numero + " · " + x.clienteNome; },
+        linha: function (x) { return { rotulo: x.numero, sub: (interno ? x.representadaNome + " · " : "") + x.clienteNome }; },
+        tip: function (x) { return x.numero + (x.pedidoNumero && x.tipo === "CHAMADO" ? " (pedido " + x.pedidoNumero + ")" : "") + " · " + x.clienteNome + "\n" + x.equipamento + "\nEtapa: " + x.etapaNome + "\nEnviado: " + x.enviado +
+          (x.prazo.texto ? "\n" + x.prazo.texto : "") + (x.visitaPrevMs ? "\nVisita agendada: " + PnA_br_(x.visitaPrevMs) : "") + (x.visitaMs ? "\nChegada do técnico: " + PnA_br_(x.visitaMs) : "") + (x.conclusaoMs ? "\nConcluído: " + PnA_br_(x.conclusaoMs) : "") + (x.tecnico ? "\nTécnico: " + x.tecnico : ""); },
+        legenda: PnA_legendaPrazo_() }) + '<div class="atv-legenda">Cada barra vai do envio do pedido até a conclusão (ou até hoje, se ainda está aberto). A cor é a situação do prazo; a parte vermelha é o tempo depois do fim do prazo.' +
+          (interno ? ' Para a agenda de cada técnico com as O.S., use Atividades da equipe (agenda única). <button type="button" class="btn-secondary" onclick="abrir(\'atividades_equipe\')">Abrir a agenda única</button>' : "") + "</div>";
+      PnA_ligar_(corpo, abrirX);
+      return;
+    }
+    // indicadores
+    var cxs = [
+      PnA_caixa_("Por etapa (abertos e fechados no período)", PnA_barras_(k.porEtapa.map(function (e) { return { t: e.t, n: e.n }; }), "Nada para mostrar.")),
+      PnA_caixa_("Abertos por prioridade", PnA_barras_(k.porPrioridade.map(function (e) { return { t: e.t, n: e.n, cor: e.codigo === "P1" ? "var(--danger)" : e.codigo === "P2" ? "var(--warning)" : "" }; }), "Nenhum aberto.") + '<div class="atv-sub" style="margin-top:6px">Pedido ainda não aceito conta pela prioridade prevista: P2 se o equipamento está parado, P3 nos demais.</div>'),
+      PnA_caixa_("Por cliente (enviados no período)", PnA_barras_(k.porCliente, "Nenhum pedido no período.")),
+      PnA_caixa_("Por UF (enviados no período)", PnA_barras_(k.porUf, "Nenhum pedido no período.")),
+      PnA_caixa_("Garantia (enviados no período)", PnA_barras_(k.garantia.map(function (g) { return { t: g.t, n: g.n, cor: g.codigo === "EM_GARANTIA" ? "var(--success)" : g.codigo === "FORA" ? "var(--warning)" : "var(--muted)" }; }), "Nenhum pedido no período.") + '<div class="atv-sub" style="margin-top:6px">Pela garantia do cadastro do equipamento (nota fiscal de venda ou data da instalação e meses do modelo), não pelo enquadramento pretendido no pedido.</div>'),
+      PnA_caixa_("Reincidência por modelo (chamados no período)", k.reincidencia.porModelo.length ? '<table class="at-tabela"><thead><tr><th>Modelo</th><th class="n">Chamados</th><th class="n">Reincidentes</th></tr></thead><tbody>' + k.reincidencia.porModelo.map(function (m) { return '<tr><td data-r="Modelo">' + Rp_esc_(m.t) + '</td><td class="n" data-r="Chamados">' + PnA_num_(m.n) + '</td><td class="n" data-r="Reincidentes">' + (m.reincidentes ? "<b>" + PnA_num_(m.reincidentes) + "</b>" : "0") + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="atv-sub">Nenhum chamado no período.</div>'),
+      PnA_caixa_("Equipamentos reincidentes (período)", PnA_barras_(k.reincidencia.porEquipamento, "Nenhum equipamento com chamado repetido em até 90 dias."))
+    ];
+    if (interno) {
+      cxs.unshift(PnA_caixa_("Fila de pedidos (aceite)", k.fila.length ? '<table class="at-tabela"><thead><tr><th>Pedido</th><th>Representada · cliente</th><th>Idade</th><th>Prazo</th></tr></thead><tbody>' + k.fila.map(function (f) {
+        return '<tr data-pna-tipo="SOLICITACAO" data-pna-id="' + Rp_esc_(f.id) + '" style="cursor:pointer"><td data-r="Pedido"><b>' + Rp_esc_(f.numero) + "</b>" + (f.parada ? ' <span class="at-selo vermelho">Parado</span>' : "") + '</td><td data-r="Representada · cliente">' + Rp_esc_(f.representada + " · " + f.cliente) + '</td><td data-r="Idade">' + Rp_esc_(PnA_tempo_(f.idadeMin, md)) + '</td><td data-r="Prazo"><span class="at-selo ' + PNA_SELO_PRAZO[f.prazo.estado] + '">' + Rp_esc_(f.prazo.texto || PNA_NOME_PRAZO[f.prazo.estado]) + "</span></td></tr>";
+      }).join("") + "</tbody></table>" : '<div class="atv-sub">Fila vazia: nenhum pedido aguardando o aceite.</div>', ' style="grid-column:1/-1"'));
+      cxs.splice(1, 0, PnA_caixa_("Prazo de atendimento por prioridade (" + k.dias + " dias)", '<table class="at-tabela"><thead><tr><th>Prioridade</th><th class="n">Atendidos</th><th class="n">No prazo</th><th class="n">Média até a visita</th><th class="n">Abertos</th><th class="n">Vencidos</th></tr></thead><tbody>' + k.slaPorPrioridade.map(function (s) {
+        return '<tr><td data-r="Prioridade">' + Rp_esc_(s.t) + '</td><td class="n" data-r="Atendidos">' + PnA_num_(s.atendidos) + '</td><td class="n" data-r="No prazo">' + PnA_pct_(s.pct) + '</td><td class="n" data-r="Média até a visita">' + Rp_esc_(PnA_tempo_(s.mediaVisitaMin, md)) + '</td><td class="n" data-r="Abertos">' + PnA_num_(s.abertos) + '</td><td class="n" data-r="Vencidos">' + (s.vencidos ? '<b style="color:var(--danger)">' + PnA_num_(s.vencidos) + "</b>" : "0") + "</td></tr>";
+      }).join("") + '</tbody></table><div class="atv-sub" style="margin-top:6px">Prazo de atendimento do chamado (prioridade e contrato, Regras da assistência), contado da abertura do chamado; pausa só quando o contrato permite.</div>'),
+        PnA_caixa_("Carga por técnico (abertos agora)", k.cargaTecnico.length ? '<table class="at-tabela"><thead><tr><th>Técnico</th><th class="n">Abertos</th><th class="n">Visita agendada</th><th class="n">Em risco</th><th class="n">Vencidos</th></tr></thead><tbody>' + k.cargaTecnico.map(function (t) {
+          return '<tr><td data-r="Técnico">' + Rp_esc_(t.nome) + '</td><td class="n" data-r="Abertos">' + PnA_num_(t.abertos) + '</td><td class="n" data-r="Visita agendada">' + PnA_num_(t.agendados) + '</td><td class="n" data-r="Em risco">' + PnA_num_(t.emRisco) + '</td><td class="n" data-r="Vencidos">' + (t.vencidos ? '<b style="color:var(--danger)">' + PnA_num_(t.vencidos) + "</b>" : "0") + "</td></tr>";
+        }).join("") + "</tbody></table>" : '<div class="atv-sub">Nenhum chamado aberto.</div>'),
+        PnA_caixa_("Por representada", k.porRepresentada.length ? '<table class="at-tabela"><thead><tr><th>Representada</th><th class="n">Abertos</th><th class="n">Na fila</th><th class="n">Vencidos</th><th class="n">Enviados (' + k.dias + " d)</th><th class=\"n\">Aceite no prazo</th></tr></thead><tbody>" + k.porRepresentada.map(function (r) {
+          return '<tr><td data-r="Representada">' + Rp_esc_(r.nome) + '</td><td class="n" data-r="Abertos">' + PnA_num_(r.abertos) + '</td><td class="n" data-r="Na fila">' + PnA_num_(r.fila) + '</td><td class="n" data-r="Vencidos">' + PnA_num_(r.vencidos) + '</td><td class="n" data-r="Enviados">' + PnA_num_(r.enviados) + '</td><td class="n" data-r="Aceite no prazo">' + PnA_pct_(r.aceitePct) + "</td></tr>";
+        }).join("") + "</tbody></table>" : '<div class="atv-sub">Nenhuma representada com pedidos.</div>'));
+    }
+    corpo.innerHTML = '<div class="atv-ind-grade">' + cxs.join("") + '</div><div class="atv-legenda">Os números consideram só o que ' + (interno ? "você pode ver (chamados de representadas)" : "é da sua empresa") + ". Abertos, fila, em risco e vencidos são de agora; os demais, do período escolhido. Como cada número é contado está em Como usar.</div>";
+    PnA_ligar_(corpo, abrirX);
   }
 
   // ---------------- visão da representada ----------------
-  function Rp_inicio_(c) {
-    Rp_chamar_("inicio", {}, function (r) {
-      RP.ini = r;
-      c.innerHTML = (r.pendencias.length ? '<div class="rp-caixa"><h3>Pendências da sua empresa</h3>' + r.pendencias.map(function (p) { return '<div class="rp-item" data-t="' + p.tipo + '" data-id="' + Rp_esc_(p.id) + '"><b>' + Rp_esc_(p.numero) + "</b> · " + Rp_esc_(p.texto) + "</div>"; }).join("") + "</div>" : "") +
-        '<div class="rp-caixa"><h3>Chamados por etapa</h3><div class="rp-grade">' + r.etapas.filter(function (e) { return e.quantidade; }).map(function (e) { return '<div class="rp-item" data-etapa="' + e.n + '"><b>' + e.quantidade + "</b> " + Rp_esc_(e.nome) + "</div>"; }).join("") +
-        "</div>" + (r.etapas.some(function (e) { return e.quantidade; }) ? "" : '<p class="rp-meta">Nenhum pedido ainda.' + (r.eu.perm.abrir ? " Use Novo pedido para acionar a Metrolabs." : "") + "</p>") + "</div>";
-      c.querySelectorAll("[data-t]").forEach(function (x) { x.onclick = function () { Rp_ficha_(x.getAttribute("data-t"), x.getAttribute("data-id")); }; });
-      c.querySelectorAll("[data-etapa]").forEach(function (x) { x.onclick = function () { RP.filtroEtapa = Number(x.getAttribute("data-etapa")); Rp_irAba_("chamados"); }; });
-    }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
-  }
   /** Lê os arquivos; foto reduzida no navegador (lado maior 1600 px, JPEG) para caber em 2 MB. */
   function Rp_lerArquivos_(input, cb, reduzir) {
-    var fs = Array.prototype.slice.call(input.files || []), saida = [], falta = fs.length;
+    var fs = Array.prototype.slice.call((input && input.files) || []), saida = [], falta = fs.length;
     if (!falta) return cb([]);
     fs.forEach(function (f, i) {
       var fim = function (o) { saida[i] = o; if (--falta === 0) cb(saida.filter(Boolean)); };
@@ -111,13 +231,13 @@
       rd.readAsDataURL(f);
     });
   }
-  function Rp_avisoCadastro_() { return '<div class="rp-faixa aviso"><b>Atenção.</b> ' + Rp_esc_(RP.ini.avisoCadastro) + "</div>"; }
-  function Rp_ciente_(id) { return '<label style="display:block;margin:10px 0"><input type="checkbox" id="rp_' + id + '"> <b>' + Rp_esc_(RP.ini.ciente) + "</b> (obrigatório; fica registrado com o seu nome, a data e a hora)</label>"; }
+  function Rp_avisoCadastro_() { return '<div class="at-faixa aviso"><b>Atenção.</b> ' + Rp_esc_(RP.ini.avisoCadastro) + "</div>"; }
+  function Rp_ciente_(id) { return '<label class="at-check"><input type="checkbox" id="rp_' + id + '"> <span><b>' + Rp_esc_(RP.ini.ciente) + "</b> (obrigatório; fica registrado com o seu nome, a data e a hora)</span></label>"; }
   function Rp_novo_(c) {
     RP.cliente = null; RP.unidadeId = ""; RP.equip = null;
-    c.innerHTML = '<div class="rp-caixa"><h3>1. Cliente final</h3><p class="rp-meta">Digite o CNPJ (ou o CPF, para profissional autônomo) completo. Não há busca por nome.</p>' +
-      '<div class="rp-grade">' + Rp_campo_("CNPJ ou CPF do cliente *", Rp_input_("documento", "Só números ou com pontuação", "text", ' inputmode="numeric"')) + '</div><div class="rp-botoes"><button type="button" class="rp-btn pri" id="rpBuscarCli">Buscar</button></div><div id="rpCliRes"></div></div>' +
-      '<div class="rp-caixa" id="rpPasso2" hidden><h3>2. Equipamento</h3><div id="rpEqCorpo"></div></div><div class="rp-caixa" id="rpPasso3" hidden><h3>3. Relato e contato no local</h3><div id="rpRelato"></div></div>';
+    c.innerHTML = '<div class="at-caixa"><h3>1. Cliente final</h3><p class="at-meta">Digite o CNPJ (ou o CPF, para profissional autônomo) completo. Não há busca por nome.</p>' +
+      '<div class="at-grade3">' + Rp_campo_("CNPJ ou CPF do cliente *", Rp_input_("documento", "Só números ou com pontuação", "text", ' inputmode="numeric"')) + '</div><div class="at-acoes">' + Rp_btn_("rpBuscarCli", "Buscar", true) + '</div><div id="rpCliRes"></div></div>' +
+      '<div class="at-caixa" id="rpPasso2" hidden><h3>2. Equipamento</h3><div id="rpEqCorpo"></div></div><div class="at-caixa" id="rpPasso3" hidden><h3>3. Relato e contato no local</h3><div id="rpRelato"></div></div>';
     Rp_$_("rpBuscarCli").onclick = function () {
       Rp_chamar_("buscarCliente", { documento: Rp_val_("documento") }, function (r) {
         if (r.encontrado) return Rp_clienteEscolhido_(r.cliente);
@@ -128,15 +248,15 @@
   function Rp_clienteEscolhido_(cli) {
     RP.cliente = cli;
     var res = Rp_$_("rpCliRes");
-    res.innerHTML = '<div class="rp-faixa ok"><b>' + Rp_esc_(cli.razaoSocial) + "</b> · " + Rp_esc_([cli.cidade, cli.uf].filter(Boolean).join("/")) + "</div>" +
-      '<div class="rp-grade">' + Rp_campo_("Unidade onde está o equipamento *", Rp_select_("unidade", cli.unidades.map(function (u) { return [u.id, u.nome + " · " + [u.cidade, u.uf].filter(Boolean).join("/")]; }), "Escolha a unidade")) + "</div>" +
-      (RP.ini.eu.perm.cadastrar ? '<div class="rp-botoes"><button type="button" class="rp-btn" id="rpNovaUn">A unidade não está na lista</button></div><div id="rpUnForm"></div>' : "");
+    res.innerHTML = '<div class="at-faixa ok"><b>' + Rp_esc_(cli.razaoSocial) + "</b> · " + Rp_esc_([cli.cidade, cli.uf].filter(Boolean).join("/")) + "</div>" +
+      '<div class="at-grade2">' + Rp_campo_("Unidade onde está o equipamento *", Rp_select_("unidade", cli.unidades.map(function (u) { return [u.id, u.nome + " · " + [u.cidade, u.uf].filter(Boolean).join("/")]; }), "Escolha a unidade")) + "</div>" +
+      (RP.ini.eu.perm.cadastrar ? '<div class="at-acoes">' + Rp_btn_("rpNovaUn", "A unidade não está na lista") + '</div><div id="rpUnForm"></div>' : "");
     Rp_$_("rp_unidade").onchange = function () { RP.unidadeId = Rp_val_("unidade"); if (RP.unidadeId) Rp_passoEquip_(); };
     var b = Rp_$_("rpNovaUn");
     if (b) b.onclick = function () {
-      Rp_$_("rpUnForm").innerHTML = Rp_avisoCadastro_() + '<div class="rp-grade">' + Rp_campo_("Nome da unidade *", Rp_input_("un_nome")) + Rp_campo_("CNPJ da unidade (se houver)", Rp_input_("un_cnpj")) +
+      Rp_$_("rpUnForm").innerHTML = Rp_avisoCadastro_() + '<div class="at-grade3">' + Rp_campo_("Nome da unidade *", Rp_input_("un_nome")) + Rp_campo_("CNPJ da unidade (se houver)", Rp_input_("un_cnpj")) +
         Rp_campo_("Endereço", Rp_input_("un_endereco")) + Rp_campo_("Cidade *", Rp_input_("un_cidade")) + Rp_campo_("UF *", Rp_select_("un_uf", RP.ini.ufs.map(function (u) { return [u, u]; }), "UF")) +
-        Rp_campo_("Responsável no local", Rp_input_("un_resp")) + Rp_campo_("Telefone", Rp_input_("un_tel", "(00) 00000-0000", "tel")) + "</div>" + Rp_ciente_("un_ciente") + '<div id="rpUnMsg"></div><button type="button" class="rp-btn pri" id="rpUnSalvar">Cadastrar a unidade</button>';
+        Rp_campo_("Responsável no local", Rp_input_("un_resp")) + Rp_campo_("Telefone", Rp_input_("un_tel", "(00) 00000-0000", "tel")) + "</div>" + Rp_ciente_("un_ciente") + '<div id="rpUnMsg"></div><div class="at-acoes">' + Rp_btn_("rpUnSalvar", "Cadastrar a unidade", true) + "</div>";
       Rp_$_("rpUnSalvar").onclick = function () {
         Rp_chamar_("cadastrarUnidade", { clienteId: cli.id, dados: { NOME_UNIDADE: Rp_val_("un_nome"), CNPJ_UNIDADE: Rp_val_("un_cnpj"), ENDERECO: Rp_val_("un_endereco"), CIDADE: Rp_val_("un_cidade"), UF: Rp_val_("un_uf"), RESPONSAVEL: Rp_val_("un_resp"), TELEFONE: Rp_val_("un_tel"), CIENTE: Rp_val_("un_ciente") } },
           function (r) { Rp_clienteEscolhido_(r.cliente); Rp_$_("rp_unidade").value = r.unidadeId; RP.unidadeId = r.unidadeId; Rp_passoEquip_(); }, function (m, r) { Rp_msg_("rpUnMsg", m); Rp_erroCampos_(r); }, "Salvando…");
@@ -145,14 +265,14 @@
   }
   function Rp_formCliente_(doc, msg) {
     var res = Rp_$_("rpCliRes");
-    if (!RP.ini.eu.perm.cadastrar) { res.innerHTML = '<div class="rp-faixa aviso">' + Rp_esc_(msg) + " O seu papel não cadastra clientes: peça a um atendente ou ao administrador da sua empresa.</div>"; return; }
+    if (!RP.ini.eu.perm.cadastrar) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O seu papel não cadastra clientes: peça a um atendente ou ao administrador da sua empresa.</div>"; return; }
     var cnpj = doc.length === 14;
     var campos = [["RAZAO_SOCIAL", "Razão social *"], ["NOME_FANTASIA", "Nome fantasia"], ["CEP", "CEP *"], ["LOGRADOURO", "Logradouro *"], ["NUMERO", "Número *"], ["COMPLEMENTO", "Complemento"], ["BAIRRO", "Bairro *"], ["CIDADE", "Cidade *"]];
-    res.innerHTML = '<div class="rp-faixa aviso">' + Rp_esc_(msg) + "</div>" + Rp_avisoCadastro_() +
-      (cnpj && RP.ini.consultaReceita ? '<div class="rp-botoes"><button type="button" class="rp-btn" id="rpReceita">Preencher pela base pública da Receita</button></div>' : "") +
-      '<div class="rp-grade">' + campos.map(function (k) { return Rp_campo_(k[1], Rp_input_(k[0])); }).join("") + Rp_campo_("UF *", Rp_select_("UF", RP.ini.ufs.map(function (u) { return [u, u]; }), "UF")) +
+    res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + "</div>" + Rp_avisoCadastro_() +
+      (cnpj && RP.ini.consultaReceita ? '<div class="at-acoes">' + Rp_btn_("rpReceita", "Preencher pela base pública da Receita") + "</div>" : "") +
+      '<div class="at-grade3">' + campos.map(function (k) { return Rp_campo_(k[1], Rp_input_(k[0])); }).join("") + Rp_campo_("UF *", Rp_select_("UF", RP.ini.ufs.map(function (u) { return [u, u]; }), "UF")) +
       Rp_campo_("Contato responsável no cliente *", Rp_input_("CONTATO")) + Rp_campo_("E-mail do contato *", Rp_input_("EMAIL", "", "email")) + Rp_campo_("Telefone com DDD *", Rp_input_("TELEFONE", "", "tel")) + "</div>" +
-      Rp_ciente_("CIENTE") + '<div id="rpCliMsg"></div><button type="button" class="rp-btn pri" id="rpCliSalvar">Cadastrar o cliente</button>';
+      Rp_ciente_("CIENTE") + '<div id="rpCliMsg"></div><div class="at-acoes">' + Rp_btn_("rpCliSalvar", "Cadastrar o cliente", true) + "</div>";
     var r0 = Rp_$_("rpReceita");
     if (r0) r0.onclick = function () { Rp_chamar_("consultarCnpj", { cnpj: doc }, function (r) { Object.keys(r.dados).forEach(function (k) { var el = Rp_$_("rp_" + k); if (el && r.dados[k]) el.value = r.dados[k]; }); Rp_msg_("rpCliMsg", r.message, "ok"); }, function (m) { Rp_msg_("rpCliMsg", m); }, "Consultando…"); };
     Rp_$_("rpCliSalvar").onclick = function () {
@@ -164,7 +284,7 @@
   function Rp_passoEquip_() {
     Rp_$_("rpPasso2").hidden = false;
     var c = Rp_$_("rpEqCorpo");
-    c.innerHTML = '<p class="rp-meta">Digite o número de série exatamente como está na etiqueta.</p><div class="rp-grade">' + Rp_campo_("Número de série *", Rp_input_("serie")) + '</div><div class="rp-botoes"><button type="button" class="rp-btn pri" id="rpBuscarEq">Buscar</button></div><div id="rpEqRes"></div>';
+    c.innerHTML = '<p class="at-meta">Digite o número de série exatamente como está na etiqueta.</p><div class="at-grade3">' + Rp_campo_("Número de série *", Rp_input_("serie")) + '</div><div class="at-acoes">' + Rp_btn_("rpBuscarEq", "Buscar", true) + '</div><div id="rpEqRes"></div>';
     Rp_$_("rpBuscarEq").onclick = function () {
       Rp_chamar_("buscarEquipamento", { clienteId: RP.cliente.id, serie: Rp_val_("serie") }, function (r) {
         if (r.encontrado) return Rp_equipEscolhido_(r.equipamento);
@@ -175,20 +295,20 @@
   }
   function Rp_equipEscolhido_(e) {
     RP.equip = e;
-    Rp_$_("rpEqRes").innerHTML = '<div class="rp-faixa ok"><b>' + Rp_esc_(e.modelo) + "</b> · série " + Rp_esc_(e.serie) + " · " + Rp_esc_(e.unidade || "") + "<br>" + Rp_esc_(e.garantia.texto) + "</div>";
+    Rp_$_("rpEqRes").innerHTML = '<div class="at-faixa ok"><b>' + Rp_esc_(e.modelo) + "</b> · série " + Rp_esc_(e.serie) + " · " + Rp_esc_(e.unidade || "") + "<br>" + Rp_esc_(e.garantia.texto) + "</div>";
     Rp_passoRelato_();
   }
   function Rp_formEquip_(msg) {
     var res = Rp_$_("rpEqRes");
-    if (!RP.ini.eu.perm.cadastrar) { res.innerHTML = '<div class="rp-faixa aviso">' + Rp_esc_(msg) + " O seu papel não cadastra equipamentos.</div>"; return; }
-    if (!RP.ini.modelos.length) { res.innerHTML = '<div class="rp-faixa aviso">' + Rp_esc_(msg) + " O catálogo de modelos da sua empresa ainda está vazio: peça à Metrolabs pelo Canal geral para cadastrar os modelos.</div>"; return; }
-    res.innerHTML = '<div class="rp-faixa aviso">' + Rp_esc_(msg) + "</div>" + Rp_avisoCadastro_() + '<div class="rp-grade">' +
+    if (!RP.ini.eu.perm.cadastrar) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O seu papel não cadastra equipamentos.</div>"; return; }
+    if (!RP.ini.modelos.length) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O catálogo de modelos da sua empresa ainda está vazio: peça à Metrolabs pelo Canal geral para cadastrar os modelos.</div>"; return; }
+    res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + "</div>" + Rp_avisoCadastro_() + '<div class="at-grade3">' +
       Rp_campo_("Modelo *", Rp_select_("modeloCodigo", RP.ini.modelos.map(function (m) { return [m.codigo, m.nome + " (garantia " + m.garantiaMeses + " meses)"]; }), "Escolha o modelo")) +
       Rp_campo_("Série *", Rp_input_("serie2")) + Rp_campo_("Data da instalação", Rp_input_("dataInstalacao", "", "date")) + Rp_campo_("Nota fiscal de venda (número)", Rp_input_("nfNumero")) +
       Rp_campo_("Data da nota fiscal", Rp_input_("nfData", "", "date")) + Rp_campo_("Arquivo da nota fiscal (PDF ou foto)", '<input id="rp_nfArquivo" type="file" accept="application/pdf,image/*">') +
       Rp_campo_("Revenda ou canal de venda", Rp_input_("revenda")) + Rp_campo_("Setor", Rp_input_("setorEq")) + Rp_campo_("Patrimônio do cliente", Rp_input_("patrimonio")) +
       Rp_campo_("Foto da etiqueta de série *", '<input id="rp_fotoEtiqueta" type="file" accept="image/*" capture="environment">', "Foto legível da etiqueta. Não fotografe pacientes nem documentos pessoais.") + "</div>" +
-      Rp_ciente_("ciente") + '<div id="rpEqMsg"></div><button type="button" class="rp-btn pri" id="rpEqSalvar">Cadastrar o equipamento</button>';
+      Rp_ciente_("ciente") + '<div id="rpEqMsg"></div><div class="at-acoes">' + Rp_btn_("rpEqSalvar", "Cadastrar o equipamento", true) + "</div>";
     Rp_$_("rp_serie2").value = Rp_val_("serie");
     Rp_$_("rpEqSalvar").onclick = function () {
       Rp_lerArquivos_(Rp_$_("rp_fotoEtiqueta"), function (fotos) {
@@ -203,17 +323,17 @@
   function Rp_passoRelato_() {
     Rp_$_("rpPasso3").hidden = false;
     var par = RP.ini.paradas, enq = RP.ini.enquadramentos;
-    Rp_$_("rpRelato").innerHTML = '<div class="rp-grade">' + Rp_campo_("Setor do equipamento *", Rp_input_("setor", "Ex.: CME, centro cirúrgico")) + Rp_campo_("Contato no local *", Rp_input_("contatoNome", "Nome")) +
+    Rp_$_("rpRelato").innerHTML = '<div class="at-grade3">' + Rp_campo_("Setor do equipamento *", Rp_input_("setor", "Ex.: CME, centro cirúrgico")) + Rp_campo_("Contato no local *", Rp_input_("contatoNome", "Nome")) +
       Rp_campo_("Telefone do contato *", Rp_input_("contatoTelefone", "(00) 00000-0000", "tel")) + Rp_campo_("E-mail do contato *", Rp_input_("contatoEmail", "", "email")) + Rp_campo_("Seu número de protocolo (se usar)", Rp_input_("protocolo")) + "</div>" +
       Rp_campo_("Sintoma *", '<textarea id="rp_sintoma" maxlength="3000" placeholder="O que acontece, em que etapa, com que frequência (pelo menos 30 letras)"></textarea>') +
-      '<div class="rp-grade">' + Rp_campo_("Quando começou *", Rp_input_("inicio", "Ex.: ontem à tarde, 27/10")) + Rp_campo_("Código de erro no visor", Rp_input_("codigoErro")) +
-      '<label style="align-self:end"><input type="checkbox" id="rp_naoExibe"> O visor não exibe código</label>' +
+      '<div class="at-grade3">' + Rp_campo_("Quando começou *", Rp_input_("inicio", "Ex.: ontem à tarde, 27/10")) + Rp_campo_("Código de erro no visor", Rp_input_("codigoErro")) +
+      '<label class="at-check" style="align-self:end"><input type="checkbox" id="rp_naoExibe"> O visor não exibe código</label>' +
       Rp_campo_("Equipamento parado? *", Rp_select_("parada", Object.keys(par).map(function (k) { return [k, par[k]]; }), "Escolha")) +
       Rp_campo_("Enquadramento pretendido *", Rp_select_("enquadramento", Object.keys(enq).map(function (k) { return [k, enq[k]]; }), "Escolha")) + "</div>" +
       Rp_campo_("Risco de continuar usando *", '<textarea id="rp_risco" maxlength="500"></textarea>') + Rp_campo_("O que já foi tentado *", '<textarea id="rp_tentado" maxlength="1000" placeholder="Ou escreva: nada"></textarea>') +
-      '<div class="rp-grade">' + Rp_campo_("Fotos do equipamento * (pelo menos 1)", '<input id="rp_fotos" type="file" accept="image/*" multiple>', "Reduzidas no seu aparelho para até 2 MB cada.") +
+      '<div class="at-grade3">' + Rp_campo_("Fotos do equipamento * (pelo menos 1)", '<input id="rp_fotos" type="file" accept="image/*" multiple>', "Reduzidas no seu aparelho para até 2 MB cada.") +
       Rp_campo_("Foto da etiqueta de série *", '<input id="rp_fotosEtiqueta" type="file" accept="image/*">') + Rp_campo_("Vídeo (opcional, até 50 MB)", '<input id="rp_video" type="file" accept="video/*">', "Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais.") + "</div>" +
-      '<div id="rpAbrirMsg"></div><button type="button" class="rp-btn pri" id="rpEnviar">Enviar o pedido à Metrolabs</button>';
+      '<div id="rpAbrirMsg"></div><div class="at-acoes">' + Rp_btn_("rpEnviar", "Enviar o pedido à Metrolabs", true) + "</div>";
     Rp_$_("rpEnviar").onclick = function () {
       Rp_lerArquivos_(Rp_$_("rp_fotos"), function (fotos) {
         Rp_lerArquivos_(Rp_$_("rp_fotosEtiqueta"), function (etq) {
@@ -229,48 +349,68 @@
   function Rp_chamados_(c) {
     Rp_chamar_("chamados", { etapa: RP.filtroEtapa || 0 }, function (r) {
       var f = RP.filtroEtapa || 0;
-      c.innerHTML = '<div class="rp-grade">' + Rp_campo_("Etapa", Rp_select_("filtroEtapa", [["0", "Todas"]].concat(r.etapas.map(function (e) { return [String(e.n), e.nome]; })))) + "</div>" +
-        (r.itens.length ? r.itens.map(function (x) {
-          return '<div class="rp-item" data-t="' + x.tipo + '" data-id="' + Rp_esc_(x.id) + '"><b>' + Rp_esc_(x.numero) + "</b> " + Rp_selo_(x.etapa, x.etapaNome) + (x.protocolo ? ' <span class="rp-meta">protocolo ' + Rp_esc_(x.protocolo) + "</span>" : "") +
-            "<div>" + Rp_esc_(x.clienteNome) + " · " + Rp_esc_(x.cidade) + " · " + Rp_esc_(x.equipamento) + '</div><div class="rp-meta">Aberto em ' + Rp_esc_(x.abertoEm) + (x.agendadoPara ? " · visita " + Rp_esc_(x.agendadoPara) + (x.tecnico ? " com " + Rp_esc_(x.tecnico) : "") : "") + "</div></div>";
-        }).join("") : '<p class="rp-meta">Nenhum pedido ou chamado nesta etapa.</p>');
+      c.innerHTML = '<div class="at-filtros"><div><label for="rp_filtroEtapa">Etapa</label>' + Rp_select_("filtroEtapa", [["0", "Todas"]].concat(r.etapas.map(function (e) { return [String(e.n), e.nome]; }))) + "</div></div>" +
+        (r.itens.length ? '<div class="at-lista">' + r.itens.map(function (x) {
+          return '<div class="at-card clicavel' + (x.etapa === 3 || x.etapa === 12 || x.etapa === 11 ? " fim" : "") + '" tabindex="0" data-t="' + x.tipo + '" data-id="' + Rp_esc_(x.id) + '"><p class="at-card-tit">' + Rp_esc_(x.numero) + " · " + Rp_esc_(x.clienteNome) + "</p>" +
+            '<p class="at-meta">' + Rp_selo_(x.etapa, x.etapaNome) + (x.protocolo ? " protocolo " + Rp_esc_(x.protocolo) : "") + "</p>" +
+            '<p class="at-txt">' + Rp_esc_([x.cidade, x.equipamento].filter(Boolean).join(" · ")) + '</p><p class="at-meta">Aberto em ' + Rp_esc_(x.abertoEm) + (x.agendadoPara ? " · visita " + Rp_esc_(x.agendadoPara) + (x.tecnico ? " com " + Rp_esc_(x.tecnico) : "") : "") + "</p></div>";
+        }).join("") + "</div>" : '<div class="at-vazio">Nenhum pedido ou chamado nesta etapa.</div>');
       Rp_$_("rp_filtroEtapa").value = String(f);
       Rp_$_("rp_filtroEtapa").onchange = function () { RP.filtroEtapa = Number(Rp_val_("filtroEtapa")); Rp_chamados_(c); };
       c.querySelectorAll("[data-t]").forEach(function (x) { x.onclick = function () { Rp_ficha_(x.getAttribute("data-t"), x.getAttribute("data-id")); }; });
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
-  function Rp_anexosHtml_(l) { return l.length ? "<ul>" + l.map(function (a) { return '<li><a href="' + Rp_esc_(a.url) + '" target="_blank" rel="noopener">' + Rp_esc_(a.tipoNome + " · " + a.nome) + '</a> <span class="rp-meta">' + Rp_esc_(a.por + " · " + a.em) + "</span></li>"; }).join("") + "</ul>" : '<p class="rp-meta">Nenhum arquivo.</p>'; }
+  function Rp_anexosHtml_(l) { return l.length ? '<div class="at-fotos">' + l.map(function (a) { return '<a href="' + Rp_esc_(a.url) + '" target="_blank" rel="noopener" title="' + Rp_esc_(a.por + " · " + a.em) + '">' + Rp_esc_(a.tipoNome + " · " + a.nome) + "</a>"; }).join("") + "</div>" : '<p class="at-meta">Nenhum arquivo.</p>'; }
+  /** Caminho principal das etapas (as de desvio aparecem no selo): Enviado, Aceito, Visita, Em atendimento, Concluído, Encerrado. */
+  function Rp_etapasHtml_(etapas, atual) {
+    var trilha = [1, 4, 7, 8, 10, 11], pos = trilha.indexOf(atual);
+    if (pos < 0) pos = atual === 2 ? 0 : atual === 5 || atual === 6 ? 1 : atual === 9 ? 3 : -1;
+    return '<div class="at-etapas">' + trilha.map(function (n, i) { var e = etapas.filter(function (x) { return x.n === n; })[0] || { nome: "" }; return '<span class="' + (i <= pos ? "feita" : "") + '">' + Rp_esc_(e.nome) + "</span>"; }).join("") + "</div>";
+  }
   function Rp_ficha_(tipo, id) {
     var c = Rp_$_("rpCorpo");
+    document.querySelectorAll("#rpAbas .at-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-a") === "chamados"); });
+    RP.aba = "chamados";
     Rp_chamar_("chamado", { tipo: tipo, id: id }, function (r) {
       var x = r.item, rel = r.relato || {};
-      c.innerHTML = '<div class="rp-botoes"><button type="button" class="rp-btn" id="rpVoltar">Voltar aos chamados</button></div><div class="rp-caixa"><h3>' + Rp_esc_(x.numero) + " " + Rp_selo_(x.etapa, x.etapaNome) + "</h3>" +
-        '<div class="rp-etapas">' + r.etapas.map(function (e) { return '<span class="' + (e.n === x.etapa ? "atual" : "") + '">' + Rp_esc_(e.nome) + "</span>"; }).join("") + "</div>" +
-        "<p>" + Rp_esc_(x.clienteNome) + " · " + Rp_esc_(x.unidade) + " · " + Rp_esc_(x.cidade) + "<br>" + Rp_esc_(x.equipamento) + (r.equipamento ? " · " + Rp_esc_(r.equipamento.garantia.texto) : "") + "</p>" +
-        (x.chamadoNumero ? '<p class="rp-faixa ok">Aceito: virou o chamado ' + Rp_esc_(x.chamadoNumero) + ".</p>" : "") + (x.recusaMotivo ? '<p class="rp-faixa erro">Recusado pela Metrolabs: ' + Rp_esc_(x.recusaMotivo) + "</p>" : "") +
-        (x.agendadoPara ? '<p class="rp-faixa ok">Visita: ' + Rp_esc_(x.agendadoPara) + (x.tecnico ? " · técnico " + Rp_esc_(x.tecnico) : "") + "</p>" : "") +
-        (r.complementoPergunta ? '<div class="rp-faixa aviso"><b>A Metrolabs pediu complemento:</b> ' + Rp_esc_(r.complementoPergunta) + (r.complementoResposta ? "<br><b>Sua resposta:</b> " + Rp_esc_(r.complementoResposta) : "") + "</div>" : "") +
-        (x.podeResponder && RP.ini.eu.perm.abrir ? Rp_campo_("Sua resposta ao complemento *", '<textarea id="rp_resposta"></textarea>') + Rp_campo_("Fotos (opcional)", '<input id="rp_fotosComp" type="file" accept="image/*" multiple>') + '<div id="rpCompMsg"></div><button type="button" class="rp-btn pri" id="rpResponder">Enviar a resposta</button>' : "") +
-        (rel.sintoma ? '<p class="rp-meta"><b>Relato:</b> ' + Rp_esc_(rel.sintoma) + "</p>" : "") +
-        (x.podeCancelar && RP.ini.eu.perm.cancelar && RP.ini.cancelarAntesVisita ? '<div class="rp-botoes"><button type="button" class="rp-btn perigo" id="rpCancelar">Cancelar ' + (tipo === "SOLICITACAO" ? "o pedido" : "o chamado") + "</button></div>" : "") + "</div>" +
-        '<div class="rp-caixa"><h3>Linha do tempo</h3><div class="rp-tl">' + (r.linhaDoTempo.map(function (e) { return '<div><span class="rp-meta">' + Rp_esc_(e.em + " · " + e.por) + "</span><br>" + Rp_esc_(e.texto || (e.de + " → " + e.para)) + "</div>"; }).join("") || '<p class="rp-meta">Sem registros ainda.</p>') + "</div></div>" +
-        '<div class="rp-caixa"><h3>Arquivos</h3>' + Rp_anexosHtml_(r.anexos) + '</div><div class="rp-caixa" id="rpConv"></div>';
+      var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return "<dt>" + Rp_esc_(p[0]) + "</dt><dd>" + Rp_esc_(p[1]) + "</dd>"; }).join("") + "</dl>"; };
+      c.innerHTML = '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpVoltar", "Voltar aos chamados") + Rp_btn_("rpVoltarPainel", "Voltar ao painel") + "</div>" +
+        '<div class="at-caixa"><h3>' + Rp_esc_(x.numero) + " " + Rp_selo_(x.etapa, x.etapaNome) + "</h3>" + Rp_etapasHtml_(r.etapas, x.etapa) +
+        dl([["Cliente", x.clienteNome], ["Unidade", [x.unidade, x.cidade].filter(Boolean).join(" · ")], ["Equipamento", x.equipamento], ["Garantia", r.equipamento ? r.equipamento.garantia.texto : ""], ["Seu protocolo", x.protocolo],
+          ["Aberto em", x.abertoEm], ["Visita", x.agendadoPara ? x.agendadoPara + (x.tecnico ? " · técnico " + x.tecnico : "") : ""], ["Encerrado em", x.encerradoEm]]) +
+        (x.chamadoNumero ? '<div class="at-faixa ok">Aceito: virou o chamado ' + Rp_esc_(x.chamadoNumero) + ".</div>" : "") + (x.recusaMotivo ? '<div class="at-faixa erro">Recusado pela Metrolabs: ' + Rp_esc_(x.recusaMotivo) + "</div>" : "") +
+        (x.canceladoMotivo ? '<div class="at-faixa">Cancelado: ' + Rp_esc_(x.canceladoMotivo) + "</div>" : "") +
+        (r.complementoPergunta ? '<div class="at-faixa aviso"><b>A Metrolabs pediu complemento:</b> ' + Rp_esc_(r.complementoPergunta) + (r.complementoResposta ? "<br><b>Sua resposta:</b> " + Rp_esc_(r.complementoResposta) : "") + "</div>" : "") +
+        (x.podeResponder && RP.ini.eu.perm.abrir ? Rp_campo_("Sua resposta ao complemento *", '<textarea id="rp_resposta"></textarea>') + Rp_campo_("Fotos (opcional)", '<input id="rp_fotosComp" type="file" accept="image/*" multiple>') + '<div id="rpCompMsg"></div><div class="at-acoes">' + Rp_btn_("rpResponder", "Enviar a resposta", true) + "</div>" : "") +
+        (rel.sintoma ? '<p class="at-txt"><b>Relato:</b> ' + Rp_esc_(rel.sintoma) + "</p>" : "") +
+        (x.podeCancelar && RP.ini.eu.perm.cancelar && RP.ini.cancelarAntesVisita ? '<div class="at-acoes">' + Rp_btnPerigo_("rpCancelar", "Cancelar " + (tipo === "SOLICITACAO" ? "o pedido" : "o chamado")) + "</div>" : "") + "</div>" +
+        ((r.marcos || []).length ? '<div class="at-caixa"><h3>Marcos: previsto e realizado</h3><div id="rpMarcos"></div></div>' : "") +
+        '<div class="at-caixa"><h3>Linha do tempo</h3><div class="at-hist">' + (r.linhaDoTempo.map(function (e) { return '<div><span class="q">' + Rp_esc_(e.em + " · " + e.por) + "</span><br>" + Rp_esc_(e.texto || (e.de + " → " + e.para)) + "</div>"; }).join("") || '<p class="at-meta">Sem registros ainda.</p>') + "</div></div>" +
+        '<div class="at-caixa"><h3>Arquivos</h3>' + Rp_anexosHtml_(r.anexos) + '</div><div class="at-caixa" id="rpConv"></div>';
+      if (Rp_$_("rpMarcos")) Rp_$_("rpMarcos").innerHTML = PnA_marcosHtml_(r.marcos, Rp_$_("rpMarcos").clientWidth || 700);
       Rp_$_("rpVoltar").onclick = function () { Rp_irAba_("chamados"); };
+      Rp_$_("rpVoltarPainel").onclick = function () { Rp_irAba_("painel"); };
       var b = Rp_$_("rpResponder");
       if (b) b.onclick = function () { Rp_lerArquivos_(Rp_$_("rp_fotosComp"), function (fs) { Rp_chamar_("responderComplemento", { id: x.id, resposta: Rp_val_("resposta"), fotos: fs }, function (k) { Rp_msg_("rpMsg", k.message, "ok"); Rp_ficha_(tipo, id); }, function (m, k) { Rp_msg_("rpCompMsg", m); Rp_erroCampos_(k); }, "Enviando…"); }, true); };
       var bc = Rp_$_("rpCancelar");
-      if (bc) bc.onclick = function () { var mot = prompt("Motivo do cancelamento (pelo menos 10 letras). Ele fica no histórico:"); if (mot === null) return; Rp_chamar_("cancelar", { tipo: tipo, id: x.id, motivo: mot }, function (k) { Rp_msg_("rpMsg", k.message, "ok"); Rp_ficha_(tipo, id); }, function (m) { alert(m); }, "Cancelando…"); };
+      if (bc) bc.onclick = function () {
+        Rp_pedirTexto_("Cancelar " + (tipo === "SOLICITACAO" ? "o pedido " : "o chamado ") + x.numero, "O motivo fica no histórico e a Metrolabs é avisada. Depois da visita, o cancelamento é só pela conversa com a Metrolabs.", "Motivo do cancelamento", 10, function (mot, ov) {
+          Rp_chamar_("cancelar", { tipo: tipo, id: x.id, motivo: mot }, function (k) { ov.remove(); Rp_msg_("rpMsg", k.message, "ok"); Rp_ficha_(tipo, id); }, function (m) { Rp_msg_("atTxtMsg", m); }, "Cancelando…");
+        }, "Cancelar " + (tipo === "SOLICITACAO" ? "o pedido" : "o chamado"));
+      };
       Rp_conversa_(Rp_$_("rpConv"), r.conversa.refTipo, r.conversa.refId, "Conversa com a Metrolabs", r.mensagens);
     }, function (m) { Rp_msg_("rpMsg", m); });
   }
-  /** Conversa (da representada ou da Metrolabs: no lado interno, a caixa "nota interna" aparece). */
+  /** Conversa (da representada ou da Metrolabs: no lado interno, a caixa "nota interna" aparece). Histórico no padrão da ficha do chamado. */
   function Rp_conversa_(el, refTipo, refId, titulo, iniciais) {
     var desenhar = function (l) {
       var pode = RP.externo ? RP.ini.eu.perm.conversar : true;
-      el.innerHTML = "<h3>" + Rp_esc_(titulo) + '</h3><div class="rp-msgs">' + (l.map(function (m) { return '<div class="rp-msg ' + m.lado + (m.interna ? " interna" : "") + '"><div class="rp-meta">' + Rp_esc_(m.autor + " · " + m.em) + (m.interna ? " · NOTA INTERNA (a representada não vê)" : "") + "</div>" + Rp_esc_(m.texto) + "</div>"; }).join("") || '<p class="rp-meta">Nenhuma mensagem ainda.</p>') + "</div>" +
-        (pode ? '<textarea id="rp_msgTexto" style="width:100%;min-height:60px" maxlength="4000" placeholder="Escreva a mensagem"></textarea>' + (!RP.externo ? '<label><input type="checkbox" id="rp_msgInterna"> Nota interna (a representada não vê)</label>' : '<p class="rp-dica">Fora do horário de trabalho da Metrolabs, a resposta vem no próximo horário útil.</p>') +
-          '<div id="rpMsgEnv"></div><button type="button" class="rp-btn pri" id="rpMsgEnviar">Enviar</button>' : '<p class="rp-meta">O seu papel só consulta a conversa.</p>');
-      var box = el.querySelector(".rp-msgs"); if (box) box.scrollTop = box.scrollHeight;
+      el.innerHTML = "<h3>" + Rp_esc_(titulo) + '</h3><div class="at-hist" style="max-height:360px;overflow:auto">' + (l.map(function (m) {
+        return '<div><span class="q">' + Rp_esc_(m.autor + " · " + m.em) + "</span>" + (m.interna ? ' <span class="at-selo laranja">Nota interna: a representada não vê</span>' : m.lado === "METROLABS" ? ' <span class="at-selo azul">Metrolabs</span>' : "") + "<br>" + Rp_esc_(m.texto) + "</div>";
+      }).join("") || '<p class="at-meta">Nenhuma mensagem ainda.</p>') + "</div>" +
+        (pode ? Rp_campo_("Mensagem", '<textarea id="rp_msgTexto" maxlength="4000" placeholder="Escreva a mensagem"></textarea>') + (!RP.externo ? '<label class="at-check"><input type="checkbox" id="rp_msgInterna"> Nota interna (a representada não vê)</label>' : '<p class="at-ajuda-campo">Fora do horário de trabalho da Metrolabs, a resposta vem no próximo horário útil.</p>') +
+          '<div id="rpMsgEnv"></div><div class="at-acoes">' + Rp_btn_("rpMsgEnviar", "Enviar", true) + "</div>" : '<p class="at-meta">O seu papel só consulta a conversa.</p>');
+      var box = el.querySelector(".at-hist"); if (box) box.scrollTop = box.scrollHeight;
       var b = Rp_$_("rpMsgEnviar");
       if (b) b.onclick = function () {
         var d = { refTipo: refTipo, refId: refId, texto: Rp_val_("msgTexto") };
@@ -283,39 +423,51 @@
   }
   function Rp_equipamentos_(c) {
     Rp_chamar_("equipamentos", {}, function (r) {
-      c.innerHTML = r.equipamentos.length ? r.equipamentos.map(function (e) { return '<div class="rp-item"><b>' + Rp_esc_(e.modelo) + "</b> · série " + Rp_esc_(e.serie) + "<div>" + Rp_esc_(e.clienteNome + " · " + e.unidade) + '</div><div class="rp-meta">' + Rp_esc_(e.garantia.texto) + "</div></div>"; }).join("")
-        : '<p class="rp-meta">Nenhum equipamento ainda. Aparecem aqui os equipamentos dos seus pedidos e os que a sua empresa cadastrou.</p>';
+      c.innerHTML = r.equipamentos.length ? '<div class="at-lista">' + r.equipamentos.map(function (e) { return '<div class="at-card"><p class="at-card-tit">' + Rp_esc_(e.modelo) + " · série " + Rp_esc_(e.serie) + '</p><p class="at-txt">' + Rp_esc_(e.clienteNome + " · " + e.unidade) + '</p><p class="at-meta">' + Rp_esc_(e.garantia.texto) + "</p></div>"; }).join("") + "</div>"
+        : '<div class="at-vazio">Nenhum equipamento ainda. Aparecem aqui os equipamentos dos seus pedidos e os que a sua empresa cadastrou.</div>';
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
   function Rp_equipe_(c) {
     Rp_chamar_("equipe", {}, function (r) {
-      c.innerHTML = '<div class="rp-caixa"><h3>Pessoas da sua empresa com acesso</h3><p class="rp-meta">' + Rp_esc_(r.message) + "</p>" + r.usuarios.map(function (u) { return "<div>" + Rp_esc_(u.nome + " · " + u.email + " · " + u.papel) + " " + Rp_selo_(u.situacao === "ATIVO" ? 10 : 12, u.situacao === "ATIVO" ? "Ativo" : "Inativo") + "</div>"; }).join("") + "</div>" +
-        '<div class="rp-caixa"><h3>Últimas ações da sua equipe</h3>' + (r.acessos.map(function (a) { return '<div class="rp-meta">' + Rp_esc_(a.em + " · " + a.quem + " · " + a.acao + " · " + a.detalhe) + "</div>"; }).join("") || '<p class="rp-meta">Nada registrado ainda.</p>') + "</div>";
+      c.innerHTML = '<div class="at-caixa"><h3>Pessoas da sua empresa com acesso</h3><p class="at-meta">' + Rp_esc_(r.message) + '</p><table class="at-tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Situação</th></tr></thead><tbody>' + r.usuarios.map(function (u) { return '<tr><td data-r="Nome">' + Rp_esc_(u.nome) + '</td><td data-r="E-mail">' + Rp_esc_(u.email) + '</td><td data-r="Papel">' + Rp_esc_(u.papel) + '</td><td data-r="Situação">' + Rp_selo_(u.situacao === "ATIVO" ? 10 : 12, u.situacao === "ATIVO" ? "Ativo" : "Inativo") + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+        '<div class="at-caixa"><h3>Últimas ações da sua equipe</h3><div class="at-hist">' + (r.acessos.map(function (a) { return '<div><span class="q">' + Rp_esc_(a.em + " · " + a.quem) + "</span><br>" + Rp_esc_(a.acao + " · " + a.detalhe) + "</div>"; }).join("") || '<p class="at-meta">Nada registrado ainda.</p>') + "</div></div>";
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
   /** Aba "Como usar": a ajuda do módulo (SGO_Ajuda_Representacao.js); a representada recebe a versão dela. */
   function Rp_ajuda_(c) {
     Rp_chamar_("ajuda", {}, function (r) {
       var a = r.ajuda;
-      if (!a) { c.innerHTML = '<p class="rp-meta">Ajuda indisponível agora.</p>'; return; }
-      var lista = function (l) { return "<ul>" + (l || []).map(function (x) { return "<li>" + Rp_esc_(x) + "</li>"; }).join("") + "</ul>"; };
-      c.innerHTML = '<div class="rp-caixa"><h3>' + Rp_esc_(a.titulo) + "</h3><p>" + Rp_esc_(a.paraQueServe) + "</p><h3>Antes de começar</h3>" + lista(a.antesDeComecar) +
-        (a.passos || []).map(function (p) { return "<h3>" + Rp_esc_(p.titulo) + "</h3>" + lista(p.itens); }).join("") +
-        "<h3>Se aparecer um problema</h3>" + lista((a.problemas || []).map(function (p) { return p.situacao + ": " + p.oQueFazer; })) +
-        "<h3>Perguntas frequentes</h3>" + lista((a.perguntas || []).map(function (p) { return p.p + " " + p.r; })) + "</div>";
+      if (!a) { c.innerHTML = '<div class="at-vazio">Ajuda indisponível agora.</div>'; return; }
+      var lista = function (l) { return '<ul class="at-txt">' + (l || []).map(function (x) { return "<li>" + Rp_esc_(x) + "</li>"; }).join("") + "</ul>"; };
+      c.innerHTML = '<div class="at-caixa"><h3>' + Rp_esc_(a.titulo) + '</h3><p class="at-txt">' + Rp_esc_(a.paraQueServe) + '</p><div class="at-sec">Antes de começar</div>' + lista(a.antesDeComecar) +
+        (a.passos || []).map(function (p) { return '<div class="at-sec">' + Rp_esc_(p.titulo) + "</div>" + lista(p.itens); }).join("") +
+        '<div class="at-sec">Se aparecer um problema</div>' + lista((a.problemas || []).map(function (p) { return p.situacao + ": " + p.oQueFazer; })) +
+        '<div class="at-sec">Perguntas frequentes</div>' + lista((a.perguntas || []).map(function (p) { return p.p + " " + p.r; })) + "</div>";
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
 
   // ---------------- visão da Metrolabs ----------------
   function RpI_selRep_(id, todas) { return Rp_select_(id, RP.ini.representadas.map(function (r) { return [r.id, r.nome]; }), todas ? "Todas as representadas" : "Escolha a representada"); }
-  function RpI_seloPrazo_(p) { var cor = { VENCIDO: "perigo", EM_RISCO: "aviso", PAUSADO: "cinza", EM_DIA: "ok" }[p.estado] || "cinza"; return p.texto ? '<span class="rp-selo ' + cor + '">' + Rp_esc_(p.texto) + "</span>" : ""; }
+  function RpI_seloPrazo_(p) { var cor = { VENCIDO: "vermelho", EM_RISCO: "laranja", PAUSADO: "cinza", EM_DIA: "verde" }[p.estado] || "cinza"; return p.texto ? '<span class="at-selo ' + cor + '">' + Rp_esc_(p.texto) + "</span>" : ""; }
+  /** Abre um pedido pelo id (vindo do painel): a fila completa traz o pedido com os anexos e as opções de aceite. */
+  function RpI_abrirPedidoPorId_(id) {
+    document.querySelectorAll("#rpAbas .at-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-a") === "pedidos"); });
+    RP.aba = "pedidos";
+    var c = Rp_$_("rpCorpo");
+    Rp_chamar_("solicitacoes", { situacao: "TODAS" }, function (r) {
+      RP.pedidosAux = r;
+      var s = r.solicitacoes.filter(function (x) { return x.id === id; })[0];
+      if (!s) { Rp_msg_("rpMsg", "Não foi possível abrir: o pedido não está mais na lista. Atualize o painel.", "aviso"); return; }
+      RpI_pedido_(c, s);
+    }, function (m) { Rp_msg_("rpMsg", m); }, "Abrindo o pedido…");
+  }
   function RpI_pedidos_(c) {
     Rp_chamar_("solicitacoes", { situacao: RP.sitPedidos || "ABERTAS" }, function (r) {
       RP.pedidosAux = r;
-      c.innerHTML = '<div class="rp-grade">' + Rp_campo_("Situação", Rp_select_("sitPedidos", [["ABERTAS", "Na fila (novos e com complemento)"], ["CONVERTIDA", "Aceitos"], ["DESCARTADA", "Recusados"], ["CANCELADA", "Cancelados pela representada"], ["TODAS", "Todos"]])) + "</div>" +
-        (r.solicitacoes.length ? r.solicitacoes.map(function (s, i) {
-          return '<div class="rp-item" data-i="' + i + '"><b>' + Rp_esc_(s.numero) + "</b> " + Rp_selo_(s.etapa, s.etapaNome) + " " + RpI_seloPrazo_(s.prazo) + "<div>" + Rp_esc_(s.representadaNome + " · " + s.clienteNome + " · " + s.cidade + " · " + s.equipamento) + '</div><div class="rp-meta">Por ' + Rp_esc_(s.por + " em " + s.abertoEm) + "</div></div>";
-        }).join("") : '<p class="rp-meta">Nenhum pedido nesta situação.</p>');
+      c.innerHTML = '<div class="at-filtros"><div><label for="rp_sitPedidos">Situação</label>' + Rp_select_("sitPedidos", [["ABERTAS", "Na fila (novos e com complemento)"], ["CONVERTIDA", "Aceitos"], ["DESCARTADA", "Recusados"], ["CANCELADA", "Cancelados pela representada"], ["TODAS", "Todos"]]) + "</div></div>" +
+        (r.solicitacoes.length ? '<div class="at-lista">' + r.solicitacoes.map(function (s, i) {
+          return '<div class="at-card clicavel' + (s.parada === "TOTAL" ? " p2" : "") + '" tabindex="0" data-i="' + i + '"><p class="at-card-tit">' + Rp_esc_(s.numero + " · " + s.representadaNome + " · " + s.clienteNome) + '</p><p class="at-meta">' + Rp_selo_(s.etapa, s.etapaNome) + " " + RpI_seloPrazo_(s.prazo) + '</p><p class="at-txt">' + Rp_esc_([s.cidade, s.equipamento].filter(Boolean).join(" · ")) + '</p><p class="at-meta">Por ' + Rp_esc_(s.por + " em " + s.abertoEm) + "</p></div>";
+        }).join("") + "</div>" : '<div class="at-vazio">Nenhum pedido nesta situação.</div>');
       Rp_$_("rp_sitPedidos").value = RP.sitPedidos || "ABERTAS";
       Rp_$_("rp_sitPedidos").onchange = function () { RP.sitPedidos = Rp_val_("sitPedidos"); RpI_pedidos_(c); };
       c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { RpI_pedido_(c, r.solicitacoes[Number(x.getAttribute("data-i"))]); }; });
@@ -323,14 +475,15 @@
   }
   function RpI_pedido_(c, s) {
     var aux = RP.pedidosAux, aberto = s.situacao === "NOVA" || s.situacao === "COMPLEMENTO";
-    c.innerHTML = '<div class="rp-botoes"><button type="button" class="rp-btn" id="rpVoltar">Voltar aos pedidos</button></div><div class="rp-caixa"><h3>' + Rp_esc_(s.numero + " · " + s.representadaNome) + " " + RpI_seloPrazo_(s.prazo) + "</h3>" +
-      "<p>" + Rp_esc_(s.clienteNome + " · " + s.unidade + " · " + s.cidade) + "<br>" + Rp_esc_(s.equipamento) + "<br>Contato no local: " + Rp_esc_(s.solicitante + " · " + s.contato) + "</p>" +
-      '<pre style="white-space:pre-wrap;font:inherit">' + Rp_esc_(s.descricao) + "</pre>" + (s.complemento ? '<div class="rp-faixa aviso"><b>Complemento pedido:</b> ' + Rp_esc_(s.complemento) + (s.complementoResposta ? "<br><b>Resposta:</b> " + Rp_esc_(s.complementoResposta) : "") + "</div>" : "") +
-      "<h3>Arquivos</h3>" + Rp_anexosHtml_(s.anexos) +
-      (aberto ? '<div class="rp-grade">' + Rp_campo_("Prioridade do chamado", Rp_select_("prio", Object.keys(aux.prioridades).map(function (k) { return [k, aux.prioridades[k]]; }), "Pela parada informada (P2 parado, P3 os demais)")) +
-        Rp_campo_("Tipo de serviço (opcional)", Rp_select_("tipoServ", aux.tipos.map(function (t) { return [t.codigo, t.nome]; }), "Definir na triagem")) + "</div>" + '<div id="rpPedMsg"></div><div class="rp-botoes"><button type="button" class="rp-btn pri" id="rpAceitar">Aceitar (vira chamado)</button>' +
-        (s.situacao === "NOVA" ? '<button type="button" class="rp-btn" id="rpComp">Pedir complemento</button>' : "") + '<button type="button" class="rp-btn perigo" id="rpRecusar">Recusar com motivo</button></div>' : "") + '</div><div class="rp-caixa" id="rpConv"></div>';
+    c.innerHTML = '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpVoltar", "Voltar aos pedidos") + Rp_btn_("rpVoltarPainel", "Voltar ao painel") + '</div><div class="at-caixa"><h3>' + Rp_esc_(s.numero + " · " + s.representadaNome) + " " + RpI_seloPrazo_(s.prazo) + "</h3>" +
+      '<dl class="at-det"><dt>Cliente</dt><dd>' + Rp_esc_(s.clienteNome + " · " + s.unidade + " · " + s.cidade) + "</dd><dt>Equipamento</dt><dd>" + Rp_esc_(s.equipamento) + "</dd><dt>Contato no local</dt><dd>" + Rp_esc_(s.solicitante + " · " + s.contato) + "</dd><dt>Enviado por</dt><dd>" + Rp_esc_(s.por + " em " + s.abertoEm) + "</dd></dl>" +
+      '<p class="at-txt" style="white-space:pre-wrap">' + Rp_esc_(s.descricao) + "</p>" + (s.complemento ? '<div class="at-faixa aviso"><b>Complemento pedido:</b> ' + Rp_esc_(s.complemento) + (s.complementoResposta ? "<br><b>Resposta:</b> " + Rp_esc_(s.complementoResposta) : "") + "</div>" : "") +
+      '<div class="at-sec">Arquivos</div>' + Rp_anexosHtml_(s.anexos) +
+      (aberto ? '<div class="at-grade2" style="margin-top:10px">' + Rp_campo_("Prioridade do chamado", Rp_select_("prio", Object.keys(aux.prioridades).map(function (k) { return [k, aux.prioridades[k]]; }), "Pela parada informada (P2 parado, P3 os demais)")) +
+        Rp_campo_("Tipo de serviço (opcional)", Rp_select_("tipoServ", aux.tipos.map(function (t) { return [t.codigo, t.nome]; }), "Definir na triagem")) + "</div>" + '<div id="rpPedMsg"></div><div class="at-acoes">' + Rp_btn_("rpAceitar", "Aceitar (vira chamado)", true) +
+        (s.situacao === "NOVA" ? Rp_btn_("rpComp", "Pedir complemento") : "") + Rp_btnPerigo_("rpRecusar", "Recusar com motivo") + "</div>" : "") + '</div><div class="at-caixa" id="rpConv"></div>';
     Rp_$_("rpVoltar").onclick = function () { RpI_pedidos_(c); };
+    Rp_$_("rpVoltarPainel").onclick = function () { Rp_irAba_("painel"); };
     var feito = function (r) { Rp_msg_("rpMsg", r.message || "Feito.", "ok"); RpI_pedidos_(c); };
     var b;
     if ((b = Rp_$_("rpAceitar"))) b.onclick = function () {
@@ -340,35 +493,35 @@
         feito(r);
       }, function (m) { Rp_msg_("rpPedMsg", m); }, "Aceitando…");
     };
-    if ((b = Rp_$_("rpComp"))) b.onclick = function () { var p = prompt("O que falta (pelo menos 10 letras)? A representada recebe por e-mail e o prazo de aceite pausa:"); if (p !== null) Rp_chamar_("complemento", { solicitacaoId: s.id, pergunta: p }, feito, function (m) { Rp_msg_("rpPedMsg", m); }); };
-    if ((b = Rp_$_("rpRecusar"))) b.onclick = function () { var p = prompt("Motivo da recusa (pelo menos 10 letras). A representada vê o motivo:"); if (p !== null) Rp_chamar_("recusar", { solicitacaoId: s.id, motivo: p }, feito, function (m) { Rp_msg_("rpPedMsg", m); }); };
+    if ((b = Rp_$_("rpComp"))) b.onclick = function () { Rp_pedirTexto_("Pedir complemento: " + s.numero, "A representada recebe por e-mail e o prazo de aceite fica pausado até ela responder.", "O que falta", 10, function (p, ov) { Rp_chamar_("complemento", { solicitacaoId: s.id, pergunta: p }, function (r) { ov.remove(); feito(r); }, function (m) { Rp_msg_("atTxtMsg", m); }); }, "Pedir complemento"); };
+    if ((b = Rp_$_("rpRecusar"))) b.onclick = function () { Rp_pedirTexto_("Recusar o pedido " + s.numero, "A representada vê o motivo e recebe por e-mail.", "Motivo da recusa", 10, function (p, ov) { Rp_chamar_("recusar", { solicitacaoId: s.id, motivo: p }, function (r) { ov.remove(); feito(r); }, function (m) { Rp_msg_("atTxtMsg", m); }); }, "Recusar"); };
     Rp_conversa_(Rp_$_("rpConv"), "SOLICITACAO", s.id, "Conversa do pedido com a representada");
   }
   function RpI_conversas_(c) {
     Rp_chamar_("conversas", { representadaId: RP.repConv || "" }, function (r) {
-      c.innerHTML = '<div class="rp-grade">' + Rp_campo_("Representada", RpI_selRep_("repConv", true)) + "</div>" +
-        (r.conversas.length ? r.conversas.map(function (g, i) { return '<div class="rp-item" data-i="' + i + '"><b>' + Rp_esc_(g.representadaNome + " · " + g.numero) + '</b> <span class="rp-meta">' + g.total + " mensagem(ns)</span>" + (g.ultima ? '<div class="rp-meta">' + Rp_esc_(g.ultima.autor + ": " + g.ultima.texto.slice(0, 120) + " · " + g.ultima.em) + "</div>" : "") + "</div>"; }).join("")
-          : '<p class="rp-meta">Nenhuma conversa. Escolha a representada para abrir o canal geral.</p>');
+      c.innerHTML = '<div class="at-filtros"><div><label for="rp_repConv">Representada</label>' + RpI_selRep_("repConv", true) + "</div></div>" +
+        (r.conversas.length ? '<div class="at-lista">' + r.conversas.map(function (g, i) { return '<div class="at-card clicavel" tabindex="0" data-i="' + i + '"><p class="at-card-tit">' + Rp_esc_(g.representadaNome + " · " + g.numero) + '</p><p class="at-meta">' + g.total + " mensagem(ns)" + (g.ultima ? " · última em " + Rp_esc_(g.ultima.em) : "") + "</p>" + (g.ultima ? '<p class="at-txt">' + Rp_esc_(g.ultima.autor + ": " + g.ultima.texto.slice(0, 160)) + "</p>" : "") + "</div>"; }).join("") + "</div>"
+          : '<div class="at-vazio">Nenhuma conversa. Escolha a representada para abrir o canal geral.</div>');
       Rp_$_("rp_repConv").value = RP.repConv || "";
       Rp_$_("rp_repConv").onchange = function () { RP.repConv = Rp_val_("repConv"); RpI_conversas_(c); };
-      c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { var g = r.conversas[Number(x.getAttribute("data-i"))]; c.innerHTML = '<div class="rp-botoes"><button type="button" class="rp-btn" id="rpVoltar">Voltar às conversas</button></div><div class="rp-caixa" id="rpConv"></div>'; Rp_$_("rpVoltar").onclick = function () { RpI_conversas_(c); }; Rp_conversa_(Rp_$_("rpConv"), g.refTipo, g.refId, g.representadaNome + " · " + g.numero); }; });
+      c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { var g = r.conversas[Number(x.getAttribute("data-i"))]; c.innerHTML = '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpVoltar", "Voltar às conversas") + '</div><div class="at-caixa" id="rpConv"></div>'; Rp_$_("rpVoltar").onclick = function () { RpI_conversas_(c); }; Rp_conversa_(Rp_$_("rpConv"), g.refTipo, g.refId, g.representadaNome + " · " + g.numero); }; });
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
   function RpI_representadas_(c) {
     var l = RP.ini.representadas;
-    c.innerHTML = (RP.ini.podeAdministrar ? '<div class="rp-botoes"><button type="button" class="rp-btn pri" id="rpNovaRep">Nova representada</button></div>' : '<p class="rp-meta">Consulta. O cadastro é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação.</p>') +
-      (l.map(function (r, i) { return '<div class="rp-item" data-i="' + i + '"><b>' + Rp_esc_(r.nome) + "</b> " + Rp_selo_(r.situacao === "ATIVA" ? 10 : 12, r.situacao === "ATIVA" ? "Ativa" : "Inativa") + '<div class="rp-meta">Aceite em ' + Math.round(r.prazos.aceiteMin / 60 * 10) / 10 + " h úteis · contrato " + Rp_esc_(r.contrato || "não informado") + "</div></div>"; }).join("") || '<p class="rp-meta">Nenhuma representada cadastrada.</p>') +
+    c.innerHTML = (RP.ini.podeAdministrar ? '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpNovaRep", '<i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova representada', true) + "</div>" : '<div class="at-faixa">Consulta. O cadastro é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação.</div>') +
+      (l.length ? '<div class="at-lista">' + l.map(function (r, i) { return '<div class="at-card' + (RP.ini.podeAdministrar ? " clicavel" : "") + (r.situacao === "ATIVA" ? "" : " fim") + '" data-i="' + i + '"><p class="at-card-tit">' + Rp_esc_(r.nome) + " " + Rp_selo_(r.situacao === "ATIVA" ? 10 : 12, r.situacao === "ATIVA" ? "Ativa" : "Inativa") + '</p><p class="at-meta">Aceite em ' + PnA_num_(r.prazos.aceiteMin / 60, 1) + " h úteis · contrato " + Rp_esc_(r.contrato || "não informado") + "</p></div>"; }).join("") + "</div>" : '<div class="at-vazio">Nenhuma representada cadastrada.</div>') +
       '<div id="rpRepForm"></div>';
     var abrirForm = function (r) {
       r = r || { prazos: RP.ini.prazosPadrao, situacao: "ATIVA" };
       var p = r.prazos;
-      Rp_$_("rpRepForm").innerHTML = '<div class="rp-caixa"><h3>' + (r.id ? "Editar " + Rp_esc_(r.nome) : "Nova representada") + '</h3><div class="rp-grade">' + Rp_campo_("Nome *", Rp_input_("nome")) + Rp_campo_("CNPJ", Rp_input_("cnpj")) +
+      Rp_$_("rpRepForm").innerHTML = '<div class="at-caixa" style="margin-top:12px"><h3>' + (r.id ? "Editar " + Rp_esc_(r.nome) : "Nova representada") + '</h3><div class="at-grade3">' + Rp_campo_("Nome *", Rp_input_("nome")) + Rp_campo_("CNPJ", Rp_input_("cnpj")) +
         Rp_campo_("Situação", Rp_select_("situacao", [["ATIVA", "Ativa"], ["INATIVA", "Inativa (os usuários dela não abrem o módulo)"]])) + Rp_campo_("Contrato", Rp_input_("contrato")) + Rp_campo_("Vigência de", Rp_input_("vigenciaInicio", "", "date")) + Rp_campo_("Vigência até", Rp_input_("vigenciaFim", "", "date")) +
         Rp_campo_("Contato na representada", Rp_input_("contatoNome")) + Rp_campo_("E-mail do contato", Rp_input_("contatoEmail", "", "email")) +
         Rp_campo_("Prazo de aceite (minutos úteis)", Rp_input_("aceiteMin", "", "number"), "Padrão 240 = 4 horas úteis.") + Rp_campo_("Alerta ao responsável (fração do prazo)", Rp_input_("alertaFracao", "", "number", ' step="0.05"'), "Padrão 0,75.") +
         Rp_campo_("Chamado sem registro (dias úteis)", Rp_input_("semRegistroDiasUteis", "", "number"), "Padrão 3.") + "</div>" +
-        '<label><input type="checkbox" id="rp_consultaReceita"> Consulta de CNPJ na base pública da Receita ao cadastrar cliente</label><br><label><input type="checkbox" id="rp_cancelarAntesVisita"> A representada pode cancelar antes da visita (com motivo)</label>' +
-        Rp_campo_("Observação", '<textarea id="rp_obs"></textarea>') + '<div id="rpRepMsg"></div><button type="button" class="rp-btn pri" id="rpRepSalvar">Salvar</button></div>';
+        '<label class="at-check"><input type="checkbox" id="rp_consultaReceita"> Consulta de CNPJ na base pública da Receita ao cadastrar cliente</label><label class="at-check"><input type="checkbox" id="rp_cancelarAntesVisita"> A representada pode cancelar antes da visita (com motivo)</label>' +
+        Rp_campo_("Observação", '<textarea id="rp_obs"></textarea>') + '<div id="rpRepMsg"></div><div class="at-acoes">' + Rp_btn_("rpRepSalvar", "Salvar", true) + "</div></div>";
       ["nome", "cnpj", "situacao", "contrato", "vigenciaInicio", "vigenciaFim", "contatoNome", "contatoEmail", "obs"].forEach(function (k) { if (Rp_$_("rp_" + k)) Rp_$_("rp_" + k).value = r[k] || (k === "situacao" ? "ATIVA" : ""); });
       ["aceiteMin", "alertaFracao", "semRegistroDiasUteis"].forEach(function (k) { Rp_$_("rp_" + k).value = p[k]; });
       Rp_$_("rp_consultaReceita").checked = !!p.consultaReceita; Rp_$_("rp_cancelarAntesVisita").checked = !!p.cancelarAntesVisita;
@@ -377,20 +530,23 @@
         ["nome", "cnpj", "situacao", "contrato", "vigenciaInicio", "vigenciaFim", "contatoNome", "contatoEmail", "obs"].forEach(function (k) { d[k] = Rp_val_(k); });
         Rp_chamar_("salvarRepresentada", d, function (x) { RP.ini.representadas = x.representadas; Rp_msg_("rpMsg", x.message, "ok"); RpI_representadas_(c); }, function (m, x) { Rp_msg_("rpRepMsg", m); Rp_erroCampos_(x); }, "Salvando…");
       };
+      Rp_$_("rpRepForm").scrollIntoView({ behavior: "smooth", block: "start" });
     };
     var b = Rp_$_("rpNovaRep"); if (b) b.onclick = function () { abrirForm(null); };
     if (RP.ini.podeAdministrar) c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { abrirForm(l[Number(x.getAttribute("data-i"))]); }; });
   }
   function RpI_modelos_(c) {
-    c.innerHTML = '<div class="rp-grade">' + Rp_campo_("Representada", RpI_selRep_("repMod")) + '</div><div id="rpModLista"></div>';
+    c.innerHTML = '<div class="at-filtros"><div><label for="rp_repMod">Representada</label>' + RpI_selRep_("repMod") + '</div></div><div id="rpModLista"></div>';
     var carregar = function () {
       var rid = Rp_val_("repMod"); RP.repMod = rid;
-      if (!rid) { Rp_$_("rpModLista").innerHTML = '<p class="rp-meta">Escolha a representada.</p>'; return; }
+      if (!rid) { Rp_$_("rpModLista").innerHTML = '<div class="at-vazio">Escolha a representada.</div>'; return; }
       Rp_chamar_("modelos", { representadaId: rid }, function (r) {
-        Rp_$_("rpModLista").innerHTML = (r.modelos.map(function (m) { return '<div class="rp-item"><b>' + Rp_esc_(m.codigo + " · " + m.nome) + "</b> " + (m.ativo ? "" : Rp_selo_(12, "Inativo")) + '<div class="rp-meta">' + Rp_esc_(m.tipo + " · " + (m.familia || "sem família") + " · garantia " + m.garantiaMeses + " meses" + (m.padraoSerie ? " · série " + m.padraoSerie : "")) + "</div></div>"; }).join("") || '<p class="rp-meta">Catálogo vazio.</p>') +
-          (RP.ini.podeAdministrar ? '<div class="rp-caixa"><h3>Incluir ou alterar modelo (mesmo código altera)</h3><div class="rp-grade">' + Rp_campo_("Código *", Rp_input_("mcod")) + Rp_campo_("Nome *", Rp_input_("mnome")) + Rp_campo_("Tipo de equipamento *", Rp_input_("mtipo", "Ex.: Autoclave")) +
+        Rp_$_("rpModLista").innerHTML = (r.modelos.length ? '<table class="at-tabela"><thead><tr><th>Código</th><th>Modelo</th><th>Tipo</th><th>Família</th><th class="n">Garantia</th><th>Padrão da série</th><th>Situação</th></tr></thead><tbody>' + r.modelos.map(function (m) {
+          return '<tr><td data-r="Código"><b>' + Rp_esc_(m.codigo) + '</b></td><td data-r="Modelo">' + Rp_esc_(m.nome) + '</td><td data-r="Tipo">' + Rp_esc_(m.tipo) + '</td><td data-r="Família">' + Rp_esc_(m.familia || "—") + '</td><td class="n" data-r="Garantia">' + m.garantiaMeses + ' meses</td><td data-r="Padrão da série">' + Rp_esc_(m.padraoSerie || "—") + '</td><td data-r="Situação">' + (m.ativo ? Rp_selo_(10, "Ativo") : Rp_selo_(12, "Inativo")) + "</td></tr>";
+        }).join("") + "</tbody></table>" : '<div class="at-vazio">Catálogo vazio.</div>') +
+          (RP.ini.podeAdministrar ? '<div class="at-caixa" style="margin-top:12px"><h3>Incluir ou alterar modelo (mesmo código altera)</h3><div class="at-grade3">' + Rp_campo_("Código *", Rp_input_("mcod")) + Rp_campo_("Nome *", Rp_input_("mnome")) + Rp_campo_("Tipo de equipamento *", Rp_input_("mtipo", "Ex.: Autoclave")) +
             Rp_campo_("Família", Rp_input_("mfam")) + Rp_campo_("Garantia (meses) *", Rp_input_("mgar", "", "number")) + Rp_campo_("Padrão da série (opcional)", Rp_input_("mpad", "Ex.: BM[0-9]{6}"), "Deixe em branco se não souber.") +
-            Rp_campo_("Situação", Rp_select_("mativo", [["SIM", "Ativo"], ["NAO", "Inativo"]])) + '</div><div id="rpModMsg"></div><button type="button" class="rp-btn pri" id="rpModSalvar">Salvar modelo</button></div>' : "");
+            Rp_campo_("Situação", Rp_select_("mativo", [["SIM", "Ativo"], ["NAO", "Inativo"]])) + '</div><div id="rpModMsg"></div><div class="at-acoes">' + Rp_btn_("rpModSalvar", "Salvar modelo", true) + "</div></div>" : "");
         var b = Rp_$_("rpModSalvar");
         if (b) b.onclick = function () { Rp_chamar_("salvarModelo", { representadaId: rid, codigo: Rp_val_("mcod"), nome: Rp_val_("mnome"), tipo: Rp_val_("mtipo"), familia: Rp_val_("mfam"), garantiaMeses: Number(Rp_val_("mgar")), padraoSerie: Rp_val_("mpad"), ativo: Rp_val_("mativo") }, function (x) { Rp_msg_("rpMsg", x.message, "ok"); carregar(); }, function (m) { Rp_msg_("rpModMsg", m); }, "Salvando…"); };
       }, function (m) { Rp_msg_("rpMsg", m); });
@@ -400,13 +556,17 @@
   }
   function RpI_usuarios_(c) {
     Rp_chamar_("usuarios", {}, function (r) {
-      c.innerHTML = '<p class="rp-faixa aviso">' + Rp_esc_(r.message) + '</p><div class="rp-botoes"><button type="button" class="rp-btn" onclick="abrir(\'usuarios\')">Abrir Administração > Usuários</button></div>' +
-        (r.usuarios.map(function (u) { return '<div class="rp-item"><b>' + Rp_esc_(u.nome) + "</b> · " + Rp_esc_(u.login + " · " + u.email) + '<div class="rp-meta">' + Rp_esc_(u.representada + " · " + u.papel + " · " + (u.situacao === "ATIVO" ? "ativo" : "inativo")) + "</div></div>"; }).join("") || '<p class="rp-meta">Nenhuma conta de representada.</p>');
+      c.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(r.message) + '</div><div class="at-acoes" style="margin:0 0 10px"><button type="button" class="btn-secondary at-btn44" onclick="abrir(\'usuarios\')">Abrir Administração &gt; Usuários</button></div>' +
+        (r.usuarios.length ? '<table class="at-tabela"><thead><tr><th>Nome</th><th>Login</th><th>E-mail</th><th>Representada</th><th>Papel</th><th>Situação</th></tr></thead><tbody>' + r.usuarios.map(function (u) {
+          return '<tr><td data-r="Nome"><b>' + Rp_esc_(u.nome) + '</b></td><td data-r="Login">' + Rp_esc_(u.login) + '</td><td data-r="E-mail">' + Rp_esc_(u.email) + '</td><td data-r="Representada">' + Rp_esc_(u.representada) + '</td><td data-r="Papel">' + Rp_esc_(u.papel) + '</td><td data-r="Situação">' + Rp_selo_(u.situacao === "ATIVO" ? 10 : 12, u.situacao === "ATIVO" ? "Ativo" : "Inativo") + "</td></tr>";
+        }).join("") + "</tbody></table>" : '<div class="at-vazio">Nenhuma conta de representada.</div>');
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
   function RpI_acessos_(c) {
     Rp_chamar_("acessos", {}, function (r) {
-      c.innerHTML = '<div class="rp-caixa"><h3>Ações das representadas no módulo</h3>' + (r.acessos.map(function (a) { return '<div class="rp-meta">' + Rp_esc_(a.em + " · " + a.representada + " · " + a.quem + " · " + a.acao + " · " + a.detalhe) + "</div>"; }).join("") || '<p class="rp-meta">Nada registrado.</p>') + "</div>";
+      c.innerHTML = '<div class="at-caixa"><h3>Ações das representadas no módulo</h3>' + (r.acessos.length ? '<table class="at-tabela"><thead><tr><th>Quando</th><th>Representada</th><th>Quem</th><th>Ação</th><th>Detalhe</th></tr></thead><tbody>' + r.acessos.map(function (a) {
+        return '<tr><td data-r="Quando">' + Rp_esc_(a.em) + '</td><td data-r="Representada">' + Rp_esc_(a.representada) + '</td><td data-r="Quem">' + Rp_esc_(a.quem) + '</td><td data-r="Ação">' + Rp_esc_(a.acao) + '</td><td data-r="Detalhe">' + Rp_esc_(a.detalhe) + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<p class="at-meta">Nada registrado.</p>') + "</div>";
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
 </script>

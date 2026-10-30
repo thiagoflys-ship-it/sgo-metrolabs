@@ -18,6 +18,14 @@ function SGO_ajudaTelas_Representacao_() {
         "Quem responde pela representação fica em Assistência técnica > Regras da assistência > Representação. Sem ninguém lá, os pedidos vão para quem faz a triagem."
       ],
       passos: [
+        { titulo: "Acompanhar pelo Painel", itens: [
+          "A aba \"Painel\" abre primeiro. Escolha a representada (ou todas) e o período dos índices (30, 90, 180 ou 365 dias). Os tempos são em horas úteis do expediente da Metrolabs.",
+          "Índices: pedidos na fila e quantos com o aceite vencido; aceite no prazo (aceitos no período em até o prazo da representada, padrão 4 h úteis, descontada a espera do complemento) e o tempo médio; primeiro contato no prazo (do aceite ao primeiro registro da Metrolabs no chamado: triagem assumida ou iniciada, ou mensagem à representada; padrão 8 h úteis); prazo vencido agora e em risco; abertos e com quem estão; tempo médio até a visita e até a conclusão (contados do envio do pedido); reincidência (mesmo equipamento com outro chamado em até 90 dias).",
+          "Kanban: um cartão por pedido ou chamado, na etapa que a representada vê. A borda é a cor do prazo. O cartão não se arrasta: o pedido abre aqui (aceitar, complemento, recusar) e o chamado abre na Assistência técnica, onde a etapa muda pelas regras do atendimento.",
+          "Gantt: cada barra vai do envio do pedido até a conclusão (ou até hoje). Escolha a janela e agrupe por chamado, cliente, técnico ou representada. O tracejado é o fim do prazo; a parte vermelha, o tempo depois dele; o losango vazado é a visita agendada e o cheio, a chegada do técnico. A agenda de cada técnico com as O.S. fica em Atividades da equipe (botão \"Abrir a agenda única\").",
+          "Indicadores: fila de pedidos com a idade em horas úteis, prazo de atendimento por prioridade (atendidos, no prazo, média até a visita, abertos e vencidos), carga por técnico, por representada, por etapa, por cliente, por UF, garantia e reincidência por modelo e por equipamento. Toque numa linha da fila para abrir o pedido.",
+          "O painel não se atualiza sozinho: toque em \"Atualizar\" no alto da tela."
+        ] },
         { titulo: "Tratar um pedido", itens: [
           "Abra a aba \"Pedidos\". Cada pedido mostra a representada, o cliente, o equipamento e o prazo de aceite (verde em dia, amarelo em risco, vermelho vencido, cinza pausado).",
           "Toque no pedido para ver o relato completo, o contato no local, as fotos, o vídeo e a conversa.",
@@ -48,7 +56,12 @@ function SGO_ajudaTelas_Representacao_() {
         { nome: "Selo amarelo do prazo", significado: "Já passou de 75% do prazo de aceite: o responsável pela representação foi avisado." },
         { nome: "Selo vermelho do prazo", significado: "Prazo de aceite vencido: a gestão da área Técnica foi avisada e o item está na Caixa de decisões." },
         { nome: "Selo cinza \"pausado\"", significado: "A Metrolabs pediu complemento; o prazo só volta a contar quando a representada responder." },
-        { nome: "Mensagem em amarelo tracejado", significado: "Nota interna: a representada não vê." }
+        { nome: "Selo \"Nota interna\" na conversa", significado: "Nota interna: a representada não vê." },
+        { nome: "Painel, borda azul ou barra azul", significado: "No prazo." },
+        { nome: "Painel, amarelo", significado: "Prazo em risco (aceite a 75% do prazo; atendimento com 25% ou menos do prazo restante)." },
+        { nome: "Painel, vermelho", significado: "Prazo vencido. Na barra do Gantt, a parte vermelha é o tempo depois do fim do prazo." },
+        { nome: "Painel, cinza", significado: "Prazo pausado (complemento com a representada, ou peça e cliente quando o contrato permite) ou sem prazo." },
+        { nome: "Painel, verde", significado: "Concluído no prazo. Marrom: concluído fora do prazo." }
       ],
       problemas: [
         { situacao: "Aparece \"o cadastro da representada e do catálogo é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação\"", oQueFazer: "Peça a um deles, ou peça ao Administrador para colocar você como responsável em Regras da assistência > Representação." },
@@ -65,7 +78,9 @@ function SGO_ajudaTelas_Representacao_() {
       perguntas: [
         { p: "A representada vê os outros clientes da Metrolabs?", r: "Não. Ela busca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, sem lista e sem busca por nome. Ela vê só os pedidos e chamados da empresa dela." },
         { p: "A representada vê valores?", r: "Não nesta etapa. Custos e fechamento entram em etapas seguintes do projeto." },
-        { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros, pedidos e cancelamentos, com nome, data e hora." }
+        { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros, pedidos e cancelamentos, com nome, data e hora." },
+        { p: "Por que o técnico vê menos chamados no Painel?", r: "O Painel mostra só os chamados que a pessoa pode abrir na Assistência técnica: o técnico vê os dele e os da fila livre; a gestão vê todos. A fila de pedidos é a mesma para todos." },
+        { p: "O que a representada vê no painel dela?", r: "Os mesmos índices de aceite, visita e conclusão, o Kanban e o Gantt, só da empresa dela. Ela não vê primeiro contato, fila de outras representadas, carga por técnico, notas internas nem valores." }
       ]
     },
     "representacao/representada": {
@@ -78,6 +93,15 @@ function SGO_ajudaTelas_Representacao_() {
         "Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais."
       ],
       passos: [
+        { titulo: "Acompanhar pelo Painel", itens: [
+          "O \"Painel\" abre primeiro. No alto: pedidos e chamados abertos, aguardando a Metrolabs, aguardando a sua empresa, aguardando o cliente final, aceitos no prazo e os tempos médios até o aceite, até a visita e até a conclusão. Escolha o período (30, 90, 180 ou 365 dias).",
+          "Os tempos são em horas úteis do expediente da Metrolabs e contam do envio do pedido; o tempo em que o pedido esperou o complemento da sua empresa não conta.",
+          "Pendências da sua empresa aparecem em amarelo, no alto: toque em \"Responder agora\".",
+          "Kanban: um cartão por pedido ou chamado, na etapa em que está; a borda é a cor do prazo. O cartão não se arrasta: a etapa muda pelo atendimento da Metrolabs. Os cartões \"Depende de você\" têm o botão para responder.",
+          "Gantt: cada barra vai do envio até a conclusão (ou até hoje). Escolha a janela e veja por chamado ou por cliente. O tracejado é o fim do prazo; o losango vazado é a visita agendada e o cheio, a chegada do técnico.",
+          "Indicadores: por etapa, por prioridade, por cliente, por UF, garantia (pelo cadastro do equipamento) e reincidência (mesmo equipamento com outro chamado em até 90 dias) por modelo e por equipamento.",
+          "Na ficha do chamado, \"Marcos\" mostra o previsto e o realizado do aceite, da visita e da conclusão."
+        ] },
         { titulo: "Pedir um atendimento", itens: [
           "Toque em \"Novo pedido\".",
           "Cliente: digite o CNPJ ou o CPF completo e toque em \"Buscar\". Achou: escolha a unidade. Não achou: preencha o cadastro completo (o botão da base pública da Receita preenche razão social e endereço; o contato precisa vir do cliente) e marque \"Ciente\".",
@@ -101,7 +125,12 @@ function SGO_ajudaTelas_Representacao_() {
         { nome: "Etapa em azul", significado: "Em andamento com a Metrolabs." },
         { nome: "Etapa em amarelo", significado: "Depende da sua empresa (por exemplo, complemento pedido)." },
         { nome: "Etapa em verde", significado: "Concluído ou encerrado." },
-        { nome: "Etapa em cinza", significado: "Recusado ou cancelado." }
+        { nome: "Etapa em cinza", significado: "Recusado ou cancelado." },
+        { nome: "Painel: azul", significado: "No prazo." },
+        { nome: "Painel: amarelo", significado: "Prazo em risco." },
+        { nome: "Painel: vermelho", significado: "Prazo vencido." },
+        { nome: "Painel: cinza", significado: "Prazo pausado (por exemplo, complemento pedido à sua empresa) ou sem prazo." },
+        { nome: "Painel: verde", significado: "Concluído no prazo. Marrom: concluído fora do prazo." }
       ],
       problemas: [
         { situacao: "Aparece que o CNPJ ou CPF não confere", oQueFazer: "Digite o número completo e confira os dígitos com o cliente ou na nota fiscal." },
@@ -117,7 +146,8 @@ function SGO_ajudaTelas_Representacao_() {
       perguntas: [
         { p: "Por que não há busca por nome do cliente?", r: "Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é só pelo CNPJ ou CPF completo." },
         { p: "Como incluir ou tirar uma pessoa da minha equipe?", r: "Escreva no \"Canal geral\". A Metrolabs cria e inativa os acessos." },
-        { p: "Onde vejo o relatório do atendimento?", r: "O relatório final no módulo vem numa próxima etapa. Enquanto isso, peça pela conversa do chamado." }
+        { p: "Onde vejo o relatório do atendimento?", r: "O relatório final no módulo vem numa próxima etapa. Enquanto isso, peça pela conversa do chamado." },
+        { p: "Por que o painel não muda sozinho?", r: "Para não atrapalhar quem está digitando. Toque em \"Atualizar\" no alto da tela." }
       ]
     }
   };

@@ -460,7 +460,56 @@ function AstP_portal_(eu) {
     .map(function (e) { var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(e.UNIDADE_ID)] || {}; return { id: e.ID, texto: Ast_equipTexto_(e), unidadeId: Ast_s_(e.UNIDADE_ID), unidade: Ast_s_(un.NOME_UNIDADE) }; })
     .sort(function (a, b) { return a.texto.localeCompare(b.texto, 'pt-BR'); });
   var orcamentos = typeof AstL_portalOrcamentos_ === 'function' ? AstL_portalOrcamentos_(eu) : [];
-  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, orcamentos: orcamentos, cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]) };
+  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, orcamentos: orcamentos, cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]),
+    // 29/10/2026: painel do cliente (índices, Kanban das 5 etapas e Gantt), só com os chamados dele
+    painel: AstP_painelCliente_(cid, Date.now()), ganttJs: typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() : '' };
+}
+
+/**
+ * PAINEL DO CLIENTE NO PORTAL (29/10/2026, pedido do dono: "todos os perfis contenham dash com Kanban, com gráfico Gantt,
+ * com índices"). Vale para todo cliente do portal. Só os chamados e pedidos do cliente da sessão; sem prazo interno, sem
+ * técnico, sem valor e sem nada da conversa com a representada. Etapas: AST_ETAPAS_CLIENTE (5).
+ * Índices (fórmulas em docs/MANUAL_MODULO_REPRESENTACAO.md, seção "Painel do cliente"):
+ *  - abertos: chamados nas etapas 1 a 4 + pedidos ainda em análise; em atendimento: etapa 4; visita agendada: etapa 3;
+ *  - concluídos no período: etapa 5 com conclusão (ATENDIDO_EM, senão ENCERRADO_EM) nos últimos 90 dias;
+ *  - próxima visita: a visita agendada mais próxima a partir de agora;
+ *  - tempo médio até a conclusão: abertura do chamado -> conclusão, em horas úteis do expediente, dos concluídos no período.
+ */
+var AST_PAINEL_CLIENTE_DIAS = 90;
+function AstP_painelCliente_(cid, agoraMs) {
+  var osPorId = Ast_mapa_(AST_ABAS.OS), de = agoraMs - AST_PAINEL_CLIENTE_DIAS * 864e5, cfg = Ast_expediente_();
+  var cartoes = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (c) { return Ast_s_(c.CLIENTE_ID) === cid; }).map(function (c) {
+    var p = AstC_publicoCliente_(c, osPorId[Ast_s_(c.OS_ID)]), s = Ast_up_(c.SITUACAO);
+    var conclMs = p.etapa === 5 ? (Ast_ms_(c.ATENDIDO_EM) !== null ? Ast_ms_(c.ATENDIDO_EM) : Ast_ms_(c.ENCERRADO_EM)) : null;
+    return { tipo: 'CHAMADO', id: p.id, numero: p.numero, etapa: p.etapa, etapaNome: p.etapaNome, equipamento: p.equipamentoTexto, unidade: p.unidadeNome, abertoEm: p.abertoEm,
+      enviadoMs: Ast_ms_(c.ABERTO_EM), visitaPrevMs: p.etapa === 3 ? Ast_ms_(c.AGENDADO_PARA) : null, agendadoPara: p.agendadoPara, conclusaoMs: conclMs,
+      fimMs: p.etapa === 5 ? conclMs : (p.cancelado ? Ast_ms_(c.CANCELADO_EM) : null), aberto: p.etapa >= 1 && p.etapa <= 4, cancelado: p.cancelado, relatorioUrl: p.relatorioUrl, osNumero: p.osNumero,
+      conclusaoMin: conclMs !== null && Ast_ms_(c.ABERTO_EM) !== null ? Ast_minUteisEntre_(Ast_ms_(c.ABERTO_EM), conclMs) : null, situacaoCampo: s === 'EM_DESLOCAMENTO' ? 'Técnico a caminho' : '' };
+  });
+  Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (x) { return Ast_s_(x.CLIENTE_ID) === cid && ['NOVA', 'COMPLEMENTO'].indexOf(Ast_up_(x.SITUACAO)) >= 0; }).forEach(function (x) {
+    cartoes.push({ tipo: 'PEDIDO', id: Ast_s_(x.ID), numero: Ast_s_(x.NUMERO), etapa: 1, etapaNome: 'Recebido', equipamento: Ast_s_(x.EQUIPAMENTO_TEXTO), unidade: '', abertoEm: Ast_br_(x.CRIADO_EM),
+      enviadoMs: Ast_ms_(x.CRIADO_EM), visitaPrevMs: null, agendadoPara: '', conclusaoMs: null, fimMs: null, aberto: true, cancelado: false, relatorioUrl: '', osNumero: '', conclusaoMin: null, pedido: true });
+  });
+  var abertos = cartoes.filter(function (x) { return x.aberto; });
+  var concl = cartoes.filter(function (x) { return x.etapa === 5 && x.conclusaoMs !== null && x.conclusaoMs >= de && x.conclusaoMs <= agoraMs; });
+  var prox = cartoes.filter(function (x) { return x.visitaPrevMs !== null && x.visitaPrevMs >= agoraMs - 3600000; }).sort(function (a, b) { return a.visitaPrevMs - b.visitaPrevMs; })[0];
+  var tempos = concl.map(function (x) { return x.conclusaoMin; }).filter(function (v) { return v !== null; });
+  var limiteK = agoraMs - 30 * 864e5;
+  var kanban = AST_ETAPAS_CLIENTE.map(function (e) {
+    var l = cartoes.filter(function (x) { return x.etapa === e.etapa && (e.etapa < 5 || (x.fimMs !== null && x.fimMs >= limiteK)); })
+      .sort(function (a, b) { return e.etapa === 5 ? (b.fimMs || 0) - (a.fimMs || 0) : (a.enviadoMs || 0) - (b.enviadoMs || 0); });
+    return { n: e.etapa, nome: e.nome, fechada: e.etapa === 5, qtd: l.length, itens: l.slice(0, 30) };
+  });
+  var limiteG = agoraMs - 365 * 864e5;
+  return {
+    indices: { dias: AST_PAINEL_CLIENTE_DIAS, abertos: abertos.length, emAtendimento: abertos.filter(function (x) { return x.etapa === 4; }).length, visitaAgendada: abertos.filter(function (x) { return x.etapa === 3; }).length,
+      emAnalise: abertos.filter(function (x) { return x.etapa <= 2; }).length, concluidos: concl.length, proximaVisita: prox ? { numero: prox.numero, quando: prox.agendadoPara || Ast_br_(Ast_agora_(prox.visitaPrevMs)), equipamento: prox.equipamento } : null,
+      mediaConclusaoMin: tempos.length ? Math.round(tempos.reduce(function (s, v) { return s + v; }, 0) / tempos.length) : null,
+      minDia: Math.max(60, (Ast_minDe_(cfg.fim) || 1050) - (Ast_minDe_(cfg.ini) || 480)) },
+    kanban: kanban,
+    gantt: cartoes.filter(function (x) { return x.enviadoMs !== null && !x.cancelado && (x.aberto || (x.fimMs !== null && x.fimMs >= limiteG)); }).sort(function (a, b) { return a.enviadoMs - b.enviadoMs; }),
+    agoraMs: agoraMs
+  };
 }
 
 // ------------------------------------------------------------

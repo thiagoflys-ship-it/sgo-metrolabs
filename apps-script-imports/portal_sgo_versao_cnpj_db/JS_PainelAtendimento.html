@@ -1,0 +1,228 @@
+<style>
+  /* PAINEL DE ATENDIMENTO (29/10/2026): índices, Kanban e Gantt da Representação (representada e Metrolabs) e de "Meus chamados"
+     (cliente). Usa os componentes da agenda única (JS_Atividades.html: atv-ind, atv-kanban, atv-kcard, atv-gantt-wrap, atv-legenda,
+     atv-caixa, atv-barra-ind, motores-tabs) e da Assistência (JS_Assistencia.html: at-faixa, at-selo). Aqui só o que é próprio do
+     painel: Kanban com mais de 4 colunas rola por dentro; no celular, uma coluna por vez, só as que têm cartão. */
+  .pna-kanban-rolar { overflow-x: auto; padding-bottom: 6px; }
+  .pna-kanban-rolar .atv-kanban { grid-template-columns: repeat(var(--pna-cols, 4), minmax(210px, 1fr)); }
+  .pna-kanban-rolar .atv-kcard { cursor: pointer; }
+  .pna-kanban-rolar .atv-kcol { min-height: 160px; }
+  .pna-kcard-acao { margin-top: 8px; }
+  .pna-kcard-acao button { width: 100%; min-height: 36px !important; }
+  .pna-ind-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  @media (max-width: 900px) {
+    .pna-kanban-rolar .atv-kanban { grid-template-columns: 1fr; }
+    .pna-kanban-rolar .atv-kcol.vazia { display: none; }
+  }
+  #app.modo-mobile .pna-kanban-rolar .atv-kanban { grid-template-columns: 1fr; }
+  #app.modo-mobile .pna-kanban-rolar .atv-kcol.vazia { display: none; }
+</style>
+
+<script>
+  // =====================================================================
+  // PAINEL DE ATENDIMENTO (29/10/2026). Pedido do dono: "todos os perfis contenham dash com Kanban, com gráfico Gantt, com
+  // índices com informação de acompanhamento e abertura". Desenho comum aos três perfis:
+  //  - Representação, visão da representada e da Metrolabs (JS_Representacao.html; dados de Representacao_api 'painel');
+  //  - Meus chamados, cliente do portal (JS_Assistencia.html; dados de Assistencia_api 'portal').
+  // Os dados chegam do servidor já filtrados pelo perfil: aqui só se desenha. O Gantt usa a régua e o empilhamento comuns
+  // (SGO_Gantt_Layout.js, window.SGOGantt), os mesmos da agenda única de atividades e da Frota.
+  // =====================================================================
+  var PNA_COR_PRAZO = { NO_PRAZO: "#5b8fb9", EM_RISCO: "#c2953f", VENCIDO: "#e05252", PAUSADO: "#8a96a8", CUMPRIDO: "#4f9f75", FORA_DO_PRAZO: "#b45a3c", SEM_PRAZO: "#8a96a8" };
+  var PNA_NOME_PRAZO = { NO_PRAZO: "No prazo", EM_RISCO: "Em risco", VENCIDO: "Vencido", PAUSADO: "Pausado", CUMPRIDO: "Concluído no prazo", FORA_DO_PRAZO: "Concluído fora do prazo", SEM_PRAZO: "Sem prazo" };
+  var PNA_SELO_PRAZO = { NO_PRAZO: "azul", EM_RISCO: "laranja", VENCIDO: "vermelho", PAUSADO: "cinza", CUMPRIDO: "verde", FORA_DO_PRAZO: "vermelho", SEM_PRAZO: "cinza" };
+  var PNA_COR_ETAPA_CLIENTE = { 1: "#8a96a8", 2: "#c2953f", 3: "#5b8fb9", 4: "#2f6fd6", 5: "#4f9f75" };
+
+  function PnA_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function PnA_num_(n, casas) { return Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 }); }
+  function PnA_pct_(v) { return v === null || v === undefined ? "—" : PnA_num_(v, 1) + "%"; }
+  /** Minutos úteis -> "3,5 h úteis" (até um dia de expediente) ou "2,1 dias úteis". */
+  function PnA_tempo_(min, minDia) {
+    if (min === null || min === undefined) return "—";
+    var dia = minDia || 570;
+    if (min < 60) return PnA_num_(min) + " min úteis";
+    if (min <= dia) return PnA_num_(min / 60, 1) + " h úteis";
+    return PnA_num_(min / dia, 1) + " dias úteis";
+  }
+  function PnA_br_(ms) { if (ms === null || ms === undefined) return ""; var d = new Date(ms), p = function (n) { return ("0" + n).slice(-2); }; return p(d.getDate()) + "/" + p(d.getMonth() + 1) + "/" + d.getFullYear() + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
+  function PnA_mobile_() { return typeof ehMobileModo_ === "function" && ehMobileModo_(); }
+  /** Garante window.SGOGantt (régua e empilhamento comuns) com o código que o servidor mandou. */
+  function PnA_prepararGantt_(codigo) { if (codigo && !window.SGOGantt) { try { window.eval(codigo); } catch (e) {} } }
+
+  /** Cartões de índice (mesmo componente dos Indicadores da agenda única). l: [{ v, l, sub, alerta, title }] */
+  function PnA_indHtml_(l) {
+    return '<div class="atv-ind">' + l.map(function (k) {
+      return '<div class="atv-ind-card' + (k.alerta ? " alerta" : "") + '"' + (k.title ? ' title="' + PnA_esc_(k.title) + '"' : "") + '><div class="v">' + PnA_esc_(k.v) + '</div><div class="l">' + PnA_esc_(k.l) + "</div>" +
+        (k.sub ? '<div class="pna-ind-sub">' + PnA_esc_(k.sub) + "</div>" : "") + "</div>";
+    }).join("") + "</div>";
+  }
+  /** Barras horizontais (mesmo componente dos Indicadores da agenda única). linhas: [{ t, n, cor }] */
+  function PnA_barras_(linhas, vazio) {
+    linhas = (linhas || []).filter(function (x) { return x && x.n > 0; });
+    if (!linhas.length) return '<div class="atv-sub">' + PnA_esc_(vazio || "Nada no período.") + "</div>";
+    var max = Math.max.apply(null, linhas.map(function (l) { return l.n; }).concat([1]));
+    return linhas.map(function (l) {
+      return '<div class="atv-barra-ind"><span class="t" title="' + PnA_esc_(l.t) + '">' + PnA_esc_(l.t) + '</span><span class="b"><div style="width:' + Math.round(l.n * 100 / max) + "%" + (l.cor ? ";background:" + l.cor : "") + '"></div></span><span class="n">' + PnA_num_(l.n) + "</span></div>";
+    }).join("");
+  }
+  function PnA_caixa_(titulo, corpo, extra) { return '<div class="atv-caixa"' + (extra || "") + "><h3>" + PnA_esc_(titulo) + "</h3>" + corpo + "</div>"; }
+  /** Abas internas do painel (mesmo componente da agenda única: motores-tabs). */
+  function PnA_abasHtml_(id, abas, atual) {
+    return '<div class="motores-tabs atv-tabs" id="' + id + '">' + abas.map(function (a) { return '<button type="button" class="motores-tab-btn' + (a[0] === atual ? " active" : "") + '" data-pna-aba="' + a[0] + '">' + PnA_esc_(a[1]) + "</button>"; }).join("") + "</div>";
+  }
+  function PnA_ligarAbas_(id, aoTrocar) {
+    var el = document.getElementById(id); if (!el) return;
+    el.querySelectorAll("[data-pna-aba]").forEach(function (b) { b.onclick = function () { el.querySelectorAll("[data-pna-aba]").forEach(function (x) { x.classList.toggle("active", x === b); }); aoTrocar(b.getAttribute("data-pna-aba")); }; });
+  }
+
+  /**
+   * Kanban de leitura (o cartão não se arrasta: quem muda a etapa é o atendimento). colunas: [{ n, nome, fechada, qtd, itens }].
+   * o: { cartao(item) -> html interno, cor(item) -> cor da borda, vazio, legenda }
+   */
+  function PnA_kanbanHtml_(colunas, o) {
+    o = o || {};
+    var cols = colunas.filter(function (c) { return !c.fechada || c.qtd; });
+    if (!cols.some(function (c) { return c.qtd; })) return '<div class="atv-vazio">' + PnA_esc_(o.vazio || "Nenhum chamado para mostrar.") + "</div>";
+    var html = cols.map(function (c) {
+      var cards = c.itens.map(function (x) {
+        return '<div class="atv-kcard' + (x.prazo && x.prazo.estado === "VENCIDO" ? " vencida" : "") + '" draggable="false" tabindex="0" role="button" data-pna-tipo="' + PnA_esc_(x.tipo) + '" data-pna-id="' + PnA_esc_(x.id) + '" style="border-left-color:' + (o.cor ? o.cor(x) : "var(--muted)") + '">' + o.cartao(x) + "</div>";
+      }).join("");
+      return '<div class="atv-kcol' + (c.qtd ? "" : " vazia") + '"><div class="atv-kcol-cab">' + PnA_esc_(c.nome) + '<span class="qtd">' + PnA_num_(c.qtd) + (c.fechada ? " (30 dias)" : "") + "</span></div>" +
+        '<div class="atv-kcol-corpo">' + (cards || '<div class="atv-sub" style="text-align:center;padding:16px 0">Nenhum</div>') + "</div></div>";
+    }).join("");
+    return (o.legenda ? '<div class="atv-legenda">' + o.legenda + "</div>" : "") + '<div class="pna-kanban-rolar"><div class="atv-kanban" style="--pna-cols:' + cols.length + '">' + html + "</div></div>";
+  }
+  /** Clique e Enter nos cartões e barras: aoAbrir(tipo, id). Botões dentro do cartão (data-pna-acao) tratam o próprio clique. */
+  function PnA_ligar_(raiz, aoAbrir, aoAcao) {
+    if (!raiz) return;
+    PnA_rolarParaHoje_(raiz);
+    raiz.querySelectorAll("[data-pna-id]").forEach(function (el) {
+      var ir = function () { aoAbrir(el.getAttribute("data-pna-tipo"), el.getAttribute("data-pna-id")); };
+      el.addEventListener("click", function (ev) { if (ev.target.closest("[data-pna-acao]")) return; ir(); });
+      el.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && !ev.target.closest("[data-pna-acao]")) ir(); });
+    });
+    if (aoAcao) raiz.querySelectorAll("[data-pna-acao]").forEach(function (b) { b.addEventListener("click", function (ev) { ev.stopPropagation(); aoAcao(b.getAttribute("data-pna-acao"), b.getAttribute("data-pna-tipo"), b.getAttribute("data-pna-id")); }); });
+  }
+
+  /**
+   * Gantt da carteira. itens: os cartões do servidor ({ id, tipo, numero, enviadoMs, fimMs, aberto, prazo, visitaPrevMs, visitaMs, ... }).
+   * o: { largura, dias (janela para trás), diasFrente, agoraMs, agrupar(item) -> { chave, rotulo, sub } | null (um chamado por linha),
+   *      cor(item), rotulo(item) (texto da barra), linha(item) -> { rotulo, sub } (sem agrupar), tip(item), comPrazo (desenha prazo e atraso),
+   *      legenda (html) }
+   */
+  function PnA_ganttHtml_(itens, o) {
+    o = o || {};
+    var G = window.SGOGantt, agora = o.agoraMs || Date.now(), DIA = 86400000;
+    var de = agora - (o.dias || 30) * DIA, ate = agora + (o.diasFrente === undefined ? 14 : o.diasFrente) * DIA;
+    var vis = itens.filter(function (x) { var fim = x.aberto ? Math.max(agora, (o.comPrazo && x.prazo && x.prazo.ateMs) || 0, x.visitaPrevMs || 0) : (x.fimMs || x.enviadoMs); return x.enviadoMs !== null && x.enviadoMs <= ate && fim >= de; });
+    if (!vis.length) return '<div class="atv-vazio">Nenhum chamado nesta janela. Aumente a janela ou veja o Kanban.</div>';
+    var movel = PnA_mobile_(), rotuloW = movel ? 118 : 230, linhaH = 26, cabH = 40;
+    var disp = Math.max(200, (o.largura || 1000) - rotuloW - 12);
+    var esc = G ? G.escala({ de: de, ate: ate, largura: disp, modo: (o.dias || 30) + (o.diasFrente === undefined ? 14 : o.diasFrente) > 24 ? "mes" : "semana", hoje: agora }) : null;
+    var pxDia = esc ? esc.pxDia : disp / Math.max(1, Math.round((ate - de) / DIA)), area = esc ? esc.largura : disp, ini0 = esc ? esc.de : de;
+    var W = rotuloW + area + 12;
+    var xm = function (ms) { return rotuloW + Math.max(0, Math.min(area, (ms - ini0) / DIA * pxDia)); };
+    var fimBarra = function (x) { return x.aberto ? agora : (x.fimMs || x.enviadoMs); };
+    var cv = document.createElement("canvas").getContext("2d"); cv.font = "700 10.5px " + (getComputedStyle(document.body).fontFamily || "sans-serif");
+    var medir = function (t) { return cv.measureText(String(t || "")).width; };
+    var arrumar = function (lista) {
+      var evs = lista.map(function (x) { return { ini: x.enviadoMs, fim: Math.max(fimBarra(x), x.enviadoMs + 1), rotulo: o.rotulo ? o.rotulo(x) : x.numero, curto: x.numero, ref: x }; });
+      if (!G) return evs.map(function (e) { return [{ x: e.ref, texto: medir(e.rotulo) + 12 <= xm(e.fim) - xm(e.ini) ? e.rotulo : "", pos: "dentro" }]; });
+      var r = G.empilhar(evs, { x: xm, larguraMin: 8, medir: medir, pad: 12, folga: 6, foraMax: movel ? 120 : 220, limite: rotuloW + area, ehMarco: function () { return false; } });
+      var fx = []; for (var i = 0; i < r.faixas; i++) fx.push([]);
+      r.itens.forEach(function (it) { fx[it.faixa].push({ x: it.item.ref, texto: it.texto, pos: it.posTexto }); });
+      return fx;
+    };
+    var linhas = [];
+    if (o.agrupar) {
+      var grupos = {}, ordem = [];
+      vis.forEach(function (x) { var g = o.agrupar(x), k = g.chave; if (!grupos[k]) { grupos[k] = { g: g, lista: [] }; ordem.push(k); } grupos[k].lista.push(x); });
+      ordem.sort(function (p, q) { return String(grupos[p].g.rotulo).localeCompare(String(grupos[q].g.rotulo), "pt-BR"); }).forEach(function (k) {
+        arrumar(grupos[k].lista).forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].g.rotulo : "", sub: i === 0 ? (grupos[k].g.sub || grupos[k].lista.length + (grupos[k].lista.length === 1 ? " chamado" : " chamados")) : "", itens: fx, grupo: i === 0 }); });
+      });
+    } else {
+      vis.slice().sort(function (a, b) { return a.enviadoMs - b.enviadoMs; }).forEach(function (x) { var l = o.linha ? o.linha(x) : { rotulo: x.numero, sub: x.clienteNome }; linhas.push({ rotulo: l.rotulo, sub: l.sub, itens: arrumar([x])[0] }); });
+    }
+    var H = cabH + linhas.length * linhaH + 10, s = [];
+    s.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Gráfico de Gantt dos chamados" style="display:block">');
+    // régua (SGOGantt.escala: fins de semana, meses e marcas da vista)
+    if (esc) {
+      esc.fds.forEach(function (f) { s.push('<rect x="' + (rotuloW + f.x).toFixed(1) + '" y="' + cabH + '" width="' + f.w.toFixed(1) + '" height="' + (H - cabH) + '" fill="rgba(127,127,127,.07)"/>'); });
+      esc.meses.forEach(function (m) { s.push('<text x="' + (rotuloW + m.x + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + PnA_esc_(m.rot) + "</text>"); });
+      esc.linhas.forEach(function (l) { s.push('<line x1="' + (rotuloW + l.x).toFixed(1) + '" y1="' + (cabH - 6) + '" x2="' + (rotuloW + l.x).toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,' + (l.forte ? ".22" : ".1") + ')"/>'); });
+      var ultimo = -99;
+      esc.ticks.forEach(function (t) { if (t.x - ultimo < 30) return; ultimo = t.x; s.push('<text x="' + (rotuloW + t.x + 2).toFixed(1) + '" y="' + (cabH - 10) + '" font-size="10" fill="var(--muted)">' + PnA_esc_(t.rot) + "</text>"); });
+    }
+    linhas.forEach(function (ln, idx) {
+      var y = cabH + idx * linhaH;
+      if (ln.grupo && idx > 0) s.push('<line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="rgba(127,127,127,.35)"/>');
+      if (ln.rotulo) {
+        var max = movel ? 16 : 30, rot = String(ln.rotulo); if (rot.length > max) rot = rot.slice(0, max - 1) + "…";
+        var sub = String(ln.sub || ""); if (sub.length > max + 4) sub = sub.slice(0, max + 3) + "…";
+        s.push('<text x="8" y="' + (y + 12) + '" font-size="12" font-weight="700" fill="var(--text)">' + PnA_esc_(rot) + "</text>");
+        if (sub) s.push('<text x="8" y="' + (y + 23) + '" font-size="10" fill="var(--muted)">' + PnA_esc_(sub) + "</text>");
+      }
+      ln.itens.forEach(function (el) {
+        var x = el.x, x0 = xm(x.enviadoMs), x1 = Math.max(x0 + 8, xm(fimBarra(x))), by = y + 5, bh = linhaH - 10, cor = o.cor ? o.cor(x) : "#5b8fb9";
+        s.push('<g data-pna-tipo="' + PnA_esc_(x.tipo) + '" data-pna-id="' + PnA_esc_(x.id) + '" style="cursor:pointer"><title>' + PnA_esc_(o.tip ? o.tip(x) : x.numero) + "</title>");
+        s.push('<rect x="' + x0.toFixed(1) + '" y="' + by + '" width="' + (x1 - x0).toFixed(1) + '" height="' + bh + '" rx="3" fill="' + cor + '"' + (x.prazo && x.prazo.estado === "VENCIDO" ? ' stroke="#e05252" stroke-width="2"' : "") + "/>");
+        if (o.comPrazo && x.prazo && x.prazo.ateMs && (x.aberto || x.prazo.estado === "FORA_DO_PRAZO" || x.prazo.estado === "CUMPRIDO")) {
+          var xp = xm(x.prazo.ateMs);
+          if (x.prazo.ateMs >= de && x.prazo.ateMs <= ate) s.push('<line x1="' + xp.toFixed(1) + '" y1="' + (by - 2) + '" x2="' + xp.toFixed(1) + '" y2="' + (by + bh + 2) + '" stroke="var(--text)" stroke-width="2" stroke-dasharray="3,2"/>');
+          if (x1 > xp + 0.5 && (x.prazo.estado === "VENCIDO" || x.prazo.estado === "FORA_DO_PRAZO")) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (x1 - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.55)"/>');
+        }
+        if (x.visitaPrevMs && x.visitaPrevMs >= de && x.visitaPrevMs <= ate) { var xv = xm(x.visitaPrevMs); s.push('<path d="M' + xv.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#fff" stroke="#1E4F7A" stroke-width="1.5"/>'); }
+        if (x.visitaMs && x.visitaMs >= de && x.visitaMs <= ate) { var xr = xm(x.visitaMs); s.push('<path d="M' + xr.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#1E4F7A" stroke="#fff" stroke-width="1"/>'); }
+        if (el.texto && el.pos === "dentro") s.push('<text x="' + (x0 + 6).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="#fff" stroke="rgba(15,23,42,.55)" stroke-width="3" stroke-linejoin="round" paint-order="stroke" pointer-events="none">' + PnA_esc_(el.texto) + "</text>");
+        else if (el.texto && el.pos === "fora") s.push('<text x="' + (x1 + 5).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="var(--text)" pointer-events="none">' + PnA_esc_(el.texto) + "</text>");
+        s.push("</g>");
+      });
+    });
+    var xh = xm(agora);
+    s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cabH - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/>');
+    s.push('<text x="' + Math.min(W - 60, xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje</text>');
+    s.push("</svg>");
+    return (o.legenda ? '<div class="atv-legenda">' + o.legenda + "</div>" : "") + '<div class="atv-gantt-wrap" data-pna-hoje="' + Math.round(xh) + '">' + s.join("") + "</div>";
+  }
+  /** Gantt mais largo que a tela (rola por dentro): abre com "hoje" à vista, não no começo da janela. */
+  function PnA_rolarParaHoje_(raiz) {
+    if (!raiz) return;
+    raiz.querySelectorAll(".atv-gantt-wrap[data-pna-hoje]").forEach(function (w) { var x = Number(w.getAttribute("data-pna-hoje")) || 0; if (w.scrollWidth > w.clientWidth + 1) w.scrollLeft = Math.max(0, x - w.clientWidth * 0.7); });
+  }
+  /** Legenda das cores por prazo (representada e Metrolabs). */
+  function PnA_legendaPrazo_() {
+    return ["NO_PRAZO", "EM_RISCO", "VENCIDO", "PAUSADO", "CUMPRIDO", "FORA_DO_PRAZO"].map(function (k) { return '<span><i style="background:' + PNA_COR_PRAZO[k] + '"></i>' + PNA_NOME_PRAZO[k] + "</span>"; }).join("") +
+      '<span><i style="background:transparent;border-left:2px dashed var(--text);width:2px"></i>Fim do prazo</span><span><i style="background:#fff;border:1.5px solid #1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Visita agendada</span>' +
+      '<span><i style="background:#1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Chegada do técnico</span><span><i style="background:#1E4F7A;width:3px"></i>Hoje</span>';
+  }
+
+  /** Marcos do chamado: previsto (losango vazado) x realizado (losango cheio), numa régua só. marcos: [{ nome, previstoMs, realizadoMs, previsto, realizado, atrasado }] */
+  function PnA_marcosHtml_(marcos, largura) {
+    var ms = []; marcos.forEach(function (m) { if (m.previstoMs) ms.push(m.previstoMs); if (m.realizadoMs) ms.push(m.realizadoMs); });
+    if (!ms.length) return "";
+    var agora = Date.now(); ms.push(agora);
+    var de = Math.min.apply(null, ms), ate = Math.max.apply(null, ms), folga = Math.max(3600000, (ate - de) * 0.06); de -= folga; ate += folga;
+    var movel = PnA_mobile_(), rotW = movel ? 96 : 170, W = Math.max(300, largura || 700), area = W - rotW - 16, linhaH = 30, H = 24 + marcos.length * linhaH;
+    var xm = function (t) { return rotW + (t - de) / (ate - de) * area; };
+    var los = function (x, y, cheio, cor) { return '<path d="M' + x.toFixed(1) + " " + (y - 7) + " l7 7 l-7 7 l-7 -7 z\" fill=\"" + (cheio ? cor : "#fff") + '" stroke="' + cor + '" stroke-width="1.8"/>'; };
+    var s = ['<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Marcos do chamado: previsto e realizado" style="display:block">'];
+    var xh = xm(agora);
+    s.push('<line x1="' + xh.toFixed(1) + '" y1="16" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/><text x="' + Math.min(W - 40, xh + 3).toFixed(1) + '" y="12" font-size="10" font-weight="700" fill="#1E4F7A">agora</text>');
+    marcos.forEach(function (m, i) {
+      var y = 24 + i * linhaH + linhaH / 2;
+      s.push('<text x="6" y="' + (y + 4) + '" font-size="12" font-weight="700" fill="var(--text)">' + PnA_esc_(m.nome) + "</text>");
+      s.push('<line x1="' + rotW + '" y1="' + y + '" x2="' + (rotW + area) + '" y2="' + y + '" stroke="rgba(127,127,127,.18)"/>');
+      var cor = m.atrasado === true ? "#e05252" : m.atrasado === false ? "#4f9f75" : "#1E4F7A";
+      if (m.previstoMs && m.realizadoMs) s.push('<line x1="' + xm(m.previstoMs).toFixed(1) + '" y1="' + y + '" x2="' + xm(m.realizadoMs).toFixed(1) + '" y2="' + y + '" stroke="' + cor + '" stroke-width="4" opacity=".5"/>');
+      if (m.previstoMs) s.push('<g><title>' + PnA_esc_(m.nome + " previsto: " + m.previsto) + "</title>" + los(xm(m.previstoMs), y, false, "#1E4F7A") + "</g>");
+      if (m.realizadoMs) s.push('<g><title>' + PnA_esc_(m.nome + " realizado: " + m.realizado) + "</title>" + los(xm(m.realizadoMs), y, true, cor) + "</g>");
+    });
+    s.push("</svg>");
+    var tab = '<table class="at-tabela"><thead><tr><th>Marco</th><th>Previsto</th><th>Realizado</th><th>Situação</th></tr></thead><tbody>' + marcos.map(function (m) {
+      var sit = m.realizadoMs ? (m.atrasado === true ? '<span class="at-selo vermelho">Depois do previsto</span>' : m.atrasado === false ? '<span class="at-selo verde">No previsto</span>' : '<span class="at-selo verde">Feito</span>') :
+        (m.previstoMs && m.previstoMs < agora ? '<span class="at-selo vermelho">Atrasado</span>' : '<span class="at-selo cinza">A acontecer</span>');
+      return '<tr><td data-r="Marco"><b>' + PnA_esc_(m.nome) + '</b></td><td data-r="Previsto">' + PnA_esc_(m.previsto || "—") + '</td><td data-r="Realizado">' + PnA_esc_(m.realizado || "—") + '</td><td data-r="Situação">' + sit + "</td></tr>";
+    }).join("") + "</tbody></table>";
+    return '<div class="atv-legenda"><span><i style="background:#fff;border:1.8px solid #1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Previsto</span><span><i style="background:#4f9f75;transform:rotate(45deg);width:9px;height:9px"></i>Realizado no previsto</span><span><i style="background:#e05252;transform:rotate(45deg);width:9px;height:9px"></i>Realizado depois do previsto</span></div>' +
+      '<div class="atv-gantt-wrap">' + s.join("") + "</div>" + tab;
+  }
+</script>

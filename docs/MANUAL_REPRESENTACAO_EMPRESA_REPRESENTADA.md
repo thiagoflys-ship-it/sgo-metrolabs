@@ -27,7 +27,21 @@ Nesta área você pede atendimento técnico da Metrolabs para os clientes finais
 
 Se faltar alguma informação, o pedido não é enviado e a tela marca cada campo que falta.
 
-## 4. Acompanhar
+## 4. Acompanhar pelo Painel
+
+O Painel é a primeira tela da sua área.
+
+- No alto: pedidos e chamados abertos; aguardando a Metrolabs (com quantos estão com o prazo vencido ou em risco); aguardando a sua empresa; aguardando o cliente final; aceitos no prazo; tempos médios até o aceite, até a visita e até a conclusão. Escolha o período: 30, 90, 180 ou 365 dias.
+- Os tempos são em horas úteis do expediente da Metrolabs e contam do envio do pedido. O tempo em que o pedido esperou o complemento da sua empresa não conta.
+- Aceitos no prazo: pedidos aceitos no período em até o prazo combinado (no padrão, 4 horas úteis) ÷ pedidos aceitos no período.
+- Pendências da sua empresa aparecem em amarelo no alto, com o botão "Responder agora".
+- Kanban: um cartão por pedido ou chamado, na etapa em que está. A borda mostra o prazo: azul no prazo, amarelo em risco, vermelho vencido, cinza pausado, verde concluído no prazo, marrom concluído fora do prazo. O cartão não se arrasta: a etapa muda pelo atendimento da Metrolabs. Os cartões "Depende de você" têm o botão para responder.
+- Gantt: cada barra vai do envio até a conclusão (ou até hoje). Escolha a janela e veja por chamado ou por cliente. O tracejado é o fim do prazo e a parte vermelha, o tempo depois dele; o losango vazado é a visita agendada e o cheio, a chegada do técnico.
+- Indicadores: por etapa, por prioridade, por cliente, por UF, garantia (pelo cadastro do equipamento) e reincidência (mesmo equipamento com outro chamado em até 90 dias) por modelo e por equipamento.
+- Na ficha do chamado, "Marcos" mostra o previsto e o realizado do aceite, da visita e da conclusão.
+- O Painel não muda sozinho: toque em "Atualizar" no alto da tela.
+
+## 5. Acompanhar cada chamado
 
 - "Chamados" mostra os pedidos e chamados com a etapa: Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado ou Cancelado.
 - Na ficha: a linha do tempo, os arquivos, a conversa e, quando a visita é agendada, a data e o técnico.
@@ -35,13 +49,13 @@ Se faltar alguma informação, o pedido não é enviado e a tela marca cada camp
 - Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo.
 - Você recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa.
 
-## 5. Conversar
+## 6. Conversar
 
 - Cada pedido e cada chamado tem a própria conversa. Assuntos gerais vão no "Canal geral".
 - Fora do horário de trabalho da Metrolabs, a resposta vem no próximo horário útil.
 - Nada é apagado: para corrigir, escreva uma mensagem nova.
 
-## 6. Papéis da sua equipe
+## 7. Papéis da sua equipe
 
 | Papel | Pode |
 |---|---|
@@ -50,7 +64,7 @@ Se faltar alguma informação, o pedido não é enviado e a tela marca cada camp
 | Financeiro de garantia | Consultar e conversar |
 | Leitura | Só consultar |
 
-## 7. Dúvidas frequentes
+## 8. Dúvidas frequentes
 
 - Por que não há busca por nome? Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é pelo CNPJ ou CPF completo.
 - Aparece "Muitas buscas seguidas": espere o tempo indicado e busque de novo com o documento ou a série conferidos.

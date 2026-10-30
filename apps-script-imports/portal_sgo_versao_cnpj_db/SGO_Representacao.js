@@ -405,6 +405,8 @@ function RepA_chamado_(eu, d) {
   return { item: item, tipo: tipo, relato: relato, setor: sol ? Rep_s_(sol.SETOR) : '', contato: sol ? { nome: Rep_s_(sol.CONTATO_NOME), telefone: Rep_s_(sol.CONTATO_TELEFONE), email: Rep_s_(sol.CONTATO_EMAIL) } : null,
     complementoPergunta: sol ? Rep_s_(sol.COMPLEMENTO_PERGUNTA) : '', complementoResposta: sol ? Rep_s_(sol.COMPLEMENTO_RESPOSTA) : '',
     equipamento: eq && esc.equipamentoIds()[Rep_s_(eq.ID)] ? Rep_eqPublico_(eq) : null, linhaDoTempo: Rep_linhaDoTempo_(refs), anexos: anexos, mensagens: msgs,
+    // 29/10/2026: marcos previsto x realizado (aceite, visita, conclusão) para o Gantt da ficha (SGO_Representacao_Painel.js)
+    marcos: typeof RepP_marcosDe_ === 'function' ? RepP_marcosDe_(tipo, reg, sol) : [],
     etapas: REP_ETAPAS.map(function (e) { return { n: e.n, nome: e.nome }; }), conversa: { refTipo: tipo, refId: Rep_s_(reg.ID) } };
 }
 function RepA_mensagens_(eu, d) {
@@ -454,6 +456,8 @@ var REP_ACOES_REPRESENTADA = {
   inicio: RepA_inicio_, buscarCliente: RepA_buscarCliente_, consultarCnpj: RepA_consultarCnpj_, cadastrarCliente: RepA_cadastrarCliente_, cadastrarUnidade: RepA_cadastrarUnidade_,
   buscarEquipamento: RepA_buscarEquipamento_, cadastrarEquipamento: RepA_cadastrarEquipamento_, abrir: RepA_abrir_, responderComplemento: RepA_responderComplemento_, cancelar: RepA_cancelar_,
   chamados: RepA_chamados_, chamado: RepA_chamado_, mensagens: RepA_mensagens_, enviarMensagem: RepA_enviarMensagem_, equipamentos: RepA_equipamentos_, equipe: RepA_equipe_,
+  // 29/10/2026: painel de abertura e acompanhamento (índices, Kanban e Gantt) em SGO_Representacao_Painel.js
+  painel: function (eu, d) { return RepA_painel_(eu, d); },
   ajuda: function () { return { ajuda: Rep_ajuda_('representacao/representada') }; }
 };
 /** Texto da ajuda do módulo (SGO_Ajuda_Representacao.js): a representada lê a versão dela, sem termos internos. */
@@ -622,6 +626,7 @@ var REP_ACOES_INTERNAS = {
   solicitacoes: RepI_solicitacoes_, aceitar: RepI_aceitar_,
   complemento: function (eu, d) { return AstC_complemento_(eu, d); }, recusar: function (eu, d) { return AstC_descartar_(eu, d); },
   conversas: RepI_conversas_, mensagens: RepI_mensagens_, enviarMensagem: RepI_enviarMensagem_, chamado: RepI_chamado_, acessos: RepI_acessos_, usuarios: RepI_usuarios_,
+  painel: function (eu, d) { return RepI_painel_(eu, d); },
   ajuda: function () { return { ajuda: Rep_ajuda_('representacao') }; }
 };
 
