@@ -152,6 +152,9 @@ var MTZ_PADRAO = [
   { cod: 'S48', modulo: 'frota', evento: 'Problema na reserva (ao reservante)', origem: 'SGO_Frota_Reservas.js', publico: 'Reservante', email: 'HORA', whatsapp: 'NAO', limite: '1 por conferência' },
   { cod: 'S49', modulo: 'frota', evento: 'Problema na reserva (à gestão)', origem: 'SGO_Frota_Reservas.js', publico: 'Gestor da Frota', email: 'RESUMO', whatsapp: 'NAO', limite: 'No resumo do dia', area: 'ADMINISTRATIVO' },
   { cod: 'S50', modulo: 'frota', evento: 'Pedido de comprovante de abastecimento (atividade)', origem: 'SGO_Frota_Rastreamento.js', publico: 'Condutor', email: 'RESUMO', whatsapp: 'NAO', limite: 'Como atividade' },
+  // 30/10/2026 (pedido do dono: o abastecimento não pode passar despercebido): comprovante pendente há mais de 1 dia útil.
+  { cod: 'S75', modulo: 'frota', evento: 'Abastecimento sem comprovante há mais de 1 dia útil (ao condutor)', origem: 'SGO_Frota_Abastecimento.js', publico: 'Condutor', email: 'HORA', whatsapp: 'RESUMO', limite: '1 por pedido', obs: 'WhatsApp só na contagem do resumo do dia, no expediente (regra sutil). A cobrança fica no sistema (atividade e trava da próxima retirada) e no e-mail.' },
+  { cod: 'S76', modulo: 'frota', evento: 'Abastecimento sem comprovante há mais de 1 dia útil (à gestão)', origem: 'SGO_Frota_Abastecimento.js', publico: 'Gestor da Frota', email: 'RESUMO', whatsapp: 'NAO', limite: '1 por pedido', area: 'ADMINISTRATIVO' },
   // Programa de conduta
   { cod: 'S51', modulo: 'conduta', evento: 'Missão aguardando aprovação', origem: 'SGO_Conduta_Missao.js', publico: 'Gestor da área do executante', email: 'RESUMO', whatsapp: 'NAO', limite: 'No resumo do dia', obs: 'Sem WhatsApp: assunto de incentivo.', sensivel: true },
   { cod: 'S52', modulo: 'conduta', evento: 'Missão aprovada ou recusada', origem: 'SGO_Conduta_Missao.js', publico: 'Quem registrou e executantes', email: 'RESUMO', whatsapp: 'NAO', limite: '-', sensivel: true },

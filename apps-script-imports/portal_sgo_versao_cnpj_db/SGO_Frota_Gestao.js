@@ -473,6 +473,7 @@ function Frota_apiGestaoConcluir(sessionId, payload) {
 function FrotaG_preventivas_(inicio, fim) {
   var porChave = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).forEach(function (m) {
+    if (SGO_UTILS.safe(m.EXCLUIDO_EM)) return; // 30/10/2026: manutenção de teste marcada como excluída fica de fora
     if (SGO_UTILS.safeUpper(m.TIPO) === 'OUTRO') return;
     var k = SGO_UTILS.safe(m.VEICULO_ID) + '|' + SGO_UTILS.safe(m.TIPO);
     (porChave[k] = porChave[k] || []).push(m);

@@ -32,12 +32,18 @@ var FROTA_CFG = Object.freeze({
   // valor na hora de registrar — isto é só o valor padrão que já vem
   // preenchido, evita digitar toda vez pros casos comuns).
   TIPOS_MANUTENCAO: Object.freeze([
-    Object.freeze({ codigo: 'OLEO', label: 'Troca de óleo', intervaloKm: 10000, intervaloMeses: 6 }),
-    Object.freeze({ codigo: 'FILTRO_OLEO', label: 'Filtro de óleo', intervaloKm: 10000, intervaloMeses: 6 }),
+    // 30/10/2026 (plano de manutenção, decisão do dono pela recomendação do estudo): óleo em uso severo (5.000 km ou 6 meses);
+    // tipos novos para os itens do plano (fluido de freio, alinhamento, arrefecimento, bateria). Ver SGO_Frota_PlanoManutencao.js.
+    Object.freeze({ codigo: 'OLEO', label: 'Troca de óleo', intervaloKm: 5000, intervaloMeses: 6 }),
+    Object.freeze({ codigo: 'FILTRO_OLEO', label: 'Filtro de óleo', intervaloKm: 5000, intervaloMeses: 6 }),
     Object.freeze({ codigo: 'FILTRO_AR', label: 'Filtro de ar', intervaloKm: 10000, intervaloMeses: 12 }),
-    Object.freeze({ codigo: 'FILTRO_COMBUSTIVEL', label: 'Filtro de combustível', intervaloKm: 10000, intervaloMeses: 12 }),
+    Object.freeze({ codigo: 'FILTRO_COMBUSTIVEL', label: 'Filtro de combustível', intervaloKm: 20000, intervaloMeses: 12 }),
     Object.freeze({ codigo: 'PNEUS', label: 'Troca de pneus', intervaloKm: 40000, intervaloMeses: null }),
-    Object.freeze({ codigo: 'FREIOS', label: 'Pastilhas/Discos de freio', intervaloKm: 20000, intervaloMeses: null }),
+    Object.freeze({ codigo: 'ALINHAMENTO', label: 'Rodízio, alinhamento e balanceamento', intervaloKm: 10000, intervaloMeses: null }),
+    Object.freeze({ codigo: 'FREIOS', label: 'Pastilhas/Discos de freio', intervaloKm: 10000, intervaloMeses: null }),
+    Object.freeze({ codigo: 'FLUIDO_FREIO', label: 'Fluido de freio', intervaloKm: null, intervaloMeses: 24 }),
+    Object.freeze({ codigo: 'ARREFECIMENTO', label: 'Líquido de arrefecimento', intervaloKm: null, intervaloMeses: 24 }),
+    Object.freeze({ codigo: 'BATERIA', label: 'Bateria (teste ou troca)', intervaloKm: null, intervaloMeses: 12 }),
     Object.freeze({ codigo: 'CORREIA', label: 'Correia dentada/acessórios', intervaloKm: 60000, intervaloMeses: null }),
     Object.freeze({ codigo: 'REVISAO', label: 'Revisão geral/motor', intervaloKm: 10000, intervaloMeses: 12 }),
     Object.freeze({ codigo: 'OUTRO', label: 'Outro', intervaloKm: null, intervaloMeses: null })

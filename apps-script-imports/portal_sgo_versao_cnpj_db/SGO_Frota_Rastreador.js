@@ -814,6 +814,8 @@ function Frota_rastreadorRotina() {
   // 20/10/2026: reservas de veículo (não comparecimento, devolução atrasada com reserva a seguir, véspera, e-mails no expediente).
   // Roda mesmo com o rastreador desligado; no máximo a cada 4 minutos (SGO_Frota_Reservas.js).
   try { if (typeof FrotaRes_rodada_ === 'function') FrotaRes_rodada_({}); } catch (eRes) { console.error('Rotina das reservas da Frota: ' + ((eRes && eRes.message) || eRes)); }
+  // 30/10/2026: abastecimento sem comprovante há mais de 1 dia útil (aviso ao condutor e à gestão); no máximo a cada 15 minutos.
+  try { if (typeof FrotaAb_rodada_ === 'function') FrotaAb_rodada_(false); } catch (eAb) { console.error('Rotina do abastecimento da Frota: ' + ((eAb && eAb.message) || eAb)); }
   try { return Rastreador_rodada_({}); }
   catch (e) { console.error('Rotina do rastreador: ' + Rastreador_limpar_(e && e.message, Rastreador_cfg_())); return { erro: true }; }
 }

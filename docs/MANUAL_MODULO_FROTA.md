@@ -106,9 +106,12 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 3. Digite o KM que está no painel agora.
 4. Toque em "Tirar foto do painel (obrigatória)".
 5. Faça a vistoria: "Tudo OK" ou "Tem problema".
-6. Se quiser, abra "Mais fotos e observações (opcional)".
-7. Toque em "Confirmar devolução".
-8. Espere o aviso "Devolução registrada".
+6. Em "Abastecimento", responda se abasteceu durante este uso (obrigatório): "Não abasteci" ou "Abasteci".
+   - "Abasteci" > "Lançar agora": litros e valor como estão na nota (ex.: 35,591 e 125,99), combustível, "Completou o tanque?" e "Tirar foto da nota (obrigatória)". Embaixo aparece o resumo (litros × preço por litro = valor) para você conferir. A foto do painel do passo 1 vai junto.
+   - "Abasteci" > "Lançar depois": fica um pedido com prazo de 1 dia útil em "Comprovantes pedidos a você" (seção 9).
+7. Se quiser, abra "Mais fotos e observações (opcional)".
+8. Toque em "Confirmar devolução".
+9. Espere o aviso "Devolução registrada". Se aparecer "Abastecimento não lançado", a sua próxima retirada fica travada até resolver (seção 9).
 
 > **Quem devolve:** só quem retirou. A gestão pode devolver no lugar da pessoa, com justificativa (seção 8). A pessoa recebe um aviso.
 
@@ -172,15 +175,87 @@ A trilha mostra quem fez cada registro especial, quando, o valor antes e depois 
 
 ## 9. Abastecimentos
 
+Desde 30/10/2026 (pedido do dono) nenhum abastecimento passa despercebido: quem abasteceu lança na devolução, o SGO+ confere na hora e cobra o que faltar.
+
+### Como o SGO+ garante que o abastecimento seja lançado
+
+1. **Na devolução**, a pergunta "Abasteceu durante este uso?" é obrigatória (seção 6). Lança ali ou deixa para depois, com prazo de 1 dia útil.
+2. **Conferência automática:** se o veículo rodar mais que o limite desde o último abastecimento lançado (75% da autonomia: capacidade do tanque × consumo do veículo; sem a capacidade cadastrada, 350 km), quem devolveu recebe a pendência "Abastecimento não lançado".
+3. **Próxima retirada travada:** com essa pendência (ou com o "Lançar depois" vencido), a próxima retirada da pessoa não é aceita. A mensagem diz o quê, por quê e o que fazer. Resolve na hora: "Enviar comprovante" ou "Não abasteci" com o motivo.
+4. **Aviso:** pendente há mais de 1 dia útil, o condutor recebe aviso no sistema e por e-mail (WhatsApp só na contagem do resumo do dia, no expediente) e a gestão no e-mail de resumo. A pendência aparece também em Minhas atividades e no Início.
+5. **A gestão confere e decide:** aceita ou não o "Não abasteci" (com a foto do painel da devolução) e pode liberar uma pendência, sempre com o motivo na trilha.
+
+### Registrar um abastecimento (gestão)
+
 1. Abra a aba "Abastecimentos e despesas" e toque em "+ Registrar abastecimento" (no celular: "Opções da gestão" > "Registrar abastecimento").
 2. Escolha o veículo e, se souber, o condutor.
-3. Preencha a data, o "KM no abastecimento", o tipo de combustível, os litros, o valor total e o posto.
+3. Preencha a data, o "KM no abastecimento", o tipo de combustível, os litros, o valor total e o posto. Litros como estão na nota: a vírgula ou o ponto é sempre a casa decimal (35,591 ou 35.591 são 35,591 litros).
 4. Anexe a foto ou o PDF do comprovante. Sem ele não salva.
 5. Toque em "Salvar abastecimento" (no celular, "Registrar abastecimento").
+6. Leia o resumo (litros × preço por litro = valor; KM e quanto rodou desde o anterior). OK grava; Cancelar volta para corrigir.
+
+### O que a conferência recusa e o que fica "a conferir"
+
+| Situação | O que acontece |
+|---|---|
+| Litros acima de 105% da capacidade do tanque (sem a capacidade, acima de 150 L) | Recusa, com a capacidade e a dica da vírgula |
+| Preço por litro abaixo de R$ 1 ou acima de R$ 15 | Recusa: litros ou valor digitados errado |
+| Mesmo veículo, data, litros e valor de outro lançamento | Recusa: já está lançado |
+| Data no futuro | Recusa |
+| Preço por litro fora da faixa normal (média de 90 dias ± 30%, ou a faixa padrão do combustível) | Grava "a conferir" |
+| KM menor que o do abastecimento anterior, ou fora das retiradas do veículo no dia (folga de 50 km) | Grava "a conferir" |
+| Dois abastecimentos com menos de 150 km entre eles somando mais que o tanque | Grava "a conferir" |
+| Lançado mais de 30 dias depois | Grava "a conferir" |
+
+Lançamento "a conferir" ou "divergente" fica fora da média de consumo. Intervalo com rendimento abaixo de 2 ou acima de 30 km/L também fica fora e aparece no copiloto como lançamento a conferir.
+
+### Responder um abastecimento pendente (condutor)
+
+1. Abra a aba "Abastecimentos e despesas" (no celular, "Resolver agora" no aviso da tela inicial da Frota).
+2. Em "Comprovantes pedidos a você": se abasteceu, preencha e anexe a nota em "Enviar comprovante"; se não abasteceu, toque em "Não abasteci" e escreva o motivo.
+3. A próxima retirada fica livre na hora.
+
+### Obrigatoriedade do abastecimento (gestão, no topo da aba)
+
+- **Veículos:** KM atual, último abastecimento, quanto rodou desde então e o limite; campo "Tanque (L)" para a capacidade do tanque.
+- **Pendências:** quem, qual veículo, prazo, se trava a retirada; "Liberar" com o motivo.
+- **"Não abasteci" a conferir:** "Aceitar" ou "Não aceitar" (com o motivo, que vai ao condutor; a retirada volta a travar).
+- **Lançamentos a conferir:** comprovante e foto do painel ao lado; "Conferido", "Divergente" (com o motivo) ou "Corrigir".
+- **Corrigir:** só os campos que mudar são gravados, com justificativa; o comprovante continua o mesmo; antes, depois, quem e quando ficam na trilha de auditoria.
+- **Corrigir data, hora ou KM de uma retirada:** escolha o veículo e a retirada (as datas da planilha antiga aparecem marcadas para conferir dia e mês). O KM do veículo não muda por aqui (use "Ajustar KM").
+- **Configuração:** porcentagem da autonomia (padrão 75%), consumo padrão sem histórico (9 km/L), limite sem tanque cadastrado (350 km) e ligar ou desligar a trava da retirada.
 
 > **Consumo (km por litro):** o sistema calcula sozinho, comparando o KM entre dois abastecimentos do mesmo veículo. Com menos de 2 abastecimentos, o consumo não aparece.
 
 ## 10. Manutenção e paradas
+
+### Plano de manutenção (gestão)
+
+Cada veículo tem um plano no topo da aba "Manutenção e paradas". Vence o que chegar primeiro, o KM ou a data.
+
+| Item | Intervalo inicial (uso severo; ajuste pelo manual do veículo) |
+|---|---|
+| Óleo do motor e filtro de óleo | 5.000 km ou 6 meses |
+| Filtro de ar e filtro de cabine | 10.000 km ou 12 meses |
+| Filtro de combustível | 20.000 km ou 12 meses |
+| Pastilhas e discos de freio (inspeção) | 10.000 km |
+| Fluido de freio | 24 meses |
+| Pneus: rodízio, alinhamento e balanceamento | 10.000 km |
+| Pneus: troca | 40.000 km (ou antes, pela medida do sulco) |
+| Correia dentada | informe pelo manual do veículo |
+| Líquido de arrefecimento | 24 meses |
+| Bateria (teste) | 12 meses |
+| Revisão geral | 10.000 km ou 12 meses |
+
+1. Abra o veículo no quadro "Plano de manutenção".
+2. Em cada item, toque em "Informar" e preencha a data e o KM da última vez (na nota ou na etiqueta da oficina). Se o manual pede outro intervalo, preencha também o intervalo e de onde veio.
+3. Toque em "Gravar". A próxima vem calculada.
+
+- **Sem a última vez:** o SGO+ cria a pendência "Plano de manutenção incompleto: informe a última troca de óleo do [veículo]" para a gestão, até preencher.
+- **Aviso antecipado:** faltam 1.000 km ou 30 dias (aviso no sistema); faltam 500 km ou 15 dias ("a vencer", também no e-mail de resumo da gestão); vencido (a cada dia, e o condutor vê na retirada).
+- **Óleo ou freio vencido há mais de 1.000 km:** a retirada do veículo fica travada. Leve à manutenção ou toque em "Liberar uso" (com o motivo, por mais 500 km).
+- **Manutenção registrada:** ao registrar a manutenção (tipo "Troca de óleo", "Filtro de ar" etc.), o item do plano se atualiza sozinho.
+- **Licenciamento, seguro e IPVA:** continuam em Documentos e multas (validade) e aparecem no rodapé de cada veículo do plano.
 
 ### Registrar uma manutenção
 
@@ -562,6 +637,8 @@ Os relatórios da frota são documentos internos: depois de gerar, a barra "Docu
 | Veículo da sua reserva de hoje liberado a outra pessoa | Reservante | E-mail e WhatsApp na hora (mesmo dia, expediente, CLT) |
 | Devolução atrasada com reserva no mesmo dia | Quem está com o veículo | WhatsApp na hora (expediente, CLT, uma por dia) |
 | Reserva feita pela gestão em seu nome, reserva não utilizada, problema na reserva (à gestão), CNH vencendo | Reservante, condutor ou gestor da Frota | E-mail de resumo do dia |
+| Abastecimento sem comprovante há mais de 1 dia útil (S75, 30/10/2026) | Condutor | Sistema e e-mail na hora (no expediente); WhatsApp só na contagem do resumo do dia |
+| Abastecimento sem comprovante há mais de 1 dia útil (S76, 30/10/2026) | Gestor da Frota | E-mail de resumo do dia |
 | Veículo da sua reserva devolvido, devolução atrasada (à gestão) | Próximo reservante, gestor da Frota | Só no sistema (Caixa de decisões) |
 
 O gestor da Frota é o da área Administrativo em Caixa de decisões › Regras e responsáveis (sem gestor, a Diretoria). PJ e vínculo não informado não recebem WhatsApp. Detalhes em `docs/MANUAL_MATRIZ_DE_AVISOS.md`.

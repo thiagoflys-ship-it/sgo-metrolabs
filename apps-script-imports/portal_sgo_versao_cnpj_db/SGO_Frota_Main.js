@@ -134,7 +134,23 @@ function Frota_apiDispatch(req) {
     apiBloqueioResponderEsquecida: Frota_apiBloqueioResponderEsquecida,
     apiPassagemPedir: Frota_apiPassagemPedir,
     apiPassagemConfirmar: Frota_apiPassagemConfirmar,
-    apiPassagemDecidir: Frota_apiPassagemDecidir
+    apiPassagemDecidir: Frota_apiPassagemDecidir,
+    // 30/10/2026 (pedido do dono: o motorista não pode esquecer o abastecimento): SGO_Frota_Abastecimento.js. Prévia, "Não abasteci"
+    // e respostas: toda a equipe (as regras de quem pode o quê ficam lá); painel, correção, liberação e conferência: a gestão.
+    apiAbastPrevia: Frota_apiAbastPrevia,
+    apiAbastJustificar: Frota_apiAbastJustificar,
+    apiAbastPainel: Frota_apiAbastPainel,
+    apiAbastLiberar: Frota_apiAbastLiberar,
+    apiAbastDecidirJustificativa: Frota_apiAbastDecidirJustificativa,
+    apiAbastConferir: Frota_apiAbastConferir,
+    apiAbastConfig: Frota_apiAbastConfig,
+    apiAbastCorrigir: Frota_apiAbastCorrigir,
+    apiRetiradaCorrigir: Frota_apiRetiradaCorrigir,
+    apiRetiradasParaCorrigir: Frota_apiRetiradasParaCorrigir,
+    // 30/10/2026: plano de manutenção por veículo (SGO_Frota_PlanoManutencao.js): só a gestão.
+    apiPlanoListar: Frota_apiPlanoListar,
+    apiPlanoSalvarItem: Frota_apiPlanoSalvarItem,
+    apiPlanoLiberar: Frota_apiPlanoLiberar
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -146,7 +162,7 @@ function Frota_apiDispatch(req) {
   if (typeof FrotaId_enfeitarResposta_ === 'function') resultado = FrotaId_enfeitarResposta_(resultado);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio|BloqueioPainel|BloqueioIntegridade|BloqueioRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|AbastPrevia|AbastPainel|RetiradasParaCorrigir|PlanoListar|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio|BloqueioPainel|BloqueioIntegridade|BloqueioRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -189,6 +205,21 @@ function Frota_num_(v, padrao) {
   if (!s) return padrao;
   if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
   else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  var n = Number(s);
+  return isFinite(n) ? n : padrao;
+}
+
+// 30/10/2026 (pedido do dono, consumo "46.300% acima da média" no PQB4394): a nota de bomba traz os litros com três casas
+// ("35.591"), e Frota_num_ lê ponto seguido de três dígitos como milhar (35591 L). Litros nunca passam de mil: aqui o ponto ou
+// a vírgula é SEMPRE a casa decimal; só com os dois ("1.234,5") o ponto é milhar. Use para LITROS (leitura e gravação);
+// KM e valores em R$ continuam em Frota_num_. Cópias do navegador: fsLitros_ (JS_Core.html) e litros() (SGO_Frota_AbastecimentoTela.js).
+function Frota_numLitros_(v, padrao) {
+  if (typeof v === 'number') return isFinite(v) ? v : padrao;
+  var s = String(v === null || v === undefined ? '' : v).replace(/\s+/g, '').replace(/L$/i, '');
+  if (!s) return padrao;
+  if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+  else s = s.replace(',', '.');
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return padrao;
   var n = Number(s);
   return isFinite(n) ? n : padrao;
 }
@@ -520,6 +551,9 @@ function Frota_bootstrapSemTrava_() {
   if (typeof FrotaR_garantirAbas_ === 'function') FrotaR_garantirAbas_();
   // 20/10/2026 (reservas): tabelas das reservas, eventos e avisos; devolução prevista e reserva na movimentação. Só colunas e tabelas novas.
   if (typeof FrotaRes_garantirAbas_ === 'function') FrotaRes_garantirAbas_();
+  // 30/10/2026 (obrigatoriedade do abastecimento e plano de manutenção): só colunas e tabelas novas.
+  if (typeof FrotaAb_garantirAbas_ === 'function') FrotaAb_garantirAbas_();
+  if (typeof FrotaPlano_garantirAbas_ === 'function') FrotaPlano_garantirAbas_();
 }
 
 // ------------------------------------------------------------
@@ -1179,6 +1213,10 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   var condutorId = condutor.ID;
   var vinculado = Frota_obterCondutorPorUsuario_(sessao.userId);
   var emNomeDeOutro = gestao && (!vinculado || SGO_UTILS.safe(vinculado.ID) !== SGO_UTILS.safe(condutorId));
+  // 30/10/2026 (pedido do dono): abastecimento não lançado trava a PRÓXIMA retirada do condutor até ele lançar ou justificar
+  // (a gestão pode liberar). Óleo ou freio vencido há mais de 1.000 km trava a retirada do veículo até a gestão liberar.
+  if (typeof FrotaAb_conferirRetirada_ === 'function') FrotaAb_conferirRetirada_(condutor, gestao);
+  var avisoManutencao = typeof FrotaPlano_conferirRetirada_ === 'function' ? FrotaPlano_conferirRetirada_(veiculo) : '';
 
   var kmSaida = Frota_num_(payload.kmSaida, NaN);
   if (!isFinite(kmSaida) || kmSaida < 0) throw new Error('Informe o KM de saída (o número do odômetro do painel, só números).');
@@ -1316,7 +1354,7 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   // Rastreador (17/10/2026): libera a partida. Nunca derruba a retirada, que já está gravada.
   var rastreador = Frota_rastreadorAoRetirar_(sessao, veiculoId, registro.ID);
   return { ok: true, movimentacaoId: registro.ID, registroPelaGestao: registro.REGISTRO_GESTAO_SAIDA === 'SIM', kmDivergencia: depois.dif || 0,
-    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador,
+    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador, avisoManutencao: avisoManutencao || '',
     devolucaoPrevista: prevista ? FrotaRes_txt_(prevista.ms) : '', reservaIniciada: resRes.reservaIniciada || '', reservaLiberada: resRes.reservaLiberada || '' };
 }
 
@@ -1375,6 +1413,8 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
     throw new Error('O KM de chegada ficou fora do esperado: ' + alertaKm + '. A devolução não é bloqueada, mas precisa da foto do painel mostrando o odômetro: ' +
       'tire a foto do painel na tela (aparece "foto do painel (obrigatória)") e toque em Confirmar de novo. Se o número foi digitado errado, corrija o KM de chegada. A gestão será avisada para conferir.');
   }
+  // 30/10/2026 (pedido do dono): "Abasteceu durante este uso?" é obrigatória; o abastecimento lançado agora é conferido antes de gravar.
+  var planoAbast = typeof FrotaAb_antesDaDevolucao_ === 'function' ? FrotaAb_antesDaDevolucao_(payload, mov, veiculo, kmChegada, pelaGestao) : null;
 
   var motivos = [];
   if (pelaGestao) motivos.push('devolução registrada pela gestão no lugar de ' + nomeCondutor);
@@ -1442,7 +1482,10 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   if (typeof FrotaRes_aposDevolucao_ === 'function') FrotaRes_aposDevolucao_(sessao, mov, veiculo);
   // Rastreador (17/10/2026): bloqueio da partida fica pendente até o veículo estar parado com a ignição desligada.
   var rastreador = Frota_rastreadorAoDevolver_(sessao, veiculo.ID, movId);
-  return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor, rastreador: rastreador };
+  // 30/10/2026: grava o abastecimento lançado na devolução (ou o pedido) e roda o detector de abastecimento não lançado.
+  var abast = planoAbast ? FrotaAb_aposDevolucao_(sessionId, sessao, planoAbast, mov, veiculo, condutor, kmChegada, fotosPainel) : null;
+  return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor, rastreador: rastreador,
+    abastecimento: abast ? { mensagem: abast.mensagem, lancado: !!abast.abastecimento, pedido: !!abast.pedido, travaProxima: !!(abast.detector && abast.detector.pedidoId) } : null };
 }
 
 // ------------------------------------------------------------
@@ -1849,6 +1892,8 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
   var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
+  // 30/10/2026: conferência na gravação (litros x tanque, preço por litro, KM, repetido) e situação "a conferir" (SGO_Frota_Abastecimento.js).
+  if (typeof FrotaAb_registrarPelaGestao_ === 'function') { FrotaAb_garantirAbas_(); return FrotaAb_registrarPelaGestao_(sessao, payload); }
 
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
@@ -1857,7 +1902,7 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
   var data = String(payload.data || '').trim();
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(data)) throw new Error('Informe a data no formato dd/mm/aaaa.');
 
-  var litros = Frota_num_(payload.litros, NaN);
+  var litros = Frota_numLitros_(payload.litros, NaN);
   if (!isFinite(litros) || litros <= 0) throw new Error('Informe os litros abastecidos.');
 
   var km = Frota_num_(payload.km, NaN);
@@ -2137,7 +2182,8 @@ function Frota_apiHistoricoVeiculo(sessionId, payload) {
     })
     .sort(function(a, b) { return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || '')); });
 
-  var manutencoes = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO)
+  // 30/10/2026: manutenção de teste marcada como excluída (correção pedida pelo dono) não aparece.
+  var manutencoes = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO)
     .filter(function(m) { return SGO_UTILS.safe(m.VEICULO_ID) === veiculoId; })
     .sort(function(a, b) { return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || '')); });
 
@@ -2181,7 +2227,7 @@ function Frota_classificarManutencao_(manutencao, veiculo) {
  * última e reabria um alerta já resolvido. CRIADO_EM só desempata.
  */
 function Frota_ultimasManutencoesPorVeiculo_() {
-  var todas = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO);
+  var todas = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO);
   var porVeiculoTipo = {};
   function chaveOrdem(m) {
     var d = Frota_dataDia_(m.DATA);
@@ -2223,10 +2269,14 @@ function Frota_calcularAlertasManutencao_() {
 
   var ultimas = Frota_ultimasManutencoesPorVeiculo_();
   var alertas = [];
+  // 30/10/2026 (plano de manutenção, SGO_Frota_PlanoManutencao.js): os itens do plano (óleo, filtros, freios, pneus...) avisam
+  // pelo plano de cada veículo, mesmo sem manutenção registrada; o registro antigo só vale para o tipo que o plano não cobre.
+  var cobertos = typeof FrotaPlano_alertas_ === 'function' ? FrotaPlano_alertas_(veiculos, alertas) : null;
   Object.keys(ultimas).forEach(function(chave) {
     var m = ultimas[chave];
     var veiculo = veiculos[SGO_UTILS.safe(m.VEICULO_ID)];
     if (!veiculo) return;
+    if (cobertos && cobertos[SGO_UTILS.safe(m.TIPO)]) return;
     var status = Frota_classificarManutencao_(m, veiculo);
     if (status !== 'VENCENDO' && status !== 'VENCIDO') return;
 

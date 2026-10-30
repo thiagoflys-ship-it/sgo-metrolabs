@@ -162,6 +162,7 @@ function QualidadeFrota_coletar_(desde) {
     // ---------------- Manutenção — custo por veículo ----------------
     var custoPorVeiculo = {};
     SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).forEach(function(m) {
+      if (SGO_UTILS.safe(m.EXCLUIDO_EM)) return; // 30/10/2026: manutenção de teste marcada como excluída fica de fora
       if (desde && !depoisDoCorte_(m.DATA)) return;
       var veiculo = veiculos[SGO_UTILS.safe(m.VEICULO_ID)] || {};
       var placa = veiculo.PLACA ? (typeof FrotaId_rotuloRapido_ === 'function' ? FrotaId_rotuloRapido_(veiculo.PLACA) : veiculo.PLACA) : 'placa não identificada'; // 21/10/2026: com o apelido

@@ -80,6 +80,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   var contadorCondutorPorVeiculo = {};
 
   SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).forEach(function(m) {
+    if (SGO_UTILS.safe(m.EXCLUIDO_EM)) return; // 30/10/2026: retirada de teste marcada como excluída fica de fora
     var saida = Frota_parseDataHora_(m.DATA_SAIDA, m.HORA_SAIDA);
     if (!saida || saida.getTime() < inicio.getTime() || saida.getTime() > fim.getTime()) return;
     var vid = SGO_UTILS.safe(m.VEICULO_ID);
@@ -123,6 +124,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   });
 
   SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).forEach(function(m) {
+    if (SGO_UTILS.safe(m.EXCLUIDO_EM)) return; // 30/10/2026: manutenção de teste marcada como excluída fica de fora
     var data = Frota_parseDataHora_(m.DATA, '00:00');
     if (!data || data.getTime() < inicio.getTime() || data.getTime() > fim.getTime()) return;
     var alvo = porVeiculo[SGO_UTILS.safe(m.VEICULO_ID)];
@@ -187,7 +189,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
     var vid = SGO_UTILS.safe(a.VEICULO_ID);
     var alvo = porVeiculo[vid];
     if (!alvo) return;
-    var litros = Frota_num_(a.LITROS, 0);
+    var litros = Frota_numLitros_(a.LITROS, 0); // 30/10/2026: "35.591" são 35,591 L (ver Frota_numLitros_)
     var valor = Frota_num_(a.VALOR, 0);
     var km = Frota_num_(a.KM, 0);
     alvo.abastecimentosLitros += litros;
@@ -199,7 +201,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
       precoLitro: litros > 0 ? (valor / litros) : 0
     });
     abastecimentosPorVeiculoKm[vid] = abastecimentosPorVeiculoKm[vid] || [];
-    abastecimentosPorVeiculoKm[vid].push({ km: km, litros: litros });
+    abastecimentosPorVeiculoKm[vid].push({ km: km, litros: litros, sit: SGO_UTILS.safeUpper(a.SITUACAO_CONFERENCIA) });
   });
 
   // Consumo médio (km/L): soma dos trechos rodados ENTRE abastecimentos
@@ -213,6 +215,10 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
     var kmTotal = 0, litrosParaConsumo = 0;
     for (var i = 1; i < listaAb.length; i++) {
       var deltaKm = listaAb[i].km - listaAb[i - 1].km;
+      // 30/10/2026: mesma regra do copiloto (FrotaR_intervalosConsumo_): trecho com rendimento impossível (abaixo de 2 ou acima
+      // de 30 km/L), acima de 3.000 km (abastecimento faltando) ou fechado por lançamento a conferir/divergente fica fora.
+      var kmLTrecho = listaAb[i].litros > 0 ? deltaKm / listaAb[i].litros : 0;
+      if (kmLTrecho < 2 || kmLTrecho > 30 || deltaKm > 3000 || listaAb[i].sit === 'A_CONFERIR' || listaAb[i].sit === 'DIVERGENTE') continue;
       if (deltaKm > 0 && listaAb[i].litros > 0) {
         kmTotal += deltaKm;
         litrosParaConsumo += listaAb[i].litros;

@@ -8,6 +8,9 @@
  * 21/10/2026: identificação fácil dos veículos (apelido, base, "Sugerir apelido", escolha da base nas listas, mapa, reservas e Gantt).
  * 21/10/2026, à noite: bloqueio e liberação da partida (passar o carro, assumir o carro, pergunta da retirada esquecida, devolução só
  *   com o carro desligado; tela "Bloqueio da partida" da gestão em frota/bloqueio_da_partida). Rótulo: apelido e base na frente, cor como cadastrada.
+ * 30/10/2026 (pedido do dono: o abastecimento não pode passar despercebido): pergunta "Abasteceu durante este uso?" na devolução,
+ *   litros com vírgula ou ponto como casa decimal, resumo antes de gravar, "a conferir", "Corrigir" com justificativa, "Não abasteci",
+ *   próxima retirada travada por abastecimento não lançado, quadro "Obrigatoriedade do abastecimento" e "Plano de manutenção".
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -43,9 +46,12 @@ function SGO_ajudaTelas_Frota_() {
           "Digite o KM que está no painel agora.",
           "Toque em \"Tirar foto do painel (obrigatória)\".",
           "Faça a vistoria: \"Tudo OK\" ou \"Tem problema\".",
+          "Em \"Abastecimento\", responda se abasteceu durante este uso (obrigatório): \"Não abasteci\" ou \"Abasteci\".",
+          "Se abasteceu, toque em \"Lançar agora\": digite os litros e o valor como estão na nota (ex.: 35,591 e 125,99), escolha o combustível, diga se completou o tanque e toque em \"Tirar foto da nota (obrigatória)\". Confira o preço por litro que aparece embaixo.",
+          "Sem a nota em mãos, toque em \"Lançar depois\": fica um pedido com prazo de 1 dia útil em \"Comprovantes pedidos a você\".",
           "Se quiser, abra \"Mais fotos e observações (opcional)\".",
           "Toque em \"Confirmar devolução\".",
-          "Espere o aviso \"Devolução registrada\"."
+          "Espere o aviso \"Devolução registrada\". Se aparecer \"Abastecimento não lançado\", leia o que fazer: a sua próxima retirada fica travada até resolver."
         ] },
         { titulo: "Passar o carro para um colega (troca de condutor, sem devolver)", itens: [
           "Use quando outra pessoa vai seguir com o carro (por exemplo, numa viagem a dois). Não devolva: a devolução pede o bloqueio da partida.",
@@ -174,10 +180,12 @@ function SGO_ajudaTelas_Frota_() {
 
     "frota/abastecimentos": {
       titulo: "Abastecimentos",
-      paraQueServe: "Guarda cada abastecimento com o comprovante. O sistema calcula o consumo (km por litro) sozinho.",
+      paraQueServe: "Guarda cada abastecimento com o comprovante e confere na hora (litros, tanque, preço por litro, KM). O sistema calcula o consumo (km por litro) sozinho e não deixa abastecimento passar sem lançamento.",
       antesDeComecar: [
         "Tenha em mãos a foto ou o PDF do comprovante. Sem ele não salva.",
-        "No celular, o botão fica em \"Opções da gestão\", na tela inicial da Frota."
+        "Litros e valor como estão na nota. A vírgula ou o ponto nos litros é sempre a casa decimal: 35,591 ou 35.591 são 35,591 litros.",
+        "Quem abasteceu lança na devolução do veículo (passo \"Abastecimento\"). A gestão também lança aqui, no lugar do condutor.",
+        "No celular, o botão da gestão fica em \"Opções da gestão\", na tela inicial da Frota."
       ],
       passos: [
         { titulo: "Registrar um abastecimento (computador)", itens: [
@@ -187,7 +195,24 @@ function SGO_ajudaTelas_Frota_() {
           "Escolha o condutor, se souber.",
           "Preencha a data, a hora (opcional: com ela o SGO+ confere se o veículo estava parado no horário), o \"KM no abastecimento\", o \"Tipo de combustível\", os litros, o \"Valor total (R$)\" e o posto.",
           "Em \"Comprovante (obrigatório)\", anexe a foto ou o PDF.",
-          "Toque em \"Salvar abastecimento\"."
+          "Toque em \"Salvar abastecimento\".",
+          "Leia o resumo que aparece (litros × preço por litro = valor, KM e quanto rodou desde o anterior). Se algo estiver errado, toque em Cancelar e corrija; se estiver certo, toque em OK."
+        ] },
+        { titulo: "Responder um abastecimento pendente (condutor)", itens: [
+          "Abra a aba \"Abastecimentos e despesas\". No celular, toque em \"Resolver agora\" no aviso da tela inicial da Frota.",
+          "Em \"Comprovantes pedidos a você\", leia o pedido: \"Abastecimento a lançar\" (você disse que lançaria depois) ou \"Abastecimento não lançado\" (o veículo rodou demais sem abastecimento lançado).",
+          "Se abasteceu: preencha data, KM, litros, valor e combustível, anexe a foto da nota e toque em \"Enviar comprovante\".",
+          "Se não abasteceu: toque em \"Não abasteci\" e escreva o motivo (mínimo de 15 caracteres). A gestão confere com a foto do painel da devolução.",
+          "Pronto: a sua próxima retirada fica livre na hora."
+        ] },
+        { titulo: "Conferir e corrigir (gestão)", itens: [
+          "No topo da aba, quadro \"Obrigatoriedade do abastecimento\": veja os veículos (quanto rodaram desde o último abastecimento e o limite), as pendências, os \"Não abasteci\" e os lançamentos a conferir.",
+          "Pendência: fale com o condutor ou toque em \"Liberar\" e escreva o motivo.",
+          "\"Não abasteci\": toque em \"Aceitar\" ou em \"Não aceitar\" (com o motivo; o condutor recebe e a próxima retirada dele volta a ficar travada).",
+          "Lançamento a conferir: abra o comprovante e toque em \"Conferido\", \"Divergente\" (com o motivo) ou \"Corrigir\".",
+          "Corrigir: mude só o campo errado, escreva a justificativa e toque em \"Gravar correção\". O comprovante continua o mesmo; o valor antigo, o novo, quem e quando ficam na trilha de auditoria.",
+          "Data, hora ou KM de uma retirada errada: abra \"Corrigir data, hora ou KM de uma retirada\", escolha o veículo e toque em \"Corrigir\" na retirada.",
+          "A capacidade do tanque de cada veículo fica no quadro (campo \"Tanque (L)\" e \"Gravar\")."
         ] },
         { titulo: "Registrar um abastecimento (celular)", itens: [
           "Abra a Frota.",
@@ -199,10 +224,15 @@ function SGO_ajudaTelas_Frota_() {
       ],
       problemas: [
         { situacao: "\"Anexe a foto ou o PDF do comprovante do abastecimento.\"", oQueFazer: "Anexe o comprovante e salve de novo." },
-        { situacao: "O consumo não aparece", oQueFazer: "É preciso ter pelo menos 2 abastecimentos do mesmo veículo." }
+        { situacao: "O consumo não aparece", oQueFazer: "É preciso ter pelo menos 2 abastecimentos do mesmo veículo." },
+        { situacao: "\"Os litros informados passam da capacidade do tanque\"", oQueFazer: "Confira o número na nota e digite com a vírgula (ex.: 35,591). Se abasteceu mais de um veículo ou galão, lance cada um separado." },
+        { situacao: "\"O preço por litro ficou fora do possível\"", oQueFazer: "Os litros ou o valor foram digitados errado (a vírgula no lugar errado). Confira a nota e digite de novo." },
+        { situacao: "Ficou \"A conferir\"", oQueFazer: "Foi gravado. A gestão confere com o comprovante (preço fora da faixa, KM que não bate com a retirada, litros em sequência acima do tanque). O consumo dele fica fora da média até a conferência." },
+        { situacao: "\"Retirada travada: você tem abastecimento pendente de lançamento\"", oQueFazer: "Em \"Comprovantes pedidos a você\", envie o comprovante ou toque em \"Não abasteci\" com o motivo. Se precisar sair agora, peça à gestão para liberar." },
+        { situacao: "\"Responda Abasteceu durante este uso?\"", oQueFazer: "Na devolução, toque em \"Não abasteci\" ou em \"Abasteci\" no passo \"Abastecimento\" e confirme de novo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar e excluir abastecimentos." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar, corrigir, conferir e excluir abastecimentos; liberar pendências; conferir os \"Não abasteci\"; configurar o limite da obrigatoriedade." },
         { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\"). Quem recebeu um pedido de comprovante da gestão envia no quadro \"Comprovante pedido a você\", no topo desta aba." }
       ]
     },
@@ -1122,8 +1152,20 @@ function SGO_ajudaTelas_Frota_() {
 
     "frota/manutencao_e_paradas": {
       titulo: "Manutenção e paradas",
-      paraQueServe: "Registra as manutenções feitas e os períodos em que o veículo ficou parado. O sistema avisa quando a próxima manutenção está perto.",
+      paraQueServe: "Mantém o plano de manutenção de cada veículo (óleo e filtros, freios, pneus, alinhamento, correia, arrefecimento, bateria, revisão), registra as manutenções feitas e os períodos em que o veículo ficou parado. O sistema avisa antes de vencer.",
       passos: [
+        { titulo: "Preencher o plano de manutenção (gestão)", itens: [
+          "Abra a aba \"Manutenção e paradas\". O quadro \"Plano de manutenção\" fica no topo.",
+          "Abra o veículo. Itens com \"Sem a última vez\" ainda não têm a data e o KM da última troca.",
+          "Toque em \"Informar\" no item, preencha a data e o KM da última vez (estão na nota ou na etiqueta da oficina) e toque em \"Gravar\".",
+          "Se o manual do veículo pede outro intervalo, preencha \"Intervalo (km)\" e \"Intervalo (meses)\" e de onde veio. Vazio usa o padrão de uso severo.",
+          "A próxima vem calculada: vence o que chegar primeiro, o KM ou a data."
+        ] },
+        { titulo: "Óleo ou freio vencido (retirada travada)", itens: [
+          "Com óleo ou freio vencido há mais de 1.000 km, a retirada do veículo fica travada.",
+          "Leve o veículo à manutenção e registre a manutenção feita: o item volta a ficar em dia.",
+          "Se o veículo precisar rodar até a troca, toque em \"Liberar uso\" no item e escreva o motivo: libera por mais 500 km."
+        ] },
         { titulo: "Registrar uma manutenção", itens: [
           "Abra a aba \"Manutenção e paradas\".",
           "Escolha o veículo e o tipo. A próxima troca em KM já vem sugerida.",
@@ -1138,7 +1180,10 @@ function SGO_ajudaTelas_Frota_() {
         ] }
       ],
       cores: [
-        { nome: "Aviso \"Vencido\" ou \"A vencer\"", significado: "A manutenção venceu ou vence em até 500 km ou 30 dias." }
+        { nome: "Aviso \"Vencido\" ou \"A vencer\"", significado: "A manutenção venceu, ou vence em até 500 km ou 15 dias (\"A vencer\")." },
+        { nome: "\"Faltam até 1.000 km ou 30 dias\"", significado: "Aviso antecipado: programe a manutenção." },
+        { nome: "\"Sem a última vez\"", significado: "Falta informar a data e o KM da última troca. O SGO+ cria a pendência \"Plano de manutenção incompleto\" até preencher." },
+        { nome: "\"Informe o intervalo\"", significado: "Item sem intervalo padrão (correia dentada): preencha pelo manual do veículo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar manutenções e paradas." }

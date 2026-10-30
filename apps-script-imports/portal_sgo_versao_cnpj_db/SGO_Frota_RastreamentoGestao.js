@@ -586,7 +586,7 @@ function FrotaR_relVeiculoMes_(sessao, veiculoId, comp) {
     x.n++; var k = Frota_num_(m.KM_CHEGADA, 0) - Frota_num_(m.KM_SAIDA, 0); if (k > 0) x.km += k;
   });
   var tipos = {}; FROTA_CFG.TIPOS_MANUTENCAO.forEach(function (t) { tipos[t.codigo] = t.label; });
-  var manut = Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).filter(function (x) { if (SGO_UTILS.safe(x.VEICULO_ID) !== vid) return false; var ms = FrotaR_msDe_(Frota_textoData_(x.DATA), '12:00'); return ms !== null && ms >= per.deMs && ms <= per.ateMs; });
+  var manut = Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).filter(function (x) { if (SGO_UTILS.safe(x.EXCLUIDO_EM) || SGO_UTILS.safe(x.VEICULO_ID) !== vid) return false; var ms = FrotaR_msDe_(Frota_textoData_(x.DATA), '12:00'); return ms !== null && ms >= per.deMs && ms <= per.ateMs; });
   var nomeMes = RelA4_competencia_(comp);
   var padrao = 'Em ' + nomeMes + ' o veículo ' + v.PLACA + ' rodou ' + FrotaR_n_(kv.kmInformado) + ' km informados em ' + kv.retiradas + ' retirada(s)' + (an && an.pontos ? ' (' + FrotaR_n_(an.distanciaKm, 1) + ' km medidos pela rota)' : '') + '. ' +
     (cons.kmLPeriodo !== null ? 'O consumo foi de ' + FrotaR_n_(cons.kmLPeriodo, 2) + ' km/L' + (cons.kmLReferencia ? ' para uma média de ' + FrotaR_n_(cons.kmLReferencia, 2) + ' km/L do próprio veículo' + (cons.alerta ? ', acima do desvio aceito de ' + cfg.desvioConsumoPct + '%: recomenda-se revisão' : '') : '') + '. ' : 'Não houve abastecimentos suficientes para calcular o consumo do mês. ') +
@@ -637,7 +637,7 @@ function FrotaR_relConsumo_(sessao, de, ate) {
     var vid = SGO_UTILS.safe(v.ID);
     var c = FrotaR_consumoVeiculo_(FrotaR_abastecimentos_(vid), per, cfg);
     var litros = 0, valor = 0;
-    FrotaR_abastecimentos_(vid).forEach(function (a) { var ms = FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00'); if (ms !== null && ms >= per.deMs && ms <= per.ateMs) { litros += Frota_num_(a.LITROS, 0); valor += Frota_num_(a.VALOR, 0); } });
+    FrotaR_abastecimentos_(vid).forEach(function (a) { var ms = FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00'); if (ms !== null && ms >= per.deMs && ms <= per.ateMs) { litros += Frota_numLitros_(a.LITROS, 0); valor += Frota_num_(a.VALOR, 0); } });
     return { placa: SGO_UTILS.safe(v.PLACA), c: c, litros: litros, valor: valor };
   });
   var abast = FrotaR_conferirAbastecimentos_(veics, per, cfg, !!FrotaR_armazem_()).filter(function (a) { return a.apontamentos.length; });

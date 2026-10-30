@@ -46,7 +46,9 @@ var FROTAR_ABAST_JANELA_MIN = 40;          // abastecimento x posição: 40 min 
 var FROTAR_ABAST_PARADA_MIN = 3;           // parada mínima no horário do abastecimento
 var FROTAR_CONSUMO_MIN_INTERVALOS = 3;     // média do veículo só com 3 intervalos entre abastecimentos
 var FROTAR_CONSUMO_INTERVALO_MAX_KM = 3000; // intervalo maior que isso = abastecimento faltando (fora da média)
-var FROTAR_CONSUMO_ESTRANHO_PCT = 40;      // um intervalo 40% pior que a média do veículo = abastecimento a conferir
+var FROTAR_CONSUMO_ESTRANHO_PCT = 40;
+var FROTAR_CONSUMO_KML_MIN = 2;           // 30/10/2026: intervalo abaixo de 2 km/L ou acima de 30 km/L = lançamento a conferir (fora da média)
+var FROTAR_CONSUMO_KML_MAX = 30;      // um intervalo 40% pior que a média do veículo = abastecimento a conferir
 var FROTAR_PRAZO_COMPROVANTE_DIAS = 2;
 var FROTAR_FUSO_MIN = -180;                // Brasília (sem horário de verão desde 2019): UTC-3
 var FROTAR_SISTEMA = { userId: '', usuario: 'sistema', nome: 'Rotina do rastreamento', perfil: 'SISTEMA' };
@@ -640,18 +642,23 @@ function FrotaR_abastecimentos_(veiculoId) {
  */
 function FrotaR_intervalosConsumo_(abast) {
   var lista = (abast || []).map(function (a) {
-    return { id: SGO_UTILS.safe(a.ID), data: Frota_textoData_(a.DATA), hora: SGO_UTILS.safe(a.HORA), km: Frota_num_(a.KM, NaN), litros: Frota_num_(a.LITROS, NaN), valor: Frota_num_(a.VALOR, 0),
-      ms: FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00') };
+    return { id: SGO_UTILS.safe(a.ID), data: Frota_textoData_(a.DATA), hora: SGO_UTILS.safe(a.HORA), km: Frota_num_(a.KM, NaN), litros: Frota_numLitros_(a.LITROS, NaN), valor: Frota_num_(a.VALOR, 0),
+      ms: FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00'), sit: SGO_UTILS.safeUpper(a.SITUACAO_CONFERENCIA) };
   }).filter(function (a) { return isFinite(a.km) && a.km > 0; }).sort(function (a, b) { return a.km - b.km || (a.ms || 0) - (b.ms || 0); });
-  var ints = [];
+  var ints = [], fora = [];
   for (var i = 1; i < lista.length; i++) {
     var km = lista[i].km - lista[i - 1].km, l = lista[i].litros;
     if (!(km > 0) || km > FROTAR_CONSUMO_INTERVALO_MAX_KM || !(l > 0)) continue;
-    ints.push({ abastecimentoId: lista[i].id, data: lista[i].data, ms: lista[i].ms, km: km, litros: l, kmL: Math.round(km / l * 100) / 100 });
+    var it = { abastecimentoId: lista[i].id, data: lista[i].data, ms: lista[i].ms, km: km, litros: l, kmL: Math.round(km / l * 100) / 100 };
+    // 30/10/2026 (alarme falso de 46.300% no PQB4394): intervalo com rendimento impossível (abaixo de 2 ou acima de 30 km/L)
+    // ou fechado por lançamento "a conferir"/"divergente" fica fora da média e vira lançamento a conferir, com o motivo.
+    if (it.kmL < FROTAR_CONSUMO_KML_MIN || it.kmL > FROTAR_CONSUMO_KML_MAX) { it.motivo = 'rendimento de ' + Rastreador_num_(it.kmL, 2) + ' km/L, fora do possível (' + FROTAR_CONSUMO_KML_MIN + ' a ' + FROTAR_CONSUMO_KML_MAX + ' km/L): confira os litros e o KM'; fora.push(it); continue; }
+    if (lista[i].sit === 'A_CONFERIR' || lista[i].sit === 'DIVERGENTE') { it.motivo = 'lançamento ' + (lista[i].sit === 'DIVERGENTE' ? 'divergente' : 'a conferir'); fora.push(it); continue; }
+    ints.push(it);
   }
   var ord = ints.map(function (x) { return x.kmL; }).sort(function (a, b) { return a - b; });
   var med = ord.length ? (ord.length % 2 ? ord[(ord.length - 1) / 2] : (ord[ord.length / 2 - 1] + ord[ord.length / 2]) / 2) : null;
-  return { intervalos: ints, mediana: med === null ? null : Math.round(med * 100) / 100 };
+  return { intervalos: ints, mediana: med === null ? null : Math.round(med * 100) / 100, foraDaMedia: fora };
 }
 
 /**
@@ -669,8 +676,9 @@ function FrotaR_consumoVeiculo_(abastVeiculo, periodo, cfg) {
   var estranhos = ref ? noPer.filter(function (x) { return x.kmL < ref * (1 - FROTAR_CONSUMO_ESTRANHO_PCT / 100); }).map(function (x) {
     return { abastecimentoId: x.abastecimentoId, data: x.data, kmL: x.kmL, km: x.km, litros: x.litros };
   }) : [];
+  var foraPer = (h.foraDaMedia || []).filter(function (x) { return x.ms !== null && x.ms >= periodo.deMs && x.ms <= periodo.ateMs; });
   return { kmLPeriodo: kmLPer, kmLReferencia: ref, desvioPct: desvio, alerta: desvio !== null && desvio > cfg.desvioConsumoPct, intervalosPeriodo: noPer.length, intervalosHistorico: h.intervalos.length,
-    kmIntervalos: km, litrosIntervalos: Math.round(l * 100) / 100, estranhos: estranhos };
+    kmIntervalos: km, litrosIntervalos: Math.round(l * 100) / 100, estranhos: estranhos, foraDaMedia: foraPer };
 }
 
 /** Abastecimento x posição do veículo: estava parado perto da hora informada? */
@@ -702,14 +710,16 @@ function FrotaR_conferirAbastecimentos_(veiculos, periodo, cfg, comPosicao) {
     var vid = SGO_UTILS.safe(v.ID);
     var lista = FrotaR_abastecimentos_(vid);
     var cons = FrotaR_consumoVeiculo_(lista, periodo, cfg);
-    var estranho = {};
+    var estranho = {}, foraMedia = {};
     cons.estranhos.forEach(function (e) { estranho[e.abastecimentoId] = e; });
+    (cons.foraDaMedia || []).forEach(function (e) { foraMedia[e.abastecimentoId] = e; });
     var cap = Frota_num_(v.CAPACIDADE_TANQUE_L, NaN);
     lista.forEach(function (a) {
       var ms = FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00');
       if (ms === null || ms < periodo.deMs || ms > periodo.ateMs) return;
-      var litros = Frota_num_(a.LITROS, NaN);
+      var litros = Frota_numLitros_(a.LITROS, NaN);
       var itens = [];
+      if (foraMedia[SGO_UTILS.safe(a.ID)]) itens.push({ tipo: 'FORA_MEDIA', texto: 'Fora da média de consumo: ' + foraMedia[SGO_UTILS.safe(a.ID)].motivo + '.' });
       if (isFinite(cap) && cap > 0 && isFinite(litros) && litros > cap * FROTAR_TANQUE_FOLGA) itens.push({ tipo: 'TANQUE', texto: 'Litros (' + Rastreador_num_(litros, 2) + ' L) acima da capacidade do tanque (' + Rastreador_num_(cap, 0) + ' L).' });
       if (estranho[SGO_UTILS.safe(a.ID)]) { var e = estranho[SGO_UTILS.safe(a.ID)]; itens.push({ tipo: 'CONSUMO', texto: 'Rendeu ' + Rastreador_num_(e.kmL, 2) + ' km/L desde o abastecimento anterior (' + Rastreador_num_(e.km, 0) + ' km com ' + Rastreador_num_(e.litros, 2) + ' L); a média do veículo é ' + Rastreador_num_(cons.kmLReferencia, 2) + ' km/L.' }); }
       if (!SGO_UTILS.safe(a.COMPROVANTE_LINK)) itens.push({ tipo: 'COMPROVANTE', texto: 'Sem comprovante anexado.' });
@@ -774,7 +784,7 @@ function Frota_apiRastrCombustivel(sessionId, payload) {
     var lista = FrotaR_abastecimentos_(SGO_UTILS.safe(v.ID));
     var c = FrotaR_consumoVeiculo_(lista, per, cfg);
     var litros = 0, valor = 0, n = 0;
-    lista.forEach(function (a) { var ms = FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00'); if (ms !== null && ms >= per.deMs && ms <= per.ateMs) { litros += Frota_num_(a.LITROS, 0); valor += Frota_num_(a.VALOR, 0); n++; } });
+    lista.forEach(function (a) { var ms = FrotaR_msDe_(Frota_textoData_(a.DATA), SGO_UTILS.safe(a.HORA) || '12:00'); if (ms !== null && ms >= per.deMs && ms <= per.ateMs) { litros += Frota_numLitros_(a.LITROS, 0); valor += Frota_num_(a.VALOR, 0); n++; } });
     var kv = kmPorV[SGO_UTILS.safe(v.ID)] || {};
     var kmBase = kv.kmRastreador !== null && kv.kmRastreador !== undefined ? kv.kmRastreador : kv.kmInformado;
     return { veiculoId: SGO_UTILS.safe(v.ID), placa: SGO_UTILS.safe(v.PLACA), modelo: SGO_UTILS.safe(v.MODELO), capacidadeTanque: Frota_num_(v.CAPACIDADE_TANQUE_L, null),
@@ -816,7 +826,10 @@ function FrotaR_listarPedidos_(usuarioId) {
       return { id: SGO_UTILS.safe(p.ID), placa: SGO_UTILS.safe(p.PLACA), veiculoId: SGO_UTILS.safe(p.VEICULO_ID), condutor: SGO_UTILS.safe(p.CONDUTOR_NOME), condutorId: SGO_UTILS.safe(p.CONDUTOR_ID), dataRef: SGO_UTILS.safe(p.DATA_REF),
         valorRef: SGO_UTILS.safe(p.VALOR_REF), motivo: SGO_UTILS.safe(p.MOTIVO), situacao: sit, prazo: SGO_UTILS.safe(p.PRAZO), atrasado: sit === 'PENDENTE' && prazoMs !== null && prazoMs < Date.now(),
         pedidoPor: SGO_UTILS.safe(p.PEDIDO_POR_NOME), pedidoEm: SGO_UTILS.safe(p.PEDIDO_EM) ? FrotaR_textoMs_(new Date(p.PEDIDO_EM).getTime()) : '',
-        enviadoEm: SGO_UTILS.safe(p.ENVIADO_EM) ? FrotaR_textoMs_(new Date(p.ENVIADO_EM).getTime()) : '', abastecimentoId: SGO_UTILS.safe(p.ABASTECIMENTO_ID), atividadeId: SGO_UTILS.safe(p.ATIVIDADE_ID) };
+        enviadoEm: SGO_UTILS.safe(p.ENVIADO_EM) ? FrotaR_textoMs_(new Date(p.ENVIADO_EM).getTime()) : '', abastecimentoId: SGO_UTILS.safe(p.ABASTECIMENTO_ID), atividadeId: SGO_UTILS.safe(p.ATIVIDADE_ID),
+        // 30/10/2026 (obrigatoriedade do abastecimento): pedido automático (devolução ou conferência automática) e se trava a próxima retirada
+        tipo: SGO_UTILS.safeUpper(p.TIPO_PEDIDO) || 'GESTAO', trava: typeof FrotaAb_pedidoTrava_ === 'function' ? FrotaAb_pedidoTrava_(p) : false,
+        prazoTexto: typeof FrotaAb_prazoMs_ === 'function' && FrotaAb_prazoMs_(p) ? FrotaR_textoMs_(FrotaAb_prazoMs_(p)) : SGO_UTILS.safe(p.PRAZO) };
     });
 }
 
@@ -894,11 +907,13 @@ function Frota_apiRastrEnviarComprovante(sessionId, payload) {
   if (!p) throw new Error('Pedido não encontrado. Atualize a tela.');
   if (SGO_UTILS.safe(p.USUARIO_ID) !== SGO_UTILS.safe(sessao.userId) && !Frota_ehGestao_(sessionId)) throw new Error('Este pedido é de ' + p.CONDUTOR_NOME + '. Só ele (ou a gestão) envia o comprovante.');
   if (SGO_UTILS.safeUpper(p.SITUACAO) !== 'PENDENTE') return { ok: true, jaEnviado: true, mensagem: 'Este pedido já foi respondido em ' + (SGO_UTILS.safe(p.ENVIADO_EM) ? FrotaR_textoMs_(new Date(p.ENVIADO_EM).getTime()) : 'data anterior') + '. Nada foi gravado em dobro.' };
+  // 30/10/2026: mesma conferência da gravação da gestão (litros com a casa decimal certa, tanque, preço por litro, KM, repetido).
+  if (typeof FrotaAb_responderPedido_ === 'function') { FrotaAb_garantirAbas_(); return FrotaAb_responderPedido_(sessionId, sessao, p, payload); }
   var data = String(payload.data || p.DATA_REF || '').trim();
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(data)) throw new Error('Informe a data do abastecimento no formato dd/mm/aaaa.');
   var hora = String(payload.hora || '').trim();
   if (hora && !/^\d{1,2}:\d{2}$/.test(hora)) throw new Error('Informe a hora no formato hh:mm (exemplo: 14:35) ou deixe vazio.');
-  var litros = Frota_num_(payload.litros, NaN);
+  var litros = Frota_numLitros_(payload.litros, NaN);
   if (!isFinite(litros) || litros <= 0 || litros > 500) throw new Error('Informe os litros abastecidos (como estão na nota, exemplo: 42,35).');
   var km = Frota_num_(payload.km, NaN);
   if (!isFinite(km) || km <= 0) throw new Error('Informe o KM do painel no momento do abastecimento.');
@@ -959,6 +974,7 @@ function FrotaR_pendencias_(add) {
   if (typeof Pend_item_ !== 'function' || typeof PEND_TIPOS === 'undefined' || !PEND_TIPOS.frota_comprovante) return;
   FrotaR_listarPedidos_(null).forEach(function (p) {
     if (p.situacao !== 'PENDENTE' || !p.atrasado) return;
+    if (p.tipo === 'DETECTOR' || p.tipo === 'DEVOLUCAO') return; // 30/10/2026: pedido automático tem pendência própria (FrotaAb_pendencias_)
     add(Pend_item_('frota_comprovante', {
       id: 'FROTA:COMPROVANTE:' + p.id, nome: p.placa, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: p.prazo, responsavel: 'Gestão da frota',
       titulo: 'Comprovante de abastecimento não enviado: ' + p.condutor + ' (veículo ' + p.placa + ')',

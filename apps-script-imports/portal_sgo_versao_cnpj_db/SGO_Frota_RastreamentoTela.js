@@ -158,6 +158,8 @@ function Frota_obterTelaRastreamento() {
   if (typeof Frota_telaReservas_ === 'function') { var r = Frota_telaReservas_(); t.css += '\n' + r.css; t.js += '\n' + r.js; }
   // 21/10/2026: a tela do bloqueio da partida (SGO_Frota_BloqueioTela.js), parte da aba Rastreamento.
   if (typeof Frota_telaBloqueio_ === 'function') { var b = Frota_telaBloqueio_(); t.css += '\n' + b.css; t.js += '\n' + b.js; }
+  // 30/10/2026: abastecimento obrigatório (conferência, correção, pendências) e plano de manutenção (SGO_Frota_AbastecimentoTela.js).
+  if (typeof Frota_telaAbastecimento_ === 'function') { var ab = Frota_telaAbastecimento_(); t.css += '\n' + ab.css; t.js += '\n' + ab.js; }
   return t;
 }
 
@@ -919,15 +921,27 @@ function FrotaR_telaNavegador_() {
       var tipos = ['Gasolina', 'Etanol', 'Diesel', 'Diesel S10', 'GNV', 'Outro'];
       alvo.innerHTML = r.itens.map(function (p) {
         var id = esc(p.id);
-        return '<div class="frr-pedido" data-frr-ped="' + id + '"><strong>Comprovante pedido a você: veículo ' + esc(rotV(p)) + (p.dataRef ? ' (' + esc(p.dataRef) + ')' : '') + '</strong>' +
-          '<div>' + esc(p.motivo) + '</div><div class="frr-meta">Pedido por ' + esc(p.pedidoPor) + ' em ' + esc(p.pedidoEm) + ' · prazo ' + esc(p.prazo) + (p.atrasado ? ' · ' : '') + (p.atrasado ? marca('prazo vencido', 'critico') : '') + '</div>' +
+        // 30/10/2026 (obrigatoriedade do abastecimento): pedido automático (devolução ou conferência automática) aceita "Não abasteci" e pode travar a próxima retirada.
+        var auto = p.tipo === 'DETECTOR' || p.tipo === 'DEVOLUCAO';
+        return '<div class="frr-pedido" data-frr-ped="' + id + '"><strong>' + (p.tipo === 'DETECTOR' ? 'Abastecimento não lançado' : (p.tipo === 'DEVOLUCAO' ? 'Abastecimento a lançar' : 'Comprovante pedido a você')) + ': veículo ' + esc(rotV(p)) + (p.dataRef ? ' (' + esc(p.dataRef) + ')' : '') + '</strong>' +
+          '<div>' + esc(p.motivo) + '</div><div class="frr-meta">Pedido por ' + esc(p.pedidoPor) + ' em ' + esc(p.pedidoEm) + ' · prazo ' + esc(p.prazoTexto || p.prazo) + (p.atrasado ? ' · ' : '') + (p.atrasado ? marca('prazo vencido', 'critico') : '') + '</div>' +
+          (p.trava ? '<div class="frr-faixa alerta">A sua próxima retirada de veículo está travada até você enviar o comprovante ou tocar em "Não abasteci" e escrever o motivo.</div>' : (auto ? '<div class="frr-meta">Depois do prazo, a sua próxima retirada fica travada até resolver.</div>' : '')) +
           '<div class="frr-form"><div><label>Data</label><input data-c="data" inputmode="numeric" placeholder="dd/mm/aaaa" value="' + esc(p.dataRef) + '"></div><div><label>Hora (se souber)</label><input data-c="hora" inputmode="numeric" placeholder="hh:mm"></div>' +
-          '<div><label>KM do painel</label><input data-c="km" inputmode="numeric"></div><div><label>Litros</label><input data-c="litros" inputmode="decimal"></div><div><label>Valor (R$)</label><input data-c="valor" inputmode="decimal"></div>' +
+          '<div><label>KM do painel</label><input data-c="km" inputmode="numeric"></div><div><label>Litros (como na nota)</label><input data-c="litros" inputmode="decimal" placeholder="ex.: 35,591"></div><div><label>Valor (R$)</label><input data-c="valor" inputmode="decimal" placeholder="ex.: 125,99"></div>' +
           '<div><label>Combustível</label><select data-c="tipoCombustivel">' + tipos.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select></div><div><label>Posto</label><input data-c="posto"></div>' +
           '<div><label>Foto da nota ou PDF</label><input type="file" data-c="arquivo" accept="image/*,application/pdf"></div></div>' +
-          '<div class="frr-botoes"><button type="button" class="btn-primary" data-frr-env>Enviar comprovante</button></div><div data-frr-st></div></div>';
+          '<div class="frr-botoes"><button type="button" class="btn-primary" data-frr-env>Enviar comprovante</button>' + (auto ? '<button type="button" class="btn" data-frr-nao>Não abasteci</button>' : '') + '</div><div data-frr-st></div></div>';
       }).join('');
       Array.prototype.forEach.call(alvo.querySelectorAll('[data-frr-ped]'), function (box) {
+        var nao = box.querySelector('[data-frr-nao]');
+        if (nao) nao.onclick = function () {
+          var st = box.querySelector('[data-frr-st]');
+          var j = window.prompt('Não abasteci: escreva o motivo (mínimo de 15 caracteres). A gestão confere com a foto do painel da devolução.\n\nExemplo: o carro saiu com o tanque cheio e voltou com meio tanque');
+          if (j === null || R.enviando) return;
+          R.enviando = true;
+          apiC('apiAbastJustificar', { pedidoId: box.getAttribute('data-frr-ped'), justificativa: j }).then(function (x) { R.enviando = false; box.innerHTML = okHtml(x.mensagem); })
+            .catch(function (err) { R.enviando = false; st.innerHTML = erroHtml(err); });
+        };
         box.querySelector('[data-frr-env]').onclick = function () {
           var st = box.querySelector('[data-frr-st]');
           var c = function (k) { var e = box.querySelector('[data-c="' + k + '"]'); return e ? e.value : ''; };

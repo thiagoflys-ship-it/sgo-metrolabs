@@ -117,6 +117,11 @@ var PEND_TIPOS = {
   // 19/10/2026 (revisão da Frota): avaria na devolução sem caso aberto e multa com pagamento vencendo (SGO_Frota_Gestao.js).
   // 20/10/2026 (rastreamento): pedido de comprovante de abastecimento vencido sem resposta (SGO_Frota_Rastreamento.js).
   frota_comprovante: { modulo: 'frota', um: 'comprovante de abastecimento pedido e não enviado', varios: 'comprovantes de abastecimento pedidos e não enviados', rotulo: 'Comprovante', fazer: 'fale com o condutor ou cancele o pedido em Frota > Rastreamento > Combustível e KM', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 30/10/2026 (pedido do dono: o abastecimento não pode passar despercebido; plano de manutenção): SGO_Frota_Abastecimento.js e SGO_Frota_PlanoManutencao.js.
+  frota_abast_pendente: { modulo: 'frota', um: 'abastecimento pendente de lançamento', varios: 'abastecimentos pendentes de lançamento', rotulo: 'Abastecimento', fazer: 'envie o comprovante ou responda "Não abasteci" em Frota > Abastecimentos e despesas > Comprovantes pedidos a você', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_abast_justificativa: { modulo: 'frota', um: '"Não abasteci" a conferir', varios: '"Não abasteci" a conferir', rotulo: 'Conferir', fazer: 'aceite ou não aceite em Frota > Abastecimentos e despesas > Obrigatoriedade do abastecimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_abast_conferir: { modulo: 'frota', um: 'abastecimento a conferir', varios: 'abastecimentos a conferir', rotulo: 'Conferir', fazer: 'confira com o comprovante em Frota > Abastecimentos e despesas > Obrigatoriedade do abastecimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_plano_incompleto: { modulo: 'frota', um: 'plano de manutenção incompleto', varios: 'planos de manutenção incompletos', rotulo: 'Completar', fazer: 'informe a última vez feita (data e KM) em Frota > Manutenção e paradas > Plano de manutenção', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_avaria: { modulo: 'frota', um: 'avaria de veículo sem tratamento', varios: 'avarias de veículos sem tratamento', rotulo: 'Tratar', fazer: 'abra o caso em Frota > Gestão e melhoria > Kanban', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   multa_vencida: { modulo: 'frota', um: 'multa vencida sem pagamento', varios: 'multas vencidas sem pagamento', rotulo: 'Vencida', fazer: 'pague ou recorra e atualize em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   multa_vencendo: { modulo: 'frota', um: 'multa a vencer', varios: 'multas a vencer', rotulo: 'A vencer', fazer: 'pague ou recorra antes do vencimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
@@ -572,7 +577,9 @@ function Pend_fonteFrota_(add) {
           id: 'FROTA:MAN:' + Pend_s_(a.veiculoId) + ':' + Pend_s_(a.tipo), nome: placaRot + ' (' + a.tipoLabel + ')', publico: 'GESTAO',
           gravidade: critico ? 'CRITICO' : 'ATENCAO', dias: dias, vencimento: Pend_br_(venc), responsavel: 'Gestão da frota',
           titulo: a.tipoLabel + ' do veículo ' + placaRot + (critico ? ' vencida' : ' a vencer') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : ''),
-          detalhe: porKm ? (critico ? 'Passou da quilometragem prevista para a manutenção.' : 'Faltam menos de ' + Pend_num_((typeof FROTA_CFG !== 'undefined' && FROTA_CFG.KM_AVISO_VENCIMENTO) || 500) + ' km para a manutenção prevista.')
+          // 30/10/2026: o plano de manutenção manda quantos km faltam (ou passaram).
+          detalhe: porKm ? (typeof a.faltamKm === 'number' ? (a.faltamKm < 0 ? 'Passou ' + Pend_num_(-a.faltamKm) + ' km da quilometragem prevista' + (a.proximaKm ? ' (' + Pend_num_(a.proximaKm) + ' km)' : '') + '.' + (a.trava ? ' Óleo ou freio vencido há mais de 1.000 km: a retirada deste veículo está travada até a gestão liberar.' : '') : 'Faltam ' + Pend_num_(a.faltamKm) + ' km para a manutenção prevista' + (a.proximaKm ? ' (' + Pend_num_(a.proximaKm) + ' km)' : '') + '.')
+            : (critico ? 'Passou da quilometragem prevista para a manutenção.' : 'Faltam menos de ' + Pend_num_((typeof FROTA_CFG !== 'undefined' && FROTA_CFG.KM_AVISO_VENCIMENTO) || 500) + ' km para a manutenção prevista.'))
             : 'Manutenção ' + Pend_textoPrazo_(dias, true) + (critico ? ' (pela data ou pela quilometragem, o que vencer primeiro).' : '.'),
           oQueFazer: 'Faça a manutenção e lance em Frota > Manutenção e paradas (veículo ' + placaRot + '); o alerta some quando a nova manutenção for registrada.',
           textoEstavel: 'O veículo \'' + placa + '\' está com a manutenção \'' + a.tipoLabel + '\' ' + (critico ? 'vencida' : 'vencendo') + (venc ? ' (prevista para ' + Pend_br_(venc) + ')' : ' (pela quilometragem)') + '.'
@@ -675,6 +682,9 @@ function Pend_fonteFrota_(add) {
   if (typeof Frota_gestaoPendencias_ === 'function') { try { Frota_gestaoPendencias_(add); } catch (eG) { console.error('Pendências da gestão da Frota: ' + ((eG && eG.message) || eG)); } }
   // 20/10/2026: comprovante de abastecimento pedido ao condutor e não enviado no prazo (Frota > Rastreamento).
   if (typeof FrotaR_pendencias_ === 'function') { try { FrotaR_pendencias_(add); } catch (eR) { console.error('Pendências do rastreamento da Frota: ' + ((eR && eR.message) || eR)); } }
+  // 30/10/2026: abastecimento pendente de lançamento, "Não abasteci" e lançamentos a conferir; plano de manutenção incompleto.
+  if (typeof FrotaAb_pendencias_ === 'function') { try { FrotaAb_pendencias_(add); } catch (eA) { console.error('Pendências do abastecimento da Frota: ' + ((eA && eA.message) || eA)); } }
+  if (typeof FrotaPlano_pendencias_ === 'function') { try { FrotaPlano_pendencias_(add); } catch (eP) { console.error('Pendências do plano de manutenção: ' + ((eP && eP.message) || eP)); } }
   // 20/10/2026: reservas de veículo (atraso com reserva a seguir, conferência com problema, lembrete e avisos ao reservante).
   if (typeof FrotaRes_pendencias_ === 'function') { try { FrotaRes_pendencias_(add); } catch (eRes) { console.error('Pendências das reservas da Frota: ' + ((eRes && eRes.message) || eRes)); } }
 

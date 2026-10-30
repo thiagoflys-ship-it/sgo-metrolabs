@@ -49,11 +49,12 @@ function Frota_apiConsultarDespesas(sessionId, payload) {
       descricao: descricao, valor: Frota_num_(valor, 0), comprovante: comprovante || '' });
   }
   Frota_registrosValidos_existentes_(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO).forEach(function(a) {
-    var litros = Frota_num_(a.LITROS, 0);
+    var litros = Frota_numLitros_(a.LITROS, 0);
     incluir('ABASTECIMENTO', a, a.DATA, a.VALOR, [litros ? SGO_DocA4_num_(litros, 2) + ' L' : '', a.TIPO_COMBUSTIVEL || '', a.POSTO ? 'posto ' + a.POSTO : '',
       a.KM ? 'km ' + SGO_DocA4_num_(Frota_num_(a.KM, 0), 0) : '', (condutores[SGO_UTILS.safe(a.CONDUTOR_ID)] || {}).NOME || ''].filter(Boolean).join(' · '), a.COMPROVANTE_LINK);
   });
   Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO).forEach(function(m) {
+    if (SGO_UTILS.safe(m.EXCLUIDO_EM)) return; // 30/10/2026: manutenção de teste marcada como excluída fica de fora
     incluir('MANUTENCAO', m, m.DATA, m.CUSTO, [tiposManut[m.TIPO] || m.TIPO || 'Manutenção', m.OFICINA || '', m.DESCRICAO || ''].filter(Boolean).join(' · '), '');
   });
   Frota_registrosValidos_existentes_(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(mu) {
@@ -206,7 +207,7 @@ function Frota_apiLevantamentoValoresSuspeitos(sessionId) {
 
   // Preço por litro do abastecimento: a evidência mais forte (valor e litros do mesmo registro).
   ler('REG_FROTA_ABASTECIMENTO').forEach(function(a) {
-    var valor = FrotaLev_valor_(a.VALOR), litros = FrotaLev_valor_(a.LITROS);
+    var valor = FrotaLev_valor_(a.VALOR), litros = typeof a.LITROS === 'number' ? a.LITROS : Frota_numLitros_(a.LITROS, null); // 30/10/2026: litros com a casa decimal no ponto
     if (!(valor > 0 && litros > 0)) return;
     var preco = valor / litros;
     if (preco > 15 && Math.round(valor) === valor) {
