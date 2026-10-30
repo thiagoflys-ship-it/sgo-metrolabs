@@ -969,3 +969,16 @@ function RepD_arquivoDaRepresentada_(repId, arquivoId) {
   var id = RepD_s_(arquivoId);
   return !!id && RepD_registros_().some(function (r) { return RepD_s_(r.REPRESENTADA_ID) === RepD_s_(repId) && Rep_up_(r.PUBLICO) === 'REPRESENTADA' && (RepD_s_(r.HTML_ID) === id || RepD_s_(r.PDF_ID) === id); });
 }
+/** Rota /arquivos (servidor próprio, 30/10/2026): o login de cliente só abre documento da Representação se for a versão do cliente
+    dele. Arquivo que não é documento da Representação segue a regra de sempre (login válido). */
+function Representacao_arquivoClientePermitido_(sessionId, arquivoId) {
+  try {
+    Rep_memoLimpar_(); Ast_memoLimpar_();
+    var id = RepD_s_(arquivoId);
+    if (!id) return false;
+    var regs = RepD_registros_().filter(function (r) { return RepD_s_(r.HTML_ID) === id || RepD_s_(r.PDF_ID) === id; });
+    if (!regs.length) return true;
+    var eu = Ast_eu_(sessionId);
+    return !!eu.clienteId && regs.some(function (r) { return Rep_up_(r.PUBLICO) === 'CLIENTE' && RepD_s_(r.CLIENTE_ID) === eu.clienteId; });
+  } catch (e) { return false; }
+}

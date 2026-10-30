@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "ca34ffd5578d",
+ "versao": "6de0b9eb189f",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3202,7 +3202,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Documentos A4: relatório do atendimento e relatório do período > Salvar, registrar e quem abre",
-     "texto": "Todo documento é gravado em HTML e PDF (SGO_DocSalvar), privado, e registrado em REP_DOCUMENTOS com o tipo, o público, a representada, o cliente, o chamado, o número (RAT-aaaa-nnnn-M, -R ou -C; período RPM-, RPR- ou RPC- com data e hora), a emissão, quem gerou e de que lado. Nada é sobrescrito: cada emissão é uma versão nova, e a revisão do cabeçalho conta as emissões anteriores do mesmo chamado e público.\nPastas: versão do cliente na pasta do equipamento (prontuário, \"4. Ordens de Serviço\") e no Arquivo de documentos do equipamento (tipo \"RELATÓRIO DE ATENDIMENTO\"); versão da representada em \"Representação - Relatórios > (representada) > ano > chamado\"; interna em \"Representação - Relatórios > Metrolabs - uso interno > ano > chamado\"; período do cliente na pasta do cliente em \"Assistência técnica - Relatórios > Relatórios do período\".\nQuem abre: a representada lista e abre só a versão dela da própria representada (a rota /arquivos confere a cada abertura, Representacao_arquivoPermitido_); o cliente lista só a versão do cliente dos chamados dele; a equipe lista todas.\nA emissão entra no histórico do chamado (interno)."
+     "texto": "Todo documento é gravado em HTML e PDF (SGO_DocSalvar), privado, e registrado em REP_DOCUMENTOS com o tipo, o público, a representada, o cliente, o chamado, o número (RAT-aaaa-nnnn-M, -R ou -C; período RPM-, RPR- ou RPC- com data e hora), a emissão, quem gerou e de que lado. Nada é sobrescrito: cada emissão é uma versão nova, e a revisão do cabeçalho conta as emissões anteriores do mesmo chamado e público.\nPastas: versão do cliente na pasta do equipamento (prontuário, \"4. Ordens de Serviço\") e no Arquivo de documentos do equipamento (tipo \"RELATÓRIO DE ATENDIMENTO\"); versão da representada em \"Representação - Relatórios > (representada) > ano > chamado\"; interna em \"Representação - Relatórios > Metrolabs - uso interno > ano > chamado\"; período do cliente na pasta do cliente em \"Assistência técnica - Relatórios > Relatórios do período\".\nQuem abre: a representada lista e abre só a versão dela da própria representada (a rota /arquivos confere a cada abertura, Representacao_arquivoPermitido_); o cliente lista e abre só a versão do cliente dos chamados dele (a rota /arquivos também confere, Representacao_arquivoClientePermitido_: documento da Representação de outro público ou de outro cliente é recusado, mesmo com o link); a equipe lista todas.\nA emissão entra no histórico do chamado (interno)."
     },
     {
      "titulo": "Documentos A4: relatório do atendimento e relatório do período > Fotos e liberação",

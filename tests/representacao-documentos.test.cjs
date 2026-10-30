@@ -119,6 +119,13 @@ test('documento salvo e registrado com o público certo; representada e cliente 
   assert.equal(a.ctx.Representacao_arquivoPermitido_('s_beto.beta', idDe(dm)), false);
   assert.equal(a.ctx.Representacao_arquivoPermitido_('s_beto.beta', idDe(dc)), false);
   assert.equal(a.ctx.Representacao_arquivoPermitido_('s_ana.alfa', idDe(dr)), false);
+  // cliente: só a versão do cliente, do cliente dele; arquivo que não é documento da Representação segue a regra de sempre
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', idDe(dc)), true);
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', dc.pdfUrl.split('/').pop()), true);
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', idDe(dm)), false);
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', idDe(dr)), false);
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.beta', idDe(dc)), false);
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', 'arquivo-de-outro-modulo'), true);
   // quem não é dono não gera
   assert.equal(a.rep('s_ana.alfa', 'relatorioAtendimento', { id: k.c.id }).ok, false);
   assert.equal(a.api('s_cliente.beta', 'relatorioAtendimento', { id: k.c.id }).ok, false);
