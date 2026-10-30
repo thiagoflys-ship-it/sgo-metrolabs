@@ -52,8 +52,9 @@ O Painel é a primeira tela da sua área.
 ## 6. Relatórios do atendimento e do período
 
 - Na ficha do chamado, toque em "Gerar relatório". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.
-- O relatório traz capa, sumário, resumo, cliente e equipamento com a garantia, o relato da abertura, a linha do tempo, os marcos previsto e realizado (aceite, visita e conclusão) com gráfico, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos e a assinatura de quem recebeu o atendimento.
-- No Painel, "Relatório do período" gera o relatório da carteira da sua empresa no período escolhido: os índices do painel, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia e reincidência por modelo), o Gantt e a lista dos pedidos e chamados.
+- A primeira folha traz o quadro "Situação em": situação, prazo de atendimento, aceite do pedido, visita, conclusão, com quem está o chamado e o próximo passo.
+- Depois vêm o sumário, o resumo, cliente e equipamento com a garantia, o relato da abertura, os marcos previsto e realizado (aceite, visita e conclusão) com gráfico e a diferença escrita, a linha do tempo, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs (com data, hora e quem tirou), a conversa do chamado, os arquivos, a assinatura de quem recebeu o atendimento e o que quer dizer cada etapa.
+- No Painel, "Relatório do período" gera o relatório da carteira da sua empresa no período escolhido: na capa, os abertos, o prazo cumprido e os pontos de atenção pelo número do chamado; depois os índices do painel, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia e reincidência por modelo), o Gantt (com a etapa e a situação do prazo escritas na barra), a lista dos pedidos e chamados e as definições dos índices.
 - A aba "Relatórios gerados" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos.
 
 ## 7. Conversar

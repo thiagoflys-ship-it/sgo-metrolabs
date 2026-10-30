@@ -150,25 +150,29 @@ Um motor só (SGO_Representacao_Documentos.js) sobre a moldura A4 dos relatório
 
 | Parte | Representada | Cliente final | Metrolabs (interno) |
 |---|---|---|---|
-| Capa, sumário, resumo com índices | Sim | Sim | Sim |
+| Capa com o quadro "Situação em" (o essencial na primeira folha) | Situação, prazo de atendimento, aceite do pedido, visita, conclusão, com quem está, próximo passo | Situação, visita, conclusão, próximo passo | Como a representada, com a situação interna entre parênteses |
+| Sumário e resumo | Tempos do envio à visita e à conclusão, marcos no previsto ("x de y"), situação do prazo; problema, causa, serviço e próximo passo | Aberto em, visita, concluído em, tempo no local; problema, causa, serviço e próximo passo | Como a representada |
 | Cliente e equipamento | Com garantia, fabricante, instalação e nota fiscal; nome e protocolo da representada | Sem garantia e sem fabricante; sem o nome da representada | Como a representada |
 | Relato da abertura | Completo (código de erro, risco, o que já foi tentado, contato no local, pedido, complemento) | Problema relatado e situação do equipamento | Completo |
 | Etapas | — | As 5 etapas de "Meus chamados", com as datas | — |
-| Linha do tempo | Eventos PUBLICO = REPRESENTADA ou SIM; autor "Metrolabs" (o nome só quando é da própria representada) | Só PUBLICO = SIM; autor "Metrolabs" | Todos, com o nome; o interno sai em ponto vazado |
-| Marcos previsto x realizado (aceite, visita, conclusão) | Sim, com gráfico | Não (prazos internos) | Sim |
+| Linha do tempo (vertical: data quando muda o dia, hora, registro e quem fez; intervalo de 2 dias ou mais escrito) | Eventos PUBLICO = REPRESENTADA ou SIM; autor "Metrolabs" (o nome só quando é da própria representada) | Só PUBLICO = SIM; autor "Metrolabs" | Todos, com o nome; o interno sai com marcador vazado e a marca "interno" |
+| Marcos previsto x realizado (aceite, visita, conclusão) | Sim, com gráfico e a diferença escrita em horas úteis (diferença só fora do expediente sai em tempo corrido, "fora do horário útil") | Não (prazos internos) | Sim |
 | Visita e atendimento | O.S., técnico, agendado, chegada, conclusão, tempo no local | Igual (do técnico, só o nome) | Mais saída, deslocamento, conferência do equipamento e outras visitas |
 | Diagnóstico e serviço | Condição, causa, serviço, teste, recomendações | Igual | Mais o relato do técnico e a orientação remota |
 | Peças | Sem valor | Sem valor | Sem valor, com o pedido de compra da peça em falta |
-| Fotos | Liberadas (REPRESENTADA ou SIM) e as que ela enviou | Só as liberadas ao cliente (SIM) | Todas, com a liberação de cada uma |
+| Fotos (duas por linha, mesmo quadro para todas; legenda com data e hora, quem tirou e o momento: abertura do pedido, antes da visita, durante a visita ou depois do serviço, pela hora da foto e a chegada e a conclusão da O.S.) | Liberadas (REPRESENTADA ou SIM) e as que ela enviou, separadas por origem | Só as liberadas ao cliente (SIM) | Todas, com a liberação de cada uma |
 | Conversa do chamado | Sem nota interna | Não | Sem nota interna (as notas vão na parte própria) |
 | Notas internas, Prazos e SLA (horas úteis, primeiro contato, pausa, triagem), Histórico do equipamento (reincidência em 90 dias) | Não | Não | Sim |
-| Arquivos, relatório da O.S., assinatura e aceite | Sim | Relatório da O.S. e assinatura | Sim, com quem lê cada arquivo |
+| Arquivos, relatório da O.S., assinatura e aceite (sem assinatura registrada, a seção diz o que falta) | Sim | Relatório da O.S. e assinatura | Sim, com quem lê cada arquivo |
+| Sobre este documento: o que quer dizer cada etapa, emissão, revisão e marca de conferência | Etapas que a representada acompanha | Etapas de "Meus chamados" | Etapas que a representada acompanha |
+
+Cadastro vazio (CNPJ, TAG, protocolo) aparece como "Não informado". O cabeçalho de cada folha traz o chamado e a versão ("Relatório do atendimento CH-... · versão da representada"), o nº e a revisão; o rodapé, "Página X de Y". Tabelas de identificação não se dividem entre folhas.
 
 Nunca, em nenhuma versão: valores. Nunca nas externas: nota interna, foto não liberada, registro interno, outra representada.
 
 ### 12.2 Relatório do período
 
-Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para representada e Metrolabs; para o cliente, as de "Meus chamados" com o período escolhido). Gráficos: por etapa, prazo cumprido (aceite, atendimento e, na interna, primeiro contato), tempos médios em horas úteis, por cliente, por UF, garantia e reincidência por modelo; para o cliente, por etapa, por mês, por equipamento e por unidade. Gantt da carteira em folha paisagem (24 linhas por figura; o texto da barra é a etapa; rótulo de mês só aparece se couber antes do mês seguinte; o texto nunca encosta no losango da visita nem no fim do prazo). Lista dos pedidos e chamados do período. Só na interna: prazo de atendimento por prioridade, carga por técnico, fila de pedidos e comparação entre representadas. Escopo: a representada só a carteira dela; o cliente só os chamados dele (inclusive os que não vieram de representada); a Metrolabs, os chamados que a pessoa pode ver, todas as representadas ou a escolhida no filtro.
+Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para representada e Metrolabs; para o cliente, as de "Meus chamados" com o período escolhido). Gráficos: por etapa, prazo cumprido (aceite, atendimento e, na interna, primeiro contato), tempos médios em horas úteis, por cliente, por UF, garantia e reincidência por modelo; para o cliente, por etapa, por mês, por equipamento e por unidade. Na capa, o quadro "Situação em": abertos agora com quantos têm prazo vencido e em risco, enviados, aceite e atendimento no prazo ("x de y"), tempo médio até a conclusão e os pontos de atenção pelo número (para o cliente: em aberto, abertos e concluídos no período, tempo médio e próxima visita). No resumo, os destaques: movimento, situação agora, prazo vencido e em risco por número, próximas visitas e reincidência. Tempos médios em barras com o mesmo texto do painel (h úteis ou dias úteis); prazo cumprido com "x de y no prazo". Gráfico por mês do cliente só com dois meses ou mais. Gantt da carteira em folha paisagem, na largura toda da folha (20 linhas por figura; o texto da barra é a etapa e, fora a versão do cliente, a situação do prazo, para ler também em preto e branco; rótulo de mês só aparece se couber antes do mês seguinte; o texto nunca encosta no losango da visita nem no fim do prazo). Lista dos pedidos e chamados do período (nº do pedido, cidade e série em linha menor; na interna, em folha paisagem junto do Gantt). "Como ler este relatório": definições dos índices e o que quer dizer cada etapa. Só na interna: prazo de atendimento por prioridade, carga por técnico, fila de pedidos e comparação entre representadas. Escopo: a representada só a carteira dela; o cliente só os chamados dele (inclusive os que não vieram de representada); a Metrolabs, os chamados que a pessoa pode ver, todas as representadas ou a escolhida no filtro.
 
 ### 12.3 Onde gerar
 

@@ -190,3 +190,32 @@ test('Gantt impresso: rótulos de mês nunca se sobrepõem e o rótulo da barra 
   const xt = Number(/<text x="([\d.]+)"[^>]*>CH-1 · Cliente Teste</.exec(svg)[1]);
   assert.ok(xt >= xl + 10, 'rótulo em ' + xt + ' encosta no losango em ' + xl);
 });
+
+test('capa com quadro-resumo, próximo passo, linha do tempo vertical, glossário: cada parte nova respeita o público (30/10/2026)', () => {
+  const a = amb(), k = encerrado(a);
+  const hr = a.html(ok(a.rep('s_beto.beta', 'relatorioAtendimento', { id: k.c.id })).documento.htmlUrl.split('/').pop());
+  const hc = a.html(ok(a.api('s_cliente.alfa', 'relatorioAtendimento', { id: k.c.id })).documento.htmlUrl.split('/').pop());
+  const hm = a.html(ok(a.rep('s_gil', 'relatorioAtendimento', { id: k.c.id })).documento.htmlUrl.split('/').pop());
+  // o essencial fica dentro da capa (primeira folha)
+  for (const h of [hr, hc, hm]) {
+    const capa = h.slice(h.indexOf('<section class="capa">'), h.indexOf('</section>', h.indexOf('<section class="capa">')));
+    for (const s of ['Situação em', 'Próximo passo', 'Nenhuma ação pendente']) assert.ok(capa.includes(s), 'capa sem: ' + s);
+    for (const s of ['class="rd-tl"', 'Sobre este documento', 'Assinaturas e aceite']) assert.ok(h.includes(s), 'faltou: ' + s);
+    assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(h), 'emoji no documento');
+  }
+  for (const s of ['Prazo de atendimento', 'Aceite do pedido', 'Etapas que a representada acompanha', 'Marcos cumpridos no previsto', 'Diferença']) assert.ok(hr.includes(s), 'faltou na representada: ' + s);
+  // cliente: sem prazo interno, sem aceite do pedido, sem "com quem está" e sem o glossário da representada
+  for (const s of ['Prazo de atendimento', 'Aceite do pedido', 'Com quem está', 'Etapas que a representada acompanha', 'Abertura do pedido', 'Marcos cumpridos', 'complemento da representada'])
+    assert.ok(!hc.includes(s), 'cliente viu: ' + s);
+  assert.ok(hc.includes('Etapas de &quot;Meus chamados&quot;') || hc.includes('Etapas de "Meus chamados"'));
+  // a marca "interno" da linha do tempo só na versão da Metrolabs
+  assert.ok(hm.includes('>interno</span>')); assert.ok(!hr.includes('>interno</span>')); assert.ok(!hc.includes('>interno</span>'));
+  // período: pontos de atenção e definições por público
+  const pr = a.html(ok(a.rep('s_beto.beta', 'relatorioPeriodo', { dias: 30 })).documento.htmlUrl.split('/').pop());
+  const pc = a.html(ok(a.api('s_cliente.alfa', 'relatorioPeriodoCliente', { dias: 90 })).documento.htmlUrl.split('/').pop());
+  const pm = a.html(ok(a.rep('s_gil', 'relatorioPeriodo', { dias: 90 })).documento.htmlUrl.split('/').pop());
+  for (const s of ['Pontos de atenção', 'Como ler este relatório', 'Aceite no prazo']) assert.ok(pr.includes(s), 'faltou no período da representada: ' + s);
+  for (const s of ['Do aceite ao primeiro contato', 'Primeiro contato:']) { assert.ok(!pr.includes(s), 'representada viu: ' + s); assert.ok(pm.includes(s), 'faltou na interna: ' + s); }
+  for (const s of ['Pontos de atenção', 'Prazo vencido', 'Aceite no prazo', 'Relatório do período · Representação', 'complemento da representada']) assert.ok(!pc.includes(s), 'cliente viu: ' + s);
+  assert.ok(pc.includes('Relatório do período · Assistência técnica'));
+});

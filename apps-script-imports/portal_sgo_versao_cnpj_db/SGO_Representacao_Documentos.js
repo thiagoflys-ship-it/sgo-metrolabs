@@ -114,7 +114,9 @@ function RepD_visao_(D, publico) {
     representadaNome: cliente ? '' : repNome, protocolo: cliente ? '' : RepD_s_(c.PROTOCOLO_REPRESENTADA), encerrado: sit === 'ENCERRADO' || sit === 'RESOLVIDO_REMOTO', cancelado: sit === 'CANCELADO',
     etapaNome: cliente ? pc.etapaNome : interno ? (AST_SITUACOES[sit] || sit) + (rep ? ' (a representada vê: ' + etRep.nome + ')' : '') : etRep.nome,
     abertoEm: Ast_br_(c.ABERTO_EM), enviadoEm: RepD_br_(D.ciclo.enviadoMs), concluidoEm: RepD_br_(concluidoMs), agoraMs: D.agoraMs };
-  V.equipamentoTexto = [RepD_s_(eq.TIPO), RepD_s_(eq.MODELO)].filter(Boolean).join(' · ') || RepD_s_(c.EQUIPAMENTO_TEXTO);
+  // tipo e modelo sem repetir a palavra ("LAVADORA · LAVADORA ULTRASSÔNICA 10 L" vira "LAVADORA ULTRASSÔNICA 10 L")
+  var eqTipo = RepD_s_(eq.TIPO), eqModelo = RepD_s_(eq.MODELO);
+  V.equipamentoTexto = (eqTipo && eqModelo && eqModelo.toUpperCase().indexOf(eqTipo.toUpperCase()) === 0 ? eqModelo : [eqTipo, eqModelo].filter(Boolean).join(' · ')) || RepD_s_(c.EQUIPAMENTO_TEXTO);
   V.serie = RepD_s_(eq.SERIE);
   // cliente e equipamento
   V.identCliente = [['Cliente', V.clienteNome, { largo: true }], ['CNPJ', RepD_s_(cli.CNPJ)], ['Unidade', RepD_s_(c.UNIDADE_NOME) || RepD_s_(un.NOME_UNIDADE)],
@@ -179,13 +181,23 @@ function RepD_visao_(D, publico) {
     return [RepD_s_(p.DESCRICAO), RepD_s_(p.CODIGO), Ast_fmtNum_(q, Math.round(q) === q ? 0 : 2) + ' ' + RepD_s_(p.UNIDADE), Ast_up_(p.SITUACAO) === 'FALTA' ? 'Em falta' + (interno && RepD_s_(p.REQUISICAO_NUMERO) ? ' (pedido ' + RepD_s_(p.REQUISICAO_NUMERO) + ')' : '') : 'Aplicada'];
   });
   // fotos liberadas (e as da representada, só para ela e para a Metrolabs)
+  // momento da foto pela hora em que foi tirada e a janela da visita (chegada e conclusão da O.S.); sem a hora, só "Atendimento"
+  var chegouMs = Ast_ms_(os.CHEGOU_EM), concluiuMs = Ast_ms_(os.CONCLUIU_EM);
+  var momento = function (ms) {
+    if (ms === null || ms === undefined || chegouMs === null) return 'Atendimento técnico';
+    if (ms < chegouMs) return 'Antes da visita';
+    return concluiuMs !== null && ms > concluiuMs ? 'Depois do serviço' : 'Durante a visita';
+  };
   V.fotos = D.fotos.filter(function (f) { return RepD_fotoVisivel_(f, publico); }).map(function (f) {
+    var ms = Ast_ms_(f.TIRADA_EM || f.RECEBIDA_EM);
     return { arquivoId: RepD_s_(f.RELATORIO_ARQUIVO_ID) || RepD_s_(f.ARQUIVO_ID), reduzida: !!RepD_s_(f.RELATORIO_ARQUIVO_ID), legenda: RepD_s_(f.LEGENDA) || 'Foto do atendimento',
-      em: Ast_br_(f.TIRADA_EM || f.RECEBIDA_EM), por: RepD_s_(f.POR_NOME) || RepD_s_(os.TECNICO_NOME), origem: 'Metrolabs', liberacao: interno ? REPD_FOTO_LIBERACAO[Ast_up_(f.PUBLICO)] || REPD_FOTO_LIBERACAO[''] : '' };
+      em: Ast_br_(f.TIRADA_EM || f.RECEBIDA_EM), por: RepD_s_(f.POR_NOME) || RepD_s_(os.TECNICO_NOME), origem: 'Metrolabs', momento: momento(ms), liberacao: interno ? REPD_FOTO_LIBERACAO[Ast_up_(f.PUBLICO)] || REPD_FOTO_LIBERACAO[''] : '' };
   });
   if (!cliente) D.anexos.filter(function (a) { return (interno || Ast_up_(a.PUBLICO) === 'REPRESENTADA') && Ast_up_(a.POR_LADO) === 'REPRESENTADA' && RepD_ehImagem_(a.MIME); }).forEach(function (a) {
-    V.fotos.push({ arquivoId: RepD_s_(a.ARQUIVO_ID), reduzida: false, legenda: REP_TIPOS_ANEXO[Ast_up_(a.TIPO)] || 'Foto enviada pela representada', em: Ast_br_(a.EM), por: RepD_s_(a.POR_NOME), origem: 'Representada', liberacao: interno ? 'Enviada pela representada' : '' });
+    V.fotos.push({ arquivoId: RepD_s_(a.ARQUIVO_ID), reduzida: false, legenda: REP_TIPOS_ANEXO[Ast_up_(a.TIPO)] || 'Foto enviada pela representada', em: Ast_br_(a.EM), por: RepD_s_(a.POR_NOME), origem: 'Representada', momento: 'Abertura do pedido', liberacao: interno ? 'Enviada pela representada' : '' });
   });
+  // as da abertura (representada) vêm antes das do atendimento
+  V.fotos.sort(function (a, b) { return (a.origem === 'Representada' ? 0 : 1) - (b.origem === 'Representada' ? 0 : 1); });
   V.fotosTotal = V.fotos.length;
   V.fotosNaoLiberadas = interno ? 0 : D.fotos.filter(function (f) { return !RepD_fotoVisivel_(f, publico); }).length;
   // conversa e notas internas
@@ -219,7 +231,46 @@ function RepD_visao_(D, publico) {
     });
     V.reincidente = !!x.reincidente || V.historico.some(function (h) { return /^Sim/.test(h[4]); });
   }
+  // quadro-resumo da capa: situação, visita, conclusão, próximo passo e (fora a versão do cliente) prazo, aceite e com quem está
+  var cy = D.ciclo;
+  V.visitaTexto = Ast_ms_(os.CHEGOU_EM) !== null ? 'Técnico no local em ' + Ast_br_(os.CHEGOU_EM) : Ast_ms_(c.AGENDADO_PARA) !== null && !V.encerrado && !V.cancelado ? 'Agendada para ' + Ast_br_(c.AGENDADO_PARA) : 'Sem visita registrada';
+  var chegou = Ast_ms_(os.CHEGOU_EM) !== null, agendou = Ast_ms_(c.AGENDADO_PARA) !== null && !V.cancelado;
+  V.visitaDia = chegou ? Ast_brDia_(os.CHEGOU_EM) : agendou ? Ast_brDia_(c.AGENDADO_PARA) : '';
+  V.visitaRotulo = chegou ? 'Visita do técnico' : agendou ? 'Visita agendada' : 'Sem visita registrada';
+  V.proximo = RepD_proximoPasso_(c, V);
+  if (!cliente) {
+    var pz = cy.prazo || {};
+    V.prazoEstado = pz.estado || 'SEM_PRAZO';
+    V.prazoTexto = V.prazoEstado !== 'SEM_PRAZO' ? REPD_NOME_PRAZO[V.prazoEstado] + (pz.ate ? ' (prazo até ' + pz.ate + ')' : '') : 'Sem prazo de atendimento definido';
+    V.aceiteTexto = cy.aceiteMin === null || cy.aceiteMin === undefined ? '' : RepD_tempo_(cy.aceiteMin) + ' do envio ao aceite, ' + (cy.aceiteNoPrazo ? 'no prazo' : 'fora do prazo') + ' (prazo de ' + RepD_tempo_(cy.aceitePrazoMin) + ')';
+    V.comQuem = { METROLABS: 'Com a Metrolabs', REPRESENTADA: 'Com a representada', CLIENTE: 'Com o cliente final' }[cy.comQuem] || '';
+    V.visitaMin = cy.visitaMin; V.conclusaoMin = cy.conclusaoMin;
+    var comPrev = V.marcos.filter(function (m) { return m.atrasado !== null; });
+    V.marcosResumo = comPrev.length ? comPrev.filter(function (m) { return m.atrasado === false; }).length + ' de ' + comPrev.length : '—';
+  }
   return V;
+}
+
+/** Próximo passo do atendimento, pela situação do chamado (texto que todos os públicos podem ler). */
+function RepD_proximoPasso_(c, V) {
+  var s = Ast_up_(c.SITUACAO), ag = Ast_ms_(c.AGENDADO_PARA) !== null ? Ast_br_(c.AGENDADO_PARA) : '', tec = RepD_s_(c.TECNICO_NOME);
+  var secServico = V.publico === 'CLIENTE' ? 'Serviço realizado e recomendações' : 'Diagnóstico e serviço';
+  var temRec = V.servico.some(function (x) { return x[0] === 'Recomendações'; });
+  var faltam = V.pecas.filter(function (p) { return /^Em falta/.test(p[3]); }).map(function (p) { return p[0]; });
+  switch (s) {
+    case 'ENCERRADO': return 'Nenhuma ação pendente da Metrolabs.' + (temRec ? ' Seguir as recomendações registradas pelo técnico (seção "' + secServico + '").' : '');
+    case 'RESOLVIDO_REMOTO': return 'Nenhuma ação pendente: resolvido com orientação a distância.';
+    case 'DOC_PENDENTE': return 'Serviço concluído. A Metrolabs fecha o relatório da ordem de serviço.';
+    case 'CANCELADO': return 'Chamado cancelado. Nenhuma ação pendente.';
+    case 'PLANEJADO': case 'AGENDADO': return ag ? 'Visita técnica agendada para ' + ag + (tec ? ', técnico ' + tec : '') + '.' : 'A Metrolabs agenda a visita técnica.';
+    case 'EM_DESLOCAMENTO': return 'Técnico a caminho do local.';
+    case 'NO_LOCAL': case 'EM_EXECUCAO': return 'Serviço em execução no local.';
+    case 'PAUSADO': return 'Serviço pausado no local.';
+    case 'AGUARDANDO_PECA': return 'Aguardando peça para concluir o serviço' + (faltam.length ? ': ' + faltam.join(', ') : '') + '.';
+    case 'AGUARDANDO_ORCAMENTO': return 'Aguardando a aprovação do orçamento.';
+    case 'AGUARDANDO_CLIENTE': return 'Aguardando retorno do cliente.';
+    default: return 'Análise técnica pela Metrolabs.';
+  }
 }
 
 // ------------------------------------------------------------
@@ -269,41 +320,50 @@ function RepD_legHtml_(itens) {
     return '<span><i style="' + st + '"></i>' + RelA4_esc_(l.rotulo) + '</span>';
   }).join('') + '</div>';
 }
-/** Linha do tempo: pontos numerados sobre a régua de datas (em até 4 faixas, sem encostar) + a tabela numerada. */
+/**
+ * Linha do tempo vertical (lê-se de cima para baixo e imprime bem em preto e branco): data à esquerda só quando muda o
+ * dia, hora, marcador na linha e o registro com quem fez. Intervalo de 2 dias ou mais entre registros aparece escrito.
+ * Registro interno (só na versão da Metrolabs): marcador vazado e a marca "interno".
+ */
 function RepD_linhaDoTempoHtml_(linha) {
-  var l = linha.filter(function (e) { return e.emMs !== null; });
-  if (!l.length) return '<p class="nota">Nenhum registro visível para este público ainda.</p>';
-  var de = l[0].emMs, ate = l[l.length - 1].emMs, folga = Math.max(3 * 3600000, (ate - de) * 0.05); de -= folga; ate += folga;
-  var W = 680, esq = 10, larg = W - 20, faixas = [], R = 8;
-  var reg = RepD_regua_(de, ate, esq, larg, 12, 26, 40 + 4 * 22, { dias: true });
-  var pontos = l.map(function (e, i) {
-    var x = reg.x(e.emMs), f = 0;
-    while (f < 3 && faixas[f] !== undefined && x - faixas[f] < 2 * R + 3) f++;
-    faixas[f] = x;
-    return { x: x, f: f, n: i + 1, interno: e.interno };
+  var l = linha.filter(function (e) { return e.emMs !== null; }), sem = linha.filter(function (e) { return e.emMs === null; });
+  if (!l.length && !sem.length) return '<p class="nota">Nenhum registro visível para este público ainda.</p>';
+  var DIA = 864e5, diaDe = function (ms) { return Math.floor((ms + REPD_FUSO_MS) / DIA); }, ultimoDia = null, h = [];
+  l.forEach(function (e) {
+    var d = diaDe(e.emMs), novoDia = d !== ultimoDia;
+    if (ultimoDia !== null && d - ultimoDia >= 2) h.push('<div class="rd-gap"><span></span><i></i><span>' + RelA4_esc_((d - ultimoDia) + ' dias depois') + '</span></div>');
+    ultimoDia = d;
+    h.push('<div class="rd-ev' + (e.interno ? ' int' : '') + (novoDia ? ' dia' : '') + '"><div class="q">' + (novoDia ? '<b>' + RelA4_esc_(e.em.slice(0, 10)) + '</b>' : '') + '<span>' + RelA4_esc_(e.em.slice(11, 16)) + '</span></div>' +
+      '<div class="m"><i></i></div><div class="o">' + RelA4_esc_(e.texto) + (e.interno ? ' <span class="marca neutra">interno</span>' : '') + '<span class="por">' + RelA4_esc_(e.por) + '</span></div></div>');
   });
-  var usadas = Math.max.apply(null, pontos.map(function (p) { return p.f; })) + 1, H = 44 + usadas * 22 + 6;
-  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
-  s.push(RepD_regua_(de, ate, esq, larg, 12, 26, H - 4, { dias: true }).svg);
-  s.push('<line x1="' + esq + '" y1="38" x2="' + (esq + larg) + '" y2="38" stroke="#0b3d6e" stroke-width="1.4"/>');
-  pontos.forEach(function (p) {
-    var y = 50 + p.f * 22;
-    s.push('<line x1="' + p.x.toFixed(1) + '" y1="38" x2="' + p.x.toFixed(1) + '" y2="' + (y - R) + '" stroke="#9aa5b1" stroke-width="0.7"/>');
-    s.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + y + '" r="' + R + '" fill="' + (p.interno ? '#fff' : '#1f5fa8') + '" stroke="#1f5fa8" stroke-width="1.2"/>');
-    s.push(RepD_txt_(p.x, y + 3.2, String(p.n), 'font-size="8.5" font-weight="700" text-anchor="middle" fill="' + (p.interno ? '#1f5fa8' : '#fff') + '"'));
-  });
-  s.push('</svg>');
-  var temInterno = pontos.some(function (p) { return p.interno; });
-  return RelA4_figura_(s.join('') + (temInterno ? RepD_legHtml_([{ cor: '#1f5fa8', rotulo: 'Registro que o cliente ou a representada também leem', circulo: true }, { cor: '#1f5fa8', rotulo: 'Registro interno', vazado: true, circulo: true }]) : ''), 'Linha do tempo do atendimento (o número de cada ponto é a linha da tabela a seguir)') +
-    RelA4_tabela_([{ t: 'Nº', cen: true, w: '9mm' }, { t: 'Quando', nw: true }, { t: 'O que aconteceu' }, { t: 'Por' }], l.map(function (e, i) { return [String(i + 1), e.em, e.texto, e.por]; }).concat(linha.filter(function (e) { return e.emMs === null; }).map(function (e) { return ['—', e.em, e.texto, e.por]; })), { legenda: 'Registros da linha do tempo' });
+  sem.forEach(function (e) { h.push('<div class="rd-ev"><div class="q"><span>sem data</span></div><div class="m"><i></i></div><div class="o">' + RelA4_esc_(e.texto) + '<span class="por">' + RelA4_esc_(e.por) + '</span></div></div>'); });
+  var temInterno = l.some(function (e) { return e.interno; });
+  var intro = l.length ? RelA4_plural_(l.length, 'registro', 'registros') + ', de ' + l[0].em + ' a ' + l[l.length - 1].em + ' (horário de Brasília), na ordem em que aconteceram.' : '';
+  return (intro ? '<p class="nota">' + RelA4_esc_(intro) + '</p>' : '') + '<div class="rd-tl">' + h.join('') + '</div>' +
+    (temInterno ? RepD_legHtml_([{ cor: '#0b3d6e', rotulo: 'Registro que o cliente ou a representada também leem', circulo: true }, { cor: '#0b3d6e', rotulo: 'Registro interno (marcado "interno")', vazado: true, circulo: true }]) : '');
 }
 
-/** Marcos previsto x realizado: losango vazado (previsto), cheio (realizado; verde no previsto, vermelho depois). */
+/** Diferença entre o realizado e o previsto, em horas úteis: "+4,8 dias úteis depois" ou "2 h úteis antes". */
+function RepD_difMarco_(m) {
+  if (!m.previstoMs || !m.realizadoMs) return '';
+  var depois = m.realizadoMs > m.previstoMs, min = depois ? Ast_minUteisEntre_(m.previstoMs, m.realizadoMs) : Ast_minUteisEntre_(m.realizadoMs, m.previstoMs);
+  if (!min) {
+    // diferença só fora do expediente (almoço, noite): mostra o tempo corrido
+    var corr = Math.round(Math.abs(m.realizadoMs - m.previstoMs) / 60000);
+    return corr ? Ast_duracaoTxt_(corr) + (depois ? ' depois' : ' antes') + ' (fora do horário útil)' : 'No horário previsto';
+  }
+  return depois ? RepD_tempo_(min) + ' depois' : RepD_tempo_(min) + ' antes';
+}
+
+/**
+ * Marcos previsto x realizado: losango vazado (previsto), cheio (realizado). Fora a cor (verde no previsto, vermelho
+ * depois), a diferença vem escrita ao lado do marco, para ler também impresso em preto e branco.
+ */
 function RepD_marcosHtml_(marcos, agoraMs) {
   var ms = []; marcos.forEach(function (m) { if (m.previstoMs) ms.push(m.previstoMs); if (m.realizadoMs) ms.push(m.realizadoMs); });
   if (!ms.length) return '<p class="nota">Sem marcos com data ainda.</p>';
   var de = Math.min.apply(null, ms), ate = Math.max.apply(null, ms), folga = Math.max(4 * 3600000, (ate - de) * 0.06); de -= folga; ate += folga;
-  var W = 680, rotW = 150, area = W - rotW - 14, lh = 30, H = 40 + marcos.length * lh;
+  var W = 680, rotW = 128, area = W - rotW - 14, lh = 30, H = 40 + marcos.length * lh;
   var reg = RepD_regua_(de, ate, rotW, area, 12, 26, H - 4, { dias: true });
   var los = function (x, y, cheio, cor) { return '<path d="M' + x.toFixed(1) + ' ' + (y - 7) + ' l7 7 l-7 7 l-7 -7 z" fill="' + (cheio ? cor : '#fff') + '" stroke="' + cor + '" stroke-width="1.6"/>'; };
   var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">', reg.svg];
@@ -314,14 +374,21 @@ function RepD_marcosHtml_(marcos, agoraMs) {
     if (m.previstoMs && m.realizadoMs) s.push('<line x1="' + reg.x(m.previstoMs).toFixed(1) + '" y1="' + y + '" x2="' + reg.x(m.realizadoMs).toFixed(1) + '" y2="' + y + '" stroke="' + cor + '" stroke-width="3.5" opacity=".45"/>');
     if (m.previstoMs) s.push(los(reg.x(m.previstoMs), y, false, RELA4_CORES.azul));
     if (m.realizadoMs) s.push(los(reg.x(m.realizadoMs), y, true, cor));
+    // texto da diferença: à direita do marco mais à direita; sem espaço, à esquerda do mais à esquerda
+    var dif = RepD_difMarco_(m);
+    var t = m.atrasado === true ? (/ depois/.test(dif) ? '+' + dif.replace(/ depois.*$/, '') : 'depois do previsto') : m.atrasado === false ? 'no previsto' : (!m.realizadoMs && m.previstoMs && m.previstoMs < agoraMs ? 'atrasado' : '');
+    if (t) {
+      var xs = [m.previstoMs, m.realizadoMs].filter(Boolean).map(reg.x), xd = Math.max.apply(null, xs) + 11, xe = Math.min.apply(null, xs) - 11, wt = RepD_largTexto_(t, 8.5, true);
+      s.push(xd + wt <= W - 2 ? RepD_txt_(xd, y + 3, t, 'font-size="8.5" font-weight="700" fill="#1f2933"') : RepD_txt_(xe, y + 3, t, 'font-size="8.5" font-weight="700" fill="#1f2933" text-anchor="end"'));
+    }
   });
   s.push('</svg>');
-  return RelA4_figura_(s.join('') + RepD_legHtml_([{ cor: RELA4_CORES.azul, rotulo: 'Previsto', vazado: true, losango: true }, { cor: RELA4_CORES.verde, rotulo: 'Realizado no previsto', losango: true }, { cor: RELA4_CORES.vermelho, rotulo: 'Realizado depois do previsto', losango: true }, { cor: RELA4_CORES.azul, rotulo: 'Realizado (sem previsão)', losango: true }]), 'Marcos do atendimento: previsto e realizado') +
-    RelA4_tabela_([{ t: 'Marco' }, { t: 'Previsto', nw: true }, { t: 'Realizado', nw: true }, { t: 'Situação' }], marcos.map(function (m) {
+  return RelA4_figura_(s.join('') + RepD_legHtml_([{ cor: RELA4_CORES.azul, rotulo: 'Previsto', vazado: true, losango: true }, { cor: RELA4_CORES.verde, rotulo: 'Realizado no previsto', losango: true }, { cor: RELA4_CORES.vermelho, rotulo: 'Realizado depois do previsto (diferença escrita ao lado)', losango: true }, { cor: RELA4_CORES.azul, rotulo: 'Realizado (sem previsão)', losango: true }]), 'Marcos do atendimento: previsto e realizado') +
+    RelA4_tabela_([{ t: 'Marco' }, { t: 'Previsto', nw: true }, { t: 'Realizado', nw: true }, { t: 'Diferença' }, { t: 'Situação' }], marcos.map(function (m) {
       var sit = m.realizadoMs ? (m.atrasado === true ? RelA4_marca_('Depois do previsto', 'critico') : m.atrasado === false ? RelA4_marca_('No previsto', 'ok') : RelA4_marca_('Feito', 'ok')) :
         (m.previstoMs && m.previstoMs < agoraMs ? RelA4_marca_('Atrasado', 'critico') : RelA4_marca_('A acontecer', 'neutra'));
-      return [m.nome, m.previsto || '—', m.realizado || '—', sit];
-    }), { legenda: 'Marcos previsto e realizado (horas úteis do expediente da Metrolabs)' });
+      return [m.nome, m.previsto || '—', m.realizado || '—', RepD_difMarco_(m) || '—', sit];
+    }), { legenda: 'Marcos previsto e realizado (diferença em horas úteis do expediente da Metrolabs)' });
 }
 
 /** As 5 etapas do portal do cliente: círculos ligados, cheios até a etapa atual, com a data de cada uma. */
@@ -348,15 +415,32 @@ function RepD_fotoBase64_(f) {
     return { mime: b.getContentType() || 'image/jpeg', data: Utilities.base64Encode(bytes) };
   } catch (e) { return null; }
 }
+/**
+ * Fotos em grade de duas colunas, quadro do mesmo tamanho para todas (a foto se ajusta dentro dele), separadas pela
+ * origem (abertura do pedido / atendimento técnico) e com legenda: número, descrição, data e hora, quem tirou, momento.
+ */
 function RepD_fotosHtml_(V) {
-  var lf = [], grandes = 0, falhas = 0;
+  var lidas = [], grandes = 0, falhas = 0;
   V.fotos.slice(0, REPD_MAX_FOTOS).forEach(function (f) {
     var b = RepD_fotoBase64_(f);
     if (!b) { falhas++; return; }
     if (b.grande) { grandes++; return; }
-    lf.push({ base64: b.data, mimeType: b.mime, legenda: [f.legenda, f.em, f.por ? 'por ' + f.por : '', f.liberacao].filter(Boolean).join(' · ') });
+    lidas.push({ f: f, b: b });
   });
-  var h = lf.length ? SGO_DocA4_fotos_(lf) : '<p class="nota">Nenhuma foto liberada para este público ainda.</p>';
+  var n = 0, h = '';
+  var grade = function (l) {
+    return '<div class="fotos rd-fotos">' + l.map(function (x) {
+      n++;
+      var mime = /^image\/(png|jpe?g|gif|webp)$/i.test(String(x.b.mime || '')) ? x.b.mime : 'image/jpeg';
+      var det = [x.f.em, x.f.por ? 'por ' + x.f.por : '', x.f.momento, x.f.liberacao].filter(Boolean).join(' · ');
+      return '<div class="foto"><div class="q"><img src="data:' + mime + ';base64,' + String(x.b.data).replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Foto ' + n + '"></div>' +
+        '<div class="leg"><b>Foto ' + n + '</b> — ' + RelA4_esc_(x.f.legenda) + (det ? '<span class="rd-sub">' + RelA4_esc_(det) + '</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  };
+  var daRep = lidas.filter(function (x) { return x.f.origem === 'Representada'; }), daMet = lidas.filter(function (x) { return x.f.origem !== 'Representada'; });
+  if (daRep.length && daMet.length) h = '<p class="rd-rot">Enviadas pela representada na abertura do pedido</p>' + grade(daRep) + '<p class="rd-rot">Registradas pela Metrolabs no atendimento</p>' + grade(daMet);
+  else if (lidas.length) h = grade(lidas);
+  else h = '<p class="nota">Nenhuma foto liberada para este público ainda.</p>';
   var notas = [];
   if (V.fotos.length > REPD_MAX_FOTOS) notas.push('Mais ' + (V.fotos.length - REPD_MAX_FOTOS) + ' foto(s) ficam no SGO+ (chamado ' + V.numero + ').');
   if (grandes) notas.push(grandes + ' foto(s) grande(s) demais para o A4 ficaram de fora: libere de novo na ficha do chamado (a tela gera a cópia reduzida).');
@@ -366,54 +450,153 @@ function RepD_fotosHtml_(V) {
 }
 
 // ------------------------------------------------------------
-// DOCUMENTO DO ATENDIMENTO
+// APRESENTAÇÃO COMUM (capa com quadro-resumo, estilos, glossário)
 // ------------------------------------------------------------
 var REPD_AVISO_PUBLICO = {
-  INTERNO: 'Uso interno da Metrolabs. Este documento traz notas internas, prazos de contrato em horas úteis, primeiro contato, deslocamento e o histórico do equipamento. Não envie à representada nem ao cliente: para eles existe a versão de cada um.',
-  REPRESENTADA: 'Versão da representada. Mostra o que a Metrolabs compartilha com a representada sobre este atendimento: linha do tempo, marcos, serviço, fotos liberadas e a conversa do chamado. Registros de uso interno da Metrolabs não fazem parte desta versão.',
-  CLIENTE: 'Versão do cliente. Mostra o andamento do atendimento técnico como aparece em "Meus chamados" no portal do cliente: etapas, visita, serviço realizado, peças, fotos liberadas e recomendações.'
+  INTERNO: 'Uso interno da Metrolabs. Traz notas internas, prazos de contrato em horas úteis, primeiro contato, deslocamento e o histórico do equipamento. Não envie à representada nem ao cliente: cada um tem a sua versão.',
+  REPRESENTADA: 'Versão da representada: o que a Metrolabs compartilha com a representada sobre este atendimento (linha do tempo, marcos, serviço, fotos liberadas e conversa do chamado). Registros de uso interno da Metrolabs não fazem parte desta versão.',
+  CLIENTE: 'Versão do cliente: o andamento do atendimento técnico como aparece em "Meus chamados" no portal do cliente (etapas, visita, serviço realizado, peças, fotos liberadas e recomendações).'
 };
+/** Etapas que a representada acompanha (REP_ETAPAS), com o que cada uma quer dizer. */
+var REPD_GLOSSARIO_REP = [
+  ['Enviado', 'Pedido enviado pela representada, aguardando o aceite da Metrolabs.'],
+  ['Complemento pedido', 'A Metrolabs pediu uma informação à representada. O prazo de aceite fica pausado até a resposta.'],
+  ['Recusado', 'Pedido não aceito pela Metrolabs.'],
+  ['Aceito, em análise', 'Pedido aceito e convertido em chamado; análise técnica em curso.'],
+  ['Aguardando aprovação de orçamento', 'Orçamento enviado, aguardando aprovação.'],
+  ['Aguardando peça', 'O serviço depende de peça ainda não disponível.'],
+  ['Visita a agendar ou agendada', 'Visita técnica em planejamento ou com data marcada.'],
+  ['Em atendimento', 'Técnico a caminho, no local ou com o serviço em execução.'],
+  ['Concluído', 'Serviço concluído; relatório da ordem de serviço em fechamento, ou problema resolvido a distância.'],
+  ['Encerrado', 'Atendimento encerrado com o relatório da ordem de serviço.'],
+  ['Cancelado', 'Pedido ou chamado cancelado.']
+];
+/** As 5 etapas de "Meus chamados" (AST_ETAPAS_CLIENTE). */
+var REPD_GLOSSARIO_CLIENTE = [
+  ['Recebido', 'Chamado registrado pela Metrolabs.'],
+  ['Em análise', 'Análise técnica do problema; pode incluir orçamento, peça ou retorno do cliente.'],
+  ['Visita agendada', 'Visita técnica com data marcada, ou técnico a caminho.'],
+  ['Em atendimento', 'Técnico no local ou serviço em execução.'],
+  ['Concluído', 'Serviço concluído.']
+];
+
+/** Estilos próprios dos documentos da Representação (somados aos da moldura RelA4 e da SGO_DocA4). */
+function RepD_estilos_() {
+  return '' +
+    '.capa .meio{margin-top:16mm}.capa h1{font-size:21pt}.capa table.t{max-width:none}.capa .sub{margin-bottom:4mm}' +
+    '.rd-quadro{margin:5mm 0 0;border:.8pt solid #0b3d6e;break-inside:avoid;page-break-inside:avoid}' +
+    '.rd-quadro .cab{background:#0b3d6e;color:#fff;font-weight:700;font-size:9pt;padding:1.4mm 3mm;letter-spacing:.02em;margin:0;text-align:left}' +
+    '.rd-quadro table{width:100%;border-collapse:collapse;font-size:9pt;line-height:1.38}' +
+    '.rd-quadro th{width:36mm;text-align:left;vertical-align:top;color:#3e4c59;font-weight:600;padding:1.5mm 3mm;border-top:.5pt solid #d5dbe1;background:#f5f7fa}' +
+    '.rd-quadro td{padding:1.5mm 3mm;border-top:.5pt solid #d5dbe1;vertical-align:top;text-align:left}' +
+    '.rd-quadro tr:first-child th,.rd-quadro tr:first-child td{border-top:0}' +
+    '.rd-quadro td.sit{font-size:11.5pt;font-weight:700;color:#0b3d6e}' +
+    '.rd-quadro td ul{margin:0;padding:0 0 0 4mm}.rd-quadro td li{margin:0 0 .6mm;text-align:left}' +
+    '.capa .rd-aviso{margin:3mm 0 0;font-size:8.3pt;color:#3e4c59;border-left:2.5pt solid #9fb3c8;padding:1mm 0 1mm 3mm;text-align:left}' +
+    '.capa .rd-aviso.int{border-left-color:#b45309;color:#5c3a00;font-weight:700}' +
+    '.rd-rot{font-size:8.8pt;font-weight:700;color:#243b53;margin:3mm 0 1.2mm;text-align:left;break-after:avoid;page-break-after:avoid}' +
+    '.rd-sub{display:block;font-size:7.6pt;color:#52606d;margin-top:.4mm;font-weight:400}' +
+    '.rd-texto p{text-align:left}.rd-texto b{color:#243b53}' +
+    // linha do tempo vertical
+    '.rd-tl{margin:1.5mm 0 3mm}' +
+    '.rd-ev,.rd-gap{display:grid;grid-template-columns:24mm 7mm 1fr;break-inside:avoid;page-break-inside:avoid}' +
+    '.rd-ev .q{text-align:right;padding:1.1mm 1.6mm 1.1mm 0;font-size:8.4pt;line-height:1.3;color:#3e4c59;font-variant-numeric:tabular-nums}' +
+    '.rd-ev .q b{display:block;color:#1f2933}' +
+    '.rd-ev .m{position:relative;background:linear-gradient(#9aa5b1,#9aa5b1) no-repeat center/0.8pt 100%}' +
+    '.rd-ev .m i{position:absolute;left:50%;top:1.7mm;width:2.8mm;height:2.8mm;margin-left:-1.4mm;border-radius:50%;background:#0b3d6e;border:.9pt solid #0b3d6e;box-sizing:border-box}' +
+    '.rd-ev.int .m i{background:#fff}' +
+    '.rd-ev .o{padding:1.1mm 0 1.1mm 1.6mm;font-size:8.8pt;line-height:1.35;border-bottom:.4pt solid #eef1f4;text-align:left}' +
+    '.rd-ev .o .por{display:block;font-size:7.6pt;color:#52606d}' +
+    '.rd-gap span{font-size:7.6pt;color:#7b8794;font-style:italic;padding:.5mm 0 .5mm 1.6mm}' +
+    '.rd-gap i{display:block;background:repeating-linear-gradient(to bottom,#9aa5b1 0,#9aa5b1 1.1mm,transparent 1.1mm,transparent 2.1mm) no-repeat center/0.8pt 100%}' +
+    // fotos: quadro igual para todas
+    '.rd-fotos .foto{flex:0 0 calc(50% - 2mm)}.rd-fotos .foto .q{height:58mm}.rd-fotos .foto img{max-height:58mm;max-width:100%;object-fit:contain}' +
+    '.rd-fotos .foto .leg b{color:#1f2933}' +
+    // período
+    '.pg-paisagem figure.grafico svg{max-width:none;width:100%}' +
+    'table.rd-lista{font-size:7.9pt}table.rd-lista td,table.rd-lista th{padding:.8mm 1.4mm}' +
+    'ul.rd-destaques{margin:0 0 3mm 4.5mm;padding:0}ul.rd-destaques li{margin:0 0 1.3mm;text-align:left}' +
+    'table.rd-glossario th:first-child{width:52mm}';
+}
+/** Estilos + quadro-resumo e aviso do público dentro da capa (o essencial na primeira folha). */
+function RepD_acabamento_(html, quadro, aviso, interno) {
+  var h = html.replace('</head>', '<style>' + RepD_estilos_() + '</style></head>');
+  var i = h.indexOf('<section class="capa">'), j = i < 0 ? -1 : h.indexOf('</div><div class="pe">', i);
+  if (j < 0) return h;
+  return h.slice(0, j) + quadro + (aviso ? '<p class="rd-aviso' + (interno ? ' int' : '') + '">' + RelA4_esc_(aviso) + '</p>' : '') + h.slice(j);
+}
+/** Quadro-resumo: linhas [[rótulo, valor (texto) ou {html}, 'sit']]. */
+function RepD_quadro_(titulo, linhas) {
+  return '<div class="rd-quadro"><p class="cab">' + RelA4_esc_(titulo) + '</p><table><tbody>' + linhas.filter(function (l) { return l && l[0] && (l[1] || l[1] === 0); }).map(function (l) {
+    var v = l[1] && typeof l[1] === 'object' && l[1].html !== undefined ? l[1].html : RelA4_esc_(l[1]);
+    return '<tr><th>' + RelA4_esc_(l[0]) + '</th><td' + (l[2] ? ' class="' + l[2] + '"' : '') + '>' + v + '</td></tr>';
+  }).join('') + '</tbody></table></div>';
+}
+/** Tabela de identificação que não se divide entre folhas; vazio vira o texto pedido (padrão "—"). */
+function RepD_ident_(pares, vazio) {
+  return '<div class="manter">' + RelA4_identificacao_(pares.map(function (p) { return [p[0], RepD_s_(p[1]) === '' ? (vazio || '—') : p[1], p[2]]; })) + '</div>';
+}
+function RepD_glossarioHtml_(itens, legenda) {
+  return RelA4_tabela_([{ t: 'Etapa' }, { t: 'O que quer dizer' }], itens, { legenda: legenda, compacta: true }).replace('<table class="t', '<table class="t rd-glossario');
+}
+
+// ------------------------------------------------------------
+// DOCUMENTO DO ATENDIMENTO
+// ------------------------------------------------------------
 function RepD_htmlAtendimento_(V, meta) {
   var m = meta || {}, cliente = V.publico === 'CLIENTE', interno = V.publico === 'INTERNO', corpo = '';
-  var kpis = [[V.etapaNome.replace(/ \(a representada vê.*$/, ''), 'Situação atual'], [String(V.abertoEm).slice(0, 10) || '—', 'Aberto em'], [V.concluidoEm ? V.concluidoEm.slice(0, 10) : '—', V.concluidoEm ? 'Concluído em' : 'Ainda não concluído', V.concluidoEm ? 'ok' : 'aviso'],
-    [String(V.fotosTotal), V.fotosTotal === 1 ? 'Foto neste documento' : 'Fotos neste documento']];
-  var resumo = 'Chamado ' + V.numero + ' do ' + V.equipamentoTexto + (V.serie ? ' (série ' + V.serie + ')' : '') + ', ' + V.clienteNome + '. ' +
-    (V.cancelado ? 'O chamado foi cancelado.' : V.concluidoEm ? 'Atendimento concluído em ' + V.concluidoEm + '.' : 'Atendimento em andamento; este documento é o retrato de ' + RepD_br_(V.agoraMs) + '.') +
-    (V.servico.length ? ' Serviço: ' + V.servico.filter(function (s) { return s[0] === 'Serviço realizado'; }).map(function (s) { return s[1]; }).join(' ').slice(0, 400) : '');
-  corpo += RelA4_secao_('Resumo do atendimento', RelA4_caixa_(REPD_AVISO_PUBLICO[V.publico], interno ? 'aviso' : '') + RelA4_kpis_(kpis) + RelA4_paragrafos_(resumo));
-  corpo += RelA4_secao_('Cliente e equipamento', RelA4_subsecao_('Cliente', RelA4_identificacao_(V.identCliente)) + RelA4_subsecao_('Equipamento', RelA4_identificacao_(V.identEquip)));
-  corpo += RelA4_secao_('Relato da abertura', RelA4_identificacao_(V.relato));
+  var versao = interno ? 'uso interno' : cliente ? 'versão do cliente' : 'versão da representada';
+  var secServico = cliente ? 'Serviço realizado e recomendações' : 'Diagnóstico e serviço';
+  var achar = function (l, rot) { var x = l.filter(function (p) { return p[0] === rot; })[0]; return x ? RepD_s_(x[1]) : ''; };
+  // 1. resumo: números do atendimento e o texto curto do problema e do serviço
+  var kpis = cliente ? [[V.abertoEm.slice(0, 10) || '—', 'Aberto em'], [V.visitaDia || '—', V.visitaRotulo], [V.concluidoEm ? V.concluidoEm.slice(0, 10) : '—', V.concluidoEm ? 'Concluído em' : 'Ainda não concluído', V.concluidoEm ? 'ok' : 'aviso'],
+    [achar(V.visita, 'Tempo no local') || '—', 'Tempo do técnico no local']] :
+    [[RepD_tempo_(V.visitaMin), 'Do envio do pedido à visita'], [RepD_tempo_(V.conclusaoMin), 'Do envio do pedido à conclusão', V.concluidoEm ? '' : 'aviso'],
+      [V.marcosResumo, 'Marcos cumpridos no previsto', /^0 de/.test(V.marcosResumo) ? 'critico' : ''], [V.prazoEstado === 'SEM_PRAZO' ? '—' : REPD_NOME_PRAZO[V.prazoEstado], 'Prazo de atendimento',
+        { CUMPRIDO: 'ok', NO_PRAZO: 'ok', EM_RISCO: 'aviso', VENCIDO: 'critico', FORA_DO_PRAZO: 'aviso' }[V.prazoEstado] || '']];
+  var problema = V.relato[0] ? RepD_s_(V.relato[0][1]) : '', servico = achar(V.servico, 'Serviço realizado'), causa = achar(V.servico, 'Causa ou diagnóstico');
+  var txt = '<div class="rd-texto">' + (problema ? '<p><b>Problema relatado.</b> ' + RelA4_esc_(problema) + '</p>' : '') + (causa ? '<p><b>Causa encontrada.</b> ' + RelA4_esc_(causa) + '</p>' : '') +
+    (servico ? '<p><b>Serviço realizado.</b> ' + RelA4_esc_(servico) + '</p>' : '<p><b>Serviço.</b> ' + RelA4_esc_(V.cancelado ? 'Chamado cancelado antes do serviço.' : 'Ainda não registrado na ordem de serviço.') + '</p>') +
+    '<p><b>Próximo passo.</b> ' + RelA4_esc_(V.proximo) + '</p>' +
+    (!V.concluidoEm && !V.cancelado ? '<p class="nota">Atendimento em andamento: este documento é o retrato de ' + RelA4_esc_(RepD_br_(V.agoraMs)) + '.</p>' : '') + '</div>';
+  corpo += RelA4_secao_('Resumo do atendimento', RelA4_kpis_(kpis) + txt + (cliente ? '' : '<p class="nota">Tempos em horas úteis do expediente da Metrolabs, descontada a espera do complemento da representada.</p>'));
+  // 2. cliente e equipamento (cadastro vazio aparece como "Não informado")
+  corpo += RelA4_secao_('Cliente e equipamento', '<p class="rd-rot">Cliente</p>' + RepD_ident_(V.identCliente, 'Não informado') + '<p class="rd-rot">Equipamento</p>' + RepD_ident_(V.identEquip, 'Não informado'));
+  corpo += RelA4_secao_('Relato da abertura', RepD_ident_(V.relato));
   if (cliente) corpo += RelA4_secao_('Etapas do atendimento', RepD_etapasClienteHtml_(V.etapasCliente, V.etapaClienteAtual));
+  else corpo += RelA4_secao_('Marcos: previsto e realizado', RepD_marcosHtml_(V.marcos, V.agoraMs));
   corpo += RelA4_secao_('Linha do tempo', RepD_linhaDoTempoHtml_(V.linha));
-  if (!cliente) corpo += RelA4_secao_('Marcos: previsto e realizado', RepD_marcosHtml_(V.marcos, V.agoraMs));
-  corpo += RelA4_secao_('Visita e atendimento', V.visita.length ? RelA4_identificacao_(V.visita) : '<p class="nota">Visita ainda não agendada.</p>');
-  corpo += RelA4_secao_(cliente ? 'Serviço realizado e recomendações' : 'Diagnóstico e serviço', V.servico.length ? V.servico.map(function (s) { return RelA4_subsecao_(s[0], RelA4_paragrafos_(s[1])); }).join('') : '<p class="nota">O serviço ainda não foi registrado na ordem de serviço.</p>');
+  corpo += RelA4_secao_('Visita e atendimento', V.visita.length ? RepD_ident_(V.visita) : '<p class="nota">Visita ainda não agendada.</p>');
+  corpo += RelA4_secao_(secServico, V.servico.length ? RelA4_identificacao_(V.servico.map(function (s) { return [s[0], s[1], { largo: true }]; })) : '<p class="nota">O serviço ainda não foi registrado na ordem de serviço.</p>');
   corpo += RelA4_secao_('Peças', RelA4_tabela_([{ t: 'Peça' }, { t: 'Código' }, { t: 'Qtd.', num: true }, { t: 'Situação' }], V.pecas, { vazio: 'Nenhuma peça registrada.', legenda: V.pecas.length ? 'Peças do atendimento' : '' }));
   corpo += RelA4_secao_('Fotos', RepD_fotosHtml_(V));
   if (!cliente) corpo += RelA4_secao_('Conversa do chamado', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Mensagem' }], V.conversa.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma mensagem na conversa do chamado.', legenda: V.conversa.length ? 'Mensagens trocadas entre a representada e a Metrolabs' : '' }));
   if (interno) corpo += RelA4_secao_('Notas internas', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Nota' }], V.notasInternas.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma nota interna.', legenda: V.notasInternas.length ? 'Notas internas (a representada e o cliente não leem)' : '' }));
   var docs = (V.anexos.length ? RelA4_tabela_([{ t: 'Tipo' }, { t: 'Arquivo' }, { t: 'Enviado por' }, { t: 'Quando', nw: true }].concat(interno ? [{ t: 'Quem lê' }] : []), V.anexos, { legenda: 'Arquivos do pedido e do chamado' }) : '') +
-    (V.relatorioOs ? '<p>Relatório da ordem de serviço ' + RelA4_esc_(V.relatorioOs.numero) + ' emitido em ' + RelA4_esc_(V.relatorioOs.em) + (cliente ? ' (disponível em "Meus chamados").' : '.') + '</p>' : '');
+    (V.relatorioOs ? '<p class="nota">Relatório da ordem de serviço ' + RelA4_esc_(V.relatorioOs.numero) + ' emitido em ' + RelA4_esc_(V.relatorioOs.em) + (cliente ? ' (disponível em "Meus chamados").' : '.') + '</p>' : '');
   corpo += RelA4_secao_('Documentos do atendimento', docs || '<p class="nota">Nenhum arquivo anexado.</p>');
   if (interno) {
-    corpo += RelA4_secao_('Prazos e SLA', RelA4_identificacao_(V.prazos) + '<p class="nota">Tempos em horas úteis do expediente da Metrolabs. O aceite e o primeiro contato seguem os prazos da representada; o prazo de atendimento, a prioridade e o contrato.</p>');
+    corpo += RelA4_secao_('Prazos e SLA', RepD_ident_(V.prazos) + '<p class="nota">Tempos em horas úteis do expediente da Metrolabs. O aceite e o primeiro contato seguem os prazos da representada; o prazo de atendimento, a prioridade e o contrato.</p>');
     corpo += RelA4_secao_('Histórico do equipamento', (V.reincidente ? RelA4_caixa_('Reincidência: há outro chamado deste equipamento em até ' + REPP_REINCIDENCIA_DIAS + ' dias.', 'critico') : '') +
       RelA4_tabela_([{ t: 'Chamado', nw: true }, { t: 'Aberto em', nw: true }, { t: 'Situação' }, { t: 'Problema' }, { t: 'Reincidência' }], V.historico, { vazio: 'Nenhum outro chamado deste equipamento nos últimos 12 meses.', legenda: V.historico.length ? 'Outros chamados do equipamento (12 meses)' : '' }));
   }
   if (V.assinatura) {
     var img = V.assinatura.arquivoId ? AstR_b64Arquivo_(V.assinatura.arquivoId) : null;
-    corpo += RelA4_secao_('Assinaturas e aceite', SGO_DocA4_assinaturas_([{ papel: 'Recebido por (cliente)', nome: V.assinatura.nome || ' ', cargo: V.assinatura.documento || (V.assinatura.sem ? 'Sem assinatura: ' + V.assinatura.sem : ''), imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null },
-      { papel: 'Técnico responsável', nome: V.assinatura.tecnico, cargo: 'Metrolabs' }]) + (V.assinatura.em ? '<p class="nota">Assinado na tela do aparelho em ' + RelA4_esc_(V.assinatura.em) + '.</p>' : ''));
-  }
-  corpo += '<p class="nota" style="margin-top:4mm">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(V.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Público: ' + RelA4_esc_(V.publicoNome) + '. Versão ' + RelA4_esc_(String(m.versao || 1)) +
-    '. Marca de conferência do conteúdo: ' + RelA4_esc_(String(m.marca || '').slice(0, 16)) + '.</p>';
-  var ficha = [['Chamado', V.numero], ['Cliente', V.clienteNome], ['Equipamento', V.equipamentoTexto + (V.serie ? ' · série ' + V.serie : '')], ['Situação', V.etapaNome]];
-  if (!cliente && V.representadaNome) ficha.splice(1, 0, ['Representada', V.representadaNome], ['Protocolo da representada', V.protocolo || '—']);
-  ficha.push(['Público', V.publicoNome]);
-  var html = RelA4_documento_({ titulo: 'Relatório do atendimento', subtitulo: V.clienteNome + ' · ' + V.equipamentoTexto, tituloCurto: 'Relatório do atendimento', tituloArquivo: 'Relatorio do atendimento',
-    numero: m.numero, revisao: m.revisao || 0, emitidoPor: m.por, ficha: ficha, tipoCapa: 'Relatório do atendimento · ' + (interno ? 'uso interno' : cliente ? 'versão do cliente' : 'versão da representada'), corpo: corpo, capa: true, sumario: true });
+    corpo += RelA4_secao_('Assinaturas e aceite', '<div class="manter">' + SGO_DocA4_assinaturas_([{ papel: 'Recebido por (cliente)', nome: V.assinatura.nome || ' ', cargo: V.assinatura.documento || (V.assinatura.sem ? 'Sem assinatura: ' + V.assinatura.sem : ''), imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null },
+      { papel: 'Técnico responsável', nome: V.assinatura.tecnico, cargo: 'Metrolabs' }]) + (V.assinatura.em ? '<p class="nota" style="margin-top:2mm">Recebimento do serviço assinado na tela do aparelho do técnico em ' + RelA4_esc_(V.assinatura.em) + '.</p>' : '') + '</div>');
+  } else corpo += RelA4_secao_('Assinaturas e aceite', '<p class="nota">' + RelA4_esc_(V.cancelado ? 'Chamado cancelado: não há recebimento do serviço a assinar.' : 'A assinatura de quem recebeu o atendimento ainda não foi registrada na ordem de serviço. Ela entra neste documento quando o técnico encerrar a visita.') + '</p>');
+  // fecho: a quem se destina, o que quer dizer cada etapa e a emissão
+  corpo += RelA4_secao_('Sobre este documento', RepD_glossarioHtml_(cliente ? REPD_GLOSSARIO_CLIENTE : REPD_GLOSSARIO_REP, cliente ? 'Etapas de "Meus chamados"' : 'Etapas que a representada acompanha') +
+    '<p class="nota">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(V.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Emissão ' + RelA4_esc_(String(m.versao || 1)) + ' (revisão ' + RelA4_esc_(SGO_DocA4_revisao_(m.revisao || 0)) + '); cada nova emissão gera outro arquivo e as anteriores continuam guardadas. Marca de conferência do conteúdo: ' +
+    RelA4_esc_(String(m.marca || '').slice(0, 16)) + '.</p>');
+  var ficha = [['Chamado', V.numero], ['Cliente', V.clienteNome], ['Equipamento', V.equipamentoTexto + (V.serie ? ' · série ' + V.serie : '')]];
+  if (!cliente && V.representadaNome) ficha.splice(1, 0, ['Representada', V.representadaNome], ['Protocolo da representada', V.protocolo || 'Não informado']);
+  var html = RelA4_documento_({ titulo: 'Relatório do atendimento', subtitulo: V.clienteNome + ' · ' + V.equipamentoTexto, tituloCurto: 'Relatório do atendimento ' + V.numero + ' · ' + versao, tituloArquivo: 'Relatorio do atendimento',
+    numero: m.numero, revisao: m.revisao || 0, emitidoPor: m.por, ficha: ficha, tipoCapa: 'Relatório do atendimento · ' + versao, corpo: corpo, capa: true, sumario: true });
   var reg = RelA4_registro_(html); if (reg) reg.semSumario = null; // o dono pediu índice sempre
-  return html;
+  var quadro = RepD_quadro_('Situação em ' + RepD_br_(V.agoraMs), [['Situação', V.etapaNome, 'sit']].concat(cliente ? [] : [['Prazo de atendimento', V.prazoTexto], ['Aceite do pedido', V.aceiteTexto]],
+    [['Visita', V.visitaTexto], ['Conclusão', V.concluidoEm || (V.cancelado ? 'Chamado cancelado' : 'Ainda não concluído')]], !cliente && !V.encerrado && !V.cancelado ? [['Com quem está', V.comQuem]] : [], [['Próximo passo', V.proximo]]));
+  return RepD_acabamento_(html, quadro, REPD_AVISO_PUBLICO[V.publico], interno);
 }
 
 // ------------------------------------------------------------
@@ -469,7 +652,8 @@ function RepD_visaoPeriodo_(publico, o) {
     var k = RepP_cartao_(x, !interno);
     return { numero: k.numero, pedidoNumero: k.pedidoNumero, tipo: k.tipo, cliente: k.clienteNome, cidade: k.cidade, equipamento: k.equipamento, etapaNome: k.etapaNome, enviadoMs: k.enviadoMs, fimMs: k.fimMs, aberto: k.aberto,
       visitaPrevMs: k.visitaPrevMs, visitaMs: k.visitaMs, conclusaoMs: k.conclusaoMs, prazo: k.prazo, prioridade: k.prioridade, prioridadePrevista: k.prioridadePrevista, reincidente: k.reincidente,
-      representada: interno ? k.representadaNome : '', tecnico: k.tecnico, rotulo: k.etapaNome, cor: REPD_COR_PRAZO[k.prazo.estado] || '#7b8794' };
+      representada: interno ? k.representadaNome : '', tecnico: k.tecnico, rotulo: k.etapaNome + (k.prazo.estado !== 'SEM_PRAZO' && REPD_NOME_PRAZO[k.prazo.estado] ? ' · ' + REPD_NOME_PRAZO[k.prazo.estado].toLowerCase() : ''),
+      cor: REPD_COR_PRAZO[k.prazo.estado] || '#7b8794' };
   });
   return P;
 }
@@ -478,7 +662,7 @@ function RepD_visaoPeriodo_(publico, o) {
 // GANTT IMPRESSO (paisagem; rótulos nunca encostam nos losangos)
 // ------------------------------------------------------------
 function RepD_ganttSvg_(itens, de, ate, agoraMs, comPrazo) {
-  var W = 1000, rotW = 190, area = W - rotW - 12, lh = 22, cab = 34, H = cab + itens.length * lh + 8, DIA = 864e5;
+  var W = 1000, rotW = 200, area = W - rotW - 12, lh = 24, cab = 34, H = cab + itens.length * lh + 8, DIA = 864e5;
   var reg = RepD_regua_(de, ate, rotW, area, 12, 27, H - 4, {}), xm = function (ms) { return Math.max(rotW, Math.min(rotW + area, reg.x(ms))); };
   var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">', reg.svg];
   var faixas = [], hoje = agoraMs >= de && agoraMs <= ate ? xm(agoraMs) : null;
@@ -486,8 +670,8 @@ function RepD_ganttSvg_(itens, de, ate, agoraMs, comPrazo) {
   itens.forEach(function (x, i) {
     var y = cab + i * lh, by = y + 4, bh = lh - 8;
     if (i % 2) faixas.push('<rect x="0" y="' + y + '" width="' + W + '" height="' + lh + '" fill="#f5f7fa"/>');
-    s.push(RepD_txt_(4, y + 10, String(x.numero), 'font-size="9" font-weight="700" fill="#1f2933"'));
-    s.push(RepD_txt_(4, y + 19, String(x.sub || '').slice(0, 34), 'font-size="7.5" fill="#52606d"'));
+    s.push(RepD_txt_(4, y + 10.5, String(x.numero), 'font-size="10" font-weight="700" fill="#1f2933"'));
+    s.push(RepD_txt_(4, y + 20.5, String(x.sub || '').slice(0, 38), 'font-size="8.3" fill="#3e4c59"'));
     var x0 = xm(x.enviadoMs), fim = x.aberto ? agoraMs : (x.fimMs || x.enviadoMs), x1 = Math.max(x0 + 4, xm(fim));
     s.push('<rect x="' + x0.toFixed(1) + '" y="' + by + '" width="' + (x1 - x0).toFixed(1) + '" height="' + bh + '" rx="2" fill="' + x.cor + '" fill-opacity="0.9"' + (x.prazo && x.prazo.estado === 'VENCIDO' ? ' stroke="#a61b1b" stroke-width="1.5"' : '') + '/>');
     var marcas = [];
@@ -513,7 +697,7 @@ function RepD_ganttHtml_(P, comPrazo) {
   if (!P.itens.length) return '<p class="nota">Nenhum pedido ou chamado no período.</p>';
   // janela justa: do primeiro envio que aparece (no máximo o início do período) até uma semana depois de hoje ou da última visita agendada
   var ini = Math.max(P.deMs, Math.min.apply(null, P.itens.map(function (x) { return x.enviadoMs || P.deMs; })) - 3 * 864e5);
-  var ate = Math.max(P.agoraMs, Math.max.apply(null, P.itens.map(function (x) { return x.visitaPrevMs || 0; }))) + 7 * 864e5, h = '', porPagina = 24;
+  var ate = Math.max(P.agoraMs, Math.max.apply(null, P.itens.map(function (x) { return x.visitaPrevMs || 0; }))) + 7 * 864e5, h = '', porPagina = 20;
   var leg = comPrazo ? ['NO_PRAZO', 'EM_RISCO', 'VENCIDO', 'PAUSADO', 'CUMPRIDO', 'FORA_DO_PRAZO'].map(function (k) { return { cor: REPD_COR_PRAZO[k], rotulo: REPD_NOME_PRAZO[k] }; }).concat([{ cor: '#1f2933', rotulo: 'Fim do prazo (tracejado)', tracejado: true }])
     : AST_ETAPAS_CLIENTE.map(function (e) { return { cor: REPD_COR_ETAPA_CLIENTE[e.etapa], rotulo: e.nome }; });
   leg = leg.concat([{ cor: '#0b3d6e', rotulo: 'Visita agendada', vazado: true, losango: true }].concat(comPrazo ? [{ cor: '#0b3d6e', rotulo: 'Chegada do técnico', losango: true }] : []), [{ cor: '#0b3d6e', rotulo: 'Hoje (linha)' }]);
@@ -521,59 +705,97 @@ function RepD_ganttHtml_(P, comPrazo) {
     var parte = P.itens.slice(i, i + porPagina).map(function (x) { return Object.assign({}, x, { sub: P.publico === 'CLIENTE' ? x.equipamento : [P.publico === 'INTERNO' ? x.representada : '', x.cliente].filter(Boolean).join(' · ') }); });
     h += RelA4_figura_(RepD_ganttSvg_(parte, ini, ate, P.agoraMs, comPrazo) + RepD_legHtml_(leg), 'Gantt da carteira, de ' + RepD_dia_(ini) + ' a ' + RepD_dia_(ate) + (P.itens.length > porPagina ? ' (parte ' + (i / porPagina + 1) + ' de ' + Math.ceil(P.itens.length / porPagina) + ')' : ''));
   }
-  return h + '<p class="nota">Cada barra vai do envio do pedido (ou da abertura do chamado) até a conclusão; aberto, vai até hoje. O texto da barra é a etapa. ' + (comPrazo ? 'A cor é a situação do prazo que vale agora (aceite para o pedido; atendimento para o chamado).' : 'A cor é a etapa em "Meus chamados".') + '</p>';
+  return h + '<p class="nota">Cada barra vai do envio do pedido (ou da abertura do chamado) até a conclusão; aberto, vai até hoje. ' + (comPrazo ? 'O texto da barra é a etapa e a situação do prazo que vale agora (aceite para o pedido; atendimento para o chamado); a cor repete a situação do prazo.' : 'O texto da barra é a etapa em "Meus chamados"; a cor repete a etapa.') + '</p>';
 }
 
 // ------------------------------------------------------------
 // DOCUMENTO DO PERÍODO
 // ------------------------------------------------------------
+/** Célula com a linha principal e uma segunda linha menor (cidade, série, nº do pedido). */
+function RepD_cel2_(a, b) {
+  return { html: RelA4_esc_(RepD_s_(a) || '—') + [].concat(b || []).filter(function (x) { return RepD_s_(x); }).map(function (x) { return '<span class="rd-sub">' + RelA4_esc_(x) + '</span>'; }).join('') };
+}
+/** "MODELO · série X" -> ["MODELO", "série X"]. */
+function RepD_eqPartes_(t) { t = RepD_s_(t); var i = t.indexOf(' · série '); return i < 0 ? [t, ''] : [t.slice(0, i), t.slice(i + 3)]; }
+
 function RepD_htmlPeriodo_(P, meta) {
   var m = meta || {}, cliente = P.publico === 'CLIENTE', interno = P.publico === 'INTERNO', k = P.indices, corpo = '', C = RELA4_CORES;
+  var versao = interno ? 'uso interno' : cliente ? 'versão do cliente' : 'versão da representada';
   var aviso = interno ? 'Uso interno da Metrolabs: traz primeiro contato, prazo por prioridade, fila, carga por técnico e a comparação entre representadas. Não envie à representada nem ao cliente.' :
-    cliente ? 'Versão do cliente: os seus chamados e pedidos de atendimento técnico no período, como aparecem em "Meus chamados".' : 'Versão da representada ' + P.escopoNome + ': só os pedidos e chamados da sua empresa.';
+    cliente ? 'Versão do cliente: os seus chamados de assistência técnica no período, como aparecem em "Meus chamados".' : 'Versão da representada ' + P.escopoNome + ': só os pedidos e chamados da sua empresa.';
+  var abertos = P.itens.filter(function (x) { return x.aberto; });
+  var proximas = abertos.filter(function (x) { return x.visitaPrevMs && x.visitaPrevMs >= P.agoraMs; }).sort(function (a, b) { return a.visitaPrevMs - b.visitaPrevMs; });
+  var nomeItem = function (x) { return x.numero + ' (' + (cliente ? RepD_eqPartes_(x.equipamento)[0] : x.cliente) + ')'; };
+  var listaCurta = function (l, max) { return l.slice(0, max).map(nomeItem).join('; ') + (l.length > max ? '; e mais ' + (l.length - max) : ''); };
+  var visitas = proximas.length ? 'Próximas visitas: ' + proximas.slice(0, 5).map(function (x) { return RepD_br_(x.visitaPrevMs) + ', ' + nomeItem(x); }).join('; ') + (proximas.length > 5 ? '; e mais ' + (proximas.length - 5) : '') + '.' : 'Nenhuma visita agendada a partir de hoje.';
+  var destaques = [], quadro = [], definicoes = [];
   if (cliente) {
-    corpo += RelA4_secao_('Resumo do período', RelA4_caixa_(aviso) + RelA4_kpis_([[RelA4_num_(k.abertos, 0), 'Abertos agora'], [RelA4_num_(k.abertosNoPeriodo, 0), 'Chamados abertos no período'], [RelA4_num_(k.concluidos, 0), 'Concluídos no período', 'ok'],
-      [RepD_tempo_(k.mediaConclusaoMin), 'Tempo médio até a conclusão']]) + RelA4_paragrafos_('De ' + P.de + ' a ' + P.ate + ': ' + k.abertosNoPeriodo + ' chamado(s) aberto(s), ' + k.concluidos + ' concluído(s). Agora: ' + k.emAnalise + ' em análise, ' +
-      k.visitaAgendada + ' com visita agendada e ' + k.emAtendimento + ' em atendimento.' + (k.proximaVisita ? ' Próxima visita: ' + k.proximaVisita.quando + ' (' + k.proximaVisita.numero + ', ' + k.proximaVisita.equipamento + ').' : '') +
-      ' Tempo médio da abertura à conclusão, em horas úteis do expediente da Metrolabs.'));
-    corpo += RelA4_secao_('Índices e gráficos', RelA4_barras_(P.porEtapa.map(function (e) { return { rotulo: e.t, valor: e.n, cor: REPD_COR_ETAPA_CLIENTE[e.n0] }; }), { titulo: 'Chamados por etapa (abertos e fechados no período)' }) +
-      RelA4_colunas_(P.porMes.map(function (x) { return { rotulo: x.t, valor: x.n, rotuloValor: String(x.n) }; }), { titulo: 'Chamados abertos por mês', altura: 170 }) +
+    destaques = ['Movimento no período: ' + RelA4_plural_(k.abertosNoPeriodo, 'chamado aberto', 'chamados abertos') + ' e ' + RelA4_plural_(k.concluidos, 'concluído', 'concluídos') + '.',
+      'Situação agora: ' + RelA4_num_(k.abertos, 0) + ' em aberto (' + k.emAnalise + ' em análise, ' + k.visitaAgendada + ' com visita agendada e ' + k.emAtendimento + ' em atendimento).', visitas,
+      k.mediaConclusaoMin !== null ? 'Tempo médio da abertura à conclusão: ' + RepD_tempo_(k.mediaConclusaoMin) + '.' : 'Nenhum chamado concluído no período.'];
+    quadro = [['Em aberto agora', RelA4_num_(k.abertos, 0) + ' (' + k.emAnalise + ' em análise, ' + k.visitaAgendada + ' com visita agendada, ' + k.emAtendimento + ' em atendimento)', 'sit'],
+      ['Abertos no período', RelA4_num_(k.abertosNoPeriodo, 0)], ['Concluídos no período', RelA4_num_(k.concluidos, 0)],
+      ['Tempo médio até a conclusão', k.mediaConclusaoMin !== null ? RepD_tempo_(k.mediaConclusaoMin) : 'Sem conclusão no período'],
+      ['Próxima visita', k.proximaVisita ? k.proximaVisita.quando + ', ' + k.proximaVisita.numero + ' (' + k.proximaVisita.equipamento + ')' : 'Nenhuma agendada']];
+    corpo += RelA4_secao_('Resumo do período', RelA4_kpis_([[RelA4_num_(k.abertos, 0), 'Em aberto agora'], [RelA4_num_(k.abertosNoPeriodo, 0), 'Chamados abertos no período'], [RelA4_num_(k.concluidos, 0), 'Concluídos no período', 'ok'],
+      [RepD_tempo_(k.mediaConclusaoMin), 'Tempo médio até a conclusão']]) + '<ul class="rd-destaques">' + destaques.map(function (d) { return '<li>' + RelA4_esc_(d) + '</li>'; }).join('') + '</ul>');
+    var porMes = P.porMes.length >= 2 ? RelA4_colunas_(P.porMes.map(function (x) { return { rotulo: x.t, valor: x.n, rotuloValor: String(x.n) }; }), { titulo: 'Chamados abertos por mês', altura: 160 }) :
+      '<p class="nota">Chamados abertos por mês: ' + (P.porMes.length ? RelA4_esc_(P.porMes[0].t + ', ' + RelA4_plural_(P.porMes[0].n, 'chamado', 'chamados')) : 'nenhum no período') + ' (o gráfico por mês aparece quando o período tem dois meses ou mais com chamados).</p>';
+    corpo += RelA4_secao_('Índices e gráficos', RelA4_barras_(P.porEtapa.map(function (e) { return { rotulo: e.t, valor: e.n, cor: REPD_COR_ETAPA_CLIENTE[e.n0] }; }), { titulo: 'Chamados por etapa (abertos agora e fechados no período)' }) + porMes +
       RelA4_barras_(P.porEquipamento.map(function (x) { return { rotulo: x.t, valor: x.n }; }), { titulo: 'Chamados por equipamento', cor: C.petroleo }) +
       RelA4_barras_(P.porUnidade.map(function (x) { return { rotulo: x.t, valor: x.n }; }), { titulo: 'Chamados por unidade', cor: C.roxo }));
+    definicoes = ['Horas úteis: tempo contado só no expediente da Metrolabs.', 'Tempo médio até a conclusão: da abertura do chamado à conclusão do serviço.', 'Chamados por etapa: os que estão abertos agora e os que fecharam no período.'];
   } else {
-    var md = P.minDia, kp = [[RelA4_num_(k.abertos, 0), 'Pedidos e chamados abertos'], [RelA4_num_(k.enviadosPeriodo, 0), 'Enviados no período'], [RepD_pct_(k.aceite.pct), 'Aceite no prazo', k.aceite.pct !== null && k.aceite.pct < 80 ? 'aviso' : 'ok'],
-      [RepD_pct_(P.atendimentoPrazo.pct), 'Atendimento no prazo', P.atendimentoPrazo.pct !== null && P.atendimentoPrazo.pct < 80 ? 'aviso' : 'ok'], [RepD_tempo_(k.aceite.mediaMin), 'Tempo médio até o aceite'],
+    var vencidos = abertos.filter(function (x) { return x.prazo && x.prazo.estado === 'VENCIDO'; }), risco = abertos.filter(function (x) { return x.prazo && x.prazo.estado === 'EM_RISCO'; });
+    var ap = P.atendimentoPrazo, deTotal = function (n, t, pct) { return t ? RepD_pct_(pct) + ' (' + n + ' de ' + t + ')' : 'Sem registro no período'; };
+    destaques = ['Movimento no período: ' + RelA4_plural_(k.enviadosPeriodo, 'pedido enviado', 'pedidos enviados') + ', ' + RelA4_plural_(k.aceite.total, 'aceito', 'aceitos') + ' (' + k.aceite.noPrazo + ' no prazo), ' +
+        RelA4_plural_(k.visita.total, 'visita', 'visitas') + ' e ' + RelA4_plural_(k.conclusao.total, 'conclusão', 'conclusões') + '.',
+      'Situação agora: ' + RelA4_num_(k.abertos, 0) + ' em aberto: ' + k.aguardandoMetrolabs + ' com a Metrolabs, ' + k.aguardandoRepresentada + ' com a representada e ' + k.aguardandoCliente + ' com o cliente final.',
+      vencidos.length ? 'Prazo vencido: ' + listaCurta(vencidos, 6) + '.' : 'Nenhum pedido ou chamado com o prazo vencido agora.', risco.length ? 'Prazo em risco: ' + listaCurta(risco, 6) + '.' : '', visitas,
+      k.reincidencia.porEquipamento.length ? 'Reincidência: ' + RelA4_plural_(k.reincidencia.porEquipamento.length, 'equipamento', 'equipamentos') + ' com chamado repetido em até ' + REPP_REINCIDENCIA_DIAS + ' dias (seção "Equipamentos reincidentes").' : ''].filter(Boolean);
+    quadro = [['Em aberto agora', RelA4_num_(k.abertos, 0) + ' (' + RelA4_plural_(vencidos.length, 'com prazo vencido', 'com prazo vencido') + ', ' + risco.length + ' em risco)', 'sit'],
+      ['Enviados no período', RelA4_num_(k.enviadosPeriodo, 0)], ['Aceite no prazo', deTotal(k.aceite.noPrazo, k.aceite.total, k.aceite.pct)], ['Atendimento no prazo', deTotal(ap.noPrazo, ap.total, ap.pct)],
+      ['Tempo médio até a conclusão', k.conclusao.mediaMin !== null && k.conclusao.mediaMin !== undefined ? RepD_tempo_(k.conclusao.mediaMin) : 'Sem conclusão no período'],
+      ['Pontos de atenção', vencidos.length ? 'Prazo vencido: ' + listaCurta(vencidos, 4) : risco.length ? 'Prazo em risco: ' + listaCurta(risco, 4) : 'Nenhum prazo vencido ou em risco agora']];
+    var kp = [[RelA4_num_(k.abertos, 0), 'Pedidos e chamados abertos'], [RelA4_num_(k.enviadosPeriodo, 0), 'Enviados no período'], [RepD_pct_(k.aceite.pct), 'Aceite no prazo', k.aceite.pct !== null && k.aceite.pct < 80 ? 'aviso' : 'ok'],
+      [RepD_pct_(ap.pct), 'Atendimento no prazo', ap.pct !== null && ap.pct < 80 ? 'aviso' : 'ok'], [RepD_tempo_(k.aceite.mediaMin), 'Tempo médio até o aceite'],
       [RepD_tempo_(k.visita.mediaMin), 'Tempo médio até a visita'], [RepD_tempo_(k.conclusao.mediaMin), 'Tempo médio até a conclusão'], [RepD_pct_(k.reincidencia.pct), 'Reincidência', k.reincidencia.reincidentes ? 'critico' : '']];
     if (interno) kp.splice(4, 0, [RepD_pct_(k.primeiroContato.pct), 'Primeiro contato no prazo'], [RelA4_num_(k.vencidos, 0), 'Prazo vencido agora', k.vencidos ? 'critico' : 'ok']);
-    corpo += RelA4_secao_('Resumo do período', RelA4_caixa_(aviso, interno ? 'aviso' : '') + RelA4_kpis_(kp) + RelA4_paragrafos_('De ' + P.de + ' a ' + P.ate + ' (' + P.dias + ' dias): ' + k.enviadosPeriodo + ' pedido(s) enviado(s), ' + k.aceite.total + ' aceito(s) (' +
-      k.aceite.noPrazo + ' no prazo), ' + k.visita.total + ' visita(s) e ' + k.conclusao.total + ' conclusão(ões). Abertos agora: ' + k.abertos + ' (' + k.aguardandoMetrolabs + ' com a Metrolabs, ' + k.aguardandoRepresentada + ' com a representada e ' +
-      k.aguardandoCliente + ' com o cliente final); ' + k.emRisco + ' em risco e ' + k.vencidos + ' com o prazo vencido. Tempos em horas úteis do expediente da Metrolabs, descontada a espera do complemento da representada.'));
+    corpo += RelA4_secao_('Resumo do período', RelA4_kpis_(kp) + '<ul class="rd-destaques">' + destaques.map(function (d) { return '<li>' + RelA4_esc_(d) + '</li>'; }).join('') + '</ul>');
     var g = '';
     g += RelA4_barras_(k.porEtapa.map(function (e) { return { rotulo: e.t, valor: e.n }; }), { titulo: 'Pedidos e chamados por etapa (abertos agora e fechados no período)' });
-    g += RelA4_barrasEmpilhadas_([{ rotulo: 'Aceite do pedido', partes: [k.aceite.noPrazo, k.aceite.total - k.aceite.noPrazo], rotuloValor: RepD_pct_(k.aceite.pct) + ' no prazo' },
-      { rotulo: 'Atendimento do chamado', partes: [P.atendimentoPrazo.noPrazo, P.atendimentoPrazo.total - P.atendimentoPrazo.noPrazo], rotuloValor: RepD_pct_(P.atendimentoPrazo.pct) + ' no prazo' }]
-      .concat(interno ? [{ rotulo: 'Primeiro contato', partes: [k.primeiroContato.noPrazo, k.primeiroContato.total - k.primeiroContato.noPrazo], rotuloValor: RepD_pct_(k.primeiroContato.pct) + ' no prazo' }] : []),
+    g += RelA4_barrasEmpilhadas_([{ rotulo: 'Aceite do pedido', partes: [k.aceite.noPrazo, k.aceite.total - k.aceite.noPrazo], rotuloValor: k.aceite.noPrazo + ' de ' + k.aceite.total + ' no prazo (' + RepD_pct_(k.aceite.pct) + ')' },
+      { rotulo: 'Atendimento do chamado', partes: [ap.noPrazo, ap.total - ap.noPrazo], rotuloValor: ap.noPrazo + ' de ' + ap.total + ' no prazo (' + RepD_pct_(ap.pct) + ')' }]
+      .concat(interno ? [{ rotulo: 'Primeiro contato', partes: [k.primeiroContato.noPrazo, k.primeiroContato.total - k.primeiroContato.noPrazo], rotuloValor: k.primeiroContato.noPrazo + ' de ' + k.primeiroContato.total + ' no prazo (' + RepD_pct_(k.primeiroContato.pct) + ')' }] : []),
       [{ rotulo: 'No prazo', cor: C.verde }, { rotulo: 'Fora do prazo', cor: C.vermelho }], { titulo: 'Prazo cumprido no período', vazio: 'Nenhum aceite ou atendimento concluído no período.' });
-    var tempos = [{ rotulo: 'Até o aceite', min: k.aceite.mediaMin }].concat(interno ? [{ rotulo: 'Primeiro contato', min: k.primeiroContato.mediaMin }] : [], [{ rotulo: 'Até a visita', min: k.visita.mediaMin }, { rotulo: 'Até a conclusão', min: k.conclusao.mediaMin }]);
-    var maxH = Math.max.apply(null, tempos.map(function (t) { return (t.min || 0) / 60; }).concat([1]));
-    g += RelA4_colunas_(tempos.map(function (t) { return { rotulo: t.rotulo, valor: t.min === null ? null : Math.round(t.min / 6) / 10, rotuloValor: t.min === null ? '—' : RelA4_num_(t.min / 60, 1) + ' h úteis' }; }), { titulo: 'Tempos médios (horas úteis)', unidade: 'horas úteis', max: Math.ceil(maxH * 1.15), altura: 180, casas: 1 });
+    var tempos = [{ rotulo: 'Do envio ao aceite', min: k.aceite.mediaMin }].concat(interno ? [{ rotulo: 'Do aceite ao primeiro contato', min: k.primeiroContato.mediaMin }] : [], [{ rotulo: 'Do envio à visita', min: k.visita.mediaMin }, { rotulo: 'Do envio à conclusão', min: k.conclusao.mediaMin }]);
+    g += RelA4_barras_(tempos.map(function (t) { var sem = t.min === null || t.min === undefined; return { rotulo: t.rotulo, valor: sem ? 0 : t.min, rotuloValor: sem ? 'sem registro no período' : RepD_tempo_(t.min) }; }), { titulo: 'Tempos médios (horas úteis do expediente da Metrolabs)', cor: C.azul });
     g += RelA4_barras_(k.porCliente.map(function (x) { return { rotulo: x.t, valor: x.n }; }), { titulo: 'Pedidos e chamados por cliente (enviados no período)', cor: C.petroleo });
     g += RelA4_barras_(k.porUf.map(function (x) { return { rotulo: x.t, valor: x.n }; }), { titulo: 'Por UF (enviados no período)', cor: C.roxo });
     g += RelA4_barras_(k.garantia.map(function (x) { return { rotulo: x.t, valor: x.n, cor: x.codigo === 'EM_GARANTIA' ? C.verde : x.codigo === 'FORA' ? C.laranja : C.cinza }; }), { titulo: 'Garantia pelo cadastro do equipamento (enviados no período)' });
-    g += RelA4_barrasEmpilhadas_(k.reincidencia.porModelo.map(function (x) { return { rotulo: x.t, partes: [x.n - x.reincidentes, x.reincidentes], rotuloValor: x.reincidentes + ' de ' + x.n }; }),
-      [{ rotulo: 'Sem reincidência', cor: C.azul }, { rotulo: 'Reincidente (mesmo equipamento em até 90 dias)', cor: C.vermelho }], { titulo: 'Reincidência por modelo (chamados no período)', vazio: 'Nenhum chamado no período.' });
-    corpo += RelA4_secao_('Índices e gráficos', g + '<p class="nota">Fórmulas dos índices: manual do módulo Representação, seção "Painel". Por etapa conta os abertos agora e os que fecharam no período; distribuições contam os enviados no período.</p>');
-    if (k.reincidencia.porEquipamento.length) corpo += RelA4_secao_('Equipamentos reincidentes', RelA4_tabela_([{ t: 'Equipamento · cliente' }, { t: 'Reincidências', num: true }], k.reincidencia.porEquipamento.map(function (x) { return [x.t, String(x.n)]; }), { legenda: 'Equipamentos com chamado repetido em até 90 dias' }));
+    g += RelA4_barrasEmpilhadas_(k.reincidencia.porModelo.map(function (x) { return { rotulo: x.t, partes: [x.n - x.reincidentes, x.reincidentes], rotuloValor: x.reincidentes + ' reincidente(s) de ' + x.n }; }),
+      [{ rotulo: 'Sem reincidência', cor: C.azul }, { rotulo: 'Reincidente (mesmo equipamento em até ' + REPP_REINCIDENCIA_DIAS + ' dias)', cor: C.vermelho }], { titulo: 'Reincidência por modelo (chamados no período)', vazio: 'Nenhum chamado no período.' });
+    corpo += RelA4_secao_('Índices e gráficos', g);
+    if (k.reincidencia.porEquipamento.length) corpo += RelA4_secao_('Equipamentos reincidentes', RelA4_tabela_([{ t: 'Equipamento · cliente' }, { t: 'Reincidências', num: true }], k.reincidencia.porEquipamento.map(function (x) { return [x.t, String(x.n)]; }), { legenda: 'Equipamentos com chamado repetido em até ' + REPP_REINCIDENCIA_DIAS + ' dias' }));
+    definicoes = ['Horas úteis: tempo contado só no expediente da Metrolabs, descontada a espera do complemento da representada.',
+      'Aceite no prazo: pedidos aceitos no período dentro do prazo de aceite combinado com a representada.', 'Atendimento no prazo: chamados concluídos no período dentro do prazo de atendimento.',
+      'Tempos médios: contados do envio do pedido; a visita é a chegada do técnico ao local.'].concat(interno ? ['Primeiro contato: do aceite ao primeiro registro da Metrolabs no chamado (triagem assumida ou iniciada, ou mensagem à representada).'] : [],
+      ['Reincidência: chamado de um equipamento que já teve outro chamado em até ' + REPP_REINCIDENCIA_DIAS + ' dias.', 'Garantia pelo cadastro: a garantia registrada no cadastro do equipamento, não o enquadramento pedido na abertura.',
+        'Por etapa: os abertos agora e os que fecharam no período. Por cliente, UF e garantia: os enviados no período.']);
   }
-  corpo += RelA4_paisagem_(RelA4_secao_('Gantt da carteira', RepD_ganttHtml_(P, !cliente)));
+  // Gantt (folha deitada) e lista
+  var gantt = RelA4_secao_('Gantt da carteira', RepD_ganttHtml_(P, !cliente));
   var cols = cliente ? [{ t: 'Chamado', nw: true }, { t: 'Equipamento' }, { t: 'Unidade' }, { t: 'Etapa' }, { t: 'Aberto em', nw: true }, { t: 'Concluído em', nw: true }] :
-    [{ t: 'Nº', nw: true }].concat(interno ? [{ t: 'Representada' }] : [], [{ t: 'Cliente' }, { t: 'Equipamento' }, { t: 'Etapa' }, { t: 'Enviado', nw: true }, { t: 'Concluído', nw: true }, { t: 'Prazo' }], interno ? [{ t: 'Técnico' }] : []);
+    [{ t: 'Nº', nw: true }].concat(interno ? [{ t: 'Representada', w: '26mm' }] : [], [{ t: 'Cliente', w: interno ? '40mm' : '34mm' }, { t: 'Equipamento', w: interno ? '40mm' : '34mm' }, { t: 'Etapa' }, { t: 'Enviado', nw: true }, { t: 'Concluído', nw: true }, { t: 'Prazo' }], interno ? [{ t: 'Técnico', w: '28mm' }] : []);
   var linhas = P.itens.map(function (x) {
-    if (cliente) return [x.numero, x.equipamento, x.unidade, x.etapaNome, String(x.abertoEm).slice(0, 10), RepD_dia_(x.conclusaoMs) || '—'];
+    var eq = RepD_eqPartes_(x.equipamento);
+    if (cliente) return [x.numero, RepD_cel2_(eq[0], eq[1]), x.unidade, x.etapaNome, String(x.abertoEm).slice(0, 10), RepD_dia_(x.conclusaoMs) || '—'];
     var pz = x.prazo && x.prazo.estado !== 'SEM_PRAZO' ? RelA4_marca_(REPD_NOME_PRAZO[x.prazo.estado], { NO_PRAZO: 'neutra', EM_RISCO: 'aviso', VENCIDO: 'critico', PAUSADO: 'neutra', CUMPRIDO: 'ok', FORA_DO_PRAZO: 'critico' }[x.prazo.estado]) : '—';
-    return [x.numero + (x.reincidente ? ' (reincidente)' : '')].concat(interno ? [x.representada] : [], [x.cliente + (x.cidade ? ' · ' + x.cidade : ''), x.equipamento, x.etapaNome, RepD_dia_(x.enviadoMs), RepD_dia_(x.conclusaoMs) || '—', pz], interno ? [x.tecnico || '—'] : []);
+    var sub = [x.tipo === 'CHAMADO' && x.pedidoNumero ? 'pedido ' + x.pedidoNumero : '', x.reincidente ? 'reincidente' : ''];
+    return [RepD_cel2_(x.numero, sub)].concat(interno ? [x.representada] : [], [RepD_cel2_(x.cliente, x.cidade), RepD_cel2_(eq[0], eq[1]), x.etapaNome, RepD_dia_(x.enviadoMs), RepD_dia_(x.conclusaoMs) || '—', pz], interno ? [x.tecnico || '—'] : []);
   });
-  corpo += RelA4_secao_(cliente ? 'Chamados do período' : 'Pedidos e chamados do período', RelA4_tabela_(cols, linhas, { legenda: 'Abertos agora e os que foram enviados ou fecharam no período', compacta: linhas.length > 12 }));
+  var lista = RelA4_secao_(cliente ? 'Chamados do período' : 'Pedidos e chamados do período', RelA4_tabela_(cols, linhas, { legenda: 'Abertos agora e os que foram enviados ou fecharam no período', compacta: true }).replace('<table class="t', '<table class="t rd-lista'));
+  corpo += interno ? RelA4_paisagem_(gantt + lista) : RelA4_paisagem_(gantt) + lista;
   if (interno) {
     corpo += RelA4_secao_('Prazo de atendimento por prioridade', RelA4_tabela_([{ t: 'Prioridade' }, { t: 'Atendidos', num: true }, { t: 'No prazo', num: true }, { t: '% no prazo', num: true }, { t: 'Média até a visita', num: true }, { t: 'Abertos', num: true }, { t: 'Em risco', num: true }, { t: 'Vencidos', num: true }],
       k.slaPorPrioridade.map(function (s) { return [s.t, String(s.atendidos), String(s.noPrazo), RepD_pct_(s.pct), RepD_tempo_(s.mediaVisitaMin), String(s.abertos), String(s.emRisco), String(s.vencidos)]; }), { legenda: 'SLA por prioridade (' + P.dias + ' dias)' }));
@@ -583,13 +805,14 @@ function RepD_htmlPeriodo_(P, meta) {
     corpo += RelA4_secao_('Fila de pedidos e representadas', RelA4_tabela_([{ t: 'Pedido', nw: true }, { t: 'Representada' }, { t: 'Cliente' }, { t: 'Idade', num: true }, { t: 'Prazo de aceite' }], k.fila.map(function (f) { return [f.numero, f.representada, f.cliente, RepD_tempo_(f.idadeMin), f.prazo.texto || REPD_NOME_PRAZO[f.prazo.estado] || '—']; }), { legenda: 'Fila de pedidos aguardando o aceite', vazio: 'Nenhum pedido na fila.' }) +
       RelA4_tabela_([{ t: 'Representada' }, { t: 'Abertos', num: true }, { t: 'Na fila', num: true }, { t: 'Vencidos', num: true }, { t: 'Enviados', num: true }, { t: 'Aceite no prazo', num: true }], k.porRepresentada.map(function (r) { return [r.nome, String(r.abertos), String(r.fila), String(r.vencidos), String(r.enviados), RepD_pct_(r.aceitePct)]; }), { legenda: 'Por representada' }));
   }
-  corpo += '<p class="nota" style="margin-top:4mm">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(P.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Público: ' + RelA4_esc_(P.publicoNome) + '. Período: ' + RelA4_esc_(P.de + ' a ' + P.ate) + '.</p>';
-  var html = RelA4_documento_({ titulo: 'Relatório do período · Representação', subtitulo: P.escopoNome, tituloCurto: 'Relatório do período', tituloArquivo: 'Relatorio do periodo', numero: m.numero, revisao: 0, emitidoPor: m.por,
-    identificacao: P.de + ' a ' + P.ate + ' (' + P.dias + ' dias)', ficha: [[cliente ? 'Cliente' : 'Representada', P.escopoNome], ['Público', P.publicoNome]],
-    tipoCapa: 'Relatório gerencial · ' + (interno ? 'uso interno' : cliente ? 'versão do cliente' : 'versão da representada'), corpo: corpo, capa: true, sumario: true });
-  if (cliente) html = html.replace('Relatório do período · Representação', 'Relatório do período · Assistência técnica');
+  corpo += RelA4_secao_('Como ler este relatório', '<ul class="rd-destaques">' + definicoes.map(function (d) { return '<li>' + RelA4_esc_(d) + '</li>'; }).join('') + '</ul>' +
+    RepD_glossarioHtml_(cliente ? REPD_GLOSSARIO_CLIENTE : REPD_GLOSSARIO_REP, cliente ? 'Etapas de "Meus chamados"' : 'Etapas que a representada acompanha') +
+    '<p class="nota">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(P.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Período: ' + RelA4_esc_(P.de + ' a ' + P.ate) + ' (' + P.dias + ' dias). Fórmulas: manual do módulo, seção "Painel".</p>');
+  var html = RelA4_documento_({ titulo: cliente ? 'Relatório do período · Assistência técnica' : 'Relatório do período · Representação', subtitulo: P.escopoNome, tituloCurto: 'Relatório do período ' + P.de + ' a ' + P.ate + ' · ' + versao,
+    tituloArquivo: 'Relatorio do periodo', numero: m.numero, revisao: 0, emitidoPor: m.por, identificacao: P.de + ' a ' + P.ate + ' (' + P.dias + ' dias)', ficha: [[cliente ? 'Cliente' : 'Representada', P.escopoNome]],
+    tipoCapa: 'Relatório gerencial · ' + versao, corpo: corpo, capa: true, sumario: true });
   var reg = RelA4_registro_(html); if (reg) reg.semSumario = null;
-  return html;
+  return RepD_acabamento_(html, RepD_quadro_('Situação em ' + RepD_br_(P.agoraMs), quadro), aviso, interno);
 }
 
 // ------------------------------------------------------------
