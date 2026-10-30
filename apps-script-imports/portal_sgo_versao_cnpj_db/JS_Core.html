@@ -2781,6 +2781,8 @@
       if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não devolveu a situação da frota.");
       if (pedido === FS.pedido) { FS.inicio = res; FS.inicioEm = Date.now(); FS.sessao = sessao; FS.semInternet = false; fsGuardarInicio_(res, sessao); }
       MOBILE_FROTA.gruposChecklist = res.gruposChecklist || [];
+      // 30/10/2026 (leva 2): grupo "Funcionamento" (óleo, água, luz no painel, pneus, freio), só na retirada
+      MOBILE_FROTA.gruposChecklistRetirada = res.gruposChecklistRetirada || [];
       MOBILE_FROTA.emAndamento = res.emAndamento || [];
       return res;
     });
@@ -2876,6 +2878,8 @@
         '<span class="fs-seta" aria-hidden="true" style="color:#fff">&rsaquo;</span></button>' +
         '<button type="button" class="fs-btn" data-acao="passar" data-id="' + fsEsc_(m.veiculoId) + '">Passar o ' + fsEsc_(m.veiculoApelido || m.veiculoRotulo || m.veiculoPlaca) + ' para outra pessoa (sem devolver)</button>';
     });
+    // 30/10/2026 (leva 2): "Abasteci" e outras despesas a qualquer momento da retirada, com a foto da nota
+    if (d.condutor || gestao) h += '<div class="fs-duas"><button type="button" class="fs-btn' + (minhas.length ? " prim" : "") + '" data-acao="abasteci">Abasteci</button><button type="button" class="fs-btn" data-acao="despesa">Pedágio, estacionamento e outras despesas</button></div>';
     if (rascunho) {
       const enviadas = rascunho.fotos.concat(rascunho.painel).filter(function (f) { return f.estado === "enviada"; }).length;
       h += '<button type="button" class="fs-btn" data-acao="continuar">Continuar ' + (rascunho.tipo === "retirada" ? "a retirada do " : "a devolução do ") + fsEsc_(rascunho.rotulo || rascunho.placa) +
@@ -3151,6 +3155,8 @@
     if (acao === "abast") { fsAbast_(alvo.getAttribute("data-v")); return; }
     if (acao === "abastModo") { if (FS.fluxo) { FS.fluxo.abastModo = alvo.getAttribute("data-v"); fsRedesenharAbast_(); } return; }
     if (acao === "abTanque") { if (FS.fluxo) { FS.fluxo.abTanque = alvo.getAttribute("data-v"); fsRedesenharAbast_(); } return; }
+    if (acao === "usarKmSug") { const f1 = FS.fluxo, s1 = f1 && fsKmSug_(f1); if (s1) { f1.km = String(s1.km); f1.kmTocado = true; const i1 = document.getElementById("fs_km"); if (i1) i1.value = f1.km; fsAtualizarKmInfo_(); fsAtualizarBarra_(); } return; }
+    if (acao === "abasteci" || acao === "despesa") { fsGastoAbrir_(acao); return; }
     if (acao === "item") { fsAlternarItem_(alvo); return; }
     if (acao === "removerFoto") { ev.preventDefault(); ev.stopPropagation(); fsRemoverFoto_(id); return; }
     if (acao === "tentarFoto") { fsTentarDeNovo_(id); return; }
@@ -3199,7 +3205,8 @@
       return;
     }
     if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "devolucao" && FS.fluxo.mov.id === m.id)) {
-      FS.fluxo = fsNovoFluxo_("devolucao", { mov: m, placa: m.veiculoPlaca, rotulo: m.veiculoRotulo || m.veiculoPlaca });
+      // 30/10/2026 (leva 2): KM de chegada já preenchido com o que o rastreador indica (a pessoa confere no painel e corrige)
+      FS.fluxo = fsNovoFluxo_("devolucao", { mov: m, placa: m.veiculoPlaca, rotulo: m.veiculoRotulo || m.veiculoPlaca, km: m.kmSugerido ? String(m.kmSugerido.km) : "", kmDoRastreador: !!m.kmSugerido });
     }
     fsDesenharFluxo_();
   }
@@ -3229,7 +3236,9 @@
     h += '<section class="fs-passo" id="fsPassoKm"><h3><span class="fs-num">1</span>' + (ret ? "KM do painel" : "KM de chegada") + "</h3>" +
       '<div class="fs-campo"><label for="fs_km">' + (ret ? "Confira o número no painel. Se for diferente, corrija." : "Número do odômetro agora") + "</label>" +
       '<input type="text" id="fs_km" class="fs-km-in" inputmode="numeric" autocomplete="off" value="' + fsEsc_(f.km) + '" placeholder="' + (ret ? "" : "Ex.: " + fsEsc_(fsKm_(Number(f.mov.kmSaida) + 35))) + '"></div>' +
-      '<div class="fs-sub" id="fs_kmInfo"></div><div id="fs_painelBloco"></div></section>';
+      '<div class="fs-sub" id="fs_kmInfo"></div>' + fsKmSugHtml_(f) + '<div id="fs_painelBloco"></div></section>';
+    // 30/10/2026 (leva 2): problemas informados em retiradas anteriores e ainda em aberto com a gestão
+    if (ret && (f.veiculo.pendChecklist || []).length) h = h.replace('<section class="fs-passo" id="fsPassoKm">', '<div class="fs-aviso">Problemas já informados neste veículo e ainda em aberto com a gestão: ' + f.veiculo.pendChecklist.map(function (p) { return fsEsc_(p.item.toLowerCase() + (p.observacao ? " (" + p.observacao + ")" : "")); }).join("; ") + '. Se continuar igual, marque de novo na vistoria.</div><section class="fs-passo" id="fsPassoKm">');
     // 2. Fotos (retirada) — na devolução, a foto do painel vem no passo 1 e fotos extras do veículo são opcionais
     if (ret) {
       h += '<section class="fs-passo" id="fsPassoFotos"><h3><span class="fs-num">2</span>Fotos do veículo</h3>' +
@@ -3297,12 +3306,23 @@
     if (!fsNoComputador_()) window.scrollTo(0, 0); else host.scrollIntoView({ block: "start" });
   }
 
+  // 30/10/2026 (leva 2): KM sugerido pelo rastreador (variação do aparelho desde a saída ou a última devolução). Vale o painel.
+  function fsKmSug_(f) { return f.tipo === "retirada" ? (f.veiculo && f.veiculo.kmSugerido) : (f.mov && f.mov.kmSugerido); }
+  function fsKmSugHtml_(f) {
+    const s = fsKmSug_(f);
+    if (!s) return "";
+    if (f.tipo === "devolucao" && f.kmDoRastreador) return '<div class="fs-sub" id="fs_kmSug">Preenchido com o KM que o rastreador indica (leitura das ' + fsEsc_(String(s.quando || "").slice(-5)) + '). Confira no painel: se for diferente, corrija.</div>';
+    return '<div class="fs-sub" id="fs_kmSug">' + fsEsc_(s.texto) + ' <button type="button" class="fs-link" data-acao="usarKmSug">Usar ' + fsEsc_(fsKm_(s.km)) + '</button></div>';
+  }
   function fsAbastHtml_(f, noLugar) {
     const tipos = (FS.inicio && FS.inicio.tiposCombustivel) || MOBILE_FROTA.tiposCombustivel || ["Gasolina", "Etanol", "Diesel", "GNV"];
     let h = '<section class="fs-passo" id="fsPassoAbast"><h3><span class="fs-num">3</span>Abastecimento</h3>' +
       '<div class="fs-sub">Abasteceu durante este uso? (obrigatório)</div>' +
       '<div class="fs-duas"><button type="button" class="fs-op ok" data-acao="abast" data-v="NAO" aria-pressed="' + (f.abast === "NAO") + '">Não abasteci</button>' +
       '<button type="button" class="fs-op ok" data-acao="abast" data-v="SIM" aria-pressed="' + (f.abast === "SIM") + '">Abasteci</button></div>' +
+      // 30/10/2026 (leva 2): abastecimento já lançado pelo botão "Abasteci" durante esta retirada
+      ((f.mov.abastNaRetirada || []).length ? '<div class="fs-aviso ok">Já lançado pelo "Abasteci" nesta retirada: ' + f.mov.abastNaRetirada.map(function (a) { return fsEsc_(a.data + " " + a.hora + ", " + fsLitros_(a.litros).toLocaleString("pt-BR", { maximumFractionDigits: 3 }) + " L"); }).join("; ") + '.</div>' +
+        '<button type="button" class="fs-op ok" data-acao="abast" data-v="JA_LANCADO" aria-pressed="' + (f.abast === "JA_LANCADO") + '">Já lancei pelo Abasteci (não abasteci de novo)</button>' : "") +
       (noLugar ? '<button type="button" class="fs-link" data-acao="abast" data-v="NAO_SEI" aria-pressed="' + (f.abast === "NAO_SEI") + '">' + (f.abast === "NAO_SEI" ? "Marcado: " : "") + "Não sei (o condutor responde depois)</button>" : "");
     if (f.abast === "SIM") {
       h += '<div class="fs-duas" style="margin-top:8px"><button type="button" class="fs-op ok" data-acao="abastModo" data-v="agora" aria-pressed="' + (f.abastModo === "agora") + '">Lançar agora</button>' +
@@ -3338,16 +3358,163 @@
     el.textContent = t;
   }
   function fsAbast_(v) { const f = FS.fluxo; if (!f) return; f.abast = v; if (v !== "SIM") f.abastModo = ""; fsRedesenharAbast_(); }
+  // ---- 30/10/2026 (leva 2): "Abasteci" e outras despesas (pedágio, estacionamento, lavagem, peças), a qualquer momento ----
+  // O servidor confere com as mesmas regras do abastecimento da devolução (FrotaAb_analisar_): o que é impossível volta com o
+  // motivo e nada é gravado; o resto grava "a conferir". A foto da nota é obrigatória. Leitura da nota por IA: só com a chave.
+  const FSG = { modo: "", ctx: null, nota: null, painel: null, ia: null, enviando: false };
+  function fsGastoAbrir_(modo) {
+    const host = fsHost_(); if (!host) return;
+    if (!fsNoComputador_()) { MOBILE_NAV = { modulo: "frota", tela: "form" }; atualizarTituloMobile_(modo === "abasteci" ? "Abasteci" : "Outra despesa"); }
+    FSG.modo = modo; FSG.nota = null; FSG.painel = null; FSG.ia = null; FSG.enviando = false; FSG.tanque = "";
+    host.innerHTML = '<div class="fs' + (fsNoComputador_() ? " fs-desk" : "") + '" id="fsRaiz" data-tela="gasto"><div class="fs-aviso info" role="status">Carregando...</div></div>';
+    fsRaiz_().addEventListener("click", fsGastoClique_);
+    mobileFrota_chamarApiSilencioso_("apiGastoContexto").then(function (c) { FSG.ctx = c; fsGastoDesenhar_(); }).catch(function (err) {
+      const r = fsRaiz_(); if (!r) return;
+      r.innerHTML = '<div class="fs-aviso erro" role="alert">' + fsEsc_((err && err.message) || String(err)) + ' Verifique a conexão e tente de novo.</div><button type="button" class="fs-btn" data-g="voltar">Voltar</button>';
+    });
+  }
+  function fsGastoDesenhar_() {
+    const r = fsRaiz_(), c = FSG.ctx; if (!r || !c) return;
+    const ab = FSG.modo === "abasteci";
+    const rets = (c.retiradas || []).filter(function (x) { return ab ? x.aberta : true; });
+    let h = '<div class="fs-titulo">' + (ab ? "Abasteci" : "Pedágio, estacionamento e outras despesas") + "</div>";
+    if (!rets.length && !c.gestao) {
+      h += '<div class="fs-aviso" role="alert">' + fsEsc_(ab ? c.semRetirada || "Você não está com nenhum veículo retirado." : "Você não está com veículo retirado nem devolveu um nos últimos 3 dias. A despesa do condutor vale para a retirada dele: entregue a nota à gestão, que lança no seu nome.") + "</div>" +
+        '<button type="button" class="fs-btn" data-g="voltar">Voltar</button>';
+      r.innerHTML = h; return;
+    }
+    h += '<div class="fs-campo"><label for="fsg_ret">Veículo</label><select id="fsg_ret">' + rets.map(function (x) {
+      return '<option value="' + fsEsc_(x.movimentacaoId) + '" data-v="' + fsEsc_(x.veiculoId) + '">' + fsEsc_(x.rotulo) + (x.aberta ? " (com " + (x.minha ? "você" : "a retirada aberta") + ")" : " (devolvido)") + "</option>";
+    }).join("") + (c.gestao ? (c.veiculosGestao || []).map(function (v) { return '<option value="" data-v="' + fsEsc_(v.id) + '">' + fsEsc_(v.rotulo) + " (gestão)</option>"; }).join("") : "") + "</select></div>";
+    h += '<div class="fs-fotos" id="fsg_fotoNota"></div><label class="fs-btn foto" for="fsg_inNota" id="fsg_lbNota">Tirar foto da nota (obrigatória)</label><input type="file" id="fsg_inNota" class="fs-oculto" data-sgo-nativo accept="image/*,application/pdf" capture="environment">' +
+      '<div class="fs-sub" id="fsg_ia" aria-live="polite">' + (c.iaLigada ? "Depois da foto, o SGO+ tenta ler a nota e sugere os campos: confira cada um." : "") + "</div>";
+    if (ab) {
+      const s = rets[0] && rets[0].kmSugerido;
+      const tipos = c.tiposCombustivel || [];
+      h += '<div class="fs-duas"><div class="fs-campo"><label for="fsg_litros">Litros (como na nota)</label><input type="text" id="fsg_litros" inputmode="decimal" autocomplete="off" placeholder="Ex.: 35,591"></div>' +
+        '<div class="fs-campo"><label for="fsg_valor">Valor total (R$)</label><input type="text" id="fsg_valor" inputmode="decimal" autocomplete="off" placeholder="Ex.: 125,99"></div></div>' +
+        '<div class="fs-duas"><div class="fs-campo"><label for="fsg_tipo">Combustível</label><select id="fsg_tipo"><option value="">Escolha</option>' + tipos.map(function (t) { return "<option>" + fsEsc_(t) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="fs-campo"><label for="fsg_km">KM do painel</label><input type="text" id="fsg_km" class="fs-km-in" inputmode="numeric" autocomplete="off" placeholder="Ex.: 197277"></div></div>' +
+        '<div class="fs-sub" id="fsg_kmSug">' + (s ? fsEsc_(s.texto) + ' <button type="button" class="fs-link" data-g="usarKm">Usar ' + fsEsc_(fsKm_(s.km)) + "</button>" : "") + "</div>" +
+        '<div class="fs-campo"><label for="fsg_posto">Posto</label><input type="text" id="fsg_posto" autocomplete="off" placeholder="Nome do posto"></div>' +
+        '<div class="fs-sub">Completou o tanque?</div><div class="fs-duas"><button type="button" class="fs-op ok" data-g="tanque" data-v="SIM" aria-pressed="false">Sim</button><button type="button" class="fs-op ok" data-g="tanque" data-v="NAO" aria-pressed="false">Não</button></div>' +
+        '<div class="fs-fotos" id="fsg_fotoPainel"></div><label class="fs-link" for="fsg_inPainel">Foto do painel (opcional: odômetro e ponteiro do combustível)</label><input type="file" id="fsg_inPainel" class="fs-oculto" data-sgo-nativo accept="image/*" capture="environment">';
+    } else {
+      h += '<div class="fs-campo"><label for="fsg_tipoD">Tipo</label><select id="fsg_tipoD">' + (c.tipos || []).map(function (t) { return '<option value="' + fsEsc_(t.codigo) + '">' + fsEsc_(t.rotulo) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="fs-duas"><div class="fs-campo"><label for="fsg_valor">Valor (R$)</label><input type="text" id="fsg_valor" inputmode="decimal" autocomplete="off" placeholder="Ex.: 12,50"></div>' +
+        '<div class="fs-campo"><label for="fsg_data">Data da nota</label><input type="text" id="fsg_data" inputmode="numeric" placeholder="dd/mm/aaaa" value="' + fsEsc_(c.hoje || "") + '"></div></div>' +
+        '<div class="fs-duas"><div class="fs-campo"><label for="fsg_hora">Hora (opcional)</label><input type="text" id="fsg_hora" inputmode="numeric" placeholder="hh:mm"></div>' +
+        '<div class="fs-campo"><label for="fsg_local">Local</label><input type="text" id="fsg_local" autocomplete="off" placeholder="Praça, estacionamento, loja"></div></div>' +
+        '<div class="fs-campo"><label for="fsg_desc">O que foi pago (obrigatório em peças e serviços e em outro)</label><input type="text" id="fsg_desc" autocomplete="off" placeholder="Ex.: troca da lâmpada do farol"></div>';
+    }
+    if (c.gestao && ab) {
+      h += '<details><summary>Opções da gestão</summary><div class="fs-det"><div class="fs-duas"><div class="fs-campo"><label for="fsg_dataG">Data (vazio = agora)</label><input type="text" id="fsg_dataG" inputmode="numeric" placeholder="dd/mm/aaaa"></div>' +
+        '<div class="fs-campo"><label for="fsg_horaG">Hora</label><input type="text" id="fsg_horaG" inputmode="numeric" placeholder="hh:mm"></div></div>' +
+        '<div class="fs-campo"><label for="fsg_just">Justificativa (data diferente de hoje)</label><textarea id="fsg_just" placeholder="Mínimo de 15 caracteres"></textarea></div></div></details>';
+    }
+    h += '<div class="fs-aviso ok" id="fsg_resumo" aria-live="polite">' + (ab ? "Digite os litros e o valor como estão na nota: aparece aqui o preço por litro para você conferir." : "") + "</div>" +
+      '<div id="fsg_status" aria-live="polite"></div>' +
+      '<button type="button" class="fs-btn prim" data-g="gravar">' + (ab ? "Conferir e lançar o abastecimento" : "Conferir e lançar a despesa") + "</button>" +
+      '<button type="button" class="fs-link" data-g="voltar">Voltar sem lançar</button>';
+    r.innerHTML = h;
+    r.addEventListener("input", fsGastoResumo_);
+    r.addEventListener("change", fsGastoMudou_);
+    if (!fsNoComputador_()) window.scrollTo(0, 0);
+  }
+  function fsGastoV_(id) { const e = document.getElementById(id); return e ? e.value : ""; }
+  function fsGastoResumo_() {
+    if (FSG.modo !== "abasteci") return;
+    const el = document.getElementById("fsg_resumo"); if (!el) return;
+    const l = fsLitros_(fsGastoV_("fsg_litros")), v = frotaNumCliente_(fsGastoV_("fsg_valor"));
+    if (!(l > 0) || !(v > 0)) { el.textContent = "Digite os litros e o valor como estão na nota: aparece aqui o preço por litro para você conferir."; return; }
+    const p = v / l;
+    let t = l.toLocaleString("pt-BR", { maximumFractionDigits: 3 }) + " L × R$ " + p.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " por litro = R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ".";
+    if (l > 150) t += " Atenção: mais de 150 litros. Confira a vírgula (ex.: 35,591).";
+    else if (p < 1 || p > 15) t += " Atenção: preço por litro fora do possível. Confira os litros e o valor.";
+    el.textContent = t;
+  }
+  function fsGastoMudou_(ev) {
+    const t = ev.target; if (!t) return;
+    if (t.id === "fsg_ret" && FSG.modo === "abasteci") {
+      const x = (FSG.ctx.retiradas || []).filter(function (q) { return q.movimentacaoId === t.value; })[0], el = document.getElementById("fsg_kmSug");
+      if (el) el.innerHTML = x && x.kmSugerido ? fsEsc_(x.kmSugerido.texto) + ' <button type="button" class="fs-link" data-g="usarKm">Usar ' + fsEsc_(fsKm_(x.kmSugerido.km)) + "</button>" : "";
+    }
+    if (t.type !== "file" || !t.files || !t.files[0]) return;
+    const arq = t.files[0], destino = t.id === "fsg_inPainel" ? "painel" : "nota";
+    const ler = /^image\//.test(arq.type) && typeof frotaComprimirImagem_ === "function" ? frotaComprimirImagem_(arq, 1600, 0.72) : mobileFrota_lerArquivoComoBase64_(arq);
+    const caixa = document.getElementById(destino === "painel" ? "fsg_fotoPainel" : "fsg_fotoNota");
+    Promise.resolve(ler).then(function (lido) {
+      if (!lido) throw new Error("Não foi possível ler a foto. Tire de novo.");
+      FSG[destino] = lido;
+      if (caixa) caixa.innerHTML = /^image\//.test(arq.type) ? '<img src="' + URL.createObjectURL(arq) + '" alt="' + (destino === "painel" ? "Foto do painel" : "Foto da nota") + '" style="max-width:120px;max-height:120px;border-radius:8px">' : '<div class="fs-sub">Arquivo: ' + fsEsc_(arq.name) + "</div>";
+      if (destino === "nota") { const lb = document.getElementById("fsg_lbNota"); if (lb) lb.textContent = "Tirar outra foto da nota"; fsGastoLerNota_(); }
+    }).catch(function (err) { const s = document.getElementById("fsg_status"); if (s) s.innerHTML = '<div class="fs-aviso erro">' + fsEsc_((err && err.message) || String(err)) + "</div>"; });
+    t.value = "";
+  }
+  // Leitura da nota por IA: só preenche campo vazio; a pessoa confere. Sem a chave, avisa e segue.
+  function fsGastoLerNota_() {
+    if (!FSG.ctx || !FSG.ctx.iaLigada || !FSG.nota || !/^image\//.test(FSG.nota.mimeType || "")) return;
+    const ia = document.getElementById("fsg_ia"); if (ia) ia.textContent = "Lendo a nota...";
+    mobileFrota_chamarApiSilencioso_("apiComprovanteLer", { base64: FSG.nota.base64, mimeType: FSG.nota.mimeType, tipo: FSG.modo === "abasteci" ? "ABASTECIMENTO" : "DESPESA" }).then(function (r) {
+      if (ia) ia.textContent = r.mensagem || "";
+      if (!r.leitura) return;
+      FSG.ia = r.leitura;
+      const por = function (id, v) { const e = document.getElementById(id); if (e && !String(e.value || "").trim() && v !== null && v !== undefined && v !== "") e.value = String(v).replace(".", ","); };
+      if (FSG.modo === "abasteci") { por("fsg_litros", r.leitura.litros); por("fsg_valor", r.leitura.valor); por("fsg_posto", r.leitura.posto); const tp = document.getElementById("fsg_tipo"); if (tp && !tp.value && r.leitura.combustivel) tp.value = r.leitura.combustivel; }
+      else { por("fsg_valor", r.leitura.valor); por("fsg_hora", r.leitura.hora); por("fsg_local", r.leitura.posto); const dt = document.getElementById("fsg_data"); if (dt && r.leitura.data) dt.value = r.leitura.data; }
+      fsGastoResumo_();
+    }).catch(function () { if (ia) ia.textContent = "Não consegui ler a nota agora. Preencha os campos olhando a nota."; });
+  }
+  function fsGastoPayload_() {
+    const sel = document.getElementById("fsg_ret"), opt = sel && sel.selectedOptions[0];
+    const p = { movimentacaoId: sel ? sel.value : "", veiculoId: opt ? opt.getAttribute("data-v") : "" };
+    if (FSG.nota) { p.base64 = FSG.nota.base64; p.mimeType = FSG.nota.mimeType; p.nomeArquivo = FSG.nota.nomeArquivo; }
+    if (FSG.modo === "abasteci") {
+      Object.assign(p, { litros: fsGastoV_("fsg_litros"), valor: fsGastoV_("fsg_valor"), tipoCombustivel: fsGastoV_("fsg_tipo"), km: fsGastoV_("fsg_km"), posto: fsGastoV_("fsg_posto"), tanqueCheio: FSG.tanque || "",
+        data: fsGastoV_("fsg_dataG"), hora: fsGastoV_("fsg_horaG"), justificativa: fsGastoV_("fsg_just"), leituraIa: FSG.ia });
+      if (FSG.painel) { p.painelBase64 = FSG.painel.base64; p.painelMimeType = FSG.painel.mimeType; }
+    } else Object.assign(p, { tipo: fsGastoV_("fsg_tipoD"), valor: fsGastoV_("fsg_valor"), data: fsGastoV_("fsg_data"), hora: fsGastoV_("fsg_hora"), local: fsGastoV_("fsg_local"), descricao: fsGastoV_("fsg_desc") });
+    return p;
+  }
+  function fsGastoClique_(ev) {
+    const b = ev.target.closest("[data-g]"); if (!b) return;
+    const g = b.getAttribute("data-g");
+    if (g === "voltar") { renderMobileFrotaOperacional_(); return; }
+    if (g === "tanque") { FSG.tanque = b.getAttribute("data-v"); fsRaiz_().querySelectorAll('[data-g="tanque"]').forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); return; }
+    if (g === "usarKm") { const sel = document.getElementById("fsg_ret"), x = (FSG.ctx.retiradas || []).filter(function (q) { return q.movimentacaoId === (sel ? sel.value : ""); })[0]; const k = document.getElementById("fsg_km"); if (x && x.kmSugerido && k) k.value = String(x.kmSugerido.km); return; }
+    if (g !== "gravar" || FSG.enviando) return;
+    const st = document.getElementById("fsg_status"), ab = FSG.modo === "abasteci";
+    const p = fsGastoPayload_();
+    FSG.enviando = true; b.disabled = true;
+    st.innerHTML = '<div class="fs-aviso info" role="status">Conferindo...</div>';
+    mobileFrota_chamarApiSilencioso_(ab ? "apiAbasteciPrevia" : "apiDespesaPrevia", p).then(function (pr) {
+      if (pr.erros && pr.erros.length) throw new Error(pr.mensagem);
+      if (!confirm("Confira antes de lançar:\n\n" + pr.mensagem + "\n\nOK lança; Cancelar volta para corrigir.")) throw new Error("Nada foi gravado. Corrija e toque em lançar de novo.");
+      st.innerHTML = '<div class="fs-aviso info" role="status">Enviando a foto e gravando...</div>';
+      return mobileFrota_chamarApiSilencioso_(ab ? "apiAbasteci" : "apiDespesaLancar", p);
+    }).then(function (res) {
+      FSG.enviando = false;
+      frotaToastEnvio_(!res.aConferir, ab ? "Abastecimento lançado" : "Despesa lançada", res.mensagem || "");
+      FS.inicioEm = 0; renderMobileFrotaOperacional_();
+    }).catch(function (err) {
+      FSG.enviando = false; b.disabled = false;
+      st.innerHTML = '<div class="fs-aviso erro" role="alert">' + fsEsc_((err && err.message) || String(err)) + "</div>";
+      st.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
   function fsRedesenharAbast_() {
     const f = FS.fluxo, sec = document.getElementById("fsPassoAbast"); if (!f || !sec) return;
     sec.outerHTML = fsAbastHtml_(f, !f.mov.minha);
     fsDesenharFotos_(); fsAtualizarResumoAbast_(); fsAtualizarBarra_();
   }
 
+  // 30/10/2026 (leva 2): na retirada a vistoria ganha o grupo "Funcionamento"; a devolução continua igual.
+  function fsGrupos_(f) { return (MOBILE_FROTA.gruposChecklist || []).concat(f && f.tipo === "retirada" ? (MOBILE_FROTA.gruposChecklistRetirada || []) : []); }
   function fsItensHtml_(f) {
-    return (MOBILE_FROTA.gruposChecklist || []).map(function (g, gi) {
+    return fsGrupos_(f).map(function (g, gi) {
       const marcados = g.itens.filter(function (it) { return f.problemas[g.grupo + "|" + it]; }).length;
       return "<details" + (marcados || gi === 0 ? " open" : "") + "><summary>" + fsEsc_(g.grupo) + (marcados ? '<span class="fs-cont">' + marcados + " com problema</span>" : "") + '</summary><div class="fs-det">' +
+        (g.grupo === "Funcionamento" ? '<div class="fs-aviso">Com a ignição ligada, olhe o painel. Luz vermelha de óleo ou de temperatura acesa, ou freio com problema: não siga viagem e fale com a gestão. Item marcado vai para a gestão resolver.</div>' : "") +
         g.itens.map(function (it) {
           const k = g.grupo + "|" + it, p = f.problemas[k];
           return '<div class="fs-item' + (p ? " prob" : "") + '" data-k="' + fsEsc_(k) + '"><button type="button" class="fs-item-bt" data-acao="item" aria-pressed="' + (!!p) + '">' + fsEsc_(it) +
@@ -3707,7 +3874,7 @@
   function fsChecklist_(f) {
     // Mesma estrutura de CHECKLIST_*_JSON: todos os itens, item a item. "Tudo OK" = todos ok.
     const lista = [];
-    (MOBILE_FROTA.gruposChecklist || []).forEach(function (g) {
+    fsGrupos_(f).forEach(function (g) {
       g.itens.forEach(function (it) {
         const p = f.vistoria === "problema" ? f.problemas[g.grupo + "|" + it] : null;
         lista.push({ grupo: g.grupo, item: it, ok: !p, observacao: p ? String(p.obs || "").trim() : "" });
@@ -3824,6 +3991,7 @@
       frotaToastEnvio_(!rt.aviso, "Retirada registrada", (f.rotulo || f.placa) + quando + (res.devolucaoPrevista ? " · devolução prevista " + res.devolucaoPrevista : "") + (res.reservaIniciada ? " · reserva " + res.reservaIniciada + " em uso" : "") + (res.reservaLiberada ? " · reserva " + res.reservaLiberada + " liberada (quem reservou foi avisado)" : "") + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
       if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + " A retirada já está registrada: não registre de novo.";
       if (res.avisoManutencao) frotaToastEnvio_(false, "Manutenção vencida", res.avisoManutencao); // 30/10/2026: plano de manutenção
+      if (res.avisoChecklist) frotaToastEnvio_(false, "Problema informado à gestão", res.avisoChecklist); // 30/10/2026 (leva 2): checklist da retirada
     } else {
       frotaToastEnvio_(true, "Devolução registrada", (f.rotulo || f.placa) + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
       // 30/10/2026: abastecimento lançado, pedido com prazo ou "abastecimento não lançado" (trava a próxima retirada)

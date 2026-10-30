@@ -422,6 +422,12 @@ function FrotaAb_antesDaDevolucao_(payload, mov, veiculo, kmChegada, pelaGestao)
   FrotaAb_garantirAbas_();
   var r = FrotaAb_up_(payload.abasteceu);
   if (r === 'NAO SEI') r = 'NAO_SEI';
+  // 30/10/2026 (leva 2): "Já lancei pelo Abasteci" só vale se há abastecimento desta retirada lançado pelo "Abasteci".
+  if (r === 'JA_LANCADO') {
+    var jaLancado = FrotaAb_abastValidos_(mov.VEICULO_ID).some(function (a) { return FrotaAb_s_(a.MOVIMENTACAO_ID) === FrotaAb_s_(mov.ID); });
+    if (!jaLancado) throw new Error('Não há abastecimento lançado pelo "Abasteci" nesta retirada. Responda "Abasteci" (e lance agora ou depois) ou "Não abasteci". Nada foi gravado.');
+    return { resposta: r, lancarAgora: false };
+  }
   if (['SIM', 'NAO', 'NAO_SEI'].indexOf(r) < 0 || (r === 'NAO_SEI' && !pelaGestao)) {
     throw new Error('Responda "Abasteceu durante este uso?" antes de confirmar a devolução (passo "Abastecimento" na tela). ' +
       'Todo abastecimento da frota precisa ser lançado com o comprovante: se abasteceu, lance agora (litros, valor e foto da nota) ou escolha "Lançar depois" (prazo de 1 dia útil). Nada foi gravado.');
@@ -636,17 +642,8 @@ function Frota_apiAbastConferir(sessionId, payload) {
   if (['CONFERIDO', 'DIVERGENTE'].indexOf(sit) < 0) throw new Error('Escolha "Conferido" ou "Divergente".');
   var ids = (Array.isArray(payload.ids) ? payload.ids : [payload.id]).map(FrotaAb_s_).filter(String).slice(0, 200);
   if (!ids.length) throw new Error('Escolha o lançamento a conferir.');
-  var motivo = String(payload.motivo || '').replace(/\s+/g, ' ').trim();
-  if (sit === 'DIVERGENTE' && motivo.length < 15) throw new Error('Para marcar como divergente, escreva o motivo (mínimo de 15 caracteres), por exemplo: "litros da nota não batem com o lançamento". Lançamento divergente fica fora das médias.');
-  var n = 0;
-  ids.forEach(function (id) {
-    var a = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, id);
-    if (!a || FrotaAb_s_(a.EXCLUIDO_EM)) return;
-    var antes = FrotaAb_up_(a.SITUACAO_CONFERENCIA) || 'PENDENTE';
-    SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, id, { SITUACAO_CONFERENCIA: sit, CONFERIDO_EM: SGO_UTILS.nowIso(), CONFERIDO_POR: FrotaAb_nome_(sessao), CONFERENCIA_MOTIVO: motivo.slice(0, 500) });
-    Frota_auditar_(sessao, { acao: 'ABASTECIMENTO_' + sit, veiculoId: FrotaAb_s_(a.VEICULO_ID), campo: 'SITUACAO_CONFERENCIA', antes: antes, depois: sit, justificativa: motivo, detalhe: 'Abastecimento de ' + Frota_textoData_(a.DATA) + ' marcado como ' + sit.toLowerCase() + '.' });
-    n++;
-  });
+  // 30/10/2026 (leva 2): a marcação é a mesma da conferência de gastos (SGO_Frota_Gastos.js), para abastecimento, despesa e manutenção.
+  var n = FrotaGas_marcar_(sessao, ids.map(function (id) { return { origem: 'ABASTECIMENTO', id: id }; }), sit, payload.motivo).marcados;
   return { ok: true, mensagem: n + (n === 1 ? ' lançamento marcado' : ' lançamentos marcados') + ' como ' + (sit === 'CONFERIDO' ? 'conferido' : 'divergente') + '.' };
 }
 

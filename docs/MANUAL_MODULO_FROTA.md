@@ -83,7 +83,7 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 6. Toque em "Tirar foto do veículo". A câmera abre direto. Tire pelo menos uma foto.
 7. Olhe o veículo por fora e por dentro.
 8. Se estiver tudo certo, toque em "Tudo OK".
-9. Se achar um problema, toque em "Tem problema", toque no item e escreva o que viu.
+9. Se achar um problema, toque em "Tem problema", toque no item e escreva o que viu. No grupo "Funcionamento" (só na retirada), com a ignição ligada, confira: luz de advertência no painel, nível do óleo do motor, nível da água do radiador, pneus (nenhum murcho ou com dano) e freio (sem ruído ou vibração).
 10. Se quiser, preencha "Finalidade (opcional)".
 11. Toque em "Confirmar retirada".
 12. Espere o aviso "Retirada registrada".
@@ -91,6 +91,10 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 > **A linha acima do botão** diz o que falta, por exemplo "Falta: a foto do painel". Quando aparece "Tudo pronto.", pode confirmar.
 
 > **Data e hora:** vale sempre a hora do momento em que você confirma (horário de Brasília). Você não digita data nem hora.
+
+> **Problema marcado na vistoria da retirada** vira uma pendência para a gestão resolver e aparece para quem retirar o veículo depois, até a gestão registrar o que foi feito. Luz vermelha de óleo ou de temperatura acesa, ou freio com problema: não siga viagem e fale com a gestão.
+
+> **KM sugerido pelo rastreador:** com leitura recente do rastreador, aparece "O rastreador indica cerca de ... km" e o botão "Usar". Vale sempre o número do painel.
 
 > **KM maior que o registrado:** não é erro. Alguém pode ter usado sem registrar. Corrija o número, tire a foto do painel e continue. A gestão confere depois. **KM menor** não é aceito, porque o odômetro não volta. Se o número registrado estiver errado, peça à gestão o ajuste de KM.
 
@@ -103,12 +107,13 @@ Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme
 0. Estacione e **desligue o carro**. Com o carro ligado ou andando (o rastreador mostra), o SGO+ não aceita a devolução: o bloqueio da partida é pedido logo depois dela (seção 21).
 1. Abra a Frota (ou o Início, no celular).
 2. Toque no botão verde "Devolver" com a placa do veículo.
-3. Digite o KM que está no painel agora.
+3. Digite o KM que está no painel agora. Com leitura recente do rastreador, o campo já vem com o KM que ele indica: confira no painel e corrija se for diferente.
 4. Toque em "Tirar foto do painel (obrigatória)".
 5. Faça a vistoria: "Tudo OK" ou "Tem problema".
 6. Em "Abastecimento", responda se abasteceu durante este uso (obrigatório): "Não abasteci" ou "Abasteci".
    - "Abasteci" > "Lançar agora": litros e valor como estão na nota (ex.: 35,591 e 125,99), combustível, "Completou o tanque?" e "Tirar foto da nota (obrigatória)". Embaixo aparece o resumo (litros × preço por litro = valor) para você conferir. A foto do painel do passo 1 vai junto.
    - "Abasteci" > "Lançar depois": fica um pedido com prazo de 1 dia útil em "Comprovantes pedidos a você" (seção 9).
+   - Já lançou pelo botão "Abasteci" durante o uso: toque em "Já lancei pelo Abasteci (não abasteci de novo)". Se abasteceu outra vez, toque em "Abasteci".
 7. Se quiser, abra "Mais fotos e observações (opcional)".
 8. Toque em "Confirmar devolução".
 9. Espere o aviso "Devolução registrada". Se aparecer "Abastecimento não lançado", a sua próxima retirada fica travada até resolver (seção 9).
@@ -185,6 +190,33 @@ Desde 30/10/2026 (pedido do dono) nenhum abastecimento passa despercebido: quem 
 4. **Aviso:** pendente há mais de 1 dia útil, o condutor recebe aviso no sistema e por e-mail (WhatsApp só na contagem do resumo do dia, no expediente) e a gestão no e-mail de resumo. A pendência aparece também em Minhas atividades e no Início.
 5. **A gestão confere e decide:** aceita ou não o "Não abasteci" (com a foto do painel da devolução) e pode liberar uma pendência, sempre com o motivo na trilha.
 
+### "Abasteci": lançar na hora, no posto (condutor)
+
+1. Na tela inicial da Frota, toque em "Abasteci". O veículo que está com você já vem escolhido.
+2. Toque em "Tirar foto da nota (obrigatória)". Com a leitura automática ligada, os campos vêm sugeridos a partir da foto: confira cada um com a nota (se mudar litros ou valor, a gestão confere).
+3. Digite os litros e o valor como estão na nota (ex.: 35,591 e 125,99), o combustível, o KM do painel e o posto, e diga se completou o tanque. Com leitura recente do rastreador, aparece o KM que ele indica e o botão "Usar".
+4. Se quiser, tire a foto do painel (odômetro e ponteiro do combustível).
+5. Toque em "Conferir e lançar o abastecimento", leia o resumo (litros × preço por litro = valor) e toque em OK.
+6. Na devolução, responda "Já lancei pelo Abasteci".
+
+As conferências são as mesmas da devolução (tabela abaixo). KM digitado longe do que o rastreador indica (mais de 20 km, ou 3% do que ele rodou) grava "a conferir". Sem retirada aberta, a tela explica: se abasteceu um veículo que não retirou, entregue a nota à gestão, que lança no seu nome.
+
+### Pedágio, estacionamento e outras despesas (condutor)
+
+1. Na tela inicial da Frota, toque em "Pedágio, estacionamento e outras despesas".
+2. Escolha o veículo (o que está com você, ou um que você devolveu nos últimos 3 dias) e o tipo: pedágio, estacionamento, lavagem, peças e serviços ou outro.
+3. Tire a foto da nota ou do recibo (obrigatória), digite o valor, a data, a hora (se tiver) e o local. Em peças e serviços e em outro, escreva o que foi pago.
+4. Toque em "Conferir e lançar a despesa" e confirme.
+
+| Situação | O que acontece |
+|---|---|
+| Sem foto da nota, valor zero ou acima de R$ 30.000, data no futuro | Recusa, com o que fazer |
+| Mesmo veículo, data, tipo e valor de outra despesa | Recusa: já está lançada |
+| Valor acima do comum (pedágio ou estacionamento acima de R$ 150, lavagem acima de R$ 250, peças e serviços acima de R$ 3.000) | Grava "a conferir" |
+| Data da nota fora da sua retirada | Grava "a conferir" |
+
+Pedágio pago pela tag não precisa ser lançado: a gestão importa o extrato.
+
 ### Registrar um abastecimento (gestão)
 
 1. Abra a aba "Abastecimentos e despesas" e toque em "+ Registrar abastecimento" (no celular: "Opções da gestão" > "Registrar abastecimento").
@@ -227,6 +259,42 @@ Lançamento "a conferir" ou "divergente" fica fora da média de consumo. Interva
 
 > **Consumo (km por litro):** o sistema calcula sozinho, comparando o KM entre dois abastecimentos do mesmo veículo. Com menos de 2 abastecimentos, o consumo não aparece.
 
+### Conferência de gastos (gestão)
+
+Quadro "Conferência de gastos", na aba "Abastecimentos e despesas": abastecimentos, despesas (pedágio, estacionamento, lavagem, peças e serviços, outro) e manutenções numa lista só, com o comprovante ao lado.
+
+1. Escolha o período (já vem o mês atual), o veículo, o condutor, o tipo e a situação. Toque em "Consultar".
+2. Leia o total do período, o km das retiradas devolvidas, o custo por km e os totais por veículo (com km/L) e por tipo.
+3. Toque numa linha: o comprovante abre ao lado (no celular, por cima), com os apontamentos da conferência e quem lançou.
+4. Toque em "Conferido", "A conferir" ou "Divergente". "A conferir" e "Divergente" pedem o motivo (mínimo de 15 caracteres). Quem, quando, o antes, o depois e o motivo ficam na trilha de auditoria.
+5. "Conferir em lote" marca como conferidos os lançamentos pendentes sem apontamento e com comprovante. "Conferido (marcados)" marca as linhas que você marcou na caixa.
+
+| Situação | O que quer dizer |
+|---|---|
+| Pendente de conferência | Acabou de entrar, sem apontamento |
+| A conferir | A conferência apontou algo (preço, KM, valor, sem retirada no momento, leitura da nota diferente) ou a gestão devolveu para conferir |
+| Conferido | A gestão bateu o comprovante com o lançamento |
+| Divergente | Não bate; fica fora dos totais e das médias de consumo |
+| Corrigido | Houve correção campo a campo; o valor anterior está na trilha |
+
+Custo por km: total do período dividido pelo km das retiradas devolvidas com saída no período. Despesa da gestão também pode ser lançada aqui ("Lançar despesa com comprovante").
+
+### Pedágio pela tag: importar o extrato (gestão)
+
+A operadora da tag de pedágio não oferece API pública para empresas: a integração automática só existe por contrato comercial com ela. Por isso o SGO+ usa o extrato.
+
+1. No portal da operadora, exporte o extrato de passagens do mês em CSV (ou Excel .xlsx), sem mudar as colunas.
+2. Na aba "Abastecimentos e despesas", abra "Importar o extrato do pedágio (tag)", escolha o arquivo e toque em "Ver a prévia".
+3. Confira cada linha: com a retirada encontrada (placa e data e hora), sem retirada (vai "a conferir"), já importada antes ou placa que não está na Frota. Estorno e linha de total são ignorados.
+4. Toque em "Gravar as passagens". O arquivo fica guardado como o comprovante. Importar o mesmo extrato de novo não duplica nada.
+
+### Relatório mensal A4 (gestão)
+
+1. Abra "Relatório mensal A4 da frota", escolha o mês e toque em "Gerar relatório mensal (A4 e PDF)".
+2. O relatório abre em outra aba. A cópia em PDF e HTML fica na pasta "Frota - Relatorios Gerados", subpasta "Relatórios mensais".
+
+Traz: resumo do mês; gastos por tipo e combustível por tipo (litros e preço médio); gastos, km, custo por km e consumo (km/L) por veículo; manutenções feitas no mês; paradas agendadas; plano de manutenção vencido, a vencer e sem a última vez; lançamentos a conferir e divergentes; problemas informados na retirada em aberto.
+
 ## 10. Manutenção e paradas
 
 ### Plano de manutenção (gestão)
@@ -256,6 +324,33 @@ Cada veículo tem um plano no topo da aba "Manutenção e paradas". Vence o que 
 - **Óleo ou freio vencido há mais de 1.000 km:** a retirada do veículo fica travada. Leve à manutenção ou toque em "Liberar uso" (com o motivo, por mais 500 km).
 - **Manutenção registrada:** ao registrar a manutenção (tipo "Troca de óleo", "Filtro de ar" etc.), o item do plano se atualiza sozinho.
 - **Licenciamento, seguro e IPVA:** continuam em Documentos e multas (validade) e aparecem no rodapé de cada veículo do plano.
+
+### Agendar parada a partir do plano (gestão)
+
+1. No "Plano de manutenção", no item vencido, a vencer ou com aviso, toque em "Agendar parada".
+2. Marque o que será feito, a data e a hora de entrega, a volta (vazio = mesmo dia), a oficina e quem leva e busca o veículo.
+3. Toque em "Agendar parada".
+
+- O veículo fica **bloqueado para reserva e retirada** no período (manutenção programada das Reservas). Quem tentar retirar recebe a mensagem com o período e os veículos livres.
+- A atividade "Levar o veículo à oficina" entra na agenda (Minhas atividades) de quem leva.
+- Se o veículo estiver reservado ou em uso no período, a tela diz com quem está: escolha outra data.
+
+### Concluir a parada
+
+1. Em "Paradas agendadas", toque em "Concluir parada".
+2. Marque o que foi feito, informe a data do serviço, o KM e o custo total e anexe a nota fiscal (obrigatória quando há custo).
+3. Toque em "Concluir parada".
+
+Cada item feito vira manutenção registrada: o plano conta a próxima a partir dela. O custo entra na conferência de gastos como "Oficina e manutenção". O veículo volta a ficar livre e a atividade é concluída. Para desistir, toque em "Cancelar" e escreva o motivo: a manutenção programada e a atividade são canceladas.
+
+### Problemas informados na retirada (gestão)
+
+O quadro lista o que os condutores marcaram com problema na vistoria da retirada. Luz no painel, óleo e freio aparecem como urgentes.
+
+1. Confira o veículo e resolva.
+2. Toque em "Resolver" e escreva o que foi feito (mínimo de 15 caracteres).
+
+Até resolver, o problema aparece na central de pendências e para quem for retirar o veículo. Se o mesmo item for marcado de novo, a pendência soma a ocorrência e junta o que o condutor escreveu (nada é apagado).
 
 ### Registrar uma manutenção
 

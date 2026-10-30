@@ -150,7 +150,25 @@ function Frota_apiDispatch(req) {
     // 30/10/2026: plano de manutenção por veículo (SGO_Frota_PlanoManutencao.js): só a gestão.
     apiPlanoListar: Frota_apiPlanoListar,
     apiPlanoSalvarItem: Frota_apiPlanoSalvarItem,
-    apiPlanoLiberar: Frota_apiPlanoLiberar
+    apiPlanoLiberar: Frota_apiPlanoLiberar,
+    // 30/10/2026 (leva 2): "Abasteci" e despesa com comprovante (toda a equipe; o condutor na retirada dele), leitura da nota
+    // por IA (opcional), conferência de gastos, extrato do pedágio, checklist da retirada, paradas e relatório mensal (gestão).
+    apiGastoContexto: Frota_apiGastoContexto,
+    apiAbasteci: Frota_apiAbasteci,
+    apiAbasteciPrevia: Frota_apiAbasteciPrevia,
+    apiDespesaLancar: Frota_apiDespesaLancar,
+    apiDespesaPrevia: Frota_apiDespesaPrevia,
+    apiComprovanteLer: Frota_apiComprovanteLer,
+    apiGastosListar: Frota_apiGastosListar,
+    apiGastosConferir: Frota_apiGastosConferir,
+    apiExtratoTagImportar: Frota_apiExtratoTagImportar,
+    apiChecklistPendencias: Frota_apiChecklistPendencias,
+    apiChecklistResolver: Frota_apiChecklistResolver,
+    apiParadaAgendar: Frota_apiParadaAgendar,
+    apiParadaConcluir: Frota_apiParadaConcluir,
+    apiParadaCancelar: Frota_apiParadaCancelar,
+    apiParadasListar: Frota_apiParadasListar,
+    apiRelatorioMensal: Frota_apiRelatorioMensal
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -162,7 +180,7 @@ function Frota_apiDispatch(req) {
   if (typeof FrotaId_enfeitarResposta_ === 'function') resultado = FrotaId_enfeitarResposta_(resultado);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|AbastPrevia|AbastPainel|RetiradasParaCorrigir|PlanoListar|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio|BloqueioPainel|BloqueioIntegridade|BloqueioRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|AbastPrevia|AbastPainel|RetiradasParaCorrigir|PlanoListar|GastoContexto|AbasteciPrevia|DespesaPrevia|ComprovanteLer|GastosListar|ChecklistPendencias|ParadasListar|RelatorioMensal|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio|BloqueioPainel|BloqueioIntegridade|BloqueioRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -371,7 +389,7 @@ function Frota_apiInicioFrota(sessionId) {
   // 20/10/2026 (reservas): próxima reserva de cada veículo e as minhas, para a tela de retirada respeitar a reserva.
   var reservas = typeof FrotaRes_resumoInicio_ === 'function' ? FrotaRes_resumoInicio_({ userId: meuId, gestao: gestor }, meuCondutor ? SGO_UTILS.safe(meuCondutor.ID) : '') : null;
   if (reservas) enxuto.forEach(function (v) { v.reserva = reservas.porVeiculo[v.id] || null; });
-  return {
+  var resposta = {
     ok: true, agora: SGO_UTILS.nowIso(), gestor: gestor,
     condutor: meuCondutor ? { id: SGO_UTILS.safe(meuCondutor.ID), nome: SGO_UTILS.safe(meuCondutor.NOME) } : null,
     condutores: (gestor ? condutoresAtivos : (meuCondutor ? [meuCondutor] : [])).map(function(c) { return { id: SGO_UTILS.safe(c.ID), nome: SGO_UTILS.safe(c.NOME) }; }),
@@ -384,6 +402,10 @@ function Frota_apiInicioFrota(sessionId) {
     // 21/10/2026: passar o carro (quem pode receber, pedidos para mim) e a pergunta da retirada esquecida
     bloqueio: typeof FrotaBlq_inicio_ === 'function' ? FrotaBlq_inicio_(meuCondutor, emAndamento) : null
   };
+  // 30/10/2026 (leva 2): KM sugerido pelo rastreador, abastecimento já lançado na retirada, problemas da retirada em aberto
+  // e o grupo "Funcionamento" do checklist da retirada (SGO_Frota_Gastos.js e SGO_Frota_Checklist.js). Só campos novos.
+  if (typeof FrotaGas_enfeitarInicio_ === 'function') resposta = FrotaGas_enfeitarInicio_(resposta, veiculos);
+  return resposta;
 }
 
 /** Miniatura do veículo (foto da última vistoria, reduzida no celular): só um link de arquivo já enviado. */
@@ -554,6 +576,10 @@ function Frota_bootstrapSemTrava_() {
   // 30/10/2026 (obrigatoriedade do abastecimento e plano de manutenção): só colunas e tabelas novas.
   if (typeof FrotaAb_garantirAbas_ === 'function') FrotaAb_garantirAbas_();
   if (typeof FrotaPlano_garantirAbas_ === 'function') FrotaPlano_garantirAbas_();
+  // 30/10/2026 (leva 2): despesa com comprovante e conferência, extrato do pedágio, checklist da retirada e paradas. Só colunas e tabelas novas.
+  if (typeof FrotaGas_garantirAbas_ === 'function') FrotaGas_garantirAbas_();
+  if (typeof FrotaChk_garantirAbas_ === 'function') FrotaChk_garantirAbas_();
+  if (typeof FrotaPar_garantirAbas_ === 'function') FrotaPar_garantirAbas_();
 }
 
 // ------------------------------------------------------------
@@ -1353,8 +1379,10 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   var resRes = reservasLigadas ? FrotaRes_aposRetirada_(sessao, registro, veiculo, condutor, chkReserva, liberacao, prevista.ms) : {};
   // Rastreador (17/10/2026): libera a partida. Nunca derruba a retirada, que já está gravada.
   var rastreador = Frota_rastreadorAoRetirar_(sessao, veiculoId, registro.ID);
+  // 30/10/2026 (leva 2): item do checklist com problema na retirada vira pendência do veículo para a gestão. Nunca derruba a retirada.
+  var chk = typeof FrotaChk_aposRetirada_ === 'function' ? FrotaChk_aposRetirada_(sessao, registro, veiculo, condutor, checklistNormalizado) : { texto: '' };
   return { ok: true, movimentacaoId: registro.ID, registroPelaGestao: registro.REGISTRO_GESTAO_SAIDA === 'SIM', kmDivergencia: depois.dif || 0,
-    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador, avisoManutencao: avisoManutencao || '',
+    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador, avisoManutencao: avisoManutencao || '', avisoChecklist: chk.texto || '',
     devolucaoPrevista: prevista ? FrotaRes_txt_(prevista.ms) : '', reservaIniciada: resRes.reservaIniciada || '', reservaLiberada: resRes.reservaLiberada || '' };
 }
 

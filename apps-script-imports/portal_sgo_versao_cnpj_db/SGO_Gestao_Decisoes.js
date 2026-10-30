@@ -97,7 +97,7 @@ var GES_TIPOS = {
   multa_conferir: { prazo: 3 }, multa_vencida: { prazo: 1 }, multa_vencendo: { prazo: 3 },
   frota_viagem_aberta: { prazo: 1 }, frota_km_conferir: { prazo: 2 }, frota_rastreador_uso: { prazo: 1 }, frota_rastreador_liberar: { prazo: 1 },
   frota_rastreador_bloqueio: { prazo: 1 }, frota_rastreador_conexao: { prazo: 2 }, frota_comprovante: { prazo: 2 }, frota_avaria: { prazo: 3 },
-  frota_abast_pendente: { prazo: 1 }, frota_abast_justificativa: { prazo: 2 }, frota_abast_conferir: { prazo: 5 }, frota_plano_incompleto: { prazo: 5 },
+  frota_abast_pendente: { prazo: 1 }, frota_abast_justificativa: { prazo: 2 }, frota_abast_conferir: { prazo: 5 }, frota_plano_incompleto: { prazo: 5 }, frota_checklist: { prazo: 2 },
   frota_reserva_atraso: { prazo: 1 }, frota_reserva_problema: { prazo: 1 },
   frota_bloqueio_decidir: { prazo: 1 }, frota_bloqueio_esquecida: { prazo: 1 }, frota_bloqueio_fila: { prazo: 1 }, frota_bloqueio_passagem: { prazo: 1 }, frota_bloqueio_odometro: { prazo: 3 },
   atividade_atrasada: { prazo: 2 }, aviso_leitura_atrasada: { prazo: 3 },

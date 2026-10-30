@@ -67,7 +67,7 @@ function ambiente(o) {
     Frota_uploadFoto_: () => '/arquivos/comprovante-teste'
   });
   for (const f of ['SGO_Utilis.js', 'SGO_Frota_Config.js', 'SGO_Frota_Main.js', 'SGO_Frota_Rastreador.js', 'SGO_Frota_Rastreamento.js', 'SGO_Expediente.js', 'SGO_Alertas_Central.js',
-    'SGO_Frota_Abastecimento.js', 'SGO_Frota_PlanoManutencao.js']) {
+    'SGO_Frota_Abastecimento.js', 'SGO_Frota_PlanoManutencao.js', 'SGO_Frota_Gastos.js', 'SGO_Frota_Checklist.js']) {
     vm.runInContext(ler(f), ctx);
   }
   ctx.Frota_uploadFoto_ = () => '/arquivos/comprovante-teste';

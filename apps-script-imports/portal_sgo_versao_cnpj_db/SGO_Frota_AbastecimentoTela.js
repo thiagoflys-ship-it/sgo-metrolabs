@@ -295,6 +295,12 @@ function FrotaAb_telaNavegador_() {
   }
 
   // ---------------- plano de manutenção ----------------
+  // parada agendada do item (lista carregada pela tela das paradas, SGO_Frota_GastosTela.js): texto curto ou ''
+  function agendada(vid, codigo) {
+    var l = (window.FROTAGAS_PARADAS || []).filter(function (p) { return p.veiculoId === vid && (p.itens || []).indexOf(codigo) >= 0; })[0];
+    return l ? l.inicio + ' · ' + l.oficina : '';
+  }
+  window.FrotaAb_redesenharPlano_ = function () { if (!A.editando) desenharPlano(); };
   var SITP = { OK: ['Em dia', 'ok'], AVISO: ['Faltam até 1.000 km ou 30 dias', 'cinza'], VENCENDO: ['A vencer', 'alerta'], VENCIDO: ['Vencido', 'critico'], SEM_HISTORICO: ['Sem a última vez', 'critico'], SEM_INTERVALO: ['Informe o intervalo', 'cinza'] };
   function carregarPlano() {
     var c = el('frab_plano_corpo');
@@ -323,12 +329,17 @@ function FrotaAb_telaNavegador_() {
             esc([i.proximaKm !== null ? 'KM ' + num(i.proximaKm) : '', i.proximaData].filter(Boolean).join(' ou ') || '—') + '<div class="frr-meta">' + esc([falta, faltaD].filter(Boolean).join('; ')) + '</div>',
             marca(s[0], s[1]) + (i.incompleto && i.situacao !== 'SEM_HISTORICO' ? '<div class="frr-meta">falta ' + esc(i.faltaInfo.join(' e ')) + '</div>' : '') + (i.trava ? '<div>' + marca('retirada travada', 'critico') + '</div>' : '') +
               (i.liberadoAteKm !== null ? '<div class="frr-meta">uso liberado até KM ' + num(i.liberadoAteKm) + ' por ' + esc(i.liberadoPor) + '</div>' : ''),
-            '<div class="frab-acoes"><button type="button" class="btn btn-sm" data-frab-pl="' + esc(v.id) + '|' + esc(i.codigo) + '">Informar</button>' + (i.trava ? '<button type="button" class="btn btn-sm btn-primary" data-frab-pll="' + esc(v.id) + '|' + esc(i.codigo) + '">Liberar uso</button>' : '') + '</div>'];
+            '<div class="frab-acoes"><button type="button" class="btn btn-sm" data-frab-pl="' + esc(v.id) + '|' + esc(i.codigo) + '">Informar</button>' + (i.trava ? '<button type="button" class="btn btn-sm btn-primary" data-frab-pll="' + esc(v.id) + '|' + esc(i.codigo) + '">Liberar uso</button>' : '') +
+              // 30/10/2026 (leva 2): agendar a parada direto do item vencido ou perto de vencer (SGO_Frota_GastosTela.js)
+              (['VENCIDO', 'VENCENDO', 'AVISO'].indexOf(i.situacao) >= 0 ? (agendada(v.id, i.codigo) ? '<span class="frr-meta">parada agendada: ' + esc(agendada(v.id, i.codigo)) + '</span>' : '<button type="button" class="btn btn-sm" data-frab-agp="' + esc(v.id) + '|' + esc(i.codigo) + '">Agendar parada</button>') : '') + '</div>'];
         }), '') +
         '<p class="frr-meta">Documentos: ' + v.documentos.map(function (d) { return esc(d.tipo) + ' ' + (d.validade ? esc(d.validade) + ' (' + esc({ OK: 'em dia', VENCENDO: 'a vencer', VENCIDO: 'vencido' }[d.situacao] || d.situacao.toLowerCase()) + ')' : 'sem documento cadastrado'); }).join(' · ') + ' (cadastre em Documentos e multas).</p>' +
         '<div data-frab-plform="' + esc(v.id) + '"></div></details>';
     }).join('');
     c.innerHTML = h;
+    Array.prototype.forEach.call(c.querySelectorAll('[data-frab-agp]'), function (b) {
+      b.onclick = function () { var p = b.getAttribute('data-frab-agp').split('|'); var v = (r.veiculos || []).filter(function (x) { return x.id === p[0]; })[0] || {}; if (typeof window.FrotaGas_agendarParada_ === 'function') window.FrotaGas_agendarParada_(p[0], p[1], rot(v.placa || '')); };
+    });
     Array.prototype.forEach.call(c.querySelectorAll('[data-frab-pl]'), function (b) { b.onclick = function () { var p = b.getAttribute('data-frab-pl').split('|'); formPlano(p[0], p[1]); }; });
     Array.prototype.forEach.call(c.querySelectorAll('[data-frab-pll]'), function (b) {
       b.onclick = function () {

@@ -160,6 +160,8 @@ function Frota_obterTelaRastreamento() {
   if (typeof Frota_telaBloqueio_ === 'function') { var b = Frota_telaBloqueio_(); t.css += '\n' + b.css; t.js += '\n' + b.js; }
   // 30/10/2026: abastecimento obrigatório (conferência, correção, pendências) e plano de manutenção (SGO_Frota_AbastecimentoTela.js).
   if (typeof Frota_telaAbastecimento_ === 'function') { var ab = Frota_telaAbastecimento_(); t.css += '\n' + ab.css; t.js += '\n' + ab.js; }
+  // 30/10/2026 (leva 2): conferência de gastos, extrato do pedágio, paradas, checklist da retirada e relatório mensal (SGO_Frota_GastosTela.js).
+  if (typeof Frota_telaGastos_ === 'function') { var gt = Frota_telaGastos_(); t.css += '\n' + gt.css; t.js += '\n' + gt.js; }
   return t;
 }
 

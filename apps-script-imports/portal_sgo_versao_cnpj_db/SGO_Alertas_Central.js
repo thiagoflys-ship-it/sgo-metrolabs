@@ -121,6 +121,8 @@ var PEND_TIPOS = {
   frota_abast_pendente: { modulo: 'frota', um: 'abastecimento pendente de lançamento', varios: 'abastecimentos pendentes de lançamento', rotulo: 'Abastecimento', fazer: 'envie o comprovante ou responda "Não abasteci" em Frota > Abastecimentos e despesas > Comprovantes pedidos a você', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_abast_justificativa: { modulo: 'frota', um: '"Não abasteci" a conferir', varios: '"Não abasteci" a conferir', rotulo: 'Conferir', fazer: 'aceite ou não aceite em Frota > Abastecimentos e despesas > Obrigatoriedade do abastecimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_abast_conferir: { modulo: 'frota', um: 'abastecimento a conferir', varios: 'abastecimentos a conferir', rotulo: 'Conferir', fazer: 'confira com o comprovante em Frota > Abastecimentos e despesas > Obrigatoriedade do abastecimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 30/10/2026 (leva 2): item do checklist com problema na retirada (SGO_Frota_Checklist.js).
+  frota_checklist: { modulo: 'frota', um: 'problema informado na retirada', varios: 'problemas informados na retirada', rotulo: 'Resolver', fazer: 'confira o veículo e registre o que foi feito em Frota > Manutenção e paradas > Problemas informados na retirada', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_plano_incompleto: { modulo: 'frota', um: 'plano de manutenção incompleto', varios: 'planos de manutenção incompletos', rotulo: 'Completar', fazer: 'informe a última vez feita (data e KM) em Frota > Manutenção e paradas > Plano de manutenção', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_avaria: { modulo: 'frota', um: 'avaria de veículo sem tratamento', varios: 'avarias de veículos sem tratamento', rotulo: 'Tratar', fazer: 'abra o caso em Frota > Gestão e melhoria > Kanban', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   multa_vencida: { modulo: 'frota', um: 'multa vencida sem pagamento', varios: 'multas vencidas sem pagamento', rotulo: 'Vencida', fazer: 'pague ou recorra e atualize em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
@@ -685,6 +687,8 @@ function Pend_fonteFrota_(add) {
   // 30/10/2026: abastecimento pendente de lançamento, "Não abasteci" e lançamentos a conferir; plano de manutenção incompleto.
   if (typeof FrotaAb_pendencias_ === 'function') { try { FrotaAb_pendencias_(add); } catch (eA) { console.error('Pendências do abastecimento da Frota: ' + ((eA && eA.message) || eA)); } }
   if (typeof FrotaPlano_pendencias_ === 'function') { try { FrotaPlano_pendencias_(add); } catch (eP) { console.error('Pendências do plano de manutenção: ' + ((eP && eP.message) || eP)); } }
+  // 30/10/2026 (leva 2): problema informado no checklist da retirada, até a gestão resolver.
+  if (typeof FrotaChk_pendencias_ === 'function') { try { FrotaChk_pendencias_(add); } catch (eC) { console.error('Pendências do checklist da retirada: ' + ((eC && eC.message) || eC)); } }
   // 20/10/2026: reservas de veículo (atraso com reserva a seguir, conferência com problema, lembrete e avisos ao reservante).
   if (typeof FrotaRes_pendencias_ === 'function') { try { FrotaRes_pendencias_(add); } catch (eRes) { console.error('Pendências das reservas da Frota: ' + ((eRes && eRes.message) || eRes)); } }
 

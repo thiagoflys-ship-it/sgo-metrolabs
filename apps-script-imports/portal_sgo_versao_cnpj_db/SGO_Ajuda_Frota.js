@@ -11,6 +11,9 @@
  * 30/10/2026 (pedido do dono: o abastecimento não pode passar despercebido): pergunta "Abasteceu durante este uso?" na devolução,
  *   litros com vírgula ou ponto como casa decimal, resumo antes de gravar, "a conferir", "Corrigir" com justificativa, "Não abasteci",
  *   próxima retirada travada por abastecimento não lançado, quadro "Obrigatoriedade do abastecimento" e "Plano de manutenção".
+ * 30/10/2026, leva 2: "Abasteci" e "Pedágio, estacionamento e outras despesas" no celular, KM sugerido pelo rastreador, grupo
+ *   "Funcionamento" na vistoria da retirada, "Conferência de gastos", importação do extrato do pedágio, relatório mensal A4,
+ *   "Agendar parada" no plano de manutenção, "Paradas agendadas" e "Problemas informados na retirada".
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -35,6 +38,9 @@ function SGO_ajudaTelas_Frota_() {
           "Olhe o veículo por fora e por dentro.",
           "Se estiver tudo certo, toque em \"Tudo OK\".",
           "Se achar algum problema, toque em \"Tem problema\", toque no item e escreva o que viu.",
+          "No grupo \"Funcionamento\" (só na retirada), com a ignição ligada: luz de advertência no painel, nível do óleo, nível da água, pneus e freio. Item marcado vai para a gestão resolver e aparece para quem retirar o carro depois.",
+          "Luz vermelha de óleo ou de temperatura acesa, ou freio com problema: não siga viagem; fale com a gestão.",
+          "Se o rastreador tiver leitura recente, aparece \"O rastreador indica cerca de ... km\" com o botão \"Usar\". Vale sempre o número do painel.",
           "Em \"Devolução prevista\", confira a data e a hora em que você pretende devolver. Se você tem reserva deste veículo, já vem o fim da reserva.",
           "Toque em \"Confirmar retirada\".",
           "Espere o aviso \"Retirada registrada\"."
@@ -43,15 +49,31 @@ function SGO_ajudaTelas_Frota_() {
           "Estacione e DESLIGUE o carro antes. Com o carro ligado ou andando o SGO+ não aceita a devolução (o bloqueio da partida sai depois dela).",
           "Abra a Frota (ou o Início, no celular).",
           "Toque no botão verde \"Devolver\" com o apelido e a placa do veículo.",
-          "Digite o KM que está no painel agora.",
+          "Digite o KM que está no painel agora. Se o rastreador tiver leitura, o campo já vem preenchido com o KM que ele indica: confira no painel e corrija se for diferente.",
           "Toque em \"Tirar foto do painel (obrigatória)\".",
           "Faça a vistoria: \"Tudo OK\" ou \"Tem problema\".",
-          "Em \"Abastecimento\", responda se abasteceu durante este uso (obrigatório): \"Não abasteci\" ou \"Abasteci\".",
+          "Em \"Abastecimento\", responda se abasteceu durante este uso (obrigatório): \"Não abasteci\" ou \"Abasteci\". Se já lançou pelo botão \"Abasteci\" durante o uso, toque em \"Já lancei pelo Abasteci (não abasteci de novo)\".",
           "Se abasteceu, toque em \"Lançar agora\": digite os litros e o valor como estão na nota (ex.: 35,591 e 125,99), escolha o combustível, diga se completou o tanque e toque em \"Tirar foto da nota (obrigatória)\". Confira o preço por litro que aparece embaixo.",
           "Sem a nota em mãos, toque em \"Lançar depois\": fica um pedido com prazo de 1 dia útil em \"Comprovantes pedidos a você\".",
           "Se quiser, abra \"Mais fotos e observações (opcional)\".",
           "Toque em \"Confirmar devolução\".",
           "Espere o aviso \"Devolução registrada\". Se aparecer \"Abastecimento não lançado\", leia o que fazer: a sua próxima retirada fica travada até resolver."
+        ] },
+        { titulo: "Abasteci (a qualquer momento da retirada)", itens: [
+          "Na tela inicial da Frota, toque em \"Abasteci\".",
+          "Confira o veículo (vem o que está com você).",
+          "Toque em \"Tirar foto da nota (obrigatória)\". Se a leitura automática estiver ligada, os campos vêm sugeridos: confira cada um com a nota.",
+          "Digite os litros e o valor como estão na nota (ex.: 35,591 e 125,99), o combustível, o KM do painel e o posto. Diga se completou o tanque.",
+          "Se quiser, tire a foto do painel (odômetro e ponteiro do combustível).",
+          "Toque em \"Conferir e lançar o abastecimento\", leia o resumo (litros × preço por litro = valor) e toque em OK.",
+          "Na devolução, responda \"Já lancei pelo Abasteci\" (ou \"Abasteci\", se abasteceu de novo)."
+        ] },
+        { titulo: "Pedágio, estacionamento e outras despesas", itens: [
+          "Na tela inicial da Frota, toque em \"Pedágio, estacionamento e outras despesas\".",
+          "Escolha o veículo (o que está com você ou um que você devolveu nos últimos 3 dias) e o tipo: pedágio, estacionamento, lavagem, peças e serviços ou outro.",
+          "Tire a foto da nota ou do recibo (obrigatória), digite o valor, a data, a hora (se tiver) e o local. Em peças e serviços e em outro, escreva o que foi pago.",
+          "Toque em \"Conferir e lançar a despesa\" e confirme.",
+          "Pedágio pago pela tag não precisa ser lançado: a gestão importa o extrato."
         ] },
         { titulo: "Passar o carro para um colega (troca de condutor, sem devolver)", itens: [
           "Use quando outra pessoa vai seguir com o carro (por exemplo, numa viagem a dois). Não devolva: a devolução pede o bloqueio da partida.",
@@ -220,6 +242,29 @@ function SGO_ajudaTelas_Frota_() {
           "Preencha os campos com asterisco.",
           "Anexe o comprovante.",
           "Toque em \"Registrar abastecimento\"."
+        ] },
+        { titulo: "Conferência de gastos (gestão)", itens: [
+          "No quadro \"Conferência de gastos\", escolha o período (já vem o mês atual), o veículo, o condutor, o tipo e a situação, e toque em \"Consultar\".",
+          "Leia os totais: gasto do período, km das retiradas, custo por km e os totais por veículo e por tipo.",
+          "Toque numa linha: o comprovante abre ao lado (no celular, por cima), com os apontamentos e quem lançou.",
+          "Toque em \"Conferido\", \"A conferir\" ou \"Divergente\". \"A conferir\" e \"Divergente\" pedem o motivo (mínimo de 15 caracteres). Quem, quando e o motivo ficam na trilha.",
+          "\"Conferir em lote\" marca de uma vez os pendentes sem apontamento e com comprovante. O resto fica para conferir um a um.",
+          "Lançamento divergente fica fora dos totais e das médias de consumo."
+        ] },
+        { titulo: "Lançar despesa com comprovante (gestão)", itens: [
+          "Abra \"Lançar despesa com comprovante\", escolha o veículo, o tipo, a data, o valor e anexe a nota.",
+          "Toque em \"Conferir e lançar\" e confirme. Pedágio ou estacionamento sem retirada no momento fica \"a conferir\"."
+        ] },
+        { titulo: "Importar o extrato do pedágio (tag)", itens: [
+          "A operadora da tag não oferece API pública para empresas. Exporte no portal dela o extrato de passagens em CSV (ou Excel .xlsx).",
+          "Abra \"Importar o extrato do pedágio (tag)\", escolha o arquivo e toque em \"Ver a prévia\".",
+          "Confira o que acontece com cada linha: com retirada, sem retirada (vai \"a conferir\"), já importada ou placa fora da Frota.",
+          "Toque em \"Gravar as passagens\". O arquivo fica guardado como o comprovante. Importar o mesmo extrato de novo não duplica nada."
+        ] },
+        { titulo: "Relatório mensal A4", itens: [
+          "Abra \"Relatório mensal A4 da frota\", escolha o mês e toque em \"Gerar relatório mensal (A4 e PDF)\".",
+          "O relatório abre em outra aba e a cópia em PDF e HTML fica na pasta da Frota (Relatórios mensais).",
+          "Traz gastos por veículo e por tipo, consumo (km/L), custo por km, manutenções feitas, plano de manutenção vencendo, paradas agendadas e lançamentos a conferir."
         ] }
       ],
       problemas: [
@@ -229,11 +274,15 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "\"O preço por litro ficou fora do possível\"", oQueFazer: "Os litros ou o valor foram digitados errado (a vírgula no lugar errado). Confira a nota e digite de novo." },
         { situacao: "Ficou \"A conferir\"", oQueFazer: "Foi gravado. A gestão confere com o comprovante (preço fora da faixa, KM que não bate com a retirada, litros em sequência acima do tanque). O consumo dele fica fora da média até a conferência." },
         { situacao: "\"Retirada travada: você tem abastecimento pendente de lançamento\"", oQueFazer: "Em \"Comprovantes pedidos a você\", envie o comprovante ou toque em \"Não abasteci\" com o motivo. Se precisar sair agora, peça à gestão para liberar." },
-        { situacao: "\"Responda Abasteceu durante este uso?\"", oQueFazer: "Na devolução, toque em \"Não abasteci\" ou em \"Abasteci\" no passo \"Abastecimento\" e confirme de novo." }
+        { situacao: "\"Responda Abasteceu durante este uso?\"", oQueFazer: "Na devolução, toque em \"Não abasteci\" ou em \"Abasteci\" no passo \"Abastecimento\" e confirme de novo." },
+        { situacao: "\"Você não está com nenhum veículo retirado\" no Abasteci", oQueFazer: "O Abasteci vale para a sua retirada aberta. Se abasteceu um veículo que não retirou, entregue a nota à gestão: ela lança no seu nome." },
+        { situacao: "\"Esta despesa já está lançada\"", oQueFazer: "Nada foi gravado em dobro. Se for outra despesa com o mesmo valor no mesmo dia, fale com a gestão." },
+        { situacao: "\"Não encontrei no arquivo a linha de cabeçalho\" (extrato)", oQueFazer: "Exporte o extrato de passagens do portal da operadora sem mudar as colunas (placa, data e hora, valor) e importe de novo." },
+        { situacao: "Leitura automática da nota desligada", oQueFazer: "A chave da IA não está configurada (Administração > Chaves e senhas). Preencha os campos olhando a nota: o lançamento funciona igual." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar, corrigir, conferir e excluir abastecimentos; liberar pendências; conferir os \"Não abasteci\"; configurar o limite da obrigatoriedade." },
-        { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\"). Quem recebeu um pedido de comprovante da gestão envia no quadro \"Comprovante pedido a você\", no topo desta aba." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar, corrigir, conferir e excluir abastecimentos; liberar pendências; conferir os \"Não abasteci\"; configurar o limite da obrigatoriedade; usar a conferência de gastos, lançar despesas em qualquer veículo, importar o extrato do pedágio e gerar o relatório mensal." },
+        { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\"). Lançar pelo \"Abasteci\" e pelas outras despesas na própria retirada. Quem recebeu um pedido de comprovante da gestão envia no quadro \"Comprovante pedido a você\", no topo desta aba." }
       ]
     },
 
@@ -1166,6 +1215,23 @@ function SGO_ajudaTelas_Frota_() {
           "Leve o veículo à manutenção e registre a manutenção feita: o item volta a ficar em dia.",
           "Se o veículo precisar rodar até a troca, toque em \"Liberar uso\" no item e escreva o motivo: libera por mais 500 km."
         ] },
+        { titulo: "Agendar parada a partir do plano (gestão)", itens: [
+          "No \"Plano de manutenção\", no item vencido, a vencer ou com aviso, toque em \"Agendar parada\".",
+          "Marque o que será feito, a data e a hora de entrega, a volta, a oficina e quem leva e busca o veículo.",
+          "Toque em \"Agendar parada\". O veículo fica bloqueado para reserva e retirada no período e a atividade \"Levar o veículo à oficina\" entra na agenda (Minhas atividades) de quem leva.",
+          "Se o veículo estiver reservado ou em uso no período, a tela diz com quem está: escolha outra data."
+        ] },
+        { titulo: "Concluir a parada", itens: [
+          "Em \"Paradas agendadas\", toque em \"Concluir parada\".",
+          "Marque o que foi feito, informe a data do serviço, o KM e o custo total e anexe a nota fiscal (obrigatória quando há custo).",
+          "Toque em \"Concluir parada\". Cada item vira manutenção registrada, o plano conta a próxima a partir dela, o custo vai para a conferência de gastos e o veículo volta a ficar livre.",
+          "Para desistir, toque em \"Cancelar\" e escreva o motivo."
+        ] },
+        { titulo: "Problemas informados na retirada (gestão)", itens: [
+          "O quadro lista o que os condutores marcaram com problema na vistoria da retirada (luz no painel, óleo, água, pneus, freio, avarias).",
+          "Confira o veículo, resolva e toque em \"Resolver\". Escreva o que foi feito (mínimo de 15 caracteres).",
+          "Até resolver, o problema aparece para quem for retirar o veículo e na central de pendências."
+        ] },
         { titulo: "Registrar uma manutenção", itens: [
           "Abra a aba \"Manutenção e paradas\".",
           "Escolha o veículo e o tipo. A próxima troca em KM já vem sugerida.",
@@ -1186,7 +1252,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "\"Informe o intervalo\"", significado: "Item sem intervalo padrão (correia dentada): preencha pelo manual do veículo." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar manutenções e paradas." }
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Registrar manutenções e paradas, agendar e concluir paradas e resolver os problemas informados na retirada." }
       ]
     },
 
