@@ -97,14 +97,15 @@ function AstR_htmlOS_(os, opcoes) {
  * módulo Documentos; sem sessão (rotina, gancho de outro módulo), pela identidade do sistema, direto na tabela, com os
  * mesmos campos. 22/10/2026 (etapa 2): antes, o relatório fechado pela rotina não entrava no Arquivo. Nunca lança.
  */
-function AstR_registrarNoArquivo_(eu, os, nomeArquivo, url) {
+function AstR_registrarNoArquivo_(eu, os, nomeArquivo, url, tipoDocumento) {
+  var tipoDoc = Ast_s_(tipoDocumento) || 'ORDEM DE SERVIÇO'; // 29/10/2026: o relatório do atendimento (versão do cliente) usa o mesmo registro
   if (!Ast_s_(os.UNIDADE_ID) || !Ast_s_(url)) return false;
   if (eu && eu.sessionId && typeof SGO_DOCUMENTOS !== 'undefined' && SGO_DOCUMENTOS.registrarDocumentoExistente) {
-    try { var rr = SGO_DOCUMENTOS.registrarDocumentoExistente(eu.sessionId, { CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID, EQUIPAMENTO_ID: os.EQUIPAMENTO_ID, TIPO_DOCUMENTO: 'ORDEM DE SERVIÇO', NOME_ARQUIVO: nomeArquivo, LINK_ARQUIVO: url, DATA_VENCIMENTO: '' }); if (rr && rr.success) return true; } catch (eR) { /* tenta pela identidade do sistema */ }
+    try { var rr = SGO_DOCUMENTOS.registrarDocumentoExistente(eu.sessionId, { CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID, EQUIPAMENTO_ID: os.EQUIPAMENTO_ID, TIPO_DOCUMENTO: tipoDoc, NOME_ARQUIVO: nomeArquivo, LINK_ARQUIVO: url, DATA_VENCIMENTO: '' }); if (rr && rr.success) return true; } catch (eR) { /* tenta pela identidade do sistema */ }
   }
   try {
     var aba = (SGO_CFG.SHEETS && SGO_CFG.SHEETS.DOC_DOCUMENTOS) || 'DOC_DOCUMENTOS';
-    var reg = { CLIENTE_ID: Ast_s_(os.CLIENTE_ID), UNIDADE_ID: Ast_s_(os.UNIDADE_ID), EQUIPAMENTO_ID: Ast_s_(os.EQUIPAMENTO_ID), TIPO_DOCUMENTO: 'ORDEM DE SERVIÇO', NOME_ARQUIVO: Ast_up_(nomeArquivo),
+    var reg = { CLIENTE_ID: Ast_s_(os.CLIENTE_ID), UNIDADE_ID: Ast_s_(os.UNIDADE_ID), EQUIPAMENTO_ID: Ast_s_(os.EQUIPAMENTO_ID), TIPO_DOCUMENTO: tipoDoc, NOME_ARQUIVO: Ast_up_(nomeArquivo),
       LINK_ARQUIVO: Ast_s_(url), DATA_EMISSAO: Ast_agora_(), DATA_VENCIMENTO: '', STATUS: 'ATIVO', OBSERVACOES: 'Registrado pela ' + ((eu && eu.nome) || 'rotina da Assistência técnica') };
     if (typeof SGO_DATA.gerarRegistroBase === 'function') reg = SGO_DATA.gerarRegistroBase(reg);
     if (typeof SGO_DATA.normalizarObjetoParaSheet === 'function') reg = SGO_DATA.normalizarObjetoParaSheet(aba, reg);

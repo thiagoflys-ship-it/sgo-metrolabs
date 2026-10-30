@@ -18,23 +18,28 @@
  *    outra representada recebe a mesma resposta de "não encontrado" que um registro que não existe.
  *
  * Tabelas novas (todas com REPRESENTADA_ID): REP_REPRESENTADAS, REP_MODELOS, REP_MENSAGENS (só inclusão), REP_ANEXOS,
- * REP_ACESSOS (ações da representada no módulo: buscas, cadastros, pedidos, cancelamentos).
- * Colunas novas (só acrescentadas): CAD_USUARIOS, ATEC_CHAMADOS, ATEC_SOLICITACOES, CAD_EQUIPAMENTOS, CAD_CLIENTES, CAD_UNIDADES.
+ * REP_ACESSOS (ações da representada no módulo: buscas, cadastros, pedidos, cancelamentos) e REP_DOCUMENTOS (documentos A4
+ * gerados, com o público que pode abrir; 29/10/2026).
+ * Colunas novas (só acrescentadas): CAD_USUARIOS, ATEC_CHAMADOS, ATEC_SOLICITACOES, CAD_EQUIPAMENTOS, CAD_CLIENTES, CAD_UNIDADES, ATEC_FOTOS.
  * Nenhuma função devolve Date cru.
  ****************************************************/
 
-var REP_ABAS = { REPRESENTADAS: 'REP_REPRESENTADAS', ACESSOS: 'REP_ACESSOS', MODELOS: 'REP_MODELOS', MENSAGENS: 'REP_MENSAGENS', ANEXOS: 'REP_ANEXOS' };
+var REP_ABAS = { REPRESENTADAS: 'REP_REPRESENTADAS', ACESSOS: 'REP_ACESSOS', MODELOS: 'REP_MODELOS', MENSAGENS: 'REP_MENSAGENS', ANEXOS: 'REP_ANEXOS', DOCUMENTOS: 'REP_DOCUMENTOS' };
 var REP_COLUNAS = {
   REP_REPRESENTADAS: ['ID', 'NOME', 'CNPJ', 'SITUACAO', 'CONTRATO', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CONTATO_NOME', 'CONTATO_EMAIL', 'PRAZOS_JSON', 'OBS',
     'CRIADO_POR_NOME', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   REP_ACESSOS: ['ID', 'REPRESENTADA_ID', 'USUARIO_ID', 'USUARIO_NOME', 'EMAIL', 'ACAO', 'DETALHE', 'IP', 'NAVEGADOR', 'EM'],
   REP_MODELOS: ['ID', 'REPRESENTADA_ID', 'CODIGO', 'NOME', 'FAMILIA', 'TIPO_EQUIPAMENTO', 'GARANTIA_MESES', 'PADRAO_SERIE', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   REP_MENSAGENS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'REF_NUMERO', 'AUTOR_LADO', 'AUTOR_ID', 'AUTOR_NOME', 'TEXTO', 'INTERNA', 'RESPONDE_A', 'ANEXO_ID', 'EM', 'CRIADO_EM'],
-  REP_ANEXOS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM']
+  REP_ANEXOS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM'],
+  // 29/10/2026: documentos A4 gerados (relatório do atendimento e do período), com o público que pode abrir (SGO_Representacao_Documentos.js)
+  REP_DOCUMENTOS: ['ID', 'TIPO', 'PUBLICO', 'REPRESENTADA_ID', 'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'NUMERO', 'VERSAO', 'TITULO',
+    'PERIODO_DIAS', 'PERIODO_DE', 'PERIODO_ATE', 'HTML_ID', 'PDF_ID', 'PASTA_URL', 'MARCA', 'PAGINAS', 'FOTOS', 'DOC_REGISTRADO', 'GERADO_POR_ID', 'GERADO_POR_NOME', 'GERADO_POR_LADO', 'EM', 'CRIADO_EM']
 };
 var REP_COLUNAS_TEXTO = {
   REP_REPRESENTADAS: ['CNPJ', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'ATUALIZADO_EM'],
-  REP_ACESSOS: ['EM'], REP_MODELOS: ['CODIGO', 'ATUALIZADO_EM'], REP_MENSAGENS: ['EM', 'REF_NUMERO'], REP_ANEXOS: ['EM', 'SHA256']
+  REP_ACESSOS: ['EM'], REP_MODELOS: ['CODIGO', 'ATUALIZADO_EM'], REP_MENSAGENS: ['EM', 'REF_NUMERO'], REP_ANEXOS: ['EM', 'SHA256'],
+  REP_DOCUMENTOS: ['EM', 'NUMERO', 'CHAMADO_NUMERO', 'PERIODO_DE', 'PERIODO_ATE', 'MARCA']
 };
 /** Colunas acrescentadas em tabelas que já existem (nada é apagado nem renomeado). */
 var REP_COLUNAS_EXTRAS = {
@@ -46,11 +51,13 @@ var REP_COLUNAS_EXTRAS = {
   CAD_EQUIPAMENTOS: ['DATA_INSTALACAO', 'NF_VENDA_NUMERO', 'NF_VENDA_DATA', 'NF_VENDA_ARQUIVO_ID', 'GARANTIA_MESES', 'GARANTIA_ATE', 'REVENDA', 'MODELO_CODIGO',
     'ORIGEM_REPRESENTADA_ID', 'FOTO_ETIQUETA_ARQUIVO_ID', 'CRIADO_POR_NOME', 'CRIADO_PELA_REPRESENTADA_EM'],
   CAD_CLIENTES: ['ORIGEM', 'ORIGEM_REPRESENTADA_ID'],
-  CAD_UNIDADES: ['ORIGEM', 'ORIGEM_REPRESENTADA_ID']
+  CAD_UNIDADES: ['ORIGEM', 'ORIGEM_REPRESENTADA_ID'],
+  // 29/10/2026: liberação da foto do técnico para os documentos externos ('' interna, REPRESENTADA, SIM = cliente e representada) e a cópia reduzida para o A4
+  ATEC_FOTOS: ['PUBLICO', 'LIBERADA_POR_NOME', 'LIBERADA_EM', 'RELATORIO_ARQUIVO_ID']
 };
 var REP_COLUNAS_EXTRAS_TEXTO = {
   ATEC_SOLICITACOES: ['COMPLEMENTO_EM', 'COMPLEMENTO_RESPONDIDO_EM', 'PAUSA_DESDE', 'ALERTA_RISCO_EM', 'ALERTA_VENCIDO_EM', 'CANCELADA_EM', 'ATUALIZADO_EM', 'CONTATO_TELEFONE'],
-  ATEC_CHAMADOS: ['REP_SEM_REGISTRO_ALERTA_EM'],
+  ATEC_CHAMADOS: ['REP_SEM_REGISTRO_ALERTA_EM'], ATEC_FOTOS: ['LIBERADA_EM'],
   CAD_EQUIPAMENTOS: ['DATA_INSTALACAO', 'NF_VENDA_DATA', 'GARANTIA_ATE', 'NF_VENDA_NUMERO', 'CRIADO_PELA_REPRESENTADA_EM']
 };
 
@@ -117,7 +124,7 @@ var REP_MEMO = {};
 function Rep_memoLimpar_() { REP_MEMO = {}; }
 function Rep_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V1')) return; } catch (e) { cache = null; }
+  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V2')) return; } catch (e) { cache = null; }
   Object.keys(REP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, REP_COLUNAS[aba]);
     REP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
@@ -127,7 +134,7 @@ function Rep_garantirAbas_() {
     REP_COLUNAS_EXTRAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (REP_COLUNAS_EXTRAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('REP_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('REP_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 function Rep_ler_(aba) {
   if (REP_MEMO[aba]) return REP_MEMO[aba];

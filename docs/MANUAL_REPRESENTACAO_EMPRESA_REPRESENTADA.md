@@ -49,13 +49,20 @@ O Painel é a primeira tela da sua área.
 - Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo.
 - Você recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa.
 
-## 6. Conversar
+## 6. Relatórios do atendimento e do período
+
+- Na ficha do chamado, toque em "Gerar relatório". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.
+- O relatório traz capa, sumário, resumo, cliente e equipamento com a garantia, o relato da abertura, a linha do tempo, os marcos previsto e realizado (aceite, visita e conclusão) com gráfico, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos e a assinatura de quem recebeu o atendimento.
+- No Painel, "Relatório do período" gera o relatório da carteira da sua empresa no período escolhido: os índices do painel, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia e reincidência por modelo), o Gantt e a lista dos pedidos e chamados.
+- A aba "Relatórios gerados" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos.
+
+## 7. Conversar
 
 - Cada pedido e cada chamado tem a própria conversa. Assuntos gerais vão no "Canal geral".
 - Fora do horário de trabalho da Metrolabs, a resposta vem no próximo horário útil.
 - Nada é apagado: para corrigir, escreva uma mensagem nova.
 
-## 7. Papéis da sua equipe
+## 8. Papéis da sua equipe
 
 | Papel | Pode |
 |---|---|
@@ -64,7 +71,7 @@ O Painel é a primeira tela da sua área.
 | Financeiro de garantia | Consultar e conversar |
 | Leitura | Só consultar |
 
-## 8. Dúvidas frequentes
+## 9. Dúvidas frequentes
 
 - Por que não há busca por nome? Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é pelo CNPJ ou CPF completo.
 - Aparece "Muitas buscas seguidas": espere o tempo indicado e busque de novo com o documento ou a série conferidos.

@@ -87,6 +87,9 @@
       '<div id="rpPnJanelaCampo"' + (RP.painelAba === "gantt" ? "" : ' style="display:none"') + '><label for="rpPnJanela">Gantt: janela</label><select id="rpPnJanela">' + [[14, "Últimas 2 semanas"], [30, "Últimos 30 dias"], [90, "Últimos 90 dias"], [180, "Últimos 180 dias"]].map(function (d) { return opt(d[0], d[1], RP.janela); }).join("") + "</select></div>" +
       '<div id="rpPnAgruparCampo"' + (RP.painelAba === "gantt" ? "" : ' style="display:none"') + '><label for="rpPnAgrupar">Gantt por</label><select id="rpPnAgrupar">' + opt("", "Chamado", RP.agrupar) + opt("cliente", "Cliente", RP.agrupar) +
         (interno ? opt("tecnico", "Técnico", RP.agrupar) + opt("representada", "Representada", RP.agrupar) : "") + "</select></div>" +
+      // 29/10/2026: relatório A4 do período (índices, gráficos, Gantt impresso e lista), salvo em HTML e PDF (SGO_Representacao_Documentos.js)
+      (interno ? '<div><label for="rpPnRelVersao">Versão do relatório</label><select id="rpPnRelVersao">' + opt("INTERNO", "Metrolabs (uso interno)", RP.relVersao || "INTERNO") + opt("REPRESENTADA", "Da representada escolhida", RP.relVersao) + "</select></div>" : "") +
+      '<div><label>&nbsp;</label><button type="button" class="btn-primary at-btn44" id="rpPnRel" title="Gera o relatório A4 do período escolhido, com índice, gráficos, Gantt e a lista; fica salvo em HTML e PDF e aparece em Relatórios gerados.">Relatório do período</button></div>' +
       "</div>";
   }
   function Rp_painelCarregar_(c, interno) {
@@ -123,7 +126,7 @@
     var pend = !interno && p.pendencias.length ? '<div class="at-faixa aviso"><b>Pendências da sua empresa (' + p.pendencias.length + ').</b> A Metrolabs pediu complemento; enquanto vocês não respondem, o prazo de aceite fica pausado.' +
       p.pendencias.map(function (x) { return '<div class="at-card clicavel" style="margin-top:8px" data-pna-tipo="' + Rp_esc_(x.tipo) + '" data-pna-id="' + Rp_esc_(x.id) + '" tabindex="0"><p class="at-card-tit">' + Rp_esc_(x.numero + " · " + x.clienteNome) + '</p><p class="at-txt">' + Rp_esc_(x.pergunta) + '</p><p class="at-meta">Pedido em ' + Rp_esc_(x.desde) + " · esperando há " + Rp_esc_(PnA_tempo_(x.esperaMin, md)) + '</p><div class="at-acoes"><button type="button" class="btn-primary at-btn44">Responder agora</button></div></div>'; }).join("") + "</div>" : "";
     c.innerHTML = Rp_barraPainel_(interno) + '<p class="atv-sub" style="margin:-6px 0 10px">Índices de ' + Rp_esc_(k.de) + " a " + Rp_esc_(k.ate) + ". Tempos em horas úteis do expediente da Metrolabs. Toque num índice e segure (ou passe o mouse) para ver como é contado.</p>" +
-      pend + PnA_indHtml_(cards) + PnA_abasHtml_("rpPnAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["indicadores", "Indicadores"]], RP.painelAba) + '<div id="rpPnCorpo"></div>';
+      pend + PnA_indHtml_(cards) + PnA_abasHtml_("rpPnAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["indicadores", "Indicadores"], ["relatorios", "Relatórios gerados"]], RP.painelAba) + '<div id="rpPnCorpo"></div>';
     var recarregar = function () { Rp_painelCarregar_(c, interno); };
     Rp_$_("rpPnDias").onchange = function () { RP.dias = Number(Rp_$_("rpPnDias").value); recarregar(); };
     if (Rp_$_("rpPnRep")) Rp_$_("rpPnRep").onchange = function () { RP.repPainel = Rp_$_("rpPnRep").value; recarregar(); };
@@ -131,6 +134,12 @@
     Rp_$_("rpPnAgrupar").onchange = function () { RP.agrupar = Rp_$_("rpPnAgrupar").value; Rp_painelCorpo_(interno); };
     PnA_ligarAbas_("rpPnAbas", function (a) { RP.painelAba = a; Rp_$_("rpPnJanelaCampo").style.display = Rp_$_("rpPnAgruparCampo").style.display = a === "gantt" ? "" : "none"; Rp_painelCorpo_(interno); });
     PnA_ligar_(c.querySelector(".at-faixa.aviso"), function (t, id) { Rp_ficha_(t, id); });
+    if (Rp_$_("rpPnRelVersao")) Rp_$_("rpPnRelVersao").onchange = function () { RP.relVersao = Rp_$_("rpPnRelVersao").value; };
+    Rp_$_("rpPnRel").onclick = function () {
+      var d = { dias: RP.dias };
+      if (interno) { d.publico = RP.relVersao || "INTERNO"; d.representadaId = RP.repPainel || ""; if (d.publico === "REPRESENTADA" && !d.representadaId) return Rp_msg_("rpMsg", "Para gerar a versão da representada, escolha a representada no filtro \"Representada\" (a versão dela só traz a carteira dela)."); }
+      Rp_chamar_("relatorioPeriodo", d, function (r) { PnA_docGerado_(Rp_$_("rpMsg"), r); if (RP.painelAba === "relatorios") Rp_painelCorpo_(interno); }, function (m) { Rp_msg_("rpMsg", m); }, "Gerando o relatório do período (A4, HTML e PDF)…");
+    };
     Rp_painelCorpo_(interno);
   }
   function Rp_abrirDoPainel_(interno, tipo, id) {
@@ -157,6 +166,14 @@
         legenda: interno ? "Um cartão por pedido ou chamado, na etapa que a representada vê. A cor da borda é o prazo (aceite para o pedido; atendimento para o chamado). Toque para abrir: o pedido abre aqui; o chamado abre na Assistência técnica, onde a etapa muda pelas regras do atendimento. Colunas fechadas mostram os últimos 30 dias." :
           "Um cartão por pedido ou chamado, na etapa em que está. A cor da borda é o prazo. A etapa muda pelo atendimento da Metrolabs; você age nos cartões marcados \"Depende de você\". Toque para abrir a ficha. Colunas fechadas mostram os últimos 30 dias." });
       PnA_ligar_(corpo, abrirX, function (acao, t, id) { if (acao === "responder") Rp_ficha_(t, id); });
+      return;
+    }
+    if (RP.painelAba === "relatorios") {
+      corpo.innerHTML = '<div class="atv-vazio">Carregando…</div>';
+      Rp_chamar_("documentos", interno ? { representadaId: RP.repPainel || "" } : {}, function (r) {
+        corpo.innerHTML = PnA_caixa_("Relatórios gerados", PnA_docsHtml_(r.documentos, interno ? "Nenhum relatório gerado ainda. Use \"Relatório do período\" aqui ou \"Relatório do atendimento\" na ficha do chamado." : "Nenhum relatório gerado ainda. Use \"Relatório do período\" acima ou abra um chamado e toque em \"Gerar relatório\".", interno) +
+          '<div class="atv-sub" style="margin-top:6px">' + (interno ? "Todas as versões (Metrolabs, representada e cliente). Cada versão só mostra o que o público dela pode ler; a interna não deve sair da Metrolabs." : "Só os documentos da versão da sua empresa. Cada emissão é uma versão nova; nenhuma é apagada.") + "</div>");
+      }, function (m) { corpo.innerHTML = ""; Rp_msg_("rpMsg", m); });
       return;
     }
     if (RP.painelAba === "gantt") {
@@ -386,9 +403,15 @@
         (x.podeCancelar && RP.ini.eu.perm.cancelar && RP.ini.cancelarAntesVisita ? '<div class="at-acoes">' + Rp_btnPerigo_("rpCancelar", "Cancelar " + (tipo === "SOLICITACAO" ? "o pedido" : "o chamado")) + "</div>" : "") + "</div>" +
         ((r.marcos || []).length ? '<div class="at-caixa"><h3>Marcos: previsto e realizado</h3><div id="rpMarcos"></div></div>' : "") +
         '<div class="at-caixa"><h3>Linha do tempo</h3><div class="at-hist">' + (r.linhaDoTempo.map(function (e) { return '<div><span class="q">' + Rp_esc_(e.em + " · " + e.por) + "</span><br>" + Rp_esc_(e.texto || (e.de + " → " + e.para)) + "</div>"; }).join("") || '<p class="at-meta">Sem registros ainda.</p>') + "</div></div>" +
-        '<div class="at-caixa"><h3>Arquivos</h3>' + Rp_anexosHtml_(r.anexos) + '</div><div class="at-caixa" id="rpConv"></div>';
+        '<div class="at-caixa"><h3>Arquivos</h3>' + Rp_anexosHtml_(r.anexos) + "</div>" +
+        // 29/10/2026: relatório A4 do atendimento na versão da representada (linha do tempo, marcos, serviço, fotos liberadas e conversa)
+        (tipo === "CHAMADO" ? '<div class="at-caixa"><h3>Relatórios do atendimento</h3><p class="at-meta">O relatório A4 mostra o que a Metrolabs compartilha com a sua empresa sobre este chamado: linha do tempo, marcos previsto e realizado, serviço, peças, fotos liberadas e a conversa. Fica salvo em HTML e PDF; cada emissão é uma versão nova.</p>' +
+          '<div id="rpRelMsg"></div><div class="at-acoes">' + Rp_btn_("rpGerarRel", "Gerar relatório", true) + '</div><div id="rpRelLista"><p class="at-meta">Carregando…</p></div></div>' : "") +
+        '<div class="at-caixa" id="rpConv"></div>';
       if (Rp_$_("rpMarcos")) Rp_$_("rpMarcos").innerHTML = PnA_marcosHtml_(r.marcos, Rp_$_("rpMarcos").clientWidth || 700);
       Rp_$_("rpVoltar").onclick = function () { Rp_irAba_("chamados"); };
+      var listarRel = function () { Rp_chamar_("documentos", { chamadoId: x.id }, function (k) { if (Rp_$_("rpRelLista")) Rp_$_("rpRelLista").innerHTML = PnA_docsHtml_(k.documentos, "Nenhum relatório gerado para este chamado ainda."); }, function (m) { if (Rp_$_("rpRelLista")) Rp_msg_("rpRelLista", m); }); };
+      if (Rp_$_("rpGerarRel")) { listarRel(); Rp_$_("rpGerarRel").onclick = function () { Rp_chamar_("relatorioAtendimento", { tipo: tipo, id: x.id }, function (k) { PnA_docGerado_(Rp_$_("rpRelMsg"), k); listarRel(); }, function (m) { Rp_msg_("rpRelMsg", m); }, "Gerando o relatório (A4, HTML e PDF)…"); }; }
       Rp_$_("rpVoltarPainel").onclick = function () { Rp_irAba_("painel"); };
       var b = Rp_$_("rpResponder");
       if (b) b.onclick = function () { Rp_lerArquivos_(Rp_$_("rp_fotosComp"), function (fs) { Rp_chamar_("responderComplemento", { id: x.id, resposta: Rp_val_("resposta"), fotos: fs }, function (k) { Rp_msg_("rpMsg", k.message, "ok"); Rp_ficha_(tipo, id); }, function (m, k) { Rp_msg_("rpCompMsg", m); Rp_erroCampos_(k); }, "Enviando…"); }, true); };

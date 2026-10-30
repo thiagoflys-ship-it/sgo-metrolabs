@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "f0c4cc87d173",
+ "versao": "66cbe28da6ad",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3134,7 +3134,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "O que a representada vê e o que nunca vê",
-     "texto": "Vê: os pedidos e chamados da empresa dela, a etapa (Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado, Cancelado), a data e o técnico da visita, a linha do tempo pública, os arquivos que ela enviou, a conversa e os equipamentos dos pedidos dela e os que ela cadastrou.\nBusca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, com limite de 20 buscas em 15 minutos (contando achou e não achou). Série cadastrada em outro cliente: a tela pede para falar com a Metrolabs, sem dizer qual cliente.\nVê também o Painel da empresa dela (índices, Kanban e Gantt; seção 4.2).\nNunca vê: outros clientes, outras representadas, notas internas, valores, registros internos do chamado, primeiro contato, fila e carga da Metrolabs, o restante do SGO+."
+     "texto": "Vê: os pedidos e chamados da empresa dela, a etapa (Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado, Cancelado), a data e o técnico da visita, a linha do tempo pública, os arquivos que ela enviou, a conversa e os equipamentos dos pedidos dela e os que ela cadastrou.\nBusca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, com limite de 20 buscas em 15 minutos (contando achou e não achou). Série cadastrada em outro cliente: a tela pede para falar com a Metrolabs, sem dizer qual cliente.\nVê também o Painel da empresa dela (índices, Kanban e Gantt; seção 4.2).\nVê e gera os relatórios A4 da versão dela (atendimento e período; seção 12) e abre só esses documentos.\nNunca vê: outros clientes, outras representadas, notas internas, valores, registros internos do chamado, fotos não liberadas, primeiro contato, fila e carga da Metrolabs, as versões interna e do cliente dos relatórios, o restante do SGO+."
     },
     {
      "titulo": "Cadastros feitos pela representada",
@@ -3145,8 +3145,36 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "A aba \"Registro de ações\" mostra buscas, cadastros, pedidos e cancelamentos das representadas, com nome, data e hora. O administrador da representada vê o da própria equipe."
     },
     {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período",
+     "texto": "Um motor só (SGO_Representacao_Documentos.js) sobre a moldura A4 dos relatórios do SGO+ (capa com a logo, sumário com o número das páginas, seções, tabelas e figuras numeradas, cabeçalho e rodapé corridos). Três versões, uma por público; o servidor filtra antes de montar o documento, e cada versão só recebe o que o público dela pode ler."
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Relatório do atendimento (um chamado) (parte 1)",
+     "texto": "Parte | Representada | Cliente final | Metrolabs (interno)Capa, sumário, resumo com índices | Sim | Sim | Sim\nCliente e equipamento | Com garantia, fabricante, instalação e nota fiscal; nome e protocolo da representada | Sem garantia e sem fabricante; sem o nome da representada | Como a representada\nRelato da abertura | Completo (código de erro, risco, o que já foi tentado, contato no local, pedido, complemento) | Problema relatado e situação do equipamento | Completo\nEtapas | — | As 5 etapas de \"Meus chamados\", com as datas | —\nLinha do tempo | Eventos PUBLICO = REPRESENTADA ou SIM; autor \"Metrolabs\" (o nome só quando é da própria representada) | Só PUBLICO = SIM; autor \"Metrolabs\" | Todos, com o nome; o interno sai em ponto vazado\nMarcos previsto x realizado (aceite, visita, conclusão) | Sim, com gráfico | Não (prazos internos) | Sim\nVisita e atendimento | O.S., técnico, agendado, chegada, conclusão, tempo no local | Igual (do técnico, só o nome) | Mais saída, deslocamento, conferência do equipamento e outras visitas\nDiagnóstico e serviço | Condição, causa, serviço, teste, recomendações | Igual | Mais o relato do técnico e a orientação remota\nPeças | Sem valor | Sem valor | Sem valor, com o pedido de compra da peça em falta\nFotos | Liberadas (REPRESENTADA ou SIM) e as que ela enviou | Só as liberadas ao cliente (SIM) | Todas, com a liberação de cada uma\nConversa do chamado | Sem nota interna | Não | Sem nota interna (as notas vão na parte própria)\nNotas internas, Prazos e SLA (horas úteis, primeiro contato, pausa, triagem), Histórico do equipamento (reincidência em 90 dias) | Não | Não | Sim\nArquivos, relatório da O.S., assinatura e aceite | Sim | Relatório da O.S. e assinatura | Sim, com quem lê cada arquivo\nNunca, em nenhuma versão: valores. Nunca nas externas:"
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Relatório do atendimento (um chamado) (parte 2)",
+     "texto": "nota interna, foto não liberada, registro interno, outra representada."
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Relatório do período",
+     "texto": "Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para representada e Metrolabs; para o cliente, as de \"Meus chamados\" com o período escolhido). Gráficos: por etapa, prazo cumprido (aceite, atendimento e, na interna, primeiro contato), tempos médios em horas úteis, por cliente, por UF, garantia e reincidência por modelo; para o cliente, por etapa, por mês, por equipamento e por unidade. Gantt da carteira em folha paisagem (24 linhas por figura; o texto da barra é a etapa; rótulo de mês só aparece se couber antes do mês seguinte; o texto nunca encosta no losango da visita nem no fim do prazo). Lista dos pedidos e chamados do período. Só na interna: prazo de atendimento por prioridade, carga por técnico, fila de pedidos e comparação entre representadas. Escopo: a representada só a carteira dela; o cliente só os chamados dele (inclusive os que não vieram de representada); a Metrolabs, os chamados que a pessoa pode ver, todas as representadas ou a escolhida no filtro."
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Onde gerar",
+     "texto": "Representada: ficha do chamado > \"Gerar relatório\"; Painel > \"Relatório do período\"; Painel > aba \"Relatórios gerados\".\nCliente: Meus chamados > \"Lista e relatórios\" > \"Gerar relatório do atendimento\" no chamado e \"Relatório do período (últimos 90 dias)\"; a lista \"Relatórios gerados\" fica logo abaixo.\nMetrolabs: ficha do chamado na Assistência técnica > \"Relatórios do atendimento\" (as três versões); Painel da Representação > \"Versão do relatório\" e \"Relatório do período\" (interna, ou a da representada escolhida no filtro)."
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Salvar, registrar e quem abre",
+     "texto": "Todo documento é gravado em HTML e PDF (SGO_DocSalvar), privado, e registrado em REP_DOCUMENTOS com o tipo, o público, a representada, o cliente, o chamado, o número (RAT-aaaa-nnnn-M, -R ou -C; período RPM-, RPR- ou RPC- com data e hora), a emissão, quem gerou e de que lado. Nada é sobrescrito: cada emissão é uma versão nova, e a revisão do cabeçalho conta as emissões anteriores do mesmo chamado e público.\nPastas: versão do cliente na pasta do equipamento (prontuário, \"4. Ordens de Serviço\") e no Arquivo de documentos do equipamento (tipo \"RELATÓRIO DE ATENDIMENTO\"); versão da representada em \"Representação - Relatórios > (representada) > ano > chamado\"; interna em \"Representação - Relatórios > Metrolabs - uso interno > ano > chamado\"; período do cliente na pasta do cliente em \"Assistência técnica - Relatórios > Relatórios do período\".\nQuem abre: a representada lista e abre só a versão dela da própria representada (a rota /arquivos confere a cada abertura, Representacao_arquivoPermitido_); o cliente lista só a versão do cliente dos chamados dele; a equipe lista todas.\nA emissão entra no histórico do chamado (interno)."
+    },
+    {
+     "titulo": "Documentos A4: relatório do atendimento e relatório do período > Fotos e liberação",
+     "texto": "A foto do técnico (ATEC_FOTOS) só entra na versão externa depois de liberada na ficha do chamado, em \"Quem vê nos relatórios\": não liberada (padrão), só à representada, ou ao cliente e à representada. Libera a gestão da área Técnica e os responsáveis pela representação; a liberação fica no histórico da O.S. com quem e quando.\nAo liberar, a tela gera uma cópia reduzida (lado maior 1000 px, JPEG) e o servidor a guarda na pasta privada da O.S.; o A4 usa essa cópia. Foto acima de 450 KB sem a cópia reduzida fica de fora do A4, com o aviso para liberar de novo. Até 12 fotos por documento."
+    },
+    {
      "titulo": "Próximas etapas do projeto (ainda não estão no módulo)",
-     "texto": "Marcos da visita, impedimentos, relatório e aceite do encerramento pela representada; remessa de peças com rastreio; garantia, tabela de preços e custos; fechamento mensal; andamento automático por e-mail ao cliente final e à representada com link público só daquele chamado; consulta automática de rastreio (Correios primeiro, com a chave configurada em Chaves e senhas; sem chave, rastreio manual); relatório final A4."
+     "texto": "Marcos da visita, impedimentos e aceite do encerramento pela representada; remessa de peças com rastreio; garantia, tabela de preços e custos; fechamento mensal; andamento automático por e-mail ao cliente final e à representada com link público só daquele chamado; consulta automática de rastreio (Correios primeiro, com a chave configurada em Chaves e senhas; sem chave, rastreio manual)."
     }
    ]
   },
@@ -3188,6 +3216,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Acompanhar cada chamado",
      "texto": "\"Chamados\" mostra os pedidos e chamados com a etapa: Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado ou Cancelado.\nNa ficha: a linha do tempo, os arquivos, a conversa e, quando a visita é agendada, a data e o técnico.\nComplemento pedido: responda na própria ficha, com fotos se precisar. O pedido volta para a Metrolabs.\nAntes da visita, o pedido ou o chamado pode ser cancelado com o motivo.\nVocê recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa."
+    },
+    {
+     "titulo": "Relatórios do atendimento e do período",
+     "texto": "Na ficha do chamado, toque em \"Gerar relatório\". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.\nO relatório traz capa, sumário, resumo, cliente e equipamento com a garantia, o relato da abertura, a linha do tempo, os marcos previsto e realizado (aceite, visita e conclusão) com gráfico, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos e a assinatura de quem recebeu o atendimento.\nNo Painel, \"Relatório do período\" gera o relatório da carteira da sua empresa no período escolhido: os índices do painel, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia e reincidência por modelo), o Gantt e a lista dos pedidos e chamados.\nA aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos."
     },
     {
      "titulo": "Conversar",

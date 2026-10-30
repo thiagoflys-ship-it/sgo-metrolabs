@@ -45,6 +45,15 @@ function SGO_ajudaTelas_Representacao_() {
           "Representada inativa: as pessoas dela não abrem mais o módulo; nada é apagado.",
           "Aba \"Catálogo de modelos\": escolha a representada, preencha código, nome, tipo, família, garantia em meses e, se souber, o padrão do número de série. O mesmo código altera o modelo."
         ] },
+        { titulo: "Relatórios A4 (atendimento e período)", itens: [
+          "Relatório do atendimento: na ficha do chamado (Assistência técnica), parte \"Relatórios do atendimento\", toque em \"Gerar (Metrolabs, uso interno)\", \"Gerar a versão do cliente\" ou \"Gerar a versão da representada\". Cada versão mostra só o que o público dela pode ler.",
+          "Versão interna: tudo da versão da representada mais as notas internas, os prazos e o SLA em horas úteis, o primeiro contato, o técnico, o deslocamento e o histórico do equipamento (reincidência). Não envie à representada nem ao cliente.",
+          "Versão da representada: capa, sumário, resumo, cliente e equipamento com a garantia, relato da abertura, linha do tempo pública para ela, marcos previsto e realizado, visita, diagnóstico e serviço, peças, fotos liberadas, conversa do chamado (sem nota interna), arquivos e assinatura.",
+          "Versão do cliente: as 5 etapas de \"Meus chamados\", a linha do tempo pública do cliente, visita, serviço, peças, fotos liberadas, recomendações e assinatura. Sem o nome da representada, sem a conversa com ela, sem prazos internos e sem valores; do técnico, só o nome.",
+          "Fotos: a foto do técnico só entra na versão do cliente ou da representada depois de liberada na mesma parte da ficha (\"Quem vê nos relatórios\"). Ao liberar, a tela guarda uma cópia reduzida para o A4 não ficar pesado. Libera a gestão da área Técnica e os responsáveis pela representação.",
+          "Relatório do período: no Painel, escolha a representada e o período e toque em \"Relatório do período\" (versão interna, ou a da representada escolhida). Traz os índices do painel com as mesmas fórmulas, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia, reincidência por modelo), o Gantt impresso, a lista e, na interna, a carga por técnico, a fila e a comparação entre representadas.",
+          "Todo documento fica salvo em HTML e PDF e registrado com o público que pode abrir. A versão do cliente de um chamado também entra no Arquivo de documentos do equipamento. Cada emissão é uma versão nova; nenhuma é apagada. A aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos para abrir de novo."
+        ] },
         { titulo: "Acompanhar na Assistência técnica", itens: [
           "Em Assistência técnica > Chamados, o filtro \"Representação\" mostra só os chamados de representadas ou de uma delas, e cada chamado leva o selo roxo com o nome da representada.",
           "Na ficha do chamado, a parte \"Representação\" mostra o protocolo da representada, o enquadramento pretendido (garantia, fora de garantia, não sei), o relato, o contato no local e os arquivos.",
@@ -67,6 +76,8 @@ function SGO_ajudaTelas_Representacao_() {
         { situacao: "Aparece \"o cadastro da representada e do catálogo é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação\"", oQueFazer: "Peça a um deles, ou peça ao Administrador para colocar você como responsável em Regras da assistência > Representação." },
         { situacao: "A representada diz que o modelo dela não aparece no cadastro de equipamento", oQueFazer: "Inclua o modelo em \"Catálogo de modelos\" (situação Ativo)." },
         { situacao: "Ao aceitar, aparece que o equipamento já tem chamado em aberto", oQueFazer: "Confira se é o mesmo problema. Se for outro, aceite mesmo assim; se for o mesmo, recuse com o motivo e indique o chamado aberto." },
+        { situacao: "A foto não aparece no relatório do cliente ou da representada", oQueFazer: "Libere a foto na ficha do chamado (Relatórios do atendimento > Quem vê nos relatórios) e gere o relatório de novo. Foto grande que ficou de fora: libere de novo para a tela gerar a cópia reduzida." },
+        { situacao: "Ao gerar a versão da representada do período, aparece \"escolha a representada\"", oQueFazer: "Escolha a representada no filtro \"Representada\" do Painel: a versão dela só traz a carteira dela." },
         { situacao: "A pessoa da representada não consegue entrar", oQueFazer: "Confira em Administração > Usuários se a conta está ativa, com o perfil Representada, a representada e o papel; e se a representada está ativa na aba Representadas." }
       ],
       quemPode: [
@@ -80,6 +91,7 @@ function SGO_ajudaTelas_Representacao_() {
         { p: "A representada vê valores?", r: "Não nesta etapa. Custos e fechamento entram em etapas seguintes do projeto." },
         { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros, pedidos e cancelamentos, com nome, data e hora." },
         { p: "Por que o técnico vê menos chamados no Painel?", r: "O Painel mostra só os chamados que a pessoa pode abrir na Assistência técnica: o técnico vê os dele e os da fila livre; a gestão vê todos. A fila de pedidos é a mesma para todos." },
+        { p: "Quem abre cada relatório gerado?", r: "A versão interna, só a equipe da Metrolabs. A da representada, só as pessoas daquela representada (o servidor confere a cada abertura do arquivo). A do cliente, só o cliente daquele chamado, em \"Meus chamados\" e no Arquivo de documentos do equipamento." },
         { p: "O que a representada vê no painel dela?", r: "Os mesmos índices de aceite, visita e conclusão, o Kanban e o Gantt, só da empresa dela. Ela não vê primeiro contato, fila de outras representadas, carga por técnico, notas internas nem valores." }
       ]
     },
@@ -114,6 +126,12 @@ function SGO_ajudaTelas_Representacao_() {
           "Toque no chamado para ver a linha do tempo, os arquivos e a conversa. Quando a visita é agendada, aparecem a data e o técnico.",
           "Complemento pedido: responda na própria ficha (pode mandar fotos). O pedido volta para a Metrolabs.",
           "Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo (se o contrato permitir)."
+        ] },
+        { titulo: "Relatórios do atendimento e do período", itens: [
+          "Na ficha do chamado, parte \"Relatórios do atendimento\", toque em \"Gerar relatório\". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.",
+          "O relatório traz capa, sumário, resumo, cliente e equipamento com a garantia, o relato da abertura, a linha do tempo, os marcos previsto e realizado (aceite, visita e conclusão), a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos e a assinatura de quem recebeu o atendimento.",
+          "No Painel, \"Relatório do período\" gera o relatório da carteira da sua empresa no período escolhido: os índices do painel, os gráficos, o Gantt e a lista dos pedidos e chamados.",
+          "A aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos."
         ] },
         { titulo: "Conversar com a Metrolabs", itens: [
           "Cada pedido e cada chamado tem a sua conversa. Assuntos fora de um chamado (dúvida, inclusão de pessoa da sua equipe) vão no \"Canal geral\".",

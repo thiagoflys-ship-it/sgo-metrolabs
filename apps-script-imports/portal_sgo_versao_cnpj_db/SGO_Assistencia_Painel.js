@@ -671,9 +671,16 @@ var AST_ACOES = {
   indexarAcervo: function (eu) { Ast_exigir_(eu, 'GESTAO', 'ligar o histórico do Auvo aos equipamentos'); return { indice: AstF_indexarAcervo_({ lote: 150, orcamentoMs: 100000, porNome: eu.nome }) }; },
   revisaoAcervo: function (eu) { return AstF_revisaoAcervo_(eu); },
   // portal do cliente
-  portal: function (eu) { return AstP_portal_(eu); }
+  portal: function (eu) { return AstP_portal_(eu); },
+  // 29/10/2026: documentos A4 do atendimento e do período (SGO_Representacao_Documentos.js). O cliente só gera e lista a versão
+  // dele; a equipe gera qualquer versão do chamado que pode ver e libera as fotos para os documentos externos.
+  relatorioAtendimento: function (eu, d) { return eu.cliente ? RepDC_relatorioAtendimento_(eu, d) : RepDI_relatorioAtendimento_(eu, d); },
+  relatorioPeriodoCliente: function (eu, d) { return RepDC_relatorioPeriodo_(eu, d); },
+  documentosGerados: function (eu, d) { return eu.cliente ? RepDC_documentos_(eu, d) : RepDI_documentos_(eu, d); },
+  fotosRelatorio: function (eu, d) { return RepD_fotosDoChamado_(eu, d); },
+  liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); }
 };
-var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento'];
+var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento', 'relatorioAtendimento', 'relatorioPeriodoCliente', 'documentosGerados'];
 /** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
 var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
 var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', assumir: 'assumir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',

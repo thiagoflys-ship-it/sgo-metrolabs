@@ -450,6 +450,10 @@
     if (r.os) h += '<div class="at-sec">Ordem de serviço</div><div class="at-card clicavel" id="atAbrirOs"><p class="at-card-tit">' + At_esc_(r.os.numero) + ' · ' + At_esc_(r.os.situacaoNome) + '</p><p class="at-meta">' + At_esc_(r.os.tipo.nome || "") + ' · ' + At_esc_(r.os.tecnicoNome) + ' · ' + At_esc_(r.os.agendadoPara) + '</p>' +
       (r.os.faltas && r.os.faltas.length ? '<p class="at-txt">Falta: ' + At_esc_(r.os.faltas.join("; ")) + '</p>' : '') + (r.os.relatorio ? '<p class="at-txt"><a href="' + At_esc_(r.os.relatorio.url) + '" target="_blank" rel="noopener">Relatório A4' + (r.os.relatorio.revisao ? " Rev. " + (r.os.relatorio.revisao < 10 ? "0" : "") + r.os.relatorio.revisao : "") + '</a>' + (r.os.envio ? ' · ' + At_esc_(r.os.envio.texto) : '') + '</p>' : '') + '</div>';
     if (r.historicoEquipamento && r.historicoEquipamento.length) h += '<div class="at-sec">Histórico do equipamento</div>' + At_listaHistorico_(r.historicoEquipamento);
+    // 29/10/2026: relatórios A4 do atendimento nas versões de cada público e a liberação das fotos para os documentos externos (SGO_Representacao_Documentos.js)
+    h += '<div class="at-sec">Relatórios do atendimento</div><div class="at-caixa" id="atRelDocs"><p class="at-meta">Cada versão mostra só o que o público dela pode ler. A interna traz notas internas, prazos e SLA: não sai da Metrolabs. Fica salvo em HTML e PDF; cada emissão é uma versão nova.</p>' +
+      '<div id="atRelMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" data-at-rel="INTERNO">Gerar (Metrolabs, uso interno)</button><button type="button" class="btn-secondary" data-at-rel="CLIENTE">Gerar a versão do cliente</button>' +
+      (c.representadaId ? '<button type="button" class="btn-secondary" data-at-rel="REPRESENTADA">Gerar a versão da representada</button>' : '') + '</div><div id="atRelLista"><p class="at-meta">Carregando…</p></div><div id="atRelFotos"></div></div>';
     // 29/10/2026 (módulo Representação): parte "Representação" da ficha (relato, contato, arquivos e conversa com a representada)
     if (c.representadaId) h += '<div class="at-sec">Representação: ' + At_esc_(c.representadaNome) + '</div><div id="atRepFicha" class="at-caixa"><p class="at-meta">Carregando…</p></div>';
     h += '<div class="at-sec">Histórico do chamado</div><div class="at-hist">' + (r.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto || ((e.de || "") + " → " + (e.para || ""))) + '</div>'; }).join("") + '</div>';
@@ -468,6 +472,7 @@
         '<p class="at-meta">' + rp.mensagens.length + ' mensagem(ns) na conversa' + (rp.mensagens.length ? '; última: ' + At_esc_(rp.mensagens[rp.mensagens.length - 1].autor + " em " + rp.mensagens[rp.mensagens.length - 1].em) : '') + '. Responda em Representação > Conversas (com nota interna, se precisar).</p>' +
         '<div class="at-acoes"><button type="button" class="btn-secondary" onclick="abrir(\'representacao\')">Abrir o módulo Representação</button></div>';
     }, function () {});
+    At_relatoriosFicha_(c, corpo);
     if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);
     if (c.podeAgendar) At_ligarAgendar_(c, corpo, reabrir, r);
     var b;
@@ -1283,11 +1288,49 @@
     q.imagem = function () { var larguras = [600, 420, 300]; for (var i = 0; i < larguras.length; i++) { var k = Math.min(1, larguras[i] / c.width), s = document.createElement("canvas"); s.width = Math.round(c.width * k); s.height = Math.round(c.height * k); var g = s.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, s.width, s.height); g.drawImage(c, 0, 0, s.width, s.height); var u = s.toDataURL("image/png"); if (u.length <= 200000) return u; } return ""; };
     return q;
   }
+  /**
+   * 29/10/2026: ficha do chamado (equipe): gerar o relatório A4 de cada público, a lista dos gerados e as fotos com a liberação
+   * para os documentos externos. A cópia reduzida da foto (1000 px, JPEG) é feita aqui no navegador e vai junto com a liberação.
+   */
+  function At_relatoriosFicha_(c, corpo) {
+    var lista = function () { At_chamar_("documentosGerados", { chamadoId: c.id }, function (r) { var el = corpo.querySelector("#atRelLista"); if (el) el.innerHTML = PnA_docsHtml_(r.documentos, "Nenhum relatório gerado para este chamado ainda.", true); }, function (m) { At_msg_(corpo.querySelector("#atRelLista"), m); }); };
+    var fotos = function () {
+      At_chamar_("fotosRelatorio", { id: c.id }, function (r) {
+        var el = corpo.querySelector("#atRelFotos"); if (!el) return;
+        if (!r.fotos.length) { el.innerHTML = '<p class="at-meta">Nenhuma foto do técnico neste chamado ainda.</p>'; return; }
+        var opcoes = function (f) { return ["", "SIM"].concat(r.temRepresentada ? ["REPRESENTADA"] : []).map(function (k) { return '<option value="' + k + '"' + (k === f.publico ? " selected" : "") + '>' + At_esc_(r.liberacoes[k]) + "</option>"; }).join(""); };
+        el.innerHTML = '<h3 style="margin-top:12px">Fotos do técnico nos relatórios</h3><p class="at-meta">A foto só entra na versão do cliente ou da representada depois de liberada aqui. Na versão interna, todas entram.' + (r.podeLiberar ? "" : " A liberação é da gestão da área Técnica e dos responsáveis pela representação.") + "</p>" +
+          '<table class="at-tabela"><thead><tr><th>Foto</th><th>O.S. · quando</th><th>Quem vê nos relatórios</th></tr></thead><tbody>' + r.fotos.map(function (f) {
+            return '<tr><td data-r="Foto"><a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.legenda || f.nome) + '</a></td><td data-r="O.S. · quando">' + At_esc_(f.os + " · " + f.em + (f.por ? " · " + f.por : "")) + '</td><td data-r="Quem vê">' +
+              (r.podeLiberar ? '<select data-at-foto="' + At_esc_(f.id) + '" data-url="' + At_esc_(f.url) + '">' + opcoes(f) + "</select>" : At_esc_(f.publicoNome)) + (f.liberadaPor ? '<div class="at-meta">' + At_esc_(f.liberadaPor + " · " + f.liberadaEm) + "</div>" : "") + "</td></tr>";
+          }).join("") + "</tbody></table>";
+        el.querySelectorAll("[data-at-foto]").forEach(function (sel) {
+          sel.onchange = function () {
+            var pub = sel.value, envia = function (red) { At_chamar_("liberarFoto", { fotoId: sel.getAttribute("data-at-foto"), publico: pub, reduzida: red }, function (x) { At_msg_(corpo.querySelector("#atRelMsg"), x.message, "ok"); fotos(); }, function (m) { At_msg_(corpo.querySelector("#atRelMsg"), m); fotos(); }); };
+            if (pub && typeof PnA_reduzirFoto_ === "function") PnA_reduzirFoto_(sel.getAttribute("data-url"), envia); else envia(null);
+          };
+        });
+      }, function (m) { At_msg_(corpo.querySelector("#atRelFotos"), m); });
+    };
+    corpo.querySelectorAll("[data-at-rel]").forEach(function (b) {
+      b.onclick = function () { At_chamar_("relatorioAtendimento", { id: c.id, publico: b.getAttribute("data-at-rel") }, function (r) { PnA_docGerado_(corpo.querySelector("#atRelMsg"), r); lista(); }, function (m) { At_msg_(corpo.querySelector("#atRelMsg"), m); }, { carregando: "Gerando o relatório (A4, HTML e PDF)…" }); };
+    });
+    lista(); fotos();
+  }
   /** Painel do cliente: toque num cartão ou barra mostra o chamado na aba Lista (o cliente não tem outra ficha). */
   function At_portalMostrar_(tipo, id) {
     var b = document.querySelector('#atPoAbas [data-pna-aba="lista"]'); if (b) b.click();
     var el = At_$_("atPoCh_" + id);
     if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.borderColor = "var(--info, #1f5fa8)"; setTimeout(function () { el.style.borderColor = ""; }, 2500); }
+  }
+  /** 29/10/2026: portal do cliente: gerar o relatório do atendimento e o do período (versão do cliente) e listar os gerados. */
+  function At_portalDocs_(el) {
+    var listar = function () { At_chamar_("documentosGerados", {}, function (r) { var d = el.querySelector("#atPoDocs"); if (d) d.innerHTML = PnA_docsHtml_(r.documentos, "Nenhum relatório gerado ainda. Toque em Gerar relatório do atendimento num chamado ou em Relatório do período."); }, function (m) { At_msg_(el.querySelector("#atPoDocs"), m); }); };
+    var msg = function () { return el.querySelector("#atPoRelMsg"); };
+    var bp = el.querySelector("#atPoRelPer");
+    if (bp) bp.onclick = function () { At_chamar_("relatorioPeriodoCliente", { dias: 90 }, function (r) { PnA_docGerado_(msg(), r); listar(); }, function (m) { At_msg_(msg(), m); }, { carregando: "Gerando o relatório do período…" }); };
+    el.querySelectorAll("[data-po-rel]").forEach(function (b) { b.onclick = function () { At_chamar_("relatorioAtendimento", { id: b.getAttribute("data-po-rel") }, function (r) { PnA_docGerado_(msg(), r); listar(); if (msg()) msg().scrollIntoView({ block: "center" }); }, function (m) { At_msg_(msg(), m); }, { carregando: "Gerando o relatório do atendimento…" }); }; });
+    listar();
   }
   function At_renderPortal_(div) {
     div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Meus chamados", "Peça atendimento técnico para os seus equipamentos e acompanhe cada pedido até o relatório.", '<button type="button" class="btn-secondary" id="atPoAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-primary" id="atPoNovo">Pedir atendimento</button>') + '<div id="atPoCorpo"><div class="at-vazio">Carregando…</div></div></div>';
@@ -1302,10 +1345,13 @@
         '<div class="at-sec">Chamados</div>' + (r.chamados.length ? '<div class="at-lista">' + r.chamados.map(function (ch) {
           return '<div class="at-card' + (ch.cancelado ? " fim" : "") + '" id="atPoCh_' + At_esc_(ch.id) + '"><p class="at-card-tit">' + At_esc_(ch.numero) + ' · ' + At_esc_(ch.equipamentoTexto) + '</p><p class="at-meta">Aberto em ' + At_esc_(ch.abertoEm) + (ch.unidadeNome ? ' · ' + At_esc_(ch.unidadeNome) : '') + '</p>' +
             (ch.cancelado ? '<p class="at-txt">Cancelado.</p>' : '<div class="at-etapas">' + ch.etapas.map(function (e, i) { return '<span class="' + (i + 1 <= ch.etapa ? "feita" : "") + '">' + At_esc_(e) + '</span>'; }).join("") + '</div>') +
-            '<p class="at-txt">' + At_esc_(ch.sintoma) + '</p>' + (ch.agendadoPara ? '<p class="at-meta">Visita agendada para ' + At_esc_(ch.agendadoPara) + '.</p>' : '') + (ch.relatorioUrl ? '<a href="' + At_esc_(ch.relatorioUrl) + '" target="_blank" rel="noopener">Baixar o relatório do atendimento (' + At_esc_(ch.osNumero) + ')</a>' : '') + '</div>';
+            '<p class="at-txt">' + At_esc_(ch.sintoma) + '</p>' + (ch.agendadoPara ? '<p class="at-meta">Visita agendada para ' + At_esc_(ch.agendadoPara) + '.</p>' : '') + (ch.relatorioUrl ? '<a href="' + At_esc_(ch.relatorioUrl) + '" target="_blank" rel="noopener">Baixar o relatório da ordem de serviço (' + At_esc_(ch.osNumero) + ')</a>' : '') +
+            // 29/10/2026: relatório A4 do atendimento (versão do cliente: etapas, linha do tempo, visita, serviço, fotos liberadas e recomendações)
+            (ch.cancelado ? '' : '<div class="at-acoes"><button type="button" class="btn-secondary" data-po-rel="' + At_esc_(ch.id) + '">Gerar relatório do atendimento</button></div>') + '</div>';
         }).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado ainda.</div>') +
-        '<div class="at-sec">Relatórios emitidos</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
-      if (!temPainel) { c.innerHTML = At_portalOrcamentos_(r.orcamentos || []) + lista; }
+        '<div class="at-sec">Relatórios gerados</div><div class="at-acoes"><button type="button" class="btn-primary" id="atPoRelPer">Relatório do período (últimos 90 dias)</button></div><div id="atPoRelMsg"></div><div id="atPoDocs"><p class="at-meta">Carregando…</p></div>' +
+        '<div class="at-sec">Relatórios das ordens de serviço</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
+      if (!temPainel) { c.innerHTML = At_portalOrcamentos_(r.orcamentos || []) + lista; At_portalDocs_(c); }
       else {
         var md = k.minDia;
         c.innerHTML = PnA_indHtml_([
@@ -1318,7 +1364,7 @@
           AT.portalAba = a;
           var el = At_$_("atPoAba"); if (!el) return;
           var irPara = function (tipo, id) { At_portalMostrar_(tipo, id); };
-          if (a === "lista") { el.innerHTML = lista; return; }
+          if (a === "lista") { el.innerHTML = lista; At_portalDocs_(el); return; }
           if (a === "gantt") {
             el.innerHTML = PnA_ganttHtml_(p.gantt, { largura: el.clientWidth || 1000, dias: 90, diasFrente: 21, agoraMs: p.agoraMs, comPrazo: false,
               cor: function (x) { return PNA_COR_ETAPA_CLIENTE[x.etapa] || "#8a96a8"; }, rotulo: function (x) { return x.numero + " · " + x.equipamento; },

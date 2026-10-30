@@ -147,7 +147,8 @@
     // régua (SGOGantt.escala: fins de semana, meses e marcas da vista)
     if (esc) {
       esc.fds.forEach(function (f) { s.push('<rect x="' + (rotuloW + f.x).toFixed(1) + '" y="' + cabH + '" width="' + f.w.toFixed(1) + '" height="' + (H - cabH) + '" fill="rgba(127,127,127,.07)"/>'); });
-      esc.meses.forEach(function (m) { s.push('<text x="' + (rotuloW + m.x + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + PnA_esc_(m.rot) + "</text>"); });
+      // 29/10/2026: o mês parcial do começo da janela ("set/2026" com 2 dias) só aparece se couber antes do mês seguinte (antes os dois rótulos se sobrepunham)
+      esc.meses.forEach(function (m, i) { var prox = esc.meses[i + 1] ? esc.meses[i + 1].x : area; if (prox - m.x < String(m.rot).length * 7 + 8) return; s.push('<text x="' + (rotuloW + m.x + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + PnA_esc_(m.rot) + "</text>"); });
       esc.linhas.forEach(function (l) { s.push('<line x1="' + (rotuloW + l.x).toFixed(1) + '" y1="' + (cabH - 6) + '" x2="' + (rotuloW + l.x).toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,' + (l.forte ? ".22" : ".1") + ')"/>'); });
       var ultimo = -99;
       esc.ticks.forEach(function (t) { if (t.x - ultimo < 30) return; ultimo = t.x; s.push('<text x="' + (rotuloW + t.x + 2).toFixed(1) + '" y="' + (cabH - 10) + '" font-size="10" fill="var(--muted)">' + PnA_esc_(t.rot) + "</text>"); });
@@ -170,10 +171,15 @@
           if (x.prazo.ateMs >= de && x.prazo.ateMs <= ate) s.push('<line x1="' + xp.toFixed(1) + '" y1="' + (by - 2) + '" x2="' + xp.toFixed(1) + '" y2="' + (by + bh + 2) + '" stroke="var(--text)" stroke-width="2" stroke-dasharray="3,2"/>');
           if (x1 > xp + 0.5 && (x.prazo.estado === "VENCIDO" || x.prazo.estado === "FORA_DO_PRAZO")) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (x1 - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.55)"/>');
         }
-        if (x.visitaPrevMs && x.visitaPrevMs >= de && x.visitaPrevMs <= ate) { var xv = xm(x.visitaPrevMs); s.push('<path d="M' + xv.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#fff" stroke="#1E4F7A" stroke-width="1.5"/>'); }
-        if (x.visitaMs && x.visitaMs >= de && x.visitaMs <= ate) { var xr = xm(x.visitaMs); s.push('<path d="M' + xr.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#1E4F7A" stroke="#fff" stroke-width="1"/>'); }
+        var marcas = []; // 29/10/2026: posições dos losangos e do fim do prazo, para o rótulo da barra não encostar neles
+        if (o.comPrazo && x.prazo && x.prazo.ateMs && x.prazo.ateMs >= de && x.prazo.ateMs <= ate) marcas.push(xm(x.prazo.ateMs));
+        if (x.visitaPrevMs && x.visitaPrevMs >= de && x.visitaPrevMs <= ate) { var xv = xm(x.visitaPrevMs); marcas.push(xv); s.push('<path d="M' + xv.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#fff" stroke="#1E4F7A" stroke-width="1.5"/>'); }
+        if (x.visitaMs && x.visitaMs >= de && x.visitaMs <= ate) { var xr = xm(x.visitaMs); marcas.push(xr); s.push('<path d="M' + xr.toFixed(1) + " " + (by - 1) + " l5 " + (bh / 2 + 1) + " l-5 " + (bh / 2 + 1) + " l-5 -" + (bh / 2 + 1) + ' z" fill="#1E4F7A" stroke="#fff" stroke-width="1"/>'); }
+        var wt = el.texto ? medir(el.texto) : 0, bate = function (a, b) { return marcas.some(function (mx) { return mx + 7 > a && mx - 7 < b; }); };
+        if (el.texto && el.pos === "dentro" && bate(x0 + 4, x0 + 8 + wt)) el = { x: el.x, texto: el.texto, pos: "fora" };
+        var xFora = Math.max.apply(null, [x1].concat(marcas.filter(function (mx) { return mx > x0 && mx - 7 < x1 + 5 + wt; }).map(function (mx) { return mx + 6; }))) + 5;
         if (el.texto && el.pos === "dentro") s.push('<text x="' + (x0 + 6).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="#fff" stroke="rgba(15,23,42,.55)" stroke-width="3" stroke-linejoin="round" paint-order="stroke" pointer-events="none">' + PnA_esc_(el.texto) + "</text>");
-        else if (el.texto && el.pos === "fora") s.push('<text x="' + (x1 + 5).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="var(--text)" pointer-events="none">' + PnA_esc_(el.texto) + "</text>");
+        else if (el.texto && el.pos === "fora") s.push('<text x="' + xFora.toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" font-weight="700" fill="var(--text)" pointer-events="none">' + PnA_esc_(el.texto) + "</text>");
         s.push("</g>");
       });
     });
@@ -224,5 +230,34 @@
     }).join("") + "</tbody></table>";
     return '<div class="atv-legenda"><span><i style="background:#fff;border:1.8px solid #1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Previsto</span><span><i style="background:#4f9f75;transform:rotate(45deg);width:9px;height:9px"></i>Realizado no previsto</span><span><i style="background:#e05252;transform:rotate(45deg);width:9px;height:9px"></i>Realizado depois do previsto</span></div>' +
       '<div class="atv-gantt-wrap">' + s.join("") + "</div>" + tab;
+  }
+  /**
+   * 29/10/2026: documentos A4 gerados (relatório do atendimento e do período), com o público de cada um. docs: Representacao_api
+   * 'documentos' ou Assistencia_api 'documentosGerados' ({ numero, versao, tipoNome, publicoNome, chamadoNumero, periodo, por, em, htmlUrl, pdfUrl }).
+   */
+  function PnA_docsHtml_(docs, vazio, comPublico) {
+    if (!docs || !docs.length) return '<p class="at-meta">' + PnA_esc_(vazio || "Nenhum relatório gerado ainda.") + "</p>";
+    return '<table class="at-tabela"><thead><tr><th>Documento</th>' + (comPublico ? "<th>Versão</th>" : "") + "<th>Gerado</th><th>Abrir</th></tr></thead><tbody>" + docs.map(function (d) {
+      return '<tr><td data-r="Documento"><b>' + PnA_esc_(d.tipoNome) + "</b><br>" + PnA_esc_([d.chamadoNumero, d.periodo, d.numero + " v" + d.versao].filter(Boolean).join(" · ")) + "</td>" +
+        (comPublico ? '<td data-r="Versão">' + PnA_esc_(d.publicoNome) + "</td>" : "") + '<td data-r="Gerado">' + PnA_esc_(d.em) + "<br>" + PnA_esc_(d.por) + "</td>" +
+        '<td data-r="Abrir">' + (d.htmlUrl ? '<a href="' + PnA_esc_(d.htmlUrl) + '" target="_blank" rel="noopener">A4 (HTML)</a>' : "") + (d.pdfUrl ? ' · <a href="' + PnA_esc_(d.pdfUrl) + '" target="_blank" rel="noopener">PDF</a>' : "") + "</td></tr>";
+    }).join("") + "</tbody></table>";
+  }
+  /** Resposta de "gerar relatório": faixa com os links e abre o A4 numa aba nova (se o navegador deixar). */
+  function PnA_docGerado_(el, r) {
+    var d = r.documento || {};
+    if (el) el.innerHTML = '<div class="at-faixa ok">' + PnA_esc_(r.message || "Relatório gerado.") + (d.htmlUrl ? ' <a href="' + PnA_esc_(d.htmlUrl) + '" target="_blank" rel="noopener">Abrir o A4</a>' : "") + (d.pdfUrl ? ' · <a href="' + PnA_esc_(d.pdfUrl) + '" target="_blank" rel="noopener">PDF</a>' : "") + "</div>";
+    if (d.htmlUrl) { try { window.open(d.htmlUrl, "_blank", "noopener"); } catch (e) {} }
+  }
+  /** Cópia reduzida da foto para o A4 (lado maior 1000 px, JPEG): o servidor guarda e usa no relatório. Devolve null se não der. */
+  function PnA_reduzirFoto_(url, cb) {
+    try {
+      var img = new Image(); img.crossOrigin = "use-credentials";
+      img.onload = function () {
+        try { var k = Math.min(1, 1000 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1)), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); cb({ base64: c.toDataURL("image/jpeg", 0.72).split(",")[1], tipo: "image/jpeg" }); } catch (e) { cb(null); }
+      };
+      img.onerror = function () { cb(null); }; img.src = url;
+    } catch (e) { cb(null); }
   }
 </script>

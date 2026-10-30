@@ -111,7 +111,7 @@
   function sid() { try { return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } }
   function perfil() { try { return String((window.USER_CONTEXT || (typeof USER_CONTEXT !== "undefined" ? USER_CONTEXT : null) || {}).perfil || "").toUpperCase(); } catch (e) { return ""; } }
   function logado() { try { var u = typeof USER_CONTEXT !== "undefined" ? USER_CONTEXT : window.USER_CONTEXT; return !!(u && u.perfil); } catch (e) { return false; } }
-  function podeEnviar() { var p = perfil(); return !!p && p !== "CLIENTE" && p !== "RH"; }
+  function podeEnviar() { var p = perfil(); return !!p && p !== "CLIENTE" && p !== "RH" && p !== "REPRESENTADA"; } // 29/10/2026: a representada não usa o Enviar documento (fica fora da lista FUNCOES_REPRESENTADA do servidor)
   function novoId() {
     try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, ""); } catch (e) {}
     var s = ""; for (var i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16); return s;

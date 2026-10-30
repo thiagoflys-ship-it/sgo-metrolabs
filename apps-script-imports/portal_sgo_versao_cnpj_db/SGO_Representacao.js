@@ -458,6 +458,9 @@ var REP_ACOES_REPRESENTADA = {
   chamados: RepA_chamados_, chamado: RepA_chamado_, mensagens: RepA_mensagens_, enviarMensagem: RepA_enviarMensagem_, equipamentos: RepA_equipamentos_, equipe: RepA_equipe_,
   // 29/10/2026: painel de abertura e acompanhamento (índices, Kanban e Gantt) em SGO_Representacao_Painel.js
   painel: function (eu, d) { return RepA_painel_(eu, d); },
+  // 29/10/2026: documentos A4 da versão da representada (SGO_Representacao_Documentos.js)
+  relatorioAtendimento: function (eu, d) { return RepDA_relatorioAtendimento_(eu, d); }, relatorioPeriodo: function (eu, d) { return RepDA_relatorioPeriodo_(eu, d); },
+  documentos: function (eu, d) { return RepDA_documentos_(eu, d); },
   ajuda: function () { return { ajuda: Rep_ajuda_('representacao/representada') }; }
 };
 /** Texto da ajuda do módulo (SGO_Ajuda_Representacao.js): a representada lê a versão dela, sem termos internos. */
@@ -627,6 +630,9 @@ var REP_ACOES_INTERNAS = {
   complemento: function (eu, d) { return AstC_complemento_(eu, d); }, recusar: function (eu, d) { return AstC_descartar_(eu, d); },
   conversas: RepI_conversas_, mensagens: RepI_mensagens_, enviarMensagem: RepI_enviarMensagem_, chamado: RepI_chamado_, acessos: RepI_acessos_, usuarios: RepI_usuarios_,
   painel: function (eu, d) { return RepI_painel_(eu, d); },
+  // 29/10/2026: documentos A4 (as três versões), fotos do chamado e liberação para os documentos externos
+  relatorioAtendimento: function (eu, d) { return RepDI_relatorioAtendimento_(eu, d); }, relatorioPeriodo: function (eu, d) { return RepDI_relatorioPeriodo_(eu, d); },
+  documentos: function (eu, d) { return RepDI_documentos_(eu, d); }, fotosChamado: function (eu, d) { return RepD_fotosDoChamado_(eu, d); }, liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); },
   ajuda: function () { return { ajuda: Rep_ajuda_('representacao') }; }
 };
 
@@ -652,7 +658,8 @@ function Representacao_api(sessionId, acao, dados) {
 
 /**
  * Servidor próprio (rota /arquivos/:id): a sessão REPRESENTADA só abre arquivo que é anexo da própria representada e que
- * ela pode ver (REP_ANEXOS.PUBLICO = REPRESENTADA). Nome com "_": o navegador não chama; só o servidor. Nunca lança.
+ * ela pode ver (REP_ANEXOS.PUBLICO = REPRESENTADA) ou documento gerado na versão dela (REP_DOCUMENTOS.PUBLICO = REPRESENTADA,
+ * 29/10/2026). Nome com "_": o navegador não chama; só o servidor. Nunca lança.
  */
 function Representacao_arquivoPermitido_(sessionId, arquivoId) {
   var antes = SGO_REP_MODULO;
@@ -662,6 +669,6 @@ function Representacao_arquivoPermitido_(sessionId, arquivoId) {
     var eu = Rep_eu_(sessionId);
     if (!eu.externo) return false;
     var id = Rep_s_(arquivoId);
-    return !!id && Rep_escopo_(eu).anexos().some(function (a) { return Rep_s_(a.ARQUIVO_ID) === id; });
+    return !!id && (Rep_escopo_(eu).anexos().some(function (a) { return Rep_s_(a.ARQUIVO_ID) === id; }) || (typeof RepD_arquivoDaRepresentada_ === 'function' && RepD_arquivoDaRepresentada_(eu.repId, id)));
   } catch (e) { return false; } finally { SGO_REP_MODULO = antes; }
 }
