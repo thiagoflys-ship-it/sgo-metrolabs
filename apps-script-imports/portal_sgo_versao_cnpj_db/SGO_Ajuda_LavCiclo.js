@@ -3,6 +3,8 @@
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Texto puro, sem HTML. Conferido contra a tela real (JS_LavCiclo.html).
  * A configuração das referências por receita é da gestão: aparece só nas linhas de "quem pode" desses perfis e no manual
  * da gestão (docs/MANUAL_RELATORIO_CICLO_LAVADORA_GESTAO.md); o cliente não vê.
+ * 01/11/2026: resultado NÃO LIBERADO (firmware REV20261101), coluna e filtro próprios, códigos de falha 17 e 18 e a nota
+ * dos arquivos antigos com código 2 no arrefecimento.
  */
 function SGO_ajudaTelas_LavCiclo_() {
   return {
@@ -27,7 +29,8 @@ function SGO_ajudaTelas_LavCiclo_() {
         ] },
         { titulo: "Usar o Kanban dos relatórios", itens: [
           "As colunas são: Aguardando assinatura, Nova versão aguardando assinatura, Com falha (cancelado ou reprovado) e Assinado e aprovado.",
-          "No celular, toque num dos quatro quadros de cima para ver aquela situação.",
+          "Quando há ciclo com o resultado NÃO LIBERADO, aparece também a coluna \"Não liberado (câmara quente no fim)\".",
+          "No celular, toque num dos quadros de cima para ver aquela situação.",
           "Toque num cartão para abrir o relatório, baixar o PDF, assinar ou ver as versões.",
           "Cada coluna mostra os 6 mais recentes. Toque em \"Ver todos\" para ver os outros."
         ] },
@@ -79,8 +82,9 @@ function SGO_ajudaTelas_LavCiclo_() {
       ],
       cores: [
         { nome: "Índice em vermelho", significado: "Há o que olhar: relatório aguardando assinatura, ciclo cancelado ou reprovado, ou manutenção preventiva vencida." },
-        { nome: "Borda do cartão no Kanban", significado: "Laranja: aguardando assinatura. Azul: nova versão aguardando assinatura. Vermelha: com falha. Verde: assinado e aprovado." },
+        { nome: "Borda do cartão no Kanban", significado: "Laranja: aguardando assinatura. Azul: nova versão aguardando assinatura. Vermelha: com falha. Âmbar: não liberado. Verde: assinado e aprovado." },
         { nome: "Selo verde \"APROVADO\"", significado: "A lavadora concluiu o ciclo sem falha registrada." },
+        { nome: "Selo âmbar \"NÃO LIBERADO\"", significado: "O processo foi concluído: lavagem, enxágue e desinfecção cumpridos e cuba drenada. A lavadora bloqueou a liberação da carga porque a câmara não esfriou até a temperatura-alvo no fim do ciclo (código 17). Não é ciclo aprovado nem cancelado. A tampa só destrava abaixo de 45 °C." },
         { nome: "Selo vermelho \"CANCELADO\" ou \"REPROVADO\"", significado: "O ciclo não chegou ao fim. O relatório sai com a falha em destaque e diz que a carga não deve ser liberada com base nele." },
         { nome: "Selo laranja \"Aguardando assinatura\"", significado: "O relatório foi gerado e ainda não foi assinado pelo responsável pelo local." },
         { nome: "Selo verde \"Assinado\"", significado: "Assinado na tela. O documento está travado." },
@@ -97,7 +101,9 @@ function SGO_ajudaTelas_LavCiclo_() {
         { situacao: "\"Nada encontrado\" na busca", oQueFazer: "Confira a grafia ou busque só por uma parte: uma palavra do nome do cliente, o CNPJ sem pontos, os últimos números da série ou do lote." },
         { situacao: "\"o campo da busca está vazio\" ou \"escreva pelo menos 2 letras ou números\"", oQueFazer: "Escreva o que procura antes de tocar em \"Buscar\", ou toque em \"Ver todas as lavadoras\"." },
         { situacao: "A sua lavadora não aparece em \"Ver todas as lavadoras\"", oQueFazer: "A lavadora não está cadastrada ou não está ligada ao seu cliente. Peça à Metrolabs para cadastrar." },
-        { situacao: "\"A assinatura ficou curta demais\"", oQueFazer: "Foi só um toque no quadro. Toque em \"Limpar\" e assine de novo." }
+        { situacao: "\"A assinatura ficou curta demais\"", oQueFazer: "Foi só um toque no quadro. Toque em \"Limpar\" e assine de novo." },
+        { situacao: "Relatório com o resultado \"NÃO LIBERADO\"", oQueFazer: "Siga o procedimento da unidade para a carga, com a avaliação do responsável pelo local. Peça à Metrolabs para verificar o arrefecimento da lavadora (água de resfriamento e temperatura da rede)." },
+        { situacao: "Faixa \"Nota sobre o código 2 deste arquivo\"", oQueFazer: "Nada a corrigir. O arquivo é de uma revisão anterior do firmware, em que o código 2 também saía quando o arrefecimento passava do tempo. O resultado gravado pela lavadora continua o mesmo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Gerar, assinar e baixar relatórios de qualquer lavadora; gerar nova versão; completar o cadastro do equipamento; cadastrar e confirmar a referência da desinfecção por receita na aba \"Referências por receita\"." },
@@ -111,6 +117,8 @@ function SGO_ajudaTelas_LavCiclo_() {
         { p: "Quem escreveu a conclusão?", r: "O relatório diz. Ou a redação foi assistida por inteligência artificial e conferida automaticamente com os números do arquivo, ou foi escrita por regra fixa do sistema. Se o texto da inteligência artificial não bater com os dados, vale a regra fixa." },
         { p: "O gráfico mostra a temperatura minuto a minuto?", r: "Não. O arquivo traz a temperatura máxima de cada fase. O gráfico mostra esse valor sobre a duração de cada fase." },
         { p: "Ciclo cancelado também gera relatório?", r: "Sim. Sai com a falha em destaque, para registro." },
+        { p: "Qual a diferença entre CANCELADO e NÃO LIBERADO?", r: "CANCELADO: o ciclo foi interrompido antes de terminar as etapas. NÃO LIBERADO: todas as etapas foram cumpridas, mas a câmara continuou acima da temperatura-alvo no fim do arrefecimento, e a lavadora bloqueou a liberação da carga. Em \"Mais filtros\", o resultado \"Não liberado\" tem filtro próprio." },
+        { p: "O texto da falha no relatório mudou. Por quê?", r: "O relatório mostra o texto que a lavadora gravou no arquivo. As revisões novas do firmware usam textos mais claros para os mesmos códigos; o número do código não mudou." },
         { p: "Posso assinar mais tarde?", r: "Sim. O relatório fica na coluna \"Aguardando assinatura\" do Kanban. Toque no cartão e em \"Assinar\"." },
         { p: "Por que a tela não mostra a lista de lavadoras ao abrir?", r: "Para abrir rápido e mostrar primeiro o que precisa de atenção. Busque a lavadora pelo nome do cliente, CNPJ, série, TAG, patrimônio ou modelo, ou toque em \"Ver todas as lavadoras\"." },
         { p: "No celular a folha fica pequena. Está certo?", r: "Sim. A folha abre inteira, do tamanho da tela, igual ao PDF. Afaste dois dedos ou toque em \"Ver em tamanho real\" para ler de perto." }
@@ -119,6 +127,12 @@ function SGO_ajudaTelas_LavCiclo_() {
         { titulo: "O que o relatório afirma e o que não afirma", paragrafos: [
           "Os indicadores mostram só o que o arquivo da lavadora sustenta: resultado registrado, temperatura máxima e duração da desinfecção térmica, tempo total, temperatura no término, falha, manutenção preventiva, fases e pausas.",
           "O relatório não usa critério de norma nem valor A0, porque o arquivo não traz a curva contínua do sensor. Quando há valor de referência cadastrado para a receita, a comparação aparece com a observação \"a confirmar pelo responsável técnico\" até ser confirmada."
+        ] },
+        { titulo: "Resultados que a lavadora registra", paragrafos: [
+          "APROVADO: o ciclo terminou com sucesso, arrefecimento incluído.",
+          "NÃO LIBERADO: o processo foi concluído (etapas de limpeza, enxágue e desinfecção cumpridas e registradas, cuba drenada), mas o arrefecimento de fim de ciclo esgotou o tempo com a câmara acima da temperatura-alvo, e a lavadora bloqueou a liberação da carga (código 17). A tampa só destrava com leitura válida abaixo de 45 °C. O relatório sai em âmbar.",
+          "CANCELADO: o ciclo foi interrompido antes do fim. O relatório sai em vermelho, com a falha em destaque.",
+          "Os arquivos de revisões anteriores do firmware continuam sendo lidos. Neles, o código 2 (SUBTEMPERATURA) também era gravado quando o arrefecimento passava do tempo; quando a última fase registrada é a de arrefecimento, o relatório traz uma nota explicando isso e mantém o resultado gravado pela máquina."
         ] }
       ]
     }

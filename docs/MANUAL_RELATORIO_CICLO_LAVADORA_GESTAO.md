@@ -29,7 +29,18 @@ A comparação usa a temperatura máxima registrada na fase de desinfecção e a
 
 ## 3. Conclusão escrita por inteligência artificial
 
-Com a chave da IA cadastrada em Configurações, Chaves e senhas, a conclusão é redigida pela IA só com os dados do arquivo e conferida automaticamente: todo número citado precisa existir no arquivo, o resultado precisa ser o mesmo, e a temperatura e a duração da desinfecção precisam aparecer. Se a conferência falhar, ou sem chave, vale a conclusão por regra fixa. A folha diz qual das duas foi usada, e o motivo fica no histórico.
+Com a chave da IA cadastrada em Configurações, Chaves e senhas, a conclusão é redigida pela IA só com os dados do arquivo e conferida automaticamente: todo número citado precisa existir no arquivo, o resultado precisa ser o mesmo, e a temperatura e a duração da desinfecção precisam aparecer. No resultado NÃO LIBERADO, o texto precisa dizer que o processo foi concluído e que a liberação foi bloqueada pela temperatura do arrefecimento; texto que chame o ciclo de aprovado, cancelado, interrompido ou reprovado, ou que fale em falha do processo, é recusado. Se a conferência falhar, ou sem chave, vale a conclusão por regra fixa. A folha diz qual das duas foi usada, e o motivo fica no histórico.
+
+## 3A. Revisões do firmware e o arquivo .sgolav
+
+O leitor aceita os arquivos de todas as revisões do firmware da lavadora. A revisão REV20261101 trouxe:
+
+- o resultado NAO LIBERADO (processo concluído, liberação da carga bloqueada porque o arrefecimento terminou com a câmara acima da temperatura-alvo, código 17). No sistema é um resultado próprio: selo e indicador em âmbar, filtro "Não liberado" em "Mais filtros", contagem no índice "Cancelados ou reprovados" e coluna "Não liberado (câmara quente no fim)" no Kanban, que só aparece quando há relatório nela. Não conta como aprovado nem como cancelado ou reprovado;
+- o campo PROCESSO (CONCLUIDO ou INTERROMPIDO). Arquivo sem o campo é de revisão anterior. Valor desconhecido, ou combinação de resultado e processo que a lavadora não grava, gera um aviso na tela e o relatório segue pelo resultado gravado;
+- textos novos para os códigos de falha 1 a 16 (os números não mudaram) e os códigos 17 (arrefecimento não concluído) e 18 (pausa excedeu o tempo máximo). O relatório mostra o texto gravado no arquivo. A tabela completa está no item 7A do manual de uso;
+- os eventos "ARREFECIMENTO PROLONGADO", "ARREFEC. NÃO CONCLUÍDO" e "CICLO NÃO LIBERADO".
+
+Campo que o leitor não conhece fica guardado com o ciclo e não impede a leitura. Arquivo antigo com código 2 e última fase de arrefecimento recebe a nota explicativa no relatório, sem mudar o resultado gravado; a nota sai também nas novas versões e na assinatura de relatórios emitidos antes desta mudança.
 
 ## 4. Onde os arquivos ficam
 

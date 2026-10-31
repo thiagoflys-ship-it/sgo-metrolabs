@@ -18,6 +18,19 @@
  *    (a data falta nos arquivos antigos). Arquivos antigos também não trazem INICIOEPOCH, FIMEPOCH, CODFALHA e FALHA;
  *  - campo futuro: SERIE= ou EQUIPAMENTO= (próxima revisão do firmware). Quem confere contra o cadastro é
  *    LavCicL_conferirEquipamento_; campo desconhecido fica guardado em "extras" e não derruba a leitura.
+ *  - revisão REV20261101 do firmware (01/11/2026):
+ *     · RESULTADO ganha o terceiro valor NAO LIBERADO (classe 'NAO_LIBERADO'): o processo foi concluído (limpeza, enxágue e
+ *       desinfecção cumpridos e registrados, cuba drenada), mas a liberação da carga ficou bloqueada porque o arrefecimento
+ *       de fim de ciclo esgotou as duas etapas de tempo com a câmara acima da temperatura-alvo (CODFALHA=17). Não é ciclo
+ *       completo (APROVADO) nem cancelamento (CANCELADO). A tampa só destrava com leitura válida abaixo de 45 °C;
+ *     · campo novo PROCESSO=CONCLUIDO (APROVADO e NAO LIBERADO) ou PROCESSO=INTERROMPIDO (CANCELADO), logo depois de
+ *       RESULTADO. Arquivo antigo não traz; valor desconhecido vira aviso e não derruba a leitura;
+ *     · códigos de falha: os números 1 a 16 continuam os mesmos e os textos mudaram (o relatório mostra o texto gravado no
+ *       arquivo); novos: 17 (arrefecimento não concluído) e 18 (pausa excedeu o tempo máximo; antes saía como 9);
+ *     · eventos novos: "ARREFECIMENTO PROLONGADO", "ARREFEC. NÃO CONCLUÍDO" e "CICLO NÃO LIBERADO".
+ *    Arquivo antigo com código 2 (SUBTEMPERATURA) e última fase de arrefecimento: na revisão anterior o firmware também
+ *    gravava o código 2 quando o arrefecimento estourava o tempo. O resultado gravado não muda (é o registro da máquina);
+ *    LavCicL_notaCodigo2Antigo_ devolve a nota que o relatório mostra.
  *
  * Relógio: a lavadora grava o relógio local de parede como se fosse UTC (o firmware usa localtime_r sem fuso). Por isso
  * as épocas são formatadas sem deslocamento: INICIOEPOCH 1793385724 = 30/10/2026 18:42:04, o mesmo horário do evento
@@ -31,7 +44,7 @@ var LAVCIC_TAMANHO_MAX = 65536;
 var LAVCIC_FASES_MAX = 64;
 var LAVCIC_EVENTOS_MAX = 300;
 var LAVCIC_OBRIGATORIOS = ['LOTE', 'RECEITA', 'OPERADOR', 'DATA', 'HORA', 'RESULTADO', 'FASES', 'EVENTOS'];
-var LAVCIC_CONHECIDOS = ['LOTE', 'RECEITA', 'OPERADOR', 'DATA', 'HORA', 'RESULTADO', 'TEMPFINAL', 'MANUTVENCIDA', 'INICIOEPOCH', 'FIMEPOCH',
+var LAVCIC_CONHECIDOS = ['LOTE', 'RECEITA', 'OPERADOR', 'DATA', 'HORA', 'RESULTADO', 'PROCESSO', 'TEMPFINAL', 'MANUTVENCIDA', 'INICIOEPOCH', 'FIMEPOCH',
   'CODFALHA', 'FALHA', 'FASES', 'EVENTOS', 'SERIE', 'EQUIPAMENTO'];
 /** Windows-1252 de 0x80 a 0x9F (o resto do Latin-1 é igual ao Unicode). */
 var LAVCIC_CP1252 = { 128: 8364, 130: 8218, 131: 402, 132: 8222, 133: 8230, 134: 8224, 135: 8225, 136: 710, 137: 8240, 138: 352, 139: 8249, 140: 338,
@@ -132,6 +145,35 @@ function LavCicL_segundosDe_(data, hora) {
   return isFinite(ms) ? Math.round(ms / 1000) : null;
 }
 
+/**
+ * Classe do resultado gravado: APROVADO, NAO_LIBERADO (REV20261101: processo concluído, liberação bloqueada pelo
+ * arrefecimento), REPROVADO, CANCELADO ou OUTRO. Aceita com e sem acento (NAO LIBERADO / NÃO LIBERADO).
+ */
+function LavCicL_classeResultado_(resultado) {
+  var r = String(resultado || '').trim().toUpperCase();
+  if (/^APROVAD/.test(r)) return 'APROVADO';
+  if (/^N(A|Ã)O[\s_-]*LIBERAD/.test(r)) return 'NAO_LIBERADO';
+  if (/^REPROVAD/.test(r)) return 'REPROVADO';
+  if (/^CANCELAD|^ABORTAD|^INTERROMP/.test(r)) return 'CANCELADO';
+  return 'OUTRO';
+}
+
+/**
+ * Arquivo de revisão anterior à REV20261101 com o código 2 (SUBTEMPERATURA) e a última fase de arrefecimento: naquela
+ * revisão o firmware também gravava o código 2 quando o arrefecimento de fim de ciclo esgotava o tempo com a câmara ainda
+ * quente. O resultado gravado continua o da máquina; esta função só devolve a nota explicativa ('' quando não se aplica).
+ * Funciona também com o ciclo guardado em DADOS_JSON de relatórios já emitidos (usa só lote, código, resultado, processo e
+ * última fase).
+ */
+function LavCicL_notaCodigo2Antigo_(ciclo) {
+  if (!ciclo || Number(ciclo.codFalha) !== 2 || ciclo.processo) return '';
+  if (ciclo.resultadoClasse === 'APROVADO' || ciclo.resultadoClasse === 'NAO_LIBERADO') return '';
+  if (!/^(ARREFEC|RESFRI)/.test(String(ciclo.ultimaFase || '').toUpperCase())) return '';
+  return 'Nota sobre o código 2 deste arquivo: na revisão do firmware que gravou este ciclo, o código 2 (SUBTEMPERATURA) também era registrado quando o arrefecimento de fim de ciclo esgotava o tempo com a câmara ainda quente. ' +
+    'Como a última fase registrada foi ' + ciclo.ultimaFase + ', a lavadora já tinha passado pelas fases anteriores ao arrefecimento, e o encerramento corresponde ao arrefecimento não concluído, não a temperatura insuficiente na lavagem ou na desinfecção. ' +
+    'O resultado ' + (ciclo.resultado || 'CANCELADO') + ' é o registro da máquina e foi mantido; a partir da revisão REV20261101 esse caso passa a ser gravado como NÃO LIBERADO (código 17).';
+}
+
 /** Grupo da fase para o gráfico e o texto (nomes curtos do firmware). */
 function LavCicL_grupoFase_(nome) {
   var n = String(nome || '').toUpperCase();
@@ -178,8 +220,18 @@ function LavCicL_interpretar_(texto, codificacao) {
   if (!/^\d{2}:\d{2}(:\d{2})?$/.test(hora)) throw alterado('o horário do ciclo (' + hora + ') não é um horário válido.');
   var resultado = String(campos.RESULTADO).trim().toUpperCase();
   if (!resultado) throw alterado('o resultado do ciclo está vazio.');
-  var classe = /^APROVAD/.test(resultado) ? 'APROVADO' : /^REPROVAD/.test(resultado) ? 'REPROVADO' : /^CANCELAD|^ABORTAD|^INTERROMP/.test(resultado) ? 'CANCELADO' : 'OUTRO';
-  if (classe === 'OUTRO') avisos.push('O resultado gravado pela lavadora ("' + resultado + '") não é um dos conhecidos (aprovado, reprovado ou cancelado). O relatório mostra o texto como veio.');
+  var classe = LavCicL_classeResultado_(resultado);
+  if (classe === 'OUTRO') avisos.push('O resultado gravado pela lavadora ("' + resultado + '") não é um dos conhecidos (aprovado, não liberado, reprovado ou cancelado). O relatório mostra o texto como veio.');
+  // PROCESSO (REV20261101): CONCLUIDO ou INTERROMPIDO; arquivo antigo não traz
+  var processo = '', processoTexto = '';
+  if (Object.prototype.hasOwnProperty.call(campos, 'PROCESSO')) {
+    processoTexto = String(campos.PROCESSO).trim().toUpperCase();
+    processo = /^CONCLU[IÍ]DO$/.test(processoTexto) ? 'CONCLUIDO' : /^INTERROMPIDO$/.test(processoTexto) ? 'INTERROMPIDO' : 'OUTRO';
+    if (processo === 'OUTRO') avisos.push('O campo PROCESSO do arquivo ("' + processoTexto.slice(0, 40) + '") não é um dos conhecidos (CONCLUIDO ou INTERROMPIDO). O relatório segue pelo resultado gravado pela lavadora.');
+    else if ((processo === 'INTERROMPIDO' && (classe === 'APROVADO' || classe === 'NAO_LIBERADO')) || (processo === 'CONCLUIDO' && (classe === 'CANCELADO' || classe === 'REPROVADO'))) {
+      avisos.push('O arquivo traz o resultado ' + resultado + ' com PROCESSO=' + processoTexto + ', combinação que a lavadora não grava. O relatório segue pelo resultado; confira o arquivo com a Metrolabs.');
+    }
+  }
 
   var num = function (k, inteiro) {
     if (!Object.prototype.hasOwnProperty.call(campos, k)) return null;
@@ -242,7 +294,7 @@ function LavCicL_interpretar_(texto, codificacao) {
   if (campos['EVT' + (nEv + 1)] !== undefined) throw alterado('há mais eventos gravados do que a quantidade informada (' + nEv + ').');
   // eventos antigos vinham do mais novo para o mais velho: põe em ordem de acontecimento
   var semData = eventos.length > 1 && eventos.every(function (e) { return !e.data; });
-  if (semData && /CONCLU|CANCEL|FINALIZ/i.test(eventos[0].texto) && /INICIAD/i.test(eventos[eventos.length - 1].texto)) eventos.reverse();
+  if (semData && /CONCLU|CANCEL|FINALIZ|LIBERAD/i.test(eventos[0].texto) && /INICIAD/i.test(eventos[eventos.length - 1].texto)) eventos.reverse();
 
   var extras = {};
   ordem.forEach(function (k) { if (LAVCIC_CONHECIDOS.indexOf(k) < 0 && !/^FASE\d+$/.test(k) && !/^EVT\d+$/.test(k)) extras[k] = campos[k]; });
@@ -272,7 +324,7 @@ function LavCicL_interpretar_(texto, codificacao) {
     formato: (inicioEp !== null && Object.prototype.hasOwnProperty.call(campos, 'CODFALHA')) ? 'COMPLETO' : 'ANTIGO',
     codificacao: codificacao || 'UTF-8',
     lote: lote, receita: String(campos.RECEITA).trim(), operador: String(campos.OPERADOR).trim(),
-    data: data, dataIso: dataIso, hora: hora, resultado: resultado, resultadoClasse: classe,
+    data: data, dataIso: dataIso, hora: hora, resultado: resultado, resultadoClasse: classe, processo: processo, processoTexto: processoTexto,
     tempFinal: tempFinal, manutVencida: manut ? manut === 'SIM' : null,
     inicioEpoch: inicioEp, fimEpoch: fimEp, codFalha: codFalha, falha: falha,
     fases: fases, eventos: eventos, serie: serie, equipamentoRef: equipRef, extras: extras,
@@ -284,6 +336,8 @@ function LavCicL_interpretar_(texto, codificacao) {
     ultimaFase: (fases.filter(function (f) { return f.grupo !== 'CANCELAMENTO'; }).pop() || { nome: '' }).nome
   };
   if (ciclo.formato === 'ANTIGO') avisos.push('Arquivo de uma revisão anterior do firmware: sem os horários exatos de início e término e sem o código de falha. O início foi calculado pela soma das fases.');
+  var nota2 = LavCicL_notaCodigo2Antigo_(ciclo);
+  if (nota2) avisos.push(nota2);
   return { ok: true, ciclo: ciclo, avisos: avisos };
 }
 

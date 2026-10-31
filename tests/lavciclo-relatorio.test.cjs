@@ -405,7 +405,7 @@ test('lista com busca por lote, período, resultado e assinatura; nenhum Date cr
   assert.deepEqual(t({ resultado: 'CANCELADO' }), ['LOT-20261017-0074', 'LOT-20260928-0060']);
   assert.deepEqual(t({ assinatura: 'SIM' }), []);
   const l = amb.api('s_dir', 'listar', {});
-  assert.deepEqual(l.resumo, { aprovados: 2, naoAprovados: 2, semAssinatura: 4 });
+  assert.deepEqual(l.resumo, { aprovados: 2, naoAprovados: 2, naoLiberados: 0, semAssinatura: 4 });
   const semDate = (o) => JSON.stringify(o) === JSON.stringify(JSON.parse(JSON.stringify(o)));
   assert.ok(semDate(l));
   const todas = amb.api('s_dir', 'buscar', { todas: true });
@@ -552,4 +552,269 @@ test('cadastro de equipamento: o formulário só envia colunas de CAD_EQUIPAMENT
   const c2 = amb.ctx.LavCic_cadastro_(amb.tabelas.CAD_EQUIPAMENTOS[0]);
   assert.equal(c2.cad.cnpj, '19.324.171/0004-47');
   assert.equal(c2.cad.unidade, 'Unidade Centro · RUA UM, GOIÂNIA - GO, 75380-000');
+});
+
+// ---------------------------------------------------------------- firmware REV20261101 (01/11/2026)
+// Pedido do dono: o SGO+ precisa entender o que a nova revisão do firmware passa a gravar no .sgolav (resultado NAO LIBERADO,
+// campo PROCESSO, códigos 17 e 18, textos novos de falha e eventos novos) sem deixar de ler os arquivos antigos.
+/** Ciclo NAO LIBERADO montado a partir do arquivo real 6222: processo concluído, arrefecimento estourou com a câmara quente. */
+function textoNaoLiberado(resultado) {
+  return abrirSgolav(fixture(EXEMPLO))
+    .replace('LOTE=LOT-20261030-6222', 'LOTE=LOT-20261101-0101')
+    .replace('HORA=19:35:54', 'HORA=20:00:24')
+    .replace('RESULTADO=APROVADO\n', 'RESULTADO=' + (resultado || 'NAO LIBERADO') + '\nPROCESSO=CONCLUIDO\n')
+    .replace('TEMPFINAL=49.9', 'TEMPFINAL=52.4')
+    .replace('FIMEPOCH=1793388954', 'FIMEPOCH=1793390424')
+    .replace('CODFALHA=0\nFALHA=SEM FALHA', 'CODFALHA=17\nFALHA=ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE')
+    .replace('FASE14=ARREFECENDO|30|58.2|1793388924', 'FASE14=ARREFECENDO|1500|58.2|1793388924')
+    .replace('EVENTOS=16', 'EVENTOS=18')
+    .replace('EVT15=19:35|FIM DE FASE: ARREFECENDO|30/10/2026\nEVT16=19:35|CICLO CONCLUÍDO|30/10/2026',
+      'EVT15=19:50|ARREFECIMENTO PROLONGADO|30/10/2026\nEVT16=20:00|ARREFEC. NÃO CONCLUÍDO|30/10/2026\nEVT17=20:00|FIM DE FASE: ARREFECENDO|30/10/2026\nEVT18=20:00|CICLO NÃO LIBERADO|30/10/2026');
+}
+const NL_NOME = 'LOT-20261101-0101.sgolav';
+
+test('REV20261101 leitor: NAO LIBERADO com PROCESSO=CONCLUIDO, código 17 e os eventos novos', () => {
+  const amb = ambiente();
+  const t = textoNaoLiberado();
+  assert.match(t, /RESULTADO=NAO LIBERADO\nPROCESSO=CONCLUIDO\n/);
+  assert.match(t, /EVENTOS=18/);
+  const r = ler(amb, montarSgolav(t));
+  assert.equal(r.ok, true, r.message);
+  const c = r.ciclo;
+  assert.equal(c.resultado, 'NAO LIBERADO');
+  assert.equal(c.resultadoClasse, 'NAO_LIBERADO');
+  assert.equal(c.processo, 'CONCLUIDO');
+  assert.equal(c.codFalha, 17);
+  assert.equal(c.falha, 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE');
+  assert.equal(c.eventos.length, 18);
+  assert.deepEqual(Array.from(c.eventos.slice(-4), (e) => e.texto), ['ARREFECIMENTO PROLONGADO', 'ARREFEC. NÃO CONCLUÍDO', 'FIM DE FASE: ARREFECENDO', 'CICLO NÃO LIBERADO']);
+  assert.ok(c.ocorrencias.some((o) => /ARREFEC\. NÃO CONCLUÍDO/.test(o)));
+  assert.deepEqual(JSON.parse(JSON.stringify(c.extras)), {}, 'PROCESSO é campo conhecido, não vai para extras');
+  assert.equal(r.avisos.length, 0, r.avisos.join(' | '));
+  // com acento também
+  const ac = ler(amb, montarSgolav(textoNaoLiberado('NÃO LIBERADO'))).ciclo;
+  assert.equal(ac.resultadoClasse, 'NAO_LIBERADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('nao liberado'), 'NAO_LIBERADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('CANCELADO'), 'CANCELADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('APROVADO'), 'APROVADO');
+  // fita: título, resultado, processo e texto da falha, como a impressora imprime
+  const fita = amb.ctx.LavCicD_linhasFita_(c);
+  const idx = (txt) => fita.findIndex((l) => l.t === txt);
+  const iTit = idx('CICLO NÃO LIBERADO');
+  assert.ok(iTit > 0 && fita[iTit].c && fita[iTit].b);
+  assert.ok(!fita.some((l) => l.t === 'TÉRMINO DE CICLO' || l.t === 'CICLO CANCELADO'));
+  const iRes = idx('[ NÃO LIBERADO ]');
+  assert.ok(iRes > 0 && fita[iRes].c && fita[iRes].b, 'linha centralizada em negrito');
+  assert.equal(fita[iRes + 1].t, 'PROCESSO CONCLUÍDO');
+  assert.equal(fita[iRes + 2].t + fita[iRes + 3].t, 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE', 'texto da falha do arquivo (quebrado em 32 colunas)');
+  assert.ok(fita.some((l) => l.t === '20:00 CICLO NÃO LIBERADO'));
+});
+
+test('REV20261101 leitor: códigos 17 e 18 mostram o texto do arquivo; PROCESSO desconhecido ou incoerente avisa e não derruba', () => {
+  const amb = ambiente();
+  const base = abrirSgolav(fixture('LOT-20261017-0074.sgolav'));
+  const t18 = base.replace('RESULTADO=CANCELADO\n', 'RESULTADO=CANCELADO\nPROCESSO=INTERROMPIDO\n').replace('CODFALHA=3\nFALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'CODFALHA=18\nFALHA=PAUSA EXCEDEU O TEMPO MÁXIMO');
+  const r18 = ler(amb, montarSgolav(t18));
+  assert.equal(r18.ok, true, r18.message);
+  assert.deepEqual([r18.ciclo.resultadoClasse, r18.ciclo.processo, r18.ciclo.codFalha, r18.ciclo.falha], ['CANCELADO', 'INTERROMPIDO', 18, 'PAUSA EXCEDEU O TEMPO MÁXIMO']);
+  assert.equal(r18.avisos.length, 0, r18.avisos.join(' | '));
+  const f18 = amb.ctx.LavCicD_linhasFita_(r18.ciclo).map((l) => l.t);
+  assert.ok(f18.includes('CICLO CANCELADO') && f18.includes('[ CANCELADO ]') && f18.includes('PAUSA EXCEDEU O TEMPO MÁXIMO'));
+  assert.ok(!f18.includes('PROCESSO CONCLUÍDO'));
+  // texto novo de um código antigo (1 a 16 não mudaram de número): vale o texto gravado
+  const t3 = base.replace('FALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'FALHA=TEMPO DE DRENAGEM ESGOTADO: CUBA NÃO ESVAZIOU');
+  const g3 = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261017-0074.sgolav', texto: montarSgolav(t3) });
+  assert.equal(g3.ok, true, g3.message);
+  assert.match(g3.html, /Falha: TEMPO DE DRENAGEM ESGOTADO: CUBA NÃO ESVAZIOU \(código 3\)/);
+  // código 17 num cancelado (arrefecimento de segurança que não chegou ao alvo)
+  const t17 = base.replace('CODFALHA=3\nFALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'CODFALHA=17\nFALHA=ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE');
+  const r17 = ler(amb, montarSgolav(t17));
+  assert.equal(r17.ok, true);
+  assert.equal(r17.ciclo.resultadoClasse, 'CANCELADO');
+  assert.ok(amb.ctx.LavCicD_linhasFita_(r17.ciclo).some((l) => l.t === 'ARREFECIMENTO NÃO CONCLUÍDO: CÂM'));
+  // PROCESSO com valor desconhecido
+  const rx = ler(amb, montarSgolav(textoNaoLiberado().replace('PROCESSO=CONCLUIDO', 'PROCESSO=PARCIAL')));
+  assert.equal(rx.ok, true, rx.message);
+  assert.equal(rx.ciclo.processo, 'OUTRO');
+  assert.equal(rx.ciclo.resultadoClasse, 'NAO_LIBERADO');
+  assert.ok(rx.avisos.some((a) => /campo PROCESSO do arquivo \("PARCIAL"\) não é um dos conhecidos/.test(a)), rx.avisos.join(' | '));
+  // combinação que a lavadora não grava
+  const ri = ler(amb, montarSgolav(textoNaoLiberado().replace('PROCESSO=CONCLUIDO', 'PROCESSO=INTERROMPIDO')));
+  assert.equal(ri.ok, true);
+  assert.ok(ri.avisos.some((a) => /combinação que a lavadora não grava/.test(a)));
+  // arquivo antigo: sem PROCESSO, sem aviso de processo
+  const ant = ler(amb, fixture(EXEMPLO));
+  assert.equal(ant.ciclo.processo, '');
+  assert.equal(ant.avisos.length, 0);
+  // campo desconhecido continua indo para extras
+  const ext = ler(amb, montarSgolav(textoNaoLiberado() + 'CAMPONOVO=123\n'));
+  assert.equal(ext.ok, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(ext.ciclo.extras)), { CAMPONOVO: '123' });
+});
+
+test('REV20261101 relatório NÃO LIBERADO: âmbar, fita, indicadores e conclusão por regra (processo concluído, liberação bloqueada)', () => {
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  assert.equal(g.ok, true, g.message);
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.RESULTADO_CLASSE, 'NAO_LIBERADO');
+  assert.equal(l.RESULTADO, 'NAO LIBERADO');
+  assert.equal(l.COD_FALHA, '17');
+  assert.equal(l.PAGINAS, 1);
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /class="resultado lc-res aviso"/);
+  assert.ok(!/class="resultado lc-res (ok|nok)"/.test(html));
+  assert.match(html, /<span class="val">NÃO LIBERADO<\/span><span class="mot">Processo concluído \(etapas cumpridas e cuba drenada\); liberação da carga bloqueada: ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE \(código 17\)\. A tampa só destrava abaixo de 45 °C/);
+  assert.match(html, /<div class="kpi aviso"><span class="v">NÃO LIBERADO<\/span><span class="r">Resultado registrado pela lavadora \(processo concluído\)/);
+  assert.match(html, /<div class="kpi aviso"><span class="v">Código 17<\/span><span class="r">Motivo do bloqueio da liberação/);
+  assert.ok(!/kpi critico/.test(html), 'nada em vermelho de falha do processo');
+  assert.match(html, /CICLO NÃO LIBERADO/);
+  assert.match(html, /\[ NÃO LIBERADO \]/);
+  assert.match(html, /PROCESSO CONCLUÍDO/);
+  const conc = l.CONCLUSAO_TEXTO;
+  assert.match(conc, /teve o processo concluído pela lavadora: as etapas de limpeza, enxágue e desinfecção foram cumpridas e registradas em 14 fases/);
+  assert.match(conc, /a cuba foi drenada/);
+  assert.match(conc, /Na desinfecção térmica, a temperatura máxima registrada foi de 61,3 °C, com duração de 16 min 00 s/);
+  assert.match(conc, /A liberação da carga, porém, ficou bloqueada com o resultado NÃO LIBERADO: o arrefecimento de fim de ciclo esgotou o tempo com a câmara ainda acima da temperatura-alvo \(registro da lavadora: "ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE", código 17\)/);
+  assert.match(conc, /A tampa da lavadora só destrava com leitura válida de temperatura abaixo de 45 °C/);
+  assert.match(conc, /não equivale a ciclo aprovado/);
+  assert.ok(!/foi encerrado|cancelad|interrompid/i.test(conc), conc);
+  // tela: conferência e cartão
+  const cf = amb.api('s_tec', 'conferir', { equipamentoId: 'eq2', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  assert.equal(cf.conferencia.classe, 'NAO_LIBERADO');
+  assert.equal(g.relatorio.classe, 'NAO_LIBERADO');
+});
+
+test('REV20261101 Kanban, índices, filtros e busca: NÃO LIBERADO é resultado próprio (nem aprovado, nem falha)', () => {
+  const amb = ambiente();
+  for (const f of ['LOT-20261030-6222.sgolav', 'LOT-20261017-0074.sgolav']) amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: f, texto: fixture(f) });
+  // sem não liberado, a coluna não aparece
+  assert.deepEqual(amb.api('s_dir', 'iniciar').painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'ASSINADO']);
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  const ini = amb.api('s_dir', 'iniciar');
+  const col = (k) => ini.painel.kanban.find((c) => c.chave === k);
+  assert.deepEqual(ini.painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'NAO_LIBERADO', 'ASSINADO']);
+  assert.deepEqual(col('NAO_LIBERADO').itens.map((x) => [x.lote, x.classe, x.falha]), [['LOT-20261101-0101', 'NAO_LIBERADO', 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE']]);
+  assert.deepEqual(col('FALHA').itens.map((x) => x.lote), ['LOT-20261017-0074']);
+  assert.deepEqual(col('AGUARDANDO').itens.map((x) => x.lote), ['LOT-20261030-6222']);
+  const i = ini.painel.indices;
+  assert.deepEqual([i.relatorios, i.aprovados, i.naoAprovados, i.naoLiberados], [3, 1, 1, 1]);
+  const t = (d) => amb.api('s_dir', 'listar', d).relatorios.map((r) => r.lote);
+  assert.deepEqual(t({ resultado: 'NAO_LIBERADO' }), ['LOT-20261101-0101']);
+  assert.deepEqual(t({ resultado: 'NAO_APROVADO' }), ['LOT-20261017-0074'], '"cancelado ou reprovado" não inclui o não liberado');
+  assert.deepEqual(t({ resultado: 'APROVADO' }), ['LOT-20261030-6222']);
+  assert.deepEqual(t({ resultado: 'CANCELADO' }), ['LOT-20261017-0074']);
+  assert.deepEqual(amb.api('s_dir', 'listar', {}).resumo, { aprovados: 1, naoAprovados: 1, naoLiberados: 1, semAssinatura: 3 });
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'NAO_LIBERADO' }).relatorios.map((r) => r.lote), ['LOT-20261101-0101']);
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).relatorios.map((r) => r.lote), ['LOT-20261017-0074']);
+  // assinado continua na coluna própria (como a falha), não em "Assinado e aprovado"
+  const id = amb.api('s_dir', 'listar', { resultado: 'NAO_LIBERADO' }).relatorios[0].id;
+  assert.equal(amb.api('s_cli', 'assinar', { id, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  const k2 = amb.api('s_dir', 'iniciar').painel.kanban;
+  assert.deepEqual(k2.find((c) => c.chave === 'NAO_LIBERADO').itens.map((x) => x.lote), ['LOT-20261101-0101']);
+  assert.ok(!k2.find((c) => c.chave === 'ASSINADO').itens.some((x) => x.lote === 'LOT-20261101-0101'));
+  // tela: selo âmbar, filtro e cor de coluna próprios
+  const js = fs.readFileSync(path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/JS_LavCiclo.html'), 'utf8');
+  assert.match(js, /classe === "NAO_LIBERADO" \? "laranja"/);
+  assert.match(js, /<option value="NAO_LIBERADO">Não liberado<\/option>/);
+  assert.match(js, /NAO_LIBERADO: "#d97706"/);
+});
+
+test('REV20261101 conclusão pela IA de um NÃO LIBERADO: aceita o texto coerente; recusa "aprovado", "cancelado" e "falha do processo"', () => {
+  const ok = 'O ciclo do lote LOT-20261101-0101, receita INSTRUMENTAL PADRÃO, foi realizado em 30/10/2026, das 18:42 às 20:00, com duração total de 1 h 18 min. O processo foi concluído, com a desinfecção térmica registrando temperatura máxima de 61,3 °C por 16 min 00 s, mas a lavadora registrou o resultado NÃO LIBERADO: o arrefecimento terminou com a câmara acima da temperatura-alvo (código 17), e a tampa só destrava abaixo de 45 °C. O arquivo registra a temperatura máxima de cada fase, e não a curva contínua.';
+  const casos = [
+    [ok.replace('o resultado NÃO LIBERADO', 'o resultado APROVADO'), /não disse o resultado|aprovado/],
+    [ok.replace('O processo foi concluído, com', 'O ciclo foi cancelado, com'), /concluído|cancelado/],
+    [ok + ' Houve falha do processo.', /falha do processo/],
+    [ok.replace('o arrefecimento terminou com a câmara acima da temperatura-alvo', 'a máquina travou'), /arrefecimento/],
+    [ok.replace('abaixo de 45 °C', 'abaixo de 40 °C'), /número 40/]
+  ];
+  for (const [resposta, motivo] of casos) {
+    const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: resposta });
+    const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+    assert.equal(g.ok, true, g.message);
+    const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+    assert.equal(l.CONCLUSAO_ORIGEM, 'REGRA', resposta);
+    assert.match(l.CONCLUSAO_MOTIVO, motivo);
+  }
+  const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: ok });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.CONCLUSAO_ORIGEM, 'IA', l.CONCLUSAO_MOTIVO);
+  const prompt = JSON.stringify(amb.chamadasIa[0].corpo);
+  assert.match(prompt, /NÃO LIBERADO significa que o processo foi concluído/);
+  assert.match(prompt, /Não escreva que o ciclo foi aprovado, cancelado, interrompido ou reprovado, nem que houve falha do processo/);
+  // o texto de um aprovado não pode dizer "não liberado"
+  const c = amb.ctx.LavCicL_ler_(fixture(EXEMPLO)).ciclo;
+  const okAprov = 'O ciclo do lote LOT-20261030-6222, receita INSTRUMENTAL PADRÃO, foi realizado em 30/10/2026, das 18:42 às 19:35, e a lavadora registrou o resultado APROVADO, com duração total de 53 min 50 s em 14 fases. Na desinfecção térmica, a temperatura máxima registrada foi de 61,3 °C por 16 min 00 s. O arquivo registra a temperatura máxima de cada fase.';
+  assert.equal(amb.ctx.LavCicD_conferirIa_(okAprov, c, null).ok, true);
+  assert.equal(amb.ctx.LavCicD_conferirIa_(okAprov + ' A carga ficou não liberada.', c, null).ok, false);
+});
+
+test('REV20261101 arquivo antigo com código 2 terminando em arrefecimento: nota honesta, resultado gravado não muda', () => {
+  const amb = ambiente();
+  const t = abrirSgolav(fixture(EXEMPLO))
+    .replace('LOTE=LOT-20261030-6222', 'LOTE=LOT-20261029-0222')
+    .replace('RESULTADO=APROVADO', 'RESULTADO=CANCELADO')
+    .replace('CODFALHA=0\nFALHA=SEM FALHA', 'CODFALHA=2\nFALHA=SUBTEMPERATURA: ALVO NÃO ATINGIDO')
+    .replace('FASES=14', 'FASES=15').replace('FASE14=ARREFECENDO|30|58.2|1793388924', 'FASE14=ARREFECENDO|1200|58.2|1793388924\nFASE15=ABORTANDO|60|52.0|1793390124')
+    .replace('EVT16=19:35|CICLO CONCLUÍDO|30/10/2026', 'EVT16=19:57|CICLO CANCELADO|30/10/2026');
+  const r = ler(amb, montarSgolav(t));
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.ciclo.resultadoClasse, 'CANCELADO');
+  assert.equal(r.ciclo.ultimaFase, 'ARREFECENDO');
+  assert.ok(r.avisos.some((a) => /Nota sobre o código 2 deste arquivo/.test(a)), r.avisos.join(' | '));
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261029-0222.sgolav', texto: montarSgolav(t) });
+  assert.equal(g.ok, true, g.message);
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.RESULTADO, 'CANCELADO', 'o registro da máquina fica');
+  assert.equal(l.RESULTADO_CLASSE, 'CANCELADO');
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /class="resultado lc-res nok"/);
+  assert.match(html, /<p class="lc-nota-antiga">Nota sobre o código 2 deste arquivo: na revisão do firmware que gravou este ciclo, o código 2 \(SUBTEMPERATURA\) também era registrado quando o arrefecimento de fim de ciclo esgotava o tempo com a câmara ainda quente\./);
+  assert.match(html, /Como a última fase registrada foi ARREFECENDO/);
+  assert.match(html, /O resultado CANCELADO é o registro da máquina e foi mantido; a partir da revisão REV20261101 esse caso passa a ser gravado como NÃO LIBERADO \(código 17\)/);
+  // a nota também sai ao reabrir um relatório já gravado (a assinatura usa o ciclo do DADOS_JSON)
+  assert.equal(amb.api('s_cli', 'assinar', { id: l.ID, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  assert.match(amb.arquivos[amb.tabelas.LAVCIC_RELATORIOS[0].HTML_ID].bytes.toString('utf8'), /lc-nota-antiga/);
+  // código 2 em outra fase (subtemperatura de verdade) e arquivo novo com PROCESSO: sem a nota
+  const naDesinf = t.replace('FASE14=ARREFECENDO|1200|58.2|1793388924\nFASE15=ABORTANDO', 'FASE14=DESINFETANDO|1200|58.2|1793388924\nFASE15=ABORTANDO');
+  const r2 = ler(amb, montarSgolav(naDesinf));
+  assert.equal(r2.ok, true, r2.message);
+  assert.ok(!r2.avisos.some((a) => /código 2/.test(a)));
+  assert.equal(amb.ctx.LavCicL_notaCodigo2Antigo_(r2.ciclo), '');
+  const novo = ler(amb, montarSgolav(t.replace('RESULTADO=CANCELADO\n', 'RESULTADO=CANCELADO\nPROCESSO=INTERROMPIDO\n')));
+  assert.equal(amb.ctx.LavCicL_notaCodigo2Antigo_(novo.ciclo), '', 'na revisão nova o código 2 é só subtemperatura de verdade');
+});
+
+// Todos os .sgolav reais que existirem neste computador (cartão da lavadora, backups e downloads). Em outra máquina, sem as
+// pastas, o teste é pulado. LAVCIC_SGOLAV_PASTAS (separadas por ;) acrescenta pastas.
+const PASTAS_REAIS = ['C:/Users/venda/Downloads', 'C:/Users/venda/Desktop/lavadora', 'C:/Users/venda/Documents/LAVADORA', 'C:/Users/venda/Documents/Arduino/_BACKUPS/PROJETO_ESP32_LAV']
+  .concat(String(process.env.LAVCIC_SGOLAV_PASTAS || '').split(';').filter(Boolean)).filter((p) => fs.existsSync(p));
+test('REV20261101 todos os .sgolav reais do computador continuam sendo lidos sem erro', { skip: PASTAS_REAIS.length ? false : 'pastas dos arquivos reais não existem nesta máquina' }, () => {
+  const amb = ambiente();
+  const arquivos = [];
+  const varrer = (d, prof) => {
+    let itens = [];
+    try { itens = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const x of itens) {
+      const p = path.join(d, x.name);
+      if (x.isDirectory()) { if (prof < 8 && !/^(node_modules|\.git)$/.test(x.name)) varrer(p, prof + 1); } else if (/\.sgolav$/i.test(x.name)) arquivos.push(p);
+    }
+  };
+  // Downloads: só a pasta em si (sem descer nas subpastas)
+  PASTAS_REAIS.forEach((p) => varrer(p, /Downloads$/.test(p) ? 8 : 0));
+  const falhas = [];
+  const classes = {};
+  for (const f of arquivos) {
+    const r = ler(amb, fs.readFileSync(f, 'latin1'));
+    if (!r.ok) { falhas.push(f + ': ' + r.message); continue; }
+    classes[r.ciclo.resultadoClasse] = (classes[r.ciclo.resultadoClasse] || 0) + 1;
+    // o documento também monta sem erro
+    amb.ctx.LavCicD_linhasFita_(r.ciclo);
+    amb.ctx.LavCicD_conclusaoRegra_(r.ciclo, null);
+  }
+  console.log('# .sgolav reais lidos sem erro: ' + (arquivos.length - falhas.length) + ' de ' + arquivos.length + ' ' + JSON.stringify(classes));
+  assert.deepEqual(falhas, []);
+  assert.ok(arquivos.length > 0);
 });

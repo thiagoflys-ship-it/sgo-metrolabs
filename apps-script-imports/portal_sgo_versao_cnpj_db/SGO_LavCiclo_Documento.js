@@ -16,6 +16,12 @@
  *  - Conclusão: a IA (Gemini, chave configurada pelo usuário) só redige a partir dos dados do arquivo; o texto volta
  *    conferido contra os números (temperaturas, tempos, contagens, datas) e o resultado. Se não bater, ou sem chave, vale a
  *    conclusão por regra fixa. O documento registra qual das duas foi usada.
+ * Resultado NÃO LIBERADO (firmware REV20261101, classe 'NAO_LIBERADO'): processo concluído, liberação da carga bloqueada
+ * porque o arrefecimento de fim de ciclo não chegou à temperatura-alvo (código 17). Sai em âmbar ("aviso"), nem verde de
+ * aprovado nem vermelho de falha do processo; a fita reproduz "CICLO NÃO LIBERADO", "[ NÃO LIBERADO ]" e "PROCESSO CONCLUÍDO";
+ * a conclusão (regra ou IA conferida) diz que as etapas foram cumpridas e que a liberação ficou bloqueada por temperatura.
+ * Arquivo antigo com código 2 terminando em arrefecimento: o resultado gravado fica, e o documento traz a nota explicativa
+ * (LavCicL_notaCodigo2Antigo_).
  * Dados do cliente e do equipamento: sempre do cadastro do SGO+ (instantâneo gravado na geração), nunca do arquivo.
  * Nenhuma função devolve Date: só texto e número.
  ****************************************************/
@@ -35,6 +41,13 @@ function LavCicD_num_(v, casas) {
   s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return s.join(',');
 }
+/** Resultado como o operador lê na fita: "NÃO LIBERADO" com acento; os outros, o texto gravado. */
+function LavCicD_resultadoTexto_(c) {
+  if (c && c.resultadoClasse === 'NAO_LIBERADO') return 'NÃO LIBERADO';
+  return (c && c.resultado) || '—';
+}
+/** Situação visual da classe: ok (verde), aviso (âmbar, não liberado), critico (vermelho). */
+function LavCicD_situacaoClasse_(classe) { return classe === 'APROVADO' ? 'ok' : classe === 'NAO_LIBERADO' ? 'aviso' : 'critico'; }
 function LavCicD_temp_(v) { return v === null || v === undefined ? 'indisponível' : LavCicD_num_(v, 1) + ' °C'; }
 /** Duração por extenso curto: 47 s, 16 min 00 s, 1 h 05 min. */
 function LavCicD_dur_(seg) {
@@ -67,7 +80,8 @@ function LavCicD_linhasFita_(ciclo) {
   add('METROLABS', { c: 1, b: 1, g: 1 });
   add('SOLUÇÕES EM', { c: 1, b: 1 }); add('ENGENHARIA CLÍNICA', { c: 1, b: 1 }); add('SGO+ MEDICAL WASHER', { c: 1, b: 1 });
   add(iguais, { c: 1, b: 1 });
-  add(ciclo.resultadoClasse === 'APROVADO' ? 'TÉRMINO DE CICLO' : 'CICLO CANCELADO', { c: 1, b: 1 });
+  var naoLib = ciclo.resultadoClasse === 'NAO_LIBERADO';
+  add(ciclo.resultadoClasse === 'APROVADO' ? 'TÉRMINO DE CICLO' : naoLib ? 'CICLO NÃO LIBERADO' : 'CICLO CANCELADO', { c: 1, b: 1 });
   add(iguais, { c: 1, b: 1 });
   add(LavCicD_chaveValor_('LOTE:', ciclo.lote)); add(LavCicD_chaveValor_('OPERADOR:', ciclo.operador)); add(LavCicD_chaveValor_('RECEITA:', ciclo.receita));
   add(tracos);
@@ -78,7 +92,8 @@ function LavCicD_linhasFita_(ciclo) {
   add(LavCicD_chaveValor_('DURAÇÃO:', d ? p2(Math.floor(d / 3600)) + ':' + p2(Math.floor((d % 3600) / 60)) + ':' + p2(d % 60) : 'INDISPONIVEL'));
   add(LavCicD_chaveValor_('TEMP FINAL:', ciclo.tempFinal === null ? 'INDISPONIVEL' : Number(ciclo.tempFinal).toFixed(1) + ' C'));
   add(tracos);
-  add('[ ' + (ciclo.resultadoClasse === 'APROVADO' ? 'APROVADO' : ciclo.resultado || 'CANCELADO') + ' ]', { c: 1, b: 1 });
+  add('[ ' + (ciclo.resultadoClasse === 'APROVADO' ? 'APROVADO' : naoLib ? 'NÃO LIBERADO' : ciclo.resultado || 'CANCELADO') + ' ]', { c: 1, b: 1 });
+  if (naoLib) add('PROCESSO CONCLUÍDO', { c: 1, b: 1 });
   if (ciclo.codFalha) add(ciclo.falha || ('FALHA CÓDIGO ' + ciclo.codFalha), { c: 1, b: 1 });
   if (ciclo.manutVencida) add('[ MANUTENÇÃO VENCIDA ]', { c: 1, b: 1 });
   add(tracos);
@@ -195,12 +210,12 @@ function LavCicD_indicadores_(ciclo, ref) {
   var d = ciclo.desinfeccao, av = LavCicD_avaliarRef_(ciclo, ref);
   var res = ciclo.resultadoClasse;
   var k = [];
-  k.push([ciclo.resultado || '—', 'Resultado registrado pela lavadora', res === 'APROVADO' ? 'ok' : 'critico']);
+  k.push([LavCicD_resultadoTexto_(ciclo), 'Resultado registrado pela lavadora' + (res === 'NAO_LIBERADO' ? ' (processo concluído)' : ''), LavCicD_situacaoClasse_(res)]);
   k.push([d ? LavCicD_temp_(d.tempMax) : 'Sem desinfecção', d ? 'Desinfecção térmica: temperatura máxima' : 'Fase de desinfecção térmica', d ? (av.atendeTemp === false ? 'critico' : av.atendeTemp ? 'ok' : '') : (res === 'APROVADO' ? '' : 'aviso')]);
   k.push([d ? LavCicD_dur_(d.duracaoSeg) : '—', 'Desinfecção térmica: duração', d ? (av.atendeTempo === false ? 'critico' : av.atendeTempo ? 'ok' : '') : '']);
   k.push([LavCicD_dur_(ciclo.duracaoSeg), 'Tempo total do ciclo' + (ciclo.duracaoFonte === 'FASES' ? ' (soma das fases)' : ''), '']);
   k.push([LavCicD_temp_(ciclo.tempFinal), 'Temperatura no término', '']);
-  k.push([ciclo.codFalha ? 'Código ' + ciclo.codFalha : (ciclo.codFalha === 0 ? 'Nenhuma' : (res === 'APROVADO' ? 'Nenhuma' : 'Não informada')), 'Falha registrada', ciclo.codFalha ? 'critico' : (res === 'APROVADO' ? 'ok' : 'aviso')]);
+  k.push([ciclo.codFalha ? 'Código ' + ciclo.codFalha : (ciclo.codFalha === 0 ? 'Nenhuma' : (res === 'APROVADO' ? 'Nenhuma' : 'Não informada')), res === 'NAO_LIBERADO' ? 'Motivo do bloqueio da liberação' : 'Falha registrada', ciclo.codFalha ? (res === 'NAO_LIBERADO' ? 'aviso' : 'critico') : (res === 'APROVADO' ? 'ok' : 'aviso')]);
   k.push([ciclo.manutVencida === null ? 'Não informada' : ciclo.manutVencida ? 'Vencida' : 'Em dia', 'Manutenção preventiva no ciclo', ciclo.manutVencida ? 'aviso' : ciclo.manutVencida === false ? 'ok' : '']);
   k.push([String(ciclo.fases.length) + (ciclo.pausas ? ' · ' + ciclo.pausas + (ciclo.pausas === 1 ? ' pausa' : ' pausas') : ''), 'Fases registradas' + (ciclo.pausas ? ' e pausas' : ' (sem pausa)'), ciclo.pausas ? 'aviso' : '']);
   return k;
@@ -219,20 +234,26 @@ function LavCicD_periodoTexto_(ciclo) {
 function LavCicD_conclusaoRegra_(ciclo, ref) {
   var p = [], d = ciclo.desinfeccao, av = LavCicD_avaliarRef_(ciclo, ref);
   var ident = 'O ciclo do lote ' + ciclo.lote + ', receita ' + ciclo.receita + ', executado ' + LavCicD_periodoTexto_(ciclo);
+  var desinfTexto = function () {
+    if (!d) return 'A receita executada não teve fase de desinfecção térmica registrada; o ciclo corresponde à lavagem e ao enxágue.';
+    var t = 'Na desinfecção térmica, a temperatura máxima registrada foi de ' + LavCicD_temp_(d.tempMax) + ', com duração de ' + LavCicD_dur_(d.duracaoSeg) + '.';
+    if (av.tem) {
+      var partes = [];
+      if (av.atendeTemp !== null) partes.push('a temperatura máxima ' + (av.atendeTemp ? 'atingiu' : 'não atingiu') + ' o valor de referência de ' + LavCicD_num_(ref.tempMin, 1) + ' °C');
+      if (av.atendeTempo !== null) partes.push('a duração ' + (av.atendeTempo ? 'atendeu' : 'não atendeu') + ' ao tempo de referência de ' + LavCicD_dur_(ref.tempoMinSeg));
+      if (partes.length) t += ' Em relação à referência cadastrada para a receita' + (av.confirmada ? '' : ' (a confirmar pelo responsável técnico)') + ', ' + partes.join(' e ') + '.';
+    }
+    return t;
+  };
   if (ciclo.resultadoClasse === 'APROVADO') {
     p.push(ident + ', foi concluído pela lavadora com o resultado APROVADO e sem registro de falha. Foram registradas ' + ciclo.fases.length + ' fases em ' + LavCicD_dur_(ciclo.duracaoSeg) + ' de duração total' + (ciclo.pausas ? ', com ' + ciclo.pausas + (ciclo.pausas === 1 ? ' pausa' : ' pausas') + ' durante o processo' : '') + '.');
-    if (d) {
-      var t = 'Na desinfecção térmica, a temperatura máxima registrada foi de ' + LavCicD_temp_(d.tempMax) + ', com duração de ' + LavCicD_dur_(d.duracaoSeg) + '.';
-      if (av.tem) {
-        var partes = [];
-        if (av.atendeTemp !== null) partes.push('a temperatura máxima ' + (av.atendeTemp ? 'atingiu' : 'não atingiu') + ' o valor de referência de ' + LavCicD_num_(ref.tempMin, 1) + ' °C');
-        if (av.atendeTempo !== null) partes.push('a duração ' + (av.atendeTempo ? 'atendeu' : 'não atendeu') + ' ao tempo de referência de ' + LavCicD_dur_(ref.tempoMinSeg));
-        if (partes.length) t += ' Em relação à referência cadastrada para a receita' + (av.confirmada ? '' : ' (a confirmar pelo responsável técnico)') + ', ' + partes.join(' e ') + '.';
-      }
-      p.push(t);
-    } else {
-      p.push('A receita executada não teve fase de desinfecção térmica registrada; o ciclo corresponde à lavagem e ao enxágue.');
-    }
+    p.push(desinfTexto());
+  } else if (ciclo.resultadoClasse === 'NAO_LIBERADO') {
+    var motivo = ciclo.codFalha ? ' (registro da lavadora: "' + (ciclo.falha || 'código ' + ciclo.codFalha) + '", código ' + ciclo.codFalha + ')' : '';
+    p.push(ident + ', teve o processo concluído pela lavadora: as etapas de ' + (d ? 'limpeza, enxágue e desinfecção' : 'limpeza e enxágue') + ' foram cumpridas e registradas em ' + ciclo.fases.length + ' fases, com ' + LavCicD_dur_(ciclo.duracaoSeg) + ' de duração total' + (ciclo.pausas ? ' e ' + ciclo.pausas + (ciclo.pausas === 1 ? ' pausa' : ' pausas') : '') + ', e a cuba foi drenada.');
+    p.push(desinfTexto());
+    p.push('A liberação da carga, porém, ficou bloqueada com o resultado NÃO LIBERADO: o arrefecimento de fim de ciclo esgotou o tempo com a câmara ainda acima da temperatura-alvo' + motivo + '. A tampa da lavadora só destrava com leitura válida de temperatura abaixo de 45 °C.');
+    p.push('Este resultado não equivale a ciclo aprovado: a decisão sobre a carga segue o procedimento da unidade, com a avaliação do responsável pelo local, e recomenda-se verificar o arrefecimento da lavadora.');
   } else {
     var falha = ciclo.codFalha ? 'A falha registrada foi "' + ciclo.falha + '" (código ' + ciclo.codFalha + ')' : 'O arquivo não traz o código da falha que encerrou o ciclo';
     p.push(ident + ', foi encerrado pela lavadora com o resultado ' + ciclo.resultado + '. ' + falha + (ciclo.ultimaFase ? ', e a última fase registrada foi ' + ciclo.ultimaFase : ', antes do registro da primeira fase') + ', após ' + LavCicD_dur_(ciclo.duracaoSeg) + ' de processo.');
@@ -248,7 +269,8 @@ function LavCicD_conclusaoRegra_(ciclo, ref) {
 function LavCicD_contextoIa_(ciclo, ref) {
   var d = ciclo.desinfeccao;
   return {
-    lote: ciclo.lote, receita: ciclo.receita, resultado: ciclo.resultado, inicio: ciclo.inicio ? ciclo.inicio.data + ' ' + ciclo.inicio.hora : '', termino: ciclo.fim ? ciclo.fim.data + ' ' + ciclo.fim.hora : '',
+    lote: ciclo.lote, receita: ciclo.receita, resultado: LavCicD_resultadoTexto_(ciclo),
+    processo: ciclo.processo === 'CONCLUIDO' ? 'concluído' : ciclo.processo === 'INTERROMPIDO' ? 'interrompido' : 'não informado no arquivo', inicio: ciclo.inicio ? ciclo.inicio.data + ' ' + ciclo.inicio.hora : '', termino: ciclo.fim ? ciclo.fim.data + ' ' + ciclo.fim.hora : '',
     duracaoTotal: LavCicD_dur_(ciclo.duracaoSeg), temperaturaNoTermino: LavCicD_temp_(ciclo.tempFinal), codigoFalha: ciclo.codFalha, falha: ciclo.falha || 'nenhuma',
     manutencaoPreventivaVencida: ciclo.manutVencida, pausas: ciclo.pausas, quantidadeFases: ciclo.fases.length, ultimaFase: ciclo.ultimaFase,
     fases: ciclo.fases.map(function (f) { return f.nome + ': ' + LavCicD_dur_(f.duracaoSeg) + ', máxima ' + LavCicD_temp_(f.tempMax); }),
@@ -259,8 +281,11 @@ function LavCicD_contextoIa_(ciclo, ref) {
 function LavCicD_promptIa_(ciclo, ref) {
   return 'Você redige a conclusão de um relatório técnico de um ciclo de lavadora ultrassônica de instrumental de CME. ' +
     'Escreva um único parágrafo de 3 a 5 frases, em português do Brasil, com os dados abaixo e somente eles. ' +
-    'Diga o resultado registrado pela lavadora com a mesma palavra do dado (' + ciclo.resultado + '), o período, a duração total e, se houver, a temperatura máxima e a duração da desinfecção térmica. ' +
-    'Se o ciclo não foi aprovado, diga a falha registrada e que a carga não deve ser liberada com base neste processamento. ' +
+    'Diga o resultado registrado pela lavadora com a mesma palavra do dado (' + LavCicD_resultadoTexto_(ciclo) + '), o período, a duração total e, se houver, a temperatura máxima e a duração da desinfecção térmica. ' +
+    (ciclo.resultadoClasse === 'NAO_LIBERADO' ?
+      'O resultado NÃO LIBERADO significa que o processo foi concluído (as etapas de limpeza, enxágue e desinfecção foram cumpridas e registradas e a cuba foi drenada), mas a liberação da carga ficou bloqueada porque o arrefecimento de fim de ciclo terminou com a câmara acima da temperatura-alvo; a tampa só destrava com leitura abaixo de 45 °C. ' +
+      'Diga que o processo foi concluído e que a liberação ficou bloqueada pela temperatura do arrefecimento, citando o registro da lavadora. Não escreva que o ciclo foi aprovado, cancelado, interrompido ou reprovado, nem que houve falha do processo. ' :
+      'Se o ciclo não foi aprovado, diga a falha registrada e que a carga não deve ser liberada com base neste processamento. ') +
     'Se houver referência da receita, compare com ela e diga se está confirmada ou a confirmar pelo responsável técnico. ' +
     'Diga que o arquivo registra a temperatura máxima de cada fase e não a curva contínua. ' +
     'Não cite norma, parâmetro A0, valor de referência que não esteja nos dados, fabricante ou marca. Use os números exatamente como estão escritos nos dados (vírgula decimal, unidades iguais). ' +
@@ -280,6 +305,7 @@ function LavCicD_numerosPermitidos_(ciclo, ref) {
   ciclo.fases.forEach(function (f) { if (f.tempMax !== null) poe(Number(f.tempMax).toFixed(1)); dur(f.duracaoSeg); });
   if (ciclo.desinfeccao) { dur(ciclo.desinfeccao.duracaoSeg); if (ciclo.desinfeccao.tempMax !== null) poe(Number(ciclo.desinfeccao.tempMax).toFixed(1)); }
   if (ref) { if (ref.tempMin) poe(Number(ref.tempMin).toFixed(1)); if (ref.tempoMinSeg) dur(Number(ref.tempoMinSeg)); }
+  if (ciclo.resultadoClasse === 'NAO_LIBERADO') poe(45); // a tampa só destrava abaixo de 45 °C (dito no prompt)
   return ok;
 }
 function LavCicD_normNum_(n) { var s = String(n); if (s.indexOf('.') >= 0) s = s.replace(/0+$/, '').replace(/\.$/, ''); s = s.replace(/^0+(?=\d)/, ''); return s; }
@@ -305,14 +331,21 @@ function LavCicD_conferirIa_(texto, ciclo, ref) {
   var classe = ciclo.resultadoClasse;
   if (classe === 'APROVADO') {
     if (!/aprovad/.test(baixo)) return { ok: false, motivo: 'não disse o resultado (aprovado)' };
-    if (/reprovad|cancelad/.test(baixo)) return { ok: false, motivo: 'escreveu um resultado diferente do registrado (aprovado)' };
+    if (/reprovad|cancelad|n[aã]o liberad/.test(baixo)) return { ok: false, motivo: 'escreveu um resultado diferente do registrado (aprovado)' };
+  } else if (classe === 'NAO_LIBERADO') {
+    if (!/n[aã]o liberad/.test(baixo)) return { ok: false, motivo: 'não disse o resultado registrado (não liberado)' };
+    if (!/conclu[ií]d/.test(baixo)) return { ok: false, motivo: 'não disse que o processo foi concluído' };
+    if (!/arrefec|resfri/.test(baixo)) return { ok: false, motivo: 'não disse que a liberação foi bloqueada pela temperatura do arrefecimento' };
+    if (/(?<!não\s(foi\s)?)\baprovad[oa]\b/.test(baixo)) return { ok: false, motivo: 'escreveu "aprovado" para um ciclo não liberado' };
+    if (/(?<!não\s(foi\s)?)\b(cancelad|interrompid|reprovad)[oa]\b/.test(baixo)) return { ok: false, motivo: 'escreveu que o ciclo foi cancelado, interrompido ou reprovado, mas o processo foi concluído' };
+    if (/falha (do|no|de) processo|processo (com )?falh|processo n[aã]o (foi )?conclu/.test(baixo)) return { ok: false, motivo: 'escreveu falha do processo para um ciclo com o processo concluído' };
   } else {
     if (baixo.indexOf(String(ciclo.resultado).toLowerCase().slice(0, 7)) < 0) return { ok: false, motivo: 'não disse o resultado registrado (' + ciclo.resultado + ')' };
     if (/(?<!não\s(foi\s)?)\baprovad[oa]\b/.test(baixo)) return { ok: false, motivo: 'escreveu "aprovado" para um ciclo ' + ciclo.resultado.toLowerCase() };
   }
   var d = ciclo.desinfeccao;
   if (d && d.tempMax !== null && t.indexOf(LavCicD_num_(d.tempMax, 1)) < 0) return { ok: false, motivo: 'não citou a temperatura máxima da desinfecção (' + LavCicD_num_(d.tempMax, 1) + ' °C)' };
-  if (d && classe === 'APROVADO' && t.indexOf(LavCicD_dur_(d.duracaoSeg)) < 0 && t.indexOf(String(Math.round(d.duracaoSeg / 60)) + ' min') < 0) return { ok: false, motivo: 'não citou a duração da desinfecção' };
+  if (d && (classe === 'APROVADO' || classe === 'NAO_LIBERADO') && t.indexOf(LavCicD_dur_(d.duracaoSeg)) < 0 && t.indexOf(String(Math.round(d.duracaoSeg / 60)) + ' min') < 0) return { ok: false, motivo: 'não citou a duração da desinfecção' };
   return { ok: true };
 }
 
@@ -354,7 +387,8 @@ function LavCicD_estilos_() {
     '@media screen{.folha{padding-top:10mm}}h1{font-size:14pt;margin-bottom:.6mm}.subtitulo{font-size:9.4pt;margin-bottom:2mm}' +
     'table.lc-ficha{font-size:7.4pt;line-height:1.25;margin:0 0 2mm;table-layout:fixed}table.lc-ficha th,table.lc-ficha td{padding:.55mm 1.4mm;width:auto}table.lc-ficha th{white-space:nowrap}table.lc-ficha col.r{width:10.8%}table.lc-ficha col.v{width:22.5%}' +
     '.resultado.lc-res{display:flex;flex-wrap:wrap;align-items:baseline;gap:1mm 3mm;margin:0 0 2.4mm;padding:1.4mm 3.2mm}.lc-res .rot{font-size:7.8pt;color:#52606d}.lc-res .val{font-size:11.5pt;font-weight:700}.lc-res .mot{font-size:8.2pt;color:#1f2933}' +
-    '.resultado.lc-res.ok .val{color:#1d6b3f}.resultado.lc-res.nok .val{color:#a61b1b}' +
+    '.resultado.lc-res.ok .val{color:#1d6b3f}.resultado.lc-res.nok .val{color:#a61b1b}.resultado.lc-res.aviso{border-color:#b45309;background:#fdf6ec}.resultado.lc-res.aviso .val{color:#8a4b00}' +
+    '.lc-nota-antiga{font-size:7.2pt;line-height:1.3;color:#5c3d00;background:#fdf6ec;border-left:2pt solid #b45309;padding:1mm 2.4mm;margin:-1.4mm 0 2.2mm;text-align:left}' +
     '.lc-grade{display:grid;grid-template-columns:53mm 1fr;gap:5mm;align-items:start}' +
     '.lc-tit{font-size:8.6pt;font-weight:700;color:#0b3d6e;text-transform:uppercase;letter-spacing:.02em;margin:0 0 1.2mm;padding-bottom:.6mm;border-bottom:.6pt solid #0b3d6e}' +
     '.lc-fita{padding:1.2mm 0 0}' +
@@ -386,7 +420,7 @@ function LavCicD_estilos_() {
     '.lc-sem-grafico{border:.5pt dashed #9aa5b1;padding:6mm 3mm;font-size:8pt;color:#52606d;text-align:center;margin:0 0 2mm}' +
     '.lc-miolo.lc-n1{zoom:.93}.lc-miolo.lc-n2{zoom:.86}.lc-miolo.lc-n3{zoom:.78}' +
     // textos longos (cliente, endereço, receita, eventos, SHA-256) quebram dentro da caixa, nunca saem da folha
-    'table.lc-ficha td,.lc-aprov td,.lc-res .mot,.lc-ref,.lc-ocor,.lc-rastro,.lc-conclusao p,.lc-dir .kpi .v,.lc-dir .kpi .r,.lc-dir .leg-grafico span,.subtitulo,h1{overflow-wrap:anywhere;word-break:normal}' +
+    'table.lc-ficha td,.lc-aprov td,.lc-res .mot,.lc-nota-antiga,.lc-ref,.lc-ocor,.lc-rastro,.lc-conclusao p,.lc-dir .kpi .v,.lc-dir .kpi .r,.lc-dir .leg-grafico span,.subtitulo,h1{overflow-wrap:anywhere;word-break:normal}' +
     '.lc-rastro,.lc-aprov td.hash{word-break:break-all}.lc-dir,.lc-esq,.lc-grade>*{min-width:0}' +
     // 31/10/2026 (pedido do dono: "o relatório que mostra no HTML no celular tem dados que saem fora da página"): na tela a folha
     // fica sempre com a largura do A4 (a mesma disposição do PDF) e o script LAVCIC_ESCALA_TELA reduz a folha inteira quando a tela é
@@ -416,7 +450,7 @@ var LAVCIC_ESCALA_TELA = '<script>(function(){var f=document.querySelector(".fol
  */
 function LavCicD_html_(d) {
   var c = d.ciclo, cad = d.cadastro || {}, ref = d.referencia || null;
-  var aprovado = c.resultadoClasse === 'APROVADO';
+  var aprovado = c.resultadoClasse === 'APROVADO', naoLib = c.resultadoClasse === 'NAO_LIBERADO';
   var vazio = function (v) { return String(v == null ? '' : v).trim() || '—'; };
   var idEq = [cad.patrimonio ? 'Patrimônio ' + cad.patrimonio : '', cad.tag ? 'TAG ' + cad.tag : ''].filter(Boolean).join(' · ');
   // ficha em 3 pares por linha; cliente e unidade ocupam duas colunas (nomes longos), com CNPJ e setor ao lado
@@ -433,9 +467,11 @@ function LavCicD_html_(d) {
     empresa: typeof RelA4_empresa_ === 'function' ? RelA4_empresa_() : { nome: 'Metrolab Soluções em Engenharia Clínica LTDA' }, orientacao: 'retrato'
   };
   // resultado numa linha: a folha é uma só (A4 retrato)
-  var textoRes = aprovado ? 'Ciclo concluído pela lavadora sem falha registrada.' : (c.codFalha ? 'Falha: ' + c.falha + ' (código ' + c.codFalha + ')' + (c.ultimaFase ? ', na fase ' + c.ultimaFase : '') + '.' : 'Ciclo encerrado sem o código da falha no arquivo.') + ' A carga não deve ser liberada com base neste ciclo.';
+  var textoRes = aprovado ? 'Ciclo concluído pela lavadora sem falha registrada.' : naoLib ?
+    'Processo concluído (etapas cumpridas e cuba drenada); liberação da carga bloqueada: ' + (c.codFalha ? c.falha + ' (código ' + c.codFalha + ')' : 'arrefecimento não concluído') + '. A tampa só destrava abaixo de 45 °C; a decisão sobre a carga segue o procedimento da unidade.' : (c.codFalha ? 'Falha: ' + c.falha + ' (código ' + c.codFalha + ')' + (c.ultimaFase ? ', na fase ' + c.ultimaFase : '') + '.' : 'Ciclo encerrado sem o código da falha no arquivo.') + ' A carga não deve ser liberada com base neste ciclo.';
   var topo = fichaHtml +
-    '<div class="resultado lc-res ' + (aprovado ? 'ok' : 'nok') + '"><span class="rot">Resultado registrado pela lavadora</span><span class="val">' + LavCicD_esc_(c.resultado || '—') + '</span><span class="mot">' + LavCicD_esc_(textoRes) + '</span></div>';
+    '<div class="resultado lc-res ' + (aprovado ? 'ok' : naoLib ? 'aviso' : 'nok') + '"><span class="rot">Resultado registrado pela lavadora</span><span class="val">' + LavCicD_esc_(LavCicD_resultadoTexto_(c)) + '</span><span class="mot">' + LavCicD_esc_(textoRes) + '</span></div>' +
+    (typeof LavCicL_notaCodigo2Antigo_ === 'function' && LavCicL_notaCodigo2Antigo_(c) ? '<p class="lc-nota-antiga">' + LavCicD_esc_(LavCicL_notaCodigo2Antigo_(c)) + '</p>' : '');
   var h = SGO_DocA4_inicioDocumento_(doc);
   h = h.replace('</head>', '<style>' + (typeof RelA4_estilosExtra_ === 'function' ? RelA4_estilosExtra_(false) : '') + LavCicD_estilos_() + '</style></head>');
   h = h.replace('<main class="folha">', '<!--LAVCIC_AVISOS--><main class="folha">');

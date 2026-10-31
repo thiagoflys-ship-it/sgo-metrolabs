@@ -16,6 +16,9 @@
  *  - o mesmo lote nunca é importado duas vezes para o mesmo equipamento: devolve o relatório que já existe;
  *  - campo futuro SERIE=/EQUIPAMENTO= do firmware: se vier e não bater com o equipamento, recusa (LavCicL_conferirEquipamento_);
  *  - ciclo reprovado ou cancelado também gera relatório, com a falha em destaque;
+ *  - resultado NÃO LIBERADO (firmware REV20261101: processo concluído, liberação bloqueada pelo arrefecimento) é resultado
+ *    próprio: rótulo, filtro, índice e coluna do Kanban próprios (a coluna só aparece quando há relatório nela); não conta
+ *    como aprovado nem como "cancelado ou reprovado" (LavCic_ehFalha_);
  *  - dados do cliente e do equipamento vêm do cadastro do SGO+ (instantâneo na geração); faltou campo importante, o
  *    relatório sai e a tela avisa o que falta, com o atalho para quem pode completar o cadastro;
  *  - depois de assinado, o documento fica travado: correção só em nova versão, com motivo, mantendo a anterior.
@@ -458,12 +461,18 @@ var LAVCIC_KANBAN = [
   { n: 1, chave: 'AGUARDANDO', nome: 'Aguardando assinatura' },
   { n: 2, chave: 'NOVA_VERSAO', nome: 'Nova versão aguardando assinatura' },
   { n: 3, chave: 'FALHA', nome: 'Com falha (cancelado ou reprovado)' },
-  { n: 4, chave: 'ASSINADO', nome: 'Assinado e aprovado' }
+  { n: 4, chave: 'NAO_LIBERADO', nome: 'Não liberado (câmara quente no fim)', soComItens: true },
+  { n: 5, chave: 'ASSINADO', nome: 'Assinado e aprovado' }
 ];
 var LAVCIC_KANBAN_POR_COLUNA = 6;
-/** Situação do relatório no Kanban: falha primeiro (assinado ou não), depois nova versão sem assinatura, aguardando e assinado. */
+/** Resultado NÃO LIBERADO (processo concluído, liberação bloqueada pela temperatura do arrefecimento). */
+function LavCic_ehNaoLiberado_(r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'NAO_LIBERADO'; }
+/** Falha do processo: cancelado, reprovado ou resultado desconhecido (nem aprovado, nem não liberado). */
+function LavCic_ehFalha_(r) { var c = LavCic_up_(r.RESULTADO_CLASSE); return c !== 'APROVADO' && c !== 'NAO_LIBERADO'; }
+/** Situação do relatório no Kanban: falha e não liberado primeiro (assinado ou não), depois nova versão sem assinatura, aguardando e assinado. */
 function LavCic_colunaKanban_(r) {
-  if (LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO') return 'FALHA';
+  if (LavCic_ehNaoLiberado_(r)) return 'NAO_LIBERADO';
+  if (LavCic_ehFalha_(r)) return 'FALHA';
   var assinado = LavCic_up_(r.ASSINADO) === 'SIM';
   if (!assinado && (Number(r.VERSAO) || 1) > 1) return 'NOVA_VERSAO';
   return assinado ? 'ASSINADO' : 'AGUARDANDO';
@@ -488,11 +497,11 @@ function LavCic_painel_(eu, rels, eqsVis) {
     relatorios: ativos.length, noMes: conta(function (r) { return LavCic_s_(r.DATA_CICLO).slice(0, 7) === mes; }),
     aguardando: aguardando.length, aguardandoDesde: maisAntigo ? LavCic_br_(maisAntigo.DATA_CICLO) : '',
     assinados: conta(assinado), aprovados: conta(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO'; }),
-    naoAprovados: conta(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO'; }),
+    naoAprovados: conta(LavCic_ehFalha_), naoLiberados: conta(LavCic_ehNaoLiberado_),
     manutVencida: conta(function (r) { return LavCic_up_(r.MANUT_VENCIDA) === 'SIM'; }), novasVersoes: conta(function (r) { return (Number(r.VERSAO) || 1) > 1; }),
     ultimo: ativos[0] ? LavCic_br_(ativos[0].DATA_CICLO) : ''
   };
-  var cols = LAVCIC_KANBAN.map(function (k) { return { n: k.n, chave: k.chave, nome: k.nome, qtd: 0, itens: [] }; });
+  var cols = LAVCIC_KANBAN.map(function (k) { return { n: k.n, chave: k.chave, nome: k.nome, qtd: 0, itens: [], soComItens: !!k.soComItens }; });
   var porChave = {};
   cols.forEach(function (c) { porChave[c.chave] = c; });
   ativos.forEach(function (r) {
@@ -506,11 +515,14 @@ function LavCic_painel_(eu, rels, eqsVis) {
       cliente: eu.interno ? (LavCic_s_(cli.NOME_FANTASIA) || LavCic_s_(cli.RAZAO_SOCIAL)) : '', resultado: LavCic_s_(r.RESULTADO), classe: LavCic_s_(r.RESULTADO_CLASSE),
       assinado: assinado(r), assinante: LavCic_s_(r.ASSINANTE_NOME), falha: LavCic_s_(r.FALHA) });
   });
+  // a coluna "Não liberado" só aparece quando tem relatório (o resultado é raro e não deve ocupar espaço vazio)
+  cols = cols.filter(function (c) { return !c.soComItens || c.qtd; }).map(function (c) { delete c.soComItens; return c; });
   return { indices: indices, kanban: cols, porColuna: LAVCIC_KANBAN_POR_COLUNA };
 }
 /**
- * Busca da tela. d: { termo, de, ate, resultado (APROVADO | CANCELADO | REPROVADO | NAO_APROVADO), assinatura (SIM | NAO),
- *   situacao (coluna do Kanban: AGUARDANDO | NOVA_VERSAO | FALHA | ASSINADO), equipamentoId, todas }.
+ * Busca da tela. d: { termo, de, ate, resultado (APROVADO | NAO_LIBERADO | CANCELADO | REPROVADO | NAO_APROVADO = cancelado ou
+ *   reprovado), assinatura (SIM | NAO), situacao (coluna do Kanban: AGUARDANDO | NOVA_VERSAO | FALHA | NAO_LIBERADO | ASSINADO),
+ *   equipamentoId, todas }.
  * Lavadoras: só pela busca por texto, pelo equipamento escolhido ou por "Ver todas as lavadoras" (nunca de entrada).
  * Relatórios: o termo olha lote, número, receita e os campos do equipamento e do cliente; os filtros recortam.
  */
@@ -549,7 +561,7 @@ function LavCic_acaoListar_(eu, sid, d, relsJa) {
     if (eqId && LavCic_s_(r.EQUIPAMENTO_ID) !== eqId) return false;
     if (de && LavCic_s_(r.DATA_CICLO) < de) return false;
     if (ate && LavCic_s_(r.DATA_CICLO) > ate) return false;
-    if (res === 'NAO_APROVADO') { if (LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO') return false; }
+    if (res === 'NAO_APROVADO') { if (!LavCic_ehFalha_(r)) return false; }
     else if (res && LavCic_up_(r.RESULTADO_CLASSE) !== res) return false;
     if (sit && LavCic_colunaKanban_(r) !== sit) return false;
     if (ass === 'SIM' && LavCic_up_(r.ASSINADO) !== 'SIM') return false;
@@ -560,7 +572,7 @@ function LavCic_acaoListar_(eu, sid, d, relsJa) {
   l.sort(LavCic_ordemRecente_);
   var total = l.length;
   return { total: total, relatorios: l.slice(0, 300).map(function (r) { var t = LavCic_relParaTela_(eu, r), e = eqs[t.equipamentoId]; t.equipamento = e ? LavCic_rotuloEquip_(e) : 'Equipamento fora do cadastro'; return t; }),
-    resumo: { aprovados: l.filter(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO'; }).length, naoAprovados: l.filter(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO'; }).length,
+    resumo: { aprovados: l.filter(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO'; }).length, naoAprovados: l.filter(LavCic_ehFalha_).length, naoLiberados: l.filter(LavCic_ehNaoLiberado_).length,
       semAssinatura: l.filter(function (r) { return LavCic_up_(r.ASSINADO) !== 'SIM'; }).length } };
 }
 function LavCic_acaoAbrir_(eu, sid, d) {

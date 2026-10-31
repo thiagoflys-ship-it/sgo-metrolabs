@@ -87,7 +87,10 @@
   // apagar o que está escrito na busca, e nunca durante a geração ou a assinatura.
   // =====================================================================
   var LC = { ini: null, vista: "painel", abaPainel: "kanban", colCel: "", ultimaBusca: null, filtrosAbertos: false };
-  var LC_COR_COLUNA = { AGUARDANDO: "#c2953f", NOVA_VERSAO: "#5b8fb9", FALHA: "#e05252", ASSINADO: "#4f9f75" };
+  var LC_COR_COLUNA = { AGUARDANDO: "#c2953f", NOVA_VERSAO: "#5b8fb9", FALHA: "#e05252", NAO_LIBERADO: "#d97706", ASSINADO: "#4f9f75" };
+  // Resultado NÃO LIBERADO (firmware REV20261101): processo concluído, liberação bloqueada porque o arrefecimento terminou
+  // com a câmara quente. Âmbar: nem verde de aprovado, nem vermelho de falha do processo.
+  var LC_RESULTADOS = { APROVADO: "aprovado", NAO_LIBERADO: "não liberado", NAO_APROVADO: "cancelado ou reprovado", CANCELADO: "cancelado", REPROVADO: "reprovado" };
   function Lc_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Lc_$_(id) { return document.getElementById(id); }
   function Lc_num_(n) { return typeof PnA_num_ === "function" ? PnA_num_(n) : String(n || 0); }
@@ -104,7 +107,14 @@
       .LavCiclo_api(SGO_getSessionId(), acao, dados || {});
   }
   function Lc_msg_(onde, texto, tipo) { var el = typeof onde === "string" ? Lc_$_(onde) : onde; if (el) el.innerHTML = texto ? '<div class="at-faixa ' + (tipo || "erro") + '" role="' + (tipo === "ok" ? "status" : "alert") + '">' + Lc_esc_(texto) + "</div>" : ""; }
-  function Lc_selo_(classe, resultado) { var c = classe === "APROVADO" ? "verde" : classe === "OUTRO" ? "cinza" : "vermelho"; return '<span class="at-selo ' + c + '">' + Lc_esc_(resultado || classe) + "</span>"; }
+  function Lc_selo_(classe, resultado) { var c = classe === "APROVADO" ? "verde" : classe === "NAO_LIBERADO" ? "laranja" : classe === "OUTRO" ? "cinza" : "vermelho"; return '<span class="at-selo ' + c + '">' + Lc_esc_(classe === "NAO_LIBERADO" ? "NÃO LIBERADO" : (resultado || classe)) + "</span>"; }
+  /** Linha da falha (vermelha) ou do bloqueio da liberação (âmbar) no cartão e na ficha; vazio para aprovado. */
+  function Lc_linhaFalha_(r, estilo) {
+    if (r.classe === "APROVADO") return "";
+    var cod = r.codFalha && r.codFalha !== "0" ? " (código " + r.codFalha + ")" : "";
+    if (r.classe === "NAO_LIBERADO") return '<p class="at-txt" style="color:var(--warning);font-weight:700' + (estilo || "") + '">' + Lc_esc_("Processo concluído; liberação bloqueada: " + (r.falha ? r.falha + cod : "arrefecimento não concluído") + ".") + "</p>";
+    return '<p class="at-txt" style="color:var(--danger);font-weight:700' + (estilo || "") + '">' + Lc_esc_(r.falha ? "Falha: " + r.falha + cod : "Ciclo encerrado sem o código da falha no arquivo.") + "</p>";
+  }
   function Lc_seloAss_(r) { return r.substituido ? '<span class="at-selo cinza">Substituída pela versão nova</span>' : r.assinado ? '<span class="at-selo verde">Assinado</span>' : '<span class="at-selo laranja">Aguardando assinatura</span>'; }
   function Lc_abrirUrl_(url, baixar) {
     if (!url) { alert("O arquivo deste relatório não foi gravado. Por quê: a cópia não foi salva na hora da geração. O que fazer: peça à Metrolabs para gerar uma nova versão."); return; }
@@ -163,7 +173,7 @@
       { v: Lc_num_(i.aguardando), l: "Aguardando assinatura", sub: i.aguardando ? "O mais antigo é de " + i.aguardandoDesde : "Nenhum relatório esperando", alerta: i.aguardando > 0 },
       { v: Lc_num_(i.assinados), l: "Assinados", sub: Lc_pct_(i.assinados, i.relatorios) + " dos relatórios" },
       { v: Lc_num_(i.aprovados), l: "Ciclos aprovados", sub: Lc_pct_(i.aprovados, i.relatorios) + " dos relatórios" },
-      { v: Lc_num_(i.naoAprovados), l: "Cancelados ou reprovados", sub: i.naoAprovados ? "Com a falha em destaque no relatório" : "Nenhuma falha registrada", alerta: i.naoAprovados > 0 },
+      { v: Lc_num_(i.naoAprovados), l: "Cancelados ou reprovados", sub: (i.naoAprovados ? "Com a falha em destaque no relatório" : "Nenhuma falha registrada") + (i.naoLiberados ? " · " + Lc_num_(i.naoLiberados) + (i.naoLiberados === 1 ? " não liberado" : " não liberados") + " (processo concluído, câmara quente no fim)" : ""), alerta: i.naoAprovados > 0 || i.naoLiberados > 0 },
       { v: Lc_num_(i.manutVencida), l: "Manutenção preventiva vencida", sub: "Ciclos em que a lavadora avisou", alerta: i.manutVencida > 0 },
       { v: Lc_num_(i.novasVersoes), l: "Novas versões", sub: "Correções feitas com motivo" }
     ];
@@ -177,7 +187,7 @@
       '<div class="lc-busca-extra"><button type="button" class="btn-secondary" id="lcMais" aria-expanded="false" aria-controls="lcFiltros"><i class="fas fa-sliders" aria-hidden="true"></i>&nbsp;Mais filtros</button>' +
       '<button type="button" class="btn-secondary" id="lcTodas"><i class="fas fa-list" aria-hidden="true"></i>&nbsp;Ver todas as lavadoras</button></div>' +
       '<div class="at-filtros" id="lcFiltros" hidden><div><label for="lcDe">Ciclo de</label><input id="lcDe" type="date"></div><div><label for="lcAte">até</label><input id="lcAte" type="date"></div>' +
-      '<div><label for="lcRes">Resultado</label><select id="lcRes"><option value="">Todos</option><option value="APROVADO">Aprovado</option><option value="NAO_APROVADO">Cancelado ou reprovado</option><option value="CANCELADO">Cancelado</option><option value="REPROVADO">Reprovado</option></select></div>' +
+      '<div><label for="lcRes">Resultado</label><select id="lcRes"><option value="">Todos</option><option value="APROVADO">Aprovado</option><option value="NAO_LIBERADO">Não liberado</option><option value="NAO_APROVADO">Cancelado ou reprovado</option><option value="CANCELADO">Cancelado</option><option value="REPROVADO">Reprovado</option></select></div>' +
       '<div><label for="lcAss">Assinatura</label><select id="lcAss"><option value="">Todas</option><option value="NAO">Aguardando assinatura</option><option value="SIM">Assinados</option></select></div>' +
       '<div><button type="button" class="btn-secondary at-btn44" id="lcLimpar">Limpar</button></div></div></div>';
     var ler = function () { return { termo: Lc_$_("lcTermo").value.trim(), de: Lc_$_("lcDe").value, ate: Lc_$_("lcAte").value, resultado: Lc_$_("lcRes").value, assinatura: Lc_$_("lcAss").value }; };
@@ -238,8 +248,8 @@
     return '<div class="atv-kcard-tit">' + Lc_esc_(x.lote) + "</div>" +
       '<div class="atv-sub">' + Lc_esc_([x.data + (x.hora ? " " + x.hora : ""), x.numero + (x.versao > 1 ? " · versão " + x.versao : "")].join(" · ")) + "</div>" +
       '<div class="atv-sub">' + Lc_esc_([x.cliente, x.equipamento].filter(Boolean).join(" · ")) + "</div>" +
-      (x.coluna === "FALHA" && x.falha ? '<div class="atv-sub" style="color:var(--danger);font-weight:700">' + Lc_esc_(x.falha) + "</div>" : "") +
-      "<div>" + Lc_selo_(x.classe, x.resultado) + (x.coluna === "FALHA" ? Lc_seloAss_(x) : "") + (x.assinado && x.assinante ? '<span class="atv-sub"> ' + Lc_esc_(x.assinante) + "</span>" : "") + "</div>";
+      ((x.coluna === "FALHA" || x.coluna === "NAO_LIBERADO") && x.falha ? '<div class="atv-sub" style="color:var(' + (x.coluna === "FALHA" ? "--danger" : "--warning") + ');font-weight:700">' + Lc_esc_(x.falha) + "</div>" : "") +
+      "<div>" + Lc_selo_(x.classe, x.resultado) + (x.coluna === "FALHA" || x.coluna === "NAO_LIBERADO" ? Lc_seloAss_(x) : "") + (x.assinado && x.assinante ? '<span class="atv-sub"> ' + Lc_esc_(x.assinante) + "</span>" : "") + "</div>";
   }
   /** Cartão do Kanban abre a ficha; coluna com mais cartões do que cabem ganha "Ver todos". */
   function Lc_ligarKanban_(el, cols) {
@@ -272,7 +282,7 @@
       if (d.rotuloSituacao) partes.push("Situação: " + d.rotuloSituacao);
       if (d.equipamentoId && r.equipamentos[0]) partes.push(r.equipamentos[0].rotulo);
       if (d.de || d.ate) partes.push("Ciclos " + (d.de ? "de " + d.de.split("-").reverse().join("/") : "") + (d.ate ? " até " + d.ate.split("-").reverse().join("/") : ""));
-      if (d.resultado) partes.push("Resultado: " + ({ APROVADO: "aprovado", NAO_APROVADO: "cancelado ou reprovado", CANCELADO: "cancelado", REPROVADO: "reprovado" }[d.resultado] || d.resultado));
+      if (d.resultado) partes.push("Resultado: " + (LC_RESULTADOS[d.resultado] || d.resultado));
       if (d.assinatura) partes.push(d.assinatura === "SIM" ? "Assinados" : "Aguardando assinatura");
       var nada = !r.totalEquipamentos && !r.totalRelatorios;
       var html = '<div class="lc-res-cab"><p>' + Lc_esc_(partes.join(" · ")) + (nada ? "" : ": " + Lc_esc_([r.totalEquipamentos ? Lc_num_(r.totalEquipamentos) + (r.totalEquipamentos === 1 ? " lavadora" : " lavadoras") : "", (r.totalRelatorios || !d.todas) ? Lc_num_(r.totalRelatorios) + (r.totalRelatorios === 1 ? " relatório" : " relatórios") : ""].filter(Boolean).join(" e "))) + "</p>" +
@@ -295,12 +305,12 @@
 
   // ---------------------------------------------------------------- cartões
   function Lc_cartaoRel_(r) {
-    var classe = r.classe === "APROVADO" ? "" : " p1";
+    var classe = r.classe === "APROVADO" ? "" : r.classe === "NAO_LIBERADO" ? " p2" : " p1";
     return '<div class="at-card' + classe + (r.substituido ? " fim" : "") + '" data-rel="' + Lc_esc_(r.id) + '">' +
       '<div class="lc-equip-cab"><div><p class="at-card-tit">' + Lc_esc_(r.lote) + ' <span style="font-weight:400;color:var(--muted)">· ' + Lc_esc_(r.data + " " + r.hora) + "</span></p>" +
       '<p class="at-meta">' + Lc_esc_([r.equipamento, "Receita " + r.receita, r.numero + (r.versao > 1 ? " · versão " + r.versao : "")].filter(Boolean).join(" · ")) + "</p></div>" +
       "<div>" + Lc_selo_(r.classe, r.resultado) + Lc_seloAss_(r) + "</div></div>" +
-      (r.classe !== "APROVADO" ? '<p class="at-txt" style="color:var(--danger);font-weight:700">' + Lc_esc_(r.falha ? "Falha: " + r.falha + (r.codFalha && r.codFalha !== "0" ? " (código " + r.codFalha + ")" : "") : "Ciclo encerrado sem o código da falha no arquivo.") + "</p>" : "") +
+      Lc_linhaFalha_(r) +
       '<p class="at-txt">' + Lc_esc_((r.desinfeccao ? "Desinfecção: " + r.desinfeccao + " · " : "") + "Tempo total: " + r.duracao) + (r.assinado ? " · Assinado por " + Lc_esc_(r.assinante + (r.cargo ? " (" + r.cargo + ")" : "") + " em " + r.assinadoEm) : "") + "</p>" +
       (r.faltam && r.faltam.length && !r.assinado ? '<p class="at-meta">Cadastro do equipamento sem: ' + Lc_esc_(r.faltam.join(", ")) + ".</p>" : "") +
       '<div class="at-acoes lc-acoes-cel"><button type="button" class="btn-primary at-btn44" data-x="abrir"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Abrir o relatório</button>' +
@@ -377,7 +387,7 @@
       var corpo = '<p class="at-card-tit" style="font-size:16px;overflow-wrap:anywhere">Lote ' + Lc_esc_(r.lote) + "</p>" +
         '<p class="lc-resumo">' + Lc_esc_([r.data + " " + r.hora, r.numero + (r.versao > 1 ? " · versão " + r.versao : ""), r.equipamento, "Receita " + r.receita].filter(Boolean).join(" · ")) + "</p>" +
         "<div>" + Lc_selo_(r.classe, r.resultado) + Lc_seloAss_(r) + "</div>" +
-        (r.classe !== "APROVADO" ? '<p class="at-txt" style="color:var(--danger);font-weight:700;margin-top:6px">' + Lc_esc_(r.falha ? "Falha: " + r.falha + (r.codFalha && r.codFalha !== "0" ? " (código " + r.codFalha + ")" : "") : "Ciclo encerrado sem o código da falha no arquivo.") + "</p>" : "") +
+        Lc_linhaFalha_(r, ";margin-top:6px") +
         '<p class="at-txt" style="margin-top:6px">' + Lc_esc_((r.desinfeccao ? "Desinfecção: " + r.desinfeccao + " · " : "") + "Tempo total: " + r.duracao) + (r.assinado ? " · Assinado por " + Lc_esc_(r.assinante + (r.cargo ? " (" + r.cargo + ")" : "") + " em " + r.assinadoEm) : "") + "</p>" +
         '<div class="at-acoes lc-acoes-cel" style="margin-bottom:6px"><button type="button" class="btn-primary at-btn44" data-f="abrir"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Abrir o relatório</button>' +
         '<button type="button" class="btn-secondary at-btn44" data-f="pdf"><i class="fas fa-download" aria-hidden="true"></i>&nbsp;Baixar PDF</button>' +
@@ -544,7 +554,8 @@
             '<div class="at-meta" style="margin:0">Lote</div><div class="lc-lote">' + Lc_esc_(c.lote) + "</div>" +
             '<dl class="lc-conf">' + dl("Data", Lc_esc_(c.data)) + dl("Horário", Lc_esc_(c.horaInicio + " às " + c.horaFim)) + dl("Receita", Lc_esc_(c.receita), true) +
             dl("Resultado", Lc_selo_(c.classe, c.resultado)) + dl("Tempo total", Lc_esc_(c.duracao)) +
-            (c.falha ? dl("Falha registrada", '<span style="color:var(--danger)">' + Lc_esc_(c.falha) + "</span>", true) : "") +
+            (c.falha ? dl(c.classe === "NAO_LIBERADO" ? "Motivo do bloqueio da liberação" : "Falha registrada", '<span style="color:var(' + (c.classe === "NAO_LIBERADO" ? "--warning" : "--danger") + ')">' + Lc_esc_(c.falha) + "</span>", true) : "") +
+            (c.classe === "NAO_LIBERADO" ? dl("Processo", Lc_esc_("Concluído: etapas cumpridas e cuba drenada; a liberação da carga ficou bloqueada porque a câmara não esfriou até a temperatura-alvo."), true) : "") +
             (c.desinfeccao ? dl("Desinfecção térmica", Lc_esc_(c.desinfeccao), true) : "") + dl("Fases e eventos", Lc_esc_(c.fases + " fases · " + c.eventos + " eventos")) + dl("Manutenção preventiva", Lc_esc_(c.manutVencida === null ? "Não informada" : c.manutVencida ? "Vencida" : "Em dia")) + "</dl>" +
             (x.avisos && x.avisos.length ? x.avisos.map(function (a) { return '<div class="at-faixa aviso">' + Lc_esc_(a) + "</div>"; }).join("") : "") +
             (x.duplicado ? '<div class="at-faixa aviso" role="alert"><b>Este lote já tem relatório para esta lavadora</b> (' + Lc_esc_(x.duplicado.numero + ", gerado em " + x.duplicado.em) + "). O mesmo ciclo não é importado duas vezes. Abra o relatório que já existe.</div>" +
