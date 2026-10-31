@@ -55,8 +55,6 @@
   .login-esqueci-btn:hover { color: var(--bc-text); }
   .btn-trocar-senha { margin-right: 6px; }
   .btn-trocar-senha i { margin-right: 4px; }
-  .mobile-topbar-senha { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
-  .mobile-topbar-senha i { font-size: 17px; }
   .login-etapa .sga-passos { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--bc-line); border-radius: 4px; background: var(--bc-surface-2, #f6f7f9); font-size: 13px; line-height: 1.55; color: var(--bc-text-2); }
   .login-etapa .sga-passos b { color: var(--bc-text); }
   .sga-destaque { border-left: 4px solid var(--danger, #b42318); }
@@ -620,7 +618,7 @@
     if (!div) return;
     if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Segurança do acesso"); } catch (e) {} }
     if (!SegAcessoTela_pode_()) {
-      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Segurança do acesso</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria e Gestor). Para trocar a sua senha, use \"Trocar minha senha\" no topo da tela (no celular, o botão da chave).</p>' +
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Segurança do acesso</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria e Gestor). Para trocar a sua senha, use \"Trocar minha senha\" no topo da tela (no celular, em \"Conta\", no canto de cima, à direita).</p>' +
         '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
       return;
     }

@@ -54,7 +54,7 @@ A gestão também pode enviar o link para o seu e-mail, se você pedir. O link e
 
 Para trocar a senha quando quiser:
 
-1. Toque em **Trocar senha**, no topo da tela (no celular, no botão da chave no topo ou em **Trocar minha senha** no Início).
+1. Toque em **Trocar senha**, no topo da tela (no celular, toque em **Conta**, no canto de cima, à direita, e em **Trocar minha senha**, ou em **Trocar minha senha** no Início).
 2. Digite a **Senha atual**.
 3. Digite a senha nova duas vezes e toque em **Salvar a senha nova**.
 

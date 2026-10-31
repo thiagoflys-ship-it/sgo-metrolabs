@@ -8,7 +8,7 @@ function SGO_ajudaTelas_Assistente_() {
       titulo: "Tire sua dúvida",
       paraQueServe: "Um assistente para perguntar como usar o SGO+: como fazer uma tarefa, onde fica uma tela, quem faz o quê. A resposta vem da ajuda das telas e dos manuais do sistema, com o passo a passo para o seu perfil, o caminho no menu e a fonte. O assistente só orienta: ele não faz nenhuma alteração no sistema.",
       antesDeComecar: [
-        "O botão \"Tire sua dúvida\" fica no canto direito da tela, acima do balão do bate-papo. No celular, é a aba \"Dúvida\" na borda direita.",
+        "O botão \"Tire sua dúvida\" fica no canto de baixo, à direita, ao lado do balão do bate-papo. No celular, é o botão redondo com o ponto de interrogação, no canto de baixo, à esquerda do balão do bate-papo. Também abre pelo botão \"Tire sua dúvida\" do painel \"Como usar esta tela\" (\"Ajuda\", no celular).",
         "Também abre pelo botão \"Tire sua dúvida\" do painel \"Como usar esta tela\".",
         "Escreva a dúvida com as suas palavras. Não escreva senhas nem dados de clientes."
       ],

@@ -10,8 +10,8 @@ O assistente só orienta. Ele não faz nenhuma alteração no sistema: quem faz 
 
 ## 2. Onde fica
 
-- Computador: botão "Tire sua dúvida", no canto direito da tela, acima do balão do bate-papo.
-- Celular: aba "Dúvida", na borda direita, logo acima da aba do bate-papo.
+- Computador: botão "Tire sua dúvida", no canto de baixo, à direita, ao lado do balão do bate-papo.
+- Celular: botão redondo com o ponto de interrogação, no canto de baixo, à esquerda do balão do bate-papo. Ele sobe sozinho quando a tela tem um botão fixo no rodapé (por exemplo, na Frota), para não cobrir esse botão.
 - Também abre pelo botão "Tire sua dúvida" do painel "Como usar esta tela".
 
 ## 3. Fazer uma pergunta

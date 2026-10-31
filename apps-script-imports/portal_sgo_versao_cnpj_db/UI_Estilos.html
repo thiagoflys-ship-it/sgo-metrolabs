@@ -3314,7 +3314,6 @@
   .app-shell.modo-mobile #conteudo { padding-bottom: 96px; overflow-wrap: anywhere; }
   /* a barra fixa do topo tem cerca de 70 px; com 64 px a primeira linha da tela ficava atrás dela */
   .app-shell.modo-mobile .main-layout .content-area { padding-top: 82px !important; }
-  .app-shell.modo-mobile .mobile-topbar-titulo { white-space: normal; line-height: 1.2; overflow-wrap: anywhere; }
   .app-shell.modo-mobile #conteudo img, .app-shell.modo-mobile #conteudo table { max-width: 100%; }
   .app-shell.modo-mobile .mobile-home-grid { gap: 10px; }
   .app-shell.modo-mobile .mobile-home-tile { aspect-ratio: auto; min-height: 96px; gap: 8px; padding: 14px 8px; }
@@ -3392,20 +3391,76 @@
     max-width: calc(100vw - 36px);
   }
   .app-shell.modo-mobile #conteudo { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
-  /* título longo ("Estufa, banho-maria e secadora") quebra em até duas linhas sem empurrar os botões */
-  .app-shell.modo-mobile .mobile-topbar-titulo {
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    font-size: 15px; min-width: 0;
+  /* BARRA DO TOPO DO CELULAR (31/10/2026, pedido do dono: "confusas, sobrepondo e bagunçando").
+     Voltar | nome da tela numa linha (reticências; o nome inteiro fica no título da própria tela) | busca | Ajuda | Conta.
+     Botões sem moldura, com 44 x 44 px de toque; Trocar minha senha e Sair ficam no menu "Conta" (JS_Core › MenuConta_*). */
+  .app-shell.modo-mobile .mobile-topbar {
+    gap: 2px; padding-top: calc(4px + env(safe-area-inset-top, 0px)); padding-bottom: 4px;
+    padding-left: calc(6px + env(safe-area-inset-left, 0px)); padding-right: calc(6px + env(safe-area-inset-right, 0px));
+    border-top: 0; min-height: 52px; box-sizing: border-box;
   }
-  .app-shell.modo-mobile .mobile-topbar-btn { flex: 0 0 auto; }
-  @media (max-width: 359px) {
-    .app-shell.modo-mobile .mobile-topbar { gap: 6px; padding-left: calc(8px + env(safe-area-inset-left, 0px)); padding-right: calc(8px + env(safe-area-inset-right, 0px)); }
-    .app-shell.modo-mobile .mobile-topbar-btn { padding: 8px 10px; }
+  .app-shell.modo-mobile .mobile-topbar-titulo {
+    display: block; flex: 1 1 auto; min-width: 0; padding: 0 6px; text-align: left;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal;
+    font-size: 16px; line-height: 1.25;
+  }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn {
+    flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 2px 4px !important; margin: 0;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1;
+    background: transparent !important; border: 0 !important; border-radius: 8px; color: var(--bc-text) !important;
+  }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn:active,
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn[aria-expanded="true"] { background: var(--bc-surface-2) !important; }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn:focus-visible { outline: 3px solid var(--bc-info, #1f5fa8); outline-offset: -3px; }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn i { font-size: 18px; }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-btn span { font-size: 11.5px; font-weight: 600; }
+  .app-shell.modo-mobile .mobile-topbar .mobile-topbar-busca { margin-left: 0; }
+  .mobile-conta { position: relative; flex: 0 0 auto; }
+  .mobile-conta-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 410; min-width: 230px; max-width: calc(100vw - 16px);
+    padding: 6px 0; background: #FFFFFF; border: 1px solid var(--bc-line-2); border-radius: 8px; box-shadow: 0 12px 32px rgba(15, 23, 42, .18);
+  }
+  .mobile-conta-menu[hidden] { display: none; }
+  .mobile-conta-quem { padding: 8px 16px 10px; border-bottom: 1px solid var(--bc-line); margin-bottom: 4px; line-height: 1.35; overflow-wrap: anywhere; }
+  .mobile-conta-quem b { display: block; font-size: 14px; color: var(--bc-text); }
+  .mobile-conta-quem span { display: block; font-size: 12.5px; color: var(--bc-text-3); }
+  .mobile-conta-quem[hidden] { display: none; }
+  .mobile-conta-item {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 16px; margin: 0;
+    background: none; border: 0; text-align: left; font: inherit; font-size: 15px; font-weight: 600; color: var(--bc-text); cursor: pointer;
+  }
+  .mobile-conta-item i { width: 18px; text-align: center; color: var(--bc-text-3); }
+  .mobile-conta-item:active, .mobile-conta-item:hover { background: var(--bc-surface-2); }
+  .mobile-conta-item:focus-visible { outline: 3px solid var(--bc-info, #1f5fa8); outline-offset: -3px; }
+  .mobile-conta-sair, .mobile-conta-sair i { color: var(--bc-danger); }
+  /* computador: espaço no fim da tela para o último cartão poder subir acima do balão do bate-papo e do "Tire sua dúvida" */
+  .app-shell:not(.modo-mobile) #conteudo { padding-bottom: 88px; }
+  /* BOTÕES FLUTUANTES (31/10/2026). Bate-papo (ComunicacaoWidget) e "Tire sua dúvida" (AssistenteWidget) ficam juntos no canto
+     de baixo, à direita, numa faixa só: o "Tire sua dúvida" à esquerda do balão, não mais acima dele, onde cobria o texto dos
+     cartões. No celular, dois botões redondos de 44 px no canto (antes, abas no meio da borda direita, que cobriam campos e o
+     botão Buscar). Quando a tela tem barra fixa no rodapé (Frota, "+ Novo cliente"), os dois sobem acima dela
+     (--sgo-rodape-fixo-h, JS_Core › SGO_medirRodapeFixo_). As regras ficam aqui, na casca, porque os dois componentes são
+     idênticos aos do COMMAND (tests/assistente-duvidas.test.cjs); "html body" vence as regras dos componentes. */
+  html body .comw-botao { bottom: calc(18px + var(--sgo-rodape-fixo-h, 0px)); }
+  html body .asw-botao { right: 86px; bottom: calc(26px + var(--sgo-rodape-fixo-h, 0px)); }
+  @media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
+    html body .comw-botao {
+      width: 44px; height: 44px; font-size: 19px; border-radius: 50%;
+      right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    html body .comw-qt { top: -6px; right: -6px; left: auto; }
+    html body .asw-botao {
+      width: 44px; height: 44px; padding: 0; gap: 0; border-radius: 50%; flex-direction: row; justify-content: center;
+      right: calc(64px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    html body .asw-botao i { font-size: 20px; }
+    html body .asw-botao .asw-rot-pc, html body .asw-botao .asw-rot-cel { display: none; }
+    html.sgo-tem-rodape-fixo body .comw-botao, html.sgo-tem-rodape-fixo body .asw-botao { bottom: calc(8px + var(--sgo-rodape-fixo-h, 0px)); }
   }
 
   /* celular deitado: pouca altura, barra do topo mais baixa */
   @media (max-height: 500px) {
-    .app-shell.modo-mobile .mobile-topbar { padding-top: calc(4px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; }
+    .app-shell.modo-mobile .mobile-topbar { padding-top: calc(2px + env(safe-area-inset-top, 0px)); padding-bottom: 2px; min-height: 48px; }
     .app-shell.modo-mobile .mobile-home-tile { min-height: 76px; }
   }
 

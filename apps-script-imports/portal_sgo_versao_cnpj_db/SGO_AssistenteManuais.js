@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "4b7ca6191f3f",
+ "versao": "f4ab43826f74",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -86,7 +86,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Onde fica",
-     "texto": "Computador: botão \"Tire sua dúvida\", no canto direito da tela, acima do balão do bate-papo.\nCelular: aba \"Dúvida\", na borda direita, logo acima da aba do bate-papo.\nTambém abre pelo botão \"Tire sua dúvida\" do painel \"Como usar esta tela\"."
+     "texto": "Computador: botão \"Tire sua dúvida\", no canto de baixo, à direita, ao lado do balão do bate-papo.\nCelular: botão redondo com o ponto de interrogação, no canto de baixo, à esquerda do balão do bate-papo. Ele sobe sozinho quando a tela tem um botão fixo no rodapé (por exemplo, na Frota), para não cobrir esse botão.\nTambém abre pelo botão \"Tire sua dúvida\" do painel \"Como usar esta tela\"."
     },
     {
      "titulo": "Fazer uma pergunta",
@@ -3532,7 +3532,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Trocar minha senha",
-     "texto": "Para trocar a senha quando quiser:\n1. Toque em Trocar senha, no topo da tela (no celular, no botão da chave no topo ou em Trocar minha senha no Início).\n2. Digite a Senha atual.\n3. Digite a senha nova duas vezes e toque em Salvar a senha nova.\n\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados na hora; este aparelho continua dentro. Você recebe um aviso por e-mail. Para desistir, toque em Cancelar (não trocar)."
+     "texto": "Para trocar a senha quando quiser:\n1. Toque em Trocar senha, no topo da tela (no celular, toque em Conta, no canto de cima, à direita, e em Trocar minha senha, ou em Trocar minha senha no Início).\n2. Digite a Senha atual.\n3. Digite a senha nova duas vezes e toque em Salvar a senha nova.\n\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados na hora; este aparelho continua dentro. Você recebe um aviso por e-mail. Para desistir, toque em Cancelar (não trocar)."
     },
     {
      "titulo": "Crie sua nova senha",
@@ -3612,7 +3612,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Trocar minha senha",
-     "texto": "Cada pessoa troca a própria senha em Trocar senha (topo da tela; no celular, o botão da chave ou Trocar minha senha no Início): senha atual e senha nova. As outras sessões dela caem na hora e ela recebe o aviso por e-mail."
+     "texto": "Cada pessoa troca a própria senha em Trocar senha (topo da tela; no celular, Conta > Trocar minha senha, no canto de cima, ou Trocar minha senha no Início): senha atual e senha nova. As outras sessões dela caem na hora e ela recebe o aviso por e-mail."
     },
     {
      "titulo": "Configurar o código no celular",

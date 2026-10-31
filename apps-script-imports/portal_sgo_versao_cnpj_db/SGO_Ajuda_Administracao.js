@@ -199,7 +199,7 @@ function SGO_ajudaTelas_Administracao_() {
         { p: "Qual a diferença entre inativar e excluir?", r: "Inativar bloqueia o acesso e guarda a conta e o histórico; dá para reativar depois. Excluir apaga a conta e não pode ser desfeito. Prefira inativar." },
         { p: "Por que o celular é importante?", r: "O celular é usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Sem ele, a pessoa não recebe esses avisos." },
         { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Mais\" e \"Enviar link de redefinição\" para a pessoa criar uma nova." },
-        { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Quem esqueceu recebe o link (Mais > Enviar link de redefinição). A própria pessoa troca a senha dela em \"Trocar senha\", no topo da tela." },
+        { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Quem esqueceu recebe o link (Mais > Enviar link de redefinição). A própria pessoa troca a senha dela em \"Trocar senha\", no topo da tela (no celular, em \"Conta\" > \"Trocar minha senha\")." },
         { p: "Onde fica o nome de usuário (login)?", r: "Não existe mais para quem usa o sistema: a pessoa entra com o e-mail cadastrado. Por dentro, o sistema guarda um identificador para o histórico antigo, que não aparece em nenhuma tela." },
         { p: "A senha que eu defino aqui vale para sempre?", r: "Não. A senha de uma conta nova, ou a senha provisória de quem não tem e-mail, vale só para o primeiro acesso: a pessoa cria a senha dela (8 caracteres ou mais, letras e números). Exigir a troca de todos, zerar o segundo fator e ver o registro de entradas ficam em Administração > Segurança do acesso." },
         { p: "Por que aparece \"Nunca entrou\" para quem já usou o sistema?", r: "O último acesso vem do registro recente de entradas. Uma entrada muito antiga pode não aparecer. Quando a pessoa entrar de novo, a data é atualizada." },
@@ -745,7 +745,7 @@ function SGO_ajudaTelas_Administracao_() {
       quemPode: [
         { perfil: "ADMIN", pode: "Liga e desliga o código, escolhe os perfis, cadastra o modelo na Meta, exige a troca de todos, exige nova senha e zera o segundo fator de uma pessoa, e consulta o registro." },
         { perfil: "DIRETORIA,GESTOR", pode: "Consulta a situação, as pessoas e o registro de segurança. As alterações são do Administrador." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Entra com o e-mail, troca a própria senha em \"Trocar senha\" (ou quando o sistema pede), usa \"Esqueci minha senha\" na entrada e digita o código que chega no celular ou no e-mail." }
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Entra com o e-mail, troca a própria senha em \"Trocar senha\" (no celular, em \"Conta\" > \"Trocar minha senha\"; ou quando o sistema pede), usa \"Esqueci minha senha\" na entrada e digita o código que chega no celular ou no e-mail." }
       ],
       perguntas: [
         { p: "Como a senha fica guardada?", r: "Nunca em texto: só um resumo forte (PBKDF2 com 600 mil rodadas e sal próprio). Senhas antigas viram o formato forte sozinhas no próximo login certo de cada pessoa." },

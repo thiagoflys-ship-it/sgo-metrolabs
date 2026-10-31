@@ -56,7 +56,7 @@ A lista mostra quem está sem e-mail e os e-mails repetidos (nome, perfil, login
 
 ## Trocar minha senha
 
-Cada pessoa troca a própria senha em **Trocar senha** (topo da tela; no celular, o botão da chave ou Trocar minha senha no Início): senha atual e senha nova. As outras sessões dela caem na hora e ela recebe o aviso por e-mail.
+Cada pessoa troca a própria senha em **Trocar senha** (topo da tela; no celular, Conta > Trocar minha senha, no canto de cima, ou Trocar minha senha no Início): senha atual e senha nova. As outras sessões dela caem na hora e ela recebe o aviso por e-mail.
 
 ## Configurar o código no celular
 

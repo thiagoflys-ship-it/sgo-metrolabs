@@ -882,6 +882,7 @@
     }
     // celular: "Início" (busca, logotipo, atalhos) é a tela inicial do celular, não o painel do computador
     if (mod === "dashboard" && ehMobileModo_()) mod = "mobile_home";
+    try { MenuConta_fechar_(true); } catch (e) {}
     // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
     try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home"); } catch (e) {}
     // Celular: a barra do topo mostra o nome da tela (do menu) antes de o módulo montar; telas que
@@ -4928,8 +4929,76 @@
 
   function atualizarTituloMobile_(texto) {
     const el = document.getElementById("mobileTopbarTitulo");
-    if (el) el.innerText = texto || "Menu";
+    if (el) { el.innerText = texto || "Menu"; el.title = texto || ""; }
   }
+
+  // Celular (31/10/2026): menu "Conta" da barra do topo, com o nome de quem entrou, Trocar minha senha e Sair.
+  // Fecha ao tocar fora, com Esc, ao escolher um item e ao trocar de tela.
+  function MenuConta_alternar_() {
+    const m = document.getElementById("mobileMenuConta");
+    if (!m) return;
+    if (!m.hidden) { MenuConta_fechar_(); return; }
+    const q = document.getElementById("mobileContaQuem");
+    if (q) {
+      const nome = (USER_CONTEXT && USER_CONTEXT.nome) || "";
+      const perfil = (USER_CONTEXT && USER_CONTEXT.perfil) || "";
+      q.innerHTML = nome ? "<b>" + escapeHtml_(nome) + "</b>" + (perfil ? "<span>" + escapeHtml_(perfil) + "</span>" : "") : "";
+      q.hidden = !nome;
+    }
+    m.hidden = false;
+    const b = document.getElementById("mobileBtnConta");
+    if (b) b.setAttribute("aria-expanded", "true");
+    document.addEventListener("pointerdown", MenuConta_fora_, true);
+    document.addEventListener("keydown", MenuConta_tecla_, true);
+    const primeiro = m.querySelector(".mobile-conta-item");
+    if (primeiro) { try { primeiro.focus({ preventScroll: true }); } catch (e) {} }
+  }
+
+  function MenuConta_fechar_(semFoco) {
+    const m = document.getElementById("mobileMenuConta");
+    const b = document.getElementById("mobileBtnConta");
+    document.removeEventListener("pointerdown", MenuConta_fora_, true);
+    document.removeEventListener("keydown", MenuConta_tecla_, true);
+    if (!m || m.hidden) return;
+    m.hidden = true;
+    if (b) { b.setAttribute("aria-expanded", "false"); if (!semFoco) { try { b.focus({ preventScroll: true }); } catch (e) {} } }
+  }
+
+  function MenuConta_fora_(e) {
+    const caixa = document.querySelector(".mobile-conta");
+    if (caixa && !caixa.contains(e.target)) MenuConta_fechar_(true);
+  }
+
+  function MenuConta_tecla_(e) {
+    if (e.key === "Escape") { e.stopPropagation(); MenuConta_fechar_(); }
+  }
+
+  // Botões flutuantes (bate-papo e "Tire sua dúvida") sobem acima de barra fixa no rodapé da tela
+  // (Frota › botão grande do rodapé, "+ Novo cliente" das listas do celular), para não cobrir o botão de ação.
+  // Só mede e grava --sgo-rodape-fixo-h no <html>; nunca redesenha a tela.
+  function SGO_medirRodapeFixo_() {
+    try {
+      const alto = window.innerHeight || document.documentElement.clientHeight;
+      let ocupa = 0;
+      document.querySelectorAll(".fs-barra, .mobile-fab").forEach(function (el) {
+        if (!el.getClientRects().length) return;
+        const st = getComputedStyle(el);
+        if (st.position !== "fixed" || st.visibility === "hidden" || st.display === "none") return;
+        const r = el.getBoundingClientRect();
+        if (r.bottom < alto - 40 || r.height <= 0) return;
+        ocupa = Math.max(ocupa, Math.ceil(alto - r.top));
+      });
+      const raiz = document.documentElement;
+      const antes = raiz.style.getPropertyValue("--sgo-rodape-fixo-h");
+      const agora = ocupa > 0 ? ocupa + "px" : "";
+      if (antes !== agora) {
+        if (agora) raiz.style.setProperty("--sgo-rodape-fixo-h", agora); else raiz.style.removeProperty("--sgo-rodape-fixo-h");
+        raiz.classList.toggle("sgo-tem-rodape-fixo", !!agora);
+      }
+    } catch (e) {}
+  }
+  setInterval(SGO_medirRodapeFixo_, 700);
+  window.addEventListener("resize", SGO_medirRodapeFixo_);
 
   function voltarMobile_() {
     // Limpa o "gancho de retorno" do wizard do Certificado de Calibração —

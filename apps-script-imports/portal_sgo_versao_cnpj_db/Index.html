@@ -304,13 +304,22 @@
 
     </div>
 
+    <!-- Barra do topo do celular (31/10/2026): Voltar, nome da tela numa linha, busca, Ajuda e o menu "Conta"
+         (nome de quem entrou, Trocar minha senha e Sair). O Voltar tem de ser o primeiro filho: no Início ele some
+         (UI_Estilos › .mobile-na-home). Menu: JS_Core › MenuConta_*. -->
     <div class="mobile-topbar">
-      <button type="button" class="mobile-topbar-btn" onclick="voltarMobile_()">← Voltar</button>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-voltar" onclick="voltarMobile_()" aria-label="Voltar" title="Voltar"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Voltar</span></button>
       <div id="mobileTopbarTitulo" class="mobile-topbar-titulo">Menu</div>
-      <button type="button" class="mobile-topbar-btn mobile-topbar-busca" onclick="Busca_abrir_()" aria-label="Buscar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-busca" onclick="Busca_abrir_()" aria-label="Buscar" title="Buscar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
       <button type="button" id="mobileBtnAjuda" class="mobile-topbar-btn mobile-topbar-ajuda" onclick="Ajuda_abrir_()" aria-label="Como usar esta tela" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i><span>Ajuda</span></button>
-      <button type="button" class="mobile-topbar-btn mobile-topbar-senha" onclick="abrir('trocar_senha')" aria-label="Trocar minha senha" title="Trocar minha senha"><i class="fas fa-key" aria-hidden="true"></i></button>
-      <button type="button" class="mobile-topbar-btn mobile-topbar-sair" onclick="logout()">Sair</button>
+      <div class="mobile-conta">
+        <button type="button" id="mobileBtnConta" class="mobile-topbar-btn mobile-topbar-conta" onclick="MenuConta_alternar_()" aria-haspopup="menu" aria-expanded="false" aria-controls="mobileMenuConta" aria-label="Conta: trocar minha senha e sair" title="Conta"><i class="fas fa-ellipsis-vertical" aria-hidden="true"></i><span>Conta</span></button>
+        <div id="mobileMenuConta" class="mobile-conta-menu" role="menu" aria-labelledby="mobileBtnConta" hidden>
+          <div id="mobileContaQuem" class="mobile-conta-quem"></div>
+          <button type="button" role="menuitem" class="mobile-conta-item" onclick="MenuConta_fechar_(true); abrir('trocar_senha')"><i class="fas fa-key" aria-hidden="true"></i>Trocar minha senha</button>
+          <button type="button" role="menuitem" class="mobile-conta-item mobile-conta-sair" onclick="MenuConta_fechar_(true); logout()"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Sair</button>
+        </div>
+      </div>
     </div>
   </div>
 
