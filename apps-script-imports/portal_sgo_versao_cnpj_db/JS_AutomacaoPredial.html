@@ -834,7 +834,7 @@
     el.innerHTML = CadUI_esqueleto_(4);
     AutPred_chamar_("permissoes", {}, function (r) {
       AUTP.perms = r;
-      var opU = r.usuarios.map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '">' + AutPred_esc_(u.nome + " (" + u.login + ", " + u.perfil + (u.dono ? ", responsável pelo sistema" : u.diretor ? ", diretor" : "") + ")") + "</option>"; }).join("");
+      var opU = r.usuarios.map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '">' + AutPred_esc_(u.nome + " (" + u.perfil + (u.dono ? ", responsável pelo sistema" : u.diretor ? ", diretor" : "") + ")") + "</option>"; }).join("");
       var opD = r.dispositivos.map(function (d) { return '<option value="' + AutPred_esc_(d.id) + '">' + AutPred_esc_(d.nome + (d.unidade ? " — " + d.unidade : "") + (d.restrito ? " (porta da Diretoria: só o responsável pelo sistema libera, só para diretores)" : "")) + "</option>"; }).join("");
       var portoesTexto = '<div class="cadx-faixa bc-faixa tom-info"><b>Portões:</b> toda a equipe interna vê, abre e fecha, sem permissão individual. No registro, cada colaborador vê só os próprios comandos; o Administrador e os diretores veem todos.</div>';
       if (!r.dispositivos.length) { el.innerHTML = portoesTexto + '<div class="cadx-sub" style="margin-top:8px">A permissão individual só existe para a porta da Diretoria, e só o responsável pelo sistema concede, a diretores.</div>'; return; }
@@ -849,7 +849,7 @@
         '<div class="cadx-sub">Uma permissão nova substitui a anterior do mesmo usuário.</div></div>';
       h += '<h3 class="aut-unidade">Permissões concedidas</h3>' + (r.permissoes.length ? '<table class="aut-tabela"><thead><tr><th>Usuário</th><th>Dispositivo</th><th>Permissão</th><th>Vigência</th><th>Concedida</th><th>Situação</th><th></th></tr></thead><tbody>' + r.permissoes.map(function (p) {
         var sit = p.status === "ATIVA" ? (p.vencida ? '<span class="cadx-selo bc-selo tom-alerta">Vencida</span>' : '<span class="cadx-selo bc-selo tom-ok">Ativa</span>') : '<span class="cadx-selo bc-selo">Revogada' + (p.revogadaEm ? " em " + AutPred_esc_(p.revogadaEm) : "") + "</span>";
-        return "<tr><td>" + AutPred_esc_(p.usuario) + '<div class="cadx-sub">' + AutPred_esc_(p.login + " · " + p.perfil) + "</div></td><td>" + AutPred_esc_(p.dispositivo) + "</td><td>" + AutPred_esc_(p.permissaoTexto) + "</td><td>" + AutPred_esc_(p.vigenciaFim || "sem data de fim") + "</td><td>" + AutPred_esc_(p.concedidaPor + " em " + p.concedidaEm) + '<div class="cadx-sub">' + AutPred_esc_(p.motivo) + "</div></td><td>" + sit + "</td><td>" +
+        return "<tr><td>" + AutPred_esc_(p.usuario) + '<div class="cadx-sub">' + AutPred_esc_(p.perfil) + "</div></td><td>" + AutPred_esc_(p.dispositivo) + "</td><td>" + AutPred_esc_(p.permissaoTexto) + "</td><td>" + AutPred_esc_(p.vigenciaFim || "sem data de fim") + "</td><td>" + AutPred_esc_(p.concedidaPor + " em " + p.concedidaEm) + '<div class="cadx-sub">' + AutPred_esc_(p.motivo) + "</div></td><td>" + sit + "</td><td>" +
           (p.status === "ATIVA" ? '<button type="button" class="cadx-btn cadx-btn-risco" onclick="AutPred_revogar_(\'' + p.id + '\')">Revogar</button>' : "") + "</td></tr>";
       }).join("") + "</tbody></table>" : '<div class="cadx-sub">Nenhuma permissão concedida.</div>');
       el.innerHTML = h;

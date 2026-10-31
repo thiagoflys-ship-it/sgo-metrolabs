@@ -24,7 +24,7 @@ function SGO_ajudaTelas_ModoPersonalizado_() {
           titulo: "Criar a senha (primeira vez)",
           itens: [
             "Abra Qualificação e inspeção > Modo personalizado.",
-            "No quadro \"Criar minha senha do modo personalizado\", digite a senha em \"Senha nova\" e de novo em \"Confirme a senha\": pelo menos 8 caracteres, com letras e números, sem o seu login.",
+            "No quadro \"Criar minha senha do modo personalizado\", digite a senha em \"Senha nova\" e de novo em \"Confirme a senha\": pelo menos 8 caracteres, com letras e números, sem o seu nome.",
             "Toque em \"Criar minha senha\". O modo abre na hora."
           ]
         },
@@ -85,17 +85,18 @@ function SGO_ajudaTelas_ModoPersonalizado_() {
       problemas: [
         { situacao: "\"O modo personalizado está fechado\"", oQueFazer: "Passaram 30 minutos sem uso ou você saiu do SGO+. Entre de novo com a sua senha nesta tela. Nada foi alterado." },
         { situacao: "\"Entrada bloqueada até hh:mm\"", oQueFazer: "Foram 5 senhas erradas seguidas. Aguarde o horário ou peça ao Administrador para desbloquear em Configurações > Responsáveis técnicos do modo personalizado." },
-        { situacao: "Esqueci a senha do modo personalizado", oQueFazer: "Peça ao Administrador para apagar a sua senha (\"Apagar a senha (esqueceu)\"). Depois, abra esta tela e crie outra." },
+        { situacao: "Esqueci a senha do modo personalizado", oQueFazer: "Toque em \"Esqueci a senha do modo personalizado\" nesta tela: o link vai para o seu e-mail e vale 30 minutos. Ao abrir o link, a senha antiga é apagada; volte a esta tela e crie outra. O Administrador também pode enviar o link (\"Enviar link de senha nova\"). Sem e-mail cadastrado, peça ao Administrador para apagar a senha (\"Apagar a senha agora\")." },
+        { situacao: "O link do e-mail diz \"Este link venceu\" ou \"não vale mais\"", oQueFazer: "O link vale 30 minutos e uma vez só, e pedir outro cancela o anterior. Peça outro link nesta tela." },
         { situacao: "\"Valor fora da faixa permitida\"", oQueFazer: "A faixa é definida na configuração do sistema. Escolha um valor dentro dela; se o protocolo do cliente pedir outro, fale com o Administrador." },
         { situacao: "A emissão do documento foi recusada por causa dos parâmetros personalizados", oQueFazer: "Entre no modo personalizado nesta tela e, na mesma sessão, aprove o documento em \"Aguardando aprovação\" do gerador." },
         { situacao: "\"Os dados ou os critérios mudaram desde o rascunho\"", oQueFazer: "O parâmetro foi ajustado ou restaurado depois do envio. Devolva ao técnico para gerar o rascunho de novo." }
       ],
       quemPode: [
         { perfil: "ADMIN, DIRETORIA, GESTOR, METROLOGIA", pode: "Quando designado responsável técnico e com a própria senha: ajustar e restaurar parâmetros, ver as diferenças do padrão, aprovar documentos com parâmetros personalizados e consultar a auditoria." },
-        { perfil: "ADMIN", pode: "Designar e retirar os responsáveis técnicos do modo personalizado, apagar a senha de quem esqueceu, desbloquear e consultar a auditoria." }
+        { perfil: "ADMIN", pode: "Designar e retirar os responsáveis técnicos do modo personalizado, enviar o link de senha nova a quem esqueceu (ou apagar a senha de quem não tem e-mail), desbloquear e consultar a auditoria." }
       ],
       perguntas: [
-        { p: "O Administrador consegue ver a minha senha do modo personalizado?", r: "Não. A senha é guardada só em forma de resumo com sal. O Administrador pode apenas apagá-la para você criar outra." },
+        { p: "O Administrador consegue ver a minha senha do modo personalizado?", r: "Não. A senha é guardada só em forma de resumo com sal. Quem esqueceu pede um link no próprio e-mail (ou o Administrador envia); ao abrir o link, a senha é apagada e você cria outra." },
         { p: "O ajuste muda documentos já emitidos?", r: "Não. Vale para os documentos gerados depois dele. Os emitidos continuam como estão." },
         { p: "O que o cliente vê no documento?", r: "A seção \"Parâmetros personalizados\", com o parâmetro, o valor de referência e a fonte, o valor usado, a justificativa, quem definiu e quem aprovou a emissão." },
         { p: "O técnico pode emitir sozinho um documento com parâmetro personalizado?", r: "Não. Ele envia para aprovação; só um responsável técnico com o modo aberto emite." }

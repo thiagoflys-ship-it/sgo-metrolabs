@@ -49,6 +49,19 @@
   .sga-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
   .sga-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
   .sga-filtros input, .sga-filtros select { min-height: 38px; }
+  /* 31/10/2026: entrada pelo e-mail, "Esqueci minha senha", link de senha nova e "Trocar minha senha" */
+  .login-esqueci { margin-top: 14px; text-align: center; }
+  .login-esqueci-btn { min-height: 44px; padding: 8px 12px; background: none; border: 0; color: var(--bc-info, #1d4ed8); font-size: 14px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+  .login-esqueci-btn:hover { color: var(--bc-text); }
+  .btn-trocar-senha { margin-right: 6px; }
+  .btn-trocar-senha i { margin-right: 4px; }
+  .mobile-topbar-senha { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .mobile-topbar-senha i { font-size: 17px; }
+  .login-etapa .sga-passos { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--bc-line); border-radius: 4px; background: var(--bc-surface-2, #f6f7f9); font-size: 13px; line-height: 1.55; color: var(--bc-text-2); }
+  .login-etapa .sga-passos b { color: var(--bc-text); }
+  .sga-destaque { border-left: 4px solid var(--danger, #b42318); }
+  .sga-destaque ul { margin: 6px 0 0 18px; padding: 0; }
+  .sga-destaque li { margin: 2px 0; font-size: 13px; }
   @media (max-width: 760px) {
     .sga-tabela thead { display: none; }
     .sga-tabela tr { display: block; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; padding: 8px 10px; }
@@ -238,29 +251,31 @@
   }
 
   // ---------------- etapa da senha nova ----------------
-  /** op: { sessionId, user, pedirAtual, sobre (true = sistema aberto: cobre a tela), motivo } */
+  /** op: { sessionId, user, pedirAtual, sobre (true = sistema aberto: cobre a tela), motivo, voluntaria (Trocar minha senha) } */
   function SegAcesso_abrirTroca_(op) {
     op = op || {};
     SegAcesso_pararTimer_();
-    SGA.etapa = { tipo: "SENHA", sessionId: op.sessionId, user: op.user || {}, pedirAtual: !!op.pedirAtual, sobre: !!op.sobre };
+    SGA.etapa = { tipo: "SENHA", sessionId: op.sessionId, user: op.user || {}, pedirAtual: !!op.pedirAtual, sobre: !!op.sobre, voluntaria: !!op.voluntaria };
     var alvo = SegAcesso_alvo_(!!op.sobre);
     if (!alvo) return;
     var nome = String((op.user && op.user.nome) || op.nome || "").split(" ")[0];
     nome = nome ? nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase() : "";
     alvo.innerHTML =
-      '<h2>Crie sua nova senha</h2>' +
+      (op.voluntaria ? '<h2>Trocar minha senha</h2>' +
+        '<p class="sga-texto">Digite a senha que você usa hoje e escolha a nova. <b>Depois da troca</b>, os outros aparelhos e sessões abertas com a senha antiga são desconectados na hora; este aparelho continua dentro. Enviamos um aviso para o seu e-mail.</p>'
+      : '<h2>Crie sua nova senha</h2>' +
       '<p class="sga-texto">' + (nome ? "Olá, " + SegAcesso_esc_(nome) + ". " : "") + 'Antes de continuar, crie uma senha nova. ' +
-        '<b>Por quê:</b> a gestão do SGO+ pediu a troca da senha para proteger o sistema contra invasões. Nada do sistema abre antes da troca.</p>' +
+        '<b>Por quê:</b> a gestão do SGO+ pediu a troca da senha para proteger o sistema contra invasões. Nada do sistema abre antes da troca.</p>') +
       (op.pedirAtual ? '<label class="sga-rotulo" for="sgaAtual">Senha atual</label><input class="sga-campo" id="sgaAtual" type="password" autocomplete="current-password">' : '') +
       '<label class="sga-rotulo" for="sgaNova">Senha nova</label><input class="sga-campo" id="sgaNova" type="password" autocomplete="new-password" maxlength="128">' +
       '<label class="sga-rotulo" for="sgaConf">Digite a senha nova de novo</label><input class="sga-campo" id="sgaConf" type="password" autocomplete="new-password" maxlength="128">' +
       '<button type="button" class="sga-ver" id="sgaVer" onclick="SegAcesso_verSenhas_()">Mostrar as senhas</button>' +
       '<ul class="sga-regras" id="sgaRegras" aria-live="polite">' +
         '<li data-r="tam">8 caracteres ou mais</li><li data-r="mix">Letras e números juntos</li><li data-r="igual">As duas senhas iguais</li>' +
-        '<li data-r="info" class="info">Diferente da senha atual e difícil de adivinhar (nada de 12345678, do seu nome, do seu login ou do nome da empresa)</li></ul>' +
+        '<li data-r="info" class="info">Diferente da senha atual e difícil de adivinhar (nada de 12345678, do seu nome, do seu e-mail ou do nome da empresa)</li></ul>' +
       '<div class="sga-msg" id="sgaMsg"></div>' +
-      '<button type="button" class="sga-principal" id="sgaSalvar" onclick="SegAcesso_salvarSenha_()">Salvar a senha nova e entrar</button>' +
-      '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_sairDaTroca_()">Sair sem trocar</button></div>' +
+      '<button type="button" class="sga-principal" id="sgaSalvar" onclick="SegAcesso_salvarSenha_()">' + (op.voluntaria ? "Salvar a senha nova" : "Salvar a senha nova e entrar") + '</button>' +
+      '<div class="sga-acoes">' + (op.voluntaria ? '<button type="button" class="sga-secundario" onclick="SegAcesso_fecharEtapas_()">Cancelar (não trocar)</button>' : '<button type="button" class="sga-secundario" onclick="SegAcesso_sairDaTroca_()">Sair sem trocar</button>') + '</div>' +
       '<p class="sga-rodape">Dica: junte duas ou três palavras que só você conhece com alguns números. Não use a mesma senha de outros sites. ' +
         'Depois da troca, os outros aparelhos e sessões abertas com a senha antiga são desconectados.</p>';
     ["sgaNova", "sgaConf"].forEach(function (id) {
@@ -303,9 +318,10 @@
     if (faltas.length) { SegAcesso_msg_(faltas.join(" ")); return; }
     if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
     SegAcesso_msg_("");
+    var rotuloSalvar = et.voluntaria ? "Salvar a senha nova" : "Salvar a senha nova e entrar";
     google.script.run
       .withSuccessHandler(function (res) {
-        if (btn) { btn.disabled = false; btn.textContent = "Salvar a senha nova e entrar"; }
+        if (btn) { btn.disabled = false; btn.textContent = rotuloSalvar; }
         if (res && res.success) {
           var sobre = et.sobre;
           SegAcesso_fecharEtapas_();
@@ -320,7 +336,7 @@
         try { document.getElementById(foco).focus(); } catch (e) {}
       })
       .withFailureHandler(function (err) {
-        if (btn) { btn.disabled = false; btn.textContent = "Salvar a senha nova e entrar"; }
+        if (btn) { btn.disabled = false; btn.textContent = rotuloSalvar; }
         SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e toque de novo; nada foi alterado."));
       })
       .trocarSenhaAcesso(et.sessionId, { senhaAtual: atual, nova: nova, confirmacao: conf });
@@ -350,6 +366,238 @@
   };
 
   // ==========================================================
+  // 31/10/2026 (pedido do dono): "Redefinição de senha e esqueci senha, você tem que implantar, e acho que o usuário
+  // tem que ser o e-mail cadastrado". Servidor: SGO_SegurancaAcesso.js (pedirRedefinicaoSenha, abrirRedefinicaoSenha,
+  // codigoRedefinicaoSenha, concluirRedefinicaoSenha). O token do link nunca fica guardado no navegador: é lido do
+  // endereço (#redefinir=...) e o endereço é limpo na hora.
+  // ==========================================================
+  (function () {
+    try {
+      var m = /[#&]redefinir=([0-9a-f]{64})\b/i.exec(String(location.hash || ""));
+      if (m) {
+        window.SGO_REDEFINIR_TOKEN = m[1].toLowerCase();
+        try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { try { location.hash = ""; } catch (x) {} }
+      }
+    } catch (e) {}
+  })();
+
+  /** Volta do "Esqueci" ou do link para a tela de entrada (e-mail e senha). */
+  function SegAcesso_irEntrada_() {
+    window.SGO_REDEFINIR_TOKEN = "";
+    SGA.red = null;
+    SegAcesso_voltarLogin_();
+    var e = document.getElementById("usuario");
+    if (e && !e.value) { try { e.focus(); } catch (x) {} }
+  }
+
+  // ---------------- Esqueci minha senha ----------------
+  function SegAcesso_abrirEsqueci_() {
+    SegAcesso_pararTimer_();
+    SGA.etapa = { tipo: "ESQUECI" };
+    var alvo = SegAcesso_alvo_(false);
+    if (!alvo) return;
+    var digitado = String((document.getElementById("usuario") || {}).value || "").trim();
+    alvo.innerHTML =
+      '<h2>Esqueci minha senha</h2>' +
+      '<p class="sga-texto">Digite o e-mail cadastrado no SGO+. Enviamos para ele um link para você criar uma senha nova. O link vale por <b>30 minutos</b> e só pode ser usado uma vez.</p>' +
+      '<label class="sga-rotulo" for="sgaEmailEsq">E-mail</label>' +
+      '<input class="sga-campo" id="sgaEmailEsq" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nome@empresa.com.br" value="' + SegAcesso_esc_(digitado.indexOf("@") > 0 ? digitado : "") + '">' +
+      '<div class="sga-msg" id="sgaMsg"></div>' +
+      '<button type="button" class="sga-principal" id="sgaEnviarLink" onclick="SegAcesso_enviarEsqueci_()">Enviar o link</button>' +
+      '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_irEntrada_()">Voltar para a entrada</button></div>' +
+      '<p class="sga-rodape">Não tem e-mail cadastrado ou não consegue abrir o e-mail? Peça à gestão da Metrolabs: ela confere o seu cadastro em Administração &gt; Usuários.</p>';
+    var campo = document.getElementById("sgaEmailEsq");
+    if (campo) {
+      campo.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); SegAcesso_enviarEsqueci_(); } });
+      setTimeout(function () { try { campo.focus(); } catch (e) {} }, 40);
+    }
+  }
+
+  function SegAcesso_enviarEsqueci_() {
+    var campo = document.getElementById("sgaEmailEsq"), btn = document.getElementById("sgaEnviarLink");
+    if (!campo || (btn && btn.disabled)) return;
+    var email = String(campo.value || "").replace(/\s+/g, "").toLowerCase();
+    if (!email) { SegAcesso_msg_("Digite o e-mail cadastrado no SGO+."); try { campo.focus(); } catch (e) {} return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { SegAcesso_msg_("Confira o e-mail digitado: ele precisa ter o formato nome@empresa.com.br."); try { campo.focus(); } catch (e) {} return; }
+    if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+    SegAcesso_msg_("");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (btn) { btn.disabled = false; btn.textContent = "Enviar o link"; }
+        if (!r || !r.success) { SegAcesso_msg_((r && r.message) || "Não foi possível pedir o link agora. Tente de novo em alguns minutos."); return; }
+        var alvo = SegAcesso_alvo_(false);
+        if (!alvo) return;
+        alvo.innerHTML = '<h2>Confira o seu e-mail</h2>' +
+          '<div class="sga-msg is-ok" style="display:block" role="status">' + SegAcesso_esc_(r.message) + '</div>' +
+          '<p class="sga-rodape">O e-mail sai do endereço sistema@metrolabs.com.br, com o assunto "Criar sua senha nova do SGO+". Pedir outro link cancela o anterior.</p>' +
+          '<button type="button" class="sga-principal" onclick="SegAcesso_irEntrada_()">Voltar para a entrada</button>';
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Enviar o link"; }
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e tente de novo."));
+      })
+      .pedirRedefinicaoSenha(email);
+  }
+
+  // ---------------- Link "Criar minha senha nova" ----------------
+  function SegAcesso_abrirRedefinir_() {
+    var token = window.SGO_REDEFINIR_TOKEN;
+    if (!token) return;
+    SegAcesso_pararTimer_();
+    SGA.etapa = { tipo: "REDEFINIR" };
+    var alvo = SegAcesso_alvo_(false);
+    if (!alvo) return;
+    alvo.innerHTML = '<h2>Criar minha senha nova</h2><p class="sga-texto">Conferindo o link...</p>';
+    google.script.run
+      .withSuccessHandler(function (r) { SegAcesso_desenharRedefinir_(r || {}); })
+      .withFailureHandler(function (err) { SegAcesso_desenharRedefinir_({ success: false, etapa: "ERRO", message: String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e abra o link de novo.") }); })
+      .abrirRedefinicaoSenha(token);
+  }
+
+  function SegAcesso_desenharRedefinir_(r, aviso) {
+    var alvo = SegAcesso_alvo_(false), esc = SegAcesso_esc_;
+    if (!alvo) return;
+    SGA.red = r;
+    if (r.etapa === "FIM" && r.success) {
+      window.SGO_REDEFINIR_TOKEN = "";
+      alvo.innerHTML = '<h2>' + (r.tipo === "MP" ? "Senha do modo personalizado liberada" : "Senha nova criada") + '</h2>' +
+        '<div class="sga-msg is-ok" style="display:block" role="status">' + esc(r.message) + '</div>' +
+        '<button type="button" class="sga-principal" onclick="SegAcesso_irEntrada_()">Ir para a entrada</button>';
+      return;
+    }
+    if (r.etapa === "INVALIDO" || r.etapa === "ERRO" || (!r.success && !r.tipo)) {
+      if (r.etapa === "INVALIDO") window.SGO_REDEFINIR_TOKEN = "";
+      alvo.innerHTML = '<h2>' + (r.etapa === "ERRO" ? "Não deu para abrir o link agora" : r.vencido ? "Este link venceu" : "Este link não vale mais") + '</h2>' +
+        '<div class="sga-msg is-erro" style="display:block" role="alert">' + esc(r.message || "Este link não vale mais.") + '</div>' +
+        (r.etapa === "ERRO" ? '<button type="button" class="sga-principal" onclick="SegAcesso_abrirRedefinir_()">Tentar de novo</button>' : '<button type="button" class="sga-principal" onclick="SegAcesso_abrirEsqueci_()">Pedir outro link</button>') +
+        '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_irEntrada_()">Ir para a entrada</button></div>';
+      return;
+    }
+    var ola = r.nome ? "Olá, " + esc(r.nome) + ". " : "";
+    var quem = r.email ? ' (conta ' + esc(r.email) + ')' : "";
+    if (r.etapa === "MP") {
+      alvo.innerHTML = '<h2>Senha do modo personalizado</h2>' +
+        '<p class="sga-texto">' + ola + 'Este link apaga a senha antiga do <b>modo personalizado</b>' + quem + '. Depois, entre no SGO+ e abra Qualificação e inspeção &gt; Modo personalizado para criar a senha nova. A senha de entrada no SGO+ não muda.</p>' +
+        '<div class="sga-msg" id="sgaMsg"></div>' +
+        '<button type="button" class="sga-principal" id="sgaRedSalvar" onclick="SegAcesso_concluirRedefinir_()">Apagar a senha antiga do modo personalizado</button>' +
+        '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_irEntrada_()">Não quero (voltar)</button></div>' +
+        '<p class="sga-rodape">O link vale até ' + esc(r.validoAte) + ' e só pode ser usado uma vez.</p>';
+      if (aviso) SegAcesso_msg_(aviso.texto, aviso.tipo);
+      return;
+    }
+    var codigo = r.etapa === "CODIGO";
+    alvo.innerHTML = '<h2>Criar minha senha nova</h2>' +
+      '<p class="sga-texto">' + ola + (r.daGestao ? 'A gestão da Metrolabs enviou este link para você criar uma senha nova' : 'Crie a sua senha nova') + quem + '. O link vale até <b>' + esc(r.validoAte) + '</b> e só pode ser usado uma vez.</p>' +
+      (codigo ? '<div class="sga-passos"><b>Confirme que é você.</b> O seu acesso pede o código no celular: ' + (r.codigoEnviado ? 'digite o código de 6 números que chegou no ' + esc(r.destino) + '.' : 'toque em "Enviar o código" para receber um código de 6 números no ' + esc(r.destino) + '.') + ' Assim, quem invadir só o seu e-mail não consegue trocar a senha.</div>' +
+        (r.codigoEnviado ? '<label class="sga-rotulo" for="sgaRedCodigo">Código de 6 números</label><input class="sga-campo sga-codigo" id="sgaRedCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*">' +
+          '<div class="sga-acoes"><button type="button" class="sga-secundario" id="sgaRedReenviar" onclick="SegAcesso_codigoRedefinir_(\'\')">Reenviar código</button>' + (r.podeEmail ? '<button type="button" class="sga-secundario" id="sgaRedEmail" onclick="SegAcesso_codigoRedefinir_(\'EMAIL\')">Receber por e-mail</button>' : '') + '</div>'
+          : '<button type="button" class="sga-principal" id="sgaRedEnviarCod" onclick="SegAcesso_codigoRedefinir_(\'\')">Enviar o código</button>') : '') +
+      (!codigo || r.codigoEnviado ?
+        '<label class="sga-rotulo" for="sgaNova">Senha nova</label><input class="sga-campo" id="sgaNova" type="password" autocomplete="new-password" maxlength="128">' +
+        '<label class="sga-rotulo" for="sgaConf">Digite a senha nova de novo</label><input class="sga-campo" id="sgaConf" type="password" autocomplete="new-password" maxlength="128">' +
+        '<button type="button" class="sga-ver" id="sgaVer" onclick="SegAcesso_verSenhas_()">Mostrar as senhas</button>' +
+        '<ul class="sga-regras" id="sgaRegras" aria-live="polite"><li data-r="tam">8 caracteres ou mais</li><li data-r="mix">Letras e números juntos</li><li data-r="igual">As duas senhas iguais</li>' +
+        '<li data-r="info" class="info">Diferente da senha atual e difícil de adivinhar (nada de 12345678, do seu nome, do seu e-mail ou do nome da empresa)</li></ul>' : '') +
+      '<div class="sga-msg" id="sgaMsg"></div>' +
+      (!codigo || r.codigoEnviado ? '<button type="button" class="sga-principal" id="sgaRedSalvar" onclick="SegAcesso_concluirRedefinir_()">Salvar a senha nova</button>' : '') +
+      '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_irEntrada_()">Voltar para a entrada</button></div>' +
+      '<p class="sga-rodape">Depois de salvar, todas as sessões abertas e os aparelhos confiados são desconectados e enviamos um aviso para o seu e-mail. Se não foi você que pediu este link, feche esta página: a senha atual continua valendo.</p>';
+    ["sgaNova", "sgaConf"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", SegAcesso_conferirRegras_);
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); SegAcesso_concluirRedefinir_(); } });
+    });
+    var cod = document.getElementById("sgaRedCodigo");
+    if (cod) cod.addEventListener("input", function () { cod.value = cod.value.replace(/\D/g, "").slice(0, 6); });
+    if (codigo && r.codigoEnviado) SegAcesso_contarReenvioRed_(r.reenviarEmS, r.enviosRestantes);
+    if (aviso) SegAcesso_msg_(aviso.texto, aviso.tipo);
+    setTimeout(function () { var f = document.getElementById(cod ? "sgaRedCodigo" : "sgaNova"); try { if (f) f.focus(); } catch (e) {} }, 40);
+  }
+
+  function SegAcesso_contarReenvioRed_(segundos, restantes) {
+    SegAcesso_pararTimer_();
+    var fim = Date.now() + Math.max(0, Number(segundos) || 0) * 1000;
+    var pintar = function () {
+      var b = document.getElementById("sgaRedReenviar"), e = document.getElementById("sgaRedEmail");
+      if (!b) { SegAcesso_pararTimer_(); return; }
+      var falta = Math.ceil((fim - Date.now()) / 1000);
+      if (restantes === 0) { b.disabled = true; b.textContent = "Envios de código usados"; if (e) e.disabled = true; SegAcesso_pararTimer_(); return; }
+      b.disabled = falta > 0; if (e) e.disabled = falta > 0;
+      b.textContent = falta > 0 ? "Reenviar código (em " + falta + " s)" : "Reenviar código";
+      if (falta <= 0) SegAcesso_pararTimer_();
+    };
+    pintar();
+    SGA.timer = setInterval(pintar, 1000);
+  }
+
+  function SegAcesso_codigoRedefinir_(canal) {
+    var token = window.SGO_REDEFINIR_TOKEN;
+    if (!token) return;
+    ["sgaRedEnviarCod", "sgaRedReenviar", "sgaRedEmail"].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = true; });
+    SegAcesso_msg_("Enviando o código...", "info");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        r = r || {};
+        if (r.etapa === "INVALIDO") { SegAcesso_desenharRedefinir_(r); return; }
+        SegAcesso_desenharRedefinir_(r, { texto: r.message || (r.success ? "Código enviado." : "Não foi possível enviar o código agora."), tipo: r.success ? "ok" : "erro" });
+      })
+      .withFailureHandler(function (err) {
+        ["sgaRedEnviarCod", "sgaRedReenviar", "sgaRedEmail"].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = false; });
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e tente de novo."));
+      })
+      .codigoRedefinicaoSenha(token, { canal: canal || "" });
+  }
+
+  function SegAcesso_concluirRedefinir_() {
+    var token = window.SGO_REDEFINIR_TOKEN, r = SGA.red || {}, btn = document.getElementById("sgaRedSalvar");
+    if (!token || (btn && btn.disabled)) return;
+    var dados = {};
+    if (r.etapa !== "MP") {
+      var cod = document.getElementById("sgaRedCodigo");
+      if (cod) {
+        dados.codigo = String(cod.value || "").replace(/\D/g, "");
+        if (dados.codigo.length !== 6) { SegAcesso_msg_("Digite os 6 números do código que chegou para você."); try { cod.focus(); } catch (e) {} return; }
+      }
+      dados.nova = (document.getElementById("sgaNova") || {}).value || "";
+      dados.confirmacao = (document.getElementById("sgaConf") || {}).value || "";
+      var reg = SegAcesso_conferirRegras_(), faltas = [];
+      if (!reg.tam) faltas.push("A senha nova precisa de 8 caracteres ou mais.");
+      if (!reg.mix) faltas.push("Use letras e números juntos.");
+      if (!reg.espaco) faltas.push("A senha não pode começar nem terminar com espaço.");
+      if (!reg.igual) faltas.push("Digite a mesma senha nova nos dois campos.");
+      if (faltas.length) { SegAcesso_msg_(faltas.join(" ")); return; }
+    }
+    var rotulo = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
+    SegAcesso_msg_("");
+    google.script.run
+      .withSuccessHandler(function (res) {
+        res = res || {};
+        if (btn) { btn.disabled = false; btn.textContent = rotulo; }
+        if (res.success || res.etapa === "INVALIDO") { SegAcesso_pararTimer_(); SegAcesso_desenharRedefinir_(res); return; }
+        // código aceito e senha recusada: a tela volta sem o campo do código (não precisa digitar de novo)
+        if (res.etapa && res.etapa !== (r.etapa || "")) { var nova = dados.nova, conf = dados.confirmacao; SegAcesso_desenharRedefinir_(res, { texto: res.message, tipo: "erro" }); var n = document.getElementById("sgaNova"), c = document.getElementById("sgaConf"); if (n) n.value = nova || ""; if (c) c.value = conf || ""; SegAcesso_conferirRegras_(); return; }
+        SGA.red = Object.assign({}, r, res, { success: true });
+        SegAcesso_msg_(res.message || "Não foi possível salvar. Confira e tente de novo.");
+        var codEl = document.getElementById("sgaRedCodigo");
+        if (codEl && /[Cc]ódigo/.test(res.message || "")) { codEl.value = ""; try { codEl.focus(); } catch (e) {} }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = rotulo; }
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e toque de novo; nada foi alterado."));
+      })
+      .concluirRedefinicaoSenha(token, dados);
+  }
+
+  // ---------------- Trocar minha senha (menu da própria pessoa) ----------------
+  function SegAcesso_abrirTrocarMinha_() {
+    var sid = typeof SGO_getSessionId === "function" ? SGO_getSessionId() : "";
+    if (!sid) { alert("Entre no SGO+ para trocar a senha. Se esqueceu a senha, use \"Esqueci minha senha\" na tela de entrada."); return; }
+    SegAcesso_abrirTroca_({ sessionId: sid, user: (typeof USER_CONTEXT !== "undefined" && USER_CONTEXT) || {}, pedirAtual: true, sobre: true, voluntaria: true });
+  }
+
+  // ==========================================================
   // TELA DA GESTÃO: Administração > Segurança do acesso
   // ==========================================================
   function SegAcessoTela_pode_() {
@@ -372,7 +620,7 @@
     if (!div) return;
     if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Segurança do acesso"); } catch (e) {} }
     if (!SegAcessoTela_pode_()) {
-      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Segurança do acesso</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria e Gestor). Para trocar a sua senha, fale com o administrador do SGO+.</p>' +
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Segurança do acesso</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria e Gestor). Para trocar a sua senha, use \"Trocar minha senha\" no topo da tela (no celular, o botão da chave).</p>' +
         '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
       return;
     }
@@ -385,6 +633,7 @@
           "<li><b>Código no celular</b>: depois da senha certa, o SGO+ manda um código de 6 números (vale 10 minutos, uma vez só). Começa <b>desligado</b>; ligue \"Só e-mail\" ou, depois que a Meta aprovar o modelo, \"WhatsApp com e-mail de reserva\".</li>" +
           "<li><b>Aparelho confiado</b>: quem marca \"Confiar neste aparelho\" não recebe o código naquele aparelho por 30 dias. Trocar a senha ou zerar o segundo fator desconecta todos os aparelhos confiados.</li>" +
           "<li><b>Recuperação</b>: \"Exigir nova senha\" e \"Zerar segundo fator\" pedem o motivo e ficam no registro com o seu nome.</li>" +
+          "<li><b>Entrada pelo e-mail</b>: todos entram com o e-mail cadastrado. Conta sem e-mail ou com e-mail repetido não entra (bloco vermelho no topo). Quem esquece a senha usa \"Esqueci minha senha\": o link vai para o e-mail, vale 30 minutos e uma vez; com o código ligado e celular cadastrado, pede também o código no WhatsApp. A gestão também envia o link em Usuários &gt; Mais ações.</li>" +
           "<li>Ver a tela: Administrador, Diretoria e Gestor. Alterar: Administrador.</li></ul>") : "") +
         '<div id="sgaCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(6) : "Carregando...") + '</div>' +
       '</div>';
@@ -408,12 +657,21 @@
       '<span class="sga-sit ' + (k.semCelular ? "alerta" : "ok") + '">Sem celular válido: ' + k.semCelular + '</span>' +
       '<span class="sga-sit ' + (k.semEmail ? "perigo" : "ok") + '">Sem e-mail válido: ' + k.semEmail + '</span>' +
       '<span class="sga-sit ' + (k.senhaAntiga ? "neutro" : "ok") + '">Senha guardada no formato antigo: ' + k.senhaAntiga + '</span></div>' +
-      (k.semEmail ? '<p class="sga-q">Quem está sem e-mail e sem celular não consegue receber o código: complete o cadastro em Administração &gt; Usuários antes de ligar o código.</p>' : '') +
+      (k.semEmail ? '<p class="sga-q">Quem está sem e-mail <b>não consegue entrar</b> (a entrada é pelo e-mail) nem pedir o link de nova senha: complete o cadastro em Administração &gt; Usuários.</p>' : '') +
       (k.senhaAntiga ? '<p class="sga-q">"Formato antigo" = a senha ainda não foi regravada no formato forte. Isso acontece sozinho no próximo login de cada pessoa.</p>' : '') +
       '</div>';
+    // 31/10/2026 (login pelo e-mail): quem não consegue entrar, em destaque
+    var ent = d.entrada || { semEmail: [], repetidos: [] };
+    if (ent.semEmail.length || ent.repetidos.length) {
+      sit += '<div class="sga-bloco sga-destaque" role="alert"><h3>Não conseguem entrar no SGO+</h3>' +
+        '<p class="sga-q">A entrada é pelo e-mail cadastrado. Conta sem e-mail recebe "Seu acesso precisa de um e-mail cadastrado"; e-mail repetido em duas contas ativas trava as duas até a correção. Corrija em Administração &gt; Usuários.</p>' +
+        (ent.semEmail.length ? '<b>Sem e-mail (' + ent.semEmail.length + ')</b><ul>' + ent.semEmail.map(function (p) { return '<li>' + esc(p.nome) + ' · ' + esc(SGA_ROT_PERFIL[p.perfil] || p.perfil) + '</li>'; }).join("") + '</ul>' : '') +
+        (ent.repetidos.length ? '<b>E-mail repetido (' + ent.repetidos.length + ')</b><ul>' + ent.repetidos.map(function (g) { return '<li>' + esc(g.email) + ': ' + esc(g.contas.map(function (x) { return x.nome; }).join(", ")) + '</li>'; }).join("") + '</ul>' : '') +
+        '<button type="button" class="cadx-btn" onclick="abrir(\'usuarios\')">Abrir Usuários</button></div>';
+    }
 
     var opcoes = ["DESLIGADO", "EMAIL", "WHATSAPP"].map(function (m) {
-      var expl = { DESLIGADO: "As pessoas entram só com usuário e senha (padrão até o modelo da Meta ser aprovado).", EMAIL: "O código vai para o e-mail do cadastro. Funciona sem a Meta.", WHATSAPP: "O código vai pelo WhatsApp oficial para o celular do cadastro; se falhar ou a pessoa não tiver celular, vai por e-mail. Ligue depois que a Meta aprovar o modelo." }[m];
+      var expl = { DESLIGADO: "As pessoas entram só com e-mail e senha (padrão até o modelo da Meta ser aprovado).", EMAIL: "O código vai para o e-mail do cadastro. Funciona sem a Meta.", WHATSAPP: "O código vai pelo WhatsApp oficial para o celular do cadastro; se falhar ou a pessoa não tiver celular, vai por e-mail. Ligue depois que a Meta aprovar o modelo." }[m];
       return '<label><input type="radio" name="sgaModo" value="' + m + '"' + (cfg.modo === m ? " checked" : "") + (pode ? "" : " disabled") + '><span><b>' + esc(d.rotulos[m]) + '</b><br><span class="sga-q">' + esc(expl) + '</span></span></label>';
     }).join("");
     var perfisOp = (d.perfis || []).map(function (p) {
@@ -434,11 +692,11 @@
       '<p class="sga-q">Marca todas as contas ativas (equipe, clientes e representadas). Cada pessoa cria a senha nova no próximo login; quem já está dentro vê a tela em até 5 minutos. Você também vai trocar a sua.</p>' +
       (pode ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="SegAcessoTela_exigirTodos_()">Exigir troca de senha de todos</button>' : '<p class="sga-q">Só o Administrador pode exigir a troca de todos.</p>') + '</div>';
 
-    var pessoas = '<div class="sga-bloco"><h3>Pessoas</h3><input type="search" id="sgaBusca" class="wap-busca" placeholder="Buscar pelo nome ou login" oninput="SegAcessoTela_filtrar_()" aria-label="Buscar pessoa" style="width:100%;max-width:360px;min-height:38px;margin-bottom:10px">' +
+    var pessoas = '<div class="sga-bloco"><h3>Pessoas</h3><input type="search" id="sgaBusca" class="wap-busca" placeholder="Buscar pelo nome ou e-mail" oninput="SegAcessoTela_filtrar_()" aria-label="Buscar pessoa" style="width:100%;max-width:360px;min-height:38px;margin-bottom:10px">' +
       '<div class="table-responsive"><table class="table sga-tabela" id="sgaPessoas"><thead><tr><th>Pessoa</th><th>Perfil</th><th>Senha</th><th>Recebe o código em</th>' + (pode ? '<th>Ações</th>' : '') + '</tr></thead><tbody>' +
       d.pessoas.map(function (p) {
         var onde = [p.celularFinal ? "WhatsApp terminado em " + p.celularFinal : "", p.temEmail ? "e-mail" : ""].filter(Boolean).join(" e ") || '<span class="sga-sit perigo">sem celular e sem e-mail</span>';
-        return '<tr data-busca="' + esc((p.nome + " " + p.usuario).toLowerCase()) + '"><td data-r="Pessoa"><b>' + esc(p.nome) + '</b><div class="sga-q">' + esc(p.usuario) + (p.ativo ? "" : " · inativa") + '</div></td>' +
+        return '<tr data-busca="' + esc((p.nome + " " + (p.email || "")).toLowerCase()) + '"><td data-r="Pessoa"><b>' + esc(p.nome) + '</b><div class="sga-q">' + (p.email ? esc(p.email) : '<span class="sga-sit perigo">sem e-mail: não entra</span>') + (p.ativo ? "" : " · inativa") + '</div></td>' +
           '<td data-r="Perfil">' + esc(SGA_ROT_PERFIL[p.perfil] || p.perfil) + '</td>' +
           '<td data-r="Senha">' + (p.trocaPendente ? '<span class="sga-sit alerta">Troca pendente</span>' : '<span class="sga-sit ok">Em dia</span>') + (p.senhaTrocadaEm ? '<div class="sga-q">trocada em ' + esc(p.senhaTrocadaEm.slice(0, 16)) + '</div>' : '') + '</td>' +
           '<td data-r="Código em">' + onde + '</td>' +
@@ -449,7 +707,7 @@
     var ev = d.eventos || {};
     var reg = '<div class="sga-bloco"><h3>Registro de segurança</h3><div class="sga-filtros">' +
       '<label>Período<select id="sgaDias"><option value="1">Hoje e ontem</option><option value="7" selected>7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select></label>' +
-      '<label>Pessoa (login)<input type="search" id="sgaRegUsuario" placeholder="todas"></label>' +
+      '<label>Pessoa (nome ou e-mail)<input type="search" id="sgaRegUsuario" placeholder="todas"></label>' +
       '<label>Evento<select id="sgaRegEvento"><option value="">Todos</option>' + Object.keys(ev).map(function (e) { return '<option value="' + esc(e) + '">' + esc(ev[e]) + '</option>'; }).join("") + '</select></label>' +
       '<button type="button" class="cadx-btn" onclick="SegAcessoTela_registro_()">Mostrar</button></div><div id="sgaRegistro"></div></div>';
 
@@ -470,7 +728,7 @@
     alvo.innerHTML = '<div class="table-responsive"><table class="table sga-tabela"><thead><tr><th>Quando</th><th>Evento</th><th>Pessoa</th><th>IP e aparelho</th><th>Detalhe</th></tr></thead><tbody>' +
       lista.map(function (l) {
         return '<tr><td data-r="Quando">' + esc(l.quando) + '</td><td data-r="Evento"><span class="sga-sit ' + tom(l.evento) + '">' + esc(l.rotulo) + '</span></td>' +
-          '<td data-r="Pessoa">' + esc(l.usuario || "-") + (l.perfil ? '<div class="sga-q">' + esc(SGA_ROT_PERFIL[l.perfil] || l.perfil) + '</div>' : '') + '</td>' +
+          '<td data-r="Pessoa">' + esc(l.pessoa || l.usuario || "-") + (l.perfil ? '<div class="sga-q">' + esc(SGA_ROT_PERFIL[l.perfil] || l.perfil) + '</div>' : '') + '</td>' +
           '<td data-r="IP e aparelho">' + esc(l.ip || "-") + (l.aparelho ? '<div class="sga-q">' + esc(l.aparelho) + '</div>' : '') + '</td>' +
           '<td data-r="Detalhe">' + esc(l.detalhe) + (l.por ? '<div class="sga-q">por ' + esc(l.por) + '</div>' : '') + '</td></tr>';
       }).join("") + '</tbody></table></div>' + (lista.length >= 500 ? '<p class="sga-q">Mostrando os 500 mais recentes. Diminua o período ou filtre pela pessoa.</p>' : '');

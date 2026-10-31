@@ -618,9 +618,9 @@ function RepI_acessos_(eu, d) {
 function RepI_usuarios_(eu, d) {
   var rid = Rep_s_(d && d.representadaId);
   return { usuarios: Rep_comContasRep_(function () { return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS); }).filter(function (u) { return Rep_up_(u.PERFIL) === 'REPRESENTADA' && (!rid || Rep_s_(u.REPRESENTADA_ID) === rid); })
-    .map(function (u) { var p = Rep_up_(u.REPRESENTACAO_PAPEL); return { id: Rep_s_(u.ID), nome: Rep_s_(u.NOME), login: Rep_s_(u.USUARIO), email: Rep_s_(u.EMAIL), papel: (REP_PAPEIS[p] || REP_PAPEIS.LEITURA).nome,
+    .map(function (u) { var p = Rep_up_(u.REPRESENTACAO_PAPEL); return { id: Rep_s_(u.ID), nome: Rep_s_(u.NOME), email: Rep_s_(u.EMAIL).replace(/\s+/g, '').toLowerCase(), papel: (REP_PAPEIS[p] || REP_PAPEIS.LEITURA).nome,
       representada: Rep_s_((Rep_representada_(u.REPRESENTADA_ID) || {}).NOME), situacao: Rep_up_(u.STATUS || 'ATIVO') }; }),
-    message: 'Os acessos da representada são criados e inativados em Administração > Usuários (perfil "Representada", com a representada e o papel).' };
+    message: 'Os acessos da representada são criados e inativados em Administração > Usuários (perfil "Representada", com a representada e o papel). A pessoa entra com o e-mail; quem esquecer a senha usa "Esqueci minha senha" na tela de entrada, ou a Metrolabs envia o link de redefinição em Usuários.' };
 }
 
 var REP_ACOES_INTERNAS = {

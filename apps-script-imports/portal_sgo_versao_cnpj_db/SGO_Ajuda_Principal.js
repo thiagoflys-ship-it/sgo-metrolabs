@@ -15,7 +15,8 @@ function SGO_ajudaTelas_Principal_() {
       titulo: "Início",
       paraQueServe: "Mostra, logo ao entrar, o que depende de você hoje: pendências, vencimentos, a situação da frota e o farol do Programa de Conduta. Abaixo ficam os números do sistema, os últimos documentos e os gráficos.",
       antesDeComecar: [
-        "Entre no SGO+ com o seu usuário e senha.",
+        "Entre no SGO+ com o seu e-mail cadastrado e a senha. Esqueceu a senha? Toque em \"Esqueci minha senha\" na tela de entrada: o link para criar a senha nova chega no seu e-mail.",
+        "Para trocar a sua senha quando quiser, toque em \"Trocar senha\" no topo da tela (no celular, no botão da chave ou em \"Trocar minha senha\" no Início).",
         "Para voltar ao Início de qualquer tela, toque em \"Início\" no menu, no grupo Principal, ou no logotipo SGO+ no alto, à esquerda.",
         "Os números chegam do servidor em alguns segundos. Enquanto isso aparecem \"···\" e \"Carregando...\".",
         "O que cada pessoa vê depende do perfil. Veja a seção \"Quem pode\"."
@@ -149,7 +150,7 @@ function SGO_ajudaTelas_Principal_() {
       titulo: "Início do celular",
       paraQueServe: "É a tela inicial no celular. Mostra as suas pendências, o farol da conduta, a situação da frota e atalhos grandes para as telas mais usadas. As demais telas ficam em \"Outras telas\".",
       antesDeComecar: [
-        "Entre no SGO+ pelo navegador do celular com o seu usuário e senha.",
+        "Entre no SGO+ pelo navegador do celular com o seu e-mail cadastrado e a senha.",
         "A tela de celular aparece no celular, em pé ou deitado, e em janelas estreitas. Ao girar o aparelho, o SGO+ ajusta a tela sozinho.",
         "Na barra do topo ficam \"← Voltar\", o nome da tela, a lupa da busca, \"Ajuda\" e \"Sair\". No Início não há \"← Voltar\". Toque em \"Ajuda\" em qualquer tela para ver o passo a passo dela."
       ],

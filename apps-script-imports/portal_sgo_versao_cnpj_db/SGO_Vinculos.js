@@ -413,7 +413,7 @@ const SGO_VINCULOS = (() => {
     for(let i=rows.length-1;i>=0;i--){
       const r=rows[i],op=text(r[1]);
       if(!op)continue;
-      if(!ops[op]){if(order.length>=max)continue;ops[op]={operacao:op,data:text(r[11]),usuario:text(r[2]),motivo:text(r[3]),acao:text(r[4]),origemId:text(r[5]),alteracoes:[],documentos:0};order.push(op);}
+      if(!ops[op]){if(order.length>=max)continue;ops[op]={operacao:op,data:text(r[11]),usuario:(typeof SGO_nomeDoLogin_==='function'?SGO_nomeDoLogin_(text(r[2])):text(r[2])),motivo:text(r[3]),acao:text(r[4]),origemId:text(r[5]),alteracoes:[],documentos:0};order.push(op);}
       const it={tabela:text(r[6]),registro:text(r[7]),campo:text(r[8]),antes:text(r[9]),depois:text(r[10])};
       if(it.campo==='__DELETE__'){try{const o=JSON.parse(it.antes);it.antes=label(o);}catch(_){}}
       ops[op].alteracoes.push(it);

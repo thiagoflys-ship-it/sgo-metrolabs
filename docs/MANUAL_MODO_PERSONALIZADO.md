@@ -46,7 +46,7 @@ A senha é guardada só como resumo (SHA-256 com sal e 2.000 repetições). Ning
 - **Cinco senhas erradas seguidas** bloqueiam a entrada por 15 minutos. O Administrador pode desbloquear.
 - **Sair do modo:** toque em **Sair do modo**.
 - **Trocar a senha:** **Trocar minha senha**, digite a atual, a nova e a confirmação.
-- **Esqueceu a senha:** peça ao Administrador para tocar em **Apagar a senha (esqueceu)** na sua linha; depois crie outra.
+- **Esqueceu a senha:** toque em **Esqueci a senha do modo personalizado**. O link vai para o seu e-mail e vale 30 minutos; ao abrir, a senha antiga é apagada e você cria outra nesta tela. O Administrador também pode enviar o link (**Enviar link de senha nova (esqueceu)** na sua linha). Sem e-mail cadastrado, o Administrador usa **Apagar a senha agora (sem e-mail)**.
 
 ## 5. Ajustar e restaurar
 

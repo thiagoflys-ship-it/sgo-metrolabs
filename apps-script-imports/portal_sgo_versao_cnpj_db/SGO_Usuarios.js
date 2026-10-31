@@ -225,12 +225,14 @@ const SGO_USUARIOS = (() => {
     const negado = exigirAdminParaContaAdmin_(sessao, dados.PERFIL, "cadastrar");
     if (negado) return { success: false, message: negado };
 
-    if (existeUsuarioDuplicado_(dados.USUARIO, "")) {
-      return { success: false, message: "Já existe uma conta com este nome de usuário (login)." };
-    }
+    // 31/10/2026 (login pelo e-mail): o e-mail é a identidade e precisa ser único; o identificador interno (USUARIO)
+    // é gerado a partir dele e não aparece para ninguém.
+    const dupEmail = contaComEmail_(dados.EMAIL, "");
+    if (dupEmail) return { success: false, message: mensagemEmailRepetido_(dupEmail) };
+    if (!dados.USUARIO) dados.USUARIO = gerarLoginInterno_(dados.EMAIL);
 
-    if (existeEmailDuplicado_(dados.EMAIL, "")) {
-      return { success: false, message: "Já existe outra conta usando este e-mail." };
+    if (existeUsuarioDuplicado_(dados.USUARIO, "")) {
+      return { success: false, message: "Não foi possível cadastrar agora: o identificador interno gerado já existe. Tente salvar de novo." };
     }
 
     // 31/10/2026 (segurança do acesso): a senha que a gestão define é provisória — a pessoa cria a dela no 1º login
@@ -257,11 +259,12 @@ const SGO_USUARIOS = (() => {
 
     SGO_DATA.insert(SHEET_NAME, registro);
     // Módulo corrigido
-    SGO_DATA.log("USUARIOS_CRIAR", sessao.usuario, "Usuário criado: " + registro.USUARIO + " (perfil " + registro.PERFIL + ")", "USUARIOS");
+    SGO_DATA.log("USUARIOS_CRIAR", sessao.usuario, "Usuário criado: " + registro.NOME + " <" + registro.EMAIL + "> (perfil " + registro.PERFIL + ", login interno " + registro.USUARIO + ")", "USUARIOS");
 
     return {
       success: true,
-      message: "Usuário cadastrado com sucesso. A senha informada é provisória: no primeiro login a pessoa cria a senha dela."
+      email: registro.EMAIL,
+      message: "Usuário cadastrado com sucesso. A pessoa entra com o e-mail " + registro.EMAIL + " e a senha inicial, que é provisória: no primeiro acesso ela cria a senha dela."
     };
   }
 
@@ -284,10 +287,12 @@ const SGO_USUARIOS = (() => {
     payload = payload || {};
     const normal = normalizarPayload_(payload);
     // Merge: campo ausente no pedido mantém o valor atual (não apaga).
-    const dados = SGO_DATA.mesclarCampos_(atual, normal, payload, ["USUARIO", "NOME", "PERFIL", "CLIENTE_ID", "REPRESENTADA_ID", "REPRESENTACAO_PAPEL", "EMAIL"]);
-    dados.USUARIO = SGO_UTILS.safeLower(dados.USUARIO);
+    const dados = SGO_DATA.mesclarCampos_(atual, normal, payload, ["NOME", "PERFIL", "CLIENTE_ID", "REPRESENTADA_ID", "REPRESENTACAO_PAPEL", "EMAIL"]);
+    // 31/10/2026 (login pelo e-mail): o identificador interno (USUARIO) não muda na edição — histórico, auditoria,
+    // Frota, Conduta e avisos guardam o login; trocar quebraria as referências. Conta antiga sem ele ganha um agora.
+    dados.USUARIO = SGO_UTILS.safeLower(atual.USUARIO) || gerarLoginInterno_(dados.EMAIL || atual.EMAIL);
     dados.PERFIL = SGO_UTILS.safeUpper(dados.PERFIL);
-    dados.EMAIL = SGO_UTILS.safeLower(dados.EMAIL);
+    dados.EMAIL = emailNormal_(dados.EMAIL);
     dados.SENHA = normal.SENHA;
     dados.CELULAR = normal.CELULAR;
     dados.VINCULO_TRABALHO = normal.VINCULO_TRABALHO;
@@ -306,17 +311,17 @@ const SGO_USUARIOS = (() => {
       return { success: false, message: "Não foi possível salvar: este é o único Administrador ativo. Cadastre (ou reative) outro Administrador antes de mudar o perfil deste." };
     }
 
-    if (existeUsuarioDuplicado_(dados.USUARIO, usuarioId)) {
-      return { success: false, message: "Já existe outra conta usando este nome de usuário (login)." };
-    }
-
-    if (existeEmailDuplicado_(dados.EMAIL, usuarioId)) {
-      return { success: false, message: "Já existe outra conta usando este e-mail." };
-    }
+    const dupEmail = contaComEmail_(dados.EMAIL, usuarioId);
+    if (dupEmail) return { success: false, message: mensagemEmailRepetido_(dupEmail) };
 
     // 31/10/2026 (segurança do acesso): senha redefinida pela gestão para OUTRA pessoa é provisória (troca obrigatória
     // no próximo login) e derruba as sessões e os aparelhos confiados dela; a própria senha trocada aqui não marca.
     const senhaDeOutro = !!dados.SENHA && usuarioId !== SGO_UTILS.safe(sessao.userId);
+    // 31/10/2026 (pedido do dono, redefinição pelo e-mail): a senha provisória fica só para quem NÃO tem e-mail válido.
+    // Quem tem e-mail recebe o link ("Enviar link de redefinição"): a gestão não fica sabendo a senha de ninguém.
+    if (senhaDeOutro && emailValido_(atual.EMAIL)) {
+      return { success: false, message: "Esta pessoa tem e-mail cadastrado: use \"Enviar link de redefinição\" (Mais ações). A senha provisória fica só para quem não tem e-mail." };
+    }
     if (dados.SENHA && typeof SegAcesso_garantirEstrutura_ === "function") SegAcesso_garantirEstrutura_();
     // Object.assign sobre o registro atual: colunas que outros módulos
     // acrescentem em CAD_USUARIOS ficam como estão.
@@ -348,7 +353,9 @@ const SGO_USUARIOS = (() => {
     const mudouPerfil = SGO_UTILS.safeUpper(atual.PERFIL) !== dados.PERFIL;
     SGO_DATA.log("USUARIOS_ATUALIZAR", sessao.usuario, "Usuário atualizado ID=" + usuarioId + (dados.SENHA ? " (senha trocada)" : "") + (mudouPerfil ? " (perfil " + SGO_UTILS.safeUpper(atual.PERFIL) + " -> " + dados.PERFIL + ")" : ""), "USUARIOS");
 
-    if (senhaDeOutro && typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("TROCA_EXIGIDA", { ID: usuarioId, USUARIO: dados.USUARIO, PERFIL: dados.PERFIL }, null, "Senha redefinida pela gestão em Usuários (provisória: a pessoa cria a dela no próximo login).", SGO_UTILS.safe(sessao.usuario));
+    if (senhaDeOutro && typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("TROCA_EXIGIDA", { ID: usuarioId, USUARIO: dados.USUARIO, PERFIL: dados.PERFIL }, null, "Senha provisória definida pela gestão em Usuários (conta sem e-mail; a pessoa cria a dela no próximo login).", SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario));
+    // as sessões abertas com a senha antiga caem na hora (antes, em até 5 minutos pela versão de segurança)
+    if (senhaDeOutro && typeof SegAcesso_derrubarSessoes_ === "function") SegAcesso_derrubarSessoes_(usuarioId, "", "");
     return {
       success: true,
       message: "Usuário atualizado com sucesso." + (mudouPerfil ? " O novo perfil vale para esta pessoa em até 5 minutos (ou no próximo login)." : "") +
@@ -391,6 +398,11 @@ const SGO_USUARIOS = (() => {
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista." };
     const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "reativar");
     if (negado) return { success: false, message: negado };
+    // 31/10/2026 (login pelo e-mail): duas contas ativas com o mesmo e-mail não entram; não reativa por cima de outra
+    const outraAtiva = emailValido_(atual.EMAIL) ? SGO_DATA.getAll(SHEET_NAME).filter(function (r) {
+      return SGO_UTILS.safe(r.ID) !== usuarioId && SGO_UTILS.safeUpper(r.STATUS) === STATUS_ATIVO && emailNormal_(r.EMAIL) === emailNormal_(atual.EMAIL);
+    })[0] : null;
+    if (outraAtiva) return { success: false, message: "Não foi possível reativar: o e-mail desta conta (" + emailNormal_(atual.EMAIL) + ") já é da conta ativa de " + SGO_UTILS.safe(outraAtiva.NOME) + ". O e-mail é a entrada no SGO+ e não pode ficar em duas contas ativas. O que fazer: troque o e-mail de uma delas (Editar) e reative de novo." };
 
     const ok = SGO_DATA.update(SHEET_NAME, usuarioId, { STATUS: STATUS_ATIVO });
     if (!ok) return { success: false, message: "Não foi possível reativar." };
@@ -419,8 +431,29 @@ const SGO_USUARIOS = (() => {
     const ok = SGO_DATA.remove(SHEET_NAME, usuarioId);
     if (!ok) return { success: false, message: "Não foi possível excluir." };
 
-    SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Usuário excluído ID=" + usuarioId + " (" + SGO_UTILS.safe(atual.USUARIO) + ", perfil " + SGO_UTILS.safeUpper(atual.PERFIL) + ")", "USUARIOS");
+    SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Usuário excluído ID=" + usuarioId + " (" + SGO_UTILS.safe(atual.NOME) + ", login interno " + SGO_UTILS.safe(atual.USUARIO) + ", perfil " + SGO_UTILS.safeUpper(atual.PERFIL) + ")", "USUARIOS");
     return { success: true, message: "Usuário excluído com sucesso." };
+  }
+
+  /**
+   * 31/10/2026 (pedido do dono): a gestão envia o link de redefinição de senha para o e-mail da pessoa (30 minutos, uso
+   * único; com o código no celular quando o perfil exige). Motivo obrigatório (fica no registro de segurança). Mesmas
+   * permissões de "redefinir senha": rotina da empresa e conta de Administrador/Diretoria só por quem pode.
+   */
+  function enviarLinkRedefinicao(sessionId, id, motivo) {
+    const sessao = exigirSessao(sessionId);
+    verificarPermissaoAdmin_(sessao);
+    const usuarioId = SGO_UTILS.safe(id);
+    const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
+    if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista." };
+    const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "enviar o link");
+    if (negado) return { success: false, message: negado };
+    const m = SGO_UTILS.safe(motivo);
+    if (m.length < 5) return { success: false, message: "Escreva o motivo (pelo menos 5 letras). Ele fica no registro de segurança com o seu nome." };
+    if (typeof SegAcesso_enviarLinkGestao_ !== "function") return { success: false, message: "A redefinição por link não está disponível neste sistema. Atualize a página (F5)." };
+    const r = SegAcesso_enviarLinkGestao_(usuarioId, m.slice(0, 300), sessao, "SENHA");
+    SGO_DATA.log("USUARIOS_LINK_SENHA", sessao.usuario, "Link de redefinição de senha enviado para " + SGO_UTILS.safe(atual.NOME) + " (" + r.destino + "). Motivo: " + m.slice(0, 300), "USUARIOS");
+    return { success: true, message: "Link enviado para o e-mail " + r.destino + ". Ele vale por 30 minutos e só pode ser usado uma vez. A senha atual de " + SGO_UTILS.safe(atual.NOME).split(" ")[0] + " continua valendo até a senha nova ser criada." };
   }
 
   function pesquisar(sessionId, termo) {
@@ -440,7 +473,7 @@ const SGO_USUARIOS = (() => {
     if (!q) return { success: true, items: base, total: base.length };
 
     const filtrados = base.filter(function (r) {
-      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR, r.VINCULO_TRABALHO, r.AREA].some(v => SGO_UTILS.safeLower(v).includes(q));
+      return [r.EMAIL, r.NOME, r.PERFIL, r.STATUS, r.CELULAR, r.VINCULO_TRABALHO, r.AREA].some(v => SGO_UTILS.safeLower(v).includes(q));
     });
 
     return { success: true, items: filtrados, total: filtrados.length };
@@ -463,14 +496,16 @@ const SGO_USUARIOS = (() => {
   function normalizarPayload_(payload) {
     payload = payload || {};
     return {
-      USUARIO: SGO_UTILS.safeLower(payload.USUARIO),
+      // 31/10/2026: não vem mais da tela; a criação gera a partir do e-mail (gerarLoginInterno_) e a edição mantém o atual
+      USUARIO: SGO_UTILS.safeLower(payload.USUARIO).replace(/\s+/g, ""),
       SENHA: SGO_UTILS.safe(payload.SENHA), // Removido o Trim da senha para permitir espaços, se o usuário quiser.
       NOME: SGO_UTILS.safeUpper(payload.NOME), // Força o nome completo para maiúsculo
       PERFIL: SGO_UTILS.safeUpper(payload.PERFIL),
       CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
       REPRESENTADA_ID: SGO_UTILS.safe(payload.REPRESENTADA_ID),
       REPRESENTACAO_PAPEL: SGO_UTILS.safeUpper(payload.REPRESENTACAO_PAPEL),
-      EMAIL: SGO_UTILS.safeLower(payload.EMAIL).trim(),
+      // 31/10/2026 (login pelo e-mail): minúsculas e sem nenhum espaço (é a chave de entrada)
+      EMAIL: emailNormal_(payload.EMAIL),
       // Sem a chave CELULAR no pedido = "não mexer" (undefined), não "apagar".
       CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined,
       // Mesma regra: sem a chave = não mexer; "" = não informado; null = valor inválido.
@@ -482,7 +517,8 @@ const SGO_USUARIOS = (() => {
 
   function validarPayload_(dados, isEdicao) {
     const erros = [];
-    if (!dados.USUARIO) erros.push("Login é obrigatório.");
+    // 31/10/2026: o identificador interno (USUARIO) é gerado pelo sistema; a tela não pede mais "login"
+    if (isEdicao && !dados.USUARIO) erros.push("Não foi possível salvar: a conta está sem identificador interno e sem e-mail. Informe o e-mail.");
     if (!dados.NOME) erros.push("Nome completo é obrigatório.");
     if (!isEdicao && !dados.SENHA) erros.push("Senha é obrigatória para novos usuários.");
     if (!dados.PERFIL) {
@@ -498,9 +534,9 @@ const SGO_USUARIOS = (() => {
       if (["ADMIN", "ATENDENTE", "FINANCEIRO", "LEITURA"].indexOf(dados.REPRESENTACAO_PAPEL) < 0) erros.push("Escolha o papel na representada (administrador, atendente, financeiro de garantia ou leitura).");
     }
     if (!dados.EMAIL) {
-      erros.push("E-mail é obrigatório — usado como identidade do usuário no Portal.");
-    } else if (dados.EMAIL.indexOf("@") === -1 || dados.EMAIL.indexOf(".") === -1) {
-      erros.push("E-mail inválido.");
+      erros.push("E-mail é obrigatório: é com ele que a pessoa entra no SGO+ e recebe o link para criar a senha.");
+    } else if (!emailValido_(dados.EMAIL)) {
+      erros.push("E-mail inválido: confira o formato (nome@empresa.com.br).");
     }
     if (dados.AREA === null) {
       erros.push("Área inválida: escolha uma das áreas da lista (Administração > Usuários > Áreas) ou deixe Sem área.");
@@ -521,14 +557,35 @@ const SGO_USUARIOS = (() => {
     return registros.some(r => SGO_UTILS.safeLower(r.USUARIO) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado));
   }
 
-  function existeEmailDuplicado_(email, idIgnorado) {
-    const alvo = SGO_UTILS.safeLower(email);
-    if (!alvo) return false;
-    const registros = SGO_DATA.getAll(SHEET_NAME);
-    return registros.some(r => SGO_UTILS.safeLower(r.EMAIL) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado));
+  /* 31/10/2026 (login pelo e-mail): e-mail comparado sem diferenciar maiúsculas e sem espaços, em TODAS as contas
+     (inclusive inativas: quem volta é reativado, não cadastrado de novo). */
+  function emailNormal_(v) { return String(v === null || v === undefined ? "" : v).replace(/\s+/g, "").toLowerCase(); }
+  function emailValido_(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormal_(v)); }
+
+  /** Outra conta (não idIgnorado) com o mesmo e-mail, ou null. */
+  function contaComEmail_(email, idIgnorado) {
+    const alvo = emailNormal_(email);
+    if (!alvo) return null;
+    return SGO_DATA.getAll(SHEET_NAME).filter(function (r) { return emailNormal_(r.EMAIL) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado); })[0] || null;
+  }
+  function mensagemEmailRepetido_(outra) {
+    const ativa = SGO_UTILS.safeUpper(outra.STATUS) === STATUS_ATIVO;
+    return "Este e-mail já é da conta de " + (SGO_UTILS.safe(outra.NOME) || "outra pessoa") + (ativa ? "" : " (inativa)") + ". O e-mail é a entrada no SGO+ e não pode ficar em duas contas. " +
+      (ativa ? "O que fazer: use outro e-mail ou corrija a conta que já existe." : "O que fazer: reative a conta que já existe (Mais > Reativar) ou troque o e-mail dela antes.");
   }
 
-  return { listar, obter, criar, atualizar, inativar, reativar, excluir, pesquisar, listarClientesAtivos };
+  /** Identificador interno (CAD_USUARIOS.USUARIO) a partir do e-mail: a parte antes do @, sem acento, com número se já existe. */
+  function gerarLoginInterno_(email) {
+    let base = String(emailNormal_(email).split("@")[0] || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9._-]/g, "").slice(0, 40);
+    if (!base) base = "usuario";
+    const usados = {};
+    SGO_DATA.getAll(SHEET_NAME).forEach(function (r) { usados[SGO_UTILS.safeLower(r.USUARIO)] = true; });
+    if (!usados[base]) return base;
+    for (let n = 2; n < 1000; n++) if (!usados[base + n]) return base + n;
+    return base + "." + Date.now();
+  }
+
+  return { listar, obter, criar, atualizar, inativar, reativar, excluir, pesquisar, listarClientesAtivos, enviarLinkRedefinicao, emailNormal_: emailNormal_, emailValido_: emailValido_ };
 })();
 
 /* =========================
@@ -542,6 +599,7 @@ function usuariosInativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { re
 function usuariosReativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosExcluir(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosPesquisar(sessionId, termo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+function usuariosEnviarLinkRedefinicao(sessionId, id, motivo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.enviarLinkRedefinicao(sessionId, id, motivo))); } catch(e) { return { success: false, message: String((e && e.message) || e) }; } }
 function usuariosListarClientesAtivos(sessionId) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 
 /* =========================
@@ -647,11 +705,26 @@ function usuariosPainel(sessionId) {
     var representadas = {}, listaRepresentadas = [];
     try { SGO_DATA.getAll("REP_REPRESENTADAS").forEach(function (r) { representadas[SGO_UTILS.safe(r.ID)] = SGO_UTILS.safe(r.NOME); if (SGO_UTILS.safeUpper(r.SITUACAO || "ATIVA") === "ATIVA") listaRepresentadas.push({ ID: SGO_UTILS.safe(r.ID), NOME: SGO_UTILS.safe(r.NOME) }); }); } catch (eRep) {}
     var ativosAdmin = (base.items || []).filter(function (u) { return SGO_UTILS.safeUpper(u.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO"; }).length;
+    // 31/10/2026 (login pelo e-mail): e-mails das contas ATIVAS, para mostrar em destaque quem não consegue entrar
+    var eN = SGO_USUARIOS.emailNormal_, eV = SGO_USUARIOS.emailValido_;
+    var ativosPorEmail = {};
+    (base.items || []).forEach(function (u) {
+      if (SGO_UTILS.safeUpper(u.STATUS) !== "ATIVO" || SGO_UTILS.safeUpper(u.PERFIL) === "AUVO_SYNC" || !eV(u.EMAIL)) return;
+      (ativosPorEmail[eN(u.EMAIL)] = ativosPorEmail[eN(u.EMAIL)] || []).push({ id: SGO_UTILS.safe(u.ID), nome: SGO_UTILS.safe(u.NOME) });
+    });
     var itens = (base.items || []).map(function (u) {
       var o = {};
-      Object.keys(u).forEach(function (k) { if (k !== "SENHA") { var v = u[k]; o[k] = Object.prototype.toString.call(v) === "[object Date]" ? v.toISOString() : v; } });
+      // o identificador interno (USUARIO) não vai para a tela: a pessoa é o nome e o e-mail
+      Object.keys(u).forEach(function (k) { if (k !== "SENHA" && k !== "USUARIO") { var v = u[k]; o[k] = Object.prototype.toString.call(v) === "[object Date]" ? v.toISOString() : v; } });
       var perfil = SGO_UTILS.safeUpper(u.PERFIL);
       o.ULTIMO_ACESSO = acessos[SGO_UTILS.safeLower(u.USUARIO)] || "";
+      o.EMAIL = eN(u.EMAIL);
+      o.TECNICA = perfil === "AUVO_SYNC";
+      o.SEM_EMAIL = !o.TECNICA && !eV(u.EMAIL);
+      var mesmos = !o.TECNICA && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && eV(u.EMAIL) ? (ativosPorEmail[eN(u.EMAIL)] || []) : [];
+      o.EMAIL_REPETIDO_COM = mesmos.filter(function (x) { return x.id !== SGO_UTILS.safe(u.ID); }).map(function (x) { return x.nome; });
+      // conta do responsável pelo sistema não entra no "Sem área" (antes a tela comparava o login "admin")
+      o.IGNORAR_AREA = SGO_UTILS.safeLower(u.USUARIO) === "admin";
       o.CLIENTE_NOME = perfil === "CLIENTE" ? (clientes[SGO_UTILS.safe(u.CLIENTE_ID)] || "") : "";
       o.REPRESENTADA_NOME = perfil === "REPRESENTADA" ? (representadas[SGO_UTILS.safe(u.REPRESENTADA_ID)] || "") : "";
       o.SEM_CELULAR = !String(u.CELULAR || "").replace(/\D/g, "");

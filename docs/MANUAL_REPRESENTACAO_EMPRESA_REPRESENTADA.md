@@ -8,7 +8,7 @@ Nesta área você pede atendimento técnico da Metrolabs para os clientes finais
 
 ## 2. Entrar
 
-- Abra o endereço do SGO+ informado pela Metrolabs e entre com o seu usuário e a sua senha.
+- Abra o endereço do SGO+ informado pela Metrolabs e entre com o seu e-mail e a sua senha. Se esquecer a senha, toque em **Esqueci minha senha**: o link para criar a senha nova chega no seu e-mail.
 - O acesso é pessoal. Não compartilhe a senha. Tudo o que é feito fica registrado com o seu nome, a data e a hora.
 - Para incluir ou tirar uma pessoa da sua equipe, ou para trocar a senha, escreva para a Metrolabs no Canal geral.
 

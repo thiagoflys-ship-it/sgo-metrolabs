@@ -928,7 +928,10 @@ function Frota_apiListarUsuariosParaVinculo(sessionId) {
   });
 
   var itens = todos.items
-    .filter(function(u) { return SGO_UTILS.safeUpper(u.STATUS) !== 'INATIVO' && !vinculados[SGO_UTILS.safe(u.ID)]; });
+    .filter(function(u) { return SGO_UTILS.safeUpper(u.STATUS) !== 'INATIVO' && !vinculados[SGO_UTILS.safe(u.ID)]; })
+    // 31/10/2026 (login pelo e-mail): a lista da tela mostra "NOME (campo USUARIO)"; o login interno não aparece mais,
+    // então o campo vai com o e-mail da pessoa (só a lista de escolha usa este campo; o vínculo é pelo ID).
+    .map(function(u) { return { ID: u.ID, NOME: u.NOME, PERFIL: u.PERFIL, STATUS: u.STATUS, USUARIO: String(u.EMAIL || '').replace(/\s+/g, '').toLowerCase() || 'sem e-mail' }; });
   return { ok: true, items: itens };
 }
 

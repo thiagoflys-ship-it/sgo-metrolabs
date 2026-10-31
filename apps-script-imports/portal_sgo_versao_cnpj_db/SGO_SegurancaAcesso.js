@@ -35,6 +35,21 @@
  * 4. REGISTRO DE SEGURANÇA: aba SYS_SEGURANCA_ACESSO (quem, quando, evento, IP, aparelho, detalhe, por quem).
  *    Nunca guarda senha, código nem token.
  *
+ * 5. ENTRADA PELO E-MAIL E "ESQUECI MINHA SENHA" (31/10/2026, pedido do dono: "Redefinição de senha e esqueci senha, você
+ *    tem que implantar, e acho que o usuário tem que ser o e-mail cadastrado"):
+ *    - login(e-mail, senha) em SGO_Auth.js; o nome de usuário (CAD_USUARIOS.USUARIO) fica só por dentro.
+ *    - pedirRedefinicaoSenha(e-mail): resposta SEMPRE igual ("Se o e-mail estiver cadastrado, enviamos um link"). O link
+ *      (#redefinir=<token> na URL pública do sistema) leva um token aleatório de 32 bytes; aqui fica só o resumo SHA-256
+ *      (SEGA_RED_<resumo>), uso único, 30 minutos, um link vivo por pessoa (o novo apaga o anterior). Limite: 3 pedidos por
+ *      e-mail por hora (aqui) e por conexão (servidor, limiteLogin.ts).
+ *    - Ao abrir o link: se o perfil exige o código e o modo é WhatsApp com celular válido, pede também o código no
+ *      WhatsApp (reserva por e-mail): só invadir o e-mail não basta. Depois, a senha nova com as regras de sempre.
+ *    - Concluir: grava a senha, derruba TODAS as sessões e aparelhos confiados da pessoa, avisa por e-mail ("sua senha foi
+ *      alterada; se não foi você, avise a gestão") e grava no registro.
+ *    - A gestão envia o link em Administração > Usuários ("Enviar link de redefinição", com motivo). O link do tipo MP
+ *      (Modo personalizado) apaga a senha do modo personalizado para a pessoa criar outra (SGO_ModoPersonalizado.js).
+ *    - Trocar minha senha (menu da pessoa): trocarSenhaAcesso com a senha atual; derruba as outras sessões dela.
+ *
  * Tela: Administração > Segurança do acesso (JS_SegurancaAcesso.html), pela função SegAcesso_api.
  * Nenhuma função devolve Date ao navegador: só texto.
  ****************************************************/
@@ -71,7 +86,12 @@ var SEGA_EVENTOS = {
   CODIGO_DISPENSADO: 'Sem código (aparelho confiado ou liberação)', APARELHO_CONFIADO: 'Aparelho confiado por 30 dias',
   SENHA_TROCADA: 'Senha trocada', SENHA_TROCA_FALHA: 'Troca de senha recusada', TROCA_EXIGIDA: 'Troca de senha exigida',
   TROCA_EXIGIDA_TODOS: 'Troca de senha exigida de todos', SEGUNDO_FATOR_ZERADO: 'Segundo fator zerado',
-  CONFIG_ALTERADA: 'Configuração alterada', RECUPERACAO: 'Acesso recuperado pelo servidor', MODELO_META: 'Modelo da Meta'
+  CONFIG_ALTERADA: 'Configuração alterada', RECUPERACAO: 'Acesso recuperado pelo servidor', MODELO_META: 'Modelo da Meta',
+  // 31/10/2026: "esqueci minha senha" e redefinição pelo link
+  REDEFINICAO_PEDIDA: 'Pediu o link de nova senha', REDEFINICAO_LINK_ENVIADO: 'Link de nova senha enviado', REDEFINICAO_IGNORADA: 'Pedido de link sem envio',
+  REDEFINICAO_LINK_GESTAO: 'Link de nova senha enviado pela gestão', REDEFINICAO_LINK_INVALIDO: 'Link de nova senha vencido ou usado',
+  REDEFINICAO_CODIGO_ENVIADO: 'Código do link enviado', REDEFINICAO_CODIGO_ERRADO: 'Código do link errado', REDEFINICAO_CONCLUIDA: 'Senha redefinida pelo link',
+  REDEFINICAO_MP_CONCLUIDA: 'Senha do modo personalizado liberada pelo link', SESSOES_DERRUBADAS: 'Sessões e aparelhos desconectados'
 };
 
 // ------------------------------------------------------------
@@ -441,7 +461,7 @@ function SegAcesso_enviarCodigo_(u, codigo, cfg, preferir) {
 // ------------------------------------------------------------
 // FUNÇÕES DO NAVEGADOR (login)
 // ------------------------------------------------------------
-var SEGA_MSG_DESAFIO_VENCIDO = 'Este código não vale mais. Por quê: cada login tem até 30 minutos para receber e digitar o código, e ele só pode ser usado uma vez. O que fazer: toque em "Voltar" e entre de novo com o usuário e a senha.';
+var SEGA_MSG_DESAFIO_VENCIDO = 'Este código não vale mais. Por quê: cada login tem até 30 minutos para receber e digitar o código, e ele só pode ser usado uma vez. O que fazer: toque em "Voltar" e entre de novo com o e-mail e a senha.';
 
 /** Confere o código. Certo = cria a sessão (e o aparelho confiado, se pedido). ctx vem do servidor. */
 function verificarCodigoAcesso(desafioId, codigo, confiar, ctx) {
@@ -456,7 +476,7 @@ function verificarCodigoAcesso(desafioId, codigo, confiar, ctx) {
       if (Date.now() > Number(d.expiraMs)) {
         SegAcesso_registrar_('CODIGO_VENCIDO', u || { ID: d.userId }, c, 'Código digitado depois de 10 minutos.');
         var podeReenviar = (Number(d.reenvios) || 0) < SEGA_MAX_REENVIOS;
-        if (!podeReenviar) { SegAcesso_apagarDesafio_(d.id); return { success: false, etapa: 'LOGIN', message: 'O código venceu (ele vale 10 minutos) e este login já usou os 3 reenvios. O que fazer: toque em "Voltar" e entre de novo com o usuário e a senha.' }; }
+        if (!podeReenviar) { SegAcesso_apagarDesafio_(d.id); return { success: false, etapa: 'LOGIN', message: 'O código venceu (ele vale 10 minutos) e este login já usou os 3 reenvios. O que fazer: toque em "Voltar" e entre de novo com o e-mail e a senha.' }; }
         return { success: false, etapa: 'CODIGO', message: 'O código venceu: ele vale 10 minutos. O que fazer: toque em "Reenviar código" para receber outro.', vencido: true, reenviarEmS: 0 };
       }
       if (!textosIguaisAuth_(SegAcesso_sha256_(d.id + ':' + digitado), d.codigoHash)) {
@@ -465,7 +485,7 @@ function verificarCodigoAcesso(desafioId, codigo, confiar, ctx) {
         if (restam <= 0) {
           SegAcesso_apagarDesafio_(d.id);
           SegAcesso_registrar_('CODIGO_BLOQUEADO', u || { ID: d.userId }, c, '5 códigos errados: login cancelado.');
-          return { success: false, etapa: 'LOGIN', message: 'Código errado 5 vezes. Por segurança, este login foi cancelado. O que fazer: toque em "Voltar" e entre de novo com o usuário e a senha para receber um código novo. Se não foi você, troque a sua senha.' };
+          return { success: false, etapa: 'LOGIN', message: 'Código errado 5 vezes. Por segurança, este login foi cancelado. O que fazer: toque em "Voltar" e entre de novo com o e-mail e a senha para receber um código novo. Se não foi você, troque a sua senha.' };
         }
         SegAcesso_guardarDesafio_(d);
         SegAcesso_registrar_('CODIGO_ERRADO', u || { ID: d.userId }, c, 'Restam ' + restam + ' tentativa(s).');
@@ -488,7 +508,7 @@ function verificarCodigoAcesso(desafioId, codigo, confiar, ctx) {
       return resp;
     })));
   } catch (e) {
-    return { success: false, etapa: 'CODIGO', message: 'Não foi possível conferir o código agora. Tente de novo em alguns segundos; se continuar, volte e entre de novo com o usuário e a senha.' };
+    return { success: false, etapa: 'CODIGO', message: 'Não foi possível conferir o código agora. Tente de novo em alguns segundos; se continuar, volte e entre de novo com o e-mail e a senha.' };
   }
 }
 
@@ -502,7 +522,7 @@ function reenviarCodigoAcesso(desafioId, opcoes, ctx) {
       if (!d) return { success: false, etapa: 'LOGIN', message: SEGA_MSG_DESAFIO_VENCIDO };
       var espera = Math.ceil((Number(d.ultimoEnvioMs) + SEGA_REENVIO_ESPERA_MS - Date.now()) / 1000);
       if (espera > 0) return { success: false, etapa: 'CODIGO', message: 'Aguarde ' + espera + ' segundo' + (espera > 1 ? 's' : '') + ' para pedir outro código.', reenviarEmS: espera };
-      if ((Number(d.reenvios) || 0) >= SEGA_MAX_REENVIOS) return { success: false, etapa: 'CODIGO', message: 'Você já pediu 3 códigos novos neste login. O que fazer: use o último código que chegou ou toque em "Voltar" e entre de novo com o usuário e a senha.', reenviosRestantes: 0 };
+      if ((Number(d.reenvios) || 0) >= SEGA_MAX_REENVIOS) return { success: false, etapa: 'CODIGO', message: 'Você já pediu 3 códigos novos neste login. O que fazer: use o último código que chegou ou toque em "Voltar" e entre de novo com o e-mail e a senha.', reenviosRestantes: 0 };
       var u = SegAcesso_usuarioPorId_(d.userId);
       if (!u || u.STATUS !== SGO_CFG.STATUS.ATIVO) { SegAcesso_apagarDesafio_(d.id); return { success: false, etapa: 'LOGIN', message: 'Usuário inativo ou bloqueado. Contate o administrador.' }; }
       var preferir = SegAcesso_txt_(opcoes.canal).toUpperCase() === 'EMAIL' ? 'EMAIL' : '';
@@ -555,6 +575,9 @@ function SegAcesso_senhaObvia_(nova, u) {
   if (/^(.)\1+$/.test(s) || s.indexOf('metrolabs') >= 0) return true;
   var login = SegAcesso_semAcento_(u && u.USUARIO).replace(/[^a-z0-9]/g, '');
   if (login.length >= 3 && s.replace(/[^a-z0-9]/g, '').indexOf(login) >= 0) return true;
+  // 31/10/2026: a entrada é pelo e-mail: a parte antes do @ também conta como óbvia
+  var caixa = SegAcesso_semAcento_(String((u && u.EMAIL) || '').split('@')[0]).replace(/[^a-z0-9]/g, '');
+  if (caixa.length >= 4 && s.replace(/[^a-z0-9]/g, '').indexOf(caixa) >= 0) return true;
   var partes = SegAcesso_semAcento_(u && u.NOME).split(/[^a-z]+/).filter(function (p) { return p.length >= 4; });
   if (partes.some(function (p) { return s.indexOf(p) >= 0; })) return true;
   var letras = s.replace(/[^a-z]/g, ''), numeros = s.replace(/[^0-9]/g, '');
@@ -574,7 +597,7 @@ function SegAcesso_validarNovaSenha_(nova, confirmacao, u) {
   if (!/[A-Za-zÀ-ÿ]/.test(nova) || !/\d/.test(nova)) e.push('Use letras e números juntos (por exemplo, duas palavras e alguns números).');
   if (confirmacao !== nova) e.push('A confirmação não é igual à senha nova: digite a mesma senha nos dois campos.');
   if (u && u.SENHA && verificarSenhaAuth_(nova, u.SENHA)) e.push('A senha nova precisa ser diferente da atual.');
-  else if (nova.length >= 8 && SegAcesso_senhaObvia_(nova, u)) e.push('Esta senha é fácil de adivinhar (sequência, repetição, o seu nome, o seu login ou o nome da empresa). Escolha outra.');
+  else if (nova.length >= 8 && SegAcesso_senhaObvia_(nova, u)) e.push('Esta senha é fácil de adivinhar (sequência, repetição, o seu nome, o seu e-mail ou o nome da empresa). Escolha outra.');
   return e;
 }
 
@@ -589,7 +612,7 @@ function trocarSenhaAcesso(sessionId, dados, ctx) {
     var sid = SegAcesso_txt_(sessionId);
     return JSON.parse(JSON.stringify(SegAcesso_travar_(function () {
       var sess = sid ? lerSessaoAuth_(sid) : null;
-      if (!sess || sessaoExpiradaAuth_(sess)) return { success: false, etapa: 'LOGIN', message: 'Sua sessão terminou antes da troca. O que fazer: entre de novo com o usuário e a senha atual; a tela "Crie sua nova senha" aparece em seguida.' };
+      if (!sess || sessaoExpiradaAuth_(sess)) return { success: false, etapa: 'LOGIN', message: 'Sua sessão terminou antes da troca. O que fazer: entre de novo com o e-mail e a senha atual; a tela "Crie sua nova senha" aparece em seguida.' };
       var pendente = sess.pendente === 'TROCA_SENHA';
       SegAcesso_garantirEstrutura_();
       var u = SegAcesso_usuarioPorId_(sess.userId);
@@ -600,7 +623,7 @@ function trocarSenhaAcesso(sessionId, dados, ctx) {
           SegAcesso_registrar_('SENHA_TROCA_FALHA', u, c, 'Senha atual errada (' + sess.errosSenhaAtual + ' de ' + SEGA_MAX_ERROS_SENHA_ATUAL + ').');
           if (sess.errosSenhaAtual >= SEGA_MAX_ERROS_SENHA_ATUAL) {
             removerSessaoAuth_(sid);
-            return { success: false, etapa: 'LOGIN', message: 'A senha atual não conferiu 5 vezes. Por segurança, a sessão foi encerrada. O que fazer: entre de novo com o usuário e a senha; se esqueceu a senha, peça ao administrador para redefinir.' };
+            return { success: false, etapa: 'LOGIN', message: 'A senha atual não conferiu 5 vezes. Por segurança, a sessão foi encerrada. O que fazer: entre de novo com o e-mail e a senha; se esqueceu a senha, use \"Esqueci minha senha\" na tela de entrada.' };
           }
           salvarSessaoAuth_(sess);
           return { success: false, message: 'A senha atual não confere. Digite a senha que você usa hoje para entrar. Restam ' + (SEGA_MAX_ERROS_SENHA_ATUAL - sess.errosSenhaAtual) + ' tentativa(s).', campo: 'atual' };
@@ -623,6 +646,10 @@ function trocarSenhaAcesso(sessionId, dados, ctx) {
       sess.segVersao = novaVersao;
       sess.conferidoEm = new Date().toISOString();
       salvarSessaoAuth_(sess);
+      // 31/10/2026: as outras sessões caem na hora (antes, em até 5 minutos pela versão) e o e-mail avisa a pessoa
+      var derrubadas = SegAcesso_derrubarSessoes_(u.ID, sid, manteveAparelho ? sess.aparelhoHash : '');
+      SegAcesso_avisarSenhaAlterada_(u, c, pendente ? 'troca obrigatória no login' : 'troca feita pela própria pessoa (Trocar minha senha)');
+      if (derrubadas.sessoes || derrubadas.aparelhos) SegAcesso_registrar_('SESSOES_DERRUBADAS', u, c, derrubadas.sessoes + ' sessão(ões) e ' + derrubadas.aparelhos + ' aparelho(s) confiado(s) desconectados na troca da senha.');
       registrarLogAuth_('SENHA_TROCADA', { usuario: u.USUARIO, perfil: u.PERFIL, detalhe: pendente ? 'Troca obrigatória concluída.' : 'Troca feita pela própria pessoa.' });
       SegAcesso_registrar_('SENHA_TROCADA', u, c, (pendente ? 'Troca obrigatória concluída.' : 'Troca feita pela própria pessoa.') + ' Outros aparelhos confiados e sessões foram desconectados.');
       var r = {
@@ -636,6 +663,371 @@ function trocarSenhaAcesso(sessionId, dados, ctx) {
   } catch (e) {
     return { success: false, message: 'Não foi possível trocar a senha agora. Nada foi alterado: tente de novo em alguns segundos.' };
   }
+}
+
+// ------------------------------------------------------------
+// SESSÕES E APARELHOS DE UMA PESSOA (31/10/2026): derrubar na hora
+// ------------------------------------------------------------
+/**
+ * Encerra as sessões da pessoa (menos `exceto`) e apaga os aparelhos confiados dela (menos o `aparelhoMantido`).
+ * Antes a troca de senha derrubava as outras sessões em até 5 minutos (versão de segurança); agora é na hora.
+ * Devolve { sessoes, aparelhos }. Nunca lança.
+ */
+function SegAcesso_derrubarSessoes_(userId, exceto, aparelhoMantido) {
+  var r = { sessoes: 0, aparelhos: 0 };
+  var alvo = SegAcesso_txt_(userId);
+  if (!alvo) return r;
+  try {
+    var todas = SegAcesso_props_().getProperties() || {};
+    Object.keys(todas).forEach(function (k) {
+      if (k.indexOf('SGO_SESSION_') === 0) {
+        var sid = k.slice('SGO_SESSION_'.length);
+        if (exceto && sid === exceto) return;
+        var d = null; try { d = JSON.parse(todas[k]); } catch (e) { d = null; }
+        if (d && SegAcesso_txt_(d.userId) === alvo) { removerSessaoAuth_(sid); r.sessoes++; }
+      } else if (k.indexOf('SEGA_APR_') === 0) {
+        if (aparelhoMantido && k === SegAcesso_chaveAparelho_(aparelhoMantido)) return;
+        var a = null; try { a = JSON.parse(todas[k]); } catch (e) { a = null; }
+        if (a && SegAcesso_txt_(a.u) === alvo) { SegAcesso_props_().deleteProperty(k); r.aparelhos++; }
+      }
+    });
+  } catch (e) {
+    // sem a lista das propriedades, a versão de segurança derruba as sessões em até 5 minutos (como antes)
+  }
+  return r;
+}
+
+/** E-mail "sua senha foi alterada; se não foi você, avise a gestão". Sem e-mail no cadastro, não envia. Nunca lança. */
+function SegAcesso_avisarSenhaAlterada_(u, ctx, como) {
+  var email = SegAcesso_email_(u);
+  if (!email) return false;
+  try {
+    var nome = SegAcesso_primeiroNome_(u.NOME), quando = Utilities.formatDate(new Date(), SEGA_FUSO, "dd/MM/yyyy 'às' HH:mm");
+    var onde = SegAcesso_descreverAgente_(ctx && ctx.agente);
+    var texto = (nome ? 'Olá, ' + nome + '.' : 'Olá.') + '\n\n' +
+      'A senha da sua conta do SGO+ (' + email + ') foi alterada em ' + quando + ' (horário de Brasília)' + (onde ? ', em ' + onde : '') + '. Como: ' + como + '.\n\n' +
+      'Se foi você, não precisa fazer nada. Por segurança, as sessões abertas com a senha antiga e os aparelhos confiados foram desconectados.\n\n' +
+      'Se NÃO foi você, avise a gestão da Metrolabs agora: alguém pode estar usando o seu acesso.\n\nMetrolabs · SGO+';
+    var html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1f2937;max-width:520px">' +
+      '<p>' + (nome ? 'Olá, ' + SegAcesso_html_(nome) + '.' : 'Olá.') + '</p>' +
+      '<p>A senha da sua conta do SGO+ (<b>' + SegAcesso_html_(email) + '</b>) foi alterada em <b>' + quando + '</b> (horário de Brasília)' + (onde ? ', em ' + SegAcesso_html_(onde) : '') + '. Como: ' + SegAcesso_html_(como) + '.</p>' +
+      '<p>Se foi você, não precisa fazer nada. Por segurança, as sessões abertas com a senha antiga e os aparelhos confiados foram desconectados.</p>' +
+      '<p style="padding:10px 12px;border:1px solid #f0c36d;background:#fff8e6;border-radius:4px"><b>Se não foi você</b>, avise a gestão da Metrolabs agora: alguém pode estar usando o seu acesso.</p>' +
+      '<p style="color:#6b7280;font-size:13px">Metrolabs · SGO+</p></div>';
+    MailApp.sendEmail({ to: email, subject: 'Sua senha do SGO+ foi alterada', body: texto, htmlBody: html, name: 'SGO+ Metrolabs' });
+    return true;
+  } catch (e) { return false; }
+}
+
+function SegAcesso_html_(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// ------------------------------------------------------------
+// ESQUECI MINHA SENHA E LINK DE REDEFINIÇÃO (31/10/2026)
+// ------------------------------------------------------------
+var SEGA_RED_VALIDADE_MS = 30 * 60 * 1000;
+var SEGA_RED_MAX_POR_HORA = 3;
+var SEGA_RED_MAX_ENVIOS_CODIGO = 4; // o primeiro e mais 3 reenvios
+var SEGA_MSG_RED_PEDIDO = 'Se o e-mail estiver cadastrado, enviamos um link para criar uma senha nova. Ele vale por 30 minutos e só pode ser usado uma vez. ' +
+  'O que fazer: abra o seu e-mail (veja também o lixo eletrônico) e toque no link "Criar minha senha nova". Se nada chegar em alguns minutos, confira o e-mail digitado ou peça ajuda à gestão da Metrolabs.';
+var SEGA_MSG_RED_USADO = 'Este link não vale mais. Por quê: ele já foi usado ou foi trocado por um link mais novo (cada link só vale uma vez, e pedir outro cancela o anterior). ' +
+  'O que fazer: use o link do e-mail mais recente ou, na tela de entrada, toque em "Esqueci minha senha" e peça outro.';
+var SEGA_MSG_RED_VENCIDO = 'Este link venceu. Por quê: o link de nova senha vale por 30 minutos depois do pedido. O que fazer: na tela de entrada, toque em "Esqueci minha senha" e peça outro link; ele chega no mesmo e-mail.';
+
+function SegAcesso_chaveRed_(hash) { return 'SEGA_RED_' + hash; }
+function SegAcesso_chaveRedPessoa_(id, tipo) { return 'SEGA_REDU_' + (tipo === 'MP' ? 'MP_' : '') + id; }
+function SegAcesso_chaveRedLimite_(email) { return 'SEGA_REDL_' + SegAcesso_sha256_('limite:' + email).slice(0, 40); }
+
+/** Contas ATIVAS com este e-mail (sem a conta técnica), no formato da sessão e com a SENHA à parte. */
+function SegAcesso_contasPorEmail_(email) {
+  var alvo = emailLoginAuth_(email);
+  if (!alvo) return [];
+  var antes = typeof SGO_DATA_REP_VISIVEL === 'undefined' ? false : SGO_DATA_REP_VISIVEL;
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) {
+      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_foraDoFluxo_(r.PERFIL) && emailLoginAuth_(r.EMAIL) === alvo;
+    }).map(function (r) { var u = usuarioParaSessaoAuth_(r); u.SENHA = r.SENHA; return u; });
+  } finally { SGO_DATA_REP_VISIVEL = antes; }
+}
+
+/** true = o e-mail já fez 3 pedidos na última hora. Com `contar`, conta este pedido (se couber). */
+function SegAcesso_limitePedidos_(email, contar) {
+  var k = SegAcesso_chaveRedLimite_(email), agora = Date.now();
+  var lista = (SegAcesso_lerJson_(k) || []).filter(function (t) { return agora - Number(t) < 3600000; });
+  var cheio = lista.length >= SEGA_RED_MAX_POR_HORA;
+  if (contar && !cheio) lista.push(agora);
+  if (lista.length) SegAcesso_props_().setProperty(k, JSON.stringify(lista)); else SegAcesso_props_().deleteProperty(k);
+  return cheio;
+}
+
+/** Endereço público do link: https://<domínio do sistema>/#redefinir=<token> ("" sem endereço configurado). O token vai depois do
+ *  "#": não chega ao servidor nem aos registros de acesso e não vai como "Referer" para outros sites. */
+function SegAcesso_urlLink_(token) {
+  var base = '';
+  try { base = String(ScriptApp.getService().getUrl() || ''); } catch (e) { base = ''; }
+  base = base.replace(/[?#].*$/, '').replace(/^(https?:\/\/[^\/]+).*$/i, '$1');
+  if (!/^https?:\/\/[^\/]+$/i.test(base)) return '';
+  return base + '/#redefinir=' + token;
+}
+
+/** E-mail com o link. dados: { origem: 'PESSOA' | 'GESTAO', porNome, tipo }. */
+function SegAcesso_emailLink_(email, url, u, ctx, dados, tipo) {
+  var nome = SegAcesso_primeiroNome_(u.NOME), quando = Utilities.formatDate(new Date(), SEGA_FUSO, "dd/MM/yyyy 'às' HH:mm");
+  var mp = tipo === 'MP', gestao = dados.origem === 'GESTAO';
+  var oQue = mp ? 'liberar uma senha nova do modo personalizado' : 'criar uma senha nova para entrar no SGO+';
+  var origem = gestao ? 'A gestão da Metrolabs' + (dados.porNome ? ' (' + dados.porNome + ')' : '') + ' enviou este link para você ' + oQue + '.' :
+    'Recebemos um pedido para ' + oQue + ' na sua conta (' + email + ').';
+  var botao = mp ? 'Liberar a senha nova do modo personalizado' : 'Criar minha senha nova';
+  var texto = (nome ? 'Olá, ' + nome + '.' : 'Olá.') + '\n\n' + origem + '\n\n' +
+    botao + ': ' + url + '\n\n' +
+    'O link vale por 30 minutos e só pode ser usado uma vez.' + (mp ? '' : ' Se o seu acesso pede o código no celular, ele também vai ser pedido.') + '\n\n' +
+    'Se não foi você que pediu, ignore este e-mail: a sua senha atual continua valendo. Se receber vários e-mails assim sem ter pedido, avise a gestão da Metrolabs.\n\n' +
+    'Pedido feito em ' + quando + ' (horário de Brasília).\nMetrolabs · SGO+';
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1f2937;max-width:520px">' +
+    '<p>' + (nome ? 'Olá, ' + SegAcesso_html_(nome) + '.' : 'Olá.') + '</p><p>' + SegAcesso_html_(origem) + '</p>' +
+    '<p style="margin:22px 0"><a href="' + SegAcesso_html_(url) + '" style="display:inline-block;background:#1f6b2a;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:4px">' + botao + '</a></p>' +
+    '<p>O link vale por <b>30 minutos</b> e só pode ser usado uma vez.' + (mp ? '' : ' Se o seu acesso pede o código no celular, ele também vai ser pedido.') + '</p>' +
+    '<p>Se o botão não abrir, copie este endereço no navegador:<br><span style="font-family:Consolas,monospace;font-size:12.5px;word-break:break-all;color:#374151">' + SegAcesso_html_(url) + '</span></p>' +
+    '<p>Se não foi você que pediu, ignore este e-mail: a sua senha atual continua valendo. Se receber vários e-mails assim sem ter pedido, avise a gestão da Metrolabs.</p>' +
+    '<p style="color:#6b7280;font-size:13px">Pedido feito em ' + quando + ' (horário de Brasília).<br>Metrolabs · SGO+</p></div>';
+  try {
+    MailApp.sendEmail({ to: email, subject: mp ? 'Senha nova do modo personalizado do SGO+' : 'Criar sua senha nova do SGO+', body: texto, htmlBody: html, name: 'SGO+ Metrolabs' });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, motivo: 'e-mail não saiu (' + String((e && e.message) || e).slice(0, 160) + ')', message: 'Não foi possível enviar o e-mail com o link agora. Tente de novo em alguns minutos.' };
+  }
+}
+
+/**
+ * Cria o link (um vivo por pessoa e tipo: o novo cancela o anterior) e manda o e-mail.
+ * dados: { origem: 'PESSOA'|'GESTAO', por, porNome, motivo, tipo: 'SENHA'|'MP' }. Devolve { ok, destino } ou { ok:false, message }.
+ */
+function SegAcesso_criarLinkRedefinicao_(u, ctx, dados) {
+  dados = dados || {};
+  var tipo = dados.tipo === 'MP' ? 'MP' : 'SENHA';
+  var email = SegAcesso_email_(u);
+  if (!email) return { ok: false, motivo: 'sem e-mail válido no cadastro', message: 'Esta conta não tem e-mail válido cadastrado. O que fazer: cadastre o e-mail em Administração > Usuários (ou use a senha provisória, para quem não tem e-mail).' };
+  var token = SegAcesso_hex_(32), hash = SegAcesso_sha256_(token);
+  var url = SegAcesso_urlLink_(token);
+  if (!url) return { ok: false, motivo: 'endereço público do sistema não configurado', message: 'Não foi possível montar o link: o endereço público do SGO+ não está configurado neste servidor. Avise o administrador do SGO+.' };
+  var props = SegAcesso_props_(), chaveP = SegAcesso_chaveRedPessoa_(u.ID, tipo);
+  var anterior = SegAcesso_txt_(props.getProperty(chaveP));
+  if (anterior) props.deleteProperty(SegAcesso_chaveRed_(anterior));
+  props.setProperty(SegAcesso_chaveRed_(hash), JSON.stringify({
+    id: 'RED_' + hash.slice(0, 32), u: SegAcesso_txt_(u.ID), v: SegAcesso_versao_(u), tipo: tipo, exp: Date.now() + SEGA_RED_VALIDADE_MS, em: SegAcesso_agora_(),
+    origem: dados.origem === 'GESTAO' ? 'GESTAO' : 'PESSOA', por: SegAcesso_txt_(dados.por).slice(0, 120), ip: SegAcesso_txt_(ctx && ctx.ip), tentativas: 0, envios: 0
+  }));
+  props.setProperty(chaveP, hash);
+  var envio = SegAcesso_emailLink_(email, url, u, ctx, dados, tipo);
+  if (!envio.ok) { props.deleteProperty(SegAcesso_chaveRed_(hash)); props.deleteProperty(chaveP); return envio; }
+  return { ok: true, destino: SegAcesso_mascararEmail_(email) };
+}
+
+/** Lê o link pelo token: { rec, u, hash } válido; { invalido, vencido, rec?, u? } se não vale. Apaga o que não vale mais. */
+function SegAcesso_lerRed_(token) {
+  token = SegAcesso_txt_(token).toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(token)) return { invalido: true };
+  var hash = SegAcesso_sha256_(token), rec = SegAcesso_lerJson_(SegAcesso_chaveRed_(hash));
+  if (!rec) return { invalido: true };
+  var u = SegAcesso_usuarioPorId_(rec.u);
+  var apagar = function () { try { SegAcesso_props_().deleteProperty(SegAcesso_chaveRed_(hash)); if (SegAcesso_props_().getProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)) === hash) SegAcesso_props_().deleteProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)); } catch (e) {} };
+  if (!(Number(rec.exp) > Date.now())) { apagar(); return { invalido: true, vencido: true, rec: rec, u: u }; }
+  var trocado = SegAcesso_props_().getProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)) !== hash;
+  var semConta = !u || u.STATUS !== SGO_CFG.STATUS.ATIVO;
+  var senhaMudou = rec.tipo !== 'MP' && u && Number(rec.v) !== SegAcesso_versao_(u);
+  if (trocado || semConta || senhaMudou) { apagar(); return { invalido: true, rec: rec, u: u, semConta: semConta }; }
+  return { rec: rec, u: u, hash: hash };
+}
+function SegAcesso_gravarRed_(hash, rec) { SegAcesso_props_().setProperty(SegAcesso_chaveRed_(hash), JSON.stringify(rec)); }
+function SegAcesso_apagarRed_(hash, rec) {
+  try { SegAcesso_props_().deleteProperty(SegAcesso_chaveRed_(hash)); } catch (e) {}
+  try { if (SegAcesso_props_().getProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)) === hash) SegAcesso_props_().deleteProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)); } catch (e) {}
+}
+function SegAcesso_respostaRedInvalida_(r, c) {
+  SegAcesso_registrar_('REDEFINICAO_LINK_INVALIDO', (r && r.u) || { USUARIO: '' }, c, r && r.vencido ? 'Link aberto depois de 30 minutos.' : r && r.semConta ? 'Conta inativa ou removida.' : 'Link já usado, trocado por outro ou inexistente.');
+  return { success: false, etapa: 'INVALIDO', vencido: !!(r && r.vencido),
+    message: r && r.semConta ? 'Este link não vale: a conta está inativa ou não existe mais. O que fazer: fale com a gestão da Metrolabs.' : r && r.vencido ? SEGA_MSG_RED_VENCIDO : SEGA_MSG_RED_USADO };
+}
+
+/** O link de senha pede também o código: código ligado para o perfil no modo WhatsApp e celular válido no cadastro. */
+function SegAcesso_precisaCodigoRed_(u) {
+  var cfg = SegAcesso_config_();
+  return cfg.modo === 'WHATSAPP' && SegAcesso_exigeCodigo_(u, cfg) && !!SegAcesso_celular_(u);
+}
+
+function SegAcesso_estadoRed_(r) {
+  var u = r.u, rec = r.rec;
+  var resp = { success: true, tipo: rec.tipo, nome: SegAcesso_primeiroNome_(u.NOME), email: SegAcesso_mascararEmail_(SegAcesso_email_(u)),
+    validoAte: Utilities.formatDate(new Date(Number(rec.exp)), SEGA_FUSO, 'HH:mm'), daGestao: rec.origem === 'GESTAO' };
+  if (rec.tipo === 'MP') { resp.etapa = 'MP'; return resp; }
+  if (SegAcesso_precisaCodigoRed_(u) && !rec.codigoOk) {
+    var tel = SegAcesso_celular_(u);
+    resp.etapa = 'CODIGO';
+    resp.codigoEnviado = !!rec.codigoHash;
+    resp.destino = rec.destino || ('WhatsApp terminado em ' + tel.slice(-2));
+    resp.reenviarEmS = rec.ultimoEnvioMs ? Math.max(0, Math.ceil((Number(rec.ultimoEnvioMs) + SEGA_REENVIO_ESPERA_MS - Date.now()) / 1000)) : 0;
+    resp.enviosRestantes = Math.max(0, SEGA_RED_MAX_ENVIOS_CODIGO - (Number(rec.envios) || 0));
+    resp.tentativasRestantes = Math.max(0, SEGA_MAX_TENTATIVAS - (Number(rec.tentativas) || 0));
+    resp.podeEmail = !!SegAcesso_email_(u) && rec.canal !== 'EMAIL';
+    return resp;
+  }
+  resp.etapa = 'NOVA_SENHA';
+  return resp;
+}
+
+/**
+ * "Esqueci minha senha" (tela de entrada, sem sessão). A resposta é SEMPRE a mesma, com ou sem conta, com o limite
+ * estourado ou não (não revela quem tem conta). Só um e-mail com formato errado recebe outra mensagem. ctx vem do servidor.
+ */
+function pedirRedefinicaoSenha(email, ctx) {
+  var e = emailLoginAuth_(email);
+  if (!e) return { success: false, message: 'Digite o e-mail cadastrado no SGO+.' };
+  if (!emailValidoAuth_(e)) return { success: false, message: 'Confira o e-mail digitado: ele precisa ter o formato nome@empresa.com.br.' };
+  try {
+    var c = SegAcesso_ctx_(ctx);
+    SegAcesso_garantirEstrutura_();
+    SegAcesso_travar_(function () {
+      if (SegAcesso_limitePedidos_(e, true)) { SegAcesso_registrar_('REDEFINICAO_IGNORADA', { USUARIO: e }, c, 'Limite de ' + SEGA_RED_MAX_POR_HORA + ' pedidos por hora para este e-mail: nada enviado.'); return; }
+      var contas = SegAcesso_contasPorEmail_(e);
+      if (!contas.length) { SegAcesso_registrar_('REDEFINICAO_IGNORADA', { USUARIO: e }, c, 'E-mail sem conta ativa no SGO+: nada enviado.'); return; }
+      if (contas.length > 1) { contas.forEach(function (u) { SegAcesso_registrar_('REDEFINICAO_IGNORADA', u, c, 'E-mail repetido em ' + contas.length + ' contas ativas: nada enviado (a gestão precisa deixar o e-mail em uma conta só).'); }); return; }
+      var u = contas[0];
+      SegAcesso_registrar_('REDEFINICAO_PEDIDA', u, c, 'Pedido na tela de entrada ("Esqueci minha senha").');
+      var r = SegAcesso_criarLinkRedefinicao_(u, c, { origem: 'PESSOA' });
+      SegAcesso_registrar_(r.ok ? 'REDEFINICAO_LINK_ENVIADO' : 'REDEFINICAO_IGNORADA', u, c, r.ok ? 'Link para ' + r.destino + ' (vale 30 minutos, uma vez).' : 'Link não enviado: ' + (r.motivo || r.message));
+    });
+  } catch (err) {
+    // a resposta não muda nem com erro interno
+  }
+  return { success: true, message: SEGA_MSG_RED_PEDIDO };
+}
+
+/** Abre o link (não gasta o link nem envia nada): diz se vale e qual a próxima etapa (CODIGO, NOVA_SENHA ou MP). */
+function abrirRedefinicaoSenha(token, ctx) {
+  try {
+    var c = SegAcesso_ctx_(ctx);
+    return JSON.parse(JSON.stringify(SegAcesso_travar_(function () {
+      var r = SegAcesso_lerRed_(token);
+      if (r.invalido) return SegAcesso_respostaRedInvalida_(r, c);
+      return SegAcesso_estadoRed_(r);
+    })));
+  } catch (e) {
+    return { success: false, etapa: 'ERRO', message: 'Não foi possível abrir o link agora. Tente de novo em alguns segundos; se continuar, peça outro link em "Esqueci minha senha".' };
+  }
+}
+
+/** Envia (ou reenvia) o código do link pelo WhatsApp, com o e-mail de reserva. opcoes.canal = "EMAIL" manda pelo e-mail. */
+function codigoRedefinicaoSenha(token, opcoes, ctx) {
+  try {
+    var c = SegAcesso_ctx_(ctx);
+    opcoes = opcoes || {};
+    return JSON.parse(JSON.stringify(SegAcesso_travar_(function () {
+      var r = SegAcesso_lerRed_(token);
+      if (r.invalido) return SegAcesso_respostaRedInvalida_(r, c);
+      var rec = r.rec, u = r.u;
+      if (rec.tipo === 'MP' || !SegAcesso_precisaCodigoRed_(u) || rec.codigoOk) return SegAcesso_estadoRed_(r);
+      var espera = rec.ultimoEnvioMs ? Math.ceil((Number(rec.ultimoEnvioMs) + SEGA_REENVIO_ESPERA_MS - Date.now()) / 1000) : 0;
+      if (espera > 0) return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Aguarde ' + espera + ' segundo' + (espera > 1 ? 's' : '') + ' para pedir outro código.' });
+      if ((Number(rec.envios) || 0) >= SEGA_RED_MAX_ENVIOS_CODIGO) return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Este link já enviou ' + SEGA_RED_MAX_ENVIOS_CODIGO + ' códigos. O que fazer: use o último código que chegou ou peça outro link em "Esqueci minha senha".' });
+      var preferir = SegAcesso_txt_(opcoes.canal).toUpperCase() === 'EMAIL' ? 'EMAIL' : '';
+      var envio = SegAcesso_novoCodigo_(rec, u, SegAcesso_config_(), preferir);
+      rec.envios = (Number(rec.envios) || 0) + 1;
+      if (!envio.ok) {
+        rec.ultimoEnvioMs = Date.now();
+        SegAcesso_gravarRed_(r.hash, rec);
+        SegAcesso_registrar_('CODIGO_FALHA_ENVIO', u, c, 'Link de nova senha: ' + (envio.motivo || envio.message));
+        return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: envio.message });
+      }
+      SegAcesso_gravarRed_(r.hash, rec);
+      SegAcesso_registrar_('REDEFINICAO_CODIGO_ENVIADO', u, c, 'Para ' + rec.destino + (rec.reserva ? ' (reserva por e-mail: ' + rec.motivoReserva + ')' : '') + '. Envio ' + rec.envios + ' de ' + SEGA_RED_MAX_ENVIOS_CODIGO + '.');
+      return Object.assign(SegAcesso_estadoRed_(r), { message: 'Enviamos um código de 6 números para ' + (rec.canal === 'WHATSAPP' ? 'o ' : 'o seu ') + rec.destino + '. Ele vale por 10 minutos.' +
+        (rec.reserva ? ' O WhatsApp não funcionou agora, por isso o código foi para o e-mail.' : '') + (rec.envios > 1 ? ' Use só o código mais recente.' : '') });
+    })));
+  } catch (e) {
+    return { success: false, etapa: 'CODIGO', message: 'Não foi possível enviar o código agora. Aguarde alguns segundos e toque de novo.' };
+  }
+}
+
+/**
+ * Conclui o link. Senha: dados = { codigo (quando pedido), nova, confirmacao }; grava a senha, derruba todas as sessões e
+ * aparelhos confiados, avisa por e-mail e registra. MP: apaga a senha do modo personalizado (a pessoa cria outra dentro do SGO+).
+ */
+function concluirRedefinicaoSenha(token, dados, ctx) {
+  try {
+    var c = SegAcesso_ctx_(ctx);
+    dados = dados || {};
+    return JSON.parse(JSON.stringify(SegAcesso_travar_(function () {
+      var r = SegAcesso_lerRed_(token);
+      if (r.invalido) return SegAcesso_respostaRedInvalida_(r, c);
+      var rec = r.rec, u = r.u;
+      if (rec.tipo === 'MP') {
+        if (typeof SGO_MP_liberarSenhaPorLink_ !== 'function') return { success: false, etapa: 'MP', message: 'O modo personalizado não está disponível neste sistema. Fale com o administrador do SGO+.' };
+        var mp = SGO_MP_liberarSenhaPorLink_(u, rec);
+        if (!mp || !mp.ok) return { success: false, etapa: 'MP', message: (mp && mp.message) || 'Não foi possível liberar a senha nova agora. Tente de novo em alguns segundos.' };
+        SegAcesso_apagarRed_(r.hash, rec);
+        SegAcesso_registrar_('REDEFINICAO_MP_CONCLUIDA', u, c, 'Senha do modo personalizado apagada pelo link (' + (rec.origem === 'GESTAO' ? 'enviado pela gestão' : 'pedido pela pessoa') + ').');
+        return { success: true, etapa: 'FIM', tipo: 'MP', message: 'Pronto: a senha antiga do modo personalizado foi apagada. O que fazer: entre no SGO+ e abra Qualificação e inspeção > Modo personalizado; lá você cria a senha nova.' };
+      }
+      if (SegAcesso_precisaCodigoRed_(u) && !rec.codigoOk) {
+        var digitado = String(dados.codigo === null || dados.codigo === undefined ? '' : dados.codigo).replace(/\D/g, '');
+        if (!rec.codigoHash) return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Primeiro toque em "Enviar o código" para receber o código no celular.' });
+        if (!/^\d{6}$/.test(digitado)) return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Digite os 6 números do código que chegou para você.' });
+        if (Date.now() > Number(rec.expiraMs)) return Object.assign(SegAcesso_estadoRed_(r), { success: false, vencido: true, message: 'O código venceu: ele vale 10 minutos. O que fazer: toque em "Reenviar código" para receber outro.' });
+        if (!textosIguaisAuth_(SegAcesso_sha256_(rec.id + ':' + digitado), rec.codigoHash)) {
+          rec.tentativas = (Number(rec.tentativas) || 0) + 1;
+          var restam = SEGA_MAX_TENTATIVAS - rec.tentativas;
+          if (restam <= 0) {
+            SegAcesso_apagarRed_(r.hash, rec);
+            SegAcesso_registrar_('REDEFINICAO_CODIGO_ERRADO', u, c, '5 códigos errados: link cancelado.');
+            return { success: false, etapa: 'INVALIDO', message: 'Código errado 5 vezes. Por segurança, este link foi cancelado e a senha atual continua valendo. O que fazer: peça outro link em "Esqueci minha senha". Se não foi você, avise a gestão da Metrolabs.' };
+          }
+          SegAcesso_gravarRed_(r.hash, rec);
+          SegAcesso_registrar_('REDEFINICAO_CODIGO_ERRADO', u, c, 'Restam ' + restam + ' tentativa(s).');
+          return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Código errado. Confira os 6 números da mensagem mais recente e digite de novo. Restam ' + restam + ' tentativa' + (restam > 1 ? 's' : '') + '.' });
+        }
+        rec.codigoOk = true;
+        delete rec.codigoHash;
+        SegAcesso_gravarRed_(r.hash, rec);
+        SegAcesso_registrar_('CODIGO_OK', u, c, 'Código do link de nova senha conferido.');
+      }
+      var erros = SegAcesso_validarNovaSenha_(dados.nova, dados.confirmacao, u);
+      if (erros.length) {
+        SegAcesso_registrar_('SENHA_TROCA_FALHA', u, c, 'Link de nova senha: senha nova fora das regras.');
+        return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: erros.join(' '), erros: erros });
+      }
+      var novaVersao = SegAcesso_versao_(u) + 1;
+      var ok = SGO_DATA.update(SGO_CFG.SHEETS.CAD_USUARIOS, u.ID, {
+        SENHA: gerarHashSenhaAuth_(String(dados.nova)), PRECISA_TROCAR_SENHA: '', SEGURANCA_VERSAO: String(novaVersao), SENHA_TROCADA_EM: SegAcesso_agora_()
+      });
+      if (!ok) return Object.assign(SegAcesso_estadoRed_(r), { success: false, message: 'Não foi possível gravar a senha nova agora. Nada foi alterado: tente de novo em alguns segundos.' });
+      SegAcesso_apagarRed_(r.hash, rec);
+      var derrubadas = SegAcesso_derrubarSessoes_(u.ID, '', '');
+      SegAcesso_avisarSenhaAlterada_(u, c, rec.origem === 'GESTAO' ? 'link de nova senha enviado pela gestão' : 'link de "Esqueci minha senha"');
+      registrarLogAuth_('SENHA_REDEFINIDA_LINK', { usuario: u.USUARIO, perfil: u.PERFIL, detalhe: 'Senha nova criada pelo link (' + (rec.origem === 'GESTAO' ? 'enviado pela gestão' : 'Esqueci minha senha') + ').' });
+      SegAcesso_registrar_('REDEFINICAO_CONCLUIDA', u, c, 'Senha nova criada pelo link (' + (rec.origem === 'GESTAO' ? 'enviado pela gestão' : 'Esqueci minha senha') + '). ' +
+        derrubadas.sessoes + ' sessão(ões) e ' + derrubadas.aparelhos + ' aparelho(s) confiado(s) desconectados; aviso por e-mail.');
+      return { success: true, etapa: 'FIM', tipo: 'SENHA', limparAparelho: true,
+        message: 'Senha nova criada. O que fazer: entre com o seu e-mail e a senha nova. Por segurança, todas as sessões abertas e os aparelhos confiados foram desconectados, e enviamos um aviso para o seu e-mail.' };
+    })));
+  } catch (e) {
+    return { success: false, message: 'Não foi possível concluir agora. Nada foi alterado: tente de novo em alguns segundos.' };
+  }
+}
+
+/** Link enviado pela gestão (Administração > Usuários) ou pelo Administrador do modo personalizado. Lança com a mensagem para a tela. */
+function SegAcesso_enviarLinkGestao_(alvoId, motivo, sessao, tipo) {
+  SegAcesso_garantirEstrutura_();
+  var alvo = SegAcesso_usuarioPorId_(alvoId);
+  if (!alvo) throw new Error('Pessoa não encontrada. Atualize a tela e tente de novo.');
+  if (alvo.STATUS !== SGO_CFG.STATUS.ATIVO) throw new Error('Esta conta está inativa: o link não vale para conta inativa. Reative a conta antes (Mais > Reativar).');
+  if (SegAcesso_foraDoFluxo_(alvo.PERFIL)) throw new Error('A conta técnica do Auvo não usa senha de pessoa: o link não se aplica.');
+  if (!SegAcesso_email_(alvo)) throw new Error('Esta conta não tem e-mail válido cadastrado. O que fazer: cadastre o e-mail (Editar) ou use "Senha provisória (sem e-mail)".');
+  if (tipo !== 'MP' && SegAcesso_contasPorEmail_(alvo.EMAIL).length > 1) throw new Error('O e-mail desta conta está em mais de uma conta ativa. Deixe o e-mail em uma conta só (Editar) antes de enviar o link.');
+  var por = SegAcesso_por_(sessao);
+  var r = SegAcesso_criarLinkRedefinicao_(alvo, null, { origem: 'GESTAO', por: por, porNome: SegAcesso_primeiroNome_(sessao && sessao.nome) || '', tipo: tipo });
+  if (!r.ok) throw new Error(r.message || 'Não foi possível enviar o link agora.');
+  SegAcesso_registrar_('REDEFINICAO_LINK_GESTAO', alvo, null, (tipo === 'MP' ? 'Link da senha do modo personalizado' : 'Link de nova senha') + ' para ' + r.destino + ' (vale 30 minutos). Motivo: ' + motivo, por);
+  return { destino: r.destino, nome: alvo.NOME };
 }
 
 // ------------------------------------------------------------
@@ -655,7 +1047,24 @@ function SegAcesso_motivo_(payload) {
   if (m.length < 5) throw new Error('Escreva o motivo (pelo menos 5 letras). Ele fica no registro de segurança com o seu nome.');
   return m.slice(0, 300);
 }
-function SegAcesso_por_(sessao) { return SegAcesso_txt_(sessao.usuario) + (sessao.nome ? ' (' + SegAcesso_txt_(sessao.nome) + ')' : ''); }
+// 31/10/2026 (login pelo e-mail): o registro mostra o NOME de quem fez (o login fica só por dentro)
+function SegAcesso_por_(sessao) { return SegAcesso_txt_(sessao && sessao.nome) || SegAcesso_txt_(sessao && sessao.usuario); }
+
+/** Nomes para o registro: login (antigo) e e-mail -> nome. */
+function SegAcesso_mapaNomes_() {
+  var m = {};
+  var antes = typeof SGO_DATA_REP_VISIVEL === 'undefined' ? false : SGO_DATA_REP_VISIVEL;
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (r) {
+      var n = SegAcesso_txt_(r.NOME);
+      if (!n) return;
+      if (SegAcesso_txt_(r.USUARIO)) m[SegAcesso_txt_(r.USUARIO).toLowerCase()] = n;
+      if (emailLoginAuth_(r.EMAIL)) m[emailLoginAuth_(r.EMAIL)] = n;
+    });
+  } catch (e) {} finally { SGO_DATA_REP_VISIVEL = antes; }
+  return m;
+}
 
 /** Marca todas as contas ativas (menos perfis técnicos). Devolve { marcados, total }. Usado pelo botão e pelo script. */
 function SegAcesso_exigirTrocaTodos_(motivo, por) {
@@ -707,15 +1116,18 @@ function SegAcesso_lerRegistro_(filtro) {
   if (!sh || sh.getLastRow() < 2) return [];
   var n = sh.getLastRow(), ini = Math.max(2, n - 5000 + 1);
   var vals = sh.getRange(ini, 1, n - ini + 1, SEGA_COLUNAS.length).getValues();
-  var out = [];
+  var out = [], nomes = SegAcesso_mapaNomes_();
   for (var i = vals.length - 1; i >= 0 && out.length < 500; i--) {
     var l = vals[i];
     var q = Object.prototype.toString.call(l[1]) === '[object Date]' ? Utilities.formatDate(l[1], SEGA_FUSO, "yyyy-MM-dd'T'HH:mm:ss") : SegAcesso_txt_(l[1]);
     if (q && q < desde) break;
-    if (quem && SegAcesso_txt_(l[3]).toLowerCase().indexOf(quem) < 0) continue;
+    // 31/10/2026: a coluna guarda o login (antigo) ou o e-mail digitado; a tela mostra o nome da pessoa
+    var gravado = SegAcesso_txt_(l[3]), nome = nomes[gravado.toLowerCase()] || '';
+    if (quem && gravado.toLowerCase().indexOf(quem) < 0 && nome.toLowerCase().indexOf(quem) < 0) continue;
     if (evento && SegAcesso_txt_(l[2]).toUpperCase() !== evento) continue;
-    out.push({ quando: SegAcesso_dataBr_(q), evento: SegAcesso_txt_(l[2]), rotulo: SEGA_EVENTOS[SegAcesso_txt_(l[2])] || SegAcesso_txt_(l[2]), usuario: SegAcesso_txt_(l[3]),
-      perfil: SegAcesso_txt_(l[5]), ip: SegAcesso_txt_(l[6]), aparelho: SegAcesso_txt_(l[7]), detalhe: SegAcesso_txt_(l[8]), por: SegAcesso_txt_(l[9]) });
+    out.push({ quando: SegAcesso_dataBr_(q), evento: SegAcesso_txt_(l[2]), rotulo: SEGA_EVENTOS[SegAcesso_txt_(l[2])] || SegAcesso_txt_(l[2]),
+      pessoa: nome || (gravado.indexOf('@') >= 0 ? gravado : (gravado ? 'Conta não encontrada' : '')),
+      perfil: SegAcesso_txt_(l[5]), ip: SegAcesso_txt_(l[6]), aparelho: SegAcesso_txt_(l[7]), detalhe: SegAcesso_txt_(l[8]), por: SegAcesso_txt_(l[9]).replace(/^\S+ \((.+)\)$/, '$1') });
   }
   return out;
 }
@@ -727,12 +1139,35 @@ function SegAcesso_pessoas_() {
     return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) { return SegAcesso_txt_(r.ID) && !SegAcesso_foraDoFluxo_(r.PERFIL); }).map(function (r) {
       var tel = SegAcesso_celular_(r);
       return {
-        id: SegAcesso_txt_(r.ID), nome: SegAcesso_txt_(r.NOME), usuario: SegAcesso_txt_(r.USUARIO).toLowerCase(), perfil: SegAcesso_txt_(r.PERFIL).toUpperCase(),
+        // 31/10/2026: a pessoa é identificada pelo nome e pelo e-mail (o login não aparece mais)
+        id: SegAcesso_txt_(r.ID), nome: SegAcesso_txt_(r.NOME), email: emailLoginAuth_(r.EMAIL), perfil: SegAcesso_txt_(r.PERFIL).toUpperCase(),
         ativo: SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO, trocaPendente: SegAcesso_txt_(r.PRECISA_TROCAR_SENHA).toUpperCase() === 'SIM',
         celularFinal: tel ? tel.slice(-2) : '', temEmail: !!SegAcesso_email_(r), senhaTrocadaEm: SegAcesso_dataBr_(r.SENHA_TROCADA_EM),
         senhaForte: senhaHashForteAuth_(r.SENHA)
       };
     }).sort(function (a, b) { return (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  } finally { SGO_DATA_REP_VISIVEL = antes; }
+}
+
+/**
+ * 31/10/2026 (login pelo e-mail): contas ATIVAS sem e-mail válido e e-mails repetidos entre contas ativas (sem a conta
+ * técnica do Auvo). Usado pela tela Usuários, pela Segurança do acesso e pelo script do servidor
+ * (sgo_servidor/scripts/seguranca_listar_emails.ts), que o dono roda antes de publicar. Só lê; nunca decide nada.
+ * Devolve { ativos, semEmail: [{ id, nome, perfil, login, email }], repetidos: [{ email, contas: [{ id, nome, perfil, login }] }] }.
+ */
+function SegAcesso_relatorioEmails_() {
+  var antes = typeof SGO_DATA_REP_VISIVEL === 'undefined' ? false : SGO_DATA_REP_VISIVEL;
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    var ativos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) {
+      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_foraDoFluxo_(r.PERFIL);
+    });
+    var item = function (r) { return { id: SegAcesso_txt_(r.ID), nome: SegAcesso_txt_(r.NOME), perfil: SegAcesso_txt_(r.PERFIL).toUpperCase(), login: SegAcesso_txt_(r.USUARIO), email: SegAcesso_txt_(r.EMAIL) }; };
+    var semEmail = ativos.filter(function (r) { return !emailValidoAuth_(r.EMAIL); }).map(item);
+    var porEmail = {};
+    ativos.forEach(function (r) { var e = emailLoginAuth_(r.EMAIL); if (emailValidoAuth_(e)) (porEmail[e] = porEmail[e] || []).push(item(r)); });
+    var repetidos = Object.keys(porEmail).filter(function (e) { return porEmail[e].length > 1; }).sort().map(function (e) { return { email: e, contas: porEmail[e] }; });
+    return { ativos: ativos.length, semEmail: semEmail, repetidos: repetidos };
   } finally { SGO_DATA_REP_VISIVEL = antes; }
 }
 
@@ -752,7 +1187,11 @@ function SegAcesso_api(sessionId, acao, payload) {
     switch (String(acao || '')) {
       case 'painel': {
         var pessoas = SegAcesso_pessoas_(), ativos = pessoas.filter(function (p) { return p.ativo; });
+        var emails = SegAcesso_relatorioEmails_();
         r = {
+          // 31/10/2026: quem não consegue entrar (sem e-mail ou e-mail repetido): a tela mostra em destaque
+          entrada: { semEmail: emails.semEmail.map(function (x) { return { id: x.id, nome: x.nome, perfil: x.perfil }; }),
+            repetidos: emails.repetidos.map(function (g) { return { email: g.email, contas: g.contas.map(function (x) { return { id: x.id, nome: x.nome, perfil: x.perfil }; }) }; }) },
           config: SegAcesso_config_(), rotulos: SEGA_ROTULO_MODO, podeAlterar: admin, eu: SegAcesso_txt_(sessao.userId),
           modelo: Object.assign({ nome: SEGA_MODELO_META.nome }, SegAcesso_lerJson_(SEGA_MODELO_PROP) || {}),
           metaConfigurada: (function () { var c = SegAcesso_credMeta_(); return !!(c.token && c.phoneId); })(),
@@ -908,13 +1347,19 @@ function SegAcesso_senhaProvisoria_() {
 function SegAcesso_recuperarAcesso_(login, opcoes) {
   opcoes = opcoes || {};
   var alvoLogin = SegAcesso_txt_(login).toLowerCase();
-  if (!alvoLogin) throw new Error('Informe o login (--usuario).');
+  if (!alvoLogin) throw new Error('Informe o e-mail (--email) ou o login interno (--usuario).');
   SegAcesso_garantirEstrutura_();
   var antes = typeof SGO_DATA_REP_VISIVEL === 'undefined' ? false : SGO_DATA_REP_VISIVEL;
   SGO_DATA_REP_VISIVEL = true;
   var reg;
-  try { reg = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) { return SegAcesso_txt_(r.USUARIO).toLowerCase() === alvoLogin; })[0]; } finally { SGO_DATA_REP_VISIVEL = antes; }
-  if (!reg) throw new Error('Login "' + alvoLogin + '" não encontrado em CAD_USUARIOS.');
+  // 31/10/2026: aceita o e-mail (a entrada agora é por ele) ou o login interno (CAD_USUARIOS.USUARIO)
+  var porEmail = alvoLogin.indexOf('@') >= 0;
+  try {
+    var achados = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) { return porEmail ? emailLoginAuth_(r.EMAIL) === emailLoginAuth_(alvoLogin) : SegAcesso_txt_(r.USUARIO).toLowerCase() === alvoLogin; });
+    if (porEmail && achados.length > 1) throw new Error('O e-mail "' + alvoLogin + '" está em ' + achados.length + ' contas: use --usuario com o login interno da conta certa.');
+    reg = achados[0];
+  } finally { SGO_DATA_REP_VISIVEL = antes; }
+  if (!reg) throw new Error((porEmail ? 'E-mail' : 'Login') + ' "' + alvoLogin + '" não encontrado em CAD_USUARIOS.');
   var u = usuarioParaSessaoAuth_(reg);
   var por = 'servidor (script de recuperação)';
   var motivo = SegAcesso_txt_(opcoes.motivo) || 'recuperação de acesso pelo servidor';

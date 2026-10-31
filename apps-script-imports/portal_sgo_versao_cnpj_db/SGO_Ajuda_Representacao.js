@@ -12,7 +12,7 @@ function SGO_ajudaTelas_Representacao_() {
       titulo: "Representação",
       paraQueServe: "Recebe os pedidos de atendimento da empresa representada (Brasmedical) aos clientes finais dos equipamentos dela, com a conversa e os arquivos de cada pedido. Aqui a equipe aceita o pedido (ele vira chamado na Assistência técnica com a marca da representada), pede complemento ou recusa com o motivo, e cadastra a representada e o catálogo de modelos.",
       antesDeComecar: [
-        "A pessoa da representada entra no SGO+ pelo login normal, com o perfil \"Representada\". Ela só vê o módulo Representação e só os pedidos e chamados da empresa dela.",
+        "A pessoa da representada entra no SGO+ pela entrada normal, com o e-mail cadastrado e a senha (perfil \"Representada\"); se esquecer a senha, usa \"Esqueci minha senha\" na tela de entrada. Ela só vê o módulo Representação e só os pedidos e chamados da empresa dela.",
         "As contas da representada são criadas e inativadas em Administração > Usuários: perfil \"Representada\", a empresa (representada) e o papel (administrador da representada, atendente, financeiro de garantia ou leitura).",
         "Antes de criar a primeira conta, cadastre a representada na aba \"Representadas\" e os modelos dela na aba \"Catálogo de modelos\" (código, nome, tipo de equipamento e garantia em meses). Sem modelo no catálogo, a representada não consegue cadastrar equipamento.",
         "Quem responde pela representação fica em Assistência técnica > Regras da assistência > Representação. Sem ninguém lá, os pedidos vão para quem faz a triagem."

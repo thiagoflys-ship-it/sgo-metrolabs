@@ -9,17 +9,18 @@ function SGO_ajudaTelas_Administracao_() {
   return {
     "usuarios": {
       titulo: "Usuários",
-      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT, PJ ou Diretoria), a situação, o e-mail, o celular (WhatsApp) e o último acesso da pessoa.",
+      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT, PJ ou Diretoria), a situação, o e-mail (com ele a pessoa entra no SGO+), o celular (WhatsApp) e o último acesso da pessoa.",
       antesDeComecar: [
         "Esta tela é usada pela gestão: Administrador, Diretoria, Gestor, RH e Financeiro. Os demais perfis não veem o item \"Usuários\" no menu.",
         "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
         "Vínculo de trabalho: CLT, PJ ou Diretoria (22/10/2026: a empresa tem os três). Pela matriz de avisos (21/10/2026), o WhatsApp é só para quem é CLT, inclusive as mensagens do ponto. Quem é PJ, Diretoria ou está como \"Não informado\" recebe os avisos pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe > Avisos e horários.",
         "Conta com perfil Diretoria sem vínculo de trabalho: a lista mostra \"Diretoria?\" e a rotina diária do sistema preenche Diretoria sozinha (fica registrado como feito pelo sistema). Um vínculo já informado nunca é trocado pelo sistema.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
+        "Entrada pelo e-mail (31/10/2026): cada pessoa entra no SGO+ com o e-mail cadastrado aqui e a senha. O e-mail é obrigatório e não pode estar em duas contas. Conta ativa sem e-mail, ou com o mesmo e-mail de outra conta ativa, não entra: aparece em vermelho na lista, na faixa do topo e nos números \"Sem e-mail (não entram)\" e \"E-mail repetido\".",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
         "Para um usuário do perfil Cliente, a empresa dele precisa estar cadastrada e ativa em Clientes.",
         "Para a pessoa de uma empresa representada (Brasmedical), use o perfil Representada: escolha a representada (cadastrada em Representação > Representadas) e o papel dela (administrador da representada, atendente, financeiro de garantia ou leitura). Essa conta vê só o módulo Representação e não aparece nas listas de pessoas do SGO+ (responsáveis, avisos, bate-papo).",
-        "Combine a senha inicial com a pessoa por um canal seguro. Nunca envie a senha em grupo ou por mensagem aberta."
+        "Combine a senha inicial com a pessoa por um canal seguro. Nunca envie a senha em grupo ou por mensagem aberta. Quem esquece a senha usa \"Esqueci minha senha\" na tela de entrada; a gestão também pode enviar o link de redefinição (Mais ações)."
       ],
       passos: [
         {
@@ -27,7 +28,7 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "Toque em \"Usuários\" no menu, no grupo de administração.",
             "Outra forma: em \"Configurações\", no bloco \"Empresa e sistema\", toque em \"Usuários e perfis\".",
-            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\", \"Sem área (ativos)\" e \"Nunca entraram\"."
+            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Sem e-mail (não entram)\", \"E-mail repetido\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\", \"Sem área (ativos)\" e \"Nunca entraram\"."
           ]
         },
         {
@@ -45,7 +46,7 @@ function SGO_ajudaTelas_Administracao_() {
         {
           titulo: "Encontrar um usuário",
           itens: [
-            "Digite no campo de busca o nome, o login, o e-mail ou o celular.",
+            "Digite no campo de busca o nome, o e-mail ou o celular.",
             "Para ver só um grupo, toque no número do resumo. Exemplo: toque em \"Sem celular (ativos)\".",
             "Toque de novo no mesmo número para desfazer o filtro.",
             "Use a lista \"Todos os perfis\" para ver só um perfil.",
@@ -61,23 +62,23 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "Toque em \"Novo usuário\", à direita da barra de busca.",
             "Preencha \"Nome completo\".",
-            "Preencha \"Login (nome de usuário)\" em letras minúsculas, sem espaço. Exemplo: joao.silva.",
-            "Preencha \"E-mail\". O e-mail é obrigatório e recebe os avisos do sistema.",
+            "Preencha \"E-mail (entrada no SGO+)\". É obrigatório: com ele a pessoa entra no SGO+, recebe o link de nova senha e os avisos. Ele não pode estar em outra conta.",
             "Preencha \"Celular (WhatsApp)\" com DDD. O sistema coloca a máscara sozinho.",
             "Em \"Trabalho\", escolha a \"Área\" da pessoa. Ao escolher um perfil que diz a área (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico), ela já vem marcada se o campo estiver vazio; confira.",
             "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ, Diretoria ou Não informado. Ao escolher o perfil Diretoria com o vínculo vazio, \"Diretoria\" já vem marcada; confira. Para Cliente, deixe \"Não informado\".",
             "Escolha o \"Perfil de acesso\". Para quem cuida do RH, escolha \"RH\". Para a direção da empresa, escolha \"Diretoria\" (só aparece para Administrador e Diretoria).",
             "Se escolheu o perfil Cliente, escolha a \"Empresa (cliente)\".",
-            "Preencha a \"Senha inicial\" com pelo menos 6 caracteres.",
+            "Preencha a \"Senha inicial\" com pelo menos 6 caracteres. Ela é provisória: no primeiro acesso a pessoa cria a dela.",
             "Toque em \"Cadastrar usuário\".",
-            "Aguarde a mensagem \"Usuário ... cadastrado.\". O painel de detalhe da conta abre em seguida."
+            "Aguarde a mensagem \"Usuário ... cadastrado. A pessoa entra com o e-mail ...\". O painel de detalhe da conta abre em seguida.",
+            "Avise a pessoa: ela entra com o e-mail cadastrado e a senha inicial."
           ]
         },
         {
           titulo: "Ver os detalhes de uma conta",
           itens: [
             "Toque na linha do usuário (ou no cartão, no celular).",
-            "Confira no painel as seções \"Identificação\", \"Contato\", \"Trabalho\" (vínculo de trabalho) e \"Acesso\".",
+            "Confira no painel as seções \"Identificação\" (nome e o e-mail com que a pessoa entra), \"Contato\", \"Trabalho\" (vínculo de trabalho) e \"Acesso\".",
             "Em \"Acesso\", confira o perfil, a empresa (se for Cliente), o último acesso e a data do cadastro.",
             "Para fechar, toque fora do painel ou aperte a tecla Esc. No celular, toque em Voltar."
           ]
@@ -93,14 +94,24 @@ function SGO_ajudaTelas_Administracao_() {
           ]
         },
         {
-          titulo: "Redefinir a senha",
+          titulo: "Enviar o link de redefinição de senha (a pessoa esqueceu)",
           itens: [
-            "Toque em \"Mais\" na linha do usuário. No painel de detalhe, toque em \"Mais ações\".",
-            "Toque em \"Redefinir senha\".",
-            "Digite a senha nova em \"Senha nova\", com pelo menos 6 caracteres.",
-            "Digite a mesma senha em \"Repita a senha nova\".",
-            "Toque em \"Gravar senha nova\". A senha antiga deixa de valer na hora.",
-            "Combine a senha nova com a pessoa por um canal seguro. Ela é provisória: no próximo login a pessoa vê \"Crie sua nova senha\" e cria a dela; as sessões abertas com a senha antiga terminam (31/10/2026, Segurança do acesso)."
+            "Primeiro, a própria pessoa pode tocar em \"Esqueci minha senha\" na tela de entrada: o link chega no e-mail dela.",
+            "Para enviar pela gestão: toque em \"Mais\" na linha do usuário (no painel de detalhe, \"Mais ações\") e em \"Enviar link de redefinição\".",
+            "Escreva o motivo (fica no registro de segurança com o seu nome) e toque em \"Enviar o link\".",
+            "O link vai para o e-mail da pessoa, vale por 30 minutos e só pode ser usado uma vez. Se o acesso dela pede o código no celular, o link também pede o código no WhatsApp.",
+            "A senha atual continua valendo até a pessoa criar a nova. Depois, todas as sessões e aparelhos confiados dela são desconectados e ela recebe um aviso por e-mail."
+          ]
+        },
+        {
+          titulo: "Senha provisória (só para quem não tem e-mail)",
+          itens: [
+            "Use só quando a conta não tem e-mail: quem tem e-mail recebe o link.",
+            "Toque em \"Mais\" e em \"Senha provisória (sem e-mail)\".",
+            "Digite a senha nova em \"Senha nova\", com pelo menos 6 caracteres, e de novo em \"Repita a senha nova\".",
+            "Toque em \"Gravar senha provisória\". A senha antiga deixa de valer na hora e as sessões abertas caem.",
+            "Combine a senha com a pessoa por um canal seguro. No próximo acesso ela vê \"Crie sua nova senha\" e cria a dela.",
+            "Lembre: sem e-mail a pessoa não consegue entrar. Cadastre o e-mail dela assim que possível (Editar)."
           ]
         },
         {
@@ -131,27 +142,35 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo amarelo \"Diretoria?\" na coluna Vínculo", significado: "Conta com perfil Diretoria ainda sem vínculo de trabalho. O sistema sugere Diretoria e preenche sozinho na rotina diária; para fazer agora, toque em \"Editar\" e salve." },
         { nome: "\"Não informado\" na coluna Vínculo", significado: "Ninguém informou se a pessoa é CLT, PJ ou Diretoria. Ela não recebe mensagens do ponto até a gestão escolher o vínculo em \"Editar\"." },
         { nome: "Número amarelo \"Sem vínculo (ativos)\" no resumo", significado: "Quantas contas ativas da equipe estão sem CLT, PJ ou Diretoria. Contas da Diretoria com a sugestão \"Diretoria?\" não entram na conta. Toque no número para ver quais são." },
-        { nome: "Selo amarelo \"Sem e-mail\"", significado: "A conta não tem e-mail. O e-mail é obrigatório: toque em \"Editar\" e preencha." },
+        { nome: "Selo vermelho \"Sem e-mail: não entra\"", significado: "A conta não tem e-mail válido. A entrada no SGO+ é pelo e-mail, então a pessoa não consegue entrar nem pedir o link de nova senha. Toque em \"Editar\" e preencha um e-mail que seja só dela." },
+        { nome: "Selo vermelho \"Repetido (...)\" ao lado do e-mail", significado: "O mesmo e-mail está em outra conta ativa (o nome aparece no selo). Nenhuma das duas entra até a correção: deixe o e-mail em uma conta só (Editar ou Inativar a conta errada)." },
+        { nome: "Faixa vermelha no topo da lista", significado: "Quantas contas ativas não conseguem entrar (sem e-mail ou com e-mail repetido) e quais são. Corrija cada uma em \"Editar\"." },
+        { nome: "Números vermelhos \"Sem e-mail (não entram)\" e \"E-mail repetido\" no resumo", significado: "Contas ativas que não conseguem entrar. Toque no número para ver quais são." },
+        { nome: "\"Conta técnica (Auvo)\" na coluna E-mail", significado: "Conta da integração com o Auvo. Ela não é de uma pessoa, não usa e-mail e continua entrando como antes." },
         { nome: "\"Não informado\" no celular de um usuário Cliente", significado: "O celular é opcional para o perfil Cliente. Por isso não aparece em destaque." },
-        { nome: "\"Nunca entrou\" no último acesso", significado: "Não há registro de entrada recente desta conta. Confira se a pessoa recebeu o login e a senha." },
+        { nome: "\"Nunca entrou\" no último acesso", significado: "Não há registro de entrada recente desta conta. Confira se a pessoa sabe que entra com o e-mail cadastrado e se recebeu a senha inicial." },
         { nome: "Número amarelo \"Sem celular (ativos)\" no resumo", significado: "Quantas contas ativas, fora do perfil Cliente, estão sem celular. Toque no número para ver quais são." },
         { nome: "Número verde \"Ativos\" no resumo", significado: "Quantas contas podem entrar hoje. Toque para filtrar." },
         { nome: "Faixa amarela no painel de detalhe", significado: "Avisa que a conta ativa está sem celular e diz o que fazer." },
+        { nome: "Faixa vermelha no painel de detalhe", significado: "Avisa que a conta ativa está sem e-mail ou com e-mail repetido: ela não consegue entrar. Diz o que fazer." },
         { nome: "Faixa azul no painel de detalhe", significado: "Avisa que é uma conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir." },
         { nome: "Faixa cinza \"Acesso bloqueado (inativo)\"", significado: "A conta está inativa. Para liberar, use \"Mais\" e \"Reativar\"." },
         { nome: "Opções em vermelho no menu \"Mais\"", significado: "São ações de risco (inativar e excluir). Sempre pedem confirmação." },
         { nome: "Opção apagada (cinza) no menu \"Mais\"", significado: "A ação não é permitida para esta conta. O motivo aparece logo abaixo da opção." }
       ],
       problemas: [
-        { situacao: "Aparece \"Este login já é de ...\" ou \"Já existe uma conta com este nome de usuário (login).\"", oQueFazer: "Outro usuário já usa esse login. Escolha um login diferente, por exemplo com o sobrenome." },
-        { situacao: "Aparece \"Já existe outra conta usando este e-mail.\"", oQueFazer: "Cada e-mail só pode estar em uma conta. Busque o e-mail na lista: a pessoa talvez já tenha conta, ativa ou inativa." },
-        { situacao: "Aparece \"Use só letras sem acento, números, ponto, hífen ou sublinhado.\"", oQueFazer: "Tire acentos, espaços e outros sinais do login. Exemplo: joao.silva." },
+        { situacao: "Aparece \"Este e-mail já é da conta de ...\"", oQueFazer: "Cada e-mail só pode estar em uma conta (maiúsculas e espaços não contam). Se a outra conta é da mesma pessoa e está inativa, reative-a (Mais > Reativar) em vez de criar outra; se é de outra pessoa, use outro e-mail." },
+        { situacao: "Aparece \"Não foi possível reativar: o e-mail desta conta ... já é da conta ativa de ...\"", oQueFazer: "Duas contas ativas com o mesmo e-mail não entram. Troque o e-mail de uma delas (Editar) e reative de novo." },
+        { situacao: "Aparece \"Esta pessoa tem e-mail cadastrado: use Enviar link de redefinição\"", oQueFazer: "Quem tem e-mail recebe o link de nova senha (Mais > Enviar link de redefinição). A senha provisória fica só para quem não tem e-mail." },
+        { situacao: "Aparece \"Esta conta não tem e-mail válido cadastrado\" ao enviar o link", oQueFazer: "Cadastre o e-mail da pessoa (Editar) e envie de novo; enquanto isso, use \"Senha provisória (sem e-mail)\"." },
+        { situacao: "A pessoa diz que o link não chegou", oQueFazer: "Confira o e-mail cadastrado (sem erro de digitação) e peça para olhar o lixo eletrônico; o e-mail sai de sistema@metrolabs.com.br. O link vale 30 minutos: envie outro se venceu (o novo cancela o anterior)." },
+        { situacao: "A pessoa diz que entrou com o nome de usuário e não consegue mais", oQueFazer: "A entrada agora é pelo e-mail cadastrado. Confirme com ela qual é o e-mail da conta (coluna E-mail)." },
         { situacao: "Aparece \"E-mail inválido: confira o formato (nome@empresa.com.br).\"", oQueFazer: "Confira se o e-mail tem @ e o domínio completo, sem espaço." },
         { situacao: "Aparece \"Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.\"", oQueFazer: "Digite o DDD e o número completo. Se a pessoa não tem celular, deixe o campo vazio." },
         { situacao: "Aparece \"Escolha a representada desta conta.\" ou \"Escolha o papel na representada.\"", oQueFazer: "Com o perfil Representada, escolha a empresa em \"Representada (empresa)\" e o papel. Se a empresa não aparece, cadastre em Representação > Representadas (ela precisa estar ativa)." },
         { situacao: "Aparece \"Escolha a empresa do usuário Cliente.\"", oQueFazer: "Com o perfil Cliente, escolha a empresa na lista \"Empresa (cliente)\". Se a empresa não aparece, ela não está ativa em Clientes: peça o cadastro dela primeiro." },
         { situacao: "Aparece \"A senha inicial precisa ter pelo menos 6 caracteres.\" ou \"A senha nova precisa ter pelo menos 6 caracteres.\"", oQueFazer: "Digite uma senha com 6 caracteres ou mais." },
-        { situacao: "Aparece \"As duas senhas não são iguais. Digite de novo.\"", oQueFazer: "Digite a mesma senha nos dois campos da janela \"Redefinir a senha\"." },
+        { situacao: "Aparece \"As duas senhas não são iguais. Digite de novo.\"", oQueFazer: "Digite a mesma senha nos dois campos da janela \"Senha provisória (sem e-mail)\"." },
         { situacao: "O perfil Administrador não aparece na lista de perfis", oQueFazer: "Só um Administrador pode dar o perfil Administrador. Peça a um Administrador." },
         { situacao: "O perfil Diretoria não aparece na lista de perfis", oQueFazer: "O perfil Diretoria é dado só por um Administrador ou pela Diretoria. Peça a um Administrador." },
         { situacao: "Aparece \"Não foi possível ...: contas de Administrador só podem ser criadas ou alteradas por um Administrador.\"", oQueFazer: "A conta é de Administrador. Peça a um Administrador para fazer a alteração." },
@@ -179,9 +198,10 @@ function SGO_ajudaTelas_Administracao_() {
       perguntas: [
         { p: "Qual a diferença entre inativar e excluir?", r: "Inativar bloqueia o acesso e guarda a conta e o histórico; dá para reativar depois. Excluir apaga a conta e não pode ser desfeito. Prefira inativar." },
         { p: "Por que o celular é importante?", r: "O celular é usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Sem ele, a pessoa não recebe esses avisos." },
-        { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Redefinir senha\" para gravar uma nova." },
-        { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Use \"Mais\" e depois \"Redefinir senha\"." },
-        { p: "A senha que eu defino aqui vale para sempre?", r: "Não. A senha de uma conta nova, ou a redefinida para outra pessoa, é provisória: no próximo login a pessoa cria a senha dela (8 caracteres ou mais, letras e números). Exigir a troca de todos, zerar o segundo fator e ver o registro de entradas ficam em Administração > Segurança do acesso." },
+        { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Mais\" e \"Enviar link de redefinição\" para a pessoa criar uma nova." },
+        { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Quem esqueceu recebe o link (Mais > Enviar link de redefinição). A própria pessoa troca a senha dela em \"Trocar senha\", no topo da tela." },
+        { p: "Onde fica o nome de usuário (login)?", r: "Não existe mais para quem usa o sistema: a pessoa entra com o e-mail cadastrado. Por dentro, o sistema guarda um identificador para o histórico antigo, que não aparece em nenhuma tela." },
+        { p: "A senha que eu defino aqui vale para sempre?", r: "Não. A senha de uma conta nova, ou a senha provisória de quem não tem e-mail, vale só para o primeiro acesso: a pessoa cria a senha dela (8 caracteres ou mais, letras e números). Exigir a troca de todos, zerar o segundo fator e ver o registro de entradas ficam em Administração > Segurança do acesso." },
         { p: "Por que aparece \"Nunca entrou\" para quem já usou o sistema?", r: "O último acesso vem do registro recente de entradas. Uma entrada muito antiga pode não aparecer. Quando a pessoa entrar de novo, a data é atualizada." },
         { p: "Quando o perfil novo começa a valer?", r: "Em até 5 minutos ou no próximo login da pessoa." },
         { p: "O que o perfil Cliente vê?", r: "Só os dados da empresa escolhida em \"Empresa (cliente)\"." },
@@ -215,7 +235,7 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "No bloco \"Sessão neste navegador\", toque em \"Sair e recarregar\".",
             "Leia a confirmação e toque em \"Sair e recarregar\" de novo.",
-            "Entre com o seu login e senha. Os dados salvos não são afetados."
+            "Entre com o seu e-mail e senha. Os dados salvos não são afetados."
           ]
         },
         {
@@ -662,7 +682,8 @@ function SGO_ajudaTelas_Administracao_() {
       paraQueServe: "Protege a entrada no SGO+ contra invasões: exige que as pessoas criem uma senha nova, liga o código de 6 números enviado ao celular (ou ao e-mail) depois da senha, recupera o acesso de quem perdeu o celular e mostra o registro de cada entrada, código enviado e troca de senha.",
       antesDeComecar: [
         "A tela é da gestão: Administrador, Diretoria e Gestor consultam; só o Administrador altera.",
-        "Confira em Administração > Usuários se cada pessoa tem e-mail válido e celular com DDD. Sem os dois, a pessoa não recebe o código.",
+        "Confira em Administração > Usuários se cada pessoa tem e-mail válido e celular com DDD. A entrada é pelo e-mail: sem e-mail a pessoa não entra; sem os dois, não recebe o código.",
+        "Quem não consegue entrar (sem e-mail ou com e-mail repetido em duas contas ativas) aparece no bloco vermelho \"Não conseguem entrar no SGO+\", no topo.",
         "O código pelo WhatsApp precisa do modelo sgo_codigo_acesso aprovado pela Meta. Até lá, use \"Só e-mail\" ou deixe desligado.",
         "Nenhuma senha, código ou token aparece nesta tela nem no registro."
       ],
@@ -691,35 +712,50 @@ function SGO_ajudaTelas_Administracao_() {
           "Desconfia que a senha vazou: toque em \"Exigir nova senha\".",
           "Escreva o motivo e confirme. Tudo fica no registro de segurança."
         ] },
+        { titulo: "Atender quem esqueceu a senha", itens: [
+          "A própria pessoa toca em \"Esqueci minha senha\" na tela de entrada e digita o e-mail. A resposta é sempre a mesma (\"Se o e-mail estiver cadastrado, enviamos um link\"), para não revelar quem tem conta.",
+          "O link chega no e-mail, vale 30 minutos e uma vez só. Se o código está ligado para o perfil e a pessoa tem celular, o link pede também o código no WhatsApp (com o e-mail de reserva).",
+          "Limite: 3 pedidos por e-mail por hora e um limite por conexão. Pedir outro link cancela o anterior.",
+          "A gestão também envia o link em Administração > Usuários > Mais ações > Enviar link de redefinição (com motivo).",
+          "No registro, acompanhe \"Pediu o link de nova senha\", \"Link de nova senha enviado\" e \"Senha redefinida pelo link\". \"Pedido de link sem envio\" diz o motivo (e-mail sem conta, repetido ou limite)."
+        ] },
         { titulo: "Consultar o registro de segurança", itens: [
-          "No bloco \"Registro de segurança\", escolha o período e, se quiser, o login e o evento.",
+          "No bloco \"Registro de segurança\", escolha o período e, se quiser, a pessoa (nome ou e-mail) e o evento.",
           "Toque em \"Mostrar\". Cada linha traz quando, o evento, a pessoa, o IP, o aparelho e o detalhe (e quem fez, nas ações da gestão)."
         ] }
       ],
       cores: [
         { nome: "Selo verde", significado: "Em dia: entrada certa, código certo, senha trocada." },
         { nome: "Selo amarelo", significado: "Ação da gestão ou pendência: troca exigida, segundo fator zerado, configuração alterada, troca pendente." },
-        { nome: "Selo vermelho", significado: "Falha: senha errada, código errado, código vencido, login cancelado por 5 códigos errados, código não enviado, pessoa sem celular e sem e-mail." },
+        { nome: "Selo vermelho", significado: "Falha: senha errada, código errado, código vencido, login cancelado por 5 códigos errados, código não enviado, link de nova senha vencido ou usado, pessoa sem celular e sem e-mail." },
+        { nome: "Bloco vermelho \"Não conseguem entrar no SGO+\"", significado: "Contas ativas sem e-mail ou com o mesmo e-mail de outra conta ativa. A entrada é pelo e-mail, então elas não entram até a correção em Administração > Usuários." },
+        { nome: "Selo vermelho \"sem e-mail: não entra\" na lista de pessoas", significado: "A pessoa não tem e-mail válido: não entra e não recebe o link de nova senha." },
         { nome: "Selo cinza", significado: "Informação neutra: código desligado, senha guardada no formato antigo (vira forte sozinha no próximo login)." }
       ],
       problemas: [
-        { situacao: "A pessoa diz que o código não chegou", oQueFazer: "No registro, filtre pelo login dela e veja \"Código enviado\" e para onde foi (WhatsApp terminado em ... ou e-mail). Confira o celular e o e-mail em Administração > Usuários. Ela pode tocar em \"Receber por e-mail\" ou \"Reenviar código\" depois de 60 segundos." },
+        { situacao: "A pessoa diz que o código não chegou", oQueFazer: "No registro, filtre pelo nome ou e-mail dela e veja \"Código enviado\" e para onde foi (WhatsApp terminado em ... ou e-mail). Confira o celular e o e-mail em Administração > Usuários. Ela pode tocar em \"Receber por e-mail\" ou \"Reenviar código\" depois de 60 segundos." },
         { situacao: "Aparece \"Código não enviado\" no registro", oQueFazer: "O detalhe diz o motivo: sem celular válido, sem e-mail válido, modelo da Meta não aprovado ou e-mail fora do ar. Corrija o cadastro ou a chave em Chaves e senhas." },
         { situacao: "A pessoa ficou trancada (perdeu o celular e não acessa o e-mail)", oQueFazer: "Corrija o celular e toque em \"Zerar segundo fator\": ela entra só com a senha nas próximas 24 horas." },
         { situacao: "Ninguém da gestão consegue entrar", oQueFazer: "O responsável pelo sistema roda no servidor o script de recuperação (sgo_servidor, scripts/seguranca_recuperar_acesso.ts), que zera o segundo fator, gera senha provisória e, se pedido, desliga o código para todos. O passo a passo está no manual da gestão." },
-        { situacao: "Aparece \"Muitas tentativas de senha erradas\" na entrada", oQueFazer: "O servidor segura por 15 minutos depois de 5 senhas erradas no mesmo login (ou 10 na mesma conexão). Espere ou redefina a senha da pessoa em Administração > Usuários." }
+        { situacao: "Aparece \"Muitas tentativas de senha erradas\" na entrada", oQueFazer: "O servidor segura por 15 minutos depois de 5 senhas erradas com o mesmo e-mail (ou 10 na mesma conexão). Espere ou peça para a pessoa usar \"Esqueci minha senha\" (ou envie o link em Administração > Usuários)." },
+        { situacao: "A pessoa abriu o link e aparece \"Este link venceu\" ou \"Este link não vale mais\"", oQueFazer: "O link vale 30 minutos e uma vez só, e um link novo cancela o anterior. Ela toca em \"Pedir outro link\" (ou você envia em Usuários) e usa o e-mail mais recente." },
+        { situacao: "Aparece \"Pedido de link sem envio\" no registro", oQueFazer: "O detalhe diz o motivo: e-mail sem conta ativa, e-mail repetido em duas contas (corrija em Usuários) ou limite de 3 pedidos por hora (espere)." },
+        { situacao: "A pessoa entra e aparece \"Seu acesso precisa de um e-mail cadastrado\" ou \"este e-mail está cadastrado em mais de uma conta ativa\"", oQueFazer: "Corrija o e-mail da conta em Administração > Usuários (deixe cada e-mail em uma conta só)." }
       ],
       quemPode: [
         { perfil: "ADMIN", pode: "Liga e desliga o código, escolhe os perfis, cadastra o modelo na Meta, exige a troca de todos, exige nova senha e zera o segundo fator de uma pessoa, e consulta o registro." },
         { perfil: "DIRETORIA,GESTOR", pode: "Consulta a situação, as pessoas e o registro de segurança. As alterações são do Administrador." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Troca a própria senha quando o sistema pede e digita o código que chega no celular ou no e-mail." }
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Entra com o e-mail, troca a própria senha em \"Trocar senha\" (ou quando o sistema pede), usa \"Esqueci minha senha\" na entrada e digita o código que chega no celular ou no e-mail." }
       ],
       perguntas: [
         { p: "Como a senha fica guardada?", r: "Nunca em texto: só um resumo forte (PBKDF2 com 600 mil rodadas e sal próprio). Senhas antigas viram o formato forte sozinhas no próximo login certo de cada pessoa." },
         { p: "O código sai fora do horário de trabalho?", r: "Sim. O código é pedido pela própria pessoa na hora em que ela entra, então sai a qualquer hora. Nenhuma outra mensagem vai pelo WhatsApp neste fluxo." },
         { p: "O piloto do WhatsApp segura o código?", r: "Não. O servidor deixa passar só o modelo sgo_codigo_acesso, só do SGO+ e só com o botão do código, mesmo para quem não está na lista do piloto. Os outros avisos continuam seguindo o piloto." },
         { p: "O que é \"Confiar neste aparelho\"?", r: "A pessoa marca no celular ou computador dela e, por 30 dias, não recebe o código naquele aparelho. Trocar a senha ou zerar o segundo fator desconecta todos os aparelhos confiados." },
-        { p: "Senha definida pela gestão em Usuários vale para sempre?", r: "Não. Conta nova ou senha redefinida para outra pessoa é provisória: no próximo login a pessoa cria a dela." }
+        { p: "Senha definida pela gestão em Usuários vale para sempre?", r: "Não. Conta nova ou senha provisória (só para quem não tem e-mail) vale para o primeiro acesso: a pessoa cria a dela." },
+        { p: "Por que a resposta do \"Esqueci minha senha\" é sempre a mesma?", r: "Para ninguém descobrir, pela tela, quais e-mails têm conta no SGO+. Só quem tem conta ativa recebe o e-mail." },
+        { p: "Por que o link pede o código no WhatsApp?", r: "Para que quem invadir só o e-mail da pessoa não consiga trocar a senha. Vale quando o código está ligado para o perfil e a pessoa tem celular cadastrado." },
+        { p: "O que acontece depois que a senha é redefinida pelo link?", r: "Todas as sessões abertas e os aparelhos confiados da pessoa são desconectados na hora, ela recebe um e-mail \"sua senha foi alterada; se não foi você, avise a gestão\" e o registro guarda o evento." }
       ],
       secoesManual: [
         { titulo: "Ordem de implantação", paragrafos: [
@@ -728,7 +764,13 @@ function SGO_ajudaTelas_Administracao_() {
         ] },
         { titulo: "Proteções do código", paragrafos: [
           "Código de 6 números, vale 10 minutos e uma vez só. No máximo 5 tentativas por login; depois o login é cancelado. Reenvio depois de 60 segundos, no máximo 3 por login. O código anterior deixa de valer quando um novo é enviado.",
-          "A senha errada também tem freio: 5 erros no mesmo login ou 10 na mesma conexão seguram as tentativas por 15 minutos, com aviso de quantas tentativas faltam."
+          "A senha errada também tem freio: 5 erros com o mesmo e-mail ou 10 na mesma conexão seguram as tentativas por 15 minutos, com aviso de quantas tentativas faltam."
+        ] },
+        { titulo: "Entrada pelo e-mail e link de nova senha (31/10/2026)", paragrafos: [
+          "Todos entram com o e-mail cadastrado em Administração > Usuários (sem diferença de maiúsculas e sem espaços). O nome de usuário não existe mais para ninguém; a conta técnica do Auvo continua como antes.",
+          "Conta ativa sem e-mail recebe \"Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.\". Duas contas ativas com o mesmo e-mail: as duas ficam recusadas até a correção.",
+          "Link de nova senha: token aleatório forte, guardado só como resumo, uso único, 30 minutos; um por pessoa (o novo cancela o anterior). Ao concluir, todas as sessões e aparelhos confiados caem, a pessoa recebe o aviso por e-mail e o registro guarda o evento.",
+          "Antes de publicar a entrada pelo e-mail, o responsável pelo sistema roda no servidor scripts/seguranca_listar_emails.ts, que lista quem está sem e-mail ou com e-mail repetido (só lê)."
         ] }
       ]
     }

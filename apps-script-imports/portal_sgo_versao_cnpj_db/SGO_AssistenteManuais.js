@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "0c1e7673b6ed",
+ "versao": "043d5455aede",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -14,7 +14,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo\nnos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de\naplicativos, e usa o mesmo usuário e senha do SGO+.\n\nEndereço: https://sgo.metrolabs.com.br/campo/\n\nA mesma ajuda está dentro do aplicativo, no botão Ajuda (canto de cima, em todas as telas)."
+     "texto": "Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo\nnos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de\naplicativos, e usa o mesmo e-mail e senha do SGO+.\n\nEndereço: https://sgo.metrolabs.com.br/campo/\n\nA mesma ajuda está dentro do aplicativo, no botão Ajuda (canto de cima, em todas as telas)."
     },
     {
      "titulo": "Aparência",
@@ -22,11 +22,11 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Instalar > Android (Chrome)",
-     "texto": "1. Abra o endereço no Chrome, com internet.\n2. Entre com o seu usuário e senha do SGO+.\n3. Toque em Instalar o app (aparece no aviso amarelo ou em Minha conta). Se não aparecer, toque no menu de três\n pontos e em Instalar aplicativo ou Adicionar à tela inicial.\n4. Daqui em diante, abra sempre pelo ícone SGO+ Campo."
+     "texto": "1. Abra o endereço no Chrome, com internet.\n2. Entre com o seu e-mail e a senha do SGO+. Esqueceu a senha? Toque em Esqueci minha senha: o link para criar a senha nova chega no seu e-mail e abre a página do SGO+; depois volte ao aplicativo e entre com a senha nova.\n3. Toque em Instalar o app (aparece no aviso amarelo ou em Minha conta). Se não aparecer, toque no menu de três\n pontos e em Instalar aplicativo ou Adicionar à tela inicial.\n4. Daqui em diante, abra sempre pelo ícone SGO+ Campo."
     },
     {
      "titulo": "Instalar > iPhone (Safari)",
-     "texto": "1. Abra o endereço no Safari (não em outro navegador), com internet.\n2. Toque em Compartilhar (o quadrado com a seta para cima) e em Adicionar à Tela de Início.\n3. Abra pelo ícone SGO+ Campo que apareceu na Tela de Início e entre com o seu usuário.\n4. Use sempre o ícone. No iPhone, o que um site guarda no Safari pode ser apagado pelo próprio aparelho depois de alguns\n dias sem uso; pelo ícone da Tela de Início isso não acontece. Enquanto o app não estiver na Tela de Início, ele mostra\n um aviso amarelo explicando isso."
+     "texto": "1. Abra o endereço no Safari (não em outro navegador), com internet.\n2. Toque em Compartilhar (o quadrado com a seta para cima) e em Adicionar à Tela de Início.\n3. Abra pelo ícone SGO+ Campo que apareceu na Tela de Início e entre com o seu e-mail.\n4. Use sempre o ícone. No iPhone, o que um site guarda no Safari pode ser apagado pelo próprio aparelho depois de alguns\n dias sem uso; pelo ícone da Tela de Início isso não acontece. Enquanto o app não estiver na Tela de Início, ele mostra\n um aviso amarelo explicando isso."
     },
     {
      "titulo": "Meu dia",
@@ -58,7 +58,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Trocar de celular (ou entregar o aparelho)",
-     "texto": "1. No celular antigo, abra o app com internet e espere Pendente de envio (0).\n2. Só depois desinstale, limpe ou entregue o aparelho. O que não foi enviado existe só naquele celular.\n3. No celular novo, instale o app (item 1) e entre com o seu usuário. A agenda e o que já está no servidor (chegada,\n respostas, fotos, relato, assinatura) são baixados de novo.\n\nCelular perdido ou quebrado com itens pendentes: avise o supervisor. O que não chegou ao servidor terá de ser\nregistrado de novo pela gestão."
+     "texto": "1. No celular antigo, abra o app com internet e espere Pendente de envio (0).\n2. Só depois desinstale, limpe ou entregue o aparelho. O que não foi enviado existe só naquele celular.\n3. No celular novo, instale o app (item 1) e entre com o seu e-mail. A agenda e o que já está no servidor (chegada,\n respostas, fotos, relato, assinatura) são baixados de novo.\n\nCelular perdido ou quebrado com itens pendentes: avise o supervisor. O que não chegou ao servidor terá de ser\nregistrado de novo pela gestão."
     },
     {
      "titulo": "Cuidados",
@@ -592,7 +592,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Entrar, sair e trocar a senha",
-     "texto": "Entrar: digite a senha e toque em Entrar.\nO modo fica aberto por 30 minutos sem uso; cada ação renova o prazo. Sair do SGO+ ou entrar por outro navegador pede a senha de novo.\nCinco senhas erradas seguidas bloqueiam a entrada por 15 minutos. O Administrador pode desbloquear.\nSair do modo: toque em Sair do modo.\nTrocar a senha: Trocar minha senha, digite a atual, a nova e a confirmação.\nEsqueceu a senha: peça ao Administrador para tocar em Apagar a senha (esqueceu) na sua linha; depois crie outra."
+     "texto": "Entrar: digite a senha e toque em Entrar.\nO modo fica aberto por 30 minutos sem uso; cada ação renova o prazo. Sair do SGO+ ou entrar por outro navegador pede a senha de novo.\nCinco senhas erradas seguidas bloqueiam a entrada por 15 minutos. O Administrador pode desbloquear.\nSair do modo: toque em Sair do modo.\nTrocar a senha: Trocar minha senha, digite a atual, a nova e a confirmação.\nEsqueceu a senha: toque em Esqueci a senha do modo personalizado. O link vai para o seu e-mail e vale 30 minutos; ao abrir, a senha antiga é apagada e você cria outra nesta tela. O Administrador também pode enviar o link (Enviar link de senha nova (esqueceu) na sua linha). Sem e-mail cadastrado, o Administrador usa Apagar a senha agora (sem e-mail)."
     },
     {
      "titulo": "Ajustar e restaurar",
@@ -3166,7 +3166,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Como a representada entra",
-     "texto": "A pessoa da representada entra pelo login normal do SGO+, com usuário e senha, no perfil \"Representada\".\nA conta é criada em Administração > Usuários: perfil Representada, a representada (empresa) e o papel dela: administrador da representada, atendente, financeiro de garantia ou leitura.\nO perfil Representada vê só o módulo Representação. O servidor recusa qualquer outra função do SGO+ para essa sessão, e a conta não aparece nas listas de pessoas (responsáveis, avisos internos, bate-papo, conduta, ponto, atividades).\nRepresentada inativa (Representação > Representadas) ou conta sem representada: a pessoa não entra, e a mensagem diz o motivo.\nNão há troca da própria senha pela pessoa nesta etapa: a senha é definida e redefinida em Administração > Usuários, como para as demais contas."
+     "texto": "A pessoa da representada entra pela entrada normal do SGO+, com o e-mail cadastrado e a senha, no perfil \"Representada\". Se esquecer a senha, usa \"Esqueci minha senha\" na tela de entrada (ou a Metrolabs envia o link em Administração > Usuários).\nA conta é criada em Administração > Usuários: perfil Representada, a representada (empresa) e o papel dela: administrador da representada, atendente, financeiro de garantia ou leitura.\nO perfil Representada vê só o módulo Representação. O servidor recusa qualquer outra função do SGO+ para essa sessão, e a conta não aparece nas listas de pessoas (responsáveis, avisos internos, bate-papo, conduta, ponto, atividades).\nRepresentada inativa (Representação > Representadas) ou conta sem representada: a pessoa não entra, e a mensagem diz o motivo.\nNão há troca da própria senha pela pessoa nesta etapa: a senha é definida e redefinida em Administração > Usuários, como para as demais contas."
     },
     {
      "titulo": "Primeira configuração",
@@ -3291,7 +3291,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Entrar",
-     "texto": "Abra o endereço do SGO+ informado pela Metrolabs e entre com o seu usuário e a sua senha.\nO acesso é pessoal. Não compartilhe a senha. Tudo o que é feito fica registrado com o seu nome, a data e a hora.\nPara incluir ou tirar uma pessoa da sua equipe, ou para trocar a senha, escreva para a Metrolabs no Canal geral."
+     "texto": "Abra o endereço do SGO+ informado pela Metrolabs e entre com o seu e-mail e a sua senha. Se esquecer a senha, toque em Esqueci minha senha: o link para criar a senha nova chega no seu e-mail.\nO acesso é pessoal. Não compartilhe a senha. Tudo o que é feito fica registrado com o seu nome, a data e a hora.\nPara incluir ou tirar uma pessoa da sua equipe, ou para trocar a senha, escreva para a Metrolabs no Canal geral."
     },
     {
      "titulo": "Pedir um atendimento (parte 1)",
@@ -3339,19 +3339,39 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Para que serve",
-     "texto": "O SGO+ guarda dados de clientes, equipamentos e documentos técnicos. Para impedir que alguém de fora entre com uma senha descoberta, o sistema pode pedir duas coisas na entrada:\nUma senha nova, criada por você, quando a gestão pede a troca.\nUm código de 6 números, enviado ao seu celular (WhatsApp) ou ao seu e-mail, depois da senha certa."
+     "texto": "O SGO+ guarda dados de clientes, equipamentos e documentos técnicos. Para impedir que alguém de fora entre com uma senha descoberta, o sistema pede o seu e-mail e a sua senha e pode pedir mais duas coisas na entrada:\nUma senha nova, criada por você, quando a gestão pede a troca.\nUm código de 6 números, enviado ao seu celular (WhatsApp) ou ao seu e-mail, depois da senha certa."
+    },
+    {
+     "titulo": "Entrar com o e-mail",
+     "texto": "Desde 31/10/2026 a entrada é pelo e-mail cadastrado no SGO+. O nome de usuário não existe mais.\n1. No campo E-mail, digite o seu e-mail. Maiúsculas e espaços não fazem diferença.\n2. No campo Senha, digite a sua senha.\n3. Toque em Entrar.\n\nSe aparecer uma destas mensagens:\nMensagem | O que fazer\"E-mail ou senha inválidos.\" | Confira o e-mail e a senha. Se esqueceu a senha, toque em Esqueci minha senha.\n\"A entrada agora é pelo e-mail cadastrado, não pelo nome de usuário.\" | Você digitou o nome de usuário antigo. Digite o seu e-mail (a mensagem mostra o começo e o fim dele) com a mesma senha.\n\"Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.\" | O seu cadastro está sem e-mail. Peça à gestão da Metrolabs para cadastrar o seu e-mail; depois entre com ele.\n\"Este e-mail está cadastrado em mais de uma conta ativa do SGO+.\" | Por segurança, nenhuma das contas entra até a gestão corrigir. Peça à gestão da Metrolabs para deixar o e-mail em uma conta só."
+    },
+    {
+     "titulo": "Esqueci minha senha",
+     "texto": "1. Na tela de entrada, toque em Esqueci minha senha.\n2. Digite o seu e-mail e toque em Enviar o link.\n3. A tela responde: \"Se o e-mail estiver cadastrado, enviamos um link\". A resposta é sempre a mesma, para ninguém descobrir quais e-mails têm conta.\n4. Abra o e-mail Criar sua senha nova do SGO+ (enviado por sistema@metrolabs.com.br; veja também o lixo eletrônico) e toque em Criar minha senha nova.\n5. Se o seu acesso pede o código no celular, a página pede também o código no WhatsApp: toque em Enviar o código e digite os 6 números. Assim, quem invadir só o seu e-mail não consegue trocar a sua senha.\n6. Digite a senha nova duas vezes (regras abaixo) e toque em Salvar a senha nova.\n7. Toque em Ir para a entrada e entre com o e-mail e a senha nova."
+    },
+    {
+     "titulo": "Esqueci minha senha > Regras do link",
+     "texto": "Vale por 30 minutos e só pode ser usado uma vez.\nPedir outro link cancela o anterior: use sempre o e-mail mais recente.\nSão no máximo 3 pedidos por hora para o mesmo e-mail.\nSe o link venceu ou já foi usado, a página diz o que aconteceu e mostra Pedir outro link."
+    },
+    {
+     "titulo": "Esqueci minha senha > O que acontece depois",
+     "texto": "Todas as sessões abertas e os aparelhos confiados da sua conta são desconectados.\nVocê recebe um e-mail Sua senha do SGO+ foi alterada. Se não foi você, avise a gestão da Metrolabs na hora.\n\nA gestão também pode enviar o link para o seu e-mail, se você pedir. O link e as regras são os mesmos."
+    },
+    {
+     "titulo": "Trocar minha senha",
+     "texto": "Para trocar a senha quando quiser:\n1. Toque em Trocar senha, no topo da tela (no celular, no botão da chave no topo ou em Trocar minha senha no Início).\n2. Digite a Senha atual.\n3. Digite a senha nova duas vezes e toque em Salvar a senha nova.\n\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados na hora; este aparelho continua dentro. Você recebe um aviso por e-mail. Para desistir, toque em Cancelar (não trocar)."
     },
     {
      "titulo": "Crie sua nova senha",
-     "texto": "Quando a gestão pede a troca, depois do usuário e da senha aparece a tela Crie sua nova senha. Nada do sistema abre antes da troca. Se você já estiver dentro do sistema, a tela aparece em até 5 minutos e pede também a senha atual.\n1. Digite a senha nova.\n2. Digite a mesma senha de novo no segundo campo.\n3. Confira a lista abaixo dos campos: cada regra cumprida fica verde.\n4. Toque em Salvar a senha nova e entrar."
+     "texto": "Quando a gestão pede a troca, depois do e-mail e da senha aparece a tela Crie sua nova senha. Nada do sistema abre antes da troca. Se você já estiver dentro do sistema, a tela aparece em até 5 minutos e pede também a senha atual.\n1. Digite a senha nova.\n2. Digite a mesma senha de novo no segundo campo.\n3. Confira a lista abaixo dos campos: cada regra cumprida fica verde.\n4. Toque em Salvar a senha nova e entrar."
     },
     {
      "titulo": "Crie sua nova senha > Regras da senha nova",
-     "texto": "8 caracteres ou mais.\nLetras e números juntos.\nNão pode começar nem terminar com espaço.\nDiferente da senha atual.\nDifícil de adivinhar: nada de 12345678, senha123, sequências, repetições, o seu nome, o seu login ou o nome da empresa.\n\nDica: junte duas ou três palavras que só você conhece com alguns números. Não use a mesma senha de outros sites."
+     "texto": "8 caracteres ou mais.\nLetras e números juntos.\nNão pode começar nem terminar com espaço.\nDiferente da senha atual.\nDifícil de adivinhar: nada de 12345678, senha123, sequências, repetições, o seu nome, o seu e-mail ou o nome da empresa.\n\nDica: junte duas ou três palavras que só você conhece com alguns números. Não use a mesma senha de outros sites."
     },
     {
      "titulo": "Crie sua nova senha > O que acontece depois",
-     "texto": "Você entra no sistema com a sessão de agora.\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados.\nDa próxima vez, entre com a senha nova.\n\nSe a mensagem disser que a senha não foi aceita, ela explica o motivo. Corrija e toque de novo em Salvar. Se preferir sair sem trocar, toque em Sair sem trocar: na próxima entrada a tela aparece de novo."
+     "texto": "Você entra no sistema com a sessão de agora.\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados.\nVocê recebe um aviso por e-mail.\nDa próxima vez, entre com o e-mail e a senha nova.\n\nSe a mensagem disser que a senha não foi aceita, ela explica o motivo. Corrija e toque de novo em Salvar. Se preferir sair sem trocar, toque em Sair sem trocar: na próxima entrada a tela aparece de novo."
     },
     {
      "titulo": "Código de acesso no celular",
@@ -3359,7 +3379,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Código de acesso no celular > Regras do código",
-     "texto": "Vale por 10 minutos e só pode ser usado uma vez.\nSão 5 tentativas por entrada. Depois de 5 códigos errados a entrada é cancelada: volte e entre de novo com o usuário e a senha.\nPara pedir outro código, espere 60 segundos e toque em Reenviar código. São no máximo 3 reenvios por entrada. Quando chega um código novo, o anterior não vale mais.\nReceber por e-mail manda o código para o e-mail do seu cadastro, quando o primeiro foi pelo WhatsApp.\nA Metrolabs nunca pede o código por telefone, mensagem ou e-mail. Não passe o código para ninguém."
+     "texto": "Vale por 10 minutos e só pode ser usado uma vez.\nSão 5 tentativas por entrada. Depois de 5 códigos errados a entrada é cancelada: volte e entre de novo com o e-mail e a senha.\nPara pedir outro código, espere 60 segundos e toque em Reenviar código. São no máximo 3 reenvios por entrada. Quando chega um código novo, o anterior não vale mais.\nReceber por e-mail manda o código para o e-mail do seu cadastro, quando o primeiro foi pelo WhatsApp.\nA Metrolabs nunca pede o código por telefone, mensagem ou e-mail. Não passe o código para ninguém."
     },
     {
      "titulo": "Código de acesso no celular > Confiar neste aparelho",
@@ -3371,15 +3391,15 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Senha errada várias vezes",
-     "texto": "Depois de 5 senhas erradas no mesmo usuário, o sistema segura novas tentativas por 15 minutos. A mensagem avisa quantas tentativas faltam antes disso. Se esqueceu a senha, peça à gestão para redefinir. A senha redefinida é provisória: na entrada seguinte você cria a sua."
+     "texto": "Depois de 5 senhas erradas com o mesmo e-mail, o sistema segura novas tentativas por 15 minutos. A mensagem avisa quantas tentativas faltam antes disso. Se esqueceu a senha, toque em Esqueci minha senha: o link para criar a senha nova chega no seu e-mail."
     },
     {
      "titulo": "No aplicativo SGO+ Campo",
-     "texto": "O aplicativo do técnico segue as mesmas regras: depois da senha, ele pode pedir o código (com Confiar neste aparelho já marcado) ou a senha nova. Nada do que está guardado no aparelho é perdido durante a troca."
+     "texto": "O aplicativo do técnico segue as mesmas regras: entra com o e-mail e a senha, tem Esqueci minha senha (o link abre a página do SGO+ no navegador; depois de criar a senha nova, volte ao aplicativo e entre com ela) e, depois da senha, pode pedir o código (com Confiar neste aparelho já marcado) ou a senha nova. Nada do que está guardado no aparelho é perdido."
     },
     {
      "titulo": "Se não foi você",
-     "texto": "Se chegar um código que você não pediu, alguém tentou entrar com a sua senha. Não use o código, troque a sua senha assim que puder e avise a gestão do SGO+."
+     "texto": "Se chegar um código que você não pediu, alguém tentou entrar com a sua senha. Não use o código, troque a sua senha assim que puder e avise a gestão do SGO+.\nSe chegar um link de senha nova que você não pediu, ignore o e-mail: a sua senha atual continua valendo. Se chegarem vários, avise a gestão.\nSe chegar o aviso \"Sua senha do SGO+ foi alterada\" sem você ter trocado, avise a gestão da Metrolabs na hora."
     }
    ]
   },
@@ -3395,15 +3415,31 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Tela: Administração > Segurança do acesso. Administrador, Diretoria e Gestor consultam; só o Administrador altera.\n\nPedido do dono (31/10/2026): \"Quero que da próxima vez que todos entrarem no sistema apareça uma tela de mude sua senha e isso é obrigatório, também queria que gerasse token e enviasse ao celular cadastrado, temos que proteger o sistema de invasões.\""
+     "texto": "Tela: Administração > Segurança do acesso. Administrador, Diretoria e Gestor consultam; só o Administrador altera.\n\nPedido do dono (31/10/2026): \"Quero que da próxima vez que todos entrarem no sistema apareça uma tela de mude sua senha e isso é obrigatório, também queria que gerasse token e enviasse ao celular cadastrado, temos que proteger o sistema de invasões.\"\n\nE, no mesmo dia: \"Redefinição de senha e esqueci senha, você tem que implantar, e acho que o usuário tem que ser o e-mail cadastrado, fica mais profissional e melhor para tratar a redefinição de senha.\" e \"onde tem login ou apelido não precisa mais existir, remova\"."
     },
     {
      "titulo": "O que a tela faz",
-     "texto": "Situação: código no celular ligado ou desligado, trocas de senha pendentes, situação do modelo do WhatsApp na Meta, quantas pessoas estão sem celular válido, sem e-mail válido e com a senha ainda no formato antigo.\nCódigo no celular (segundo fator): Desligado, Só e-mail ou WhatsApp com e-mail de reserva, para todos ou só para alguns perfis.\nTroca de senha obrigatória: exige a troca de todas as contas ativas.\nPessoas: para cada pessoa, a situação da senha e onde ela recebe o código, com Exigir nova senha e Zerar segundo fator.\nRegistro de segurança: cada entrada, senha errada, código enviado, código usado ou errado, troca de senha, configuração alterada e zeramento, com quando, quem, IP, aparelho e quem fez."
+     "texto": "Situação: código no celular ligado ou desligado, trocas de senha pendentes, situação do modelo do WhatsApp na Meta, quantas pessoas estão sem celular válido, sem e-mail válido e com a senha ainda no formato antigo.\nNão conseguem entrar no SGO+ (bloco vermelho, só quando há alguém): contas ativas sem e-mail e e-mails repetidos em duas ou mais contas ativas, com o botão Abrir Usuários.\nCódigo no celular (segundo fator): Desligado, Só e-mail ou WhatsApp com e-mail de reserva, para todos ou só para alguns perfis.\nTroca de senha obrigatória: exige a troca de todas as contas ativas.\nPessoas: para cada pessoa (nome e e-mail), a situação da senha e onde ela recebe o código, com Exigir nova senha e Zerar segundo fator.\nRegistro de segurança: cada entrada, senha errada, código enviado, código usado ou errado, troca de senha, configuração alterada e zeramento, com quando, quem, IP, aparelho e quem fez."
     },
     {
      "titulo": "Ordem de implantação",
      "texto": "Siga esta ordem. Cada passo pode esperar o anterior sem prejuízo.\n1. Publicar com tudo desligado. O código começa desligado e ninguém é marcado para trocar a senha. Nada muda para as pessoas, a não ser que a senha passa a ser guardada no formato forte no próximo login de cada uma e que conta nova (ou senha redefinida em Usuários) já nasce provisória.\n2. Cadastrar o modelo na Meta. Em Modelo do WhatsApp na Meta, toque em Cadastrar modelo na Meta (ou peça ao suporte para rodar o script do servidor). Toque em Consultar situação até aparecer Aprovado.\n3. Ligar a troca obrigatória para todos. Toque em Exigir troca de senha de todos, escreva o motivo e confirme (ou peça ao suporte para rodar o script do servidor). Acompanhe as trocas pendentes na Situação.\n4. Ligar o código. Antes, complete o e-mail e o celular de quem aparece sem. Comece com Só e-mail, ou só com alguns perfis; depois da aprovação do modelo, passe para WhatsApp com e-mail de reserva."
+    },
+    {
+     "titulo": "Entrada pelo e-mail (31/10/2026)",
+     "texto": "Todos entram com o e-mail cadastrado em Administração > Usuários e a senha. O e-mail é comparado sem diferenciar maiúsculas e sem espaços.\nO nome de usuário (login) não aparece mais em tela nenhuma. Por dentro, o sistema guarda o mesmo identificador de antes, para o histórico, a auditoria, a Frota, a Conduta e os avisos continuarem ligados às pessoas.\nConta ativa sem e-mail: a entrada é recusada com \"Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.\".\nE-mail repetido em duas contas ativas: as duas ficam recusadas até a correção (a pessoa que acerta a senha vê o porquê).\nQuem digitar o nome de usuário antigo com a senha certa recebe a orientação de entrar pelo e-mail (com o e-mail mascarado).\nA conta técnica do Auvo continua entrando como antes (pelo nome), fora da troca obrigatória e do código.\nNo cadastro e na edição de usuário, o e-mail é obrigatório e único (inclusive entre contas inativas: quem volta é reativado). Reativar uma conta com o e-mail de outra conta ativa é recusado.\nA tela Usuários mostra em vermelho quem está sem e-mail ou com e-mail repetido (faixa no topo, selos e os números Sem e-mail (não entram) e E-mail repetido)."
+    },
+    {
+     "titulo": "Entrada pelo e-mail (31/10/2026) > Antes de publicar a entrada pelo e-mail",
+     "texto": "O responsável pelo sistema roda no contêiner do SGO+ (só lê, não altera nada):\n\n npx tsx scripts/seguranca_listar_emails.ts\n\nA lista mostra quem está sem e-mail e os e-mails repetidos (nome, perfil, login interno e e-mail). Corrija em Administração > Usuários (ou avise as pessoas) antes de publicar."
+    },
+    {
+     "titulo": "Esqueci minha senha e link de redefinição",
+     "texto": "Na tela de entrada (computador, celular, aplicativo SGO+ Campo, Cliente e Representada), Esqueci minha senha pede o e-mail e responde sempre igual: \"Se o e-mail estiver cadastrado, enviamos um link\".\nO link vai por e-mail para a pessoa (de sistema@metrolabs.com.br): token aleatório forte, guardado só como resumo, uso único, vale 30 minutos; um link por pessoa (o novo cancela o anterior).\nAo abrir o link, se o perfil exige o código e o modo é WhatsApp, e a pessoa tem celular, a página pede também o código no WhatsApp (reserva por e-mail). Só invadir o e-mail não basta.\nA senha nova segue as regras de sempre. Ao salvar, todas as sessões e aparelhos confiados da pessoa caem na hora, ela recebe \"Sua senha do SGO+ foi alterada; se não foi você, avise a gestão\" e o registro guarda o evento.\nLimites: 3 pedidos por e-mail por hora (a resposta continua igual) e limite por conexão no servidor.\nA gestão envia o link em Administração > Usuários > Mais ações > Enviar link de redefinição, com motivo. Conta de Administrador só por Administrador; Diretoria por Administrador ou Diretoria.\nA senha provisória (Mais ações > Senha provisória (sem e-mail)) fica só para quem não tem e-mail.\nNo modo personalizado, o Administrador envia o link de senha nova do modo (no lugar de apagar a senha); a própria pessoa também pede. Sem e-mail, continua \"Apagar a senha agora\"."
+    },
+    {
+     "titulo": "Trocar minha senha",
+     "texto": "Cada pessoa troca a própria senha em Trocar senha (topo da tela; no celular, o botão da chave ou Trocar minha senha no Início): senha atual e senha nova. As outras sessões dela caem na hora e ela recebe o aviso por e-mail."
     },
     {
      "titulo": "Configurar o código no celular",
@@ -3415,19 +3451,19 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Recuperar o acesso de uma pessoa",
-     "texto": "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em Zerar segundo fator. Os aparelhos confiados e as sessões dela caem e, nas próximas 24 horas, ela entra só com a senha.\nSenha pode ter vazado: toque em Exigir nova senha. Na próxima entrada (ou em até 5 minutos, se estiver dentro) ela cria a senha nova.\nEsqueceu a senha: redefina em Administração > Usuários. A senha que você define é provisória.\n\nCada ação pede o motivo e fica no registro de segurança com o seu nome."
+     "texto": "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em Zerar segundo fator. Os aparelhos confiados e as sessões dela caem e, nas próximas 24 horas, ela entra só com a senha.\nSenha pode ter vazado: toque em Exigir nova senha. Na próxima entrada (ou em até 5 minutos, se estiver dentro) ela cria a senha nova.\nEsqueceu a senha: a própria pessoa usa Esqueci minha senha; ou envie o link em Administração > Usuários > Mais ações > Enviar link de redefinição. Sem e-mail, use a senha provisória (a pessoa cria a dela no próximo acesso).\n\nCada ação pede o motivo e fica no registro de segurança com o seu nome."
     },
     {
      "titulo": "Se ninguém da gestão consegue entrar",
-     "texto": "O caminho de recuperação fica no servidor, fora do navegador. O responsável pelo sistema roda, dentro do contêiner do SGO+:\n\n npx tsx scripts/seguranca_recuperar_acesso.ts --usuario admin --senha-provisoria --desligar-codigo --motivo \"dono sem acesso ao celular\"\nSempre: zera o segundo fator do login (aparelhos confiados e sessões desconectados, 24 horas sem código).\n--senha-provisoria: grava uma senha provisória, mostrada uma única vez no terminal; no login a pessoa cria a dela.\n--desligar-codigo: desliga o código para todos (volte a ligar pela tela depois).\n--reativar: reativa a conta, se estiver inativa.\n\nTudo fica no registro de segurança como feito pelo servidor. A senha provisória não vai para nenhum registro."
+     "texto": "O caminho de recuperação fica no servidor, fora do navegador. O responsável pelo sistema roda, dentro do contêiner do SGO+:\n\n npx tsx scripts/seguranca_recuperar_acesso.ts --email <e-mail do dono> --senha-provisoria --desligar-codigo --motivo \"dono sem acesso ao celular\"\n\n(--usuario admin, pelo login interno, também funciona.)\nSempre: zera o segundo fator do login (aparelhos confiados e sessões desconectados, 24 horas sem código).\n--senha-provisoria: grava uma senha provisória, mostrada uma única vez no terminal; no login a pessoa cria a dela.\n--desligar-codigo: desliga o código para todos (volte a ligar pela tela depois).\n--reativar: reativa a conta, se estiver inativa.\n\nTudo fica no registro de segurança como feito pelo servidor. A senha provisória não vai para nenhum registro."
     },
     {
      "titulo": "Registro de segurança",
-     "texto": "Escolha o período (até 90 dias), o login e o evento e toque em Mostrar. Aparecem os 500 mais recentes. O registro nunca guarda senha, código ou token. O aparelho aparece resumido, por exemplo \"Celular Android · Chrome\"."
+     "texto": "Escolha o período (até 90 dias), a pessoa (nome ou e-mail) e o evento e toque em Mostrar. A coluna Pessoa mostra o nome; tentativa com e-mail que não tem conta mostra o e-mail digitado. Aparecem os 500 mais recentes. O registro nunca guarda senha, código ou token. O aparelho aparece resumido, por exemplo \"Celular Android · Chrome\"."
     },
     {
      "titulo": "Proteções que valem sempre",
-     "texto": "Senha guardada só como resumo forte (PBKDF2, 600 mil rodadas, sal próprio por senha).\n5 senhas erradas no mesmo login, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.\nCódigo de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.\nAparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou zerar o segundo fator desconecta todos.\nSessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela."
+     "texto": "Senha guardada só como resumo forte (PBKDF2, 600 mil rodadas, sal próprio por senha).\n5 senhas erradas com o mesmo e-mail, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.\nPedir o link de nova senha: 3 por e-mail por hora e 10 por conexão por hora; enviar o código do link: 15 por conexão por hora; 5 erros no mesmo link seguram o link por 15 minutos (e 5 códigos errados cancelam o link).\nCódigo de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.\nAparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou zerar o segundo fator desconecta todos.\nSessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela."
     }
    ]
   }
