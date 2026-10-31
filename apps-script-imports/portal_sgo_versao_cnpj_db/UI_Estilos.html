@@ -2184,6 +2184,103 @@
     display: flex; justify-content: flex-end;
     padding: 12px 18px; border-top: 1px solid var(--bc-line);
   }
+  /* JANELA "AVISOS" EM CARTÕES (31/10/2026, pedido do dono: "redesenhar e entregar esses avisos de forma melhor,
+     tanto no celular quanto no computador"). Um cartão por grupo de pendência: módulo, gravidade, título com a
+     quantidade, exemplos, por quê, o que fazer e "Abrir". "Estou ciente" fixo no rodapé. No celular a janela ocupa
+     a tela, rola por dentro e os botões têm 44 px. Só vale para #avisosLoginOverlay (a janela do Conduta usa as
+     mesmas classes-base e não muda). Ver JS_Core.html Avisos_renderModal_. */
+  #avisosLoginOverlay .avisos-login-modal { max-width: 560px; }
+  #avisosLoginOverlay .avisos-login-modal--pend { max-width: 760px; max-height: 88vh; }
+  #avisosLoginOverlay .avisos-login-header { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px 14px; }
+  #avisosLoginOverlay .avisos-cab-textos { flex: 1 1 auto; min-width: 0; }
+  #avisosLoginOverlay .avisos-login-header h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; color: var(--bc-text); }
+  #avisosLoginOverlay .avisos-cab-resumo { margin: 4px 0 0; font-size: 13.5px; color: var(--bc-text-3); line-height: 1.5; }
+  #avisosLoginOverlay .avisos-cab-resumo strong { font-family: var(--bc-mono); font-weight: 600; color: var(--bc-danger); font-size: 15px; }
+  #avisosLoginOverlay .avisos-cab-sep { margin: 0 8px; color: var(--bc-line-2); }
+  #avisosLoginOverlay .avisos-cab-fechar {
+    flex: 0 0 auto; width: 36px; height: 36px; min-height: 36px; padding: 0; margin: -4px -6px 0 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent !important; border: 1px solid transparent !important; border-radius: 4px;
+    color: var(--bc-text-3) !important; font-size: 18px; cursor: pointer; box-shadow: none !important;
+  }
+  #avisosLoginOverlay .avisos-cab-fechar:hover { background: var(--bc-surface-3) !important; color: var(--bc-text) !important; }
+  #avisosLoginOverlay .avisos-login-body { padding: 16px 20px; background: var(--bc-surface-2); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  #avisosLoginOverlay .avisos-secao { margin-bottom: 20px; }
+  #avisosLoginOverlay .avisos-secao:last-child { margin-bottom: 0; }
+  #avisosLoginOverlay .avisos-secao-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  #avisosLoginOverlay .avisos-secao-cab h4 { margin: 0; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--bc-text-3); }
+  #avisosLoginOverlay .avisos-secao-hora { font-size: 12px; color: var(--bc-text-3); font-family: var(--bc-mono); }
+
+  .avisos-cartoes { display: flex; flex-direction: column; gap: 10px; }
+  .avisos-card {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; row-gap: 6px;
+    padding: 14px 16px; background: #FFFFFF; border: 1px solid var(--bc-line); border-left: 4px solid var(--bc-line-2);
+    border-radius: 6px; color: var(--bc-text); min-width: 0;
+  }
+  .avisos-card > * { grid-column: 1; min-width: 0; }
+  .avisos-card--critico { border-left-color: var(--bc-danger); }
+  .avisos-card--atencao { border-left-color: var(--bc-warn); }
+  .avisos-card--info { border-left-color: var(--bc-info); }
+  .avisos-card-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .avisos-card-modulo { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--bc-text-3); }
+  .avisos-card-modulo i { width: 14px; text-align: center; color: var(--bc-text-2); }
+  .avisos-card-etiquetas { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .avisos-etiqueta { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; line-height: 1.5; white-space: nowrap; border: 1px solid transparent; }
+  .avisos-etiqueta--critico { background: var(--bc-danger-bg); color: var(--bc-danger); border-color: var(--bc-danger-line); }
+  .avisos-etiqueta--atencao { background: var(--bc-warn-bg); color: var(--bc-warn); border-color: var(--bc-warn-line); }
+  .avisos-etiqueta--info { background: var(--bc-info-bg); color: var(--bc-info); border-color: var(--bc-info-line); }
+  .avisos-etiqueta--leve { background: var(--bc-surface-3); color: var(--bc-text-2); border-color: var(--bc-line); font-weight: 600; }
+  .avisos-card-titulo { margin: 2px 0 0; font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--bc-text); overflow-wrap: anywhere; }
+  .avisos-card-exemplos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .avisos-card-exemplos li { padding: 2px 8px; border-radius: 4px; background: var(--bc-surface-3); border: 1px solid var(--bc-line-soft); font-family: var(--bc-mono); font-size: 12px; color: var(--bc-text-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .avisos-card-exemplos li.avisos-card-mais { background: transparent; border-color: transparent; font-family: var(--bc-sans); color: var(--bc-text-3); padding-left: 2px; }
+  .avisos-card-linha { margin: 0; font-size: 13px; line-height: 1.5; color: var(--bc-text-2); overflow-wrap: anywhere; }
+  .avisos-card-chave { display: inline-block; margin-right: 6px; font-weight: 700; color: var(--bc-text); }
+  .avisos-card-chave::after { content: ":"; }
+  .avisos-card-fazer { color: var(--bc-text); }
+  .avisos-card-acoes { grid-column: 2 !important; grid-row: 1 / span 6; align-self: center; }
+  .avisos-card-abrir { gap: 8px; white-space: nowrap; }
+  .avisos-card-abrir i, .avisos-ver-todas i { font-size: 12px; }
+  .avisos-mais {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    margin-top: 12px; padding: 10px 14px; border: 1px dashed var(--bc-line-2); border-radius: 6px;
+    font-size: 13px; color: var(--bc-text-3); background: #FFFFFF;
+  }
+  .avisos-ver-todas {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; min-height: 36px;
+    background: transparent !important; border: 0 !important; box-shadow: none !important;
+    color: var(--bc-action) !important; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .avisos-ver-todas:hover { text-decoration: underline; }
+  #avisosLoginOverlay .avisos-login-footer { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 20px; background: #FFFFFF; }
+  .avisos-rodape-nota { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--bc-text-3); }
+  .avisos-rodape-nota i { margin-top: 3px; color: var(--bc-info); }
+  .avisos-rodape-nota strong { color: var(--bc-text); }
+  .avisos-rodape-botoes { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  #avisosLoginOverlay :is(.avisos-card-abrir, .avisos-ver-todas, .avisos-cab-fechar, .avisos-rodape-botoes button):focus-visible { outline: 3px solid var(--bc-action); outline-offset: 2px; }
+  #avisosLoginOverlay .avisos-login-modal:focus { outline: none; }
+
+  /* celular: janela na tela inteira, cartões em coluna, botões de 44 px, sem rolagem lateral, rodapé sempre à vista */
+  @media (max-width: 640px) {
+    #avisosLoginOverlay.avisos-login-overlay { padding: 0; align-items: stretch; }
+    #avisosLoginOverlay .avisos-login-modal,
+    #avisosLoginOverlay .avisos-login-modal--pend { max-width: none; width: 100%; max-height: none; height: 100%; height: 100dvh; border: 0; border-radius: 0; }
+    #avisosLoginOverlay .avisos-login-header { padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; }
+    #avisosLoginOverlay .avisos-cab-fechar { width: 44px; height: 44px; min-height: 44px; margin: -6px -8px 0 0; }
+    #avisosLoginOverlay .avisos-login-body { flex: 1 1 auto; min-height: 0; padding: 14px 16px; overflow-x: hidden; }
+    .avisos-card { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+    .avisos-card-acoes { grid-column: 1 !important; grid-row: auto; margin-top: 4px; }
+    .avisos-card-abrir { width: 100%; min-height: 44px !important; height: 44px; justify-content: center; }
+    .avisos-mais { flex-direction: column; align-items: stretch; text-align: left; }
+    .avisos-ver-todas { min-height: 44px; justify-content: center; border: 1px solid var(--bc-line-2) !important; border-radius: 4px; }
+    #avisosLoginOverlay .avisos-login-footer { padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -4px 12px rgba(28,31,29,.06); }
+    .avisos-rodape-botoes { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+    .avisos-rodape-botoes:has(> :only-child) { grid-template-columns: 1fr; }
+    .avisos-rodape-botoes button { width: 100%; min-height: 48px !important; height: 48px; font-size: 15px; }
+    .avisos-rodape-nota { font-size: 12px; }
+    /* com a janela aberta na tela inteira, os botões flutuantes (Tire sua dúvida, bate-papo) não cobrem os cartões */
+    body:has(#avisosLoginOverlay[style*="flex"]) :is(.asw-botao, .comw-botao) { display: none !important; }
+  }
   .dashc-stat-label { font-size: 12.5px; color: var(--bc-text-3); font-weight: 600; }
   .dashc-stat-value {
     margin-left: auto; font-family: var(--bc-mono); font-size: 24px; font-weight: 500; color: var(--bc-text);

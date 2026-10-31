@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "923301857217",
+ "versao": "0eb5082bf7f3",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -536,6 +536,14 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Central de pendências por área",
      "texto": "O gestor vê o da sua área (área do cadastro e áreas de Regras e responsáveis) e o que é dele; a Diretoria vê tudo; o Administrador sem área vê as falhas técnicas (rastreador sem conexão, importação do Auvo parada) e o que é dele. Gestor sem área definida continua vendo tudo, para ninguém ficar sem enxergar o que precisa. Quem publicou um aviso com ciência vê a leitura atrasada dele. O filtro desliga em Matriz de avisos › Alterar horários."
+    },
+    {
+     "titulo": "Central de pendências por área > Janela \"Avisos\" ao entrar (31/10/2026) (parte 1)",
+     "texto": "Ao entrar no SGO+, a janela \"Avisos\" resume as pendências críticas da central que não têm janela própria (atividade atrasada, aviso com ciência, Programa de conduta e cobrança da gestão já abrem sozinhos). Para quem já recebe o balão de padrões, os padrões ficam fora do resumo.\n1. No topo, abaixo de \"Avisos\", aparece o total. Exemplo: \"89 pendências críticas · 7 grupos\". Se houver, aparecem também as cobranças da gestão e os reconhecimentos.\n2. Em \"Pendências críticas\" há um cartão por grupo. Cada cartão mostra o módulo, a etiqueta de gravidade (\"Crítica\" ou \"Prazo estourado\") e o motivo resumido (ex.: \"Bloqueia emissão\"). Mostra também o título com a quantidade (ex.: \"76 padrões de referência vencidos\"), até 3 exemplos com \"e mais N\", o \"Por quê\" (quando o grupo tem uma pendência só ou só parte dele é crítica) e o \"O que fazer\".\n3. Ordem: primeiro o que é da própria pessoa, depois o que está com prazo estourado, depois o resto, na ordem da central.\n4. \"Abrir\" fecha a janela e leva à tela que resolve. Quando o grupo não tem tela própria, o botão se chama \"Ver a lista\" e abre a lista do Início filtrada por aquele grupo.\n5. A janela mostra os 5 primeiros grupos. \"Ver todas as pendências\" abre a lista completa do Início, com uma pendência por linha.\n6. \"Estou ciente\" fica fixo no rodapé, também no celular. Ele só esconde o mesmo conjunto de pendências por 20 horas e não resolve nada. Se surgir uma pendência crítica nova, o resumo volta no próximo acesso.\n7. No celular a janela ocupa a tela inteira, rola por dentro, os cartões ficam em coluna e os botões têm pelo menos 44 px."
+    },
+    {
+     "titulo": "Central de pendências por área > Janela \"Avisos\" ao entrar (31/10/2026) (parte 2)",
+     "texto": "O texto corrido do resumo continua sendo montado no servidor (campo DESCRICAO) para quem lê só texto; a janela desenha os cartões a partir dos grupos estruturados (campos RESUMO e GRUPOS, Qualidade_gruposDaJanela_ em SGO_Qualidade_Ocorrencias.js)."
     },
     {
      "titulo": "COMMAND",

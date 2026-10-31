@@ -88,25 +88,51 @@ function SGO_ajudaTelas_Qualidade_() {
 
     "qualidade/avisos_ao_entrar": {
       titulo: "Janela \"Avisos\" ao entrar (para toda a equipe)",
-      paraQueServe: "Ao entrar no SGO+, a pessoa vê as cobranças da gestão que ainda não confirmou e os elogios recentes.",
+      paraQueServe: "Ao entrar no SGO+, a pessoa vê o resumo das pendências críticas, as cobranças da gestão que ainda não confirmou e os elogios recentes. As pendências aparecem em um cartão por grupo: o que é, por que importa, o que fazer e o botão que leva à tela certa.",
       passos: [
-        { titulo: "Confirmar que leu uma cobrança", itens: [
-          "Leia a cobrança em \"Pendências que precisam da sua atenção\".",
-          "Toque em \"Estou ciente\".",
+        { titulo: "Ler o topo da janela", itens: [
+          "Abaixo de \"Avisos\" aparece o total. Exemplo: \"89 pendências críticas · 7 grupos\".",
+          "Se houver, aparecem também quantas cobranças da gestão e quantos reconhecimentos existem."
+        ] },
+        { titulo: "Ler os cartões de \"Pendências críticas\"", itens: [
+          "Cada cartão é um grupo de pendências do mesmo tipo. Exemplo: \"76 padrões de referência vencidos\".",
+          "No alto do cartão ficam o módulo (Padrões de referência, Frota, Assistência técnica...) e a etiqueta de gravidade.",
+          "Logo abaixo do título aparecem até 3 exemplos (placa, código, nome) e \"e mais N\" quando há outros.",
+          "\"Por quê\" explica o motivo quando o grupo tem uma pendência só ou quando só parte dele é crítica.",
+          "\"O que fazer\" diz o próximo passo.",
+          "Primeiro vêm as pendências que são suas, depois as de prazo estourado, depois as demais.",
+          "A janela mostra os 5 primeiros grupos. Os outros estão em \"Ver todas as pendências\"."
+        ] },
+        { titulo: "Resolver uma pendência", itens: [
+          "Toque em \"Abrir\" no cartão. A janela fecha e o SGO+ abre a tela que resolve (exemplo: Padrões de referência, Frota, o chamado da Assistência técnica).",
+          "Quando o grupo não tem tela própria, o botão se chama \"Ver a lista\" e abre a lista do Início só com aquele grupo.",
+          "Para ver tudo, uma pendência por linha, toque em \"Ver todas as pendências\". Abre a mesma lista do Início."
+        ] },
+        { titulo: "\"Estou ciente\" do resumo de pendências", itens: [
+          "O botão fica fixo no rodapé da janela, também no celular.",
+          "Ele só esconde este resumo por 20 horas. Não resolve nenhuma pendência: elas continuam no Início até serem tratadas na tela de cada uma.",
+          "Se aparecer uma pendência crítica nova, o resumo volta a aparecer no próximo acesso, mesmo dentro das 20 horas."
+        ] },
+        { titulo: "Confirmar que leu uma cobrança da gestão", itens: [
+          "Leia a cobrança em \"Cobranças da gestão\" (ou em \"Pendências que precisam da sua atenção\", quando não há resumo de pendências).",
+          "Toque em \"Estou ciente\" ao lado da cobrança.",
           "Corrija o que foi pedido.",
           "Toque em \"Fechar\" quando terminar."
-        ] },
-        { titulo: "Item \"Pendências críticas\"", itens: [
-          "Leia quantas pendências críticas existem.",
-          "Para ver a lista, vá ao Início e toque em \"Ver todas as pendências\".",
-          "\"Estou ciente\" neste item só esconde o aviso por 20 horas. As pendências continuam abertas."
         ] }
       ],
+      cores: [
+        { nome: "Faixa e etiqueta vermelhas \"Crítica\"", significado: "Vencida, vence hoje ou bloqueia o trabalho. Trate primeiro." },
+        { nome: "Etiqueta vermelha \"Prazo estourado\"", significado: "O prazo já passou. Fica no topo da lista." },
+        { nome: "Etiqueta cinza ao lado (ex.: \"Bloqueia emissão\", \"Uso sem registro\")", significado: "O motivo resumido do grupo." },
+        { nome: "Quadro verde em \"Reconhecimento\"", significado: "Elogio da gestão. Não pede nenhuma ação." }
+      ],
       problemas: [
-        { situacao: "\"Não foi possível registrar a ciência.\"", oQueFazer: "Confira a internet e toque em \"Estou ciente\" de novo." }
+        { situacao: "\"Não foi possível registrar a ciência.\"", oQueFazer: "Confira a internet e toque em \"Estou ciente\" de novo." },
+        { situacao: "Toquei em \"Ver todas as pendências\" e a lista demorou a abrir", oQueFazer: "O SGO+ abre o Início e espera a lista carregar. Se não abrir, toque em \"Ver todas as pendências\" no próprio Início." },
+        { situacao: "Fechei a janela sem querer", oQueFazer: "As mesmas pendências estão no Início, em \"Prioridades do dia\" e em \"Ver todas as pendências\"." }
       ],
       quemPode: [
-        { perfil: "TODOS", pode: "Ver os próprios avisos e tocar em \"Estou ciente\"." }
+        { perfil: "TODOS", pode: "Ver os próprios avisos, abrir a tela de cada pendência e tocar em \"Estou ciente\"." }
       ]
     }
   };

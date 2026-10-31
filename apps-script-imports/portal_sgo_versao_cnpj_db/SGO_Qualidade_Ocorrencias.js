@@ -197,10 +197,63 @@ function Qualidade_itemResumoPendencias_(sessao, pend) {
   return {
     ID: 'PEND:' + assinatura,
     TIPO: 'PENDENCIAS',
+    // Texto corrido mantido para quem lê só texto; a janela "Avisos" desenha os cartões a partir de GRUPOS (31/10/2026).
     DESCRICAO: (n === 1 ? 'Há 1 pendência crítica no SGO+. ' : 'Há ' + n + ' pendências críticas no SGO+. ') + linhas.join('. ') +
       (grupos.length > 5 ? '. E mais ' + (grupos.length - 5) + ' grupo(s)' : '') +
-      '. A lista completa, com o motivo e o que fazer em cada uma, está no Início (Ver todas as pendências).'
+      '. A lista completa, com o motivo e o que fazer em cada uma, está no Início (Ver todas as pendências).',
+    RESUMO: {
+      criticas: n,
+      grupos: grupos.length,
+      total: Number(pend.resumo && pend.resumo.total) || n,
+      geradoEm: String(pend.geradoEm || '')
+    },
+    GRUPOS: Qualidade_gruposDaJanela_(grupos)
   };
+}
+
+var QUALIDADE_JANELA_MAX_GRUPOS = 20;
+
+/**
+ * 31/10/2026 (pedido do dono: "redesenhar e entregar esses avisos de forma melhor, tanto no celular quanto no
+ * computador"): um cartão por grupo, com o quê (título e exemplos), o porquê (etiqueta e detalhe), o que fazer
+ * e a tela que resolve. Ordem: o que é da pessoa, depois prazo estourado (vencido ou "prazo estourado"), depois o
+ * resto, sempre na ordem da central. Só texto e números (nada de Date cru no retorno do google.script.run).
+ */
+function Qualidade_gruposDaJanela_(grupos) {
+  var lista = grupos.map(function(g, i) {
+    var exemplos = (g.exemplos || []).map(String);
+    var porque = '';
+    if (g.qtd === 1) porque = String(g.detalhe || '');
+    else if (g.criticos && g.criticos < g.qtd) porque = Pend_plural_(g.criticos, 'está crítica', 'estão críticas') + ' (vencida, vence hoje ou bloqueia o trabalho); as demais vencem em breve.';
+    var tela = g.tela && typeof g.tela === 'object' ? JSON.parse(JSON.stringify(g.tela)) : null;
+    return {
+      ordem: i,
+      tipo: String(g.tipo || ''),
+      modulo: String(g.modulo || ''),
+      moduloNome: String(g.moduloNome || g.modulo || ''),
+      gravidade: String(g.gravidade || 'CRITICO'),
+      rotulo: String(g.rotulo || ''),
+      qtd: Number(g.qtd) || 0,
+      criticos: Number(g.criticos) || 0,
+      meus: Number(g.meus) || 0,
+      titulo: String(g.titulo || ''),
+      exemplos: exemplos,
+      maisExemplos: Number(g.maisExemplos) || 0,
+      porque: porque,
+      oQueFazer: String(g.oQueFazer || ''),
+      prazoEstourado: (g.piorDias !== null && g.piorDias !== undefined && Number(g.piorDias) < 0) || /estourad/i.test(String(g.titulo || '')),
+      piorDias: (g.piorDias === null || g.piorDias === undefined) ? null : Number(g.piorDias),
+      tela: tela,
+      // grupo com várias pendências sem tela própria (ex.: link do Auvo): o botão abre a lista do Início filtrada
+      abrirLista: (Number(g.qtd) || 0) > 1 && (!tela || tela.tipo === 'link')
+    };
+  });
+  lista.sort(function(a, b) {
+    if ((a.meus > 0) !== (b.meus > 0)) return a.meus > 0 ? -1 : 1;
+    if (a.prazoEstourado !== b.prazoEstourado) return a.prazoEstourado ? -1 : 1;
+    return a.ordem - b.ordem;
+  });
+  return lista.slice(0, QUALIDADE_JANELA_MAX_GRUPOS).map(function(g) { delete g.ordem; return g; });
 }
 
 function Qualidade_apiMarcarCiencia(sessionId, payload) {

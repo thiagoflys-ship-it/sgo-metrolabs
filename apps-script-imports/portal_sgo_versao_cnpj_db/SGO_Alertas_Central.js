@@ -1101,6 +1101,10 @@ function Pend_agrupar_(itens) {
     var t = PEND_TIPOS[g.tipo], primeiro = g.itens[0], n = g.itens.length;
     var pior = g.itens.reduce(function (m, i) { return PEND_GRAV_ORDEM[i.gravidade] < PEND_GRAV_ORDEM[m] ? i.gravidade : m; }, 'INFO');
     var criticos = g.itens.filter(function (i) { return i.gravidade === 'CRITICO'; }).length;
+    // 31/10/2026 (janela "Avisos" em cartões): até 3 exemplos curtos, o que sobra e o prazo mais estourado do grupo.
+    var exemplos = [], vistos = {};
+    if (n > 1) g.itens.forEach(function (i) { var x = Pend_curto_(i.nome || i.titulo, 40); if (x && !vistos[x] && exemplos.length < 3) { vistos[x] = 1; exemplos.push(x); } });
+    var dias = g.itens.map(function (i) { return i.dias; }).filter(function (d) { return d !== null && d !== undefined && !isNaN(d); });
     return {
       tipo: g.tipo, modulo: t.modulo, moduloNome: PEND_MODULOS[t.modulo] || t.modulo, gravidade: pior,
       rotulo: n === 1 ? primeiro.rotulo : t.rotulo, qtd: n, criticos: criticos,
@@ -1109,7 +1113,9 @@ function Pend_agrupar_(itens) {
       detalhe: n === 1 ? primeiro.detalhe : Pend_listaCurta_(g.itens.map(function (i) { return i.nome || i.titulo; }), 3) + ' · ' + t.fazer.charAt(0).toUpperCase() + t.fazer.slice(1) + '.',
       oQueFazer: n === 1 ? primeiro.oQueFazer : t.fazer.charAt(0).toUpperCase() + t.fazer.slice(1) + '.',
       tela: n === 1 ? primeiro.tela : (g.itens.every(function (i) { return i.meu; }) && primeiro.tela && primeiro.tela.tipo === 'atividade' ? { tipo: 'modulo', mod: 'minhas_atividades' } : t.tela),
-      ids: g.itens.slice(0, 100).map(function (i) { return i.id; })
+      ids: g.itens.slice(0, 100).map(function (i) { return i.id; }),
+      exemplos: exemplos, maisExemplos: exemplos.length ? Math.max(0, n - exemplos.length) : 0,
+      piorDias: dias.length ? Math.min.apply(null, dias) : null
     };
   }).sort(function (a, b) {
     var g = PEND_GRAV_ORDEM[a.gravidade] - PEND_GRAV_ORDEM[b.gravidade];

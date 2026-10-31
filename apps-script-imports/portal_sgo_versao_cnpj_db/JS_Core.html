@@ -6773,6 +6773,71 @@
   // (SGO_Qualidade_Ocorrencias.js) — genérico por construção, não depende
   // de qual módulo originou a ocorrência.
   // ------------------------------------------------------------
+  // 31/10/2026 (pedido do dono: "redesenhar e entregar esses avisos de forma melhor, tanto no celular quanto
+  // no computador, está muito desorganizado"): o resumo de pendências críticas deixou de ser um parágrafo corrido.
+  // Vem do servidor em GRUPOS (Qualidade_gruposDaJanela_) e vira um cartão por grupo: o quê (título e exemplos),
+  // o porquê (etiqueta e detalhe), o que fazer e o botão "Abrir" que leva à tela certa. "Estou ciente" fica fixo
+  // no rodapé e só esconde o resumo por 20 horas (não resolve nada). Sem GRUPOS (servidor antigo), mostra o texto.
+  var AVISOS_GRUPOS = [];
+  var AVISOS_PEND_ID = "";
+  var AVISOS_CARTOES_VISIVEIS = 5;
+  var AVISOS_ICONES = {
+    padroes: "fa-ruler-combined", documentos: "fa-file-lines", certificados: "fa-certificate", nr13: "fa-gauge-high",
+    qualificacao: "fa-temperature-half", frota: "fa-car", conduta: "fa-scale-balanced", qualidade: "fa-clipboard-check",
+    auvo: "fa-screwdriver-wrench", atividades: "fa-list-check", avisos: "fa-bullhorn", email: "fa-envelope",
+    comercial: "fa-handshake", ponto: "fa-clock", automacao: "fa-building-shield", assistencia: "fa-headset",
+    compras: "fa-cart-shopping", representacao: "fa-briefcase"
+  };
+
+  function Avisos_num_(n) {
+    return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  function Avisos_cartao_(g, i) {
+    var critico = g.gravidade === "CRITICO";
+    var nivel = critico ? "critico" : (g.gravidade === "ATENCAO" ? "atencao" : "info");
+    var etiqueta = g.prazoEstourado ? "Prazo estourado" : (critico ? "Crítica" : (nivel === "atencao" ? "Atenção" : "Informação"));
+    // o motivo resumido só aparece quando acrescenta algo à etiqueta ("Prazo" ao lado de "Prazo estourado" não acrescenta)
+    var rotulo = g.rotulo && etiqueta.toLowerCase().indexOf(String(g.rotulo).toLowerCase()) < 0 ? '<span class="avisos-etiqueta avisos-etiqueta--leve">' + escapeHtml_(g.rotulo) + '</span>' : "";
+    var exemplos = (g.exemplos || []).length ? (
+      '<ul class="avisos-card-exemplos" aria-label="Exemplos">' +
+        g.exemplos.map(function (x) { return '<li>' + escapeHtml_(x) + '</li>'; }).join("") +
+        (g.maisExemplos ? '<li class="avisos-card-mais">e mais ' + Avisos_num_(g.maisExemplos) + '</li>' : "") +
+      '</ul>'
+    ) : "";
+    var temAcao = !!(g.tela || g.abrirLista);
+    var rotuloBotao = g.abrirLista ? "Ver a lista" : ((g.tela && g.tela.rotulo) || "Abrir");
+    var icone = AVISOS_ICONES[g.modulo] || "fa-circle-exclamation";
+    return '<article class="avisos-card avisos-card--' + nivel + '">' +
+      '<div class="avisos-card-topo">' +
+        '<span class="avisos-card-modulo"><i class="fas ' + icone + '" aria-hidden="true"></i>' + escapeHtml_(g.moduloNome || "") + '</span>' +
+        '<span class="avisos-card-etiquetas"><span class="avisos-etiqueta avisos-etiqueta--' + nivel + '">' + escapeHtml_(etiqueta) + '</span>' + rotulo + '</span>' +
+      '</div>' +
+      '<h5 class="avisos-card-titulo">' + escapeHtml_(g.titulo) + '</h5>' +
+      exemplos +
+      (g.porque ? '<p class="avisos-card-linha"><span class="avisos-card-chave">Por quê</span>' + escapeHtml_(g.porque) + '</p>' : "") +
+      (g.oQueFazer ? '<p class="avisos-card-linha avisos-card-fazer"><span class="avisos-card-chave">O que fazer</span>' + escapeHtml_(g.oQueFazer) + '</p>' : "") +
+      (temAcao ? '<div class="avisos-card-acoes"><button type="button" class="btn-secondary avisos-card-abrir" onclick="Avisos_abrirGrupo_(' + i + ')" aria-label="' + escapeHtml_(rotuloBotao + ": " + g.titulo) + '">' + escapeHtml_(rotuloBotao) + '<i class="fas fa-arrow-right" aria-hidden="true"></i></button></div>' : "") +
+    '</article>';
+  }
+
+  function Avisos_blocoPendencias_(item) {
+    var r = item.RESUMO || {};
+    var grupos = AVISOS_GRUPOS;
+    var visiveis = grupos.slice(0, AVISOS_CARTOES_VISIVEIS);
+    var restantes = Math.max(0, (Number(r.grupos) || grupos.length) - visiveis.length);
+    var total = Number(r.total) || Number(r.criticas) || 0;
+    return '<section class="avisos-secao avisos-secao-pend" aria-labelledby="avisosPendTitulo">' +
+      '<div class="avisos-secao-cab"><h4 id="avisosPendTitulo">Pendências críticas</h4>' +
+        (r.geradoEm ? '<span class="avisos-secao-hora">Conferido em ' + escapeHtml_(r.geradoEm) + '</span>' : "") + '</div>' +
+      '<div class="avisos-cartoes">' + visiveis.map(Avisos_cartao_).join("") + '</div>' +
+      '<div class="avisos-mais">' +
+        '<span>' + (restantes ? 'Mais ' + Avisos_num_(restantes) + (restantes === 1 ? ' grupo crítico' : ' grupos críticos') + ' na lista completa.' : 'A lista completa mostra cada pendência, uma a uma.') + '</span>' +
+        '<button type="button" class="avisos-ver-todas" onclick="Avisos_verTodas_()">Ver todas as pendências' + (total ? ' (' + Avisos_num_(total) + ')' : '') + '<i class="fas fa-arrow-right" aria-hidden="true"></i></button>' +
+      '</div>' +
+    '</section>';
+  }
+
   function verificarAvisosLogin_() {
     if (!SESSION) return;
     google.script.run
@@ -6798,52 +6863,115 @@
       document.body.appendChild(overlay);
     }
 
-    const blocoCobrancas = cobrancas.length ? (
-      '<div class="avisos-secao avisos-secao-cobranca">' +
-        '<h4>Pendências que precisam da sua atenção</h4>' +
-        cobrancas.map(function (o) {
+    // o resumo de pendências (ID "PEND:...") com GRUPOS vira cartões; as cobranças da gestão continuam uma a uma
+    const pend = cobrancas.filter(function (o) { return o.TIPO === "PENDENCIAS" && o.GRUPOS && o.GRUPOS.length; })[0] || null;
+    const outras = cobrancas.filter(function (o) { return o !== pend; });
+    AVISOS_GRUPOS = pend ? pend.GRUPOS : [];
+    AVISOS_PEND_ID = pend ? String(pend.ID) : "";
+
+    const r = (pend && pend.RESUMO) || {};
+    const partes = [];
+    if (pend) partes.push('<strong>' + Avisos_num_(r.criticas) + '</strong> ' + (Number(r.criticas) === 1 ? 'pendência crítica' : 'pendências críticas') + ' · ' + Avisos_num_(r.grupos) + (Number(r.grupos) === 1 ? ' grupo' : ' grupos'));
+    if (outras.length) partes.push('<strong>' + Avisos_num_(outras.length) + '</strong> ' + (outras.length === 1 ? 'cobrança da gestão' : 'cobranças da gestão'));
+    if (elogios.length) partes.push('<strong>' + Avisos_num_(elogios.length) + '</strong> ' + (elogios.length === 1 ? 'reconhecimento' : 'reconhecimentos'));
+
+    const blocoCobrancas = outras.length ? (
+      '<section class="avisos-secao avisos-secao-cobranca">' +
+        '<div class="avisos-secao-cab"><h4>' + (pend ? 'Cobranças da gestão' : 'Pendências que precisam da sua atenção') + '</h4></div>' +
+        outras.map(function (o) {
           return '<div class="avisos-item avisos-item-cobranca">' +
             '<div class="avisos-item-texto">' + escapeHtml_(o.DESCRICAO) + '</div>' +
             '<button type="button" class="btn-primary" onclick="Avisos_marcarCiencia_(\'' + escapeHtml_(o.ID) + '\', this)">Estou ciente</button>' +
           '</div>';
         }).join("") +
-      "</div>"
+      "</section>"
     ) : "";
 
     const blocoElogios = elogios.length ? (
-      '<div class="avisos-secao avisos-secao-elogio">' +
-        '<h4>Reconhecimento</h4>' +
+      '<section class="avisos-secao avisos-secao-elogio">' +
+        '<div class="avisos-secao-cab"><h4>Reconhecimento</h4></div>' +
         elogios.map(function (o) {
           return '<div class="avisos-item avisos-item-elogio">' +
             '<div class="avisos-item-texto">' + escapeHtml_(o.DESCRICAO) + '</div>' +
           '</div>';
         }).join("") +
-      "</div>"
+      "</section>"
     ) : "";
 
+    const rodape = pend ? (
+      '<p class="avisos-rodape-nota"><i class="fas fa-circle-info" aria-hidden="true"></i><span><strong>Estou ciente</strong> só esconde este resumo por 20 horas. Não resolve nenhuma pendência: elas continuam no Início até serem tratadas na tela de cada uma.</span></p>' +
+      '<div class="avisos-rodape-botoes">' +
+        '<button type="button" class="btn-secondary" onclick="Avisos_fecharModal_()">Fechar</button>' +
+        '<button type="button" class="btn-primary avisos-ciente-pend" onclick="Avisos_marcarCiencia_(\'' + escapeHtml_(AVISOS_PEND_ID) + '\', this)">Estou ciente</button>' +
+      '</div>'
+    ) : '<div class="avisos-rodape-botoes"><button type="button" class="btn-secondary" onclick="Avisos_fecharModal_()">Fechar</button></div>';
+
     overlay.innerHTML =
-      '<div class="avisos-login-modal">' +
-        '<div class="avisos-login-header"><h3>Avisos</h3></div>' +
-        '<div class="avisos-login-body">' + blocoCobrancas + blocoElogios + "</div>" +
-        '<div class="avisos-login-footer">' +
-          '<button type="button" class="btn-secondary" onclick="Avisos_fecharModal_()">Fechar</button>' +
-        "</div>" +
+      '<div class="avisos-login-modal' + (pend ? ' avisos-login-modal--pend' : '') + '" role="dialog" aria-modal="true" aria-labelledby="avisosLoginTitulo">' +
+        '<div class="avisos-login-header">' +
+          '<div class="avisos-cab-textos"><h3 id="avisosLoginTitulo">Avisos</h3>' +
+            (partes.length ? '<p class="avisos-cab-resumo">' + partes.join('<span class="avisos-cab-sep" aria-hidden="true">·</span>') + '</p>' : "") +
+          '</div>' +
+          '<button type="button" class="avisos-cab-fechar" onclick="Avisos_fecharModal_()" aria-label="Fechar avisos"><i class="fas fa-xmark" aria-hidden="true"></i></button>' +
+        '</div>' +
+        '<div class="avisos-login-body">' + (pend ? Avisos_blocoPendencias_(pend) : "") + blocoCobrancas + blocoElogios + "</div>" +
+        '<div class="avisos-login-footer">' + rodape + "</div>" +
       "</div>";
     overlay.style.display = "flex";
+    if (!overlay.dataset.teclas) {
+      overlay.dataset.teclas = "1";
+      overlay.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); Avisos_fecharModal_(); } });
+    }
+    // foco na própria janela (leitor de tela anuncia "Avisos"; Esc fecha), sem destacar nenhum botão
+    const foco = overlay.querySelector(".avisos-login-modal");
+    if (foco) { foco.setAttribute("tabindex", "-1"); setTimeout(function () { try { foco.focus({ preventScroll: true }); } catch (e) {} }, 50); }
+  }
+
+  /** "Abrir" de um cartão: vai para a tela que resolve; grupo sem tela própria abre a lista do Início filtrada. */
+  function Avisos_abrirGrupo_(i) {
+    var g = AVISOS_GRUPOS[i];
+    if (!g) return;
+    Avisos_fecharModal_();
+    if (g.abrirLista || !g.tela) { Avisos_verTodas_(g.tipo); return; }
+    if (typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(g.tela);
+    else if (g.tela.mod) abrir(g.tela.mod);
+  }
+
+  /** Lista completa do Início ("Ver todas as pendências"); abre o Início antes, se a lista ainda não carregou. */
+  function Avisos_verTodas_(soTipo) {
+    Avisos_fecharModal_();
+    if (typeof Inicio_abrirTodas_ !== "function") { abrir("dashboard"); return; }
+    if (typeof INICIO_PENDENCIAS !== "undefined" && INICIO_PENDENCIAS.length) { Inicio_abrirTodas_(soTipo); return; }
+    abrir("dashboard");
+    var n = 0, t = setInterval(function () {
+      if (typeof INICIO_PENDENCIAS !== "undefined" && INICIO_PENDENCIAS.length) { clearInterval(t); Inicio_abrirTodas_(soTipo); }
+      else if (++n > 60) clearInterval(t);
+    }, 250);
   }
 
   function Avisos_marcarCiencia_(ocorrenciaId, btnEl) {
+    if (btnEl) btnEl.disabled = true;
     google.script.run
       .withSuccessHandler(function (res) {
-        if (!res || !res.ok) { alert("Não foi possível confirmar. Tente de novo."); return; }
-        const item = btnEl.closest(".avisos-item");
-        if (item) item.remove();
-        const secao = document.querySelector(".avisos-secao-cobranca");
-        if (secao && !secao.querySelector(".avisos-item")) secao.remove();
-        const corpo = document.querySelector(".avisos-login-body");
-        if (corpo && !corpo.querySelector(".avisos-item")) Avisos_fecharModal_();
+        if (!res || !res.ok) { if (btnEl) btnEl.disabled = false; alert("Não foi possível confirmar. Tente de novo."); return; }
+        // resumo de pendências: o botão fica no rodapé; tira a seção dos cartões e o rodapé volta a ter só "Fechar"
+        if (String(ocorrenciaId).indexOf("PEND:") === 0) {
+          const secaoPend = document.querySelector("#avisosLoginOverlay .avisos-secao-pend");
+          if (secaoPend) secaoPend.remove();
+          const rodape = document.querySelector("#avisosLoginOverlay .avisos-login-footer");
+          if (rodape) rodape.innerHTML = '<div class="avisos-rodape-botoes"><button type="button" class="btn-secondary" onclick="Avisos_fecharModal_()">Fechar</button></div>';
+          AVISOS_GRUPOS = []; AVISOS_PEND_ID = "";
+        } else {
+          const item = btnEl && btnEl.closest(".avisos-item");
+          if (item) item.remove();
+          const secao = document.querySelector("#avisosLoginOverlay .avisos-secao-cobranca");
+          if (secao && !secao.querySelector(".avisos-item")) secao.remove();
+        }
+        const corpo = document.querySelector("#avisosLoginOverlay .avisos-login-body");
+        if (corpo && !corpo.querySelector(".avisos-item, .avisos-card")) Avisos_fecharModal_();
       })
       .withFailureHandler(function (err) {
+        if (btnEl) btnEl.disabled = false;
         console.error("Erro ao marcar ciência:", err);
         alert("Não foi possível registrar a ciência. Verifique a conexão e tente de novo.");
       })
