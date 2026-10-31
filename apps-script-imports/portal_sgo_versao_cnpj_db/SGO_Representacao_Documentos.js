@@ -976,6 +976,8 @@ function Representacao_arquivoClientePermitido_(sessionId, arquivoId) {
     Rep_memoLimpar_(); Ast_memoLimpar_();
     var id = RepD_s_(arquivoId);
     if (!id) return false;
+    // 31/10/2026: relatórios do ciclo da lavadora (SGO_LavCiclo_Main.js): o cliente só abre os dos equipamentos dele.
+    if (typeof LavCic_arquivoClientePermitido_ === 'function') { var lc = LavCic_arquivoClientePermitido_(sessionId, id); if (lc !== null) return lc; }
     var regs = RepD_registros_().filter(function (r) { return RepD_s_(r.HTML_ID) === id || RepD_s_(r.PDF_ID) === id; });
     if (!regs.length) return true;
     var eu = Ast_eu_(sessionId);

@@ -55,6 +55,9 @@ const MAPA = {
   // 29/10/2026: módulo Representação (equipe da Metrolabs) e a versão para a empresa representada, sem termos internos
   "MANUAL_MODULO_REPRESENTACAO.md": { tela: "representacao", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "RH"] },
   "MANUAL_REPRESENTACAO_EMPRESA_REPRESENTADA.md": { tela: "representacao", perfis: ["REPRESENTADA", "ADMIN", "DIRETORIA", "GESTOR"] },
+  // 31/10/2026: relatório do ciclo da lavadora — o manual de quem usa (equipe e cliente) e o da gestão (nova versão, referências, arquivos)
+  "MANUAL_RELATORIO_CICLO_LAVADORA.md": { tela: "lavadora_ciclos" },
+  "MANUAL_RELATORIO_CICLO_LAVADORA_GESTAO.md": { tela: "lavadora_ciclos", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO"] },
   // 31/10/2026: segurança do acesso — o manual de quem entra no sistema (todos) e o da gestão (configuração e recuperação)
   "MANUAL_SEGURANCA_ACESSO.md": { tela: "dashboard" },
   "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] }

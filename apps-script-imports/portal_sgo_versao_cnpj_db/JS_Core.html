@@ -668,6 +668,8 @@
           </button>
         </div>
 
+        ${typeof LavCiclo_cartaoQr_ === "function" ? LavCiclo_cartaoQr_(eqp) : ""}
+
         <div style="background: #ffffff; width: 100%; max-width: 400px; border-radius: 12px; border: 1px solid #dadce0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 25px; margin-bottom: 25px; text-align: left;">
           <h2 style="font-size: 16px; color: var(--metro-blue-dark, #083978); text-transform: uppercase; border-bottom: 2px solid var(--metro-green, #007b3e); padding-bottom: 10px; margin-top: 0; margin-bottom: 14px; text-align: center;">
             Qualificação
@@ -991,6 +993,12 @@
     // (visão dela) e para a Metrolabs (visão interna); o servidor decide pela sessão.
     if (mod === "representacao" && typeof Representacao_render_ === "function") {
       Representacao_render_();
+      return;
+    }
+
+    // RELATÓRIO DO CICLO DA LAVADORA (2026-10-31) — ver JS_LavCiclo.html / SGO_LavCiclo_*.js. O servidor confere o acesso (cliente só os equipamentos dele) em toda chamada.
+    if (mod === "lavadora_ciclos" && typeof LavCiclo_render_ === "function") {
+      LavCiclo_render_();
       return;
     }
 
@@ -4834,6 +4842,8 @@
     if (isCliente) { var grupoAstCli = document.getElementById("menu-secao-assistencia"); if (grupoAstCli && grupoAstCli.style.display !== "none") itens.push({ icone: '<i class="fas fa-headset" aria-hidden="true"></i>', legenda: "Meus chamados", mod: "assistencia_portal" }); }
     itens.push({ icone: '<i class="fas fa-location-dot" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
+    // 31/10/2026: relatório do ciclo da lavadora (equipe e cliente; o servidor mostra só os equipamentos do cliente)
+    itens.push({ icone: '<i class="fas fa-receipt" aria-hidden="true"></i>', legenda: "Relatórios de ciclo", mod: "lavadora_ciclos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
     if (typeof SegAcessoTela_pode_ === "function" && SegAcessoTela_pode_()) itens.push({ icone: '<i class="fas fa-shield-halved" aria-hidden="true"></i>', legenda: "Segurança do acesso", mod: "seguranca_acesso" });

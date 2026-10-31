@@ -1,0 +1,401 @@
+<style>
+  /* RELATÓRIO DO CICLO DA LAVADORA (31/10/2026) — servidor: SGO_LavCiclo_*.js (uma porta: LavCiclo_api). Usa os componentes
+     da Assistência (at-*); aqui só o que é próprio do fluxo: passos, conferência e botões grandes no celular. */
+  .lc-passos { display: flex; gap: 6px; margin: 2px 0 12px; flex-wrap: wrap; }
+  .lc-passos span { flex: 1 1 90px; text-align: center; font-size: 11.5px; font-weight: 700; padding: 6px 4px; border-radius: 8px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .lc-passos span.atual { background: var(--card); color: var(--text-strong, var(--text)); border-color: var(--info, #1f5fa8); box-shadow: inset 0 -3px 0 var(--info, #1f5fa8); }
+  .lc-passos span.feito { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+  .lc-arquivo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 2px dashed var(--border); border-radius: 10px; padding: 22px 14px; text-align: center; cursor: pointer; background: var(--bg); min-height: 120px; }
+  .lc-arquivo:hover, .lc-arquivo:focus-within { border-color: var(--info, #1f5fa8); }
+  .lc-arquivo i { font-size: 28px; color: var(--info, #1f5fa8); }
+  .lc-arquivo b { font-size: 15px; } .lc-arquivo small { color: var(--muted); font-size: 12px; max-width: 420px; }
+  .lc-arquivo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .lc-lote { font-size: 22px; font-weight: 800; letter-spacing: .01em; margin: 2px 0 8px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .lc-conf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+  .lc-conf div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--card); min-width: 0; }
+  .lc-conf dt { font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 0 0 2px; }
+  .lc-conf dd { margin: 0; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+  .lc-conf .largo { grid-column: 1 / -1; }
+  .lc-grande { min-height: 48px; font-size: 15px; font-weight: 700; }
+  .lc-equip-cab { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  .lc-quadro { display: block; width: 100%; height: 190px; background: #fff; border: 2px dashed #9DA29C; border-radius: 8px; touch-action: none; }
+  .lc-resumo { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+  .lc-qr-card .at-acoes button { flex: 1 1 100%; }
+  @media (max-width: 640px) {
+    .lc-conf { grid-template-columns: 1fr 1fr; }
+    .lc-acoes-cel button, .lc-acoes-cel a { flex: 1 1 100%; }
+    .lc-lote { font-size: 19px; }
+  }
+</style>
+<script>
+  // =====================================================================
+  // RELATÓRIO DO CICLO DA LAVADORA (31/10/2026). Pedido do dono: importar o arquivo .sgolav do ciclo e gerar o relatório A4
+  // de uma folha, salvo no histórico do equipamento, com a assinatura do responsável pelo local feita na tela.
+  // Abre por abrir('lavadora_ciclos') (menu Cadastros > Relatórios de ciclo) e pelo QR code do equipamento
+  // (LavCiclo_cartaoQr_ em renderProntuarioDigital_). Servidor: LavCiclo_api(sessionId, acao, dados) em SGO_LavCiclo_Main.js;
+  // o servidor confere o acesso (o cliente só vê os equipamentos dele) em toda chamada. A tela não se redesenha sozinha:
+  // recarrega depois de cada ação ou no botão "Atualizar" (nunca apaga o que está sendo digitado ou assinado).
+  // =====================================================================
+  var LC = { ini: null, aba: "", filtro: { busca: "", de: "", ate: "", resultado: "", assinatura: "", equipamentoId: "" } };
+  function Lc_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Lc_$_(id) { return document.getElementById(id); }
+  function Lc_chamar_(acao, dados, ok, erro, carregando) {
+    if (carregando && typeof SGO_iniciarCarregamento_ === "function") SGO_iniciarCarregamento_(carregando);
+    var fim = function () { if (carregando && typeof SGO_finalizarCarregamento_ === "function") SGO_finalizarCarregamento_(); };
+    var falhou = function (m, r) { (erro || function (x) { alert(x); })(m, r || {}); };
+    google.script.run.withSuccessHandler(function (r) {
+      fim();
+      if (r && r.ok) { try { ok(r); } catch (e) { console.error("Relatório do ciclo " + acao + ":", e); falhou("A tela não conseguiu mostrar a resposta (" + ((e && e.message) || e) + "). Atualize a página (F5); nada foi perdido no servidor."); } }
+      else falhou((r && r.message) || "Não foi possível concluir. Tente de novo.", r);
+    }).withFailureHandler(function (e) { fim(); falhou("Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado."); })
+      .LavCiclo_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function Lc_msg_(onde, texto, tipo) { var el = typeof onde === "string" ? Lc_$_(onde) : onde; if (el) el.innerHTML = texto ? '<div class="at-faixa ' + (tipo || "erro") + '" role="' + (tipo === "ok" ? "status" : "alert") + '">' + Lc_esc_(texto) + "</div>" : ""; }
+  function Lc_selo_(classe, resultado) { var c = classe === "APROVADO" ? "verde" : classe === "OUTRO" ? "cinza" : "vermelho"; return '<span class="at-selo ' + c + '">' + Lc_esc_(resultado || classe) + "</span>"; }
+  function Lc_seloAss_(r) { return r.substituido ? '<span class="at-selo cinza">Substituída pela versão nova</span>' : r.assinado ? '<span class="at-selo verde">Assinado</span>' : '<span class="at-selo laranja">Aguardando assinatura</span>'; }
+  function Lc_abrirUrl_(url, baixar) {
+    if (!url) { alert("O arquivo deste relatório não foi gravado. Por quê: a cópia não foi salva na hora da geração. O que fazer: peça à Metrolabs para gerar uma nova versão."); return; }
+    var u = String(url);
+    if (baixar && /^\/?arquivos\//.test(u.replace(/^https?:\/\/[^/]+/, ""))) u += (u.indexOf("?") >= 0 ? "&" : "?") + "baixar=1";
+    window.open(u, "_blank", "noopener");
+  }
+  function Lc_ehCel_() { return typeof ehMobileModo_ === "function" && ehMobileModo_(); }
+
+  // ---------------------------------------------------------------- tela principal
+  function LavCiclo_render_() {
+    var div = Lc_$_("conteudo"); if (!div) return;
+    if (Lc_ehCel_() && typeof atualizarTituloMobile_ === "function") atualizarTituloMobile_("Relatórios de ciclo");
+    div.innerHTML = '<div class="module-shell"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Relatórios de ciclo da lavadora</h2>' +
+      '<p class="content-subtitle" id="lcSub">Carregando…</p></div><div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button type="button" class="btn-secondary at-btn44" id="lcAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button></div></div>' +
+      '<div id="lcKpis"></div><div id="lcAbas" class="at-tabs" role="tablist"></div><div id="lcMsg"></div><div id="lcCorpo"></div></div>';
+    Lc_$_("lcAtualizar").onclick = function () { Lc_iniciar_(LC.aba); };
+    Lc_iniciar_("");
+  }
+  function Lc_iniciar_(aba) {
+    Lc_chamar_("iniciar", {}, function (r) {
+      LC.ini = r;
+      var eu = r.eu;
+      Lc_$_("lcSub").textContent = eu.cliente ? (eu.clienteNome ? eu.clienteNome + ": " : "") + "importe o arquivo do ciclo da lavadora, gere o relatório A4 e assine na tela. Aparecem só os equipamentos da sua empresa." :
+        "Importe o arquivo .sgolav que a lavadora grava a cada ciclo: o relatório A4 de uma folha fica salvo no histórico do equipamento, com a assinatura do responsável pelo local.";
+      var abas = [["relatorios", "Relatórios gerados"], ["equipamentos", "Equipamentos"]];
+      if (eu.interno) abas.push(["referencias", "Referências por receita"]);
+      Lc_$_("lcAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="at-tab" role="tab" data-a="' + a[0] + '">' + Lc_esc_(a[1]) + "</button>"; }).join("");
+      Lc_$_("lcAbas").querySelectorAll(".at-tab").forEach(function (b) { b.onclick = function () { Lc_irAba_(b.getAttribute("data-a")); }; });
+      Lc_irAba_(aba || (r.totalRelatorios ? "relatorios" : "equipamentos"));
+    }, function (m) { Lc_$_("lcSub").textContent = ""; Lc_msg_("lcMsg", m); }, "Carregando os relatórios de ciclo…");
+  }
+  function Lc_irAba_(a) {
+    LC.aba = a; Lc_msg_("lcMsg", "");
+    document.querySelectorAll("#lcAbas .at-tab").forEach(function (b) { var on = b.getAttribute("data-a") === a; b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
+    var c = Lc_$_("lcCorpo"); if (!c) return;
+    c.innerHTML = '<div class="at-vazio">Carregando…</div>';
+    ({ relatorios: Lc_abaRelatorios_, equipamentos: Lc_abaEquipamentos_, referencias: Lc_abaReferencias_ }[a] || Lc_abaRelatorios_)(c);
+  }
+
+  // ---------------------------------------------------------------- relatórios
+  function Lc_abaRelatorios_(c) {
+    var f = LC.filtro, eqs = (LC.ini && LC.ini.equipamentos) || [];
+    c.innerHTML = '<div class="at-filtros">' +
+      '<div style="flex:2 1 220px"><label for="lcBusca">Buscar (lote, nº, TAG ou série)</label><input id="lcBusca" type="search" placeholder="Ex.: LOT-20261030-6222" value="' + Lc_esc_(f.busca) + '" style="width:100%"></div>' +
+      '<div><label for="lcDe">De</label><input id="lcDe" type="date" value="' + Lc_esc_(f.de) + '"></div><div><label for="lcAte">Até</label><input id="lcAte" type="date" value="' + Lc_esc_(f.ate) + '"></div>' +
+      '<div><label for="lcRes">Resultado</label><select id="lcRes"><option value="">Todos</option><option value="APROVADO">Aprovado</option><option value="CANCELADO">Cancelado</option><option value="REPROVADO">Reprovado</option></select></div>' +
+      '<div><label for="lcAss">Assinatura</label><select id="lcAss"><option value="">Todas</option><option value="NAO">Aguardando assinatura</option><option value="SIM">Assinados</option></select></div>' +
+      (eqs.length > 1 ? '<div style="flex:1 1 200px"><label for="lcEq">Equipamento</label><select id="lcEq" style="width:100%"><option value="">Todos</option>' + eqs.map(function (e) { return '<option value="' + Lc_esc_(e.id) + '">' + Lc_esc_(e.rotulo + (LC.ini.eu.interno && e.cliente ? " · " + e.cliente : "")) + "</option>"; }).join("") + "</select></div>" : "") +
+      '<div><button type="button" class="btn-primary at-btn44" id="lcFiltrar">Buscar</button></div><div><button type="button" class="btn-secondary at-btn44" id="lcLimpar">Limpar</button></div></div><div id="lcLista"><div class="at-vazio">Carregando…</div></div>';
+    Lc_$_("lcRes").value = f.resultado; Lc_$_("lcAss").value = f.assinatura; if (Lc_$_("lcEq")) Lc_$_("lcEq").value = f.equipamentoId;
+    var ler = function () { f.busca = Lc_$_("lcBusca").value.trim(); f.de = Lc_$_("lcDe").value; f.ate = Lc_$_("lcAte").value; f.resultado = Lc_$_("lcRes").value; f.assinatura = Lc_$_("lcAss").value; f.equipamentoId = Lc_$_("lcEq") ? Lc_$_("lcEq").value : ""; };
+    Lc_$_("lcFiltrar").onclick = function () { ler(); Lc_carregarLista_(); };
+    Lc_$_("lcBusca").onkeydown = function (e) { if (e.key === "Enter") { ler(); Lc_carregarLista_(); } };
+    ["lcRes", "lcAss", "lcEq"].forEach(function (id) { var el = Lc_$_(id); if (el) el.onchange = function () { ler(); Lc_carregarLista_(); }; });
+    Lc_$_("lcLimpar").onclick = function () { LC.filtro = { busca: "", de: "", ate: "", resultado: "", assinatura: "", equipamentoId: "" }; Lc_abaRelatorios_(c); };
+    Lc_carregarLista_();
+  }
+  function Lc_carregarLista_() {
+    var el = Lc_$_("lcLista"); if (!el) return;
+    Lc_chamar_("listar", LC.filtro, function (r) {
+      var k = Lc_$_("lcKpis");
+      if (k) k.innerHTML = '<div class="at-kpis"><div class="at-kpi"><span class="v">' + r.total + '</span><span class="r">Relatórios' + (LC.filtro.busca || LC.filtro.de || LC.filtro.ate || LC.filtro.resultado || LC.filtro.assinatura || LC.filtro.equipamentoId ? " (filtro)" : "") + '</span></div>' +
+        '<div class="at-kpi ok"><span class="v">' + r.resumo.aprovados + '</span><span class="r">Ciclos aprovados</span></div><div class="at-kpi ' + (r.resumo.naoAprovados ? "critico" : "ok") + '"><span class="v">' + r.resumo.naoAprovados + '</span><span class="r">Cancelados ou reprovados</span></div>' +
+        '<div class="at-kpi ' + (r.resumo.semAssinatura ? "aviso" : "ok") + '"><span class="v">' + r.resumo.semAssinatura + '</span><span class="r">Aguardando assinatura</span></div></div>';
+      if (!r.relatorios.length) { el.innerHTML = '<div class="at-vazio">' + (r.total ? "" : "Nenhum relatório encontrado" + (LC.filtro.busca || LC.filtro.de || LC.filtro.ate || LC.filtro.resultado || LC.filtro.assinatura ? " com este filtro. Toque em \"Limpar\" para ver todos." : ". Para gerar o primeiro, abra a aba \"Equipamentos\" e toque em \"Gerar relatório do ciclo\", ou leia o QR code da lavadora.")) + "</div>"; return; }
+      el.innerHTML = '<div class="at-lista">' + r.relatorios.map(Lc_cartaoRel_).join("") + (r.total > r.relatorios.length ? '<div class="at-vazio">Mostrando os ' + r.relatorios.length + " mais recentes de " + r.total + ". Use a busca ou o período para achar os outros.</div>" : "") + "</div>";
+      Lc_ligarCartoes_(el, r.relatorios, Lc_carregarLista_);
+    }, function (m) { el.innerHTML = ""; Lc_msg_(el, m); });
+  }
+  function Lc_cartaoRel_(r) {
+    var classe = r.classe === "APROVADO" ? "" : " p1";
+    return '<div class="at-card' + classe + (r.substituido ? " fim" : "") + '" data-rel="' + Lc_esc_(r.id) + '">' +
+      '<div class="lc-equip-cab"><div><p class="at-card-tit">' + Lc_esc_(r.lote) + ' <span style="font-weight:400;color:var(--muted)">· ' + Lc_esc_(r.data + " " + r.hora) + "</span></p>" +
+      '<p class="at-meta">' + Lc_esc_([r.equipamento, "Receita " + r.receita, r.numero + (r.versao > 1 ? " · versão " + r.versao : "")].filter(Boolean).join(" · ")) + "</p></div>" +
+      "<div>" + Lc_selo_(r.classe, r.resultado) + Lc_seloAss_(r) + "</div></div>" +
+      (r.classe !== "APROVADO" ? '<p class="at-txt" style="color:var(--danger);font-weight:700">' + Lc_esc_(r.falha ? "Falha: " + r.falha + (r.codFalha && r.codFalha !== "0" ? " (código " + r.codFalha + ")" : "") : "Ciclo encerrado sem o código da falha no arquivo.") + "</p>" : "") +
+      '<p class="at-txt">' + Lc_esc_((r.desinfeccao ? "Desinfecção: " + r.desinfeccao + " · " : "") + "Tempo total: " + r.duracao) + (r.assinado ? " · Assinado por " + Lc_esc_(r.assinante + (r.cargo ? " (" + r.cargo + ")" : "") + " em " + r.assinadoEm) : "") + "</p>" +
+      (r.faltam && r.faltam.length && !r.assinado ? '<p class="at-meta">Cadastro do equipamento sem: ' + Lc_esc_(r.faltam.join(", ")) + ".</p>" : "") +
+      '<div class="at-acoes lc-acoes-cel"><button type="button" class="btn-primary at-btn44" data-x="abrir"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Abrir o relatório</button>' +
+      '<button type="button" class="btn-secondary at-btn44" data-x="pdf"><i class="fas fa-download" aria-hidden="true"></i>&nbsp;Baixar PDF</button>' +
+      (r.podeAssinar ? '<button type="button" class="btn-secondary at-btn44" data-x="assinar"><i class="fas fa-signature" aria-hidden="true"></i>&nbsp;Assinar</button>' : "") +
+      '<button type="button" class="btn-secondary at-btn44" data-x="det">Versões e histórico</button></div></div>';
+  }
+  function Lc_ligarCartoes_(el, lista, depois) {
+    var mapa = {}; lista.forEach(function (r) { mapa[r.id] = r; });
+    el.querySelectorAll("[data-rel]").forEach(function (card) {
+      var r = mapa[card.getAttribute("data-rel")];
+      card.querySelectorAll("[data-x]").forEach(function (b) {
+        b.onclick = function () {
+          var x = b.getAttribute("data-x");
+          if (x === "abrir") Lc_abrirUrl_(r.htmlUrl);
+          else if (x === "pdf") Lc_abrirUrl_(r.pdfUrl, true);
+          else if (x === "assinar") Lc_assinar_(r, depois);
+          else if (x === "det") Lc_detalhes_(r.id, depois);
+        };
+      });
+    });
+  }
+  function Lc_detalhes_(id, depois) {
+    Lc_chamar_("abrir", { id: id }, function (x) {
+      var r = x.relatorio, eu = LC.ini ? LC.ini.eu : { interno: false };
+      var corpo = '<p class="lc-resumo">' + Lc_esc_(r.numero + " · lote " + r.lote + " · " + r.equipamento) + "</p>" +
+        '<div class="at-sec">Versões</div><div class="at-lista">' + r.versoes.map(function (v) {
+          return '<div class="at-card' + (v.substituido ? " fim" : "") + '"><p class="at-card-tit">Versão ' + v.versao + " " + Lc_seloAss_(v) + '</p><p class="at-meta">Gerada por ' + Lc_esc_(v.por) + " em " + Lc_esc_(v.em) + (v.motivoVersao ? " · Motivo: " + Lc_esc_(v.motivoVersao) : "") + "</p>" +
+            '<div class="at-acoes"><button type="button" class="btn-secondary" data-v="' + Lc_esc_(v.id) + '" data-u="html">Abrir</button><button type="button" class="btn-secondary" data-v="' + Lc_esc_(v.id) + '" data-u="pdf">Baixar PDF</button></div></div>';
+        }).join("") + "</div>" +
+        '<div class="at-sec">Histórico</div><div class="at-hist">' + (r.historico.length ? r.historico.map(function (h) { return "<div>" + Lc_esc_(h.texto) + '<div class="q">' + Lc_esc_(h.por + " · " + h.em) + "</div></div>"; }).join("") : '<div class="q">Sem registros.</div>') + "</div>" +
+        (r.podeNovaVersao ? '<div class="at-faixa aviso" style="margin-top:12px">Precisa corrigir? A nova versão é gerada do mesmo arquivo, com o cadastro atual e a conclusão refeita. A versão atual fica guardada, marcada como substituída' + (r.assinado ? ", e a nova precisa de assinatura de novo" : "") + ".</div>" : "");
+      var ov = At_modal_("Relatório " + r.numero, corpo, (r.podeNovaVersao ? '<button type="button" class="btn-secondary" data-nv>Gerar nova versão</button>' : "") + '<button type="button" class="btn-primary" data-fechar>Fechar</button>', 640);
+      ov.querySelector("[data-fechar]").onclick = function () { ov.remove(); };
+      ov.querySelectorAll("[data-v]").forEach(function (b) { b.onclick = function () { var v = r.versoes.filter(function (z) { return z.id === b.getAttribute("data-v"); })[0]; if (v) Lc_abrirUrl_(b.getAttribute("data-u") === "pdf" ? v.pdfUrl : v.htmlUrl, b.getAttribute("data-u") === "pdf"); }; });
+      var nv = ov.querySelector("[data-nv]");
+      if (nv) nv.onclick = function () {
+        ov.remove();
+        At_pedirTexto_("Gerar nova versão do " + r.numero, "Diga o que muda nesta versão. O motivo sai impresso na nova versão e fica no histórico; a versão atual continua guardada.", "Motivo da nova versão", 10, function (motivo, ov2) {
+          Lc_chamar_("novaVersao", { id: r.id, motivo: motivo }, function (n) { ov2.remove(); alert(n.message); if (depois) depois(); }, function (m) { Lc_msg_("atTxtMsg", m); }, "Gerando a nova versão…");
+        }, "Gerar nova versão");
+      };
+    }, function (m) { alert(m); }, "Abrindo…");
+  }
+
+  // ---------------------------------------------------------------- assinatura na tela
+  function Lc_assinar_(r, depois) {
+    var eu = LC.ini ? LC.ini.eu : { cliente: false };
+    var nomePadrao = eu.cliente && typeof USER_CONTEXT !== "undefined" && USER_CONTEXT ? String(USER_CONTEXT.nome || "") : "";
+    var corpo = '<p class="lc-resumo">' + Lc_esc_("Lote " + r.lote + " · " + r.data + " · " + (r.equipamento || "")) + " " + Lc_selo_(r.classe, r.resultado) + "</p>" +
+      '<p class="at-txt">Abra o relatório e confira antes de assinar. Depois de assinado, o documento fica travado: uma correção só pela Metrolabs, em nova versão.</p>' +
+      '<div class="at-acoes" style="margin:0 0 10px"><button type="button" class="btn-secondary at-btn44" id="lcAssVer"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Abrir o relatório para conferir</button></div>' +
+      '<div class="at-campo"><label for="lcAssQuadro">Assinatura (com o dedo ou com o mouse)</label><canvas class="lc-quadro" id="lcAssQuadro" aria-label="Quadro de assinatura"></canvas><div class="at-ajuda-campo" id="err_assinatura"></div></div>' +
+      '<div class="at-acoes" style="margin:-4px 0 10px"><button type="button" class="btn-secondary" id="lcAssLimpar">Limpar a assinatura</button></div>' +
+      '<div class="at-grade2"><div class="at-campo"><label for="lcAssNome">Nome de quem assina</label><input id="lcAssNome" maxlength="120" autocomplete="name" value="' + Lc_esc_(nomePadrao) + '"><div class="at-ajuda-campo" id="err_nome">O responsável pelo local (por exemplo, a enfermeira da CME).</div></div>' +
+      '<div class="at-campo"><label for="lcAssCargo">Cargo</label><input id="lcAssCargo" maxlength="80" autocomplete="organization-title"><div class="at-ajuda-campo" id="err_cargo"></div></div></div>' +
+      '<label class="at-check"><input type="checkbox" id="lcAssConf"> <span>Conferi os dados do relatório (equipamento, lote, data e resultado) e aprovo o registro deste ciclo.</span></label><div class="at-ajuda-campo" id="err_conferi"></div>' +
+      '<div id="lcAssMsg"></div>';
+    var ov = At_modal_("Assinar o relatório " + r.numero, corpo, '<button type="button" class="btn-secondary at-btn44" data-x>Voltar</button><button type="button" class="btn-primary at-btn44" data-ok><i class="fas fa-signature" aria-hidden="true"></i>&nbsp;Assinar</button>', 640);
+    var q = At_quadro_(Lc_$_("lcAssQuadro"));
+    Lc_$_("lcAssLimpar").onclick = q.limpar;
+    Lc_$_("lcAssVer").onclick = function () { Lc_abrirUrl_(r.htmlUrl); };
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      ["assinatura", "nome", "cargo", "conferi"].forEach(function (k) { var e = Lc_$_("err_" + k); if (e) { e.style.color = ""; if (k !== "nome") e.textContent = ""; } });
+      var d = { id: r.id, nome: Lc_$_("lcAssNome").value, cargo: Lc_$_("lcAssCargo").value, conferi: Lc_$_("lcAssConf").checked, imagem: q.tracos ? q.imagem() : "" };
+      Lc_chamar_("assinar", d, function (x) { ov.remove(); Lc_depoisDeAssinar_(x, depois); }, function (m, resp) {
+        (resp.faltam || []).forEach(function (f) { var e = Lc_$_("err_" + f.campo); if (e) { e.textContent = f.texto; e.style.color = "var(--danger)"; } });
+        Lc_msg_("lcAssMsg", m);
+      }, "Gravando a assinatura…");
+    };
+  }
+  function Lc_depoisDeAssinar_(x, depois) {
+    var r = x.relatorio;
+    var ov = At_modal_("Relatório assinado", '<div class="at-faixa ok" role="status">' + Lc_esc_(x.message) + '</div><p class="lc-resumo">' + Lc_esc_("Assinado por " + r.assinante + " (" + r.cargo + ") em " + r.assinadoEm + ".") + "</p>",
+      '<button type="button" class="btn-secondary at-btn44" data-pdf>Baixar PDF</button><button type="button" class="btn-primary at-btn44" data-abrir>Abrir o relatório assinado</button>', 560);
+    ov.querySelector("[data-pdf]").onclick = function () { Lc_abrirUrl_(r.pdfUrl, true); };
+    ov.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(r.htmlUrl); ov.remove(); };
+    if (depois) depois();
+  }
+
+  // ---------------------------------------------------------------- equipamentos
+  function Lc_abaEquipamentos_(c) {
+    var eqs = (LC.ini && LC.ini.equipamentos) || [], eu = LC.ini.eu;
+    if (!eqs.length) {
+      c.innerHTML = '<div class="at-vazio">' + (eu.cliente ? "Nenhuma lavadora da sua empresa está cadastrada no SGO+. Por quê: o relatório do ciclo é ligado ao equipamento do cadastro. O que fazer: peça à Metrolabs para cadastrar a lavadora (com o número de série) e ligar ao seu cliente." :
+        "Nenhuma lavadora cadastrada. Por quê: aparecem aqui os equipamentos cujo tipo tem \"Lavadora\", \"Termodesinfectora\" ou \"Ultrassônica\". O que fazer: cadastre a lavadora em Cadastros > Equipamentos (tipo \"Lavadora ultrassônica\") e volte aqui.") + "</div>";
+      return;
+    }
+    var busca = '<div class="at-filtros"><div style="flex:1 1 260px"><label for="lcEqBusca">Procurar equipamento</label><input id="lcEqBusca" type="search" placeholder="TAG, série, modelo, cliente ou setor" style="width:100%"></div></div>';
+    c.innerHTML = (eqs.length > 4 ? busca : "") + '<div class="at-lista" id="lcEqLista">' + eqs.map(function (e) {
+      return '<div class="at-card" data-eq="' + Lc_esc_(e.id) + '" data-busca="' + Lc_esc_([e.rotulo, e.modelo, e.cliente, e.setor, e.patrimonio, e.unidade].join(" ").toLowerCase()) + '">' +
+        '<p class="at-card-tit">' + Lc_esc_(e.rotulo) + (e.ativo ? "" : ' <span class="at-selo cinza">Inativo</span>') + "</p>" +
+        '<p class="at-meta">' + Lc_esc_([eu.interno ? e.cliente : "", e.unidade, e.setor ? "Setor " + e.setor : "", e.modelo ? "Modelo " + e.modelo : ""].filter(Boolean).join(" · ")) + "</p>" +
+        '<p class="at-txt">' + (e.relatorios ? e.relatorios + (e.relatorios === 1 ? " relatório" : " relatórios") + (e.semAssinatura ? ' · <b style="color:var(--warning)">' + e.semAssinatura + " aguardando assinatura</b>" : "") + (e.ultimo ? " · último: " + Lc_esc_(e.ultimo.lote + " (" + e.ultimo.data + ") ") + Lc_selo_(e.ultimo.classe, e.ultimo.resultado) : "") : "Nenhum relatório ainda.") + "</p>" +
+        Lc_faltamHtml_(e) +
+        '<div class="at-acoes lc-acoes-cel"><button type="button" class="btn-primary lc-grande" data-x="gerar"><i class="fas fa-file-import" aria-hidden="true"></i>&nbsp;Gerar relatório do ciclo</button>' +
+        (e.relatorios ? '<button type="button" class="btn-secondary at-btn44" data-x="ver">Ver relatórios</button>' : "") + "</div></div>";
+    }).join("") + "</div>";
+    var b = Lc_$_("lcEqBusca");
+    if (b) b.oninput = function () { var t = b.value.trim().toLowerCase(); c.querySelectorAll("[data-eq]").forEach(function (card) { card.style.display = !t || card.getAttribute("data-busca").indexOf(t) >= 0 ? "" : "none"; }); };
+    c.querySelectorAll("[data-eq]").forEach(function (card) {
+      var id = card.getAttribute("data-eq");
+      card.querySelectorAll("[data-x]").forEach(function (bt) {
+        bt.onclick = function () {
+          if (bt.getAttribute("data-x") === "gerar") LavCiclo_fluxoGerar_(Lc_$_("lcCorpo"), id, {});
+          else { LC.filtro = { busca: "", de: "", ate: "", resultado: "", assinatura: "", equipamentoId: id }; Lc_irAba_("relatorios"); }
+        };
+      });
+      Lc_ligarCompletar_(card, id, false);
+    });
+  }
+  function Lc_faltamHtml_(e) {
+    if (!e.faltam || !e.faltam.length) return "";
+    return '<div class="at-faixa aviso" style="margin:6px 0">O cadastro desta lavadora está sem: <b>' + Lc_esc_(e.faltam.join(", ")) + "</b>. O relatório sai assim mesmo, com \"—\" nesses campos." +
+      (e.podeCompletar ? ' <button type="button" class="btn-secondary" data-completar style="margin-top:6px">Completar o cadastro do equipamento</button>' : " Se puder, peça à Metrolabs para completar o cadastro.") + "</div>";
+  }
+  function Lc_ligarCompletar_(raiz, id, qr) {
+    var b = raiz.querySelector("[data-completar]");
+    if (!b) return;
+    b.onclick = function () {
+      if (qr && typeof restaurarLayoutPadrao_ === "function") { try { restaurarLayoutPadrao_(); } catch (e) {} }
+      if (typeof equipamentosEditar_ === "function") equipamentosEditar_(id); else abrir("equipamentos");
+    };
+  }
+
+  // ---------------------------------------------------------------- gerar: escolher, conferir, confirmar
+  /** Fluxo de geração dentro de `alvo` (tela de relatórios ou página do QR). o: { qr } */
+  function LavCiclo_fluxoGerar_(alvo, equipamentoId, o) {
+    o = o || {};
+    var estado = { arquivo: null };
+    var passos = function (n) { return '<div class="lc-passos" aria-label="Passo ' + n + ' de 3">' + ["1. Escolher o arquivo", "2. Conferir", "3. Relatório"].map(function (t, i) { return '<span class="' + (i + 1 < n ? "feito" : i + 1 === n ? "atual" : "") + '">' + t + "</span>"; }).join("") + "</div>"; };
+    var voltar = o.qr ? "" : '<button type="button" class="btn-secondary at-btn44" data-voltar><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar aos equipamentos</button>';
+    alvo.innerHTML = '<div class="at-vazio">Abrindo o equipamento…</div>';
+    Lc_chamar_("equipamento", { id: equipamentoId }, function (r) {
+      var e = r.equipamento;
+      var cab = '<div class="at-caixa"><p class="at-card-tit" style="font-size:15px">' + Lc_esc_(e.rotulo) + '</p><p class="at-meta" style="margin:0">' + Lc_esc_([e.cliente, e.unidade, e.setor ? "Setor " + e.setor : "", e.modelo ? "Modelo " + e.modelo : ""].filter(Boolean).join(" · ")) + "</p>" +
+        (e.tipoAceito ? "" : '<div class="at-faixa aviso" style="margin:8px 0 0">O tipo cadastrado deste equipamento ("' + Lc_esc_(e.tipo) + '") não é de lavadora. Confira se leu o QR code da máquina certa antes de importar.</div>') + Lc_faltamHtml_(e) + "</div>";
+      var passo1 = function (msg) {
+        alvo.innerHTML = (voltar ? '<div class="at-acoes" style="margin:0 0 10px">' + voltar + "</div>" : "") + passos(1) + cab +
+          '<div class="at-caixa"><h3>Escolha o arquivo do ciclo</h3><label class="lc-arquivo" for="lcArq"><i class="fas fa-file-arrow-up" aria-hidden="true"></i><b>Escolher o arquivo do ciclo</b>' +
+          "<small>É o arquivo com o nome do lote e final .sgolav (por exemplo, LOT-20261030-6222.sgolav), copiado da lavadora pelo Wi-Fi da máquina ou pelo cartão.</small>" +
+          '<input id="lcArq" type="file" accept=".sgolav"></label><div id="lcArqMsg"></div></div>';
+        Lc_ligarAlvo_();
+        if (msg) Lc_msg_("lcArqMsg", msg);
+        Lc_$_("lcArq").onchange = function () {
+          var f = this.files && this.files[0];
+          if (!f) return;
+          if (f.size > 65536) { Lc_msg_("lcArqMsg", "Este arquivo é grande demais para ser o arquivo de um ciclo (" + Math.round(f.size / 1024) + " KB). Por quê: o arquivo .sgolav de um ciclo tem poucos kilobytes. O que fazer: escolha o arquivo .sgolav do lote."); return; }
+          var leitor = new FileReader();
+          leitor.onload = function () { estado.arquivo = { nome: f.name, texto: String(leitor.result || "") }; conferir(); };
+          leitor.onerror = function () { Lc_msg_("lcArqMsg", "O celular ou o computador não conseguiu ler o arquivo escolhido. O que fazer: copie o arquivo de novo e tente outra vez."); };
+          leitor.readAsText(f);
+        };
+      };
+      var conferir = function () {
+        Lc_chamar_("conferir", { equipamentoId: equipamentoId, nomeArquivo: estado.arquivo.nome, texto: estado.arquivo.texto }, function (x) {
+          var c = x.conferencia;
+          var dl = function (rot, val, largo) { return '<div class="' + (largo ? "largo" : "") + '"><dt>' + Lc_esc_(rot) + "</dt><dd>" + val + "</dd></div>"; };
+          alvo.innerHTML = (voltar ? '<div class="at-acoes" style="margin:0 0 10px">' + voltar + "</div>" : "") + passos(2) + cab +
+            '<div class="at-caixa"><h3>Confira antes de confirmar</h3><p class="lc-resumo">Arquivo ' + Lc_esc_(x.arquivo) + ". Confira se é o ciclo desta lavadora: o arquivo não traz o número de série da máquina.</p>" +
+            '<div class="at-meta" style="margin:0">Lote</div><div class="lc-lote">' + Lc_esc_(c.lote) + "</div>" +
+            '<dl class="lc-conf">' + dl("Data", Lc_esc_(c.data)) + dl("Horário", Lc_esc_(c.horaInicio + " às " + c.horaFim)) + dl("Receita", Lc_esc_(c.receita), true) +
+            dl("Resultado", Lc_selo_(c.classe, c.resultado)) + dl("Tempo total", Lc_esc_(c.duracao)) +
+            (c.falha ? dl("Falha registrada", '<span style="color:var(--danger)">' + Lc_esc_(c.falha) + "</span>", true) : "") +
+            (c.desinfeccao ? dl("Desinfecção térmica", Lc_esc_(c.desinfeccao), true) : "") + dl("Fases e eventos", Lc_esc_(c.fases + " fases · " + c.eventos + " eventos")) + dl("Manutenção preventiva", Lc_esc_(c.manutVencida === null ? "Não informada" : c.manutVencida ? "Vencida" : "Em dia")) + "</dl>" +
+            (x.avisos && x.avisos.length ? x.avisos.map(function (a) { return '<div class="at-faixa aviso">' + Lc_esc_(a) + "</div>"; }).join("") : "") +
+            (x.duplicado ? '<div class="at-faixa aviso" role="alert"><b>Este lote já tem relatório para esta lavadora</b> (' + Lc_esc_(x.duplicado.numero + ", gerado em " + x.duplicado.em) + "). O mesmo ciclo não é importado duas vezes. Abra o relatório que já existe.</div>" +
+              '<div class="at-acoes lc-acoes-cel"><button type="button" class="btn-primary lc-grande" data-dup>Abrir o relatório que já existe</button><button type="button" class="btn-secondary at-btn44" data-outro>Escolher outro arquivo</button></div>' :
+              '<div class="at-acoes lc-acoes-cel"><button type="button" class="btn-primary lc-grande" data-confirmar><i class="fas fa-check" aria-hidden="true"></i>&nbsp;Confirmar e gerar o relatório</button><button type="button" class="btn-secondary at-btn44" data-outro>Escolher outro arquivo</button></div>') +
+            '<div id="lcConfMsg"></div></div>';
+          Lc_ligarAlvo_();
+          alvo.querySelector("[data-outro]").onclick = function () { passo1(""); };
+          var dup = alvo.querySelector("[data-dup]");
+          if (dup) dup.onclick = function () { mostrarGerado({ relatorio: x.duplicado, message: "Este é o relatório que já existe para o lote " + c.lote + "." }, true); };
+          var conf = alvo.querySelector("[data-confirmar]");
+          if (conf) conf.onclick = function () {
+            conf.disabled = true;
+            Lc_chamar_("gerar", { equipamentoId: equipamentoId, nomeArquivo: estado.arquivo.nome, texto: estado.arquivo.texto }, function (g) { mostrarGerado(g, !!g.duplicado); },
+              function (m) { conf.disabled = false; Lc_msg_("lcConfMsg", m); }, "Gerando o relatório (leva alguns segundos)…");
+          };
+        }, function (m) { passo1(m); }, "Lendo o arquivo…");
+      };
+      var mostrarGerado = function (g, jaExistia) {
+        var rel = g.relatorio;
+        rel.equipamento = rel.equipamento || e.rotulo;
+        alvo.innerHTML = (voltar ? '<div class="at-acoes" style="margin:0 0 10px">' + voltar + "</div>" : "") + passos(3) + cab +
+          '<div class="at-caixa"><div class="at-faixa ' + (jaExistia ? "aviso" : "ok") + '" role="status">' + Lc_esc_(g.message) + "</div>" +
+          '<div class="lc-equip-cab"><div><div class="at-meta" style="margin:0">Lote</div><div class="lc-lote">' + Lc_esc_(rel.lote) + '</div></div><div style="padding-top:6px">' + Lc_selo_(rel.classe, rel.resultado) + Lc_seloAss_(rel) + "</div></div>" +
+          '<p class="lc-resumo">' + Lc_esc_(rel.numero + (rel.versao > 1 ? " · versão " + rel.versao : "") + " · " + rel.data + " " + rel.hora + " · Receita " + rel.receita) + "</p>" +
+          '<div class="at-acoes lc-acoes-cel">' + (rel.podeAssinar ? '<button type="button" class="btn-primary lc-grande" data-assinar><i class="fas fa-signature" aria-hidden="true"></i>&nbsp;Assinar agora</button>' : "") +
+          '<button type="button" class="' + (rel.podeAssinar ? "btn-secondary at-btn44" : "btn-primary lc-grande") + '" data-abrir><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Abrir o relatório</button>' +
+          '<button type="button" class="btn-secondary at-btn44" data-pdf><i class="fas fa-download" aria-hidden="true"></i>&nbsp;Baixar PDF</button>' +
+          '<button type="button" class="btn-secondary at-btn44" data-novo>Gerar de outro ciclo</button></div>' +
+          (rel.podeAssinar ? '<p class="at-ajuda-campo" style="margin-top:8px">Pode assinar depois: o relatório fica em "Relatórios gerados", com o selo "Aguardando assinatura".</p>' : "") + "</div>";
+        Lc_ligarAlvo_();
+        alvo.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(rel.htmlUrl); };
+        alvo.querySelector("[data-pdf]").onclick = function () { Lc_abrirUrl_(rel.pdfUrl, true); };
+        alvo.querySelector("[data-novo]").onclick = function () { passo1(""); };
+        var a = alvo.querySelector("[data-assinar]");
+        if (a) a.onclick = function () { Lc_assinar_(rel, function () { Lc_chamar_("abrir", { id: rel.id }, function (x) { mostrarGerado({ relatorio: x.relatorio, message: x.relatorio.assinado ? "Relatório assinado e salvo." : g.message }, false); }, function () {}); }); };
+        if (LC.ini && !o.qr) LC.ini.totalRelatorios = (LC.ini.totalRelatorios || 0) + (jaExistia ? 0 : 1);
+      };
+      var Lc_ligarAlvo_ = function () {
+        var v = alvo.querySelector("[data-voltar]");
+        if (v) v.onclick = function () { Lc_iniciar_("equipamentos"); };
+        Lc_ligarCompletar_(alvo, equipamentoId, !!o.qr);
+      };
+      passo1("");
+    }, function (m) { alvo.innerHTML = ""; Lc_msg_(alvo, m); });
+  }
+
+  // ---------------------------------------------------------------- referências por receita
+  function Lc_abaReferencias_(c) {
+    Lc_chamar_("referencias", {}, function (r) {
+      c.innerHTML = '<div class="at-faixa">O arquivo da lavadora não traz a temperatura nem o tempo programados na receita. Sem referência cadastrada, o relatório mostra o que a lavadora registrou, sem comparar. Com referência, o relatório compara a temperatura máxima e a duração da desinfecção térmica e escreve "a confirmar pelo responsável técnico" até a confirmação. A mudança vale para os relatórios gerados depois; os já emitidos não mudam.</div>' +
+        (r.receitas.length ? '<div class="at-lista">' + r.receitas.map(function (x) {
+          return '<div class="at-card" data-rec="' + Lc_esc_(x.receita) + '"><p class="at-card-tit">' + Lc_esc_(x.receita) + " " + (x.tem ? (x.confirmado ? '<span class="at-selo verde">Confirmada</span>' : '<span class="at-selo laranja">A confirmar pelo responsável técnico</span>') : '<span class="at-selo cinza">Sem referência</span>') + "</p>" +
+            (x.tem ? '<p class="at-txt">Desinfecção térmica: ' + Lc_esc_([x.tempMinTxt ? "pelo menos " + x.tempMinTxt : "", x.tempoMinTxt ? "por pelo menos " + x.tempoMinTxt : ""].filter(Boolean).join(" ")) + '</p><p class="at-meta">Fonte: ' + Lc_esc_(x.motivo) + " · " + Lc_esc_(x.alteradoPor + " em " + x.em) + (x.confirmado ? " · confirmada por " + Lc_esc_(x.confirmadoPor) : "") + "</p>" : "") +
+            (r.podeEditar ? '<div class="at-acoes"><button type="button" class="btn-secondary at-btn44" data-ed>' + (x.tem ? "Alterar" : "Cadastrar referência") + "</button>" + (x.tem ? '<button type="button" class="btn-secondary at-btn44" data-rm style="color:var(--danger);border-color:var(--danger)">Remover</button>' : "") + "</div>" : "") + "</div>";
+        }).join("") + "</div>" : '<div class="at-vazio">As receitas aparecem aqui depois do primeiro relatório gerado.' + (r.podeEditar ? "" : "") + "</div>") +
+        (r.podeEditar ? '<div class="at-acoes"><button type="button" class="btn-secondary at-btn44" data-novo>Cadastrar referência de outra receita</button></div>' : '<p class="at-meta" style="margin-top:10px">Quem cadastra: Administrador, Diretoria, gestão e Metrologia.</p>');
+      var editar = function (x) {
+        var ov = At_modal_("Referência da receita", '<div class="at-campo"><label for="lcRefRec">Receita (como aparece na fita)</label><input id="lcRefRec" maxlength="60" value="' + Lc_esc_(x ? x.receita : "") + '"' + (x ? " readonly" : "") + "></div>" +
+          '<div class="at-grade2"><div class="at-campo"><label for="lcRefT">Temperatura mínima da desinfecção (°C)</label><input id="lcRefT" inputmode="decimal" value="' + Lc_esc_(x && x.tempMin !== null ? String(x.tempMin).replace(".", ",") : "") + '"></div>' +
+          '<div class="at-campo"><label for="lcRefM">Tempo mínimo da desinfecção (minutos)</label><input id="lcRefM" inputmode="decimal" value="' + Lc_esc_(x && x.tempoMinMin !== null ? String(x.tempoMinMin).replace(".", ",") : "") + '"></div></div>' +
+          '<div class="at-campo"><label for="lcRefMot">Fonte ou motivo do valor</label><textarea id="lcRefMot" maxlength="300">' + Lc_esc_(x ? x.motivo : "") + '</textarea><div class="at-ajuda-campo">Por exemplo: "parâmetro validado na qualificação de outubro de 2026".</div></div>' +
+          '<label class="at-check"><input type="checkbox" id="lcRefConf"' + (x && x.confirmado ? " checked" : "") + "> <span>Sou o responsável técnico e confirmo este valor (sem marcar, o relatório escreve \"a confirmar pelo responsável técnico\").</span></label><div id=\"lcRefMsg\"></div>",
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Salvar</button>', 560);
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () {
+          Lc_chamar_("referencias", { salvar: { receita: Lc_$_("lcRefRec").value, tempMin: Lc_$_("lcRefT").value, tempoMinMin: Lc_$_("lcRefM").value, motivo: Lc_$_("lcRefMot").value, confirmado: Lc_$_("lcRefConf").checked } },
+            function (s) { ov.remove(); alert(s.message); Lc_abaReferencias_(c); }, function (m) { Lc_msg_("lcRefMsg", m); }, "Salvando…");
+        };
+      };
+      c.querySelectorAll("[data-rec]").forEach(function (card) {
+        var x = r.receitas.filter(function (z) { return z.receita === card.getAttribute("data-rec"); })[0];
+        var ed = card.querySelector("[data-ed]"); if (ed) ed.onclick = function () { editar(x); };
+        var rm = card.querySelector("[data-rm]"); if (rm) rm.onclick = function () {
+          if (!confirm("Remover a referência da receita " + x.receita + "? Os próximos relatórios saem sem comparação; os já emitidos não mudam.")) return;
+          Lc_chamar_("referencias", { salvar: { receita: x.receita, remover: true } }, function (s) { alert(s.message); Lc_abaReferencias_(c); }, function (m) { alert(m); }, "Removendo…");
+        };
+      });
+      var nv = c.querySelector("[data-novo]"); if (nv) nv.onclick = function () { editar(null); };
+    }, function (m) { c.innerHTML = ""; Lc_msg_(c, m); });
+  }
+
+  // ---------------------------------------------------------------- QR code do equipamento
+  /** Cartão "Relatório do ciclo" da página aberta pelo QR (renderProntuarioDigital_). Só para lavadora. */
+  function LavCiclo_cartaoQr_(eqp) {
+    if (!eqp || !/LAVADORA|TERMODESINF|ULTRASS/i.test(String(eqp.TIPO || ""))) return "";
+    return '<div class="lc-qr-card" style="background:#ffffff;width:100%;max-width:400px;border-radius:12px;border:1px solid #dadce0;box-shadow:0 4px 12px rgba(0,0,0,0.08);padding:20px;margin-bottom:25px;text-align:left;box-sizing:border-box">' +
+      '<h2 style="font-size:16px;color:var(--metro-blue-dark,#083978);text-transform:uppercase;border-bottom:2px solid var(--metro-green,#007b3e);padding-bottom:10px;margin:0 0 14px;text-align:center">Relatório do ciclo</h2>' +
+      '<div id="lcQrArea"><p style="font-size:13.5px;color:var(--muted,#5f6368);margin:0 0 12px">Importe o arquivo .sgolav do ciclo que acabou de rodar nesta lavadora. O relatório A4 fica salvo no histórico do equipamento e pode ser assinado aqui na tela.</p>' +
+      '<div class="at-acoes" style="margin:0"><button type="button" class="btn-primary lc-grande" style="width:100%" onclick="LavCiclo_qrGerar_(\'' + Lc_esc_(eqp.ID) + '\')"><i class="fas fa-file-import" aria-hidden="true"></i>&nbsp;Gerar relatório do ciclo</button>' +
+      '<button type="button" class="btn-secondary at-btn44" style="width:100%" onclick="LavCiclo_qrLista_(\'' + Lc_esc_(eqp.ID) + '\')">Ver os relatórios deste equipamento</button></div></div></div>';
+  }
+  function LavCiclo_qrGerar_(id) { var a = Lc_$_("lcQrArea"); if (!a) return; LC.ini = LC.ini || { eu: { cliente: typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE" } }; LavCiclo_fluxoGerar_(a, id, { qr: true }); a.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function LavCiclo_qrLista_(id) {
+    var a = Lc_$_("lcQrArea"); if (!a) return;
+    LC.ini = LC.ini || { eu: { cliente: typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE" } };
+    a.innerHTML = '<div class="at-vazio">Carregando…</div>';
+    Lc_chamar_("listar", { equipamentoId: id }, function (r) {
+      a.innerHTML = '<div class="at-acoes" style="margin:0 0 10px"><button type="button" class="btn-primary lc-grande" style="width:100%" onclick="LavCiclo_qrGerar_(\'' + Lc_esc_(id) + '\')">Gerar relatório do ciclo</button></div>' +
+        (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.slice(0, 20).map(Lc_cartaoRel_).join("") + "</div>" : '<div class="at-vazio">Nenhum relatório deste equipamento ainda.</div>');
+      Lc_ligarCartoes_(a, r.relatorios, function () { LavCiclo_qrLista_(id); });
+    }, function (m) { a.innerHTML = ""; Lc_msg_(a, m); });
+  }
+</script>

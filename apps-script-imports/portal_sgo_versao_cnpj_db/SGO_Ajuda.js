@@ -46,7 +46,9 @@ var SGO_AJUDA_NOMES = {
   // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js)
   automacao_predial: 'Segurança e automação predial',
   // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js)
-  representacao: 'Representação'
+  representacao: 'Representação',
+  // 31/10/2026: relatório do ciclo da lavadora (SGO_Ajuda_LavCiclo.js)
+  lavadora_ciclos: 'Relatórios de ciclo'
 };
 
 /**
@@ -90,6 +92,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_AutomacaoPredial_ === 'function') fontes.push(['AutomacaoPredial', SGO_ajudaTelas_AutomacaoPredial_]);
   // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js).
   if (typeof SGO_ajudaTelas_Representacao_ === 'function') fontes.push(['Representacao', SGO_ajudaTelas_Representacao_]);
+  // 31/10/2026: relatório do ciclo da lavadora (SGO_Ajuda_LavCiclo.js).
+  if (typeof SGO_ajudaTelas_LavCiclo_ === 'function') fontes.push(['LavCiclo', SGO_ajudaTelas_LavCiclo_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;
