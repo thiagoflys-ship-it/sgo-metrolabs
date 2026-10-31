@@ -269,7 +269,7 @@ function FrotaBlq_distM_(a, b) {
 function FrotaBlq_naBase_(pos, areas) {
   areas = areas || FrotaBlq_areas_();
   var nomes = Object.keys(areas).filter(function (k) { var a = areas[k]; return a && isFinite(Number(a.lat)) && isFinite(Number(a.lon)); });
-  if (!nomes.length) return { naBase: null, motivo: 'nenhuma área de base configurada (Frota > Rastreamento > Bloqueio da partida > Áreas das bases)' };
+  if (!nomes.length) return { naBase: null, motivo: 'nenhuma área de base configurada (Frota > Rastreamento > Configuração > Áreas das bases)' };
   if (!pos || pos.lat === null || pos.lon === null || pos.lat === undefined) return { naBase: null, motivo: 'posição sem coordenadas' };
   var melhor = null;
   nomes.forEach(function (k) {
@@ -465,7 +465,7 @@ function FrotaBlq_executar_(c, veiculo, est, acao, o) {
   if (r.situacao === 'NA_FILA' && acao === 'BLOQUEAR') {
     FrotaBlq_avisarGestao_('Bloqueio na fila do rastreador: ' + FrotaBlq_rotulo_(veiculo),
       'O bloqueio da partida do ' + FrotaBlq_rotulo_(veiculo) + ' foi aceito pela iTracker com o carro sem conexão (HTTP 202). Ele fica na fila e executa quando o carro reconectar.\n' +
-      'O SGO+ trata como NÃO executado. Se alguém retirar o carro antes, o SGO+ manda a liberação logo em seguida. Confira o carro em Frota > Rastreamento > Bloqueio da partida.', FrotaBlq_s_(est.ID), 'S63');
+      'O SGO+ trata como NÃO executado. Se alguém retirar o carro antes, o SGO+ manda a liberação logo em seguida. Confira o carro em Frota > Rastreamento > Visão geral.', FrotaBlq_s_(est.ID), 'S63');
   }
   return { situacao: r.situacao, http: r.http, motivo: r.motivo,
     texto: r.situacao === 'ENTREGUE' ? (acao === 'BLOQUEAR' ? 'Partida bloqueada pelo rastreador.' : 'Partida liberada pelo rastreador.')
@@ -552,7 +552,7 @@ function FrotaBlq_avaliar_(c, veiculo, est, ctx) {
         detalhe: 'Devolução fora da base: o SGO+ não bloqueia sozinho; a gestão decide na Caixa de decisões.' });
       FrotaBlq_avisarGestao_('Decidir o bloqueio: ' + FrotaBlq_rotulo_(veiculo) + (nb.naBase === false ? ' devolvido fora da base' : ' devolvido (área da base não configurada)'),
         'O ' + FrotaBlq_rotulo_(veiculo) + ' foi devolvido: ' + nb.motivo + '. O SGO+ não bloqueia sozinho fora da área da base.\n' +
-        'Decida em Caixa de decisões ou em Frota > Rastreamento > Bloqueio da partida: "Bloquear" (só sai com o carro conectado, parado e desligado) ou "Não bloquear" (vale até a próxima retirada).', FrotaBlq_s_(est.ID), 'S60');
+        'Decida em Caixa de decisões ou em Frota > Rastreamento > Visão geral: "Bloquear" (só sai com o carro conectado, parado e desligado) ou "Não bloquear" (vale até a próxima retirada).', FrotaBlq_s_(est.ID), 'S60');
     }
     if (d.soAvisa && !FrotaBlq_s_(est.PEDIDO_AVISADO_EM)) {
       FrotaBlq_gravarEstado_(est, { PEDIDO_AVISADO_EM: SGO_UTILS.nowIso() });
@@ -604,7 +604,7 @@ function FrotaBlq_avisoLiberacaoSemSinal_(veiculo, est, mov, exec) {
   var rot = FrotaBlq_rotulo_(veiculo);
   FrotaBlq_avisarGestao_('Liberação aguardando sinal: ' + rot,
     'A retirada do ' + rot + ' foi registrada, mas a liberação da partida não chegou ao carro (' + (exec.motivo || 'sem conexão') + ').\n' +
-    'O SGO+ confere a cada 2 minutos. Se o condutor precisar sair já, use "Liberar agora" em Frota > Rastreamento > Bloqueio da partida (com o motivo) ou a central da iTracker.', FrotaBlq_s_(mov.ID), 'S36');
+    'O SGO+ confere a cada 2 minutos. Se o condutor precisar sair já, use "Liberar agora" em Frota > Rastreamento > Visão geral (com o motivo) ou a central da iTracker.', FrotaBlq_s_(mov.ID), 'S36');
   FrotaBlq_avisarUsuario_(condUid, 'Liberação aguardando sinal: ' + rot,
     'A sua retirada do ' + rot + ' está registrada. O rastreador ainda não recebeu a liberação (carro sem conexão). Tente ligar em alguns minutos; se não pegar, fale com a gestão.', FrotaBlq_s_(mov.ID), 'S59', ['sgo']);
 }
@@ -774,7 +774,7 @@ function FrotaBlq_esquecida_(c, v, est, aberta, pos, areas, agora, con) {
     FrotaBlq_gravarEstado_(est, { ESQ_GESTAO_EM: new Date(agora).toISOString() });
     FrotaBlq_evento_({ veiculo: v, modo: est.MODO, tipo: 'DECISAO', acao: 'ESQUECIDA', origem: 'ESQUECIDA', quem: FBLQ_SISTEMA, movId: movId, detalhe: 'Condutor não respondeu em 1 hora: retirada esquecida vai para a Caixa de decisões da gestão.' });
     FrotaBlq_avisarGestao_('Retirada esquecida: ' + rot, 'O ' + rot + ' está parado na base há mais de 2 horas com a retirada aberta e o condutor não respondeu à pergunta do SGO+.\n' +
-      'Em Caixa de decisões ou em Frota > Rastreamento > Bloqueio da partida: "Encerrar a retirada" (só com o carro parado, desligado, na base e com sinal; depois o bloqueio é pedido) ou passe a retirada para quem precisa do carro.', movId, 'S62');
+      'Em Caixa de decisões ou em Frota > Rastreamento > Visão geral: "Encerrar a retirada" (só com o carro parado, desligado, na base e com sinal; depois o bloqueio é pedido) ou passe a retirada para quem precisa do carro.', movId, 'S62');
   }
 }
 
@@ -1081,7 +1081,7 @@ function Frota_apiPassagemConfirmar(sessionId, payload) {
     upd = { DE_CONFIRMOU_EM: SGO_UTILS.nowIso() };
   } else {
     throw new Error(souDe || souPara ? 'Falta a outra pessoa confirmar: ' + (FrotaBlq_s_(p.SITUACAO) === 'AGUARDANDO_RECEBEDOR' ? FrotaBlq_s_(p.PARA_NOME) + ' toca em "Assumi o carro".' : FrotaBlq_s_(p.DE_NOME) + ' confirma no aplicativo (ou a gestão autoriza).')
-      : 'Só quem passa ou quem recebe o carro confirma este pedido. A gestão autoriza em Frota > Rastreamento > Bloqueio da partida.');
+      : 'Só quem passa ou quem recebe o carro confirma este pedido. A gestão autoriza em Frota > Rastreamento > Visão geral.');
   }
   SGO_DATA.update(FBLQ_ABA_PASSAGENS, p.ID, upd);
   Object.assign(p, upd);
@@ -1199,7 +1199,7 @@ function FrotaBlq_exigirGestao_(sessionId) {
 function FrotaBlq_veiculo_(id) {
   var v = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, FrotaBlq_s_(id));
   if (!v) throw new Error('Veículo não encontrado. Atualize a tela e escolha de novo.');
-  if (!FrotaBlq_s_(v.RASTREADOR_DEVICE_ID)) throw new Error('O ' + FrotaBlq_rotulo_(v) + ' não tem aparelho do rastreador ligado. Ligue em Frota > Rastreamento > Aparelhos e alertas.');
+  if (!FrotaBlq_s_(v.RASTREADOR_DEVICE_ID)) throw new Error('O ' + FrotaBlq_rotulo_(v) + ' não tem aparelho do rastreador ligado. Ligue em Frota > Rastreamento > Configuração > Aparelhos.');
   return v;
 }
 function FrotaBlq_posAgora_(c, v) {
@@ -1352,7 +1352,7 @@ function FrotaBlq_conferirOdometro_(veiculo, est, mov, pos) {
  */
 function Frota_apiBloqueioHodometro(sessionId, payload) {
   var sessao = FrotaBlq_exigirGestao_(sessionId);
-  if (FBLQ_ODO_PERFIS.indexOf(FrotaBlq_perfil_(sessionId)) < 0) throw new Error('Acertar o odômetro do rastreador é do Gestor ou do Administrador. Peça a uma dessas pessoas (Frota > Rastreamento > Bloqueio da partida).');
+  if (FBLQ_ODO_PERFIS.indexOf(FrotaBlq_perfil_(sessionId)) < 0) throw new Error('Acertar o odômetro do rastreador é do Gestor ou do Administrador. Peça a uma dessas pessoas (Frota > Rastreamento > Visão geral).');
   payload = payload || {};
   var v = FrotaBlq_veiculo_(payload.veiculoId), est = FrotaBlq_estadoDe_(v);
   var rot = FrotaBlq_rotulo_(v);
@@ -1504,7 +1504,7 @@ function FrotaBlq_relatorioTexto_(dia, eventos) {
     'Comandos reais enviados: ' + reais.length + (reais.length ? '\n' + reais.map(linha).join('\n') : '') + '\n\n' +
     'O que a simulação teria feito (nada foi enviado): ' + sim.length + (sim.length ? '\n' + sim.map(linha).join('\n') : '') + '\n\n' +
     'Decisões, avisos, passagens e emergências: ' + dec.length + (dec.length ? '\n' + dec.map(linha).join('\n') : '') + '\n\n' +
-    'Detalhe e registro completo: Frota > Rastreamento > Bloqueio da partida.';
+    'Detalhe e registro completo: Frota > Rastreamento > Consultas e relatórios > Registro do bloqueio.';
   return { texto: t, reais: reais.length, simulados: sim.length, decisoes: dec.length, total: doDia.length };
 }
 
@@ -1572,14 +1572,14 @@ function FrotaBlq_pendencias_(add) {
     if (Pend_s_(e.PEDIDO_SITUACAO) === 'AGUARDANDO_GESTAO') {
       add(Pend_item_('frota_bloqueio_decidir', { id: 'FROTA:BLQ:FORA:' + Pend_s_(e.ID) + ':' + Pend_s_(e.PEDIDO_DESDE), nome: r, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: Pend_s_(e.PEDIDO_DESDE).slice(0, 10),
         responsavel: 'Gestão da frota', titulo: 'Decidir o bloqueio: ' + r + ' devolvido fora da base', detalhe: Pend_s_(e.PEDIDO_MOTIVO),
-        oQueFazer: 'Em Frota > Rastreamento > Bloqueio da partida, escolha "Bloquear" (sai só com o carro conectado, parado e desligado) ou "Não bloquear" (vale até a próxima retirada), com a justificativa.',
+        oQueFazer: 'Em Frota > Rastreamento > Visão geral, escolha "Bloquear" (sai só com o carro conectado, parado e desligado) ou "Não bloquear" (vale até a próxima retirada), com a justificativa.',
         textoEstavel: 'O bloqueio do veículo \'' + pl + '\' aguarda a decisão da gestão.' }));
     }
     if (Pend_s_(e.ESQ_GESTAO_EM)) {
       add(Pend_item_('frota_bloqueio_esquecida', { id: 'FROTA:BLQ:ESQ:' + Pend_s_(e.ESQ_MOV_ID), nome: r, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: Pend_s_(e.ESQ_GESTAO_EM).slice(0, 10),
         responsavel: 'Gestão da frota', titulo: 'Retirada esquecida: ' + r + ' parado na base sem resposta do condutor',
         detalhe: 'Carro parado na base desde ' + (FrotaBlq_txt_(FrotaBlq_ms_(e.ESQ_PARADO_DESDE)) || 'há mais de 2 h') + '; o condutor não respondeu à pergunta do SGO+.',
-        oQueFazer: 'Em Frota > Rastreamento > Bloqueio da partida: "Encerrar a retirada" (só com o carro parado, desligado, na base e com sinal) ou autorize a passagem para quem precisa do carro.',
+        oQueFazer: 'Em Frota > Rastreamento > Visão geral: "Encerrar a retirada" (só com o carro parado, desligado, na base e com sinal) ou autorize a passagem para quem precisa do carro.',
         textoEstavel: 'A retirada do veículo \'' + pl + '\' parece esquecida.' }));
     }
     if (Pend_s_(e.ULT_CMD_REAL) === 'SIM' && Pend_s_(e.ULT_CMD_RESULTADO) === 'NA_FILA' && Pend_s_(e.ULT_CMD_ACAO) === 'BLOQUEAR') {
@@ -1594,7 +1594,7 @@ function FrotaBlq_pendencias_(add) {
     add(Pend_item_('frota_bloqueio_odometro', { id: 'FROTA:BLQ:ODO:' + Pend_s_(e.ODO_DIVERGENCIA_MOV_ID), nome: r, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: Pend_s_(e.ODO_DIVERGENCIA_EM).slice(0, 10),
       responsavel: 'Gestão da frota', titulo: 'Odômetro do rastreador diferente do painel: ' + r,
       detalhe: 'Na devolução o painel marcava ' + Frota_kmTexto_(e.ODO_PAINEL_KM) + ' km e o rastreador ' + Frota_kmTexto_(e.ODO_RASTREADOR_KM) + ' km.' + (Pend_s_(e.ODO_FOTO) ? ' Foto do painel: ' + Pend_s_(e.ODO_FOTO) : ''),
-      oQueFazer: 'Confira a foto do painel em Frota > Rastreamento > Bloqueio da partida. A rotina das 22h só ajusta veículos ativos com foto confirmada, devolvidos, parados e desligados, sem uso posterior à foto. Casos pendentes exigem conferência da gestão.',
+      oQueFazer: 'Confira a foto do painel em Frota > Rastreamento > Visão geral. A rotina das 22h só ajusta veículos ativos com foto confirmada, devolvidos, parados e desligados, sem uso posterior à foto. Casos pendentes exigem conferência da gestão.',
       textoEstavel: 'O odômetro do rastreador do veículo \'' + pl + '\' está diferente do painel.' }));
   });
   if (!Pend_abaExiste_(FBLQ_ABA_PASSAGENS)) return;
@@ -1605,7 +1605,7 @@ function FrotaBlq_pendencias_(add) {
     try { uidDe = FrotaBlq_usuarioDoCondutor_(Pend_s_(p.DE_CONDUTOR_ID)); } catch (e) {}
     add(Pend_item_('frota_bloqueio_passagem', { id: 'FROTA:BLQ:PASS:' + Pend_s_(p.ID), nome: r, publico: 'GESTAO', paraUsuarios: [uidDe], gravidade: 'ATENCAO', dias: null, vencimento: Pend_s_(p.CRIADO_EM).slice(0, 10),
       responsavel: 'Gestão da frota', titulo: Pend_s_(p.PARA_NOME) + ' pediu para assumir o ' + r, detalhe: 'O carro está com ' + Pend_s_(p.DE_NOME) + '.',
-      oQueFazer: 'Autorize ou recuse em Frota > Rastreamento > Bloqueio da partida (se ' + Pend_s_(p.DE_NOME) + ' não conseguir confirmar no aplicativo).',
+      oQueFazer: 'Autorize ou recuse em Frota > Rastreamento > Visão geral (se ' + Pend_s_(p.DE_NOME) + ' não conseguir confirmar no aplicativo).',
       oQueFazerOutro: 'Abra a Frota no SGO+ e toque em "Confirmar" se você passou o carro, ou "Recusar".', textoEstavel: 'Pedido para assumir o veículo \'' + pl + '\'.' }));
   });
 }

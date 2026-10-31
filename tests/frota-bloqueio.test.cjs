@@ -700,7 +700,9 @@ test('Tela "Bloqueio da partida": entra na aba Rastreamento e o código do naveg
   assert.match(t.css, /\.fbq-chip/);
   assert.doesNotThrow(() => new Function(t.js));
   const rt = ler('SGO_Frota_RastreamentoTela.js');
-  assert.match(rt, /\['bloqueio', 'Bloqueio da partida'\]/);
+  // 31/10/2026: o bloqueio da partida é a aba Visão geral (cartão de cada carro); o nome antigo leva para lá
+  assert.match(rt, /\['geral', 'Visão geral'\]/);
+  assert.match(rt, /bloqueio: \['geral', ''\]/);
   const tela = ler('SGO_Frota_BloqueioTela.js');
   for (const fn of ['apiBloqueioPainel', 'apiBloqueioModo', 'apiBloqueioTriagem', 'apiBloqueioLiberarAgora', 'apiBloqueioRoubo', 'apiBloqueioHodometro', 'apiBloqueioAreaBase', 'apiBloqueioDecidirForaBase', 'apiBloqueioEncerrarEsquecida', 'apiPassagemDecidir', 'apiBloqueioIntegridade', 'apiBloqueioRelatorio']) {
     assert.match(tela, new RegExp("'" + fn + "'"), fn + ' chamado pela tela');

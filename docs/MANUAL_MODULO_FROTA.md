@@ -2,7 +2,7 @@
 
 Retirar e devolver veículo, vistoria, KM, abastecimento, despesas, multas, documentos, manutenção, relatório e rastreador.
 
-*Revisão: 21/10/2026 (Gantt da frota refeito: escalas Dia, Semana e Mês, sub-linhas sem sobreposição, balão e lista no celular); 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
+*Revisão: 31/10/2026 (Rastreamento redesenhado em 4 partes: Visão geral com um cartão por carro e as ações do bloqueio, Mapa e rotas, Consultas e relatórios, Configuração com "O que falta para funcionar", Aparelhos e Áreas das bases; seções 17, 19 e 21); 21/10/2026 (Gantt da frota refeito: escalas Dia, Semana e Mês, sub-linhas sem sobreposição, balão e lista no celular); 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
 
 ## 1. Como usar este manual
 
@@ -482,22 +482,25 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 
 ## 17. Rastreador: monitoramento, localização e bloqueio da partida
 
-> **21/10/2026:** o bloqueio e a liberação da partida seguem a regra nova da seção 21 (Rastreamento > "Bloqueio da partida"). O que está abaixo sobre "acesso com comandos" é a versão anterior e vale só como histórico.
+> **21/10/2026:** o bloqueio e a liberação da partida seguem a regra nova da seção 21 (Rastreamento > "Visão geral", desde 31/10/2026). O que está abaixo sobre "acesso com comandos" é a versão anterior e vale só como histórico.
 
-### Como a tela "Rastreador" está organizada
+### Onde fica o que era a tela "Rastreador" (desde 31/10/2026)
 
-1. **Para que serve** (no topo): o que o SGO+ faz com o rastreador, em três linhas.
-2. **Situação**: se o rastreador está ligado, a hora da última leitura, por quantos dias a localização fica guardada e o que funciona com o acesso de hoje.
-3. **O que fazer agora**: a lista do que precisa da gestão, veículo por veículo. Exemplo: "PQB4394 tem sugestão de aparelho: confira no cartão do veículo e clique em Gravar vínculo". Quando está tudo em dia, aparece "Nada a fazer".
-4. **Alertas para conferir** (só quando houver): uso sem registro e falha de comunicação.
-5. **Veículos e aparelhos**: um cartão por veículo, com o aparelho ligado a ele, a situação agora (parado ou andando, onde está), o hodômetro do aparelho e a última devolução.
-6. **Liberar ou bloquear a partida** e **Comandos enviados**: só aparecem quando o acesso com comandos estiver liberado.
+A antiga tela do rastreador (depois "Aparelhos e alertas") foi distribuída pelas partes da aba Rastreamento (seção 19):
+
+1. **Situação** (rastreador ligado, última leitura, chaves gravadas): Rastreamento > Configuração > "O que falta para funcionar".
+2. **O que fazer agora** e **Alertas para conferir** (uso sem registro, falta de comunicação, aparelho sugerido pela placa): no topo da Visão geral, em "Precisa da gestão".
+3. **Veículos e aparelhos**: o cartão de cada carro na Visão geral (situação agora, onde está, aparelho) e Configuração > "Aparelhos" (vínculo).
+4. **Ler o rastreador agora**: no topo da Visão geral e em Configuração.
+5. **Comandos enviados (versão anterior)**: Consultas e relatórios > "Registro do bloqueio" > "Comandos da versão anterior".
 
 ### Ligar um veículo ao aparelho do rastreador
 
-1. No cartão do veículo, escolha o aparelho na lista. O aparelho com a placa no nome já vem marcado e o cartão fica verde com "Sugestão".
-2. Toque em "Gravar vínculo".
-3. Se o aparelho já estava ligado ao veículo, aparece "Vínculo já estava gravado": está tudo certo, nada foi mudado.
+1. Abra Rastreamento > Configuração > "Aparelhos" (ou toque em "Ligar aparelho" ou "Trocar aparelho" no cartão do carro, na Visão geral).
+2. Escolha o aparelho na lista. O aparelho com a placa no nome já vem marcado e o cartão fica verde com "Sugestão". Aparelho já ligado a outro carro aparece apagado.
+3. Toque em "Gravar". Se o aparelho já estava ligado ao veículo, aparece "Vínculo já estava gravado": está tudo certo, nada foi mudado.
+4. Carro sem rastreador: deixe "Sem aparelho". Tirar ou trocar o aparelho cancela os comandos pendentes do aparelho antigo.
+5. Com a chave dos comandos gravada, cada carro mostra a "Anotação do teste no pátio" (usa o bloqueio ou só monitoramento). É só uma anotação: quem decide se o carro bloqueia é o modo do bloqueio, no cartão da Visão geral.
 
 ### O que o SGO+ faz com o rastreador
 
@@ -505,7 +508,7 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 - **Parado ou andando:** abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado (oscilação normal do sinal): o SGO+ mostra "parado, ignição desligada" e não trata como uso.
 - **KM:** o hodômetro do aparelho conta desde a instalação e nunca é igual ao painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). Por isso o SGO+ não compara esses números. Ele guarda o hodômetro do aparelho na retirada e na devolução e compara o **KM rodado**: o informado (chegada menos saída) com o medido pelo aparelho. Se o aparelho não informar o hodômetro, vale a distância que o rastreador mediu no período da retirada. Diferença acima de 20 km (ou de 5%) vai para "KM a conferir".
 - **KM do painel estimado:** no cartão do veículo aparece o KM do painel calculado pelo rastreador (hodômetro do aparelho mais a diferença fixa medida na última retirada). Serve só para a gestão perceber uso sem registro; não muda nenhum KM.
-- **Ponto de chegada:** na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, na aba "Rastreador".
+- **Ponto de chegada:** na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, no cartão do carro (Rastreamento > Visão geral) e no mapa.
 
 ### Quando o acesso com comandos for liberado (versão anterior, substituída pela seção 21)
 
@@ -516,14 +519,14 @@ O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, 
 
 > **O veículo nunca é bloqueado em movimento.** Se o veículo estiver andando, com a ignição ligada, com o GPS ainda oscilando ou com a posição antiga (mais de 30 minutos), o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.
 
-> **Emergência (a partida não liberou e você precisa sair):** ligue para a gestão. A gestão libera no computador (Frota > aba "Rastreador") ou no celular (Frota > "Opções da gestão" > "Partida do veículo (rastreador)"): escolhe o veículo, escreve a justificativa e toca em "Liberar partida". Também pode liberar pelo aplicativo do rastreador.
+> **Emergência (a partida não liberou e você precisa sair):** ligue para a gestão. A gestão libera no computador (Frota > Rastreamento > Visão geral > "Liberar agora (emergência)" no cartão do carro) ou no celular (Frota > "Opções da gestão" > "Partida do veículo (rastreador)"): escolhe o veículo, escreve a justificativa e toca em "Liberar partida". Também pode liberar pelo aplicativo do rastreador.
 
 ### Localização e LGPD
 
 - A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.
 - Desde 20/10/2026 (decisão da diretoria) o SGO+ guarda a rota de cada veículo: cada posição lida do rastreador vira um ponto da rota, numa tabela própria do servidor. Ficam também o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.
-- Depois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.
-- Cada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).
+- Depois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Configuração > Regras e alertas), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.
+- Cada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Configuração > Privacidade > Quem consultou).
 - Quem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.
 - Só a gestão (Administrador, Diretoria, Gestor, RH e Financeiro) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
 - Os avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.
@@ -569,13 +572,37 @@ Multa e avaria com condutor identificado também viram sugestão no Programa de 
 
 ## 19. Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto
 
-Aba "Rastreamento", só da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.
+Aba "Rastreamento", só da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Desde 31/10/2026 (pedido do dono: "redesenhe essa função lá no frota para ficar mais fácil ativar e desativar, cadastrar e outras ferramentas, está muito confusa") ela tem quatro partes, nos botões do topo da aba. No celular os quatro botões ficam em duas linhas e os cartões, um embaixo do outro.
 
-> **Rastreador não configurado?** A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e "Rastreador ligado no SGO+"). Depois volte e toque em "Atualizar".
+| Parte | O que tem |
+| --- | --- |
+| **Visão geral** | O que precisa da gestão e um cartão por carro, com as ações no próprio cartão (seção 21) |
+| **Mapa e rotas** | Mapa ao vivo e Rotas |
+| **Consultas e relatórios** | Combustível e KM, Relatórios A4 e Registro do bloqueio |
+| **Configuração** | O que falta para funcionar, Aparelhos, Áreas das bases, Regras e alertas e Privacidade |
+
+### Onde ficou cada ferramenta
+
+| Antes (até 30/10/2026) | Agora |
+| --- | --- |
+| Mapa ao vivo | Mapa e rotas > Mapa ao vivo (e "Ver no mapa" no cartão do carro) |
+| Rotas | Mapa e rotas > Rotas |
+| Combustível e KM | Consultas e relatórios > Combustível e KM |
+| Relatórios | Consultas e relatórios > Relatórios A4 |
+| Aparelhos e alertas | Configuração > Aparelhos (vínculo); alertas no topo da Visão geral; "Ler o rastreador agora" no topo da Visão geral |
+| Bloqueio da partida: cartões dos carros, modo, emergência, triagem, odômetro, roubo, decisões | Visão geral |
+| Bloqueio da partida: áreas das bases | Configuração > Áreas das bases |
+| Bloqueio da partida: registro, integridade e relatório do dia | Consultas e relatórios > Registro do bloqueio |
+| Privacidade e configuração: prazo de guarda, limite de velocidade, expediente, desvio de consumo | Configuração > Regras e alertas |
+| Privacidade e configuração: Quem consultou | Configuração > Privacidade |
+
+Nenhuma ferramenta foi removida, e as regras do bloqueio da partida não mudaram. Mapa, rotas, combustível e relatórios só leem o rastreador; comandos ao carro só pelo cartão do carro, na Visão geral.
+
+> **Rastreador não configurado?** Abra Configuração > "O que falta para funcionar". Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota. Depois volte e toque em "Atualizar".
 
 ### Mapa ao vivo
 
-1. Abra a aba "Rastreamento". O mapa abre com todos os veículos que têm aparelho ligado.
+1. Abra a aba "Rastreamento" e toque em "Mapa e rotas". O mapa abre com todos os veículos que têm aparelho ligado. No cartão do carro, na Visão geral, "Ver no mapa" abre o mapa já centralizado nele.
 2. Cada veículo aparece com a cor da situação; a lista ao lado (embaixo, no celular) mostra placa, situação, condutor da retirada aberta, velocidade em km/h, local e a hora da última posição.
 3. Com a tela aberta, o mapa se atualiza sozinho a cada 30 segundos (limite da empresa do rastreador). Nada que você estiver digitando é apagado.
 4. Toque num veículo da lista para centralizar o mapa nele.
@@ -590,7 +617,7 @@ Aba "Rastreamento", só da gestão (Administrador, Diretoria, Gestor, RH e Finan
 
 ### Rotas
 
-1. Em "Rotas", escolha o período e toque em "Buscar retiradas", ou escolha um veículo e toque em "Ver rota do período".
+1. Em "Mapa e rotas" > "Rotas", escolha o período e toque em "Buscar retiradas", ou escolha um veículo e toque em "Ver rota do período".
 2. Na lista de retiradas, toque em "Ver rota": o trajeto aparece no mapa (em vermelho os trechos acima do limite de velocidade), com saída, chegada e paradas numeradas.
 3. Abaixo do mapa: km do trajeto, tempo em movimento e parado, velocidade máxima, trechos acima do limite, paradas de 5 minutos ou mais e, quando o condutor tem atendimentos no Auvo, o deslocamento até cada um.
 4. "Relatório A4" gera o relatório de rota da retirada para imprimir (fica salvo em PDF e HTML).
@@ -599,7 +626,7 @@ A empresa do rastreador não informa trânsito. O SGO+ mostra o que os pontos pe
 
 ### Combustível e KM
 
-1. Escolha o período e toque em "Calcular".
+1. Em "Consultas e relatórios" > "Combustível e KM", escolha o período e toque em "Calcular".
 2. "Consumo por veículo": km/L do período, a média do próprio veículo e o desvio. Vermelho = gastou mais que a média além do limite configurado (padrão 15%): revise o veículo.
 3. "Capacidade do tanque": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.
 4. "Abastecimentos a conferir": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque "Conferir com a posição do veículo").
@@ -610,16 +637,38 @@ Consumo pelo método do tanque cheio: os km entre dois abastecimentos divididos 
 
 ### Relatórios
 
-Quatro relatórios A4 para imprimir, salvos em PDF e HTML na pasta "Frota - Relatorios Gerados/Rastreamento": rota da retirada, mensal do veículo (km, consumo, custos, paradas, excessos, manutenção), consumo da frota e uso fora do expediente.
+Em "Consultas e relatórios" > "Relatórios A4": quatro relatórios A4 para imprimir, salvos em PDF e HTML na pasta "Frota - Relatorios Gerados/Rastreamento": rota da retirada, mensal do veículo (km, consumo, custos, paradas, excessos, manutenção), consumo da frota e uso fora do expediente.
 
-### Aparelhos e alertas
+### Registro do bloqueio
 
-É a tela do rastreador descrita na seção 17: ligar veículo e aparelho, alertas de uso sem registro e de conexão.
+Em "Consultas e relatórios" > "Registro do bloqueio": a tabela inviolável de pedidos, comandos, simulações, confirmações e decisões, "Conferir a integridade", "Relatório de hoje" e, recolhido, o histórico dos "Comandos da versão anterior" (até 21/10/2026). Detalhes na seção 21.
 
-### Privacidade e configuração
+### Configuração
 
-- Prazo de guarda das rotas (padrão 90 dias), limite de velocidade (padrão 110 km/h), expediente da frota (padrão 07:00 a 19:00, segunda a sexta; feriados contam como fora) e desvio de consumo aceito (padrão 15%).
-- "Quem consultou": a trilha de quem abriu o mapa, viu rotas ou gerou relatório com localização.
+**O que falta para funcionar.** Uma lista de verificação, uma linha por condição, cada uma com a situação de agora (verde = ok, vermelho = falta, laranja = atenção, cinza = informação) e o botão para resolver:
+
+| Linha | O que mostra | Botão |
+| --- | --- | --- |
+| Rastreador ligado no SGO+ | Ligado ou Desligado | Para o responsável pelo sistema, "Ligar/Desligar em Chaves e senhas"; para os outros, a quem pedir |
+| Chave de acesso de leitura | Gravada ou Faltando (o valor nunca aparece) | "Gravar em Chaves e senhas" (responsável pelo sistema) |
+| Leitura do rastreador | Funcionando, Sem leitura ainda ou Com problema (com o motivo) | "Ler o rastreador agora" |
+| Chave de acesso dos comandos | Gravada ou Faltando (o valor nunca aparece) | "Gravar em Chaves e senhas" (responsável pelo sistema) |
+| Bloqueio da partida pelo SGO+ (chave geral) | Ligado ou Desligado. Desligado põe todos os carros em simulação de uma vez | "Ligar/Desligar em Chaves e senhas" (responsável pelo sistema) |
+| Aparelhos ligados aos veículos | Quantos de quantos, e quais estão sem aparelho | "Ligar aparelhos" |
+| Áreas das bases | Quantas de quantas, e quais estão sem área | "Cadastrar área" |
+| Modo do bloqueio de cada carro | Quantos em Ativo, Simulação e Desligado | "Abrir a Visão geral" |
+| Regras de alerta | Limite de velocidade, expediente, desvio de consumo, guarda | "Abrir as regras" |
+| Conferência noturna do KM | Ligada ou Desligada e a última rodada | "Ligar/Desligar em Chaves e senhas" (responsável pelo sistema) |
+
+No topo aparece o resumo: "Tudo pronto: o rastreamento e o bloqueio da partida estão funcionando" ou "Nenhum comando real sai agora", com o que falta.
+
+**Aparelhos.** Um cartão por veículo ativo com o aparelho atual (ou a sugestão pela placa) e a lista para escolher; "Gravar" liga, troca ou tira o aparelho (seção 17). No fim, os aparelhos do rastreador que não estão ligados a nenhum veículo.
+
+**Áreas das bases.** A tabela mostra cada base como "Cadastrada" ou "Sem área", com o centro e o raio. Para cadastrar ou editar: toque em "Cadastrar" ou "Editar" na linha da base; marque o centro tocando no mapa (o círculo tracejado é a prévia), escolhendo um carro estacionado na base (usa a posição dele) ou digitando latitude e longitude; confira o raio (padrão de 300 m, de 50 a 3.000 m) e toque em "Gravar a área". "Remover" apaga a área (com confirmação). No mapa, as áreas gravadas aparecem como círculos verdes. Sem a área, toda devolução daquela base vai para a decisão da gestão.
+
+**Regras e alertas.** Prazo de guarda das rotas (padrão 90 dias), limite de velocidade (padrão 110 km/h), expediente da frota (padrão 07:00 a 19:00, segunda a sexta; feriados contam como fora) e desvio de consumo aceito (padrão 15%); toque em "Gravar as regras". O alerta de uso sem registro é sempre ligado.
+
+**Privacidade.** "Quem consultou": a trilha de quem abriu o mapa, viu rotas ou gerou relatório com localização. Ninguém apaga.
 
 ### Gantt da frota e copiloto (aba Gestão e melhoria)
 
@@ -706,13 +755,18 @@ Regra aprovada pelo dono a partir do estudo de 12.000 situações simuladas: **a
 - **Sem internet:** passar e assumir ficam guardados no celular com a hora e vão sozinhos quando a internet voltar. A tela avisa quantos pedidos estão guardados.
 - **"Você ainda está com o ...?"**: toque em "Devolver" (se terminou) ou "Continuar com ele".
 
-### Para a gestão (Rastreamento > "Bloqueio da partida")
+### Para a gestão (Rastreamento > "Visão geral")
 
-- **Carros:** um cartão por carro com modo, triagem do sinal, quem está com ele, partida no carro (liberada ou bloqueada, lida no rastreador), sinal, situação, base, último comando e pendência. A tela não se atualiza sozinha: toque em "Atualizar".
-- **Decisões pendentes:** devolução fora da base (Bloquear / Não bloquear), retirada esquecida (Encerrar a retirada), passagem do carro (Autorizar / Recusar) e odômetro diferente do painel (Acertar o odômetro do rastreador). Todas pedem justificativa e também aparecem na Caixa de decisões.
-- **Áreas das bases:** escolha a base, use a posição de um carro estacionado nela (ou digite latitude e longitude), confira o raio (padrão de 300 m) e grave. Sem a área, toda devolução vai para a decisão da gestão.
-- **Registro e relatório:** "Conferir a integridade" e "Relatório de hoje".
-- **Celular da gestão:** Frota > "Opções da gestão" > "Partida do veículo (rastreador)" > "Liberar agora (emergência)".
+- **Faixa no topo:** verde quando o rastreamento e o bloqueio estão funcionando; amarela quando nenhum comando real sai agora, com o motivo e o botão "Ver o que falta para funcionar".
+- **Precisa da gestão:** devolução fora da base (Bloquear / Não bloquear), retirada esquecida (Encerrar a retirada), passagem do carro (Autorizar / Recusar), odômetro diferente do painel (Acertar o odômetro do rastreador), uso sem registro (Conferido) e aparelho sugerido pela placa (Ligar o aparelho). As decisões pedem justificativa e também aparecem na Caixa de decisões.
+- **Veículos:** um cartão por carro ativo (filtro "Base" no topo). No canto, a partida que o rastreador informa (liberada, bloqueada ou não informada). No meio: com quem está o carro, o sinal (conectado ou sem conexão agora), onde está, o aparelho, a base, o último comando, a pendência, a emergência e o odômetro do rastreador. Carro sem rastreador aparece com borda tracejada e o botão "Ligar aparelho". Cartão com faixa laranja à esquerda tem algo para olhar (sem conexão, emergência ou decisão pendente).
+- **Ativar ou desativar o bloqueio de um carro:** em "Bloqueio da partida neste carro", toque em "Ativo", "Simulação" ou "Desligado" (o botão escuro é o modo de hoje). A tela explica o que vai acontecer, escreva o motivo e toque em "Confirmar". Se a partida estiver bloqueada e você escolher Simulação ou Desligado, a tela avisa que nesses modos o SGO+ não manda mais a liberação na retirada: libere antes com "Liberar agora".
+- **Ações no cartão:** "Liberar agora (emergência)", "Ver no mapa" e "Trocar aparelho". Em "Mais ações": "Triagem do sinal", "Acertar o odômetro do rastreador", "Encerrar emergência" e "Bloqueio de roubo".
+- **Botão apagado:** a ação não está disponível para você ou para o carro. Toque nele: a tela diz por quê e o que fazer (por exemplo, "Liberar agora" é do Administrador, da Diretoria, do Gestor e do RH; o bloqueio de roubo é só da Diretoria; com o bloqueio Desligado no carro, use a central 24 h do rastreador).
+- **A tela não se atualiza sozinha:** toque em "Atualizar". "Ler o rastreador agora" faz uma leitura na hora.
+- **Áreas das bases:** Configuração > "Áreas das bases" (seção 19).
+- **Registro e relatório:** Consultas e relatórios > "Registro do bloqueio": "Conferir a integridade" e "Relatório de hoje".
+- **Celular da gestão:** a Visão geral funciona no celular (cartões um embaixo do outro, botões grandes). Também há Frota > "Opções da gestão" > "Partida do veículo (rastreador)" > "Liberar agora (emergência)".
 
 > **Por que o bloqueio não sai na hora da devolução?** Porque um comando aceito com o carro sem conexão fica na fila do rastreador e executa quando o carro reconecta, talvez com outra pessoa dirigindo. Por isso o SGO+ só manda com o aparelho conectado agora, o carro parado e desligado, e trata o comando que ficou na fila como não executado.
 

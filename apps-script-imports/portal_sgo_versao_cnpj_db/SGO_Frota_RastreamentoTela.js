@@ -3,8 +3,16 @@
  *
  * Código do navegador (nunca executado no servidor): Frota_obterTelaRastreamento devolve o CSS e o texto da
  * função FrotaR_telaNavegador_, e o carregador JS_Frota.html a executa logo depois do módulo da Frota.
- *  - aba "Rastreamento" (só gestão): Mapa ao vivo, Rotas, Combustível e KM, Relatórios, Aparelhos e alertas
- *    (o painel do rastreador que já existia) e Privacidade e configuração;
+ *  - aba "Rastreamento" (só gestão). 31/10/2026 (pedido do dono: "redesenhe essa função lá no frota para ficar mais fácil
+ *    ativar e desativar, cadastrar e outras ferramentas, está muito confusa"): as 7 partes viraram 4 abas:
+ *      Visão geral ........... um cartão por veículo (aparelho, sinal, com quem está, partida, modo do bloqueio) com as ações
+ *                              no próprio cartão e, no topo, o que precisa da gestão (SGO_Frota_BloqueioTela.js);
+ *      Mapa e rotas .......... Mapa ao vivo | Rotas;
+ *      Consultas e relatórios  Combustível e KM | Relatórios A4 | Registro do bloqueio;
+ *      Configuração .......... O que falta para funcionar | Aparelhos | Áreas das bases | Regras e alertas | Privacidade.
+ *    O painel antigo do rastreador (tplFrota_rtPainel, em SGO_Frota_ConteudoModulo.js) fica escondido: tudo o que ele
+ *    fazia (vínculo do aparelho, alertas, ler agora, histórico dos comandos antigos) está nas abas novas.
+ *    Só tela e organização: as chamadas ao servidor e as regras do bloqueio são as mesmas.
  *  - aba "Gestão e melhoria": partes "Gantt da frota" e "Copiloto de sugestões";
  *  - aba "Abastecimentos e despesas" (toda a equipe): "Comprovantes pedidos a você".
  * Mapa: Leaflet 1.9.4 (cdnjs, a mesma CDN do Chart.js) com o mapa do OpenStreetMap, com a atribuição exigida
@@ -14,6 +22,13 @@
  ****************************************************/
 
 var FROTAR_TELA_CSS = [
+  // 31/10/2026: abas do Rastreamento (Visão geral, Mapa e rotas, Consultas e relatórios, Configuração); os botões internos de cada aba usam .frr-sub
+  '.frr-abas{display:flex;flex-wrap:wrap;gap:0;border-bottom:2px solid var(--bc-line,#e2e0d8);margin:0 0 12px}',
+  '.frr-abas button{border:0;border-bottom:3px solid transparent;margin-bottom:-2px;background:transparent;padding:10px 16px;font:inherit;font-size:14px;font-weight:700;color:var(--bc-text-2,#4a4f4b);cursor:pointer;min-height:44px}',
+  '.frr-abas button:hover{color:var(--bc-text,#1c1f1d);background:var(--bc-surface-2,#faf9f6)}',
+  '.frr-abas button.ativo{color:var(--bc-action,#1f6b2a);border-bottom-color:var(--bc-action,#1f6b2a)}',
+  '.frr-abas button:focus-visible,.frr-sub button:focus-visible{outline:2px solid var(--bc-text,#1c1f1d);outline-offset:2px}',
+  '@media (max-width:760px){.frr-abas{display:grid;grid-template-columns:1fr 1fr;border-bottom:0;gap:6px}.frr-abas button{border:1px solid var(--bc-line-2,#cfccc1);border-radius:8px;margin:0;padding:8px 6px;font-size:13px;line-height:1.25}.frr-abas button.ativo{background:var(--bc-action-bg,#e8f2e5);border-color:var(--bc-action,#1f6b2a)}}',
   '.frr-sub{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}',
   '.frr-sub button{border:1px solid var(--bc-line-2,#cfd6dd);background:#fff;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--bc-text,#1f2933);min-height:36px}',
   '.frr-sub button.ativo{background:var(--bc-text,#1f2933);color:#fff;border-color:var(--bc-text,#1f2933)}',
@@ -166,12 +181,20 @@ function Frota_obterTelaRastreamento() {
 }
 
 function FrotaR_telaNavegador_() {
-  var R = { sub: 'mapa', mapa: null, marcadores: {}, timer: null, dados: null, veiculos: null, condutores: null, rotaMapa: null, rotaCamada: null,
+  var R = { sub: 'geral', int: { mapa: 'vivo', consultas: 'combustivel', config: 'situacao' }, focar: '', mapa: null, marcadores: {}, timer: null, dados: null, veiculos: null, condutores: null, rotaMapa: null, rotaCamada: null,
     leaflet: null, ajustou: false, enviando: false, gantt: { de: '', ate: '', modo: 'semana', vista: '', dados: null }, cop: { dias: 30, ia: false, dados: null } };
   var LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
   var LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
   var CENTRO = [-16.6869, -49.2648];
-  var SUBS = [['mapa', 'Mapa ao vivo'], ['rotas', 'Rotas'], ['combustivel', 'Combustível e KM'], ['relatorios', 'Relatórios'], ['aparelhos', 'Aparelhos e alertas'], ['bloqueio', 'Bloqueio da partida'], ['config', 'Privacidade e configuração']];
+  // 31/10/2026: 4 abas; as que juntam ferramentas têm botões internos (INTERNAS). ANTIGAS: nomes das 7 partes de antes,
+  // para link, atalho e botão que ainda apontam para elas.
+  var SUBS = [['geral', 'Visão geral'], ['mapa', 'Mapa e rotas'], ['consultas', 'Consultas e relatórios'], ['config', 'Configuração']];
+  var INTERNAS = {
+    mapa: [['vivo', 'Mapa ao vivo'], ['rotas', 'Rotas']],
+    consultas: [['combustivel', 'Combustível e KM'], ['relatorios', 'Relatórios A4'], ['registro', 'Registro do bloqueio']],
+    config: [['situacao', 'O que falta para funcionar'], ['aparelhos', 'Aparelhos'], ['areas', 'Áreas das bases'], ['regras', 'Regras e alertas'], ['privacidade', 'Privacidade']]
+  };
+  var ANTIGAS = { rotas: ['mapa', 'rotas'], combustivel: ['consultas', 'combustivel'], relatorios: ['consultas', 'relatorios'], aparelhos: ['config', 'aparelhos'], bloqueio: ['geral', ''] };
 
   function esc(v) { return tplFrota_esc(v); }
   // 21/10/2026: identificação dos veículos (apelido e base). O servidor manda rotuloVeiculo/identVeiculo em cada veículo;
@@ -231,11 +254,12 @@ function FrotaR_telaNavegador_() {
   }
 
   // ---------------- montagem da aba ----------------
-  // O painel antigo do rastreador (parte "Aparelhos e alertas") só lê a API quando essa parte está aberta: duas leituras
-  // ao mesmo tempo esbarram no limite do rastreador (uma leitura de posições a cada 30 s).
+  // 31/10/2026: o painel antigo do rastreador (tplFrota_rtPainel) fica escondido e não lê mais a API com a tela nova
+  // montada: o vínculo do aparelho, os alertas, "Ler o rastreador agora" e o histórico dos comandos antigos estão nas
+  // abas novas (duas leituras ao mesmo tempo esbarrariam no limite do rastreador, uma leitura de posições a cada 30 s).
   if (typeof window.tplFrota_rtCarregar === 'function' && !window.tplFrota_rtCarregar._frr) {
     var rtOriginal = window.tplFrota_rtCarregar;
-    window.tplFrota_rtCarregar = function () { if (R.sub === 'aparelhos' || !el('tplFrotaR_raiz')) return rtOriginal.apply(this, arguments); };
+    window.tplFrota_rtCarregar = function () { if (!el('tplFrotaR_raiz')) return rtOriginal.apply(this, arguments); };
     window.tplFrota_rtCarregar._frr = true;
   }
   window.tplFrotaR_aoMostrarAba_ = function (id) {
@@ -243,14 +267,21 @@ function FrotaR_telaNavegador_() {
     if (id === 'rastreador' && tplFrota_souGestor_()) montar();
     if (id === 'despesas') carregarMeusPedidos();
   };
+  // Usado pelos cartões da Visão geral ("Ver no mapa") e pela Configuração: irPara('mapa', 'vivo', { focar: veiculoId }).
+  window.tplFrotaR_irPara_ = function (aba, interna, opc) { irPara(aba, interna, opc); };
+  window.tplFrotaR_regras_ = function (alvo) { preencherRegras(alvo); };
+  window.tplFrotaR_quemConsultou_ = function (alvo) { preencherQuemConsultou(alvo); };
+  window.tplFrotaR_mapaBase_ = function () { return garantirLeaflet().then(function (L) { return { L: L, camada: camadaOsm(L), centro: CENTRO }; }); };
 
   function montar() {
     var raiz = el('tplFrotaR_raiz');
     if (!raiz) return;
+    var antigo = el('tplFrota_rtPainel');
+    if (antigo) antigo.style.display = 'none';
     if (!raiz.getAttribute('data-montado')) {
       raiz.setAttribute('data-montado', '1');
       raiz.classList.remove('muted');
-      raiz.innerHTML = '<div class="frr-sub" role="tablist">' + SUBS.map(function (s) {
+      raiz.innerHTML = '<div class="frr-abas" role="tablist" aria-label="Partes do rastreamento">' + SUBS.map(function (s) {
         return '<button type="button" role="tab" data-frr-sub="' + s[0] + '">' + esc(s[1]) + '</button>';
       }).join('') + '</div><div id="frr_corpo"></div>';
       Array.prototype.forEach.call(raiz.querySelectorAll('[data-frr-sub]'), function (b) { b.onclick = function () { mostrarSub(b.getAttribute('data-frr-sub')); }; });
@@ -258,23 +289,50 @@ function FrotaR_telaNavegador_() {
     mostrarSub(R.sub);
   }
 
+  function irPara(aba, interna, opc) {
+    if (ANTIGAS[aba]) { interna = interna || ANTIGAS[aba][1]; aba = ANTIGAS[aba][0]; }
+    if (interna && INTERNAS[aba]) R.int[aba] = interna;
+    if (opc && opc.focar) R.focar = String(opc.focar);
+    if (!el('frr_corpo')) { R.sub = aba; montar(); } else mostrarSub(aba);
+    try { var r = el('tplFrotaR_raiz'); if (r && opc && opc.rolar !== false) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+  }
+
   function mostrarSub(s) {
+    if (ANTIGAS[s]) { if (ANTIGAS[s][1]) R.int[ANTIGAS[s][0]] = ANTIGAS[s][1]; s = ANTIGAS[s][0]; }
+    if (!SUBS.some(function (x) { return x[0] === s; })) s = 'geral';
     R.sub = s;
     pararTimer();
     Array.prototype.forEach.call(document.querySelectorAll('[data-frr-sub]'), function (b) { var on = b.getAttribute('data-frr-sub') === s; b.classList.toggle('ativo', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
-    var antigo = el('tplFrota_rtPainel'), corpo = el('frr_corpo');
-    if (antigo) antigo.style.display = s === 'aparelhos' ? '' : 'none';
+    var corpo = el('frr_corpo');
     if (!corpo) return;
-    corpo.style.display = s === 'aparelhos' ? 'none' : '';
-    if (s === 'aparelhos') { corpo.innerHTML = ''; if (typeof tplFrota_rtCarregar === 'function') tplFrota_rtCarregar(); return; }
+    if (!INTERNAS[s]) { desenharParte(s, '', corpo); return; }
+    corpo.innerHTML = '<div class="frr-sub" role="tablist" aria-label="' + esc((SUBS.filter(function (x) { return x[0] === s; })[0] || [])[1] || '') + '">' + INTERNAS[s].map(function (x) {
+      return '<button type="button" role="tab" data-frr-int="' + x[0] + '">' + esc(x[1]) + '</button>';
+    }).join('') + '</div><div id="frr_int"></div>';
+    Array.prototype.forEach.call(corpo.querySelectorAll('[data-frr-int]'), function (b) { b.onclick = function () { R.int[s] = b.getAttribute('data-frr-int'); mostrarInterna(s); }; });
+    mostrarInterna(s);
+  }
+
+  function mostrarInterna(s) {
+    var i = R.int[s];
+    if (!INTERNAS[s].some(function (x) { return x[0] === i; })) i = R.int[s] = INTERNAS[s][0][0];
+    pararTimer();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-frr-int]'), function (b) { var on = b.getAttribute('data-frr-int') === i; b.classList.toggle('ativo', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    var alvo = el('frr_int');
+    if (alvo) desenharParte(s, i, alvo);
+  }
+
+  function semBloqueio(corpo) { corpo.innerHTML = '<p class="muted">Esta parte não carregou. Atualize a página (F5) e abra de novo.</p>'; }
+  function desenharParte(s, i, corpo) {
     R.mapa = null; R.marcadores = {}; R.ajustou = false; R.rotaMapa = null;
-    if (s === 'mapa') telaMapa(corpo);
-    else if (s === 'rotas') telaRotas(corpo);
-    else if (s === 'combustivel') telaCombustivel(corpo);
-    else if (s === 'relatorios') telaRelatorios(corpo);
-    // 21/10/2026: bloqueio e liberação da partida (SGO_Frota_BloqueioTela.js)
-    else if (s === 'bloqueio') { if (typeof window.tplFrotaBlq_montar_ === 'function') window.tplFrotaBlq_montar_(corpo); else corpo.innerHTML = '<p class="muted">A tela do bloqueio da partida não carregou. Atualize a página e abra de novo.</p>'; }
-    else telaConfig(corpo);
+    // 21/10/2026: bloqueio e liberação da partida (SGO_Frota_BloqueioTela.js); 31/10/2026: é a Visão geral e parte da Configuração
+    var blq = function (fn) { if (typeof window[fn] === 'function') window[fn](corpo, i); else semBloqueio(corpo); };
+    if (s === 'geral') blq('tplFrotaBlq_montar_');
+    else if (s === 'mapa') { if (i === 'rotas') telaRotas(corpo); else telaMapa(corpo); }
+    else if (s === 'consultas') { if (i === 'relatorios') telaRelatorios(corpo); else if (i === 'registro') blq('tplFrotaBlq_registro_'); else telaCombustivel(corpo); }
+    else if (i === 'regras') telaRegras(corpo);
+    else if (i === 'privacidade') telaPrivacidade(corpo);
+    else blq('tplFrotaBlq_config_');
   }
 
   // ---------------- MAPA AO VIVO ----------------
@@ -318,7 +376,9 @@ function FrotaR_telaNavegador_() {
         el('frr_mapa').innerHTML = '<p class="muted" style="padding:14px">O mapa aparece quando o rastreador estiver configurado.</p>';
         return;
       }
-      aviso.innerHTML = (r.aviso ? '<div class="frr-faixa alerta">' + esc(r.aviso) + '</div>' : '') + (!r.veiculos.length ? '<div class="frr-faixa">Nenhum veículo tem aparelho do rastreador ligado. Ligue em "Aparelhos e alertas".</div>' : '');
+      aviso.innerHTML = (r.aviso ? '<div class="frr-faixa alerta">' + esc(r.aviso) + '</div>' : '') + (!r.veiculos.length ? '<div class="frr-faixa">Nenhum veículo tem aparelho do rastreador ligado. Ligue em Configuração > Aparelhos.</div>' : '') +
+        (R.focar && !r.veiculos.some(function (v) { return String(v.id) === R.focar && v.lat !== null; }) ? '<div class="frr-faixa alerta">O veículo escolhido não tem posição lida agora (aparelho sem sinal ou sem leitura ainda). Os outros aparecem no mapa.</div>' : '');
+      if (R.focar && !r.veiculos.some(function (v) { return String(v.id) === R.focar && v.lat !== null; })) R.focar = '';
       desenharLista(r.veiculos.filter(passaBase));
       el('frr_atualizado').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR') + ' · próxima leitura em ' + r.intervaloSeg + ' s';
       garantirLeaflet().then(function (L) { desenharMarcadores(L, r.veiculos.filter(passaBase)); }).catch(function () {
@@ -383,6 +443,9 @@ function FrotaR_telaNavegador_() {
       limites.push([v.lat, v.lon]);
     });
     Object.keys(R.marcadores).forEach(function (id) { if (!vistos[id]) { R.mapa.removeLayer(R.marcadores[id]); delete R.marcadores[id]; } });
+    // 31/10/2026: "Ver no mapa" do cartão da Visão geral centraliza o veículo escolhido (uma vez; depois o mapa segue normal)
+    var foco = R.focar && R.marcadores[R.focar];
+    if (foco) { R.focar = ''; R.ajustou = true; R.mapa.setView(foco.getLatLng(), 15); foco.openPopup(); return; }
     if (!R.ajustou && limites.length) { R.ajustou = true; if (limites.length === 1) R.mapa.setView(limites[0], 15); else R.mapa.fitBounds(limites, { padding: [30, 30], maxZoom: 15 }); }
   }
 
@@ -587,12 +650,25 @@ function FrotaR_telaNavegador_() {
     }).catch(function (err) { if (janela) janela.close(); el(statusId).innerHTML = erroHtml(err); });
   }
 
-  // ---------------- PRIVACIDADE E CONFIGURAÇÃO ----------------
-  function telaConfig(corpo) {
-    corpo.innerHTML = '<div class="frr-faixa"><strong>Para que serve:</strong> definir por quanto tempo as rotas ficam guardadas, o limite de velocidade, o horário da frota e o desvio de consumo aceito, e ver quem consultou a localização dos veículos (a trilha não pode ser apagada).</div><div id="frr_cfg"><span class="muted">Carregando...</span></div><h3>Quem consultou</h3><div id="frr_trilha"><span class="muted">Carregando...</span></div>';
+  // ---------------- CONFIGURAÇÃO > REGRAS E ALERTAS / PRIVACIDADE ----------------
+  // 31/10/2026: a antiga "Privacidade e configuração" virou duas partes da aba Configuração. O formulário e a trilha são os mesmos.
+  function telaRegras(corpo) {
+    corpo.innerHTML = '<div class="frr-faixa"><strong>Para que serve:</strong> as regras que geram os alertas e as conferências do rastreamento. ' +
+      '<b>Limite de velocidade</b>: trecho acima dele aparece na rota, no relatório e no copiloto. <b>Expediente da frota</b>: o que rodar fora dele entra no relatório "Uso fora do expediente". ' +
+      '<b>Desvio de consumo</b>: o veículo que gastar mais que a própria média além disso fica em vermelho em Combustível e KM. <b>Guarda das rotas</b>: depois desse prazo os pontos são apagados sozinhos. ' +
+      'O alerta de uso sem registro (carro andando sem retirada) é sempre ligado e não tem ajuste.</div><div id="frr_cfg"><span class="muted">Carregando...</span></div>';
+    preencherRegras(el('frr_cfg'));
+  }
+  function telaPrivacidade(corpo) {
+    corpo.innerHTML = '<div class="frr-faixa"><strong>Privacidade:</strong> só a gestão vê a localização dos veículos. Cada abertura do mapa, consulta de rota e relatório com localização fica registrada aqui, com quem, quando e o quê; a trilha não pode ser apagada. ' +
+      'O prazo de guarda das rotas fica em "Regras e alertas".</div><h3>Quem consultou</h3><div id="frr_trilha"><span class="muted">Carregando...</span></div>';
+    preencherQuemConsultou(el('frr_trilha'));
+  }
+  function preencherRegras(alvoCfg) {
+    if (!alvoCfg) return;
     api('apiRastrConfig').then(function (r) {
       var c = r.cfg;
-      el('frr_cfg').innerHTML = (r.rotasGuardadas ? '<p class="frr-meta">Rotas guardadas: ' + num(r.armazem ? r.armazem.total : 0) + ' pontos' + (r.armazem && r.armazem.maisAntigo ? ', o mais antigo de ' + esc(r.armazem.maisAntigo) : '') + '.</p>' : '<div class="frr-faixa alerta">Nesta instalação as rotas não ficam guardadas (só no servidor próprio do SGO+).</div>') +
+      alvoCfg.innerHTML = (r.rotasGuardadas ? '<p class="frr-meta">Rotas guardadas: ' + num(r.armazem ? r.armazem.total : 0) + ' pontos' + (r.armazem && r.armazem.maisAntigo ? ', o mais antigo de ' + esc(r.armazem.maisAntigo) : '') + '.</p>' : '<div class="frr-faixa alerta">Nesta instalação as rotas não ficam guardadas (só no servidor próprio do SGO+).</div>') +
         '<div class="frr-form"><div><label for="frr_cfRet">Guardar as rotas por (dias)</label><input id="frr_cfRet" inputmode="numeric" value="' + esc(c.retencaoDias) + '"></div>' +
         '<div><label for="frr_cfLim">Limite de velocidade (km/h)</label><input id="frr_cfLim" inputmode="numeric" value="' + esc(c.limiteKmh) + '"></div>' +
         '<div><label for="frr_cfIni">Expediente da frota: início</label><input id="frr_cfIni" value="' + esc(c.expedienteInicio) + '" placeholder="hh:mm"></div>' +
@@ -600,16 +676,19 @@ function FrotaR_telaNavegador_() {
         '<div><label for="frr_cfDes">Desvio de consumo aceito (%)</label><input id="frr_cfDes" inputmode="numeric" value="' + esc(c.desvioConsumoPct) + '"></div>' +
         '<div><label><input type="checkbox" id="frr_cfSab"' + (c.sabadoExpediente ? ' checked' : '') + '> Sábado é dia de expediente</label></div></div>' +
         '<p class="frr-meta">Prazo menor apaga os pontos mais velhos na próxima limpeza (uma vez por dia). Feriados do SGO+ contam como fora do expediente.</p>' +
-        '<div class="frr-botoes"><button type="button" class="btn-primary" id="frr_cfGravar">Gravar configuração</button></div><div id="frr_cfStatus"></div>';
+        '<div class="frr-botoes"><button type="button" class="btn-primary" id="frr_cfGravar">Gravar as regras</button></div><div id="frr_cfStatus"></div>';
       el('frr_cfGravar').onclick = function () {
         apiC('apiRastrConfig', { gravar: true, retencaoDias: val('frr_cfRet'), limiteKmh: val('frr_cfLim'), expedienteInicio: val('frr_cfIni'), expedienteFim: val('frr_cfFim'), desvioConsumoPct: val('frr_cfDes'), sabadoExpediente: !!el('frr_cfSab').checked })
           .then(function (x) { el('frr_cfStatus').innerHTML = okHtml(x.mensagem); }).catch(function (err) { el('frr_cfStatus').innerHTML = erroHtml(err); });
       };
-    }).catch(function (err) { el('frr_cfg').innerHTML = erroHtml(err); });
+    }).catch(function (err) { alvoCfg.innerHTML = erroHtml(err); });
+  }
+  function preencherQuemConsultou(alvoTr) {
+    if (!alvoTr) return;
     api('apiRastrConsultas').then(function (r) {
-      el('frr_trilha').innerHTML = tabela([{ t: 'Quando' }, { t: 'Quem' }, { t: 'O quê' }, { t: 'Veículo' }, { t: 'Período' }, { t: 'Onde' }],
+      alvoTr.innerHTML = tabela([{ t: 'Quando' }, { t: 'Quem' }, { t: 'O quê' }, { t: 'Veículo' }, { t: 'Período' }, { t: 'Onde' }],
         r.itens.map(function (x) { return [esc(x.quando), esc(x.quem) + ' <span class="frr-meta">' + esc(x.perfil) + '</span>', esc(x.acao), esc(x.placa ? rotV(x) : '—'), esc(x.periodo || '—'), esc(x.origem)]; }), 'Ninguém consultou ainda.');
-    }).catch(function (err) { el('frr_trilha').innerHTML = erroHtml(err); });
+    }).catch(function (err) { alvoTr.innerHTML = erroHtml(err); });
   }
 
   // ---------------- GANTT (Gestão e melhoria) ----------------

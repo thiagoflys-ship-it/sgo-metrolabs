@@ -2925,7 +2925,7 @@
         '<button type="button" class="fs-btn" data-acao="abastecer">Registrar abastecimento</button>' +
         '<button type="button" class="fs-btn" data-acao="ajustarKm">Ajustar KM do veículo</button>' +
         '<button type="button" class="fs-btn" data-acao="partida">Partida do veículo (rastreador)</button>' +
-        '<button type="button" class="fs-btn" data-acao="completa" data-aba="rastreador">Rastreamento: mapa, rotas, combustível e relatórios</button>' +
+        '<button type="button" class="fs-btn" data-acao="completa" data-aba="rastreador">Rastreamento: veículos, bloqueio, mapa e relatórios</button>' +
         '<button type="button" class="fs-btn" data-acao="completa" data-aba="gestao">Gestão e melhoria: Kanban, Gantt e copiloto</button></div></details>';
     }
     h += '<button type="button" class="fs-btn" data-acao="reservas">Reservas: agenda e reservar um veículo</button>';
@@ -4089,7 +4089,7 @@
       // 19/10/2026: acesso somente leitura = sem liberar/bloquear; a tela mostra só a situação do veículo.
       if (est) est.innerHTML = !r.ligado ? '<div class="mobile-frota-alerta critico">Rastreador desligado no SGO+: nada é enviado por aqui. Em emergência, use o aplicativo do rastreador.</div>'
         : r.somenteLeitura ? '<div class="mobile-frota-alerta aviso">' + escapeHtml_(r.textoSomenteLeitura || "") + '</div>'
-        : 'Liberar agora: a partida é liberada na hora (emergência, vale 24 h ou até a devolução) e fica no registro com o seu nome. O bloqueio do dia a dia sai sozinho depois da devolução; o bloqueio de roubo é da Diretoria, na tela completa (Rastreamento > Bloqueio da partida).';
+        : 'Liberar agora: a partida é liberada na hora (emergência, vale 24 h ou até a devolução) e fica no registro com o seu nome. O bloqueio do dia a dia sai sozinho depois da devolução; o bloqueio de roubo é da Diretoria, na tela completa (Rastreamento > Visão geral).';
       const comDispositivo = (r.veiculos || []).filter(function (v) { return v.deviceId; });
       const sel = document.getElementById("mob_frota_p_veiculo");
       if (sel) sel.innerHTML = '<option value="">' + (comDispositivo.length ? 'Selecione' : 'Nenhum veículo com rastreador vinculado') + '</option>' + comDispositivo.map(function (v) {
@@ -4097,7 +4097,7 @@
       }).join("");
       const bL = document.getElementById("mob_frota_p_liberar"), bB = document.getElementById("mob_frota_p_bloquear");
       if (bL) { bL.disabled = !r.ligado || !!r.somenteLeitura; bL.style.display = r.somenteLeitura ? "none" : ""; }
-      // 21/10/2026: bloqueio manual só o de roubo, pela Diretoria, na tela completa (Rastreamento > Bloqueio da partida).
+      // 21/10/2026: bloqueio manual só o de roubo, pela Diretoria, na tela completa (Rastreamento > Visão geral).
       if (bB) bB.style.display = "none";
       const jus = document.getElementById("mob_frota_p_justificativa");
       if (jus && r.somenteLeitura) { const campo = jus.closest(".mobile-field") || jus.parentNode; if (campo) campo.style.display = "none"; }

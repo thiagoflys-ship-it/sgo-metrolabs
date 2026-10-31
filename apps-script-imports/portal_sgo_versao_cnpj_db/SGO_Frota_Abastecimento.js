@@ -121,7 +121,7 @@ function FrotaAb_analisar_(veiculo, d, o) {
       'Confira o número na nota: litros com três casas, como 35,591, devem ser digitados com a vírgula (ou o ponto) no lugar certo. Se o abastecimento foi em mais de um veículo ou em galão, lance cada um separado.');
   } else if (!(isFinite(cap) && cap > 0) && litros > FROTAAB_LITROS_SEM_TANQUE) {
     erros.push('Os litros informados (' + FrotaAb_l_(litros) + ' L) passam de ' + FROTAAB_LITROS_SEM_TANQUE + ' L, mais do que cabe no tanque de qualquer veículo da frota. ' +
-      'Confira o número na nota e digite com a vírgula (exemplo: 35,591). A gestão pode cadastrar a capacidade do tanque do veículo ' + placa + ' em Frota > Rastreamento > Combustível e KM.');
+      'Confira o número na nota e digite com a vírgula (exemplo: 35,591). A gestão pode cadastrar a capacidade do tanque do veículo ' + placa + ' em Frota > Rastreamento > Consultas e relatórios > Combustível e KM.');
   }
   if (!(valor > 0)) erros.push('Informe o valor total pago, como está na nota (exemplo: 125,99).');
   var preco = litros > 0 && valor > 0 ? valor / litros : null;

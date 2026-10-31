@@ -1276,12 +1276,12 @@ function Frota_apiRastreadorLiberar(sessionId, payload) {
 
 /**
  * "Bloquear agora" da tela antiga: desde 21/10/2026 o bloqueio manual é só o de roubo, pela Diretoria, com dupla
- * confirmação (Frota > Rastreamento > Bloqueio da partida). O bloqueio do dia a dia sai sozinho depois da devolução.
+ * confirmação (Frota > Rastreamento > Visão geral). O bloqueio do dia a dia sai sozinho depois da devolução.
  */
 function Frota_apiRastreadorBloquear(sessionId, payload) {
   Rastreador_exigirGestao_(sessionId);
   throw new Error('O bloqueio manual mudou: o bloqueio do dia a dia sai sozinho depois da devolução (com o carro conectado, parado e desligado). ' +
-    'Em caso de roubo, a Diretoria usa "Bloqueio de roubo" em Frota > Rastreamento > Bloqueio da partida, com dupla confirmação. Nada foi enviado.');
+    'Em caso de roubo, a Diretoria usa "Bloqueio de roubo" no cartão do carro, em Frota > Rastreamento > Visão geral > Mais ações, com dupla confirmação. Nada foi enviado.');
 }
 
 function Frota_apiRastreadorConferirAlerta(sessionId, payload) {

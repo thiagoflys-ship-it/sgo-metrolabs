@@ -14,6 +14,10 @@
  * 30/10/2026, leva 2: "Abasteci" e "Pedágio, estacionamento e outras despesas" no celular, KM sugerido pelo rastreador, grupo
  *   "Funcionamento" na vistoria da retirada, "Conferência de gastos", importação do extrato do pedágio, relatório mensal A4,
  *   "Agendar parada" no plano de manutenção, "Paradas agendadas" e "Problemas informados na retirada".
+ * 31/10/2026 (pedido do dono: "redesenhe essa função lá no frota para ficar mais fácil ativar e desativar, cadastrar e outras
+ *   ferramentas"): Rastreamento em 4 partes (Visão geral, Mapa e rotas, Consultas e relatórios, Configuração), cartão por carro com
+ *   o modo do bloqueio e as ações, "O que falta para funcionar", Aparelhos e Áreas das bases (com mapa). Textos de frota/rastreamento,
+ *   frota/rastreador e frota/bloqueio_da_partida reescritos para os lugares novos.
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -459,371 +463,224 @@ function SGO_ajudaTelas_Frota_() {
       ]
     },
 
-    "frota/rastreador": {
-      "titulo": "Rastreador e bloqueio da partida",
-      "paraQueServe": "Mostrar à gestão onde cada veículo está e se está andando. O SGO+ lê o rastreador a cada 2 minutos e: 1) avisa se um veículo andar sem retirada registrada; 2) confere o KM rodado de cada retirada com o que o rastreador mediu; 3) guarda o local onde o veículo parou na devolução.",
-      "antesDeComecar": [
-        "O bloqueio e a liberação da partida ficam na parte \"Bloqueio da partida\" da aba Rastreamento (a regra, os modos de cada carro e o registro estão lá).",
-        "O hodômetro do aparelho conta desde a instalação e não é o número do painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). O SGO+ compara o KM rodado, não esses números.",
-        "Abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado: a tela mostra \"parado, ignição desligada\" e o SGO+ não trata como uso.",
-        "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada, abaixo de 5 km/h e com posição recente.",
-        "Só a gestão vê a localização. As rotas e a localização ficam guardadas pelo prazo de Rastreamento > Privacidade e configuração (padrão de 90 dias) e depois são apagadas sozinhas. Esta tela agora é a parte \"Aparelhos e alertas\" da aba Rastreamento."
+    "frota/rastreamento": {
+      titulo: "Rastreamento (Visão geral, Mapa e rotas, Consultas e relatórios, Configuração)",
+      paraQueServe: "Tudo do rastreador e do bloqueio da partida num lugar só, para a gestão: ver cada carro e agir nele, ver o mapa e as rotas, conferir combustível e KM, gerar relatórios e configurar aparelhos, áreas das bases e regras. Só a gestão.",
+      antesDeComecar: [
+        "A aba Rastreamento tem 4 partes, nos botões do topo: \"Visão geral\" (um cartão por carro, com as ações), \"Mapa e rotas\", \"Consultas e relatórios\" e \"Configuração\".",
+        "Onde ficou cada ferramenta de antes: Mapa ao vivo e Rotas = Mapa e rotas; Combustível e KM e Relatórios = Consultas e relatórios; Bloqueio da partida = Visão geral (cartão de cada carro) e Consultas e relatórios > Registro do bloqueio; Aparelhos e alertas = Configuração > Aparelhos (vínculo) e Visão geral (alertas); Privacidade e configuração = Configuração > Regras e alertas e Configuração > Privacidade.",
+        "Para saber se está tudo ligado, abra Configuração > \"O que falta para funcionar\": cada linha mostra a situação e o botão para resolver. As chaves de acesso nunca aparecem na tela, só \"Gravada\" ou \"Faltando\".",
+        "Mapa, rotas, combustível e relatórios só leem o rastreador. Comandos ao carro (liberar, bloquear, odômetro) só pelo cartão do carro na Visão geral.",
+        "Toda abertura do mapa, consulta de rota e relatório com localização fica registrada em Configuração > Privacidade > \"Quem consultou\"."
       ],
-      "passos": [
-        {
-          "titulo": "Entender a tela, de cima para baixo",
-          "itens": [
-            "Abra a aba \"Rastreador\".",
-            "\"Para que serve\": as três coisas que o SGO+ faz com o rastreador.",
-            "Caixa azul: se está ligado, a hora da última leitura e o que funciona com o acesso de hoje.",
-            "\"O que fazer agora\": a lista do que precisa de você, veículo por veículo. Quando está tudo em dia, aparece \"Nada a fazer\".",
-            "\"Alertas para conferir\": só aparece quando há uso sem registro ou falha de comunicação.",
-            "\"Veículos e aparelhos\": um cartão por veículo, com o aparelho, a situação agora, o hodômetro e a última devolução."
-          ]
-        },
-        {
-          "titulo": "Ligar um veículo ao aparelho do rastreador",
-          "itens": [
-            "No cartão do veículo, escolha o aparelho na lista. Se o nome do aparelho tem a placa, ele já vem marcado e o cartão fica verde com \"Sugestão\".",
-            "Toque em \"Gravar vínculo\".",
-            "Se aparecer \"Vínculo já estava gravado\", está tudo certo: o veículo já estava ligado a esse aparelho.",
-            "Veículo sem rastreador: deixe \"Sem aparelho\"."
-          ]
-        },
-        {
-          "titulo": "Ver onde o veículo está e onde chegou na devolução",
-          "itens": [
-            "No cartão do veículo, leia \"Agora\": parado ou andando, a hora e o local. Toque em \"ver no mapa\".",
-            "Leia \"Última devolução\": hora e endereço onde o veículo parou."
-          ]
-        },
-        {
-          "titulo": "Conferir um alerta de uso sem registro",
-          "itens": [
-            "Leia o alerta vermelho \"Uso sem registro\".",
-            "Descubra quem estava com o veículo.",
-            "Se foi esquecimento, registre a retirada no lugar do condutor, em \"Opções da gestão\".",
-            "Toque em \"Conferido\" e escreva o que foi conferido, com pelo menos 10 letras."
-          ]
-        },
-        {
-          "titulo": "Liberar a partida em emergência",
-          "itens": [
-            "\"Liberar partida\" desta parte (e, no celular, Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\" > \"Liberar agora (emergência)\") faz a liberação de emergência: escreva o motivo e confirme.",
-            "\"Bloquear agora\" não envia mais nada: o bloqueio do dia a dia sai sozinho depois da devolução, e o bloqueio de roubo é da Diretoria, na parte \"Bloqueio da partida\"."
-          ]
-        }
+      passos: [
+        { titulo: "Ver os veículos no mapa", itens: [
+          "Toque em \"Mapa e rotas\". O \"Mapa ao vivo\" abre primeiro.",
+          "Em \"Base\", acima do mapa, escolha a cidade para ver só os carros dela (\"Todas as bases\" mostra todos).",
+          "Cada veículo aparece com o apelido (ou a placa). Leia a cor de cada um na legenda abaixo do mapa.",
+          "Toque num veículo da lista para centralizar o mapa nele. No cartão da Visão geral, \"Ver no mapa\" abre o mapa já centralizado no carro.",
+          "A tela se atualiza sozinha a cada 30 segundos enquanto estiver aberta. \"Atualizar agora\" lê na hora (se já passaram 30 segundos)."
+        ] },
+        { titulo: "Ver a rota de uma retirada ou de um período", itens: [
+          "Em \"Mapa e rotas\", toque em \"Rotas\".",
+          "Confira o período e toque em \"Buscar retiradas\". Na linha da retirada, toque em \"Ver rota\" (trajeto, paradas numeradas e trechos acima do limite em vermelho) ou em \"Relatório A4\".",
+          "Para tudo o que um veículo rodou no período (até 31 dias), escolha o veículo e toque em \"Ver rota do período\"."
+        ] },
+        { titulo: "Conferir o consumo e pedir comprovante", itens: [
+          "Toque em \"Consultas e relatórios\" > \"Combustível e KM\".",
+          "Escolha o período e toque em \"Calcular\". Desvio em vermelho: o veículo gastou mais que a média dele; revise.",
+          "Informe a capacidade do tanque (litros) de cada veículo e toque em \"Gravar\".",
+          "Marque \"Conferir com a posição do veículo\" para saber se ele estava parado na hora do abastecimento (precisa da hora no lançamento).",
+          "Em \"Pedir comprovante de abastecimento\", escolha veículo, condutor, o que pedir e o prazo e toque em \"Pedir comprovante\". Se o comprovante chegou por outro meio, toque em \"Cancelar\" e escreva o motivo."
+        ] },
+        { titulo: "Gerar um relatório para imprimir", itens: [
+          "Toque em \"Consultas e relatórios\" > \"Relatórios A4\".",
+          "Escolha: rota da retirada, mensal do veículo, consumo da frota ou uso fora do expediente. Preencha e toque em \"Gerar\".",
+          "O relatório abre numa aba nova; a cópia em PDF e HTML fica na pasta \"Frota - Relatorios Gerados/Rastreamento\"."
+        ] },
+        { titulo: "Mudar as regras de alerta e o prazo de guarda", itens: [
+          "Toque em \"Configuração\" > \"Regras e alertas\".",
+          "Ajuste o prazo de guarda das rotas (padrão 90 dias), o limite de velocidade (padrão 110 km/h), o expediente da frota e o desvio de consumo aceito (padrão 15%).",
+          "Toque em \"Gravar as regras\". A mudança fica na trilha de auditoria da Frota.",
+          "O alerta de uso sem registro (carro andando sem retirada) é sempre ligado e não tem ajuste."
+        ] },
+        { titulo: "Ver quem consultou a localização", itens: [
+          "Toque em \"Configuração\" > \"Privacidade\". A tabela \"Quem consultou\" mostra quem, quando, o quê, o veículo e o período. Ninguém apaga."
+        ] }
       ],
-      "cores": [
-        {
-          "nome": "Caixa vermelha \"Rastreador desligado\"",
-          "significado": "Nada é lido. Retirada e devolução funcionam normalmente."
-        },
-        {
-          "nome": "Caixa azul \"Rastreador ligado\"",
-          "significado": "O SGO+ lê o rastreador a cada 2 minutos."
-        },
-        {
-          "nome": "Caixa amarela \"O que fazer agora\"",
-          "significado": "O próximo passo de cada veículo ou alerta."
-        },
-        {
-          "nome": "Cartão verde com \"Sugestão\"",
-          "significado": "O SGO+ achou o aparelho pela placa. Confira e toque em \"Gravar vínculo\"."
-        },
-        {
-          "nome": "\"parado, ignição desligada (o GPS marcou ... km/h)\"",
-          "significado": "O veículo está parado. A velocidade é oscilação normal do sinal."
-        },
-        {
-          "nome": "Alerta vermelho \"Uso sem registro\"",
-          "significado": "O veículo andou ou ligou sem retirada aberta no SGO+."
-        },
-        {
-          "nome": "Alerta vermelho \"Sem comunicação com o rastreador\"",
-          "significado": "O SGO+ não conseguiu ler o rastreador. Aparece uma vez só e some sozinho quando a conexão voltar."
-        },
-        {
-          "nome": "Comando \"Pendente\", \"Enviado\", \"Cancelado\" ou \"Não enviado\"",
-          "significado": "Histórico da versão anterior (até 21/10/2026). Os comandos de agora ficam no registro da parte \"Bloqueio da partida\"."
-        }
+      cores: [
+        { nome: "Botão de cima verde e sublinhado", significado: "A parte do Rastreamento que está aberta. No celular, o botão aberto fica verde-claro." },
+        { nome: "Azul (mapa)", significado: "Em uso, com retirada registrada." },
+        { nome: "Vermelho (mapa)", significado: "Andando sem retirada registrada (uso sem registro). No mapa da rota, vermelho é trecho acima do limite de velocidade." },
+        { nome: "Amarelo (mapa)", significado: "Parado com a ignição ligada e sem retirada." },
+        { nome: "Verde (mapa)", significado: "Parado. Na rota, verde é a saída." },
+        { nome: "Cinza (mapa)", significado: "Sem sinal há mais de 30 minutos." },
+        { nome: "Laranja numerado (rota)", significado: "Parada de 5 minutos ou mais; o número é o da tabela de paradas." }
       ],
-      "problemas": [
-        {
-          "situacao": "\"recusou a chave de acesso (HTTP 401)\"",
-          "oQueFazer": "A chave está errada ou foi cancelada. Avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota)."
-        },
-        {
-          "situacao": "\"excesso de consultas (HTTP 429)\"",
-          "oQueFazer": "Não precisa fazer nada. O SGO+ espera e lê de novo na próxima rodada."
-        },
-        {
-          "situacao": "\"O rastreador só aceita ler as posições a cada 30 segundos\"",
-          "oQueFazer": "Espere os segundos indicados e toque de novo em \"Ler o rastreador agora\"."
-        },
-        {
-          "situacao": "\"plataforma do rastreador está indisponível (HTTP 503)\"",
-          "oQueFazer": "Aguarde. O SGO+ tenta de novo sozinho."
-        },
-        {
-          "situacao": "Condutor diz \"Partida não liberada pelo rastreador\"",
-          "oQueFazer": "A retirada já está registrada. Use \"Liberar agora\" na parte \"Bloqueio da partida\" (com o motivo) ou a central 24 h da iTracker."
-        },
-        {
-          "situacao": "\"não tem aparelho do rastreador ligado\"",
-          "oQueFazer": "Ligue o veículo ao aparelho em \"Veículos e aparelhos\" e toque em \"Gravar vínculo\"."
-        },
-        {
-          "situacao": "O hodômetro do aparelho é muito diferente do KM do painel",
-          "oQueFazer": "É normal: o aparelho conta desde a instalação. Não precisa fazer nada; o SGO+ compara o KM rodado."
-        },
-        {
-          "situacao": "\"Falta a chave de acesso do rastreador\"",
-          "oQueFazer": "Avise o responsável pelo sistema (Chaves e senhas)."
-        }
+      problemas: [
+        { situacao: "\"Rastreador não configurado\" ou \"Rastreador desligado no SGO+\"", oQueFazer: "Abra Configuração > \"O que falta para funcionar\". O responsável pelo sistema liga em Chaves e senhas > Rastreador da frota (para ele aparece o botão \"Abrir Chaves e senhas\"). Depois toque em \"Atualizar\"." },
+        { situacao: "\"Nenhum ponto de rota guardado neste período\"", oQueFazer: "Confira se o veículo tem aparelho ligado (Configuração > Aparelhos). Rotas de antes de o rastreador ser ligado não existem, e pontos mais velhos que o prazo de guarda já foram apagados." },
+        { situacao: "\"O veículo escolhido não tem posição lida agora\" (depois de \"Ver no mapa\")", oQueFazer: "O aparelho está sem sinal ou ainda não foi lido. Os outros carros aparecem no mapa; tente de novo depois de \"Atualizar agora\"." },
+        { situacao: "\"O mapa de fundo não carregou\"", oQueFazer: "A internet ou a rede bloqueou o mapa. A lista dos veículos continua funcionando; use \"abrir no mapa\" de cada um." },
+        { situacao: "Média do veículo aparece como \"poucos dados\"", oQueFazer: "A média precisa de pelo menos 3 intervalos entre abastecimentos com o KM informado. Continue lançando os abastecimentos com o KM." }
       ],
-      "quemPode": [
-        {
-          "perfil": "ADMIN,GESTOR,DIRETORIA",
-          "pode": "Usar a aba Rastreador, ver a localização e a Partida do veículo no celular."
-        },
-        {
-          "perfil": "TODOS",
-          "pode": "A equipe não vê a localização. Só retira e devolve normalmente. Em emergência, ligue para a gestão."
-        }
+      quemPode: [
+        { perfil: "ADMIN,GESTOR,DIRETORIA,RH,FINANCEIRO", pode: "Abrir as 4 partes, ver o mapa, as rotas, o consumo, pedir comprovantes, gerar relatórios e mudar as regras." },
+        { perfil: "TODOS", pode: "A equipe não vê esta aba nem a localização de nenhum veículo. Quem recebe um pedido de comprovante responde na aba Abastecimentos e despesas." }
+      ],
+      perguntas: [
+        { p: "Onde foi parar o \"Bloqueio da partida\"?", r: "No cartão de cada carro, na Visão geral: modo (Ativo, Simulação, Desligado), Liberar agora, triagem, odômetro e roubo. O registro inviolável e o relatório do dia ficam em Consultas e relatórios > Registro do bloqueio; as áreas das bases, em Configuração > Áreas das bases." },
+        { p: "O rastreador mostra o trânsito?", r: "Não. A empresa do rastreador não informa trânsito. O SGO+ mostra velocidade, paradas, horários e uso fora do expediente." },
+        { p: "Quanto tempo a rota fica guardada?", r: "Pelo prazo de Configuração > Regras e alertas (padrão de 90 dias). Depois os pontos são apagados sozinhos, uma vez por dia." },
+        { p: "O rastreamento controla a pessoa?", r: "Não. O dado é do veículo. O ponto do COMMAND não usa a localização do veículo, e uso sem registro não vira ocorrência para ninguém." },
+        { p: "Como é calculado o consumo?", r: "Pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. A média do veículo é a mediana de todo o histórico dele." }
       ]
     },
 
-    "frota/rastreamento": {
-      "titulo": "Rastreamento (mapa, rotas, combustível e relatórios)",
-      "paraQueServe": "Mostrar à gestão onde cada veículo está, guardar as rotas, conferir o consumo de combustível e o KM, cobrar comprovantes de abastecimento e gerar os relatórios para imprimir. Só a gestão.",
-      "antesDeComecar": [
-        "O rastreador precisa estar configurado pelo responsável pelo sistema (Configurações > Chaves e senhas > Rastreador da frota). Sem isso, a tela diz \"Rastreador não configurado\" e o caminho para configurar.",
-        "Cada veículo precisa estar ligado ao aparelho dele, na parte \"Aparelhos e alertas\".",
-        "Mapa, rotas, combustível e relatórios só leem o rastreador. Comandos ao carro (liberar, bloquear, odômetro) só na parte \"Bloqueio da partida\".",
-        "Toda abertura do mapa, consulta de rota e relatório com localização fica registrada em \"Privacidade e configuração > Quem consultou\"."
+    "frota/rastreador": {
+      titulo: "Aparelhos do rastreador e alertas (Rastreamento > Configuração > Aparelhos)",
+      paraQueServe: "Ligar cada veículo ao aparelho do rastreador instalado nele e conferir os alertas do rastreador. O SGO+ lê o rastreador a cada 2 minutos e: 1) avisa se um veículo andar sem retirada registrada; 2) confere o KM rodado de cada retirada com o que o rastreador mediu; 3) guarda o local onde o veículo parou na devolução.",
+      antesDeComecar: [
+        "O vínculo do aparelho fica em Rastreamento > Configuração > \"Aparelhos\" e também no cartão do carro, na Visão geral (\"Ligar aparelho\" ou \"Trocar aparelho\").",
+        "Os alertas de uso sem registro e de falta de comunicação aparecem no topo da Visão geral, em \"Precisa da gestão\". \"Ler o rastreador agora\" fica no topo da Visão geral e em Configuração.",
+        "O hodômetro do aparelho conta desde a instalação e não é o número do painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). O SGO+ compara o KM rodado, não esses números.",
+        "Abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado: a tela mostra \"parado, ignição desligada\" e o SGO+ não trata como uso.",
+        "Só a gestão vê a localização. As rotas ficam guardadas pelo prazo de Configuração > Regras e alertas (padrão de 90 dias) e depois são apagadas sozinhas."
       ],
-      "passos": [
-        {
-          "titulo": "Ver os veículos no mapa",
-          "itens": [
-            "Abra a aba \"Rastreamento\". O \"Mapa ao vivo\" abre primeiro.",
-            "Em \"Base\", acima do mapa, escolha a cidade para ver só os carros dela (\"Todas as bases\" mostra todos).",
-            "No mapa, cada veículo aparece com o apelido (ou a placa, se ainda não tiver apelido). Na lista ao lado vêm apelido, placa e base.",
-            "Leia a cor de cada veículo na legenda abaixo do mapa.",
-            "Toque num veículo da lista para centralizar o mapa nele e ver condutor, velocidade e local.",
-            "A tela se atualiza sozinha a cada 30 segundos enquanto estiver aberta. \"Atualizar agora\" lê na hora (se já passaram 30 segundos)."
-          ]
-        },
-        {
-          "titulo": "Ver a rota de uma retirada",
-          "itens": [
-            "Toque em \"Rotas\".",
-            "Confira o período e toque em \"Buscar retiradas\".",
-            "Na linha da retirada, toque em \"Ver rota\". O trajeto aparece no mapa, com as paradas numeradas e os trechos acima do limite em vermelho.",
-            "Para imprimir, toque em \"Relatório A4\"."
-          ]
-        },
-        {
-          "titulo": "Ver tudo o que um veículo rodou",
-          "itens": [
-            "Em \"Rotas\", escolha o veículo e o período (até 31 dias).",
-            "Toque em \"Ver rota do período\"."
-          ]
-        },
-        {
-          "titulo": "Conferir o consumo e os abastecimentos",
-          "itens": [
-            "Toque em \"Combustível e KM\".",
-            "Escolha o período e toque em \"Calcular\".",
-            "Desvio em vermelho: o veículo gastou mais combustível que a média dele. Revise o veículo.",
-            "Informe a capacidade do tanque (litros) de cada veículo e toque em \"Gravar\".",
-            "Marque \"Conferir com a posição do veículo\" para saber se o veículo estava parado na hora do abastecimento (precisa da hora no lançamento)."
-          ]
-        },
-        {
-          "titulo": "Pedir o comprovante de um abastecimento",
-          "itens": [
-            "Em \"Combustível e KM\", vá até \"Pedir comprovante de abastecimento\".",
-            "Escolha o veículo e o condutor, escreva o que pedir e o prazo.",
-            "Toque em \"Pedir comprovante\". O condutor recebe uma atividade em Minhas atividades.",
-            "Quando ele enviar, o pedido aparece como \"Enviado\" e a atividade fecha sozinha. Se o comprovante chegou por outro meio, toque em \"Cancelar\" e escreva o motivo."
-          ]
-        },
-        {
-          "titulo": "Gerar um relatório para imprimir",
-          "itens": [
-            "Toque em \"Relatórios\".",
-            "Escolha: rota da retirada, mensal do veículo, consumo da frota ou uso fora do expediente.",
-            "Preencha e toque em \"Gerar\". O relatório abre numa aba nova; a cópia em PDF e HTML fica na pasta \"Frota - Relatorios Gerados/Rastreamento\"."
-          ]
-        },
-        {
-          "titulo": "Mudar o prazo de guarda e os limites",
-          "itens": [
-            "Toque em \"Privacidade e configuração\".",
-            "Ajuste os dias de guarda das rotas (padrão 90), o limite de velocidade (padrão 110 km/h), o expediente da frota e o desvio de consumo aceito (padrão 15%).",
-            "Toque em \"Gravar configuração\". A mudança fica na trilha de auditoria da Frota."
-          ]
-        }
+      passos: [
+        { titulo: "Ligar um veículo ao aparelho do rastreador", itens: [
+          "Abra Rastreamento > Configuração > \"Aparelhos\" (ou toque em \"Ligar aparelho\" no cartão do carro, na Visão geral).",
+          "Escolha o aparelho na lista. Se o nome do aparelho tem a placa, ele já vem marcado e o cartão fica verde com \"Sugestão\". Aparelho já ligado a outro carro aparece apagado.",
+          "Toque em \"Gravar\". Se aparecer \"Vínculo já estava gravado\", está tudo certo: o veículo já estava ligado a esse aparelho.",
+          "Veículo sem rastreador: deixe \"Sem aparelho\". Tirar ou trocar o aparelho cancela os comandos pendentes do aparelho antigo."
+        ] },
+        { titulo: "Conferir um alerta de uso sem registro", itens: [
+          "Na Visão geral, em \"Precisa da gestão\", leia o cartão vermelho \"Uso sem registro\".",
+          "Descubra quem estava com o veículo. Se foi esquecimento, registre a retirada no lugar do condutor, em \"Opções da gestão\".",
+          "Toque em \"Conferido\", escreva o que foi conferido (pelo menos 10 letras) e toque em \"Gravar a conferência\"."
+        ] },
+        { titulo: "Anotação do teste no pátio", itens: [
+          "Em Configuração > Aparelhos, com a chave dos comandos gravada, cada carro com aparelho mostra \"Anotação do teste no pátio\" e o botão \"Anotar: usa o bloqueio\" ou \"Anotar: só monitoramento\".",
+          "É só uma anotação. Quem decide se o carro bloqueia é o modo do bloqueio no cartão do carro, na Visão geral."
+        ] },
+        { titulo: "Ver o histórico dos comandos da versão anterior", itens: [
+          "Abra Consultas e relatórios > \"Registro do bloqueio\" e toque em \"Comandos da versão anterior\"."
+        ] }
       ],
-      "cores": [
-        {
-          "nome": "Azul",
-          "significado": "Em uso, com retirada registrada."
-        },
-        {
-          "nome": "Vermelho",
-          "significado": "Andando sem retirada registrada (uso sem registro). No mapa da rota, vermelho é trecho acima do limite de velocidade."
-        },
-        {
-          "nome": "Amarelo",
-          "significado": "Parado com a ignição ligada e sem retirada."
-        },
-        {
-          "nome": "Verde",
-          "significado": "Parado. Na rota, verde é a saída."
-        },
-        {
-          "nome": "Cinza",
-          "significado": "Sem sinal há mais de 30 minutos."
-        },
-        {
-          "nome": "Laranja numerado (rota)",
-          "significado": "Parada de 5 minutos ou mais; o número é o da tabela de paradas."
-        }
+      cores: [
+        { nome: "Cartão verde com \"Sugestão\"", significado: "O SGO+ achou o aparelho pela placa. Confira e toque em \"Gravar\"." },
+        { nome: "\"parado, ignição desligada (o GPS marcou ... km/h)\"", significado: "O veículo está parado. A velocidade é oscilação normal do sinal." },
+        { nome: "Cartão vermelho \"Uso sem registro\"", significado: "O veículo andou ou ligou sem retirada aberta no SGO+." },
+        { nome: "Cartão laranja \"Sem comunicação com o rastreador\"", significado: "O SGO+ não conseguiu ler o rastreador. Some sozinho quando a conexão voltar." },
+        { nome: "Comando \"Pendente\", \"Enviado\", \"Cancelado\" ou \"Não enviado\"", significado: "Histórico da versão anterior (até 21/10/2026), em Registro do bloqueio." }
       ],
-      "problemas": [
-        {
-          "situacao": "\"Rastreador não configurado\" ou \"Rastreador desligado no SGO+\"",
-          "oQueFazer": "Avise o responsável pelo sistema: ele grava a chave e liga o rastreador em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar agora\"."
-        },
-        {
-          "situacao": "\"Nenhum ponto de rota guardado neste período\"",
-          "oQueFazer": "Confira se o veículo tem aparelho ligado (Aparelhos e alertas). Rotas de antes de o rastreador ser ligado não existem, e pontos mais velhos que o prazo de guarda já foram apagados."
-        },
-        {
-          "situacao": "\"O mapa de fundo não carregou\"",
-          "oQueFazer": "A internet ou a rede bloqueou o mapa. A lista dos veículos continua funcionando; use \"abrir no mapa\" de cada um."
-        },
-        {
-          "situacao": "\"O condutor ... não tem login do SGO+ ligado\"",
-          "oQueFazer": "Ligue o login do condutor em Frota > Veículos e condutores > Editar condutor (campo Login) e peça de novo."
-        },
-        {
-          "situacao": "Média do veículo aparece como \"poucos dados\"",
-          "oQueFazer": "A média precisa de pelo menos 3 intervalos entre abastecimentos com o KM informado. Continue lançando os abastecimentos com o KM."
-        }
+      problemas: [
+        { situacao: "\"recusou a chave de acesso (HTTP 401)\"", oQueFazer: "A chave está errada ou foi cancelada. Avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota)." },
+        { situacao: "\"excesso de consultas (HTTP 429)\"", oQueFazer: "Não precisa fazer nada. O SGO+ espera e lê de novo na próxima rodada." },
+        { situacao: "\"O rastreador só aceita ler as posições a cada 30 segundos\"", oQueFazer: "Espere os segundos indicados e toque de novo em \"Ler o rastreador agora\"." },
+        { situacao: "\"plataforma do rastreador está indisponível (HTTP 503)\"", oQueFazer: "Aguarde. O SGO+ tenta de novo sozinho." },
+        { situacao: "\"não tem aparelho do rastreador ligado\"", oQueFazer: "Ligue o veículo ao aparelho em Configuração > Aparelhos e toque em \"Gravar\"." },
+        { situacao: "Condutor diz \"Partida não liberada pelo rastreador\"", oQueFazer: "A retirada já está registrada. Use \"Liberar agora (emergência)\" no cartão do carro, na Visão geral (com o motivo), ou a central 24 h da iTracker." },
+        { situacao: "O hodômetro do aparelho é muito diferente do KM do painel", oQueFazer: "É normal: o aparelho conta desde a instalação. O SGO+ compara o KM rodado." }
       ],
-      "quemPode": [
-        {
-          "perfil": "ADMIN,GESTOR,DIRETORIA",
-          "pode": "Ver o mapa, as rotas, o consumo, pedir comprovantes, gerar relatórios e mudar a configuração."
-        },
-        {
-          "perfil": "TODOS",
-          "pode": "A equipe não vê esta aba nem a localização de nenhum veículo. Quem recebe um pedido de comprovante responde na aba Abastecimentos e despesas."
-        }
-      ],
-      "perguntas": [
-        {
-          "p": "O rastreador mostra o trânsito?",
-          "r": "Não. A empresa do rastreador não informa trânsito. O SGO+ mostra velocidade, paradas, horários e uso fora do expediente. Trânsito em tempo real exigiria um serviço pago de mapas."
-        },
-        {
-          "p": "Quanto tempo a rota fica guardada?",
-          "r": "Pelo prazo da configuração (padrão de 90 dias). Depois os pontos são apagados sozinhos, uma vez por dia."
-        },
-        {
-          "p": "O rastreamento controla a pessoa?",
-          "r": "Não. O dado é do veículo. O ponto do COMMAND não usa a localização do veículo, e uso sem registro não vira ocorrência para ninguém."
-        },
-        {
-          "p": "Como é calculado o consumo?",
-          "r": "Pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. A média do veículo é a mediana de todo o histórico dele."
-        }
+      quemPode: [
+        { perfil: "ADMIN,GESTOR,DIRETORIA,RH,FINANCEIRO", pode: "Ligar e trocar aparelhos, conferir alertas e ler o rastreador agora." },
+        { perfil: "TODOS", pode: "A equipe não vê a localização. Só retira e devolve normalmente. Em emergência, ligue para a gestão." }
       ]
     },
 
     "frota/bloqueio_da_partida": {
-      titulo: "Bloqueio da partida (Rastreamento > Bloqueio da partida)",
-      paraQueServe: "Garantir que o carro só pega com a retirada registrada no SGO+, sem nunca cortar o motor de quem está dirigindo. A retirada libera a partida; a devolução pede o bloqueio, que só sai com o carro conectado, parado e desligado. Aqui a gestão vê cada carro, decide os casos que o sistema não decide sozinho e acompanha o registro.",
+      titulo: "Bloqueio da partida (Rastreamento > Visão geral)",
+      paraQueServe: "Garantir que o carro só pega com a retirada registrada no SGO+, sem nunca cortar o motor de quem está dirigindo. A retirada libera a partida; a devolução pede o bloqueio, que só sai com o carro conectado, parado e desligado. Na Visão geral a gestão vê cada carro num cartão, ativa ou desativa o bloqueio dele, decide os casos que o sistema não decide sozinho e age em emergência.",
       antesDeComecar: [
-        "Só a gestão da Frota abre esta parte. \"Liberar agora\": Administrador, Diretoria, Gestor e RH. Odômetro: Gestor e Administrador. Bloqueio de roubo: só a Diretoria.",
-        "Modos de cada carro: Ativo (manda o comando de verdade), Simulação (faz tudo e só registra o que teria feito) e Desligado. Começo do piloto: o Onix em Ativo e os outros em Simulação.",
-        "Ativo só manda comando de verdade depois que o responsável pelo sistema grava a \"Chave de acesso dos comandos\" e liga \"Bloqueio da partida pelo SGO+\" em Chaves e senhas > Rastreador da frota. Até lá o cartão mostra \"Ativo aguardando liberação\" e o carro trabalha em simulação.",
-        "Configure a área de cada base (centro e raio) no fim da tela. Sem ela, toda devolução vai para a decisão da gestão.",
+        "Só a gestão da Frota abre esta parte. \"Liberar agora\": Administrador, Diretoria, Gestor e RH. Odômetro: Gestor e Administrador. Bloqueio de roubo: só a Diretoria. Botão que você não pode usar aparece apagado: toque nele e a tela diz por quê e a quem pedir.",
+        "Modos de cada carro: Ativo (manda o comando de verdade), Simulação (faz tudo e só registra o que teria feito) e Desligado (não faz nada com a partida).",
+        "Ativo só manda comando de verdade com a \"Chave de acesso dos comandos\" gravada e \"Bloqueio da partida pelo SGO+\" ligado em Chaves e senhas > Rastreador da frota. Até lá o cartão mostra \"Ativo aguardando liberação\" e o carro trabalha em simulação. Confira em Configuração > \"O que falta para funcionar\".",
+        "Cadastre a área de cada base em Configuração > \"Áreas das bases\". Sem ela, toda devolução daquela base vai para a decisão da gestão.",
         "Regras: com retirada aberta o carro fica liberado, mesmo em viagem de dias; o bloqueio nunca sai com o carro andando, ligado ou com o aparelho offline (conectado = online na iTracker e contato nos últimos 2 minutos; com o carro desligado a última posição pode ser de horas antes, porque o rastreador economiza); devolução fora da base não bloqueia sozinha; um bloqueio aceito com o carro sem conexão (fila do rastreador) é tratado como NÃO feito; a conferência a cada 2 minutos compara o que deveria estar com o relé do carro."
       ],
       passos: [
         { titulo: "Ver como está cada carro", itens: [
-          "Abra Frota > Rastreamento > \"Bloqueio da partida\".",
-          "Cada cartão mostra o modo, a triagem do sinal, quem está com o carro, a partida no carro (liberada ou bloqueada), o sinal, a situação, a base, o último comando e o que está pendente.",
-          "A tela não se atualiza sozinha. Toque em \"Atualizar\" para ler de novo."
+          "Abra Frota > Rastreamento. A \"Visão geral\" abre primeiro.",
+          "No topo, a faixa verde diz que está tudo funcionando; a amarela diz por que nenhum comando real sai agora, com o botão \"Ver o que falta para funcionar\".",
+          "Em \"Precisa da gestão\" ficam as decisões pendentes, os alertas de uso sem registro e os aparelhos sugeridos.",
+          "Cada cartão de \"Veículos\" mostra o apelido, a placa e a base; a partida (liberada, bloqueada ou não informada, lida no rastreador); com quem está o carro; o sinal (conectado ou sem conexão agora); onde está; o aparelho; o último comando, a pendência e a emergência.",
+          "Use \"Base\" para ver só os carros de uma cidade. A tela não se atualiza sozinha: toque em \"Atualizar\"."
         ] },
-        { titulo: "Decidir um carro devolvido fora da base", itens: [
-          "Em \"Decisões pendentes\", no cartão \"Devolvido fora da base: bloquear?\", toque em \"Bloquear\" ou \"Não bloquear\".",
-          "Escreva a justificativa e confirme.",
-          "\"Bloquear\" só sai com o carro conectado, parado e desligado. \"Não bloquear\" vale até a próxima retirada."
-        ] },
-        { titulo: "Retirada esquecida", itens: [
-          "Carro parado na base há 1 hora com retirada aberta: o SGO+ pergunta ao condutor. Sem resposta em mais 1 hora, aparece aqui e na Caixa de decisões.",
-          "Se alguém precisa do carro, prefira autorizar \"Passar o carro\" (o carro não é bloqueado).",
-          "Para encerrar: toque em \"Encerrar a retirada\", escreva a justificativa e confirme. Só funciona com o carro parado, desligado, na base e com sinal. O KM vem do rastreador e entra em \"KM a conferir\"; depois o bloqueio é pedido."
-        ] },
-        { titulo: "Autorizar ou recusar uma passagem do carro", itens: [
-          "Quando quem está com o carro não consegue confirmar no aplicativo, a passagem aparece em \"Decisões pendentes\".",
-          "Toque em \"Autorizar\", escreva a justificativa e confirme. Quem está envolvido não autoriza a si mesmo."
+        { titulo: "Ativar ou desativar o bloqueio de um carro", itens: [
+          "No cartão do carro, em \"Bloqueio da partida neste carro\", toque em \"Ativo\", \"Simulação\" ou \"Desligado\". O botão escuro é o modo que vale hoje.",
+          "Leia o que vai acontecer. Se a partida do carro estiver bloqueada e você escolher Simulação ou Desligado, a tela avisa: nesses modos o SGO+ não manda mais a liberação na retirada; libere antes com \"Liberar agora\".",
+          "Escreva o motivo (obrigatório) e toque em \"Confirmar\". O motivo fica no registro.",
+          "Para pôr todos os carros em simulação de uma vez, o responsável pelo sistema desliga \"Bloqueio da partida pelo SGO+\" em Chaves e senhas (o modo de cada carro fica guardado)."
         ] },
         { titulo: "Liberar agora (emergência)", itens: [
-          "No cartão do carro, toque em \"Liberar agora\".",
+          "No cartão do carro, toque em \"Liberar agora (emergência)\".",
           "Escreva o motivo e toque em \"Liberar agora\". Vale 24 horas ou até a próxima devolução.",
-          "Se aparecer \"aguardando sinal\", o carro está sem conexão: ligue para a central 24 h da iTracker."
+          "Se aparecer \"aguardando sinal\", o carro está sem conexão: ligue para a central 24 h da iTracker.",
+          "Para encerrar antes: \"Mais ações\" > \"Encerrar emergência\"."
+        ] },
+        { titulo: "Ver o carro no mapa e trocar o aparelho", itens: [
+          "\"Ver no mapa\" abre Mapa e rotas com o mapa centralizado no carro.",
+          "\"Trocar aparelho\" (ou \"Ligar aparelho\", no carro sem rastreador) abre a lista dos aparelhos: escolha e toque em \"Gravar\"."
+        ] },
+        { titulo: "Decidir um carro devolvido fora da base", itens: [
+          "Em \"Precisa da gestão\", no cartão \"Devolvido fora da base: bloquear?\", toque em \"Bloquear\" ou \"Não bloquear\".",
+          "Escreva a justificativa e confirme. \"Bloquear\" só sai com o carro conectado, parado e desligado. \"Não bloquear\" vale até a próxima retirada."
+        ] },
+        { titulo: "Retirada esquecida", itens: [
+          "Carro parado na base há 1 hora com retirada aberta: o SGO+ pergunta ao condutor. Sem resposta em mais 1 hora, aparece em \"Precisa da gestão\" e na Caixa de decisões.",
+          "Se alguém precisa do carro, prefira autorizar \"Passar o carro\" (o carro não é bloqueado).",
+          "Para encerrar: toque em \"Encerrar a retirada\", escreva a justificativa e confirme. Só funciona com o carro parado, desligado, na base e com sinal."
+        ] },
+        { titulo: "Autorizar ou recusar uma passagem do carro", itens: [
+          "Quando quem está com o carro não consegue confirmar no aplicativo, a passagem aparece em \"Precisa da gestão\".",
+          "Toque em \"Autorizar\", escreva a justificativa e confirme. Quem está envolvido não autoriza a si mesmo."
         ] },
         { titulo: "Bloqueio de roubo (só a Diretoria)", itens: [
-          "No cartão do carro, toque em \"Bloqueio de roubo\".",
+          "No cartão do carro, abra \"Mais ações\" e toque em \"Bloqueio de roubo\".",
           "Escreva o motivo, marque \"Confirmo que é roubo ou furto\" e digite BLOQUEAR e a placa.",
           "Com o carro andando, o SGO+ não envia e explica o risco. Para enviar mesmo assim, marque \"Aceito o risco\" e toque de novo.",
           "Avise a central 24 h da iTracker e registre o boletim de ocorrência."
         ] },
         { titulo: "Acertar o odômetro do rastreador", itens: [
-          "Quando o KM do painel na devolução e o do rastreador diferem mais de 2% e mais de 50 km, aparece \"Odômetro diferente do painel\" (só no sistema).",
-          "Abra a foto do painel e confira o número.",
-          "Toque em \"Acertar o odômetro do rastreador\" (já vem o KM do painel), marque a confirmação e toque de novo.",
+          "Quando o KM do painel na devolução e o do rastreador diferem mais de 2% e mais de 50 km, aparece \"Odômetro diferente do painel\" em \"Precisa da gestão\".",
+          "Abra a foto do painel e confira o número. Toque em \"Acertar o odômetro do rastreador\" (já vem o KM do painel), marque a confirmação e toque de novo.",
           "Valor menor que o atual pede a segunda confirmação e o motivo. O carro precisa estar parado. Em Simulação o SGO+ só registra o que mandaria.",
-          "Numa revisão, use o mesmo botão no cartão do carro a qualquer momento."
+          "Numa revisão, use \"Mais ações\" > \"Acertar o odômetro do rastreador\" no cartão do carro."
         ] },
-        { titulo: "Mudar o modo ou a triagem do sinal de um carro", itens: [
-          "Toque em \"Modo\", escolha Ativo, Simulação ou Desligado, escreva o motivo e grave.",
-          "Toque em \"Triagem do sinal\" para ver os locais onde o carro costuma ficar, a parte do tempo em que o aparelho estava conectado à iTracker e quanto demora, em média, para reconectar. A medida é a conexão do aparelho, não o intervalo entre posições: carro desligado manda posição raramente (economia do rastreador) e continua conectado. Nas primeiras 24 h aparece \"Triagem sem dados\" e vale a regra normal. \"Só avisa\" = o SGO+ nunca manda bloqueio para este carro (por exemplo, carro que dorme em garagem subterrânea). Pode deixar automática ou escolher, com motivo."
+        { titulo: "Triagem do sinal", itens: [
+          "No cartão do carro, \"Mais ações\" > \"Triagem do sinal\" mostra os locais onde o carro costuma ficar, a parte do tempo conectado e a reconexão média.",
+          "\"Só avisa\" = o SGO+ nunca manda bloqueio para este carro (por exemplo, carro que dorme em garagem subterrânea). Pode deixar automática ou escolher, com motivo."
         ] },
         { titulo: "Configurar a área de uma base", itens: [
-          "No fim da tela, escolha a base.",
-          "Escolha um carro estacionado na base (usa a posição dele) ou digite a latitude e a longitude.",
-          "Confira o raio (padrão de 300 metros) e toque em \"Gravar a área\"."
+          "Abra Configuração > \"Áreas das bases\". A tabela mostra cada base como \"Cadastrada\" ou \"Sem área\".",
+          "Toque em \"Cadastrar\" ou \"Editar\" na linha da base.",
+          "Marque o centro: toque no mapa, escolha um carro estacionado na base (usa a posição dele) ou digite a latitude e a longitude. O círculo tracejado mostra a prévia.",
+          "Confira o raio (padrão de 300 metros, de 50 a 3.000) e toque em \"Gravar a área\". \"Remover\" apaga a área da base (com confirmação)."
         ] },
         { titulo: "Registro e relatório do dia", itens: [
-          "A tabela \"Registro\" mostra cada pedido, comando, simulação, confirmação e decisão, com quem, quando e a condição do carro. Nada pode ser apagado.",
-          "Toque em \"Conferir a integridade\": o SGO+ confere que nenhuma linha foi alterada ou apagada.",
-          "Toque em \"Relatório de hoje\" para ver o que aconteceu e o que a simulação teria feito. Às 18h o mesmo relatório vai por e-mail para a gestão da Frota e a Diretoria."
+          "Abra Consultas e relatórios > \"Registro do bloqueio\". A tabela mostra cada pedido, comando, simulação, confirmação e decisão, com quem, quando e a condição do carro. Nada pode ser apagado.",
+          "\"Conferir a integridade\": o SGO+ confere que nenhuma linha foi alterada ou apagada.",
+          "\"Relatório de hoje\": o que aconteceu e o que a simulação teria feito. Às 18h o mesmo relatório vai por e-mail para a gestão da Frota e a Diretoria."
         ] }
       ],
       cores: [
-        { nome: "Selo vermelho \"Ativo\"", significado: "Comandos de verdade para este carro." },
-        { nome: "Selo azul \"Simulação\"", significado: "O SGO+ só registra o que teria feito." },
+        { nome: "\"Partida bloqueada\" (vermelho) e \"Partida liberada\" (verde), no canto do cartão", significado: "O que o rastreador do carro informa agora." },
+        { nome: "Botão escuro em Ativo (vermelho), Simulação (azul) ou Desligado (cinza)", significado: "O modo do bloqueio que vale para o carro." },
         { nome: "Selo amarelo \"Ativo aguardando liberação\"", significado: "O carro está em Ativo, mas falta a chave dos comandos ou ligar o bloqueio em Chaves e senhas. Trabalha em simulação." },
         { nome: "Selo \"Só avisa\"", significado: "Sinal fraco onde o carro costuma ficar: o SGO+ nunca manda bloqueio, só avisa." },
-        { nome: "Cartão com faixa vermelha em \"Decisões pendentes\"", significado: "Precisa da gestão." }
+        { nome: "Cartão com faixa laranja à esquerda", significado: "O carro tem algo para olhar: sem conexão agora, emergência valendo ou decisão pendente." },
+        { nome: "Botão apagado", significado: "A ação não está disponível para você ou para este carro. Toque nele para ver o porquê." }
       ],
       problemas: [
-        { situacao: "\"Nenhum comando real sai agora\"", oQueFazer: "O responsável pelo sistema grava a chave e liga o bloqueio em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar\"." },
-        { situacao: "Pendência \"aguardando: o aparelho está offline\" (ou \"não fala com a iTracker há mais de 2 minutos\")", oQueFazer: "Normal. O bloqueio sai sozinho quando o aparelho voltar a ficar conectado, com o carro parado e desligado. Se demorar muito, confira onde está o carro no mapa." },
+        { situacao: "\"Nenhum comando real sai agora\"", oQueFazer: "Toque em \"Ver o que falta para funcionar\". O responsável pelo sistema grava a chave e liga o bloqueio em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar\"." },
+        { situacao: "Pendência \"aguardando: o aparelho está offline\" (ou \"não fala com a iTracker há mais de 2 minutos\")", oQueFazer: "Normal. O bloqueio sai sozinho quando o aparelho voltar a ficar conectado, com o carro parado e desligado. Se demorar muito, toque em \"Ver no mapa\"." },
         { situacao: "\"Bloqueio na fila do rastreador\"", oQueFazer: "O carro estava sem conexão. O SGO+ trata como não bloqueado. Se alguém vai usar o carro, a retirada manda a liberação logo em seguida." },
         { situacao: "\"A retirada não foi encerrada: ...\"", oQueFazer: "A mensagem diz a condição que faltou (carro andando, ligado, fora da base ou sem sinal). Espere o carro ficar parado e desligado na base, ou autorize \"Passar o carro\"." },
         { situacao: "\"Registro com problema\" na conferência", oQueFazer: "Alguém mexeu na planilha do registro. Avise o Administrador; a linha indicada mostra o que foi alterado." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver, decidir fora da base, encerrar retirada esquecida, autorizar passagem, mudar modo, triagem e áreas das bases." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Ver, decidir fora da base, encerrar retirada esquecida, autorizar passagem, mudar modo, triagem, aparelhos e áreas das bases." },
         { perfil: "ADMIN,DIRETORIA,GESTOR,RH", pode: "Liberar agora (emergência)." },
         { perfil: "ADMIN,GESTOR", pode: "Acertar o odômetro do rastreador." },
         { perfil: "DIRETORIA", pode: "Bloqueio de roubo." },
@@ -831,7 +688,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       perguntas: [
         { p: "Por que não bloqueia logo depois da devolução?", r: "Porque o bloqueio só pode sair com o aparelho conectado agora (online na iTracker, com contato nos últimos 2 minutos), o carro parado e desligado. Se o comando ficasse na fila do rastreador, ele poderia cortar o motor de quem saísse dirigindo depois." },
-        { p: "O cartão mostra a última posição de horas atrás. Está sem sinal?", r: "Não necessariamente. Com o carro desligado o rastreador entra em economia e só manda posição quando o carro liga, mas continua conectado. Veja a linha \"Sinal\": \"aparelho online, último contato agora\" é o que vale." },
+        { p: "O cartão mostra a última posição de horas atrás. Está sem sinal?", r: "Não necessariamente. Com o carro desligado o rastreador entra em economia e só manda posição quando o carro liga, mas continua conectado. Veja \"Sinal\": \"Conectado\" é o que vale." },
         { p: "Por que um carro está em \"Só avisa\"?", r: "Pela triagem do sinal: onde ele costuma ficar, o aparelho perde a conexão com a iTracker por muito tempo (garagem subterrânea, região sem cobertura). Um bloqueio enviado ali poderia ficar na fila e cair quando o carro saísse." },
         { p: "O que a Simulação mostra?", r: "Tudo o que o SGO+ teria feito com o carro (liberar, bloquear, esperar, pedir decisão), no registro e no relatório das 18h, sem mandar nada ao carro." }
       ]
@@ -943,7 +800,7 @@ function SGO_ajudaTelas_Frota_() {
         },
         {
           "perfil": "ADMIN,GESTOR,DIRETORIA",
-          "pode": "Pedir, acompanhar e cancelar pedidos (aba Rastreamento > Combustível e KM)."
+          "pode": "Pedir, acompanhar e cancelar pedidos (aba Rastreamento > Consultas e relatórios > Combustível e KM)."
         }
       ]
     },

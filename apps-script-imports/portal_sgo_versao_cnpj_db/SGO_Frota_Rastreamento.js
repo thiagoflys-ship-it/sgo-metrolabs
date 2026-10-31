@@ -602,7 +602,7 @@ function Frota_apiRastrRota(sessionId, payload) {
   var an = FrotaR_rotaDe_(SGO_UTILS.safe(v.ID), per.deMs, per.ateMs, cfg);
   FrotaR_registrarConsulta_(sessao, 'ROTA_VEICULO', { veiculoId: SGO_UTILS.safe(v.ID), placa: SGO_UTILS.safe(v.PLACA), periodo: per.texto });
   return { ok: true, tipo: 'VEICULO', placa: SGO_UTILS.safe(v.PLACA), analise: an, periodo: per.texto, limiteKmh: cfg.limiteKmh,
-    vazio: !an.pontos ? 'Nenhum ponto de rota guardado para o veículo ' + v.PLACA + ' neste período. Confira se o aparelho está ligado ao veículo (aba Aparelhos e alertas) e lembre que pontos com mais de ' + cfg.retencaoDias + ' dias são apagados.' : '' };
+    vazio: !an.pontos ? 'Nenhum ponto de rota guardado para o veículo ' + v.PLACA + ' neste período. Confira se o aparelho está ligado ao veículo (Frota > Rastreamento > Configuração > Aparelhos) e lembre que pontos com mais de ' + cfg.retencaoDias + ' dias são apagados.' : '' };
 }
 
 /** Retiradas de um veículo (ou de todos) num período, para escolher qual rota ver. Sem localização. */
@@ -979,7 +979,7 @@ function FrotaR_pendencias_(add) {
       id: 'FROTA:COMPROVANTE:' + p.id, nome: p.placa, publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: p.prazo, responsavel: 'Gestão da frota',
       titulo: 'Comprovante de abastecimento não enviado: ' + p.condutor + ' (veículo ' + p.placa + ')',
       detalhe: 'Pedido em ' + p.pedidoEm + ' com prazo ' + p.prazo + '. ' + p.motivo + ' O condutor vê a cobrança em Minhas atividades até enviar.',
-      oQueFazer: 'Fale com o condutor. Se o comprovante chegou por outro meio, cancele o pedido em Frota > Rastreamento > Combustível e KM > Pedidos de comprovante (com o motivo).',
+      oQueFazer: 'Fale com o condutor. Se o comprovante chegou por outro meio, cancele o pedido em Frota > Rastreamento > Consultas e relatórios > Combustível e KM > Pedidos de comprovante (com o motivo).',
       textoEstavel: 'Comprovante de abastecimento pedido a ' + p.condutor + ' ainda não foi enviado.'
     }));
   });
