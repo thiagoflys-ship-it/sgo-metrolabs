@@ -52,7 +52,10 @@ const MAPA = {
   "MANUAL_MODULO_RELATORIO_QUALIFICACAO_QIQOQD.md": { tela: "declaracao_qiqo" },
   // 29/10/2026: módulo Representação (equipe da Metrolabs) e a versão para a empresa representada, sem termos internos
   "MANUAL_MODULO_REPRESENTACAO.md": { tela: "representacao", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "RH"] },
-  "MANUAL_REPRESENTACAO_EMPRESA_REPRESENTADA.md": { tela: "representacao", perfis: ["REPRESENTADA", "ADMIN", "DIRETORIA", "GESTOR"] }
+  "MANUAL_REPRESENTACAO_EMPRESA_REPRESENTADA.md": { tela: "representacao", perfis: ["REPRESENTADA", "ADMIN", "DIRETORIA", "GESTOR"] },
+  // 31/10/2026: segurança do acesso — o manual de quem entra no sistema (todos) e o da gestão (configuração e recuperação)
+  "MANUAL_SEGURANCA_ACESSO.md": { tela: "dashboard" },
+  "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] }
 };
 /** Manuais que não são deste SGO+ (cartão financeiro do sistema antigo). */
 const IGNORAR = ["MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md", "MANUAL_USO_FIN_FLASH_V2.md"];

@@ -30,7 +30,7 @@ var SGO_AJUDA_NOMES = {
   auvo: 'Integração Auvo', frota: 'Frota', qualidade: 'Painel de qualidade', conduta: 'Programa de conduta',
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', cadastro_correcoes: 'Correções de cadastro', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
-  chaves: 'Chaves e senhas', modo_personalizado: 'Modo personalizado', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
+  chaves: 'Chaves e senhas', seguranca_acesso: 'Segurança do acesso', modo_personalizado: 'Modo personalizado', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
   assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp',
   comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',
   comercial_catalogo: 'Produtos e serviços', comercial_painel: 'Painel comercial', comercial_metodologia: 'Metodologia comercial',

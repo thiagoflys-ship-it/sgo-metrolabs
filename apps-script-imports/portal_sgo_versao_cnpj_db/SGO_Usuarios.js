@@ -233,11 +233,14 @@ const SGO_USUARIOS = (() => {
       return { success: false, message: "Já existe outra conta usando este e-mail." };
     }
 
+    // 31/10/2026 (segurança do acesso): a senha que a gestão define é provisória — a pessoa cria a dela no 1º login
+    if (typeof SegAcesso_garantirEstrutura_ === "function") SegAcesso_garantirEstrutura_();
     const registro = SGO_DATA.normalizarObjetoParaSheet(
       SHEET_NAME,
       SGO_DATA.gerarRegistroBase({
         USUARIO: dados.USUARIO,
         SENHA: gerarHashSenhaAuth_(dados.SENHA), // SEGURANCA: nunca grava senha em texto plano
+        PRECISA_TROCAR_SENHA: "SIM",
         NOME: dados.NOME,
         PERFIL: dados.PERFIL,
         CLIENTE_ID: dados.PERFIL === "CLIENTE" ? dados.CLIENTE_ID : "",
@@ -258,7 +261,7 @@ const SGO_USUARIOS = (() => {
 
     return {
       success: true,
-      message: "Usuário cadastrado com sucesso."
+      message: "Usuário cadastrado com sucesso. A senha informada é provisória: no primeiro login a pessoa cria a senha dela."
     };
   }
 
@@ -311,6 +314,10 @@ const SGO_USUARIOS = (() => {
       return { success: false, message: "Já existe outra conta usando este e-mail." };
     }
 
+    // 31/10/2026 (segurança do acesso): senha redefinida pela gestão para OUTRA pessoa é provisória (troca obrigatória
+    // no próximo login) e derruba as sessões e os aparelhos confiados dela; a própria senha trocada aqui não marca.
+    const senhaDeOutro = !!dados.SENHA && usuarioId !== SGO_UTILS.safe(sessao.userId);
+    if (dados.SENHA && typeof SegAcesso_garantirEstrutura_ === "function") SegAcesso_garantirEstrutura_();
     // Object.assign sobre o registro atual: colunas que outros módulos
     // acrescentem em CAD_USUARIOS ficam como estão.
     const novosDados = Object.assign({}, atual, {
@@ -330,7 +337,7 @@ const SGO_USUARIOS = (() => {
       AREA: dados.PERFIL === "CLIENTE" || dados.PERFIL === "REPRESENTADA" ? "" : (dados.AREA === undefined ? SGO_UTILS.safeUpper(atual.AREA) : dados.AREA),
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
-    });
+    }, senhaDeOutro ? { PRECISA_TROCAR_SENHA: "SIM", SEGURANCA_VERSAO: String((Number(atual.SEGURANCA_VERSAO) || 0) + 1) } : {});
 
     const ok = SGO_DATA.update(SHEET_NAME, usuarioId, novosDados);
 
@@ -341,9 +348,11 @@ const SGO_USUARIOS = (() => {
     const mudouPerfil = SGO_UTILS.safeUpper(atual.PERFIL) !== dados.PERFIL;
     SGO_DATA.log("USUARIOS_ATUALIZAR", sessao.usuario, "Usuário atualizado ID=" + usuarioId + (dados.SENHA ? " (senha trocada)" : "") + (mudouPerfil ? " (perfil " + SGO_UTILS.safeUpper(atual.PERFIL) + " -> " + dados.PERFIL + ")" : ""), "USUARIOS");
 
+    if (senhaDeOutro && typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("TROCA_EXIGIDA", { ID: usuarioId, USUARIO: dados.USUARIO, PERFIL: dados.PERFIL }, null, "Senha redefinida pela gestão em Usuários (provisória: a pessoa cria a dela no próximo login).", SGO_UTILS.safe(sessao.usuario));
     return {
       success: true,
-      message: "Usuário atualizado com sucesso." + (mudouPerfil ? " O novo perfil vale para esta pessoa em até 5 minutos (ou no próximo login)." : "")
+      message: "Usuário atualizado com sucesso." + (mudouPerfil ? " O novo perfil vale para esta pessoa em até 5 minutos (ou no próximo login)." : "") +
+        (senhaDeOutro ? " A senha nova é provisória: no próximo login a pessoa cria a senha dela (as sessões abertas com a senha antiga terminam)." : "")
     };
   }
 

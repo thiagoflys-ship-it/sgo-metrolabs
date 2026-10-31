@@ -270,6 +270,10 @@
           if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
           if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
           if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
+          if (typeof SegAcessoTela_iniciar_ === "function") SegAcessoTela_iniciar_();
+        } else if (res && res.pendente === "TROCA_SENHA" && typeof SegAcesso_abrirTroca_ === "function") {
+          // 31/10/2026: troca de senha obrigatória pendente — a mesma sessão abre "Crie sua nova senha" (JS_SegurancaAcesso.html)
+          SegAcesso_abrirTroca_({ sessionId: sessaoSalva, nome: res.trocaSenha && res.trocaSenha.nome, pedirAtual: !!(res.trocaSenha && res.trocaSenha.pedirAtual), sobre: false });
         } else {
           limparSessaoFront_();
         }
@@ -317,6 +321,24 @@
           return;
         }
 
+        // 31/10/2026 (segurança do acesso): código no celular e troca de senha obrigatória (JS_SegurancaAcesso.html)
+        if (res.etapa && typeof SegAcesso_tratarLogin_ === "function" && SegAcesso_tratarLogin_(res)) return;
+        SGO_entrarComSessao_(res);
+      })
+      .withFailureHandler(function (err) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        console.error("Erro no login:", err);
+        alert("Não foi possível entrar. Verifique a conexão e tente de novo.");
+      })
+      .login(usuario, senha);
+  }
+
+  /**
+   * Entra no sistema com a sessão aprovada: login direto, código do celular conferido ou senha nova criada
+   * (31/10/2026: a mesma sequência para os três caminhos; antes ficava dentro do fazerLogin).
+   */
+  function SGO_entrarComSessao_(res) {
         SESSION = res.sessionId || null;
         USER_CONTEXT = res.user || null;
 
@@ -351,14 +373,7 @@
         if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
         if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
         if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
-      })
-      .withFailureHandler(function (err) {
-        LOGIN_EM_ANDAMENTO = false;
-        setBotaoLoginEstado_(false);
-        console.error("Erro no login:", err);
-        alert("Não foi possível entrar. Verifique a conexão e tente de novo.");
-      })
-      .login(usuario, senha);
+        if (typeof SegAcessoTela_iniciar_ === "function") SegAcessoTela_iniciar_();
   }
 
   function exibirAppLogado_() {
@@ -715,6 +730,7 @@
     if (typeof Assistencia_parar_ === "function") Assistencia_parar_();
     if (typeof Ponto_parar_ === "function") Ponto_parar_();
     if (typeof Email_parar_ === "function") Email_parar_();
+    if (typeof SegAcesso_fecharEtapas_ === "function") SegAcesso_fecharEtapas_();
 
     const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
     limparSessaoFront_();
@@ -1017,6 +1033,13 @@
     if (mod === "chaves") {
       ChavesTela_render_();
       atualizarBadgeModulo_("chaves");
+      return;
+    }
+
+    // SEGURANÇA DO ACESSO (31/10/2026) — troca de senha obrigatória, código no celular, recuperação e registro; gestão vê,
+    // Administrador altera. Ver JS_SegurancaAcesso.html / SGO_SegurancaAcesso.js.
+    if (mod === "seguranca_acesso" && typeof SegAcessoTela_render_ === "function") {
+      SegAcessoTela_render_();
       return;
     }
 
@@ -4806,6 +4829,7 @@
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
+    if (typeof SegAcessoTela_pode_ === "function" && SegAcessoTela_pode_()) itens.push({ icone: '<i class="fas fa-shield-halved" aria-hidden="true"></i>', legenda: "Segurança do acesso", mod: "seguranca_acesso" });
     // Perfil RH: só as telas do perfil. Usuários: a rotina da empresa (gestão, RH e Financeiro) tem o atalho no celular.
     if (SGO_ehRH_()) {
       for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }
@@ -6266,6 +6290,7 @@
       avisos: "Avisos",
       email: "E-mail",
       chaves: "Chaves e senhas",
+      seguranca_acesso: "Segurança do acesso",
       modo_personalizado: "Modo personalizado"
     };
 

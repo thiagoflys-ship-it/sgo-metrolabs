@@ -100,7 +100,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Digite a senha nova em \"Senha nova\", com pelo menos 6 caracteres.",
             "Digite a mesma senha em \"Repita a senha nova\".",
             "Toque em \"Gravar senha nova\". A senha antiga deixa de valer na hora.",
-            "Combine a senha nova com a pessoa por um canal seguro e peça para ela trocar no primeiro acesso."
+            "Combine a senha nova com a pessoa por um canal seguro. Ela é provisória: no próximo login a pessoa vê \"Crie sua nova senha\" e cria a dela; as sessões abertas com a senha antiga terminam (31/10/2026, Segurança do acesso)."
           ]
         },
         {
@@ -181,6 +181,7 @@ function SGO_ajudaTelas_Administracao_() {
         { p: "Por que o celular é importante?", r: "O celular é usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Sem ele, a pessoa não recebe esses avisos." },
         { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Redefinir senha\" para gravar uma nova." },
         { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Use \"Mais\" e depois \"Redefinir senha\"." },
+        { p: "A senha que eu defino aqui vale para sempre?", r: "Não. A senha de uma conta nova, ou a redefinida para outra pessoa, é provisória: no próximo login a pessoa cria a senha dela (8 caracteres ou mais, letras e números). Exigir a troca de todos, zerar o segundo fator e ver o registro de entradas ficam em Administração > Segurança do acesso." },
         { p: "Por que aparece \"Nunca entrou\" para quem já usou o sistema?", r: "O último acesso vem do registro recente de entradas. Uma entrada muito antiga pode não aparecer. Quando a pessoa entrar de novo, a data é atualizada." },
         { p: "Quando o perfil novo começa a valer?", r: "Em até 5 minutos ou no próximo login da pessoa." },
         { p: "O que o perfil Cliente vê?", r: "Só os dados da empresa escolhida em \"Empresa (cliente)\"." },
@@ -651,6 +652,83 @@ function SGO_ajudaTelas_Administracao_() {
         { titulo: "O que fica registrado", paragrafos: [
           "Cada mensagem fica registrada com a data, o sistema, a origem, o destinatário e a situação. O conteúdo da mensagem não é guardado no registro do servidor.",
           "O registro do servidor é apagado depois de 90 dias. O histórico do SGO+ continua em Notificações enviadas."
+        ] }
+      ]
+    },
+
+    // 31/10/2026: segurança do acesso (SGO_SegurancaAcesso.js / JS_SegurancaAcesso.html), pedido do dono.
+    "seguranca_acesso": {
+      titulo: "Segurança do acesso",
+      paraQueServe: "Protege a entrada no SGO+ contra invasões: exige que as pessoas criem uma senha nova, liga o código de 6 números enviado ao celular (ou ao e-mail) depois da senha, recupera o acesso de quem perdeu o celular e mostra o registro de cada entrada, código enviado e troca de senha.",
+      antesDeComecar: [
+        "A tela é da gestão: Administrador, Diretoria e Gestor consultam; só o Administrador altera.",
+        "Confira em Administração > Usuários se cada pessoa tem e-mail válido e celular com DDD. Sem os dois, a pessoa não recebe o código.",
+        "O código pelo WhatsApp precisa do modelo sgo_codigo_acesso aprovado pela Meta. Até lá, use \"Só e-mail\" ou deixe desligado.",
+        "Nenhuma senha, código ou token aparece nesta tela nem no registro."
+      ],
+      passos: [
+        { titulo: "Exigir a troca de senha de todos", itens: [
+          "Toque em \"Segurança do acesso\" no menu Administração.",
+          "No bloco \"Troca de senha obrigatória\", toque em \"Exigir troca de senha de todos\".",
+          "Escreva o motivo (fica no registro com o seu nome) e confirme.",
+          "No próximo login, cada pessoa vê \"Crie sua nova senha\" e não abre nada antes de trocar. Quem já está dentro vê a tela em até 5 minutos. Você também troca a sua.",
+          "Acompanhe no bloco \"Situação\" quantas trocas ainda estão pendentes."
+        ] },
+        { titulo: "Ligar o código no celular", itens: [
+          "No bloco \"Código no celular (segundo fator)\", escolha \"Só e-mail\" ou \"WhatsApp com e-mail de reserva\".",
+          "Para começar aos poucos, marque só alguns perfis. Nenhum marcado = todos, inclusive Cliente e Representada.",
+          "Toque em \"Gravar\". Vale a partir do próximo login de cada pessoa.",
+          "Para voltar atrás, escolha \"Desligado\" e grave."
+        ] },
+        { titulo: "Cadastrar e acompanhar o modelo do WhatsApp", itens: [
+          "Abra \"Modelo do WhatsApp na Meta (sgo_codigo_acesso)\".",
+          "Toque em \"Cadastrar modelo na Meta\". A Meta analisa em minutos ou até 24 horas.",
+          "Toque em \"Consultar situação\" até aparecer \"Aprovado\". Só então escolha \"WhatsApp com e-mail de reserva\"."
+        ] },
+        { titulo: "Ajudar quem perdeu o celular ou desconfia da senha", itens: [
+          "No bloco \"Pessoas\", ache a pessoa pelo nome.",
+          "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em \"Zerar segundo fator\". Os aparelhos confiados e as sessões dela caem, e nas próximas 24 horas ela entra só com a senha.",
+          "Desconfia que a senha vazou: toque em \"Exigir nova senha\".",
+          "Escreva o motivo e confirme. Tudo fica no registro de segurança."
+        ] },
+        { titulo: "Consultar o registro de segurança", itens: [
+          "No bloco \"Registro de segurança\", escolha o período e, se quiser, o login e o evento.",
+          "Toque em \"Mostrar\". Cada linha traz quando, o evento, a pessoa, o IP, o aparelho e o detalhe (e quem fez, nas ações da gestão)."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo verde", significado: "Em dia: entrada certa, código certo, senha trocada." },
+        { nome: "Selo amarelo", significado: "Ação da gestão ou pendência: troca exigida, segundo fator zerado, configuração alterada, troca pendente." },
+        { nome: "Selo vermelho", significado: "Falha: senha errada, código errado, código vencido, login cancelado por 5 códigos errados, código não enviado, pessoa sem celular e sem e-mail." },
+        { nome: "Selo cinza", significado: "Informação neutra: código desligado, senha guardada no formato antigo (vira forte sozinha no próximo login)." }
+      ],
+      problemas: [
+        { situacao: "A pessoa diz que o código não chegou", oQueFazer: "No registro, filtre pelo login dela e veja \"Código enviado\" e para onde foi (WhatsApp terminado em ... ou e-mail). Confira o celular e o e-mail em Administração > Usuários. Ela pode tocar em \"Receber por e-mail\" ou \"Reenviar código\" depois de 60 segundos." },
+        { situacao: "Aparece \"Código não enviado\" no registro", oQueFazer: "O detalhe diz o motivo: sem celular válido, sem e-mail válido, modelo da Meta não aprovado ou e-mail fora do ar. Corrija o cadastro ou a chave em Chaves e senhas." },
+        { situacao: "A pessoa ficou trancada (perdeu o celular e não acessa o e-mail)", oQueFazer: "Corrija o celular e toque em \"Zerar segundo fator\": ela entra só com a senha nas próximas 24 horas." },
+        { situacao: "Ninguém da gestão consegue entrar", oQueFazer: "O responsável pelo sistema roda no servidor o script de recuperação (sgo_servidor, scripts/seguranca_recuperar_acesso.ts), que zera o segundo fator, gera senha provisória e, se pedido, desliga o código para todos. O passo a passo está no manual da gestão." },
+        { situacao: "Aparece \"Muitas tentativas de senha erradas\" na entrada", oQueFazer: "O servidor segura por 15 minutos depois de 5 senhas erradas no mesmo login (ou 10 na mesma conexão). Espere ou redefina a senha da pessoa em Administração > Usuários." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Liga e desliga o código, escolhe os perfis, cadastra o modelo na Meta, exige a troca de todos, exige nova senha e zera o segundo fator de uma pessoa, e consulta o registro." },
+        { perfil: "DIRETORIA,GESTOR", pode: "Consulta a situação, as pessoas e o registro de segurança. As alterações são do Administrador." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Troca a própria senha quando o sistema pede e digita o código que chega no celular ou no e-mail." }
+      ],
+      perguntas: [
+        { p: "Como a senha fica guardada?", r: "Nunca em texto: só um resumo forte (PBKDF2 com 600 mil rodadas e sal próprio). Senhas antigas viram o formato forte sozinhas no próximo login certo de cada pessoa." },
+        { p: "O código sai fora do horário de trabalho?", r: "Sim. O código é pedido pela própria pessoa na hora em que ela entra, então sai a qualquer hora. Nenhuma outra mensagem vai pelo WhatsApp neste fluxo." },
+        { p: "O piloto do WhatsApp segura o código?", r: "Não. O servidor deixa passar só o modelo sgo_codigo_acesso, só do SGO+ e só com o botão do código, mesmo para quem não está na lista do piloto. Os outros avisos continuam seguindo o piloto." },
+        { p: "O que é \"Confiar neste aparelho\"?", r: "A pessoa marca no celular ou computador dela e, por 30 dias, não recebe o código naquele aparelho. Trocar a senha ou zerar o segundo fator desconecta todos os aparelhos confiados." },
+        { p: "Senha definida pela gestão em Usuários vale para sempre?", r: "Não. Conta nova ou senha redefinida para outra pessoa é provisória: no próximo login a pessoa cria a dela." }
+      ],
+      secoesManual: [
+        { titulo: "Ordem de implantação", paragrafos: [
+          "1. Publicar com o código desligado. 2. Cadastrar o modelo sgo_codigo_acesso na Meta e esperar a aprovação. 3. Exigir a troca de senha de todos. 4. Ligar o código, primeiro \"Só e-mail\" ou para alguns perfis, depois \"WhatsApp com e-mail de reserva\".",
+          "Antes do passo 4, confira na Situação quantas pessoas estão sem e-mail e sem celular."
+        ] },
+        { titulo: "Proteções do código", paragrafos: [
+          "Código de 6 números, vale 10 minutos e uma vez só. No máximo 5 tentativas por login; depois o login é cancelado. Reenvio depois de 60 segundos, no máximo 3 por login. O código anterior deixa de valer quando um novo é enviado.",
+          "A senha errada também tem freio: 5 erros no mesmo login ou 10 na mesma conexão seguram as tentativas por 15 minutos, com aviso de quantas tentativas faltam."
         ] }
       ]
     }

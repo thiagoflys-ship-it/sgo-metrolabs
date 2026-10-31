@@ -56,6 +56,9 @@
             <button id="btnLogin" type="button" onclick="fazerLogin()">Entrar</button>
           </div>
         </div>
+
+        <!-- 31/10/2026: etapas do login (código no celular e "Crie sua nova senha"), JS_SegurancaAcesso.html -->
+        <div id="loginEtapa" class="login-etapa" style="display:none;" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -265,6 +268,7 @@
           <button type="button" class="menu-btn" data-mod="usuarios" data-busca="usuarios login senha perfil acesso celular whatsapp" id="menu-btn-usuarios" onclick="abrir('usuarios')" title="Usuários e perfis de acesso"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
           <button type="button" class="menu-btn" data-mod="admin" data-busca="administracao configuracoes ociosidade alertas sessao" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Configurações</button>
           <button type="button" class="menu-btn" data-mod="chaves" data-busca="chaves senhas api integracoes whatsapp email" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
+          <button type="button" class="menu-btn" data-mod="seguranca_acesso" data-busca="seguranca acesso senha trocar troca obrigatoria codigo celular segundo fator token aparelho confiado registro login invasao" id="menu-btn-seguranca_acesso" style="display:none;" onclick="abrir('seguranca_acesso')" title="Troca de senha, código no celular e registro de acessos"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Segurança do acesso</button>
           <button type="button" class="menu-btn" data-mod="whatsapp_piloto" data-busca="piloto whatsapp meta quem recebe mensagens retidas relatorio" id="menu-btn-whatsapp_piloto" style="display:none;" onclick="abrir('whatsapp_piloto')" title="Quem recebe WhatsApp durante o piloto e o que saiu"><span class="menu-btn-icon"><i class="fas fa-comment-sms" aria-hidden="true"></i></span>Piloto do WhatsApp</button>
           <button type="button" class="menu-btn" data-mod="avisos_matriz" data-busca="matriz de avisos regras notificacoes email whatsapp resumo do dia gestor da area medicao" id="menu-btn-avisos_matriz" style="display:none;" onclick="abrir('avisos_matriz')" title="Quem recebe cada aviso e por qual canal"><span class="menu-btn-icon"><i class="fas fa-table-list" aria-hidden="true"></i></span>Matriz de avisos</button>
           <button type="button" class="menu-btn" data-mod="assistente" data-busca="assistente duvidas perguntas ajuda manual tire sua duvida" id="menu-btn-assistente" style="display:none;" onclick="abrir('assistente')"><span class="menu-btn-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></span>Perguntas ao assistente</button>
@@ -321,6 +325,7 @@
 <?!= include('JS_Atividades'); ?>
 <?!= include('JS_Avisos'); ?>
 <?!= include('JS_Chaves'); ?>
+<?!= include('JS_SegurancaAcesso'); ?>
 <?!= include('JS_AutomacaoPredial'); ?>
 <?!= include('JS_ModoPersonalizado'); ?>
 <?!= include('JS_WhatsappPiloto'); ?>

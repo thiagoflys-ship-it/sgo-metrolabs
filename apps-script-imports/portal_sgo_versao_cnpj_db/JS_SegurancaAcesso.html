@@ -1,0 +1,545 @@
+<style>
+  /* SEGURANÇA DO ACESSO (31/10/2026): etapas do login (código e senha nova) e a tela da gestão. */
+  .login-etapa { width: 100%; }
+  .login-etapa h2 { margin: 0 0 8px; font-size: 22px; font-weight: 700; color: var(--bc-text); }
+  .login-etapa .sga-texto { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: var(--bc-text-2); }
+  .login-etapa label.sga-rotulo { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: 600; color: var(--bc-text); }
+  .login-etapa input.sga-campo { width: 100%; height: 48px; box-sizing: border-box; font-size: 16px; padding: 0 12px; border: 1px solid var(--bc-line-2); border-radius: 4px; background: var(--bc-surface); color: var(--bc-text); }
+  .login-etapa input.sga-campo:focus { outline: none; border-color: var(--bc-action); box-shadow: 0 0 0 3px rgba(31,107,42,.18); }
+  .login-etapa input.sga-codigo { font-family: var(--bc-mono); font-size: 26px; letter-spacing: 10px; text-align: center; height: 56px; }
+  .login-etapa .sga-check { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 4px; font-size: 14px; font-weight: 500; color: var(--bc-text); cursor: pointer; }
+  .login-etapa .sga-check input { width: 20px; height: 20px; margin: 1px 0 0; flex: 0 0 auto; }
+  .login-etapa .sga-dica { margin: 4px 0 0 30px; font-size: 12.5px; line-height: 1.5; color: var(--bc-text-3); }
+  .login-etapa .sga-msg { margin: 14px 0 0; padding: 10px 12px; border-radius: 4px; font-size: 13.5px; line-height: 1.5; display: none; }
+  .login-etapa .sga-msg.is-erro { display: block; background: var(--bc-danger-bg); border: 1px solid var(--bc-danger-line); color: var(--bc-danger); }
+  .login-etapa .sga-msg.is-ok { display: block; background: var(--bc-action-bg); border: 1px solid var(--bc-action-line); color: var(--bc-action); }
+  .login-etapa .sga-msg.is-info { display: block; background: var(--bc-info-bg); border: 1px solid var(--bc-info-line); color: var(--bc-info); }
+  .login-etapa .sga-principal { width: 100%; min-height: 48px; margin-top: 18px; border: 0; border-radius: 4px; background: var(--bc-action); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .login-etapa .sga-principal:hover { background: var(--bc-action-hover); }
+  .login-etapa .sga-principal:disabled { opacity: .6; cursor: wait; }
+  .login-etapa .sga-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .login-etapa .sga-secundario { min-height: 44px; padding: 0 14px; border: 1px solid var(--bc-line-2); border-radius: 4px; background: var(--bc-surface); color: var(--bc-text); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .login-etapa .sga-secundario:disabled { opacity: .55; cursor: not-allowed; }
+  .login-etapa .sga-rodape { margin: 16px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--bc-text-3); }
+  .login-etapa .sga-regras { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+  .login-etapa .sga-regras li { padding: 3px 0 3px 24px; position: relative; color: var(--bc-text-2); }
+  .login-etapa .sga-regras li::before { content: ""; position: absolute; left: 4px; top: 8px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bc-line-2); box-sizing: border-box; }
+  .login-etapa .sga-regras li.ok { color: var(--bc-action); }
+  .login-etapa .sga-regras li.ok::before { background: var(--bc-action); border-color: var(--bc-action); }
+  .login-etapa .sga-ver { margin-top: 8px; background: none; border: 0; padding: 6px 0; color: var(--bc-info); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+  /* troca exigida com o sistema aberto: a tela cobre tudo */
+  .sga-sobre { position: fixed; inset: 0; z-index: 2147483000; background: var(--bc-bg); overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; padding: 48px 16px calc(32px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  .sga-sobre .login-etapa { max-width: 420px; }
+  /* tela da gestão */
+  .sga-bloco { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .sga-bloco h3 { margin: 0 0 10px; font-size: 15px; }
+  .sga-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sga-sit { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .sga-sit.ok { color: var(--success); background: var(--success-bg); }
+  .sga-sit.alerta { color: var(--warning); background: var(--warning-bg); }
+  .sga-sit.perigo { color: var(--danger); background: var(--danger-bg); }
+  .sga-sit.neutro { color: var(--muted); }
+  .sga-q { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .sga-opcoes { display: grid; gap: 8px; margin: 6px 0 10px; }
+  .sga-opcoes label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+  .sga-opcoes label input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+  .sga-perfis { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 10px; }
+  .sga-perfis label { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; }
+  .sga-tabela td, .sga-tabela th { vertical-align: top; font-size: 13px; }
+  .sga-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+  .sga-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+  .sga-filtros input, .sga-filtros select { min-height: 38px; }
+  @media (max-width: 760px) {
+    .sga-tabela thead { display: none; }
+    .sga-tabela tr { display: block; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; padding: 8px 10px; }
+    .sga-tabela td { display: block; border: 0 !important; padding: 3px 0 !important; }
+    .sga-tabela td[data-r]::before { content: attr(data-r) ": "; font-weight: 600; color: var(--muted); }
+    .sga-bloco .cadx-btn { min-height: 44px; }
+  }
+</style>
+<script>
+  // ==========================================================
+  // SEGURANÇA DO ACESSO (31/10/2026, pedido do dono): "da próxima vez que todos entrarem no sistema apareça uma tela
+  // de mude sua senha e isso é obrigatório, também queria que gerasse token e enviasse ao celular cadastrado".
+  // Servidor: SGO_SegurancaAcesso.js (verificarCodigoAcesso, reenviarCodigoAcesso, trocarSenhaAcesso, SegAcesso_api)
+  // e SGO_Auth.js (login devolve etapa CODIGO ou TROCAR_SENHA). Ganchos na casca (JS_Core.html):
+  //   fazerLogin -> SegAcesso_tratarLogin_(res); tentarAutoLogin_ -> SegAcesso_abrirTroca_; logout -> SegAcesso_fecharEtapas_;
+  //   abrir('seguranca_acesso') -> SegAcessoTela_render_; SegAcessoTela_iniciar_ mostra o item do menu para a gestão.
+  // O código, a senha e o token do aparelho nunca ficam guardados no navegador.
+  // ==========================================================
+  var SGA = { etapa: null, timer: null, painel: null, filtro: { dias: 7, usuario: "", evento: "" } };
+
+  function SegAcesso_esc_(v) {
+    return String(v === null || v === undefined ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function SegAcesso_celular_() {
+    try { return !!(window.matchMedia && (window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(max-width: 760px)").matches)); } catch (e) { return false; }
+  }
+  function SegAcesso_msg_(texto, tipo) {
+    var el = document.getElementById("sgaMsg");
+    if (!el) return;
+    el.className = "sga-msg" + (texto ? (tipo === "ok" ? " is-ok" : tipo === "info" ? " is-info" : " is-erro") : "");
+    el.textContent = texto || "";
+    el.setAttribute("role", tipo === "ok" || tipo === "info" ? "status" : "alert");
+  }
+  function SegAcesso_pararTimer_() { if (SGA.timer) { clearInterval(SGA.timer); SGA.timer = null; } }
+
+  /** Onde desenhar: no cartão do login (antes de entrar) ou numa tela que cobre o sistema aberto. */
+  function SegAcesso_alvo_(sobre) {
+    if (sobre) {
+      var fundo = document.getElementById("sgaSobre");
+      if (!fundo) { fundo = document.createElement("div"); fundo.id = "sgaSobre"; fundo.className = "sga-sobre"; fundo.setAttribute("role", "dialog"); fundo.setAttribute("aria-modal", "true"); fundo.innerHTML = '<div class="login-etapa" id="sgaSobreEtapa"></div>'; document.body.appendChild(fundo); }
+      return document.getElementById("sgaSobreEtapa");
+    }
+    var form = document.querySelector("#login .login-form");
+    var alvo = document.getElementById("loginEtapa");
+    if (form) form.style.display = "none";
+    if (alvo) alvo.style.display = "";
+    return alvo;
+  }
+
+  /** Volta para usuário e senha (cancela a etapa). */
+  function SegAcesso_voltarLogin_() {
+    SegAcesso_pararTimer_();
+    SGA.etapa = null;
+    var form = document.querySelector("#login .login-form"), alvo = document.getElementById("loginEtapa");
+    if (alvo) { alvo.innerHTML = ""; alvo.style.display = "none"; }
+    if (form) form.style.display = "";
+    var senha = document.getElementById("senha");
+    if (senha) { senha.value = ""; try { senha.focus(); } catch (e) {} }
+  }
+
+  /** Logout ou nova sessão: some com qualquer etapa aberta. */
+  function SegAcesso_fecharEtapas_() {
+    SegAcesso_pararTimer_();
+    SGA.etapa = null;
+    var s = document.getElementById("sgaSobre");
+    if (s) s.remove();
+    var form = document.querySelector("#login .login-form"), alvo = document.getElementById("loginEtapa");
+    if (alvo) { alvo.innerHTML = ""; alvo.style.display = "none"; }
+    if (form) form.style.display = "";
+  }
+
+  /** Resposta do login com etapa. true = esta tela cuidou (não entra no sistema ainda). */
+  function SegAcesso_tratarLogin_(res) {
+    if (!res || !res.etapa) return false;
+    if (res.etapa === "CODIGO") { SegAcesso_abrirCodigo_(res); return true; }
+    if (res.etapa === "TROCAR_SENHA" && res.sessionId) {
+      SegAcesso_abrirTroca_({ sessionId: res.sessionId, user: res.user, pedirAtual: !!(res.trocaSenha && res.trocaSenha.pedirAtual), sobre: false });
+      return true;
+    }
+    if (res.etapa === "SEM_ENVIO") {
+      var alvo = SegAcesso_alvo_(false);
+      if (alvo) alvo.innerHTML = '<h2>Não deu para enviar o código</h2><div class="sga-msg is-erro" style="display:block" role="alert">' + SegAcesso_esc_(res.message) + '</div>' +
+        '<button type="button" class="sga-principal" onclick="SegAcesso_voltarLogin_()">Voltar</button>';
+      return true;
+    }
+    return false;
+  }
+
+  // ---------------- etapa do código ----------------
+  function SegAcesso_abrirCodigo_(res) {
+    SGA.etapa = { tipo: "CODIGO", desafio: res.desafio, dados: res, enviadoEm: Date.now() };
+    var alvo = SegAcesso_alvo_(false);
+    if (!alvo) return;
+    var celular = SegAcesso_celular_();
+    alvo.innerHTML =
+      '<h2>Digite o código de acesso</h2>' +
+      '<p class="sga-texto" id="sgaTextoCodigo">' + SegAcesso_esc_(res.message) + '</p>' +
+      '<label class="sga-rotulo" for="sgaCodigo">Código de 6 números</label>' +
+      '<input class="sga-campo sga-codigo" id="sgaCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" aria-describedby="sgaTextoCodigo">' +
+      '<label class="sga-check"><input type="checkbox" id="sgaConfiar"' + (celular ? " checked" : "") + '> <span>Confiar neste aparelho por 30 dias</span></label>' +
+      '<p class="sga-dica">Marque só no celular ou computador que é seu (ou da empresa, de uso só seu). Neste aparelho o SGO+ não pede o código por 30 dias. Em computador de uso compartilhado, deixe desmarcado.</p>' +
+      '<div class="sga-msg" id="sgaMsg"></div>' +
+      '<button type="button" class="sga-principal" id="sgaConfirmar" onclick="SegAcesso_confirmarCodigo_()">Confirmar e entrar</button>' +
+      '<div class="sga-acoes">' +
+        '<button type="button" class="sga-secundario" id="sgaReenviar" onclick="SegAcesso_reenviar_(\'\')">Reenviar código</button>' +
+        (res.podeEmail ? '<button type="button" class="sga-secundario" id="sgaPorEmail" onclick="SegAcesso_reenviar_(\'EMAIL\')">Receber por e-mail</button>' : '') +
+        '<button type="button" class="sga-secundario" onclick="SegAcesso_voltarLogin_()">Voltar</button>' +
+      '</div>' +
+      '<p class="sga-rodape">Não chegou? Confira se o celular está com internet; o e-mail pode levar até 1 minuto (veja também o lixo eletrônico). ' +
+        'Você pode pedir outro código depois de 60 segundos, até 3 vezes. Se nada chegar, peça ao administrador do SGO+ para conferir o seu celular e o seu e-mail.</p>';
+    var campo = document.getElementById("sgaCodigo");
+    if (campo) {
+      campo.addEventListener("input", function () { campo.value = campo.value.replace(/\D/g, "").slice(0, 6); if (campo.value.length === 6) SegAcesso_confirmarCodigo_(); });
+      campo.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); SegAcesso_confirmarCodigo_(); } });
+      setTimeout(function () { try { campo.focus(); } catch (e) {} }, 40);
+    }
+    SegAcesso_contarReenvio_(res.reenviarEmS, res.reenviosRestantes);
+  }
+
+  function SegAcesso_contarReenvio_(segundos, restantes) {
+    SegAcesso_pararTimer_();
+    var fim = Date.now() + Math.max(0, Number(segundos) || 0) * 1000;
+    var pintar = function () {
+      var b = document.getElementById("sgaReenviar"), e = document.getElementById("sgaPorEmail");
+      if (!b) { SegAcesso_pararTimer_(); return; }
+      var falta = Math.ceil((fim - Date.now()) / 1000);
+      if (restantes === 0) { b.disabled = true; b.textContent = "Reenvios usados (3 de 3)"; if (e) e.disabled = true; SegAcesso_pararTimer_(); return; }
+      b.disabled = falta > 0; if (e) e.disabled = falta > 0;
+      b.textContent = falta > 0 ? "Reenviar código (em " + falta + " s)" : "Reenviar código";
+      if (falta <= 0) SegAcesso_pararTimer_();
+    };
+    pintar();
+    SGA.timer = setInterval(pintar, 1000);
+  }
+
+  function SegAcesso_confirmarCodigo_() {
+    var et = SGA.etapa, campo = document.getElementById("sgaCodigo"), btn = document.getElementById("sgaConfirmar");
+    if (!et || et.tipo !== "CODIGO" || !campo || (btn && btn.disabled)) return;
+    var codigo = String(campo.value || "").replace(/\D/g, "");
+    if (codigo.length !== 6) { SegAcesso_msg_("Digite os 6 números do código que chegou para você."); try { campo.focus(); } catch (e) {} return; }
+    var confiar = !!(document.getElementById("sgaConfiar") || {}).checked;
+    if (btn) { btn.disabled = true; btn.textContent = "Conferindo..."; }
+    SegAcesso_msg_("");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (btn) { btn.disabled = false; btn.textContent = "Confirmar e entrar"; }
+        if (r && r.success && r.etapa === "TROCAR_SENHA" && r.sessionId) { SegAcesso_pararTimer_(); SegAcesso_abrirTroca_({ sessionId: r.sessionId, user: r.user, pedirAtual: false, sobre: false }); return; }
+        if (r && r.success && r.sessionId) { SegAcesso_fecharEtapas_(); if (typeof SGO_entrarComSessao_ === "function") SGO_entrarComSessao_(r); return; }
+        if (r && r.etapa === "LOGIN") { SegAcesso_pararTimer_(); SegAcesso_msg_(r.message); var b = document.getElementById("sgaConfirmar"); if (b) { b.textContent = "Voltar e entrar de novo"; b.onclick = SegAcesso_voltarLogin_; } campo.disabled = true; return; }
+        campo.value = ""; try { campo.focus(); } catch (e) {}
+        SegAcesso_msg_((r && r.message) || "O código não foi aceito. Confira e digite de novo.");
+        if (r && r.vencido) SegAcesso_contarReenvio_(0, et.dados.reenviosRestantes);
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Confirmar e entrar"; }
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e toque de novo."));
+      })
+      .verificarCodigoAcesso(et.desafio, codigo, confiar);
+  }
+
+  function SegAcesso_reenviar_(canal) {
+    var et = SGA.etapa;
+    if (!et || et.tipo !== "CODIGO") return;
+    var b = document.getElementById("sgaReenviar"), e = document.getElementById("sgaPorEmail");
+    if (b) b.disabled = true; if (e) e.disabled = true;
+    SegAcesso_msg_("Enviando outro código...", "info");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) {
+          et.dados = r;
+          var t = document.getElementById("sgaTextoCodigo"); if (t) t.textContent = r.message;
+          SegAcesso_msg_("Código novo enviado. Use só o mais recente.", "ok");
+          if (!r.podeEmail && e) e.remove();
+          SegAcesso_contarReenvio_(r.reenviarEmS, r.reenviosRestantes);
+          var campo = document.getElementById("sgaCodigo"); if (campo) { campo.value = ""; try { campo.focus(); } catch (x) {} }
+          return;
+        }
+        if (r && r.etapa === "LOGIN") { SegAcesso_pararTimer_(); SegAcesso_msg_(r.message); return; }
+        SegAcesso_msg_((r && r.message) || "Não foi possível reenviar agora.");
+        SegAcesso_contarReenvio_(r && r.reenviarEmS !== undefined ? r.reenviarEmS : 10, r && r.reenviosRestantes);
+      })
+      .withFailureHandler(function (err) {
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor."));
+        SegAcesso_contarReenvio_(5, et.dados.reenviosRestantes);
+      })
+      .reenviarCodigoAcesso(et.desafio, { canal: canal || "" });
+  }
+
+  // ---------------- etapa da senha nova ----------------
+  /** op: { sessionId, user, pedirAtual, sobre (true = sistema aberto: cobre a tela), motivo } */
+  function SegAcesso_abrirTroca_(op) {
+    op = op || {};
+    SegAcesso_pararTimer_();
+    SGA.etapa = { tipo: "SENHA", sessionId: op.sessionId, user: op.user || {}, pedirAtual: !!op.pedirAtual, sobre: !!op.sobre };
+    var alvo = SegAcesso_alvo_(!!op.sobre);
+    if (!alvo) return;
+    var nome = String((op.user && op.user.nome) || op.nome || "").split(" ")[0];
+    nome = nome ? nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase() : "";
+    alvo.innerHTML =
+      '<h2>Crie sua nova senha</h2>' +
+      '<p class="sga-texto">' + (nome ? "Olá, " + SegAcesso_esc_(nome) + ". " : "") + 'Antes de continuar, crie uma senha nova. ' +
+        '<b>Por quê:</b> a gestão do SGO+ pediu a troca da senha para proteger o sistema contra invasões. Nada do sistema abre antes da troca.</p>' +
+      (op.pedirAtual ? '<label class="sga-rotulo" for="sgaAtual">Senha atual</label><input class="sga-campo" id="sgaAtual" type="password" autocomplete="current-password">' : '') +
+      '<label class="sga-rotulo" for="sgaNova">Senha nova</label><input class="sga-campo" id="sgaNova" type="password" autocomplete="new-password" maxlength="128">' +
+      '<label class="sga-rotulo" for="sgaConf">Digite a senha nova de novo</label><input class="sga-campo" id="sgaConf" type="password" autocomplete="new-password" maxlength="128">' +
+      '<button type="button" class="sga-ver" id="sgaVer" onclick="SegAcesso_verSenhas_()">Mostrar as senhas</button>' +
+      '<ul class="sga-regras" id="sgaRegras" aria-live="polite">' +
+        '<li data-r="tam">8 caracteres ou mais</li><li data-r="mix">Letras e números juntos</li><li data-r="igual">As duas senhas iguais</li>' +
+        '<li data-r="info" class="info">Diferente da senha atual e difícil de adivinhar (nada de 12345678, do seu nome, do seu login ou do nome da empresa)</li></ul>' +
+      '<div class="sga-msg" id="sgaMsg"></div>' +
+      '<button type="button" class="sga-principal" id="sgaSalvar" onclick="SegAcesso_salvarSenha_()">Salvar a senha nova e entrar</button>' +
+      '<div class="sga-acoes"><button type="button" class="sga-secundario" onclick="SegAcesso_sairDaTroca_()">Sair sem trocar</button></div>' +
+      '<p class="sga-rodape">Dica: junte duas ou três palavras que só você conhece com alguns números. Não use a mesma senha de outros sites. ' +
+        'Depois da troca, os outros aparelhos e sessões abertas com a senha antiga são desconectados.</p>';
+    ["sgaNova", "sgaConf"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", SegAcesso_conferirRegras_);
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); SegAcesso_salvarSenha_(); } });
+    });
+    setTimeout(function () { var p = document.getElementById(op.pedirAtual ? "sgaAtual" : "sgaNova"); try { if (p) p.focus(); } catch (e) {} }, 40);
+  }
+
+  function SegAcesso_verSenhas_() {
+    var b = document.getElementById("sgaVer"), mostrar = b && b.textContent.indexOf("Mostrar") === 0;
+    ["sgaAtual", "sgaNova", "sgaConf"].forEach(function (id) { var el = document.getElementById(id); if (el) el.type = mostrar ? "text" : "password"; });
+    if (b) b.textContent = mostrar ? "Esconder as senhas" : "Mostrar as senhas";
+  }
+
+  /** Regras conferidas na tela enquanto digita (o servidor confere de novo, inclusive "diferente da atual" e "óbvia"). */
+  function SegAcesso_regrasLocais_(nova, conf) {
+    return { tam: nova.length >= 8, mix: /[A-Za-zÀ-ÿ]/.test(nova) && /\d/.test(nova), igual: !!nova && nova === conf, espaco: nova === nova.trim() };
+  }
+  function SegAcesso_conferirRegras_() {
+    var nova = (document.getElementById("sgaNova") || {}).value || "", conf = (document.getElementById("sgaConf") || {}).value || "";
+    var r = SegAcesso_regrasLocais_(nova, conf);
+    document.querySelectorAll("#sgaRegras li[data-r]").forEach(function (li) { var k = li.getAttribute("data-r"); if (k in r) li.classList.toggle("ok", !!r[k]); });
+    return r;
+  }
+
+  function SegAcesso_salvarSenha_() {
+    var et = SGA.etapa, btn = document.getElementById("sgaSalvar");
+    if (!et || et.tipo !== "SENHA" || (btn && btn.disabled)) return;
+    var nova = (document.getElementById("sgaNova") || {}).value || "", conf = (document.getElementById("sgaConf") || {}).value || "";
+    var atual = (document.getElementById("sgaAtual") || {}).value || "";
+    var r = SegAcesso_conferirRegras_(), faltas = [];
+    if (et.pedirAtual && !atual) faltas.push("Digite a senha atual.");
+    if (!r.tam) faltas.push("A senha nova precisa de 8 caracteres ou mais.");
+    if (!r.mix) faltas.push("Use letras e números juntos.");
+    if (!r.espaco) faltas.push("A senha não pode começar nem terminar com espaço.");
+    if (!r.igual) faltas.push("Digite a mesma senha nova nos dois campos.");
+    if (faltas.length) { SegAcesso_msg_(faltas.join(" ")); return; }
+    if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
+    SegAcesso_msg_("");
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) { btn.disabled = false; btn.textContent = "Salvar a senha nova e entrar"; }
+        if (res && res.success) {
+          var sobre = et.sobre;
+          SegAcesso_fecharEtapas_();
+          try { if (typeof CadUI_aviso_ === "function") setTimeout(function () { CadUI_aviso_(res.message || "Senha nova criada.", "ok"); }, 300); } catch (e) {}
+          if (sobre) { try { if (typeof SESSION !== "undefined") SESSION = res.sessionId || SESSION; if (typeof USER_CONTEXT !== "undefined" && res.user) USER_CONTEXT = Object.assign({}, USER_CONTEXT || {}, res.user); } catch (e) {} return; }
+          if (typeof SGO_entrarComSessao_ === "function") SGO_entrarComSessao_(res);
+          return;
+        }
+        if (res && res.etapa === "LOGIN") { SegAcesso_msg_(res.message); if (btn) { btn.textContent = "Voltar e entrar de novo"; btn.onclick = SegAcesso_sairDaTroca_; } return; }
+        SegAcesso_msg_((res && res.message) || "A senha não foi aceita. Confira as regras e tente de novo.");
+        var foco = res && res.campo === "atual" ? "sgaAtual" : "sgaNova";
+        try { document.getElementById(foco).focus(); } catch (e) {}
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Salvar a senha nova e entrar"; }
+        SegAcesso_msg_(String((err && err.message) || "Não foi possível falar com o servidor. Verifique a internet e toque de novo; nada foi alterado."));
+      })
+      .trocarSenhaAcesso(et.sessionId, { senhaAtual: atual, nova: nova, confirmacao: conf });
+  }
+
+  /** Sair sem trocar: encerra a sessão pendente e volta ao login. */
+  function SegAcesso_sairDaTroca_() {
+    var et = SGA.etapa;
+    SegAcesso_fecharEtapas_();
+    if (typeof logout === "function" && typeof SESSION !== "undefined" && SESSION) { logout(); return; }
+    if (et && et.sessionId) { try { google.script.run.withFailureHandler(function () {}).logout(et.sessionId); } catch (e) {} }
+    try { if (typeof limparSessaoFront_ === "function") limparSessaoFront_(); } catch (e) {}
+    var senha = document.getElementById("senha"); if (senha) senha.value = "";
+  }
+
+  /** O servidor recusou uma chamada porque a troca está pendente (google-script.js): cobre o sistema com a tela da senha nova. */
+  window.SGO_exigirTrocaSenha_ = function () {
+    if (SGA.etapa && SGA.etapa.tipo === "SENHA") return;
+    var sid = typeof SGO_getSessionId === "function" ? SGO_getSessionId() : "";
+    if (!sid) return;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.pendente === "TROCA_SENHA") SegAcesso_abrirTroca_({ sessionId: sid, nome: r.trocaSenha && r.trocaSenha.nome, pedirAtual: !!(r.trocaSenha && r.trocaSenha.pedirAtual), sobre: true });
+      })
+      .withFailureHandler(function () {})
+      .getSessaoAtual(sid);
+  };
+
+  // ==========================================================
+  // TELA DA GESTÃO: Administração > Segurança do acesso
+  // ==========================================================
+  function SegAcessoTela_pode_() {
+    var p = String((typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    return p === "ADMIN" || p === "DIRETORIA" || p === "GESTOR";
+  }
+  function SegAcessoTela_iniciar_() {
+    var b = document.getElementById("menu-btn-seguranca_acesso");
+    if (b) b.style.display = SegAcessoTela_pode_() ? "" : "none";
+  }
+  function SegAcessoTela_chamar_(acao, payload, ok, erro) {
+    google.script.run
+      .withSuccessHandler(function (r) { if (!r || !r.ok) { erro((r && r.message) || "O servidor não confirmou. Atualize a página e tente de novo."); return; } try { ok(r); } catch (e) { console.error("Segurança do acesso:", e); erro("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); } })
+      .withFailureHandler(function (e) { erro(String((e && e.message) || "Não foi possível falar com o servidor. Verifique a conexão; nada foi alterado.")); })
+      .SegAcesso_api(SGO_getSessionId(), acao, payload || {});
+  }
+
+  function SegAcessoTela_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Segurança do acesso"); } catch (e) {} }
+    if (!SegAcessoTela_pode_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Segurança do acesso</h2><p class="content-subtitle">Esta tela é da gestão (Administrador, Diretoria e Gestor). Para trocar a sua senha, fale com o administrador do SGO+.</p>' +
+        '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
+    div.innerHTML =
+      '<div class="module-shell cadx" id="sgaTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Segurança do acesso</h2>' +
+          '<p class="content-subtitle">Troca de senha obrigatória, código no celular para entrar, recuperação de acesso e o registro de cada entrada no sistema.</p></div><div class="module-header-right"></div></div>' +
+        (typeof CadUI_ajuda_ === "function" ? CadUI_ajuda_(
+          "<ul><li><b>Troca de senha obrigatória</b>: a pessoa marcada vê a tela \"Crie sua nova senha\" no próximo login e não abre nada antes de trocar. Quem já está dentro vê a tela em até 5 minutos.</li>" +
+          "<li><b>Código no celular</b>: depois da senha certa, o SGO+ manda um código de 6 números (vale 10 minutos, uma vez só). Começa <b>desligado</b>; ligue \"Só e-mail\" ou, depois que a Meta aprovar o modelo, \"WhatsApp com e-mail de reserva\".</li>" +
+          "<li><b>Aparelho confiado</b>: quem marca \"Confiar neste aparelho\" não recebe o código naquele aparelho por 30 dias. Trocar a senha ou zerar o segundo fator desconecta todos os aparelhos confiados.</li>" +
+          "<li><b>Recuperação</b>: \"Exigir nova senha\" e \"Zerar segundo fator\" pedem o motivo e ficam no registro com o seu nome.</li>" +
+          "<li>Ver a tela: Administrador, Diretoria e Gestor. Alterar: Administrador.</li></ul>") : "") +
+        '<div id="sgaCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(6) : "Carregando...") + '</div>' +
+      '</div>';
+    SegAcessoTela_chamar_("painel", {}, function (r) { SGA.painel = r; SegAcessoTela_desenhar_(); }, function (m) {
+      var c = document.getElementById("sgaCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não carregou.</strong> ' + SegAcesso_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="SegAcessoTela_render_()">Tentar de novo</button></div></div>';
+    });
+  }
+
+  var SGA_ROT_PERFIL = { ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH", CLIENTE: "Cliente", REPRESENTADA: "Representada" };
+
+  function SegAcessoTela_desenhar_() {
+    var c = document.getElementById("sgaCorpo"), d = SGA.painel;
+    if (!c || !d) return;
+    var esc = SegAcesso_esc_, k = d.contagem, cfg = d.config, pode = d.podeAlterar, mod = d.modelo || {};
+    var rotModelo = { APPROVED: "Aprovado", PENDING: "Em análise", REJECTED: "Recusado", PAUSED: "Pausado", DISABLED: "Desativado" };
+    var sit = '<div class="sga-bloco"><h3>Situação</h3><div class="sga-linha">' +
+      '<span class="sga-sit ' + (cfg.modo === "DESLIGADO" ? "neutro" : "ok") + '">Código no celular: ' + esc(d.rotulos[cfg.modo]) + (cfg.modo !== "DESLIGADO" && cfg.perfis.length ? " (" + esc(cfg.perfis.map(function (p) { return SGA_ROT_PERFIL[p] || p; }).join(", ")) + ")" : "") + '</span>' +
+      '<span class="sga-sit ' + (k.trocaPendente ? "alerta" : "ok") + '">Troca de senha pendente: ' + k.trocaPendente + ' de ' + k.ativos + '</span>' +
+      '<span class="sga-sit ' + (mod.status === "APPROVED" ? "ok" : mod.status ? "alerta" : "neutro") + '">Modelo do WhatsApp: ' + esc(rotModelo[mod.status] || (mod.status ? mod.status : "situação não consultada")) + '</span>' +
+      '<span class="sga-sit ' + (k.semCelular ? "alerta" : "ok") + '">Sem celular válido: ' + k.semCelular + '</span>' +
+      '<span class="sga-sit ' + (k.semEmail ? "perigo" : "ok") + '">Sem e-mail válido: ' + k.semEmail + '</span>' +
+      '<span class="sga-sit ' + (k.senhaAntiga ? "neutro" : "ok") + '">Senha guardada no formato antigo: ' + k.senhaAntiga + '</span></div>' +
+      (k.semEmail ? '<p class="sga-q">Quem está sem e-mail e sem celular não consegue receber o código: complete o cadastro em Administração &gt; Usuários antes de ligar o código.</p>' : '') +
+      (k.senhaAntiga ? '<p class="sga-q">"Formato antigo" = a senha ainda não foi regravada no formato forte. Isso acontece sozinho no próximo login de cada pessoa.</p>' : '') +
+      '</div>';
+
+    var opcoes = ["DESLIGADO", "EMAIL", "WHATSAPP"].map(function (m) {
+      var expl = { DESLIGADO: "As pessoas entram só com usuário e senha (padrão até o modelo da Meta ser aprovado).", EMAIL: "O código vai para o e-mail do cadastro. Funciona sem a Meta.", WHATSAPP: "O código vai pelo WhatsApp oficial para o celular do cadastro; se falhar ou a pessoa não tiver celular, vai por e-mail. Ligue depois que a Meta aprovar o modelo." }[m];
+      return '<label><input type="radio" name="sgaModo" value="' + m + '"' + (cfg.modo === m ? " checked" : "") + (pode ? "" : " disabled") + '><span><b>' + esc(d.rotulos[m]) + '</b><br><span class="sga-q">' + esc(expl) + '</span></span></label>';
+    }).join("");
+    var perfisOp = (d.perfis || []).map(function (p) {
+      return '<label><input type="checkbox" class="sga-perfil" value="' + esc(p) + '"' + (cfg.perfis.indexOf(p) >= 0 ? " checked" : "") + (pode ? "" : " disabled") + '> ' + esc(SGA_ROT_PERFIL[p] || p) + '</label>';
+    }).join("");
+    var codigo = '<div class="sga-bloco"><h3>Código no celular (segundo fator)</h3><div class="sga-opcoes">' + opcoes + '</div>' +
+      '<p class="sga-q"><b>Para quem vale.</b> Nenhum perfil marcado = todos (inclusive Cliente e Representada). Para começar aos poucos, marque só alguns perfis.</p><div class="sga-perfis">' + perfisOp + '</div>' +
+      (pode ? '<div class="sga-linha"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="sgaGravar" onclick="SegAcessoTela_gravar_()">Gravar</button><span class="sga-q" id="sgaGravarMsg" role="status"></span></div>' :
+        '<p class="sga-q">Só o Administrador altera esta configuração.</p>') +
+      (cfg.alteradoEm ? '<p class="sga-q">Última alteração: ' + esc(String(cfg.alteradoEm).replace("T", " ").slice(0, 16).split(" ").map(function (x, i) { return i ? x : x.split("-").reverse().join("/"); }).join(" ")) + (cfg.alteradoPor ? " por " + esc(cfg.alteradoPor) : "") + '</p>' : '') +
+      '<details style="margin-top:8px"><summary>Modelo do WhatsApp na Meta (sgo_codigo_acesso)</summary><div style="margin-top:8px">' +
+        '<p class="sga-q">A Meta exige um modelo da categoria <b>Autenticação</b> para mandar código. O texto é o padrão da Meta: "<b>123456</b> é seu código de verificação. Para sua segurança, não compartilhe este código." com o aviso "Este código expira em 10 minutos." e o botão "Copiar código".' +
+        (d.metaConfigurada ? '' : ' <b>O WhatsApp oficial ainda não está configurado em Chaves e senhas.</b>') + '</p>' +
+        (pode ? '<div class="sga-linha"><button type="button" class="cadx-btn" onclick="SegAcessoTela_modelo_(\'modeloSituacao\', this)">Consultar situação</button><button type="button" class="cadx-btn" onclick="SegAcessoTela_modelo_(\'modeloCadastrar\', this)">Cadastrar modelo na Meta</button><span class="sga-q" id="sgaModeloMsg" role="status"></span></div>' : '') +
+      '</div></details></div>';
+
+    var troca = '<div class="sga-bloco"><h3>Troca de senha obrigatória</h3>' +
+      '<p class="sga-q">Marca todas as contas ativas (equipe, clientes e representadas). Cada pessoa cria a senha nova no próximo login; quem já está dentro vê a tela em até 5 minutos. Você também vai trocar a sua.</p>' +
+      (pode ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="SegAcessoTela_exigirTodos_()">Exigir troca de senha de todos</button>' : '<p class="sga-q">Só o Administrador pode exigir a troca de todos.</p>') + '</div>';
+
+    var pessoas = '<div class="sga-bloco"><h3>Pessoas</h3><input type="search" id="sgaBusca" class="wap-busca" placeholder="Buscar pelo nome ou login" oninput="SegAcessoTela_filtrar_()" aria-label="Buscar pessoa" style="width:100%;max-width:360px;min-height:38px;margin-bottom:10px">' +
+      '<div class="table-responsive"><table class="table sga-tabela" id="sgaPessoas"><thead><tr><th>Pessoa</th><th>Perfil</th><th>Senha</th><th>Recebe o código em</th>' + (pode ? '<th>Ações</th>' : '') + '</tr></thead><tbody>' +
+      d.pessoas.map(function (p) {
+        var onde = [p.celularFinal ? "WhatsApp terminado em " + p.celularFinal : "", p.temEmail ? "e-mail" : ""].filter(Boolean).join(" e ") || '<span class="sga-sit perigo">sem celular e sem e-mail</span>';
+        return '<tr data-busca="' + esc((p.nome + " " + p.usuario).toLowerCase()) + '"><td data-r="Pessoa"><b>' + esc(p.nome) + '</b><div class="sga-q">' + esc(p.usuario) + (p.ativo ? "" : " · inativa") + '</div></td>' +
+          '<td data-r="Perfil">' + esc(SGA_ROT_PERFIL[p.perfil] || p.perfil) + '</td>' +
+          '<td data-r="Senha">' + (p.trocaPendente ? '<span class="sga-sit alerta">Troca pendente</span>' : '<span class="sga-sit ok">Em dia</span>') + (p.senhaTrocadaEm ? '<div class="sga-q">trocada em ' + esc(p.senhaTrocadaEm.slice(0, 16)) + '</div>' : '') + '</td>' +
+          '<td data-r="Código em">' + onde + '</td>' +
+          (pode ? '<td data-r="Ações"><div class="sga-linha"><button type="button" class="cadx-btn" onclick="SegAcessoTela_acaoPessoa_(\'exigirTrocaUsuario\', \'' + esc(p.id) + '\')"' + (p.ativo ? "" : " disabled") + '>Exigir nova senha</button>' +
+            '<button type="button" class="cadx-btn" onclick="SegAcessoTela_acaoPessoa_(\'zerarSegundoFator\', \'' + esc(p.id) + '\')"' + (p.ativo ? "" : " disabled") + '>Zerar segundo fator</button></div></td>' : '') + '</tr>';
+      }).join("") + '</tbody></table></div></div>';
+
+    var ev = d.eventos || {};
+    var reg = '<div class="sga-bloco"><h3>Registro de segurança</h3><div class="sga-filtros">' +
+      '<label>Período<select id="sgaDias"><option value="1">Hoje e ontem</option><option value="7" selected>7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select></label>' +
+      '<label>Pessoa (login)<input type="search" id="sgaRegUsuario" placeholder="todas"></label>' +
+      '<label>Evento<select id="sgaRegEvento"><option value="">Todos</option>' + Object.keys(ev).map(function (e) { return '<option value="' + esc(e) + '">' + esc(ev[e]) + '</option>'; }).join("") + '</select></label>' +
+      '<button type="button" class="cadx-btn" onclick="SegAcessoTela_registro_()">Mostrar</button></div><div id="sgaRegistro"></div></div>';
+
+    c.innerHTML = sit + codigo + troca + pessoas + reg;
+    SegAcessoTela_pintarRegistro_(d.registro || []);
+  }
+
+  function SegAcessoTela_filtrar_() {
+    var q = String((document.getElementById("sgaBusca") || {}).value || "").trim().toLowerCase();
+    document.querySelectorAll("#sgaPessoas tbody tr").forEach(function (tr) { tr.style.display = !q || tr.getAttribute("data-busca").indexOf(q) >= 0 ? "" : "none"; });
+  }
+
+  function SegAcessoTela_pintarRegistro_(lista) {
+    var alvo = document.getElementById("sgaRegistro"), esc = SegAcesso_esc_;
+    if (!alvo) return;
+    if (!lista.length) { alvo.innerHTML = '<p class="sga-q">Nenhum evento no período.</p>'; return; }
+    var tom = function (e) { return /FALHA|ERRADO|BLOQUEADO|NEGADO|VENCIDO/.test(e) ? "perigo" : /EXIGIDA|ZERADO|RECUPERACAO|CONFIG|MODELO/.test(e) ? "alerta" : "ok"; };
+    alvo.innerHTML = '<div class="table-responsive"><table class="table sga-tabela"><thead><tr><th>Quando</th><th>Evento</th><th>Pessoa</th><th>IP e aparelho</th><th>Detalhe</th></tr></thead><tbody>' +
+      lista.map(function (l) {
+        return '<tr><td data-r="Quando">' + esc(l.quando) + '</td><td data-r="Evento"><span class="sga-sit ' + tom(l.evento) + '">' + esc(l.rotulo) + '</span></td>' +
+          '<td data-r="Pessoa">' + esc(l.usuario || "-") + (l.perfil ? '<div class="sga-q">' + esc(SGA_ROT_PERFIL[l.perfil] || l.perfil) + '</div>' : '') + '</td>' +
+          '<td data-r="IP e aparelho">' + esc(l.ip || "-") + (l.aparelho ? '<div class="sga-q">' + esc(l.aparelho) + '</div>' : '') + '</td>' +
+          '<td data-r="Detalhe">' + esc(l.detalhe) + (l.por ? '<div class="sga-q">por ' + esc(l.por) + '</div>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>' + (lista.length >= 500 ? '<p class="sga-q">Mostrando os 500 mais recentes. Diminua o período ou filtre pela pessoa.</p>' : '');
+  }
+
+  function SegAcessoTela_registro_() {
+    var alvo = document.getElementById("sgaRegistro");
+    if (alvo) alvo.innerHTML = '<p class="sga-q">Carregando...</p>';
+    SegAcessoTela_chamar_("registro", { dias: Number((document.getElementById("sgaDias") || {}).value || 7), usuario: (document.getElementById("sgaRegUsuario") || {}).value || "", evento: (document.getElementById("sgaRegEvento") || {}).value || "" },
+      function (r) { SegAcessoTela_pintarRegistro_(r.registro || []); },
+      function (m) { if (alvo) alvo.innerHTML = '<p class="sga-q" role="alert">' + SegAcesso_esc_(m) + '</p>'; });
+  }
+
+  function SegAcessoTela_gravar_() {
+    var modo = (document.querySelector('input[name="sgaModo"]:checked') || {}).value || "DESLIGADO";
+    var perfis = []; document.querySelectorAll(".sga-perfil").forEach(function (el) { if (el.checked) perfis.push(el.value); });
+    var btn = document.getElementById("sgaGravar"), msg = document.getElementById("sgaGravarMsg");
+    var d = SGA.painel || {}, mod = d.modelo || {};
+    if (modo === "WHATSAPP" && mod.status !== "APPROVED" && !confirm("O modelo do WhatsApp ainda não aparece como aprovado pela Meta. Enquanto isso o código vai por e-mail. Gravar assim mesmo?")) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Gravando..."; }
+    SegAcessoTela_chamar_("gravarConfig", { modo: modo, perfis: perfis }, function (r) {
+      SGA.painel.config = r.config; SegAcessoTela_desenhar_();
+      var m = document.getElementById("sgaGravarMsg"); if (m) m.textContent = r.message || "Gravado.";
+    }, function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Gravar"; }
+      if (msg) msg.textContent = "Não gravou: " + e;
+    });
+  }
+
+  function SegAcessoTela_modelo_(acao, btn) {
+    var msg = document.getElementById("sgaModeloMsg");
+    if (btn) btn.disabled = true;
+    if (msg) msg.textContent = "Falando com a Meta...";
+    SegAcessoTela_chamar_(acao, {}, function (r) {
+      if (btn) btn.disabled = false;
+      if (r.situacao && SGA.painel) SGA.painel.modelo = Object.assign({ nome: "sgo_codigo_acesso" }, r.situacao.status === "NAO_CADASTRADO" ? {} : r.situacao);
+      var t = r.texto || "Pronto.";
+      SegAcessoTela_desenhar_();
+      var m = document.getElementById("sgaModeloMsg"); if (m) m.textContent = t;
+      var det = document.querySelector("#sgaCorpo details"); if (det) det.open = true;
+    }, function (e) { if (btn) btn.disabled = false; if (msg) msg.textContent = e; });
+  }
+
+  function SegAcessoTela_exigirTodos_() {
+    var conf = typeof CadUI_confirmar_ === "function" ? CadUI_confirmar_ : null;
+    var executar = function (motivo, fechar, reabilitar) {
+      SegAcessoTela_chamar_("exigirTrocaTodos", { motivo: motivo, confirmar: true }, function (r) { if (fechar) fechar(); if (typeof CadUI_aviso_ === "function") CadUI_aviso_(r.message, "ok"); else alert(r.message); SegAcessoTela_render_(); },
+        function (e) { if (reabilitar) reabilitar(e); else alert(e); });
+    };
+    if (!conf) { var m = prompt("Motivo da troca de senha de todos (fica no registro):"); if (m) executar(m); return; }
+    conf({ titulo: "Exigir troca de senha de todos", risco: true, botao: "Exigir de todos",
+      texto: "<p>Todas as contas ativas (equipe, clientes e representadas) vão ver a tela <b>Crie sua nova senha</b> no próximo login e não abrem nada antes de trocar. Quem já está no sistema vê a tela em até 5 minutos. <b>Você também.</b></p>",
+      motivo: { rotulo: "Motivo", min: 5, dica: "Fica no registro de segurança com o seu nome, a data e a hora." },
+      aoConfirmar: function (v, fechar, reabilitar) { executar(v.motivo, fechar, reabilitar); } });
+  }
+
+  function SegAcessoTela_acaoPessoa_(acao, id) {
+    var p = ((SGA.painel || {}).pessoas || []).filter(function (x) { return x.id === id; })[0] || { nome: "" };
+    var zerar = acao === "zerarSegundoFator";
+    var titulo = zerar ? "Zerar segundo fator de " + p.nome : "Exigir nova senha de " + p.nome;
+    var texto = zerar ? "<p>Desconecta todos os aparelhos confiados e as sessões abertas desta pessoa. Nas próximas <b>24 horas</b> ela entra só com a senha (para quem perdeu o celular). <b>Antes</b>, confira o celular e o e-mail dela em Administração &gt; Usuários.</p>"
+      : "<p>No próximo login a pessoa vê a tela <b>Crie sua nova senha</b> e não abre nada antes de trocar. Se ela estiver dentro do sistema, a tela abre em até 5 minutos.</p>";
+    var executar = function (motivo, fechar, reabilitar) {
+      SegAcessoTela_chamar_(acao, { usuarioId: id, motivo: motivo }, function (r) { if (fechar) fechar(); if (typeof CadUI_aviso_ === "function") CadUI_aviso_(r.message, "ok"); else alert(r.message); SegAcessoTela_render_(); },
+        function (e) { if (reabilitar) reabilitar(e); else alert(e); });
+    };
+    if (typeof CadUI_confirmar_ !== "function") { var m = prompt(titulo + " — motivo:"); if (m) executar(m); return; }
+    CadUI_confirmar_({ titulo: titulo, texto: texto, risco: zerar, botao: zerar ? "Zerar segundo fator" : "Exigir nova senha",
+      motivo: { rotulo: "Motivo", min: 5, dica: "Ex.: perdeu o celular; trocou de número; suspeita de senha vazada. Fica no registro com o seu nome." },
+      aoConfirmar: function (v, fechar, reabilitar) { executar(v.motivo, fechar, reabilitar); } });
+  }
+</script>

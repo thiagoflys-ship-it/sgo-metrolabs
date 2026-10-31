@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "4e223730d75d",
+ "versao": "0c1e7673b6ed",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3324,6 +3324,110 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Dúvidas frequentes",
      "texto": "Por que não há busca por nome? Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é pelo CNPJ ou CPF completo.\nAparece \"Muitas buscas seguidas\": espere o tempo indicado e busque de novo com o documento ou a série conferidos.\nO modelo não aparece na lista: peça à Metrolabs, pelo Canal geral, para incluir no catálogo.\nO relatório final no portal, o aceite do encerramento, as peças e os custos entram nas próximas etapas; enquanto isso, combine pela conversa do chamado."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_SEGURANCA_ACESSO.md",
+   "titulo": "Manual: entrar no SGO+ com segurança",
+   "tela": "dashboard",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Vale para todos que entram no SGO+: equipe da Metrolabs, clientes e empresas representadas, no computador, no celular e no aplicativo SGO+ Campo."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O SGO+ guarda dados de clientes, equipamentos e documentos técnicos. Para impedir que alguém de fora entre com uma senha descoberta, o sistema pode pedir duas coisas na entrada:\nUma senha nova, criada por você, quando a gestão pede a troca.\nUm código de 6 números, enviado ao seu celular (WhatsApp) ou ao seu e-mail, depois da senha certa."
+    },
+    {
+     "titulo": "Crie sua nova senha",
+     "texto": "Quando a gestão pede a troca, depois do usuário e da senha aparece a tela Crie sua nova senha. Nada do sistema abre antes da troca. Se você já estiver dentro do sistema, a tela aparece em até 5 minutos e pede também a senha atual.\n1. Digite a senha nova.\n2. Digite a mesma senha de novo no segundo campo.\n3. Confira a lista abaixo dos campos: cada regra cumprida fica verde.\n4. Toque em Salvar a senha nova e entrar."
+    },
+    {
+     "titulo": "Crie sua nova senha > Regras da senha nova",
+     "texto": "8 caracteres ou mais.\nLetras e números juntos.\nNão pode começar nem terminar com espaço.\nDiferente da senha atual.\nDifícil de adivinhar: nada de 12345678, senha123, sequências, repetições, o seu nome, o seu login ou o nome da empresa.\n\nDica: junte duas ou três palavras que só você conhece com alguns números. Não use a mesma senha de outros sites."
+    },
+    {
+     "titulo": "Crie sua nova senha > O que acontece depois",
+     "texto": "Você entra no sistema com a sessão de agora.\nOs outros aparelhos e sessões abertas com a senha antiga são desconectados.\nDa próxima vez, entre com a senha nova.\n\nSe a mensagem disser que a senha não foi aceita, ela explica o motivo. Corrija e toque de novo em Salvar. Se preferir sair sem trocar, toque em Sair sem trocar: na próxima entrada a tela aparece de novo."
+    },
+    {
+     "titulo": "Código de acesso no celular",
+     "texto": "Depois da senha certa, o sistema pode mostrar Digite o código de acesso. A tela diz para onde o código foi, por exemplo \"WhatsApp terminado em 94\" ou \"e-mail j•••o@metrolabs.com.br\".\n1. Abra a mensagem do WhatsApp (ou o e-mail) com o código do SGO+. No WhatsApp, o botão Copiar código copia os 6 números.\n2. Digite ou cole os 6 números no campo Código de 6 números. No celular o campo entra sozinho quando os 6 números estão completos.\n3. Se o aparelho é seu, deixe marcado Confiar neste aparelho por 30 dias.\n4. Toque em Confirmar e entrar."
+    },
+    {
+     "titulo": "Código de acesso no celular > Regras do código",
+     "texto": "Vale por 10 minutos e só pode ser usado uma vez.\nSão 5 tentativas por entrada. Depois de 5 códigos errados a entrada é cancelada: volte e entre de novo com o usuário e a senha.\nPara pedir outro código, espere 60 segundos e toque em Reenviar código. São no máximo 3 reenvios por entrada. Quando chega um código novo, o anterior não vale mais.\nReceber por e-mail manda o código para o e-mail do seu cadastro, quando o primeiro foi pelo WhatsApp.\nA Metrolabs nunca pede o código por telefone, mensagem ou e-mail. Não passe o código para ninguém."
+    },
+    {
+     "titulo": "Código de acesso no celular > Confiar neste aparelho",
+     "texto": "Com a opção marcada, o SGO+ não pede o código naquele celular ou computador por 30 dias. No celular ela já vem marcada. Em computador de uso compartilhado, deixe desmarcada.\n\nA troca de senha desconecta todos os aparelhos confiados: depois dela, o código volta a ser pedido nos outros aparelhos."
+    },
+    {
+     "titulo": "O código não chegou",
+     "texto": "Confira se o celular está com internet.\nO e-mail pode levar até 1 minuto. Veja também a pasta de lixo eletrônico.\nToque em Reenviar código depois de 60 segundos, ou em Receber por e-mail.\nSe nada chegar, peça à gestão do SGO+ para conferir o seu celular (com DDD) e o seu e-mail no cadastro.\nSe você trocou ou perdeu o celular, avise a gestão: ela corrige o número e libera a sua entrada."
+    },
+    {
+     "titulo": "Senha errada várias vezes",
+     "texto": "Depois de 5 senhas erradas no mesmo usuário, o sistema segura novas tentativas por 15 minutos. A mensagem avisa quantas tentativas faltam antes disso. Se esqueceu a senha, peça à gestão para redefinir. A senha redefinida é provisória: na entrada seguinte você cria a sua."
+    },
+    {
+     "titulo": "No aplicativo SGO+ Campo",
+     "texto": "O aplicativo do técnico segue as mesmas regras: depois da senha, ele pode pedir o código (com Confiar neste aparelho já marcado) ou a senha nova. Nada do que está guardado no aparelho é perdido durante a troca."
+    },
+    {
+     "titulo": "Se não foi você",
+     "texto": "Se chegar um código que você não pediu, alguém tentou entrar com a sua senha. Não use o código, troque a sua senha assim que puder e avise a gestão do SGO+."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_SEGURANCA_ACESSO_GESTAO.md",
+   "titulo": "Manual da gestão: segurança do acesso",
+   "tela": "seguranca_acesso",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Tela: Administração > Segurança do acesso. Administrador, Diretoria e Gestor consultam; só o Administrador altera.\n\nPedido do dono (31/10/2026): \"Quero que da próxima vez que todos entrarem no sistema apareça uma tela de mude sua senha e isso é obrigatório, também queria que gerasse token e enviasse ao celular cadastrado, temos que proteger o sistema de invasões.\""
+    },
+    {
+     "titulo": "O que a tela faz",
+     "texto": "Situação: código no celular ligado ou desligado, trocas de senha pendentes, situação do modelo do WhatsApp na Meta, quantas pessoas estão sem celular válido, sem e-mail válido e com a senha ainda no formato antigo.\nCódigo no celular (segundo fator): Desligado, Só e-mail ou WhatsApp com e-mail de reserva, para todos ou só para alguns perfis.\nTroca de senha obrigatória: exige a troca de todas as contas ativas.\nPessoas: para cada pessoa, a situação da senha e onde ela recebe o código, com Exigir nova senha e Zerar segundo fator.\nRegistro de segurança: cada entrada, senha errada, código enviado, código usado ou errado, troca de senha, configuração alterada e zeramento, com quando, quem, IP, aparelho e quem fez."
+    },
+    {
+     "titulo": "Ordem de implantação",
+     "texto": "Siga esta ordem. Cada passo pode esperar o anterior sem prejuízo.\n1. Publicar com tudo desligado. O código começa desligado e ninguém é marcado para trocar a senha. Nada muda para as pessoas, a não ser que a senha passa a ser guardada no formato forte no próximo login de cada uma e que conta nova (ou senha redefinida em Usuários) já nasce provisória.\n2. Cadastrar o modelo na Meta. Em Modelo do WhatsApp na Meta, toque em Cadastrar modelo na Meta (ou peça ao suporte para rodar o script do servidor). Toque em Consultar situação até aparecer Aprovado.\n3. Ligar a troca obrigatória para todos. Toque em Exigir troca de senha de todos, escreva o motivo e confirme (ou peça ao suporte para rodar o script do servidor). Acompanhe as trocas pendentes na Situação.\n4. Ligar o código. Antes, complete o e-mail e o celular de quem aparece sem. Comece com Só e-mail, ou só com alguns perfis; depois da aprovação do modelo, passe para WhatsApp com e-mail de reserva."
+    },
+    {
+     "titulo": "Configurar o código no celular",
+     "texto": "1. Escolha Desligado, Só e-mail ou WhatsApp com e-mail de reserva.\n2. Marque os perfis que recebem o código. Nenhum marcado vale para todos, inclusive Cliente e Representada.\n3. Toque em Gravar. Vale a partir do próximo login de cada pessoa.\n\nCom WhatsApp: o código vai para o celular do cadastro pelo WhatsApp oficial. Se a pessoa não tem celular válido, se a Meta recusar, se o modelo não estiver aprovado ou se o WhatsApp não estiver configurado em Chaves e senhas, o código vai por e-mail e a tela diz isso para a pessoa."
+    },
+    {
+     "titulo": "Configurar o código no celular > O modelo da Meta",
+     "texto": "A Meta exige a categoria Autenticação para mandar código e não aceita texto livre nessa categoria. O texto é o padrão da Meta em português, com o código em destaque, a recomendação \"Para sua segurança, não compartilhe este código.\", o aviso \"Este código expira em 10 minutos.\" e o botão Copiar código. O nome do modelo é sgo_codigo_acesso, em pt_BR.\n\nO código é pedido pela própria pessoa naquela hora, então sai a qualquer hora. O piloto do WhatsApp não segura este modelo, e nenhuma outra mensagem vai pelo WhatsApp neste fluxo."
+    },
+    {
+     "titulo": "Recuperar o acesso de uma pessoa",
+     "texto": "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em Zerar segundo fator. Os aparelhos confiados e as sessões dela caem e, nas próximas 24 horas, ela entra só com a senha.\nSenha pode ter vazado: toque em Exigir nova senha. Na próxima entrada (ou em até 5 minutos, se estiver dentro) ela cria a senha nova.\nEsqueceu a senha: redefina em Administração > Usuários. A senha que você define é provisória.\n\nCada ação pede o motivo e fica no registro de segurança com o seu nome."
+    },
+    {
+     "titulo": "Se ninguém da gestão consegue entrar",
+     "texto": "O caminho de recuperação fica no servidor, fora do navegador. O responsável pelo sistema roda, dentro do contêiner do SGO+:\n\n npx tsx scripts/seguranca_recuperar_acesso.ts --usuario admin --senha-provisoria --desligar-codigo --motivo \"dono sem acesso ao celular\"\nSempre: zera o segundo fator do login (aparelhos confiados e sessões desconectados, 24 horas sem código).\n--senha-provisoria: grava uma senha provisória, mostrada uma única vez no terminal; no login a pessoa cria a dela.\n--desligar-codigo: desliga o código para todos (volte a ligar pela tela depois).\n--reativar: reativa a conta, se estiver inativa.\n\nTudo fica no registro de segurança como feito pelo servidor. A senha provisória não vai para nenhum registro."
+    },
+    {
+     "titulo": "Registro de segurança",
+     "texto": "Escolha o período (até 90 dias), o login e o evento e toque em Mostrar. Aparecem os 500 mais recentes. O registro nunca guarda senha, código ou token. O aparelho aparece resumido, por exemplo \"Celular Android · Chrome\"."
+    },
+    {
+     "titulo": "Proteções que valem sempre",
+     "texto": "Senha guardada só como resumo forte (PBKDF2, 600 mil rodadas, sal próprio por senha).\n5 senhas erradas no mesmo login, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.\nCódigo de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.\nAparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou zerar o segundo fator desconecta todos.\nSessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela."
     }
    ]
   }
