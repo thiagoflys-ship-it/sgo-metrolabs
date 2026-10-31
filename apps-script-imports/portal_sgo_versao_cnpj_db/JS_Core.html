@@ -781,7 +781,7 @@
   // equipamentos e vínculos, Caixa de decisões (itens das áreas dele), Regras de compras e Piloto do WhatsApp (pessoas).
   // Continuam fora: documentos técnicos, arquivo de documentos, inventário, Comercial (valores de venda), Integração Auvo,
   // Painel de qualidade, Configurações, Chaves e senhas e Matriz de avisos.
-  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "meus_avisos",
+  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "email", "frota", "conduta", "usuarios", "ponto", "compras_pedir", "compras_meus", "compras_informar", "meus_avisos",
     "clientes", "unidades", "equipamentos", "vinculos", "gestao_decisoes", "compras_regras", "whatsapp_piloto", "automacao_predial", "cadastro_correcoes"];
   // Rotina da empresa (cadastrar, editar e organizar): Administrador, Diretoria, Gestor, RH e Financeiro (SGO_ehGestaoRotina_ no servidor).
   function SGO_ehRotina_() { var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
@@ -4809,6 +4809,8 @@
       // 21/10/2026: Compras (todo colaborador interno pede peça; o grupo aparece depois que o servidor responde o acesso).
       var grupoCmp = document.getElementById("menu-secao-compras");
       if (grupoCmp && grupoCmp.style.display !== "none") itens.push({ icone: '<i class="fas fa-cart-plus" aria-hidden="true"></i>', legenda: "Pedir peça", mod: "compras_pedir" });
+      // 31/10/2026: informar a compra feita com o cartão da empresa (ou do próprio bolso) pelo celular, com a foto do comprovante
+      if (grupoCmp && grupoCmp.style.display !== "none") itens.push({ icone: '<i class="fas fa-receipt" aria-hidden="true"></i>', legenda: "Informar compra", mod: "compras_informar" });
       // 21/10/2026: Assistência técnica (O.S. do técnico; o grupo aparece depois que o servidor responde o acesso).
       var grupoAst = document.getElementById("menu-secao-assistencia");
       if (grupoAst && grupoAst.style.display !== "none") itens.push({ icone: '<i class="fas fa-clipboard-list" aria-hidden="true"></i>', legenda: "Ordens de serviço", mod: "assistencia_os" });

@@ -52,6 +52,8 @@ function CmpFin_registrarPagamento_(eu, d) {
     if (arq) { campos.COMPROVANTE_ID = arq.id; campos.COMPROVANTE_NOME = arq.nome; campos.COMPROVANTE_URL = arq.url; }
     if (corrigindo) campos.FIN_REENVIO_TEXTO = correcao;
     SGO_DATA.update(CMP_ABAS.PEDIDOS, p.ID, campos);
+    // 31/10/2026: parcelas e a fatura de cada uma (conciliação do cartão, A pagar)
+    if (typeof CmpI_gerarParcelasSeguro_ === 'function') CmpI_gerarParcelasSeguro_(p.ID, eu);
     Cmp_historico_('REQUISICAO', r.ID, corrigindo ? 'PAGAMENTO_CORRIGIDO' : 'PAGAMENTO', eu, { texto: (corrigindo ? 'Pagamento corrigido (' + correcao + '): ' : 'Pagamento registrado: ') + Cmp_moeda_(valor) + ' em ' + Cmp_brDia_(pagoEm) + ' · ' + CmpP_formaTexto_(Object.assign({}, p, campos), true) + '. Enviado à conferência do Financeiro.' });
     var us = Cmp_usuarios_();
     CmpFin_idsFinanceiro_(us, [eu.id]).forEach(function (id) {
@@ -74,6 +76,7 @@ function CmpFin_conferir_(eu, d) {
     if (Cmp_up_(p.FIN_SITUACAO) !== 'AGUARDANDO') throw new Error('Não foi possível conferir: a compra está "' + CMP_FIN_SITUACOES[Cmp_up_(p.FIN_SITUACAO)] + '". Só se confere compra com o pagamento registrado e aguardando');
     if (eu.id === Cmp_s_(p.PAGAMENTO_POR_ID) || eu.id === Cmp_s_(p.EMITIDO_POR_ID)) throw new Error('Não foi possível conferir: foi você quem registrou esta compra ou o pagamento. Quem registra não confere a própria; outra pessoa do Financeiro (ou a Diretoria) confere');
     var r = SGO_DATA.getById(CMP_ABAS.REQUISICOES, Cmp_s_(p.REQUISICAO_ID)) || {};
+    if (Cmp_s_(r.COMPRADO_POR_ID) === eu.id) throw new Error('Não foi possível conferir: a compra ' + Cmp_s_(r.NUMERO) + ' foi feita por você. Quem comprou não confere a própria; outra pessoa do Financeiro (ou a Diretoria) confere');
     var campos = { FIN_SITUACAO: res, FIN_POR_ID: eu.id, FIN_POR_NOME: eu.nome, FIN_EM: Cmp_agora_(), FIN_OBS: obs, ATUALIZADO_EM: Cmp_agora_() };
     SGO_DATA.update(CMP_ABAS.PEDIDOS, p.ID, campos);
     Cmp_historico_('REQUISICAO', r.ID, 'FINANCEIRO_' + res, eu, { texto: (res === 'CONFERIDA' ? 'Conferida pelo Financeiro.' : 'Divergência apontada pelo Financeiro: ' + obs) + (res === 'CONFERIDA' && obs ? ' ' + obs : '') });
@@ -155,6 +158,7 @@ function CmpFin_semPedido_(eu, d) {
       VALOR_TOTAL: Cmp_r2_(valor), VALOR_PAGO: Cmp_r2_(valor), PAGO_EM: pagoEm, COMPROVANTE_ID: arq.id, COMPROVANTE_NOME: arq.nome, COMPROVANTE_URL: arq.url, PAGAMENTO_POR_ID: eu.id, PAGAMENTO_POR_NOME: eu.nome,
       EMITIDO_EM: agora, EMITIDO_POR_ID: eu.id, EMITIDO_POR_NOME: eu.nome, FIN_SITUACAO: 'AGUARDANDO', SEM_PEDIDO: 'SIM', SITUACAO: 'SEM_PEDIDO', ATUALIZADO_EM: agora }));
     SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, { PEDIDO_ID: ped.ID });
+    if (typeof CmpI_gerarParcelas_ === 'function') { try { CmpI_gerarParcelas_(ped, r, eu); } catch (eP) { console.error('Compras, parcelas: ' + ((eP && eP.message) || eP)); } }
     Cmp_historico_('REQUISICAO', r.ID, 'SEM_PEDIDO', eu, { publico: true, para: 'Entregue', texto: 'Compra feita fora do sistema, registrada por ' + eu.nome + '. Justificativa: ' + just });
     Cmp_historico_('REQUISICAO', r.ID, 'PAGAMENTO', eu, { texto: 'Valor ' + Cmp_moeda_(valor) + ' em ' + Cmp_brDia_(pagoEm) + ' · ' + fNome + ' · ' + CmpP_formaTexto_(pag, true) + '.' });
     CmpFin_idsFinanceiro_(Cmp_usuarios_(), [eu.id]).forEach(function (id) {
@@ -169,7 +173,7 @@ function CmpFin_ciente_(eu, d) {
   if (!(eu.gestor || eu.diretoria || eu.admin)) throw new Error('Não foi possível registrar a ciência: é da gestão (gestor, Diretoria ou Administrador)');
   return Cmp_comTrava_(function () {
     var r = CmpR_obter_(eu, d && d.requisicaoId, 'registrar a ciência');
-    if (!Cmp_sim_(r.SEM_PEDIDO) || Cmp_s_(r.GESTAO_CIENTE_EM)) throw new Error('Não foi possível registrar: não é compra sem pedido ou a ciência já foi registrada');
+    if (!CmpFin_exigeCiencia_(r)) throw new Error('Não foi possível registrar: a compra não pede ciência da gestão ou a ciência já foi registrada');
     if (Cmp_s_(r.SOLICITANTE_ID) === eu.id) throw new Error('Não foi possível registrar: a compra é sua. A ciência é de outro gestor ou da Diretoria');
     var campos = { GESTAO_CIENTE_EM: Cmp_agora_(), GESTAO_CIENTE_POR_NOME: eu.nome, GESTAO_CIENTE_TEXTO: Cmp_texto_(d.texto, 500), ATUALIZADO_EM: Cmp_agora_() };
     SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, campos);
@@ -194,7 +198,13 @@ function CmpFin_acoes_(eu, r, a) {
   var p = Cmp_s_(r.PEDIDO_ID) ? CmpFin_pedidoPorId_(r.PEDIDO_ID) : null, s = Cmp_up_(r.SITUACAO);
   a.pagamento = !!p && eu.comprador && ['PEDIDO_FEITO', 'RECEBIDA_DIVERGENCIA', 'DISPONIVEL', 'ENTREGUE'].indexOf(s) >= 0 && Cmp_up_(p.FIN_SITUACAO) !== 'CONFERIDA' && Cmp_up_(p.FIN_SITUACAO) !== 'AGUARDANDO';
   a.conferir = !!p && eu.financeiro && Cmp_up_(p.FIN_SITUACAO) === 'AGUARDANDO' && eu.id !== Cmp_s_(p.PAGAMENTO_POR_ID) && eu.id !== Cmp_s_(p.EMITIDO_POR_ID);
-  a.ciente = Cmp_sim_(r.SEM_PEDIDO) && !Cmp_s_(r.GESTAO_CIENTE_EM) && (eu.gestor || eu.diretoria || eu.admin) && eu.id !== Cmp_s_(r.SOLICITANTE_ID);
+  a.ciente = CmpFin_exigeCiencia_(r) && (eu.gestor || eu.diretoria || eu.admin) && eu.id !== Cmp_s_(r.SOLICITANTE_ID);
+}
+
+/** 31/10/2026: compra sem pedido sempre pede a ciência da gestão; a compra informada, só acima do limite da compra direta (INF_CIENCIA). */
+function CmpFin_exigeCiencia_(r) {
+  if (!Cmp_sim_(r.SEM_PEDIDO) || Cmp_s_(r.GESTAO_CIENTE_EM) || Cmp_up_(r.SITUACAO) === 'CANCELADA') return false;
+  return Cmp_up_(r.ORIGEM) !== 'INFORMADA' || Cmp_sim_(r.INF_CIENCIA);
 }
 
 function CmpFin_pendencias_(add, ctx, r, o) {
@@ -211,12 +221,14 @@ function CmpFin_pendencias_(add, ctx, r, o) {
       titulo: 'Corrigir a compra ' + num + ' (' + tit + '): divergência do Financeiro', detalhe: Cmp_s_(p.FIN_POR_NOME) + ' apontou: ' + Cmp_s_(p.FIN_OBS).slice(0, 220),
       oQueFazer: 'Abra a ficha da compra, toque em "Registrar o pagamento", corrija o valor, a forma ou o comprovante e escreva o que foi corrigido.', tela: CMP_PEND_TELA('compras', Cmp_s_(r.ID)) }));
   }
-  if (Cmp_sim_(r.SEM_PEDIDO) && !Cmp_s_(r.GESTAO_CIENTE_EM)) {
+  if (CmpFin_exigeCiencia_(r)) {
     var sol = Cmp_s_(r.SOLICITANTE_ID), area = Cmp_up_(r.SOLICITANTE_AREA) || Cmp_up_(o.regras.areaCompras), extra = { area: area, naoPode: [sol], desde: Cmp_dia_(r.CRIADO_EM) || o.hoje };
     var conf = []; try { conf = ((typeof Ges_cfg_ === 'function' ? Ges_cfg_().gestoresPorArea : {}) || {})[area] || []; } catch (e) { conf = []; }
     if (!conf.length) { var us = o.usuarios(), g = Object.keys(us).filter(function (id) { return us[id].ativo && us[id].perfil === 'GESTOR' && us[id].area === area && id !== sol; })[0]; if (g) { extra.decisor = g; extra.motivoDecisor = 'Gestor da área de quem comprou (cadastro; a área ainda não tem responsável em Regras e responsáveis).'; } }
+    var inform = Cmp_up_(r.ORIGEM) === 'INFORMADA';
     add(Pend_item_('compras_sem_pedido', { id: 'CMP:SEMPED:' + r.ID, nome: num, publico: 'GESTAO', responsavel: Cmp_s_(r.SOLICITANTE_NOME), responsavelId: sol, gravidade: 'ATENCAO', dias: null,
-      titulo: 'Compra feita sem pedido no sistema: ' + num + ' (' + tit + ') por ' + Cmp_s_(r.SOLICITANTE_NOME), detalhe: 'Justificativa: ' + Cmp_s_(r.SEM_PEDIDO_JUSTIFICATIVA).slice(0, 220),
+      titulo: (inform ? 'Compra informada acima do limite da compra direta: ' : 'Compra feita sem pedido no sistema: ') + num + ' (' + tit + ') por ' + Cmp_s_(r.SOLICITANTE_NOME),
+      detalhe: inform ? 'Compra feita e informada depois, sem cotação nem aprovação no sistema. ' + Cmp_json_(r.INF_APONTAMENTOS, []).map(function (x) { return x.texto; }).join(' ').slice(0, 200) : 'Justificativa: ' + Cmp_s_(r.SEM_PEDIDO_JUSTIFICATIVA).slice(0, 220),
       oQueFazer: 'Abra a ficha da compra em Compras > Fila de compras, leia a justificativa e toque em "Ciente". Converse com a pessoa para que a próxima compra passe pelo sistema.',
       tela: CMP_PEND_TELA('compras', Cmp_s_(r.ID)), extra: extra }));
   }

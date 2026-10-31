@@ -45,7 +45,9 @@ var CNDQ_ORIGENS = {
   // 21/10/2026: Assistente do ponto nativo do SGO+ (SGO_Ponto_Rodada.js): 3º esquecimento no mês = sugestão informativa
   PONTO: { nome: 'Assistente do ponto', tela: 'ponto' },
   // 20/10/2026: avaliação do gestor (SGO_Gestao_Avaliacao.js). Sugestão sobre gestor: só a Diretoria vê e decide.
-  GESTAO: { nome: 'Desempenho da gestão', tela: 'gestao_desempenho' }
+  GESTAO: { nome: 'Desempenho da gestão', tela: 'gestao_desempenho' },
+  // 31/10/2026: compra no cartão da empresa que está na fatura e ninguém informou (SGO_Compras_Faturas.js). A gestão decide.
+  COMPRAS: { nome: 'Compras (cartão da empresa)', tela: 'compras_conciliacao' }
 };
 
 // ------------------------------------------------------------
@@ -372,7 +374,8 @@ function Conduta_coletarSugestoes_(quem) {
   var usuarios = Cndq_usuarios_();
   var desde = Cndq_menosDias_(CNDQ_JANELA_DIAS);
   var avisos = [], candidatos = [], porOrigem = {};
-  var fontes = [['FROTA', Cndq_coletarFrota_], ['AUVO', Cndq_coletarAuvo_], ['QUALIDADE', Cndq_coletarQualidade_], ['ATIVIDADES', Cndq_coletarAtividades_], ['AVISOS', Cndq_coletarAvisos_]];
+  var fontes = [['FROTA', Cndq_coletarFrota_], ['AUVO', Cndq_coletarAuvo_], ['QUALIDADE', Cndq_coletarQualidade_], ['ATIVIDADES', Cndq_coletarAtividades_], ['AVISOS', Cndq_coletarAvisos_],
+    ['COMPRAS', function (us) { return typeof Compras_candidatosConduta_ === 'function' ? Compras_candidatosConduta_(us) : []; }]];
   fontes.forEach(function (f) {
     try { var c = f[1](usuarios, desde, avisos) || []; porOrigem[f[0]] = c.length; candidatos = candidatos.concat(c); }
     catch (e) { avisos.push(CNDQ_ORIGENS[f[0]].nome + ': não foi possível ler (' + String((e && e.message) || e) + ').'); porOrigem[f[0]] = 0; }
@@ -399,9 +402,9 @@ function Conduta_coletarSugestoes_(quem) {
   existentes.forEach(function (s) {
     if (SGO_UTILS.safeUpper(s.STATUS) !== 'PENDENTE' || vistas[String(s.CHAVE)]) return;
     var t = SGO_UTILS.safeUpper(s.ORIGEM_TIPO);
-    if (t !== 'KM_A_CONFERIR' && t !== 'OS_ABERTA' && t !== 'CIENCIA_PENDENTE' && t !== 'COMPROVANTE_PENDENTE') return;
+    if (t !== 'KM_A_CONFERIR' && t !== 'OS_ABERTA' && t !== 'CIENCIA_PENDENTE' && t !== 'COMPROVANTE_PENDENTE' && t !== 'COMPRA_NAO_INFORMADA') return;
     SGO_DATA.update(CNDQ_SHEETS.SUGESTAO, s.ID, { STATUS: 'SUPERADA', DECIDIDA_EM: agora, DECIDIDA_POR_NOME: 'Sistema',
-      MOTIVO: 'A origem foi resolvida em ' + Conduta_dataBr_(hoje) + ' (' + (t === 'KM_A_CONFERIR' ? 'KM conferido pela gestão' : t === 'OS_ABERTA' ? 'O.S. finalizada' : t === 'COMPROVANTE_PENDENTE' ? 'comprovante enviado ou pedido cancelado' : 'ciência confirmada') + ').' });
+      MOTIVO: 'A origem foi resolvida em ' + Conduta_dataBr_(hoje) + ' (' + (t === 'KM_A_CONFERIR' ? 'KM conferido pela gestão' : t === 'OS_ABERTA' ? 'O.S. finalizada' : t === 'COMPROVANTE_PENDENTE' ? 'comprovante enviado ou pedido cancelado' : t === 'COMPRA_NAO_INFORMADA' ? 'compra informada ou lançamento justificado pelo Financeiro' : 'ciência confirmada') + ').' });
     superadas++;
   });
   PropertiesService.getScriptProperties().setProperty(CNDQ_COLETA_PROP, agora);

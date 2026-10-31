@@ -19,7 +19,7 @@ const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO
   'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_QualifIA_Verificador.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js', 'SGO_EnviarDoc.js',
   'SGO_Comercial_Config.js', 'SGO_Comercial_Contatos.js', 'SGO_Comercial_Oportunidades.js', 'SGO_Comercial_Propostas.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Painel.js', 'SGO_Comercial_Precificacao.js',
   'SGO_CnpjConsulta.js', 'SGO_Compras_Config.js', 'SGO_Compras_Cotacoes.js', 'SGO_Compras_Financeiro.js', 'SGO_Compras_Fornecedores.js', 'SGO_Compras_Painel.js', 'SGO_Compras_Pedido.js',
-  'SGO_Compras_Requisicoes.js', 'SGO_Pendencias_Compras.js'].filter((f) => fs.existsSync(path.join(pastaLegado, f)));
+  'SGO_Compras_Requisicoes.js', 'SGO_Compras_Faturas.js', 'SGO_Compras_Informar.js', 'SGO_Compras_Relatorios.js', 'SGO_Frota_Gastos.js', 'SGO_Pendencias_Compras.js'].filter((f) => fs.existsSync(path.join(pastaLegado, f)));
 
 function ambiente(opcoes) {
   const o = opcoes || {};

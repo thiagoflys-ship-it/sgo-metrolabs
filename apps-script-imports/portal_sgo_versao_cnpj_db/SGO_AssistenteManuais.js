@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "0c1e7673b6ed",
+ "versao": "6b299da9e24d",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -259,6 +259,75 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Do cadastro ao relatório de qualificação (20/10/2026) > Vencimento da requalificação",
      "texto": "A validade do relatório de qualificação vira pendência Requalificação a vencer (30 dias antes) e Requalificação vencida na central de pendências, na Caixa de decisões da gestão (acompanhamento) e para o próprio cliente. No Cronograma de execução, ao trazer os equipamentos do cadastro, a tela avisa quais estão com a requalificação vencida ou a vencer. O novo relatório emitido substitui o vencimento anterior."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_COMPRAS_FINANCEIRO.md",
+   "titulo": "Manual de Compras para o Financeiro e a gestão: cartões, conciliação das faturas, A pagar, painel e relatórios",
+   "tela": "compras_conciliacao",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR",
+    "FINANCEIRO"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 31/10/2026. Telas: Compras > Cartões da empresa, Conciliação das faturas, A pagar e Painel de compras. Para quem: Financeiro (perfil ou área), Diretoria, Administrador e o gestor da área de Compras. A compra informada pelos colaboradores está no manual do módulo Compras (seção \"Informar compra já feita\")."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Desde 31/10/2026 (pedido do dono), as compras feitas com os cartões da empresa, faturadas, por boleto, Pix, dinheiro do caixa ou com o dinheiro do próprio colaborador são informadas no sistema, com o comprovante. Cada compra ganha as suas parcelas ou o seu vencimento. Com isso o Financeiro:\nbate cada fatura de cartão com as compras informadas, importando o extrato que o banco exporta;\ncobra automaticamente quem responde pelo cartão quando há lançamento na fatura sem compra informada;\nvê numa lista só o que há a pagar (faturado, boleto, reembolso) e baixa com o comprovante;\ntira relatórios A4 por colaborador, por cliente e chamado, por forma de pagamento, do período e da conciliação de cada fatura, que ficam salvos."
+    },
+    {
+     "titulo": "Cartões da empresa",
+     "texto": "Cada cartão é cadastrado pelo final (os 4 últimos números; nunca o número inteiro), com apelido, tipo (crédito, débito ou os dois), responsável, dia de fechamento, dia de vencimento, limite (opcional) e observações. Financeiro, Diretoria e Administrador cadastram; compradores e gestores consultam.\n1. Compras > Cartões da empresa > \"Novo cartão\".\n2. Preencha o final, o apelido, o tipo, o responsável e os dois dias (estão na fatura).\n3. \"Salvar o cartão\".\n\nAo salvar, as compras já informadas com aquele final se ligam ao cartão e a fatura de cada parcela ainda não conciliada é recalculada com os dias reais. Na edição, só o que mudou é gravado, com o motivo, e fica no histórico do cartão. Dois cartões ativos com o mesmo final não são aceitos.\n\n\"O que falta\" lista, uma linha por condição, o que impede a conciliação completa: nenhum cartão cadastrado, cartão sem responsável ativo, cartão de crédito sem os dias de fechamento e vencimento, final usado em compras e ainda não cadastrado (com o botão para cadastrar) e ninguém com o perfil ou a área Financeiro."
+    },
+    {
+     "titulo": "Em que fatura cai cada parcela",
+     "texto": "A fatura é identificada pelo mês do vencimento.\nCompra feita antes do dia do fechamento entra na fatura que fecha no mesmo mês; no dia do fechamento ou depois, na seguinte. O vencimento cai no mesmo mês do fechamento quando o dia do vencimento é maior que o do fechamento; senão, no mês seguinte.\nParcelado: a parcela 1 cai na fatura da compra; a parcela 2 na seguinte, e assim por diante. O valor é o total dividido pelas parcelas; a diferença de centavos fica na primeira.\nCartão ainda não cadastrado: a fatura é estimada (mês seguinte ao da compra) e aparece marcada \"fatura estimada\" até o cadastro.\nFaturado e boleto: um vencimento na data informada. Reembolso: a pagar ao colaborador em 5 dias úteis. Pix, transferência, débito e dinheiro do caixa: pago na data da compra (confere pelo comprovante).\n\nAs compras do fluxo normal (pedido de compra) também ganham as parcelas quando o pagamento é registrado."
+    },
+    {
+     "titulo": "Conciliação das faturas",
+     "texto": "1. Compras > Conciliação das faturas: escolha o cartão e o mês da fatura (mês do vencimento). A tela mostra o total do extrato, o total das compras informadas, a diferença e os itens em aberto.\n2. Exporte a fatura pelo banco em CSV, Excel (.xlsx) ou OFX. As colunas são reconhecidas pelo nome (data, descrição ou estabelecimento, valor, parcela e final do cartão, quando houver).\n3. Escolha o arquivo e toque em \"Ver a prévia\": mostra cada lançamento e com que compra ele casa. Nada é gravado.\n4. \"Importar e conciliar\" grava os lançamentos e casa sozinho: mesmo final, valor com diferença até R$ 0,05, data da compra até 3 dias e, quando o extrato traz \"02/03\", a mesma parcela. Lançamento já importado não entra duas vezes; pagamento da fatura, saldo, estorno e crédito são ignorados com o motivo. O arquivo fica guardado e listado em \"Importações\".\n\nSituações:\nSituação | O que é | O que fazerConciliada | Lançamento e compra casados | Nada\nNão informada | Está na fatura e ninguém informou a compra | O responsável do cartão é cobrado. Se a compra existe com valor diferente (frete, por exemplo), \"Casar\" com a parcela. Se não é compra (tarifa, assinatura, anuidade), \"Justificar\"\nJustificada | Lançamento explicado sem compra, com o motivo | \"Reabrir\" volta a cobrar\nNão está na fatura | Compra informada que não veio no extrato deste mês | \"Próxima fatura\" (compra perto do fechamento) ou \"Divergente\" (quem comprou é avisado)\nDivergente | Compra com problema apontado | Resolva com quem comprou e toque em \"Voltar a conciliar\"\nToda ação manual pede o motivo (pelo menos 15 letras) e vai para a trilha, com antes, depois, quem e quando. Quem comprou ou informou a compra não concilia a própria; outra pessoa do Financeiro ou a Diretoria faz."
+    },
+    {
+     "titulo": "Conciliação das faturas > Fechar a fatura",
+     "texto": "Com tudo conciliado ou justificado, \"Fechar a fatura\" grava os totais. Se algo ficou aberto e é preciso fechar assim mesmo, \"Fechar com ressalva\" pede o motivo (pelo menos 20 letras) e o que ficou aberto continua na lista. Fatura fechada não aceita nova importação nem mudança de situação; reabrir é da Diretoria, com motivo.\n\n\"Relatório A4 da fatura\" gera o relatório da conciliação (resumo, lançamentos, compras, importações) e salva em HTML e PDF."
+    },
+    {
+     "titulo": "Cobrança de quem não informou",
+     "texto": "O lançamento \"Não informada\" vira na hora uma pendência no Início do responsável pelo cartão, com a data e a descrição do lançamento (sem valor), e aparece na aba \"Compras a informar\" dele, com o botão \"Informar esta compra\". Depois de 2 dias úteis (configurável), sai o e-mail no expediente (evento CP02 da matriz de avisos); no WhatsApp, só entra na contagem do resumo do dia, em dia útil. Depois de 5 dias úteis (configurável), entra na Caixa de decisões do gestor da área da pessoa e vira sugestão na fila do Programa de conduta, que a gestão decide; nada é automático. A sugestão some sozinha quando a compra é informada ou o lançamento é justificado. Lançamento de cartão sem responsável vai para o Financeiro, com o pedido de cadastrar o responsável."
+    },
+    {
+     "titulo": "A pagar",
+     "texto": "Compras > A pagar lista, por vencimento, as compras faturadas, os boletos e os reembolsos a colaboradores. No alto, o total a pagar, os vencidos e os reembolsos pendentes. \"Marcar como pago\" pede a data e o comprovante; no reembolso, o colaborador é avisado. Ninguém baixa o próprio reembolso. Vencido ou vencendo hoje aparece no Início do Financeiro, e o resumo do dia (evento CP03) vai no e-mail."
+    },
+    {
+     "titulo": "Conferência do Financeiro",
+     "texto": "Continua como antes, com a compra informada junto: selo \"Informada depois de feita\", os apontamentos (duplicidade possível, acima do comum, informada com atraso, cartão não cadastrado) e o comprovante. Quem comprou não confere a própria compra, nem quem a registrou."
+    },
+    {
+     "titulo": "Ciência da gestão",
+     "texto": "Compra informada acima do limite da compra direta (R$ 1.000 no padrão) entra na Caixa de decisões da gestão até alguém tocar em \"Ciente\" na ficha, como a compra sem pedido."
+    },
+    {
+     "titulo": "Painel de compras",
+     "texto": "Compradores, gestores, Financeiro e Diretoria. No alto, os índices do período escolhido (30, 90, 180 ou 365 dias): total comprado, parcela informada depois de feita, tempo médio para informar e percentual no prazo, lançamentos na fatura não informados, taxa de conciliação, compras com apontamento, a pagar vencido, compras em aberto e entregas atrasadas, compras aguardando o Financeiro e faturas abertas.\nKanban: uma coluna por situação (as entregues dos últimos 30 dias); a cor da borda é a situação da entrega.\nGantt: cada barra vai do pedido (ou da data da compra informada) até a chegada; o tracejado é a previsão de entrega e o losango, o recebimento.\nIndicadores: gasto por forma de pagamento, por colaborador, por vínculo e nos últimos 6 meses.\nRelatórios: gerar e abrir de novo os relatórios A4.\nMês em detalhe: o painel mensal de antes e o relatório mensal."
+    },
+    {
+     "titulo": "Relatórios A4",
+     "texto": "Em Painel de compras > Relatórios (e na conciliação, o da fatura). Todos com o padrão dos documentos do SGO+, índice e gráficos, salvos em HTML e PDF na pasta \"Compras - Relatórios\" e listados em \"Relatórios gerados\":\nRelatório | ConteúdoCompras por colaborador | Gasto por pessoa com gráfico, formas e cartões usados, compras com apontamento, informadas com atraso e a lista\nCompras por cliente e chamado | Gasto por cliente, por chamado da Assistência (custo do atendimento) e por pedido do Comercial, e a lista\nCompras por forma de pagamento | Gasto por forma e por cartão, parcelas e vencimentos em aberto por mês\nTotal de compras do período | Gasto por mês, por vínculo, por origem (pedido de compra ou informada), por área e por fornecedor, controles e a lista\nConciliação da fatura do cartão | Resumo, lançamentos com a situação, compras da fatura e importações"
+    },
+    {
+     "titulo": "Regras",
+     "texto": "Em Compras > Regras de compras, quadro \"Compra informada depois de feita\": limite da compra direta, prazo para informar, até quantos dias atrás qualquer pessoa informa, quantas vezes a média é \"acima do comum\", prazo do reembolso, quando a cobrança vai por e-mail e quando vai à Caixa de decisões e ao Conduta. Cada mudança vira uma versão com motivo."
+    },
+    {
+     "titulo": "Integração",
+     "texto": "Assistência técnica: a ficha do chamado mostra \"Compras ligadas ao chamado\", com o custo para quem vê valor.\nComercial: a ficha do pedido aprovado mostra \"Compras deste pedido\", com o custo para quem vê valor.\nMinhas atividades: a compra informada que \"ainda vai chegar\" segue o recebimento normal; a peça disponível avisa quem comprou e vira a atividade de entrega do comprador."
     }
    ]
   },
@@ -519,11 +588,11 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Regras gerais que valem para todo envio (parte 1)",
-     "texto": "WhatsApp para vínculo CLT e PJ (decisão de 26/10/2026; Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). Os lembretes do ponto vão só para CLT. Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo. WhatsApp na hora só nos eventos marcados \"Na hora\" na matriz (desde 26/10/2026, qualquer evento pode ser marcado pelo Administrador ou pela Diretoria, com motivo). Fora deles e do resumo do dia, o envio fica PULADO em Notificações enviadas, com o motivo. Passou do teto do dia, o aviso fica no sistema e no e-mail. Eventos novos (26/10/2026): S69 \"Atividade vence hoje\" (desligado até a gestão marcar; sai uma vez por atividade, na primeira rodada do expediente do dia do prazo) e S70 \"Aviso urgente\" (quem publica um aviso escolhe a importância Urgente: vai também pelo WhatsApp na hora). Avisos por setor (26/10/2026): CP01 \"Avisos de Compras\" (requisição aprovada ou reprovada, item disponível, especificação devolvida, cancelamento, conferência) e VC01 \"Vencimentos que dependem de você\" (uma vez por dia, no e-mail de resumo: padrões de referência, calibrações e requalificações de equipamentos, documentos, CNH e veículos, só o vencido e o que vence em até 7 dias). A Assistência técnica tem os eventos AT01 a AT17. Escalonamento das atividades atrasadas por prioridade (26/10/2026): S71 \"cobrança ao responsável\" (nível 1), S72 \"escalada ao gestor da área\" (nível 2) e S73 \"escalada à Diretoria\" (nível 3). Saem no sistema e por e-mail na hora, uma vez por atividade e por previsão, só no expediente; o WhatsApp só sai se a gestão marcar \"Na hora\"."
+     "texto": "WhatsApp para vínculo CLT e PJ (decisão de 26/10/2026; Administração › Usuários › Vínculo: CLT, PJ ou Diretoria). Os lembretes do ponto vão só para CLT. Diretoria e vínculo não informado recebem pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe › Avisos e horários. Vale para todos os módulos, inclusive Frota, Programa de conduta, Avisos e Auvo. WhatsApp na hora só nos eventos marcados \"Na hora\" na matriz (desde 26/10/2026, qualquer evento pode ser marcado pelo Administrador ou pela Diretoria, com motivo). Fora deles e do resumo do dia, o envio fica PULADO em Notificações enviadas, com o motivo. Passou do teto do dia, o aviso fica no sistema e no e-mail. Eventos novos (26/10/2026): S69 \"Atividade vence hoje\" (desligado até a gestão marcar; sai uma vez por atividade, na primeira rodada do expediente do dia do prazo) e S70 \"Aviso urgente\" (quem publica um aviso escolhe a importância Urgente: vai também pelo WhatsApp na hora). Compras, cartão da empresa (31/10/2026): CP02 \"Compra no cartão da empresa sem informar\" (ao responsável pelo cartão: e-mail na hora, no expediente, depois de 2 dias úteis da importação da fatura; WhatsApp só na contagem do resumo do dia; a cobrança fica no Início até informar) e CP03 \"A pagar e conciliação do dia\" (ao Financeiro, no resumo de e-mail, sem WhatsApp). Avisos por setor (26/10/2026): CP01 \"Avisos de Compras\" (requisição aprovada ou reprovada, item disponível, especificação devolvida, cancelamento, conferência) e VC01 \"Vencimentos que dependem de você\" (uma vez por dia, no e-mail de resumo: padrões de referência, calibrações e requalificações de equipamentos, documentos, CNH e veículos, só o vencido e o que vence em até 7 dias). A Assistência técnica tem os eventos AT01 a AT17."
     },
     {
      "titulo": "Regras gerais que valem para todo envio (parte 2)",
-     "texto": "Os prazos de cada prioridade ficam em Caixa de decisões > Regras e responsáveis (padrão: Urgente 15 min, 1 h e 4 h; Alta 1, 4 e 24 h; Normal 4, 24 e 72 h; Baixa 24, 72 e 168 h). Evento marcado \"Na hora\" vai também pelo WhatsApp mesmo quando o módulo pediu só sistema ou e-mail: a matriz acrescenta o canal e confere expediente, vínculo, piloto e teto. Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora). Evento \"vira histórico\": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído). Gestor da área no lugar de \"toda a gestão\": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística. O assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa. O piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista."
+     "texto": "Escalonamento das atividades atrasadas por prioridade (26/10/2026): S71 \"cobrança ao responsável\" (nível 1), S72 \"escalada ao gestor da área\" (nível 2) e S73 \"escalada à Diretoria\" (nível 3). Saem no sistema e por e-mail na hora, uma vez por atividade e por previsão, só no expediente; o WhatsApp só sai se a gestão marcar \"Na hora\". Os prazos de cada prioridade ficam em Caixa de decisões > Regras e responsáveis (padrão: Urgente 15 min, 1 h e 4 h; Alta 1, 4 e 24 h; Normal 4, 24 e 72 h; Baixa 24, 72 e 168 h). Evento marcado \"Na hora\" vai também pelo WhatsApp mesmo quando o módulo pediu só sistema ou e-mail: a matriz acrescenta o canal e confere expediente, vínculo, piloto e teto. Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora). Evento \"vira histórico\": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído). Gestor da área no lugar de \"toda a gestão\": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística. O assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa. O piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista."
     },
     {
      "titulo": "Matriz de avisos (Administrador e Diretoria)",
@@ -1587,7 +1656,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras."
+     "texto": "Versão de 31/10/2026. Telas: Compras > Pedir peça ou material, Informar compra já feita, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras. Os cartões da empresa, a conciliação das faturas e o A pagar estão no manual do Financeiro (Compras: cartões, conciliação e relatórios)."
     },
     {
      "titulo": "Para que serve",
@@ -1642,8 +1711,16 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Depois do pedido feito, o comprador toca em \"Registrar o pagamento\": valor pago, data, forma (a do pedido ou outra) e o comprovante (recibo, extrato, cupom ou boleto pago). A compra entra na Conferência do Financeiro como \"Aguardando conferência\", e o Financeiro é avisado no sistema e no resumo de e-mail (sem valor).\n\nCompras > Conferência do Financeiro (perfil ou área Financeiro, Diretoria e Administrador) lista as compras por mês, situação e final do cartão, com o valor do pedido, o valor pago (selo \"diferente\" quando não batem), o comprovante, a nota e os selos \"Sem pedido\" e \"Menos cotações\". \"Abrir o dossiê\" mostra a ficha completa (vínculo, orçamentos com os arquivos, aprovação, pedido, recebimento, pagamento). \"Conferida\" encerra a conferência; \"Divergente\" exige o que não bate e volta para quem registrou o pagamento, que corrige e reenvia com o que foi corrigido. Quem registrou a compra ou o pagamento não confere a própria. \"Baixar a planilha\" gera o arquivo CSV com a lista filtrada, para bater a fatura do cartão."
     },
     {
+     "titulo": "Informar compra já feita (parte 1)",
+     "texto": "Desde 31/10/2026 (pedido do dono), quem compra com o cartão da empresa, faturado, boleto, Pix, dinheiro do caixa ou com o próprio dinheiro informa a compra em Compras > Informar compra já feita, no celular ou no computador. Substitui o aviso no grupo do WhatsApp e o antigo \"Registrar compra feita fora do sistema\". A compra entra no mesmo cadastro das compras do fluxo normal (número REQ-ano-número), vai para a conferência do Financeiro e cada parcela cai na fatura certa do cartão. 1. Abra Compras > Informar compra já feita (no celular, também pelo atalho \"Informar compra\" da tela inicial). 2. Quadro 1, para que foi: escreva a finalidade (pelo menos 10 letras) e escolha o vínculo: chamado da Assistência técnica (a compra entra no custo do chamado), cliente (com a unidade e o número da O.S., se houver), pedido aprovado do Comercial (aparece na ficha do pedido), veículo da Frota ou uso interno (com o centro de custo e a explicação). Se houver orçamento ou pedido de compra, informe o número ou anexe o arquivo. 3. Quadro 2, o que foi comprado: um ou mais itens (o que é, quantidade e unidade), onde foi comprado, o valor total pago (como no comprovante) e a data da compra. Se a mercadoria ainda vai chegar, marque \"Ainda vai chegar\" e informe a previsão: Compras registra o recebimento e avisa você quando chegar. 4. Quadro 3, como foi pago: cartão de crédito da empresa (os 4 últimos números e as parcelas), cartão de débito, faturado ou boleto (com o vencimento), Pix, transferência, dinheiro do caixa ou dinheiro próprio (o reembolso vai para você e fica com o Financeiro, em 5 dias úteis). Nunca se digita o número inteiro do cartão. Cartão ainda não cadastrado: digite o final assim mesmo. 5. Quadro 4: a foto do comprovante (obrigatória) e a nota fiscal (foto ou PDF, ou o número;"
+    },
+    {
+     "titulo": "Informar compra já feita (parte 2)",
+     "texto": "sem nota, o motivo). 6. \"Conferir antes de enviar\" mostra os apontamentos; \"Enviar ao Financeiro\" grava.\n\nO sistema confere na hora e grava com o apontamento, para o Financeiro olhar:\nCompra parecida já informada (mesmo cartão ou mesma pessoa, mesmo valor, data próxima) ou o mesmo arquivo de comprovante: mostra a compra parecida e pede que você explique se é outra.\nInformada depois do prazo (2 dias úteis no padrão): pede o motivo do atraso. Compra de mais de 90 dias só o Financeiro e a gestão informam.\nValor acima do limite da compra direta (R$ 1.000 no padrão): vai também para a ciência da gestão na Caixa de decisões.\nValor bem acima da sua média de compras dos últimos 90 dias: marcado \"acima do comum\".\n\nCada pessoa informa as próprias compras. O comprador, o Financeiro e a gestão podem informar em nome de outra pessoa; quem comprou é avisado no sistema.\n\nNa aba \"Minhas compras informadas\" ficam as suas compras com o valor, a situação no Financeiro (aguardando, conferida, divergente com o texto), as parcelas e a fatura de cada uma, e o reembolso pago com o comprovante. Informou por engano? Abra a compra e toque em \"Cancelar o pedido\" com o motivo, enquanto o Financeiro não conferiu e nada foi conciliado.\n\nQuem responde por um cartão da empresa vê a aba \"Compras a informar\": os lançamentos da fatura daquele cartão que ninguém informou. \"Informar esta compra\" abre o formulário com o valor, a data e o cartão preenchidos. A cobrança fica no Início; depois de 2 dias úteis vai também por e-mail (no expediente) e, no WhatsApp, só entra na contagem do resumo do dia. Depois de 5 dias úteis, a gestão é avisada. Se o lançamento não foi compra (tarifa, assinatura), fale com o Financeiro."
+    },
+    {
      "titulo": "Compra feita sem pedido no sistema",
-     "texto": "Resposta do dono: a compra feita fora do sistema não é bloqueada, mas é registrada. Em Meus pedidos de compra, \"Registrar compra feita fora do sistema\": para que foi, o vínculo, o que foi comprado, onde, o valor, a data, a forma de pagamento, o comprovante e por que foi fora do sistema (pelo menos 20 letras). A compra nasce encerrada, entra na conferência do Financeiro e aparece na Caixa de decisões do gestor da área de quem comprou (sem gestor, a Diretoria) até alguém da gestão tocar em \"Ciente\" na ficha."
+     "texto": "A compra registrada antes de 31/10/2026 por \"Registrar compra feita fora do sistema\" continua como estava: entra na conferência do Financeiro e na Caixa de decisões até a gestão tocar em \"Ciente\". As novas são informadas pela tela \"Informar compra já feita\" (seção anterior)."
     },
     {
      "titulo": "Painel e relatório mensal",
@@ -1663,7 +1740,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Avisos (parte 2)",
-     "texto": "quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail. Compra sem pedido: a Caixa de decisões da gestão até a ciência. Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.\n\nA rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês."
+     "texto": "quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail. Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência. Compra informada em seu nome por outra pessoa: você, no sistema. Compra informada que \"ainda vai chegar\": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento. Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa. Reembolso pago: quem recebeu, no sistema e no resumo de e-mail. Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.\n\nA rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês."
     }
    ]
   },

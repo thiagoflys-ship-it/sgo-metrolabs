@@ -806,6 +806,8 @@ function AstC_detalhe_(eu, id) {
     .map(function (o) { return { id: o.ID, numero: o.NUMERO, situacao: AST_OS_SITUACOES[Ast_up_(o.SITUACAO)] || o.SITUACAO, tecnico: Ast_s_(o.TECNICO_NOME), agendadoPara: Ast_br_(o.AGENDADO_PARA) }; });
   r.orcamentos = typeof AstR_orcamentosDoChamado_ === 'function' ? AstR_orcamentosDoChamado_(eu, c) : [];
   r.casos = Ast_ler_(AST_ABAS.CASOS).filter(function (k) { return Ast_s_(k.CHAMADO_ID) === Ast_s_(c.ID); }).map(AstC_casoPublico_);
+  // 31/10/2026 (pedido do dono, Compras): compras ligadas ao chamado (pedido de peça e compra informada com o número CH-...) e o custo; valor só para quem vê valor em Compras
+  if (eu.interno && !eu.cliente && typeof Compras_custoDoChamado_ === 'function') r.compras = Compras_custoDoChamado_(eu.id, c.NUMERO, c.REQUISICAO_ID);
   r.triagemItens = AST_TRIAGEM_ITENS;
   if (c.EQUIPAMENTO_ID && typeof SGO_Atendimentos_doEquipamento_ === 'function') {
     try { r.historicoEquipamento = SGO_Atendimentos_doEquipamento_(c.EQUIPAMENTO_ID, { limite: 8, sessao: eu }); } catch (e) { r.historicoEquipamento = []; }

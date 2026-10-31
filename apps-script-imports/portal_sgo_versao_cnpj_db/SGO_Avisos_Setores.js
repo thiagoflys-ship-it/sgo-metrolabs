@@ -11,9 +11,15 @@
  *    de colegas (a central já filtra o que cada pessoa enxerga).
  * Com o evento marcado "na hora" na matriz, o notificador manda também pelo WhatsApp (expediente, vínculo, piloto e
  * teto diário). O padrão aprovado não muda nada: CP01 e VC01 começam sem WhatsApp.
+ * 31/10/2026 (compra informada e conciliação da fatura do cartão, pedido do dono):
+ *  - CP02 Compra no cartão da empresa sem informar (ao responsável do cartão): e-mail na hora, no expediente; WhatsApp só na
+ *    contagem do resumo do dia (regra sutil). A cobrança fica no sistema (Início) até informar ou o Financeiro justificar.
+ *  - CP03 A pagar e conciliação do dia (ao Financeiro): no resumo de e-mail, sem WhatsApp.
  ****************************************************/
 
 var SET_MTZ_EVENTOS = [
+  { cod: 'CP02', modulo: 'compras', evento: 'Compra no cartão da empresa sem informar (ao responsável do cartão)', origem: 'SGO_Compras_Faturas.js', publico: 'Responsável pelo cartão', email: 'HORA', whatsapp: 'RESUMO', limite: '1 por lançamento', obs: 'Sai depois de 2 dias úteis da importação da fatura (configurável em Regras de compras), no expediente. WhatsApp só na contagem do resumo do dia. A cobrança continua no Início até informar.' },
+  { cod: 'CP03', modulo: 'compras', evento: 'A pagar e conciliação do dia (ao Financeiro)', origem: 'SGO_Compras_Faturas.js', publico: 'Financeiro', email: 'RESUMO', whatsapp: 'NAO', limite: '1 por dia útil', obs: 'Vencimentos de faturado, boleto e reembolso para hoje ou atrasados e lançamentos de fatura sem compra informada.' },
   { cod: 'CP01', modulo: 'compras', evento: 'Avisos de Compras (requisição aprovada ou reprovada, item disponível, especificação devolvida, cancelamento, conferência)', origem: 'SGO_Compras_*.js', publico: 'Solicitante, comprador, vendedor e Financeiro, conforme o aviso', email: 'HORA', whatsapp: 'NAO', limite: '1 por aviso (agrupado por pessoa)', obs: 'O e-mail sai agrupado na rotina de Compras. Marque "na hora" para mandar também pelo WhatsApp.', area: 'LOGISTICA' },
   { cod: 'VC01', modulo: 'vencimentos', evento: 'Vencimentos que dependem de você (padrões, calibrações, requalificações, documentos, CNH e veículos)', origem: 'SGO_Avisos_Setores.js', publico: 'Quem enxerga o item na central de pendências (gestor da área, rotina da Frota, o próprio condutor)', email: 'RESUMO', whatsapp: 'NAO', limite: '1 por pessoa por dia', obs: 'Só o vencido e o que vence em até 7 dias. Marque "na hora" para receber também pelo WhatsApp no início do expediente.' }
 ];

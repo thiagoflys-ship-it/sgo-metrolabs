@@ -27,11 +27,16 @@ var CMP_PEND_TIPOS = {
   compras_conferir: { modulo: 'compras', um: 'compra para conferir no Financeiro', varios: 'compras para conferir no Financeiro', rotulo: 'Conferir', fazer: 'confira em Compras > Conferência do Financeiro', tela: CMP_PEND_TELA('compras_financeiro'), origem: 'COMPRAS' },
   compras_fin_divergente: { modulo: 'compras', um: 'divergência apontada pelo Financeiro', varios: 'divergências apontadas pelo Financeiro', rotulo: 'Corrigir', fazer: 'corrija o pagamento ou o comprovante em Compras > Fila de compras', tela: CMP_PEND_TELA('compras'), origem: 'COMPRAS' },
   compras_sem_pedido: { modulo: 'compras', um: 'compra feita sem pedido no sistema', varios: 'compras feitas sem pedido no sistema', rotulo: 'Compra sem pedido', fazer: 'leia a justificativa e marque "Ciente" na ficha da compra (Compras > Fila de compras)', tela: CMP_PEND_TELA('compras'), origem: 'COMPRAS' },
-  compras_aviso: { modulo: 'compras', um: 'aviso de Compras', varios: 'avisos de Compras', rotulo: 'Informativo', fazer: 'abra Compras para ver', tela: CMP_PEND_TELA('compras_meus'), origem: 'COMPRAS' }
+  compras_aviso: { modulo: 'compras', um: 'aviso de Compras', varios: 'avisos de Compras', rotulo: 'Informativo', fazer: 'abra Compras para ver', tela: CMP_PEND_TELA('compras_meus'), origem: 'COMPRAS' },
+  // 31/10/2026 (compra informada, cartões e conciliação): cobrança do não informado, A pagar e fora da fatura
+  compras_nao_informada: { modulo: 'compras', um: 'compra no cartão da empresa sem informar', varios: 'compras no cartão da empresa sem informar', rotulo: 'Informar compra', fazer: 'informe em Compras > Informar compra já feita > Compras a informar', tela: CMP_PEND_TELA('compras_informar', 'cobrancas'), origem: 'COMPRAS' },
+  compras_nao_informada_gestao: { modulo: 'compras', um: 'colaborador com compra do cartão sem informar há dias', varios: 'colaboradores com compras do cartão sem informar há dias', rotulo: 'Cobrar', fazer: 'cobre a pessoa; a conciliação fica em Compras > Conciliação das faturas', tela: CMP_PEND_TELA('compras_conciliacao'), origem: 'COMPRAS' },
+  compras_a_pagar: { modulo: 'compras', um: 'vencimento de compra a pagar', varios: 'vencimentos de compras a pagar', rotulo: 'Pagar', fazer: 'pague e marque como pago em Compras > A pagar', tela: CMP_PEND_TELA('compras_apagar'), origem: 'COMPRAS' },
+  compras_fora_fatura: { modulo: 'compras', um: 'compra informada que não está na fatura', varios: 'compras informadas que não estão na fatura', rotulo: 'Conciliar', fazer: 'resolva em Compras > Conciliação das faturas', tela: CMP_PEND_TELA('compras_conciliacao'), origem: 'COMPRAS' }
 };
 
 /** Decisões da gestão (Caixa): prazo em dias úteis contado da entrada, quando o item não traz prazo próprio. */
-var CMP_GES_TIPOS = { compras_aprovar: { prazo: 1 }, compras_parado_gestao: { prazo: 1 }, compras_sem_pedido: { prazo: 2 } };
+var CMP_GES_TIPOS = { compras_aprovar: { prazo: 1 }, compras_parado_gestao: { prazo: 1 }, compras_sem_pedido: { prazo: 2 }, compras_nao_informada_gestao: { prazo: 1 } };
 
 function Compras_registrarTipos_() {
   try {

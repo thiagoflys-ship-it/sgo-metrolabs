@@ -51,10 +51,12 @@ var SGO_ASSIST_ACESSO = {
   comercial_pedidos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_catalogo: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL', 'FINANCEIRO'], comercial_painel: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
   // 21/10/2026: Compras (a conferência é do Financeiro; o servidor confere o resto pela lista de compradores).
   compras_financeiro: ['ADMIN', 'DIRETORIA', 'FINANCEIRO'],
+  // 31/10/2026: cartões, conciliação e A pagar (o servidor confere: Financeiro, gestão de Compras, Diretoria e Administrador; compradores consultam os cartões)
+  compras_cartoes: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'], compras_conciliacao: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'], compras_apagar: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'],
   comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
-var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'meus_avisos',
+var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'compras_informar', 'meus_avisos',
   'clientes', 'unidades', 'equipamentos', 'vinculos', 'gestao_decisoes', 'compras_regras', 'whatsapp_piloto', 'automacao_predial', 'cadastro_correcoes'];
 /** Telas e janelas que não ficam no menu, com o lugar onde se chega a elas. */
 var SGO_ASSIST_FORA_DO_MENU = {

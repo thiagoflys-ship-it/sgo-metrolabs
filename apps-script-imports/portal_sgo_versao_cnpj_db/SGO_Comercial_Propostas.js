@@ -514,6 +514,8 @@ function ComP_detalhe_(eu, id) {
   t.decisaoSoDiretoria = !!(pol && pol.exigeDiretoria);
   t.contatosCliente = (eu.gestao || eu.vendedor) ? ComCt_listar_(t.clienteId, t.unidadeId) : [];
   if (t.passagem && t.passagem.length) t.passagem = ComP_situacaoPassagem_(t.passagem);
+  // 31/10/2026 (pedido do dono, Compras): compras ligadas a este pedido e o custo (valor só para quem vê valor em Compras)
+  if (typeof Compras_doComercial_ === 'function') t.compras = Compras_doComercial_(eu.id, t.id);
   t.motivosRecusa = met.motivosPerda;
   // 29/10/2026: excluir (nunca foi ao cliente) ou só cancelar (já foi); a tela mostra o botão e, sem ele, o porquê
   if (eu.gestao || eu.vendedor) { var pe = ComP_podeExcluir_(eu, p); t.podeExcluir = pe.pode; if (!pe.pode && (eu.gestao || t.responsavelId === eu.id)) t.motivoSemExcluir = pe.motivo; }

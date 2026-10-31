@@ -1,6 +1,6 @@
 # Manual do módulo Compras e peças do SGO+
 
-Versão de 21/10/2026. Telas: Compras > Pedir peça ou material, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras.
+Versão de 31/10/2026. Telas: Compras > Pedir peça ou material, Informar compra já feita, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras. Os cartões da empresa, a conciliação das faturas e o A pagar estão no manual do Financeiro (Compras: cartões, conciliação e relatórios).
 
 ## Para que serve
 
@@ -114,9 +114,33 @@ Depois do pedido feito, o comprador toca em "Registrar o pagamento": valor pago,
 
 Compras > Conferência do Financeiro (perfil ou área Financeiro, Diretoria e Administrador) lista as compras por mês, situação e final do cartão, com o valor do pedido, o valor pago (selo "diferente" quando não batem), o comprovante, a nota e os selos "Sem pedido" e "Menos cotações". "Abrir o dossiê" mostra a ficha completa (vínculo, orçamentos com os arquivos, aprovação, pedido, recebimento, pagamento). "Conferida" encerra a conferência; "Divergente" exige o que não bate e volta para quem registrou o pagamento, que corrige e reenvia com o que foi corrigido. Quem registrou a compra ou o pagamento não confere a própria. "Baixar a planilha" gera o arquivo CSV com a lista filtrada, para bater a fatura do cartão.
 
+## Informar compra já feita
+
+Desde 31/10/2026 (pedido do dono), quem compra com o cartão da empresa, faturado, boleto, Pix, dinheiro do caixa ou com o próprio dinheiro informa a compra em Compras > Informar compra já feita, no celular ou no computador. Substitui o aviso no grupo do WhatsApp e o antigo "Registrar compra feita fora do sistema". A compra entra no mesmo cadastro das compras do fluxo normal (número REQ-ano-número), vai para a conferência do Financeiro e cada parcela cai na fatura certa do cartão.
+
+1. Abra Compras > Informar compra já feita (no celular, também pelo atalho "Informar compra" da tela inicial).
+2. Quadro 1, para que foi: escreva a finalidade (pelo menos 10 letras) e escolha o vínculo: chamado da Assistência técnica (a compra entra no custo do chamado), cliente (com a unidade e o número da O.S., se houver), pedido aprovado do Comercial (aparece na ficha do pedido), veículo da Frota ou uso interno (com o centro de custo e a explicação). Se houver orçamento ou pedido de compra, informe o número ou anexe o arquivo.
+3. Quadro 2, o que foi comprado: um ou mais itens (o que é, quantidade e unidade), onde foi comprado, o valor total pago (como no comprovante) e a data da compra. Se a mercadoria ainda vai chegar, marque "Ainda vai chegar" e informe a previsão: Compras registra o recebimento e avisa você quando chegar.
+4. Quadro 3, como foi pago: cartão de crédito da empresa (os 4 últimos números e as parcelas), cartão de débito, faturado ou boleto (com o vencimento), Pix, transferência, dinheiro do caixa ou dinheiro próprio (o reembolso vai para você e fica com o Financeiro, em 5 dias úteis). Nunca se digita o número inteiro do cartão. Cartão ainda não cadastrado: digite o final assim mesmo.
+5. Quadro 4: a foto do comprovante (obrigatória) e a nota fiscal (foto ou PDF, ou o número; sem nota, o motivo).
+6. "Conferir antes de enviar" mostra os apontamentos; "Enviar ao Financeiro" grava.
+
+O sistema confere na hora e grava com o apontamento, para o Financeiro olhar:
+
+- Compra parecida já informada (mesmo cartão ou mesma pessoa, mesmo valor, data próxima) ou o mesmo arquivo de comprovante: mostra a compra parecida e pede que você explique se é outra.
+- Informada depois do prazo (2 dias úteis no padrão): pede o motivo do atraso. Compra de mais de 90 dias só o Financeiro e a gestão informam.
+- Valor acima do limite da compra direta (R$ 1.000 no padrão): vai também para a ciência da gestão na Caixa de decisões.
+- Valor bem acima da sua média de compras dos últimos 90 dias: marcado "acima do comum".
+
+Cada pessoa informa as próprias compras. O comprador, o Financeiro e a gestão podem informar em nome de outra pessoa; quem comprou é avisado no sistema.
+
+Na aba "Minhas compras informadas" ficam as suas compras com o valor, a situação no Financeiro (aguardando, conferida, divergente com o texto), as parcelas e a fatura de cada uma, e o reembolso pago com o comprovante. Informou por engano? Abra a compra e toque em "Cancelar o pedido" com o motivo, enquanto o Financeiro não conferiu e nada foi conciliado.
+
+Quem responde por um cartão da empresa vê a aba "Compras a informar": os lançamentos da fatura daquele cartão que ninguém informou. "Informar esta compra" abre o formulário com o valor, a data e o cartão preenchidos. A cobrança fica no Início; depois de 2 dias úteis vai também por e-mail (no expediente) e, no WhatsApp, só entra na contagem do resumo do dia. Depois de 5 dias úteis, a gestão é avisada. Se o lançamento não foi compra (tarifa, assinatura), fale com o Financeiro.
+
 ## Compra feita sem pedido no sistema
 
-Resposta do dono: a compra feita fora do sistema não é bloqueada, mas é registrada. Em Meus pedidos de compra, "Registrar compra feita fora do sistema": para que foi, o vínculo, o que foi comprado, onde, o valor, a data, a forma de pagamento, o comprovante e por que foi fora do sistema (pelo menos 20 letras). A compra nasce encerrada, entra na conferência do Financeiro e aparece na Caixa de decisões do gestor da área de quem comprou (sem gestor, a Diretoria) até alguém da gestão tocar em "Ciente" na ficha.
+A compra registrada antes de 31/10/2026 por "Registrar compra feita fora do sistema" continua como estava: entra na conferência do Financeiro e na Caixa de decisões até a gestão tocar em "Ciente". As novas são informadas pela tela "Informar compra já feita" (seção anterior).
 
 ## Painel e relatório mensal
 
@@ -164,7 +188,11 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
   técnico e a gestão da área Técnica são avisados (AT14) e o cliente recebe o e-mail "peça chegou, retorno será
   agendado" (AT15). Recebimento com divergência não devolve o chamado; "Divergência resolvida" devolve (22/10/2026).
 - Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail.
-- Compra sem pedido: a Caixa de decisões da gestão até a ciência.
+- Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência.
+- Compra informada em seu nome por outra pessoa: você, no sistema.
+- Compra informada que "ainda vai chegar": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento.
+- Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa.
+- Reembolso pago: quem recebeu, no sistema e no resumo de e-mail.
 - Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.
 
 A rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês.

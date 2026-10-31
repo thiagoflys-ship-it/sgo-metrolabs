@@ -48,11 +48,13 @@ function Compras_fontePendencias_(add, ctx) {
     if (typeof CmpP_pendencias_ === 'function') CmpP_pendencias_(add, ctx, r, { hoje: hoje, regras: regras, usuarios: usuarios });
     if (typeof CmpFin_pendencias_ === 'function') CmpFin_pendencias_(add, ctx, r, { hoje: hoje, regras: regras, usuarios: usuarios });
   });
+  // 31/10/2026: cobrança do não informado (responsável do cartão; Caixa depois de N dias úteis), A pagar vencido e fora da fatura (Financeiro)
+  if (typeof CmpFat_pendencias_ === 'function') { try { CmpFat_pendencias_(add, ctx, { hoje: hoje, regras: regras, usuarios: usuarios }); } catch (eF) { console.error('Compras, pendências da conciliação: ' + ((eF && eF.message) || eF)); } }
   if (ctx.userId && !ctx.interno) {
     Cmp_ler_(CMP_ABAS.AVISOS).forEach(function (v) {
       if (Cmp_s_(v.DESTINATARIO_ID) !== ctx.userId || Cmp_s_(v.LIDO_EM)) return;
       // estes avisos já têm a pendência viva (até resolver); no Início aparece só ela (o aviso vai no resumo de e-mail)
-      if (['ESPEC_DEVOLVIDA', 'PARA_CONFERIR', 'DIVERGENCIA_FIN'].indexOf(Cmp_up_(v.TIPO)) >= 0) return;
+      if (['ESPEC_DEVOLVIDA', 'PARA_CONFERIR', 'DIVERGENCIA_FIN', 'INFORMADA_A_RECEBER'].indexOf(Cmp_up_(v.TIPO)) >= 0) return;
       add(Pend_item_('compras_aviso', {
         id: 'CMP:AVISO:' + v.ID, nome: Cmp_s_(v.TITULO).slice(0, 40), publico: 'PESSOA', paraUsuarios: [ctx.userId], responsavel: ctx.nome, responsavelId: ctx.userId, gravidade: 'INFO', dias: null,
         titulo: Cmp_s_(v.TITULO), detalhe: Cmp_s_(v.TEXTO).slice(0, 220), oQueFazer: 'Abra Compras: o aviso fica marcado como lido ao aparecer na tela.',
@@ -123,6 +125,9 @@ function Compras_rotina_(quando, forcar) {
   var passo = function (nome, fn) { try { r[nome] = fn(); } catch (e) { r[nome] = { erro: String((e && e.message) || e).slice(0, 300) }; console.error('Compras (' + nome + '): ' + r[nome].erro); } };
   if (typeof CmpP_sincronizarEnvios_ === 'function') passo('envios', CmpP_sincronizarEnvios_);
   passo('emails', function () { return Cmp_enviarResumos_(quando); });
+  // 31/10/2026: cobrança por e-mail do que está na fatura e não foi informado (CP02) e o resumo do Financeiro (CP03)
+  if (typeof CmpFat_cobrarPorEmail_ === 'function') passo('cobrancaNaoInformadas', CmpFat_cobrarPorEmail_);
+  if (typeof CmpFat_resumoFinanceiro_ === 'function') passo('resumoFinanceiro', CmpFat_resumoFinanceiro_);
   if (typeof CmpFin_relatorioAutomatico_ === 'function') passo('relatorioMensal', function () { return CmpFin_relatorioAutomatico_(quando); });
   return r;
 }
@@ -137,6 +142,8 @@ function Cmp_inicio_(eu) {
   if (eu.nivel === 'NENHUM') return base;
   base.situacoes = CMP_SITUACOES; base.urgencias = CMP_URGENCIAS; base.vinculos = CMP_VINCULOS; base.categorias = CMP_CATEGORIAS_ITEM;
   base.categoriasFornecedor = CMP_CATEGORIAS_FORNECEDOR; base.formasPagamento = CMP_FORMAS_PAGAMENTO; base.compatibilidade = CMP_COMPATIBILIDADE; base.finSituacoes = CMP_FIN_SITUACOES;
+  // 31/10/2026: compra informada, cartões e conciliação
+  base.podeCartoes = typeof CmpCart_podeVer_ === 'function' && CmpCart_podeVer_(eu); base.podeConciliar = !!(eu.financeiro || eu.gestao || eu.diretoria || eu.admin); base.vePainel = !!(eu.veFila || eu.financeiro);
   base.faixas = eu.veValores ? regras.faixas.map(function (f, i) { var fx = Cmp_faixaDe_(f.ate === null ? 1e12 : f.ate, regras); return { indice: i + 1, nome: fx.nome, aprovador: CMP_NIVEIS_APROVACAO[Cmp_up_(f.aprovador)], cotacoes: f.cotacoes }; }) : [];
   var us = Cmp_usuarios_();
   base.compradores = Cmp_compradoresAtivos_(regras, us).map(function (id) { return { id: id, nome: us[id].nome }; });
@@ -187,7 +194,26 @@ var CMP_ACOES = {
     if (eu.nivel !== 'NENHUM') { try { Compras_rotina_(new Date(), false); } catch (e) {} }
     return b;
   },
-  acesso: function (eu) { return { nivel: eu.nivel, comprador: eu.comprador, veFila: eu.veFila, veValores: eu.veValores, financeiro: eu.financeiro, podeRegras: eu.regras }; },
+  acesso: function (eu) { return { nivel: eu.nivel, comprador: eu.comprador, veFila: eu.veFila, veValores: eu.veValores, financeiro: eu.financeiro, podeRegras: eu.regras,
+    podeCartoes: typeof CmpCart_podeVer_ === 'function' && CmpCart_podeVer_(eu), podeConciliar: !!(eu.financeiro || eu.gestao || eu.diretoria || eu.admin), vePainel: !!(eu.veFila || eu.financeiro) }; },
+  // 31/10/2026: compra informada depois de feita (SGO_Compras_Informar.js)
+  informar: function (eu, sid, d) { return CmpI_informar_(eu, d); },
+  opcoesInformar: function (eu) { return CmpI_opcoes_(eu); },
+  minhasInformadas: function (eu) { return { compras: CmpI_minhas_(eu), cobrancas: CmpFat_minhasCobrancas_(eu) }; },
+  chamados: function (eu, sid, d) { return { chamados: CmpI_chamados_(eu, d) }; },
+  // cartões, conciliação das faturas e A pagar (SGO_Compras_Faturas.js)
+  cartoes: function (eu) { return CmpCart_listar_(eu); },
+  salvarCartao: function (eu, sid, d) { return CmpCart_salvar_(eu, d); },
+  fatura: function (eu, sid, d) { return CmpFat_tela_(eu, d); },
+  importarExtrato: function (eu, sid, d) { return CmpFat_importar_(eu, d); },
+  conciliacao: function (eu, sid, d) { return CmpFat_acao_(eu, d); },
+  fecharFatura: function (eu, sid, d) { return CmpFat_fechar_(eu, d); },
+  aPagar: function (eu, sid, d) { return CmpPag_lista_(eu, d); },
+  marcarPago: function (eu, sid, d) { return CmpPag_marcarPago_(eu, d); },
+  // painel com Kanban e Gantt, relatórios A4 salvos (SGO_Compras_Relatorios.js)
+  painelGeral: function (eu, sid, d) { return CmpRel_painel_(eu, d); },
+  gerarRelatorio: function (eu, sid, d) { return CmpRel_gerar_(eu, d); },
+  documentos: function (eu) { return CmpRel_documentos_(eu); },
   avisosLidos: function (eu) { return { marcados: Cmp_marcarAvisosLidos_(eu) }; },
   // requisições
   salvarRequisicao: function (eu, sid, d) { return CmpR_salvar_(eu, d); },

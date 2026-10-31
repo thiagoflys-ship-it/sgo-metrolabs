@@ -15,7 +15,10 @@
  *   SGO_Compras_Cotacoes.js       cotações com o arquivo do orçamento, escolha justificada, aprovação por faixa de valor
  *   SGO_Compras_Pedido.js         pedido de compra A4 (PC-AAAA-NNNN), envio ao fornecedor, recebimento, entrega
  *   SGO_Compras_Financeiro.js     pagamento, conferência do Financeiro, compra sem pedido, painel e relatório mensal A4
+ *   SGO_Compras_Faturas.js        cartões da empresa, faturas, importação do extrato, conciliação, A pagar (31/10/2026)
+ *   SGO_Compras_Informar.js       "Informar compra já feita", parcelas e fatura de cada parcela (31/10/2026)
  *   SGO_Compras_Painel.js         pendências (central e Caixa de decisões), rotina e a chamada única da tela (Compras_api)
+ *   SGO_Compras_Relatorios.js     painel com índices, Kanban e Gantt; relatórios A4 salvos e registrados; custo no chamado e na proposta (31/10/2026)
  *   SGO_Pendencias_Compras.js     registra os tipos de Compras na central de pendências e na Caixa de decisões (carrega depois delas)
  *   SGO_Ajuda_Compras.js          ajuda "Como usar esta tela"
  *   JS_Compras.html               telas
@@ -34,14 +37,17 @@
  *   Técnico, Metrologia e RH nunca veem preço. Cliente não vê nada de Compras.
  *
  * Abas (criadas sob demanda; nada é apagado, só marcado): CMP_CONFIG, CMP_FORNECEDORES, CMP_REQUISICOES, CMP_ITENS,
- * CMP_COTACOES, CMP_APROVACOES, CMP_PEDIDOS, CMP_HISTORICO, CMP_AVISOS. Anexos no Drive, pasta "Compras - Anexos".
+ * CMP_COTACOES, CMP_APROVACOES, CMP_PEDIDOS, CMP_HISTORICO, CMP_AVISOS e, desde 31/10/2026 (pedido do dono: compra informada,
+ * cartões e conciliação), CMP_CARTOES, CMP_PARCELAS, CMP_FATURAS, CMP_EXTRATO, CMP_IMPORTACOES e CMP_DOCUMENTOS. Colunas novas
+ * entram no fim das abas existentes, sem mexer nas antigas. Anexos no Drive, pasta "Compras - Anexos".
  * Nenhuma função devolve Date cru.
  ****************************************************/
 
 var CMP_FUSO = 'America/Sao_Paulo';
 var CMP_ABAS = {
   CONFIG: 'CMP_CONFIG', FORNECEDORES: 'CMP_FORNECEDORES', REQUISICOES: 'CMP_REQUISICOES', ITENS: 'CMP_ITENS', COTACOES: 'CMP_COTACOES',
-  APROVACOES: 'CMP_APROVACOES', PEDIDOS: 'CMP_PEDIDOS', HISTORICO: 'CMP_HISTORICO', AVISOS: 'CMP_AVISOS'
+  APROVACOES: 'CMP_APROVACOES', PEDIDOS: 'CMP_PEDIDOS', HISTORICO: 'CMP_HISTORICO', AVISOS: 'CMP_AVISOS',
+  CARTOES: 'CMP_CARTOES', PARCELAS: 'CMP_PARCELAS', FATURAS: 'CMP_FATURAS', EXTRATO: 'CMP_EXTRATO', IMPORTACOES: 'CMP_IMPORTACOES', DOCUMENTOS: 'CMP_DOCUMENTOS'
 };
 var CMP_COLUNAS = {
   CMP_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -57,7 +63,9 @@ var CMP_COLUNAS = {
     'PEDIDO_ID', 'PEDIDO_NUMERO', 'PREVISAO_ENTREGA', 'RECEBIDA_EM', 'RECEBIDA_POR_NOME', 'DIVERGENCIA_TEXTO', 'DISPONIVEL_EM',
     'ENTREGUE_EM', 'ENTREGUE_A_ID', 'ENTREGUE_A_NOME', 'ENTREGA_EVIDENCIA', 'ENTREGUE_POR_NOME', 'CANCELADA_EM', 'CANCELADA_POR_NOME', 'CANCELADA_MOTIVO',
     'SEM_PEDIDO', 'SEM_PEDIDO_JUSTIFICATIVA', 'GESTAO_CIENTE_EM', 'GESTAO_CIENTE_POR_NOME', 'GESTAO_CIENTE_TEXTO',
-    'COMERCIAL_ATIVIDADE_ID', 'COMERCIAL_VENDEDOR_ID', 'COMERCIAL_CONCLUIDA_EM', 'RECEBIMENTO_JSON', 'ORIGEM', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'COMERCIAL_ATIVIDADE_ID', 'COMERCIAL_VENDEDOR_ID', 'COMERCIAL_CONCLUIDA_EM', 'RECEBIMENTO_JSON', 'ORIGEM', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 31/10/2026: compra informada depois de feita (SGO_Compras_Informar.js)
+    'COMPRADO_POR_ID', 'COMPRADO_POR_NOME', 'ORCAMENTO_REF', 'ORCAMENTO_ARQUIVO_URL', 'CENTRO_CUSTO', 'CHAMADO_NUMERO', 'INF_APONTAMENTOS', 'INF_CIENCIA', 'INF_ATRASO_DIAS', 'INF_ATRASO_MOTIVO'],
   CMP_ITENS: ['ID', 'REQUISICAO_ID', 'ORDEM', 'CATEGORIA', 'DESCRICAO', 'QUANTIDADE', 'UNIDADE', 'PART_NUMBER', 'MARCA', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO',
     'TENSAO', 'CORRENTE', 'PRESSAO', 'ROSCA', 'DIMENSAO', 'MATERIAL', 'OUTRAS_ESPEC', 'FOTOS_JSON', 'PRODUTO_ID', 'QTD_RECEBIDA', 'ATIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
   CMP_COTACOES: ['ID', 'REQUISICAO_ID', 'FORNECEDOR_ID', 'FORNECEDOR_NOME', 'PRECOS_JSON', 'SUBTOTAL', 'FRETE', 'IMPOSTOS', 'TOTAL', 'PRAZO_DIAS', 'VALIDADE',
@@ -69,9 +77,24 @@ var CMP_COLUNAS = {
     'ENDERECO_ENTREGA', 'OBS', 'CONGELADO_JSON', 'MARCA_CONTEUDO', 'PDF_ID', 'HTML_ID', 'PDF_URL', 'HTML_URL', 'PASTA_URL', 'ARQUIVO_NOME',
     'EMITIDO_EM', 'EMITIDO_POR_ID', 'EMITIDO_POR_NOME', 'ENVIADO_EM', 'ENVIO_COMO', 'VALOR_PAGO', 'PAGO_EM', 'COMPROVANTE_ID', 'COMPROVANTE_NOME', 'COMPROVANTE_URL',
     'PAGAMENTO_POR_ID', 'PAGAMENTO_POR_NOME', 'NF_NUMERO', 'NF_ARQUIVO_ID', 'NF_ARQUIVO_NOME', 'NF_ARQUIVO_URL',
-    'FIN_SITUACAO', 'FIN_POR_ID', 'FIN_POR_NOME', 'FIN_EM', 'FIN_OBS', 'FIN_REENVIO_TEXTO', 'SEM_PEDIDO', 'SITUACAO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'FIN_SITUACAO', 'FIN_POR_ID', 'FIN_POR_NOME', 'FIN_EM', 'FIN_OBS', 'FIN_REENVIO_TEXTO', 'SEM_PEDIDO', 'SITUACAO', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 31/10/2026: cartão cadastrado, data da compra, conferência do comprovante repetido e da nota
+    'CARTAO_ID', 'DATA_COMPRA', 'COMPROVANTE_HASH', 'NF_SEM_MOTIVO', 'DUPLICIDADE_MOTIVO'],
   CMP_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
-  CMP_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM']
+  CMP_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM'],
+  // 31/10/2026 (pedido do dono): cartões da empresa (só o final), parcelas e vencimentos, faturas, extrato importado e relatórios emitidos
+  CMP_CARTOES: ['ID', 'FINAL', 'APELIDO', 'TIPO', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'DIA_FECHAMENTO', 'DIA_VENCIMENTO', 'LIMITE', 'ATIVO', 'OBS',
+    'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  CMP_PARCELAS: ['ID', 'PEDIDO_ID', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'FORMA', 'CARTAO_FINAL', 'CARTAO_ID', 'PARCELA', 'PARCELAS', 'VALOR', 'DATA_COMPRA', 'COMPETENCIA',
+    'VENCIMENTO', 'ESTIMADA', 'SITUACAO', 'MOTIVO', 'EXTRATO_ID', 'BENEFICIARIO_ID', 'BENEFICIARIO_NOME', 'PAGO_EM', 'PAGO_POR_ID', 'PAGO_POR_NOME', 'PAGO_COMPROVANTE_URL',
+    'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  CMP_FATURAS: ['ID', 'CARTAO_FINAL', 'CARTAO_ID', 'COMPETENCIA', 'SITUACAO', 'TOTAL_EXTRATO', 'TOTAL_SISTEMA', 'FECHADA_POR_ID', 'FECHADA_POR_NOME', 'FECHADA_EM', 'FECHAMENTO_OBS',
+    'ATUALIZADO_EM', 'CRIADO_EM'],
+  CMP_EXTRATO: ['ID', 'FATURA_ID', 'IMPORTACAO_ID', 'LINHA', 'DATA', 'DESCRICAO', 'VALOR', 'PARCELA', 'PARCELAS', 'CARTAO_FINAL', 'CHAVE', 'PARCELA_ID', 'SITUACAO', 'MOTIVO',
+    'COBRADO_EM', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  CMP_IMPORTACOES: ['ID', 'FATURA_ID', 'ARQUIVO_NOME', 'ARQUIVO_ID', 'ARQUIVO_URL', 'FORMATO', 'LINHAS', 'GRAVADAS', 'CASADAS', 'NAO_INFORMADAS', 'REPETIDAS', 'IGNORADAS',
+    'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM'],
+  CMP_DOCUMENTOS: ['ID', 'TIPO', 'TITULO', 'NUMERO', 'PERIODO_DE', 'PERIODO_ATE', 'FILTRO_JSON', 'PDF_URL', 'HTML_URL', 'PASTA_URL', 'PAGINAS', 'SALVO', 'GERADO_POR_ID', 'GERADO_POR_NOME', 'EM', 'CRIADO_EM']
 };
 var CMP_COLUNAS_TEXTO = {
   CMP_FORNECEDORES: ['DOCUMENTO', 'TELEFONE', 'WHATSAPP', 'CODIGO', 'ATUALIZADO_EM', 'ARQUIVADO_EM'],
@@ -80,8 +103,11 @@ var CMP_COLUNAS_TEXTO = {
   CMP_ITENS: ['PART_NUMBER', 'ATUALIZADO_EM'],
   CMP_COTACOES: ['VALIDADE', 'REFERENCIA', 'ATUALIZADO_EM'],
   CMP_APROVACOES: ['EM'],
-  CMP_PEDIDOS: ['NUMERO', 'PREVISAO_ENTREGA', 'CARTAO_FINAL', 'BOLETO_VENCIMENTO', 'EMITIDO_EM', 'ENVIADO_EM', 'PAGO_EM', 'NF_NUMERO', 'FIN_EM', 'ATUALIZADO_EM'],
-  CMP_HISTORICO: ['DATA'], CMP_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'], CMP_CONFIG: ['ATUALIZADO_EM']
+  CMP_PEDIDOS: ['NUMERO', 'PREVISAO_ENTREGA', 'CARTAO_FINAL', 'BOLETO_VENCIMENTO', 'EMITIDO_EM', 'ENVIADO_EM', 'PAGO_EM', 'NF_NUMERO', 'FIN_EM', 'ATUALIZADO_EM', 'DATA_COMPRA'],
+  CMP_HISTORICO: ['DATA'], CMP_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'], CMP_CONFIG: ['ATUALIZADO_EM'],
+  CMP_CARTOES: ['FINAL', 'ATUALIZADO_EM'], CMP_PARCELAS: ['CARTAO_FINAL', 'DATA_COMPRA', 'COMPETENCIA', 'VENCIMENTO', 'PAGO_EM', 'ATUALIZADO_EM', 'REQUISICAO_NUMERO'],
+  CMP_FATURAS: ['CARTAO_FINAL', 'COMPETENCIA', 'FECHADA_EM', 'ATUALIZADO_EM'], CMP_EXTRATO: ['DATA', 'CARTAO_FINAL', 'COBRADO_EM', 'ATUALIZADO_EM'],
+  CMP_IMPORTACOES: ['EM'], CMP_DOCUMENTOS: ['PERIODO_DE', 'PERIODO_ATE', 'EM', 'NUMERO']
 };
 
 var CMP_SITUACOES = {
@@ -116,7 +142,9 @@ var CMP_CATEGORIAS_ITEM = [
 var CMP_CATEGORIAS_FORNECEDOR = ['Peças hospitalares', 'Ferramentas e instrumentos', 'Insumos', 'Veículos (peças e oficina)', 'Serviços', 'Escritório e limpeza', 'Outros'];
 var CMP_FORMAS_PAGAMENTO = {
   CARTAO_CREDITO: 'Cartão de crédito', CARTAO_DEBITO: 'Cartão de débito', PIX: 'PIX', BOLETO: 'Boleto', TRANSFERENCIA: 'Transferência bancária',
-  FATURADO: 'Faturado (prazo do fornecedor)', REEMBOLSO: 'Reembolso a colaborador'
+  FATURADO: 'Faturado (prazo do fornecedor)', REEMBOLSO: 'Reembolso a colaborador',
+  // 31/10/2026: dinheiro do caixa da empresa (o controle do fundo de caixa fica para a leva 2 do estudo)
+  DINHEIRO: 'Dinheiro (caixa da empresa)'
 };
 var CMP_COMPATIBILIDADE = { ORIGINAL: 'Original (mesmo número de peça)', EQUIVALENTE: 'Equivalente (especificação conferida)', A_CONFIRMAR: 'A confirmar' };
 var CMP_FIN_SITUACOES = { '': 'Sem pagamento registrado', AGUARDANDO: 'Aguardando conferência', CONFERIDA: 'Conferida', DIVERGENTE: 'Divergente' };
@@ -139,7 +167,9 @@ var CMP_REGRAS_PADRAO = {
   ],
   prazos: { cotarDiasUteis: 1, cotarBaixaDiasUteis: 2, criticaHoras: 4, pedidoDiasUteis: 1, entregaDiasUteis: 1, paradoDiasUteis: 1, gestorAposDiasUteis: 2 },
   empresa: { enderecoEntrega: '', enderecoFaturamento: '', observacaoPedido: 'Favor citar o número deste pedido de compra na nota fiscal e no documento de entrega. Mercadoria em desacordo com a especificação será devolvida.' },
-  avisos: { horaResumo: '08:00' }
+  avisos: { horaResumo: '08:00' },
+  // 31/10/2026 (estudo ESTUDO_COMPRAS_20261031, decisões 2, 4, 8 e 10 pela recomendação): compra informada depois de feita
+  informar: { limiteDireta: 1000, prazoDiasUteis: 2, maxDiasAtras: 90, multiploMedia: 3, reembolsoDiasUteis: 5, cobrancaEmailDiasUteis: 2, cobrancaGestaoDiasUteis: 5 }
 };
 
 // ------------------------------------------------------------
@@ -242,13 +272,13 @@ function Cmp_comTrava_(fn) {
 // ------------------------------------------------------------
 function Cmp_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('CMP_ABAS_OK_V2')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('CMP_ABAS_OK_V3')) return; } catch (e) {}
   Object.keys(CMP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, CMP_COLUNAS[aba]);
     CMP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (CMP_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('CMP_ABAS_OK_V2', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('CMP_ABAS_OK_V3', '1', 21600); } catch (e) {}
 }
 
 function Cmp_ler_(aba) {
@@ -329,6 +359,13 @@ function Cmp_validarRegras_(r) {
     ultimo = ate;
   });
   if (!/^[A-Z_]{2,30}$/.test(Cmp_up_(r.areaCompras))) throw new Error('escolha a área de Compras (Logística ou Administrativo) e salve de novo');
+  var inf = r.informar || {}, lim = { limiteDireta: [0, 1000000, 'o limite da compra direta (em reais)'], prazoDiasUteis: [0, 30, 'o prazo para informar (dias úteis)'], maxDiasAtras: [7, 365, 'quantos dias para trás qualquer pessoa pode informar'],
+    multiploMedia: [1, 20, 'quantas vezes a média do colaborador é "acima do comum"'], reembolsoDiasUteis: [1, 30, 'o prazo do reembolso (dias úteis)'], cobrancaEmailDiasUteis: [0, 30, 'quando a cobrança do não informado vai por e-mail (dias úteis)'],
+    cobrancaGestaoDiasUteis: [1, 60, 'quando o não informado vai à Caixa de decisões (dias úteis)'] };
+  Object.keys(lim).forEach(function (k) {
+    var n = Cmp_num_(inf[k]);
+    if (!(n >= lim[k][0] && n <= lim[k][1])) throw new Error('confira ' + lim[k][2] + ': precisa ser um número de ' + lim[k][0] + ' a ' + lim[k][1] + '. Corrija e salve de novo');
+  });
 }
 
 function Cmp_gravarRegras_(r, eu, motivo) {
@@ -338,6 +375,9 @@ function Cmp_gravarRegras_(r, eu, motivo) {
   limpa.substitutos = (limpa.substitutos || []).map(Cmp_s_).filter(function (id, i, l) { return id && l.indexOf(id) === i && limpa.compradores.indexOf(id) < 0; });
   limpa.areaCompras = Cmp_up_(limpa.areaCompras || 'LOGISTICA');
   limpa.faixas = (limpa.faixas || []).map(function (f, i, l) { return { ate: i === l.length - 1 ? null : Cmp_r2_(Cmp_num_(f.ate)), aprovador: Cmp_up_(f.aprovador), cotacoes: Number(Cmp_num_(f.cotacoes)) }; });
+  // 31/10/2026: tela antiga sem o quadro "Compra informada" não apaga o que já estava gravado (junta com as regras em vigor)
+  limpa.informar = Object.assign({}, Cmp_regras_().informar || {}, limpa.informar || {});
+  Object.keys(limpa.informar).forEach(function (k) { var n = Cmp_num_(limpa.informar[k]); if (!isNaN(n)) limpa.informar[k] = n; });
   Cmp_validarRegras_(limpa);
   var atual = Cmp_regras_(), versao = (Number(atual.versao) || 1) + 1;
   SGO_DATA.insert(CMP_ABAS.CONFIG, { CHAVE: 'REGRAS', VALOR_JSON: JSON.stringify(limpa), VERSAO: versao, MOTIVO: Cmp_texto_(motivo, 500),

@@ -58,7 +58,11 @@
   .cp-kpi .v { display: block; font-size: 20px; font-weight: 800; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .cp-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
   .cp-kpi.ok { border-top-color: var(--success); } .cp-kpi.aviso { border-top-color: var(--warning); } .cp-kpi.critico { border-top-color: var(--danger); }
+  /* 31/10/2026: conciliação (lançamentos | compras lado a lado no computador; um embaixo do outro no celular) */
+  .cp-duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 16px; }
+  .cp-duas .cp-tabela button { min-height: 34px; margin: 2px 4px 2px 0; }
   @media (max-width: 900px) {
+    .cp-duas { grid-template-columns: 1fr; }
     .cp-grade2, .cp-grade3 { grid-template-columns: 1fr; }
     .cp-grade4, .cp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cp-det { grid-template-columns: 1fr; }
@@ -77,12 +81,15 @@
   // COMPRAS E PEÇAS NATIVO DO SGO+ (21/10/2026)
   // Telas (abrir(mod)): compras_pedir (Pedir peça ou material), compras_meus (Meus pedidos de compra), compras (Fila de compras),
   // compras_fornecedores, compras_financeiro (Conferência do Financeiro), compras_painel (Painel de compras), compras_regras.
+  // 31/10/2026: compras_informar (Informar compra já feita), compras_cartoes (Cartões da empresa), compras_conciliacao
+  // (Conciliação das faturas), compras_apagar (A pagar); o painel ganhou índices, Kanban, Gantt e relatórios A4 salvos.
   // Uma chamada só no servidor: Compras_api(sessionId, acao, dados). O servidor confere o perfil em toda chamada e
   // nunca manda valor para quem não pode ver. A tela não se redesenha sozinha: recarrega depois de cada ação ou em "Atualizar".
   // ==========================================================
   var CP = { ini: null, mod: "", filtro: { situacao: "ABERTAS", busca: "" }, fornBusca: "", fornArquivados: false, opcoes: null };
   var CP_MODS = { compras_pedir: "Pedir peça ou material", compras_meus: "Meus pedidos de compra", compras: "Fila de compras", compras_fornecedores: "Fornecedores",
-    compras_financeiro: "Conferência do Financeiro", compras_painel: "Painel de compras", compras_regras: "Regras de compras" };
+    compras_financeiro: "Conferência do Financeiro", compras_painel: "Painel de compras", compras_regras: "Regras de compras",
+    compras_informar: "Informar compra já feita", compras_cartoes: "Cartões da empresa", compras_conciliacao: "Conciliação das faturas", compras_apagar: "A pagar" };
   var CP_COR_SIT = { SOLICITADA: "azul", EM_COTACAO: "azul", AGUARDANDO_APROVACAO: "laranja", APROVADA: "azul", PEDIDO_FEITO: "azul", RECEBIDA_DIVERGENCIA: "vermelho", DISPONIVEL: "verde", ENTREGUE: "cinza", CANCELADA: "cinza" };
 
   function Cp_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
@@ -110,7 +117,8 @@
     var s = [Cp_seloSit_(r)];
     if (r.urgencia === "CRITICA") s.push('<span class="cp-selo vermelho">Crítica</span>'); else if (r.urgencia === "ALTA") s.push('<span class="cp-selo laranja">Alta</span>');
     if (r.especIncompleta) s.push('<span class="cp-selo laranja">Especificação incompleta</span>');
-    if (r.semPedido) s.push('<span class="cp-selo vermelho">Compra sem pedido</span>');
+    if (r.informada) s.push('<span class="cp-selo azul">Informada depois de feita</span>');
+    else if (r.semPedido) s.push('<span class="cp-selo vermelho">Compra sem pedido</span>');
     if (r.finSituacao === "DIVERGENTE") s.push('<span class="cp-selo vermelho">Divergência do Financeiro</span>');
     return s.join("");
   }
@@ -190,7 +198,10 @@
     if (grupo) grupo.style.display = r ? "" : "none";
     document.querySelectorAll("#menu-grupo-itens-compras .menu-btn").forEach(function (b) {
       var m = b.getAttribute("data-mod"), ver = !!r;
-      if (m === "compras" || m === "compras_painel") ver = !!(r && r.veFila);
+      if (m === "compras") ver = !!(r && r.veFila);
+      if (m === "compras_painel") ver = !!(r && (r.vePainel || r.veFila));
+      if (m === "compras_cartoes") ver = !!(r && r.podeCartoes);
+      if (m === "compras_conciliacao" || m === "compras_apagar") ver = !!(r && r.podeConciliar);
       if (m === "compras_fornecedores") ver = !!(r && r.veValores);
       if (m === "compras_financeiro") ver = !!(r && r.financeiro);
       if (m === "compras_regras") ver = !!(r && (r.podeRegras || r.comprador));
@@ -213,15 +224,19 @@
     div.innerHTML = '<div class="module-shell"><div class="cp-vazio">Carregando Compras…</div></div>';
     Compras_garantirInicio_(function (ini) {
       if (ini.nivel === "NENHUM") { div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Compras", "") + '<div class="cp-faixa aviso">Compras é da equipe interna da Metrolabs.</div></div>'; return; }
-      var mapa = { compras_pedir: Compras_renderPedir_, compras_meus: Compras_renderMeus_, compras: Compras_renderFila_, compras_fornecedores: Compras_renderFornecedores_, compras_regras: Compras_renderRegras_ };
+      var mapa = { compras_pedir: Compras_renderPedir_, compras_meus: Compras_renderMeus_, compras: Compras_renderFila_, compras_fornecedores: Compras_renderFornecedores_, compras_regras: Compras_renderRegras_,
+        compras_informar: Compras_renderInformar_, compras_cartoes: Compras_renderCartoes_, compras_conciliacao: Compras_renderConciliacao_, compras_apagar: Compras_renderAPagar_ };
       if (typeof Compras_renderFinanceiro_ === "function") mapa.compras_financeiro = Compras_renderFinanceiro_;
       if (typeof Compras_renderPainel_ === "function") mapa.compras_painel = Compras_renderPainel_;
       var fn = mapa[mod];
-      if ((mod === "compras" || mod === "compras_painel") && !ini.veFila) fn = null;
+      if (mod === "compras" && !ini.veFila) fn = null;
+      if (mod === "compras_painel" && !(ini.vePainel || ini.veFila)) fn = null;
+      if (mod === "compras_cartoes" && !ini.podeCartoes) fn = null;
+      if ((mod === "compras_conciliacao" || mod === "compras_apagar") && !ini.podeConciliar) fn = null;
       if (mod === "compras_fornecedores" && !ini.veValores) fn = null;
       if (mod === "compras_financeiro" && !ini.financeiro) fn = null;
       if (!fn) {
-        if (mapa[mod]) { div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_(CP_MODS[mod] || "Compras", "") + '<div class="cp-faixa aviso">Esta tela de Compras é dos compradores, gestores, do Financeiro (conferência) e da Diretoria. Para pedir uma peça ou acompanhar os seus pedidos, use "Pedir peça ou material" e "Meus pedidos de compra" no menu Compras.</div></div>'; return; }
+        if (mapa[mod]) { div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_(CP_MODS[mod] || "Compras", "") + '<div class="cp-faixa aviso">Esta tela de Compras é dos compradores, gestores, do Financeiro (conferência, cartões, conciliação e A pagar) e da Diretoria. Para pedir uma peça, informar uma compra que você fez ou acompanhar os seus pedidos, use "Pedir peça ou material", "Informar compra já feita" e "Meus pedidos de compra" no menu Compras.</div></div>'; return; }
         fn = Compras_renderMeus_;
       }
       fn(div, alvo || {});
@@ -390,10 +405,11 @@
   // =========================================================
   function Compras_renderMeus_(div) {
     div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Meus pedidos de compra", "Os pedidos que você fez e os do seu pedido aprovado no Comercial: situação, previsão de entrega e o que falta completar. Sem valores.",
-      '<button type="button" class="btn-secondary" id="cpMeusAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-secondary" id="cpSemPedido">Registrar compra feita fora do sistema</button><button type="button" class="btn-primary" onclick="abrir(\'compras_pedir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Pedir peça ou material</button>') +
+      '<button type="button" class="btn-secondary" id="cpMeusAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-secondary" id="cpSemPedido">Informar compra já feita</button><button type="button" class="btn-primary" onclick="abrir(\'compras_pedir\')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Pedir peça ou material</button>') +
       Cp_avisosRecentes_() + '<div id="cpMeus"><div class="cp-vazio">Carregando…</div></div></div>';
     Cp_$_("cpMeusAtualizar").onclick = function () { Compras_renderMeus_(div); };
-    Cp_$_("cpSemPedido").onclick = function () { Cp_formSemPedido_(function () { Compras_renderMeus_(div); }); };
+    // 31/10/2026: a compra feita fora do sistema agora é informada pela tela nova (vínculo, forma, parcelas, comprovante e nota)
+    Cp_$_("cpSemPedido").onclick = function () { abrir("compras_informar"); };
     Cp_chamar_("meus", {}, function (r) {
       var el = Cp_$_("cpMeus");
       if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Você ainda não fez pedidos de compra. Toque em "Pedir peça ou material".</div>'; return; }
@@ -471,6 +487,8 @@
       '<dt>Vínculo</dt><dd>' + Cp_esc_(q.vinculo.texto) + '</dd><dt>Urgência</dt><dd>' + Cp_esc_(q.urgenciaNome) + (q.precisaAte ? ' · precisa até ' + Cp_esc_(q.precisaAte) : '') + '</dd>' +
       '<dt>Comprador</dt><dd>' + Cp_esc_(q.comprador.nome || "—") + '</dd>' + (q.previsaoEntrega ? '<dt>Previsão de entrega</dt><dd>' + Cp_esc_(q.previsaoEntrega) + '</dd>' : '') + '</dl>';
     if (q.especIncompleta) h += '<div class="cp-faixa aviso"><b>Especificação incompleta.</b> ' + Cp_esc_((q.falta || []).join("; ")) + ' O pedido não é cotado até completar.</div>';
+    if (q.informada) h += '<div class="cp-faixa">Compra informada depois de feita' + (q.compradoPor ? ' · comprou: <b>' + Cp_esc_(q.compradoPor) + '</b>' : '') + (q.centroCusto ? ' · centro de custo: ' + Cp_esc_(q.centroCusto) : '') + (q.orcamentoRef ? ' · orçamento ' + Cp_esc_(q.orcamentoRef) : '') + (q.orcamentoUrl ? ' (<a href="' + Cp_esc_(q.orcamentoUrl) + '" target="_blank" rel="noopener">arquivo</a>)' : '') +
+      (q.apontamentos && q.apontamentos.length ? '<br>' + Cp_ap_(q.apontamentos) + '<br><span class="cp-meta">' + Cp_esc_(q.apontamentos.map(function (x) { return x.texto; }).join(" ")) + '</span>' : '') + '</div>';
     h += '<div class="cp-sec">Itens</div>' + q.itens.map(function (i) {
       var tec = [i.partNumber ? "nº da peça " + i.partNumber : "", i.marca, i.equipamentoTexto, i.tensao, i.corrente, i.pressao, i.rosca, i.dimensao, i.material, i.outras].filter(Boolean).join(" · ");
       return '<div class="cp-item"><p class="cp-txt"><b>' + i.ordem + '. ' + Cp_esc_(i.descricao) + '</b> — ' + Cp_esc_(i.quantidadeTxt + ' ' + i.unidade) + ' <span class="cp-meta">' + Cp_esc_(i.categoriaNome) + '</span></p>' +
@@ -801,17 +819,17 @@
   // =========================================================
   // PAINEL DE COMPRAS
   // =========================================================
-  function Compras_renderPainel_(div) {
+  /** 31/10/2026: o painel mensal anterior virou a aba "Mês em detalhe" do Painel de compras (nada foi tirado). */
+  function Cp_painelMes_(div) {
     var d = new Date(), comp = CP.painelComp || (d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2));
-    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Painel de compras", "Compras em aberto, paradas e atrasadas, gasto do mês por vínculo, área e fornecedor, e os controles (menos cotações, divergências, compras sem pedido).",
-      '<input type="month" id="pnMes" value="' + Cp_esc_(comp) + '" style="min-height:40px"><button type="button" class="btn-secondary" id="pnRel"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Relatório do mês (A4)</button>') + '<div id="pnCorpo"><div class="cp-vazio">Carregando…</div></div></div>';
-    Cp_$_("pnMes").onchange = function () { CP.painelComp = this.value; Compras_renderPainel_(div); };
+    div.innerHTML = '<div class="cp-filtros"><div>' + Cp_campo_("Mês", '<input type="month" id="pmMes" value="' + Cp_esc_(comp) + '">') + '</div><div><label>&nbsp;</label><button type="button" class="btn-secondary" id="pmRel"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Relatório do mês (A4)</button></div></div><p class="cp-meta">Compras em aberto, paradas e atrasadas, gasto do mês por vínculo, área e fornecedor, e os controles (menos cotações, divergências, compras sem pedido).</p><div id="pmCorpo"><div class="cp-vazio">Carregando…</div></div>';
+    Cp_$_("pmMes").onchange = function () { CP.painelComp = this.value; Cp_painelMes_(div); };
     Cp_chamar_("painel", { competencia: comp }, function (r) {
-      if (!r.podeRelatorio) Cp_$_("pnRel").style.display = "none";
+      if (!r.podeRelatorio) Cp_$_("pmRel").style.display = "none";
       var tab = function (l, rot) { return l.length ? '<table class="cp-tabela"><thead><tr><th>' + rot + '</th><th class="n">Pedidos</th><th class="n">Valor</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td data-r="' + rot + '">' + Cp_esc_(x.nome) + '</td><td class="n" data-r="Pedidos">' + x.qtd + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td></tr>'; }).join("") + '</tbody></table>' : '<p class="cp-meta">Nenhuma compra no mês.</p>'; };
       var casos = function (l, vazio) { return l.length ? '<div class="cp-lista">' + l.map(function (x) { return '<div class="cp-card"><p class="cp-txt"><b>' + Cp_esc_(x.numero) + '</b> · ' + Cp_esc_(x.titulo) + '</p><p class="cp-meta">' + Cp_esc_([x.comprador, x.previsao ? "previsão " + x.previsao : "", x.texto].filter(Boolean).join(" · ")) + '</p></div>'; }).join("") + '</div>' : '<p class="cp-meta">' + vazio + '</p>'; };
       var c = r.conferencia;
-      Cp_$_("pnCorpo").innerHTML = '<div class="cp-kpis"><div class="cp-kpi"><span class="v">' + Cp_esc_(r.pedidos.valorTxt) + '</span><span class="r">Comprado em ' + Cp_esc_(r.competenciaNome) + ' (' + r.pedidos.qtd + ' pedidos)</span></div>' +
+      Cp_$_("pmCorpo").innerHTML = '<div class="cp-kpis"><div class="cp-kpi"><span class="v">' + Cp_esc_(r.pedidos.valorTxt) + '</span><span class="r">Comprado em ' + Cp_esc_(r.competenciaNome) + ' (' + r.pedidos.qtd + ' pedidos)</span></div>' +
         '<div class="cp-kpi"><span class="v">' + r.abertas + '</span><span class="r">Em aberto</span></div><div class="cp-kpi ' + (r.atrasadas.length ? "critico" : "ok") + '"><span class="v">' + r.atrasadas.length + '</span><span class="r">Entregas atrasadas</span></div>' +
         '<div class="cp-kpi ' + (c.aguardando ? "aviso" : "ok") + '"><span class="v">' + c.aguardando + '</span><span class="r">Aguardando o Financeiro (' + c.divergentes + ' divergentes)</span></div></div>' +
         '<div class="cp-caixa"><h3>Em aberto por situação</h3><dl class="cp-det">' + r.situacoes.map(function (s) { return '<dt>' + Cp_esc_(s.nome) + '</dt><dd>' + s.qtd + '</dd>'; }).join("") + '</dl></div>' +
@@ -820,8 +838,8 @@
         '<div class="cp-caixa"><h3>Entregas atrasadas</h3>' + casos(r.atrasadas, "Nenhuma.") + '</div>' +
         '<div class="cp-grade2"><div class="cp-caixa"><h3>Recebidas fora do prazo</h3>' + casos(r.foraPrazo, "Nenhuma.") + '</div><div class="cp-caixa"><h3>Menos cotações que o mínimo</h3>' + casos(r.menosCotacoes, "Nenhuma.") + '</div></div>' +
         '<div class="cp-grade2"><div class="cp-caixa"><h3>Divergências de recebimento</h3>' + casos(r.divergenciasRecebimento, "Nenhuma.") + '</div><div class="cp-caixa"><h3>Compras sem pedido</h3>' + casos(r.semPedido, "Nenhuma.") + '</div></div>';
-    }, function (m) { Cp_msg_("pnCorpo", m); });
-    Cp_$_("pnRel").onclick = function () {
+    }, function (m) { Cp_msg_("pmCorpo", m); });
+    Cp_$_("pmRel").onclick = function () {
       var w = window.open("", "_blank");
       Cp_chamar_("relatorioMes", { competencia: comp }, function (r) { if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } }, function (m) { if (w) w.close(); alert(m); }, { carregando: "Gerando o relatório do mês…" });
     };
@@ -946,6 +964,15 @@
         Cp_campo_("Cotar (dias úteis, urgência baixa)", '<input type="number" min="1" max="15" id="rgCotarBaixa" value="' + Cp_esc_(g.prazos.cotarBaixaDiasUteis) + '"' + dis + '>') + Cp_campo_("Crítica: horas para cotar", '<input type="number" min="1" max="8" id="rgCritica" value="' + Cp_esc_(g.prazos.criticaHoras) + '"' + dis + '>') + '</div>' +
         '<div class="cp-grade3">' + Cp_campo_("Aprovada sem pedido: avisar após (dias úteis)", '<input type="number" min="1" max="10" id="rgParado" value="' + Cp_esc_(g.prazos.paradoDiasUteis) + '"' + dis + '>') + Cp_campo_("Gestor de Compras cobra após (dias úteis)", '<input type="number" min="1" max="15" id="rgGestor" value="' + Cp_esc_(g.prazos.gestorAposDiasUteis) + '"' + dis + '>') +
         Cp_campo_("Resumo de e-mail a partir de", '<input type="time" id="rgHora" value="' + Cp_esc_(g.avisos.horaResumo) + '"' + dis + '>') + '</div></div>' +
+        // 31/10/2026: compra informada depois de feita (limite da compra direta, prazos, reembolso e cobrança do não informado)
+        (function () { var inf = g.informar || {}; return '<div class="cp-caixa"><h3>Compra informada depois de feita</h3><div class="cp-grade3">' +
+          Cp_campo_("Limite da compra direta (R$)", '<input type="text" inputmode="decimal" id="rgInfLim" value="' + Cp_esc_(String(inf.limiteDireta === undefined ? 1000 : inf.limiteDireta).replace(".", ",")) + '"' + dis + '>', "Acima dele, a compra informada vai à ciência da gestão.") +
+          Cp_campo_("Prazo para informar (dias úteis)", '<input type="number" min="0" max="30" id="rgInfPrazo" value="' + Cp_esc_(inf.prazoDiasUteis) + '"' + dis + '>', "Depois disso, pede o motivo do atraso.") +
+          Cp_campo_("Qualquer pessoa informa até (dias atrás)", '<input type="number" min="7" max="365" id="rgInfMax" value="' + Cp_esc_(inf.maxDiasAtras) + '"' + dis + '>', "Mais antigo: só Financeiro e gestão.") + '</div><div class="cp-grade3">' +
+          Cp_campo_("\"Acima do comum\": vezes a média do colaborador", '<input type="number" min="1" max="20" id="rgInfMult" value="' + Cp_esc_(inf.multiploMedia) + '"' + dis + '>') +
+          Cp_campo_("Prazo do reembolso (dias úteis)", '<input type="number" min="1" max="30" id="rgInfReemb" value="' + Cp_esc_(inf.reembolsoDiasUteis) + '"' + dis + '>') +
+          Cp_campo_("Cobrança do não informado por e-mail após (dias úteis)", '<input type="number" min="0" max="30" id="rgInfEmail" value="' + Cp_esc_(inf.cobrancaEmailDiasUteis) + '"' + dis + '>') + '</div>' +
+          Cp_campo_("Não informado vai à Caixa de decisões e ao Conduta após (dias úteis)", '<input type="number" min="1" max="60" id="rgInfGestao" value="' + Cp_esc_(inf.cobrancaGestaoDiasUteis) + '"' + dis + '>', "O Conduta só recebe a sugestão; a gestão decide se vira ocorrência.") + '</div>'; })() +
         '<div class="cp-caixa"><h3>Pedido de compra (folha A4)</h3>' + Cp_campo_("Endereço de entrega", '<textarea id="rgEntrega" maxlength="400"' + dis + '>' + Cp_esc_(g.empresa.enderecoEntrega) + '</textarea>') + Cp_campo_("Endereço de faturamento", '<textarea id="rgFat" maxlength="400"' + dis + '>' + Cp_esc_(g.empresa.enderecoFaturamento) + '</textarea>') +
         Cp_campo_("Observação no pedido", '<textarea id="rgObs" maxlength="600"' + dis + '>' + Cp_esc_(g.empresa.observacaoPedido) + '</textarea>') + '</div>' +
         (ed ? Cp_campo_("O que mudou e por quê", '<textarea id="rgMotivo" maxlength="500"></textarea>', "Obrigatório (pelo menos 10 letras). Fica no histórico de versões.") + '<div id="rgMsg"></div><div class="cp-acoes"><button type="button" class="btn-primary" id="rgSalvar">Salvar as regras</button></div>' : '') +
@@ -957,9 +984,434 @@
         var nova = { compradores: marcados("compradores"), substitutos: marcados("substitutos"), areaCompras: Cp_$_("rgArea").value,
           faixas: g.faixas.map(function (f, i) { var a = el.querySelector('[data-fx-ate="' + i + '"]'); return { ate: a ? a.value : null, aprovador: el.querySelector('[data-fx-apr="' + i + '"]').value, cotacoes: el.querySelector('[data-fx-cot="' + i + '"]').value }; }),
           prazos: { cotarDiasUteis: Number(Cp_$_("rgCotar").value), cotarBaixaDiasUteis: Number(Cp_$_("rgCotarBaixa").value), criticaHoras: Number(Cp_$_("rgCritica").value), paradoDiasUteis: Number(Cp_$_("rgParado").value), gestorAposDiasUteis: Number(Cp_$_("rgGestor").value), pedidoDiasUteis: g.prazos.pedidoDiasUteis, entregaDiasUteis: g.prazos.entregaDiasUteis },
-          empresa: { enderecoEntrega: Cp_$_("rgEntrega").value, enderecoFaturamento: Cp_$_("rgFat").value, observacaoPedido: Cp_$_("rgObs").value }, avisos: { horaResumo: Cp_$_("rgHora").value || "08:00" } };
+          empresa: { enderecoEntrega: Cp_$_("rgEntrega").value, enderecoFaturamento: Cp_$_("rgFat").value, observacaoPedido: Cp_$_("rgObs").value }, avisos: { horaResumo: Cp_$_("rgHora").value || "08:00" },
+          informar: { limiteDireta: Cp_$_("rgInfLim").value, prazoDiasUteis: Cp_$_("rgInfPrazo").value, maxDiasAtras: Cp_$_("rgInfMax").value, multiploMedia: Cp_$_("rgInfMult").value, reembolsoDiasUteis: Cp_$_("rgInfReemb").value, cobrancaEmailDiasUteis: Cp_$_("rgInfEmail").value, cobrancaGestaoDiasUteis: Cp_$_("rgInfGestao").value } };
         Cp_chamar_("regras", { salvar: nova, motivo: Cp_$_("rgMotivo").value }, function (rr) { CP.ini = null; Compras_garantirInicio_(function () {}); Compras_renderRegras_(div); setTimeout(function () { alert(rr.message); }, 50); }, function (m) { Cp_msg_("rgMsg", m); }, { carregando: "Salvando…" });
       };
     }, function (m) { Cp_msg_("cpRegras", m); });
+  }
+  // =========================================================
+  // 31/10/2026 (pedido do dono): INFORMAR COMPRA JÁ FEITA, CARTÕES, CONCILIAÇÃO DAS FATURAS, A PAGAR, PAINEL COM KANBAN E GANTT
+  // Servidor: SGO_Compras_Informar.js, SGO_Compras_Faturas.js, SGO_Compras_Relatorios.js. Kanban e Gantt: componentes comuns
+  // (JS_PainelAtendimento.html). Nada se redesenha sozinho: a tela recarrega depois de cada ação ou em "Atualizar".
+  // =========================================================
+  function Cp_moeda_(n) { return "R$ " + (Number(n) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function Cp_hojeIso_() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function Cp_mesIso_(n) { var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + (n || 0)); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2); }
+  function Cp_ap_(lista) {
+    if (!lista || !lista.length) return "";
+    var nome = { ATRASO: "Informada com atraso", DUPLICIDADE: "Duplicidade possível", ACIMA_LIMITE: "Acima do limite", ACIMA_MEDIA: "Acima do comum", CARTAO_SEM_CADASTRO: "Cartão não cadastrado" };
+    return lista.map(function (a) { return '<span class="cp-selo laranja" title="' + Cp_esc_(a.texto) + '">' + Cp_esc_(nome[a.tipo] || a.tipo) + '</span>'; }).join("");
+  }
+  var CP_COR_PARC = { A_CONCILIAR: "azul", CONCILIADA: "verde", NAO_ESTA_NA_FATURA: "laranja", DIVERGENTE: "vermelho", A_PAGAR: "laranja", PAGA: "verde", CANCELADA: "cinza" };
+  var CP_COR_EXT = { CONCILIADA: "verde", NAO_INFORMADA: "vermelho", JUSTIFICADA: "cinza", IGNORADA: "cinza" };
+  function Cp_seloParc_(x) { return '<span class="cp-selo ' + (CP_COR_PARC[x.situacao] || "cinza") + '">' + Cp_esc_(x.situacaoNome) + (x.estimada ? " (fatura estimada)" : "") + '</span>'; }
+
+  // ---------------- Informar compra já feita ----------------
+  var CP_INF = { aba: "informar", opcoes: null, preenche: null, cobrancas: 0 };
+  function Compras_renderInformar_(div, alvo) {
+    if (alvo && alvo.id === "cobrancas") CP_INF.aba = "cobrancas";
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Informar compra já feita", "Comprou com o cartão da empresa, faturado, Pix, dinheiro do caixa ou do próprio bolso? Informe aqui, de preferência no mesmo dia, com a foto do comprovante. Substitui o aviso no grupo do WhatsApp: o Financeiro confere e a fatura do cartão bate sozinha.",
+      '<button type="button" class="btn-secondary" id="ciAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div class="cp-tabs" id="ciAbas"></div><div id="ciCorpo"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_$_("ciAtualizar").onclick = function () { CP_INF.opcoes = null; Compras_renderInformar_(div, {}); };
+    var abas = function () {
+      Cp_$_("ciAbas").innerHTML = [["informar", "Informar uma compra"], ["minhas", "Minhas compras informadas"], ["cobrancas", "Compras a informar"]].map(function (a) {
+        return '<button type="button" class="cp-tab' + (CP_INF.aba === a[0] ? " active" : "") + '" data-ci="' + a[0] + '">' + a[1] + (a[0] === "cobrancas" && CP_INF.cobrancas ? '<span>' + CP_INF.cobrancas + '</span>' : '') + '</button>';
+      }).join("");
+      Cp_$_("ciAbas").querySelectorAll("[data-ci]").forEach(function (b) { b.onclick = function () { CP_INF.aba = b.getAttribute("data-ci"); if (CP_INF.aba !== "informar") CP_INF.preenche = null; abas(); corpo(); }; });
+    };
+    var corpo = function () {
+      var el = Cp_$_("ciCorpo");
+      if (CP_INF.aba === "informar") {
+        var desenhar = function () { Cp_formInformar_(el, CP_INF.preenche, function () { CP_INF.preenche = null; CP_INF.aba = "minhas"; abas(); corpo(); }); };
+        if (CP_INF.opcoes) desenhar(); else Cp_chamar_("opcoesInformar", {}, function (o) { CP_INF.opcoes = o; desenhar(); }, function (m) { Cp_msg_(el, m); });
+        return;
+      }
+      el.innerHTML = '<div class="cp-vazio">Carregando…</div>';
+      Cp_chamar_("minhasInformadas", {}, function (r) {
+        CP_INF.cobrancas = r.cobrancas.length; abas();
+        if (CP_INF.aba === "cobrancas") { Cp_listaCobrancas_(el, r.cobrancas, function (c) { CP_INF.preenche = c; CP_INF.aba = "informar"; abas(); corpo(); }); return; }
+        Cp_listaInformadas_(el, r.compras);
+      }, function (m) { Cp_msg_(el, m); });
+    };
+    abas(); corpo();
+    if (CP_INF.aba === "informar") Cp_chamar_("minhasInformadas", {}, function (r) { if (r.cobrancas.length !== CP_INF.cobrancas) { CP_INF.cobrancas = r.cobrancas.length; abas(); } }, function () {});
+  }
+
+  function Cp_listaCobrancas_(el, l, informar) {
+    if (!l.length) { el.innerHTML = '<div class="cp-vazio">Nada a informar. Quando o Financeiro importa a fatura do cartão pelo qual você responde, o que estiver lá sem a compra informada aparece aqui.</div>'; return; }
+    el.innerHTML = '<div class="cp-faixa aviso">Estes lançamentos estão na fatura do cartão pelo qual você responde e ninguém informou a compra. Toque em "Informar esta compra": a data, o valor e o cartão já vêm preenchidos; falta o vínculo e o comprovante. Se não foi compra (tarifa, assinatura), fale com o Financeiro.</div>' +
+      '<table class="cp-tabela"><thead><tr><th>Data</th><th>Lançamento</th><th>Cartão e fatura</th><th class="n">Valor</th><th>Há</th><th></th></tr></thead><tbody>' + l.map(function (c, k) {
+        return '<tr><td data-r="Data">' + Cp_esc_(c.data) + '</td><td data-r="Lançamento"><b>' + Cp_esc_(c.descricao || "Sem descrição") + '</b>' + (c.parcelas ? ' <span class="cp-meta">parcela ' + c.parcela + '/' + c.parcelas + '</span>' : '') + '</td>' +
+          '<td data-r="Cartão">' + Cp_esc_(c.cartao) + (c.fatura ? '<br><span class="cp-meta">fatura de ' + Cp_esc_(c.fatura) + '</span>' : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(c.valorTxt) + '</td>' +
+          '<td data-r="Há">' + Cp_esc_(c.diasUteis + (c.diasUteis === 1 ? " dia útil" : " dias úteis")) + '</td><td data-r=""><button type="button" class="btn-primary" data-cob="' + k + '">Informar esta compra</button></td></tr>';
+      }).join("") + '</tbody></table>';
+    el.querySelectorAll("[data-cob]").forEach(function (b) { b.onclick = function () { informar(l[Number(b.getAttribute("data-cob"))]); }; });
+  }
+
+  function Cp_listaInformadas_(el, l) {
+    if (!l.length) { el.innerHTML = '<div class="cp-vazio">Você ainda não informou compras. Toque em "Informar uma compra".</div>'; return; }
+    el.innerHTML = '<div class="cp-lista">' + l.map(function (c) {
+      var corFin = c.finSituacao === "CONFERIDA" ? "verde" : c.finSituacao === "DIVERGENTE" ? "vermelho" : "azul";
+      return '<div class="cp-card' + (c.finSituacao === "DIVERGENTE" ? " critica" : "") + '"><p class="cp-card-tit">' + Cp_esc_(c.numero) + ' · ' + Cp_esc_(c.titulo) + '</p>' +
+        '<p class="cp-meta"><span class="cp-selo ' + (CP_COR_SIT[c.situacao] || "cinza") + '">' + Cp_esc_(c.situacaoNome) + '</span><span class="cp-selo ' + corFin + '">Financeiro: ' + Cp_esc_(c.finSituacaoNome || "—") + '</span>' + Cp_ap_(c.apontamentos) + '</p>' +
+        '<p class="cp-txt"><b>' + Cp_esc_(c.valorTxt) + '</b> · ' + Cp_esc_(c.fornecedor) + ' · ' + Cp_esc_(c.dataCompra) + ' · ' + Cp_esc_(c.forma) + '<br><span class="cp-meta">' + Cp_esc_(c.vinculo) + (c.quem ? ' · comprou: ' + Cp_esc_(c.quem) : '') + '</span></p>' +
+        (c.finObs ? '<div class="cp-faixa ' + (c.finSituacao === "DIVERGENTE" ? "erro" : "") + '">Financeiro: ' + Cp_esc_(c.finObs) + '</div>' : '') +
+        (c.parcelas.length ? '<details><summary class="cp-meta" style="cursor:pointer">' + (c.parcelas.length === 1 ? "Pagamento" : c.parcelas.length + " parcelas") + '</summary><table class="cp-tabela"><tbody>' + c.parcelas.map(function (x) {
+          return '<tr><td data-r="Parcela">' + x.parcela + '/' + x.parcelas + '</td><td data-r="Fatura ou vencimento">' + Cp_esc_(x.forma === "CARTAO_CREDITO" ? "fatura de " + x.competenciaNome : (x.vencimento ? "vence " + x.vencimento : "")) + (x.beneficiario ? ' · a ' + Cp_esc_(x.beneficiario) : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td><td data-r="Situação">' + Cp_seloParc_(x) + (x.comprovantePagoUrl ? ' <a href="' + Cp_esc_(x.comprovantePagoUrl) + '" target="_blank" rel="noopener">comprovante</a>' : '') + '</td></tr>';
+        }).join("") + '</tbody></table></details>' : '') +
+        '<div class="cp-acoes">' + (c.comprovanteUrl ? '<a class="btn-secondary" href="' + Cp_esc_(c.comprovanteUrl) + '" target="_blank" rel="noopener">Comprovante</a>' : '') + '<button type="button" class="btn-secondary" data-ficha="' + Cp_esc_(c.id) + '">Abrir a compra</button></div></div>';
+    }).join("") + '</div>';
+    el.querySelectorAll("[data-ficha]").forEach(function (b) { b.onclick = function () { Compras_abrirFicha_(b.getAttribute("data-ficha")); }; });
+  }
+
+  /** Formulário "Informar compra". pre: lançamento da fatura (cobrança) que esta compra explica, ou null. */
+  function Cp_formInformar_(alvo, pre, depois) {
+    var ini = CP.ini, o = CP_INF.opcoes || {}, est = { itens: [{ descricao: "", quantidade: 1, unidade: "un." }], clienteId: "", clienteNome: "", chamado: "" };
+    var formas = [["CARTAO_CREDITO", "Cartão de crédito da empresa"], ["CARTAO_DEBITO", "Cartão de débito da empresa"], ["FATURADO", "Faturado (paga depois, com vencimento)"], ["BOLETO", "Boleto"], ["PIX", "Pix da empresa"], ["TRANSFERENCIA", "Transferência da empresa"], ["DINHEIRO", "Dinheiro do caixa da empresa"], ["REEMBOLSO", "Dinheiro próprio (pedir reembolso)"]];
+    var h = (pre ? '<div class="cp-faixa aviso"><b>Lançamento da fatura de ' + Cp_esc_(pre.data) + ':</b> ' + Cp_esc_(pre.descricao) + ' · ' + Cp_esc_(pre.valorTxt) + ' · ' + Cp_esc_(pre.cartao) + '. Valor, data e cartão já preenchidos: complete o vínculo, o que foi comprado e o comprovante.</div>' : '') +
+      (o.limiteDireta ? '<p class="cp-meta">Prazo para informar: ' + o.prazoDiasUteis + ' dias úteis depois da compra. Acima de ' + Cp_moeda_(o.limiteDireta) + ', a compra vai também para a ciência da gestão.</p>' : '') +
+      '<div class="cp-caixa"><h3>1. Para que foi</h3>' + (o.podeOutro ? Cp_campo_("Quem comprou", '<select id="ciQuem">' + Cp_opcoes_(o.equipe.map(function (u) { return { v: u.id, t: u.nome }; }), ini.eu.id) + '</select>', "Você pode informar em nome de outra pessoa da equipe (comprador, Financeiro e gestão).") : '') +
+      Cp_campo_("Para que foi a compra", '<textarea id="ciFin" maxlength="500" placeholder="Exemplo: vedação da porta da autoclave do cliente, troca no atendimento de hoje"></textarea>', "Obrigatório (pelo menos 10 letras).") +
+      '<div class="cp-vinculos">' + Object.keys(o.vinculos || {}).map(function (k) { return '<label><input type="radio" name="ciVinc" value="' + k + '"> ' + Cp_esc_(o.vinculos[k]) + '</label>'; }).join("") + '</div><div id="ciVincCampos"><p class="cp-meta">Escolha uma opção acima. Toda compra precisa dizer para que é.</p></div>' +
+      '<div class="cp-grade2">' + Cp_campo_("Orçamento ou pedido de compra (se houver)", '<input type="text" id="ciOrc" maxlength="120" placeholder="Nº do orçamento ou REQ-2026-0001">') + Cp_campo_("Arquivo do orçamento (opcional)", '<input type="file" id="ciOrcArq" accept=".pdf,image/*">') + '</div></div>' +
+      '<div class="cp-caixa"><h3>2. O que foi comprado e de quem</h3><div id="ciItens"></div><div class="cp-acoes"><button type="button" class="btn-secondary" id="ciAddItem"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Acrescentar item</button></div>' +
+      '<div class="cp-grade3">' + Cp_campo_("Onde foi comprado", '<input type="text" id="ciForn" maxlength="160" placeholder="Nome da loja ou do fornecedor" value="' + Cp_esc_(pre ? pre.descricao : "") + '">') +
+      Cp_campo_("Valor total pago (R$)", '<input type="text" inputmode="decimal" id="ciValor" placeholder="0,00" value="' + Cp_esc_(pre ? String(pre.valor.toFixed(2)).replace(".", ",") : "") + '">', "Como está no comprovante.") +
+      Cp_campo_("Data da compra", '<input type="date" id="ciData" max="' + Cp_hojeIso_() + '" value="' + Cp_esc_(pre ? pre.dataIso : Cp_hojeIso_()) + '">') + '</div>' +
+      '<div class="cp-vinculos"><label><input type="radio" name="ciRec" value="sim" checked> Já está comigo</label><label><input type="radio" name="ciRec" value="nao"> Ainda vai chegar (compra pela internet ou encomenda)</label></div><div id="ciPrevC"></div></div>' +
+      '<div class="cp-caixa"><h3>3. Como foi pago</h3><div class="cp-grade2">' + Cp_campo_("Forma de pagamento", '<select id="ciForma">' + Cp_opcoes_(formas.map(function (f) { return { v: f[0], t: f[1] }; }), pre ? "CARTAO_CREDITO" : "", "Escolha") + '</select>') + '<div id="ciFormaExtra"></div></div></div>' +
+      '<div class="cp-caixa"><h3>4. Comprovante e nota</h3><div class="cp-grade2">' + Cp_campo_("Foto do comprovante (obrigatória)", '<input type="file" id="ciComp" accept="image/*,.pdf">', "Cupom, recibo, comprovante do cartão ou do Pix. No celular, toque e tire a foto.") +
+      Cp_campo_("Nota fiscal (foto ou PDF)", '<input type="file" id="ciNf" accept="image/*,.pdf">') + '</div><div class="cp-grade2">' + Cp_campo_("Ou o número da nota", '<input type="text" id="ciNfNum" maxlength="60">') +
+      Cp_campo_("Sem nota? Escreva o motivo", '<input type="text" id="ciNfSem" maxlength="300" placeholder="Exemplo: compra em feira, só recibo">') + '</div></div>' +
+      '<div id="ciMsg"></div><div id="ciConf"></div><div class="cp-acoes"><button type="button" class="btn-secondary" id="ciConferir">Conferir antes de enviar</button><button type="button" class="btn-primary" id="ciEnviar"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar ao Financeiro</button></div>';
+    alvo.innerHTML = h;
+    var g = function (id) { var el = Cp_$_(id); return el ? el.value : ""; };
+    // vínculo
+    var vincCampos = function () {
+      var tipo = (alvo.querySelector('input[name="ciVinc"]:checked') || {}).value || "", c = Cp_$_("ciVincCampos");
+      if (tipo === "CHAMADO") {
+        c.innerHTML = Cp_campo_("Chamado da Assistência", '<input type="text" id="ciChBusca" placeholder="Número do chamado ou nome do cliente"><div id="ciChRes"></div><input type="hidden" id="ciCh" value="' + Cp_esc_(est.chamado) + '">', "Os chamados abertos aparecem primeiro. A compra entra no custo do chamado.");
+        var buscar = function (q) {
+          Cp_chamar_("chamados", { busca: q }, function (r) {
+            var res = Cp_$_("ciChRes"); if (!res) return;
+            res.innerHTML = r.chamados.map(function (x) { return '<div class="cp-card clicavel" style="padding:6px 10px;margin-top:4px" data-ch="' + Cp_esc_(x.numero) + '"><b>' + Cp_esc_(x.numero) + '</b> · ' + Cp_esc_(x.cliente) + ' <span class="cp-meta">' + Cp_esc_(x.equipamento) + '</span></div>'; }).join("") || '<p class="cp-meta">Nenhum chamado encontrado.</p>';
+            res.querySelectorAll("[data-ch]").forEach(function (b) { b.onclick = function () { est.chamado = b.getAttribute("data-ch"); Cp_$_("ciCh").value = est.chamado; Cp_$_("ciChBusca").value = b.textContent; res.innerHTML = ""; }; });
+          }, function () {});
+        };
+        var tt = null; Cp_$_("ciChBusca").oninput = function () { clearTimeout(tt); var q = this.value.trim(); tt = setTimeout(function () { buscar(q); }, 350); };
+        buscar("");
+      } else if (tipo === "CLIENTE") {
+        c.innerHTML = '<div class="cp-grade2">' + Cp_campo_("Cliente", '<input type="text" id="ciCliBusca" placeholder="Digite o nome ou o CNPJ"><div id="ciCliRes"></div><input type="hidden" id="ciCli">') + Cp_campo_("Unidade", '<select id="ciUni"><option value="">Escolha o cliente primeiro</option></select>') + '</div>' +
+          Cp_campo_("Número da O.S. (se houver)", '<input type="text" id="ciOs" maxlength="40">');
+        var t = null;
+        Cp_$_("ciCliBusca").oninput = function () {
+          clearTimeout(t); var q = this.value.trim();
+          t = setTimeout(function () {
+            if (q.length < 2) { Cp_$_("ciCliRes").innerHTML = ""; return; }
+            Cp_chamar_("clientes", { busca: q }, function (r) {
+              Cp_$_("ciCliRes").innerHTML = r.clientes.map(function (x) { return '<div class="cp-card clicavel" style="padding:6px 10px;margin-top:4px" data-cli="' + Cp_esc_(x.id) + '" data-nome="' + Cp_esc_(x.nome) + '">' + Cp_esc_(x.nome) + '</div>'; }).join("") || '<p class="cp-meta">Nenhum cliente com esse nome. Cadastre em Cadastros > Clientes.</p>';
+              Cp_$_("ciCliRes").querySelectorAll("[data-cli]").forEach(function (b) { b.onclick = function () {
+                Cp_$_("ciCli").value = b.getAttribute("data-cli"); Cp_$_("ciCliBusca").value = b.getAttribute("data-nome"); Cp_$_("ciCliRes").innerHTML = "";
+                Cp_chamar_("cliente", { clienteId: b.getAttribute("data-cli") }, function (u) { var sel = Cp_$_("ciUni"); if (sel) sel.innerHTML = Cp_opcoes_(u.unidades.map(function (x) { return { v: x.id, t: x.nome }; }), "", u.unidades.length ? "Sem unidade (sede)" : "Cliente sem unidades"); }, function () {});
+              }; });
+            }, function () {});
+          }, 350);
+        };
+      } else if (tipo === "COMERCIAL" || tipo === "VEICULO") {
+        c.innerHTML = '<div class="cp-vazio">Carregando…</div>';
+        Cp_garantirOpcoes_(function (op) {
+          c.innerHTML = tipo === "VEICULO" ? Cp_campo_("Veículo da Frota", '<select id="ciVei">' + Cp_opcoes_(op.veiculos.map(function (x) { return { v: x.id, t: x.placa + (x.modelo ? " · " + x.modelo : "") }; }), "", "Escolha o veículo") + '</select>') :
+            Cp_campo_("Pedido aprovado do Comercial", '<select id="ciProp">' + Cp_opcoes_(op.pedidosComercial.map(function (x) { return { v: x.id, t: x.numero + " · " + x.cliente }; }), "", op.pedidosComercial.length ? "Escolha o pedido" : "Nenhum pedido aprovado") + '</select>', "A compra aparece na ficha do pedido no Comercial.");
+        });
+      } else if (tipo === "INTERNO") {
+        c.innerHTML = '<div class="cp-grade2">' + Cp_campo_("Centro de custo", '<select id="ciCc">' + Cp_opcoes_(o.centrosCusto || [], "", "Escolha") + '</select>') + Cp_campo_("Explique o uso", '<input type="text" id="ciInt" maxlength="500" placeholder="Exemplo: material de limpeza da sede">', "Pelo menos 20 letras, contando o centro de custo.") + '</div>';
+      }
+    };
+    alvo.querySelectorAll('input[name="ciVinc"]').forEach(function (r) { r.onchange = vincCampos; });
+    // itens
+    var lerItens = function () { alvo.querySelectorAll("[data-ci-item]").forEach(function (box) { var i = est.itens[Number(box.getAttribute("data-ci-item"))]; box.querySelectorAll("[data-c]").forEach(function (el) { i[el.getAttribute("data-c")] = el.value; }); }); };
+    var desenharItens = function () {
+      Cp_$_("ciItens").innerHTML = est.itens.map(function (i, k) {
+        return '<div class="cp-item" data-ci-item="' + k + '"><div class="cp-grade3">' + Cp_campo_("Item " + (k + 1) + ": o que é", '<input type="text" data-c="descricao" maxlength="300" value="' + Cp_esc_(i.descricao) + '" placeholder="Exemplo: vedação de silicone da porta">') +
+          Cp_campo_("Quantidade", '<input type="text" inputmode="decimal" data-c="quantidade" value="' + Cp_esc_(i.quantidade) + '">') + Cp_campo_("Unidade", '<input type="text" data-c="unidade" maxlength="20" value="' + Cp_esc_(i.unidade) + '">') + '</div>' +
+          (est.itens.length > 1 ? '<button type="button" class="btn-secondary" data-ci-tirar="' + k + '">Tirar este item</button>' : '') + '</div>';
+      }).join("");
+      Cp_$_("ciItens").querySelectorAll("[data-ci-tirar]").forEach(function (b) { b.onclick = function () { lerItens(); est.itens.splice(Number(b.getAttribute("data-ci-tirar")), 1); desenharItens(); }; });
+    };
+    desenharItens();
+    Cp_$_("ciAddItem").onclick = function () { lerItens(); est.itens.push({ descricao: "", quantidade: 1, unidade: "un." }); desenharItens(); };
+    alvo.querySelectorAll('input[name="ciRec"]').forEach(function (r) { r.onchange = function () { Cp_$_("ciPrevC").innerHTML = r.value === "nao" && r.checked ? Cp_campo_("Previsão de entrega", '<input type="date" id="ciPrev" min="' + Cp_hojeIso_() + '">', "Compras confere o recebimento e avisa você quando chegar.") : ""; }; });
+    // forma de pagamento
+    var formaExtra = function () {
+      var v = Cp_$_("ciForma").value, h2 = "";
+      var cartoes = (o.cartoes || []).filter(function (k) { return v === "CARTAO_DEBITO" ? k.tipo !== "CREDITO" : k.tipo !== "DEBITO"; });
+      if (v === "CARTAO_CREDITO" || v === "CARTAO_DEBITO") {
+        h2 = Cp_campo_("4 últimos números do cartão", '<input type="text" inputmode="numeric" maxlength="4" id="ciFinal" list="ciFinais" value="' + Cp_esc_(pre ? pre.final : "") + '"><datalist id="ciFinais">' + cartoes.map(function (k) { return '<option value="' + Cp_esc_(k.final) + '">' + Cp_esc_(k.apelido) + '</option>'; }).join("") + '</datalist>', "Nunca digite o número inteiro." + (cartoes.length ? " Cadastrados: " + cartoes.map(function (k) { return k.final + " (" + k.apelido + ")"; }).join(", ") + "." : " Cartão ainda não cadastrado? Digite o final assim mesmo."));
+        if (v === "CARTAO_CREDITO") { var opts = []; for (var n = 1; n <= 24; n++) opts.push({ v: n, t: n === 1 ? "À vista (1x)" : n + " parcelas" }); h2 += Cp_campo_("Parcelas", '<select id="ciParc">' + Cp_opcoes_(opts, pre && pre.parcelas ? pre.parcelas : 1) + '</select>'); }
+      } else if (v === "FATURADO" || v === "BOLETO") h2 = Cp_campo_("Vencimento", '<input type="date" id="ciVenc">', "É por esta data que o Financeiro paga.") + (v === "FATURADO" ? Cp_campo_("Condição (opcional)", '<input type="text" id="ciCond" maxlength="200" placeholder="28 dias da nota fiscal">') : "");
+      else if (v === "REEMBOLSO") h2 = '<p class="cp-meta" style="margin-top:22px">O reembolso vai para quem comprou e fica em "A pagar" do Financeiro, com prazo de 5 dias úteis.</p>';
+      Cp_$_("ciFormaExtra").innerHTML = h2;
+    };
+    Cp_$_("ciForma").onchange = formaExtra; formaExtra();
+    var montar = function (cb, extra) {
+      lerItens();
+      var tipo = (alvo.querySelector('input[name="ciVinc"]:checked') || {}).value || "";
+      Cp_lerArquivos_(Cp_$_("ciComp"), function (comp) { Cp_lerArquivos_(Cp_$_("ciNf"), function (nf) { Cp_lerArquivos_(Cp_$_("ciOrcArq"), function (orc) {
+        var rec = ((alvo.querySelector('input[name="ciRec"]:checked') || {}).value || "sim") === "sim";
+        cb(Object.assign({ compradoPorId: g("ciQuem"), finalidade: g("ciFin"), vinculo: { tipo: tipo, chamadoNumero: g("ciCh"), clienteId: g("ciCli"), unidadeId: g("ciUni"), osAuvo: g("ciOs"), propostaId: g("ciProp"), veiculoId: g("ciVei"), motivoInterno: g("ciInt"), centroCusto: g("ciCc") },
+          orcamentoRef: g("ciOrc"), orcamentoArquivo: orc[0] || null, itens: est.itens.map(function (i) { return { descricao: i.descricao, quantidade: i.quantidade, unidade: i.unidade, categoria: "OUTRO" }; }), fornecedorNome: g("ciForn"), valor: g("ciValor"),
+          formaPagamento: g("ciForma"), cartaoFinal: g("ciFinal"), parcelas: g("ciParc") || 1, boletoVencimento: g("ciVenc"), condicao: g("ciCond"), dataCompra: g("ciData"), comprovante: comp[0] || null,
+          nfArquivo: nf[0] || null, nfNumero: g("ciNfNum"), nfSemMotivo: g("ciNfSem"), recebido: rec, previsaoEntrega: g("ciPrev"), extratoId: pre ? pre.extratoId : "", atrasoMotivo: g("ciAtraso"), duplicidadeMotivo: g("ciDup") }, extra || {}));
+      }); }); });
+    };
+    var tratar = function (r) {
+      var c = Cp_$_("ciConf");
+      if (r.precisa === "ATRASO") { Cp_msg_("ciMsg", ""); c.innerHTML = '<div class="cp-faixa aviso">' + Cp_esc_(r.message) + Cp_campo_("Por que só agora", '<input type="text" id="ciAtraso" maxlength="500">') + '</div>'; Cp_$_("ciAtraso").focus(); return; }
+      if (r.precisa === "DUPLICIDADE") { Cp_msg_("ciMsg", ""); c.innerHTML = '<div class="cp-faixa aviso">' + Cp_esc_(r.message) + '<ul>' + r.duplicadas.map(function (x) { return '<li>' + Cp_esc_(x.numero + " · " + x.titulo + " · " + x.quem + " · " + x.dia + " · " + x.valorTxt + (x.mesmoArquivo ? " (mesmo arquivo)" : "")) + '</li>'; }).join("") + '</ul>' + Cp_campo_("Se é outra compra, explique", '<input type="text" id="ciDup" maxlength="500">') + '</div>'; Cp_$_("ciDup").focus(); return; }
+      if (r.simulada) { c.innerHTML = '<div class="cp-faixa ' + (r.apontamentos.length ? "aviso" : "ok") + '">' + Cp_esc_(r.message) + (r.apontamentos.length ? '<ul>' + r.apontamentos.map(function (a) { return '<li>' + Cp_esc_(a.texto) + '</li>'; }).join("") + '</ul>' : '') + '</div>'; return; }
+      alert(r.message); if (depois) depois(r);
+    };
+    Cp_$_("ciConferir").onclick = function () { Cp_msg_("ciMsg", ""); montar(function (d) { Cp_chamar_("informar", d, tratar, function (m) { Cp_msg_("ciMsg", m); }, { carregando: "Conferindo…" }); }, { simular: true }); };
+    Cp_$_("ciEnviar").onclick = function () { Cp_msg_("ciMsg", ""); montar(function (d) { Cp_chamar_("informar", d, tratar, function (m) { Cp_msg_("ciMsg", m); }, { carregando: "Enviando a compra…" }); }); };
+  }
+
+  // ---------------- Cartões da empresa ----------------
+  function Compras_renderCartoes_(div) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Cartões da empresa", "Cada cartão pelo final (nunca o número inteiro), com o responsável e os dias de fechamento e vencimento. É assim que cada parcela cai na fatura certa e o que não foi informado é cobrado de quem responde pelo cartão.",
+      '<button type="button" class="btn-secondary" id="ckAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-primary" id="ckNovo" style="display:none"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo cartão</button>') +
+      '<div id="ckCorpo"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_$_("ckAtualizar").onclick = function () { Compras_renderCartoes_(div); };
+    Cp_chamar_("cartoes", {}, function (r) {
+      if (r.podeEditar) { Cp_$_("ckNovo").style.display = ""; Cp_$_("ckNovo").onclick = function () { Cp_formCartao_(null, r, function () { Compras_renderCartoes_(div); }); }; }
+      var falta = r.oQueFalta.length ? '<div class="cp-caixa"><h3>O que falta para a conciliação funcionar</h3>' + r.oQueFalta.map(function (x, k) {
+        return '<div class="cp-faixa ' + (x.grave ? "aviso" : "") + '"><b>' + Cp_esc_(x.texto) + '</b><br>' + Cp_esc_(x.fazer) + (r.podeEditar && (x.final || x.cartaoId) ? '<div class="cp-acoes"><button type="button" class="btn-secondary" data-ckf="' + k + '">' + (x.final ? "Cadastrar o final " + Cp_esc_(x.final) : "Editar o cartão") + '</button></div>' : '') + '</div>';
+      }).join("") + '</div>' : '<div class="cp-faixa ok">Tudo pronto: cartões com responsável, fechamento e vencimento, e nenhum final usado sem cadastro.</div>';
+      var tab = r.cartoes.length ? '<table class="cp-tabela"><thead><tr><th>Final</th><th>Apelido</th><th>Tipo</th><th>Responsável</th><th>Fecha / vence</th><th class="n">Limite</th><th>Situação</th>' + (r.podeEditar ? '<th></th>' : '') + '</tr></thead><tbody>' + r.cartoes.map(function (k, i) {
+        return '<tr' + (k.ativo ? '' : ' style="opacity:.6"') + '><td data-r="Final"><b>' + Cp_esc_(k.final) + '</b></td><td data-r="Apelido">' + Cp_esc_(k.apelido) + '</td><td data-r="Tipo">' + Cp_esc_(k.tipoNome) + '</td><td data-r="Responsável">' + Cp_esc_(k.responsavel || "—") + '</td>' +
+          '<td data-r="Fecha / vence">' + (k.diaFechamento ? 'dia ' + Cp_esc_(k.diaFechamento) + ' / dia ' + Cp_esc_(k.diaVencimento) : '—') + '</td><td class="n" data-r="Limite">' + Cp_esc_(k.limiteTxt || "—") + '</td><td data-r="Situação">' + (k.ativo ? '<span class="cp-selo verde">Ativo</span>' : '<span class="cp-selo cinza">Inativo</span>') + '</td>' +
+          (r.podeEditar ? '<td data-r=""><button type="button" class="btn-secondary" data-cke="' + i + '">Editar</button></td>' : '') + '</tr>';
+      }).join("") + '</tbody></table>' : '<div class="cp-vazio">Nenhum cartão cadastrado ainda. As compras informadas aceitam o final digitado e se ligam ao cartão quando ele for cadastrado.</div>';
+      Cp_$_("ckCorpo").innerHTML = falta + (r.podeEditar ? '' : '<div class="cp-faixa">Só o Financeiro, a Diretoria e o Administrador cadastram cartões. Você está consultando.</div>') + tab;
+      var el = Cp_$_("ckCorpo");
+      el.querySelectorAll("[data-cke]").forEach(function (b) { b.onclick = function () { Cp_formCartao_(r.cartoes[Number(b.getAttribute("data-cke"))], r, function () { Compras_renderCartoes_(div); }); }; });
+      el.querySelectorAll("[data-ckf]").forEach(function (b) { b.onclick = function () { var x = r.oQueFalta[Number(b.getAttribute("data-ckf"))]; Cp_formCartao_(x.cartaoId ? r.cartoes.filter(function (k) { return k.id === x.cartaoId; })[0] : { final: x.final, novo: true }, r, function () { Compras_renderCartoes_(div); }); }; });
+    }, function (m) { Cp_msg_("ckCorpo", m); });
+  }
+  function Cp_formCartao_(k, r, depois) {
+    var ed = k && k.id; k = k || {};
+    Cp_gaveta_(ed ? "Editar o cartão final " + k.final : "Novo cartão", '<div id="ckForm"></div>');
+    Cp_$_("ckForm").innerHTML = '<div class="cp-grade2">' + Cp_campo_("4 últimos números", '<input type="text" inputmode="numeric" maxlength="4" id="ckFinal" value="' + Cp_esc_(k.final || "") + '">', "Nunca o número inteiro.") + Cp_campo_("Apelido", '<input type="text" id="ckApelido" maxlength="60" value="' + Cp_esc_(k.apelido || "") + '" placeholder="Cartão da Logística">') + '</div>' +
+      '<div class="cp-grade2">' + Cp_campo_("Tipo", '<select id="ckTipo">' + Cp_opcoes_(Cp_mapaOpcoes_(r.tipos), k.tipo || "CREDITO") + '</select>') + Cp_campo_("Responsável", '<select id="ckResp">' + Cp_opcoes_(r.equipe.map(function (u) { return { v: u.id, t: u.nome }; }), k.responsavelId || "", "Escolha") + '</select>', "Recebe a cobrança do que está na fatura e não foi informado.") + '</div>' +
+      '<div class="cp-grade3">' + Cp_campo_("Dia do fechamento", '<input type="number" min="1" max="31" id="ckFech" value="' + Cp_esc_(k.diaFechamento || "") + '">') + Cp_campo_("Dia do vencimento", '<input type="number" min="1" max="31" id="ckVenc" value="' + Cp_esc_(k.diaVencimento || "") + '">') + Cp_campo_("Limite (opcional)", '<input type="text" inputmode="decimal" id="ckLim" value="' + Cp_esc_(k.limite === "" || k.limite === undefined ? "" : String(k.limite).replace(".", ",")) + '">') + '</div>' +
+      Cp_campo_("Observações", '<textarea id="ckObs" maxlength="500">' + Cp_esc_(k.obs || "") + '</textarea>') + (ed ? '<label class="cp-check"><input type="checkbox" id="ckAtivo"' + (k.ativo ? " checked" : "") + '> Cartão ativo</label>' + Cp_campo_("O que mudou e por quê", '<input type="text" id="ckMotivo" maxlength="500">', "Obrigatório na edição. Fica no histórico do cartão.") : '') +
+      '<div id="ckMsg"></div><div class="cp-acoes"><button type="button" class="btn-primary" id="ckSalvar">Salvar o cartão</button></div>';
+    Cp_$_("ckSalvar").onclick = function () {
+      var d = { id: ed ? k.id : "", final: Cp_$_("ckFinal").value, apelido: Cp_$_("ckApelido").value, tipo: Cp_$_("ckTipo").value, responsavelId: Cp_$_("ckResp").value, diaFechamento: Cp_$_("ckFech").value, diaVencimento: Cp_$_("ckVenc").value, limite: Cp_$_("ckLim").value, obs: Cp_$_("ckObs").value };
+      if (ed) { d.ativo = Cp_$_("ckAtivo").checked; d.motivo = Cp_$_("ckMotivo").value; }
+      Cp_chamar_("salvarCartao", d, function (x) { var gv = Cp_$_("cpGaveta"); if (gv) gv.remove(); alert(x.message); if (depois) depois(); }, function (m) { Cp_msg_("ckMsg", m); }, { carregando: "Salvando…" });
+    };
+  }
+
+  // ---------------- Conciliação das faturas ----------------
+  var CP_CONC = { final: "", competencia: "" };
+  function Compras_renderConciliacao_(div) {
+    if (!CP_CONC.competencia) CP_CONC.competencia = Cp_mesIso_(1);
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Conciliação das faturas", "Escolha o cartão e o mês da fatura (mês do vencimento), importe o extrato que o banco exporta e confira: o sistema casa valor, data e parcela; o que está na fatura sem compra informada vira cobrança ao responsável do cartão.",
+      '<button type="button" class="btn-secondary" id="cfAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-secondary" id="cfRel"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Relatório A4 da fatura</button>') +
+      '<div class="cp-filtros"><div>' + Cp_campo_("Cartão", '<select id="cfFinal"><option value="">Carregando…</option></select>') + '</div><div>' + Cp_campo_("Mês da fatura (vencimento)", '<input type="month" id="cfMes" value="' + Cp_esc_(CP_CONC.competencia) + '">') + '</div></div><div id="cfCorpo"><div class="cp-vazio">Carregando…</div></div></div>';
+    var carregar = function () {
+      CP_CONC.competencia = Cp_$_("cfMes").value; CP_CONC.final = Cp_$_("cfFinal").value || CP_CONC.final;
+      Cp_chamar_("fatura", { final: CP_CONC.final, competencia: CP_CONC.competencia }, function (t) {
+        Cp_$_("cfFinal").innerHTML = Cp_opcoes_(t.finais.map(function (f) { return { v: f.final, t: f.rotulo + (f.ativo ? "" : " (inativo)") }; }), CP_CONC.final, t.finais.length ? "Escolha o cartão" : "Nenhum cartão: cadastre em Cartões da empresa");
+        Cp_desenharConciliacao_(t, carregar);
+      }, function (m) { Cp_msg_("cfCorpo", m); });
+    };
+    Cp_$_("cfFinal").onchange = function () { CP_CONC.final = this.value; carregar(); };
+    Cp_$_("cfMes").onchange = carregar;
+    Cp_$_("cfAtualizar").onclick = carregar;
+    Cp_$_("cfRel").onclick = function () {
+      if (!CP_CONC.final) { alert("Escolha o cartão primeiro."); return; }
+      var w = window.open("", "_blank");
+      Cp_chamar_("gerarRelatorio", { tipo: "CONCILIACAO", final: CP_CONC.final, competencia: CP_CONC.competencia }, function (r) { if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } }, function (m) { if (w) w.close(); alert(m); }, { carregando: "Gerando o relatório da fatura…" });
+    };
+    carregar();
+  }
+  function Cp_desenharConciliacao_(t, recarregar) {
+    var el = Cp_$_("cfCorpo");
+    if (!t.final) { el.innerHTML = '<div class="cp-vazio">Escolha o cartão. Os cartões cadastrados e os finais usados nas compras informadas aparecem na lista.</div>'; return; }
+    var r = t.resumo, fech = t.fatura && t.fatura.fechada;
+    var h = (t.cartao ? '' : '<div class="cp-faixa aviso">O final ' + Cp_esc_(t.final) + ' não está cadastrado: as faturas das parcelas são estimadas e ninguém é cobrado pelo que não foi informado. Cadastre em Compras > Cartões da empresa.</div>') +
+      (t.fatura ? '<div class="cp-faixa ' + (fech ? "ok" : "") + '">Fatura de ' + Cp_esc_(t.competenciaNome) + ' · ' + Cp_esc_(t.cartaoRotulo) + (t.vencimento ? ' · vence ' + Cp_esc_(t.vencimento) : '') + ' · <b>' + Cp_esc_(t.fatura.situacaoNome) + '</b>' + (fech ? ' por ' + Cp_esc_(t.fatura.fechadaPor) + ' em ' + Cp_esc_(t.fatura.fechadaEm) : '') + (t.fatura.obs ? '<br>' + Cp_esc_(t.fatura.obs) : '') + '</div>' : '') +
+      '<div class="cp-kpis"><div class="cp-kpi"><span class="v">' + Cp_esc_(r.totalExtratoTxt) + '</span><span class="r">Extrato (' + r.linhas + ' lançamentos)</span></div><div class="cp-kpi"><span class="v">' + Cp_esc_(r.totalSistemaTxt) + '</span><span class="r">Compras informadas (' + r.parcelas + ' parcelas)</span></div>' +
+      '<div class="cp-kpi ' + (r.diferenca ? "critico" : "ok") + '"><span class="v">' + Cp_esc_(r.diferencaTxt) + '</span><span class="r">Diferença</span></div><div class="cp-kpi ' + (r.abertos ? "aviso" : "ok") + '"><span class="v">' + r.abertos + '</span><span class="r">Itens em aberto (' + r.naoInformadas + ' não informados, ' + r.foraDaFatura + ' fora da fatura)</span></div></div>';
+    if (!fech) h += '<div class="cp-caixa"><h3>Importar o extrato da fatura</h3><p class="cp-meta">CSV, Excel (.xlsx) ou OFX, como o banco exporta. As colunas são reconhecidas pelo nome (data, descrição, valor, parcela, final). Primeiro a prévia; nada é gravado sem confirmar. Lançamento já importado não entra duas vezes.</p>' +
+      Cp_campo_("Arquivo", '<input type="file" id="cfArq" accept=".csv,.txt,.ofx,.qfx,.xlsx">') + '<div id="cfImpMsg"></div><div class="cp-acoes"><button type="button" class="btn-secondary" id="cfPrevia">Ver a prévia</button><button type="button" class="btn-primary" id="cfImportar" disabled>Importar e conciliar</button></div></div>';
+    h += '<div class="cp-duas"><div><div class="cp-sec">Lançamentos da fatura</div>' + (t.linhas.length ? '<table class="cp-tabela"><thead><tr><th>Data</th><th>Lançamento</th><th class="n">Valor</th><th>Situação</th><th></th></tr></thead><tbody>' + t.linhas.map(function (x) {
+      var ac = fech ? '' : (x.situacao === "NAO_INFORMADA" ? '<button type="button" class="btn-secondary" data-cfa="casar" data-ext="' + Cp_esc_(x.id) + '">Casar</button><button type="button" class="btn-secondary" data-cfa="justificar" data-ext="' + Cp_esc_(x.id) + '">Justificar</button>' :
+        x.situacao === "CONCILIADA" ? '<button type="button" class="btn-secondary" data-cfa="descasar" data-ext="' + Cp_esc_(x.id) + '">Desfazer</button>' : x.situacao === "JUSTIFICADA" ? '<button type="button" class="btn-secondary" data-cfa="reabrirLinha" data-ext="' + Cp_esc_(x.id) + '">Reabrir</button>' : '');
+      return '<tr><td data-r="Data">' + Cp_esc_(x.data) + '</td><td data-r="Lançamento">' + Cp_esc_(x.descricao) + (x.parcelas ? ' <span class="cp-meta">' + x.parcela + '/' + x.parcelas + '</span>' : '') + (x.final !== t.final ? ' <span class="cp-meta">final ' + Cp_esc_(x.final) + '</span>' : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td>' +
+        '<td data-r="Situação"><span class="cp-selo ' + (CP_COR_EXT[x.situacao] || "cinza") + '">' + Cp_esc_(x.situacaoNome) + '</span>' + (x.motivo && x.situacao !== "CONCILIADA" ? '<br><span class="cp-meta">' + Cp_esc_(x.motivo) + '</span>' : '') + '</td><td data-r="">' + ac + '</td></tr>';
+    }).join("") + '</tbody></table>' : '<p class="cp-meta">Nenhum extrato importado para esta fatura.</p>') + '</div>';
+    h += '<div><div class="cp-sec">Compras informadas que caem nesta fatura</div>' + (t.parcelas.length ? '<table class="cp-tabela"><thead><tr><th>Compra</th><th>Parcela</th><th class="n">Valor</th><th>Situação</th><th></th></tr></thead><tbody>' + t.parcelas.map(function (x) {
+      var ac = fech || x.minha ? '' : (x.situacao === "NAO_ESTA_NA_FATURA" || x.situacao === "A_CONCILIAR" ? '<button type="button" class="btn-secondary" data-cfa="proxima" data-parc="' + Cp_esc_(x.id) + '">Próxima fatura</button><button type="button" class="btn-secondary" data-cfa="divergente" data-parc="' + Cp_esc_(x.id) + '">Divergente</button>' : x.situacao === "DIVERGENTE" ? '<button type="button" class="btn-secondary" data-cfa="voltarParcela" data-parc="' + Cp_esc_(x.id) + '">Voltar a conciliar</button>' : '');
+      return '<tr><td data-r="Compra"><a href="#" data-ficha="' + Cp_esc_(x.requisicaoId) + '"><b>' + Cp_esc_(x.requisicaoNumero) + '</b></a> · ' + Cp_esc_(x.titulo) + '<br><span class="cp-meta">' + Cp_esc_(x.dataCompra + " · " + x.quem + " · " + x.fornecedor) + '</span>' + (x.comprovanteUrl ? ' <a href="' + Cp_esc_(x.comprovanteUrl) + '" target="_blank" rel="noopener">comprovante</a>' : '') + '</td>' +
+        '<td data-r="Parcela">' + x.parcela + '/' + x.parcelas + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td><td data-r="Situação">' + Cp_seloParc_(x) + (x.motivo && x.situacao !== "CONCILIADA" ? '<br><span class="cp-meta">' + Cp_esc_(x.motivo) + '</span>' : '') + (x.minha ? '<br><span class="cp-meta">Compra sua: outra pessoa concilia.</span>' : '') + '</td><td data-r="">' + ac + '</td></tr>';
+    }).join("") + '</tbody></table>' : '<p class="cp-meta">Nenhuma compra informada cai nesta fatura.</p>') + '</div></div>';
+    if (t.fatura) h += '<div class="cp-acoes">' + (fech ? '<button type="button" class="btn-secondary" id="cfReabrir">Reabrir a fatura (Diretoria)</button>' : '<button type="button" class="btn-primary" id="cfFechar">Fechar a fatura</button><button type="button" class="btn-secondary" id="cfRessalva">Fechar com ressalva</button>') + '</div>';
+    if (t.importacoes.length) h += '<div class="cp-sec">Importações</div>' + t.importacoes.map(function (i) { return '<p class="cp-meta">' + Cp_esc_(i.em + " · " + i.por + " · " + i.formato + " · " + i.linhas + " lidos, " + i.gravadas + " gravados, " + i.casadas + " conciliados na hora") + (i.url ? ' · <a href="' + Cp_esc_(i.url) + '" target="_blank" rel="noopener">' + Cp_esc_(i.arquivo || "arquivo") + '</a>' : '') + '</p>'; }).join("");
+    el.innerHTML = h;
+    el.querySelectorAll("[data-ficha]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); Compras_abrirFicha_(a.getAttribute("data-ficha")); }; });
+    var arq = null, prev = Cp_$_("cfPrevia");
+    var ler = function (cb) {
+      var inp = Cp_$_("cfArq"), f = inp && inp.files && inp.files[0];
+      if (!f) { Cp_msg_("cfImpMsg", "Escolha o arquivo do extrato.", "aviso"); return; }
+      var rd = new FileReader();
+      rd.onload = function () { arq = { nomeArquivo: f.name, mimeType: f.type, base64: String(rd.result).split(",")[1] }; cb(arq); };
+      rd.readAsDataURL(f);
+    };
+    if (prev) prev.onclick = function () {
+      ler(function (a) {
+        Cp_chamar_("importarExtrato", Object.assign({ final: t.final, competencia: t.competencia }, a), function (p) {
+          Cp_$_("cfImpMsg").innerHTML = '<div class="cp-faixa ok">' + Cp_esc_(p.resumo) + '</div>' + (p.linhas && p.linhas.length ? '<table class="cp-tabela"><tbody>' + p.linhas.slice(0, 60).map(function (x) { return '<tr><td data-r="Data">' + Cp_esc_(x.data) + '</td><td data-r="Lançamento">' + Cp_esc_(x.descricao) + (x.parcela ? ' (' + x.parcela + ')' : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td><td data-r="Casa com">' + (x.casa ? '<span class="cp-selo verde">' + Cp_esc_(x.casa) + '</span>' : '<span class="cp-selo vermelho">sem compra informada</span>') + '</td></tr>'; }).join("") + '</tbody></table>' : '') +
+            (p.ignoradas && p.ignoradas.length ? '<p class="cp-meta">Ignoradas: ' + Cp_esc_(p.ignoradas.slice(0, 10).map(function (x) { return "linha " + x.linha + " (" + x.motivo + ")"; }).join("; ")) + '</p>' : '');
+          Cp_$_("cfImportar").disabled = !(p.linhas && p.linhas.length);
+        }, function (m) { Cp_msg_("cfImpMsg", m); }, { carregando: "Lendo o extrato…" });
+      });
+    };
+    var imp = Cp_$_("cfImportar");
+    if (imp) imp.onclick = function () { if (!arq) return; Cp_chamar_("importarExtrato", Object.assign({ final: t.final, competencia: t.competencia, confirmar: true }, arq), function (x) { alert(x.message); recarregar(); }, function (m) { Cp_msg_("cfImpMsg", m); }, { carregando: "Importando e conciliando…" }); };
+    var acao = function (nome, extId, parcId) {
+      var txt = { casar: ["Casar o lançamento com uma compra", "Escolha a parcela e escreva por que casam (por exemplo, valor com frete)."], justificar: ["Justificar o lançamento", "Use para o que não é compra a informar (tarifa, assinatura, anuidade). A cobrança ao responsável do cartão é encerrada."],
+        descasar: ["Desfazer a conciliação", "O lançamento volta a \"Não informada\" e a parcela a \"A conciliar\"."], reabrirLinha: ["Reabrir o lançamento", "Volta a cobrar o responsável do cartão."], proxima: ["Passar para a próxima fatura", "Para compra feita perto do fechamento, que vem na fatura seguinte."],
+        divergente: ["Marcar como divergente", "Quem comprou é avisado e confere com você."], voltarParcela: ["Voltar a conciliar", "A divergência foi resolvida."] }[nome];
+      var extra = "";
+      if (nome === "casar") { var livres = t.parcelas.filter(function (x) { return !x.extratoId && ["A_CONCILIAR", "NAO_ESTA_NA_FATURA", "DIVERGENTE"].indexOf(x.situacao) >= 0 && !x.minha; }); extra = livres.length ? livres : null; }
+      if (nome === "casar" && !extra) { alert("Não há parcela livre desta fatura para casar. Se a compra não foi informada, o responsável do cartão informa; se não é compra, use Justificar."); return; }
+      var ov = Cp_modal_(txt[0], '<p class="cp-txt">' + Cp_esc_(txt[1]) + '</p>' + (extra ? Cp_campo_("Parcela", '<select id="cfParc">' + Cp_opcoes_(extra.map(function (x) { return { v: x.id, t: x.requisicaoNumero + " · " + x.parcela + "/" + x.parcelas + " · " + x.valorTxt + " · " + x.quem }; }), "") + '</select>') : '') + Cp_campo_("Motivo", '<textarea id="cfMot" maxlength="500"></textarea>', "Pelo menos 15 letras. Fica na trilha da conciliação.") + '<div id="cfMotMsg"></div>',
+        '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Confirmar</button>');
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () { Cp_chamar_("conciliacao", { acao: nome, extratoId: extId || "", parcelaId: parcId || (Cp_$_("cfParc") ? Cp_$_("cfParc").value : ""), motivo: Cp_$_("cfMot").value }, function (x) { ov.remove(); recarregar(); setTimeout(function () { alert(x.message); }, 50); }, function (m) { Cp_msg_("cfMotMsg", m); }); };
+    };
+    el.querySelectorAll("[data-cfa]").forEach(function (b) { b.onclick = function () { acao(b.getAttribute("data-cfa"), b.getAttribute("data-ext"), b.getAttribute("data-parc")); }; });
+    var fecharCom = function (ressalva, reabrir) {
+      if (!ressalva && !reabrir) { Cp_chamar_("fecharFatura", { final: t.final, competencia: t.competencia }, function (x) { alert(x.message); recarregar(); }, function (m) { alert(m); }); return; }
+      Cp_pedirTexto_(reabrir ? "Reabrir a fatura" : "Fechar com ressalva", reabrir ? "Só a Diretoria reabre fatura fechada. O motivo fica no histórico." : "O que ficou aberto continua na lista com o motivo. Escreva o motivo e o que ficou pendente.", "Motivo", reabrir ? 15 : 20, function (txt, ov) {
+        Cp_chamar_("fecharFatura", { final: t.final, competencia: t.competencia, ressalva: !!ressalva, reabrir: !!reabrir, motivo: txt }, function (x) { ov.remove(); alert(x.message); recarregar(); }, function (m) { Cp_msg_("cpTxtMsg", m); });
+      }, reabrir ? "Reabrir" : "Fechar com ressalva");
+    };
+    if (Cp_$_("cfFechar")) Cp_$_("cfFechar").onclick = function () { fecharCom(false, false); };
+    if (Cp_$_("cfRessalva")) Cp_$_("cfRessalva").onclick = function () { fecharCom(true, false); };
+    if (Cp_$_("cfReabrir")) Cp_$_("cfReabrir").onclick = function () { fecharCom(false, true); };
+  }
+
+  // ---------------- A pagar ----------------
+  var CP_APG = { situacao: "A_PAGAR" };
+  function Compras_renderAPagar_(div) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("A pagar", "Compras faturadas, boletos e reembolsos a colaboradores, por vencimento. Pague e toque em \"Marcar como pago\" com a data e o comprovante. Ninguém baixa o próprio reembolso.",
+      '<button type="button" class="btn-secondary" id="apAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div class="cp-filtros"><div>' + Cp_campo_("Mostrar", '<select id="apSit">' + Cp_opcoes_([{ v: "A_PAGAR", t: "A pagar" }, { v: "PAGA", t: "Pagos nos últimos 60 dias" }, { v: "TODAS", t: "Todos" }], CP_APG.situacao) + '</select>') + '</div></div><div id="apCorpo"><div class="cp-vazio">Carregando…</div></div></div>';
+    Cp_$_("apAtualizar").onclick = function () { Compras_renderAPagar_(div); };
+    Cp_$_("apSit").onchange = function () { CP_APG.situacao = this.value; Compras_renderAPagar_(div); };
+    Cp_chamar_("aPagar", { situacao: CP_APG.situacao }, function (r) {
+      var el = Cp_$_("apCorpo"), t = r.totais;
+      el.innerHTML = '<div class="cp-kpis"><div class="cp-kpi"><span class="v">' + Cp_esc_(t.aPagarTxt) + '</span><span class="r">A pagar</span></div><div class="cp-kpi ' + (t.vencidas ? "critico" : "ok") + '"><span class="v">' + t.vencidas + '</span><span class="r">Vencidos (' + Cp_esc_(t.vencidoTxt) + ')</span></div><div class="cp-kpi ' + (t.reembolsos ? "aviso" : "ok") + '"><span class="v">' + t.reembolsos + '</span><span class="r">Reembolsos a colaboradores</span></div></div>' +
+        (r.itens.length ? '<table class="cp-tabela"><thead><tr><th>Vencimento</th><th>Compra</th><th>Forma</th><th class="n">Valor</th><th>Situação</th><th></th></tr></thead><tbody>' + r.itens.map(function (x, k) {
+          return '<tr><td data-r="Vencimento"><b>' + Cp_esc_(x.vencimento) + '</b>' + (x.vencida ? ' <span class="cp-selo vermelho">vencido</span>' : x.venceHoje ? ' <span class="cp-selo laranja">hoje</span>' : '') + '</td><td data-r="Compra"><a href="#" data-ficha="' + Cp_esc_(x.requisicaoId) + '"><b>' + Cp_esc_(x.requisicaoNumero) + '</b></a> · ' + Cp_esc_(x.titulo) + '<br><span class="cp-meta">' + Cp_esc_(x.fornecedor + " · " + x.quem) + '</span></td>' +
+            '<td data-r="Forma">' + Cp_esc_(x.formaNome) + (x.beneficiario ? '<br><span class="cp-meta">a ' + Cp_esc_(x.beneficiario) + '</span>' : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td><td data-r="Situação">' + Cp_seloParc_(x) + (x.pagoEm ? '<br><span class="cp-meta">' + Cp_esc_(x.pagoEm + " · " + x.pagoPor) + '</span>' : '') + '</td>' +
+            '<td data-r="">' + (x.podePagar ? '<button type="button" class="btn-primary" data-pg="' + k + '">Marcar como pago</button>' : (x.situacao === "A_PAGAR" ? '<span class="cp-meta">Reembolso seu: outra pessoa baixa.</span>' : '')) + '</td></tr>';
+        }).join("") + '</tbody></table>' : '<div class="cp-vazio">Nada nesta lista.</div>');
+      el.querySelectorAll("[data-ficha]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); Compras_abrirFicha_(a.getAttribute("data-ficha")); }; });
+      el.querySelectorAll("[data-pg]").forEach(function (b) { b.onclick = function () {
+        var x = r.itens[Number(b.getAttribute("data-pg"))];
+        var ov = Cp_modal_("Marcar como pago", '<p class="cp-txt">' + Cp_esc_(x.requisicaoNumero + " · " + x.formaNome + (x.beneficiario ? " a " + x.beneficiario : "") + " · " + x.valorTxt) + '</p><div class="cp-grade2">' + Cp_campo_("Data do pagamento", '<input type="date" id="apData" max="' + Cp_hojeIso_() + '" value="' + Cp_hojeIso_() + '">') + Cp_campo_("Comprovante", '<input type="file" id="apArq" accept=".pdf,image/*">') + '</div><div id="apMsg"></div>',
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Marcar como pago</button>');
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () { Cp_lerArquivos_(Cp_$_("apArq"), function (l) { Cp_chamar_("marcarPago", { parcelaId: x.id, pagoEm: Cp_$_("apData").value, comprovante: l[0] || null }, function (y) { ov.remove(); alert(y.message); Compras_renderAPagar_(div); }, function (m) { Cp_msg_("apMsg", m); }, { carregando: "Salvando…" }); }); };
+      }; });
+    }, function (m) { Cp_msg_("apCorpo", m); });
+  }
+
+  // ---------------- Painel de compras (índices, Kanban, Gantt, indicadores, relatórios) ----------------
+  var CP_PN = { aba: "kanban", dias: 30, janela: 30, dados: null };
+  function Compras_renderPainel_(div) {
+    div.innerHTML = '<div class="module-shell">' + Cp_cabecalho_("Painel de compras", "Índices do período, Kanban por situação, Gantt do pedido até a entrega, gráficos e os relatórios A4 salvos para consulta.",
+      '<button type="button" class="btn-secondary" id="pnAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
+      '<div class="cp-filtros"><div>' + Cp_campo_("Período dos índices", '<select id="pnDias">' + Cp_opcoes_([{ v: 30, t: "Últimos 30 dias" }, { v: 90, t: "Últimos 90 dias" }, { v: 180, t: "Últimos 180 dias" }, { v: 365, t: "Últimos 365 dias" }], CP_PN.dias) + '</select>') + '</div>' +
+      '<div id="pnJanelaC"' + (CP_PN.aba === "gantt" ? "" : ' style="display:none"') + '>' + Cp_campo_("Gantt: janela", '<select id="pnJanela">' + Cp_opcoes_([{ v: 14, t: "Últimas 2 semanas" }, { v: 30, t: "Últimos 30 dias" }, { v: 90, t: "Últimos 90 dias" }, { v: 180, t: "Últimos 180 dias" }], CP_PN.janela) + '</select>') + '</div></div>' +
+      '<div id="pnInd"><div class="cp-vazio">Carregando…</div></div><div id="pnAbasC"></div><div id="pnCorpo"></div></div>';
+    Cp_$_("pnAtualizar").onclick = function () { Compras_renderPainel_(div); };
+    Cp_$_("pnDias").onchange = function () { CP_PN.dias = Number(this.value); Compras_renderPainel_(div); };
+    Cp_$_("pnJanela").onchange = function () { CP_PN.janela = Number(this.value); Cp_painelCorpo_(); };
+    Cp_chamar_("painelGeral", { dias: CP_PN.dias }, function (p) {
+      CP_PN.dados = p; if (typeof PnA_prepararGantt_ === "function") PnA_prepararGantt_(p.ganttJs);
+      var i = p.indices, pct = function (v) { return v === null || v === undefined ? "—" : String(v).replace(".", ",") + "%"; };
+      Cp_$_("pnInd").innerHTML = PnA_indHtml_([
+        { v: p.indicesTxt.total, l: "Comprado no período", sub: i.qtd + " compras · " + p.periodo.texto },
+        { v: pct(i.pctInformadas), l: "Informadas depois de feitas", sub: i.informadas + " compras · " + p.indicesTxt.informadasValor },
+        { v: i.tempoInformar === null ? "—" : String(i.tempoInformar).replace(".", ",") + " d.u.", l: "Tempo médio para informar", sub: "No prazo: " + pct(i.pctNoPrazo), alerta: i.pctNoPrazo !== null && i.pctNoPrazo < 80 },
+        { v: i.naoInformadasAgora, l: "Na fatura e não informadas", sub: p.indicesTxt.naoInformadasValor, alerta: i.naoInformadasAgora > 0 },
+        { v: pct(i.conciliacao), l: "Lançamentos conciliados", sub: i.lancamentos + " importados no período" },
+        { v: i.comApontamento, l: "Compras com apontamento", sub: "Duplicidade, acima do comum, atraso", alerta: i.comApontamento > 0 },
+        { v: i.aPagarVencido, l: "A pagar vencido", sub: p.indicesTxt.aPagarValor + " a pagar · " + i.reembolsos + " reembolsos", alerta: i.aPagarVencido > 0 },
+        { v: i.abertas, l: "Compras em aberto", sub: i.atrasadas + " com entrega atrasada" + (i.cicloMedio !== null ? " · pedido à entrega: " + String(i.cicloMedio).replace(".", ",") + " dias" : ""), alerta: i.atrasadas > 0 },
+        { v: i.conferenciaAguardando, l: "Aguardando o Financeiro", sub: i.divergentes + " divergentes" },
+        { v: i.faturasAbertas, l: "Faturas abertas", sub: i.faturasFechadas + " fechadas · " + i.faturasRessalva + " com ressalva" }
+      ]);
+      Cp_$_("pnAbasC").innerHTML = PnA_abasHtml_("pnAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["indicadores", "Indicadores"], ["relatorios", "Relatórios"], ["mes", "Mês em detalhe"]], CP_PN.aba);
+      PnA_ligarAbas_("pnAbas", function (a) { CP_PN.aba = a; Cp_$_("pnJanelaC").style.display = a === "gantt" ? "" : "none"; Cp_painelCorpo_(); });
+      Cp_painelCorpo_();
+    }, function (m) { Cp_msg_("pnInd", m); });
+  }
+  function Cp_painelCorpo_() {
+    var p = CP_PN.dados, c = Cp_$_("pnCorpo");
+    if (!p || !c) return;
+    var corPrazo = function (x) { return (typeof PNA_COR_PRAZO !== "undefined" && PNA_COR_PRAZO[x.prazo.estado]) || "#5b8fb9"; };
+    if (CP_PN.aba === "kanban") {
+      c.innerHTML = PnA_kanbanHtml_(p.kanban, { vazio: "Nenhuma compra em aberto.", cor: function (x) { return x.urgencia === "CRITICA" ? "#e05252" : corPrazo(x); },
+        cartao: function (x) { return '<div class="atv-kcard-tit"><b>' + Cp_esc_(x.numero) + '</b> ' + (x.origem === "INFORMADA" ? '<span class="cp-selo azul">Informada</span>' : '') + (x.apontamentos ? '<span class="cp-selo laranja">' + x.apontamentos + ' apontamento(s)</span>' : '') + '</div><div>' + Cp_esc_(x.titulo) + '</div><div class="atv-sub">' + Cp_esc_([x.quem, x.valorTxt, x.prazo.texto].filter(Boolean).join(" · ")) + '</div><div class="atv-sub">' + Cp_esc_(x.vinculo) + '</div>'; },
+        legenda: '<span><i style="background:#5b8fb9"></i>No prazo</span><span><i style="background:#c2953f"></i>Entrega em até 2 dias</span><span><i style="background:#e05252"></i>Entrega atrasada ou urgência crítica</span><span><i style="background:#8a96a8"></i>Sem previsão</span>' });
+    } else if (CP_PN.aba === "gantt") {
+      c.innerHTML = PnA_ganttHtml_(p.gantt, { largura: c.clientWidth || 1000, dias: CP_PN.janela, diasFrente: 14, agoraMs: p.agoraMs, comPrazo: true, cor: corPrazo,
+        rotulo: function (x) { return x.numero + " · " + x.situacaoNome; }, linha: function (x) { return { rotulo: x.numero, sub: x.quem }; }, tip: function (x) { return x.numero + " · " + x.titulo + " · " + x.situacaoNome + (x.prazo.texto ? " · " + x.prazo.texto : ""); },
+        legenda: '<span><i style="background:#5b8fb9"></i>No prazo</span><span><i style="background:#c2953f"></i>Em risco</span><span><i style="background:#e05252"></i>Atrasada</span><span><i style="background:#4f9f75"></i>Chegou no prazo</span><span><i style="background:#b45a3c"></i>Chegou depois da previsão</span><span><i style="background:transparent;border-left:2px dashed var(--text);width:2px"></i>Previsão de entrega</span><span><i style="background:#1E4F7A;transform:rotate(45deg);width:9px;height:9px"></i>Recebida</span>' });
+    } else if (CP_PN.aba === "indicadores") {
+      var barras = function (l, vazio) {
+        if (!l.length) return '<div class="atv-sub">' + Cp_esc_(vazio) + '</div>';
+        var max = Math.max.apply(null, l.map(function (x) { return x.n; }).concat([0.01]));
+        return l.map(function (x) { return '<div class="atv-barra-ind"><span class="t" title="' + Cp_esc_(x.t) + '">' + Cp_esc_(x.t) + '</span><span class="b"><div style="width:' + Math.round(x.n * 100 / max) + '%"></div></span><span class="n">' + Cp_esc_(x.valorTxt) + '</span></div>'; }).join("");
+      };
+      c.innerHTML = '<div class="cp-grade2">' + PnA_caixa_("Por forma de pagamento", barras(p.porForma, "Nenhuma compra no período.")) + PnA_caixa_("Por colaborador", barras(p.porColaborador, "Nenhuma compra no período.")) + '</div>' +
+        '<div class="cp-grade2">' + PnA_caixa_("Por vínculo", barras(p.porVinculo, "Nenhuma compra no período.")) + PnA_caixa_("Últimos 6 meses", barras(p.porMes.filter(function (x) { return x.n > 0; }), "Nenhuma compra nos últimos 6 meses.")) + '</div>';
+    } else if (CP_PN.aba === "relatorios") {
+      var tipos = Object.keys(p.tipos).filter(function (k) { return k !== "CONCILIACAO"; }).map(function (k) { return { v: k, t: p.tipos[k] }; });
+      c.innerHTML = '<div class="cp-caixa"><h3>Gerar relatório A4</h3><p class="cp-meta">Com índice, gráficos e a lista das compras do período escolhido acima (' + Cp_esc_(p.periodo.texto) + '). Fica salvo em HTML e PDF na pasta "Compras - Relatórios" e aparece na lista abaixo. A conciliação da fatura sai em Compras > Conciliação das faturas.</p>' +
+        '<div class="cp-filtros"><div>' + Cp_campo_("Relatório", '<select id="pnRelTipo">' + Cp_opcoes_(tipos, "PERIODO") + '</select>') + '</div><div><label>&nbsp;</label><button type="button" class="btn-primary" id="pnRelGerar">Gerar e salvar</button></div><div><label>&nbsp;</label><button type="button" class="btn-secondary" id="pnRelMes">Relatório do mês (A4)</button></div></div><div id="pnRelMsg"></div></div>' +
+        '<div class="cp-sec">Relatórios gerados</div><div id="pnDocs">' + Cp_docs_(p.documentos) + '</div>';
+      Cp_$_("pnRelGerar").onclick = function () {
+        var w = window.open("", "_blank");
+        Cp_chamar_("gerarRelatorio", { tipo: Cp_$_("pnRelTipo").value, dias: CP_PN.dias }, function (r) {
+          if (w) { w.document.open(); w.document.write(r.html); w.document.close(); }
+          Cp_msg_("pnRelMsg", r.message, "ok");
+          Cp_chamar_("documentos", {}, function (d) { p.documentos = d.documentos; var el = Cp_$_("pnDocs"); if (el) el.innerHTML = Cp_docs_(d.documentos); }, function () {});
+        }, function (m) { if (w) w.close(); Cp_msg_("pnRelMsg", m); }, { carregando: "Gerando o relatório…" });
+      };
+      Cp_$_("pnRelMes").onclick = function () {
+        var w = window.open("", "_blank");
+        Cp_chamar_("relatorioMes", { competencia: Cp_mesIso_(0) }, function (r) { if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } }, function (m) { if (w) w.close(); alert(m); }, { carregando: "Gerando o relatório do mês…" });
+      };
+    } else if (CP_PN.aba === "mes") {
+      c.innerHTML = '<div id="pnMesC"></div>';
+      Cp_painelMes_(Cp_$_("pnMesC"));
+    }
+    if (typeof PnA_ligar_ === "function") PnA_ligar_(c, function (tipo, id) { Compras_abrirFicha_(id); });
+  }
+  function Cp_docs_(docs) {
+    if (!docs || !docs.length) return '<p class="cp-meta">Nenhum relatório gerado ainda.</p>';
+    return '<table class="cp-tabela"><thead><tr><th>Relatório</th><th>Gerado</th><th>Abrir</th></tr></thead><tbody>' + docs.map(function (d) {
+      return '<tr><td data-r="Relatório"><b>' + Cp_esc_(d.tipoNome) + '</b><br><span class="cp-meta">' + Cp_esc_(d.titulo.replace(d.tipoNome + " · ", "") + (d.numero ? " · " + d.numero : "")) + '</span></td><td data-r="Gerado">' + Cp_esc_(d.em) + '<br><span class="cp-meta">' + Cp_esc_(d.por) + '</span></td>' +
+        '<td data-r="Abrir">' + (d.htmlUrl ? '<a href="' + Cp_esc_(d.htmlUrl) + '" target="_blank" rel="noopener">A4 (HTML)</a>' : '') + (d.pdfUrl ? ' · <a href="' + Cp_esc_(d.pdfUrl) + '" target="_blank" rel="noopener">PDF</a>' : '') + (!d.salvo ? '<span class="cp-meta">cópia não gravada</span>' : '') + '</td></tr>';
+    }).join("") + '</tbody></table>';
   }
 </script>

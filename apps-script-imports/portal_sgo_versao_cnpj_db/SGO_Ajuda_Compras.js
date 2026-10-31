@@ -1,7 +1,8 @@
 /**
  * SGO_Ajuda_Compras.js — ajuda "Como usar esta tela" do Compras e peças nativo (21/10/2026).
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Telas: JS_Compras.html. Regras: SGO_Compras_*.js.
- * Manual completo: docs/MANUAL_MODULO_COMPRAS.md.
+ * Manual completo: docs/MANUAL_MODULO_COMPRAS.md (e, para Financeiro e gestão, docs/MANUAL_COMPRAS_FINANCEIRO.md).
+ * 31/10/2026: Informar compra já feita, Cartões da empresa, Conciliação das faturas, A pagar e o painel com Kanban e Gantt.
  */
 function SGO_ajudaTelas_Compras_() {
   var quem = [
@@ -48,7 +49,7 @@ function SGO_ajudaTelas_Compras_() {
         { titulo: 'Acompanhar um pedido', itens: ['Abra "Meus pedidos de compra".', 'Leia a situação e a frase embaixo dela.', 'Toque em "Itens e andamento" para ver os itens e o histórico.'] },
         { titulo: 'Cancelar um pedido', itens: ['Enquanto o pedido está "Solicitada", toque em "Cancelar o pedido".', 'Escreva o motivo e confirme.', 'Depois que a cotação começa, peça o cancelamento ao comprador.'] },
         { titulo: 'Confirmar que recebeu', itens: ['Quando o pedido estiver "Disponível" e você já estiver com a peça, toque em "Recebi a peça".', 'O pedido é encerrado.'] },
-        { titulo: 'Registrar uma compra feita fora do sistema', itens: ['Use só quando já comprou (por exemplo, no balcão durante um atendimento).', 'Toque em "Registrar compra feita fora do sistema".', 'Diga para que foi, a que está ligada, o que comprou, onde, o valor, a data e a forma de pagamento.', 'Anexe o comprovante e explique por que foi fora do sistema.', 'A compra vai para a conferência do Financeiro e para a ciência da gestão.'] }
+        { titulo: 'Informar uma compra que você já fez', itens: ['Toque em "Informar compra já feita" (também no menu Compras e no atalho do celular).', 'Diga para que foi, a que está ligada, o que comprou, onde, o valor, a data e como pagou.', 'Anexe a foto do comprovante e a nota (ou o motivo de não ter nota).', 'A compra vai para a conferência do Financeiro.'] }
       ],
       cores: [
         { nome: 'Selo azul', significado: 'Em andamento em Compras (solicitada, em cotação, aprovada, pedido feito).' },
@@ -79,7 +80,8 @@ function SGO_ajudaTelas_Compras_() {
         { titulo: 'Mudar a previsão ou o pedido', itens: ['Toque em "Mudar previsão ou rastreio", informe a data nova e o motivo. Quem pediu vê a data nova.', 'Para mudar o próprio pedido (quantidade, forma de pagamento), toque em "Nova revisão do pedido" e escreva o que mudou. Sai a revisão 01, 02...'] },
         { titulo: 'Receber e conferir', itens: ['Quando a compra chegar, toque em "Registrar o recebimento".', 'Conte e informe a quantidade recebida de cada item.', 'Marque se a especificação confere e se chegou sem dano.', 'Informe o número da nota fiscal (ou o motivo de vir sem nota).', 'Com dano, anexe a foto. Com qualquer divergência, descreva o que aconteceu.', 'Sem divergência, a peça fica "Disponível" e quem pediu é avisado. Com divergência, fica segura até você tocar em "Divergência resolvida".'] },
         { titulo: 'Registrar o pagamento', itens: ['Na ficha, toque em "Registrar o pagamento".', 'Informe o valor pago e a data (troque a forma de pagamento se mudou).', 'Anexe o comprovante e toque em "Enviar ao Financeiro".', 'Se o Financeiro apontar divergência, toque em "Corrigir e reenviar ao Financeiro" e escreva o que foi corrigido.'] },
-        { titulo: 'Gestão: compra feita sem pedido', itens: ['Abra a compra pela Caixa de decisões.', 'Leia a justificativa e toque em "Ciente".', 'Converse com a pessoa para que a próxima compra passe pelo sistema.'] },
+        { titulo: 'Gestão: compra sem pedido ou informada acima do limite', itens: ['Abra a compra pela Caixa de decisões.', 'Leia a justificativa ou os apontamentos e toque em "Ciente".', 'Converse com a pessoa se a compra deveria ter passado pela cotação.'] },
+        { titulo: 'Receber a compra informada que "ainda vai chegar"', itens: ['Ela aparece na fila como "Pedido feito", com a previsão.', 'Quando chegar, toque em "Registrar o recebimento": quem comprou é avisado e a entrega entra em Minhas atividades.'] },
         { titulo: 'Entregar a quem pediu', itens: ['Toque em "Registrar a entrega".', 'Escolha quem recebeu e escreva a evidência (protocolo, retirada assinada) ou anexe a foto.', 'Quem pediu também pode tocar em "Recebi a peça" em Meus pedidos de compra. O pedido é encerrado.'] },
         { titulo: 'Cancelar', itens: ['Toque em "Cancelar o pedido".', 'Escreva o motivo. Quem pediu é avisado no sistema.', 'Se o pedido de compra já foi feito, avise o fornecedor.'] }
       ],
@@ -131,10 +133,96 @@ function SGO_ajudaTelas_Compras_() {
       quemPode: quem,
       perguntas: [{ p: 'A divergência volta para quem?', r: 'Para quem registrou o pagamento (normalmente o comprador), no sistema e no resumo de e-mail, até corrigir e reenviar.' }]
     },
+    'compras_informar': {
+      titulo: 'Informar compra já feita',
+      paraQueServe: 'Informar a compra que você já fez com o cartão da empresa, faturado, boleto, Pix, dinheiro do caixa ou com o próprio dinheiro (para pedir reembolso), com a foto do comprovante. Substitui o aviso no grupo do WhatsApp: a compra entra no mesmo cadastro das compras, o Financeiro confere e a fatura do cartão bate sozinha.',
+      antesDeComecar: [
+        'Tenha a foto do comprovante (cupom, recibo, comprovante do cartão ou do Pix) e, se houver, a nota fiscal.',
+        'Saiba para que foi: o cliente ou o chamado da Assistência, o pedido do Comercial, o veículo ou o uso interno.',
+        'Do cartão, só os 4 últimos números. Nunca digite o número inteiro.',
+        'Informe no mesmo dia, se der. Passado o prazo (2 dias úteis no padrão), o sistema pede o motivo do atraso.'
+      ],
+      passos: [
+        { titulo: 'Informar uma compra', itens: ['Abra Compras > Informar compra já feita.', 'Quadro 1: escreva para que foi e escolha o vínculo (chamado, cliente, pedido do Comercial, veículo ou uso interno com o centro de custo). Se houver orçamento ou pedido de compra, informe o número.', 'Quadro 2: o que foi comprado (um ou mais itens), onde, o valor total pago e a data. Se ainda vai chegar, marque e informe a previsão.', 'Quadro 3: como pagou. No cartão de crédito, os 4 últimos números e as parcelas; faturado e boleto, o vencimento.', 'Quadro 4: a foto do comprovante e a nota (ou o número da nota, ou o motivo de não ter).', 'Toque em "Conferir antes de enviar" para ver os apontamentos, depois em "Enviar ao Financeiro".'] },
+        { titulo: 'Responder às perguntas do sistema', itens: ['"Já existe compra parecida": confira se não é a mesma. Se for outra, explique e envie de novo.', '"Escreva por que só agora": a compra passou do prazo para informar. Escreva o motivo e envie.'] },
+        { titulo: 'Compras a informar (responsável por um cartão)', itens: ['Abra a aba "Compras a informar".', 'Cada linha é um lançamento da fatura do seu cartão que ninguém informou.', 'Toque em "Informar esta compra": valor, data e cartão já vêm preenchidos. Complete e envie.', 'Se não foi compra (tarifa, assinatura), fale com o Financeiro.'] },
+        { titulo: 'Acompanhar', itens: ['A aba "Minhas compras informadas" mostra cada compra com o valor, a situação no Financeiro, as parcelas e a fatura de cada uma.', 'Reembolso pago aparece com o comprovante do Financeiro.', 'Informou por engano? Abra a compra e toque em "Cancelar o pedido" com o motivo (enquanto o Financeiro não conferiu).'] }
+      ],
+      cores: [
+        { nome: 'Selo laranja "Informada com atraso", "Duplicidade possível", "Acima do limite", "Acima do comum" ou "Cartão não cadastrado"', significado: 'Apontamento registrado para o Financeiro conferir. A compra foi gravada.' },
+        { nome: 'Selo verde "Financeiro: Conferida"', significado: 'O Financeiro conferiu a compra.' },
+        { nome: 'Selo vermelho "Financeiro: Divergente"', significado: 'O Financeiro apontou o que não bate: leia o texto e corrija.' }
+      ],
+      problemas: [
+        { situacao: 'Aparece "tire a foto do comprovante".', oQueFazer: 'O comprovante é obrigatório. Toque no campo, tire a foto ou escolha o PDF e envie de novo.' },
+        { situacao: 'Aparece "cada pessoa informa as próprias compras".', oQueFazer: 'Peça a quem comprou para informar pelo celular. O comprador, o Financeiro e a gestão podem informar em nome de outra pessoa.' },
+        { situacao: 'Aparece "a compra é de ... mais de 90 dias atrás".', oQueFazer: 'Compra tão antiga é informada pelo Financeiro. Envie o comprovante a ele.' },
+        { situacao: 'O cartão não aparece na lista.', oQueFazer: 'Digite os 4 últimos números assim mesmo. Quando o cartão for cadastrado, a compra se liga a ele sozinha.' }
+      ],
+      quemPode: [
+        { perfil: 'TODOS', pode: 'Todo colaborador interno informa as próprias compras e vê o valor do que informou.' },
+        { perfil: 'GESTOR,FINANCEIRO,DIRETORIA,ADMIN', pode: 'Também informam em nome de outra pessoa (o comprador da lista de Regras de compras também).' }
+      ],
+      perguntas: [
+        { p: 'Vou receber mensagem no WhatsApp?', r: 'A cobrança do que está na fatura e não foi informado fica no Início e vai por e-mail no expediente. No WhatsApp, só entra na contagem do resumo do dia, em dia útil.' },
+        { p: 'Preciso de três orçamentos para informar uma compra?', r: 'Não. A compra informada não passa pela cotação. Acima do limite da compra direta (R$ 1.000 no padrão), a gestão dá ciência na Caixa de decisões.' }
+      ]
+    },
+    'compras_cartoes': {
+      titulo: 'Cartões da empresa',
+      paraQueServe: 'Cadastro dos cartões da empresa pelo final, com o responsável e os dias de fechamento e vencimento. É assim que cada parcela cai na fatura certa e o que não foi informado é cobrado de quem responde pelo cartão. "O que falta" mostra o que ainda não está pronto.',
+      antesDeComecar: ['Tenha a fatura de cada cartão à mão: o dia do fechamento e o do vencimento estão nela.', 'Só os 4 últimos números. Nunca o número inteiro.'],
+      passos: [
+        { titulo: 'Cadastrar um cartão', itens: ['Toque em "Novo cartão".', 'Digite os 4 últimos números e um apelido (por exemplo "Cartão da Logística").', 'Escolha o tipo, o responsável e os dias de fechamento e de vencimento.', 'Toque em "Salvar o cartão". As compras já informadas com esse final se ligam a ele e a fatura das parcelas é recalculada.'] },
+        { titulo: 'Resolver "O que falta"', itens: ['Cada linha diz o que falta e o que fazer.', 'Para um final usado nas compras e não cadastrado, toque em "Cadastrar o final".', 'Para cartão sem responsável ou sem os dias, toque em "Editar o cartão".'] },
+        { titulo: 'Editar ou desativar', itens: ['Toque em "Editar".', 'Mude o que precisa (só o que mudar é gravado).', 'Para desativar, desmarque "Cartão ativo".', 'Escreva o que mudou e por quê e salve. Fica no histórico do cartão.'] }
+      ],
+      cores: [{ nome: 'Faixa laranja em "O que falta"', significado: 'Algo impede a conciliação completa (cartão sem responsável, sem os dias, final usado e não cadastrado).' }, { nome: 'Selo cinza "Inativo"', significado: 'Cartão fora de uso; o histórico continua.' }],
+      problemas: [
+        { situacao: 'Aparece "já existe cartão ativo com o final".', oQueFazer: 'Edite o cartão existente ou desative o antigo antes de cadastrar o novo com o mesmo final.' },
+        { situacao: 'Aparece "o cadastro dos cartões é do Financeiro".', oQueFazer: 'Peça ao Financeiro ou à Diretoria. Compradores e gestores consultam.' }
+      ],
+      quemPode: [{ perfil: 'FINANCEIRO,DIRETORIA,ADMIN', pode: 'Cadastram e editam os cartões.' }, { perfil: 'GESTOR', pode: 'Consulta os cartões (o gestor da área de Compras e os compradores também).' }]
+    },
+    'compras_conciliacao': {
+      titulo: 'Conciliação das faturas',
+      paraQueServe: 'Bater a fatura do cartão com as compras informadas: escolha o cartão e o mês da fatura, importe o extrato que o banco exporta e confira. O sistema casa valor, data e parcela; o que está na fatura sem compra informada vira cobrança ao responsável do cartão.',
+      antesDeComecar: ['O mês da fatura é o mês do vencimento.', 'Exporte a fatura pelo banco em CSV, Excel (.xlsx) ou OFX, sem mudar as colunas.', 'Quem comprou não concilia a própria compra.'],
+      passos: [
+        { titulo: 'Importar o extrato', itens: ['Escolha o cartão e o mês da fatura.', 'Escolha o arquivo e toque em "Ver a prévia": mostra o que casa e o que não casa. Nada é gravado.', 'Toque em "Importar e conciliar". Lançamento já importado não entra duas vezes; pagamento da fatura e estorno são ignorados com o motivo.'] },
+        { titulo: 'Resolver o que não casou', itens: ['Lançamento "Não informada": o responsável do cartão é cobrado no Início. Se a compra existe com valor diferente, toque em "Casar" e escolha a parcela. Se não é compra (tarifa, assinatura), toque em "Justificar".', 'Compra "Não está na fatura": toque em "Próxima fatura" (compra perto do fechamento) ou em "Divergente" (quem comprou é avisado).', 'Toda ação pede o motivo (15 letras) e fica na trilha.'] },
+        { titulo: 'Fechar a fatura', itens: ['Com tudo conciliado ou justificado, toque em "Fechar a fatura".', 'Se algo ficou aberto e precisa fechar assim mesmo, toque em "Fechar com ressalva" e escreva o motivo.', 'Fatura fechada não aceita nova importação. Reabrir é da Diretoria, com motivo.', '"Relatório A4 da fatura" gera e salva o relatório da conciliação.'] }
+      ],
+      cores: [
+        { nome: 'Selo verde "Conciliada"', significado: 'Lançamento e compra casados.' },
+        { nome: 'Selo vermelho "Não informada"', significado: 'Está na fatura e ninguém informou a compra: o responsável do cartão está sendo cobrado.' },
+        { nome: 'Selo laranja "Não está na fatura"', significado: 'Compra informada que não apareceu no extrato deste mês.' },
+        { nome: 'Selo cinza "Justificada"', significado: 'Lançamento explicado sem compra (tarifa, assinatura), com o motivo.' },
+        { nome: '"(fatura estimada)"', significado: 'O cartão ainda não estava cadastrado com os dias: a fatura foi estimada.' }
+      ],
+      problemas: [
+        { situacao: 'Aparece "não encontrei a linha de títulos com a data e o valor".', oQueFazer: 'Exporte de novo pelo banco, em CSV, Excel ou OFX, sem apagar a linha de títulos.' },
+        { situacao: 'O Excel antigo (.xls) não abre.', oQueFazer: 'Abra no Excel e salve como .xlsx ou CSV, depois importe.' },
+        { situacao: 'Aparece "a compra é sua".', oQueFazer: 'Quem comprou não concilia a própria compra. Outra pessoa do Financeiro ou a Diretoria faz.' }
+      ],
+      quemPode: [{ perfil: 'FINANCEIRO,DIRETORIA,ADMIN', pode: 'Importam, conciliam e fecham a fatura. Reabrir fatura fechada é da Diretoria.' }, { perfil: 'GESTOR', pode: 'O gestor da área de Compras também concilia.' }]
+    },
+    'compras_apagar': {
+      titulo: 'A pagar',
+      paraQueServe: 'Os vencimentos das compras faturadas, dos boletos e dos reembolsos a colaboradores que pagaram com o próprio dinheiro, por data. Pague e marque como pago com a data e o comprovante.',
+      passos: [{ titulo: 'Marcar como pago', itens: ['Veja os vencidos e os de hoje no alto da lista.', 'Pague pelo banco.', 'Toque em "Marcar como pago", escolha a data e anexe o comprovante.', 'No reembolso, o colaborador é avisado no sistema.'] }],
+      cores: [{ nome: 'Selo vermelho "vencido"', significado: 'Passou do vencimento.' }, { nome: 'Selo laranja "hoje"', significado: 'Vence hoje.' }],
+      problemas: [{ situacao: 'Aparece "o reembolso é para você".', oQueFazer: 'Ninguém baixa o próprio reembolso. Outra pessoa do Financeiro ou a Diretoria faz.' }],
+      quemPode: [{ perfil: 'FINANCEIRO,DIRETORIA,ADMIN', pode: 'Veem e marcam como pago.' }, { perfil: 'GESTOR', pode: 'O gestor da área de Compras também.' }]
+    },
     'compras_painel': {
       titulo: 'Painel de compras',
-      paraQueServe: 'Compras em aberto por situação, entregas atrasadas, gasto do mês por vínculo, área e fornecedor, e os controles: recebidas fora do prazo, menos cotações que o mínimo, divergências e compras sem pedido. Gera o relatório mensal em A4.',
-      passos: [{ titulo: 'Ver outro mês e o relatório', itens: ['Escolha o mês no alto da tela.', 'Toque em "Relatório do mês (A4)": abre a folha A4 e salva PDF e HTML na pasta Compras - Relatórios.', 'No primeiro dia útil, o relatório do mês anterior sai sozinho e a Diretoria é avisada.'] }],
+      paraQueServe: 'Índices do período (total comprado, compras informadas, tempo para informar, lançamentos não informados, conciliação, a pagar vencido), Kanban por situação, Gantt do pedido até a entrega, gráficos e relatórios A4 salvos. Na aba "Mês em detalhe": compras em aberto por situação, entregas atrasadas, gasto do mês por vínculo, área e fornecedor, e os controles: recebidas fora do prazo, menos cotações que o mínimo, divergências e compras sem pedido. Gera o relatório mensal em A4.',
+      // 31/10/2026: índices, Kanban, Gantt, indicadores e relatórios A4 salvos
+      cores: [{ nome: 'Borda azul no Kanban e barra azul no Gantt', significado: 'Compra dentro da previsão de entrega.' }, { nome: 'Âmbar', significado: 'Entrega prevista para os próximos 2 dias.' }, { nome: 'Vermelho', significado: 'Entrega atrasada (ou urgência crítica, no Kanban).' }, { nome: 'Verde / marrom no Gantt', significado: 'Chegou no prazo / chegou depois da previsão.' }],
+      passos: [{ titulo: 'Índices, Kanban e Gantt', itens: ['Escolha o período dos índices no alto (30, 90, 180 ou 365 dias).', 'Aba "Kanban": uma coluna por situação; toque no cartão para abrir a compra.', 'Aba "Gantt": cada barra vai do pedido (ou da data da compra informada) até a chegada; o tracejado é a previsão de entrega. Escolha a janela.', 'Aba "Indicadores": gasto por forma de pagamento, por colaborador, por vínculo e por mês.'] },
+        { titulo: 'Relatórios A4', itens: ['Aba "Relatórios": escolha o relatório (por colaborador, por cliente e chamado, por forma de pagamento ou total do período) e toque em "Gerar e salvar".', 'Abre a folha A4 com índice e gráficos e salva HTML e PDF em Compras - Relatórios.', 'Os relatórios gerados ficam listados para abrir de novo.'] },
+        { titulo: 'Ver outro mês e o relatório', itens: ['Aba "Mês em detalhe": escolha o mês.', 'Toque em "Relatório do mês (A4)": abre a folha A4 e salva PDF e HTML na pasta Compras - Relatórios.', 'No primeiro dia útil, o relatório do mês anterior sai sozinho e a Diretoria é avisada.'] }],
       quemPode: quem
     },
     'compras_regras': {
@@ -143,7 +231,8 @@ function SGO_ajudaTelas_Compras_() {
       antesDeComecar: ['Só o Administrador e a Diretoria alteram. Compradores e gestores consultam.', 'O padrão é o aprovado pelo dono em 21/10/2026: até R$ 1.000 o comprador aprova (1 cotação); até R$ 10.000 o gestor da área (2 cotações); acima, a Diretoria (3 cotações).'],
       passos: [
         { titulo: 'Escolher o comprador e o substituto', itens: ['Marque o comprador na primeira lista.', 'Marque o substituto na segunda lista.', 'Escreva o motivo e toque em "Salvar as regras".'] },
-        { titulo: 'Mudar uma faixa', itens: ['Altere o valor "até", quem aprova ou as cotações mínimas.', 'Escreva o motivo e toque em "Salvar as regras".', 'Vale para as próximas escolhas de orçamento.'] }
+        { titulo: 'Mudar uma faixa', itens: ['Altere o valor "até", quem aprova ou as cotações mínimas.', 'Escreva o motivo e toque em "Salvar as regras".', 'Vale para as próximas escolhas de orçamento.'] },
+        { titulo: 'Compra informada depois de feita', itens: ['No quadro "Compra informada depois de feita", ajuste o limite da compra direta (acima dele, ciência da gestão), o prazo para informar, o prazo do reembolso e quando a cobrança do não informado vai por e-mail e à Caixa de decisões.', 'Escreva o motivo e salve.'] }
       ],
       problemas: [{ situacao: 'Aparece "os valores das faixas precisam crescer".', oQueFazer: 'Cada faixa precisa ter o valor maior que a anterior. A última faixa não tem teto.' }],
       quemPode: quem,

@@ -128,7 +128,10 @@ function CmpR_paraTela_(eu, r, completo) {
     especIncompleta: Cmp_sim_(r.ESPEC_INCOMPLETA), falta: Cmp_json_(r.ESPEC_FALTA, []), devolvida: Cmp_s_(r.ESPEC_DEVOLVIDA_TEXTO) ? { texto: Cmp_s_(r.ESPEC_DEVOLVIDA_TEXTO), em: Cmp_br_(r.ESPEC_DEVOLVIDA_EM), por: Cmp_s_(r.ESPEC_DEVOLVIDA_POR_NOME) } : null,
     criadoEm: Cmp_br_(r.CRIADO_EM), atualizadoEm: Cmp_br_(r.ATUALIZADO_EM), previsaoEntrega: Cmp_brDia_(r.PREVISAO_ENTREGA), pedidoNumero: Cmp_s_(r.PEDIDO_NUMERO),
     origem: Cmp_up_(r.ORIGEM) || 'TELA', semPedido: Cmp_sim_(r.SEM_PEDIDO), canceladaMotivo: Cmp_s_(r.CANCELADA_MOTIVO), entregueA: Cmp_s_(r.ENTREGUE_A_NOME), entregueEm: Cmp_br_(r.ENTREGUE_EM),
-    divergencia: Cmp_s_(r.DIVERGENCIA_TEXTO), meu: Cmp_s_(r.SOLICITANTE_ID) === eu.id, veValores: !!valores
+    divergencia: Cmp_s_(r.DIVERGENCIA_TEXTO), meu: Cmp_s_(r.SOLICITANTE_ID) === eu.id, veValores: !!valores,
+    // 31/10/2026: compra informada depois de feita
+    informada: Cmp_up_(r.ORIGEM) === 'INFORMADA', compradoPor: Cmp_s_(r.COMPRADO_POR_NOME), orcamentoRef: Cmp_s_(r.ORCAMENTO_REF), orcamentoUrl: Cmp_s_(r.ORCAMENTO_ARQUIVO_URL), centroCusto: Cmp_s_(r.CENTRO_CUSTO),
+    apontamentos: Cmp_json_(r.INF_APONTAMENTOS, []), cienciaExigida: Cmp_sim_(r.INF_CIENCIA)
   };
   if (valores) {
     t.valorTotal = Number(r.VALOR_TOTAL) || 0; t.valorTxt = Cmp_s_(r.VALOR_TOTAL) !== '' ? Cmp_moeda_(r.VALOR_TOTAL) : '';
@@ -154,7 +157,8 @@ function CmpR_paraTela_(eu, r, completo) {
 function CmpR_acoes_(eu, r) {
   var s = Cmp_up_(r.SITUACAO), meu = Cmp_s_(r.SOLICITANTE_ID) === eu.id, a = {};
   a.editar = s === 'SOLICITADA' && (meu || eu.comprador);
-  a.cancelar = (s === 'SOLICITADA' && (meu || eu.comprador)) || (['EM_COTACAO', 'AGUARDANDO_APROVACAO', 'APROVADA', 'PEDIDO_FEITO', 'RECEBIDA_DIVERGENCIA'].indexOf(s) >= 0 && eu.comprador);
+  a.cancelar = (s === 'SOLICITADA' && (meu || eu.comprador)) || (['EM_COTACAO', 'AGUARDANDO_APROVACAO', 'APROVADA', 'PEDIDO_FEITO', 'RECEBIDA_DIVERGENCIA'].indexOf(s) >= 0 && eu.comprador) ||
+    (Cmp_up_(r.ORIGEM) === 'INFORMADA' && s !== 'CANCELADA' && (meu || Cmp_s_(r.CRIADO_POR_ID) === eu.id || eu.financeiro || eu.gestao));
   a.devolver = ['SOLICITADA', 'EM_COTACAO'].indexOf(s) >= 0 && eu.comprador;
   a.iniciarCotacao = s === 'SOLICITADA' && eu.comprador && !Cmp_sim_(r.ESPEC_INCOMPLETA);
   if (typeof CmpC_acoes_ === 'function') CmpC_acoes_(eu, r, a);
@@ -318,6 +322,15 @@ function CmpR_cancelar_(eu, d) {
   return Cmp_comTrava_(function () {
     var r = CmpR_obter_(eu, d.id, 'cancelar o pedido'), s = Cmp_up_(r.SITUACAO), meu = Cmp_s_(r.SOLICITANTE_ID) === eu.id;
     var ok = (s === 'SOLICITADA' && (meu || eu.comprador)) || (['EM_COTACAO', 'AGUARDANDO_APROVACAO', 'APROVADA', 'PEDIDO_FEITO', 'RECEBIDA_DIVERGENCIA'].indexOf(s) >= 0 && eu.comprador);
+    // 31/10/2026: compra informada lançada por engano (repetida, valor errado): cancela quem informou, quem comprou, o Financeiro ou a gestão,
+    // enquanto o Financeiro não conferiu e nenhuma parcela foi conciliada ou paga
+    if (Cmp_up_(r.ORIGEM) === 'INFORMADA' && s !== 'CANCELADA') {
+      var pInf = Cmp_s_(r.PEDIDO_ID) ? SGO_DATA.getById(CMP_ABAS.PEDIDOS, r.PEDIDO_ID) : null;
+      var andou = Cmp_ler_(CMP_ABAS.PARCELAS).some(function (x) { return Cmp_s_(x.REQUISICAO_ID) === Cmp_s_(r.ID) && (Cmp_up_(x.SITUACAO) === 'CONCILIADA' || (Cmp_up_(x.SITUACAO) === 'PAGA' && !/^Pago na compra/.test(Cmp_s_(x.PAGO_POR_NOME)))); });
+      if (pInf && Cmp_up_(pInf.FIN_SITUACAO) === 'CONFERIDA') throw new Error('Não foi possível cancelar: o Financeiro já conferiu a compra ' + r.NUMERO + '. Fale com o Financeiro');
+      if (andou) throw new Error('Não foi possível cancelar: a compra ' + r.NUMERO + ' já foi conciliada com a fatura ou paga. Fale com o Financeiro para desfazer antes');
+      ok = meu || Cmp_s_(r.CRIADO_POR_ID) === eu.id || eu.financeiro || eu.gestao;
+    }
     if (!ok) {
       if (['DISPONIVEL', 'ENTREGUE', 'CANCELADA'].indexOf(s) >= 0) throw new Error('Não foi possível cancelar: o pedido ' + r.NUMERO + ' está "' + CMP_SITUACOES[s] + '". Depois que a peça chega, não há o que cancelar; se ela não serve, fale com o comprador para a devolução ao fornecedor');
       throw new Error('Não foi possível cancelar: o pedido ' + r.NUMERO + ' já está com Compras ("' + CMP_SITUACOES[s] + '"). Peça o cancelamento a ' + (Cmp_s_(r.COMPRADOR_NOME) || 'Compras') + ', que avisa o fornecedor se preciso');
@@ -330,6 +343,7 @@ function CmpR_cancelar_(eu, d) {
       try { SGO_DATA.update(CMP_ABAS.PEDIDOS, r.PEDIDO_ID, { SITUACAO: 'CANCELADO', ATUALIZADO_EM: agora }); } catch (e) {}
       aviso = ' O pedido de compra ' + Cmp_s_(r.PEDIDO_NUMERO) + ' já tinha sido feito: avise o fornecedor do cancelamento.';
     }
+    if (typeof CmpI_cancelarParcelas_ === 'function') CmpI_cancelarParcelas_(r.ID, 'Compra cancelada por ' + eu.nome + ': ' + motivo);
     Cmp_historico_('REQUISICAO', r.ID, 'CANCELADA', eu, { de: CMP_SITUACOES[s], para: 'Cancelada', publico: true, texto: motivo });
     Cmp_avisar_(r.SOLICITANTE_ID, 'CANCELADA', 'Pedido de compra ' + r.NUMERO + ' cancelado', eu.nome + ' cancelou o pedido "' + Cmp_s_(r.TITULO).slice(0, 80) + '". Motivo: ' + motivo, r.ID, { autorId: eu.id });
     if (Cmp_s_(r.COMERCIAL_VENDEDOR_ID)) Cmp_avisar_(r.COMERCIAL_VENDEDOR_ID, 'CANCELADA', 'Compra do pedido ' + Cmp_s_(r.PROPOSTA_NUMERO) + ' cancelada (' + r.NUMERO + ')', eu.nome + ' cancelou a compra. Motivo: ' + motivo, r.ID, { autorId: eu.id });

@@ -32,6 +32,8 @@ const MAPA = {
   "MANUAL_MODULO_CADEIA_FRIO.md": { tela: "cadeia_frio" },
   "MANUAL_MODULO_COMERCIAL.md": { tela: "comercial", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "COMERCIAL", "FINANCEIRO"] },
   "MANUAL_MODULO_COMPRAS.md": { tela: "compras_pedir" },
+  // 31/10/2026: cartões da empresa, conciliação das faturas, A pagar, painel e relatórios (Financeiro e gestão)
+  "MANUAL_COMPRAS_FINANCEIRO.md": { tela: "compras_conciliacao", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "FINANCEIRO"] },
   "MANUAL_MODULO_ASSISTENCIA.md": { tela: "assistencia" },
   "MANUAL_MODULO_AUTOMACAO_PREDIAL.md": { tela: "automacao_predial", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO", "TECNICO", "METROLOGIA", "COMERCIAL"] },
   "MANUAL_APP_CAMPO.md": { tela: "assistencia_os" },
