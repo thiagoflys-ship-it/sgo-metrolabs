@@ -30,13 +30,18 @@
         </div>
 
         <div class="login-form">
+          <!-- 31/10/2026 (pedido do dono): a entrada é pelo e-mail cadastrado; o nome de usuário não existe mais para a pessoa.
+               O id continua "usuario" (ganchos da casca e do Leitor de QR). -->
           <div class="form-group">
-            <label for="usuario">Usuário</label>
+            <label for="usuario">E-mail</label>
             <input
               id="usuario"
-              type="text"
-              placeholder="Digite seu usuário"
+              type="email"
+              inputmode="email"
+              placeholder="nome@empresa.com.br"
               autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
               onkeydown="if(event.key === 'Enter') document.getElementById('senha').focus()"
             >
           </div>
@@ -54,6 +59,10 @@
 
           <div class="login-actions">
             <button id="btnLogin" type="button" onclick="fazerLogin()">Entrar</button>
+          </div>
+          <!-- 31/10/2026: "Esqueci minha senha" (link por e-mail, JS_SegurancaAcesso.html) -->
+          <div class="login-esqueci">
+            <button type="button" id="btnEsqueci" class="login-esqueci-btn" onclick="SegAcesso_abrirEsqueci_()">Esqueci minha senha</button>
           </div>
         </div>
 
@@ -96,6 +105,10 @@
         </div>
         <div class="user-action-block">
             <div id="userInfo" class="user-info"></div>
+            <!-- 31/10/2026: a própria pessoa troca a senha (senha atual + nova), JS_SegurancaAcesso.html -->
+            <button id="btnTrocarSenha" type="button" class="btn-logout btn-trocar-senha" onclick="abrir('trocar_senha')" title="Trocar minha senha">
+              <i class="fas fa-key" aria-hidden="true"></i> Trocar senha
+            </button>
             <button id="btnLogout" type="button" class="btn-logout" onclick="logout()">
               Sair
             </button>
@@ -294,6 +307,7 @@
       <div id="mobileTopbarTitulo" class="mobile-topbar-titulo">Menu</div>
       <button type="button" class="mobile-topbar-btn mobile-topbar-busca" onclick="Busca_abrir_()" aria-label="Buscar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
       <button type="button" id="mobileBtnAjuda" class="mobile-topbar-btn mobile-topbar-ajuda" onclick="Ajuda_abrir_()" aria-label="Como usar esta tela" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i><span>Ajuda</span></button>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-senha" onclick="abrir('trocar_senha')" aria-label="Trocar minha senha" title="Trocar minha senha"><i class="fas fa-key" aria-hidden="true"></i></button>
       <button type="button" class="mobile-topbar-btn mobile-topbar-sair" onclick="logout()">Sair</button>
     </div>
   </div>

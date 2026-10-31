@@ -580,8 +580,8 @@
   function RpI_usuarios_(c) {
     Rp_chamar_("usuarios", {}, function (r) {
       c.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(r.message) + '</div><div class="at-acoes" style="margin:0 0 10px"><button type="button" class="btn-secondary at-btn44" onclick="abrir(\'usuarios\')">Abrir Administração &gt; Usuários</button></div>' +
-        (r.usuarios.length ? '<table class="at-tabela"><thead><tr><th>Nome</th><th>Login</th><th>E-mail</th><th>Representada</th><th>Papel</th><th>Situação</th></tr></thead><tbody>' + r.usuarios.map(function (u) {
-          return '<tr><td data-r="Nome"><b>' + Rp_esc_(u.nome) + '</b></td><td data-r="Login">' + Rp_esc_(u.login) + '</td><td data-r="E-mail">' + Rp_esc_(u.email) + '</td><td data-r="Representada">' + Rp_esc_(u.representada) + '</td><td data-r="Papel">' + Rp_esc_(u.papel) + '</td><td data-r="Situação">' + Rp_selo_(u.situacao === "ATIVO" ? 10 : 12, u.situacao === "ATIVO" ? "Ativo" : "Inativo") + "</td></tr>";
+        (r.usuarios.length ? '<table class="at-tabela"><thead><tr><th>Nome</th><th>E-mail (entrada no SGO+)</th><th>Representada</th><th>Papel</th><th>Situação</th></tr></thead><tbody>' + r.usuarios.map(function (u) {
+          return '<tr><td data-r="Nome"><b>' + Rp_esc_(u.nome) + '</b></td><td data-r="E-mail">' + (u.email ? Rp_esc_(u.email) : '<b style="color:var(--bc-danger,#b42318)">Sem e-mail: não consegue entrar</b>') + '</td><td data-r="Representada">' + Rp_esc_(u.representada) + '</td><td data-r="Papel">' + Rp_esc_(u.papel) + '</td><td data-r="Situação">' + Rp_selo_(u.situacao === "ATIVO" ? 10 : 12, u.situacao === "ATIVO" ? "Ativo" : "Inativo") + "</td></tr>";
         }).join("") + "</tbody></table>" : '<div class="at-vazio">Nenhuma conta de representada.</div>');
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }

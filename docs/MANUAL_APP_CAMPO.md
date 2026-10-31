@@ -2,7 +2,7 @@
 
 Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo
 nos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de
-aplicativos, e usa o mesmo usuário e senha do SGO+.
+aplicativos, e usa o mesmo e-mail e senha do SGO+.
 
 Endereço: `https://sgo.metrolabs.com.br/campo/`
 
@@ -26,7 +26,7 @@ A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em
 ### Android (Chrome)
 
 1. Abra o endereço no Chrome, com internet.
-2. Entre com o seu usuário e senha do SGO+.
+2. Entre com o seu e-mail e a senha do SGO+. Esqueceu a senha? Toque em **Esqueci minha senha**: o link para criar a senha nova chega no seu e-mail e abre a página do SGO+; depois volte ao aplicativo e entre com a senha nova.
 3. Toque em **Instalar o app** (aparece no aviso amarelo ou em Minha conta). Se não aparecer, toque no menu de três
    pontos e em **Instalar aplicativo** ou **Adicionar à tela inicial**.
 4. Daqui em diante, abra sempre pelo ícone **SGO+ Campo**.
@@ -35,7 +35,7 @@ A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em
 
 1. Abra o endereço no **Safari** (não em outro navegador), com internet.
 2. Toque em **Compartilhar** (o quadrado com a seta para cima) e em **Adicionar à Tela de Início**.
-3. Abra pelo ícone **SGO+ Campo** que apareceu na Tela de Início e entre com o seu usuário.
+3. Abra pelo ícone **SGO+ Campo** que apareceu na Tela de Início e entre com o seu e-mail.
 4. Use sempre o ícone. No iPhone, o que um site guarda no Safari pode ser apagado pelo próprio aparelho depois de alguns
    dias sem uso; pelo ícone da Tela de Início isso não acontece. Enquanto o app não estiver na Tela de Início, ele mostra
    um aviso amarelo explicando isso.
@@ -145,7 +145,7 @@ Toque na barra **Pendente de envio (N)**. A tela lista:
 
 1. No celular antigo, abra o app com internet e espere **Pendente de envio (0)**.
 2. Só depois desinstale, limpe ou entregue o aparelho. O que não foi enviado existe **só naquele celular**.
-3. No celular novo, instale o app (item 1) e entre com o seu usuário. A agenda e o que já está no servidor (chegada,
+3. No celular novo, instale o app (item 1) e entre com o seu e-mail. A agenda e o que já está no servidor (chegada,
    respostas, fotos, relato, assinatura) são baixados de novo.
 
 Celular perdido ou quebrado com itens pendentes: avise o supervisor. O que não chegou ao servidor terá de ser

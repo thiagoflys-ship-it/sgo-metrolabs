@@ -89,7 +89,10 @@ test('vínculo de trabalho: grava CLT/PJ, editar outro campo ou a senha não apa
   assert.equal(s.SGO_USUARIOS.atualizar('G', 'u3', { NOME: 'Caio Novo' }).success, true);
   assert.equal(u('u3').VINCULO_TRABALHO, 'PJ');
   assert.equal(u('u3').NOME, 'CAIO NOVO');
-  assert.equal(s.SGO_USUARIOS.atualizar('G', 'u3', { SENHA: 'nova123' }).success, true);
+  // 31/10/2026: quem tem e-mail recebe o link de redefinição; a senha provisória da gestão é recusada (e nada se apaga)
+  const prov = s.SGO_USUARIOS.atualizar('G', 'u3', { SENHA: 'nova123' });
+  assert.equal(prov.success, false);
+  assert.match(prov.message, /Enviar link de redefinição/);
   assert.equal(u('u3').VINCULO_TRABALHO, 'PJ');
   assert.equal(s.SGO_USUARIOS.atualizar('G', 'u3', { VINCULO_TRABALHO: 'Não informado' }).success, true);
   assert.equal(u('u3').VINCULO_TRABALHO, '');

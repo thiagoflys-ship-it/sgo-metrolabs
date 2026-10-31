@@ -122,13 +122,15 @@
   // ---------- entrar, criar senha, sair ----------
   function ModoPers_htmlAcesso_() {
     var s = MP.sit, esc = ModoPers_esc_;
-    if (s.bloqueado) return '<div class="mp-bloco" role="alert"><h3>Entrada bloqueada até ' + esc(s.bloqueadoAte) + '</h3><p>Foram ' + s.tentativasMax + ' senhas erradas seguidas. Aguarde até ' + esc(s.bloqueadoAte) + ' e tente de novo, ou peça ao Administrador para desbloquear em ' + esc(s.caminhoAdmin) + '. Se esqueceu a senha, peça para ele apagar a senha; depois você cria outra aqui.</p></div>';
-    if (!s.temSenha) return '<div class="mp-bloco"><h3>Criar minha senha do modo personalizado</h3><p class="mp-dica">Você foi designado responsável técnico. A senha é só sua, diferente da senha de entrada no SGO+: pelo menos 8 caracteres, com letras e números, sem o seu login. Ninguém consegue ver a senha depois de gravada; se esquecer, o Administrador apaga e você cria outra.</p>' +
+    // 31/10/2026: "Esqueci a senha do modo personalizado" manda um link para o e-mail da pessoa (no lugar de pedir ao Administrador para apagar)
+    var esqueci = '<div class="mp-linha" style="margin-top:10px"><button type="button" class="cadx-btn" onclick="ModoPers_esqueci_()">Esqueci a senha do modo personalizado</button><span id="mpEsqueciMsg" class="mp-msg" role="status"></span></div>';
+    if (s.bloqueado) return '<div class="mp-bloco" role="alert"><h3>Entrada bloqueada até ' + esc(s.bloqueadoAte) + '</h3><p>Foram ' + s.tentativasMax + ' senhas erradas seguidas. Aguarde até ' + esc(s.bloqueadoAte) + ' e tente de novo, ou peça ao Administrador para desbloquear em ' + esc(s.caminhoAdmin) + '. Se esqueceu a senha, toque em "Esqueci a senha do modo personalizado": o link vai para o seu e-mail e, ao abrir, você cria outra aqui.</p>' + esqueci + '</div>';
+    if (!s.temSenha) return '<div class="mp-bloco"><h3>Criar minha senha do modo personalizado</h3><p class="mp-dica">Você foi designado responsável técnico. A senha é só sua, diferente da senha de entrada no SGO+: pelo menos 8 caracteres, com letras e números, sem o seu nome. Ninguém consegue ver a senha depois de gravada; se esquecer, você pede um link no seu e-mail e cria outra.</p>' +
       '<form class="mp-form" onsubmit="ModoPers_criarSenha_();return false;" autocomplete="off"><label>Senha nova<input type="password" id="mpNova" autocomplete="new-password" maxlength="128"></label><label>Confirme a senha<input type="password" id="mpConf" autocomplete="new-password" maxlength="128"></label>' +
       '<button type="submit" class="cadx-btn cadx-btn-grande cadx-btn-primario">Criar minha senha</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></form></div>';
     if (!s.aberto) return '<div class="mp-bloco"><h3>Entrar no modo personalizado</h3><p class="mp-dica">Digite a sua senha do modo personalizado. O modo fecha sozinho depois de ' + s.minutosSessao + ' minutos sem uso e quando você sai do SGO+. ' + (s.tentativasRestantes < s.tentativasMax ? '<b>Restam ' + s.tentativasRestantes + ' tentativas antes do bloqueio.</b>' : '') + '</p>' +
       '<form class="mp-form" onsubmit="ModoPers_entrar_();return false;" autocomplete="off"><label>Senha do modo personalizado<input type="password" id="mpSenha" autocomplete="current-password" maxlength="128"></label>' +
-      '<button type="submit" class="cadx-btn cadx-btn-grande cadx-btn-primario">Entrar</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></form></div>';
+      '<button type="submit" class="cadx-btn cadx-btn-grande cadx-btn-primario">Entrar</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></form>' + esqueci + '</div>';
     return '<div class="mp-bloco"><div class="mp-linha"><span class="mp-sit ok">Modo aberto</span><span class="mp-dica">Fecha sozinho às ' + esc(s.expiraEm) + ' se não houver uso (cada ação renova o prazo).</span>' +
       '<button type="button" class="cadx-btn" onclick="ModoPers_sair_()">Sair do modo</button><button type="button" class="cadx-btn" onclick="ModoPers_formTroca_()">Trocar minha senha</button><span id="mpAcessoMsg" class="mp-msg" role="status"></span></div><div id="mpTroca"></div></div>';
   }
@@ -147,6 +149,11 @@
       if (el) el.value = ""; ModoPers_msg_("mpAcessoMsg", m, true);
       ModoPers_chamar_("SGO_MP_apiSituacao", {}, function (r) { if (r.bloqueado) { MP.sit = r; ModoPers_desenhar_(); } }, function () {});
     });
+  }
+  function ModoPers_esqueci_() {
+    if (!confirm("Enviar para o seu e-mail um link para apagar a senha do modo personalizado? Ao abrir o link (vale 30 minutos), você cria uma senha nova nesta tela.")) return;
+    ModoPers_msg_("mpEsqueciMsg", "Enviando...");
+    ModoPers_chamar_("SGO_MP_apiEsqueciSenha", {}, function (r) { MP.sit = r; ModoPers_desenhar_(); ModoPers_msg_("mpEsqueciMsg", r.mensagem); ModoPers_msg_("mpAcessoMsg", r.mensagem); }, function (m) { ModoPers_msg_("mpEsqueciMsg", m, true); });
   }
   function ModoPers_sair_() {
     ModoPers_chamar_("SGO_MP_apiSair", {}, function (r) { MP.sit = r; MP.tabela = null; ModoPers_desenhar_(); }, function (m) { ModoPers_msg_("mpAcessoMsg", m, true); });
@@ -322,7 +329,7 @@
       var integ = r.integridade ? (r.integridade.ok ? '<p><span class="mp-sit ok">Íntegro</span> ' + r.integridade.total + ' linha(s) conferida(s), nenhuma alterada ou apagada.</p>' : '<div role="alert"><span class="mp-sit perigo">Registro alterado</span><ul>' + r.integridade.problemas.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join("") + '</ul><p class="mp-dica">Avise o Administrador: alguém mexeu direto na aba MODO_PERS_AUDITORIA do banco.</p></div>') : '';
       d.innerHTML = integ + (r.linhas.length ? '<p class="mp-dica">' + r.total + ' registro(s)' + (r.total > r.linhas.length ? '; mostrando os ' + r.linhas.length + ' mais recentes' : '') + '.</p><div class="table-responsive"><table class="table mp-tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Onde</th><th>De → para</th><th>Motivo</th></tr></thead><tbody>' +
         r.linhas.map(function (l) {
-          return '<tr><td>' + esc(l.em) + '</td><td>' + esc(l.nome) + '<div class="mp-dica">' + esc(l.usuario) + '</div></td><td>' + esc(l.acaoTxt) + '</td><td>' + esc([l.gerador, l.perfil, l.cliente, l.parametro].filter(Boolean).join(" · ")) + (l.referencia ? '<div class="mp-dica">' + esc(l.referencia) + '</div>' : '') + '</td>' +
+          return '<tr><td>' + esc(l.em) + '</td><td>' + esc(l.nome || l.usuario) + '</td><td>' + esc(l.acaoTxt) + '</td><td>' + esc([l.gerador, l.perfil, l.cliente, l.parametro].filter(Boolean).join(" · ")) + (l.referencia ? '<div class="mp-dica">' + esc(l.referencia) + '</div>' : '') + '</td>' +
             '<td>' + (l.novo || l.anterior ? esc(l.anterior || "—") + ' → ' + esc(l.novo || "—") + (l.normativo ? '<div class="mp-dica">Referência: ' + esc(l.normativo) + '</div>' : '') : '') + '</td><td>' + esc(l.motivo) + '</td></tr>';
         }).join("") + '</tbody></table></div>' : '<p class="mp-dica">Nenhum registro com estes filtros.</p>');
     }, function (m) { var d = document.getElementById("mpAud"); if (d) d.innerHTML = '<p class="mp-msg erro" role="alert">' + esc(m) + '</p>'; });
@@ -348,10 +355,12 @@
       (mensagem ? '<p class="mp-msg" role="status">' + esc(mensagem) + '</p>' : '') +
       '<div class="wap-pessoas" style="max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:6px">' + (r.itens.length ? r.itens.map(function (u) {
         return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)"><input type="checkbox" class="mp-resp" value="' + esc(u.userId) + '"' + (u.designado ? " checked" : "") + ' style="width:18px;height:18px;margin-top:3px" aria-label="Responsável: ' + esc(u.nome) + '">' +
-          '<div style="flex:1"><b>' + esc(u.nome) + '</b> <span class="mp-dica">' + esc(u.usuario) + (u.perfil ? ' · ' + esc(rot[u.perfil] || u.perfil) : '') + '</span>' +
+          '<div style="flex:1"><b>' + esc(u.nome) + '</b> <span class="mp-dica">' + esc(u.email || "sem e-mail") + (u.perfil ? ' · ' + esc(rot[u.perfil] || u.perfil) : '') + '</span>' +
           (u.designado ? '<div class="mp-linha" style="margin-top:4px"><span class="mp-sit ' + (u.temSenha ? "ok" : "alerta") + '">' + (u.temSenha ? "Senha criada" : "Ainda sem senha") + '</span>' + (u.bloqueadoAte ? '<span class="mp-sit perigo">Bloqueado até ' + esc(u.bloqueadoAte) + '</span>' : '') +
             (u.desde ? '<span class="mp-dica">Desde ' + esc(u.desde) + (u.por ? ' (por ' + esc(u.por) + ')' : '') + '</span>' : '') +
-            (u.temSenha ? '<button type="button" class="cadx-btn" onclick="ModoPers_redefinir_(\'' + esc(u.userId) + '\',\'' + esc(u.nome).replace(/'/g, "") + '\')">Apagar a senha (esqueceu)</button>' : '') +
+            // 31/10/2026: com e-mail, o link vai para a pessoa (ela prova que é ela); sem e-mail, fica o "Apagar a senha agora"
+            (u.temSenha && u.temEmail ? '<button type="button" class="cadx-btn" onclick="ModoPers_enviarLink_(\'' + esc(u.userId) + '\',\'' + esc(u.nome).replace(/'/g, "") + '\')">Enviar link de senha nova (esqueceu)</button>' : '') +
+            (u.temSenha && !u.temEmail ? '<button type="button" class="cadx-btn" onclick="ModoPers_redefinir_(\'' + esc(u.userId) + '\',\'' + esc(u.nome).replace(/'/g, "") + '\')" title="Sem e-mail cadastrado: o link não tem para onde ir">Apagar a senha agora (sem e-mail)</button>' : '') +
             (u.bloqueadoAte ? '<button type="button" class="cadx-btn" onclick="ModoPers_desbloquear_(\'' + esc(u.userId) + '\')">Desbloquear</button>' : '') + '</div>' : '') +
           (u.aviso ? '<div class="mp-msg erro">' + esc(u.aviso) + '</div>' : '') + '</div></div>';
       }).join("") : '<p class="mp-dica" style="padding:10px">Nenhum usuário ativo dos perfis habilitados.</p>') + '</div>' +
@@ -366,6 +375,13 @@
   function ModoPers_redefinir_(id, nome) {
     if (!confirm("Apagar a senha do modo personalizado de " + nome + "? Ele cria uma senha nova na próxima vez que abrir o modo.")) return;
     ModoPers_chamar_("SGO_MP_apiRedefinirSenha", { userId: id }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });
+  }
+  function ModoPers_enviarLink_(id, nome) {
+    var motivo = prompt("Enviar para o e-mail de " + nome + " um link para apagar a senha do modo personalizado (vale 30 minutos). Ao abrir, a pessoa cria uma senha nova.\n\nMotivo (fica no registro):", "esqueceu a senha");
+    if (motivo === null) return;
+    if (String(motivo).trim().length < 5) { ModoPers_msg_("mpRespMsg", "Escreva o motivo (pelo menos 5 letras).", true); return; }
+    ModoPers_msg_("mpRespMsg", "Enviando o link...");
+    ModoPers_chamar_("SGO_MP_apiEnviarLinkSenha", { userId: id, motivo: String(motivo).trim() }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });
   }
   function ModoPers_desbloquear_(id) {
     ModoPers_chamar_("SGO_MP_apiDesbloquear", { userId: id }, function (r) { ModoPers_desenharResponsaveis_(r, r.mensagem); }, function (m) { ModoPers_msg_("mpRespMsg", m, true); });

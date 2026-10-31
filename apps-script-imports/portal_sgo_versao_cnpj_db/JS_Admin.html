@@ -326,7 +326,31 @@
   // =====================================================================
   // USUÁRIOS
   // =====================================================================
-  function Usuarios_nome_(u) { return (u && (u.NOME || u.USUARIO)) || "Usuário sem nome"; }
+  // 31/10/2026 (pedido do dono): a pessoa entra com o e-mail; o nome de usuário (login) não aparece mais em lugar nenhum.
+  function Usuarios_nome_(u) { return (u && (u.NOME || u.EMAIL)) || "Usuário sem nome"; }
+  /** Selo do e-mail: sem e-mail e e-mail repetido aparecem em destaque (não conseguem entrar). */
+  function Usuarios_seloEmail_(u) {
+    if (u.TECNICA) return '<span class="cadx-sub">Conta técnica (Auvo)</span>';
+    if (u.SEM_EMAIL) return '<span class="cadx-chip tom-perigo" title="A entrada é pelo e-mail: esta conta não consegue entrar">Sem e-mail: não entra</span>';
+    return CadUI_esc_(u.EMAIL) + (u.EMAIL_REPETIDO_COM && u.EMAIL_REPETIDO_COM.length ? ' <span class="cadx-chip tom-perigo" title="O mesmo e-mail está em outra conta ativa: nenhuma das duas entra">Repetido (' + CadUI_esc_(u.EMAIL_REPETIDO_COM.join(", ")) + ')</span>' : "");
+  }
+  /** Faixa no topo da lista: quantas contas ativas não conseguem entrar (sem e-mail ou e-mail repetido). */
+  function Usuarios_faixaEntrada_(itens) {
+    var tela = document.getElementById("cadxTela_usuarios");
+    if (!tela) return;
+    var velha = document.getElementById("usrFaixaEntrada"); if (velha) velha.remove();
+    var ativos = (itens || []).filter(function (u) { return u.STATUS === "ATIVO" && !u.TECNICA; });
+    var sem = ativos.filter(function (u) { return u.SEM_EMAIL; }), rep = ativos.filter(function (u) { return u.EMAIL_REPETIDO_COM && u.EMAIL_REPETIDO_COM.length; });
+    if (!sem.length && !rep.length) return;
+    var f = document.createElement("div");
+    f.id = "usrFaixaEntrada"; f.className = "cadx-faixa bc-faixa tom-perigo"; f.setAttribute("role", "alert");
+    f.innerHTML = "<b>" + (sem.length + rep.length) + " conta(s) ativa(s) não conseguem entrar no SGO+.</b> A entrada é pelo e-mail cadastrado. " +
+      (sem.length ? "Sem e-mail: " + CadUI_esc_(sem.map(Usuarios_nome_).join(", ")) + ". " : "") +
+      (rep.length ? "E-mail repetido (nenhuma das contas entra): " + CadUI_esc_(rep.map(Usuarios_nome_).join(", ")) + ". " : "") +
+      "O que fazer: abra a conta, clique em Editar e informe um e-mail que seja só dela.";
+    var resumo = document.getElementById("cadxResumo_usuarios");
+    if (resumo && resumo.parentNode) resumo.parentNode.insertBefore(f, resumo); else tela.appendChild(f);
+  }
 
   function renderUsuariosModulo_() {
     var div = document.getElementById("conteudo");
@@ -340,9 +364,10 @@
     CadTela_montar_({
       chave: "usuarios", titulo: "Usuários", nomeItens: ["usuário", "usuários"],
       subtitulo: soConsulta ? "Consulta das contas do SGO+: perfil, vínculo de trabalho, situação, e-mail e celular. Para criar ou alterar uma conta, peça à gestão." : "Contas de acesso ao SGO+: perfil, vínculo de trabalho, situação, e-mail e celular (WhatsApp) de cada pessoa.",
-      idBusca: "usuariosPesquisa", buscaPlaceholder: "Buscar por nome, login, e-mail ou celular",
+      idBusca: "usuariosPesquisa", buscaPlaceholder: "Buscar por nome, e-mail ou celular",
       ajuda:
-        "<ul><li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Diretoria e Gestor são a gestão; Cliente vê só a própria empresa.</li>" +
+        "<ul><li><b>Entrada pelo e-mail</b>: cada pessoa entra no SGO+ com o e-mail cadastrado aqui e a senha. O e-mail é obrigatório e não pode se repetir entre contas. Conta sem e-mail ou com e-mail repetido <b>não entra</b> e aparece em vermelho.</li>" +
+        "<li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Diretoria e Gestor são a gestão; Cliente vê só a própria empresa.</li>" +
         "<li><b>Quem cria e altera contas</b>: Administrador, Diretoria, Gestor, RH e Financeiro (perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente). Os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria. Ninguém muda o próprio perfil.</li>" +
         "<li><b>RH</b> faz a rotina da empresa como o Gestor (usuários, áreas, cadastros, frota, avisos, atividades, ponto). Não abre documentos técnicos, o Comercial, Configurações nem Chaves e senhas.</li>" +
         "<li><b>Área</b> (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez aqui e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. O botão <i>Áreas</i> mostra quem está sem área e permite criar ou corrigir áreas.</li>" +
@@ -350,15 +375,18 @@
         "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
         "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
         "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Excluir de vez é só do Administrador e da Diretoria.</li>" +
-        "<li><b>Redefinir senha</b> fica em <i>Mais</i>. Combine a senha nova com a pessoa por um canal seguro e peça para ela trocar no primeiro acesso.</li></ul>",
+        "<li><b>Esqueceu a senha?</b> A própria pessoa usa \"Esqueci minha senha\" na tela de entrada. A gestão também pode usar <i>Mais › Enviar link de redefinição</i> (com motivo): o link vai para o e-mail da pessoa, vale 30 minutos e uma vez. A <i>senha provisória</i> fica só para quem não tem e-mail.</li></ul>",
       resumo: [
         { id: "todos", rotulo: "Total" },
         { id: "ativos", rotulo: "Ativos", tom: "tom-ok", filtro: function (u) { return u.STATUS === "ATIVO"; } },
+        // 31/10/2026: a entrada é pelo e-mail: sem e-mail ou com e-mail repetido, a conta ativa não entra
+        { id: "sememail", rotulo: "Sem e-mail (não entram)", tom: "tom-perigo", dica: "Contas ativas sem e-mail válido: a entrada é pelo e-mail, então elas não conseguem entrar. Clique em Editar e informe o e-mail.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_EMAIL; } },
+        { id: "emailrep", rotulo: "E-mail repetido", tom: "tom-perigo", dica: "O mesmo e-mail em duas contas ativas: nenhuma delas entra até a correção. Deixe o e-mail em uma conta só.", filtro: function (u) { return u.STATUS === "ATIVO" && u.EMAIL_REPETIDO_COM && u.EMAIL_REPETIDO_COM.length; } },
         { id: "inativos", rotulo: "Inativos", filtro: function (u) { return u.STATUS !== "ATIVO"; } },
         { id: "semcel", rotulo: "Sem celular (ativos)", tom: "tom-alerta", dica: "Ativos sem celular: não recebem WhatsApp nem usam o Assistente do ponto do COMMAND.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE"; } },
         { id: "gestao", rotulo: "Administração e gestão", filtro: function (u) { return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(u.PERFIL).toUpperCase()) >= 0; } },
         { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT, PJ ou Diretoria informado: não recebe as mensagens do ponto. Conta da Diretoria sem vínculo não entra aqui: o sistema preenche Diretoria sozinho.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.VINCULO_TRABALHO && !u.VINCULO_SUGERIDO; } },
-        { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.AREA && String(u.USUARIO).toLowerCase() !== "admin"; } },
+        { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.AREA && !u.IGNORAR_AREA; } },
         { id: "nunca", rotulo: "Nunca entraram", filtro: function (u) { return u.STATUS === "ATIVO" && !u.ULTIMO_ACESSO; } }
       ],
       filtros: [
@@ -371,29 +399,29 @@
         { id: "nome", rotulo: "Ordenar por nome", fn: null },
         { id: "acesso", rotulo: "Último acesso mais recente", fn: function (a, b) { return String(b.ULTIMO_ACESSO || "").localeCompare(String(a.ULTIMO_ACESSO || "")); } }
       ],
-      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO, Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO), u.AREA_NOME].join(" "); },
+      texto: function (u) { return [u.NOME, u.EMAIL, u.SEM_EMAIL ? "sem e-mail" : "", u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO, Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO), u.AREA_NOME].join(" "); },
       acao: soConsulta ? null : { texto: "Novo usuário", fn: function () { Usuarios_formulario_(null); } },
       vazioTitulo: "Nenhum usuário além de você.", vazio: "Clique em Novo usuário para dar acesso a alguém.",
       colunas: [
-        { titulo: "Usuário", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + (u.EU ? ' <span class="cadx-chip tom-info">Você</span>' : "") + '</div><div class="cadx-sub cadx-mono">' + CadUI_esc_(u.USUARIO) + "</div>"; } },
+        { titulo: "Pessoa", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + (u.EU ? ' <span class="cadx-chip tom-info">Você</span>' : "") + "</div>"; } },
         { titulo: "Perfil", html: function (u) { return CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + (u.CLIENTE_NOME || u.REPRESENTADA_NOME ? '<div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME || u.REPRESENTADA_NOME) + "</div>" : ""); } },
         { titulo: "Área", html: function (u) { return Usuarios_seloArea_(u); } },
         { titulo: "Vínculo", html: function (u) { return Usuarios_seloVinculo_(u); } },
-        { titulo: "E-mail", html: function (u) { return u.EMAIL ? CadUI_esc_(u.EMAIL) : '<span class="cadx-chip tom-alerta">Sem e-mail</span>'; } },
+        { titulo: "E-mail (entrada)", html: function (u) { return Usuarios_seloEmail_(u); } },
         { titulo: "Celular (WhatsApp)", html: function (u) { return u.SEM_CELULAR ? (String(u.PERFIL).toUpperCase() === "CLIENTE" ? '<span class="cadx-sub">Não informado</span>' : '<span class="cadx-chip tom-alerta">Sem celular</span>') : '<span class="cadx-mono">' + CadUI_esc_(usuariosMascaraCelular_(u.CELULAR)) + "</span>"; } },
         { titulo: "Último acesso", html: function (u) { return u.ULTIMO_ACESSO ? '<span class="cadx-mono">' + CadUI_esc_(CadUI_dataHora_(u.ULTIMO_ACESSO)) + "</span>" : '<span class="cadx-sub">Nunca entrou</span>'; } },
         { titulo: "Situação", html: function (u) { return CadUI_selo_(u.STATUS); } },
         { titulo: "", classe: "cadx-col-acoes", html: function (u) { return CadTela_botoesLinha_("usuarios", u); } }
       ],
       cartao: function (u) {
-        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + '</div><div class="cadx-sub">' + CadUI_esc_(u.USUARIO + " · " + SGO_rotuloPerfil_(u.PERFIL)) + "</div></div>" + CadUI_selo_(u.STATUS) + "</div>" +
-          '<div class="cadx-cartao-linhas"><span>Área: ' + Usuarios_seloArea_(u) + "</span><span>Vínculo: " + Usuarios_seloVinculo_(u) + "</span><span>" + CadUI_esc_(u.EMAIL || "Sem e-mail") + "</span><span>" + (u.SEM_CELULAR ? '<span class="cadx-chip tom-alerta">Sem celular</span>' : CadUI_esc_(usuariosMascaraCelular_(u.CELULAR))) + "</span><span>" + CadUI_esc_(u.ULTIMO_ACESSO ? "Último acesso " + CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou") + "</span></div>";
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + '</div><div class="cadx-sub">' + CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + "</div></div>" + CadUI_selo_(u.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>Área: ' + Usuarios_seloArea_(u) + "</span><span>Vínculo: " + Usuarios_seloVinculo_(u) + "</span><span>" + Usuarios_seloEmail_(u) + "</span><span>" + (u.SEM_CELULAR ? '<span class="cadx-chip tom-alerta">Sem celular</span>' : CadUI_esc_(usuariosMascaraCelular_(u.CELULAR))) + "</span><span>" + CadUI_esc_(u.ULTIMO_ACESSO ? "Último acesso " + CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou") + "</span></div>";
       },
       botaoPrincipal: function (u) { return u.PODE_ALTERAR ? { texto: "Editar", acao: "editar" } : null; },
       editar: function (u) { Usuarios_formulario_(u.ID); },
       mais: soConsulta ? null : function (u) { return Usuarios_menu_(u); },
       abrir: function (u) { Usuarios_detalhe_(u); },
-      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, podeExcluir: !!res.podeExcluir, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas }); }, erro); }
+      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, podeExcluir: !!res.podeExcluir, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas, representadas: res.representadas || [], papeisRepresentacao: res.papeisRepresentacao || [] }); setTimeout(function () { Usuarios_faixaEntrada_(res.items || []); }, 0); }, erro); }
     });
     // Áreas (19/10/2026): a gestão, o RH e o Financeiro abrem a tela das áreas a partir daqui.
     var dirUsr = document.querySelector("#cadxTela_usuarios .module-header-right");
@@ -422,7 +450,12 @@
     var ultimo = u.ULTIMO_ADMIN ? "Único Administrador ativo: cadastre ou reative outro antes." : "";
     return [
       { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("usuarios", u.ID); } },
-      { texto: "Redefinir senha", icone: "fa-key", desabilitado: !!bloqueio, nota: bloqueio, acao: function () { Usuarios_redefinirSenha_(u); } },
+      // 31/10/2026 (pedido do dono): o link vai para o e-mail da pessoa; a senha provisória fica só para quem não tem e-mail
+      (function () {
+        var nota = bloqueio || (u.TECNICA ? "Conta técnica do Auvo: não usa senha de pessoa." : u.SEM_EMAIL ? "Sem e-mail cadastrado: clique em Editar e informe o e-mail, ou use a senha provisória." : !ativo ? "Conta inativa: reative antes." : (u.EMAIL_REPETIDO_COM && u.EMAIL_REPETIDO_COM.length) ? "E-mail repetido em outra conta ativa: corrija antes (Editar)." : "");
+        return { texto: "Enviar link de redefinição", icone: "fa-envelope", desabilitado: !!nota, nota: nota, acao: function () { Usuarios_enviarLink_(u); } };
+      })(),
+      { texto: "Senha provisória (sem e-mail)", icone: "fa-key", desabilitado: !!(bloqueio || (!u.SEM_EMAIL && !u.EU)), nota: bloqueio || (!u.SEM_EMAIL && !u.EU ? "Esta pessoa tem e-mail: use \"Enviar link de redefinição\". A senha provisória fica só para quem não tem e-mail." : ""), acao: function () { Usuarios_redefinirSenha_(u); } },
       "-",
       ativo
         ? { texto: "Inativar (bloquear o acesso)", icone: "fa-ban", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_inativar_(u); } }
@@ -434,14 +467,16 @@
   function Usuarios_detalhe_(u) {
     var semCel = u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE";
     CadUI_painelAbrir_({
-      chave: "usuarios", id: u.ID, titulo: Usuarios_nome_(u), sub: CadUI_esc_(u.USUARIO + " · " + SGO_rotuloPerfil_(u.PERFIL)), seloHtml: CadUI_selo_(u.STATUS),
+      chave: "usuarios", id: u.ID, titulo: Usuarios_nome_(u), sub: CadUI_esc_((u.EMAIL ? u.EMAIL + " · " : "") + SGO_rotuloPerfil_(u.PERFIL)), seloHtml: CadUI_selo_(u.STATUS),
       corpo: function () {
-        return (semCel && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem celular.</b> Esta pessoa não recebe avisos por WhatsApp e não consegue usar o Assistente do ponto do COMMAND. Clique em Editar e informe o celular com DDD.</div>' : "") +
+        return (u.SEM_EMAIL && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-perigo" role="alert"><b>Sem e-mail: esta pessoa não consegue entrar.</b> A entrada no SGO+ é pelo e-mail cadastrado e o link de nova senha também vai para ele. Clique em Editar e informe um e-mail que seja só dela.</div>' : "") +
+          (u.EMAIL_REPETIDO_COM && u.EMAIL_REPETIDO_COM.length && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-perigo" role="alert"><b>E-mail repetido: esta conta não entra.</b> O mesmo e-mail está na conta ativa de ' + CadUI_esc_(u.EMAIL_REPETIDO_COM.join(", ")) + '; nenhuma das duas entra até a correção. Deixe o e-mail em uma conta só (Editar).</div>' : "") +
+          (semCel && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem celular.</b> Esta pessoa não recebe avisos por WhatsApp e não consegue usar o Assistente do ponto do COMMAND. Clique em Editar e informe o celular com DDD.</div>' : "") +
           (!u.PODE_ALTERAR ? '<div class="cadx-faixa bc-faixa tom-info">Conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir.</div>' : "") +
           (u.STATUS !== "ATIVO" ? '<div class="cadx-faixa bc-faixa">Acesso bloqueado (inativo). Para liberar, use Mais › Reativar.</div>' : "") +
           (u.VINCULO_SUGERIDO ? '<div class="cadx-faixa bc-faixa tom-info"><b>Vínculo: ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '?</b> Esta conta é da Diretoria e está sem vínculo de trabalho. O sistema preenche Diretoria sozinho na rotina diária; para fazer agora, clique em Editar e confirme o Vínculo de trabalho.</div>' : "") +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["Login", u.USUARIO]]) + "</section>" +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["E-mail", u.EMAIL], ["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["E-mail (entrada no SGO+)", u.SEM_EMAIL ? "Sem e-mail: não entra" : u.EMAIL]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" ? "Não se aplica (cliente)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, u.REPRESENTADA_NOME ? ["Representada", u.REPRESENTADA_NOME + " · " + Usuarios_rotuloPapelRep_(u.REPRESENTACAO_PAPEL)] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
       },
@@ -456,10 +491,23 @@
     });
   }
 
+  // 31/10/2026: link de redefinição pelo e-mail (30 minutos, uso único; com o código no celular quando o perfil exige)
+  function Usuarios_enviarLink_(u) {
+    CadUI_confirmar_({
+      titulo: "Enviar link de redefinição", botao: "Enviar o link",
+      texto: "<p>Enviar para <b>" + CadUI_esc_(u.EMAIL) + "</b> um link para <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> criar uma senha nova.</p>" +
+        "<p>O link vale por 30 minutos e só pode ser usado uma vez. Se o acesso da pessoa pede o código no celular, o link também pede. A senha atual continua valendo até a nova ser criada; depois, todas as sessões dela são desconectadas.</p>",
+      motivo: { rotulo: "Motivo", min: 5, dica: "Ex.: esqueceu a senha; pediu por telefone. Fica no registro de segurança com o seu nome." },
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("usuariosEnviarLinkRedefinicao", [u.ID, v.motivo], function (res) { fechar(); CadUI_aviso_(res.message || "Link enviado.", "ok"); }, reabilitar);
+      }
+    });
+  }
+
   function Usuarios_redefinirSenha_(u) {
     CadUI_confirmar_({
-      titulo: "Redefinir a senha", botao: "Gravar senha nova",
-      texto: "<p>Senha nova para <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> (" + CadUI_esc_(u.USUARIO) + "). A senha atual deixa de valer na hora.</p>",
+      titulo: "Senha provisória (sem e-mail)", botao: "Gravar senha provisória",
+      texto: "<p>Senha provisória para <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>. Use só para quem não tem e-mail: quem tem e-mail recebe o link de redefinição. A senha atual deixa de valer na hora e, no próximo acesso, a pessoa cria a dela.</p>",
       extraHtml: '<div class="cadx-campo" data-campo="cadxSenha1"><label for="cadxSenha1">Senha nova <span class="cadx-obr">*</span></label><input id="cadxSenha1" type="password" autocomplete="new-password"><div class="cadx-dica">Mínimo de 6 caracteres.</div></div>' +
         '<div class="cadx-campo" data-campo="cadxSenha2" style="margin-top:10px"><label for="cadxSenha2">Repita a senha nova <span class="cadx-obr">*</span></label><input id="cadxSenha2" type="password" autocomplete="new-password"></div>',
       validar: function (f) {
@@ -476,7 +524,7 @@
   }
   function Usuarios_inativar_(u) {
     CadTela_acaoRisco_({ titulo: "Inativar o usuário", botao: "Bloquear o acesso", fn: "usuariosInativar", id: u.ID,
-      texto: "<p>Bloquear o acesso de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> (" + CadUI_esc_(u.USUARIO) + ")?</p><p>A sessão aberta dela é encerrada em até 5 minutos. O histórico fica guardado; para liberar de novo, use Reativar.</p>",
+      texto: "<p>Bloquear o acesso de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>" + (u.EMAIL ? " (" + CadUI_esc_(u.EMAIL) + ")" : "") + "?</p><p>A sessão aberta dela é encerrada em até 5 minutos. O histórico fica guardado; para liberar de novo, use Reativar.</p>",
       aoConcluir: function () { CadTela_recarregar_("usuarios", u.ID); } });
   }
   function Usuarios_reativar_(u) {
@@ -486,7 +534,7 @@
   }
   function Usuarios_excluir_(u) {
     CadTela_acaoRisco_({ titulo: "Excluir o usuário", botao: "Excluir definitivamente", fn: "usuariosExcluir", id: u.ID,
-      texto: "<p>Excluir a conta <b>" + CadUI_esc_(u.USUARIO) + "</b> (" + CadUI_esc_(Usuarios_nome_(u)) + ")? Não pode ser desfeito.</p><p>Para só bloquear o acesso e manter o histórico ligado ao nome da pessoa, prefira Inativar.</p>",
+      texto: "<p>Excluir a conta de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>" + (u.EMAIL ? " (" + CadUI_esc_(u.EMAIL) + ")" : "") + "? Não pode ser desfeito.</p><p>Para só bloquear o acesso e manter o histórico ligado ao nome da pessoa, prefira Inativar.</p>",
       aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("usuarios"); } });
   }
 
@@ -501,14 +549,15 @@
       // 19/10/2026: o perfil Diretoria só é dado por Administrador ou Diretoria (o servidor confere).
       .filter(function (p) { return souAdmin || (st.extra && st.extra.podeDarDiretoria) || String(p).toUpperCase() !== "DIRETORIA"; });
     var cfg = {
-      chave: "usuarios", id: id || "", titulo: novo ? "Novo usuário" : "Editar usuário", sub: novo ? "Conta de acesso ao SGO+." : CadUI_esc_(Usuarios_nome_(u) + " · " + u.USUARIO),
+      chave: "usuarios", id: id || "", titulo: novo ? "Novo usuário" : "Editar usuário", sub: novo ? "Conta de acesso ao SGO+." : CadUI_esc_(Usuarios_nome_(u)),
       corpo: function () {
+        // 31/10/2026 (pedido do dono): o campo do nome de usuário saiu; a pessoa entra com o e-mail, que é obrigatório e único
         return CadUI_secao_("Identificação", [
           CadUI_campo_({ id: "usr_nome", rotulo: "Nome completo", obrigatorio: true, inteiro: true, valor: u.NOME, placeholder: "Nome e sobrenome" }),
-          CadUI_campo_({ id: "usr_usuario", rotulo: "Login (nome de usuário)", obrigatorio: true, valor: u.USUARIO, placeholder: "ex.: joao.silva", attrs: ' autocapitalize="none" autocomplete="off" spellcheck="false"', dica: "Letras minúsculas, sem espaço." })
+          CadUI_campo_({ id: "usr_email", rotulo: "E-mail (entrada no SGO+)", tipo: "email", obrigatorio: true, inteiro: true, valor: u.EMAIL, placeholder: "nome@empresa.com.br", attrs: ' autocapitalize="none" autocomplete="off" spellcheck="false"',
+            dica: "É com este e-mail que a pessoa entra no SGO+ e recebe o link de nova senha e os avisos. Precisa ser só dela: não pode estar em outra conta." })
         ]) +
         CadUI_secao_("Contato", [
-          CadUI_campo_({ id: "usr_email", rotulo: "E-mail", tipo: "email", obrigatorio: true, inteiro: true, valor: u.EMAIL, placeholder: "nome@metrolabs.com.br", dica: "Identidade da pessoa no SGO+; recebe os avisos por e-mail." }),
           CadUI_campo_({ id: "usr_celular", rotulo: "Celular (WhatsApp)", tipo: "tel", inteiro: true, valor: usuariosMascaraCelular_(u.CELULAR), placeholder: "(11) 98765-4321", attrs: ' inputmode="numeric" maxlength="16"', dica: "Usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Pode ficar vazio, mas a pessoa aparece como Sem celular." })
         ]) +
         CadUI_secao_("Trabalho", [
@@ -530,8 +579,8 @@
             CadUI_campo_({ id: "usr_rep_papel", rotulo: "Papel na representada", obrigatorio: true, tipo: "select", valor: String(u.REPRESENTACAO_PAPEL || "").toUpperCase(),
             opcoes: [["", "Escolha o papel"]].concat((st.extra && st.extra.papeisRepresentacao) || []),
             dica: "Administrador e Atendente abrem pedidos e cadastram; Financeiro de garantia acompanha e conversa; Leitura só consulta." }) + "</div>",
-          novo ? CadUI_campo_({ id: "usr_senha", rotulo: "Senha inicial", tipo: "password", obrigatorio: true, inteiro: true, attrs: ' autocomplete="new-password"', dica: "Mínimo de 6 caracteres. Combine com a pessoa por um canal seguro." })
-               : '<p class="cadx-dica" style="grid-column:1/-1">Para trocar a senha, use Mais › Redefinir senha.</p>'
+          novo ? CadUI_campo_({ id: "usr_senha", rotulo: "Senha inicial", tipo: "password", obrigatorio: true, inteiro: true, attrs: ' autocomplete="new-password"', dica: "Mínimo de 6 caracteres, provisória: no primeiro acesso a pessoa cria a dela. Combine com a pessoa por um canal seguro." })
+               : '<p class="cadx-dica" style="grid-column:1/-1">Esqueceu a senha? Use Mais › Enviar link de redefinição (vai para o e-mail da pessoa). A senha provisória fica só para quem não tem e-mail.</p>'
         ]) +
         '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios.</p>';
       },
@@ -556,7 +605,7 @@
         // Vínculo (22/10/2026): perfil Diretoria com o vínculo vazio sugere "Diretoria" (quem salva confere; nunca troca um vínculo já escolhido).
         perfilSel.addEventListener("change", function () { var v = p.querySelector("#usr_vinculo"); if (v && !v.value && perfilSel.value === "DIRETORIA") { v.value = "DIRETORIA"; CadUI_erroCampo_("usr_vinculo", ""); } });
         p.querySelector("#usr_celular").addEventListener("input", function (e) { e.target.value = usuariosMascaraCelular_(e.target.value); });
-        p.querySelector("#usr_usuario").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
+        p.querySelector("#usr_email").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
         CadUI_chamar_("usuariosListarClientesAtivos", [], function (res) {
           var sel = document.getElementById("usr_cliente_id");
           if (!sel) return;
@@ -573,35 +622,32 @@
   function Usuarios_salvar_(id) {
     var novo = !id;
     var cel = usuariosCelularDigitos_(getValue_("usr_celular"));
-    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo"), AREA: getValue_("usr_perfil") === "CLIENTE" || getValue_("usr_perfil") === "REPRESENTADA" ? "" : getValue_("usr_area"),
+    var p = { NOME: getValue_("usr_nome"), EMAIL: String(getValue_("usr_email") || "").replace(/\s+/g, "").toLowerCase(), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo"), AREA: getValue_("usr_perfil") === "CLIENTE" || getValue_("usr_perfil") === "REPRESENTADA" ? "" : getValue_("usr_area"),
       REPRESENTADA_ID: getValue_("usr_perfil") === "REPRESENTADA" ? getValue_("usr_representada_id") : "", REPRESENTACAO_PAPEL: getValue_("usr_perfil") === "REPRESENTADA" ? getValue_("usr_rep_papel") : "" };
     if (novo) p.SENHA = (document.getElementById("usr_senha") || {}).value || "";
     var erros = {};
     if (!p.NOME) erros.usr_nome = "Informe o nome completo.";
-    if (!p.USUARIO) erros.usr_usuario = "Informe o login.";
-    else if (!/^[a-z0-9._@-]+$/.test(p.USUARIO)) erros.usr_usuario = "Use só letras sem acento, números, ponto, hífen ou sublinhado.";
-    else { var st = CADUI.telas.usuarios; var dup = st && st.itens.filter(function (x) { return String(x.USUARIO).toLowerCase() === p.USUARIO && String(x.ID) !== String(id || ""); })[0]; if (dup) erros.usr_usuario = "Este login já é de " + CadUI_esc_(Usuarios_nome_(dup)) + "."; }
-    if (!p.EMAIL) erros.usr_email = "Informe o e-mail.";
+    if (!p.EMAIL) erros.usr_email = "Informe o e-mail: é com ele que a pessoa entra no SGO+.";
     else if (!CadUI_emailValido_(p.EMAIL)) erros.usr_email = "E-mail inválido: confira o formato (nome@empresa.com.br).";
+    else { var st = CADUI.telas.usuarios; var dup = st && st.itens.filter(function (x) { return String(x.EMAIL || "").replace(/\s+/g, "").toLowerCase() === p.EMAIL && String(x.ID) !== String(id || ""); })[0]; if (dup) erros.usr_email = "Este e-mail já é da conta de " + CadUI_esc_(Usuarios_nome_(dup)) + (dup.STATUS !== "ATIVO" ? " (inativa: reative essa conta em vez de criar outra)" : "") + ". O e-mail precisa ser só de uma conta."; }
     if (cel === null) erros.usr_celular = "Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.";
     if (!p.PERFIL) erros.usr_perfil = "Escolha o perfil de acesso.";
     if (p.PERFIL === "CLIENTE" && !p.CLIENTE_ID) erros.usr_cliente_id = "Escolha a empresa do usuário Cliente.";
     if (p.PERFIL === "REPRESENTADA" && !p.REPRESENTADA_ID) erros.usr_representada_id = "Escolha a representada desta conta.";
     if (p.PERFIL === "REPRESENTADA" && !p.REPRESENTACAO_PAPEL) erros.usr_rep_papel = "Escolha o papel na representada.";
     if (novo && p.SENHA.length < 6) erros.usr_senha = "A senha inicial precisa ter pelo menos 6 caracteres.";
-    if (!CadUI_mostrarErros_(erros, ["usr_nome", "usr_usuario", "usr_email", "usr_celular", "usr_perfil", "usr_cliente_id", "usr_representada_id", "usr_rep_papel", "usr_senha"])) return;
+    if (!CadUI_mostrarErros_(erros, ["usr_nome", "usr_email", "usr_celular", "usr_perfil", "usr_cliente_id", "usr_representada_id", "usr_rep_papel", "usr_senha"])) return;
     CadUI_salvando_(true);
     CadUI_chamar_(novo ? "usuariosCriar" : "usuariosAtualizar", novo ? [p] : [id, p], function (res) {
       CadUI_painelSujo_(false);
-      CadUI_aviso_((novo ? "Usuário " + p.USUARIO + " cadastrado." : "Usuário " + p.USUARIO + " atualizado.") + (res.message && /perfil/.test(res.message) ? " " + res.message.replace(/^Usuário atualizado com sucesso\.\s*/, "") : ""), "ok");
+      CadUI_aviso_((novo ? "Usuário " + p.NOME + " cadastrado. A pessoa entra com o e-mail " + p.EMAIL + "." : "Usuário " + p.NOME + " atualizado.") + (res.message && /perfil/.test(res.message) ? " " + res.message.replace(/^Usuário atualizado com sucesso\.\s*/, "") : ""), "ok");
       CadTela_carregar_("usuarios", function () {
-        var it = (CADUI.telas.usuarios.itens || []).filter(function (x) { return String(x.USUARIO).toLowerCase() === p.USUARIO; })[0];
+        var it = (CADUI.telas.usuarios.itens || []).filter(function (x) { return id ? String(x.ID) === String(id) : String(x.EMAIL || "").toLowerCase() === p.EMAIL; })[0];
         if (it) Usuarios_detalhe_(it); else CadUI_painelFechar_();
       });
     }, function (msg) {
       CadUI_salvando_(false);
-      if (/login|nome de usuário/i.test(msg)) CadUI_erroCampo_("usr_usuario", CadUI_esc_(msg));
-      else if (/e-?mail/i.test(msg)) CadUI_erroCampo_("usr_email", CadUI_esc_(msg));
+      if (/e-?mail/i.test(msg)) CadUI_erroCampo_("usr_email", CadUI_esc_(msg));
       else if (/celular/i.test(msg)) CadUI_erroCampo_("usr_celular", CadUI_esc_(msg));
       else if (/vínculo de trabalho/i.test(msg)) CadUI_erroCampo_("usr_vinculo", CadUI_esc_(msg));
       else if (/^Área/i.test(msg)) CadUI_erroCampo_("usr_area", CadUI_esc_(msg));

@@ -166,6 +166,62 @@ function verificarSenhaAuth_(senhaInformada, valorArmazenado) {
  *  - com a marca "precisa trocar a senha", cria a sessão PENDENTE e devolve etapa
  *    "TROCAR_SENHA": validarSessao recusa essa sessão até trocarSenhaAcesso.
  */
+/*
+ * 31/10/2026 (pedido do dono: "acho que o usuário tem que ser o e-mail cadastrado [...] onde tem login ou apelido não
+ * precisa mais existir, remova"): a entrada é pelo E-MAIL cadastrado (CAD_USUARIOS.EMAIL), comparado sem diferenciar
+ * maiúsculas e sem espaços (emailLoginAuth_). A coluna USUARIO continua existindo por dentro (histórico, auditoria,
+ * Frota, Conduta e avisos guardam o login e o ID) e a sessão continua levando "usuario" = USUARIO: nada que já estava
+ * gravado muda. Regras:
+ *  - e-mail de UMA conta ativa: segue como antes (senha, código no celular, troca obrigatória, aparelho confiado);
+ *  - e-mail de DUAS ou mais contas ativas: recusa todas (com a senha certa a mensagem diz o porquê; a gestão resolve);
+ *  - nome de usuário digitado (sem "@"): só a conta técnica do Auvo (SEGA_PERFIS_FORA) ainda entra assim; as outras
+ *    recebem a orientação de entrar pelo e-mail (com a senha certa, o e-mail mascarado; sem e-mail, "peça à gestão");
+ *  - a resposta da senha errada é sempre a mesma ("E-mail ou senha inválidos."): não revela se o e-mail existe.
+ */
+var MSG_LOGIN_INVALIDO_AUTH = "E-mail ou senha inválidos.";
+var MSG_SEM_EMAIL_AUTH = "Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.";
+var MSG_EMAIL_REPETIDO_AUTH = "Não foi possível entrar: este e-mail está cadastrado em mais de uma conta ativa do SGO+. Por segurança, nenhuma delas entra até a gestão corrigir. O que fazer: peça à gestão da Metrolabs para deixar o e-mail em uma conta só (Administração > Usuários).";
+
+/** E-mail como chave de entrada: minúsculas, sem nenhum espaço. "" se vazio. */
+function emailLoginAuth_(v) {
+  return String(v === null || v === undefined ? "" : v).replace(/\s+/g, "").toLowerCase();
+}
+/** E-mail com formato aceitável para entrar e receber o link. */
+function emailValidoAuth_(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLoginAuth_(v));
+}
+/** "j•••a@metrolabs.com.br" (para orientar sem mostrar o e-mail inteiro). */
+function mascararEmailAuth_(e) {
+  const p = emailLoginAuth_(e).split("@");
+  if (p.length !== 2 || !p[0]) return "";
+  return p[0].charAt(0) + "•••" + (p[0].length > 1 ? p[0].slice(-1) : "") + "@" + p[1];
+}
+/** Perfil técnico (integração) que ainda entra pelo nome de usuário: a conta do Auvo (SEGA_PERFIS_FORA). */
+function perfilTecnicoAuth_(perfil) {
+  const p = SGO_UTILS.safeUpper(perfil);
+  if (typeof SegAcesso_foraDoFluxo_ === "function") return SegAcesso_foraDoFluxo_(p);
+  return p === "AUVO_SYNC";
+}
+
+/**
+ * Contas de CAD_USUARIOS (todas as abas de cabeçalho, com as de representada) que entram com o identificador digitado.
+ * Devolve { porEmail: bool, linhas: [{ i, linha, registro }] }.
+ */
+function contasDoIdentificadorAuth_(dados, identificador) {
+  const cab = (dados[0] || []).map(function (h) { return SGO_UTILS.safe(h).toUpperCase(); });
+  const cEmail = cab.indexOf("EMAIL"), cUsuario = cab.indexOf("USUARIO") >= 0 ? cab.indexOf("USUARIO") : 1, cPerfil = cab.indexOf("PERFIL") >= 0 ? cab.indexOf("PERFIL") : 4;
+  const porEmail = identificador.indexOf("@") >= 0;
+  const alvo = porEmail ? emailLoginAuth_(identificador) : normalizarTextoAuth_(identificador).toLowerCase();
+  const linhas = [];
+  for (let i = 1; i < dados.length; i++) {
+    const l = dados[i];
+    if (!SGO_UTILS.safe(l[0])) continue;
+    if (porEmail) { if (cEmail >= 0 && emailLoginAuth_(l[cEmail]) === alvo) linhas.push({ i: i, linha: l }); }
+    else if (normalizarTextoAuth_(l[cUsuario]).toLowerCase() === alvo) linhas.push({ i: i, linha: l, tecnico: perfilTecnicoAuth_(l[cPerfil]) });
+  }
+  return { porEmail: porEmail, linhas: linhas, cEmail: cEmail };
+}
+
 function login(usuario, senha, ctx) {
   try {
     const dbId = SGO_CFG.DB_ID;
@@ -176,13 +232,14 @@ function login(usuario, senha, ctx) {
       };
     }
 
-    const usuarioInformado = normalizarTextoAuth_(usuario);
+    // 31/10/2026: o primeiro argumento é o e-mail digitado (o nome continua "usuario" por compatibilidade das chamadas)
+    const usuarioInformado = normalizarTextoAuth_(usuario).indexOf("@") >= 0 ? emailLoginAuth_(usuario) : normalizarTextoAuth_(usuario);
     const senhaInformada = SGO_UTILS.safe(senha);
 
     if (!usuarioInformado || !senhaInformada) {
       return {
         success: false,
-        message: "Informe usuário e senha."
+        message: "Informe o e-mail e a senha."
       };
     }
 
@@ -205,20 +262,54 @@ function login(usuario, senha, ctx) {
       };
     }
 
-    // Varre os usuários cadastrados
-    for (let i = 1; i < dados.length; i++) {
-      const linha = dados[i];
+    // 31/10/2026: contas que entram com o identificador digitado (e-mail; nome de usuário só para a conta técnica do Auvo)
+    const achado = contasDoIdentificadorAuth_(dados, usuarioInformado);
+    let candidatos = achado.linhas;
+    const falhar = function (motivo, extra) {
+      registrarLogAuth_("LOGIN_FALHA", { usuario: usuarioInformado, perfil: "", detalhe: motivo });
+      if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_FALHA", { USUARIO: usuarioInformado }, ctxAcesso, motivo);
+      return Object.assign({ success: false, message: MSG_LOGIN_INVALIDO_AUTH }, extra || {});
+    };
+    if (!achado.porEmail) {
+      const tecnicas = candidatos.filter(function (c) { return c.tecnico; });
+      if (!tecnicas.length) {
+        // nome de usuário de uma pessoa: a entrada agora é pelo e-mail (com a senha certa, a orientação é exata)
+        const certa = candidatos.filter(function (c) { return verificarSenhaAuth_(senhaInformada, c.linha[2]); })[0];
+        if (!certa) return falhar("Entrada pelo nome de usuário recusada (agora é pelo e-mail).", { message: MSG_LOGIN_INVALIDO_AUTH + " Lembre: a entrada agora é pelo e-mail cadastrado, não pelo nome de usuário." });
+        const emailCerto = achado.cEmail >= 0 ? certa.linha[achado.cEmail] : "";
+        if (!emailValidoAuth_(emailCerto)) {
+          registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: SGO_UTILS.safeUpper(certa.linha[4]), detalhe: "Conta sem e-mail cadastrado." });
+          if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_NEGADO", { ID: SGO_UTILS.safe(certa.linha[0]), USUARIO: usuarioInformado, PERFIL: certa.linha[4] }, ctxAcesso, "Conta sem e-mail cadastrado.");
+          return { success: false, semEmail: true, message: MSG_SEM_EMAIL_AUTH };
+        }
+        return falhar("Entrada pelo nome de usuário (senha certa): orientado a usar o e-mail.", { message: "A entrada agora é pelo e-mail cadastrado, não pelo nome de usuário. O que fazer: digite o seu e-mail (" + mascararEmailAuth_(emailCerto) + ") no campo E-mail, com a mesma senha." });
+      }
+      candidatos = tecnicas;
+    }
+    const ativosId = candidatos.filter(function (c) { return SGO_UTILS.safeUpper(c.linha[5]) === SGO_CFG.STATUS.ATIVO; });
+    if (achado.porEmail && ativosId.length > 1) {
+      // o mesmo e-mail em duas ou mais contas ativas: nenhuma entra (com a senha certa, a pessoa sabe o porquê)
+      const algumaCerta = ativosId.some(function (c) { return verificarSenhaAuth_(senhaInformada, c.linha[2]); });
+      if (!algumaCerta) return falhar("E-mail ou senha inválidos.");
+      registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: "", detalhe: "E-mail repetido em " + ativosId.length + " contas ativas." });
+      if (typeof SegAcesso_registrar_ === "function") ativosId.forEach(function (c) { SegAcesso_registrar_("LOGIN_NEGADO", { ID: SGO_UTILS.safe(c.linha[0]), USUARIO: SGO_UTILS.safe(c.linha[1]), PERFIL: c.linha[4] }, ctxAcesso, "E-mail repetido em " + ativosId.length + " contas ativas: entrada recusada até a gestão corrigir."); });
+      return { success: false, emailRepetido: true, message: MSG_EMAIL_REPETIDO_AUTH };
+    }
+    // conta ativa primeiro; sem nenhuma ativa, a inativa (para dizer "inativo" a quem acertou a senha)
+    const lista = ativosId.length ? ativosId : candidatos;
+
+    for (let k = 0; k < lista.length; k++) {
+      const i = lista[k].i;
+      const linha = lista[k].linha;
 
       const id = SGO_UTILS.safe(linha[0]);
       const usuarioDb = normalizarTextoAuth_(linha[1]);
-      const senhaDb = SGO_UTILS.safe(linha[2]);
       const nomeDb = SGO_UTILS.safe(linha[3]);
       const perfilDb = SGO_UTILS.safeUpper(linha[4]);
       const statusDb = SGO_UTILS.safeUpper(linha[5]);
       const clienteIdDb = SGO_UTILS.safe(linha[7]); // Captura a trava do Portal do Cliente
 
       if (
-        usuarioDb === usuarioInformado &&
         verificarSenhaAuth_(senhaInformada, linha[2]) // SEGURANCA: compara via hash (com suporte a legado)
       ) {
 
@@ -288,18 +379,8 @@ function login(usuario, senha, ctx) {
       }
     }
 
-    // Se varreu o for inteiro e não achou a combinação
-    registrarLogAuth_("LOGIN_FALHA", {
-      usuario: usuarioInformado,
-      perfil: "",
-      detalhe: "Usuário ou senha inválidos."
-    });
-    if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_FALHA", { USUARIO: usuarioInformado }, ctxAcesso, "Usuário ou senha inválidos.");
-
-    return {
-      success: false,
-      message: "Usuário ou senha inválidos."
-    };
+    // Se varreu as contas e a senha não confere (ou o e-mail não existe): sempre a mesma resposta
+    return falhar("E-mail ou senha inválidos.");
 
   } catch (err) {
     registrarLogAuth_("LOGIN_ERRO", {
@@ -377,7 +458,8 @@ function criarSessaoLoginAuth_(u, ctx, opcoes) {
     sessionId: sessionId,
     user: {
       id: u.ID,
-      usuario: u.USUARIO,
+      usuario: u.USUARIO, // identificador interno (histórico e registros); a pessoa entra e se vê pelo e-mail e pelo nome
+      email: emailLoginAuth_(u.EMAIL),
       nome: u.NOME,
       perfil: u.PERFIL,
       clienteId: u.CLIENTE_ID,
@@ -820,6 +902,31 @@ function gerarSessionIdAuth_() {
  */
 function normalizarTextoAuth_(valor) {
   return SGO_UTILS.safe(valor).trim();
+}
+
+/**
+ * 31/10/2026 (login pelo e-mail): o nome de usuário não aparece mais para ninguém. Histórico gravado com o login
+ * (SYS_LOGS, registros antigos) é mostrado com o NOME da pessoa: login -> nome (o próprio texto se não achar).
+ * Lê CAD_USUARIOS no máximo a cada 60 s (o servidor mantém o legado carregado entre execuções). Nunca lança.
+ */
+var SGO_NOMES_POR_LOGIN_ = null, SGO_NOMES_POR_LOGIN_EM_ = 0;
+function SGO_nomeDoLogin_(login) {
+  const t = String(login === null || login === undefined ? "" : login).trim();
+  if (!t) return "";
+  try {
+    if (!SGO_NOMES_POR_LOGIN_ || Date.now() - SGO_NOMES_POR_LOGIN_EM_ > 60000) {
+      SGO_NOMES_POR_LOGIN_ = {}; SGO_NOMES_POR_LOGIN_EM_ = Date.now();
+      const antes = typeof SGO_DATA_REP_VISIVEL === "undefined" ? false : SGO_DATA_REP_VISIVEL;
+      SGO_DATA_REP_VISIVEL = true;
+      try {
+        SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) {
+          const l = String(u.USUARIO || "").trim().toLowerCase();
+          if (l && u.NOME) SGO_NOMES_POR_LOGIN_[l] = String(u.NOME).trim();
+        });
+      } finally { SGO_DATA_REP_VISIVEL = antes; }
+    }
+    return SGO_NOMES_POR_LOGIN_[t.toLowerCase()] || t;
+  } catch (e) { return t; }
 }
 
 /**

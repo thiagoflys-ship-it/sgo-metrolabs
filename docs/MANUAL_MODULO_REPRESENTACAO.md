@@ -8,7 +8,7 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 
 ## 2. Como a representada entra
 
-- A pessoa da representada entra pelo login normal do SGO+, com usuário e senha, no perfil "Representada".
+- A pessoa da representada entra pela entrada normal do SGO+, com o e-mail cadastrado e a senha, no perfil "Representada". Se esquecer a senha, usa "Esqueci minha senha" na tela de entrada (ou a Metrolabs envia o link em Administração > Usuários).
 - A conta é criada em Administração > Usuários: perfil Representada, a representada (empresa) e o papel dela: administrador da representada, atendente, financeiro de garantia ou leitura.
 - O perfil Representada vê só o módulo Representação. O servidor recusa qualquer outra função do SGO+ para essa sessão, e a conta não aparece nas listas de pessoas (responsáveis, avisos internos, bate-papo, conduta, ponto, atividades).
 - Representada inativa (Representação > Representadas) ou conta sem representada: a pessoa não entra, e a mensagem diz o motivo.

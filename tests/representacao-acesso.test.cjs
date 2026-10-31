@@ -46,18 +46,18 @@ function ambiente() {
 
 test('login: a conta REPRESENTADA entra só ligada a uma representada ativa e a sessão leva a representada e o papel', () => {
   const a = ambiente();
-  const r = a.ctx.login('ana.rep', 'senha123');
+  const r = a.ctx.login('ana@rep.exemplo.test', 'senha123');
   assert.equal(r.success, true); assert.equal(r.user.perfil, 'REPRESENTADA'); assert.equal(r.user.representadaId, 'repA'); assert.equal(r.user.representacaoPapel, 'ATENDENTE');
-  const sem = a.ctx.login('sem.rep', 'senha123');
+  const sem = a.ctx.login('sem@rep.exemplo.test', 'senha123');
   assert.equal(sem.success, false); assert.match(sem.message, /não está ligado a nenhuma empresa/);
-  const ina = a.ctx.login('ina.rep', 'senha123');
+  const ina = a.ctx.login('ina@rep.exemplo.test', 'senha123');
   assert.equal(ina.success, false); assert.match(ina.message, /suspenso pela Metrolabs/);
-  assert.equal(a.ctx.login('gil', 'senha123').success, true);
+  assert.equal(a.ctx.login('gil@exemplo.test', 'senha123').success, true);
 });
 
 test('exigirSessao recusa a sessão REPRESENTADA fora da entrada do módulo; isAdminSession é falso; validarSessao segue valendo (identidade)', () => {
   const a = ambiente();
-  const sid = a.ctx.login('ana.rep', 'senha123').sessionId;
+  const sid = a.ctx.login('ana@rep.exemplo.test', 'senha123').sessionId;
   assert.equal(a.ctx.validarSessao(sid).valid, true);
   assert.throws(() => a.ctx.exigirSessao(sid), /só o módulo Representação/);
   assert.equal(a.ctx.isAdminSession(sid), false);
@@ -65,7 +65,7 @@ test('exigirSessao recusa a sessão REPRESENTADA fora da entrada do módulo; isA
   assert.equal(a.ctx.exigirSessao(sid).representadaId, 'repA');
   vm.runInContext('SGO_REP_MODULO = false;', a.ctx);
   assert.throws(() => a.ctx.exigirSessao(sid), /Acesso negado/);
-  const sg = a.ctx.login('gil', 'senha123').sessionId;
+  const sg = a.ctx.login('gil@exemplo.test', 'senha123').sessionId;
   assert.equal(a.ctx.exigirSessao(sg).perfil, 'GESTOR'); // o resto da equipe não muda
 });
 

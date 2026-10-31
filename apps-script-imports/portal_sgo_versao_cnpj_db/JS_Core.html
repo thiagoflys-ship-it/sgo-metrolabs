@@ -225,6 +225,8 @@
   // SISTEMA DE LOGIN E SESSÃO
   // ==========================================
   function tentarAutoLogin_() {
+    // 31/10/2026: aberto pelo link "Criar minha senha nova" do e-mail: a tela do link vem antes de qualquer entrada automática
+    if (window.SGO_REDEFINIR_TOKEN && typeof SegAcesso_abrirRedefinir_ === "function") { SegAcesso_abrirRedefinir_(); return; }
     const sessaoSalva = getSessionStorageItem_(STORAGE_KEYS.SESSION);
     if (!sessaoSalva) return;
 
@@ -296,8 +298,9 @@
     const usuario = usuarioEl ? String(usuarioEl.value || "").trim() : "";
     const senha = senhaEl ? String(senhaEl.value || "").trim() : "";
 
+    // 31/10/2026: a entrada é pelo e-mail cadastrado (sem espaços; o servidor compara sem diferenciar maiúsculas)
     if (!usuario) {
-      alert("Informe o usuário.");
+      alert("Informe o seu e-mail.");
       if (usuarioEl) usuarioEl.focus();
       return;
     }
@@ -860,6 +863,8 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    // 31/10/2026: "Trocar minha senha" (todos os perfis) abre a janela da troca por cima da tela atual (JS_SegurancaAcesso.html)
+    if (mod === "trocar_senha") { if (typeof SegAcesso_abrirTrocarMinha_ === "function") SegAcesso_abrirTrocarMinha_(); return; }
     // Perfil REPRESENTADA: qualquer outra tela (atalho, busca, link antigo) leva ao módulo Representação.
     if (SGO_ehRepresentada_() && SGO_TELAS_REPRESENTADA.indexOf(String(mod || "")) < 0) mod = "representacao";
     // Perfil RH: tela fora do perfil (busca, atalho antigo, link) mostra o motivo e o caminho de volta.
@@ -4837,6 +4842,8 @@
       for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }
     }
     if (SGO_ehRotina_()) itens.push({ icone: '<i class="fas fa-users" aria-hidden="true"></i>', legenda: "Usuários", mod: "usuarios" });
+    // 31/10/2026: a própria pessoa troca a senha (senha atual + nova); as outras sessões dela são desconectadas
+    itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Trocar minha senha", mod: "trocar_senha" });
 
     const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
     atualizarTituloMobile_("Início");

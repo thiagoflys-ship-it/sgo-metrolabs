@@ -64,6 +64,7 @@ var SGO_MP_CAMPOS_AUDITORIA = ['ID', 'EM', 'USUARIO', 'NOME', 'PERFIL_USUARIO', 
 var SGO_MP_ACOES = {
   RESPONSAVEL_INCLUIDO: 'Responsável técnico incluído', RESPONSAVEL_REMOVIDO: 'Responsável técnico removido',
   SENHA_CRIADA: 'Senha criada', SENHA_TROCADA: 'Senha trocada', SENHA_REDEFINIDA: 'Senha apagada pelo Administrador',
+  LINK_SENHA_ENVIADO: 'Link de senha nova enviado por e-mail', SENHA_REDEFINIDA_LINK: 'Senha apagada pelo link do e-mail',
   SENHA_ANTIGA_REMOVIDA: 'Senha única antiga apagada', DESBLOQUEIO: 'Entrada desbloqueada pelo Administrador',
   ENTRADA: 'Entrada no modo', ENTRADA_RECUSADA: 'Senha incorreta', BLOQUEIO: 'Entrada bloqueada (5 senhas erradas)', SAIDA: 'Saída do modo',
   ACESSO_RECUSADO: 'Acesso recusado', PARAMETRO_ALTERADO: 'Parâmetro ajustado', PARAMETRO_RESTAURADO: 'Padrão restaurado',
@@ -674,7 +675,7 @@ function SGO_MP_apiSituacao(sessionId, payload) {
 function SGO_MP_apiCriarSenha(sessionId, payload) {
   return SGO_MP_resposta_(function () {
     var eu = SGO_MP_exigirResponsavel_(sessionId);
-    if (SGO_MP_temSenha_(eu.userId)) throw new Error('Você já tem a senha do modo personalizado. Para trocar, use "Trocar minha senha" (pede a senha atual). Se esqueceu, peça ao Administrador para apagar a senha em ' + SGO_MP_CFG.CAMINHO_ADMIN + '.');
+    if (SGO_MP_temSenha_(eu.userId)) throw new Error('Você já tem a senha do modo personalizado. Para trocar, use "Trocar minha senha" (pede a senha atual). Se esqueceu, toque em "Esqueci a senha do modo personalizado": o link vai para o seu e-mail.');
     var p = payload || {};
     var s = SGO_MP_validarSenhaNova_(eu, p.nova, p.confirmar);
     SGO_MP_gravarSenha_(eu.userId, s);
@@ -690,7 +691,7 @@ function SGO_MP_apiEntrar(sessionId, payload) {
     var eu = SGO_MP_exigirResponsavel_(sessionId);
     if (!SGO_MP_temSenha_(eu.userId)) throw new Error('Você ainda não tem a senha do modo personalizado. Toque em "Criar minha senha" nesta tela.');
     var ate = SGO_MP_bloqueadoAte_(eu.userId);
-    if (ate) throw new Error('A entrada está bloqueada até ' + SGO_MP_fmtData_(ate, 'HH:mm') + ' por causa de ' + SGO_MP_CFG.TENTATIVAS_MAX + ' senhas erradas seguidas. Aguarde ou peça ao Administrador para desbloquear em ' + SGO_MP_CFG.CAMINHO_ADMIN + '. Se esqueceu a senha, peça para ele apagar a senha e crie outra.');
+    if (ate) throw new Error('A entrada está bloqueada até ' + SGO_MP_fmtData_(ate, 'HH:mm') + ' por causa de ' + SGO_MP_CFG.TENTATIVAS_MAX + ' senhas erradas seguidas. Aguarde ou peça ao Administrador para desbloquear em ' + SGO_MP_CFG.CAMINHO_ADMIN + '. Se esqueceu a senha, toque em "Esqueci a senha do modo personalizado" (o link vai para o seu e-mail) e crie outra.');
     var senha = String((payload || {}).senha || '');
     if (!senha) throw new Error('Digite a sua senha do modo personalizado e toque em "Entrar".');
     var r = SGO_MP_trava_(function () {
@@ -886,7 +887,9 @@ function SGO_MP_listaResponsaveis_() {
     vistos[id] = true;
     var ativo = SGO_MP_up_(u.STATUS || 'ATIVO') === 'ATIVO', eleg = SGO_MP_CFG.PERFIS_ELEGIVEIS.indexOf(SGO_MP_up_(u.PERFIL)) >= 0;
     var ate = d ? SGO_MP_bloqueadoAte_(id) : 0;
-    return { userId: id, usuario: SGO_MP_s_(u.USUARIO), nome: SGO_MP_s_(u.NOME) || SGO_MP_s_(u.USUARIO), perfil: SGO_MP_up_(u.PERFIL), designado: !!d,
+    var em = String(u.EMAIL || '').replace(/\s+/g, '').toLowerCase();
+    // 31/10/2026: a tela mostra o e-mail (o login interno não aparece mais) e oferece o link quando há e-mail
+    return { userId: id, usuario: SGO_MP_s_(u.USUARIO), email: em, temEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em), nome: SGO_MP_s_(u.NOME) || SGO_MP_s_(u.USUARIO), perfil: SGO_MP_up_(u.PERFIL), designado: !!d,
       desde: d ? d.desde : '', por: d ? d.por : '', temSenha: d ? SGO_MP_temSenha_(id) : false, bloqueadoAte: ate ? SGO_MP_fmtData_(ate, 'HH:mm') : '',
       aviso: d && (!ativo || !eleg) ? (!ativo ? 'Usuário inativo: não entra no modo.' : 'Perfil sem habilitação (' + SGO_MP_up_(u.PERFIL) + '): não entra no modo até voltar a um perfil habilitado.') : '' };
   });
@@ -948,6 +951,64 @@ function SGO_MP_apiRedefinirSenha(sessionId, payload) {
     SGO_MP_apagar_(SGO_MP_CFG.PROP_TENTATIVAS + id);
     SGO_MP_auditar_(eu, 'SENHA_REDEFINIDA', { MOTIVO: (r.nome || id) + ' (' + (r.usuario || '') + ') vai criar uma senha nova.' });
     return Object.assign(SGO_MP_listaResponsaveis_(), { mensagem: 'Senha de ' + (r.nome || id) + ' apagada. Na próxima vez, ele cria uma senha nova em ' + SGO_MP_CFG.CAMINHO_TELA + '.' });
+  });
+}
+
+/*
+ * 31/10/2026 (pedido do dono, redefinição de senha pelo e-mail): no lugar de "Apagar a senha (esqueceu)", o Administrador
+ * envia um LINK para o e-mail do responsável (30 minutos, uso único; SGO_SegurancaAcesso.js, tipo MP). Ao abrir o link, a
+ * senha antiga do modo personalizado é apagada e a pessoa cria a nova dentro do SGO+ (com o login e o código de sempre).
+ * O próprio responsável também pede o link ("Esqueci a senha do modo personalizado"). Quem não tem e-mail cadastrado
+ * continua com o "Apagar a senha agora" do Administrador (alternativa, com registro).
+ */
+function SGO_MP_emailDe_(userId) {
+  var u = (SGO_MP_usuarios_() || []).filter(function (x) { return SGO_MP_s_(x.ID) === SGO_MP_s_(userId); })[0];
+  var e = String((u && u.EMAIL) || '').replace(/\s+/g, '').toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : '';
+}
+
+/** Chamado pelo link (SGO_SegurancaAcesso.js > concluirRedefinicaoSenha, tipo MP). u = pessoa do link. */
+function SGO_MP_liberarSenhaPorLink_(u, rec) {
+  var id = SGO_MP_s_(u && u.ID);
+  var r = SGO_MP_responsaveis_().filter(function (x) { return String(x.userId) === id; })[0];
+  if (!r) return { ok: false, message: 'Você não está mais na lista de responsáveis técnicos do modo personalizado. Fale com o Administrador do SGO+.' };
+  SGO_MP_apagar_(SGO_MP_CFG.PROP_SENHA + id);
+  SGO_MP_apagar_(SGO_MP_CFG.PROP_SESSAO + id);
+  SGO_MP_apagar_(SGO_MP_CFG.PROP_TENTATIVAS + id);
+  SGO_MP_auditar_({ usuario: SGO_MP_s_(u.USUARIO), nome: SGO_MP_s_(u.NOME), perfil: SGO_MP_up_(u.PERFIL) }, 'SENHA_REDEFINIDA_LINK',
+    { MOTIVO: (u.NOME || id) + ' abriu o link do e-mail (' + (rec && rec.origem === 'GESTAO' ? 'enviado pelo Administrador' : 'pedido pela própria pessoa') + ') e vai criar uma senha nova.' });
+  return { ok: true };
+}
+
+/** Administrador: envia o link da senha nova do modo personalizado para o e-mail do responsável. payload = { userId, motivo }. */
+function SGO_MP_apiEnviarLinkSenha(sessionId, payload) {
+  return SGO_MP_resposta_(function () {
+    var eu = SGO_MP_exigirAdmin_(sessionId);
+    var id = SGO_MP_s_((payload || {}).userId), motivo = SGO_MP_s_((payload || {}).motivo) || 'esqueceu a senha do modo personalizado';
+    var r = SGO_MP_responsaveis_().filter(function (x) { return String(x.userId) === id; })[0];
+    if (!r) throw new Error('Este usuário não está na lista de responsáveis técnicos. Atualize a tela.');
+    if (typeof SegAcesso_enviarLinkGestao_ !== 'function') throw new Error('O envio do link não está disponível neste sistema. Use "Apagar a senha agora".');
+    var env = SegAcesso_enviarLinkGestao_(id, motivo, exigirSessao(String(sessionId || '')), 'MP');
+    SGO_MP_auditar_(eu, 'LINK_SENHA_ENVIADO', { MOTIVO: (r.nome || id) + ': link para ' + env.destino + ' (30 minutos, uso único). Motivo: ' + motivo });
+    return Object.assign(SGO_MP_listaResponsaveis_(), { mensagem: 'Link enviado para o e-mail ' + env.destino + ' de ' + (r.nome || id) + '. Ele vale por 30 minutos: ao abrir, a senha antiga é apagada e a pessoa cria outra em ' + SGO_MP_CFG.CAMINHO_TELA + '.' });
+  });
+}
+
+/** O próprio responsável esqueceu a senha do modo personalizado: link para o e-mail dele (3 por hora). */
+function SGO_MP_apiEsqueciSenha(sessionId, payload) {
+  return SGO_MP_resposta_(function () {
+    var eu = SGO_MP_exigirResponsavel_(sessionId);
+    if (!SGO_MP_temSenha_(eu.userId)) throw new Error('Você ainda não tem a senha do modo personalizado: toque em "Criar minha senha" nesta tela.');
+    var email = SGO_MP_emailDe_(eu.userId);
+    if (!email) throw new Error('O seu cadastro não tem e-mail válido, então o link não tem para onde ir. O que fazer: peça ao Administrador para apagar a senha em ' + SGO_MP_CFG.CAMINHO_ADMIN + ' (ou para cadastrar o seu e-mail em Administração > Usuários).');
+    if (typeof SegAcesso_criarLinkRedefinicao_ !== 'function') throw new Error('O envio do link não está disponível neste sistema. Peça ao Administrador para apagar a senha em ' + SGO_MP_CFG.CAMINHO_ADMIN + '.');
+    if (SegAcesso_limitePedidos_('mp:' + email, true)) throw new Error('Você já pediu 3 links na última hora. Use o link do e-mail mais recente ou aguarde e tente de novo.');
+    var u = SegAcesso_usuarioPorId_(eu.userId);
+    var r = SegAcesso_criarLinkRedefinicao_(u, null, { origem: 'PESSOA', tipo: 'MP' });
+    if (!r.ok) throw new Error(r.message || 'Não foi possível enviar o link agora.');
+    SegAcesso_registrar_('REDEFINICAO_LINK_ENVIADO', u, null, 'Link da senha do modo personalizado para ' + r.destino + ' (pedido pela própria pessoa).');
+    SGO_MP_auditar_(eu, 'LINK_SENHA_ENVIADO', { MOTIVO: 'Pedido pela própria pessoa: link para ' + r.destino + ' (30 minutos, uso único).' });
+    return Object.assign(SGO_MP_situacao_(eu), { mensagem: 'Enviamos um link para o seu e-mail ' + r.destino + '. Ele vale por 30 minutos: ao abrir, a senha antiga é apagada e você cria outra nesta tela.' });
   });
 }
 

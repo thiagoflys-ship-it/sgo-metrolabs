@@ -252,3 +252,45 @@ test('ajuda da tela só para o responsável e o Administrador', () => {
   assert.match(aj, /SGO_ajudaTelas_ModoPersonalizado_/);
   assert.match(aj, /modulo === 'modo_personalizado' && !mpLib \? \[\]/);
 });
+
+test('esqueceu a senha do modo personalizado: link para o e-mail (Administrador ou a própria pessoa); ao abrir, a senha antiga é apagada (31/10/2026)', () => {
+  const env = ambiente();
+  // a parte do link (token, e-mail, 30 minutos) é de SGO_SegurancaAcesso.js e tem os testes dela (login-email.test.cjs); aqui, simulada
+  env.run([
+    'var __LINKS = [];',
+    'var __EMAILS = { u_rt: "rt@exemplo.test" }, __usuariosOrig = SGO_MP_usuarios_;',
+    'SGO_MP_usuarios_ = function () { return __usuariosOrig().map(function (u) { return Object.assign({}, u, { EMAIL: __EMAILS[u.ID] || "" }); }); };',
+    'function SegAcesso_enviarLinkGestao_(id, motivo, sessao, tipo) { __LINKS.push({ id: id, motivo: motivo, tipo: tipo, por: "gestao" }); return { destino: "r•••t@exemplo.test" }; }',
+    'function SegAcesso_criarLinkRedefinicao_(u, ctx, dados) { __LINKS.push({ id: u.ID, tipo: dados.tipo, por: "pessoa" }); return { ok: true, destino: "r•••t@exemplo.test" }; }',
+    'var __LIMITE = 0; function SegAcesso_limitePedidos_() { return ++__LIMITE > 3; }',
+    'function SegAcesso_usuarioPorId_(id) { var u = SGO_DATA.getById("CAD_USUARIOS", id); return u ? { ID: u.ID, USUARIO: u.USUARIO, NOME: u.NOME, PERFIL: u.PERFIL, EMAIL: u.EMAIL } : null; }',
+    'function SegAcesso_registrar_() {}'
+  ].join('\n'));
+  designarECriar(env);
+  const lista = env.mp('adm', 'apiResponsaveis');
+  const rt = lista.itens.find((x) => x.userId === 'u_rt');
+  assert.strictEqual(rt.temEmail, true); assert.strictEqual(rt.email, 'rt@exemplo.test');
+  assert.strictEqual(lista.itens.find((x) => x.userId === 'u_gest2').temEmail, false);
+  // só o Administrador envia o link pelos responsáveis
+  assert.match(env.mp('gest2', 'apiEnviarLinkSenha', { userId: 'u_rt', motivo: 'esqueceu' }).message, /são do Administrador/);
+  const adm = env.mp('adm', 'apiEnviarLinkSenha', { userId: 'u_rt', motivo: 'esqueceu a senha' });
+  assert.ok(adm.ok, adm.message); assert.match(adm.mensagem, /Link enviado para o e-mail/);
+  // a própria pessoa pede (3 por hora)
+  const eu = env.mp('rt', 'apiEsqueciSenha');
+  assert.ok(eu.ok, eu.message); assert.match(eu.mensagem, /Enviamos um link para o seu e-mail/);
+  env.mp('rt', 'apiEsqueciSenha'); env.mp('rt', 'apiEsqueciSenha');
+  assert.match(env.mp('rt', 'apiEsqueciSenha').message, /3 links na última hora/);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(env.run('__LINKS.map(function (l) { return l.tipo; })'))), ['MP', 'MP', 'MP', 'MP']);
+  // o link aberto apaga a senha; a pessoa cria outra dentro do SGO+
+  const r = JSON.parse(JSON.stringify(env.run('SGO_MP_liberarSenhaPorLink_(SGO_DATA.getById("CAD_USUARIOS", "u_rt"), { origem: "GESTAO" })')));
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(env.mp('rt', 'apiSituacao').temSenha, false);
+  assert.ok(env.mp('rt', 'apiCriarSenha', { nova: 'Outra' + 'Senha99', confirmar: 'Outra' + 'Senha99' }).ok);
+  assert.ok(env.auditoria().some((l) => l.ACAO === 'SENHA_REDEFINIDA_LINK'));
+  assert.ok(env.auditoria().some((l) => l.ACAO === 'LINK_SENHA_ENVIADO'));
+  // fora da lista: o link não libera nada
+  assert.strictEqual(env.run('SGO_MP_liberarSenhaPorLink_(SGO_DATA.getById("CAD_USUARIOS", "u_gest2"), {}).ok'), false);
+  // sem e-mail: a própria pessoa recebe a orientação (o Administrador apaga)
+  env.run('__EMAILS.u_rt = "";');
+  assert.match(env.mp('rt', 'apiEsqueciSenha').message, /não tem e-mail válido/);
+});
