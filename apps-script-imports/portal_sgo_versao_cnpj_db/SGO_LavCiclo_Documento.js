@@ -380,13 +380,33 @@ function LavCicD_estilos_() {
     '.lc-aprov .ass .linha{border-top:.6pt solid #3e4c59;margin-top:1mm;padding-top:.8mm;font-size:7.4pt;color:#52606d;text-align:center}' +
     '.lc-aprov .pend{font-size:7.8pt;color:#8a4b00;text-align:center;margin:auto 0 2mm}' +
     '.lc-aprov table{width:100%;border-collapse:collapse;font-size:7.5pt;table-layout:fixed}.lc-aprov td,.lc-aprov th{padding:.5mm 2.2mm;border-bottom:.4pt solid #e1e5ea;text-align:left;vertical-align:top}' +
-    '.lc-aprov th{width:20mm;white-space:nowrap;color:#3e4c59;font-weight:600}.lc-aprov td.hash{font:6.6pt/1.25 "Courier New",monospace;word-break:break-all}' +
+    '.lc-aprov th{width:25mm;white-space:nowrap;color:#3e4c59;font-weight:600}.lc-aprov td.hash{font:6.6pt/1.25 "Courier New",monospace;word-break:break-all}' +
     '.lc-rastro{font-size:6.7pt;color:#616e7c;line-height:1.3;margin:1.8mm 0 0;text-align:left}' +
     '.lc-falha{border:1pt solid #a61b1b;background:#fcf3f3;color:#a61b1b;font-weight:700;font-size:8.6pt;padding:1.4mm 3mm;margin:0 0 2.4mm}' +
     '.lc-sem-grafico{border:.5pt dashed #9aa5b1;padding:6mm 3mm;font-size:8pt;color:#52606d;text-align:center;margin:0 0 2mm}' +
     '.lc-miolo.lc-n1{zoom:.93}.lc-miolo.lc-n2{zoom:.86}.lc-miolo.lc-n3{zoom:.78}' +
-    '@media screen and (max-width:640px){.lc-grade{grid-template-columns:1fr}.lc-dir .kpis{grid-template-columns:repeat(2,1fr)}.lc-aprov{grid-template-columns:1fr}.lc-aprov .cab{grid-column:1}.lc-aprov .ass{border-right:0;border-bottom:.6pt solid #bcc5cf}}';
+    // textos longos (cliente, endereço, receita, eventos, SHA-256) quebram dentro da caixa, nunca saem da folha
+    'table.lc-ficha td,.lc-aprov td,.lc-res .mot,.lc-ref,.lc-ocor,.lc-rastro,.lc-conclusao p,.lc-dir .kpi .v,.lc-dir .kpi .r,.lc-dir .leg-grafico span,.subtitulo,h1{overflow-wrap:anywhere;word-break:normal}' +
+    '.lc-rastro,.lc-aprov td.hash{word-break:break-all}.lc-dir,.lc-esq,.lc-grade>*{min-width:0}' +
+    // 31/10/2026 (pedido do dono: "o relatório que mostra no HTML no celular tem dados que saem fora da página"): na tela a folha
+    // fica sempre com a largura do A4 (a mesma disposição do PDF) e o script LAVCIC_ESCALA_TELA reduz a folha inteira quando a tela é
+    // mais estreita. Na impressão a escala volta a 1 (a folha continua A4 de uma página).
+    '@media screen{.folha{max-width:none}html,body{overflow-x:hidden}.barra-tela button.lc-zoom{background:#fff;color:#0b3d6e;border:1px solid #0b3d6e}}' +
+    '@media screen and (max-width:820px){.barra-tela{flex-wrap:wrap;padding:0 8px;box-sizing:border-box}.barra-tela button{flex:1 1 140px;min-height:42px;font-size:13px;padding:8px 10px}.aviso-tela{margin-left:8px!important;margin-right:8px!important}}' +
+    '@media print{.folha{zoom:1!important}}';
 }
+
+/**
+ * Escala da folha na tela estreita (celular). A folha inteira é reduzida em proporção à largura da tela, com o botão
+ * "Ver em tamanho real" (rola para o lado) e "Ajustar a folha à tela". Não roda no PDF (o gerador desliga o JavaScript) e,
+ * se rodar na impressão, o CSS @media print devolve a escala 1.
+ */
+var LAVCIC_ESCALA_TELA = '<script>(function(){var f=document.querySelector(".folha"),b=document.querySelector(".barra-tela");if(!f)return;var real=false,bt=null;' +
+  'function aj(){if(window.matchMedia&&matchMedia("print").matches)return;f.style.zoom="";var w=document.documentElement.clientWidth-12,fw=f.offsetWidth,z=(!real&&fw>w)?w/fw:1;' +
+  'f.style.zoom=z<1?z.toFixed(4):"";document.documentElement.style.overflowX=real&&fw>w?"auto":"";document.body.style.overflowX=real&&fw>w?"auto":"";' +
+  'if(bt){bt.style.display=fw>w?"":"none";bt.textContent=real?"Ajustar a folha à tela":"Ver em tamanho real";}}' +
+  'if(b){bt=document.createElement("button");bt.type="button";bt.className="lc-zoom";bt.onclick=function(){real=!real;aj();};b.insertBefore(bt,b.firstChild);}' +
+  'addEventListener("resize",aj);addEventListener("orientationchange",function(){setTimeout(aj,200);});addEventListener("beforeprint",function(){f.style.zoom="";});addEventListener("afterprint",aj);aj();})();</script>';
 
 /**
  * Monta o HTML A4.
@@ -451,5 +471,5 @@ function LavCicD_html_(d) {
     (arq.sha256 ? ', resumo SHA-256 ' + LavCicD_esc_(arq.sha256) : '') + (arq.importadoPor && arq.importadoPor !== d.emitidoPor ? ', importado por ' + LavCicD_esc_(arq.importadoPor) : '') +
     '. Dados do cliente e do equipamento: cadastro do SGO+.' + (d.versaoAnterior ? ' Versão ' + (Number(d.versao) || 1) + ', substitui a versão ' + LavCicD_esc_(d.versaoAnterior.versao) + ' (motivo: ' + LavCicD_esc_(d.versaoAnterior.motivo) + ').' : '') +
     (a && a.imagem ? ' Assinado na tela do SGO+; documento travado, correção só em nova versão.' : '') + '</p>';
-  return h + corpo + SGO_DocA4_fimDocumento_();
+  return h + corpo + LAVCIC_ESCALA_TELA + SGO_DocA4_fimDocumento_();
 }

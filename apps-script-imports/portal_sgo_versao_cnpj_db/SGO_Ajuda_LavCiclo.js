@@ -13,9 +13,24 @@ function SGO_ajudaTelas_LavCiclo_() {
         "A lavadora precisa estar cadastrada no SGO+ e ligada ao cliente. Os dados do cliente e do equipamento que saem no relatório vêm do cadastro, nunca do arquivo.",
         "Copie o arquivo do ciclo da lavadora pelo Wi-Fi da máquina ou pelo cartão. É o arquivo com o nome do lote e final .sgolav (por exemplo, LOT-20261030-6222.sgolav). Os arquivos .csv e .txt do mesmo lote não servem.",
         "Não abra nem edite o arquivo antes de importar: arquivo mexido é recusado.",
-        "Pelo QR code da lavadora, a tela abre direto no equipamento certo."
+        "Pelo QR code da lavadora, a tela abre direto no equipamento certo.",
+        "Ao abrir a tela, não aparece a lista de lavadoras: aparecem os índices, a busca e o Kanban dos relatórios. As lavadoras aparecem depois da busca."
       ],
       passos: [
+        { titulo: "Achar uma lavadora ou um relatório", itens: [
+          "No campo de busca, escreva o nome do cliente, o CNPJ, o número de série, a TAG, o patrimônio, o modelo ou o lote.",
+          "Pode escrever sem acento e só uma parte (por exemplo, \"alfa\", o CNPJ sem pontos ou os últimos números do lote).",
+          "Toque em \"Buscar\".",
+          "Para escolher o período, o resultado ou a assinatura, toque em \"Mais filtros\".",
+          "Para ver a lista completa, toque em \"Ver todas as lavadoras\".",
+          "Para voltar aos índices e ao Kanban, toque em \"Voltar ao painel\"."
+        ] },
+        { titulo: "Usar o Kanban dos relatórios", itens: [
+          "As colunas são: Aguardando assinatura, Nova versão aguardando assinatura, Com falha (cancelado ou reprovado) e Assinado e aprovado.",
+          "No celular, toque num dos quatro quadros de cima para ver aquela situação.",
+          "Toque num cartão para abrir o relatório, baixar o PDF, assinar ou ver as versões.",
+          "Cada coluna mostra os 6 mais recentes. Toque em \"Ver todos\" para ver os outros."
+        ] },
         { titulo: "Gerar o relatório pelo QR code da lavadora", itens: [
           "Leia o QR code da etiqueta da lavadora com a câmera do celular.",
           "Entre com o seu e-mail e a sua senha, se o sistema pedir.",
@@ -27,26 +42,27 @@ function SGO_ajudaTelas_LavCiclo_() {
         ] },
         { titulo: "Gerar o relatório pela tela", itens: [
           "No menu, toque em \"Relatórios de ciclo\".",
-          "Abra a aba \"Equipamentos\".",
+          "Na busca, escreva a TAG, a série, o patrimônio ou o nome do cliente e toque em \"Buscar\".",
           "Na lavadora certa, toque em \"Gerar relatório do ciclo\".",
           "Toque em \"Escolher o arquivo do ciclo\" e escolha o arquivo .sgolav.",
-          "Confira os dados e toque em \"Confirmar e gerar o relatório\"."
+          "Confira os dados e toque em \"Confirmar e gerar o relatório\".",
+          "Toque em \"Voltar\" para voltar à busca que você tinha feito."
         ] },
         { titulo: "Assinar o relatório na tela", itens: [
-          "Logo depois de gerar, toque em \"Assinar agora\". Para assinar depois, abra \"Relatórios gerados\" e toque em \"Assinar\" no relatório.",
+          "Logo depois de gerar, toque em \"Assinar agora\". Para assinar depois, toque no cartão do relatório na coluna \"Aguardando assinatura\" e em \"Assinar\".",
           "Toque em \"Abrir o relatório para conferir\" e leia a folha.",
-          "Assine no quadro com o dedo (celular) ou com o mouse (computador). Se errar, toque em \"Limpar a assinatura\".",
+          "Assine no quadro com o dedo (celular) ou com o mouse (computador). No celular, a assinatura ocupa a tela inteira e a página não rola enquanto você assina.",
+          "Se errar, toque em \"Desfazer\" para tirar o último traço ou em \"Limpar\" para recomeçar.",
           "Escreva o nome e o cargo de quem assina.",
           "Marque \"Conferi os dados do relatório\".",
           "Toque em \"Assinar\".",
           "Depois de assinado, o documento fica travado. Uma correção só pela Metrolabs, em nova versão."
         ] },
-        { titulo: "Encontrar, abrir e baixar um relatório", itens: [
-          "Abra a aba \"Relatórios gerados\".",
-          "Para achar um ciclo, escreva o lote em \"Buscar\" ou escolha o período em \"De\" e \"Até\".",
-          "Para ver só os cancelados ou só os que faltam assinar, use \"Resultado\" e \"Assinatura\".",
+        { titulo: "Abrir, ler e baixar um relatório", itens: [
+          "Ache o relatório pela busca ou pelo Kanban.",
           "Toque em \"Abrir o relatório\" para ver a folha A4.",
-          "Toque em \"Baixar PDF\" para guardar o arquivo.",
+          "No celular, a folha abre inteira, do tamanho da tela. Para ler de perto, afaste dois dedos ou toque em \"Ver em tamanho real\"; \"Ajustar a folha à tela\" volta.",
+          "Toque em \"Baixar PDF\" para guardar o arquivo. O PDF e a impressão saem em uma folha A4.",
           "Toque em \"Versões e histórico\" para ver quem gerou, quem assinou e as versões anteriores."
         ] },
         { titulo: "Completar o cadastro do equipamento", itens: [
@@ -55,13 +71,15 @@ function SGO_ajudaTelas_LavCiclo_() {
           "Para o relatório já gerado mostrar o cadastro completo, a equipe da Metrolabs gera uma nova versão."
         ] },
         { titulo: "Gerar nova versão (equipe da Metrolabs)", itens: [
-          "Em \"Relatórios gerados\", toque em \"Versões e histórico\" no relatório.",
+          "Abra o relatório pelo cartão do Kanban ou toque em \"Versões e histórico\" no resultado da busca.",
           "Toque em \"Gerar nova versão\".",
           "Escreva o motivo (pelo menos 10 letras) e toque em \"Gerar nova versão\".",
           "A versão anterior continua guardada, marcada como substituída. A nova precisa de assinatura de novo."
         ] }
       ],
       cores: [
+        { nome: "Índice em vermelho", significado: "Há o que olhar: relatório aguardando assinatura, ciclo cancelado ou reprovado, ou manutenção preventiva vencida." },
+        { nome: "Borda do cartão no Kanban", significado: "Laranja: aguardando assinatura. Azul: nova versão aguardando assinatura. Vermelha: com falha. Verde: assinado e aprovado." },
         { nome: "Selo verde \"APROVADO\"", significado: "A lavadora concluiu o ciclo sem falha registrada." },
         { nome: "Selo vermelho \"CANCELADO\" ou \"REPROVADO\"", significado: "O ciclo não chegou ao fim. O relatório sai com a falha em destaque e diz que a carga não deve ser liberada com base nele." },
         { nome: "Selo laranja \"Aguardando assinatura\"", significado: "O relatório foi gerado e ainda não foi assinado pelo responsável pelo local." },
@@ -76,7 +94,10 @@ function SGO_ajudaTelas_LavCiclo_() {
         { situacao: "\"Este arquivo é de outro equipamento\"", oQueFazer: "O arquivo informa a série de outra máquina. Importe pelo QR code ou pela ficha da máquina de onde o arquivo foi copiado." },
         { situacao: "\"Acesso negado: este equipamento não pertence à sua empresa\"", oQueFazer: "Confira se leu o QR code da máquina certa. Se a máquina for da sua empresa, peça à Metrolabs para corrigir o cadastro." },
         { situacao: "\"o relatório ... já foi assinado\"", oQueFazer: "O documento assinado fica travado. Para corrigir, peça à Metrolabs uma nova versão, com o motivo." },
-        { situacao: "Não aparece nenhuma lavadora na aba \"Equipamentos\"", oQueFazer: "A lavadora não está cadastrada ou não está ligada ao seu cliente. Peça à Metrolabs para cadastrar." }
+        { situacao: "\"Nada encontrado\" na busca", oQueFazer: "Confira a grafia ou busque só por uma parte: uma palavra do nome do cliente, o CNPJ sem pontos, os últimos números da série ou do lote." },
+        { situacao: "\"o campo da busca está vazio\" ou \"escreva pelo menos 2 letras ou números\"", oQueFazer: "Escreva o que procura antes de tocar em \"Buscar\", ou toque em \"Ver todas as lavadoras\"." },
+        { situacao: "A sua lavadora não aparece em \"Ver todas as lavadoras\"", oQueFazer: "A lavadora não está cadastrada ou não está ligada ao seu cliente. Peça à Metrolabs para cadastrar." },
+        { situacao: "\"A assinatura ficou curta demais\"", oQueFazer: "Foi só um toque no quadro. Toque em \"Limpar\" e assine de novo." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Gerar, assinar e baixar relatórios de qualquer lavadora; gerar nova versão; completar o cadastro do equipamento; cadastrar e confirmar a referência da desinfecção por receita na aba \"Referências por receita\"." },
@@ -90,7 +111,9 @@ function SGO_ajudaTelas_LavCiclo_() {
         { p: "Quem escreveu a conclusão?", r: "O relatório diz. Ou a redação foi assistida por inteligência artificial e conferida automaticamente com os números do arquivo, ou foi escrita por regra fixa do sistema. Se o texto da inteligência artificial não bater com os dados, vale a regra fixa." },
         { p: "O gráfico mostra a temperatura minuto a minuto?", r: "Não. O arquivo traz a temperatura máxima de cada fase. O gráfico mostra esse valor sobre a duração de cada fase." },
         { p: "Ciclo cancelado também gera relatório?", r: "Sim. Sai com a falha em destaque, para registro." },
-        { p: "Posso assinar mais tarde?", r: "Sim. Abra \"Relatórios gerados\", filtre \"Assinatura: Aguardando assinatura\" e toque em \"Assinar\"." }
+        { p: "Posso assinar mais tarde?", r: "Sim. O relatório fica na coluna \"Aguardando assinatura\" do Kanban. Toque no cartão e em \"Assinar\"." },
+        { p: "Por que a tela não mostra a lista de lavadoras ao abrir?", r: "Para abrir rápido e mostrar primeiro o que precisa de atenção. Busque a lavadora pelo nome do cliente, CNPJ, série, TAG, patrimônio ou modelo, ou toque em \"Ver todas as lavadoras\"." },
+        { p: "No celular a folha fica pequena. Está certo?", r: "Sim. A folha abre inteira, do tamanho da tela, igual ao PDF. Afaste dois dedos ou toque em \"Ver em tamanho real\" para ler de perto." }
       ],
       secoesManual: [
         { titulo: "O que o relatório afirma e o que não afirma", paragrafos: [

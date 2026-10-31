@@ -4,7 +4,7 @@ Complementa o MANUAL_RELATORIO_CICLO_LAVADORA.md com o que é da equipe da Metro
 
 ## 1. Nova versão de um relatório
 
-1. Em "Relatórios gerados", toque em "Versões e histórico" no relatório.
+1. Abra o relatório pelo cartão do Kanban ou pela busca (botão "Versões e histórico").
 2. Toque em "Gerar nova versão".
 3. Escreva o motivo (pelo menos 10 letras), por exemplo "série da máquina completada no cadastro".
 4. Toque em "Gerar nova versão".
@@ -15,7 +15,7 @@ A nova versão é feita do mesmo arquivo do ciclo, com o cadastro atual do clien
 
 O arquivo da lavadora não traz a temperatura nem o tempo programados na receita (o alvo fica na memória da máquina e pode ser mudado pelo operador). Por isso o padrão é não ter referência: o relatório mostra o que a lavadora registrou, sem comparar.
 
-Para comparar, cadastre a referência da receita na aba "Referências por receita":
+Para comparar, cadastre a referência da receita na aba "Referências por receita", ao lado do Kanban (só para a equipe interna):
 
 1. Toque em "Cadastrar referência" na receita (as receitas aparecem depois do primeiro relatório) ou em "Cadastrar referência de outra receita".
 2. Informe a temperatura mínima e o tempo mínimo esperados da desinfecção térmica (um dos dois ou os dois).
@@ -38,6 +38,10 @@ Pasta "Relatórios de ciclo da lavadora", subpasta do cliente (CNPJ ou nome), su
 Abas no banco: LAVCIC_RELATORIOS (um registro por versão) e LAVCIC_HISTORICO (geração, assinatura, nova versão, referências).
 
 ## 5. Acesso
+
+- A tela de entrada recebe do servidor só os números do painel e os cartões do Kanban (até 6 por coluna). As lavadoras e os relatórios só vêm na busca, que é feita no servidor com a mesma regra de acesso de sempre.
+- No Kanban, a equipe vê o nome do cliente no cartão; o cliente não vê nada de outra empresa (nem nos números do painel).
+- Os índices "cadastro incompleto" (dentro de "Lavadoras cadastradas") aparecem só para a equipe interna.
 
 - Equipe interna: todas as lavadoras.
 - Cliente: só as lavadoras do cliente ligado ao usuário. Na rota de arquivos do servidor, o cliente só abre o HTML e o PDF dos relatórios das lavadoras dele.

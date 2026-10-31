@@ -346,9 +346,11 @@ test('cliente vê e gera só para os equipamentos dele, também na rota /arquivo
   assert.equal(gBeta.ok, true, gBeta.message);
   // lista de equipamentos e de relatórios
   const iniAlfa = amb.api('s_cli', 'iniciar');
-  assert.deepEqual(iniAlfa.equipamentos.map((e) => e.id), ['eq1'], 'só a lavadora dele (a autoclave não entra)');
+  assert.equal(iniAlfa.equipamentos, undefined, 'a entrada não manda a lista de lavadoras');
   assert.equal(iniAlfa.eu.clienteNome, 'Hospital Teste Alfa');
-  assert.equal(iniAlfa.equipamentos[0].podeCompletar, false);
+  const todasAlfa = amb.api('s_cli', 'buscar', { todas: true });
+  assert.deepEqual(todasAlfa.equipamentos.map((e) => e.id), ['eq1'], 'só a lavadora dele (a autoclave não entra)');
+  assert.equal(todasAlfa.equipamentos[0].podeCompletar, false);
   assert.deepEqual(amb.api('s_cli', 'listar', {}).relatorios.map((r) => r.lote), ['LOT-20261030-6222']);
   assert.deepEqual(amb.api('s_cli2', 'listar', {}).relatorios.map((r) => r.lote), ['LOT-20261017-0077']);
   assert.equal(amb.api('s_dir', 'listar', {}).total, 2);
@@ -406,9 +408,116 @@ test('lista com busca por lote, período, resultado e assinatura; nenhum Date cr
   assert.deepEqual(l.resumo, { aprovados: 2, naoAprovados: 2, semAssinatura: 4 });
   const semDate = (o) => JSON.stringify(o) === JSON.stringify(JSON.parse(JSON.stringify(o)));
   assert.ok(semDate(l));
+  const todas = amb.api('s_dir', 'buscar', { todas: true });
+  assert.equal(todas.equipamentos.find((e) => e.id === 'eq1').relatorios, 4);
+  assert.equal(todas.equipamentos.find((e) => e.id === 'eq1').ultimo.lote, 'LOT-20261030-6222');
+  assert.deepEqual(t({ resultado: 'NAO_APROVADO' }), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+});
+
+// ---------------------------------------------------------------- entrada: painel e busca única (31/10/2026)
+// Pedido do dono: "quando entro já são mostrando um monte de lavadora [...] mostra uma Dashboard, um Kanban e a busca por
+// nome ou CNPJ ou número de série ou tag, enfim só aí mostra, sem já mostrar uma lista de máquina".
+test('entrada: índices e Kanban por situação, sem a lista de lavadoras; o cliente vê só os números dele', () => {
+  const amb = ambiente();
+  for (const f of ['LOT-20261030-6222.sgolav', 'LOT-20261017-0074.sgolav', 'LOT-20261017-0077.sgolav', 'LOT-20260928-0060.sgolav']) amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: f, texto: fixture(f) });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq2', nomeArquivo: 'LOT-20261017-0077.sgolav', texto: fixture('LOT-20261017-0077.sgolav') });
+  // um assinado e uma nova versão sem assinatura
+  const lista = amb.api('s_dir', 'listar', {}).relatorios;
+  const r6222 = lista.find((r) => r.lote === 'LOT-20261030-6222'), r0077 = lista.find((r) => r.lote === 'LOT-20261017-0077' && r.equipamentoId === 'eq1');
+  assert.equal(amb.api('s_cli', 'assinar', { id: r6222.id, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  assert.equal(amb.api('s_dir', 'novaVersao', { id: r0077.id, motivo: 'série completada no cadastro' }).ok, true);
   const ini = amb.api('s_dir', 'iniciar');
-  assert.equal(ini.equipamentos.find((e) => e.id === 'eq1').relatorios, 4);
-  assert.equal(ini.equipamentos.find((e) => e.id === 'eq1').ultimo.lote, 'LOT-20261030-6222');
+  assert.equal(ini.ok, true, ini.message);
+  assert.equal(ini.equipamentos, undefined);
+  const i = ini.painel.indices;
+  assert.equal(i.lavadoras, 2, 'as duas lavadoras ativas (a autoclave não conta)');
+  assert.equal(i.relatorios, 5);
+  assert.equal(i.aguardando, 4);
+  assert.equal(i.assinados, 1);
+  assert.equal(i.aprovados, 3);
+  assert.equal(i.naoAprovados, 2);
+  assert.equal(i.novasVersoes, 1);
+  assert.equal(i.noMes, 4, 'ciclos de outubro de 2026 (6222, 0074, 0077 e 0077 da Beta)');
+  assert.equal(i.cadastroIncompleto, 1, 'a lavadora da Beta está sem série, modelo, setor...');
+  const col = (k) => ini.painel.kanban.find((c) => c.chave === k);
+  assert.deepEqual(ini.painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'ASSINADO']);
+  assert.deepEqual(col('FALHA').itens.map((x) => x.lote), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.deepEqual(col('ASSINADO').itens.map((x) => x.lote), ['LOT-20261030-6222']);
+  assert.deepEqual(col('NOVA_VERSAO').itens.map((x) => [x.lote, x.versao]), [['LOT-20261017-0077', 2]]);
+  assert.equal(col('AGUARDANDO').qtd, 1);
+  assert.equal(col('AGUARDANDO').itens[0].cliente, 'Clínica Teste Beta', 'a equipe vê o cliente no cartão');
+  assert.equal(col('ASSINADO').itens[0].equipamento, 'TAG LAV-01 · série LUS0001');
+  // "Ver todos" de uma coluna: a busca pela situação traz os mesmos
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).relatorios.map((r) => r.lote), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.equal(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).equipamentos.length, 0, 'filtro sem texto não lista lavadoras');
+  // cliente: só os números e os cartões das lavadoras dele, sem o nome do cliente no cartão
+  const cli = amb.api('s_cli', 'iniciar').painel;
+  assert.equal(cli.indices.lavadoras, 1);
+  assert.equal(cli.indices.relatorios, 4);
+  assert.equal(cli.indices.cadastroIncompleto, 0);
+  assert.ok(cli.kanban.every((c) => c.itens.every((x) => x.cliente === '')));
+  assert.ok(!JSON.stringify(cli).includes('Beta'), 'nada da outra empresa');
+  const cli2 = amb.api('s_cli2', 'iniciar').painel;
+  assert.equal(cli2.indices.relatorios, 1);
+  assert.deepEqual(cli2.kanban.find((c) => c.chave === 'AGUARDANDO').itens.map((x) => x.lote), ['LOT-20261017-0077']);
+  const semDate = (o) => JSON.stringify(o) === JSON.stringify(JSON.parse(JSON.stringify(o)));
+  assert.ok(semDate(ini));
+});
+
+test('busca única: cliente, CNPJ (com ou sem máscara), série, TAG, patrimônio, modelo e lote, sem acento; o cliente não acha o que é de outro', () => {
+  const amb = ambiente();
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq2', nomeArquivo: 'LOT-20261017-0077.sgolav', texto: fixture('LOT-20261017-0077.sgolav') });
+  const eqs = (sid, termo) => amb.api(sid, 'buscar', { termo }).equipamentos.map((e) => e.id);
+  const rels = (sid, termo) => amb.api(sid, 'buscar', { termo }).relatorios.map((r) => r.lote);
+  assert.deepEqual(eqs('s_dir', 'hospital alfa'), ['eq1'], 'palavras do nome do cliente, em qualquer ordem e caixa');
+  assert.deepEqual(eqs('s_dir', 'clinica'), ['eq2'], 'sem acento acha CLÍNICA');
+  assert.deepEqual(eqs('s_dir', '11.222.333/0001-81'), ['eq1'], 'CNPJ com máscara');
+  assert.deepEqual(eqs('s_dir', '11222333'), ['eq1'], 'CNPJ só com os números');
+  assert.deepEqual(eqs('s_dir', 'LUS0001'), ['eq1'], 'número de série');
+  assert.deepEqual(eqs('s_dir', 'beta-lav'), ['eq2'], 'TAG');
+  assert.deepEqual(eqs('s_dir', 'PAT-778'), ['eq1'], 'patrimônio');
+  assert.deepEqual(eqs('s_dir', 'lus-60'), ['eq1'], 'modelo');
+  assert.deepEqual(eqs('s_dir', 'AC-01'), [], 'a autoclave não é lavadora');
+  assert.deepEqual(rels('s_dir', '6222'), ['LOT-20261030-6222'], 'parte do lote');
+  assert.deepEqual(rels('s_dir', 'hospital alfa'), ['LOT-20261030-6222'], 'relatórios das lavadoras do cliente');
+  assert.deepEqual(rels('s_dir', 'instrumental padrao'), ['LOT-20261030-6222', 'LOT-20261017-0077'], 'receita sem acento');
+  assert.deepEqual(eqs('s_dir', 'nada que exista'), []);
+  // o cliente da Alfa não acha a lavadora nem o relatório da Beta, nem pelo nome, nem pela TAG, nem pelo lote
+  assert.deepEqual(eqs('s_cli', 'beta'), []);
+  assert.deepEqual(eqs('s_cli', 'BETA-LAV'), []);
+  assert.deepEqual(rels('s_cli', '0077'), []);
+  assert.deepEqual(eqs('s_cli', 'lus0001'), ['eq1']);
+  // sem termo e sem filtro: recusa com o que fazer; 1 letra só: recusa; datas trocadas: recusa
+  const vazio = amb.api('s_dir', 'buscar', {});
+  assert.equal(vazio.ok, false);
+  assert.match(vazio.message, /O que fazer: escreva o nome do cliente, o CNPJ/);
+  assert.match(amb.api('s_dir', 'buscar', { termo: 'a' }).message, /pelo menos 2 letras ou números/);
+  assert.match(amb.api('s_dir', 'buscar', { de: '2026-10-30', ate: '2026-10-01' }).message, /"De" está depois da data "Até"/);
+  // a lavadora escolhida: o cartão dela e os relatórios dela
+  const deEq = amb.api('s_dir', 'buscar', { equipamentoId: 'eq1' });
+  assert.deepEqual([deEq.equipamentos.map((e) => e.id), deEq.relatorios.map((r) => r.lote)], [['eq1'], ['LOT-20261030-6222']]);
+  assert.equal(amb.api('s_cli', 'buscar', { equipamentoId: 'eq2' }).equipamentos.length, 0, 'cliente não abre a lavadora de outro pelo id');
+  assert.equal(amb.api('s_cli', 'buscar', { equipamentoId: 'eq2' }).totalRelatorios, 0);
+});
+
+test('tela: a entrada não lista lavadoras; o documento A4 cabe na tela do celular e volta à escala 1 na impressão', () => {
+  const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+  const tela = fs.readFileSync(path.join(pasta, 'JS_LavCiclo.html'), 'utf8');
+  const iniciar = /function Lc_iniciar_\(depois\) \{[\s\S]*?\n  \}/.exec(tela)[0];
+  assert.match(iniciar, /Lc_chamar_\("iniciar"/);
+  assert.ok(!/"buscar"|"listar"/.test(iniciar), 'a entrada não pede a lista de lavadoras ao servidor');
+  assert.match(tela, /Lc_chamar_\("buscar"/);
+  assert.match(tela, /touch-action: none/);
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  const html = amb.arquivos[amb.tabelas.LAVCIC_RELATORIOS[0].HTML_ID].bytes.toString('utf8');
+  assert.equal(g.ok, true);
+  assert.match(html, /@media screen\{\.folha\{max-width:none\}/, 'na tela a folha fica com a largura do A4');
+  assert.match(html, /@media print\{\.folha\{zoom:1!important\}\}/, 'na impressão a escala volta a 1');
+  assert.match(html, /f\.style\.zoom=/, 'o script reduz a folha inteira na tela estreita');
+  assert.ok(!/max-width:640px\)\{\.lc-grade\{grid-template-columns:1fr\}/.test(html), 'a folha não muda de disposição no celular');
+  assert.match(html, /table\.lc-ficha td,[^{]*\{overflow-wrap:anywhere/, 'texto longo quebra dentro da caixa');
 });
 
 // ---------------------------------------------------------------- cadastro do equipamento (31/10/2026)

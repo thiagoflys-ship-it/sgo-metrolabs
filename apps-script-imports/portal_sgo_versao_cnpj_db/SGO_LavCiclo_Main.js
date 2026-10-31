@@ -8,7 +8,8 @@
  * o login dele (só os equipamentos dele).
  *
  * Uma chamada do navegador: LavCiclo_api(sessionId, acao, dados). Ações:
- *  iniciar · equipamento · conferir · gerar · listar · abrir · assinar · novaVersao · referencias
+ *  iniciar (índices e Kanban, sem lista de lavadoras) · buscar (busca única: cliente, CNPJ, série, TAG, patrimônio, modelo, lote)
+ *  equipamento · conferir · gerar · listar · abrir · assinar · novaVersao · referencias
  * Decisões do dono que este arquivo garante:
  *  - o arquivo não traz a série da máquina: a ligação com o equipamento vem do QR ou da escolha na tela, e a tela mostra
  *    lote, data, horário, receita e resultado para conferir antes de confirmar ("conferir" não grava nada);
@@ -425,22 +426,138 @@ function LavCic_acaoNovaVersao_(eu, sid, d) {
   });
 }
 
-function LavCic_acaoListar_(eu, sid, d) {
+// ------------------------------------------------------------
+// BUSCA ÚNICA E PAINEL (31/10/2026)
+// Pedido do dono: "quando entro já são mostrando um monte de lavadora [...] mostra uma Dashboard, um Kanban e a busca por
+// nome ou CNPJ ou número de série ou tag, enfim só aí mostra, sem já mostrar uma lista de máquina". A tela de entrada recebe
+// só os números do painel e o Kanban; as lavadoras e os relatórios vêm da busca, filtrada aqui no servidor (o navegador
+// nunca recebe a lista inteira). A regra de visibilidade é a mesma de sempre (LavCic_podeEquip_ / LavCic_relVisivel_).
+// ------------------------------------------------------------
+/** Texto sem acento, em maiúsculas, espaços simples (para comparar "clinica" com "CLÍNICA"). */
+function LavCic_norm_(v) { return LavCic_up_(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' '); }
+function LavCic_digitos_(v) { return LavCic_s_(v).replace(/\D/g, ''); }
+/**
+ * O termo casa quando todas as palavras dele aparecem nos campos (sem acento; "hospital alfa" acha "HOSPITAL TESTE ALFA").
+ * Termo só com números e pontuação (CNPJ "11.222.333/0001-81" ou "11222333", série, patrimônio): compara também só os dígitos.
+ */
+function LavCic_casa_(termo, campos) {
+  var t = LavCic_norm_(termo);
+  if (!t) return true;
+  var txt = (campos || []).map(LavCic_norm_).join(' | ');
+  if (t.split(' ').every(function (p) { return txt.indexOf(p) >= 0; })) return true;
+  var dig = LavCic_digitos_(termo);
+  if (dig.length >= 3 && /^[\d.\/\-\s]+$/.test(LavCic_s_(termo))) return (campos || []).some(function (c) { return LavCic_digitos_(c).indexOf(dig) >= 0; });
+  return false;
+}
+/** Campos do equipamento que a busca olha: cliente (razão social, nome fantasia, CNPJ), unidade, TAG, série, patrimônio, modelo, setor. */
+function LavCic_camposBusca_(eq, clis, unis) {
+  var cli = clis[LavCic_s_(eq.CLIENTE_ID)] || {}, uni = unis[LavCic_s_(eq.UNIDADE_ID)] || {};
+  return [eq.TIPO, eq.TAG, eq.SERIE, eq.PATRIMONIO, eq.MODELO, eq.FABRICANTE, eq.SETOR, cli.RAZAO_SOCIAL, cli.NOME_FANTASIA, cli.CNPJ, uni.NOME_UNIDADE, uni.CNPJ_UNIDADE, uni.CIDADE];
+}
+var LAVCIC_KANBAN = [
+  { n: 1, chave: 'AGUARDANDO', nome: 'Aguardando assinatura' },
+  { n: 2, chave: 'NOVA_VERSAO', nome: 'Nova versão aguardando assinatura' },
+  { n: 3, chave: 'FALHA', nome: 'Com falha (cancelado ou reprovado)' },
+  { n: 4, chave: 'ASSINADO', nome: 'Assinado e aprovado' }
+];
+var LAVCIC_KANBAN_POR_COLUNA = 6;
+/** Situação do relatório no Kanban: falha primeiro (assinado ou não), depois nova versão sem assinatura, aguardando e assinado. */
+function LavCic_colunaKanban_(r) {
+  if (LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO') return 'FALHA';
+  var assinado = LavCic_up_(r.ASSINADO) === 'SIM';
+  if (!assinado && (Number(r.VERSAO) || 1) > 1) return 'NOVA_VERSAO';
+  return assinado ? 'ASSINADO' : 'AGUARDANDO';
+}
+function LavCic_ordemRecente_(a, b) { return (LavCic_s_(b.DATA_CICLO) + LavCic_s_(b.HORA_CICLO) + LavCic_s_(b.VERSAO)).localeCompare(LavCic_s_(a.DATA_CICLO) + LavCic_s_(a.HORA_CICLO) + LavCic_s_(a.VERSAO)); }
+/** Índices e Kanban da tela de entrada (só números e os cartões mais recentes de cada coluna). */
+function LavCic_painel_(eu, rels, eqsVis) {
+  var ativos = rels.filter(function (r) { return LavCic_up_(r.SITUACAO) !== 'SUBSTITUIDO'; }).sort(LavCic_ordemRecente_);
+  var agora = new Date(), mes = Utilities.formatDate(agora, LAVCIC_TZ, 'yyyy-MM'), d30 = Utilities.formatDate(new Date(agora.getTime() - 30 * 86400000), LAVCIC_TZ, 'yyyy-MM-dd');
+  var conta = function (fn) { return ativos.filter(fn).length; };
+  var assinado = function (r) { return LavCic_up_(r.ASSINADO) === 'SIM'; };
+  var aguardando = ativos.filter(function (r) { return !assinado(r); });
+  var com30 = {};
+  ativos.forEach(function (r) { if (LavCic_s_(r.DATA_CICLO) >= d30) com30[LavCic_s_(r.EQUIPAMENTO_ID)] = 1; });
+  var eqMapa = {};
+  eqsVis.forEach(function (e) { eqMapa[LavCic_s_(e.ID)] = e; });
+  var clis = eu.interno ? LavCic_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES) : {};
+  var incompletos = eu.interno ? eqsVis.filter(function (e) { return LavCic_ativo_(e) && LavCic_cadastro_(e).faltam.length; }).length : 0;
+  var maisAntigo = aguardando.length ? aguardando[aguardando.length - 1] : null;
+  var indices = {
+    lavadoras: eqsVis.filter(LavCic_ativo_).length, lavadorasCom30: Object.keys(com30).filter(function (k) { return eqMapa[k]; }).length, cadastroIncompleto: incompletos,
+    relatorios: ativos.length, noMes: conta(function (r) { return LavCic_s_(r.DATA_CICLO).slice(0, 7) === mes; }),
+    aguardando: aguardando.length, aguardandoDesde: maisAntigo ? LavCic_br_(maisAntigo.DATA_CICLO) : '',
+    assinados: conta(assinado), aprovados: conta(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO'; }),
+    naoAprovados: conta(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO'; }),
+    manutVencida: conta(function (r) { return LavCic_up_(r.MANUT_VENCIDA) === 'SIM'; }), novasVersoes: conta(function (r) { return (Number(r.VERSAO) || 1) > 1; }),
+    ultimo: ativos[0] ? LavCic_br_(ativos[0].DATA_CICLO) : ''
+  };
+  var cols = LAVCIC_KANBAN.map(function (k) { return { n: k.n, chave: k.chave, nome: k.nome, qtd: 0, itens: [] }; });
+  var porChave = {};
+  cols.forEach(function (c) { porChave[c.chave] = c; });
+  ativos.forEach(function (r) {
+    var c = porChave[LavCic_colunaKanban_(r)];
+    c.qtd++;
+    if (c.itens.length >= LAVCIC_KANBAN_POR_COLUNA) return;
+    var e = eqMapa[LavCic_s_(r.EQUIPAMENTO_ID)] || SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, LavCic_s_(r.EQUIPAMENTO_ID)) || {};
+    var cli = clis[LavCic_s_(r.CLIENTE_ID)] || {};
+    c.itens.push({ id: LavCic_s_(r.ID), tipo: 'rel', numero: LavCic_s_(r.NUMERO), versao: Number(r.VERSAO) || 1, lote: LavCic_s_(r.LOTE), data: LavCic_br_(r.DATA_CICLO), hora: LavCic_s_(r.HORA_CICLO).slice(0, 5),
+      equipamento: [LavCic_s_(e.TAG) ? 'TAG ' + LavCic_s_(e.TAG) : '', LavCic_s_(e.SERIE) ? 'série ' + LavCic_s_(e.SERIE) : ''].filter(Boolean).join(' · ') || LavCic_s_(e.TIPO) || 'Equipamento fora do cadastro',
+      cliente: eu.interno ? (LavCic_s_(cli.NOME_FANTASIA) || LavCic_s_(cli.RAZAO_SOCIAL)) : '', resultado: LavCic_s_(r.RESULTADO), classe: LavCic_s_(r.RESULTADO_CLASSE),
+      assinado: assinado(r), assinante: LavCic_s_(r.ASSINANTE_NOME), falha: LavCic_s_(r.FALHA) });
+  });
+  return { indices: indices, kanban: cols, porColuna: LAVCIC_KANBAN_POR_COLUNA };
+}
+/**
+ * Busca da tela. d: { termo, de, ate, resultado (APROVADO | CANCELADO | REPROVADO | NAO_APROVADO), assinatura (SIM | NAO),
+ *   situacao (coluna do Kanban: AGUARDANDO | NOVA_VERSAO | FALHA | ASSINADO), equipamentoId, todas }.
+ * Lavadoras: só pela busca por texto, pelo equipamento escolhido ou por "Ver todas as lavadoras" (nunca de entrada).
+ * Relatórios: o termo olha lote, número, receita e os campos do equipamento e do cliente; os filtros recortam.
+ */
+function LavCic_acaoBuscar_(eu, sid, d) {
   d = d || {};
-  var busca = LavCic_up_(d.busca), de = LavCic_s_(d.de), ate = LavCic_s_(d.ate), res = LavCic_up_(d.resultado), eqId = LavCic_s_(d.equipamentoId), ass = LavCic_up_(d.assinatura);
+  var termo = LavCic_s_(d.termo).replace(/\s+/g, ' ').slice(0, 80), eqId = LavCic_s_(d.equipamentoId);
+  var filtros = !!(LavCic_s_(d.de) || LavCic_s_(d.ate) || LavCic_s_(d.resultado) || LavCic_s_(d.assinatura) || LavCic_s_(d.situacao));
+  if (!termo && !filtros && !d.todas && !eqId) throw new Error('Não foi possível buscar: o campo da busca está vazio. O que fazer: escreva o nome do cliente, o CNPJ, o número de série, a TAG, o patrimônio, o modelo ou o lote e toque em "Buscar"; ou toque em "Ver todas as lavadoras"');
+  if (termo && LavCic_norm_(termo).replace(/[^A-Z0-9]/g, '').length < 2) throw new Error('Não foi possível buscar: escreva pelo menos 2 letras ou números. Por quê: com 1 só, quase tudo aparece. O que fazer: complete o nome, o CNPJ, a série, a TAG ou o lote e busque de novo');
+  if (LavCic_s_(d.de) && LavCic_s_(d.ate) && LavCic_s_(d.de) > LavCic_s_(d.ate)) throw new Error('Não foi possível buscar: a data "De" está depois da data "Até". O que fazer: troque as datas e busque de novo');
+  var rels = LavCic_relatoriosVisiveis_(eu);
+  var eqs = [], totalEq = 0;
+  if (termo || eqId || d.todas) {
+    var clis = LavCic_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES), unis = LavCic_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES);
+    var achados = LavCic_equipamentosVisiveis_(eu, rels).filter(function (e) {
+      if (eqId) return LavCic_s_(e.ID) === eqId;
+      return d.todas && !termo ? true : LavCic_casa_(termo, LavCic_camposBusca_(e, clis, unis));
+    });
+    totalEq = achados.length;
+    eqs = achados.map(function (e) { return LavCic_equipParaTela_(eu, e, rels); });
+    eqs.sort(function (a, b) { return (a.cliente + a.rotulo).localeCompare(b.cliente + b.rotulo, 'pt-BR'); });
+    eqs = eqs.slice(0, 40);
+  }
+  var lista = d.todas && !termo && !filtros && !eqId ? { total: 0, relatorios: [], resumo: null } :
+    LavCic_acaoListar_(eu, sid, { busca: termo, de: d.de, ate: d.ate, resultado: d.resultado, assinatura: d.assinatura, situacao: d.situacao, equipamentoId: eqId }, rels);
+  return { termo: termo, equipamentos: eqs, totalEquipamentos: totalEq, relatorios: lista.relatorios.slice(0, 60), totalRelatorios: lista.total, resumo: lista.resumo };
+}
+
+function LavCic_acaoListar_(eu, sid, d, relsJa) {
+  d = d || {};
+  var busca = LavCic_s_(d.busca), de = LavCic_s_(d.de), ate = LavCic_s_(d.ate), res = LavCic_up_(d.resultado), eqId = LavCic_s_(d.equipamentoId), ass = LavCic_up_(d.assinatura), sit = LavCic_up_(d.situacao);
   var eqs = LavCic_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS);
-  var l = LavCic_relatoriosVisiveis_(eu).filter(function (r) {
+  var clis = busca ? LavCic_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES) : {}, unis = busca ? LavCic_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES) : {};
+  var l = (relsJa || LavCic_relatoriosVisiveis_(eu)).filter(function (r) {
     if (!d.substituidos && LavCic_up_(r.SITUACAO) === 'SUBSTITUIDO') return false;
     if (eqId && LavCic_s_(r.EQUIPAMENTO_ID) !== eqId) return false;
     if (de && LavCic_s_(r.DATA_CICLO) < de) return false;
     if (ate && LavCic_s_(r.DATA_CICLO) > ate) return false;
-    if (res && LavCic_up_(r.RESULTADO_CLASSE) !== res) return false;
+    if (res === 'NAO_APROVADO') { if (LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO') return false; }
+    else if (res && LavCic_up_(r.RESULTADO_CLASSE) !== res) return false;
+    if (sit && LavCic_colunaKanban_(r) !== sit) return false;
     if (ass === 'SIM' && LavCic_up_(r.ASSINADO) !== 'SIM') return false;
     if (ass === 'NAO' && LavCic_up_(r.ASSINADO) === 'SIM') return false;
-    if (busca) { var e = eqs[LavCic_s_(r.EQUIPAMENTO_ID)] || {}; if ([r.LOTE, r.NUMERO, r.RECEITA, e.TAG, e.SERIE, e.TIPO, e.PATRIMONIO].map(LavCic_up_).join(' ').indexOf(busca) < 0) return false; }
+    if (busca) { var e = eqs[LavCic_s_(r.EQUIPAMENTO_ID)] || {}; if (!LavCic_casa_(busca, [r.LOTE, r.NUMERO, r.RECEITA].concat(LavCic_camposBusca_(e, clis, unis)))) return false; }
     return true;
   });
-  l.sort(function (a, b) { return (LavCic_s_(b.DATA_CICLO) + LavCic_s_(b.HORA_CICLO) + LavCic_s_(b.VERSAO)).localeCompare(LavCic_s_(a.DATA_CICLO) + LavCic_s_(a.HORA_CICLO) + LavCic_s_(a.VERSAO)); });
+  l.sort(LavCic_ordemRecente_);
   var total = l.length;
   return { total: total, relatorios: l.slice(0, 300).map(function (r) { var t = LavCic_relParaTela_(eu, r), e = eqs[t.equipamentoId]; t.equipamento = e ? LavCic_rotuloEquip_(e) : 'Equipamento fora do cadastro'; return t; }),
     resumo: { aprovados: l.filter(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) === 'APROVADO'; }).length, naoAprovados: l.filter(function (r) { return LavCic_up_(r.RESULTADO_CLASSE) !== 'APROVADO'; }).length,
@@ -475,19 +592,21 @@ function LavCic_acaoConferir_(eu, sid, d) {
     duplicado: ja ? LavCic_relParaTela_(eu, ja) : null,
     message: ja ? 'O lote ' + lido.ciclo.lote + ' já foi importado para este equipamento (relatório ' + LavCic_s_(ja.NUMERO) + '). Abra o relatório que já existe.' : '' };
 }
+/** Tela de entrada: quem está usando, índices e Kanban. Sem a lista de lavadoras (ela vem da busca). */
 function LavCic_acaoIniciar_(eu) {
   var rels = LavCic_relatoriosVisiveis_(eu);
-  var eqs = LavCic_equipamentosVisiveis_(eu, rels).map(function (e) { return LavCic_equipParaTela_(eu, e, rels); });
-  eqs.sort(function (a, b) { return (a.cliente + a.rotulo).localeCompare(b.cliente + b.rotulo, 'pt-BR'); });
+  var eqsVis = LavCic_equipamentosVisiveis_(eu, rels);
   var cliNome = '';
   if (eu.cliente) { var cli = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, eu.clienteId) || {}; cliNome = LavCic_s_(cli.NOME_FANTASIA) || LavCic_s_(cli.RAZAO_SOCIAL); }
+  var painel = LavCic_painel_(eu, rels, eqsVis);
   return { eu: { nome: eu.nome, perfil: eu.perfil, cliente: eu.cliente, interno: eu.interno, gestao: eu.gestao, referencias: eu.referencias, cadastro: eu.cadastro, clienteNome: cliNome },
-    equipamentos: eqs, totalRelatorios: rels.filter(function (r) { return LavCic_up_(r.SITUACAO) !== 'SUBSTITUIDO'; }).length };
+    painel: painel, totalRelatorios: painel.indices.relatorios, totalLavadoras: eqsVis.length };
 }
 
 var LAVCIC_ACOES = {
   iniciar: function (eu, sid, d) { return LavCic_acaoIniciar_(eu, d); },
-  equipamento: LavCic_acaoEquipamento_, conferir: LavCic_acaoConferir_, gerar: LavCic_acaoGerar_, listar: LavCic_acaoListar_, abrir: LavCic_acaoAbrir_,
+  buscar: LavCic_acaoBuscar_,
+  equipamento: LavCic_acaoEquipamento_, conferir: LavCic_acaoConferir_, gerar: LavCic_acaoGerar_, listar: function (eu, sid, d) { return LavCic_acaoListar_(eu, sid, d); }, abrir: LavCic_acaoAbrir_,
   assinar: LavCic_acaoAssinar_, novaVersao: LavCic_acaoNovaVersao_, referencias: LavCic_acaoReferencias_
 };
 

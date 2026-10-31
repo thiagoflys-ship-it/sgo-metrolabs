@@ -14,6 +14,18 @@ A lavadora grava, a cada ciclo, um arquivo com o nome do lote e final .sgolav (p
 
 Ciclo cancelado ou reprovado também gera relatório, com a falha em destaque.
 
+## 1A. A tela de entrada: painel, busca e Kanban
+
+Ao abrir "Relatórios de ciclo", a tela não mostra a lista de lavadoras. Mostra:
+
+- **Os índices**: lavadoras cadastradas (o cliente vê as da empresa dele), relatórios no mês, aguardando assinatura (com a data do mais antigo), assinados, ciclos aprovados, cancelados ou reprovados, ciclos em que a lavadora avisou manutenção preventiva vencida e novas versões.
+- **A busca**: um campo só. Escreva o nome do cliente, o CNPJ (com ou sem pontos), o número de série, a TAG, o patrimônio, o modelo ou o lote e toque em "Buscar". Pode escrever sem acento e só uma parte (por exemplo, "alfa", "11222333" ou "6222"). "Mais filtros" abre o período do ciclo, o resultado e a assinatura. "Ver todas as lavadoras" mostra a lista completa, só quando você pedir.
+- **O Kanban dos relatórios**, por situação: "Aguardando assinatura", "Nova versão aguardando assinatura", "Com falha (cancelado ou reprovado)" e "Assinado e aprovado". Cada coluna mostra os 6 mais recentes; "Ver todos" traz os outros. Toque num cartão para abrir, baixar, assinar ou ver as versões.
+
+No celular, o Kanban mostra uma situação por vez: toque num dos quatro quadros de cima (cada um com a contagem) para trocar.
+
+Depois da busca aparecem as lavadoras e os relatórios encontrados. "Voltar ao painel" volta aos índices e ao Kanban.
+
 ## 2. Antes de começar
 
 - A lavadora precisa estar cadastrada no SGO+ e ligada ao cliente. Os dados do cliente (razão social, CNPJ, unidade e setor) e da lavadora (descrição, fabricante, modelo, número de série, patrimônio ou TAG) saem do cadastro, nunca do arquivo.
@@ -33,15 +45,16 @@ Ciclo cancelado ou reprovado também gera relatório, com a falha em destaque.
 ## 4. Gerar o relatório pela tela
 
 1. No menu, toque em "Relatórios de ciclo" (no celular, no Início).
-2. Abra a aba "Equipamentos". Aparecem só as lavadoras a que você tem acesso; o cliente vê só as da empresa dele.
+2. Na busca, escreva a TAG, o número de série, o patrimônio ou o nome do cliente da lavadora e toque em "Buscar". Aparecem só as lavadoras a que você tem acesso; o cliente vê só as da empresa dele.
 3. Na lavadora certa, toque em "Gerar relatório do ciclo".
 4. Siga os passos 4 a 7 do item 3.
+5. "Voltar" leva de volta à busca que você tinha feito, com os números do painel atualizados.
 
 ## 5. Assinar na tela
 
-1. Logo depois de gerar, toque em "Assinar agora". Para assinar depois, abra "Relatórios gerados" e toque em "Assinar" no relatório.
+1. Logo depois de gerar, toque em "Assinar agora". Para assinar depois, toque no cartão do relatório na coluna "Aguardando assinatura" do Kanban e em "Assinar".
 2. Toque em "Abrir o relatório para conferir" e leia a folha.
-3. Assine no quadro com o dedo (celular) ou com o mouse (computador). Se errar, toque em "Limpar a assinatura".
+3. Assine no quadro com o dedo (celular) ou com o mouse (computador). No celular, a assinatura ocupa a tela inteira e a página não rola enquanto você assina; pode girar o celular, que a assinatura continua no lugar. Se errar, toque em "Desfazer" (tira o último traço) ou em "Limpar".
 4. Escreva o nome e o cargo de quem assina (o responsável pelo local, por exemplo a enfermeira da CME).
 5. Marque "Conferi os dados do relatório".
 6. Toque em "Assinar".
@@ -50,11 +63,13 @@ O documento assinado traz a imagem da assinatura, o nome, o cargo, a data e a ho
 
 ## 6. Encontrar, abrir e baixar
 
-1. Abra a aba "Relatórios gerados".
-2. Para achar um ciclo, escreva o lote em "Buscar" ou escolha o período em "De" e "Até".
-3. Use "Resultado" para ver só os aprovados ou só os cancelados, e "Assinatura" para ver os que faltam assinar.
+1. Na busca, escreva o lote (ou só os últimos números), o nome do cliente, o CNPJ, a série ou a TAG e toque em "Buscar".
+2. Para um período, toque em "Mais filtros" e escolha "Ciclo de" e "até".
+3. Em "Mais filtros", use "Resultado" para ver só os aprovados ou só os cancelados e reprovados, e "Assinatura" para ver os que faltam assinar.
 4. Toque em "Abrir o relatório" para ver a folha A4, ou em "Baixar PDF".
 5. "Versões e histórico" mostra quem gerou, quem assinou e as versões anteriores.
+
+**A folha no celular.** A folha abre do tamanho da tela, inteira, com a mesma disposição do PDF. Para ler de perto, afaste dois dedos na tela ou toque em "Ver em tamanho real" (a folha fica no tamanho do papel e rola para o lado); "Ajustar a folha à tela" volta. Nada sai da folha: nome, endereço e outros textos longos quebram de linha dentro da caixa. A impressão e o PDF continuam em uma folha A4.
 
 ## 7. O que cada parte da folha mostra
 
@@ -91,7 +106,8 @@ O relatório não usa critério de norma nem valor A0, porque o arquivo não tra
 | "Este arquivo é de outro equipamento" | O arquivo informa a série de outra máquina. Importe pelo QR code da máquina de onde o arquivo saiu. |
 | "Acesso negado: este equipamento não pertence à sua empresa" | Confira o QR code. Se a máquina for sua, peça à Metrolabs para corrigir o cadastro. |
 | "já foi assinado" | Documento travado. Peça à Metrolabs uma nova versão, com o motivo. |
-| Nenhuma lavadora na aba "Equipamentos" | Peça à Metrolabs para cadastrar a lavadora e ligar ao seu cliente. |
+| "Nada encontrado" na busca | Confira a grafia ou busque só por uma parte: uma palavra do nome do cliente, o CNPJ sem pontos, os últimos números da série ou do lote. |
+| "Ver todas as lavadoras" não mostra a sua | Peça à Metrolabs para cadastrar a lavadora e ligar ao seu cliente. |
 
 ## 10. Quem pode
 
