@@ -102,7 +102,8 @@ function setupSGO() {
     "PERFIL",
     "STATUS",
     "CRIADO_EM",
-    "CLIENTE_ID" // <- Trava de segurança do Portal do Cliente
+    "CLIENTE_ID", // <- Trava de segurança do Portal do Cliente
+    "EMAIL" // 31/10/2026: o login é pelo e-mail; conta sem e-mail não entra
   ]);
 
   usuarios.appendRow([
@@ -113,7 +114,8 @@ function setupSGO() {
     "ADMIN",
     SGO_CFG.STATUS.ATIVO,
     SGO_UTILS.nowIso(),
-    ""
+    "",
+    "admin@sgo.local" // e-mail de entrada da instalação nova: troque pelo e-mail real em Usuários
   ]);
 
   /* =========================
