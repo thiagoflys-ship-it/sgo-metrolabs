@@ -389,6 +389,8 @@ function SGO_ajudaTelas_Principal_() {
             "Quem lançou a atividade aceita ou recusa. Até a decisão, você não é cobrado por este atraso: a janela não volta e a frase do topo fica \"Aguardando ... decidir sua nova data; você não será cobrado enquanto isso\".",
             "Se a nova data for aceita, ela vira a previsão de entrega. Se for recusada, você vê o motivo da recusa e precisa pedir outra data ou concluir.",
             "Para mudar um pedido que ainda espera decisão, abra o detalhe e toque em \"Mudar o pedido\". O mesmo pedido é atualizado.",
+            "Se a data que você propôs passar sem decisão, a faixa do topo avisa. Se precisar de mais tempo, toque em \"Mudar o pedido\" e proponha outra data; se já terminou, conclua.",
+            "Se a atividade passar para outra pessoa, o pedido aberto é encerrado.",
             "Atividade que você lançou para você mesmo: a nova data vale na hora, sem aprovação."
           ]
         },
@@ -599,7 +601,7 @@ function SGO_ajudaTelas_Principal_() {
             "Abra o detalhe da atividade e toque em \"Editar\".",
             "Mude o \"Prazo\" para uma data futura.",
             "Toque em \"Salvar alterações\".",
-            "A atividade deixa de cobrar o responsável. Se havia pedido de nova data aguardando decisão, ele é encerrado. O replanejamento fica no histórico e não conta como pedido de nova data."
+            "A atividade deixa de cobrar o responsável. Se havia pedido de nova data aguardando decisão, ele é encerrado (passar a atividade para outra pessoa também encerra o pedido). O replanejamento fica no histórico e não conta como pedido de nova data."
           ]
         },
         {
@@ -609,7 +611,8 @@ function SGO_ajudaTelas_Principal_() {
             "Para aceitar, toque em \"Aceitar nova data (data)\". A data proposta vira a previsão de entrega; o prazo original continua para o indicador \"no prazo\".",
             "Para recusar, toque em \"Recusar\", escreva em poucas palavras por que a data não serve e toque em \"Confirmar recusa\". A pessoa vê o motivo e volta a ser cobrada até pedir outra data ou concluir.",
             "Cada atividade tem no máximo um pedido aberto. Se a pessoa mudar o pedido, o mesmo item é atualizado.",
-            "Enquanto você não decide, a pessoa não é cobrada pelo atraso. A cobrança do prazo de decisão fica com você, na Caixa de decisões.",
+            "Enquanto você não decide, a pessoa não é cobrada pelo atraso. A cobrança do prazo de decisão fica com você, na Caixa de decisões, e o resumo do dia da gestão diz quantos pedidos aguardam decisão.",
+            "Se a data proposta passou enquanto o pedido esperava, \"Aceitar\" não aparece: recuse com o motivo (a pessoa propõe outra data ou conclui) ou mude o prazo em \"Editar\".",
             "No motivo \"Outra prioridade, a pedido de alguém\", o texto mostra \"Priorizou: (o quê), a pedido de (quem)\"."
           ]
         },

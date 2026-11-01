@@ -395,3 +395,91 @@ test('concluir, cancelar ou replanejar encerra o pedido aberto (sai da caixa); a
   assert.ok(amb.tabelas.ATV_HISTORICO.some((h) => h.ATIVIDADE_ID === id2 && h.TIPO === 'PEDIDO_ENCERRADO' && /replanejou o prazo para 22\/10\/2026 18:00/.test(h.TEXTO)));
   assert.equal(agirDe(amb, 's_tec', id2).frase, 'Nada a fazer agora');
 });
+
+// ------------------------------------------------------------------ revisão 01/11/2026
+test('revisão: trocar o responsável com pedido pendente encerra o pedido; o novo responsável é cobrado e a caixa não fica com um pedido órfão', () => {
+  const amb = ambiente();
+  const id = vencidaDoTiago(amb);
+  assert.equal(pedir(amb, id).ok, true);
+  amb.ctx.Ges_sincronizar_();
+  // passa para quem lançou (Gil): antes o pedido seguia PENDENTE e o Gil, agora responsável, não podia mais decidir
+  const r = amb.ctx.Atividades_apiEditar('s_gt', { id, responsavelId: 'u_gt' });
+  assert.equal(r.ok, true, r.message);
+  const a = linha(amb, id);
+  assert.equal(a.PEDIDO_SITUACAO, 'ENCERRADO');
+  assert.ok(amb.tabelas.ATV_HISTORICO.some((h) => h.ATIVIDADE_ID === id && h.TIPO === 'PEDIDO_ENCERRADO' && /passou a atividade para GIL GESTOR TESTE/.test(h.TEXTO)));
+  assert.equal(amb.ctx.Atividades_vencida_(amb.ctx.Atividades_obter_(id), amb.ctx.Atividades_agora_()), true, 'o novo responsável volta a ser cobrado');
+  assert.equal(agirDe(amb, 's_gt', id).codigo, 'JUSTIFICAR');
+  amb.ctx.Ges_sincronizar_();
+  assert.ok(!caixaDe(amb, 's_dir', 'todas').itens.some((i) => i.id === 'ATV:PEDIDO:' + id), 'o item do pedido sai da caixa');
+  // troca de responsável e de prazo juntas: uma linha de histórico só, com as duas causas
+  const id2 = vencidaDoTiago(amb);
+  assert.equal(pedir(amb, id2).ok, true);
+  assert.equal(amb.ctx.Atividades_apiEditar('s_gt', { id: id2, responsavelId: 'u_met', prazo: '2026-10-22T18:00' }).ok, true);
+  const enc = amb.tabelas.ATV_HISTORICO.filter((h) => h.ATIVIDADE_ID === id2 && h.TIPO === 'PEDIDO_ENCERRADO');
+  assert.equal(enc.length, 1); assert.match(enc[0].TEXTO, /replanejou o prazo para 22\/10\/2026 18:00 e passou a atividade para MARA METROLOGIA TESTE\./);
+});
+
+test('revisão: data proposta que passou sem decisão: o decisor vê só "Recusar" (aceitar é barrado) e o responsável é orientado a mudar o pedido', () => {
+  const amb = ambiente();
+  const id = vencidaDoTiago(amb);
+  assert.equal(pedir(amb, id, { novaPrevisao: '2026-10-19T16:00' }).ok, true);
+  const antes = agirDe(amb, 's_gt', id);
+  assert.equal(antes.dataPassou, undefined); assert.match(antes.frase, /aceitar ou recusar/);
+  amb.mudar('2026-10-20T09:00:00-03:00');
+  const ag = agirDe(amb, 's_gt', id);
+  assert.equal(ag.codigo, 'DECIDIR'); assert.equal(ag.dataPassou, true);
+  assert.equal(ag.frase, 'Você precisa: recusar ou replanejar a nova data proposta por TIAGO TECNICO TESTE');
+  assert.match(ag.detalhe, /A data proposta \(19\/10\/2026 16:00\) já passou sem decisão e não pode mais ser aceita\. Recuse com o motivo/);
+  const tec = agirDe(amb, 's_tec', id);
+  assert.equal(tec.codigo, 'AGUARDANDO'); assert.match(tec.detalhe, /A data que você propôs \(19\/10\/2026 16:00\) já passou e ainda não houve decisão\. Se precisar de mais tempo, toque em "Mudar o pedido"/);
+  amb.ctx.Ges_sincronizar_();
+  const it = caixaDe(amb, 's_gt').itens.find((i) => i.id === 'ATV:PEDIDO:' + id);
+  assert.equal(it.pedido.passou, true);
+  assert.match(it.oQueFazer, /já passou sem decisão e não pode mais ser aceita\. Toque em "Recusar"/);
+  // o responsável muda o pedido para uma data futura: volta a poder ser aceito
+  assert.equal(pedir(amb, id, { novaPrevisao: '2026-10-21T18:00' }).ok, true);
+  assert.equal(agirDe(amb, 's_gt', id).dataPassou, undefined);
+  amb.ctx.Ges_sincronizar_();
+  assert.equal(caixaDe(amb, 's_gt').itens.find((i) => i.id === 'ATV:PEDIDO:' + id).pedido.passou, false);
+});
+
+test('revisão: a janela de cobrança traz RESPONSAVEL_ID (Concluir diz "sua lista") e a atrasada com pedido pendente não entra em "vence hoje"', () => {
+  const amb = ambiente();
+  const id = vencidaDoTiago(amb); // previsão 19/10 09:00, agora 19/10 10:00
+  const v1 = amb.ctx.Atividades_apiVerificar('s_tec', {});
+  assert.equal(v1.pendentes[0].RESPONSAVEL_ID, 'u_tec');
+  assert.equal(pedir(amb, id).ok, true);
+  const v2 = amb.ctx.Atividades_apiVerificar('s_tec', {});
+  assert.equal(v2.pendentes.length, 0);
+  assert.ok(!v2.venceHoje.some((x) => x.ID === id), 'já venceu às 09:00: não "vence hoje"');
+});
+
+test('revisão: os textos de cobrança usam o pedido de nova data (sem "justificativa com a nova previsão")', () => {
+  const amb = ambiente();
+  vencidaDoTiago(amb);
+  amb.ctx.Atividades_rotinaAtrasos();
+  const av = avisos(amb, 'u_tec', 'ATRASO');
+  assert.equal(av.length, 1);
+  assert.match(av[0].TEXTO, /Peça nova data \(motivo e data proposta\) em Minhas atividades ou, se já terminou, conclua/);
+  assert.ok(!/justificativa/i.test(av[0].TEXTO));
+  assert.match(amb.ctx.PEND_TIPOS.atividade_atrasada.fazer, /peça nova data/);
+});
+
+test('revisão: quem lançou e não é da gestão não decide o pedido (a decisão vai para a gestão), como diz o manual', () => {
+  const amb = ambiente();
+  amb.mudar('2026-10-19T08:00:00-03:00');
+  const c = amb.ctx.Atividades_apiCriar('s_met', { titulo: 'Atividade da Mara passada ao Tiago', prazo: '2026-10-19T09:00' });
+  assert.equal(c.ok, true, c.message);
+  const id = c.item.ID;
+  assert.equal(amb.ctx.Atividades_apiEditar('s_gt', { id, responsavelId: 'u_tec' }).ok, true);
+  amb.mudar('2026-10-19T10:00:00-03:00');
+  const r = pedir(amb, id);
+  assert.equal(r.ok, true, r.message);
+  assert.match(r.message, /Agora a gestão aceita ou recusa/);
+  assert.equal(linha(amb, id).PEDIDO_DECISOR_ID || '', '');
+  assert.equal(agirDe(amb, 's_met', id).codigo, 'NADA', 'a colega que lançou só acompanha');
+  assert.match(amb.ctx.Atividades_apiDecidirPedido('s_met', { id, decisao: 'ACEITAR' }).message, /ou pela gestão/);
+  assert.equal(agirDe(amb, 's_gt', id).codigo, 'DECIDIR');
+  assert.equal(amb.ctx.Atividades_apiDecidirPedido('s_gt', { id, decisao: 'ACEITAR' }).ok, true);
+});

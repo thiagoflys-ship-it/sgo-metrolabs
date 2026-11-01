@@ -594,8 +594,9 @@
       b = '<button type="button" class="btn-primary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Pedir nova data</button><span class="atv-sep"></span>' +
         '<button type="button" class="btn-secondary atv-btn-concluir" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Já terminei: concluir</button>';
     } else if (ag.acao === "decidir") {
-      b = '<button type="button" class="btn-primary" onclick="Atividades_decidirPedido_(\'' + a.ID + '\', \'ACEITAR\', \'\', this)">Aceitar nova data (' + Atividades_esc_(Atividades_br_(a.PEDIDO_DATA)) + ")</button>" +
-        '<button type="button" class="btn-secondary" onclick="Atividades_abrirRecusa_(\'' + a.ID + '\')">Recusar</button>';
+      // revisão 01/11/2026: data proposta que já passou não pode ser aceita (o servidor barra); fica só "Recusar"
+      b = (ag.dataPassou ? "" : '<button type="button" class="btn-primary" onclick="Atividades_decidirPedido_(\'' + a.ID + '\', \'ACEITAR\', \'\', this)">Aceitar nova data (' + Atividades_esc_(Atividades_br_(a.PEDIDO_DATA)) + ")</button>") +
+        '<button type="button" class="' + (ag.dataPassou ? "btn-primary" : "btn-secondary") + '" onclick="Atividades_abrirRecusa_(\'' + a.ID + '\')">Recusar</button>';
     } else if (ag.acao === "mudarPedido") {
       b = '<button type="button" class="btn-secondary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Mudar o pedido</button>';
     }

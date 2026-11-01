@@ -200,7 +200,8 @@
       '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(i.motivoRota) : '') + '</div>' +
       (i.providencia ? '<div class="gd-txt"><strong>Providência</strong> (' + Gestao_esc_(i.providenciaPor) + ', ' + Gestao_esc_(i.providenciaEm) + (i.pausadoAte ? '; acompanhar até ' + Gestao_esc_(i.pausadoAte) : '') + '): ' + Gestao_esc_(i.providencia) + '</div>' : '') +
       // 31/10/2026: pedido de nova data de uma atividade: aceitar com um toque ou recusar com o motivo, aqui mesmo
-      (i.pedido && podeAgir ? '<div class="gd-acoes"><button type="button" class="btn-primary" id="gdAceita' + k + '" onclick="Gestao_aceitarPedido_(' + k + ')">Aceitar nova data (' + Gestao_esc_(i.pedido.dataBr) + ')</button>' +
+      // revisão 01/11/2026: data proposta que já passou não pode ser aceita (o servidor barra): ficam Recusar e Abrir a atividade
+      (i.pedido && podeAgir ? '<div class="gd-acoes">' + (i.pedido.passou ? '' : '<button type="button" class="btn-primary" id="gdAceita' + k + '" onclick="Gestao_aceitarPedido_(' + k + ')">Aceitar nova data (' + Gestao_esc_(i.pedido.dataBr) + ')</button>') +
         '<button type="button" class="btn-secondary" onclick="Gestao_formRecusa_(' + k + ')">Recusar</button>' +
         (i.tela ? '<button type="button" class="btn-secondary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a atividade") + '</button>' : '') + '</div>' :
       '<div class="gd-acoes">' + (i.tela ? '<button type="button" class="btn-primary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a tela de resolver") + '</button>' : '') +

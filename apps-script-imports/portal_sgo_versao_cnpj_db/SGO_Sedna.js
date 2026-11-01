@@ -200,7 +200,7 @@ function Sedna_escalonar_() {
     if (g.nivel === 1) {
       titulo = n === 1 ? 'Atividade atrasada: ' + g.itens[0].a.TITULO : n + ' atividades suas atrasadas';
       abertura = 'Pela prioridade, ' + (n === 1 ? 'esta atividade precisa' : 'estas atividades precisam') + ' da sua atenção agora:';
-      fecho = 'Conclua, ou registre a justificativa de atraso com a nova previsão em Minhas atividades.';
+      fecho = 'Conclua, ou peça nova data (motivo e data proposta) em Minhas atividades.';
     } else {
       titulo = (n === 1 ? 'Atividade da equipe atrasada' : n + ' atividades da equipe atrasadas') + (g.nivel === 3 ? ' (Diretoria)' : '');
       abertura = (g.nivel === 3 ? 'Escalada à Diretoria' : 'Escalada a você como gestor da área') + ' pelo tempo de atraso e pela prioridade:';
@@ -263,6 +263,9 @@ function Sedna_fatos_(u, us, gcfg, todas, agora) {
   var equipe = Sedna_escopo_(u, us, gcfg, todas);
   var atrasadas = equipe.filter(function (a) { return Atividades_vencida_(a, agora); });
   var venceHoje = equipe.filter(function (a) { return Sedna_venceHoje_(a, agora); });
+  // Revisão 01/11/2026: a atrasada com pedido de nova data pendente sai de "atrasadas" (o responsável não é cobrado); o resumo
+  // da gestão passa a dizer quantas esperam decisão, para o pedido não ficar parado sem ninguém ver
+  var pedidos = typeof Atividades_pedidoPendente_ === 'function' ? equipe.filter(function (a) { return Atividades_aberta_(a) && Atividades_pedidoPendente_(a); }).length : 0;
   var porPri = {};
   atrasadas.forEach(function (a) { var p = Sedna_prioridade_(a); porPri[p] = (porPri[p] || 0) + 1; });
   var comecar = atrasadas.map(function (a) { return { a: a, pri: Sedna_prioridade_(a), min: minAgora - Sedna_minutos_(a.PREVISAO_ATUAL) }; })
@@ -271,7 +274,7 @@ function Sedna_fatos_(u, us, gcfg, todas, agora) {
   var minhas = todas.filter(function (a) { return Atividades_aberta_(a) && String(a.RESPONSAVEL_ID) === u.id; });
   var f = {
     nome: Sedna_primeiroNome_(u.nome), dia: Ges_brDia_(hoje),
-    equipe: { atrasadas: atrasadas.length, porPrioridade: porPri, vencemHoje: venceHoje.length, comecarPor: comecar },
+    equipe: { atrasadas: atrasadas.length, porPrioridade: porPri, vencemHoje: venceHoje.length, comecarPor: comecar, pedidosNovaData: pedidos },
     suas: { atrasadas: minhas.filter(function (a) { return Atividades_vencida_(a, agora); }).length, vencemHoje: minhas.filter(function (a) { return Sedna_venceHoje_(a, agora); }).length },
     pendencias: null
   };
@@ -297,6 +300,7 @@ function Sedna_textoRegras_(f) {
   } else {
     l.push('Equipe: nenhuma atividade atrasada' + (e.vencemHoje ? '; ' + Sedna_plural_(e.vencemHoje, 'vence', 'vencem') + ' hoje.' : '.'));
   }
+  if (e.pedidosNovaData) l.push('Pedidos de nova data aguardando decisão: ' + e.pedidosNovaData + ' (aceite ou recuse na Caixa de decisões; enquanto isso, o responsável não é cobrado pelo atraso).');
   if (f.suas.atrasadas || f.suas.vencemHoje) l.push('Suas atividades: ' + [f.suas.atrasadas ? Sedna_plural_(f.suas.atrasadas, 'atrasada', 'atrasadas') : '', f.suas.vencemHoje ? Sedna_plural_(f.suas.vencemHoje, 'vence hoje', 'vencem hoje') : ''].filter(Boolean).join(' e ') + '.');
   if (f.pendencias && f.pendencias.total) {
     l.push('Central de pendências: ' + Sedna_plural_(f.pendencias.total, 'pendência', 'pendências') + (f.pendencias.criticas ? ', ' + Sedna_plural_(f.pendencias.criticas, 'crítica', 'críticas') : '') +

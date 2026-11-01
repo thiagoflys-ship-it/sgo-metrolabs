@@ -438,7 +438,7 @@ function Gestao_fontePendencias_(add, ctx) {
   // item é atualizado; ao aceitar ou recusar (aqui ou no detalhe da atividade), ele sai. As justificativas antigas (sem pedido)
   // ficam só no histórico da atividade e nos indicadores.
   if (typeof Atividades_todas_ === 'function' && typeof Atividades_pedidoPendente_ === 'function') {
-    var atvs = [];
+    var atvs = [], agoraAtv = typeof Atividades_agora_ === 'function' ? Atividades_agora_() : Ges_agora_();
     try { atvs = Atividades_todas_(); } catch (e) { atvs = []; }
     atvs.forEach(function (a) {
       if (!Atividades_pedidoPendente_(a) || !Atividades_aberta_(a)) return;
@@ -449,16 +449,20 @@ function Gestao_fontePendencias_(add, ctx) {
       var titAtv = (Ges_s_(a.TITULO) || 'atividade');
       var motivo = typeof Atividades_motivoNeutro_ === 'function' ? Atividades_motivoNeutro_(a.PEDIDO_MOTIVO, a.PEDIDO_PRIORIZOU, a.PEDIDO_A_PEDIDO_DE_NOME) : Ges_s_(a.PEDIDO_MOTIVO);
       var vezes = Number(a.QTD_JUSTIFICATIVAS) || 1;
+      // revisão 01/11/2026: data proposta que passou enquanto esperava não pode mais ser aceita; o item diz o que fazer
+      var passou = !!Ges_s_(a.PEDIDO_DATA) && Ges_s_(a.PEDIDO_DATA) <= agoraAtv;
       add(Pend_item_('atividade_justificativa', {
         id: 'ATV:PEDIDO:' + Ges_s_(a.ID), nome: titAtv.slice(0, 40) + ' · ' + nome, publico: 'GESTAO', responsavel: nome, responsavelId: quem,
         gravidade: 'ATENCAO', dias: Pend_diasAte_(pz, hoje), vencimento: Ges_brDia_(pz),
         titulo: 'Decidir a nova data (' + Ges_br_(a.PEDIDO_DATA) + ') pedida por ' + nome + ': ' + titAtv.slice(0, 90),
         detalhe: (motivo ? motivo + '. ' : '') + Ges_s_(a.PEDIDO_TEXTO).slice(0, 220) + ' A previsão venceu em ' + Ges_br_(a.PEDIDO_PREVISAO_ANTERIOR || a.PREVISAO_ATUAL) +
           '; nova data proposta: ' + Ges_br_(a.PEDIDO_DATA) + (vezes > 1 ? ' (é a ' + vezes + 'ª vez que a data desta atividade é adiada).' : '.'),
-        oQueFazer: 'Toque em "Aceitar nova data" (a data proposta vira a previsão de entrega) ou em "Recusar" (escreva o motivo; ' + nome + ' vê e propõe outra data ou conclui). Enquanto você não decide, ' + nome + ' não é cobrado pelo atraso.',
+        oQueFazer: passou
+          ? 'A data proposta (' + Ges_br_(a.PEDIDO_DATA) + ') já passou sem decisão e não pode mais ser aceita. Toque em "Recusar" e escreva o motivo (' + nome + ' vê e propõe outra data ou conclui) ou, se já sabe a data certa, abra a atividade e mude o prazo em Editar.'
+          : 'Toque em "Aceitar nova data" (a data proposta vira a previsão de entrega) ou em "Recusar" (escreva o motivo; ' + nome + ' vê e propõe outra data ou conclui). Enquanto você não decide, ' + nome + ' não é cobrado pelo atraso.',
         tela: { tipo: 'atividade', id: Ges_s_(a.ID), rotulo: 'Abrir a atividade' },
         extra: { prazo: pz, naoPode: [quem], desde: dia, decisor: Ges_s_(a.PEDIDO_DECISOR_ID), motivoDecisor: 'Quem lançou a atividade decide a nova data.',
-          pedido: { atividadeId: Ges_s_(a.ID), data: Ges_s_(a.PEDIDO_DATA), dataBr: Ges_br_(a.PEDIDO_DATA), responsavel: nome } }
+          pedido: { atividadeId: Ges_s_(a.ID), data: Ges_s_(a.PEDIDO_DATA), dataBr: Ges_br_(a.PEDIDO_DATA), responsavel: nome, passou: passou } }
       }));
     });
   }

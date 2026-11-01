@@ -34,11 +34,11 @@ Pelo detalhe da atividade ou pela Caixa de decisões (item "Decidir a nova data 
 
 Decidido em um lugar, o item sai do outro na hora. A decisão fica no histórico da atividade e na Caixa de decisões, com o nome de quem decidiu, e conta como decisão tomada na avaliação do gestor.
 
-Não dá para aceitar uma data que já passou enquanto o pedido esperava: recuse pedindo outra data ou mude o prazo em "Editar".
+Não dá para aceitar uma data que já passou enquanto o pedido esperava. Nesse caso o botão "Aceitar nova data" não aparece (nem no detalhe nem na Caixa de decisões) e a faixa diz "Você precisa: recusar ou replanejar a nova data proposta por (responsável)": recuse pedindo outra data ou mude o prazo em "Editar".
 
 ## 4. Quem decide
 
-- Quem lançou a atividade, se for da gestão e estiver ativo. O nome dessa pessoa aparece para o responsável ("Aguardando (nome) decidir sua nova data").
+- Quem lançou a atividade, se for da gestão e estiver ativo. O nome dessa pessoa aparece para o responsável ("Aguardando (nome) decidir sua nova data"). Se quem lançou não é da gestão (por exemplo, lançou para si e a gestão passou a atividade a outra pessoa) ou não está mais ativo, o responsável vê "Aguardando a gestão" e quem lançou só acompanha.
 - Qualquer pessoa da gestão também pode decidir.
 - Quem pediu nunca decide o próprio pedido.
 - Atividade lançada pela própria pessoa, ou criada por rotina do sistema (Comercial, Assistência, Compras): a nova data vale na hora, sem pedido.
@@ -56,6 +56,7 @@ Nos indicadores, o motivo antigo conta junto com o novo.
 ## 6. Replanejar, concluir ou cancelar com pedido aberto
 
 - Mudar o prazo em "Editar" (replanejamento) encerra o pedido aberto; o histórico registra que o pedido foi encerrado pelo replanejamento.
+- Trocar o responsável em "Editar" também encerra o pedido aberto: o novo responsável não herda um pedido que não fez e volta a ser cobrado se a previsão já venceu.
 - Concluir ou cancelar a atividade também encerra o pedido.
 - Concluir pede confirmação: Concluir "(nome da atividade)"? Ela sai da lista de (responsável) e conta como entregue.
 
@@ -67,6 +68,8 @@ Com pedido aguardando decisão, a atividade:
 - não gera aviso de atraso novo, nem no sistema nem por e-mail;
 - não aparece como "atividade atrasada" na central de pendências nem na Caixa de decisões (o pedido já é o item);
 - não sobe a escada de cobrança pela prioridade.
+
+Quem é cobrado nesse período é quem decide: o item da Caixa de decisões tem prazo de decisão e sobe a escada da caixa como os demais, e o resumo do dia da gestão traz a linha "Pedidos de nova data aguardando decisão: (quantidade)".
 
 Ela continua contando como atrasada nos números da equipe ("Vencidas", com a quantidade aguardando decisão entre parênteses), porque o atraso existe. Nenhuma mensagem nova de WhatsApp foi criada para este fluxo.
 

@@ -34,6 +34,10 @@ Depois de enviar:
 
 Para mudar um pedido que ainda está aguardando decisão, abra a atividade e toque em "Mudar o pedido". O mesmo pedido é atualizado; não conta como outro adiamento.
 
+Se a data que você propôs passar e ainda não houver decisão, a faixa do topo avisa. Se precisar de mais tempo, toque em "Mudar o pedido" e proponha outra data; se já terminou, conclua.
+
+Se a atividade passar para outra pessoa, o pedido aberto é encerrado.
+
 Atividade que você lançou para você mesmo, ou que foi criada por uma rotina do sistema: a nova data vale na hora, sem aprovação.
 
 ## 3. Registrar o andamento do dia

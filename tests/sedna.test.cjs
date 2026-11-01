@@ -231,3 +231,16 @@ test('resumo do dia: atividade de O.S. da Assistência não conta como "vence ho
   const f2 = c.Sedna_fatos_(us.u_gt, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());
   assert.equal(f2.suas.vencemHoje, 0);
 });
+
+test('revisão 01/11/2026: o resumo da gestão diz quantos pedidos de nova data esperam decisão (a atrasada com pedido sai de "atrasadas")', () => {
+  const amb = ambiente(); // 19/10/2026 10:00
+  const c = amb.ctx;
+  atividade(amb, 'ped', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T08:00', { CRIADO_POR_ID: 'u_gt', PEDIDO_SITUACAO: 'PENDENTE', PEDIDO_DATA: '2026-10-21T18:00' });
+  atividade(amb, 'atr', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T08:00', { CRIADO_POR_ID: 'u_gt' });
+  const us = c.Ges_usuarios_(), f = c.Sedna_fatos_(us.u_gt, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());
+  assert.equal(f.equipe.atrasadas, 1, 'a com pedido não conta como atrasada a cobrar');
+  assert.equal(f.equipe.pedidosNovaData, 1);
+  assert.match(c.Sedna_textoRegras_(f), /Pedidos de nova data aguardando decisão: 1 \(aceite ou recuse na Caixa de decisões/);
+  const sem = { nome: 'Gil', dia: '19/10/2026', equipe: { atrasadas: 0, porPrioridade: {}, vencemHoje: 0, comecarPor: [], pedidosNovaData: 0 }, suas: { atrasadas: 0, vencemHoje: 0 }, pendencias: null };
+  assert.ok(!/Pedidos de nova data/.test(c.Sedna_textoRegras_(sem)), 'sem pedido, a linha não aparece');
+});

@@ -309,7 +309,7 @@ function Atividades_notificarAtrasos_() {
       if (a.ATRASO_AVISADO_PREV && a.ATRASO_AVISADO_PREV === a.PREVISAO_ATUAL) return;
       SGO_DATA.update(Atividades_abas_().ATIVIDADES, a.ID, { ATRASO_AVISADO_PREV: a.PREVISAO_ATUAL });
       Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'ATRASO', 'Atividade atrasada: ' + a.TITULO,
-        'A atividade passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Registre a justificativa de atraso com a nova previsão, ou conclua a atividade.',
+        'A atividade passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Peça nova data (motivo e data proposta) em Minhas atividades ou, se já terminou, conclua a atividade.',
         { email: true, lido: true });
       avisar.push(a);
     });
@@ -335,7 +335,7 @@ function Atividades_notificarVenceHoje_() {
       var prev = String(a.PREVISAO_ATUAL || a.PRAZO || '');
       if (prev.slice(0, 10) !== hoje || prev <= agora) return;
       Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'VENCE_HOJE', 'Atividade vence hoje: ' + a.TITULO,
-        'A atividade "' + a.TITULO + '" vence hoje às ' + prev.slice(11, 16) + '. Conclua, ou registre o andamento e, se precisar, a justificativa com a nova previsão.',
+        'A atividade "' + a.TITULO + '" vence hoje às ' + prev.slice(11, 16) + '. Conclua, ou registre o andamento do dia; se não der para entregar, peça nova data depois que a previsão passar.',
         { email: regra.email !== 'NAO', lido: true });
       n++;
     });
@@ -528,7 +528,10 @@ function Atividades_motivoNeutro_(motivo, priorizou, aPedidoDe) {
 /** Decide o pedido de nova data: quem lançou ou a gestão; nunca o próprio responsável. */
 function Atividades_podeDecidirPedido_(eu, a) {
   if (!eu || !eu.id || eu.id === a.RESPONSAVEL_ID) return false;
-  return Atividades_gestaoSobre_(eu, a) || a.CRIADO_POR_ID === eu.id || (!!a.PEDIDO_DECISOR_ID && a.PEDIDO_DECISOR_ID === eu.id);
+  // Revisão 01/11/2026: quem lançou só decide se for o decisor gravado no pedido (da gestão, Atividades_infoDecisor_). Antes
+  // qualquer "quem lançou" decidia: atividade lançada por um técnico para si e depois passada a um colega pela gestão
+  // deixava o colega aprovar o pedido do outro, contra o manual ("quem lançou, se for da gestão").
+  return Atividades_gestaoSobre_(eu, a) || (!!a.PEDIDO_DECISOR_ID && a.PEDIDO_DECISOR_ID === eu.id);
 }
 
 /**
@@ -543,6 +546,8 @@ function Atividades_infoDecisor_(a) {
   var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, lancou);
   if (!u) return { direto: true, id: '', nome: '' }; // rotina do sistema (ASSISTENCIA, COMERCIAL, COMPRAS...)
   if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') return { direto: false, id: '', nome: 'a gestão' };
+  // revisão 01/11/2026: quem lançou e não é da gestão (lançou para si e a gestão passou a outra pessoa) não decide
+  if (!Atividades_ehGestorPerfil_(SGO_UTILS.safeUpper(u.PERFIL))) return { direto: false, id: '', nome: 'a gestão' };
   return { direto: false, id: String(u.ID), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO) || a.CRIADO_POR_NOME || 'a gestão' };
 }
 
@@ -561,13 +566,21 @@ function Atividades_quemAge_(eu, a, agora) {
   var pedida = Atividades_dataBr_(a.PEDIDO_DATA);
   if (Atividades_pedidoPendente_(a)) {
     var decisor = a.PEDIDO_DECISOR_NOME || 'a gestão';
+    // Revisão 01/11/2026: a data proposta pode passar enquanto o pedido espera. Aceitar fica impossível (o servidor barra);
+    // a tela não oferece "Aceitar" e diz o que fazer, dos dois lados.
+    var passou = !!a.PEDIDO_DATA && a.PEDIDO_DATA <= agora;
     if (Atividades_podeDecidirPedido_(eu, a)) {
+      if (passou) {
+        return { codigo: 'DECIDIR', frase: 'Você precisa: recusar ou replanejar a nova data proposta por ' + resp, dataPassou: true,
+          detalhe: 'A data proposta (' + pedida + ') já passou sem decisão e não pode mais ser aceita. Recuse com o motivo (' + resp + ' propõe outra data ou conclui) ou, se já sabe a data certa, mude o prazo em Editar.', acao: 'decidir' };
+      }
       return { codigo: 'DECIDIR', frase: 'Você precisa: aceitar ou recusar a nova data proposta por ' + resp,
         detalhe: 'Enquanto você não decide, ' + resp + ' não é cobrado pelo atraso.', acao: 'decidir' };
     }
     if (souResp) {
       return { codigo: 'AGUARDANDO', frase: 'Aguardando ' + decisor + ' decidir sua nova data; você não será cobrado enquanto isso',
-        detalhe: 'Se precisar mudar a data ou o motivo, toque em "Mudar o pedido".', acao: 'mudarPedido' };
+        detalhe: passou ? 'A data que você propôs (' + pedida + ') já passou e ainda não houve decisão. Se precisar de mais tempo, toque em "Mudar o pedido" e proponha outra data; se já terminou, conclua.'
+          : 'Se precisar mudar a data ou o motivo, toque em "Mudar o pedido".', acao: 'mudarPedido' };
     }
     return nada('Aguardando ' + decisor + ' decidir a nova data (' + pedida + ') pedida por ' + resp + '.');
   }
@@ -969,20 +982,27 @@ function Atividades_apiEditar(sessionId, payload) {
       var replanejada = prazo !== a.PRAZO, estavaVencida = Atividades_vencida_(a, agora);
       if (replanejada) {
         if (!eu.gestor && estavaVencida) {
-          throw new Error('Não foi possível mudar o prazo: a atividade está com prazo vencido. Registre primeiro a justificativa de atraso (motivo e nova previsão) na janela que aparece na tela; mudar o prazo sem justificar só é permitido à gestão.');
+          throw new Error('Não foi possível mudar o prazo: a atividade está com prazo vencido. Peça nova data (motivo e data proposta) na janela "Atividade com prazo vencido" ou no detalhe da atividade; mudar o prazo vencido sem pedir nova data só é permitido à gestão.');
         }
         dados.PRAZO = prazo;
         dados.PREVISAO_ATUAL = prazo; // replanejamento: a previsão passa a ser o novo prazo
         // 31/10/2026: o replanejamento da gestão responde ao pedido de nova data que estava aberto (encerra o pedido)
         if (Atividades_pedidoPendente_(a)) dados.PEDIDO_SITUACAO = 'ENCERRADO';
       }
+      // Revisão 01/11/2026: trocar o responsável com pedido aberto também encerra o pedido. Antes ele seguia PENDENTE: o novo
+      // responsável ficava sem cobrança por um pedido que não fez e, se a atividade passasse para quem lançou, ninguém além da
+      // gestão podia decidir (quem decide nunca é o responsável).
+      var encerraPorResp = !!novoResp && Atividades_pedidoPendente_(a);
+      if (encerraPorResp) dados.PEDIDO_SITUACAO = 'ENCERRADO';
 
       if (!Object.keys(dados).length) return { item: a, message: 'Nada foi alterado: os campos estão iguais aos já gravados.' };
       Atividades_gravar_(a.ID, dados);
 
       if (mudancas.length) Atividades_registrarHist_(eu, a.ID, 'EDICAO', { texto: mudancas.join('\n') });
       if (dados.PEDIDO_SITUACAO === 'ENCERRADO') {
-        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ENCERRADO', { texto: 'O pedido de nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') foi encerrado: ' + eu.nome + ' replanejou o prazo para ' + Atividades_dataBr_(prazo) + '.' });
+        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ENCERRADO', { texto: 'O pedido de nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') foi encerrado: ' + eu.nome +
+          (replanejada ? ' replanejou o prazo para ' + Atividades_dataBr_(prazo) : '') + (replanejada && encerraPorResp ? ' e' : '') +
+          (encerraPorResp ? ' passou a atividade para ' + novoResp.nome : '') + '.' });
       }
       if (replanejada) {
         var deixou = estavaVencida && prazo > agora;
@@ -1147,14 +1167,15 @@ function Atividades_apiVerificar(sessionId, payload) {
       .map(function (a) {
         var dec = Atividades_infoDecisor_(a);
         return { ID: a.ID, TITULO: a.TITULO, PRAZO: a.PRAZO, PREVISAO_ATUAL: a.PREVISAO_ATUAL, CRIADO_POR_NOME: a.CRIADO_POR_NOME, MODULO_NOME: a.MODULO_NOME, QTD_JUSTIFICATIVAS: a.QTD_JUSTIFICATIVAS, PRIORIDADE: a.PRIORIDADE,
-          RESPONSAVEL_NOME: a.RESPONSAVEL_NOME, PEDIDO_SITUACAO: a.PEDIDO_SITUACAO, PEDIDO_DATA: a.PEDIDO_DATA, PEDIDO_RESPOSTA: a.PEDIDO_SITUACAO === 'RECUSADO' ? a.PEDIDO_RESPOSTA : '',
+          RESPONSAVEL_ID: a.RESPONSAVEL_ID, RESPONSAVEL_NOME: a.RESPONSAVEL_NOME, PEDIDO_SITUACAO: a.PEDIDO_SITUACAO, PEDIDO_DATA: a.PEDIDO_DATA, PEDIDO_RESPOSTA: a.PEDIDO_SITUACAO === 'RECUSADO' ? a.PEDIDO_RESPOSTA : '',
           PEDIDO_DECIDIDO_POR_NOME: a.PEDIDO_SITUACAO === 'RECUSADO' ? a.PEDIDO_DECIDIDO_POR_NOME : '', DECISOR_DIRETO: dec.direto, DECISOR_NOME: dec.nome };
       });
     var avisos = SGO_DATA.getAll(Atividades_abas_().AVISOS)
       .filter(function (v) { return String(v.DESTINATARIO_ID) === eu.id && !SGO_UTILS.safe(v.LIDO_EM); })
       .map(function (v) { return { ID: String(v.ID), ATIVIDADE_ID: String(v.ATIVIDADE_ID), TIPO: String(v.TIPO), TITULO: String(v.TITULO), TEXTO: String(v.TEXTO), DATA: Atividades_normData_(v.DATA, '00:00') }; })
       .slice(-20);
-    var venceHoje = minhas.filter(function (a) { return !Atividades_vencida_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === agora.slice(0, 10); })
+    // Revisão 01/11/2026: com !Atividades_vencida_ a atividade já atrasada com pedido pendente entrava em "vence hoje"
+    var venceHoje = minhas.filter(function (a) { return !Atividades_atrasada_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === agora.slice(0, 10); })
       .map(function (a) { return { ID: a.ID, TITULO: a.TITULO, PREVISAO_ATUAL: a.PREVISAO_ATUAL }; });
     return { pendentes: pendentes, avisos: avisos, abertas: minhas.length, venceHoje: venceHoje, agora: agora, gestor: eu.gestor, motivosAtraso: ATV_MOTIVOS_ATRASO,
       motivoPrioridade: ATV_MOTIVO_PRIORIDADE };
