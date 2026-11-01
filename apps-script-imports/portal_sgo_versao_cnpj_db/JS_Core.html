@@ -4141,6 +4141,7 @@
   }
   function fsSecoes_() {
     const f = FS.fluxo, raiz = fsRaiz_(); if (!f || !raiz) return;
+    if (fsNoComputador_()) return; // revisão da Etapa 3: no computador o formulário fica como era (sem seções que recolhem)
     raiz.querySelectorAll(".fs-passo").forEach(function (sec) {
       if (sec.querySelector(":scope > .fs-passo-corpo")) return;
       const h3 = sec.querySelector(":scope > h3"); if (!h3 || !sec.id) return;
@@ -5155,6 +5156,17 @@
   }
   (function () {
     const memo = new WeakMap();
+    let quem = null; // o elemento cuja rolagem escondeu os botões
+    // revisão da Etapa 3: se esse elemento saiu da tela (janela fechada, tela trocada) ou não rola mais, os botões voltam
+    setInterval(function () {
+      try {
+        const raiz = document.documentElement;
+        if (!raiz.classList.contains("sgo-flut-recolhido")) { quem = null; return; }
+        const pag = document.scrollingElement || raiz;
+        const sumiu = !quem || !quem.isConnected || (quem !== pag && !quem.getClientRects().length) || quem.scrollHeight - quem.clientHeight < 80;
+        if (sumiu) { raiz.classList.remove("sgo-flut-recolhido"); quem = null; }
+      } catch (e) {}
+    }, 700);
     document.addEventListener("scroll", function (ev) {
       try {
         const raiz = document.documentElement;
@@ -5162,9 +5174,14 @@
         const t = ev.target;
         const el = (!t || t === document || t === raiz || t === document.body) ? (document.scrollingElement || raiz) : t;
         if (!el || el.nodeType !== 1 || (el.closest && el.closest("#aswPainel, .comw-painel"))) return;
-        if (el.scrollHeight - el.clientHeight < 80) return; // caixinha que rola pouco (lista curta, chips) não conta
+        if (el.scrollHeight - el.clientHeight < 80) {
+          // a página encolheu (fechou a janela que rolava e caiu numa tela curta): os botões voltam
+          if (el === (document.scrollingElement || raiz)) raiz.classList.remove("sgo-flut-recolhido");
+          return; // caixinha que rola pouco (lista curta, chips) não conta
+        }
         const novo = SGO_flutAoRolar_(memo.get(el) || { ultimo: 0, oculto: raiz.classList.contains("sgo-flut-recolhido") }, el.scrollTop, el.scrollHeight - el.clientHeight);
         memo.set(el, novo);
+        if (novo.oculto) quem = el;
         raiz.classList.toggle("sgo-flut-recolhido", novo.oculto);
       } catch (e) {}
     }, { capture: true, passive: true });

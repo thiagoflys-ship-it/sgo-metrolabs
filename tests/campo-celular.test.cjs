@@ -216,3 +216,14 @@ test('ajudas, manuais e base do assistente acompanham a Etapa 3', () => {
   assert.ok(base.includes('Ir para o que falta'), 'base do assistente regenerada');
   assert.ok(base.includes('Próxima: ...'), 'base do assistente com o índice da O.S.');
 });
+
+test('revisão da Etapa 3: botões redondos voltam quando a tela encolhe; sem "SLA" na ajuda; Frota do computador sem seções; lista carregada não conta como alteração', () => {
+  const fs2 = require('node:fs'), path2 = require('node:path');
+  const p = (f) => fs2.readFileSync(path2.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db', f), 'utf8');
+  const core = p('JS_Core.html');
+  assert.match(core, /let quem = null;/);
+  assert.match(core, /if \(sumiu\) \{ raiz\.classList\.remove\("sgo-flut-recolhido"\)/);
+  assert.match(core, /if \(fsNoComputador_\(\)\) return; \/\/ revisão da Etapa 3/);
+  assert.doesNotMatch(p('SGO_Ajuda_Assistencia.js'), /SLA/);
+  assert.match(p('JS_Atividades.html'), /sel\.__sgoIni = Atividades_campoValor_\(sel\)/);
+});

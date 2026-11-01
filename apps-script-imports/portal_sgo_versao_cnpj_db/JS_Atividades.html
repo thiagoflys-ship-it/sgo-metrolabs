@@ -481,6 +481,8 @@
     Atividades_garantirOpcoes_(function (op) {
       if (!sel) return;
       var atual = sel.getAttribute("data-atual") || sel.value || "";
+      // revisão da Etapa 3: tocada antes de a lista chegar, o "valor de antes" passa a ser o que o sistema escolheu (não pergunta à toa)
+      setTimeout(function () { if (sel.__sgoIni !== undefined) sel.__sgoIni = Atividades_campoValor_(sel); }, 0);
       sel.innerHTML = '<option value="">Escolha a pessoa</option>' + (op.pessoas || []).map(function (p) { return '<option value="' + Atividades_esc_(p.id) + '"' + (p.id === atual ? " selected" : "") + ">" + Atividades_esc_(p.nome) + "</option>"; }).join("");
     });
   }

@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "f04333c34919",
+ "versao": "9ad7fef18cbc",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -879,7 +879,7 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "1. Aberto: o pedido chegou (tela interna, e-mail recebido, portal do cliente, QR do equipamento, pedido aprovado do Comercial).\n2. Em triagem: a gestão confirma os sintomas, o risco de continuar usando e o diagnóstico preliminar.\n3. Decisão da triagem: resolvido remotamente, aguardando orçamento, aguardando peça ou planejado (visita).\n4. Agendado: técnico, data, duração, tipo de serviço e preparo.\n5. Em campo: em deslocamento, no local, em execução (pausado ou aguardando cliente quando preciso).\n6. Execução concluída, documentação pendente: o técnico concluiu, mas falta algo da documentação.\n7. Encerrado (ou Cancelado, sempre com motivo).\n\nChamado encerrado ou cancelado não muda. Se o problema voltar, abra outro chamado: ele aparece como reincidência\nquando o mesmo equipamento teve chamado nos últimos 30 dias."
     },
     {
-     "titulo": "Prazos (SLA)",
+     "titulo": "Prazos de atendimento",
      "texto": "O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa\n(08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):\nPrioridade | Quando usar | Prazo de atendimento | Prazo de triagemP1, crítica | Equipamento parado que afeta o paciente | 4 horas úteis | 30 minutos úteis\nP2, alta | Equipamento com falha importante | 1 dia útil | 2 horas úteis\nP3, normal | Falha que permite uso | 3 dias úteis | 4 horas úteis\nP4, baixa | Ajuste, melhoria, dúvida | 7 dias úteis | 1 dia útil\nContrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar\ncliente ou peça quando o contrato permite. Selos: \"Em dia\", \"Em risco\" (resta um quarto do prazo ou menos) e\n\"Prazo estourado\". Prazo em risco ou estourado entra na Caixa de decisões da área Técnica."
     },
     {

@@ -37,7 +37,7 @@ relatório A4, salvo na pasta do equipamento e enviado ao cliente.
 Chamado encerrado ou cancelado não muda. Se o problema voltar, abra outro chamado: ele aparece como reincidência
 quando o mesmo equipamento teve chamado nos últimos 30 dias.
 
-## Prazos (SLA)
+## Prazos de atendimento
 
 O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa
 (08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):

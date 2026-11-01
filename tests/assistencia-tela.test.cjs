@@ -39,7 +39,7 @@ test('ajuda: todas as telas com passos, quem pode e o registro no SGO_Ajuda.js; 
   assert.match(fs.readFileSync(path.join(__dirname, '../_tools/gerar_base_assistente.cjs'), 'utf8'), /"MANUAL_MODULO_ASSISTENCIA\.md": \{ tela: "assistencia" \}/);
   assert.match(ler('SGO_AssistenteManuais.js'), /MANUAL_MODULO_ASSISTENCIA/);
   const man = fs.readFileSync(path.join(__dirname, '../docs/MANUAL_MODULO_ASSISTENCIA.md'), 'utf8');
-  ['Prazos (SLA)', 'Ordem de serviço', 'Transição do Auvo', 'Orçamento do chamado', 'Fonte única'].forEach((t) => assert.match(man, new RegExp(t.replace(/[()]/g, '\\$&'))));
+  ['Prazos de atendimento', 'Ordem de serviço', 'Transição do Auvo', 'Orçamento do chamado', 'Fonte única'].forEach((t) => assert.match(man, new RegExp(t.replace(/[()]/g, '\\$&'))));
   assert.doesNotMatch(man + JSON.stringify(a), /burr/i);
 });
 
