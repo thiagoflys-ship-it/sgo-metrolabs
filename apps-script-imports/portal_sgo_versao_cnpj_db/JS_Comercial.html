@@ -210,6 +210,8 @@
   .cm-orc-refs { margin: 4px 0 6px 18px; padding: 0; font-size: 12.5px; line-height: 1.5; }
   .cm-orc-refs li { margin-bottom: 2px; overflow-wrap: anywhere; }
   .cm-orc-det summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+  /* revisão 01/11/2026: "Justificativa" e "Preços mais recentes" também com toque de 44 px */
+  .cm-c3-shell details > summary, .cm-orc details > summary { min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; cursor: pointer; }
   .cm-orc button, .cm-bp-grupo button, .cm-bp-linhas button, #cmWebRes button, .cm-vencedor input { min-height: 44px; }
   .cm-bp-num { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px 14px; margin: 6px 0; font-size: 12.5px; }
   .cm-bp-num > div { min-width: 0; overflow-wrap: anywhere; }
@@ -1969,7 +1971,7 @@
         CM.orc = r;
         var res = Com_$_("cmOrcRes"); if (!res) return;
         Comercial_desenharOrcamento_(res, r, { modo: "entrada" });
-        if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Orçamentista: resultado", function () { var x = Com_$_("cmOrcRes"); if (x) x.innerHTML = ""; var f = Com_$_("cmOrcForm"); if (f && f.scrollIntoView) f.scrollIntoView({ block: "start" }); }, { chave: "cm-orc-res" });
+        if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Orçamentista: resultado", function () { var x = Com_$_("cmOrcRes"); if (x) x.innerHTML = ""; var f = Com_$_("cmOrcForm"); if (f && f.scrollIntoView) f.scrollIntoView({ block: "start" }); }, { chave: "cm-orc-res", mantemTexto: true });
         if (res.scrollIntoView) res.scrollIntoView({ block: "start" });
       }, function (m) { Com_msg_("cmOrcMsg", m); }, { carregando: "O Orçamentista está lendo o pedido e conferindo o catálogo e o banco de preços…" });
     };
@@ -2051,9 +2053,10 @@
           '<div class="cm-orc-linha"><div class="cm-campo"><label for="cmOrcQ' + k + '">Quantidade</label><input id="cmOrcQ' + k + '" data-oq="' + k + '" inputmode="decimal" value="' + Com_esc_(String(i.quantidade).replace(".", ",")) + '"></div>' +
           '<div class="cm-orc-preco"><span class="cm-meta">Preço de tabela</span><b>' + Com_esc_(Comercial_moeda_(preco)) + '</b> <span class="cm-meta">cada · total ' + Com_esc_(Comercial_moeda_(preco * Comercial_num_(i.quantidade))) + '</span>' +
           (ini.veCusto && i.precoMinimoTxt ? '<br><span class="cm-meta">Mínimo (só gestão): ' + Com_esc_(i.precoMinimoTxt) + (i.custoTxt ? ' · custo ' + Com_esc_(i.custoTxt) : '') + '</span>' : '') +
-          (i.precoSugeridoCompraTxt ? '<br><span class="cm-meta">Sugerido pela última compra: ' + Com_esc_(i.precoSugeridoCompraTxt) + '</span>' : '') + '</div>' +
+          (i.precoSugeridoCompraTxt ? '<br><span class="cm-meta">Sugerido pela última compra (só gestão): ' + Com_esc_(i.precoSugeridoCompraTxt) + '</span>' : '') + '</div>' +
           '<button type="button" class="btn-secondary" data-otira="' + k + '">Tirar</button></div>' +
           '<ul class="cm-orc-refs">' + (i.cliente ? '<li><b>Com este cliente:</b> ' + Com_esc_(i.cliente.txt) + '</li>' : (r.cliente ? '<li><b>Com este cliente:</b> nenhum preço no banco.</li>' : '')) +
+          (i.praticado ? '<li><b>Preço de venda praticado:</b> último ' + Com_esc_(i.praticado.ultimoTxt + " em " + i.praticado.data + "; mediana " + i.praticado.medianaTxt + " (" + i.praticado.n + ")") + '</li>' : '') +
           (i.parecidos && i.parecidos.txt ? '<li>' + Com_esc_(i.parecidos.txt) + '</li>' : '') + (i.mercado && i.mercado.txt ? '<li>' + Com_esc_(i.mercado.txt) + '</li>' : '') + '</ul>' +
           (i.riscos || []).map(function (x) { return '<div class="cm-faixa ' + (x.nivel === "erro" ? "erro" : x.nivel === "aviso" ? "aviso" : "") + '">' + Com_esc_(x.texto) + '</div>'; }).join("") +
           '<details class="cm-orc-det"><summary class="cm-meta">De onde veio cada número</summary><ul class="cm-orc-refs">' + (i.motivo ? '<li>Item: ' + Com_esc_(i.motivo) + '.</li>' : '') + (i.fontes || []).map(function (f) { return '<li>' + Com_esc_(f) + '</li>'; }).join("") + '</ul></details>' +
@@ -2162,7 +2165,7 @@
     var ini = CM.ini, f = CM.filtroBp || { busca: "", tipo: "", origem: "", resultado: "", uf: "", de: "", ate: "" };
     CM.filtroBp = f;
     div.innerHTML = '<div class="module-shell cm-c3-shell">' + Comercial_cabecalho_("Banco de preços", "Preços de serviços e produtos que a Metrolabs já cobrou (propostas e CRM), o mercado (licitações, concorrentes e internet) e, para a gestão, as cotações de fornecedores. Por item: mínimo, mediana, máximo, último preço e taxa de ganho por faixa de preço.",
-      '<button type="button" class="btn-secondary" id="cmBpOrc"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Orçamentista</button><button type="button" class="btn-secondary" id="cmBpReg">Registrar preço</button>' + (ini.gestao ? '<button type="button" class="btn-secondary" id="cmBpCarga">Carga inicial e Compras</button>' : '')) +
+      '<button type="button" class="btn-secondary" id="cmBpOrc"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Orçamentista</button><button type="button" class="btn-secondary" id="cmBpReg">Registrar preço</button>' + (ini.gestao ? '<button type="button" class="btn-secondary" id="cmBpCarga">Carga inicial e Compras</button><button type="button" class="btn-secondary" id="cmBpCurva">Preços fora da curva</button>' : '')) +
       '<div class="cm-filtros"><div style="flex:2 1 220px"><label for="cmBpBusca">Buscar</label><input id="cmBpBusca" type="search" value="' + Com_esc_(f.busca) + '" placeholder="Serviço, produto, cliente, concorrente, fornecedor"></div>' +
       '<div><label for="cmBpTipo">Tipo</label><select id="cmBpTipo">' + Com_opcoes_([{ v: "SERVICO", t: "Serviço" }, { v: "PRODUTO", t: "Produto" }], f.tipo, "Todos") + '</select></div>' +
       '<div><label for="cmBpOri">Origem</label><select id="cmBpOri"></select></div><div><label for="cmBpRes">Resultado</label><select id="cmBpRes"></select></div><div><label for="cmBpUf">UF</label><select id="cmBpUf"></select></div>' +
@@ -2171,6 +2174,7 @@
     Com_$_("cmBpOrc").onclick = function () { abrir("comercial_orcamentista"); };
     Com_$_("cmBpReg").onclick = function () { Comercial_registrarPreco_({}, function () { Comercial_renderBanco_(div); }); };
     if (Com_$_("cmBpCarga")) Com_$_("cmBpCarga").onclick = function () { Comercial_cargaBanco_(function () { Comercial_renderBanco_(div); }); };
+    if (Com_$_("cmBpCurva")) Com_$_("cmBpCurva").onclick = function () { Comercial_foraDaCurva_(function () { Comercial_renderBanco_(div); }); };
     var ler = function () { f.busca = Com_$_("cmBpBusca").value; f.tipo = Com_$_("cmBpTipo").value; f.origem = Com_$_("cmBpOri").value; f.resultado = Com_$_("cmBpRes").value; f.uf = Com_$_("cmBpUf").value; f.de = Com_$_("cmBpDe").value; f.ate = Com_$_("cmBpAte").value; };
     var carregar = function () {
       Com_chamar_("bancoPrecos", f, function (r) {
@@ -2273,6 +2277,35 @@
       Com_$_("cmCgOk").onclick = function () { Com_chamar_("bancoCarregar", { marca: r.marca }, function (x) { ov.remove(); alert(x.message); if (depois) depois(); }, function (m) { Com_msg_("cmCgMsg", m); }, { carregando: "Carregando o banco de preços…" }); };
     }, function (m) { Com_msg_("cmCgCorpo", m); });
   }
+  /**
+   * Revisão 01/11/2026 (gestão): preços fora da curva (menos de 1/5 ou mais de 5 vezes a referência). Prévia com tudo marcado;
+   * a gestão desmarca o que for de verdade, escreve o motivo e confirma. Nada é apagado: ficam no banco, fora das contas.
+   */
+  function Comercial_foraDaCurva_(depois) {
+    var ov = Com_modal_("Preços fora da curva", '<div id="cmFcCorpo"><div class="cm-vazio">Procurando valores muito longe da referência…</div></div>', '', 760);
+    if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Preços fora da curva", function () { ov.remove(); }, { chave: "cm-bp-curva" });
+    Com_chamar_("bancoForaDaCurva", {}, function (r) {
+      var c = Com_$_("cmFcCorpo"); if (!c) return;
+      if (!r.total) { c.innerHTML = '<div class="cm-faixa ok">' + Com_esc_(r.message) + '</div>'; return; }
+      c.innerHTML = '<p class="cm-txt">' + Com_esc_(r.message) + '</p>' + (r.limitado ? '<p class="cm-meta">Mostrando os ' + r.linhas.length + ' mais distantes de ' + r.total + '. Depois de confirmar, abra de novo para ver os próximos.</p>' : '') +
+        '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmFcTodos" checked> Marcar todos</label>' +
+        '<table class="cm-tabela"><thead><tr><th></th><th>Item</th><th class="n">Valor</th><th class="n">Referência</th><th>Leitura</th><th>Origem</th></tr></thead><tbody>' + r.linhas.map(function (x, k) {
+          return '<tr><td data-r="Tirar"><label class="cm-check cm-check-grande"><input type="checkbox" data-fc="' + k + '" checked aria-label="Tirar das contas"></label></td><td data-r="Item">' + Com_esc_(x.item) + '<br><span class="cm-meta">' + Com_esc_(x.descricao) + '</span></td>' +
+            '<td class="n" data-r="Valor"><b>' + Com_esc_(x.valorTxt) + '</b></td><td class="n" data-r="Referência">' + Com_esc_(x.referenciaTxt) + '</td><td data-r="Leitura">' + Com_esc_(x.leitura) + '</td><td data-r="Origem">' + Com_esc_(x.origemNome + (x.data ? " · " + x.data : "") + (x.confianca === "BAIXA" ? " · confiança baixa" : "")) + '</td></tr>'; }).join("") + '</tbody></table>' +
+        Com_campo_("Motivo (vale para todos os marcados; mínimo 10 letras)", '<textarea id="cmFcMot" maxlength="300" placeholder="Ex.: valor lido errado nas propostas antigas do Drive (preço de peça, não do serviço)"></textarea>') +
+        '<div id="cmFcMsg"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmFcCanc">Cancelar</button><button type="button" class="btn-primary" id="cmFcOk">Tirar os marcados das contas</button></div>' +
+        '<p class="cm-meta">Nada é apagado: os preços ficam no banco, marcados "fora das contas", com o motivo e o seu nome. Para devolver um, abra o item e toque em "Voltar às contas".</p>';
+      var caixas = function () { return [].slice.call(c.querySelectorAll("[data-fc]")); };
+      Com_$_("cmFcTodos").onchange = function () { var v = this.checked; caixas().forEach(function (x) { x.checked = v; }); };
+      Com_$_("cmFcCanc").onclick = function () { ov.remove(); };
+      Com_$_("cmFcOk").onclick = function () {
+        var ids = caixas().filter(function (x) { return x.checked; }).map(function (x) { return r.linhas[+x.getAttribute("data-fc")].id; });
+        if (!ids.length) { Com_msg_("cmFcMsg", "Marque pelo menos um preço, ou toque em Cancelar."); return; }
+        Com_chamar_("bancoDesconsiderarLote", { ids: ids, motivo: Com_$_("cmFcMot").value, marca: r.marca }, function (x) { ov.remove(); alert(x.message); if (depois) depois(); }, function (m) { Com_msg_("cmFcMsg", m); }, { carregando: "Tirando os preços das contas…" });
+      };
+    }, function (m) { Com_msg_("cmFcCorpo", m); });
+  }
+
   /** Painel (gestão): indicadores do banco de preços. */
   function Comercial_painelBanco_(alvo) {
     Com_chamar_("bancoIndicadores", {}, function (r) {

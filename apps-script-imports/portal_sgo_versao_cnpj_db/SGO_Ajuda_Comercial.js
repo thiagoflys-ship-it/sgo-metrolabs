@@ -256,7 +256,8 @@ function SGO_ajudaTelas_Comercial_() {
       paraQueServe: 'Ajuda a montar o orçamento. Você descreve o pedido do cliente em texto livre (por exemplo "qualificação de 2 autoclaves de 300 L e 1 termodesinfectora em Anápolis, urgente") ou escolhe o cliente, e o Orçamentista acha os serviços e produtos do catálogo com as quantidades, sugere a faixa de prazo e o deslocamento e mostra, para cada item, o preço de tabela, o que já cobramos deste cliente e dos outros, a faixa de mercado das licitações e o risco do preço. Com um toque, ele monta o rascunho da proposta; você revisa nos 4 passos. Nada vai ao cliente sozinho.',
       antesDeComecar: [
         'Os preços vêm sempre do sistema (catálogo, tabela C1 e banco de preços). Com a chave da IA, a IA só lê o pedido: ela nunca dá preço, e cada item que ela aponta é conferido no catálogo.',
-        'Sem a chave da IA, o Orçamentista trabalha pelas regras (palavras e sinônimos: autoclave, termodesinfectora, freezer, monitor, balança e outros). O resultado mostra de onde veio cada número.',
+        'Sem a chave da IA, o Orçamentista trabalha pelas regras (palavras e sinônimos: autoclave, termodesinfectora, freezer, monitor, bomba, balança e outros). Erro de digitação comum ("prevenitva", "autoclav", "calibrção") é corrigido. O resultado mostra de onde veio cada número.',
+        'Cada pessoa faz até 20 análises com IA por hora. Depois disso, a análise sai pelas regras, com o aviso; os preços são os mesmos.',
         'O km vem da tabela de distâncias do Programa de conduta. Cidade fora da tabela: o Orçamentista pede o km.',
         'Também dá para usar dentro da proposta: no passo 1, toque em "Orçamentista". Os itens vão para o editor e você salva.'
       ],
@@ -275,7 +276,8 @@ function SGO_ajudaTelas_Comercial_() {
       quemPode: quem,
       perguntas: [
         { p: 'A IA pode mudar o preço?', r: 'Não. A IA só lê o pedido e escreve a justificativa. Toda justificativa é conferida contra os números do sistema; com número que não existe, ela é recusada e vale a das regras.' },
-        { p: 'Por que o risco compara com o preço normal quando o prazo é urgente?', r: 'O histórico e o mercado são de prazo normal. O acréscimo da urgência vem por cima e aparece separado.' }
+        { p: 'Por que o risco compara com o preço normal quando o prazo é urgente?', r: 'O histórico e o mercado são de prazo normal. O acréscimo da urgência vem por cima e aparece separado.' },
+        { p: 'Por que não vejo o preço sugerido pela última compra de um produto?', r: 'Esse preço sai do custo do fornecedor e entregaria o preço de compra, que é da gestão. Você vê o preço de venda praticado (último e mediana das propostas e do CRM) e, quando a última compra mudou a conta, o aviso para conferir com a gestão.' }
       ],
       secoesManual: []
     },
@@ -284,15 +286,17 @@ function SGO_ajudaTelas_Comercial_() {
       paraQueServe: 'Junta os preços de serviços e produtos: o que a Metrolabs já cobrou (propostas do SGO+, CRM antigo e propostas antigas), o mercado (licitações, concorrentes e internet) e, para a gestão, as cotações de fornecedores de Compras. Por item: mínimo, mediana, máximo, último preço, preço ganho e perdido e a taxa de ganho por faixa de preço.',
       antesDeComecar: [
         'Toda proposta concluída entra sozinha (em aberto); quando o cliente aprova ou a oportunidade é ganha, vira ganha; recusada ou perdida, vira perdida. Na perda, diga quem ganhou e por quanto: é opcional, mas é o que mais ajuda.',
-        'O vendedor vê os preços praticados e o mercado. Custo, margem e preço de compra ficam com a gestão.',
+        'O vendedor vê os preços praticados e o mercado. Custo, margem e preço de compra ficam com a gestão. Nas linhas de propostas de outros vendedores e do CRM antigo, o nome do cliente não aparece para o vendedor (o valor aparece e entra nas contas); o órgão das licitações aparece para todos.',
         'Preço de proposta antiga do Drive vem com o selo "confiança baixa": o valor foi lido por regra; confira antes de usar.'
       ],
       passos: [
         { titulo: 'Consultar', itens: ['Escreva o serviço, o produto, o cliente, o concorrente ou o fornecedor em "Buscar".', 'Filtre por tipo, origem, resultado, UF e período e toque em "Buscar".', 'Cada cartão é um item, com as contas. Toque em "Ver o item" para a taxa de ganho por faixa de preço, para quem já ganhou de nós e para todos os preços.'] },
-        { titulo: 'Registrar um preço', itens: ['Toque em "Registrar preço".', 'Diga de onde veio (concorrente, internet ou licitação), o item, o valor e a data. Internet e licitação pedem o link.', 'Cotação de fornecedor (preço de compra) é registrada pela gestão.'] }
+        { titulo: 'Registrar um preço', itens: ['Toque em "Registrar preço".', 'Diga de onde veio (concorrente, internet ou licitação), o item, o valor e a data. Internet e licitação pedem o link.', 'Cotação de fornecedor (preço de compra) é registrada pela gestão.'] },
+        { titulo: 'Preços fora da curva (gestão comercial)', itens: ['Toque em "Preços fora da curva". A lista mostra os preços com menos de 1/5 ou mais de 5 vezes a referência (o preço normal da tabela C1 ou a mediana do item), com a leitura de cada um. Exemplo: qualificação de autoclave a R$ 4,50.', 'Todos vêm marcados. Desmarque o que for preço de verdade.', 'Escreva o motivo (vale para todos os marcados) e toque em "Tirar os marcados das contas". Nada é apagado: ficam no banco, fora das contas, com o motivo e o seu nome.', 'Para devolver um preço, abra o item e toque em "Voltar às contas".'] },
+        { titulo: 'Buscar na internet', itens: ['No item, toque em "Buscar na internet". A busca usa a cota da IA: cada pessoa faz até 10 buscas por hora, e a mesma busca nas últimas 6 horas mostra o resultado já achado, sem gastar de novo.', 'Abra o link, confira o valor e toque em "Confirmar e guardar no banco". Se mudar o valor, escreva por quê. Nada entra sem a sua confirmação.'] }
       ],
       cores: [{ nome: 'Linha apagada com "fora das contas"', significado: 'Revisão substituída, proposta cancelada ou preço que a gestão tirou das contas, com o motivo. Fica no banco, mas não entra no mínimo, na mediana nem na taxa de ganho.' }],
-      problemas: [{ situacao: 'O banco está vazio.', oQueFazer: 'A gestão comercial faz a carga inicial (C1 e Compras). Enquanto isso, as propostas concluídas já entram.' }, { situacao: 'Cotação de fornecedor sem valor.', oQueFazer: 'É o preço de compra (custo): só a gestão vê.' }],
+      problemas: [{ situacao: 'O banco está vazio.', oQueFazer: 'A gestão comercial faz a carga inicial (C1 e Compras). Enquanto isso, as propostas concluídas já entram.' }, { situacao: 'Cotação de fornecedor sem valor.', oQueFazer: 'É o preço de compra (custo): só a gestão vê o valor, o fornecedor e a marca.' }, { situacao: 'Linha sem o nome do cliente.', oQueFazer: 'É proposta de outro vendedor ou do CRM antigo: o cliente fica com quem fez a proposta e com a gestão. O valor vale para as contas.' }, { situacao: '"Você já fez 10 buscas na internet nesta hora".', oQueFazer: 'Cada busca gasta a cota da IA do sistema. Use o banco de preços e o catálogo e tente de novo na próxima hora.' }, { situacao: '"O banco mudou desde a prévia" em Preços fora da curva.', oQueFazer: 'Alguém registrou ou tirou preços das contas. Abra "Preços fora da curva" de novo e confira.' }],
       quemPode: quem,
       perguntas: [{ p: 'Por que meu preço de proposta aparece mais baixo que o digitado?', r: 'O banco guarda o preço com o desconto geral da proposta rateado entre os itens: é o preço que o cliente pagaria.' }],
       secoesManual: []

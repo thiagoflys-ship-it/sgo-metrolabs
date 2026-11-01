@@ -479,6 +479,9 @@ var COM_ACOES = {
   bancoCarregar: function (eu, sid, d) { return ComBP_carregar_(eu, d); },
   bancoRegistrar: function (eu, sid, d) { return ComBP_registrar_(eu, d); },
   bancoDesconsiderar: function (eu, sid, d) { return ComBP_desconsiderar_(eu, d); },
+  // revisão 01/11/2026: preços fora da curva (prévia e lote, gestão)
+  bancoForaDaCurva: function (eu) { return ComBP_foraDaCurva_(eu); },
+  bancoDesconsiderarLote: function (eu, sid, d) { return ComBP_desconsiderarLote_(eu, d); },
   bancoIndicadores: function (eu, sid, d) { return ComBP_indicadores_(eu, d); },
   bancoBuscarInternet: function (eu, sid, d) { return ComBP_buscarInternet_(eu, d); },
   bancoConfirmarInternet: function (eu, sid, d) { return ComBP_confirmarInternet_(eu, d); },

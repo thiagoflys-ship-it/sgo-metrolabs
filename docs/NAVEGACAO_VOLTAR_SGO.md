@@ -35,7 +35,7 @@ if (window.SGO_NAV) SGO_NAV.empilhar("Ficha do pedido", function () { Compras_de
 ```
 
 - `aoVoltar` desenha a tela anterior **sem** chamar `abrir()` e sem empilhar de novo (durante o voltar, `empilhar` não faz nada).
-- Opções (terceiro argumento): `{ chave: "x" }` não empilha de novo se o topo já é um sub-nível com a mesma chave (passos de um assistente); `{ substituir: true }` troca o sub-nível do topo (ex.: "Novo cliente" salvo vira o passo "Equipamento"); `{ reabrir: fn }` redesenha o sub-nível quando a pessoa volta para ele a partir de outra tela; `{ reinicia: true }` indica que `aoVoltar` leva ao começo do módulo.
+- Opções (terceiro argumento): `{ chave: "x" }` não empilha de novo se o topo já é um sub-nível com a mesma chave (passos de um assistente); `{ substituir: true }` troca o sub-nível do topo (ex.: "Novo cliente" salvo vira o passo "Equipamento"); `{ reabrir: fn }` redesenha o sub-nível quando a pessoa volta para ele a partir de outra tela; `{ reinicia: true }` indica que `aoVoltar` leva ao começo do módulo. `{ mantemTexto: true }` (revisão de 01/11/2026) diz que `aoVoltar` só desfaz o que está acima do formulário e o texto digitado fica: o voltar não pergunta "Descartar o que foi digitado?" (ex.: o resultado do Orçamentista, com o pedido ainda na tela).
 - Botões "Voltar" do próprio módulo: troque `onclick="desenharLista_()"` por `onclick="SGO_voltarOu_(desenharLista_)"`. Com sub-nível gravado, volta pelo histórico (o mesmo `aoVoltar`); sem, chama a função.
 - O módulo voltou ao começo sozinho (ex.: "Voltar ao painel"): chame `SGO_NAV.limparSubniveis()` no começo da função que desenha o começo.
 - `SGO_NAV.voltar()` faz o mesmo que o Voltar da barra do topo.

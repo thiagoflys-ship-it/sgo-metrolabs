@@ -23,7 +23,7 @@
  *   SGO_Comercial_Quadro.js         quadro Kanban do funil, Gantt comercial e tempo por etapa (21/10/2026)
  *   SGO_Comercial_Precificacao.js   política de precificação, custos da viagem (checklist), margem e alçada, reajuste do catálogo (29/10/2026)
  *   SGO_Comercial_BancoPrecos.js    banco de preços de serviços e produtos: carga da C1 e de Compras, propostas, consulta, indicadores, busca na internet (C3)
- *   SGO_Comercial_BancoC1.js        carga inicial do banco (gerado por _tools/gerar_banco_c1.cjs a partir dos JSONs da C1)
+ *   SGO_Comercial_BancoC1.js        carga inicial do banco (gerado por _tools/gerar_banco_c1.cjs); os dados só são montados na prévia e na carga
  *   SGO_Comercial_Orcamentista.js   o Orçamentista: pedido em texto livre -> itens, prazo, deslocamento, referências, riscos e o rascunho (C3)
  *   SGO_Ajuda_Comercial.js          ajuda "Como usar esta tela"
  *   JS_Comercial.html               telas

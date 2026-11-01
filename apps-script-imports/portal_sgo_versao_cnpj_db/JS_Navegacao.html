@@ -162,8 +162,11 @@
       var restantes = popped.filter(function (s) { return s.tipo !== "janela"; });
       var saiDeTela = restantes.some(function (s) { return s.tipo === "tela"; });
       var subs = restantes.filter(function (s) { return s.tipo === "sub" && !entradaMorta(s); });
-      // 2) sair de uma tela ou sub-nível com texto digitado
-      if ((saiDeTela || subs.length) && amb.conteudoSujo() && !amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(restantes); return; }
+      // 2) sair de uma tela ou sub-nível com texto digitado. Revisão 01/11/2026 (Comercial C3): sub-nível empilhado com
+      // { mantemTexto: true } só desfaz o que está acima do formulário (ex.: o resultado do Orçamentista); o texto digitado fica,
+      // então não pergunta "Descartar o que foi digitado?"
+      var subsQueDescartam = subs.filter(function (s) { var e = N.entradas[s.id]; return !(e && e.mantemTexto); });
+      if ((saiDeTela || subsQueDescartam.length) && amb.conteudoSujo() && !amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(restantes); return; }
       N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo;
       if (novo.tipo === "base") { aoChegarNaBase(); return; }
       // 3) chegou numa entrada que não vale mais (janela fechada, passo antigo): continua voltando
@@ -242,11 +245,11 @@
       if (!N.ativo || N.restaurando || !N.atual) return null;
       var topo = N.atual, rt = N.entradas[topo.id];
       if (topo.tipo === "sub" && rt && !rt.morta && (op.substituir || (op.chave && rt.chave === op.chave))) {
-        rt.aoVoltar = aoVoltar; rt.reabrir = op.reabrir || null; rt.reinicia = !!op.reinicia; N.ultimaOp = agora();
+        rt.aoVoltar = aoVoltar; rt.reabrir = op.reabrir || null; rt.reinicia = !!op.reinicia; rt.mantemTexto = !!op.mantemTexto; N.ultimaOp = agora();
         return topo.id;
       }
       var est = estado("sub", amb.telaAtual() || topo.mod, { rotulo: String(rotulo || "") });
-      N.entradas[est.id] = { aoVoltar: aoVoltar, reabrir: op.reabrir || null, chave: op.chave || "", reinicia: !!op.reinicia, auto: !!op.auto };
+      N.entradas[est.id] = { aoVoltar: aoVoltar, reabrir: op.reabrir || null, chave: op.chave || "", reinicia: !!op.reinicia, auto: !!op.auto, mantemTexto: !!op.mantemTexto };
       push(est);
       return est.id;
     }

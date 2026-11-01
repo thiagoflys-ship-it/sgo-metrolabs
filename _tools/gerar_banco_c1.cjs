@@ -3,6 +3,8 @@
 //   docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json -> CRM (CRM antigo, 2025-26) e PROPOSTA_METROLABS (Drive 2018-23, só valor unitário
 //                                                 de serviço da tabela C1, confiança baixa)
 // É a carga inicial do Banco de preços (SGO_Comercial_BancoPrecos.js › ComBP_previaCarga_ / ComBP_carregar_), idempotente pela CHAVE.
+// Revisão 01/11/2026: os dados ficam dentro da função ComBP_dadosC1_(), montados só quando a prévia ou a carga a chamam. Antes eram a
+// global COM_BANCO_C1, montada em toda execução do Apps Script e em cada contexto de cada worker do servidor.
 // Sem dados pessoais: os JSONs da C1 já vêm sem nome de pessoa, telefone, e-mail ou CPF; o cliente das linhas do Drive (texto lido
 // por regra, às vezes com o título da proposta) não entra.
 // Uso: node _tools/gerar_banco_c1.cjs            (grava)
@@ -64,8 +66,9 @@ const texto = '/****************************************************\n' +
   ' * A gestão carrega em Comercial > Banco de preços > "Carga inicial (C1)", com prévia; a carga é idempotente (CHAVE).\n' +
   ' * Ficaram de fora: ' + Object.keys(fora).map((k) => k + ' ' + fora[k]).join(', ') + '.\n' +
   ' ****************************************************/\n\n' +
-  'var COM_BANCO_C1 = {\n versao: ' + JSON.stringify('C1-' + mercado.meta.gerado_em) + ',\n fora: ' + JSON.stringify(fora) + ',\n colunas: ' + JSON.stringify(COLUNAS) + ',\n linhas: [\n' +
-  linhas.map((r) => '  ' + JSON.stringify(r)).join(',\n') + '\n ]\n};\n';
+  '// Os dados só são montados quando a prévia ou a carga chamam esta função: nada roda ao carregar o projeto.\n' +
+  'function ComBP_dadosC1_() {\n return {\n versao: ' + JSON.stringify('C1-' + mercado.meta.gerado_em) + ',\n fora: ' + JSON.stringify(fora) + ',\n colunas: ' + JSON.stringify(COLUNAS) + ',\n linhas: [\n' +
+  linhas.map((r) => '  ' + JSON.stringify(r)).join(',\n') + '\n ]\n };\n}\n';
 if (process.argv.includes('--conferir')) {
   const atual = fs.existsSync(destino) ? fs.readFileSync(destino, 'utf8').replace(/\r\n/g, '\n') : '';
   if (atual !== texto) { console.error('SGO_Comercial_BancoC1.js desatualizado: rode node _tools/gerar_banco_c1.cjs'); process.exit(1); }

@@ -279,7 +279,8 @@ test('busca na internet: sem configuração não trava e não grava; configurada
   assert.match(amb.api('s_vera', 'bancoConfirmarInternet', { token: 'nao-existe', indice: 0 }).message, /expirou/);
   // a IA respondeu sem pesquisar: nada é aproveitado
   amb.ctx.UrlFetchApp = { fetch: () => ({ getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"resultados":[{"url":"https://x.test/a","valor":5}]}' }] } }] }) }) };
-  const sem = ok(amb.api('s_vera', 'bancoBuscarInternet', { descricao: 'qualificação térmica de autoclave' }));
+  // (outro item: a mesma busca de antes devolveria o resultado guardado, sem chamar a IA — revisão 01/11/2026)
+  const sem = ok(amb.api('s_vera', 'bancoBuscarInternet', { descricao: 'qualificação térmica de autoclave de bancada' }));
   assert.equal(sem.resultados.length, 0); assert.match(sem.message, /sem pesquisar na web/);
 });
 

@@ -98,17 +98,23 @@ Comercial > Banco de preços (tabela COM_PRECOS, uma linha por preço observado)
 
 **Tirar das contas.** Em "Ver o item", "Tirar das contas" pede o motivo (por exemplo "valor da proposta inteira, não do item"). O preço fica no banco, marcado; "Voltar às contas" desfaz.
 
+**Preços fora da curva.** "Preços fora da curva" lista os preços com menos de 1/5 ou mais de 5 vezes a referência: o preço normal da tabela C1 (serviços da tabela) ou a mediana do item (com pelo menos 4 preços). Exemplo da carga: qualificação de autoclave a R$ 4,50, lido por regra numa proposta antiga do Drive. A carga da C1 tem cerca de 100 casos assim (propostas antigas do Drive, CRM e licitações). Todos vêm marcados: desmarque o que for preço de verdade, escreva o motivo (vale para todos os marcados) e confirme. Nada é apagado; ficam fora das contas, com o motivo e o seu nome. Cotação de fornecedor não entra nessa lista.
+
+**O cliente para o vendedor.** O vendedor vê o nome do cliente só nas linhas dele (propostas e registros que ele fez) e nas licitações (o órgão é público). Nas outras, o valor aparece e entra nas contas, sem o cliente, e a busca pelo nome do cliente não as encontra. Na cotação de fornecedor, o vendedor não vê valor, fornecedor, marca nem a requisição de Compras.
+
+**Itens do catálogo sem código da tabela.** Serviço do catálogo sem o código da tabela C1 (os que vieram do CRM antigo, enquanto a tabela não é importada ou quando o nome é outro) casa com o serviço da tabela pelo nome quando o nome começa pela atividade (qualificação, calibração, manutenção preventiva) e aponta um único serviço. Assim o histórico do CRM e das licitações aparece no item, e as propostas entram no mesmo grupo do banco. Reparo, corretiva, instalação, controle de qualidade e contrato ficam pela descrição. Na cópia do catálogo de 01/11/2026, 47 dos 122 serviços casam assim.
+
 **Indicadores no Painel.** No fim do Painel comercial: taxa de ganho por serviço e por produto, preço médio ganho e perdido (com a leitura "ganhamos com preço menor" ou "mesmo com preço maior"), de quem mais perdemos, quem mais vence as licitações do banco, propostas perdidas sem o vencedor informado e os itens ativos do catálogo sem preço de referência.
 
 ## Margem sobre peças e produtos
 
-Em Metodologia > Preço e desconto, "Margem sobre peças e produtos" (valor inicial 30%, da planilha interna citada na C1). O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor: custo ÷ (1 − margem). O vendedor vê o preço sugerido, nunca o custo nem a margem, e é avisado quando o preço do catálogo está abaixo do sugerido.
+Em Metodologia > Preço e desconto, "Margem sobre peças e produtos" (valor inicial 30%, da planilha interna citada na C1). O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor: custo ÷ (1 − margem). Só a gestão vê esse preço sugerido: com a margem conhecida, ele entregaria o preço de compra (sugerido × 0,7). O vendedor vê o preço de venda praticado (último e mediana das propostas e do CRM) e, quando o preço do catálogo está abaixo do sugerido, um aviso sem número para conferir com a gestão.
 
 ## Orçamentista: IA e busca na internet
 
-Sem a chave da IA, o Orçamentista funciona pelas regras. Com a chave (Administração > Chaves e senhas > Chave da IA), a IA lê o pedido e escreve a justificativa, sempre conferida contra os números do sistema; preço nunca vem da IA.
+Sem a chave da IA, o Orçamentista funciona pelas regras. Com a chave (Administração > Chaves e senhas > Chave da IA), a IA lê o pedido e escreve a justificativa, sempre conferida contra os números do sistema (só 0, 1 e 2 ficam livres; qualquer outro número precisa estar nos fatos); preço nunca vem da IA. Cada pessoa faz até 20 análises com IA por hora; depois, vale só as regras, com o aviso.
 
-A busca de preços na internet usa a mesma chave da IA com a pesquisa do Google, no servidor (a chave não vai ao navegador). Para ligar: Administração > Chaves e senhas > Inteligência artificial > "Comercial: buscar preços na internet" = Ligado. Resposta da IA sem pesquisa na web não é aproveitada; resultado sem link https ou sem valor é descartado; nada entra no banco sem a confirmação de quem buscou, com o link e, se o valor mudou, o motivo. Outro serviço de busca entra pelo ponto de extensão COM_BP_PROVEDORES_BUSCA (SGO_Comercial_BancoPrecos.js) e é escolhido em "Comercial: serviço de busca de preços".
+A busca de preços na internet usa a mesma chave da IA com a pesquisa do Google, no servidor (a chave não vai ao navegador). Para ligar: Administração > Chaves e senhas > Inteligência artificial > "Comercial: buscar preços na internet" = Ligado. Resposta da IA sem pesquisa na web não é aproveitada; resultado sem link https ou sem valor é descartado; nada entra no banco sem a confirmação de quem buscou, com o link e, se o valor mudou, o motivo. Cada pessoa faz até 10 buscas por hora; a mesma busca (mesma pessoa, item, tipo e UF) nas últimas 6 horas devolve o resultado já achado, sem chamar a IA de novo. Outro serviço de busca entra pelo ponto de extensão COM_BP_PROVEDORES_BUSCA (SGO_Comercial_BancoPrecos.js) e é escolhido em "Comercial: serviço de busca de preços".
 
 ## Problemas comuns
 
@@ -120,4 +126,5 @@ A busca de preços na internet usa a mesma chave da IA com a pesquisa do Google,
 | "Impostos, comissão e margem passam de 95% do preço" | Confira os percentuais: a conta do preço não fecha. |
 | "O banco mudou desde a prévia" na carga | Alguém carregou ou registrou preços. Toque em "Carga inicial e Compras" de novo. |
 | A busca na internet diz "não está configurada" | Ligue "Comercial: buscar preços na internet" em Chaves e senhas e confira a Chave da IA. |
-| Um preço distorce a mediana | Em "Ver o item", "Tirar das contas", com o motivo. |
+| Um preço distorce a mediana | Em "Ver o item", "Tirar das contas", com o motivo. Vários de uma vez: "Preços fora da curva". |
+| "O banco mudou desde a prévia" em Preços fora da curva | Alguém registrou ou tirou preços das contas. Abra "Preços fora da curva" de novo. |

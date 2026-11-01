@@ -14,7 +14,7 @@
  *              tirou da conta, com o motivo) ficam no banco e no histórico, fora das contas. Nada é apagado.
  *
  * Como o banco é alimentado:
- *   1. Carga inicial (gestão, com prévia; idempotente pela CHAVE): os JSONs da C1 (SGO_Comercial_BancoC1.js, gerado por
+ *   1. Carga inicial (gestão, com prévia; idempotente pela CHAVE): os JSONs da C1 (SGO_Comercial_BancoC1.js › ComBP_dadosC1_, gerado por
  *      _tools/gerar_banco_c1.cjs) e as cotações de fornecedor que já existem em Compras (somente leitura: o fluxo de Compras
  *      não muda). Rodar de novo só acrescenta o que ainda não está.
  *   2. Propostas do SGO+: concluída = EM_ABERTO; aprovada pelo cliente ou oportunidade ganha = GANHO; recusada ou perdida =
@@ -40,6 +40,8 @@ var COM_BP_CENTRO_OESTE = ['GO', 'DF', 'MT', 'MS'];
 // ------------------------------------------------------------
 // BÁSICO
 // ------------------------------------------------------------
+/** Texto para a tela sem os símbolos de lista do Word/Drive (área privada do Unicode), que aparecem como quadradinhos. */
+function ComBP_limpo_(v) { return Com_s_(v).replace(/[\uE000-\uF8FF\uFFFD]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function ComBP_valida_(r) { return COM_BP_SITUACOES_FORA.indexOf(Com_up_(r && r.SITUACAO)) < 0; }
 function ComBP_num_(v) { var n = Com_num_(v); return isFinite(n) ? n : null; }
 function ComBP_c1_(codigo) { return typeof ComF_tabelaC1_ === 'function' ? ComF_tabelaC1_(codigo) : null; }
@@ -60,7 +62,37 @@ function ComBP_nomeItem_(chave, descricao) {
 function ComBP_c1DoProduto_(p) {
   if (!p) return '';
   var t = Com_up_(p.TABELA_CODIGO).replace(/^C1:/, ''); if (t && ComBP_c1_(t)) return t;
-  var c = Com_up_(p.CODIGO).replace(/-/g, '_'); return c && ComBP_c1_(c) ? c : '';
+  var c = Com_up_(p.CODIGO).replace(/-/g, '_'); if (c && ComBP_c1_(c)) return c;
+  return Com_up_(p.TIPO) === 'PRODUTO' ? '' : ComBP_c1PeloNome_(p.NOME);
+}
+
+/**
+ * Revisão 01/11/2026: serviço do catálogo sem TABELA_CODIGO (os 122 serviços que vieram do CRM antigo, enquanto a tabela C1 não é
+ * importada ou quando o nome é outro: "Qualificação de (QI, QO e QD) em uma Autoclave Hospitalar") casa com o código da C1 pelas
+ * regras do Orçamentista, para o histórico do CRM e das licitações (gravado com o código da C1) aparecer no item e as propostas
+ * entrarem no mesmo grupo do banco. Só quando o nome diz a atividade (qualificação, calibração, manutenção), as regras acham UM
+ * serviço e não há dúvida (volume da autoclave, tipo da lavadora). Reparo, peça e controle de qualidade ficam pela descrição.
+ */
+var COM_BP_C1_NOME = {};
+var COM_BP_AVISO_VOLUME = 'o volume da autoclave não foi dito: considerei acima de 100 L; se for de bancada, troque o item';
+function ComBP_c1PeloNome_(nome) {
+  if (typeof ComO_identificarRegras_ !== 'function' || typeof ComO_atividade_ !== 'function') return '';
+  var n = Com_normBusca_(nome);
+  if (!n) return '';
+  if (Object.prototype.hasOwnProperty.call(COM_BP_C1_NOME, n)) return COM_BP_C1_NOME[n];
+  var r = '';
+  try {
+    // a atividade abre o nome ("Calibração ... de termômetro"; não "Termo-higrômetro ... com calibração", que é venda do instrumento)
+    if (ComO_atividade_(n.slice(0, 30)) && !/(reparo|conserto|recupera|substitui|troca|instala|corretiv|controle de qualidade|contrato|locacao)/.test(n)) {
+      // "Qualificação ... - Calibração rastreável da instrumentação": a calibração faz parte da qualificação (escopo da C1)
+      var id = ComO_identificarRegras_(/qualifica/.test(n) ? n.replace(/calibra\w*/g, ' ') : n);
+      var aviso = id.itens.length === 1 ? Com_s_(id.itens[0].aviso) : 'x';
+      // única dúvida aceita: o volume da autoclave não dito (vale a regra: acima de 100 L)
+      if (id.itens.length === 1 && (!aviso || aviso === COM_BP_AVISO_VOLUME) && ComBP_c1_(id.itens[0].codigo)) r = id.itens[0].codigo;
+    }
+  } catch (e) { r = ''; }
+  COM_BP_C1_NOME[n] = r;
+  return r;
 }
 
 /** Estatística simples de uma lista de valores: { n, min, mediana, max, media, q1, q3 }. */
@@ -78,17 +110,30 @@ function ComBP_ler_() { return Com_ler_(COM_ABAS.PRECOS).filter(function (r) { r
 /** Vê custo, preço de compra e margem? (gestão) */
 function ComBP_veCusto_(eu) { return !!(eu && eu.veCusto); }
 
+/**
+ * Revisão 01/11/2026: o vendedor vê o nome do cliente de uma linha só quando ela é dele (proposta ou registro que ele fez) ou é
+ * compra pública (o órgão é dado público). As outras (propostas de outros vendedores, CRM antigo) aparecem sem o cliente: a regra
+ * do Comercial é que o vendedor vê só as próprias oportunidades e propostas. O valor continua nas contas e na lista.
+ */
+function ComBP_veCliente_(r, eu) {
+  if (!eu || eu.gestao || eu.veCusto) return true;
+  return Com_up_(r.ORIGEM) === 'LICITACAO' || (!!Com_s_(eu.id) && Com_s_(r.REGISTRADO_POR_ID) === Com_s_(eu.id));
+}
+
 /** Linha para a tela, conforme quem vê. */
 function ComBP_paraTela_(r, eu) {
   var compra = Com_up_(r.ORIGEM) === 'COTACAO_FORNECEDOR', ve = ComBP_veCusto_(eu), valor = ComBP_num_(r.VALOR_UNITARIO);
   var t = { id: Com_s_(r.ID), tipo: Com_up_(r.TIPO) || 'SERVICO', tipoNome: COM_BP_TIPOS[Com_up_(r.TIPO)] || 'Serviço', itemChave: Com_s_(r.ITEM_CHAVE), item: ComBP_nomeItem_(r.ITEM_CHAVE, r.DESCRICAO),
-    descricao: Com_s_(r.DESCRICAO), unidade: Com_s_(r.UNIDADE), quantidade: ComBP_num_(r.QUANTIDADE) || 1, data: Com_brDia_(r.DATA), dataIso: Com_dia_(r.DATA), cidade: Com_s_(r.CIDADE), uf: Com_up_(r.UF),
+    descricao: ComBP_limpo_(r.DESCRICAO), unidade: Com_s_(r.UNIDADE), quantidade: ComBP_num_(r.QUANTIDADE) || 1, data: Com_brDia_(r.DATA), dataIso: Com_dia_(r.DATA), cidade: Com_s_(r.CIDADE), uf: Com_up_(r.UF),
     cliente: Com_s_(r.CLIENTE_NOME), origem: Com_up_(r.ORIGEM), origemNome: COM_BP_ORIGENS[Com_up_(r.ORIGEM)] || Com_s_(r.ORIGEM), resultado: Com_up_(r.RESULTADO), resultadoNome: COM_BP_RESULTADOS[Com_up_(r.RESULTADO)] || Com_s_(r.RESULTADO),
     concorrente: Com_s_(r.CONCORRENTE), valorVencedor: ComBP_num_(r.VALOR_VENCEDOR), fornecedor: Com_s_(r.FORNECEDOR), marca: Com_s_(r.MARCA), link: /^https?:\/\//i.test(Com_s_(r.LINK)) ? Com_s_(r.LINK) : '',
     fonte: Com_s_(r.FONTE), confianca: Com_up_(r.CONFIANCA) || 'ALTA', confiancaNome: COM_BP_CONFIANCA[Com_up_(r.CONFIANCA)] || 'Alta', registradoPor: Com_s_(r.REGISTRADO_POR_NOME), refRotulo: Com_s_(r.REF_ROTULO),
     situacao: Com_up_(r.SITUACAO) || 'VALIDO', situacaoMotivo: Com_s_(r.SITUACAO_MOTIVO), valida: ComBP_valida_(r) };
   t.valorVencedorTxt = t.valorVencedor ? Com_moeda_(t.valorVencedor) : '';
-  if (compra && !ve) { t.valor = null; t.valorTxt = 'só a gestão vê (preço de compra)'; t.oculto = true; }
+  if (!ComBP_veCliente_(r, eu)) { t.cliente = ''; t.clienteOculto = true; t.refRotulo = ''; if (Com_up_(r.ORIGEM) === 'CRM' || Com_up_(r.REF_TIPO) === 'PROPOSTA') t.fonte = COM_BP_ORIGENS[Com_up_(r.ORIGEM)] + ' (o cliente fica com quem fez a proposta e com a gestão)'; }
+  // revisão 01/11/2026: cotação de fornecedor para o vendedor sem fornecedor, marca nem fonte (a fonte trazia a requisição e o
+  // orçamento de Compras): só que existe
+  if (compra && !ve) { t.valor = null; t.valorTxt = 'só a gestão vê (preço de compra)'; t.oculto = true; t.fornecedor = ''; t.marca = ''; t.fonte = 'Cotação de fornecedor (detalhes com a gestão)'; t.link = ''; t.registradoPor = ''; t.refRotulo = ''; }
   else { t.valor = valor; t.valorTxt = valor === null ? '' : Com_moeda_(valor); }
   if (ve) {
     var c = ComBP_num_(r.CUSTO_UNITARIO);
@@ -142,9 +187,22 @@ function ComBP_gravar_(linhas, existentes) {
 // ------------------------------------------------------------
 // CARGA INICIAL (C1) E COTAÇÕES DE COMPRAS
 // ------------------------------------------------------------
-/** Linhas da carga da C1 no formato do banco. */
-function ComBP_linhasC1_() {
-  if (typeof COM_BANCO_C1 === 'undefined' || !COM_BANCO_C1) return [];
+/**
+ * Dados da carga da C1 (revisão 01/11/2026). SGO_Comercial_BancoC1.js (gerado por _tools/gerar_banco_c1.cjs) define a função
+ * ComBP_dadosC1_(), que monta { versao, fora, colunas, linhas } só quando é chamada: na prévia e na carga. Antes era a global
+ * COM_BANCO_C1, montada em TODA execução (no servidor, em cada contexto de cada worker: 3.053 linhas copiadas a cada chamada e
+ * ~3 MB a mais por worker). Não ficou num .html lido com HtmlService porque, neste projeto, o createHtmlOutputFromFile já truncou
+ * conteúdo grande no Google (ver SGO_CadeiaFrioRel_Main.js). Sem o arquivo: null, e a prévia diz o que fazer.
+ */
+function ComBP_lerDadosC1_() {
+  try { return typeof ComBP_dadosC1_ === 'function' ? ComBP_dadosC1_() : null; }
+  catch (e) { console.error('Banco de preços: carga da C1 ilegível: ' + ((e && e.message) || e)); return null; }
+}
+
+/** Linhas da carga da C1 no formato do banco. dados: o que ComBP_lerDadosC1_ devolveu (lido de novo quando não vem). */
+function ComBP_linhasC1_(dados) {
+  var COM_BANCO_C1 = dados === undefined ? ComBP_lerDadosC1_() : dados;
+  if (!COM_BANCO_C1) return [];
   var cols = COM_BANCO_C1.colunas, ix = {};
   cols.forEach(function (c, i) { ix[c] = i; });
   return COM_BANCO_C1.linhas.map(function (l) {
@@ -185,14 +243,14 @@ function ComBP_exigirGestao_(eu, acao) { Com_exigir_(eu, 'GESTAO', acao); }
 function ComBP_previaCarga_(eu) {
   ComBP_exigirGestao_(eu, 'ver a prévia da carga do banco de preços');
   var ja = {}; ComBP_ler_().forEach(function (r) { ja[Com_s_(r.CHAVE)] = 1; });
-  var c1 = ComBP_linhasC1_(), cmp = ComBP_linhasCompras_();
+  var dadosC1 = ComBP_lerDadosC1_(), c1 = ComBP_linhasC1_(dadosC1), cmp = ComBP_linhasCompras_();
   var conta = function (lista) {
     var r = { total: lista.length, novas: 0, jaNoBanco: 0, porOrigem: {} };
     lista.forEach(function (o) { var nova = !ja[o.CHAVE]; if (nova) r.novas++; else r.jaNoBanco++; var k = o.ORIGEM; r.porOrigem[k] = r.porOrigem[k] || { origem: k, nome: COM_BP_ORIGENS[k], novas: 0, total: 0 }; r.porOrigem[k].total++; if (nova) r.porOrigem[k].novas++; });
     r.porOrigem = Object.keys(r.porOrigem).map(function (k) { return r.porOrigem[k]; });
     return r;
   };
-  var fora = (typeof COM_BANCO_C1 !== 'undefined' && COM_BANCO_C1 && COM_BANCO_C1.fora) || {};
+  var fora = (dadosC1 && dadosC1.fora) || {};
   var foraTxt = [
     fora.mercadoNaoComparavel ? Com_plural_(fora.mercadoNaoComparavel, 'preço público ficou', 'preços públicos ficaram') + ' de fora por ser lote, valor global, mensal ou fora da curva (não dá para comparar por unidade)' : '',
     fora.driveNaoUnitario || fora.driveSemServico ? Com_plural_((fora.driveNaoUnitario || 0) + (fora.driveSemServico || 0), 'valor das propostas antigas do Drive ficou', 'valores das propostas antigas do Drive ficaram') + ' de fora (total da proposta, parcela, desconto ou serviço sem correspondência na tabela)' : '',
@@ -200,7 +258,8 @@ function ComBP_previaCarga_(eu) {
     fora.crmSemPreco ? Com_plural_(fora.crmSemPreco, 'linha do CRM sem preço ficou', 'linhas do CRM sem preço ficaram') + ' de fora' : ''
   ].filter(Boolean);
   var a = conta(c1), b = conta(cmp);
-  return { c1: a, compras: b, versao: (typeof COM_BANCO_C1 !== 'undefined' && COM_BANCO_C1) ? COM_BANCO_C1.versao : '', foraTxt: foraTxt,
+  if (!dadosC1) foraTxt.unshift('O arquivo da carga da C1 (SGO_Comercial_BancoC1.js) não está nesta instalação: a prévia mostra só as cotações de Compras. Peça ao Administrador para publicar a versão completa do sistema.');
+  return { c1: a, compras: b, versao: dadosC1 ? dadosC1.versao : '', semArquivoC1: !dadosC1, foraTxt: foraTxt,
     marca: Com_marca_([a.novas, b.novas, a.total, b.total].join('|')).slice(0, 16), noBanco: Object.keys(ja).length };
 }
 
@@ -378,8 +437,8 @@ function ComBP_resumoItem_(linhas, eu) {
   return r;
 }
 
-/** Filtro da consulta. d: { busca, tipo, origem, resultado, uf, de, ate, itemChave, incluirFora } */
-function ComBP_filtrar_(linhas, d) {
+/** Filtro da consulta. d: { busca, tipo, origem, resultado, uf, de, ate, itemChave, incluirFora }. eu: quem busca (o vendedor não acha pelo que não vê). */
+function ComBP_filtrar_(linhas, d, eu) {
   d = d || {};
   var termos = Com_termosBusca_(d.busca), tipo = Com_up_(d.tipo), origem = Com_up_(d.origem), res = Com_up_(d.resultado), uf = Com_up_(d.uf), de = Com_dia_(d.de), ate = Com_dia_(d.ate), ic = Com_s_(d.itemChave);
   return linhas.filter(function (r) {
@@ -393,7 +452,9 @@ function ComBP_filtrar_(linhas, d) {
     if (de && (!dia || dia < de)) return false;
     if (ate && (!dia || dia > ate)) return false;
     if (!termos.length) return true;
-    return Com_casaBusca_(termos, [Com_s_(r.DESCRICAO), Com_s_(r.ITEM_CODIGO), ComBP_nomeItem_(r.ITEM_CHAVE, ''), Com_s_(r.CLIENTE_NOME), Com_s_(r.CONCORRENTE), Com_s_(r.FORNECEDOR), Com_s_(r.MARCA), Com_s_(r.CIDADE)]);
+    var compraOculta = eu && !ComBP_veCusto_(eu) && Com_up_(r.ORIGEM) === 'COTACAO_FORNECEDOR';
+    return Com_casaBusca_(termos, [Com_s_(r.DESCRICAO), Com_s_(r.ITEM_CODIGO), ComBP_nomeItem_(r.ITEM_CHAVE, ''), !eu || ComBP_veCliente_(r, eu) ? Com_s_(r.CLIENTE_NOME) : '', Com_s_(r.CONCORRENTE),
+      compraOculta ? '' : Com_s_(r.FORNECEDOR), compraOculta ? '' : Com_s_(r.MARCA), Com_s_(r.CIDADE)]);
   });
 }
 
@@ -401,7 +462,7 @@ function ComBP_filtrar_(linhas, d) {
 function ComBP_consultar_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'consultar o banco de preços');
   d = d || {};
-  var todas = ComBP_ler_(), achadas = ComBP_filtrar_(todas, d);
+  var todas = ComBP_ler_(), achadas = ComBP_filtrar_(todas, d, eu);
   var grupos = {};
   achadas.forEach(function (r) { var k = Com_s_(r.ITEM_CHAVE) || 'D:' + Com_normBusca_(r.DESCRICAO); (grupos[k] = grupos[k] || []).push(r); });
   var lista = Object.keys(grupos).map(function (k) {
@@ -480,6 +541,71 @@ function ComBP_desconsiderar_(eu, d) {
 }
 
 // ------------------------------------------------------------
+// VALORES FORA DA CURVA (revisão 01/11/2026, gestão): propostos para sair das contas em lote, com prévia e motivo
+// ------------------------------------------------------------
+/**
+ * Exemplo real da carga: "qualificação de autoclave" a R$ 4,50 (valor lido por regra numa proposta antiga do Drive). A referência é
+ * o preço normal da tabela C1 (serviços da tabela) ou a mediana do item (outros itens, com pelo menos 4 preços). Fora da curva: menos
+ * de 1/5 ou mais de 5 vezes a referência. Cotação de fornecedor fica de fora (é preço de compra). Nada é apagado: a gestão escolhe e
+ * as escolhidas ficam DESCONSIDERADO, com o motivo; "Voltar às contas" no item desfaz uma a uma.
+ */
+var COM_BP_FATOR_CURVA = 5;
+function ComBP_foraDaCurvaLista_(todas) {
+  var grupos = {};
+  todas.forEach(function (r) {
+    if (!ComBP_valida_(r) || Com_up_(r.ORIGEM) === 'COTACAO_FORNECEDOR' || !(ComBP_num_(r.VALOR_UNITARIO) > 0) || !Com_s_(r.ITEM_CHAVE)) return;
+    (grupos[Com_s_(r.ITEM_CHAVE)] = grupos[Com_s_(r.ITEM_CHAVE)] || []).push(r);
+  });
+  var achadas = [];
+  Object.keys(grupos).forEach(function (k) {
+    var g = grupos[k], s1 = /^C1:/.test(k) ? ComBP_c1_(k) : null;
+    var ref = s1 && s1.c1 && Number(s1.c1.precoNormal) > 0 ? Number(s1.c1.precoNormal) : (g.length >= 4 ? ComBP_estat_(g.map(function (r) { return ComBP_num_(r.VALOR_UNITARIO); })).mediana : 0);
+    if (!(ref > 0)) return;
+    g.forEach(function (r) {
+      var v = ComBP_num_(r.VALOR_UNITARIO), raz = v / ref;
+      if (raz >= 1 / COM_BP_FATOR_CURVA && raz <= COM_BP_FATOR_CURVA) return;
+      achadas.push({ id: Com_s_(r.ID), itemChave: k, item: ComBP_nomeItem_(k, r.DESCRICAO), descricao: ComBP_limpo_(r.DESCRICAO).slice(0, 160), valor: v, valorTxt: Com_moeda_(v), referencia: ref,
+        referenciaTxt: Com_moeda_(ref) + (s1 ? ' (tabela C1)' : ' (mediana de ' + g.length + ' preços)'), razao: raz, leitura: raz < 1 ? 'muito abaixo: ' + Com_pct_(raz * 100, raz < 0.01 ? 2 : 1) + ' da referência' : 'muito acima: ' + ComBP_qtdBr_(Math.round(raz * 10) / 10) + ' vezes a referência',
+        origemNome: COM_BP_ORIGENS[Com_up_(r.ORIGEM)] || Com_s_(r.ORIGEM), data: Com_brDia_(r.DATA), confianca: Com_up_(r.CONFIANCA) || 'ALTA' });
+    });
+  });
+  // os mais distantes primeiro (nos dois sentidos)
+  return achadas.sort(function (a, b) { return Math.abs(Math.log(b.razao)) - Math.abs(Math.log(a.razao)); });
+}
+function ComBP_qtdBr_(n) { return String(n).replace('.', ','); }
+
+/** Prévia (gestão): os preços fora da curva, com a referência e a leitura. Nada é gravado. */
+function ComBP_foraDaCurva_(eu) {
+  ComBP_exigirGestao_(eu, 'ver os preços fora da curva');
+  var l = ComBP_foraDaCurvaLista_(ComBP_ler_());
+  return { linhas: l.slice(0, 400), total: l.length, limitado: l.length > 400, fator: COM_BP_FATOR_CURVA, marca: Com_marca_(l.map(function (x) { return x.id; }).sort().join('|')).slice(0, 16),
+    message: l.length ? Com_plural_(l.length, 'preço está', 'preços estão') + ' fora da curva (menos de 1/' + COM_BP_FATOR_CURVA + ' ou mais de ' + COM_BP_FATOR_CURVA + ' vezes a referência). Desmarque o que for de verdade, escreva o motivo e confirme: nada é apagado.' : 'Nenhum preço fora da curva nas contas.' };
+}
+
+/** Tira das contas, em lote, os escolhidos da prévia. d: { ids[], motivo, marca }. Só os que continuam fora da curva. */
+function ComBP_desconsiderarLote_(eu, d) {
+  ComBP_exigirGestao_(eu, 'tirar preços das contas em lote');
+  d = d || {};
+  var mot = Com_texto_(d.motivo, 300);
+  if (mot.length < 10) throw new Error('Não foi possível tirar os preços das contas: escreva o motivo (pelo menos 10 letras), por exemplo "valor lido errado nas propostas antigas do Drive"');
+  var ids = (Array.isArray(d.ids) ? d.ids : []).map(Com_s_).filter(Boolean);
+  if (!ids.length) throw new Error('Não foi possível: marque pelo menos um preço da lista');
+  return Com_comTrava_(function () {
+    var l = ComBP_foraDaCurvaLista_(ComBP_ler_());
+    if (Com_s_(d.marca) !== Com_marca_(l.map(function (x) { return x.id; }).sort().join('|')).slice(0, 16)) throw new Error('Não foi possível: o banco mudou desde a prévia (alguém registrou ou tirou preços das contas). Abra "Preços fora da curva" de novo e confira');
+    var ok = {}; l.forEach(function (x) { ok[x.id] = 1; });
+    var feitos = 0, agora = Com_agora_();
+    ids.forEach(function (id) {
+      if (!ok[id]) return;
+      SGO_DATA.update(COM_ABAS.PRECOS, id, { SITUACAO: 'DESCONSIDERADO', SITUACAO_MOTIVO: mot + ' (' + eu.nome + ', em lote: fora da curva)', ATUALIZADO_EM: agora });
+      feitos++;
+    });
+    Com_historico_('BANCO_PRECOS', 'LOTE', 'DESCONSIDERADO', eu, { texto: 'Fora das contas, em lote (fora da curva): ' + Com_plural_(feitos, 'preço', 'preços') + '. Motivo: ' + mot });
+    return { feitos: feitos, message: Com_plural_(feitos, 'preço saiu', 'preços saíram') + ' das contas (ficam no banco, marcados, com o motivo). Para devolver um, abra o item no Banco de preços e toque em "Voltar às contas".' };
+  });
+}
+
+// ------------------------------------------------------------
 // INDICADORES (Painel, gestão)
 // ------------------------------------------------------------
 function ComBP_indicadores_(eu, d) {
@@ -537,6 +663,7 @@ function ComBP_indicadores_(eu, d) {
  * e escolher o provedor em Administração > Chaves e senhas (COM_BUSCA_WEB_PROVEDOR). Nada do que o provedor devolve é gravado
  * sem a confirmação de quem buscou (ComBP_confirmarInternet_).
  */
+var COM_BP_BUSCAS_POR_HORA = 10;
 var COM_BP_PROVEDORES_BUSCA = {
   GEMINI_GOOGLE: {
     nome: 'Pesquisa do Google pela IA (Gemini), com a chave da IA do sistema',
@@ -593,6 +720,20 @@ function ComBP_buscarInternet_(eu, d) {
   var desc = Com_texto_(d.descricao, 200);
   if (desc.length < 4) throw new Error('Não foi possível buscar: diga o que procurar (pelo menos 4 letras)');
   var cod = Com_up_(PropertiesService.getScriptProperties().getProperty('COM_BUSCA_WEB_PROVEDOR')) || 'GEMINI_GOOGLE';
+  // revisão 01/11/2026: a busca gasta a cota da IA. A mesma busca (mesma pessoa, item, tipo e UF) nas últimas 6 horas devolve o que
+  // já foi achado, sem chamar de novo; e cada pessoa tem um limite por hora (toques repetidos não viram laço de chamadas).
+  var tipoQ = Com_up_(d.tipo) === 'PRODUTO' ? 'PRODUTO' : 'SERVICO', chaveQ = 'COM_BP_WEBQ_' + Com_marca_([eu.id, Com_normBusca_(desc), tipoQ, Com_up_(d.uf)].join('|')).slice(0, 24);
+  var cacheS = null; try { cacheS = CacheService.getScriptCache(); } catch (e) { cacheS = null; }
+  var repetida = null; try { repetida = cacheS ? Com_json_(cacheS.get(chaveQ), null) : null; } catch (e) { repetida = null; }
+  if (repetida && repetida.token && cacheS && cacheS.get('COM_BP_WEB_' + repetida.token)) {
+    var g0 = Com_json_(cacheS.get('COM_BP_WEB_' + repetida.token), {});
+    return { configurada: true, token: repetida.token, resultados: g0.resultados || [], consultas: repetida.consultas || [], repetida: true,
+      message: 'Esta busca já foi feita às ' + Com_s_(repetida.hora) + ': mostrando o mesmo resultado, sem gastar a cota da IA de novo. Nada foi gravado ainda.' };
+  }
+  var hora = Com_agora_().slice(0, 13), chaveN = 'COM_BP_WEBN_' + Com_s_(eu.id) + '_' + hora, feitas = 0;
+  try { feitas = cacheS ? Number(cacheS.get(chaveN)) || 0 : 0; } catch (e) { feitas = 0; }
+  if (feitas >= COM_BP_BUSCAS_POR_HORA) return { configurada: true, resultados: [], limite: true, message: 'Você já fez ' + COM_BP_BUSCAS_POR_HORA + ' buscas na internet nesta hora: cada busca gasta a cota da IA do sistema. Tente de novo na próxima hora. Nada travou: o orçamento segue com o catálogo e o banco de preços.' };
+  try { if (cacheS) cacheS.put(chaveN, String(feitas + 1), 3700); } catch (e) {}
   var r;
   try { r = COM_BP_PROVEDORES_BUSCA[cod].buscar({ descricao: desc, tipo: Com_up_(d.tipo) === 'PRODUTO' ? 'PRODUTO' : 'SERVICO', uf: Com_up_(d.uf) }); }
   catch (e) { return { configurada: true, resultados: [], message: 'A busca não deu certo agora (' + String((e && e.message) || e).replace(/[.\s]+$/, '').slice(0, 160) + '). Tente de novo mais tarde; nada foi gravado.' }; }
@@ -604,6 +745,7 @@ function ComBP_buscarInternet_(eu, d) {
   }).filter(Boolean).slice(0, 12);
   var token = Com_marca_([eu.id, desc, Com_agora_(), Math.random()].join('|')).slice(0, 20);
   try { CacheService.getScriptCache().put('COM_BP_WEB_' + token, JSON.stringify({ uid: eu.id, descricao: desc, tipo: Com_up_(d.tipo) === 'PRODUTO' ? 'PRODUTO' : 'SERVICO', itemCodigo: Com_up_(d.itemCodigo), resultados: ok }), 21600); } catch (e) {}
+  try { if (cacheS) cacheS.put(chaveQ, JSON.stringify({ token: token, hora: Com_agora_().slice(11, 16), consultas: (r.consultas || []).slice(0, 5) }), 21600); } catch (e) {}
   return { configurada: true, token: token, resultados: ok, consultas: (r.consultas || []).slice(0, 5),
     message: ok.length ? Com_plural_(ok.length, 'preço encontrado', 'preços encontrados') + '. Abra o link, confira o valor e confirme só o que for comparável: nada foi gravado ainda.' : 'Nenhum preço público comparável foi encontrado. Nada foi gravado.' };
 }

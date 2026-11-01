@@ -27,25 +27,27 @@
  * o mais específico primeiro ("ultracongelador" antes de "congelador"; "termo-higrômetro" antes de "termômetro").
  */
 var COM_O_EQUIP = [
-  { k: 'baixa', re: /(baixa temperatura|peroxido|formaldeido|oxido de etileno|plasma)/, qt: 'QT_AUTOCLAVE_BT', padrao: 'qt', nome: 'esterilizador de baixa temperatura' },
-  { k: 'autoclave', re: /(autoclave[s]?|esterilizador(es)? a vapor)/, qt: 'QT_AUTOCLAVE_GRANDE', mp: 'MP_AUTOCLAVE_GRANDE', padrao: 'qt', tamanho: true, nome: 'autoclave' },
-  { k: 'termodesinfectora', re: /(termo ?desinfe(c)?t(ora|adora)s?|lavadora(s)? termo|lavadora(s)? de instrumentos|lavadora(s)? automatica)/, qt: 'QT_LAVADORA_TD', padrao: 'qt', nome: 'lavadora termodesinfectora' },
+  { k: 'baixa', re: /((autoclav\w*|esterilizador(es)?) (a |de |por )?(baixa temperatura|peroxido|formaldeido|formol|oxido de etileno|plasma)|baixa temperatura|peroxido|formaldeido|formol|oxido de etileno|plasma)/, qt: 'QT_AUTOCLAVE_BT', padrao: 'qt', nome: 'esterilizador de baixa temperatura' },
+  // revisão 01/11/2026: "autoclav" (digitado sem o e) e "statim" (autoclave de cassete, de bancada) também valem
+  { k: 'autoclave', re: /(autoclav\w*|esterilizador(es)? a vapor|statim)/, qt: 'QT_AUTOCLAVE_GRANDE', mp: 'MP_AUTOCLAVE_GRANDE', padrao: 'qt', tamanho: true, nome: 'autoclave' },
+  { k: 'termodesinfectora', re: /(termo ?desinfe(c)?t(ora|adora)s?|lavadora(s)? (termo|desinfetadora|desinfectadora)|lavadora(s)? de instrumentos|lavadora(s)? automatica)/, qt: 'QT_LAVADORA_TD', padrao: 'qt', nome: 'lavadora termodesinfectora' },
   { k: 'ultrassonica', re: /(ultrass?onica(s)?|lavadora(s)? ultra)/, qt: 'QT_LAVADORA_US', mp: 'MP_LAVADORA_US', padrao: 'qt', nome: 'lavadora ultrassônica' },
   { k: 'lavadora', re: /(lavadora(s)?)/, qt: 'QT_LAVADORA_TD', padrao: 'qt', nome: 'lavadora', aviso: 'o tipo da lavadora não foi dito: considerei termodesinfectora; se for ultrassônica, troque o item' },
-  { k: 'secadora', re: /(secadora(s)?|gabinete(s)? de secagem)/, qt: 'QT_SECADORA', padrao: 'qt', nome: 'secadora' },
+  { k: 'secadora', re: /(secadora(s)?|gabinete(s)? de secagem|estufa(s)? de secagem)/, qt: 'QT_SECADORA', padrao: 'qt', nome: 'secadora' },
   { k: 'seladora', re: /(seladora(s)?)/, qt: 'QT_SELADORA', mp: 'MP_SELADORA', padrao: 'qt', nome: 'seladora' },
   { k: 'ultrafreezer', re: /(ultra ?freezer(s)?|ultracongelador(es)?|ultra congelador(es)?)/, qt: 'QT_ULTRAFREEZER', padrao: 'qt', nome: 'ultracongelador' },
   { k: 'freezer', re: /(freezer(s)?|congelador(es)?)/, qt: 'QT_FREEZER', padrao: 'qt', nome: 'freezer' },
   { k: 'camarafria', re: /(camara(s)? fria(s)?|walk ?in)/, qt: 'QT_CAMARA_FRIA', padrao: 'qt', nome: 'câmara fria' },
-  { k: 'incubadorabio', re: /(incubadora(s)? (de )?(indicador|biologic))/, cal: 'CAL_INCUBADORA_BIO', padrao: 'cal', nome: 'incubadora de indicador biológico' },
+  { k: 'incubadorabio', re: /(incubadora(s)? (de )?(indicador|biologic|microbiologic)\w*)/, cal: 'CAL_INCUBADORA_BIO', padrao: 'cal', nome: 'incubadora de indicador biológico' },
   { k: 'camara', re: /(camara(s)? (de )?(conservacao|vacina(s)?|refrigerada(s)?)|conservadora(s)?|refrigerador(es)?|geladeira(s)?)/, qt: 'QT_CAMARA_CONSERVADORA', mp: 'MP_CAMARA', cal: 'CAL_CAMARA', padrao: 'qt', nome: 'câmara ou refrigerador' },
   { k: 'estufa', re: /(estufa(s)?|banho(s)? ?maria|incubadora(s)? de laboratorio)/, qt: 'QT_ESTUFA', cal: 'CAL_CAMARA', padrao: 'qt', nome: 'estufa ou banho-maria' },
-  { k: 'incubadoraneo', re: /(incubadora(s)?( neonata(l|is))?|berco(s)? aquecido(s)?)/, cal: 'CAL_INCUBADORA_NEO', padrao: 'cal', nome: 'incubadora neonatal' },
+  { k: 'incubadoraneo', re: /(incubadora(s)?( neonata(l|is))?|berco(s)? aquecido(s)?)/, cal: 'CAL_INCUBADORA_NEO', padrao: 'cal', nome: 'incubadora neonatal', avisoSe: { sem: /(neonata|berco|uti|recem)/, texto: 'o tipo da incubadora não foi dito: considerei neonatal; se for de indicador biológico ou de laboratório, troque o item' } },
   { k: 'ambiente', re: /(mapeamento|almoxarifado(s)?|farmacia(s)?|deposito(s)?|ambiente(s)?|sala(s)? de)/, qt: 'QT_SALA', padrao: 'qt', nome: 'ambiente' },
   { k: 'caixa', re: /(caixa(s)? termica(s)?)/, qt: 'QT_CAIXA_TERMICA', padrao: 'qt', nome: 'caixa térmica' },
   { k: 'monitor', re: /(monitor(es)?( multiparametrico(s)?)?|multiparametrico(s)?)/, cal: 'CAL_MONITOR', padrao: 'cal', nome: 'monitor multiparamétrico' },
   { k: 'desfibrilador', re: /(desfibrilador(es)?|cardioversor(es)?|\bdea\b)/, cal: 'CAL_DESFIBRILADOR', padrao: 'cal', nome: 'desfibrilador' },
-  { k: 'bomba', re: /(bomba(s)? (de )?infusao)/, cal: 'CAL_BOMBA_INFUSAO', padrao: 'cal', nome: 'bomba de infusão' },
+  // revisão 01/11/2026: "5 bombas" sozinho (pedido de calibração) é bomba de infusão; bomba de vácuo, d'água, dosadora etc. não
+  { k: 'bomba', re: /(bomba(s)?(?! (d[eao] )?(vacuo|agua|calor|dosadora(s)?|detergente|combustivel|oleo|incendio|recalque))( (de )?(infusao|seringa))?)/, cal: 'CAL_BOMBA_INFUSAO', padrao: 'cal', nome: 'bomba de infusão' },
   { k: 'ventilador', re: /(ventilador(es)?( pulmona(r|res))?|respirador(es)?)/, cal: 'CAL_VENTILADOR', padrao: 'cal', nome: 'ventilador pulmonar' },
   { k: 'ecg', re: /(eletrocardiografo(s)?|\becg\b)/, cal: 'CAL_ECG', padrao: 'cal', nome: 'eletrocardiógrafo' },
   { k: 'bisturi', re: /(bisturi(s)?)/, cal: 'CAL_BISTURI', padrao: 'cal', nome: 'bisturi elétrico' },
@@ -53,12 +55,12 @@ var COM_O_EQUIP = [
   { k: 'aspirador', re: /(aspirador(es)?)/, cal: 'CAL_ASPIRADOR', padrao: 'cal', nome: 'aspirador' },
   { k: 'anestesia', re: /(anestesia)/, cal: 'CAL_ANESTESIA', padrao: 'cal', nome: 'aparelho de anestesia' },
   { k: 'esfigmo', re: /(esfigmo\w*|aparelho(s)? de pressao)/, cal: 'CAL_ESFIGMO', padrao: 'cal', nome: 'esfigmomanômetro' },
-  { k: 'termohigrometro', re: /(termo ?higrometro(s)?)/, cal: 'CAL_TERMOHIGROMETRO', padrao: 'cal', nome: 'termo-higrômetro' },
-  { k: 'datalogger', re: /(data ?logger(s)?|registrador(es)? de temperatura)/, cal: 'CAL_DATALOGGER', padrao: 'cal', nome: 'registrador de temperatura' },
-  { k: 'termometro', re: /(termometro(s)?)/, cal: 'CAL_TERMOMETRO', padrao: 'cal', nome: 'termômetro' },
+  { k: 'termohigrometro', re: /(termo ?higrometro(s)?)/, cal: 'CAL_TERMOHIGROMETRO', padrao: 'cal', instrumento: true, nome: 'termo-higrômetro' },
+  { k: 'datalogger', re: /(data ?logger(s)?|registrador(es)? de temperatura)/, cal: 'CAL_DATALOGGER', padrao: 'cal', instrumento: true, nome: 'registrador de temperatura' },
+  { k: 'termometro', re: /(termometro(s)?)/, cal: 'CAL_TERMOMETRO', padrao: 'cal', instrumento: true, nome: 'termômetro' },
   { k: 'balanca', re: /(balanca(s)?)/, cal: 'CAL_BALANCA_ADULTO', padrao: 'cal', balanca: true, nome: 'balança' },
-  { k: 'manometro', re: /(manometro(s)?|manovacuometro(s)?|transdutor(es)? de pressao)/, cal: 'CAL_MANOMETRO', padrao: 'cal', nome: 'manômetro' },
-  { k: 'valvula', re: /(valvula(s)? de seguranca)/, cal: 'CAL_VALVULA_SEG', padrao: 'cal', nome: 'válvula de segurança' },
+  { k: 'manometro', re: /(\bmanometro(s)?|\bmanovacuometro(s)?|transdutor(es)? de pressao)/, cal: 'CAL_MANOMETRO', padrao: 'cal', instrumento: true, nome: 'manômetro' },
+  { k: 'valvula', re: /(valvula(s)? de seguranca)/, cal: 'CAL_VALVULA_SEG', padrao: 'cal', instrumento: true, nome: 'válvula de segurança' },
   { k: 'centrifuga', re: /(centrifuga(s)?)/, cal: 'CAL_CENTRIFUGA', padrao: 'cal', nome: 'centrífuga' },
   { k: 'horaeng', re: /(hora(s)? (tecnica(s)? )?de engenheiro|laudo(s)? tecnico(s)?|parecer(es)? tecnico(s)?)/, qt: 'HORA_ENGENHEIRO', padrao: 'qt', nome: 'hora de engenheiro' },
   { k: 'horatec', re: /(hora(s)? tecnica(s)?|hora(s)? de tecnico)/, qt: 'HORA_TECNICO', padrao: 'qt', nome: 'hora técnica' }
@@ -84,33 +86,100 @@ function ComO_quantidadeAntes_(antes) {
   return 1;
 }
 
+/**
+ * Quantidade logo depois do equipamento, só quando vem com a palavra de quantidade ("caixas térmicas (4 caixas)", "termômetro 10 un.",
+ * "freezer x3"). Número seguido de unidade de medida (300 L, 30 kg) não é quantidade.
+ */
+function ComO_quantidadeDepois_(depois, palavra) {
+  var raiz = Com_s_(palavra).slice(0, 4);
+  var m = /^\s*x\s*(\d{1,4})\b/.exec(depois) || (raiz.length === 4 ? new RegExp('^\\s*(\\d{1,4})\\s*(x\\b|unidades?\\b|un\\b|equipamentos?\\b|pecas?\\b|' + raiz + '\\w*)').exec(depois) : null);
+  return m ? Math.max(1, Math.min(999, parseInt(m[1], 10))) : 0;
+}
+
+/**
+ * Revisão 01/11/2026: correção de erro de digitação nas palavras que as regras usam ("prevenitva", "calibrção", "autoclav",
+ * "termohigrometo"). Só troca palavra de 5 letras ou mais que fica a 1 letra (2 letras a partir de 9) de UMA palavra conhecida
+ * (inversão de duas letras vizinhas conta 1). Palavra que já é conhecida, número e nome de cidade ficam como estão.
+ */
+var COM_O_DICIONARIO = ['calibracao', 'calibrar', 'qualificacao', 'qualificar', 'validacao', 'manutencao', 'preventiva', 'corretiva', 'mapeamento', 'autoclave', 'termodesinfectora',
+  'desinfetadora', 'ultrassonica', 'lavadora', 'secadora', 'seladora', 'ultrafreezer', 'ultracongelador', 'freezer', 'congelador', 'refrigerador', 'geladeira', 'conservadora', 'conservacao',
+  'estufa', 'incubadora', 'neonatal', 'monitor', 'multiparametrico', 'desfibrilador', 'cardioversor', 'bomba', 'infusao', 'ventilador', 'pulmonar', 'respirador', 'eletrocardiografo',
+  'bisturi', 'oximetro', 'aspirador', 'anestesia', 'esfigmomanometro', 'termohigrometro', 'higrometro', 'termometro', 'datalogger', 'registrador', 'balanca', 'pediatrica', 'manometro',
+  'manovacuometro', 'transdutor', 'valvula', 'seguranca', 'centrifuga', 'almoxarifado', 'farmacia', 'deposito', 'bancada', 'hospitalar', 'peroxido', 'formaldeido', 'termica', 'temperatura'];
+function ComO_distancia_(a, b, lim) {
+  if (Math.abs(a.length - b.length) > lim) return lim + 1;
+  var d = [], i, j;
+  for (i = 0; i <= a.length; i++) { d[i] = [i]; }
+  for (j = 0; j <= b.length; j++) d[0][j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var menor = lim + 1;
+    for (j = 1; j <= b.length; j++) {
+      var c = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+      if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      if (d[i][j] < menor) menor = d[i][j];
+    }
+    if (menor > lim) return lim + 1;
+  }
+  return d[a.length][b.length];
+}
+function ComO_corrigir_(t) {
+  var formas = {};
+  COM_O_DICIONARIO.forEach(function (p) { formas[p] = p; formas[p + 's'] = p + 's'; formas[p + 'es'] = p + 'es'; });
+  return Com_s_(t).split(' ').map(function (w) {
+    if (w.length < 5 || formas[w] || /\d/.test(w)) return w;
+    var lim = w.length >= 9 ? 2 : 1, melhor = null, dist = lim + 1, empate = false;
+    Object.keys(formas).forEach(function (f) {
+      var x = ComO_distancia_(w, f, lim);
+      if (x < dist) { dist = x; melhor = f; empate = false; } else if (x === dist && x <= lim && melhor && melhor.slice(0, 6) !== f.slice(0, 6)) empate = true;
+    });
+    return melhor && dist <= lim && !empate ? melhor : w;
+  }).join(' ');
+}
+
 /** Identifica os itens pelas regras. [{ codigo, quantidade, trecho, motivo, aviso }] e { resto[] } (trechos sem item). */
 function ComO_identificarRegras_(texto) {
-  var n = Com_normBusca_(texto);
+  var n = ComO_corrigir_(Com_normBusca_(texto));
   // trechos: vírgula, ponto e vírgula, "+", quebra de linha e " e " entre itens
   var partes = Com_s_(texto).replace(/\r/g, '').split(/[;\n+]|,(?!\d)|\s+e\s+(?=\d|um\b|uma\b|dois\b|duas\b|tr[eê]s\b|quatro\b|cinco\b|[a-zà-ú]+\s+(?:de|da|do)\b)/i);
   var itens = [], resto = [], ultimaAtiv = ComO_atividade_(n);
   partes.forEach(function (bruto) {
-    var t = Com_normBusca_(bruto);
+    var t = ComO_corrigir_(Com_normBusca_(bruto));
     if (!t) return;
     var ativ = ComO_atividade_(t) || ultimaAtiv;
     if (ComO_atividade_(t)) ultimaAtiv = ComO_atividade_(t);
-    var achou = false, usado = t;
+    var achou = false, achouInstr = false, usado = t;
     COM_O_EQUIP.forEach(function (e) {
       var m = e.re.exec(usado);
       if (!m) return;
       var antes = usado.slice(0, m.index);
+      // "manômetro e válvula de segurança DA AUTOCLAVE": a autoclave é onde o instrumento está, não um item a mais
+      // ("termômetros DE geladeira": o instrumento vem antes; "de" sozinho só vale assim)
+      var prep = /\b(da|do|das|dos|de)\s*$/.exec(antes);
+      if (!e.instrumento && e.padrao === 'qt' && prep) {
+        var semEste = antes + ' ' + usado.slice(m.index + m[0].length);
+        var instr = function (txt) { return COM_O_EQUIP.some(function (e2) { return e2.instrumento && e2.re.test(txt); }); };
+        if (prep[1] === 'de' ? instr(antes) : (achouInstr || instr(semEste))) { usado = semEste; achou = true; return; }
+      }
       var codigo = (ativ === 'MP' && e.mp) || (ativ === 'CAL' && e.cal) || (ativ === 'QT' && e.qt) || e[e.padrao];
       var aviso = e.aviso || '';
       if (ativ && !((ativ === 'MP' && e.mp) || (ativ === 'CAL' && e.cal) || (ativ === 'QT' && e.qt))) aviso = (aviso ? aviso + '; ' : '') + 'a atividade pedida não existe na tabela para ' + e.nome + ': considerei ' + (codigo.indexOf('CAL_') === 0 ? 'calibração' : codigo.indexOf('MP_') === 0 ? 'manutenção preventiva' : 'qualificação');
       if (e.tamanho) {
-        var lit = /(\d{2,4})\s*(l|litros?)\b/.exec(t), pequeno = /(bancada|pequen\w*|odontologic\w*|ate 100|cassete)/.test(t), grande = /(hospitala\w*|horizonta\w*|grande(s)?)/.test(t);
+        var lit = /(\d{2,4})\s*(l|litros?)\b/.exec(t), pequeno = /(bancada|pequen\w*|odontologic\w*|ate 100|cassete|statim)/.test(t), grande = /(hospitala\w*|horizonta\w*|grande(s)?)/.test(t);
         var bancada = lit ? Number(lit[1]) <= 100 : (pequeno && !grande);
         if (bancada) codigo = codigo === 'MP_AUTOCLAVE_GRANDE' ? 'MP_AUTOCLAVE_BANCADA' : codigo === 'QT_AUTOCLAVE_GRANDE' ? 'QT_AUTOCLAVE_BANCADA' : codigo;
         if (!lit && !pequeno && !grande) aviso = (aviso ? aviso + '; ' : '') + 'o volume da autoclave não foi dito: considerei acima de 100 L; se for de bancada, troque o item';
       }
-      if (e.balanca && /(neonata\w*|pediatric\w*|bancada|30 ?kg|ate 30)/.test(t)) codigo = 'CAL_BALANCA_PEQ';
-      itens.push({ codigo: codigo, quantidade: ComO_quantidadeAntes_(antes), trecho: Com_texto_(bruto, 120), motivo: 'palavras "' + m[0] + '"' + (ativ ? ' e "' + { QT: 'qualificação', CAL: 'calibração', MP: 'manutenção' }[ativ] + '"' : ''), aviso: aviso });
+      if (e.balanca) {
+        // capacidade: o maior número antes de "kg" ("5 a 15 kg" = até 15 kg, pequena; "0 a 60 kg" = adulto)
+        var kgs = (t.match(/\d+(?=\s*kg\b)/g) || []).map(Number), kgMax = kgs.length ? Math.max.apply(null, kgs) : 0;
+        if (kgMax ? kgMax <= 30 : /(neonata\w*|pediatric\w*|bancada|ate 30)/.test(t)) codigo = 'CAL_BALANCA_PEQ';
+      }
+      if (e.avisoSe && !e.avisoSe.sem.test(t)) aviso = (aviso ? aviso + '; ' : '') + e.avisoSe.texto;
+      var qtd = ComO_quantidadeAntes_(antes);
+      if (qtd === 1 && !/\d|\b(um|uma)\b/.test(antes)) qtd = ComO_quantidadeDepois_(usado.slice(m.index + m[0].length), m[0]) || 1;
+      if (e.instrumento) achouInstr = true;
+      itens.push({ codigo: codigo, quantidade: qtd, trecho: Com_texto_(bruto, 120), motivo: 'palavras "' + m[0] + '"' + (ativ ? ' e "' + { QT: 'qualificação', CAL: 'calibração', MP: 'manutenção' }[ativ] + '"' : ''), aviso: aviso });
       usado = usado.slice(0, m.index) + ' ' + usado.slice(m.index + m[0].length);
       achou = true;
     });
@@ -190,12 +259,17 @@ function ComO_montarItem_(base, ctx, eu) {
   else if (s1) { it.fontes.push('Preço de tabela: tabela C1 (' + s1.codigo + '), ' + Com_moeda_(normal) + (preco !== normal ? '; ' + fx.nome.toLowerCase() + ' = ' + Com_moeda_(preco) : '') + '. O item não está no catálogo: entra como avulso.'); it.riscos.push({ nivel: 'aviso', texto: 'Fora do catálogo: entra como item avulso com o preço da tabela C1. Peça à gestão para importar a tabela de preços C1 em Produtos e serviços.' }); }
   else it.riscos.push({ nivel: 'erro', texto: 'Sem preço no sistema: digite o preço no passo 1 da proposta.' });
   if (ctx.licitacao && faixa && faixa !== 'NORMAL' && pol.prazo.licitacaoSemAcrescimo) it.fontes.push('Licitação ou contrato: sem o acréscimo da faixa ' + fx.nome.toLowerCase() + '.');
-  if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && Number(pol.margemPecasPct) > 0 && ctx.compras[chave]) {
-    // produto: preço de venda sugerido pela última compra e pela margem sobre peças (o vendedor vê o preço sugerido, não o custo)
+  if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && Number(pol.margemPecasPct) > 0 && ctx.compras[chave] && eu.veCusto) {
+    // produto: preço de venda sugerido pela última compra e pela margem sobre peças. Revisão 01/11/2026: só para quem vê custo.
+    // O sugerido é custo ÷ (1 − margem), arredondado a R$ 1, e a margem (30%) está no manual: para o vendedor ele entregava o
+    // preço de compra (sugerido × 0,7). O vendedor vê o preço de venda praticado (abaixo) e um aviso sem número.
     var cpr = ctx.compras[chave], sug = ComPr_arredondarCima_(cpr.valor / (1 - pol.margemPecasPct / 100), 1);
     it.precoSugeridoCompra = sug; it.precoSugeridoCompraTxt = Com_moeda_(sug);
     it.fontes.push('Preço sugerido pela última cotação de fornecedor (' + cpr.data + ') com a margem sobre peças da política: ' + Com_moeda_(sug) + '.');
     if (preco > 0 && preco < sug - 0.004) it.riscos.push({ nivel: 'aviso', texto: 'O preço do catálogo está abaixo do sugerido pela última compra (' + Com_moeda_(sug) + '): confira com a gestão antes de mandar.' });
+  } else if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && Number(pol.margemPecasPct) > 0 && ctx.compras[chave]) {
+    var cprV = ctx.compras[chave], sugV = cprV.valor / (1 - pol.margemPecasPct / 100);
+    if (preco > 0 && preco < sugV - 0.5) it.riscos.push({ nivel: 'aviso', texto: 'Preço do catálogo a conferir com a gestão antes de mandar (a última compra deste produto mudou a conta).' });
   }
   // referências do banco de preços
   var linhas = ctx.banco.filter(function (r) { return Com_s_(r.ITEM_CHAVE) === chave && ComBP_valida_(r); });
@@ -210,6 +284,12 @@ function ComO_montarItem_(base, ctx, eu) {
   var mesmaUf = ctx.uf ? outros.filter(function (r) { return Com_up_(r.UF) === ctx.uf; }) : [];
   it.parecidos = { n: outros.length, ganho: ComBP_estat_(g.map(v)), perdido: ComBP_estat_(pd.map(v)), geral: ComBP_estat_(outros.map(v)), mesmaUf: mesmaUf.length };
   it.parecidos.txt = outros.length ? 'Outros clientes: ' + Com_plural_(outros.length, 'preço', 'preços') + ' (mediana ' + Com_moeda_(it.parecidos.geral.mediana) + ')' + (g.length ? '; ganhamos com mediana ' + Com_moeda_(it.parecidos.ganho.mediana) + ' (' + g.length + ')' : '') + (pd.length ? '; perdemos com mediana ' + Com_moeda_(it.parecidos.perdido.mediana) + ' (' + pd.length + ')' : '') + (ctx.uf && mesmaUf.length ? '; ' + mesmaUf.length + ' em ' + ctx.uf : '') : 'Sem preços com outros clientes no banco.';
+  if (tipo === 'PRODUTO' && praticado.length) {
+    // produto: o preço de venda praticado (propostas e CRM), que todos veem; o sugerido pela compra é só da gestão (acima)
+    var ultP = praticado.slice().sort(function (a, b) { return Com_dia_(b.DATA).localeCompare(Com_dia_(a.DATA)); })[0];
+    it.praticado = { n: praticado.length, ultimoTxt: Com_moeda_(v(ultP)), data: Com_brDia_(ultP.DATA), medianaTxt: Com_moeda_(ComBP_estat_(praticado.map(v)).mediana) };
+    it.fontes.push('Preço de venda praticado deste produto (propostas e CRM): último ' + it.praticado.ultimoTxt + ' em ' + it.praticado.data + ', mediana ' + it.praticado.medianaTxt + ' (' + Com_plural_(praticado.length, 'venda', 'vendas') + ').');
+  }
   var merc = linhas.filter(function (r) { var o = Com_up_(r.ORIGEM); return o === 'LICITACAO' || o === 'CONCORRENTE' || o === 'INTERNET'; });
   var co = merc.filter(function (r) { return COM_BP_CENTRO_OESTE.indexOf(Com_up_(r.UF)) >= 0; });
   it.mercado = { estat: ComBP_estat_(merc.map(v)), centroOeste: ComBP_estat_(co.map(v)) };
@@ -313,6 +393,17 @@ function ComO_interpretarIA_(texto, candidatos, faixas, refs) {
   return r;
 }
 
+/** Cota de análises com IA por pessoa por hora (conta e devolve se ainda pode). Sem o cache, deixa passar. */
+var COM_O_IA_POR_HORA = 20;
+function ComO_cotaIA_(eu) {
+  try {
+    var c = CacheService.getScriptCache(), k = 'COM_O_IAN_' + Com_s_(eu && eu.id) + '_' + Com_agora_().slice(0, 13), n = Number(c.get(k)) || 0;
+    if (n >= COM_O_IA_POR_HORA) return false;
+    c.put(k, String(n + 1), 3700);
+    return true;
+  } catch (e) { return true; }
+}
+
 /** Fatos (números do sistema) para a justificativa e o verificador. */
 function ComO_fatos_(res) {
   return { itens: res.itens.map(function (i) { return { item: i.nome, quantidade: i.quantidade, faixa: i.faixa, precoTabela: Com_moeda_(i.precoTabela), total: Com_moeda_(i.precoTabela * i.quantidade), cliente: i.cliente ? i.cliente.txt : '', outrosClientes: i.parecidos.txt, mercado: i.mercado.txt, riscos: i.riscos.map(function (x) { return x.texto; }) }; }),
@@ -338,7 +429,8 @@ function ComO_justificativaIA_(res) {
     '\n\nTAREFA: justificativa do orçamento para o vendedor (não vai ao cliente), em até 6 frases: por que estes itens, este prazo e este deslocamento, e onde está o risco de preço. Não invente número: use só os dos FATOS. Formato: {"justificativa":"..."}';
   var r = ComG_chamarIA_(prompt, 4096);
   if (!r.json || !Com_s_(r.json.justificativa)) return { texto: '', aviso: r.aviso };
-  var v = ComG_verificar_(r.json.justificativa, fatos, { livres: 31 });
+  // revisão 01/11/2026: só 0 a 2 ficam livres (antes até 31: "ofereça 15 dias de prazo" passava sem estar nos fatos)
+  var v = ComG_verificar_(r.json.justificativa, fatos, { livres: 2 });
   return v.ok ? { texto: Com_texto_(r.json.justificativa, 1500), aviso: '' } : { texto: '', aviso: 'A justificativa da IA foi recusada pelo verificador (' + v.problemas.slice(0, 2).join('; ') + '); vale a das regras.' };
 }
 
@@ -382,7 +474,11 @@ function ComO_analisar_(eu, d) {
     if (termosTexto.some(function (w) { return nome.indexOf(w) >= 0; }) && candidatos.length < 120) candidatos.push({ codigo: 'P:' + Com_s_(p.ID), nome: Com_s_(p.NOME) });
   });
   var iaFaixa = '', iaLic = null, iaCidade = '';
-  if (texto && !d.semIA && ComG_iaDisponivel_()) {
+  // revisão 01/11/2026: cada análise com IA são 2 chamadas (ler o pedido e a justificativa). Limite por pessoa por hora: depois dele,
+  // vale só as regras (os números são os mesmos), com o aviso.
+  var cotaIA = texto && !d.semIA && ComG_iaDisponivel_() ? ComO_cotaIA_(eu) : true;
+  if (!cotaIA) avisos.push('Você já usou ' + COM_O_IA_POR_HORA + ' análises com IA nesta hora: esta foi feita só pelas regras (os preços são os mesmos; vêm do sistema). Na próxima hora a IA volta.');
+  if (texto && !d.semIA && cotaIA && ComG_iaDisponivel_()) {
     var ri = ComO_interpretarIA_(texto, candidatos, pol.prazo.faixas.filter(function (x) { return x.ativa; }).map(function (x) { return x.codigo; }), ctx.refs);
     if (ri.json && Array.isArray(ri.json.itens)) {
       var validos = {}, descartados = [];

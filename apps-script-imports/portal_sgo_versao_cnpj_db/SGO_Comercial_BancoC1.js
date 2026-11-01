@@ -7,7 +7,9 @@
  * Ficaram de fora: mercadoNaoComparavel 360, mercadoSemValor 1, crmSemPreco 7, crmDeslocamento 27, driveNaoUnitario 573, driveSemServico 425, repetidas 0.
  ****************************************************/
 
-var COM_BANCO_C1 = {
+// Os dados só são montados quando a prévia ou a carga chamam esta função: nada roda ao carregar o projeto.
+function ComBP_dadosC1_() {
+ return {
  versao: "C1-2026-11-01",
  fora: {"mercadoNaoComparavel":360,"mercadoSemValor":1,"crmSemPreco":7,"crmDeslocamento":27,"driveNaoUnitario":573,"driveSemServico":425,"repetidas":0},
  colunas: ["chave","tipo","item","descricao","unidade","valor","quantidade","data","cidade","uf","cliente","origem","resultado","concorrente","valorVencedor","custo","link","fonte","confianca"],
@@ -3066,4 +3068,5 @@ var COM_BANCO_C1 = {
   ["DRV:DRV-0300-00","SERVICO","QT_AUTOCLAVE_GRANDE","ços de Qualificação de Instalação, Operação e Desempenho para equipamentos em geral, como: Autoclaves, Maquinas de Lavanderia Industrial, Calandras e Secadores industriais dentre outros. Descrição dos serviços: REPARO L…","",250,1,"2022-08-25","Goiânia","GO","","PROPOSTA_METROLABS","REFERENCIA","",null,null,"","Proposta antiga da Metrolabs (arquivo do Drive, valor lido por regra; conferir)","BAIXA"],
   ["DRV:DRV-0312-00","SERVICO","CAL_TERMOMETRO","e Corretiva Calibração manômetro, Vacuômetro e Transdutor de pressão, sensor de temperatura (Autoclave) Calibração manômetro, Caldeira (Geradora de Vapor). / [LINHA] / Valores finais: Hora inicial: 09:30 Hora final: 17:…","",250,1,"2020-08-10","Goiânia","GO","","PROPOSTA_METROLABS","REFERENCIA","",null,null,"","Proposta antiga da Metrolabs (arquivo do Drive, valor lido por regra; conferir)","BAIXA"]
  ]
-};
+ };
+}

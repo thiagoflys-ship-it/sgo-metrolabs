@@ -249,9 +249,11 @@ Tudo é editável na tela: tire o que não for, acrescente do catálogo, mude a 
 
 Dentro da proposta, no passo 1, o botão "Orçamentista" faz a mesma análise com o cliente e a unidade da proposta; "Pôr nesta proposta" põe os itens no editor, e você salva.
 
-Os preços vêm sempre do sistema. Quando a chave da IA está cadastrada, a IA só lê o pedido e escreve a justificativa: ela nunca dá preço, cada item que ela aponta é conferido no catálogo, e a justificativa com número que não está no sistema é recusada. Sem a chave, o Orçamentista trabalha pelas regras (palavras e sinônimos). Nos riscos, a comparação é com o preço normal, porque o histórico e o mercado são de prazo normal; o acréscimo da urgência vem por cima.
+Os preços vêm sempre do sistema. Quando a chave da IA está cadastrada, a IA só lê o pedido e escreve a justificativa: ela nunca dá preço, cada item que ela aponta é conferido no catálogo, e a justificativa com número que não está no sistema é recusada. Sem a chave, o Orçamentista trabalha pelas regras (palavras e sinônimos; erro de digitação comum, como "prevenitva" ou "autoclav", é corrigido). Cada pessoa faz até 20 análises com IA por hora; depois, a análise sai pelas regras, com o aviso, e os preços são os mesmos. Nos riscos, a comparação é com o preço normal, porque o histórico e o mercado são de prazo normal; o acréscimo da urgência vem por cima.
 
-"Buscar na internet", em cada item, pesquisa preços públicos (editais, atas e lojas). Abra o link, confira o valor e toque em "Confirmar e guardar no banco": só o que você confirmar entra no banco de preços, com o link. Se mudar o valor, diga por quê. Sem a busca configurada, a tela avisa e o orçamento segue.
+"Buscar na internet", em cada item, pesquisa preços públicos (editais, atas e lojas). Abra o link, confira o valor e toque em "Confirmar e guardar no banco": só o que você confirmar entra no banco de preços, com o link. Se mudar o valor, diga por quê. Sem a busca configurada, a tela avisa e o orçamento segue. A busca gasta a cota da IA: cada pessoa faz até 10 buscas por hora, e a mesma busca nas últimas 6 horas mostra o resultado já achado, sem gastar de novo.
+
+Nos produtos, o vendedor vê o preço de venda praticado (último e mediana das propostas e do CRM). O preço sugerido pela última cotação de fornecedor é da gestão: ele sai do custo e entregaria o preço de compra. Quando a última compra mudou a conta, aparece o aviso para conferir com a gestão.
 
 ## Banco de preços
 
@@ -260,7 +262,8 @@ Comercial > Banco de preços junta os preços de serviços e produtos: o que a M
 - Toda proposta concluída entra sozinha, em aberto. Aprovada pelo cliente ou oportunidade ganha: ganha. Recusada ou perdida: perdida.
 - Na recusa e na perda, diga quem ganhou e por quanto (o valor total da proposta vencedora; o sistema reparte pelos itens). É opcional, mas é o que mais ajuda nas próximas.
 - Preço de concorrente, de internet ou de edital: "Registrar preço". Internet e licitação pedem o link.
-- Você vê os preços praticados e o mercado. Custo, margem e preço de compra dos fornecedores ficam com a gestão: a cotação de fornecedor aparece sem o valor.
+- Você vê os preços praticados e o mercado. Custo, margem e preço de compra dos fornecedores ficam com a gestão: a cotação de fornecedor aparece sem o valor, o fornecedor e a marca.
+- Nas linhas de propostas de outros vendedores e do CRM antigo, o nome do cliente não aparece para o vendedor (o cliente fica com quem fez a proposta e com a gestão); o valor aparece e entra nas contas. O órgão das licitações aparece para todos.
 - O valor das propostas antigas do Drive foi lido por regra e vem com o selo "confiança baixa".
 
 ## Comercial no celular
