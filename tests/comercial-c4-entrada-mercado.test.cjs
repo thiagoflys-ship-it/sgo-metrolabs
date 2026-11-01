@@ -226,7 +226,9 @@ test('telas: entrada com os quatro caminhos (vendedor e gestão), sem valores; N
 
 test('menu, ajuda, manual e base do assistente: Quadro e Gantt dentro de Oportunidades; entrada, perda e relatório documentados', () => {
   const idx = ler('Index.html');
-  assert.doesNotMatch(idx, /data-mod="comercial_kanban"|data-mod="comercial_gantt"/);
+  // o dono pediu para manter Kanban e Gantt: os atalhos ficam no menu e abrem Oportunidades no modo certo
+  assert.match(idx, /data-mod="comercial_kanban"[^>]*onclick="abrir\('comercial_kanban'\)"/);
+  assert.match(idx, /data-mod="comercial_gantt"[^>]*onclick="abrir\('comercial_gantt'\)"/);
   assert.match(idx, /data-mod="comercial_oportunidades" data-busca="[^"]*kanban[^"]*gantt/);
   assert.match(ler('JS_Comercial.html'), /var CM_NAV = \[\[[^\]]*\]((?!comercial_kanban).)*\["comercial_metodologia", "Metodologia"\]\];/s);
   const ajuda = ler('SGO_Ajuda_Comercial.js');

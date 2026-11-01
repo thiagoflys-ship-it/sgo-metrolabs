@@ -361,7 +361,7 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 
 ## Problemas comuns
 
-- **Não acho o Quadro do funil nem o Gantt comercial no menu.** Estão dentro de Oportunidades, nos botões "Quadro (Kanban)" e "Gantt" do topo. A busca do menu por "kanban", "quadro" ou "gantt" leva a Oportunidades.
+- **Onde ficam o Kanban e o Gantt?** No menu do computador continuam os atalhos "Kanban do funil" e "Gantt comercial", que abrem Oportunidades já no modo certo. Dentro de Oportunidades, use os botões "Quadro (Kanban)" e "Gantt" do topo. No celular, entre em Oportunidades e toque no modo.
 - **"Completar quem ganhou" diz que já está registrado e não é trocado.** É a regra: o que foi informado não se sobrescreve. Peça à gestão comercial para desconsiderar o preço no Banco de preços e registrar o certo.
 - **O quadro "Preço proposto × ganho ou perdido" está vazio.** Ele só conta propostas decididas. Escolha "Todo o histórico" ou inclua o CRM antigo (que entra depois da carga do Banco de preços).
 
