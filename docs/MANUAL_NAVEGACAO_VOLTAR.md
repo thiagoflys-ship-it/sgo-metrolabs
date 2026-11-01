@@ -114,3 +114,9 @@ Atualizar a página (F5) ou abrir o SGO+ de novo no mesmo aparelho volta para a 
 - O Voltar pergunta "Sair deste formulário?" quando você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo e o documento ainda não foi gerado.
 - Caixas de marcar: a linha inteira é tocável; as caixas soltas dos sensores ficam com 40 px.
 - Pré-visualização no celular: dentro do SGO+ (visualizador da Etapa 1). Tabela mais larga que a tela rola de lado na própria caixa; a impressão e o PDF continuam em A4, sem mudança. No computador, o documento abre em aba nova, como antes.
+
+## Etapa 5 (01/11/2026): Compras, E-mail, Cadastros e Gestão
+
+- Janelas do E-mail: "×" preso no alto; fecham pelo "×", pelo voltar (inclusive a janela de escrever, que antes não fechava pelo voltar), pela tecla Esc e, no computador, pelo fundo escuro. Com algo digitado, pergunta antes.
+- Listas vazias de Compras e da Caixa de decisões dizem o que trocar para ver os itens.
+- Cliente em Unidades e Equipamentos: sem o filtro "Todos os clientes" e sem os números internos de cadastro.

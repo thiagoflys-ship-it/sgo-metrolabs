@@ -458,7 +458,7 @@
         // Etapa 2 (01/11/2026): trocar de situação é um passo do voltar (volta à situação de antes, com a busca)
         Cp_$_("cpAbas").querySelectorAll("[data-sit]").forEach(function (b) { b.onclick = function () { var de = f.situacao, para = b.getAttribute("data-sit"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Fila de compras: " + b.textContent, function () { f.situacao = de; if (Cp_$_("cpAbas")) carregar(); }); f.situacao = para; carregar(); }; });
         var el = Cp_$_("cpFila");
-        if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Nenhum pedido nesta situação.</div>'; return; }
+        if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Nenhum pedido ' + (f.busca ? 'com essa busca nesta situação. Apague a busca ou toque em «Todas».' : 'nesta situação. Toque em outra situação acima (ou em «Todas») para ver os demais pedidos.') + '</div>'; return; }
         el.innerHTML = '<div class="cp-lista">' + r.requisicoes.map(function (q) {
           var enc = q.situacao === "ENTREGUE" || q.situacao === "CANCELADA";
           return '<div class="cp-card clicavel' + (q.urgencia === "CRITICA" && !enc ? " critica" : q.urgencia === "ALTA" && !enc ? " alta" : enc ? " encerrada" : "") + '" data-req="' + Cp_esc_(q.id) + '"><p class="cp-card-tit">' + Cp_esc_(q.numero) + ' · ' + Cp_esc_(q.titulo) + '</p>' +
@@ -797,7 +797,7 @@
       CP_FIN.mes = Cp_$_("fnMes").value; CP_FIN.cartao = Cp_$_("fnCartao").value; CP_FIN.situacao = Cp_$_("fnSit").value;
       Cp_chamar_("financeiro", { mes: CP_FIN.mes, cartaoFinal: CP_FIN.cartao, situacao: CP_FIN.situacao }, function (r) {
         var el = Cp_$_("fnLista");
-        if (!r.compras.length) { el.innerHTML = '<div class="cp-vazio">Nenhuma compra com esses filtros.</div>'; return; }
+        if (!r.compras.length) { el.innerHTML = '<div class="cp-vazio">Nenhuma compra com esses filtros. Troque o mês, apague o final do cartão ou escolha «Todas» em Situação.</div>'; return; }
         el.innerHTML = '<p class="cp-meta">' + r.compras.length + ' compra(s) · total ' + Cp_esc_(r.totalTxt) + '</p><table class="cp-tabela"><thead><tr><th>Compra</th><th>Fornecedor</th><th class="n">Pedido</th><th class="n">Pago</th><th>Pagamento</th><th>Situação</th><th></th></tr></thead><tbody>' + r.compras.map(function (x) {
           return '<tr><td data-r="Compra"><b>' + Cp_esc_(x.numero) + '</b> · ' + Cp_esc_(x.requisicao) + '<br><span class="cp-meta">' + Cp_esc_(x.titulo) + ' · ' + Cp_esc_(x.vinculo) + '</span>' + (x.semPedido ? ' <span class="cp-selo vermelho">Sem pedido</span>' : '') + (x.menosCotacoes ? ' <span class="cp-selo laranja">Menos cotações</span>' : '') + '</td>' +
             '<td data-r="Fornecedor">' + Cp_esc_(x.fornecedor) + '</td><td class="n" data-r="Pedido">' + Cp_esc_(x.valorTxt) + '</td><td class="n" data-r="Pago">' + Cp_esc_(x.valorPagoTxt || "—") + (x.diferenca ? ' <span class="cp-selo laranja">diferente</span>' : '') + '</td>' +
@@ -1323,7 +1323,7 @@
           return '<tr><td data-r="Vencimento"><b>' + Cp_esc_(x.vencimento) + '</b>' + (x.vencida ? ' <span class="cp-selo vermelho">vencido</span>' : x.venceHoje ? ' <span class="cp-selo laranja">hoje</span>' : '') + '</td><td data-r="Compra"><a href="#" data-ficha="' + Cp_esc_(x.requisicaoId) + '"><b>' + Cp_esc_(x.requisicaoNumero) + '</b></a> · ' + Cp_esc_(x.titulo) + '<br><span class="cp-meta">' + Cp_esc_(x.fornecedor + " · " + x.quem) + '</span></td>' +
             '<td data-r="Forma">' + Cp_esc_(x.formaNome) + (x.beneficiario ? '<br><span class="cp-meta">a ' + Cp_esc_(x.beneficiario) + '</span>' : '') + '</td><td class="n" data-r="Valor">' + Cp_esc_(x.valorTxt) + '</td><td data-r="Situação">' + Cp_seloParc_(x) + (x.pagoEm ? '<br><span class="cp-meta">' + Cp_esc_(x.pagoEm + " · " + x.pagoPor) + '</span>' : '') + '</td>' +
             '<td data-r="">' + (x.podePagar ? '<button type="button" class="btn-primary" data-pg="' + k + '">Marcar como pago</button>' : (x.situacao === "A_PAGAR" ? '<span class="cp-meta">Reembolso seu: outra pessoa baixa.</span>' : '')) + '</td></tr>';
-        }).join("") + '</tbody></table>' : '<div class="cp-vazio">Nada nesta lista.</div>');
+        }).join("") + '</tbody></table>' : '<div class="cp-vazio">' + (CP_APG.situacao === "A_PAGAR" ? 'Nada a pagar agora. Para ver o que já foi pago, escolha «Pagos nos últimos 60 dias» em Mostrar.' : 'Nada nesta lista. Escolha outra opção em Mostrar.') + '</div>');
       el.querySelectorAll("[data-ficha]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); Compras_abrirFicha_(a.getAttribute("data-ficha")); }; });
       el.querySelectorAll("[data-pg]").forEach(function (b) { b.onclick = function () {
         var x = r.itens[Number(b.getAttribute("data-pg"))];

@@ -196,3 +196,13 @@ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resu
 - Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.
 
 A rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês.
+
+## Etapa 5 do programa de melhoria (01/11/2026): listas vazias
+
+As listas vazias dizem o que fazer:
+
+- **Fila de compras:** "Toque em outra situação acima (ou em «Todas»)". Com busca digitada, pede para apagar a busca.
+- **Conferência do Financeiro:** "Troque o mês, apague o final do cartão ou escolha «Todas» em Situação".
+- **A pagar:** "Nada a pagar agora. Para ver o que já foi pago, escolha «Pagos nos últimos 60 dias» em Mostrar".
+
+No celular (390 px) e no computador (1366 px), as telas de Compras foram medidas sem rolagem lateral, sem campo passando da largura e, no celular, sem alvo de toque abaixo de 40 px.

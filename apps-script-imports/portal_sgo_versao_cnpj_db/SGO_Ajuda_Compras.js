@@ -95,6 +95,7 @@ function SGO_ajudaTelas_Compras_() {
         { nome: 'Selo vermelho na cotação', significado: 'Não pode ser escolhida: sem o arquivo do orçamento, validade vencida ou compatibilidade da peça a confirmar.' }
       ],
       problemas: [
+        { situacao: 'A lista está vazia (Fila, Conferência do Financeiro, A pagar).', oQueFazer: 'A mensagem da lista diz o que trocar: outra situação nas abas do alto (ou «Todas»), outro mês, o final do cartão apagado ou, em A pagar, «Pagos nos últimos 60 dias» em Mostrar.' },
         { situacao: 'O botão "iniciar cotação" não aparece.', oQueFazer: 'A especificação está incompleta ou foi devolvida. Complete pelo botão "Editar a especificação" ou espere quem pediu completar.' },
         { situacao: 'Aparece "anexe o arquivo do orçamento".', oQueFazer: 'Só conta orçamento com a prova do preço. Salve o e-mail ou o PDF do fornecedor (ou tire foto) e anexe.' },
         { situacao: 'Não consigo aprovar a compra que eu cotei.', oQueFazer: 'Acima da faixa do comprador, quem lançou ou escolheu orçamento não aprova, e quem pediu nunca aprova a própria compra. A ficha mostra quem aprova.' },

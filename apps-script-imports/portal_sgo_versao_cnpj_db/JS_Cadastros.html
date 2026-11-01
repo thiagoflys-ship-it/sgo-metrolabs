@@ -345,8 +345,15 @@
     sem_documento: ["Sem documento", "tom-info"],
     sem_arquivo: ["Sem arquivo", "tom-alerta"]
   };
+  // Etapa 5 (01/11/2026): pendências da rotina interna (cadastro incompleto, vínculo pendente) não aparecem para o perfil Cliente:
+  // ele não corrige o cadastro e o texto falava de Vínculos e da gestão. O servidor já manda só os dados da empresa dele.
+  var CADUI_PEND_INTERNAS = ["incompleto", "vinculo_pendente"];
+  function CadUI_pendencias_(item) {
+    var p = (item && item.PENDENCIAS) || [];
+    return CadUI_ehCliente_() ? p.filter(function (k) { return CADUI_PEND_INTERNAS.indexOf(k) < 0; }) : p;
+  }
   function CadUI_chips_(item) {
-    var p = item.PENDENCIAS || [];
+    var p = CadUI_pendencias_(item);
     if (!p.length) return "";
     return '<div class="cadx-chips">' + p.map(function (k) {
       var d = CADUI_PENDENCIAS[k] || [k, ""];
@@ -490,6 +497,12 @@
     var div = document.getElementById("conteudo");
     if (!div) return;
     CadUI_fecharMenu_();
+    // Etapa 5 (01/11/2026): perfil Cliente sem o filtro "Todos os clientes" (só existe a empresa dele) e sem os números
+    // "Cadastro incompleto" e "Vínculo pendente", que são da rotina interna.
+    if (CadUI_ehCliente_()) {
+      cfg.filtros = (cfg.filtros || []).filter(function (f) { return f.id !== "cliente"; });
+      cfg.resumo = (cfg.resumo || []).filter(function (r) { return r.id !== "incompleto" && r.id !== "vinculo"; });
+    }
     // Etapa 2 (01/11/2026): voltando para esta tela pelo voltar, a busca, os números do topo, os filtros e a ordem continuam como estavam
     var antigo = CADUI.telas[cfg.chave], manter = !!(antigo && window.SGO_NAV && SGO_NAV.restaurando && SGO_NAV.restaurando());
     var st = CADUI.telas[cfg.chave] = { cfg: cfg, itens: [], carregado: false, resumo: manter ? antigo.resumo : "todos", busca: manter ? antigo.busca : "", filtros: manter ? antigo.filtros : {}, ordem: manter && antigo.ordem ? antigo.ordem : (cfg.ordenar ? cfg.ordenar[0].id : ""), limite: 100, selecionado: "", extra: (antigo && antigo.extra) || {} };
@@ -1223,8 +1236,8 @@
       corpo: function (a) {
         if (a !== "dados") return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(5) + "</div>";
         var faixas = "";
-        if ((u.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> O cliente desta unidade está inativo ou não existe; ela não recebe atendimento. ' + (gestao ? "Corrija em Mais › Transferir para outro cliente, ou reative o cliente." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
-        if ((u.PENDENCIAS || []).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((u.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
+        if (CadUI_pendencias_(u).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> O cliente desta unidade está inativo ou não existe; ela não recebe atendimento. ' + (gestao ? "Corrija em Mais › Transferir para outro cliente, ou reative o cliente." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
+        if (CadUI_pendencias_(u).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((u.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
         return faixas +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Unidade</h4>' + CadUI_dados_([["Nome", u.NOME_UNIDADE], ["Cliente", u.CLIENTE_NOME], ["CNPJ", u.CNPJ_UNIDADE ? CadUI_cnpj_(u.CNPJ_UNIDADE) : ""]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Endereço</h4>' + CadUI_dados_([["Endereço", u.ENDERECO], ["Cidade", u.CIDADE], ["UF", u.UF]]) + "</section>" +

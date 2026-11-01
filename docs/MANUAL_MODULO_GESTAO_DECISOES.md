@@ -150,3 +150,8 @@ Padrões adotados (seguros e já funcionando), para confirmar ou mudar em Regras
 8. Cadastrar na Meta o modelo `sgo_gestao_resumo_dia` (texto em `sgo_servidor/docs/MODELOS_WHATSAPP_META.md`).
 9. Configurar os gestores responsáveis por área (sem isso, tudo vai para a Diretoria).
 10. Relatórios da empresa (29/10/2026): o Gestor de Qualidade está na lista, mas a avaliação dos gestores (Desempenho e Semanal da gestão) segue a regra da tela e vai só para a Diretoria. Se ele também deve receber, é uma mudança de regra de acesso, a decidir.
+
+## Etapa 5 do programa de melhoria (01/11/2026): textos da caixa e do desempenho
+
+- **Caixa de decisões:** o quadro "Como funciona a caixa" vem **fechado no celular** (toque para abrir) e aberto no computador; os números e as abas aparecem mais cedo. "Reserva da Diretoria" virou **"com a Diretoria (a área não tem gestor)"**; o selo "Parado: WhatsApp" virou **"Parado: cobrado no WhatsApp"**. Lista vazia diz o que fazer (qual aba olhar).
+- **Desempenho da gestão:** sem jargão na tela. "Escalonamentos à Diretoria" virou **"Vezes que subiu para a Diretoria"**; "Decisões revertidas … homologadas" virou **"Decisões desfeitas na conferência … conferidas"**; "farol" virou **faixa** (verde, amarela, vermelha); "componente" virou **item**; "média ponderada" virou "média dos itens, cada um com o seu peso". Item sem dado mostra **"não entra na nota: sem dado no mês"**. A conta da nota, os pesos e o relatório A4 não mudaram.

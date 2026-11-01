@@ -102,3 +102,15 @@ Com caixa pessoal conectada, sai da caixa da pessoa (cópia em Enviados; a respo
 | Uma imagem dentro do texto passa de 1024 KB | Reduza a imagem colada ou mande como anexo. |
 | Filtro "De cliente" com nome errado ou e-mail interno | Confira o e-mail do cliente em Cadastros › Clientes: endereço @metrolabs nunca conta; o mesmo endereço em dois clientes aparece como "A ou B". |
 | O rascunho guardado não está mais na pasta Rascunhos | Foi apagado ou enviado pelo webmail/celular; anexe de novo e envie. |
+
+## Etapa 5 do programa de melhoria (01/11/2026): fechar as janelas
+
+Toda janela do E-mail (Escrever, Responder, Encaminhar, Continuar rascunho, Nova assinatura, Editar assinatura e Registrar no cliente) tem um **"×" no alto**, preso no topo mesmo quando a janela rola (também no celular). A janela fecha por:
+
+- o "×" do alto;
+- o Cancelar ou o Descartar do rodapé, como antes;
+- o voltar do celular, do navegador ou o Voltar da barra do topo (a casca usa o mesmo "×");
+- a tecla Esc;
+- no computador, o clique no fundo escuro em volta da janela (no celular a janela ocupa a tela inteira e não há fundo).
+
+Com algo digitado, o sistema pergunta "Fechar sem salvar?" antes. Na janela de escrever vale a pergunta do Descartar (o que não foi salvo como rascunho se perde). Abrir outro módulo pelo menu ou pela busca fecha a janela. No celular, o rodapé da janela (Salvar assinatura, Enviar) tem espaço embaixo para não ficar atrás dos botões redondos de ajuda e bate-papo.

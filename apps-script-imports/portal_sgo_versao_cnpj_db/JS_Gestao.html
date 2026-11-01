@@ -12,6 +12,10 @@
   .gd-kpi.ok { border-top-color: var(--success); }
   .gd-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--bc-line-2, var(--border)); border-left: 4px solid var(--warning); border-radius: 8px; background: var(--bc-surface-2, var(--card)); font-size: 13px; line-height: 1.5; }
   .gd-faixa.info { border-left-color: var(--info, #1f5fa8); }
+  /* Etapa 5 (01/11/2026): "Como funciona" recolhido, para a lista aparecer mais cedo no celular */
+  details.gd-como { padding: 0; }
+  details.gd-como > summary { cursor: pointer; font-weight: 700; padding: 12px 14px; min-height: 44px; box-sizing: border-box; line-height: 20px; } /* mantém o triângulo de abrir */
+  details.gd-como > div { padding: 0 14px 10px; }
   .gd-lista { display: flex; flex-direction: column; gap: 10px; }
   .gd-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 12px 14px; }
   .gd-card.DIRETORIA { border-left-color: var(--danger); } .gd-card.WHATSAPP { border-left-color: var(--warning); }
@@ -81,7 +85,7 @@
   // (formulário de providência nunca é apagado no meio da digitação): recarrega depois de cada ação ou em "Atualizar".
   // ==========================================================
   var GD = { aba: "minhas", dados: null, timer: null, regras: null, aval: null, avalComp: "", avalGestor: "", abaDes: "notas", gerados: null };
-  var GD_ETAPA = { NA_HORA: "Novo", EMAIL: "No e-mail diário", WHATSAPP: "Parado: WhatsApp", DIRETORIA: "Com a Diretoria", PAUSADO: "Providência registrada", ACOMPANHAMENTO: "Acompanhamento" };
+  var GD_ETAPA = { NA_HORA: "Novo", EMAIL: "No e-mail diário", WHATSAPP: "Parado: cobrado no WhatsApp", DIRETORIA: "Com a Diretoria", PAUSADO: "Providência registrada", ACOMPANHAMENTO: "Acompanhamento" };
 
   function Gestao_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Gestao_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
@@ -173,16 +177,16 @@
     document.getElementById("gdKpis").innerHTML = kp(r.total, "Esperando por você", r.total ? "" : "ok") + kp(r.parados, "Paradas há " + R.whatsDiasUteis + " dias úteis ou mais", r.parados ? "aviso" : "ok") +
       kp(r.escalados, "Com a Diretoria", r.escalados ? "critico" : "ok") + kp(r.prazoVencido, "Prazo de decisão vencido", r.prazoVencido ? "critico" : "ok") + kp(r.novos, "Novas");
     var av = [];
-    if (!d.configurado) av.push('<div class="gd-faixa">Nenhum gestor responsável por área foi configurado: tudo vai para a reserva da Diretoria. O Administrador ou a Diretoria escolhe os responsáveis em "Regras e responsáveis".</div>');
+    if (!d.configurado) av.push('<div class="gd-faixa">Nenhum gestor responsável por área foi configurado: tudo fica com a Diretoria. O Administrador ou a Diretoria escolhe os responsáveis em "Regras e responsáveis".</div>');
     if (d.naoVerificado && d.naoVerificado.length) av.push('<div class="gd-faixa">Não foi possível conferir agora: ' + Gestao_esc_(d.naoVerificado.join(", ")) + '. Os itens dessas fontes podem estar faltando; toque em "Atualizar" daqui a pouco.</div>');
-    av.push('<div class="gd-faixa info">Como funciona: o item entra aqui na hora. Todo dia útil, a partir das ' + Gestao_esc_(R.horaEmail) + ', sai um e-mail com o resumo. Parado há ' + R.whatsDiasUteis + ' dias úteis, entra no resumo do WhatsApp (no máximo um por dia, só no horário de trabalho). Parado há ' + R.diretoriaDiasUteis +
-      ' dias úteis, vai para a Diretoria com o nome de quem está com ele. Resolvido na tela de origem, sai sozinho. "Registrar providência" pausa a cobrança por até ' + R.pausaMaxDias + ' dias.' + (d.eu.areas && d.eu.areas.length ? ' Você responde por: ' + Gestao_esc_(d.eu.areas.join(", ")) + '.' : '') + '</div>');
+    av.push('<details class="gd-faixa info gd-como"' + (ehMobileModo_() ? '' : ' open') + '><summary>Como funciona a caixa</summary><div>O item entra aqui na hora. Todo dia útil, a partir das ' + Gestao_esc_(R.horaEmail) + ', sai um e-mail com o resumo. Parado há ' + R.whatsDiasUteis + ' dias úteis, entra no resumo do WhatsApp (no máximo um por dia, só no horário de trabalho). Parado há ' + R.diretoriaDiasUteis +
+      ' dias úteis, vai para a Diretoria com o nome de quem está com ele. Resolvido na tela de origem, sai sozinho. "Registrar providência" pausa a cobrança por até ' + R.pausaMaxDias + ' dias.' + (d.eu.areas && d.eu.areas.length ? ' Você responde por: ' + Gestao_esc_(d.eu.areas.join(", ")) + '.' : '') + '</div></details>');
     document.getElementById("gdAviso").innerHTML = av.join("");
     var abas = [["minhas", "Para mim (" + r.total + ")"], ["todas", "Toda a gestão (" + d.resumoTodas.total + ")"], ["escalados", "Com a Diretoria (" + d.resumoTodas.escalados + ")"], ["acompanhamento", "Acompanhamento (" + d.acompanhamento + ")"]];
     document.getElementById("gdTabs").innerHTML = abas.map(function (a) { return '<button type="button" class="gd-tab' + (GD.aba === a[0] ? " active" : "") + '" onclick="Gestao_trocarAba_(\'' + a[0] + '\')">' + Gestao_esc_(a[1]) + '</button>'; }).join("");
     var c = document.getElementById("gdCorpo");
     if (!d.itens.length) {
-      c.innerHTML = '<div class="gd-vazio">' + (GD.aba === "minhas" ? "Nada esperando pela sua decisão agora." : GD.aba === "acompanhamento" ? "Nenhum vencimento de cliente para acompanhar." : "Nenhum item nesta lista.") + '</div>';
+      c.innerHTML = '<div class="gd-vazio">' + (GD.aba === "minhas" ? "Nada esperando pela sua decisão agora. Quando um módulo precisar de você, o item aparece aqui na hora; para ver o resto da gestão, toque em «Toda a gestão»." : GD.aba === "acompanhamento" ? "Nenhum vencimento de cliente para acompanhar. Quando um documento de cliente estiver perto de vencer, ele aparece aqui." : "Nenhum item nesta lista. Toque em outra aba acima para ver os demais.") + '</div>';
       return;
     }
     c.innerHTML = '<div class="gd-lista">' + d.itens.map(Gestao_cartao_).join("") + '</div>' + (d.cortado ? '<p class="gd-meta">Mostrando os 400 primeiros.</p>' : '') + '<p class="gd-meta">Atualizado em ' + Gestao_esc_(d.geradoEm) + '.</p>';
@@ -190,14 +194,14 @@
 
   function Gestao_cartao_(i, k) {
     var podeAgir = i.meu || (GD.dados.eu.diretoria) || Gestao_perfil_() === "ADMIN";
-    var meta = [i.moduloNome, "área " + i.areaNome, (i.reserva ? "reserva da Diretoria" : "com " + (i.responsaveisNomes.join(", ") || "ninguém")), i.envolvido ? "envolve " + i.envolvido : ""].filter(Boolean).join(" · ");
+    var meta = [i.moduloNome, "área " + i.areaNome, (i.reserva ? "com a Diretoria (a área não tem gestor)" : "com " + (i.responsaveisNomes.join(", ") || "ninguém")), i.envolvido ? "envolve " + i.envolvido : ""].filter(Boolean).join(" · ");
     var tempo = "Na caixa desde " + i.entrouEm + " · " + (i.prazo ? "prazo de decisão " + i.prazo : "sem prazo") + (i.diasParado ? " · parado há " + i.diasParado + (i.diasParado === 1 ? " dia útil" : " dias úteis") : "");
     return '<div class="gd-card ' + Gestao_esc_(i.etapa) + '" id="gdItem' + k + '">' +
       '<div class="gd-card-tit"><span class="gd-selo ' + Gestao_esc_(i.etapa) + '">' + Gestao_esc_(GD_ETAPA[i.etapa] || i.etapa) + '</span>' + (i.prazoVencido ? '<span class="gd-selo vencido">Prazo vencido</span>' : '') + Gestao_esc_(i.titulo) + '</div>' +
       '<div class="gd-meta">' + Gestao_esc_(meta) + '</div>' +
       (i.detalhe ? '<div class="gd-txt">' + Gestao_esc_(i.detalhe) + '</div>' : '') +
       (i.oQueFazer ? '<div class="gd-txt"><strong>O que fazer:</strong> ' + Gestao_esc_(i.oQueFazer) + '</div>' : '') +
-      '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(i.motivoRota) : '') + '</div>' +
+      '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(String(i.motivoRota).replace(/: reserva da Diretoria\./, ": fica com a Diretoria.")) : '') + '</div>' +
       (i.providencia ? '<div class="gd-txt"><strong>Providência</strong> (' + Gestao_esc_(i.providenciaPor) + ', ' + Gestao_esc_(i.providenciaEm) + (i.pausadoAte ? '; acompanhar até ' + Gestao_esc_(i.pausadoAte) : '') + '): ' + Gestao_esc_(i.providencia) + '</div>' : '') +
       // 31/10/2026: pedido de nova data de uma atividade: aceitar com um toque ou recusar com o motivo, aqui mesmo
       // revisão 01/11/2026: data proposta que já passou não pode ser aceita (o servidor barra): ficam Recusar e Abrir a atividade
@@ -301,7 +305,7 @@
       var sel = r.cfg.gestoresPorArea[a.codigo] || [];
       return '<div class="gd-area"><b>' + Gestao_esc_(a.nome) + '</b><div class="gd-checks">' + (r.gestao.length ? r.gestao.map(function (p) {
         return '<label><input type="checkbox" data-gd-area="' + Gestao_esc_(a.codigo) + '" value="' + Gestao_esc_(p.id) + '"' + (sel.indexOf(p.id) >= 0 ? " checked" : "") + dis + '> ' + Gestao_esc_(p.nome) + '</label>';
-      }).join("") : '<span class="gd-meta">Ninguém com perfil de gestão ativo.</span>') + (sel.length ? '' : '<span class="gd-meta">Sem responsável: vai para a reserva da Diretoria.</span>') + '</div></div>';
+      }).join("") : '<span class="gd-meta">Ninguém com perfil de gestão ativo.</span>') + (sel.length ? '' : '<span class="gd-meta">Sem responsável: fica com a Diretoria.</span>') + '</div></div>';
     }).join("");
     var mods = r.modulos.map(function (m) {
       var atual = r.cfg.areaPorModulo[m.chave] || r.areaPadrao[m.chave] || "";
@@ -311,7 +315,7 @@
     var num = function (id, rot, v, min, max) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
     var hora = function (id, rot, v) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="time" id="' + id + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
     c.innerHTML = (r.podeConfigurar ? '' : '<div class="gd-faixa">Só o Administrador e a Diretoria mudam estas regras. Você vê como estão.</div>') +
-      '<div class="gd-regras"><div class="gd-caixa"><h3>Gestor responsável por área</h3><p class="gd-meta">Quem recebe os itens de cada área. Área sem responsável vai para a reserva da Diretoria (' + Gestao_esc_(r.diretoria.join(", ") || "ninguém com perfil Diretoria") + '). Ninguém decide sobre si mesmo: o item da própria pessoa vai para outro responsável ou para a Diretoria.</p>' + areas + '</div>' +
+      '<div class="gd-regras"><div class="gd-caixa"><h3>Gestor responsável por área</h3><p class="gd-meta">Quem recebe os itens de cada área. Área sem responsável fica com a Diretoria (' + Gestao_esc_(r.diretoria.join(", ") || "ninguém com perfil Diretoria") + '). Ninguém decide sobre si mesmo: o item da própria pessoa vai para outro responsável ou para a Diretoria.</p>' + areas + '</div>' +
       '<div><div class="gd-caixa"><h3>Área de cada módulo</h3><p class="gd-meta">Usada quando o item não é de uma pessoa (padrão, veículo, documento). Item de uma pessoa vai para a área dela (Administração > Usuários > Áreas).</p>' + mods + '</div>' +
       '<div class="gd-caixa" style="margin-top:14px"><h3>Escada de cobrança</h3><p class="gd-meta">Sempre só em dia útil e no horário de trabalho (' + Gestao_esc_(r.expediente.ini) + ' a ' + Gestao_esc_(r.expediente.fim) + ', em Atividades da equipe > Avisos e horários).</p>' +
         chk("gdEmail", "E-mail diário com o resumo", e.emailDiario) + hora("gdHoraEmail", "Hora do e-mail diário", e.horaEmail) +
@@ -375,7 +379,7 @@
     if (!div) return;
     if (ehMobileModo_()) atualizarTituloMobile_("Desempenho da gestão");
     div.innerHTML = '<div class="module-shell">' +
-      Gestao_cabecalho_("Desempenho da gestão", "Como cada gestor decide o que depende dele: prazo, tempo, itens vencidos, escalonamentos, acesso, decisões revertidas, equipe e planos de ação. Cada gestor vê a própria avaliação; a Diretoria vê todas.",
+      Gestao_cabecalho_("Desempenho da gestão", "Como cada gestor cuida do que depende dele: se decide no prazo, quanto tempo leva, o que venceu, o que precisou subir para a Diretoria, se entra no sistema, se a decisão foi desfeita, a equipe e os planos de ação. Cada gestor vê a própria avaliação; a Diretoria vê todas.",
         '<button type="button" class="btn-secondary" onclick="Gestao_carregarDesempenho_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
         '<button type="button" class="btn-secondary" onclick="abrir(\'gestao_decisoes\')"><i class="fas fa-inbox" aria-hidden="true"></i>&nbsp;Caixa de decisões</button>') +
       '<div id="gdDesFiltros" class="gd-filtros"></div><div class="gd-tabs" id="gdDesTabs"></div><div id="gdDesCorpo"><div class="gd-vazio">Carregando...</div></div></div>';
@@ -416,7 +420,7 @@
   function Gestao_cartaoGestor_(g) {
     var i = g.indicadores, comp = g.componentes || {};
     var item = function (rot, valor, nota) {
-      return '<div><span class="gd-meta">' + Gestao_esc_(rot) + '</span><b>' + Gestao_esc_(valor) + '</b>' + (nota === null || nota === undefined ? '<span class="gd-meta">sem dado no mês</span>' : '<div class="gd-barra" title="Nota do componente: ' + Gestao_n_(nota) + '"><i style="width:' + Math.max(2, Math.min(100, nota)) + '%"></i></div>') + '</div>';
+      return '<div><span class="gd-meta">' + Gestao_esc_(rot) + '</span><b>' + Gestao_esc_(valor) + '</b>' + (nota === null || nota === undefined ? '<span class="gd-meta">não entra na nota: sem dado no mês</span>' : '<div class="gd-barra" title="Nota do componente: ' + Gestao_n_(nota) + '"><i style="width:' + Math.max(2, Math.min(100, nota)) + '%"></i></div>') + '</div>';
     };
     var det = g.detalhes || {};
     var lst = function (tit, l) { return l && l.length ? '<div class="gd-txt"><strong>' + Gestao_esc_(tit) + ':</strong> ' + Gestao_esc_(l.join("; ")) + '</div>' : ''; };
@@ -425,8 +429,8 @@
       '<div class="gd-comp">' +
         item("Decidido no prazo", i.pctPrazo === null ? "—" : Gestao_n_(i.pctPrazo, 1) + "% (" + i.noPrazo + " de " + i.basePrazo + ")", comp.prazo) +
         item("Tempo médio de decisão", i.tempoMedio === null ? "—" : Gestao_n_(i.tempoMedio, 1) + " dia(s) útil(eis)", comp.tempo) +
-        item("Prazos vencidos sem decisão", String(i.vencidos), comp.vencidos) + item("Escalonamentos à Diretoria", String(i.escalonamentos), comp.escalonamentos) +
-        item("Dias úteis sem acessar", i.diasSemAcesso + " de " + i.diasUteis, comp.acesso) + item("Decisões revertidas", i.revertidas + " de " + i.homologou + " homologadas", comp.revertidas) +
+        item("Prazos vencidos sem decisão", String(i.vencidos), comp.vencidos) + item("Vezes que subiu para a Diretoria", String(i.escalonamentos), comp.escalonamentos) +
+        item("Dias úteis sem acessar", i.diasSemAcesso + " de " + i.diasUteis, comp.acesso) + item("Decisões desfeitas na conferência", i.revertidas + " de " + i.homologou + " conferidas", comp.revertidas) +
         item("Atividades da equipe sem atraso", i.pctEquipe === null ? "—" : Gestao_n_(i.pctEquipe, 1) + "% (" + (i.equipe - i.equipeAtrasadas) + " de " + i.equipe + ")", comp.equipe) +
         item("Planos de ação no prazo", i.pctPlanos === null ? "—" : Gestao_n_(i.pctPlanos, 1) + "% (" + i.planosOk + " de " + i.planos + ")", comp.planos) +
       '</div>' +
@@ -436,10 +440,10 @@
 
   function Gestao_htmlRegraNota_(a) {
     var r = a.regras;
-    var h = '<div class="gd-caixa"><h3>Como a nota é calculada</h3><p class="gd-txt">Cada componente vira uma nota de 0 a 100 e a nota do mês é a média ponderada dos que tiveram dado. Componente sem dado no mês não entra e os pesos dos outros são redistribuídos. Farol verde a partir de ' + r.farol.verde + ', amarelo a partir de ' + r.farol.amarelo + ', vermelho abaixo. Vencimentos de clientes (acompanhamento) não entram. Dias sem acesso contam desde ' + Gestao_esc_(r.implantadoEm || "a ligação da caixa") + '.</p>' +
-      '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Componente</th><th class="n">Peso</th><th>Como é contado</th></tr></thead><tbody>' +
+    var h = '<div class="gd-caixa"><h3>Como a nota é calculada</h3><p class="gd-txt">Cada item vira uma nota de 0 a 100 e a nota do mês é a média dos itens que tiveram dado, cada um com o seu peso. Item sem dado no mês fica de fora e os pesos dos outros são ajustados. Faixa verde a partir de ' + r.farol.verde + ', amarela a partir de ' + r.farol.amarelo + ', vermelha abaixo. Vencimentos de clientes (acompanhamento) não entram. Dias sem acesso contam desde ' + Gestao_esc_(r.implantadoEm || "a ligação da caixa") + '.</p>' +
+      '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Item</th><th class="n">Peso</th><th>Como é contado</th></tr></thead><tbody>' +
       r.componentes.map(function (k) { return '<tr><td>' + Gestao_esc_(k.nome) + '</td><td class="n">' + Gestao_esc_(r.pesos[k.chave]) + '</td><td>' + Gestao_esc_(r.textos[k.chave]) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
-      '<p class="gd-meta">Falha grave recorrente (farol vermelho dois meses seguidos, ou 3 escalonamentos ou mais no mês) vira sugestão no Programa de conduta só para a Diretoria decidir. Nunca vira ocorrência sozinha.</p></div>';
+      '<p class="gd-meta">Falha grave recorrente (faixa vermelha dois meses seguidos, ou 3 vezes ou mais no mês em que o assunto subiu para a Diretoria) vira sugestão no Programa de conduta só para a Diretoria decidir. Nunca vira ocorrência sozinha.</p></div>';
     if (a.podeConfigurar) {
       h += '<div class="gd-caixa" style="margin-top:14px"><h3>Pesos e faixas (Diretoria)</h3>' + r.componentes.map(function (k) {
         return '<div class="gd-linha"><label for="gdPeso_' + k.chave + '">' + Gestao_esc_(k.nome) + '</label><input type="number" min="0" max="100" id="gdPeso_' + k.chave + '" value="' + Gestao_esc_(r.pesos[k.chave]) + '"></div>';

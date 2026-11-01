@@ -9,11 +9,12 @@ function SGO_ajudaTelas_Gestao_() {
       paraQueServe: 'Junta numa lista só tudo o que depende de um gestor ou da Diretoria, venha do módulo que vier: homologar e julgar ocorrências, aprovar missões, decidir sugestões, conferir KM, multas, CNH, manutenção, reservas, comprovantes, casos e planos de ação atrasados, atividades atrasadas da equipe, pedidos de nova data das atividades, padrões e O.S. do Auvo. Cada item diz quem decide, o prazo, há quanto tempo está parado e leva à tela de resolver. Você não precisa abrir módulo por módulo para saber o que espera por você.',
       antesDeComecar: [
         'A caixa é da gestão: perfis Administrador, Diretoria e Gestor. RH e Financeiro também abrem, com os itens das áreas em que são responsáveis.',
-        'Quem recebe cada item depende do gestor responsável por área, definido pelo Administrador ou pela Diretoria em "Regras e responsáveis". Área sem responsável vai para a reserva da Diretoria.',
+        'Quem recebe cada item depende do gestor responsável por área, definido pelo Administrador ou pela Diretoria em "Regras e responsáveis". Área sem responsável fica com a Diretoria.',
         'A área de cada pessoa vem do cadastro (Administração > Usuários > Áreas).'
       ],
       passos: [
         { titulo: 'Ver o que espera por você', itens: ['Toque em "Caixa de decisões" no menu (grupo Gestão).', 'A aba "Para mim" mostra só o que é seu, do mais urgente para o menos urgente.', 'Leia o título, o "O que fazer" e o prazo de decisão.'] },
+        { titulo: 'Ler a caixa no celular', itens: ['O quadro "Como funciona a caixa" vem fechado no celular: toque nele para ler a regra (e-mail diário, WhatsApp, Diretoria e pausa).', 'Os números do topo e as abas (Para mim, Toda a gestão, Com a Diretoria, Acompanhamento) ficam logo abaixo. Lista vazia diz qual aba olhar.'] },
         { titulo: 'Resolver um item', itens: ['Toque em "Abrir a tela de resolver".', 'Faça a decisão na tela do módulo (por exemplo, homologar a ocorrência ou conferir o KM).', 'Volte à caixa e toque em "Atualizar": o item resolvido sai sozinho.'] },
         { titulo: 'Registrar providência (quando a solução depende de terceiros)', itens: ['Toque em "Registrar providência" no item.', 'Escreva o que foi feito, por exemplo "Oficina agendada para quinta".', 'Escolha até quando acompanhar (no máximo 10 dias).', 'Toque em "Registrar". A cobrança fica pausada até a data; o item continua na caixa até ser resolvido.'] },
         { titulo: 'Decidir um pedido de nova data (atividades)', itens: ['O item "Decidir a nova data (data) pedida por ..." traz o motivo, a explicação, a data proposta e quantas vezes a data já foi adiada. É um item por atividade: se a pessoa muda o pedido, o mesmo item é atualizado.', 'Para aceitar, toque em "Aceitar nova data (data)". A data vira a previsão de entrega e o item sai da caixa.', 'Para recusar, toque em "Recusar", escreva em poucas palavras por que a data não serve e toque em "Confirmar recusa". A pessoa vê o motivo e volta a ser cobrada até pedir outra data ou concluir.', 'Enquanto você não decide, a pessoa não é cobrada pelo atraso; o prazo de decisão é seu.', 'Se preferir definir outra data você mesmo, abra a atividade e mude o prazo em "Editar": o pedido é encerrado e o replanejamento fica no histórico.'] },
@@ -28,7 +29,7 @@ function SGO_ajudaTelas_Gestao_() {
         { nome: 'Aba "Acompanhamento"', significado: 'Vencimentos de documentos, calibrações e laudos de clientes. Não sobem a escada nem entram na avaliação: dependem do cliente.' }
       ],
       problemas: [
-        { situacao: 'Tudo aparece como "reserva da Diretoria".', oQueFazer: 'Ainda não há gestor responsável configurado nas áreas. Peça ao Administrador ou à Diretoria para marcar os responsáveis em "Regras e responsáveis".' },
+        { situacao: 'Tudo aparece como "com a Diretoria (a área não tem gestor)".', oQueFazer: 'Ainda não há gestor responsável configurado nas áreas. Peça ao Administrador ou à Diretoria para marcar os responsáveis em "Regras e responsáveis".' },
         { situacao: 'Um item de uma pessoa da minha área foi para outro gestor.', oQueFazer: 'Confira a área da pessoa em Administração > Usuários > Áreas. O item segue a área da pessoa envolvida.' },
         { situacao: 'Aparece "Não foi possível conferir agora" com o nome de uma fonte.', oQueFazer: 'Uma leitura falhou nesta atualização; nada foi dado como resolvido. Toque em "Atualizar" daqui a pouco. Se repetir, avise o administrador.' },
         { situacao: 'Resolvi na tela do módulo e o item continua na caixa.', oQueFazer: 'Toque em "Atualizar". Itens do Auvo dependem da próxima sincronização; documentos dependem do cadastro do documento novo.' },
@@ -37,7 +38,7 @@ function SGO_ajudaTelas_Gestao_() {
       quemPode: [
         { perfil: 'GESTOR', pode: 'Ver a própria caixa e a da gestão toda, abrir as telas de resolver e registrar providência nos itens dele.' },
         { perfil: 'ADMIN', pode: 'Tudo do gestor, registrar providência em qualquer item e configurar os responsáveis, a escada e as automações.' },
-        { perfil: 'DIRETORIA', pode: 'Tudo do administrador, ver os itens escalados e receber a reserva das áreas sem gestor.' },
+        { perfil: 'DIRETORIA', pode: 'Tudo do administrador, ver os itens escalados e receber os itens das áreas sem gestor.' },
         { perfil: 'RH,FINANCEIRO', pode: 'Abrem a caixa com os itens das áreas em que são responsáveis (Regras e responsáveis) e registram a providência neles. Não veem os itens das outras áreas.' },
         { perfil: 'TECNICO,METROLOGIA,COMERCIAL', pode: 'Não usam esta tela. O que depende de cada um aparece no Início e em Minhas atividades.' }
       ],
@@ -97,22 +98,22 @@ function SGO_ajudaTelas_Gestao_() {
     },
     'gestao_desempenho': {
       titulo: 'Desempenho da gestão',
-      paraQueServe: 'Mostra, por gestor e por mês, como ele decide o que depende dele: decidido no prazo, tempo médio de decisão, prazos vencidos sem decisão, escalonamentos à Diretoria, dias úteis sem acessar o sistema, decisões revertidas, atividades da equipe sem atraso e planos de ação no prazo. A nota de 0 a 100 e o farol seguem uma regra publicada na própria tela.',
+      paraQueServe: 'Mostra, por gestor e por mês, como ele decide o que depende dele: decidido no prazo, tempo médio de decisão, prazos vencidos sem decisão, vezes que o assunto subiu para a Diretoria, dias úteis sem acessar o sistema, decisões desfeitas na conferência, atividades da equipe sem atraso e planos de ação no prazo. A nota de 0 a 100 e a faixa (verde, amarela ou vermelha) seguem uma regra publicada na própria tela, na aba "Regra da nota". Item marcado "não entra na nota: sem dado no mês" não pesa na nota daquele mês.',
       antesDeComecar: [
         'Cada gestor vê só a própria avaliação. A Diretoria vê todos. Ninguém mais vê.',
         'É avaliado quem tem o perfil Gestor e quem responde por uma área em Caixa de decisões > Regras e responsáveis.',
         'O mês fechado fica congelado no primeiro dia útil do mês seguinte.'
       ],
       passos: [
-        { titulo: 'Ver a avaliação', itens: ['Toque em "Desempenho da gestão" no menu (grupo Gestão).', 'Escolha o mês.', 'Leia a nota, o farol e cada indicador. A barra embaixo de cada indicador é a nota daquele componente.'] },
+        { titulo: 'Ver a avaliação', itens: ['Toque em "Desempenho da gestão" no menu (grupo Gestão).', 'Escolha o mês.', 'Leia a nota, a faixa (verde, amarela ou vermelha) e cada item. A barra embaixo de cada item é a nota dele.'] },
         { titulo: 'Gerar o relatório A4', itens: ['Gestor: toque em "Gerar meu relatório A4".', 'Diretoria: toque em "Gerar relatório A4 do mês" (todos ou o gestor escolhido em "Gestor").', 'A cópia em PDF e HTML fica guardada na pasta "Gestão - Relatórios".'] },
-        { titulo: 'Mudar os pesos (Diretoria)', itens: ['Abra a aba "Regra da nota".', 'Ajuste os pesos e as faixas do farol.', 'Toque em "Salvar pesos". O mês em curso usa os pesos novos; meses fechados não mudam.'] },
+        { titulo: 'Mudar os pesos (Diretoria)', itens: ['Abra a aba "Regra da nota".', 'Ajuste os pesos e as faixas verde e amarela.', 'Toque em "Salvar pesos". O mês em curso usa os pesos novos; meses fechados não mudam.'] },
         { titulo: 'Relatórios da empresa (Diretoria)', itens: ['Abra a aba "Relatórios". O bloco "Relatórios da empresa" mostra quem recebe, os próximos envios e o histórico.', 'Marque quem recebe e toque em "Salvar lista". "Voltar ao padrão" deixa a Diretoria e o gestor da Qualidade.', 'No primeiro dia útil da semana, a partir das 08:00, sai um e-mail com os relatórios da semana anterior: gestão, Programa de conduta (equipe e missões), Frota, Comercial e SEDNA. No primeiro dia útil do mês sai o pacote do mês anterior, que começa pela "Saúde da empresa".', 'O e-mail sai quando tudo fica pronto ou às 10:30, com o que ficou pronto e o motivo do que faltou.', 'Para conferir sem esperar, toque em "Gerar e enviar agora (teste)": o pacote vai só para você.'] }
       ],
       cores: [
-        { nome: 'Farol verde', significado: 'Nota a partir de 85 (padrão).' },
-        { nome: 'Farol amarelo', significado: 'Nota a partir de 70 e abaixo de 85 (padrão).' },
-        { nome: 'Farol vermelho', significado: 'Nota abaixo de 70. Dois meses seguidos no vermelho, ou 3 escalonamentos no mês, geram sugestão no Programa de conduta só para a Diretoria decidir.' },
+        { nome: 'Faixa verde', significado: 'Nota a partir de 85 (padrão).' },
+        { nome: 'Faixa amarela', significado: 'Nota a partir de 70 e abaixo de 85 (padrão).' },
+        { nome: 'Faixa vermelha', significado: 'Nota abaixo de 70. Dois meses seguidos no vermelho, ou 3 vezes no mês em que o assunto subiu para a Diretoria, geram sugestão no Programa de conduta só para a Diretoria decidir.' },
         { nome: '"Sem dados no mês"', significado: 'Não houve item, prazo nem atividade para medir no mês.' }
       ],
       problemas: [

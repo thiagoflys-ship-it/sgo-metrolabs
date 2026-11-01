@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "7aae44524d92",
+ "versao": "7f3146b5f2a4",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -313,6 +313,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Do cadastro ao relatório de qualificação (20/10/2026) > Vencimento da requalificação",
      "texto": "A validade do relatório de qualificação vira pendência Requalificação a vencer (30 dias antes) e Requalificação vencida na central de pendências, na Caixa de decisões da gestão (acompanhamento) e para o próprio cliente. No Cronograma de execução, ao trazer os equipamentos do cadastro, a tela avisa quais estão com a requalificação vencida ou a vencer. O novo relatório emitido substitui o vencimento anterior."
+    },
+    {
+     "titulo": "Etapa 5 do programa de melhoria (01/11/2026): o que o cliente vê em Unidades e Equipamentos",
+     "texto": "Para o perfil Cliente, as listas de Unidades e Equipamentos:\nnão têm o filtro \"Todos os clientes\" (só existe a empresa dele);\nnão mostram os números, os selos e as faixas \"Cadastro incompleto\" e \"Vínculo pendente\", que são da rotina interna da Metrolabs (ele não corrige o cadastro). Continuam: Total, Ativos, Inativos, Documento vencido ou vencendo e Sem documento.\n\nConferência no servidor (sem mudança necessária): com um cliente entrando e pedindo direto ao servidor os dados de outro cliente, todas as chamadas desta área devolveram só a própria empresa ou \"Acesso negado\": cadastrosPainel (clientes, unidades, equipamentos, documentos), cadastrosDetalhe, equipamentosListar, equipamentosPesquisar, equipamentosObter, equipamentosListarClientesAtivos, equipamentosListarUnidadesAtivasPorCliente, qualifEquipamentoListar, qrcodeGerarParaEquipamento, qrcodeAcessar, inventarioListarClientesAtivos, inventarioListarUnidadesAtivasPorCliente e inventarioGerar (mesmo pedindo o outro cliente no filtro). O recorte é feito pelo clienteId da sessão (CadPainel_base_, SGO_EQUIPAMENTOS, SGO_QEQ_equipamentoVisivel_, SGO_VINCULOS.units). O filtro na tela era só aparência: não havia vazamento."
     }
    ]
   },
@@ -1960,6 +1964,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Avisos (parte 2)",
      "texto": "quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail. Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência. Compra informada em seu nome por outra pessoa: você, no sistema. Compra informada que \"ainda vai chegar\": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento. Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa. Reembolso pago: quem recebeu, no sistema e no resumo de e-mail. Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.\n\nA rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês."
+    },
+    {
+     "titulo": "Etapa 5 do programa de melhoria (01/11/2026): listas vazias",
+     "texto": "As listas vazias dizem o que fazer:\nFila de compras: \"Toque em outra situação acima (ou em «Todas»)\". Com busca digitada, pede para apagar a busca.\nConferência do Financeiro: \"Troque o mês, apague o final do cartão ou escolha «Todas» em Situação\".\nA pagar: \"Nada a pagar agora. Para ver o que já foi pago, escolha «Pagos nos últimos 60 dias» em Mostrar\".\n\nNo celular (390 px) e no computador (1366 px), as telas de Compras foram medidas sem rolagem lateral, sem campo passando da largura e, no celular, sem alvo de toque abaixo de 40 px."
     }
    ]
   },
@@ -2200,6 +2208,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Erros comuns",
      "texto": "O que aparece | O que fazerO servidor de e-mail recusou a senha | Confira no webmail; se trocou a senha, \"Trocar a senha guardada\".\nSó dá para conectar caixas da empresa | Use o endereço @metrolabs.com.br.\nLimite de envio atingido | \"Salvar rascunho\" e envie mais tarde.\nA mensagem não está mais na pasta | Foi movida ou apagada no webmail ou celular; procure nas pastas e na Lixeira.\nO e-mail integrado só funciona no servidor próprio | Entre por sgo.metrolabs.com.br ou command.metrolabs.com.br.\nO limite por arquivo é 15 MB / passaria de 18 MB somados | Compacte, divida em partes, desmarque anexos da original ou mande um link de compartilhamento.\nLimite de 20 arquivos por mensagem | Junte os arquivos num .zip ou mande em outra mensagem.\nA imagem da assinatura precisa ser PNG ou JPG / passa de 300 KB | Salve como PNG ou JPG; recorte as bordas ou use o logotipo em PNG.\nUma imagem dentro do texto passa de 1024 KB | Reduza a imagem colada ou mande como anexo.\nFiltro \"De cliente\" com nome errado ou e-mail interno | Confira o e-mail do cliente em Cadastros › Clientes: endereço @metrolabs nunca conta; o mesmo endereço em dois clientes aparece como \"A ou B\".\nO rascunho guardado não está mais na pasta Rascunhos | Foi apagado ou enviado pelo webmail/celular; anexe de novo e envie."
+    },
+    {
+     "titulo": "Etapa 5 do programa de melhoria (01/11/2026): fechar as janelas",
+     "texto": "Toda janela do E-mail (Escrever, Responder, Encaminhar, Continuar rascunho, Nova assinatura, Editar assinatura e Registrar no cliente) tem um \"×\" no alto, preso no topo mesmo quando a janela rola (também no celular). A janela fecha por:\no \"×\" do alto;\no Cancelar ou o Descartar do rodapé, como antes;\no voltar do celular, do navegador ou o Voltar da barra do topo (a casca usa o mesmo \"×\");\na tecla Esc;\nno computador, o clique no fundo escuro em volta da janela (no celular a janela ocupa a tela inteira e não há fundo).\n\nCom algo digitado, o sistema pergunta \"Fechar sem salvar?\" antes. Na janela de escrever vale a pergunta do Descartar (o que não foi salvo como rascunho se perde). Abrir outro módulo pelo menu ou pela busca fecha a janela. No celular, o rodapé da janela (Salvar assinatura, Enviar) tem espaço embaixo para não ficar atrás dos botões redondos de ajuda e bate-papo."
     }
    ]
   },
@@ -2806,6 +2818,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Decisões para o dono",
      "texto": "Padrões adotados (seguros e já funcionando), para confirmar ou mudar em Regras e responsáveis:\n1. Áreas padrão de cada módulo (Frota em Administrativo, Programa de conduta em RH, documentos de clientes em Comercial).\n2. Vencimentos de clientes como acompanhamento (fora da escada e da avaliação).\n3. Janela da caixa para \"a vencer\": 15 dias (padrões, documentos e manutenção de veículo) e 7 dias (CNH).\n4. Pausa máxima da providência: 10 dias.\n5. Mensal no primeiro dia útil do mês (o dia 1 pode cair em fim de semana ou feriado).\n6. Pesos e faixas do farol (30/15/15/15/10/5/5/5; 85 e 70).\n7. Gatilho da sugestão no Programa de conduta (vermelho dois meses seguidos ou 3 escalonamentos no mês).\n8. Cadastrar na Meta o modelo sgo_gestao_resumo_dia (texto em sgo_servidor/docs/MODELOS_WHATSAPP_META.md).\n9. Configurar os gestores responsáveis por área (sem isso, tudo vai para a Diretoria).\n10. Relatórios da empresa (29/10/2026): o Gestor de Qualidade está na lista, mas a avaliação dos gestores (Desempenho e Semanal da gestão) segue a regra da tela e vai só para a Diretoria. Se ele também deve receber, é uma mudança de regra de acesso, a decidir."
+    },
+    {
+     "titulo": "Etapa 5 do programa de melhoria (01/11/2026): textos da caixa e do desempenho",
+     "texto": "Caixa de decisões: o quadro \"Como funciona a caixa\" vem fechado no celular (toque para abrir) e aberto no computador; os números e as abas aparecem mais cedo. \"Reserva da Diretoria\" virou \"com a Diretoria (a área não tem gestor)\"; o selo \"Parado: WhatsApp\" virou \"Parado: cobrado no WhatsApp\". Lista vazia diz o que fazer (qual aba olhar).\nDesempenho da gestão: sem jargão na tela. \"Escalonamentos à Diretoria\" virou \"Vezes que subiu para a Diretoria\"; \"Decisões revertidas … homologadas\" virou \"Decisões desfeitas na conferência … conferidas\"; \"farol\" virou faixa (verde, amarela, vermelha); \"componente\" virou item; \"média ponderada\" virou \"média dos itens, cada um com o seu peso\". Item sem dado mostra \"não entra na nota: sem dado no mês\". A conta da nota, os pesos e o relatório A4 não mudaram."
     }
    ]
   },
@@ -3675,6 +3691,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Etapa 4 (01/11/2026): documentos técnicos no celular",
      "texto": "Vale para Autoclaves, Lavadoras, Cadeia de frio, Estufa/banho-maria/secadora, Esterilização a baixa temperatura, Declaração de execução, Relatório de qualificação (QI/QO/QD), Certificado e Relatório de calibração, Padrões, PGT e POP, Registros operacionais, Planejamento CME, Cronograma de execução e Laudo NR-13.\nFormulário longo (mais de duas telas e meia, com 4 seções ou mais) ganha, no celular, o índice das seções acima do formulário. Ao rolar, ele fica preso logo abaixo da barra do topo; \"Próxima\" leva à seção seguinte.\nO Voltar pergunta \"Sair deste formulário?\" quando você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo e o documento ainda não foi gerado.\nCaixas de marcar: a linha inteira é tocável; as caixas soltas dos sensores ficam com 40 px.\nPré-visualização no celular: dentro do SGO+ (visualizador da Etapa 1). Tabela mais larga que a tela rola de lado na própria caixa; a impressão e o PDF continuam em A4, sem mudança. No computador, o documento abre em aba nova, como antes."
+    },
+    {
+     "titulo": "Etapa 5 (01/11/2026): Compras, E-mail, Cadastros e Gestão",
+     "texto": "Janelas do E-mail: \"×\" preso no alto; fecham pelo \"×\", pelo voltar (inclusive a janela de escrever, que antes não fechava pelo voltar), pela tecla Esc e, no computador, pelo fundo escuro. Com algo digitado, pergunta antes.\nListas vazias de Compras e da Caixa de decisões dizem o que trocar para ver os itens.\nCliente em Unidades e Equipamentos: sem o filtro \"Todos os clientes\" e sem os números internos de cadastro."
     }
    ]
   },

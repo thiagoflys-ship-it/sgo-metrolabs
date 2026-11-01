@@ -287,7 +287,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar unidades. Transferir a unidade para outro cliente em Vínculos." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também excluir de vez unidades sem nada ligado." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Cadastrar, editar, inativar e reativar unidades. Excluir e trocar de cliente fica com a gestão." },
-        { perfil: "CLIENTE", pode: "Ver as unidades da própria empresa, com os equipamentos e os documentos. Para corrigir um dado, fale com a Metrolabs." }
+        { perfil: "CLIENTE", pode: "Ver as unidades da própria empresa, com os equipamentos e os documentos. A lista não tem filtro de cliente (só aparece a sua empresa) nem os números internos de cadastro. Para corrigir um dado, fale com a Metrolabs." }
       ],
       perguntas: [
         { p: "A unidade principal pode ter o mesmo CNPJ do cliente?", r: "Sim. É o caso mais comum: a unidade principal usa o mesmo CNPJ e o mesmo endereço do cliente." },
@@ -446,7 +446,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Cadastrar, editar, inativar e reativar equipamentos, gerar o QR Code e anexar documentos. Transferir para outra unidade em Vínculos." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também excluir de vez equipamentos sem nada ligado." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Cadastrar, editar, inativar e reativar equipamentos, gerar o QR Code e anexar documentos. Excluir e transferir fica com a gestão." },
-        { perfil: "CLIENTE", pode: "Ver os equipamentos da própria empresa, os documentos de cada um e o QR Code (botão \"QR Code\"). Para corrigir um dado, fale com a Metrolabs." }
+        { perfil: "CLIENTE", pode: "Ver os equipamentos da própria empresa, os documentos de cada um e o QR Code (botão \"QR Code\"). A lista não tem filtro de cliente (só aparece a sua empresa) e não mostra \"Cadastro incompleto\" nem \"Vínculo pendente\", que são da rotina interna da Metrolabs. Para corrigir um dado, fale com a Metrolabs." }
       ],
       perguntas: [
         { p: "O que é a TAG?", r: "É o código que identifica o equipamento no cliente, como o número do patrimônio ou da etiqueta. Exemplo: AUT-01." },

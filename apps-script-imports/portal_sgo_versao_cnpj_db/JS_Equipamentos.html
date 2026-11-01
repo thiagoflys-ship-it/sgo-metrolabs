@@ -94,8 +94,8 @@
       corpo: function (a) {
         if (a !== "dados") return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(5) + "</div>";
         var faixas = "";
-        if ((e.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> A unidade ou o cliente deste equipamento estão inativos, ou a unidade é de outro cliente. ' + (gestao ? "Corrija em Mais › Transferir para outra unidade." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
-        if ((e.PENDENCIAS || []).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((e.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
+        if (CadUI_pendencias_(e).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> A unidade ou o cliente deste equipamento estão inativos, ou a unidade é de outro cliente. ' + (gestao ? "Corrija em Mais › Transferir para outra unidade." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
+        if (CadUI_pendencias_(e).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((e.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
         return faixas +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["TAG", e.TAG], ["Tipo", CadUI_maiusculaInicial_(e.TIPO)], ["Número de série", e.SERIE], ["Patrimônio", e.PATRIMONIO], ["Fabricante", e.FABRICANTE], ["Modelo", e.MODELO], ["Ano de fabricação", e.ANO_FABRICACAO], ["Capacidade ou volume", e.CAPACIDADE], ["Câmaras ou portas", e.NUM_CAMARAS]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Onde está</h4>' + CadUI_dados_([["Cliente", e.CLIENTE_NOME], ["Unidade", e.UNIDADE_NOME], ["Setor ou local", e.SETOR], ["Responsável no cliente", e.RESPONSAVEL_CLIENTE]]) +

@@ -161,3 +161,12 @@ Quem lê a etiqueta do equipamento e entra no SGO+ vê, abaixo da identificaçã
 ### Vencimento da requalificação
 
 A validade do relatório de qualificação vira pendência **Requalificação a vencer** (30 dias antes) e **Requalificação vencida** na central de pendências, na Caixa de decisões da gestão (acompanhamento) e para o próprio cliente. No Cronograma de execução, ao trazer os equipamentos do cadastro, a tela avisa quais estão com a requalificação vencida ou a vencer. O novo relatório emitido substitui o vencimento anterior.
+
+## Etapa 5 do programa de melhoria (01/11/2026): o que o cliente vê em Unidades e Equipamentos
+
+Para o perfil **Cliente**, as listas de Unidades e Equipamentos:
+
+- não têm o filtro **"Todos os clientes"** (só existe a empresa dele);
+- não mostram os números, os selos e as faixas **"Cadastro incompleto"** e **"Vínculo pendente"**, que são da rotina interna da Metrolabs (ele não corrige o cadastro). Continuam: Total, Ativos, Inativos, Documento vencido ou vencendo e Sem documento.
+
+**Conferência no servidor (sem mudança necessária):** com um cliente entrando e pedindo direto ao servidor os dados de outro cliente, todas as chamadas desta área devolveram só a própria empresa ou "Acesso negado": `cadastrosPainel` (clientes, unidades, equipamentos, documentos), `cadastrosDetalhe`, `equipamentosListar`, `equipamentosPesquisar`, `equipamentosObter`, `equipamentosListarClientesAtivos`, `equipamentosListarUnidadesAtivasPorCliente`, `qualifEquipamentoListar`, `qrcodeGerarParaEquipamento`, `qrcodeAcessar`, `inventarioListarClientesAtivos`, `inventarioListarUnidadesAtivasPorCliente` e `inventarioGerar` (mesmo pedindo o outro cliente no filtro). O recorte é feito pelo `clienteId` da sessão (`CadPainel_base_`, `SGO_EQUIPAMENTOS`, `SGO_QEQ_equipamentoVisivel_`, `SGO_VINCULOS.units`). O filtro na tela era só aparência: não havia vazamento.

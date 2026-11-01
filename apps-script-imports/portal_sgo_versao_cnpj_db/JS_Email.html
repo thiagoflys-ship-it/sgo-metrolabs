@@ -51,7 +51,11 @@
   .em-acoes select { width: auto; max-width: 100%; }
   .em-overlay { position: fixed; inset: 0; background: rgba(15, 20, 18, .45); z-index: 9000; display: flex; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow-y: auto; }
   .em-janela { background: var(--card); color: var(--text); border-radius: 10px; width: 100%; max-width: 820px; padding: 14px 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25); box-sizing: border-box; }
-  .em-janela h3 { margin: 0 0 10px; font-size: 16px; }
+  .em-janela h3 { margin: 0 0 10px; font-size: 16px; padding-right: 52px; }
+  /* Etapa 5 (01/11/2026): "×" preso no alto da janela, também quando a janela rola */
+  .em-janela-topo { position: sticky; top: 0; height: 0; display: flex; justify-content: flex-end; z-index: 2; }
+  .em-fechar { width: 44px; height: 44px; min-height: 44px; margin: -6px -8px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--card); color: var(--text); font-size: 24px; line-height: 1; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .em-fechar:hover, .em-fechar:focus-visible { border-color: var(--info, #1f5fa8); }
   .em-linha { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; align-items: center; margin-bottom: 6px; }
   .em-linha label { font-size: 12.5px; font-weight: 700; }
   .em-linha input { width: 100%; box-sizing: border-box; min-height: 38px; }
@@ -75,7 +79,8 @@
     .em-voltar { display: inline-flex; }
     .em-lista { max-height: none; }
     .em-overlay { padding: 0; }
-    .em-janela { border-radius: 0; min-height: 100vh; max-width: none; }
+    .em-janela { border-radius: 0; min-height: 100vh; max-width: none; padding-bottom: 96px; } /* Etapa 5: rodapé (Salvar, Enviar) fora dos botões redondos */
+    .em-fechar { margin: -2px 0 0; }
     .em-linha { grid-template-columns: minmax(0, 1fr); gap: 2px; }
     .em-tabela-rolar { overflow-x: auto; }
   }
@@ -467,15 +472,36 @@
   }
 
   // ---------------- janela (modal) ----------------
+  // Etapa 5 (01/11/2026): toda janela do E-mail fecha pelo "×" do topo (preso no alto, também no celular), pelo voltar
+  // (a casca clica no "×", marcado com data-sgo-fechar), pelo toque no fundo escuro (computador) e pela tecla Esc.
+  // Antes só fechava pelo Cancelar/Descartar do rodapé; na janela de escrever, o voltar não achava botão e a janela ficava.
+  // Fechar com algo digitado pergunta antes (a de escrever usa o Descartar de sempre, que também pergunta).
   function Email_janela_(html) {
     Email_fecharJanela_();
     var o = document.createElement("div");
     o.className = "em-overlay"; o.id = "emOverlay";
-    o.innerHTML = '<div class="em-janela" role="dialog" aria-modal="true">' + html + '</div>';
+    o.innerHTML = '<div class="em-janela" role="dialog" aria-modal="true"><div class="em-janela-topo"><button type="button" class="em-fechar" data-sgo-fechar aria-label="Fechar a janela" title="Fechar" onclick="Email_fecharPeloUsuario_()">&times;</button></div>' + html + '</div>';
+    var tocouFundo = false;
+    o.addEventListener("mousedown", function (e) { tocouFundo = e.target === o; });
+    o.addEventListener("click", function (e) { if (e.target === o && tocouFundo) Email_fecharPeloUsuario_(); tocouFundo = false; });
+    o.addEventListener("input", function () { o.__emSujo = true; });
+    o.addEventListener("change", function (e) { if (e.target && e.target.id !== "emAssSel") o.__emSujo = true; });
     document.body.appendChild(o);
+    if (!EM.escInstalado) {
+      EM.escInstalado = true;
+      document.addEventListener("keydown", function (e) { if ((e.key === "Escape" || e.key === "Esc") && document.getElementById("emOverlay")) { e.stopPropagation(); Email_fecharPeloUsuario_(); } });
+    }
     return o;
   }
   function Email_fecharJanela_() { var o = document.getElementById("emOverlay"); if (o) o.remove(); }
+  function Email_fecharPeloUsuario_() {
+    var o = document.getElementById("emOverlay");
+    if (!o) return;
+    if (EM.comp) { Email_descartar_(); return; }
+    if (o.__emSujo && !confirm("Fechar sem salvar? O que foi digitado nesta janela será perdido.")) return;
+    EM.assEd = null;
+    Email_fecharJanela_();
+  }
 
   // ---------------- escrever / responder / encaminhar ----------------
   function Email_citacao_(m) {

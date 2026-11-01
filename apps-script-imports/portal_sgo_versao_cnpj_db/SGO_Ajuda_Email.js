@@ -50,6 +50,7 @@ function SGO_ajudaTelas_Email_() {
         { perfil: 'CLIENTE', pode: 'Não usa esta tela.' }
       ],
       perguntas: [
+        { p: 'Como fecho uma janela do E-mail (escrever, assinatura, registrar no cliente)?', r: 'Toque no "×" no alto da janela, que fica preso no topo mesmo quando a janela rola. Também fecham o Cancelar ou Descartar do rodapé, o voltar do celular, a tecla Esc e, no computador, o clique no fundo escuro em volta da janela. Se você já digitou algo, o sistema pergunta antes de fechar; na janela de escrever, salve o rascunho para continuar depois.' },
         { p: 'O Administrador ou o meu gestor conseguem ler os meus e-mails?', r: 'Não. A caixa pessoal só abre para quem conectou. A senha fica cifrada no servidor e não volta para nenhuma tela. A gestão só fica sabendo que existe e-mail de cliente parado, sem o conteúdo.' },
         { p: 'Os meus e-mails ficam copiados no sistema?', r: 'Não. A leitura é feita direto na caixa, na hora. O sistema guarda só remetente, assunto e data das mensagens novas da Entrada por 30 dias, para o contador e as pendências.' },
         { p: 'Quando o e-mail de cliente vira pendência?', r: 'Não lido há mais de 4 horas úteis, ou lido e sem resposta há mais de 8 horas úteis, aparece no seu Início. Sem resposta há mais de 2 dias úteis, entra na Caixa de decisões do gestor da sua área. Os prazos são ajustáveis pelo Administrador.' },
