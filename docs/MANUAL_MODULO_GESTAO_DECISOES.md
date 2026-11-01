@@ -15,13 +15,13 @@ A fonte é a central de pendências do SGO+ (a mesma do Início). Entram as pend
 |---|---|
 | Programa de conduta | homologar ocorrência, julgar contestação ou recurso, aprovar missão, sugestão de ocorrência (uma a uma), fechamento do mês |
 | Frota | KM a conferir, devolução esquecida, multa sem condutor, multa vencendo ou vencida, CNH vencida ou com 7 dias ou menos, manutenção e documento do veículo (vencidos ou com 15 dias ou menos), avaria sem caso, comprovante não enviado, reserva em risco ou com problema, uso sem registro e alertas do rastreador, caso do Kanban em análise, plano de ação vencido, sugestão do copiloto de alta gravidade |
-| Atividades | atividade atrasada da equipe, justificativa de atraso a avaliar (últimos 30 dias) |
+| Atividades | atividade atrasada da equipe; pedido de nova data para decidir (um item por atividade, desde 31/10/2026) |
 | Avisos | aviso com prazo de leitura vencido e gente sem confirmar |
 | Qualidade e Auvo | O.S. com registro incompleto, retirada com registro incompleto, O.S. aberta, O.S. sem vínculo, importação do Auvo parada (administrador) |
 | Padrões e planos | padrão vencido, sem validade ou com 15 dias ou menos; plano de ação do Programa de conduta com prazo vencido |
 | Acompanhamento | documentos, calibrações e laudos NR-13 vencidos dos clientes: aparecem em aba própria e no e-mail como contagem, mas não sobem a escada nem entram na avaliação (dependem do cliente) |
 
-Novos itens que a central não tinha (homologar, julgar, missão, justificativa, caso, plano, copiloto) também aparecem no Início da gestão.
+Novos itens que a central não tinha (homologar, julgar, missão, pedido de nova data, caso, plano, copiloto) também aparecem no Início da gestão.
 
 ## 3. Quem recebe cada item
 
@@ -30,7 +30,7 @@ Novos itens que a central não tinha (homologar, julgar, missão, justificativa,
 3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.
 4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.
 5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).
-6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano.
+6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano. Pedidos de nova data vão para quem lançou a atividade (se for da gestão e estiver ativo); senão, para o gestor da área.
 
 ## 4. Idade, prazo e providência
 
@@ -38,7 +38,8 @@ Novos itens que a central não tinha (homologar, julgar, missão, justificativa,
 - Prazo de decisão: o da própria regra quando existe (prazo de homologação, de julgamento, de registro da sugestão, vencimento) ou a entrada mais N dias úteis do tipo (1 a 5).
 - Parado: dias úteis desde a entrada ou desde a última providência. Fins de semana e feriados não contam (expediente da empresa).
 - "Registrar providência": o que foi feito e até quando acompanhar (no máximo 10 dias). Conta como decisão tomada e pausa a escada até a data.
-- "Ciente": só para justificativa de atraso; tira o item da caixa.
+- Pedido de nova data (atividades): "Aceitar nova data" (a data proposta vira a previsão de entrega) ou "Recusar" (com o motivo, em poucas palavras). Decidido aqui ou no detalhe da atividade, o item sai na hora, registrado como decisão de quem decidiu. Enquanto ninguém decide, o responsável não é cobrado pelo atraso e a atividade não aparece também como "atividade atrasada". "Ciente" não vale para este item.
+- As justificativas de atraso antigas (de antes de 31/10/2026) ficam só no histórico da atividade e nos indicadores; não viram itens da caixa.
 - Ocorrência que o sistema descartou porque o prazo de homologação venceu fica como "venceu sem decisão" e conta na avaliação.
 
 ## 5. Escada de cobrança

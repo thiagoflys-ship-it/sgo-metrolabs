@@ -36,7 +36,11 @@ function AstApp_atividades_(eu) {
         id: String(a.ID), titulo: String(a.TITULO || ''), descricao: String(a.DESCRICAO || '').slice(0, 600), prioridade: a.PRIORIDADE || 'Normal',
         situacao: a.SITUACAO, prazo: prev, prazoOriginal: String(a.PRAZO || ''), atrasada: Atividades_vencida_(a, agora), venceHoje: prev.slice(0, 10) === hoje,
         cliente: String(a.CLIENTE_NOME || ''), modulo: String(a.MODULO_NOME || ''), lancadaPor: String(a.CRIADO_POR_NOME || ''), justificativas: Number(a.QTD_JUSTIFICATIVAS) || 0,
-        motivoAguardando: String(a.MOTIVO_AGUARDANDO || ''), versao: String(a.ATUALIZADO_EM || a.CRIADO_EM || '')
+        motivoAguardando: String(a.MOTIVO_AGUARDANDO || ''), versao: String(a.ATUALIZADO_EM || a.CRIADO_EM || ''),
+        // 31/10/2026: pedido de nova data (aguardando a gestão não é cobrado) e a frase "quem age agora" da tela do SGO+
+        pedidoPendente: typeof Atividades_pedidoPendente_ === 'function' && Atividades_pedidoPendente_(a), pedidoData: String(a.PEDIDO_DATA || ''),
+        pedidoRecusado: a.PEDIDO_SITUACAO === 'RECUSADO' ? String(a.PEDIDO_RESPOSTA || '') : '',
+        agir: typeof Atividades_quemAge_ === 'function' ? Atividades_quemAge_(eu, a, agora).frase : ''
       };
     }).sort(function (x, y) {
       return (y.atrasada - x.atrasada) || ((AST_APP_ATV_PESO[y.prioridade] || 2) - (AST_APP_ATV_PESO[x.prioridade] || 2)) || (x.prazo < y.prazo ? -1 : x.prazo > y.prazo ? 1 : 0);
@@ -47,8 +51,15 @@ function AstApp_atividades_(eu) {
   }
 }
 
-/** Motivos de atraso (os mesmos da tela do SGO+) para a justificativa no aparelho. */
-function AstApp_motivosAtraso_() { return typeof ATV_MOTIVOS_ATRASO !== 'undefined' ? ATV_MOTIVOS_ATRASO.slice() : []; }
+/**
+ * Motivos de atraso (os mesmos da tela do SGO+) para o pedido de nova data no aparelho. 31/10/2026: sem "Outra prioridade, a
+ * pedido de alguém", que exige qual prioridade e quem pediu (campos que o aparelho ainda não tem); esse motivo é escolhido
+ * no SGO+ (Minhas atividades), no celular ou no computador.
+ */
+function AstApp_motivosAtraso_() {
+  if (typeof ATV_MOTIVOS_ATRASO === 'undefined') return [];
+  return ATV_MOTIVOS_ATRASO.filter(function (m) { return typeof ATV_MOTIVO_PRIORIDADE === 'undefined' || m !== ATV_MOTIVO_PRIORIDADE; });
+}
 
 /** Mudança de outra pessoa depois da versão vista no aparelho (histórico da atividade). null se não houve. */
 function AstApp_mudancaDeOutro_(eu, atividadeId, versao) {
@@ -74,7 +85,7 @@ function AstApp_aplicarAtividade_(sessionId, eu, tipo, dados) {
   }
   var r;
   if (tipo === 'ATV_SITUACAO') r = Atividades_apiMudarSituacao(sessionId, { id: id, situacao: String(d.situacao || ''), observacao: d.observacao || '', motivo: d.motivo || '' });
-  else if (tipo === 'ATV_JUSTIFICAR') r = Atividades_apiJustificar(sessionId, { id: id, motivo: d.motivo || '', categoria: d.categoria || '', novaPrevisao: d.novaPrevisao || '' });
+  else if (tipo === 'ATV_JUSTIFICAR') r = Atividades_apiJustificar(sessionId, { id: id, motivo: d.motivo || '', categoria: d.categoria || '', novaPrevisao: d.novaPrevisao || '', prioridade: d.prioridade || '', pedidoPorId: d.pedidoPorId || '' });
   else r = Atividades_apiComentar(sessionId, { id: id, texto: d.texto || '' });
   if (r && r.ok) return { ok: true, nota: String(r.message || '').slice(0, 200) };
   return { ok: false, definitivo: true, motivo: String((r && r.message) || 'recusado').replace(/^Não foi possível [^:]+:\s*/, ''), corrigir: 'Abra a atividade no Meu dia, corrija e faça de novo.' };

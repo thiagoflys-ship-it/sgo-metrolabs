@@ -60,7 +60,10 @@ const MAPA = {
   "MANUAL_RELATORIO_CICLO_LAVADORA_GESTAO.md": { tela: "lavadora_ciclos", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO"] },
   // 31/10/2026: segurança do acesso — o manual de quem entra no sistema (todos) e o da gestão (configuração e recuperação)
   "MANUAL_SEGURANCA_ACESSO.md": { tela: "dashboard" },
-  "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] }
+  "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] },
+  // 31/10/2026: atividades — o manual de quem executa (pedido de nova data, andamento do dia, concluir) e o da gestão (decidir o pedido)
+  "MANUAL_MINHAS_ATIVIDADES.md": { tela: "minhas_atividades" },
+  "MANUAL_ATIVIDADES_GESTAO.md": { tela: "atividades_equipe", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"] }
 };
 /** Manuais que não são deste SGO+ (cartão financeiro do sistema antigo). */
 const IGNORAR = ["MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md", "MANUAL_USO_FIN_FLASH_V2.md"];

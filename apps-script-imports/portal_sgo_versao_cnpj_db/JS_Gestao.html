@@ -199,10 +199,50 @@
       (i.oQueFazer ? '<div class="gd-txt"><strong>O que fazer:</strong> ' + Gestao_esc_(i.oQueFazer) + '</div>' : '') +
       '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(i.motivoRota) : '') + '</div>' +
       (i.providencia ? '<div class="gd-txt"><strong>Providência</strong> (' + Gestao_esc_(i.providenciaPor) + ', ' + Gestao_esc_(i.providenciaEm) + (i.pausadoAte ? '; acompanhar até ' + Gestao_esc_(i.pausadoAte) : '') + '): ' + Gestao_esc_(i.providencia) + '</div>' : '') +
+      // 31/10/2026: pedido de nova data de uma atividade: aceitar com um toque ou recusar com o motivo, aqui mesmo
+      (i.pedido && podeAgir ? '<div class="gd-acoes"><button type="button" class="btn-primary" id="gdAceita' + k + '" onclick="Gestao_aceitarPedido_(' + k + ')">Aceitar nova data (' + Gestao_esc_(i.pedido.dataBr) + ')</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_formRecusa_(' + k + ')">Recusar</button>' +
+        (i.tela ? '<button type="button" class="btn-secondary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a atividade") + '</button>' : '') + '</div>' :
       '<div class="gd-acoes">' + (i.tela ? '<button type="button" class="btn-primary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a tela de resolver") + '</button>' : '') +
       (podeAgir && !i.acompanhamento ? (i.resolveNaCaixa ? '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', true)">Ciente</button>' : '') +
-        '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', false)">Registrar providência</button>' : '') + '</div>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', false)">Registrar providência</button>' : '') + '</div>') +
       '<div id="gdForm' + k + '"></div></div>';
+  }
+
+  /** Pedido de nova data: a data proposta vira a previsão de entrega da atividade (servidor: Atividades_apiDecidirPedido). */
+  function Gestao_aceitarPedido_(k) {
+    var i = GD.dados && GD.dados.itens[k], box = document.getElementById("gdForm" + k), bt = document.getElementById("gdAceita" + k);
+    if (!i || !i.pedido) return;
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Atividades_apiDecidirPedido", { id: i.pedido.atividadeId, decisao: "ACEITAR" }, function (res) {
+      if (box) box.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (box) box.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Aceitando a nova data" });
+  }
+
+  /** Pedido de nova data: recusar com um motivo curto (a pessoa lê e propõe outra data ou conclui). */
+  function Gestao_formRecusa_(k) {
+    var box = document.getElementById("gdForm" + k), i = GD.dados.itens[k];
+    if (!box || !i) return;
+    if (box.querySelector("#gdRecTxt" + k)) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="gd-form">' +
+      '<label for="gdRecTxt' + k + '">Por que a data não serve? (curto; ' + Gestao_esc_(i.pedido.responsavel || "a pessoa") + ' vai ler)</label>' +
+      '<textarea id="gdRecTxt' + k + '" maxlength="300" placeholder="Ex.: o cliente precisa até sexta"></textarea>' +
+      '<div class="gd-acoes"><button type="button" class="btn-danger" id="gdRecOk' + k + '" onclick="Gestao_recusarPedido_(' + k + ')">Confirmar recusa</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdForm' + k + '\').innerHTML=\'\'">Voltar</button></div><div id="gdSt' + k + '"></div>' +
+      '<div class="gd-meta">A previsão continua a vencida: a pessoa é avisada com o motivo e volta a ser cobrada até pedir outra data ou concluir.</div></div>';
+    var t = document.getElementById("gdRecTxt" + k); if (t) t.focus();
+  }
+
+  function Gestao_recusarPedido_(k) {
+    var i = GD.dados.itens[k], st = document.getElementById("gdSt" + k), bt = document.getElementById("gdRecOk" + k);
+    var texto = String((document.getElementById("gdRecTxt" + k) || {}).value || "").replace(/\s+/g, " ").trim();
+    if (texto.length < 5) { if (st) st.innerHTML = '<div class="gd-msg erro">Não foi possível recusar: escreva em poucas palavras por que a data não serve (mínimo 5 letras). A pessoa vai ler e propor outra data.</div>'; return; }
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Atividades_apiDecidirPedido", { id: i.pedido.atividadeId, decisao: "RECUSAR", motivo: texto }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
   }
 
   function Gestao_abrirItem_(k) {

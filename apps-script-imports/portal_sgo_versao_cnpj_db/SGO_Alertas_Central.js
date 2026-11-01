@@ -157,7 +157,8 @@ var PEND_TIPOS = {
   conduta_homologar: { modulo: 'conduta', um: 'ocorrência do Programa de conduta para homologar', varios: 'ocorrências do Programa de conduta para homologar', rotulo: 'Homologar', fazer: 'homologue ou rejeite em Programa de conduta > Ocorrências', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
   conduta_julgar: { modulo: 'conduta', um: 'contestação ou recurso para julgar', varios: 'contestações ou recursos para julgar', rotulo: 'Julgar', fazer: 'julgue a defesa em Programa de conduta > Ocorrências', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
   conduta_missao: { modulo: 'conduta', um: 'missão aguardando aprovação', varios: 'missões aguardando aprovação', rotulo: 'Aprovar', fazer: 'aprove ou recuse em Programa de conduta > Missões', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
-  atividade_justificativa: { modulo: 'atividades', um: 'justificativa de atraso para avaliar', varios: 'justificativas de atraso para avaliar', rotulo: 'Avaliar', fazer: 'leia a justificativa e toque em Ciente na Caixa de decisões', tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, origem: 'ATIVIDADES' },
+  // 31/10/2026: a justificativa de atraso virou pedido de nova data (aceitar ou recusar); o tipo mantém o nome para o histórico da caixa
+  atividade_justificativa: { modulo: 'atividades', um: 'pedido de nova data para decidir', varios: 'pedidos de nova data para decidir', rotulo: 'Decidir data', fazer: 'aceite ou recuse a nova data na Caixa de decisões ou no detalhe da atividade', tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, origem: 'ATIVIDADES' },
   frota_caso: { modulo: 'frota', um: 'caso da Frota em análise', varios: 'casos da Frota em análise', rotulo: 'Analisar', fazer: 'decida a causa e o tratamento em Frota > Gestão e melhoria', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   plano_atrasado: { modulo: 'qualidade', um: 'plano de ação com prazo vencido', varios: 'planos de ação com prazo vencido', rotulo: 'Plano atrasado', fazer: 'cobre as ações ou replaneje o plano', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'QUALIDADE' },
   frota_copiloto: { modulo: 'frota', um: 'sugestão do copiloto da Frota para decidir', varios: 'sugestões do copiloto da Frota para decidir', rotulo: 'Decidir', fazer: 'aceite ou descarte em Frota > Gestão e melhoria > Copiloto', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
@@ -811,6 +812,9 @@ function Pend_fonteAtividades_(add, ctx) {
   Atividades_todas_().forEach(function (a) {
     // 26/10/2026: atendimento de O.S. (atividade criada pela Assistência) é cobrado pela O.S., não aqui
     if (!Atividades_aberta_(a) || !a.PREVISAO_ATUAL || !a.RESPONSAVEL_ID || (typeof Atividades_daOS_ === 'function' && Atividades_daOS_(a))) return;
+    // 31/10/2026: com pedido de nova data aguardando decisão, quem age é a gestão (item "pedido de nova data" da Caixa de
+    // decisões, um por atividade); o responsável não é cobrado e a mesma atividade não vira um segundo item
+    if (typeof Atividades_pedidoPendente_ === 'function' && Atividades_pedidoPendente_(a)) return;
     var resp = Pend_s_(a.RESPONSAVEL_NOME) || 'responsável não identificado';
     var prev = Atividades_dataBr_(a.PREVISAO_ATUAL);
     if (a.PREVISAO_ATUAL < agora) {
@@ -820,8 +824,8 @@ function Pend_fonteAtividades_(add, ctx) {
         gravidade: 'CRITICO', dias: dias, vencimento: prev,
         titulo: 'Atividade atrasada: ' + Pend_curto_(a.TITULO, 80),
         detalhe: 'Previsão era ' + prev + (a.MODULO_NOME ? ' · ' + a.MODULO_NOME : '') + ' · responsável ' + resp + (a.QTD_JUSTIFICATIVAS ? ' · ' + Pend_plural_(a.QTD_JUSTIFICATIVAS, 'justificativa', 'justificativas') + ' já registrada(s)' : '') + '.',
-        oQueFazer: 'Conclua a atividade ou registre a justificativa do atraso com a nova previsão (Minhas atividades).',
-        oQueFazerOutro: 'Acompanhe com ' + resp + '; a justificativa e a nova previsão são registradas por ele em Minhas atividades.',
+        oQueFazer: 'Conclua a atividade ou peça nova data (motivo e data proposta) em Minhas atividades.' + (a.PEDIDO_SITUACAO === 'RECUSADO' ? ' O último pedido de nova data foi recusado: veja o motivo no detalhe.' : ''),
+        oQueFazerOutro: 'Acompanhe com ' + resp + '; o pedido de nova data é feito por ele em Minhas atividades e chega para você decidir.',
         tela: { tipo: 'atividade', id: a.ID }, telaOutro: { tipo: 'modulo', mod: 'atividades_equipe' }
       }));
     } else if (a.PREVISAO_ATUAL.slice(0, 10) === hoje) {

@@ -205,11 +205,11 @@ test('resumo do dia: "maiores grupos" são os maiores de verdade, com o nome do 
     { tipo: 'auvo_sem_vinculo', rotulo: 'Revisar', qtd: 259 }, { tipo: 'auvo_os_aberta', rotulo: 'Revisar', qtd: 168 }
   ];
   const m = JSON.parse(JSON.stringify(c.Sedna_maioresGrupos_(grupos, 3)));
-  assert.deepEqual(m, [{ grupo: 'justificativas de atraso para avaliar', qtd: 261 }, { grupo: 'O.S. do Auvo sem vínculo de cadastro', qtd: 259 }, { grupo: 'O.S. abertas no Auvo', qtd: 168 }]);
+  assert.deepEqual(m, [{ grupo: 'pedidos de nova data para decidir', qtd: 261 }, { grupo: 'O.S. do Auvo sem vínculo de cadastro', qtd: 259 }, { grupo: 'O.S. abertas no Auvo', qtd: 168 }]);
   assert.equal(c.Sedna_maioresGrupos_([{ tipo: 'padrao_vencido', qtd: 1 }], 3)[0].grupo, 'padrão de referência vencido', 'singular');
   const f = { nome: 'Dora', dia: '19/10/2026', equipe: { atrasadas: 0, porPrioridade: {}, vencemHoje: 0, comecarPor: [] }, suas: { atrasadas: 0, vencemHoje: 0 },
     pendencias: { total: 741, criticas: 118, maiores: m } };
-  assert.match(c.Sedna_textoRegras_(f), /Central de pendências: 741 pendências, 118 críticas. Maiores grupos: 261 justificativas de atraso para avaliar; 259 O.S. do Auvo sem vínculo de cadastro; 168 O.S. abertas no Auvo./);
+  assert.match(c.Sedna_textoRegras_(f), /Central de pendências: 741 pendências, 118 críticas. Maiores grupos: 261 pedidos de nova data para decidir; 259 O.S. do Auvo sem vínculo de cadastro; 168 O.S. abertas no Auvo./);
   // pelo caminho real: a central do teste também sai em ordem de tamanho
   for (let i = 0; i < 3; i++) atividade(amb, 'j' + i, 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T09:00', { CRIADO_POR_ID: 'u_tec' });
   const us = c.Ges_usuarios_(), fr = c.Sedna_fatos_(us.u_dir, us, c.Ges_cfg_(), c.Atividades_todas_(), c.Atividades_agora_());

@@ -102,7 +102,9 @@ var GES_TIPOS = {
   frota_bloqueio_decidir: { prazo: 1 }, frota_bloqueio_esquecida: { prazo: 1 }, frota_bloqueio_fila: { prazo: 1 }, frota_bloqueio_passagem: { prazo: 1 }, frota_bloqueio_odometro: { prazo: 3 },
   atividade_atrasada: { prazo: 2 }, aviso_leitura_atrasada: { prazo: 3 },
   conduta_sugestao: { prazo: 2 }, conduta_fechamento: { prazo: 3 }, conduta_homologar: { prazo: 3 }, conduta_julgar: { prazo: 5 }, conduta_missao: { prazo: 3 },
-  atividade_justificativa: { prazo: 2, resolveNaCaixa: true }, frota_caso: { prazo: 5 }, plano_atrasado: { prazo: 2 }, frota_copiloto: { prazo: 5 },
+  // 31/10/2026: atividade_justificativa = pedido de nova data (um por atividade), decidido com "Aceitar nova data" ou "Recusar"
+  // na própria caixa ou no detalhe da atividade; sai sozinho quando decidido (não usa mais "Ciente")
+  atividade_justificativa: { prazo: 2 }, frota_caso: { prazo: 5 }, plano_atrasado: { prazo: 2 }, frota_copiloto: { prazo: 5 },
   qualidade_os: { prazo: 3 }, qualidade_mov: { prazo: 3 },
   auvo_os_aberta: { prazo: 3 }, auvo_sem_vinculo: { prazo: 3 }, auvo_importacao: { prazo: 1 },
   // 21/10/2026: e-mail de cliente sem resposta além do prazo da gestão (SGO_Email.js); vai ao gestor da área da pessoa
@@ -369,8 +371,6 @@ function Gestao_fontePendencias_(add, ctx) {
   var veSigilo = !!ctx.interno || !ctx.userId || Ges_veSigilo_(us[Ges_s_(ctx.userId)]);
   var cfgExp = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null;
   var grav = function (prazo) { return prazo && prazo < hoje ? 'CRITICO' : 'ATENCAO'; };
-  var resolvidosNaCaixa = {};
-  Ges_ler_(GES_ABA_DECISOES).forEach(function (d) { if (Ges_up_(d.SITUACAO) === 'RESOLVIDA' && Ges_up_(d.TIPO) === 'ATIVIDADE_JUSTIFICATIVA') resolvidosNaCaixa[Ges_s_(d.ITEM_ID)] = true; });
 
   // Programa de conduta: homologar, julgar e aprovar missões
   if (typeof CONDUTA_SHEETS !== 'undefined') {
@@ -432,38 +432,33 @@ function Gestao_fontePendencias_(add, ctx) {
       }));
     });
   }
-  // Justificativas de atraso dos últimos 30 dias a avaliar pela gestão (some com "Ciente" na caixa)
-  if (typeof Atividades_abas_ === 'function') {
-    var corte = Ges_somarDias_(hoje, -30);
-    var porAtv = {};
-    try { (typeof Atividades_todas_ === 'function' ? Atividades_todas_() : []).forEach(function (a) { porAtv[Ges_s_(a.ID)] = a; }); } catch (e) {}
-    // 29/10/2026: só a justificativa mais recente de cada atividade, e nada de atividade concluída ou cancelada
-    // (contava uma pendência por linha do histórico: 261 na caixa da Diretoria, para 121 atividades de verdade)
-    var ultimaJust = {};
-    Ges_ler_(Atividades_abas_().HISTORICO).forEach(function (h) {
-      if (Ges_up_(h.TIPO) !== 'JUSTIFICATIVA') return;
-      var k = Ges_s_(h.ATIVIDADE_ID), atual = ultimaJust[k];
-      var chave = Ges_s_(Ges_iso_(h.DATA)) + '|' + Ges_s_(Ges_iso_(h.CRIADO_EM));
-      if (!atual || chave >= atual.chave) ultimaJust[k] = { chave: chave, h: h };
-    });
-    Object.keys(ultimaJust).map(function (k) { return ultimaJust[k].h; }).forEach(function (h) {
-      var sit = Ges_s_((porAtv[Ges_s_(h.ATIVIDADE_ID)] || {}).SITUACAO);
-      if (sit === 'Concluída' || sit === 'Cancelada') return;
-      var dia = Ges_dia_(h.DATA);
-      if (!dia || dia < corte) return;
-      var id = 'ATV:JUST:' + Ges_s_(h.ID);
-      if (resolvidosNaCaixa[id]) return;
-      var a = porAtv[Ges_s_(h.ATIVIDADE_ID)] || {}, quem = Ges_s_(h.USUARIO_ID), nome = Ges_s_(h.USUARIO_NOME) || Ges_nomeDe_(us, quem);
+  // 31/10/2026 (pedido do dono, caso da lavadora): PEDIDO DE NOVA DATA aguardando decisão, UM item por atividade.
+  // Antes, cada justificativa diária virava um item novo "Avaliar a justificativa..." (6 para a mesma atividade) e a gestão
+  // parecia cobrada. Agora o item tem a identificação da atividade (ATV:PEDIDO:<id>): se o responsável muda o pedido, o mesmo
+  // item é atualizado; ao aceitar ou recusar (aqui ou no detalhe da atividade), ele sai. As justificativas antigas (sem pedido)
+  // ficam só no histórico da atividade e nos indicadores.
+  if (typeof Atividades_todas_ === 'function' && typeof Atividades_pedidoPendente_ === 'function') {
+    var atvs = [];
+    try { atvs = Atividades_todas_(); } catch (e) { atvs = []; }
+    atvs.forEach(function (a) {
+      if (!Atividades_pedidoPendente_(a) || !Atividades_aberta_(a)) return;
+      var quem = Ges_s_(a.RESPONSAVEL_ID), nome = Ges_s_(a.RESPONSAVEL_NOME) || Ges_nomeDe_(us, quem);
       if (!quem || (us[quem] && !us[quem].ativo)) return;
+      var dia = Ges_dia_(a.PEDIDO_EM) || hoje;
       var pz = Ges_somarDiasUteis_(dia, GES_TIPOS.atividade_justificativa.prazo, cfgExp);
+      var titAtv = (Ges_s_(a.TITULO) || 'atividade');
+      var motivo = typeof Atividades_motivoNeutro_ === 'function' ? Atividades_motivoNeutro_(a.PEDIDO_MOTIVO, a.PEDIDO_PRIORIZOU, a.PEDIDO_A_PEDIDO_DE_NOME) : Ges_s_(a.PEDIDO_MOTIVO);
+      var vezes = Number(a.QTD_JUSTIFICATIVAS) || 1;
       add(Pend_item_('atividade_justificativa', {
-        id: id, nome: (Ges_s_(a.TITULO) || 'atividade').slice(0, 40) + ' · ' + nome, publico: 'GESTAO', responsavel: nome, responsavelId: quem,
+        id: 'ATV:PEDIDO:' + Ges_s_(a.ID), nome: titAtv.slice(0, 40) + ' · ' + nome, publico: 'GESTAO', responsavel: nome, responsavelId: quem,
         gravidade: 'ATENCAO', dias: Pend_diasAte_(pz, hoje), vencimento: Ges_brDia_(pz),
-        titulo: 'Avaliar a justificativa de atraso de ' + nome + ': ' + (Ges_s_(a.TITULO) || 'atividade').slice(0, 90),
-        detalhe: (Ges_s_(h.CATEGORIA) ? Ges_s_(h.CATEGORIA) + '. ' : '') + Ges_s_(h.TEXTO).slice(0, 220) + ' Nova previsão: ' + Ges_br_(Ges_iso_(h.PREVISAO_NOVA)) + (Number(a.QTD_JUSTIFICATIVAS) > 1 ? ' (' + a.QTD_JUSTIFICATIVAS + 'ª justificativa desta atividade).' : '.'),
-        oQueFazer: 'Leia a justificativa. Se concorda, toque em "Ciente" aqui na caixa. Se não, fale com a pessoa ou replaneje a atividade em Atividades da equipe e depois registre a providência.',
-        tela: { tipo: 'atividade', id: Ges_s_(h.ATIVIDADE_ID) },
-        extra: { prazo: pz, naoPode: [quem], desde: dia }
+        titulo: 'Decidir a nova data (' + Ges_br_(a.PEDIDO_DATA) + ') pedida por ' + nome + ': ' + titAtv.slice(0, 90),
+        detalhe: (motivo ? motivo + '. ' : '') + Ges_s_(a.PEDIDO_TEXTO).slice(0, 220) + ' A previsão venceu em ' + Ges_br_(a.PEDIDO_PREVISAO_ANTERIOR || a.PREVISAO_ATUAL) +
+          '; nova data proposta: ' + Ges_br_(a.PEDIDO_DATA) + (vezes > 1 ? ' (é a ' + vezes + 'ª vez que a data desta atividade é adiada).' : '.'),
+        oQueFazer: 'Toque em "Aceitar nova data" (a data proposta vira a previsão de entrega) ou em "Recusar" (escreva o motivo; ' + nome + ' vê e propõe outra data ou conclui). Enquanto você não decide, ' + nome + ' não é cobrado pelo atraso.',
+        tela: { tipo: 'atividade', id: Ges_s_(a.ID), rotulo: 'Abrir a atividade' },
+        extra: { prazo: pz, naoPode: [quem], desde: dia, decisor: Ges_s_(a.PEDIDO_DECISOR_ID), motivoDecisor: 'Quem lançou a atividade decide a nova data.',
+          pedido: { atividadeId: Ges_s_(a.ID), data: Ges_s_(a.PEDIDO_DATA), dataBr: Ges_br_(a.PEDIDO_DATA), responsavel: nome } }
       }));
     });
   }
@@ -663,7 +658,8 @@ function Ges_caixa_() {
       prazoVencido: et.prazoVencido, diasParado: et.diasParado, etapa: et.etapa, etapaTexto: et.etapaTexto, pausadoAte: Ges_brDia_(et.pausadoAte),
       providencia: Ges_s_(reg.PROVIDENCIA_TEXTO), providenciaPor: Ges_s_(reg.PROVIDENCIA_POR_NOME), providenciaEm: Ges_br_(reg.PROVIDENCIA_EM), providencias: Number(reg.PROVIDENCIAS) || 0,
       escalado: !!Ges_s_(reg.ESCALADO_EM) || et.etapa === 'DIRETORIA', acompanhamento: et.etapa === 'ACOMPANHAMENTO', resolveNaCaixa: !!t.resolveNaCaixa,
-      soDiretoria: it.publico === 'DIRETORIA', sigilo: !!ex.sigilo
+      soDiretoria: it.publico === 'DIRETORIA', sigilo: !!ex.sigilo,
+      pedido: ex.pedido || null // 31/10/2026: pedido de nova data (botões "Aceitar nova data" e "Recusar" na caixa)
     };
   });
   var ordemEt = { DIRETORIA: 0, WHATSAPP: 1, EMAIL: 2, NA_HORA: 3, PAUSADO: 4, ACOMPANHAMENTO: 5 };
@@ -798,6 +794,27 @@ function Gestao_apiResumo(sessionId) {
 }
 
 /**
+ * 31/10/2026: decisão tomada fora da caixa (ex.: "Aceitar nova data" ou "Recusar" no pedido de nova data de uma atividade):
+ * o item aberto sai na hora como RESOLVIDA, com a decisão registrada no nome de quem decidiu (conta como primeira ação na
+ * avaliação do gestor). Sem item aberto (a caixa ainda não tinha visto o pedido), não faz nada. Nunca lança para quem chamou.
+ */
+function Gestao_resolverItemDecidido_(itemId, eu, texto) {
+  try {
+    if (!SGO_DATA.getDB().getSheetByName(GES_ABA_DECISOES)) return false;
+    var reg = Ges_registrosAbertos_()[Ges_s_(itemId)];
+    if (!reg) return false;
+    var agora = Ges_agora_(), uid = Ges_s_(eu && eu.id), campos = {
+      SITUACAO: 'RESOLVIDA', RESOLVIDO_EM: agora, PROVIDENCIAS: (Number(reg.PROVIDENCIAS) || 0) + 1, PROVIDENCIA_EM: agora,
+      PROVIDENCIA_TEXTO: Ges_s_(texto).slice(0, 900), PROVIDENCIA_POR_ID: uid, PROVIDENCIA_POR_NOME: Ges_s_(eu && eu.nome), ATUALIZADO_EM: agora
+    };
+    if (!Ges_s_(reg.PRIMEIRA_ACAO_EM)) { campos.PRIMEIRA_ACAO_EM = agora; campos.PRIMEIRA_ACAO_POR_ID = uid; }
+    SGO_DATA.update(GES_ABA_DECISOES, reg.ID, campos);
+    try { CacheService.getScriptCache().remove('GES_RESUMO_' + uid); } catch (e) {}
+    return true;
+  } catch (e) { console.error('Caixa de decisões, item decidido fora da caixa: ' + ((e && e.message) || e)); return false; }
+}
+
+/**
  * Registrar providência (o que foi feito e até quando acompanhar) ou "Ciente" (justificativa de atraso).
  * payload: { itemId, texto (>= 10 letras), acompanharAte ('aaaa-mm-dd', até 10 dias corridos), ciente: true }
  * Conta como decisão tomada (primeira ação) e pausa a escada até a data de acompanhamento.
@@ -817,7 +834,7 @@ function Gestao_apiProvidencia(sessionId, payload) {
     if (it.envolvidoId && it.envolvidoId === uid && !(us[uid] && us[uid].diretoria)) throw new Error('o item é sobre você: quem decide é o seu gestor ou a Diretoria');
     var hoje = Ges_hoje_(), ate = '';
     if (p.ciente) {
-      if (!it.resolveNaCaixa) throw new Error('"Ciente" só vale para justificativa de atraso. Para este item, registre a providência com a data de acompanhamento');
+      if (!it.resolveNaCaixa) throw new Error('"Ciente" não vale para este item. ' + (it.pedido ? 'Pedido de nova data: toque em "Aceitar nova data" ou em "Recusar"' : 'Registre a providência com a data de acompanhamento'));
     } else {
       ate = Ges_dia_(p.acompanharAte);
       if (!ate) throw new Error('escolha até quando acompanhar (data de hoje até ' + Ges_brDia_(Ges_somarDias_(hoje, GES_PAUSA_MAX_DIAS)) + ') e toque de novo em Registrar');

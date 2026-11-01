@@ -309,7 +309,8 @@ function SGO_ajudaTelas_Principal_() {
         "Abra pelo menu, no grupo Principal, em \"Minhas atividades\".",
         "O número ao lado do nome no menu mostra as atividades abertas. Se ficar vermelho, mostra as vencidas.",
         "Você lança atividades só para você. Para lançar para outra pessoa, peça a um gestor.",
-        "Quando o prazo de uma atividade passa sem conclusão, o SGO+ abre uma janela que pede a justificativa. Ela não fecha sem justificar.",
+        "Quando a previsão de entrega passa sem conclusão, o SGO+ abre uma janela que pede uma de duas coisas: pedir nova data ou concluir. Ela não fecha antes disso.",
+        "No topo do detalhe de cada atividade, uma frase diz quem precisa agir agora e o quê, por exemplo \"Você precisa: pedir nova data (justificar) ou concluir\" ou \"Nada a fazer agora\". A mesma frase aparece, menor, na lista e nos cartões.",
         "A atividade pode ser vista pela equipe em \"Atividades da equipe\". Marque \"Restrita\" quando só você, quem lançou e a gestão devem ver."
       ],
       passos: [
@@ -351,16 +352,17 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Toque em \"Iniciar\" para passar a atividade para \"Em andamento\".",
             "Toque em \"Aguardando\" quando depender de outra coisa. Escreva o que está aguardando (mínimo 5 letras) e toque em \"Confirmar\".",
-            "Toque em \"Concluir\" quando terminar. Escreva uma observação, se quiser, e toque em \"Confirmar\".",
-            "No celular, use \"Iniciar\", \"Concluir\" ou \"Detalhes\" no cartão."
+            "Toque em \"Concluir\" quando terminar. A tela pergunta: Concluir \"nome da atividade\"? Ela sai da lista do responsável e conta como entregue. Escreva uma observação, se quiser, e toque em \"Sim, concluir\". Para desistir, toque em \"Voltar, não concluir\".",
+            "No celular, \"Concluir\" fica numa linha própria, no fim do cartão, separado de \"Iniciar\" e \"Detalhes\"."
           ]
         },
         {
-          titulo: "Abrir o detalhe, comentar e registrar andamento",
+          titulo: "Abrir o detalhe, comentar e registrar o andamento do dia",
           itens: [
             "Toque no título da atividade.",
+            "Leia a frase do topo: ela diz quem precisa agir agora e o quê.",
             "Confira responsável, quem lançou, prioridade, módulo, cliente e datas.",
-            "Para registrar o percentual feito, preencha \"Andamento (%)\" e toque em \"Gravar andamento\".",
+            "Para o relatório do dia, use \"Registrar andamento do dia\": escreva o que foi feito e o que falta, preencha \"Andamento (%)\" se quiser e toque em \"Registrar andamento\". Fica no histórico. Não pede nova data e não vai para a gestão decidir.",
             "Para registrar um combinado ou uma dúvida, escreva em \"Comentário\" e toque em \"Comentar\".",
             "Leia o \"Histórico\": toda mudança fica registrada com nome, data e hora."
           ]
@@ -375,15 +377,19 @@ function SGO_ajudaTelas_Principal_() {
           ]
         },
         {
-          titulo: "Justificar uma atividade atrasada",
+          titulo: "Atividade atrasada: pedir nova data",
           itens: [
-            "Quando aparecer a janela \"Atividade com prazo vencido\", leia o nome da atividade.",
-            "Escolha em \"O que causou o atraso\" o motivo da lista. Se nenhum servir, escolha \"Outro motivo\".",
-            "Escreva em \"Explique a demora\" o que atrasou e o que falta (mínimo 15 letras).",
-            "Escolha em \"Nova previsão de entrega\" a data e a hora. Ela já vem com amanhã às 18h.",
-            "Toque em \"Registrar justificativa\".",
-            "Repita para cada atividade da janela. A janela fecha quando todas estiverem justificadas.",
-            "Se a atividade já foi feita, justifique e depois toque em \"Concluir\"."
+            "Quando aparecer a janela \"Atividade com prazo vencido\" (ou a frase \"Você precisa: pedir nova data (justificar) ou concluir\" no detalhe), leia o nome da atividade.",
+            "Se já terminou, toque em \"Já terminei: concluir\" e confirme.",
+            "Se precisa de mais tempo, escolha em \"Motivo do atraso\" o motivo da lista. Se nenhum servir, escolha \"Outro motivo\".",
+            "Se o motivo for \"Outra prioridade, a pedido de alguém\", diga qual prioridade você atendeu e escolha em \"Quem pediu\" a pessoa que pediu.",
+            "Escreva em \"Explique em poucas palavras\" o que atrasou (de 15 a 600 letras). O relatório do que foi feito vai em \"Registrar andamento do dia\".",
+            "Escolha em \"Nova data que você propõe\" a data e a hora. Ela já vem com amanhã às 18h.",
+            "Toque em \"Enviar pedido de nova data\".",
+            "Quem lançou a atividade aceita ou recusa. Até a decisão, você não é cobrado por este atraso: a janela não volta e a frase do topo fica \"Aguardando ... decidir sua nova data; você não será cobrado enquanto isso\".",
+            "Se a nova data for aceita, ela vira a previsão de entrega. Se for recusada, você vê o motivo da recusa e precisa pedir outra data ou concluir.",
+            "Para mudar um pedido que ainda espera decisão, abra o detalhe e toque em \"Mudar o pedido\". O mesmo pedido é atualizado.",
+            "Atividade que você lançou para você mesmo: a nova data vale na hora, sem aprovação."
           ]
         },
         {
@@ -408,6 +414,10 @@ function SGO_ajudaTelas_Principal_() {
       ],
       cores: [
         { nome: "Selo vermelho \"Vencida\"", significado: "A previsão de entrega já passou e a atividade não foi concluída." },
+        { nome: "Selo amarelo \"Nova data pedida\"", significado: "A previsão passou e o responsável pediu nova data. Aguarda a decisão de quem lançou; enquanto isso o responsável não é cobrado." },
+        { nome: "Faixa vermelha no topo do detalhe", significado: "Você precisa agir: pedir nova data ou concluir." },
+        { nome: "Faixa azul no topo do detalhe", significado: "Você precisa decidir a nova data pedida (aceitar ou recusar)." },
+        { nome: "Faixa amarela no topo do detalhe", significado: "Aguardando a decisão de outra pessoa; você não é cobrado." },
         { nome: "Selo amarelo \"Vence hoje\"", significado: "A previsão de entrega é hoje." },
         { nome: "Selo verde \"Em dia\"", significado: "A atividade está aberta e dentro do prazo." },
         { nome: "Selo cinza \"No prazo\" ou \"Com atraso\"", significado: "Atividade concluída: diz se terminou antes ou depois do prazo original." },
@@ -424,15 +434,19 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Selo cinza \"Restrita\"", significado: "Só o responsável, quem lançou e a gestão veem a atividade." }
       ],
       problemas: [
-        { situacao: "A janela \"Atividade com prazo vencido\" não fecha", oQueFazer: "É assim mesmo. Escreva o motivo e a nova previsão de cada atividade e toque em \"Registrar justificativa\"." },
-        { situacao: "Aparece \"o motivo precisa ter pelo menos 15 letras\"", oQueFazer: "Explique melhor o que atrasou. O contador abaixo do campo mostra quantas letras faltam." },
-        { situacao: "Aparece \"escolha em O que causou o atraso o motivo\"", oQueFazer: "Escolha o motivo na lista acima do texto. Se nenhum servir, escolha \"Outro motivo\" e registre de novo." },
+        { situacao: "A janela \"Atividade com prazo vencido\" não fecha", oQueFazer: "É assim mesmo. Em cada atividade, peça nova data (motivo, explicação curta e data) ou toque em \"Já terminei: concluir\"." },
+        { situacao: "Aparece \"a explicação está curta demais (mínimo 15 letras)\"", oQueFazer: "Diga em poucas palavras o que atrasou. O contador abaixo do campo mostra quantas letras já tem." },
+        { situacao: "Aparece \"a explicação passou de 600 letras\"", oQueFazer: "O pedido é só o motivo, curto. Resuma e envie de novo; o relatório do que foi feito vai em \"Registrar andamento do dia\"." },
+        { situacao: "Aparece \"o motivo não foi escolhido\"", oQueFazer: "Escolha o motivo na lista \"Motivo do atraso\". Se nenhum servir, escolha \"Outro motivo\" e envie de novo." },
+        { situacao: "Aparece \"diga qual prioridade você atendeu\" ou \"escolha na lista Quem pediu\"", oQueFazer: "No motivo \"Outra prioridade, a pedido de alguém\", escreva qual foi a outra prioridade e escolha a pessoa que pediu. Se a decisão foi sua, escolha outro motivo." },
         { situacao: "Aparece \"Não foi possível mudar a situação: a atividade é de\"", oQueFazer: "A atividade é de outra pessoa. Só o responsável, quem lançou e a gestão mudam a situação; você acompanha em Atividades da equipe." },
-        { situacao: "Aparece \"a nova previsão já passou\"", oQueFazer: "Escolha uma data e hora depois de agora e registre de novo." },
+        { situacao: "Aparece \"a nova data (...) já passou\"", oQueFazer: "A data proposta precisa ser depois de agora. Escolha uma data e hora futuras e envie de novo." },
+        { situacao: "Aparece \"está com o ano ..., fora do período aceito\"", oQueFazer: "O ano foi digitado errado (só vale do ano passado até daqui a dois anos). Corrija o ano no campo indicado e salve de novo." },
         { situacao: "Aparece \"o título está vazio ou curto demais\"", oQueFazer: "Escreva no campo \"Título\" o que precisa ser feito (mínimo 3 letras) e salve de novo." },
-        { situacao: "Aparece \"o início previsto está depois do prazo\"", oQueFazer: "Ajuste uma das duas datas e salve de novo." },
+        { situacao: "Aparece \"o início previsto está depois do prazo\"", oQueFazer: "A atividade não pode começar depois de terminar. Ajuste uma das duas datas e salve de novo." },
         { situacao: "Aparece \"o cliente digitado não foi escolhido na lista\"", oQueFazer: "Toque no nome do cliente na lista que aparece abaixo do campo, ou apague o campo." },
-        { situacao: "Aparece \"Não foi possível mudar o prazo: a atividade está com prazo vencido.\"", oQueFazer: "Registre primeiro a justificativa de atraso na janela que aparece. Só a gestão muda o prazo sem justificar." },
+        { situacao: "Aparece \"Não foi possível mudar o prazo: a atividade está com prazo vencido.\"", oQueFazer: "Use \"Pedir nova data\" no detalhe da atividade. Só a gestão muda o prazo direto." },
+        { situacao: "A gestão recusou a nova data", oQueFazer: "Leia o motivo da recusa no topo do detalhe (ou na janela). Peça outra data ou conclua a atividade." },
         { situacao: "Aparece \"Não foi possível editar a atividade: ela foi lançada por\"", oQueFazer: "Só um gestor ou quem lançou a atividade para si mesmo pode editar. Comente na atividade ou peça a um gestor." },
         { situacao: "Aparece \"Não foi possível cancelar: só quem lançou a atividade ou um gestor pode cancelar.\"", oQueFazer: "Comente o motivo na atividade e avise quem lançou." },
         { situacao: "Aparece \"Não foi possível marcar \"fazendo agora\": só o responsável\"", oQueFazer: "Só o responsável marca o que está executando. Confira se a atividade é sua." },
@@ -441,12 +455,14 @@ function SGO_ajudaTelas_Principal_() {
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,RH,FINANCEIRO", pode: "Lançar atividade para qualquer pessoa (menos o responsável pelo sistema, que só recebe as que ele mesmo lança), editar, trocar o responsável, mudar o prazo (replanejar), reabrir e cancelar qualquer atividade. Atividade restrita (Programa de conduta) de outra pessoa: o Financeiro não vê nem altera." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Lançar atividades para si, mudar a situação, comentar, registrar andamento e justificar atraso das próprias atividades. Edita e cancela só as que lançou para si." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Lançar atividades para si, mudar a situação, comentar, registrar o andamento do dia e pedir nova data das próprias atividades. Edita e cancela só as que lançou para si." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
-        { p: "Quem fica sabendo quando lanço ou justifico?", r: "Quem recebe uma atividade nova é avisado na hora no SGO+ e no COMMAND, e por e-mail no horário de trabalho. Quem lançou a atividade é avisado da justificativa de atraso do mesmo jeito." },
-        { p: "Recebo aviso de atraso?", r: "Sim. No sistema, a janela de justificativa e a lista de pendências cobram até a atividade ser concluída ou justificada. O e-mail do atraso sai uma vez, no horário de trabalho." },
+        { p: "Quem fica sabendo quando lanço ou peço nova data?", r: "Quem recebe uma atividade nova é avisado na hora no SGO+ e no COMMAND, e por e-mail no horário de trabalho. Quem lançou a atividade recebe o pedido de nova data do mesmo jeito e decide. A decisão volta para você no sistema (a recusa também por e-mail)." },
+        { p: "Quem decide a nova data?", r: "Quem lançou a atividade (o nome aparece no pedido). A gestão também pode decidir. Quem pede nunca decide o próprio pedido." },
+        { p: "Qual a diferença entre andamento e pedido de nova data?", r: "\"Registrar andamento do dia\" é o relatório do que foi feito: fica no histórico e não vai para ninguém decidir. \"Pedir nova data\" é curto: o motivo do atraso e a data que você propõe, para quem lançou aceitar ou recusar." },
+        { p: "Recebo aviso de atraso?", r: "Sim. No sistema, a janela e a lista de pendências cobram até a atividade ser concluída ou ter um pedido de nova data aguardando decisão. O e-mail do atraso sai uma vez, no horário de trabalho. Enquanto o pedido espera, não há nova cobrança." },
         { p: "Recebo mensagem de WhatsApp?", r: "No máximo um resumo do dia (09:30), em dia útil, só para quem tem vínculo CLT e só se a pessoa ainda não abriu o sistema e há atividade nova, para hoje ou atrasada (ou decisão parada). Nunca à noite, no fim de semana ou em feriado. O e-mail das atividades vem no e-mail de resumo do dia (08:00); na hora só a atividade com prazo para hoje. Cada pessoa ajusta em Menu > Meus avisos." },
         { p: "Posso lançar a atividade no COMMAND?", r: "Sim. A lista é a mesma: lance uma vez só, no sistema que for mais prático." },
         { p: "A tela atualiza sozinha?", r: "Sim, a cada 30 segundos, quando você não está digitando nem com janela aberta." },
@@ -528,7 +544,8 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Leia os quadros do alto: \"Abertas\", \"Vencidas\", \"Concluídas nos últimos 30 dias\" e \"Concluídas no prazo (30 dias)\".",
             "No bloco \"Agora\", confira cada colaborador, o que está fazendo, há quanto tempo, quantas abertas e quantas vencidas.",
-            "No bloco \"Justificativas recentes\" (para a gestão) ou \"Justificativas das suas atividades\" (para os demais), leia os motivos de atraso e as novas previsões.",
+            "No bloco \"Pedidos de nova data recentes\" (para a gestão) ou \"Pedidos de nova data das suas atividades\" (para os demais), leia os motivos de atraso e as datas propostas.",
+            "O quadro \"Vencidas\" conta todas as atrasadas; entre parênteses, quantas têm nova data aguardando decisão.",
             "Toque no título de uma atividade para abrir o detalhe.",
             "Toque em \"Atualizar\" para buscar os dados agora."
           ]
@@ -582,7 +599,18 @@ function SGO_ajudaTelas_Principal_() {
             "Abra o detalhe da atividade e toque em \"Editar\".",
             "Mude o \"Prazo\" para uma data futura.",
             "Toque em \"Salvar alterações\".",
-            "A atividade deixa de pedir justificativa ao responsável. O replanejamento fica no histórico e não conta como justificativa."
+            "A atividade deixa de cobrar o responsável. Se havia pedido de nova data aguardando decisão, ele é encerrado. O replanejamento fica no histórico e não conta como pedido de nova data."
+          ]
+        },
+        {
+          titulo: "Decidir uma nova data pedida (gestão e quem lançou)",
+          itens: [
+            "No topo do detalhe aparece \"Você precisa: aceitar ou recusar a nova data proposta por ...\", com o motivo, a explicação, a data proposta e quantas vezes a data já foi adiada. O mesmo pedido aparece na Caixa de decisões.",
+            "Para aceitar, toque em \"Aceitar nova data (data)\". A data proposta vira a previsão de entrega; o prazo original continua para o indicador \"no prazo\".",
+            "Para recusar, toque em \"Recusar\", escreva em poucas palavras por que a data não serve e toque em \"Confirmar recusa\". A pessoa vê o motivo e volta a ser cobrada até pedir outra data ou concluir.",
+            "Cada atividade tem no máximo um pedido aberto. Se a pessoa mudar o pedido, o mesmo item é atualizado.",
+            "Enquanto você não decide, a pessoa não é cobrada pelo atraso. A cobrança do prazo de decisão fica com você, na Caixa de decisões.",
+            "No motivo \"Outra prioridade, a pedido de alguém\", o texto mostra \"Priorizou: (o quê), a pedido de (quem)\"."
           ]
         },
         {
@@ -597,9 +625,9 @@ function SGO_ajudaTelas_Principal_() {
           titulo: "Ler os indicadores",
           itens: [
             "Toque na aba \"Indicadores\".",
-            "Leia os quadros: concluídas no prazo nos últimos 30 dias, atrasadas agora, justificativas de atraso e atividades aguardando algo.",
+            "Leia os quadros: concluídas no prazo nos últimos 30 dias, atrasadas agora, pedidos de nova data e atividades aguardando algo.",
             "Em \"Carga por pessoa\", veja abertas, vencidas, que vencem hoje, dos próximos 7 dias e aguardando. A carga soma as abertas pelo peso da prioridade.",
-            "Em \"Justificativas por motivo (30 dias)\", veja o que mais atrasa a equipe.",
+            "Em \"Pedidos de nova data por motivo (30 dias)\", veja o que mais atrasa a equipe. O motivo antigo \"Outra prioridade definida pela gestão\" conta junto com \"Outra prioridade, a pedido de alguém\".",
             "Em \"Abertas por módulo\", veja onde está o trabalho aberto e quantas foram lançadas no SGO+ e no COMMAND."
           ]
         },
@@ -618,7 +646,7 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Número vermelho no quadro \"Vencidas\"", significado: "Há atividades da equipe com prazo vencido." },
         { nome: "Número vermelho na coluna \"Vencidas\" do bloco Agora", significado: "Aquele colaborador tem atividades vencidas." },
         { nome: "\"Nenhuma marcada\" no bloco Agora", significado: "O colaborador tem atividades abertas, mas nenhuma marcada como \"fazendo agora\"." },
-        { nome: "Justificativa com borda amarela", significado: "Justificativa de atraso registrada pelo responsável." },
+        { nome: "Pedido com borda amarela", significado: "Pedido de nova data (ou justificativa antiga) registrado pelo responsável." },
         { nome: "Selos e situações", significado: "Os mesmos de Minhas atividades: \"Vencida\" vermelho, \"Vence hoje\" amarelo, \"Em dia\" verde." }
       ],
       problemas: [
@@ -628,13 +656,13 @@ function SGO_ajudaTelas_Principal_() {
         { situacao: "Os blocos mostram \"Não carregou. Veja o aviso abaixo.\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\"." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,RH", pode: "Ver todas as atividades da equipe, inclusive as restritas, ler todas as justificativas, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,RH", pode: "Ver todas as atividades da equipe, inclusive as restritas, ler todos os pedidos de nova data, aceitar ou recusar os pedidos das atividades de outras pessoas, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar." },
         { perfil: "FINANCEIRO", pode: "O mesmo da gestão, menos as atividades restritas (Programa de conduta) de outras pessoas." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ver as atividades da equipe (menos as restritas de outras pessoas). Alteram só as próprias e as que lançaram. O texto das justificativas aparece só nas atividades em que estão envolvidos." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ver as atividades da equipe (menos as restritas de outras pessoas). Alteram só as próprias e as que lançaram. O texto dos pedidos de nova data aparece só nas atividades em que estão envolvidos." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
-        { p: "O gestor é avisado da justificativa?", r: "Quem lançou a atividade é avisado. A justificativa também aparece em \"Justificativas recentes\"." },
+        { p: "O gestor é avisado do pedido de nova data?", r: "Quem lançou a atividade é avisado e decide (aceitar ou recusar) no detalhe da atividade ou na Caixa de decisões. É um pedido por atividade: se a pessoa muda o pedido, o mesmo item é atualizado. O pedido também aparece em \"Pedidos de nova data recentes\"." },
         { p: "Por que o nome de algumas atividades aparece ao lado da barra ou termina em \"…\" no Gantt?", r: "O nome fica dentro da barra quando cabe inteiro. Se não cabe, vai para o lado direito quando há espaço até a próxima atividade; senão aparece o começo do nome com \"…\" dentro da barra. Atividades que se cruzam no tempo ficam em linhas separadas, nunca uma por cima da outra. Passe o mouse ou toque na barra para ver o nome completo, as datas e a situação." },
         { p: "Por que não vejo uma atividade que um colega citou?", r: "Ela pode ser restrita ou do Programa de conduta. Essas só aparecem para os envolvidos e para a gestão." },
         { p: "As atividades do COMMAND aparecem aqui?", r: "Sim. A lista é a mesma nos dois sistemas. As lançadas pelo COMMAND têm o selo \"COMMAND\"." },
@@ -661,7 +689,7 @@ function SGO_ajudaTelas_Principal_() {
       ],
       cores: [
         { nome: "Barra cinza claro, azul, amarelo escuro ou verde", significado: "Situação: A fazer, Em andamento, Aguardando e Concluída." },
-        { nome: "Trecho listrado em amarelo escuro depois da barra", significado: "Previsão adiada por justificativa de atraso." },
+        { nome: "Trecho listrado em amarelo escuro depois da barra", significado: "Previsão adiada (nova data aceita ou justificativa antiga)." },
         { nome: "Trecho vermelho com contorno vermelho", significado: "Atrasada: vencida até hoje." },
         { nome: "Trecho vermelho claro em barra verde", significado: "Concluída depois do prazo." },
         { nome: "Linha azul vertical com \"hoje\"", significado: "O dia de hoje." },

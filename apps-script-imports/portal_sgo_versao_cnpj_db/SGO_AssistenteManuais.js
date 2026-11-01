@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "23ac3defb243",
+ "versao": "f952094061f4",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -123,6 +123,60 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Painel \"Perguntas ao assistente\" (Administrador e Diretoria)",
      "texto": "No SGO+, fica em Menu > Administração > Perguntas ao assistente. No COMMAND, fica em Menu > ADMINISTRAÇÃO > Perguntas ao assistente (Administrador e Direção).\n\"Assuntos mais frequentes\": perguntas parecidas juntas, com o número de perguntas, as telas, os perfis e os selos de sem resposta, não resolveu, resolveu e recusada.\n\"Sem resposta ou não resolveu\": o que a ajuda ainda não cobre.\n\"Por tela\": em que telas surgem mais dúvidas.\n\"Base do assistente\": quantos trechos, telas e manuais a base tem e quando foi montada.\n\nO botão \"Sugerir texto de ajuda\" escreve um rascunho a partir das perguntas daquele assunto e dos trechos atuais da ajuda, com a lista do que falta conferir na tela. O rascunho é só para revisar: nada é publicado sozinho. Depois da revisão, o texto entra na ajuda da tela e no manual do módulo na próxima atualização do sistema."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_ATIVIDADES_GESTAO.md",
+   "titulo": "Manual da gestão: pedidos de nova data das atividades",
+   "tela": "atividades_equipe",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA",
+    "GESTOR",
+    "RH",
+    "FINANCEIRO"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Complementa o MANUAL_MINHAS_ATIVIDADES.md com o que é de quem lança atividades para outras pessoas e da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Vale a partir de 31/10/2026."
+    },
+    {
+     "titulo": "O que mudou",
+     "texto": "Antes, quando a previsão de uma atividade vencia, o responsável registrava uma justificativa com a nova previsão, que valia na hora, e cada justificativa virava um item novo \"Avaliar a justificativa de atraso\" na Caixa de decisões. A mesma atividade adiada todo dia gerava um item por dia.\n\nAgora a justificativa é um pedido de nova data:\no responsável escolhe o motivo, explica em poucas palavras e propõe a data;\nquem lançou a atividade (ou a gestão) aceita ou recusa;\nenquanto o pedido espera, o responsável não é cobrado pelo atraso;\ncada atividade tem no máximo um pedido aberto e um item na Caixa de decisões. Se o responsável muda o pedido, o mesmo item é atualizado.\n\nO relatório técnico do dia ficou separado: \"Registrar andamento do dia\", que vai só para o histórico."
+    },
+    {
+     "titulo": "Quem age agora",
+     "texto": "No topo do detalhe da atividade, para quem decide, aparece:\nVocê precisa: aceitar ou recusar a nova data proposta por (responsável)\n\nLogo abaixo: a data proposta, quando a previsão venceu, o motivo, a explicação e quantas vezes a data já foi adiada. Na lista, no Gantt e no Kanban a mesma frase aparece, menor, no cartão da atividade.\n\nPara quem só acompanha (sem poder decidir), a faixa mostra \"Nada a fazer agora\" e quem está decidindo."
+    },
+    {
+     "titulo": "Decidir",
+     "texto": "Pelo detalhe da atividade ou pela Caixa de decisões (item \"Decidir a nova data (data) pedida por ...\"):\nAceitar: toque em \"Aceitar nova data (data)\". A data proposta vira a previsão de entrega. O prazo original não muda e continua valendo para o indicador \"concluídas no prazo\".\nRecusar: toque em \"Recusar\", escreva em poucas palavras por que a data não serve (até 300 letras) e toque em \"Confirmar recusa\". A previsão continua a vencida; o responsável recebe o motivo no sistema e por e-mail e volta a ser cobrado até pedir outra data ou concluir.\n\nDecidido em um lugar, o item sai do outro na hora. A decisão fica no histórico da atividade e na Caixa de decisões, com o nome de quem decidiu, e conta como decisão tomada na avaliação do gestor.\n\nNão dá para aceitar uma data que já passou enquanto o pedido esperava: recuse pedindo outra data ou mude o prazo em \"Editar\"."
+    },
+    {
+     "titulo": "Quem decide",
+     "texto": "Quem lançou a atividade, se for da gestão e estiver ativo. O nome dessa pessoa aparece para o responsável (\"Aguardando (nome) decidir sua nova data\").\nQualquer pessoa da gestão também pode decidir.\nQuem pediu nunca decide o próprio pedido.\nAtividade lançada pela própria pessoa, ou criada por rotina do sistema (Comercial, Assistência, Compras): a nova data vale na hora, sem pedido.\n\nNa Caixa de decisões o item vai para quem lançou a atividade; sem essa pessoa, para o gestor da área do responsável e, por último, para a Diretoria, como os demais itens."
+    },
+    {
+     "titulo": "Motivo \"Outra prioridade, a pedido de alguém\"",
+     "texto": "Substitui o antigo \"Outra prioridade definida pela gestão\". O responsável é obrigado a dizer qual prioridade atendeu e escolher quem pediu (pessoa ativa do cadastro, não ele mesmo). O texto que a gestão lê é neutro:\nPriorizou: atendimento de urgência no Hospital X, a pedido de (nome)\n\nNos indicadores, o motivo antigo conta junto com o novo."
+    },
+    {
+     "titulo": "Replanejar, concluir ou cancelar com pedido aberto",
+     "texto": "Mudar o prazo em \"Editar\" (replanejamento) encerra o pedido aberto; o histórico registra que o pedido foi encerrado pelo replanejamento.\nConcluir ou cancelar a atividade também encerra o pedido.\nConcluir pede confirmação: Concluir \"(nome da atividade)\"? Ela sai da lista de (responsável) e conta como entregue."
+    },
+    {
+     "titulo": "Cobrança enquanto o pedido espera",
+     "texto": "Com pedido aguardando decisão, a atividade:\nnão abre a janela de cobrança para o responsável;\nnão gera aviso de atraso novo, nem no sistema nem por e-mail;\nnão aparece como \"atividade atrasada\" na central de pendências nem na Caixa de decisões (o pedido já é o item);\nnão sobe a escada de cobrança pela prioridade.\n\nEla continua contando como atrasada nos números da equipe (\"Vencidas\", com a quantidade aguardando decisão entre parênteses), porque o atraso existe. Nenhuma mensagem nova de WhatsApp foi criada para este fluxo."
+    },
+    {
+     "titulo": "Datas",
+     "texto": "O servidor e a tela recusam datas com ano fora do período do ano passado até daqui a dois anos, início previsto depois do prazo e nova data no passado. Na edição, só o valor alterado é conferido: uma atividade antiga com o ano errado continua editável, e a tela de edição mostra um aviso para corrigir a data."
+    },
+    {
+     "titulo": "Registros antigos",
+     "texto": "As justificativas registradas antes de 31/10/2026 continuam no histórico da atividade (marcadas como \"registro anterior ao pedido de nova data\") e nos indicadores. Elas não viram itens da Caixa de decisões. O próximo atraso dessas atividades já segue o pedido de nova data."
     }
    ]
   },
@@ -625,6 +679,46 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Registros",
      "texto": "Nada é apagado. NTF_REGRAS (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), NTF_RESUMO_FILA (itens guardados para o e-mail de resumo ou para o próximo expediente), NTF_RESUMOS (cada resumo avaliado: pessoa, dia, canal, situação, motivo), NTF_PREFERENCIAS (cada mudança de preferência) e NTF_ENVIOS (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO)."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MINHAS_ATIVIDADES.md",
+   "titulo": "Manual: Minhas atividades (atraso, nova data, andamento e conclusão)",
+   "tela": "minhas_atividades",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Vale para o SGO+ a partir de 31/10/2026, no computador e no celular. Tela \"Minhas atividades\" (menu, grupo Principal). Este manual cobre o que acontece quando a previsão de entrega de uma atividade passa: pedir nova data, registrar o andamento do dia e concluir."
+    },
+    {
+     "titulo": "Quem age agora",
+     "texto": "No topo do detalhe de cada atividade há uma faixa com uma frase só, que diz quem precisa agir e o quê:\nFrase | O que significaVocê precisa: pedir nova data (justificar) ou concluir | A previsão de entrega passou. Peça nova data ou, se já terminou, conclua. Faixa vermelha.\nAguardando (nome) decidir sua nova data; você não será cobrado enquanto isso | Você já pediu nova data. Quem lançou a atividade vai aceitar ou recusar. Faixa amarela.\nNada a fazer agora | Não há ação sua pendente. A linha de baixo diz a previsão de entrega.\nA mesma frase aparece, menor, embaixo do nome da atividade na lista, nos cartões do celular e no quadro de cartões (Kanban), quando há algo pendente."
+    },
+    {
+     "titulo": "Pedir nova data",
+     "texto": "Use quando a previsão passou e você precisa de mais tempo.\n1. Abra a atividade e toque em \"Pedir nova data\" (ou use a janela \"Atividade com prazo vencido\", que abre sozinha).\n2. Escolha em \"Motivo do atraso\" o motivo da lista. Se nenhum servir, escolha \"Outro motivo\".\n3. Se o motivo for \"Outra prioridade, a pedido de alguém\", escreva qual prioridade você atendeu e escolha em \"Quem pediu\" a pessoa que pediu. Quem lê o pedido vê \"Priorizou: (o quê), a pedido de (quem)\".\n4. Escreva em \"Explique em poucas palavras\" o que atrasou (de 15 a 600 letras). O pedido é curto: o relatório do que foi feito vai em \"Registrar andamento do dia\".\n5. Escolha em \"Nova data que você propõe\" a data e a hora (vem preenchida com amanhã às 18h).\n6. Toque em \"Enviar pedido de nova data\".\n\nDepois de enviar:\nquem lançou a atividade aceita ou recusa. O nome dessa pessoa aparece no formulário e na faixa do topo;\naté a decisão, você não é cobrado por este atraso: a janela não volta, a atividade não aparece como atrasada nas suas pendências e não sai aviso de atraso novo;\nse a nova data for aceita, ela vira a previsão de entrega;\nse for recusada, a faixa do topo mostra quem recusou e o motivo. Você volta a ser cobrado e precisa pedir outra data ou concluir.\n\nPara mudar um pedido que ainda está aguardando decisão, abra a atividade e toque em \"Mudar o pedido\". O mesmo pedido é atualizado; não conta como outro adiamento.\n\nAtividade que você lançou para você mesmo, ou que foi criada por uma rotina do sistema: a nova data vale na hora, sem aprovação."
+    },
+    {
+     "titulo": "Registrar o andamento do dia",
+     "texto": "É o relatório técnico: o que foi feito e o que falta.\n1. Abra a atividade.\n2. Em \"Registrar andamento do dia\", escreva o que foi feito e o que falta (mínimo 10 letras).\n3. Preencha \"Andamento (%)\", se quiser.\n4. Toque em \"Registrar andamento\".\n\nFica no histórico da atividade. Não pede nova data, não tira a cobrança do atraso e não vai para ninguém decidir."
+    },
+    {
+     "titulo": "Concluir",
+     "texto": "1. Toque em \"Concluir\" (no detalhe, na lista ou no cartão). Na atividade vencida, o botão é \"Já terminei: concluir\".\n2. A tela pergunta: Concluir \"(nome da atividade)\"? Ela sai da sua lista e conta como entregue.\n3. Escreva uma observação, se quiser, e toque em \"Sim, concluir\". Para desistir, toque em \"Voltar, não concluir\".\n\nSe havia pedido de nova data aguardando decisão, ele é encerrado.\n\nNo celular, \"Concluir\" fica numa linha própria, separado dos outros botões."
+    },
+    {
+     "titulo": "Datas aceitas",
+     "texto": "O SGO+ só aceita datas do ano passado até daqui a dois anos. Também não aceita início previsto depois do prazo, nem nova data no passado. Quando isso acontece, a mensagem diz o campo, o ano digitado e o que corrigir."
+    },
+    {
+     "titulo": "Mensagens comuns",
+     "texto": "Mensagem | O que fazera explicação está curta demais (mínimo 15 letras) | Diga em poucas palavras o que atrasou. O contador abaixo do campo mostra quantas letras já tem.\na explicação passou de 600 letras | Resuma. O relatório do dia vai em \"Registrar andamento do dia\".\no motivo não foi escolhido | Escolha o motivo na lista. Se nenhum servir, escolha \"Outro motivo\".\ndiga qual prioridade você atendeu / escolha na lista \"Quem pediu\" | Preencha os dois campos do motivo \"Outra prioridade, a pedido de alguém\". Se a decisão foi sua, escolha outro motivo.\na nova data (...) já passou | Escolha uma data e hora depois de agora.\nestá com o ano ..., fora do período aceito | O ano foi digitado errado. Corrija o ano no campo indicado.\no início previsto (...) está depois do prazo | A atividade não pode começar depois de terminar. Ajuste uma das datas."
+    },
+    {
+     "titulo": "Avisos",
+     "texto": "A cobrança do atraso é feita no sistema (janela, faixa do topo e lista de pendências) e por e-mail, no horário de trabalho. O pedido de nova data chega para quem lançou no sistema e por e-mail; a recusa volta para você no sistema e por e-mail; o aceite, no sistema."
     }
    ]
   },
@@ -2510,15 +2604,15 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "O que entra na caixa",
-     "texto": "A fonte é a central de pendências do SGO+ (a mesma do Início). Entram as pendências que são decisão da gestão:\nMódulo | ItensPrograma de conduta | homologar ocorrência, julgar contestação ou recurso, aprovar missão, sugestão de ocorrência (uma a uma), fechamento do mês\nFrota | KM a conferir, devolução esquecida, multa sem condutor, multa vencendo ou vencida, CNH vencida ou com 7 dias ou menos, manutenção e documento do veículo (vencidos ou com 15 dias ou menos), avaria sem caso, comprovante não enviado, reserva em risco ou com problema, uso sem registro e alertas do rastreador, caso do Kanban em análise, plano de ação vencido, sugestão do copiloto de alta gravidade\nAtividades | atividade atrasada da equipe, justificativa de atraso a avaliar (últimos 30 dias)\nAvisos | aviso com prazo de leitura vencido e gente sem confirmar\nQualidade e Auvo | O.S. com registro incompleto, retirada com registro incompleto, O.S. aberta, O.S. sem vínculo, importação do Auvo parada (administrador)\nPadrões e planos | padrão vencido, sem validade ou com 15 dias ou menos; plano de ação do Programa de conduta com prazo vencido\nAcompanhamento | documentos, calibrações e laudos NR-13 vencidos dos clientes: aparecem em aba própria e no e-mail como contagem, mas não sobem a escada nem entram na avaliação (dependem do cliente)\nNovos itens que a central não tinha (homologar, julgar, missão, justificativa, caso, plano, copiloto) também aparecem no Início da gestão."
+     "texto": "A fonte é a central de pendências do SGO+ (a mesma do Início). Entram as pendências que são decisão da gestão:\nMódulo | ItensPrograma de conduta | homologar ocorrência, julgar contestação ou recurso, aprovar missão, sugestão de ocorrência (uma a uma), fechamento do mês\nFrota | KM a conferir, devolução esquecida, multa sem condutor, multa vencendo ou vencida, CNH vencida ou com 7 dias ou menos, manutenção e documento do veículo (vencidos ou com 15 dias ou menos), avaria sem caso, comprovante não enviado, reserva em risco ou com problema, uso sem registro e alertas do rastreador, caso do Kanban em análise, plano de ação vencido, sugestão do copiloto de alta gravidade\nAtividades | atividade atrasada da equipe; pedido de nova data para decidir (um item por atividade, desde 31/10/2026)\nAvisos | aviso com prazo de leitura vencido e gente sem confirmar\nQualidade e Auvo | O.S. com registro incompleto, retirada com registro incompleto, O.S. aberta, O.S. sem vínculo, importação do Auvo parada (administrador)\nPadrões e planos | padrão vencido, sem validade ou com 15 dias ou menos; plano de ação do Programa de conduta com prazo vencido\nAcompanhamento | documentos, calibrações e laudos NR-13 vencidos dos clientes: aparecem em aba própria e no e-mail como contagem, mas não sobem a escada nem entram na avaliação (dependem do cliente)\nNovos itens que a central não tinha (homologar, julgar, missão, pedido de nova data, caso, plano, copiloto) também aparecem no Início da gestão."
     },
     {
      "titulo": "Quem recebe cada item",
-     "texto": "1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.\n2. Responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram). Pode ser Gestor, RH ou Financeiro. RH e Financeiro abrem a caixa e veem só os itens das áreas em que são responsáveis.\n3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.\n4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.\n5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).\n6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano."
+     "texto": "1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.\n2. Responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram). Pode ser Gestor, RH ou Financeiro. RH e Financeiro abrem a caixa e veem só os itens das áreas em que são responsáveis.\n3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.\n4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.\n5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).\n6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano. Pedidos de nova data vão para quem lançou a atividade (se for da gestão e estiver ativo); senão, para o gestor da área."
     },
     {
      "titulo": "Idade, prazo e providência",
-     "texto": "Cada item ganha um registro quando entra na caixa (GES_DECISOES) e sai sozinho quando a pendência some da origem. Itens que já existiam quando a caixa foi ligada começam a contar do dia em que a caixa os viu.\nPrazo de decisão: o da própria regra quando existe (prazo de homologação, de julgamento, de registro da sugestão, vencimento) ou a entrada mais N dias úteis do tipo (1 a 5).\nParado: dias úteis desde a entrada ou desde a última providência. Fins de semana e feriados não contam (expediente da empresa).\n\"Registrar providência\": o que foi feito e até quando acompanhar (no máximo 10 dias). Conta como decisão tomada e pausa a escada até a data.\n\"Ciente\": só para justificativa de atraso; tira o item da caixa.\nOcorrência que o sistema descartou porque o prazo de homologação venceu fica como \"venceu sem decisão\" e conta na avaliação."
+     "texto": "Cada item ganha um registro quando entra na caixa (GES_DECISOES) e sai sozinho quando a pendência some da origem. Itens que já existiam quando a caixa foi ligada começam a contar do dia em que a caixa os viu.\nPrazo de decisão: o da própria regra quando existe (prazo de homologação, de julgamento, de registro da sugestão, vencimento) ou a entrada mais N dias úteis do tipo (1 a 5).\nParado: dias úteis desde a entrada ou desde a última providência. Fins de semana e feriados não contam (expediente da empresa).\n\"Registrar providência\": o que foi feito e até quando acompanhar (no máximo 10 dias). Conta como decisão tomada e pausa a escada até a data.\nPedido de nova data (atividades): \"Aceitar nova data\" (a data proposta vira a previsão de entrega) ou \"Recusar\" (com o motivo, em poucas palavras). Decidido aqui ou no detalhe da atividade, o item sai na hora, registrado como decisão de quem decidiu. Enquanto ninguém decide, o responsável não é cobrado pelo atraso e a atividade não aparece também como \"atividade atrasada\". \"Ciente\" não vale para este item.\nAs justificativas de atraso antigas (de antes de 31/10/2026) ficam só no histórico da atividade e nos indicadores; não viram itens da caixa.\nOcorrência que o sistema descartou porque o prazo de homologação venceu fica como \"venceu sem decisão\" e conta na avaliação."
     },
     {
      "titulo": "Escada de cobrança (parte 1)",

@@ -281,10 +281,9 @@ test('WhatsApp: só com item parado há 2 dias úteis, um por dia somando ativid
 });
 
 // ------------------------------------------------------------------ providência
-test('providência: só o responsável (ou a Diretoria), texto e data obrigatórios, pausa a escada; "Ciente" resolve a justificativa', () => {
+test('providência: só o responsável (ou a Diretoria), texto e data obrigatórios, pausa a escada; pedido de nova data se decide com Aceitar/Recusar, não com "Ciente"', () => {
   const amb = ambiente();
   atividadeAtrasada(amb, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
-  amb.tabelas.ATV_HISTORICO.push({ ID: 'h1', ATIVIDADE_ID: 'a1', TIPO: 'JUSTIFICATIVA', USUARIO_ID: 'u_tec', USUARIO_NOME: 'TIAGO TECNICO TESTE', DATA: '2026-10-19T09:00', TEXTO: 'Aguardando peça do fornecedor de teste.', CATEGORIA: 'Aguardando peça ou material', PREVISAO_NOVA: '2026-10-23T18:00' });
   amb.ctx.Ges_sincronizar_();
   assert.match(amb.ctx.Gestao_apiProvidencia('s_ga', { itemId: 'ATV:a1', texto: 'Tentativa de outra gestora', acompanharAte: '2026-10-22' }).message, /é de GIL GESTOR TESTE/);
   assert.match(amb.ctx.Gestao_apiProvidencia('s_gt', { itemId: 'ATV:a1', texto: 'curto', acompanharAte: '2026-10-22' }).message, /pelo menos 10 letras/);
@@ -295,31 +294,45 @@ test('providência: só o responsável (ou a Diretoria), texto e data obrigatór
   const it = caixaDe(amb, 's_gt').itens.find((i) => i.id === 'ATV:a1');
   assert.equal(it.etapa, 'PAUSADO');
   assert.equal(it.providencia, 'Conversei com o técnico hoje');
+  assert.match(amb.ctx.Gestao_apiProvidencia('s_gt', { itemId: 'ATV:a1', texto: 'Ciente indevido aqui', ciente: true }).message, /"Ciente" não vale para este item/);
   amb.mudar('2026-10-28T10:00:00-03:00'); // pausa venceu em 23/10: conta de novo a partir dela (26, 27, 28)
   assert.equal(caixaDe(amb, 's_gt').itens.find((i) => i.id === 'ATV:a1').diasParado, 3);
   const reg = amb.tabelas.GES_DECISOES.find((r) => r.ITEM_ID === 'ATV:a1');
   assert.equal(reg.PRIMEIRA_ACAO_EM, '2026-10-19T10:00');
-  // justificativa: "Ciente" só vale para ela e tira da caixa
-  const just = caixaDe(amb, 's_gt').itens.find((i) => i.tipo === 'atividade_justificativa');
-  assert.ok(just, 'justificativa do técnico entra na caixa do gestor');
-  assert.match(amb.ctx.Gestao_apiProvidencia('s_gt', { itemId: 'ATV:a1', texto: 'Ciente indevido aqui', ciente: true }).message, /só vale para justificativa/);
-  const c = amb.ctx.Gestao_apiProvidencia('s_gt', { itemId: just.id, texto: 'Justificativa procede, peça confirmada', ciente: true });
-  assert.equal(c.ok, true, c.message);
-  assert.ok(!caixaDe(amb, 's_gt').itens.some((i) => i.id === just.id));
+  // o técnico pede nova data: o item "atividade atrasada" dá lugar ao pedido (um item só), que vai para quem lançou (Dora)
+  const p = amb.ctx.Atividades_apiJustificar('s_tec', { id: 'a1', categoria: 'Aguardando peça ou material', motivo: 'Aguardando peça do fornecedor de teste.', novaPrevisao: '2026-10-30T18:00' });
+  assert.equal(p.ok, true, p.message);
+  amb.ctx.Ges_sincronizar_();
+  assert.ok(!caixaDe(amb, 's_gt', 'todas').itens.some((i) => i.id === 'ATV:a1'), 'atividade com pedido pendente não fica também como atrasada');
+  const ped = caixaDe(amb, 's_dir').itens.find((i) => i.id === 'ATV:PEDIDO:a1');
+  assert.ok(ped, 'pedido entra na caixa de quem lançou');
+  assert.equal(ped.tipo, 'atividade_justificativa');
+  assert.equal(ped.pedido.atividadeId, 'a1');
+  assert.match(ped.titulo, /Decidir a nova data \(30\/10\/2026 18:00\) pedida por TIAGO TECNICO TESTE/);
+  assert.match(amb.ctx.Gestao_apiProvidencia('s_dir', { itemId: ped.id, texto: 'Ciente indevido aqui', ciente: true }).message, /Aceitar nova data/);
+  const d = amb.ctx.Atividades_apiDecidirPedido('s_dir', { id: 'a1', decisao: 'ACEITAR' });
+  assert.equal(d.ok, true, d.message);
+  assert.ok(!caixaDe(amb, 's_dir').itens.some((i) => i.id === ped.id), 'decidido: sai da caixa na hora');
+  const regP = amb.tabelas.GES_DECISOES.find((r) => r.ITEM_ID === 'ATV:PEDIDO:a1');
+  assert.equal(regP.SITUACAO, 'RESOLVIDA'); assert.equal(regP.PRIMEIRA_ACAO_POR_ID, 'u_dir'); assert.match(regP.PROVIDENCIA_TEXTO, /Nova data aceita/);
 });
 
-test('justificativas: só a mais recente de cada atividade entra na caixa, e atividade concluída ou cancelada não entra (29/10/2026: 261 pendências para 121 atividades)', () => {
+test('justificativas antigas (antes do pedido de nova data) ficam só no histórico: não criam item na caixa, nem uma por dia', () => {
   const amb = ambiente();
   atividadeAtrasada(amb, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
   atividadeAtrasada(amb, 'a2', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-16T18:00');
-  const j = (id, atv, data, texto) => amb.tabelas.ATV_HISTORICO.push({ ID: id, ATIVIDADE_ID: atv, TIPO: 'JUSTIFICATIVA', USUARIO_ID: 'u_tec', USUARIO_NOME: 'TIAGO TECNICO TESTE', DATA: data, TEXTO: texto, CATEGORIA: 'Outro', PREVISAO_NOVA: '2026-10-23T18:00' });
+  const j = (id, atv, data, texto) => amb.tabelas.ATV_HISTORICO.push({ ID: id, ATIVIDADE_ID: atv, TIPO: 'JUSTIFICATIVA', USUARIO_ID: 'u_tec', USUARIO_NOME: 'TIAGO TECNICO TESTE', DATA: data, TEXTO: texto, CATEGORIA: 'Outra prioridade definida pela gestão', PREVISAO_NOVA: '2026-10-23T18:00' });
   j('h1', 'a1', '2026-10-17T09:00', 'Primeira justificativa de teste.');
   j('h2', 'a1', '2026-10-19T09:00', 'Segunda justificativa de teste.');
   j('h3', 'a2', '2026-10-19T09:00', 'Justificativa da atividade que foi concluída.');
   amb.tabelas.ATV_ATIVIDADES.find((a) => a.ID === 'a2').SITUACAO = 'Concluída';
   amb.ctx.Ges_sincronizar_();
-  const just = caixaDe(amb, 's_gt').itens.filter((i) => i.tipo === 'atividade_justificativa');
-  assert.deepEqual(just.map((i) => i.id), ['ATV:JUST:h2']);
+  const todas = caixaDe(amb, 's_dir', 'todas').itens;
+  assert.deepEqual(todas.filter((i) => i.tipo === 'atividade_justificativa').map((i) => i.id), []);
+  assert.deepEqual(todas.filter((i) => /^ATV:/.test(i.id)).map((i) => i.id), ['ATV:a1'], 'a atividade atrasada continua (um item), a concluída não');
+  // o motivo antigo conta junto com o novo nome nos indicadores
+  const eq = amb.ctx.Atividades_apiPainelEquipe('s_dir', {});
+  assert.ok(eq.indicadores.porMotivo.some((m) => m.motivo === 'Outra prioridade, a pedido de alguém'));
 });
 
 // ------------------------------------------------------------------ avaliação

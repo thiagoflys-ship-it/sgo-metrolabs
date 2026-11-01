@@ -45,7 +45,13 @@ test('fila do aparelho: iniciar, comentar, aguardando e justificar sobem pela AP
   assert.equal(r.aceitos.length, 3, JSON.stringify(r.recusados));
   const a = (id) => amb.tabelas.ATV_ATIVIDADES.find((x) => x.ID === id);
   assert.equal(a('a_hoje').SITUACAO, 'Em andamento');
-  assert.equal(a('a_atr').PREVISAO_ATUAL, '2026-10-21T17:00');
+  // 31/10/2026: atividade lançada pelo gestor: a nova data vira pedido para ele decidir; a previsão só muda quando aceitar
+  assert.equal(a('a_atr').PEDIDO_SITUACAO, 'PENDENTE');
+  assert.equal(a('a_atr').PEDIDO_DATA, '2026-10-21T17:00');
+  assert.equal(a('a_atr').PREVISAO_ATUAL, '2026-10-17T17:00');
+  const naLista = r.atividades.find((x) => x.id === 'a_atr');
+  assert.equal(naLista.pedidoPendente, true); assert.equal(naLista.atrasada, false, 'aguardando a gestão não é cobrado');
+  assert.match(naLista.agir, /Aguardando GIL GESTOR TECNICO TESTE decidir sua nova data/);
   assert.ok(amb.tabelas.ATV_HISTORICO.some((h) => h.ATIVIDADE_ID === 'a_hoje' && h.TIPO === 'COMENTARIO' && /baú/.test(h.TEXTO)));
   assert.ok(Array.isArray(r.atividades) && r.atividades.some((x) => x.id === 'a_hoje' && x.situacao === 'Em andamento'));
   assert.ok(amb.tabelas.ATEC_SYNC.some((l) => l.ID_LOCAL === 'atv-ini-0001' && l.RESULTADO === 'ACEITO' && l.TIPO === 'ATV_SITUACAO'));

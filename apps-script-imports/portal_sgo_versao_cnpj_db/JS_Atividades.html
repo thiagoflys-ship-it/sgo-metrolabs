@@ -137,8 +137,51 @@
   .atv-cartao.vencida { border-left-color: var(--danger) !important; }
   .atv-cartao-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; font-size: 12.5px; }
   .atv-cartao .atv-acoes { margin-top: 8px; }
-  .atv-cartao .atv-acoes button { flex: 1 1 auto; min-height: 40px !important; height: auto !important; }
+  .atv-cartao .atv-acoes button { flex: 1 1 auto; min-height: 44px !important; height: auto !important; }
+  .atv-cartao .atv-acoes-fim { margin: 10px 0 0; }
   #app.modo-mobile .atv-agora-faixa .atv-resumo-faixa { margin-left: 0 !important; width: 100%; }
+  /* 31/10/2026 (pedido do dono): "quem age agora", pedido de nova data, andamento do dia e confirmação de Concluir */
+  .atv-selo.pedido { color: #8a5a00; background: var(--warning-bg); }
+  .atv-agir { border: 1px solid var(--border); border-left: 5px solid var(--muted); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; background: var(--card); }
+  .atv-agir.eu { border-left-color: var(--danger); background: var(--danger-bg); }
+  .atv-agir.decidir { border-left-color: var(--info); background: var(--bc-surface-3, var(--card)); }
+  .atv-agir.espera { border-left-color: var(--warning); background: var(--warning-bg); }
+  .atv-agir-tit { font-weight: 800; font-size: 14px; color: var(--text-strong, var(--text)); line-height: 1.35; }
+  .atv-agir-det { font-size: 12.5px; margin-top: 4px; line-height: 1.45; }
+  .atv-agir-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: center; }
+  .atv-agir-acoes .atv-sep { flex: 1 1 auto; }
+  .atv-pedido-resumo { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--border); font-size: 12.5px; line-height: 1.5; }
+  .atv-pedido-resumo b { color: var(--text-strong, var(--text)); }
+  .atv-agir-mini { font-size: 12px; font-weight: 700; margin-top: 4px; line-height: 1.35; }
+  .atv-agir-mini.eu { color: var(--danger); }
+  .atv-agir-mini.decidir { color: var(--info); }
+  .atv-agir-mini.espera { color: #8a5a00; }
+  .atv-andamento { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; }
+  .atv-andamento h4 { margin: 0 0 6px; font-size: 13px; }
+  .atv-andamento-linha { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .atv-andamento-linha .atv-campo { margin: 0; width: 120px; }
+  .atv-acoes-fim { display: flex; justify-content: flex-end; gap: 10px; margin: 0 0 14px; padding-top: 10px; border-top: 1px dashed var(--border); flex-wrap: wrap; }
+  .atv-acoes-fim .atv-esq { margin-right: auto; }
+  td .atv-acoes .atv-btn-concluir { margin-left: 12px; }
+  .atv-overlay.acima { z-index: 100003; }
+  .atv-conf-pergunta { font-size: 15px; font-weight: 700; margin: 0 0 8px; color: var(--text-strong, var(--text)); line-height: 1.4; }
+  .atv-just-card .atv-acoes-fim { border-top-color: rgba(0,0,0,.12); }
+  @media (max-width: 700px) {
+    /* celular: a janela termina acima dos botões redondos do canto (bate-papo e dúvida), que ficam por cima de tudo */
+    .atv-overlay, .atv-overlay.bloqueante { align-items: flex-start; padding: 8px 8px calc(64px + env(safe-area-inset-bottom, 0px)); }
+    /* vence a regra geral da casca (UI_Estilos: calc(100dvh - 32px)), que deixava o rodapé da janela embaixo dos botões redondos */
+    .atv-overlay .atv-modal, .atv-overlay.bloqueante .atv-modal { max-height: 100% !important; }
+    .atv-modal-corpo { padding: 12px 14px; }
+    .atv-modal .atv-mini, .atv-acoes button, .atv-agir-acoes button, .atv-acoes-fim button, .atv-andamento button, .atv-modal-rod button { min-height: 44px !important; height: auto !important; font-size: 14px !important; }
+    .atv-modal-rod.empilha { flex-direction: column-reverse; gap: 12px; }
+    .atv-modal-rod.empilha button { width: 100%; }
+    .atv-agir-acoes button { flex: 1 1 100%; }
+    .atv-agir-acoes .atv-sep { display: none; }
+    .atv-acoes-fim button { flex: 1 1 100%; }
+    .atv-acoes-fim .atv-esq { margin-right: 0; }
+    .atv-andamento-linha .atv-campo { width: 100%; }
+    .atv-andamento-linha button { flex: 1 1 100%; }
+  }
   @media (max-width: 900px) {
     .atv-kanban { grid-template-columns: 1fr; }
     .atv-semana { grid-template-columns: 1fr; }
@@ -206,13 +249,17 @@
     return "há " + dias + (dias === 1 ? " dia" : " dias") + (h % 24 ? " " + (h % 24) + " h" : "");
   }
   function Atividades_aberta_(a) { return a.SITUACAO !== "Concluída" && a.SITUACAO !== "Cancelada"; }
-  // 26/10/2026: atendimento de O.S. (OS_ID) e atendimento do Auvo não contam atraso aqui: o prazo é acompanhado na Assistência técnica
-  function Atividades_vencida_(a) { return Atividades_aberta_(a) && !a.OS_ID && !a._auvo && a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < Atividades_agoraIso_(); }
+  /** 31/10/2026: pedido de nova data aguardando quem lançou (ou a gestão) decidir. */
+  function Atividades_pedidoPendente_(a) { return String((a && a.PEDIDO_SITUACAO) || "").toUpperCase() === "PENDENTE"; }
+  // 26/10/2026: atendimento de O.S. (OS_ID) e atendimento do Auvo não contam atraso aqui: o prazo é acompanhado na Assistência técnica.
+  // 31/10/2026: com pedido de nova data aguardando decisão, o responsável não é cobrado (mesma regra do servidor, Atividades_vencida_).
+  function Atividades_vencida_(a) { return Atividades_aberta_(a) && !a.OS_ID && !a._auvo && a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < Atividades_agoraIso_() && !Atividades_pedidoPendente_(a); }
   function Atividades_seloHtml_(a) {
     if (!Atividades_aberta_(a)) {
       if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM && a.PRAZO) return a.CONCLUIDA_EM <= a.PRAZO ? '<span class="atv-selo neutro">No prazo</span>' : '<span class="atv-selo neutro">Com atraso</span>';
       return "";
     }
+    if (Atividades_pedidoPendente_(a) && !a.OS_ID) return '<span class="atv-selo pedido" title="A previsão venceu e o responsável pediu nova data; aguardando a decisão de quem lançou">Nova data pedida</span>';
     if (Atividades_vencida_(a)) return '<span class="atv-selo vencida">Vencida</span>';
     if (String(a.PREVISAO_ATUAL).slice(0, 10) === Atividades_agoraIso_().slice(0, 10)) return '<span class="atv-selo hoje">Vence hoje</span>';
     return '<span class="atv-selo emdia">Em dia</span>';
@@ -347,6 +394,7 @@
         badge.style.background = n ? "var(--danger)" : "";
       }
       if (res.motivosAtraso && res.motivosAtraso.length) ATV.motivos = res.motivosAtraso;
+      if (res.motivoPrioridade) ATV.motivoPrioridade = res.motivoPrioridade;
       if (res.pendentes && res.pendentes.length) Atividades_mostrarJustificativas_(res.pendentes);
       else Atividades_fecharJustificativas_();
       if (res.avisos && res.avisos.length) Atividades_mostrarAvisos_(res.avisos);
@@ -369,8 +417,221 @@
     if (ATV.tela === "equipe") Atividades_carregarEquipe_();
   }
 
-  // ---------- janela de justificativa de atraso (não fecha sem justificar) ----------
+  // ---------- pedido de nova data (31/10/2026; antes "justificativa de atraso") ----------
+  // O responsável escolhe o motivo, explica em poucas palavras e PROPÕE a data. Quem lançou (ou a gestão) aceita ou recusa.
+  // Enquanto o pedido espera, ele não é cobrado. Lançada pela própria pessoa (ou por rotina do sistema): a data vale na hora.
+  var ATV_MOTIVO_PRIORIDADE_PADRAO = "Outra prioridade, a pedido de alguém";
+  var ATV_MOTIVOS_LEGADO_TELA = { "Outra prioridade definida pela gestão": "Outra prioridade (registro anterior)" };
+  function Atividades_motivoPrioridade_() { return (ATV.opcoes && ATV.opcoes.motivoPrioridade) || ATV.motivoPrioridade || ATV_MOTIVO_PRIORIDADE_PADRAO; }
+
+  /** Ano fora de [ano atual - 1, ano atual + 2]: a mesma trava do servidor, com o mesmo texto. Vazio se a data é aceita. */
+  function Atividades_anoForaMsg_(iso, rotulo, acao) {
+    if (!iso) return "";
+    var ano = Number(String(iso).slice(0, 4)), atual = new Date().getFullYear();
+    if (ano >= atual - 1 && ano <= atual + 2) return "";
+    return "Não foi possível " + acao + ": o campo " + rotulo + " (" + Atividades_br_(iso) + ") está com o ano " + ano + ", fora do período aceito (" + (atual - 1) + " a " + (atual + 2) + "). Provavelmente o ano foi digitado errado. Corrija o ano no campo " + rotulo + " e tente de novo.";
+  }
+  function Atividades_limitesData_() { var a = new Date().getFullYear(); return ' min="' + (a - 1) + '-01-01T00:00" max="' + (a + 2) + '-12-31T23:59"'; }
+
+  /**
+   * Campos do pedido de nova data. k = sufixo dos ids (a atividade na janela de cobrança, "M" na janela do detalhe).
+   * a = atividade (com PEDIDO_* quando é para mudar o pedido); dec = { direto, nome } de quem decide.
+   */
+  function Atividades_formPedidoHtml_(k, a, dec) {
+    var minimo = new Date(Date.now() + 5 * 60000), maxAno = new Date().getFullYear() + 2;
+    var sugestao = new Date(); sugestao.setDate(sugestao.getDate() + 1); sugestao.setHours(18, 0, 0, 0);
+    var pend = Atividades_pedidoPendente_(a);
+    var catAtual = pend ? (a.PEDIDO_MOTIVO || "") : "";
+    if (catAtual === "Outra prioridade definida pela gestão") catAtual = Atividades_motivoPrioridade_();
+    var motivos = (ATV.opcoes && ATV.opcoes.motivosAtraso) || ATV.motivos || [];
+    var dataAtual = pend && a.PEDIDO_DATA ? a.PEDIDO_DATA : Atividades_iso_(sugestao);
+    var max = (ATV.opcoes && ATV.opcoes.pedidoTextoMax) || 600;
+    var quem = dec && dec.direto ? "A atividade foi lançada por você (ou por uma rotina do sistema): a nova data vale na hora."
+      : "Quem decide: " + Atividades_esc_((dec && dec.nome) || a.PEDIDO_DECISOR_NOME || a.CRIADO_POR_NOME || "a gestão") + ". Até a decisão, você não é cobrado por este atraso.";
+    return '<div class="atv-campo"><label for="atvPedCat_' + k + '">Motivo do atraso</label>' +
+        '<select id="atvPedCat_' + k + '" onchange="Atividades_pedidoMotivoMudou_(\'' + k + '\')"><option value="">Escolha o motivo</option>' +
+        motivos.map(function (m) { return "<option" + (m === catAtual ? " selected" : "") + ">" + Atividades_esc_(m) + "</option>"; }).join("") + "</select></div>" +
+      '<div id="atvPedPri_' + k + '"' + (catAtual === Atividades_motivoPrioridade_() ? "" : " hidden") + ">" +
+        '<div class="atv-campo"><label for="atvPedQual_' + k + '">Qual prioridade você atendeu?</label><input type="text" id="atvPedQual_' + k + '" maxlength="200" placeholder="Ex.: atendimento de urgência no Hospital X" value="' + Atividades_esc_(pend ? a.PEDIDO_PRIORIZOU : "") + '"></div>' +
+        '<div class="atv-campo"><label for="atvPedQuem_' + k + '">Quem pediu?</label><select id="atvPedQuem_' + k + '" data-atual="' + Atividades_esc_(pend ? a.PEDIDO_A_PEDIDO_DE_ID : "") + '"><option value="">Carregando a lista...</option></select></div>' +
+      "</div>" +
+      '<div class="atv-campo"><label for="atvPedTxt_' + k + '">Explique em poucas palavras</label>' +
+        '<textarea id="atvPedTxt_' + k + '" maxlength="' + max + '" placeholder="O que atrasou, em poucas palavras" oninput="Atividades_pedidoContar_(\'' + k + '\')">' + Atividades_esc_(pend ? a.PEDIDO_TEXTO : "") + "</textarea>" +
+        '<div class="atv-contador curto" id="atvPedCont_' + k + '">0 letras (mínimo 15, máximo ' + max + ")</div>" +
+        '<div class="atv-sub">O relatório do que foi feito vai em "Registrar andamento do dia", no detalhe da atividade.</div></div>' +
+      '<div class="atv-campo"><label for="atvPedData_' + k + '">Nova data que você propõe</label>' +
+        '<input type="datetime-local" id="atvPedData_' + k + '" min="' + Atividades_iso_(minimo) + '" max="' + maxAno + '-12-31T23:59" value="' + Atividades_esc_(dataAtual) + '"></div>' +
+      '<div class="atv-sub" style="margin:-4px 0 8px">' + quem + "</div>" +
+      '<div id="atvPedMsg_' + k + '"></div>';
+  }
+  function Atividades_pedidoContar_(k) {
+    var ta = document.getElementById("atvPedTxt_" + k), c = document.getElementById("atvPedCont_" + k);
+    if (!ta || !c) return;
+    var n = ta.value.replace(/\s+/g, " ").trim().length, max = Number(ta.getAttribute("maxlength")) || 600;
+    c.textContent = n + (n === 1 ? " letra" : " letras") + " (mínimo 15, máximo " + max + ")";
+    c.classList.toggle("curto", n < 15);
+  }
+  /** "Outra prioridade, a pedido de alguém": mostra qual prioridade e quem pediu (lista de pessoas das opções da tela). */
+  function Atividades_pedidoMotivoMudou_(k) {
+    var cat = (document.getElementById("atvPedCat_" + k) || {}).value || "", box = document.getElementById("atvPedPri_" + k);
+    if (!box) return;
+    box.hidden = cat !== Atividades_motivoPrioridade_();
+    if (box.hidden) return;
+    var sel = document.getElementById("atvPedQuem_" + k);
+    Atividades_garantirOpcoes_(function (op) {
+      if (!sel) return;
+      var atual = sel.getAttribute("data-atual") || sel.value || "";
+      sel.innerHTML = '<option value="">Escolha a pessoa</option>' + (op.pessoas || []).map(function (p) { return '<option value="' + Atividades_esc_(p.id) + '"' + (p.id === atual ? " selected" : "") + ">" + Atividades_esc_(p.nome) + "</option>"; }).join("");
+    });
+  }
+  /** Lê e confere os campos do pedido (o servidor confere de novo). Devolve o payload ou null (e mostra o erro). */
+  function Atividades_lerPedido_(k, id) {
+    var v = function (p) { var el = document.getElementById(p + k); return el ? String(el.value || "").trim() : ""; };
+    var msg = document.getElementById("atvPedMsg_" + k);
+    var erro = function (t, campo) { if (msg) msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; var el = campo && document.getElementById(campo + k); if (el) el.focus(); return null; };
+    var acao = "enviar o pedido de nova data";
+    var d = { id: id, categoria: v("atvPedCat_"), motivo: v("atvPedTxt_").replace(/\s+/g, " "), novaPrevisao: v("atvPedData_") };
+    if (!d.categoria) return erro("Não foi possível " + acao + ": o motivo não foi escolhido. Escolha na lista \"Motivo do atraso\" (se nenhum servir, escolha \"Outro motivo\") e envie de novo.", "atvPedCat_");
+    if (d.categoria === Atividades_motivoPrioridade_()) {
+      d.prioridade = v("atvPedQual_"); d.pedidoPorId = v("atvPedQuem_");
+      if (d.prioridade.length < 5) return erro("Não foi possível " + acao + ": diga qual prioridade você atendeu (mínimo 5 letras), por exemplo \"atendimento de urgência no Hospital X\", e envie de novo.", "atvPedQual_");
+      if (!d.pedidoPorId) return erro("Não foi possível " + acao + ": escolha na lista \"Quem pediu\" a pessoa que pediu a outra prioridade e envie de novo.", "atvPedQuem_");
+    }
+    if (d.motivo.length < 15) return erro("Não foi possível " + acao + ": a explicação está curta demais (mínimo 15 letras). Diga em poucas palavras o que atrasou e envie de novo.", "atvPedTxt_");
+    if (!d.novaPrevisao) return erro("Não foi possível " + acao + ": a nova data não foi informada. Preencha data e hora da entrega que você propõe e envie de novo.", "atvPedData_");
+    var fora = Atividades_anoForaMsg_(d.novaPrevisao, "Nova data", acao);
+    if (fora) return erro(fora, "atvPedData_");
+    if (d.novaPrevisao <= Atividades_agoraIso_()) return erro("Não foi possível " + acao + ": a nova data (" + Atividades_br_(d.novaPrevisao) + ") já passou. A data proposta precisa ser depois de agora. Escolha uma data e hora futuras e envie de novo.", "atvPedData_");
+    return d;
+  }
+
+  /** Janela "Pedir nova data" / "Mudar o pedido", aberta pelo detalhe, pela lista ou pelo cartão. */
+  function Atividades_abrirPedido_(id) {
+    Atividades_garantirOpcoes_(function () {
+      Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) {
+        var a = res.item, pend = Atividades_pedidoPendente_(a);
+        var antigo = document.getElementById("atvPedidoOverlay"); if (antigo) antigo.remove();
+        var ov = Atividades_modal_(pend ? "Mudar o pedido de nova data" : "Pedir nova data",
+          '<p style="margin-top:0"><b>' + Atividades_esc_(a.TITULO) + '</b><br><span class="atv-sub">A previsão de entrega venceu em ' + Atividades_br_(a.PEDIDO_PREVISAO_ANTERIOR && pend ? a.PEDIDO_PREVISAO_ANTERIOR : a.PREVISAO_ATUAL) + ".</span></p>" +
+            Atividades_formPedidoHtml_("M", a, res.decisor),
+          '<button type="button" class="btn-secondary" data-x="cancelar">Voltar</button><button type="button" class="btn-primary" data-x="ok">' + (pend ? "Atualizar o pedido" : "Enviar pedido de nova data") + "</button>",
+          { id: "atvPedidoOverlay", largura: 560, acima: true, empilha: true });
+        ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
+        ov.querySelector('[data-x="ok"]').onclick = function () {
+          var d = Atividades_lerPedido_("M", id); if (!d) return;
+          var b = this; b.disabled = true;
+          Atividades_chamar_("Atividades_apiJustificar", d, function (r) {
+            ov.remove(); frotaToastEnvio_(true, pend ? "Pedido alterado" : "Pedido de nova data", r.message || "");
+            Atividades_aposAlterar_(); Atividades_verificar_();
+          }, function (m) { b.disabled = false; var msg = document.getElementById("atvPedMsg_M"); if (msg) msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { carregando: "Enviando o pedido..." });
+        };
+        Atividades_pedidoContar_("M");
+        Atividades_pedidoMotivoMudou_("M");
+      }, null, { carregando: "Abrindo atividade..." });
+    });
+  }
+
+  /** Aceitar (um toque) ou recusar (com motivo curto) o pedido de nova data, no detalhe da atividade. */
+  function Atividades_decidirPedido_(id, decisao, motivo, btn, aoErro) {
+    if (btn) btn.disabled = true;
+    Atividades_chamar_("Atividades_apiDecidirPedido", { id: id, decisao: decisao, motivo: motivo || "" }, function (r) {
+      frotaToastEnvio_(true, decisao === "ACEITAR" ? "Nova data aceita" : "Pedido recusado", r.message || "");
+      Atividades_aposAlterar_();
+    }, function (m) { if (btn) btn.disabled = false; if (aoErro) aoErro(m); else alert(m); }, { carregando: decisao === "ACEITAR" ? "Aceitando a nova data..." : "Recusando..." });
+  }
+  function Atividades_abrirRecusa_(id) {
+    var box = document.getElementById("atvRecusa_" + id);
+    if (!box) return;
+    if (box.innerHTML) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="atv-campo" style="margin-top:10px"><label for="atvRecusaTxt_' + id + '">Por que a data não serve? (curto; a pessoa vai ler)</label>' +
+      '<textarea id="atvRecusaTxt_' + id + '" maxlength="300" placeholder="Ex.: o cliente precisa até sexta"></textarea></div><div id="atvRecusaMsg_' + id + '"></div>' +
+      '<div class="atv-agir-acoes"><button type="button" class="btn-danger" id="atvRecusaOk_' + id + '">Confirmar recusa</button><button type="button" class="btn-secondary" onclick="Atividades_abrirRecusa_(\'' + id + '\')">Voltar</button></div>';
+    var ta = document.getElementById("atvRecusaTxt_" + id); if (ta) ta.focus();
+    document.getElementById("atvRecusaOk_" + id).onclick = function () {
+      var t = (ta.value || "").replace(/\s+/g, " ").trim(), msg = document.getElementById("atvRecusaMsg_" + id);
+      if (t.length < 5) { msg.innerHTML = '<div class="atv-msg erro">Não foi possível recusar: escreva em poucas palavras por que a data não serve (mínimo 5 letras). A pessoa vai ler e propor outra data.</div>'; ta.focus(); return; }
+      Atividades_decidirPedido_(id, "RECUSAR", t, this, function (m) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; });
+    };
+  }
+
+  /** Classe visual do "quem age agora". */
+  function Atividades_agirClasse_(a) { var c = (a.AGIR || {}).codigo; return c === "JUSTIFICAR" ? "eu" : c === "DECIDIR" ? "decidir" : c === "AGUARDANDO" ? "espera" : "nada"; }
+  /** Linha compacta para lista, cartão e Kanban: só quando há algo pendente (pedir, decidir ou aguardando). */
+  function Atividades_agirMiniHtml_(a) {
+    var ag = a.AGIR;
+    if (!ag || ag.codigo === "NADA" || a.OS_ID || a._auvo) return "";
+    var ic = ag.codigo === "AGUARDANDO" ? "fa-hourglass-half" : "fa-hand-point-right";
+    return '<div class="atv-agir-mini ' + Atividades_agirClasse_(a) + '"><i class="fas ' + ic + '" aria-hidden="true"></i> ' + Atividades_esc_(ag.frase) + "</div>";
+  }
+  /** Botão principal da linha (lista e cartão), conforme quem age. */
+  function Atividades_agirBotaoHtml_(a) {
+    var ac = (a.AGIR || {}).acao;
+    if (ac === "pedir") return '<button type="button" class="btn-primary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Pedir nova data</button>';
+    if (ac === "decidir") return '<button type="button" class="btn-primary" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">Decidir a nova data</button>';
+    if (ac === "mudarPedido") return '<button type="button" class="btn-secondary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Mudar o pedido</button>';
+    return "";
+  }
+
+  /** Resumo do pedido (motivo neutro, explicação, datas) para o "quem age agora" do detalhe. */
+  function Atividades_pedidoResumoHtml_(a) {
+    var s = String(a.PEDIDO_SITUACAO || "");
+    if (s !== "PENDENTE" && s !== "RECUSADO") return "";
+    var linhas = [];
+    linhas.push("<b>" + (s === "PENDENTE" ? "Nova data pedida" : "Nova data recusada") + ":</b> " + Atividades_br_(a.PEDIDO_DATA) + ' <span class="atv-sub">(a previsão venceu em ' + Atividades_br_(a.PEDIDO_PREVISAO_ANTERIOR || a.PREVISAO_ATUAL) + ")</span>");
+    if (a.PEDIDO_MOTIVO_TEXTO) linhas.push("<b>Motivo:</b> " + Atividades_esc_(a.PEDIDO_MOTIVO_TEXTO));
+    if (a.PEDIDO_TEXTO) linhas.push("<b>Explicação:</b> " + Atividades_esc_(a.PEDIDO_TEXTO));
+    if (Number(a.QTD_JUSTIFICATIVAS) > 1) linhas.push('<span class="atv-sub">É a ' + Atividades_num_(a.QTD_JUSTIFICATIVAS) + "ª vez que a data desta atividade é adiada.</span>");
+    if (s === "RECUSADO" && a.PEDIDO_RESPOSTA) linhas.push("<b>Motivo da recusa (" + Atividades_esc_(a.PEDIDO_DECIDIDO_POR_NOME) + "):</b> " + Atividades_esc_(a.PEDIDO_RESPOSTA));
+    return '<div class="atv-pedido-resumo">' + linhas.join("<br>") + "</div>";
+  }
+
+  /** Topo do detalhe: uma frase e o botão principal (31/10/2026, pedido do dono: "tem que ficar claro do lado dele e do meu"). */
+  function Atividades_agirHtml_(a) {
+    var ag = a.AGIR;
+    if (!ag) return "";
+    var cls = Atividades_agirClasse_(a), b = "";
+    if (ag.acao === "pedir") {
+      b = '<button type="button" class="btn-primary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Pedir nova data</button><span class="atv-sep"></span>' +
+        '<button type="button" class="btn-secondary atv-btn-concluir" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Já terminei: concluir</button>';
+    } else if (ag.acao === "decidir") {
+      b = '<button type="button" class="btn-primary" onclick="Atividades_decidirPedido_(\'' + a.ID + '\', \'ACEITAR\', \'\', this)">Aceitar nova data (' + Atividades_esc_(Atividades_br_(a.PEDIDO_DATA)) + ")</button>" +
+        '<button type="button" class="btn-secondary" onclick="Atividades_abrirRecusa_(\'' + a.ID + '\')">Recusar</button>';
+    } else if (ag.acao === "mudarPedido") {
+      b = '<button type="button" class="btn-secondary" onclick="Atividades_abrirPedido_(\'' + a.ID + '\')">Mudar o pedido</button>';
+    }
+    var ic = ag.codigo === "AGUARDANDO" ? "fa-hourglass-half" : ag.codigo === "NADA" ? "fa-circle-check" : "fa-hand-point-right";
+    return '<div class="atv-agir ' + cls + '" role="status"><div class="atv-agir-tit"><i class="fas ' + ic + '" aria-hidden="true"></i> ' + Atividades_esc_(ag.frase) + "</div>" +
+      (ag.detalhe ? '<div class="atv-agir-det">' + Atividades_esc_(ag.detalhe) + "</div>" : "") + Atividades_pedidoResumoHtml_(a) +
+      (b ? '<div class="atv-agir-acoes">' + b + "</div>" : "") + (ag.acao === "decidir" ? '<div id="atvRecusa_' + Atividades_esc_(a.ID) + '"></div>' : "") + "</div>";
+  }
+
+  /**
+   * Concluir pede confirmação clara (31/10/2026: o dono concluiu sem perceber, no celular).
+   * a = { ID, TITULO, RESPONSAVEL_ID, RESPONSAVEL_NOME, PEDIDO_SITUACAO }; aoConfirmar(observacao).
+   */
+  function Atividades_confirmarConcluir_(a, aoConfirmar) {
+    var meu = Atividades_meuId_(), souResp = !!meu && a.RESPONSAVEL_ID === meu;
+    var efeito = souResp ? "Ela sai da sua lista e conta como entregue." : "Ela sai da lista de " + (a.RESPONSAVEL_NOME || "quem é responsável") + " e conta como entregue.";
+    var ov = Atividades_modal_("Concluir atividade",
+      '<p class="atv-conf-pergunta">Concluir "' + Atividades_esc_(a.TITULO || "esta atividade") + '"? ' + Atividades_esc_(efeito) + "</p>" +
+      (Atividades_pedidoPendente_(a) ? '<p class="atv-sub" style="margin:0 0 8px">O pedido de nova data que está aguardando decisão é encerrado.</p>' : "") +
+      '<div class="atv-campo"><label for="atvConclObs">Observação da conclusão (opcional)</label><textarea id="atvConclObs" maxlength="2000" placeholder="Ex.: entregue ao cliente, laudo anexado no módulo"></textarea></div>',
+      '<button type="button" class="btn-secondary" data-x="cancelar">Voltar, não concluir</button><button type="button" class="btn-primary" data-x="ok">Sim, concluir</button>',
+      { largura: 480, acima: true, empilha: true, id: "atvConcluirOverlay" });
+    ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () { var t = (ov.querySelector("#atvConclObs").value || "").trim(); ov.remove(); aoConfirmar(t); };
+    ov.querySelector('[data-x="cancelar"]').focus();
+  }
+  /** A atividade que já está na tela (lista, equipe, painel do módulo ou detalhe aberto), para a confirmação. */
+  function Atividades_itemLocal_(id) {
+    var listas = [ATV.minhas || [], (ATV.equipe && ATV.equipe.itens) || [], ATV.drawerItens || [], ATV.detalheItem ? [ATV.detalheItem] : [], ATV.justItens || []];
+    for (var i = 0; i < listas.length; i++) { var x = listas[i].filter(function (a) { return a.ID === id; })[0]; if (x) return x; }
+    return { ID: id, TITULO: "", RESPONSAVEL_ID: "", RESPONSAVEL_NOME: "" };
+  }
+
+  // ---------- janela de cobrança: atividade vencida (não fecha sem pedir nova data ou concluir) ----------
   function Atividades_mostrarJustificativas_(pendentes) {
+    ATV.justItens = pendentes;
     var ov = document.getElementById("atvJustOverlay");
     if (!ov) {
       ov = document.createElement("div");
@@ -380,7 +641,7 @@
       ov.setAttribute("aria-modal", "true");
       ov.innerHTML = '<div class="atv-modal" style="max-width:620px">' +
         '<div class="atv-modal-cab"><div><h3>Atividade com prazo vencido</h3>' +
-        '<div class="atv-sub" style="font-size:12.5px;margin-top:6px">O prazo destas atividades já passou e elas não foram concluídas. Para continuar usando o sistema, informe para cada uma o que causou o atraso, explique a demora (mínimo 15 letras) e escolha uma nova previsão de entrega. A justificativa fica no histórico da atividade e quem lançou a atividade é avisado. Se a atividade já foi feita, justifique e depois marque como concluída em Minhas atividades.</div></div></div>' +
+        '<div class="atv-sub" style="font-size:12.5px;margin-top:6px">A previsão de entrega passou. Em cada atividade, <b>peça nova data</b> ou, se já terminou, <b>conclua</b>. Quem lançou decide a nova data; enquanto isso, você não é cobrado.</div></div></div>' +
         '<div class="atv-modal-corpo" id="atvJustCorpo"></div></div>';
       document.body.appendChild(ov);
       ATV.justAbertas = {};
@@ -391,36 +652,23 @@
       ids[a.ID] = 1;
       if (ATV.justAbertas[a.ID]) return; // já na tela: não apaga o que a pessoa está digitando
       ATV.justAbertas[a.ID] = 1;
-      var minimo = new Date(Date.now() + 5 * 60000);
-      var sugestao = new Date(); sugestao.setDate(sugestao.getDate() + 1); sugestao.setHours(18, 0, 0, 0);
       var card = document.createElement("div");
       card.className = "atv-just-card";
       card.id = "atvJust_" + a.ID;
+      var recusa = a.PEDIDO_RESPOSTA ? '<div class="atv-pedido-resumo" style="margin:8px 0 0"><b>' + Atividades_esc_(a.PEDIDO_DECIDIDO_POR_NOME || "A gestão") + " recusou a nova data pedida (" + Atividades_br_(a.PEDIDO_DATA) + "):</b> " + Atividades_esc_(a.PEDIDO_RESPOSTA) + "<br>Peça outra data ou conclua.</div>" : "";
       card.innerHTML = '<div class="t">' + Atividades_esc_(a.TITULO) + "</div>" +
         '<div class="atv-sub">Previsão vencida em ' + Atividades_br_(a.PREVISAO_ATUAL) + (a.PRAZO !== a.PREVISAO_ATUAL ? " (prazo original " + Atividades_br_(a.PRAZO) + ")" : "") +
-        (a.CRIADO_POR_NOME ? " · lançada por " + Atividades_esc_(a.CRIADO_POR_NOME) : "") + (a.QTD_JUSTIFICATIVAS ? " · já justificada " + a.QTD_JUSTIFICATIVAS + " vez(es)" : "") + "</div>" +
-        '<div class="atv-campo" style="margin-top:10px"><label for="atvJustCat_' + a.ID + '">O que causou o atraso</label>' +
-        '<select id="atvJustCat_' + a.ID + '"><option value="">Escolha o motivo</option>' + (ATV.motivos || []).map(function (m) { return '<option>' + Atividades_esc_(m) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="atv-campo"><label for="atvJustMot_' + a.ID + '">Explique a demora</label>' +
-        '<textarea id="atvJustMot_' + a.ID + '" maxlength="2000" placeholder="O que atrasou a atividade e o que falta para concluir"></textarea>' +
-        '<div class="atv-contador curto" id="atvJustCont_' + a.ID + '">0 de 15 letras no mínimo</div></div>' +
-        '<div class="atv-campo"><label for="atvJustPrev_' + a.ID + '">Nova previsão de entrega</label>' +
-        '<input type="datetime-local" id="atvJustPrev_' + a.ID + '" min="' + Atividades_iso_(minimo) + '" value="' + Atividades_iso_(sugestao) + '"></div>' +
-        '<div id="atvJustMsg_' + a.ID + '"></div>' +
-        '<div style="text-align:right"><button type="button" class="btn-primary" onclick="Atividades_enviarJustificativa_(\'' + a.ID + '\', this)">Registrar justificativa</button></div>';
+        (a.CRIADO_POR_NOME ? " · lançada por " + Atividades_esc_(a.CRIADO_POR_NOME) : "") + (a.QTD_JUSTIFICATIVAS ? " · data já adiada " + Atividades_pl_(a.QTD_JUSTIFICATIVAS, "vez", "vezes") : "") + "</div>" + recusa +
+        '<div style="margin-top:10px">' + Atividades_formPedidoHtml_(a.ID, a, { direto: !!a.DECISOR_DIRETO, nome: a.DECISOR_NOME }) + "</div>" +
+        '<div class="atv-agir-acoes"><button type="button" class="btn-primary" onclick="Atividades_enviarJustificativa_(\'' + a.ID + '\', this)">Enviar pedido de nova data</button></div>' +
+        '<div class="atv-acoes-fim"><button type="button" class="btn-secondary atv-btn-concluir" onclick="Atividades_concluirDaJanela_(\'' + a.ID + '\')">Já terminei: concluir</button></div>';
       corpo.appendChild(card);
-      var ta = card.querySelector("textarea");
-      ta.addEventListener("input", function () {
-        var n = ta.value.replace(/\s+/g, " ").trim().length;
-        var c = document.getElementById("atvJustCont_" + a.ID);
-        c.textContent = n >= 15 ? n + " letras" : n + " de 15 letras no mínimo";
-        c.classList.toggle("curto", n < 15);
-      });
+      Atividades_pedidoContar_(a.ID);
     });
     Object.keys(ATV.justAbertas).forEach(function (id) {
       if (!ids[id]) { var c = document.getElementById("atvJust_" + id); if (c) c.remove(); delete ATV.justAbertas[id]; }
     });
-    var primeiro = corpo.querySelector("textarea");
+    var primeiro = corpo.querySelector("select");
     if (primeiro && !ov.contains(document.activeElement)) primeiro.focus();
   }
 
@@ -431,33 +679,43 @@
   }
 
   function Atividades_enviarJustificativa_(id, btn) {
-    var motivo = (document.getElementById("atvJustMot_" + id) || {}).value || "";
-    var prev = (document.getElementById("atvJustPrev_" + id) || {}).value || "";
-    var cat = (document.getElementById("atvJustCat_" + id) || {}).value || "";
-    var msg = document.getElementById("atvJustMsg_" + id);
-    var mostrar = function (t) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; };
-    if (!cat && (ATV.motivos || []).length) { mostrar("Não foi possível registrar: escolha em \"O que causou o atraso\" o motivo (se nenhum servir, escolha \"Outro motivo\") e clique em Registrar de novo."); return; }
-    if (motivo.replace(/\s+/g, " ").trim().length < 15) { mostrar("Não foi possível registrar: o motivo precisa ter pelo menos 15 letras. Explique o que atrasou e clique em Registrar de novo."); return; }
-    if (!prev) { mostrar("Não foi possível registrar: informe a nova previsão (data e hora) e clique em Registrar de novo."); return; }
-    if (prev <= Atividades_agoraIso_()) { mostrar("Não foi possível registrar: a nova previsão já passou. Escolha uma data e hora depois de agora."); return; }
-    btn.disabled = true; btn.textContent = "Registrando...";
-    Atividades_chamar_("Atividades_apiJustificar", { id: id, motivo: motivo, novaPrevisao: prev, categoria: cat }, function () {
+    var d = Atividades_lerPedido_(id, id);
+    if (!d) return;
+    var msg = document.getElementById("atvPedMsg_" + id);
+    btn.disabled = true; btn.textContent = "Enviando...";
+    Atividades_chamar_("Atividades_apiJustificar", d, function (r) {
       var c = document.getElementById("atvJust_" + id); if (c) c.remove();
       delete ATV.justAbertas[id];
+      frotaToastEnvio_(true, "Pedido de nova data", r.message || "");
       if (!Object.keys(ATV.justAbertas).length) { Atividades_fecharJustificativas_(); Atividades_atualizarTela_(true); Atividades_verificar_(); }
-    }, function (m) { btn.disabled = false; btn.textContent = "Registrar justificativa"; mostrar(m); });
+    }, function (m) { btn.disabled = false; btn.textContent = "Enviar pedido de nova data"; if (msg) msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; });
+  }
+
+  /** "Já terminei: concluir" na janela de cobrança: a mesma confirmação clara de Concluir. */
+  function Atividades_concluirDaJanela_(id) {
+    var a = Atividades_itemLocal_(id);
+    Atividades_confirmarConcluir_(a, function (obs) {
+      Atividades_chamar_("Atividades_apiMudarSituacao", { id: id, situacao: "Concluída", observacao: obs }, function () {
+        var c = document.getElementById("atvJust_" + id); if (c) c.remove();
+        delete ATV.justAbertas[id];
+        if (!Object.keys(ATV.justAbertas).length) Atividades_fecharJustificativas_();
+        Atividades_atualizarTela_(true); Atividades_verificar_();
+      }, function (m) { var msg = document.getElementById("atvPedMsg_" + id); if (msg) msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { carregando: "Concluindo..." });
+    });
   }
 
   // ---------- modal genérico ----------
   function Atividades_modal_(titulo, corpoHtml, rodapeHtml, opcoes) {
     var o = opcoes || {};
     var ov = document.createElement("div");
-    ov.className = "atv-overlay";
+    // 31/10/2026: "acima" = por cima da janela de cobrança (confirmação de Concluir e pedido); "empilha" = no celular,
+    // os botões do rodapé um por linha, com espaço entre eles
+    ov.className = "atv-overlay" + (o.acima ? " acima" : "");
     if (o.id) ov.id = o.id;
     ov.innerHTML = '<div class="atv-modal" style="max-width:' + (o.largura || 640) + 'px">' +
       '<div class="atv-modal-cab"><h3>' + titulo + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
       '<div class="atv-modal-corpo">' + corpoHtml + "</div>" +
-      (rodapeHtml ? '<div class="atv-modal-rod">' + rodapeHtml + "</div>" : "") + "</div>";
+      (rodapeHtml ? '<div class="atv-modal-rod' + (o.empilha ? " empilha" : "") + '">' + rodapeHtml + "</div>" : "") + "</div>";
     ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
     document.body.appendChild(ov);
     return ov;
@@ -486,7 +744,7 @@
     };
     if (situacao === "Aguardando") Atividades_pedirTexto_("Colocar em Aguardando", "O que você está aguardando? (por exemplo: peça, retorno do cliente, aprovação). Mínimo 5 letras.", 5, function (t) { enviar({ motivo: t }); });
     else if (situacao === "Cancelada") Atividades_pedirTexto_("Cancelar atividade", "Por que a atividade está sendo cancelada? Mínimo 5 letras.", 5, function (t) { enviar({ motivo: t }); });
-    else if (situacao === "Concluída") Atividades_pedirTexto_("Concluir atividade", "Observação da conclusão (opcional).", 0, function (t) { enviar({ observacao: t }); });
+    else if (situacao === "Concluída") Atividades_confirmarConcluir_(Atividades_itemLocal_(id), function (t) { enviar({ observacao: t }); });
     else enviar();
   }
 
@@ -512,19 +770,28 @@
   function Atividades_abrirDetalhe_(id) {
     Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) {
       var a = res.item, eu = res.eu;
+      ATV.detalheItem = a;
       var antigo = document.getElementById("atvDetalheOverlay");
       var comentarioRascunho = antigo && antigo.querySelector("#atvComentario") ? antigo.querySelector("#atvComentario").value : "";
+      var andamentoRascunho = antigo && antigo.querySelector("#atvAndTexto") ? antigo.querySelector("#atvAndTexto").value : "";
       if (antigo) antigo.remove();
       var souResp = a.RESPONSAVEL_ID === eu.id, dono = eu.gestor || a.CRIADO_POR_ID === eu.id;
       var aberta = Atividades_aberta_(a), podeAlt = Atividades_podeAlterar_(a);
       var linha = function (r, v) { return v ? "<dt>" + r + "</dt><dd>" + v + "</dd>" : ""; };
       var hist = (res.historico || []).map(function (h) {
-        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", EDICAO: "Editada", REPLANEJAMENTO: "Replanejada pela gestão", RESPONSAVEL: "Responsável alterado", ESCALONAMENTO: "Cobrança escalada pela prioridade", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
+        // 31/10/2026: JUSTIFICATIVA com PARA = PENDENTE é o pedido de nova data; APLICADA, nova data de quem lançou para si;
+        // sem PARA, a justificativa antiga (antes do pedido), que mudava a previsão na hora
+        var tituloJust = h.PARA === "PENDENTE" ? "Pedido de nova data" : h.PARA === "APLICADA" ? "Nova data (atividade lançada pela própria pessoa)" : "Justificativa de atraso (registro anterior ao pedido de nova data)";
+        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: tituloJust, AGORA: "Fazendo agora", EDICAO: "Editada", REPLANEJAMENTO: "Replanejada pela gestão", RESPONSAVEL: "Responsável alterado", ESCALONAMENTO: "Cobrança escalada pela prioridade", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA),
+          PEDIDO_ALTERADO: "Pedido de nova data alterado", PEDIDO_ACEITO: "Nova data aceita", PEDIDO_RECUSADO: "Nova data recusada", PEDIDO_ENCERRADO: "Pedido de nova data encerrado", ANDAMENTO: "Andamento do dia" + (h.PARA ? " · " + Atividades_esc_(h.PARA) : "") }[h.TIPO] || Atividades_esc_(h.TIPO);
+        var ehPedido = h.TIPO === "JUSTIFICATIVA" || h.TIPO === "PEDIDO_ALTERADO";
         return '<div class="atv-hist-item ' + Atividades_esc_(h.TIPO) + '"><div><b>' + titulo + '</b></div>' +
-          (h.TIPO === "JUSTIFICATIVA" && h.CATEGORIA ? "<div>Motivo: " + Atividades_esc_(h.CATEGORIA) + "</div>" : "") +
-          (h.OCULTO ? '<div class="atv-sub">O texto da justificativa fica visível para o responsável, para quem lançou e para a gestão.</div>' : "") +
+          (ehPedido && h.CATEGORIA ? "<div>Motivo: " + Atividades_esc_(ATV_MOTIVOS_LEGADO_TELA[h.CATEGORIA] || h.CATEGORIA) + "</div>" : "") +
+          (h.OCULTO ? '<div class="atv-sub">O texto do pedido fica visível para o responsável, para quem lançou e para a gestão.</div>' : "") +
           (h.TEXTO ? '<div style="white-space:pre-wrap">' + Atividades_esc_(h.TEXTO) + "</div>" : "") +
-          (h.TIPO === "JUSTIFICATIVA" ? "<div>Previsão: " + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" : "") +
+          (ehPedido && (h.PARA === "PENDENTE" || h.TIPO === "PEDIDO_ALTERADO") ? "<div>Data proposta: " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" :
+            h.TIPO === "JUSTIFICATIVA" || h.TIPO === "PEDIDO_ACEITO" ? "<div>Previsão: " + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" :
+            h.TIPO === "PEDIDO_RECUSADO" ? "<div>Data recusada: " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" : "") +
           '<div class="q">' + Atividades_esc_(h.USUARIO_NOME) + " · " + Atividades_br_(h.DATA) + "</div></div>";
       }).join("") || '<div class="atv-sub">Sem registros.</div>';
       var acoes = [];
@@ -532,10 +799,12 @@
       if (aberta && souResp) acoes.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar fazendo agora</button>' : '<button type="button" class="btn-secondary atv-mini" title="Marca esta como a atividade que você está executando agora" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
       if (podeAlt && aberta && a.SITUACAO !== "Em andamento") acoes.push('<button type="button" class="btn-secondary atv-mini" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (podeAlt && aberta && a.SITUACAO !== "Aguardando") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
-      if (podeAlt && aberta) acoes.push('<button type="button" class="btn-primary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       if (!aberta && dono) acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'A fazer\')">Reabrir</button>');
-      if (aberta && dono) acoes.push('<button type="button" class="btn-danger atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Cancelada\')">Cancelar atividade</button>');
-      var corpo =
+      // 31/10/2026: Concluir fica separado dos outros botões (linha própria, no fim), com confirmação clara; Cancelar no lado oposto
+      var fim = [];
+      if (aberta && dono) fim.push('<button type="button" class="btn-danger atv-mini atv-esq" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Cancelada\')">Cancelar atividade</button>');
+      if (podeAlt && aberta && (a.AGIR || {}).acao !== "pedir") fim.push('<button type="button" class="btn-primary atv-mini atv-btn-concluir" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
+      var corpo = Atividades_agirHtml_(a) +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">' + Atividades_sitHtml_(a.SITUACAO) + " " + Atividades_seloHtml_(a) +
           (a.AGORA_DESDE ? '<span class="atv-selo emdia"><i class="fas fa-person-digging" aria-hidden="true"></i> Fazendo agora ' + Atividades_duracao_(a.AGORA_DESDE) + "</span>" : "") + Atividades_selosOrigemHtml_(a) + "</div>" +
         (a.OS_ID ? '<div class="atv-msg" style="border:1px solid var(--border);background:var(--bc-surface-3);color:var(--text)">Atendimento da O.S. ' + Atividades_esc_(a.OS_NUMERO || '') + ' (Assistência técnica). A situação, o horário e o técnico mudam pela O.S.: agendar, reagendar, encerrar ou cancelar. Ela não conta atraso em Atividades; o prazo do cliente é acompanhado na Assistência. ' +
@@ -548,7 +817,7 @@
           linha("Módulo", Atividades_esc_(a.MODULO_NOME || (a.MODULO ? Atividades_nomeModulo_(a.MODULO) : ""))) +
           linha("Cliente", Atividades_esc_(a.CLIENTE_NOME) + (a.UNIDADE_NOME ? " · " + Atividades_esc_(a.UNIDADE_NOME) : "")) +
           linha("Início previsto", Atividades_br_(a.INICIO_PREVISTO)) + linha("Prazo", Atividades_br_(a.PRAZO)) +
-          linha("Previsão atual", a.PREVISAO_ATUAL !== a.PRAZO ? Atividades_br_(a.PREVISAO_ATUAL) + " (" + Atividades_pl_(a.QTD_JUSTIFICATIVAS, "justificativa", "justificativas") + ")" : "") +
+          linha("Previsão atual", a.PREVISAO_ATUAL !== a.PRAZO ? Atividades_br_(a.PREVISAO_ATUAL) + " (data adiada " + Atividades_pl_(a.QTD_JUSTIFICATIVAS, "vez", "vezes") + ")" : "") +
           linha("Iniciada em", Atividades_br_(a.INICIADA_EM)) + linha("Concluída em", Atividades_br_(a.CONCLUIDA_EM)) +
           linha("Aguardando", a.SITUACAO === "Aguardando" ? Atividades_esc_(a.MOTIVO_AGUARDANDO) : "") +
           linha("Observação final", Atividades_esc_(a.OBS_CONCLUSAO)) +
@@ -557,9 +826,15 @@
           linha("Lançada no", a.SISTEMA_ORIGEM === "COMMAND" ? "METROLABS COMMAND" : "") +
           linha("Plano de ação", res.plano ? Atividades_esc_(res.plano.CODIGO + " · " + res.plano.FASE_NOME + (res.plano.CICLO > 1 ? " · ciclo " + res.plano.CICLO : "")) + '<div class="atv-sub">O ciclo PDCA (verificar a eficácia e padronizar) é acompanhado no Programa de conduta, aba Qualidade e planos.</div>' : "") +
         "</dl>" +
-        (aberta && (souResp || eu.gestor) ? '<div class="atv-campo" style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" placeholder="0 a 100" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div><button type="button" class="btn-secondary atv-mini" style="height:36px!important" onclick="Atividades_salvarPercentual_(\'' + a.ID + '\')">Gravar andamento</button></div>' : "") +
-        '<div class="atv-acoes" style="margin-bottom:14px">' + acoes.join("") + "</div>" +
-        (podeAlt || (a.OS_ID && a.PODE_ALTERAR) ? '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre um andamento, dúvida ou combinado"></textarea></div>' +
+        // 31/10/2026: "Registrar andamento do dia" é o relatório técnico (texto e percentual). Não pede nova data e não vai para a gestão decidir.
+        (aberta && !a.OS_ID && (souResp || eu.gestor) ? '<div class="atv-andamento"><h4>Registrar andamento do dia</h4>' +
+          '<div class="atv-campo"><label for="atvAndTexto">O que foi feito e o que falta</label><textarea id="atvAndTexto" maxlength="4000" placeholder="Ex.: montei o painel e testei a bomba; falta calibrar o sensor"></textarea></div>' +
+          '<div class="atv-andamento-linha"><div class="atv-campo"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" placeholder="0 a 100" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div>' +
+          '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_registrarAndamento_(\'' + a.ID + '\', this)">Registrar andamento</button></div>' +
+          '<div class="atv-sub" style="margin-top:6px">Fica no histórico. Não pede nova data e não vai para a gestão decidir.</div><div id="atvAndMsg"></div></div>' : "") +
+        (acoes.length ? '<div class="atv-acoes" style="margin-bottom:10px">' + acoes.join("") + "</div>" : "") +
+        (fim.length ? '<div class="atv-acoes-fim">' + fim.join("") + "</div>" : "") +
+        (podeAlt || (a.OS_ID && a.PODE_ALTERAR) ? '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre uma dúvida ou um combinado com quem lançou"></textarea></div>' +
         '<div style="text-align:right;margin-bottom:14px"><button type="button" class="btn-secondary atv-mini" onclick="Atividades_comentar_(\'' + a.ID + '\', this)">Comentar</button></div>' : "") +
         '<h4 style="margin:0 0 8px;font-size:13px">Histórico</h4><div class="atv-hist">' + hist + "</div>";
       var ov = Atividades_modal_(Atividades_esc_(a.TITULO), corpo, "", { id: "atvDetalheOverlay", largura: 700 });
@@ -567,7 +842,24 @@
       var bEd = ov.querySelector('[data-x="editar"]');
       if (bEd) bEd.onclick = function () { Atividades_abrirFormulario_({ editar: a }); };
       if (comentarioRascunho && ov.querySelector("#atvComentario")) ov.querySelector("#atvComentario").value = comentarioRascunho;
+      if (andamentoRascunho && ov.querySelector("#atvAndTexto")) ov.querySelector("#atvAndTexto").value = andamentoRascunho;
     }, null, { carregando: "Abrindo atividade..." });
+  }
+
+  /** "Registrar andamento do dia" (texto e/ou percentual) no histórico. */
+  function Atividades_registrarAndamento_(id, btn) {
+    var ta = document.getElementById("atvAndTexto"), pc = document.getElementById("atvPerc"), msg = document.getElementById("atvAndMsg");
+    var texto = ta ? ta.value.trim() : "", perc = pc ? String(pc.value || "").trim() : "";
+    var erro = function (t) { if (msg) msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; };
+    if (!texto && !perc) return erro("Não foi possível registrar o andamento: escreva o que foi feito hoje (mínimo 10 letras) ou informe o percentual, e toque em Registrar andamento de novo.");
+    if (texto && texto.replace(/\s+/g, " ").length < 10) return erro("Não foi possível registrar o andamento: o texto está curto demais (mínimo 10 letras). Diga o que foi feito e o que falta, e registre de novo.");
+    if (perc && (!(Number(perc.replace(",", ".")) >= 0) || Number(perc.replace(",", ".")) > 100)) return erro("Não foi possível registrar o andamento: o percentual precisa ficar entre 0 e 100. Corrija o número (ou deixe vazio) e registre de novo.");
+    btn.disabled = true;
+    Atividades_chamar_("Atividades_apiAndamento", { id: id, texto: texto, percentual: perc }, function (r) {
+      if (ta) ta.value = "";
+      frotaToastEnvio_(true, "Andamento registrado", r.message || "");
+      Atividades_aposAlterar_();
+    }, function (m) { btn.disabled = false; erro(m); }, { carregando: "Registrando andamento..." });
   }
 
   function Atividades_salvarPercentual_(id) {
@@ -603,8 +895,11 @@
       var priSel = ed ? ed.PRIORIDADE : "Normal";
       var vencida = ed && Atividades_vencida_(ed);
       var avisoEd = "";
-      if (ed && eu.gestor && vencida) avisoEd = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com prazo vencido. Se você mudar o prazo para uma data futura, ela é replanejada: deixa de exigir justificativa de atraso do responsável e o replanejamento fica no histórico (não conta como justificativa).</div>';
-      else if (ed && !eu.gestor && vencida) avisoEd = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com prazo vencido: o prazo só pode ser mudado depois de registrar a justificativa de atraso. Os demais campos podem ser alterados.</div>';
+      // 31/10/2026: data já gravada com ano fora do período aceito (ex.: 2023): avisa para corrigir
+      var anoErrado = ed ? [Atividades_anoForaMsg_(ed.INICIO_PREVISTO, "Início previsto", "manter a data"), Atividades_anoForaMsg_(ed.PRAZO, "Prazo", "manter a data")].filter(Boolean) : [];
+      if (anoErrado.length) avisoEd += '<div class="atv-msg" style="border:1px solid var(--danger);background:var(--danger-bg);color:var(--text)">Data gravada com o ano errado: ' + Atividades_esc_(anoErrado.join(" ").replace(/Não foi possível manter a data: /g, "")) + "</div>";
+      if (ed && eu.gestor && (vencida || Atividades_pedidoPendente_(ed))) avisoEd += '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com a previsão vencida. Se você mudar o prazo para uma data futura, ela é replanejada: deixa de exigir pedido de nova data do responsável' + (Atividades_pedidoPendente_(ed) ? ", o pedido que está aguardando decisão é encerrado" : "") + ' e o replanejamento fica no histórico.</div>';
+      else if (ed && !eu.gestor && vencida) avisoEd += '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com a previsão vencida: para mudar a data, use "Pedir nova data" no detalhe. Os demais campos podem ser alterados.</div>';
       var corpo =
         '<div id="atvFormMsg"></div>' + avisoEd +
         '<div class="atv-campo"><label for="atvF_titulo">Título *</label><input id="atvF_titulo" type="text" maxlength="200" placeholder="O que precisa ser feito"></div>' +
@@ -615,8 +910,8 @@
           '<div class="atv-campo"><label for="atvF_resp">Responsável *</label><select id="atvF_resp"' + (eu.gestor ? "" : " disabled title=\"Somente Gestor, Admin e Diretoria " + (ed ? "trocam o responsável" : "lançam atividade para outra pessoa") + ".\"") + ">" + pessoas + "</select>" +
             (eu.gestor ? (ed ? '<div class="atv-sub">Ao trocar, o novo responsável é avisado e a troca fica no histórico.</div>' : "") : '<div class="atv-sub">' + (ed ? "Só a gestão troca o responsável." : "Você lança atividades só para você. Para outra pessoa, peça a um gestor.") + "</div>") + "</div>" +
           '<div class="atv-campo"><label for="atvF_pri">Prioridade</label><select id="atvF_pri">' + op.prioridades.map(function (x) { return "<option" + (x === priSel ? " selected" : "") + ">" + Atividades_esc_(x) + "</option>"; }).join("") + "</select></div>" +
-          '<div class="atv-campo"><label for="atvF_ini">Início previsto</label><input id="atvF_ini" type="datetime-local"></div>' +
-          '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local" value="' + Atividades_esc_(ed ? ed.PRAZO : Atividades_iso_(prazoPadrao)) + '"></div>' +
+          '<div class="atv-campo"><label for="atvF_ini">Início previsto</label><input id="atvF_ini" type="datetime-local"' + Atividades_limitesData_() + "></div>" +
+          '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local"' + Atividades_limitesData_() + ' value="' + Atividades_esc_(ed ? ed.PRAZO : Atividades_iso_(prazoPadrao)) + '"></div>' +
           '<div class="atv-campo"><label for="atvF_mod">Módulo ligado</label><select id="atvF_mod">' + mods + "</select></div>" +
         "</div>" +
         '<div class="atv-grade2">' +
@@ -799,7 +1094,13 @@
     d.moduloNome = d.modulo ? Atividades_nomeModulo_(d.modulo) : "";
     if (d.titulo.length < 3) return erro("Não foi possível " + verbo + ": o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito e clique em " + botaoNome + " de novo.", "atvF_titulo");
     if (!d.prazo) return erro("Não foi possível " + verbo + ": o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em " + botaoNome + " de novo.", "atvF_prazo");
-    if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível " + verbo + ": o início previsto está depois do prazo. Ajuste uma das datas e clique em " + botaoNome + " de novo.", "atvF_ini");
+    // 31/10/2026: ano digitado errado é barrado aqui e no servidor (na edição, só o valor que mudou)
+    var edAtual = editId && ATV.detalheItem && ATV.detalheItem.ID === editId ? ATV.detalheItem : null;
+    var foraP = (!edAtual || d.prazo !== edAtual.PRAZO) ? Atividades_anoForaMsg_(d.prazo, "Prazo", verbo) : "";
+    if (foraP) return erro(foraP, "atvF_prazo");
+    var foraI = (!edAtual || d.inicioPrevisto !== edAtual.INICIO_PREVISTO) ? Atividades_anoForaMsg_(d.inicioPrevisto, "Início previsto", verbo) : "";
+    if (foraI) return erro(foraI, "atvF_ini");
+    if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível " + verbo + ": o início previsto (" + Atividades_br_(d.inicioPrevisto) + ") está depois do prazo (" + Atividades_br_(d.prazo) + "). A atividade não pode começar depois de terminar. Ajuste uma das datas e clique em " + botaoNome + " de novo.", "atvF_ini");
     if (v("atvF_cli_busca") && !d.clienteId) return erro("Não foi possível " + verbo + ": o cliente digitado não foi escolhido na lista. Clique no nome do cliente na lista que aparece, ou apague o campo.", "atvF_cli_busca");
     var chkS = ov.querySelector("#atvF_servico");
     if (!editId && chkS && chkS.checked) return Atividades_enviarServico_(ov, d, erro);
@@ -828,15 +1129,18 @@
     var linhas = itens.map(function (a) {
       var aberta = Atividades_aberta_(a), alt = Atividades_podeAlterar_(a);
       var b = [];
+      var bAgir = Atividades_agirBotaoHtml_(a);
+      if (bAgir) b.push(bAgir);
       if (aberta && o.minhas) b.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary" title="Parar de marcar como em execução" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar fazendo agora</button>' : '<button type="button" class="btn-secondary" title="Marcar como a atividade que estou executando" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
       if (alt && aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (alt && aberta && a.SITUACAO !== "Aguardando") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
-      if (alt && aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       if (Atividades_podeEditar_(a)) b.push('<button type="button" class="btn-secondary" title="Editar a atividade" onclick="Atividades_editarPorId_(\'' + a.ID + '\')">Editar</button>');
+      // 31/10/2026: Concluir por último, afastado dos outros, com confirmação
+      if (alt && aberta) b.push('<button type="button" class="' + (bAgir ? "btn-secondary" : "btn-primary") + ' atv-btn-concluir" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       return "<tr>" +
         '<td><button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' + Atividades_esc_(a.TITULO) + "</button>" +
           (a.AGORA_DESDE ? ' <span class="atv-selo emdia" title="Em execução">Agora</span>' : "") + Atividades_selosOrigemHtml_(a) +
-          '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div></td>" +
+          '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" + Atividades_agirMiniHtml_(a) + "</td>" +
         '<td><span class="atv-pri-' + Atividades_esc_(a.PRIORIDADE) + '">' + Atividades_esc_(a.PRIORIDADE) + "</span></td>" +
         "<td>" + Atividades_prazoTexto_(a) + "</td>" +
         "<td>" + Atividades_seloHtml_(a) + "</td>" +
@@ -851,15 +1155,19 @@
   function Atividades_cartoesHtml_(itens, o) {
     return '<div class="atv-cartoes">' + itens.map(function (a) {
       var aberta = Atividades_aberta_(a), venc = Atividades_vencida_(a), b = [], alt = Atividades_podeAlterar_(a);
+      var bAgir = Atividades_agirBotaoHtml_(a);
+      if (bAgir) b.push(bAgir);
       if (alt && aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
-      if (alt && aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       b.push('<button type="button" class="btn-secondary" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">Detalhes</button>');
+      // 31/10/2026: no celular, Concluir fica numa linha própria, separado dos outros botões (antes, colado em Iniciar e Detalhes)
+      var concluir = alt && aberta ? '<div class="atv-acoes-fim"><button type="button" class="btn-secondary atv-btn-concluir" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button></div>' : "";
       return '<div class="atv-cartao' + (venc ? " vencida" : "") + '" style="border-left-color:' + (ATV_CORES[a.SITUACAO] || "var(--muted)") + '">' +
         '<button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' + Atividades_esc_(a.TITULO) + "</button>" +
         '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" +
+        Atividades_agirMiniHtml_(a) +
         '<div class="atv-cartao-linha">' + Atividades_sitHtml_(a.SITUACAO) + " " + Atividades_seloHtml_(a) + (a.AGORA_DESDE ? ' <span class="atv-selo emdia">Fazendo agora</span>' : "") + Atividades_selosOrigemHtml_(a) + "</div>" +
         '<div class="atv-cartao-linha"><span>Prazo: ' + Atividades_prazoTexto_(a) + '</span><span class="atv-pri-' + Atividades_esc_(a.PRIORIDADE) + '">· ' + Atividades_esc_(a.PRIORIDADE) + "</span>" + (a.PERCENTUAL !== "" ? "<span>· " + Atividades_num_(a.PERCENTUAL) + "%</span>" : "") + "</div>" +
-        '<div class="atv-acoes">' + b.join("") + "</div></div>";
+        '<div class="atv-acoes">' + b.join("") + "</div>" + concluir + "</div>";
     }).join("") + "</div>";
   }
 
@@ -873,6 +1181,7 @@
         return '<div class="atv-kcard' + (venc ? " vencida" : "") + (alt ? "" : " so-ver") + '" draggable="' + (alt ? "true" : "false") + '" data-id="' + Atividades_esc_(a.ID) + '" style="border-left-color:' + ATV_CORES[a.SITUACAO] + '"' + (alt ? "" : ' title="' + (a.OS_ID ? "Atendimento de O.S.: a situação muda pela O.S. em Assistência técnica (encerrar, reagendar, cancelar)" : "Você acompanha esta atividade; quem altera é o responsável, quem lançou e a gestão") + '"') + ">" +
           '<div class="atv-kcard-tit">' + Atividades_esc_(a.TITULO) + Atividades_selosOrigemHtml_(a) + "</div>" +
           '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", o.semModulo ? "" : Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" +
+          Atividades_agirMiniHtml_(a) +
           (a.PERCENTUAL !== "" && a.PERCENTUAL !== undefined ? '<div class="atv-barra-prog"><div style="width:' + Number(a.PERCENTUAL) + '%"></div></div>' : "") +
           '<div class="atv-kcard-rod"><span class="atv-sub">' + Atividades_br_(a.PREVISAO_ATUAL).slice(0, 16) + "</span>" + Atividades_seloHtml_(a) + "</div>" +
           (a.AGORA_DESDE ? '<div class="atv-sub" style="color:var(--success)"><i class="fas fa-person-digging" aria-hidden="true"></i> Fazendo agora ' + Atividades_duracao_(a.AGORA_DESDE) + "</div>" : "") +
@@ -1046,7 +1355,9 @@
     if (faixa) {
       faixa.className = "atv-agora-faixa" + (atual ? "" : " vazia");
       var vencidas = ATV.minhas.filter(Atividades_vencida_).length, abertas = ATV.minhas.filter(Atividades_aberta_).length;
-      var resumo = '<span style="margin-left:auto" class="atv-sub atv-resumo-faixa">' + Atividades_pl_(abertas, "aberta", "abertas") + (vencidas ? ' · <b style="color:var(--danger)">' + Atividades_pl_(vencidas, "vencida", "vencidas") + "</b>" : "") + "</span>";
+      var esperando = ATV.minhas.filter(function (a) { return Atividades_aberta_(a) && Atividades_pedidoPendente_(a); }).length;
+      var resumo = '<span style="margin-left:auto" class="atv-sub atv-resumo-faixa">' + Atividades_pl_(abertas, "aberta", "abertas") + (vencidas ? ' · <b style="color:var(--danger)">' + Atividades_pl_(vencidas, "vencida", "vencidas") + "</b>" : "") +
+        (esperando ? " · " + Atividades_pl_(esperando, "nova data aguardando decisão", "novas datas aguardando decisão") : "") + "</span>";
       faixa.innerHTML = atual
         ? '<i class="fas fa-person-digging" aria-hidden="true" style="color:var(--info)"></i><span>Fazendo agora: <button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + atual.ID + '\')">' + Atividades_esc_(atual.TITULO) + "</button> <span class=\"atv-sub\">" + Atividades_duracao_(atual.AGORA_DESDE) + '</span></span><button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + atual.ID + '\', false)">Parar</button>' + resumo
         : '<i class="fas fa-circle-pause" aria-hidden="true"></i><span>Nenhuma atividade marcada como "fazendo agora". Use o botão Fazendo agora na atividade que você está executando.</span>' + resumo;
@@ -1097,7 +1408,7 @@
           '<button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova atividade</button></div></div>' +
         '<div id="atvEqInd" class="atv-ind"></div>' +
         '<div class="atv-duas"><div class="atv-caixa"><h3>Agora</h3><div id="atvEqAgora" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div>' +
-          '<div class="atv-caixa"><h3>' + (Atividades_ehGestor_() ? "Justificativas recentes" : "Justificativas das suas atividades") + '</h3><div id="atvEqJust" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div></div>' +
+          '<div class="atv-caixa"><h3>' + (Atividades_ehGestor_() ? "Pedidos de nova data recentes" : "Pedidos de nova data das suas atividades") + '</h3><div id="atvEqJust" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div></div>' +
         '<div class="atv-barra">' +
           '<div><label for="atvEqDe">Período de</label><input type="date" id="atvEqDe" value="' + f.de + '" onchange="Atividades_filtrarEquipe_()"></div>' +
           '<div><label for="atvEqAte">até</label><input type="date" id="atvEqAte" value="' + f.ate + '" onchange="Atividades_filtrarEquipe_()"></div>' +
@@ -1145,7 +1456,7 @@
     var el = document.getElementById("atvEqInd");
     if (el) el.innerHTML =
       '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.abertas) + '</div><div class="l">Abertas</div></div>' +
-      '<div class="atv-ind-card' + (ind.vencidas ? " alerta" : "") + '"><div class="v">' + Atividades_num_(ind.vencidas) + '</div><div class="l">Vencidas</div></div>' +
+      '<div class="atv-ind-card' + (ind.vencidas ? " alerta" : "") + '"><div class="v">' + Atividades_num_(ind.vencidas) + '</div><div class="l">Vencidas' + (ind.pedidosPendentes ? " (" + Atividades_pl_(ind.pedidosPendentes, "com nova data aguardando decisão", "com nova data aguardando decisão") + ")" : "") + "</div></div>" +
       '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.concluidas30) + '</div><div class="l">Concluídas nos últimos 30 dias</div></div>' +
       '<div class="atv-ind-card"><div class="v">' + (ind.percNoPrazo30 === null ? "—" : Atividades_num_(ind.percNoPrazo30, 1) + "%") + '</div><div class="l">Concluídas no prazo (30 dias)' + (ind.concluidas30 ? ": " + ind.noPrazo30 + " de " + ind.concluidas30 : "") + "</div></div>";
     var ag = document.getElementById("atvEqAgora");
@@ -1164,10 +1475,10 @@
     var js = document.getElementById("atvEqJust");
     if (js) js.innerHTML = r.justificativas.length ? r.justificativas.map(function (h) {
       return '<div class="atv-just"><b>' + Atividades_esc_(h.RESPONSAVEL_NOME) + '</b> · <button type="button" class="atv-titulo-link" style="font-size:12.5px" onclick="Atividades_abrirDetalhe_(\'' + h.ATIVIDADE_ID + '\')">' + Atividades_esc_(h.TITULO) + "</button>" +
-        (h.CATEGORIA ? '<div class="atv-sub">Motivo: ' + Atividades_esc_(h.CATEGORIA) + "</div>" : "") +
+        (h.CATEGORIA ? '<div class="atv-sub">Motivo: ' + Atividades_esc_(ATV_MOTIVOS_LEGADO_TELA[h.CATEGORIA] || h.CATEGORIA) + "</div>" : "") +
         '<div style="white-space:pre-wrap;margin:3px 0">' + Atividades_esc_(h.TEXTO) + "</div>" +
-        '<div class="atv-sub">Previsão ' + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + " · registrada " + Atividades_br_(h.DATA) + "</div></div>";
-    }).join("") : '<div class="atv-sub">Nenhuma justificativa de atraso registrada.</div>';
+        '<div class="atv-sub">' + (h.PARA === "PENDENTE" ? "Data proposta " + Atividades_br_(h.PREVISAO_NOVA) + " (previsão era " + Atividades_br_(h.PREVISAO_ANTERIOR) + ")" : "Previsão " + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA)) + " · registrada " + Atividades_br_(h.DATA) + "</div></div>";
+    }).join("") : '<div class="atv-sub">Nenhum pedido de nova data registrado.</div>';
     var selP = document.getElementById("atvEqPessoa");
     if (selP && selP.options.length <= 1) {
       selP.innerHTML = '<option value="">Todas</option>' + r.usuarios.map(function (u) { return '<option value="' + Atividades_esc_(u.id) + '">' + Atividades_esc_(u.nome) + "</option>"; }).join("");
@@ -1278,15 +1589,15 @@
     return '<div class="atv-ind">' +
         '<div class="atv-ind-card"><div class="v">' + (ind.percNoPrazo30 === null || ind.percNoPrazo30 === undefined ? "—" : Atividades_num_(ind.percNoPrazo30, 1) + "%") + '</div><div class="l">Concluídas no prazo (30 dias)' + (ind.concluidas30 ? ": " + ind.noPrazo30 + " de " + ind.concluidas30 : "") + "</div></div>" +
         '<div class="atv-ind-card' + (ind.vencidas ? " alerta" : "") + '"><div class="v">' + Atividades_num_(ind.vencidas || 0) + '</div><div class="l">Atrasadas agora</div></div>' +
-        '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.justificativas30 || 0) + '</div><div class="l">Justificativas de atraso (30 dias)</div></div>' +
+        '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.justificativas30 || 0) + '</div><div class="l">Pedidos de nova data (30 dias)</div></div>' +
         '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.aguardando || 0) + '</div><div class="l">Aguardando algo</div></div></div>' +
       '<div class="atv-caixa" style="margin-bottom:14px"><h3>Carga por pessoa</h3>' + tabCarga + "</div>" +
       '<div class="atv-ind-grade">' +
-        '<div class="atv-caixa"><h3>Justificativas por motivo (30 dias)</h3>' + Atividades_barrasHtml_(motivos, "Nenhuma justificativa de atraso nos últimos 30 dias.") + "</div>" +
+        '<div class="atv-caixa"><h3>Pedidos de nova data por motivo (30 dias)</h3>' + Atividades_barrasHtml_(motivos, "Nenhum pedido de nova data nos últimos 30 dias.") + "</div>" +
         '<div class="atv-caixa"><h3>Abertas por módulo</h3>' + Atividades_barrasHtml_(modulos, "Nenhuma atividade aberta.") +
           '<div class="atv-sub" style="margin-top:8px">Lançadas no SGO+: ' + Atividades_num_(sis["SGO+"] || 0) + " · no COMMAND: " + Atividades_num_(sis.COMMAND || 0) + " (abertas)</div></div>" +
       "</div>" +
-      '<div class="atv-legenda">Os números consideram as atividades que você pode ver. Concluída no prazo é a que terminou até o prazo original; replanejamento da gestão muda o prazo original, justificativa não.</div>';
+      '<div class="atv-legenda">Os números consideram as atividades que você pode ver. Concluída no prazo é a que terminou até o prazo original; replanejamento da gestão muda o prazo original, nova data aceita não. Atrasadas agora inclui as que têm nova data aguardando decisão.</div>';
   }
 
   // ---------- Avisos e horários (Admin e Diretoria) ----------
