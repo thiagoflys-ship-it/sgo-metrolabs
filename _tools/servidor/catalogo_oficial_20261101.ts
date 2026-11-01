@@ -8,7 +8,8 @@
  *
  * Etapas (sempre a prévia antes; aplicar exige a marca que a prévia imprimiu; rodar de novo não duplica):
  *   CATALOGO    cria os 26 serviços (casando pelo código), desativa os serviços da tabela C1 que repetem um dos 26 (com histórico;
- *               nunca apaga) e põe os parâmetros padrão no freezer da C1. A prévia imprime também a sobra de cada serviço.
+ *               nunca apaga) e põe os parâmetros padrão no freezer da C1 e no óxido de etileno
+ *               (QT-AUTOCLAVE-BT da C1 continua ativo: nome e descrição novos só se ainda forem os da C1; preço a confirmar pela Diretoria). A prévia imprime também a sobra de cada serviço.
  *   DESCRICOES  cria a descrição padronizada dos serviços e produtos ativos sem descritivo (só o campo vazio; marca "revisar").
  *
  * Uso no contêiner:
@@ -51,7 +52,7 @@ try {
     for (const c of v.conflitos) console.log("  ! " + c.codigo + " já é o código de \"" + c.existente + "\": não será criado (troque o código do item antigo e rode de novo)");
     console.log("Desativar " + v.qtdDesativar + " da C1 (com histórico, nada apagado):");
     for (const d of v.desativar) console.log("  - " + d.codigo + " " + d.nome + " -> " + d.por.join(", "));
-    for (const p of v.parametrizar ?? []) console.log("  + parâmetros padrão em " + p.codigo + " " + p.nome + " (" + p.condicoes + ")");
+    for (const p of v.parametrizar ?? []) console.log("  + " + p.codigo + " " + p.nome + ": " + [p.parametros ? "parâmetros padrão (" + p.condicoes + ")" : "", p.nomeNovo ? "novo nome \"" + p.nomeNovo + "\"" : "", p.descricaoNova ? "descrição padronizada" : "", p.precoAConfirmar ? "preço " + p.precoTxt + " mantido, " + p.precoAConfirmar : ""].filter(Boolean).join("; "));
     console.log("Mantidos: " + v.mantidos);
     console.log("SOBRA PELA FICHA (preço | custo | impostos GO | comissão | sobra R$ | sobra %):");
     for (const l of v.sobra ?? []) console.log("  " + l.codigo + " " + l.nome + " | " + l.precoTxt + " | " + l.custoTxt + " | " + l.impostosTxt + " | " + l.comissaoTxt + " | " + l.sobraTxt + " | " + l.sobraPctTxt + (l.fonte === "estimativa" || l.estimativa ? " (estimativa)" : ""));

@@ -114,7 +114,7 @@ test('implantação: cria os 26 com os preços do dono, desativa os repetidos da
   assert.equal(prodCod(amb, 'QUA-012').NOME, 'Qualificação de esterilizador por formaldeído (VBTF)');
   assert.doesNotMatch(JSON.stringify(amb.tabelas.COM_PRODUTOS.filter((p) => p.CATALOGO_OFICIAL)), /Phoenix|Cristófoli|Sercon|Baumer|Stermax/i, 'nunca cita fabricante');
   // repetidos da C1: desativados com o motivo; os sem equivalente (data logger, freezer, eletromédicos) ficam ativos
-  const desat = ['CAL-TERMOMETRO', 'CAL-TERMOHIGROMETRO', 'CAL-MANOMETRO', 'CAL-VALVULA-SEG', 'CAL-CENTRIFUGA', 'QT-AUTOCLAVE-GRANDE', 'QT-LAVADORA-TD', 'QT-SECADORA', 'QT-LAVADORA-US', 'QT-AUTOCLAVE-BANCADA', 'QT-CAMARA-CONSERVADORA', 'QT-ULTRAFREEZER', 'QT-ESTUFA', 'QT-AUTOCLAVE-BT'];
+  const desat = ['CAL-TERMOMETRO', 'CAL-TERMOHIGROMETRO', 'CAL-MANOMETRO', 'CAL-VALVULA-SEG', 'CAL-CENTRIFUGA', 'QT-AUTOCLAVE-GRANDE', 'QT-LAVADORA-TD', 'QT-SECADORA', 'QT-LAVADORA-US', 'QT-AUTOCLAVE-BANCADA', 'QT-CAMARA-CONSERVADORA', 'QT-ULTRAFREEZER', 'QT-ESTUFA'];
   assert.equal(aplicado.desativados, desat.length);
   desat.forEach((c) => {
     const p = prodCod(amb, c); assert.equal(p.ATIVO, 'NAO', c);
@@ -145,7 +145,7 @@ test('sobra dos 26 pela ficha (só gestão e Diretoria): preço, custo, impostos
   assert.match(amb.api('s_vera', 'catalogoOficial', {}).message, /é da gestão comercial/);
   assert.equal(amb.api('s_fabio', 'catalogoOficial', {}).ok, false, 'Financeiro não vê');
   const t = ok(amb.api('s_gaspar', 'catalogoOficial', {}));
-  assert.equal(t.itens.length, 26); assert.equal(t.implantados, 26); assert.equal(t.podeMudarPreco, false);
+  assert.equal(t.itens.length, 27, '26 oficiais + óxido de etileno (C1 mantido)'); assert.equal(t.implantados, 26); assert.equal(t.podeMudarPreco, false);
   const l = t.sobra.linhas.find((x) => x.codigo === 'QUA-012');
   assert.equal(l.preco, 5450); assert.equal(l.impostos, 776.63, '14,25% de Goiânia'); assert.equal(l.comissao, 163.5);
   assert.equal(l.sobra, Math.round((5450 - 776.63 - 163.5 - l.custo) * 100) / 100); assert.equal(l.fonte, 'C1:QT_AUTOCLAVE_BT');
@@ -400,4 +400,68 @@ test('documentação no mesmo pacote: ajuda da tela, manuais e a base do assiste
   const base = fs.readFileSync(path.join(pasta, 'SGO_AssistenteManuais.js'), 'utf8');
   [ajuda, man, base].forEach((t) => { assert.match(t, /Parâmetros técnicos/); assert.match(t, /tabela oficial da Diretoria/i); });
   assert.match(man, /REG-CAL-001/); assert.match(gest, /sobra/i); assert.match(gest, /suspeito/i); assert.match(gest, /DESCRICOES/);
+});
+
+// ---------------------------------------------------------------- revisão de 01/11/2026 (pedido do dono: óxido de etileno; achados da revisão)
+test('óxido de etileno: o QT-AUTOCLAVE-BT da C1 continua ativo, vira a oferta de ETO (nome e descrição só se ainda forem os da C1), preço mantido "a confirmar", sobra da gestão; reimplantação não duplica', () => {
+  const amb = amb0();
+  const pv = ok(amb.api('s_dora', 'importarC1Previa')); ok(amb.api('s_dora', 'importarC1', { marca: pv.marca, escolhas: {} }));
+  const bt = prodCod(amb, 'QT-AUTOCLAVE-BT'), precoC1 = bt.PRECO, nomeC1 = bt.NOME;
+  // proposta já salva com o item antigo (antes da implantação)
+  const r = proposta(amb, [{ produtoId: bt.ID, descricao: nomeC1, quantidade: 1, precoUnitario: String(precoC1).replace('.', ',') }]);
+  ok(r.salvo);
+  const antesItem = JSON.stringify(itensDe(amb, r.id)[0]);
+  const { previa, aplicado } = implantar(amb, false);
+  assert.ok(!previa.desativar.some((d) => d.codigo === 'QT-AUTOCLAVE-BT'), 'não é desativado');
+  const linha = previa.parametrizar.find((x) => x.codigo === 'QT-AUTOCLAVE-BT');
+  assert.ok(linha && linha.parametros && linha.nomeNovo && linha.descricaoNova); assert.equal(linha.precoAConfirmar, 'preço a confirmar pela Diretoria');
+  assert.ok(aplicado.parametrizados >= 2);
+  const p = prodCod(amb, 'QT-AUTOCLAVE-BT');
+  assert.equal(p.ATIVO, 'SIM'); assert.equal(p.PRECO, precoC1, 'preço o que estava gravado');
+  assert.equal(p.NOME, 'Qualificação de esterilizador por óxido de etileno (ETO)');
+  assert.match(p.DESCRICAO, /^Qualificação de instalação, operação e desempenho de esterilizador por óxido de etileno/);
+  assert.equal(p.REGRA_PRECO, 'RECEITA'); assert.equal(p.CATALOGO_OFICIAL, undefined);
+  const def = JSON.parse(p.PARAMETROS_JSON);
+  assert.equal(def.precoAConfirmar, 'preço a confirmar pela Diretoria');
+  ['fabricante', 'modelo', 'serie', 'receitaCiclo', 'temperatura', 'umidade', 'concentracao', 'tempo', 'aeracao', 'indicadoresQuimicos', 'indicadoresBiologicos', 'ciclos', 'carga'].forEach((c) => assert.ok(def.campos.some((x) => x.codigo === c), c));
+  assert.ok(amb.tabelas.COM_HISTORICO.some((h) => h.ENTIDADE_ID === p.ID && /óxido de etileno/.test(h.TEXTO) && /preço a confirmar/.test(h.TEXTO)));
+  // proposta antiga: igual, mesmo salvando de novo pela tela (sem os parâmetros)
+  assert.equal(JSON.stringify(itensDe(amb, r.id)[0]), antesItem);
+  const tela = ok(amb.api('s_vera', 'proposta', { id: r.id })).proposta.itens[0];
+  ok(amb.api('s_vera', 'salvarProposta', { id: r.id, itens: [{ produtoId: tela.produtoId, descricao: tela.descricao, detalhe: tela.detalhe, quantidade: tela.quantidade, precoUnitario: String(tela.precoUnitario).replace('.', ',') }] }));
+  const i0 = itensDe(amb, r.id)[0];
+  assert.equal(i0.precoUnitario, precoC1); assert.equal(i0.descricao, nomeC1); assert.equal(i0.catalogo, undefined);
+  // sobra da gestão
+  const t = ok(amb.api('s_gaspar', 'catalogoOficial', {}));
+  const so = t.sobra.linhas.find((x) => x.codigo === 'QT-AUTOCLAVE-BT');
+  assert.ok(so && so.extra); assert.equal(so.preco, precoC1); assert.equal(so.precoAConfirmar, 'preço a confirmar pela Diretoria');
+  assert.equal(t.itens.find((x) => x.codigo === 'QT-AUTOCLAVE-BT').extra, true);
+  // reimplantação: não duplica, segue ativo, nada muda
+  const total = amb.tabelas.COM_PRODUTOS.length;
+  const p2 = amb.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO' });
+  assert.equal(p2.parametrizar.length, 0); assert.equal(p2.qtdCriar, 0); assert.equal(p2.qtdDesativar, 0);
+  ok(amb.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO', aplicar: true, marca: p2.marca }));
+  assert.equal(amb.tabelas.COM_PRODUTOS.length, total); assert.equal(prodCod(amb, 'QT-AUTOCLAVE-BT').ATIVO, 'SIM');
+  // nome editado pela gestão não é sobrescrito
+  const amb2 = amb0();
+  const pv2 = ok(amb2.api('s_dora', 'importarC1Previa')); ok(amb2.api('s_dora', 'importarC1', { marca: pv2.marca, escolhas: {} }));
+  const bt2 = prodCod(amb2, 'QT-AUTOCLAVE-BT'); bt2.NOME = 'Qualificação de esterilizador ETO (nome da gestão)'; bt2.DESCRICAO = 'Descrição escrita pela gestão para o serviço.';
+  implantar(amb2, false);
+  assert.equal(prodCod(amb2, 'QT-AUTOCLAVE-BT').NOME, 'Qualificação de esterilizador ETO (nome da gestão)');
+  assert.equal(prodCod(amb2, 'QT-AUTOCLAVE-BT').DESCRICAO, 'Descrição escrita pela gestão para o serviço.');
+  assert.equal(prodCod(amb2, 'QT-AUTOCLAVE-BT').REGRA_PRECO, 'RECEITA', 'os parâmetros (campo vazio) entram');
+});
+
+test('revisão: escopo para a execução sem o motivo comercial do ajuste; concordância "condições contratadas"; Diretoria não muda o preço oficial pelo cadastro comum', () => {
+  const amb = amb0(); implantar(amb);
+  const r = proposta(amb, [it(amb, 'QUA-008', 1, { processos: [{ codigo: 'C1', nome: '50 °C' }, { codigo: 'C2', nome: '100 °C' }, { codigo: 'C3', nome: '150 °C' }, { codigo: 'N4', nome: '200 °C' }], motivoAjuste: 'quarta condição; desconto de R$ 100,00 combinado' })]);
+  ok(r.salvo);
+  const i0 = itensDe(amb, r.id)[0];
+  assert.match(i0.detalhe, /Condições contratadas: 50 °C, 100 °C, 150 °C e 200 °C\./);
+  const esc = amb.ctx.ComCat_escopoTexto_(i0);
+  assert.match(esc, /ESCOPO ADICIONAL ao pacote-base \(4 condições \(o pacote-base inclui 3\)\)/);
+  assert.doesNotMatch(esc, /desconto|R\$/);
+  const p = prodCod(amb, 'CAL-001');
+  assert.match(amb.api('s_dora', 'salvarProduto', { id: p.ID, codigo: 'CAL-001', nome: p.NOME, tipo: 'SERVICO', preco: '80,00' }).message, /Catálogo oficial > Editar/);
+  assert.equal(prodCod(amb, 'CAL-001').PRECO, 75.5);
 });

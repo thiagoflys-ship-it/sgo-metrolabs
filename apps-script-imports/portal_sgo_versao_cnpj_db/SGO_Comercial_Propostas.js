@@ -190,6 +190,9 @@ function ComP_salvarProduto_(eu, d) {
       if (Com_up_(atual.CODIGO) !== codigo || (Com_up_(atual.TIPO) || 'SERVICO') !== tipo) throw new Error('Não foi possível salvar: o código e o tipo de ' + Com_s_(atual.CODIGO) + ' identificam o serviço da tabela oficial e não mudam. Nada foi gravado');
       var podeDir = typeof ComCat_podeMudarPreco_ === 'function' && ComCat_podeMudarPreco_(eu);
       if (!podeDir && Math.abs((Number(atual.PRECO) || 0) - Com_r2_(preco)) > 0.004) throw new Error('Não foi possível salvar: o preço-base de ' + Com_s_(atual.CODIGO) + ' é da tabela oficial e só a Diretoria ou o Administrador mudam (Produtos e serviços > Catálogo oficial). Mantenha o preço de ' + Com_moeda_(atual.PRECO) + ' para salvar o resto. Nada foi gravado');
+      // revisão 01/11/2026: nem a Diretoria muda o preço oficial por aqui: este caminho não grava o lote de reajuste, a vigência nem a
+      // versão da tabela (as propostas novas congelariam o preço novo com a versão antiga). O caminho é o Catálogo oficial.
+      if (podeDir && Math.abs((Number(atual.PRECO) || 0) - Com_r2_(preco)) > 0.004) throw new Error('Não foi possível salvar: o preço-base de ' + Com_s_(atual.CODIGO) + ' é da tabela oficial e muda em Produtos e serviços > Catálogo oficial > Editar (com a vigência, a versão da tabela e o lote de reajuste). Mantenha o preço de ' + Com_moeda_(atual.PRECO) + ' para salvar o resto aqui. Nada foi gravado');
       if (!podeDir && Com_normBusca_(atual.NOME) !== Com_normBusca_(nome)) throw new Error('Não foi possível salvar: o nome de ' + Com_s_(atual.CODIGO) + ' é da tabela oficial e só a Diretoria ou o Administrador mudam. Nada foi gravado');
     }
     if (atual && limitado) {

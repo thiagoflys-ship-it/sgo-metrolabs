@@ -32,6 +32,8 @@
  * IMPLANTAÇÃO (Comercial_catalogoOficial20261101, script _tools/servidor/catalogo_oficial_20261101.ts):
  *  - etapa CATALOGO: cria os 26 (casando pelo código: rodar de novo cria 0) e desativa os serviços da tabela C1 que repetem um
  *    dos 26 (ATIVO = NAO, histórico com o motivo; nunca apaga: propostas antigas apontam para eles).
+ *    O QT_AUTOCLAVE_BT da C1 NÃO é desativado (dono, 01/11/2026, "óxido de etileno também"): vira a oferta de óxido de etileno
+ *    (ComCat_extras_: parâmetros só no campo vazio, nome e descrição só se ainda forem os da C1, preço mantido "a confirmar pela Diretoria").
  *  - etapa DESCRICOES (pedido do dono, 01/11/2026: "o que estiver sem descritivo tem que criar"): serviço ou produto ativo sem
  *    descrição (vazia ou só repetindo o nome) recebe a descrição padronizada da família; só o campo vazio, com a marca
  *    DESCRICAO_GERADA ("revisar") e histórico.
@@ -367,11 +369,12 @@ function ComCat_definicoes_() {
     pendente: 'terceiro ponto a definir (2.250 RPM é sugestão pendente de validação técnica)', descricao: 'Calibração dos parâmetros de rotação contratados, com emissão de certificado.', c1: 'CAL_CENTRIFUGA' });
   return L;
 }
-/** C1 que o catálogo oficial substitui (decisão do dono, 01/11/2026). CAL_DATALOGGER fica ativo (registrador não é só o sensor). */
+/** C1 que o catálogo oficial substitui (decisão do dono, 01/11/2026). CAL_DATALOGGER fica ativo (registrador não é só o sensor).
+ * QT_AUTOCLAVE_BT NÃO é substituído (dono, 01/11/2026: "óxido de etileno também"): vira a oferta de óxido de etileno (ComCat_extras_). */
 var COM_CAT_SUBSTITUI = {
   CAL_TERMOMETRO: ['CAL-001', 'CAL-002'], CAL_TERMOHIGROMETRO: ['CAL-003'], CAL_MANOMETRO: ['CAL-004', 'CAL-005', 'CAL-006'], CAL_VALVULA_SEG: ['CAL-009'], CAL_CENTRIFUGA: ['CAL-011'],
   QT_AUTOCLAVE_GRANDE: ['QUA-001'], QT_LAVADORA_TD: ['QUA-002'], QT_SECADORA: ['QUA-003'], QT_LAVADORA_US: ['QUA-004'], QT_AUTOCLAVE_BANCADA: ['QUA-005'],
-  QT_CAMARA_CONSERVADORA: ['QUA-006'], QT_ULTRAFREEZER: ['QUA-007'], QT_ESTUFA: ['QUA-008', 'QUA-009'], QT_AUTOCLAVE_BT: ['QUA-011', 'QUA-012']
+  QT_CAMARA_CONSERVADORA: ['QUA-006'], QT_ULTRAFREEZER: ['QUA-007'], QT_ESTUFA: ['QUA-008', 'QUA-009']
 };
 
 /**
@@ -381,7 +384,39 @@ var COM_CAT_SUBSTITUI = {
 function ComCat_extras_() {
   return [{ c1: 'QT_FREEZER', regra: 'RECEITA', receita: { unidadeFaturavel: 'CONDICAO', incluidas: 2, aprovada: false }, receitaRotulo: 'condições',
     processos: [ComCat_proc_('C1', '0 °C', { temperatura: '0 °C' }), ComCat_proc_('C2', '-10 °C', { temperatura: '-10 °C' })], campos: ComCat_camposTermicos_(),
-    avisos: ['O preço-base não inclui 24 h com e sem carga, a menos que esteja no escopo.'] }];
+    avisos: ['O preço-base não inclui 24 h com e sem carga, a menos que esteja no escopo.'] },
+  // dono, 01/11/2026 ("óxido de etileno também"): o serviço de baixa temperatura da C1 continua ativo como a oferta de óxido de etileno
+  // (o peróxido e o formaldeído são QUA-011 e QUA-012). Preço: o que está gravado (da C1), a confirmar pela Diretoria. Nome e descrição
+  // só trocam se ainda forem os da C1 (edição da gestão fica).
+  { c1: 'QT_AUTOCLAVE_BT', nome: 'Qualificação de esterilizador por óxido de etileno (ETO)',
+    descricao: 'Qualificação de instalação, operação e desempenho de esterilizador por óxido de etileno, conforme etapas aplicáveis, com ensaios compatíveis com o processo e o fabricante.',
+    precoAConfirmar: 'preço a confirmar pela Diretoria', regra: 'RECEITA', receita: { unidadeFaturavel: 'RECEITA', incluidas: 1, aprovada: false }, receitaRotulo: 'receitas',
+    processos: [ComCat_proc_('RECEITA', 'Receita ou ciclo do equipamento', { temperatura: 'Conforme o fabricante', tempo: 'Conforme o fabricante', ciclos: 'Repetições definidas no protocolo' })],
+    campos: [ComCat_campo_('etapas', 'Etapas (conforme aplicabilidade)', { tipo: 'multi', opcoes: ['IQ (instalação)', 'OQ (operação)', 'PQ (desempenho)'], padrao: ['IQ (instalação)', 'OQ (operação)', 'PQ (desempenho)'], doc: true }),
+      ComCat_campo_('fabricante', 'Fabricante do equipamento'), ComCat_campo_('modelo', 'Modelo'), ComCat_campo_('serie', 'Número de série'),
+      ComCat_campo_('receitaCiclo', 'Receita ou ciclo'), ComCat_campo_('temperatura', 'Temperatura', { padrao: 'Conforme o fabricante' }),
+      ComCat_campo_('umidade', 'Umidade relativa'), ComCat_campo_('concentracao', 'Concentração do agente esterilizante'), ComCat_campo_('tempo', 'Tempo de exposição'),
+      ComCat_campo_('aeracao', 'Aeração'), ComCat_campo_('indicadoresQuimicos', 'Indicadores químicos'), ComCat_campo_('indicadoresBiologicos', 'Indicadores biológicos'),
+      ComCat_campo_('ciclos', 'Ciclos previstos'), ComCat_campo_('carga', 'Carga')],
+    avisos: ['Parâmetros do ciclo (temperatura, umidade, concentração, exposição e aeração) conforme o fabricante e o protocolo.'] }];
+}
+/** Definição a gravar de um extra (sem o que é só da implantação: c1, nome, descrição e a marca do preço ficam nas colunas do item). */
+function ComCat_extraParaGravar_(ex) { var d = Com_copia_(ex); delete d.c1; delete d.nome; delete d.descricao; return d; }
+/** Nome e descrição originais da C1 (o que a importação gravou): só eles são trocados pelo texto do extra. */
+function ComCat_textosC1_(c1) {
+  var s = typeof ComF_tabelaC1_ === 'function' ? ComF_tabelaC1_(c1) : null;
+  return s ? { nome: Com_s_(s.nome), descricao: typeof ComF_descricao_ === 'function' ? ComF_descricao_(s) : '' } : { nome: '', descricao: '' };
+}
+/** O que a implantação ainda muda num extra (merge): parâmetros (só vazios), nome (só o da C1) e descrição (vazia, igual ao nome ou a da C1). */
+function ComCat_mudancasExtra_(p, ex) {
+  var m = {}, t = ComCat_textosC1_(ex.c1);
+  if (Com_s_(p.PARAMETROS_JSON) === '' && Com_s_(p.REGRA_PRECO) === '') m.parametros = true;
+  if (ex.nome && Com_normBusca_(p.NOME) !== Com_normBusca_(ex.nome) && t.nome && Com_normBusca_(p.NOME) === Com_normBusca_(t.nome)) m.nome = ex.nome;
+  if (ex.descricao) {
+    var d = Com_normBusca_(p.DESCRICAO);
+    if (d !== Com_normBusca_(ex.descricao) && (!d || d === Com_normBusca_(p.NOME) || (t.nome && d === Com_normBusca_(t.nome)) || (t.descricao && d === Com_normBusca_(t.descricao)))) m.descricao = ex.descricao;
+  }
+  return m;
 }
 /** Item com regra de preço e parâmetros técnicos: os 26 oficiais e os extras da C1 que receberam a definição. */
 function ComCat_temRegra_(p) { return ComCat_ehOficial_(p) || (!!p && !!COM_CAT_REGRAS[Com_up_(p.REGRA_PRECO)] && Com_s_(p.PARAMETROS_JSON) !== ''); }
@@ -468,7 +503,9 @@ function ComCat_descricao_(base, def, sel, r) {
     partes.push(r.grandezas.map(function (g) { return g.nome + ': ' + (g.pontos.length ? ComCat_juntar_(g.pontos.map(function (p) { return p.texto; })) : 'a definir'); }).join('; ') + '.');
   } else if (r.regra === 'RECEITA') {
     if (vn) partes.push(vn + '.');
-    if (r.processos.length) partes.push(Com_s_(def.receitaRotulo || 'processos').replace(/^./, function (c) { return c.toUpperCase(); }) + ' contratados: ' + ComCat_juntar_(r.processos.map(function (p) { return p.nome + (p.tipo === 'ENSAIO' && p.ensaios ? ' (' + p.ensaios.replace(/\s*\(.*\)$/, '').toLowerCase() + ')' : ''); })) + '.');
+    // revisão 01/11/2026: concordância no documento do cliente ("Condições contratadas", "Receitas contratadas", "Processos contratados")
+    var rot = Com_s_(def.receitaRotulo || 'processos');
+    if (r.processos.length) partes.push(rot.replace(/^./, function (c) { return c.toUpperCase(); }) + (/^(condi|receita)/i.test(rot) ? ' contratadas: ' : ' contratados: ') + ComCat_juntar_(r.processos.map(function (p) { return p.nome + (p.tipo === 'ENSAIO' && p.ensaios ? ' (' + p.ensaios.replace(/\s*\(.*\)$/, '').toLowerCase() + ')' : ''); })) + '.');
   } else if (r.pontos.length) partes.push('Pontos do manômetro: ' + ComCat_juntar_(r.pontos.map(function (p) { return p.texto; })) + '.');
   var par = sel.parametros || {}, docs = [];
   (def.campos || []).forEach(function (c) {
@@ -495,7 +532,8 @@ function ComCat_escopoTexto_(i) {
   r.grandezas.forEach(function (g) { l.push(g.nome.toLowerCase() + ': ' + (g.pontos.map(function (p) { return p.texto; }).join('; ') || 'a definir')); });
   r.processos.forEach(function (p) { l.push((def.receitaRotulo ? def.receitaRotulo.replace(/s$/, '') : 'processo') + ' ' + p.nome + ['temperatura', 'tempo', 'pressao', 'carga', 'sensores', 'ciclos', 'ensaios'].map(function (k) { return p[k] ? ' · ' + k + ' ' + p[k] : ''; }).join('')); });
   (def.campos || []).forEach(function (cp) { var v = (sel.parametros || {})[cp.codigo]; if (!ComCatN_vazio(v)) l.push(cp.nome.toLowerCase() + ': ' + (Array.isArray(v) ? v.join(', ') : v)); });
-  if (c.escopoAdicional) l.push('ESCOPO ADICIONAL ao pacote-base' + (c.motivoAjuste ? ' (' + c.motivoAjuste + ')' : ''));
+  // revisão 01/11/2026: o motivo do ajuste é texto comercial (pode citar preço ou desconto) e não vai para a execução; vai o que passou do pacote
+  if (c.escopoAdicional) l.push('ESCOPO ADICIONAL ao pacote-base' + ((c.adicionais || []).length ? ' (' + c.adicionais.join('; ') + ')' : ''));
   if ((c.pendencias || []).length) l.push('pendente de aprovação técnica: ' + c.pendencias.join('; '));
   (def.avisos || []).forEach(function (a) { l.push(a); });
   return 'versão da tabela ' + Com_s_(c.versaoTabela) + '; ' + l.join('; ');
@@ -510,6 +548,10 @@ function ComCat_escopoTexto_(i) {
  */
 function ComCat_aplicarNoItem_(item, i, p, ant, k, pol, pz) {
   var antCat = ant && ant.catalogo && ant.catalogo.def ? ant.catalogo : null;
+  // revisão 01/11/2026: item gravado ANTES de o serviço ganhar regra (ex.: freezer da C1 numa proposta antiga) e reenviado sem os
+  // parâmetros técnicos: continua como era (preço digitado, tabela da época, detalhe). Sem isto, salvar a proposta antiga trocava o
+  // preço negociado pelo preço de hoje do catálogo, sem aviso.
+  if (!antCat && ant && !(i && i.catalogo && i.catalogo.sel)) return item;
   var def = antCat ? antCat.def : ComCat_def_(p);
   var base = antCat ? Number(antCat.precoBase) || 0 : Number(p.PRECO) || 0;
   var selTela = i && i.catalogo && i.catalogo.sel ? i.catalogo.sel : (antCat ? antCat.sel : null);
@@ -571,10 +613,31 @@ function ComCat_sobra_(eu) {
       sobra: sobra, sobraTxt: Com_moeda_(sobra), sobraPct: pct, sobraPctTxt: pct === null ? '—' : Com_pct_(pct, 1), abaixoMin: pct !== null && pct < mn - 1e-9, fonte: fonte, estimativa: est,
       horasTxt: ComPr_qtd_(c.horasTecnico) + ' h técnico + ' + ComPr_qtd_(c.horasEngenheiro) + ' h engenheiro', implantado: !!p };
   });
+  // dono, 01/11/2026: o óxido de etileno (serviço da C1 mantido, preço a confirmar pela Diretoria) entra na tabela de sobra da gestão
+  ComCat_produtosExtrasComPreco_().forEach(function (x) {
+    var p = x.p, f = typeof ComF_temFicha_ === 'function' && ComF_temFicha_(p) ? ComF_fichaDe_(p) : ComCat_ficha_({ c1: x.ex.c1 });
+    var c = ComF_calcular_({ horasTecnico: f.horasTecnico, horasEngenheiro: f.horasEngenheiro, padroes: f.padroes, consumiveis: f.consumiveis }, pol);
+    var preco = Number(p.PRECO) || 0, impV = Com_r2_(preco * imp / 100), comV = Com_r2_(preco * com / 100), sobra = Com_r2_(preco - impV - comV - c.custo);
+    var pct = preco > 0 ? Math.round(sobra / preco * 10000) / 100 : null;
+    linhas.push({ codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), preco: preco, precoTxt: Com_moeda_(preco), custo: c.custo, custoTxt: Com_moeda_(c.custo), impostos: impV, impostosTxt: Com_moeda_(impV), comissao: comV, comissaoTxt: Com_moeda_(comV),
+      sobra: sobra, sobraTxt: Com_moeda_(sobra), sobraPct: pct, sobraPctTxt: pct === null ? '—' : Com_pct_(pct, 1), abaixoMin: pct !== null && pct < mn - 1e-9, fonte: 'ficha do item (C1:' + x.ex.c1 + ')', estimativa: '',
+      horasTxt: ComPr_qtd_(c.horasTecnico) + ' h técnico + ' + ComPr_qtd_(c.horasEngenheiro) + ' h engenheiro', implantado: true, extra: true, precoAConfirmar: x.ex.precoAConfirmar });
+  });
   return { linhas: linhas, impostosPct: imp, comissaoPct: com, margemMinPct: mn, bonusHora: ComPr_bonusHora_(pol).porHora, custoHora: pol.custoHora, custoFixoPct: pol.custoFixoPct, unidade: pol.unidadeNome,
     abaixo: linhas.filter(function (l) { return l.abaixoMin; }).length };
 }
 
+/** Itens ativos da C1 mantidos como extra com "preço a confirmar pela Diretoria" (óxido de etileno), já parametrizados. [{ p, ex }] */
+function ComCat_produtosExtrasComPreco_() {
+  var exs = ComCat_extras_().filter(function (e) { return !!e.precoAConfirmar; }), l = [];
+  if (!exs.length) return l;
+  Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
+    if (ComCat_ehOficial_(p) || Com_up_(p.ATIVO || 'SIM') === 'NAO' || Com_s_(p.PARAMETROS_JSON) === '') return;
+    var c1 = ComCat_c1Do_(p), ex = exs.filter(function (e) { return e.c1 === c1; })[0];
+    if (ex) l.push({ p: p, ex: ex });
+  });
+  return l;
+}
 /** Tela "Catálogo oficial" (gestão): os 26 com regra, versão, vigência e, para a gestão, a sobra. */
 function ComCat_tela_(eu) {
   Com_exigir_(eu, 'GESTAO', 'abrir o catálogo oficial');
@@ -588,7 +651,14 @@ function ComCat_tela_(eu) {
       precoTxt: Com_moeda_(p ? p.PRECO : s.preco), precoTabelaDono: s.preco, descricao: p ? Com_s_(p.DESCRICAO) : s.descricao, versao: p ? Com_s_(p.CATALOGO_VERSAO) : COM_CAT_VERSAO, vigencia: p ? Com_brDia_(p.VIGENCIA_DESDE) : '',
       regra: def.regra, regraNome: COM_CAT_REGRAS[def.regra], def: def, sobra: porCod[s.codigo] };
   });
-  return { itens: itens, sobra: sobra, implantados: itens.filter(function (x) { return x.implantado; }).length, podeMudarPreco: ComCat_podeMudarPreco_(eu), regras: COM_CAT_REGRAS, unidadesFaturaveis: COM_CAT_UNIDADES_FAT, marca: COM_CAT_MARCA };
+  var implantados = itens.filter(function (x) { return x.implantado; }).length;
+  // serviço da C1 mantido com preço a confirmar (óxido de etileno): aparece na lista com a sobra; edita em Produtos e serviços (não é oficial)
+  ComCat_produtosExtrasComPreco_().forEach(function (x) {
+    var p = x.p, def = ComCat_def_(p);
+    itens.push({ codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), id: Com_s_(p.ID), implantado: true, extra: true, ativo: true, preco: Number(p.PRECO) || 0, precoTxt: Com_moeda_(p.PRECO), precoTabelaDono: null,
+      descricao: Com_s_(p.DESCRICAO), versao: x.ex.precoAConfirmar, vigencia: '', regra: def.regra, regraNome: COM_CAT_REGRAS[def.regra], def: def, sobra: porCod[Com_s_(p.CODIGO)], precoAConfirmar: x.ex.precoAConfirmar });
+  });
+  return { itens: itens, sobra: sobra, implantados: implantados, podeMudarPreco: ComCat_podeMudarPreco_(eu), regras: COM_CAT_REGRAS, unidadesFaturaveis: COM_CAT_UNIDADES_FAT, marca: COM_CAT_MARCA };
 }
 
 /**
@@ -700,12 +770,17 @@ function ComCat_previaCatalogo_(eu) {
   });
   // extras: serviço da C1 que continua ativo e recebe os parâmetros padrão (só quando ainda não tem regra: nunca sobrescreve)
   var parametrizar = [];
+  // e o merge do nome e da descrição dos extras que trazem texto (óxido de etileno): só o que ainda é o da C1 ou está vazio
   produtos.forEach(function (p) {
-    if (ComCat_ehOficial_(p) || Com_up_(p.ATIVO || 'SIM') === 'NAO' || Com_s_(p.PARAMETROS_JSON) !== '' || Com_s_(p.REGRA_PRECO) !== '') return;
+    if (ComCat_ehOficial_(p) || Com_up_(p.ATIVO || 'SIM') === 'NAO') return;
     var c1 = ComCat_c1Do_(p), ex = ComCat_extras_().filter(function (x) { return x.c1 === c1; })[0];
-    if (ex) parametrizar.push({ id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), c1: c1, condicoes: ex.processos.map(function (x) { return x.nome; }).join(' e ') });
+    if (!ex) return;
+    var m = ComCat_mudancasExtra_(p, ex);
+    if (!m.parametros && !m.nome && !m.descricao) return;
+    parametrizar.push({ id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), c1: c1, condicoes: ex.processos.map(function (x) { return x.nome; }).join(' e '),
+      parametros: !!m.parametros, nomeNovo: m.nome || '', descricaoNova: m.descricao || '', precoAConfirmar: ex.precoAConfirmar || '', precoTxt: Com_moeda_(p.PRECO) });
   });
-  var marca = Com_marca_(JSON.stringify({ c: criar.map(function (x) { return x.codigo; }), e: existem.map(function (x) { return x.codigo; }), x: conflitos.map(function (x) { return x.id; }), d: desativar.map(function (x) { return x.id; }), p: parametrizar.map(function (x) { return x.id; }) })).slice(0, 32);
+  var marca = Com_marca_(JSON.stringify({ c: criar.map(function (x) { return x.codigo; }), e: existem.map(function (x) { return x.codigo; }), x: conflitos.map(function (x) { return x.id; }), d: desativar.map(function (x) { return x.id; }), p: parametrizar.map(function (x) { return [x.id, x.parametros, x.nomeNovo, x.descricaoNova]; }) })).slice(0, 32);
   return { etapa: 'CATALOGO', criar: criar, existem: existem, conflitos: conflitos, desativar: desativar, parametrizar: parametrizar, qtdCriar: criar.length, qtdDesativar: desativar.length, marca: marca, versao: COM_CAT_VERSAO,
     mantidos: 'CAL_DATALOGGER (registrador de temperatura) e os demais serviços da C1 sem equivalente continuam ativos' };
 }
@@ -740,10 +815,15 @@ function ComCat_aplicarCatalogo_(eu, d) {
     var parametrizados = [];
     prev.parametrizar.forEach(function (x) {
       var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, x.id), ex = ComCat_extras_().filter(function (e) { return e.c1 === x.c1; })[0];
-      if (!p || !ex || Com_s_(p.PARAMETROS_JSON) !== '' || Com_s_(p.REGRA_PRECO) !== '') return;
-      var dx = Com_copia_(ex); delete dx.c1;
-      SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, { REGRA_PRECO: dx.regra, PARAMETROS_JSON: JSON.stringify(dx), ATUALIZADO_POR_NOME: eu.nome + ' (catálogo oficial)', ATUALIZADO_EM: agora });
-      Com_historico_('PRODUTO', p.ID, 'EDICAO', eu, { texto: 'Parâmetros técnicos padrão (decisão do dono de 01/11/2026): condições ' + x.condicoes + '. O preço e o restante do item ficaram como estavam.' });
+      if (!p || !ex || Com_up_(p.ATIVO || 'SIM') === 'NAO') return;
+      var m = ComCat_mudancasExtra_(p, ex), cp = {}, feito = []; // merge: confere de novo cada campo no registro atual
+      if (m.parametros) { var dx = ComCat_extraParaGravar_(ex); cp.REGRA_PRECO = dx.regra; cp.PARAMETROS_JSON = JSON.stringify(dx); feito.push('parâmetros técnicos padrão (' + x.condicoes + ')'); }
+      if (m.nome) { cp.NOME = m.nome; feito.push('nome "' + Com_s_(p.NOME) + '" → "' + m.nome + '"'); }
+      if (m.descricao) { cp.DESCRICAO = m.descricao; feito.push('descrição padronizada (antes: "' + Com_s_(p.DESCRICAO).slice(0, 300) + '")'); }
+      if (!feito.length) return;
+      cp.ATUALIZADO_POR_NOME = eu.nome + ' (catálogo oficial)'; cp.ATUALIZADO_EM = agora;
+      SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, cp);
+      Com_historico_('PRODUTO', p.ID, 'EDICAO', eu, { texto: 'Decisão do dono de 01/11/2026: ' + feito.join('; ') + '. O preço (' + Com_moeda_(p.PRECO) + ') ficou como estava' + (ex.precoAConfirmar ? ', ' + ex.precoAConfirmar : '') + '; as propostas já salvas não mudam.' });
       parametrizados.push(x.codigo);
     });
     Com_historico_('CATALOGO', 'CATALOGO_OFICIAL', 'IMPLANTACAO', eu, { texto: COM_CAT_MARCA + ' (' + COM_CAT_VERSAO + '): ' + criados.length + ' criados, ' + prev.existem.length + ' já existiam, ' + prev.conflitos.length + ' com código em uso por outro item, ' + desativados.length + ' serviços da C1 desativados (' + desativados.join('; ') + ')' + (parametrizados.length ? '; parâmetros padrão em ' + parametrizados.join(', ') : '') + '.' });
