@@ -36,10 +36,14 @@ var COM_G_PRIORIDADE = { 1: 'Antes de tudo', 2: 'Hoje', 3: 'Hoje, se der tempo',
 var COM_G_PROIBIDOS = [
   /\b(eu\s+)?(enviei|enviarei|vou enviar|já enviei|mandei)\b/i,
   /\b(garanto|garantimos|prometo|prometemos)\b/i,
-  // 01/11/2026 (especialista): "dê" só com acento; sem o acento, "pedido de desconto" era recusado como promessa. A promessa com
-  // percentual ("ofereça 10% de desconto", "dê 10% de desconto") continua recusada pela linha de baixo.
-  /\b(ofere[cç]a|conceda|dê|dar)\s+(um\s+|mais\s+)?desconto/i,
-  /\b(ofere[cç]a|ofere[cç]o|conceda|concedo|dê|dou|dar|oferecer|conceder)\s+(at[eé]\s+)?\d+([.,]\d+)?\s*%\s*(de\s+)?desconto/i,
+  // 01/11/2026 (revisão da especialista): desconto com percentual é recusado com QUALQUER verbo ("posso fazer 10% de desconto",
+  // "consigo 10% de desconto", "fechamos com 15% de desconto", "de um desconto de 10%", com ou sem acento). Só o relato do pedido
+  // do cliente passa ("pedido de desconto", "o cliente pediu 25% de desconto", "pediu desconto de 25%"): ComG_tirarRelatoDesconto_
+  // tira esses trechos antes desta lista, e o número continua conferido contra os fatos.
+  /\b(ofere[cç]a|conceda|dar)\s+(um\s+|mais\s+)?desconto/i,
+  /\d+([.,]\d+)?\s*%\s*(de\s+)?desconto/i,
+  /desconto\s+de\s+\d+([.,]\d+)?\s*%/i,
+  /\bd[eê]\s+(um\s+|mais\s+)?desconto/i,
   /\bdesconto\s+(extra|adicional|especial)\b/i,
   /\b(aprovei|aprovado pela gestora|eu aprovo)\b/i
 ];
@@ -273,17 +277,28 @@ function ComG_lerJson_(t) {
 }
 
 /** Confere um texto da IA contra os fatos. { ok, problemas }. */
+/**
+ * Tira do texto só o RELATO do pedido do cliente ("pedido de desconto", "o cliente pediu 25% de desconto", "pediu desconto de
+ * 25%", "solicitou um desconto"), para a lista de promessas não recusar o relato. O número do relato continua conferido contra os
+ * fatos (a conferência de números usa o texto inteiro).
+ */
+function ComG_tirarRelatoDesconto_(t) {
+  var pct = '\\d+(?:[.,]\\d+)?\\s*%';
+  return Com_s_(t)
+    .replace(new RegExp('\\b(pedidos?|solicita[cç][aã]o|solicita[cç][oõ]es)\\s+de\\s+(' + pct + '\\s*(de\\s+)?)?desconto(\\s+de\\s+' + pct + ')?', 'gi'), ' ')
+    .replace(new RegExp('\\b(pediu|pediram|pede|pedem|solicitou|solicitaram|quer|querem|exigiu|exigiram)\\s+(um\\s+|mais\\s+)?(' + pct + '\\s*(de\\s+)?desconto|desconto(\\s+de\\s+' + pct + ')?)', 'gi'), ' ');
+}
+
 function ComG_verificar_(texto, fatos, extra) {
   var t = Com_s_(texto);
   if (!t) return { ok: false, problemas: ['texto vazio'] };
-  var problemas = [];
+  var problemas = [], semRelato = ComG_tirarRelatoDesconto_(t);
   if (typeof SGO_QIAV_verificar_ === 'function') {
     var nums = typeof SGO_QIAV_numerosDe_ === 'function' ? SGO_QIAV_numerosDe_(fatos) : [];
-    var r = SGO_QIAV_verificar_(t, { numeros: nums, normas: [], veredito: '', inteirosLivresAte: (extra && extra.livres) || 10, termosProibidos: COM_G_PROIBIDOS });
+    var r = SGO_QIAV_verificar_(t, { numeros: nums, normas: [], veredito: '', inteirosLivresAte: (extra && extra.livres) || 10, termosProibidos: [] });
     problemas = problemas.concat(r.problemas || []);
-  } else {
-    COM_G_PROIBIDOS.forEach(function (re) { if (re.test(t)) problemas.push('expressão proibida: ' + t.match(re)[0]); });
   }
+  COM_G_PROIBIDOS.forEach(function (re) { var m = semRelato.match(re); if (m) problemas.push('expressão proibida: ' + m[0]); });
   if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(t)) problemas.push('emoji');
   if (/\*\*|^#|\bAI\b|\bIA\b/m.test(t)) problemas.push('formatação ou referência a IA');
   return { ok: !problemas.length, problemas: problemas };

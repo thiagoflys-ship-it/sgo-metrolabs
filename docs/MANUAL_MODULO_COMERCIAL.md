@@ -120,11 +120,15 @@ A janela mostra o plano em uso, com o gatilho, e o histórico dos planos tentado
 - tem passo sem data, com data no passado ou fora de dia útil;
 - os planos B ou C são iguais ao A ou variação dele;
 - repete um plano que falhou;
-- cita número que não está no sistema, promessa de desconto ou de prazo, norma ou fabricante.
+- cita número que não está no sistema, promessa de desconto (com qualquer verbo) ou de prazo, condição de pacote fora da política, norma ou fabricante.
 
 Depois de 2 refações, valem os planos pelas regras. Eles também trazem A, B e C concretos, montados com os mesmos fatos e com a metodologia, e passam pela mesma conferência. Sem a chave da IA, ou quando a pessoa atinge o limite de análises com IA da hora (o mesmo limite do Orçamentista, 20 por pessoa e hora), a janela diz o porquê e mostra os planos pelas regras.
 
-**Quem vê o quê.** Para o vendedor, a especialista usa só as oportunidades dele com aquele cliente e os preços da empresa sem o nome de outros clientes. Nunca usa custo, margem, preço de compra nem a regra de cálculo do preço. A gestão comercial recebe tudo.
+**Quem vê o quê.** Para o vendedor, a especialista usa só as oportunidades dele com aquele cliente e os preços da empresa sem o nome de outros clientes. Nunca usa custo, margem, preço de compra nem a regra de cálculo do preço. A gestão comercial recebe tudo nas oportunidades dela. Quando a gestão pede à especialista numa oportunidade de outra pessoa, os planos saem com a visão do responsável, porque o plano posto em uso fica gravado na oportunidade e o responsável lê tudo. A janela avisa quando isso acontece.
+
+**Desconto e pacote.** A especialista nunca oferece desconto nem condição de pacote por conta própria. Texto com percentual de desconto, "a menos", "abaixo da tabela", abatimento ou número de parcelas é recusado. O relato do pedido do cliente passa ("o cliente pediu 25% de desconto"), desde que o número seja o que está registrado. Uma condição de pacote ou contrato só aparece quando a gestão a escreve na política, e sempre como algo que precisa de aprovação na Caixa de decisões.
+
+**Quando tudo já foi tentado.** Se todas as abordagens já foram marcadas como "não deu certo" ou trocadas, a especialista mostra só o encerramento educado, com o aviso para avaliar encerrar com o motivo real ou pedir ajuda à gestão comercial.
 
 A especialista não envia nada ao cliente, não muda a etapa e não cria atividade sozinha. Cada consulta fica registrada para a gestão, em Metodologia comercial.
 

@@ -41,7 +41,7 @@ var COM_ESP_ABORDAGENS = {
   VISITA_TECNICA: 'Visita técnica ou diagnóstico presencial',
   CONFORMIDADE: 'Risco de conformidade e auditoria (vigilância sanitária, acreditação)',
   URGENCIA: 'Prazo e agenda (data limite do cliente, agenda técnica confirmada)',
-  PACOTE_ANUAL: 'Pacote anual ou contrato (visitas programadas, pagamento mensal)',
+  PACOTE_ANUAL: 'Pacote anual ou contrato (visitas programadas; condição aprovada pela gestão)',
   ESCOPO: 'Recalcular o escopo (fases, prioridade nos equipamentos críticos)',
   CONDICAO: 'Mudar a condição de pagamento, não o preço',
   VALOR_TECNICO: 'Comparar valor técnico, não preço (o que está incluso, custo da parada)',
@@ -359,12 +359,46 @@ function ComEsp_fatos_(eu, o) {
     precos: precos.length ? precos : 'sem proposta com itens: os preços do banco entram quando houver proposta',
     urgenciaEPrazo: { prazoInformadoPeloCliente: x.prazoInformado || 'não informado', previsaoDeFechamento: t.previsaoBr || 'não informada', faixasDePrazo: ComEsp_faixasTxt_(met) },
     tipoDeCompra: licitacao ? 'compra pública ou licitação (preço único, sem acréscimo de urgência; lance abaixo do preço mínimo só com a Diretoria)' : contrato ? 'contrato ou serviço recorrente' : 'compra direta (avulsa)',
-    referenciasComerciais: ['Contrato anual: preço da tabela com 10% a menos, pagamento em 12 parcelas mensais e visitas programadas (referência da gestão; cada contrato é aprovado pela gestão).',
-      'Prazo curto só depois de a Área técnica confirmar a agenda.', 'Desconto acima do limite do vendedor vai para a Caixa de decisões da gestão, com a fundamentação; o vendedor não promete.'],
+    // revisão 01/11/2026: nada de condição de pacote inventada. Só entra o que a gestão escreveu na política (met.politica.pacote),
+    // e sempre como algo que depende de aprovação na Caixa de decisões.
+    referenciasComerciais: ComEsp_referenciasPacote_(met).concat(['Prazo curto só depois de a Área técnica confirmar a agenda.',
+      'Desconto acima do limite do vendedor vai para a Caixa de decisões da gestão, com a fundamentação; o vendedor não promete.',
+      'Pacote anual ou contrato: preço e condição de pagamento dependem de aprovação da gestão na Caixa de decisões; não prometa percentual, abatimento nem número de parcelas.']),
     cenario: COM_ESP_CENARIOS[x.cenario]
   };
   if (ve) fatos.oportunidade.valorEstimado = Com_moeda_(o.VALOR_ESTIMADO);
   return { fatos: fatos, x: x, c: c };
+}
+
+/**
+ * Referência de pacote ou contrato: só a que a gestão gravou na política (met.politica.pacote: texto, ou { texto }), sempre como
+ * condição que depende de aprovação. Sem nada na política, nada entra (a especialista não inventa condição de contrato).
+ */
+function ComEsp_pacotePolitica_(met) {
+  var p = met && met.politica && met.politica.pacote;
+  var txt = typeof p === 'string' ? Com_s_(p) : Com_s_(p && p.texto);
+  return txt;
+}
+function ComEsp_referenciasPacote_(met) {
+  var txt = ComEsp_pacotePolitica_(met);
+  return txt ? ['Pacote ou contrato, pela política da gestão (precisa de aprovação na Caixa de decisões antes de oferecer): ' + Com_texto_(txt, 400)] : [];
+}
+/** Números que a política de pacote permite citar (percentual a menos, parcelas). Vazio sem política de pacote. */
+function ComEsp_numerosPacote_(met) {
+  var txt = ComEsp_pacotePolitica_(met);
+  return txt && typeof SGO_QIAV_numerosDe_ === 'function' ? SGO_QIAV_numerosDe_(txt) : [];
+}
+/** Condição comercial prometida sem estar na política: "% a menos", "abaixo da tabela", "abatimento", "N parcelas". */
+function ComEsp_condicaoForaDaPolitica_(s, permitidos) {
+  var l = [], t = Com_s_(s), m;
+  if (/abaixo\s+d[ao]\s+(pre[cç]o\s+de\s+)?tabela/i.test(t)) l.push('preço "abaixo da tabela" (só com aprovação da gestão na Caixa de decisões)');
+  if (/abatimento/i.test(t)) l.push('"abatimento" (condição que só a gestão aprova)');
+  var reN = /(\d+(?:[.,]\d+)?)\s*%\s*a\s+menos|(\d+)\s*(?:x\s*)?(?:parcelas?|presta[cç][oõ]es)\b|\bem\s+(\d+)\s*x\b/gi;
+  while ((m = reN.exec(t)) !== null) {
+    var n = Number(String(m[1] || m[2] || m[3]).replace(',', '.'));
+    if (!(permitidos || []).some(function (p) { return Math.abs(p - n) < 1e-9; })) l.push('condição "' + m[0] + '" que não está na política (depende de aprovação da gestão)');
+  }
+  return l;
 }
 
 function ComEsp_faixasTxt_(met) {
@@ -426,10 +460,12 @@ function ComEsp_montarAbordagem_(cod, x) {
         [2, 'WHATSAPP', 'Oferecer a data de agenda confirmada e pedir o aceite até a data combinada']],
       canalMsg: 'WHATSAPP', mensagem: 'Olá, ' + n + '. Para eu reservar a agenda da equipe técnica para ' + x.assunto + ', preciso saber: existe alguma data limite do seu lado (auditoria, parada ou vencimento)?',
       sucesso: 'Data limite do cliente registrada e o aceite combinado para antes dela.' },
-    PACOTE_ANUAL: { titulo: 'Propor pacote anual', objetivo: 'Trocar a discussão de preço avulso por um pacote anual com visitas programadas e pagamento mensal (preço de contrato da política, aprovado pela gestão).',
-      passos: [[0, 'LIGACAO', 'Levantar com ' + n + ' os outros equipamentos e o que vence nos próximos meses'], [2, 'REUNIAO', 'Apresentar o pacote anual com visitas programadas e pagamento mensal'], [4, 'EMAIL', 'Enviar a proposta de contrato pedindo a data de decisão']],
-      canalMsg: 'WHATSAPP', mensagem: 'Olá, ' + n + '. Pensando em evitar urgência e custo avulso, posso montar um pacote anual com as visitas programadas e pagamento mensal. Quais outros equipamentos vencem nos próximos meses?',
-      sucesso: 'Lista dos equipamentos levantada e a proposta de contrato com data de decisão.' },
+    // revisão 01/11/2026: sem percentual nem parcelamento prometidos; a condição do pacote depende de aprovação na Caixa de decisões
+    PACOTE_ANUAL: { titulo: 'Propor pacote anual', objetivo: 'Trocar a discussão de preço avulso por um pacote anual com visitas programadas. A condição de preço e de pagamento do pacote depende de aprovação da gestão na Caixa de decisões.',
+      passos: [[0, 'LIGACAO', 'Levantar com ' + n + ' os outros equipamentos e o que vence nos próximos meses'], [1, 'EMAIL', 'Pedir à gestão, na Caixa de decisões, a condição do pacote anual com a lista dos equipamentos e das visitas'],
+        [4, 'REUNIAO', 'Apresentar o pacote anual com as visitas programadas e a condição aprovada pela gestão, e pedir a data de decisão']],
+      canalMsg: 'WHATSAPP', mensagem: 'Olá, ' + n + '. Pensando em evitar urgência e custo avulso, posso levar à minha gestão um pacote anual com as visitas programadas. Quais outros equipamentos vencem nos próximos meses?',
+      sucesso: 'Lista dos equipamentos levantada, condição do pacote aprovada pela gestão e a data de decisão combinada com o cliente.' },
     ESCOPO: { titulo: 'Recalcular o escopo', objetivo: 'Caber na verba do cliente sem tirar preço: primeira fase só com o que é crítico, o resto em segunda fase.',
       passos: [[0, 'LIGACAO', 'Perguntar para ' + n + ' quais equipamentos são críticos e quais podem ficar para uma segunda fase'], [1, 'EMAIL', 'Montar nova revisão da proposta com a primeira fase só com o crítico, mantendo o preço unitário'],
         [3, 'LIGACAO', 'Apresentar a revisão e pedir a data de decisão']],
@@ -527,7 +563,9 @@ function ComEsp_escolherAbordagens_(x, mem) {
 
 /** Planos A, B e C pelas regras (sem IA), com os gatilhos e a próxima ação. */
 function ComEsp_planosRegras_(x, mem) {
-  var esc = ComEsp_escolherAbordagens_(x, mem).escolha;
+  var esc = ComEsp_escolherAbordagens_(x, mem).escolha, avisoTodas = '';
+  // revisão 01/11/2026: todas as abordagens já falharam: nada de erro; sai o encerramento educado com o aviso claro
+  if (!esc.length) { esc = ['ENCERRAR']; avisoTodas = 'Todas as abordagens já foram tentadas nesta oportunidade e não deram certo: avalie encerrar (com o motivo real da perda) ou pedir ajuda à gestão comercial.'; }
   var inicio = ComEsp_du_(x.hoje, 0), planos = [], letras = ['A', 'B', 'C'];
   esc.forEach(function (cod, i) {
     var p = ComEsp_planoDatado_(letras[i], cod, x, inicio);
@@ -551,7 +589,9 @@ function ComEsp_planosRegras_(x, mem) {
   });
   ComEsp_saidas_(planos, x);
   var falhos = mem.falhos || [];
-  return { diagnostico: ComEsp_diagnosticoRegras_(x, a, falhos), planos: planos, proximaAcao: ComEsp_proximaDoPlano_(a), perguntas: x.faltam.slice(0, 3).map(function (q) { return q.pergunta; }) };
+  var r = { diagnostico: ComEsp_diagnosticoRegras_(x, a, avisoTodas ? [] : falhos), planos: planos, proximaAcao: ComEsp_proximaDoPlano_(a), perguntas: x.faltam.slice(0, 3).map(function (q) { return q.pergunta; }) };
+  if (avisoTodas) { r.aviso = avisoTodas; r.diagnostico += ' ' + avisoTodas; }
+  return r;
 }
 
 /** Prazo de cada plano (quando trocar): A e B pelo gatilho do seguinte; C pelo último passo mais 3 dias úteis. */
@@ -605,12 +645,13 @@ function ComEsp_fabricantes_() {
 function ComEsp_verificar_(j, ctx) {
   var problemas = [], fatos = ctx.fatos, x = ctx.x, mem = ctx.mem || { falhos: [] }, hoje = x.hoje, limiteDia = Com_somarDias_(hoje, 120);
   var ignorar = ComEsp_palavras_([x.t.titulo, x.t.cliente, x.t.unidade, x.t.contato, x.assunto].join(' '));
-  var fabs = ctx.fabricantes || [];
+  var fabs = ctx.fabricantes || [], numPacote = ComEsp_numerosPacote_(x.met);
   var txt = function (onde, v, obrig) {
     var s = Com_s_(v);
     if (!s) { if (obrig) problemas.push(onde + ': vazio'); return ''; }
     var r = ComG_verificar_(s, fatos, { livres: 10 });
     if (!r.ok) problemas.push(onde + ': ' + r.problemas.slice(0, 2).join('; '));
+    ComEsp_condicaoForaDaPolitica_(s, numPacote).forEach(function (c) { problemas.push(onde + ': ' + c); });
     COM_ESP_VAZIAS.forEach(function (re) { var m = s.match(re); if (m) problemas.push(onde + ': frase vazia ("' + m[0] + '"): diga o quê, com quem, por qual canal e quando'); });
     var n = ' ' + ComEsp_norm_(s) + ' ';
     fabs.forEach(function (fb) { if (n.indexOf(' ' + fb + ' ') >= 0) problemas.push(onde + ': cita fabricante ou marca (' + fb + ')'); });
@@ -720,6 +761,7 @@ function ComEsp_prompt_(eu, fx, mem) {
     '\n- proximaAcao: a primeira ação do plano A, com data (dd/mm/aaaa), hora (hh:mm) e canal.' +
     '\n- Proibido: "manter contato", "agregar valor", "entender a necessidade" sem dizer qual, "follow-up", "estreitar relacionamento", "alinhar expectativas". Toda ação diz o quê, com quem, por qual canal e quando.' +
     '\n- Desconto: nunca ofereça nem prometa. Acima do limite do vendedor, o caminho é a Caixa de decisões da gestão com a fundamentação, ou mudar escopo, prazo ou condição de pagamento.' +
+    '\n- Pacote anual ou contrato: nunca prometa percentual "a menos", preço "abaixo da tabela", abatimento nem número de parcelas; diga que a condição depende de aprovação da gestão na Caixa de decisões' + (ComEsp_pacotePolitica_(fx.x.met) ? ' (a política da gestão está nos FATOS, em referenciasComerciais).' : '.') +
     '\n- Não cite marca, fabricante ou modelo de equipamento. Número só se estiver nos FATOS (dias úteis até 10 podem ser usados).' +
     '\n\nFormato: {"diagnostico":"...","planos":[{"letra":"A","abordagem":"CODIGO","titulo":"...","objetivo":"...","passos":[{"quando":"dd/mm/aaaa","canal":"LIGACAO","acao":"..."}],"mensagem":{"canal":"WHATSAPP","assunto":"","texto":"..."},"objecoes":[{"objecao":"...","resposta":"..."}],"sucesso":"..."},' +
     '{"letra":"B","abordagem":"CODIGO","titulo":"...","objetivo":"...","gatilho":{"texto":"...","ate":"dd/mm/aaaa"},"passos":[...],"mensagem":{...},"sucesso":"..."},{"letra":"C",...}],"proximaAcao":{"acao":"...","data":"dd/mm/aaaa","hora":"10:00","canal":"LIGACAO"},"perguntas":["..."]}';
@@ -733,11 +775,26 @@ function ComEsp_prompt_(eu, fx, mem) {
  * perguntas }, origem, aviso, memoria, oportunidade, proximaAtual, lembrete }. Só registra a sugestão (COM_IA_SUGESTOES, tipo
  * ESPECIALISTA); nada é enviado, nenhuma etapa muda e nenhuma atividade é criada.
  */
+/**
+ * Com que olhos a especialista monta os fatos. A própria oportunidade: a visão de quem pede. A gestão numa oportunidade de outra
+ * pessoa: a visão do responsável (vendedor: vê valores das próprias, nunca custo nem o que é de outro vendedor).
+ */
+function ComEsp_visao_(eu, o) {
+  var resp = Com_s_(o.RESPONSAVEL_ID);
+  if (!eu.gestao || !resp || resp === eu.id) return { eu: eu, doResponsavel: false };
+  return { doResponsavel: true, eu: { id: resp, nome: Com_s_(o.RESPONSAVEL_NOME), login: '', perfil: 'COMERCIAL', area: 'COMERCIAL', nivel: 'VENDEDOR', gestao: false, vendedor: true, financeiro: false,
+    veValores: true, veCusto: false, catalogo: false, catalogoVenda: true, diretoria: false } };
+}
+
 function ComEsp_consultar_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'pedir à especialista');
   d = d || {};
   var o = ComOpo_obter_(eu, d.id, 'pedir à especialista');
-  var fx = ComEsp_fatos_(eu, o), x = fx.x, t = x.t;
+  // revisão 01/11/2026: tudo o que a especialista escreve pode ser gravado na oportunidade (plano em uso, histórico) e lido pelo
+  // responsável. Quando a gestão consulta a oportunidade de outra pessoa, os fatos e o prompt saem com a VISÃO DO RESPONSÁVEL
+  // (sem custo, margem, preço de compra nem oportunidades de outros vendedores).
+  var visao = ComEsp_visao_(eu, o), ev = visao.eu;
+  var fx = ComEsp_fatos_(ev, o), x = fx.x, t = x.t;
   var mem = ComEsp_memoria_(t.id, x.regs, x.hoje);
   fx.fatos.planoEmUso = mem.emUso ? { letra: mem.emUso.letra, titulo: mem.emUso.titulo, desde: mem.emUso.desde, gatilho: mem.emUso.gatilho, ate: mem.emUso.gatilhoAte, gatilhoVencido: mem.gatilhoVencido } : 'nenhum';
   fx.fatos.planosQueFalharam = mem.falhos.map(function (p) { return { abordagem: p.abordagem, titulo: p.titulo, motivo: p.motivo }; });
@@ -746,7 +803,7 @@ function ComEsp_consultar_(eu, d) {
     if (!ComG_iaDisponivel_()) avisos.push('A especialista está trabalhando só pelas regras: a chave da IA não está cadastrada (Administração > Chaves e senhas). Os planos abaixo saem dos fatos do sistema e da metodologia.');
     else {
       var ctxV = { fatos: fx.fatos, x: x, mem: mem, fabricantes: ComEsp_fabricantes_() };
-      var prompt = ComEsp_prompt_(eu, fx, mem), problemas = [];
+      var prompt = ComEsp_prompt_(ev, fx, mem), problemas = [];
       for (var k = 0; k <= COM_ESP_REFACOES; k++) {
         if (typeof ComO_cotaIA_ === 'function' && !ComO_cotaIA_(eu)) { avisos.push('Você já usou ' + (typeof COM_O_IA_POR_HORA !== 'undefined' ? COM_O_IA_POR_HORA : 20) + ' análises com IA nesta hora (a cota é por pessoa e vale para todo o Comercial): esta saiu pelas regras. Na próxima hora a IA volta.'); break; }
         tentativas++;
@@ -761,8 +818,9 @@ function ComEsp_consultar_(eu, d) {
       if (!saida && recusas.length && recusas.length === tentativas) avisos.push('A resposta da IA foi recusada ' + Com_plural_(tentativas, 'vez', 'vezes') + ' pelo verificador (' + recusas[recusas.length - 1].problemas.slice(0, 2).join('; ') + '). Valem os planos pelas regras, montados com os fatos do sistema.');
     }
   }
-  if (!saida) saida = ComEsp_planosRegras_(x, mem);
+  if (!saida) { saida = ComEsp_planosRegras_(x, mem); if (saida.aviso) avisos.unshift(saida.aviso); }
   saida.cenario = x.cenario; saida.cenarioNome = COM_ESP_CENARIOS[x.cenario];
+  if (visao.doResponsavel) { saida.visao = 'responsavel'; avisos.push('Como a oportunidade é de ' + Com_s_(o.RESPONSAVEL_NOME) + ', os planos foram montados com a visão dele (sem custo, margem nem dados de outros vendedores): o plano posto em uso fica gravado na oportunidade e ele vê tudo.'); }
   var aviso = avisos.join(' ');
   var id = ComEsp_registrar_(eu, t, origem, saida, (aviso + (recusas.length ? ' Recusas: ' + JSON.stringify(recusas) : '')).trim());
   return { sugestaoId: id, sugestao: saida, origem: origem, aviso: aviso, tentativasIA: tentativas, memoria: mem,
@@ -848,6 +906,11 @@ function ComEsp_criarAcao_(eu, sessionId, d) {
   var r = Com_comTrava_(function () {
     var o = ComOpo_obter_(eu, d.id, 'criar a próxima ação');
     if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível criar a próxima ação: a oportunidade ' + Com_s_(o.CODIGO) + ' está encerrada');
+    // revisão 01/11/2026: a consulta tem de ser desta oportunidade (sugestaoId de outra não põe plano em uso aqui)
+    if (Com_s_(d.sugestaoId)) {
+      var sg = SGO_DATA.getById(COM_ABAS.SUGESTOES, Com_s_(d.sugestaoId));
+      if (!sg || Com_s_(sg.TIPO) !== 'ESPECIALISTA' || Com_s_(sg.OPORTUNIDADE_ID) !== Com_s_(o.ID)) throw new Error('Não foi possível criar a próxima ação: a consulta à especialista não é desta oportunidade. Peça à especialista de novo nesta oportunidade');
+    }
     var antiga = Com_atividade_(o.ATIVIDADE_ID), trocou = false;
     var campos = { PROXIMA_ACAO: prox.texto, PROXIMA_ACAO_TIPO: prox.tipo, PROXIMA_ACAO_EM: prox.prazo, ATUALIZADO_EM: Com_agora_() };
     var novo = Object.assign({}, o, campos);

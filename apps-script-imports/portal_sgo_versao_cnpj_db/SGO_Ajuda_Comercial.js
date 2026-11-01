@@ -79,6 +79,7 @@ function SGO_ajudaTelas_Comercial_() {
       problemas: [
         { situacao: '"O cliente tem unidades no cadastro: escolha a unidade".', oQueFazer: 'No SGO+ documentos, equipamentos e pastas são por unidade. Escolha a unidade da oportunidade.' },
         { situacao: 'A especialista avisou que está trabalhando só pelas regras.', oQueFazer: 'O aviso diz o porquê: chave da IA não cadastrada, limite de análises com IA da hora atingido ou resposta da IA recusada pelo verificador (genérica, sem data, repetindo um plano que falhou ou com número que não está no sistema). Os planos pelas regras usam os mesmos fatos e servem do mesmo jeito.' },
+        { situacao: 'A especialista mostrou só o encerramento e o aviso "Todas as abordagens já foram tentadas".', oQueFazer: 'Todos os planos desta oportunidade já foram marcados como "não deu certo" ou trocados. Avalie encerrar com o motivo real da perda ou peça ajuda à gestão comercial.' },
         { situacao: '"Diga em poucas palavras por que o plano não andou".', oQueFazer: 'Para trocar de plano ou marcar "Não deu certo", escreva o motivo (pelo menos 5 letras). É com ele que a especialista evita repetir o que falhou.' },
         { situacao: '"A próxima ação não pode ficar no passado".', oQueFazer: 'O que já foi feito se registra em "Registrar contato"; a próxima ação é o passo seguinte, de hoje em diante.' },
         { situacao: 'Não consigo mudar a etapa.', oQueFazer: 'A janela de mudança de etapa diz o que falta: oportunidade parada (registre um contato real ou a perda), itens da lista da etapa não confirmados, decisor não mapeado, nenhum contato registrado, proposta ainda não enviada ou aceite não registrado. Resolva e mude de novo.' }
@@ -86,7 +87,8 @@ function SGO_ajudaTelas_Comercial_() {
       quemPode: quem,
       perguntas: [
         { p: 'Outro vendedor vê as minhas oportunidades?', r: 'Não. O vendedor vê só as próprias; a gestão comercial vê todas.' },
-        { p: 'A especialista usa dados de outros vendedores?', r: 'Para o vendedor, ela usa só as oportunidades dele com o cliente e os preços da empresa sem o nome de outros clientes; nunca custo, margem nem preço de compra. Para a gestão, usa tudo.' },
+        { p: 'A especialista usa dados de outros vendedores?', r: 'Para o vendedor, ela usa só as oportunidades dele com o cliente e os preços da empresa sem o nome de outros clientes; nunca custo, margem nem preço de compra. Para a gestão, usa tudo nas oportunidades dela; na oportunidade de outra pessoa, usa a visão do responsável, porque o plano fica gravado na oportunidade.' },
+        { p: 'A especialista pode sugerir desconto ou condição de pacote?', r: 'Não. Ela só relata o pedido do cliente. Desconto, preço abaixo da tabela, abatimento e parcelas dependem da aprovação da gestão na Caixa de decisões.' },
         { p: 'A especialista cria atividade ou manda mensagem sozinha?', r: 'Não. A próxima ação só nasce quando você toca em "Criar em Minhas atividades", e a mensagem é você quem envia.' },
         { p: 'Onde foram parar o Quadro do funil e o Gantt comercial?', r: 'Estão dentro de Oportunidades, nos botões "Quadro (Kanban)" e "Gantt" do topo. Funcionam como antes; os nomes continuam.' },
         { p: 'Reabri uma oportunidade perdida. O que acontece com quem ganhou?', r: 'Sai da oportunidade junto com o motivo da perda e fica registrado no histórico da oportunidade (sai também do Banco de preços, para a perda nova não herdar o vencedor antigo). Se ela for perdida de novo, informe quem ganhou desta vez.' },

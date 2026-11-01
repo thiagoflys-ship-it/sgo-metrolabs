@@ -259,10 +259,110 @@ test('visibilidade: o prompt do vendedor não traz oportunidade nem preço de ou
     assert.ok(!pv.includes(proib), 'o vendedor não pode receber: ' + proib);
   });
   assert.match(pv, /nenhuma outra oportunidade sua com este cliente/);
+  // revisão 01/11/2026: a gestão na oportunidade da vendedora usa a visão da responsável (o plano pode ser gravado e ela lê)
   amb.iaPrompts.length = 0;
-  ok(amb.api('s_dora', 'especialista', { id: o.id }));
+  const rg = ok(amb.api('s_dora', 'especialista', { id: o.id }));
+  const pgv = amb.iaPrompts.find((x) => /ESPECIALISTA em vendas B2B/.test(x));
+  ['OPO-2026-0002', '6.543,21', 'Empresa Concorrente Teste', '2.345,67', 'custoTotal', '31,4', '1.234,56', 'REGRA DO PREÇO'].forEach((proib) => assert.ok(!pgv.includes(proib), 'gestão na oportunidade da vendedora, sem: ' + proib));
+  assert.match(rg.aviso, /montados com a visão dele/);
+  // na oportunidade da própria gestão, a visão completa
+  const od = oportunidadeDeTeste(amb, 's_dora', { titulo: 'Contrato de calibração da UTI', proxima: PROX }).oportunidade;
+  const pd = ok(amb.api('s_dora', 'novaProposta', { oportunidadeId: od.id })).proposta.id;
+  Object.assign(amb.tabelas.COM_PROPOSTAS.find((x) => x.ID === pd), { CUSTO_TOTAL: 2345.67, MARGEM_PCT: 31.4, TOTAL: 4500 });
+  amb.iaPrompts.length = 0;
+  ok(amb.api('s_dora', 'especialista', { id: od.id }));
   const pg = amb.iaPrompts.find((x) => /ESPECIALISTA em vendas B2B/.test(x));
-  ['OPO-2026-0002', '6.543,21', 'Empresa Concorrente Teste', '2.345,67', 'custoTotal', 'REGRA DO PREÇO'].forEach((visto) => assert.ok(pg.includes(visto), 'a gestão vê: ' + visto));
+  ['OPO-2026-0002', '6.543,21', 'Empresa Concorrente Teste', '2.345,67', 'custoTotal', 'REGRA DO PREÇO'].forEach((visto) => assert.ok(pg.includes(visto), 'a gestão na própria vê: ' + visto));
+});
+
+test('revisão: a gestão usa um plano na oportunidade da vendedora e nenhum custo, margem ou dado de outro vendedor chega ao que a vendedora vê', () => {
+  let n = 0;
+  const amb = ambiente({ ia: (p) => { if (!/ESPECIALISTA em vendas B2B/.test(p)) return '{}'; n++; const r = respostaBoa();
+    if (n === 1) r.planos[0].objetivo = 'Mostrar que a margem de 31,4% sobre o custo de R$ 2.345,67 ainda permite negociar com a Ana.';
+    return JSON.stringify(r); } });
+  const o = paradaSemResposta(amb);
+  const ov = oportunidadeDeTeste(amb, 's_vito', { titulo: 'Manutenção da lavadora LV-77', valor: '7.777,00', proxima: PROX }).oportunidade;
+  ok(amb.api('s_vito', 'perder', { id: ov.id, motivo: 'Concorrente escolhido', aprendizado: 'Perdemos no preço para um concorrente local', concorrente: 'Empresa Concorrente Teste', valorVencedor: '6.543,21' }));
+  const pid = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: o.id })).proposta.id;
+  Object.assign(amb.tabelas.COM_PROPOSTAS.find((x) => x.ID === pid), { CUSTO_TOTAL: 2345.67, MARGEM_PCT: 31.4, TOTAL: 4500 });
+  const r = ok(amb.api('s_dora', 'especialista', { id: o.id }));
+  assert.equal(r.origem, 'IA');
+  assert.equal(r.tentativasIA, 2, 'a resposta com custo e margem foi recusada: não estão nos fatos da visão da vendedora');
+  ok(amb.api('s_dora', 'especialistaUsarPlano', { sugestaoId: r.sugestaoId, letra: 'A' }));
+  ok(amb.api('s_dora', 'especialistaCriarAcao', { id: o.id, sugestaoId: r.sugestaoId, letra: 'A', acao: r.sugestao.proximaAcao.acao, data: r.sugestao.proximaAcao.dataIso, hora: r.sugestao.proximaAcao.hora, tipo: r.sugestao.proximaAcao.canal }));
+  const visto = JSON.stringify([amb.tabelas.COM_PLANOS_ESPECIALISTA, amb.tabelas.COM_HISTORICO.filter((h) => h.ENTIDADE_ID === o.id), ok(amb.api('s_vera', 'especialistaPlanos', { id: o.id })),
+    ok(amb.api('s_vera', 'oportunidade', { id: o.id })).planoEspecialista, amb.tabelas.COM_IA_SUGESTOES.find((x) => x.ID === r.sugestaoId).CONTEUDO_JSON]);
+  ['2.345,67', '2345.67', '31,4', '31.4', 'margemPct', 'custoTotal', 'precoDeCompra', 'OPO-2026-0002', '6.543,21', 'Empresa Concorrente Teste', 'Manutenção da lavadora'].forEach((proib) => assert.ok(!visto.includes(proib), 'chegou à vendedora: ' + proib));
+});
+
+// ------------------------------------------------------------------ revisão 01/11/2026: pacote, desconto, sugestão de outra oportunidade, tudo falhou
+test('pacote: sem política de pacote nada de "% a menos", "abaixo da tabela", abatimento ou parcelas; com a política, só o que ela diz e como dependente de aprovação', () => {
+  const amb = ambiente();
+  const o = paradaSemResposta(amb);
+  const eu = amb.ctx.Com_eu_('s_vera');
+  const fx = amb.ctx.ComEsp_fatos_(eu, amb.ctx.ComOpo_obter_(eu, o.id, 'teste'));
+  const refs = JSON.stringify(fx.fatos.referenciasComerciais);
+  assert.doesNotMatch(refs, /10% a menos|12 parcelas/, 'a linha inventada saiu');
+  assert.match(refs, /dependem de aprovação da gestão na Caixa de decisões/);
+  const v = (frase) => { const j = respostaBoa(); j.planos[2].objetivo = frase; return amb.ctx.ComEsp_verificar_(j, { fatos: fx.fatos, x: fx.x, mem: { falhos: [] }, fabricantes: [] }); };
+  for (const f of ['Oferecer o contrato anual com 10% a menos que a tabela.', 'Fechar o pacote abaixo da tabela.', 'Dar um abatimento no pacote anual.', 'Pacote anual em 12 parcelas mensais.', 'Pacote anual pago em 6x.']) {
+    const r = v(f);
+    assert.equal(r.ok, false, f);
+    assert.ok(r.problemas.some((p) => /abaixo da tabela|abatimento|não está na política/.test(p)), f + ': ' + r.problemas.join(' | '));
+  }
+  assert.equal(v('Propor o pacote anual com as visitas programadas; a condição depende de aprovação da gestão.').ok, true);
+  // a regra do PACOTE_ANUAL não promete percentual nem parcelamento
+  const pac = amb.ctx.ComEsp_montarAbordagem_('PACOTE_ANUAL', fx.x);
+  const tp = JSON.stringify(pac);
+  assert.doesNotMatch(tp, /\d+\s*%|parcela|pagamento mensal|abaixo da tabela/i);
+  assert.match(pac.objetivo, /depende de aprovação da gestão na Caixa de decisões/);
+  // com a política de pacote escrita pela gestão: o número dela pode ser citado, e a referência vem como dependente de aprovação
+  fx.x.met.politica.pacote = { texto: 'Contrato anual com até 8% a menos sobre a tabela, em 12 parcelas.' };
+  const fx2 = Object.assign({}, fx, { fatos: Object.assign({}, fx.fatos, { referenciasComerciais: amb.ctx.ComEsp_referenciasPacote_(fx.x.met) }) });
+  assert.match(JSON.stringify(fx2.fatos.referenciasComerciais), /precisa de aprovação na Caixa de decisões.*8% a menos/);
+  const j = respostaBoa(); j.planos[2].objetivo = 'Levar à gestão o contrato anual com 8% a menos em 12 parcelas, pela política.';
+  assert.equal(amb.ctx.ComEsp_verificar_(j, { fatos: fx2.fatos, x: fx.x, mem: { falhos: [] }, fabricantes: [] }).ok, true);
+  const j2 = respostaBoa(); j2.planos[2].objetivo = 'Contrato anual com 9% a menos em 10 parcelas.';
+  assert.equal(amb.ctx.ComEsp_verificar_(j2, { fatos: fx2.fatos, x: fx.x, mem: { falhos: [] }, fabricantes: [] }).ok, false);
+});
+
+test('gestora: promessa de desconto com qualquer verbo é recusada; o relato do pedido do cliente passa com o número dos fatos', () => {
+  const amb = ambiente();
+  const fatos = { pedido: 'o cliente pediu 25% de desconto', limites: [10, 15] };
+  const rec = ['Posso fazer 10% de desconto se fechar hoje.', 'Consigo 10% de desconto.', 'Fechamos com 15% de desconto.', 'De um desconto de 10%.', 'Dê um desconto de 10%.', 'Ofereça um desconto para fechar.', 'Damos desconto de 15% no pacote.', 'Dê mais desconto.'];
+  rec.forEach((f) => { const r = amb.ctx.ComG_verificar_(f, fatos); assert.equal(r.ok, false, f); assert.ok(r.problemas.some((p) => /expressão proibida/.test(p)), f); });
+  const passa = ['O pedido de desconto foi registrado na proposta.', 'O cliente pediu 25% de desconto na reunião.', 'A Ana pediu desconto de 25% e citou o concorrente.', 'Leve o pedido de 25% de desconto à gestão.'];
+  passa.forEach((f) => { const r = amb.ctx.ComG_verificar_(f, fatos); assert.equal(r.ok, true, f + ': ' + r.problemas.join('; ')); });
+  // o relato com número que não está nos fatos continua recusado (pelo número)
+  const r = amb.ctx.ComG_verificar_('O cliente pediu 33% de desconto.', fatos);
+  assert.equal(r.ok, false);
+  assert.ok(r.problemas.some((p) => /número que não está nos resultados: 33/.test(p)));
+});
+
+test('criar a próxima ação: sugestaoId de outra oportunidade é recusado e nada é criado', () => {
+  const amb = ambiente();
+  const o = paradaSemResposta(amb);
+  const o2 = oportunidadeDeTeste(amb, 's_vera', { titulo: 'Calibração de 4 seladoras', proxima: PROX }).oportunidade;
+  const r2 = ok(amb.api('s_vera', 'especialista', { id: o2.id }));
+  const atv = amb.tabelas.ATV_ATIVIDADES.length, antes = JSON.stringify(opo(amb, o.id));
+  const pa = r2.sugestao.proximaAcao;
+  const x = amb.api('s_vera', 'especialistaCriarAcao', { id: o.id, sugestaoId: r2.sugestaoId, letra: 'A', acao: pa.acao, data: pa.dataIso, hora: pa.hora, tipo: pa.canal });
+  assert.equal(x.ok, false);
+  assert.match(x.message, /a consulta à especialista não é desta oportunidade/);
+  assert.equal(amb.tabelas.ATV_ATIVIDADES.length, atv, 'nenhuma atividade criada');
+  assert.equal(JSON.stringify(opo(amb, o.id)), antes, 'oportunidade intacta');
+  assert.equal((amb.tabelas.COM_PLANOS_ESPECIALISTA || []).length, 0, 'nenhum plano posto em uso');
+});
+
+test('todas as abordagens já falharam: sem erro, sai o encerramento educado com o aviso claro', () => {
+  const amb = ambiente();
+  const o = paradaSemResposta(amb);
+  amb.tabelas.COM_PLANOS_ESPECIALISTA = Object.keys(amb.ctx.COM_ESP_ABORDAGENS).map((k, i) => ({ ID: 'pf' + i, OPORTUNIDADE_ID: o.id, LETRA: 'A', ABORDAGEM: k, TITULO: 'Plano ' + k, SITUACAO: 'NAO_DEU_CERTO', MOTIVO: '20/10/2026: sem avanço', INICIADO_EM: '2026-10-20T10:00', PLANO_JSON: '{}' }));
+  const r = ok(amb.api('s_vera', 'especialista', { id: o.id }));
+  assert.equal(r.sugestao.planos.length, 1);
+  assert.equal(r.sugestao.planos[0].abordagem, 'ENCERRAR');
+  assert.match(r.aviso, /Todas as abordagens já foram tentadas nesta oportunidade e não deram certo: avalie encerrar .* ou pedir ajuda à gestão comercial/);
+  assert.ok(r.sugestao.proximaAcao && r.sugestao.proximaAcao.dataIso);
 });
 
 // ------------------------------------------------------------------ próxima ação com um toque e cota
