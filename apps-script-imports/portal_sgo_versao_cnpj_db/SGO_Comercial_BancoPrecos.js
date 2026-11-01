@@ -301,8 +301,9 @@ function ComBP_linhasDaProposta_(p, resultado, extra) {
   if (!itens.length) return [];
   var cat = {}; Com_ler_(COM_ABAS.PRODUTOS).forEach(function (x) { cat[Com_s_(x.ID)] = x; });
   var sub = itens.reduce(function (s, i) { return s + Number(i.quantidade) * Number(i.precoUnitario); }, 0);
-  var subTodos = Com_json_(p.ITENS_JSON, []).reduce(function (s, i) { return s + (Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0); }, 0);
-  var fator = subTodos > 0 ? Math.max(0, subTodos - (Number(p.DESCONTO_GERAL) || 0)) / subTodos : 1;
+  // revisão de 01/11/2026 (decisão do dono): o desconto geral sai só dos serviços e produtos (ComP_calcular_); o deslocamento e o
+  // frete automáticos ficam com o preço inteiro. O rateio aqui segue a mesma regra (antes diluía o desconto também no deslocamento).
+  var fator = sub > 0 ? Math.max(0, sub - (Number(p.DESCONTO_GERAL) || 0)) / sub : 1;
   var lugar = ComBP_lugarDa_(p), venc = ComBP_num_(extra.valorVencedor), rot = ComP_rotulo_(p);
   return itens.map(function (i) {
     var prod = i.produtoId ? cat[Com_s_(i.produtoId)] : null, c1 = ComBP_c1DoProduto_(prod) || (ComBP_c1_(Com_s_(i.codigo).replace(/-/g, '_')) ? Com_up_(i.codigo).replace(/-/g, '_') : '');

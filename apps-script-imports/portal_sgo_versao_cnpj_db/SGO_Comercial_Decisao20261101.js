@@ -104,7 +104,11 @@ function ComDec_aplicarPolitica_(eu, d) {
     var prev = ComDec_previaPolitica_(eu, d);
     if (Com_s_(d.marca) !== prev.marca) throw new Error('Não foi possível aplicar: a política mudou desde a prévia (outra versão foi gravada). Veja a prévia de novo e confira antes de aplicar. Nada foi gravado');
     if (!prev.aplicar) return { versao: prev.versaoAtual, aplicados: 0, conflitos: prev.conflitos, message: 'Nada a aplicar: a política já está com os valores decididos' + (prev.conflitos ? ' (há ' + Com_plural_(prev.conflitos, 'campo', 'campos') + ' com valor da Diretoria mantido)' : '') + '.' };
+    // revisão: a prévia leu o banco agora; a metodologia em memória (até 20 s) pode ser de uma versão anterior e gravá-la por cima
+    // apagaria o que outra pessoa salvou nesse intervalo. Lê de novo do banco.
+    COM_METODOLOGIA_MEMO = null;
     var m = Com_copia_(Com_metodologia_());
+    if ((Number(m.versao) || 0) !== (Number(prev.versaoAtual) || 0) && prev.versaoAtual) throw new Error('Não foi possível aplicar: a política mudou desde a prévia (outra versão foi gravada). Veja a prévia de novo e confira antes de aplicar. Nada foi gravado');
     delete m.versao; delete m.atualizadaEm; delete m.atualizadaPor; delete m.margemUnificada;
     var porChave = {};
     ComDec_campos_().forEach(function (c) { porChave[c.chave] = c; });

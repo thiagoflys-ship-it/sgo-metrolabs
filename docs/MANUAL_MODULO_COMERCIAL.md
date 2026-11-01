@@ -153,7 +153,7 @@ O rascunho abre em quatro passos. Toque no número do passo ou em "Próximo"; no
 3. **Prazo e condições.** A faixa de prazo da proposta, "Licitação ou contrato", validade, contato, condições e a apresentação.
 4. **Revisar e enviar.** Ao abrir, o rascunho é salvo. Mostra os itens com o prazo, o total, o prazo que vai no documento, o deslocamento e o que falta. Depois toque em "Concluir".
 
-No topo fica sempre o quadro do preço: preço, deslocamento (repasse, fora da sobra), impostos da unidade e comissão e a situação da sobra (verde dentro da margem alvo de 40%, laranja abaixo da alvo, vermelho abaixo da mínima de 35%). Sobra abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui. Para evitar, suba o preço dos itens marcados ou reduza o desconto.
+No topo fica sempre o quadro do preço: preço, deslocamento (repasse, fora da sobra; digitado abaixo de custo mais impostos, o que faltar sai da sobra), impostos da unidade e comissão e a situação da sobra (verde dentro da margem alvo de 40%, laranja abaixo da alvo, vermelho abaixo da mínima de 35%). Sobra abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui. Para evitar, suba o preço dos itens marcados ou reduza o desconto.
 
 ### Prazo de cada item: as faixas
 
@@ -214,8 +214,9 @@ Checklist obrigatório (caixa "Custos da viagem e do frete" do rascunho). Propos
 | Combustível adicional ou passagem | valor por viagem x viagens | só quando não é veículo da empresa (avião, ônibus, veículo locado) |
 | Horas de estrada | horas por viagem x (valor da hora por função) x viagens | custo da hora com o custo fixo (técnico R$ 112,50, engenheiro R$ 165,00), só em trecho acima de 200 km; horas pela velocidade média (70 km/h) |
 
-A linha "Taxa por viagem" das propostas gravadas antes de 01/11/2026 continua aparecendo nelas, com o valor gravado. Nas propostas novas ela não existe.
 | Outros (opcional) | valor total com a descrição | — |
+
+A linha "Taxa por viagem" das propostas gravadas antes de 01/11/2026 continua aparecendo nelas, com o valor gravado, enquanto ninguém as salva de novo. Ao salvar o rascunho (ou numa nova revisão) a linha sai e o deslocamento é refeito sem ela. Nas propostas novas ela não existe.
 
 - "Não se aplica" automático (com o motivo escrito pelo sistema): 0 km (km e pedágio), 0 noite (hospedagem), trecho abaixo do mínimo da Conduta (Incentivo de Missão) e veículo da empresa (combustível). Pedágio e combustível aceitam valor mesmo assim (pedágio urbano, abastecimento extra).
 - Proposta com produto (Produto ou Misto): frete e entrega com o custo ou "não se aplica" com o motivo (por exemplo "cliente retira" ou "vai junto com a visita técnica").

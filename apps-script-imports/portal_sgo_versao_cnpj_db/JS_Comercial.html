@@ -1241,9 +1241,11 @@
     if (CM.ini.veCusto && q.margemMinPct !== null && q.margemMinPct !== undefined) {
       var custo = cusS + cusP + (CM.custoDiluidoServidor || 0);
       var impItens = recS * u.servico / 100 + recP * u.produto / 100 - cusP * u.credito / 100;
-      var sobra = rec - impItens - com - custo, pct = rec > 0 ? sobra / rec * 100 : 0;
+      // revisão de 01/11/2026: o que o deslocamento digitado deixar de cobrir (custo + impostos) sai da sobra, como no servidor
+      var custoFora = Math.max(0, (CM.custoDeslServidor || 0) - (CM.custoDiluidoServidor || 0)), perda = custoFora > 0 ? Math.max(0, custoFora - auto * (1 - u.servico / 100)) : 0;
+      var sobra = rec - impItens - com - custo - perda, pct = rec > 0 ? sobra / rec * 100 : 0;
       var cls = pct < q.margemMinPct ? "erro" : pct < q.margemAlvoPct ? "aviso" : "ok";
-      h += '<span>Custo ' + Com_esc_(Comercial_moeda_(custo)) + (CM.custoDiluidoServidor ? ' (com a viagem diluída)' : '') + '</span></div><div class="cm-qp-sobra ' + cls + '">Sobra para a empresa: <b>' + Com_esc_(Comercial_moeda_(sobra)) + ', ' + Com_esc_(pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + '%</b> dos serviços e produtos' +
+      h += '<span>Custo ' + Com_esc_(Comercial_moeda_(custo)) + (CM.custoDiluidoServidor ? ' (com a viagem diluída)' : '') + (perda > 0.009 ? ' + deslocamento não coberto ' + Com_esc_(Comercial_moeda_(perda)) : '') + '</span></div><div class="cm-qp-sobra ' + cls + '">Sobra para a empresa: <b>' + Com_esc_(Comercial_moeda_(sobra)) + ', ' + Com_esc_(pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + '%</b> dos serviços e produtos' +
         ' <span class="cm-meta">(mínima ' + String(q.margemMinPct).replace(".", ",") + '%, alvo ' + String(q.margemAlvoPct).replace(".", ",") + '%; antes de IR e CSLL' + (semCusto ? '; ' + semCusto + ' item(ns) sem custo ficam fora' : '') + ')</span>' +
         (pct < q.margemMinPct && rec > 0 ? '<br>Abaixo da sobra mínima: ao concluir, a proposta vai para a Caixa de decisões e só a Diretoria aprova. Para evitar, suba o preço dos itens marcados ou reduza o desconto.' : '') + '</div>';
     } else {
@@ -1493,7 +1495,7 @@
       var a = d.analiseTxt, an = d.analise || {};
       h += '<div class="cm-faixa' + (an.abaixoMin ? " erro" : an.abaixoAlvo ? " aviso" : " ok") + '"><b>Precificação (só gestão), ' + Com_esc_(a.unidade || "") + ':</b> serviços e produtos ' + Com_esc_(a.receitaItens) + ' · impostos ' + Com_esc_(a.impostosItens) + ' (serviço ' + Com_esc_(a.impostosPct) + '; produto ' + Com_esc_(a.impostosProdutoPct) + ' menos ' + Com_esc_(a.creditoProdutoPct) + ' de créditos sobre o custo) · comissão ' + Com_esc_(a.comissao) + ' · custo ' + Com_esc_(a.custoItens) + (an.custoDiluido ? ' + viagem diluída ' + Com_esc_(a.custoDiluido) : '') +
         ' · <b>sobra ' + Com_esc_(a.margem) + '</b> (mínima ' + Com_esc_(a.minima) + ', alvo ' + Com_esc_(a.alvo) + '; antes de IR e CSLL)' + (an.receitaDeslocamento ? '. Deslocamento e frete (repasse, fora da sobra): ' + Com_esc_(a.receitaDeslocamento) + ' para um custo de ' + Com_esc_(a.custoDeslocamento) : '') + (an.completa ? "" : '. Sobra parcial: ' + an.itensSemCusto + ' item(ns) sem custo no catálogo') +
-        (a.precoMinimo ? '. Total mínimo da proposta ' + Com_esc_(a.precoMinimo) + (a.precoAlvo ? ', total alvo ' + Com_esc_(a.precoAlvo) : '') : '') + (a.naoRepassado && an.naoRepassado > 0.009 ? '. Custo de viagem não repassado (deslocamento digitado abaixo de custo mais impostos): ' + Com_esc_(a.naoRepassado) : '') + '.</div>';
+        (a.precoMinimo ? '. Total mínimo da proposta ' + Com_esc_(a.precoMinimo) + (a.precoAlvo ? ', total alvo ' + Com_esc_(a.precoAlvo) : '') : '') + (a.naoRepassado && an.naoRepassado > 0.009 ? '. Custo de viagem não repassado (deslocamento digitado abaixo de custo mais impostos, sai da sobra): ' + Com_esc_(a.naoRepassado) : '') + '.</div>';
     }
     return h;
   }

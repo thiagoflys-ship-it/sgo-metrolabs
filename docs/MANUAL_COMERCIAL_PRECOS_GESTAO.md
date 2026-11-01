@@ -26,7 +26,7 @@ Peça ou produto revendido: custo × (1 − créditos) ÷ (1 − impostos de pro
 
 Sobra = preço dos serviços e produtos − impostos − comissão − custos diretos. É antes de IR e CSLL (no Lucro Real eles incidem sobre o lucro do período, fora desta conta).
 
-Deslocamento: custo ÷ (1 − impostos), sem margem, sem comissão e sem desconto. Fica fora da conta da sobra. Diluído nos serviços, o custo entra na sobra.
+Deslocamento: custo ÷ (1 − impostos), sem margem, sem comissão e sem desconto. Fica fora da conta da sobra enquanto cobrir o custo mais os impostos; se o deslocamento for digitado abaixo disso, o que faltar sai da sobra (e pode levar a proposta para a Diretoria). Diluído nos serviços, o custo entra na sobra.
 
 ## Valores da política (decisão do dono de 01/11/2026)
 

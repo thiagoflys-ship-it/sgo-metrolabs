@@ -79,6 +79,25 @@ test('deslocamento: fica fora da conta da sobra (nem ajuda nem atrapalha) e o de
   assert.equal(calc.fatorItens, 0.9); assert.equal(calc.subtotalItens, 1000);
 });
 
+test('revisão: deslocamento digitado abaixo de custo + impostos sai da sobra (o vendedor não fura os 35% dentro da própria alçada)', () => {
+  const amb = amb0();
+  const srv = produto(amb, 'SRV-G', 'SERVICO', '10.000,00', '4.000,00');
+  // sem mexer no deslocamento: 10.000 − 1.425 − 300 − 4.000 = 4.275 (42,75%); o item de deslocamento sai a 2.650
+  const p = proposta(amb, [item(srv)], VIAGEM_RV);
+  assert.equal(analise(amb, p.id).margemPct, 42.75);
+  // deslocamento digitado a 1.150 (1.500 abaixo = 15% dos serviços, dentro do limite de 15% da vendedora)
+  const s = ok(amb.api('s_vera', 'salvarProposta', { id: p.id, itens: [item(srv)], deslocamento: Object.assign({}, VIAGEM_RV, { precoInformado: '1.150,00' }) }));
+  const a = analise(amb, p.id);
+  assert.equal(a.naoRepassado, 1285.13, '2.271,25 − 1.150 x (1 − 14,25%)');
+  assert.equal(a.margemValor, 2989.87, '4.275 − 1.285,13 que o deslocamento deixou de cobrir');
+  assert.equal(a.abaixoMin, true);
+  assert.equal(s.politica.exigeDiretoria, true, 'antes da revisão a sobra ficava em 42,75% e a proposta concluía direto');
+  assert.equal(amb.api('s_vera', 'concluirProposta', { id: p.id }).ok, false);
+  // deslocamento cobrado a mais não aumenta a sobra (repasse)
+  ok(amb.api('s_vera', 'salvarProposta', { id: p.id, itens: [item(srv)], deslocamento: Object.assign({}, VIAGEM_RV, { precoInformado: '3.000,00' }) }));
+  assert.equal(analise(amb, p.id).margemPct, 42.75);
+});
+
 test('viagem diluída no preço dos serviços: o custo entra na sobra e a sobra mínima tem que cobrir', () => {
   const amb = amb0();
   const srv = produto(amb, 'SRV-1', 'SERVICO', '1.000,00', '400,00');

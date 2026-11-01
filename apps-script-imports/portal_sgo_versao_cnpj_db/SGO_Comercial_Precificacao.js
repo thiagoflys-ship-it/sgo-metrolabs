@@ -868,7 +868,13 @@ function ComPr_analise_(itens, descontoGeral, desl, pol) {
   var impostos = Com_r2_(impostosItens + impostosRepasse);
   // comissão sobre a venda dos itens (o deslocamento e o frete são repasse de custo: sem comissão)
   var comissao = Com_r2_(Math.max(0, receitaItens) * com / 100);
-  var margemValor = Com_r2_(receitaItens - impostosItens - comissao - custoItens - custoDiluido);
+  // Revisão de 01/11/2026: o deslocamento fica fora da sobra quando cobre custo + impostos; o que o preço digitado do deslocamento
+  // deixar de cobrir (naoRepassado) sai da sobra. Sem isso, o vendedor baixava o deslocamento dentro da própria alçada de
+  // desconto e a empresa perdia dinheiro com a sobra ainda "acima de 35%", sem passar pela Diretoria.
+  var naoRepassado = null;
+  if (foraViagem + foraFrete > 0) naoRepassado = Com_r2_(Math.max(0, foraViagem + foraFrete - receitaAutoTotal * (1 - imp / 100)));
+  var perdaRepasse = naoRepassado > 0 ? naoRepassado : 0;
+  var margemValor = Com_r2_(receitaItens - impostosItens - comissao - custoItens - custoDiluido - perdaRepasse);
   var margemPct = receitaItens > 0 ? Math.round(margemValor / receitaItens * 10000) / 100 : null;
   var abaixoMin = mn !== null && mn !== undefined && margemPct !== null && margemPct < mn - 1e-9;
   var abaixoAlvo = al !== null && al !== undefined && margemPct !== null && margemPct < al - 1e-9;
@@ -877,13 +883,11 @@ function ComPr_analise_(itens, descontoGeral, desl, pol) {
     if (semCusto || m === null || m === undefined) return null;
     var dS = 1 - (imp + com + m) / 100, dP = 1 - (impP + com + m) / 100;
     if (!(dS > 0.05) || (custoProdBase > 0 && !(dP > 0.05))) return null;
-    return Com_r2_((custoServ + custoDiluido) / dS + (custoProdBase > 0 ? custoProdBase / dP : 0));
+    return Com_r2_((custoServ + custoDiluido + perdaRepasse) / dS + (custoProdBase > 0 ? custoProdBase / dP : 0));
   };
   var piMin = precoItensPara(mn), piAlvo = precoItensPara(al);
   var precoMin = piMin === null ? null : Com_r2_(piMin + receitaAutoTotal), precoAlvo = piAlvo === null ? null : Com_r2_(piAlvo + receitaAutoTotal);
   var repasse = desl ? desl.repasse : '';
-  var naoRepassado = null;
-  if (foraViagem + foraFrete > 0) naoRepassado = Com_r2_(Math.max(0, foraViagem + foraFrete - receitaAutoTotal * (1 - imp / 100)));
   var r = { total: total, impostosPct: pol.impostosPct, impostos: impostos, impostosItens: impostosItens, impostosRepasse: impostosRepasse, semImpostos: pol.impostosPct === null || pol.impostosPct === undefined,
     impostosServicoPct: imp, impostosProdutoPct: impP, creditoProdutoPct: cr, unidade: pol.unidade, unidadeNome: pol.unidadeNome,
     comissaoPct: com, comissao: comissao, custoItens: Com_r2_(custoItens), custoViagem: cv.custo, custoFrete: cf, custoDeslocamento: custoDesl, custoDiluido: custoDiluido,
@@ -1180,7 +1184,7 @@ function ComPr_problemas_(p, pol, x) {
   if (typeof ComF_problemasItens_ === 'function') ComF_problemasItens_(p, pol).forEach(function (q) { add(q.regra, q.texto, q.grave); });
   if (!x.checklist.ok && s === 'RASCUNHO') add('CHECKLIST', 'checklist de custos incompleto: ' + x.checklist.faltas.map(function (f) { return f.texto.split(':')[0]; }).slice(0, 4).join(', '), false);
   // 01/11/2026: o desconto geral não reduz mais o deslocamento; sobra só o preço digitado abaixo de custo + impostos
-  if (a.naoRepassado > 0.009) add('DESCONTO_NA_VIAGEM', 'o preço digitado do deslocamento não cobre o custo mais os impostos: ' + Com_moeda_(a.naoRepassado) + ' do custo da viagem não volta no preço (o deslocamento é repasse, sem desconto)', false);
+  if (a.naoRepassado > 0.009) add('DESCONTO_NA_VIAGEM', 'o preço digitado do deslocamento não cobre o custo mais os impostos: ' + Com_moeda_(a.naoRepassado) + ' do custo da viagem não volta no preço e sai da sobra (o deslocamento é repasse, sem desconto)', false);
   if (a.abaixoMin && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0) add('MARGEM_MINIMA', 'sobra de ' + Com_pct_(a.margemPct) + ' abaixo da mínima de ' + Com_pct_(a.margemMinPct, 1) + ' (depois de impostos, comissão e custos diretos; o deslocamento fica fora)' + (a.completa ? '' : ' (mesmo sem o custo de ' + Com_plural_(a.itensSemCusto, 'item', 'itens') + ')'), true);
   else if (a.abaixoAlvo) add('MARGEM_ALVO', 'sobra de ' + Com_pct_(a.margemPct) + ' abaixo da alvo de ' + Com_pct_(a.margemAlvoPct, 1), false);
   return l;
