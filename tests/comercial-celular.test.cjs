@@ -42,7 +42,9 @@ test('celular: toda tela do Comercial abre com a barra de seções (Produtos inc
   a.ctx.Comercial_render_('comercial');
   const c = a.els.conteudo;
   assert.match(c.innerHTML, /<nav class="cm-nav-mob" aria-label="Seções do Comercial">/);
-  for (const r of ['Hoje', 'Oportunidades', 'Propostas', 'Pedidos', 'Produtos', 'Quadro', 'Gantt', 'Painel', 'Metodologia']) assert.match(c.innerHTML, new RegExp('>' + r + '</button>'));
+  for (const r of ['Hoje', 'Oportunidades', 'Propostas', 'Pedidos', 'Produtos', 'Painel', 'Metodologia']) assert.match(c.innerHTML, new RegExp('>' + r + '</button>'));
+  // Comercial C4 (01/11/2026): Quadro (Kanban) e Gantt são modos de ver dentro de Oportunidades, fora da barra
+  for (const r of ['Quadro', 'Gantt']) assert.doesNotMatch(c.innerHTML, new RegExp('>' + r + '</button>'));
   assert.match(c.innerHTML, /cm-nav-mob-btn ativo" aria-current="page" data-cm-nav="comercial"/);
   assert.deepEqual(a.desenhos.at(-1), { f: 'Comercial_renderHoje_', onde: 'cmCorpoMob' }, 'a tela desenha abaixo da barra');
   c.botoes.find((b) => b.m === 'comercial_catalogo').onclick();

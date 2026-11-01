@@ -292,6 +292,55 @@ function Com_inicio_(eu) {
   return base;
 }
 
+// ------------------------------------------------------------
+// ENTRADA "O QUE VOCÊ QUER FAZER AGORA?" (Comercial C4, 01/11/2026)
+// ------------------------------------------------------------
+var COM_ENTRADA_ORDEM = { ATRASADO: 0, VENCEU: 1, HOJE: 2, SEMANA: 3 };
+/**
+ * Números dos quatro caminhos da entrada (tela Hoje) e a lista do que vence: retornos de hoje ou atrasados, propostas que vencem
+ * nos próximos 7 dias e as que venceram sem resposta nos últimos 30 dias. Vendedor: só o que é dele (ComOpo_podeVer_ e
+ * ComP_podeVer_); gestão: a equipe toda. Não devolve valor nenhum (a entrada não mostra dinheiro).
+ */
+function Com_entrada_(eu) {
+  Com_exigir_(eu, 'VENDEDOR', 'abrir o Comercial');
+  var met = Com_metodologia_(), agora = Com_agora_(), hoje = agora.slice(0, 10), em7 = Com_somarDias_(hoje, 7), ha30 = Com_somarDias_(hoje, -30);
+  var ctx = { met: met, agora: agora, atividades: ComOpo_mapaAtividades_() };
+  var r = { abertas: 0, minhas: 0, semProxima: 0, atrasados: 0, retornosHoje: 0, aguardando: 0, vencidas: 0, vencemSemana: 0, rascunhos: 0, vence: [] };
+  Com_ler_(COM_ABAS.OPORTUNIDADES).forEach(function (o) {
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA' || !ComOpo_podeVer_(eu, o)) return;
+    r.abertas++;
+    if (Com_s_(o.RESPONSAVEL_ID) === eu.id) r.minhas++;
+    var dv = ComOpo_derivados_(o, ctx);
+    if (dv.semProxima) r.semProxima++;
+    if (!dv.atrasada && !dv.hoje) return;
+    if (dv.atrasada) r.atrasados++; else r.retornosHoje++;
+    r.vence.push({ tipo: 'oportunidade', id: Com_s_(o.ID), quando: dv.atrasada ? 'ATRASADO' : 'HOJE', ord: Com_iso_(dv.proximaEm) || hoje,
+      titulo: (dv.atrasada ? 'Retorno atrasado' : 'Retorno de hoje') + ': ' + (Com_s_(o.PROXIMA_ACAO) || 'próxima ação'),
+      sub: [Com_s_(o.CODIGO) + ' · ' + Com_s_(o.CLIENTE_NOME), dv.proximaEm ? 'combinado para ' + Com_br_(dv.proximaEm) : '', eu.gestao ? Com_s_(o.RESPONSAVEL_NOME) : ''].filter(Boolean).join(' · ') });
+  });
+  ComP_lerPropostas_().forEach(function (p) {
+    if (!ComP_podeVer_(eu, p)) return;
+    var s = Com_up_(p.SITUACAO), va = Com_dia_(p.VALIDA_ATE);
+    if (s === 'RASCUNHO' || s === 'PRONTA' || s === 'AGUARDANDO_APROVACAO') r.rascunhos++;
+    if (s !== 'ENVIADA' && s !== 'VENCIDA') return;
+    r.aguardando++;
+    var base = { tipo: 'proposta', id: Com_s_(p.ID), ord: va || hoje };
+    var sub = [Com_s_(p.CLIENTE_NOME), eu.gestao ? Com_s_(p.RESPONSAVEL_NOME) : ''].filter(Boolean).join(' · ');
+    if (s === 'VENCIDA' || (va && va < hoje)) {
+      r.vencidas++;
+      if (!va || va >= ha30) r.vence.push(Object.assign(base, { quando: 'VENCEU', titulo: 'Proposta vencida sem resposta: ' + ComP_rotulo_(p), sub: sub + (va ? ' · venceu em ' + Com_brDia_(va) : '') }));
+    } else if (va && va <= em7) {
+      r.vencemSemana++;
+      r.vence.push(Object.assign(base, { quando: va === hoje ? 'HOJE' : 'SEMANA', titulo: 'Proposta vence ' + (va === hoje ? 'hoje' : 'em ' + Com_brDia_(va)) + ': ' + ComP_rotulo_(p), sub: sub }));
+    }
+  });
+  r.vence.sort(function (a, b) { return (COM_ENTRADA_ORDEM[a.quando] - COM_ENTRADA_ORDEM[b.quando]) || String(a.ord).localeCompare(String(b.ord)); });
+  r.venceTotal = r.vence.length;
+  r.vence = r.vence.slice(0, 40).map(function (x) { delete x.ord; return x; });
+  r.gestao = !!eu.gestao;
+  return r;
+}
+
 function Com_marcarAvisosLidos_(eu) {
   var agora = Com_agora_(), n = 0;
   Com_ler_(COM_ABAS.AVISOS).forEach(function (v) { if (Com_s_(v.DESTINATARIO_ID) === eu.id && !Com_s_(v.LIDO_EM)) { SGO_DATA.update(COM_ABAS.AVISOS, v.ID, { LIDO_EM: agora }); n++; } });
@@ -486,7 +535,11 @@ var COM_ACOES = {
   bancoBuscarInternet: function (eu, sid, d) { return ComBP_buscarInternet_(eu, d); },
   bancoConfirmarInternet: function (eu, sid, d) { return ComBP_confirmarInternet_(eu, d); },
   orcamentista: function (eu, sid, d) { return ComO_analisar_(eu, d); },
-  orcamentistaMontar: function (eu, sid, d) { return ComO_montar_(eu, d); }
+  orcamentistaMontar: function (eu, sid, d) { return ComO_montar_(eu, d); },
+  // 01/11/2026 (Comercial C4): entrada "O que você quer fazer agora?", quem ganhou informado depois e o relatório preço × resultado
+  entrada: function (eu) { return Com_entrada_(eu); },
+  completarPerda: function (eu, sid, d) { return ComOpo_completarPerda_(eu, d); },
+  relatorioPrecoResultado: function (eu, sid, d) { return ComBP_relatorioResultado_(eu, d); }
 };
 
 /** google.script.run: Comercial_api(sessionId, acao, dados). Nunca lança. */

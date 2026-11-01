@@ -653,6 +653,156 @@ function ComBP_indicadores_(eu, d) {
 }
 
 // ------------------------------------------------------------
+// COMERCIAL C4 (01/11/2026): QUEM GANHOU, INFORMADO DEPOIS, E O RELATÓRIO "PREÇO PROPOSTO × GANHO OU PERDIDO"
+// ------------------------------------------------------------
+/**
+ * Completa as linhas PERDIDO das propostas da oportunidade com quem ganhou e por quanto, SÓ onde estavam vazias (merge: nada
+ * informado antes é trocado; DATA, valor e resultado ficam como estavam). venc: { concorrente, valorVencedor (total) }.
+ * Nunca lança. Devolve { linhas } (quantas linhas do banco mudaram).
+ */
+function ComBP_completarVencedor_(o, venc) {
+  var n = 0;
+  try {
+    venc = venc || {};
+    var props = {};
+    ComP_lerPropostas_().forEach(function (p) { if (Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o && o.ID)) props[Com_s_(p.ID)] = p; });
+    var linhas = ComBP_ler_().filter(function (r) { return Com_s_(r.REF_TIPO) === 'PROPOSTA' && props[Com_s_(r.REF_ID)] && Com_up_(r.RESULTADO) === 'PERDIDO' && ComBP_valida_(r); });
+    if (!linhas.length) return { linhas: 0 };
+    // o valor do vencedor é rateado como na perda (ComBP_linhasDaProposta_): pela participação de cada item na proposta
+    var rateado = {};
+    if (ComBP_num_(venc.valorVencedor) > 0) Object.keys(props).forEach(function (pid) {
+      ComBP_linhasDaProposta_(props[pid], 'PERDIDO', { valorVencedor: venc.valorVencedor }).forEach(function (l) { rateado[l.CHAVE] = ComBP_num_(l.VALOR_VENCEDOR); });
+    });
+    var agora = Com_agora_();
+    linhas.forEach(function (r) {
+      var c = {};
+      if (Com_s_(venc.concorrente) && !Com_s_(r.CONCORRENTE)) c.CONCORRENTE = Com_texto_(venc.concorrente, 160);
+      var v = rateado[Com_s_(r.CHAVE)];
+      if (v > 0 && !(ComBP_num_(r.VALOR_VENCEDOR) > 0)) c.VALOR_VENCEDOR = Com_r2_(v);
+      if (!Object.keys(c).length) return;
+      c.ATUALIZADO_EM = agora;
+      SGO_DATA.update(COM_ABAS.PRECOS, r.ID, c);
+      n++;
+    });
+  } catch (e) { console.error('Banco de preços, completar quem ganhou ' + Com_s_(o && o.ID) + ': ' + ((e && e.message) || e)); }
+  return { linhas: n };
+}
+
+/** "12% acima", "8% abaixo", "igual" (pt-BR). x: diferença em %, ou null. */
+function ComBP_difTxt_(x) {
+  if (x === null || x === undefined || !isFinite(x)) return '';
+  if (Math.abs(x) < 0.5) return 'igual';
+  return Com_pct_(Math.abs(x), 0) + (x > 0 ? ' acima' : ' abaixo');
+}
+function ComBP_dif_(a, b) { return a > 0 && b > 0 ? Math.round((a / b - 1) * 1000) / 10 : null; }
+
+/** Preço de tabela de cada item: o do catálogo ativo (pela C1 ou pelo nome); sem catálogo, o preço normal da tabela C1. */
+function ComBP_tabelaPorItem_() {
+  var t = {};
+  Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
+    if (!(Com_s_(p.ID) || Com_s_(p.NOME)) || Com_up_(p.ATIVO || 'SIM') === 'NAO' || Com_s_(p.JUNTADO_COM_ID)) return;
+    var preco = ComBP_num_(p.PRECO); if (!(preco > 0)) return;
+    var c1 = ComBP_c1DoProduto_(p);
+    [c1 ? 'C1:' + c1 : '', ComBP_itemChave_('', p.NOME)].forEach(function (k) {
+      if (k && !t[k]) t[k] = { valor: preco, fonte: 'catálogo' + (Com_s_(p.CODIGO) ? ' (' + Com_s_(p.CODIGO) + ')' : '') };
+    });
+  });
+  return t;
+}
+
+/** Faixa de mercado do item: banco (licitação, concorrente, internet) com 3 ou mais preços; senão o PNCP da C1; senão o pouco que houver. */
+function ComBP_faixaMercado_(k, valores) {
+  var e = ComBP_estat_(valores || []);
+  if (e.n >= 3) return { de: e.n >= 4 ? e.q1 : e.min, ate: e.n >= 4 ? e.q3 : e.max, mediana: e.mediana, n: e.n, fonte: 'banco de preços (licitações, concorrentes e internet)' };
+  var s = /^C1:/.test(Com_s_(k)) ? ComBP_c1_(k) : null, m = s && s.mercado;
+  if (m && m.n) return { de: m.q1 || m.min, ate: m.q3 || m.max, mediana: m.mediana, n: m.n, fonte: 'compras públicas (PNCP, levantamento da C1)' };
+  if (e.n) return { de: e.min, ate: e.max, mediana: e.mediana, n: e.n, fonte: 'banco de preços (poucos preços: ler com cuidado)' };
+  return null;
+}
+function ComBP_posicao_(v, f) { if (!(v > 0) || !f) return ''; return v < f.de ? 'abaixo' : v > f.ate ? 'acima' : 'dentro'; }
+
+/**
+ * Relatório "preço proposto × ganho ou perdido, por serviço" (Painel). Fonte: linhas válidas do banco das propostas da Metrolabs
+ * (e, se pedido, do CRM antigo) já decididas (GANHO ou PERDIDO). Para cada item: taxa de ganho, preço médio ganho e perdido, o
+ * valor de quem ganhou de nós (quando informado), o preço de tabela e a faixa de mercado.
+ * d: { meses: 0|6|12|24 (0 = tudo; padrão 12), origem: 'TODAS'|'SGO', tipo: 'SERVICO'|'PRODUTO', vendedorId (gestão), meus (vendedor),
+ *      itemChave (devolve também as linhas do item) }.
+ * Quem vê: gestão e vendedor. Ninguém vê custo nem preço de compra aqui (cotação de fornecedor não entra); o vendedor vê os números
+ * da empresa (como no Banco de preços), mas o cliente e o número da proposta só das linhas dele e das compras públicas.
+ */
+function ComBP_relatorioResultado_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'ver o relatório de preço e resultado');
+  d = d || {};
+  var meses = [0, 6, 12, 24].indexOf(Number(d.meses)) >= 0 && Com_s_(d.meses) !== '' ? Number(d.meses) : 12;
+  var hoje = Com_hoje_(), de = meses ? Com_somarDias_(hoje, -Math.round(meses * 30.44)) : '';
+  var soSgo = Com_up_(d.origem) === 'SGO', tipo = Com_up_(d.tipo) === 'PRODUTO' ? 'PRODUTO' : 'SERVICO';
+  var vid = eu.gestao ? Com_s_(d.vendedorId) : (d.meus ? Com_s_(eu.id) : '');
+  var porItem = {}, mercado = {}, semVencedor = {};
+  ComBP_ler_().filter(ComBP_valida_).forEach(function (r) {
+    var k = Com_s_(r.ITEM_CHAVE); if (!k) return;
+    var o = Com_up_(r.ORIGEM), v = ComBP_num_(r.VALOR_UNITARIO);
+    if ((Com_up_(r.TIPO) || 'SERVICO') !== tipo || !(v > 0)) return;
+    if (o === 'LICITACAO' || o === 'CONCORRENTE' || o === 'INTERNET') { (mercado[k] = mercado[k] || []).push(v); return; }
+    if (o !== 'PROPOSTA_METROLABS' && (o !== 'CRM' || soSgo)) return;
+    var s = Com_up_(r.RESULTADO); if (s !== 'GANHO' && s !== 'PERDIDO') return;
+    if (de && (!Com_dia_(r.DATA) || Com_dia_(r.DATA) < de)) return;
+    if (vid && Com_s_(r.REGISTRADO_POR_ID) !== vid) return;
+    (porItem[k] = porItem[k] || []).push(r);
+    if (s === 'PERDIDO' && o === 'PROPOSTA_METROLABS' && !Com_s_(r.CONCORRENTE) && !(ComBP_num_(r.VALOR_VENCEDOR) > 0)) semVencedor[Com_s_(r.REF_ID) || Com_s_(r.ID)] = 1;
+  });
+  var tabela = ComBP_tabelaPorItem_();
+  var media = function (l) { return l.length ? Com_r2_(l.reduce(function (a, x) { return a + x; }, 0) / l.length) : null; };
+  var totG = 0, totN = 0;
+  var itens = Object.keys(porItem).map(function (k) {
+    var ls = porItem[k], v = function (r) { return ComBP_num_(r.VALOR_UNITARIO); };
+    var g = ls.filter(function (r) { return Com_up_(r.RESULTADO) === 'GANHO'; }), p = ls.filter(function (r) { return Com_up_(r.RESULTADO) === 'PERDIDO'; });
+    var mg = media(g.map(v)), mp = media(p.map(v));
+    var venc = p.filter(function (r) { return ComBP_num_(r.VALOR_VENCEDOR) > 0; }), vv = venc.map(function (r) { return ComBP_num_(r.VALOR_VENCEDOR); });
+    var nomes = {};
+    p.forEach(function (r) { var c = Com_s_(r.CONCORRENTE); if (c) { var kk = Com_normBusca_(c); nomes[kk] = nomes[kk] || { nome: c, n: 0 }; nomes[kk].n++; } });
+    var c1 = /^C1:/.test(k) ? ComBP_c1_(k) : null;
+    var tab = tabela[k] || (c1 && c1.c1 && c1.c1.precoNormal > 0 ? { valor: c1.c1.precoNormal, fonte: 'tabela C1 (o item não está no catálogo)' } : null);
+    var fx = ComBP_faixaMercado_(k, mercado[k]);
+    var mvv = media(vv);
+    totG += g.length; totN += ls.length;
+    var x = { itemChave: k, item: ComBP_nomeItem_(k, ls[0].DESCRICAO), decididas: ls.length, ganhos: g.length, perdidos: p.length,
+      taxa: Math.round(g.length / ls.length * 1000) / 10, taxaTxt: Com_pct_(g.length / ls.length * 100, 0),
+      mediaGanho: mg, mediaGanhoTxt: mg ? Com_moeda_(mg) : '—', mediaPerdido: mp, mediaPerdidoTxt: mp ? Com_moeda_(mp) : '—',
+      concorrente: { n: venc.length, media: mvv, mediaTxt: mvv ? Com_moeda_(mvv) : '', menorTxt: vv.length ? Com_moeda_(Math.min.apply(null, vv)) : '',
+        nomes: Object.keys(nomes).map(function (kk) { return nomes[kk]; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 3).map(function (z) { return z.nome; }),
+        vsPerdidoTxt: ComBP_difTxt_(ComBP_dif_(mvv, mp)) },
+      tabela: tab ? { valor: tab.valor, valorTxt: Com_moeda_(tab.valor), fonte: tab.fonte } : null,
+      ganhoVsTabelaTxt: tab ? ComBP_difTxt_(ComBP_dif_(mg, tab.valor)) : '', perdidoVsTabelaTxt: tab ? ComBP_difTxt_(ComBP_dif_(mp, tab.valor)) : '',
+      mercado: fx ? { de: fx.de, ate: fx.ate, faixaTxt: Com_moeda_(fx.de) + ' a ' + Com_moeda_(fx.ate), medianaTxt: Com_moeda_(fx.mediana), n: fx.n, fonte: fx.fonte } : null,
+      ganhoNoMercado: ComBP_posicao_(mg, fx), perdidoNoMercado: ComBP_posicao_(mp, fx) };
+    // leitura em linguagem simples (pesquisa de mercado): o que os números sugerem, sem decidir por ninguém
+    var l = [];
+    if (ls.length < 3) l.push('Poucas decisões (' + ls.length + '): leia com cuidado.');
+    if (mvv && mp) l.push('Quem ganhou de nós cobrou, em média, ' + Com_moeda_(mvv) + (x.concorrente.vsPerdidoTxt && x.concorrente.vsPerdidoTxt !== 'igual' ? ' (' + x.concorrente.vsPerdidoTxt + ' do nosso preço perdido)' : '') + '.');
+    if (tab && mp && mp > tab.valor * 1.05) l.push('Perdemos com preço acima da tabela (' + x.perdidoVsTabelaTxt + ').');
+    if (tab && mg && mg < tab.valor * 0.95) l.push('Ganhamos abaixo da tabela (' + x.ganhoVsTabelaTxt + '): confira se o desconto está valendo a pena.');
+    if (x.perdidoNoMercado === 'acima') l.push('O preço perdido está acima da faixa de mercado.');
+    if (x.ganhoNoMercado === 'dentro') l.push('O preço ganho está dentro da faixa de mercado.');
+    if (mg && mp) l.push(mg < mp * 0.97 ? 'Ganhamos com preço menor do que perdemos: o preço pesa na decisão.' : mg > mp * 1.03 ? 'Ganhamos mesmo com preço maior: o preço não é o que decide.' : 'Preço parecido no ganho e na perda: o que decide é outra coisa (prazo, relacionamento, escopo).');
+    if (ls.length >= 5 && x.taxa < 30) l.push('Taxa de ganho baixa.');
+    x.leitura = l;
+    if (d.itemChave && Com_s_(d.itemChave) === k) {
+      x.linhas = ls.slice().sort(function (a, b) { return Com_dia_(b.DATA).localeCompare(Com_dia_(a.DATA)); }).slice(0, 60).map(function (r) {
+        var ve = ComBP_veCliente_(r, eu);
+        return { data: Com_brDia_(r.DATA), valorTxt: Com_moeda_(r.VALOR_UNITARIO), resultado: Com_up_(r.RESULTADO), resultadoNome: COM_BP_RESULTADOS[Com_up_(r.RESULTADO)] || '', origemNome: COM_BP_ORIGENS[Com_up_(r.ORIGEM)] || '',
+          concorrente: Com_s_(r.CONCORRENTE), valorVencedorTxt: ComBP_num_(r.VALOR_VENCEDOR) > 0 ? Com_moeda_(r.VALOR_VENCEDOR) : '',
+          cliente: ve ? Com_s_(r.CLIENTE_NOME) : '', ref: ve ? Com_s_(r.REF_ROTULO) : '', uf: Com_up_(r.UF) };
+      });
+    }
+    return x;
+  }).sort(function (a, b) { return b.decididas - a.decididas || a.item.localeCompare(b.item, 'pt-BR'); });
+  var detalhe = d.itemChave ? itens.filter(function (x) { return x.itemChave === Com_s_(d.itemChave); })[0] || null : null;
+  return { meses: meses, periodoTxt: meses ? 'últimos ' + meses + ' meses (desde ' + Com_brDia_(de) + ')' : 'todo o histórico', origem: soSgo ? 'SGO' : 'TODAS', tipo: tipo, vendedorId: vid,
+    total: { decididas: totN, ganhos: totG, taxaTxt: totN ? Com_pct_(totG / totN * 100, 0) : '—' }, perdasSemVencedor: Object.keys(semVencedor).length,
+    itens: itens.slice(0, 40).map(function (x) { if (x !== detalhe) delete x.linhas; return x; }), itensTotal: itens.length, detalhe: detalhe, gestao: !!eu.gestao };
+}
+
+// ------------------------------------------------------------
 // BUSCA NA INTERNET (ponto de extensão)
 // ------------------------------------------------------------
 /**

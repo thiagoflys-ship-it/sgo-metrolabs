@@ -225,6 +225,51 @@
     .cm-orc-item .cm-orc-linha .cm-orc-preco { grid-column: 1 / -1; order: -1; }
     .cm-bp-num { grid-template-columns: 1fr 1fr; }
   }
+  /* 01/11/2026 (Comercial C4): entrada "O que você quer fazer agora?", modos de ver as oportunidades (Lista, Quadro (Kanban), Gantt)
+     e o relatório "preço proposto × ganho ou perdido". Toque de 44 px ou mais; nada passa da largura do celular. */
+  .cm-entrada { margin: 0 0 14px; }
+  .cm-entrada h3 { margin: 0 0 8px; font-size: 16px; color: var(--text-strong, var(--text)); }
+  .cm-entrada-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .cm-caminho { display: grid; grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left; min-height: 88px; padding: 12px 14px;
+    border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; cursor: pointer; min-width: 0; }
+  .cm-caminho:hover { border-color: var(--info, #1f5fa8); }
+  .cm-caminho:focus-visible { outline: 3px solid var(--info, #1f5fa8); outline-offset: 2px; }
+  .cm-caminho .ic { grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 50%; background: var(--info-bg, #e8f0fb); color: var(--info, #1f5fa8); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .cm-caminho .t { font-weight: 800; font-size: 14.5px; line-height: 1.25; color: var(--text-strong, var(--text)); overflow-wrap: anywhere; }
+  .cm-caminho .s { font-size: 12.5px; line-height: 1.35; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  .cm-caminho.alerta { border-left-color: var(--danger); } .cm-caminho.alerta .ic { background: var(--danger-bg); color: var(--danger); }
+  .cm-caminho.aviso { border-left-color: var(--warning); } .cm-caminho.aviso .ic { background: var(--warning-bg); color: var(--warning); }
+  .cm-escolhas { display: flex; flex-direction: column; gap: 10px; }
+  .cm-escolhas .cm-caminho { min-height: 72px; }
+  .cm-vence-l { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); margin-bottom: 8px; }
+  .cm-vence-l.ATRASADO, .cm-vence-l.VENCEU { border-left-color: var(--danger); } .cm-vence-l.HOJE { border-left-color: var(--warning); }
+  .cm-vence-l > div { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+  .cm-vence-l button { min-height: 44px; flex: 0 0 auto; }
+  .cm-modos { display: flex; gap: 6px; margin: 4px 0 4px; flex-wrap: wrap; }
+  .cm-modo { flex: 1 1 0; min-width: 0; min-height: 44px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; padding: 6px 10px; white-space: nowrap; }
+  .cm-modo.ativo { background: var(--info, #1f5fa8); border-color: var(--info, #1f5fa8); color: #fff; }
+  .cm-modo:focus-visible { outline: 3px solid var(--info, #1f5fa8); outline-offset: 2px; }
+  .cm-modo-dica { font-size: 12.5px; color: var(--muted); margin: 2px 0 10px; line-height: 1.45; }
+  .cm-rr .cm-tabela td .cm-meta { margin: 2px 0 0; }
+  .cm-rr-tab { overflow-x: auto; overscroll-behavior-x: contain; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .cm-rr-tab .cm-tabela { table-layout: fixed; min-width: 900px; }
+  .cm-rr-tab .cm-tabela th, .cm-rr-tab .cm-tabela td, .cm-rr-tab .cm-tabela td.n, .cm-rr-tab .cm-tabela th.n { white-space: normal; overflow-wrap: anywhere; }
+  .cm-rr-tab .cm-tabela th:nth-child(1) { width: 24%; } .cm-rr-tab .cm-tabela th:nth-child(2) { width: 9%; } .cm-rr-tab .cm-tabela th:nth-child(3) { width: 7%; }
+  .cm-rr-res { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+  .cm-rr button, .cm-rr select, .cm-rr input { min-height: 44px; }
+  .cm-rr .cm-check { min-height: 44px; align-items: center; }
+  @media (max-width: 900px) {
+    .cm-rr-tab { overflow-x: visible; }
+    .cm-rr-tab .cm-tabela { min-width: 0; table-layout: auto; }
+    .cm-entrada-grade { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cm-caminho { grid-template-columns: 1fr; grid-template-rows: auto; row-gap: 4px; min-height: 112px; padding: 10px 12px; align-content: start; }
+    .cm-caminho .ic { grid-row: auto; width: 34px; height: 34px; font-size: 15px; }
+    .cm-caminho .t { font-size: 14px; }
+    .cm-escolhas .cm-caminho { grid-template-columns: 34px minmax(0, 1fr); min-height: 64px; }
+    .cm-escolhas .cm-caminho .ic { grid-row: 1 / span 2; }
+    .cm-modo { font-size: 13px; padding: 4px 6px; white-space: normal; line-height: 1.15; }
+    .cm-modo[data-cm-modo="kanban"] { flex-grow: 1.6; }
+  }
 </style>
 
 <script>
@@ -235,7 +280,7 @@
   // Uma chamada só no servidor: Comercial_api(sessionId, acao, dados). O servidor confere o perfil em toda chamada.
   // A tela não se redesenha sozinha (formulário aberto nunca é apagado): recarrega depois de cada ação ou em "Atualizar".
   // ==========================================================
-  var CM = { ini: null, mod: "", hojePapel: "", visao: "quadro", filtro: { situacao: "ABERTA" }, filtroProp: { situacao: "ABERTAS" }, cache: {} };
+  var CM = { ini: null, mod: "", hojePapel: "", visao: "lista", filtro: { situacao: "ABERTA" }, filtroProp: { situacao: "ABERTAS" }, cache: {} };
   var CM_MODS = { comercial: "Hoje no Comercial", comercial_oportunidades: "Oportunidades", comercial_propostas: "Propostas", comercial_pedidos: "Pedidos aprovados",
     comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial", comercial_kanban: "Quadro do funil", comercial_gantt: "Gantt comercial",
     comercial_orcamentista: "Orçamentista", comercial_precos: "Banco de preços" };
@@ -294,7 +339,9 @@
   // serviços, Pedidos, Quadro, Gantt, Painel e Metodologia não tinham caminho (só pela lupa). Agora toda tela do Comercial no
   // celular abre com a barra de seções, com as mesmas regras do menu do computador.
   var CM_NAV = [["comercial", "Hoje"], ["comercial_oportunidades", "Oportunidades"], ["comercial_propostas", "Propostas"], ["comercial_orcamentista", "Orçamentista"], ["comercial_pedidos", "Pedidos"],
-    ["comercial_catalogo", "Produtos"], ["comercial_precos", "Preços"], ["comercial_kanban", "Quadro"], ["comercial_gantt", "Gantt"], ["comercial_painel", "Painel"], ["comercial_metodologia", "Metodologia"]];
+    ["comercial_catalogo", "Produtos"], ["comercial_precos", "Preços"], ["comercial_painel", "Painel"], ["comercial_metodologia", "Metodologia"]];
+  // 01/11/2026 (Comercial C4): Quadro (Kanban) e Gantt saíram da barra e do menu: são modos de ver dentro de Oportunidades. Os
+  // endereços antigos (comercial_kanban, comercial_gantt) continuam valendo e abrem Oportunidades no modo certo.
   function Com_navMobileHtml_(mod, nivel) {
     var itens = CM_NAV.filter(function (x) { return Com_modVisivel_(x[0], nivel); });
     if (itens.length < 2) return "";
@@ -329,6 +376,7 @@
         return;
       }
       if (ini.nivel === "FINANCEIRO" && mod !== "comercial_pedidos" && mod !== "comercial_catalogo") mod = "comercial_pedidos";
+      if (mod === "comercial_kanban" || mod === "comercial_gantt") { CM.visao = mod === "comercial_kanban" ? "kanban" : "gantt"; mod = "comercial_oportunidades"; CM.mod = mod; }
       // celular: barra de seções no topo e a tela abaixo dela (cmCorpoMob); trocar de tela some com a barra junto
       var corpo = div, nav = ehMobileModo_() ? Com_navMobileHtml_(mod, ini.nivel) : "";
       if (nav) {
@@ -413,12 +461,91 @@
     div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Hoje no Comercial", "O que fazer hoje, em ordem de prioridade, segundo a metodologia comercial da empresa. A gestora comercial sugere; quem decide e envia é você.",
       '<button type="button" class="btn-secondary" id="cmHojeAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
       '<button type="button" class="btn-primary" id="cmNovaOpo"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+      Comercial_entradaHtml_(CM.entrada) +
       (ini.gestao ? '<div class="cm-tabs"><button type="button" class="cm-tab' + (papel === "GESTAO" ? " active" : "") + '" data-papel="GESTAO">Panorama da gestão</button><button type="button" class="cm-tab' + (papel === "VENDEDOR" ? " active" : "") + '" data-papel="VENDEDOR">Minha lista</button></div>' : "") +
       '<div id="cmHoje"><div class="cm-vazio">A gestora está montando a lista…</div></div></div>';
     Com_$_("cmHojeAtualizar").onclick = function () { Comercial_renderHoje_(div); };
+    Comercial_ligarEntrada_(div);
     Com_$_("cmNovaOpo").onclick = function () { Comercial_formOportunidade_(null); };
     div.querySelectorAll("[data-papel]").forEach(function (b) { b.onclick = function () { CM.hojePapel = b.getAttribute("data-papel"); Comercial_renderHoje_(div); }; });
     Com_chamar_("hoje", { papel: papel }, function (r) { Comercial_desenharHoje_(r); }, function (m) { Com_msg_("cmHoje", m); });
+  }
+
+  // ---------------- entrada "O que você quer fazer agora?" (Comercial C4, 01/11/2026) ----------------
+  // Quatro caminhos grandes no topo do Hoje. Os números vêm do servidor (acao "entrada": só o que a pessoa pode ver; sem valores).
+  // A entrada não se redesenha sozinha: recarrega quando o Hoje abre ou em "Atualizar". As outras telas continuam no menu.
+  function Comercial_entradaHtml_(e) {
+    var ini = CM.ini, n = function (v) { return Number(v) || 0; }, c = function (q, um, varios) { return q + " " + (q === 1 ? um : varios); };
+    var caminho = function (cod, ic, titulo, sub, cls) { return '<button type="button" class="cm-caminho' + (cls ? " " + cls : "") + '" data-caminho="' + cod + '"><span class="ic"><i class="fas ' + ic + '" aria-hidden="true"></i></span><span class="t">' + Com_esc_(titulo) + '</span><span class="s">' + Com_esc_(sub) + '</span></button>'; };
+    var subOpo = !e ? "Carregando…" : ini.gestao ? c(n(e.abertas), "aberta na equipe", "abertas na equipe") + (n(e.minhas) ? " (" + c(n(e.minhas), "sua", "suas") + ")" : "") + (n(e.semProxima) ? " · " + n(e.semProxima) + " sem próxima ação" : "")
+      : c(n(e.abertas), "aberta", "abertas") + (n(e.semProxima) ? " · " + n(e.semProxima) + " sem próxima ação" : "");
+    var subProp = !e ? "Carregando…" : n(e.aguardando) ? c(n(e.aguardando), "proposta enviada", "propostas enviadas") + " sem resposta" + (n(e.vencidas) ? " · " + c(n(e.vencidas), "vencida", "vencidas") : "") : "Nenhuma proposta esperando o cliente";
+    var partes = !e ? [] : [n(e.atrasados) ? c(n(e.atrasados), "retorno atrasado", "retornos atrasados") : "", n(e.retornosHoje) ? c(n(e.retornosHoje), "retorno hoje", "retornos hoje") : "", n(e.vencemSemana) ? c(n(e.vencemSemana), "proposta vence", "propostas vencem") + " em 7 dias" : ""].filter(Boolean);
+    var subVence = !e ? "Carregando…" : partes.length ? partes.join(" · ") : "Nada vencendo agora";
+    return '<section class="cm-entrada" aria-labelledby="cmEntradaTit"><h3 id="cmEntradaTit">O que você quer fazer agora?</h3><div class="cm-entrada-grade">' +
+      caminho("orcamento", "fa-file-circle-plus", "Novo orçamento", "Com o Orçamentista ou pela oportunidade" + (e && n(e.rascunhos) ? " · " + c(n(e.rascunhos), "rascunho", "rascunhos") + " em andamento" : "")) +
+      caminho("oportunidades", "fa-handshake", ini.gestao ? "Ver as oportunidades" : "Ver minhas oportunidades", subOpo, e && n(e.semProxima) ? "aviso" : "") +
+      caminho("propostas", "fa-paper-plane", "Propostas aguardando resposta", subProp, e && n(e.vencidas) ? "aviso" : "") +
+      caminho("vence", "fa-calendar-day", "Hoje e o que vence", subVence, e && (n(e.atrasados) || (e.vence || []).some(function (x) { return x.quando === "VENCEU"; })) ? "alerta" : e && partes.length ? "aviso" : "") +
+      '</div></section>';
+  }
+  function Comercial_ligarEntrada_(div) {
+    var ligar = function () {
+      div.querySelectorAll("[data-caminho]").forEach(function (b) { b.onclick = function () { Comercial_caminho_(b.getAttribute("data-caminho")); }; });
+    };
+    ligar();
+    Com_chamar_("entrada", {}, function (r) {
+      CM.entrada = r;
+      var velha = div.querySelector(".cm-entrada");
+      if (!velha || !velha.isConnected) return;
+      var tmp = document.createElement("div"); tmp.innerHTML = Comercial_entradaHtml_(r);
+      velha.parentNode.replaceChild(tmp.firstChild, velha);
+      ligar();
+    }, function (m) { var velha = div.querySelector(".cm-entrada"); if (velha) velha.insertAdjacentHTML("beforeend", '<div class="cm-faixa aviso">Os números da entrada não carregaram (' + Com_esc_(m) + '). Os caminhos funcionam assim mesmo; toque em "Atualizar" para tentar de novo.</div>'); });
+  }
+  function Comercial_caminho_(cod) {
+    var ini = CM.ini;
+    if (cod === "orcamento") return Comercial_novoOrcamento_();
+    if (cod === "oportunidades") { CM.visao = "lista"; CM.filtro = { situacao: "ABERTA", funil: "", busca: "", responsavelId: "" }; abrir("comercial_oportunidades"); return; }
+    if (cod === "propostas") { CM.filtroProp = { situacao: "AGUARDANDO_RESPOSTA", busca: "", responsavelId: "" }; abrir("comercial_propostas"); return; }
+    if (cod === "vence") {
+      if (CM.entrada) return Comercial_janelaVence_(CM.entrada);
+      Com_chamar_("entrada", {}, function (r) { CM.entrada = r; Comercial_janelaVence_(r); }, function (m) { alert(m); }, { carregando: "Conferindo o que vence…" });
+    }
+  }
+  /** Novo orçamento: três jeitos de começar, em palavras simples. */
+  function Comercial_novoOrcamento_() {
+    var esc = function (cod, ic, t, s) { return '<button type="button" class="cm-caminho" data-esc="' + cod + '"><span class="ic"><i class="fas ' + ic + '" aria-hidden="true"></i></span><span class="t">' + Com_esc_(t) + '</span><span class="s">' + Com_esc_(s) + '</span></button>'; };
+    var ov = Com_modal_("Novo orçamento", '<p class="cm-txt">Como você quer começar?</p><div class="cm-escolhas">' +
+      esc("orc", "fa-wand-magic-sparkles", "Montar com o Orçamentista", "Cole o pedido do cliente (e-mail ou WhatsApp): o sistema separa os itens, sugere o preço e mostra as referências. No fim, vira o rascunho da proposta.") +
+      esc("opo", "fa-handshake", "Fazer a proposta de uma oportunidade que já existe", "Abra a oportunidade na lista e toque em \"Nova proposta\": a proposta nasce ligada ao cliente, à unidade e ao contato.") +
+      esc("nova", "fa-plus", "Cliente ou pedido novo: criar a oportunidade", "Primeiro a oportunidade (cliente, contato e próxima ação); depois a proposta, de dentro dela.") + '</div>', "", 560);
+    ov.querySelectorAll("[data-esc]").forEach(function (b) { b.onclick = function () {
+      var e = b.getAttribute("data-esc"); ov.remove();
+      if (e === "orc") abrir("comercial_orcamentista");
+      else if (e === "opo") { CM.visao = "lista"; CM.filtro = { situacao: "ABERTA", funil: "", busca: "", responsavelId: "" }; CM.dicaOpo = 'Para fazer a proposta: abra a oportunidade e toque em "Nova proposta".'; abrir("comercial_oportunidades"); }
+      else Comercial_formOportunidade_(null);
+    }; });
+  }
+  /** Hoje e o que vence: retornos atrasados ou de hoje e propostas que vencem (ou venceram) — cada um abre por cima e o voltar volta aqui. */
+  function Comercial_janelaVence_(e) {
+    var grupos = [["ATRASADO", "Atrasados"], ["VENCEU", "Propostas que venceram sem resposta (últimos 30 dias)"], ["HOJE", "Hoje"], ["SEMANA", "Nos próximos 7 dias"]];
+    var l = e.vence || [];
+    var h = '<p class="cm-meta">' + (CM.ini.gestao ? "Da equipe toda." : "Só o que é seu.") + ' A lista do dia, com o porquê e o próximo passo de cada item, continua em Hoje no Comercial.</p>';
+    if (!l.length) h += '<div class="cm-vazio">Nada vencendo agora: nenhum retorno atrasado ou para hoje e nenhuma proposta vencendo nos próximos 7 dias. Bom momento para prospectar ou adiantar uma proposta.</div>';
+    grupos.forEach(function (gr) {
+      var d = l.map(function (x, i) { return { x: x, i: i }; }).filter(function (y) { return y.x.quando === gr[0]; });
+      if (!d.length) return;
+      h += '<p class="cm-sec">' + Com_esc_(gr[1]) + ' (' + d.length + ')</p>' + d.map(function (y) { return '<div class="cm-vence-l ' + y.x.quando + '"><div><b>' + Com_esc_(y.x.titulo) + '</b><br><span class="cm-meta">' + Com_esc_(y.x.sub) + '</span></div><button type="button" class="btn-secondary" data-vence="' + y.i + '">Abrir</button></div>'; }).join("");
+    });
+    if (e.venceTotal > l.length) h += '<p class="cm-meta">Mostrando ' + l.length + ' de ' + e.venceTotal + '. Os demais estão em Oportunidades e em Propostas.</p>';
+    var g = Com_gaveta_("Hoje e o que vence", h);
+    g.querySelectorAll("[data-vence]").forEach(function (b) { b.onclick = function () {
+      var x = l[+b.getAttribute("data-vence")]; g.remove();
+      var g2 = x.tipo === "proposta" ? Comercial_abrirProposta_(x.id) : Comercial_abrirOportunidade_(x.id);
+      if (g2 && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(g2, function () { Comercial_janelaVence_(CM.entrada || e); });
+    }; });
+    return g;
   }
 
   function Comercial_desenharHoje_(r) {
@@ -466,17 +593,41 @@
   // =========================================================
   // OPORTUNIDADES
   // =========================================================
+  // 01/11/2026 (Comercial C4): Oportunidades tem três modos de ver as mesmas oportunidades. Os nomes "Kanban" e "Gantt" ficam
+  // (decisão do dono), com uma frase curta embaixo. Trocar de modo é um passo do voltar (SGO_NAV.empilhar, padrão das Etapas 2 e 3).
+  var CM_SUB_OPO = "Cada venda, do primeiro contato ao pedido, ligada ao cliente, à unidade e aos equipamentos do cadastro. Toda oportunidade aberta tem próxima ação em Minhas atividades.";
+  var CM_MODOS = [["lista", "Lista", "fa-list", "Uma oportunidade embaixo da outra; as que pedem ação vêm primeiro. Use os filtros para achar ganhas e perdidas."],
+    ["kanban", "Quadro (Kanban)", "fa-table-columns", "Uma coluna por etapa do funil. Arraste o cartão (ou toque em \"Mover para\") para mudar de etapa; o sistema confere os critérios da metodologia antes de mover."],
+    ["gantt", "Gantt", "fa-chart-gantt", "Linha do tempo de cada oportunidade: criação, proposta enviada, validade, retornos, pedido e previsão de fechamento. Toque numa linha para ver os detalhes."]];
+  function Comercial_modosHtml_(atual) {
+    var m = CM_MODOS.filter(function (x) { return x[0] === atual; })[0] || CM_MODOS[0];
+    return '<div class="cm-modos" role="tablist" aria-label="Como ver as oportunidades">' + CM_MODOS.map(function (x) { var at = x[0] === m[0]; return '<button type="button" role="tab" class="cm-modo' + (at ? " ativo" : "") + '" aria-selected="' + at + '" data-cm-modo="' + x[0] + '"><i class="fas ' + x[2] + '" aria-hidden="true"></i>&nbsp;' + Com_esc_(x[1]) + '</button>'; }).join("") +
+      '</div><p class="cm-modo-dica">' + Com_esc_(m[3]) + '</p>';
+  }
+  function Comercial_ligarModos_(div) {
+    div.querySelectorAll("[data-cm-modo]").forEach(function (b) { b.onclick = function () {
+      var de = CM.visao, para = b.getAttribute("data-cm-modo");
+      if (de === para) return;
+      if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Oportunidades: " + b.textContent.replace(/\s+/g, " ").trim(), function () { CM.visao = de; if (CM.mod === "comercial_oportunidades" && div.isConnected !== false && div.querySelector(".cm-modos")) Comercial_renderOportunidades_(div); });
+      CM.visao = para; Comercial_renderOportunidades_(div);
+    }; });
+  }
   function Comercial_renderOportunidades_(div) {
+    if (CM.visao === "quadro") CM.visao = "kanban";
+    if (CM.visao === "kanban") return Comercial_renderKanban_(div);
+    if (CM.visao === "gantt") return Comercial_renderGantt_(div);
+    CM.visao = "lista";
     var ini = CM.ini, f = CM.filtro;
     var funis = ini.funis.map(function (x) { return { v: x.codigo, t: x.nome }; });
-    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Oportunidades", "Cada venda, do primeiro contato ao pedido, ligada ao cliente, à unidade e aos equipamentos do cadastro. Toda oportunidade aberta tem próxima ação em Minhas atividades.",
-      '<button type="button" class="btn-secondary" id="cmVisao">' + (CM.visao === "quadro" ? '<i class="fas fa-list" aria-hidden="true"></i>&nbsp;Ver em lista' : '<i class="fas fa-table-columns" aria-hidden="true"></i>&nbsp;Ver em quadro') + '</button>' +
-      '<button type="button" class="btn-primary" id="cmNovaOpo2"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+    var dica = CM.dicaOpo; CM.dicaOpo = "";
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Oportunidades", CM_SUB_OPO,
+      '<button type="button" class="btn-primary" id="cmNovaOpo2"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') + Comercial_modosHtml_("lista") +
+      (dica ? '<div class="cm-faixa ok">' + Com_esc_(dica) + '</div>' : '') +
       '<div class="cm-filtros"><div><label>Situação</label><select id="cmFSit">' + Com_opcoes_([{ v: "ABERTA", t: "Abertas" }, { v: "GANHA", t: "Ganhas" }, { v: "PERDIDA", t: "Perdidas" }, { v: "TODAS", t: "Todas" }], f.situacao) + '</select></div>' +
       '<div><label>Funil</label><select id="cmFFunil">' + Com_opcoes_(funis, f.funil, "Todos") + '</select></div>' +
       (ini.gestao ? '<div><label>Responsável</label><select id="cmFResp">' + Com_opcoes_(ini.equipe.map(function (e) { return { v: e.id, t: e.nome }; }), f.responsavelId, "Toda a equipe") + '</select></div>' : '') +
       '<div style="flex:1 1 200px"><label for="cmFBusca">Buscar</label><input id="cmFBusca" type="search" placeholder="Cliente, unidade, título, código ou contato" value="' + Com_esc_(f.busca || "") + '"></div></div><div id="cmOpos"><div class="cm-vazio">Carregando…</div></div></div>';
-    Com_$_("cmVisao").onclick = function () { CM.visao = CM.visao === "quadro" ? "lista" : "quadro"; Comercial_renderOportunidades_(div); };
+    Comercial_ligarModos_(div);
     Com_$_("cmNovaOpo2").onclick = function () { Comercial_formOportunidade_(null); };
     var ler = function () { f.situacao = Com_$_("cmFSit").value; f.funil = Com_$_("cmFFunil").value; f.busca = Com_$_("cmFBusca").value; if (Com_$_("cmFResp")) f.responsavelId = Com_$_("cmFResp").value; Comercial_carregarOpos_(); };
     ["cmFSit", "cmFFunil", "cmFResp"].forEach(function (id) { var el = Com_$_(id); if (el) el.onchange = ler; });
@@ -503,18 +654,8 @@
         return '<div class="cm-mini" data-opo="' + Com_esc_(o.id) + '"><b>' + Com_esc_(o.cliente) + '</b>' + Com_esc_(o.titulo) + '<div class="cm-meta" style="margin:4px 0 2px">' + Com_esc_(o.codigo) + (o.valorTxt ? ' · ' + Com_esc_(o.valorTxt) : '') + (CM.ini.gestao ? ' · ' + Com_esc_(o.responsavel) : '') + '</div>' +
           (o.situacao === "ABERTA" ? '<div class="cm-meta">Próxima: ' + Com_esc_(o.proximaAcao || "—") + (o.proximaEm ? ' (' + Com_esc_(o.proximaEm) + ')' : '') + '</div>' : '') + Com_selosOpo_(o) + '</div>';
       };
-      if (CM.visao === "quadro" && CM.filtro.situacao === "ABERTA") {
-        var funis = CM.ini.funis.filter(function (f) { return !CM.filtro.funil || f.codigo === CM.filtro.funil; });
-        alvo.innerHTML = funis.map(function (f) {
-          var deste = l.filter(function (o) { return o.funil === f.codigo; });
-          if (!deste.length && funis.length > 1) return '';
-          return '<p class="cm-sec">' + Com_esc_(f.nome) + '</p><div class="cm-quadro">' + f.etapas.map(function (e) {
-            var c = deste.filter(function (o) { return o.etapa === e.codigo; });
-            return '<div class="cm-coluna"><h4>' + Com_esc_(e.nome) + '<span>' + e.probabilidade + '% · ' + c.length + '</span></h4>' + c.map(mini).join("") + '</div>';
-          }).join("") + '</div>';
-        }).join("") || '<div class="cm-vazio">Nenhuma oportunidade aberta.</div>';
-        alvo.innerHTML = fora + alvo.innerHTML;
-      } else alvo.innerHTML = fora + '<div class="cm-lista">' + l.map(mini).join("") + '</div>';
+      // C4: o antigo "Ver em quadro" desta tela deu lugar ao modo Quadro (Kanban), que é o quadro completo do funil
+      alvo.innerHTML = fora + '<div class="cm-lista">' + l.map(mini).join("") + '</div>';
       alvo.querySelectorAll("[data-opo]").forEach(function (c) { c.onclick = function () { Comercial_abrirOportunidade_(c.getAttribute("data-opo")); }; });
     }, function (m) { Com_msg_("cmOpos", m); }, { chave: "opos" });
   }
@@ -617,8 +758,8 @@
   function Comercial_aposAlterar_() {
     if (CM.mod === "comercial_oportunidades" && Com_$_("cmOpos")) Comercial_carregarOpos_();
     if (CM.mod === "comercial_propostas" && Com_$_("cmProps")) Comercial_carregarProps_();
-    if (CM.mod === "comercial_kanban" && Com_$_("cmkCorpo")) Comercial_carregarKanban_();
-    if (CM.mod === "comercial_gantt" && Com_$_("cmgCorpo")) Comercial_carregarGantt_();
+    if (Com_$_("cmkCorpo")) Comercial_carregarKanban_();
+    if (Com_$_("cmgCorpo")) Comercial_carregarGantt_();
     if (CM.mod === "comercial" && Com_$_("cmHoje")) Com_chamar_("hoje", { papel: CM.hojePapel || (CM.ini.gestao ? "GESTAO" : "VENDEDOR") }, Comercial_desenharHoje_, function () {});
   }
 
@@ -638,10 +779,13 @@
       (o.valorTxt ? '<dt>Valor estimado</dt><dd>' + Com_esc_(o.valorTxt) + ' · chance ' + Com_esc_({ BAIXA: "baixa", MEDIA: "média", ALTA: "alta" }[o.chance] || "") + '</dd>' : '') +
       '<dt>Origem</dt><dd>' + Com_esc_(o.origem) + '</dd><dt>Responsável</dt><dd>' + Com_esc_(o.responsavel) + '</dd><dt>Último contato</dt><dd>' + Com_esc_(o.ultimoContato || "nenhum registrado") + ' (' + o.diasSemContato + ' dias)</dd>' +
       (aberta ? '<dt>Próxima ação</dt><dd><b>' + Com_esc_(o.proximaAcao || "—") + '</b>' + (r.atividade ? ' · ' + Com_esc_(r.atividade.previsao) + ' · atividade ' + Com_esc_(r.atividade.situacao) : ' · sem atividade aberta') + '</dd>' : '') +
-      (o.situacao === "PERDIDA" ? '<dt>Motivo da perda</dt><dd>' + Com_esc_(o.motivoPerda) + '. ' + Com_esc_(o.aprendizado) + '</dd>' : '') +
+      (o.situacao === "PERDIDA" ? '<dt>Motivo da perda</dt><dd>' + Com_esc_(o.motivoPerda) + '. ' + Com_esc_(o.aprendizado) + '</dd>' +
+        '<dt>Quem ganhou</dt><dd>' + (o.concorrenteVencedor || o.temValorVencedor ? Com_esc_(o.concorrenteVencedor || "concorrente não informado") + (o.valorVencedorTxt ? ', por ' + Com_esc_(o.valorVencedorTxt) : (o.temValorVencedor ? '' : ' (valor não informado)')) : 'não informado') + '</dd>' : '') +
       (r.equipamentos.length ? '<dt>Equipamentos</dt><dd>' + r.equipamentos.map(function (e) { return Com_esc_(e.texto); }).join("<br>") + '</dd>' : '') + '</dl>';
     if (aberta && r.podeEditar) h += '<div class="cm-acoes">' + b("contato", '<i class="fas fa-phone" aria-hidden="true"></i>&nbsp;Registrar contato', "btn-primary") + b("passo", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Próximo passo da gestora') + b("especialista", "Pedir à especialista") +
       b("etapa", "Mudar etapa") + b("proposta", "Nova proposta") + b("editar", "Editar") + b("ganha", "Marcar como ganha") + b("perda", "Registrar perda") + '</div>';
+    // C4: quem ganhou ainda não informado (o vendedor soube depois): completa sem trocar o que já estava registrado
+    if (o.situacao === "PERDIDA" && (ini.gestao || o.responsavelId === ini.eu.id) && (!o.concorrenteVencedor || !o.temValorVencedor)) h += '<div class="cm-acoes">' + b("completarPerda", "Completar quem ganhou", "btn-primary") + '</div>';
     if (!aberta && !o.reaberturaPedida && !ini.gestao) h += '<div class="cm-acoes">' + b("pedirReabrir", "Pedir reabertura à gestão") + '</div>';
     if (!aberta && ini.gestao) h += '<div class="cm-acoes">' + b("reabrir", "Reabrir", "btn-primary") + (o.reaberturaPedida ? b("recusarReabrir", "Recusar o pedido de reabertura") : '') + '</div>' + (o.reaberturaPedida ? '<div class="cm-faixa aviso">Pedido de reabertura: ' + Com_esc_(o.reaberturaMotivo) + '</div>' : '');
     h += '<div id="cmOpoAcao"></div>';
@@ -700,6 +844,13 @@
           Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmLApr" maxlength="2000"></textarea>') + Comercial_vencedorHtml_("cmLV") + '<div id="cmLMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmLOk">Registrar perda</button></div></div>';
         Com_$_("cmLOk").onclick = function () { Com_chamar_("perder", Object.assign({ id: o.id, motivo: Com_$_("cmLMot").value, aprendizado: Com_$_("cmLApr").value }, Comercial_vencedorLer_("cmLV")), function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmLMsg", m); }); };
       },
+      completarPerda: function () {
+        area.innerHTML = '<div class="cm-caixa"><h3>Completar quem ganhou</h3><p class="cm-meta">Preencha o que você soube depois da perda. O que já está registrado não muda' + (o.concorrenteVencedor ? ' (concorrente: ' + Com_esc_(o.concorrenteVencedor) + ')' : '') + (o.valorVencedorTxt ? ' (valor: ' + Com_esc_(o.valorVencedorTxt) + ')' : '') + '.</p>' +
+          Comercial_vencedorHtml_("cmPV") + '<div id="cmPVMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmPVOk">Registrar</button></div></div>';
+        if (o.concorrenteVencedor && Com_$_("cmPVConc")) { Com_$_("cmPVConc").value = o.concorrenteVencedor; Com_$_("cmPVConc").disabled = true; }
+        if (o.temValorVencedor && Com_$_("cmPVVenc")) { Com_$_("cmPVVenc").value = o.valorVencedorTxt || "já registrado"; Com_$_("cmPVVenc").disabled = true; }
+        Com_$_("cmPVOk").onclick = function () { var v = Comercial_vencedorLer_("cmPV"); Com_chamar_("completarPerda", { id: o.id, concorrente: o.concorrenteVencedor ? "" : v.concorrente, valorVencedor: o.temValorVencedor ? "" : v.valorVencedor }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmPVMsg", m); }); };
+      },
       pedirReabrir: function () { var m = window.prompt("Por que reabrir? (vai para a Caixa de decisões da gestão comercial)"); if (m) Com_chamar_("pedirReabertura", { id: o.id, motivo: m }, function (x) { recarregar(x.message); }, function (e) { alert(e); }); },
       reabrir: function () {
         area.innerHTML = '<div class="cm-caixa"><h3>Reabrir a oportunidade</h3>' + Com_campo_("Motivo da reabertura", '<textarea id="cmRMot" maxlength="1000">' + Com_esc_(o.reaberturaMotivo || "") + '</textarea>') + formProx("") + '<div id="cmRMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmROk">Reabrir</button></div></div>';
@@ -716,7 +867,7 @@
   // =========================================================
   function Comercial_renderPropostas_(div) {
     var ini = CM.ini, f = CM.filtroProp;
-    var sits = [{ v: "ABERTAS", t: "Em andamento" }].concat(Object.keys(ini.situacoesProposta).map(function (k) { return { v: k, t: ini.situacoesProposta[k] }; })).concat([{ v: "TODAS", t: "Todas" }]);
+    var sits = [{ v: "ABERTAS", t: "Em andamento" }, { v: "AGUARDANDO_RESPOSTA", t: "Aguardando resposta do cliente (enviadas e vencidas)" }].concat(Object.keys(ini.situacoesProposta).map(function (k) { return { v: k, t: ini.situacoesProposta[k] }; })).concat([{ v: "TODAS", t: "Todas" }]);
     div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Propostas", "Proposta numerada (PROP-ano-número) com revisão, folha A4 salva na pasta do cliente e envio pelo \"Enviar documento\". Desconto acima do limite passa pela aprovação do gestor comercial.",
       '<button type="button" class="btn-secondary" id="cmPAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>') +
       '<div class="cm-faixa">Para criar uma proposta, abra a oportunidade e toque em "Nova proposta": a proposta nasce ligada ao cliente, à unidade e ao contato dela.</div>' +
@@ -1627,14 +1778,74 @@
         i.funil.map(function (e) { return '<tr><td data-r="Funil">' + Com_esc_(e.funil) + '</td><td data-r="Etapa">' + Com_esc_(e.etapa) + ' (' + e.probabilidade + '%)</td><td class="n" data-r="Oportunidades">' + e.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(e.valor)) + '</td><td class="n" data-r="Ponderado">' + Com_esc_(Comercial_moeda_(e.ponderado)) + '</td></tr>'; }).join("") + '</tbody></table></div>';
       var perdas = i.perdasPorMotivo.filter(function (m) { return m.qtd; });
       h += '<div class="cm-caixa"><h3>Perdas por motivo</h3>' + (perdas.length ? '<table class="cm-tabela"><tbody>' + perdas.map(function (m) { return '<tr><td data-r="Motivo">' + Com_esc_(m.motivo) + '</td><td class="n" data-r="Quantidade">' + m.qtd + '</td><td class="n" data-r="Valor">' + Com_esc_(Comercial_moeda_(m.valor)) + '</td></tr>'; }).join("") + '</tbody></table>' : '<p class="cm-meta">Nenhuma perda no mês.</p>') + '</div>';
+      h += '<div id="cmPainelResultado"></div>';
       if (r.precificacao) h += Comercial_quadroPrecificacao_(r.precificacao);
       h += '<div class="cm-caixa"><h3>Propostas</h3><p class="cm-txt">Enviadas ' + i.propostas.enviadas + ' · aprovadas ' + i.propostas.aprovadas + ' · recusadas ' + i.propostas.recusadas + ' · vencidas sem resposta ' + i.propostas.vencidas + ' · desconto médio ' + Com_esc_(i.propostas.descontoMedioTxt) + ' · tempo médio até a 1ª proposta ' + Com_esc_(i.tempoPrimeiraPropostaTxt) + '</p></div>';
       if (i.porVendedor && i.porVendedor.length) h += '<div class="cm-caixa"><h3>Por vendedor</h3><table class="cm-tabela"><thead><tr><th>Vendedor</th><th class="n">Abertas</th><th class="n">Sem próxima ação</th><th class="n">Paradas</th><th class="n">Ganhas</th><th class="n">Valor ganho</th><th class="n">Perdidas</th></tr></thead><tbody>' +
         i.porVendedor.map(function (v) { return '<tr><td data-r="Vendedor"><b>' + Com_esc_(v.nome) + '</b></td><td class="n" data-r="Abertas">' + v.abertas + '</td><td class="n" data-r="Sem próxima ação">' + v.semProxima + '</td><td class="n" data-r="Paradas">' + v.paradas + '</td><td class="n" data-r="Ganhas">' + v.ganhas + '</td><td class="n" data-r="Valor ganho">' + Com_esc_(Comercial_moeda_(v.valorGanho)) + '</td><td class="n" data-r="Perdidas">' + v.perdidas + '</td></tr>'; }).join("") + '</tbody></table></div>';
       if (ini.gestao) h += '<div id="cmPainelBanco"><div class="cm-vazio">Carregando o banco de preços…</div></div>';
       alvo.innerHTML = h;
+      Comercial_relatorioResultado_(Com_$_("cmPainelResultado"));
       if (ini.gestao) Comercial_painelBanco_(Com_$_("cmPainelBanco"));
     }, function (m) { Com_msg_("cmPainel", m); });
+  }
+
+  // ---------------- relatório "preço proposto × ganho ou perdido, por serviço" (Comercial C4, 01/11/2026) ----------------
+  // Servidor: SGO_Comercial_BancoPrecos.js › ComBP_relatorioResultado_. Sem custo e sem preço de compra; o vendedor vê os números da
+  // empresa, mas o cliente e o número da proposta só das linhas dele. Filtros próprios; a gestão usa o "Vendedor" do Painel.
+  function Comercial_relatorioResultado_(alvo) {
+    if (!alvo) return;
+    var ini = CM.ini, f = CM.filtroRR || (CM.filtroRR = { meses: "12", origem: "TODAS", tipo: "SERVICO", meus: false });
+    alvo.innerHTML = '<div class="cm-caixa cm-rr"><h3>Preço proposto × ganho ou perdido, por serviço</h3><p class="cm-meta">Das propostas ganhas e perdidas: a taxa de ganho, o preço médio de cada lado, quanto cobrou quem ganhou de nós (quando foi informado), o preço de tabela e a faixa de mercado. Custo e preço de compra não entram aqui.</p>' +
+      '<div class="cm-filtros"><div><label for="cmRRMeses">Período</label><select id="cmRRMeses">' + Com_opcoes_([{ v: "6", t: "Últimos 6 meses" }, { v: "12", t: "Últimos 12 meses" }, { v: "24", t: "Últimos 24 meses" }, { v: "0", t: "Todo o histórico" }], f.meses) + '</select></div>' +
+      '<div><label for="cmRROrig">De onde</label><select id="cmRROrig">' + Com_opcoes_([{ v: "TODAS", t: "Propostas do SGO+ e CRM antigo" }, { v: "SGO", t: "Só propostas do SGO+" }], f.origem) + '</select></div>' +
+      '<div><label for="cmRRTipo">Tipo</label><select id="cmRRTipo">' + Com_opcoes_([{ v: "SERVICO", t: "Serviços" }, { v: "PRODUTO", t: "Produtos" }], f.tipo) + '</select></div>' +
+      (ini.gestao ? '' : '<div><label class="cm-check"><input type="checkbox" id="cmRRMeus"' + (f.meus ? ' checked' : '') + '> Só as minhas propostas</label></div>') +
+      '</div><div id="cmRRCorpo"><div class="cm-vazio">Calculando o relatório…</div></div></div>';
+    var carregar = function () {
+      Com_chamar_("relatorioPrecoResultado", { meses: f.meses, origem: f.origem, tipo: f.tipo, meus: !!f.meus, vendedorId: ini.gestao ? (CM.vendPainel || "") : "" }, function (r) {
+        var c = Com_$_("cmRRCorpo"); if (!c) return;
+        CM.rr = r; c.innerHTML = Comercial_relatorioResultadoHtml_(r);
+        c.querySelectorAll("[data-rr]").forEach(function (b) { b.onclick = function () { Comercial_relatorioItem_(r.itens[+b.getAttribute("data-rr")]); }; });
+      }, function (m) { Com_msg_("cmRRCorpo", m); }, { chave: "rr" });
+    };
+    var ler = function () { f.meses = Com_$_("cmRRMeses").value; f.origem = Com_$_("cmRROrig").value; f.tipo = Com_$_("cmRRTipo").value; f.meus = !!(Com_$_("cmRRMeus") && Com_$_("cmRRMeus").checked); Com_$_("cmRRCorpo").innerHTML = '<div class="cm-vazio">Calculando o relatório…</div>'; carregar(); };
+    ["cmRRMeses", "cmRROrig", "cmRRTipo", "cmRRMeus"].forEach(function (id) { var el = Com_$_(id); if (el) el.onchange = ler; });
+    carregar();
+  }
+  function Comercial_relatorioResultadoHtml_(r) {
+    var nome = r.tipo === "PRODUTO" ? "Produto" : "Serviço";
+    var h = '<div class="cm-rr-res"><span><b>' + r.total.decididas + '</b> ' + (r.total.decididas === 1 ? "decisão" : "decisões") + ' (' + Com_esc_(r.periodoTxt) + ')</span><span><b>' + r.total.ganhos + '</b> ' + (r.total.ganhos === 1 ? "ganha" : "ganhas") + '</span><span>Taxa de ganho <b>' + Com_esc_(r.total.taxaTxt) + '</b></span></div>';
+    if (r.perdasSemVencedor) h += '<div class="cm-faixa aviso">' + r.perdasSemVencedor + (r.perdasSemVencedor === 1 ? ' proposta perdida está' : ' propostas perdidas estão') + ' sem quem ganhou nem por quanto. Abra a oportunidade perdida e toque em "Completar quem ganhou": o relatório e o Orçamentista passam a usar o valor.</div>';
+    if (!r.itens.length) return h + '<div class="cm-vazio">Nenhuma proposta ganha ou perdida neste período e nestes filtros. Elas aparecem aqui quando o cliente aprova ou recusa a proposta, ou quando a oportunidade é ganha ou perdida. Experimente "Todo o histórico" ou "Propostas do SGO+ e CRM antigo".</div>';
+    h += '<div class="cm-rr-tab"><table class="cm-tabela"><thead><tr><th>' + nome + '</th><th class="n">Decididas</th><th class="n">Taxa de ganho</th><th class="n">Preço médio ganho</th><th class="n">Preço médio perdido</th><th class="n">Quem ganhou de nós</th><th class="n">Tabela</th><th class="n">Faixa de mercado</th></tr></thead><tbody>' +
+      r.itens.map(function (x, i) {
+        var meta = function (t) { return t ? '<br><span class="cm-meta">' + Com_esc_(t) + '</span>' : ''; };
+        return '<tr><td data-r="' + nome + '"><b>' + Com_esc_(x.item) + '</b>' + (x.leitura.length ? '<br><span class="cm-meta">' + Com_esc_(x.leitura.slice(0, 3).join(" ")) + '</span>' : '') + '<div class="cm-acoes" style="margin-top:4px"><button type="button" class="btn-secondary" data-rr="' + i + '">Ver as propostas</button></div></td>' +
+          '<td class="n" data-r="Decididas">' + x.decididas + meta(x.ganhos + (x.ganhos === 1 ? " ganha, " : " ganhas, ") + x.perdidos + (x.perdidos === 1 ? " perdida" : " perdidas")) + '</td>' +
+          '<td class="n" data-r="Taxa de ganho"><b>' + Com_esc_(x.taxaTxt) + '</b></td>' +
+          '<td class="n" data-r="Preço médio ganho">' + Com_esc_(x.mediaGanhoTxt) + meta(x.ganhoVsTabelaTxt ? x.ganhoVsTabelaTxt + " da tabela" : "") + '</td>' +
+          '<td class="n" data-r="Preço médio perdido">' + Com_esc_(x.mediaPerdidoTxt) + meta(x.perdidoVsTabelaTxt ? x.perdidoVsTabelaTxt + " da tabela" : "") + '</td>' +
+          '<td class="n" data-r="Quem ganhou de nós">' + (x.concorrente.mediaTxt ? Com_esc_(x.concorrente.mediaTxt) + meta("média de " + x.concorrente.n + (x.concorrente.n > 1 ? " · menor " + x.concorrente.menorTxt : "")) : '—') + (x.concorrente.nomes.length ? meta(x.concorrente.nomes.join(", ")) : '') + '</td>' +
+          '<td class="n" data-r="Tabela">' + (x.tabela ? Com_esc_(x.tabela.valorTxt) + meta(x.tabela.fonte) : '—') + '</td>' +
+          '<td class="n" data-r="Faixa de mercado">' + (x.mercado ? Com_esc_(x.mercado.faixaTxt) + meta(x.mercado.n + (x.mercado.n === 1 ? " preço · " : " preços · ") + x.mercado.fonte) : 'sem referência') + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+    if (r.itensTotal > r.itens.length) h += '<p class="cm-meta">Mostrando os ' + r.itens.length + ' itens com mais decisões, de ' + r.itensTotal + '.</p>';
+    return h + '<p class="cm-meta">Preço médio: o valor unitário de cada item (com o desconto geral da proposta repartido). "Quem ganhou de nós": o valor informado na perda, repartido pelos itens da proposta. Tabela: o preço do catálogo (ou o da tabela C1). Faixa de mercado: o meio da distribuição dos preços de licitações, concorrentes e internet do Banco de preços (ou o levantamento de compras públicas da C1).</p>';
+  }
+  function Comercial_relatorioItem_(x) {
+    var ini = CM.ini, f = CM.filtroRR || {};
+    var ov = Com_modal_(x.item, '<div id="cmRRItem"><div class="cm-vazio">Carregando as propostas…</div></div>', '<button type="button" class="btn-secondary" data-x="f">Fechar</button>', 760);
+    ov.querySelector('[data-x="f"]').onclick = function () { ov.remove(); };
+    Com_chamar_("relatorioPrecoResultado", { meses: f.meses, origem: f.origem, tipo: f.tipo, meus: !!f.meus, vendedorId: ini.gestao ? (CM.vendPainel || "") : "", itemChave: x.itemChave }, function (r) {
+      var c = Com_$_("cmRRItem"), d = r.detalhe; if (!c) return;
+      if (!d || !d.linhas || !d.linhas.length) { c.innerHTML = '<div class="cm-vazio">Nenhuma proposta deste item no período.</div>'; return; }
+      c.innerHTML = '<p class="cm-txt">' + d.decididas + (d.decididas === 1 ? ' decisão' : ' decisões') + ' · taxa de ganho <b>' + Com_esc_(d.taxaTxt) + '</b>' + (d.tabela ? ' · tabela ' + Com_esc_(d.tabela.valorTxt) : '') + (d.mercado ? ' · mercado ' + Com_esc_(d.mercado.faixaTxt) : '') + '</p>' +
+        (d.leitura.length ? '<ul class="cm-lista-simples">' + d.leitura.map(function (t) { return '<li>' + Com_esc_(t) + '</li>'; }).join("") + '</ul>' : '') +
+        '<table class="cm-tabela"><thead><tr><th>Data</th><th>Resultado</th><th class="n">Nosso preço</th><th>Quem ganhou</th><th>Cliente</th><th>Origem</th></tr></thead><tbody>' +
+        d.linhas.map(function (l) { return '<tr><td data-r="Data">' + Com_esc_(l.data || "—") + '</td><td data-r="Resultado"><span class="cm-selo ' + (l.resultado === "GANHO" ? "verde" : "vermelho") + '">' + Com_esc_(l.resultadoNome) + '</span></td><td class="n" data-r="Nosso preço">' + Com_esc_(l.valorTxt) + '</td>' +
+          '<td data-r="Quem ganhou">' + (l.resultado === "PERDIDO" ? Com_esc_((l.concorrente || "não informado") + (l.valorVencedorTxt ? ", " + l.valorVencedorTxt : "")) : "—") + '</td><td data-r="Cliente">' + (l.cliente ? Com_esc_(l.cliente + (l.ref ? " · " + l.ref : "")) : '<span class="cm-meta">de outro vendedor</span>') + '</td><td data-r="Origem">' + Com_esc_(l.origemNome + (l.uf ? " · " + l.uf : "")) + '</td></tr>'; }).join("") + '</tbody></table>';
+    }, function (m) { Com_msg_("cmRRItem", m); });
   }
 
   // =========================================================
@@ -2332,7 +2543,8 @@
       var tab = function (l) { return '<table class="cm-tabela"><thead><tr><th>Item</th><th class="n">Decididas</th><th class="n">Taxa de ganho</th><th class="n">Preço médio ganho</th><th class="n">Preço médio perdido</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td data-r="Item">' + Com_esc_(x.item) + (x.leitura ? '<br><span class="cm-meta">' + Com_esc_(x.leitura) + '</span>' : '') + '</td><td class="n" data-r="Decididas">' + x.decididas + '</td><td class="n" data-r="Taxa de ganho"><b>' + Com_esc_(x.taxaTxt) + '</b></td><td class="n" data-r="Ganho">' + Com_esc_(x.mediaGanhoTxt) + '</td><td class="n" data-r="Perdido">' + Com_esc_(x.mediaPerdidoTxt) + '</td></tr>'; }).join("") + '</tbody></table>'; };
       var h = '<div class="cm-caixa"><h3>Banco de preços</h3><p class="cm-meta">' + Com_esc_(r.totalPrecos.toLocaleString("pt-BR") + " preços nas contas: " + r.porOrigem.filter(function (o) { return o.n; }).map(function (o) { return o.nome.toLowerCase() + " " + o.n.toLocaleString("pt-BR"); }).join(", ")) + '.</p>';
       if (!r.totalPrecos) h += '<p class="cm-txt">O banco está vazio: faça a carga inicial em Comercial > Banco de preços.</p>';
-      h += '<p class="cm-sec">Taxa de ganho por serviço e preço médio ganho × perdido</p>' + (r.servicos.length ? tab(r.servicos) : '<p class="cm-meta">Sem serviços com propostas ganhas ou perdidas.</p>');
+      // C4: a taxa de ganho por serviço, com a tabela, o mercado e quem ganhou, está no relatório "Preço proposto × ganho ou perdido" (acima)
+      h += '<p class="cm-sec">Taxa de ganho por serviço</p><p class="cm-meta">Está no quadro "Preço proposto × ganho ou perdido, por serviço", mais acima, com o preço de tabela, a faixa de mercado e quanto cobrou quem ganhou de nós.</p>';
       if (r.produtos.length) h += '<p class="cm-sec">Produtos</p>' + tab(r.produtos);
       h += '<p class="cm-sec">Principais concorrentes (perdemos para)</p>' + (r.concorrentes.length ? '<ul class="cm-orc-refs">' + r.concorrentes.map(function (c) { return '<li>' + Com_esc_(c.nome + ": " + c.perdas + (c.perdas === 1 ? " perda" : " perdas") + (c.comValor ? " (" + c.comValor + " com o valor do vencedor)" : "")) + '</li>'; }).join("") + '</ul>' : '<p class="cm-meta">Nenhuma perda com o concorrente informado.</p>') +
         (r.perdasSemVencedor ? '<p class="cm-txt">' + r.perdasSemVencedor + ' proposta(s) perdida(s) sem dizer quem ganhou: peça ao vendedor, o Orçamentista usa isso.</p>' : '');
@@ -2393,13 +2605,13 @@
   // ---------------- quadro ----------------
   function Comercial_renderKanban_(div) {
     Comercial_filtroQ_();
-    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Quadro do funil", "As oportunidades em colunas, uma por etapa do funil. Arraste o cartão (ou toque em \"Mover para\") para mudar de etapa: o sistema confere os critérios de saída da metodologia antes de mover.",
+    CM.visao = "kanban";
+    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Oportunidades", CM_SUB_OPO,
       '<button type="button" class="btn-secondary" id="cmkAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
-      '<button type="button" class="btn-secondary" id="cmkGantt"><i class="fas fa-chart-gantt" aria-hidden="true"></i>&nbsp;Ver o Gantt</button>' +
-      '<button type="button" class="btn-primary" id="cmkNova"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') +
+      '<button type="button" class="btn-primary" id="cmkNova"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') + Comercial_modosHtml_("kanban") +
       Comercial_filtrosQHtml_("kanban") + '<div id="cmkLeitura"></div><div id="cmkMsg"></div><div id="cmkCorpo"><div class="cm-vazio">Montando o quadro…</div></div></div>';
+    Comercial_ligarModos_(div);
     Com_$_("cmkAtual").onclick = Comercial_carregarKanban_;
-    Com_$_("cmkGantt").onclick = function () { abrir("comercial_gantt"); };
     Com_$_("cmkNova").onclick = function () { Comercial_formOportunidade_(null); };
     Comercial_ligarFiltrosQ_(Comercial_carregarKanban_);
     Comercial_carregarKanban_();
@@ -2631,11 +2843,14 @@
   // ---------------- Gantt ----------------
   function Comercial_renderGantt_(div) {
     Comercial_filtroQ_();
-    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Gantt comercial", "Cada oportunidade no tempo: da criação à previsão de fechamento, com a proposta enviada, a validade, os retornos combinados, o pedido aprovado e a passagem aos setores. Toque numa linha para ver os detalhes.",
-      '<button type="button" class="btn-secondary" id="cmgAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button><button type="button" class="btn-secondary" id="cmgQuadro"><i class="fas fa-table-columns" aria-hidden="true"></i>&nbsp;Ver o quadro</button>') +
+    CM.visao = "gantt";
+    div.innerHTML = '<div class="module-shell cmk-area">' + Comercial_cabecalho_("Oportunidades", CM_SUB_OPO,
+      '<button type="button" class="btn-secondary" id="cmgAtual"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+      '<button type="button" class="btn-primary" id="cmgNova"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova oportunidade</button>') + Comercial_modosHtml_("gantt") +
       Comercial_filtrosQHtml_("gantt") + '<div id="cmgMsg"></div><div id="cmgCorpo"><div class="cm-vazio">Montando o Gantt…</div></div></div>';
+    Comercial_ligarModos_(div);
     Com_$_("cmgAtual").onclick = Comercial_carregarGantt_;
-    Com_$_("cmgQuadro").onclick = function () { abrir("comercial_kanban"); };
+    Com_$_("cmgNova").onclick = function () { Comercial_formOportunidade_(null); };
     Comercial_ligarFiltrosQ_(Comercial_carregarGantt_);
     Comercial_carregarGantt_();
   }

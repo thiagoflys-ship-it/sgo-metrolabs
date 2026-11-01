@@ -78,9 +78,11 @@ function ComOpo_paraTela_(eu, o, ctx) {
     ganhaEm: Com_brDia_(o.GANHA_EM), perdidaEm: Com_brDia_(o.PERDIDA_EM), reaberturaPedida: !!Com_s_(o.REABERTURA_PEDIDA_EM), reaberturaMotivo: Com_s_(o.REABERTURA_MOTIVO),
     observacoes: Com_s_(o.OBSERVACOES), origemRef: Com_s_(o.ORIGEM_REF), criadaEm: Com_brDia_(o.CRIADO_EM),
     diasSemContato: d.diasSemContato, diasNaEtapa: d.diasNaEtapa, parada: d.parada, esfriando: d.esfriando, estagnada: d.estagnada, semProxima: d.semProxima, atrasada: d.atrasada,
-    venceHoje: d.hoje, mudarEstrategia: d.mudarEstrategia
+    venceHoje: d.hoje, mudarEstrategia: d.mudarEstrategia,
+    // 01/11/2026 (Comercial C4): quem ganhou (na perda), para a ficha mostrar e oferecer "Completar quem ganhou" quando falta
+    concorrenteVencedor: Com_s_(o.CONCORRENTE_VENCEDOR), temValorVencedor: Number(o.VALOR_VENCEDOR) > 0
   };
-  if (eu.veValores) { t.valor = Number(o.VALOR_ESTIMADO) || 0; t.valorTxt = Com_moeda_(t.valor); t.ponderado = d.ponderado; }
+  if (eu.veValores) { t.valor = Number(o.VALOR_ESTIMADO) || 0; t.valorTxt = Com_moeda_(t.valor); t.ponderado = d.ponderado; t.valorVencedorTxt = Number(o.VALOR_VENCEDOR) > 0 ? Com_moeda_(o.VALOR_VENCEDOR) : ''; }
   return t;
 }
 
@@ -484,6 +486,33 @@ function ComOpo_perder_(eu, d) {
   });
 }
 
+/**
+ * 01/11/2026 (Comercial C4): completar quem ganhou e por quanto numa oportunidade já perdida (o vendedor soube depois).
+ * d: { id, concorrente, valorVencedor }. Merge: só preenche o que está vazio; o que já foi informado nunca é trocado (para
+ * corrigir, a gestão desconsidera a linha no Banco de preços e registra o preço certo). As linhas do banco desta perda ganham o
+ * concorrente e o valor só onde estavam vazios (ComBP_completarVencedor_).
+ */
+function ComOpo_completarPerda_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'completar quem ganhou');
+  d = d || {};
+  var vencedor = ComBP_vencedorDaTela_(d);
+  if (!vencedor.concorrente && !vencedor.valorVencedor) throw new Error('Não foi possível completar: escreva o concorrente que ganhou, o valor, ou os dois');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'completar quem ganhou');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'PERDIDA') throw new Error('Não foi possível completar: a oportunidade ' + o.CODIGO + ' não está perdida. Quem ganhou só se registra na perda');
+    var campos = {}, ja = [];
+    if (vencedor.concorrente) { if (Com_s_(o.CONCORRENTE_VENCEDOR)) ja.push('o concorrente (' + Com_s_(o.CONCORRENTE_VENCEDOR) + ')'); else campos.CONCORRENTE_VENCEDOR = vencedor.concorrente; }
+    if (vencedor.valorVencedor) { if (Number(o.VALOR_VENCEDOR) > 0) ja.push('o valor (' + Com_moeda_(o.VALOR_VENCEDOR) + ')'); else campos.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor); }
+    if (!Object.keys(campos).length) throw new Error('Não foi possível completar: ' + ja.join(' e ') + ' já ' + (ja.length > 1 ? 'estão registrados' : 'está registrado') + ' e não é trocado. Para corrigir, peça à gestão comercial: ela desconsidera o preço no Banco de preços e registra o certo');
+    campos.ATUALIZADO_EM = Com_agora_();
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    var feito = { concorrente: campos.CONCORRENTE_VENCEDOR || '', valorVencedor: campos.VALOR_VENCEDOR || null };
+    var banco = typeof ComBP_completarVencedor_ === 'function' ? ComBP_completarVencedor_(o, feito) : { linhas: 0 };
+    Com_historico_('OPORTUNIDADE', o.ID, 'PERDA_COMPLETADA', eu, { texto: 'Quem ganhou, informado depois da perda: ' + (feito.concorrente || Com_s_(o.CONCORRENTE_VENCEDOR) || 'concorrente não informado') + (feito.valorVencedor ? ', por ' + Com_moeda_(feito.valorVencedor) : (Number(o.VALOR_VENCEDOR) > 0 ? ', por ' + Com_moeda_(o.VALOR_VENCEDOR) : '')) + '.' });
+    return { message: 'Quem ganhou foi registrado' + (ja.length ? ' (' + ja.join(' e ') + ' já ' + (ja.length > 1 ? 'estavam' : 'estava') + ' registrado e ficou como estava)' : '') + '.' + (banco.linhas ? ' O banco de preços foi completado em ' + Com_plural_(banco.linhas, 'item', 'itens') + ' desta perda.' : ' Esta perda não tem proposta concluída no banco de preços; o registro fica na oportunidade.') };
+  });
+}
+
 /** Vendedor pede a reabertura (vai para a Caixa de decisões). d: { id, motivo }. */
 function ComOpo_pedirReabertura_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'pedir a reabertura');
@@ -518,12 +547,14 @@ function ComOpo_reabrir_(eu, sessionId, d) {
       return { message: 'Pedido de reabertura recusado. O vendedor foi avisado.' };
     }
     var antes = Com_up_(o.SITUACAO);
-    var campos = { SITUACAO: 'ABERTA', GANHA_EM: '', PERDIDA_EM: '', MOTIVO_PERDA: '', APRENDIZADO_PERDA: '', REABERTURA_PEDIDA_EM: '', REABERTURA_PEDIDA_POR_ID: '',
+    // 01/11/2026 (C4): quem ganhou e por quanto saem junto com o motivo (ficam no histórico e no banco de preços); uma perda nova
+    // não herda o vencedor da perda anterior
+    var campos = { SITUACAO: 'ABERTA', GANHA_EM: '', PERDIDA_EM: '', MOTIVO_PERDA: '', APRENDIZADO_PERDA: '', CONCORRENTE_VENCEDOR: '', VALOR_VENCEDOR: '', REABERTURA_PEDIDA_EM: '', REABERTURA_PEDIDA_POR_ID: '',
       ETAPA_DESDE: agora, ULTIMO_CONTATO_EM: agora, TENTATIVAS_SEM_RESPOSTA: 0, PROXIMA_ACAO: prox.texto, PROXIMA_ACAO_TIPO: prox.tipo, PROXIMA_ACAO_EM: prox.prazo, ATUALIZADO_EM: agora };
     var novo = Object.assign({}, o, campos);
     campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, novo, prox);
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
-    Com_historico_('OPORTUNIDADE', o.ID, 'REABERTA', eu, { de: COM_SITUACOES_OPO[antes], para: 'Aberta', texto: motivo + (antes === 'PERDIDA' ? ' (motivo da perda anterior: ' + Com_s_(o.MOTIVO_PERDA) + ')' : '') });
+    Com_historico_('OPORTUNIDADE', o.ID, 'REABERTA', eu, { de: COM_SITUACOES_OPO[antes], para: 'Aberta', texto: motivo + (antes === 'PERDIDA' ? ' (motivo da perda anterior: ' + Com_s_(o.MOTIVO_PERDA) + (Com_s_(o.CONCORRENTE_VENCEDOR) || Number(o.VALOR_VENCEDOR) > 0 ? '; quem ganhou: ' + (Com_s_(o.CONCORRENTE_VENCEDOR) || 'não informado') + (Number(o.VALOR_VENCEDOR) > 0 ? ', por ' + Com_moeda_(o.VALOR_VENCEDOR) : '') : '') + ')' : '') });
     if (Com_s_(o.RESPONSAVEL_ID) !== eu.id) Com_avisar_(o.RESPONSAVEL_ID, 'REABERTA', 'Oportunidade ' + o.CODIGO + ' reaberta', eu.nome + ' reabriu a oportunidade: ' + motivo + ' A próxima ação está em Minhas atividades.', { tipo: 'oportunidade', id: o.ID }, { email: true });
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Oportunidade reaberta. A próxima ação está em Minhas atividades do responsável.' };
   });

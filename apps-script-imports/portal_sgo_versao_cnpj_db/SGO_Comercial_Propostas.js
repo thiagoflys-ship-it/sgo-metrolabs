@@ -494,7 +494,9 @@ function ComP_listar_(eu, filtro, info) {
     if (f.responsavelId && eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== Com_s_(f.responsavelId)) return false;
     if (termos.length && !Com_casaBusca_(termos, ComP_textoBusca_(p))) return false;
     var s = Com_up_(p.SITUACAO);
-    if (sit === 'ABERTAS' ? abertas.indexOf(s) < 0 : (sit !== 'TODAS' && s !== sit)) { if (termos.length) fora++; return false; }
+    // 01/11/2026 (Comercial C4): AGUARDANDO_RESPOSTA = enviada ao cliente ou vencida sem resposta (caminho da entrada do Comercial)
+    var fora_ = sit === 'ABERTAS' ? abertas.indexOf(s) < 0 : sit === 'AGUARDANDO_RESPOSTA' ? ['ENVIADA', 'VENCIDA'].indexOf(s) < 0 : (sit !== 'TODAS' && s !== sit);
+    if (fora_) { if (termos.length) fora++; return false; }
     return true;
   });
   if (info) info.foraDoFiltro = fora;

@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços. A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial.
+Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços e com a entrada "O que você quer fazer agora?", os modos de ver das Oportunidades (Lista, Quadro (Kanban) e Gantt), "Completar quem ganhou" e o relatório "Preço proposto × ganho ou perdido, por serviço" (Comercial C4). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades (com os modos Quadro (Kanban) e Gantt), Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial.
 
 ## Para que serve
 
@@ -18,6 +18,19 @@ A gestora comercial do sistema conhece a metodologia que a gestão escreve (funi
 
 ## Hoje no Comercial
 
+### O que você quer fazer agora?
+
+No topo do Hoje no Comercial ficam quatro caminhos grandes, no celular e no computador:
+
+- **Novo orçamento**: escolha entre "Montar com o Orçamentista" (cole o pedido do cliente; o sistema separa os itens, sugere o preço e mostra as referências, e no fim vira o rascunho da proposta), "Fazer a proposta de uma oportunidade que já existe" (abre Oportunidades; abra a oportunidade e toque em "Nova proposta") ou "Cliente ou pedido novo: criar a oportunidade".
+- **Ver minhas oportunidades** (para a gestão, "Ver as oportunidades", da equipe): abre Oportunidades em lista, com as abertas. O número mostra quantas estão abertas e quantas estão sem próxima ação.
+- **Propostas aguardando resposta**: abre Propostas com o filtro "Aguardando resposta do cliente (enviadas e vencidas)".
+- **Hoje e o que vence**: abre a lista dos retornos atrasados ou de hoje e das propostas que vencem nos próximos 7 dias ou que venceram sem resposta nos últimos 30 dias. "Abrir" leva à oportunidade ou à proposta; o voltar traz de volta à lista.
+
+O vendedor vê só o que é dele; a gestão, a equipe toda. A entrada não mostra valores. Os números são conferidos quando a tela abre ou em "Atualizar" (a tela não se redesenha sozinha). As outras telas continuam no menu e, no celular, na barra de seções.
+
+### A lista do dia
+
 A lista do dia mostra, em ordem de prioridade: oportunidades sem próxima ação, retornos atrasados, oportunidades paradas, pedidos aprovados sem passagem aos setores, retornos de hoje, propostas sem resposta ou perto de vencer, propostas prontas não enviadas, descontos negados, rascunhos com os custos da viagem ou do frete incompletos, oportunidades esfriando, muito tempo na mesma etapa e qualificação incompleta. No panorama da gestão, a especialista em precificação aponta também a política de precificação incompleta, proposta com o benefício do Programa de conduta ou o km tirado à mão, margem abaixo da alvo, desconto que come o repasse da viagem e itens do catálogo sem reajuste.
 
 Cada item diz o porquê e o próximo passo; quando há, traz a mensagem pronta para copiar. Depois de agir, toque em "Feito" ou em "Não se aplica" (com o motivo): a gestão vê, em Metodologia, quais regras funcionam.
@@ -27,6 +40,14 @@ Cada item diz o porquê e o próximo passo; quando há, traz a mensagem pronta p
 Para a gestão, a aba "Panorama da gestão" mostra a equipe (abertas, sem próxima ação, atrasadas, paradas, contatos dos últimos 10 dias), os alertas de cadência quebrada e de funil parado, os descontos e reaberturas esperando decisão e os pedidos sem passagem. Em "Pergunte à gestora" a gestão faz perguntas sobre o funil; a resposta usa só os números do sistema.
 
 ## Oportunidades
+
+A tela tem três modos de ver as mesmas oportunidades, nos botões do topo (os nomes "Kanban" e "Gantt" continuam, por decisão do dono):
+
+- **Lista**: uma oportunidade embaixo da outra, as que pedem ação primeiro, com busca e os filtros de situação, funil e responsável.
+- **Quadro (Kanban)**: uma coluna por etapa do funil (veja "Quadro do funil (modo Quadro (Kanban))").
+- **Gantt**: a linha do tempo de cada oportunidade (veja "Gantt comercial (modo Gantt)").
+
+Uma frase curta embaixo dos botões explica o modo aberto. Trocar de modo é um passo do voltar: o voltar devolve o modo de antes. Os endereços antigos "Quadro do funil" e "Gantt comercial" (atalhos, avisos e a busca do menu por "kanban", "quadro" ou "gantt") abrem Oportunidades no modo certo.
 
 1. Toque em "Nova oportunidade".
 2. Busque o cliente (nome ou CNPJ) e escolha a unidade e o contato. Se o contato não existe, toque em "Novo contato".
@@ -39,9 +60,17 @@ Para mudar de etapa, toque em "Mudar etapa", escolha a etapa e toque em "Continu
 
 Regras: toda oportunidade aberta tem próxima ação com data; parada há 10 dias sem contato (padrão) não muda de etapa até um contato real ou a perda; a perda exige o motivo da lista e o aprendizado; reabrir é decisão da gestão comercial (o vendedor pede e o pedido vai para a Caixa de decisões).
 
-## Quadro do funil
+### Perda: quem ganhou e "Completar quem ganhou"
 
-Comercial > Quadro do funil mostra as oportunidades em colunas, uma por etapa do funil escolhido (Engenharia ou Produtos), mais as ganhas e as perdidas do período. Cada coluna mostra a quantidade e, para quem vê valores, o valor em aberto. Cada cartão traz o cliente, o título, o código, o valor (para quem vê valores), a próxima ação e a data, há quantos dias está sem contato e na etapa, a previsão de fechamento e os selos (proposta, desconto aguardando aprovação, parada, retorno atrasado, tempo acima da meta, pedido sem passagem).
+Na perda (e na recusa da proposta), "Quem ganhou e por quanto?" é opcional: o nome do concorrente e o valor total da proposta vencedora. O valor vai para o Banco de preços, repartido pelos itens da proposta, e o Orçamentista avisa quando um preço novo passa do que já perdemos.
+
+Se você souber depois, abra a oportunidade perdida e toque em **Completar quem ganhou**. A ficha mostra o que já está registrado. Só o que estava em branco é gravado, na oportunidade e nas linhas do Banco de preços desta perda (a data, o valor e o resultado das linhas não mudam). O que já foi informado nunca é trocado: para corrigir, a gestão comercial desconsidera o preço no Banco de preços, com o motivo, e registra o certo. Cada complemento fica no histórico da oportunidade.
+
+Ao reabrir uma oportunidade perdida, quem ganhou sai da oportunidade junto com o motivo da perda; fica no histórico ("quem ganhou: ...") e no Banco de preços. Se ela for perdida de novo, informe quem ganhou desta vez.
+
+## Quadro do funil (modo Quadro (Kanban))
+
+Comercial > Oportunidades > Quadro (Kanban) mostra as oportunidades em colunas, uma por etapa do funil escolhido (Engenharia ou Produtos), mais as ganhas e as perdidas do período. Cada coluna mostra a quantidade e, para quem vê valores, o valor em aberto. Cada cartão traz o cliente, o título, o código, o valor (para quem vê valores), a próxima ação e a data, há quantos dias está sem contato e na etapa, a previsão de fechamento e os selos (proposta, desconto aguardando aprovação, parada, retorno atrasado, tempo acima da meta, pedido sem passagem).
 
 Filtros: funil, vendedor (gestão), busca (cliente, unidade, título, código ou contato; veja "Como a busca funciona no Comercial"), área (tipo do equipamento ligado ou categoria do serviço no catálogo) e período ("De" e "Até"; padrão: 90 dias para trás e 90 para frente). A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período; as ganhas e perdidas aparecem pela data em que foram encerradas (as 30 mais recentes).
 
@@ -55,9 +84,9 @@ No topo do quadro, a "Leitura do funil" mostra, com os números do sistema: os g
 
 "Pedir a leitura da especialista" faz a IA escrever a leitura com os mesmos números. O verificador confere cada número: número que não está nos dados do sistema, promessa ou norma e o texto é recusado; vale o das regras. A leitura não muda nada: nenhuma oportunidade muda de etapa e nada é enviado. "Usei" e "Não serviu" ficam registrados para a gestão.
 
-## Gantt comercial
+## Gantt comercial (modo Gantt)
 
-Comercial > Gantt comercial mostra uma linha por oportunidade (ou agrupadas por vendedor), com a barra da criação até a previsão de fechamento. Sem previsão, a barra vai até hoje, tracejada. Ganha em verde, perdida em cinza. Se a previsão passou e a oportunidade continua aberta, o trecho até hoje fica em vermelho.
+Comercial > Oportunidades > Gantt mostra uma linha por oportunidade (ou agrupadas por vendedor), com a barra da criação até a previsão de fechamento. Sem previsão, a barra vai até hoje, tracejada. Ganha em verde, perdida em cinza. Se a previsão passou e a oportunidade continua aberta, o trecho até hoje fica em vermelho.
 
 Marcos na linha: proposta enviada (círculo), validade da proposta (losango; vermelho se venceu sem resposta), retornos combinados com o cliente, que são as atividades do Comercial em Minhas atividades (triângulo; verde quando feito, vermelho quando atrasado), pedido aprovado (quadrado verde) e passagem aos setores (quadrado roxo; vermelho quando o pedido aprovado está sem passagem além do prazo). A linha azul marca hoje.
 
@@ -268,11 +297,11 @@ Comercial > Banco de preços junta os preços de serviços e produtos: o que a M
 
 ## Comercial no celular
 
-No celular o menu lateral fica escondido. Toque em "Comercial" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Orçamentista, Pedidos, Produtos, Preços, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo.
+No celular o menu lateral fica escondido. Toque em "Comercial" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Orçamentista, Pedidos, Produtos, Preços, Painel e Metodologia). O Quadro (Kanban) e o Gantt ficam dentro de Oportunidades, nos botões do topo; no Hoje, a entrada "O que você quer fazer agora?" mostra os quatro caminhos dois a dois. Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo.
 
 ## Como a busca funciona no Comercial
 
-Em Oportunidades, Propostas, Quadro do funil, Gantt, Produtos e serviços e na escolha do cliente, a busca:
+Em Oportunidades (nos três modos), Propostas, Produtos e serviços e na escolha do cliente, a busca:
 
 - ignora acentos, cedilha e maiúsculas ("uruacu" acha "Uruaçu"; "fundacao" acha "FUNDAÇÃO");
 - aceita parte das palavras, em qualquer ordem ("pio fund" acha "Fundação Pio XII");
@@ -285,6 +314,23 @@ A busca respeita o filtro "Situação". Se ela também achar oportunidades ou pr
 ## Painel e relatório mensal
 
 O painel mostra o valor ganho, as perdas por motivo, a conversão, o funil em aberto por etapa (com o valor ponderado pela probabilidade), as propostas e as próximas ações em dia. A gestão vê também o quadro "Precificação e estratégia": margem média das propostas enviadas no mês (as que têm custo completo), propostas enviadas abaixo da margem mínima (com quem decidiu), custo de viagem nas enviadas, quanto foi repassado em item próprio, quanto foi diluído, quanto não voltou no preço (desconto sobre o item de deslocamento), o benefício da Conduta previsto (custo interno), itens sem reajuste, reajustes agendados, a política incompleta e o que a especialista recomenda. Os números saem da fotografia gravada ao concluir cada proposta. A gestão gera o relatório mensal em A4 (com a análise da gestora, conferida contra os números), salvo em Comercial - Relatórios; no 1º dia útil do mês ele sai sozinho e vai à Diretoria junto com os relatórios da gestão.
+
+### Preço proposto × ganho ou perdido, por serviço
+
+No Painel, logo depois das perdas por motivo, o quadro "Preço proposto × ganho ou perdido, por serviço" junta as propostas já decididas (aprovadas ou recusadas pelo cliente, ou da oportunidade ganha ou perdida) do Banco de preços. Para cada serviço (ou produto, no filtro "Tipo"):
+
+- decididas, ganhas e perdidas, e a **taxa de ganho**;
+- **preço médio ganho** e **preço médio perdido** (o valor unitário do item, com o desconto geral da proposta repartido), cada um comparado com a tabela ("12% acima da tabela");
+- **quem ganhou de nós**: a média do valor informado na perda (repartido pelos itens), o menor valor e os nomes dos concorrentes;
+- **tabela**: o preço do catálogo (pelo código da C1 ou pelo nome) ou, se o serviço não está no catálogo, o preço normal da tabela C1;
+- **faixa de mercado**: o meio da distribuição (do primeiro ao terceiro quartil) dos preços de licitações, concorrentes e internet do Banco de preços, com 3 preços ou mais; sem isso, o levantamento de compras públicas (PNCP) da C1;
+- uma **leitura** em palavras simples: "Quem ganhou de nós cobrou, em média, R$ X (Y% abaixo do nosso preço perdido)", "Perdemos com preço acima da tabela", "Ganhamos abaixo da tabela: confira se o desconto está valendo a pena", "Ganhamos mesmo com preço maior: o preço não é o que decide", "Poucas decisões: leia com cuidado".
+
+Filtros: período (6, 12 ou 24 meses, ou todo o histórico; padrão 12 meses), de onde (propostas do SGO+ e CRM antigo, ou só do SGO+) e tipo. A gestão usa o filtro "Vendedor" do Painel; o vendedor pode marcar "Só as minhas propostas". "Ver as propostas" lista cada decisão: data, resultado, nosso preço, quem ganhou e o cliente.
+
+Quem vê: a gestão e o vendedor. Custo e preço de compra não entram neste quadro (cotação de fornecedor fica fora). O vendedor vê os números da empresa, como no Banco de preços, mas o cliente e o número da proposta só das propostas dele (e o órgão das compras públicas); nas outras aparece "de outro vendedor". Quando há propostas perdidas sem quem ganhou, o quadro avisa quantas são e pede o "Completar quem ganhou".
+
+No quadro "Banco de preços" da gestão, a taxa de ganho por serviço passou para este relatório; produtos, concorrentes, licitações e itens sem referência continuam lá.
 
 ## Avisos
 
@@ -314,6 +360,10 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - Notas e tarefas do CRM estão no histórico da oportunidade; ligações e reuniões, nos contatos registrados.
 
 ## Problemas comuns
+
+- **Não acho o Quadro do funil nem o Gantt comercial no menu.** Estão dentro de Oportunidades, nos botões "Quadro (Kanban)" e "Gantt" do topo. A busca do menu por "kanban", "quadro" ou "gantt" leva a Oportunidades.
+- **"Completar quem ganhou" diz que já está registrado e não é trocado.** É a regra: o que foi informado não se sobrescreve. Peça à gestão comercial para desconsiderar o preço no Banco de preços e registrar o certo.
+- **O quadro "Preço proposto × ganho ou perdido" está vazio.** Ele só conta propostas decididas. Escolha "Todo o histórico" ou inclua o CRM antigo (que entra depois da carga do Banco de preços).
 
 - "Ainda não dá para mover" (quadro ou ficha): falta algo exigido pela metodologia para sair da etapa. A janela diz o quê e onde resolver; resolva e mova de novo.
 - No celular o cartão não arrasta: use "Mover para".
