@@ -5239,11 +5239,12 @@
     const shell = document.querySelector("#conteudo .module-shell");
     const ok = !!shell && ehMobileModo_() && SGO_docEhModulo_(window.SGO_MODULO_ATUAL);
     document.querySelectorAll("#conteudo .sgo-doc-movel").forEach(function (s) { if (!ok || s !== shell) s.classList.remove("sgo-doc-movel"); });
-    if (!ok) { document.querySelectorAll("#conteudo .sgo-doc-indice-lugar").forEach(function (x) { x.remove(); }); return; }
-    shell.classList.add("sgo-doc-movel");
+    if (!ok) { document.querySelectorAll("#conteudo .sgo-doc-indice-lugar").forEach(function (x) { x.remove(); }); document.documentElement.style.scrollPaddingTop = ""; return; }
+    // revisão da Etapa 4: só acrescenta se faltar (classList.add regrava o atributo e o observador abaixo entraria em laço)
+    if (!shell.classList.contains("sgo-doc-movel")) shell.classList.add("sgo-doc-movel");
     const secs = SGO_docSecoes_(shell);
     let lugar = shell.querySelector(".sgo-doc-indice-lugar");
-    if (!SGO_docPrecisaIndice_(secs.length, document.documentElement.scrollHeight, window.innerHeight || 800)) { if (lugar) lugar.remove(); return; }
+    if (!SGO_docPrecisaIndice_(secs.length, document.documentElement.scrollHeight, window.innerHeight || 800)) { if (lugar) lugar.remove(); document.documentElement.style.scrollPaddingTop = ""; return; }
     const assin = secs.map(function (x) { return x.r; }).join("|");
     // o índice fica antes do bloco do módulo que tem a primeira seção (filho direto da tela), fora do formulário
     let bloco = secs[0].el;
@@ -5292,6 +5293,9 @@
       nav.classList.toggle("fixo", prender);
     }
     if (prender) nav.style.top = barra + "px"; else nav.style.top = "";
+    // revisão da Etapa 4: com o índice preso, o campo que ganha foco (teclado aberto) não fica escondido atrás dele
+    const pad = prender ? (barra + nav.offsetHeight + 8) + "px" : "";
+    if (document.documentElement.style.scrollPaddingTop !== pad) document.documentElement.style.scrollPaddingTop = pad;
     const itens = lugar.__itens || [], i = SGO_docAtual_(lugar);
     if (i < 0 && lista.scrollLeft) lista.scrollLeft = 0; // antes da primeira seção, a lista volta ao começo
     lista.querySelectorAll(".sgo-doc-indice-bt").forEach(function (b, j) {

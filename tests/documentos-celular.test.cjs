@@ -167,3 +167,9 @@ test('manuais: seção "No celular" nos módulos e Etapa 4 no manual de navegaç
   assert.match(base, /Etapa 4 \(01\/11\/2026\)/);
   assert.match(base, /No celular \(01\/11\/2026\)/);
 });
+
+test('revisão da Etapa 4: o índice não entra em laço com o observador e não esconde o campo em foco', () => {
+  const core = require('node:fs').readFileSync(require('node:path').join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/JS_Core.html'), 'utf8');
+  assert.match(core, /if \(!shell\.classList\.contains\("sgo-doc-movel"\)\) shell\.classList\.add\("sgo-doc-movel"\)/);
+  assert.match(core, /document\.documentElement\.style\.scrollPaddingTop = pad/);
+});
