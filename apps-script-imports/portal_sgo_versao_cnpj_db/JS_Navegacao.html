@@ -736,10 +736,19 @@
         var doc = v.iframe.contentDocument; if (!doc || !doc.documentElement || !doc.body) return;
         var st = doc.getElementById("sgo-visor-ajuste");
         if (!st) { st = doc.createElement("style"); st.id = "sgo-visor-ajuste"; (doc.head || doc.documentElement).appendChild(st); }
-        st.textContent = "";
+        // Etapa 4 (01/11/2026): tabela mais larga que a folha passa a rolar de lado dentro da própria caixa, só na tela do
+        // celular (@media screen). A folha não alarga e o ajuste à largura não encolhe o resto. Na impressão nada muda: a marca
+        // é só um atributo e a regra não vale em @media print. O HTML do documento não é alterado.
+        var REGRA_LARGA = "@media screen { table[data-sgo-visor-largo] { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } }";
+        st.textContent = REGRA_LARGA;
+        Array.prototype.forEach.call(doc.querySelectorAll("table"), function (t) {
+          if (t.hasAttribute("data-sgo-visor-largo") || (t.closest && t.closest("svg"))) return;
+          var pai = t.parentElement; if (!pai || !pai.clientWidth) return;
+          if (t.offsetWidth > pai.clientWidth + 2) t.setAttribute("data-sgo-visor-largo", "1");
+        });
         var larg = doc.documentElement.scrollWidth, cabe = v.iframe.clientWidth;
         v.podeAjustar = cabe > 0 && larg > cabe + 4;
-        if (v.podeAjustar && !v.tamanhoReal) st.textContent = "@media screen { html { zoom: " + (Math.floor(cabe / larg * 1000) / 1000) + "; } }";
+        if (v.podeAjustar && !v.tamanhoReal) st.textContent = REGRA_LARGA + "\n@media screen { html { zoom: " + (Math.floor(cabe / larg * 1000) / 1000) + "; } }";
         v.btAjuste.hidden = !v.podeAjustar;
         v.btAjuste.querySelector("span").textContent = v.tamanhoReal ? "Ajustar à tela" : "Tamanho real";
       } catch (e) {}

@@ -426,3 +426,11 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 
 
 Nestes documentos o número continua sendo o digitado no relatório (com o mesmo número, a emissão é a revisão seguinte, como antes); na correção pela lista o campo do número fica travado e o motivo entra no quadro "Histórico de revisões" do documento. Quem é responsável técnico pode emitir direto, marcando a conferência; quem não é envia para aprovação. As leituras e os arquivos do registrador voltam sem reimportar; as fotos do documento de origem voltam quando ele foi emitido direto, e precisam ser anexadas de novo quando ele passou pelo envio para aprovação (o quadro do alto avisa). Gere o rascunho de novo antes de emitir ou enviar. Relatórios de ensaio e planilhas emitidos antes de 21/10/2026 não guardaram os dados do formulário e não entram na lista: para corrigir um deles, preencha o formulário com o mesmo número (sai a revisão seguinte, agora com o histórico de revisões no documento).
+
+## No celular (01/11/2026)
+
+- **Índice das seções.** Acima do formulário fica uma linha com o nome de cada seção (1. Cliente, 2. Equipamento...). Toque num nome para ir direto à seção, ou em "Próxima" para ir à seguinte. Ao rolar, o índice fica preso logo abaixo da barra do topo e mostra, escura, a seção em que você está. Os campos e a ordem são os mesmos do computador.
+- **Caixas de marcar.** Toque em qualquer ponto da linha (na caixa ou no texto): a linha inteira marca e desmarca. As caixas soltas dos sensores (S1, S2...) ficam com 40 px.
+- **Voltar com o formulário preenchido.** Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta "Sair deste formulário?" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.

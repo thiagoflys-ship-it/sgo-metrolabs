@@ -106,3 +106,11 @@ Atualizar a página (F5) ou abrir o SGO+ de novo no mesmo aparelho volta para a 
 - Janelas de Atividades (ficha, Pedir nova data, Nova atividade, Editar) perguntam antes de descartar também quando você mudou só uma lista de escolha, uma data ou uma caixa de marcar.
 - Frota, "Abasteci" e "Outra despesa": com a foto da nota tirada, o voltar pergunta "Voltar sem lançar?" antes de descartar.
 - No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+
+## Etapa 4 (01/11/2026): documentos técnicos no celular
+
+- Vale para Autoclaves, Lavadoras, Cadeia de frio, Estufa/banho-maria/secadora, Esterilização a baixa temperatura, Declaração de execução, Relatório de qualificação (QI/QO/QD), Certificado e Relatório de calibração, Padrões, PGT e POP, Registros operacionais, Planejamento CME, Cronograma de execução e Laudo NR-13.
+- Formulário longo (mais de duas telas e meia, com 4 seções ou mais) ganha, no celular, o índice das seções acima do formulário. Ao rolar, ele fica preso logo abaixo da barra do topo; "Próxima" leva à seção seguinte.
+- O Voltar pergunta "Sair deste formulário?" quando você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo e o documento ainda não foi gerado.
+- Caixas de marcar: a linha inteira é tocável; as caixas soltas dos sensores ficam com 40 px.
+- Pré-visualização no celular: dentro do SGO+ (visualizador da Etapa 1). Tabela mais larga que a tela rola de lado na própria caixa; a impressão e o PDF continuam em A4, sem mudança. No computador, o documento abre em aba nova, como antes.

@@ -297,3 +297,9 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 
 
 **Certificados emitidos antes de 21/10/2026** também podem ser corrigidos pela busca por CNPJ: o formulário é remontado a partir do registro do próprio certificado (cliente, equipamento, técnico, datas, local, blocos com as leituras e os padrões, fotos e solicitação de próxima calibração). Só a temperatura ambiente e a umidade relativa precisam ser digitadas de novo, porque o certificado antigo guardou apenas a frase das condições ambientais; o quadro do alto avisa. Padrão que venceu ou foi inativado depois da emissão é recusado na correção: troque o padrão do bloco. O certificado corrigido sai da busca (fica como substituído) e o relatório interpretativo é gerado de novo a partir da revisão nova.
+
+## No celular (01/11/2026)
+
+- **Emissão pelo celular.** No celular, o certificado é emitido pelo assistente passo a passo (veja "Emitir pelo celular"). O voltar pergunta antes de descartar o que você digitou.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.

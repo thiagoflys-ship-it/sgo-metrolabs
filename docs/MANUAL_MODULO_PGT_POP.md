@@ -141,3 +141,9 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 **Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
 
 Neste módulo o número do documento é o código (PGTS para o PGT, o código do POP no catálogo) no hospital: gerar de novo o mesmo código para o mesmo hospital já sai como a revisão seguinte, com a tabela "Controle de revisões" no próprio documento. Pelo "Abrir para corrigir", o motivo digitado vira a descrição dessa revisão (antes saía "Revisão de conteúdo"), e só o documento aberto é gerado de novo (os outros marcados na tela não são gerados nessa rodada). "Usar como base" para outro hospital sai como a primeira revisão do código nesse hospital; POP avulso (sem código) não tem revisão e sai como documento novo.
+
+## No celular (01/11/2026)
+
+- **Voltar com o formulário preenchido.** Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta "Sair deste formulário?" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.

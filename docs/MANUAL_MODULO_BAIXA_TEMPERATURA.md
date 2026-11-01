@@ -125,3 +125,9 @@ Administrador, Diretoria, Gestor, Técnico e Metrologia preenchem, calculam, env
 - **Identificação do equipamento completa.** Escolhido o equipamento, tudo o que está preenchido em Cadastros › Equipamentos sai no documento: tipo, fabricante (marca), modelo, nº de série, TAG, patrimônio, setor, capacidade, câmaras ou portas e ano de fabricação. Campo preenchido no cadastro fica travado na tela, com a explicação de onde corrigir (Cadastros › Equipamentos › Editar); campo vazio no cadastro pode ser completado no quadro "Cliente e equipamento", em "Gravar no cadastro" (só grava o que está vazio). Linha vazia não aparece no documento.
 - **Vários padrões de referência.** Na aba "3. Instrumentos", toque em "Carregar padrões" e marque na lista, com busca, todos os registradores e transdutores usados (sem limite); desmarcar tira da tabela. O relatório traz cada um com fabricante, modelo, nº de série, certificado, laboratório, calibração, validade, incerteza e a situação no período do ensaio.
 - Documentos e rascunhos antigos, com um padrão só, continuam abrindo e gerando igual.
+
+## No celular (01/11/2026)
+
+- **Voltar com o formulário preenchido.** Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta "Sair deste formulário?" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.

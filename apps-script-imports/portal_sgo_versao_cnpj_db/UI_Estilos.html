@@ -3463,6 +3463,41 @@
   }
   @media (prefers-reduced-motion: reduce) { html body .comw-botao, html body .asw-botao { transition: none; } }
 
+  /* Etapa 4 (01/11/2026): documentos técnicos no celular (JS_Core › SGO_docAtualizar_ põe .sgo-doc-movel na tela só no celular).
+     Índice das seções preso abaixo da barra do topo, com "Próxima"; caixas de marcar de 28 px com a linha inteira tocável
+     (antes 22 px, e só a caixa ou o texto respondiam); caixas soltas dos sensores com 40 px; abas Relatório oficial / Gerar
+     relatório com a altura do botão (antes 140 px cada, porque "flex: 1 1 140px" em coluna vira altura). Nada aqui vale no
+     computador nem no documento A4. */
+  .sgo-doc-indice-lugar { margin: 0 0 12px; }
+  .sgo-doc-indice { display: flex; gap: 8px; align-items: center; padding: 6px 0; background: var(--bc-bg, #F6F5F1); border-bottom: 1px solid var(--bc-line, #E2E0DA); }
+  .sgo-doc-indice.fixo {
+    position: fixed; z-index: 380; left: 0; right: 0;
+    padding: 6px calc(12px + env(safe-area-inset-right, 0px)) 6px calc(12px + env(safe-area-inset-left, 0px));
+    box-shadow: 0 4px 10px rgba(28, 31, 29, .08);
+  }
+  .sgo-doc-indice-lista { display: flex; gap: 6px; overflow-x: auto; flex: 1 1 auto; min-width: 0; scrollbar-width: none; overflow-wrap: normal; }
+  .sgo-doc-indice-lista::-webkit-scrollbar { display: none; }
+  .app-shell.modo-mobile #conteudo .sgo-doc-indice-bt {
+    flex: 0 0 auto; min-height: 40px !important; min-width: 0; padding: 0 12px; margin: 0; border-radius: 999px; border: 1px solid var(--bc-line-2, #CFCBC2);
+    background: #FFFFFF; color: var(--bc-text, #1C1F1D); font: inherit; font-size: 13px !important; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: none;
+  }
+  .app-shell.modo-mobile #conteudo .sgo-doc-indice-bt.ativo { background: var(--bc-text, #1C1F1D); border-color: var(--bc-text, #1C1F1D); color: #FFFFFF; }
+  .app-shell.modo-mobile #conteudo .sgo-doc-indice-prox {
+    flex: 0 0 auto; min-height: 40px !important; padding: 0 12px; margin: 0; border-radius: 8px; border: 1px solid var(--bc-action, #1f6f3f);
+    background: var(--bc-action-bg, #eaf4ee); color: var(--bc-action, #1f6f3f); font: inherit; font-size: 13px !important; font-weight: 800; white-space: nowrap; cursor: pointer;
+  }
+  .sgo-doc-indice-prox[hidden] { display: none !important; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(input[type="checkbox"], input[type="radio"]) { width: 28px; height: 28px; min-width: 28px !important; min-height: 28px !important; max-width: none !important; max-height: none !important; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(.check-item, .check-item-qualif-linha):has(> input:first-child + label:last-child) { position: relative; min-height: 44px; align-items: center; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(.check-item, .check-item-qualif-linha):has(> input:first-child + label:last-child) > input { position: relative; z-index: 1; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(.check-item, .check-item-qualif-linha):has(> input:first-child + label:last-child) > label::after { content: ""; position: absolute; inset: 0; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(input.sensor-ativo, td > input[type="checkbox"]:only-child) { width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important; max-width: none !important; max-height: none !important; }
+  #app.modo-mobile #conteudo .sgo-doc-movel :is(label:has(> input[type="checkbox"]), label:has(> input[type="radio"])) { min-height: 44px !important; }
+  #app.modo-mobile #conteudo .sgo-doc-movel .motores-tabs .motores-tab-btn { flex: 0 0 auto; }
+  /* campo e botão lado a lado (ex.: CNPJ da Autoclave e da Lavadora): o campo ficava com 18 px; a linha quebra e o campo tem largura */
+  #app.modo-mobile #conteudo .sgo-doc-movel div[style*="display:flex"]:has(> input.form-control) { flex-wrap: wrap; }
+  #app.modo-mobile #conteudo .sgo-doc-movel div[style*="display:flex"] > input.form-control { min-width: min(100%, 180px); }
+
   /* celular deitado: pouca altura, barra do topo mais baixa */
   @media (max-height: 500px) {
     .app-shell.modo-mobile .mobile-topbar { padding-top: calc(2px + env(safe-area-inset-top, 0px)); padding-bottom: 2px; min-height: 48px; }

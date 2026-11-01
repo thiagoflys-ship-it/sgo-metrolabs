@@ -111,7 +111,30 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaComplementos_ === 'function') {
     try { SGO_ajudaComplementos_(todas, ordem); } catch (e) { try { console.error('Complementos da ajuda com erro: ' + (e && e.message ? e.message : e)); } catch (x) {} }
   }
+  // Etapa 4 do programa de melhoria (01/11/2026): documentos técnicos no celular (JS_Core › SGO_docAtualizar_).
+  try { SGO_ajudaDocCelular_(todas); } catch (e) { try { console.error('Ajuda dos documentos no celular com erro: ' + (e && e.message ? e.message : e)); } catch (x) {} }
   return { telas: todas, ordem: ordem };
+}
+
+/** Telas de documento técnico em que a casca põe o índice das seções no celular (formulários longos) e as que só ganham o resto.
+ * O Certificado de calibração fica de fora: no celular ele é emitido pelo assistente passo a passo, com ajuda própria. */
+var SGO_AJUDA_DOC_COM_INDICE = ['autoclave', 'lavadora', 'cadeia_frio', 'estufa_banhomaria', 'declaracao_exec', 'declaracao_qiqo', 'relatorio_calibracao'];
+var SGO_AJUDA_DOC_TODAS = SGO_AJUDA_DOC_COM_INDICE.concat(['baixa_temperatura', 'padroes', 'pgt_pop', 'reg_op', 'planejamento_cme', 'cronograma_execucao', 'nr13']);
+function SGO_ajudaDocCelular_(todas) {
+  if (!todas || typeof todas !== 'object') return;
+  SGO_AJUDA_DOC_TODAS.forEach(function (k) {
+    var t = todas[k];
+    if (!t || typeof t !== 'object') return;
+    var probs = Array.isArray(t.problemas) ? t.problemas.slice() : [];
+    if (probs.some(function (p) { return p && /pergunta se quero sair do formulário/i.test(String(p.situacao || '')); })) return;
+    if (SGO_AJUDA_DOC_COM_INDICE.indexOf(k) >= 0) {
+      probs.push({ situacao: 'No celular, o formulário é muito longo e eu me perco', oQueFazer: 'Logo acima do formulário fica o índice das seções (1. Cliente, 2. Equipamento...). Toque no nome de uma seção para ir direto a ela, ou em "Próxima" para ir à seguinte. Ao rolar, o índice fica preso logo abaixo da barra do topo e mostra, escura, a seção em que você está. Os campos e a ordem são os mesmos do computador.' });
+      probs.push({ situacao: 'No celular, a caixa de marcar é pequena', oQueFazer: 'Toque em qualquer ponto da linha, na caixa ou no texto ao lado: a linha inteira marca e desmarca. As caixas soltas dos sensores (S1, S2...) são maiores no celular.' });
+    }
+    probs.push({ situacao: 'Toquei em Voltar e o sistema pergunta se quero sair do formulário', oQueFazer: 'Você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo, e isso ainda não virou documento. Toque em Cancelar para continuar preenchendo. Toque em OK só se quiser sair: o que foi preenchido se perde.' });
+    probs.push({ situacao: 'No celular, a tabela do documento não cabe na tela', oQueFazer: 'A pré-visualização abre dentro do SGO+, com Voltar no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece o botão "Tamanho real", ele mostra a folha na largura do papel. A impressão e o PDF saem em A4, sem nenhuma mudança.' });
+    t.problemas = probs;
+  });
 }
 
 function SGO_Ajuda_txt_(v) {

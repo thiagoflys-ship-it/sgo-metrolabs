@@ -130,3 +130,9 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 **Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
 
 Ao abrir, hospital, tipo de documento, respostas, assinaturas, observações e fotos voltam e a tela vai para a etapa 3. Se o tipo de documento foi excluído depois, os campos são remontados com as respostas guardadas. Na correção de um registro que abre pendência, a pendência passa para a revisão nova (a linha antiga fica como substituída); na correção de um fechamento, o fechamento continua valendo. Uma cópia ("Usar como base") nunca fecha pendência.
+
+## No celular (01/11/2026)
+
+- **Voltar com o formulário preenchido.** Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta "Sair deste formulário?" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.

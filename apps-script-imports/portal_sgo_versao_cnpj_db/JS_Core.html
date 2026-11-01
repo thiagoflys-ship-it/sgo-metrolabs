@@ -5187,6 +5187,165 @@
     }, { capture: true, passive: true });
   })();
 
+  // Etapa 4 do programa de melhoria (01/11/2026): documentos técnicos no celular (qualificações, declarações, certificado,
+  // relatório de calibração, NR-13, PGT/POP, registros, Planejamento CME, cronograma). A casca só acrescenta, por fora do
+  // formulário: (1) índice das seções, que fica preso logo abaixo da barra do topo, com "Próxima"; (2) a classe sgo-doc-movel,
+  // que aumenta as caixas de marcar e deixa a linha inteira tocável (UI_Estilos); (3) data-sgo-sujo quando a pessoa escolhe numa
+  // lista, marca uma caixa ou importa um arquivo (o texto digitado a casca já conta). Nunca mexe na ordem nem no conteúdo dos
+  // campos, nunca redesenha o formulário, e o documento A4 não muda (é gerado no servidor, fora daqui).
+  const SGO_DOC_MODULOS = ["autoclave", "lavadora", "cadeia_frio", "estufa_banhomaria", "baixa_temperatura", "declaracao_exec", "declaracao_qiqo",
+    "relatorio_calibracao", "certificado_calibracao", "padroes", "pgt_pop", "reg_op", "planejamento_cme", "cronograma_execucao", "nr13"];
+  const SGO_DOC_NAO_CONTA = /busca|buscar|pesquis|filtro|search|procurar/i;
+  function SGO_docEhModulo_(mod) { return SGO_DOC_MODULOS.indexOf(String(mod || "")) >= 0; }
+  /** Rótulo curto do botão do índice: o título da seção sem a explicação entre parênteses ou depois de dois-pontos/travessão. */
+  function SGO_docRotulo_(t) {
+    let r = String(t || "").replace(/\s+/g, " ").trim().replace(/\s*(\(|:|—|–| - ).*$/, "").trim();
+    if (r.length > 34) r = r.slice(0, 32).replace(/\s+\S*$/, "") + "…";
+    return r;
+  }
+  /** tops = altura de cada seção na tela; limite = linha logo abaixo do índice. Última seção que já passou dela (-1 = antes da primeira). */
+  function SGO_docSecaoAtual_(tops, limite) { let i = -1; (tops || []).forEach(function (t, j) { if (t <= limite) i = j; }); return i; }
+  /** Mostrar o índice? Só com 4 seções ou mais e página com mais de duas telas e meia. */
+  function SGO_docPrecisaIndice_(nSecoes, alturaPagina, alturaTela) { return nSecoes >= 4 && alturaPagina > alturaTela * 2.5; }
+  function SGO_docVisivel_(el) { return !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden"; }
+  /** Seções visíveis do formulário: blocos .panel/.qvinc/.bt-painel com título próprio (o manual embutido fica de fora). */
+  function SGO_docSecoes_(shell) {
+    const cands = Array.prototype.filter.call(shell.querySelectorAll(".panel, .qvinc, .bt-painel"), function (el) {
+      return !el.closest(".manual-wrap, .sgo-doc-indice-lugar, .atv-overlay") && SGO_docVisivel_(el);
+    });
+    const fora = cands.filter(function (el) { return !cands.some(function (o) { return o !== el && o.contains(el); }); });
+    const lista = [];
+    fora.forEach(function (el) {
+      const h = el.querySelector(":scope > h2, :scope > h3, :scope > summary, :scope > .panel-header h2");
+      if (!h || !SGO_docVisivel_(h)) return;
+      // só o texto que aparece (o título da Estufa tem as duas versões do nome, uma escondida)
+      const r = SGO_docRotulo_(typeof h.innerText === "string" ? h.innerText : h.textContent);
+      if (r) lista.push({ el: el, r: r });
+    });
+    // Autoclave e Lavadora: as seções numeradas (1. Cliente e ensaio, 2. Equipamento...) são divisórias dentro de um bloco só
+    Array.prototype.forEach.call(shell.querySelectorAll(".section-divider"), function (d) {
+      if (d.closest(".manual-wrap, details:not([open])") || !SGO_docVisivel_(d)) return;
+      const t = String(typeof d.innerText === "string" ? d.innerText : d.textContent).trim();
+      if (/^\d+\.\s/.test(t)) lista.push({ el: d, r: SGO_docRotulo_(t) });
+    });
+    lista.sort(function (a, b) { return a.el === b.el ? 0 : (a.el.compareDocumentPosition(b.el) & 4 ? -1 : 1); });
+    return lista;
+  }
+  function SGO_docAlturaBarra_() {
+    const b = document.querySelector(".mobile-topbar");
+    return b && SGO_docVisivel_(b) ? Math.round(b.getBoundingClientRect().bottom) : 0;
+  }
+  function SGO_docAtualizar_() {
+    const shell = document.querySelector("#conteudo .module-shell");
+    const ok = !!shell && ehMobileModo_() && SGO_docEhModulo_(window.SGO_MODULO_ATUAL);
+    document.querySelectorAll("#conteudo .sgo-doc-movel").forEach(function (s) { if (!ok || s !== shell) s.classList.remove("sgo-doc-movel"); });
+    if (!ok) { document.querySelectorAll("#conteudo .sgo-doc-indice-lugar").forEach(function (x) { x.remove(); }); return; }
+    shell.classList.add("sgo-doc-movel");
+    const secs = SGO_docSecoes_(shell);
+    let lugar = shell.querySelector(".sgo-doc-indice-lugar");
+    if (!SGO_docPrecisaIndice_(secs.length, document.documentElement.scrollHeight, window.innerHeight || 800)) { if (lugar) lugar.remove(); return; }
+    const assin = secs.map(function (x) { return x.r; }).join("|");
+    // o índice fica antes do bloco do módulo que tem a primeira seção (filho direto da tela), fora do formulário
+    let bloco = secs[0].el;
+    while (bloco.parentElement && bloco.parentElement !== shell) bloco = bloco.parentElement;
+    if (!lugar || lugar.nextElementSibling !== bloco) {
+      if (lugar) lugar.remove();
+      lugar = document.createElement("div");
+      lugar.className = "sgo-doc-indice-lugar";
+      lugar.innerHTML = '<nav class="sgo-doc-indice" aria-label="Seções deste formulário"><div class="sgo-doc-indice-lista"></div>' +
+        '<button type="button" class="sgo-doc-indice-prox" data-prox hidden></button></nav>';
+      shell.insertBefore(lugar, bloco);
+      lugar.addEventListener("click", function (e) {
+        const b = e.target.closest("[data-ir]");
+        const it = lugar.__itens || [];
+        if (b) { const x = it[Number(b.getAttribute("data-ir"))]; if (x) SGO_docIr_(lugar, x.el); return; }
+        if (e.target.closest("[data-prox]")) { const p = it[SGO_docAtual_(lugar) + 1]; if (p) SGO_docIr_(lugar, p.el); }
+      });
+    }
+    lugar.__itens = secs;
+    if (lugar.__assin !== assin) {
+      lugar.__assin = assin;
+      lugar.querySelector(".sgo-doc-indice-lista").innerHTML = secs.map(function (x, j) {
+        return '<button type="button" class="sgo-doc-indice-bt" data-ir="' + j + '">' + escapeHtml_(x.r) + "</button>";
+      }).join("");
+    }
+    SGO_docMarcar_(lugar);
+  }
+  function SGO_docAtual_(lugar) {
+    const nav = lugar.querySelector(".sgo-doc-indice");
+    const lim = SGO_docAlturaBarra_() + (nav ? nav.offsetHeight : 0) + 16;
+    return SGO_docSecaoAtual_((lugar.__itens || []).map(function (x) { return x.el.getBoundingClientRect().top; }), lim);
+  }
+  function SGO_docIr_(lugar, el) {
+    const nav = lugar.querySelector(".sgo-doc-indice");
+    const y = el.getBoundingClientRect().top + (window.scrollY || 0) - SGO_docAlturaBarra_() - (nav ? nav.offsetHeight : 0) - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+  /** Prende o índice logo abaixo da barra do topo depois que ele sai da tela (o lugar dele guarda a altura) e marca a seção atual. */
+  function SGO_docMarcar_(lugar) {
+    if (!lugar || !lugar.isConnected) return;
+    const nav = lugar.querySelector(".sgo-doc-indice"), lista = lugar.querySelector(".sgo-doc-indice-lista"), bProx = lugar.querySelector("[data-prox]");
+    const barra = SGO_docAlturaBarra_();
+    const prender = lugar.getBoundingClientRect().top < barra;
+    if (prender !== nav.classList.contains("fixo")) {
+      lugar.style.minHeight = prender ? nav.offsetHeight + "px" : "";
+      nav.classList.toggle("fixo", prender);
+    }
+    if (prender) nav.style.top = barra + "px"; else nav.style.top = "";
+    const itens = lugar.__itens || [], i = SGO_docAtual_(lugar);
+    if (i < 0 && lista.scrollLeft) lista.scrollLeft = 0; // antes da primeira seção, a lista volta ao começo
+    lista.querySelectorAll(".sgo-doc-indice-bt").forEach(function (b, j) {
+      const ativo = j === i;
+      if (b.classList.contains("ativo") !== ativo) b.classList.toggle("ativo", ativo);
+      if (ativo) {
+        if (b.getAttribute("aria-current") !== "true") b.setAttribute("aria-current", "true");
+        if (b.offsetLeft < lista.scrollLeft || b.offsetLeft + b.offsetWidth > lista.scrollLeft + lista.clientWidth) lista.scrollLeft = Math.max(0, b.offsetLeft - 24);
+      } else if (b.hasAttribute("aria-current")) b.removeAttribute("aria-current");
+    });
+    const p = itens[i + 1];
+    const txt = p ? "Próxima: " + p.r : "";
+    if (bProx.hidden !== !p) bProx.hidden = !p;
+    if (p && bProx.getAttribute("data-rot") !== txt) {
+      bProx.setAttribute("data-rot", txt);
+      bProx.setAttribute("aria-label", "Ir para a próxima seção: " + p.r);
+      bProx.innerHTML = 'Próxima <span aria-hidden="true">&darr;</span>';
+      bProx.title = txt;
+    }
+  }
+  (function () {
+    let tDoc = null, tRol = null;
+    const agendarDoc = function () { clearTimeout(tDoc); tDoc = setTimeout(function () { try { SGO_docAtualizar_(); } catch (e) { console.error("Índice do formulário:", e); } }, 350); };
+    document.addEventListener("DOMContentLoaded", function () {
+      const c = document.getElementById("conteudo");
+      if (!c || typeof MutationObserver !== "function") return;
+      new MutationObserver(function (lista) {
+        // as mudanças do próprio índice (seção marcada, barra presa) não contam
+        for (let i = 0; i < lista.length; i++) { const t = lista[i].target; if (!(t.closest && t.closest(".sgo-doc-indice-lugar"))) { agendarDoc(); return; } }
+      }).observe(c, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden", "open"] });
+    });
+    window.addEventListener("resize", agendarDoc);
+    window.addEventListener("scroll", function () {
+      if (tRol) return;
+      tRol = setTimeout(function () { tRol = null; try { SGO_docMarcar_(document.querySelector("#conteudo .sgo-doc-indice-lugar")); } catch (e) {} }, 60);
+    }, { passive: true });
+    // escolha em lista, caixa de marcar ou arquivo importado (inclusive para leitura pela IA) conta como formulário alterado:
+    // o voltar e a troca de tela perguntam antes de descartar (JS_Navegacao › marcadoSujo)
+    document.addEventListener("change", function (e) {
+      try {
+        const t = e.target;
+        if (!e.isTrusted || !t || !SGO_docEhModulo_(window.SGO_MODULO_ATUAL)) return;
+        if (!/^(SELECT|INPUT)$/.test(t.tagName)) return;
+        if (t.tagName === "INPUT" && !/^(checkbox|radio|file)$/i.test(t.type || "")) return;
+        if (t.type === "file" && !(t.files && t.files.length)) return;
+        if (SGO_DOC_NAO_CONTA.test([t.id, t.name, t.className, t.getAttribute("aria-label"), t.getAttribute("placeholder")].join(" "))) return;
+        const shell = t.closest("#conteudo .module-shell");
+        if (!shell || t.closest(".manual-wrap, .sgo-doc-indice-lugar")) return;
+        shell.setAttribute("data-sgo-sujo", "1");
+        shell.setAttribute("data-sgo-sujo-texto", "Sair deste formulário? O que foi preenchido aqui (campos, escolhas e arquivos importados) ainda não virou documento e se perde.");
+      } catch (x) {}
+    }, true);
+  })();
+
   function voltarMobile_() {
     // Limpa o "gancho de retorno" do wizard do Certificado de Calibração —
     // sem isto, cancelar um cadastro de cliente/equipamento aberto A PARTIR
@@ -7568,7 +7727,8 @@
     const podeCadastros = !(USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE");
     return '<div class="movel-apresentacao">' +
       '<h2 class="movel-apresentacao-titulo">' + escapeHtml_(titulo) + '</h2>' +
-      '<p>Esta tela ' + escapeHtml_(info.oQue) + '. Ela funciona no celular, mas é longa: com o computador o trabalho fica mais rápido.</p>' +
+      '<p>Esta tela ' + escapeHtml_(info.oQue) + '. Ela funciona no celular, mas é longa: com o computador o trabalho fica mais rápido.' +
+        (tipoMotor === "planejamento_cme" ? "" : ' Na tela completa, o índice no alto leva direto a cada seção e o botão "Próxima" passa para a seguinte.') + '</p>' +
       '<p class="movel-apresentacao-sub">No celular você também pode:</p>' +
       '<ul class="movel-apresentacao-lista">' +
         '<li>abrir os relatórios já emitidos em <strong>Arquivo de documentos</strong>;</li>' +

@@ -226,3 +226,9 @@ Depois de gerado, o documento pode ser corrigido sem refazer nada: o sistema gua
 **Documentos gerados antes de 21/10/2026:** não guardaram os dados do formulário e não entram na lista para corrigir. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo.
 
 Ao abrir, cliente, equipamento, escopo contratado, receitas e observações voltam ao formulário e a tela vai para a etapa 4: toque em "Calcular planejamento" (o quantitativo é refeito com os dados corrigidos), confira o resultado, toque em "Gerar Documento" e em "Salvar na pasta do cliente". O número (PLC) e a revisão ficam no documento salvo; o motivo é conferido ao tocar em "Gerar Documento".
+
+## No celular (01/11/2026)
+
+- **Voltar com o formulário preenchido.** Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta "Sair deste formulário?" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.
+- **Pré-visualização do documento.** No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece "Tamanho real", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.
+- **O documento A4 não muda.** Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF.
