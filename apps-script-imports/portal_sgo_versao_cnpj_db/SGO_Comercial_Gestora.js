@@ -22,8 +22,8 @@
  * situação; não inventa preço, prazo, cliente ou número. Cada sugestão fica em COM_IA_SUGESTOES com a decisão
  * do vendedor ("Feito", "Usei", "Não se aplica"), para a gestão ver quais regras funcionam.
  *
- * 21/10/2026 — ESPECIALISTA NO QUADRO E NO GANTT: "Pedir à especialista" (ComG_especialista_: próximo passo, estratégia
- * para a etapa com o que falta para avançar, objeções prováveis com a resposta, perguntas, mensagem e e-mail) e a
+ * 21/10/2026 — ESPECIALISTA NO QUADRO E NO GANTT: "Pedir à especialista" (desde 01/11/2026 em SGO_Comercial_Especialista.js:
+ * diagnóstico, planos A/B/C com gatilhos, memória dos planos tentados e verificador anti-genérico) e a
  * "Leitura do funil" (ComG_leituraFunil_: gargalos, oportunidades em risco e tempo por etapa contra a meta). Mesmas duas
  * camadas e o mesmo verificador; nada é enviado e nenhuma etapa muda; a decisão do vendedor fica em COM_IA_SUGESTOES.
  *
@@ -36,7 +36,10 @@ var COM_G_PRIORIDADE = { 1: 'Antes de tudo', 2: 'Hoje', 3: 'Hoje, se der tempo',
 var COM_G_PROIBIDOS = [
   /\b(eu\s+)?(enviei|enviarei|vou enviar|já enviei|mandei)\b/i,
   /\b(garanto|garantimos|prometo|prometemos)\b/i,
-  /\b(ofere[cç]a|conceda|d[eê]|dar)\s+(um\s+|mais\s+)?desconto/i,
+  // 01/11/2026 (especialista): "dê" só com acento; sem o acento, "pedido de desconto" era recusado como promessa. A promessa com
+  // percentual ("ofereça 10% de desconto", "dê 10% de desconto") continua recusada pela linha de baixo.
+  /\b(ofere[cç]a|conceda|dê|dar)\s+(um\s+|mais\s+)?desconto/i,
+  /\b(ofere[cç]a|ofere[cç]o|conceda|concedo|dê|dou|dar|oferecer|conceder)\s+(at[eé]\s+)?\d+([.,]\d+)?\s*%\s*(de\s+)?desconto/i,
   /\bdesconto\s+(extra|adicional|especial)\b/i,
   /\b(aprovei|aprovado pela gestora|eu aprovo)\b/i
 ];
@@ -521,71 +524,12 @@ function ComG_objecoesProvaveis_(c) {
 }
 
 /**
- * "Pedir à especialista": a gestora comercial olha uma oportunidade com a metodologia e devolve o próximo passo, a
- * estratégia para a etapa (o critério de saída e o que falta para avançar), as objeções prováveis com a resposta, as
- * perguntas e o texto da mensagem e do e-mail. Regras primeiro; a IA reescreve e o verificador confere campo a campo.
- * NÃO envia nada, NÃO muda etapa nem grava na oportunidade: só registra a sugestão (COM_IA_SUGESTOES, tipo ESPECIALISTA).
- * d: { id, comIA }
+ * "Pedir à especialista" (01/11/2026, pedido do dono: "especialista mesmo, que defina estratégias, não genérica, e que se uma
+ * não der ela bola outra"): diagnóstico com fatos, planos A, B e C com gatilhos de troca, próxima ação com um toque e memória
+ * dos planos tentados. Tudo em SGO_Comercial_Especialista.js (ComEsp_consultar_). NÃO envia nada, NÃO muda etapa e NÃO cria
+ * atividade sozinha: só registra a sugestão (COM_IA_SUGESTOES, tipo ESPECIALISTA). d: { id, comIA }
  */
-function ComG_especialista_(eu, d) {
-  Com_exigir_(eu, 'VENDEDOR', 'pedir à especialista');
-  d = d || {};
-  var o = ComOpo_obter_(eu, d.id, 'pedir à especialista');
-  var c = ComG_contextoOportunidade_(eu, o), met = c.met, t = c.t;
-  var f = Com_funil_(t.funil, met), idx = -1;
-  (f ? f.etapas : []).forEach(function (e, i) { if (e.codigo === t.etapa) idx = i; });
-  var proxima = f && idx >= 0 && idx < f.etapas.length - 1 ? f.etapas[idx + 1] : null;
-  var crit = proxima ? ComOpo_criteriosMudanca_(o, proxima.codigo, { met: met }) : { confirmar: [], faltas: [] };
-  var passos = crit.faltas.map(function (x) { return x.texto + ' ' + x.oQueFazer; })
-    .concat(crit.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return 'Cumprir e confirmar: ' + x.texto + '.'; })).slice(0, 6);
-  var estrategia = { titulo: 'Estratégia para a etapa ' + t.etapaNome, texto: 'Critério para sair: ' + (Com_s_(c.etapa.criterio) || 'não definido na metodologia') + '.' + (proxima ? ' A próxima etapa é ' + proxima.nome + ' (' + proxima.probabilidade + '%).' : ' É a última etapa do funil: garanta o aceite, os documentos e a passagem aos setores.'),
-    passos: passos.length ? passos : ['Nada pendente pelas regras para avançar: confirme a lista da etapa ao mover o cartão.'] };
-  var regras = Com_copia_(c.regras);
-  regras.estrategia = estrategia;
-  regras.objecoes = ComG_objecoesProvaveis_(c);
-  var fatos = Com_copia_(c.fatos);
-  fatos.paraAvancar = { proximaEtapa: proxima ? proxima.nome : '', faltas: crit.faltas.map(function (x) { return x.texto; }), listaPendente: crit.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return x.texto; }) };
-  fatos.objecoesDaMetodologia = met.objecoes;
-  var saida = Com_copia_(regras), origem = 'REGRAS', aviso = '';
-  if (d.comIA !== false) {
-    var prompt = ComG_regrasPrompt_() + '\nVocê é também especialista em gestão comercial B2B de serviços técnicos para hospitais.\n\nMETODOLOGIA:\n' + ComG_metodologiaTexto_(met) + '\n\nFATOS:\n' + JSON.stringify(fatos) +
-      '\n\nSUGESTÃO DAS REGRAS:\n' + JSON.stringify(regras) +
-      '\n\nTAREFA: para esta oportunidade, como especialista: (1) o próximo passo concreto e por quê; (2) a estratégia para cumprir o critério de saída da etapa atual, em até 5 passos curtos, usando o que falta para avançar; ' +
-      '(3) até 3 objeções prováveis do cliente neste momento, cada uma com a resposta que vende valor técnico (não desconto); (4) até 3 perguntas para o cliente; (5) a mensagem curta de WhatsApp e o e-mail, em nome do vendedor, para ele revisar e enviar. ' +
-      'Formato: {"proximoPasso":"...","porque":"...","estrategia":{"texto":"...","passos":["..."]},"objecoes":[{"objecao":"...","resposta":"..."}],"perguntas":["..."],"mensagem":"...","emailAssunto":"...","emailCorpo":"..."}';
-    var r = ComG_chamarIA_(prompt, 16384);
-    aviso = r.aviso;
-    if (r.json) {
-      var recusas = [], aceitos = 0;
-      ['proximoPasso', 'porque', 'mensagem', 'emailAssunto', 'emailCorpo'].forEach(function (k) {
-        if (!Com_s_(r.json[k])) return;
-        var v = ComG_verificar_(r.json[k], fatos);
-        if (v.ok) { saida[k] = Com_texto_(r.json[k], 3000); aceitos++; } else recusas.push(k + ' (' + v.problemas.slice(0, 2).join('; ') + ')');
-      });
-      var e = r.json.estrategia;
-      if (e && typeof e === 'object') {
-        var vt = ComG_verificar_(e.texto, fatos);
-        var ps = (Array.isArray(e.passos) ? e.passos : []).map(Com_s_).filter(function (x) { return x && ComG_verificar_(x, fatos).ok; }).slice(0, 5);
-        if (vt.ok && ps.length) { saida.estrategia = { titulo: estrategia.titulo, texto: Com_texto_(e.texto, 1500), passos: ps.map(function (x) { return Com_texto_(x, 500); }) }; aceitos++; }
-        else recusas.push('estratégia' + (vt.ok ? '' : ' (' + vt.problemas.slice(0, 2).join('; ') + ')'));
-      }
-      if (Array.isArray(r.json.objecoes)) {
-        var ob = r.json.objecoes.filter(function (x) { return x && Com_s_(x.objecao) && Com_s_(x.resposta) && ComG_verificar_(x.objecao, fatos).ok && ComG_verificar_(x.resposta, fatos).ok; }).slice(0, 3)
-          .map(function (x) { return { objecao: Com_texto_(x.objecao, 300), resposta: Com_texto_(x.resposta, 800) }; });
-        if (ob.length) { saida.objecoes = ob; aceitos++; } else if (r.json.objecoes.length) recusas.push('objeções');
-      }
-      if (Array.isArray(r.json.perguntas)) {
-        var pg = r.json.perguntas.map(Com_s_).filter(function (q) { return q && ComG_verificar_(q, fatos).ok; }).slice(0, 3);
-        if (pg.length) saida.perguntas = pg;
-      }
-      if (aceitos) origem = 'IA';
-      if (recusas.length) aviso = 'O verificador recusou parte do texto da IA (' + recusas.join(', ') + '); nessa parte vale o texto das regras.';
-    }
-  }
-  var id = ComG_registrar_('ESPECIALISTA', origem, eu.id, { tipo: 'oportunidade', id: t.id }, origem, t.codigo, saida, aviso);
-  return { sugestaoId: id, sugestao: saida, origem: origem, aviso: aviso, oportunidade: { id: t.id, codigo: t.codigo, cliente: t.cliente, titulo: t.titulo, etapaNome: t.etapaNome },
-    lembrete: 'A especialista só sugere: nada é enviado ao cliente e a etapa não muda sozinha. Revise o texto, envie você mesmo pelo seu e-mail ou WhatsApp e registre o contato na oportunidade.' };
-}
+function ComG_especialista_(eu, d) { return ComEsp_consultar_(eu, d); }
 
 // ------------------------------------------------------------
 // LEITURA DO FUNIL (topo do quadro)

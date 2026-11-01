@@ -18,7 +18,9 @@ const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO
   'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_QualifIA_Verificador.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js', 'SGO_EnviarDoc.js',
   'SGO_Comercial_Config.js', 'SGO_Comercial_Contatos.js', 'SGO_Comercial_Oportunidades.js', 'SGO_Comercial_Propostas.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Painel.js', 'SGO_Comercial_Quadro.js', 'SGO_Comercial_Precificacao.js', 'SGO_Comercial_TabelaC1.js', 'SGO_Comercial_Ficha.js',
   // 01/11/2026 (Comercial C3): banco de preços (com a carga da C1) e o Orçamentista
-  'SGO_Comercial_BancoC1.js', 'SGO_Comercial_BancoPrecos.js', 'SGO_Comercial_Orcamentista.js'];
+  'SGO_Comercial_BancoC1.js', 'SGO_Comercial_BancoPrecos.js', 'SGO_Comercial_Orcamentista.js',
+  // 01/11/2026: a especialista (planos A/B/C, memória de planos, verificador anti-genérico)
+  'SGO_Comercial_Especialista.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};

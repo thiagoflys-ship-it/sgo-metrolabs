@@ -94,9 +94,39 @@ Tocar na linha abre os detalhes, com os botões "Abrir a oportunidade" e "Pedir 
 
 ## A especialista em comercial
 
-No cartão do quadro, na linha do Gantt e na ficha da oportunidade, "Pedir à especialista" chama a gestora comercial com o contexto da oportunidade e devolve: o próximo passo e o porquê; a estratégia para a etapa (o critério de saída e o que falta para avançar, pelos mesmos critérios do quadro); as objeções prováveis neste momento, com a resposta que vende valor técnico; perguntas para o cliente; e os textos de WhatsApp e e-mail para o vendedor revisar e enviar.
+No cartão do quadro, na linha do Gantt e na ficha da oportunidade, "Pedir à especialista" monta a estratégia daquela oportunidade com os fatos do sistema: os contatos registrados (data, canal e se o cliente respondeu), as tentativas sem resposta, as objeções que aparecem no histórico, as propostas e revisões (valor, desconto, validade, situação), os dias na etapa e o critério para sair dela, o histórico do cliente (compras e perdas, quem ganhou e por quanto), os preços do Banco de preços e a faixa de mercado do serviço, a urgência e o prazo, e se a compra é licitação ou contrato.
 
-Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verificador confere campo a campo. A especialista não envia nada ao cliente, não muda etapa e não grava nada na oportunidade. Cada pedido fica registrado com a decisão do vendedor ("Usei" ou "Não serviu", com o motivo), que a gestão vê em Metodologia comercial.
+Ela devolve:
+
+- **Diagnóstico**, em 2 ou 3 frases com números e datas do sistema.
+- **Plano A**: o objetivo, de 3 a 5 passos com data e canal, a mensagem pronta (WhatsApp ou e-mail), a resposta para as objeções prováveis e quando o plano deu certo.
+- **Planos B e C**: cada um com o **gatilho de troca** (por exemplo, "sem resposta até 03/11/2026, 2 dias úteis depois do último passo do plano A" ou "o cliente mantém o pedido de desconto acima do seu limite") e uma abordagem diferente de verdade: subir para o decisor, falar com quem usa o equipamento, visita técnica, risco de conformidade, prazo e agenda, pacote anual, recalcular o escopo, mudar a condição de pagamento, comparar valor técnico, caminho de compras ou da compra pública, envolver a gestão ou encerrar com educação.
+- **Próxima ação**, com data, hora e canal.
+
+Botões da janela:
+
+- **Copiar mensagem**, em cada plano. Revise e envie você mesmo.
+- **Criar a próxima ação**: abre o formulário já preenchido. "Criar em Minhas atividades" cria a atividade, que passa a ser a próxima ação da oportunidade. A próxima ação anterior é cancelada, com o motivo no histórico. Se nenhum plano estava em uso, o plano de onde saiu a ação passa a ser o plano em uso. Sem esse toque, nenhuma atividade é criada.
+- **Usar este plano** marca o plano em uso. Com outro plano em uso, o botão vira "Troquei para o plano B" (ou C) e pede o motivo: o plano anterior fica como "não andou". Quando a abordagem é a mesma, a troca vale como atualização e não conta como falha.
+- **Deu certo** e **Não deu certo**, no plano em uso. "Não deu certo" pede o motivo.
+
+A janela mostra o plano em uso, com o gatilho, e o histórico dos planos tentados. O voltar do celular fecha a janela.
+
+**Memória dos planos.** Cada plano posto em uso fica registrado na oportunidade, com a situação e o motivo. A consulta seguinte recebe os planos que não deram certo e o motivo de cada um, e não pode repetir a abordagem deles. Também conta como falho o plano em uso cujo gatilho venceu sem que o cliente tenha respondido desde que o plano começou. Nesse caso, a ficha da oportunidade mostra a faixa "troque de plano" com o botão "Pedir à especialista o próximo plano".
+
+**Conferência.** A resposta da IA é recusada e refeita (até 2 vezes, com os problemas apontados) quando:
+
+- tem frase vazia, como "manter contato", "agregar valor", "entender a necessidade" sem dizer qual, ou "follow-up";
+- tem passo sem data, com data no passado ou fora de dia útil;
+- os planos B ou C são iguais ao A ou variação dele;
+- repete um plano que falhou;
+- cita número que não está no sistema, promessa de desconto ou de prazo, norma ou fabricante.
+
+Depois de 2 refações, valem os planos pelas regras. Eles também trazem A, B e C concretos, montados com os mesmos fatos e com a metodologia, e passam pela mesma conferência. Sem a chave da IA, ou quando a pessoa atinge o limite de análises com IA da hora (o mesmo limite do Orçamentista, 20 por pessoa e hora), a janela diz o porquê e mostra os planos pelas regras.
+
+**Quem vê o quê.** Para o vendedor, a especialista usa só as oportunidades dele com aquele cliente e os preços da empresa sem o nome de outros clientes. Nunca usa custo, margem, preço de compra nem a regra de cálculo do preço. A gestão comercial recebe tudo.
+
+A especialista não envia nada ao cliente, não muda a etapa e não cria atividade sozinha. Cada consulta fica registrada para a gestão, em Metodologia comercial.
 
 ## Propostas
 

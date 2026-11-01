@@ -584,12 +584,14 @@ function ComOpo_detalhe_(eu, id) {
   }
   var emails = ComOpo_emailsDoCliente_(eu, o);
   var sugestoes = typeof ComG_sugestoesDaOportunidade_ === 'function' ? ComG_sugestoesDaOportunidade_(eu, o, t, contatos) : [];
+  // 01/11/2026: plano da especialista em uso e, quando o gatilho venceu sem resposta do cliente, a sugestão de troca
+  var planoEsp = t.situacao === 'ABERTA' && typeof ComEsp_resumoFicha_ === 'function' ? ComEsp_resumoFicha_(o) : null;
   return {
     oportunidade: t, contatosRegistrados: contatos, historico: hist.slice(0, 80), propostas: propostas, equipamentos: equipamentos,
     atividade: atv ? { id: Com_s_(atv.ID), titulo: Com_s_(atv.TITULO), situacao: Com_s_(atv.SITUACAO), previsao: Com_br_(atv.PREVISAO_ATUAL || atv.PRAZO) } : null,
     etapaChecklist: etapa.checklist || [], etapaCriterio: Com_s_(etapa.criterio), contatosCliente: ComCt_listar_(t.clienteId, t.unidadeId),
     etapaConfirmados: (((Com_json_(o.CRITERIOS_JSON, {}) || {})[t.etapa] || {}).itens || []),
-    emails: emails, sugestoes: sugestoes, podeEditar: t.situacao === 'ABERTA' && (eu.gestao || t.responsavelId === eu.id)
+    emails: emails, sugestoes: sugestoes, planoEspecialista: planoEsp, podeEditar: t.situacao === 'ABERTA' && (eu.gestao || t.responsavelId === eu.id)
   };
 }
 

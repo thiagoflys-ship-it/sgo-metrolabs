@@ -179,26 +179,24 @@ test('tempo por etapa: média pelo histórico contra o máximo de dias da metodo
 });
 
 // ------------------------------------------------------------------ especialista e leitura do funil (IA)
-test('especialista: IA conferida; número inventado e promessa recusados (vale a regra); nada muda de etapa; decisão do vendedor registrada', () => {
+test('especialista: resposta da IA com promessa, número inventado e afirmação de envio é recusada (refeita e depois vale a regra); nada muda de etapa; decisão do vendedor registrada', () => {
+  // 01/11/2026: a especialista devolve diagnóstico e planos A/B/C (tests/comercial-especialista.test.cjs cobre o resto)
   const amb = ambiente({ ia: (prompt) => {
-    if (/estrategia":\{"texto/.test(prompt)) return JSON.stringify({ proximoPasso: 'Ligue hoje e ofereça desconto de 30% para fechar.', porque: 'A dor técnica ainda não está registrada e o decisor não foi mapeado.',
-      estrategia: { texto: 'Cumpra o critério da etapa: valide dor, decisor e potencial antes de propor.', passos: ['Pergunte quem aprova a compra.', 'Confirme o prazo de 45 dias para a auditoria.'] },
-      objecoes: [{ objecao: 'Já tenho fornecedor', resposta: 'Pergunte onde o atendimento atual falha e ofereça ser a reserva para urgência.' }, { objecao: 'Está caro', resposta: 'Custa R$ 12.345,00 a menos que a parada.' }],
-      perguntas: ['Quem participa da decisão técnica?'], mensagem: 'Olá, Ana. Podemos conversar hoje sobre a qualificação da autoclave?', emailAssunto: 'Metrolabs: qualificação da autoclave', emailCorpo: 'Prezada Ana, enviei a proposta ontem.' });
+    if (/ESPECIALISTA em vendas B2B/.test(prompt)) return JSON.stringify({ diagnostico: 'A oportunidade vale R$ 12.345,00. Ligue hoje.', planos: [
+      { letra: 'A', abordagem: 'CANAL', titulo: 'Ligar e ofereça desconto de 30% para fechar', objetivo: 'Fechar logo.', passos: [{ quando: '19/10/2026', canal: 'LIGACAO', acao: 'Ligar para a Ana e dizer que enviei a proposta ontem' }], mensagem: { texto: 'Prezada Ana, enviei a proposta ontem.' }, objecoes: [], sucesso: 'Fechou.' }] });
     return '{}';
   } });
   const { oportunidade } = oportunidadeDeTeste(amb);
   const antes = JSON.stringify(opo(amb, oportunidade.id));
   const hist = amb.tabelas.COM_HISTORICO.length;
   const r = ok(amb.api('s_vera', 'especialista', { id: oportunidade.id }));
-  assert.equal(r.origem, 'IA');
-  assert.doesNotMatch(r.sugestao.proximoPasso, /30%/, 'promessa de desconto recusada');
-  assert.match(r.sugestao.porque, /decisor não foi mapeado/);
-  assert.equal(r.sugestao.estrategia.passos.length, 1, 'passo com número inventado (45 dias) sai');
-  assert.deepEqual(r.sugestao.objecoes.map((o) => o.objecao), ['Já tenho fornecedor'], 'objeção com valor inventado sai');
-  assert.doesNotMatch(r.sugestao.emailCorpo, /enviei/, 'afirmação de envio recusada');
-  assert.match(r.aviso, /verificador recusou/);
-  assert.match(r.lembrete, /nada é enviado ao cliente e a etapa não muda/);
+  assert.equal(r.origem, 'REGRAS');
+  assert.match(r.aviso, /recusada 3 vezes pelo verificador/);
+  const txt = JSON.stringify(r.sugestao);
+  assert.doesNotMatch(txt, /30%|12.345|enviei/, 'promessa, número inventado e afirmação de envio não passam');
+  assert.equal(r.sugestao.planos.length, 3);
+  assert.ok(r.sugestao.planos.slice(1).every((p) => p.gatilho && p.gatilho.ate));
+  assert.match(r.lembrete, /nada é enviado ao cliente, a etapa não muda/);
   assert.equal(JSON.stringify(opo(amb, oportunidade.id)), antes, 'oportunidade intacta');
   assert.equal(amb.tabelas.COM_HISTORICO.length, hist, 'nada no histórico da oportunidade');
   assert.equal(amb.emails.length + amb.whats.length, 0, 'nada enviado');
@@ -207,13 +205,14 @@ test('especialista: IA conferida; número inventado e promessa recusados (vale a
   ok(amb.api('s_vera', 'decidirSugestao', { sugestaoId: r.sugestaoId, decisao: 'USEI' }));
   assert.equal(amb.tabelas.COM_IA_SUGESTOES.find((x) => x.ID === r.sugestaoId).DECISAO, 'USEI');
   assert.equal(amb.api('s_vito', 'especialista', { id: oportunidade.id }).ok, false, 'outro vendedor não pede sobre a oportunidade alheia');
-  // sem IA: regras completas (estratégia com o que falta para avançar e objeções da metodologia)
+  // sem IA: regras completas (qualificação: falta o decisor; objeções da metodologia no plano A)
   const amb2 = ambiente();
   const o2 = oportunidadeDeTeste(amb2).oportunidade;
   const r2 = ok(amb2.api('s_vera', 'especialista', { id: o2.id }));
   assert.equal(r2.origem, 'REGRAS');
-  assert.ok(r2.sugestao.estrategia.passos.some((p) => /decisor/.test(p)));
-  assert.ok(r2.sugestao.objecoes.length >= 1);
+  assert.equal(r2.sugestao.cenario, 'QUALIFICACAO');
+  assert.ok(r2.sugestao.planos.some((p) => p.abordagem === 'DECISOR'));
+  assert.ok(r2.sugestao.planos[0].objecoes.length >= 1);
 });
 
 test('leitura do funil: números do sistema; IA com número fora dos dados é recusada e vale o texto das regras; não muda etapa', () => {

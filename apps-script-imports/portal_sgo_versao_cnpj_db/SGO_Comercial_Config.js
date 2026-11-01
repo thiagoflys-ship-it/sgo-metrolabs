@@ -19,6 +19,7 @@
  *   SGO_Comercial_Propostas.js      catálogo, proposta (rascunho, desconto, revisão, envio, resposta), passagem aos setores
  *   SGO_Comercial_Documento.js      proposta A4 e relatório mensal A4
  *   SGO_Comercial_Gestora.js        a gestora comercial: lista do dia, próximo passo, revisão da proposta, análise, perguntas
+ *   SGO_Comercial_Especialista.js   a especialista: diagnóstico, planos A/B/C com gatilhos, memória de planos, verificador anti-genérico (01/11/2026)
  *   SGO_Comercial_Painel.js         indicadores, pendências (central e Caixa de decisões), rotina e a chamada única da tela
  *   SGO_Comercial_Quadro.js         quadro Kanban do funil, Gantt comercial e tempo por etapa (21/10/2026)
  *   SGO_Comercial_Precificacao.js   política de precificação, custos da viagem (checklist), margem e alçada, reajuste do catálogo (29/10/2026)
@@ -40,7 +41,7 @@
  *
  * Abas (criadas sob demanda; nada é apagado, só marcado):
  *   COM_CONFIG, COM_OPORTUNIDADES, COM_CONTATOS_REGISTRO, COM_HISTORICO, COM_PRODUTOS, COM_PROPOSTAS,
- *   COM_IA_SUGESTOES, COM_DIA, COM_AVISOS e CAD_CONTATOS (cadastro, fora do Comercial).
+ *   COM_IA_SUGESTOES, COM_DIA, COM_AVISOS, COM_PLANOS_ESPECIALISTA e CAD_CONTATOS (cadastro, fora do Comercial).
  * Nenhuma função devolve Date cru.
  ****************************************************/
 
@@ -52,7 +53,10 @@ var COM_ABAS = {
   REAJUSTES: 'COM_REAJUSTES',
   // 01/11/2026 (Comercial C3): banco de preços (um preço observado por linha: propostas, CRM, licitações, cotações de
   // fornecedor, concorrentes e internet). SGO_Comercial_BancoPrecos.js.
-  PRECOS: 'COM_PRECOS'
+  PRECOS: 'COM_PRECOS',
+  // 01/11/2026 (especialista): memória dos planos da especialista por oportunidade (plano em uso, tentados, motivo da falha).
+  // SGO_Comercial_Especialista.js. Uma linha por plano posto em uso; nada é apagado, a situação muda (com merge).
+  PLANOS: 'COM_PLANOS_ESPECIALISTA'
 };
 var COM_COLUNAS = {
   COM_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -107,6 +111,8 @@ var COM_COLUNAS = {
     'CONFIANCA', 'REF_TIPO', 'REF_ID', 'REF_ROTULO', 'SITUACAO', 'SITUACAO_MOTIVO', 'REGISTRADO_POR_ID', 'REGISTRADO_POR_NOME', 'CARGA', 'ATUALIZADO_EM', 'CRIADO_EM'],
   COM_REAJUSTES: ['ID', 'LOTE', 'PRODUTO_ID', 'CODIGO', 'NOME', 'PRECO_ANTERIOR', 'PRECO_NOVO', 'PRECO_DESDE_ANTERIOR', 'PERCENTUAL', 'ARREDONDAR_PARA', 'INDICE', 'VIGENCIA', 'MOTIVO', 'SITUACAO',
     'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'DESFEITO_POR_NOME', 'DESFEITO_MOTIVO', 'CRIADO_EM'],
+  COM_PLANOS_ESPECIALISTA: ['ID', 'OPORTUNIDADE_ID', 'OPORTUNIDADE_CODIGO', 'RESPONSAVEL_ID', 'SUGESTAO_ID', 'ORIGEM', 'LETRA', 'ABORDAGEM', 'TITULO', 'RESUMO', 'GATILHO', 'GATILHO_ATE',
+    'SITUACAO', 'MOTIVO', 'PLANO_JSON', 'CONTATOS_INICIO', 'INICIADO_EM', 'INICIADO_POR_ID', 'INICIADO_POR_NOME', 'DECIDIDO_EM', 'DECIDIDO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
   COM_DIA: ['ID', 'DIA', 'USUARIO_ID', 'USUARIO_NOME', 'PAPEL', 'ITENS_JSON', 'RESUMO', 'ORIGEM', 'AVISO', 'GERADO_EM', 'CRIADO_EM'],
   COM_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_TIPO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM'],
@@ -118,7 +124,8 @@ var COM_COLUNAS_TEXTO = {
   COM_PROPOSTAS: ['EXCLUIDA_EM', 'VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
   COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
-  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_PRECOS: ['CHAVE', 'DATA', 'UF', 'ATUALIZADO_EM', 'ITEM_CODIGO'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
+  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_PRECOS: ['CHAVE', 'DATA', 'UF', 'ATUALIZADO_EM', 'ITEM_CODIGO'],
+  COM_PLANOS_ESPECIALISTA: ['GATILHO_ATE', 'INICIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
 var COM_SITUACOES_OPO = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
@@ -474,14 +481,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  // V7 (01/11/2026, C3): banco de preços (COM_PRECOS) e quem ganhou na perda. V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V7')) return; } catch (e) {}
+  // V8 (01/11/2026, especialista): aba COM_PLANOS_ESPECIALISTA. V7 (01/11/2026, C3): banco de preços (COM_PRECOS) e quem ganhou na perda. V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V8')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V7', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V8', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {

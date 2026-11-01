@@ -270,6 +270,25 @@
     .cm-modo { font-size: 13px; padding: 4px 6px; white-space: normal; line-height: 1.15; }
     .cm-modo[data-cm-modo="kanban"] { flex-grow: 1.6; }
   }
+  /* 01/11/2026: a especialista (planos A, B e C com gatilhos, plano em uso, próxima ação, histórico) */
+  .cm-esp .atv-modal-corpo { overflow-wrap: anywhere; }
+  .cm-esp-plano { border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: var(--card); }
+  .cm-esp-plano.em-uso { border-left-color: var(--success); box-shadow: inset 0 0 0 1px var(--success); }
+  .cm-esp-cab { display: flex; align-items: flex-start; gap: 10px; }
+  .cm-esp-letra { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--info, #1f5fa8); color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .cm-esp-plano.em-uso .cm-esp-letra { background: var(--success); }
+  .cm-esp-tit { flex: 1 1 auto; min-width: 0; }
+  .cm-esp-gatilho { margin: 8px 0; padding: 6px 10px; border-radius: 6px; background: var(--warning-bg); border: 1px solid var(--warning); font-size: 12.5px; line-height: 1.5; }
+  .cm-esp-passos { margin: 4px 0 6px 18px; padding: 0; font-size: 12.5px; line-height: 1.5; }
+  .cm-esp-passos li { margin: 3px 0; }
+  .cm-esp-passos .q { display: inline-block; min-width: 150px; margin-right: 6px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cm-esp-lista { margin: 0 0 6px 18px; font-size: 12.5px; }
+  .cm-esp-prox { border: 1px dashed var(--border); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+  @media (max-width: 900px) {
+    .cm-esp-passos .q { display: block; min-width: 0; margin: 0; }
+    .cm-esp .cm-acoes button { flex: 1 1 100%; }
+    .cm-esp .cm-grade3 { grid-template-columns: 1fr 1fr; }
+  }
 </style>
 
 <script>
@@ -792,6 +811,12 @@
     if (!aberta && ini.gestao) h += '<div class="cm-acoes">' + b("reabrir", "Reabrir", "btn-primary") + (o.reaberturaPedida ? b("recusarReabrir", "Recusar o pedido de reabertura") : '') + '</div>' + (o.reaberturaPedida ? '<div class="cm-faixa aviso">Pedido de reabertura: ' + Com_esc_(o.reaberturaMotivo) + '</div>' : '');
     h += '<div id="cmOpoAcao"></div>';
     if (r.sugestoes && r.sugestoes.length) h += '<p class="cm-sec">A gestora sugere</p>' + r.sugestoes.map(function (s) { return '<div class="cm-faixa"><b>' + Com_esc_(s.titulo) + '.</b> ' + Com_esc_(s.texto) + '</div>'; }).join("");
+    // 01/11/2026: plano da especialista em uso; gatilho vencido sem resposta do cliente = sugestão de troca com o botão da especialista
+    if (aberta && r.planoEspecialista && r.planoEspecialista.emUso) {
+      var pe = r.planoEspecialista, pu = pe.emUso;
+      h += '<div class="cm-faixa' + (pe.gatilhoVencido ? ' aviso' : '') + '"><b>Plano ' + Com_esc_(pu.letra) + ' da especialista em uso:</b> ' + Com_esc_(pu.titulo) + ' (desde ' + Com_esc_(pu.desde) + ')' +
+        (pu.gatilho ? '<br>Trocar se: ' + Com_esc_(pu.gatilho) : '') + (pe.gatilhoVencido ? '<br><b>' + Com_esc_(pe.sugestaoTroca) + '</b>' + (r.podeEditar ? '<div class="cm-acoes">' + b("especialista", "Pedir à especialista o próximo plano", "btn-primary") + '</div>' : '') : '') + '</div>';
+    }
     if (r.etapaChecklist.length) h += '<p class="cm-sec">Para sair desta etapa (' + Com_esc_(r.etapaCriterio) + ')</p><ul style="margin:0 0 8px 18px;font-size:12.5px">' + r.etapaChecklist.map(function (c) { return '<li>' + Com_esc_(c) + '</li>'; }).join("") + '</ul>';
     h += '<p class="cm-sec">Qualificação</p><dl class="cm-det">' + ini.qualificacao.map(function (q) { return '<dt>' + Com_esc_(q.nome) + '</dt><dd>' + (o.qualificacao[q.codigo] ? Com_esc_(o.qualificacao[q.codigo]) : '<span class="cm-selo laranja">Falta</span> ' + Com_esc_(q.pergunta)) + '</dd>'; }).join("") + '</dl>';
     h += '<p class="cm-sec">Propostas</p>' + (r.propostas.length ? r.propostas.map(function (p) { return '<div class="cm-mini" data-prop="' + Com_esc_(p.id) + '"><b>' + Com_esc_(p.numero) + ' rev.' + Com_esc_(p.revisao) + '</b>' + Com_seloProp_(p) + (p.total ? ' ' + Com_esc_(p.total) : '') + '</div>'; }).join("") : '<p class="cm-meta">Nenhuma proposta ainda.</p>');
@@ -2815,31 +2840,127 @@
   }
 
   // ---------------- especialista ----------------
+  // 01/11/2026 (pedido do dono: "especialista mesmo, que defina estratégias, não genérica, e que se uma não der ela bola outra"):
+  // diagnóstico, planos A, B e C com o gatilho de troca, a próxima ação com um toque (Minhas atividades) e a memória dos planos
+  // tentados (usar, trocar, deu certo, não deu certo). A janela é da pilha do voltar (data-sgo-janela). Depois de cada ação só os
+  // blocos da memória e da próxima ação se redesenham; um formulário aberto (motivo, próxima ação) nunca é apagado sozinho.
   function Comercial_especialista_(id) {
-    var ov = Com_modal_("Pedir à especialista", '<div class="cm-vazio">A especialista está analisando a oportunidade com a metodologia…</div>', '', 680);
+    var ov = Com_modal_("Pedir à especialista", '<div class="cm-vazio">A especialista está montando a estratégia desta oportunidade com os fatos do sistema…</div>', '', 780);
+    ov.setAttribute("data-sgo-janela", "1");
+    ov.classList.add("cm-esp");
     var corpo = ov.querySelector(".atv-modal-corpo");
-    Com_chamar_("especialista", { id: id }, function (x) {
-      var s = x.sugestao, o = x.oportunidade;
-      ov.querySelector("h3").textContent = "Especialista · " + o.codigo + " · " + o.cliente;
-      var lista = function (l) { return '<ul style="margin:0 0 6px 18px;font-size:12.5px">' + l.map(function (q) { return '<li>' + Com_esc_(q) + '</li>'; }).join("") + '</ul>'; };
-      corpo.innerHTML = '<p class="cm-meta">' + Com_esc_(o.titulo) + ' · etapa ' + Com_esc_(o.etapaNome) + ' · ' + (x.origem === "IA" ? "texto da especialista, conferido contra os dados do sistema" : "pelas regras da metodologia") + '</p>' +
-        (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '') +
-        '<p class="cm-sec">Próximo passo</p><p class="cm-txt"><b>' + Com_esc_(s.proximoPasso) + '</b></p><p class="cm-txt">' + Com_esc_(s.porque) + '</p>' +
-        '<p class="cm-sec">' + Com_esc_(s.estrategia.titulo) + '</p><p class="cm-txt">' + Com_esc_(s.estrategia.texto) + '</p>' + lista(s.estrategia.passos || []) +
-        '<p class="cm-sec">Objeções prováveis</p>' + (s.objecoes || []).map(function (b) { return '<p class="cm-txt"><b>"' + Com_esc_(b.objecao) + '"</b><br>' + Com_esc_(b.resposta) + '</p>'; }).join("") +
-        (s.perguntas && s.perguntas.length ? '<p class="cm-sec">Perguntas para o cliente</p>' + lista(s.perguntas) : '') +
-        '<p class="cm-sec">Mensagem (WhatsApp)</p><div class="cm-msg">' + Com_esc_(s.mensagem) + '</div><p class="cm-sec">E-mail: ' + Com_esc_(s.emailAssunto) + '</p><div class="cm-msg">' + Com_esc_(s.emailCorpo) + '</div>' +
-        '<p class="cm-meta">' + Com_esc_(x.lembrete) + '</p><div id="cmEspMsg"></div>';
-      var rod = document.createElement("div"); rod.className = "atv-modal-rod";
-      rod.innerHTML = '<button type="button" class="btn-secondary" data-e="msg">Copiar mensagem</button><button type="button" class="btn-secondary" data-e="email">Copiar e-mail</button><button type="button" class="btn-secondary" data-e="usei">Usei</button><button type="button" class="btn-secondary" data-e="desc">Não serviu</button><button type="button" class="btn-primary" data-e="abrir">Abrir a oportunidade</button>';
-      ov.querySelector(".atv-modal").appendChild(rod);
-      rod.querySelector('[data-e="msg"]').onclick = function () { Com_copiar_(s.mensagem, this); };
-      rod.querySelector('[data-e="email"]').onclick = function () { Com_copiar_(s.emailAssunto + "\n\n" + s.emailCorpo, this); };
-      var dec = function (b, decisao, motivo) { Com_chamar_("decidirSugestao", { sugestaoId: x.sugestaoId, decisao: decisao, motivo: motivo || "" }, function () { b.textContent = "Anotado"; b.disabled = true; }, function (m) { Com_msg_("cmEspMsg", m); }); };
-      rod.querySelector('[data-e="usei"]').onclick = function () { dec(this, "USEI"); };
-      rod.querySelector('[data-e="desc"]').onclick = function () { var b = this, m = window.prompt("Por que a sugestão não serviu? (a gestão usa isso para ajustar a metodologia)"); if (m && m.trim().length >= 5) dec(b, "DESCARTEI", m.trim()); else if (m !== null) alert("Escreva pelo menos 5 letras."); };
-      rod.querySelector('[data-e="abrir"]').onclick = function () { ov.remove(); Comercial_abrirOportunidade_(o.id); };
-    }, function (m) { corpo.innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; }, { carregando: "A especialista está analisando…" });
+    Com_chamar_("especialista", { id: id }, function (x) { Comercial_espDesenhar_(ov, x); },
+      function (m) { corpo.innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div><p class="cm-meta">Nada foi gravado. Feche e tente de novo; se continuar, abra a oportunidade e use "Próximo passo da gestora".</p>'; },
+      { carregando: "A especialista está analisando…" });
+    return ov;
+  }
+
+  function Comercial_espDesenhar_(ov, x) {
+    var s = x.sugestao, o = x.oportunidade, corpo = ov.querySelector(".atv-modal-corpo"), st = { mem: x.memoria || {} };
+    ov.querySelector("h3").textContent = "Especialista · " + o.codigo + " · " + o.cliente;
+    var lista = function (l) { return '<ul class="cm-esp-lista">' + l.map(function (q) { return '<li>' + Com_esc_(q) + '</li>'; }).join("") + '</ul>'; };
+    var pa = s.proximaAcao || {};
+    corpo.innerHTML = '<p class="cm-meta">' + Com_esc_(o.titulo) + ' · etapa ' + Com_esc_(o.etapaNome) + ' · cenário: ' + Com_esc_(s.cenarioNome || "") + ' · ' +
+        (x.origem === "IA" ? "planos da especialista, conferidos contra os dados do sistema" : "planos pelas regras da metodologia, com os fatos do sistema") + '</p>' +
+      (x.aviso ? '<div class="cm-faixa aviso">' + Com_esc_(x.aviso) + '</div>' : '') +
+      '<div class="cm-esp-diag"><p class="cm-sec">Diagnóstico</p><p class="cm-txt">' + Com_esc_(s.diagnostico) + '</p></div>' +
+      '<div id="cmEspMem"></div>' +
+      '<div class="cm-esp-prox"><p class="cm-sec">Próxima ação</p><p class="cm-txt"><b>' + Com_esc_(pa.acao) + '</b><br>' + Com_esc_(pa.data) + ' às ' + Com_esc_(pa.hora) + ' · ' + Com_esc_(pa.canalNome) + ' · plano ' + Com_esc_(pa.plano || "A") + '</p>' +
+        '<div class="cm-acoes"><button type="button" class="btn-primary" data-esp="criar"><i class="fas fa-calendar-plus" aria-hidden="true"></i>&nbsp;Criar a próxima ação</button></div><div id="cmEspProxForm"></div></div>' +
+      '<div class="cm-esp-planos">' + (s.planos || []).map(function (p) { return Comercial_espPlanoHtml_(p); }).join("") + '</div>' +
+      (s.perguntas && s.perguntas.length ? '<p class="cm-sec">Perguntas para o cliente</p>' + lista(s.perguntas) : '') +
+      '<div id="cmEspHist"></div><p class="cm-meta">' + Com_esc_(x.lembrete) + '</p><div id="cmEspMsg"></div>';
+    var rod = document.createElement("div"); rod.className = "atv-modal-rod";
+    rod.innerHTML = '<button type="button" class="btn-secondary" data-e="fechar">Fechar</button><button type="button" class="btn-primary" data-e="abrir">Abrir a oportunidade</button>';
+    ov.querySelector(".atv-modal").appendChild(rod);
+    rod.querySelector('[data-e="fechar"]').onclick = function () { ov.remove(); };
+    rod.querySelector('[data-e="abrir"]').onclick = function () { ov.remove(); Comercial_abrirOportunidade_(o.id); };
+    var msg = function (m, tipo) { var el = Com_$_("cmEspMsg"); if (el) { el.innerHTML = '<div class="cm-faixa ' + (tipo || "ok") + '">' + Com_esc_(m) + '</div>'; if (el.scrollIntoView) el.scrollIntoView({ block: "nearest" }); } };
+    var porLetra = {}; (s.planos || []).forEach(function (p) { porLetra[p.letra] = p; });
+    // memória: plano em uso (com o gatilho e o aviso de troca) e o histórico; redesenha só estes blocos
+    var desenharMem = function () {
+      var m = st.mem || {}, u = m.emUso, el = Com_$_("cmEspMem"), h = '';
+      if (u) {
+        h = '<div class="cm-faixa ' + (m.gatilhoVencido ? 'aviso' : 'ok') + ' cm-esp-uso"><b>Plano em uso: ' + Com_esc_(u.letra) + ' · ' + Com_esc_(u.titulo) + '</b> <span class="cm-selo verde">Em uso</span>' +
+          '<div class="cm-meta">' + Com_esc_(u.abordagemNome) + ' · desde ' + Com_esc_(u.desde) + (u.gatilho ? ' · trocar se: ' + Com_esc_(u.gatilho) : '') + '</div>' +
+          (m.gatilhoVencido ? '<p class="cm-txt"><b>' + Com_esc_(m.sugestaoTroca) + '</b> Os planos abaixo já não repetem este.</p>' : '') +
+          '<div class="cm-acoes"><button type="button" class="btn-secondary" data-esp="certo">Deu certo</button><button type="button" class="btn-secondary" data-esp="naodeu">Não deu certo</button></div><div id="cmEspDecForm"></div></div>';
+      }
+      if (el) el.innerHTML = h;
+      var hist = Com_$_("cmEspHist"), l = m.historico || [];
+      if (hist) hist.innerHTML = l.length ? '<p class="cm-sec">Planos tentados nesta oportunidade</p><div class="cm-hist">' + l.map(function (p) {
+        var cor = p.situacao === "DEU_CERTO" ? "verde" : p.situacao === "EM_USO" ? "azul" : p.situacao === "ATUALIZADO" ? "cinza" : "laranja";
+        return '<div><b>Plano ' + Com_esc_(p.letra) + ' · ' + Com_esc_(p.titulo) + '</b> <span class="cm-selo ' + cor + '">' + Com_esc_(p.situacaoNome) + '</span>' + (p.motivo ? '<br>' + Com_esc_(p.motivo) : '') +
+          '<div class="q">' + Com_esc_(p.abordagemNome) + ' · desde ' + Com_esc_(p.desde) + (p.decididoEm ? ' · decidido em ' + Com_esc_(p.decididoEm) : '') + ' · ' + Com_esc_(p.por) + '</div></div>';
+      }).join("") + '</div>' : '';
+      // selo e botões dos cartões conforme o plano em uso
+      ov.querySelectorAll(".cm-esp-plano").forEach(function (c) {
+        var L = c.getAttribute("data-letra"), esteEmUso = !!(u && u.sugestaoId === x.sugestaoId && u.letra === L);
+        c.classList.toggle("em-uso", esteEmUso);
+        var b = c.querySelector('[data-esp="usar"]');
+        if (b) { b.style.display = esteEmUso ? "none" : ""; b.textContent = u ? "Troquei para o plano " + L : "Usar este plano"; }
+        var selo = c.querySelector(".cm-esp-selo"); if (selo) selo.style.display = esteEmUso ? "" : "none";
+      });
+      var bc = el && el.querySelector('[data-esp="certo"]'), bn = el && el.querySelector('[data-esp="naodeu"]');
+      if (bc) bc.onclick = function () { Com_chamar_("especialistaDecidirPlano", { planoId: u.id, resultado: "DEU_CERTO" }, function (r) { st.mem = r.memoria; desenharMem(); msg(r.message); }, function (e) { msg(e, "erro"); }); };
+      if (bn) bn.onclick = function () {
+        var f = Com_$_("cmEspDecForm"); if (!f || f.innerHTML) return;
+        f.innerHTML = Com_campo_("Por que não deu certo?", '<textarea id="cmEspDecMot" maxlength="500" placeholder="Ex.: a coordenadora respondeu que a decisão ficou para o ano que vem"></textarea>', "A próxima consulta recebe este motivo e não repete o plano.") +
+          '<div class="cm-acoes"><button type="button" class="btn-secondary" data-f="c">Cancelar</button><button type="button" class="btn-primary" data-f="ok">Registrar</button></div>';
+        f.querySelector('[data-f="c"]').onclick = function () { f.innerHTML = ""; };
+        f.querySelector('[data-f="ok"]').onclick = function () { Com_chamar_("especialistaDecidirPlano", { planoId: u.id, resultado: "NAO_DEU_CERTO", motivo: Com_$_("cmEspDecMot").value }, function (r) { st.mem = r.memoria; desenharMem(); msg(r.message); }, function (e) { msg(e, "erro"); }); };
+      };
+    };
+    // cartões: copiar mensagem, usar ou trocar
+    ov.querySelectorAll(".cm-esp-plano").forEach(function (c) {
+      var L = c.getAttribute("data-letra"), p = porLetra[L];
+      var cp = c.querySelector('[data-esp="copiar"]');
+      if (cp) cp.onclick = function () { Com_copiar_((p.mensagem.assunto ? p.mensagem.assunto + "\n\n" : "") + p.mensagem.texto, this); };
+      var us = c.querySelector('[data-esp="usar"]');
+      if (us) us.onclick = function () {
+        var u = st.mem && st.mem.emUso, form = c.querySelector(".cm-esp-form");
+        var enviar = function (motivo) { Com_chamar_("especialistaUsarPlano", { sugestaoId: x.sugestaoId, letra: L, motivo: motivo || "" }, function (r) { st.mem = r.memoria; form.innerHTML = ""; desenharMem(); msg(r.message); }, function (e) { msg(e, "erro"); }); };
+        if (!u || u.abordagem === p.abordagem) { enviar(""); return; }
+        if (form.innerHTML) return;
+        form.innerHTML = Com_campo_("Por que o plano " + u.letra + " não andou?", '<textarea maxlength="500" placeholder="Ex.: três mensagens sem resposta; a coordenadora saiu de férias"></textarea>', "O plano " + u.letra + " fica como \"não andou\" e não volta nas próximas consultas.") +
+          '<div class="cm-acoes"><button type="button" class="btn-secondary" data-f="c">Cancelar</button><button type="button" class="btn-primary" data-f="ok">Trocar para o plano ' + Com_esc_(L) + '</button></div>';
+        form.querySelector('[data-f="c"]').onclick = function () { form.innerHTML = ""; };
+        form.querySelector('[data-f="ok"]').onclick = function () { enviar(form.querySelector("textarea").value); };
+      };
+    });
+    // próxima ação com um toque: o formulário vem preenchido; confirmar cria em Minhas atividades
+    ov.querySelector('[data-esp="criar"]').onclick = function () {
+      var f = Com_$_("cmEspProxForm"); if (!f || f.innerHTML) return;
+      var tipos = x.tiposContato || CM.ini.tiposContato || {};
+      var atual = x.proximaAtual || {};
+      f.innerHTML = '<div class="cm-caixa">' + Com_campo_("Ação", '<input id="cmEspPAcao" maxlength="300" value="' + Com_esc_(pa.acao) + '">') +
+        '<div class="cm-grade3">' + Com_campo_("Data", '<input id="cmEspPData" type="date" value="' + Com_esc_(pa.dataIso) + '">') + Com_campo_("Hora", '<input id="cmEspPHora" type="time" value="' + Com_esc_(pa.hora) + '">') +
+        Com_campo_("Como", '<select id="cmEspPTipo">' + Com_opcoes_(Object.keys(tipos).map(function (k) { return { v: k, t: tipos[k] }; }), pa.canal) + '</select>') + '</div>' +
+        (atual.temAtividade && atual.acao ? '<p class="cm-meta">A próxima ação de agora ("' + Com_esc_(atual.acao) + '", ' + Com_esc_(atual.em) + ') será cancelada e trocada por esta.</p>' : '') +
+        '<div class="cm-acoes"><button type="button" class="btn-secondary" data-f="c">Cancelar</button><button type="button" class="btn-primary" data-f="ok">Criar em Minhas atividades</button></div></div>';
+      f.querySelector('[data-f="c"]').onclick = function () { f.innerHTML = ""; };
+      f.querySelector('[data-f="ok"]').onclick = function () {
+        var b = this;
+        b.disabled = true;
+        Com_chamar_("especialistaCriarAcao", { id: o.id, sugestaoId: x.sugestaoId, letra: pa.plano || "A", acao: Com_$_("cmEspPAcao").value, data: Com_$_("cmEspPData").value, hora: Com_$_("cmEspPHora").value, tipo: Com_$_("cmEspPTipo").value },
+          function (r) { f.innerHTML = '<div class="cm-faixa ok">' + Com_esc_(r.message) + '</div>'; var bt = ov.querySelector('[data-esp="criar"]'); if (bt) { bt.disabled = true; bt.textContent = "Próxima ação criada"; } st.mem = r.memoria || st.mem; desenharMem(); Comercial_aposAlterar_(); },
+          function (e) { msg(e, "erro"); b.disabled = false; }, { carregando: "Criando a próxima ação…" });
+      };
+    };
+    desenharMem();
+  }
+
+  function Comercial_espPlanoHtml_(p) {
+    var passos = (p.passos || []).map(function (z) { return '<li><span class="q">' + Com_esc_(z.quando) + ' · ' + Com_esc_(z.canalNome) + '</span>' + Com_esc_(z.acao) + '</li>'; }).join("");
+    return '<div class="cm-esp-plano" data-letra="' + Com_esc_(p.letra) + '">' +
+      '<div class="cm-esp-cab"><span class="cm-esp-letra">' + Com_esc_(p.letra) + '</span><div class="cm-esp-tit"><b>' + Com_esc_(p.titulo) + '</b><div class="cm-meta">' + Com_esc_(p.abordagemNome) + '</div></div><span class="cm-selo verde cm-esp-selo" style="display:none">Em uso</span></div>' +
+      (p.gatilho ? '<div class="cm-esp-gatilho"><b>Quando trocar para este plano:</b> ' + Com_esc_(p.gatilho.texto) + (p.gatilho.ate ? ' <span class="cm-selo laranja">até ' + Com_esc_(p.gatilho.ate) + '</span>' : '') + '</div>' : '') +
+      '<p class="cm-txt"><b>Objetivo:</b> ' + Com_esc_(p.objetivo) + '</p><ol class="cm-esp-passos">' + passos + '</ol>' +
+      '<p class="cm-sec">Mensagem pronta (' + Com_esc_(p.mensagem.canalNome) + ')</p>' + (p.mensagem.assunto ? '<p class="cm-meta">Assunto: ' + Com_esc_(p.mensagem.assunto) + '</p>' : '') + '<div class="cm-msg">' + Com_esc_(p.mensagem.texto) + '</div>' +
+      ((p.objecoes || []).length ? '<p class="cm-sec">Se o cliente disser</p>' + p.objecoes.map(function (b) { return '<p class="cm-txt"><b>"' + Com_esc_(b.objecao) + '"</b><br>' + Com_esc_(b.resposta) + '</p>'; }).join("") : '') +
+      (p.sucesso ? '<p class="cm-txt"><b>Deu certo se:</b> ' + Com_esc_(p.sucesso) + '</p>' : '') +
+      (p.saida ? '<p class="cm-meta">Prazo deste plano: ' + Com_esc_(p.saida.texto) + '</p>' : '') +
+      '<div class="cm-acoes"><button type="button" class="btn-secondary" data-esp="copiar"><i class="fas fa-copy" aria-hidden="true"></i>&nbsp;Copiar mensagem</button><button type="button" class="btn-secondary" data-esp="usar">Usar este plano</button></div><div class="cm-esp-form"></div></div>';
   }
 
   // ---------------- Gantt ----------------

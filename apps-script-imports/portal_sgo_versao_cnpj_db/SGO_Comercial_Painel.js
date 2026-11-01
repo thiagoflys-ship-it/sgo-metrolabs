@@ -473,6 +473,11 @@ var COM_ACOES = {
   quadro: function (eu, sid, d) { return ComQ_quadro_(eu, d); },
   gantt: function (eu, sid, d) { return ComQ_gantt_(eu, d); },
   especialista: function (eu, sid, d) { return ComG_especialista_(eu, d); },
+  // 01/11/2026: memória dos planos da especialista (usar, trocar, deu certo, não deu certo) e a próxima ação com um toque
+  especialistaUsarPlano: function (eu, sid, d) { return ComEsp_usarPlano_(eu, d); },
+  especialistaDecidirPlano: function (eu, sid, d) { return ComEsp_decidirPlano_(eu, d); },
+  especialistaCriarAcao: function (eu, sid, d) { return ComEsp_criarAcao_(eu, sid, d); },
+  especialistaPlanos: function (eu, sid, d) { return ComEsp_planosTela_(eu, d); },
   leituraFunil: function (eu, sid, d) { return ComG_leituraFunil_(eu, d); },
   registrarContato: function (eu, sid, d) { return ComOpo_registrarContato_(eu, sid, d); },
   ganhar: function (eu, sid, d) { return ComOpo_ganhar_(eu, d); },
