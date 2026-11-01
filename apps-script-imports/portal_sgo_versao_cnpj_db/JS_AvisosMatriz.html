@@ -20,6 +20,13 @@
   .mtz-regra .cod { font-weight: 700; min-width: 40px; }
   .mtz-regra .sels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center; }
   .mtz-travado { opacity: .75; }
+  /* Etapa 6 (01/11/2026): com "Todos", as regras vêm agrupadas por módulo (no celular, fechadas: a página tinha 36 mil px). */
+  .mtz-grupo { border: 1px solid var(--border); border-radius: 6px; margin: 8px 0; background: var(--card); }
+  .mtz-grupo > summary { cursor: pointer; padding: 10px 12px; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; }
+  .mtz-grupo > summary::before { content: "\25B8"; color: var(--muted); }
+  .mtz-grupo[open] > summary::before { content: "\25BE"; }
+  .mtz-grupo > .mtz-grupo-corpo { padding: 0 12px 4px; }
+  .mtz-btn-quebra { white-space: normal !important; height: auto !important; max-width: 100%; text-align: left; line-height: 1.35; padding-top: 8px; padding-bottom: 8px; }
   .mtz-previa { white-space: pre-wrap; font-family: inherit; font-size: 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; max-height: 420px; overflow: auto; }
   @media (max-width: 700px) { .mtz-tabela thead { display: none; } .mtz-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .mtz-tabela td { display: block; border: none; padding: 2px 4px; } }
 </style>
@@ -31,7 +38,7 @@
   // Ganchos na casca (JS_Core): AvisosMatriz_iniciar_ no login (mostra o item do menu para Administrador e Diretoria),
   // abrir('avisos_matriz') -> AvisosMatriz_render_; abrir('meus_avisos') -> MeusAvisos_render_.
   // ==========================================================
-  var MTZ = { dados: null, modulo: "", meus: null };
+  var MTZ = { dados: null, modulo: "", meus: null, abertos: {} };
 
   function Mtz_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Mtz_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
@@ -109,7 +116,7 @@
       '</tbody></table></div>' +
       (semGestor.length ? '<p class="mtz-q">Área sem gestor: os avisos de "gestor da área" vão para a Diretoria. Compras fica na área Logística.</p>' : '') +
       (areas.gestoresSemArea.length ? '<p class="mtz-q" role="alert">Gestores sem área definida (continuam vendo toda a central até ganhar uma área): ' + esc(areas.gestoresSemArea.join(", ")) + '.</p>' : '') +
-      '<button type="button" class="cadx-btn" onclick="abrir(\'gestao_decisoes\');setTimeout(function(){if(typeof Gestao_abrirRegras_===\'function\')Gestao_abrirRegras_();},400);">Definir gestores em Caixa de decisões &gt; Regras e responsáveis</button></div>';
+      '<button type="button" class="cadx-btn mtz-btn-quebra" onclick="abrir(\'gestao_decisoes\');setTimeout(function(){if(typeof Gestao_abrirRegras_===\'function\')Gestao_abrirRegras_();},400);">Definir gestores em Caixa de decisões &gt; Regras e responsáveis</button></div>';
 
     var mods = Object.keys(d.modulos);
     var filtro = '<div class="mtz-campos" style="margin-bottom:6px"><label>Módulo<select id="mtzModulo" onchange="MTZ.modulo=this.value;AvisosMatriz_desenharRegras_()"><option value="">Todos</option>' +
@@ -142,7 +149,7 @@
     var opc = function (rotulos, valor, permitidos) {
       return Object.keys(rotulos).filter(function (k) { return !permitidos || permitidos.indexOf(k) >= 0 || k === valor; }).map(function (k) { return '<option value="' + k + '"' + (k === valor ? " selected" : "") + '>' + esc(rotulos[k]) + '</option>'; }).join("");
     };
-    alvo.innerHTML = lista.map(function (r) {
+    var htmlRegra = function (r) {
       var whatsPerm = null; // 26/10/2026: "na hora" pode ser marcado em qualquer evento (teto diário por pessoa)
       return '<div class="mtz-regra" data-cod="' + esc(r.cod) + '"><div class="cab"><span class="cod">' + esc(r.cod) + '</span><b>' + esc(r.evento) + '</b>' +
         (r.obrigatorio ? ' <span class="mtz-sit neutro">Obrigatório</span>' : '') + (r.alterada ? ' <span class="mtz-sit alerta">Alterada</span>' : '') + (r.decisao === "HISTORICO" ? ' <span class="mtz-sit neutro">Vira histórico</span>' : '') + '</div>' +
@@ -152,7 +159,21 @@
         '<label class="mtz-q">Decisão <select data-c="decisao" aria-label="Decisão de ' + esc(r.cod) + '"><option value="AVISA"' + (r.decisao === "AVISA" ? " selected" : "") + '>Continua avisando</option><option value="HISTORICO"' + (r.decisao === "HISTORICO" ? " selected" : "") + '>Vira só histórico</option></select></label>' +
         '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', false)">Salvar</button>' +
         (r.alterada ? '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', true)">Voltar ao padrão aprovado</button>' : '') + '</div></div>';
-    }).join("") || '<p class="mtz-q">Nenhum evento neste módulo.</p>';
+    };
+    if (!lista.length) { alvo.innerHTML = '<p class="mtz-q">Nenhum evento neste módulo. Escolha outro módulo ou "Todos" no campo Módulo.</p>'; return; }
+    if (MTZ.modulo) { alvo.innerHTML = lista.map(htmlRegra).join(""); return; }
+    // Etapa 6: "Todos" agrupa por módulo; no computador os grupos começam abertos, no celular fechados; o que a pessoa abriu fica aberto
+    var celular = typeof CadUI_movel_ === "function" && CadUI_movel_();
+    var ordem = [], porMod = {};
+    lista.forEach(function (r) { if (!porMod[r.modulo]) { porMod[r.modulo] = []; ordem.push(r.modulo); } porMod[r.modulo].push(r); });
+    alvo.innerHTML = ordem.map(function (m) {
+      var rs = porMod[m], alt = rs.filter(function (r) { return r.alterada; }).length;
+      var aberto = MTZ.abertos[m] !== undefined ? MTZ.abertos[m] : !celular;
+      return '<details class="mtz-grupo" data-mod="' + esc(m) + '"' + (aberto ? " open" : "") + '><summary>' + esc((d.modulos && d.modulos[m]) || rs[0].moduloNome || m) +
+        ' <span class="mtz-sit neutro">' + rs.length + (rs.length === 1 ? " aviso" : " avisos") + '</span>' + (alt ? ' <span class="mtz-sit alerta">' + alt + (alt === 1 ? " alterado" : " alterados") + '</span>' : '') +
+        '</summary><div class="mtz-grupo-corpo">' + rs.map(htmlRegra).join("") + '</div></details>';
+    }).join("");
+    alvo.querySelectorAll("details.mtz-grupo").forEach(function (det) { det.addEventListener("toggle", function () { MTZ.abertos[det.getAttribute("data-mod")] = det.open; }); });
   }
 
   function AvisosMatriz_salvarRegra_(cod, restaurar) {

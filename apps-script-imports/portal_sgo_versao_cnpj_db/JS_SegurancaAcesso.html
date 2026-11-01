@@ -42,7 +42,7 @@
   .sga-q { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
   .sga-opcoes { display: grid; gap: 8px; margin: 6px 0 10px; }
   .sga-opcoes label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
-  .sga-opcoes label input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+  .sga-opcoes label input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; align-self: flex-start; } /* Etapa 6: no celular a bolinha ficava no meio do texto longo */
   .sga-perfis { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 10px; }
   .sga-perfis label { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; }
   .sga-tabela td, .sga-tabela th { vertical-align: top; font-size: 13px; }
@@ -630,7 +630,7 @@
           "<ul><li><b>Troca de senha obrigatória</b>: a pessoa marcada vê a tela \"Crie sua nova senha\" no próximo login e não abre nada antes de trocar. Quem já está dentro vê a tela em até 5 minutos.</li>" +
           "<li><b>Código no celular</b>: depois da senha certa, o SGO+ manda um código de 6 números (vale 10 minutos, uma vez só). Começa <b>desligado</b>; ligue \"Só e-mail\" ou, depois que a Meta aprovar o modelo, \"WhatsApp com e-mail de reserva\".</li>" +
           "<li><b>Aparelho confiado</b>: quem marca \"Confiar neste aparelho\" não recebe o código naquele aparelho por 30 dias. Trocar a senha ou zerar o segundo fator desconecta todos os aparelhos confiados.</li>" +
-          "<li><b>Recuperação</b>: \"Exigir nova senha\" e \"Zerar segundo fator\" pedem o motivo e ficam no registro com o seu nome.</li>" +
+          "<li><b>Recuperação</b>: \"Exigir nova senha\" e \"Desconectar aparelhos\" (para quem perdeu ou trocou o celular) pedem o motivo e ficam no registro com o seu nome.</li>" +
           "<li><b>Entrada pelo e-mail</b>: todos entram com o e-mail cadastrado. Conta sem e-mail ou com e-mail repetido não entra (bloco vermelho no topo). Quem esquece a senha usa \"Esqueci minha senha\": o link vai para o e-mail, vale 30 minutos e uma vez; com o código ligado e celular cadastrado, pede também o código no WhatsApp. A gestão também envia o link em Usuários &gt; Mais ações.</li>" +
           "<li>Ver a tela: Administrador, Diretoria e Gestor. Alterar: Administrador.</li></ul>") : "") +
         '<div id="sgaCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(6) : "Carregando...") + '</div>' +
@@ -680,7 +680,7 @@
       (pode ? '<div class="sga-linha"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="sgaGravar" onclick="SegAcessoTela_gravar_()">Gravar</button><span class="sga-q" id="sgaGravarMsg" role="status"></span></div>' :
         '<p class="sga-q">Só o Administrador altera esta configuração.</p>') +
       (cfg.alteradoEm ? '<p class="sga-q">Última alteração: ' + esc(String(cfg.alteradoEm).replace("T", " ").slice(0, 16).split(" ").map(function (x, i) { return i ? x : x.split("-").reverse().join("/"); }).join(" ")) + (cfg.alteradoPor ? " por " + esc(cfg.alteradoPor) : "") + '</p>' : '') +
-      '<details style="margin-top:8px"><summary>Modelo do WhatsApp na Meta (sgo_codigo_acesso)</summary><div style="margin-top:8px">' +
+      '<details style="margin-top:8px"><summary>Modelo da mensagem do código no WhatsApp (Meta)</summary><div style="margin-top:8px">' +
         '<p class="sga-q">A Meta exige um modelo da categoria <b>Autenticação</b> para mandar código. O texto é o padrão da Meta: "<b>123456</b> é seu código de verificação. Para sua segurança, não compartilhe este código." com o aviso "Este código expira em 10 minutos." e o botão "Copiar código".' +
         (d.metaConfigurada ? '' : ' <b>O WhatsApp oficial ainda não está configurado em Chaves e senhas.</b>') + '</p>' +
         (pode ? '<div class="sga-linha"><button type="button" class="cadx-btn" onclick="SegAcessoTela_modelo_(\'modeloSituacao\', this)">Consultar situação</button><button type="button" class="cadx-btn" onclick="SegAcessoTela_modelo_(\'modeloCadastrar\', this)">Cadastrar modelo na Meta</button><span class="sga-q" id="sgaModeloMsg" role="status"></span></div>' : '') +
@@ -699,7 +699,7 @@
           '<td data-r="Senha">' + (p.trocaPendente ? '<span class="sga-sit alerta">Troca pendente</span>' : '<span class="sga-sit ok">Em dia</span>') + (p.senhaTrocadaEm ? '<div class="sga-q">trocada em ' + esc(p.senhaTrocadaEm.slice(0, 16)) + '</div>' : '') + '</td>' +
           '<td data-r="Código em">' + onde + '</td>' +
           (pode ? '<td data-r="Ações"><div class="sga-linha"><button type="button" class="cadx-btn" onclick="SegAcessoTela_acaoPessoa_(\'exigirTrocaUsuario\', \'' + esc(p.id) + '\')"' + (p.ativo ? "" : " disabled") + '>Exigir nova senha</button>' +
-            '<button type="button" class="cadx-btn" onclick="SegAcessoTela_acaoPessoa_(\'zerarSegundoFator\', \'' + esc(p.id) + '\')"' + (p.ativo ? "" : " disabled") + '>Zerar segundo fator</button></div></td>' : '') + '</tr>';
+            '<button type="button" class="cadx-btn" onclick="SegAcessoTela_acaoPessoa_(\'zerarSegundoFator\', \'' + esc(p.id) + '\')"' + (p.ativo ? "" : " disabled") + ' title="Para quem perdeu ou trocou o celular: desconecta os aparelhos e libera 24 horas sem código">Desconectar aparelhos</button></div></td>' : '') + '</tr>';
       }).join("") + '</tbody></table></div></div>';
 
     var ev = d.eventos || {};
@@ -721,7 +721,7 @@
   function SegAcessoTela_pintarRegistro_(lista) {
     var alvo = document.getElementById("sgaRegistro"), esc = SegAcesso_esc_;
     if (!alvo) return;
-    if (!lista.length) { alvo.innerHTML = '<p class="sga-q">Nenhum evento no período.</p>'; return; }
+    if (!lista.length) { alvo.innerHTML = '<p class="sga-q">Nenhum evento no período escolhido. Para ver mais, aumente o período, apague o nome da pessoa ou escolha "Todos" em Evento e toque em Mostrar.</p>'; return; }
     var tom = function (e) { return /FALHA|ERRADO|BLOQUEADO|NEGADO|VENCIDO/.test(e) ? "perigo" : /EXIGIDA|ZERADO|RECUPERACAO|CONFIG|MODELO/.test(e) ? "alerta" : "ok"; };
     alvo.innerHTML = '<div class="table-responsive"><table class="table sga-tabela"><thead><tr><th>Quando</th><th>Evento</th><th>Pessoa</th><th>IP e aparelho</th><th>Detalhe</th></tr></thead><tbody>' +
       lista.map(function (l) {
@@ -786,7 +786,7 @@
   function SegAcessoTela_acaoPessoa_(acao, id) {
     var p = ((SGA.painel || {}).pessoas || []).filter(function (x) { return x.id === id; })[0] || { nome: "" };
     var zerar = acao === "zerarSegundoFator";
-    var titulo = zerar ? "Zerar segundo fator de " + p.nome : "Exigir nova senha de " + p.nome;
+    var titulo = zerar ? "Desconectar os aparelhos de " + p.nome : "Exigir nova senha de " + p.nome;
     var texto = zerar ? "<p>Desconecta todos os aparelhos confiados e as sessões abertas desta pessoa. Nas próximas <b>24 horas</b> ela entra só com a senha (para quem perdeu o celular). <b>Antes</b>, confira o celular e o e-mail dela em Administração &gt; Usuários.</p>"
       : "<p>No próximo login a pessoa vê a tela <b>Crie sua nova senha</b> e não abre nada antes de trocar. Se ela estiver dentro do sistema, a tela abre em até 5 minutos.</p>";
     var executar = function (motivo, fechar, reabilitar) {
@@ -794,7 +794,7 @@
         function (e) { if (reabilitar) reabilitar(e); else alert(e); });
     };
     if (typeof CadUI_confirmar_ !== "function") { var m = prompt(titulo + " — motivo:"); if (m) executar(m); return; }
-    CadUI_confirmar_({ titulo: titulo, texto: texto, risco: zerar, botao: zerar ? "Zerar segundo fator" : "Exigir nova senha",
+    CadUI_confirmar_({ titulo: titulo, texto: texto, risco: zerar, botao: zerar ? "Desconectar aparelhos" : "Exigir nova senha",
       motivo: { rotulo: "Motivo", min: 5, dica: "Ex.: perdeu o celular; trocou de número; suspeita de senha vazada. Fica no registro com o seu nome." },
       aoConfirmar: function (v, fechar, reabilitar) { executar(v.motivo, fechar, reabilitar); } });
   }

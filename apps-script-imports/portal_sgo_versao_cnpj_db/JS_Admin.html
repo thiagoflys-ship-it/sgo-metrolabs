@@ -763,8 +763,8 @@
     blocos.push(Config_bloco_("cfgOciosidade", "Sessão e ociosidade",
       "Aviso que aparece quando o SGO+ fica parado, para ninguém deixar a tela aberta sem querer. Vale para este navegador.",
       '<div class="cadx-campos">' +
-        CadUI_campo_({ id: "inputIdleLimit", rotulo: "Avisar depois de (minutos sem uso)", tipo: "number", valor: String(minutos).replace(".", ","), attrs: ' min="0.5" step="0.5" inputmode="decimal"', dica: "Mínimo de meio minuto. Hoje: " + CadUI_num_(Number(IDLE_LIMIT) || 300) + " segundos." }) +
-        '<div class="cadx-campo"><label>Som do aviso</label><label class="cadx-chave" style="min-height:36px"><input type="checkbox" id="cfgSom"' + (SOM_OCIOSIDADE_ATIVO ? " checked" : "") + '><span class="cadx-chave-trilho" aria-hidden="true"></span><span id="adminSomStatus">' + (SOM_OCIOSIDADE_ATIVO ? "Ligado" : "Desligado") + "</span></label></div>" +
+        CadUI_campo_({ id: "inputIdleLimit", rotulo: "Avisar depois de (minutos sem uso)", tipo: "number", valor: String(minutos).replace(".", ","), attrs: ' min="0.5" step="0.5" inputmode="decimal"', dica: "Mínimo de meio minuto. Hoje: " + CadUI_num_(minutos) + (minutos === 1 ? " minuto." : " minutos.") }) +
+        '<div class="cadx-campo"><label>Som do aviso</label><label class="cadx-chave" style="min-height:44px"><input type="checkbox" id="cfgSom"' + (SOM_OCIOSIDADE_ATIVO ? " checked" : "") + '><span class="cadx-chave-trilho" aria-hidden="true"></span><span id="adminSomStatus">' + (SOM_OCIOSIDADE_ATIVO ? "Ligado" : "Desligado") + "</span></label></div>" +
       "</div>",
       '<span class="cadx-msg" id="cfgOciosidadeMsg"></span><button type="button" class="cadx-btn cadx-btn-grande" onclick="testarSomOciosidade_()">Testar o som</button><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Config_salvarOciosidade_()">Salvar</button>'));
     if (perfil === "ADMIN") {
@@ -777,7 +777,7 @@
           CadUI_campo_({ id: "ap_antecedencia", rotulo: "Avisar antes do vencimento (dias)", tipo: "number", attrs: ' min="1" max="365"' }) +
           CadUI_campo_({ id: "ap_intervalo_balao", rotulo: "Repetir o lembrete a cada (minutos)", tipo: "number", attrs: ' min="15" max="720"' }) +
           CadUI_campo_({ id: "ap_duracao", rotulo: "Tempo visível do lembrete (segundos)", tipo: "number", attrs: ' min="5" max="120"' }) +
-          '<div class="cadx-campo"><label>Janela no centro da tela</label><label class="cadx-chave" style="min-height:36px"><input type="checkbox" id="ap_critico_chave"><span class="cadx-chave-trilho" aria-hidden="true"></span><span>Mostrar quando houver padrão vencido</span></label></div>' +
+          '<div class="cadx-campo"><label>Janela no centro da tela</label><label class="cadx-chave" style="min-height:44px"><input type="checkbox" id="ap_critico_chave"><span class="cadx-chave-trilho" aria-hidden="true"></span><span>Mostrar quando houver padrão vencido</span></label></div>' +
           CadUI_campo_({ id: "ap_intervalo_critico", rotulo: "Repetir a janela a cada (minutos)", tipo: "number", attrs: ' min="30" max="1440"' }) +
           CadUI_campo_({ id: "ap_mensagem", rotulo: "Mensagem da janela", inteiro: true, attrs: ' maxlength="240"' }) +
         "</div>",

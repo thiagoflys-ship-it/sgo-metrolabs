@@ -282,6 +282,7 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo cinza \"Desligados\" (Alertas de calibração)", significado: "Ninguém recebe os lembretes de vencimento dos padrões." }
       ],
       problemas: [
+        { situacao: "No celular, a chave do som ou da janela do centro é difícil de tocar", oQueFazer: "Toque em qualquer ponto da linha (a chave e o texto ao lado): desde 01/11/2026 a linha inteira tem altura de toque. A dica embaixo do tempo de ociosidade mostra o valor de hoje em minutos." },
         { situacao: "Aparece \"Informe pelo menos meio minuto (0,5).\"", oQueFazer: "Digite um tempo de 0,5 minuto ou mais, com vírgula se for fração." },
         { situacao: "A tela ficou travada depois de uma atualização do sistema", oQueFazer: "Use \"Sair e recarregar\" no bloco \"Sessão neste navegador\" e entre de novo." },
         { situacao: "O tempo de ociosidade voltou ao que era em outro computador", oQueFazer: "Esse ajuste vale só para o navegador onde foi salvo. Ajuste e salve em cada navegador." },
@@ -410,6 +411,7 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Número apagado no resumo do topo", significado: "Nenhuma integração naquela situação." }
       ],
       problemas: [
+        { situacao: "A tela mostra só o alarme e a faixa \"As chaves das integrações ficam com o responsável pelo sistema\"", oQueFazer: "É o esperado para quem não é o responsável pelo sistema: o seu perfil configura o alarme e a automação predial. Para gravar ou trocar a chave de uma integração, peça a ele." },
         { situacao: "Aparece \"Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.\"", oQueFazer: "Esta tela não é do seu acesso. Peça ao responsável pelo sistema para gravar ou testar a chave." },
         { situacao: "Aparece \"Não foi possível abrir: a sua sessão expirou. Saia e entre de novo no SGO+.\"", oQueFazer: "Saia do sistema, entre de novo e abra a tela outra vez." },
         { situacao: "Aparece \"Cole o valor no campo antes de clicar em Gravar.\"", oQueFazer: "O campo está vazio. Cole o valor e toque em \"Gravar\". Para remover uma chave, use \"Apagar\"." },
@@ -581,6 +583,7 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo verde \"Enviado\" nos resumos", significado: "O resumo saiu. \"Já abriu o sistema\", \"Sem WhatsApp (vínculo)\" e \"Sem novidade\" não são erro: são a regra." }
       ],
       problemas: [
+        { situacao: "Com Módulo em \"Todos\", as regras aparecem em grupos fechados", oQueFazer: "Cada grupo é um módulo, com o número de avisos e de regras alteradas. Toque no nome para abrir. No celular os grupos começam fechados (a página ficava enorme); no computador, abertos. Para ver um módulo só, escolha-o em Módulo." },
         { situacao: "Aparece \"WhatsApp na hora só vale para as exceções aprovadas pelo dono\"", oQueFazer: "Escolha \"Na contagem do WhatsApp do dia\" ou \"Sem WhatsApp\" para este evento. Só as quatro exceções da Frota e o aviso ao cliente (depois do piloto) podem ir na hora." },
         { situacao: "Aparece \"é obrigatório pela matriz aprovada pelo dono\"", oQueFazer: "Este aviso não pode deixar de avisar. Troque só entre \"na hora\" e \"no resumo\". Se a regra precisa mudar, leve ao dono." },
         { situacao: "Aparece \"escreva o motivo da mudança\"", oQueFazer: "Toque em Salvar de novo e escreva pelo menos 8 letras explicando a mudança." },
@@ -612,7 +615,7 @@ function SGO_ajudaTelas_Administracao_() {
       passos: [
         { titulo: "Escolher quem recebe", itens: [
           "Toque em \"Piloto do WhatsApp\" no menu Administração.",
-          "Confira o bloco \"Situação\": piloto ligado, provedor em uso \"WhatsApp oficial (Meta)\" e \"Z-API desligada\".",
+          "Confira o bloco \"Situação\": piloto ligado, provedor em uso \"WhatsApp oficial (Meta)\" e \"Envio antigo (Z-API) desligado\".",
           "No bloco \"Quem recebe pelo WhatsApp\", deixe \"Piloto ligado\" marcado.",
           "Marque as pessoas do piloto. Use o campo de busca para achar pelo nome.",
           "Confira, abaixo do nome, se a pessoa tem celular válido.",
@@ -646,6 +649,7 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo amarelo \"Não enviada (regra do módulo)\"", significado: "A regra do módulo segurou: fora do expediente, limite de uma por dia, PJ, sem celular ou modelo não aprovado." }
       ],
       problemas: [
+        { situacao: "O bloco Situação diz que falta gravar o token permanente ou a identificação do número", oQueFazer: "São campos do cartão WhatsApp oficial (Meta) em Chaves e senhas, gravados pelo responsável pelo sistema. Enquanto faltarem, as mensagens ficam no sistema e no e-mail. O selo \"Envio antigo (Z-API) desligado\" é o normal." },
         { situacao: "Ninguém da lista recebe e aparece \"Falhou\" com código 141006 ou de pagamento", oQueFazer: "A conta da Meta está com bloqueio de pagamento. No Gerenciador do WhatsApp (Meta), confira a forma de pagamento; depois as mensagens voltam a sair." },
         { situacao: "Aparece \"Provedor em uso: nenhum\"", oQueFazer: "O responsável pelo sistema grava o token e o identificador do número da Meta em Chaves e senhas > WhatsApp oficial e escolhe \"meta\" no provedor." },
         { situacao: "Uma pessoa da lista não recebeu", oQueFazer: "Filtre o relatório pela pessoa. Confira o celular no cadastro e o motivo da linha; regras como expediente e limite por dia continuam valendo." },
@@ -708,7 +712,7 @@ function SGO_ajudaTelas_Administracao_() {
         ] },
         { titulo: "Ajudar quem perdeu o celular ou desconfia da senha", itens: [
           "No bloco \"Pessoas\", ache a pessoa pelo nome.",
-          "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em \"Zerar segundo fator\". Os aparelhos confiados e as sessões dela caem, e nas próximas 24 horas ela entra só com a senha.",
+          "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em \"Desconectar aparelhos\". Os aparelhos confiados e as sessões dela caem, e nas próximas 24 horas ela entra só com a senha.",
           "Desconfia que a senha vazou: toque em \"Exigir nova senha\".",
           "Escreva o motivo e confirme. Tudo fica no registro de segurança."
         ] },
@@ -733,9 +737,10 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo cinza", significado: "Informação neutra: código desligado, senha guardada no formato antigo (vira forte sozinha no próximo login)." }
       ],
       problemas: [
+        { situacao: "Onde foi parar o \"Zerar segundo fator\"?", oQueFazer: "Agora se chama \"Desconectar aparelhos\", na lista de Pessoas. Faz o mesmo: desconecta os aparelhos confiados e as sessões da pessoa e libera 24 horas sem código (para quem perdeu ou trocou o celular). Pede o motivo e fica no registro." },
         { situacao: "A pessoa diz que o código não chegou", oQueFazer: "No registro, filtre pelo nome ou e-mail dela e veja \"Código enviado\" e para onde foi (WhatsApp terminado em ... ou e-mail). Confira o celular e o e-mail em Administração > Usuários. Ela pode tocar em \"Receber por e-mail\" ou \"Reenviar código\" depois de 60 segundos." },
         { situacao: "Aparece \"Código não enviado\" no registro", oQueFazer: "O detalhe diz o motivo: sem celular válido, sem e-mail válido, modelo da Meta não aprovado ou e-mail fora do ar. Corrija o cadastro ou a chave em Chaves e senhas." },
-        { situacao: "A pessoa ficou trancada (perdeu o celular e não acessa o e-mail)", oQueFazer: "Corrija o celular e toque em \"Zerar segundo fator\": ela entra só com a senha nas próximas 24 horas." },
+        { situacao: "A pessoa ficou trancada (perdeu o celular e não acessa o e-mail)", oQueFazer: "Corrija o celular e toque em \"Desconectar aparelhos\": ela entra só com a senha nas próximas 24 horas." },
         { situacao: "Ninguém da gestão consegue entrar", oQueFazer: "O responsável pelo sistema roda no servidor o script de recuperação (sgo_servidor, scripts/seguranca_recuperar_acesso.ts), que zera o segundo fator, gera senha provisória e, se pedido, desliga o código para todos. O passo a passo está no manual da gestão." },
         { situacao: "Aparece \"Muitas tentativas de senha erradas\" na entrada", oQueFazer: "O servidor segura por 15 minutos depois de 5 senhas erradas com o mesmo e-mail (ou 10 na mesma conexão). Espere ou peça para a pessoa usar \"Esqueci minha senha\" (ou envie o link em Administração > Usuários)." },
         { situacao: "A pessoa abriu o link e aparece \"Este link venceu\" ou \"Este link não vale mais\"", oQueFazer: "O link vale 30 minutos e uma vez só, e um link novo cancela o anterior. Ela toca em \"Pedir outro link\" (ou você envia em Usuários) e usa o e-mail mais recente." },

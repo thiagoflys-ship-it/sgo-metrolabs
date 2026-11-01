@@ -236,11 +236,14 @@
     if (!c || !d) return;
     var h = "";
     var cfg = d.config || {};
-    if (AUTP.adm && !cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação): ' + AutPred_esc_((cfg.faltas || []).join("; ")) + ". O responsável pelo sistema liga em Chaves e senhas > Automação predial (Tuya).</div>";
+    // Etapa 6 (01/11/2026): o que falta vem em lista, uma linha por item, e a faixa diz quem resolve e o que fazer depois
+    if (AUTP.adm && !cfg.podeLer) h += '<div class="cadx-faixa bc-faixa tom-alerta"><strong>Nenhum comando real sai agora</strong> (tudo trabalha em simulação). O que falta:<ul style="margin:6px 0 6px 18px;padding:0">' +
+      (cfg.faltas || []).map(function (f) { f = String(f || ""); return "<li>" + AutPred_esc_(f.charAt(0).toUpperCase() + f.slice(1)) + "</li>"; }).join("") +
+      "</ul>Quem resolve é o responsável pelo sistema, em Chaves e senhas &gt; Automação predial (Tuya). Depois, toque em Atualizar.</div>";
     else if (AUTP.adm) h += '<div class="cadx-faixa bc-faixa tom-info">Automação ligada (região ' + AutPred_esc_(cfg.regiao) + "). Comandos reais só nos dispositivos homologados pela Diretoria; os demais ficam em simulação.</div>";
     if (AUTP.adm) {
-      h += '<div class="aut-abas">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].concat(d.podeVerSaude ? [["saude", "Saúde da infraestrutura"]] : []).map(function (a) {
-        return '<button type="button" class="cadx-btn cadx-btn-grande' + (AUTP.aba === a[0] ? " is-ativa" : "") + '" onclick="AutPred_aba_(\'' + a[0] + '\')">' + a[1] + "</button>";
+      h += '<div class="aut-abas" role="tablist" aria-label="Partes da tela">' + [["dispositivos", "Dispositivos"], ["permissoes", "Permissões"], ["auditoria", "Auditoria"]].concat(d.podeVerSaude ? [["saude", "Saúde da infraestrutura"]] : []).map(function (a) {
+        return '<button type="button" role="tab" aria-selected="' + (AUTP.aba === a[0] ? "true" : "false") + '" class="cadx-btn cadx-btn-grande' + (AUTP.aba === a[0] ? " is-ativa" : "") + '" onclick="AutPred_aba_(\'' + a[0] + '\')">' + a[1] + "</button>";
       }).join("") + "</div>";
     }
     h += '<div id="autAba"></div>';
@@ -248,7 +251,16 @@
     AutPred_desenharAba_();
   }
 
-  function AutPred_aba_(aba) { AUTP.aba = aba; AUTP.aberto = ""; AutPred_desenhar_(); }
+  // Etapa 6 (01/11/2026): trocar de parte (Dispositivos, Permissões, Auditoria, Saúde) é um passo do voltar (antes o voltar saía da tela).
+  var AUTP_NOMES_ABA = { dispositivos: "Dispositivos", permissoes: "Permissões", auditoria: "Auditoria", saude: "Saúde da infraestrutura" };
+  function AutPred_aba_(aba) {
+    var de = AUTP.aba || "dispositivos";
+    AUTP.aba = aba; AUTP.aberto = ""; AutPred_desenhar_();
+    if (de !== aba && window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Automação predial: " + (AUTP_NOMES_ABA[aba] || aba), function () {
+      if (window.SGO_MODULO_ATUAL !== "automacao_predial" || !document.getElementById("autCorpo")) return;
+      AUTP.aba = de; AUTP.aberto = ""; AutPred_desenhar_();
+    }, { chave: "aut-aba-" + aba });
+  }
 
   function AutPred_desenharAba_() {
     var el = document.getElementById("autAba");

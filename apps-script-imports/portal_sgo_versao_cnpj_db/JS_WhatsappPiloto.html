@@ -25,6 +25,9 @@
   .wap-testar { min-height: 32px; padding: 4px 10px; font-size: 12.5px; }
   .wap-modelos { font-size: 12.5px; }
   .wap-modelos div { padding: 3px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  /* Etapa 6 (01/11/2026): no celular, marcar uma pessoa, um tipo de aviso ou uma área tem alvo de 44 px (antes 22 px). */
+  @media (max-width: 700px) { .wap-pessoa > input { width: 22px; height: 22px; margin-top: 11px; } .wap-pessoa label[for] { display: inline-flex; align-items: center; min-height: 44px; }
+    .wap-grupos label, .wap-areas label { min-height: 44px; } .wap-grupos input { width: 20px; height: 20px; } .wap-testar { min-height: 44px; } }
   @media (max-width: 700px) { .wap-tabela thead { display: none; } .wap-tabela tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; } .wap-tabela td { display: block; border: none; padding: 2px 4px; } }
 </style>
 
@@ -41,6 +44,17 @@
   function WaPiloto_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
   // 21/10/2026: a gestão, o RH e o Financeiro escolhem as pessoas; ligar e desligar o piloto, só Administrador e Diretoria (o servidor confere).
   function WaPiloto_pode_() { var p = WaPiloto_perfil_(); return ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
+  // Etapa 6 (01/11/2026): o motivo do servidor cita o nome interno das chaves; a tela mostra o nome do campo em Chaves e senhas.
+  var WAP_NOMES_CHAVES = { META_WA_TOKEN: "o token permanente", META_WA_PHONE_ID: "a identificação do número de telefone", META_WA_WABA_ID: "a identificação da conta comercial" };
+  function WaPiloto_textoMotivo_(t) {
+    return String(t || "").replace(/META_WA_[A-Z_]+/g, function (k) { return WAP_NOMES_CHAVES[k] || k; })
+      .replace("em Chaves e senhas do SGO+.", "em Chaves e senhas > WhatsApp oficial (Meta); quem grava é o responsável pelo sistema.");
+  }
+  /** "2026-11-01T12:15:00" -> "01/11/2026 12:15" (padrão pt-BR). */
+  function WaPiloto_dataBr_(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(v || ""));
+    return m ? m[3] + "/" + m[2] + "/" + m[1] + (m[4] ? " " + m[4] + ":" + m[5] : "") : String(v || "");
+  }
   function WaPiloto_hoje_() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
 
   function WaPiloto_iniciar_() {
@@ -91,11 +105,11 @@
     var sit = '<div class="wap-bloco"><h3>Situação</h3><div class="wap-linha">' +
       '<span class="wap-sit ' + (d.ligado ? "alerta" : "ok") + '">' + (d.ligado ? "Piloto ligado" : "Piloto desligado") + '</span>' +
       '<span class="wap-sit ' + (d.provedorEmUso === "nenhum" ? "perigo" : "ok") + '">Provedor em uso: ' + esc(d.provedorEmUso) + '</span>' +
-      '<span class="wap-sit ' + (d.zapiFora ? "ok" : "alerta") + '">' + (d.zapiFora ? "Z-API desligada" : "Z-API liberada") + '</span>' +
+      '<span class="wap-sit ' + (d.zapiFora ? "ok" : "alerta") + '">' + (d.zapiFora ? "Envio antigo (Z-API) desligado" : "Envio antigo (Z-API) liberado") + '</span>' +
       '<span class="wap-sit ' + (aprov ? "ok" : "alerta") + '">Modelos aprovados: ' + aprov + ' de ' + d.modelos.length + '</span></div>' +
-      (d.provedorMotivo ? '<p class="wap-motivo" role="alert">' + esc(d.provedorMotivo) + '</p>' : '') +
-      (d.provedorEscolhido !== "meta" ? '<p class="wap-motivo">O provedor gravado em Chaves e senhas é "' + esc(d.provedorEscolhido) + '". Durante o piloto o sistema usa a Meta mesmo assim; para deixar claro, o responsável pelo sistema grava <b>meta</b> em Chaves e senhas &gt; WhatsApp oficial &gt; Provedor do WhatsApp em uso.</p>' : '') +
-      '<p class="wap-motivo">' + (d.gravado ? "Última alteração: " + esc(String(d.atualizadoEm).replace("T", " ").slice(0, 16)) + (d.atualizadoPor ? " por " + esc(d.atualizadoPor) : "") : "Ainda não gravado: vale a lista padrão (só o responsável pelo sistema).") + '</p>' +
+      (d.provedorMotivo ? '<p class="wap-motivo" role="alert">' + esc(WaPiloto_textoMotivo_(d.provedorMotivo)) + '</p>' : '') +
+      (d.provedorEscolhido !== "meta" ? '<p class="wap-motivo">' + (d.provedorEscolhido === "(vazio)" || !d.provedorEscolhido ? 'Nenhum provedor está escolhido em Chaves e senhas.' : 'O provedor gravado em Chaves e senhas é "' + esc(d.provedorEscolhido) + '".') + ' Durante o piloto o sistema usa a Meta mesmo assim; para deixar claro, o responsável pelo sistema grava <b>meta</b> em Chaves e senhas &gt; WhatsApp oficial &gt; Provedor do WhatsApp em uso.</p>' : '') +
+      '<p class="wap-motivo">' + (d.gravado ? "Última alteração: " + esc(WaPiloto_dataBr_(d.atualizadoEm)) + (d.atualizadoPor ? " por " + esc(d.atualizadoPor) : "") : "Ainda não gravado: vale a lista padrão (só o responsável pelo sistema).") + '</p>' +
       '<details><summary>Situação de cada modelo na Meta</summary><div class="wap-modelos">' + d.modelos.map(function (m) {
         return '<div><span>' + esc(m.nome) + ' <span class="q">— ' + esc(m.uso) + '</span></span><span class="wap-sit ' + (m.status === "APPROVED" ? "ok" : m.status ? "alerta" : "neutro") + '">' + esc(m.situacao) + '</span></div>';
       }).join("") + '<p class="wap-motivo">A situação é a lida pela última vez em Chaves e senhas &gt; Situação dos modelos (e todo dia às 18h). Modelo não aprovado não é usado: a mensagem vai pelo aviso geral, se ele estiver aprovado; senão fica no sistema e no e-mail.</p></div></details></div>';
@@ -194,7 +208,7 @@
       var topo = '<div class="wap-linha" style="margin-bottom:8px"><span class="wap-sit ok">Enviadas: ' + k.enviadas + '</span><span class="wap-sit neutro">Retidas pelo piloto: ' + k.retidas + '</span>' +
         '<span class="wap-sit perigo">Bloqueadas pelo servidor: ' + k.bloqueadas + '</span><span class="wap-sit perigo">Falharam: ' + k.falhas + '</span><span class="wap-sit alerta">Não enviadas por regra do módulo: ' + k.puladas + '</span></div>' +
         (r.servidor ? "" : '<p class="wap-motivo">Fora do servidor próprio só aparecem as mensagens do SGO+.</p>');
-      if (!r.linhas.length) { alvo.innerHTML = topo + '<p class="wap-motivo">Nenhuma mensagem de WhatsApp neste dia' + (pessoa ? " para esta pessoa" : "") + '.</p>'; return; }
+      if (!r.linhas.length) { alvo.innerHTML = topo + '<p class="wap-motivo">Nenhuma mensagem de WhatsApp neste dia' + (pessoa ? " para esta pessoa" : "") + '. Para ver outro dia' + (pessoa ? ' ou todas as pessoas, troque o dia ou escolha "Todas" em Pessoa' : ', troque o dia') + ' e toque em Mostrar.</p>'; return; }
       alvo.innerHTML = topo + '<div class="table-responsive"><table class="table wap-tabela"><thead><tr><th>Hora</th><th>Sistema</th><th>Origem</th><th>Para</th>' + (r.admin ? '<th>Telefone</th>' : '') + '<th>Situação</th></tr></thead><tbody>' +
         r.linhas.map(function (l) {
           return '<tr><td>' + esc(l.hora) + '</td><td>' + esc(l.sistema) + '</td><td>' + esc(l.origem || "-") + (l.assunto && l.assunto !== l.origem ? '<div class="wap-motivo">' + esc(l.assunto) + '</div>' : '') + '</td><td>' + esc(l.pessoa) + '</td>' +

@@ -120,3 +120,10 @@ Atualizar a página (F5) ou abrir o SGO+ de novo no mesmo aparelho volta para a 
 - Janelas do E-mail: "×" preso no alto; fecham pelo "×", pelo voltar (inclusive a janela de escrever, que antes não fechava pelo voltar), pela tecla Esc e, no computador, pelo fundo escuro. Com algo digitado, pergunta antes.
 - Listas vazias de Compras e da Caixa de decisões dizem o que trocar para ver os itens.
 - Cliente em Unidades e Equipamentos: sem o filtro "Todos os clientes" e sem os números internos de cadastro.
+
+## Etapa 6 (01/11/2026): Administração e telas de configuração
+
+- Automação predial: Dispositivos, Permissões, Auditoria e Saúde da infraestrutura são passos do voltar (antes o voltar saía da tela).
+- Usuários, Segurança do acesso e Configurações: as janelas (Novo usuário, Exigir nova senha, Desconectar aparelhos) fecham pelo voltar; Responsáveis técnicos volta para Configurações. Conferido no ensaio, sem mudança.
+- Alvos de toque no celular: chaves de Configurações, marcações do Piloto do WhatsApp e chaves da Integração Auvo com 44 px; grupos da Matriz de avisos recolhidos no celular.
+- Chaves e senhas: quem não é o responsável pelo sistema vê por que as chaves das integrações não aparecem e a quem pedir.

@@ -245,6 +245,8 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 - "intervalo mínimo de 10 s", "comandos no último minuto", "ainda está sem resultado": limites de proteção; aguarde ou use "Conferir agora".
 - Fechadura "Não disponível pela API": o modelo não aceita abertura remota pela nuvem; use o aplicativo Smart Life ou a própria porta.
 
+**Desde 01/11/2026 (Etapa 6 do Programa de melhoria):** trocar de parte (Dispositivos, Permissões, Auditoria, Saúde da infraestrutura) é um passo do voltar: o voltar do celular ou do navegador leva à parte anterior (antes saía da tela). A faixa "Nenhum comando real sai agora" mostra o que falta em lista, uma linha por item, e diz quem resolve (o responsável pelo sistema, em Chaves e senhas > Automação predial) e o que fazer depois (Atualizar).
+
 ## Ponte local dos portões (27/10/2026)
 
 **Por quê:** a cota do plano de teste da Tuya acabou em 27/10/2026 às 07:45 e os portões pararam pelo SGO+. Os módulos dos dois portões (protocolo Tuya 3.5) aceitam controle direto pela rede da empresa, validado com leitura autenticada nos dois.

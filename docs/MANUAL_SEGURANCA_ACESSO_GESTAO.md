@@ -12,7 +12,7 @@ E, no mesmo dia: "Redefinição de senha e esqueci senha, você tem que implanta
 - **Não conseguem entrar no SGO+** (bloco vermelho, só quando há alguém): contas ativas sem e-mail e e-mails repetidos em duas ou mais contas ativas, com o botão Abrir Usuários.
 - **Código no celular (segundo fator)**: Desligado, Só e-mail ou WhatsApp com e-mail de reserva, para todos ou só para alguns perfis.
 - **Troca de senha obrigatória**: exige a troca de todas as contas ativas.
-- **Pessoas**: para cada pessoa (nome e e-mail), a situação da senha e onde ela recebe o código, com Exigir nova senha e Zerar segundo fator.
+- **Pessoas**: para cada pessoa (nome e e-mail), a situação da senha e onde ela recebe o código, com Exigir nova senha e Desconectar aparelhos (antes "Zerar segundo fator").
 - **Registro de segurança**: cada entrada, senha errada, código enviado, código usado ou errado, troca de senha, configuração alterada e zeramento, com quando, quem, IP, aparelho e quem fez.
 
 ## Ordem de implantação
@@ -74,11 +74,13 @@ O código é pedido pela própria pessoa naquela hora, então sai a qualquer hor
 
 ## Recuperar o acesso de uma pessoa
 
-- **Perdeu ou trocou o celular**: corrija o celular em Administração > Usuários e toque em Zerar segundo fator. Os aparelhos confiados e as sessões dela caem e, nas próximas 24 horas, ela entra só com a senha.
+- **Perdeu ou trocou o celular**: corrija o celular em Administração > Usuários e toque em Desconectar aparelhos. Os aparelhos confiados e as sessões dela caem e, nas próximas 24 horas, ela entra só com a senha.
 - **Senha pode ter vazado**: toque em Exigir nova senha. Na próxima entrada (ou em até 5 minutos, se estiver dentro) ela cria a senha nova.
 - **Esqueceu a senha**: a própria pessoa usa Esqueci minha senha; ou envie o link em Administração > Usuários > Mais ações > Enviar link de redefinição. Sem e-mail, use a senha provisória (a pessoa cria a dela no próximo acesso).
 
 Cada ação pede o motivo e fica no registro de segurança com o seu nome.
+
+**Desde 01/11/2026 (Etapa 6 do Programa de melhoria):** o botão "Zerar segundo fator" passou a se chamar **Desconectar aparelhos** (mesma ação, mesmo motivo obrigatório, mesmo registro, agora com o rótulo "Aparelhos desconectados (24 h sem código)"). O bloco do modelo do WhatsApp se chama "Modelo da mensagem do código no WhatsApp (Meta)". O registro sem eventos diz como ver mais (período maior, sem nome, Evento em "Todos").
 
 ## Se ninguém da gestão consegue entrar
 

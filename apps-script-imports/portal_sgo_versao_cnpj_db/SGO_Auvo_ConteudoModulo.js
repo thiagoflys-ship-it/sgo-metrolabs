@@ -82,6 +82,9 @@ var AUVO_CONTEUDO_MODULO = `<style>
 #tplAuvoContainer .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
 #tplAuvoContainer .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
 #tplAuvoContainer .toggle-linha { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+/* Etapa 6 (01/11/2026): o texto ao lado da chave também liga e desliga; no celular a linha tem 44 px de altura para o toque */
+#tplAuvoContainer .toggle-texto { cursor: pointer; }
+@media (max-width: 700px) { #tplAuvoContainer .toggle-linha { min-height: 44px; } #tplAuvoContainer .toggle-texto { display: inline-flex; align-items: center; min-height: 44px; flex: 1; } }
 #tplAuvoContainer .avancado-toggle-btn { background: none; border: 1px solid var(--border); color: var(--muted); }
 #tplAuvoContainer .busca-linha { display: flex; gap: 8px; margin-top: 8px; }
 #tplAuvoContainer .busca-linha input[type="text"] { flex: 1; }
@@ -1078,7 +1081,7 @@ function tplAuvo_paintPainel_() {
       'essa sincronização que alimenta o Início e o alerta de atendimento.</p>' +
       '<div class="toggle-linha">' +
         '<label class="toggle-switch"><input type="checkbox" id="tplAuvo_toggleSincAuto" onchange="tplAuvo_toggleSincAuto()"><span class="toggle-slider"></span></label>' +
-        '<span>Sincronizar automaticamente a cada 30 minutos</span>' +
+        '<label class="toggle-texto" for="tplAuvo_toggleSincAuto">Sincronizar automaticamente a cada 30 minutos</label>' +
       '</div>' +
       '<div id="tplAuvo_statusIncremental" class="muted" style="margin:6px 0"></div>' +
       '<button type="button" class="btn btn-sm" onclick="tplAuvo_rodarSincIncremental()">Sincronizar agora</button>' +
@@ -1101,7 +1104,7 @@ function tplAuvo_paintPainel_() {
       '</div>' +
       '<div class="toggle-linha">' +
         '<label class="toggle-switch"><input type="checkbox" id="tplAuvo_pendToggleDiario" onchange="tplAuvo_pendToggleDiario_()"><span class="toggle-slider"></span></label>' +
-        '<span>Atualizar automaticamente todo dia às 5h</span>' +
+        '<label class="toggle-texto" for="tplAuvo_pendToggleDiario">Atualizar automaticamente todo dia às 5h</label>' +
       '</div>' +
       '<table class="tabela-resultado"><thead><tr><th>Técnico responsável</th><th>Tarefa</th><th>Pendência</th><th>Cobranças</th><th></th></tr></thead>' +
       '<tbody id="tplAuvo_pendBody"><tr><td colspan="5" class="muted">Carregando...</td></tr></tbody></table>' +

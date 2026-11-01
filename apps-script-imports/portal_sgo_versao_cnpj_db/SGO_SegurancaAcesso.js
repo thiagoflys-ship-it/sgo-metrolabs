@@ -85,7 +85,7 @@ var SEGA_EVENTOS = {
   CODIGO_VENCIDO: 'Código vencido', CODIGO_BLOQUEADO: 'Login cancelado (5 códigos errados)', CODIGO_FALHA_ENVIO: 'Código não enviado',
   CODIGO_DISPENSADO: 'Sem código (aparelho confiado ou liberação)', APARELHO_CONFIADO: 'Aparelho confiado por 30 dias',
   SENHA_TROCADA: 'Senha trocada', SENHA_TROCA_FALHA: 'Troca de senha recusada', TROCA_EXIGIDA: 'Troca de senha exigida',
-  TROCA_EXIGIDA_TODOS: 'Troca de senha exigida de todos', SEGUNDO_FATOR_ZERADO: 'Segundo fator zerado',
+  TROCA_EXIGIDA_TODOS: 'Troca de senha exigida de todos', SEGUNDO_FATOR_ZERADO: 'Aparelhos desconectados (24 h sem código)',
   CONFIG_ALTERADA: 'Configuração alterada', RECUPERACAO: 'Acesso recuperado pelo servidor', MODELO_META: 'Modelo da Meta',
   // 31/10/2026: "esqueci minha senha" e redefinição pelo link
   REDEFINICAO_PEDIDA: 'Pediu o link de nova senha', REDEFINICAO_LINK_ENVIADO: 'Link de nova senha enviado', REDEFINICAO_IGNORADA: 'Pedido de link sem envio',
@@ -1241,7 +1241,7 @@ function SegAcesso_api(sessionId, acao, payload) {
           r = { message: SegAcesso_primeiroNome_(alvo.NOME) + ' vai criar a senha nova no próximo login (se estiver dentro do sistema, a tela abre em até 5 minutos).' };
         } else {
           SegAcesso_zerarSegundoFator_(alvo, motivoU, por, true);
-          r = { message: 'Segundo fator de ' + SegAcesso_primeiroNome_(alvo.NOME) + ' zerado: os aparelhos confiados e as sessões abertas foram desconectados, e ' +
+          r = { message: 'Aparelhos de ' + SegAcesso_primeiroNome_(alvo.NOME) + ' desconectados: os aparelhos confiados e as sessões abertas caíram, e ' +
             'nas próximas 24 horas a pessoa entra só com a senha. Confira o celular dela em Administração > Usuários antes disso.' };
         }
         break;

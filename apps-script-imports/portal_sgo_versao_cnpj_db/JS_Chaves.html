@@ -68,7 +68,7 @@
     div.innerHTML =
       '<div class="module-shell cadx" id="chvTela">' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Chaves e senhas</h2>' +
-          '<p class="content-subtitle">Chaves das integrações e senhas administrativas, agrupadas por integração. Configurações restritas conforme as permissões do seu usuário.</p></div><div class="module-header-right"></div></div>' +
+          '<p class="content-subtitle">Chaves de acesso e senhas que ligam o SGO+ aos outros serviços, uma integração por cartão. Cada pessoa vê só o que o perfil dela pode configurar.</p></div><div class="module-header-right"></div></div>' +
         CadUI_ajuda_(
           "<ul><li><b>O valor gravado nunca aparece de novo.</b> Das chaves de API aparecem só os 4 últimos caracteres; das senhas, nada. Para trocar, grave outro valor por cima.</li>" +
           "<li><b>Configurada</b> = os campos obrigatórios da integração estão gravados. <b>Com erro no teste</b> = o último teste não funcionou e nenhuma chave da integração mudou depois dele. <b>Falta configurar</b> = algum campo obrigatório está vazio.</li>" +
@@ -137,6 +137,10 @@
     c.innerHTML = (CHV.dados.podeConfigurarAlarme ? '<section class="chvx-grupo" id="chvAlarme"></section><section class="chvx-grupo" id="chvPredial"></section>' : "") + grupos.map(function (g) { return ChavesTela_htmlGrupo_(g, sit[g]); }).join("");
     if (CHV.dados.podeConfigurarAlarme) { ChavesAlarme_chamar_("configuracao", {}); ChavesPredial_carregar_(); }
     if (res && !grupos.length) res.innerHTML = "";
+    // Etapa 6 (01/11/2026): sem as chaves das integrações (são do responsável pelo sistema), a tela diz por quê e a quem pedir
+    if (!grupos.length) c.insertAdjacentHTML("beforeend", '<div class="cadx-vazio bc-vazio" id="chvSoDono"><strong>As chaves das integrações ficam com o responsável pelo sistema.</strong>' +
+      (CHV.dados.podeConfigurarAlarme ? "Pelo seu perfil, aqui você configura o alarme e a automação predial. " : "") +
+      "Para gravar ou trocar a chave de uma integração (inteligência artificial, Auvo, e-mail, WhatsApp, rastreador), peça a ele.</div>");
     c.querySelectorAll("[data-chv-grupo]").forEach(function (det) {
       det.addEventListener("toggle", function () { CHV.abertos[det.getAttribute("data-chv-grupo")] = det.open; });
     });

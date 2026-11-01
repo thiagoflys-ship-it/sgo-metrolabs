@@ -91,6 +91,7 @@ function SGO_ajudaTelas_Auvo_() {
         { nome: "Bolinha verde \"Concluído\" e amarela \"Em aberto\" (Início)", significado: "Situação da O.S. no Auvo." }
       ],
       problemas: [
+        { situacao: "No celular, a chave de sincronizar a cada 30 minutos ou de atualizar às 5h é difícil de tocar", oQueFazer: "Toque também no texto ao lado da chave: desde 01/11/2026 ele liga e desliga, com altura de toque no celular." },
         { situacao: "\"Credenciais do Auvo não configuradas\"", oQueFazer: "Peça ao Administrador para gravar AUVO_API_KEY e AUVO_API_TOKEN em \"Chaves e senhas\". As chaves são geradas no Auvo, em Menu > Integração. Depois toque em \"Testar conexão\"." },
         { situacao: "\"Credenciais do Auvo inválidas (HTTP 401/403)\"", oQueFazer: "As chaves gravadas estão erradas ou vencidas. Peça ao Administrador para gerar de novo no Auvo e gravar em \"Chaves e senhas\"." },
         { situacao: "\"Limite de requisições do Auvo atingido (HTTP 429)\"", oQueFazer: "O Auvo pediu uma pausa. Espere alguns minutos e tente de novo." },

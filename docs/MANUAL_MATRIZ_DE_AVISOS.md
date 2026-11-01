@@ -49,6 +49,10 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 
 Travas: WhatsApp na hora só nos eventos aprovados como exceção; evento obrigatório (avisos com ciência, atividade atrasada, decisões do gestor, escalada à Diretoria, exceções da Frota) não pode deixar de avisar; toda mudança pede motivo de pelo menos 8 letras.
 
+**Desde 01/11/2026 (Etapa 6 do Programa de melhoria):** com Módulo em "Todos", as regras vêm agrupadas por módulo, com o número de avisos e de regras alteradas no título de cada grupo. No celular os grupos começam fechados (antes a página tinha cerca de 36 mil px); no computador, abertos. O grupo que você abriu ou fechou continua assim depois de salvar uma regra. O botão "Definir gestores em Caixa de decisões" quebra a linha no celular em vez de passar da tela.
+
+**Piloto do WhatsApp (mesma data):** o bloco Situação diz o nome do campo que falta em Chaves e senhas (token permanente, identificação do número de telefone, identificação da conta comercial) em vez do nome interno da chave; a última alteração aparece como 01/11/2026 12:15; o selo antigo "Z-API desligada" agora é "Envio antigo (Z-API) desligado". No celular, marcar a pessoa, o tipo de aviso ou a área tem alvo de 44 px. O dia sem mensagens diz como ver outro dia ou todas as pessoas. O envio não mudou.
+
 ## 5. Meus avisos (cada pessoa)
 
 1. Abra Menu › Principal › Meus avisos.
