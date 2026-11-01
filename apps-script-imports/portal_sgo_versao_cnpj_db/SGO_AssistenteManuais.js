@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "faf4411aaf87",
+ "versao": "f04333c34919",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -792,6 +792,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Avisos",
      "texto": "A cobrança do atraso é feita no sistema (janela, faixa do topo e lista de pendências) e por e-mail, no horário de trabalho. O pedido de nova data chega para quem lançou no sistema e por e-mail; a recusa volta para você no sistema e por e-mail; o aceite, no sistema."
+    },
+    {
+     "titulo": "No celular e o voltar (01/11/2026)",
+     "texto": "Trocar de aba (Lista, Agenda, Kanban) é um passo do voltar: voltar devolve a aba de antes, em vez de sair de Minhas atividades. Em Atividades da equipe vale o mesmo para Gantt, Kanban, Lista e Indicadores.\nA ficha da atividade e a janela \"Pedir nova data\" fecham com o voltar. Se você mudou alguma coisa nelas (texto, motivo, data ou caixa de marcar), o sistema pergunta \"Descartar o que foi digitado?\" antes de fechar. Toque em Cancelar para continuar na janela.\nSe você abriu a O.S. pela ficha (\"Abrir a O.S.\"), voltar reabre a ficha da atividade.\nDepois de Comentar, Registrar andamento ou mudar a situação, a ficha continua na mesma altura.\nKanban é um quadro com uma coluna por situação; Gantt mostra cada atividade como uma barra do início à previsão de entrega. Agenda sem atividade no período diz isso e sugere as setas para ver outros períodos.\nNo celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.\nA janela \"Atividade com prazo vencido\" continua sem fechar pelo voltar: peça nova data ou conclua."
     }
    ]
   },
@@ -981,6 +985,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Chamados de representada (módulo Representação, 29/10/2026)",
      "texto": "A empresa representada (Brasmedical) entra no SGO+ com o perfil \"Representada\" e usa só o módulo Representação. O pedido dela entra na fila de Solicitações dos clientes com o selo roxo da representada e o prazo de aceite (4 horas úteis no padrão, configurável em Representação > Representadas).\nNa fila: \"Aceitar (vira chamado)\", \"Pedir complemento\" (o pedido volta para a representada e o prazo de aceite pausa até a resposta) ou \"Recusar com motivo\" (a representada vê o motivo). A representada recebe e-mail nas três saídas.\nO chamado aceito leva a representada (REPRESENTADA_ID), o protocolo dela e o enquadramento pretendido, e segue a triagem, a agenda, a O.S. e o relatório de sempre. O canal aparece como \"Representação\".\nLista de chamados: filtro \"Representação\" (só de representadas ou de uma delas) e selo roxo com o nome. Ficha: parte \"Representação\" com relato completo, contato no local, arquivos e número de mensagens; a conversa fica em Representação > Conversas.\nLinha do tempo com três públicos: interno (sem marca), representada e cliente final. O que a equipe registra com público para o cliente aparece também para a representada; o resto é interno.\nRegras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.\nAlertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).\nDetalhes no Manual do módulo Representação."
+    },
+    {
+     "titulo": "Ficha da O.S. e do chamado no celular (01/11/2026)",
+     "texto": "Ficha com quatro seções ou mais (a O.S. do técnico: Checklist, Relato e conferência, Fotos gerais, Peças, Assinatura do cliente, Documento e envio, Histórico; e a ficha do chamado) tem um índice no alto, que fica preso enquanto você rola. Toque no nome da seção para ir direto; \"Próxima: ...\" desce para a seção seguinte. A seção em que você está fica destacada.\nDepois de salvar (peça, assinatura, relato, Cheguei), a ficha continua na mesma altura, e o aviso do que foi salvo aparece também perto do botão \"Salvar o que preenchi\".\nO fim da ficha passa acima dos botões redondos. No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.\nO.S. fechada pelo botão Fechar e aberta de novo por outro caminho (lista, agenda, atividade) não volta mais para o chamado antigo.\nMeus chamados (cliente): Kanban mostra os chamados em colunas, uma por etapa; Gantt mostra os atendimentos numa linha do tempo; Lista e relatórios traz cada chamado e os documentos dele. No celular estreito, as abas quebram em duas linhas em vez de cortar o nome.\nNa ficha do chamado, a explicação da versão interna do relatório diz \"prazos de atendimento\" (antes, \"SLA\")."
     }
    ]
   },
@@ -2680,6 +2688,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Avisos da Frota pela matriz de avisos (21/10/2026)",
      "texto": "Aviso | Quem recebe | CanalRetirada ou devolução registrada em seu nome pela gestão | Condutor | Sistema e e-mail de resumo do dia (sem WhatsApp)\nVeículo em uso sem registro (rastreador) | Gestor da Frota | E-mail e WhatsApp na hora, no expediente; fora dele, no resumo do dia seguinte\nPartida não liberada pelo rastreador | Gestor da Frota | WhatsApp na hora, no expediente (o condutor está esperando)\nBloqueio da partida pendente há 30 minutos | Gestor da Frota | E-mail na hora\nReserva cancelada, trocada de veículo, lembrete da véspera, problema na reserva, devolução atrasada (a quem reservou) | Reservante | E-mail na hora\nVeículo da sua reserva de hoje liberado a outra pessoa | Reservante | E-mail e WhatsApp na hora (mesmo dia, expediente, CLT)\nDevolução atrasada com reserva no mesmo dia | Quem está com o veículo | WhatsApp na hora (expediente, CLT, uma por dia)\nReserva feita pela gestão em seu nome, reserva não utilizada, problema na reserva (à gestão), CNH vencendo | Reservante, condutor ou gestor da Frota | E-mail de resumo do dia\nAbastecimento sem comprovante há mais de 1 dia útil (S75, 30/10/2026) | Condutor | Sistema e e-mail na hora (no expediente); WhatsApp só na contagem do resumo do dia\nAbastecimento sem comprovante há mais de 1 dia útil (S76, 30/10/2026) | Gestor da Frota | E-mail de resumo do dia\nVeículo da sua reserva devolvido, devolução atrasada (à gestão) | Próximo reservante, gestor da Frota | Só no sistema (Caixa de decisões)\nO gestor da Frota é o da área Administrativo em Caixa de decisões › Regras e responsáveis (sem gestor, a Diretoria). PJ e vínculo não informado não recebem WhatsApp. Detalhes em docs/MANUAL_MATRIZ_DE_AVISOS.md."
+    },
+    {
+     "titulo": "Retirada e devolução no celular (01/11/2026)",
+     "texto": "As etapas da retirada e da devolução (KM, Fotos do veículo, Vistoria, Abastecimento, Devolução prevista) podem ser recolhidas: toque no título da etapa para recolher ou abrir. Recolhida, a etapa mostra o resumo do que foi preenchido (por exemplo, \"KM 45.210\", \"2 fotos\", \"Tudo OK\"). O conteúdo de cada etapa não mudou.\nO botão \"Confirmar retirada\" ou \"Confirmar devolução\" fica sempre embaixo, com a lista do que falta. \"Ir para o que falta\" abre e mostra a primeira etapa pendente; tocar em Confirmar com pendência faz o mesmo.\nSe você sair da retirada ou da devolução no meio, o rascunho fica guardado no aparelho: na tela inicial da Frota, toque em \"Continuar a retirada\" (ou a devolução).\n\"Abasteci\" e \"Pedágio, estacionamento e outras despesas\": com a foto da nota tirada (ou um campo preenchido), o voltar do celular, o voltar do navegador e o \"Voltar sem lançar\" perguntam \"Voltar sem lançar?\" antes de descartar. Cancelar continua na tela, com a foto.\nO fim do formulário passa acima da barra do Confirmar e dos botões redondos. No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.\nNo computador a tela continua igual, com o Confirmar preso no fim da área da Frota."
     }
    ]
   },
@@ -3142,6 +3154,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Erros comuns",
      "texto": "Situação | O que fazerO colaborador não recebeu o lembrete | Veja \"Pessoas e jornadas\": vínculo, piloto, celular e e-mail. Corrija em Administração > Usuários ou no Piloto do WhatsApp\nO lembrete chegou por e-mail | O modelo ainda não foi aprovado na Meta ou a pessoa está sem celular. Confira em \"Configuração\" > Modelos do WhatsApp\n\"Este link já foi usado\" | Cada link vale uma vez. Peça o ajuste em \"Meus lembretes\" > \"Pedir ajuste ao RH\"\n\"Este link valia só para...\" | O link vence no fim do dia. Peça o ajuste em \"Meus lembretes\" ou fale com o RH\nO RH não consegue tratar um pedido | Quem pediu não trata o próprio pedido. Outra pessoa do RH, a Diretoria ou o Administrador trata\n\"Lembrete não saiu\" | Nem o WhatsApp nem o e-mail funcionaram; o motivo aparece embaixo. Não conta como esquecimento"
+    },
+    {
+     "titulo": "No celular e o voltar (01/11/2026)",
+     "texto": "Trocar de aba (Hoje, Pedidos de ajuste, Mês, Meus lembretes, Pessoas e jornadas, Configuração) é um passo do voltar: voltar devolve a aba de antes.\n\"Ninguém para mostrar neste dia\" diz o motivo (fim de semana ou feriado, assistente desligado, ou ninguém com jornada no dia) e o que fazer: escolher outro dia no campo Dia ou conferir a jornada em \"Pessoas e jornadas\".\n\"Nenhum pedido pendente\" explica que o pedido aparece quando alguém toca em \"Esqueci de bater\"; \"Nenhuma marcação\" no mês diz se o assistente estava desligado.\nNo celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo."
     }
    ]
   },
@@ -3599,6 +3615,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "O que fazer se algo der errado",
      "texto": "Situação | O que fazerVoltar não fechou a janela | A janela é uma das que precisam ser resolvidas antes (veja acima), ou não tem botão de fechar. Leia o aviso no pé da tela e use os botões da janela.\nVoltar levou para o começo da tela, e não para a ficha | Essa tela ainda não guarda a ficha no caminho (a Etapa 2 cobriu Comercial, Assistência técnica, Compras, Frota, Clientes, Unidades, Equipamentos, Padrões e Vínculos). Abra a ficha de novo. As próximas etapas do programa de melhoria cobrem as telas restantes.\nVoltar devolveu a lista, mas não na mesma altura | A lista chegou do servidor depois de alguns segundos. O SGO+ tenta por até 3 segundos e para se você rolar a tela. Role até o ponto em que estava.\nO documento abriu numa aba nova no celular | É um documento guardado fora do SGO+. Feche a aba para voltar.\nA impressão saiu pequena ou cortada | Toque em \"Imprimir\" no alto do visualizador (e não no menu do navegador). Se continuar, avise o administrador do sistema."
+    },
+    {
+     "titulo": "Etapa 3 (01/11/2026): campo e celular",
+     "texto": "Abas que agora são passos do voltar: Minhas atividades (Lista, Agenda, Kanban), Atividades da equipe (Gantt, Kanban, Lista, Indicadores), Ponto e Relatório do ciclo (Kanban e Referências).\nA ficha da atividade é reaberta quando você volta da O.S. aberta por ela.\nJanelas de Atividades (ficha, Pedir nova data, Nova atividade, Editar) perguntam antes de descartar também quando você mudou só uma lista de escolha, uma data ou uma caixa de marcar.\nFrota, \"Abasteci\" e \"Outra despesa\": com a foto da nota tirada, o voltar pergunta \"Voltar sem lançar?\" antes de descartar.\nNo celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo."
     }
    ]
   },
@@ -3667,6 +3687,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Quem pode",
      "texto": "Perfil | O que fazCliente | Gera, assina e baixa os relatórios das lavadoras da própria empresa.\nEquipe da Metrolabs | Gera, assina e baixa os relatórios de qualquer lavadora, completa o cadastro do equipamento e gera nova versão com motivo."
+    },
+    {
+     "titulo": "No celular e o voltar (01/11/2026)",
+     "texto": "O Kanban dos relatórios é um quadro com uma coluna por situação do relatório (aguardando assinatura, assinado e aprovado, cancelado ou reprovado...).\nTrocar entre \"Kanban dos relatórios\" e \"Referências por receita\" é um passo do voltar: voltar devolve a aba de antes.\nNo celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo."
     }
    ]
   },

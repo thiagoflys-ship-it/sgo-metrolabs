@@ -791,3 +791,12 @@ Os relatórios da frota são documentos internos: depois de gerar, a barra "Docu
 | Veículo da sua reserva devolvido, devolução atrasada (à gestão) | Próximo reservante, gestor da Frota | Só no sistema (Caixa de decisões) |
 
 O gestor da Frota é o da área Administrativo em Caixa de decisões › Regras e responsáveis (sem gestor, a Diretoria). PJ e vínculo não informado não recebem WhatsApp. Detalhes em `docs/MANUAL_MATRIZ_DE_AVISOS.md`.
+
+## Retirada e devolução no celular (01/11/2026)
+
+- As etapas da retirada e da devolução (KM, Fotos do veículo, Vistoria, Abastecimento, Devolução prevista) podem ser recolhidas: toque no título da etapa para recolher ou abrir. Recolhida, a etapa mostra o resumo do que foi preenchido (por exemplo, "KM 45.210", "2 fotos", "Tudo OK"). O conteúdo de cada etapa não mudou.
+- O botão "Confirmar retirada" ou "Confirmar devolução" fica sempre embaixo, com a lista do que falta. "Ir para o que falta" abre e mostra a primeira etapa pendente; tocar em Confirmar com pendência faz o mesmo.
+- Se você sair da retirada ou da devolução no meio, o rascunho fica guardado no aparelho: na tela inicial da Frota, toque em "Continuar a retirada" (ou a devolução).
+- "Abasteci" e "Pedágio, estacionamento e outras despesas": com a foto da nota tirada (ou um campo preenchido), o voltar do celular, o voltar do navegador e o "Voltar sem lançar" perguntam "Voltar sem lançar?" antes de descartar. Cancelar continua na tela, com a foto.
+- O fim do formulário passa acima da barra do Confirmar e dos botões redondos. No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+- No computador a tela continua igual, com o Confirmar preso no fim da área da Frota.

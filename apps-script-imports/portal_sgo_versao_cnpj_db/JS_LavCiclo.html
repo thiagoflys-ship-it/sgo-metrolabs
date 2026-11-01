@@ -216,7 +216,16 @@
     if (LC.ini.eu.interno) abas.push(["referencias", "Referências por receita"]);
     if (LC.abaPainel !== "referencias" || !LC.ini.eu.interno) LC.abaPainel = "kanban";
     c.innerHTML = (abas.length > 1 && typeof PnA_abasHtml_ === "function" ? PnA_abasHtml_("lcAbasP", abas, LC.abaPainel) : "") + '<div id="lcPainelCorpo"></div>';
-    if (typeof PnA_ligarAbas_ === "function") PnA_ligarAbas_("lcAbasP", function (a) { LC.abaPainel = a; Lc_painelCorpo_(); });
+    // Etapa 3 (01/11/2026): trocar entre o Kanban e as Referências é um passo do voltar (volta à aba de antes)
+    if (typeof PnA_ligarAbas_ === "function") PnA_ligarAbas_("lcAbasP", function (a) {
+      var de = LC.abaPainel;
+      if (de && de !== a && window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Relatório do ciclo: " + a, function () {
+        if (!Lc_$_("lcPainelCorpo")) return;
+        LC.abaPainel = de; Lc_painelCorpo_();
+        var ab = Lc_$_("lcAbasP"); if (ab) ab.querySelectorAll("[data-pna-aba]").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-pna-aba") === de); });
+      });
+      LC.abaPainel = a; Lc_painelCorpo_();
+    });
     Lc_painelCorpo_();
   }
   function Lc_painelCorpo_() {
@@ -232,7 +241,7 @@
       el.innerHTML = '<div class="at-vazio">Nenhum relatório de ciclo ainda. Para gerar o primeiro, busque a lavadora acima (ou toque em "Ver todas as lavadoras") e toque em "Gerar relatório do ciclo". Pelo celular, também dá para ler o QR code da lavadora.</div>';
       return;
     }
-    var legenda = "Cada coluna mostra os " + p.porColuna + " relatórios mais recentes. Toque num cartão para abrir, baixar, assinar ou ver as versões.";
+    var legenda = "Kanban: um quadro com uma coluna por situação do relatório. Cada coluna mostra os " + p.porColuna + " relatórios mais recentes. Toque num cartão para abrir, baixar, assinar ou ver as versões.";
     var opc = { vazio: "Nenhum relatório nesta situação.", cor: function (x) { return LC_COR_COLUNA[x.coluna] || "var(--muted)"; }, cartao: Lc_kcard_, legenda: Lc_esc_(legenda) };
     cols.forEach(function (c) { c.itens.forEach(function (x) { x.coluna = c.chave; }); });
     if (Lc_estreito_()) {

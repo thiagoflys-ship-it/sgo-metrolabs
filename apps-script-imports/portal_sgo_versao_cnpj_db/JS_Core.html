@@ -882,6 +882,7 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    try { document.documentElement.classList.remove("sgo-flut-recolhido"); } catch (e0) {} // Etapa 3: botões redondos de volta ao trocar de tela
     // 31/10/2026: "Trocar minha senha" (todos os perfis) abre a janela da troca por cima da tela atual (JS_SegurancaAcesso.html)
     if (mod === "trocar_senha") { if (typeof SegAcesso_abrirTrocarMinha_ === "function") SegAcesso_abrirTrocarMinha_(); return; }
     // Perfil REPRESENTADA: qualquer outra tela (atalho, busca, link antigo) leva ao módulo Representação.
@@ -2768,7 +2769,21 @@
       ".fs input[type=date],.fs input[type=time]{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-strong);font-size:16px;box-sizing:border-box}",
       ".fs-livres{display:flex;flex-direction:column;gap:8px;margin-top:8px}",
       ".fs-check{display:flex;gap:10px;align-items:flex-start;font-size:15px;font-weight:700;color:var(--text-strong)}",
-      ".fs-check input{width:22px;height:22px;flex:0 0 auto;margin-top:2px}"
+      ".fs-check input{width:22px;height:22px;flex:0 0 auto;margin-top:2px}",
+      // Etapa 3 (01/11/2026): seções recolhíveis na retirada e na devolução (o conteúdo não muda; toque no título recolhe ou abre)
+      ".fs-passo{scroll-margin-top:calc(var(--mobile-topbar-h,64px) + 12px)}",
+      ".fs-passo h3{margin:0}",
+      ".fs-passo-cab{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0;margin:0;border:0;background:none;font:inherit;font-size:16px;font-weight:800;color:var(--text-strong);text-align:left;cursor:pointer}",
+      ".fs-passo-resumo{margin-left:auto;font-size:13.5px;font-weight:700;color:var(--muted);text-align:right}",
+      ".fs-passo-seta{flex:0 0 auto;width:24px;text-align:center;font-size:20px;color:var(--muted)}",
+      ".fs-passo-seta::after{content:'\\2212'}",
+      ".fs-passo.recolhida .fs-passo-seta::after{content:'+'}",
+      ".fs-passo.recolhida .fs-passo-resumo{color:var(--text-strong)}",
+      ".fs-passo-corpo{display:flex;flex-direction:column;gap:10px}",
+      ".fs-passo-corpo[hidden]{display:none}",
+      ".fs-irfalta{display:inline-flex;align-items:center;min-height:40px;padding:0 6px;margin-left:4px;border:0;background:none;color:var(--bc-action);font:inherit;font-size:13.5px;font-weight:800;text-decoration:underline;cursor:pointer}",
+      // o fim do formulário passa acima da barra fixa e dos botões redondos (que sobem acima dela)
+      "html.sgo-tem-rodape-fixo .fs:not(.fs-desk){padding-bottom:calc(var(--sgo-rodape-fixo-h,96px) + 72px + env(safe-area-inset-bottom,0px))}"
     ].join("\n");
     document.head.appendChild(st);
   }
@@ -3230,6 +3245,8 @@
     if (acao === "removerFoto") { ev.preventDefault(); ev.stopPropagation(); fsRemoverFoto_(id); return; }
     if (acao === "tentarFoto") { fsTentarDeNovo_(id); return; }
     if (acao === "confirmar") { fsConfirmar_(); return; }
+    if (acao === "recolher") { const f2 = FS.fluxo; if (f2) { f2.recolhidas = f2.recolhidas || {}; f2.recolhidas[id] = !f2.recolhidas[id]; fsAplicarRecolher_(); } return; }
+    if (acao === "irFalta") { fsIrFalta_(); return; }
     if (acao === "cancelar") { fsCancelar_(); return; }
     // 21/10/2026: bloqueio da partida (passar o carro, retirada esquecida)
     if (acao === "passar" || acao === "assumir" || acao === "assumi") { fsBlqForm_(acao, id); return; }
@@ -3370,6 +3387,7 @@
     raiz.addEventListener("click", fsClique_);
     raiz.addEventListener("input", fsAoDigitar_);
     raiz.addEventListener("change", fsAoMudar_);
+    fsSecoes_();
     fsAtualizarKmInfo_();
     fsDesenharFotos_();
     fsAtualizarBarra_();
@@ -3432,6 +3450,14 @@
   // O servidor confere com as mesmas regras do abastecimento da devolução (FrotaAb_analisar_): o que é impossível volta com o
   // motivo e nada é gravado; o resto grava "a conferir". A foto da nota é obrigatória. Leitura da nota por IA: só com a chave.
   const FSG = { modo: "", ctx: null, nota: null, painel: null, ia: null, enviando: false };
+  const FSG_TEXTO_DESCARTAR = "Voltar sem lançar?\n\nA foto da nota e o que você preencheu ainda não foram enviados e serão descartados. Toque em OK para descartar e voltar, ou em Cancelar para continuar aqui.";
+  /** Etapa 3: há foto (nota ou painel) ou campo preenchido que ainda não foi lançado. */
+  function fsGastoSujo_() {
+    const r = fsRaiz_();
+    if (!r || r.getAttribute("data-tela") !== "gasto" || FSG.enviando) return false;
+    if (FSG.nota || FSG.painel) return true;
+    return ["fsg_litros", "fsg_valor", "fsg_km", "fsg_posto", "fsg_local", "fsg_desc", "fsg_just"].some(function (id) { const e = document.getElementById(id); return !!(e && String(e.value || "").trim()); });
+  }
   function fsGastoAbrir_(modo) {
     const host = fsHost_(); if (!host) return;
     fsEntrarForm_(modo === "abasteci" ? "Abasteci" : "Outra despesa");
@@ -3439,6 +3465,11 @@
     FSG.modo = modo; FSG.nota = null; FSG.painel = null; FSG.ia = null; FSG.enviando = false; FSG.tanque = "";
     host.innerHTML = '<div class="fs' + (fsNoComputador_() ? " fs-desk" : "") + '" id="fsRaiz" data-tela="gasto"><div class="fs-aviso info" role="status">Carregando...</div></div>';
     fsRaiz_().addEventListener("click", fsGastoClique_);
+    // Etapa 3 (01/11/2026): com a foto da nota (ou do painel) tirada, o voltar pergunta antes de descartar (data-sgo-sujo, JS_Navegacao)
+    const rz = fsRaiz_();
+    rz.setAttribute("data-sgo-sujo", "");
+    rz.setAttribute("data-sgo-sujo-texto", FSG_TEXTO_DESCARTAR);
+    rz.__sgoSujo = fsGastoSujo_;
     mobileFrota_chamarApiSilencioso_("apiGastoContexto").then(function (c) { FSG.ctx = c; fsGastoDesenhar_(); }).catch(function (err) {
       const r = fsRaiz_(); if (!r) return;
       r.innerHTML = '<div class="fs-aviso erro" role="alert">' + fsEsc_((err && err.message) || String(err)) + ' Verifique a conexão e tente de novo.</div><button type="button" class="fs-btn" data-g="voltar">Voltar</button>';
@@ -3550,7 +3581,7 @@
   function fsGastoClique_(ev) {
     const b = ev.target.closest("[data-g]"); if (!b) return;
     const g = b.getAttribute("data-g");
-    if (g === "voltar") { renderMobileFrotaOperacional_(); return; }
+    if (g === "voltar") { if (fsGastoSujo_() && !confirm(FSG_TEXTO_DESCARTAR)) return; renderMobileFrotaOperacional_(); return; }
     if (g === "tanque") { FSG.tanque = b.getAttribute("data-v"); fsRaiz_().querySelectorAll('[data-g="tanque"]').forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); return; }
     if (g === "usarKm") { const sel = document.getElementById("fsg_ret"), x = (FSG.ctx.retiradas || []).filter(function (q) { return q.movimentacaoId === (sel ? sel.value : ""); })[0]; const k = document.getElementById("fsg_km"); if (x && x.kmSugerido && k) k.value = String(x.kmSugerido.km); return; }
     if (g !== "gravar" || FSG.enviando) return;
@@ -3576,6 +3607,7 @@
   function fsRedesenharAbast_() {
     const f = FS.fluxo, sec = document.getElementById("fsPassoAbast"); if (!f || !sec) return;
     sec.outerHTML = fsAbastHtml_(f, !f.mov.minha);
+    fsSecoes_();
     fsDesenharFotos_(); fsAtualizarResumoAbast_(); fsAtualizarBarra_();
   }
 
@@ -3928,7 +3960,8 @@
     const enviadas = todas.filter(function (x) { return x.estado === "enviada"; }).length;
     let txt = p.length ? "Falta: " + p.join(", ") + "." : "Tudo pronto.";
     if (todas.length) txt += " Fotos: " + enviadas + " de " + todas.length + " enviadas.";
-    sub.textContent = txt;
+    sub.innerHTML = fsEsc_(txt) + (p.length && fsSecaoDaPendencia_(p[0]) ? '<button type="button" class="fs-irfalta" data-acao="irFalta">Ir para o que falta</button>' : "");
+    fsAplicarRecolher_();
     ["fsPassoKm", "fsPassoFotos", "fsPassoVist"].forEach(function (id, i) {
       const el = document.getElementById(id); if (!el) return;
       const feito = i === 0 ? (p.indexOf("o KM do painel") < 0 && p.indexOf("o KM de chegada") < 0 && p.indexOf("a foto do painel") < 0)
@@ -3958,7 +3991,7 @@
     const f = FS.fluxo, d = FS.inicio || {};
     if (!f || FS.enviando) return;
     const p = fsPendencias_();
-    if (p.length) { fsStatus_("erro", "Para confirmar, falta: " + p.join(", ") + "."); return; }
+    if (p.length) { fsStatus_("erro", "Para confirmar, falta: " + p.join(", ") + "."); fsIrFalta_(p); return; }
     if (!(MOBILE_FROTA.gruposChecklist || []).length) { fsStatus_("erro", "A lista da vistoria não carregou. Toque em Cancelar e voltar, depois em Atualizar agora."); return; }
     const ret = f.tipo === "retirada";
     const km = frotaNumCliente_(f.km);
@@ -4083,6 +4116,64 @@
   // Etapa 2 do programa de melhoria (01/11/2026): os formulários da Frota simples (retirar, devolver, abasteci, outra despesa,
   // passar o carro, ajustar KM, partida) são um passo do voltar; voltar (ou "Cancelar") volta à tela inicial da Frota, na mesma
   // altura e com a mesma base escolhida. Ao voltar à tela inicial por conta própria (salvou, cancelou), o passo sai da pilha.
+  // Etapa 3 do programa de melhoria (01/11/2026): retirada e devolução em seções recolhíveis, sem mudar o conteúdo. Toque no título
+  // recolhe ou abre; recolhida, a seção mostra o resumo do que foi preenchido. "Ir para o que falta" (na barra do Confirmar, que
+  // fica sempre à vista) e Confirmar com pendência abrem e mostram a primeira seção pendente.
+  function fsSecaoDaPendencia_(txt) {
+    const t = String(txt || "");
+    if (/abasteceu|abastecimento|combustível/.test(t)) return "fsPassoAbast";
+    if (/KM|painel/.test(t)) return "fsPassoKm";
+    if (/foto do veículo/.test(t)) return "fsPassoFotos";
+    if (/vistoria|item|escrever/.test(t)) return "fsPassoVist";
+    if (/devolução prevista/.test(t)) return "fsPassoPrev";
+    if (/condutor/.test(t)) return "fs_gestao";
+    return "";
+  }
+  function fsResumoPasso_(id, f) {
+    if (!f) return "";
+    const vivas = function (l) { return (l || []).filter(function (x) { return !x.removida; }).length; };
+    if (id === "fsPassoKm") { const k = frotaNumCliente_(f.km); return String(f.km || "").trim() && isFinite(k) ? "KM " + fsKm_(k) + (vivas(f.painel) ? " · foto do painel" : "") : "falta o KM"; }
+    if (id === "fsPassoFotos") { const n = vivas(f.fotos); return n ? SGO_qtd_(n, "foto", "fotos") : "falta a foto"; }
+    if (id === "fsPassoVist") { const n = Object.keys(f.problemas || {}).length; return f.vistoria === "ok" ? "Tudo OK" : (f.vistoria === "problema" ? (n ? SGO_qtd_(n, "item com problema", "itens com problema") : "marque o item") : "falta a vistoria"); }
+    if (id === "fsPassoAbast") return ({ NAO: "Não abasteci", SIM: f.abastModo === "depois" ? "Abasteci (lançar depois)" : "Abasteci", JA_LANCADO: "Já lançado pelo Abasteci", NAO_SEI: "O condutor responde depois" })[f.abast] || "falta responder";
+    if (id === "fsPassoPrev") return f.prevData && f.prevHora ? fsDiaHora_(f.prevData, f.prevHora) : "falta a data e a hora";
+    return "";
+  }
+  function fsSecoes_() {
+    const f = FS.fluxo, raiz = fsRaiz_(); if (!f || !raiz) return;
+    raiz.querySelectorAll(".fs-passo").forEach(function (sec) {
+      if (sec.querySelector(":scope > .fs-passo-corpo")) return;
+      const h3 = sec.querySelector(":scope > h3"); if (!h3 || !sec.id) return;
+      const corpo = document.createElement("div"); corpo.className = "fs-passo-corpo"; corpo.id = sec.id + "_corpo";
+      while (h3.nextSibling) corpo.appendChild(h3.nextSibling);
+      sec.appendChild(corpo);
+      const bt = document.createElement("button"); bt.type = "button"; bt.className = "fs-passo-cab";
+      bt.setAttribute("data-acao", "recolher"); bt.setAttribute("data-id", sec.id); bt.setAttribute("aria-controls", corpo.id);
+      while (h3.firstChild) bt.appendChild(h3.firstChild);
+      bt.insertAdjacentHTML("beforeend", '<span class="fs-passo-resumo"></span><span class="fs-passo-seta" aria-hidden="true"></span>');
+      h3.appendChild(bt);
+    });
+    fsAplicarRecolher_();
+  }
+  function fsAplicarRecolher_() {
+    const f = FS.fluxo, raiz = fsRaiz_(); if (!f || !raiz) return;
+    const rec = f.recolhidas || {};
+    raiz.querySelectorAll(".fs-passo").forEach(function (sec) {
+      const corpo = sec.querySelector(":scope > .fs-passo-corpo"), bt = sec.querySelector(".fs-passo-cab"); if (!corpo || !bt) return;
+      const fechada = !!rec[sec.id];
+      corpo.hidden = fechada; sec.classList.toggle("recolhida", fechada); bt.setAttribute("aria-expanded", String(!fechada));
+      const r = bt.querySelector(".fs-passo-resumo"); if (r) r.textContent = fechada ? fsResumoPasso_(sec.id, f) : "";
+    });
+  }
+  function fsIrFalta_(pend) {
+    const f = FS.fluxo; if (!f) return;
+    const p = pend || fsPendencias_(); if (!p.length) return;
+    const id = fsSecaoDaPendencia_(p[0]), el = id ? document.getElementById(id) : null; if (!el) return;
+    if (el.tagName === "DETAILS") el.open = true;
+    if (f.recolhidas) delete f.recolhidas[id];
+    fsAplicarRecolher_();
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
   function fsEntrarForm_(rotulo) {
     if (window.SGO_NAV && SGO_NAV.empilhar) FS.navForm = SGO_NAV.empilhar(rotulo, function () { renderMobileFrotaOperacional_(); }, { chave: "fs-form" }) || null;
   }
@@ -5049,6 +5140,35 @@
   }
   setInterval(SGO_medirRodapeFixo_, 700);
   window.addEventListener("resize", SGO_medirRodapeFixo_);
+
+  // Etapa 3 do programa de melhoria (01/11/2026): no celular, enquanto a pessoa rola para baixo (a página, uma janela ou a gaveta
+  // da O.S.), os dois botões redondos (bate-papo e "Tire sua dúvida") saem para o lado e não ficam por cima de botões e campos.
+  // Voltam ao rolar para cima, no topo, no fim da rolagem e ao trocar de tela. Só a classe html.sgo-flut-recolhido (UI_Estilos);
+  // AssistenteWidget e ComunicacaoWidget não mudam. Movimento pequeno (até 12 px) não muda nada.
+  function SGO_flutAoRolar_(est, topo, max) {
+    const t = Math.max(0, Number(topo) || 0), m = Math.max(0, Number(max) || 0), ult = Number(est && est.ultimo) || 0;
+    const oculto = !!(est && est.oculto);
+    if (t <= 40 || t >= m - 8) return { ultimo: t, oculto: false };
+    if (t - ult > 12) return { ultimo: t, oculto: true };
+    if (ult - t > 12) return { ultimo: t, oculto: false };
+    return { ultimo: ult, oculto: oculto };
+  }
+  (function () {
+    const memo = new WeakMap();
+    document.addEventListener("scroll", function (ev) {
+      try {
+        const raiz = document.documentElement;
+        if (!document.querySelector("#app.modo-mobile")) { raiz.classList.remove("sgo-flut-recolhido"); return; }
+        const t = ev.target;
+        const el = (!t || t === document || t === raiz || t === document.body) ? (document.scrollingElement || raiz) : t;
+        if (!el || el.nodeType !== 1 || (el.closest && el.closest("#aswPainel, .comw-painel"))) return;
+        if (el.scrollHeight - el.clientHeight < 80) return; // caixinha que rola pouco (lista curta, chips) não conta
+        const novo = SGO_flutAoRolar_(memo.get(el) || { ultimo: 0, oculto: raiz.classList.contains("sgo-flut-recolhido") }, el.scrollTop, el.scrollHeight - el.clientHeight);
+        memo.set(el, novo);
+        raiz.classList.toggle("sgo-flut-recolhido", novo.oculto);
+      } catch (e) {}
+    }, { capture: true, passive: true });
+  })();
 
   function voltarMobile_() {
     // Limpa o "gancho de retorno" do wizard do Certificado de Calibração —

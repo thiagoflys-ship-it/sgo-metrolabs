@@ -98,3 +98,11 @@ Atualizar a página (F5) ou abrir o SGO+ de novo no mesmo aparelho volta para a 
 | Voltar devolveu a lista, mas não na mesma altura | A lista chegou do servidor depois de alguns segundos. O SGO+ tenta por até 3 segundos e para se você rolar a tela. Role até o ponto em que estava. |
 | O documento abriu numa aba nova no celular | É um documento guardado fora do SGO+. Feche a aba para voltar. |
 | A impressão saiu pequena ou cortada | Toque em "Imprimir" no alto do visualizador (e não no menu do navegador). Se continuar, avise o administrador do sistema. |
+
+## Etapa 3 (01/11/2026): campo e celular
+
+- Abas que agora são passos do voltar: Minhas atividades (Lista, Agenda, Kanban), Atividades da equipe (Gantt, Kanban, Lista, Indicadores), Ponto e Relatório do ciclo (Kanban e Referências).
+- A ficha da atividade é reaberta quando você volta da O.S. aberta por ela.
+- Janelas de Atividades (ficha, Pedir nova data, Nova atividade, Editar) perguntam antes de descartar também quando você mudou só uma lista de escolha, uma data ou uma caixa de marcar.
+- Frota, "Abasteci" e "Outra despesa": com a foto da nota tirada, o voltar pergunta "Voltar sem lançar?" antes de descartar.
+- No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.

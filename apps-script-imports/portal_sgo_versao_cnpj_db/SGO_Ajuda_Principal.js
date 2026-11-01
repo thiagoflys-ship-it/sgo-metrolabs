@@ -456,6 +456,8 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Selo cinza \"Restrita\"", significado: "Só o responsável, quem lançou e a gestão veem a atividade." }
       ],
       problemas: [
+        { situacao: "Voltei e saí de Minhas atividades, ou perdi a aba", oQueFazer: "Trocar de aba (Lista, Agenda, Kanban) é um passo do voltar: voltar devolve a aba de antes. A ficha da atividade e a janela \"Pedir nova data\" fecham com o voltar; com algo preenchido (texto, motivo ou data), o sistema pergunta antes de descartar. Se você abriu a O.S. pela ficha, voltar reabre a ficha." },
+        { situacao: "O botão redondo está por cima de \"Concluir\" ou \"Detalhes\"", oQueFazer: "No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo." },
         { situacao: "A janela \"Atividade com prazo vencido\" não fecha", oQueFazer: "É assim mesmo. Em cada atividade, peça nova data (motivo, explicação curta e data) ou toque em \"Já terminei: concluir\"." },
         { situacao: "Aparece \"a explicação está curta demais (mínimo 15 letras)\"", oQueFazer: "Diga em poucas palavras o que atrasou. O contador abaixo do campo mostra quantas letras já tem." },
         { situacao: "Aparece \"a explicação passou de 600 letras\"", oQueFazer: "O pedido é só o motivo, curto. Resuma e envie de novo; o relatório do que foi feito vai em \"Registrar andamento do dia\"." },
@@ -673,6 +675,7 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Selos e situações", significado: "Os mesmos de Minhas atividades: \"Vencida\" vermelho, \"Vence hoje\" amarelo, \"Em dia\" verde." }
       ],
       problemas: [
+        { situacao: "O que são Gantt e Kanban?", oQueFazer: "Gantt: cada atividade é uma barra do início à previsão de entrega, numa linha do tempo. Kanban: um quadro com uma coluna por situação (A fazer, Em andamento...). Trocar de aba é um passo do voltar: voltar devolve a aba de antes." },
         { situacao: "Aparece \"Não foi possível mudar a situação: a atividade é de\"", oQueFazer: "A atividade é de outra pessoa. Só o responsável, quem lançou e a gestão mudam a situação. Fale com o responsável." },
         { situacao: "Aparece \"Não foi possível montar o Gantt: o período está inválido.\"", oQueFazer: "Ajuste as datas \"Período de\" e \"até\". A data final precisa ser depois da inicial." },
         { situacao: "Aparece \"Nenhuma atividade no período e filtros escolhidos.\"", oQueFazer: "Aumente o período ou escolha \"Todas\" em \"Pessoa\" e \"Todos\" em \"Módulo\"." },
@@ -866,6 +869,7 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Número vermelho ao lado de \"Avisos\" no menu", significado: "Quantidade de avisos aguardando a sua ciência." }
       ],
       problemas: [
+        { situacao: "A tela diz \"Nenhum aviso para você por enquanto\"", oQueFazer: "Está tudo certo: não há comunicado esperando a sua leitura. Quando a gestão ou o RH publicar um, ele aparece aqui e na entrada do sistema." },
         { situacao: "A janela do aviso aparece toda vez que entro", oQueFazer: "Toque em \"Li e estou ciente\". Ela volta enquanto a leitura não for confirmada." },
         { situacao: "Aparece \"Não foi possível registrar a ciência: este aviso não foi enviado para você.\"", oQueFazer: "Atualize a lista de avisos. O aviso pode ter sido arquivado ou o público mudou." },
         { situacao: "A miniatura mostra \"Não carregou\"", oQueFazer: "Feche e abra o aviso de novo. Se continuar, avise a gestão." },

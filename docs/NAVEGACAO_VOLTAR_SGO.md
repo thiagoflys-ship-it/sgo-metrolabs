@@ -77,3 +77,16 @@ Já usam o gancho: Relatório do ciclo da lavadora (busca, busca dentro da busca
 - Auto-refresh nunca grava passo: só `abrir()` de outra tela, `empilhar` e janelas gravam.
 - `AssistenteWidget.html` e `ComunicacaoWidget.html` não mudam; desde a Etapa 2 os painéis deles entram na pilha pela casca (ver acima).
 - `empilhar` não faz nada durante o voltar: o `aoVoltar` pode redesenhar com as funções normais do módulo (que chamam `empilhar`) sem gravar passo.
+
+## Etapa 3 (01/11/2026): campo e celular
+
+- **`data-sgo-sujo-texto`.** O painel marcado com `data-sgo-sujo` pode trazer a pergunta própria (o que se perde). `confirmar` da casca troca a pergunta padrão por esse texto quando o painel visível está alterado. Usado em "Abasteci" e "Outra despesa" da Frota simples (`FSG_TEXTO_DESCARTAR`, `fsGastoSujo_`).
+- **Botões redondos ao rolar.** `SGO_flutAoRolar_(estado, topo, max)` (JS_Core, pura) decide se o bate-papo e o "Tire sua dúvida" saem para o lado: rolando para baixo mais de 12 px, somem; rolando para cima, no topo (até 40 px) e no fim (8 px), voltam. Ouvinte de `scroll` em captura (página, janelas, gaveta) só no modo celular; classe `html.sgo-flut-recolhido` (UI_Estilos, `translate`, sem mexer nos componentes); `abrir()` tira a classe.
+
+| Módulo | Arquivo | Gancho |
+|---|---|---|
+| Atividades | `JS_Atividades.html` | `Atividades_passoAba_` (abas de Minhas e da equipe); `ATV.fichaVolta` reabre a ficha ao voltar da O.S. (`Atividades_aoAbrirModulo_` com `SGO_NAV.restaurando()`); `Atividades_vigiarSujo_` em toda janela de `Atividades_modal_` (valor guardado no primeiro foco); ficha redesenhada mantém a rolagem |
+| Frota simples | `JS_Core.html` | `fsSecoes_`/`fsAplicarRecolher_`/`fsIrFalta_`/`fsSecaoDaPendencia_`/`fsResumoPasso_` (seções recolhíveis, estado em `FS.fluxo.recolhidas`); gasto com `data-sgo-sujo` |
+| Assistência | `JS_Assistencia.html` | `At_indiceSecoes_` (4 seções ou mais, `At_secaoAtual_` pura) em `At_gaveta_`; rolagem mantida ao redesenhar a mesma ficha (`g.__rolMantido`); `AT.voltaChamado = null` ao fechar pelo botão ou por fora |
+| Ponto | `JS_Ponto.html` | `Ponto_aba_` com `empilhar` |
+| Relatório do ciclo | `JS_LavCiclo.html` | abas Kanban/Referências com `empilhar` |

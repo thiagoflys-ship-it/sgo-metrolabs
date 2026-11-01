@@ -706,6 +706,25 @@
   }
 
   // ---------- modal genérico ----------
+  /**
+   * Etapa 3 (01/11/2026): a janela conta como "alterada" quando a pessoa mudou um campo dela (texto, lista de escolha, data,
+   * caixa de marcar). O valor de antes é guardado no primeiro toque no campo; o que o sistema preenche sozinho não conta.
+   * O voltar da casca pergunta "Descartar o que foi digitado?" (data-sgo-sujo / __sgoSujo, JS_Navegacao).
+   */
+  function Atividades_campoValor_(c) { return c.type === "checkbox" || c.type === "radio" ? (c.checked ? "1" : "0") : String(c.value || ""); }
+  function Atividades_vigiarSujo_(ov) {
+    ov.setAttribute("data-sgo-sujo", "");
+    ov.addEventListener("focusin", function (e) {
+      var c = e.target;
+      if (c && /^(INPUT|SELECT|TEXTAREA)$/.test(c.tagName) && c.__sgoIni === undefined) c.__sgoIni = Atividades_campoValor_(c);
+    });
+    ov.__sgoSujo = function () {
+      return Array.prototype.some.call(ov.querySelectorAll("input, select, textarea"), function (c) {
+        if (c.__sgoIni === undefined || /busca/i.test(c.id || "")) return false;
+        return Atividades_campoValor_(c) !== c.__sgoIni;
+      });
+    };
+  }
   function Atividades_modal_(titulo, corpoHtml, rodapeHtml, opcoes) {
     var o = opcoes || {};
     var ov = document.createElement("div");
@@ -718,6 +737,7 @@
       '<div class="atv-modal-corpo">' + corpoHtml + "</div>" +
       (rodapeHtml ? '<div class="atv-modal-rod' + (o.empilha ? " empilha" : "") + '">' + rodapeHtml + "</div>" : "") + "</div>";
     ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
+    Atividades_vigiarSujo_(ov);
     document.body.appendChild(ov);
     return ov;
   }
@@ -763,7 +783,10 @@
   // ---------- detalhe ----------
   /** 26/10/2026: abre a O.S. na Assistência técnica (atendimento ligado à atividade). */
   function Atividades_abrirOS_(osId) {
-    var ov = document.getElementById("atvDetalheOverlay"); if (ov) ov.remove();
+    var ov = document.getElementById("atvDetalheOverlay");
+    // Etapa 3: voltar da O.S. reabre esta ficha na tela de onde ela foi aberta (Atividades_aoAbrirModulo_)
+    if (ov && ov.dataset.id) ATV.fichaVolta = { id: ov.dataset.id, mod: window.SGO_MODULO_ATUAL || "" };
+    if (ov) ov.remove();
     if (typeof Assistencia_irPara_ === "function") Assistencia_irPara_({ mod: "assistencia_os", id: osId });
     else if (typeof abrir === "function") abrir("assistencia_os");
   }
@@ -775,6 +798,8 @@
       var antigo = document.getElementById("atvDetalheOverlay");
       var comentarioRascunho = antigo && antigo.querySelector("#atvComentario") ? antigo.querySelector("#atvComentario").value : "";
       var andamentoRascunho = antigo && antigo.querySelector("#atvAndTexto") ? antigo.querySelector("#atvAndTexto").value : "";
+      // Etapa 3: a mesma ficha redesenhada depois de uma ação continua na altura em que a pessoa estava
+      var rolAntes = antigo && antigo.dataset.id === String(id) && antigo.querySelector(".atv-modal-corpo") ? antigo.querySelector(".atv-modal-corpo").scrollTop : 0;
       if (antigo) antigo.remove();
       var souResp = a.RESPONSAVEL_ID === eu.id, dono = eu.gestor || a.CRIADO_POR_ID === eu.id;
       var aberta = Atividades_aberta_(a), podeAlt = Atividades_podeAlterar_(a);
@@ -840,6 +865,7 @@
         '<h4 style="margin:0 0 8px;font-size:13px">Histórico</h4><div class="atv-hist">' + hist + "</div>";
       var ov = Atividades_modal_(Atividades_esc_(a.TITULO), corpo, "", { id: "atvDetalheOverlay", largura: 700 });
       ov.dataset.id = a.ID;
+      if (rolAntes) { var cRol = ov.querySelector(".atv-modal-corpo"); if (cRol) cRol.scrollTop = rolAntes; }
       var bEd = ov.querySelector('[data-x="editar"]');
       if (bEd) bEd.onclick = function () { Atividades_abrirFormulario_({ editar: a }); };
       if (comentarioRascunho && ov.querySelector("#atvComentario")) ov.querySelector("#atvComentario").value = comentarioRascunho;
@@ -1189,7 +1215,7 @@
           "</div>";
       }).join("");
       return '<div class="atv-kcol" data-sit="' + s + '"><div class="atv-kcol-cab">' + s + '<span class="qtd">' + doCol.length + "</span></div>" +
-        '<div class="atv-kcol-corpo">' + (cards || '<div class="atv-sub" style="text-align:center;padding:16px 0">Arraste uma atividade para cá</div>') + "</div></div>";
+        '<div class="atv-kcol-corpo">' + (cards || '<div class="atv-sub" style="text-align:center;padding:16px 0">' + (typeof ehMobileModo_ === "function" && ehMobileModo_() ? "Nenhuma atividade nesta situação." : "Nenhuma atividade nesta situação. Arraste uma para cá para mudar a situação.") + "</div>") + "</div></div>";
     }).join("");
     return '<div class="atv-kanban" data-ctx="' + ctx + '">' + cols + "</div>";
   }
@@ -1272,7 +1298,7 @@
       '<span style="margin-left:auto" class="motores-tabs" role="tablist">' +
         '<button type="button" class="motores-tab-btn atv-mini' + (ATV.agendaModo === "semana" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'semana\')">Semana</button>' +
         '<button type="button" class="motores-tab-btn atv-mini' + (ATV.agendaModo === "mes" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'mes\')">Mês</button></span></div>' +
-      grade +
+      grade + (grade.indexOf('class="atv-ev') < 0 ? '<div class="atv-vazio" style="margin-top:8px">Nenhuma atividade ' + (ATV.agendaModo === "semana" ? "nesta semana" : "neste mês") + '. Use as setas para ver outros períodos, ou "Nova atividade" para registrar uma.</div>' : "") +
       '<div class="atv-legenda">Cada atividade aparece no dia da previsão de entrega; quando tem início previsto em outro dia, aparece também nesse dia com a borda tracejada.</div>';
   }
 
@@ -1315,7 +1341,15 @@
     Atividades_ligarTimerTela_();
   }
 
+  // Etapa 3 do programa de melhoria (01/11/2026): trocar de aba (Lista, Agenda, Kanban; na equipe, Gantt, Kanban, Lista,
+  // Indicadores) é um passo do voltar: voltar devolve a aba de antes, em vez de sair do módulo.
+  function Atividades_passoAba_(rotulo, de, para, desfazer) {
+    if (!de || de === para || !window.SGO_NAV || !SGO_NAV.empilhar) return;
+    SGO_NAV.empilhar(rotulo, desfazer);
+  }
   function Atividades_trocarAba_(aba) {
+    var de = ATV.aba;
+    Atividades_passoAba_("Minhas atividades: " + aba, de, aba, function () { if (ATV.tela === "minhas" && document.getElementById("atvMinhasCorpo")) Atividades_trocarAba_(de); });
     ATV.aba = aba;
     document.querySelectorAll("#conteudo .atv-tabs .motores-tab-btn").forEach(function (b, i) { b.classList.toggle("active", ["lista", "agenda", "kanban"][i] === aba); });
     var fb = document.getElementById("atvFiltrosMinhas"); if (fb) fb.style.display = aba === "lista" ? "" : "none";
@@ -1365,7 +1399,7 @@
     }
     if (ATV.aba === "agenda") { corpo.innerHTML = Atividades_agendaHtml_(ATV.minhas); return; }
     if (ATV.aba === "kanban") {
-      corpo.innerHTML = '<div class="atv-legenda">Arraste o cartão para mudar a situação. Clique para abrir o detalhe. Canceladas não aparecem; concluídas mostram as 30 mais recentes.</div>' + Atividades_kanbanHtml_(ATV.minhas, "minhas");
+      corpo.innerHTML = '<div class="atv-legenda">Kanban: um quadro com uma coluna por situação. Arraste o cartão para mudar a situação. Toque no cartão para abrir o detalhe. Canceladas não aparecem; concluídas mostram as 30 mais recentes.</div>' + Atividades_kanbanHtml_(ATV.minhas, "minhas");
       Atividades_ligarKanban_(corpo, ATV.minhas);
       return;
     }
@@ -1428,6 +1462,8 @@
   }
 
   function Atividades_trocarAbaEquipe_(aba) {
+    var de = ATV.equipeAba;
+    Atividades_passoAba_("Atividades da equipe: " + aba, de, aba, function () { if (ATV.tela === "equipe" && document.getElementById("atvEqCorpo")) Atividades_trocarAbaEquipe_(de); });
     ATV.equipeAba = aba;
     document.querySelectorAll("#atvEqTabs .motores-tab-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.aba === aba); });
     var campoG = document.getElementById("atvEqAgruparCampo"); if (campoG) campoG.style.display = aba === "gantt" ? "" : "none";
@@ -1542,7 +1578,7 @@
     if (!corpo || !ATV.equipe) return;
     if (ATV.equipeAba === "kanban") {
       var itensK = Atividades_itensEquipeFiltrados_(false);
-      corpo.innerHTML = '<div class="atv-legenda">' + (Atividades_ehGestor_() ? "Arraste o cartão para mudar a situação. Clique para abrir o detalhe." : "Arraste as suas atividades e as que você lançou para mudar a situação. As demais (borda tracejada) você acompanha. Clique para abrir o detalhe.") + "</div>" + Atividades_kanbanHtml_(itensK, "equipe", { mostrarResp: true });
+      corpo.innerHTML = '<div class="atv-legenda">Kanban: um quadro com uma coluna por situação. ' + (Atividades_ehGestor_() ? "Arraste o cartão para mudar a situação. Clique para abrir o detalhe." : "Arraste as suas atividades e as que você lançou para mudar a situação. As demais (borda tracejada) você acompanha. Clique para abrir o detalhe.") + "</div>" + Atividades_kanbanHtml_(itensK, "equipe", { mostrarResp: true });
       Atividades_ligarKanban_(corpo, itensK);
       return;
     }
@@ -1769,7 +1805,7 @@
       '<span><i style="border:1px solid #c2953f;background-image:repeating-linear-gradient(45deg,#c2953f 0 3px,transparent 3px 6px)"></i>Previsão adiada por justificativa</span>' +
       '<span><i style="background:rgba(224,82,82,.55);outline:2px solid #e05252"></i>Atrasada (vencida até hoje)</span>' +
       '<span><i style="background:#1E4F7A;width:3px"></i>Hoje</span><span><i style="background:#fff;border-radius:50%"></i>Fazendo agora</span>';
-    return '<div class="atv-legenda">' + leg + '</div><div class="atv-gantt-wrap">' + s.join("") + "</div>";
+    return '<div class="atv-legenda">Gantt: cada atividade é uma barra do início à previsão de entrega, na linha do tempo. ' + leg + '</div><div class="atv-gantt-wrap">' + s.join("") + "</div>";
   }
 
   // ---------- atualização automática (30 s, só com a aba visível e sem edição em andamento) ----------
@@ -1796,6 +1832,11 @@
   // ---------- Kanban do módulo (painel lateral injetado pela casca) ----------
   function Atividades_aoAbrirModulo_(mod) {
     ATV.modAtual = mod;
+    var fv = ATV.fichaVolta;
+    if (fv && mod === fv.mod) {
+      ATV.fichaVolta = null;
+      if (window.SGO_NAV && SGO_NAV.restaurando && SGO_NAV.restaurando()) setTimeout(function () { Atividades_abrirDetalhe_(fv.id); }, 60);
+    }
     if (mod !== "minhas_atividades" && mod !== "atividades_equipe") ATV.tela = "";
     Atividades_fecharDrawer_();
     if (!SESSION || Atividades_ehCliente_()) return;

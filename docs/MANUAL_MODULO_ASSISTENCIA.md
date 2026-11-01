@@ -384,3 +384,12 @@ tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o aten
 - Regras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.
 - Alertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).
 - Detalhes no Manual do módulo Representação.
+
+## Ficha da O.S. e do chamado no celular (01/11/2026)
+
+- Ficha com quatro seções ou mais (a O.S. do técnico: Checklist, Relato e conferência, Fotos gerais, Peças, Assinatura do cliente, Documento e envio, Histórico; e a ficha do chamado) tem um índice no alto, que fica preso enquanto você rola. Toque no nome da seção para ir direto; "Próxima: ..." desce para a seção seguinte. A seção em que você está fica destacada.
+- Depois de salvar (peça, assinatura, relato, Cheguei), a ficha continua na mesma altura, e o aviso do que foi salvo aparece também perto do botão "Salvar o que preenchi".
+- O fim da ficha passa acima dos botões redondos. No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+- O.S. fechada pelo botão Fechar e aberta de novo por outro caminho (lista, agenda, atividade) não volta mais para o chamado antigo.
+- Meus chamados (cliente): Kanban mostra os chamados em colunas, uma por etapa; Gantt mostra os atendimentos numa linha do tempo; Lista e relatórios traz cada chamado e os documentos dele. No celular estreito, as abas quebram em duas linhas em vez de cortar o nome.
+- Na ficha do chamado, a explicação da versão interna do relatório diz "prazos de atendimento" (antes, "SLA").

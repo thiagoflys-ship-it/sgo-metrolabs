@@ -80,6 +80,8 @@ function SGO_ajudaTelas_Assistencia_() {
         { nome: 'Selo "Aberta em campo"', significado: 'O técnico abriu a O.S. pelo aplicativo, fora da agenda; o cadastro usado pode estar marcado "criado em campo" (confira em Chamados).' }
       ],
       problemas: [
+        { situacao: 'A ficha da O.S. é longa no celular.', oQueFazer: 'Use o índice no alto da ficha (Checklist, Relato e conferência, Fotos gerais, Peças, Assinatura do cliente...) para pular direto, ou "Próxima: ..." para descer uma seção. Depois de salvar, a ficha continua na mesma altura e o aviso aparece perto do botão "Salvar o que preenchi".' },
+        { situacao: 'O botão redondo está por cima de um botão da ficha.', oQueFazer: 'No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo. No fim da ficha sobra espaço para nada ficar coberto.' },
         { situacao: 'Aparece "a chegada ainda não foi registrada".', oQueFazer: 'Toque em "Cheguei" primeiro e salve de novo.' },
         { situacao: 'A foto não subiu.', oQueFazer: 'Verifique a conexão e salve de novo. As fotos que já subiram não se repetem.' },
         { situacao: 'Aparece "a O.S. é de outro técnico".', oQueFazer: 'Só o técnico responsável (ou a gestão da área Técnica) registra. Fale com a gestão se ela deveria ser sua.' },
@@ -155,7 +157,7 @@ function SGO_ajudaTelas_Assistencia_() {
         { titulo: 'Responder um orçamento', itens: ['Em "Orçamentos", confira os itens, o total, a validade e as condições (o PDF baixa pelo link "Baixar o orçamento em PDF").', 'Toque em "Aprovar" (nome completo, cargo, CPF opcional, e-mail, assinatura no quadro e "Li e concordo"), "Pedir ajuste" (o que precisa mudar) ou "Recusar" (o motivo).', 'A resposta é única: depois dela o orçamento mostra "Respondido em ... por ...". A confirmação chega por e-mail; na aprovação, com o comprovante em PDF.', 'Recebeu o orçamento por e-mail? O link "Ver e responder o orçamento" faz o mesmo, sem precisar entrar no portal.'] }
       ],
       quemPode: [{ perfil: 'CLIENTE', pode: 'Vê só os chamados e os equipamentos da própria empresa.' }],
-      perguntas: [{ p: 'Recebo aviso?', r: 'Sim, por e-mail: quando o pedido é recebido, quando a visita é reagendada, quando o atendimento é concluído e quando você responde um orçamento (a confirmação, com o comprovante na aprovação).' }, { p: 'O orçamento venceu. E agora?', r: 'Não dá para aprovar um orçamento vencido. Toque em "Pedir ajuste" ou fale com a Metrolabs: a equipe faz uma revisão com a validade nova e envia de novo.' }]
+      perguntas: [{ p: 'O que são Kanban e Gantt?', r: 'Kanban: os seus chamados em colunas, uma por etapa (Recebido, Em análise, Visita agendada...). Gantt: os atendimentos numa linha do tempo. Lista e relatórios: cada chamado e os documentos dele.' }, { p: 'Recebo aviso?', r: 'Sim, por e-mail: quando o pedido é recebido, quando a visita é reagendada, quando o atendimento é concluído e quando você responde um orçamento (a confirmação, com o comprovante na aprovação).' }, { p: 'O orçamento venceu. E agora?', r: 'Não dá para aprovar um orçamento vencido. Toque em "Pedir ajuste" ou fale com a Metrolabs: a equipe faz uma revisão com a validade nova e envia de novo.' }]
     }
   };
 }

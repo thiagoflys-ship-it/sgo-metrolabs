@@ -161,3 +161,9 @@ Eventos que podem aparecer na fita e nas ocorrências a partir das revisões atu
 |---|---|
 | Cliente | Gera, assina e baixa os relatórios das lavadoras da própria empresa. |
 | Equipe da Metrolabs | Gera, assina e baixa os relatórios de qualquer lavadora, completa o cadastro do equipamento e gera nova versão com motivo. |
+
+## 11. No celular e o voltar (01/11/2026)
+
+- O Kanban dos relatórios é um quadro com uma coluna por situação do relatório (aguardando assinatura, assinado e aprovado, cancelado ou reprovado...).
+- Trocar entre "Kanban dos relatórios" e "Referências por receita" é um passo do voltar: voltar devolve a aba de antes.
+- No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.

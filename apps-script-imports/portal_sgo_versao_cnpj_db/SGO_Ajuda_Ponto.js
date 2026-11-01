@@ -31,6 +31,7 @@ function SGO_ajudaTelas_Ponto_() {
         { nome: 'Selo cinza "Lembrete não saiu"', significado: 'Nem o WhatsApp nem o e-mail funcionaram (o motivo aparece embaixo). Não conta como esquecimento.' }
       ],
       problemas: [
+        { situacao: 'Aparece "Ninguém para mostrar neste dia".', oQueFazer: 'A própria tela diz o motivo (fim de semana, feriado, assistente desligado ou ninguém com jornada no dia). Escolha outro dia no campo Dia. Trocar de aba é um passo do voltar: voltar devolve a aba de antes.' },
         { situacao: 'O colaborador diz que não recebeu o lembrete.', oQueFazer: 'Veja na aba "Pessoas e jornadas" se ele recebe. Os motivos mais comuns: vínculo não informado, fora da lista do piloto ou sem celular. Corrija em Administração > Usuários ou no Piloto do WhatsApp.' },
         { situacao: 'O lembrete chegou por e-mail e não pelo WhatsApp.', oQueFazer: 'O modelo sgo_ponto_* ainda não foi aprovado na Meta, ou a pessoa está sem celular. Confira na aba "Configuração" > Modelos do WhatsApp.' },
         { situacao: 'O link diz que já foi usado.', oQueFazer: 'Cada link vale uma vez. Se tocou por engano, peça o ajuste em "Meus lembretes" > "Pedir ajuste ao RH".' },

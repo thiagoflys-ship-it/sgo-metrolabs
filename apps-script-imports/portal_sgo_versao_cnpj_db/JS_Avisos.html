@@ -312,7 +312,8 @@
   }
 
   function AvisosTela_htmlMeus_(itens) {
-    if (!itens.length) return '<div class="atv-vazio">Nenhum aviso para você por enquanto.</div>';
+    // Etapa 3 (01/11/2026): o estado vazio diz o que acontece quando chegar um aviso
+    if (!itens.length) return '<div class="atv-vazio">Nenhum aviso para você por enquanto. Quando a gestão ou o RH publicar um comunicado para você, ele aparece aqui e também na entrada do sistema, com o botão "Li e estou ciente". Não precisa fazer nada agora.</div>';
     return '<div class="avs-lista">' + itens.map(function (a, i) {
       var pend = !a.CIENTE_EM;
       return '<div class="avs-card' + (pend ? " pendente" : "") + ((a.IMPORTANCIA === "Importante" || a.IMPORTANCIA === "Urgente") ? " importante" : "") + '">' +

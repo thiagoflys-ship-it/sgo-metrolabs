@@ -72,7 +72,21 @@
   .at-tri b.n { font-size: 18px; font-variant-numeric: tabular-nums; }
   .at-vinc { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12.5px; background: var(--card); overflow-wrap: anywhere; }
   .at-vinc.alerta { border-left: 4px solid var(--danger); background: var(--danger-bg); }
+  /* Etapa 3 (01/11/2026): índice das seções na gaveta (O.S. e chamado), preso no alto enquanto rola, com "Próxima seção" */
+  .at-indice { position: sticky; top: -14px; z-index: 3; display: flex; gap: 8px; align-items: center; margin: -14px -18px 10px; padding: 8px 18px; background: var(--bg, #fff); border-bottom: 1px solid var(--border); }
+  .at-indice-lista { display: flex; gap: 6px; overflow-x: auto; flex: 1 1 auto; min-width: 0; scrollbar-width: thin; }
+  .at-indice-bt { flex: 0 0 auto; min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card, #fff); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .at-indice-bt.ativo { background: var(--text-strong, #1f2933); border-color: var(--text-strong, #1f2933); color: #fff; }
+  .at-indice-prox { flex: 0 0 auto; min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--bc-action, #1f6f3f); background: var(--bc-action-bg, #eaf4ee); color: var(--bc-action, #1f6f3f); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .at-indice-prox[hidden] { display: none; }
+  .at-sec[data-at-sec] { scroll-margin-top: 64px; }
   @media (max-width: 900px) {
+    .at-indice { flex-wrap: wrap; }
+    .at-indice-prox { width: 100%; }
+    /* o fim da gaveta passa acima dos botões redondos */
+    #atGaveta .atv-drawer-corpo { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+    #atPoAbas { flex-wrap: wrap; }
+    #atPoAbas .motores-tab-btn { white-space: normal; }
     .at-grade2, .at-grade3 { grid-template-columns: 1fr; }
     .at-grade4, .at-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .at-det { grid-template-columns: 1fr; } .at-det dt { margin-top: 6px; }
@@ -144,14 +158,59 @@
     document.body.appendChild(ov);
     return ov;
   }
+  // Etapa 3 (01/11/2026): índice das seções de uma gaveta longa (4 seções ou mais). Puras: rótulo curto e seção em que a pessoa está.
+  function At_rotuloSecao_(t) { return String(t || "").replace(/\s+/g, " ").replace(/\s*[·(:].*$/, "").trim(); }
+  function At_slugSecao_(t) { return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  /** tops = altura de cada seção na tela; limite = linha logo abaixo do índice. Devolve a última seção que já passou dela (-1 = antes da primeira). */
+  function At_secaoAtual_(tops, limite) { var i = -1; (tops || []).forEach(function (t, j) { if (t <= limite) i = j; }); return i; }
+  function At_indiceSecoes_(corpo, rotulo) {
+    if (!corpo) return;
+    var secs = Array.prototype.filter.call(corpo.children, function (x) { return x.classList && x.classList.contains("at-sec"); });
+    if (secs.length < 4) return;
+    var itens = secs.map(function (s, j) { var r = At_rotuloSecao_(s.textContent), k = At_slugSecao_(r) || "secao-" + j; s.setAttribute("data-at-sec", k); return { k: k, r: r, el: s }; });
+    var nav = document.createElement("nav");
+    nav.className = "at-indice"; nav.setAttribute("aria-label", rotulo || "Seções desta ficha");
+    nav.innerHTML = '<div class="at-indice-lista">' + itens.map(function (x) { return '<button type="button" class="at-indice-bt" data-ir="' + At_esc_(x.k) + '">' + At_esc_(x.r) + "</button>"; }).join("") + "</div>" +
+      '<button type="button" class="at-indice-prox" data-prox></button>';
+    corpo.insertBefore(nav, corpo.firstChild);
+    var lista = nav.querySelector(".at-indice-lista"), bProx = nav.querySelector("[data-prox]");
+    var limite = function () { return corpo.getBoundingClientRect().top + nav.offsetHeight + 16; };
+    var atual = function () { return At_secaoAtual_(itens.map(function (x) { return x.el.getBoundingClientRect().top; }), limite()); };
+    var ir = function (x) { corpo.scrollTo({ top: Math.max(0, x.el.getBoundingClientRect().top - corpo.getBoundingClientRect().top + corpo.scrollTop - nav.offsetHeight - 8), behavior: "smooth" }); };
+    var marcar = function () {
+      var i = atual();
+      nav.querySelectorAll(".at-indice-bt").forEach(function (b, j) {
+        b.classList.toggle("ativo", j === i);
+        if (j === i) { b.setAttribute("aria-current", "true"); if (b.offsetLeft < lista.scrollLeft || b.offsetLeft + b.offsetWidth > lista.scrollLeft + lista.clientWidth) lista.scrollLeft = Math.max(0, b.offsetLeft - 24); }
+        else b.removeAttribute("aria-current");
+      });
+      var p = itens[i + 1];
+      bProx.hidden = !p;
+      if (p) bProx.innerHTML = "Próxima: " + At_esc_(p.r) + ' <span aria-hidden="true">&darr;</span>';
+    };
+    nav.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ir]");
+      if (b) { var x = itens.filter(function (q) { return q.k === b.getAttribute("data-ir"); })[0]; if (x) ir(x); return; }
+      if (e.target.closest("[data-prox]")) { var p = itens[atual() + 1]; if (p) ir(p); }
+    });
+    var t = null;
+    corpo.addEventListener("scroll", function () { clearTimeout(t); t = setTimeout(marcar, 80); }, { passive: true });
+    marcar();
+  }
   function At_gaveta_(titulo, corpo) {
-    var antiga = At_$_("atGaveta"); if (antiga) antiga.remove();
+    // Etapa 3: a mesma ficha redesenhada depois de salvar (peça, assinatura, relato) continua na altura em que a pessoa estava
+    var antiga = At_$_("atGaveta"), rol = 0;
+    if (antiga) { var ca = antiga.querySelector("#atGavetaCorpo"), ta = antiga.querySelector(".atv-drawer-cab h3"); if (ca && ta && ta.textContent === titulo) rol = ca.scrollTop; antiga.remove(); }
     var g = document.createElement("div");
     g.id = "atGaveta"; g.className = "atv-overlay"; g.style.justifyContent = "flex-end"; g.style.padding = "0";
     g.innerHTML = '<div class="atv-drawer" role="dialog" aria-label="' + At_esc_(titulo) + '" style="max-width:760px;width:100%"><div class="atv-drawer-cab"><h3>' + At_esc_(titulo) + '</h3><button type="button" class="btn-secondary" data-at-fechar>Fechar</button></div><div class="atv-drawer-corpo" id="atGavetaCorpo">' + corpo + '</div></div>';
-    g.querySelector("[data-at-fechar]").onclick = function () { g.remove(); };
-    g.addEventListener("click", function (e) { if (e.target === g) g.remove(); });
+    // Etapa 3: fechada pelo botão ou por fora, a O.S. não guarda mais a volta ao chamado (AT.voltaChamado) para uma próxima abertura
+    g.querySelector("[data-at-fechar]").onclick = function () { AT.voltaChamado = null; g.remove(); };
+    g.addEventListener("click", function (e) { if (e.target === g) { AT.voltaChamado = null; g.remove(); } });
     document.body.appendChild(g);
+    var cn = g.querySelector("#atGavetaCorpo");
+    At_indiceSecoes_(cn, "Seções de " + titulo);
+    if (rol && cn) { cn.scrollTop = rol; g.__rolMantido = true; }
     return g;
   }
   function At_pedirTexto_(titulo, explicacao, rotulo, minimo, ok, botao) {
@@ -456,7 +515,7 @@
       r.compras.compras.map(function (x) { return '<tr><td data-r="Compra"><b>' + At_esc_(x.numero) + '</b> · ' + At_esc_(x.titulo) + '<br><span class="at-meta">' + At_esc_(x.origem + " · " + x.quem) + '</span></td><td data-r="Data">' + At_esc_(x.data) + '</td><td data-r="Situação">' + At_esc_(x.situacaoNome) + '</td>' + (r.compras.veValores ? '<td data-r="Valor">' + At_esc_(x.valorTxt || "") + '</td>' : '') + '</tr>'; }).join("") +
       '</tbody></table><p class="at-meta">Detalhes em Compras. ' + (r.compras.veValores ? 'O custo soma o que foi pago (compra informada ou pedido com pagamento registrado).' : 'Valores só para Compras, gestão e Financeiro.') + '</p></div>';
     // 29/10/2026: relatórios A4 do atendimento nas versões de cada público e a liberação das fotos para os documentos externos (SGO_Representacao_Documentos.js)
-    h += '<div class="at-sec">Relatórios do atendimento</div><div class="at-caixa" id="atRelDocs"><p class="at-meta">Cada versão mostra só o que o público dela pode ler. A interna traz notas internas, prazos e SLA: não sai da Metrolabs. Fica salvo em HTML e PDF; cada emissão é uma versão nova.</p>' +
+    h += '<div class="at-sec">Relatórios do atendimento</div><div class="at-caixa" id="atRelDocs"><p class="at-meta">Cada versão mostra só o que o público dela pode ler. A interna traz notas internas e os prazos de atendimento: não sai da Metrolabs. Fica salvo em HTML e PDF; cada emissão é uma versão nova.</p>' +
       '<div id="atRelMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" data-at-rel="INTERNO">Gerar (Metrolabs, uso interno)</button><button type="button" class="btn-secondary" data-at-rel="CLIENTE">Gerar a versão do cliente</button>' +
       (c.representadaId ? '<button type="button" class="btn-secondary" data-at-rel="REPRESENTADA">Gerar a versão da representada</button>' : '') + '</div><div id="atRelLista"><p class="at-meta">Carregando…</p></div><div id="atRelFotos"></div></div>';
     // 29/10/2026 (módulo Representação): parte "Representação" da ficha (relato, contato, arquivos e conversa com a representada)
@@ -818,6 +877,8 @@
       '<button type="button" class="btn-secondary" id="atOsChamado">Abrir o chamado</button></div>';
     h += '<div class="at-sec">Histórico da O.S.</div><div class="at-hist">' + (o.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + (e.emAparelho && e.emAparelho !== e.em ? ' (aparelho ' + At_esc_(e.emAparelho) + ')' : '') + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto) + '</div>'; }).join("") + '</div>';
     var g = At_gaveta_("O.S. " + o.numero, h), corpo = g.querySelector("#atGavetaCorpo");
+    // Etapa 3: com a gaveta na mesma altura, o aviso do que foi salvo também aparece embaixo, perto do botão usado
+    if (msg && g.__rolMantido) { if (corpo.querySelector("#atOsMsg")) At_msg_("atOsMsg", msg, tipo || "ok"); else if (typeof frotaToastEnvio_ === "function") frotaToastEnvio_(tipo !== "erro", "O.S. " + o.numero, msg); }
     var vch = AT.voltaChamado;
     if (vch && vch.os === o.id && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(g, function () { if (AT.voltaChamado === vch) AT.voltaChamado = null; At_abrirChamado_(vch.ch); });
     else AT.voltaChamado = null;
@@ -1368,7 +1429,8 @@
           { v: PnA_num_(k.emAtendimento), l: "Em atendimento agora", sub: "Técnico no local ou serviço em andamento" },
           { v: k.proximaVisita ? k.proximaVisita.quando : "—", l: "Próxima visita", sub: k.proximaVisita ? k.proximaVisita.numero + " · " + k.proximaVisita.equipamento : "Nenhuma visita agendada" },
           { v: PnA_num_(k.concluidos), l: "Concluídos (" + k.dias + " dias)", sub: "Tempo médio até a conclusão: " + PnA_tempo_(k.mediaConclusaoMin, md), title: "Chamados concluídos nos últimos " + k.dias + " dias. Tempo médio: da abertura do chamado à conclusão, em horas úteis do expediente da Metrolabs." }
-        ]) + At_portalOrcamentos_(r.orcamentos || []) + PnA_abasHtml_("atPoAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["lista", "Lista e relatórios"]], AT.portalAba || "kanban") + '<div id="atPoAba"></div>';
+        ]) + At_portalOrcamentos_(r.orcamentos || []) + PnA_abasHtml_("atPoAbas", [["kanban", "Kanban"], ["gantt", "Gantt"], ["lista", "Lista e relatórios"]], AT.portalAba || "kanban") +
+          '<p class="at-meta">Kanban: os seus chamados em colunas, uma por etapa. Gantt: os atendimentos numa linha do tempo. Lista e relatórios: cada chamado e os documentos dele.</p><div id="atPoAba"></div>';
         var desenhar = function (a) {
           AT.portalAba = a;
           var el = At_$_("atPoAba"); if (!el) return;

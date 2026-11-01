@@ -92,6 +92,7 @@ function SGO_ajudaTelas_LavCiclo_() {
         { nome: "Faixa laranja \"O cadastro desta lavadora está sem...\"", significado: "Falta um dado do cadastro (série, setor, unidade...). Não impede o relatório." }
       ],
       problemas: [
+        { situacao: "O que é o Kanban dos relatórios?", oQueFazer: "Um quadro com uma coluna por situação do relatório (aguardando assinatura, assinado e aprovado, cancelado ou reprovado...). Toque num cartão para abrir. Trocar entre o Kanban e as Referências por receita é um passo do voltar." },
         { situacao: "\"Este arquivo não é o arquivo de ciclo da lavadora (.sgolav)\"", oQueFazer: "Escolha o arquivo do mesmo lote com final .sgolav. O .csv e o .txt não servem." },
         { situacao: "\"O conteúdo do arquivo está corrompido, incompleto ou foi alterado\"", oQueFazer: "Copie o arquivo de novo direto da lavadora e escolha sem abrir nem editar. Se repetir com o arquivo novo, avise a Metrolabs." },
         { situacao: "\"Este lote já tem relatório para esta lavadora\"", oQueFazer: "O mesmo ciclo não é importado duas vezes. Toque em \"Abrir o relatório que já existe\"." },

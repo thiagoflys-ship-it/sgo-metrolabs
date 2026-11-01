@@ -3456,7 +3456,12 @@
     html body .asw-botao i { font-size: 20px; }
     html body .asw-botao .asw-rot-pc, html body .asw-botao .asw-rot-cel { display: none; }
     html.sgo-tem-rodape-fixo body .comw-botao, html.sgo-tem-rodape-fixo body .asw-botao { bottom: calc(8px + var(--sgo-rodape-fixo-h, 0px)); }
+    /* Etapa 3 (01/11/2026): rolando para baixo, os dois botões saem para o lado (JS_Core > SGO_flutAoRolar_) e não cobrem
+       botões e campos; voltam ao rolar para cima, no topo, no fim e ao trocar de tela. */
+    html body .comw-botao, html body .asw-botao { transition: translate .18s ease, opacity .18s ease; }
+    html.sgo-flut-recolhido body .comw-botao, html.sgo-flut-recolhido body .asw-botao { translate: calc(100% + 96px) 0; opacity: 0; pointer-events: none; }
   }
+  @media (prefers-reduced-motion: reduce) { html body .comw-botao, html body .asw-botao { transition: none; } }
 
   /* celular deitado: pouca altura, barra do topo mais baixa */
   @media (max-height: 500px) {

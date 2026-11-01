@@ -541,6 +541,11 @@
       });
     }
     var NAO_CONTA = /busca|buscar|pesquis|filtro|search|procurar/i;
+    function textoSujoProprio() {
+      var l = document.querySelectorAll("[data-sgo-sujo-texto]");
+      for (var i = l.length - 1; i >= 0; i--) if (visivel(l[i]) && marcadoSujo(l[i])) return l[i].getAttribute("data-sgo-sujo-texto");
+      return "";
+    }
     // Revisão da Etapa 2: o módulo que já sabe que o formulário mudou (preenchido pela leitura do certificado, lista de escolha,
     // caixa de marcar) avisa a casca com data-sgo-sujo no painel: "1" fixo ou, se o elemento tiver __sgoSujo(), o que ela responder.
     function marcadoSujo(el) {
@@ -614,7 +619,9 @@
       telaInicial: telaInicial,
       usuario: function () { try { var u = typeof USER_CONTEXT !== "undefined" && USER_CONTEXT; return u ? (u.userId || u.id || u.email || u.usuario || u.nome || "") : ""; } catch (e) { return ""; } },
       aviso: aviso,
-      confirmar: function (t) { try { return window.confirm(t); } catch (e) { return true; } },
+      // Etapa 3 (01/11/2026): o painel marcado com data-sgo-sujo pode dizer o que se perde (data-sgo-sujo-texto, ex.: a foto da
+      // nota na Frota); sem isso, vale a pergunta padrão "Descartar o que foi digitado?"
+      confirmar: function (t) { try { return window.confirm(t === SGO_NAV_TEXTOS.descartar ? (textoSujoProprio() || t) : t); } catch (e) { return true; } },
       janelaAberta: function (el) { return visivel(el); },
       janelaTrava: ehTrava,
       janelaSuja: function (el) { return !ehWidget(el) && sujoEm(el); }, // o rascunho do bate-papo fica guardado ao fechar o painel

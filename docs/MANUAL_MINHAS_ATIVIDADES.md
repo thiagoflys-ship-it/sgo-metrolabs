@@ -80,3 +80,13 @@ O SGO+ só aceita datas do ano passado até daqui a dois anos. Também não acei
 ## 7. Avisos
 
 A cobrança do atraso é feita no sistema (janela, faixa do topo e lista de pendências) e por e-mail, no horário de trabalho. O pedido de nova data chega para quem lançou no sistema e por e-mail; a recusa volta para você no sistema e por e-mail; o aceite, no sistema.
+
+## 8. No celular e o voltar (01/11/2026)
+
+- Trocar de aba (Lista, Agenda, Kanban) é um passo do voltar: voltar devolve a aba de antes, em vez de sair de Minhas atividades. Em Atividades da equipe vale o mesmo para Gantt, Kanban, Lista e Indicadores.
+- A ficha da atividade e a janela "Pedir nova data" fecham com o voltar. Se você mudou alguma coisa nelas (texto, motivo, data ou caixa de marcar), o sistema pergunta "Descartar o que foi digitado?" antes de fechar. Toque em Cancelar para continuar na janela.
+- Se você abriu a O.S. pela ficha ("Abrir a O.S."), voltar reabre a ficha da atividade.
+- Depois de Comentar, Registrar andamento ou mudar a situação, a ficha continua na mesma altura.
+- Kanban é um quadro com uma coluna por situação; Gantt mostra cada atividade como uma barra do início à previsão de entrega. Agenda sem atividade no período diz isso e sugere as setas para ver outros períodos.
+- No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+- A janela "Atividade com prazo vencido" continua sem fechar pelo voltar: peça nova data ou conclua.

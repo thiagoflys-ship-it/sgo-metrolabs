@@ -155,3 +155,10 @@ Categoria Utilidade, idioma Português (BR). Cada modelo tem um botão de link "
 | "Este link valia só para..." | O link vence no fim do dia. Peça o ajuste em "Meus lembretes" ou fale com o RH |
 | O RH não consegue tratar um pedido | Quem pediu não trata o próprio pedido. Outra pessoa do RH, a Diretoria ou o Administrador trata |
 | "Lembrete não saiu" | Nem o WhatsApp nem o e-mail funcionaram; o motivo aparece embaixo. Não conta como esquecimento |
+
+## No celular e o voltar (01/11/2026)
+
+- Trocar de aba (Hoje, Pedidos de ajuste, Mês, Meus lembretes, Pessoas e jornadas, Configuração) é um passo do voltar: voltar devolve a aba de antes.
+- "Ninguém para mostrar neste dia" diz o motivo (fim de semana ou feriado, assistente desligado, ou ninguém com jornada no dia) e o que fazer: escolher outro dia no campo Dia ou conferir a jornada em "Pessoas e jornadas".
+- "Nenhum pedido pendente" explica que o pedido aparece quando alguém toca em "Esqueci de bater"; "Nenhuma marcação" no mês diz se o assistente estava desligado.
+- No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
