@@ -22,7 +22,9 @@ const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO
   // 01/11/2026: a especialista (planos A/B/C, memória de planos, verificador anti-genérico)
   'SGO_Comercial_Especialista.js',
   // 01/11/2026: aplicar a decisão do dono (política e preços) na produção
-  'SGO_Comercial_Decisao20261101.js'];
+  'SGO_Comercial_Decisao20261101.js',
+  // 01/11/2026: catálogo oficial da Diretoria (26 serviços), regra de pontos, parâmetros técnicos e implantação
+  'SGO_Comercial_CatalogoOficial.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};

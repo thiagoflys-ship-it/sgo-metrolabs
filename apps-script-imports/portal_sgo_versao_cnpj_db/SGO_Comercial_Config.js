@@ -25,6 +25,7 @@
  *   SGO_Comercial_Precificacao.js   política de precificação, custos da viagem (checklist), margem e alçada, reajuste do catálogo (29/10/2026)
  *   SGO_Comercial_BancoPrecos.js    banco de preços de serviços e produtos: carga da C1 e de Compras, propostas, consulta, indicadores, busca na internet (C3)
  *   SGO_Comercial_BancoC1.js        carga inicial do banco (gerado por _tools/gerar_banco_c1.cjs); os dados só são montados na prévia e na carga
+ *   SGO_Comercial_CatalogoOficial.js catálogo oficial da Diretoria (26 serviços), regra de pontos, parâmetros técnicos, sobra e implantação (01/11/2026)
  *   SGO_Comercial_Orcamentista.js   o Orçamentista: pedido em texto livre -> itens, prazo, deslocamento, referências, riscos e o rascunho (C3)
  *   SGO_Ajuda_Comercial.js          ajuda "Como usar esta tela"
  *   JS_Comercial.html               telas
@@ -85,7 +86,11 @@ var COM_COLUNAS = {
     // da C1 (TABELA_CODIGO, chave da importação idempotente) e as referências de mercado e do histórico da Metrolabs. O custo e o
     // preço sugerido são recalculados pela política em vigor (SGO_Comercial_Ficha.js); o preço de venda (PRECO) só muda quando a
     // gestão confirma, com o motivo.
-    'HORAS_TECNICO', 'HORAS_ENGENHEIRO', 'PADROES_CUSTO', 'CONSUMIVEIS_CUSTO', 'TABELA_CODIGO', 'TABELA_VERSAO', 'REFERENCIA_JSON', 'FICHA_EM', 'FICHA_POR_NOME'],
+    'HORAS_TECNICO', 'HORAS_ENGENHEIRO', 'PADROES_CUSTO', 'CONSUMIVEIS_CUSTO', 'TABELA_CODIGO', 'TABELA_VERSAO', 'REFERENCIA_JSON', 'FICHA_EM', 'FICHA_POR_NOME',
+    // 01/11/2026 (catálogo oficial da Diretoria, SGO_Comercial_CatalogoOficial.js): marca da tabela oficial, versão e vigência do preço,
+    // regra de preço (PONTOS, GRANDEZAS, FIXO, RECEITA) e a definição dos parâmetros técnicos; DESCRICAO_GERADA = descrição criada pelo
+    // sistema para item sem descritivo ("revisar"; some quando a gestão edita a descrição)
+    'CATALOGO_OFICIAL', 'CATALOGO_VERSAO', 'VIGENCIA_DESDE', 'REGRA_PRECO', 'PARAMETROS_JSON', 'DESCRICAO_GERADA'],
   COM_PROPOSTAS: ['ID', 'NUMERO', 'REVISAO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'VALIDA_ATE',
     'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL', 'SITUACAO',
@@ -124,7 +129,7 @@ var COM_COLUNAS_TEXTO = {
   COM_PROPOSTAS: ['EXCLUIDA_EM', 'VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
   COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
-  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_PRECOS: ['CHAVE', 'DATA', 'UF', 'ATUALIZADO_EM', 'ITEM_CODIGO'],
+  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM', 'VIGENCIA_DESDE', 'CATALOGO_VERSAO'], COM_PRECOS: ['CHAVE', 'DATA', 'UF', 'ATUALIZADO_EM', 'ITEM_CODIGO'],
   COM_PLANOS_ESPECIALISTA: ['GATILHO_ATE', 'INICIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
@@ -515,14 +520,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  // V8 (01/11/2026, especialista): aba COM_PLANOS_ESPECIALISTA. V7 (01/11/2026, C3): banco de preços (COM_PRECOS) e quem ganhou na perda. V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V8')) return; } catch (e) {}
+  // V9 (01/11/2026, catálogo oficial): colunas da tabela oficial e dos parâmetros técnicos em COM_PRODUTOS. V8 (01/11/2026, especialista): aba COM_PLANOS_ESPECIALISTA. V7 (01/11/2026, C3): banco de preços (COM_PRECOS) e quem ganhou na perda. V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V9')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V8', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V9', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {

@@ -298,7 +298,9 @@ test('aplicar a decisão nos preços: só sobe, lote de reajuste com histórico 
   ok(amb.api('s_dora', 'decisaoDonoPolitica', { aplicar: true, marca: pp.marca }));
   assert.match(amb.api('s_gaspar', 'decisaoDonoPrecos', {}).message, /é da Diretoria/);
   const pv = ok(amb.api('s_dora', 'decisaoDonoPrecos', {}));
-  assert.ok(pv.qtd >= 35, 'os serviços sobem: ' + pv.qtd); assert.equal(pv.semPreco, 0);
+  // 01/11/2026 (catálogo oficial): alta acima de 100% (ou custo cadastrado maior que o preço) fica fora, como suspeito
+  assert.ok(pv.qtd + pv.qtdSuspeitos >= 35, 'os serviços sobem: ' + pv.qtd + ' + suspeitos ' + pv.qtdSuspeitos); assert.equal(pv.semPreco, 0);
+  assert.ok(pv.suspeitos.every((x) => /acima do limite de 100%|custo cadastrado/.test(x.motivo) && /corrigir o custo antes/.test(x.oQueFazer)));
   assert.ok(pv.linhas.every((x) => x.precoNovo > x.precoAtual), 'só sobe');
   const la = pv.linhas.find((x) => x.codigo === 'QT-AUTOCLAVE-GRANDE');
   assert.equal(la.precoAtual, antes); assert.equal(la.precoNovo, 5900, 'com o bônus de R$ 7,14 por hora do cadastro de teste');

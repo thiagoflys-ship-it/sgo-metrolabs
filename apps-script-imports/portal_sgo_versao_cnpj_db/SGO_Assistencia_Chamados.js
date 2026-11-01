@@ -925,9 +925,11 @@ function Assistencia_doPedidoComercial_(p, o) {
     var comEq = itens.filter(function (i) { return Ast_s_(i.equipamentoId); });
     var eqId = comEq.length === 1 ? Ast_s_(comEq[0].equipamentoId) : '';
     var desc = itens.map(function (i) { return (i.quantidade || 1) + ' × ' + Ast_s_(i.descricao) + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : ''); }).join('; ');
+    // 01/11/2026: escopo técnico dos itens do catálogo oficial (pontos, receitas, parâmetros, NR-13), sem valores, no relato do chamado
+    var escopo = itens.map(function (i) { var e = typeof ComCat_escopoTexto_ === 'function' ? ComCat_escopoTexto_(i) : ''; return e ? Ast_s_(i.codigo || i.descricao) + ': ' + e : ''; }).filter(Boolean).join('\n');
     var eu = { id: '', nome: 'Comercial (pedido aprovado)', perfil: 'SISTEMA' };
     var r = AstC_abrir_(eu, { clienteId: p.CLIENTE_ID, unidadeId: p.UNIDADE_ID, equipamentoId: eqId, equipNaoIdentificado: !eqId, equipamentoDescricao: eqId ? '' : (desc || 'Itens do pedido aprovado').slice(0, 300),
-      sintoma: 'Pedido aprovado ' + Ast_s_(p.NUMERO) + ' do Comercial: ' + (desc || 'serviço técnico vendido') + '.', solicitante: Ast_s_(p.CONTATO_NOME) || Ast_s_(p.CLIENTE_NOME) || 'Cliente',
+      sintoma: ('Pedido aprovado ' + Ast_s_(p.NUMERO) + ' do Comercial: ' + (desc || 'serviço técnico vendido') + '.' + (escopo ? '\nEscopo técnico contratado:\n' + escopo : '')).slice(0, 2990), solicitante: Ast_s_(p.CONTATO_NOME) || Ast_s_(p.CLIENTE_NOME) || 'Cliente',
       prioridade: 'P3', canal: 'COMERCIAL', origemRef: Ast_s_(p.NUMERO), propostaId: Ast_s_(p.ID), confirmarDuplicado: true }, { sistema: true, porNome: 'Comercial (pedido aprovado)' });
     return { ok: true, numero: r.chamado && r.chamado.numero };
   } catch (e) { console.error('Comercial -> Assistência: ' + ((e && e.message) || e)); return { ok: false, motivo: String((e && e.message) || e) }; }

@@ -1016,6 +1016,8 @@ function ComPr_selecionar_(s) {
   if (modo === 'SEM_REAJUSTE') { var lim = ComPr_politica_().reajusteAlertaMeses || 12; var sr = {}; ComPr_semReajuste_(null, lim).forEach(function (x) { sr[x.id] = 1; }); ids = Object.keys(sr); }
   return Com_ler_(COM_ABAS.PRODUTOS).filter(function (p) {
     if (Com_up_(p.ATIVO || 'SIM') === 'NAO') return false;
+    // 01/11/2026: a tabela oficial da Diretoria fica fora do reajuste por percentual (preço próprio, com versão e vigência no catálogo oficial)
+    if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)) return false;
     if (modo === 'TIPO') return Com_up_(p.TIPO || 'SERVICO') === Com_up_(s.tipo);
     if (modo === 'CATEGORIA') return Com_normBusca_(p.CATEGORIA) === Com_normBusca_(s.categoria);
     if (modo === 'BUSCA') return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA)]);
@@ -1097,7 +1099,10 @@ function ComPr_rotinaReajustes_() {
         var atual = Number(p.PRECO) || 0, novo = Number(r.PRECO_NOVO) || 0;
         // o preço mudou entre o agendamento e a vigência: aplica o mesmo percentual sobre o preço de agora
         if (Math.abs(atual - (Number(r.PRECO_ANTERIOR) || 0)) > 0.004) novo = Math.max(0.01, ComPr_arredondar_(atual * (1 + (Number(r.PERCENTUAL) || 0) / 100), Number(r.ARREDONDAR_PARA) || 0.01));
-        SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, { PRECO: novo, PRECO_DESDE: Com_dia_(r.VIGENCIA), ATUALIZADO_POR_NOME: Com_s_(r.USUARIO_NOME) + ' (reajuste ' + Com_s_(r.LOTE) + ')', ATUALIZADO_EM: agora });
+        var cpR = { PRECO: novo, PRECO_DESDE: Com_dia_(r.VIGENCIA), ATUALIZADO_POR_NOME: Com_s_(r.USUARIO_NOME) + ' (reajuste ' + Com_s_(r.LOTE) + ')', ATUALIZADO_EM: agora };
+        // 01/11/2026: preço-base agendado da tabela oficial da Diretoria: a vigência e a versão da tabela do item acompanham
+        if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)) { cpR.VIGENCIA_DESDE = Com_dia_(r.VIGENCIA); cpR.CATALOGO_VERSAO = ComCat_proximaVersao_(p, Com_dia_(r.VIGENCIA)); }
+        SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, cpR);
         SGO_DATA.update(COM_ABAS.REAJUSTES, r.ID, { SITUACAO: 'APLICADO', APLICADO_EM: agora, PRECO_ANTERIOR: atual, PRECO_NOVO: novo, PRECO_DESDE_ANTERIOR: Com_s_(p.PRECO_DESDE) });
         n++;
       });

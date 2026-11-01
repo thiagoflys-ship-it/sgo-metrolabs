@@ -155,6 +155,20 @@ O rascunho abre em quatro passos. Toque no número do passo ou em "Próximo"; no
 
 No topo fica sempre o quadro do preço: preço, deslocamento (repasse, fora da sobra; digitado abaixo de custo mais impostos, o que faltar sai da sobra), impostos da unidade e comissão e a situação da sobra (verde dentro da margem alvo de 40%, laranja abaixo da alvo, vermelho abaixo da mínima de 35%). Sobra abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui. Para evitar, suba o preço dos itens marcados ou reduza o desconto.
 
+### Parâmetros técnicos do item (tabela oficial da Diretoria)
+
+Os 26 serviços da tabela oficial da Diretoria (versão DIRETORIA-2026-11-01) entram na proposta com o quadro "Parâmetros técnicos" abaixo do item, já preenchido com o padrão do serviço. É o simulador da proposta: mudou um parâmetro, o preço do item e o quadro do preço se atualizam na hora; quem grava o preço é o servidor, pela mesma conta.
+
+- **Calibração por pontos (REG-CAL-001).** Unitário = preço-base × maior entre 3 e o número de pontos ÷ 3; subtotal = unitário × equipamentos, conta feita em centavos com a fração exata. Exemplo: termômetro digital (R$ 75,50) com 4 pontos, R$ 100,67; com 5 pontos, R$ 125,83; 10 equipamentos com 5 pontos, R$ 1.258,33. Até 3 pontos cobra o mínimo de 3. A quantidade do item é o número de equipamentos. Sensor, ponto, ciclo, receita e equipamento são coisas diferentes: quantidade de sensores nunca vira ponto e receita nunca vira equipamento.
+- **Pressão.** Escolha bar ou kgf/cm² (1 kgf/cm² = 0,980665 bar; 1 bar e 1 kgf/cm² são pontos diferentes). mmHg só para pressão negativa, com o sinal (-500 mmHg). Manômetro mede pressão positiva; vacuômetro, negativa. Com a faixa nominal informada, ponto fora dela é recusado com a mensagem do que corrigir.
+- **Termo-higrômetro.** Temperatura e umidade relativa são grandezas independentes; cada uma tem 3 pontos incluídos no preço mínimo (R$ 107,42). Ponto além de 3 numa grandeza soma 1/3 do preço-base (regra configurável pela Diretoria).
+- **Preço fixo.** Válvula de segurança (CAL-009), manômetro e válvula de autoclave (CAL-010) e as inspeções NR-13 têm preço por equipamento. A pressão de ajuste da válvula vem dos dados do vaso (PMTA e prontuário) e nunca passa da PMTA. Na NR-13, teste hidrostático nunca é automático, a categoria é confirmada pelo profissional habilitado e a ART só sai quando está no escopo (NR13-003).
+- **Qualificação por receita.** O pacote-base inclui as receitas, processos ou condições do padrão (autoclave hospitalar: Bowie-Dick, 121 °C e 134 °C; autoclave vertical de 75 L: uma receita a 121 °C; odontológica: uma receita, 121 °C ou 134 °C). O que passar do pacote-base é "escopo adicional": enquanto a Diretoria não aprova a cobrança proporcional, o preço de tabela fica o do pacote-base e a proposta só conclui com o motivo do ajuste. A NR-13 nunca entra na qualificação: é o serviço NR-13, à parte.
+- **Pendente de aprovação técnica.** Valores sugeridos ainda não validados pela área técnica aparecem com o selo laranja (pontos do vacuômetro, terceiro ponto da centrífuga, temperaturas padrão de termodesinfectora, gabinete de secagem, estufa e banho-maria).
+- **Documento.** A descrição do item é o texto padrão do serviço completado com os parâmetros escolhidos. Nada de acreditação, ensaio, ART ou certificação que não esteja no escopo.
+- **Cópia congelada.** O item da proposta guarda o código, o nome, a versão da tabela, o preço-base, a regra, os pontos, as receitas e os parâmetros da época. Mudar o catálogo depois não altera a proposta salva; propostas antigas continuam iguais.
+- O desconto, a alçada, a sobra mínima de 35% (abaixo dela, a Diretoria decide), o deslocamento e o checklist são os de sempre.
+
 ### Prazo de cada item: as faixas
 
 | Faixa | Prazo | Preço |
@@ -297,6 +311,8 @@ No pedido aprovado, toque em "Passar aos setores". A Área técnica (serviço ou
 
 O Financeiro vê o valor, a condição de pagamento e os dados de faturamento em Comercial > Pedidos aprovados.
 
+Itens da tabela oficial da Diretoria levam o escopo técnico para a execução, sem valores: na atividade da Área técnica e no chamado da Assistência aparecem, item a item, a versão da tabela, os pontos, as receitas ou processos (com temperatura, tempo, pressão, carga, sensores, ciclos e ensaios), os parâmetros (por exemplo PMTA e pressão de ajuste da NR-13), o escopo adicional e o que está pendente de aprovação técnica. A atividade guarda até 4.000 letras; se o escopo passar disso, o final aponta para a proposta, onde está completo.
+
 Quando a proposta tem viagem, as atividades da Área técnica e do Financeiro trazem, sem valores, a viagem prevista (equipe, destino, km do trecho, dias e noites, transporte) e, quando a viagem dá direito, o lembrete do incentivo de missão do Programa de conduta de cada colaborador (lançar a missão na Conduta depois da viagem).
 
 ## Produtos e serviços
@@ -308,6 +324,13 @@ Possíveis duplicados (gestão): em "Situação", escolha "Possíveis duplicados
 Buscar no catálogo: escreva no campo "Buscar no catálogo" parte do código, do nome, da descrição ou da categoria (por exemplo "fonte 9v" ou "CRM-DF8F"). A busca é feita no banco do SGO+, ignora acentos e maiúsculas e aceita as palavras em qualquer ordem. Filtre também por tipo (serviço, produto, contrato), categoria e, para a gestão, situação (ativos, arquivados ou os dois). A linha acima da lista diz quantos itens foram encontrados de quantos há no catálogo. A tela mostra até 200 itens, os mais parecidos primeiro (código igual, começo do código ou do nome); se houver mais, ela avisa: escreva mais uma palavra ou o código para afinar. "Limpar" volta à lista completa.
 
 Na proposta, o campo "Produto ou serviço" de cada item busca enquanto você digita (itens ativos, os 8 mais parecidos); o botão "Do catálogo" abre a mesma busca numa janela (50 por vez).
+
+### Tabela oficial da Diretoria e descrições geradas
+
+- Os 26 serviços da tabela oficial da Diretoria têm o selo azul "tabela oficial" (versão e vigência no selo) e a situação "Tabela oficial da Diretoria" no filtro. A equipe comercial usa esses serviços nas propostas mas não altera o cadastro nem arquiva.
+- A gestão comercial abre "Catálogo oficial": a regra de cada serviço e quanto cada um deixa de sobra pela ficha de custo, e "Editar" para descrição, pontos padrão, receitas padrão e ativar ou desativar, com o motivo. Preço-base (vigência hoje ou agendada), regra e cobrança proporcional das receitas: só Diretoria e Administrador. O preço da tabela oficial não muda pelo reajuste em lote nem pelo "preço sugerido" da ficha.
+- O serviço de freezer da tabela C1 (sem código entre os 26) continua ativo, com as condições padrão de 0 °C e -10 °C.
+- "Descrição gerada, revisar": item que estava sem descritivo recebeu, em 01/11/2026, a descrição padronizada da família (calibração, qualificação, manutenção, NR-13, hora técnica...) ou, para produto, só o nome e a unidade. Confira e salve; ao editar a descrição, a marca some.
 
 ### Catálogo pela equipe comercial (com limites)
 

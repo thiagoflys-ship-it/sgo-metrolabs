@@ -532,7 +532,15 @@ var COM_ACOES = {
   reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); },
   // 01/11/2026: aplicar a decisão do dono na política (versão nova) e nos preços (lote de reajuste), com prévia (SGO_Comercial_Decisao20261101.js)
   decisaoDonoPolitica: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPolitica_(eu, d) : ComDec_previaPolitica_(eu, d); },
-  decisaoDonoPrecos: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPrecos_(eu, d) : ComDec_previaPrecos_(eu); },
+  decisaoDonoPrecos: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPrecos_(eu, d) : ComDec_previaPrecos_(eu, d); },
+  // 01/11/2026: catálogo oficial da Diretoria (26 serviços): tela da gestão (com a sobra), alteração e implantação (SGO_Comercial_CatalogoOficial.js)
+  catalogoOficial: function (eu) { return ComCat_tela_(eu); },
+  catalogoOficialSalvar: function (eu, sid, d) { return ComCat_salvar_(eu, d); },
+  catalogoOficialImplantar: function (eu, sid, d) {
+    var etapa = Com_up_(d && d.etapa) || 'CATALOGO';
+    if (etapa === 'DESCRICOES') return d.aplicar === true ? ComCat_aplicarDescricoes_(eu, d) : ComCat_previaDescricoes_(eu);
+    return d && d.aplicar === true ? ComCat_aplicarCatalogo_(eu, d) : ComCat_previaCatalogo_(eu);
+  },
   // 01/11/2026 (Comercial C2): tabela de preços C1 (prévia e importação), ficha de custo e "usar o preço sugerido" (SGO_Comercial_Ficha.js)
   importarC1Previa: function (eu, sid, d) { return ComF_previaImportacao_(eu); },
   importarC1: function (eu, sid, d) { return ComF_importar_(eu, d); },

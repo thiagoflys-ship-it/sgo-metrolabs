@@ -51,6 +51,9 @@ function ComP_produtoParaTela_(p, eu, corteReajuste, polFicha) {
     var fi = ComF_paraTela_(p, eu, polFicha);
     if (fi) { t.ficha = fi; if (eu && eu.veCusto && fi.conta && fi.vale) { t.custo = fi.conta.custo; t.custoTxt = Com_moeda_(fi.conta.custo) + ' (ficha)'; } }
   }
+  // 01/11/2026: catálogo oficial da Diretoria (regra, versão, vigência e parâmetros técnicos; sem custo) e a descrição gerada
+  if (typeof ComCat_paraTela_ === 'function') { var of = ComCat_paraTela_(p); if (of) t.oficial = of; }
+  if (eu && (eu.gestao || eu.catalogo) && Com_s_(p.DESCRICAO_GERADA)) t.descricaoGerada = Com_s_(p.DESCRICAO_GERADA);
   // 29/10/2026: redução de preço pedida pelo vendedor (acima da alçada) e a última decisão
   var sitPed = Com_up_(p.PRECO_PEDIDO_SITUACAO);
   if (sitPed === 'PENDENTE') t.precoPedido = { preco: Number(p.PRECO_PEDIDO) || 0, precoTxt: Com_moeda_(p.PRECO_PEDIDO), por: Com_s_(p.PRECO_PEDIDO_POR_NOME), porId: Com_s_(p.PRECO_PEDIDO_POR_ID),
@@ -81,7 +84,8 @@ function ComP_catalogo_(eu, d) {
   // 28/10/2026: "Possíveis duplicados" (gestão): itens ATIVOS com o mesmo nome (sem acento, maiúscula e pontuação). Na
   // importação do CRM, 25 nomes vieram em mais de um código (53 itens, produção em 28/10/2026); a gestão confere e arquiva o que sobra.
   var mesmoNome = ComP_nomesRepetidos_(visiveis);
-  if ((sit === 'DUPLICADOS' || sit === 'SEM_REAJUSTE') && !gere) sit = 'ATIVOS';
+  if ((sit === 'DUPLICADOS' || sit === 'SEM_REAJUSTE' || sit === 'DESCRICAO_GERADA') && !gere) sit = 'ATIVOS';
+  var oficial = function (p) { return typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p); };
   // 29/10/2026: preço aguardando aprovação (redução pedida pelo vendedor acima da alçada)
   var pendente = function (p) { return Com_up_(p.PRECO_PEDIDO_SITUACAO) === 'PENDENTE'; };
   // 29/10/2026: "Sem reajuste há mais de N meses" (política de precificação; padrão 12)
@@ -97,6 +101,9 @@ function ComP_catalogo_(eu, d) {
     if (sit === 'ARQUIVADOS' && ativo) return false;
     if (sit === 'DUPLICADOS' && !(ativo && mesmoNome[Com_normBusca_(p.NOME)] > 1)) return false;
     if (sit === 'PRECO_PENDENTE' && !pendente(p)) return false;
+    // 01/11/2026: os 26 da tabela oficial da Diretoria e os itens com descrição criada pelo sistema (revisar)
+    if (sit === 'OFICIAL' && !(oficial(p) && ativo)) return false;
+    if (sit === 'DESCRICAO_GERADA' && !Com_s_(p.DESCRICAO_GERADA)) return false;
     return Com_casaBusca_(termos, [Com_s_(p.CODIGO), Com_s_(p.NOME), Com_s_(p.DESCRICAO), Com_s_(p.CATEGORIA), COM_TIPOS_ITEM[Com_up_(p.TIPO)] || '', Com_s_(p.UNIDADE_MEDIDA)]);
   }).map(function (p) { return ComP_produtoParaTela_(p, eu, corte, polF); });
   var q = termos.join(' '), qJunto = termos.join('');
@@ -120,7 +127,8 @@ function ComP_catalogo_(eu, d) {
   return { produtos: lista, total: visiveis.length, encontrados: achados.length, limitado: lista.length < achados.length,
     categorias: Object.keys(categorias).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }), duplicados: gere ? dupGrupos : 0,
     semReajuste: semReaj, reajusteMeses: mesesReaj, podeReajustar: typeof ComPr_podeReajustar_ === 'function' && ComPr_podeReajustar_(eu),
-    precosPendentes: visiveis.filter(pendente).length, comFicha: typeof ComF_temFicha_ === 'function' ? visiveis.filter(ComF_temFicha_).length : 0, podeImportarC1: !!eu.gestao, podeCadastrar: !!(eu.catalogo || eu.catalogoVenda), acessoLimitado: !!eu.catalogoVenda, alcadaPreco: eu.catalogoVenda ? ComP_alcadaPreco_(eu) : null };
+    precosPendentes: visiveis.filter(pendente).length, oficiais: visiveis.filter(function (p) { return oficial(p) && Com_up_(p.ATIVO || 'SIM') !== 'NAO'; }).length,
+    descricoesGeradas: gere ? visiveis.filter(function (p) { return !!Com_s_(p.DESCRICAO_GERADA); }).length : 0, comFicha: typeof ComF_temFicha_ === 'function' ? visiveis.filter(ComF_temFicha_).length : 0, podeImportarC1: !!eu.gestao, podeCadastrar: !!(eu.catalogo || eu.catalogoVenda), acessoLimitado: !!eu.catalogoVenda, alcadaPreco: eu.catalogoVenda ? ComP_alcadaPreco_(eu) : null };
 }
 
 /** { nomeNormalizado: quantidade de itens ATIVOS com esse nome } */
@@ -175,6 +183,15 @@ function ComP_salvarProduto_(eu, d) {
     if (outro) throw new Error('Não foi possível salvar: o código ' + codigo + ' já é do item "' + Com_s_(outro.NOME) + '". Use outro código ou edite aquele item');
     var atual = Com_s_(d.id) ? SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d.id)) : null;
     if (Com_s_(d.id) && !atual) throw new Error('Não foi possível salvar: o item não existe mais. Atualize o catálogo');
+    // 01/11/2026: item da tabela oficial da Diretoria. Vendedor não altera; a gestão muda descrição, unidade e categoria; preço-base e
+    // nome só a Diretoria ou o Administrador (com o histórico); o código e o tipo identificam o serviço e não mudam por aqui.
+    if (atual && typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(atual)) {
+      if (!eu.gestao) throw new Error('Não foi possível salvar: ' + Com_s_(atual.CODIGO) + ' é da tabela oficial da Diretoria. A equipe comercial usa o serviço nas propostas (com os parâmetros técnicos), mas não altera o cadastro; peça à gestão comercial ou à Diretoria. Nada foi gravado');
+      if (Com_up_(atual.CODIGO) !== codigo || (Com_up_(atual.TIPO) || 'SERVICO') !== tipo) throw new Error('Não foi possível salvar: o código e o tipo de ' + Com_s_(atual.CODIGO) + ' identificam o serviço da tabela oficial e não mudam. Nada foi gravado');
+      var podeDir = typeof ComCat_podeMudarPreco_ === 'function' && ComCat_podeMudarPreco_(eu);
+      if (!podeDir && Math.abs((Number(atual.PRECO) || 0) - Com_r2_(preco)) > 0.004) throw new Error('Não foi possível salvar: o preço-base de ' + Com_s_(atual.CODIGO) + ' é da tabela oficial e só a Diretoria ou o Administrador mudam (Produtos e serviços > Catálogo oficial). Mantenha o preço de ' + Com_moeda_(atual.PRECO) + ' para salvar o resto. Nada foi gravado');
+      if (!podeDir && Com_normBusca_(atual.NOME) !== Com_normBusca_(nome)) throw new Error('Não foi possível salvar: o nome de ' + Com_s_(atual.CODIGO) + ' é da tabela oficial e só a Diretoria ou o Administrador mudam. Nada foi gravado');
+    }
     if (atual && limitado) {
       var mudou = [];
       if (Com_up_(atual.CODIGO) !== codigo) mudou.push('o código');
@@ -193,6 +210,8 @@ function ComP_salvarProduto_(eu, d) {
     var campos = { CODIGO: codigo, NOME: nome, TIPO: tipo, CATEGORIA: Com_texto_(d.categoria, 80), UNIDADE_MEDIDA: Com_texto_(d.unidade, 20) || 'un.', DESCRICAO: Com_texto_(d.descricao, 2000),
       PRECO: Com_r2_(preco), CUSTO: custo === '' ? '' : Com_r2_(custo), ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora };
     if (limitado) delete campos.CUSTO; // o vendedor nunca mexe no custo (nem apaga)
+    // 01/11/2026: descrição criada pelo sistema (DESCRICAO_GERADA) deixa de estar "para revisar" quando alguém da gestão a altera
+    if (atual && Com_s_(atual.DESCRICAO_GERADA) && !limitado && Com_s_(campos.DESCRICAO) !== Com_s_(atual.DESCRICAO)) campos.DESCRICAO_GERADA = '';
     var reg, pedido = null, msg = 'Item ' + codigo + ' salvo no catálogo.';
     if (atual) {
       var antes = Com_r2_(Number(atual.PRECO) || 0), mudouPreco = Math.abs(antes - campos.PRECO) > 0.004;
@@ -282,6 +301,7 @@ function ComP_arquivarProduto_(eu, d) {
     var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, Com_s_(d && d.id));
     if (!p) throw new Error('Não foi possível arquivar: o item não existe mais. Atualize o catálogo');
     var ativo = !(d && d.reativar);
+    if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p) && !eu.gestao) throw new Error('Não foi possível arquivar: ' + Com_s_(p.CODIGO) + ' é da tabela oficial da Diretoria; ativar e desativar é da gestão comercial. Peça a ela');
     // 29/10/2026: o vendedor não exclui nem reativa: só arquiva (o item sai da escolha das propostas novas)
     if (!ativo && !eu.catalogo) throw new Error('Não foi possível reativar: reativar um item arquivado é da gestão comercial ou do Financeiro. Peça a um deles; o item continua no catálogo, só fora da escolha das propostas');
     // 29/10/2026: item repetido que foi juntado em outro (Cadastros > Correções de cadastro) não volta: reativar recriaria a duplicidade
@@ -460,6 +480,8 @@ function ComP_paraTela_(eu, p, completo) {
         equipamentoId: i.equipamentoId || '', equipamentoTexto: i.equipamentoTexto || '', unidade: i.unidade || 'un.', quantidade: Number(i.quantidade) || 0, auto: i.auto || '', faixa: i.faixa || '' };
       if (eu.veValores) { o.precoUnitario = Number(i.precoUnitario) || 0; o.precoTabela = Number(i.precoTabela) || 0; o.precoTabelaNormal = i.precoTabelaNormal !== undefined ? Number(i.precoTabelaNormal) || 0 : o.precoTabela; o.total = Com_r2_((Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0)); o.precoDiferente = !!i.precoDiferente; }
       if (eu.veCusto && i.custoUnitario !== undefined && i.custoUnitario !== null && i.custoUnitario !== '') o.custoUnitario = Number(i.custoUnitario);
+      // 01/11/2026: cópia congelada do catálogo oficial (regra, parâmetros, pontos, receitas; sem custo)
+      if (i.catalogo) { o.catalogo = i.catalogo; if (!eu.veValores) { o.catalogo = Com_copia_(i.catalogo); delete o.catalogo.precoBase; delete o.catalogo.unitarioCentavos; delete o.catalogo.subtotalCentavos; } }
       return o;
     });
     t.revisaoGestora = Com_json_(p.REVISAO_GESTORA_JSON, null);
@@ -559,6 +581,9 @@ function ComP_itensDaTela_(lista, prop, eu, prazo) {
     var q = Com_num_(i.quantidade);
     if (!(q > 0)) throw new Error('Não foi possível salvar a proposta: a quantidade do item ' + (k + 1) + ' (' + desc.slice(0, 40) + ') precisa ser maior que zero');
     var pu = Com_num_(i.precoUnitario);
+    // 01/11/2026: serviço com regra de preço (catálogo oficial) aceita o preço em branco: vale o da tabela pela regra
+    var pRegra = i.produtoId && cat[Com_s_(i.produtoId)] && typeof ComCat_temRegra_ === 'function' && ComCat_temRegra_(cat[Com_s_(i.produtoId)]);
+    if (!(pu >= 0) && pRegra && Com_s_(i.precoUnitario) === '') pu = 0;
     if (!(pu >= 0)) throw new Error('Não foi possível salvar a proposta: o preço unitário do item ' + (k + 1) + ' (' + desc.slice(0, 40) + ') não é um valor. Use por exemplo 1.250,00');
     var p = i.produtoId ? cat[Com_s_(i.produtoId)] : null;
     var eqId = Com_s_(i.equipamentoId), eqTxt = '';
@@ -589,6 +614,8 @@ function ComP_itensDaTela_(lista, prop, eu, prazo) {
     // 28/10/2026: preço diferente da tabela do catálogo fica marcado no item (e no histórico, ComP_salvar_); abaixo da
     // tabela já conta como desconto na política. Item sem catálogo (avulso) não tem tabela para comparar.
     item.precoDiferente = !!(p && item.precoTabela > 0 && Math.abs(item.precoUnitario - item.precoTabela) > 0.004);
+    // 01/11/2026: serviço do catálogo oficial (ou com parâmetros técnicos): preço pela regra, descrição gerada e a cópia congelada
+    if (p && typeof ComCat_temRegra_ === 'function' && ComCat_temRegra_(p)) ComCat_aplicarNoItem_(item, i, p, ant, k, polIt, pz);
     return item;
   });
 }
@@ -775,6 +802,9 @@ function ComP_concluir_(eu, d) {
     var rev = typeof ComG_revisarPropostaRegras_ === 'function' ? ComG_revisarPropostaRegras_(p) : { erros: [], alertas: [] };
     if (rev.erros.length) throw new Error('Não foi possível concluir a proposta ' + ComP_rotulo_(p) + '. A revisão encontrou: ' + rev.erros.join('; ') + '. Corrija no rascunho e toque em Concluir de novo');
     var itensC = Com_json_(p.ITENS_JSON, []);
+    // 01/11/2026: catálogo oficial: escopo além do pacote-base precisa do motivo do ajuste; receita obrigatória escolhida
+    var errCat = typeof ComCat_errosConcluir_ === 'function' ? ComCat_errosConcluir_(itensC) : [];
+    if (errCat.length) throw new Error('Não foi possível concluir a proposta ' + ComP_rotulo_(p) + ': ' + errCat.join('; ') + '. Ajuste no passo 1 (Itens), salve e toque em Concluir de novo');
     var calc = ComP_calcular_(itensC, p.DESCONTO_GERAL);
     // 29/10/2026: margem da política de precificação (impostos e viagem) entra na mesma alçada; abaixo da mínima, só a Diretoria
     var xPr = typeof ComPr_daProposta_ === 'function' ? ComPr_daProposta_(p, null, itensC) : null;
@@ -1303,19 +1333,22 @@ function ComP_passarSetores_(eu, d) {
     pedidos = pedidos.filter(function (s, i, l) { return l.indexOf(s) === i && jaSet.indexOf(s) < 0; });
     if (!pedidos.length) throw new Error('Não foi possível passar: os setores escolhidos já receberam este pedido. Acompanhe o andamento na proposta');
     var obs = Com_texto_(d.observacao, 1500);
-    var itensTxt = Com_json_(p.ITENS_JSON, []).filter(function (i) { return !i.auto; }).map(function (i) { return '- ' + i.quantidade + ' ' + (i.unidade || 'un.') + ' · ' + i.descricao + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : ''); }).join('\n');
+    // 01/11/2026: o escopo técnico de cada item do catálogo oficial (pontos, receitas, parâmetros, NR-13) vai junto, sem valores
+    var itensTxt = Com_json_(p.ITENS_JSON, []).filter(function (i) { return !i.auto; }).map(function (i) { var esc = typeof ComCat_escopoTexto_ === 'function' ? ComCat_escopoTexto_(i) : ''; return '- ' + i.quantidade + ' ' + (i.unidade || 'un.') + ' · ' + (i.codigo ? i.codigo + ' ' : '') + i.descricao + (i.equipamentoTexto ? ' (' + i.equipamentoTexto + ')' : '') + (esc ? '\n  Escopo técnico: ' + esc : ''); }).join('\n');
     var cond = Com_json_(p.CONDICOES_JSON, {}) || {};
     var hoje = Com_hoje_(), novos = [];
     pedidos.forEach(function (s) {
       var cfgS = met.posVenda[s] || {}, r = ComP_responsavelSetor_(s, Com_s_((d.responsaveis || {})[s]), met);
       var prazo = Com_somarDiasUteis_(hoje, Number(cfgS.prazoDiasUteis) || 2) + 'T17:00';
-      var desc = 'Pedido aprovado ' + ComP_rotulo_(p) + ' de ' + Com_s_(p.CLIENTE_NOME) + (Com_s_(p.UNIDADE_NOME) ? ' (' + Com_s_(p.UNIDADE_NOME) + ')' : '') + '. Vendedor: ' + Com_s_(p.RESPONSAVEL_NOME) + '.\n\n' +
+      var desc0 = 'Pedido aprovado ' + ComP_rotulo_(p) + ' de ' + Com_s_(p.CLIENTE_NOME) + (Com_s_(p.UNIDADE_NOME) ? ' (' + Com_s_(p.UNIDADE_NOME) + ')' : '') + '. Vendedor: ' + Com_s_(p.RESPONSAVEL_NOME) + '.\n\n' +
         'Lista de conferência:\n' + (cfgS.checklist || []).map(function (c) { return '[ ] ' + c; }).join('\n') + '\n\nItens do pedido:\n' + itensTxt +
         (s === 'TECNICA' && cond.prazoExecucao ? '\n\nPrazo de execução combinado: ' + cond.prazoExecucao : '') +
         (s === 'FINANCEIRO' ? '\n\nValor, condição de pagamento e dados de faturamento: Comercial > Pedidos aprovados > ' + ComP_rotulo_(p) + '.' : '') +
         // 29/10/2026: viagem prevista na proposta (equipe, destino, dias), sem valores
         ((s === 'TECNICA' || s === 'FINANCEIRO') && typeof ComPr_resumoSemValor_ === 'function' && ComPr_resumoSemValor_(p, s) ? '\n\n' + ComPr_resumoSemValor_(p, s) : '') +
         (obs ? '\n\nObservação do vendedor: ' + obs : '') + '\n\nAo concluir, conte o que foi feito (número da O.S., do pedido de compra ou da nota fiscal).';
+      // a atividade guarda até 4.000 letras: com escopo técnico longo, o final aponta para a proposta (onde está o escopo inteiro)
+      var desc = desc0.length > 3990 ? desc0.slice(0, 3800) + '\n\n(continua: o escopo técnico completo de cada item está na proposta ' + ComP_rotulo_(p) + ', Comercial > Pedidos aprovados)' : desc0;
       var atv = Com_criarAtividade_({ responsavelId: r.id, titulo: 'Pedido aprovado ' + ComP_rotulo_(p) + ' · ' + COM_SETORES[s] + ': ' + Com_s_(p.CLIENTE_NOME), descricao: desc, prazo: prazo, prioridade: 'Alta',
         modulo: cfgS.modulo || 'comercial', moduloNome: cfgS.modulo === 'cronograma_execucao' ? 'Cronograma de execução' : 'Comercial', clienteId: Com_s_(p.CLIENTE_ID), unidadeId: Com_s_(p.UNIDADE_ID),
         porQue: 'Pedido aprovado pelo cliente: o setor ' + COM_SETORES[s] + ' executa a sua parte.', onde: s === 'TECNICA' ? 'Cronograma de execução e Minhas atividades' : 'Minhas atividades',

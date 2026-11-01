@@ -16,6 +16,11 @@
  *    conta de produto). Só SOBE preço. Grava como um lote de reajuste (COM_REAJUSTES): histórico por item e "Desfazer o último
  *    reajuste" em Produtos e serviços. Só PRECO e PRECO_DESDE mudam no item (merge; nada mais é sobrescrito).
  *
+ * 01/11/2026 (catálogo oficial, autorização do dono): a prévia dos preços separa os SUSPEITOS (alta acima do limite, padrão 100%, ou custo
+ *    cadastrado maior que o preço atual): ficam FORA do reajuste e listados como "corrigir o custo antes". Os itens da tabela oficial da
+ *    Diretoria (SGO_Comercial_CatalogoOficial.js) ficam SEMPRE fora do reajuste automático (têm preço próprio, com versão e vigência).
+ *    d.limiteAltaPct muda o limite (linha de comando: --limite-alta N).
+ *
  * Tela: Comercial > Metodologia > Preço e desconto, quadro "Decisão do dono de 01/11/2026" (Diretoria e Administrador).
  * Servidor, sem tela (origem "editor"): Comercial_decisaoDono20261101({ etapa: 'POLITICA'|'PRECOS', aplicar: false|true, marca, motivo }).
  * Prévia sempre antes; aplicar exige a marca da prévia (se algo mudou entre as duas, nada é gravado).
@@ -121,12 +126,17 @@ function ComDec_aplicarPolitica_(eu, d) {
   });
 }
 
-/** Prévia dos preços (nada é gravado). Só sobe preço; item sem preço fica de fora (a importação da tabela C1 preenche). */
-function ComDec_previaPrecos_(eu) {
+var COM_DEC_LIMITE_ALTA = 100;
+/** Limite de alta da prévia (%): o informado (1 a 10.000) ou o padrão de 100%. */
+function ComDec_limiteAlta_(d) { var n = Com_num_(d && d.limiteAltaPct); return isFinite(n) && n >= 1 && n <= 10000 ? n : COM_DEC_LIMITE_ALTA; }
+/** Prévia dos preços (nada é gravado). Só sobe preço; item sem preço fica de fora (a importação da tabela C1 preenche).
+ * d: { limiteAltaPct } (opcional). Suspeitos e itens da tabela oficial ficam fora. */
+function ComDec_previaPrecos_(eu, d) {
   ComDec_exigir_(eu, 'ver a prévia dos preços');
-  var pol = ComPr_politica_(), linhas = [], semPreco = 0, iguais = 0;
+  var pol = ComPr_politica_(), linhas = [], semPreco = 0, iguais = 0, suspeitos = [], oficiais = 0, limite = ComDec_limiteAlta_(d);
   Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
     if (Com_up_(p.ATIVO || 'SIM') === 'NAO') return;
+    if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)) { oficiais++; return; }
     var atual = Com_r2_(Number(p.PRECO) || 0), novo = null, fonte = '';
     if (ComF_temFicha_(p)) { var c = ComF_calcular_(ComF_fichaDe_(p), pol); novo = c.precoSugerido; fonte = c.fonteTxt; }
     else if (Com_up_(p.TIPO) === 'PRODUTO' && Number(p.CUSTO) > 0) { novo = ComPr_precoProduto_(Number(p.CUSTO), pol); fonte = 'peça pela conta com a sobra mínima e os impostos de produto (custo cadastrado ' + Com_moeda_(p.CUSTO) + ')'; }
@@ -134,13 +144,23 @@ function ComDec_previaPrecos_(eu) {
     if (novo === null || !(novo > 0)) return;
     if (!(atual > 0)) { semPreco++; return; }
     if (!(novo > atual + 0.004)) { iguais++; return; }
+    var alta = (novo / atual - 1) * 100, custoCad = Com_s_(p.CUSTO) === '' ? null : Number(p.CUSTO) || 0;
+    var porque = [];
+    if (alta > limite + 1e-9) porque.push('alta de ' + Com_pct_(alta, 0) + ' (acima do limite de ' + Com_pct_(limite, 0) + ')');
+    if (custoCad !== null && custoCad > atual + 0.004) porque.push('custo cadastrado (' + Com_moeda_(custoCad) + ') maior que o preço atual');
+    if (porque.length) {
+      suspeitos.push({ id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), precoAtualTxt: Com_moeda_(atual), precoNovoTxt: Com_moeda_(novo), custoTxt: custoCad === null ? '' : Com_moeda_(custoCad),
+        percentualTxt: Com_pct_(alta, 1), motivo: porque.join('; '), oQueFazer: 'corrigir o custo antes (Produtos e serviços > Editar ou Ficha de custo) e ver a prévia de novo' });
+      return;
+    }
     linhas.push({ id: Com_s_(p.ID), codigo: Com_s_(p.CODIGO), nome: Com_s_(p.NOME), tipoNome: COM_TIPOS_ITEM[Com_up_(p.TIPO)] || 'Serviço', precoAtual: atual, precoNovo: novo, precoAtualTxt: Com_moeda_(atual), precoNovoTxt: Com_moeda_(novo),
       percentual: Math.round((novo / atual - 1) * 1000000) / 10000, percentualTxt: Com_pct_((novo / atual - 1) * 100, 1), fonte: fonte });
   });
   linhas.sort(function (a, b) { return a.codigo.localeCompare(b.codigo); });
-  var marca = Com_marca_(JSON.stringify({ v: pol.versao, l: linhas.map(function (x) { return [x.id, x.precoAtual, x.precoNovo]; }) })).slice(0, 32);
+  suspeitos.sort(function (a, b) { return a.codigo.localeCompare(b.codigo); });
+  var marca = Com_marca_(JSON.stringify({ v: pol.versao, lim: limite, l: linhas.map(function (x) { return [x.id, x.precoAtual, x.precoNovo]; }), s: suspeitos.map(function (x) { return x.id; }) })).slice(0, 32);
   var antes = linhas.reduce(function (t, x) { return t + x.precoAtual; }, 0), depois = linhas.reduce(function (t, x) { return t + x.precoNovo; }, 0);
-  return { linhas: linhas, qtd: linhas.length, semPreco: semPreco, iguais: iguais, marca: marca, politicaVersao: pol.versao, somaAntesTxt: Com_moeda_(antes), somaDepoisTxt: Com_moeda_(depois), motivoPadrao: COM_DEC_MOTIVO };
+  return { linhas: linhas, qtd: linhas.length, semPreco: semPreco, iguais: iguais, suspeitos: suspeitos, qtdSuspeitos: suspeitos.length, limiteAltaPct: limite, oficiais: oficiais, marca: marca, politicaVersao: pol.versao, somaAntesTxt: Com_moeda_(antes), somaDepoisTxt: Com_moeda_(depois), motivoPadrao: COM_DEC_MOTIVO };
 }
 
 /** Aplica os preços como um lote de reajuste (desfazível). d: { marca, motivo (opcional) } */
@@ -149,8 +169,8 @@ function ComDec_aplicarPrecos_(eu, d) {
   d = d || {};
   return Com_comTrava_(function () {
     Com_garantirAbas_();
-    var prev = ComDec_previaPrecos_(eu);
-    if (Com_s_(d.marca) !== prev.marca) throw new Error('Não foi possível aplicar: o catálogo ou a política mudou desde a prévia. Veja a prévia de novo e confira antes de aplicar. Nada foi gravado');
+    var prev = ComDec_previaPrecos_(eu, d);
+    if (Com_s_(d.marca) !== prev.marca) throw new Error('Não foi possível aplicar: o catálogo ou a política mudou desde a prévia (ou o limite de alta é outro). Veja a prévia de novo e confira antes de aplicar. Nada foi gravado');
     if (!prev.qtd) return { qtd: 0, message: 'Nenhum preço a subir: o catálogo já está nos valores da decisão' + (prev.semPreco ? ' (' + Com_plural_(prev.semPreco, 'item sem preço ficou', 'itens sem preço ficaram') + ' de fora: use "Importar tabela de preços C1")' : '') + '.' };
     var motivo = Com_texto_(d.motivo, 500) || COM_DEC_MOTIVO, hoje = Com_hoje_(), agora = Com_agora_();
     var lote = Com_proximoNumero_('RJ', COM_ABAS.REAJUSTES, 'LOTE'), registros = [];
@@ -162,21 +182,21 @@ function ComDec_aplicarPrecos_(eu, d) {
       SGO_DATA.update(COM_ABAS.PRODUTOS, x.id, { PRECO: x.precoNovo, PRECO_DESDE: hoje, ATUALIZADO_POR_NOME: eu.nome + ' (decisão do dono 01/11/2026)', ATUALIZADO_EM: agora });
     });
     SGO_DATA.insertMany(COM_ABAS.REAJUSTES, registros);
-    Com_historico_('REAJUSTE', lote, 'APLICADO', eu, { para: 'preços da decisão', texto: Com_plural_(registros.length, 'item', 'itens') + ' passaram ao maior dos valores (tabela, planilha de 30/10/2026 com imposto por fora e conta com a sobra mínima). ' + motivo });
-    return { lote: lote, qtd: registros.length, message: 'Preços aplicados no lote ' + lote + ': ' + Com_plural_(registros.length, 'item subiu', 'itens subiram') + ' de preço. As propostas já salvas guardam o preço antigo. Se precisar, use "Desfazer o último reajuste" em Produtos e serviços.' };
+    Com_historico_('REAJUSTE', lote, 'APLICADO', eu, { para: 'preços da decisão', texto: Com_plural_(registros.length, 'item', 'itens') + ' passaram ao maior dos valores (tabela, planilha de 30/10/2026 com imposto por fora e conta com a sobra mínima). ' + motivo + (prev.qtdSuspeitos ? ' Fora do lote (corrigir o custo antes): ' + prev.suspeitos.map(function (x) { return x.codigo; }).slice(0, 40).join(', ') + (prev.qtdSuspeitos > 40 ? '...' : '') + '.' : '') + (prev.oficiais ? ' A tabela oficial da Diretoria (' + prev.oficiais + ' itens) ficou fora.' : '') });
+    return { lote: lote, qtd: registros.length, qtdSuspeitos: prev.qtdSuspeitos, message: 'Preços aplicados no lote ' + lote + ': ' + Com_plural_(registros.length, 'item subiu', 'itens subiram') + ' de preço. As propostas já salvas guardam o preço antigo. Se precisar, use "Desfazer o último reajuste" em Produtos e serviços.' + (prev.qtdSuspeitos ? ' ' + Com_plural_(prev.qtdSuspeitos, 'item suspeito ficou', 'itens suspeitos ficaram') + ' fora: corrija o custo e rode a prévia de novo.' : '') };
   });
 }
 
 /**
  * Para rodar no servidor sem tela (origem "editor", como as outras rotinas): prévia por padrão; aplicar exige aplicar: true e a
- * marca da prévia. o: { etapa: 'POLITICA' | 'PRECOS', aplicar, marca, motivo, forcar }. Devolve o resultado (nunca lança).
+ * marca da prévia. o: { etapa: 'POLITICA' | 'PRECOS', aplicar, marca, motivo, forcar, limiteAltaPct }. Devolve o resultado (nunca lança).
  */
 function Comercial_decisaoDono20261101(o) {
   o = o || {};
   try {
     var eu = { id: 'SISTEMA', nome: 'Rotina do servidor (decisão do dono 01/11/2026)', login: 'sistema', perfil: 'ADMIN', diretoria: true, gestao: true, catalogo: true, veCusto: true, nivel: 'GESTAO' };
     var etapa = Com_up_(o.etapa) || 'POLITICA';
-    var r = etapa === 'PRECOS' ? (o.aplicar === true ? ComDec_aplicarPrecos_(eu, o) : ComDec_previaPrecos_(eu)) : (o.aplicar === true ? ComDec_aplicarPolitica_(eu, o) : ComDec_previaPolitica_(eu, o));
+    var r = etapa === 'PRECOS' ? (o.aplicar === true ? ComDec_aplicarPrecos_(eu, o) : ComDec_previaPrecos_(eu, o)) : (o.aplicar === true ? ComDec_aplicarPolitica_(eu, o) : ComDec_previaPolitica_(eu, o));
     return JSON.parse(JSON.stringify(Object.assign({ ok: true, etapa: etapa, aplicado: o.aplicar === true }, r)));
   } catch (e) { return { ok: false, message: String((e && e.message) || e) }; }
 }

@@ -191,18 +191,20 @@ function ComF_aplicarSugerido_(eu, d) {
   var ids = (Array.isArray(d.ids) ? d.ids : [d.id]).map(Com_s_).filter(Boolean);
   if (!ids.length) throw new Error('Não foi possível mudar o preço: escolha pelo menos um item');
   return Com_comTrava_(function () {
-    var pol = ComPr_politica_(), agora = Com_agora_(), mudou = [], iguais = 0, semFicha = 0;
+    var pol = ComPr_politica_(), agora = Com_agora_(), mudou = [], iguais = 0, semFicha = 0, oficiais = 0;
     ids.forEach(function (id) {
       var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, id);
       if (!p || !ComF_temFicha_(p)) { semFicha++; return; }
+      // 01/11/2026: o preço da tabela oficial da Diretoria não muda pelo preço sugerido (só a Diretoria, no catálogo oficial)
+      if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)) { oficiais++; return; }
       var c = ComF_calcular_(ComF_fichaDe_(p), pol), antes = Com_r2_(Number(p.PRECO) || 0);
       if (c.precoSugerido === null || Math.abs(c.precoSugerido - antes) < 0.005) { iguais++; return; }
       SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, { PRECO: c.precoSugerido, PRECO_DESDE: Com_hoje_(), PRECO_REFERENCIA: '', ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora });
       Com_historico_('PRODUTO', p.ID, 'PRECO', eu, { de: Com_moeda_(antes), para: Com_moeda_(c.precoSugerido), texto: 'Preço de venda de ' + Com_s_(p.CODIGO) + ' alterado de ' + Com_moeda_(antes) + ' para ' + Com_moeda_(c.precoSugerido) + ' (preço sugerido pela ficha de custo, ' + c.fonteTxt + '; política versão ' + pol.versao + '). Motivo: ' + motivo });
       mudou.push(Com_s_(p.CODIGO));
     });
-    return { mudados: mudou.length, message: mudou.length ? Com_plural_(mudou.length, 'item passou', 'itens passaram') + ' ao preço sugerido (' + mudou.slice(0, 8).join(', ') + (mudou.length > 8 ? '...' : '') + '). As propostas já salvas guardam o preço antigo.' + (iguais ? ' ' + Com_plural_(iguais, 'item já estava', 'itens já estavam') + ' no preço sugerido.' : '') + (semFicha ? ' ' + Com_plural_(semFicha, 'item sem ficha ficou', 'itens sem ficha ficaram') + ' de fora.' : '')
-      : 'Nenhum preço mudou: ' + (iguais ? 'os itens já estão no preço sugerido' : 'os itens escolhidos não têm ficha de custo') + '.' };
+    return { mudados: mudou.length, message: mudou.length ? Com_plural_(mudou.length, 'item passou', 'itens passaram') + ' ao preço sugerido (' + mudou.slice(0, 8).join(', ') + (mudou.length > 8 ? '...' : '') + '). As propostas já salvas guardam o preço antigo.' + (iguais ? ' ' + Com_plural_(iguais, 'item já estava', 'itens já estavam') + ' no preço sugerido.' : '') + (semFicha ? ' ' + Com_plural_(semFicha, 'item sem ficha ficou', 'itens sem ficha ficaram') + ' de fora.' : '') + (oficiais ? ' ' + Com_plural_(oficiais, 'item da tabela oficial ficou', 'itens da tabela oficial ficaram') + ' de fora (o preço-base é da Diretoria, em Catálogo oficial).' : '')
+      : 'Nenhum preço mudou: ' + (oficiais ? 'o preço da tabela oficial da Diretoria só muda pela Diretoria, em Produtos e serviços > Catálogo oficial' : iguais ? 'os itens já estão no preço sugerido' : 'os itens escolhidos não têm ficha de custo') + '.' };
   });
 }
 
@@ -221,6 +223,8 @@ function ComF_previaImportacao_(eu) {
   var porNome = {}, usados = {};
   produtos.forEach(function (p) {
     if (Com_up_(p.ATIVO || 'SIM') === 'NAO' || Com_s_(p.TABELA_CODIGO) !== '') return;
+    // 01/11/2026: a tabela oficial da Diretoria nunca é completada pela importação da C1
+    if (typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)) return;
     var k = ComF_nomeChave_(p.NOME); if (!k) return;
     (porNome[k] = porNome[k] || []).push(p);
   });
@@ -229,7 +233,7 @@ function ComF_previaImportacao_(eu) {
     var chave = 'C1:' + s.codigo, cod = ComF_codigoCatalogo_(s), c = ComF_calcular_(s, pol);
     var ja = produtos.filter(function (p) { return Com_s_(p.TABELA_CODIGO) === chave; })[0];
     var mesmos = ja ? [] : (porNome[ComF_nomeChave_(s.nome)] || []).filter(function (p) { return !usados[Com_s_(p.ID)]; });
-    var igual = ja ? null : (produtos.filter(function (p) { return Com_up_(p.CODIGO) === cod && !usados[Com_s_(p.ID)]; })[0] || mesmos[0]);
+    var igual = ja ? null : (produtos.filter(function (p) { return Com_up_(p.CODIGO) === cod && !usados[Com_s_(p.ID)] && !(typeof ComCat_ehOficial_ === 'function' && ComCat_ehOficial_(p)); })[0] || mesmos[0]);
     if (igual) usados[Com_s_(igual.ID)] = true;
     var sit = ja ? 'JA_IMPORTADO' : igual ? 'EXISTE' : 'NOVO';
     resumo[sit]++;

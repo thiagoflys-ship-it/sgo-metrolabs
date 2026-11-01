@@ -12,6 +12,9 @@
  *   docker exec -w /app sgo-app-1 npx tsx scripts/aplicar_decisao_20261101.ts --etapa POLITICA --aplicar --marca <marca>
  *   docker exec -w /app sgo-app-1 npx tsx scripts/aplicar_decisao_20261101.ts --etapa PRECOS
  *   docker exec -w /app sgo-app-1 npx tsx scripts/aplicar_decisao_20261101.ts --etapa PRECOS --aplicar --marca <marca>
+ * Nos preços (01/11/2026, catálogo oficial): itens com alta acima de 100% ou com custo cadastrado maior que o preço ficam FORA do lote
+ * e são listados como "corrigir o custo antes"; --limite-alta N muda o limite (use o MESMO N na prévia e no aplicar: a marca depende
+ * dele). A tabela oficial da Diretoria fica sempre fora.
  * Opcional: --motivo "texto" (padrão: "Decisão do dono 01/11/2026: ...") e, na política, --forcar margemAlvoPct,impostosPct
  * (troca também campos em conflito). Desfazer os preços: Produtos e serviços > Reajustes > "Desfazer o último reajuste".
  */
@@ -29,6 +32,7 @@ if (etapa !== "POLITICA" && etapa !== "PRECOS") { console.log('Use --etapa POLIT
 const opcoes: Record<string, unknown> = { etapa, aplicar: tem("--aplicar") };
 if (arg("--marca")) opcoes.marca = arg("--marca");
 if (arg("--motivo")) opcoes.motivo = arg("--motivo");
+if (arg("--limite-alta")) opcoes.limiteAltaPct = Number(arg("--limite-alta").replace(",", "."));
 if (arg("--forcar")) opcoes.forcar = arg("--forcar").split(",").map((x) => x.trim()).filter(Boolean);
 if (opcoes.aplicar && !opcoes.marca) { console.log("Para aplicar, rode antes a prévia e passe --marca <marca> que ela imprimiu."); process.exit(1); }
 
@@ -51,6 +55,9 @@ try {
     console.log("PRÉVIA DOS PREÇOS (política versão " + v.politicaVersao + ")");
     for (const l of v.linhas) console.log("- " + l.codigo + " " + l.nome + ": " + l.precoAtualTxt + " -> " + l.precoNovoTxt + " (" + l.percentualTxt + "; " + l.fonte + ")");
     console.log(v.qtd + " itens sobem (soma " + v.somaAntesTxt + " -> " + v.somaDepoisTxt + "); sem preço (use a importação da tabela C1): " + v.semPreco + "; já no valor: " + v.iguais + ".");
+    console.log("SUSPEITOS fora do lote (limite de alta " + v.limiteAltaPct + "%; corrigir o custo antes): " + v.qtdSuspeitos);
+    for (const l of v.suspeitos ?? []) console.log("  ! " + l.codigo + " " + l.nome + ": " + l.precoAtualTxt + " -> " + l.precoNovoTxt + (l.custoTxt ? " (custo " + l.custoTxt + ")" : "") + " - " + l.motivo);
+    console.log("Tabela oficial da Diretoria fora do reajuste: " + (v.oficiais ?? 0) + " itens.");
     console.log("MARCA " + v.marca);
   } else console.log(String(v.message ?? "Aplicado."));
 } catch (e: any) {
