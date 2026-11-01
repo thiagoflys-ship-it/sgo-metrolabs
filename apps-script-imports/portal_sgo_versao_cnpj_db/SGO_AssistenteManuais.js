@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "c8cfa820dc66",
+ "versao": "178b92ebbe24",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -4043,7 +4043,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Proteções que valem sempre",
-     "texto": "Senha guardada só como resumo forte (PBKDF2, 600 mil rodadas, sal próprio por senha).\n5 senhas erradas com o mesmo e-mail, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.\nPedir o link de nova senha: 3 por e-mail por hora e 10 por conexão por hora; enviar o código do link: 15 por conexão por hora; 5 erros no mesmo link seguram o link por 15 minutos (e 5 códigos errados cancelam o link).\nCódigo de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.\nAparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou zerar o segundo fator desconecta todos.\nSessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela."
+     "texto": "Senha guardada só como resumo forte (PBKDF2, 600 mil rodadas, sal próprio por senha).\n5 senhas erradas com o mesmo e-mail, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.\nPedir o link de nova senha: 3 por e-mail por hora e 10 por conexão por hora; enviar o código do link: 15 por conexão por hora; 5 erros no mesmo link seguram o link por 15 minutos (e 5 códigos errados cancelam o link).\nCódigo de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.\nAparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou usar “Desconectar aparelhos” desconecta todos.\nSessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela."
     }
    ]
   }

@@ -107,5 +107,5 @@ Escolha o período (até 90 dias), a pessoa (nome ou e-mail) e o evento e toque 
 - 5 senhas erradas com o mesmo e-mail, ou 10 na mesma conexão, seguram as tentativas por 15 minutos, com aviso de quantas faltam.
 - Pedir o link de nova senha: 3 por e-mail por hora e 10 por conexão por hora; enviar o código do link: 15 por conexão por hora; 5 erros no mesmo link seguram o link por 15 minutos (e 5 códigos errados cancelam o link).
 - Código de 6 números, 10 minutos, uso único, 5 tentativas, reenvio depois de 60 segundos e até 3 por entrada.
-- Aparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou zerar o segundo fator desconecta todos.
+- Aparelho confiado por 30 dias guardado num cookie que o navegador não lê (HttpOnly, Secure, SameSite); trocar a senha ou usar “Desconectar aparelhos” desconecta todos.
 - Sessão com troca pendente é recusada pelo servidor em qualquer função até a troca, não só escondida na tela.

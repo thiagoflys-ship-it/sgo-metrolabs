@@ -138,7 +138,7 @@
     if (CHV.dados.podeConfigurarAlarme) { ChavesAlarme_chamar_("configuracao", {}); ChavesPredial_carregar_(); }
     if (res && !grupos.length) res.innerHTML = "";
     // Etapa 6 (01/11/2026): sem as chaves das integrações (são do responsável pelo sistema), a tela diz por quê e a quem pedir
-    if (!grupos.length) c.insertAdjacentHTML("beforeend", '<div class="cadx-vazio bc-vazio" id="chvSoDono"><strong>As chaves das integrações ficam com o responsável pelo sistema.</strong>' +
+    if (!grupos.length) c.insertAdjacentHTML("beforeend", '<div class="cadx-vazio bc-vazio" id="chvSoDono"><strong>As chaves das integrações ficam com o responsável pelo sistema.</strong> ' +
       (CHV.dados.podeConfigurarAlarme ? "Pelo seu perfil, aqui você configura o alarme e a automação predial. " : "") +
       "Para gravar ou trocar a chave de uma integração (inteligência artificial, Auvo, e-mail, WhatsApp, rastreador), peça a ele.</div>");
     c.querySelectorAll("[data-chv-grupo]").forEach(function (det) {
