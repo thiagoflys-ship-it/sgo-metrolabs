@@ -100,7 +100,7 @@ test('IA genérica é refeita até 2 vezes com os problemas apontados; depois va
   assert.match(chamadas[1], /SUA RESPOSTA ANTERIOR FOI RECUSADA[\s\S]*frase vazia/);
   assert.equal(r.origem, 'REGRAS');
   assert.equal(r.tentativasIA, 3);
-  assert.match(r.aviso, /recusada 3 vezes pelo verificador/);
+  assert.match(r.aviso, /Planos montados pelas regras da metodologia/);
   const s = r.sugestao;
   assert.equal(s.planos.map((p) => p.letra).join(''), 'ABC');
   assert.equal(new Set(s.planos.map((p) => p.abordagem)).size, 3, 'três abordagens diferentes');
@@ -264,7 +264,7 @@ test('visibilidade: o prompt do vendedor não traz oportunidade nem preço de ou
   const rg = ok(amb.api('s_dora', 'especialista', { id: o.id }));
   const pgv = amb.iaPrompts.find((x) => /ESPECIALISTA em vendas B2B/.test(x));
   ['OPO-2026-0002', '6.543,21', 'Empresa Concorrente Teste', '2.345,67', 'custoTotal', '31,4', '1.234,56', 'REGRA DO PREÇO'].forEach((proib) => assert.ok(!pgv.includes(proib), 'gestão na oportunidade da vendedora, sem: ' + proib));
-  assert.match(rg.aviso, /montados com a visão dele/);
+  assert.match(rg.aviso, /montados com a visão de quem é responsável/);
   // na oportunidade da própria gestão, a visão completa
   const od = oportunidadeDeTeste(amb, 's_dora', { titulo: 'Contrato de calibração da UTI', proxima: PROX }).oportunidade;
   const pd = ok(amb.api('s_dora', 'novaProposta', { oportunidadeId: od.id })).proposta.id;

@@ -341,7 +341,8 @@ function ComEsp_fatos_(eu, o) {
   };
   x.cenario = ComEsp_cenario_(x);
   var fatos = {
-    hoje: Com_brDia_(hoje), quemPede: eu.gestao ? 'gestão comercial (vê tudo)' : 'vendedor responsável (vê só as próprias oportunidades)', vendedorPrimeiroNome: x.eu,
+    // 01/11/2026: a IA não sabe quais dias são feriados (marcou 02/11, Finados, 3 vezes e foi recusada); recebe a lista pronta
+    hoje: Com_brDia_(hoje), proximosDiasUteis: (function () { var l = [], d = ComEsp_du_(hoje, 0); for (var i = 0; i < 12; i++) { l.push(Com_brDia_(d)); d = Com_somarDiasUteis_(d, 1); } return l; })(), quemPede: eu.gestao ? 'gestão comercial (vê tudo)' : 'vendedor responsável (vê só as próprias oportunidades)', vendedorPrimeiroNome: x.eu,
     oportunidade: { codigo: t.codigo, titulo: t.titulo, cliente: t.cliente, unidade: t.unidade, contatoPrimeiroNome: ComG_primeiroNome_(t.contato), origem: t.origem, funil: t.funilNome,
       etapa: t.etapaNome, probabilidade: t.probabilidade + '%', diasNaEtapa: t.diasNaEtapa, maxDiasNaEtapa: Number(c.etapa.maxDias) || '', criterioDeSaidaDaEtapa: Com_s_(c.etapa.criterio),
       listaDaEtapa: c.etapa.checklist || [], proximaEtapa: proxima ? proxima.nome : '', faltaParaAvancar: crit.faltas.map(function (z) { return z.texto; }).concat(crit.confirmar.filter(function (z) { return !z.confirmado; }).map(function (z) { return z.texto; })).slice(0, 8),
@@ -756,7 +757,7 @@ function ComEsp_prompt_(eu, fx, mem) {
     '\n\nREGRAS DA RESPOSTA:' +
     '\n- diagnostico: 2 ou 3 frases que citem fatos concretos do sistema (datas, dias, tentativas, valores, etapa), exatamente como estão nos FATOS.' +
     '\n- planos: exatamente 3, letras A, B e C. Abordagem diferente de verdade em cada um (trocar só o canal com o mesmo texto não conta como plano diferente).' +
-    '\n- Plano A: objetivo; 3 a 5 passos, cada um com "quando" (dd/mm/aaaa, de ' + fx.fatos.hoje + ' em diante, em dia útil e em ordem), "canal" (LIGACAO, WHATSAPP, EMAIL, REUNIAO ou VISITA) e "acao" concreta (o quê, com quem); mensagem pronta em nome do vendedor (WhatsApp ou e-mail com assunto); respostas para as objeções prováveis (as do histórico primeiro); critério de sucesso verificável.' +
+    '\n- Plano A: objetivo; 3 a 5 passos, cada um com "quando" (dd/mm/aaaa, SÓ datas da lista proximosDiasUteis dos FATOS, que já exclui fins de semana e feriados, em ordem), "canal" (LIGACAO, WHATSAPP, EMAIL, REUNIAO ou VISITA) e "acao" concreta (o quê, com quem); mensagem pronta em nome do vendedor (WhatsApp ou e-mail com assunto); respostas para as objeções prováveis (as do histórico primeiro); critério de sucesso verificável.' +
     '\n- Planos B e C: gatilho de troca concreto com a data limite (por exemplo: sem resposta até dd/mm/aaaa, 3 dias úteis depois do passo 2; cliente pediu desconto acima do limite do vendedor; concorrente entrou com preço menor), 2 a 4 passos datados depois do gatilho, mensagem e critério de sucesso.' +
     '\n- proximaAcao: a primeira ação do plano A, com data (dd/mm/aaaa), hora (hh:mm) e canal.' +
     '\n- Proibido: "manter contato", "agregar valor", "entender a necessidade" sem dizer qual, "follow-up", "estreitar relacionamento", "alinhar expectativas". Toda ação diz o quê, com quem, por qual canal e quando.' +
@@ -815,12 +816,13 @@ function ComEsp_consultar_(eu, d) {
         problemas = v.problemas;
         recusas.push({ tentativa: tentativas, problemas: v.problemas.slice(0, 8) });
       }
-      if (!saida && recusas.length && recusas.length === tentativas) avisos.push('A resposta da IA foi recusada ' + Com_plural_(tentativas, 'vez', 'vezes') + ' pelo verificador (' + recusas[recusas.length - 1].problemas.slice(0, 2).join('; ') + '). Valem os planos pelas regras, montados com os fatos do sistema.');
+      // 01/11/2026 (pedido do dono): o detalhe da recusa é técnico e fica só para a gestão; o vendedor lê que o plano saiu pelas regras
+      if (!saida && recusas.length && recusas.length === tentativas) avisos.push(eu.gestao ? 'A resposta da IA foi recusada ' + Com_plural_(tentativas, 'vez', 'vezes') + ' pelo verificador (' + recusas[recusas.length - 1].problemas.slice(0, 2).join('; ') + '). Valem os planos pelas regras, montados com os fatos do sistema.' : 'Planos montados pelas regras da metodologia, com os fatos desta oportunidade.');
     }
   }
   if (!saida) { saida = ComEsp_planosRegras_(x, mem); if (saida.aviso) avisos.unshift(saida.aviso); }
   saida.cenario = x.cenario; saida.cenarioNome = COM_ESP_CENARIOS[x.cenario];
-  if (visao.doResponsavel) { saida.visao = 'responsavel'; avisos.push('Como a oportunidade é de ' + Com_s_(o.RESPONSAVEL_NOME) + ', os planos foram montados com a visão dele (sem custo, margem nem dados de outros vendedores): o plano posto em uso fica gravado na oportunidade e ele vê tudo.'); }
+  if (visao.doResponsavel) { saida.visao = 'responsavel'; avisos.push('Como a oportunidade é de ' + Com_s_(o.RESPONSAVEL_NOME) + ', os planos foram montados com a visão de quem é responsável por ela (sem custo, margem nem dados de outros vendedores): o plano posto em uso fica gravado na oportunidade e a pessoa responsável vê tudo.'); }
   var aviso = avisos.join(' ');
   var id = ComEsp_registrar_(eu, t, origem, saida, (aviso + (recusas.length ? ' Recusas: ' + JSON.stringify(recusas) : '')).trim());
   return { sugestaoId: id, sugestao: saida, origem: origem, aviso: aviso, tentativasIA: tentativas, memoria: mem,

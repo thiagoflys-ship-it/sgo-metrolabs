@@ -191,7 +191,7 @@ test('especialista: resposta da IA com promessa, número inventado e afirmação
   const hist = amb.tabelas.COM_HISTORICO.length;
   const r = ok(amb.api('s_vera', 'especialista', { id: oportunidade.id }));
   assert.equal(r.origem, 'REGRAS');
-  assert.match(r.aviso, /recusada 3 vezes pelo verificador/);
+  assert.match(r.aviso, /Planos montados pelas regras da metodologia/);
   const txt = JSON.stringify(r.sugestao);
   assert.doesNotMatch(txt, /30%|12.345|enviei/, 'promessa, número inventado e afirmação de envio não passam');
   assert.equal(r.sugestao.planos.length, 3);

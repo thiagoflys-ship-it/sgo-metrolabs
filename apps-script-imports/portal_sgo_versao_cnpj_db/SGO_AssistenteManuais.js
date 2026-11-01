@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "247020a2cf15",
+ "versao": "ddcd7cbe22cf",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -1787,7 +1787,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "A especialista em comercial (parte 1)",
-     "texto": "No cartão do quadro, na linha do Gantt e na ficha da oportunidade, \"Pedir à especialista\" monta a estratégia daquela oportunidade com os fatos do sistema: os contatos registrados (data, canal e se o cliente respondeu), as tentativas sem resposta, as objeções que aparecem no histórico, as propostas e revisões (valor, desconto, validade, situação), os dias na etapa e o critério para sair dela, o histórico do cliente (compras e perdas, quem ganhou e por quanto), os preços do Banco de preços e a faixa de mercado do serviço, a urgência e o prazo, e se a compra é licitação ou contrato.\n\nEla devolve:\nDiagnóstico, em 2 ou 3 frases com números e datas do sistema.\nPlano A: o objetivo, de 3 a 5 passos com data e canal, a mensagem pronta (WhatsApp ou e-mail), a resposta para as objeções prováveis e quando o plano deu certo.\nPlanos B e C: cada um com o gatilho de troca (por exemplo, \"sem resposta até 03/11/2026, 2 dias úteis depois do último passo do plano A\" ou \"o cliente mantém o pedido de desconto acima do seu limite\") e uma abordagem diferente de verdade: subir para o decisor, falar com quem usa o equipamento, visita técnica, risco de conformidade, prazo e agenda, pacote anual, recalcular o escopo, mudar a condição de pagamento, comparar valor técnico, caminho de compras ou da compra pública, envolver a gestão ou encerrar com educação.\nPróxima ação, com data, hora e canal."
+     "texto": "No cartão do quadro, na linha do Gantt e na ficha da oportunidade, \"Pedir à especialista\" monta a estratégia daquela oportunidade com os fatos do sistema: os contatos registrados (data, canal e se o cliente respondeu), as tentativas sem resposta, as objeções que aparecem no histórico, as propostas e revisões (valor, desconto, validade, situação), os dias na etapa e o critério para sair dela, o histórico do cliente (compras e perdas, quem ganhou e por quanto), os preços do Banco de preços e a faixa de mercado do serviço, a urgência e o prazo, e se a compra é licitação ou contrato.\n\nEla devolve:\nDiagnóstico, em 2 ou 3 frases com números e datas do sistema.\nPlano A: o objetivo, de 3 a 5 passos com data e canal, a mensagem pronta (WhatsApp ou e-mail), a resposta para as objeções prováveis e quando o plano deu certo.\nPlanos B e C: cada um com o gatilho de troca (por exemplo, \"sem resposta até 03/11/2026, 2 dias úteis depois do último passo do plano A\" ou \"o cliente mantém o pedido de desconto acima do seu limite\") e uma abordagem diferente de verdade: subir para o decisor, falar com quem usa o equipamento, visita técnica, risco de conformidade, prazo e agenda, pacote anual, recalcular o escopo, mudar a condição de pagamento, comparar valor técnico, caminho de compras ou da compra pública, envolver a gestão ou encerrar com educação.\nDatas e avisos (01/11/2026): os passos só usam dias úteis da lista que o sistema entrega à IA (sem fins de semana nem feriados). Se a IA for recusada pelo verificador, o vendedor vê apenas \"Planos montados pelas regras da metodologia\"; o motivo da recusa aparece só para a gestão.\nPróxima ação, com data, hora e canal."
     },
     {
      "titulo": "A especialista em comercial (parte 2)",

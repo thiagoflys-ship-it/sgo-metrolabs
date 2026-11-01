@@ -101,6 +101,7 @@ Ela devolve:
 - **Diagnóstico**, em 2 ou 3 frases com números e datas do sistema.
 - **Plano A**: o objetivo, de 3 a 5 passos com data e canal, a mensagem pronta (WhatsApp ou e-mail), a resposta para as objeções prováveis e quando o plano deu certo.
 - **Planos B e C**: cada um com o **gatilho de troca** (por exemplo, "sem resposta até 03/11/2026, 2 dias úteis depois do último passo do plano A" ou "o cliente mantém o pedido de desconto acima do seu limite") e uma abordagem diferente de verdade: subir para o decisor, falar com quem usa o equipamento, visita técnica, risco de conformidade, prazo e agenda, pacote anual, recalcular o escopo, mudar a condição de pagamento, comparar valor técnico, caminho de compras ou da compra pública, envolver a gestão ou encerrar com educação.
+- **Datas e avisos** (01/11/2026): os passos só usam dias úteis da lista que o sistema entrega à IA (sem fins de semana nem feriados). Se a IA for recusada pelo verificador, o vendedor vê apenas "Planos montados pelas regras da metodologia"; o motivo da recusa aparece só para a gestão.
 - **Próxima ação**, com data, hora e canal.
 
 Botões da janela:

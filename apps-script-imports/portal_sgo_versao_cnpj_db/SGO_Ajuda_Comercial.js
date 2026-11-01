@@ -78,7 +78,7 @@ function SGO_ajudaTelas_Comercial_() {
       ],
       problemas: [
         { situacao: '"O cliente tem unidades no cadastro: escolha a unidade".', oQueFazer: 'No SGO+ documentos, equipamentos e pastas são por unidade. Escolha a unidade da oportunidade.' },
-        { situacao: 'A especialista avisou que está trabalhando só pelas regras.', oQueFazer: 'O aviso diz o porquê: chave da IA não cadastrada, limite de análises com IA da hora atingido ou resposta da IA recusada pelo verificador (genérica, sem data, repetindo um plano que falhou ou com número que não está no sistema). Os planos pelas regras usam os mesmos fatos e servem do mesmo jeito.' },
+        { situacao: 'A especialista avisou que está trabalhando só pelas regras.', oQueFazer: 'O aviso diz o porquê: chave da IA não cadastrada, limite de análises com IA da hora atingido ou resposta da IA recusada pelo verificador (genérica, sem data, repetindo um plano que falhou ou com número que não está no sistema). Os planos pelas regras usam os mesmos fatos e servem do mesmo jeito. O vendedor vê só "Planos montados pelas regras da metodologia"; o motivo da recusa aparece para a gestão.' },
         { situacao: 'A especialista mostrou só o encerramento e o aviso "Todas as abordagens já foram tentadas".', oQueFazer: 'Todos os planos desta oportunidade já foram marcados como "não deu certo" ou trocados. Avalie encerrar com o motivo real da perda ou peça ajuda à gestão comercial.' },
         { situacao: '"Diga em poucas palavras por que o plano não andou".', oQueFazer: 'Para trocar de plano ou marcar "Não deu certo", escreva o motivo (pelo menos 5 letras). É com ele que a especialista evita repetir o que falhou.' },
         { situacao: '"A próxima ação não pode ficar no passado".', oQueFazer: 'O que já foi feito se registra em "Registrar contato"; a próxima ação é o passo seguinte, de hoje em diante.' },
@@ -243,7 +243,7 @@ function SGO_ajudaTelas_Comercial_() {
         { situacao: 'Arrastei e apareceu "Ainda não dá para mover".', oQueFazer: 'É a metodologia: falta algo para sair da etapa (lista, decisor, contato registrado, proposta enviada ou aceite). Leia o que fazer na janela, resolva na oportunidade e mova de novo.' },
         { situacao: 'No celular o cartão não arrasta.', oQueFazer: 'Use o botão "Mover para" do cartão. Ele faz o mesmo que arrastar.' },
         { situacao: 'Uma oportunidade sumiu do quadro.', oQueFazer: 'Confira o período ("De" e "Até"), a área e o cliente nos filtros. A oportunidade aparece quando o tempo entre a criação e a previsão de fechamento (ou hoje) cruza o período.' },
-        { situacao: 'A especialista entregou os planos pelas regras.', oQueFazer: 'Leia o aviso no topo da janela: sem a chave da IA, sem cota de análises na hora ou resposta da IA recusada pelo verificador. Os planos pelas regras saem dos mesmos fatos.' },
+        { situacao: 'A especialista entregou os planos pelas regras.', oQueFazer: 'Leia o aviso no topo da janela: sem a chave da IA, sem cota de análises na hora ou resposta da IA recusada pelo verificador. Os planos pelas regras saem dos mesmos fatos. O motivo de uma recusa da IA só aparece para a gestão; as datas dos planos são sempre dias úteis, sem feriados.' },
         { situacao: 'A leitura diz que o verificador recusou o texto.', oQueFazer: 'É uma proteção: a IA citou número que não está no sistema. Vale o texto das regras, que usa só os números do sistema.' }
       ],
       quemPode: quem,
