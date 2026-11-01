@@ -801,10 +801,15 @@ function SGO_notificar_(opcoes) {
             if (barradoRes) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoRes); return; }
           }
           // 21/10/2026: piloto do WhatsApp — só as pessoas da lista recebem; as demais ficam RETIDO (sistema e e-mail seguem)
-          // 01/11/2026 (decisão do dono): o aviso da gestão vale para todos os gestores e a Diretoria, sem piloto
-          if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function' && origem !== 'AVISOS_GESTAO') {
-            if (pilotoCfg === null) { SGO_waPilotoSincronizar_(false); pilotoCfg = SGO_waPilotoCfg_(); }
-            var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg, { categoria: categoria, origem: origem }); // 26/10/2026: e o grupo que a pessoa recebe
+          // 01/11/2026 (decisão do dono): o aviso da gestão (modelo sgo_gestao_acao) passa pela lista própria da gestão
+          // (WA_PILOTO.telefonesGestao), sincronizada aqui a cada envio; nenhum outro envio usa essa lista
+          if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function') {
+            if (pilotoCfg === null) {
+              SGO_waPilotoSincronizar_(false);
+              if (origem === 'AVISOS_GESTAO' && typeof SGO_waPilotoSincronizarGestao_ === 'function') SGO_waPilotoSincronizarGestao_();
+              pilotoCfg = SGO_waPilotoCfg_();
+            }
+            var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg, { categoria: categoria, origem: origem, modelo: modelo ? modelo.nome : '' }); // 26/10/2026: e o grupo que a pessoa recebe
             if (barradoPiloto) { registrar(uid, c.nome, canal, c.telefone, 'RETIDO', barradoPiloto); return; }
           }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;

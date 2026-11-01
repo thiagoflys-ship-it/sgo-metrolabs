@@ -830,9 +830,9 @@ function ComP_decidirDesconto_(eu, d) {
     Com_historico_('PROPOSTA', p.ID, aprovar ? 'DESCONTO_APROVADO' : 'DESCONTO_NEGADO', eu, { de: 'Aguardando aprovação', para: aprovar ? 'Pronta para enviar' : 'Rascunho', texto: texto });
     Com_avisar_(p.RESPONSAVEL_ID, aprovar ? 'DESCONTO_APROVADO' : 'DESCONTO_NEGADO', (aprovar ? 'Desconto aprovado: ' : 'Desconto não aprovado: ') + ComP_rotulo_(p),
       eu.nome + (aprovar ? ' aprovou o desconto da proposta. Ela está pronta para gerar o documento e enviar. ' : ' não aprovou o desconto. A proposta voltou para rascunho para ajuste. ') + 'Fundamentação: ' + texto, { tipo: 'proposta', id: p.ID });
-    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
-    if (!aprovar) if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Desconto não aprovado', item: 'proposta ' + ComP_rotulo_(p) + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: texto,
-      tela: { tipo: 'comercial', aba: 'propostas', id: p.ID }, refId: 'PROP-DESC-NEG-' + p.ID + '-' + agora });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    if (!aprovar) Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Desconto não aprovado', item: 'proposta ' + ComP_rotulo_(p) + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: texto,
+      tela: { tipo: 'comercial', aba: 'propostas', id: p.ID }, refId: 'PROP-DESC-NEG-' + p.ID + '-' + agora }); });
     return { proposta: ComP_paraTela_(eu, Object.assign({}, p, campos), true), message: aprovar ? 'Desconto aprovado. O vendedor foi avisado.' : 'Desconto não aprovado: a proposta voltou para rascunho e o vendedor foi avisado.' };
   });
 }
@@ -1035,9 +1035,9 @@ function ComP_cancelar_(eu, d) {
     if (typeof ComBP_marcarProposta_ === 'function') ComBP_marcarProposta_(p.ID, 'CANCELADO', 'Proposta cancelada: ' + motivo);
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta cancelada: ' + motivo);
     Com_historico_('PROPOSTA', p.ID, 'CANCELADA', eu, { de: COM_SITUACOES_PROP[s], para: 'Cancelada', texto: motivo });
-    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
-    if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Proposta cancelada', item: 'proposta ' + ComP_rotulo_(p) + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: motivo,
-      tela: { tipo: 'comercial', aba: 'propostas', id: p.ID }, refId: 'PROP-CANC-' + p.ID });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Proposta cancelada', item: 'proposta ' + ComP_rotulo_(p) + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: motivo,
+      tela: { tipo: 'comercial', aba: 'propostas', id: p.ID }, refId: 'PROP-CANC-' + p.ID }); });
     return { message: 'Proposta cancelada: saiu do funil e das propostas em andamento. Ela continua no histórico da oportunidade e no filtro "Cancelada".' };
   });
 }
@@ -1109,9 +1109,9 @@ function ComP_excluir_(eu, d) {
     var texto = 'Proposta ' + rot + ' excluída por ' + eu.nome + ' em ' + Com_br_(agora) + ' (nunca foi enviada ao cliente; estava "' + (COM_SITUACOES_PROP[s] || s) + '"). Motivo: ' + motivo + ' O número ' + Com_s_(p.NUMERO) + ' não volta a ser usado.';
     Com_historico_('PROPOSTA', p.ID, 'EXCLUIDA', eu, { de: COM_SITUACOES_PROP[s] || s, para: 'Excluída', texto: texto });
     if (Com_s_(p.OPORTUNIDADE_ID)) Com_historico_('OPORTUNIDADE', p.OPORTUNIDADE_ID, 'PROPOSTA_EXCLUIDA', eu, { texto: texto });
-    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
-    if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Proposta excluída (nunca foi ao cliente)', item: 'proposta ' + rot + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: motivo,
-      tela: Com_s_(p.OPORTUNIDADE_ID) ? { tipo: 'comercial', aba: 'oportunidades', id: p.OPORTUNIDADE_ID } : { tipo: 'comercial', aba: 'propostas' }, refId: 'PROP-EXC-' + p.ID });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Proposta excluída (nunca foi ao cliente)', item: 'proposta ' + rot + (Com_s_(p.CLIENTE_NOME) ? ' (' + Com_s_(p.CLIENTE_NOME) + ')' : ''), motivo: motivo,
+      tela: Com_s_(p.OPORTUNIDADE_ID) ? { tipo: 'comercial', aba: 'oportunidades', id: p.OPORTUNIDADE_ID } : { tipo: 'comercial', aba: 'propostas' }, refId: 'PROP-EXC-' + p.ID }); });
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta ' + rot + ' excluída: ' + motivo);
     var extra = '';
     var ant = Com_s_(p.REVISAO_DE) ? SGO_DATA.getById(COM_ABAS.PROPOSTAS, Com_s_(p.REVISAO_DE)) : null;

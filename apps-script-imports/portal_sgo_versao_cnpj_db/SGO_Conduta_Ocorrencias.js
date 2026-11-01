@@ -913,7 +913,7 @@ function Conduta_apiJulgarOcorrencia(sessionId, payload) {
   Conduta_auditarDecisao_(sessao, oc, decisao === 'ANULAR' ? 'ANULADA' : 'MANTIDA', textoJulgamento, marca);
   // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js) (sigilo: só a Diretoria, sem detalhe)
   if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI05', modulo: 'conduta', soDiretoria: true, sensivel: true, quem: { id: sessao.userId, nome: sessao.nome || sessao.usuario },
-    oque: decisao === 'ANULAR' ? 'Ocorrência anulada no julgamento' : 'Ocorrência mantida no julgamento', item: 'ocorrência do Programa de conduta', motivo: '', tela: { tipo: 'modulo', mod: 'conduta' }, refId: 'CND-JUL-' + oc.ID + '-' + statusAtual });
+    oque: 'Julgamento registrado no Programa de Conduta', item: '', motivo: '', tela: { tipo: 'modulo', mod: 'conduta' }, refId: 'CND-JUL-' + oc.ID + '-' + statusAtual });
   return { success: true, decisaoDiretoria: marca };
 }
 

@@ -18,6 +18,12 @@
  *     O COMMAND lê a mesma propriedade (alias WA_PILOTO no servidor) e resolve as pessoas pelo sgo_id.
  *   - Cliente e contato externo (Auvo ao cliente, contato da unidade) não recebem WhatsApp durante o piloto, salvo
  *     telefone que esteja na lista.
+ *   - telefonesGestao (01/11/2026, avisos da gestão no celular, decisão do dono): lista SEPARADA, no mesmo formato de
+ *     "telefones" (55 + DDD + 8 últimos dígitos, sem o 9), com o celular dos gestores e da Diretoria (SGO_Avisos_Gestao.js,
+ *     AvG_idsGestaoWhatsapp_). Libera SÓ o modelo sgo_gestao_acao vindo dos avisos da gestão (origem AVISOS_GESTAO), aqui
+ *     (SGO_waPilotoMotivo_) e no servidor (regra 6 de servicos/whatsappPiloto.ts: sistema "sgo" + modelo sgo_gestao_acao).
+ *     Nunca vale para contato externo nem para outro modelo; o COMMAND não lê este campo. Sincronizada a cada envio dos
+ *     avisos da gestão (SGO_waPilotoSincronizarGestao_), além da sincronização comum.
  *
  * Relatório: SGO_WaPiloto_api('relatorio') junta NTF_ENVIOS (WhatsApp do SGO+: enviado, retido, falhou, pulado) e o
  * registro do servidor (SGO_WHATSAPP.pilotoRegistros: tudo do COMMAND e o que o servidor bloqueou). Telefone só para o
@@ -78,7 +84,7 @@ function SGO_waPilotoCfg_() {
   var j = null;
   try { j = bruto ? JSON.parse(bruto) : null; } catch (e) { j = null; }
   if (!j || typeof j !== 'object') {
-    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], grupos: {}, gravado: false, atualizadoEm: '', atualizadoPor: '' };
+    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], telefonesGestao: [], grupos: {}, gravado: false, atualizadoEm: '', atualizadoPor: '' };
   }
   return {
     ligado: j.ligado !== false,
@@ -86,6 +92,7 @@ function SGO_waPilotoCfg_() {
     grupos: SGO_waPilotoGruposLimpos_(j.grupos),
     areas: SGO_waPilotoLista_(j.areas).map(function (a) { return a.toUpperCase(); }).filter(function (a) { return WAP_AREAS.indexOf(a) >= 0; }),
     telefones: SGO_waPilotoLista_(j.telefones).map(SGO_waPilotoCanon_).filter(Boolean),
+    telefonesGestao: SGO_waPilotoLista_(j.telefonesGestao).map(SGO_waPilotoCanon_).filter(Boolean),
     gravado: true, atualizadoEm: String(j.atualizadoEm || ''), atualizadoPor: String(j.atualizadoPor || '')
   };
 }
@@ -127,6 +134,11 @@ function SGO_waPilotoMotivo_(contato, cfg, ctx) {
   try {
     cfg = cfg || SGO_waPilotoCfg_();
     if (!cfg.ligado) return '';
+    // 01/11/2026: aviso da gestão (só o modelo sgo_gestao_acao, só pessoa interna) passa pela lista própria da gestão
+    if (contato && !contato.externo && ctx && String(ctx.origem || '').toUpperCase() === 'AVISOS_GESTAO' && String(ctx.modelo || '') === WAP_MODELO_GESTAO) {
+      var kg = SGO_waPilotoCanon_(contato.telefone);
+      if (kg && (cfg.telefonesGestao || []).indexOf(kg) >= 0) return '';
+    }
     if (contato && contato.externo) {
       var k = SGO_waPilotoCanon_(contato.telefone);
       return k && SGO_waPilotoTelefones_(cfg).indexOf(k) >= 0 ? '' : WAP_MOTIVO_EXTERNO;
@@ -155,9 +167,6 @@ function SGO_waPilotoTelefones_(cfg) {
       });
     } catch (e) {}
   }
-  // 01/11/2026 (decisão do dono): os avisos da gestão vão a todos os gestores e à Diretoria, sem piloto (SGO_Avisos_Gestao.js). O
-  // celular deles entra na lista que o servidor confere; as demais mensagens continuam barradas aqui pelo piloto (SGO_waPilotoMotivo_).
-  if (typeof AvG_idsGestaoWhatsapp_ === 'function') AvG_idsGestaoWhatsapp_().forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
   var mapa = ids.length ? Notificar_contatos_(ids) : {};
   var out = [];
   Object.keys(mapa).forEach(function (id) {
@@ -167,6 +176,36 @@ function SGO_waPilotoTelefones_(cfg) {
     if (k && out.indexOf(k) < 0) out.push(k);
   });
   return out;
+}
+
+var WAP_MODELO_GESTAO = 'sgo_gestao_acao';
+
+/** 01/11/2026: telefones da gestão (sem o 9, como "telefones") para os avisos da gestão. Vazio sem SGO_Avisos_Gestao.js. */
+function SGO_waPilotoTelefonesGestao_() {
+  var ids = typeof AvG_idsGestaoWhatsapp_ === 'function' ? AvG_idsGestaoWhatsapp_() : [];
+  var mapa = ids.length ? Notificar_contatos_(ids) : {}, out = [];
+  ids.forEach(function (id) {
+    var c = mapa[id];
+    if (!c || !c.ativo) return;
+    var k = SGO_waPilotoCanon_(c.telefone);
+    if (k && out.indexOf(k) < 0) out.push(k);
+  });
+  return out;
+}
+
+function SGO_waPilotoMesmaLista_(a, b) { a = a || []; b = b || []; return a.length === b.length && a.every(function (t) { return b.indexOf(t) >= 0; }); }
+
+/**
+ * 01/11/2026: grava telefonesGestao quando mudou (chamado a cada envio dos avisos da gestão, para a lista do servidor nunca ficar
+ * atrasada até a sincronização comum). Não mexe em "telefones", pessoas, áreas nem grupos. Nunca lança.
+ */
+function SGO_waPilotoSincronizarGestao_() {
+  try {
+    var cfg = SGO_waPilotoCfg_(), tg = SGO_waPilotoTelefonesGestao_();
+    if (cfg.gravado && SGO_waPilotoMesmaLista_(cfg.telefonesGestao, tg)) return false;
+    SGO_waPilotoGravarProp_(cfg, cfg.gravado ? cfg.telefones : SGO_waPilotoTelefones_(cfg), cfg.atualizadoPor || 'sistema', tg);
+    return true;
+  } catch (e) { console.error('Piloto do WhatsApp (lista da gestão): ' + ((e && e.message) || e)); return false; }
 }
 
 /** O telefone está liberado pelo piloto? (piloto desligado = sim). Usado nos testes de Chaves e senhas. */
@@ -197,17 +236,20 @@ function SGO_waPilotoSincronizar_(forcar) {
     if (!forcar && cache && cache.get('WAP_SYNC_V1')) return;
     var cfg = SGO_waPilotoCfg_();
     var tel = SGO_waPilotoTelefones_(cfg);
-    var igual = cfg.gravado && cfg.telefones.length === tel.length && tel.every(function (t) { return cfg.telefones.indexOf(t) >= 0; });
-    if (!igual) SGO_waPilotoGravarProp_(cfg, tel, cfg.atualizadoPor || 'sistema');
+    var tg = SGO_waPilotoTelefonesGestao_();
+    var igual = cfg.gravado && cfg.telefones.length === tel.length && tel.every(function (t) { return cfg.telefones.indexOf(t) >= 0; }) && SGO_waPilotoMesmaLista_(cfg.telefonesGestao, tg);
+    if (!igual) SGO_waPilotoGravarProp_(cfg, tel, cfg.atualizadoPor || 'sistema', tg);
     SGO_waPilotoGarantirGatilho_();   // resumo das 18h mesmo sem ninguém abrir a tela
     if (cache) cache.put('WAP_SYNC_V1', '1', 1800);
   } catch (e) { console.error('Piloto do WhatsApp (sincronizar): ' + ((e && e.message) || e)); }
 }
 
-function SGO_waPilotoGravarProp_(cfg, telefones, por) {
+function SGO_waPilotoGravarProp_(cfg, telefones, por, telefonesGestao) {
   var agora = Utilities.formatDate(new Date(), WAP_FUSO, "yyyy-MM-dd'T'HH:mm:ss");
+  // 01/11/2026: telefonesGestao (lista separada da gestão); sem o parâmetro, recalcula
+  var tg = Array.isArray(telefonesGestao) ? telefonesGestao : SGO_waPilotoTelefonesGestao_();
   PropertiesService.getScriptProperties().setProperty(WAP_PROP, JSON.stringify({
-    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones, grupos: cfg.grupos || {},
+    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones, telefonesGestao: tg, grupos: cfg.grupos || {},
     atualizadoEm: agora, atualizadoPor: String(por || '').slice(0, 80)
   }));
 }

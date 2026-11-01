@@ -553,7 +553,7 @@ function SGO_ajudaTelas_Administracao_() {
         "WhatsApp: no máximo um resumo por dia (padrão 09:30), só para CLT, só para quem ainda não abriu o sistema e, durante o piloto, só para quem está na lista do piloto. Na hora, só as quatro exceções da Frota (partida não liberada, uso de veículo sem registro no expediente, devolução atrasada com reserva no mesmo dia e reserva de hoje liberada a outra pessoa).",
         "O Assistente do ponto tem regra própria e não aparece aqui.",
         "O gestor de cada área vem de Caixa de decisões > Regras e responsáveis. Área sem gestor: os avisos vão para a Diretoria. Compras fica na área Logística.",
-        "Avisos da gestão (01/11/2026, decisão do dono): pendência, aprovação, atraso e ato irreversível vão aos gestores e à Diretoria por WhatsApp e e-mail, com o link que abre o item. Gestor só no expediente; Diretoria a qualquer hora; pendência agrupada em 30 minutos; atraso e irreversível na hora; sem teto e sem piloto, inclusive PJ. O ponto fica fora."
+        "Avisos da gestão (01/11/2026, decisão do dono): pendência, aprovação, atraso e ato irreversível vão aos gestores e à Diretoria por WhatsApp e e-mail, com o link que abre o item. Gestor só no expediente; Diretoria a qualquer hora; pendência agrupada em 30 minutos; atraso e irreversível na hora; sem teto e sem piloto, inclusive PJ (o celular da gestão vai numa lista própria do piloto, que libera só estes avisos). RH e Financeiro entram só quando são responsáveis de área. O ponto fica fora."
       ],
       passos: [
         { titulo: "Ver e ajustar a regra de um aviso", itens: [

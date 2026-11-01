@@ -256,10 +256,12 @@ test('nenhum aviso duplicado: mesmo evento + item + pessoa não se repete (módu
   const c = amb.ctx;
   apoio(amb, ['u_gt'], 'OPO-1'); apoio(amb, ['u_gt'], 'OPO-1');
   assert.equal(filaG(amb, { REF_ID: 'OPO-1' }).length, 1);
+  // revisão 01/11/2026: a repetição não tira o gestor do e-mail comum (S23: e-mail na hora pela matriz)
+  assert.equal(emailsPara(amb, 'gil').length, 1, 'a segunda chamada foi pelo e-mail comum');
   const irr = { evento: 'GI04', modulo: 'assistencia', quem: { id: 'u_tec', nome: 'TIAGO' }, oque: 'Chamado cancelado', item: 'CH-1', motivo: 'teste', refId: 'AST-CANC-1' };
   c.SGO_avisoGestaoIrreversivel_(irr); c.SGO_avisoGestaoIrreversivel_(irr);
   assert.equal(filaG(amb, { REF_ID: 'AST-CANC-1' }).length, 2, 'uma linha por pessoa (Gil e Dora)');
-  assert.equal(emailsPara(amb, 'gil').length, 1);
+  assert.equal(emailsPara(amb, 'gil').length, 2, 'o comum do S23 e um só do irreversível (o irreversível repetido não repete)');
   c.SGO_avisosGestaoRodada_(new c.Date()); c.SGO_avisosGestaoRodada_(new c.Date());
   assert.equal(filaG(amb, { EVENTO: 'GS01' }).length, 1);
   assert.equal(new Set(filaG(amb).map((l) => l.CHAVE)).size, filaG(amb).length);

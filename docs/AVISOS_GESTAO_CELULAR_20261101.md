@@ -8,11 +8,11 @@ Data: 01/11/2026. Pedido do dono: pendência, atraso, aprovação e ato irrevers
 |---|---|
 | 1. Horário | A Diretoria (perfil Diretoria e o dono) recebe a qualquer hora. O gestor recebe só no expediente cadastrado em Atividades da equipe > Avisos e horários. O que nasce fora dele fica na fila com a hora de saída (`LIBERAR_EM`) na abertura do próximo dia útil (08:00 no padrão), pulando fim de semana e feriados. |
 | 2. Quantidade | Sem o teto de 3 WhatsApp por dia. Pendência e aprovação esperam até 30 minutos e saem numa mensagem só por pessoa, com um link por item. Atraso e ato irreversível saem na hora, sem esperar o agrupamento, respeitando o horário. |
-| 3. Ação | Cada item leva o link `<endereço do SGO+>?aviso=<código>`. Depois do login, o SGO+ abre o item exato com a mesma ação do Início (proposta, oportunidade, chamado, pedido de compra, Caixa de decisões). Não há botão de aprovar ou recusar no WhatsApp. |
+| 3. Ação | Cada item leva o link `<endereço do SGO+>?aviso=<código>`. Depois do login, o SGO+ abre o item exato com a mesma ação do Início (proposta, oportunidade, chamado, pedido de compra, Caixa de decisões). Só o destinatário do aviso e a gestão abrem pelo link; os demais veem "Este aviso é de outra pessoa". Não há botão de aprovar ou recusar no WhatsApp. |
 | 4. Irreversível | Perda, cancelamento, exclusão, indeferimento e recusa definitiva avisam na hora o gestor da área e a Diretoria, menos quem fez: quem fez, o quê, o item e o motivo. |
-| 5. Para todos | Vale para todos os gestores e a Diretoria, inclusive PJ, sem piloto. O piloto continua valendo para as demais mensagens. O ponto continua fora. |
+| 5. Para todos | Vale para todos os gestores e a Diretoria, inclusive PJ, sem piloto. O celular deles vai numa lista própria do piloto, `WA_PILOTO.telefonesGestao`, que libera só o modelo `sgo_gestao_acao` destes avisos (no SGO+ e na regra 6 do servidor). A lista comum `telefones` não muda, e o piloto continua valendo para todas as outras mensagens. O ponto continua fora. |
 
-"Gestão", aqui: Administrador, Gestor, Diretoria, o dono e os responsáveis de área da rotina da empresa (RH e Financeiro), ativos, sem a conta técnica "admin". Para as demais pessoas nada muda: teto de 3 WhatsApp na hora, resumo do dia e regras da matriz.
+"Gestão", aqui: Administrador, Gestor, Diretoria e o dono; RH e Financeiro só quando são responsáveis de área em Caixa de decisões > Regras e responsáveis. Ativos, sem a conta técnica "admin". Um auxiliar de RH ou do Financeiro fica de fora e segue a regra comum (com o teto). Para as demais pessoas nada muda: teto de 3 WhatsApp na hora, resumo do dia e regras da matriz.
 
 ## 2. Os quatro tipos
 
@@ -70,11 +70,11 @@ Fora do GS01, de propósito: os quatro itens de acompanhamento (documento, requa
 | GI02 | Atividades | Pedido de nova data recusado (`Atividades_apiDecidirPedido`) | Gestor da área da pessoa e Diretoria |
 | GI03 | Compras | Pedido de compra cancelado (`CmpR_cancelar_`) | Gestor da Logística e Diretoria |
 | GI04 | Assistência técnica | Chamado cancelado (`AstC_cancelar_`) ou excluído (`AstC_excluir_`); solicitação do cliente descartada (`AstC_descartar_`) | Gestor da Técnica e Diretoria |
-| GI05 | Programa de conduta | Ocorrência mantida ou anulada no julgamento (`Conduta_apiJulgarOcorrencia`) | Só a Diretoria, sem detalhe (sigilo) |
+| GI05 | Programa de conduta | Julgamento de ocorrência (`Conduta_apiJulgarOcorrencia`). Título fixo "Julgamento registrado no Programa de Conduta", com o link e sem o resultado | Só a Diretoria (sigilo) |
 | GI06 | Representação | Pedido da representada recusado (`AstC_descartar_`) | Gestor da Técnica e Diretoria |
 | GI07 | Cadastros | Cliente, unidade, equipamento ou usuário excluído (`clientesExcluir`, `unidadesExcluir`, `equipamentosExcluir`, `usuariosExcluir`) | Diretoria |
 
-Quem fez nunca recebe o próprio aviso. A exclusão de cadastro não pede motivo; o aviso diz isso.
+Quem fez nunca recebe o próprio aviso. Destinatário que não é da gestão (por exemplo um técnico responsável pela área) recebe pela regra comum do notificador, por e-mail. A exclusão de cadastro não pede motivo; o aviso diz isso. O aviso é chamado depois de o módulo soltar a sua trava (fila "depois" de Comercial, Compras e Assistência; fim da função nas Atividades): a ação do módulo não espera e-mail nem WhatsApp.
 
 ### 3.4 Informativo (sem mudança, sem WhatsApp da gestão)
 
@@ -88,13 +88,14 @@ Venda ganha (S24), atividade concluída e comentário (S05, S06), atendimento do
 
 ## 5. Ciclo de cada aviso e "não perder nada"
 
-Aba `NTF_GESTAO`, uma linha por evento + item + pessoa (a `CHAVE`; não se repete):
+Aba `NTF_GESTAO`, uma linha por evento + item + marco + pessoa (a `CHAVE`; não se repete). O marco é a entrada do item na Caixa (`ENTROU_EM`) ou o tipo e o título do aviso: um novo marco do mesmo item avisa de novo (RP07 "em risco" e depois "vencido"; segundo pedido de nova data). Chave repetida não tira a pessoa do e-mail comum do notificador.
 
 1. **Criado e na fila** (`NA_FILA`, com `QUANDO` e `LIBERAR_EM`).
-2. **Enviado** (`ENVIADO`): o e-mail sai sempre (`EMAIL_SITUACAO`); o WhatsApp sai junto (`WA_SITUACAO`: `ENVIADO`, `AGUARDANDO_MODELO`, `SEM_NUMERO` ou `FALHOU`, com `WA_MOTIVO`). Celular sempre mascarado ("final 1234").
-3. **Entregue e lido**: `SGO_avisosGestaoRetornoMeta_(wamid, status, quandoIso, motivo)` grava `ENTREGUE_EM` e `LIDO_EM`. O retorno da Meta ainda não é registrado no SGO+; a função está pronta para o servidor chamar.
-4. **Aberto**: o link grava `ABERTO_EM` quando a própria pessoa abre.
-5. **Resolvido** (`RESOLVIDO`): o item saiu da Caixa de decisões (`CAIXA:<item>`) ou a atividade foi concluída ou replanejada (`ATV:<ids>`). Resolvido antes do envio não manda mensagem (fica registrado). O irreversível fica resolvido ao sair.
+2. **Enviando** (`ENVIANDO`, com `ENVIANDO_EM`): a escolha das linhas fica sob trava (`LockService.tryLock`) e cada linha é marcada antes de sair, para a rodada de 15 minutos e o envio na hora não mandarem a mesma linha duas vezes. Linha em `ENVIANDO` há mais de 10 minutos (execução que caiu) volta a sair.
+3. **Enviado** (`ENVIADO`): o e-mail sai sempre (`EMAIL_SITUACAO`); o WhatsApp sai junto (`WA_SITUACAO`: `ENVIADO`, `AGUARDANDO_MODELO`, `SEM_NUMERO` ou `FALHOU`, com `WA_MOTIVO`). Celular sempre mascarado ("final 1234").
+4. **Entregue e lido**: `SGO_avisosGestaoRetornoMeta_(wamid, status, quandoIso, motivo)` grava `ENTREGUE_EM` e `LIDO_EM`. O retorno da Meta ainda não é registrado no SGO+; a função está pronta para o servidor chamar.
+5. **Aberto**: o link grava `ABERTO_EM` quando a própria pessoa abre.
+6. **Resolvido** (`RESOLVIDO`): o item saiu da Caixa de decisões (`CAIXA:<item>`) ou a atividade foi concluída ou replanejada (`ATV:<ids>`). Resolvido antes do envio não manda mensagem (fica registrado). O irreversível fica resolvido ao sair.
 
 Falhas: sem e-mail no cadastro, cota ou erro do e-mail ficam registrados; erro passageiro do e-mail tenta de novo até 3 vezes. Sem ação no prazo, a escada da Caixa (e-mail diário, resumo do WhatsApp, Diretoria em 5 dias úteis) e a SEDNA continuam cobrando; GS02 e GS03 avisam essas subidas na hora. O S23 (pedido de apoio comercial) não tem item na Caixa: não sobe a escada, só o aviso.
 
@@ -143,7 +144,7 @@ Em erro: `{ ok: false, message }`. O campo `texto` serve direto para o e-mail da
 
 ## 9. Riscos e pendências
 
-- O servidor confere a lista de telefones do piloto em todo envio: o celular da gestão passou a entrar nessa lista (`SGO_waPilotoTelefones_`), para a decisão 5 valer também lá. As demais mensagens para essas pessoas continuam barradas pelo piloto no SGO+.
+- Piloto: o celular da gestão fica só em `WA_PILOTO.telefonesGestao`, uma lista de textos com 55 + DDD + os 8 últimos dígitos, sem o 9, no mesmo formato de `telefones`. Exemplo: `["556299990010","556299990011"]`. A lista é gravada na sincronização comum, na tela do piloto e a cada envio dos avisos da gestão (`SGO_waPilotoSincronizarGestao_`, só quando muda). Ela libera só o modelo `sgo_gestao_acao` com origem AVISOS_GESTAO; nunca contato externo nem outro modelo. O COMMAND não lê este campo.
 - Os avisos de um módulo que já mandava e-mail próprio ao gestor e também criam item na Caixa (por exemplo a triagem da Assistência, AT01) chegam pelos dois caminhos: o e-mail antigo do módulo e o GS01.
 - Antes do cadastro e da aprovação do modelo, todos os avisos da gestão saem só por e-mail (com a marca).
 - O retorno de entrega e leitura da Meta depende de o servidor registrar o webhook e chamar `SGO_avisosGestaoRetornoMeta_`.

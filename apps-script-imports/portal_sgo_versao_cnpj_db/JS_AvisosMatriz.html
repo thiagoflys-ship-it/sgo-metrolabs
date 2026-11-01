@@ -267,7 +267,8 @@
     google.script.run
       .withSuccessHandler(function (r) {
         var t = r && r.tela;
-        if (t && typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(t); else irCaixa();
+        // aviso de outra pessoa (revisão 01/11/2026): fica no Início, com o motivo
+        if (t && typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(t); else if (!(r && r.outraPessoa)) irCaixa();
         if (r && r.message) setTimeout(function () { alert(r.message); }, 400);
       })
       .withFailureHandler(function () { irCaixa(); setTimeout(function () { alert("Não foi possível abrir o item do aviso agora (sem comunicação com o SGO+). Abrimos a Caixa de decisões: o item continua lá até ser resolvido."); }, 400); })

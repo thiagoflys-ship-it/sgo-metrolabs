@@ -347,9 +347,9 @@ function CmpR_cancelar_(eu, d) {
     Cmp_historico_('REQUISICAO', r.ID, 'CANCELADA', eu, { de: CMP_SITUACOES[s], para: 'Cancelada', publico: true, texto: motivo });
     Cmp_avisar_(r.SOLICITANTE_ID, 'CANCELADA', 'Pedido de compra ' + r.NUMERO + ' cancelado', eu.nome + ' cancelou o pedido "' + Cmp_s_(r.TITULO).slice(0, 80) + '". Motivo: ' + motivo, r.ID, { autorId: eu.id });
     if (Cmp_s_(r.COMERCIAL_VENDEDOR_ID)) Cmp_avisar_(r.COMERCIAL_VENDEDOR_ID, 'CANCELADA', 'Compra do pedido ' + Cmp_s_(r.PROPOSTA_NUMERO) + ' cancelada (' + r.NUMERO + ')', eu.nome + ' cancelou a compra. Motivo: ' + motivo, r.ID, { autorId: eu.id });
-    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
-    if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI03', modulo: 'compras', quem: eu, oque: 'Pedido de compra cancelado', item: Cmp_s_(r.NUMERO) + ' (' + Cmp_s_(r.TITULO).slice(0, 80) + ')' + (Cmp_s_(r.PEDIDO_NUMERO) ? ', pedido ao fornecedor ' + Cmp_s_(r.PEDIDO_NUMERO) : ''), motivo: motivo,
-      tela: { tipo: 'compras', mod: 'compras', id: r.ID }, refId: 'CMP-CANC-' + r.ID });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    Cmp_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI03', modulo: 'compras', quem: eu, oque: 'Pedido de compra cancelado', item: Cmp_s_(r.NUMERO) + ' (' + Cmp_s_(r.TITULO).slice(0, 80) + ')' + (Cmp_s_(r.PEDIDO_NUMERO) ? ', pedido ao fornecedor ' + Cmp_s_(r.PEDIDO_NUMERO) : ''), motivo: motivo,
+      tela: { tipo: 'compras', mod: 'compras', id: r.ID }, refId: 'CMP-CANC-' + r.ID }); });
     return { requisicao: CmpR_paraTela_(eu, Object.assign({}, r, campos), true), message: 'Pedido ' + r.NUMERO + ' cancelado.' + aviso };
   });
 }

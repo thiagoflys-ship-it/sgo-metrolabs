@@ -466,13 +466,23 @@ function Com_marca_(texto) {
   }
 }
 
+// 01/11/2026: o que roda depois de soltar a trava (aviso da gestão com e-mail e WhatsApp, SGO_Avisos_Gestao.js), como CMP_TRAVA em Compras
+var COM_TRAVA = { n: 0, depois: [] };
+function Com_depois_(fn) { if (COM_TRAVA.n > 0) COM_TRAVA.depois.push(fn); else { try { fn(); } catch (e) { console.error('Comercial (depois): ' + ((e && e.message) || e)); } } }
 function Com_comTrava_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(25000);
-  try { return fn(); } finally {
+  COM_TRAVA.n++;
+  var ok = false;
+  try { var r = fn(); ok = true; return r; } finally {
+    COM_TRAVA.n--;
     try { SpreadsheetApp.flush(); } catch (e) {}
     lock.releaseLock();
     if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+    if (COM_TRAVA.n === 0) {
+      var fila = COM_TRAVA.depois; COM_TRAVA.depois = [];
+      if (ok) fila.forEach(function (f) { try { f(); } catch (e3) { console.error('Comercial (depois da trava): ' + ((e3 && e3.message) || e3)); } });
+    }
   }
 }
 

@@ -43,14 +43,15 @@ Pendência, aprovação, atraso e ato irreversível da gestão chegam aos gestor
 |---|---|---|
 | Pendência / Aprovação | Decisão nova na Caixa de decisões (GS01: desconto acima da alçada, reabertura, preço, pedido de nova data, compra a aprovar, Frota, Assistência, padrões), pedido de apoio comercial (S23), pedido da representada (RP01, RP02) | Agrupada: o que nasce em 30 minutos vai numa mensagem só, com um link por item |
 | Atraso | Prazo de decisão vencido sem ação (GS02), decisão escalada à Diretoria (GS03), atividade atrasada escalada ao gestor ou à Diretoria (S72, S73), prazo de aceite da representada (RP07) | Na hora |
-| Irreversível | Oportunidade perdida, proposta cancelada ou excluída, desconto não aprovado, reabertura recusada (GI01); pedido de nova data recusado (GI02); pedido de compra cancelado (GI03); chamado cancelado ou excluído, solicitação descartada (GI04); julgamento do Programa de conduta, só à Diretoria e sem detalhe (GI05); pedido da representada recusado (GI06); cadastro excluído (GI07) | Na hora, ao gestor da área e à Diretoria, menos quem fez: quem fez, o quê, o item e o motivo |
+| Irreversível | Oportunidade perdida, proposta cancelada ou excluída, desconto não aprovado, reabertura recusada (GI01); pedido de nova data recusado (GI02); pedido de compra cancelado (GI03); chamado cancelado ou excluído, solicitação descartada (GI04); julgamento do Programa de conduta, só à Diretoria, com o título fixo "Julgamento registrado no Programa de Conduta" e sem o resultado (GI05); pedido da representada recusado (GI06); cadastro excluído (GI07) | Na hora, ao gestor da área e à Diretoria, menos quem fez: quem fez, o quê, o item e o motivo |
 
 Regras:
 
-- Quem recebe: Administrador, Gestor, Diretoria e os responsáveis de área de RH e Financeiro, inclusive PJ, sem piloto. Para as demais pessoas nada muda (teto de 3 WhatsApp na hora e resumo do dia).
+- Quem recebe: Administrador, Gestor e Diretoria; RH e Financeiro só quando são responsáveis de área (Caixa de decisões › Regras e responsáveis). Inclusive PJ, sem piloto: o celular deles vai numa lista própria do piloto, que libera só estes avisos. Para as demais pessoas nada muda (teto de 3 WhatsApp na hora e resumo do dia). Quem recebe um irreversível sem ser da gestão (por exemplo, um técnico responsável pela área) recebe por e-mail, pela regra comum.
 - Horário: a Diretoria recebe a qualquer hora, inclusive à noite e no fim de semana. O gestor recebe só no expediente; o que nasce fora dele chega na abertura do próximo dia útil (08:00 no padrão).
 - Não há teto de mensagens para a gestão.
-- O link abre o item no SGO+ depois do login. A decisão é sempre tomada no sistema: o WhatsApp não tem botão de aprovar ou recusar.
+- O link abre o item no SGO+ depois do login, só para quem recebeu o aviso e para a gestão. Quem abre o link de outra pessoa vê "Este aviso é de outra pessoa". A decisão é sempre tomada no sistema: o WhatsApp não tem botão de aprovar ou recusar.
+- Cada item avisa uma vez por marco: um segundo marco do mesmo item (prazo em risco e depois vencido, um segundo pedido de nova data) avisa de novo.
 - Informativo (venda ganha, comentário, atividade concluída, itens de acompanhamento) continua como antes, sem WhatsApp da gestão.
 - O ponto continua fora.
 - Enquanto o modelo `sgo_gestao_acao` não for aprovado pela Meta, o aviso sai só por e-mail com a marca "WhatsApp aguardando modelo". Sem celular no cadastro ou com erro da Meta, também vai o e-mail, e o motivo fica registrado.
@@ -123,6 +124,7 @@ O COMMAND fica em silêncio fora do próprio sino enquanto não for usado pela e
 | Aviso da gestão com "Sem celular no cadastro" | Complete o celular em Administração › Usuários. O e-mail saiu. |
 | Gestor diz que o aviso chegou só de manhã | Gestor recebe só no expediente; o que nasce fora dele sai na abertura do próximo dia útil. A Diretoria recebe a qualquer hora. |
 | O link do aviso abriu a Caixa de decisões em vez do item | O link não foi encontrado (copiado pela metade ou de outro ambiente). O item continua na Caixa até ser resolvido. |
+| Aparece "Este aviso é de outra pessoa" | O link foi encaminhado. Só quem recebeu o aviso e a gestão abrem; o que é seu está no Início e em Meus avisos. |
 
 ## 9. Registros
 
