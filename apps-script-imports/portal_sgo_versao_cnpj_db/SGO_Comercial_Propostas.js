@@ -49,7 +49,7 @@ function ComP_produtoParaTela_(p, eu, corteReajuste, polFicha) {
   // 01/11/2026 (Comercial C2): ficha de custo, preço sugerido pela política em vigor e as referências de mercado e do histórico
   if (typeof ComF_paraTela_ === 'function') {
     var fi = ComF_paraTela_(p, eu, polFicha);
-    if (fi) { t.ficha = fi; if (eu && eu.veCusto && fi.conta) { t.custo = fi.conta.custo; t.custoTxt = Com_moeda_(fi.conta.custo) + ' (ficha)'; } }
+    if (fi) { t.ficha = fi; if (eu && eu.veCusto && fi.conta && fi.vale) { t.custo = fi.conta.custo; t.custoTxt = Com_moeda_(fi.conta.custo) + ' (ficha)'; } }
   }
   // 29/10/2026: redução de preço pedida pelo vendedor (acima da alçada) e a última decisão
   var sitPed = Com_up_(p.PRECO_PEDIDO_SITUACAO);
@@ -446,7 +446,8 @@ function ComP_paraTela_(eu, p, completo) {
       foraDoDocumento: !tm.congelado && !!Com_s_(p.GERADA_EM) }; t.condicoes = Com_json_(p.CONDICOES_JSON, {}); t.modelo = Com_s_(p.MODELO);
     // 01/11/2026 (Comercial C2): faixa de prazo da proposta e de cada item
     t.prazo = Com_json_(p.PRAZO_JSON, null) || { faixa: 'NORMAL', licitacao: false };
-    if (typeof ComPr_textoPrazo_ === 'function') { try { t.prazoTexto = ComPr_textoPrazo_(ComPr_politica_(), t.prazo, itens); } catch (eP) { t.prazoTexto = ''; } }
+    if (typeof ComPr_textoPrazo_ === 'function') { try { t.prazoTexto = ComPr_textoPrazo_(ComPr_politicaDoPrazo_(t.prazo), t.prazo, itens); } catch (eP) { t.prazoTexto = ''; } }
+    delete t.prazo.politica;
     t.itens = itens.map(function (i) {
       var o = { ordem: i.ordem, produtoId: i.produtoId || '', codigo: i.codigo || '', tipo: i.tipo || 'SERVICO', descricao: i.descricao || '', detalhe: i.detalhe || '',
         equipamentoId: i.equipamentoId || '', equipamentoTexto: i.equipamentoTexto || '', unidade: i.unidade || 'un.', quantidade: Number(i.quantidade) || 0, auto: i.auto || '', faixa: i.faixa || '' };
@@ -721,6 +722,9 @@ function ComP_salvar_(eu, d) {
       if (txtPrazo && (!normP(cond.prazoExecucao) || padroesPrazo.indexOf(normP(cond.prazoExecucao)) >= 0 || ehAuto(cond.prazoExecucao))) cond.prazoExecucao = txtPrazo;
     }
     campos.CONDICOES_JSON = JSON.stringify(cond);
+    // revisão da C2: retrato das faixas em vigor na gravação (nome, dias úteis, acréscimo, até onde o prazo conta). O documento e a
+    // tela da proposta usam o retrato: a Diretoria mudar as faixas depois não muda o prazo de proposta já gravada ou enviada.
+    if (polPr) prazo.politica = ComPr_retratoPrazo_(polPr);
     campos.PRAZO_JSON = JSON.stringify(prazo);
     if (ct) { campos.CONTATO_ID = ct.ID; campos.CONTATO_NOME = Com_s_(ct.NOME); }
     if (desl) campos.DESLOCAMENTO_JSON = JSON.stringify(desl);

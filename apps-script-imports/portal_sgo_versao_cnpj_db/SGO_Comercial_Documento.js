@@ -71,7 +71,7 @@ function ComDoc_propostaHtml_(p, cong, marca) {
   if (Com_s_(p.APRESENTACAO)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(p.APRESENTACAO));
   corpo += RelA4_secao_(ehProduto ? 'Resumo do fornecimento' : 'Escopo', RelA4_paragrafos_(ComP_escopo_(p) || 'Conforme os itens da tabela a seguir.'));
   // 01/11/2026 (Comercial C2): prazo da faixa escolhida em cada item de serviço (o valor da linha já é o da faixa)
-  var prazoDoc = Com_json_(p.PRAZO_JSON, null), polDoc = prazoDoc && typeof ComPr_politica_ === 'function' ? ComPr_politica_(met) : null;
+  var prazoDoc = Com_json_(p.PRAZO_JSON, null), polDoc = prazoDoc && typeof ComPr_politica_ === 'function' ? ComPr_politicaDoPrazo_(prazoDoc, met) : null;
   var linhas = itens.map(function (i, k) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
     var fxDoc = polDoc && !i.auto && i.tipo !== 'PRODUTO' ? ComPr_faixa_(polDoc, i.faixa || prazoDoc.faixa) : null;

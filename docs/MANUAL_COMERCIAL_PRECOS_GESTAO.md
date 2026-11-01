@@ -58,22 +58,25 @@ Antes havia duas margens: a da política de desconto (margem bruta dos itens com
 - "Licitação ou contrato: sem acréscimo de urgência" aparece na proposta; o texto é editável.
 - O prazo conta até a entrega do relatório ou certificado (padrão) ou até a execução (o relatório sai em até 5 dias úteis depois). O documento explica ao cliente em cada item e em "Prazo de execução".
 - Urgente e prioritária precisam de menos dias que a Normal; o sistema confere ao salvar.
+- A proposta guarda as faixas em vigor quando foi salva. Mudar os dias ou o acréscimo de uma faixa depois vale para as propostas novas e para os rascunhos salvos de novo; o documento de proposta já concluída ou enviada continua com o prazo da época.
 
 ## Importar a tabela de preços C1
 
 1. Em Produtos e serviços, toque em "Importar tabela de preços C1".
-2. Confira a prévia: os 42 serviços, com custo e preço sugerido pela política em vigor. Cada linha diz se é novo, se já existe um item com o mesmo código ou nome (lado a lado, com o preço e o custo de hoje) ou se já foi importado.
-3. Para o que já existe, escolha "Preencher só o que está vazio" (horas, padrões, consumíveis, categoria, descrição, custo e referências; nunca troca preço, nome ou descrição já gravados) ou "Deixar como está".
+2. Confira a prévia: os 42 serviços, com custo e preço sugerido pela política em vigor. Cada linha diz se é novo, se já existe um item com o mesmo código ou nome (lado a lado, com o preço e o custo de hoje) ou se já foi importado. O nome é comparado sem acento, sem maiúscula, sem pontuação e sem as palavras de ligação: "Manutenção preventiva em seladora" e "Manutenção preventiva de seladora" são o mesmo serviço. Com mais de um item igual no catálogo, a prévia mostra o que tem preço e avisa quantos outros existem (confira em Situação > "Possíveis duplicados (mesmo nome)").
+3. Para o que já existe, escolha "Preencher só o que está vazio" (horas, padrões, consumíveis, categoria, descrição, custo e referências; nunca troca preço, nome ou descrição já gravados), "Deixar como está (não importa este serviço)" ou "Criar um item novo (o existente fica como está)", para quando o nome parecido é de outro serviço.
 4. Toque em "Importar" e confirme.
 
-Rodar de novo não duplica: o item importado fica ligado à tabela e aparece como "Já importado". Se alguém mudou o catálogo entre a prévia e a importação, o sistema pede a prévia de novo.
+Rodar de novo não duplica: o item importado fica ligado à tabela e aparece como "Já importado". Se alguém mudou o catálogo entre a prévia e a importação, o sistema pede a prévia de novo. Uma escolha inválida para algum item para a importação inteira antes de gravar qualquer coisa.
+
+Item que já tinha custo cadastrado: a importação preenche as horas da ficha (a conta da tabela aparece em "Ficha de custo"), mas o custo usado nas propostas continua o cadastrado até a gestão conferir as horas e tocar em "Salvar a ficha". A prévia e a ficha avisam.
 
 ## Ficha de custo e preço sugerido
 
 - "Ficha de custo" do item mostra a conta aberta, o preço sugerido, o mínimo, o urgente, o mercado público (menor, mediana e maior preço, com quantos preços), o Centro-Oeste e o histórico da Metrolabs.
 - Ajuste as horas, os padrões e os consumíveis e toque em "Salvar a ficha". Fica no histórico do item.
 - O preço sugerido muda na hora quando a Diretoria muda um parâmetro. O preço de venda só muda quando você toca em "Usar o preço sugerido" e escreve o motivo; o histórico guarda o preço anterior, o novo e o motivo. As propostas já salvas guardam o preço antigo.
-- Nas propostas novas, o custo do item com ficha é o custo da ficha pela política em vigor.
+- Nas propostas novas, o custo do item com ficha é o custo da ficha pela política em vigor. Exceção: item que já tinha custo cadastrado antes da importação continua com o custo cadastrado até a gestão salvar a ficha.
 
 ## O que a gestora aponta
 

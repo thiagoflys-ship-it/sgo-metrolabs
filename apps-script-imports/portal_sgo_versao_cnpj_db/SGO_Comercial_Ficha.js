@@ -21,7 +21,8 @@
  * "preencher só o que está vazio" (nunca troca preço, nome ou descrição já gravados) ou "deixar como está".
  ****************************************************/
 
-var COM_F_ESCOLHAS = { PREENCHER: 'Preencher só o que está vazio', IGNORAR: 'Deixar como está' };
+// revisão da C2: "Criar um item novo" para quando o casamento pelo nome juntou serviços que são diferentes (o existente fica como está)
+var COM_F_ESCOLHAS = { PREENCHER: 'Preencher só o que está vazio', IGNORAR: 'Deixar como está (não importa este serviço)', CRIAR: 'Criar um item novo (o existente fica como está)' };
 
 function ComF_n_(v) { var n = ComPr_num_(v); return n === null ? null : n; }
 function ComF_temFicha_(p) { return !!p && (Com_s_(p.HORAS_TECNICO) !== '' || Com_s_(p.HORAS_ENGENHEIRO) !== '' || Com_s_(p.TABELA_CODIGO) !== ''); }
@@ -75,11 +76,25 @@ function ComF_fichaDe_(p) {
     regra: ref.regra || null, historico: ref.historico || null, mercado: ref.mercado || null };
 }
 
-/** Custo do item para a proposta: com ficha, o custo calculado pela política em vigor; sem ficha, o custo cadastrado (ou null). */
+/**
+ * 01/11/2026 (revisão da C2): a ficha só passa a valer como custo do item quando a gestão salvou a ficha (FICHA_EM) ou quando o
+ * item não tinha custo cadastrado. A importação que completa um item que já tinha CUSTO preenche as horas (a gestão vê a conta da
+ * C1 na ficha), mas o custo das propostas continua o cadastrado até a gestão salvar a ficha: "só preenche o que está vazio".
+ */
+function ComF_fichaVale_(p) { return ComF_temFicha_(p) && (Com_s_(p.FICHA_EM) !== '' || Com_s_(p.CUSTO) === ''); }
+
+/** Custo do item para a proposta: com ficha valendo, o custo calculado pela política em vigor; senão, o custo cadastrado (ou null). */
 function ComF_custoProduto_(p, pol) {
-  if (ComF_temFicha_(p)) return ComF_calcular_(ComF_fichaDe_(p), pol).custo;
+  if (ComF_fichaVale_(p)) return ComF_calcular_(ComF_fichaDe_(p), pol).custo;
   return Com_s_(p && p.CUSTO) === '' ? null : Number(p.CUSTO) || 0;
 }
+
+/**
+ * 01/11/2026 (revisão da C2): chave do nome para casar a tabela C1 com o catálogo. Sem acento, sem maiúscula, sem pontuação e sem
+ * as palavras de ligação ("Manutenção preventiva EM autoclave" = "Manutenção preventiva DE autoclave"; "Calibração COM teste" =
+ * "Calibração E teste"). A importação antiga só casava o nome idêntico e criava item repetido no catálogo.
+ */
+function ComF_nomeChave_(s) { return Com_normBusca_(s).replace(/\b(de|da|do|das|dos|em|no|na|nos|nas|com|e|a|o|as|os|ao|aos|para|por)\b/g, ' ').replace(/\s+/g, ' ').trim(); }
 
 /** Parte da tela do item. Gestão (veCusto): a conta inteira. Vendedor: só as referências de mercado e do histórico. */
 function ComF_paraTela_(p, eu, pol) {
@@ -90,6 +105,9 @@ function ComF_paraTela_(p, eu, pol) {
   if (t.tem && eu && eu.veCusto) {
     var c = ComF_calcular_(ComF_fichaDe_(p), pol || ComPr_politica_());
     t.conta = c;
+    // revisão da C2: a ficha ainda não vale como custo (item já tinha custo cadastrado e a gestão não salvou a ficha)
+    t.vale = ComF_fichaVale_(p);
+    if (!t.vale) t.custoCadastradoTxt = Com_moeda_(p.CUSTO);
     t.contaTxt = { maoObraTecnico: Com_moeda_(c.maoObraTecnico), maoObraEngenheiro: Com_moeda_(c.maoObraEngenheiro), custoFixo: Com_moeda_(c.custoFixo), padroes: Com_moeda_(c.padroes), consumiveis: Com_moeda_(c.consumiveis), custo: Com_moeda_(c.custo),
       precoConta: c.precoConta === null ? '—' : Com_moeda_(c.precoConta), precoMinimo: c.precoMinimo === null ? '—' : Com_moeda_(c.precoMinimo), precoSugerido: c.precoSugerido === null ? '—' : Com_moeda_(c.precoSugerido), precoUrgente: c.precoUrgente === null ? '—' : Com_moeda_(c.precoUrgente) };
     var preco = Number(p.PRECO) || 0;
@@ -169,10 +187,21 @@ function ComF_previaImportacao_(eu) {
   Com_exigir_(eu, 'GESTAO', 'importar a tabela de preços C1');
   if (typeof COM_TABELA_C1 === 'undefined' || !COM_TABELA_C1) throw new Error('Não foi possível montar a prévia: a tabela C1 não está instalada neste servidor (SGO_Comercial_TabelaC1.js). Avise o Administrador');
   var pol = ComPr_politica_(), produtos = Com_ler_(COM_ABAS.PRODUTOS), resumo = { NOVO: 0, JA_IMPORTADO: 0, EXISTE: 0 };
+  // revisão da C2: casamento pelo nome sem as palavras de ligação; com mais de um item igual, o primeiro com preço e mais recente
+  // (os outros aparecem contados na prévia). Item do catálogo que já casou com um serviço não casa com outro.
+  var porNome = {}, usados = {};
+  produtos.forEach(function (p) {
+    if (Com_up_(p.ATIVO || 'SIM') === 'NAO' || Com_s_(p.TABELA_CODIGO) !== '') return;
+    var k = ComF_nomeChave_(p.NOME); if (!k) return;
+    (porNome[k] = porNome[k] || []).push(p);
+  });
+  Object.keys(porNome).forEach(function (k) { porNome[k].sort(function (a, b) { return ((Number(b.PRECO) > 0) - (Number(a.PRECO) > 0)) || Com_s_(b.ATUALIZADO_EM).localeCompare(Com_s_(a.ATUALIZADO_EM)); }); });
   var linhas = COM_TABELA_C1.servicos.map(function (s) {
     var chave = 'C1:' + s.codigo, cod = ComF_codigoCatalogo_(s), c = ComF_calcular_(s, pol);
     var ja = produtos.filter(function (p) { return Com_s_(p.TABELA_CODIGO) === chave; })[0];
-    var igual = ja ? null : (produtos.filter(function (p) { return Com_up_(p.CODIGO) === cod; })[0] || produtos.filter(function (p) { return Com_up_(p.ATIVO || 'SIM') !== 'NAO' && Com_normBusca_(p.NOME) === Com_normBusca_(s.nome); })[0]);
+    var mesmos = ja ? [] : (porNome[ComF_nomeChave_(s.nome)] || []).filter(function (p) { return !usados[Com_s_(p.ID)]; });
+    var igual = ja ? null : (produtos.filter(function (p) { return Com_up_(p.CODIGO) === cod && !usados[Com_s_(p.ID)]; })[0] || mesmos[0]);
+    if (igual) usados[Com_s_(igual.ID)] = true;
     var sit = ja ? 'JA_IMPORTADO' : igual ? 'EXISTE' : 'NOVO';
     resumo[sit]++;
     var l = { codigo: s.codigo, codigoCatalogo: cod, nome: s.nome, grupo: s.grupo, situacao: sit, situacaoTxt: { NOVO: 'Novo no catálogo', JA_IMPORTADO: 'Já importado (fica como está)', EXISTE: 'Já existe um item parecido' }[sit],
@@ -180,7 +209,12 @@ function ComF_previaImportacao_(eu) {
     var ex = ja || igual;
     if (ex) {
       l.existente = { id: Com_s_(ex.ID), codigo: Com_s_(ex.CODIGO), nome: Com_s_(ex.NOME), precoTxt: Com_moeda_(ex.PRECO), custoTxt: Com_s_(ex.CUSTO) === '' ? 'sem custo' : Com_moeda_(ex.CUSTO), unidade: Com_s_(ex.UNIDADE_MEDIDA), ativo: Com_up_(ex.ATIVO || 'SIM') !== 'NAO', temFicha: ComF_temFicha_(ex) };
-      if (sit === 'EXISTE') l.vaiPreencher = ComF_camposVazios_(ex, s, c).map(function (x) { return x.nome; });
+      if (sit === 'EXISTE') {
+        l.vaiPreencher = ComF_camposVazios_(ex, s, c).map(function (x) { return x.nome; });
+        if (Com_s_(ex.CUSTO) !== '' && l.vaiPreencher.indexOf('horas do técnico') >= 0) l.custoFica = 'O custo cadastrado (' + Com_moeda_(ex.CUSTO) + ') continua valendo nas propostas até a gestão salvar a ficha.';
+        var outros = mesmos.filter(function (p) { return Com_s_(p.ID) !== Com_s_(ex.ID); }).length;
+        if (outros) l.outrosIguais = 'Há mais ' + Com_plural_(outros, 'item ativo', 'itens ativos') + ' com o mesmo nome no catálogo (confira em Situação > "Possíveis duplicados (mesmo nome)").';
+      }
     }
     l.escolha = sit === 'EXISTE' ? 'PREENCHER' : '';
     return l;
@@ -208,7 +242,7 @@ function ComF_camposVazios_(p, s, c) {
 function ComF_descricao_(s) { return Com_texto_(s.escopo + ' Unidade: ' + s.unidadeTexto + '. Deslocamento cobrado à parte.', 2000); }
 function ComF_referenciaDe_(s) { return { mercado: s.mercado, mercadoCentroOeste: s.mercadoCentroOeste, historico: s.historico, regra: s.regra, fonte: s.fonte, alertas: s.alertas, unidadeTexto: s.unidadeTexto, c1: s.c1, versao: COM_TABELA_C1.versao }; }
 
-/** Importa conforme a prévia conferida. d: { marca, escolhas: { <codigo C1>: 'PREENCHER'|'IGNORAR' } } */
+/** Importa conforme a prévia conferida. d: { marca, escolhas: { <codigo C1>: 'PREENCHER'|'IGNORAR'|'CRIAR' } } */
 function ComF_importar_(eu, d) {
   Com_exigir_(eu, 'GESTAO', 'importar a tabela de preços C1');
   d = d || {};
@@ -217,27 +251,34 @@ function ComF_importar_(eu, d) {
     var prev = ComF_previaImportacao_(eu);
     if (Com_s_(d.marca) !== prev.marca) throw new Error('Não foi possível importar: o catálogo mudou desde a prévia (item novo, editado ou já importado por outra pessoa). Toque em "Ver a prévia" de novo e confira antes de importar. Nada foi gravado');
     var pol = ComPr_politica_(), agora = Com_agora_(), hoje = Com_hoje_(), escolhas = d.escolhas || {}, criados = [], preenchidos = [], deixados = 0, ja = 0;
+    // revisão da C2: as escolhas são conferidas antes de gravar qualquer item (antes, uma escolha inválida parava no meio)
+    prev.linhas.forEach(function (l) {
+      var e = l.situacao === 'EXISTE' ? (Com_up_(escolhas[l.codigo]) || 'PREENCHER') : '';
+      if (e && !COM_F_ESCOLHAS[e]) throw new Error('Não foi possível importar: a escolha "' + Com_s_(escolhas[l.codigo]) + '" para ' + l.nome + ' não existe. Escolha preencher só o que está vazio, deixar como está ou criar um item novo. Nada foi gravado');
+    });
     prev.linhas.forEach(function (l) {
       var s = ComF_tabelaC1_(l.codigo), c = ComF_calcular_(s, pol);
       if (l.situacao === 'JA_IMPORTADO') { ja++; return; }
-      if (l.situacao === 'NOVO') {
-        var reg = SGO_DATA.insert(COM_ABAS.PRODUTOS, { CODIGO: l.codigoCatalogo, NOME: s.nome, TIPO: 'SERVICO', CATEGORIA: s.grupo, UNIDADE_MEDIDA: s.unidade, DESCRICAO: ComF_descricao_(s),
+      var esc = l.situacao === 'EXISTE' ? (Com_up_(escolhas[l.codigo]) || 'PREENCHER') : '';
+      if (l.situacao === 'NOVO' || esc === 'CRIAR') {
+        // código igual ao do item existente (casou pelo código): o item novo leva "-C1" para não repetir o código
+        var codNovo = l.situacao === 'EXISTE' && l.existente && Com_up_(l.existente.codigo) === Com_up_(l.codigoCatalogo) ? l.codigoCatalogo + '-C1' : l.codigoCatalogo;
+        var reg = SGO_DATA.insert(COM_ABAS.PRODUTOS, { CODIGO: codNovo, NOME: s.nome, TIPO: 'SERVICO', CATEGORIA: s.grupo, UNIDADE_MEDIDA: s.unidade, DESCRICAO: ComF_descricao_(s),
           PRECO: c.precoSugerido, CUSTO: c.custo, ATIVO: 'SIM', PRECO_DESDE: hoje, HORAS_TECNICO: s.horasTecnico, HORAS_ENGENHEIRO: s.horasEngenheiro, PADROES_CUSTO: s.padroes, CONSUMIVEIS_CUSTO: s.consumiveis,
           TABELA_CODIGO: 'C1:' + s.codigo, TABELA_VERSAO: COM_TABELA_C1.versao, REFERENCIA_JSON: JSON.stringify(ComF_referenciaDe_(s)), FICHA_EM: agora, FICHA_POR_NOME: eu.nome,
           ATUALIZADO_POR_NOME: eu.nome + ' (tabela de preços C1)', ATUALIZADO_EM: agora });
-        Com_historico_('PRODUTO', reg.ID, 'CRIACAO', eu, { para: Com_moeda_(c.precoSugerido), texto: s.nome + ' (' + l.codigoCatalogo + ') importado da tabela de preços C1 com a ficha de custo: custo ' + Com_moeda_(c.custo) + ', preço de venda ' + Com_moeda_(c.precoSugerido) + ' (' + c.fonteTxt + ').' });
-        criados.push(l.codigoCatalogo);
+        Com_historico_('PRODUTO', reg.ID, 'CRIACAO', eu, { para: Com_moeda_(c.precoSugerido), texto: s.nome + ' (' + codNovo + ') importado da tabela de preços C1 com a ficha de custo: custo ' + Com_moeda_(c.custo) + ', preço de venda ' + Com_moeda_(c.precoSugerido) + ' (' + c.fonteTxt + ')' + (esc === 'CRIAR' ? '; criado à parte de ' + l.existente.codigo + ' (' + l.existente.nome + '), que ficou como estava' : '') + '.' });
+        criados.push(codNovo);
         return;
       }
-      var esc = Com_up_(escolhas[l.codigo]) || 'PREENCHER';
-      if (!COM_F_ESCOLHAS[esc]) throw new Error('Não foi possível importar: a escolha "' + Com_s_(escolhas[l.codigo]) + '" para ' + l.nome + ' não existe. Escolha preencher só o que está vazio ou deixar como está');
       if (esc === 'IGNORAR') { deixados++; return; }
       var p = SGO_DATA.getById(COM_ABAS.PRODUTOS, l.existente.id), vaz = ComF_camposVazios_(p, s, c), campos = { TABELA_CODIGO: 'C1:' + s.codigo, TABELA_VERSAO: COM_TABELA_C1.versao, ATUALIZADO_EM: agora, ATUALIZADO_POR_NOME: eu.nome + ' (tabela de preços C1)' };
       vaz.forEach(function (x) { campos[x.coluna] = x.valor; });
       if (campos.PRECO !== undefined) campos.PRECO_DESDE = hoje;
-      if (campos.HORAS_TECNICO !== undefined) { campos.FICHA_EM = agora; campos.FICHA_POR_NOME = eu.nome; }
+      // a ficha só vale como custo quando o item não tinha custo cadastrado (ComF_fichaVale_); senão a gestão confirma salvando a ficha
+      if (campos.HORAS_TECNICO !== undefined && Com_s_(p.CUSTO) === '') { campos.FICHA_EM = agora; campos.FICHA_POR_NOME = eu.nome; }
       SGO_DATA.update(COM_ABAS.PRODUTOS, p.ID, campos);
-      Com_historico_('PRODUTO', p.ID, 'EDICAO', eu, { texto: 'Ligado à tabela de preços C1 (' + s.codigo + '). Preenchido o que estava vazio: ' + (vaz.length ? vaz.map(function (x) { return x.nome; }).join(', ') : 'nada (tudo já estava preenchido)') + '. O que já estava gravado ficou como estava.' });
+      Com_historico_('PRODUTO', p.ID, 'EDICAO', eu, { texto: 'Ligado à tabela de preços C1 (' + s.codigo + '). Preenchido o que estava vazio: ' + (vaz.length ? vaz.map(function (x) { return x.nome; }).join(', ') : 'nada (tudo já estava preenchido)') + '. O que já estava gravado ficou como estava' + (Com_s_(p.CUSTO) !== '' && campos.HORAS_TECNICO !== undefined ? ' (o custo cadastrado de ' + Com_moeda_(p.CUSTO) + ' continua valendo nas propostas até a gestão salvar a ficha)' : '') + '.' });
       preenchidos.push(Com_s_(p.CODIGO));
     });
     Com_historico_('CATALOGO', 'TABELA_C1', 'IMPORTACAO', eu, { texto: 'Importação da tabela de preços C1 (' + COM_TABELA_C1.versao + '): ' + criados.length + ' novos, ' + preenchidos.length + ' completados, ' + deixados + ' deixados como estavam, ' + ja + ' já importados.' });

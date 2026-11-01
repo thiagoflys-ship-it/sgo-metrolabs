@@ -91,7 +91,14 @@ function SGO_Assist_eu_(sessionId) {
   if (SGO_ASSIST_PERFIS.indexOf(perfil) < 0) perfil = perfil || 'TECNICO';
   var rot = (typeof SGO_AJUDA_PERFIS !== 'undefined' && SGO_AJUDA_PERFIS[perfil]) || perfil;
   return { id: SGO_Assist_s_(s.userId || s.usuario), nome: SGO_Assist_s_(s.nome), perfil: perfil, rotulo: rot,
-    admin: perfil === 'ADMIN', gestao: SGO_ASSIST_GESTAO.indexOf(perfil) >= 0, painel: SGO_ASSIST_PAINEL.indexOf(perfil) >= 0 };
+    admin: perfil === 'ADMIN', gestao: SGO_ASSIST_GESTAO.indexOf(perfil) >= 0, painel: SGO_ASSIST_PAINEL.indexOf(perfil) >= 0,
+    // 01/11/2026 (revisão da C2): o manual de preços do Comercial (custo da hora, margens, impostos) é de quem vê custo no Comercial
+    // (gestão comercial, Diretoria, Administrador e Financeiro). Gestor de outra área tem o perfil GESTOR, mas não vê custo.
+    veCustoComercial: SGO_Assist_veCustoComercial_(sessionId, perfil) };
+}
+function SGO_Assist_veCustoComercial_(sessionId, perfil) {
+  try { if (typeof Com_eu_ === 'function') return !!Com_eu_(sessionId).veCusto; } catch (e) {}
+  return perfil === 'ADMIN' || perfil === 'DIRETORIA';
 }
 
 /* ------------------------------------------------------------
@@ -206,7 +213,7 @@ function SGO_Assist_base_() {
     var mod = m.tela;
     (m.secoes || []).forEach(function (s, i) {
       trechos.push({ id: 'man:' + m.arquivo.replace(/\.md$/, '') + '#' + i, tipo: 'manual', titulo: s.titulo, texto: s.texto, tela: mod, modulo: mod, nomeTela: nomeDe(mod),
-        caminho: caminhoDe(mod, ''), fonte: 'Manual: ' + m.titulo, telaAbrir: abrivel(mod) ? mod : '', quemTela: mod, perfisManual: m.perfis || null,
+        caminho: caminhoDe(mod, ''), fonte: 'Manual: ' + m.titulo, telaAbrir: abrivel(mod) ? mod : '', quemTela: mod, perfisManual: m.perfis || null, soCustoComercial: m.arquivo === 'MANUAL_COMERCIAL_PRECOS_GESTAO.md',
         perfisTarefa: SGO_Assist_perfisDoTitulo_(s.titulo), soAdmin: ASN_TERMOS_ADMIN.test(s.titulo + ' ' + s.texto) });
     });
   });
@@ -244,6 +251,7 @@ function SGO_Assist_situacao_(base, t, eu) {
   var restrito = !acessa;
   if (!restrito && SGO_Assist_nivelQuem_(base.quem[t.quemTela], eu.perfil) === 'RESTRITO') restrito = true;
   if (!restrito && t.perfisManual && t.perfisManual.indexOf(eu.perfil) < 0) restrito = true;
+  if (!restrito && t.soCustoComercial && !eu.veCustoComercial) restrito = true;
   if (!restrito && t.perfisTarefa && t.perfisTarefa.indexOf(eu.perfil) < 0) restrito = true;
   // tela fora do perfil: só o que diz onde fica e quem faz (nada de passo a passo)
   if (!acessa && ['menu', 'quem', 'visao'].indexOf(t.tipo) < 0) return null;

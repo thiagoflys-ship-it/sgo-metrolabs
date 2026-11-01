@@ -658,7 +658,10 @@ function Com_gravarMetodologia_(m, eu, motivo) {
   var atual = Com_metodologia_(), limpa = {};
   Object.keys(COM_METODOLOGIA_PADRAO).forEach(function (k) { if (k !== 'versao' && m[k] !== undefined) limpa[k] = m[k]; });
   // 01/11/2026: a margem é uma só; o espelho antigo (politica.margemMinPct) acompanha a da precificação
-  if (limpa.precificacao && limpa.politica && limpa.precificacao.margemMinPct !== undefined) limpa.politica = Object.assign({}, limpa.politica, { margemMinPct: limpa.precificacao.margemMinPct });
+  // (revisão da C2) sempre, mesmo quando a gravação não traz a precificação: sem isso, um politica.margemMinPct mandado sozinho
+  // virava a margem mínima na leitura (Com_unificarMargem_) sem passar pela trava da Diretoria
+  if (limpa.precificacao === undefined && atual.precificacao) limpa.precificacao = Com_copia_(atual.precificacao);
+  if (limpa.politica && limpa.precificacao && limpa.precificacao.margemMinPct !== undefined) limpa.politica = Object.assign({}, limpa.politica, { margemMinPct: limpa.precificacao.margemMinPct });
   var versao = (Number(atual.versao) || 1) + 1;
   SGO_DATA.insert(COM_ABAS.CONFIG, { CHAVE: 'METODOLOGIA', VALOR_JSON: JSON.stringify(limpa), VERSAO: versao, MOTIVO: Com_texto_(motivo, 500),
     ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() });

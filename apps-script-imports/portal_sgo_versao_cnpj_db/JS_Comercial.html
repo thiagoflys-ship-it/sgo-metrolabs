@@ -927,8 +927,11 @@
   function Comercial_ligarPassos_(p, salvar) {
     var ed = Com_$_("cmEditor"); if (!ed) return;
     var nomes = { 1: "Itens", 2: "Deslocamento", 3: "Prazo e condições", 4: "Revisar e enviar" };
+    // revisão da C2: o editor é procurado de novo a cada vez. O passo 4 salva o rascunho e redesenha a proposta; o "Voltar" guardava
+    // o editor antigo (fora da página) e não fazia nada na primeira vez.
     var mostrar = function (n) {
       n = Math.max(1, Math.min(4, Number(n) || 1)); CM.passo = n; CM.passoProp = p.id;
+      ed = Com_$_("cmEditor") || ed;
       ed.querySelectorAll("[data-painel]").forEach(function (s) { s.hidden = s.getAttribute("data-painel") !== String(n); });
       ed.querySelectorAll("[data-passo]").forEach(function (b) { var at = b.getAttribute("data-passo") === String(n); b.classList.toggle("ativo", at); if (at) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
       var ant = Com_$_("cmPassoAnt"), prox = Com_$_("cmPassoProx");
@@ -1322,14 +1325,15 @@
         '<table class="cm-tabela"><thead><tr><th>Serviço</th><th>Situação</th><th class="n">Custo</th><th class="n">Preço sugerido</th><th>No catálogo hoje</th><th>O que fazer</th></tr></thead><tbody>' + r.linhas.map(function (l) {
           return '<tr><td data-r="Serviço"><b>' + Com_esc_(l.nome) + '</b><br><span class="cm-meta">' + Com_esc_(l.codigoCatalogo + " · " + l.tabela.horasTxt) + '</span></td><td data-r="Situação">' + Com_esc_(l.situacaoTxt) + '</td>' +
             '<td class="n" data-r="Custo">' + Com_esc_(l.tabela.custoTxt) + '</td><td class="n" data-r="Preço sugerido">' + Com_esc_(l.tabela.precoTxt) + '<br><span class="cm-meta">mínimo ' + Com_esc_(l.tabela.minimoTxt) + '</span></td>' +
-            '<td data-r="No catálogo hoje">' + (l.existente ? Com_esc_(l.existente.codigo + " · " + l.existente.nome) + '<br><span class="cm-meta">preço ' + Com_esc_(l.existente.precoTxt) + ' · custo ' + Com_esc_(l.existente.custoTxt) + (l.existente.ativo ? '' : ' · arquivado') + '</span>' + (l.vaiPreencher && l.vaiPreencher.length ? '<br><span class="cm-meta">Preenche: ' + Com_esc_(l.vaiPreencher.join(", ")) + '</span>' : '') : '—') + '</td>' +
+            '<td data-r="No catálogo hoje">' + (l.existente ? Com_esc_(l.existente.codigo + " · " + l.existente.nome) + '<br><span class="cm-meta">preço ' + Com_esc_(l.existente.precoTxt) + ' · custo ' + Com_esc_(l.existente.custoTxt) + (l.existente.ativo ? '' : ' · arquivado') + '</span>' + (l.vaiPreencher && l.vaiPreencher.length ? '<br><span class="cm-meta">Preenche: ' + Com_esc_(l.vaiPreencher.join(", ")) + '</span>' : '') + (l.custoFica ? '<br><span class="cm-meta">' + Com_esc_(l.custoFica) + '</span>' : '') + (l.outrosIguais ? '<br><span class="cm-meta">' + Com_esc_(l.outrosIguais) + '</span>' : '') : '—') + '</td>' +
             '<td data-r="O que fazer">' + (l.situacao === "EXISTE" ? '<select data-esc="' + Com_esc_(l.codigo) + '" aria-label="O que fazer com ' + Com_esc_(l.nome) + '">' + Com_opcoes_(esc, l.escolha) + '</select>' : Com_esc_(l.situacao === "NOVO" ? "Cria o item" : "Nada (não duplica)")) + '</td></tr>';
         }).join("") + '</tbody></table><div id="cmImpMsg"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmImpFechar">Fechar sem importar</button><button type="button" class="btn-primary" id="cmImpOk"' + (r.resumo.NOVO + r.resumo.EXISTE ? '' : ' disabled') + '>Importar</button></div>';
       c.innerHTML = h;
       Com_$_("cmImpFechar").onclick = function () { ov.remove(); };
       Com_$_("cmImpOk").onclick = function () {
         var escolhas = {}; c.querySelectorAll("[data-esc]").forEach(function (s) { escolhas[s.getAttribute("data-esc")] = s.value; });
-        if (!confirm("Importar " + r.resumo.NOVO + " serviço(s) novo(s) e completar " + c.querySelectorAll('[data-esc]').length + " item(ns) que já existem (só o que estiver vazio)?")) return;
+        var conta = { PREENCHER: 0, IGNORAR: 0, CRIAR: 0 }; Object.keys(escolhas).forEach(function (k) { conta[escolhas[k]] = (conta[escolhas[k]] || 0) + 1; });
+        if (!confirm("Importar " + (r.resumo.NOVO + conta.CRIAR) + " serviço(s) novo(s), completar " + conta.PREENCHER + " item(ns) que já existem (só o que estiver vazio)" + (conta.IGNORAR ? " e deixar " + conta.IGNORAR + " como está(ão)" : "") + "?")) return;
         Com_chamar_("importarC1", { marca: r.marca, escolhas: escolhas }, function (x) { ov.remove(); alert(x.message); Comercial_carregarCatalogo_(); }, function (m) { Com_msg_("cmImpMsg", m); }, { carregando: "Importando a tabela de preços…" });
       };
     }, function (m) { Com_msg_(corpo(), m); });
@@ -1343,7 +1347,8 @@
       h += '<table class="cm-tabela cm-conta"><tbody>' + linha("Técnico: " + String(c.horasTecnico).replace(".", ",") + " h", Com_esc_(t.maoObraTecnico)) + linha("Engenheiro: " + String(c.horasEngenheiro).replace(".", ",") + " h", Com_esc_(t.maoObraEngenheiro)) +
         linha("Custo fixo sobre a mão de obra", Com_esc_(t.custoFixo)) + linha("Padrões (rateio)", Com_esc_(t.padroes)) + linha("Consumíveis e ART", Com_esc_(t.consumiveis)) + linha("<b>Custo</b>", "<b>" + Com_esc_(t.custo) + "</b>") +
         linha("Preço pela conta", Com_esc_(t.precoConta)) + linha("<b>Preço sugerido</b> (" + Com_esc_(c.fonteTxt) + ")", "<b>" + Com_esc_(t.precoSugerido) + "</b>") + linha("Preço mínimo (margem mínima)", Com_esc_(t.precoMinimo)) + linha("Urgente", Com_esc_(t.precoUrgente)) + '</tbody></table>' +
-        '<div class="cm-faixa' + (f.abaixoMinimo ? " erro" : Math.abs(f.diferenca || 0) >= 0.01 ? " aviso" : " ok") + '">Preço de venda hoje: <b>' + Com_esc_(p.precoTxt) + '</b>' + (Math.abs(f.diferenca || 0) >= 0.01 ? ' (' + Com_esc_(f.diferencaTxt) + (f.diferenca > 0 ? ' acima' : ' abaixo') + ' do sugerido)' : ' (igual ao sugerido)') + (f.abaixoMinimo ? '. Abaixo do preço mínimo: a margem não fecha.' : '.') + ' O preço de venda só muda quando a gestão confirma.</div>';
+        '<div class="cm-faixa' + (f.abaixoMinimo ? " erro" : Math.abs(f.diferenca || 0) >= 0.01 ? " aviso" : " ok") + '">Preço de venda hoje: <b>' + Com_esc_(p.precoTxt) + '</b>' + (Math.abs(f.diferenca || 0) >= 0.01 ? ' (' + Com_esc_(f.diferencaTxt) + (f.diferenca > 0 ? ' acima' : ' abaixo') + ' do sugerido)' : ' (igual ao sugerido)') + (f.abaixoMinimo ? '. Abaixo do preço mínimo: a margem não fecha.' : '.') + ' O preço de venda só muda quando a gestão confirma.</div>' +
+        (f.vale === false ? '<div class="cm-faixa aviso">Nas propostas, o custo deste item continua o cadastrado (' + Com_esc_(f.custoCadastradoTxt || "") + '): ele já tinha custo antes da importação. Para usar a ficha como custo, confira as horas abaixo e toque em "Salvar a ficha".</div>' : '');
     }
     h += '<p class="cm-sec">Referências</p><dl class="cm-det"><dt>Mercado público</dt><dd>' + Com_esc_(f.mercadoTxt || "sem dados") + ' <span class="cm-meta">(mínimo / mediana / máximo)</span>' + (f.mercadoCentroOeste ? '<br><span class="cm-meta">Centro-Oeste: mediana ' + Com_esc_(Comercial_moeda_(f.mercadoCentroOeste.mediana)) + ' (' + f.mercadoCentroOeste.n + ')</span>' : '') + '</dd>' +
       '<dt>Metrolabs CRM 2025-26</dt><dd>' + Com_esc_(f.historicoTxt || "sem dados") + '</dd><dt>Propostas ganhas</dt><dd>' + Com_esc_(f.ganhosTxt || "sem dados") + '</dd><dt>Drive 2018-23</dt><dd>' + Com_esc_(f.driveTxt || "sem dados") + ' <span class="cm-meta">(extração automática; só contexto)</span></dd></dl>' +
@@ -1634,6 +1639,7 @@
     raiz.addEventListener("click", function (e) {
       var add = e.target.closest && e.target.closest("[data-tabed-add]"), rem = e.target.closest && e.target.closest("[data-tabed-rem]");
       if (!add && !rem) return;
+      if (rem) CM.metSujo = true;
       var id = (add || rem).getAttribute(add ? "data-tabed-add" : "data-tabed-rem"), el = Com_$_(id), c = CM.tabCols[id];
       var atuais = Comercial_lerTabEdCru_(id);
       if (add) atuais.push({}); else atuais.splice(+rem.getAttribute("data-j"), 1);
@@ -1663,9 +1669,13 @@
     var podeSalvar = r.podeEditar && (pag !== "preco" || true);
     if (podeSalvar) h += '<div class="cm-caixa cm-met-salvar">' + Com_campo_("O que mudou nesta página e por quê (obrigatório)", '<textarea id="cmMMotivo" maxlength="500"></textarea>') + '<div id="cmMMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmMSalvar">Salvar "' + Com_esc_(CM_MET_PAGS.filter(function (x) { return x[0] === pag; })[0][2]) + '"</button></div></div>';
     alvo.innerHTML = h;
+    CM.metSujo = false;
+    if (!alvo.getAttribute("data-sujo")) { alvo.setAttribute("data-sujo", "1"); var marcar = function (e) { if (e.target && e.target.id !== "cmMMotivo" && e.target.closest && !e.target.closest(".cm-met-pags")) CM.metSujo = true; }; alvo.addEventListener("input", marcar); alvo.addEventListener("change", marcar); }
     alvo.querySelectorAll("[data-met-pag]").forEach(function (b) {
       b.onclick = function () {
         var nova = b.getAttribute("data-met-pag"), de = CM.metPag || "vendemos"; if (nova === de) return;
+        // revisão da C2: cada página salva sozinha; trocar de página com algo digitado apagava o que foi digitado sem perguntar
+        if (CM.metSujo && !window.confirm('Você mudou campos da página "' + CM_MET_PAGS.filter(function (y) { return y[0] === de; })[0][2] + '" e ainda não salvou. Trocar de página e perder essas mudanças? Para guardar, toque em Cancelar, escreva o motivo e toque em Salvar.')) return;
         if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Metodologia: " + b.textContent, function () { CM.metPag = de; Comercial_desenharMetodologia_(CM.metR); }, { chave: "cm-met-" + nova });
         CM.metPag = nova; Comercial_desenharMetodologia_(CM.metR);
       };

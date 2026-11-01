@@ -259,7 +259,7 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 ## Metodologia comercial
 
-É a cartilha da gestora, em quatro páginas. Cada página tem o próprio "Salvar" e pede o motivo; salvar uma página não mexe nas outras. O vendedor lê; quem salva é a gestão.
+É a cartilha da gestora, em quatro páginas. Cada página tem o próprio "Salvar" e pede o motivo; salvar uma página não mexe nas outras. Trocar de página com algo mudado e não salvo faz o sistema perguntar antes (o que não foi salvo se perde). O vendedor lê; quem salva é a gestão.
 
 - **Como vendemos:** tese, regras de ouro, funis e etapas, critérios para avançar de etapa, origens, motivos de perda, qualificação, cadência, estratégias, objeções, modelos de mensagem e quem é a gestão comercial. Funis, cadência, estratégias, objeções e listas são tabelas: uma linha por item, com "+ adicionar" e "Remover".
 - **Preço e desconto:** a regra do preço, as faixas de prazo e o desconto. O vendedor vê as faixas e os valores da viagem; impostos, comissão, custo da hora e margens ficam com a gestão.

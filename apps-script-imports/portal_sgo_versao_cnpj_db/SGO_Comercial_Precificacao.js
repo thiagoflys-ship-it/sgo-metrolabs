@@ -226,6 +226,18 @@ function ComPr_textoPrazo_(pol, prazo, itens) {
   if (pz.licitacao && pol.prazo.licitacaoSemAcrescimo) partes.push('Preço único de licitação ou contrato, sem acréscimo de urgência.');
   return partes.join(' ');
 }
+/** Revisão da C2: retrato das faixas que vai junto da proposta (PRAZO_JSON.politica). */
+function ComPr_retratoPrazo_(pol) {
+  var z = pol.prazo;
+  return { contaAte: z.contaAte, relatorioDiasUteis: z.relatorioDiasUteis, licitacaoSemAcrescimo: z.licitacaoSemAcrescimo, licitacaoRotulo: z.licitacaoRotulo,
+    faixas: z.faixas.map(function (x) { return { codigo: x.codigo, nome: x.nome, diasUteis: x.diasUteis, acrescimoPct: x.acrescimoPct, ativa: x.ativa }; }) };
+}
+/** Política para mostrar o prazo de uma proposta: a do retrato gravado nela; sem retrato (proposta anterior), a em vigor. */
+function ComPr_politicaDoPrazo_(prazo, met) {
+  var pol = ComPr_politica_(met);
+  if (prazo && prazo.politica && typeof prazo.politica === 'object') pol.prazo = ComPr_prazoNormal_(prazo.politica);
+  return pol;
+}
 /** O que da política ainda é valor provisório (não confirmado pelo dono). [{ campo, nome }] */
 function ComPr_provisorios_(pol) {
   var c = (pol && pol.confirmados) || [];
