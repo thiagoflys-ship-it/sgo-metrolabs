@@ -33,7 +33,28 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 - Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).
 - Gestor da área no lugar de "toda a gestão": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.
 - O assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa.
-- O piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista.
+- O piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista. A exceção são os avisos da gestão (seção 3A).
+
+## 3A. Avisos da gestão no celular (01/11/2026, decisão do dono)
+
+Pendência, aprovação, atraso e ato irreversível da gestão chegam aos gestores e à Diretoria por WhatsApp e por e-mail, com um link que abre o item exato no SGO+. Inventário completo: `docs/AVISOS_GESTAO_CELULAR_20261101.md`.
+
+| Tipo | Exemplos | Quando chega |
+|---|---|---|
+| Pendência / Aprovação | Decisão nova na Caixa de decisões (GS01: desconto acima da alçada, reabertura, preço, pedido de nova data, compra a aprovar, Frota, Assistência, padrões), pedido de apoio comercial (S23), pedido da representada (RP01, RP02) | Agrupada: o que nasce em 30 minutos vai numa mensagem só, com um link por item |
+| Atraso | Prazo de decisão vencido sem ação (GS02), decisão escalada à Diretoria (GS03), atividade atrasada escalada ao gestor ou à Diretoria (S72, S73), prazo de aceite da representada (RP07) | Na hora |
+| Irreversível | Oportunidade perdida, proposta cancelada ou excluída, desconto não aprovado, reabertura recusada (GI01); pedido de nova data recusado (GI02); pedido de compra cancelado (GI03); chamado cancelado ou excluído, solicitação descartada (GI04); julgamento do Programa de conduta, só à Diretoria e sem detalhe (GI05); pedido da representada recusado (GI06); cadastro excluído (GI07) | Na hora, ao gestor da área e à Diretoria, menos quem fez: quem fez, o quê, o item e o motivo |
+
+Regras:
+
+- Quem recebe: Administrador, Gestor, Diretoria e os responsáveis de área de RH e Financeiro, inclusive PJ, sem piloto. Para as demais pessoas nada muda (teto de 3 WhatsApp na hora e resumo do dia).
+- Horário: a Diretoria recebe a qualquer hora, inclusive à noite e no fim de semana. O gestor recebe só no expediente; o que nasce fora dele chega na abertura do próximo dia útil (08:00 no padrão).
+- Não há teto de mensagens para a gestão.
+- O link abre o item no SGO+ depois do login. A decisão é sempre tomada no sistema: o WhatsApp não tem botão de aprovar ou recusar.
+- Informativo (venda ganha, comentário, atividade concluída, itens de acompanhamento) continua como antes, sem WhatsApp da gestão.
+- O ponto continua fora.
+- Enquanto o modelo `sgo_gestao_acao` não for aprovado pela Meta, o aviso sai só por e-mail com a marca "WhatsApp aguardando modelo". Sem celular no cadastro ou com erro da Meta, também vai o e-mail, e o motivo fica registrado.
+- Cada aviso tem um ciclo registrado: criado, na fila, enviado (e-mail e WhatsApp), entregue ou lido (quando a Meta devolver), aberto e resolvido (quando o item sai da pendência). Sem ação no prazo, a escada da Caixa de decisões e a SEDNA continuam cobrando.
 
 ## 4. Matriz de avisos (Administrador e Diretoria)
 
@@ -46,6 +67,8 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 7. "Medição": antes (16/10 a 20/10) e depois; mostra a média e o maior número de e-mails e WhatsApp por pessoa por dia, quantas pessoas-dia passaram da meta, WhatsApp fora do expediente e para PJ, retidos pelo piloto e e-mails guardados para o resumo.
 8. "Preferências da equipe": o que cada pessoa escolheu em Meus avisos (só leitura).
 9. "Trilha de mudanças": quem mudou, quando, o antes, o depois e o motivo.
+10. "Avisos da gestão" (01/11/2026): escolha o dia e toque em "Mostrar". Aparecem os totais (enviados, na fila, falhas, parados e WhatsApp aguardando modelo), a situação do modelo `sgo_gestao_acao` e uma linha por aviso: quando, pessoa, tipo, item, situação, canais e o motivo. "Parado" em vermelho = na fila há mais de 1 hora, enviado e sem resolução depois do prazo, ou nada chegou.
+11. Nas regras, cada evento da gestão tem o selo "Gestão: <tipo>" e a escolha "Avisos da gestão": Ligado (WhatsApp e e-mail aos gestores e à Diretoria) ou Desligado (só a regra comum da linha). Salvar pede o motivo, como as outras mudanças. A ligação inicial está na trilha com o motivo "decisão do dono 01/11/2026".
 
 Travas: WhatsApp na hora só nos eventos aprovados como exceção; evento obrigatório (avisos com ciência, atividade atrasada, decisões do gestor, escalada à Diretoria, exceções da Frota) não pode deixar de avisar; toda mudança pede motivo de pelo menos 8 letras.
 
@@ -63,7 +86,7 @@ Travas: WhatsApp na hora só nos eventos aprovados como exceção; evento obriga
 6. Toque em "Salvar". Vale a partir do próximo resumo.
 7. "Ver a prévia" mostra o texto do seu e-mail de resumo de hoje, sem enviar nada.
 
-Não podem ser desligados: avisos com ciência (sistema e e-mail), a cobrança da atividade atrasada no sistema, o e-mail com as decisões do gestor, as exceções da Frota para o gestor da Frota e para quem está com o veículo, e as pendências da central. Só a própria pessoa altera as suas preferências; a gestão vê na Matriz de avisos.
+Não podem ser desligados: avisos com ciência (sistema e e-mail), a cobrança da atividade atrasada no sistema, o e-mail com as decisões do gestor, as exceções da Frota para o gestor da Frota e para quem está com o veículo, e as pendências da central. Para quem é da gestão, também os avisos da gestão (pendência, aprovação, atraso e ato irreversível por WhatsApp e e-mail): a tela mostra o porquê e o horário de cada um (gestor no expediente, Diretoria a qualquer hora). Só a própria pessoa altera as suas preferências; a gestão vê na Matriz de avisos.
 
 ## 6. Central de pendências por área
 
@@ -96,7 +119,11 @@ O COMMAND fica em silêncio fora do próprio sino enquanto não for usado pela e
 | "WhatsApp na hora só vale para as exceções aprovadas pelo dono" | Escolha "Na contagem do WhatsApp do dia" ou "Sem WhatsApp". |
 | "é obrigatório pela matriz aprovada pelo dono" | Troque só entre na hora e no resumo; para mudar a regra, leve ao dono. |
 | Um gestor vê poucas pendências | Confira a área dele em Administração › Usuários e em Caixa de decisões › Regras e responsáveis. |
+| Aviso da gestão com "WhatsApp aguardando modelo" | O modelo `sgo_gestao_acao` ainda não foi aprovado pela Meta. O e-mail saiu. Cadastre em Chaves e senhas › Cadastrar modelos na Meta e confira em Situação dos modelos. |
+| Aviso da gestão com "Sem celular no cadastro" | Complete o celular em Administração › Usuários. O e-mail saiu. |
+| Gestor diz que o aviso chegou só de manhã | Gestor recebe só no expediente; o que nasce fora dele sai na abertura do próximo dia útil. A Diretoria recebe a qualquer hora. |
+| O link do aviso abriu a Caixa de decisões em vez do item | O link não foi encontrado (copiado pela metade ou de outro ambiente). O item continua na Caixa até ser resolvido. |
 
 ## 9. Registros
 
-Nada é apagado. `NTF_REGRAS` (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), `NTF_RESUMO_FILA` (itens guardados para o e-mail de resumo ou para o próximo expediente), `NTF_RESUMOS` (cada resumo avaliado: pessoa, dia, canal, situação, motivo), `NTF_PREFERENCIAS` (cada mudança de preferência) e `NTF_ENVIOS` (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO).
+Nada é apagado. `NTF_REGRAS` (cada mudança de regra e de horário, com antes, depois, motivo, quem e quando; a última de cada evento vale), `NTF_RESUMO_FILA` (itens guardados para o e-mail de resumo ou para o próximo expediente), `NTF_RESUMOS` (cada resumo avaliado: pessoa, dia, canal, situação, motivo), `NTF_PREFERENCIAS` (cada mudança de preferência) e `NTF_ENVIOS` (cada envio, com a coluna EVENTO; e-mail guardado para o resumo fica com SITUACAO = NO_RESUMO; destinatário da gestão de um aviso da gestão fica com SITUACAO = NA_FILA_GESTAO) e `NTF_GESTAO` (01/11/2026: cada aviso da gestão, uma linha por evento + item + pessoa, com a fila, o envio por canal, entregue, lido, aberto e resolvido).

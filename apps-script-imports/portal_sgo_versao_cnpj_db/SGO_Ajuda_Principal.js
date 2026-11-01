@@ -757,7 +757,8 @@ function SGO_ajudaTelas_Principal_() {
         "No sistema você vê tudo na hora (Início e central de pendências). Isso não desliga.",
         "Por e-mail chega um resumo por dia útil (08:00 ou 12:00, você escolhe), só quando há algo para você.",
         "Pelo WhatsApp chega no máximo um resumo por dia (09:30), só se você é CLT e ainda não abriu o sistema. Durante o piloto, só quem está na lista do piloto recebe.",
-        "Para receber, confira o seu e-mail e o seu celular no cadastro (peça ao Administrador, em Administração > Usuários)."
+        "Para receber, confira o seu e-mail e o seu celular no cadastro (peça ao Administrador, em Administração > Usuários).",
+        "Quem responde pela gestão (Gestor, Diretoria, Administrador, RH e Financeiro responsáveis de área) recebe os avisos da gestão por WhatsApp e e-mail: pendência, aprovação, atraso e ato irreversível, com um link que abre o item. São obrigatórios (decisão do dono, 01/11/2026). Gestor: só no expediente. Diretoria: a qualquer hora."
       ],
       passos: [
         { titulo: "Ajustar o que você recebe", itens: [
@@ -787,7 +788,9 @@ function SGO_ajudaTelas_Principal_() {
       perguntas: [
         { p: "Por que recebo menos e-mails?", r: "Desde a matriz de avisos (21/10/2026), os avisos de atividades, Comercial, reservas e Caixa de decisões vêm juntos num e-mail de resumo por dia. Na hora só chega o que exige ciência ou muda algo de hoje." },
         { p: "Vou receber WhatsApp do bate-papo?", r: "Não. O bate-papo fica no sistema. No resumo do dia vai só a contagem de mensagens não lidas." },
-        { p: "E os lembretes do ponto?", r: "Ficam no Assistente do ponto, com regra própria. Ajuste lá, quando ele estiver ligado para você." }
+        { p: "E os lembretes do ponto?", r: "Ficam no Assistente do ponto, com regra própria. Ajuste lá, quando ele estiver ligado para você." },
+        { p: "Sou gestor: por que recebo WhatsApp da gestão e não consigo desligar?", r: "Para nenhuma decisão ficar parada sem ninguém saber (decisão do dono, 01/11/2026). Pendências chegam juntas a cada 30 minutos; atraso e ato irreversível chegam na hora. O link abre o item no SGO+; a decisão é sempre tomada no sistema. Não conta no limite de 3 WhatsApp por dia." },
+        { p: "O link do aviso da gestão abriu a Caixa de decisões", r: "O link não foi encontrado (copiado pela metade, por exemplo). O item continua na Caixa de decisões até ser resolvido." }
       ]
     },
     "avisos": {

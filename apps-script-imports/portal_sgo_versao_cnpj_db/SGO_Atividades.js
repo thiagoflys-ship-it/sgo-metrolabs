@@ -1330,6 +1330,10 @@ function Atividades_apiDecidirPedido(sessionId, payload) {
         Atividades_registrarHist_(eu, a.ID, 'PEDIDO_RECUSADO', { texto: motivo, previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: a.PEDIDO_DATA, para: 'RECUSADO' });
         Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'PEDIDO_RECUSADO', 'Nova data recusada: ' + a.TITULO,
           eu.nome + ' recusou a nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') de "' + a.TITULO + '". Motivo: ' + motivo + ' Peça outra data ou conclua a atividade em Minhas atividades.', { email: true });
+        // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+        if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI02', modulo: 'atividades', quem: eu, responsavelId: a.RESPONSAVEL_ID, oque: 'Pedido de nova data recusado',
+          item: '"' + String(a.TITULO || '').slice(0, 120) + '", com ' + (a.RESPONSAVEL_NOME || 'o responsável') + ' (data pedida: ' + Atividades_dataBr_(a.PEDIDO_DATA) + ')', motivo: motivo,
+          tela: { tipo: 'modulo', mod: 'atividades_equipe' }, refId: 'ATV-PEDIDO-REC-' + a.ID + '-' + a.PEDIDO_DATA });
       }
       resolver = { itemId: 'ATV:PEDIDO:' + a.ID, eu: eu, texto: (decisao === 'ACEITAR' ? 'Nova data aceita (' + Atividades_dataBr_(a.PEDIDO_DATA) + ').' : 'Nova data recusada: ' + motivo) };
       return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora),

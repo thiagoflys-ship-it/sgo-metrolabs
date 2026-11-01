@@ -556,7 +556,10 @@ function unidadesReativar(sessionId, id) {
   try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.reativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar a unidade', e) }; }
 }
 function unidadesExcluir(sessionId, id) {
-  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir a unidade', e) }; }
+  try { var antesG = typeof SGO_avisoGestaoAntes_ === 'function' ? SGO_avisoGestaoAntes_(SGO_CFG.SHEETS.CAD_UNIDADES, id) : null; var rG = JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id)));
+    // 01/11/2026: exclusão de cadastro é ato irreversível: avisa na hora a Diretoria (SGO_Avisos_Gestao.js, GI07)
+    if (antesG && rG && rG.success !== false && typeof SGO_avisoGestaoExclusao_ === 'function') SGO_avisoGestaoExclusao_(sessionId, 'unidade', antesG);
+    return SGO_Pendencias_aposGravar_(rG); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir a unidade', e) }; }
 }
 function unidadesPesquisar(sessionId, termo) {
   try { return JSON.parse(JSON.stringify(SGO_UNIDADES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar as unidades', e) }; }

@@ -481,6 +481,9 @@ function ComOpo_perder_(eu, d) {
     if (vencedor.valorVencedor) campPerda.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor);
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campPerda);
     Com_historico_('OPORTUNIDADE', o.ID, 'PERDIDA', eu, { de: 'Aberta', para: 'Perdida', texto: motivo + '. ' + apr + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou: ' + (vencedor.concorrente || 'não informado') + (vencedor.valorVencedor ? ', por ' + Com_moeda_(vencedor.valorVencedor) : '') + '.' : '') });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+    if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Oportunidade marcada como perdida', item: Com_s_(o.CODIGO) + (Com_s_(o.CLIENTE_NOME) ? ' (' + Com_s_(o.CLIENTE_NOME) + ')' : ''),
+      motivo: motivo + '. ' + apr + (canceladas ? ' Propostas canceladas junto: ' + canceladas + '.' : ''), tela: { tipo: 'comercial', aba: 'oportunidades', id: o.ID }, refId: 'OPO-PERDA-' + o.ID + '-' + agora });
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr })),
       message: 'Perda registrada' + (canceladas ? ' e ' + Com_plural_(canceladas, 'proposta cancelada', 'propostas canceladas') : '') + '.' + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou e por quanto foram para o banco de preços.' : ' Se souber quem ganhou e por quanto, isso ajuda a precificar as próximas: a gestão pode registrar no Banco de preços.') };
   });
@@ -544,6 +547,9 @@ function ComOpo_reabrir_(eu, sessionId, d) {
       SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { REABERTURA_PEDIDA_EM: '', REABERTURA_PEDIDA_POR_ID: '', ATUALIZADO_EM: agora });
       Com_historico_('OPORTUNIDADE', o.ID, 'REABERTURA_RECUSADA', eu, { texto: motivo });
       if (Com_s_(o.REABERTURA_PEDIDA_POR_ID)) Com_avisar_(o.REABERTURA_PEDIDA_POR_ID, 'REABERTURA_RECUSADA', 'Reabertura de ' + o.CODIGO + ' não aprovada', eu.nome + ': ' + motivo, { tipo: 'oportunidade', id: o.ID });
+      // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+      if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Pedido de reabertura recusado', item: Com_s_(o.CODIGO) + (Com_s_(o.CLIENTE_NOME) ? ' (' + Com_s_(o.CLIENTE_NOME) + ')' : ''), motivo: motivo,
+        tela: { tipo: 'comercial', aba: 'oportunidades', id: o.ID }, refId: 'OPO-REAB-REC-' + o.ID + '-' + agora });
       return { message: 'Pedido de reabertura recusado. O vendedor foi avisado.' };
     }
     var antes = Com_up_(o.SITUACAO);

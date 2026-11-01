@@ -155,6 +155,9 @@ function SGO_waPilotoTelefones_(cfg) {
       });
     } catch (e) {}
   }
+  // 01/11/2026 (decisão do dono): os avisos da gestão vão a todos os gestores e à Diretoria, sem piloto (SGO_Avisos_Gestao.js). O
+  // celular deles entra na lista que o servidor confere; as demais mensagens continuam barradas aqui pelo piloto (SGO_waPilotoMotivo_).
+  if (typeof AvG_idsGestaoWhatsapp_ === 'function') AvG_idsGestaoWhatsapp_().forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
   var mapa = ids.length ? Notificar_contatos_(ids) : {};
   var out = [];
   Object.keys(mapa).forEach(function (id) {

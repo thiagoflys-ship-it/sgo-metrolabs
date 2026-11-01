@@ -92,6 +92,9 @@ function Ges_rodada_(quando) {
   if (cfg.automacoes.manutencaoAgenda) passo('manutencao', function () { return Ges_autoManutencaoAgenda_(); });
   // 21/10/2026: rotina do Comercial (no máximo uma vez por hora; lista do dia da gestora comercial no início do expediente)
   if (typeof Comercial_rotina_ === 'function') passo('comercial', function () { return Comercial_rotina_(quando); });
+  // 01/11/2026 (decisão do dono): avisos da gestão no celular (SGO_Avisos_Gestao.js), a qualquer hora: a Diretoria recebe também à
+  // noite e no fim de semana; para o gestor, o que nasce fora do expediente fica na fila até a abertura do próximo dia útil
+  if (typeof SGO_avisosGestaoRodada_ === 'function') passo('avisosGestao', function () { return SGO_avisosGestaoRodada_(quando); });
   var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando) : { dentro: true, hora: '09:00', dia: Ges_hoje_() };
   if (!ex.dentro) { r.fora = ex.motivo; return r; }
   // 26/10/2026 (fase 5 do plano de avisos): escalonamento das atividades por prioridade e resumo do dia da gestão (SGO_Sedna.js)

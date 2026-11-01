@@ -552,7 +552,8 @@ function SGO_ajudaTelas_Administracao_() {
         "E-mail: cada pessoa recebe no máximo um e-mail de resumo por dia útil (padrão 08:00). Na hora, só o que exige ciência ou muda algo de hoje, sempre no expediente.",
         "WhatsApp: no máximo um resumo por dia (padrão 09:30), só para CLT, só para quem ainda não abriu o sistema e, durante o piloto, só para quem está na lista do piloto. Na hora, só as quatro exceções da Frota (partida não liberada, uso de veículo sem registro no expediente, devolução atrasada com reserva no mesmo dia e reserva de hoje liberada a outra pessoa).",
         "O Assistente do ponto tem regra própria e não aparece aqui.",
-        "O gestor de cada área vem de Caixa de decisões > Regras e responsáveis. Área sem gestor: os avisos vão para a Diretoria. Compras fica na área Logística."
+        "O gestor de cada área vem de Caixa de decisões > Regras e responsáveis. Área sem gestor: os avisos vão para a Diretoria. Compras fica na área Logística.",
+        "Avisos da gestão (01/11/2026, decisão do dono): pendência, aprovação, atraso e ato irreversível vão aos gestores e à Diretoria por WhatsApp e e-mail, com o link que abre o item. Gestor só no expediente; Diretoria a qualquer hora; pendência agrupada em 30 minutos; atraso e irreversível na hora; sem teto e sem piloto, inclusive PJ. O ponto fica fora."
       ],
       passos: [
         { titulo: "Ver e ajustar a regra de um aviso", itens: [
@@ -569,6 +570,12 @@ function SGO_ajudaTelas_Administracao_() {
           "Marque ou desmarque o WhatsApp de resumo e o filtro da central por área.",
           "Escreva o motivo e toque em \"Salvar horários\"."
         ] },
+        { titulo: "Acompanhar os avisos da gestão", itens: [
+          "No bloco \"Avisos da gestão\", escolha o dia e toque em \"Mostrar\".",
+          "Confira os totais: enviados, na fila, falhas, parados e WhatsApp aguardando modelo.",
+          "Em cada linha veja a pessoa, o tipo, o item, a situação, os canais (e-mail e WhatsApp) e o motivo.",
+          "Para ligar ou desligar o aviso da gestão de um evento, use \"Avisos da gestão\" na regra do evento, toque em \"Salvar\" e escreva o motivo."
+        ] },
         { titulo: "Acompanhar os resumos e medir", itens: [
           "No bloco \"Resumos do dia\", escolha o dia e toque em \"Mostrar\": cada pessoa, o canal, a situação e o motivo.",
           "No bloco \"Medição\", confira os períodos antes e depois e toque em \"Calcular\".",
@@ -579,6 +586,8 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo \"Obrigatório\"", significado: "Aviso que a matriz aprovada não deixa desligar. Dá para trocar entre na hora e no resumo, mas não tirar o aviso." },
         { nome: "Selo amarelo \"Alterada\"", significado: "A regra foi mudada nesta tela. A trilha mostra quem, quando e por quê." },
         { nome: "Selo \"Vira histórico\"", significado: "Ninguém é avisado. O fato continua no histórico do próprio registro." },
+        { nome: "Selo verde \"Gestão: <tipo>\"", significado: "Aviso da gestão ligado (Pendência / Aprovação, Atraso ou Irreversível): vai aos gestores e à Diretoria por WhatsApp e e-mail. Com \"(desligado)\", segue só a regra comum da linha." },
+        { nome: "Selo vermelho \"Parado\" nos avisos da gestão", significado: "Na fila há mais de 1 hora, enviado e sem resolução depois do prazo, ou nada chegou (nem e-mail nem WhatsApp). O motivo está na linha." },
         { nome: "Selo amarelo \"Sem gestor: vai para a Diretoria\"", significado: "A área não tem gestor em Regras e responsáveis. Os avisos dela vão para a Diretoria." },
         { nome: "Selo verde \"Enviado\" nos resumos", significado: "O resumo saiu. \"Já abriu o sistema\", \"Sem WhatsApp (vínculo)\" e \"Sem novidade\" não são erro: são a regra." }
       ],
@@ -587,6 +596,8 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "Aparece \"WhatsApp na hora só vale para as exceções aprovadas pelo dono\"", oQueFazer: "Escolha \"Na contagem do WhatsApp do dia\" ou \"Sem WhatsApp\" para este evento. Só as quatro exceções da Frota e o aviso ao cliente (depois do piloto) podem ir na hora." },
         { situacao: "Aparece \"é obrigatório pela matriz aprovada pelo dono\"", oQueFazer: "Este aviso não pode deixar de avisar. Troque só entre \"na hora\" e \"no resumo\". Se a regra precisa mudar, leve ao dono." },
         { situacao: "Aparece \"escreva o motivo da mudança\"", oQueFazer: "Toque em Salvar de novo e escreva pelo menos 8 letras explicando a mudança." },
+        { situacao: "Aviso da gestão com \"WhatsApp aguardando modelo\"", oQueFazer: "O modelo sgo_gestao_acao ainda não foi aprovado pela Meta. O e-mail já saiu. Cadastre em Chaves e senhas > Cadastrar modelos na Meta e acompanhe em Situação dos modelos." },
+        { situacao: "Aviso da gestão com \"Sem celular no cadastro\"", oQueFazer: "Complete o celular da pessoa em Administração > Usuários. O e-mail já saiu." },
         { situacao: "Uma pessoa diz que não recebeu o WhatsApp de resumo", oQueFazer: "Em \"Resumos do dia\", veja o motivo: PJ ou vínculo não informado, já abriu o sistema, nada para hoje, fora do piloto ou desligado por ela em Meus avisos." },
         { situacao: "Um gestor diz que a central mostra pouca coisa", oQueFazer: "Com o filtro por área, ele vê o da sua área e o que é dele. Confira a área dele em Administração > Usuários e em Caixa de decisões > Regras e responsáveis." }
       ],

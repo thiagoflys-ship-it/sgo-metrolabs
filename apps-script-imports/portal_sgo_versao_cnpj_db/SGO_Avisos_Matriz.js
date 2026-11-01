@@ -56,6 +56,12 @@
  * ninguém ficar sem enxergar o que precisa (configure a área em Administração >
  * Usuários ou em Caixa de decisões > Regras e responsáveis).
  *
+ * AVISOS DA GESTÃO NO CELULAR (01/11/2026, decisão do dono; SGO_Avisos_Gestao.js): evento com o campo
+ * "gestao" (PENDENCIA, ATRASO ou IRREVERSIVEL) e "Avisos da gestão" ligado vai, para quem é da gestão
+ * (Administrador, Gestor, Diretoria, RH e Financeiro responsáveis de área), por WhatsApp e e-mail com o link
+ * do item: pendência agrupada em 30 minutos, atraso e irreversível na hora; gestor no expediente, Diretoria a
+ * qualquer hora; sem teto e sem piloto. Os demais destinatários do mesmo evento seguem a regra de sempre.
+ *
  * Abas próprias (criadas sob demanda; nada é apagado): NTF_REGRAS,
  * NTF_RESUMO_FILA, NTF_RESUMOS, NTF_PREFERENCIAS. Nenhuma função devolve Date
  * cru. Mensagens sóbrias, sem emoji.
@@ -248,6 +254,9 @@ function Mtz_normRegra_(base) {
   // 26/10/2026: "na hora" vale para qualquer evento marcado pela gestão (antes só as exceções whatsHoraPermitido)
   if (r.decisao === 'HISTORICO') { r.email = 'NAO'; r.whatsapp = 'NAO'; }
   r.area = Mtz_up_(r.area);
+  // 01/11/2026: aviso da gestão (PENDENCIA | ATRASO | IRREVERSIVEL) e se está ligado (padrão: ligado, decisão do dono)
+  r.gestao = ['PENDENCIA', 'ATRASO', 'IRREVERSIVEL'].indexOf(Mtz_up_(r.gestao)) >= 0 ? Mtz_up_(r.gestao) : '';
+  r.gestaoLigada = r.gestao ? r.gestaoLigada !== false : false;
   return r;
 }
 
@@ -276,14 +285,19 @@ function Mtz_regras_() {
   if (typeof Setores_registrarEventos_ === 'function') Setores_registrarEventos_();
   // 26/10/2026: escalonamento das atividades por prioridade (SGO_Sedna.js): S71, S72 e S73
   if (typeof Sedna_registrarEventos_ === 'function') Sedna_registrarEventos_();
+  // 01/11/2026: avisos da gestão no celular (SGO_Avisos_Gestao.js): GS01-GS03, GI01-GI07 e o tipo "gestao" dos eventos que já existiam
+  if (typeof AvG_registrarEventos_ === 'function') AvG_registrarEventos_();
   var mud = {};
   try { mud = Mtz_mudancas_(); } catch (e) { mud = {}; }
   var mapa = {};
   MTZ_PADRAO.forEach(function (p) {
     var r = Object.assign({}, p), m = mud[p.cod];
-    if (m && typeof m === 'object') ['email', 'whatsapp', 'decisao', 'area', 'obsGestao'].forEach(function (k) { if (m[k] !== undefined) r[k] = m[k]; });
+    if (m && typeof m === 'object') ['email', 'whatsapp', 'decisao', 'area', 'obsGestao', 'gestaoLigada'].forEach(function (k) { if (m[k] !== undefined) r[k] = m[k]; });
     var n = Mtz_normRegra_(r);
-    n.alterada = !!m;
+    // 01/11/2026: a linha da decisão do dono (avisos da gestão ligados) não conta como "alterada" quando o resto é o padrão
+    n.alterada = !!m && !(m.padraoDono && m.gestaoLigada !== false && ['email', 'whatsapp', 'decisao', 'area'].every(function (k) {
+      return m[k] === undefined || Mtz_up_(m[k]) === Mtz_up_(k === 'decisao' ? (p.decisao || 'AVISA') : p[k]);
+    }));
     mapa[p.cod] = n;
   });
   return mapa;
@@ -455,7 +469,8 @@ function Mtz_pertoDoPonto_(uid, agora) {
  */
 function Mtz_foraDaMatriz_(o) {
   var cat = Mtz_up_(o.categoria), org = Mtz_up_(o.origem);
-  return cat === 'PONTO' || org.indexOf('PONTO') === 0 || cat === 'RESUMO_DIA' || org === 'RESUMO_DIA' || org === 'WA_PILOTO';
+  // 01/11/2026: AVISOS_GESTAO = o envio do próprio aviso da gestão (SGO_Avisos_Gestao.js), que já passou pela regra
+  return cat === 'PONTO' || org.indexOf('PONTO') === 0 || cat === 'RESUMO_DIA' || org === 'RESUMO_DIA' || org === 'WA_PILOTO' || org === 'AVISOS_GESTAO';
 }
 
 /** Evento da chamada: o informado ou o da origem (Comercial: pelo tipo do aviso guardado). */
@@ -492,11 +507,18 @@ function SGO_avisoMatrizPreparar_(o, ids, canais) {
     var saida = { canais: canais.slice(), evento: evento, semEmail: {}, historico: !!(regra && regra.decisao === 'HISTORICO') };
     if (!regra) return saida;
     if (saida.historico) { saida.canais = canais.filter(function (c) { return c !== 'email' && c !== 'whatsapp'; }); return saida; }
+    // 01/11/2026 (decisão do dono): aviso da gestão ligado -> os destinatários da gestão vão para a fila da gestão (WhatsApp e
+    // e-mail, agrupado em 30 minutos; atraso e irreversível na hora; SGO_Avisos_Gestao.js). Os demais seguem a regra abaixo.
+    var idsGestao = {};
+    if (typeof AvG_preparar_ === 'function') {
+      var g = AvG_preparar_(o, ids.filter(function (id) { return String(id).indexOf('EXT:') !== 0; }), regra, evento);
+      if (g) { saida.gestao = g.ids; saida.gestaoUrgente = g.urgentes; idsGestao = g.ids; }
+    }
     // 26/10/2026: evento marcado "na hora" pela gestão vai também pelo WhatsApp, mesmo que o módulo tenha pedido só sistema
     // ou e-mail (a regra do WhatsApp em SGO_avisoMotivoWhatsapp_ confere expediente, vínculo, piloto e teto). o.semWhatsapp barra.
     if (regra.whatsapp === 'HORA' && !o.semWhatsapp && saida.canais.indexOf('whatsapp') < 0 && (saida.canais.indexOf('email') >= 0 || saida.canais.indexOf('sgo') >= 0)) saida.canais.push('whatsapp');
     if (canais.indexOf('email') < 0) return saida;
-    var internos = ids.filter(function (id) { return String(id).indexOf('EXT:') !== 0; });
+    var internos = ids.filter(function (id) { return String(id).indexOf('EXT:') !== 0 && !idsGestao[id]; });
     var modo = regra.email;
     var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(new Date()) : { dentro: true };
     if (modo === 'RESUMO' && regra.horaSeHoje && o.prazoHoje) modo = 'HORA';
@@ -1074,7 +1096,8 @@ function Mtz_sessao_(sessionId) {
 function Mtz_regraTela_(r) {
   return { cod: r.cod, modulo: r.modulo, moduloNome: r.moduloNome, evento: r.evento, origem: r.origem, publico: r.publico, email: r.email, whatsapp: r.whatsapp, decisao: r.decisao,
     limite: r.limite || '', obs: r.obs || '', area: r.area || '', whatsHoraPermitido: !!r.whatsHoraPermitido, obrigatorio: !!r.obrigatorio, sensivel: !!r.sensivel, alterada: !!r.alterada,
-    rotuloEmail: MTZ_ROTULO_EMAIL[r.email], rotuloWhats: MTZ_ROTULO_WHATS[r.whatsapp] };
+    rotuloEmail: MTZ_ROTULO_EMAIL[r.email], rotuloWhats: MTZ_ROTULO_WHATS[r.whatsapp],
+    gestao: r.gestao || '', gestaoLigada: !!r.gestaoLigada, gestaoTipo: r.gestao && typeof AVG_TIPOS !== 'undefined' ? AVG_TIPOS[r.gestao] : '' };
 }
 
 function Mtz_gravarMudanca_(eu, cod, antes, depois, motivo) {
@@ -1122,10 +1145,13 @@ function SGO_AvisosMatriz_api(sessionId, acao, dados) {
       if (motivo.length < 8) throw new Error('Não foi possível salvar: escreva o motivo da mudança (pelo menos 8 caracteres). Ele fica na trilha de mudanças, com o seu nome e a data.');
       var atual = Mtz_regras_()[cod];
       var antes = { email: atual.email, whatsapp: atual.whatsapp, decisao: atual.decisao, area: atual.area };
+      // 01/11/2026: avisos da gestão (ligado/desligado) entram no antes e no depois; sem o campo na tela, vale o que está (merge)
+      if (atual.gestao) antes.gestaoLigada = !!atual.gestaoLigada;
       var depois;
-      if (acao === 'restaurar') depois = { email: base.email, whatsapp: base.whatsapp, decisao: base.decisao || 'AVISA', area: Mtz_up_(base.area), restaurada: true };
+      if (acao === 'restaurar') { depois = { email: base.email, whatsapp: base.whatsapp, decisao: base.decisao || 'AVISA', area: Mtz_up_(base.area), restaurada: true }; if (atual.gestao) depois.gestaoLigada = true; }
       else {
         depois = { email: Mtz_up_(d.email), whatsapp: Mtz_up_(d.whatsapp), decisao: Mtz_up_(d.decisao) || 'AVISA', area: Mtz_up_(d.area) };
+        if (atual.gestao) depois.gestaoLigada = d.gestaoLigada === undefined || d.gestaoLigada === '' ? !!atual.gestaoLigada : (d.gestaoLigada === true || Mtz_up_(d.gestaoLigada) === 'SIM');
         if (MTZ_CANAIS_EMAIL.indexOf(depois.email) < 0 || MTZ_CANAIS_WHATS.indexOf(depois.whatsapp) < 0 || MTZ_DECISOES.indexOf(depois.decisao) < 0) throw new Error('Não foi possível salvar: escolha o canal do e-mail, o do WhatsApp e a decisão nas listas da tela e toque em Salvar de novo.');
         // 26/10/2026: "na hora" liberado para qualquer evento (teto diário em Mtz_cfg_().whatsTetoDia)
         if (base.obrigatorio && (depois.decisao === 'HISTORICO' || (base.email !== 'NAO' && depois.email === 'NAO') || (base.whatsapp === 'HORA' && depois.whatsapp !== 'HORA'))) {
@@ -1154,6 +1180,11 @@ function SGO_AvisosMatriz_api(sessionId, acao, dados) {
       return { ok: true, cfg: Mtz_cfg_(), message: 'Horários do resumo salvos. A mudança está na trilha.' };
     }
     if (acao === 'trilha') return { ok: true, trilha: Mtz_trilha_(300) };
+    // 01/11/2026: avisos da gestão do dia (enviados, na fila, falhas e parados, com o motivo)
+    if (acao === 'gestaoHoje') {
+      if (typeof AvG_painelDia_ !== 'function') throw new Error('Os avisos da gestão não estão instalados neste ambiente (SGO_Avisos_Gestao.js).');
+      return { ok: true, gestao: AvG_painelDia_(d.dia) };
+    }
     if (acao === 'medicao') return { ok: true, medicao: Mtz_medicao_(d) };
     if (acao === 'resumos') {
       var dia = Mtz_s_(d.dia) || Mtz_hoje_();
@@ -1222,6 +1253,8 @@ function SGO_MeusAvisos_api(sessionId, acao, dados) {
       alteradoEm: Mtz_br_(p.alteradoEm || ''), vinculo: vinculo, vinculoRotulo: typeof SGO_rotuloVinculo_ === 'function' ? SGO_rotuloVinculo_(vinculo) : vinculo, whatsLiberado: libVinc.indexOf(vinculo || 'VAZIO') >= 0, temEmail: !!(u && String(u.EMAIL || '').indexOf('@') > 0), temCelular: !!(u && String(u.CELULAR || '').replace(/\D/g, '')),
       horas: { email: cfg.horaEmail, emailAlternativa: MTZ_CFG_PADRAO.horaEmailAlternativa, whats: cfg.horaWhats }, whatsResumoLigado: cfg.whatsResumo,
       silenciaveis: MTZ_MODULOS_SILENCIAVEIS, excecoesWhats: excecoes,
+      // 01/11/2026: avisos da gestão (obrigatórios para quem responde pela gestão, com o porquê)
+      gestao: typeof AvG_meusAvisos_ === 'function' ? AvG_meusAvisos_(eu.id) : { ehGestao: false },
       message: acao === 'salvar' ? 'Preferências salvas. Valem a partir do próximo resumo.' : ''
     };
   } catch (e) {

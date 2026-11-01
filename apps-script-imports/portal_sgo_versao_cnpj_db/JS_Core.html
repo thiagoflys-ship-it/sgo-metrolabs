@@ -603,6 +603,10 @@
               irTelaInicial_();
             })
             .qrcodeAcessar(SESSION, equipId);
+        } else if (location.parameters && location.parameters.aviso && /^[A-Za-z0-9-]{4,40}$/.test(String(location.parameters.aviso[0] || ""))) {
+          // 01/11/2026: links dos avisos da gestão (?aviso=...) abrem o item exato depois do login (SGO_Avisos_Gestao.js, JS_AvisosMatriz.html).
+          irTelaInicial_();
+          try { if (typeof AvisosGestao_abrirLink_ === "function") AvisosGestao_abrirLink_(String(location.parameters.aviso[0])); else abrir("gestao_decisoes"); } catch (eAviso) { console.error("Aviso do link:", eAviso); }
         } else if (location.parameters && location.parameters.tela && /^[a-z_]{3,40}$/.test(String(location.parameters.tela[0] || ""))) {
           // 20/10/2026: links dos e-mails da gestão (?tela=gestao_decisoes) abrem a tela direto depois do login.
           irTelaInicial_();

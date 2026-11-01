@@ -87,6 +87,7 @@
       "<li><b>E-mail</b>: um resumo por pessoa por dia útil (padrão 08:00). Na hora só o que exige ciência ou muda algo de hoje, sempre no expediente.</li>" +
       "<li><b>WhatsApp</b>: um resumo por dia (09:30), só para CLT, só para quem ainda não abriu o sistema e só para quem está no piloto. Na hora, só as quatro exceções da Frota.</li>" +
       "<li>Cada mudança pede o motivo e fica na trilha, com nome e data. Os eventos obrigatórios não podem ser desligados.</li>" +
+      "<li><b>Avisos da gestão</b> (01/11/2026, decisão do dono): pendência, aprovação, atraso e ato irreversível vão aos gestores e à Diretoria por WhatsApp e e-mail, com o link do item. Gestor só no expediente; Diretoria a qualquer hora; pendência agrupada em 30 minutos; atraso e irreversível na hora; sem teto e sem piloto. Liga e desliga por evento, na regra.</li>" +
       "<li>O Assistente do ponto tem regra própria e não aparece aqui.</li></ul>", "mtzCorpo");
     Mtz_chamar_("SGO_AvisosMatriz_api", "carregar", {}, function (r) { MTZ.dados = r; AvisosMatriz_desenhar_(); }, function (m) { Mtz_falhaTela_("mtzCorpo", m, "AvisosMatriz_render_"); });
   }
@@ -136,8 +137,12 @@
         '</tbody></table></div>' : '<p class="mtz-q">Ninguém mudou as preferências: vale o padrão da matriz para todos.</p>') + '</div>';
     var trilha = '<div class="mtz-bloco"><h3>Trilha de mudanças</h3><div id="mtzTrilha">' + AvisosMatriz_trilhaHtml_(d.trilha) + '</div>' +
       '<button type="button" class="cadx-btn" onclick="AvisosMatriz_trilhaToda_()">Ver a trilha inteira</button></div>';
-    c.innerHTML = horarios + blocoAreas + regras + resumos + medicao + prefs + trilha;
+    // 01/11/2026: avisos da gestão no celular (SGO_Avisos_Gestao.js): estado do dia, com o motivo de cada um
+    var gestao = '<div class="mtz-bloco"><h3>Avisos da gestão</h3><p class="mtz-q">Pendência, aprovação, atraso e ato irreversível para os gestores e a Diretoria, por WhatsApp e e-mail, com o link que abre o item no SGO+ (decisão do dono, 01/11/2026). Aqui aparece o que saiu, o que está na fila, o que falhou e o que está parado, com o motivo.</p>' +
+      '<div class="mtz-campos"><label>Dia<input type="date" id="mtzDiaGestao" value="' + esc(Mtz_hojeIso_()) + '"></label><button type="button" class="cadx-btn" onclick="AvisosMatriz_gestao_()">Mostrar</button></div><div id="mtzGestao"></div></div>';
+    c.innerHTML = horarios + gestao + blocoAreas + regras + resumos + medicao + prefs + trilha;
     AvisosMatriz_desenharRegras_();
+    AvisosMatriz_gestao_();
   }
 
   function Mtz_hojeIso_() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
@@ -152,10 +157,11 @@
     var htmlRegra = function (r) {
       var whatsPerm = null; // 26/10/2026: "na hora" pode ser marcado em qualquer evento (teto diário por pessoa)
       return '<div class="mtz-regra" data-cod="' + esc(r.cod) + '"><div class="cab"><span class="cod">' + esc(r.cod) + '</span><b>' + esc(r.evento) + '</b>' +
-        (r.obrigatorio ? ' <span class="mtz-sit neutro">Obrigatório</span>' : '') + (r.alterada ? ' <span class="mtz-sit alerta">Alterada</span>' : '') + (r.decisao === "HISTORICO" ? ' <span class="mtz-sit neutro">Vira histórico</span>' : '') + '</div>' +
+        (r.obrigatorio ? ' <span class="mtz-sit neutro">Obrigatório</span>' : '') + (r.gestao ? ' <span class="mtz-sit ' + (r.gestaoLigada ? "ok" : "neutro") + '">Gestão: ' + esc(r.gestaoTipo || r.gestao) + (r.gestaoLigada ? "" : " (desligado)") + '</span>' : '') + (r.alterada ? ' <span class="mtz-sit alerta">Alterada</span>' : '') + (r.decisao === "HISTORICO" ? ' <span class="mtz-sit neutro">Vira histórico</span>' : '') + '</div>' +
         '<div class="mtz-q">' + esc(r.moduloNome) + ' · Quem recebe: ' + esc(r.publico) + (r.area ? ' (área ' + esc(r.area) + ')' : '') + ' · Limite: ' + esc(r.limite) + (r.obs ? ' · ' + esc(r.obs) : '') + ' · Origem: ' + esc(r.origem) + '</div>' +
         '<div class="sels"><label class="mtz-q">E-mail <select data-c="email" aria-label="E-mail de ' + esc(r.cod) + '">' + opc(d.rotulosEmail, r.email) + '</select></label>' +
         '<label class="mtz-q">WhatsApp <select data-c="whatsapp" aria-label="WhatsApp de ' + esc(r.cod) + '">' + opc(d.rotulosWhats, r.whatsapp, whatsPerm) + '</select></label>' +
+        (r.gestao ? '<label class="mtz-q">Avisos da gestão <select data-c="gestaoLigada" aria-label="Avisos da gestão de ' + esc(r.cod) + '"><option value="SIM"' + (r.gestaoLigada ? " selected" : "") + '>Ligado: WhatsApp e e-mail aos gestores e à Diretoria</option><option value="NAO"' + (r.gestaoLigada ? "" : " selected") + '>Desligado: só a regra comum</option></select></label>' : '') +
         '<label class="mtz-q">Decisão <select data-c="decisao" aria-label="Decisão de ' + esc(r.cod) + '"><option value="AVISA"' + (r.decisao === "AVISA" ? " selected" : "") + '>Continua avisando</option><option value="HISTORICO"' + (r.decisao === "HISTORICO" ? " selected" : "") + '>Vira só histórico</option></select></label>' +
         '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', false)">Salvar</button>' +
         (r.alterada ? '<button type="button" class="cadx-btn" onclick="AvisosMatriz_salvarRegra_(\'' + esc(r.cod) + '\', true)">Voltar ao padrão aprovado</button>' : '') + '</div></div>';
@@ -227,6 +233,47 @@
     }, function (m) { alvo.innerHTML = '<p class="mtz-q" role="alert">' + esc(m) + '</p>'; });
   }
 
+  // 01/11/2026: avisos da gestão do dia (SGO_AvisosMatriz_api 'gestaoHoje')
+  function AvisosMatriz_gestao_() {
+    var alvo = document.getElementById("mtzGestao"), esc = Mtz_esc_;
+    if (!alvo) return;
+    alvo.innerHTML = '<p class="mtz-q">Carregando...</p>';
+    var dia = (document.getElementById("mtzDiaGestao") || {}).value || "";
+    var rotSit = { ENVIADO: ["Enviado", "ok"], NA_FILA: ["Na fila", "alerta"], FALHOU: ["Falhou", "perigo"], RESOLVIDO: ["Resolvido", "neutro"] };
+    var rotMod = { APPROVED: "aprovado", PENDING: "em análise na Meta", IN_APPEAL: "em recurso na Meta", REJECTED: "recusado pela Meta", PAUSED: "pausado pela Meta", DISABLED: "desativado pela Meta", NAO_CADASTRADO: "não cadastrado (Chaves e senhas > Cadastrar modelos na Meta)" };
+    var rotEmail = { ENVIADO: "enviado", FALHOU: "falhou", SEM_EMAIL: "sem e-mail no cadastro" };
+    Mtz_chamar_("SGO_AvisosMatriz_api", "gestaoHoje", { dia: dia }, function (r) {
+      var g = r.gestao, t = g.totais;
+      var sel = function (cls, txt) { return '<span class="mtz-sit ' + cls + '">' + esc(txt) + '</span>'; };
+      var topo = '<div class="mtz-linha" style="margin:8px 0">' + sel("ok", "Enviados: " + t.enviados) + sel(t.naFila ? "alerta" : "neutro", "Na fila: " + t.naFila) +
+        sel(t.falhas ? "perigo" : "neutro", "Falhas: " + t.falhas) + sel(t.parados ? "perigo" : "neutro", "Parados: " + t.parados) +
+        sel(t.aguardandoModelo ? "alerta" : "neutro", "WhatsApp aguardando modelo: " + t.aguardandoModelo) +
+        sel(g.modelo.situacao === "APPROVED" ? "ok" : "alerta", "Modelo " + g.modelo.nome + ": " + (rotMod[g.modelo.situacao] || g.modelo.situacao)) + '</div>' +
+        (g.modelo.situacao === "APPROVED" ? "" : '<p class="mtz-q">Enquanto o modelo não for aprovado pela Meta, os avisos da gestão saem só por e-mail, com a marca "WhatsApp aguardando modelo". Nada se perde.</p>');
+      if (!g.linhas.length) { alvo.innerHTML = topo + '<p class="mtz-q">Nenhum aviso da gestão neste dia e nada na fila. Escolha outro dia em Dia, se quiser conferir.</p>'; return; }
+      alvo.innerHTML = topo + '<div class="table-responsive"><table class="table mtz-tabela"><thead><tr><th>Quando</th><th>Pessoa</th><th>Tipo</th><th>Item</th><th>Situação</th><th>Canais</th><th>Motivo</th></tr></thead><tbody>' +
+        g.linhas.map(function (l) {
+          var s = rotSit[l.situacao] || [l.situacaoNome || l.situacao, "neutro"];
+          var canais = (l.email ? "E-mail: " + (rotEmail[l.email] || l.email.toLowerCase()) : "E-mail: ainda não") + " · " + (l.whatsappNome || "WhatsApp: ainda não") + (l.aberto ? " · link aberto" : "");
+          return '<tr><td>' + esc(l.hora) + '</td><td>' + esc(l.pessoa) + (l.diretoria ? ' <span class="mtz-q">(Diretoria)</span>' : '') + '</td><td>' + esc(l.tipo) + ' <span class="mtz-q">' + esc(l.evento) + '</span></td><td>' + esc(l.titulo) + '</td>' +
+            '<td><span class="mtz-sit ' + s[1] + '">' + esc(s[0]) + '</span>' + (l.parado ? ' <span class="mtz-sit perigo">Parado</span>' : '') + '</td><td class="mtz-q">' + esc(canais) + '</td><td class="mtz-q">' + esc(l.motivo) + '</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }, function (m) { alvo.innerHTML = '<p class="mtz-q" role="alert">' + esc(m) + '</p>'; });
+  }
+
+  /** 01/11/2026: link do aviso da gestão (?aviso=...) depois do login: abre o item exato (a mesma ação do Início). */
+  function AvisosGestao_abrirLink_(id) {
+    var irCaixa = function () { if (typeof abrir === "function") abrir("gestao_decisoes"); };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        var t = r && r.tela;
+        if (t && typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(t); else irCaixa();
+        if (r && r.message) setTimeout(function () { alert(r.message); }, 400);
+      })
+      .withFailureHandler(function () { irCaixa(); setTimeout(function () { alert("Não foi possível abrir o item do aviso agora (sem comunicação com o SGO+). Abrimos a Caixa de decisões: o item continua lá até ser resolvido."); }, 400); })
+      .SGO_AvisosGestao_api(SGO_getSessionId(), "abrir", { aviso: id });
+  }
+
   function AvisosMatriz_medicao_() {
     var alvo = document.getElementById("mtzMedicao"), esc = Mtz_esc_;
     if (!alvo) return;
@@ -293,7 +340,9 @@
         '<li>Atividade atrasada: a cobrança no sistema continua até você concluir ou justificar com nova previsão.</li>' +
         '<li>Caixa de decisões (para quem é gestor): o e-mail de resumo com as decisões que dependem de você.</li>' +
         '<li>Exceções do WhatsApp na hora da Frota, para quem é gestor da Frota ou está com o veículo: ' + esc((d.excecoesWhats || []).join("; ") || "nenhuma ligada") + '.</li>' +
-        '<li>Pendências da central: aparecem sempre no Início.</li></ul></div>' +
+        '<li>Pendências da central: aparecem sempre no Início.</li>' +
+        (d.gestao && d.gestao.ehGestao ? '<li><b>Avisos da gestão</b>: ' + esc(d.gestao.texto) + ' Modelo do WhatsApp: ' + esc(d.gestao.modelo) + (d.temCelular ? '' : '. Sem celular no cadastro: chegam só por e-mail até o Administrador completar em Administração &gt; Usuários') + '.</li>' : '') +
+        '</ul></div>' +
       '<div class="mtz-bloco"><h3>Como fica o seu resumo de hoje</h3><p class="mtz-q">Mostra o texto do e-mail de resumo com o que existe agora. Nada é enviado.</p>' +
         '<button type="button" class="cadx-btn" onclick="MeusAvisos_previa_()">Ver a prévia</button><div id="maPrevia" style="margin-top:8px"></div></div>';
   }

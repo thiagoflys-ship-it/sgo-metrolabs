@@ -512,7 +512,10 @@ function clientesReativar(sessionId, id) {
   try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.reativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o cliente', e) }; }
 }
 function clientesExcluir(sessionId, id) { 
-  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o cliente', e) }; }
+  try { var antesG = typeof SGO_avisoGestaoAntes_ === 'function' ? SGO_avisoGestaoAntes_(SGO_CFG.SHEETS.CAD_CLIENTES, id) : null; var rG = JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id)));
+    // 01/11/2026: exclusão de cadastro é ato irreversível: avisa na hora a Diretoria (SGO_Avisos_Gestao.js, GI07)
+    if (antesG && rG && rG.success !== false && typeof SGO_avisoGestaoExclusao_ === 'function') SGO_avisoGestaoExclusao_(sessionId, 'cliente', antesG);
+    return SGO_Pendencias_aposGravar_(rG); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o cliente', e) }; }
 }
 function clientesPesquisar(sessionId, termo) { 
   try { return JSON.parse(JSON.stringify(SGO_CLIENTES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar os clientes', e) }; }

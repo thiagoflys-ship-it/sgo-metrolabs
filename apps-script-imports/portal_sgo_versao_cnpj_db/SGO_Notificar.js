@@ -40,6 +40,11 @@
  *             decide o canal: e-mail "na hora", "no resumo do dia" (vai para a fila NTF_RESUMO_FILA e sai no e-mail de
  *             resumo das 08:00) ou "só no sistema"; "vira histórico" não manda nada. Sem evento, a origem indica (COMERCIAL,
  *             AVISOS, GESTAO_CNH). prazoHoje: true = atividade com prazo hoje (e-mail na hora).
+ *     tela, resolvePor, prazoGestao — opcionais (01/11/2026, avisos da gestão no celular, SGO_Avisos_Gestao.js): a ação que
+ *             abre o item exato (a mesma do Início), como o aviso sai da pendência ('CAIXA:<item>' ou 'ATV:<ids>') e o prazo.
+ *             Evento da matriz marcado como aviso da gestão: quem é da gestão vai para a fila da gestão (NTF_GESTAO; aqui fica
+ *             NA_FILA_GESTAO em NTF_ENVIOS) e recebe WhatsApp e e-mail por lá, sem teto e sem piloto; atraso e irreversível na
+ *             hora. origem 'AVISOS_GESTAO' é o envio da própria fila (não passa de novo pela matriz nem pelo piloto).
  *   })
  *
  * MATRIZ DE AVISOS (21/10/2026, aprovada pelo dono): valem para TODO envio, menos o assistente do ponto (categoria PONTO,
@@ -276,6 +281,19 @@ var NTF_MODELOS_META = {
     limites: [60, 10, 10, 60, 300],
     texto: 'Olá, {{1}}. Este é o resumo do que espera pela sua decisão no SGO+.\n\nDecisões aguardando você: {{2}}\nParadas há 2 dias úteis ou mais: {{3}}\nSuas atividades: {{4}}\n\nPara decidir, acesse a Caixa de decisões: {{5}}\n\nMetrolabs — SGO+',
     exemplos: ['Maria', '4', '2', '1 nova, 1 vence hoje', 'https://sgo.metrolabs.com.br']
+  },
+  // 01/11/2026 (avisos da gestão no celular, decisão do dono; SGO_Avisos_Gestao.js): pendência, aprovação, atraso e ato irreversível
+  // para os gestores e a Diretoria, com a lista dos itens (um link por item, ?aviso=...) e o link do item ou da Caixa de decisões.
+  // Categoria Utilidade (aviso sobre itens concretos da conta, sem oferta), porque sgo_gestao_resumo_dia e sgo_aviso_geral foram
+  // reclassificados como Marketing pela Meta. Sem botão de aprovar ou recusar: a decisão é tomada no sistema. Enquanto a Meta
+  // não aprovar, o aviso vai só por e-mail com a marca "WhatsApp aguardando modelo" (nunca troca pelo sgo_aviso_geral).
+  sgo_gestao_acao: {
+    uso: 'Avisos da gestão: pendência, aprovação, atraso e ato irreversível (nome, quantidade, lista com um link por item, link do item ou da Caixa de decisões)',
+    limites: [60, 40, 560, 200],
+    texto: 'Olá, {{1}}. Você tem {{2}} no SGO+ que pede a sua ação ou atenção.\n\n{{3}}\n\nPara ver e decidir no sistema, acesse: {{4}}\n\nA decisão é sempre tomada no SGO+, com login.\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '2 avisos da gestão',
+      '1) Caixa de decisões: Aprovação de desconto da proposta PROP-2026-0012 rev.00: https://sgo.metrolabs.com.br/?aviso=AG1x2y3z | 2) Atraso · Caixa de decisões: Prazo vencido no pedido de compra RC-2026-0040: https://sgo.metrolabs.com.br/?aviso=AG4k5m6n',
+      'https://sgo.metrolabs.com.br/?tela=gestao_decisoes']
   },
   sgo_justificativa_recebida: {
     uso: 'Minhas atividades: justificativa de atraso (colaborador, atividade, motivo, nova previsão)',
@@ -671,6 +689,8 @@ function SGO_notificar_(opcoes) {
     // 21/10/2026: matriz de avisos (SGO_Avisos_Matriz.js) — canal de cada evento, fila do resumo do dia e "vira histórico"
     var matriz = ids.length && typeof SGO_avisoMatrizPreparar_ === 'function' ? SGO_avisoMatrizPreparar_(o, ids, canais) : null;
     if (matriz) canais = matriz.canais;
+    // 01/11/2026: aviso da gestão urgente (atraso, irreversível) sai na hora, sem esperar o agrupamento (SGO_Avisos_Gestao.js)
+    if (matriz && matriz.gestaoUrgente && matriz.gestaoUrgente.length && typeof AvG_enviarUrgentes_ === 'function') AvG_enviarUrgentes_(matriz.gestaoUrgente);
     var evento = String((matriz && matriz.evento) || o.evento || '').trim().toUpperCase().slice(0, 20);
     var externos = canais.filter(function (c) { return c === 'email' || c === 'whatsapp'; });
     if (!ids.length || !externos.length) return resumo;
@@ -745,6 +765,15 @@ function SGO_notificar_(opcoes) {
           if (!c) { registrar(uid, '', canal, '', 'PULADO', 'Usuário não encontrado no cadastro.'); return; }
           if (!c.ativo) { registrar(uid, c.nome, canal, '', 'PULADO', 'Usuário inativo.'); return; }
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
+          // 01/11/2026: destinatário da gestão de um aviso da gestão: já está na fila da gestão (WhatsApp e e-mail saem por lá)
+          var naGestao = matriz && matriz.gestao ? matriz.gestao[uid] : '';
+          if (naGestao) {
+            if (canal !== 'email') return;
+            resumo.ok++; resumo.guardados = (resumo.guardados || 0) + 1; resumo.motivo = naGestao;
+            linhas.push({ QUANDO: Notificar_agora_(), USUARIO_ID: uid, USUARIO_NOME: c.nome || '', CANAL: canal, DESTINO: c.email || '', ASSUNTO: titulo, ORIGEM: origem, REF_ID: refId,
+              SITUACAO: 'NA_FILA_GESTAO', MOTIVO: String(naGestao).slice(0, 480), EVENTO: evento });
+            return;
+          }
           // 21/10/2026: matriz de avisos — e-mail guardado para o resumo do dia (ou para o próximo expediente) ou só no sistema
           var semEmail = canal === 'email' && matriz && matriz.semEmail ? matriz.semEmail[uid] : null;
           if (semEmail) {
@@ -772,7 +801,8 @@ function SGO_notificar_(opcoes) {
             if (barradoRes) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoRes); return; }
           }
           // 21/10/2026: piloto do WhatsApp — só as pessoas da lista recebem; as demais ficam RETIDO (sistema e e-mail seguem)
-          if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function') {
+          // 01/11/2026 (decisão do dono): o aviso da gestão vale para todos os gestores e a Diretoria, sem piloto
+          if (canal === 'whatsapp' && typeof SGO_waPilotoMotivo_ === 'function' && origem !== 'AVISOS_GESTAO') {
             if (pilotoCfg === null) { SGO_waPilotoSincronizar_(false); pilotoCfg = SGO_waPilotoCfg_(); }
             var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg, { categoria: categoria, origem: origem }); // 26/10/2026: e o grupo que a pessoa recebe
             if (barradoPiloto) { registrar(uid, c.nome, canal, c.telefone, 'RETIDO', barradoPiloto); return; }

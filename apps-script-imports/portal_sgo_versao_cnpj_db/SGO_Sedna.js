@@ -208,7 +208,9 @@ function Sedna_escalonar_() {
     }
     var r = SGO_notificar_({ usuarios: [g.uid], canais: ['sgo', 'email'], evento: SEDNA_EVENTO_NIVEL[g.nivel], origem: 'SEDNA',
       refId: ('SEDNA-' + g.nivel + '-' + dia + '-' + g.itens.map(function (it) { return it.a.ID; }).join(',')).slice(0, 80),
-      titulo: String(titulo).slice(0, 180), texto: abertura + '\n' + linhas.join('\n') + '\n\n' + fecho, link: typeof Ges_linkTela_ === 'function' ? Ges_linkTela_('atividades_equipe') : '' });
+      titulo: String(titulo).slice(0, 180), texto: abertura + '\n' + linhas.join('\n') + '\n\n' + fecho, link: typeof Ges_linkTela_ === 'function' ? Ges_linkTela_('atividades_equipe') : '',
+      // 01/11/2026: S72 e S73 são avisos da gestão (atraso, na hora): a tela que abre e quando o aviso sai da pendência (SGO_Avisos_Gestao.js)
+      tela: { tipo: 'modulo', mod: g.nivel > 1 ? 'atividades_equipe' : 'minhas_atividades' }, resolvePor: 'ATV:' + g.itens.map(function (it) { return it.a.ID; }).join(',') });
     if (r && r.ok) mensagens++;
   });
   return { atividades: escaladas.length, mensagens: mensagens };

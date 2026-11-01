@@ -595,6 +595,8 @@ function AstC_cancelar_(eu, d) {
       Ast_mudarAtividade_(os.ATIVIDADE_ID, 'Cancelada', 'Chamado ' + c.NUMERO + ' cancelado: ' + motivo);
       if (Ast_s_(os.TECNICO_ID)) Ast_avisar_(os.TECNICO_ID, 'OS_CANCELADA', 'O.S. ' + os.NUMERO + ' cancelada', 'O chamado ' + c.NUMERO + ' (' + Ast_s_(c.CLIENTE_NOME) + ') foi cancelado: ' + motivo, os.ID, { autorId: eu.id, evento: 'AT05' });
     }
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+    if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI04', modulo: 'assistencia', quem: eu, oque: 'Chamado cancelado', item: Ast_s_(c.NUMERO) + ' (' + Ast_s_(c.CLIENTE_NOME) + ')', motivo: motivo, tela: { tipo: 'assistencia', mod: 'assistencia', id: c.ID }, refId: 'AST-CANC-' + c.ID });
     return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Chamado ' + c.NUMERO + ' cancelado.' };
   });
 }
@@ -684,6 +686,9 @@ function AstC_excluir_(eu, d) {
     Ast_memoTirar_(AST_ABAS.AVISOS);
     return { c: c, nOs: nOs, nOrc: nOrc, vinc: vinc };
   });
+  // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+  if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI04', modulo: 'assistencia', quem: eu, oque: 'Chamado excluído (teste ou simulação)', item: Ast_s_(res.c.NUMERO) + ' (' + Ast_s_(res.c.CLIENTE_NOME) + ')' + (res.nOs.length ? ', com a O.S. ' + res.nOs.join(', ') : ''), motivo: motivo,
+    tela: { tipo: 'assistencia', mod: 'assistencia' }, refId: 'AST-EXC-' + res.c.ID });
   return { excluido: AstC_exclusaoResumo_(res.c), message: 'Chamado ' + res.c.NUMERO + ' excluído' + (res.nOs.length ? ', junto com a O.S. ' + res.nOs.join(', ') : '') + (res.nOrc ? (res.nOs.length ? ' e ' : ', junto com ') + Ast_plural_(res.nOrc, 'orçamento', 'orçamentos') : '') +
     '. Ele saiu das listas, contadores, pendências, indicadores e do portal do cliente. Nada foi apagado: a gestão vê e restaura em Chamados > Excluídos.' +
     (res.vinc.some(function (x) { return x.tipo === 'COMPRAS'; }) ? ' Lembre: o pedido de compra continua em Compras.' : '') };
@@ -879,6 +884,9 @@ function AstC_descartar_(eu, d) {
   var m = Ast_texto_(d.motivo, 500);
   if (m.length < 10) throw new Error('Não foi possível ' + (rep ? 'recusar' : 'descartar') + ': escreva o motivo (pelo menos 10 letras), por exemplo ' + (rep ? '"o equipamento não é da representada" ou "cliente fora da área de atendimento"' : '"repetida do chamado CH-2026-0005"'));
   Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'DESCARTADA', DESCARTE_MOTIVO: m, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_(), PAUSA_DESDE: '' });
+  // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js)
+  if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: rep ? 'GI06' : 'GI04', modulo: rep ? 'representacao' : 'assistencia', quem: eu, oque: rep ? 'Pedido da representada recusado' : 'Solicitação do cliente descartada',
+    item: Ast_s_(s.NUMERO) + ' (' + Ast_s_(s.CLIENTE_NOME) + ')', motivo: m, tela: rep ? { tipo: 'modulo', mod: 'representacao' } : { tipo: 'assistencia', mod: 'assistencia_solicitacoes' }, refId: 'AST-DESC-' + s.ID });
   if (rep) {
     // 29/10/2026: a representada vê o motivo da recusa e é avisada por e-mail
     Ast_evento_('SOLICITACAO', s.ID, 'RECUSA', eu, 'Pedido recusado pela Metrolabs: ' + m, { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Recusado' });
