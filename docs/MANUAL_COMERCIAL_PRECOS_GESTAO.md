@@ -1,6 +1,6 @@
 # Manual da gestão: preços, ficha de custo e parâmetros do Comercial
 
-Versão de 01/11/2026 (Comercial C2). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto e Comercial > Produtos e serviços. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md.
+Versão de 01/11/2026 (Comercial C2), com o Banco de preços e o Orçamentista (Comercial C3). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto, Comercial > Produtos e serviços, Comercial > Banco de preços e Comercial > Orçamentista. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md.
 
 ## Quem muda o quê
 
@@ -88,6 +88,28 @@ Item que já tinha custo cadastrado: a importação preenche as horas da ficha (
 - Desconto acima da alçada da Diretoria.
 - Valores da política ainda provisórios.
 
+## Banco de preços (gestão)
+
+Comercial > Banco de preços (tabela COM_PRECOS, uma linha por preço observado). Campos: tipo (serviço ou produto), item do catálogo e da tabela C1, descrição, unidade, valor unitário, quantidade, data, cidade e UF, cliente, origem (proposta da Metrolabs, CRM, licitação, cotação de fornecedor, concorrente ou internet), resultado (ganho, perdido, em aberto ou referência), concorrente e valor do vencedor, fornecedor e marca, custo (só gestão), link ou fonte, confiança e quem registrou. Nada é apagado: revisão substituída, proposta cancelada e preço tirado das contas ficam marcados, fora do mínimo, da mediana e da taxa de ganho.
+
+**Carga inicial e Compras.** Toque em "Carga inicial e Compras". A prévia mostra, por origem, o que já está e o que entra, e o que ficou de fora da C1 de propósito: 360 preços públicos de lote, valor global ou mensal; os valores do Drive que não são preço unitário de um serviço da tabela; as linhas de deslocamento do CRM. A carga só acrescenta o que falta: rodar de novo não repete nada. As cotações de fornecedor já lançadas em Compras entram como "cotação de fornecedor" (o valor é o custo); Compras não muda. Cotação nova em Compras entra na próxima carga.
+
+**O que só a gestão vê.** Custo de cada preço praticado (o custo cadastrado no CRM e o da proposta), a margem bruta (preço menos custo, antes de impostos), o preço de compra dos fornecedores, o histórico por fornecedor e a relação entre a mediana de venda e a de compra.
+
+**Tirar das contas.** Em "Ver o item", "Tirar das contas" pede o motivo (por exemplo "valor da proposta inteira, não do item"). O preço fica no banco, marcado; "Voltar às contas" desfaz.
+
+**Indicadores no Painel.** No fim do Painel comercial: taxa de ganho por serviço e por produto, preço médio ganho e perdido (com a leitura "ganhamos com preço menor" ou "mesmo com preço maior"), de quem mais perdemos, quem mais vence as licitações do banco, propostas perdidas sem o vencedor informado e os itens ativos do catálogo sem preço de referência.
+
+## Margem sobre peças e produtos
+
+Em Metodologia > Preço e desconto, "Margem sobre peças e produtos" (valor inicial 30%, da planilha interna citada na C1). O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor: custo ÷ (1 − margem). O vendedor vê o preço sugerido, nunca o custo nem a margem, e é avisado quando o preço do catálogo está abaixo do sugerido.
+
+## Orçamentista: IA e busca na internet
+
+Sem a chave da IA, o Orçamentista funciona pelas regras. Com a chave (Administração > Chaves e senhas > Chave da IA), a IA lê o pedido e escreve a justificativa, sempre conferida contra os números do sistema; preço nunca vem da IA.
+
+A busca de preços na internet usa a mesma chave da IA com a pesquisa do Google, no servidor (a chave não vai ao navegador). Para ligar: Administração > Chaves e senhas > Inteligência artificial > "Comercial: buscar preços na internet" = Ligado. Resposta da IA sem pesquisa na web não é aproveitada; resultado sem link https ou sem valor é descartado; nada entra no banco sem a confirmação de quem buscou, com o link e, se o valor mudou, o motivo. Outro serviço de busca entra pelo ponto de extensão COM_BP_PROVEDORES_BUSCA (SGO_Comercial_BancoPrecos.js) e é escolhido em "Comercial: serviço de busca de preços".
+
 ## Problemas comuns
 
 | Situação | O que fazer |
@@ -96,3 +118,6 @@ Item que já tinha custo cadastrado: a importação preenche as horas da ficha (
 | "O catálogo mudou desde a prévia" ao importar | Toque em "Importar tabela de preços C1" de novo e confira a prévia. |
 | O preço sugerido mudou e o preço de venda não | É o esperado: confirme em "Usar o preço sugerido", com o motivo. |
 | "Impostos, comissão e margem passam de 95% do preço" | Confira os percentuais: a conta do preço não fecha. |
+| "O banco mudou desde a prévia" na carga | Alguém carregou ou registrou preços. Toque em "Carga inicial e Compras" de novo. |
+| A busca na internet diz "não está configurada" | Ligue "Comercial: buscar preços na internet" em Chaves e senhas e confira a Chave da IA. |
+| Um preço distorce a mediana | Em "Ver o item", "Tirar das contas", com o motivo. |

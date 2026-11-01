@@ -53,7 +53,9 @@ var SGO_ASSIST_ACESSO = {
   compras_financeiro: ['ADMIN', 'DIRETORIA', 'FINANCEIRO'],
   // 31/10/2026: cartões, conciliação e A pagar (o servidor confere: Financeiro, gestão de Compras, Diretoria e Administrador; compradores consultam os cartões)
   compras_cartoes: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'], compras_conciliacao: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'], compras_apagar: ['ADMIN', 'DIRETORIA', 'FINANCEIRO', 'GESTOR'],
-  comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
+  comercial_metodologia: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_kanban: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_gantt: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'],
+  // 01/11/2026 (Comercial C3): Orçamentista e Banco de preços (o servidor confere a área e esconde custo do vendedor)
+  comercial_orcamentista: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL'], comercial_precos: ['ADMIN', 'DIRETORIA', 'GESTOR', 'COMERCIAL']
 };
 /** Cópia de SGO_TELAS_RH (JS_Core.html), usada só se a leitura do arquivo falhar. */
 var SGO_ASSIST_TELAS_RH = ['dashboard', 'mobile_home', 'minhas_atividades', 'atividades_equipe', 'avisos', 'email', 'frota', 'conduta', 'usuarios', 'ponto', 'compras_pedir', 'compras_meus', 'compras_informar', 'meus_avisos',

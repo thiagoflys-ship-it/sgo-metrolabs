@@ -437,6 +437,8 @@ function ComOpo_ganhar_(eu, d) {
     if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', 'Oportunidade ganha. ' + Com_texto_(d.texto, 500));
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { SITUACAO: 'GANHA', GANHA_EM: agora, PROXIMA_ACAO: 'Passar o pedido aprovado aos setores', ATUALIZADO_EM: agora });
     Com_historico_('OPORTUNIDADE', o.ID, 'GANHA', eu, { de: 'Aberta', para: 'Ganha', texto: Com_texto_(d.texto, 1000) || 'Venda ganha.' });
+    // 01/11/2026 (Comercial C3): a última proposta concluída entra no banco de preços como ganha (se o cliente não respondeu por ela)
+    if (typeof ComBP_registrarOportunidade_ === 'function') ComBP_registrarOportunidade_(o, 'GANHO');
     Com_idsGestaoComercial_([eu.id]).forEach(function (gid) { Com_avisar_(gid, 'GANHA', 'Venda ganha: ' + o.CODIGO, eu.nome + ' ganhou a oportunidade ' + o.CODIGO + ' (' + Com_s_(o.CLIENTE_NOME) + ').', { tipo: 'oportunidade', id: o.ID }); });
     var aprovada = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && Com_up_(p.SITUACAO) === 'APROVADA'; })[0];
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'GANHA', GANHA_EM: agora })), propostaAprovadaId: aprovada ? Com_s_(aprovada.ID) : '',
@@ -451,6 +453,8 @@ function ComOpo_perder_(eu, d) {
   var met = Com_metodologia_();
   var motivo = Com_s_(d.motivo);
   if (met.motivosPerda.indexOf(motivo) < 0) throw new Error('Não foi possível registrar a perda: escolha o motivo na lista. ' + met.regraPerda);
+  // 01/11/2026 (Comercial C3): quem ganhou e por quanto (opcional, incentivado; alimenta o banco de preços)
+  var vencedor = typeof ComBP_vencedorDaTela_ === 'function' ? ComBP_vencedorDaTela_(d) : { concorrente: '', valorVencedor: null };
   var apr = Com_texto_(d.aprendizado, 2000);
   if (apr.length < 15) throw new Error('Não foi possível registrar a perda: escreva o que aconteceu e o que aprender com isso (pelo menos 15 letras). Sem isso o relatório de perdas não ensina nada');
   return Com_comTrava_(function () {
@@ -458,6 +462,8 @@ function ComOpo_perder_(eu, d) {
     if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível registrar a perda: a oportunidade ' + o.CODIGO + ' já está ' + COM_SITUACOES_OPO[Com_up_(o.SITUACAO)].toLowerCase());
     var agora = Com_agora_();
     if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Oportunidade perdida: ' + motivo + '.');
+    // antes de cancelar as propostas: as concluídas entram (ou mudam) no banco de preços como perdidas
+    if (typeof ComBP_registrarOportunidade_ === 'function') ComBP_registrarOportunidade_(o, 'PERDIDO', vencedor);
     var canceladas = 0;
     ComP_lerPropostas_().forEach(function (p) {
       if (Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(o.ID)) return;
@@ -468,10 +474,13 @@ function ComOpo_perder_(eu, d) {
       Com_historico_('PROPOSTA', p.ID, 'CANCELADA', eu, { de: COM_SITUACOES_PROP[s], para: 'Cancelada', texto: 'Oportunidade perdida: ' + motivo });
       canceladas++;
     });
-    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr, ATUALIZADO_EM: agora });
-    Com_historico_('OPORTUNIDADE', o.ID, 'PERDIDA', eu, { de: 'Aberta', para: 'Perdida', texto: motivo + '. ' + apr });
+    var campPerda = { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr, ATUALIZADO_EM: agora };
+    if (vencedor.concorrente) campPerda.CONCORRENTE_VENCEDOR = vencedor.concorrente;
+    if (vencedor.valorVencedor) campPerda.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor);
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campPerda);
+    Com_historico_('OPORTUNIDADE', o.ID, 'PERDIDA', eu, { de: 'Aberta', para: 'Perdida', texto: motivo + '. ' + apr + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou: ' + (vencedor.concorrente || 'não informado') + (vencedor.valorVencedor ? ', por ' + Com_moeda_(vencedor.valorVencedor) : '') + '.' : '') });
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr })),
-      message: 'Perda registrada' + (canceladas ? ' e ' + Com_plural_(canceladas, 'proposta cancelada', 'propostas canceladas') : '') + '.' };
+      message: 'Perda registrada' + (canceladas ? ' e ' + Com_plural_(canceladas, 'proposta cancelada', 'propostas canceladas') : '') + '.' + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou e por quanto foram para o banco de preços.' : ' Se souber quem ganhou e por quanto, isso ajuda a precificar as próximas: a gestão pode registrar no Banco de preços.') };
   });
 }
 

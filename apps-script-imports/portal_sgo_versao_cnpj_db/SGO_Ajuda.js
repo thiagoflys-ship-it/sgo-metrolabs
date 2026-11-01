@@ -34,7 +34,7 @@ var SGO_AJUDA_NOMES = {
   assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida', whatsapp_piloto: 'Piloto do WhatsApp',
   comercial: 'Hoje no Comercial', comercial_oportunidades: 'Oportunidades', comercial_propostas: 'Propostas', comercial_pedidos: 'Pedidos aprovados',
   comercial_catalogo: 'Produtos e serviços', comercial_painel: 'Painel comercial', comercial_metodologia: 'Metodologia comercial',
-  comercial_kanban: 'Quadro do funil', comercial_gantt: 'Gantt comercial',
+  comercial_kanban: 'Quadro do funil', comercial_gantt: 'Gantt comercial', comercial_orcamentista: 'Orçamentista', comercial_precos: 'Banco de preços',
   compras_pedir: 'Pedir peça ou material', compras_meus: 'Meus pedidos de compra', compras: 'Fila de compras', compras_fornecedores: 'Fornecedores',
   compras_financeiro: 'Conferência do Financeiro', compras_painel: 'Painel de compras', compras_regras: 'Regras de compras',
   compras_informar: 'Informar compra já feita', compras_cartoes: 'Cartões da empresa', compras_conciliacao: 'Conciliação das faturas', compras_apagar: 'A pagar',

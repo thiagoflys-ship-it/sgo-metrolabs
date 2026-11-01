@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "c07d3b581e98",
+ "versao": "0e484abb4af7",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -329,7 +329,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Versão de 01/11/2026 (Comercial C2). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto e Comercial > Produtos e serviços. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md."
+     "texto": "Versão de 01/11/2026 (Comercial C2), com o Banco de preços e o Orçamentista (Comercial C3). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto, Comercial > Produtos e serviços, Comercial > Banco de preços e Comercial > Orçamentista. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md."
     },
     {
      "titulo": "Quem muda o quê",
@@ -364,8 +364,24 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "Item abaixo do preço mínimo da tabela (na faixa escolhida).\nItem abaixo do menor ou acima do maior preço público (com pelo menos 3 preços).\nDeslocamento abaixo do custo da viagem.\nPrazo urgente ou prioritário sem a agenda confirmada pela Área técnica.\nDesconto por pagamento até o dia 10 quando a política não permite.\nDesconto acima da alçada da Diretoria.\nValores da política ainda provisórios."
     },
     {
+     "titulo": "Banco de preços (gestão) (parte 1)",
+     "texto": "Comercial > Banco de preços (tabela COM_PRECOS, uma linha por preço observado). Campos: tipo (serviço ou produto), item do catálogo e da tabela C1, descrição, unidade, valor unitário, quantidade, data, cidade e UF, cliente, origem (proposta da Metrolabs, CRM, licitação, cotação de fornecedor, concorrente ou internet), resultado (ganho, perdido, em aberto ou referência), concorrente e valor do vencedor, fornecedor e marca, custo (só gestão), link ou fonte, confiança e quem registrou. Nada é apagado: revisão substituída, proposta cancelada e preço tirado das contas ficam marcados, fora do mínimo, da mediana e da taxa de ganho.\n\nCarga inicial e Compras. Toque em \"Carga inicial e Compras\". A prévia mostra, por origem, o que já está e o que entra, e o que ficou de fora da C1 de propósito: 360 preços públicos de lote, valor global ou mensal; os valores do Drive que não são preço unitário de um serviço da tabela; as linhas de deslocamento do CRM. A carga só acrescenta o que falta: rodar de novo não repete nada. As cotações de fornecedor já lançadas em Compras entram como \"cotação de fornecedor\" (o valor é o custo); Compras não muda. Cotação nova em Compras entra na próxima carga.\n\nO que só a gestão vê. Custo de cada preço praticado (o custo cadastrado no CRM e o da proposta), a margem bruta (preço menos custo, antes de impostos), o preço de compra dos fornecedores, o histórico por fornecedor e a relação entre a mediana de venda e a de compra.\n\nTirar das contas. Em \"Ver o item\", \"Tirar das contas\" pede o motivo (por exemplo \"valor da proposta inteira, não do item\"). O preço fica no banco, marcado; \"Voltar às contas\" desfaz."
+    },
+    {
+     "titulo": "Banco de preços (gestão) (parte 2)",
+     "texto": "Indicadores no Painel. No fim do Painel comercial: taxa de ganho por serviço e por produto, preço médio ganho e perdido (com a leitura \"ganhamos com preço menor\" ou \"mesmo com preço maior\"), de quem mais perdemos, quem mais vence as licitações do banco, propostas perdidas sem o vencedor informado e os itens ativos do catálogo sem preço de referência."
+    },
+    {
+     "titulo": "Margem sobre peças e produtos",
+     "texto": "Em Metodologia > Preço e desconto, \"Margem sobre peças e produtos\" (valor inicial 30%, da planilha interna citada na C1). O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor: custo ÷ (1 − margem). O vendedor vê o preço sugerido, nunca o custo nem a margem, e é avisado quando o preço do catálogo está abaixo do sugerido."
+    },
+    {
+     "titulo": "Orçamentista: IA e busca na internet",
+     "texto": "Sem a chave da IA, o Orçamentista funciona pelas regras. Com a chave (Administração > Chaves e senhas > Chave da IA), a IA lê o pedido e escreve a justificativa, sempre conferida contra os números do sistema; preço nunca vem da IA.\n\nA busca de preços na internet usa a mesma chave da IA com a pesquisa do Google, no servidor (a chave não vai ao navegador). Para ligar: Administração > Chaves e senhas > Inteligência artificial > \"Comercial: buscar preços na internet\" = Ligado. Resposta da IA sem pesquisa na web não é aproveitada; resultado sem link https ou sem valor é descartado; nada entra no banco sem a confirmação de quem buscou, com o link e, se o valor mudou, o motivo. Outro serviço de busca entra pelo ponto de extensão COM_BP_PROVEDORES_BUSCA (SGO_Comercial_BancoPrecos.js) e é escolhido em \"Comercial: serviço de busca de preços\"."
+    },
+    {
      "titulo": "Problemas comuns",
-     "texto": "Situação | O que fazer\"Só é alterada pela Diretoria ou pelo Administrador\" ao salvar Preço e desconto | O gestor comercial muda só o desconto. Desfaça a mudança nos outros campos e salve de novo.\n\"O catálogo mudou desde a prévia\" ao importar | Toque em \"Importar tabela de preços C1\" de novo e confira a prévia.\nO preço sugerido mudou e o preço de venda não | É o esperado: confirme em \"Usar o preço sugerido\", com o motivo.\n\"Impostos, comissão e margem passam de 95% do preço\" | Confira os percentuais: a conta do preço não fecha."
+     "texto": "Situação | O que fazer\"Só é alterada pela Diretoria ou pelo Administrador\" ao salvar Preço e desconto | O gestor comercial muda só o desconto. Desfaça a mudança nos outros campos e salve de novo.\n\"O catálogo mudou desde a prévia\" ao importar | Toque em \"Importar tabela de preços C1\" de novo e confira a prévia.\nO preço sugerido mudou e o preço de venda não | É o esperado: confirme em \"Usar o preço sugerido\", com o motivo.\n\"Impostos, comissão e margem passam de 95% do preço\" | Confira os percentuais: a conta do preço não fecha.\n\"O banco mudou desde a prévia\" na carga | Alguém carregou ou registrou preços. Toque em \"Carga inicial e Compras\" de novo.\nA busca na internet diz \"não está configurada\" | Ligue \"Comercial: buscar preços na internet\" em Chaves e senhas e confira a Chave da IA.\nUm preço distorce a mediana | Em \"Ver o item\", \"Tirar das contas\", com o motivo."
     }
    ]
   },
@@ -1659,7 +1675,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) e em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas). A gestão tem também o manual \"Preços, ficha de custo e parâmetros\" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial."
+     "texto": "Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços. A gestão tem também o manual \"Preços, ficha de custo e parâmetros\" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial."
     },
     {
      "titulo": "Para que serve",
@@ -1778,8 +1794,20 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "\"Reajustar preços\": escolha os itens (todos os ativos, por tipo, por categoria, pela busca ou os sem reajuste há mais de 12 meses), o percentual (negativo para redução), o índice (por exemplo IPCA de 12 meses, informado à mão), a vigência (hoje aplica agora; data futura agenda e a rotina aplica no dia), o arredondamento (centavos, R$ 1, R$ 5 ou R$ 10) e o motivo.\n\"Ver a prévia\" mostra cada item com o preço atual e o novo; nada muda até \"Aplicar o reajuste\". Se o catálogo mudar entre a prévia e o aplicar, o sistema pede a prévia de novo.\nCada lote (RJ-ano-número) fica em \"Histórico de reajustes\" com percentual, índice, vigência, quem, quando, motivo e cada item (preço anterior e novo). A Diretoria desfaz o último lote: os itens voltam ao preço anterior; item com o preço mudado depois do reajuste fica como está (e o histórico diz qual); reajuste agendado é cancelado.\nAs propostas já salvas guardam o preço antigo.\nItem sem reajuste há mais de 12 meses (configurável na política) tem o selo laranja \"sem reajuste\" no preço e aparece em Situação > \"Sem reajuste\". A data conta da última mudança do preço (cadastro ou reajuste); item que nunca mudou conta da data do cadastro, e os itens trazidos do CRM contam da importação (27/10/2026), porque o CRM não trouxe a data do último preço."
     },
     {
+     "titulo": "Orçamentista (parte 1)",
+     "texto": "Comercial > Orçamentista ajuda a montar o orçamento. Escreva o pedido como o cliente falou, por exemplo \"qualificação de 2 autoclaves de 300 L e 1 termodesinfectora em Anápolis, urgente\", e, se já souber, escolha o cliente e a unidade. Toque em \"Montar orçamento\".\n\nO Orçamentista mostra:\nos serviços e produtos do catálogo, com as quantidades. Serviço da tabela de preços que ainda não está no catálogo entra como item avulso, com o preço da tabela;\na faixa de prazo (urgente, quando o pedido diz \"urgente\"; licitação ou contrato sem acréscimo);\no deslocamento: a cidade, o km pela tabela de distâncias do Programa de conduta, quantos técnicos, dias e noites, e uma estimativa do item \"Despesas de deslocamento e estadia\";\npara cada item: o preço de tabela, o que já cobramos deste cliente, o que cobramos dos outros clientes (quanto ganhamos e quanto perdemos), a faixa de mercado das licitações e os riscos (\"acima do que já perdemos para...\", \"acima do maior preço com que já ganhamos\", \"acima do maior preço pago em compra pública\", \"abaixo do mínimo da política\");\numa justificativa e \"De onde veio cada número\".\n\nTudo é editável na tela: tire o que não for, acrescente do catálogo, mude a quantidade, o prazo e o deslocamento. Depois escolha a oportunidade e toque em \"Montar o rascunho\". A proposta abre nos quatro passos para você revisar e concluir. Sem oportunidade aberta, toque em \"Nova oportunidade\", crie e volte: o orçamento continua na tela. Se a oportunidade já tinha rascunho, os itens entram nele; o que já estava fica como estava, e a faixa e o deslocamento já escolhidos também.\n\nDentro da proposta, no passo 1, o botão \"Orçamentista\" faz a mesma análise com o cliente e a unidade da proposta; \"Pôr nesta proposta\" põe os itens no editor, e você salva."
+    },
+    {
+     "titulo": "Orçamentista (parte 2)",
+     "texto": "Os preços vêm sempre do sistema. Quando a chave da IA está cadastrada, a IA só lê o pedido e escreve a justificativa: ela nunca dá preço, cada item que ela aponta é conferido no catálogo, e a justificativa com número que não está no sistema é recusada. Sem a chave, o Orçamentista trabalha pelas regras (palavras e sinônimos). Nos riscos, a comparação é com o preço normal, porque o histórico e o mercado são de prazo normal; o acréscimo da urgência vem por cima.\n\n\"Buscar na internet\", em cada item, pesquisa preços públicos (editais, atas e lojas). Abra o link, confira o valor e toque em \"Confirmar e guardar no banco\": só o que você confirmar entra no banco de preços, com o link. Se mudar o valor, diga por quê. Sem a busca configurada, a tela avisa e o orçamento segue."
+    },
+    {
+     "titulo": "Banco de preços",
+     "texto": "Comercial > Banco de preços junta os preços de serviços e produtos: o que a Metrolabs já cobrou (propostas do SGO+, CRM antigo e propostas antigas do Drive), o mercado (licitações, concorrentes e internet) e as cotações de fornecedores de Compras. Busque pelo serviço, produto, cliente ou concorrente e filtre por tipo, origem, resultado, UF e período. Cada item mostra o mínimo, a mediana, o máximo, o último preço, o preço ganho e perdido, a taxa de ganho e, em \"Ver o item\", a taxa de ganho por faixa de preço e quem já ganhou de nós.\nToda proposta concluída entra sozinha, em aberto. Aprovada pelo cliente ou oportunidade ganha: ganha. Recusada ou perdida: perdida.\nNa recusa e na perda, diga quem ganhou e por quanto (o valor total da proposta vencedora; o sistema reparte pelos itens). É opcional, mas é o que mais ajuda nas próximas.\nPreço de concorrente, de internet ou de edital: \"Registrar preço\". Internet e licitação pedem o link.\nVocê vê os preços praticados e o mercado. Custo, margem e preço de compra dos fornecedores ficam com a gestão: a cotação de fornecedor aparece sem o valor.\nO valor das propostas antigas do Drive foi lido por regra e vem com o selo \"confiança baixa\"."
+    },
+    {
      "titulo": "Comercial no celular",
-     "texto": "No celular o menu lateral fica escondido. Toque em \"Comercial\" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Pedidos, Produtos, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo."
+     "texto": "No celular o menu lateral fica escondido. Toque em \"Comercial\" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Orçamentista, Pedidos, Produtos, Preços, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo."
     },
     {
      "titulo": "Como a busca funciona no Comercial",

@@ -201,6 +201,28 @@
     .cm-quadro-preco { margin: 0 -10px 10px; padding: 8px 10px; }
     .cm-acoes button, .cm-acoes .btn-secondary, .cm-acoes .btn-primary, .cm-item-orig button, .cmk-card .cmk-bts button, .cm-campo input, .cm-campo select { min-height: 44px; }
   }
+  /* 01/11/2026 (Comercial C3): Orçamentista e Banco de preços. Toque de 44 px; folga no fim para os botões redondos do canto. */
+  .cm-c3-shell { padding-bottom: 120px; }
+  .cm-orc-cli #cmCliCt, .cm-orc-cli #cmCliEq { display: none; }
+  .cm-orc-item .cm-orc-linha { display: grid; grid-template-columns: 140px 1fr auto; gap: 8px 12px; align-items: end; margin: 6px 0; }
+  .cm-orc-item .cm-orc-linha .cm-campo { margin: 0; }
+  .cm-orc-preco b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .cm-orc-refs { margin: 4px 0 6px 18px; padding: 0; font-size: 12.5px; line-height: 1.5; }
+  .cm-orc-refs li { margin-bottom: 2px; overflow-wrap: anywhere; }
+  .cm-orc-det summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+  .cm-orc button, .cm-bp-grupo button, .cm-bp-linhas button, #cmWebRes button, .cm-vencedor input { min-height: 44px; }
+  .cm-bp-num { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px 14px; margin: 6px 0; font-size: 12.5px; }
+  .cm-bp-num > div { min-width: 0; overflow-wrap: anywhere; }
+  .cm-bp-num span { display: block; } .cm-bp-num b { font-variant-numeric: tabular-nums; }
+  .cm-bp-fora { opacity: .6; }
+  .cm-bp-linhas { table-layout: fixed; }
+  .cm-bp-linhas td { overflow-wrap: anywhere; }
+  .cm-bp-linhas th:nth-child(1) { width: 90px; } .cm-bp-linhas th:nth-child(3) { width: 110px; } .cm-bp-linhas th:nth-child(4), .cm-bp-linhas th:nth-child(5) { width: 120px; } .cm-bp-linhas th:nth-child(7) { width: 100px; } .cm-bp-linhas th:nth-child(8) { width: 140px; }
+  @media (max-width: 900px) {
+    .cm-orc-item .cm-orc-linha { grid-template-columns: 1fr 1fr; }
+    .cm-orc-item .cm-orc-linha .cm-orc-preco { grid-column: 1 / -1; order: -1; }
+    .cm-bp-num { grid-template-columns: 1fr 1fr; }
+  }
 </style>
 
 <script>
@@ -213,7 +235,8 @@
   // ==========================================================
   var CM = { ini: null, mod: "", hojePapel: "", visao: "quadro", filtro: { situacao: "ABERTA" }, filtroProp: { situacao: "ABERTAS" }, cache: {} };
   var CM_MODS = { comercial: "Hoje no Comercial", comercial_oportunidades: "Oportunidades", comercial_propostas: "Propostas", comercial_pedidos: "Pedidos aprovados",
-    comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial", comercial_kanban: "Quadro do funil", comercial_gantt: "Gantt comercial" };
+    comercial_catalogo: "Produtos e serviços", comercial_painel: "Painel comercial", comercial_metodologia: "Metodologia comercial", comercial_kanban: "Quadro do funil", comercial_gantt: "Gantt comercial",
+    comercial_orcamentista: "Orçamentista", comercial_precos: "Banco de preços" };
 
   function Com_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
   function Com_$_(id) { return document.getElementById(id); }
@@ -268,8 +291,8 @@
   // Causa: no celular o menu lateral fica escondido e o atalho "Comercial" da tela inicial só abria a tela Hoje; Produtos e
   // serviços, Pedidos, Quadro, Gantt, Painel e Metodologia não tinham caminho (só pela lupa). Agora toda tela do Comercial no
   // celular abre com a barra de seções, com as mesmas regras do menu do computador.
-  var CM_NAV = [["comercial", "Hoje"], ["comercial_oportunidades", "Oportunidades"], ["comercial_propostas", "Propostas"], ["comercial_pedidos", "Pedidos"],
-    ["comercial_catalogo", "Produtos"], ["comercial_kanban", "Quadro"], ["comercial_gantt", "Gantt"], ["comercial_painel", "Painel"], ["comercial_metodologia", "Metodologia"]];
+  var CM_NAV = [["comercial", "Hoje"], ["comercial_oportunidades", "Oportunidades"], ["comercial_propostas", "Propostas"], ["comercial_orcamentista", "Orçamentista"], ["comercial_pedidos", "Pedidos"],
+    ["comercial_catalogo", "Produtos"], ["comercial_precos", "Preços"], ["comercial_kanban", "Quadro"], ["comercial_gantt", "Gantt"], ["comercial_painel", "Painel"], ["comercial_metodologia", "Metodologia"]];
   function Com_navMobileHtml_(mod, nivel) {
     var itens = CM_NAV.filter(function (x) { return Com_modVisivel_(x[0], nivel); });
     if (itens.length < 2) return "";
@@ -315,7 +338,8 @@
         if (barra && ativo.getBoundingClientRect) { var nb = barra.getBoundingClientRect(), ab = ativo.getBoundingClientRect(); barra.scrollLeft += (ab.left - nb.left) - (nb.width - ab.width) / 2; }
       }
       var mapa = { comercial: Comercial_renderHoje_, comercial_oportunidades: Comercial_renderOportunidades_, comercial_propostas: Comercial_renderPropostas_, comercial_pedidos: Comercial_renderPedidos_,
-        comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_, comercial_kanban: Comercial_renderKanban_, comercial_gantt: Comercial_renderGantt_ };
+        comercial_catalogo: Comercial_renderCatalogo_, comercial_painel: Comercial_renderPainel_, comercial_metodologia: Comercial_renderMetodologia_, comercial_kanban: Comercial_renderKanban_, comercial_gantt: Comercial_renderGantt_,
+        comercial_orcamentista: Comercial_renderOrcamentista_, comercial_precos: Comercial_renderBanco_ };
       (mapa[mod] || Comercial_renderHoje_)(corpo, alvo || {});
       if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) Com_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
     });
@@ -668,8 +692,8 @@
       ganha: function () { if (!confirm("Marcar a oportunidade " + o.codigo + " como ganha? Depois, registre a resposta do cliente na proposta e passe o pedido aos setores.")) return; Com_chamar_("ganhar", { id: o.id }, function (x) { recarregar(x.message); }, function (m) { Com_msg_(area, m); }); },
       perda: function () {
         area.innerHTML = '<div class="cm-caixa"><h3>Registrar perda</h3><p class="cm-meta">' + Com_esc_(ini.regraPerda) + '</p>' + Com_campo_("Motivo", '<select id="cmLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') +
-          Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmLApr" maxlength="2000"></textarea>') + '<div id="cmLMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmLOk">Registrar perda</button></div></div>';
-        Com_$_("cmLOk").onclick = function () { Com_chamar_("perder", { id: o.id, motivo: Com_$_("cmLMot").value, aprendizado: Com_$_("cmLApr").value }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmLMsg", m); }); };
+          Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmLApr" maxlength="2000"></textarea>') + Comercial_vencedorHtml_("cmLV") + '<div id="cmLMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmLOk">Registrar perda</button></div></div>';
+        Com_$_("cmLOk").onclick = function () { Com_chamar_("perder", Object.assign({ id: o.id, motivo: Com_$_("cmLMot").value, aprendizado: Com_$_("cmLApr").value }, Comercial_vencedorLer_("cmLV")), function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmLMsg", m); }); };
       },
       pedirReabrir: function () { var m = window.prompt("Por que reabrir? (vai para a Caixa de decisões da gestão comercial)"); if (m) Com_chamar_("pedirReabertura", { id: o.id, motivo: m }, function (x) { recarregar(x.message); }, function (e) { alert(e); }); },
       reabrir: function () {
@@ -813,12 +837,12 @@
         area.innerHTML = '<div class="cm-caixa"><h3>Resposta do cliente</h3>' + Com_campo_("O cliente", '<select id="cmRResp"><option value="APROVADA">Aprovou</option><option value="RECUSADA">Recusou</option></select>') +
           '<div id="cmRAprov">' + Com_campo_("Arquivo do aceite (obrigatório)", '<input type="file" id="cmRArq" accept=".pdf,.png,.jpg,.jpeg,.eml,.msg,.txt,.doc,.docx">', "E-mail de aprovação salvo em PDF, pedido de compra ou proposta assinada. Fica na pasta do cliente.") +
           '<label class="cm-check"><input type="checkbox" id="cmRGanha" checked> Marcar a oportunidade como ganha</label></div>' +
-          '<div id="cmRRec" style="display:none">' + Com_campo_("Motivo", '<select id="cmRMot">' + Com_opcoes_(p.motivosRecusa || ini.motivosPerda, "", "Escolha o motivo") + '</select>') + '</div>' +
+          '<div id="cmRRec" style="display:none">' + Com_campo_("Motivo", '<select id="cmRMot">' + Com_opcoes_(p.motivosRecusa || ini.motivosPerda, "", "Escolha o motivo") + '</select>') + Comercial_vencedorHtml_("cmRV") + '</div>' +
           Com_campo_("Data da resposta", '<input type="date" id="cmRData" value="' + Com_hojeIso_(0) + '">') + Com_campo_("O que o cliente disse", '<textarea id="cmRTexto" maxlength="2000"></textarea>') +
           '<div id="cmRMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmROk2">Registrar</button></div></div>';
         Com_$_("cmRResp").onchange = function () { var ap = this.value === "APROVADA"; Com_$_("cmRAprov").style.display = ap ? "" : "none"; Com_$_("cmRRec").style.display = ap ? "none" : ""; };
         Com_$_("cmROk2").onclick = function () {
-          var enviar = function (arq) { Com_chamar_("respostaCliente", { id: p.id, resposta: Com_$_("cmRResp").value, texto: Com_$_("cmRTexto").value, motivo: Com_$_("cmRMot").value, data: Com_$_("cmRData").value, marcarGanha: Com_$_("cmRGanha").checked, arquivo: arq }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmRMsg", m); }, { carregando: "Registrando a resposta…" }); };
+          var enviar = function (arq) { Com_chamar_("respostaCliente", { id: p.id, resposta: Com_$_("cmRResp").value, texto: Com_$_("cmRTexto").value, motivo: Com_$_("cmRMot").value, data: Com_$_("cmRData").value, marcarGanha: Com_$_("cmRGanha").checked, arquivo: arq, concorrente: Comercial_vencedorLer_("cmRV").concorrente, valorVencedor: Comercial_vencedorLer_("cmRV").valorVencedor }, function (x) { recarregar(x.message); }, function (m) { Com_msg_("cmRMsg", m); }, { carregando: "Registrando a resposta…" }); };
           var f = Com_$_("cmRArq").files[0];
           if (Com_$_("cmRResp").value === "APROVADA" && f) { if (f.size > 10 * 1024 * 1024) { Com_msg_("cmRMsg", "O arquivo passa de 10 MB. Salve em PDF menor e anexe de novo."); return; } var rd = new FileReader(); rd.onload = function () { enviar({ nome: f.name, tipo: f.type || "application/octet-stream", base64: String(rd.result).replace(/^data:[^,]+,/, "") }); }; rd.readAsDataURL(f); }
           else enviar(null);
@@ -879,7 +903,7 @@
     h += '<section class="cm-painel" data-painel="1"><h3>1. Itens</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
       Com_campo_("Tipo de orçamento", '<select id="cmPrTipo">' + Com_opcoes_(opTipo, p.tipoOrcamentoEscolhido || "") + '</select>', "Muda os dizeres do documento (apresentação, prazo, local, responsabilidades e aceite). Ao trocar, o rascunho é salvo e os textos padrão passam para o modelo escolhido; o que você escreveu fica.") +
       (p.escopoTermosLegado ? '<div class="cm-faixa">As cláusulas que estavam na descrição (texto do CRM antigo) saíram daqui: agora vão fixas no documento, na seção "Termos e condições da contratação". Ficou só o restante. Ao salvar o rascunho, a descrição é gravada assim.</div>' : '') +
-      '<div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
+      '<div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button><button type="button" class="btn-secondary" id="cmAddOrc"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Orçamentista</button></div><div id="cmOrcAviso" aria-live="polite"></div>' +
       '<p class="cm-meta">O prazo de cada item vem da faixa da proposta (passo 3). Para um item com prazo diferente, troque o "Prazo" dele: o preço de tabela acompanha a faixa.</p>' +
       '<div class="cm-grade2" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
       Com_campo_("Descrição (opcional)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:70px" placeholder="Só o que for específico desta proposta. Os termos e condições vão fixos no documento.">' + Com_esc_(p.escopo) + '</textarea>') + '</div>' +
@@ -1042,6 +1066,8 @@
       buscar();
     };
     var dsc = Com_$_("cmPrDesc"); if (dsc) dsc.oninput = Comercial_totais_;
+    // 01/11/2026 (Comercial C3): o Orçamentista dentro da proposta (põe os itens no editor; o vendedor salva)
+    var orcB = Com_$_("cmAddOrc"); if (orcB) orcB.onclick = function () { Comercial_orcamentistaNaProposta_(p); };
   }
   function Comercial_desenharItens_() {
     var alvo = Com_$_("cmItens"); if (!alvo) return;
@@ -1584,7 +1610,9 @@
       h += '<div class="cm-caixa"><h3>Propostas</h3><p class="cm-txt">Enviadas ' + i.propostas.enviadas + ' · aprovadas ' + i.propostas.aprovadas + ' · recusadas ' + i.propostas.recusadas + ' · vencidas sem resposta ' + i.propostas.vencidas + ' · desconto médio ' + Com_esc_(i.propostas.descontoMedioTxt) + ' · tempo médio até a 1ª proposta ' + Com_esc_(i.tempoPrimeiraPropostaTxt) + '</p></div>';
       if (i.porVendedor && i.porVendedor.length) h += '<div class="cm-caixa"><h3>Por vendedor</h3><table class="cm-tabela"><thead><tr><th>Vendedor</th><th class="n">Abertas</th><th class="n">Sem próxima ação</th><th class="n">Paradas</th><th class="n">Ganhas</th><th class="n">Valor ganho</th><th class="n">Perdidas</th></tr></thead><tbody>' +
         i.porVendedor.map(function (v) { return '<tr><td data-r="Vendedor"><b>' + Com_esc_(v.nome) + '</b></td><td class="n" data-r="Abertas">' + v.abertas + '</td><td class="n" data-r="Sem próxima ação">' + v.semProxima + '</td><td class="n" data-r="Paradas">' + v.paradas + '</td><td class="n" data-r="Ganhas">' + v.ganhas + '</td><td class="n" data-r="Valor ganho">' + Com_esc_(Comercial_moeda_(v.valorGanho)) + '</td><td class="n" data-r="Perdidas">' + v.perdidas + '</td></tr>'; }).join("") + '</tbody></table></div>';
+      if (ini.gestao) h += '<div id="cmPainelBanco"><div class="cm-vazio">Carregando o banco de preços…</div></div>';
       alvo.innerHTML = h;
+      if (ini.gestao) Comercial_painelBanco_(Com_$_("cmPainelBanco"));
     }, function (m) { Com_msg_("cmPainel", m); });
   }
 
@@ -1802,7 +1830,8 @@
       cmp("cmPrImp", p.impostosPct, "Impostos sobre a nota (%)", "PIS, COFINS e ISS no Lucro Real. Saem do preço antes da sobra.", { reservado: true }) +
       cmp("cmPrCom", p.comissaoPct, "Comissão de venda (%)", "Sobre a venda dos itens (o deslocamento não paga comissão).", { reservado: true, prov: "comissaoPct" }) +
       cmp("cmPrAlvo", p.margemAlvoPct, "Margem alvo (%)", "O que deve sobrar para a empresa no preço de tabela.", { reservado: true }) +
-      cmp("cmPrMin", p.margemMinPct, "Margem mínima (%)", "Abaixo dela a proposta vai para a Caixa de decisões e só a Diretoria aprova.", { reservado: true }) + '</div>' +
+      cmp("cmPrMin", p.margemMinPct, "Margem mínima (%)", "Abaixo dela a proposta vai para a Caixa de decisões e só a Diretoria aprova.", { reservado: true }) +
+      cmp("cmPrPecas", p.margemPecasPct, "Margem sobre peças e produtos (%)", "Preço de venda sugerido = custo do fornecedor ÷ (1 − margem). Valor inicial: 30%, da planilha interna citada na C1.", { reservado: true }) + '</div>' +
       (m.margemUnificada && !res ? '<p class="cm-meta">Uma margem mínima só, depois de impostos, comissão e deslocamento. ' + Com_esc_({ PRECIFICACAO: 'Valor que já estava na política de precificação.', POLITICA_ANTIGA: 'Valor trazido da antiga margem da política de desconto (' + vb(m.margemUnificada.antes.politica) + '%).', PADRAO: 'Valor inicial da tabela C1 (não havia margem gravada).' }[m.margemUnificada.origem] || '') + (m.margemUnificada.divergiam ? ' A antiga margem da política de desconto era ' + vb(m.margemUnificada.antes.politica) + '% e ficou registrada no histórico.' : '') + '</p>' : '') + '</div>';
     h += '<div class="cm-caixa"><h3>Custo do serviço (ficha de custo)</h3><div class="cm-grade2">' +
       cmp("cmPrHT", ch.TECNICO, "Custo da hora do técnico (R$)", "Salário com encargos dividido pelas horas faturáveis do mês.", { reservado: true, prov: "custoHora" }) +
@@ -1868,7 +1897,7 @@
         var g = function (k) { var el = row.querySelector('[data-fk="' + k + '"]'); return el ? (el.type === "checkbox" ? el.checked : el.value) : ""; };
         faixas.push({ codigo: row.getAttribute("data-faixa"), nome: g("nome"), diasUteis: n(g("diasUteis")), acrescimoPct: n(g("acrescimoPct")), ativa: row.getAttribute("data-faixa") === "NORMAL" ? true : g("ativa") });
       });
-      out.precificacao = Object.assign({}, atual, { impostosPct: n(v("cmPrImp")), comissaoPct: n(v("cmPrCom")), margemAlvoPct: n(v("cmPrAlvo")), margemMinPct: n(v("cmPrMin")),
+      out.precificacao = Object.assign({}, atual, { impostosPct: n(v("cmPrImp")), comissaoPct: n(v("cmPrCom")), margemAlvoPct: n(v("cmPrAlvo")), margemMinPct: n(v("cmPrMin")), margemPecasPct: n(v("cmPrPecas")),
         custoHora: { TECNICO: n(v("cmPrHT")), ENGENHEIRO: n(v("cmPrHE")) }, custoFixoPct: n(v("cmPrFixo")), horaAvulsa: n(v("cmPrAvulsa")),
         valorKm: n(v("cmPrKm")), taxaViagem: { valor: n(v("cmPrTaxa")), rotulo: v("cmPrTaxaRot"), kmMinimo: n(v("cmPrTaxaKm")) }, alimentacaoPessoaDia: n(v("cmPrAli")), hospedagemPessoaNoite: n(v("cmPrHosp")),
         estradaKmMinimo: n(v("cmPrEstr")), alimentacaoForaDaRegiao: ck("cmPrAliReg"), velocidadeMediaKmh: n(v("cmPrVel")), origemPadrao: v("cmPrOri"), repassePadrao: v("cmPrRep") || "ITEM",
@@ -1905,6 +1934,360 @@
     };
     Com_$_("cmMet").querySelectorAll("[data-preco-vivo], [data-fk]").forEach(function (x) { x.addEventListener("input", desenhar); x.addEventListener("change", desenhar); });
     desenhar();
+  }
+
+  // =========================================================
+  // ORÇAMENTISTA E BANCO DE PREÇOS (01/11/2026, Comercial C3)
+  // Servidor: SGO_Comercial_Orcamentista.js (orcamentista, orcamentistaMontar) e SGO_Comercial_BancoPrecos.js (banco*).
+  // Os preços vêm sempre do servidor; a tela só escolhe itens, quantidades, faixa e deslocamento. Nada é enviado ao cliente.
+  // A tela não se redesenha sozinha: o resultado fica até a pessoa analisar de novo, montar ou sair.
+  // =========================================================
+  /** "Quem ganhou e por quanto" (recusa da proposta e perda da oportunidade): opcional, incentivado. */
+  function Comercial_vencedorHtml_(p) {
+    return '<div class="cm-caixa cm-vencedor"><p class="cm-txt"><b>Quem ganhou e por quanto?</b> <span class="cm-meta">Opcional, mas vale muito: vai para o banco de preços e o Orçamentista avisa nas próximas propostas deste serviço.</span></p><div class="cm-grade2">' +
+      Com_campo_("Concorrente que ganhou", '<input id="' + p + 'Conc" maxlength="160" placeholder="Nome da empresa" autocomplete="off">') +
+      Com_campo_("Por quanto (R$, total da proposta vencedora)", '<input id="' + p + 'Venc" inputmode="decimal" placeholder="Ex.: 5.400,00">', "O sistema reparte o valor pelos itens, na proporção dos preços desta proposta.") + '</div></div>';
+  }
+  function Comercial_vencedorLer_(p) { return { concorrente: Com_$_(p + "Conc") ? Com_$_(p + "Conc").value : "", valorVencedor: Com_$_(p + "Venc") ? Com_$_(p + "Venc").value : "" }; }
+
+  // ---------------- Orçamentista (entrada do Comercial) ----------------
+  function Comercial_renderOrcamentista_(div) {
+    var ini = CM.ini;
+    div.innerHTML = '<div class="module-shell cm-c3-shell">' + Comercial_cabecalho_("Orçamentista", "Descreva o pedido do cliente: o Orçamentista acha os serviços e produtos do catálogo, sugere o prazo e o deslocamento e mostra o histórico, o mercado e o risco de cada preço. Você revisa e monta o rascunho; nada vai ao cliente sozinho.",
+      '<button type="button" class="btn-secondary" id="cmOrcBanco"><i class="fas fa-database" aria-hidden="true"></i>&nbsp;Banco de preços</button>') +
+      '<div class="cm-caixa" id="cmOrcForm">' + Com_campo_("O que o cliente pediu", '<textarea id="cmOrcTxt" maxlength="2000" style="min-height:96px" placeholder="Ex.: qualificação de 2 autoclaves de 300 L e 1 termodesinfectora em Anápolis, urgente">' + Com_esc_(CM.orcTexto || "") + '</textarea>',
+        "Escreva como o cliente falou: equipamento, quantidade, serviço, cidade e prazo. Pode também deixar em branco e escolher só o cliente.") +
+      '<div class="cm-orc-cli" id="cmOrcCli"></div><div id="cmOrcMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmOrcIr"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Montar orçamento</button>' +
+      (ini.iaDisponivel ? '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmOrcSemIA"> Só pelas regras (sem IA)</label>' : '') + '</div>' +
+      (ini.iaDisponivel ? '' : '<p class="cm-meta">Sem a chave da IA, o Orçamentista trabalha pelas regras (palavras e sinônimos do catálogo). Os preços são os mesmos: vêm sempre do sistema.</p>') + '</div><div id="cmOrcRes"></div></div>';
+    Com_$_("cmOrcBanco").onclick = function () { abrir("comercial_precos"); };
+    var sel = Comercial_seletorCliente_(Com_$_("cmOrcCli"), CM.orcCli || {}, null);
+    var ir = function () {
+      var v = sel.valor(); CM.orcTexto = Com_$_("cmOrcTxt").value; CM.orcCli = { clienteId: v.clienteId, cliente: Com_$_("cmCliBusca") ? Com_$_("cmCliBusca").value : "", unidadeId: v.unidadeId };
+      Com_msg_("cmOrcMsg", "");
+      Com_chamar_("orcamentista", { texto: CM.orcTexto, clienteId: v.clienteId, unidadeId: v.unidadeId, semIA: !!(Com_$_("cmOrcSemIA") && Com_$_("cmOrcSemIA").checked) }, function (r) {
+        CM.orc = r;
+        var res = Com_$_("cmOrcRes"); if (!res) return;
+        Comercial_desenharOrcamento_(res, r, { modo: "entrada" });
+        if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Orçamentista: resultado", function () { var x = Com_$_("cmOrcRes"); if (x) x.innerHTML = ""; var f = Com_$_("cmOrcForm"); if (f && f.scrollIntoView) f.scrollIntoView({ block: "start" }); }, { chave: "cm-orc-res" });
+        if (res.scrollIntoView) res.scrollIntoView({ block: "start" });
+      }, function (m) { Com_msg_("cmOrcMsg", m); }, { carregando: "O Orçamentista está lendo o pedido e conferindo o catálogo e o banco de preços…" });
+    };
+    Com_$_("cmOrcIr").onclick = ir;
+    // voltando de "Nova oportunidade": o último resultado continua na tela
+    if (CM.orc && !CM.orc.propostaId) Comercial_desenharOrcamento_(Com_$_("cmOrcRes"), CM.orc, { modo: "entrada" });
+  }
+
+  /** Dentro da proposta: a mesma análise, e "Pôr nesta proposta" põe os itens no editor (o vendedor salva). */
+  function Comercial_orcamentistaNaProposta_(p) {
+    var ov = Com_modal_("Orçamentista", Com_campo_("O que o cliente pediu", '<textarea id="cmOrcPTxt" maxlength="2000" style="min-height:90px" placeholder="Ex.: calibração de 10 termômetros e 2 balanças pediátricas, prazo normal"></textarea>', "O cliente e a unidade são os desta proposta. Os itens que já estão na proposta ficam como estão.") +
+      '<div id="cmOrcPMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmOrcPIr">Analisar o pedido</button></div><div id="cmOrcPRes"></div>', '', 760);
+    Com_$_("cmOrcPIr").onclick = function () {
+      Com_chamar_("orcamentista", { texto: Com_$_("cmOrcPTxt").value, propostaId: p.id }, function (r) {
+        Comercial_desenharOrcamento_(Com_$_("cmOrcPRes"), r, { modo: "proposta", aplicar: function (st) { Comercial_aplicarOrcamentoNoEditor_(st); ov.remove(); } });
+        if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Orçamentista", function () { ov.remove(); }, { chave: "cm-orc-prop" });
+      }, function (m) { Com_msg_("cmOrcPMsg", m); }, { carregando: "O Orçamentista está lendo o pedido…" });
+    };
+    Com_$_("cmOrcPTxt").focus();
+  }
+
+  /** Itens do Orçamentista no editor da proposta (merge: o que já está fica; faixa e deslocamento só se ainda estão no padrão). */
+  function Comercial_aplicarOrcamentoNoEditor_(st) {
+    Comercial_lerItens_();
+    var ja = {}, novos = 0, repetidos = [];
+    CM.itens.forEach(function (i) { ja[i.produtoId || ("C:" + String(i.codigo || "").toUpperCase())] = 1; });
+    var fx = Com_$_("cmPrFaixa"), notas = [];
+    if (fx && st.faixa && fx.value === "NORMAL" && st.faixa !== "NORMAL") { fx.value = st.faixa; if (fx.onchange) fx.onchange(); }
+    else if (fx && st.faixa && fx.value !== st.faixa) notas.push("a faixa de prazo da proposta foi mantida");
+    var lic = Com_$_("cmPrLic"); if (lic && st.licitacao && !lic.checked) { lic.checked = true; if (lic.onchange) lic.onchange(); }
+    st.itens.forEach(function (x) {
+      var k = x.produtoId || ("C:" + String(x.codigoCatalogo || "").toUpperCase());
+      if (ja[k]) { repetidos.push(x.nome); return; }
+      ja[k] = 1; novos++;
+      var it = { produtoId: x.produtoId || "", codigo: x.codigoCatalogo || "", tipo: x.tipo, descricao: x.nome, detalhe: x.produtoId ? "" : (x.detalhe || ""), quantidade: x.quantidade, unidade: x.unidade || "un.", precoTabelaNormal: x.produtoId ? x.precoNormal : 0, custoUnitario: x.custoUnitario, faixa: "" };
+      it.precoUnitario = x.produtoId ? Comercial_precoNaFaixa_(x.precoNormal, Comercial_faixaDoItem_(it), x.tipo) : x.precoTabela;
+      it.precoTabela = x.produtoId ? it.precoUnitario : 0;
+      CM.itens.push(it);
+    });
+    var d = st.deslocamento, ha = Com_$_("cmCvHa");
+    if (d && d.ha && ha && !ha.value) {
+      ha.value = "SIM"; if (ha.onchange) ha.onchange();
+      var por_ = function (id, v, sempre) { var e = Com_$_(id); if (!e || v === null || v === undefined || v === "") return; if (sempre || String(e.value).trim() === "") e.value = String(v).replace(".", ","); };
+      por_("cmCvDest", d.destino); por_("cmCvKm", d.kmTrecho); por_("cmCvDias", d.dias, true); por_("cmCvNoi", d.noites, true); por_("cmCvTec", d.tecnicos, true); por_("cmCvEng", d.engenheiros, true);
+      if (Com_$_("cmCvKm") && d.kmFonte) Com_$_("cmCvKm").setAttribute("data-fonte", d.kmFonte);
+      notas.push("o deslocamento foi preenchido no passo 2 (" + d.destino + ")");
+    } else if (d && d.ha && ha && ha.value) notas.push("o deslocamento que já estava no passo 2 foi mantido");
+    Comercial_desenharItens_();
+    var av = Com_$_("cmOrcAviso");
+    if (av) av.innerHTML = '<div class="cm-faixa ok">' + Com_esc_(novos + (novos === 1 ? " item do Orçamentista foi posto" : " itens do Orçamentista foram postos") + " na proposta" + (repetidos.length ? "; " + repetidos.length + " já estava(m) e ficou(aram) como estava(m)" : "") + (notas.length ? "; " + notas.join("; ") : "") + ". Confira e toque em Salvar rascunho: nada foi gravado ainda.") + '</div>';
+  }
+
+  /** Desenha o resultado do Orçamentista. op: { modo: 'entrada'|'proposta', aplicar(st) } */
+  function Comercial_desenharOrcamento_(alvo, r, op) {
+    if (!alvo) return;
+    var ini = CM.ini, st = { itens: (r.itens || []).map(function (i) { return Object.assign({}, i); }), faixa: r.prazo.faixa, licitacao: !!r.prazo.licitacao, deslocamento: r.deslocamento && r.deslocamento.ha ? Object.assign({}, r.deslocamento) : null };
+    var desenhar = function () {
+      var h = '<div class="cm-caixa cm-orc"><h3>Orçamento sugerido</h3>' +
+        (r.origem === "IA" || !(r.avisos || []).some(function (a) { return /Sem a chave da IA/.test(a); }) ? '<div class="cm-faixa ' + (r.origem === "IA" ? "ok" : "") + '">' + Com_esc_(r.origem === "IA" ? "A IA leu o pedido e cada item foi conferido no catálogo e na tabela. Os preços são do sistema." : "Itens identificados pelas regras (palavras e sinônimos do catálogo). Os preços são do sistema.") + '</div>' : '') +
+        (r.avisos || []).map(function (a) { return '<div class="cm-faixa aviso">' + Com_esc_(a) + '</div>'; }).join("");
+      if (!st.itens.length) h += '<div class="cm-faixa aviso">Nenhum item do catálogo foi identificado. Escreva o equipamento e o serviço (por exemplo "calibração de 10 termômetros") e toque de novo em Montar orçamento, ou acrescente do catálogo abaixo.</div>';
+      if (r.naoEntendi && r.naoEntendi.length) h += '<div class="cm-faixa aviso"><b>Não identificado:</b> ' + Com_esc_(r.naoEntendi.join("; ")) + '. Acrescente do catálogo ou digite o item no passo 1 da proposta.</div>';
+      // prazo e deslocamento
+      var faixasOp = (r.faixas || []).map(function (x) { return { v: x.codigo, t: Comercial_rotuloFaixa_(x) }; });
+      h += '<div class="cm-grade2">' + Com_campo_("Prazo", '<select id="cmOrcFx">' + Com_opcoes_(faixasOp, st.faixa) + '</select>', r.prazo.motivo) +
+        (r.licitacaoSemAcrescimo ? Com_campo_("Licitação ou contrato", '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmOrcLic"' + (st.licitacao ? " checked" : "") + '> Sem acréscimo de urgência</label>') : '') + '</div>';
+      var d = st.deslocamento;
+      h += '<p class="cm-sec">Deslocamento</p>' + (d ? '<div class="cm-grade2">' + Com_campo_("Cidade de destino", '<input id="cmOrcDest" list="cmOrcRefs" maxlength="300" value="' + Com_esc_(d.destino || "") + '"><datalist id="cmOrcRefs">' + (r.referencias || []).map(function (x) { return '<option value="' + Com_esc_(x.destino) + '">' + Com_esc_(String(x.km).replace(".", ",") + " km") + '</option>'; }).join("") + '</datalist>', d.fonte || "") +
+          Com_campo_("Km do trecho (só a ida)", '<input id="cmOrcKm" inputmode="decimal" value="' + Com_esc_(d.kmTrecho === null || d.kmTrecho === undefined ? "" : String(d.kmTrecho).replace(".", ",")) + '">', d.faltaKm ? "A cidade não está na tabela de distâncias da Conduta: digite o km." : "") + '</div>' +
+          '<div class="cm-grade4">' + ["Técnicos|cmOrcTec|tecnicos", "Engenheiros|cmOrcEng|engenheiros", "Dias|cmOrcDias|dias", "Noites|cmOrcNoi|noites"].map(function (x) { var a = x.split("|"); return Com_campo_(a[0], '<input id="' + a[1] + '" inputmode="numeric" value="' + Com_esc_(d[a[2]]) + '">'); }).join("") + '</div>' +
+          '<p class="cm-meta">' + Com_esc_(d.motivo || "") + (r.viagem ? ' Estimativa: custo ' + Com_esc_(r.viagem.custoTxt) + ', item "Despesas de deslocamento e estadia" ' + Com_esc_(r.viagem.precoTxt) + ' (o passo 2 da proposta recalcula, com o pedágio).' : '') + '</p>'
+        : '<p class="cm-meta">' + Com_esc_((r.deslocamento && r.deslocamento.motivo) || "Sem deslocamento sugerido.") + '</p>');
+      // itens
+      h += '<p class="cm-sec">Itens</p><div class="cm-lista">' + st.itens.map(function (i, k) {
+        var preco = i.produtoId ? Comercial_precoNaFaixa_(i.precoNormal, st.faixa, i.tipo, st.licitacao) : i.precoTabela;
+        i.precoAgora = preco;
+        return '<div class="cm-card cm-orc-item" data-oi="' + k + '"><p class="cm-card-tit">' + Com_esc_(i.nome) + '</p>' +
+          '<p class="cm-meta">' + (i.semCatalogo ? '<span class="cm-selo laranja">Fora do catálogo (avulso)</span>' : '<span class="cm-selo verde">Catálogo ' + Com_esc_(i.codigoCatalogo) + '</span>') + Com_esc_(i.tipoNome || "") + (i.trecho ? ' · do pedido: "' + Com_esc_(i.trecho) + '"' : '') + '</p>' +
+          '<div class="cm-orc-linha"><div class="cm-campo"><label for="cmOrcQ' + k + '">Quantidade</label><input id="cmOrcQ' + k + '" data-oq="' + k + '" inputmode="decimal" value="' + Com_esc_(String(i.quantidade).replace(".", ",")) + '"></div>' +
+          '<div class="cm-orc-preco"><span class="cm-meta">Preço de tabela</span><b>' + Com_esc_(Comercial_moeda_(preco)) + '</b> <span class="cm-meta">cada · total ' + Com_esc_(Comercial_moeda_(preco * Comercial_num_(i.quantidade))) + '</span>' +
+          (ini.veCusto && i.precoMinimoTxt ? '<br><span class="cm-meta">Mínimo (só gestão): ' + Com_esc_(i.precoMinimoTxt) + (i.custoTxt ? ' · custo ' + Com_esc_(i.custoTxt) : '') + '</span>' : '') +
+          (i.precoSugeridoCompraTxt ? '<br><span class="cm-meta">Sugerido pela última compra: ' + Com_esc_(i.precoSugeridoCompraTxt) + '</span>' : '') + '</div>' +
+          '<button type="button" class="btn-secondary" data-otira="' + k + '">Tirar</button></div>' +
+          '<ul class="cm-orc-refs">' + (i.cliente ? '<li><b>Com este cliente:</b> ' + Com_esc_(i.cliente.txt) + '</li>' : (r.cliente ? '<li><b>Com este cliente:</b> nenhum preço no banco.</li>' : '')) +
+          (i.parecidos && i.parecidos.txt ? '<li>' + Com_esc_(i.parecidos.txt) + '</li>' : '') + (i.mercado && i.mercado.txt ? '<li>' + Com_esc_(i.mercado.txt) + '</li>' : '') + '</ul>' +
+          (i.riscos || []).map(function (x) { return '<div class="cm-faixa ' + (x.nivel === "erro" ? "erro" : x.nivel === "aviso" ? "aviso" : "") + '">' + Com_esc_(x.texto) + '</div>'; }).join("") +
+          '<details class="cm-orc-det"><summary class="cm-meta">De onde veio cada número</summary><ul class="cm-orc-refs">' + (i.motivo ? '<li>Item: ' + Com_esc_(i.motivo) + '.</li>' : '') + (i.fontes || []).map(function (f) { return '<li>' + Com_esc_(f) + '</li>'; }).join("") + '</ul></details>' +
+          '<div class="cm-acoes"><button type="button" class="btn-secondary" data-oweb="' + k + '"><i class="fas fa-globe" aria-hidden="true"></i>&nbsp;Buscar na internet</button></div></div>';
+      }).join("") + '</div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmOrcAddCat">Acrescentar do catálogo</button></div>';
+      var tot = st.itens.reduce(function (s, i) { return s + i.precoAgora * Comercial_num_(i.quantidade); }, 0);
+      h += '<p class="cm-txt"><b>Total dos itens pela tabela: ' + Com_esc_(Comercial_moeda_(tot)) + '</b>' + (r.viagem && st.deslocamento ? ' · deslocamento estimado ' + Com_esc_(r.viagem.precoTxt) : '') + '</p>';
+      h += '<details class="cm-caixa" open><summary><b>Justificativa</b> <span class="cm-meta">' + (r.justificativaOrigem === "IA" ? "escrita pela IA e conferida contra os números do sistema" : "pelas regras") + '; não vai ao cliente</span></summary><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(r.justificativa || "") + '</p>' +
+        '<p class="cm-sec">Como o Orçamentista chegou aqui</p><ul class="cm-orc-refs">' + (r.explicacao || []).map(function (x) { return '<li>' + Com_esc_(x) + '</li>'; }).join("") + '</ul></details>';
+      // ações
+      if (op.modo === "proposta") h += '<div id="cmOrcAMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmOrcAplicar"' + (st.itens.length ? '' : ' disabled') + '>Pôr nesta proposta</button></div>';
+      else {
+        var opos = r.oportunidades || [];
+        h += '<p class="cm-sec">Montar o rascunho da proposta</p>' + (opos.length ? Com_campo_("Oportunidade", '<select id="cmOrcOpo">' + Com_opcoes_(opos.map(function (o) { return { v: o.id, t: o.codigo + " · " + o.cliente + " · " + o.titulo }; }), opos.length === 1 ? opos[0].id : "", "Escolha a oportunidade") + '</select>', "Se a oportunidade já tem rascunho, os itens entram nele (o que já está fica como está).")
+          : '<div class="cm-faixa aviso">' + Com_esc_(r.cliente ? "Este cliente não tem oportunidade aberta sua. Crie a oportunidade e volte aqui: este orçamento continua na tela." : "Não há oportunidade aberta sua" + (r.cliente ? "" : " (escolha o cliente acima para filtrar)") + ". Crie a oportunidade e volte aqui: este orçamento continua na tela.") + '</div>') +
+          '<div id="cmOrcAMsg"></div><div class="cm-acoes">' + (opos.length ? '<button type="button" class="btn-primary" id="cmOrcMontar"' + (st.itens.length ? '' : ' disabled') + '>Montar o rascunho</button>' : '') + '<button type="button" class="btn-secondary" id="cmOrcNovaOpo">Nova oportunidade</button></div>' +
+          '<p class="cm-meta">O rascunho abre nos 4 passos da proposta para você revisar. Nada é enviado ao cliente.</p>';
+      }
+      alvo.innerHTML = h + '</div>';
+      ligar();
+    };
+    var lerCampos = function () {
+      st.itens.forEach(function (i, k) { var q = Com_$_("cmOrcQ" + k); if (q) i.quantidade = q.value; });
+      if (Com_$_("cmOrcFx")) st.faixa = Com_$_("cmOrcFx").value;
+      if (Com_$_("cmOrcLic")) st.licitacao = Com_$_("cmOrcLic").checked;
+      if (st.deslocamento) { var g = function (id) { var e = Com_$_(id); return e ? e.value : ""; }; Object.assign(st.deslocamento, { destino: g("cmOrcDest"), kmTrecho: g("cmOrcKm"), tecnicos: g("cmOrcTec"), engenheiros: g("cmOrcEng"), dias: g("cmOrcDias"), noites: g("cmOrcNoi") }); }
+    };
+    var ligar = function () {
+      ["cmOrcFx", "cmOrcLic"].forEach(function (id) { var e = Com_$_(id); if (e) e.onchange = function () { lerCampos(); desenhar(); }; });
+      alvo.querySelectorAll("[data-oq]").forEach(function (e) { e.onchange = function () { lerCampos(); desenhar(); }; });
+      var km = Com_$_("cmOrcKm"), dest = Com_$_("cmOrcDest");
+      if (km) km.oninput = function () { if (st.deslocamento) st.deslocamento.kmFonte = "DIGITADO"; };
+      if (dest) dest.onchange = function () { var x = (r.referencias || []).filter(function (y) { return Comercial_semAcento_(y.destino) === Comercial_semAcento_(dest.value); })[0]; if (x && km) { km.value = String(x.km).replace(".", ","); if (st.deslocamento) st.deslocamento.kmFonte = "REFERENCIA_CONDUTA"; } };
+      alvo.querySelectorAll("[data-otira]").forEach(function (b) { b.onclick = function () { lerCampos(); st.itens.splice(+b.getAttribute("data-otira"), 1); desenhar(); }; });
+      alvo.querySelectorAll("[data-oweb]").forEach(function (b) { b.onclick = function () { var i = st.itens[+b.getAttribute("data-oweb")]; Comercial_buscarInternet_({ descricao: i.nome, tipo: i.tipo, itemCodigo: i.codigo, uf: "" }); }; });
+      var add = Com_$_("cmOrcAddCat");
+      if (add) add.onclick = function () {
+        lerCampos();
+        Comercial_escolherDoCatalogo_(function (x) {
+          st.itens.push({ produtoId: x.id, codigoCatalogo: x.codigo, codigo: x.ficha && x.ficha.tabela ? String(x.ficha.tabela).replace(/^C1:/, "") : "", nome: x.nome, tipo: x.tipo, tipoNome: x.tipoNome, unidade: x.unidade, precoNormal: x.preco, precoTabela: x.preco, quantidade: 1, custoUnitario: x.custo,
+            riscos: [], fontes: ["Acrescentado do catálogo por você: preço de tabela " + x.precoTxt + ". Para ver o histórico e o mercado deste item, escreva-o no pedido e monte de novo."], parecidos: { txt: "" }, mercado: { txt: x.ficha && x.ficha.mercadoTxt ? "Mercado público (tabela C1): " + x.ficha.mercadoTxt : "" } });
+          desenhar();
+        });
+      };
+      var ap = Com_$_("cmOrcAplicar");
+      if (ap) ap.onclick = function () { lerCampos(); op.aplicar(st); };
+      var mt = Com_$_("cmOrcMontar");
+      if (mt) mt.onclick = function () {
+        lerCampos();
+        var oid = Com_$_("cmOrcOpo") ? Com_$_("cmOrcOpo").value : "";
+        if (!oid) { Com_msg_("cmOrcAMsg", "Escolha a oportunidade em que o rascunho vai ficar (ou crie uma nova)."); return; }
+        Com_chamar_("orcamentistaMontar", { oportunidadeId: oid, itens: st.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", quantidade: i.quantidade }; }), prazo: { faixa: st.faixa, licitacao: st.licitacao },
+          deslocamento: st.deslocamento, justificativa: r.justificativa || "" }, function (x) {
+          CM.orc = null; Comercial_aposAlterar_();
+          abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(x.propostaId, x.message); }, 500);
+        }, function (m) { Com_msg_("cmOrcAMsg", m); }, { carregando: "Montando o rascunho…" });
+      };
+      var no = Com_$_("cmOrcNovaOpo");
+      if (no) no.onclick = function () { lerCampos(); CM.orc = r; r.itens = st.itens; Comercial_formOportunidade_(null); };
+    };
+    desenhar();
+  }
+
+  /** Escolher um item do catálogo (a mesma busca de Produtos e serviços). */
+  function Comercial_escolherDoCatalogo_(aoEscolher) {
+    var ov = Com_modal_("Escolher do catálogo", '<div class="cm-campo"><label for="cmEsc3Busca">Buscar no catálogo</label><input id="cmEsc3Busca" type="search" autocomplete="off" placeholder="Código, nome ou descrição"></div><p class="cm-meta" id="cmEsc3Info" aria-live="polite"></p><div id="cmEsc3Res"></div>', '', 560);
+    var t = null;
+    var buscar = function () {
+      Com_chamar_("catalogo", { busca: Com_$_("cmEsc3Busca") ? Com_$_("cmEsc3Busca").value : "", situacao: "ATIVOS", limite: 40 }, function (r) {
+        var res = Com_$_("cmEsc3Res"); if (!res) return;
+        res.innerHTML = r.produtos.length ? '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '" tabindex="0" role="button"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + '</div>'; }).join("") + '</div>' : '<div class="cm-vazio">Nenhum item ativo com esse texto. A busca ignora acentos e aceita parte das palavras.</div>';
+        res.querySelectorAll("[data-k]").forEach(function (el) { el.onclick = function () { ov.remove(); aoEscolher(r.produtos[+el.getAttribute("data-k")]); }; el.onkeydown = function (e) { if (e.key === "Enter") el.onclick(); }; });
+      }, function (m) { Com_msg_("cmEsc3Res", m); }, { chave: "catalogoC3" });
+    };
+    Com_$_("cmEsc3Busca").oninput = function () { clearTimeout(t); t = setTimeout(buscar, 350); };
+    buscar();
+  }
+
+  // ---------------- Buscar na internet (nada grava sem confirmação) ----------------
+  function Comercial_buscarInternet_(q) {
+    var ov = Com_modal_("Buscar preço na internet", '<p class="cm-txt"><b>' + Com_esc_(q.descricao) + '</b></p><div id="cmWebRes"><div class="cm-vazio">Pesquisando preços públicos (editais, atas e lojas)…</div></div>', '', 720);
+    if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Buscar na internet", function () { ov.remove(); }, { chave: "cm-web" });
+    Com_chamar_("bancoBuscarInternet", q, function (r) {
+      var res = Com_$_("cmWebRes"); if (!res) return;
+      if (!r.configurada) { res.innerHTML = '<div class="cm-faixa aviso"><b>A busca na internet não está configurada:</b> ' + Com_esc_(r.falta || "") + '.</div><p class="cm-txt">' + Com_esc_(r.comoConfigurar || "") + '</p><p class="cm-meta">Nada travou: o orçamento segue com o catálogo e o banco de preços.</p>'; return; }
+      var origens = [{ v: "INTERNET", t: "Internet (loja, distribuidor, site)" }, { v: "LICITACAO", t: "Licitação ou compra pública" }];
+      res.innerHTML = '<div class="cm-faixa">' + Com_esc_(r.message || "") + '</div>' + (r.resultados || []).map(function (x, k) {
+        return '<div class="cm-card" data-w="' + k + '"><p class="cm-card-tit">' + Com_esc_(x.valorTxt) + (x.unidade ? ' / ' + Com_esc_(x.unidade) : '') + ' · ' + Com_esc_(x.onde || x.titulo || "") + '</p>' +
+          '<p class="cm-meta">' + Com_esc_([x.dataTxt, x.uf].filter(Boolean).join(" · ")) + ' · <a href="' + Com_esc_(x.url) + '" target="_blank" rel="noopener noreferrer">abrir a página</a></p>' + (x.trecho ? '<p class="cm-txt">"' + Com_esc_(x.trecho) + '"</p>' : '') +
+          '<div class="cm-grade3">' + Com_campo_("Origem", '<select data-wo>' + Com_opcoes_(origens, /\.gov\.br|pncp|licita|pregao|compras/i.test(x.url) ? "LICITACAO" : "INTERNET") + '</select>') + Com_campo_("Valor conferido (R$)", '<input data-wv inputmode="decimal" value="' + Com_esc_(String(x.valor).replace(".", ",")) + '">') + Com_campo_("Observação", '<input data-wobs maxlength="200" placeholder="Obrigatória se mudar o valor">') + '</div>' +
+          '<div data-wmsg></div><div class="cm-acoes"><button type="button" class="btn-primary" data-wok>Confirmar e guardar no banco</button></div></div>';
+      }).join("");
+      res.querySelectorAll("[data-w]").forEach(function (c) {
+        var k = +c.getAttribute("data-w");
+        c.querySelector("[data-wok]").onclick = function () {
+          Com_chamar_("bancoConfirmarInternet", { token: r.token, indice: k, origem: c.querySelector("[data-wo]").value, valor: c.querySelector("[data-wv]").value, observacao: c.querySelector("[data-wobs]").value }, function (y) {
+            c.querySelector("[data-wmsg]").innerHTML = '<div class="cm-faixa ok">' + Com_esc_(y.message) + '</div>'; c.querySelector("[data-wok]").disabled = true;
+          }, function (m) { Com_msg_(c.querySelector("[data-wmsg]"), m); });
+        };
+      });
+    }, function (m) { Com_msg_("cmWebRes", m); });
+  }
+
+  // ---------------- Banco de preços ----------------
+  function Comercial_renderBanco_(div) {
+    var ini = CM.ini, f = CM.filtroBp || { busca: "", tipo: "", origem: "", resultado: "", uf: "", de: "", ate: "" };
+    CM.filtroBp = f;
+    div.innerHTML = '<div class="module-shell cm-c3-shell">' + Comercial_cabecalho_("Banco de preços", "Preços de serviços e produtos que a Metrolabs já cobrou (propostas e CRM), o mercado (licitações, concorrentes e internet) e, para a gestão, as cotações de fornecedores. Por item: mínimo, mediana, máximo, último preço e taxa de ganho por faixa de preço.",
+      '<button type="button" class="btn-secondary" id="cmBpOrc"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Orçamentista</button><button type="button" class="btn-secondary" id="cmBpReg">Registrar preço</button>' + (ini.gestao ? '<button type="button" class="btn-secondary" id="cmBpCarga">Carga inicial e Compras</button>' : '')) +
+      '<div class="cm-filtros"><div style="flex:2 1 220px"><label for="cmBpBusca">Buscar</label><input id="cmBpBusca" type="search" value="' + Com_esc_(f.busca) + '" placeholder="Serviço, produto, cliente, concorrente, fornecedor"></div>' +
+      '<div><label for="cmBpTipo">Tipo</label><select id="cmBpTipo">' + Com_opcoes_([{ v: "SERVICO", t: "Serviço" }, { v: "PRODUTO", t: "Produto" }], f.tipo, "Todos") + '</select></div>' +
+      '<div><label for="cmBpOri">Origem</label><select id="cmBpOri"></select></div><div><label for="cmBpRes">Resultado</label><select id="cmBpRes"></select></div><div><label for="cmBpUf">UF</label><select id="cmBpUf"></select></div>' +
+      '<div><label for="cmBpDe">De</label><input id="cmBpDe" type="date" value="' + Com_esc_(f.de) + '"></div><div><label for="cmBpAte">Até</label><input id="cmBpAte" type="date" value="' + Com_esc_(f.ate) + '"></div>' +
+      '<div><button type="button" class="btn-primary" id="cmBpIr">Buscar</button></div></div><div id="cmBpCorpo"><div class="cm-vazio">Carregando o banco de preços…</div></div></div>';
+    Com_$_("cmBpOrc").onclick = function () { abrir("comercial_orcamentista"); };
+    Com_$_("cmBpReg").onclick = function () { Comercial_registrarPreco_({}, function () { Comercial_renderBanco_(div); }); };
+    if (Com_$_("cmBpCarga")) Com_$_("cmBpCarga").onclick = function () { Comercial_cargaBanco_(function () { Comercial_renderBanco_(div); }); };
+    var ler = function () { f.busca = Com_$_("cmBpBusca").value; f.tipo = Com_$_("cmBpTipo").value; f.origem = Com_$_("cmBpOri").value; f.resultado = Com_$_("cmBpRes").value; f.uf = Com_$_("cmBpUf").value; f.de = Com_$_("cmBpDe").value; f.ate = Com_$_("cmBpAte").value; };
+    var carregar = function () {
+      Com_chamar_("bancoPrecos", f, function (r) {
+        var o = Com_$_("cmBpOri"); if (!o) return;
+        o.innerHTML = Com_opcoes_(Object.keys(r.origens).map(function (k) { return { v: k, t: r.origens[k] }; }), f.origem, "Todas");
+        Com_$_("cmBpRes").innerHTML = Com_opcoes_(Object.keys(r.resultados).map(function (k) { return { v: k, t: r.resultados[k] }; }), f.resultado, "Todos");
+        Com_$_("cmBpUf").innerHTML = Com_opcoes_(r.ufs, f.uf, "Todas");
+        Comercial_desenharBanco_(Com_$_("cmBpCorpo"), r);
+      }, function (m) { Com_msg_("cmBpCorpo", m); }, { chave: "bancoPrecos" });
+    };
+    Com_$_("cmBpIr").onclick = function () { ler(); carregar(); };
+    Com_$_("cmBpBusca").onkeydown = function (e) { if (e.key === "Enter") { ler(); carregar(); } };
+    carregar();
+  }
+  function Comercial_estatHtml_(g) {
+    var kv = function (r, v) { return '<div><span class="cm-meta">' + Com_esc_(r) + '</span><b>' + Com_esc_(v) + '</b></div>'; };
+    return '<div class="cm-bp-num">' + kv("Mínimo / mediana / máximo", g.geral && g.geral.n ? Comercial_moeda_(g.geral.min) + " / " + Comercial_moeda_(g.geral.mediana) + " / " + Comercial_moeda_(g.geral.max) : "—") +
+      kv("Último preço", g.ultimo ? g.ultimo.valorTxt + " em " + g.ultimo.data + " (" + g.ultimo.origemNome.toLowerCase() + ")" : "—") + kv("Ganho (mediana)", g.ganhoTxt) + kv("Perdido (mediana)", g.perdidoTxt) + kv("Taxa de ganho", g.taxaGanhoTxt) +
+      kv("Mercado público", g.mercado && g.mercado.n ? Comercial_moeda_(g.mercado.mediana) + " (" + g.mercado.n + ")" : "—") +
+      (g.compraTxt !== undefined ? kv("Preço de compra (só gestão)", g.compra && g.compra.n ? Comercial_moeda_(g.compra.mediana) + " (" + g.compra.n + ")" : "—") : "") +
+      (g.margemBrutaTxt ? kv("Margem bruta (só gestão)", g.margemBrutaTxt) : "") + (g.margemCompraVendaTxt ? kv("Venda sobre compra (só gestão)", g.margemCompraVendaTxt) : "") + '</div>';
+  }
+  function Comercial_faixasHtml_(fx) {
+    if (!fx || !fx.length) return '<p class="cm-meta">Sem propostas ganhas ou perdidas deste item para calcular a taxa por faixa de preço.</p>';
+    return '<table class="cm-tabela"><thead><tr><th>Faixa de preço</th><th class="n">Decididas</th><th class="n">Ganhas</th><th class="n">Taxa de ganho</th></tr></thead><tbody>' + fx.map(function (x) {
+      return '<tr><td data-r="Faixa">' + Com_esc_(x.deTxt + " a " + x.ateTxt) + '</td><td class="n" data-r="Decididas">' + x.n + '</td><td class="n" data-r="Ganhas">' + x.ganhos + '</td><td class="n" data-r="Taxa de ganho"><b>' + Com_esc_(x.taxaTxt) + '</b></td></tr>'; }).join("") + '</tbody></table>';
+  }
+  function Comercial_linhasBancoHtml_(linhas, gestao) {
+    return '<table class="cm-tabela cm-bp-linhas"><thead><tr><th>Data</th><th>Item</th><th class="n">Valor</th><th>Origem</th><th>Resultado</th><th>Cliente, fornecedor ou fonte</th><th>Local</th>' + (gestao ? '<th></th>' : '') + '</tr></thead><tbody>' + linhas.map(function (l) {
+      return '<tr' + (l.valida ? '' : ' class="cm-bp-fora"') + '><td data-r="Data">' + Com_esc_(l.data) + '</td><td data-r="Item">' + Com_esc_(l.descricao) + (l.valida ? '' : ' <span class="cm-selo cinza">fora das contas: ' + Com_esc_(l.situacaoMotivo || l.situacao) + '</span>') + (l.confianca === "BAIXA" ? ' <span class="cm-selo laranja">confiança baixa</span>' : '') + '</td>' +
+        '<td class="n" data-r="Valor">' + Com_esc_(l.valorTxt) + (l.custoTxt ? '<br><span class="cm-meta">custo ' + Com_esc_(l.custoTxt) + '</span>' : '') + '</td><td data-r="Origem">' + Com_esc_(l.origemNome) + '</td><td data-r="Resultado">' + Com_esc_(l.resultadoNome) + (l.concorrente ? '<br><span class="cm-meta">' + Com_esc_((l.resultado === "PERDIDO" ? "ganhou: " : "vencedor: ") + l.concorrente + (l.valorVencedorTxt ? " · " + l.valorVencedorTxt : "")) + '</span>' : '') + '</td>' +
+        '<td data-r="Fonte">' + Com_esc_([l.cliente, l.fornecedor, l.marca].filter(Boolean).join(" · ")) + '<br><span class="cm-meta">' + Com_esc_(l.fonte) + '</span>' + (l.link ? ' <a href="' + Com_esc_(l.link) + '" target="_blank" rel="noopener noreferrer">link</a>' : '') + '</td><td data-r="Local">' + Com_esc_([l.cidade, l.uf].filter(Boolean).join("/")) + '</td>' +
+        (gestao ? '<td data-r="Contas">' + (l.valida ? '<button type="button" class="btn-secondary" data-bpfora="' + Com_esc_(l.id) + '">Tirar das contas</button>' : (l.situacao === "DESCONSIDERADO" ? '<button type="button" class="btn-secondary" data-bpvolta="' + Com_esc_(l.id) + '">Voltar às contas</button>' : '')) + '</td>' : '') + '</tr>'; }).join("") + '</tbody></table>';
+  }
+  function Comercial_desenharBanco_(alvo, r) {
+    if (!r.total) { alvo.innerHTML = '<div class="cm-vazio">O banco de preços ainda está vazio. ' + (r.gestao ? 'Toque em "Carga inicial e Compras" para trazer os preços da C1 (CRM antigo, propostas antigas e licitações) e as cotações de Compras.' : 'A gestão comercial faz a carga inicial; enquanto isso, as propostas concluídas já entram sozinhas.') + '</div>'; return; }
+    var h = '<p class="cm-meta">' + Com_esc_(r.encontradas.toLocaleString("pt-BR") + " de " + r.total.toLocaleString("pt-BR") + " preços no banco · " + r.gruposTotal + (r.gruposTotal === 1 ? " item" : " itens") + (r.gruposTotal > r.grupos.length ? " (os " + r.grupos.length + " com mais preços abaixo; afine a busca)" : "")) + '</p>';
+    if (!r.veCusto) h += '<p class="cm-meta">Você vê os preços praticados e o mercado. Custo, margem e preço de compra ficam com a gestão.</p>';
+    h += r.grupos.length ? '<div class="cm-lista">' + r.grupos.map(function (g, k) {
+      return '<div class="cm-card cm-bp-grupo"><p class="cm-card-tit">' + Com_esc_(g.item) + '</p><p class="cm-meta">' + Com_esc_(g.tipoNome + " · " + g.n + (g.n === 1 ? " preço" : " preços") + (g.compras && !r.veCusto ? " · " + g.compras + " cotação(ões) de fornecedor (valor só para a gestão)" : "")) + '</p>' + Comercial_estatHtml_(g) +
+        '<div class="cm-acoes"><button type="button" class="btn-secondary" data-bpg="' + k + '">Ver o item</button></div></div>'; }).join("") + '</div>' : '<div class="cm-vazio">Nenhum preço com esses filtros.</div>';
+    if (r.linhas.length) h += '<details class="cm-caixa" style="margin-top:12px"><summary><b>Preços mais recentes</b> <span class="cm-meta">' + r.linhas.length + (r.limitado ? " de " + r.encontradas.toLocaleString("pt-BR") : "") + '</span></summary>' + Comercial_linhasBancoHtml_(r.linhas, false) + '</details>';
+    alvo.innerHTML = h;
+    alvo.querySelectorAll("[data-bpg]").forEach(function (b) { b.onclick = function () { Comercial_abrirItemBanco_(r.grupos[+b.getAttribute("data-bpg")].itemChave); }; });
+  }
+  function Comercial_abrirItemBanco_(itemChave) {
+    var g = Com_gaveta_("Banco de preços", '<div class="cm-vazio">Carregando…</div>');
+    if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Banco de preços: item", function () { g.remove(); }, { chave: "cm-bp-item" });
+    var carregar = function (aviso) {
+      Com_chamar_("bancoItem", { itemChave: itemChave }, function (r) {
+        var c = Com_$_("cmGavetaCorpo"); if (!c) return;
+        g.querySelector("h3").textContent = r.item;
+        var h = (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '') + '<p class="cm-meta">' + Com_esc_((r.tipo === "PRODUTO" ? "Produto" : "Serviço") + (r.c1 ? " da tabela C1 (" + r.c1 + ")" : "") + (r.unidadeC1 ? " · " + r.unidadeC1 : "") + " · " + r.totalLinhas + " preço(s)") + '</p>' + Comercial_estatHtml_(r) +
+          '<p class="cm-sec">Taxa de ganho por faixa de preço</p>' + Comercial_faixasHtml_(r.faixas);
+        if (r.vencedores && r.vencedores.length) h += '<p class="cm-sec">Perdemos para</p><ul class="cm-orc-refs">' + r.vencedores.map(function (x) { return '<li>' + Com_esc_(x.concorrente + ": " + x.valorTxt + " (" + x.data + ")") + '</li>'; }).join("") + '</ul>';
+        if (r.porFornecedor && r.porFornecedor.length) h += '<p class="cm-sec">Por fornecedor (só gestão)</p><table class="cm-tabela"><thead><tr><th>Fornecedor</th><th class="n">Cotações</th><th class="n">Mediana</th><th class="n">Última</th></tr></thead><tbody>' + r.porFornecedor.map(function (x) { return '<tr><td data-r="Fornecedor">' + Com_esc_(x.fornecedor + (x.marca ? " · " + x.marca : "")) + '</td><td class="n" data-r="Cotações">' + x.n + '</td><td class="n" data-r="Mediana">' + Com_esc_(x.medianaTxt) + '</td><td class="n" data-r="Última">' + Com_esc_(x.ultimoTxt + " em " + x.ultimaData) + '</td></tr>'; }).join("") + '</tbody></table>';
+        h += '<div class="cm-acoes"><button type="button" class="btn-secondary" id="cmBpiWeb"><i class="fas fa-globe" aria-hidden="true"></i>&nbsp;Buscar na internet</button><button type="button" class="btn-secondary" id="cmBpiReg">Registrar preço deste item</button></div>';
+        h += '<p class="cm-sec">Todos os preços</p>' + Comercial_linhasBancoHtml_(r.linhas, r.gestao) + '<div id="cmBpiMsg"></div>';
+        c.innerHTML = h;
+        Com_$_("cmBpiWeb").onclick = function () { Comercial_buscarInternet_({ descricao: r.item, tipo: r.tipo, itemCodigo: r.c1, uf: "" }); };
+        Com_$_("cmBpiReg").onclick = function () { Comercial_registrarPreco_({ descricao: r.item, tipo: r.tipo, itemCodigo: r.c1 }, function (m) { carregar(m); }); };
+        c.querySelectorAll("[data-bpfora],[data-bpvolta]").forEach(function (b) {
+          b.onclick = function () {
+            var fora = b.hasAttribute("data-bpfora"), mot = fora ? window.prompt("Por que tirar este preço das contas? (fica no banco, marcado; por exemplo: valor da proposta inteira, não do item)") : "";
+            if (fora && !mot) return;
+            Com_chamar_("bancoDesconsiderar", { id: b.getAttribute(fora ? "data-bpfora" : "data-bpvolta"), desconsiderar: fora, motivo: mot }, function (x) { carregar(x.message); }, function (m) { Com_msg_("cmBpiMsg", m); });
+          };
+        });
+      }, function (m) { var c = Com_$_("cmGavetaCorpo"); if (c) Com_msg_(c, m); });
+    };
+    carregar("");
+  }
+  function Comercial_registrarPreco_(base, depois) {
+    var ini = CM.ini;
+    var origens = [{ v: "CONCORRENTE", t: "Preço de concorrente" }, { v: "INTERNET", t: "Internet (loja, distribuidor, site)" }, { v: "LICITACAO", t: "Licitação ou compra pública" }].concat(ini.gestao ? [{ v: "COTACAO_FORNECEDOR", t: "Cotação de fornecedor (preço de compra)" }] : []);
+    var ov = Com_modal_("Registrar preço", '<div class="cm-grade2">' + Com_campo_("De onde veio", '<select id="cmRgOri">' + Com_opcoes_(origens, "CONCORRENTE") + '</select>') + Com_campo_("Tipo", '<select id="cmRgTipo">' + Com_opcoes_([{ v: "SERVICO", t: "Serviço" }, { v: "PRODUTO", t: "Produto" }], base.tipo || "SERVICO") + '</select>') + '</div>' +
+      Com_campo_("Item", '<input id="cmRgDesc" maxlength="300" value="' + Com_esc_(base.descricao || "") + '" placeholder="Ex.: Qualificação térmica de autoclave 300 L">') +
+      '<div class="cm-grade3">' + Com_campo_("Valor unitário (R$)", '<input id="cmRgVal" inputmode="decimal">') + Com_campo_("Quantidade", '<input id="cmRgQtd" inputmode="decimal" value="1">') + Com_campo_("Data", '<input id="cmRgData" type="date" value="' + Com_hojeIso_(0) + '">') + '</div>' +
+      '<div class="cm-grade3">' + Com_campo_("Concorrente", '<input id="cmRgConc" maxlength="160">') + Com_campo_("Fornecedor ou loja", '<input id="cmRgForn" maxlength="160">') + Com_campo_("Marca (produto)", '<input id="cmRgMarca" maxlength="80">') + '</div>' +
+      '<div class="cm-grade3">' + Com_campo_("Cidade", '<input id="cmRgCid" maxlength="80">') + Com_campo_("UF", '<input id="cmRgUf" maxlength="2">') + Com_campo_("Link (obrigatório para internet e licitação)", '<input id="cmRgLink" maxlength="500" placeholder="https://">') + '</div>' +
+      Com_campo_("Fonte ou observação", '<input id="cmRgFonte" maxlength="200" placeholder="Ex.: proposta do concorrente mostrada pelo cliente">') + '<div id="cmRgMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Registrar</button>', 680);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      var v = function (id) { return Com_$_(id).value; };
+      Com_chamar_("bancoRegistrar", { origem: v("cmRgOri"), tipo: v("cmRgTipo"), descricao: v("cmRgDesc"), itemCodigo: base.itemCodigo || "", valor: v("cmRgVal"), quantidade: v("cmRgQtd"), data: v("cmRgData"), concorrente: v("cmRgConc"), fornecedor: v("cmRgForn"), marca: v("cmRgMarca"), cidade: v("cmRgCid"), uf: v("cmRgUf"), link: v("cmRgLink"), fonte: v("cmRgFonte") },
+        function (x) { ov.remove(); if (depois) depois(x.message); }, function (m) { Com_msg_("cmRgMsg", m); });
+    };
+  }
+  function Comercial_cargaBanco_(depois) {
+    var ov = Com_modal_("Carga inicial do banco de preços", '<div id="cmCgCorpo"><div class="cm-vazio">Conferindo o que já está no banco…</div></div>', '', 640);
+    Com_chamar_("bancoCargaPrevia", {}, function (r) {
+      var c = Com_$_("cmCgCorpo"); if (!c) return;
+      var tab = function (x) { return '<table class="cm-tabela"><thead><tr><th>Origem</th><th class="n">No arquivo</th><th class="n">Novos</th></tr></thead><tbody>' + x.porOrigem.map(function (o) { return '<tr><td data-r="Origem">' + Com_esc_(o.nome) + '</td><td class="n" data-r="No arquivo">' + o.total.toLocaleString("pt-BR") + '</td><td class="n" data-r="Novos"><b>' + o.novas.toLocaleString("pt-BR") + '</b></td></tr>'; }).join("") + '</tbody></table>'; };
+      var novas = r.c1.novas + r.compras.novas;
+      c.innerHTML = '<p class="cm-txt">A carga só acrescenta o que ainda não está no banco: rodar de novo não repete nada. Nada é apagado nem trocado.</p><p class="cm-sec">Tabela C1 (' + Com_esc_(r.versao) + ')</p>' + tab(r.c1) +
+        '<p class="cm-sec">Cotações de fornecedor em Compras</p>' + (r.compras.total ? tab(r.compras) : '<p class="cm-meta">Compras ainda não tem cotação lançada.</p>') +
+        (r.foraTxt.length ? '<p class="cm-sec">Ficaram de fora da C1, de propósito</p><ul class="cm-orc-refs">' + r.foraTxt.map(function (x) { return '<li>' + Com_esc_(x) + '</li>'; }).join("") + '</ul>' : '') +
+        '<div id="cmCgMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmCgOk"' + (novas ? '' : ' disabled') + '>' + (novas ? 'Carregar ' + novas.toLocaleString("pt-BR") + ' preços' : 'Nada a carregar') + '</button></div>';
+      Com_$_("cmCgOk").onclick = function () { Com_chamar_("bancoCarregar", { marca: r.marca }, function (x) { ov.remove(); alert(x.message); if (depois) depois(); }, function (m) { Com_msg_("cmCgMsg", m); }, { carregando: "Carregando o banco de preços…" }); };
+    }, function (m) { Com_msg_("cmCgCorpo", m); });
+  }
+  /** Painel (gestão): indicadores do banco de preços. */
+  function Comercial_painelBanco_(alvo) {
+    Com_chamar_("bancoIndicadores", {}, function (r) {
+      if (!alvo) return;
+      var tab = function (l) { return '<table class="cm-tabela"><thead><tr><th>Item</th><th class="n">Decididas</th><th class="n">Taxa de ganho</th><th class="n">Preço médio ganho</th><th class="n">Preço médio perdido</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td data-r="Item">' + Com_esc_(x.item) + (x.leitura ? '<br><span class="cm-meta">' + Com_esc_(x.leitura) + '</span>' : '') + '</td><td class="n" data-r="Decididas">' + x.decididas + '</td><td class="n" data-r="Taxa de ganho"><b>' + Com_esc_(x.taxaTxt) + '</b></td><td class="n" data-r="Ganho">' + Com_esc_(x.mediaGanhoTxt) + '</td><td class="n" data-r="Perdido">' + Com_esc_(x.mediaPerdidoTxt) + '</td></tr>'; }).join("") + '</tbody></table>'; };
+      var h = '<div class="cm-caixa"><h3>Banco de preços</h3><p class="cm-meta">' + Com_esc_(r.totalPrecos.toLocaleString("pt-BR") + " preços nas contas: " + r.porOrigem.filter(function (o) { return o.n; }).map(function (o) { return o.nome.toLowerCase() + " " + o.n.toLocaleString("pt-BR"); }).join(", ")) + '.</p>';
+      if (!r.totalPrecos) h += '<p class="cm-txt">O banco está vazio: faça a carga inicial em Comercial > Banco de preços.</p>';
+      h += '<p class="cm-sec">Taxa de ganho por serviço e preço médio ganho × perdido</p>' + (r.servicos.length ? tab(r.servicos) : '<p class="cm-meta">Sem serviços com propostas ganhas ou perdidas.</p>');
+      if (r.produtos.length) h += '<p class="cm-sec">Produtos</p>' + tab(r.produtos);
+      h += '<p class="cm-sec">Principais concorrentes (perdemos para)</p>' + (r.concorrentes.length ? '<ul class="cm-orc-refs">' + r.concorrentes.map(function (c) { return '<li>' + Com_esc_(c.nome + ": " + c.perdas + (c.perdas === 1 ? " perda" : " perdas") + (c.comValor ? " (" + c.comValor + " com o valor do vencedor)" : "")) + '</li>'; }).join("") + '</ul>' : '<p class="cm-meta">Nenhuma perda com o concorrente informado.</p>') +
+        (r.perdasSemVencedor ? '<p class="cm-txt">' + r.perdasSemVencedor + ' proposta(s) perdida(s) sem dizer quem ganhou: peça ao vendedor, o Orçamentista usa isso.</p>' : '');
+      if (r.vencedoresLicitacoes.length) h += '<p class="cm-sec">Quem mais vence as licitações do banco</p><ul class="cm-orc-refs">' + r.vencedoresLicitacoes.slice(0, 6).map(function (c) { return '<li>' + Com_esc_(c.nome + ": " + c.vezes + (c.ufs ? " (" + c.ufs + ")" : "")) + '</li>'; }).join("") + '</ul>';
+      h += '<p class="cm-sec">Itens do catálogo sem preço de referência (' + r.semReferenciaTotal + ')</p>' + (r.semReferencia.length ? '<p class="cm-txt">' + Com_esc_(r.semReferencia.map(function (x) { return x.nome; }).join("; ")) + (r.semReferenciaTotal > r.semReferencia.length ? "; e mais " + (r.semReferenciaTotal - r.semReferencia.length) : "") + '.</p><p class="cm-meta">Nesses itens o preço é só a conta da ficha: vale buscar na internet ou registrar o preço de um concorrente.</p>' : '<p class="cm-meta">Todos os itens ativos têm alguma referência.</p>');
+      alvo.innerHTML = h + '</div>';
+    }, function (m) { if (alvo) Com_msg_(alvo, m); });
   }
 
   // =========================================================
@@ -2156,12 +2539,12 @@
   function Comercial_kanbanPerder_(c, depois) {
     var ini = CM.ini;
     var ov = Com_modal_("Registrar a perda de " + c.codigo, '<p class="cm-txt"><b>' + Com_esc_(c.cliente) + '</b> · ' + Com_esc_(c.titulo) + '</p><p class="cm-meta">' + Com_esc_(ini.regraPerda) + '</p>' +
-      Com_campo_("Motivo", '<select id="cmKLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') + Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmKLApr" maxlength="2000"></textarea>') +
+      Com_campo_("Motivo", '<select id="cmKLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') + Com_campo_("O que aconteceu e o que aprender (mínimo 15 letras)", '<textarea id="cmKLApr" maxlength="2000"></textarea>') + Comercial_vencedorHtml_("cmKLV") +
       '<p class="cm-meta">As atividades abertas e as propostas sem resposta desta oportunidade são canceladas (ficam no histórico).</p><div id="cmKLMsg"></div>',
       '<button type="button" class="btn-secondary" data-x="c">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Registrar a perda</button>', 540);
     ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
     ov.querySelector('[data-x="ok"]').onclick = function () {
-      Com_chamar_("perder", { id: c.id, motivo: Com_$_("cmKLMot").value, aprendizado: Com_$_("cmKLApr").value }, function () { ov.remove(); Comercial_aposAlterar_(); if (depois) depois(); }, function (m) { Com_msg_("cmKLMsg", m); }, { carregando: "Registrando…" });
+      Com_chamar_("perder", Object.assign({ id: c.id, motivo: Com_$_("cmKLMot").value, aprendizado: Com_$_("cmKLApr").value }, Comercial_vencedorLer_("cmKLV")), function () { ov.remove(); Comercial_aposAlterar_(); if (depois) depois(); }, function (m) { Com_msg_("cmKLMsg", m); }, { carregando: "Registrando…" });
     };
   }
 

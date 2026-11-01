@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) e em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial.
+Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços. A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial.
 
 ## Para que serve
 
@@ -233,9 +233,39 @@ A gestão comercial e o Financeiro continuam sem esses limites.
 - As propostas já salvas guardam o preço antigo.
 - Item sem reajuste há mais de 12 meses (configurável na política) tem o selo laranja "sem reajuste" no preço e aparece em Situação > "Sem reajuste". A data conta da última mudança do preço (cadastro ou reajuste); item que nunca mudou conta da data do cadastro, e os itens trazidos do CRM contam da importação (27/10/2026), porque o CRM não trouxe a data do último preço.
 
+## Orçamentista
+
+Comercial > Orçamentista ajuda a montar o orçamento. Escreva o pedido como o cliente falou, por exemplo "qualificação de 2 autoclaves de 300 L e 1 termodesinfectora em Anápolis, urgente", e, se já souber, escolha o cliente e a unidade. Toque em "Montar orçamento".
+
+O Orçamentista mostra:
+
+- os serviços e produtos do catálogo, com as quantidades. Serviço da tabela de preços que ainda não está no catálogo entra como item avulso, com o preço da tabela;
+- a faixa de prazo (urgente, quando o pedido diz "urgente"; licitação ou contrato sem acréscimo);
+- o deslocamento: a cidade, o km pela tabela de distâncias do Programa de conduta, quantos técnicos, dias e noites, e uma estimativa do item "Despesas de deslocamento e estadia";
+- para cada item: o preço de tabela, o que já cobramos deste cliente, o que cobramos dos outros clientes (quanto ganhamos e quanto perdemos), a faixa de mercado das licitações e os riscos ("acima do que já perdemos para...", "acima do maior preço com que já ganhamos", "acima do maior preço pago em compra pública", "abaixo do mínimo da política");
+- uma justificativa e "De onde veio cada número".
+
+Tudo é editável na tela: tire o que não for, acrescente do catálogo, mude a quantidade, o prazo e o deslocamento. Depois escolha a oportunidade e toque em "Montar o rascunho". A proposta abre nos quatro passos para você revisar e concluir. Sem oportunidade aberta, toque em "Nova oportunidade", crie e volte: o orçamento continua na tela. Se a oportunidade já tinha rascunho, os itens entram nele; o que já estava fica como estava, e a faixa e o deslocamento já escolhidos também.
+
+Dentro da proposta, no passo 1, o botão "Orçamentista" faz a mesma análise com o cliente e a unidade da proposta; "Pôr nesta proposta" põe os itens no editor, e você salva.
+
+Os preços vêm sempre do sistema. Quando a chave da IA está cadastrada, a IA só lê o pedido e escreve a justificativa: ela nunca dá preço, cada item que ela aponta é conferido no catálogo, e a justificativa com número que não está no sistema é recusada. Sem a chave, o Orçamentista trabalha pelas regras (palavras e sinônimos). Nos riscos, a comparação é com o preço normal, porque o histórico e o mercado são de prazo normal; o acréscimo da urgência vem por cima.
+
+"Buscar na internet", em cada item, pesquisa preços públicos (editais, atas e lojas). Abra o link, confira o valor e toque em "Confirmar e guardar no banco": só o que você confirmar entra no banco de preços, com o link. Se mudar o valor, diga por quê. Sem a busca configurada, a tela avisa e o orçamento segue.
+
+## Banco de preços
+
+Comercial > Banco de preços junta os preços de serviços e produtos: o que a Metrolabs já cobrou (propostas do SGO+, CRM antigo e propostas antigas do Drive), o mercado (licitações, concorrentes e internet) e as cotações de fornecedores de Compras. Busque pelo serviço, produto, cliente ou concorrente e filtre por tipo, origem, resultado, UF e período. Cada item mostra o mínimo, a mediana, o máximo, o último preço, o preço ganho e perdido, a taxa de ganho e, em "Ver o item", a taxa de ganho por faixa de preço e quem já ganhou de nós.
+
+- Toda proposta concluída entra sozinha, em aberto. Aprovada pelo cliente ou oportunidade ganha: ganha. Recusada ou perdida: perdida.
+- Na recusa e na perda, diga quem ganhou e por quanto (o valor total da proposta vencedora; o sistema reparte pelos itens). É opcional, mas é o que mais ajuda nas próximas.
+- Preço de concorrente, de internet ou de edital: "Registrar preço". Internet e licitação pedem o link.
+- Você vê os preços praticados e o mercado. Custo, margem e preço de compra dos fornecedores ficam com a gestão: a cotação de fornecedor aparece sem o valor.
+- O valor das propostas antigas do Drive foi lido por regra e vem com o selo "confiança baixa".
+
 ## Comercial no celular
 
-No celular o menu lateral fica escondido. Toque em "Comercial" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Pedidos, Produtos, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo.
+No celular o menu lateral fica escondido. Toque em "Comercial" na tela inicial: toda tela do Comercial abre com a barra de seções no topo (Hoje, Oportunidades, Propostas, Orçamentista, Pedidos, Produtos, Preços, Quadro, Gantt, Painel e Metodologia). Arraste a barra para o lado para ver as outras seções; a seção aberta fica destacada. Cada pessoa vê as mesmas seções do menu do computador: o Financeiro vê Pedidos e Produtos; quem não é do Comercial não vê o módulo.
 
 ## Como a busca funciona no Comercial
 

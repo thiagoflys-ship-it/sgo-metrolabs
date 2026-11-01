@@ -129,7 +129,7 @@ var COM_PR_PROVISORIOS = [
   { campo: 'prazoConta', nome: 'se o prazo conta até a execução ou até o relatório' }
 ];
 /** Campos da política que, vazios, recebem o valor inicial (preenche só o que está vazio; nunca troca valor gravado). */
-var COM_PR_INICIAIS = ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses'];
+var COM_PR_INICIAIS = ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses', 'margemPecasPct'];
 
 /** Política de precificação em vigor (metodologia), completa e normalizada. */
 function ComPr_politica_(met) {
@@ -147,7 +147,7 @@ function ComPr_politica_(met) {
   p.taxaViagem = { valor: ComPr_num_(tv.valor), rotulo: Com_s_(tv.rotulo) || pad.taxaViagem.rotulo, kmMinimo: ComPr_num_(tv.kmMinimo) };
   if (p.taxaViagem.valor === null && (tv.valor === undefined || tv.valor === null || Com_s_(tv.valor) === '')) p.taxaViagem.valor = pad.taxaViagem.valor;
   if (p.taxaViagem.kmMinimo === null) p.taxaViagem.kmMinimo = pad.taxaViagem.kmMinimo;
-  ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses']
+  ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses', 'margemPecasPct']
     .forEach(function (k) { p[k] = ComPr_num_(p[k]); });
   // 01/11/2026 (C2): campo vazio recebe o valor inicial da C1 (a política antiga nascia vazia)
   COM_PR_INICIAIS.forEach(function (k) { if (p[k] === null && pad[k] !== null && pad[k] !== undefined) p[k] = pad[k]; });
@@ -281,6 +281,8 @@ function ComPr_validarPolitica_(pr) {
   pct(pr.impostosPct, 'impostos sobre o faturamento', 60); pct(pr.margemMinPct, 'margem mínima', 90); pct(pr.margemAlvoPct, 'margem alvo', 90); pct(pr.margemDeslocamentoPct, 'margem sobre o deslocamento', 100);
   // 01/11/2026 (C2): comissão, custo da hora, custo fixo, taxa por viagem, hora avulsa e faixas de prazo
   pct(pr.comissaoPct, 'comissão', 20); pct(pr.custoFixoPct, 'custo fixo sobre a mão de obra', 300);
+  // 01/11/2026 (C3): margem sobre peças e produtos revendidos
+  pct(pr.margemPecasPct, 'margem sobre peças e produtos', 90);
   dinheiro(pr.horaAvulsa, 'hora técnica avulsa'); dinheiro(pr.estradaKmMinimo, 'km mínimo para cobrar as horas de estrada');
   if (pr.custoHora !== undefined && pr.custoHora !== null) {
     if (typeof pr.custoHora !== 'object' || Array.isArray(pr.custoHora)) throw new Error('na política de precificação, o custo da hora veio num formato inválido. Atualize a tela e salve de novo');

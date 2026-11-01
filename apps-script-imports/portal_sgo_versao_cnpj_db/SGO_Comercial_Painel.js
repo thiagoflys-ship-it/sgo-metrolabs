@@ -386,7 +386,7 @@ function Com_metodologiaTela_(eu, d) {
   // quem não vê custo (vendedor) vê os valores da viagem, mas não impostos nem margens da política
   if (!eu.veCusto && r.metodologia && r.metodologia.precificacao) {
     r.metodologia = Com_copia_(r.metodologia);
-    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct', 'margemPecasPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
     r.metodologia.politica = Com_copia_(r.metodologia.politica); r.metodologia.politica.margemMinPct = null;
     delete r.metodologia.margemUnificada;
     r.precificacaoReservada = true;
@@ -471,7 +471,19 @@ var COM_ACOES = {
   importarC1Previa: function (eu, sid, d) { return ComF_previaImportacao_(eu); },
   importarC1: function (eu, sid, d) { return ComF_importar_(eu, d); },
   salvarFicha: function (eu, sid, d) { return ComF_salvarFicha_(eu, d); },
-  aplicarSugerido: function (eu, sid, d) { return ComF_aplicarSugerido_(eu, d); }
+  aplicarSugerido: function (eu, sid, d) { return ComF_aplicarSugerido_(eu, d); },
+  // 01/11/2026 (Comercial C3): banco de preços (SGO_Comercial_BancoPrecos.js) e o Orçamentista (SGO_Comercial_Orcamentista.js)
+  bancoPrecos: function (eu, sid, d) { return ComBP_consultar_(eu, d); },
+  bancoItem: function (eu, sid, d) { return ComBP_item_(eu, d); },
+  bancoCargaPrevia: function (eu) { return ComBP_previaCarga_(eu); },
+  bancoCarregar: function (eu, sid, d) { return ComBP_carregar_(eu, d); },
+  bancoRegistrar: function (eu, sid, d) { return ComBP_registrar_(eu, d); },
+  bancoDesconsiderar: function (eu, sid, d) { return ComBP_desconsiderar_(eu, d); },
+  bancoIndicadores: function (eu, sid, d) { return ComBP_indicadores_(eu, d); },
+  bancoBuscarInternet: function (eu, sid, d) { return ComBP_buscarInternet_(eu, d); },
+  bancoConfirmarInternet: function (eu, sid, d) { return ComBP_confirmarInternet_(eu, d); },
+  orcamentista: function (eu, sid, d) { return ComO_analisar_(eu, d); },
+  orcamentistaMontar: function (eu, sid, d) { return ComO_montar_(eu, d); }
 };
 
 /** google.script.run: Comercial_api(sessionId, acao, dados). Nunca lança. */

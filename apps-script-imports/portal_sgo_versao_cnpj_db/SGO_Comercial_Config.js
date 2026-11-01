@@ -22,6 +22,9 @@
  *   SGO_Comercial_Painel.js         indicadores, pendências (central e Caixa de decisões), rotina e a chamada única da tela
  *   SGO_Comercial_Quadro.js         quadro Kanban do funil, Gantt comercial e tempo por etapa (21/10/2026)
  *   SGO_Comercial_Precificacao.js   política de precificação, custos da viagem (checklist), margem e alçada, reajuste do catálogo (29/10/2026)
+ *   SGO_Comercial_BancoPrecos.js    banco de preços de serviços e produtos: carga da C1 e de Compras, propostas, consulta, indicadores, busca na internet (C3)
+ *   SGO_Comercial_BancoC1.js        carga inicial do banco (gerado por _tools/gerar_banco_c1.cjs a partir dos JSONs da C1)
+ *   SGO_Comercial_Orcamentista.js   o Orçamentista: pedido em texto livre -> itens, prazo, deslocamento, referências, riscos e o rascunho (C3)
  *   SGO_Ajuda_Comercial.js          ajuda "Como usar esta tela"
  *   JS_Comercial.html               telas
  *
@@ -46,7 +49,10 @@ var COM_ABAS = {
   CONFIG: 'COM_CONFIG', OPORTUNIDADES: 'COM_OPORTUNIDADES', CONTATOS_REG: 'COM_CONTATOS_REGISTRO', HISTORICO: 'COM_HISTORICO',
   PRODUTOS: 'COM_PRODUTOS', PROPOSTAS: 'COM_PROPOSTAS', SUGESTOES: 'COM_IA_SUGESTOES', DIA: 'COM_DIA', AVISOS: 'COM_AVISOS', CONTATOS: 'CAD_CONTATOS',
   // 29/10/2026: histórico dos reajustes de preço do catálogo (um registro por item por lote; desfazer o último lote)
-  REAJUSTES: 'COM_REAJUSTES'
+  REAJUSTES: 'COM_REAJUSTES',
+  // 01/11/2026 (Comercial C3): banco de preços (um preço observado por linha: propostas, CRM, licitações, cotações de
+  // fornecedor, concorrentes e internet). SGO_Comercial_BancoPrecos.js.
+  PRECOS: 'COM_PRECOS'
 };
 var COM_COLUNAS = {
   COM_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -56,7 +62,9 @@ var COM_COLUNAS = {
     'ATIVIDADE_ID', 'GANHA_EM', 'PERDIDA_EM', 'REABERTURA_PEDIDA_EM', 'REABERTURA_PEDIDA_POR_ID', 'REABERTURA_MOTIVO', 'ORIGEM_REF', 'OBSERVACOES',
     'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
     // 21/10/2026: itens da lista de cada etapa confirmados pelo vendedor ao avançar ({ "<etapa>": { itens: [texto], por, em } })
-    'CRITERIOS_JSON'],
+    'CRITERIOS_JSON',
+    // 01/11/2026 (Comercial C3): na perda, quem ganhou e por quanto (opcional; alimenta o banco de preços)
+    'CONCORRENTE_VENCEDOR', 'VALOR_VENCEDOR'],
   COM_CONTATOS_REGISTRO: ['ID', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'TIPO', 'RESPONDEU', 'RESUMO', 'CONTATO_ID', 'CONTATO_NOME', 'ESTRATEGIA', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'TIPO', 'DE', 'PARA', 'TEXTO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'CRIADO_EM'],
   COM_PRODUTOS: ['ID', 'CODIGO', 'NOME', 'TIPO', 'CATEGORIA', 'UNIDADE_MEDIDA', 'DESCRICAO', 'PRECO', 'CUSTO', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
@@ -91,7 +99,12 @@ var COM_COLUNAS = {
     // no banco e no histórico, o número não volta a ser usado; some das listas, do quadro, do painel e da gestora)
     'EXCLUIDA_EM', 'EXCLUIDA_POR_ID', 'EXCLUIDA_POR_NOME', 'EXCLUIDA_MOTIVO',
     // 01/11/2026 (Comercial C2): faixa de prazo da proposta inteira ({ faixa, licitacao }); cada item pode ter a sua (ITENS_JSON.faixa)
-    'PRAZO_JSON'],
+    'PRAZO_JSON',
+    // 01/11/2026 (Comercial C3): na recusa, quem ganhou e por quanto (opcional; alimenta o banco de preços)
+    'CONCORRENTE_VENCEDOR', 'VALOR_VENCEDOR'],
+  COM_PRECOS: ['ID', 'CHAVE', 'TIPO', 'PRODUTO_ID', 'ITEM_CODIGO', 'ITEM_CHAVE', 'DESCRICAO', 'DESCRICAO_NORMAL', 'UNIDADE', 'VALOR_UNITARIO', 'QUANTIDADE', 'DATA',
+    'CIDADE', 'UF', 'CLIENTE_ID', 'CLIENTE_NOME', 'ORIGEM', 'RESULTADO', 'CONCORRENTE', 'VALOR_VENCEDOR', 'FORNECEDOR', 'MARCA', 'CUSTO_UNITARIO', 'LINK', 'FONTE',
+    'CONFIANCA', 'REF_TIPO', 'REF_ID', 'REF_ROTULO', 'SITUACAO', 'SITUACAO_MOTIVO', 'REGISTRADO_POR_ID', 'REGISTRADO_POR_NOME', 'CARGA', 'ATUALIZADO_EM', 'CRIADO_EM'],
   COM_REAJUSTES: ['ID', 'LOTE', 'PRODUTO_ID', 'CODIGO', 'NOME', 'PRECO_ANTERIOR', 'PRECO_NOVO', 'PRECO_DESDE_ANTERIOR', 'PERCENTUAL', 'ARREDONDAR_PARA', 'INDICE', 'VIGENCIA', 'MOTIVO', 'SITUACAO',
     'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'DESFEITO_POR_NOME', 'DESFEITO_MOTIVO', 'CRIADO_EM'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
@@ -105,7 +118,7 @@ var COM_COLUNAS_TEXTO = {
   COM_PROPOSTAS: ['EXCLUIDA_EM', 'VALIDA_ATE', 'DESCONTO_PEDIDO_EM', 'DESCONTO_DECISAO_EM', 'GERADA_EM', 'ENVIADA_EM', 'VENCIMENTO_AVISADO_EM', 'RESPOSTA_EM', 'PASSAGEM_EM', 'PASSAGEM_CONCLUIDA_EM', 'ATUALIZADO_EM', 'NUMERO'],
   COM_CONTATOS_REGISTRO: ['DATA'], COM_HISTORICO: ['DATA'], COM_DIA: ['DIA', 'GERADO_EM'], COM_AVISOS: ['DATA', 'LIDO_EM', 'EMAIL_EM'],
   COM_IA_SUGESTOES: ['DIA', 'DECISAO_EM'], CAD_CONTATOS: ['CELULAR', 'TELEFONE', 'ATUALIZADO_EM'], COM_CONFIG: ['ATUALIZADO_EM'],
-  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
+  COM_PRODUTOS: ['PRECO_DESDE', 'PRECO_PEDIDO_EM', 'PRECO_DECISAO_EM', 'JUNTADO_EM'], COM_PRECOS: ['CHAVE', 'DATA', 'UF', 'ATUALIZADO_EM', 'ITEM_CODIGO'], COM_REAJUSTES: ['LOTE', 'VIGENCIA', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'PRECO_DESDE_ANTERIOR']
 };
 
 var COM_SITUACOES_OPO = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
@@ -343,6 +356,9 @@ var COM_METODOLOGIA_PADRAO = {
     },
     confirmados: [],
     margemDeslocamentoPct: 0,
+    // 01/11/2026 (Comercial C3): margem sobre peças e produtos revendidos (preço = custo do fornecedor ÷ (1 − margem)). Valor inicial
+    // da planilha interna de 30/10/2026 citada na C1 (30%); editável em Metodologia > Preço e desconto.
+    margemPecasPct: 30,
     arredondarPara: 10,
     repassePadrao: 'ITEM',
     reajusteAlertaMeses: 12,
@@ -458,14 +474,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  // V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V6')) return; } catch (e) {}
+  // V7 (01/11/2026, C3): banco de preços (COM_PRECOS) e quem ganhou na perda. V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V7')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V6', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V7', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {

@@ -52,6 +52,11 @@ var CHV_ITENS = [
     ajuda: 'Autoriza enviar somente a foto do painel da última devolução ao Google Gemini, com a chave de IA já configurada. Sem esta autorização, a conferência automática não executa.' },
   { chave: 'GEMINI_API_KEY', grupo: 'Inteligência artificial', tipo: 'chave', teste: 'gemini', nome: 'Chave da IA (Gemini)',
     ajuda: 'Google AI Studio → Get API key. Usada nas interpretações técnicas, PGT/POP e leitura de documentos.' },
+  // 01/11/2026 (Comercial C3): busca de preços públicos na internet pelo Orçamentista e pelo Banco de preços (usa a chave da IA)
+  { chave: 'COM_BUSCA_WEB', grupo: 'Inteligência artificial', tipo: 'aberto', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Comercial: buscar preços na internet',
+    ajuda: 'Liga o botão "Buscar na internet" do Orçamentista e do Banco de preços. A pesquisa usa a Chave da IA (Gemini) com a pesquisa do Google, no servidor; a chave nunca vai ao navegador. O que for achado só entra no banco depois que o vendedor ou a gestão confere o link e confirma.' },
+  { chave: 'COM_BUSCA_WEB_PROVEDOR', grupo: 'Inteligência artificial', tipo: 'aberto', exemplo: 'GEMINI_GOOGLE', vazio: 'GEMINI_GOOGLE', nome: 'Comercial: serviço de busca de preços',
+    ajuda: 'Hoje só existe GEMINI_GOOGLE. Outro serviço de busca entra em SGO_Comercial_BancoPrecos.js (COM_BP_PROVEDORES_BUSCA) e é escolhido aqui.' },
   { chave: 'AUVO_API_KEY', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: chave de acesso',
     ajuda: 'No Auvo: Menu → Integrações → API, campo da chave de acesso (API Key).' },
   { chave: 'AUVO_API_TOKEN', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: token de acesso',

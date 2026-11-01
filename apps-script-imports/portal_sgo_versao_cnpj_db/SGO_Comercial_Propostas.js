@@ -798,6 +798,8 @@ function ComP_concluir_(eu, d) {
       }
     }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
+    // 01/11/2026 (Comercial C3): proposta concluída entra no banco de preços (em aberto); nunca impede a conclusão
+    if (typeof ComBP_registrarProposta_ === 'function') ComBP_registrarProposta_(Object.assign({}, p, campos), 'EM_ABERTO');
     Com_historico_('PROPOSTA', p.ID, campos.SITUACAO, eu, { de: 'Rascunho', para: COM_SITUACOES_PROP[campos.SITUACAO], texto: (pol.dentro ? 'Dentro da política (' + Com_pct_(calc.descontoPct) + ').' : pol.motivos.join('; ') + '. ' + (campos.DESCONTO_MOTIVO || '')) + (rev.alertas.length ? ' Alertas da revisão: ' + rev.alertas.join('; ') : '') });
     return { proposta: ComP_paraTela_(eu, Object.assign({}, p, campos), true), alertas: rev.alertas, message: msg };
   });
@@ -1007,6 +1009,8 @@ function ComP_novaRevisao_(eu, d) {
     var antiga = { SUBSTITUIDA_POR: nova.ID, ATUALIZADO_EM: agora };
     if (s !== 'RECUSADA') antiga.SITUACAO = 'SUBSTITUIDA';
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, antiga);
+    // 01/11/2026 (Comercial C3): a revisão substituída sai das contas do banco de preços (a recusada fica como perda)
+    if (s !== 'RECUSADA' && typeof ComBP_marcarProposta_ === 'function') ComBP_marcarProposta_(p.ID, 'SUBSTITUIDO', 'Substituída pela revisão ' + ComP_rotulo_(nova) + '.');
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Concluída', 'A proposta foi substituída pela ' + ComP_rotulo_(nova) + '.');
     Com_historico_('PROPOSTA', p.ID, 'SUBSTITUIDA', eu, { de: COM_SITUACOES_PROP[s], para: s === 'RECUSADA' ? 'Recusada' : 'Substituída', texto: 'Nova revisão: ' + ComP_rotulo_(nova) + '.' });
     Com_historico_('PROPOSTA', nova.ID, 'CRIACAO', eu, { para: 'Rascunho', texto: 'Revisão criada a partir da ' + ComP_rotulo_(p) + '.' });
@@ -1023,6 +1027,7 @@ function ComP_cancelar_(eu, d) {
     var s = Com_up_(p.SITUACAO);
     if (['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'].indexOf(s) < 0) throw new Error('Não foi possível cancelar: a proposta está "' + COM_SITUACOES_PROP[s] + '"');
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { SITUACAO: 'CANCELADA', CANCELADA_MOTIVO: motivo, ATUALIZADO_EM: Com_agora_() });
+    if (typeof ComBP_marcarProposta_ === 'function') ComBP_marcarProposta_(p.ID, 'CANCELADO', 'Proposta cancelada: ' + motivo);
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta cancelada: ' + motivo);
     Com_historico_('PROPOSTA', p.ID, 'CANCELADA', eu, { de: COM_SITUACOES_PROP[s], para: 'Cancelada', texto: motivo });
     return { message: 'Proposta cancelada: saiu do funil e das propostas em andamento. Ela continua no histórico da oportunidade e no filtro "Cancelada".' };
@@ -1134,6 +1139,8 @@ function ComP_registrarResposta_(eu, sessionId, d) {
     if (met.motivosPerda.indexOf(Com_s_(d.motivo)) < 0) throw new Error('Não foi possível registrar a recusa: escolha o motivo na lista. Ele alimenta o relatório de perdas');
     if (texto.length < 10) throw new Error('Não foi possível registrar a recusa: escreva o que o cliente disse (pelo menos 10 letras)');
   }
+  // 01/11/2026 (Comercial C3): na recusa, quem ganhou e por quanto (opcional; alimenta o banco de preços)
+  var vencedor = resp === 'RECUSADA' && typeof ComBP_vencedorDaTela_ === 'function' ? ComBP_vencedorDaTela_(d) : { concorrente: '', valorVencedor: null };
   var arq = d.arquivo || null;
   if (resp === 'APROVADA') {
     if (!arq || !Com_s_(arq.base64) || !Com_s_(arq.nome)) throw new Error('Não foi possível registrar a aprovação: anexe o arquivo do aceite do cliente (o e-mail de aprovação salvo em PDF, o pedido de compra ou a proposta assinada). Ele fica guardado na pasta do cliente e é a prova do pedido');
@@ -1158,9 +1165,10 @@ function ComP_registrarResposta_(eu, sessionId, d) {
     if (Com_up_(p.SITUACAO) !== s0) throw new Error('Não foi possível registrar: a proposta mudou de situação. Atualize a tela');
     var agora = Com_agora_(), quando = Com_dia_(d.data) ? Com_dia_(d.data) + agora.slice(10) : agora;
     var campos = { SITUACAO: resp, RESPOSTA_EM: quando, RESPOSTA_POR_NOME: eu.nome, RESPOSTA_TEXTO: texto, ATUALIZADO_EM: agora };
-    if (resp === 'RECUSADA') campos.MOTIVO_RECUSA = Com_s_(d.motivo);
+    if (resp === 'RECUSADA') { campos.MOTIVO_RECUSA = Com_s_(d.motivo); if (vencedor.concorrente) campos.CONCORRENTE_VENCEDOR = vencedor.concorrente; if (vencedor.valorVencedor) campos.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor); }
     if (salvo) { campos.ACEITE_ARQUIVO_ID = salvo.id; campos.ACEITE_ARQUIVO_NOME = salvo.nome; campos.ACEITE_ARQUIVO_URL = salvo.url; campos.PEDIDO_SITUACAO = 'SEM_PASSAGEM'; }
     SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
+    if (typeof ComBP_registrarProposta_ === 'function') ComBP_registrarProposta_(Object.assign({}, p, campos), resp === 'APROVADA' ? 'GANHO' : 'PERDIDO', vencedor);
     if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Concluída', 'Cliente ' + (resp === 'APROVADA' ? 'aprovou' : 'recusou') + ' a proposta.');
     // 28/10/2026: o Comercial não tem aprovação pelo link nem pelo portal; a aprovação é registrada pelo vendedor, com o aceite
     // anexado. O histórico diz qual versão dos termos e condições o cliente recebeu no documento.
@@ -1197,7 +1205,7 @@ function ComP_registrarResposta_(eu, sessionId, d) {
     if (Com_s_(p.RESPONSAVEL_ID) !== eu.id) avisar.push(Com_s_(p.RESPONSAVEL_ID));
     avisar.forEach(function (uid) { Com_avisar_(uid, 'RESPOSTA_' + resp, titulo, txt, { tipo: 'proposta', id: p.ID }, { email: true }); });
     return { proposta: ComP_paraTela_(eu, Object.assign({}, p, campos), true), ganhou: ganhou,
-      message: (resp === 'APROVADA' ? 'Aprovação registrada' + (ganhou ? ' e oportunidade ganha' : '') + '. Agora toque em "Passar aos setores".' : 'Recusa registrada. A decisão (nova revisão ou perda) está em Minhas atividades para amanhã.') + aviso };
+      message: (resp === 'APROVADA' ? 'Aprovação registrada' + (ganhou ? ' e oportunidade ganha' : '') + '. Agora toque em "Passar aos setores".' : 'Recusa registrada' + (vencedor.concorrente || vencedor.valorVencedor ? ', com quem ganhou e por quanto (vai para o banco de preços)' : '') + '. A decisão (nova revisão ou perda) está em Minhas atividades para amanhã.') + aviso };
   });
 }
 
