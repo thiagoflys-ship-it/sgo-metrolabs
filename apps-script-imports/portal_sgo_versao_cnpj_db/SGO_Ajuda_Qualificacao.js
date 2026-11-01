@@ -48,8 +48,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Confira na \"Prévia dos dados lidos\" se as datas, horas e temperaturas estão certas.",
           "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\" e \"Identificação do registrador\" (TAG do cadastro de padrões, exemplo: DTL-01). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio. A planilha usa esses dois campos: sem o registrador cadastrado e válido, ela não é gerada.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Responsável técnico: confirme a mensagem de aprovação. A planilha abre em nova aba e fica salva em HTML e PDF na pasta do cliente (subpasta do CNPJ), com o nome \"Planilha de dados Autoclave ...\" e o seu nome como aprovador.",
-          "Técnico: a planilha vai para aprovação do responsável técnico. A minuta abre em outra aba com a faixa \"MINUTA PARA CONFERÊNCIA\" (não entregue ao cliente) e o pedido aparece em \"6. Aguardando aprovação\", com a coluna \"Documento\" = \"Planilha de dados\".",
+          "Responsável técnico: confirme a mensagem de aprovação. A planilha abre em nova aba e fica salva em HTML e PDF na pasta do cliente (subpasta do CNPJ), com o nome \"Planilha de dados Autoclave ...\" e o seu nome como aprovador. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
+          "Técnico: a planilha vai para aprovação do responsável técnico. A minuta abre em outra aba com a faixa \"MINUTA PARA CONFERÊNCIA\" (não entregue ao cliente) e o pedido aparece em \"6. Aguardando aprovação\", com a coluna \"Documento\" = \"Planilha de dados\". No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Depois de emitida, use os botões \"Abrir PDF da planilha de dados\", \"Abrir pasta do cliente\" e \"Enviar ao cliente\" que aparecem abaixo do botão. Emitir de novo o mesmo número gera a revisão seguinte da planilha; as anteriores continuam na pasta.",
           "Se os dados tiverem problema (sensor com leitura impossível, sensor parado, leitura faltando, registrador sem cadastro ou vencido), a faixa vermelha diz o que corrigir e a planilha não é gerada."
         ] },
@@ -72,7 +72,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Leia os textos que apareceram em \"Revise os textos antes de confirmar\". Corrija o que precisar. O resultado (aprovado ou reprovado) é o calculado: texto que diga outra coisa é recusado.",
           "Técnico: toque em \"Enviar para aprovação do responsável técnico\". O pedido aparece em \"6. Aguardando aprovação\".",
           "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Aprovar e emitir\". Ou, em \"6. Aguardando aprovação\", toque em \"Ver prévia\", confira e toque em \"Aprovar e emitir\" (ou \"Devolver\", com o motivo).",
-          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente, com o nome de quem aprovou. Para enviar ao cliente, use \"Enviar ao cliente\" na faixa verde do documento.",
+          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente, com o nome de quem aprovou. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Para enviar ao cliente, use \"Enviar ao cliente\" na faixa verde do documento.",
           "Emitir de novo o mesmo número gera a revisão seguinte (Revisão 1, 2...). As revisões anteriores continuam na pasta."
         ] },
         { titulo: "Gerar a memória de cálculo do F0", itens: [
@@ -156,7 +156,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Um arquivo por sensor: aviso de leitura faltando na exposição.", oQueFazer: "O arquivo daquele sensor não cobre todo o ciclo ou o relógio do registrador estava fora de hora. Confira o arquivo; se o sensor falhou, desmarque-o e registre a falha." },
         { situacao: "Aviso \"Pressão incompatível com a temperatura\".", oQueFazer: "A coluna de pressão provavelmente está em bar relativo, kPa ou mbar. O ciclo usa bar absoluto: converta a coluna e envie de novo." },
         { situacao: "A planilha de dados não gera e diz que o registrador não foi informado ou não está no cadastro.", oQueFazer: "Preencha \"Identificação do registrador\" na seção 5 com a TAG do cadastro de padrões e gere de novo. Se o certificado venceu, atualize em \"Padrões de referência\"." },
-        { situacao: "A planilha não abriu em outra aba.", oQueFazer: "O navegador bloqueou a nova aba. Permita janelas do SGO+ no navegador e gere de novo; a planilha emitida também fica na pasta do cliente (botão \"Abrir PDF da planilha de dados\")." },
+        { situacao: "A planilha não abriu em outra aba.", oQueFazer: "O navegador bloqueou a nova aba. Permita janelas do SGO+ no navegador e gere de novo; a planilha emitida também fica na pasta do cliente (botão \"Abrir PDF da planilha de dados\"). No celular, o documento abre dentro do SGO+, sem aba nova." },
         { situacao: "Apareceu a janela \"Tela sem uso\".", oQueFazer: "Toque em \"Continuar\". O que você preencheu continua na tela." },
         { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\" ao gerar.", oQueFazer: "Escolha os três no quadro \"Cliente e equipamento (do cadastro)\", no início da tela. Se faltar cadastro, use os botões de cadastrar (abrem em outra aba) e depois \"Atualizar listas\"." },
         { situacao: "Aparece que o equipamento pertence a outro cliente ou está em outra unidade.", oQueFazer: "Escolha o equipamento na lista do cliente certo. Se o cadastro estiver errado, a gestão corrige em Cadastros › Vínculos." },
@@ -220,14 +220,14 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Em \"4. Dados do registrador\", envie o arquivo ou, em \"Um arquivo por sensor\", um arquivo para cada sensor.",
           "Toque em \"Pré-visualizar dados\" e confira as leituras.",
           "Em \"5.\", informe o número do ensaio e a \"Identificação do registrador\" (a TAG do cadastro de padrões). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio.",
-          "Toque em \"Gerar planilha de dados\". Responsável técnico: confirme e a planilha é emitida na pasta do equipamento. Técnico: a minuta abre em outra aba e a planilha vai para \"6. Aguardando aprovação\"."
+          "Toque em \"Gerar planilha de dados\". Responsável técnico: confirme e a planilha é emitida na pasta do equipamento. Técnico: a minuta abre em outra aba e a planilha vai para \"6. Aguardando aprovação\". No celular, o documento abre dentro do SGO+, com Voltar e Imprimir."
         ] },
         { titulo: "Gerar o relatório de ensaio (A4)", itens: [
           "Com os mesmos dados, toque em \"Gerar rascunho da interpretação\".",
           "Se aparecer a lista vermelha de problemas dos dados, corrija o que ela diz e gere de novo: nada é redigido com dado ruim.",
           "Revise os textos. O resultado é o calculado; texto que contradiga o resultado é recusado.",
           "Técnico: toque em \"Enviar para aprovação do responsável técnico\".",
-          "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Aprovar e emitir\". O documento abre em nova aba e fica na pasta do equipamento.",
+          "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Aprovar e emitir\". O documento abre em nova aba e fica na pasta do equipamento. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Em \"6. Aguardando aprovação\", o responsável técnico usa \"Ver prévia\", \"Aprovar e emitir\" ou \"Devolver\" com o motivo."
         ] },
         { titulo: "Gerar o relatório de qualificação (aba \"Relatório oficial\")", itens: [
@@ -345,7 +345,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se quiser, anexe até 4 fotos.",
           "Toque em \"Gerar rascunho\". Se aparecer a lista \"O documento não pode ser emitido\", corrija cada item (a lista diz o que fazer) e gere de novo.",
           "Leia a análise de cada estudo e as duas conclusões. O texto é conferido: número, norma ou resultado diferente do calculado é recusado.",
-          "Técnico: toque em \"Enviar para aprovação\"; a minuta abre em outra aba.",
+          "Técnico: toque em \"Enviar para aprovação\"; a minuta abre em outra aba. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Emitir relatório\".",
           "O documento fica salvo em HTML e PDF na pasta do equipamento, dentro da pasta do cliente. Use \"Enviar ao cliente\" para mandar o PDF."
         ] },
@@ -463,7 +463,7 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Planilha de dados (seção 5)", itens: [
           "Preencha \"Identificação do registrador\" como está no cadastro de padrões (ex.: DTL-01). Logo abaixo, toque em \"Escolher padrões\" e marque todos os registradores e padrões usados no ensaio (busca por TAG, descrição, fabricante ou certificado; sem limite). A identificação é preenchida sozinha, separada por vírgula, e o relatório traz uma tabela com cada um: fabricante, modelo, nº de série, certificado, laboratório, calibração, validade e incerteza. A validade de cada um é conferida na data do ensaio. Se quiser, preencha também o responsável pelo aceite e a tarefa de origem. O número do relatório é atribuído na emissão.",
           "Toque em \"Gerar a planilha de dados\". Se houver problema nos dados, aparece a lista com o que aconteceu, o porquê e como corrigir, e nada é gerado.",
-          "Sem problema, a minuta abre em outra aba. O técnico toca em \"Enviar a planilha para aprovação\"; o responsável técnico marca a confirmação e gera de novo para emitir."
+          "Sem problema, a minuta abre em outra aba. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. O técnico toca em \"Enviar a planilha para aprovação\"; o responsável técnico marca a confirmação e gera de novo para emitir."
         ] },
         { titulo: "Relatório de ensaio (seção 6)", itens: [
           "Toque em \"Gerar rascunho\": aparecem o resultado, a tabela de critérios e os textos (análise de cada estudo e as duas conclusões).",
@@ -567,7 +567,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque em \"Gerar Relatório de QI/QO com IA\".",
           "Em \"3.1 Revise os textos do QI/QO antes de confirmar\", leia e corrija objetivo, QI, QO, QD e conclusão.",
           "Toque em \"Confirmar e Gerar Relatório de QI/QO\".",
-          "O documento abre em nova aba e é salvo sozinho na pasta do cliente. Espere a mensagem \"Salvo na pasta do cliente\"."
+          "O documento abre em nova aba e é salvo sozinho na pasta do cliente. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Espere a mensagem \"Salvo na pasta do cliente\"."
         ] },
         { titulo: "Reabrir um relatório já gerado", itens: [
           "Em \"Documentos já gerados\", digite o cliente, a TAG ou o nome do arquivo.",
@@ -597,7 +597,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       problemas: [
         { situacao: "Apareceu \"Tentar salvar de novo\".", oQueFazer: "Toque no botão. Se falhar de novo, confira a internet e avise o administrador." },
         { situacao: "Não tenho o certificado de algum instrumento.", oQueFazer: "Deixe o campo em branco. Na tabela de certificados do relatório, o instrumento aparece como \"Não anexado nesta visita\"." },
-        { situacao: "A nova aba não abriu.", oQueFazer: "Libere janelas novas (pop-up) para o endereço do SGO+ e gere de novo." },
+        { situacao: "A nova aba não abriu.", oQueFazer: "Libere janelas novas (pop-up) para o endereço do SGO+ e gere de novo. No celular, o documento abre dentro do SGO+, sem aba nova." },
         { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Confirmar e Gerar Relatório de QI/QO\"." },
         { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },
         { situacao: "O documento não aparece na lista para corrigir.", oQueFazer: "Documentos gerados antes de 21/10/2026 não guardaram os dados do formulário e não entram nessa lista. O PDF continua na pasta do cliente. Para corrigir um deles, preencha o formulário e gere um documento novo." }

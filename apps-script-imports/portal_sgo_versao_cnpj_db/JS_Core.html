@@ -2903,6 +2903,7 @@
   }
 
   function fsDesenharInicio_() {
+    try { if (window.SGO_NAV && !fsNoComputador_()) SGO_NAV.limparSubniveis(); } catch (e) {}
     const host = fsHost_();
     const d = FS.inicio;
     if (!host || !d) return;
@@ -3041,6 +3042,7 @@
   function fsBlqForm_(acao, id) {
     const d = FS.inicio || {};
     const r = fsRaiz_(); if (!r) return;
+    fsEntrarForm_("Passar o carro");
     const b = d.bloqueio || {};
     let veiculoId = id, titulo = "", corpo = "";
     if (acao === "passar") {
@@ -3186,10 +3188,16 @@
 
   function fsAbrirFrotaCompleta_(abaId) {
     window.SGO_FROTA_COMPLETA = true;
+    // Etapa 2: no celular, a tela completa é um passo do voltar (voltar devolve a Frota simples)
+    const passo = !fsNoComputador_() && window.SGO_NAV && SGO_NAV.empilhar;
     abrir("frota");
     let n = 0;
     const t = setInterval(function () {
-      if (typeof tplFrota_mostrarAba_ === "function" && document.querySelector("#tplFrotaContainer .frota-abas")) { clearInterval(t); tplFrota_mostrarAba_(abaId); }
+      if (typeof tplFrota_mostrarAba_ === "function" && document.querySelector("#tplFrotaContainer .frota-abas")) {
+        clearInterval(t);
+        if (passo) SGO_NAV.empilhar("Frota: tela completa", function () { abrir("frota"); });
+        tplFrota_mostrarAba_(abaId);
+      }
       else if (++n > 80) clearInterval(t);
     }, 250);
   }
@@ -3272,6 +3280,7 @@
   function fsDesenharFluxo_() {
     const f = FS.fluxo, d = FS.inicio || {}, host = fsHost_();
     if (!f || !host) return;
+    fsEntrarForm_(f.tipo === "retirada" ? "Retirar veículo" : "Devolver veículo");
     const ret = f.tipo === "retirada";
     const gestao = !!d.gestor;
     if (!fsNoComputador_()) {
@@ -3422,6 +3431,7 @@
   const FSG = { modo: "", ctx: null, nota: null, painel: null, ia: null, enviando: false };
   function fsGastoAbrir_(modo) {
     const host = fsHost_(); if (!host) return;
+    fsEntrarForm_(modo === "abasteci" ? "Abasteci" : "Outra despesa");
     if (!fsNoComputador_()) { MOBILE_NAV = { modulo: "frota", tela: "form" }; atualizarTituloMobile_(modo === "abasteci" ? "Abasteci" : "Outra despesa"); }
     FSG.modo = modo; FSG.nota = null; FSG.painel = null; FSG.ia = null; FSG.enviando = false; FSG.tanque = "";
     host.innerHTML = '<div class="fs' + (fsNoComputador_() ? " fs-desk" : "") + '" id="fsRaiz" data-tela="gasto"><div class="fs-aviso info" role="status">Carregando...</div></div>';
@@ -4067,6 +4077,12 @@
       fsAgendarAtualizacao_();
     }, 1500);
   }
+  // Etapa 2 do programa de melhoria (01/11/2026): os formulários da Frota simples (retirar, devolver, abasteci, outra despesa,
+  // passar o carro, ajustar KM, partida) são um passo do voltar; voltar (ou "Cancelar") volta à tela inicial da Frota, na mesma
+  // altura e com a mesma base escolhida. Ao voltar à tela inicial por conta própria (salvou, cancelou), o passo sai da pilha.
+  function fsEntrarForm_(rotulo) {
+    if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar(rotulo, function () { renderMobileFrotaOperacional_(); }, { chave: "fs-form" });
+  }
   function fsCancelar_() {
     const f = FS.fluxo;
     if (f && (f.fotos.length || f.painel.length || f.vistoria) && !confirm("Descartar esta " + (f.tipo === "retirada" ? "retirada" : "devolução") + "? Nada foi registrado ainda.")) return;
@@ -4077,6 +4093,7 @@
 
   // Ajuste de KM no celular (17/10/2026): só a gestão; justificativa obrigatória; antes e depois na trilha de auditoria.
   function renderMobileFrotaAjustarKm_() {
+    fsEntrarForm_("Ajustar KM do veículo");
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Ajustar KM do veículo");
     const div = document.getElementById("conteudo");
@@ -4126,6 +4143,7 @@
   // Partida do veículo pelo rastreador no celular (17/10/2026): só a gestão (o servidor confere o perfil).
   // "Liberar partida" e "Bloquear agora" com justificativa e confirmação; o bloqueio só sai com o veículo parado e a ignição desligada.
   function renderMobileFrotaPartida_() {
+    fsEntrarForm_("Partida do veículo");
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Partida do veículo");
     const div = document.getElementById("conteudo");
@@ -4197,6 +4215,7 @@
 
   // Abastecimento no celular (gestão da Frota: Administrador, Diretoria, Gestor, RH e Financeiro).
   function renderMobileFrotaAbastecer_() {
+    fsEntrarForm_("Registrar abastecimento");
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Registrar abastecimento");
     MOBILE_FROTA.comprovante = null;

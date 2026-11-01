@@ -173,6 +173,7 @@ function SGO_DocA4_estilos_(doc) {
     '.folha{background:#fff;width:210mm;max-width:100%;margin:14px auto 40px;padding:14mm 15mm 18mm 18mm;box-shadow:0 1px 6px rgba(0,0,0,.18)}' +
     '.barra-tela{max-width:210mm;margin:12px auto 0;display:flex;gap:8px;justify-content:flex-end;font:13px Arial,sans-serif}' +
     '.barra-tela button{background:#0b3d6e;color:#fff;border:0;border-radius:4px;padding:8px 16px;font-weight:700;cursor:pointer}' +
+    '.barra-tela .barra-voltar{margin-right:auto;display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border:1px solid #0b3d6e;border-radius:4px;color:#0b3d6e;font-weight:700;text-decoration:none}.barra-tela .barra-voltar[hidden]{display:none}' +
     '.cab-tela{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.6pt solid #9aa5b1;padding-bottom:2.2mm;margin-bottom:6mm}' +
     '.cab-tela img{height:13mm;width:auto;display:block}' +
     '.cab-tela .meta{text-align:right;font-size:7.8pt;line-height:1.35;color:#3e4c59}' +
@@ -531,7 +532,11 @@ function SGO_DocA4_inicioDocumento_(doc) {
   h.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
   h.push('<title>' + SGO_DocA4_esc_(tituloAba) + '</title>');
   h.push('<style>' + SGO_DocA4_estilos_(doc) + '</style></head><body>');
-  h.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
+  // Programa de melhoria, Etapa 2 (01/11/2026): "Voltar ao SGO+" aparece só quando o documento foi aberto pelo link direto (e-mail,
+  // pasta, endereço copiado) no endereço do próprio SGO+. Aberto pelo sistema (aba nova no computador ou visualizador no celular,
+  // que já tem Voltar), o botão fica escondido. Não sai na impressão (a barra inteira é só da tela).
+  h.push('<div class="barra-tela"><a class="barra-voltar" id="sgoDocVoltar" href="/" hidden>Voltar ao SGO+</a><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
+  h.push('<script>(function(){try{var a=document.getElementById("sgoDocVoltar");if(!a)return;var direto=window.top===window&&!window.opener&&(location.protocol==="https:"||location.protocol==="http:")&&location.pathname.indexOf("/arquivos/")===0;if(direto){a.href=location.origin+"/";a.hidden=false;}}catch(e){}})();<\/script>');
   h.push('<main class="folha">');
   h.push('<div class="cab-tela"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta">' +
     SGO_DocA4_esc_(doc.tituloCurto || doc.titulo || '') + '<br>' + SGO_DocA4_esc_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao)) + '</div></div>');

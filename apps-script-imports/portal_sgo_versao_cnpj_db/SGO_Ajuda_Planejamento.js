@@ -35,7 +35,7 @@ function SGO_ajudaTelas_Planejamento_() {
         ] },
         { titulo: "Gerar, salvar e enviar o documento", itens: [
           "Se quiser, escreva em \"Observações adicionais\" e toque em \"Refinar texto com IA\".",
-          "Toque em \"Gerar Documento\". O documento abre em nova aba.",
+          "Toque em \"Gerar Documento\". O documento abre em nova aba. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Toque em \"Salvar na pasta do cliente\" para guardar o PDF. Sem isso o documento não fica registrado.",
           "Toque em \"Abrir WhatsApp\" para enviar o resumo. O link do documento só vai na mensagem se você salvou antes."
         ] },
@@ -112,7 +112,7 @@ function SGO_ajudaTelas_Planejamento_() {
           "Na etapa \"4. Gerar\", toque em \"Gerar Cronograma\"."
         ] },
         { titulo: "Abrir, salvar e enviar", itens: [
-          "Na etapa \"5. Documento\", toque em \"Abrir Documento\". Ele abre em nova aba.",
+          "Na etapa \"5. Documento\", toque em \"Abrir Documento\". Ele abre em nova aba. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Toque em \"Salvar na pasta do cliente\".",
           "Toque em \"Abrir WhatsApp\" para enviar ao cliente.",
           "Para ajustar algo, toque em \"Voltar aos Grupos\"."
@@ -139,7 +139,7 @@ function SGO_ajudaTelas_Planejamento_() {
       problemas: [
         { situacao: "\"Trazer equipamentos do cadastro\" não encontrou o cliente.", oQueFazer: "O cliente não está no cadastro. Cadastre em \"Clientes\" ou acrescente os equipamentos à mão." },
         { situacao: "Aparece \"Adicione ao menos um equipamento na etapa 2 antes de sugerir os grupos.\"", oQueFazer: "Volte à etapa 2 e inclua os equipamentos." },
-        { situacao: "Aparece que o navegador bloqueou a nova aba.", oQueFazer: "Libere janelas novas (pop-up) para o SGO+ e toque em \"Abrir Documento\" de novo. O \"Salvar na pasta do cliente\" já funciona." },
+        { situacao: "Aparece que o navegador bloqueou a nova aba.", oQueFazer: "Libere janelas novas (pop-up) para o SGO+ e toque em \"Abrir Documento\" de novo. O \"Salvar na pasta do cliente\" já funciona. No celular, o documento abre dentro do SGO+, sem aba nova." },
         { situacao: "Aparece \"Abra o documento primeiro\".", oQueFazer: "Toque em \"Abrir Documento\" antes de salvar." },
         { situacao: "Ao gerar a correção apareceu \"Escreva o motivo da revisão\".", oQueFazer: "Escreva o motivo no quadro amarelo \"Correção do documento\", no alto do formulário (ao menos 10 caracteres), e toque de novo em \"Gerar Cronograma\"." },
         { situacao: "Apareceu \"O número ... já é de um documento gerado\".", oQueFazer: "Para corrigir aquele documento, use \"Abrir para corrigir\" na lista de documentos gerados. Para um documento novo, apague o número ou use outro." },

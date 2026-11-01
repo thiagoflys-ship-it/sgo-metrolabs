@@ -19,8 +19,11 @@
   //      visualizador de tela cheia dentro do SGO+, com Voltar e Imprimir (e Baixar PDF quando o fluxo já tem o arquivo).
   //      No computador continuam abrindo em aba nova, como antes (decisão do dono, 01/11/2026). Endereços reais (PDF do
   //      Drive, wa.me, mailto, downloads) nunca são interceptados.
+  //   5. Etapa 2 (01/11/2026): a rolagem da lista volta junto; ficha aberta por cima de outra reabre a anterior (janelaVolta);
+  //      painel lateral marcado com data-sgo-janela="1" conta como janela; os painéis do bate-papo e do "Tire sua dúvida" fecham
+  //      com o voltar; texto digitado dentro de uma janela também pergunta antes de descartar.
   // Chave para desligar tudo: window.SGO_NAV_LIGADO = false (antes de carregar) ou localStorage "SGO_NAV_DESLIGADO" = "1".
-  // Os widgets AssistenteWidget.html e ComunicacaoWidget.html não mudam (idênticos aos do COMMAND).
+  // Os widgets AssistenteWidget.html e ComunicacaoWidget.html não mudam (idênticos aos do COMMAND): a casca reconhece os painéis deles.
   // ==========================================================================================
 
   var SGO_NAV_TEXTOS = {
@@ -73,8 +76,12 @@
     function executar(fn) { if (N.esperando > 0) N.fila.push(fn); else fn(); }
     function esvaziarFila() { while (N.esperando === 0 && N.fila.length) N.fila.shift()(); }
 
+    // Etapa 2 (01/11/2026): rolagem da tela guardada no passo de onde a pessoa saiu; voltar devolve a mesma altura da lista.
+    function rolAtual() { try { return amb.rolagem ? amb.rolagem() : null; } catch (e) { return null; } }
+    function guardarRol(v) { if (!N.atual) return; var r = v === undefined ? rolAtual() : v; if (r !== null && r !== undefined) N.atual.rol = r; }
     function push(est) {
       executar(function () {
+        if (N.atual && (N.atual.rol === undefined || N.atual.rol === null)) guardarRol();
         est.pos = (N.atual ? N.atual.pos : 0) + 1;
         est.telaPos = est.tipo === "tela" ? est.pos : (N.atual ? (N.atual.telaPos !== undefined ? N.atual.telaPos : N.atual.pos) : 0);
         amb.history.pushState(est, "", url(est));
@@ -141,6 +148,7 @@
     function aoVoltarUsuario(novo, antes) {
       var popped = [];
       for (var p = antes.pos; p > novo.pos; p--) { var s = N.pilha[p] || (p === antes.pos ? antes : null); if (s) popped.push(s); }
+      var memo = N.pilha[novo.pos], rolAlvo = memo && memo.id === novo.id ? memo.rol : undefined; // rolagem guardada ao sair daquele passo
       N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo; // o navegador já está na entrada de chegada
       // 1) janelas, de cima para baixo
       var fechadas = [];
@@ -166,11 +174,22 @@
       // { mantemTexto: true } só desfaz o que está acima do formulário (ex.: o resultado do Orçamentista); o texto digitado fica,
       // então não pergunta "Descartar o que foi digitado?"
       var subsQueDescartam = subs.filter(function (s) { var e = N.entradas[s.id]; return !(e && e.mantemTexto); });
-      if ((saiDeTela || subsQueDescartam.length) && amb.conteudoSujo() && !amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(restantes); return; }
+      // Etapa 2: o texto digitado conta também dentro das janelas abertas (ficha do cadastro, painel do padrão); com OK, o
+      // "confirm" do próprio módulo é respondido sozinho enquanto o sub-nível é desfeito (não pergunta duas vezes).
+      var confirmouSair = false;
+      if ((saiDeTela || subsQueDescartam.length) && amb.conteudoSujo()) {
+        if (!amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(restantes); return; }
+        confirmouSair = true;
+      }
       N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo;
       if (novo.tipo === "base") { aoChegarNaBase(); return; }
-      // 3) chegou numa entrada que não vale mais (janela fechada, passo antigo): continua voltando
-      if (entradaMorta(novo)) { amb.history.back(); return; }
+      var rodar = function (fn) { if (confirmouSair && amb.semPerguntar) amb.semPerguntar(fn); else fn(); };
+      // 3) chegou numa entrada que não vale mais (janela fechada, passo antigo): continua voltando. Etapa 2: antes, desfaz os
+      // sub-níveis que saíram agora (senão a aba ou a ficha de antes não voltava quando havia uma janela morta no meio).
+      if (entradaMorta(novo)) {
+        if (!saiDeTela) comRestauracao(function () { subs.forEach(function (s) { var e = N.entradas[s.id]; if (e && e.aoVoltar) { e.morta = true; rodar(e.aoVoltar); } }); });
+        amb.history.back(); return;
+      }
       var depois = [];
       comRestauracao(function () {
         var semDesfazer = subs.some(function (s) { var e = N.entradas[s.id]; return !e || !e.aoVoltar; });
@@ -179,10 +198,13 @@
           var en = N.entradas[novo.id];
           if (novo.tipo === "sub" && en && en.reabrir) en.reabrir();
         } else {
-          subs.forEach(function (s) { var e = N.entradas[s.id]; if (e && e.aoVoltar) { e.morta = true; e.aoVoltar(); if (e.reinicia) depois.push(true); } });
+          subs.forEach(function (s) { var e = N.entradas[s.id]; if (e && e.aoVoltar) { e.morta = true; rodar(e.aoVoltar); if (e.reinicia) depois.push(true); } });
         }
       });
       if (depois.length) limparSubniveis();
+      // Etapa 2: ficha aberta por cima de outra ficha (ex.: a O.S. aberta de dentro do chamado): fechada pelo voltar, reabre a de baixo
+      fechadas.forEach(function (s) { var e = N.entradas[s.id]; if (e && typeof e.aoVoltar === "function") { try { e.aoVoltar(); } catch (x) { console.error("Navegação (reabrir a ficha anterior):", x); } } });
+      if (rolAlvo !== undefined && rolAlvo !== null && amb.restaurarRolagem) amb.restaurarRolagem(rolAlvo);
     }
 
     function aoPop(novo) {
@@ -212,11 +234,14 @@
       for (var i = 0; i < abertas.length; i++) {
         var r = N.entradas[abertas[i].id];
         if (!r || r.morta || !amb.janelaAberta(r.el) || amb.janelaTrava(r.el)) continue;
+        // painéis do bate-papo e do "Tire sua dúvida" continuam abertos na tela nova (entram de novo na pilha, por cima dela)
+        if (amb.janelaPersistente && amb.janelaPersistente(r.el)) { r.morta = true; continue; }
         var confirmou = false;
         if (amb.janelaSuja(r.el)) { if (!amb.confirmar(SGO_NAV_TEXTOS.descartar)) return false; confirmou = true; }
         if (amb.fecharJanela(r.el, confirmou)) r.morta = true;
       }
       N.janelas = N.janelas.filter(function (j) { var r2 = N.entradas[j.id]; return r2 && !r2.morta; });
+      guardarRol(); // a lista de onde a pessoa sai volta na mesma altura
       return true;
     }
 
@@ -243,6 +268,7 @@
     function empilhar(rotulo, aoVoltar, op) {
       op = op || {};
       if (!N.ativo || N.restaurando || !N.atual) return null;
+      if (op.rol !== undefined && op.rol !== null) guardarRol(op.rol); // rolagem medida no toque (passo automático)
       var topo = N.atual, rt = N.entradas[topo.id];
       if (topo.tipo === "sub" && rt && !rt.morta && (op.substituir || (op.chave && rt.chave === op.chave))) {
         rt.aoVoltar = aoVoltar; rt.reabrir = op.reabrir || null; rt.reinicia = !!op.reinicia; rt.mantemTexto = !!op.mantemTexto; N.ultimaOp = agora();
@@ -252,6 +278,26 @@
       N.entradas[est.id] = { aoVoltar: aoVoltar, reabrir: op.reabrir || null, chave: op.chave || "", reinicia: !!op.reinicia, auto: !!op.auto, mantemTexto: !!op.mantemTexto };
       push(est);
       return est.id;
+    }
+
+    /** Sub-nível que deixou de valer (ex.: o módulo voltou sozinho à tela de antes): sai da pilha sem desfazer nada. */
+    function descartar(id) {
+      var r = id && N.entradas[id];
+      if (!N.ativo || !r || r.morta) return;
+      r.morta = true;
+      if (!N.restaurando) voltarSilencioso(mortasNoTopo());
+    }
+    /** Ficha (janela) que, fechada pelo voltar, reabre a anterior: janelaVolta(el, fn). Vale para o elemento já registrado ou o próximo. */
+    N.voltas = [];
+    function tirarVolta(el) {
+      for (var i = 0; i < N.voltas.length; i++) if (N.voltas[i].el === el) { var fn = N.voltas[i].fn; N.voltas.splice(i, 1); return fn; }
+      return null;
+    }
+    function janelaVolta(el, fn) {
+      if (!N.ativo || !el || typeof fn !== "function") return;
+      for (var i = 0; i < N.janelas.length; i++) if (N.janelas[i].el === el) { var r = N.entradas[N.janelas[i].id]; if (r) r.aoVoltar = fn; return; }
+      N.voltas = N.voltas.filter(function (v) { return v.el !== el; }).slice(-19);
+      N.voltas.push({ el: el, fn: fn });
     }
 
     function limparSubniveis() {
@@ -295,7 +341,7 @@
       var novas = abertas.filter(function (el) { return conhecidas.indexOf(el) < 0; });
       novas.forEach(function (el, i) {
         var est = estado("janela", amb.telaAtual() || (N.atual && N.atual.mod) || "", { rotulo: amb.rotuloJanela(el) || "" });
-        N.entradas[est.id] = { el: el };
+        N.entradas[est.id] = { el: el, aoVoltar: tirarVolta(el) };
         N.janelas.push({ el: el, id: est.id });
         if (i === 0 && fechouTopo && N.atual && N.atual.tipo === "janela") { replace(est); fechouTopo = false; } else push(est);
       });
@@ -334,7 +380,7 @@
     }
 
     return {
-      N: N, aoPop: aoPop, antesDeAbrir: antesDeAbrir, aoAbrir: aoAbrir, empilhar: empilhar, limparSubniveis: limparSubniveis,
+      N: N, aoPop: aoPop, antesDeAbrir: antesDeAbrir, aoAbrir: aoAbrir, empilhar: empilhar, limparSubniveis: limparSubniveis, descartar: descartar, janelaVolta: janelaVolta,
       voltar: voltar, voltarOu: voltarOu, janelasMudaram: janelasMudaram, iniciarSessao: iniciarSessao, encerrarSessao: encerrarSessao,
       comRestauracao: comRestauracao, restaurando: function () { return N.restaurando > 0; }, ativo: function () { return N.ativo; },
       ultimaOp: function () { return N.ultimaOp; }
@@ -391,14 +437,17 @@
     var vazio = function () { return false; };
     if (desligado) {
       window.SGO_NAV = { ligado: false, empilhar: function () { return null; }, voltar: vazio, voltarOu: function (fn) { if (typeof fn === "function") fn(); },
-        limparSubniveis: function () {}, antesDeAbrir: function () { return true; }, aoAbrir: function () {}, iniciarSessao: function () { return null; },
+        limparSubniveis: function () {}, descartar: function () {}, janelaVolta: function () {}, restaurando: vazio, antesDeAbrir: function () { return true; }, aoAbrir: function () {}, iniciarSessao: function () { return null; },
         encerrarSessao: function () {}, restaurarCom: function (fn) { return fn(); }, abrirDocumento: vazio, ehCelular: vazio, telaParaRestaurar: function () { return null; } };
       return;
     }
 
     var SELETOR_JANELAS = ".atv-overlay, .modal-overlay, .sgo-overlay, .em-overlay, .vinc-overlay, .conduta-modal-overlay, .auvo-os-overlay, " +
       ".busca-overlay, .avs-overlay, .avisos-login-overlay, .sga-sobre, .padroes-critico-overlay, .ajuda-painel, .aut-janela-fundo, .cadx-dialogo-fundo, " +
-      "[class*='-overlay'], [role='dialog'][aria-modal='true'], .sgo-visor";
+      "[class*='-overlay'], [role='dialog'][aria-modal='true'], .sgo-visor, [data-sgo-janela='1']";
+    // Etapa 2: painéis do "Tire sua dúvida" (AssistenteWidget) e do bate-papo (ComunicacaoWidget) entram na pilha pela casca; os
+    // dois componentes não mudam (idênticos aos do COMMAND). Voltar fecha o painel pelo "×" dele; o rascunho da mensagem fica.
+    function ehWidget(el) { return !!el && (el.id === "aswPainel" || (el.classList && el.classList.contains("comw-painel"))); }
     var EXCLUIR = /(^|\s)(asw-|comw-|mobile-topbar|sgo-overlay-carregando|sgo-nav-aviso|login-)/;
     var editados = typeof WeakSet === "function" ? new WeakSet() : null;
 
@@ -423,8 +472,12 @@
         if (st.position !== "fixed") return;
         var r = el.getBoundingClientRect();
         var w = Math.max(0, Math.min(r.right, W) - Math.max(r.left, 0)), h = Math.max(0, Math.min(r.bottom, H) - Math.max(r.top, 0));
-        if (w * h < W * H * 0.4) return;
+        // data-sgo-janela="1": painel lateral do módulo (ficha do cadastro) que conta como janela mesmo estreito no computador
+        if (w * h < W * H * 0.4 && el.getAttribute("data-sgo-janela") !== "1") return;
         achadas.push(el);
+      });
+      [document.getElementById("aswPainel")].concat(Array.prototype.slice.call(document.querySelectorAll(".comw-painel"))).forEach(function (el) {
+        if (el && achadas.indexOf(el) < 0 && visivel(el) && getComputedStyle(el).position === "fixed") achadas.push(el);
       });
       // a janela de dentro (caixa da janela) não conta de novo
       return achadas.filter(function (el) { return !achadas.some(function (o) { return o !== el && o.contains(el); }); });
@@ -464,6 +517,28 @@
       } catch (e) { console.error("Navegação: fechar janela:", e); }
       finally { if (jaConfirmou) window.confirm = confOrig; }
       return !visivel(el);
+    }
+    /** Responde sozinho o "confirm" do módulo enquanto fn roda (a casca já perguntou "Descartar o que foi digitado?"). */
+    function semPerguntar(fn) {
+      var confOrig = window.confirm;
+      window.confirm = function () { return true; };
+      try { fn(); } finally { window.confirm = confOrig; }
+    }
+    // ---------------- rolagem da tela (Etapa 2) ----------------
+    function rolagem() { var se = document.scrollingElement || document.documentElement; return Math.round((se && se.scrollTop) || 0); }
+    var rolPedido = 0, rolMexeu = 0;
+    ["wheel", "touchstart", "keydown"].forEach(function (ev) { window.addEventListener(ev, function (e) { if (e.isTrusted) rolMexeu = Date.now(); }, { passive: true, capture: true }); });
+    /** Volta a lista para a altura em que a pessoa saiu. A lista pode chegar do servidor depois: tenta por até 3 s, e para se a pessoa rolar. */
+    function restaurarRolagem(y) {
+      if (!(y >= 0)) return;
+      var meu = ++rolPedido, t0 = Date.now(), mod = window.SGO_MODULO_ATUAL;
+      [0, 120, 350, 800, 1500, 2400, 3200].forEach(function (ms) {
+        setTimeout(function () {
+          if (meu !== rolPedido || rolMexeu > t0 || window.SGO_MODULO_ATUAL !== mod) return;
+          var se = document.scrollingElement || document.documentElement;
+          if (Math.abs(se.scrollTop - y) > 2) se.scrollTop = y;
+        }, ms);
+      });
     }
     var NAO_CONTA = /busca|buscar|pesquis|filtro|search|procurar/i;
     function sujoEm(raiz) {
@@ -531,11 +606,22 @@
       confirmar: function (t) { try { return window.confirm(t); } catch (e) { return true; } },
       janelaAberta: function (el) { return visivel(el); },
       janelaTrava: ehTrava,
-      janelaSuja: function (el) { return sujoEm(el); },
+      janelaSuja: function (el) { return !ehWidget(el) && sujoEm(el); }, // o rascunho do bate-papo fica guardado ao fechar o painel
       fecharJanela: fecharJanela,
       rotuloJanela: rotuloJanela,
       textoTrava: textoTrava,
-      conteudoSujo: function () { return sujoEm(document.getElementById("conteudo")); },
+      // Etapa 2: o texto digitado conta na tela e nas janelas abertas (fora os painéis do bate-papo e do assistente)
+      conteudoSujo: function () {
+        if (sujoEm(document.getElementById("conteudo"))) return true;
+        var js = (nucleo && nucleo.N.janelas) || [];
+        var cont = document.getElementById("conteudo");
+        for (var i = 0; i < js.length; i++) { var el = js[i].el; if (el && !ehWidget(el) && visivel(el) && !(cont && cont.contains(el)) && sujoEm(el)) return true; }
+        return false;
+      },
+      semPerguntar: semPerguntar,
+      janelaPersistente: ehWidget,
+      rolagem: rolagem,
+      restaurarRolagem: restaurarRolagem,
       telaPermitida: function () { return true; }, // conferida em telaParaRestaurar, com o menu já montado
       hashTela: function () { var m = /^#\/([a-z_]{3,40})$/.exec(String(location.hash || "")); return m ? m[1] : ""; },
       agora: function () { return Date.now(); },
@@ -582,16 +668,16 @@
       document.documentElement.classList.toggle("sgo-movel", ehCelular());
       if (!nucleo.ativo()) return;
       var abertas = listarJanelas();
-      abertas.forEach(function (el) { el.classList.add("sgo-nav-janela"); });
-      document.documentElement.classList.toggle("sgo-tem-janela", abertas.some(function (el) { return !el.classList.contains("sgo-visor"); }));
+      abertas.forEach(function (el) { if (!ehWidget(el)) el.classList.add("sgo-nav-janela"); });
+      document.documentElement.classList.toggle("sgo-tem-janela", abertas.some(function (el) { return !el.classList.contains("sgo-visor") && !ehWidget(el); }));
       nucleo.janelasMudaram(abertas);
       // passo automático: um toque dentro da tela trocou os títulos sem nenhum passo gravado
       if (clique && Date.now() - clique.t < 6000 && !abertas.length) {
         if (nucleo.ultimaOp() > clique.t || window.SGO_MODULO_ATUAL !== clique.mod) { clique = null; return; }
         var agoraAss = assinatura();
         if (agoraAss && agoraAss !== clique.assinatura) {
-          var mod = clique.mod, aba = clique.aba; clique = null;
-          nucleo.empilhar("Tela dentro do módulo", function () { voltarAoComeco(mod, aba); }, { auto: true, reinicia: true });
+          var mod = clique.mod, aba = clique.aba, rolClique = clique.rol; clique = null;
+          nucleo.empilhar("Tela dentro do módulo", function () { voltarAoComeco(mod, aba); }, { auto: true, reinicia: true, rol: rolClique });
         }
       } else if (clique && Date.now() - clique.t >= 6000) clique = null;
     }
@@ -607,7 +693,7 @@
       if (!b) return;
       if (b.tagName === "A" && b.getAttribute("href") && !/^(#|javascript:)/i.test(b.getAttribute("href"))) return;
       if (EXCLUIR_CLIQUE.test(texto(b))) return;
-      clique = { t: Date.now(), assinatura: assinatura(), mod: window.SGO_MODULO_ATUAL || "", aba: abaSelecionada() };
+      clique = { t: Date.now(), assinatura: assinatura(), mod: window.SGO_MODULO_ATUAL || "", aba: abaSelecionada(), rol: rolagem() };
     }, true);
     function ligarObservador() {
       if (typeof MutationObserver !== "function" || !document.body) return;
@@ -718,12 +804,18 @@
       ligado: true,
       nucleo: nucleo,
       ehCelular: ehCelular,
-      /** Sub-nível dentro do módulo: grava um passo; voltar chama aoVoltar. opcoes: { chave, substituir, reabrir, reinicia }. */
+      /** Sub-nível dentro do módulo: grava um passo; voltar chama aoVoltar. opcoes: { chave, substituir, reabrir, reinicia, mantemTexto, rol }. */
       empilhar: function (rotulo, aoVoltar, opcoes) { return nucleo.empilhar(rotulo, aoVoltar, opcoes); },
       /** Botão "Voltar" de um módulo: se há sub-nível gravado, volta um passo pelo histórico; senão, roda fn. */
       voltarOu: function (fn) { nucleo.voltarOu(fn); },
       /** O módulo voltou ao começo por conta própria (ex.: "Voltar ao painel"): tira os sub-níveis da pilha. */
       limparSubniveis: function () { nucleo.limparSubniveis(); },
+      /** Etapa 2: um sub-nível (id devolvido por empilhar) deixou de valer: sai da pilha sem desfazer nada (ex.: "Cancelar" do formulário). */
+      descartar: function (id) { nucleo.descartar(id); },
+      /** Etapa 2: ficha (janela) aberta por cima de outra: fechada pelo voltar, chama fn para reabrir a anterior (ex.: O.S. aberta do chamado). */
+      janelaVolta: function (el, fn) { nucleo.janelaVolta(el, fn); },
+      /** Etapa 2: true enquanto o voltar redesenha uma tela (o módulo pode manter filtro e busca de antes). */
+      restaurando: function () { return nucleo.restaurando(); },
       voltar: function () { return nucleo.voltar(); },
       antesDeAbrir: function (mod) { return nucleo.antesDeAbrir(mod); },
       aoAbrir: function (mod) { nucleo.aoAbrir(mod); agendar(); },

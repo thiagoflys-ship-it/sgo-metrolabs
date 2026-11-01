@@ -44,7 +44,7 @@ function SGO_ajudaTelas_Qualidade_() {
         { titulo: "Gerar o relatório A4", itens: [
           "Escolha o período.",
           "Toque em \"Gerar relatório A4\".",
-          "Aguarde até 1 minuto. O relatório abre numa aba nova. Não feche a aba antes de terminar.",
+          "Aguarde até 1 minuto. O relatório abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Não feche a aba antes de terminar.",
           "Uma cópia (PDF e HTML) fica guardada na pasta \"Painel de qualidade - Relatórios\". O link para o PDF aparece no topo do relatório."
         ] },
         { titulo: "Abrir uma O.S. com pendência", itens: [

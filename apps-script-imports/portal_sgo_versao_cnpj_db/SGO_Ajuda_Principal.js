@@ -139,7 +139,7 @@ function SGO_ajudaTelas_Principal_() {
         { p: "O que conta como crítico?", r: "Vencido ou que vence hoje. O que vence em até 30 dias é atenção. Atividade atrasada também é crítica." },
         { p: "Por que só aparecem quatro cartões?", r: "O Início mostra os quatro grupos mais urgentes. Toque em \"Ver todas as pendências (N)\" para ver o resto." },
         { p: "Como volto ao Início?", r: "Toque em \"Início\" no menu ou no logotipo SGO+ no alto da tela." },
-        { p: "O botão voltar do navegador funciona no SGO+?", r: "Sim. Ele volta um passo dentro do sistema: fecha a janela aberta ou volta para a tela anterior, com a mesma lista e os mesmos filtros quando a tela guarda isso. Atualizar a página (F5) mantém a tela em que você estava. No computador, relatórios e documentos A4 continuam abrindo em aba nova; no celular, abrem no visualizador do SGO+, com \"Voltar\" e \"Imprimir\"." },
+        { p: "O botão voltar do navegador funciona no SGO+?", r: "Sim. Ele volta um passo dentro do sistema: fecha a janela aberta ou volta para a tela anterior, com a mesma lista, os mesmos filtros e a mesma altura da página; dentro dos módulos, volta também à aba e à ficha de antes. Atualizar a página (F5) mantém a tela em que você estava. No computador, relatórios e documentos A4 continuam abrindo em aba nova; no celular, abrem no visualizador do SGO+, com \"Voltar\" e \"Imprimir\"." },
         { p: "A tela atualiza sozinha?", r: "A situação da frota atualiza a cada 30 segundos. Para atualizar o resto, toque em \"Início\" de novo ou aperte F5." }
       ]
     },
@@ -178,12 +178,15 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "O \"← Voltar\" da barra do topo, o botão voltar do celular e o gesto de voltar fazem a mesma coisa: voltam um passo, para a tela ou a lista em que você estava antes.",
             "Com uma janela aberta (detalhe, ficha, formulário), voltar fecha a janela e você continua na mesma tela.",
+            "Dentro dos módulos, voltar devolve exatamente o que estava antes: a lista com a mesma busca, os mesmos filtros e a mesma altura; a aba anterior; a ficha de onde você abriu outra ficha (por exemplo, a O.S. aberta dentro do chamado volta ao chamado, e a proposta aberta dentro da oportunidade volta à oportunidade). Vale no Comercial, na Assistência técnica, em Compras, na Frota, em Clientes, Unidades, Equipamentos, Padrões de referência e Vínculos.",
+            "Os painéis do bate-papo e do \"Tire sua dúvida\" também fecham com o voltar. A mensagem que você estava escrevendo no bate-papo fica guardada.",
             "Se você já escreveu alguma coisa na janela ou na tela, o SGO+ pergunta \"Descartar o que foi digitado?\". Toque em Cancelar para continuar onde estava, sem perder o texto.",
             "Algumas janelas precisam ser resolvidas antes, como a da atividade com prazo vencido e a da troca de senha obrigatória: elas não fecham pelo voltar. Use os botões da própria janela.",
             "No Início, voltar mostra \"Para sair do SGO+, toque em voltar de novo\". Só um segundo toque, logo em seguida, sai do sistema.",
             "Relatórios, certificados, manuais e outros documentos abrem dentro do SGO+, num visualizador de tela cheia. No alto ficam \"Voltar\" (volta para a tela de onde você veio), o nome do documento e \"Imprimir\". Quando o documento já tem o arquivo PDF salvo, aparece também \"Baixar PDF\".",
             "Folha mais larga que o celular aparece ajustada à largura da tela. Toque em \"Tamanho real\" para ver no tamanho original e arrastar para os lados; toque em \"Ajustar à tela\" para voltar. A impressão continua saindo em folha A4.",
             "Documento guardado fora do SGO+ (por exemplo, um PDF numa pasta) mostra o botão \"Abrir o documento\": ele abre numa aba nova. Para voltar ao SGO+, feche a aba ou use o botão de abas do navegador.",
+            "Documento A4 aberto pelo link direto (de um e-mail ou de um endereço copiado) mostra \"Voltar ao SGO+\" no alto, ao lado de \"Imprimir ou salvar em PDF\". O botão não sai na impressão.",
             "Atualizar a página ou abrir o SGO+ de novo volta para a tela em que você estava, quando ela ainda está no seu menu; senão, para o Início."
           ]
         },

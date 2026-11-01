@@ -316,7 +316,8 @@
       ((ini.representadas || []).length ? '<div><label for="atRep">Representação</label><select id="atRep">' + At_opcoes_([{ v: "TODAS", t: "Só de representadas" }].concat(ini.representadas.map(function (r) { return { v: r.id, t: r.nome }; })), AT.filtro.representadaId, "Todos os chamados") + '</select></div>' : '') +
       '</div><div id="atLista"><div class="at-vazio">Carregando…</div></div></div>';
     At_$_("atAtualizar").onclick = function () { At_carregarChamados_(); };
-    div.querySelectorAll("#atGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.filtro.grupo = b.getAttribute("data-g"); At_renderChamados_(div); }; });
+    // Etapa 2: trocar de aba é um passo do voltar (volta à aba de antes, com a busca e a prioridade)
+    div.querySelectorAll("#atGrupos .at-tab").forEach(function (b) { b.onclick = function () { var de = AT.filtro.grupo, para = b.getAttribute("data-g"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Chamados: " + b.textContent, function () { AT.filtro.grupo = de; if (AT.mod === "assistencia" && At_$_("atGrupos")) At_renderChamados_(div); }); AT.filtro.grupo = para; At_renderChamados_(div); }; });
     var t = null;
     At_$_("atBusca").oninput = function () { clearTimeout(t); t = setTimeout(function () { AT.filtro.busca = At_$_("atBusca").value; At_carregarChamados_(); }, 400); };
     At_$_("atPrio").onchange = function () { AT.filtro.prioridade = At_$_("atPrio").value; At_carregarChamados_(); };
@@ -483,7 +484,8 @@
     if ((b = corpo.querySelector("#atRemOk"))) b.onclick = function () { At_chamar_("encerrarRemoto", { id: c.id, confirmadoPor: At_$_("atRemQuem").value, testeFuncional: At_$_("atRemTeste").value }, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atRemMsg", m); }); };
     if ((b = corpo.querySelector("#atRetomar"))) b.onclick = function () { At_pedirTexto_("Liberar para agendar", "O chamado volta para \"Planejado\" e a gestão agenda o atendimento. Ao agendar, o cliente recebe a data por e-mail.", "O que aconteceu (peça chegou, orçamento aprovado...)", 5, function (t, ov) { At_chamar_("retomar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
     if ((b = corpo.querySelector("#atVoltarTriagem"))) b.onclick = function () { At_pedirTexto_("Voltar o chamado à triagem", "Use quando o técnico descobriu em campo que precisa de orçamento ou de outro diagnóstico. A O.S. fica pausada (a visita foi interrompida) e volta para a agenda quando a triagem decidir \"planejar visita\". O técnico é avisado.", "Motivo", 10, function (t, ov) { At_chamar_("voltarTriagem", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Voltar à triagem"); };
-    if ((b = corpo.querySelector("#atAbrirOs"))) b.onclick = function () { At_abrirOs_(r.os.id); };
+    // Etapa 2 (01/11/2026): a O.S. abre por cima do chamado; o voltar (ou o Voltar do celular) reabre o chamado
+    if ((b = corpo.querySelector("#atAbrirOs"))) b.onclick = function () { AT.voltaChamado = { os: r.os.id, ch: c.id }; At_abrirOs_(r.os.id); };
     if ((b = corpo.querySelector("#atAssumir"))) b.onclick = function () { At_assumir_(c.id, c.numero); };
     if ((b = corpo.querySelector("#atExcluir"))) b.onclick = function () { At_excluir_(c); };
     corpo.querySelector("#atAnotar").onclick = function () { At_pedirTexto_("Registrar no histórico", "Ligação do cliente, e-mail recebido ou observação. Fica no histórico do chamado.", "O que aconteceu", 5, function (t, ov) { At_chamar_("anotar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Registrar"); };
@@ -755,7 +757,7 @@
       '<div class="at-tabs" id="atOsGrupos">' + [["ABERTAS", "Abertas"], ["PENDENTES", "Documentação pendente"], ["ENCERRADAS", "Encerradas"], ["TODAS", "Todas"]].map(function (g) { return '<button type="button" class="at-tab' + (AT.osFiltro === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
       '<div id="atOsLista"><div class="at-vazio">Carregando…</div></div></div>';
     At_$_("atOsAtualizar").onclick = function () { At_renderOs_(div); };
-    div.querySelectorAll("#atOsGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.osFiltro = b.getAttribute("data-g"); At_renderOs_(div); }; });
+    div.querySelectorAll("#atOsGrupos .at-tab").forEach(function (b) { b.onclick = function () { var de = AT.osFiltro, para = b.getAttribute("data-g"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("O.S.: " + b.textContent, function () { AT.osFiltro = de; if (AT.mod === "assistencia_os" && At_$_("atOsGrupos")) At_renderOs_(div); }); AT.osFiltro = para; At_renderOs_(div); }; });
     At_chamar_("listaOs", { situacao: AT.osFiltro }, function (r) {
       var l = At_$_("atOsLista"); if (!l) return;
       l.innerHTML = r.os.length ? '<div class="at-lista">' + r.os.map(function (o) {
@@ -763,7 +765,7 @@
           '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
           '<p class="at-txt">' + At_esc_(o.equipamentoTexto) + '</p>' + (o.faltas ? '<p class="at-meta" style="color:var(--danger)">Falta: ' + At_esc_(o.faltas) + '</p>' : '') + (o.endereco ? '<p class="at-meta">' + At_esc_(o.endereco) + '</p>' : '') + '</div>';
       }).join("") + '</div>' : '<div class="at-vazio">Nenhuma O.S. neste filtro.</div>';
-      l.querySelectorAll("[data-os]").forEach(function (c) { c.onclick = function () { At_abrirOs_(c.getAttribute("data-os")); }; });
+      l.querySelectorAll("[data-os]").forEach(function (c) { c.onclick = function () { AT.voltaChamado = null; At_abrirOs_(c.getAttribute("data-os")); }; });
     }, function (m) { At_msg_("atOsLista", m); });
   }
   function At_abrirOs_(id, msg, tipo) { At_chamar_("os", { id: id }, function (r) { At_desenharOs_(r.os, msg, tipo); }, null, { carregando: "Abrindo a O.S.…" }); }
@@ -816,6 +818,9 @@
       '<button type="button" class="btn-secondary" id="atOsChamado">Abrir o chamado</button></div>';
     h += '<div class="at-sec">Histórico da O.S.</div><div class="at-hist">' + (o.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + (e.emAparelho && e.emAparelho !== e.em ? ' (aparelho ' + At_esc_(e.emAparelho) + ')' : '') + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto) + '</div>'; }).join("") + '</div>';
     var g = At_gaveta_("O.S. " + o.numero, h), corpo = g.querySelector("#atGavetaCorpo");
+    var vch = AT.voltaChamado;
+    if (vch && vch.os === o.id && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(g, function () { if (AT.voltaChamado === vch) AT.voltaChamado = null; At_abrirChamado_(vch.ch); });
+    else AT.voltaChamado = null;
     var reabrir = function (m, t) { At_abrirOs_(o.id, m, t); if (AT.mod === "assistencia_os") { var d = At_$_("conteudo"); if (d) At_renderOs_(d); } };
     var enviarEventos = function (eventos, carregando) {
       if (!eventos.length) { At_msg_("atOsMsg", "Nada novo para salvar.", "aviso"); return; }
@@ -987,7 +992,7 @@
         h += '</tr>';
       });
       c.innerHTML = h + '</tbody></table></div>';
-      c.querySelectorAll("[data-os]").forEach(function (x) { x.onclick = function () { At_abrirOs_(x.getAttribute("data-os")); }; });
+      c.querySelectorAll("[data-os]").forEach(function (x) { x.onclick = function () { AT.voltaChamado = null; At_abrirOs_(x.getAttribute("data-os")); }; });
       c.querySelectorAll("[data-rota]").forEach(function (x) { x.onclick = function () { At_abrirRota_(x.getAttribute("data-rota"), AT.agenda.inicio); }; });
     }, function (m) { At_msg_("atAgCorpo", m); });
   }

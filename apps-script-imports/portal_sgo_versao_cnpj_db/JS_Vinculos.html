@@ -127,7 +127,19 @@
     if (VINC.origem) vincCarregarDetalhes_();
   }
 
-  function vincAba_(a) { VINC.aba = a; vincDesenhar_(); }
+  // Etapa 2 do programa de melhoria (01/11/2026): escolher a origem, trocar o tipo e abrir o histórico são passos do voltar;
+  // voltar devolve a tela como estava (tipo, busca, situação e origem de antes).
+  function vincPasso_(rotulo) {
+    if (!window.SGO_NAV || !SGO_NAV.empilhar) return;
+    var antes = { tipo: VINC.tipo, origem: VINC.origem, aba: VINC.aba, cod: VINC.cod, ep: VINC.epoch };
+    SGO_NAV.empilhar(rotulo, function () {
+      if (!document.getElementById("vincTela") || !VINC.data) return;
+      VINC.tipo = antes.tipo; VINC.origem = antes.origem; VINC.aba = antes.aba; VINC.cod = antes.cod;
+      if (VINC.origem && !vincItem_(VINC.tipo, VINC.origem)) VINC.origem = "";
+      vincLimparAcao_(); vincDesenhar_();
+    });
+  }
+  function vincAba_(a) { if (a !== VINC.aba) vincPasso_(a === "historico" ? "Vínculos: histórico" : "Vínculos"); VINC.aba = a; vincDesenhar_(); }
   function vincFiltroResumo_(tipo, cod) {
     if (VINC.cod === cod && (tipo === "*" || VINC.tipo === tipo)) VINC.cod = "";
     else { VINC.cod = cod; if (tipo !== "*") VINC.tipo = tipo; }
@@ -186,13 +198,14 @@
   function vincLigarOrigem_() {
     var c = document.getElementById("vincOrigemCartao");
     if (!c) return;
-    c.querySelectorAll(".vincx-tipos button").forEach(function (b) { b.onclick = function () { VINC.tipo = b.getAttribute("data-tipo"); VINC.origem = ""; vincLimparAcao_(); VINC.cod = VINC.cod && ["REGULAR", "INATIVO", "DUPLICIDADE"].indexOf(VINC.cod) >= 0 ? VINC.cod : ""; vincDesenhar_(); }; });
+    c.querySelectorAll(".vincx-tipos button").forEach(function (b) { b.onclick = function () { if (VINC.tipo !== b.getAttribute("data-tipo")) vincPasso_("Vínculos: " + b.textContent); VINC.tipo = b.getAttribute("data-tipo"); VINC.origem = ""; vincLimparAcao_(); VINC.cod = VINC.cod && ["REGULAR", "INATIVO", "DUPLICIDADE"].indexOf(VINC.cod) >= 0 ? VINC.cod : ""; vincDesenhar_(); }; });
     var busca = c.querySelector("#vincBusca"), t = null;
     busca.addEventListener("input", function () { clearTimeout(t); t = setTimeout(function () { VINC.busca = busca.value; document.getElementById("vincOrigens").innerHTML = vincOrigensHtml_(); }, 160); });
     c.querySelector("#vincFiltroCod").addEventListener("change", function (e) { VINC.cod = e.target.value; vincDesenhar_(); });
     c.querySelector("#vincOrigens").addEventListener("click", function (e) {
       var b = e.target.closest(".vincx-origem");
       if (!b) return;
+      if (VINC.origem !== b.getAttribute("data-id")) vincPasso_("Vínculos: situação");
       VINC.origem = b.getAttribute("data-id");
       vincLimparAcao_();
       c.querySelectorAll(".vincx-origem").forEach(function (x) { var s = x === b; x.classList.toggle("is-ativa", s); x.setAttribute("aria-selected", s); });

@@ -1,6 +1,23 @@
 <script>
   let tplFrota_carregado_ = false;
 
+  // Etapa 2 do programa de melhoria (01/11/2026): trocar de aba na Frota completa (toque da pessoa) é um passo do voltar; voltar
+  // devolve a aba de antes. Feito pela casca, embrulhando tplFrota_mostrarAba_ depois que o módulo carrega
+  // (SGO_Frota_ConteudoModulo.js não muda). Trocas feitas pelo próprio sistema (abrir já numa aba) não gravam passo.
+  function tplFrota_ligarVoltarAbas_() {
+    var orig = window.tplFrota_mostrarAba_;
+    if (typeof orig !== 'function' || orig.__sgoNav) return;
+    var nova = function (id) {
+      var de = window.tplFrota_abaAtual_, ev = window.event;
+      if (de && id && de !== id && ev && ev.isTrusted && ev.type === 'click' && window.SGO_NAV && SGO_NAV.empilhar) {
+        SGO_NAV.empilhar('Frota: ' + id, function () { if (document.querySelector('#tplFrotaContainer .frota-abas')) orig(de); });
+      }
+      return orig.apply(this, arguments);
+    };
+    nova.__sgoNav = true;
+    window.tplFrota_mostrarAba_ = nova;
+  }
+
   function renderTplFrota_() {
     const container = document.getElementById('tplFrotaContainer');
     if (!container) return;
@@ -31,6 +48,7 @@
           tplFrota_carregado_ = true;
 
           var desenhar = function () {
+            tplFrota_ligarVoltarAbas_();
             if (typeof tplFrota_renderReal_ === 'function') {
               tplFrota_renderReal_();
             } else {

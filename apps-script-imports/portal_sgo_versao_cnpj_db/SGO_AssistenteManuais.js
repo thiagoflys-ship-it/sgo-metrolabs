@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "4e592754f047",
+ "versao": "faf4411aaf87",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3550,7 +3550,7 @@ var SGO_ASSIST_MANUAIS = {
    "secoes": [
     {
      "titulo": "Introdução",
-     "texto": "Vale para todas as telas, no celular e no computador. Atualizado em 01/11/2026."
+     "texto": "Vale para todas as telas, no celular e no computador. Atualizado em 01/11/2026 (Etapa 2: voltar dentro dos módulos, bate-papo e \"Tire sua dúvida\", \"Voltar ao SGO+\" no documento)."
     },
     {
      "titulo": "O que mudou",
@@ -3561,8 +3561,20 @@ var SGO_ASSIST_MANUAIS = {
      "texto": "1. No celular, use o \"← Voltar\" da barra do topo, o botão voltar do próprio celular ou o gesto de voltar. Os três fazem a mesma coisa.\n2. No computador, use o botão voltar do navegador (a seta no alto, à esquerda) ou a tecla de voltar do mouse.\n3. Com uma janela aberta, voltar fecha a janela e você continua na mesma tela.\n4. Sem janela aberta, voltar leva para a tela ou a lista em que você estava antes, com os mesmos filtros quando a tela guarda isso. Exemplos: da busca do Relatório do ciclo para o painel; de \"Regras e responsáveis\" para a Caixa de decisões; do \"+ Novo cliente\" do Certificado de calibração de volta para o certificado; de \"Abrir a tela completa\" (Autoclaves, Lavadoras, Cadeia de frio, Estufa, Planejamento CME, no celular) de volta para o resumo.\n5. No Início, voltar mostra \"Para sair do SGO+, toque em voltar de novo\". Só um segundo toque, logo em seguida, sai do sistema. Antes, o primeiro toque já saía e deixava a tela em branco."
     },
     {
+     "titulo": "Dentro dos módulos: volta exatamente para onde você estava (Etapa 2) (parte 1)",
+     "texto": "Nos módulos mais usados, voltar devolve a tela como estava, sem recomeçar o módulo: A lista, com a mesma busca, os mesmos filtros, os números do topo escolhidos e a mesma altura da página. A aba anterior: trocar de aba (por exemplo, \"Em aberto\" para \"Todos\" nos chamados, ou \"Dados\" para \"Unidades e equipamentos\" na ficha do cliente) é um passo. Voltar devolve a aba de antes. A ficha de onde você abriu outra ficha: a O.S. aberta dentro do chamado volta ao chamado; a proposta aberta dentro da oportunidade volta à oportunidade (a proposta agora abre por cima da oportunidade, sem trocar de tela); \"Editar\" a oportunidade ou o fornecedor volta à ficha; a oportunidade aberta pelo detalhe do Gantt volta ao detalhe. O formulário dentro da ficha: \"Editar\" o cliente, a unidade, o equipamento ou o padrão volta à ficha, na aba em que você estava. \"Cancelar\" e \"Salvar\" também voltam à ficha, e o voltar seguinte fecha a ficha (não precisa voltar duas vezes). Módulo | O que volta ao lugarComercial | Lista de oportunidades e de propostas com o filtro e a busca; ficha da oportunidade a partir da proposta, do \"Editar\" e do novo contato; seção anterior (Hoje, Oportunidades, Propostas e outras); detalhe do Gantt. Assistência técnica | Abas dos chamados e das O.S. com a busca e a prioridade; ficha do chamado a partir da O.S. Compras | Situação da fila de compras com a busca; abas de \"Informar compra já feita\"; ficha do fornecedor a partir do \"Editar\". Frota | No celular: retirar, devolver, \"Abasteci\", outras despesas, passar o carro, ajustar KM e partida voltam à tela inicial da Frota; a tela completa volta à Frota simples. No computador: a aba anterior da Frota. Clientes, Unidades, Equipamentos | Lista com a busca e os filtros; abas da ficha; \"Editar\" volta à ficha."
+    },
+    {
+     "titulo": "Dentro dos módulos: volta exatamente para onde você estava (Etapa 2) (parte 2)",
+     "texto": "Voltando de outra tela, a busca e os filtros continuam. Padrões de referência | Abas da ficha do padrão (Resumo, Cadastro e validade, Dados); do canal para o grupo. Vínculos | Origem escolhida, tipo de cadastro e aba \"Histórico das alterações\" voltam ao passo de antes, com a busca."
+    },
+    {
+     "titulo": "Dentro dos módulos: volta exatamente para onde você estava (Etapa 2) > Bate-papo e \"Tire sua dúvida\"",
+     "texto": "Os painéis do bate-papo e do \"Tire sua dúvida\" fecham com o voltar (no celular, com o botão voltar do aparelho ou o gesto; no computador, com o voltar do navegador). A mensagem que você estava escrevendo no bate-papo fica guardada. Se você trocar de tela com um desses painéis aberto, ele continua aberto e o próximo voltar fecha o painel."
+    },
+    {
      "titulo": "Texto digitado não se perde sem aviso",
-     "texto": "Se você escreveu alguma coisa numa janela ou num formulário e toca em voltar, aparece a pergunta \"Descartar o que foi digitado?\".\nToque em Cancelar para continuar onde estava, com o texto.\nToque em OK para descartar e voltar.\n\nA mesma pergunta aparece se você abrir outra tela pelo menu com uma janela preenchida ainda aberta."
+     "texto": "Se você escreveu alguma coisa numa janela ou num formulário e toca em voltar, aparece a pergunta \"Descartar o que foi digitado?\".\nToque em Cancelar para continuar onde estava, com o texto.\nToque em OK para descartar e voltar.\n\nA mesma pergunta aparece se você abrir outra tela pelo menu com uma janela preenchida ainda aberta, e quando o voltar desfaz um passo dentro de uma ficha com texto digitado (por exemplo, o formulário \"Editar\" do cliente ou do padrão). A pergunta é uma só: o SGO+ não pergunta duas vezes."
     },
     {
      "titulo": "Janelas que não fecham pelo voltar",
@@ -3574,7 +3586,11 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Documentos no celular: o visualizador",
-     "texto": "No celular, relatórios, certificados, documentos A4 e o manual completo da Ajuda abrem dentro do SGO+, num visualizador de tela cheia. Antes abriam numa aba em branco, sem botão para voltar.\n\nNo alto do visualizador ficam:\nVoltar: fecha o documento e volta para a tela de onde você veio. O botão voltar do celular faz o mesmo.\nO nome do documento.\nImprimir: imprime ou salva em PDF. A folha sai em A4, igual a antes.\nBaixar PDF: aparece quando o documento já tem o arquivo PDF salvo (por exemplo, no Relatório do ciclo da lavadora).\nTamanho real e Ajustar à tela: folha mais larga que o celular aparece ajustada à largura da tela; \"Tamanho real\" mostra no tamanho original, para arrastar para os lados.\n\nDocumento guardado fora do SGO+ (por exemplo, um PDF numa pasta) mostra o botão \"Abrir o documento\". Ele abre numa aba nova; para voltar ao SGO+, feche a aba ou use o botão de abas do navegador.\n\nO visualizador vale para o SGO+ no modo celular: telas de até 900 px de largura e celular deitado (tela de toque com até 500 px de altura). No computador, os documentos continuam abrindo em aba nova, como antes.\n\nLinks para fora do sistema continuam abrindo fora: conversa no WhatsApp, e-mail, pasta e PDF no Drive, e os botões de baixar arquivo."
+     "texto": "No celular, relatórios, certificados, documentos A4 e o manual completo da Ajuda abrem dentro do SGO+, num visualizador de tela cheia. Antes abriam numa aba em branco, sem botão para voltar.\n\nNo alto do visualizador ficam:\nVoltar: fecha o documento e volta para a tela de onde você veio. O botão voltar do celular faz o mesmo.\nO nome do documento.\nImprimir: imprime ou salva em PDF. A folha sai em A4, igual a antes.\nBaixar PDF: aparece quando o documento já tem o arquivo PDF salvo (por exemplo, no Relatório do ciclo da lavadora).\nTamanho real e Ajustar à tela: folha mais larga que o celular aparece ajustada à largura da tela; \"Tamanho real\" mostra no tamanho original, para arrastar para os lados.\n\nDocumento guardado fora do SGO+ (por exemplo, um PDF numa pasta) mostra o botão \"Abrir o documento\". Ele abre numa aba nova; para voltar ao SGO+, feche a aba ou use o botão de abas do navegador.\n\nO visualizador vale para o SGO+ no modo celular: telas de até 900 px de largura e celular deitado (tela de toque com até 500 px de altura). No computador, os documentos continuam abrindo em aba nova, como antes.\n\nLinks para fora do sistema continuam abrindo fora: conversa no WhatsApp, e-mail, pasta e PDF no Drive, e os botões de baixar arquivo.\n\nAs ajudas de cada tela (\"Como usar esta tela\") dizem, onde o documento abre em aba nova no computador: \"No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.\""
+    },
+    {
+     "titulo": "Documento aberto pelo link direto: \"Voltar ao SGO+\"",
+     "texto": "O documento A4 aberto pelo link direto (o link de um e-mail, de uma mensagem ou um endereço copiado) mostra no alto, à esquerda, o botão Voltar ao SGO+, ao lado de \"Imprimir ou salvar em PDF\". Ele abre o SGO+ (com a senha, se a sessão tiver terminado). Aberto pelo próprio sistema, o documento não mostra o botão: no computador, a aba nova é fechada ao terminar; no celular, o visualizador já tem \"Voltar\". O botão não sai na impressão."
     },
     {
      "titulo": "Atualizar a página ou abrir de novo",
@@ -3582,7 +3598,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "O que fazer se algo der errado",
-     "texto": "Situação | O que fazerVoltar não fechou a janela | A janela é uma das que precisam ser resolvidas antes (veja acima), ou não tem botão de fechar. Leia o aviso no pé da tela e use os botões da janela.\nVoltar levou para o começo da tela, e não para a ficha | Essa tela ainda não guarda a ficha no caminho. Abra a ficha de novo. As próximas etapas do programa de melhoria vão cobrir as telas restantes.\nO documento abriu numa aba nova no celular | É um documento guardado fora do SGO+. Feche a aba para voltar.\nA impressão saiu pequena ou cortada | Toque em \"Imprimir\" no alto do visualizador (e não no menu do navegador). Se continuar, avise o administrador do sistema."
+     "texto": "Situação | O que fazerVoltar não fechou a janela | A janela é uma das que precisam ser resolvidas antes (veja acima), ou não tem botão de fechar. Leia o aviso no pé da tela e use os botões da janela.\nVoltar levou para o começo da tela, e não para a ficha | Essa tela ainda não guarda a ficha no caminho (a Etapa 2 cobriu Comercial, Assistência técnica, Compras, Frota, Clientes, Unidades, Equipamentos, Padrões e Vínculos). Abra a ficha de novo. As próximas etapas do programa de melhoria cobrem as telas restantes.\nVoltar devolveu a lista, mas não na mesma altura | A lista chegou do servidor depois de alguns segundos. O SGO+ tenta por até 3 segundos e para se você rolar a tela. Role até o ponto em que estava.\nO documento abriu numa aba nova no celular | É um documento guardado fora do SGO+. Feche a aba para voltar.\nA impressão saiu pequena ou cortada | Toque em \"Imprimir\" no alto do visualizador (e não no menu do navegador). Se continuar, avise o administrador do sistema."
     }
    ]
   },

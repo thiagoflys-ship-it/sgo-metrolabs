@@ -40,7 +40,32 @@ if (window.SGO_NAV) SGO_NAV.empilhar("Ficha do pedido", function () { Compras_de
 - O módulo voltou ao começo sozinho (ex.: "Voltar ao painel"): chame `SGO_NAV.limparSubniveis()` no começo da função que desenha o começo.
 - `SGO_NAV.voltar()` faz o mesmo que o Voltar da barra do topo.
 
-Já usam o gancho: Relatório do ciclo da lavadora (busca, busca dentro da busca, gerar relatório, "Voltar ao painel"), Caixa de decisões ("Regras e responsáveis" e "Voltar à caixa"), Certificado de calibração do celular (passos Equipamento, Dados, Ensaios, Gerar, "+ Novo cliente" e "+ Novo equipamento", que voltam ao certificado) e "Abrir a tela completa" das telas pesadas no celular (Autoclaves, Lavadoras, Cadeia de frio, Estufa, Planejamento CME: voltar volta ao resumo). Os outros módulos ficam para a Etapa 2 (lista na seção 5 do diagnóstico); até lá, o passo automático leva ao começo do módulo.
+## Etapa 2 (01/11/2026): peças novas
+
+- **Rolagem.** Cada passo guarda a altura da página (`document.scrollingElement.scrollTop`) no momento em que a pessoa sai dele: em `antesDeAbrir` (troca de tela), no `push` de qualquer passo novo (janela, sub-nível) e, no passo automático, a altura medida no toque (`empilhar(..., { rol })`). Ao voltar para o passo, `restaurarRolagem(y)` repete por até 3 s (a lista pode chegar do servidor depois) e para se a pessoa rolar (roda do mouse, toque, tecla) ou trocar de tela. A rolagem de dentro de janelas e painéis não é guardada.
+- **`SGO_NAV.janelaVolta(el, fn)`.** Ficha aberta por cima de outra no mesmo lugar (a gaveta é trocada, então o passo da janela é substituído): quando o voltar fecha `el`, chama `fn` para reabrir a anterior (com os dados de agora). Vale para o elemento já registrado ou para o próximo que aparecer. Fechada pelo próprio botão, a ficha não reabre nada. Usado em: O.S. aberta do chamado (`AT.voltaChamado`), proposta aberta da oportunidade (`CM.voltaOpo`, `Comercial_abrirPropostaDaOportunidade_`; antes trocava para a tela Propostas), "Editar" a oportunidade, outra revisão da proposta, oportunidade aberta do detalhe do Gantt, "Editar" o fornecedor.
+- **`SGO_NAV.descartar(id)`.** O sub-nível (id devolvido por `empilhar`) deixou de valer: sai da pilha com um voltar silencioso, sem chamar `aoVoltar`. Usado quando o módulo voltou sozinho à tela de antes ("Cancelar" e "Salvar" do formulário, que já reabrem a ficha) e ao fechar um painel (os passos de dentro dele).
+- **`SGO_NAV.restaurando()`.** `true` enquanto o voltar redesenha uma tela. `CadTela_montar_` usa para manter a busca, os números do topo, os filtros e a ordem ao voltar de outra tela.
+- **`data-sgo-janela="1"`.** Painel lateral que conta como janela mesmo estreito no computador (menos de 40% da tela). Usado no painel dos cadastros (`#cadxPainel`, dentro de `#conteudo`).
+- **Texto digitado dentro de janela.** `conteudoSujo` olha `#conteudo` e as janelas abertas fora dele. Com OK no "Descartar o que foi digitado?", o `aoVoltar` do sub-nível roda com o `confirm` do módulo respondido sozinho (`semPerguntar`), como já acontecia ao fechar janela.
+- **Bate-papo e "Tire sua dúvida".** A casca reconhece `#aswPainel` (AssistenteWidget) e `.comw-painel` (ComunicacaoWidget) visíveis como janelas, sem limite de tamanho, sem a classe `sgo-nav-janela` (não mexe na posição deles) e sem a pergunta de texto digitado (o rascunho fica no componente). Voltar fecha pelo "×" de cada um (`aria-label` "Fechar..."). Trocar de tela não fecha esses painéis (`janelaPersistente`): o passo antigo morre e o painel entra de novo por cima da tela nova. Os dois componentes não mudam.
+- **Documento A4 pelo link direto.** `SGO_DocA4_inicioDocumento_` põe na barra da tela `<a id="sgoDocVoltar" hidden>Voltar ao SGO+</a>` e um script que só mostra o botão quando `window.top === window`, sem `window.opener`, em http(s) e no caminho `/arquivos/` (o endereço do próprio SGO+). Aberto pelo sistema (aba nova no computador, visualizador no celular), fica escondido. A barra inteira some na impressão.
+
+### Ganchos por módulo (Etapa 2)
+
+| Módulo | Arquivo | Gancho |
+|---|---|---|
+| Cadastros (Clientes, Unidades, Equipamentos, Arquivo de documentos, Usuários) | `JS_Cadastros.html` | `#cadxPainel` com `data-sgo-janela`; `CadUI_painelPasso_` em `CadUI_painelAbrir_`: aba e formulário dentro do painel são passos (`CADUI.passosPainel`); voltar à mesma ficha pelo botão do módulo descarta o passo; "Novo ..." salvo não volta ao formulário vazio; `CadUI_painelFechar_` descarta os passos; `CadTela_montar_` mantém busca e filtros no voltar |
+| Comercial | `JS_Comercial.html` | `janelaVolta` (proposta da oportunidade, editar, revisão, Gantt); proposta do Hoje abre por cima do Hoje |
+| Assistência técnica | `JS_Assistencia.html` | abas de chamados e de O.S. com `empilhar`; O.S. do chamado com `janelaVolta` |
+| Compras | `JS_Compras.html` | situação da fila e abas de "Informar compra" com `empilhar`; editar fornecedor com `janelaVolta` |
+| Frota | `JS_Core.html` (Frota simples), `JS_Frota.html` (Frota completa) | `fsEntrarForm_` (chave `fs-form`) nos formulários; `fsDesenharInicio_` limpa os sub-níveis no celular; "tela completa" é passo no celular; `tplFrota_ligarVoltarAbas_` embrulha `tplFrota_mostrarAba_` (só toque da pessoa grava passo; `SGO_Frota_ConteudoModulo.js` não muda) |
+| Padrões de referência | `JS_Padroes_Documentos.html` | `pdrPassoPainel_` em `pdrAbrirPainel_` e `pdrAbrirGrupo_`; `pdrFecharPainel_` descarta |
+| Vínculos | `JS_Vinculos.html` | `vincPasso_` ao escolher a origem, trocar o tipo e abrir o histórico |
+
+Robô de medição da Etapa 2 (ensaio local): `subniveis.mjs` desce lista, ficha, formulário e aba de cada módulo e compara a tela depois de cada voltar com a impressão guardada antes (módulo, títulos, janelas abertas, filtros e busca, aba ativa; rolagem à parte). Resultado no relatório da etapa.
+
+Já usam o gancho: Relatório do ciclo da lavadora (busca, busca dentro da busca, gerar relatório, "Voltar ao painel"), Caixa de decisões ("Regras e responsáveis" e "Voltar à caixa"), Certificado de calibração do celular (passos Equipamento, Dados, Ensaios, Gerar, "+ Novo cliente" e "+ Novo equipamento", que voltam ao certificado) e "Abrir a tela completa" das telas pesadas no celular (Autoclaves, Lavadoras, Cadeia de frio, Estufa, Planejamento CME: voltar volta ao resumo). Na Etapa 2 entraram Comercial, Assistência, Compras, Frota, cadastros, Padrões e Vínculos (tabela acima). Nas telas ainda sem gancho, o passo automático leva ao começo do módulo, agora na mesma altura de página.
 
 ## Desligar
 
@@ -50,4 +75,5 @@ Já usam o gancho: Relatório do ciclo da lavadora (busca, busca dentro da busca
 
 - `history.replaceState(null, ...)` apaga o passo atual: use `history.replaceState(history.state, ...)` (teste em `navegacao-voltar.test.cjs`).
 - Auto-refresh nunca grava passo: só `abrir()` de outra tela, `empilhar` e janelas gravam.
-- `AssistenteWidget.html` e `ComunicacaoWidget.html` não mudam; os painéis deles não entram na pilha.
+- `AssistenteWidget.html` e `ComunicacaoWidget.html` não mudam; desde a Etapa 2 os painéis deles entram na pilha pela casca (ver acima).
+- `empilhar` não faz nada durante o voltar: o `aoVoltar` pode redesenhar com as funções normais do módulo (que chamam `empilhar`) sem gravar passo.

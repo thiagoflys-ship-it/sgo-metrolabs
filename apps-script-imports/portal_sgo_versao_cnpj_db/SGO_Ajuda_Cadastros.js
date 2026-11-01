@@ -135,6 +135,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Aviso no canto da tela", significado: "Resultado da operação. O de sucesso some sozinho; o de erro fica até você fechar." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Aparece \"Já existe cliente com este CNPJ\" embaixo do campo.", oQueFazer: "Toque em \"Abrir o cadastro existente\" e use esse cadastro. Se ele estiver inativo, reative em \"Mais\"." },
         { situacao: "Aparece \"Já existe cliente cadastrado com este CNPJ.\" ao salvar.", oQueFazer: "Outra pessoa cadastrou a empresa. Busque pelo CNPJ e abra o cadastro existente." },
         { situacao: "Aparece \"CNPJ inválido: confira os números\".", oQueFazer: "Confira os 14 números. Os dois últimos são o dígito verificador e costumam denunciar um número trocado." },
@@ -271,6 +272,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Campo Cliente em cinza no formulário", significado: "O cliente está travado. A troca é feita pela gestão em Vínculos." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Aparece \"Escolha o cliente na lista\".", oQueFazer: "Digite parte do nome ou do CNPJ e toque na sugestão. Só digitar o nome não basta." },
         { situacao: "O cliente não aparece na lista de sugestões.", oQueFazer: "Só aparecem clientes ativos. Confira em \"Clientes\" se ele está cadastrado e reative se estiver inativo." },
         { situacao: "Aparece \"Já existe unidade com este CNPJ\".", oQueFazer: "Toque em \"Abrir a unidade existente\". Se ela estiver no cliente errado, peça à gestão para transferir em Vínculos." },
@@ -427,6 +429,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Selo amarelo \"Em andamento\" na aba Atendimentos", significado: "O atendimento do Auvo ainda não foi finalizado." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Na tela do ensaio aparece \"Falta no cadastro do equipamento: TAG, Nº de série, Setor\".", oQueFazer: "Preencha ali mesmo e toque em \"Gravar no cadastro\" (só o que está vazio é gravado, com registro de quem gravou), ou complete aqui em Editar." },
         { situacao: "Ao salvar aparece \"o equipamento ... deste cliente tem o mesmo número de série\".", oQueFazer: "O cadastro foi salvo. Abra os dois equipamentos e confira a placa: se for o mesmo, inative o repetido (ou peça à gestão para juntar em Vínculos)." },
         { situacao: "Aparece \"Este cliente já tem um equipamento ativo com a TAG ...\".", oQueFazer: "Toque em \"Abrir o existente\" e confira se é o mesmo equipamento. Se for outro, use uma TAG diferente." },
@@ -645,6 +648,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Cartões apagados", significado: "Etapa ainda não liberada. Complete a etapa anterior." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Aparece \"Escreva o motivo com pelo menos 8 caracteres.\"", oQueFazer: "Escreva o motivo com mais detalhe. Exemplo: cadastro repetido do mesmo CNPJ." },
         { situacao: "Aparece \"Escolha o destino na lista.\"", oQueFazer: "Filtre pelo nome ou CNPJ e toque no destino. Só aparecem destinos ativos." },
         { situacao: "Aparece \"A prévia vale 10 minutos e expirou. Nada foi gravado.\"", oQueFazer: "Toque em \"Conferir o impacto\" de novo e confirme." },

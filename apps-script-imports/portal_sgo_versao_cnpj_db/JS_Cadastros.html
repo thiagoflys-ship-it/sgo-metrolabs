@@ -234,6 +234,33 @@
 
   // ---------- painel lateral ----------
   // cfg: { chave, id, titulo, sub, seloHtml, abas: [{id, rotulo}], aba, corpo(abaId) -> html, rodape -> html, depois(painel) }
+  // Etapa 2 do programa de melhoria (01/11/2026): o painel é uma janela da pilha do voltar (data-sgo-janela="1", mesmo estreito
+  // no computador). Trocar de aba ou ir para o formulário dentro do painel vira um passo: voltar devolve o painel como estava (a
+  // aba e a ficha de antes). Voltar com texto digitado pergunta antes ("Descartar o que foi digitado?"). "Cancelar" do
+  // formulário, que já volta à ficha, tira o passo da pilha (não precisa voltar duas vezes).
+  function CadUI_painelFicha_(cfg) { return cfg ? [cfg.chave || "", cfg.id || "", cfg.titulo || ""].join("|") : ""; }
+  /** anterior: { cfg, aba } do painel que está na tela; nova: cfg que vai ser desenhado. */
+  function CadUI_painelPasso_(anterior, nova) {
+    if (!window.SGO_NAV || !SGO_NAV.empilhar || CADUI.voltandoPainel) return;
+    var pilha = CADUI.passosPainel = CADUI.passosPainel || [];
+    var abaNova = nova.aba || (nova.abas && nova.abas[0] && nova.abas[0].id) || "";
+    var fAnt = CadUI_painelFicha_(anterior.cfg), fNova = CadUI_painelFicha_(nova);
+    var kAnt = fAnt + "|" + (anterior.aba || ""), kNova = fNova + "|" + abaNova;
+    if (kNova === kAnt) return; // a mesma ficha redesenhada (depois de salvar): não grava passo
+    if (!anterior.cfg.id && nova.id && fAnt !== fNova) return; // "Novo ..." salvo vira a ficha nova: não volta ao formulário vazio
+    var topo = pilha[pilha.length - 1];
+    // voltou pelo próprio botão do módulo ("Cancelar", salvar e reabrir a ficha): o passo sai da pilha
+    if (topo && (topo.k === kNova || (fAnt !== fNova && topo.f === fNova))) { pilha.pop(); SGO_NAV.descartar(topo.id); return; }
+    var item = { id: null, k: kAnt, f: fAnt };
+    item.id = SGO_NAV.empilhar(nova.titulo ? "Painel: " + nova.titulo : "Painel", function () {
+      var i = pilha.indexOf(item); if (i >= 0) pilha.splice(i, pilha.length - i);
+      if (!document.getElementById("cadxPainel")) return;
+      CadUI_painelSujo_(false);
+      CADUI.voltandoPainel = true;
+      try { anterior.cfg.aba = anterior.aba; CadUI_painelAbrir_(anterior.cfg); } finally { CADUI.voltandoPainel = false; }
+    });
+    if (item.id) pilha.push(item);
+  }
   function CadUI_painelAbrir_(cfg) {
     CadUI_fecharMenu_();
     var cont = document.getElementById("conteudo");
@@ -241,6 +268,7 @@
     // resposta que chegou depois de a pessoa trocar de tela: não abre painel por cima de outra tela
     if (cfg.chave && !document.getElementById("cadxTela_" + cfg.chave)) return;
     var p = document.getElementById("cadxPainel");
+    if (p && CADUI.painel) CadUI_painelPasso_({ cfg: CADUI.painel, aba: CADUI.painelAba }, cfg);
     if (!p) {
       var fundo = document.createElement("div");
       fundo.id = "cadxPainelFundo";
@@ -250,6 +278,7 @@
       p = document.createElement("aside");
       p.id = "cadxPainel";
       p.className = "cadx-painel bc-painel";
+      p.setAttribute("data-sgo-janela", "1"); // conta como janela na pilha do voltar (Etapa 2)
       p.setAttribute("role", "dialog");
       p.setAttribute("aria-modal", "false");
       cont.appendChild(p);
@@ -257,6 +286,7 @@
     }
     CADUI.painel = cfg;
     cfg.aba = cfg.aba || (cfg.abas && cfg.abas[0] && cfg.abas[0].id) || "";
+    CADUI.painelAba = cfg.aba; // a aba mostrada (o clique na aba muda cfg.aba antes de redesenhar)
     p.setAttribute("aria-label", cfg.titulo || "Detalhe");
     p.innerHTML =
       '<div class="cadx-painel-cab bc-painel-cab"><div class="cadx-painel-cab-texto"><h3>' + CadUI_esc_(cfg.titulo) + "</h3>" +
@@ -289,6 +319,8 @@
     if (p) p.remove();
     if (f) f.remove();
     CADUI.painel = null;
+    // os passos de dentro do painel deixam de valer (fechado pelo "×", pelo fundo ou pelo voltar)
+    (CADUI.passosPainel || []).splice(0).forEach(function (x) { if (window.SGO_NAV && SGO_NAV.descartar) SGO_NAV.descartar(x.id); });
     document.removeEventListener("keydown", CadUI_painelTecla_);
     if (CadUI_movel_() && chave) { try { MOBILE_NAV = { modulo: chave, tela: "lista" }; } catch (e) {} }
     if (chave) CadTela_marcarSelecionado_(chave, "");
@@ -457,7 +489,9 @@
     var div = document.getElementById("conteudo");
     if (!div) return;
     CadUI_fecharMenu_();
-    var st = CADUI.telas[cfg.chave] = { cfg: cfg, itens: [], carregado: false, resumo: "todos", busca: "", filtros: {}, ordem: cfg.ordenar ? cfg.ordenar[0].id : "", limite: 100, selecionado: "", extra: (CADUI.telas[cfg.chave] && CADUI.telas[cfg.chave].extra) || {} };
+    // Etapa 2 (01/11/2026): voltando para esta tela pelo voltar, a busca, os números do topo, os filtros e a ordem continuam como estavam
+    var antigo = CADUI.telas[cfg.chave], manter = !!(antigo && window.SGO_NAV && SGO_NAV.restaurando && SGO_NAV.restaurando());
+    var st = CADUI.telas[cfg.chave] = { cfg: cfg, itens: [], carregado: false, resumo: manter ? antigo.resumo : "todos", busca: manter ? antigo.busca : "", filtros: manter ? antigo.filtros : {}, ordem: manter && antigo.ordem ? antigo.ordem : (cfg.ordenar ? cfg.ordenar[0].id : ""), limite: 100, selecionado: "", extra: (antigo && antigo.extra) || {} };
     if (CadUI_movel_()) { try { MOBILE_NAV = { modulo: cfg.chave, tela: "lista" }; atualizarTituloMobile_(cfg.titulo); } catch (e) {} }
     var filtrosHtml = (cfg.filtros || []).map(function (f) {
       return '<select id="cadxFiltro_' + cfg.chave + "_" + f.id + '" aria-label="' + CadUI_esc_(f.rotulo) + '" data-filtro="' + f.id + '"><option value="">' + CadUI_esc_(f.rotulo) + "</option></select>";
@@ -484,6 +518,8 @@
       "</div>";
     var raiz = document.getElementById("cadxTela_" + cfg.chave);
     var busca = raiz.querySelector(".cadx-busca-campo");
+    if (st.busca) busca.value = st.busca;
+    if (manter && st.ordem && document.getElementById("cadxOrdem_" + cfg.chave)) document.getElementById("cadxOrdem_" + cfg.chave).value = st.ordem;
     var timer = null;
     busca.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { st.busca = busca.value; st.limite = 100; CadTela_desenhar_(cfg.chave); }, 180); });
     raiz.querySelectorAll("select[data-filtro]").forEach(function (s) { s.addEventListener("change", function () { st.filtros[s.getAttribute("data-filtro")] = s.value; st.limite = 100; CadTela_desenhar_(cfg.chave); }); });

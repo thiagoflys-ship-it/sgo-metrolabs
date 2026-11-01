@@ -31,6 +31,7 @@ function SGO_ajudaTelas_Compras_() {
         { nome: 'Linha verde "Especificação completa"', significado: 'O item tem o que o comprador precisa para cotar.' }
       ],
       problemas: [
+        { situacao: 'Quero voltar para a ficha, a aba ou a lista de antes.', oQueFazer: 'Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar.' },
         { situacao: 'Aparece "diga a que a compra está ligada".', oQueFazer: 'Escolha uma das quatro opções do quadro 2. Toda compra precisa dizer para que é (regra da empresa).' },
         { situacao: 'O cliente não aparece na busca.', oQueFazer: 'Ele precisa estar em Cadastros > Clientes. Peça o cadastro e volte ao pedido.' },
         { situacao: 'O pedido do Comercial não aparece na lista.', oQueFazer: 'Só aparece proposta aprovada pelo cliente. Até a aprovação, use o vínculo "Cliente".' },

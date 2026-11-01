@@ -319,14 +319,27 @@ function pdrPainelMsg_(t,erro){var el=document.getElementById('pdr-painel-status
 function pdrMostrarPainel_(alvoId){var p=document.getElementById('pdr-painel'),f=document.getElementById('pdr-fundo');if(!p)return;var jaAberto=!p.hidden;if(!jaAberto){PDR.voltarFoco=document.activeElement;}p.hidden=false;f.hidden=false;document.documentElement.classList.add('pdr-painel-aberto');var b=(alvoId&&document.getElementById(alvoId))||(!jaAberto&&p.querySelector('[data-pdr-p="fechar"]'));if(b)b.focus();}
 function pdrFecharPainel_(){var p=document.getElementById('pdr-painel'),f=document.getElementById('pdr-fundo');if(!p||p.hidden)return;
   if(PDR.painel&&/cadastro|dados|novo/.test(PDR.painel.modo)&&PDR.painel.sujo&&!confirm('Fechar sem salvar? O que foi digitado será descartado.'))return;
-  p.hidden=true;f.hidden=true;document.documentElement.classList.remove('pdr-painel-aberto');PDR.painel=null;if(PDR.voltarFoco&&PDR.voltarFoco.focus&&document.body.contains(PDR.voltarFoco))PDR.voltarFoco.focus();}
+  p.hidden=true;f.hidden=true;document.documentElement.classList.remove('pdr-painel-aberto');PDR.painel=null;
+  (PDR.passos||[]).splice(0).forEach(function(x){if(window.SGO_NAV&&SGO_NAV.descartar)SGO_NAV.descartar(x.id);});if(PDR.voltarFoco&&PDR.voltarFoco.focus&&document.body.contains(PDR.voltarFoco))PDR.voltarFoco.focus();}
 function pdrAbas_(id,modo){var pode=pdrPodeEditar_();var abas=[['resumo','Resumo']];if(pode){abas.push(['cadastro','Cadastro e validade'],['dados','Dados, localização e foto']);}
   return abas.map(function(a){var on=a[0]===modo;return '<button type="button" role="tab" aria-selected="'+on+'" class="'+(on?'bc-ativo':'')+'" data-pdr-p="aba" data-modo="'+a[0]+'" data-id="'+pdEsc(id)+'">'+a[1]+'</button>';}).join('');}
 function pdrCampoLeitura_(rot,val){return '<div class="pdr-dl-item"><dt>'+rot+'</dt><dd>'+(val===''||val==null?'<span class="pdr-mudo">—</span>':val)+'</dd></div>';}
+// Etapa 2 do programa de melhoria (01/11/2026): com o painel aberto, trocar de aba (Resumo, Cadastro, Dados) ou ir do grupo para um
+// canal é um passo do voltar; voltar devolve o painel como estava. "Cancelar" e salvar, que já voltam ao Resumo, tiram o passo da pilha.
+function pdrPassoPainel_(novo){
+  var pp=document.getElementById('pdr-painel');if(!pp||pp.hidden||!PDR.painel||!window.SGO_NAV||!SGO_NAV.empilhar||PDR.voltandoPainel)return;
+  var ant={modo:PDR.painel.modo,id:PDR.painel.id,grupo:PDR.painel.grupo};var kAnt=ant.modo+'|'+(ant.id||ant.grupo||''),kNovo=novo.modo+'|'+(novo.id||novo.grupo||'');
+  if(kAnt===kNovo)return;PDR.passos=PDR.passos||[];var topo=PDR.passos[PDR.passos.length-1];
+  if(topo&&topo.k===kNovo){PDR.passos.pop();SGO_NAV.descartar(topo.id);return;}
+  var item={k:kAnt,id:null};
+  item.id=SGO_NAV.empilhar('Padrão: '+(novo.modo==='grupo'?'grupo':novo.modo),function(){var i=PDR.passos.indexOf(item);if(i>=0)PDR.passos.splice(i);var p2=document.getElementById('pdr-painel');if(!p2||p2.hidden)return;if(PDR.painel)PDR.painel.sujo=false;PDR.voltandoPainel=true;try{if(ant.modo==='grupo')pdrAbrirGrupo_(ant.grupo);else pdrAbrirPainel_(ant.id,ant.modo);}finally{PDR.voltandoPainel=false;}});
+  if(item.id)PDR.passos.push(item);
+}
 function pdrAbrirPainel_(id,modo){
   pdrFecharMenu_();var x=pdrX_(id);if(!x){pdMsg('Padrão não encontrado na lista. Use Atualizar lista.',true);return;}
   if(PDR.painel&&PDR.painel.sujo&&PDR.painel.id===id&&modo!==PDR.painel.modo&&!confirm('Trocar de aba sem salvar? O que foi digitado será descartado.'))return;
   if(!pdrPodeEditar_())modo='resumo';
+  pdrPassoPainel_({modo:modo,id:id});
   PDR.painel={modo:modo,id:id,sujo:false};PD.current=x.item;PD.token='';
   document.getElementById('pdr-painel-titulo').textContent=x.TAG;
   document.getElementById('pdr-painel-sub').innerHTML=pdEsc(x.DESCRICAO)+' '+pdrSelo_(x);
@@ -372,6 +385,7 @@ function pdrTabelaCanais_(lista,atual){
 }
 function pdrAbrirGrupo_(base){
   pdrFecharMenu_();var lista=PDR.lista.filter(function(x){return x.base===base;}).sort(function(a,b){return a.TAG.localeCompare(b.TAG,'pt-BR',{numeric:true});});if(!lista.length)return;
+  pdrPassoPainel_({modo:'grupo',grupo:base});
   PDR.painel={modo:'grupo',grupo:base,sujo:false};var x0=lista[0];
   var g={itens:lista,total:lista.length,chave:base};
   document.getElementById('pdr-painel-titulo').textContent=base;

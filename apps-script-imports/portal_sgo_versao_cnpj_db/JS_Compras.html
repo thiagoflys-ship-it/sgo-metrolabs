@@ -455,7 +455,8 @@
       Cp_chamar_("fila", { situacao: f.situacao, busca: f.busca }, function (r) {
         var cont = r.contagem || {}, abertas = ["SOLICITADA", "EM_COTACAO", "AGUARDANDO_APROVACAO", "APROVADA", "PEDIDO_FEITO", "RECEBIDA_DIVERGENCIA", "DISPONIVEL"].reduce(function (s, k) { return s + (cont[k] || 0); }, 0);
         Cp_$_("cpAbas").innerHTML = abas.map(function (a) { var n = a[0] === "ABERTAS" ? abertas : a[0] === "TODAS" ? "" : (cont[a[0]] || 0); return '<button type="button" class="cp-tab' + (f.situacao === a[0] ? " active" : "") + '" data-sit="' + a[0] + '">' + a[1] + (n !== "" ? '<span>' + n + '</span>' : '') + '</button>'; }).join("");
-        Cp_$_("cpAbas").querySelectorAll("[data-sit]").forEach(function (b) { b.onclick = function () { f.situacao = b.getAttribute("data-sit"); carregar(); }; });
+        // Etapa 2 (01/11/2026): trocar de situação é um passo do voltar (volta à situação de antes, com a busca)
+        Cp_$_("cpAbas").querySelectorAll("[data-sit]").forEach(function (b) { b.onclick = function () { var de = f.situacao, para = b.getAttribute("data-sit"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Fila de compras: " + b.textContent, function () { f.situacao = de; if (Cp_$_("cpAbas")) carregar(); }); f.situacao = para; carregar(); }; });
         var el = Cp_$_("cpFila");
         if (!r.requisicoes.length) { el.innerHTML = '<div class="cp-vazio">Nenhum pedido nesta situação.</div>'; return; }
         el.innerHTML = '<div class="cp-lista">' + r.requisicoes.map(function (q) {
@@ -888,7 +889,8 @@
       Cp_$_("cpGavetaCorpo").innerHTML = h;
       var g = Cp_$_("cpGavetaCorpo");
       var bx = function (s, fn) { var el = g.querySelector('[data-x="' + s + '"]'); if (el) el.onclick = fn; };
-      bx("editar", function () { Cp_formFornecedor_(f, depois); });
+      // Etapa 2: o formulário abre no lugar da ficha; o voltar reabre a ficha do fornecedor
+      bx("editar", function () { Cp_formFornecedor_(f, depois); var gf = Cp_$_("cpGaveta"); if (gf && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(gf, function () { Cp_abrirFornecedor_(f.id, depois); }); });
       bx("arquivar", function () { Cp_pedirTexto_("Arquivar " + f.nome, "O fornecedor sai da escolha nas cotações; o histórico de compras continua.", "Motivo", 10, function (t, ov) { Cp_chamar_("arquivarFornecedor", { id: f.id, motivo: t }, function (rr) { ov.remove(); Cp_abrirFornecedor_(f.id, depois); if (depois) depois(); }, function (m) { Cp_msg_("cpTxtMsg", m); }); }, "Arquivar"); });
       bx("reativar", function () { Cp_chamar_("arquivarFornecedor", { id: f.id, reativar: true }, function () { Cp_abrirFornecedor_(f.id, depois); if (depois) depois(); }, function (m) { Cp_msg_("cpFornMsg", m); }); });
     }, function (m) { Cp_msg_("cpGavetaCorpo", m); });
@@ -1019,7 +1021,7 @@
       Cp_$_("ciAbas").innerHTML = [["informar", "Informar uma compra"], ["minhas", "Minhas compras informadas"], ["cobrancas", "Compras a informar"]].map(function (a) {
         return '<button type="button" class="cp-tab' + (CP_INF.aba === a[0] ? " active" : "") + '" data-ci="' + a[0] + '">' + a[1] + (a[0] === "cobrancas" && CP_INF.cobrancas ? '<span>' + CP_INF.cobrancas + '</span>' : '') + '</button>';
       }).join("");
-      Cp_$_("ciAbas").querySelectorAll("[data-ci]").forEach(function (b) { b.onclick = function () { CP_INF.aba = b.getAttribute("data-ci"); if (CP_INF.aba !== "informar") CP_INF.preenche = null; abas(); corpo(); }; });
+      Cp_$_("ciAbas").querySelectorAll("[data-ci]").forEach(function (b) { b.onclick = function () { var de = CP_INF.aba, para = b.getAttribute("data-ci"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Informar compra: " + b.textContent, function () { CP_INF.aba = de; if (Cp_$_("ciAbas")) { abas(); corpo(); } }); CP_INF.aba = para; if (CP_INF.aba !== "informar") CP_INF.preenche = null; abas(); corpo(); }; });
     };
     var corpo = function () {
       var el = Cp_$_("ciCorpo");

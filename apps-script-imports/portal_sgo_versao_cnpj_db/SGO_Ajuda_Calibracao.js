@@ -42,11 +42,11 @@ function SGO_ajudaTelas_Calibracao_() {
           "Toque em \"Calcular\" e confira a prévia (média, tendência, U95, Veff).",
           "Em \"5. Fotos do ensaio (opcional)\", anexe as fotos, se tiver.",
           "Em \"6. Gerar\", toque em \"Gerar Certificado de Calibração\".",
-          "O certificado abre em nova aba, com número automático, e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ). O documento traz identificação, método e rastreabilidade, resultados com U95 e k, orçamento de incerteza, observações, próxima calibração e assinaturas, em seções numeradas."
+          "O certificado abre em nova aba, com número automático, e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ). No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. O documento traz identificação, método e rastreabilidade, resultados com U95 e k, orçamento de incerteza, observações, próxima calibração e assinaturas, em seções numeradas."
         ] },
         { titulo: "Gerar o relatório interpretativo", itens: [
           "Depois de emitir o certificado, toque em \"Gerar Relatório Interpretativo\".",
-          "Espere até um minuto. O relatório abre em nova aba e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ).",
+          "Espere até um minuto. O relatório abre em nova aba e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ). No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Ele explica os mesmos números do certificado, sem recalcular nada, com um gráfico por grandeza (tendência e intervalo de ±U95 em cada ponto)."
         ] },
         { titulo: "Reabrir um certificado já emitido", itens: [
@@ -133,7 +133,7 @@ function SGO_ajudaTelas_Calibracao_() {
           "Se quiser, marque \"Detectar automaticamente os dados do certificado\" e confira o que foi preenchido.",
           "Anexe até 6 fotos, se tiver.",
           "Toque em \"Gerar Relatório de Calibração\".",
-          "O relatório abre em nova aba e é salvo na pasta do cliente. Espere a mensagem \"Salvo na pasta do cliente\"."
+          "O relatório abre em nova aba e é salvo na pasta do cliente. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Espere a mensagem \"Salvo na pasta do cliente\"."
         ] },
         { titulo: "Ligar o relatório ao equipamento do cadastro", itens: [
           "Depois de salvo, aparece o quadro \"Vincular ao Cadastro\".",
@@ -247,6 +247,7 @@ function SGO_ajudaTelas_Calibracao_() {
         { nome: "Faixa amarela com \"Programar recalibração\"", significado: "Mostra quantos vencem em até 30 dias. Toque para filtrar." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Não vejo \"Editar\" nem \"Cadastrar padrão\".", oQueFazer: "Seu perfil só consulta. O cadastro é feito pela metrologia, pelos técnicos ou pela gestão." },
         { situacao: "Fechei o painel e ele perguntou se quero sair.", oQueFazer: "Havia algo digitado e não salvo. Toque em cancelar para voltar e salvar, ou confirme para descartar." },
         { situacao: "O padrão não aparece na lista.", oQueFazer: "Confira o filtro \"Situação\". Padrões inativos só aparecem em \"Inativos\" ou \"Todos\"." },

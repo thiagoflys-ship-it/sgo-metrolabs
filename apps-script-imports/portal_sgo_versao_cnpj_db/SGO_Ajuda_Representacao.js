@@ -130,7 +130,7 @@ function SGO_ajudaTelas_Representacao_() {
           "Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo (se o contrato permitir)."
         ] },
         { titulo: "Relatórios do atendimento e do período", itens: [
-          "Na ficha do chamado, parte \"Relatórios do atendimento\", toque em \"Gerar relatório\". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.",
+          "Na ficha do chamado, parte \"Relatórios do atendimento\", toque em \"Gerar relatório\". O documento A4 abre numa aba nova e fica salvo em HTML e PDF. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "A primeira folha traz o quadro \"Situação em\": situação, prazo de atendimento, aceite do pedido, visita, conclusão, com quem está o chamado e o próximo passo. Depois vêm o sumário, o resumo, cliente e equipamento com a garantia, o relato da abertura, os marcos previsto e realizado (aceite, visita e conclusão, com a diferença escrita), a linha do tempo, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos, a assinatura de quem recebeu o atendimento e o que quer dizer cada etapa.",
           "No Painel, \"Relatório do período\" gera o relatório da carteira da sua empresa no período escolhido: na capa, os abertos, o prazo cumprido e os pontos de atenção; depois os índices do painel, os gráficos, o Gantt, a lista dos pedidos e chamados e as definições dos índices.",
           "A aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos."

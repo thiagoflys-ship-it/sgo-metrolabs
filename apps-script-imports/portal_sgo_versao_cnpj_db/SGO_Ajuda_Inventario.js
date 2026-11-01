@@ -39,7 +39,7 @@ function SGO_ajudaTelas_Inventario_() {
         { titulo: "Gerar o relatório A4 com análise", itens: [
           "Gere o inventário primeiro.",
           "Toque em \"Relatório A4 com análise\".",
-          "Aguarde até um minuto. O relatório abre numa aba nova.",
+          "Aguarde até um minuto. O relatório abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.",
           "Relatório longo traz capa e sumário com o número das páginas.", "No \"Inventário completo\", o patrimônio do cliente ganha coluna própria quando algum equipamento listado tem patrimônio no cadastro; capacidade e ano de fabricação, quando preenchidos no cadastro, aparecem junto do tipo."
         ] },
@@ -65,7 +65,7 @@ function SGO_ajudaTelas_Inventario_() {
         { situacao: "\"Nenhum cliente ativo encontrado com esse CNPJ.\"", oQueFazer: "Confira o número ou escolha o cliente na lista." },
         { situacao: "\"Gere o inventário antes de imprimir.\" ou \"antes de emitir o relatório\"", oQueFazer: "Toque em \"Gerar Inventário\" primeiro." },
         { situacao: "Equipamento aparece \"Sem doc\" mas tem certificado", oQueFazer: "Confira no \"Arquivo de documentos\" se o documento está ativo, ligado a este equipamento e com data de vencimento." },
-        { situacao: "\"O navegador bloqueou a nova aba\"", oQueFazer: "Toque no link \"abrir o relatório\"." },
+        { situacao: "\"O navegador bloqueou a nova aba\"", oQueFazer: "Toque no link \"abrir o relatório\". No celular, o documento abre dentro do SGO+, sem aba nova." },
         { situacao: "A análise saiu com o texto padrão do sistema", oQueFazer: "A chave da IA não está gravada. Os números estão certos. Peça ao administrador para gravar a chave em \"Chaves e senhas\"." },
         { situacao: "\"a cópia (PDF e HTML) não foi gravada na pasta\"", oQueFazer: "O relatório abriu, mas não foi guardado. Gere de novo. Se repetir, avise o administrador." }
       ],

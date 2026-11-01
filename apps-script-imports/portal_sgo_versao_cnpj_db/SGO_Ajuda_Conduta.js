@@ -330,7 +330,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Em \"Competência para conferência\", confira o mês.",
           "Toque em \"Consultar prévia\".",
           "Confira as defesas pendentes, as missões aguardando aprovação e os valores por pessoa.",
-          "Se quiser, toque em \"Imprimir prévia\". A prévia abre em A4 numa aba nova e uma cópia (PDF e HTML) fica na pasta do programa, em \"Prévias\". Ela não autoriza pagamento."
+          "Se quiser, toque em \"Imprimir prévia\". A prévia abre em A4 numa aba nova e uma cópia (PDF e HTML) fica na pasta do programa, em \"Prévias\". No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Ela não autoriza pagamento."
         ] },
         { titulo: "Fechar o mês", itens: [
           "Resolva as defesas e as missões pendentes.",
@@ -339,7 +339,7 @@ function SGO_ajudaTelas_Conduta_() {
           "O resultado fica congelado e o relatório do mês é gerado."
         ] },
         { titulo: "Ver o relatório de um mês fechado", itens: [
-          "Na lista de fechamentos, toque em \"Ver relatório\". O relatório abre em A4 numa aba nova.",
+          "Na lista de fechamentos, toque em \"Ver relatório\". O relatório abre em A4 numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "No topo: o velocímetro do índice (o mesmo do farol), a situação do bônus, os pontos de demérito com a margem e os números do mês. Depois: a interpretação, a composição do demérito por grupo e código, a evolução dos meses fechados (a partir de três), reconhecimentos, missões, contestações e as assinaturas.",
           "Se a cópia gravada do mês estiver no modelo anterior do relatório, a versão atual é gerada na hora com os números do fechamento congelado (nada é recalculado) e sai como nova revisão. A faixa no topo da aba avisa e traz o link \"Abrir a cópia original\".",
           "A cópia gravada no dia do fechamento nunca é apagada: ela abre pelo link \"Abrir a cópia original\" da faixa.",
@@ -371,7 +371,7 @@ function SGO_ajudaTelas_Conduta_() {
       passos: [
         { titulo: "Gerar o relatório da equipe (Diretoria e Gestor de Qualidade)", itens: [
           "Em \"Relatório da equipe\", escolha o mês em \"De\" e em \"Até\" (o mesmo mês, ou um intervalo de até 12 meses).",
-          "Toque em \"Gerar relatório da equipe\". O relatório abre em A4 deitado numa aba nova.",
+          "Toque em \"Gerar relatório da equipe\". O relatório abre em A4 deitado numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Traz uma linha por colaborador (área, ocorrências firmes e em andamento, pontos, reconhecimentos, missões elegíveis, incentivo, ciência dos avisos e situação do bônus) e os totais por área. O gráfico por área só aparece com quatro ou mais áreas com pontos.",
           "Quem está sem área no cadastro aparece como \"Área não informada\", nunca fica de fora. Para corrigir, a gestão informa a área no cadastro da pessoa, em Administração > Usuários, e gera o relatório de novo.",
           "O documento tem as ocorrências de cada pessoa: por sigilo do colaborador, é da Diretoria e do Gestor de Qualidade e não deve ser publicado nem passado adiante."

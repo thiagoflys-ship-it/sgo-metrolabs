@@ -66,7 +66,7 @@ function SGO_ajudaTelas_BaixaTemp_() {
           "Em \"8. Revisão e emissão\", toque em \"Ver prévia do relatório\" e leia o documento inteiro.",
           "Toque em \"Enviar para revisão\". O ensaio passa a \"Aguardando revisão do responsável técnico\".",
           "O responsável técnico abre o ensaio, lê a prévia, escolhe quem assina, escreve o parecer e toca em \"Aprovar\" (ou em \"Devolver ao técnico\", com o que corrigir).",
-          "Depois da aprovação, toque em \"Emitir relatório\". O documento abre em outra aba e fica salvo em PDF e HTML na pasta do equipamento (dentro da pasta do cliente) e no Arquivo de documentos.",
+          "Depois da aprovação, toque em \"Emitir relatório\". O documento abre em outra aba e fica salvo em PDF e HTML na pasta do equipamento (dentro da pasta do cliente) e no Arquivo de documentos. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Toque em \"Enviar ao cliente\" para mandar por e-mail ou WhatsApp."
         ] },
         { titulo: "Corrigir um relatório já emitido (nova revisão)", itens: [

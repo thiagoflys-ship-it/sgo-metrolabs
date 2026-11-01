@@ -129,6 +129,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Aviso \"Sem internet: esta é a tela de ...\"", significado: "O celular está sem internet. Passar e assumir o carro ficam guardados no celular e vão sozinhos depois." }
       ],
       problemas: [
+        { situacao: "Quero voltar para a ficha, a aba ou a lista de antes.", oQueFazer: "Toque em voltar (o Voltar do alto no celular, o botão voltar do aparelho ou o voltar do navegador no computador). Cada toque desfaz um passo: fecha a janela de cima, volta à aba anterior ou à ficha de onde você abriu outra ficha, e devolve a lista com a mesma busca, os mesmos filtros e a mesma altura. Com texto digitado, o SGO+ pergunta antes de descartar." },
         { situacao: "Deu erro ao confirmar, ou o sinal está fraco", oQueFazer: "Não saia da tela. O sistema tenta de novo sozinho. Se a tela pedir, toque de novo em \"Confirmar retirada\" ou \"Confirmar devolução\": as fotos já enviadas não são enviadas outra vez." },
         { situacao: "Aparece \"Já estava registrado\" ou \"já estava registrada\"", oQueFazer: "Está tudo certo. O primeiro toque já tinha gravado. Nada foi registrado em dobro. Não faça mais nada." },
         { situacao: "Aparece \"Registro conferido\" (\"A conexão caiu na resposta, mas o registro foi gravado\")", oQueFazer: "Está tudo certo. Não registre de novo." },
@@ -267,7 +268,7 @@ function SGO_ajudaTelas_Frota_() {
         ] },
         { titulo: "Relatório mensal A4", itens: [
           "Abra \"Relatório mensal A4 da frota\", escolha o mês e toque em \"Gerar relatório mensal (A4 e PDF)\".",
-          "O relatório abre em outra aba e a cópia em PDF e HTML fica na pasta da Frota (Relatórios mensais).",
+          "O relatório abre em outra aba e a cópia em PDF e HTML fica na pasta da Frota (Relatórios mensais). No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Traz gastos por veículo e por tipo, consumo (km/L), custo por km, manutenções feitas, plano de manutenção vencendo, paradas agendadas e lançamentos a conferir."
         ] }
       ],
@@ -496,7 +497,7 @@ function SGO_ajudaTelas_Frota_() {
         { titulo: "Gerar um relatório para imprimir", itens: [
           "Toque em \"Consultas e relatórios\" > \"Relatórios A4\".",
           "Escolha: rota da retirada, mensal do veículo, consumo da frota ou uso fora do expediente. Preencha e toque em \"Gerar\".",
-          "O relatório abre numa aba nova; a cópia em PDF e HTML fica na pasta \"Frota - Relatorios Gerados/Rastreamento\"."
+          "O relatório abre numa aba nova; a cópia em PDF e HTML fica na pasta \"Frota - Relatorios Gerados/Rastreamento\". No celular, o documento abre dentro do SGO+, com Voltar e Imprimir."
         ] },
         { titulo: "Mudar as regras de alerta e o prazo de guarda", itens: [
           "Toque em \"Configuração\" > \"Regras e alertas\".",
@@ -1126,13 +1127,13 @@ function SGO_ajudaTelas_Frota_() {
           "Em \"Relatório da frota\", escolha um veículo ou deixe \"Toda a frota (relatório geral)\".",
           "Confira \"Data início\" e \"Data fim\".",
           "Toque em \"Gerar relatório\".",
-          "Aguarde até um minuto. O relatório abre numa aba nova.",
+          "Aguarde até um minuto. O relatório abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",
           "Para imprimir ou salvar em PDF, toque em \"Imprimir ou salvar em PDF\" no topo do relatório. Uma cópia (PDF e HTML) fica guardada na pasta da Frota, na subpasta do veículo ou em \"Frota completa\".",
           "Relatório com mais de três páginas traz o sumário com o número das páginas. No relatório geral, o quadro de custos por veículo sai na última folha, deitada."
         ] }
       ],
       problemas: [
-        { situacao: "O navegador bloqueou a aba nova", oQueFazer: "Toque no link \"Abrir o relatório\"." },
+        { situacao: "O navegador bloqueou a aba nova", oQueFazer: "Toque no link \"Abrir o relatório\". No celular, o documento abre dentro do SGO+, sem aba nova." },
         { situacao: "O consumo (km/L) não aparece", oQueFazer: "Precisa de pelo menos 2 abastecimentos do veículo no período." }
       ],
       quemPode: [

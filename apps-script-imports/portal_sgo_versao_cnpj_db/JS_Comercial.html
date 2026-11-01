@@ -448,7 +448,7 @@
     if (ini.avisos && ini.avisos.length) h += '<div class="cm-caixa" style="margin-top:14px"><h3>Avisos recentes do Comercial</h3>' + ini.avisos.map(function (a) { return '<p class="cm-txt"><b>' + Com_esc_(a.titulo) + '</b> <span class="cm-meta">' + Com_esc_(a.em) + '</span><br>' + Com_esc_(a.texto) + '</p>'; }).join("") + '</div>';
     alvo.innerHTML = h;
     var itens = r.itens;
-    alvo.querySelectorAll("[data-abrir]").forEach(function (b) { b.onclick = function () { var i = itens[+b.getAttribute("data-abrir")]; if (i.ref.tipo === "proposta") { abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(i.ref.id); }, 400); } else if (i.ref.tipo === "oportunidade") Comercial_abrirOportunidade_(i.ref.id); else if (i.ref.tipo === "metodologia") abrir("comercial_metodologia"); else if (i.ref.tipo === "catalogo") { CM.filtroCat = { busca: "", tipo: "", categoria: "", situacao: "SEM_REAJUSTE" }; abrir("comercial_catalogo"); } else { if (i.ref.responsavelId) CM.filtro.responsavelId = i.ref.responsavelId; abrir("comercial_oportunidades"); } }; });
+    alvo.querySelectorAll("[data-abrir]").forEach(function (b) { b.onclick = function () { var i = itens[+b.getAttribute("data-abrir")]; if (i.ref.tipo === "proposta") { Comercial_abrirProposta_(i.ref.id); /* Etapa 2: abre por cima do Hoje; o voltar volta ao Hoje */ } else if (i.ref.tipo === "oportunidade") Comercial_abrirOportunidade_(i.ref.id); else if (i.ref.tipo === "metodologia") abrir("comercial_metodologia"); else if (i.ref.tipo === "catalogo") { CM.filtroCat = { busca: "", tipo: "", categoria: "", situacao: "SEM_REAJUSTE" }; abrir("comercial_catalogo"); } else { if (i.ref.responsavelId) CM.filtro.responsavelId = i.ref.responsavelId; abrir("comercial_oportunidades"); } }; });
     alvo.querySelectorAll("[data-copiar]").forEach(function (b) { b.onclick = function () { Com_copiar_(itens[+b.getAttribute("data-copiar")].mensagem, b); }; });
     var decidir = function (k, decisao, motivo) { var i = itens[k]; Com_chamar_("decidirSugestao", { chave: i.chave, regra: i.regra, decisao: decisao, motivo: motivo || "", ref: i.ref }, function () { i.decisao = decisao; var c = Com_$_("cmItem" + k); if (c) { c.classList.add("feito"); c.querySelectorAll("[data-feito],[data-naose]").forEach(function (x) { x.remove(); }); } }); };
     alvo.querySelectorAll("[data-feito]").forEach(function (b) { b.onclick = function () { decidir(+b.getAttribute("data-feito"), "FEITO"); }; });
@@ -611,6 +611,7 @@
       if (novo) d.proxima = { acao: Com_$_("cmPAcao").value, data: Com_$_("cmPData").value, tipo: Com_$_("cmPTipo").value };
       Com_chamar_("salvarOportunidade", d, function (r) { g.remove(); Comercial_aposAlterar_(); Comercial_abrirOportunidade_(r.oportunidade.id, r.message); }, function (m) { Com_msg_("cmOMsg", m); }, { carregando: "Salvando…" });
     };
+    return g;
   }
 
   function Comercial_aposAlterar_() {
@@ -624,6 +625,7 @@
   function Comercial_abrirOportunidade_(id, aviso) {
     var g = Com_gaveta_("Oportunidade", '<div class="cm-vazio">Carregando…</div>');
     Com_chamar_("oportunidade", { id: id }, function (r) { Comercial_desenharOportunidade_(g, r, aviso); }, function (m) { Com_$_("cmGavetaCorpo").innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; });
+    return g;
   }
 
   function Comercial_desenharOportunidade_(g, r, aviso) {
@@ -653,7 +655,8 @@
       '<div class="cm-acoes">' + b("novoContato", "Novo contato") + '</div>';
     h += '<p class="cm-sec">Histórico</p><div class="cm-hist">' + r.historico.map(function (x) { return '<div>' + Com_esc_(x.texto) + '<div class="q">' + Com_esc_(x.em) + ' · ' + Com_esc_(x.por) + '</div></div>'; }).join("") + '</div>';
     corpo.innerHTML = h;
-    corpo.querySelectorAll("[data-prop]").forEach(function (el) { el.onclick = function () { g.remove(); abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(el.getAttribute("data-prop")); }, 400); }; });
+    // Etapa 2 (01/11/2026): a proposta abre por cima da oportunidade, sem trocar de tela; voltar (ou o Voltar do celular) reabre a oportunidade
+    corpo.querySelectorAll("[data-prop]").forEach(function (el) { el.onclick = function () { Comercial_abrirPropostaDaOportunidade_(el.getAttribute("data-prop"), o.id); }; });
     var recarregar = function (msg) { Comercial_aposAlterar_(); Com_chamar_("oportunidade", { id: o.id }, function (x) { Comercial_desenharOportunidade_(g, x, msg); }); };
     var area = Com_$_("cmOpoAcao");
     var formProx = function (pref) { return '<div class="cm-grade3">' + Com_campo_("Próxima ação", '<input id="cmPAcao" maxlength="300" value="' + Com_esc_(pref || "") + '">') + Com_campo_("Data", '<input id="cmPData" type="date" value="' + Com_hojeIso_(1) + '">') + Com_campo_("Hora", '<input id="cmPHora" type="time" value="10:00">') + '</div>' + Com_campo_("Como", '<select id="cmPTipo">' + Com_opcoes_(Object.keys(ini.tiposContato).map(function (k) { return { v: k, t: ini.tiposContato[k] }; }), "LIGACAO") + '</select>'); };
@@ -689,8 +692,8 @@
         Com_$_("cmEOk").onclick = function () { Comercial_mudarEtapaJanela_(o.id, Com_$_("cmEEt").value, function (x) { recarregar(x && x.message); }); };
       },
       especialista: function () { Comercial_especialista_(o.id); },
-      proposta: function () { Com_chamar_("novaProposta", { oportunidadeId: o.id }, function (x) { g.remove(); abrir("comercial_propostas"); setTimeout(function () { Comercial_abrirProposta_(x.proposta.id, x.message); }, 400); }, function (m) { Com_msg_(area, m); }); },
-      editar: function () { g.remove(); Comercial_formOportunidade_(o); },
+      proposta: function () { Com_chamar_("novaProposta", { oportunidadeId: o.id }, function (x) { Comercial_abrirPropostaDaOportunidade_(x.proposta.id, o.id, x.message); }, function (m) { Com_msg_(area, m); }); },
+      editar: function () { g.remove(); var fm = Comercial_formOportunidade_(o); if (fm && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(fm, function () { Comercial_abrirOportunidade_(o.id); }); },
       ganha: function () { if (!confirm("Marcar a oportunidade " + o.codigo + " como ganha? Depois, registre a resposta do cliente na proposta e passe o pedido aos setores.")) return; Com_chamar_("ganhar", { id: o.id }, function (x) { recarregar(x.message); }, function (m) { Com_msg_(area, m); }); },
       perda: function () {
         area.innerHTML = '<div class="cm-caixa"><h3>Registrar perda</h3><p class="cm-meta">' + Com_esc_(ini.regraPerda) + '</p>' + Com_campo_("Motivo", '<select id="cmLMot">' + Com_opcoes_(ini.motivosPerda, "", "Escolha o motivo real") + '</select>') +
@@ -743,10 +746,23 @@
   }
 
   function Comercial_abrirProposta_(id, aviso) {
+    if (!CM.voltaOpo || CM.voltaOpo.prop !== id) CM.voltaOpo = null; // aberta pela lista: o voltar só fecha a proposta
     var g = Com_gaveta_("Proposta", '<div class="cm-vazio">Carregando…</div>');
+    Comercial_ligarVoltaOpo_(g, id);
     Com_chamar_("proposta", { id: id }, function (r) { Comercial_desenharProposta_(g, r.proposta, aviso); }, function (m) { Com_$_("cmGavetaCorpo").innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; });
+    return g;
   }
 
+  /** Etapa 2: proposta aberta de dentro da oportunidade. Fecha pelo voltar e a oportunidade reabre (com os dados de agora). */
+  function Comercial_abrirPropostaDaOportunidade_(propId, opoId, aviso) {
+    CM.voltaOpo = { prop: propId, opo: opoId };
+    Comercial_abrirProposta_(propId, aviso);
+  }
+  function Comercial_ligarVoltaOpo_(g, propId) {
+    var v = CM.voltaOpo;
+    if (!g || !v || v.prop !== propId || !window.SGO_NAV || !SGO_NAV.janelaVolta) return;
+    SGO_NAV.janelaVolta(g, function () { if (CM.voltaOpo === v) CM.voltaOpo = null; Comercial_abrirOportunidade_(v.opo); });
+  }
   function Comercial_desenharProposta_(g, p, aviso) {
     var ini = CM.ini, corpo = Com_$_("cmGavetaCorpo"), s = p.situacao, meu = p.responsavelId === ini.eu.id || ini.gestao;
     g.querySelector("h3").textContent = p.rotulo + " · " + p.cliente;
@@ -810,7 +826,8 @@
     corpo.innerHTML = h;
     if (p.editavel) Comercial_ligarEditor_(p);
     if (p.editavel && Com_$_("cmPrTipo")) Com_$_("cmPrTipo").onchange = function () { acao.salvar(); };
-    corpo.querySelectorAll("[data-rev]").forEach(function (el) { el.onclick = function () { Comercial_abrirProposta_(el.getAttribute("data-rev")); }; });
+    // Etapa 2: outra revisão abre por cima; o voltar reabre esta
+    corpo.querySelectorAll("[data-rev]").forEach(function (el) { el.onclick = function () { var g2 = Comercial_abrirProposta_(el.getAttribute("data-rev")); if (g2 && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(g2, function () { Comercial_abrirProposta_(p.id); }); }; });
     var area = Com_$_("cmPropAcao");
     var recarregar = function (msg) { Comercial_aposAlterar_(); Com_chamar_("proposta", { id: p.id }, function (x) { Comercial_desenharProposta_(g, x.proposta, msg); }); };
     var acao = {
@@ -2697,7 +2714,8 @@
       '<p class="cm-sec">Marcos</p>' + (l.marcos.length ? '<div class="cm-hist">' + l.marcos.map(function (m) { return '<div' + (m.atrasado ? ' style="color:var(--danger)"' : '') + '><b>' + Com_esc_(m.diaTxt) + '</b> · ' + Com_esc_(m.rotulo) + (m.atrasado ? ' (atrasado)' : '') + '</div>'; }).join("") + '</div>' : '<p class="cm-meta">Nenhum marco ainda.</p>');
     var ov = Com_modal_(l.codigo + " · " + l.cliente, corpo, '<button type="button" class="btn-secondary" data-x="c">Fechar</button>' + (l.situacao === "ABERTA" ? '<button type="button" class="btn-secondary" data-x="esp"><i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Pedir à especialista</button>' : '') + '<button type="button" class="btn-primary" data-x="abrir">Abrir a oportunidade</button>', 560);
     ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
-    ov.querySelector('[data-x="abrir"]').onclick = function () { ov.remove(); Comercial_abrirOportunidade_(l.id); };
+    // Etapa 2: a oportunidade abre no lugar do detalhe do Gantt; o voltar reabre o detalhe
+    ov.querySelector('[data-x="abrir"]').onclick = function () { ov.remove(); var g2 = Comercial_abrirOportunidade_(l.id); if (g2 && window.SGO_NAV && SGO_NAV.janelaVolta) SGO_NAV.janelaVolta(g2, function () { Comercial_ganttDetalhe_(id); }); };
     var e = ov.querySelector('[data-x="esp"]'); if (e) e.onclick = function () { ov.remove(); Comercial_especialista_(l.id); };
   }
 </script>
