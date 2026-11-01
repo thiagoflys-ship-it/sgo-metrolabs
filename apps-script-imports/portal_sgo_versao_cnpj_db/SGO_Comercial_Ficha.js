@@ -12,6 +12,8 @@
  *   preço sugerido   = o pela conta; quando a mediana do mercado público E a mediana do histórico da Metrolabs (CRM 2025-26)
  *                      ficam as duas acima dela, sobe até o menor dos dois. Exceções da C1: ultracongelador com piso de 120% do
  *                      freezer; hora técnica avulsa no valor da política (R$ 190).
+ * 01/11/2026 (decisão do dono): a conta usa a sobra mínima (35%), o custo soma o Bônus Coletivo diluído na hora e o preço sugerido
+ * é o MAIOR entre o preço atual, a tabela C1, a planilha de 30/10/2026 com o imposto por fora e a conta (ComF_calcular_).
  * Os números vêm da política em vigor (Metodologia > Preço e desconto): mudou um parâmetro, o custo e o preço sugerido mudam na
  * hora. O PREÇO DE VENDA (PRECO) não muda sozinho: a gestão confirma ("Usar o preço sugerido"), com o motivo e o histórico.
  * O custo dos itens com ficha, nas propostas novas, é o custo calculado da ficha (ComF_custoProduto_).
@@ -34,8 +36,15 @@ function ComF_tabelaC1_(codigo) {
 }
 
 /**
- * Conta da ficha. f: { horasTecnico, horasEngenheiro, padroes, consumiveis, regra, historico, mercado }. Sem Date cru.
- * { maoObraTecnico, maoObraEngenheiro, maoObra, custoFixo, custo, precoConta, precoMinimo, precoSugerido, precoUrgente, fonte, fonteTxt }
+ * Conta da ficha. f: { horasTecnico, horasEngenheiro, padroes, consumiveis, regra, historico, mercado, c1, planilha, precoAtual }.
+ * 01/11/2026 (decisão do dono, "sobrar no mínimo 35%" e "os valores têm que ser os valores maiores"):
+ *   custo         = mão de obra x (1 + custo fixo) + Bônus Coletivo diluído (horas x R$/h) + padrões + consumíveis
+ *   preço pela conta (garante a sobra mínima) = custo ÷ (1 − impostos de serviço − comissão − margem mínima), arredondado
+ *   preço sugerido = o MAIOR entre: o preço atual do catálogo, o preço normal da tabela C1, o valor da planilha de 30/10/2026 com o
+ *                    imposto por fora (valor ÷ (1 − impostos de serviço)) e o preço pela conta. Hora avulsa: o maior entre a hora da
+ *                    política (sem imposto) ÷ (1 − impostos) e a conta. Ultracongelador: piso de 120% do freezer.
+ * Sem Date cru. { maoObraTecnico, maoObraEngenheiro, maoObra, custoFixo, bonusHora, bonus, custo, precoConta, precoMinimo, precoAlvo,
+ *   precoSugerido, precoUrgente, candidatos, fonte, fonteTxt }
  */
 function ComF_calcular_(f, pol, ctx) {
   pol = pol || ComPr_politica_();
@@ -46,34 +55,53 @@ function ComF_calcular_(f, pol, ctx) {
   r.maoObraEngenheiro = Com_r2_(hE * (Number(pol.custoHora.ENGENHEIRO) || 0));
   r.maoObra = Com_r2_(r.maoObraTecnico + r.maoObraEngenheiro);
   r.custoFixo = Com_r2_(r.maoObra * (Number(pol.custoFixoPct) || 0) / 100);
-  r.custo = Com_r2_(r.maoObra + r.custoFixo + r.padroes + r.consumiveis);
-  var base = 1 - (Number(pol.impostosPct) || 0) / 100 - (Number(pol.comissaoPct) || 0) / 100;
+  var bh = typeof ComPr_bonusHora_ === 'function' ? ComPr_bonusHora_(pol) : { porHora: 0 };
+  r.bonusHora = Number(bh.porHora) || 0;
+  r.bonus = Com_r2_((hT + hE) * r.bonusHora);
+  r.custo = Com_r2_(r.maoObra + r.custoFixo + r.bonus + r.padroes + r.consumiveis);
+  var imp = Number(pol.impostosServicoPct !== undefined ? pol.impostosServicoPct : pol.impostosPct) || 0;
+  var base = 1 - imp / 100 - (Number(pol.comissaoPct) || 0) / 100;
   var dAlvo = base - (Number(pol.margemAlvoPct) || 0) / 100, dMin = base - (Number(pol.margemMinPct) || 0) / 100;
   r.divisorAlvo = Math.round(dAlvo * 10000) / 10000; r.divisorMinimo = Math.round(dMin * 10000) / 10000;
-  r.precoConta = dAlvo > 0.05 ? ComPr_arredondarTabela_(r.custo / dAlvo) : null;
   r.precoMinimo = dMin > 0.05 ? ComPr_arredondarTabela_(r.custo / dMin) : null;
-  var sug = r.precoConta, fonte = 'CONTA';
+  r.precoConta = r.precoMinimo;
+  r.precoAlvo = dAlvo > 0.05 ? ComPr_arredondarTabela_(r.custo / dAlvo) : null;
+  var semImp = 1 - imp / 100;
+  var cand = { conta: r.precoConta, atual: Number(f.precoAtual) > 0 ? Com_r2_(f.precoAtual) : null, tabela: f.c1 && Number(f.c1.precoNormal) > 0 ? Com_r2_(f.c1.precoNormal) : null,
+    planilha: f.planilha && Number(f.planilha.valor) > 0 && semImp > 0.05 ? ComPr_arredondarTabela_(Number(f.planilha.valor) / semImp) : null, mercadoHistorico: null, horaAvulsa: null, piso: null };
   var merc = f.mercado && f.mercado.mediana, hist = f.historico && f.historico.crm && f.historico.crm.mediana;
-  if (sug !== null && merc > sug && hist > sug) { sug = ComPr_arredondarTabela_(Math.min(merc, hist)); fonte = 'MERCADO_HISTORICO'; }
+  if (r.precoConta !== null && merc > r.precoConta && hist > r.precoConta) cand.mercadoHistorico = ComPr_arredondarTabela_(Math.min(merc, hist));
   var regra = f.regra || {};
-  if (regra.tipo === 'HORA_AVULSA' && Number(pol.horaAvulsa) > 0) { sug = Math.max(sug || 0, Com_r2_(pol.horaAvulsa)); fonte = 'HORA_AVULSA'; }
+  // hora avulsa: o valor da política é sem imposto; o preço normal da C1 (R$ 190 com imposto dentro) deixa de valer
+  // (a planilha de 30/10 é a origem dos R$ 190; vale o número da política, que a Diretoria pode mudar)
+  if (regra.tipo === 'HORA_AVULSA' && Number(pol.horaAvulsa) > 0 && semImp > 0.05) { cand.horaAvulsa = ComPr_arredondarTabela_(Number(pol.horaAvulsa) / semImp); cand.tabela = null; cand.planilha = null; }
   if (regra.tipo === 'PISO_RELATIVO' && !ctx.semPiso) {
     var b = ComF_tabelaC1_(regra.base);
-    if (b) { var pb = ComF_calcular_(b, pol, { semPiso: true }).precoSugerido; var piso = ComPr_arredondarTabela_(pb * (Number(regra.fator) || 1)); if (piso > (sug || 0)) { sug = piso; fonte = 'PISO_RELATIVO'; } }
+    if (b) { var pb = ComF_calcular_(b, pol, { semPiso: true }).precoSugerido; cand.piso = ComPr_arredondarTabela_(pb * (Number(regra.fator) || 1)); }
   }
+  var nomes = { conta: 'CONTA', planilha: 'PLANILHA', horaAvulsa: 'HORA_AVULSA', tabela: 'TABELA', mercadoHistorico: 'MERCADO_HISTORICO', piso: 'PISO_RELATIVO', atual: 'ATUAL' };
+  var sug = null, fonte = 'CONTA';
+  ['conta', 'planilha', 'horaAvulsa', 'tabela', 'mercadoHistorico', 'piso', 'atual'].forEach(function (k) {
+    if (cand[k] !== null && cand[k] !== undefined && (sug === null || cand[k] > sug + 0.004)) { sug = cand[k]; fonte = nomes[k]; }
+  });
+  r.candidatos = cand;
   r.precoSugerido = sug;
   r.precoUrgente = sug === null ? null : ComPr_precoNaFaixa_(sug, pol, 'URGENTE', false, 'SERVICO');
   r.fonte = fonte;
-  r.fonteTxt = { CONTA: 'preço pela conta', MERCADO_HISTORICO: 'o mercado público e o histórico da Metrolabs estão os dois acima da conta: o preço sobe até o menor dos dois',
-    HORA_AVULSA: 'hora avulsa da política (carrega espera e diagnóstico sem peça)', PISO_RELATIVO: 'piso de ' + Com_pct_(((Number(regra.fator) || 1) - 1) * 100, 0) + ' acima do serviço de referência (' + Com_s_(regra.base) + ')' }[fonte];
+  r.fonteTxt = { CONTA: 'conta de custo com a sobra mínima de ' + Com_pct_(pol.margemMinPct, 0), PLANILHA: 'planilha do dono de 30/10/2026 (' + Com_moeda_(f.planilha && f.planilha.valor) + ' sem imposto) com o imposto por fora',
+    HORA_AVULSA: 'hora avulsa da política (' + Com_moeda_(pol.horaAvulsa) + ' sem imposto) com o imposto por fora', TABELA: 'preço da tabela C1 (o maior dos valores)',
+    MERCADO_HISTORICO: 'o mercado público e o histórico da Metrolabs estão os dois acima da conta: o preço sobe até o menor dos dois',
+    PISO_RELATIVO: 'piso de ' + Com_pct_(((Number(regra.fator) || 1) - 1) * 100, 0) + ' acima do serviço de referência (' + Com_s_(regra.base) + ')', ATUAL: 'preço atual do catálogo (já é o maior)' }[fonte];
   return r;
 }
 
 /** Ficha de um item do catálogo (linha de COM_PRODUTOS) para a conta. */
 function ComF_fichaDe_(p) {
   var ref = ComF_referencia_(p);
+  // 01/11/2026: a tabela C1, a planilha de 30/10 (do item C1 em vigor; a referência gravada na importação é a da época) e o preço atual
+  var s1 = Com_s_(p.TABELA_CODIGO) ? ComF_tabelaC1_(p.TABELA_CODIGO) : null;
   return { horasTecnico: ComF_n_(p.HORAS_TECNICO) || 0, horasEngenheiro: ComF_n_(p.HORAS_ENGENHEIRO) || 0, padroes: ComF_n_(p.PADROES_CUSTO) || 0, consumiveis: ComF_n_(p.CONSUMIVEIS_CUSTO) || 0,
-    regra: ref.regra || null, historico: ref.historico || null, mercado: ref.mercado || null };
+    regra: ref.regra || null, historico: ref.historico || null, mercado: ref.mercado || null, c1: (s1 && s1.c1) || ref.c1 || null, planilha: (s1 && s1.planilha) || ref.planilha || null, precoAtual: Number(p.PRECO) || 0 };
 }
 
 /**
@@ -109,6 +137,7 @@ function ComF_paraTela_(p, eu, pol) {
     t.vale = ComF_fichaVale_(p);
     if (!t.vale) t.custoCadastradoTxt = Com_moeda_(p.CUSTO);
     t.contaTxt = { maoObraTecnico: Com_moeda_(c.maoObraTecnico), maoObraEngenheiro: Com_moeda_(c.maoObraEngenheiro), custoFixo: Com_moeda_(c.custoFixo), padroes: Com_moeda_(c.padroes), consumiveis: Com_moeda_(c.consumiveis), custo: Com_moeda_(c.custo),
+      bonus: Com_moeda_(c.bonus), bonusHora: Com_moeda_(c.bonusHora), precoAlvo: c.precoAlvo === null ? '—' : Com_moeda_(c.precoAlvo), planilha: c.candidatos.planilha === null ? '' : Com_moeda_(c.candidatos.planilha), tabela: c.candidatos.tabela === null ? '' : Com_moeda_(c.candidatos.tabela),
       precoConta: c.precoConta === null ? '—' : Com_moeda_(c.precoConta), precoMinimo: c.precoMinimo === null ? '—' : Com_moeda_(c.precoMinimo), precoSugerido: c.precoSugerido === null ? '—' : Com_moeda_(c.precoSugerido), precoUrgente: c.precoUrgente === null ? '—' : Com_moeda_(c.precoUrgente) };
     var preco = Number(p.PRECO) || 0;
     t.diferenca = c.precoSugerido === null ? 0 : Com_r2_(preco - c.precoSugerido);
@@ -240,7 +269,7 @@ function ComF_camposVazios_(p, s, c) {
   return l;
 }
 function ComF_descricao_(s) { return Com_texto_(s.escopo + ' Unidade: ' + s.unidadeTexto + '. Deslocamento cobrado à parte.', 2000); }
-function ComF_referenciaDe_(s) { return { mercado: s.mercado, mercadoCentroOeste: s.mercadoCentroOeste, historico: s.historico, regra: s.regra, fonte: s.fonte, alertas: s.alertas, unidadeTexto: s.unidadeTexto, c1: s.c1, versao: COM_TABELA_C1.versao }; }
+function ComF_referenciaDe_(s) { return { mercado: s.mercado, mercadoCentroOeste: s.mercadoCentroOeste, historico: s.historico, regra: s.regra, fonte: s.fonte, alertas: s.alertas, unidadeTexto: s.unidadeTexto, c1: s.c1, planilha: s.planilha || null, versao: COM_TABELA_C1.versao }; }
 
 /** Importa conforme a prévia conferida. d: { marca, escolhas: { <codigo C1>: 'PREENCHER'|'IGNORAR'|'CRIAR' } } */
 function ComF_importar_(eu, d) {
@@ -304,7 +333,11 @@ function ComF_problemasItens_(p, pol) {
     var pu = Number(i.precoUnitario) || 0, nome = Com_s_(i.codigo) || Com_s_(i.descricao).slice(0, 40);
     if (ComF_temFicha_(pr)) {
       var c = ComF_calcular_(ComF_fichaDe_(pr), pol);
-      if (c.precoMinimo !== null && pu > 0 && pu < c.precoMinimo * fat - 0.004) add('PRECO_ABAIXO_MINIMO', nome + ' a ' + Com_moeda_(pu) + ', abaixo do preço mínimo da tabela (' + Com_moeda_(Com_r2_(c.precoMinimo * fat)) + ', margem de ' + Com_pct_(pol.margemMinPct, 1) + ')', false);
+      if (c.precoMinimo !== null && pu > 0 && pu < c.precoMinimo * fat - 0.004) add('PRECO_ABAIXO_MINIMO', nome + ' a ' + Com_moeda_(pu) + ', abaixo do preço que garante a sobra mínima (' + Com_moeda_(Com_r2_(c.precoMinimo * fat)) + ', sobra de ' + Com_pct_(pol.margemMinPct, 1) + ')', false);
+    } else if (i.tipo === 'PRODUTO' && typeof ComPr_pisoItem_ === 'function') {
+      // 01/11/2026: peça revendida: o piso é a conta com os impostos de produto da unidade e os créditos sobre o custo
+      var desl = Com_json_(p.DESLOCAMENTO_JSON, null), piso = ComPr_pisoItem_(i, ComPr_polUnidade_(pol, desl && desl.unidade));
+      if (piso !== null && pu > 0 && pu < piso - 0.004) add('PRECO_ABAIXO_MINIMO', nome + ' a ' + Com_moeda_(pu) + ', abaixo do preço que garante a sobra mínima (' + Com_moeda_(piso) + ', com os impostos de produto e os créditos da compra)', false);
     }
     var m = ComF_referencia_(pr).mercado;
     if (m && m.n >= 3 && pu > 0) {

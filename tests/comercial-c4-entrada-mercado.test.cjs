@@ -18,6 +18,10 @@ function amb0() {
   const amb = ambiente({ tabelas: { qual_distancia_referencia: [{ ID: 'd1', DESTINO: 'Anápolis/GO', KM_TRECHO: 55 }] } });
   amb.ctx.CONDUTA_SHEETS = { DISTANCIA_REFERENCIA: 'qual_distancia_referencia' };
   amb.ctx.Conduta_obterParametros_ = () => ({ VALOR_INCENTIVO_MISSAO: 300, MISSAO_KM_MINIMO: 200 });
+  // 01/11/2026 (decisão do dono): estes testes conferem a mecânica (banco de preços, Orçamentista, entrada, perda e relatório) com
+  // os números da C1 anteriores à decisão (margem mínima 10%, alvo 20%, técnico a R$ 45, sem o Bônus Coletivo), para os preços de
+  // exemplo (autoclave a R$ 3.020) continuarem valendo. Os números da decisão estão em comercial-c2-precos e comercial-decisao-dono.
+  ok(amb.api('s_dora', 'metodologia', { pagina: 'PRECO', salvar: { precificacao: { margemMinPct: 10, margemAlvoPct: 20, custoHora: { TECNICO: 45, ENGENHEIRO: 132 }, bonusConduta: { valorMes: 0 } } }, motivo: 'Teste: números da C1 anteriores à decisão do dono' }));
   const pv = ok(amb.api('s_dora', 'importarC1Previa'));
   ok(amb.api('s_dora', 'importarC1', { marca: pv.marca, escolhas: {} }));
   return amb;

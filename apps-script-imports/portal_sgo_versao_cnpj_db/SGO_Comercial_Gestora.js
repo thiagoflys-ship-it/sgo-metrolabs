@@ -248,7 +248,8 @@ function ComG_metodologiaTexto_(met) {
   if (typeof ComPr_politica_ === 'function') {
     try {
       var pp = ComPr_politica_(met);
-      l.push('REGRA DO PREÇO: preço = custo / (1 - impostos ' + Com_pct_(pp.impostosPct, 2) + ' - comissão ' + Com_pct_(pp.comissaoPct, 1) + ' - margem alvo ' + Com_pct_(pp.margemAlvoPct, 1) + '); margem mínima ' + Com_pct_(pp.margemMinPct, 1) + ' (abaixo dela, só a Diretoria aprova). Deslocamento à parte, sem margem e sem comissão.');
+      // 01/11/2026 (decisão do dono): sobra mínima, preço = o maior dos valores, impostos por unidade; tudo da política, nada da IA
+      l.push('REGRA DO PREÇO: sobra mínima ' + Com_pct_(pp.margemMinPct, 1) + ' e margem alvo ' + Com_pct_(pp.margemAlvoPct, 1) + ' depois de impostos (serviço ' + Com_pct_(pp.impostosPct, 2) + ' na ' + pp.unidadeNome + '), comissão ' + Com_pct_(pp.comissaoPct, 1) + ' e custos diretos, antes de IR e CSLL (abaixo da mínima, só a Diretoria aprova). Preço do serviço = o maior entre a tabela, a planilha de 30/10/2026 com o imposto por fora e custo / (1 - impostos - comissão - sobra mínima). Deslocamento à parte: custo mais impostos, sem margem, sem comissão e sem desconto.');
       l.push('FAIXAS DE PRAZO: ' + pp.prazo.faixas.filter(function (x) { return x.ativa; }).map(function (x) { return x.nome + ' ' + x.diasUteis + ' dias úteis' + (x.acrescimoPct ? ' (+' + Com_pct_(x.acrescimoPct, 0) + ')' : ''); }).join('; ') + '. O prazo conta até ' + (pp.prazo.contaAte === 'EXECUCAO' ? 'a execução' : 'a entrega do relatório ou certificado') + '.' + (pp.prazo.licitacaoSemAcrescimo ? ' Licitação ou contrato: sem acréscimo de urgência.' : '') + ' Prazo curto só depois de a Área técnica confirmar a agenda.');
     } catch (ePp) {}
   }
@@ -630,7 +631,7 @@ function ComG_revisarPropostaRegras_(p) {
   if (!ct) alertas.push('a proposta não tem contato do cliente (A/C)');
   else if (!Com_s_(ct.EMAIL)) alertas.push('o contato ' + Com_s_(ct.NOME) + ' está sem e-mail: o envio pelo e-mail vai pedir outro endereço');
   // 29/10/2026: especialista em precificação (SGO_Comercial_Precificacao.js): checklist de custos da viagem e do frete,
-  // margem depois de impostos e da viagem, benefício do Programa de conduta e desconto sobre o deslocamento
+  // sobra depois de impostos e custos diretos (o deslocamento fica fora), Incentivo de Missão e preço do deslocamento
   var xPr = typeof ComPr_daProposta_ === 'function' ? ComPr_daProposta_(p, null, itens) : null;
   var pol = ComP_avaliarPolitica_(calc, Com_s_(p.RESPONSAVEL_ID), met, xPr && xPr.analise);
   if (!pol.dentro && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0 && Com_up_(p.SITUACAO) === 'PRONTA') erros.push('a proposta tem ' + pol.motivos.join(' e ') + ' sem aprovação registrada');

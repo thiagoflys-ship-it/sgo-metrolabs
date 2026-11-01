@@ -20,7 +20,9 @@ const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO
   // 01/11/2026 (Comercial C3): banco de preços (com a carga da C1) e o Orçamentista
   'SGO_Comercial_BancoC1.js', 'SGO_Comercial_BancoPrecos.js', 'SGO_Comercial_Orcamentista.js',
   // 01/11/2026: a especialista (planos A/B/C, memória de planos, verificador anti-genérico)
-  'SGO_Comercial_Especialista.js'];
+  'SGO_Comercial_Especialista.js',
+  // 01/11/2026: aplicar a decisão do dono (política e preços) na produção
+  'SGO_Comercial_Decisao20261101.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};

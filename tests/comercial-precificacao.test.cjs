@@ -143,7 +143,9 @@ test('edge cases: atendimento local (0 km), trecho abaixo do mínimo da Conduta,
   assert.equal(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto).length, 0);
   const ge = ok(amb.api('s_gaspar', 'proposta', { id: e.id })).proposta.deslocamento;
   assert.equal(ge.analise.custoDeslocamento, 3185);
-  assert.equal(ge.diluir, 3747.06, 'quanto diluir nos serviços: custo mais impostos');
+  // 01/11/2026 (decisão do dono): diluído, o custo da viagem entra no custo dos serviços e a sobra mínima tem que cobrir:
+  // 3.185 ÷ (1 − 15% − 0% − 25%) = 5.308,33 (antes: só custo mais impostos, 3.747,06)
+  assert.equal(ge.diluir, 5308.33, 'quanto diluir nos serviços: custo ÷ (1 − impostos − comissão − sobra mínima)');
   // trocar para item cria o item; voltar para diluído tira
   ok(amb.api('s_vera', 'salvarProposta', { id: e.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { repasse: 'ITEM' } }));
   assert.equal(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto === 'DESLOCAMENTO').length, 1);
@@ -185,12 +187,21 @@ test('margem e alçada: abaixo da mínima vai para aprovação e só a Diretoria
   assert.equal(ok(amb.api('s_vera', 'concluirProposta', { id: b.id })).proposta.situacao, 'PRONTA');
 });
 
-test('desconto geral sobre o deslocamento: a gestora aponta o custo não repassado; revisão da proposta copia a viagem; passagem aos setores leva a viagem sem valor', () => {
+// 01/11/2026 (decisão do dono, MAN-VIA-001 item 6.1): antes o desconto geral era rateado também no item de deslocamento e a gestora
+// apontava o custo não repassado. Agora o desconto sai só dos serviços e produtos: o deslocamento fica com o preço inteiro.
+test('desconto geral não reduz o deslocamento (sai só dos serviços); revisão da proposta copia a viagem; passagem aos setores leva a viagem sem valor', () => {
   const amb = amb0();
   ok(politica(amb, POL));
   const a = rascunho(amb, { deslocamento: { viagem: VIAGEM }, descontoGeral: '1.000,00' });
   const rv = ok(amb.api('s_vera', 'revisarProposta', { id: a.id, comIA: false }));
-  assert.ok(rv.alertas.some((x) => /o desconto geral reduz o repasse da viagem: R\$ [\d.,]+ do custo de deslocamento não volta no preço/.test(x)), rv.alertas.join(' | '));
+  assert.ok(!rv.alertas.some((x) => /não volta no preço/.test(x)), rv.alertas.join(' | '));
+  const an = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta.deslocamento.analise;
+  assert.equal(an.receitaDeslocamento, 3750, 'o item de deslocamento fica com o preço inteiro');
+  assert.equal(an.naoRepassado, 0); assert.equal(an.receitaItens, 8000, '9.000 de serviço menos os 1.000 de desconto');
+  assert.equal(reg(amb, a.id).TOTAL, 11750); assert.equal(reg(amb, a.id).DESCONTO_PCT, 11.11, '1.000 sobre os 9.000 do serviço (o deslocamento não entra na base)');
+  // o desconto não pode passar da soma dos serviços e produtos (o deslocamento não absorve desconto)
+  const muito = amb.api('s_vera', 'salvarProposta', { id: a.id, descontoGeral: '9.500,00', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00', equipamentoId: 'eq1' }] });
+  assert.equal(muito.ok, false); assert.match(muito.message, /maior que a soma dos serviços e produtos \(R\$ 9\.000,00\)\. O deslocamento e o frete são repasse de custo e não recebem desconto/);
   ok(amb.api('s_vera', 'concluirProposta', { id: a.id, justificativa: 'Desconto combinado com a compradora' }));
   if (reg(amb, a.id).SITUACAO === 'AGUARDANDO_APROVACAO') ok(amb.api('s_gaspar', 'decidirDesconto', { id: a.id, aprovar: true, texto: 'Aprovado pela gestão comercial' }));
   ok(amb.api('s_vera', 'gerarDocumento', { id: a.id }));
@@ -330,7 +341,7 @@ test('especialista contínuo: lista do vendedor cobra o checklist; panorama da g
   const hoje = ok(amb.api('s_vera', 'hoje', { papel: 'VENDEDOR' }));
   const it = hoje.itens.find((i) => i.regra === 'CHECKLIST_CUSTOS');
   assert.ok(it, JSON.stringify(hoje.itens.map((i) => i.regra)));
-  assert.match(it.porque, /benefício do Programa de conduta de cada colaborador/); assert.match(it.acao, /Sem isso a proposta não conclui/);
+  assert.match(it.porque, /Incentivo de Missão de cada executante/); assert.match(it.acao, /Sem isso a proposta não conclui/);
   // panorama: política incompleta
   let pan = ok(amb.api('s_gaspar', 'hoje', { papel: 'GESTAO' }));
   // 01/11/2026 (C2): a política nasce com os valores iniciais da C1; o panorama aponta os que o dono ainda não confirmou
@@ -345,11 +356,11 @@ test('especialista contínuo: lista do vendedor cobra o checklist; panorama da g
   pan = ok(amb.api('s_gaspar', 'hoje', { papel: 'GESTAO' }));
   const conduta = pan.itens.find((i) => i.regra === 'PRECIFICACAO');
   assert.ok(conduta, pan.itens.map((i) => i.regra).join(','));
-  assert.match(conduta.titulo, /o benefício do Programa de conduta ficou "não se aplica" numa viagem de 228 km/);
+  assert.match(conduta.titulo, /o Incentivo de Missão ficou "não se aplica" numa viagem de 228 km/);
   assert.ok(pan.itens.some((i) => i.regra === 'CATALOGO_SEM_REAJUSTE' && /1 item do catálogo está sem reajuste há mais de 12 meses/.test(i.titulo)));
   assert.ok(!pan.itens.some((i) => i.regra === 'POLITICA_INCOMPLETA'), 'a política foi preenchida');
   const rv = ok(amb.api('s_vera', 'revisarProposta', { id: a.id, comIA: false }));
-  assert.ok(rv.alertas.some((x) => /benefício do Programa de conduta ficou "não se aplica"/.test(x)));
+  assert.ok(rv.alertas.some((x) => /Incentivo de Missão ficou "não se aplica"/.test(x)));
   // catálogo: filtro "sem reajuste"
   const cat = ok(amb.api('s_gaspar', 'catalogo', { situacao: 'SEM_REAJUSTE' }));
   assert.deepEqual(cat.produtos.map((p) => p.codigo), ['SRV-9']); assert.equal(cat.semReajuste, 1); assert.equal(cat.produtos[0].semReajuste, true);
@@ -393,14 +404,14 @@ test('telas: caixa de custos no rascunho, resumo fora dele, política na Metodol
   assert.match(cx, /Tabela de distâncias: Rio Verde\/GO, 228 km/);
   assert.doesNotMatch(cx, /Precificação \(só gestão\)/, 'vendedor não vê a margem em número');
   const pg = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta;
-  assert.match(tela.Comercial_editorCustos_(pg), /Precificação \(só gestão\):.*margem/);
+  assert.match(tela.Comercial_editorCustos_(pg), /Precificação \(só gestão\), Matriz Goiânia\/GO:.*<b>sobra/);
   ok(amb.api('s_vera', 'concluirProposta', { id: a.id }));
   const pr = ok(amb.api('s_vera', 'proposta', { id: a.id })).proposta;
-  assert.match(tela.Comercial_resumoCustos_(pr.deslocamento), /Benefício do Programa de conduta/);
+  assert.match(tela.Comercial_resumoCustos_(pr.deslocamento), /Incentivo de Missão \(Programa de conduta\)/);
   const met = ok(amb.api('s_dora', 'metodologia'));
   // 01/11/2026 (C2): a política virou a página "Preço e desconto" da Metodologia
   const cp = tela.Comercial_metPreco_(met);
-  assert.match(cp, /Impostos, comissão e margem/); assert.doesNotMatch(cp, /id="cmPrImp" inputmode="decimal" value="[^"]*" disabled/);
+  assert.match(cp, /Sobra, comissão e margem/); assert.doesNotMatch(cp, /id="cmPrImp" inputmode="decimal" value="[^"]*" disabled/);
   assert.match(tela.Comercial_metPreco_(ok(amb.api('s_gaspar', 'metodologia'))), /id="cmPrImp" inputmode="decimal" value="15" disabled/, 'gestor comercial vê, mas não edita');
   const pn = ok(amb.api('s_gaspar', 'painel', { competencia: '2026-10' })).precificacao;
   assert.match(tela.Comercial_quadroPrecificacao_(pn), /Precificação e estratégia/);

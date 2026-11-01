@@ -1,6 +1,6 @@
 # O que o seu material comercial diz e o que o SGO+ usa hoje
 
-Data: 01/11/2026. Conferência feita a seu pedido ("leia tudo"). Nada foi mudado no SGO+.
+Data: 01/11/2026. Conferência feita a seu pedido ("leia tudo"). Na conferência nada foi mudado no SGO+; no mesmo dia o senhor decidiu os pontos da seção 0, que já estão no sistema.
 
 Como ler este documento:
 
@@ -9,6 +9,23 @@ Como ler este documento:
 - **Não está no material**: o SGO+ usa um número ou uma regra que não aparece em nenhum documento seu. Foi proposta nossa, estimativa ou pedido falado. Precisa do seu ok.
 
 "C1" é o estudo de preços de 01/11/2026 (`docs/COMERCIAL_C1_PRECIFICACAO_20261101.md`). O SGO+ de hoje usa os números da C1 como valores iniciais.
+
+---
+
+## 0. Decidido pelo dono em 01/11/2026
+
+Palavras do senhor: "Pra empresa tem que sobrar no mínimo 35%". "Os valores têm que ser os valores maiores, esses serviços estão muito baratos". "Os 300 é missão acima de 200 km, porém temos mais 300 por colaborador de incentivo de conduta, tem que incluir e diluir, a empresa precisa pagar esses custos". "2,50 km rodado; imposto: você tem que ver como é Goiás e como é Rio; aqui é lucro real."
+
+| Ponto | Decidido | Como ficou no SGO+ | Provisório |
+|---|---|---|---|
+| Margem | Sobra mínima de 35% | Sobra = preço dos serviços e produtos − impostos − comissão − custos diretos, antes de IR e CSLL. Abaixo de 35%, só a Diretoria aprova, qualquer que seja a alçada de quem vende. O deslocamento em item próprio fica fora da conta. | Margem alvo de 40% (proposta nossa; o Planejamento traz margem de contribuição de 39,5%) |
+| Valores | Os valores maiores | Preço de cada serviço = o maior entre a tabela, a planilha de 30/10/2026 com o imposto por fora e a conta de custo com a sobra de 35%. Hora avulsa = o maior entre R$ 190 com o imposto por fora e a conta. Peça = conta com a sobra de 35% e os impostos de produto. Custo da hora do técnico R$ 90 (MAN-VIA-001). | Equivalências com a planilha: câmara (R$ 950 por visita), calibração do indicador (R$ 800, o valor de 3 pontos), qualificação de câmara e de incubadora (metade do "com e sem carga") |
+| Taxa de R$ 300 por viagem | Era o Incentivo de Missão | Removida. Fica só o Incentivo de Missão: R$ 300 por executante, por missão com trecho de 200 km ou mais a partir da sede. Propostas antigas que gravaram a taxa continuam mostrando o valor gravado. | — |
+| Bônus de conduta | Incluir e diluir | O Bônus Coletivo (R$ 300 por mês para cada colaborador ativo) entra no custo da hora: bônus × colaboradores ÷ horas faturáveis da equipe. A tela da política mostra a conta. | Horas faturáveis da equipe por mês (sem o número real: 140 h por colaborador de campo) |
+| Km rodado | R$ 2,50 confirmado | Sem mudança. Alimentação R$ 100 e hotel R$ 150 seguem como estavam. | Alimentação e hotel |
+| Impostos | Ver Goiás e Rio; Lucro Real | Tabela por unidade que emite a nota. Serviço: PIS 1,65% + COFINS 7,6% + ISS 5%. Produto: PIS + COFINS + ICMS (GO 19%; RJ 20% + 2% de FECP) sobre o preço, menos os créditos sobre o custo de compra (PIS/COFINS 9,25% e ICMS da compra). A proposta escolhe a unidade (Goiânia padrão). Em 2026 a CBS e o IBS só aparecem na nota em teste: nada é somado. | ISS de 5% nos dois municípios e ICMS da compra de 12%: confirmar com o contador |
+
+Exemplos com os valores de hoje (Goiânia): qualificação de autoclave acima de 100 L passa de R$ 3.020 para R$ 5.760 (custo R$ 2.747,64 ÷ 0,4775); peça de custo R$ 1.000 sai por R$ 2.334 em Goiânia e R$ 2.561 no Rio; hora avulsa do técnico, R$ 250. A lista dos 42 serviços, com a fonte de cada preço, está em `docs/COMERCIAL_C1_TABELA_SERVICOS.json` (campo `decisao_dono_20261101`).
 
 ---
 
@@ -49,8 +66,8 @@ Como ler este documento:
 
 | Regra ou número | O que o seu material diz | Onde | O que o SGO+ e a C1 usam | Situação |
 |---|---|---|---|---|
-| Margem alvo por venda | Nenhum número. A margem aparece só como critério: "As metas poderão considerar: (...) Margem de lucro"; a comissão "poderá variar conforme: (...) Margem da negociação". | Política Comercial, itens 4 e 5 (pág. 3) | 20% do preço, depois de impostos e comissão | **Não está no material** |
-| Margem mínima | Nenhum número | — | 10%. Abaixo disso, só a Diretoria aprova | **Não está no material** |
+| Margem alvo por venda | Nenhum número. A margem aparece só como critério: "As metas poderão considerar: (...) Margem de lucro"; a comissão "poderá variar conforme: (...) Margem da negociação". | Política Comercial, itens 4 e 5 (pág. 3) | 40% (proposta nossa, provisória; antes 20%) | **Não está no material** |
+| Margem mínima | Nenhum número | — | 35% de sobra. Abaixo disso, só a Diretoria aprova | **Decidido pelo dono em 01/11/2026** (antes 10%) |
 | Margem de contribuição | "Margem de Contribuição: 39,5%" (2025 e 2026), 40,0% (2028) | Planejamento, Tabela 4.2 (pág. 11) | Não usa | Diferente (o SGO+ não usa esse número) |
 | Margem EBITDA | "~10%" (2025), "~12%" (2026), "~13,5%" (2027), "~15,5%" (2028) | Planejamento, Tabela 4.2 (pág. 11) | Não usa | Diferente (o SGO+ não usa esse número) |
 | Margem sobre peças | "Margem material" = 0,3 (30%) | Planilha de 30/10, aba PECAS_A_COTAR, célula K3 | 30% | **Igual no número**, diferente na conta (ver 2.2) |
@@ -60,7 +77,7 @@ Como ler este documento:
 
 | Regra ou número | O que o seu material diz | Onde | O que o SGO+ e a C1 usam | Situação |
 |---|---|---|---|---|
-| Conta do preço da peça | Preço = custo ÷ (1 − 30%) + horas de instalação × R$ 190 + extras de logística | Planilha de 30/10, aba PECAS_A_COTAR, fórmula da coluna K (K5 a K51) | Preço sugerido = custo do fornecedor ÷ (1 − 30%). As horas de instalação não entram sozinhas. | Diferente |
+| Conta do preço da peça | Preço = custo ÷ (1 − 30%) + horas de instalação × R$ 190 + extras de logística | Planilha de 30/10, aba PECAS_A_COTAR, fórmula da coluna K (K5 a K51) | Preço = custo × (1 − créditos) ÷ (1 − impostos de produto − comissão − 35%). As horas de instalação entram como item de hora. | **Decidido em 01/11/2026** (sobra de 35% e impostos por fora) |
 | Imposto no preço da planilha | Tributos: "Preço preliminar interno sem enquadramento tributário validado" / "Não aplicado adicional" / "Validar com contador/financeiro". E também: "NÃO ENVIAR AO CLIENTE sem confirmar (...) tributos". | Planilha, aba PREMISSAS, linha 23; aba ITENS_ORCAMENTO, célula A24 | A proposta do SGO+ diz "Impostos: Inclusos no preço" (`SGO_Comercial_Config.js`, condições padrão). O preço da peça sai **com o imposto dentro**. | **Diferente** |
 
 **O que isso quer dizer, num exemplo.** Peça com custo de R$ 1.000:
@@ -82,7 +99,7 @@ O preço dos **serviços** da C1 não tem esse problema: a conta já põe os imp
 |---|---|---|---|---|
 | Regime | "PORTE: ME OPTANTE DO LUCRO REAL" | Dados cadastrais da matriz, pág. 1 | Lucro Real | Igual |
 | Regime (outro documento) | "possível saída do Simples Nacional ou aumento de alíquota efetiva" | Planejamento, pág. 3 | — | Contradição no material (ver seção 4) |
-| Alíquota sobre a venda | "Impostos S/ Vendas: (10,5% est.)" 2025; "(12,5% est.)" 2026; "(13,5% est.)" 2027; "(14,0% est.)" 2028 | Planejamento, Tabela 4.2 (pág. 11) | 14,25% (PIS 1,65% + COFINS 7,6% + ISS até 5%) | **Diferente** (e os dois números são estimativas) |
+| Alíquota sobre a venda | "Impostos S/ Vendas: (10,5% est.)" 2025; "(12,5% est.)" 2026; "(13,5% est.)" 2027; "(14,0% est.)" 2028 | Planejamento, Tabela 4.2 (pág. 11) | Por unidade (Lucro Real): serviço 14,25% (PIS 1,65% + COFINS 7,6% + ISS 5%); produto GO 28,25% e RJ 31,25% menos os créditos da compra | **Decidido pelo dono em 01/11/2026** (impostos por unidade; ISS e ICMS da compra provisórios para o contador) |
 | Alíquota antiga | Taxas e impostos de R$ 2.901,60 sobre R$ 48.360 (6%) | Planilha de custos de 2019 | — | Só histórico |
 
 ### 2.4 Desconto e alçadas (quem aprova quanto)
@@ -94,7 +111,7 @@ O preço dos **serviços** da C1 não tem esse problema: a conta já põe os imp
 | SDR e desconto | "Não e papel do SDR: (...) negociar desconto sem autorizacao" | Playbook, slide 28 | Não há regra por cargo | Diferente |
 | Postura | "Nunca venda apenas desconto."; "não vender desconto como primeira saída" | Playbook, slides 20 e 101 | Texto da metodologia: "Venda valor técnico, não desconto." | Igual |
 | Percentuais das alçadas | **Nenhum número** | — | C1 e manual: vendedor 5%, gerente 10%, Diretoria até 13,75%. **No valor padrão do código, o vendedor dá até 15% sem pedir** (`descontoMaxPct: 15`; não conferi o valor gravado na produção); 10% e 13,75% só geram aviso. | **Não está no material** (e o SGO+ se contradiz) |
-| Desconto e incentivo de viagem | "Desconto comercial incide sobre a margem, nunca sobre a linha de incentivo." A linha "Não pode ser suprimida na negociação". | MAN-VIA-001, item 6.1 (pág. 4) | O incentivo fica dentro do item "Despesas de deslocamento e estadia". O desconto geral é sobre o total e não protege esse item: a margem cai e, se ficar abaixo de 10%, vai para a Diretoria. | **Diferente** |
+| Desconto e incentivo de viagem | "Desconto comercial incide sobre a margem, nunca sobre a linha de incentivo." A linha "Não pode ser suprimida na negociação". | MAN-VIA-001, item 6.1 (pág. 4) | O incentivo fica dentro do item "Despesas de deslocamento e estadia", e o desconto geral sai só dos serviços e produtos: esse item fica sempre com o preço inteiro. | **Igual** (corrigido em 01/11/2026) |
 | Desconto de lote (5% de 5 a 19 unidades, 10% a partir de 20) | Nenhum | — | Regra de uso da C1 | **Não está no material** |
 
 ### 2.5 Desconto de pontualidade e antecipação
@@ -113,7 +130,7 @@ O preço dos **serviços** da C1 não tem esse problema: a conta já põe os imp
 | Quando se paga | Contrato assinado, "O cliente efetuar o pagamento conforme política financeira", CRM em dia, Playbook seguido | Política Comercial, item 5 (pág. 3) | O SGO+ não calcula | Diferente |
 | Tabela da escala | Playbook: "conforme regras oficiais". A tabela de 1% a 5% **não foi encontrada**. | Playbook, slide 76 | — | Lacuna |
 | Comissão do gestor comercial (2025) | 2% até R$ 50 mil; 3% de R$ 50 mil a R$ 100 mil; 4% acima de R$ 100 mil, sobre o faturamento mensal de contratos novos. Bônus de R$ 2.000 (contrato de 12 meses ou mais acima de R$ 100 mil) e de R$ 5.000 (acima de R$ 300 mil). | "Proposta do Gestor Comercial" (mar/2025), seções 2 e 3 | Não usa | Diferente (e contradiz a Política; ver seção 4) |
-| Bônus Coletivo de Cultura | R$ 300 por colaborador por mês, com farol verde. "Custo fixo da empresa, diluído na hora técnica: +R$ 3,56/hora" | POL-BON-001, itens 2, 4.1 e 10 (págs. 1, 3 e 7) | A conta do custo da hora não soma os R$ 3,56. Pode estar dentro dos 25% de custo fixo, mas isso não está escrito. | **Diferente** |
+| Bônus Coletivo de Cultura | R$ 300 por colaborador por mês, com farol verde. "Custo fixo da empresa, diluído na hora técnica: +R$ 3,56/hora" | POL-BON-001, itens 2, 4.1 e 10 (págs. 1, 3 e 7) | Diluído na hora: bônus × colaboradores ativos ÷ horas faturáveis da equipe (soma no custo da hora de técnico e engenheiro) | **Decidido pelo dono em 01/11/2026** ("incluir e diluir") |
 | Incentivo de Missão | R$ 300 por executante, por missão de 200 km ou mais por trecho, a partir da sede. "Linha direta no orçamento". | POL-BON-001, itens 5 e 10; MAN-VIA-001, itens 1 e 6 | R$ 300 por pessoa quando o trecho tem 200 km ou mais, dentro do custo do deslocamento; nunca aparece com esse nome para o cliente | **Igual** |
 | Incentivo "antes da margem" | "deve conter a linha de incentivo no custo, como item próprio, antes da margem" | MAN-VIA-001, item 6 (pág. 4) | Entra no custo do deslocamento, que é repassado sem margem | Igual no valor; o MAN-VIA pede "item próprio", o SGO+ junta no item de deslocamento |
 
@@ -156,8 +173,8 @@ O preço dos **serviços** da C1 não tem esse problema: a conta já põe os imp
 |---|---|---|---|---|
 | Ponto de partida | "Sempre a sede" (Goiânia). "Não se mede da residência do colaborador." | POL-BON-001, item 5.1; MAN-VIA-001, item 1 | Origem padrão Goiânia/GO; distância pela tabela da Conduta | Igual |
 | Incentivo de R$ 300 | Ver 2.6 | POL-BON-001 e MAN-VIA-001 | R$ 300 por pessoa, trecho de 200 km ou mais | Igual |
-| Km rodado | Nenhum valor por km. Exemplo do MAN-VIA: "Deslocamento — combustível e pedágio: R$ 480,00 / 420 km ida e volta" (cerca de R$ 1,14 por km, já com pedágio). | MAN-VIA-001, item 6.1 (pág. 4) | R$ 2,50 por km (ida e volta), mais pedágio à parte. O código registra como pedido seu de 29/10, não escrito. | **Diferente** (o exemplo do manual dá menos da metade) |
-| "Taxa por viagem" de R$ 300 | **Nenhum documento fala disso.** O único R$ 300 por viagem no material é o Incentivo de Missão. | — | R$ 300 em toda viagem acima de 60 km, **além** do incentivo | **Não está no material** (risco de cobrar o mesmo R$ 300 duas vezes) |
+| Km rodado | Nenhum valor por km. Exemplo do MAN-VIA: "Deslocamento — combustível e pedágio: R$ 480,00 / 420 km ida e volta" (cerca de R$ 1,14 por km, já com pedágio). | MAN-VIA-001, item 6.1 (pág. 4) | R$ 2,50 por km (ida e volta), mais pedágio à parte | **Decidido pelo dono em 01/11/2026** (R$ 2,50 confirmado) |
+| "Taxa por viagem" de R$ 300 | **Nenhum documento fala disso.** O único R$ 300 por viagem no material é o Incentivo de Missão. | — | Removida | **Decidido pelo dono em 01/11/2026**: era o Incentivo de Missão; fica só ele |
 | Diária, alimentação e hotel | "Diárias, hospedagem e alimentação seguem a política de despesas". Exemplo: "Diárias e hospedagem: R$ 520,00" para 2 técnicos. | MAN-VIA-001, itens 3 e 6.1 | Alimentação R$ 100 por pessoa por dia; hotel R$ 150 por pessoa por noite | **Não está no material** (a "política de despesas" não foi encontrada) |
 | Incentivo não é diária | "O valor de R$ 300,00 será tratado como incentivo de eficiência em missão técnica, e não como diária automática." | Manual de Viagem em Campo, item 4 (pág. 6) | O SGO+ trata como linha separada da alimentação | Igual |
 | Horas de estrada | Nenhuma regra | — | Cobradas em trecho acima de 200 km | **Não está no material** |
@@ -167,8 +184,8 @@ O preço dos **serviços** da C1 não tem esse problema: a conta já põe os imp
 
 | Regra ou número | O que o seu material diz | Onde | O que o SGO+ e a C1 usam | Situação |
 |---|---|---|---|---|
-| Custo da hora do técnico | Exemplo: "Hora técnica — 2 técnicos × 10 h: R$ 1.800,00 / Já contém o rateio do Bônus Coletivo (+R$ 3,56/h)". Dá **R$ 90 por hora de custo**. | MAN-VIA-001, item 6.1 (pág. 4) | Técnico R$ 45 por hora (R$ 56,25 com o custo fixo); engenheiro R$ 132 (R$ 165 com o fixo) | **Diferente** (o seu exemplo é quase o dobro do nosso, mesmo com o fixo) |
-| Preço da hora de instalação | R$ 190 por hora, sem imposto (célula L3, usada na fórmula da coluna K) | Planilha, PECAS_A_COTAR | Hora avulsa R$ 190, **com imposto dentro** (sobram R$ 163 depois dos 14,25%) | **Igual no número, diferente no imposto** |
+| Custo da hora do técnico | Exemplo: "Hora técnica — 2 técnicos × 10 h: R$ 1.800,00 / Já contém o rateio do Bônus Coletivo (+R$ 3,56/h)". Dá **R$ 90 por hora de custo**. | MAN-VIA-001, item 6.1 (pág. 4) | Técnico R$ 90 por hora (o valor maior), mais o custo fixo e o Bônus Coletivo diluído; engenheiro R$ 132 | **Decidido em 01/11/2026** ("valores maiores"). Observação: o MAN-VIA diz que os R$ 90 já contêm o bônus; o sistema soma o bônus por cima, o lado seguro |
+| Preço da hora de instalação | R$ 190 por hora, sem imposto (célula L3, usada na fórmula da coluna K) | Planilha, PECAS_A_COTAR | O maior entre R$ 190 com o imposto por fora (R$ 230) e a conta de custo (R$ 250 hoje) | **Decidido em 01/11/2026** (imposto por fora; valor maior) |
 | Hora do engenheiro (preço) | Nenhum | — | R$ 270 | **Não está no material** |
 | Encargos sobre salário | Encargos de R$ 5.319 sobre mão de obra de R$ 7.800 (68%, ou 1,68) | Planilha de custos de 2019 | 1,8 | **Diferente** (e o 1,8 é estimativa) |
 | Salários e horas faturáveis | Nenhum documento traz | — | Técnico R$ 3.500, engenheiro R$ 8.800; 140 h e 120 h por mês | **Não está no material** (estimativa) |
@@ -243,9 +260,9 @@ Item por item. Na coluna do meio está o que o seu material diz sobre o mesmo as
 
 | # | O que o SGO+ usa | O que o seu material diz sobre isso | Origem |
 |---|---|---|---|
-| 1 | Margem alvo de 20% | Não dá margem por venda. O Planejamento projeta EBITDA de ~12% em 2026 e margem de contribuição de 39,5%. A planilha usa 30% em peças. | Proposta nossa |
-| 2 | Margem mínima de 10% | Nada | Proposta nossa |
-| 3 | Impostos de 14,25% | Lucro Real (dados cadastrais). O Planejamento estima 12,5% para 2026. | Proposta nossa |
+| 1 | Margem alvo de 40% (antes 20%) | Não dá margem por venda. O Planejamento projeta EBITDA de ~12% em 2026 e margem de contribuição de 39,5%. A planilha usa 30% em peças. | Proposta nossa, ajustada à sobra mínima de 35% decidida em 01/11/2026 |
+| 2 | Sobra mínima de 35% (antes margem de 10%) | Nada | **Decidido pelo dono em 01/11/2026** |
+| 3 | Impostos por unidade (Lucro Real) | Lucro Real (dados cadastrais). O Planejamento estima 12,5% para 2026. | **Decidido em 01/11/2026**: tabela de Goiânia e Rio; ISS e ICMS da compra provisórios para o contador |
 | 4 | Comissão de 3% na conta | De 1% a 5%, conforme meta, margem, adimplência e CRM (Política, item 5) | Escolha nossa dentro da sua faixa |
 | 5 | Alçadas: vendedor 5%, gerente 10%, Diretoria 13,75% | A Diretoria valida as alçadas (Playbook, slide 26), sem número. **Pelo padrão do código, o vendedor dá até 15% sozinho.** | Proposta nossa |
 | 6 | Contrato anual com 10% a menos | Nada sobre desconto de contrato | Proposta nossa |
@@ -254,14 +271,14 @@ Item por item. Na coluna do meio está o que o seu material diz sobre o mesmo as
 | 9 | Desconto de lote de 5% e 10% | Nada | Proposta nossa |
 | 10 | Normal 10 d.u.; urgente 3 d.u. com +110%; prioritária 5 d.u. com +50% | Só proíbe prometer prazo sem validar | Pedido falado (urgente e normal) e proposta nossa (prioritária). Nada escrito. |
 | 11 | Sem acréscimo de urgência em licitação e contrato | Nada | Proposta nossa |
-| 12 | R$ 2,50 por km | Exemplo do MAN-VIA: R$ 480 para 420 km, já com pedágio | Pedido falado (29/10). Nada escrito. |
-| 13 | Taxa de R$ 300 por viagem (acima de 60 km) | Só existe o Incentivo de Missão de R$ 300 (200 km ou mais) | Não sabemos de onde veio. Pode ser o mesmo R$ 300 contado duas vezes. |
+| 12 | R$ 2,50 por km | Exemplo do MAN-VIA: R$ 480 para 420 km, já com pedágio | **Decidido pelo dono em 01/11/2026** (confirmado) |
+| 13 | Taxa de R$ 300 por viagem (acima de 60 km) | Só existe o Incentivo de Missão de R$ 300 (200 km ou mais) | **Decidido em 01/11/2026**: era o Incentivo de Missão; removida |
 | 14 | Alimentação R$ 100 por dia e hotel R$ 150 por noite, por pessoa | "seguem a política de despesas" (não encontrada). Exemplo: R$ 520 de diárias e hospedagem para 2 técnicos. | Proposta nossa |
 | 15 | Horas de estrada acima de 200 km | Nada | Proposta nossa |
-| 16 | Salários R$ 3.500 e R$ 8.800, encargos 1,8, 140 h e 120 h faturáveis | Encargos de 1,68 (planilha de 2019). Custo da hora do técnico de R$ 90 no exemplo do MAN-VIA. | Estimativa |
+| 16 | Custo da hora: técnico R$ 90 (MAN-VIA-001), engenheiro R$ 132 | Encargos de 1,68 (planilha de 2019). Custo da hora do técnico de R$ 90 no exemplo do MAN-VIA. | **Decidido em 01/11/2026** ("valores maiores"); o salário real continua estimativa |
 | 17 | Custo fixo de 25% sobre a mão de obra | Custos fixos de R$ 1,2 mi (2025) e R$ 1,5 mi (2026), estimados no Planejamento | Estimativa |
-| 18 | Preço da peça = custo ÷ 0,7, com imposto dentro | A planilha usa custo ÷ 0,7 **sem imposto** e soma as horas de instalação | Seu número, aplicado de outro jeito |
-| 19 | Hora avulsa de R$ 190 com imposto dentro | R$ 190 por hora de instalação, sem imposto | Seu número, aplicado de outro jeito |
+| 18 | Preço da peça pela conta com a sobra de 35% e os impostos de produto | A planilha usa custo ÷ 0,7 **sem imposto** e soma as horas de instalação | **Decidido em 01/11/2026** |
+| 19 | Hora avulsa: o maior entre R$ 190 com o imposto por fora e a conta (R$ 250) | R$ 190 por hora de instalação, sem imposto | **Decidido em 01/11/2026** |
 | 20 | Hora do engenheiro a R$ 270 | Nada | Conta nossa |
 | 21 | Validade de 15 dias | Exige validade, sem número | Proposta nossa |
 | 22 | Pagamento em boleto a 28 dias da nota | "conforme política financeira" (não encontrada) | Padrão antigo do SGO+; nada escrito |
@@ -293,23 +310,23 @@ E uma contradição dentro do SGO+, achada nesta conferência: o manual e a C1 d
 
 Só o senhor pode responder:
 
-1. **Margem.** Qual margem quer em cada venda (alvo e mínima)? É igual para serviço, peça e equipamento de alto valor?
-2. **Impostos.** Qual é o percentual real sobre a nota (PIS, COFINS e ISS no Lucro Real)? É para o contador.
-3. **Preço da peça.** Os 30% da planilha são antes do imposto? Se forem, o SGO+ precisa somar o imposto por fora (no exemplo, R$ 1.666 em vez de R$ 1.429).
-4. **Hora de R$ 190.** É com ou sem imposto?
+1. **Margem.** Decidido em 01/11/2026: sobra mínima de 35% para tudo. Falta confirmar a margem alvo (40% proposto).
+2. **Impostos.** Decidido em 01/11/2026: Lucro Real, por unidade (Goiânia e Rio). Falta o contador confirmar o ISS de cada município e o ICMS das compras.
+3. **Preço da peça.** Decidido em 01/11/2026: imposto por fora e sobra de 35% (peça de R$ 1.000 sai por R$ 2.334 em Goiânia).
+4. **Hora de R$ 190.** Decidido em 01/11/2026: sem imposto (o preço é o maior entre R$ 190 com o imposto e a conta de custo).
 5. **Alçadas.** Quanto o vendedor, o gerente e a Diretoria podem dar de desconto? Pelo padrão do código, o vendedor pode dar 15%.
 6. **Comissão.** Qual é a tabela da escala de 1% a 5%? A tabela do gestor de 2025 ainda vale? Comissão sobre produto é igual à de serviço?
 7. **Política financeira.** Prazo padrão de pagamento, parcelamento de avulso, desconto por pagar até o dia 10. O documento existe?
 8. **Política de despesas.** Valor da diária, alimentação e hotel. O documento existe?
-9. **Taxa de R$ 300 por viagem.** Existe mesmo, além do Incentivo de Missão?
-10. **Valor do km.** É R$ 2,50 ou algo perto do exemplo do MAN-VIA (cerca de R$ 1,14 com pedágio)?
+9. **Taxa de R$ 300 por viagem.** Decidido em 01/11/2026: não existe; era o Incentivo de Missão.
+10. **Valor do km.** Decidido em 01/11/2026: R$ 2,50.
 11. **Urgência.** Confirma 10 dias úteis no normal e 3 dias úteis com +110%? Quer a faixa de 5 dias? Cliente de contrato paga urgência?
 12. **Contrato anual.** Tem desconto sobre o avulso? Deslocamento e corretiva entram ou ficam fora (a planilha deixa fora)?
 13. **Validade da proposta.** Quantos dias?
 14. **Garantia** dos serviços e **reajuste** dos contratos (índice e data).
 15. **Custo real.** Salários por função, horas faturadas por mês e custo fixo que cabe aos serviços.
-16. **Custo da hora.** O R$ 90 do MAN-VIA é o custo real da hora do técnico?
-17. **Preços da planilha de 30/10.** Eles valem como referência? Estão quase no dobro da tabela do SGO+.
+16. **Custo da hora.** Decidido em 01/11/2026: R$ 90 (valor maior). O MAN-VIA diz que esse valor já contém o Bônus Coletivo; o sistema soma o bônus por cima. Confirmar se é para manter assim.
+17. **Preços da planilha de 30/10.** Decidido em 01/11/2026: valem, com o imposto por fora, quando forem maiores que a tabela e a conta.
 18. **Meta.** Vale R$ 600 mil por mês (Playbook) ou R$ 5,5 milhões no ano (Planejamento)?
 19. **Licitação.** Qual é a margem mínima de lance e quem aprova?
-20. **Filial do Rio de Janeiro.** Usa a mesma tabela e as mesmas regras de deslocamento?
+20. **Filial do Rio de Janeiro.** Decidido em 01/11/2026: a mesma tabela de preços, com os impostos do Rio na proposta e a distância medida a partir da sede do Rio.

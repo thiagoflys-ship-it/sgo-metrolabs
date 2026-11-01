@@ -91,19 +91,20 @@ test('importação C1 em item que já tinha custo: a proposta continua usando o 
 
 test('margem mínima: o gestor comercial não muda a margem mandando só a política de desconto (sem página), nem com a precificação ainda não gravada', () => {
   const amb = amb0();
-  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 10);
+  // 01/11/2026 (decisão do dono): a sobra mínima padrão passou de 10% para 35%
+  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 35);
   const r = ok(amb.api('s_gaspar', 'metodologia'));
   const salvar = JSON.parse(JSON.stringify(r.metodologia));
   delete salvar.precificacao; salvar.politica.margemMinPct = 50;
   ok(amb.api('s_gaspar', 'metodologia', { salvar, motivo: 'Teste: gravação sem página' }));
   amb.ctx.COM_METODOLOGIA_MEMO = null;
-  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 10, 'a margem continua a da precificação');
-  assert.equal(amb.ctx.Com_metodologia_().politica.margemMinPct, 10);
+  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 35, 'a margem continua a da precificação');
+  assert.equal(amb.ctx.Com_metodologia_().politica.margemMinPct, 35);
   // pela página Preço e desconto, a política de desconto também não leva a margem
   ok(amb.api('s_gaspar', 'metodologia', { pagina: 'PRECO', salvar: { politica: { descontoMaxPct: 12, margemMinPct: 60 } }, motivo: 'Teste: desconto do vendedor 12%' }));
   amb.ctx.COM_METODOLOGIA_MEMO = null;
-  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 10); assert.equal(amb.ctx.Com_metodologia_().politica.descontoMaxPct, 12);
-  // a Diretoria muda (zero = não confere) e uma gravação sem página depois não volta para 10
+  assert.equal(amb.ctx.ComPr_politica_().margemMinPct, 35); assert.equal(amb.ctx.Com_metodologia_().politica.descontoMaxPct, 12);
+  // a Diretoria muda (zero = não confere) e uma gravação sem página depois não volta para 35
   ok(amb.api('s_dora', 'metodologia', { pagina: 'PRECO', salvar: { precificacao: { margemMinPct: 0 } }, motivo: 'Teste: Diretoria tira a margem mínima' }));
   amb.ctx.COM_METODOLOGIA_MEMO = null;
   const s2 = JSON.parse(JSON.stringify(ok(amb.api('s_gaspar', 'metodologia')).metodologia)); delete s2.precificacao;
@@ -119,8 +120,10 @@ test('documento e tela da proposta: o prazo da faixa é o da gravação; a Diret
   const { oportunidade } = oportunidadeDeTeste(amb);
   const np = ok(amb.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
   const id = np.proposta.id;
+  // 01/11/2026: o preço urgente segue o preço da tabela em vigor (decisão do dono: valores maiores)
+  const urg = amb.ctx.ComPr_precoNaFaixa_(ac.PRECO, amb.ctx.ComPr_politica_(), 'URGENTE', false, 'SERVICO');
   ok(amb.api('s_vera', 'salvarProposta', { id, prazo: { faixa: 'NORMAL' }, deslocamento: { viagem: { ha: 'NAO', motivoSem: 'Cliente traz o equipamento' }, frete: { nsa: true, motivo: 'Cliente retira' } },
-    itens: [itemCat(ac, 1, { faixa: 'URGENTE', precoUnitario: '6.350,00' })], condicoes: { pagamento: 'Boleto em 28 dias', garantia: '90 dias' } }));
+    itens: [itemCat(ac, 1, { faixa: 'URGENTE', precoUnitario: String(urg).replace('.', ',') })], condicoes: { pagamento: 'Boleto em 28 dias', garantia: '90 dias' } }));
   assert.equal(JSON.parse(reg(amb, id).PRAZO_JSON).politica.faixas.find((f) => f.codigo === 'URGENTE').diasUteis, 3);
   ok(amb.api('s_vera', 'concluirProposta', { id }));
   const met = ok(amb.api('s_dora', 'metodologia'));

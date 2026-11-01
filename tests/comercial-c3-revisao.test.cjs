@@ -15,6 +15,10 @@ function amb0(o) {
   const amb = ambiente(Object.assign({ tabelas: { qual_distancia_referencia: [{ ID: 'd1', DESTINO: 'Anápolis/GO', KM_TRECHO: 55 }, { ID: 'd2', DESTINO: 'Goiânia/GO', KM_TRECHO: 0 }] } }, o || {}));
   amb.ctx.CONDUTA_SHEETS = { DISTANCIA_REFERENCIA: 'qual_distancia_referencia' };
   amb.ctx.Conduta_obterParametros_ = () => ({ VALOR_INCENTIVO_MISSAO: 300, MISSAO_KM_MINIMO: 200 });
+  // 01/11/2026 (decisão do dono): estes testes conferem a mecânica (banco de preços, Orçamentista, entrada, perda e relatório) com
+  // os números da C1 anteriores à decisão (margem mínima 10%, alvo 20%, técnico a R$ 45, sem o Bônus Coletivo), para os preços de
+  // exemplo (autoclave a R$ 3.020) continuarem valendo. Os números da decisão estão em comercial-c2-precos e comercial-decisao-dono.
+  ok(amb.api('s_dora', 'metodologia', { pagina: 'PRECO', salvar: { precificacao: { margemMinPct: 10, margemAlvoPct: 20, custoHora: { TECNICO: 45, ENGENHEIRO: 132 }, bonusConduta: { valorMes: 0 } } }, motivo: 'Teste: números da C1 anteriores à decisão do dono' }));
   const pv = ok(amb.api('s_dora', 'importarC1Previa'));
   ok(amb.api('s_dora', 'importarC1', { marca: pv.marca, escolhas: {} }));
   return amb;
@@ -74,7 +78,10 @@ test('acesso: cotação de fornecedor para o vendedor sem valor, fornecedor, mar
   assert.equal(g.encontradas, 1); assert.equal(g.linhas[0].valor, 123.45); assert.equal(g.linhas[0].fornecedor, 'FORNECEDOR TESTE LTDA');
 });
 
-test('acesso: o preço sugerido pela última compra (custo ÷ 0,7) é só da gestão; o vendedor vê o preço de venda praticado', () => {
+// 01/11/2026 (decisão do dono): o sugerido pela compra deixou de ser "custo ÷ 0,7 com imposto dentro". Agora é a conta de produto
+// com a sobra mínima: custo x (1 − 21,25% de créditos) ÷ (1 − 28,25% de impostos de produto em GO − 3% − sobra mínima). Com a
+// política deste arquivo (mínima de 10%): 7 x 0,7875 ÷ 0,5875 = 9,38 -> R$ 10 (o número continua 10, pela conta nova).
+test('acesso: o preço sugerido pela última compra (conta de produto com a sobra mínima) é só da gestão; o vendedor vê o preço de venda praticado', () => {
   const amb = amb0({ tabelas: {
     CMP_REQUISICOES: [{ ID: 'rq1', NUMERO: 'REQ-0001' }],
     CMP_ITENS: [{ ID: 'it1', REQUISICAO_ID: 'rq1', DESCRICAO: 'Integrador químico classe 5', UNIDADE: 'un', QUANTIDADE: 100 }],
@@ -87,10 +94,12 @@ test('acesso: o preço sugerido pela última compra (custo ÷ 0,7) é só da ges
   const iv = v.itens.find((i) => /Integrador/.test(i.nome));
   assert.ok(iv, 'achou o produto pelo nome');
   assert.equal(iv.precoSugeridoCompra, undefined);
-  assert.doesNotMatch(JSON.stringify(v), /R\$\s?10,00/, 'o sugerido (7 ÷ 0,7 = 10) não vai ao vendedor');
+  assert.doesNotMatch(JSON.stringify(v), /R\$\s?10,00/, 'o sugerido (R$ 10) não vai ao vendedor');
   assert.ok(iv.riscos.some((x) => /conferir com a gestão/.test(x.texto) && !/R\$/.test(x.texto)), 'aviso sem número');
   const g = ok(amb.api('s_gaspar', 'orcamentista', { texto: 'integrador químico classe 5', semIA: true }));
   assert.equal(g.itens.find((i) => /Integrador/.test(i.nome)).precoSugeridoCompra, 10);
+  assert.equal(amb.ctx.ComPr_precoProduto_(7, amb.ctx.ComPr_politica_()), 10);
+  assert.match(g.itens.find((i) => /Integrador/.test(i.nome)).fontes.join(' '), /sobra mínima de 10% e os impostos de produto \(28,25%, menos 21,25% de créditos sobre o custo\)/);
 });
 
 test('Orçamentista por regras: "bombas" sozinho, erros de digitação, instrumento "da autoclave"/"de geladeira", statim, estufa de secagem, "(4 caixas)", balança 5 a 10 kg, formol', () => {

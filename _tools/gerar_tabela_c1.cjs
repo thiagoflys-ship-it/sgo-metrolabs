@@ -17,6 +17,9 @@ const servicos = origem.servicos.map((s) => ({
   horasTecnico: s.horas.tecnico, horasEngenheiro: s.horas.engenheiro, padroes: s.padroes_rateio, consumiveis: s.consumiveis_art,
   c1: { custo: s.custo.total, precoConta: s.preco_pela_conta, precoNormal: s.preco_normal, precoMinimo: s.preco_minimo, precoUrgente: s.preco_urgente },
   regra: regra(s), fonte: s.fonte_preco, alertas: s.alertas || [],
+  // 01/11/2026 (decisão do dono): valor da planilha de 30/10/2026 (sem imposto) e o preço de referência da decisão
+  planilha: s.planilha_30_10 ? { valor: s.planilha_30_10.valor, referencia: s.planilha_30_10.referencia } : null,
+  decisao: s.decisao_dono_20261101 ? { precoNovo: s.decisao_dono_20261101.preco_novo, fonte: s.decisao_dono_20261101.fonte, custo: s.decisao_dono_20261101.custo.total } : null,
   historico: { crm: resumo(s.historico_metrolabs.crm_2025_2026), ganhos: resumo(s.historico_metrolabs.crm_ganhos), drive: resumo(s.historico_metrolabs.drive_2018_2023), custoCrm: resumo(s.historico_metrolabs.custo_cadastrado_crm) },
   mercado: s.mercado_publico && s.mercado_publico.n ? { n: s.mercado_publico.n, min: s.mercado_publico.min, mediana: s.mercado_publico.mediana, max: s.mercado_publico.max, orgaos: s.mercado_publico.orgaos || null, q1: s.mercado_publico.q1 || null, q3: s.mercado_publico.q3 || null } : null,
   mercadoCentroOeste: resumo(s.mercado_centro_oeste)
@@ -28,6 +31,8 @@ const texto = '/****************************************************\n' +
   ' * São os ' + servicos.length + ' serviços que a gestão importa para o catálogo em Produtos e serviços > "Importar tabela de preços C1"\n' +
   ' * (SGO_Comercial_Ficha.js): horas por função, padrões, consumíveis, os preços da C1, o mercado público (PNCP) e o histórico\n' +
   ' * da Metrolabs (CRM 2025-26 e Drive 2018-23). Os preços valem como referência: o sistema recalcula pela política em vigor.\n' +
+  ' * 01/11/2026 (decisão do dono): "planilha" é o valor equivalente da planilha de 30/10/2026 (sem imposto) e "decisao" o preço de\n' +
+  ' * referência (o maior entre a tabela, a planilha com o imposto por fora e a conta com a sobra de 35%), de _tools/precos_decisao_20261101.py.\n' +
   ' ****************************************************/\n\n' +
   'var COM_TABELA_C1 = ' + JSON.stringify({ versao: 'C1-' + origem.meta.gerado_em, servicos }, null, 1) + ';\n';
 if (process.argv.includes('--conferir')) {

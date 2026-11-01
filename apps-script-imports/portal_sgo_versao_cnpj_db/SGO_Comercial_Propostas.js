@@ -301,23 +301,29 @@ function ComP_arquivarProduto_(eu, d) {
  * margem só dos itens com custo (o desconto geral é rateado).
  */
 function ComP_calcular_(itens, descontoGeral) {
-  var bruto = 0, liquidoItens = 0, custo = 0, receitaComCusto = 0, semCusto = 0;
+  var bruto = 0, liquidoItens = 0, liquidoVenda = 0, brutoVenda = 0, reducaoAuto = 0, custo = 0, receitaComCusto = 0, semCusto = 0;
   (itens || []).forEach(function (i) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0, pt = Number(i.precoTabela) > 0 ? Number(i.precoTabela) : pu;
     bruto += q * Math.max(pt, pu);
     liquidoItens += q * pu;
+    if (!i.auto) { liquidoVenda += q * pu; brutoVenda += q * Math.max(pt, pu); }
+    else reducaoAuto += q * Math.max(0, pt - pu);
   });
   var dg = Math.max(0, Number(descontoGeral) || 0);
   var total = Com_r2_(liquidoItens - dg);
-  var fator = liquidoItens > 0 ? total / liquidoItens : 1;
+  // 01/11/2026 (decisão do dono, MAN-VIA-001 item 6.1): o desconto geral sai só dos serviços e produtos. O item de deslocamento e o
+  // frete automáticos são repasse a custo mais impostos e ficam com o preço inteiro.
+  var fator = liquidoVenda > 0 ? Math.max(0, liquidoVenda - dg) / liquidoVenda : 1;
   (itens || []).forEach(function (i) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
-    if (i.custoUnitario !== null && i.custoUnitario !== undefined && i.custoUnitario !== '') { custo += q * Number(i.custoUnitario); receitaComCusto += q * pu * fator; }
+    if (i.custoUnitario !== null && i.custoUnitario !== undefined && i.custoUnitario !== '') { custo += q * Number(i.custoUnitario); receitaComCusto += q * pu * (i.auto ? 1 : fator); }
     else semCusto++;
   });
   return {
-    subtotal: Com_r2_(liquidoItens), bruto: Com_r2_(bruto), descontoGeral: Com_r2_(dg), total: total,
-    descontoPct: bruto > 0 ? Math.round((bruto - total) / bruto * 10000) / 100 : 0,
+    subtotal: Com_r2_(liquidoItens), subtotalItens: Com_r2_(liquidoVenda), fatorItens: fator, bruto: Com_r2_(bruto), descontoGeral: Com_r2_(dg), total: total,
+    // 01/11/2026: o percentual é sobre a tabela dos serviços e produtos (o deslocamento não recebe desconto; se o vendedor digitar o
+    // deslocamento abaixo do calculado, a diferença conta como desconto)
+    descontoPct: brutoVenda > 0 ? Math.round(((brutoVenda - liquidoVenda) + dg + reducaoAuto) / brutoVenda * 10000) / 100 : (bruto > 0 ? Math.round((bruto - total) / bruto * 10000) / 100 : 0),
     margemPct: receitaComCusto > 0 ? Math.round((receitaComCusto - custo) / receitaComCusto * 10000) / 100 : null,
     custoTotal: Com_r2_(custo), itensSemCusto: semCusto
   };
@@ -343,7 +349,8 @@ function ComP_avaliarPolitica_(calc, uid, met, analise) {
   var limite = ComP_limiteDe_(uid, met), mm = Number(met.precificacao && met.precificacao.margemMinPct) || 0, motivos = [], exigeDiretoria = false;
   if (calc.descontoPct > limite + 1e-9) motivos.push('desconto de ' + Com_pct_(calc.descontoPct) + ' acima do limite de ' + Com_pct_(limite, 0) + ' sem aprovação');
   if (analise && analise.abaixoMin) {
-    motivos.push('margem de ' + Com_pct_(analise.margemPct) + ' (depois de impostos, comissão e custos da viagem' + (analise.completa ? '' : ', sem o custo de ' + Com_plural_(analise.itensSemCusto, 'item', 'itens')) + ') abaixo da mínima de ' + Com_pct_(analise.margemMinPct, 1) + ' da política de precificação; só a Diretoria aprova');
+    // 01/11/2026 (decisão do dono): sobra mínima de 35%; vale qualquer que seja o limite de desconto de quem vende
+    motivos.push('sobra de ' + Com_pct_(analise.margemPct) + ' (depois de impostos, comissão e custos diretos; o deslocamento em item próprio fica fora' + (analise.completa ? '' : '; sem o custo de ' + Com_plural_(analise.itensSemCusto, 'item', 'itens')) + ') abaixo da mínima de ' + Com_pct_(analise.margemMinPct, 1) + ' da política de precificação; só a Diretoria aprova');
     exigeDiretoria = true;
   }
   return { dentro: !motivos.length, motivos: motivos, limite: limite, margemMin: mm, exigeDiretoria: exigeDiretoria };
@@ -689,10 +696,11 @@ function ComP_salvar_(eu, d) {
       itens = itens.concat(ComPr_itensAuto_(desl, polPr));
       itens.forEach(function (i, k) { i.ordem = k + 1; });
     }
-    var liquido = itens.reduce(function (s, i) { return s + i.quantidade * i.precoUnitario; }, 0);
+    // 01/11/2026 (decisão do dono): o desconto geral é sobre os serviços e produtos; o deslocamento e o frete (repasse) ficam fora
+    var liquido = itens.reduce(function (s, i) { return s + (i.auto ? 0 : i.quantidade * i.precoUnitario); }, 0);
     var dg = Com_s_(d.descontoPct) !== '' && Com_s_(d.descontoGeral) === '' ? liquido * (Com_num_(d.descontoPct) || 0) / 100 : Com_num_(d.descontoGeral);
     if (!(dg >= 0)) dg = 0;
-    if (dg > liquido) throw new Error('Não foi possível salvar: o desconto geral (' + Com_moeda_(dg) + ') é maior que a soma dos itens (' + Com_moeda_(liquido) + '). Corrija o desconto');
+    if (dg > liquido + 0.004) throw new Error('Não foi possível salvar: o desconto geral (' + Com_moeda_(dg) + ') é maior que a soma dos serviços e produtos (' + Com_moeda_(liquido) + '). O deslocamento e o frete são repasse de custo e não recebem desconto. Corrija o desconto');
     var calc = ComP_calcular_(itens, dg);
     var val = Com_num_(d.validadeDias);
     if (!(val >= 1 && val <= 365)) val = Number(p.VALIDADE_DIAS) || 15;

@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços e com a entrada "O que você quer fazer agora?", os modos de ver das Oportunidades (Lista, Quadro (Kanban) e Gantt), "Completar quem ganhou" e o relatório "Preço proposto × ganho ou perdido, por serviço" (Comercial C4). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades (com os modos Quadro (Kanban) e Gantt), Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial.
+Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços e com a entrada "O que você quer fazer agora?", os modos de ver das Oportunidades (Lista, Quadro (Kanban) e Gantt), "Completar quem ganhou" e o relatório "Preço proposto × ganho ou perdido, por serviço" (Comercial C4). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades (com os modos Quadro (Kanban) e Gantt), Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial. Atualizado em 01/11/2026 com a decisão do dono: sobra mínima de 35%, valores maiores, Incentivo de Missão no lugar da taxa por viagem, Bônus Coletivo diluído e impostos por unidade (Lucro Real).
 
 ## Para que serve
 
@@ -12,7 +12,7 @@ A gestora comercial do sistema conhece a metodologia que a gestão escreve (funi
 
 - Vendedor: perfil Comercial ou área Comercial no cadastro. Vê só as próprias oportunidades e propostas; edita e exclui a própria proposta que ainda não foi ao cliente. No catálogo de Produtos e serviços cadastra itens e altera descrição, unidade, categoria e preço de venda, com limites (veja "Catálogo pela equipe comercial").
 - Gestão comercial: Gestor com área Comercial no cadastro, quem a Metodologia lista como gestor comercial, a Diretoria e o Administrador. Vê a equipe toda, troca responsável, reabre oportunidade, decide desconto e a redução de preço do catálogo pedida pelo vendedor, exclui proposta não enviada, mantém o catálogo e a metodologia.
-- Diretoria e Administrador: além do que a gestão comercial faz, só eles mudam a política de precificação, aprovam proposta abaixo da margem mínima e reajustam os preços do catálogo em lote.
+- Diretoria e Administrador: além do que a gestão comercial faz, só eles mudam a política de precificação, aprovam proposta abaixo da sobra mínima de 35% e reajustam os preços do catálogo em lote (inclusive aplicar a decisão do dono de 01/11/2026).
 - Financeiro: perfil Financeiro ou área Financeiro. Vê os pedidos aprovados, com o valor e os dados de faturamento, e mantém o catálogo de Produtos e serviços (preço e custo). O RH não vê o Comercial.
 - Técnico, Metrologia, RH e gestores de outras áreas não veem o Comercial nem valores. Quando recebem a parte deles de um pedido aprovado, é uma atividade em Minhas atividades, sem valor.
 
@@ -137,7 +137,7 @@ A especialista não envia nada ao cliente, não muda a etapa e não cria ativida
 1. Na oportunidade, toque em "Nova proposta". O número é PROP-ano-número (por exemplo PROP-2026-0001), revisão 00.
 2. Acrescente os itens: em "Acrescentar item", comece a digitar o nome ou o código no campo "Produto ou serviço" e escolha da lista (itens ativos de Produtos e serviços); código, tipo, descrição, unidade e preço de tabela entram sozinhos. "Do catálogo" abre a mesma busca numa janela. Item fora do catálogo fica "Avulso (fora do catálogo)"; "Tornar avulso" desliga um item do catálogo. O preço pode ser ajustado: abaixo da tabela conta como desconto na política e o item mostra a diferença; preço diferente da tabela fica no histórico da proposta (tabela e praticado). Confira as condições e a validade. A descrição (escopo) é opcional: só o que for específico desta proposta. Confira o "Tipo de orçamento" (veja abaixo).
 3. Preencha "Custos da viagem e do frete" (checklist obrigatório; veja "Precificação" abaixo) e toque em "Calcular (salva o rascunho)". Toque em "Revisão da gestora" para ver o que impede o envio e os alertas.
-4. Toque em "Concluir". Dentro da política de desconto (padrão: até 15% sobre o preço de tabela) e da margem mínima da política de precificação, a proposta fica pronta. Acima do limite de desconto, escreva o motivo: ela vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão. Abaixo da margem mínima, a decisão é da Diretoria. Sem o checklist de custos completo, a proposta não conclui.
+4. Toque em "Concluir". Dentro da política de desconto (padrão: até 15% sobre o preço de tabela dos serviços e produtos) e com a sobra mínima de 35%, a proposta fica pronta. Acima do limite de desconto, escreva o motivo: ela vai para a Caixa de decisões do gestor comercial e só pode ser enviada depois da decisão. Com a sobra abaixo de 35%, a decisão é da Diretoria, qualquer que seja o seu limite de desconto. Sem o checklist de custos completo, a proposta não conclui.
 5. Toque em "Gerar documento": a folha A4 (PDF e HTML) é salva na pasta do cliente, em Comercial - Propostas, com os dados do cliente congelados, os termos e condições da contratação na versão em vigor e a marca de conferência do conteúdo.
 6. Toque em "Enviar ao cliente" e envie pela janela "Enviar documento": por e-mail (PDF anexado) e/ou pelo WhatsApp oficial da Metrolabs (o PDF vai na própria mensagem, com o texto do modelo aprovado pela Meta; o texto não é editado). Depois toque em "Já enviei: atualizar". A proposta fica "Enviada", a oportunidade vai para a etapa de proposta e o retorno ao cliente vira atividade para o 2º dia útil.
 7. Quando o cliente responder, toque em "Registrar resposta do cliente". Aprovação exige o arquivo do aceite (e-mail salvo em PDF, pedido de compra ou proposta assinada), que fica na pasta do cliente; o histórico registra quem lançou e a versão dos termos e condições que foi no documento ("aprovado por fora"). Recusa exige o motivo.
@@ -148,12 +148,12 @@ Só o rascunho é editado. Antes do envio use "Editar (volta para rascunho)"; de
 
 O rascunho abre em quatro passos. Toque no número do passo ou em "Próximo"; no celular, o Voltar do topo volta ao passo anterior. Nenhum passo apaga o que foi digitado em outro.
 
-1. **Itens.** Os produtos e serviços, a quantidade, o preço e o prazo de cada item. O preço de tabela vem do catálogo e da faixa de prazo.
-2. **Deslocamento.** Destino, km, dias, noites e quem vai. O sistema calcula o custo da viagem e o item "Despesas de deslocamento e estadia".
+1. **Itens.** Os produtos e serviços, a quantidade, o preço e o prazo de cada item. O preço de tabela vem do catálogo e da faixa de prazo. Item com preço abaixo do que garante a sobra mínima aparece em vermelho ("Abaixo do preço que garante a sobra mínima"): a gestão vê o valor na hora; o vendedor vê o aviso depois de salvar.
+2. **Deslocamento.** A unidade que emite a nota (Goiânia ou Rio de Janeiro), destino, km, dias, noites e quem vai. O sistema calcula o custo da viagem e o item "Despesas de deslocamento e estadia".
 3. **Prazo e condições.** A faixa de prazo da proposta, "Licitação ou contrato", validade, contato, condições e a apresentação.
 4. **Revisar e enviar.** Ao abrir, o rascunho é salvo. Mostra os itens com o prazo, o total, o prazo que vai no documento, o deslocamento e o que falta. Depois toque em "Concluir".
 
-No topo fica sempre o quadro do preço: preço, impostos e comissão e a situação da margem (verde dentro da margem alvo, laranja abaixo da alvo, vermelho abaixo da mínima). Margem abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui.
+No topo fica sempre o quadro do preço: preço, deslocamento (repasse, fora da sobra), impostos da unidade e comissão e a situação da sobra (verde dentro da margem alvo de 40%, laranja abaixo da alvo, vermelho abaixo da mínima de 35%). Sobra abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui. Para evitar, suba o preço dos itens marcados ou reduza o desconto.
 
 ### Prazo de cada item: as faixas
 
@@ -176,9 +176,11 @@ No topo fica sempre o quadro do preço: preço, impostos e comissão e a situaç
 3. Informe os dias, as noites, quantos técnicos e engenheiros vão e o pedágio da viagem (0 se não há).
 4. Toque em "Calcular (salva o rascunho)".
 
-O sistema calcula o km rodado (ida e volta), a taxa por viagem (só fora da Grande Goiânia), o benefício da Conduta (trecho acima de 200 km), a alimentação (fora da Grande Goiânia), o hotel e as horas de estrada (trecho acima de 200 km). O custo vira o item "Despesas de deslocamento e estadia", com o preço igual ao custo mais os impostos, sem margem e sem comissão. O cliente vê só esse item, com a equipe e o que está incluído.
+O sistema calcula o km rodado (ida e volta), o Incentivo de Missão (R$ 300 por executante em trecho de 200 km ou mais a partir da sede), a alimentação (fora da região da sede), o hotel e as horas de estrada (trecho acima de 200 km). O custo vira o item "Despesas de deslocamento e estadia", com o preço igual ao custo mais os impostos, sem margem, sem comissão e sem desconto. O cliente vê só esse item, com a equipe e o que está incluído. A antiga "taxa por viagem" de R$ 300 não existe mais (o dono decidiu em 01/11/2026 que ela era o Incentivo de Missão contado duas vezes).
 
-Exemplo: Brasília (210 km), 2 técnicos, 2 dias e 1 noite. Km R$ 1.050,00 + taxa R$ 300,00 + Conduta R$ 600,00 + alimentação R$ 400,00 + hotel R$ 300,00 + estrada R$ 675,00 = custo de R$ 3.325,00; o item sai por R$ 3.880,00.
+Unidade que emite a nota: Goiânia (padrão) ou Rio de Janeiro. Ela muda os impostos da proposta e a sede de onde a distância é medida. No Rio, a tabela de distâncias da Conduta (medida de Goiânia) não vale: digite o km a partir da sede do Rio.
+
+Exemplo: Brasília (210 km), 2 técnicos, 2 dias e 1 noite. Km R$ 1.050,00 + Incentivo de Missão R$ 600,00 + alimentação R$ 400,00 + hotel R$ 300,00 + estrada R$ 1.350,00 (2 x 6 h x R$ 112,50) = custo de R$ 3.700,00; o item sai por R$ 4.320,00.
 
 Para digitar outro preço, use "Preço do deslocamento na proposta". Abaixo do custo da viagem, a tela avisa em vermelho (a empresa estaria pagando para ir), a gestora aponta e o valor conta como desconto. Em branco, vale o calculado. Transporte diferente do veículo da empresa, várias viagens ou um valor diferente ficam em "Ver a conta linha por linha e ajustar".
 
@@ -205,34 +207,67 @@ Checklist obrigatório (caixa "Custos da viagem e do frete" do rascunho). Propos
 |---|---|---|
 | Km rodado | km do trecho x 2 (ida e volta) x viagens x valor por km | R$ 2,50 por km; cobre o veículo da empresa (combustível, desgaste, manutenção) |
 | Pedágios | valor por viagem (ida e volta) x viagens | sem padrão (depende da rota) |
-| Taxa por viagem | valor por viagem x viagens | R$ 300 por viagem, só fora da Grande Goiânia (trecho acima de 60 km); valor provisório |
-| Alimentação | pessoas x dias x viagens x valor | R$ 100 por pessoa por dia, só fora da Grande Goiânia |
+| Alimentação | pessoas x dias x viagens x valor | R$ 100 por pessoa por dia, só fora da região da sede (trecho acima de 60 km) |
 | Diárias | (técnicos x diária do técnico + engenheiros x diária do engenheiro) x dias x viagens | sem diária em dinheiro: a linha fica "não se aplica" sozinha (a alimentação e o hotel cobrem a estadia) |
 | Hospedagem | pessoas x noites x viagens x valor | R$ 150 por pessoa por noite |
-| Benefício do Programa de conduta | colaboradores x viagens x valor | R$ 300 por colaborador por viagem, dos parâmetros do Programa de conduta; só em trecho de 200 km ou mais (regra da Conduta) |
+| Incentivo de Missão (Programa de conduta) | executantes x viagens x valor | R$ 300 por executante por missão, dos parâmetros do Programa de conduta; só em trecho de 200 km ou mais a partir da sede da unidade (regra da Conduta) |
 | Combustível adicional ou passagem | valor por viagem x viagens | só quando não é veículo da empresa (avião, ônibus, veículo locado) |
-| Horas de estrada | horas por viagem x (valor da hora por função) x viagens | custo da hora com o custo fixo (técnico R$ 56,25, engenheiro R$ 165,00), só em trecho acima de 200 km; horas pela velocidade média (70 km/h) |
+| Horas de estrada | horas por viagem x (valor da hora por função) x viagens | custo da hora com o custo fixo (técnico R$ 112,50, engenheiro R$ 165,00), só em trecho acima de 200 km; horas pela velocidade média (70 km/h) |
+
+A linha "Taxa por viagem" das propostas gravadas antes de 01/11/2026 continua aparecendo nelas, com o valor gravado. Nas propostas novas ela não existe.
 | Outros (opcional) | valor total com a descrição | — |
 
-- "Não se aplica" automático (com o motivo escrito pelo sistema): 0 km (km e pedágio), 0 noite (hospedagem), trecho abaixo do mínimo da Conduta (benefício) e veículo da empresa (combustível). Pedágio e combustível aceitam valor mesmo assim (pedágio urbano, abastecimento extra).
+- "Não se aplica" automático (com o motivo escrito pelo sistema): 0 km (km e pedágio), 0 noite (hospedagem), trecho abaixo do mínimo da Conduta (Incentivo de Missão) e veículo da empresa (combustível). Pedágio e combustível aceitam valor mesmo assim (pedágio urbano, abastecimento extra).
 - Proposta com produto (Produto ou Misto): frete e entrega com o custo ou "não se aplica" com o motivo (por exemplo "cliente retira" ou "vai junto com a visita técnica").
-- Nas propostas do CRM antigo o km a R$ 2,50 vinha num item só ("DESLOCAMENTO/HORA TÉCNICA/PEDÁGIO", por exemplo 720 km a R$ 2,50). Agora pedágio, alimentação, diárias, hospedagem, horas e o benefício são linhas próprias, para nada ficar escondido no km.
+- Nas propostas do CRM antigo o km a R$ 2,50 vinha num item só ("DESLOCAMENTO/HORA TÉCNICA/PEDÁGIO", por exemplo 720 km a R$ 2,50). Agora pedágio, alimentação, diárias, hospedagem, horas e o Incentivo de Missão são linhas próprias, para nada ficar escondido no km.
 
 Como o custo entra no preço (escolha da proposta; padrão na política = item separado):
 
 - Item separado: o sistema põe na proposta o item "Despesas de deslocamento e estadia" (tipo Serviço, 1 vb) com preço = custo da viagem x (1 + margem sobre o deslocamento) / (1 - impostos), arredondado para cima a R$ 10 (configurável). O frete vira o item "Frete e entrega". Esses itens são refeitos a cada gravação do rascunho e não mudam o tipo de orçamento nem os setores do pedido.
-- Diluído no preço dos serviços: nenhum item a mais; a tela mostra quanto aumentar os serviços (custo mais impostos) e o custo entra na margem.
+- Diluído no preço dos serviços: nenhum item a mais; o custo da viagem entra no custo dos serviços e a sobra mínima de 35% tem que cobrir. A tela mostra quanto aumentar os serviços: custo ÷ (1 − impostos − comissão − 35%).
 - Nos dois casos o custo interno, linha por linha, fica gravado na proposta.
 
-O que o cliente vê: só o item "Despesas de deslocamento e estadia" (ou nada, se diluído), com a equipe, a viagem e o que está incluído (deslocamento, pedágios, alimentação, hospedagem, diárias). O benefício do Programa de conduta nunca aparece com esse nome nem o custo interno: ele está dentro do valor do item.
+O que o cliente vê: só o item "Despesas de deslocamento e estadia" (ou nada, se diluído), com a equipe, a viagem e o que está incluído (deslocamento, pedágios, alimentação, hospedagem, diárias). O Incentivo de Missão nunca aparece com esse nome nem o custo interno: ele está dentro do valor do item.
 
-O que o vendedor vê: os custos da viagem (ele preenche), o item calculado, quanto diluir, o que falta no checklist e a situação da margem (dentro da alvo, abaixo da alvo, abaixo da mínima). O que a gestão vê: também o custo dos itens do catálogo, os impostos, a margem em número, o preço mínimo e o preço alvo e o custo de viagem não repassado.
+O que o vendedor vê: os custos da viagem (ele preenche), o item calculado, quanto diluir, o que falta no checklist, a situação da sobra (dentro da alvo, abaixo da alvo, abaixo da mínima) e o aviso nos itens abaixo do preço que garante a sobra mínima (sem o valor). O que a gestão vê: também o custo dos itens do catálogo, os impostos da unidade, a sobra em número, o total mínimo e o total alvo da proposta, o piso de cada item e o custo de viagem não repassado.
 
-Margem e alçada: margem = preço total menos impostos sobre o faturamento (% da política) menos custos (itens do catálogo com custo, viagem e frete). Abaixo da margem mínima, a proposta vai para a mesma aprovação da política de desconto, mas só a Diretoria (ou o Administrador) aprova; o gestor comercial pode negar. A Diretoria é avisada no sistema e por e-mail no expediente. Item sem custo no catálogo deixa a margem parcial (otimista): ela só trava quando nem a conta parcial alcança a mínima. Sem margem mínima na política, nada trava pela margem (a gestora aponta a política incompleta).
+Sobra e alçada (decisão do dono, 01/11/2026: "pra empresa tem que sobrar no mínimo 35%"): sobra = preço dos serviços e produtos (já com o desconto geral) − impostos da unidade (serviço sobre o preço; produto sobre o preço menos os créditos sobre o custo) − comissão − custos diretos (itens com custo e, quando a viagem é diluída, o custo da viagem e do frete). O item de deslocamento e o frete em item próprio ficam fora da conta: são repasse, nem ajudam nem atrapalham. A sobra é antes de IR e CSLL: no Lucro Real eles incidem sobre o lucro do período, fora desta conta. Abaixo de 35%, a proposta vai para a mesma aprovação da política de desconto, mas só a Diretoria (ou o Administrador) aprova, qualquer que seja a alçada de desconto do vendedor; o gestor comercial pode negar. A Diretoria é avisada no sistema e por e-mail no expediente. Item sem custo no catálogo deixa a sobra parcial (otimista): ela só trava quando nem a conta parcial alcança a mínima. A margem alvo é 40% (proposta nossa, provisória; o Planejamento traz margem de contribuição de 39,5%).
 
-Casos: proposta antiga (concluída antes de 29/10/2026) não é travada; a revisão da gestora e o documento mostram o alerta, e a nova revisão cobra o checklist. Nova revisão copia os custos da viagem. Desconto geral também reduz o item de deslocamento: a gestora avisa quanto do custo não volta no preço (prefira desconto nos serviços). Item de deslocamento digitado (por exemplo os itens do CRM antigo "DESLOCAMENTO GO/DF" ou "DESPESAS DESLOCAMENTO") junto com o cálculo da viagem: a revisão avisa para não cobrar duas vezes; use o cálculo. Ao concluir, a proposta guarda a fotografia da precificação (custo, impostos, margem, repasse, benefício e a versão da política) para o painel.
+Casos: proposta antiga (concluída antes de 29/10/2026) não é travada; a revisão da gestora e o documento mostram o alerta, e a nova revisão cobra o checklist. Nova revisão copia os custos da viagem. O desconto geral sai só dos serviços e produtos e não pode passar da soma deles: o deslocamento e o frete ficam com o preço inteiro (MAN-VIA-001: "desconto comercial incide sobre a margem, nunca sobre a linha de incentivo"). Se o vendedor digitar o deslocamento abaixo de custo mais impostos, a diferença conta como desconto e a gestora avisa. Item de deslocamento digitado (por exemplo os itens do CRM antigo "DESLOCAMENTO GO/DF" ou "DESPESAS DESLOCAMENTO") junto com o cálculo da viagem: a revisão avisa para não cobrar duas vezes; use o cálculo. Ao concluir, a proposta guarda a fotografia da precificação (custo, impostos, margem, repasse, benefício e a versão da política) para o painel.
 
-Política de precificação (Metodologia comercial, só Diretoria e Administrador): origem padrão, valor por km, velocidade média, alimentação, diárias do técnico e do engenheiro, hospedagem, hora de deslocamento por função, reserva do benefício da Conduta, impostos sobre o faturamento, margem mínima, margem alvo, margem sobre o deslocamento, arredondamento do item, repasse padrão, alerta de item sem reajuste (12 meses) e o texto da política. Cada gravação é uma versão com o motivo. Valores em branco ficam sem padrão: o vendedor informa na proposta e a gestora cobra a Diretoria.
+Política de precificação (Metodologia comercial, só Diretoria e Administrador): origem padrão, valor por km, velocidade média, alimentação, diárias do técnico e do engenheiro, hospedagem, hora de deslocamento por função, reserva do Incentivo de Missão, impostos por unidade que emite a nota, sobra mínima, margem alvo, Bônus Coletivo, margem sobre o deslocamento, arredondamento do item, repasse padrão, alerta de item sem reajuste (12 meses) e o texto da política. Cada gravação é uma versão com o motivo. Campo em branco vale o padrão do sistema; campo gravado vence o padrão.
+
+### Decisão do dono de 01/11/2026: sobra mínima, valores maiores, incentivos e impostos
+
+O que o dono decidiu, nas palavras dele: "Pra empresa tem que sobrar no mínimo 35%". "Os valores têm que ser os valores maiores, esses serviços estão muito baratos". "Os 300 é missão acima de 200 km, porém temos mais 300 por colaborador de incentivo de conduta, tem que incluir e diluir, a empresa precisa pagar esses custos". "2,50 km rodado; imposto: você tem que ver como é Goiás e como é Rio; aqui é lucro real."
+
+| Assunto | Como ficou no SGO+ |
+|---|---|
+| Sobra mínima | 35% depois de impostos, comissão e custos diretos, antes de IR e CSLL. Abaixo, só a Diretoria aprova. Margem alvo 40% (provisória). |
+| Preço de cada serviço | O maior entre: o preço da tabela (catálogo ou C1), o valor da planilha de 30/10/2026 com o imposto por fora (valor ÷ (1 − impostos de serviço)) e a conta de custo com a sobra mínima (custo ÷ (1 − impostos − comissão − 35%)). |
+| Hora avulsa | O maior entre R$ 190 ÷ (1 − impostos) e a conta de custo. Com os valores de hoje: R$ 250. |
+| Peça ou produto revendido | Custo × (1 − créditos) ÷ (1 − impostos de produto − comissão − 35%). Substitui o antigo "custo ÷ 0,7 com imposto dentro". |
+| Custo da hora | Técnico R$ 90 (exemplo do MAN-VIA-001), engenheiro R$ 132, mais 25% de custo fixo e o Bônus Coletivo diluído. |
+| Incentivo de Missão | R$ 300 por executante, por missão com trecho de 200 km ou mais a partir da sede da unidade. Entra no custo do deslocamento. O cliente nunca vê o nome. |
+| Taxa por viagem de R$ 300 | Removida: era o Incentivo de Missão contado duas vezes. Propostas antigas que a gravaram continuam com o valor gravado. |
+| Bônus Coletivo | R$ 300 por mês para cada colaborador ativo (Programa de conduta). Custo fixo diluído na hora: bônus × colaboradores ativos ÷ horas faturáveis da equipe no mês. A tela da política mostra a conta. Horas em branco: 140 h por colaborador de campo (técnico, metrologia ou área técnica), provisório. |
+| Km rodado | R$ 2,50 (confirmado). Alimentação R$ 100 e hotel R$ 150 seguem provisórios. |
+| Impostos | Por unidade que emite a nota, as duas no Lucro Real. Serviço: PIS 1,65% + COFINS 7,6% + ISS 5% (Goiânia e Rio; provisório, a lei permite de 2% a 5%). Produto: PIS + COFINS + ICMS (GO 19%; RJ 20% + 2% de FECP) sobre o preço, menos os créditos sobre o custo de compra (PIS/COFINS 9,25% e ICMS da compra, 12% provisório). A exclusão do ICMS da base do PIS e da COFINS não entra na conta (lado seguro). Tudo a confirmar com o contador. |
+| Reforma tributária | Em 2026 a CBS e o IBS só aparecem na nota em teste, sem recolhimento. Nada é somado ao preço. |
+
+Exemplos com os valores de hoje (Goiânia, Bônus Coletivo de R$ 3,56 por hora, a base do POL-BON-001):
+
+- Qualificação de autoclave acima de 100 L: custo = 14 h × R$ 90 + 5 h × R$ 132 = R$ 1.920,00 de mão de obra + R$ 480,00 de custo fixo + R$ 67,64 de bônus (19 h × R$ 3,56) + R$ 280,00 de padrões e consumíveis = R$ 2.747,64. Preço = R$ 2.747,64 ÷ 0,4775 = R$ 5.754,22, arredondado para R$ 5.760,00 (antes R$ 3.020,00). Sobra: R$ 5.760,00 − R$ 820,80 de impostos − R$ 172,80 de comissão − R$ 2.747,64 = R$ 2.018,76 (35,0%).
+- Peça com custo de R$ 1.000,00: Goiânia R$ 1.000 × 0,7875 ÷ 0,3375 = R$ 2.334,00; Rio de Janeiro R$ 1.000 × 0,7875 ÷ 0,3075 = R$ 2.561,00.
+- Hora avulsa do técnico: R$ 190 ÷ 0,8575 = R$ 221,57 (R$ 230,00 arredondado); conta: (R$ 90 + R$ 22,50 + R$ 3,56) ÷ 0,4775 = R$ 243,06 (R$ 250,00). Vale R$ 250,00.
+
+O sistema recalcula com a política em vigor: o bônus por hora usa os colaboradores reais do cadastro, e os preços mudam quando a Diretoria muda um parâmetro.
+
+Como a decisão chega à produção (Diretoria ou Administrador, em Metodologia > Preço e desconto, quadro "Decisão do dono de 01/11/2026"):
+
+1. "Ver a prévia da política": mostra campo a campo o valor de hoje, o decidido e o que acontece. Campo vazio ou com o valor inicial da C1 recebe o decidido; campo que a Diretoria gravou com outro valor fica e aparece como conflito (margem mínima abaixo de 35%, hora do técnico abaixo de R$ 90 e taxa por viagem com valor são trocadas, porque contrariam a decisão). "Aplicar na política" grava uma versão nova da metodologia com o motivo.
+2. Se a tabela C1 ainda não está no catálogo, a gestão usa "Importar tabela de preços C1" em Produtos e serviços: os itens novos já entram com o preço da decisão.
+3. "Ver a prévia dos preços": os itens com ficha de custo e as peças com custo que sobem de preço (nunca desce). "Aplicar os preços" grava um lote de reajuste, com histórico em cada item e "Desfazer o último reajuste" em Produtos e serviços.
 
 
 ### Tipo de orçamento: modelo de serviço, de produto ou misto
@@ -412,7 +447,9 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - "Os termos e condições da contratação só são alterados pela Diretoria ou pelo Administrador": desfaça a mudança nas cláusulas (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria.
 - "Quem pediu não aprova o próprio desconto": a decisão é de outro gestor comercial ou da Diretoria.
 - "O checklist de custos está incompleto": em "Custos da viagem e do frete", dê valor ou "não se aplica" com o motivo a cada linha da lista; se a política ainda não tem o valor padrão, digite o desta viagem e peça à Diretoria para preencher a política.
-- "Abaixo da margem mínima... só a Diretoria aprova": ajuste preço, escopo ou repasse da viagem, ou peça a aprovação da Diretoria com o motivo. O gestor comercial pode negar, não aprovar.
+- "Sobra ... abaixo da mínima de 35% ... só a Diretoria aprova": suba o preço dos itens marcados em vermelho, reduza o desconto ou ajuste o escopo, ou peça a aprovação da Diretoria com o motivo. O gestor comercial pode negar, não aprovar. O deslocamento em item próprio não muda a sobra; a viagem diluída entra nela.
+- "O desconto geral é maior que a soma dos serviços e produtos": o deslocamento e o frete não recebem desconto. Diminua o desconto.
+- "A unidade emissora ... não existe": escolha Goiânia ou Rio de Janeiro no passo 2.
 - "A política de precificação só é alterada pela Diretoria ou pelo Administrador": desfaça a mudança nesses campos (ou atualize a tela) e salve de novo.
 - "O reajuste de preços do catálogo é da Diretoria": a gestão e o Financeiro continuam editando item por item; o lote é da Diretoria.
 - "O catálogo ou a seleção mudou desde a prévia": toque em "Ver a prévia" de novo e aplique.

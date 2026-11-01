@@ -5,6 +5,8 @@
  * São os 42 serviços que a gestão importa para o catálogo em Produtos e serviços > "Importar tabela de preços C1"
  * (SGO_Comercial_Ficha.js): horas por função, padrões, consumíveis, os preços da C1, o mercado público (PNCP) e o histórico
  * da Metrolabs (CRM 2025-26 e Drive 2018-23). Os preços valem como referência: o sistema recalcula pela política em vigor.
+ * 01/11/2026 (decisão do dono): "planilha" é o valor equivalente da planilha de 30/10/2026 (sem imposto) e "decisao" o preço de
+ * referência (o maior entre a tabela, a planilha com o imposto por fora e a conta com a sobra de 35%), de _tools/precos_decisao_20261101.py.
  ****************************************************/
 
 var COM_TABELA_C1 = {
@@ -33,6 +35,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 5760,
+    "fonte": "conta de custo",
+    "custo": 2747.64
+   },
    "historico": {
     "crm": {
      "n": 17,
@@ -93,6 +101,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 3040,
+    "fonte": "conta de custo",
+    "custo": 1448.1
+   },
    "historico": {
     "crm": {
      "n": 13,
@@ -150,6 +164,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 3630,
+    "fonte": "conta de custo",
+    "custo": 1732.72
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -192,6 +212,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 3680,
+    "fonte": "conta de custo",
+    "custo": 1752.72
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -247,6 +273,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 1850,
+    "fonte": "conta de custo",
+    "custo": 881.36
+   },
    "historico": {
     "crm": {
      "n": 7,
@@ -300,6 +332,12 @@ var COM_TABELA_C1 = {
     "preço pela conta acima do maior preço já praticado pela Metrolabs",
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 1370,
+    "fonte": "conta de custo",
+    "custo": 651.02
+   },
    "historico": {
     "crm": {
      "n": 4,
@@ -344,6 +382,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "preço pela conta acima do maior preço já praticado pela Metrolabs"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 990,
+    "fonte": "conta de custo",
+    "custo": 470.68
+   },
    "historico": {
     "crm": {
      "n": 1,
@@ -396,6 +440,15 @@ var COM_TABELA_C1 = {
    "alertas": [
     "preço pela conta acima do 3º quartil do mercado público: revisar horas ou aceitar perder licitação"
    ],
+   "planilha": {
+    "valor": 2400,
+    "referencia": "ITENS_ORCAMENTO, R$ / QUAL: câmara de cerca de 600 L com e sem carga, R$ 4.800 = 2 campanhas de 24 h (PAINEL, nota 4); R$ 2.400 por campanha"
+   },
+   "decisao": {
+    "precoNovo": 2800,
+    "fonte": "planilha 30/10",
+    "custo": 1069.92
+   },
    "historico": {
     "crm": {
      "n": 12,
@@ -446,6 +499,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 2290,
+    "fonte": "conta de custo",
+    "custo": 1089.92
+   },
    "historico": {
     "crm": {
      "n": 4,
@@ -495,6 +554,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 2750,
+    "fonte": "piso de 120% do freezer",
+    "custo": 1214.2
+   },
    "historico": {
     "crm": {
      "n": 4,
@@ -532,6 +597,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 3690,
+    "fonte": "conta de custo",
+    "custo": 1759.16
+   },
    "historico": {
     "crm": null,
     "ganhos": null,
@@ -575,6 +646,15 @@ var COM_TABELA_C1 = {
     "preço pela conta acima do maior preço já praticado pela Metrolabs",
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
    ],
+   "planilha": {
+    "valor": 1750,
+    "referencia": "ITENS_ORCAMENTO, R$ / QUAL: incubadora BOD com e sem carga, R$ 3.500 = 2 campanhas de 24 h (PAINEL, nota 4); R$ 1.750 por campanha (microincubadora R$ 3.300)"
+   },
+   "decisao": {
+    "precoNovo": 2050,
+    "fonte": "planilha 30/10",
+    "custo": 849.58
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -622,6 +702,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 4150,
+    "fonte": "conta de custo",
+    "custo": 1977.72
+   },
    "historico": {
     "crm": null,
     "ganhos": null,
@@ -658,6 +744,12 @@ var COM_TABELA_C1 = {
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 1100,
+    "fonte": "conta de custo",
+    "custo": 524.96
+   },
    "historico": {
     "crm": {
      "n": 1,
@@ -697,6 +789,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 151.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 490,
+    "fonte": "conta de custo",
+    "custo": 230.65
+   },
    "historico": {
     "crm": {
      "n": 15,
@@ -754,6 +852,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 164.80), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 440,
+    "fonte": "conta de custo",
+    "custo": 206.63
+   },
    "historico": {
     "crm": {
      "n": 11,
@@ -816,6 +920,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 80.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 560,
+    "fonte": "conta de custo",
+    "custo": 264.66
+   },
    "historico": {
     "crm": {
      "n": 8,
@@ -873,6 +983,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 163.20), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 620,
+    "fonte": "conta de custo",
+    "custo": 291.51
+   },
    "historico": {
     "crm": {
      "n": 15,
@@ -928,6 +1044,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 330,
+    "fonte": "conta de custo",
+    "custo": 154.19
+   },
    "historico": {
     "crm": {
      "n": 8,
@@ -980,6 +1102,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 266.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 480,
+    "fonte": "tabela C1",
+    "custo": 206.63
+   },
    "historico": {
     "crm": {
      "n": 7,
@@ -1037,6 +1165,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 120.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 240,
+    "fonte": "conta de custo",
+    "custo": 111.74
+   },
    "historico": {
     "crm": {
      "n": 7,
@@ -1094,6 +1228,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 570,
+    "fonte": "conta de custo",
+    "custo": 271.51
+   },
    "historico": {
     "crm": {
      "n": 12,
@@ -1144,6 +1284,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 200,
+    "fonte": "conta de custo",
+    "custo": 93.31
+   },
    "historico": {
     "crm": {
      "n": 4,
@@ -1193,6 +1339,12 @@ var COM_TABELA_C1 = {
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 770,
+    "fonte": "conta de custo",
+    "custo": 366.4
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -1232,6 +1384,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 48.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 130,
+    "fonte": "conta de custo",
+    "custo": 60.16
+   },
    "historico": {
     "crm": {
      "n": 13,
@@ -1292,6 +1450,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 140,
+    "fonte": "conta de custo",
+    "custo": 63.16
+   },
    "historico": {
     "crm": {
      "n": 28,
@@ -1352,6 +1516,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 130,
+    "fonte": "conta de custo",
+    "custo": 61.67
+   },
    "historico": {
     "crm": {
      "n": 24,
@@ -1410,6 +1580,12 @@ var COM_TABELA_C1 = {
     "o CRM tem custo cadastrado (mediana R$ 60.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado",
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 200,
+    "fonte": "conta de custo",
+    "custo": 93.31
+   },
    "historico": {
     "crm": {
      "n": 2,
@@ -1454,6 +1630,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 59.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 240,
+    "fonte": "conta de custo",
+    "custo": 109.92
+   },
    "historico": {
     "crm": {
      "n": 10,
@@ -1506,6 +1688,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 210.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 400,
+    "fonte": "conta de custo",
+    "custo": 189.77
+   },
    "historico": {
     "crm": {
      "n": 14,
@@ -1563,6 +1751,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 210,
+    "fonte": "conta de custo",
+    "custo": 98.31
+   },
    "historico": {
     "crm": {
      "n": 2,
@@ -1607,6 +1801,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 470,
+    "fonte": "conta de custo",
+    "custo": 220.34
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -1646,6 +1846,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 290,
+    "fonte": "conta de custo",
+    "custo": 135.76
+   },
    "historico": {
     "crm": {
      "n": 10,
@@ -1687,6 +1893,15 @@ var COM_TABELA_C1 = {
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
+   "planilha": {
+    "valor": 800,
+    "referencia": "ITENS_ORCAMENTO, R$ / CAL: R$ 450 (1 ponto) a R$ 800 (3 pontos) para câmara, estufa e incubadora; usado o maior"
+   },
+   "decisao": {
+    "precoNovo": 940,
+    "fonte": "planilha 30/10",
+    "custo": 149.19
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -1726,6 +1941,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 160,
+    "fonte": "conta de custo",
+    "custo": 73.28
+   },
    "historico": {
     "crm": {
      "n": 8,
@@ -1768,6 +1989,12 @@ var COM_TABELA_C1 = {
    },
    "fonte": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 1680,
+    "fonte": "conta de custo",
+    "custo": 800.64
+   },
    "historico": {
     "crm": {
      "n": 5,
@@ -1830,6 +2057,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 720,
+    "fonte": "conta de custo",
+    "custo": 342.29
+   },
    "historico": {
     "crm": {
      "n": 2,
@@ -1874,6 +2107,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 600,
+    "fonte": "conta de custo",
+    "custo": 284.26
+   },
    "historico": {
     "crm": null,
     "ganhos": null,
@@ -1908,6 +2147,12 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 460,
+    "fonte": "conta de custo",
+    "custo": 217.8
+   },
    "historico": {
     "crm": {
      "n": 3,
@@ -1952,6 +2197,15 @@ var COM_TABELA_C1 = {
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
+   "planilha": {
+    "valor": 950,
+    "referencia": "ITENS_ORCAMENTO, R$ / MP: câmara fria R$ 850 e câmara com freezer conjugado R$ 950 por visita; usado o maior"
+   },
+   "decisao": {
+    "precoNovo": 1110,
+    "fonte": "planilha 30/10",
+    "custo": 447.46
+   },
    "historico": {
     "crm": null,
     "ganhos": null,
@@ -1987,6 +2241,15 @@ var COM_TABELA_C1 = {
     "sem preço comparável em compras públicas",
     "hora avulsa tem ociosidade (espera, diagnóstico sem peça): a conta pura com 140 h faturáveis subestima"
    ],
+   "planilha": {
+    "valor": 190,
+    "referencia": "PECAS_A_COTAR, célula L3: R$ 190 por hora de instalação, sem imposto"
+   },
+   "decisao": {
+    "precoNovo": 250,
+    "fonte": "conta de custo",
+    "custo": 116.06
+   },
    "historico": {
     "crm": null,
     "ganhos": null,
@@ -2022,6 +2285,12 @@ var COM_TABELA_C1 = {
     "sem preço comparável em compras públicas",
     "a planilha interna não traz hora de engenheiro; com a mesma folga usada na hora do técnico (R$ 190 sobre custo de R$ 56,25) daria cerca de R$ 560: decisão do dono"
    ],
+   "planilha": null,
+   "decisao": {
+    "precoNovo": 360,
+    "fonte": "conta de custo",
+    "custo": 168.56
+   },
    "historico": {
     "crm": null,
     "ganhos": null,

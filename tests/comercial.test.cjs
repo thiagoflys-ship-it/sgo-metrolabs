@@ -135,12 +135,13 @@ test('desconto pelo preço de tabela do catálogo e margem mínima configurada',
   // (Metodologia > Preço e desconto). Custo 4.000 e preço 4.600: sobra 4.600 - 655,50 - 138 - 4.000 = -193,50 (-4,2%).
   const nova = JSON.parse(JSON.stringify(met)); nova.politica.margemMinPct = 30;
   ok(amb.api('s_gaspar', 'metodologia', { salvar: nova, motivo: 'Margem mínima de teste' }));
-  assert.equal(amb.ctx.Com_metodologia_().precificacao.margemMinPct, 10, 'o campo antigo da política de desconto não muda mais a margem sozinho');
+  // 01/11/2026 (decisão do dono): o padrão passou de 10% para 35%
+  assert.equal(amb.ctx.Com_metodologia_().precificacao.margemMinPct, 35, 'o campo antigo da política de desconto não muda mais a margem sozinho');
   assert.match(amb.api('s_gaspar', 'metodologia', { pagina: 'PRECO', salvar: { precificacao: { margemMinPct: 30, margemAlvoPct: 35 } }, motivo: 'Margem mínima de teste' }).message, /só é alterada pela Diretoria ou pelo Administrador/);
   ok(amb.api('s_dora', 'metodologia', { pagina: 'PRECO', salvar: { precificacao: { margemMinPct: 30, margemAlvoPct: 35 } }, motivo: 'Margem mínima de teste' }));
   const s2 = ok(amb.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: p.id, escopo: 'Qualificação térmica completa da autoclave, com relatório final.', itens: [{ produtoId: prod.id, descricao: 'Qualificação térmica', quantidade: 1, precoUnitario: '4.600,00' }], condicoes: { pagamento: 'Boleto', prazoExecucao: 'A combinar' } }));
   assert.equal(s2.politica.dentro, false);
-  assert.match(s2.politica.motivos.join(' '), /margem de -4,2% \(depois de impostos, comissão e custos da viagem\) abaixo da mínima de 30,0% da política de precificação; só a Diretoria aprova/);
+  assert.match(s2.politica.motivos.join(' '), /sobra de -4,2% \(depois de impostos, comissão e custos diretos; o deslocamento em item próprio fica fora\) abaixo da mínima de 30,0% da política de precificação; só a Diretoria aprova/);
   assert.equal(s2.politica.exigeDiretoria, true);
   assert.equal(amb.api('s_vera', 'metodologia', { salvar: nova, motivo: 'tentativa do vendedor' }).ok, false, 'vendedor não muda a metodologia');
 });

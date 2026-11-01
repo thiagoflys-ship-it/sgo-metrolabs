@@ -21,7 +21,28 @@
   },
   "regra_preco_normal": "preco_normal = preco_pela_conta; quando a mediana do mercado público E a mediana do histórico da Metrolabs ficam ambas acima da conta, sobe até o menor dos dois. Exceções anotadas em fonte_preco.",
   "deslocamento": "nunca incluso nos preços desta tabela; ver regras no documento COMERCIAL_C1_PRECIFICACAO_20261101.md, seção 6",
-  "campos_para_c2": "codigo, nome, grupo (CATEGORIA), unidade (UNIDADE_MEDIDA), escopo (DESCRICAO), preco_normal (PRECO), custo.total (CUSTO), horas e padroes_rateio (ficha de custo nova)"
+  "campos_para_c2": "codigo, nome, grupo (CATEGORIA), unidade (UNIDADE_MEDIDA), escopo (DESCRICAO), preco_normal (PRECO), custo.total (CUSTO), horas e padroes_rateio (ficha de custo nova)",
+  "decisao_dono_20261101": {
+   "falas": [
+    "Pra empresa tem que sobrar no mínimo 35%",
+    "Os valores têm que ser os valores maiores, esses serviços estão muito baratos"
+   ],
+   "regra": "preço = o MAIOR entre a tabela C1 (preco_normal), a planilha de 30/10/2026 com o imposto por fora (valor ÷ (1 − impostos de serviço)) e a conta de custo com a sobra mínima (custo ÷ (1 − impostos − comissão − 35%)); hora avulsa: o maior entre R$ 190 ÷ (1 − impostos) e a conta; ultracongelador com piso de 120% do freezer",
+   "custo": "horas x custo da hora (técnico R$ 90, MAN-VIA-001; engenheiro R$ 132) + 25% de custo fixo sobre a mão de obra + Bônus Coletivo diluído (horas x R$ 3,56, POL-BON-001) + padrões + consumíveis/ART",
+   "parametros": {
+    "hora_tecnico_custo": 90.0,
+    "hora_engenheiro_custo": 132.0,
+    "custo_fixo_sobre_mao_de_obra": 0.25,
+    "bonus_coletivo_por_hora": 3.56,
+    "impostos_servico": 0.1425,
+    "comissao_venda": 0.03,
+    "margem_minima": 0.35,
+    "margem_alvo": 0.4,
+    "acrescimo_urgente": 1.1,
+    "hora_avulsa_sem_imposto": 190.0
+   },
+   "observacao": "O SGO+ recalcula pela política em vigor (bônus com os colaboradores reais do cadastro; impostos da unidade emissora). Arredondamento para cima: R$ 5 abaixo de R$ 100 e R$ 10 acima."
+  }
  },
  "servicos": [
   {
@@ -89,7 +110,29 @@
    },
    "fonte_preco": "custo",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1920.0,
+     "custo_fixo": 480.0,
+     "bonus_coletivo": 67.64,
+     "total": 2747.64,
+     "preco_conta_sobra_35": 5760.0,
+     "preco_alvo_40": 6430.0
+    },
+    "candidatos": {
+     "tabela_c1": 3020.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 5760.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 3020.0,
+    "preco_novo": 5760.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 90.73,
+    "preco_urgente_novo": 12100.0,
+    "sobra_no_preco_novo_pct": 35.05
+   }
   },
   {
    "codigo": "QT_AUTOCLAVE_BANCADA",
@@ -151,7 +194,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1026.0,
+     "custo_fixo": 256.5,
+     "bonus_coletivo": 35.6,
+     "total": 1448.1,
+     "preco_conta_sobra_35": 3040.0,
+     "preco_alvo_40": 3390.0
+    },
+    "candidatos": {
+     "tabela_c1": 1660.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 3040.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1660.0,
+    "preco_novo": 3040.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 83.13,
+    "preco_urgente_novo": 6390.0,
+    "sobra_no_preco_novo_pct": 35.12
+   }
   },
   {
    "codigo": "QT_AUTOCLAVE_BT",
@@ -202,7 +267,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1248.0,
+     "custo_fixo": 312.0,
+     "bonus_coletivo": 42.72,
+     "total": 1732.72,
+     "preco_conta_sobra_35": 3630.0,
+     "preco_alvo_40": 4060.0
+    },
+    "candidatos": {
+     "tabela_c1": 1980.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 3630.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1980.0,
+    "preco_novo": 3630.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 83.33,
+    "preco_urgente_novo": 7630.0,
+    "sobra_no_preco_novo_pct": 35.02
+   }
   },
   {
    "codigo": "QT_LAVADORA_TD",
@@ -264,7 +351,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1248.0,
+     "custo_fixo": 312.0,
+     "bonus_coletivo": 42.72,
+     "total": 1752.72,
+     "preco_conta_sobra_35": 3680.0,
+     "preco_alvo_40": 4100.0
+    },
+    "candidatos": {
+     "tabela_c1": 2430.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 3680.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 2430.0,
+    "preco_novo": 3680.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 51.44,
+    "preco_urgente_novo": 7730.0,
+    "sobra_no_preco_novo_pct": 35.12
+   }
   },
   {
    "codigo": "QT_LAVADORA_US",
@@ -321,7 +430,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 624.0,
+     "custo_fixo": 156.0,
+     "bonus_coletivo": 21.36,
+     "total": 881.36,
+     "preco_conta_sobra_35": 1850.0,
+     "preco_alvo_40": 2070.0
+    },
+    "candidatos": {
+     "tabela_c1": 1430.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 1850.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1430.0,
+    "preco_novo": 1850.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 29.37,
+    "preco_urgente_novo": 3890.0,
+    "sobra_no_preco_novo_pct": 35.11
+   }
   },
   {
    "codigo": "QT_SECADORA",
@@ -373,7 +504,29 @@
     "preço pela conta acima do maior preço já praticado pela Metrolabs",
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 468.0,
+     "custo_fixo": 117.0,
+     "bonus_coletivo": 16.02,
+     "total": 651.02,
+     "preco_conta_sobra_35": 1370.0,
+     "preco_alvo_40": 1530.0
+    },
+    "candidatos": {
+     "tabela_c1": 750.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 1370.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 750.0,
+    "preco_novo": 1370.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 82.67,
+    "preco_urgente_novo": 2880.0,
+    "sobra_no_preco_novo_pct": 35.23
+   }
   },
   {
    "codigo": "QT_SELADORA",
@@ -432,7 +585,29 @@
    "alertas": [
     "preço pela conta acima do maior preço já praticado pela Metrolabs"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 312.0,
+     "custo_fixo": 78.0,
+     "bonus_coletivo": 10.68,
+     "total": 470.68,
+     "preco_conta_sobra_35": 990.0,
+     "preco_alvo_40": 1110.0
+    },
+    "candidatos": {
+     "tabela_c1": 560.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 990.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 560.0,
+    "preco_novo": 990.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 76.79,
+    "preco_urgente_novo": 2080.0,
+    "sobra_no_preco_novo_pct": 35.21
+   }
   },
   {
    "codigo": "QT_CAMARA_CONSERVADORA",
@@ -491,7 +666,34 @@
    "alertas": [
     "preço pela conta acima do 3º quartil do mercado público: revisar horas ou aceitar perder licitação"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "planilha_30_10": {
+    "sem_imposto": true,
+    "valor": 2400.0,
+    "referencia": "ITENS_ORCAMENTO, R$ / QUAL: câmara de cerca de 600 L com e sem carga, R$ 4.800 = 2 campanhas de 24 h (PAINEL, nota 4); R$ 2.400 por campanha"
+   },
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 756.0,
+     "custo_fixo": 189.0,
+     "bonus_coletivo": 24.92,
+     "total": 1069.92,
+     "preco_conta_sobra_35": 2250.0,
+     "preco_alvo_40": 2510.0
+    },
+    "candidatos": {
+     "tabela_c1": 1310.0,
+     "planilha_com_imposto": 2800.0,
+     "conta_custo_sobra_35": 2250.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1310.0,
+    "preco_novo": 2800.0,
+    "fonte": "planilha 30/10",
+    "aumento_pct": 113.74,
+    "preco_urgente_novo": 5880.0,
+    "sobra_no_preco_novo_pct": 44.54
+   }
   },
   {
    "codigo": "QT_FREEZER",
@@ -543,7 +745,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 756.0,
+     "custo_fixo": 189.0,
+     "bonus_coletivo": 24.92,
+     "total": 1089.92,
+     "preco_conta_sobra_35": 2290.0,
+     "preco_alvo_40": 2550.0
+    },
+    "candidatos": {
+     "tabela_c1": 1800.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 2290.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1800.0,
+    "preco_novo": 2290.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 27.22,
+    "preco_urgente_novo": 4810.0,
+    "sobra_no_preco_novo_pct": 35.16
+   }
   },
   {
    "codigo": "QT_ULTRAFREEZER",
@@ -589,7 +813,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 822.0,
+     "custo_fixo": 205.5,
+     "bonus_coletivo": 26.7,
+     "total": 1214.2,
+     "preco_conta_sobra_35": 2550.0,
+     "preco_alvo_40": 2850.0
+    },
+    "candidatos": {
+     "tabela_c1": 2160.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 2550.0,
+     "piso_freezer": 2750.0
+    },
+    "preco_antes": 2160.0,
+    "preco_novo": 2750.0,
+    "fonte": "piso de 120% do freezer",
+    "aumento_pct": 27.31,
+    "preco_urgente_novo": 5780.0,
+    "sobra_no_preco_novo_pct": 38.6
+   }
   },
   {
    "codigo": "QT_CAMARA_FRIA",
@@ -636,7 +882,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1200.0,
+     "custo_fixo": 300.0,
+     "bonus_coletivo": 39.16,
+     "total": 1759.16,
+     "preco_conta_sobra_35": 3690.0,
+     "preco_alvo_40": 4120.0
+    },
+    "candidatos": {
+     "tabela_c1": 2210.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 3690.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 2210.0,
+    "preco_novo": 3690.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 66.97,
+    "preco_urgente_novo": 7750.0,
+    "sobra_no_preco_novo_pct": 35.08
+   }
   },
   {
    "codigo": "QT_ESTUFA",
@@ -691,7 +959,34 @@
     "preço pela conta acima do maior preço já praticado pela Metrolabs",
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "planilha_30_10": {
+    "sem_imposto": true,
+    "valor": 1750.0,
+    "referencia": "ITENS_ORCAMENTO, R$ / QUAL: incubadora BOD com e sem carga, R$ 3.500 = 2 campanhas de 24 h (PAINEL, nota 4); R$ 1.750 por campanha (microincubadora R$ 3.300)"
+   },
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 600.0,
+     "custo_fixo": 150.0,
+     "bonus_coletivo": 19.58,
+     "total": 849.58,
+     "preco_conta_sobra_35": 1780.0,
+     "preco_alvo_40": 1990.0
+    },
+    "candidatos": {
+     "tabela_c1": 1060.0,
+     "planilha_com_imposto": 2050.0,
+     "conta_custo_sobra_35": 1780.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 1060.0,
+    "preco_novo": 2050.0,
+    "fonte": "planilha 30/10",
+    "aumento_pct": 93.4,
+    "preco_urgente_novo": 4310.0,
+    "sobra_no_preco_novo_pct": 41.31
+   }
   },
   {
    "codigo": "QT_SALA",
@@ -732,7 +1027,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 1332.0,
+     "custo_fixo": 333.0,
+     "bonus_coletivo": 42.72,
+     "total": 1977.72,
+     "preco_conta_sobra_35": 4150.0,
+     "preco_alvo_40": 4630.0
+    },
+    "candidatos": {
+     "tabela_c1": 2550.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 4150.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 2550.0,
+    "preco_novo": 4150.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 62.75,
+    "preco_urgente_novo": 8720.0,
+    "sobra_no_preco_novo_pct": 35.09
+   }
   },
   {
    "codigo": "QT_CAIXA_TERMICA",
@@ -780,7 +1097,29 @@
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 378.0,
+     "custo_fixo": 94.5,
+     "bonus_coletivo": 12.46,
+     "total": 524.96,
+     "preco_conta_sobra_35": 1100.0,
+     "preco_alvo_40": 1230.0
+    },
+    "candidatos": {
+     "tabela_c1": 640.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 1100.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 640.0,
+    "preco_novo": 1100.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 71.88,
+    "preco_urgente_novo": 2310.0,
+    "sobra_no_preco_novo_pct": 35.03
+   }
   },
   {
    "codigo": "CAL_MONITOR",
@@ -844,7 +1183,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 151.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 152.1,
+     "custo_fixo": 38.03,
+     "bonus_coletivo": 5.52,
+     "total": 230.65,
+     "preco_conta_sobra_35": 490.0,
+     "preco_alvo_40": 540.0
+    },
+    "candidatos": {
+     "tabela_c1": 350.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 490.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 350.0,
+    "preco_novo": 490.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 40.0,
+    "preco_urgente_novo": 1030.0,
+    "sobra_no_preco_novo_pct": 35.68
+   }
   },
   {
    "codigo": "CAL_DESFIBRILADOR",
@@ -913,7 +1274,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 164.80), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 129.6,
+     "custo_fixo": 32.4,
+     "bonus_coletivo": 4.63,
+     "total": 206.63,
+     "preco_conta_sobra_35": 440.0,
+     "preco_alvo_40": 490.0
+    },
+    "candidatos": {
+     "tabela_c1": 280.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 440.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 280.0,
+    "preco_novo": 440.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 57.14,
+    "preco_urgente_novo": 930.0,
+    "sobra_no_preco_novo_pct": 35.79
+   }
   },
   {
    "codigo": "CAL_BOMBA_INFUSAO",
@@ -977,7 +1360,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 80.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 174.6,
+     "custo_fixo": 43.65,
+     "bonus_coletivo": 6.41,
+     "total": 264.66,
+     "preco_conta_sobra_35": 560.0,
+     "preco_alvo_40": 620.0
+    },
+    "candidatos": {
+     "tabela_c1": 280.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 560.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 280.0,
+    "preco_novo": 560.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 100.0,
+    "preco_urgente_novo": 1180.0,
+    "sobra_no_preco_novo_pct": 35.49
+   }
   },
   {
    "codigo": "CAL_VENTILADOR",
@@ -1041,7 +1446,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 163.20), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 187.8,
+     "custo_fixo": 46.95,
+     "bonus_coletivo": 6.76,
+     "total": 291.51,
+     "preco_conta_sobra_35": 620.0,
+     "preco_alvo_40": 690.0
+    },
+    "candidatos": {
+     "tabela_c1": 350.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 620.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 350.0,
+    "preco_novo": 620.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 77.14,
+    "preco_urgente_novo": 1310.0,
+    "sobra_no_preco_novo_pct": 35.73
+   }
   },
   {
    "codigo": "CAL_ECG",
@@ -1098,7 +1525,29 @@
    },
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 100.5,
+     "custo_fixo": 25.13,
+     "bonus_coletivo": 3.56,
+     "total": 154.19,
+     "preco_conta_sobra_35": 330.0,
+     "preco_alvo_40": 370.0
+    },
+    "candidatos": {
+     "tabela_c1": 210.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 330.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 210.0,
+    "preco_novo": 330.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 57.14,
+    "preco_urgente_novo": 700.0,
+    "sobra_no_preco_novo_pct": 36.03
+   }
   },
   {
    "codigo": "CAL_BISTURI",
@@ -1162,7 +1611,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 266.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 129.6,
+     "custo_fixo": 32.4,
+     "bonus_coletivo": 4.63,
+     "total": 206.63,
+     "preco_conta_sobra_35": 440.0,
+     "preco_alvo_40": 490.0
+    },
+    "candidatos": {
+     "tabela_c1": 480.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 440.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 480.0,
+    "preco_novo": 480.0,
+    "fonte": "tabela C1",
+    "aumento_pct": 0.0,
+    "preco_urgente_novo": 1010.0,
+    "sobra_no_preco_novo_pct": 39.7
+   }
   },
   {
    "codigo": "CAL_OXIMETRO",
@@ -1226,7 +1697,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 120.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 71.4,
+     "custo_fixo": 17.85,
+     "bonus_coletivo": 2.49,
+     "total": 111.74,
+     "preco_conta_sobra_35": 240.0,
+     "preco_alvo_40": 270.0
+    },
+    "candidatos": {
+     "tabela_c1": 180.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 240.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 180.0,
+    "preco_novo": 240.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 33.33,
+    "preco_urgente_novo": 510.0,
+    "sobra_no_preco_novo_pct": 36.19
+   }
   },
   {
    "codigo": "CAL_INCUBADORA_NEO",
@@ -1285,7 +1778,29 @@
    "alertas": [
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 187.8,
+     "custo_fixo": 46.95,
+     "bonus_coletivo": 6.76,
+     "total": 271.51,
+     "preco_conta_sobra_35": 570.0,
+     "preco_alvo_40": 640.0
+    },
+    "candidatos": {
+     "tabela_c1": 290.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 570.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 290.0,
+    "preco_novo": 570.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 96.55,
+    "preco_urgente_novo": 1200.0,
+    "sobra_no_preco_novo_pct": 35.12
+   }
   },
   {
    "codigo": "CAL_ASPIRADOR",
@@ -1337,7 +1852,29 @@
    "mercado_centro_oeste": null,
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 64.8,
+     "custo_fixo": 16.2,
+     "bonus_coletivo": 2.31,
+     "total": 93.31,
+     "preco_conta_sobra_35": 200.0,
+     "preco_alvo_40": 220.0
+    },
+    "candidatos": {
+     "tabela_c1": 190.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 200.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 190.0,
+    "preco_novo": 200.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 5.26,
+    "preco_urgente_novo": 420.0,
+    "sobra_no_preco_novo_pct": 36.1
+   }
   },
   {
    "codigo": "CAL_ANESTESIA",
@@ -1385,7 +1922,29 @@
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 246.0,
+     "custo_fixo": 61.5,
+     "bonus_coletivo": 8.9,
+     "total": 366.4,
+     "preco_conta_sobra_35": 770.0,
+     "preco_alvo_40": 860.0
+    },
+    "candidatos": {
+     "tabela_c1": 400.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 770.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 400.0,
+    "preco_novo": 770.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 92.5,
+    "preco_urgente_novo": 1620.0,
+    "sobra_no_preco_novo_pct": 35.17
+   }
   },
   {
    "codigo": "CAL_ESFIGMO",
@@ -1454,7 +2013,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 48.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 42.9,
+     "custo_fixo": 10.73,
+     "bonus_coletivo": 1.53,
+     "total": 60.16,
+     "preco_conta_sobra_35": 130.0,
+     "preco_alvo_40": 150.0
+    },
+    "candidatos": {
+     "tabela_c1": 70.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 130.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 70.0,
+    "preco_novo": 130.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 85.71,
+    "preco_urgente_novo": 280.0,
+    "sobra_no_preco_novo_pct": 36.48
+   }
   },
   {
    "codigo": "CAL_TERMOMETRO",
@@ -1521,7 +2102,29 @@
    },
    "fonte_preco": "custo",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 42.9,
+     "custo_fixo": 10.73,
+     "bonus_coletivo": 1.53,
+     "total": 63.16,
+     "preco_conta_sobra_35": 140.0,
+     "preco_alvo_40": 150.0
+    },
+    "candidatos": {
+     "tabela_c1": 70.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 140.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 70.0,
+    "preco_novo": 140.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 100.0,
+    "preco_urgente_novo": 300.0,
+    "sobra_no_preco_novo_pct": 37.64
+   }
   },
   {
    "codigo": "CAL_TERMOHIGROMETRO",
@@ -1583,7 +2186,29 @@
    },
    "fonte_preco": "custo",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 40.2,
+     "custo_fixo": 10.05,
+     "bonus_coletivo": 1.42,
+     "total": 61.67,
+     "preco_conta_sobra_35": 130.0,
+     "preco_alvo_40": 150.0
+    },
+    "candidatos": {
+     "tabela_c1": 70.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 130.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 70.0,
+    "preco_novo": 130.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 85.71,
+    "preco_urgente_novo": 280.0,
+    "sobra_no_preco_novo_pct": 35.32
+   }
   },
   {
    "codigo": "CAL_DATALOGGER",
@@ -1635,7 +2260,29 @@
     "o CRM tem custo cadastrado (mediana R$ 60.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado",
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 64.8,
+     "custo_fixo": 16.2,
+     "bonus_coletivo": 2.31,
+     "total": 93.31,
+     "preco_conta_sobra_35": 200.0,
+     "preco_alvo_40": 220.0
+    },
+    "candidatos": {
+     "tabela_c1": 110.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 200.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 110.0,
+    "preco_novo": 200.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 81.82,
+    "preco_urgente_novo": 420.0,
+    "sobra_no_preco_novo_pct": 36.1
+   }
   },
   {
    "codigo": "CAL_BALANCA_PEQ",
@@ -1694,7 +2341,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 59.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 73.8,
+     "custo_fixo": 18.45,
+     "bonus_coletivo": 2.67,
+     "total": 109.92,
+     "preco_conta_sobra_35": 240.0,
+     "preco_alvo_40": 260.0
+    },
+    "candidatos": {
+     "tabela_c1": 150.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 240.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 150.0,
+    "preco_novo": 240.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 60.0,
+    "preco_urgente_novo": 510.0,
+    "sobra_no_preco_novo_pct": 36.95
+   }
   },
   {
    "codigo": "CAL_BALANCA_ADULTO",
@@ -1758,7 +2427,29 @@
    "alertas": [
     "o CRM tem custo cadastrado (mediana R$ 210.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 116.4,
+     "custo_fixo": 29.1,
+     "bonus_coletivo": 4.27,
+     "total": 189.77,
+     "preco_conta_sobra_35": 400.0,
+     "preco_alvo_40": 450.0
+    },
+    "candidatos": {
+     "tabela_c1": 250.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 400.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 250.0,
+    "preco_novo": 400.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 60.0,
+    "preco_urgente_novo": 840.0,
+    "sobra_no_preco_novo_pct": 35.31
+   }
   },
   {
    "codigo": "CAL_MANOMETRO",
@@ -1809,7 +2500,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 64.8,
+     "custo_fixo": 16.2,
+     "bonus_coletivo": 2.31,
+     "total": 98.31,
+     "preco_conta_sobra_35": 210.0,
+     "preco_alvo_40": 230.0
+    },
+    "candidatos": {
+     "tabela_c1": 110.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 210.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 110.0,
+    "preco_novo": 210.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 90.91,
+    "preco_urgente_novo": 450.0,
+    "sobra_no_preco_novo_pct": 35.94
+   }
   },
   {
    "codigo": "CAL_VALVULA_SEG",
@@ -1855,7 +2568,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 156.0,
+     "custo_fixo": 39.0,
+     "bonus_coletivo": 5.34,
+     "total": 220.34,
+     "preco_conta_sobra_35": 470.0,
+     "preco_alvo_40": 520.0
+    },
+    "candidatos": {
+     "tabela_c1": 260.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 470.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 260.0,
+    "preco_novo": 470.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 80.77,
+    "preco_urgente_novo": 990.0,
+    "sobra_no_preco_novo_pct": 35.87
+   }
   },
   {
    "codigo": "CAL_CENTRIFUGA",
@@ -1901,7 +2636,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 93.9,
+     "custo_fixo": 23.48,
+     "bonus_coletivo": 3.38,
+     "total": 135.76,
+     "preco_conta_sobra_35": 290.0,
+     "preco_alvo_40": 320.0
+    },
+    "candidatos": {
+     "tabela_c1": 150.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 290.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 150.0,
+    "preco_novo": 290.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 93.33,
+    "preco_urgente_novo": 610.0,
+    "sobra_no_preco_novo_pct": 35.94
+   }
   },
   {
    "codigo": "CAL_CAMARA",
@@ -1949,7 +2706,34 @@
     "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "planilha_30_10": {
+    "sem_imposto": true,
+    "valor": 800.0,
+    "referencia": "ITENS_ORCAMENTO, R$ / CAL: R$ 450 (1 ponto) a R$ 800 (3 pontos) para câmara, estufa e incubadora; usado o maior"
+   },
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 100.5,
+     "custo_fixo": 25.13,
+     "bonus_coletivo": 3.56,
+     "total": 149.19,
+     "preco_conta_sobra_35": 320.0,
+     "preco_alvo_40": 350.0
+    },
+    "candidatos": {
+     "tabela_c1": 170.0,
+     "planilha_com_imposto": 940.0,
+     "conta_custo_sobra_35": 320.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 170.0,
+    "preco_novo": 940.0,
+    "fonte": "planilha 30/10",
+    "aumento_pct": 452.94,
+    "preco_urgente_novo": 1980.0,
+    "sobra_no_preco_novo_pct": 66.88
+   }
   },
   {
    "codigo": "CAL_INCUBADORA_BIO",
@@ -2000,7 +2784,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 49.2,
+     "custo_fixo": 12.3,
+     "bonus_coletivo": 1.78,
+     "total": 73.28,
+     "preco_conta_sobra_35": 160.0,
+     "preco_alvo_40": 180.0
+    },
+    "candidatos": {
+     "tabela_c1": 80.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 160.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 80.0,
+    "preco_novo": 160.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 100.0,
+    "preco_urgente_novo": 340.0,
+    "sobra_no_preco_novo_pct": 36.95
+   }
   },
   {
    "codigo": "MP_AUTOCLAVE_GRANDE",
@@ -2067,7 +2873,29 @@
    },
    "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
    "alertas": [],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 606.0,
+     "custo_fixo": 151.5,
+     "bonus_coletivo": 23.14,
+     "total": 800.64,
+     "preco_conta_sobra_35": 1680.0,
+     "preco_alvo_40": 1880.0
+    },
+    "candidatos": {
+     "tabela_c1": 750.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 1680.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 750.0,
+    "preco_novo": 1680.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 124.0,
+    "preco_urgente_novo": 3530.0,
+    "sobra_no_preco_novo_pct": 35.09
+   }
   },
   {
    "codigo": "MP_AUTOCLAVE_BANCADA",
@@ -2118,7 +2946,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 258.0,
+     "custo_fixo": 64.5,
+     "bonus_coletivo": 9.79,
+     "total": 342.29,
+     "preco_conta_sobra_35": 720.0,
+     "preco_alvo_40": 810.0
+    },
+    "candidatos": {
+     "tabela_c1": 310.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 720.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 310.0,
+    "preco_novo": 720.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 132.26,
+    "preco_urgente_novo": 1520.0,
+    "sobra_no_preco_novo_pct": 35.21
+   }
   },
   {
    "codigo": "MP_LAVADORA_US",
@@ -2159,7 +3009,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 213.0,
+     "custo_fixo": 53.25,
+     "bonus_coletivo": 8.01,
+     "total": 284.26,
+     "preco_conta_sobra_35": 600.0,
+     "preco_alvo_40": 670.0
+    },
+    "candidatos": {
+     "tabela_c1": 270.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 600.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 270.0,
+    "preco_novo": 600.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 122.22,
+    "preco_urgente_novo": 1260.0,
+    "sobra_no_preco_novo_pct": 35.37
+   }
   },
   {
    "codigo": "MP_SELADORA",
@@ -2210,7 +3082,29 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 161.4,
+     "custo_fixo": 40.35,
+     "bonus_coletivo": 6.05,
+     "total": 217.8,
+     "preco_conta_sobra_35": 460.0,
+     "preco_alvo_40": 510.0
+    },
+    "candidatos": {
+     "tabela_c1": 210.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 460.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 210.0,
+    "preco_novo": 460.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 119.05,
+    "preco_urgente_novo": 970.0,
+    "sobra_no_preco_novo_pct": 35.4
+   }
   },
   {
    "codigo": "MP_CAMARA",
@@ -2251,7 +3145,34 @@
    "alertas": [
     "sem preço comparável em compras públicas"
    ],
-   "deslocamento": "à parte (regras de deslocamento)"
+   "deslocamento": "à parte (regras de deslocamento)",
+   "planilha_30_10": {
+    "sem_imposto": true,
+    "valor": 950.0,
+    "referencia": "ITENS_ORCAMENTO, R$ / MP: câmara fria R$ 850 e câmara com freezer conjugado R$ 950 por visita; usado o maior"
+   },
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 336.0,
+     "custo_fixo": 84.0,
+     "bonus_coletivo": 12.46,
+     "total": 447.46,
+     "preco_conta_sobra_35": 940.0,
+     "preco_alvo_40": 1050.0
+    },
+    "candidatos": {
+     "tabela_c1": 430.0,
+     "planilha_com_imposto": 1110.0,
+     "conta_custo_sobra_35": 940.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 430.0,
+    "preco_novo": 1110.0,
+    "fonte": "planilha 30/10",
+    "aumento_pct": 158.14,
+    "preco_urgente_novo": 2340.0,
+    "sobra_no_preco_novo_pct": 42.44
+   }
   },
   {
    "codigo": "HORA_TECNICO",
@@ -2293,7 +3214,34 @@
     "sem preço comparável em compras públicas",
     "hora avulsa tem ociosidade (espera, diagnóstico sem peça): a conta pura com 140 h faturáveis subestima"
    ],
-   "deslocamento": "à parte"
+   "deslocamento": "à parte",
+   "planilha_30_10": {
+    "sem_imposto": true,
+    "valor": 190.0,
+    "referencia": "PECAS_A_COTAR, célula L3: R$ 190 por hora de instalação, sem imposto"
+   },
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 90.0,
+     "custo_fixo": 22.5,
+     "bonus_coletivo": 3.56,
+     "total": 116.06,
+     "preco_conta_sobra_35": 250.0,
+     "preco_alvo_40": 280.0
+    },
+    "candidatos": {
+     "tabela_c1": null,
+     "planilha_com_imposto": 230.0,
+     "conta_custo_sobra_35": 250.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 190.0,
+    "preco_novo": 250.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 31.58,
+    "preco_urgente_novo": 530.0,
+    "sobra_no_preco_novo_pct": 36.33
+   }
   },
   {
    "codigo": "HORA_ENGENHEIRO",
@@ -2335,7 +3283,29 @@
     "sem preço comparável em compras públicas",
     "a planilha interna não traz hora de engenheiro; com a mesma folga usada na hora do técnico (R$ 190 sobre custo de R$ 56,25) daria cerca de R$ 560: decisão do dono"
    ],
-   "deslocamento": "à parte"
+   "deslocamento": "à parte",
+   "decisao_dono_20261101": {
+    "custo": {
+     "mao_obra": 132.0,
+     "custo_fixo": 33.0,
+     "bonus_coletivo": 3.56,
+     "total": 168.56,
+     "preco_conta_sobra_35": 360.0,
+     "preco_alvo_40": 400.0
+    },
+    "candidatos": {
+     "tabela_c1": 270.0,
+     "planilha_com_imposto": null,
+     "conta_custo_sobra_35": 360.0,
+     "piso_freezer": null
+    },
+    "preco_antes": 270.0,
+    "preco_novo": 360.0,
+    "fonte": "conta de custo",
+    "aumento_pct": 33.33,
+    "preco_urgente_novo": 760.0,
+    "sobra_no_preco_novo_pct": 35.93
+   }
   }
  ]
 }

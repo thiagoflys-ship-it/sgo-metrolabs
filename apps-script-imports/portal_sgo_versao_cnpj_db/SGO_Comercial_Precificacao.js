@@ -54,6 +54,33 @@
  *    do custo, a tela e a gestora avisam.
  *  - Faixas de prazo (Normal 10 d.u.; Urgente 3 d.u. +110%; Prioritária 5 d.u. +50%, desligada até o dono aprovar) por item ou
  *    para a proposta inteira; "Licitação ou contrato" tira o acréscimo. O acréscimo vale só para serviço.
+ *
+ * 01/11/2026 — DECISÃO DO DONO (docs/COMERCIAL_MATERIAL_DO_DONO_20261101.md, seção 0):
+ *   "Pra empresa tem que sobrar no mínimo 35%". "Os valores têm que ser os valores maiores, esses serviços estão muito baratos".
+ *   "Os 300 é missão acima de 200 km, porém temos mais 300 por colaborador de incentivo de conduta, tem que incluir e diluir, a
+ *   empresa precisa pagar esses custos". "2,50 km rodado; imposto: você tem que ver como é Goiás e como é Rio; aqui é lucro real."
+ *  - Sobra mínima 35% (margemMinPct), alvo 40% (proposta nossa, provisória). Sobra = preço dos itens − impostos (com os créditos
+ *    do produto) − comissão − custos diretos (mão de obra com custo fixo e bônus diluído, peças, viagem quando diluída). É antes
+ *    de IR e CSLL (no Lucro Real eles incidem sobre o lucro, fora desta conta). Abaixo de 35%: Caixa de decisões, só a Diretoria
+ *    aprova, qualquer que seja a alçada de desconto de quem vende.
+ *  - O item "Despesas de deslocamento e estadia" (e o frete) é repasse a custo mais impostos, sem margem (MAN-VIA-001): fica FORA
+ *    da conta da sobra (nem ajuda nem atrapalha) e o desconto geral nunca o reduz (ComP_calcular_ rateia o desconto só nos
+ *    serviços e produtos). Viagem "diluída no preço dos serviços": o custo entra no custo dos serviços e a sobra tem que cobrir.
+ *  - Preço do serviço = o MAIOR entre a tabela (catálogo ou C1), a planilha do dono de 30/10/2026 com o imposto por fora
+ *    (valor ÷ (1 − impostos de serviço)) e a conta de custo com a sobra mínima (custo ÷ (1 − impostos − comissão − 35%)).
+ *    Hora avulsa: o maior entre R$ 190 ÷ (1 − impostos) e a conta. Peça revendida: custo × (1 − créditos) ÷ (1 − impostos de
+ *    produto − comissão − 35%) (ComPr_precoProduto_), no lugar do antigo "custo ÷ 0,7 com imposto dentro". Ficha em
+ *    SGO_Comercial_Ficha.js; aplicação em produção em SGO_Comercial_Decisao20261101.js.
+ *  - Custo da hora: técnico R$ 90 (MAN-VIA-001), engenheiro R$ 132, mais o Bônus Coletivo diluído (ComPr_bonusHora_): bônus do
+ *    Programa de conduta x colaboradores ativos (mesmo filtro do fechamento da Conduta) ÷ horas faturáveis da equipe no mês.
+ *  - A "Taxa por viagem" de R$ 300 era o Incentivo de Missão em dobro: desligada (valor 0, a linha fica "não se aplica" sozinha e
+ *    não aparece na tela). Proposta antiga que gravou a taxa continua mostrando o que gravou. Fica só o Incentivo de Missão:
+ *    R$ 300 por executante por missão com trecho de 200 km ou mais a partir da sede da unidade (parâmetros da Conduta).
+ *  - Impostos por unidade emissora (Lucro Real, ComPr_polUnidade_): Goiânia/GO (padrão) e Rio de Janeiro/RJ. Serviço: PIS 1,65% +
+ *    COFINS 7,6% + ISS 5% (provisório). Produto: PIS + COFINS + ICMS (GO 19%; RJ 20% + 2% FECP) sobre o preço, menos créditos
+ *    sobre o custo (PIS/COFINS 9,25% + ICMS da compra 12%, provisório). A unidade fica na proposta (DESLOCAMENTO_JSON.unidade) e
+ *    muda a origem da distância (e o Incentivo de Missão). Proposta sem unidade = Goiânia. CBS/IBS de 2026 só em teste na nota:
+ *    nada é somado. Km R$ 2,50, alimentação R$ 100 e hotel R$ 150 seguem como estavam.
  ****************************************************/
 
 var COM_PR_FUNCOES = { TECNICO: 'Técnico', ENGENHEIRO: 'Engenheiro' };
@@ -63,12 +90,13 @@ var COM_PR_REPASSES = { ITEM: 'Item separado na proposta ("Despesas de deslocame
 var COM_PR_LINHAS = [
   { codigo: 'KM', nome: 'Km rodado (ida e volta)', unidade: 'por km', obrigatoria: true },
   { codigo: 'PEDAGIO', nome: 'Pedágios', unidade: 'por viagem (ida e volta)', obrigatoria: true },
-  // 01/11/2026 (C2): só fora da Grande Goiânia (trecho acima de taxaViagem.kmMinimo); o nome que aparece é o da política
-  { codigo: 'TAXA', nome: 'Taxa por viagem', unidade: 'por viagem', obrigatoria: true },
+  // 01/11/2026 (decisão do dono): a taxa por viagem era o Incentivo de Missão em dobro. A linha fica só para ler as propostas
+  // antigas que a gravaram; nas novas ela é "não se aplica" sozinha e não aparece na tela (ComPr_normalizar_).
+  { codigo: 'TAXA', nome: 'Taxa por viagem (proposta anterior a 01/11/2026)', unidade: 'por viagem', obrigatoria: true },
   { codigo: 'ALIMENTACAO', nome: 'Alimentação', unidade: 'por pessoa por dia', obrigatoria: true },
   { codigo: 'DIARIA', nome: 'Diárias', unidade: 'por pessoa por dia', obrigatoria: true, porFuncao: true },
   { codigo: 'HOSPEDAGEM', nome: 'Hospedagem', unidade: 'por pessoa por noite', obrigatoria: true },
-  { codigo: 'CONDUTA', nome: 'Benefício do Programa de conduta', unidade: 'por colaborador por viagem', obrigatoria: true },
+  { codigo: 'CONDUTA', nome: 'Incentivo de Missão (Programa de conduta)', unidade: 'por executante por missão', obrigatoria: true },
   { codigo: 'COMBUSTIVEL', nome: 'Combustível adicional ou passagem', unidade: 'por viagem', obrigatoria: true },
   { codigo: 'HORAS', nome: 'Horas de estrada (mão de obra)', unidade: 'por hora por pessoa', obrigatoria: false, porFuncao: true },
   { codigo: 'OUTROS', nome: 'Outros custos da viagem', unidade: 'total', obrigatoria: false }
@@ -119,7 +147,10 @@ function ComPr_qtd_(n) { return typeof SGO_DocA4_num_ === 'function' ? SGO_DocA4
 var COM_PR_PROVISORIOS = [
   { campo: 'custoHora', nome: 'custo da hora do técnico e do engenheiro (salários reais e horas faturáveis)' },
   { campo: 'custoFixoPct', nome: 'custo fixo sobre a mão de obra' },
-  { campo: 'taxaViagem', nome: 'o que é a taxa por viagem' },
+  // 01/11/2026: a taxa por viagem foi decidida pelo dono (era o Incentivo de Missão; desligada). Novos provisórios abaixo.
+  { campo: 'margemAlvoPct', nome: 'margem alvo de 40% (proposta nossa; a mínima de 35% é decisão do dono)' },
+  { campo: 'impostosUnidade', nome: 'ISS de 5% (Goiânia e Rio) e ICMS da compra de 12% (confirmar com o contador)' },
+  { campo: 'bonusHoras', nome: 'horas faturáveis da equipe por mês (diluição do Bônus Coletivo)' },
   { campo: 'calibracaoParceiro', nome: 'calibração feita pela equipe própria ou por parceiro' },
   { campo: 'comissaoPct', nome: 'comissão' },
   { campo: 'prioritaria', nome: 'aprovação da faixa prioritária de 5 dias úteis' },
@@ -129,7 +160,8 @@ var COM_PR_PROVISORIOS = [
   { campo: 'prazoConta', nome: 'se o prazo conta até a execução ou até o relatório' }
 ];
 /** Campos da política que, vazios, recebem o valor inicial (preenche só o que está vazio; nunca troca valor gravado). */
-var COM_PR_INICIAIS = ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses', 'margemPecasPct'];
+// 01/11/2026: impostosPct saiu da lista (vazio = imposto de serviço da unidade emissora)
+var COM_PR_INICIAIS = ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses', 'margemPecasPct'];
 
 /** Política de precificação em vigor (metodologia), completa e normalizada. */
 function ComPr_politica_(met) {
@@ -156,8 +188,138 @@ function ComPr_politica_(met) {
   p.confirmados = Array.isArray(p.confirmados) ? p.confirmados.map(Com_s_).filter(Boolean) : [];
   if (!COM_PR_REPASSES[Com_up_(p.repassePadrao)]) p.repassePadrao = 'ITEM'; else p.repassePadrao = Com_up_(p.repassePadrao);
   p.origemPadrao = Com_s_(p.origemPadrao) || 'Goiânia/GO';
+  // 01/11/2026 (decisão do dono): unidades emissoras (Lucro Real) e o Bônus Coletivo diluído na hora
+  p.unidades = ComPr_unidadesNormal_(p.unidades);
+  p.unidadePadrao = p.unidades[Com_up_(p.unidadePadrao)] ? Com_up_(p.unidadePadrao) : (p.unidades.GO ? 'GO' : Object.keys(p.unidades)[0]);
+  var bc = p.bonusConduta && typeof p.bonusConduta === 'object' ? p.bonusConduta : {}, bp = pad.bonusConduta || {};
+  p.bonusConduta = { valorMes: ComPr_num_(bc.valorMes), colaboradores: ComPr_num_(bc.colaboradores), horasFaturaveisMes: ComPr_num_(bc.horasFaturaveisMes),
+    horasPorColaboradorCampo: ComPr_num_(bc.horasPorColaboradorCampo) === null ? bp.horasPorColaboradorCampo : ComPr_num_(bc.horasPorColaboradorCampo) };
+  // impostosPct gravado = imposto de serviço fixo (todas as unidades); vazio = o da unidade padrão (o da proposta em ComPr_polUnidade_)
+  p.impostosFixoPct = p.impostosPct;
+  ComPr_aplicarUnidade_(p, p.unidadePadrao);
   p.versao = met.versao;
   return p;
+}
+
+// ------------------------------------------------------------
+// UNIDADE EMISSORA E IMPOSTOS (Lucro Real, 01/11/2026)
+// ------------------------------------------------------------
+var COM_PR_CAMPOS_UNIDADE = ['pisPct', 'cofinsPct', 'issPct', 'icmsPct', 'fecpPct', 'creditoPisCofinsPct', 'icmsCompraPct'];
+/** Tabela de unidades normalizada: cada unidade do padrão, com o que foi gravado por cima (campo vazio vale o padrão). */
+function ComPr_unidadesNormal_(u) {
+  var pad = COM_METODOLOGIA_PADRAO.precificacao.unidades || {}, g = u && typeof u === 'object' && !Array.isArray(u) ? u : {}, r = {};
+  Object.keys(pad).concat(Object.keys(g).filter(function (k) { return !pad[Com_up_(k)]; })).forEach(function (k0) {
+    var k = Com_up_(k0), b = pad[k] || {}, x = g[k] || g[k0] || {};
+    var o = { codigo: k, nome: Com_s_(x.nome) || Com_s_(b.nome) || k, origem: Com_s_(x.origem) || Com_s_(b.origem) || '' };
+    COM_PR_CAMPOS_UNIDADE.forEach(function (c) { var v = ComPr_num_(x[c]); o[c] = v === null ? (ComPr_num_(b[c]) === null ? 0 : ComPr_num_(b[c])) : v; });
+    r[k] = o;
+  });
+  return r;
+}
+/** Percentuais da unidade: { servicoPct, produtoPct, creditoPct } (soma das alíquotas). */
+function ComPr_impostosDaUnidade_(un) {
+  var u = un || {}, n = function (c) { return Number(u[c]) || 0; };
+  return { servicoPct: Math.round((n('pisPct') + n('cofinsPct') + n('issPct')) * 10000) / 10000,
+    produtoPct: Math.round((n('pisPct') + n('cofinsPct') + n('icmsPct') + n('fecpPct')) * 10000) / 10000,
+    creditoPct: Math.round((n('creditoPisCofinsPct') + n('icmsCompraPct')) * 10000) / 10000 };
+}
+/** Põe na política (no lugar) os impostos e a origem da unidade. */
+function ComPr_aplicarUnidade_(p, cod) {
+  var k = p.unidades[Com_up_(cod)] ? Com_up_(cod) : p.unidadePadrao, un = p.unidades[k], im = ComPr_impostosDaUnidade_(un);
+  p.unidade = k; p.unidadeNome = un.nome;
+  p.impostosServicoPct = p.impostosFixoPct === null || p.impostosFixoPct === undefined ? im.servicoPct : p.impostosFixoPct;
+  p.impostosPct = p.impostosServicoPct;
+  p.impostosProdutoPct = im.produtoPct; p.creditoProdutoPct = im.creditoPct;
+  // a origem padrão segue a unidade (a sede de onde sai a equipe); "origemPadrao" gravada vale para a unidade padrão
+  p.origemUnidade = k === p.unidadePadrao ? (Com_s_(p.origemPadrao) || un.origem) : (un.origem || p.origemPadrao);
+  return p;
+}
+/** Cópia da política com os impostos e a origem da unidade emissora (vazio ou desconhecida = a unidade padrão, Goiânia). */
+function ComPr_polUnidade_(pol, cod) {
+  if (!pol || !pol.unidades) return pol;
+  var k = Com_up_(cod);
+  if (!pol.unidades[k]) k = pol.unidadePadrao;
+  if (pol.unidade === k) return pol;
+  var c = Object.assign({}, pol);
+  return ComPr_aplicarUnidade_(c, k);
+}
+/** Unidades para a tela: [{ codigo, nome, origem, servicoPct, produtoPct, creditoPct, ...alíquotas }]. */
+function ComPr_unidadesTela_(pol) {
+  return Object.keys(pol.unidades).map(function (k) { var u = pol.unidades[k], im = ComPr_impostosDaUnidade_(u); return Object.assign({}, u, im, { servicoTxt: Com_pct_(pol.impostosFixoPct === null || pol.impostosFixoPct === undefined ? im.servicoPct : pol.impostosFixoPct, 2), produtoTxt: Com_pct_(im.produtoPct, 2), creditoTxt: Com_pct_(im.creditoPct, 2), padrao: k === pol.unidadePadrao }); });
+}
+
+/**
+ * Preço de uma peça ou produto revendido que garante a sobra (padrão: a mínima). Lucro Real: imposto = alíquotas x preço − créditos
+ * x custo. Sobra = P − aP·P + cr·C − com·P − C ≥ m·P  =>  P = C x (1 − cr) ÷ (1 − aP − com − m). Arredonda para cima a R$ 1.
+ * null quando a conta não fecha.
+ */
+function ComPr_precoProduto_(custo, pol, margemPct) {
+  var c = Number(custo) || 0;
+  if (!(c > 0)) return 0;
+  var m = margemPct === undefined || margemPct === null ? Number(pol.margemMinPct) || 0 : Number(margemPct) || 0;
+  var d = 1 - ((Number(pol.impostosProdutoPct) || 0) + (Number(pol.comissaoPct) || 0) + m) / 100;
+  if (!(d > 0.05)) return null;
+  return ComPr_arredondarCima_(c * (1 - (Number(pol.creditoProdutoPct) || 0) / 100) / d, 1);
+}
+/** Preço de serviço que garante a sobra (padrão: a mínima): custo ÷ (1 − impostos de serviço − comissão − margem). Sem arredondar. */
+function ComPr_precoServicoConta_(custo, pol, margemPct) {
+  var c = Number(custo) || 0;
+  if (!(c > 0)) return 0;
+  var m = margemPct === undefined || margemPct === null ? Number(pol.margemMinPct) || 0 : Number(margemPct) || 0;
+  var d = 1 - ((Number(pol.impostosServicoPct !== undefined ? pol.impostosServicoPct : pol.impostosPct) || 0) + (Number(pol.comissaoPct) || 0) + m) / 100;
+  return d > 0.05 ? Com_r2_(c / d) : null;
+}
+/** Piso de um item da proposta (o preço unitário que garante a sobra mínima); null sem custo ou item automático. */
+function ComPr_pisoItem_(i, pol) {
+  if (!i || i.auto || i.custoUnitario === null || i.custoUnitario === undefined || i.custoUnitario === '') return null;
+  var c = Number(i.custoUnitario) || 0;
+  if (!(c > 0)) return null;
+  return i.tipo === 'PRODUTO' ? ComPr_precoProduto_(c, pol) : (function () { var v = ComPr_precoServicoConta_(c, pol); return v === null ? null : ComPr_arredondarCima_(v, 0.01); })();
+}
+
+// ------------------------------------------------------------
+// BÔNUS COLETIVO DILUÍDO NA HORA (01/11/2026)
+// ------------------------------------------------------------
+var COM_PR_BONUS_MEMO = null;
+var COM_PR_HORAS_RESERVA = 1600; // POL-BON-001: R$ 68.400 por ano ÷ R$ 3,56 por hora ≈ 1.600 h faturadas por mês na empresa
+/**
+ * Custo do Bônus Coletivo por hora faturável: { valor, fonteValor, colaboradores, fonteColaboradores, campo, horas, fonteHoras,
+ * porHora, provisorio }. valor = bônus mensal por colaborador (Programa de conduta, VALOR_BONUS_COLETIVO; reserva: a política ou
+ * R$ 300); colaboradores = ativos pelo mesmo filtro do fechamento da Conduta (SGO_Conduta_Fechamento.js); horas = o campo da
+ * política, ou 140 h x colaboradores de campo (técnico, metrologia ou área técnica), ou 1.600 h (provisório). Nunca lança.
+ */
+function ComPr_bonusHora_(pol) {
+  pol = pol || ComPr_politica_();
+  var b = pol.bonusConduta || {};
+  var chave = JSON.stringify([b.valorMes, b.colaboradores, b.horasFaturaveisMes, b.horasPorColaboradorCampo]);
+  if (COM_PR_BONUS_MEMO && COM_PR_BONUS_MEMO.chave === chave && Date.now() - COM_PR_BONUS_MEMO.em < 20000) return COM_PR_BONUS_MEMO.r;
+  var r = { valor: null, fonteValor: '', colaboradores: null, fonteColaboradores: '', campo: 0, horas: null, fonteHoras: '', porHora: 0, provisorio: false };
+  if (b.valorMes !== null && b.valorMes !== undefined) { r.valor = b.valorMes; r.fonteValor = 'política de precificação'; }
+  else {
+    try {
+      if (typeof Conduta_obterParametros_ === 'function' && typeof CONDUTA_SHEETS !== 'undefined' && CONDUTA_SHEETS) {
+        var v = ComPr_num_((Conduta_obterParametros_() || {}).VALOR_BONUS_COLETIVO);
+        if (v !== null) { r.valor = v; r.fonteValor = 'Programa de conduta (Bônus Coletivo)'; }
+      }
+    } catch (e) { /* vale a reserva */ }
+    if (r.valor === null) { r.valor = 300; r.fonteValor = 'reserva (R$ 300 do POL-BON-001; o Programa de conduta não respondeu)'; }
+  }
+  var ativos = [], campo = 0;
+  try {
+    var generica = function (u) { if (typeof Conduta_ehContaGenerica_ === 'function') return Conduta_ehContaGenerica_(u); var l = Com_s_(u.USUARIO).toLowerCase(), n = Com_s_(u.NOME).toLowerCase(); return l === 'admin' || n === 'administrador'; };
+    ativos = Com_ler_(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) { return Com_up_(u.STATUS) === 'ATIVO' && Com_up_(u.PERFIL) !== 'CLIENTE' && !generica(u); });
+    campo = ativos.filter(function (u) { var pf = Com_up_(u.PERFIL), ar = Com_up_(u.AREA); return pf === 'TECNICO' || pf === 'METROLOGIA' || ar === 'TECNICA'; }).length;
+  } catch (e2) { ativos = []; }
+  if (b.colaboradores !== null && b.colaboradores !== undefined) { r.colaboradores = b.colaboradores; r.fonteColaboradores = 'política de precificação'; }
+  else { r.colaboradores = ativos.length; r.fonteColaboradores = 'colaboradores ativos no cadastro (mesmo filtro do fechamento da Conduta)'; }
+  r.campo = campo;
+  if (b.horasFaturaveisMes !== null && b.horasFaturaveisMes !== undefined && b.horasFaturaveisMes > 0) { r.horas = b.horasFaturaveisMes; r.fonteHoras = 'política de precificação'; }
+  else if (campo > 0) { r.horas = campo * (Number(b.horasPorColaboradorCampo) || 140); r.fonteHoras = ComPr_qtd_(Number(b.horasPorColaboradorCampo) || 140) + ' h x ' + Com_plural_(campo, 'colaborador de campo', 'colaboradores de campo') + ' (provisório)'; r.provisorio = true; }
+  else { r.horas = COM_PR_HORAS_RESERVA; r.fonteHoras = 'valor provisório de ' + ComPr_qtd_(COM_PR_HORAS_RESERVA) + ' h (base do POL-BON-001; ninguém de campo no cadastro)'; r.provisorio = true; }
+  r.porHora = r.horas > 0 ? Com_r2_(r.valor * r.colaboradores / r.horas) : 0;
+  r.totalMes = Com_r2_(r.valor * r.colaboradores);
+  COM_PR_BONUS_MEMO = { chave: chave, em: Date.now(), r: r };
+  return r;
 }
 
 /** 01/11/2026 (C2): faixas de prazo normalizadas (faixa que faltar vem do padrão; a Normal fica sempre ligada e sem acréscimo). */
@@ -251,7 +413,7 @@ function ComPr_politicaIncompleta_(pol) {
   f(pol.valorKm, 'valorKm', 'valor por km rodado');
   f(pol.alimentacaoPessoaDia, 'alimentacaoPessoaDia', 'alimentação por pessoa por dia');
   f(pol.hospedagemPessoaNoite, 'hospedagemPessoaNoite', 'hospedagem por pessoa por noite');
-  f(pol.impostosPct, 'impostosPct', 'impostos sobre o faturamento (%)');
+  f(pol.impostosPct, 'unidades', 'impostos da unidade emissora (%)');
   f(pol.margemMinPct, 'margemMinPct', 'margem mínima (%)');
   f(pol.margemAlvoPct, 'margemAlvoPct', 'margem alvo (%)');
   return l;
@@ -305,7 +467,28 @@ function ComPr_validarPolitica_(pr) {
     var fl = ComPr_prazoNormal_(pz).faixas, nor = fl[0];
     fl.slice(1).forEach(function (fx) { if (fx.ativa && fx.diasUteis >= nor.diasUteis) throw new Error('a faixa ' + fx.nome + ' (' + fx.diasUteis + ' dias úteis) precisa ser mais rápida que a Normal (' + nor.diasUteis + ' dias úteis). Corrija e salve de novo'); });
   }
-  var mn = ComPr_num_(pr.margemMinPct), al = ComPr_num_(pr.margemAlvoPct), im = (ComPr_num_(pr.impostosPct) || 0) + (ComPr_num_(pr.comissaoPct) || 0);
+  // 01/11/2026 (decisão do dono): impostos por unidade emissora e o Bônus Coletivo diluído na hora
+  if (pr.unidades !== undefined && pr.unidades !== null) {
+    if (typeof pr.unidades !== 'object' || Array.isArray(pr.unidades)) throw new Error('na política de precificação, a tabela de impostos por unidade veio num formato inválido. Atualize a tela e salve de novo');
+    Object.keys(pr.unidades).forEach(function (k) {
+      var u = pr.unidades[k] || {}, nome = Com_s_(u.nome) || k;
+      if (typeof u !== 'object' || Array.isArray(u)) throw new Error('na política de precificação, a unidade ' + k + ' veio num formato inválido. Atualize a tela e salve de novo');
+      if (Com_s_(u.nome).length > 60 || Com_s_(u.origem).length > 200) throw new Error('na política de precificação, o nome ou a origem da unidade ' + nome + ' está longo demais. Resuma e salve de novo');
+      COM_PR_CAMPOS_UNIDADE.forEach(function (c) { pct(u[c], c.replace('Pct', '').replace('creditoPisCofins', 'crédito de PIS/COFINS').replace('icmsCompra', 'ICMS da compra').replace('fecp', 'FECP').replace('pis', 'PIS').replace('cofins', 'COFINS').replace('iss', 'ISS').replace('icms', 'ICMS') + ' da unidade ' + nome, 40); });
+    });
+    if (Com_s_(pr.unidadePadrao) && !ComPr_unidadesNormal_(pr.unidades)[Com_up_(pr.unidadePadrao)]) throw new Error('na política de precificação, a unidade padrão "' + Com_s_(pr.unidadePadrao) + '" não está na tabela de unidades. Escolha Goiânia ou Rio de Janeiro e salve de novo');
+  }
+  if (pr.bonusConduta !== undefined && pr.bonusConduta !== null) {
+    var bc = pr.bonusConduta;
+    if (typeof bc !== 'object' || Array.isArray(bc)) throw new Error('na política de precificação, o Bônus Coletivo veio num formato inválido. Atualize a tela e salve de novo');
+    dinheiro(bc.valorMes, 'Bônus Coletivo por colaborador por mês');
+    var nb = function (v, nome, min, max) { if (v === null || v === undefined || v === '') return; var x = Com_num_(v); if (!(isFinite(x) && x >= min && x <= max)) throw new Error('na política de precificação, "' + nome + '" precisa ficar entre ' + min + ' e ' + SGO_DocA4_num_(max, 0) + ' (ou em branco para o sistema calcular). Corrija e salve de novo'); };
+    nb(bc.colaboradores, 'colaboradores que recebem o Bônus Coletivo', 0, 1000); nb(bc.horasFaturaveisMes, 'horas faturáveis da equipe por mês', 1, 100000); nb(bc.horasPorColaboradorCampo, 'horas faturáveis por colaborador de campo', 1, 300);
+  }
+  var mn = ComPr_num_(pr.margemMinPct), al = ComPr_num_(pr.margemAlvoPct);
+  var imFixo = ComPr_num_(pr.impostosPct), uns = ComPr_unidadesNormal_(pr.unidades), imMax = 0;
+  Object.keys(uns).forEach(function (k) { var x = ComPr_impostosDaUnidade_(uns[k]); imMax = Math.max(imMax, imFixo === null ? x.servicoPct : imFixo, x.produtoPct); });
+  var im = imMax + (ComPr_num_(pr.comissaoPct) || 0);
   if (mn !== null && al !== null && al < mn) throw new Error('na política de precificação, a margem alvo (' + Com_pct_(al, 1) + ') não pode ser menor que a margem mínima (' + Com_pct_(mn, 1) + '). Corrija e salve de novo');
   if (im + Math.max(mn || 0, al || 0) >= 95) throw new Error('na política de precificação, impostos, comissão e margem passam de 95% do preço: a conta do preço mínimo não fecha. Confira os percentuais e salve de novo');
   var v = ComPr_num_(pr.velocidadeMediaKmh);
@@ -356,9 +539,13 @@ function ComPr_referencias_() {
   } catch (e) { return []; }
 }
 
-/** Sugestão de destino e km para a proposta: unidade (cidade/UF), endereço e a referência da Conduta, se houver. */
-function ComPr_sugestaoDestino_(p, refs) {
-  refs = refs || ComPr_referencias_();
+/**
+ * Sugestão de destino e km para a proposta: unidade (cidade/UF), endereço e a referência da Conduta, se houver. 01/11/2026: a
+ * tabela de distâncias da Conduta mede a partir da sede de Goiânia; com outra unidade emissora (Rio de Janeiro), o km não é
+ * sugerido (o vendedor digita a distância a partir da sede dela).
+ */
+function ComPr_sugestaoDestino_(p, refs, unidade) {
+  refs = unidade && Com_up_(unidade) !== 'GO' ? [] : (refs || ComPr_referencias_());
   var un = Com_s_(p.UNIDADE_ID) ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, Com_s_(p.UNIDADE_ID)) || {} : {};
   var cli = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, Com_s_(p.CLIENTE_ID)) || {};
   var cidade = Com_s_(un.CIDADE), uf = Com_s_(un.UF);
@@ -383,7 +570,7 @@ function ComPr_horaEstrada_(pol, f) {
 
 /** Vazio: proposta sem nada preenchido sobre a viagem. */
 function ComPr_vazio_(pol) {
-  return { v: 1, viagem: { ha: null, motivoSem: '', equipe: { TECNICO: 0, ENGENHEIRO: 0 }, transporte: 'VEICULO_EMPRESA', origem: pol.origemPadrao, destino: '', kmTrecho: null, kmFonte: '',
+  return { v: 1, unidade: pol.unidade || pol.unidadePadrao || 'GO', viagem: { ha: null, motivoSem: '', equipe: { TECNICO: 0, ENGENHEIRO: 0 }, transporte: 'VEICULO_EMPRESA', origem: pol.origemUnidade || pol.origemPadrao, destino: '', kmTrecho: null, kmFonte: '',
     viagens: 1, dias: 1, noites: 0, linhas: {} }, frete: { valor: null, nsa: false, motivo: '' }, repasse: pol.repassePadrao };
 }
 
@@ -394,11 +581,23 @@ function ComPr_vazio_(pol) {
  */
 function ComPr_normalizar_(d, anterior, pol, ctx) {
   ctx = ctx || {};
+  d = d && typeof d === 'object' ? d : {};
+  // 01/11/2026: unidade emissora (Goiânia padrão; Rio de Janeiro quando a filial vende). Proposta antiga sem unidade = Goiânia.
+  var unAnt = anterior && typeof anterior === 'object' && Com_up_(anterior.unidade) && pol.unidades && pol.unidades[Com_up_(anterior.unidade)] ? Com_up_(anterior.unidade) : (pol.unidadePadrao || 'GO');
+  var unNova = unAnt;
+  if (d.unidade !== undefined && Com_s_(d.unidade) !== '') {
+    unNova = Com_up_(d.unidade);
+    if (pol.unidades && !pol.unidades[unNova]) throw new Error('Não foi possível salvar: a unidade emissora "' + Com_s_(d.unidade) + '" não existe. Escolha ' + Object.keys(pol.unidades).map(function (k) { return pol.unidades[k].nome; }).join(' ou '));
+  }
+  var polAnt = ComPr_polUnidade_(pol, unAnt);
+  pol = ComPr_polUnidade_(pol, unNova);
   var base = anterior && typeof anterior === 'object' && anterior.viagem ? Com_copia_(anterior) : ComPr_vazio_(pol);
   var vz = ComPr_vazio_(pol);
+  base.unidade = unNova;
+  // trocou a unidade e a origem era a padrão da unidade anterior: a origem passa a ser a sede da unidade nova
+  if (unNova !== unAnt && base.viagem && (!Com_s_(base.viagem.origem) || Com_s_(base.viagem.origem) === Com_s_(polAnt.origemUnidade))) base.viagem.origem = pol.origemUnidade;
   base.viagem = Object.assign(vz.viagem, base.viagem || {}); base.viagem.linhas = base.viagem.linhas || {}; base.viagem.equipe = Object.assign({ TECNICO: 0, ENGENHEIRO: 0 }, base.viagem.equipe || {});
   base.frete = Object.assign(vz.frete, base.frete || {});
-  d = d && typeof d === 'object' ? d : {};
   var tv = d.viagem && typeof d.viagem === 'object' ? d.viagem : {}, v = base.viagem;
   if (tv.ha !== undefined) {
     var h = Com_up_(tv.ha);
@@ -408,7 +607,7 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
   if (tv.tecnicos !== undefined) v.equipe.TECNICO = ComPr_inteiro_(tv.tecnicos, 'o número de técnicos', 0, 20, 0);
   if (tv.engenheiros !== undefined) v.equipe.ENGENHEIRO = ComPr_inteiro_(tv.engenheiros, 'o número de engenheiros', 0, 20, 0);
   if (tv.transporte !== undefined) { var tr = Com_up_(tv.transporte); if (tr && !COM_PR_TRANSPORTES[tr]) throw new Error('Não foi possível salvar: o transporte "' + Com_s_(tv.transporte) + '" não existe. Escolha veículo da empresa, veículo locado, avião, ônibus ou outro'); v.transporte = tr || 'VEICULO_EMPRESA'; }
-  if (tv.origem !== undefined) v.origem = Com_texto_(tv.origem, 200) || pol.origemPadrao;
+  if (tv.origem !== undefined) v.origem = Com_texto_(tv.origem, 200) || pol.origemUnidade || pol.origemPadrao;
   if (tv.destino !== undefined) v.destino = Com_texto_(tv.destino, 300);
   if (tv.kmTrecho !== undefined) {
     var km = Com_s_(tv.kmTrecho) === '' ? null : Com_num_(tv.kmTrecho);
@@ -422,6 +621,8 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
   var tl = tv.linhas && typeof tv.linhas === 'object' ? tv.linhas : {};
   var benef = ctx.beneficio || ComPr_beneficio_(pol);
   COM_PR_LINHAS.forEach(function (L) {
+    // 01/11/2026 (decisão do dono): a taxa por viagem era o Incentivo de Missão em dobro; nas gravações novas fica sempre fora
+    if (L.codigo === 'TAXA') { v.linhas.TAXA = { nsa: true, auto: true, motivo: 'Não se aplica: o R$ 300 por viagem é o Incentivo de Missão, que já está na linha do incentivo (decisão do dono, 01/11/2026).', fonte: '', valor: 0 }; return; }
     var a = v.linhas[L.codigo] || {}, t = tl[L.codigo] || {}, n = { nsa: false, motivo: '', auto: false, fonte: '' };
     // a tela devolve com "auto" a linha que estava em "não se aplica" automático: não é escolha do vendedor
     var telaAuto = !!t.auto && Com_s_(t.auto) !== 'false';
@@ -460,11 +661,9 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
     if (L.codigo === 'PEDAGIO' && v.kmTrecho === 0) auto = 'Atendimento local: sem pedágio.';
     if (L.codigo === 'HOSPEDAGEM' && v.noites === 0) auto = 'Sem pernoite (0 noite por viagem).';
     if (L.codigo === 'COMBUSTIVEL' && v.transporte === 'VEICULO_EMPRESA') auto = 'Veículo da empresa: o valor por km rodado já cobre o combustível.';
-    if (L.codigo === 'CONDUTA' && v.kmTrecho !== null && v.kmTrecho < benef.kmMinimo) auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, abaixo do mínimo de ' + ComPr_qtd_(benef.kmMinimo) + ' km do Programa de conduta: não há benefício nesta viagem.';
-    // 01/11/2026 (C2): taxa só fora da Grande Goiânia; diária sem valor na política; horas de estrada só em trecho longo
-    if (L.codigo === 'TAXA' && v.kmTrecho !== null && v.kmTrecho <= pol.taxaViagem.kmMinimo) auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.taxaViagem.kmMinimo) + ' km (Grande Goiânia): sem taxa por viagem.';
-    if (L.codigo === 'TAXA' && !auto && !(Number(pol.taxaViagem.valor) > 0) && n.fonte !== 'VENDEDOR') auto = 'A política não cobra taxa por viagem.';
-    if (L.codigo === 'ALIMENTACAO' && pol.alimentacaoForaDaRegiao && v.kmTrecho !== null && v.kmTrecho <= pol.taxaViagem.kmMinimo && n.fonte !== 'VENDEDOR') auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.taxaViagem.kmMinimo) + ' km (Grande Goiânia): sem alimentação.';
+    if (L.codigo === 'CONDUTA' && v.kmTrecho !== null && v.kmTrecho < benef.kmMinimo) auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, abaixo do mínimo de ' + ComPr_qtd_(benef.kmMinimo) + ' km do Programa de conduta: não há Incentivo de Missão nesta viagem.';
+    // 01/11/2026 (C2): alimentação só fora da região da sede; diária sem valor na política; horas de estrada só em trecho longo
+    if (L.codigo === 'ALIMENTACAO' && pol.alimentacaoForaDaRegiao && v.kmTrecho !== null && v.kmTrecho <= pol.taxaViagem.kmMinimo && n.fonte !== 'VENDEDOR') auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.taxaViagem.kmMinimo) + ' km (região da sede): sem alimentação.';
     if (L.codigo === 'DIARIA' && !vendedorNsa && Object.keys(COM_PR_FUNCOES).every(function (fu) { return !(Number(v.equipe[fu]) > 0) || (n.fonteFuncao[fu] !== 'VENDEDOR' && pol.diariaPessoaDia[fu] === null); }))
       auto = 'Sem diária em dinheiro: a alimentação e a hospedagem cobrem a estadia (política de precificação).';
     if (L.codigo === 'HORAS' && !vendedorNsa && n.horasFonte !== 'VENDEDOR' && Object.keys(COM_PR_FUNCOES).every(function (fu) { return n.fonteFuncao[fu] !== 'VENDEDOR'; }) && v.kmTrecho !== null && v.kmTrecho <= (pol.estradaKmMinimo || 0))
@@ -501,7 +700,10 @@ function ComPr_calcularViagem_(desl, pol) {
   var T = Number(v.equipe.TECNICO) || 0, E = Number(v.equipe.ENGENHEIRO) || 0, P = T + E, km = Number(v.kmTrecho) || 0, vg = Number(v.viagens) || 1, dias = Number(v.dias) || 1, noites = Number(v.noites) || 0;
   r.pessoas = P;
   COM_PR_LINHAS.forEach(function (L) {
-    var l = v.linhas[L.codigo] || { valor: null, nsa: false }, x = { codigo: L.codigo, nome: L.codigo === 'TAXA' ? pol.taxaViagem.rotulo : L.nome, unidade: L.unidade, nsa: !!l.nsa, motivo: Com_s_(l.motivo), auto: !!l.auto, fonte: Com_s_(l.fonte), total: 0, quantidade: 0, quantidadeTxt: '', valorTxt: '' };
+    var l = v.linhas[L.codigo] || { valor: null, nsa: false };
+    // 01/11/2026: a taxa por viagem só aparece na proposta antiga que a gravou (com valor e sem "não se aplica")
+    if (L.codigo === 'TAXA' && (l.nsa || !(Number(l.valor) > 0))) return;
+    var x = { codigo: L.codigo, nome: L.nome, unidade: L.unidade, nsa: !!l.nsa, motivo: Com_s_(l.motivo), auto: !!l.auto, fonte: Com_s_(l.fonte), total: 0, quantidade: 0, quantidadeTxt: '', valorTxt: '' };
     var val = Number(l.valor) || 0;
     if (L.codigo === 'KM') { x.quantidade = km * 2 * vg; x.quantidadeTxt = ComPr_qtd_(x.quantidade) + ' km (' + ComPr_qtd_(km) + ' km x 2' + (vg > 1 ? ' x ' + vg + ' viagens' : '') + ')'; x.total = x.quantidade * val; }
     else if (L.codigo === 'PEDAGIO') { x.quantidade = vg; x.quantidadeTxt = Com_plural_(vg, 'viagem', 'viagens'); x.total = vg * val; }
@@ -612,6 +814,7 @@ function ComPr_detalheCliente_(v, calc) {
 /** Itens automáticos da proposta pelo repasse ITEM: viagem e frete (com o custo interno). Lista vazia no repasse diluído. */
 function ComPr_itensAuto_(desl, pol) {
   if (!desl || desl.repasse !== 'ITEM') return [];
+  pol = ComPr_polUnidade_(pol, desl.unidade);
   var l = [], calc = ComPr_calcularViagem_(desl, pol);
   if (calc.ha && calc.custo > 0) {
     var pv = ComPr_precoRepasse_(calc.custo, pol);
@@ -633,47 +836,65 @@ function ComPr_itensAuto_(desl, pol) {
 // MARGEM
 // ------------------------------------------------------------
 /**
- * Precificação da proposta: custo (itens com custo + viagem + frete), impostos, preço, margem depois dos impostos e o que
- * a viagem deixou de repassar. Itens sem custo deixam a margem parcial (otimista). Sem Date cru.
+ * Precificação da proposta (01/11/2026, decisão do dono). Sobra = receita dos itens (serviços e produtos, já com o desconto geral)
+ * − impostos (serviço: % da unidade sobre a receita; produto: % da unidade sobre a receita − créditos sobre o custo) − comissão −
+ * custos diretos (itens com custo e, quando a viagem é diluída, o custo da viagem e do frete). O item de deslocamento e o frete
+ * automáticos são repasse a custo mais impostos: ficam FORA da sobra (receita e custo) e o desconto geral não os reduz. A sobra
+ * é antes de IR e CSLL. Itens sem custo deixam a margem parcial (otimista). Sem Date cru.
  */
 function ComPr_analise_(itens, descontoGeral, desl, pol) {
-  pol = pol || ComPr_politica_();
+  pol = ComPr_polUnidade_(pol || ComPr_politica_(), desl && desl.unidade);
   var calc = ComP_calcular_(itens, descontoGeral);
-  var total = calc.total, imp = pol.impostosPct === null ? 0 : pol.impostosPct, com = pol.comissaoPct === null || pol.comissaoPct === undefined ? 0 : pol.comissaoPct;
-  var custoItens = 0, semCusto = 0, receitaAuto = {};
-  var fator = calc.subtotal > 0 ? total / calc.subtotal : 1;
+  var total = calc.total, imp = pol.impostosPct === null || pol.impostosPct === undefined ? 0 : pol.impostosPct, com = pol.comissaoPct === null || pol.comissaoPct === undefined ? 0 : pol.comissaoPct;
+  var impP = Number(pol.impostosProdutoPct) || 0, cr = Number(pol.creditoProdutoPct) || 0, mn = pol.margemMinPct, al = pol.margemAlvoPct;
+  var custoItens = 0, semCusto = 0, receitaAuto = {}, receitaServ = 0, receitaProd = 0, impItens = 0, custoServ = 0, custoProdBase = 0;
+  var fator = calc.fatorItens === undefined ? 1 : calc.fatorItens;
   (itens || []).forEach(function (i) {
-    var q = Number(i.quantidade) || 0;
-    if (i.auto) { receitaAuto[i.auto] = (receitaAuto[i.auto] || 0) + q * (Number(i.precoUnitario) || 0) * fator; return; }
-    if (i.custoUnitario !== null && i.custoUnitario !== undefined && i.custoUnitario !== '') custoItens += q * Number(i.custoUnitario);
-    else semCusto++;
+    var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
+    if (i.auto) { receitaAuto[i.auto] = (receitaAuto[i.auto] || 0) + q * pu; return; }
+    var rec = q * pu * fator, temCusto = i.custoUnitario !== null && i.custoUnitario !== undefined && i.custoUnitario !== '', c = temCusto ? q * Number(i.custoUnitario) : 0;
+    if (i.tipo === 'PRODUTO') { receitaProd += rec; impItens += rec * impP / 100 - c * cr / 100; custoProdBase += c * (1 - cr / 100); }
+    else { receitaServ += rec; impItens += rec * imp / 100; custoServ += c; }
+    if (temCusto) custoItens += c; else semCusto++;
   });
   var cv = ComPr_calcularViagem_(desl, pol), cf = ComPr_custoFrete_(desl);
-  var custoDesl = Com_r2_(cv.custo + cf), impostos = Com_r2_(total * imp / 100), custoTotal = Com_r2_(custoItens + custoDesl);
-  // 01/11/2026 (C2): comissão sobre a venda dos itens (o deslocamento e o frete são repasse de custo: sem comissão)
-  var receitaAutoTotal = (receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0);
-  var comissao = Com_r2_(Math.max(0, total - receitaAutoTotal) * com / 100);
-  var margemValor = Com_r2_(total - impostos - comissao - custoTotal);
-  var margemPct = total > 0 ? Math.round(margemValor / total * 10000) / 100 : null;
-  var mn = pol.margemMinPct, al = pol.margemAlvoPct;
-  var abaixoMin = mn !== null && margemPct !== null && margemPct < mn - 1e-9;
-  var abaixoAlvo = al !== null && margemPct !== null && margemPct < al - 1e-9;
-  var divisor = function (m) { var x = 1 - imp / 100 - com / 100 - (m || 0) / 100; return x > 0.05 ? x : null; };
-  var precoMin = semCusto === 0 && mn !== null && divisor(mn) ? Com_r2_(custoTotal / divisor(mn)) : null;
-  var precoAlvo = semCusto === 0 && al !== null && divisor(al) ? Com_r2_(custoTotal / divisor(al)) : null;
+  var custoDesl = Com_r2_(cv.custo + cf), custoTotal = Com_r2_(custoItens + custoDesl);
+  // custo coberto pelo item automático (repasse) fica fora da sobra; o resto (repasse diluído, ou sem o item) entra no custo
+  var foraViagem = receitaAuto.DESLOCAMENTO !== undefined ? cv.custo : 0, foraFrete = receitaAuto.FRETE !== undefined ? cf : 0;
+  var custoDiluido = Com_r2_(Math.max(0, custoDesl - foraViagem - foraFrete));
+  var receitaAutoTotal = Com_r2_((receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0));
+  var receitaItens = Com_r2_(receitaServ + receitaProd);
+  var impostosItens = Com_r2_(impItens), impostosRepasse = Com_r2_(receitaAutoTotal * imp / 100);
+  var impostos = Com_r2_(impostosItens + impostosRepasse);
+  // comissão sobre a venda dos itens (o deslocamento e o frete são repasse de custo: sem comissão)
+  var comissao = Com_r2_(Math.max(0, receitaItens) * com / 100);
+  var margemValor = Com_r2_(receitaItens - impostosItens - comissao - custoItens - custoDiluido);
+  var margemPct = receitaItens > 0 ? Math.round(margemValor / receitaItens * 10000) / 100 : null;
+  var abaixoMin = mn !== null && mn !== undefined && margemPct !== null && margemPct < mn - 1e-9;
+  var abaixoAlvo = al !== null && al !== undefined && margemPct !== null && margemPct < al - 1e-9;
+  // preço dos itens que garante a margem m: serviços (e viagem diluída) ÷ (1 − imp − com − m); produtos x (1 − créditos) ÷ (1 − impP − com − m)
+  var precoItensPara = function (m) {
+    if (semCusto || m === null || m === undefined) return null;
+    var dS = 1 - (imp + com + m) / 100, dP = 1 - (impP + com + m) / 100;
+    if (!(dS > 0.05) || (custoProdBase > 0 && !(dP > 0.05))) return null;
+    return Com_r2_((custoServ + custoDiluido) / dS + (custoProdBase > 0 ? custoProdBase / dP : 0));
+  };
+  var piMin = precoItensPara(mn), piAlvo = precoItensPara(al);
+  var precoMin = piMin === null ? null : Com_r2_(piMin + receitaAutoTotal), precoAlvo = piAlvo === null ? null : Com_r2_(piAlvo + receitaAutoTotal);
   var repasse = desl ? desl.repasse : '';
   var naoRepassado = null;
-  if (repasse === 'ITEM' && custoDesl > 0) {
-    var receitaLiq = ((receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0)) * (1 - imp / 100);
-    naoRepassado = Com_r2_(Math.max(0, custoDesl - receitaLiq));
-  }
-  var r = { total: total, impostosPct: pol.impostosPct, impostos: impostos, semImpostos: pol.impostosPct === null, comissaoPct: com, comissao: comissao, custoItens: Com_r2_(custoItens), custoViagem: cv.custo, custoFrete: cf, custoDeslocamento: custoDesl,
+  if (foraViagem + foraFrete > 0) naoRepassado = Com_r2_(Math.max(0, foraViagem + foraFrete - receitaAutoTotal * (1 - imp / 100)));
+  var r = { total: total, impostosPct: pol.impostosPct, impostos: impostos, impostosItens: impostosItens, impostosRepasse: impostosRepasse, semImpostos: pol.impostosPct === null || pol.impostosPct === undefined,
+    impostosServicoPct: imp, impostosProdutoPct: impP, creditoProdutoPct: cr, unidade: pol.unidade, unidadeNome: pol.unidadeNome,
+    comissaoPct: com, comissao: comissao, custoItens: Com_r2_(custoItens), custoViagem: cv.custo, custoFrete: cf, custoDeslocamento: custoDesl, custoDiluido: custoDiluido,
+    receitaItens: receitaItens, receitaServicos: Com_r2_(receitaServ), receitaProdutos: Com_r2_(receitaProd),
     beneficio: cv.beneficio, custoTotal: custoTotal, margemValor: margemValor, margemPct: margemPct, completa: semCusto === 0, itensSemCusto: semCusto,
-    margemMinPct: mn, margemAlvoPct: al, abaixoMin: abaixoMin, abaixoAlvo: abaixoAlvo, precoMinimo: precoMin, precoAlvo: precoAlvo, repasse: repasse,
-    receitaDeslocamento: Com_r2_((receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0)), naoRepassado: naoRepassado };
+    margemMinPct: mn, margemAlvoPct: al, abaixoMin: abaixoMin, abaixoAlvo: abaixoAlvo, precoMinimo: precoMin, precoAlvo: precoAlvo, precoMinimoItens: piMin, precoAlvoItens: piAlvo, repasse: repasse,
+    receitaDeslocamento: receitaAutoTotal, naoRepassado: naoRepassado };
   r.situacao = margemPct === null ? 'SEM_VALOR' : abaixoMin ? 'ABAIXO_MIN' : abaixoAlvo ? 'ABAIXO_ALVO' : (mn === null && al === null ? 'SEM_POLITICA' : 'OK');
-  r.situacaoTxt = { SEM_VALOR: 'sem valor para calcular', ABAIXO_MIN: 'abaixo da margem mínima: precisa da aprovação da Diretoria', ABAIXO_ALVO: 'acima da mínima, abaixo da margem alvo', SEM_POLITICA: 'a política ainda não tem margem mínima nem alvo', OK: 'dentro da margem alvo' }[r.situacao];
-  r.diluir = repasse === 'DILUIDO' && custoDesl > 0 ? Com_r2_(ComPr_precoRepasse_(custoDesl, Object.assign({}, pol, { arredondarPara: 0.01 }))) : 0;
+  r.situacaoTxt = { SEM_VALOR: 'sem valor para calcular', ABAIXO_MIN: 'sobra abaixo da mínima: precisa da aprovação da Diretoria', ABAIXO_ALVO: 'acima da sobra mínima, abaixo da margem alvo', SEM_POLITICA: 'a política ainda não tem margem mínima nem alvo', OK: 'dentro da margem alvo' }[r.situacao];
+  // viagem diluída: quanto somar ao preço dos serviços para a sobra mínima cobrir o custo dela (custo ÷ (1 − impostos − comissão − mínima))
+  r.diluir = repasse === 'DILUIDO' && custoDesl > 0 ? (ComPr_precoServicoConta_(custoDesl, pol) || Com_r2_(ComPr_precoRepasse_(custoDesl, Object.assign({}, pol, { arredondarPara: 0.01 })))) : 0;
   return r;
 }
 
@@ -683,26 +904,41 @@ function ComPr_daProposta_(p, pol, itens) {
   itens = itens || Com_json_(p.ITENS_JSON, []) || [];
   var desl = Com_json_(p.DESLOCAMENTO_JSON, null);
   var tipo = ComP_tipoOrcamento_(p, itens).tipo;
-  return { desl: desl, tipo: tipo, analise: ComPr_analise_(itens, p.DESCONTO_GERAL, desl, pol), checklist: ComPr_checklist_(desl, tipo, pol) };
+  // 01/11/2026: impostos e origem da unidade emissora da proposta (sem unidade gravada = Goiânia)
+  pol = ComPr_polUnidade_(pol, desl && desl.unidade);
+  return { desl: desl, tipo: tipo, pol: pol, analise: ComPr_analise_(itens, p.DESCONTO_GERAL, desl, pol), checklist: ComPr_checklist_(desl, tipo, pol) };
 }
 
 /** Fotografia gravada ao concluir (PRECIFICACAO_JSON): números do painel sem recalcular com a política nova. */
 function ComPr_fotografia_(x, pol) {
   var a = x.analise, d = x.desl || {}, v = d.viagem || {};
-  return { em: Com_agora_(), politicaVersao: pol.versao, total: a.total, custoTotal: a.custoTotal, impostos: a.impostos, margemPct: a.margemPct, completa: a.completa, abaixoMin: a.abaixoMin, abaixoAlvo: a.abaixoAlvo,
+  return { em: Com_agora_(), politicaVersao: pol.versao, unidade: a.unidade || 'GO', receitaItens: a.receitaItens, margemValor: a.margemValor, custoDiluido: a.custoDiluido, margemMinPct: a.margemMinPct,
+    total: a.total, custoTotal: a.custoTotal, impostos: a.impostos, margemPct: a.margemPct, completa: a.completa, abaixoMin: a.abaixoMin, abaixoAlvo: a.abaixoAlvo,
     custoViagem: a.custoViagem, custoFrete: a.custoFrete, beneficio: a.beneficio, repasse: a.repasse, receitaDeslocamento: a.receitaDeslocamento, naoRepassado: a.naoRepassado,
     viagem: v.ha === true, semViagemMotivo: v.ha === false ? Com_s_(v.motivoSem) : '', pessoas: (Number((v.equipe || {}).TECNICO) || 0) + (Number((v.equipe || {}).ENGENHEIRO) || 0), kmTrecho: v.kmTrecho === undefined ? null : v.kmTrecho };
 }
 
 /** Para a tela da proposta. Vendedor: os custos da viagem (ele preenche) e só a situação da margem; gestão: tudo. */
 function ComPr_paraTela_(eu, p, itens, editavel) {
-  var pol = ComPr_politica_(), x = ComPr_daProposta_(p, pol, itens);
+  var polBase = ComPr_politica_(), x = ComPr_daProposta_(p, polBase, itens), pol = x.pol || polBase;
   var desl = x.desl || ComPr_vazio_(pol), calc = ComPr_calcularViagem_(desl, pol), benef = ComPr_beneficio_(pol);
+  // 01/11/2026: a taxa por viagem só aparece na proposta antiga que a gravou com valor
+  var tx = desl.viagem && desl.viagem.linhas && desl.viagem.linhas.TAXA, mostraTaxa = !!(tx && !tx.nsa && Number(tx.valor) > 0);
   var t = { dados: desl, preenchido: !!x.desl, calculo: calc, custoFrete: ComPr_custoFrete_(desl), custoFreteTxt: Com_moeda_(ComPr_custoFrete_(desl)), checklist: x.checklist, tipo: x.tipo,
-    linhas: COM_PR_LINHAS, funcoes: COM_PR_FUNCOES, transportes: COM_PR_TRANSPORTES, repasses: COM_PR_REPASSES, beneficio: benef,
+    linhas: COM_PR_LINHAS.filter(function (L) { return L.codigo !== 'TAXA' || mostraTaxa; }), funcoes: COM_PR_FUNCOES, transportes: COM_PR_TRANSPORTES, repasses: COM_PR_REPASSES, beneficio: benef,
+    unidade: pol.unidade, unidades: Object.keys(pol.unidades).map(function (k) { return { codigo: k, nome: pol.unidades[k].nome, origem: pol.unidades[k].origem }; }),
     politica: { valorKm: pol.valorKm, alimentacaoPessoaDia: pol.alimentacaoPessoaDia, diariaPessoaDia: pol.diariaPessoaDia, hospedagemPessoaNoite: pol.hospedagemPessoaNoite, horaDeslocamento: pol.horaDeslocamento,
-      velocidadeMediaKmh: pol.velocidadeMediaKmh, origemPadrao: pol.origemPadrao, repassePadrao: pol.repassePadrao, versao: pol.versao, incompleta: ComPr_politicaIncompleta_(pol).map(function (f) { return f.nome; }),
+      velocidadeMediaKmh: pol.velocidadeMediaKmh, origemPadrao: pol.origemUnidade || pol.origemPadrao, repassePadrao: pol.repassePadrao, versao: pol.versao, incompleta: ComPr_politicaIncompleta_(pol).map(function (f) { return f.nome; }),
       taxaViagem: pol.taxaViagem, estradaKmMinimo: pol.estradaKmMinimo, horaEstrada: { TECNICO: ComPr_horaEstrada_(pol, 'TECNICO'), ENGENHEIRO: ComPr_horaEstrada_(pol, 'ENGENHEIRO') } } };
+  // 01/11/2026: itens com preço abaixo do que garante a sobra mínima (o vendedor vê só o aviso; a gestão vê o piso)
+  t.abaixoPiso = [];
+  (itens || []).forEach(function (i, k) {
+    var piso = ComPr_pisoItem_(i, pol);
+    if (piso === null || !(Number(i.precoUnitario) < piso - 0.004)) return;
+    var o = { ordem: k + 1, descricao: Com_s_(i.descricao).slice(0, 80) };
+    if (eu && eu.veCusto) { o.piso = piso; o.pisoTxt = Com_moeda_(piso); }
+    t.abaixoPiso.push(o);
+  });
   // 01/11/2026 (C2): preço digitado do deslocamento e o alerta quando fica abaixo do custo
   t.precoInformado = desl.precoInformado === undefined ? null : desl.precoInformado;
   t.abaixoDoCusto = t.precoInformado !== null && calc.custo > 0 && t.precoInformado < calc.custo - 0.004;
@@ -715,9 +951,11 @@ function ComPr_paraTela_(eu, p, itens, editavel) {
     t.analiseTxt = { custoTotal: Com_moeda_(a.custoTotal), custoItens: Com_moeda_(a.custoItens), custoDeslocamento: Com_moeda_(a.custoDeslocamento), impostos: Com_moeda_(a.impostos), total: Com_moeda_(a.total),
       margem: a.margemPct === null ? '—' : Com_pct_(a.margemPct) + ' (' + Com_moeda_(a.margemValor) + ')', comissao: Com_moeda_(a.comissao), comissaoPct: Com_pct_(a.comissaoPct, 1), sobra: Com_moeda_(a.margemValor), minima: a.margemMinPct === null ? 'não definida' : Com_pct_(a.margemMinPct, 1), alvo: a.margemAlvoPct === null ? 'não definida' : Com_pct_(a.margemAlvoPct, 1),
       impostosPct: a.impostosPct === null ? 'não definido na política' : Com_pct_(a.impostosPct, 1), precoMinimo: a.precoMinimo === null ? '' : Com_moeda_(a.precoMinimo), precoAlvo: a.precoAlvo === null ? '' : Com_moeda_(a.precoAlvo),
-      naoRepassado: a.naoRepassado === null ? '' : Com_moeda_(a.naoRepassado) };
+      naoRepassado: a.naoRepassado === null ? '' : Com_moeda_(a.naoRepassado), receitaItens: Com_moeda_(a.receitaItens), custoDiluido: Com_moeda_(a.custoDiluido), receitaDeslocamento: Com_moeda_(a.receitaDeslocamento),
+      impostosItens: Com_moeda_(a.impostosItens), unidade: a.unidadeNome || '', impostosProdutoPct: Com_pct_(a.impostosProdutoPct, 2), creditoProdutoPct: Com_pct_(a.creditoProdutoPct, 2),
+      precoMinimoItens: a.precoMinimoItens === null ? '' : Com_moeda_(a.precoMinimoItens) };
   }
-  if (editavel) { t.sugestao = ComPr_sugestaoDestino_(p); t.referencias = ComPr_referencias_().slice(0, 300); }
+  if (editavel) { t.sugestao = ComPr_sugestaoDestino_(p, null, pol.unidade); t.referencias = pol.unidade === 'GO' ? ComPr_referencias_().slice(0, 300) : []; }
   return t;
 }
 
@@ -920,7 +1158,7 @@ function ComPr_problemas_(p, pol, x) {
   else if (v && v.ha === true) {
     if (!(a.custoViagem > 0)) add('VIAGEM_SEM_CUSTO', 'viagem marcada sem nenhum custo calculado', true);
     var c = v.linhas.CONDUTA || {};
-    if (c.nsa && !c.auto && Number(v.kmTrecho) >= ComPr_beneficio_(pol).kmMinimo) add('CONDUTA_FORA', 'o benefício do Programa de conduta ficou "não se aplica" numa viagem de ' + ComPr_qtd_(v.kmTrecho) + ' km (' + Com_s_(c.motivo) + ')', true);
+    if (c.nsa && !c.auto && Number(v.kmTrecho) >= ComPr_beneficio_(pol).kmMinimo) add('CONDUTA_FORA', 'o Incentivo de Missão ficou "não se aplica" numa viagem de ' + ComPr_qtd_(v.kmTrecho) + ' km (' + Com_s_(c.motivo) + ')', true);
     var k = v.linhas.KM || {};
     if (k.nsa && !k.auto && Number(v.kmTrecho) > 0) add('KM_FORA', 'o km rodado ficou "não se aplica" numa viagem de ' + ComPr_qtd_(v.kmTrecho) + ' km (' + Com_s_(k.motivo) + ')', true);
     var lk = v.linhas.KM || {};
@@ -941,9 +1179,10 @@ function ComPr_problemas_(p, pol, x) {
   }
   if (typeof ComF_problemasItens_ === 'function') ComF_problemasItens_(p, pol).forEach(function (q) { add(q.regra, q.texto, q.grave); });
   if (!x.checklist.ok && s === 'RASCUNHO') add('CHECKLIST', 'checklist de custos incompleto: ' + x.checklist.faltas.map(function (f) { return f.texto.split(':')[0]; }).slice(0, 4).join(', '), false);
-  if (a.naoRepassado > 0.009) add('DESCONTO_NA_VIAGEM', 'o desconto geral reduz o repasse da viagem: ' + Com_moeda_(a.naoRepassado) + ' do custo de deslocamento não volta no preço', false);
-  if (a.abaixoMin && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0) add('MARGEM_MINIMA', 'margem de ' + Com_pct_(a.margemPct) + ' abaixo da mínima de ' + Com_pct_(a.margemMinPct, 1) + (a.completa ? '' : ' (mesmo sem o custo de ' + Com_plural_(a.itensSemCusto, 'item', 'itens') + ')'), true);
-  else if (a.abaixoAlvo) add('MARGEM_ALVO', 'margem de ' + Com_pct_(a.margemPct) + ' abaixo da alvo de ' + Com_pct_(a.margemAlvoPct, 1), false);
+  // 01/11/2026: o desconto geral não reduz mais o deslocamento; sobra só o preço digitado abaixo de custo + impostos
+  if (a.naoRepassado > 0.009) add('DESCONTO_NA_VIAGEM', 'o preço digitado do deslocamento não cobre o custo mais os impostos: ' + Com_moeda_(a.naoRepassado) + ' do custo da viagem não volta no preço (o deslocamento é repasse, sem desconto)', false);
+  if (a.abaixoMin && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0) add('MARGEM_MINIMA', 'sobra de ' + Com_pct_(a.margemPct) + ' abaixo da mínima de ' + Com_pct_(a.margemMinPct, 1) + ' (depois de impostos, comissão e custos diretos; o deslocamento fica fora)' + (a.completa ? '' : ' (mesmo sem o custo de ' + Com_plural_(a.itensSemCusto, 'item', 'itens') + ')'), true);
+  else if (a.abaixoAlvo) add('MARGEM_ALVO', 'sobra de ' + Com_pct_(a.margemPct) + ' abaixo da alvo de ' + Com_pct_(a.margemAlvoPct, 1), false);
   return l;
 }
 
@@ -958,7 +1197,7 @@ function ComPr_itensVendedor_(props, pol) {
     var x = ComPr_daProposta_(p, pol, itensP);
     if (x.checklist.ok) return;
     itens.push({ chave: 'CUSTOS:' + p.ID, regra: 'CHECKLIST_CUSTOS', prioridade: 2, titulo: ComP_rotulo_(p) + ' · ' + Com_s_(p.CLIENTE_NOME) + ': custos da viagem ou do frete incompletos', ref: { tipo: 'proposta', id: Com_s_(p.ID) }, valor: Number(p.TOTAL) || 0,
-      porque: 'Política de precificação: todo custo de campo (km, pedágio, alimentação, diárias, hospedagem, benefício do Programa de conduta de cada colaborador) entra no preço. Falta: ' + x.checklist.faltas.slice(0, 3).map(function (f) { return f.texto.split(';')[0]; }).join('; ') + '.',
+      porque: 'Política de precificação: todo custo de campo (km, pedágio, alimentação, diárias, hospedagem, Incentivo de Missão de cada executante) entra no preço. Falta: ' + x.checklist.faltas.slice(0, 3).map(function (f) { return f.texto.split(';')[0]; }).join('; ') + '.',
       acao: 'Abra a proposta, preencha "Custos da viagem e do frete" e salve. Sem isso a proposta não conclui.' });
   });
   return itens;
@@ -1029,8 +1268,8 @@ function ComPr_quadroPainel_(comp, vendedorId) {
   r.margemMinTxt = pol.margemMinPct === null ? 'não definida' : Com_pct_(pol.margemMinPct, 1); r.margemAlvoTxt = pol.margemAlvoPct === null ? 'não definida' : Com_pct_(pol.margemAlvoPct, 1);
   r.estrategia = [];
   if (r.politicaIncompleta.length) r.estrategia.push('Preencher a política de precificação (' + r.politicaIncompleta.join(', ') + '): sem ela a margem não é conferida.');
-  if (r.abaixoMin.length) r.estrategia.push(Com_plural_(r.abaixoMin.length, 'proposta saiu', 'propostas saíram') + ' abaixo da margem mínima no mês: revise preço, escopo ou repasse da viagem antes de aprovar exceções.');
-  if (r.naoRepassado > 0) r.estrategia.push(r.naoRepassadoTxt + ' de custo de viagem não voltou no preço (desconto sobre o item de deslocamento): dê desconto nos serviços, não na viagem.');
+  if (r.abaixoMin.length) r.estrategia.push(Com_plural_(r.abaixoMin.length, 'proposta saiu', 'propostas saíram') + ' abaixo da sobra mínima no mês: revise preço, escopo ou repasse da viagem antes de aprovar exceções.');
+  if (r.naoRepassado > 0) r.estrategia.push(r.naoRepassadoTxt + ' de custo de viagem não voltou no preço (deslocamento digitado abaixo de custo mais impostos): o deslocamento é repasse, sem desconto.');
   if (r.semCalculo) r.estrategia.push(Com_plural_(r.semCalculo, 'proposta de serviço enviada', 'propostas de serviço enviadas') + ' sem o cálculo da viagem (anteriores ao checklist ou sem registro): confira se o custo de campo estava no preço.');
   if (r.semReajuste) r.estrategia.push(Com_plural_(r.semReajuste, 'item do catálogo', 'itens do catálogo') + ' sem reajuste há mais de ' + r.reajusteMeses + ' meses: avalie o reajuste anual.');
   if (r.margemMedia !== null && pol.margemAlvoPct !== null && r.margemMedia < pol.margemAlvoPct) r.estrategia.push('Margem média do mês (' + r.margemMediaTxt + ') abaixo da alvo (' + r.margemAlvoTxt + '): venda valor técnico e reduza desconto.');

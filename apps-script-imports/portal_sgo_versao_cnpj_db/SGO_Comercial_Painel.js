@@ -280,7 +280,10 @@ function Com_inicio_(eu) {
   if (typeof ComPr_politica_ === 'function') {
     var polI = ComPr_politica_(met);
     base.prazo = { faixas: polI.prazo.faixas, contaAte: polI.prazo.contaAte, relatorioDiasUteis: polI.prazo.relatorioDiasUteis, licitacaoSemAcrescimo: polI.prazo.licitacaoSemAcrescimo, licitacaoRotulo: polI.prazo.licitacaoRotulo };
-    base.precoQuadro = { impostosPct: polI.impostosPct, comissaoPct: polI.comissaoPct, margemMinPct: eu.veCusto ? polI.margemMinPct : null, margemAlvoPct: eu.veCusto ? polI.margemAlvoPct : null };
+    // 01/11/2026: impostos por unidade emissora (alíquotas para todos; os créditos sobre o custo só para quem vê custo)
+    var unQ = {};
+    Object.keys(polI.unidades).forEach(function (k) { var pu = ComPr_polUnidade_(polI, k); unQ[k] = { nome: polI.unidades[k].nome, impostosPct: pu.impostosServicoPct, impostosProdutoPct: pu.impostosProdutoPct, creditoProdutoPct: eu.veCusto ? pu.creditoProdutoPct : null }; });
+    base.precoQuadro = { impostosPct: polI.impostosPct, comissaoPct: polI.comissaoPct, margemMinPct: eu.veCusto ? polI.margemMinPct : null, margemAlvoPct: eu.veCusto ? polI.margemAlvoPct : null, unidades: unQ, unidadePadrao: polI.unidadePadrao };
   }
   // 29/10/2026: alçada do vendedor para reduzir preço do catálogo sem aprovação
   if (eu.catalogoVenda) base.alcadaPreco = ComP_alcadaPreco_(eu, met);
@@ -430,12 +433,18 @@ function Com_metodologiaTela_(eu, d) {
     r.precificacao = { beneficio: ComPr_beneficio_(polT), incompleta: ComPr_politicaIncompleta_(polT).map(function (f) { return f.nome; }), repasses: COM_PR_REPASSES,
       // 01/11/2026 (Comercial C2): o que ainda é provisório, a lista para "confirmado pelo dono" e a política normalizada (faixas)
       provisorios: COM_PR_PROVISORIOS, pendentes: ComPr_provisorios_(polT).map(function (x) { return x.campo; }), prazo: polT.prazo };
+    // 01/11/2026 (decisão do dono): impostos por unidade e a conta do Bônus Coletivo por hora (só quem vê custo)
+    if (eu.veCusto) {
+      r.precificacao.unidades = ComPr_unidadesTela_(polT); r.precificacao.unidadePadrao = polT.unidadePadrao; r.precificacao.bonus = ComPr_bonusHora_(polT);
+      r.precificacao.custoHoraComBonus = { TECNICO: Com_r2_((Number(polT.custoHora.TECNICO) || 0) + r.precificacao.bonus.porHora), ENGENHEIRO: Com_r2_((Number(polT.custoHora.ENGENHEIRO) || 0) + r.precificacao.bonus.porHora) };
+      if (typeof ComDec_podeAplicar_ === 'function') r.precificacao.decisaoDono = { pode: ComDec_podeAplicar_(eu) };
+    }
   }
   r.paginas = Object.keys(COM_MET_PAGINAS).map(function (k) { return { codigo: k, nome: COM_MET_PAGINAS[k].nome }; });
   // quem não vê custo (vendedor) vê os valores da viagem, mas não impostos nem margens da política
   if (!eu.veCusto && r.metodologia && r.metodologia.precificacao) {
     r.metodologia = Com_copia_(r.metodologia);
-    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct', 'margemPecasPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct', 'margemPecasPct', 'unidades', 'bonusConduta'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
     r.metodologia.politica = Com_copia_(r.metodologia.politica); r.metodologia.politica.margemMinPct = null;
     delete r.metodologia.margemUnificada;
     r.precificacaoReservada = true;
@@ -521,6 +530,9 @@ var COM_ACOES = {
   reajusteAplicar: function (eu, sid, d) { return ComPr_aplicarReajuste_(eu, d); },
   reajustes: function (eu, sid, d) { return ComPr_historicoReajustes_(eu); },
   reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); },
+  // 01/11/2026: aplicar a decisão do dono na política (versão nova) e nos preços (lote de reajuste), com prévia (SGO_Comercial_Decisao20261101.js)
+  decisaoDonoPolitica: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPolitica_(eu, d) : ComDec_previaPolitica_(eu, d); },
+  decisaoDonoPrecos: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPrecos_(eu, d) : ComDec_previaPrecos_(eu); },
   // 01/11/2026 (Comercial C2): tabela de preços C1 (prévia e importação), ficha de custo e "usar o preço sugerido" (SGO_Comercial_Ficha.js)
   importarC1Previa: function (eu, sid, d) { return ComF_previaImportacao_(eu); },
   importarC1: function (eu, sid, d) { return ComF_importar_(eu, d); },

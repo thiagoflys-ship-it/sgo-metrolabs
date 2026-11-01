@@ -2,6 +2,8 @@
 
 Data: 01/11/2026. Etapa C1 da trilha Comercial do SGO+. Nenhum código do SGO+ foi alterado e a produção não foi tocada.
 
+> Atualização de 01/11/2026 (decisão do dono): sobra mínima de 35%, valores maiores, técnico a R$ 90 com o Bônus Coletivo diluído, taxa por viagem removida e impostos por unidade. Os preços desta tabela foram substituídos pelo maior entre a tabela, a planilha de 30/10/2026 com o imposto por fora e a conta com a sobra de 35%: veja o campo `decisao_dono_20261101` de cada serviço em `docs/COMERCIAL_C1_TABELA_SERVICOS.json` e a seção 0 de `docs/COMERCIAL_MATERIAL_DO_DONO_20261101.md`.
+
 Dados que acompanham este documento, todos em `docs/`:
 
 - `COMERCIAL_C1_TABELA_SERVICOS.json`: os 42 serviços da tabela, com horas, custo, preços e fontes. É o arquivo que a C2 vai importar.

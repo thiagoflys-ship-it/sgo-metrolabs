@@ -1,50 +1,70 @@
 # Manual da gestão: preços, ficha de custo e parâmetros do Comercial
 
-Versão de 01/11/2026 (Comercial C2), com o Banco de preços e o Orçamentista (Comercial C3). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto, Comercial > Produtos e serviços, Comercial > Banco de preços e Comercial > Orçamentista. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md.
+Versão de 01/11/2026 (Comercial C2), com o Banco de preços e o Orçamentista (Comercial C3), atualizada no mesmo dia com a decisão do dono (sobra mínima de 35%, valores maiores, Incentivo de Missão, Bônus Coletivo diluído e impostos por unidade). Para a gestão comercial, a Diretoria, o Administrador e o Financeiro. Telas: Comercial > Metodologia comercial > Preço e desconto, Comercial > Produtos e serviços, Comercial > Banco de preços e Comercial > Orçamentista. Estudo de origem: docs/COMERCIAL_C1_PRECIFICACAO_20261101.md. Manual do módulo: docs/MANUAL_MODULO_COMERCIAL.md.
 
 ## Quem muda o quê
 
 | O quê | Quem |
 |---|---|
-| Impostos, comissão, margens, custo da hora, custo fixo, hora avulsa, deslocamento e faixas de prazo | Diretoria e Administrador |
+| Impostos por unidade, comissão, sobra mínima e margem alvo, custo da hora, custo fixo, Bônus Coletivo, hora avulsa, deslocamento e faixas de prazo | Diretoria e Administrador |
+| Aplicar a decisão do dono de 01/11/2026 na política e nos preços | Diretoria e Administrador |
 | Limite de desconto do vendedor, alçadas, desconto por pagamento até o dia 10 e o texto da política de desconto | Gestão comercial, Diretoria e Administrador |
 | Importar a tabela de preços C1 | Gestão comercial, Diretoria e Administrador |
 | Ficha de custo do item e "Usar o preço sugerido" | Gestão comercial, Diretoria, Administrador e Financeiro |
 
 ## A regra do preço
 
-Preço de tabela = custo ÷ (1 − impostos − comissão − margem alvo). Com os valores iniciais: custo ÷ 0,6275, ou seja, custo × 1,594. O preço mínimo usa a margem mínima (custo ÷ 0,7275). O preço arredonda para cima: R$ 5 abaixo de R$ 100 e R$ 10 a partir de R$ 100. A página mostra a regra com o exemplo da qualificação de autoclave refeito a cada número que muda.
+Decisão do dono (01/11/2026): "pra empresa tem que sobrar no mínimo 35%" e "os valores têm que ser os valores maiores".
 
-Custo do serviço = horas do técnico × custo da hora do técnico + horas do engenheiro × custo da hora do engenheiro, mais o custo fixo sobre essa mão de obra, mais padrões e consumíveis.
+Preço que garante a sobra mínima = custo ÷ (1 − impostos de serviço − comissão − sobra mínima). Com os valores de hoje: custo ÷ 0,4775, ou seja, custo × 2,094. Na margem alvo de 40%: custo ÷ 0,4275. O preço arredonda para cima: R$ 5 abaixo de R$ 100 e R$ 10 a partir de R$ 100. A página mostra a regra com o exemplo da qualificação de autoclave refeito a cada número que muda.
 
-Preço sugerido: o preço pela conta. Quando a mediana do mercado público e a mediana do que a Metrolabs cobrou (CRM 2025-26) ficam as duas acima da conta, o preço sobe até o menor dos dois. Exceções da tabela: ultracongelador com piso de 120% do freezer e hora técnica avulsa no valor da política.
+Custo do serviço = horas do técnico × custo da hora do técnico + horas do engenheiro × custo da hora do engenheiro, mais o custo fixo sobre essa mão de obra, mais o Bônus Coletivo diluído (horas × R$ por hora), mais padrões e consumíveis.
 
-Deslocamento: custo ÷ (1 − impostos), sem margem e sem comissão.
+Preço sugerido: o MAIOR entre o preço atual do catálogo, o preço normal da tabela C1, o valor da planilha de 30/10/2026 com o imposto por fora (valor ÷ (1 − impostos de serviço)) e a conta com a sobra mínima. Ainda vale a regra do mercado e do histórico (as duas medianas acima da conta: sobe até a menor) e o piso do ultracongelador (120% do freezer). Hora avulsa: o maior entre a hora da política (R$ 190, sem imposto) ÷ (1 − impostos) e a conta.
 
-## Valores iniciais (provisórios até o dono confirmar)
+Peça ou produto revendido: custo × (1 − créditos) ÷ (1 − impostos de produto − comissão − sobra mínima), arredondado a R$ 1. Em Goiânia, peça de R$ 1.000 sai por R$ 2.334; no Rio, por R$ 2.561.
 
-| Parâmetro | Valor inicial |
+Sobra = preço dos serviços e produtos − impostos − comissão − custos diretos. É antes de IR e CSLL (no Lucro Real eles incidem sobre o lucro do período, fora desta conta).
+
+Deslocamento: custo ÷ (1 − impostos), sem margem, sem comissão e sem desconto. Fica fora da conta da sobra. Diluído nos serviços, o custo entra na sobra.
+
+## Valores da política (decisão do dono de 01/11/2026)
+
+| Parâmetro | Valor |
 |---|---|
-| Impostos sobre a nota | 14,25% (Lucro Real) |
+| Sobra mínima | 35% (decisão do dono) |
+| Margem alvo | 40% (proposta nossa, provisória) |
+| Impostos de serviço | por unidade: PIS 1,65% + COFINS 7,6% + ISS 5% = 14,25% (Goiânia e Rio; ISS provisório) |
+| Impostos de produto | Goiânia: PIS + COFINS + ICMS 19% = 28,25%; Rio: + ICMS 20% e FECP 2% = 31,25%; menos os créditos sobre o custo de compra (PIS/COFINS 9,25% + ICMS da compra 12%, provisório) |
 | Comissão | 3% |
-| Margem alvo e margem mínima | 20% e 10% |
-| Custo da hora | técnico R$ 45,00; engenheiro R$ 132,00 |
+| Custo da hora | técnico R$ 90,00 (MAN-VIA-001); engenheiro R$ 132,00 |
+| Bônus Coletivo diluído | R$ 300 por colaborador ativo ÷ horas faturáveis da equipe (em branco: 140 h por colaborador de campo) |
 | Custo fixo sobre a mão de obra | 25% |
-| Hora técnica avulsa | R$ 190,00 |
-| Km rodado | R$ 2,50 (ida e volta) |
-| Taxa por viagem | R$ 300,00, só fora da Grande Goiânia (trecho acima de 60 km); o nome é editável |
-| Benefício da Conduta | R$ 300,00 por pessoa em trecho acima de 200 km (vem do Programa de conduta) |
-| Alimentação | R$ 100,00 por pessoa por dia, fora da Grande Goiânia |
+| Hora técnica avulsa | R$ 190,00 sem imposto (o preço da tabela é o maior entre ela com o imposto e a conta) |
+| Km rodado | R$ 2,50 (ida e volta), confirmado |
+| Taxa por viagem | removida (era o Incentivo de Missão) |
+| Incentivo de Missão | R$ 300,00 por executante em trecho de 200 km ou mais a partir da sede (vem do Programa de conduta) |
+| Alimentação | R$ 100,00 por pessoa por dia, fora da região da sede |
 | Hotel | R$ 150,00 por pessoa por noite |
 | Alçadas de desconto (referência) | vendedor 5%, gerente 10%, Diretoria até 13,75% |
 
-Campo deixado em branco volta ao valor inicial. Os valores que ainda dependem do dono aparecem com o selo "valor provisório": salários reais e horas faturáveis, custo fixo real, o que é a taxa por viagem, calibração própria ou de parceiro, comissão, a faixa prioritária, se o cliente de contrato paga urgência, as alçadas, o fim do desconto por pagamento até o dia 10 e se o prazo conta até a execução ou até o relatório. Quando o dono confirmar, marque em "O que o dono já confirmou". Enquanto houver valor provisório, o panorama da gestora lembra.
+Campo deixado em branco vale o padrão do sistema; campo gravado vence o padrão. Os valores que ainda dependem do dono ou do contador aparecem com o selo "valor provisório": margem alvo, ISS e ICMS da compra, horas faturáveis da equipe, salários reais, custo fixo real, calibração própria ou de parceiro, comissão, a faixa prioritária, se o cliente de contrato paga urgência, as alçadas, o fim do desconto por pagamento até o dia 10 e se o prazo conta até a execução ou até o relatório. Quando o dono confirmar, marque em "O que o dono já confirmou". Enquanto houver valor provisório, o panorama da gestora lembra.
 
-## Margem mínima única
+Reforma tributária: em 2026 a CBS e o IBS só aparecem na nota em teste, sem recolhimento. Nada é somado ao preço.
 
-Existe uma margem mínima só: a sobra depois de impostos, comissão e custos (itens com custo, deslocamento e frete). A comissão não incide sobre o deslocamento nem sobre o frete. Abaixo da mínima, a proposta vai para a Caixa de decisões e só a Diretoria aprova; o gestor comercial pode negar.
+### Aplicar a decisão na produção
 
-Antes havia duas margens: a da política de desconto (margem bruta dos itens com custo) e a da política de precificação. Na leitura, vale a da precificação; se ela estava vazia, vale a antiga da política de desconto (quando maior que zero); sem nenhuma das duas, 10%. Os dois valores antigos aparecem na página e ficam no histórico das versões.
+Em Metodologia > Preço e desconto, quadro "Decisão do dono de 01/11/2026" (Diretoria e Administrador):
+
+1. "Ver a prévia da política" e depois "Aplicar na política (versão nova)". Campo vazio ou igual ao valor inicial da C1 recebe o decidido; campo que a Diretoria gravou com outro valor fica e aparece como conflito. Margem mínima abaixo de 35%, hora do técnico abaixo de R$ 90 e taxa por viagem com valor são trocadas, porque contrariam a decisão.
+2. Se a tabela C1 ainda não está no catálogo: "Importar tabela de preços C1" em Produtos e serviços (os itens novos entram com o preço da decisão).
+3. "Ver a prévia dos preços" e depois "Aplicar os preços (lote de reajuste)". Só sobe preço. O lote fica no histórico de reajustes e "Desfazer o último reajuste" volta tudo.
+
+## Sobra mínima única
+
+Existe uma sobra mínima só (35%): o que fica depois de impostos, comissão e custos diretos (itens com custo e, quando diluída, a viagem). O deslocamento e o frete em item próprio ficam fora da conta. A comissão não incide sobre o deslocamento nem sobre o frete. Abaixo da mínima, a proposta vai para a Caixa de decisões e só a Diretoria aprova, qualquer que seja a alçada de desconto do vendedor; o gestor comercial pode negar.
+
+Antes havia duas margens: a da política de desconto (margem bruta dos itens com custo) e a da política de precificação. Na leitura, vale a da precificação; se ela estava vazia, vale a antiga da política de desconto (quando maior que zero); sem nenhuma das duas, 35%. Os dois valores antigos aparecem na página e ficam no histórico das versões.
 
 ## Faixas de prazo
 
@@ -80,7 +100,7 @@ Item que já tinha custo cadastrado: a importação preenche as horas da ficha (
 
 ## O que a gestora aponta
 
-- Item abaixo do preço mínimo da tabela (na faixa escolhida).
+- Item abaixo do preço que garante a sobra mínima (na faixa escolhida; peça pela conta de produto da unidade).
 - Item abaixo do menor ou acima do maior preço público (com pelo menos 3 preços).
 - Deslocamento abaixo do custo da viagem.
 - Prazo urgente ou prioritário sem a agenda confirmada pela Área técnica.
@@ -106,9 +126,9 @@ Comercial > Banco de preços (tabela COM_PRECOS, uma linha por preço observado)
 
 **Indicadores no Painel.** Desde a C4 (01/11/2026), a taxa de ganho por serviço fica no quadro "Preço proposto × ganho ou perdido, por serviço", logo depois das perdas por motivo: decididas, taxa de ganho, preço médio ganho e perdido comparados com a tabela, quanto cobrou quem ganhou de nós (média e menor valor, com os nomes), o preço de tabela (catálogo ou tabela C1) e a faixa de mercado (primeiro ao terceiro quartil de licitações, concorrentes e internet do banco, ou o PNCP da C1), com a leitura em palavras simples e a lista das propostas de cada serviço. Custo e preço de compra não entram nele; o vendedor também o vê, sem o cliente das propostas dos outros. No fim do Painel, o quadro "Banco de preços" continua com os produtos, de quem mais perdemos, quem mais vence as licitações do banco, propostas perdidas sem o vencedor informado (o vendedor completa pela oportunidade perdida, em "Completar quem ganhou") e os itens ativos do catálogo sem preço de referência.
 
-## Margem sobre peças e produtos
+## Preço de peças e produtos
 
-Em Metodologia > Preço e desconto, "Margem sobre peças e produtos" (valor inicial 30%, da planilha interna citada na C1). O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor: custo ÷ (1 − margem). Só a gestão vê esse preço sugerido: com a margem conhecida, ele entregaria o preço de compra (sugerido × 0,7). O vendedor vê o preço de venda praticado (último e mediana das propostas e do CRM) e, quando o preço do catálogo está abaixo do sugerido, um aviso sem número para conferir com a gestão.
+Desde a decisão do dono de 01/11/2026, a antiga "Margem sobre peças e produtos" (custo ÷ 0,7, com o imposto dentro) não entra mais na conta. O Orçamentista sugere o preço de venda do produto pela última cotação de fornecedor com a sobra mínima e os impostos de produto da unidade: custo × (1 − créditos) ÷ (1 − impostos de produto − comissão − sobra mínima). Só a gestão vê esse preço sugerido: conhecida a conta, ele entregaria o preço de compra. O vendedor vê o preço de venda praticado (último e mediana das propostas e do CRM) e, quando o preço do catálogo está abaixo do sugerido, um aviso sem número para conferir com a gestão.
 
 ## Orçamentista: IA e busca na internet
 

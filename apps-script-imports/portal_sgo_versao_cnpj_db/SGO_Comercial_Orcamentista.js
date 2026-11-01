@@ -223,9 +223,11 @@ function ComO_produtoDoC1_(codigo, catalogo) {
   return catalogo.filter(function (p) { return Com_up_(p.TABELA_CODIGO).replace(/^C1:/, '') === c; })[0] || catalogo.filter(function (p) { return Com_up_(p.CODIGO).replace(/-/g, '_') === c; })[0] || null;
 }
 
-/** Preço mínimo (margem mínima da política) de um item: pela ficha ou pelo custo cadastrado; null sem custo. */
+/** Preço mínimo (sobra mínima da política) de um item: pela ficha ou pelo custo cadastrado; null sem custo. */
 function ComO_precoMinimo_(prod, s1, pol) {
   if (prod && typeof ComF_temFicha_ === 'function' && ComF_fichaVale_(prod)) return ComF_calcular_(ComF_fichaDe_(prod), pol).precoMinimo;
+  // 01/11/2026: peça revendida pela conta com os impostos de produto e os créditos da compra (Lucro Real)
+  if (prod && Com_s_(prod.CUSTO) !== '' && Com_up_(prod.TIPO) === 'PRODUTO') return ComPr_precoProduto_(Number(prod.CUSTO), pol);
   if (prod && Com_s_(prod.CUSTO) !== '') { var d = 1 - ((Number(pol.impostosPct) || 0) + (Number(pol.comissaoPct) || 0) + (Number(pol.margemMinPct) || 0)) / 100; return d > 0.05 ? ComPr_arredondarTabela_(Number(prod.CUSTO) / d) : null; }
   if (!prod && s1) return ComF_calcular_(s1, pol).precoMinimo;
   return null;
@@ -259,17 +261,19 @@ function ComO_montarItem_(base, ctx, eu) {
   else if (s1) { it.fontes.push('Preço de tabela: tabela C1 (' + s1.codigo + '), ' + Com_moeda_(normal) + (preco !== normal ? '; ' + fx.nome.toLowerCase() + ' = ' + Com_moeda_(preco) : '') + '. O item não está no catálogo: entra como avulso.'); it.riscos.push({ nivel: 'aviso', texto: 'Fora do catálogo: entra como item avulso com o preço da tabela C1. Peça à gestão para importar a tabela de preços C1 em Produtos e serviços.' }); }
   else it.riscos.push({ nivel: 'erro', texto: 'Sem preço no sistema: digite o preço no passo 1 da proposta.' });
   if (ctx.licitacao && faixa && faixa !== 'NORMAL' && pol.prazo.licitacaoSemAcrescimo) it.fontes.push('Licitação ou contrato: sem o acréscimo da faixa ' + fx.nome.toLowerCase() + '.');
-  if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && Number(pol.margemPecasPct) > 0 && ctx.compras[chave] && eu.veCusto) {
-    // produto: preço de venda sugerido pela última compra e pela margem sobre peças. Revisão 01/11/2026: só para quem vê custo.
-    // O sugerido é custo ÷ (1 − margem), arredondado a R$ 1, e a margem (30%) está no manual: para o vendedor ele entregava o
-    // preço de compra (sugerido × 0,7). O vendedor vê o preço de venda praticado (abaixo) e um aviso sem número.
-    var cpr = ctx.compras[chave], sug = ComPr_arredondarCima_(cpr.valor / (1 - pol.margemPecasPct / 100), 1);
-    it.precoSugeridoCompra = sug; it.precoSugeridoCompraTxt = Com_moeda_(sug);
-    it.fontes.push('Preço sugerido pela última cotação de fornecedor (' + cpr.data + ') com a margem sobre peças da política: ' + Com_moeda_(sug) + '.');
-    if (preco > 0 && preco < sug - 0.004) it.riscos.push({ nivel: 'aviso', texto: 'O preço do catálogo está abaixo do sugerido pela última compra (' + Com_moeda_(sug) + '): confira com a gestão antes de mandar.' });
-  } else if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && Number(pol.margemPecasPct) > 0 && ctx.compras[chave]) {
-    var cprV = ctx.compras[chave], sugV = cprV.valor / (1 - pol.margemPecasPct / 100);
-    if (preco > 0 && preco < sugV - 0.5) it.riscos.push({ nivel: 'aviso', texto: 'Preço do catálogo a conferir com a gestão antes de mandar (a última compra deste produto mudou a conta).' });
+  if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && ctx.compras[chave] && eu.veCusto) {
+    // produto: preço de venda sugerido pela última compra. Revisão 01/11/2026: só para quem vê custo (para o vendedor o número
+    // entregava o preço de compra). Decisão do dono de 01/11/2026: o sugerido é a conta com a sobra mínima e os impostos de produto
+    // da unidade, menos os créditos da compra (ComPr_precoProduto_), arredondado a R$ 1; não é mais "custo ÷ 0,7 com imposto dentro".
+    var cpr = ctx.compras[chave], sug = ComPr_precoProduto_(cpr.valor, pol);
+    if (sug) {
+      it.precoSugeridoCompra = sug; it.precoSugeridoCompraTxt = Com_moeda_(sug);
+      it.fontes.push('Preço sugerido pela última cotação de fornecedor (' + cpr.data + '), com a sobra mínima de ' + Com_pct_(pol.margemMinPct, 0) + ' e os impostos de produto (' + Com_pct_(pol.impostosProdutoPct, 2) + ', menos ' + Com_pct_(pol.creditoProdutoPct, 2) + ' de créditos sobre o custo): ' + Com_moeda_(sug) + '.');
+      if (preco > 0 && preco < sug - 0.004) it.riscos.push({ nivel: 'aviso', texto: 'O preço do catálogo está abaixo do sugerido pela última compra (' + Com_moeda_(sug) + '): abaixo dele a sobra fica menor que a mínima. Confira com a gestão antes de mandar.' });
+    }
+  } else if (prod && Com_up_(prod.TIPO) === 'PRODUTO' && ctx.compras[chave]) {
+    var cprV = ctx.compras[chave], sugV = ComPr_precoProduto_(cprV.valor, pol);
+    if (sugV && preco > 0 && preco < sugV - 0.5) it.riscos.push({ nivel: 'aviso', texto: 'Preço do catálogo a conferir com a gestão antes de mandar (a última compra deste produto mudou a conta).' });
   }
   // referências do banco de preços
   var linhas = ctx.banco.filter(function (r) { return Com_s_(r.ITEM_CHAVE) === chave && ComBP_valida_(r); });

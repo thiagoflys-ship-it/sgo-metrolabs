@@ -235,7 +235,7 @@ var COM_METODOLOGIA_PADRAO = {
     descontoMaxPct: 15,
     // 01/11/2026 (C2): margem mínima ÚNICA em precificacao.margemMinPct. Este campo fica só para ler versões antigas
     // (Com_unificarMargem_ copia o valor de lá para cá ao ler); não é mais conferido sozinho.
-    margemMinPct: 10,
+    margemMinPct: 35,
     descontoPorVendedor: {},
     // 01/11/2026 (C2, provisório até o dono confirmar): alçadas sugeridas pela C1 sobre o preço de tabela. Hoje servem de alerta
     // da gestora; quem trava é o limite do vendedor (descontoMaxPct) e a margem mínima.
@@ -243,7 +243,7 @@ var COM_METODOLOGIA_PADRAO = {
     alcadaDiretoriaPct: 13.75,
     // desconto por pagamento até o dia 10 (8% a 10% nas propostas antigas): a C1 recomenda acabar. false = a gestora avisa.
     descontoPontualidade: false,
-    texto: 'O vendedor concede até o limite de desconto sem pedir aprovação. Acima do limite, a proposta vai para a Caixa de decisões do gestor comercial antes de poder ser enviada. Com a margem abaixo da mínima (depois de impostos, comissão e deslocamento), só a Diretoria aprova. Quem pediu não aprova o próprio desconto.'
+    texto: 'O vendedor concede até o limite de desconto sem pedir aprovação. Acima do limite, a proposta vai para a Caixa de decisões do gestor comercial antes de poder ser enviada. Com a sobra abaixo da mínima de 35% (depois de impostos, comissão e custos diretos), só a Diretoria aprova, qualquer que seja a alçada de quem vende. O desconto geral nunca reduz o item de deslocamento. Quem pediu não aprova o próprio desconto.'
   },
   proposta: {
     validadeDias: 15,
@@ -337,19 +337,42 @@ var COM_METODOLOGIA_PADRAO = {
     // horas de estrada: vazio = custo da hora da função com o custo fixo, só em trecho acima de estradaKmMinimo
     horaDeslocamento: { TECNICO: null, ENGENHEIRO: null },
     estradaKmMinimo: 200,
-    // taxa por viagem (o dono ainda vai dizer o que é): só fora da Grande Goiânia (trecho acima de kmMinimo); o nome é editável
-    taxaViagem: { valor: 300, rotulo: 'Taxa por viagem (fora da Grande Goiânia)', kmMinimo: 60 },
-    // alimentação também só fora da Grande Goiânia (o mesmo raio da taxa por viagem), como na C1
+    // 01/11/2026 (decisão do dono): a "taxa por viagem" de R$ 300 era o Incentivo de Missão contado duas vezes. Fica desligada
+    // (valor 0; a linha fica "não se aplica" sozinha nas propostas novas). kmMinimo continua sendo o raio da região da sede
+    // (até ele não há alimentação), e propostas antigas que gravaram a taxa continuam mostrando o que foi gravado.
+    taxaViagem: { valor: 0, rotulo: 'Taxa por viagem (desligada: era o Incentivo de Missão)', kmMinimo: 60 },
+    // alimentação só fora da região da sede (trecho acima de taxaViagem.kmMinimo), como na C1
     alimentacaoForaDaRegiao: true,
+    // Incentivo de Missão (reserva): o valor e o km vêm do Programa de conduta (VALOR_INCENTIVO_MISSAO e MISSAO_KM_MINIMO)
     beneficioConduta: { valorPorColaborador: 300, kmMinimoTrecho: 200 },
-    impostosPct: 14.25,
+    // 01/11/2026 (decisão do dono, "aqui é lucro real"): impostos por unidade emissora (tabela "unidades" abaixo). impostosPct
+    // vazio = imposto de serviço da unidade (PIS + COFINS + ISS); com valor gravado, vale como imposto de serviço fixo para todas
+    // as unidades (compatibilidade com versões antigas da política).
+    impostosPct: null,
     comissaoPct: 3,
-    margemMinPct: 10,
-    margemAlvoPct: 20,
-    // ficha de custo dos serviços: custo da hora por função e o custo fixo sobre a mão de obra
-    custoHora: { TECNICO: 45, ENGENHEIRO: 132 },
+    // 01/11/2026 (decisão do dono): "pra empresa tem que sobrar no mínimo 35%". Alvo de 40% é proposta nossa (provisória; o
+    // Planejamento traz margem de contribuição de 39,5%). Sobra antes de IR e CSLL (no Lucro Real eles incidem sobre o lucro).
+    margemMinPct: 35,
+    margemAlvoPct: 40,
+    // ficha de custo dos serviços: custo da hora por função e o custo fixo sobre a mão de obra. 01/11/2026: técnico R$ 90 (exemplo
+    // do MAN-VIA-001, valor maior que a estimativa da C1); engenheiro R$ 132 (já era o maior).
+    custoHora: { TECNICO: 90, ENGENHEIRO: 132 },
     custoFixoPct: 25,
+    // 01/11/2026: Bônus Coletivo do Programa de conduta (R$ 300 por mês para cada colaborador ativo) é custo fixo da empresa,
+    // diluído na hora de técnico e engenheiro: bônus x colaboradores ÷ horas faturáveis da equipe no mês. Vazio = valor do
+    // programa (VALOR_BONUS_COLETIVO), colaboradores ativos pelo mesmo filtro do fechamento da Conduta e horas = 140 h por
+    // colaborador de campo (sem ninguém de campo cadastrado: 1.600 h, a base do POL-BON-001; provisório).
+    bonusConduta: { valorMes: null, colaboradores: null, horasFaturaveisMes: null, horasPorColaboradorCampo: 140 },
+    // preço da hora avulsa SEM imposto (planilha de 30/10): o preço da tabela é o maior entre ele ÷ (1 − impostos) e a conta de custo
     horaAvulsa: 190,
+    // 01/11/2026: unidades emissoras, todas no Lucro Real. Serviço: PIS + COFINS + ISS do município. Produto: PIS + COFINS + ICMS
+    // interno (+ FECP no RJ) sobre o preço, menos os créditos sobre o custo de compra (PIS/COFINS 9,25% e o ICMS da compra).
+    // ISS de 5% e ICMS da compra de 12% são provisórios até o contador confirmar.
+    unidadePadrao: 'GO',
+    unidades: {
+      GO: { nome: 'Matriz Goiânia/GO', origem: 'Goiânia/GO', pisPct: 1.65, cofinsPct: 7.6, issPct: 5, icmsPct: 19, fecpPct: 0, creditoPisCofinsPct: 9.25, icmsCompraPct: 12 },
+      RJ: { nome: 'Filial Rio de Janeiro/RJ', origem: 'Rio de Janeiro/RJ', pisPct: 1.65, cofinsPct: 7.6, issPct: 5, icmsPct: 20, fecpPct: 2, creditoPisCofinsPct: 9.25, icmsCompraPct: 12 }
+    },
     // faixas de prazo (decisão do dono, 01/11/2026). acrescimoPct vale só para serviço (deslocamento e peças ficam fora).
     // A prioritária nasce desligada até o dono aprovar. contaAte: RELATORIO (até a entrega do relatório ou certificado) ou EXECUCAO.
     prazo: {
@@ -363,13 +386,14 @@ var COM_METODOLOGIA_PADRAO = {
     },
     confirmados: [],
     margemDeslocamentoPct: 0,
-    // 01/11/2026 (Comercial C3): margem sobre peças e produtos revendidos (preço = custo do fornecedor ÷ (1 − margem)). Valor inicial
-    // da planilha interna de 30/10/2026 citada na C1 (30%); editável em Metodologia > Preço e desconto.
+    // 01/11/2026 (Comercial C3): margem sobre peças e produtos revendidos. Desde a decisão do dono de 01/11/2026 o preço sugerido da
+    // peça é a conta com a sobra mínima e os impostos de produto da unidade (ComPr_precoProduto_); este campo fica só para ler
+    // versões antigas da política (não entra mais em conta nenhuma).
     margemPecasPct: 30,
     arredondarPara: 10,
     repassePadrao: 'ITEM',
     reajusteAlertaMeses: 12,
-    texto: 'Todo serviço em campo leva o custo da viagem ao preço: km rodado (ida e volta), pedágios, alimentação, diárias, hospedagem, o benefício do Programa de conduta de cada colaborador e, quando não for veículo da empresa, o combustível ou a passagem. O custo entra como item próprio da proposta ("Despesas de deslocamento e estadia") ou diluído no preço dos serviços; nos dois casos fica registrado. O item de deslocamento repassa o custo mais os impostos sobre o faturamento. Proposta abaixo da margem mínima só segue com aprovação da Diretoria. Os preços do catálogo são reajustados pelo menos uma vez a cada 12 meses, pelo índice que a Diretoria informar.'
+    texto: 'Todo serviço em campo leva o custo da viagem ao preço: km rodado (ida e volta), pedágios, alimentação, diárias, hospedagem, o Incentivo de Missão de cada executante (trecho de 200 km ou mais a partir da sede) e, quando não for veículo da empresa, o combustível ou a passagem. O custo entra como item próprio da proposta ("Despesas de deslocamento e estadia", custo mais impostos, sem margem e sem desconto) ou diluído no preço dos serviços; nos dois casos fica registrado. Sobra mínima de 35% para a empresa depois de impostos, comissão e custos diretos (antes de IR e CSLL); abaixo disso, só a Diretoria aprova. O preço de cada serviço é o maior entre a tabela, a planilha de 30/10/2026 com o imposto por fora e a conta de custo com a sobra mínima. Os preços do catálogo são reajustados pelo menos uma vez a cada 12 meses, pelo índice que a Diretoria informar.'
   },
   referencias: { metaMensal: 600000, ticketServicos: 3817.64, ticketContratos: 10000, primeiraRespostaHoras: 24, higieneMetaPct: 100 },
   gestores: [],
@@ -593,7 +617,7 @@ function Com_normalizarMetodologia_(m) {
  * 01/11/2026 (Comercial C2): UMA margem mínima. Antes havia duas: politica.margemMinPct (margem bruta só dos itens com custo,
  * sem impostos; padrão 0 = não conferia) e precificacao.margemMinPct (depois de impostos e da viagem; padrão vazio). Agora vale
  * só precificacao.margemMinPct, depois de impostos, comissão e custos da viagem. Ao ler: o valor gravado na precificação vale;
- * vazio, vale o da política antiga (se maior que zero); sem nenhum dos dois, o valor inicial (10%). Os dois valores antigos ficam
+ * vazio, vale o da política antiga (se maior que zero); sem nenhum dos dois, o valor inicial (35%, decisão do dono de 01/11/2026). Os dois valores antigos ficam
  * em margemUnificada (a tela mostra de onde veio); a versão gravada no banco não muda até a gestão salvar a página.
  */
 function Com_unificarMargem_(m, gravada) {
