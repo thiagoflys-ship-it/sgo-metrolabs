@@ -626,7 +626,7 @@
       tentativas++;
       if (logado()) {
         clearInterval(t);
-        try { var u = new URL(location.href); u.searchParams.delete("enviarDoc"); history.replaceState(null, "", u.pathname + (u.search || "") + u.hash); } catch (e) {}
+        try { var u = new URL(location.href); u.searchParams.delete("enviarDoc"); history.replaceState(history.state, "", u.pathname + (u.search || "") + u.hash); } catch (e) {}
         setTimeout(function () { abrir({ arquivoId: id }); }, 600);
       } else if (tentativas > 300) clearInterval(t);
     }, 1000);

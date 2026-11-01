@@ -116,10 +116,14 @@
     return '<p class="at-txt" style="color:var(--danger);font-weight:700' + (estilo || "") + '">' + Lc_esc_(r.falha ? "Falha: " + r.falha + cod : "Ciclo encerrado sem o código da falha no arquivo.") + "</p>";
   }
   function Lc_seloAss_(r) { return r.substituido ? '<span class="at-selo cinza">Substituída pela versão nova</span>' : r.assinado ? '<span class="at-selo verde">Assinado</span>' : '<span class="at-selo laranja">Aguardando assinatura</span>'; }
-  function Lc_abrirUrl_(url, baixar) {
+  /** 01/11/2026 (Etapa 1): no celular, "Abrir o relatório" mostra a folha no visualizador do SGO+ (Voltar, Imprimir, Baixar PDF);
+   *  no computador continua em aba nova. Baixar (PDF) nunca passa pelo visualizador. pdf = endereço do PDF, quando existe. */
+  function Lc_abrirUrl_(url, baixar, pdf) {
     if (!url) { alert("O arquivo deste relatório não foi gravado. Por quê: a cópia não foi salva na hora da geração. O que fazer: peça à Metrolabs para gerar uma nova versão."); return; }
     var u = String(url);
-    if (baixar && /^\/?arquivos\//.test(u.replace(/^https?:\/\/[^/]+/, ""))) u += (u.indexOf("?") >= 0 ? "&" : "?") + "baixar=1";
+    var comBaixar = function (x) { x = String(x || ""); return x && /^\/?arquivos\//.test(x.replace(/^https?:\/\/[^/]+/, "")) ? x + (x.indexOf("?") >= 0 ? "&" : "?") + "baixar=1" : x; };
+    if (baixar) u = comBaixar(u);
+    else if (window.SGO_NAV && SGO_NAV.abrirDocumento({ url: u, titulo: "Relatório do ciclo", baixarUrl: pdf ? comBaixar(pdf) : "" })) return;
     window.open(u, "_blank", "noopener");
   }
   function Lc_ehCel_() { return typeof ehMobileModo_ === "function" && ehMobileModo_(); }
@@ -205,6 +209,7 @@
 
   // ---------------------------------------------------------------- painel: Kanban por situação e referências
   function Lc_mostrarPainel_() {
+    if (window.SGO_NAV) SGO_NAV.limparSubniveis(); // "Voltar ao painel": os passos da busca saem da pilha do voltar
     LC.vista = "painel"; LC.ultimaBusca = null; Lc_mostrarBuscaEIndices_(true); Lc_msg_("lcMsg", "");
     var c = Lc_$_("lcCorpo"); if (!c || !LC.ini) return;
     var abas = [["kanban", "Kanban dos relatórios"]];
@@ -270,6 +275,11 @@
   // ---------------------------------------------------------------- busca
   function Lc_buscar_(d) {
     var c = Lc_$_("lcCorpo"); if (!c) return;
+    // voltar (celular ou barra) volta ao painel ou à busca anterior, com os mesmos filtros (Etapa 1, JS_Navegacao.html)
+    if (window.SGO_NAV && d !== LC.ultimaBusca && (LC.vista === "painel" || LC.vista === "busca")) {
+      var antes = LC.vista === "busca" ? LC.ultimaBusca : null;
+      SGO_NAV.empilhar("Busca", function () { if (antes) Lc_buscar_(antes); else Lc_mostrarPainel_(); });
+    }
     LC.vista = "busca"; LC.ultimaBusca = d; Lc_mostrarBuscaEIndices_(true, false); Lc_msg_("lcMsg", "");
     var bt = Lc_$_("lcBuscar"); if (bt) bt.disabled = true;
     c.innerHTML = '<div class="at-vazio" role="status">Buscando…</div>';
@@ -325,7 +335,7 @@
       card.querySelectorAll("[data-x]").forEach(function (b) {
         b.onclick = function () {
           var x = b.getAttribute("data-x");
-          if (x === "abrir") Lc_abrirUrl_(r.htmlUrl);
+          if (x === "abrir") Lc_abrirUrl_(r.htmlUrl, false, r.pdfUrl);
           else if (x === "pdf") Lc_abrirUrl_(r.pdfUrl, true);
           else if (x === "assinar") Lc_assinar_(r, depois);
           else if (x === "det") Lc_ficha_(r.id, depois);
@@ -361,10 +371,12 @@
     var antes = { vista: LC.vista, busca: LC.ultimaBusca };
     LC.vista = "gerar"; Lc_mostrarBuscaEIndices_(false); Lc_msg_("lcMsg", "");
     try { window.scrollTo(0, 0); } catch (e) {}
-    LavCiclo_fluxoGerar_(c, id, { voltar: function () {
+    var volta = function () {
       LC.vista = antes.vista; LC.ultimaBusca = antes.busca;
       Lc_iniciar_(function () { if (antes.vista === "busca" && antes.busca) Lc_buscar_(antes.busca); else Lc_mostrarPainel_(); });
-    } });
+    };
+    if (window.SGO_NAV) SGO_NAV.empilhar("Gerar relatório", volta);
+    LavCiclo_fluxoGerar_(c, id, { voltar: function () { if (typeof SGO_voltarOu_ === "function") SGO_voltarOu_(volta); else volta(); } });
   }
   function Lc_faltamHtml_(e) {
     if (!e.faltam || !e.faltam.length) return "";
@@ -403,7 +415,7 @@
       ov.querySelectorAll("[data-f]").forEach(function (b) {
         b.onclick = function () {
           var f = b.getAttribute("data-f");
-          if (f === "abrir") Lc_abrirUrl_(r.htmlUrl);
+          if (f === "abrir") Lc_abrirUrl_(r.htmlUrl, false, r.pdfUrl);
           else if (f === "pdf") Lc_abrirUrl_(r.pdfUrl, true);
           else if (f === "assinar") { ov.remove(); Lc_assinar_(r, depois); }
         };
@@ -489,7 +501,7 @@
     ov.remove = function () { q.parar(); document.body.classList.remove("lc-assinando"); removerOriginal(); };
     Lc_$_("lcAssLimpar").onclick = q.limpar;
     Lc_$_("lcAssDesfazer").onclick = q.desfazer;
-    Lc_$_("lcAssVer").onclick = function () { Lc_abrirUrl_(r.htmlUrl); };
+    Lc_$_("lcAssVer").onclick = function () { Lc_abrirUrl_(r.htmlUrl, false, r.pdfUrl); };
     ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
     var botaoOk = ov.querySelector("[data-ok]");
     botaoOk.onclick = function () {
@@ -510,7 +522,7 @@
     var ov = Lc_modal_("Relatório assinado", '<div class="at-faixa ok" role="status">' + Lc_esc_(x.message) + '</div><p class="lc-resumo">' + Lc_esc_("Assinado por " + r.assinante + " (" + r.cargo + ") em " + r.assinadoEm + ".") + "</p>",
       '<button type="button" class="btn-secondary at-btn44" data-pdf>Baixar PDF</button><button type="button" class="btn-primary at-btn44" data-abrir>Abrir o relatório assinado</button>', 560);
     ov.querySelector("[data-pdf]").onclick = function () { Lc_abrirUrl_(r.pdfUrl, true); };
-    ov.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(r.htmlUrl); ov.remove(); };
+    ov.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(r.htmlUrl, false, r.pdfUrl); ov.remove(); };
     if (depois) depois();
   }
 
@@ -588,7 +600,7 @@
           '<button type="button" class="btn-secondary at-btn44" data-novo>Gerar de outro ciclo</button></div>' +
           (rel.podeAssinar ? '<p class="at-ajuda-campo" style="margin-top:8px">Pode assinar depois: o relatório fica no Kanban, na coluna "Aguardando assinatura".</p>' : "") + "</div>";
         Lc_ligarAlvo_();
-        alvo.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(rel.htmlUrl); };
+        alvo.querySelector("[data-abrir]").onclick = function () { Lc_abrirUrl_(rel.htmlUrl, false, rel.pdfUrl); };
         alvo.querySelector("[data-pdf]").onclick = function () { Lc_abrirUrl_(rel.pdfUrl, true); };
         alvo.querySelector("[data-novo]").onclick = function () { passo1(""); };
         var a = alvo.querySelector("[data-assinar]");

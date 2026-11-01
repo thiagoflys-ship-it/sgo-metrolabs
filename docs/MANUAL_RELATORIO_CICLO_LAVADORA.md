@@ -24,7 +24,7 @@ Ao abrir "Relatórios de ciclo", a tela não mostra a lista de lavadoras. Mostra
 
 No celular, o Kanban mostra uma situação por vez: toque num dos quadros de cima (cada um com a contagem) para trocar.
 
-Depois da busca aparecem as lavadoras e os relatórios encontrados. "Voltar ao painel" volta aos índices e ao Kanban.
+Depois da busca aparecem as lavadoras e os relatórios encontrados. "Voltar ao painel" volta aos índices e ao Kanban. O voltar do celular (ou o "← Voltar" do alto, ou o voltar do navegador) volta um passo: da lista de uma lavadora para a busca que você tinha feito, e da busca para o painel.
 
 ## 2. Antes de começar
 
@@ -69,7 +69,7 @@ O documento assinado traz a imagem da assinatura, o nome, o cargo, a data e a ho
 4. Toque em "Abrir o relatório" para ver a folha A4, ou em "Baixar PDF".
 5. "Versões e histórico" mostra quem gerou, quem assinou e as versões anteriores.
 
-**A folha no celular.** A folha abre do tamanho da tela, inteira, com a mesma disposição do PDF. Para ler de perto, afaste dois dedos na tela ou toque em "Ver em tamanho real" (a folha fica no tamanho do papel e rola para o lado); "Ajustar a folha à tela" volta. Nada sai da folha: nome, endereço e outros textos longos quebram de linha dentro da caixa. A impressão e o PDF continuam em uma folha A4.
+**A folha no celular.** No celular, "Abrir o relatório" mostra a folha dentro do SGO+, no visualizador de documentos: no alto ficam "Voltar" (volta para a ficha ou a lista de onde você veio; o botão voltar do celular faz o mesmo), "Imprimir" e "Baixar PDF". No computador, a folha continua abrindo em aba nova. A folha abre do tamanho da tela, inteira, com a mesma disposição do PDF. Para ler de perto, afaste dois dedos na tela ou toque em "Ver em tamanho real" (a folha fica no tamanho do papel e rola para o lado); "Ajustar a folha à tela" volta. Nada sai da folha: nome, endereço e outros textos longos quebram de linha dentro da caixa. A impressão e o PDF continuam em uma folha A4.
 
 ## 7. O que cada parte da folha mostra
 

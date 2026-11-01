@@ -1,0 +1,748 @@
+<script>
+  // ==========================================================================================
+  // NAVEGAÇÃO E "VOLTAR" ÚNICOS DA CASCA (Programa de melhoria do SGO+, Etapa 1, 01/11/2026)
+  // Diagnóstico: docs/PROGRAMA_MELHORIA_SGO_ETAPA0_DIAGNOSTICO.md (seção 3). Manual: docs/NAVEGACAO_VOLTAR_SGO.md.
+  //
+  // O SGO+ é uma página só. Antes, o navegador não sabia que a pessoa tinha andado: o voltar do celular saía do sistema,
+  // o Voltar da barra do topo ia para o Início e os documentos abriam numa aba em branco sem volta. Agora:
+  //   1. Cada tela é um passo no histórico do navegador (pushState com { sgo, pos, tipo, mod, id, u } e endereço #/modulo).
+  //      O voltar do Android, o gesto, o botão do navegador e o Voltar da barra do topo fazem a mesma coisa: um passo atrás.
+  //      Recarregar a página reabre a mesma tela (se ela ainda está no menu da pessoa); senão, o Início.
+  //      Há uma entrada-base antes do Início: voltar no Início avisa "toque de novo para sair" em vez de cair em página em branco.
+  //   2. Janelas (fichas, detalhes, formulários) entram na pilha sozinhas: voltar fecha a janela de cima pelo botão de fechar
+  //      dela (a regra do módulo roda). Com texto digitado, pergunta "Descartar o que foi digitado?". Travas obrigatórias
+  //      (atividade atrasada, troca de senha obrigatória) não fecham. Trocar de módulo fecha as janelas que ficaram abertas.
+  //   3. Sub-níveis que trocam o conteúdo por dentro usam SGO_NAV.empilhar(rotulo, aoVoltar, opcoes) (ver o manual).
+  //      Sem o gancho, um toque que troca os títulos da tela vira um passo automático que volta ao começo do módulo.
+  //   4. Só no celular (modo celular da casca: #app.modo-mobile, decidido por SGO_modoMovelDesejado_: tela até 900 px de
+  //      largura, ou toque com altura até 500 px), documentos abertos por window.open("") + document.write aparecem num
+  //      visualizador de tela cheia dentro do SGO+, com Voltar e Imprimir (e Baixar PDF quando o fluxo já tem o arquivo).
+  //      No computador continuam abrindo em aba nova, como antes (decisão do dono, 01/11/2026). Endereços reais (PDF do
+  //      Drive, wa.me, mailto, downloads) nunca são interceptados.
+  // Chave para desligar tudo: window.SGO_NAV_LIGADO = false (antes de carregar) ou localStorage "SGO_NAV_DESLIGADO" = "1".
+  // Os widgets AssistenteWidget.html e ComunicacaoWidget.html não mudam (idênticos aos do COMMAND).
+  // ==========================================================================================
+
+  var SGO_NAV_TEXTOS = {
+    sair: "Você está no Início. Para sair do SGO+, toque em voltar de novo.",
+    descartar: "Descartar o que foi digitado?\n\nO que você escreveu nesta tela ainda não foi salvo. Toque em OK para descartar e voltar, ou em Cancelar para continuar aqui.",
+    trava: "Esta janela precisa ser resolvida antes de sair: use os botões dela. Ela não fecha pelo voltar.",
+    semBotao: "Use os botões da própria janela para sair dela.",
+    noInicio: "Você já está no Início."
+  };
+
+  /** Endereço vazio (window.open() / window.open("") / "about:blank") em aba nova: é um documento escrito por document.write. */
+  function SGO_NAV_ehDocumentoVazio_(url, alvo) {
+    var u = url === undefined || url === null ? "" : String(url).trim();
+    if (u !== "" && u.toLowerCase() !== "about:blank") return false;
+    var a = alvo === undefined || alvo === null ? "" : String(alvo).toLowerCase();
+    return a !== "_self" && a !== "_parent" && a !== "_top";
+  }
+
+  /** Mesmo endereço do SGO+ (relativo ou mesmo host), que pode ser mostrado no visualizador. Externos, blob: e data: não. */
+  function SGO_NAV_mesmaOrigem_(url, origem) {
+    var u = String(url || "").trim();
+    if (!u) return false;
+    if (/^(blob:|data:|mailto:|tel:|javascript:|intent:|whatsapp:)/i.test(u)) return false;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(u) || /^\/\//.test(u)) {
+      var m = /^(https?:)?\/\/([^/?#]+)/i.exec(u);
+      var o = String(origem || "").replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+      return !!(m && o && m[2].toLowerCase() === o.toLowerCase());
+    }
+    return true;
+  }
+
+  /**
+   * Núcleo testável da pilha (sem DOM). amb: { history, urlBase(), abrirTela(mod), telaAtual(), telaInicial(), usuario(),
+   * aviso(texto), confirmar(texto), janelaAberta(el), janelaTrava(el), janelaSuja(el), fecharJanela(el, jaConfirmou),
+   * rotuloJanela(el), textoTrava(el), conteudoSujo(), telaPermitida(mod), hashTela(), agora(), agendar(fn, ms) }.
+   */
+  function SGO_NAV_criarNucleo_(amb) {
+    var N = { ativo: false, seq: 0, atual: null, pilha: [], entradas: {}, janelas: [], esperando: 0, fila: [], restaurando: 0,
+      avisoSairEm: -1e15, saindo: false, ultimaOp: 0, restaurar: null, guarda: null };
+
+    function agora() { return amb.agora ? amb.agora() : Date.now(); }
+    function url(est) { return est && est.tipo !== "base" && est.mod ? amb.urlBase() + "#/" + est.mod : amb.urlBase(); }
+    function novoId() { N.seq += 1; return "n" + N.seq + "_" + Math.floor(Math.random() * 1e6).toString(36); }
+    function estado(tipo, mod, extra) {
+      var e = { sgo: 1, pos: 0, tipo: tipo, mod: mod || "", id: novoId(), u: String(amb.usuario() || "") };
+      if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) e[k] = extra[k];
+      return e;
+    }
+    function copia(e) { var c = {}; for (var k in e) if (Object.prototype.hasOwnProperty.call(e, k)) c[k] = e[k]; return c; }
+    function executar(fn) { if (N.esperando > 0) N.fila.push(fn); else fn(); }
+    function esvaziarFila() { while (N.esperando === 0 && N.fila.length) N.fila.shift()(); }
+
+    function push(est) {
+      executar(function () {
+        est.pos = (N.atual ? N.atual.pos : 0) + 1;
+        est.telaPos = est.tipo === "tela" ? est.pos : (N.atual ? (N.atual.telaPos !== undefined ? N.atual.telaPos : N.atual.pos) : 0);
+        amb.history.pushState(est, "", url(est));
+        N.atual = est; N.pilha.length = est.pos; N.pilha[est.pos] = est; N.ultimaOp = agora();
+      });
+    }
+    function replace(est) {
+      executar(function () {
+        est.pos = N.atual ? N.atual.pos : 0;
+        est.telaPos = est.tipo === "tela" ? est.pos : (N.atual && N.atual.telaPos !== undefined ? N.atual.telaPos : est.pos);
+        amb.history.replaceState(est, "", url(est));
+        N.atual = est; N.pilha[est.pos] = est; N.ultimaOp = agora();
+      });
+    }
+    /** Volta k passos sem tratar o popstate (tira da pilha entradas que já não valem). */
+    function voltarSilencioso(k) {
+      if (!(k > 0)) return;
+      executar(function () {
+        if (!N.atual || N.atual.pos - k < 0) return;
+        N.esperando += 1;
+        amb.history.go(-k);
+        if (N.guarda) N.guarda.cancelado = true;
+        var g = { cancelado: false }; N.guarda = g;
+        amb.agendar(function () { if (!g.cancelado && N.esperando > 0) { N.esperando = 0; esvaziarFila(); } }, 1200);
+      });
+    }
+    function entradaMorta(e) {
+      if (!e || e.tipo === "tela" || e.tipo === "base") return false;
+      var r = N.entradas[e.id];
+      if (!r || r.morta) return true;
+      if (e.tipo === "janela") return !amb.janelaAberta(r.el);
+      return false;
+    }
+    function telaAbaixo(pos) { for (var p = pos; p >= 0; p--) { var e = N.pilha[p]; if (e && (e.tipo === "tela" || e.tipo === "base")) return e; } return null; }
+    /** Quantas entradas mortas há no topo (para tirar com um voltar silencioso). */
+    function mortasNoTopo() {
+      if (!N.atual) return 0;
+      var k = 0;
+      for (var p = N.atual.pos; p > 0; p--) { var e = N.pilha[p]; if (e && entradaMorta(e)) k++; else break; }
+      return k;
+    }
+    function comRestauracao(fn) { N.restaurando++; try { return fn(); } finally { N.restaurando--; } }
+    function inicial() { return amb.telaInicial(); }
+
+    function reempurrar(lista) { for (var i = lista.length - 1; i >= 0; i--) push(copia(lista[i])); }
+
+    function aoChegarNaBase() {
+      var home = inicial();
+      if (agora() - N.avisoSairEm < 3000 && !N.saindo) {
+        N.saindo = true;
+        amb.history.back(); // sai do SGO+ (se houver página antes); se não houver, nada acontece e o Início volta abaixo
+        amb.agendar(function () {
+          if (N.saindo && N.ativo && N.atual && N.atual.tipo === "base") { N.saindo = false; push(estado("tela", home)); }
+        }, 1500);
+        return;
+      }
+      N.saindo = false;
+      N.avisoSairEm = agora();
+      amb.aviso(SGO_NAV_TEXTOS.sair);
+      if (amb.telaAtual() !== home) comRestauracao(function () { amb.abrirTela(home); });
+      push(estado("tela", home));
+    }
+
+    function aoVoltarUsuario(novo, antes) {
+      var popped = [];
+      for (var p = antes.pos; p > novo.pos; p--) { var s = N.pilha[p] || (p === antes.pos ? antes : null); if (s) popped.push(s); }
+      N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo; // o navegador já está na entrada de chegada
+      // 1) janelas, de cima para baixo
+      var fechadas = [];
+      for (var i = 0; i < popped.length; i++) {
+        var s1 = popped[i];
+        if (s1.tipo !== "janela") continue;
+        var r = N.entradas[s1.id];
+        if (!r || r.morta || !amb.janelaAberta(r.el)) continue;
+        if (amb.janelaTrava(r.el)) { reempurrar(popped.slice(0, i + 1)); amb.aviso(amb.textoTrava(r.el) || SGO_NAV_TEXTOS.trava); return; }
+        var confirmou = false;
+        if (amb.janelaSuja(r.el)) {
+          if (!amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(popped.slice(0, i + 1)); return; }
+          confirmou = true;
+        }
+        if (!amb.fecharJanela(r.el, confirmou)) { reempurrar(popped.slice(0, i + 1)); amb.aviso(SGO_NAV_TEXTOS.semBotao); return; }
+        r.morta = true; fechadas.push(s1);
+        N.janelas = N.janelas.filter(function (j) { return j.id !== s1.id; });
+      }
+      var restantes = popped.filter(function (s) { return s.tipo !== "janela"; });
+      var saiDeTela = restantes.some(function (s) { return s.tipo === "tela"; });
+      var subs = restantes.filter(function (s) { return s.tipo === "sub" && !entradaMorta(s); });
+      // 2) sair de uma tela ou sub-nível com texto digitado
+      if ((saiDeTela || subs.length) && amb.conteudoSujo() && !amb.confirmar(SGO_NAV_TEXTOS.descartar)) { reempurrar(restantes); return; }
+      N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo;
+      if (novo.tipo === "base") { aoChegarNaBase(); return; }
+      // 3) chegou numa entrada que não vale mais (janela fechada, passo antigo): continua voltando
+      if (entradaMorta(novo)) { amb.history.back(); return; }
+      var depois = [];
+      comRestauracao(function () {
+        var semDesfazer = subs.some(function (s) { var e = N.entradas[s.id]; return !e || !e.aoVoltar; });
+        if (saiDeTela || novo.mod !== amb.telaAtual() || semDesfazer) {
+          amb.abrirTela(novo.mod);
+          var en = N.entradas[novo.id];
+          if (novo.tipo === "sub" && en && en.reabrir) en.reabrir();
+        } else {
+          subs.forEach(function (s) { var e = N.entradas[s.id]; if (e && e.aoVoltar) { e.morta = true; e.aoVoltar(); if (e.reinicia) depois.push(true); } });
+        }
+      });
+      if (depois.length) limparSubniveis();
+    }
+
+    function aoPop(novo) {
+      if (!N.ativo) return;
+      if (N.esperando > 0) {
+        N.esperando -= 1;
+        if (novo && novo.sgo) { N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo; }
+        if (N.esperando === 0) { if (N.guarda) N.guarda.cancelado = true; esvaziarFila(); }
+        return;
+      }
+      var antes = N.atual;
+      if (!novo || !novo.sgo || (novo.u && novo.u !== String(amb.usuario() || ""))) novo = { sgo: 1, pos: 0, tipo: "base", mod: "" };
+      if (!antes) { N.atual = novo; N.pilha[novo.pos] = novo; if (novo.tipo !== "base" && novo.mod && novo.mod !== amb.telaAtual()) comRestauracao(function () { amb.abrirTela(novo.mod); }); return; }
+      if (novo.pos < antes.pos) { aoVoltarUsuario(novo, antes); return; }
+      // para a frente (ou mesma posição): reabre a tela daquele passo; janela e sub-nível não podem ser refeitos
+      N.atual = novo; N.pilha.length = novo.pos + 1; N.pilha[novo.pos] = novo;
+      if (novo.tipo === "base") { aoChegarNaBase(); return; }
+      if (novo.mod && novo.mod !== amb.telaAtual()) comRestauracao(function () { amb.abrirTela(novo.mod); });
+      if (novo.tipo !== "tela") replace(estado("tela", novo.mod));
+    }
+
+    /** Chamado no começo de abrir(mod), antes de desenhar. false = a pessoa preferiu continuar (não abre). */
+    function antesDeAbrir(mod) {
+      if (!N.ativo || N.restaurando) return true;
+      if (mod === amb.telaAtual()) return true;
+      var abertas = N.janelas.slice().reverse();
+      for (var i = 0; i < abertas.length; i++) {
+        var r = N.entradas[abertas[i].id];
+        if (!r || r.morta || !amb.janelaAberta(r.el) || amb.janelaTrava(r.el)) continue;
+        var confirmou = false;
+        if (amb.janelaSuja(r.el)) { if (!amb.confirmar(SGO_NAV_TEXTOS.descartar)) return false; confirmou = true; }
+        if (amb.fecharJanela(r.el, confirmou)) r.morta = true;
+      }
+      N.janelas = N.janelas.filter(function (j) { var r2 = N.entradas[j.id]; return r2 && !r2.morta; });
+      return true;
+    }
+
+    /** Chamado no fim de abrir(mod): grava o passo (ou só ajusta o atual, se é a mesma tela ou uma restauração). */
+    function aoAbrir(mod) {
+      if (!N.ativo || !mod) return;
+      if (N.restaurando) {
+        if (N.atual && N.atual.tipo !== "base" && N.atual.mod !== mod) { var c = copia(N.atual); c.mod = mod; replace(c); }
+        return;
+      }
+      if (!N.atual || N.atual.tipo === "base") { push(estado("tela", mod)); return; }
+      var tela = telaAbaixo(N.atual.pos);
+      if (tela && tela.tipo === "tela" && tela.mod === mod) {
+        if (N.atual.tipo === "tela") return; // mesma tela redesenhada: não grava passo
+        // a tela voltou ao começo vinda de um sub-nível: os sub-níveis acima deixam de valer
+        for (var p = N.atual.pos; p > tela.pos; p--) { var e = N.pilha[p]; if (e && e.tipo === "sub" && N.entradas[e.id]) N.entradas[e.id].morta = true; }
+        voltarSilencioso(mortasNoTopo());
+        return;
+      }
+      if (N.atual.tipo === "tela" && N.atual.mod === mod) return;
+      push(estado("tela", mod));
+    }
+
+    function empilhar(rotulo, aoVoltar, op) {
+      op = op || {};
+      if (!N.ativo || N.restaurando || !N.atual) return null;
+      var topo = N.atual, rt = N.entradas[topo.id];
+      if (topo.tipo === "sub" && rt && !rt.morta && (op.substituir || (op.chave && rt.chave === op.chave))) {
+        rt.aoVoltar = aoVoltar; rt.reabrir = op.reabrir || null; rt.reinicia = !!op.reinicia; N.ultimaOp = agora();
+        return topo.id;
+      }
+      var est = estado("sub", amb.telaAtual() || topo.mod, { rotulo: String(rotulo || "") });
+      N.entradas[est.id] = { aoVoltar: aoVoltar, reabrir: op.reabrir || null, chave: op.chave || "", reinicia: !!op.reinicia, auto: !!op.auto };
+      push(est);
+      return est.id;
+    }
+
+    function limparSubniveis() {
+      if (!N.ativo || N.restaurando || !N.atual) return;
+      var tela = telaAbaixo(N.atual.pos);
+      if (!tela) return;
+      var temJanela = false;
+      for (var p = N.atual.pos; p > tela.pos; p--) {
+        var e = N.pilha[p]; if (!e) continue;
+        var r = N.entradas[e.id];
+        if (e.tipo === "sub" && r) r.morta = true;
+        if (e.tipo === "janela" && r && !r.morta && amb.janelaAberta(r.el)) temJanela = true;
+      }
+      if (!temJanela) voltarSilencioso(mortasNoTopo());
+    }
+
+    /** Voltar da barra do topo (e de botões "Voltar" dos módulos). true = tratado. */
+    function voltar() {
+      if (!N.ativo) return false;
+      if (N.atual && N.atual.pos > 1) { amb.history.back(); return true; }
+      var home = inicial();
+      if (amb.telaAtual() !== home) { comRestauracao(function () { amb.abrirTela(home); }); if (N.atual && N.atual.tipo !== "base") replace(estado("tela", home)); else push(estado("tela", home)); return true; }
+      amb.aviso(SGO_NAV_TEXTOS.noInicio);
+      return true;
+    }
+    function topoEhSubVivo() { var r = N.atual && N.entradas[N.atual.id]; return !!(N.ativo && N.atual && N.atual.tipo === "sub" && r && !r.morta && r.aoVoltar); }
+    function voltarOu(fn) { if (topoEhSubVivo()) amb.history.back(); else if (typeof fn === "function") fn(); }
+
+    /** Janelas abertas agora (na ordem em que estão por cima). Grava as novas e tira as que fecharam. */
+    function janelasMudaram(abertas) {
+      if (!N.ativo) return;
+      abertas = abertas || [];
+      var fechouTopo = false;
+      N.janelas = N.janelas.filter(function (j) {
+        if (abertas.indexOf(j.el) >= 0) return true;
+        var r = N.entradas[j.id]; if (r) r.morta = true;
+        if (N.atual && N.atual.id === j.id) fechouTopo = true;
+        return false;
+      });
+      var conhecidas = N.janelas.map(function (j) { return j.el; });
+      var novas = abertas.filter(function (el) { return conhecidas.indexOf(el) < 0; });
+      novas.forEach(function (el, i) {
+        var est = estado("janela", amb.telaAtual() || (N.atual && N.atual.mod) || "", { rotulo: amb.rotuloJanela(el) || "" });
+        N.entradas[est.id] = { el: el };
+        N.janelas.push({ el: el, id: est.id });
+        if (i === 0 && fechouTopo && N.atual && N.atual.tipo === "janela") { replace(est); fechouTopo = false; } else push(est);
+      });
+      if (fechouTopo && !N.restaurando) voltarSilencioso(mortasNoTopo());
+    }
+
+    function iniciarSessao() {
+      N.ativo = true; N.restaurar = null;
+      var st = amb.history.state, u = String(amb.usuario() || "");
+      if (st && st.sgo && st.tipo !== "base" && st.mod && st.u === u) {
+        N.pilha = []; N.atual = copia(st); N.pilha[st.pos] = N.atual;
+        var mod = amb.telaPermitida(st.mod) ? st.mod : inicial();
+        // estava numa janela ou sub-nível: volta, sem tratar, até o passo da tela (a janela não é refeita)
+        if (st.tipo !== "tela" && mod === st.mod && st.telaPos >= 1 && st.telaPos < st.pos) {
+          voltarSilencioso(st.pos - st.telaPos);
+          N.restaurar = { mod: mod, mesmaEntrada: true };
+          return N.restaurar;
+        }
+        if (st.tipo !== "tela" || mod !== st.mod) { var t = estado("tela", mod); t.pos = st.pos; amb.history.replaceState(t, "", url(t)); N.atual = t; N.pilha[t.pos] = t; }
+        N.restaurar = { mod: mod, mesmaEntrada: true };
+        return N.restaurar;
+      }
+      var base = { sgo: 1, pos: 0, tipo: "base", mod: "", id: "base", u: u };
+      amb.history.replaceState(base, "", amb.urlBase());
+      N.pilha = [base]; N.atual = base; N.entradas = {}; N.janelas = [];
+      var home = inicial();
+      var est = estado("tela", home); est.pos = 1; est.telaPos = 1;
+      amb.history.pushState(est, "", url(est)); N.atual = est; N.pilha[1] = est;
+      var h = amb.hashTela ? amb.hashTela() : "";
+      if (h && h !== home && amb.telaPermitida(h)) N.restaurar = { mod: h, mesmaEntrada: false };
+      return N.restaurar;
+    }
+    function encerrarSessao() {
+      N.ativo = false; N.atual = null; N.pilha = []; N.entradas = {}; N.janelas = []; N.fila = []; N.esperando = 0; N.restaurar = null;
+      try { amb.history.replaceState({ sgo: 1, pos: 0, tipo: "base", mod: "", id: "base" }, "", amb.urlBase()); } catch (e) {}
+    }
+
+    return {
+      N: N, aoPop: aoPop, antesDeAbrir: antesDeAbrir, aoAbrir: aoAbrir, empilhar: empilhar, limparSubniveis: limparSubniveis,
+      voltar: voltar, voltarOu: voltarOu, janelasMudaram: janelasMudaram, iniciarSessao: iniciarSessao, encerrarSessao: encerrarSessao,
+      comRestauracao: comRestauracao, restaurando: function () { return N.restaurando > 0; }, ativo: function () { return N.ativo; },
+      ultimaOp: function () { return N.ultimaOp; }
+    };
+  }
+
+  /**
+   * "Janela" devolvida por window.open("") no celular: a casca escreve o documento num iframe do visualizador.
+   * cw = contentWindow do iframe (mesma origem, about:blank). ctl = { fechar(), fechado(), imprimir(), navegar(url) }.
+   * Suporta o que os 77 pontos do código usam: document.open/write/close, location.href = url, close(), closed, focus(), print(), opener.
+   */
+  function SGO_NAV_criarJanelaFalsa_(cw, ctl) {
+    var loc = {
+      assign: function (u) { ctl.navegar(String(u)); },
+      replace: function (u) { ctl.navegar(String(u)); },
+      reload: function () {},
+      toString: function () { try { return String(cw.location.href); } catch (e) { return "about:blank"; } }
+    };
+    Object.defineProperty(loc, "href", { get: function () { return loc.toString(); }, set: function (u) { ctl.navegar(String(u)); } });
+    var nada = function () {};
+    var especiais = {
+      close: function () { ctl.fechar(); }, focus: nada, blur: nada, moveTo: nada, resizeTo: nada, moveBy: nada, resizeBy: nada,
+      print: function () { ctl.imprimir(); }, stop: nada
+    };
+    var proxy = null;
+    proxy = new Proxy({}, {
+      get: function (t, k) {
+        if (k === "closed") return !!ctl.fechado();
+        if (k === "opener") return null;
+        if (k === "location") return loc;
+        if (k === "document") return cw.document;
+        if (k === "window" || k === "self") return proxy;
+        if (Object.prototype.hasOwnProperty.call(especiais, k)) return especiais[k];
+        var v;
+        try { v = cw[k]; } catch (e) { return undefined; }
+        return typeof v === "function" ? v.bind(cw) : v;
+      },
+      set: function (t, k, v) {
+        if (k === "location") { ctl.navegar(String(v)); return true; }
+        if (k === "opener" || k === "closed") return true;
+        try { cw[k] = v; } catch (e) {}
+        return true;
+      }
+    });
+    return proxy;
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Parte do navegador (DOM): janelas, campos digitados, passo automático, visualizador, aviso.
+  // ------------------------------------------------------------------------------------------
+  function SGO_NAV_instalar_() {
+    var desligado = window.SGO_NAV_LIGADO === false;
+    try { if (localStorage.getItem("SGO_NAV_DESLIGADO") === "1") desligado = true; } catch (e) {}
+    var vazio = function () { return false; };
+    if (desligado) {
+      window.SGO_NAV = { ligado: false, empilhar: function () { return null; }, voltar: vazio, voltarOu: function (fn) { if (typeof fn === "function") fn(); },
+        limparSubniveis: function () {}, antesDeAbrir: function () { return true; }, aoAbrir: function () {}, iniciarSessao: function () { return null; },
+        encerrarSessao: function () {}, restaurarCom: function (fn) { return fn(); }, abrirDocumento: vazio, ehCelular: vazio, telaParaRestaurar: function () { return null; } };
+      return;
+    }
+
+    var SELETOR_JANELAS = ".atv-overlay, .modal-overlay, .sgo-overlay, .em-overlay, .vinc-overlay, .conduta-modal-overlay, .auvo-os-overlay, " +
+      ".busca-overlay, .avs-overlay, .avisos-login-overlay, .sga-sobre, .padroes-critico-overlay, .ajuda-painel, .aut-janela-fundo, .cadx-dialogo-fundo, " +
+      "[class*='-overlay'], [role='dialog'][aria-modal='true'], .sgo-visor";
+    var EXCLUIR = /(^|\s)(asw-|comw-|mobile-topbar|sgo-overlay-carregando|sgo-nav-aviso|login-)/;
+    var editados = typeof WeakSet === "function" ? new WeakSet() : null;
+
+    function ehCelular() { try { return typeof ehMobileModo_ === "function" && ehMobileModo_(); } catch (e) { return false; } }
+    function visivel(el) {
+      if (!el || !el.isConnected || !el.getClientRects().length) return false;
+      var st = getComputedStyle(el);
+      return st.display !== "none" && st.visibility !== "hidden" && Number(st.opacity || 1) > 0.05;
+    }
+    function listarJanelas() {
+      var achadas = [];
+      var cands = [];
+      try { cands = Array.prototype.slice.call(document.querySelectorAll(SELETOR_JANELAS)); } catch (e) {}
+      Array.prototype.forEach.call(document.body.children, function (c) { if (cands.indexOf(c) < 0) cands.push(c); });
+      var W = window.innerWidth || 1, H = window.innerHeight || 1;
+      cands.forEach(function (el) {
+        if (el.id === "app" || el.id === "login" || el.id === "sgoOverlayCarregando") return;
+        if (EXCLUIR.test(String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className || ""))) return;
+        if (el.closest && el.closest(".asw-painel, .comw-painel, .mobile-topbar")) return;
+        if (!visivel(el)) return;
+        var st = getComputedStyle(el);
+        if (st.position !== "fixed") return;
+        var r = el.getBoundingClientRect();
+        var w = Math.max(0, Math.min(r.right, W) - Math.max(r.left, 0)), h = Math.max(0, Math.min(r.bottom, H) - Math.max(r.top, 0));
+        if (w * h < W * H * 0.4) return;
+        achadas.push(el);
+      });
+      // a janela de dentro (caixa da janela) não conta de novo
+      return achadas.filter(function (el) { return !achadas.some(function (o) { return o !== el && o.contains(el); }); });
+    }
+    function texto(el) { return String((el && (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent)) || "").replace(/\s+/g, " ").trim(); }
+    function rotuloJanela(el) {
+      var h = el.querySelector("h1, h2, h3, h4, .sgo-visor-titulo");
+      return (h ? texto(h) : texto(el)).slice(0, 80);
+    }
+    function ehTrava(el) {
+      if (!el) return false;
+      if (el.getAttribute("data-sgo-trava") === "1") return true;
+      if (el.classList.contains("bloqueante")) return true; // atividade com prazo vencido (JS_Atividades.html)
+      if (el.id === "sgaSobre" || el.classList.contains("sga-sobre")) return !el.querySelector("[onclick*='SegAcesso_fecharEtapas_']"); // troca de senha obrigatória
+      return false;
+    }
+    function textoTrava(el) {
+      var t = rotuloJanela(el);
+      return t ? "Resolva primeiro a janela \"" + t + "\": ela não fecha pelo voltar. Use os botões dela." : SGO_NAV_TEXTOS.trava;
+    }
+    function botaoFechar(el) {
+      var bts = Array.prototype.slice.call(el.querySelectorAll("button, [role='button'], a")).filter(visivel);
+      var por = function (f) { for (var i = 0; i < bts.length; i++) if (f(bts[i])) return bts[i]; return null; };
+      return por(function (b) { return b.hasAttribute("data-sgo-fechar"); }) ||
+        por(function (b) { return /(^|\s|-)(fechar|close)(\s|-|$)/i.test(String(b.className || "")) || b.hasAttribute("data-cm-fechar") || b.hasAttribute("data-at-fechar"); }) ||
+        por(function (b) { return /^fechar/i.test(String(b.getAttribute("aria-label") || b.getAttribute("title") || "")); }) ||
+        por(function (b) { return /^(×|✕|✖|x|fechar|fechar janela|fechar avisos)$/i.test(texto(b)); }) ||
+        por(function (b) { return /^(voltar|cancelar \(não trocar\)|não, voltar)$/i.test(texto(b)) || (/^cancelar$/i.test(texto(b)) && (b.hasAttribute("data-x") || /fechar|remove\(\)|close/i.test(String(b.getAttribute("onclick") || "")))); });
+    }
+    function fecharJanela(el, jaConfirmou) {
+      var b = botaoFechar(el);
+      var confOrig = window.confirm;
+      if (jaConfirmou) window.confirm = function () { return true; };
+      try {
+        if (b) { b.click(); }
+        else { el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); }
+      } catch (e) { console.error("Navegação: fechar janela:", e); }
+      finally { if (jaConfirmou) window.confirm = confOrig; }
+      return !visivel(el);
+    }
+    var NAO_CONTA = /busca|buscar|pesquis|filtro|search|procurar/i;
+    function sujoEm(raiz) {
+      if (!raiz || !editados) return false;
+      var campos = raiz.querySelectorAll("input, textarea, [contenteditable='true'], [contenteditable='']");
+      for (var i = 0; i < campos.length; i++) {
+        var c = campos[i];
+        if (!editados.has(c)) continue;
+        var v = c.isContentEditable ? String(c.textContent || "").trim() : String(c.value || "").trim();
+        if (v) return true;
+      }
+      return false;
+    }
+    document.addEventListener("input", function (e) {
+      var t = e.target;
+      if (!e.isTrusted || !t || !editados) return;
+      if (t.isContentEditable) { editados.add(t); return; }
+      if (t.tagName === "TEXTAREA") { editados.add(t); return; }
+      if (t.tagName !== "INPUT") return;
+      var tipo = String(t.type || "text").toLowerCase();
+      if (["text", "email", "tel", "number", "date", "time", "datetime-local", "month", "url"].indexOf(tipo) < 0) return;
+      if (NAO_CONTA.test([t.id, t.name, t.placeholder, t.className, t.getAttribute("aria-label")].join(" "))) return;
+      editados.add(t);
+    }, true);
+
+    // ---------------- aviso curto (toast) ----------------
+    var avisoTimer = null;
+    function aviso(msg) {
+      var a = document.getElementById("sgoNavAviso");
+      if (!a) { a = document.createElement("div"); a.id = "sgoNavAviso"; a.className = "sgo-nav-aviso"; a.setAttribute("role", "status"); a.setAttribute("aria-live", "polite"); document.body.appendChild(a); }
+      a.textContent = msg; a.classList.add("visivel");
+      clearTimeout(avisoTimer);
+      avisoTimer = setTimeout(function () { a.classList.remove("visivel"); }, 3600);
+    }
+
+    function telaInicial() {
+      try { if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return "representacao"; } catch (e) {}
+      return ehCelular() ? "mobile_home" : "dashboard";
+    }
+    function telaPermitida(mod) {
+      mod = String(mod || "");
+      if (!/^[a-z_]{3,40}$/.test(mod) || mod === "trocar_senha") return false;
+      if (mod === "dashboard" || mod === "mobile_home") return true;
+      try { if (typeof SGO_telaLiberadaRH_ === "function" && !SGO_telaLiberadaRH_(mod)) return false; } catch (e) {}
+      try { if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return mod === "representacao"; } catch (e) {}
+      var b = document.querySelector('#menu .menu-btn[data-mod="' + mod + '"]');
+      if (!b) return false;
+      // Cliente: só o que o menu dele mostra (aplicarRegrasDeAcesso_ esconde na hora). Equipe: alguns grupos (Comercial, Compras)
+      // só aparecem depois da conferência do servidor; a tela reaberta confere o acesso de novo, como pelo menu.
+      var perfil = ""; try { perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase(); } catch (e0) {}
+      if (perfil === "CLIENTE" || b.style.display === "none") {
+        for (var e = b; e && e.id !== "menu"; e = e.parentElement) if (e.style && e.style.display === "none") return false;
+      }
+      return true;
+    }
+
+    var nucleo = SGO_NAV_criarNucleo_({
+      history: window.history,
+      urlBase: function () { return location.pathname + location.search; },
+      abrirTela: function (mod) { if (typeof abrir === "function") abrir(mod); },
+      telaAtual: function () { return window.SGO_MODULO_ATUAL || ""; },
+      telaInicial: telaInicial,
+      usuario: function () { try { var u = typeof USER_CONTEXT !== "undefined" && USER_CONTEXT; return u ? (u.userId || u.id || u.email || u.usuario || u.nome || "") : ""; } catch (e) { return ""; } },
+      aviso: aviso,
+      confirmar: function (t) { try { return window.confirm(t); } catch (e) { return true; } },
+      janelaAberta: function (el) { return visivel(el); },
+      janelaTrava: ehTrava,
+      janelaSuja: function (el) { return sujoEm(el); },
+      fecharJanela: fecharJanela,
+      rotuloJanela: rotuloJanela,
+      textoTrava: textoTrava,
+      conteudoSujo: function () { return sujoEm(document.getElementById("conteudo")); },
+      telaPermitida: function () { return true; }, // conferida em telaParaRestaurar, com o menu já montado
+      hashTela: function () { var m = /^#\/([a-z_]{3,40})$/.exec(String(location.hash || "")); return m ? m[1] : ""; },
+      agora: function () { return Date.now(); },
+      agendar: function (fn, ms) { return setTimeout(fn, ms); }
+    });
+
+    window.addEventListener("popstate", function (e) { try { nucleo.aoPop(e.state); } catch (x) { console.error("Navegação (voltar):", x); } });
+
+    // ---------------- observador: janelas que abrem e fecham; passo automático ----------------
+    var tique = null;
+    var clique = null; // { t, assinatura, mod, aba }
+    var SELETOR_ABA = "[role='tab'][aria-selected='true'], [role='tablist'] .active, [class*='tabs'] > .active, [class*='abas'] .active, [class*='abas'] .bc-ativo";
+    function abaSelecionada() {
+      var c = document.getElementById("conteudo"); if (!c) return "";
+      var a = Array.prototype.filter.call(c.querySelectorAll(SELETOR_ABA), visivel)[0];
+      return a ? texto(a) : "";
+    }
+    /** Voltar de um passo automático: reabre o módulo e, se ele lembrou outra aba, volta para a aba de antes. */
+    function voltarAoComeco(mod, aba) {
+      abrir(mod);
+      if (!aba) return;
+      [300, 1000, 2200].forEach(function (ms) {
+        setTimeout(function () {
+          if (window.SGO_MODULO_ATUAL !== mod || abaSelecionada() === aba) return;
+          var c = document.getElementById("conteudo"); if (!c) return;
+          var alvo = Array.prototype.filter.call(c.querySelectorAll("[role='tab'], [role='tablist'] button, [class*='tabs'] > button, [class*='abas'] button"), visivel)
+            .filter(function (b) { return texto(b) === aba; })[0];
+          if (alvo) nucleo.comRestauracao(function () { alvo.click(); });
+        }, ms);
+      });
+    }
+    function assinatura() {
+      var c = document.getElementById("conteudo");
+      if (!c) return "";
+      var partes = [];
+      var hs = c.querySelectorAll("h1, h2, h3, .content-title, " + SELETOR_ABA);
+      for (var i = 0; i < hs.length && partes.length < 8; i++) if (visivel(hs[i])) partes.push(texto(hs[i]).slice(0, 60));
+      var tt = document.getElementById("mobileTopbarTitulo");
+      if (tt && ehCelular()) partes.push(texto(tt));
+      return partes.join("|");
+    }
+    function verificar() {
+      tique = null;
+      document.documentElement.classList.toggle("sgo-movel", ehCelular());
+      if (!nucleo.ativo()) return;
+      var abertas = listarJanelas();
+      abertas.forEach(function (el) { el.classList.add("sgo-nav-janela"); });
+      document.documentElement.classList.toggle("sgo-tem-janela", abertas.some(function (el) { return !el.classList.contains("sgo-visor"); }));
+      nucleo.janelasMudaram(abertas);
+      // passo automático: um toque dentro da tela trocou os títulos sem nenhum passo gravado
+      if (clique && Date.now() - clique.t < 6000 && !abertas.length) {
+        if (nucleo.ultimaOp() > clique.t || window.SGO_MODULO_ATUAL !== clique.mod) { clique = null; return; }
+        var agoraAss = assinatura();
+        if (agoraAss && agoraAss !== clique.assinatura) {
+          var mod = clique.mod, aba = clique.aba; clique = null;
+          nucleo.empilhar("Tela dentro do módulo", function () { voltarAoComeco(mod, aba); }, { auto: true, reinicia: true });
+        }
+      } else if (clique && Date.now() - clique.t >= 6000) clique = null;
+    }
+    function agendar() { if (!tique) tique = setTimeout(verificar, 60); }
+    var EXCLUIR_CLIQUE = /^(atualizar|recarregar|buscar|filtrar|limpar|ordenar|mostrar mais|carregar mais|salvar|gravar|enviar|concluir|iniciar|excluir|apagar|aprovar|recusar|assumir|marcar|confirmar|cancelar|arquivar|restaurar|copiar|baixar|imprimir|calcular|sincronizar|importar|testar|desfazer)/i;
+    document.addEventListener("click", function (e) {
+      if (!e.isTrusted || !nucleo.ativo()) return;
+      var c = document.getElementById("conteudo");
+      var t = e.target;
+      if (!c || !t || !c.contains(t)) return;
+      if (t.closest && t.closest("input, select, textarea, label, summary, option")) return;
+      var b = t.closest ? t.closest("button, a, [role='button'], [onclick], .mobile-card, [data-eq], tr") : null;
+      if (!b) return;
+      if (b.tagName === "A" && b.getAttribute("href") && !/^(#|javascript:)/i.test(b.getAttribute("href"))) return;
+      if (EXCLUIR_CLIQUE.test(texto(b))) return;
+      clique = { t: Date.now(), assinatura: assinatura(), mod: window.SGO_MODULO_ATUAL || "", aba: abaSelecionada() };
+    }, true);
+    function ligarObservador() {
+      if (typeof MutationObserver !== "function" || !document.body) return;
+      new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden", "open"] });
+    }
+    if (document.body) ligarObservador(); else document.addEventListener("DOMContentLoaded", ligarObservador);
+    window.addEventListener("resize", agendar);
+
+    // ---------------- visualizador de documentos (só no celular) ----------------
+    var VISOR = null;
+    function fecharVisor() {
+      if (!VISOR) return;
+      var v = VISOR; VISOR = null; v.fechado = true;
+      document.documentElement.classList.remove("sgo-visor-aberto");
+      clearInterval(v.timer);
+      try { window.removeEventListener("resize", v.aoGirar); } catch (e) {}
+      try { v.el.remove(); } catch (e) {}
+    }
+    /** Folha mais larga que o celular: ajusta à largura (zoom só na tela; a impressão continua em A4). Mede ao carregar e ao girar. */
+    function ajustarLargura(v) {
+      try {
+        var doc = v.iframe.contentDocument; if (!doc || !doc.documentElement || !doc.body) return;
+        var st = doc.getElementById("sgo-visor-ajuste");
+        if (!st) { st = doc.createElement("style"); st.id = "sgo-visor-ajuste"; (doc.head || doc.documentElement).appendChild(st); }
+        st.textContent = "";
+        var larg = doc.documentElement.scrollWidth, cabe = v.iframe.clientWidth;
+        v.podeAjustar = cabe > 0 && larg > cabe + 4;
+        if (v.podeAjustar && !v.tamanhoReal) st.textContent = "@media screen { html { zoom: " + (Math.floor(cabe / larg * 1000) / 1000) + "; } }";
+        v.btAjuste.hidden = !v.podeAjustar;
+        v.btAjuste.querySelector("span").textContent = v.tamanhoReal ? "Ajustar à tela" : "Tamanho real";
+      } catch (e) {}
+    }
+    function tiqueVisor(v) {
+      if (v.fechado) return;
+      try {
+        var doc = v.iframe.contentDocument;
+        if (doc) {
+          var t = String(doc.title || "").trim();
+          if (t && !v.tituloFixo) v.titulo.textContent = t;
+          // links dentro do documento abrem fora (o iframe não navega para o Drive nem para outro site)
+          Array.prototype.forEach.call(doc.querySelectorAll("a[href]:not([target])"), function (a) { if (!/^(#|javascript:)/i.test(a.getAttribute("href"))) a.setAttribute("target", "_blank"); });
+          // a barra própria do documento (Imprimir) continua; no visualizador, a nossa já tem Imprimir
+          if (!v.medido && doc.readyState === "complete" && doc.body && doc.body.children.length) { v.medido = true; ajustarLargura(v); }
+        }
+      } catch (e) {}
+    }
+    function painelExterno(v, u, ehPdf) {
+      v.iframe.hidden = true;
+      v.externo.hidden = false;
+      v.externo.innerHTML = '<div class="sgo-visor-externo-caixa"><p><b>O documento está pronto.</b></p>' +
+        '<p>' + (ehPdf ? "Este arquivo é um PDF e abre no leitor do celular." : "Este documento fica fora do SGO+ e abre numa aba nova.") + ' Para voltar ao SGO+ depois, feche a aba ou use o botão de abas do navegador.</p>' +
+        '<a class="btn-primary sgo-visor-grande" target="_blank" rel="noopener" href="' + escapeHtml_(u) + '"><i class="fas fa-up-right-from-square" aria-hidden="true"></i>&nbsp;Abrir o documento</a></div>';
+      v.btImprimir.hidden = true;
+    }
+    function navegarVisor(v, u) {
+      if (v.fechado) return;
+      var ehPdf = /\.pdf(\?|#|$)/i.test(u) || /^blob:/i.test(u);
+      if (SGO_NAV_mesmaOrigem_(u, location.host) && !ehPdf) {
+        v.iframe.hidden = false; v.externo.hidden = true; v.btImprimir.hidden = false;
+        try { v.iframe.contentWindow.location.replace(u); } catch (e) { v.iframe.src = u; } // replace: não cria passo no histórico
+      } else painelExterno(v, u, ehPdf);
+    }
+    /** op: { titulo, url, baixarUrl }. Devolve a "janela" (para document.write) ou null se não é celular. */
+    function abrirVisor(op) {
+      op = op || {};
+      fecharVisor();
+      var el = document.createElement("div");
+      el.className = "sgo-visor";
+      el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Documento");
+      el.innerHTML = '<div class="sgo-visor-barra">' +
+        '<button type="button" class="sgo-visor-btn sgo-visor-voltar" data-sgo-fechar aria-label="Voltar" title="Voltar"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Voltar</span></button>' +
+        '<div class="sgo-visor-titulo">' + escapeHtml_(op.titulo || "Documento") + '</div>' +
+        '<button type="button" class="sgo-visor-btn" data-visor-ajuste hidden title="Ver a folha no tamanho real ou ajustada à largura da tela"><i class="fas fa-maximize" aria-hidden="true"></i><span>Tamanho real</span></button>' +
+        '<a class="sgo-visor-btn" data-visor-baixar hidden target="_blank" rel="noopener" title="Baixar PDF"><i class="fas fa-download" aria-hidden="true"></i><span>Baixar PDF</span></a>' +
+        '<button type="button" class="sgo-visor-btn" data-visor-imprimir title="Imprimir ou salvar em PDF"><i class="fas fa-print" aria-hidden="true"></i><span>Imprimir</span></button>' +
+        '</div><div class="sgo-visor-corpo"><iframe title="Documento"></iframe><div class="sgo-visor-externo" hidden></div></div>';
+      document.body.appendChild(el);
+      document.documentElement.classList.add("sgo-visor-aberto"); // os botões redondos (dúvida e bate-papo) não cobrem o documento
+      var v = { el: el, iframe: el.querySelector("iframe"), titulo: el.querySelector(".sgo-visor-titulo"), externo: el.querySelector(".sgo-visor-externo"),
+        btAjuste: el.querySelector("[data-visor-ajuste]"), btImprimir: el.querySelector("[data-visor-imprimir]"), btBaixar: el.querySelector("[data-visor-baixar]"),
+        fechado: false, tamanhoReal: false, podeAjustar: false, tituloFixo: !!op.tituloFixo };
+      VISOR = v;
+      el.querySelector("[data-sgo-fechar]").onclick = function () { fecharVisor(); };
+      v.btImprimir.onclick = function () { try { v.iframe.contentWindow.focus(); v.iframe.contentWindow.print(); } catch (e) { alert("Não foi possível imprimir daqui. Toque em \"Imprimir ou salvar em PDF\" no alto do documento."); } };
+      v.btAjuste.onclick = function () { v.tamanhoReal = !v.tamanhoReal; ajustarLargura(v); };
+      if (op.baixarUrl) { v.btBaixar.href = op.baixarUrl; v.btBaixar.hidden = false; }
+      el.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); fecharVisor(); } });
+      v.iframe.addEventListener("load", function () { v.medido = true; ajustarLargura(v); tiqueVisor(v); });
+      v.aoGirar = function () { if (!v.fechado) ajustarLargura(v); };
+      window.addEventListener("resize", v.aoGirar);
+      v.timer = setInterval(function () { tiqueVisor(v); }, 700);
+      if (op.url) navegarVisor(v, String(op.url));
+      var cw = v.iframe.contentWindow;
+      return SGO_NAV_criarJanelaFalsa_(cw, { fechar: function () { if (VISOR === v) fecharVisor(); }, fechado: function () { return v.fechado; },
+        imprimir: function () { v.btImprimir.onclick(); }, navegar: function (u) { navegarVisor(v, u); } });
+    }
+
+    // window.open("") seguido de document.write: no celular vira o visualizador. Todo o resto segue como antes.
+    var abrirOriginal = window.open;
+    window.open = function (u, alvo, recursos) {
+      try {
+        if (nucleo.ativo() && ehCelular() && SGO_NAV_ehDocumentoVazio_(u, alvo)) return abrirVisor({ titulo: "Documento" });
+      } catch (e) { console.error("Visualizador:", e); }
+      return abrirOriginal.apply(window, arguments);
+    };
+
+    window.SGO_NAV = {
+      ligado: true,
+      nucleo: nucleo,
+      ehCelular: ehCelular,
+      /** Sub-nível dentro do módulo: grava um passo; voltar chama aoVoltar. opcoes: { chave, substituir, reabrir, reinicia }. */
+      empilhar: function (rotulo, aoVoltar, opcoes) { return nucleo.empilhar(rotulo, aoVoltar, opcoes); },
+      /** Botão "Voltar" de um módulo: se há sub-nível gravado, volta um passo pelo histórico; senão, roda fn. */
+      voltarOu: function (fn) { nucleo.voltarOu(fn); },
+      /** O módulo voltou ao começo por conta própria (ex.: "Voltar ao painel"): tira os sub-níveis da pilha. */
+      limparSubniveis: function () { nucleo.limparSubniveis(); },
+      voltar: function () { return nucleo.voltar(); },
+      antesDeAbrir: function (mod) { return nucleo.antesDeAbrir(mod); },
+      aoAbrir: function (mod) { nucleo.aoAbrir(mod); agendar(); },
+      iniciarSessao: function () { var r = nucleo.iniciarSessao(); document.documentElement.classList.toggle("sgo-movel", ehCelular()); return r; },
+      encerrarSessao: function () { fecharVisor(); nucleo.encerrarSessao(); },
+      telaParaRestaurar: function () {
+        var r = nucleo.N.restaurar;
+        if (r && r.mod && !telaPermitida(r.mod)) r = { mod: telaInicial(), mesmaEntrada: !!r.mesmaEntrada };
+        return r;
+      },
+      restaurarCom: function (fn) { return nucleo.comRestauracao(fn); },
+      /** Documento por endereço (ex.: relatório do ciclo). No computador abre aba nova; no celular, o visualizador. */
+      abrirDocumento: function (op) {
+        op = op || {};
+        if (!nucleo.ativo() || !ehCelular()) return false;
+        abrirVisor({ titulo: op.titulo || "Documento", tituloFixo: !!op.titulo, url: op.url, baixarUrl: op.baixarUrl });
+        return true;
+      }
+    };
+  }
+
+  if (typeof window !== "undefined" && window.document && !window.__SGO_NAV_TESTE__) {
+    try { SGO_NAV_instalar_(); } catch (e) { console.error("Navegação do SGO+ não ligou:", e); }
+  }
+</script>

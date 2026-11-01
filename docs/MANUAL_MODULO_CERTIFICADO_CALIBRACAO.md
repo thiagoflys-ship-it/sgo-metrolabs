@@ -202,6 +202,8 @@ Depois que o certificado for gerado, aparece um segundo botão: **"Gerar Relató
 3. Uma nova aba abre com o documento pronto, com uma conclusão técnica (pra quem entende) e uma conclusão em linguagem simples (pra quem não entende de metrologia) — as duas dizendo a mesma coisa, cada uma no seu nível.
 4. Esse documento também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ).
 
+> **No celular** (01/11/2026): o certificado e o relatório interpretativo abrem dentro do SGO+, no visualizador de documentos, em vez da aba nova: no alto ficam "Voltar" (volta para o certificado; o botão voltar do celular faz o mesmo) e "Imprimir" (folha A4). Nos passos do certificado do celular, voltar volta ao passo anterior; "+ Novo cliente" e "+ Novo equipamento" voltam para o certificado, e não para a lista de Clientes ou de Equipamentos.
+
 > **Este relatório é opcional e separado do certificado.** O certificado sozinho já é um documento completo e válido — o Relatório Interpretativo é um complemento, útil quando o cliente ou gestor não entende de metrologia e precisa de uma explicação mais acessível.
 
 ---

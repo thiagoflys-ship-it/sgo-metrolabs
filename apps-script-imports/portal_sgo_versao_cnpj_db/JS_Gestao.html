@@ -284,6 +284,7 @@
   function Gestao_abrirRegras_() {
     var c = document.getElementById("gdCorpo");
     if (!c) return;
+    if (window.SGO_NAV) SGO_NAV.empilhar("Regras e responsáveis", function () { Gestao_renderCaixa_(); }); // voltar volta à caixa (Etapa 1)
     GD.modoRegras = true;
     ["gdKpis", "gdTabs"].forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = ""; });
     c.innerHTML = '<div class="gd-vazio">Carregando as regras...</div>';
@@ -323,7 +324,7 @@
         chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div>' +
       Gestao_htmlSedna_(r.sedna, dis, chk, hora) + '</div></div>' +
       '<div class="gd-acoes">' + (r.podeConfigurar ? '<button type="button" class="btn-primary" id="gdSalvarRegras" onclick="Gestao_salvarRegras_()">Salvar regras</button>' : '') +
-      '<button type="button" class="btn-secondary" onclick="Gestao_renderCaixa_()">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
+      '<button type="button" class="btn-secondary" onclick="SGO_voltarOu_(Gestao_renderCaixa_)">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
   }
 
   // 26/10/2026: escalonamento das atividades atrasadas por prioridade e resumo do dia da gestão (SGO_Sedna.js)

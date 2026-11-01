@@ -63,7 +63,7 @@ function SGO_ajudaTelas_LavCiclo_() {
         ] },
         { titulo: "Abrir, ler e baixar um relatório", itens: [
           "Ache o relatório pela busca ou pelo Kanban.",
-          "Toque em \"Abrir o relatório\" para ver a folha A4.",
+          "Toque em \"Abrir o relatório\" para ver a folha A4. No celular, a folha abre dentro do SGO+, no visualizador, com \"Voltar\", \"Imprimir\" e \"Baixar PDF\" no alto; no computador, abre em aba nova.",
           "No celular, a folha abre inteira, do tamanho da tela. Para ler de perto, afaste dois dedos ou toque em \"Ver em tamanho real\"; \"Ajustar a folha à tela\" volta.",
           "Toque em \"Baixar PDF\" para guardar o arquivo. O PDF e a impressão saem em uma folha A4.",
           "Toque em \"Versões e histórico\" para ver quem gerou, quem assinou e as versões anteriores."

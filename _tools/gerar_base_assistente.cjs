@@ -60,6 +60,8 @@ const MAPA = {
   "MANUAL_RELATORIO_CICLO_LAVADORA_GESTAO.md": { tela: "lavadora_ciclos", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO"] },
   // 31/10/2026: segurança do acesso — o manual de quem entra no sistema (todos) e o da gestão (configuração e recuperação)
   "MANUAL_SEGURANCA_ACESSO.md": { tela: "dashboard" },
+  // 01/11/2026 (Etapa 1 do programa de melhoria): voltar único, janelas na pilha e visualizador de documentos do celular
+  "MANUAL_NAVEGACAO_VOLTAR.md": { tela: "dashboard" },
   "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] },
   // 31/10/2026: atividades — o manual de quem executa (pedido de nova data, andamento do dia, concluir) e o da gestão (decidir o pedido)
   "MANUAL_MINHAS_ATIVIDADES.md": { tela: "minhas_atividades" },

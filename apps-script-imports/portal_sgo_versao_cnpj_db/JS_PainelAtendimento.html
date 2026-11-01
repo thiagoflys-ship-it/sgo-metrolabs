@@ -247,6 +247,8 @@
   function PnA_docGerado_(el, r) {
     var d = r.documento || {};
     if (el) el.innerHTML = '<div class="at-faixa ok">' + PnA_esc_(r.message || "Relatório gerado.") + (d.htmlUrl ? ' <a href="' + PnA_esc_(d.htmlUrl) + '" target="_blank" rel="noopener">Abrir o A4</a>' : "") + (d.pdfUrl ? ' · <a href="' + PnA_esc_(d.pdfUrl) + '" target="_blank" rel="noopener">PDF</a>' : "") + "</div>";
+    // 01/11/2026 (Etapa 1): no celular, o A4 abre no visualizador do SGO+ (Voltar, Imprimir, Baixar PDF); no computador, aba nova
+    if (d.htmlUrl && window.SGO_NAV && SGO_NAV.abrirDocumento({ url: d.htmlUrl, titulo: d.tipoNome || "Relatório", baixarUrl: d.pdfUrl || "" })) return;
     if (d.htmlUrl) { try { window.open(d.htmlUrl, "_blank", "noopener"); } catch (e) {} }
   }
   /** Cópia reduzida da foto para o A4 (lado maior 1000 px, JPEG): o servidor guarda e usa no relatório. Devolve null se não der. */

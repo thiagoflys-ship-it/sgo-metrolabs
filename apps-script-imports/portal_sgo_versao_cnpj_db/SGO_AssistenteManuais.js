@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "cedde0935295",
+ "versao": "7e819df8c712",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -1548,7 +1548,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Seção 7 — Gerar > Gerar Relatório Interpretativo",
-     "texto": "Depois que o certificado for gerado, aparece um segundo botão: \"Gerar Relatório Interpretativo\".\n1. Clique nele.\n2. O sistema monta uma explicação didática a partir dos mesmos resultados salvos no certificado. Os textos e tabelas usam a mesma formatação; a interpretação numérica não depende de geração por IA.\n3. Uma nova aba abre com o documento pronto, com uma conclusão técnica (pra quem entende) e uma conclusão em linguagem simples (pra quem não entende de metrologia) — as duas dizendo a mesma coisa, cada uma no seu nível.\n4. Esse documento também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ).\nEste relatório é opcional e separado do certificado. O certificado sozinho já é um documento completo e válido — o Relatório Interpretativo é um complemento, útil quando o cliente ou gestor não entende de metrologia e precisa de uma explicação mais acessível."
+     "texto": "Depois que o certificado for gerado, aparece um segundo botão: \"Gerar Relatório Interpretativo\".\n1. Clique nele.\n2. O sistema monta uma explicação didática a partir dos mesmos resultados salvos no certificado. Os textos e tabelas usam a mesma formatação; a interpretação numérica não depende de geração por IA.\n3. Uma nova aba abre com o documento pronto, com uma conclusão técnica (pra quem entende) e uma conclusão em linguagem simples (pra quem não entende de metrologia) — as duas dizendo a mesma coisa, cada uma no seu nível.\n4. Esse documento também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ).\nNo celular (01/11/2026): o certificado e o relatório interpretativo abrem dentro do SGO+, no visualizador de documentos, em vez da aba nova: no alto ficam \"Voltar\" (volta para o certificado; o botão voltar do celular faz o mesmo) e \"Imprimir\" (folha A4). Nos passos do certificado do celular, voltar volta ao passo anterior; \"+ Novo cliente\" e \"+ Novo equipamento\" voltam para o certificado, e não para a lista de Clientes ou de Equipamentos.\nEste relatório é opcional e separado do certificado. O certificado sozinho já é um documento completo e válido — o Relatório Interpretativo é um complemento, útil quando o cliente ou gestor não entende de metrologia e precisa de uma explicação mais acessível."
     },
     {
      "titulo": "Consultar certificados já emitidos (por CNPJ)",
@@ -3442,6 +3442,50 @@ var SGO_ASSIST_MANUAIS = {
    ]
   },
   {
+   "arquivo": "MANUAL_NAVEGACAO_VOLTAR.md",
+   "titulo": "Manual: voltar e documentos no SGO+",
+   "tela": "dashboard",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Vale para todas as telas, no celular e no computador. Atualizado em 01/11/2026."
+    },
+    {
+     "titulo": "O que mudou",
+     "texto": "O SGO+ passou a lembrar o caminho que você fez. Cada tela que você abre, cada janela (detalhe, ficha, formulário) e cada passo dentro de uma tela viram um passo do caminho. Voltar desfaz o último passo."
+    },
+    {
+     "titulo": "Como voltar",
+     "texto": "1. No celular, use o \"← Voltar\" da barra do topo, o botão voltar do próprio celular ou o gesto de voltar. Os três fazem a mesma coisa.\n2. No computador, use o botão voltar do navegador (a seta no alto, à esquerda) ou a tecla de voltar do mouse.\n3. Com uma janela aberta, voltar fecha a janela e você continua na mesma tela.\n4. Sem janela aberta, voltar leva para a tela ou a lista em que você estava antes, com os mesmos filtros quando a tela guarda isso. Exemplos: da busca do Relatório do ciclo para o painel; de \"Regras e responsáveis\" para a Caixa de decisões; do \"+ Novo cliente\" do Certificado de calibração de volta para o certificado; de \"Abrir a tela completa\" (Autoclaves, Lavadoras, Cadeia de frio, Estufa, Planejamento CME, no celular) de volta para o resumo.\n5. No Início, voltar mostra \"Para sair do SGO+, toque em voltar de novo\". Só um segundo toque, logo em seguida, sai do sistema. Antes, o primeiro toque já saía e deixava a tela em branco."
+    },
+    {
+     "titulo": "Texto digitado não se perde sem aviso",
+     "texto": "Se você escreveu alguma coisa numa janela ou num formulário e toca em voltar, aparece a pergunta \"Descartar o que foi digitado?\".\nToque em Cancelar para continuar onde estava, com o texto.\nToque em OK para descartar e voltar.\n\nA mesma pergunta aparece se você abrir outra tela pelo menu com uma janela preenchida ainda aberta."
+    },
+    {
+     "titulo": "Janelas que não fecham pelo voltar",
+     "texto": "Duas janelas precisam ser resolvidas antes de qualquer outra coisa e não fecham pelo voltar:\nAtividade com prazo vencido: peça nova data ou conclua a atividade.\nTroca de senha obrigatória: crie a senha nova ou toque em \"Sair sem trocar\".\n\nAo tocar em voltar com uma delas aberta, aparece no pé da tela o aviso \"Resolva primeiro a janela...\". Use os botões da própria janela."
+    },
+    {
+     "titulo": "Janelas que ficavam abertas",
+     "texto": "Ao trocar de tela pelo menu, pela busca ou por um atalho, as janelas que ficaram abertas fecham sozinhas. Antes, a \"Nova assinatura\" do E-mail, por exemplo, continuava por cima de qualquer outra tela.\n\nNo celular, as janelas começam logo abaixo da barra do topo: o \"← Voltar\", a busca, a Ajuda e a Conta ficam sempre à vista."
+    },
+    {
+     "titulo": "Documentos no celular: o visualizador",
+     "texto": "No celular, relatórios, certificados, documentos A4 e o manual completo da Ajuda abrem dentro do SGO+, num visualizador de tela cheia. Antes abriam numa aba em branco, sem botão para voltar.\n\nNo alto do visualizador ficam:\nVoltar: fecha o documento e volta para a tela de onde você veio. O botão voltar do celular faz o mesmo.\nO nome do documento.\nImprimir: imprime ou salva em PDF. A folha sai em A4, igual a antes.\nBaixar PDF: aparece quando o documento já tem o arquivo PDF salvo (por exemplo, no Relatório do ciclo da lavadora).\nTamanho real e Ajustar à tela: folha mais larga que o celular aparece ajustada à largura da tela; \"Tamanho real\" mostra no tamanho original, para arrastar para os lados.\n\nDocumento guardado fora do SGO+ (por exemplo, um PDF numa pasta) mostra o botão \"Abrir o documento\". Ele abre numa aba nova; para voltar ao SGO+, feche a aba ou use o botão de abas do navegador.\n\nO visualizador vale para o SGO+ no modo celular: telas de até 900 px de largura e celular deitado (tela de toque com até 500 px de altura). No computador, os documentos continuam abrindo em aba nova, como antes.\n\nLinks para fora do sistema continuam abrindo fora: conversa no WhatsApp, e-mail, pasta e PDF no Drive, e os botões de baixar arquivo."
+    },
+    {
+     "titulo": "Atualizar a página ou abrir de novo",
+     "texto": "Atualizar a página (F5) ou abrir o SGO+ de novo no mesmo aparelho volta para a tela em que você estava, se ela ainda está no seu menu. Senão, abre o Início. Janelas abertas não são refeitas: você volta para a tela de baixo delas."
+    },
+    {
+     "titulo": "O que fazer se algo der errado",
+     "texto": "Situação | O que fazerVoltar não fechou a janela | A janela é uma das que precisam ser resolvidas antes (veja acima), ou não tem botão de fechar. Leia o aviso no pé da tela e use os botões da janela.\nVoltar levou para o começo da tela, e não para a ficha | Essa tela ainda não guarda a ficha no caminho. Abra a ficha de novo. As próximas etapas do programa de melhoria vão cobrir as telas restantes.\nO documento abriu numa aba nova no celular | É um documento guardado fora do SGO+. Feche a aba para voltar.\nA impressão saiu pequena ou cortada | Toque em \"Imprimir\" no alto do visualizador (e não no menu do navegador). Se continuar, avise o administrador do sistema."
+    }
+   ]
+  },
+  {
    "arquivo": "MANUAL_RELATORIO_CICLO_LAVADORA.md",
    "titulo": "Manual: relatório do ciclo da lavadora",
    "tela": "lavadora_ciclos",
@@ -3457,7 +3501,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "1A. A tela de entrada: painel, busca e Kanban",
-     "texto": "Ao abrir \"Relatórios de ciclo\", a tela não mostra a lista de lavadoras. Mostra:\nOs índices: lavadoras cadastradas (o cliente vê as da empresa dele), relatórios no mês, aguardando assinatura (com a data do mais antigo), assinados, ciclos aprovados, cancelados ou reprovados (com a contagem dos não liberados, quando houver), ciclos em que a lavadora avisou manutenção preventiva vencida e novas versões.\nA busca: um campo só. Escreva o nome do cliente, o CNPJ (com ou sem pontos), o número de série, a TAG, o patrimônio, o modelo ou o lote e toque em \"Buscar\". Pode escrever sem acento e só uma parte (por exemplo, \"alfa\", \"11222333\" ou \"6222\"). \"Mais filtros\" abre o período do ciclo, o resultado e a assinatura. \"Ver todas as lavadoras\" mostra a lista completa, só quando você pedir.\nO Kanban dos relatórios, por situação: \"Aguardando assinatura\", \"Nova versão aguardando assinatura\", \"Com falha (cancelado ou reprovado)\" e \"Assinado e aprovado\". Quando há ciclo com o resultado NÃO LIBERADO, aparece também a coluna \"Não liberado (câmara quente no fim)\"; o relatório fica nela mesmo depois de assinado. Cada coluna mostra os 6 mais recentes; \"Ver todos\" traz os outros. Toque num cartão para abrir, baixar, assinar ou ver as versões.\n\nNo celular, o Kanban mostra uma situação por vez: toque num dos quadros de cima (cada um com a contagem) para trocar.\n\nDepois da busca aparecem as lavadoras e os relatórios encontrados. \"Voltar ao painel\" volta aos índices e ao Kanban."
+     "texto": "Ao abrir \"Relatórios de ciclo\", a tela não mostra a lista de lavadoras. Mostra:\nOs índices: lavadoras cadastradas (o cliente vê as da empresa dele), relatórios no mês, aguardando assinatura (com a data do mais antigo), assinados, ciclos aprovados, cancelados ou reprovados (com a contagem dos não liberados, quando houver), ciclos em que a lavadora avisou manutenção preventiva vencida e novas versões.\nA busca: um campo só. Escreva o nome do cliente, o CNPJ (com ou sem pontos), o número de série, a TAG, o patrimônio, o modelo ou o lote e toque em \"Buscar\". Pode escrever sem acento e só uma parte (por exemplo, \"alfa\", \"11222333\" ou \"6222\"). \"Mais filtros\" abre o período do ciclo, o resultado e a assinatura. \"Ver todas as lavadoras\" mostra a lista completa, só quando você pedir.\nO Kanban dos relatórios, por situação: \"Aguardando assinatura\", \"Nova versão aguardando assinatura\", \"Com falha (cancelado ou reprovado)\" e \"Assinado e aprovado\". Quando há ciclo com o resultado NÃO LIBERADO, aparece também a coluna \"Não liberado (câmara quente no fim)\"; o relatório fica nela mesmo depois de assinado. Cada coluna mostra os 6 mais recentes; \"Ver todos\" traz os outros. Toque num cartão para abrir, baixar, assinar ou ver as versões.\n\nNo celular, o Kanban mostra uma situação por vez: toque num dos quadros de cima (cada um com a contagem) para trocar.\n\nDepois da busca aparecem as lavadoras e os relatórios encontrados. \"Voltar ao painel\" volta aos índices e ao Kanban. O voltar do celular (ou o \"← Voltar\" do alto, ou o voltar do navegador) volta um passo: da lista de uma lavadora para a busca que você tinha feito, e da busca para o painel."
     },
     {
      "titulo": "Antes de começar",
@@ -3477,7 +3521,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Encontrar, abrir e baixar",
-     "texto": "1. Na busca, escreva o lote (ou só os últimos números), o nome do cliente, o CNPJ, a série ou a TAG e toque em \"Buscar\".\n2. Para um período, toque em \"Mais filtros\" e escolha \"Ciclo de\" e \"até\".\n3. Em \"Mais filtros\", use \"Resultado\" para ver só os aprovados, só os não liberados ou só os cancelados e reprovados, e \"Assinatura\" para ver os que faltam assinar.\n4. Toque em \"Abrir o relatório\" para ver a folha A4, ou em \"Baixar PDF\".\n5. \"Versões e histórico\" mostra quem gerou, quem assinou e as versões anteriores.\n\nA folha no celular. A folha abre do tamanho da tela, inteira, com a mesma disposição do PDF. Para ler de perto, afaste dois dedos na tela ou toque em \"Ver em tamanho real\" (a folha fica no tamanho do papel e rola para o lado); \"Ajustar a folha à tela\" volta. Nada sai da folha: nome, endereço e outros textos longos quebram de linha dentro da caixa. A impressão e o PDF continuam em uma folha A4."
+     "texto": "1. Na busca, escreva o lote (ou só os últimos números), o nome do cliente, o CNPJ, a série ou a TAG e toque em \"Buscar\".\n2. Para um período, toque em \"Mais filtros\" e escolha \"Ciclo de\" e \"até\".\n3. Em \"Mais filtros\", use \"Resultado\" para ver só os aprovados, só os não liberados ou só os cancelados e reprovados, e \"Assinatura\" para ver os que faltam assinar.\n4. Toque em \"Abrir o relatório\" para ver a folha A4, ou em \"Baixar PDF\".\n5. \"Versões e histórico\" mostra quem gerou, quem assinou e as versões anteriores.\n\nA folha no celular. No celular, \"Abrir o relatório\" mostra a folha dentro do SGO+, no visualizador de documentos: no alto ficam \"Voltar\" (volta para a ficha ou a lista de onde você veio; o botão voltar do celular faz o mesmo), \"Imprimir\" e \"Baixar PDF\". No computador, a folha continua abrindo em aba nova. A folha abre do tamanho da tela, inteira, com a mesma disposição do PDF. Para ler de perto, afaste dois dedos na tela ou toque em \"Ver em tamanho real\" (a folha fica no tamanho do papel e rola para o lado); \"Ajustar a folha à tela\" volta. Nada sai da folha: nome, endereço e outros textos longos quebram de linha dentro da caixa. A impressão e o PDF continuam em uma folha A4."
     },
     {
      "titulo": "O que cada parte da folha mostra",

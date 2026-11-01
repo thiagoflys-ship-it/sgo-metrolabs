@@ -390,6 +390,22 @@
       appBox.classList.toggle("modo-mobile", SGO_modoMovelDesejado_());
     }
     SGO_medirBarraMovel_();
+    // Etapa 1: começa a pilha do voltar (entrada-base + Início) ou retoma a tela em que a pessoa estava antes de recarregar.
+    try { if (window.SGO_NAV) SGO_NAV.iniciarSessao(); } catch (e) { console.error("Navegação:", e); }
+  }
+
+  /** Tela de entrada depois do login: a mesma tela de antes de recarregar (#/modulo, se ainda está no menu da pessoa) ou o Início. */
+  function SGO_irTelaDeEntrada_() {
+    let r = null;
+    try { r = window.SGO_NAV ? SGO_NAV.telaParaRestaurar() : null; } catch (e) { r = null; }
+    if (r && r.mod && r.mesmaEntrada) { SGO_NAV.restaurarCom(function () { abrir(r.mod); }); return; }
+    irTelaInicial_();
+    if (r && r.mod) { try { abrir(r.mod); } catch (e) { console.error("Tela do endereço:", e); } }
+  }
+
+  /** Botão "Voltar" de uma tela: com passo gravado, volta pelo histórico (igual ao voltar do celular); senão, roda fn. */
+  function SGO_voltarOu_(fn) {
+    if (window.SGO_NAV && SGO_NAV.ligado) SGO_NAV.voltarOu(fn); else if (typeof fn === "function") fn();
   }
 
   // Modo celular: tela estreita (até 900 px) ou celular deitado (toque e altura até 500 px).
@@ -592,11 +608,11 @@
           irTelaInicial_();
           try { abrir(String(location.parameters.tela[0])); } catch (eTela) { console.error("Tela do link:", eTela); }
         } else {
-          irTelaInicial_();
+          SGO_irTelaDeEntrada_();
         }
       });
     } else {
-      irTelaInicial_();
+      SGO_irTelaDeEntrada_();
     }
   }
 
@@ -736,6 +752,7 @@
     if (typeof Ponto_parar_ === "function") Ponto_parar_();
     if (typeof Email_parar_ === "function") Email_parar_();
     if (typeof SegAcesso_fecharEtapas_ === "function") SegAcesso_fecharEtapas_();
+    try { if (window.SGO_NAV) SGO_NAV.encerrarSessao(); } catch (e) {}
 
     const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
     limparSessaoFront_();
@@ -882,6 +899,8 @@
     }
     // celular: "Início" (busca, logotipo, atalhos) é a tela inicial do celular, não o painel do computador
     if (mod === "dashboard" && ehMobileModo_()) mod = "mobile_home";
+    // Etapa 1 (01/11/2026, JS_Navegacao.html): trocar de módulo fecha as janelas que ficaram abertas (com texto digitado, pergunta antes).
+    try { if (window.SGO_NAV && !SGO_NAV.antesDeAbrir(mod)) return; } catch (e) { console.error("Navegação:", e); }
     try { MenuConta_fechar_(true); } catch (e) {}
     // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
     try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home"); } catch (e) {}
@@ -910,6 +929,8 @@
     }
     try { if (typeof Atividades_aoAbrirModulo_ === "function") Atividades_aoAbrirModulo_(mod); } catch (e) { console.error("Atividades do módulo:", e); }
     try { if (typeof Ajuda_aoAbrirModulo_ === "function") Ajuda_aoAbrirModulo_(mod); } catch (e) { console.error("Ajuda da tela:", e); }
+    // Etapa 1: cada tela vira um passo no histórico do navegador (#/modulo); a mesma tela redesenhada não grava passo.
+    try { if (window.SGO_NAV) SGO_NAV.aoAbrir(mod); } catch (e) { console.error("Navegação:", e); }
   }
 
   function abrirModulo_(mod) {
@@ -4316,6 +4337,7 @@
         if (!res || !res.success || !res.item) return alert("Cliente não encontrado.");
         MOBILE_CERTCAL.cliente = res.item;
         MOBILE_CERTCAL.equipamento = null;
+        if (window.SGO_NAV) SGO_NAV.empilhar("Equipamento", renderMobileCertCalCliente_, { chave: "cc-equip" });
         renderMobileCertCalEquipamento_();
       })
       .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar o cliente. Verifique a conexão e tente de novo."); console.error(err); })
@@ -4324,6 +4346,8 @@
 
   function mobileCertCalNovoCliente_() {
     MOBILE_CERTCAL_RETORNO = "cliente";
+    // voltar (celular ou barra) devolve ao passo 1 do certificado, e não à lista de Clientes
+    if (window.SGO_NAV) SGO_NAV.empilhar("Novo cliente", function () { MOBILE_CERTCAL_RETORNO = null; renderMobileCertCalCliente_(); });
     renderMobileFormClientes_(null);
   }
 
@@ -4371,6 +4395,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success || !res.item) return alert("Equipamento não encontrado.");
         MOBILE_CERTCAL.equipamento = res.item;
+        if (window.SGO_NAV) SGO_NAV.empilhar("Dados", renderMobileCertCalEquipamento_, { chave: "cc-dados" });
         renderMobileCertCalDados_();
       })
       .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar o equipamento. Verifique a conexão e tente de novo."); console.error(err); })
@@ -4379,6 +4404,7 @@
 
   function mobileCertCalNovoEquipamento_() {
     MOBILE_CERTCAL_RETORNO = "equipamento";
+    if (window.SGO_NAV) SGO_NAV.empilhar("Novo equipamento", function () { MOBILE_CERTCAL_RETORNO = null; renderMobileCertCalEquipamento_(); });
     renderMobileFormEquipamentos_(null);
   }
 
@@ -4404,7 +4430,7 @@
       mobileFieldHtml_("Temperatura ambiente (°C)", '<input type="text" id="mob_cc_temp" inputmode="decimal" value="' + escapeHtml_(d.temperaturaAmbiente || "") + '">') +
       mobileFieldHtml_("Umidade relativa (%)", '<input type="text" id="mob_cc_umidade" inputmode="decimal" value="' + escapeHtml_(d.umidadeRelativa || "") + '">') +
       '<div class="mobile-form-actions">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalEquipamento_()">Voltar</button>' +
+        '<button type="button" class="mobile-btn-cancelar" onclick="SGO_voltarOu_(renderMobileCertCalEquipamento_)">Voltar</button>' +
         '<button type="button" class="mobile-btn-salvar" onclick="mobileCertCalAvancarDados_()">Continuar</button>' +
       '</div>';
 
@@ -4460,6 +4486,7 @@
       temperaturaAmbiente: getValue_("mob_cc_temp"),
       umidadeRelativa: getValue_("mob_cc_umidade")
     };
+    if (window.SGO_NAV) SGO_NAV.empilhar("Ensaios", renderMobileCertCalDados_, { chave: "cc-ensaios" });
     renderMobileCertCalEnsaios_();
   }
 
@@ -4475,7 +4502,7 @@
       '<div class="mobile-list" id="mobileCertCalBlocosLista"></div>' +
       '<button type="button" class="btn" style="width:100%;margin-top:10px" onclick="mobileCertCalEditarBloco_(-1)">+ Adicionar bloco de ensaio</button>' +
       '<div class="mobile-form-actions" style="margin-top:16px">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalDados_()">Voltar</button>' +
+        '<button type="button" class="mobile-btn-cancelar" onclick="SGO_voltarOu_(renderMobileCertCalDados_)">Voltar</button>' +
         '<button type="button" class="mobile-btn-salvar" onclick="mobileCertCalAvancarEnsaios_()">Continuar</button>' +
       '</div>';
     mobileCertCalRenderBlocosLista_();
@@ -4494,6 +4521,7 @@
   function mobileCertCalAvancarEnsaios_() {
     if (!MOBILE_CERTCAL.blocos.length) return alert("Adicione ao menos 1 bloco de ensaio.");
     delete MOBILE_CERTCAL.veredito;
+    if (window.SGO_NAV) SGO_NAV.empilhar("Gerar", renderMobileCertCalEnsaios_, { chave: "cc-gerar" });
     renderMobileCertCalGerar_();
   }
 
@@ -4690,7 +4718,7 @@
       '<div class="mobile-card-subtitulo" style="margin-top:8px">O certificado traz os resultados e as incertezas. A avaliação de aptidão e a decisão de uso ficam com o cliente, como nota no próprio certificado.</div>' +
       '<div id="mob_cc_gerar_status" style="margin-top:12px"></div>' +
       '<div class="mobile-form-actions" style="margin-top:16px">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalEnsaios_()">Voltar</button>' +
+        '<button type="button" class="mobile-btn-cancelar" onclick="SGO_voltarOu_(renderMobileCertCalEnsaios_)">Voltar</button>' +
         '<button type="button" class="mobile-btn-salvar" id="mob_cc_btn_gerar" onclick="mobileCertCalGerar_()">Emitir certificado</button>' +
       '</div>';
     mobileCertCalRenderFotos_();
@@ -5007,6 +5035,9 @@
     // relação nenhuma com Certificado) era sequestrado de volta pro
     // wizard em vez de ir pra lista normal (achado na validação, 2026-09-01).
     MOBILE_CERTCAL_RETORNO = null;
+    // Etapa 1 (01/11/2026): o Voltar da barra faz o mesmo que o voltar do celular — um passo atrás no histórico
+    // (fecha a janela de cima, volta ao sub-nível ou à tela anterior). O caminho abaixo só vale com a navegação desligada.
+    try { if (window.SGO_NAV && SGO_NAV.voltar()) return; } catch (e) { console.error("Navegação:", e); }
     if (MOBILE_NAV.tela === "form" && MOBILE_NAV.modulo) {
       abrir(MOBILE_NAV.modulo);
     } else {
@@ -5802,6 +5833,8 @@
       if (!id && MOBILE_CERTCAL_RETORNO === "cliente" && res.item) {
         MOBILE_CERTCAL_RETORNO = null;
         MOBILE_CERTCAL.cliente = res.item;
+        // o passo "Novo cliente" vira o passo "Equipamento" (voltar leva ao passo 1 do certificado)
+        if (window.SGO_NAV) SGO_NAV.empilhar("Equipamento", renderMobileCertCalCliente_, { substituir: true });
         renderMobileCertCalEquipamento_();
         return;
       }
@@ -6095,6 +6128,7 @@
       if (!id && MOBILE_CERTCAL_RETORNO === "equipamento" && res.item) {
         MOBILE_CERTCAL_RETORNO = null;
         MOBILE_CERTCAL.equipamento = res.item;
+        if (window.SGO_NAV) SGO_NAV.empilhar("Dados", renderMobileCertCalEquipamento_, { substituir: true });
         renderMobileCertCalDados_();
         return;
       }
@@ -7392,7 +7426,10 @@
 
   function SGO_movelLiberar_(tipoMotor) {
     SGO_MOVEL_LIBERADAS[tipoMotor] = true;
-    abrir(window.SGO_MODULO_ATUAL || tipoMotor);
+    const modLib = window.SGO_MODULO_ATUAL || tipoMotor;
+    abrir(modLib);
+    // Etapa 1 (01/11/2026): "Abrir a tela completa" é um passo; voltar (celular ou barra) volta ao resumo do celular
+    if (window.SGO_NAV) SGO_NAV.empilhar("Tela completa", function () { delete SGO_MOVEL_LIBERADAS[tipoMotor]; abrir(modLib); });
   }
 
   function renderMotorModulo_(titulo, tipoMotor) {
