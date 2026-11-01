@@ -1,0 +1,2341 @@
+{
+ "meta": {
+  "gerado_em": "2026-11-01",
+  "etapa": "Comercial C1",
+  "situacao": "proposta para aprovação do dono; valores provisórios onde indicado",
+  "formula": "custo = horas_tecnico x hora_tecnico + horas_engenheiro x hora_engenheiro + custo_fixo (25% da mão de obra) + padroes_rateio + consumiveis_art; preco_pela_conta = custo / (1 - impostos - comissao - margem_alvo), arredondado para cima (R$ 5 abaixo de R$ 100, R$ 10 acima); preco_minimo usa a margem mínima; preco_urgente = preco_normal x 2,1",
+  "parametros": {
+   "hora_tecnico_custo": 45.0,
+   "hora_engenheiro_custo": 132.0,
+   "origem_hora": "salário de função (técnico R$ 3.500, engenheiro R$ 8.800, estimativa CAGED) x encargos 1,8 / horas faturáveis (140 e 120 por mês): provisório, o dono vai confirmar",
+   "custo_fixo_sobre_mao_de_obra": 0.25,
+   "impostos_sobre_nota": 0.1425,
+   "comissao_venda": 0.03,
+   "margem_alvo": 0.2,
+   "margem_minima": 0.1,
+   "acrescimo_urgente": 1.1,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "divisor_alvo": 0.6275,
+   "divisor_minimo": 0.7275
+  },
+  "regra_preco_normal": "preco_normal = preco_pela_conta; quando a mediana do mercado público E a mediana do histórico da Metrolabs ficam ambas acima da conta, sobe até o menor dos dois. Exceções anotadas em fonte_preco.",
+  "deslocamento": "nunca incluso nos preços desta tabela; ver regras no documento COMERCIAL_C1_PRECIFICACAO_20261101.md, seção 6",
+  "campos_para_c2": "codigo, nome, grupo (CATEGORIA), unidade (UNIDADE_MEDIDA), escopo (DESCRICAO), preco_normal (PRECO), custo.total (CUSTO), horas e padroes_rateio (ficha de custo nova)"
+ },
+ "servicos": [
+  {
+   "codigo": "QT_AUTOCLAVE_GRANDE",
+   "nome": "Qualificação térmica de autoclave a vapor acima de 100 L (QI, QO e QD)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "QI, QO e QD com até 3 programas de ciclo (3 ciclos por programa), teste de vácuo e Bowie-Dick quando aplicável; calibração RBC da instrumentação da autoclave (sensor de temperatura, manômetro, manovacuômetro, válvula de segurança com ART); relatório com F0, gráficos e parecer.",
+   "horas": {
+    "tecnico": 14,
+    "engenheiro": 5
+   },
+   "padroes_rateio": 150,
+   "consumiveis_art": 130,
+   "custo": {
+    "mao_obra_tecnico": 630.0,
+    "mao_obra_engenheiro": 660.0,
+    "custo_fixo": 322.5,
+    "padroes": 150,
+    "consumiveis_art": 130,
+    "total": 1892.5
+   },
+   "preco_pela_conta": 3020.0,
+   "preco_minimo": 2610.0,
+   "preco_normal": 3020.0,
+   "preco_urgente": 6350.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 17,
+     "min": 2700.0,
+     "mediana": 3800.0,
+     "max": 7500.0
+    },
+    "crm_ganhos": {
+     "n": 6,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "drive_2018_2023": {
+     "n": 73,
+     "min": 1000.0,
+     "mediana": 2750.0,
+     "max": 10500.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 59,
+    "min": 610.74,
+    "mediana": 2550.0,
+    "max": 8700.0,
+    "orgaos": 31,
+    "q1": 1800.0,
+    "q3": 3899.0
+   },
+   "mercado_centro_oeste": {
+    "n": 2,
+    "min": 3375.0,
+    "mediana": 3375.0,
+    "max": 3375.0
+   },
+   "fonte_preco": "custo",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_AUTOCLAVE_BANCADA",
+   "nome": "Qualificação térmica de autoclave de bancada até 100 L (QO e QD)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "QO e QD em 1 ou 2 programas (3 ciclos por programa), calibração do sensor do equipamento, relatório.",
+   "horas": {
+    "tecnico": 7,
+    "engenheiro": 3
+   },
+   "padroes_rateio": 100,
+   "consumiveis_art": 30,
+   "custo": {
+    "mao_obra_tecnico": 315.0,
+    "mao_obra_engenheiro": 396.0,
+    "custo_fixo": 177.75,
+    "padroes": 100,
+    "consumiveis_art": 30,
+    "total": 1018.75
+   },
+   "preco_pela_conta": 1630.0,
+   "preco_minimo": 1410.0,
+   "preco_normal": 1660.0,
+   "preco_urgente": 3490.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.4,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 13,
+     "min": 1080.0,
+     "mediana": 2750.0,
+     "max": 3500.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "drive_2018_2023": {
+     "n": 2,
+     "min": 2200.0,
+     "mediana": 2200.0,
+     "max": 2200.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 7,
+    "min": 799.0,
+    "mediana": 1659.5,
+    "max": 7200.0,
+    "orgaos": 5,
+    "q1": 955.0,
+    "q3": 5000.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_AUTOCLAVE_BT",
+   "nome": "Qualificação de esterilizador de baixa temperatura (formaldeído, peróxido ou óxido de etileno)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "QI, QO e QD, perfil de temperatura e pressão, calibração da instrumentação; indicadores químicos e biológicos fornecidos pelo cliente.",
+   "horas": {
+    "tecnico": 8,
+    "engenheiro": 4
+   },
+   "padroes_rateio": 100,
+   "consumiveis_art": 30,
+   "custo": {
+    "mao_obra_tecnico": 360.0,
+    "mao_obra_engenheiro": 528.0,
+    "custo_fixo": 222.0,
+    "padroes": 100,
+    "consumiveis_art": 30,
+    "total": 1240.0
+   },
+   "preco_pela_conta": 1980.0,
+   "preco_minimo": 1710.0,
+   "preco_normal": 1980.0,
+   "preco_urgente": 4160.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_LAVADORA_TD",
+   "nome": "Qualificação de lavadora termodesinfectora (QI, QO e QD)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "Perfil térmico das fases de lavagem e termodesinfecção (A0), calibração da instrumentação, testes de limpeza fornecidos pelo cliente.",
+   "horas": {
+    "tecnico": 8,
+    "engenheiro": 4
+   },
+   "padroes_rateio": 120,
+   "consumiveis_art": 30,
+   "custo": {
+    "mao_obra_tecnico": 360.0,
+    "mao_obra_engenheiro": 528.0,
+    "custo_fixo": 222.0,
+    "padroes": 120,
+    "consumiveis_art": 30,
+    "total": 1260.0
+   },
+   "preco_pela_conta": 2010.0,
+   "preco_minimo": 1740.0,
+   "preco_normal": 2430.0,
+   "preco_urgente": 5110.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 30.9,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 2750.0,
+     "mediana": 2750.0,
+     "max": 2750.0
+    },
+    "drive_2018_2023": {
+     "n": 23,
+     "min": 700.0,
+     "mediana": 1300.0,
+     "max": 7850.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 11,
+    "min": 1109.76,
+    "mediana": 2425.0,
+    "max": 4013.0,
+    "orgaos": 5,
+    "q1": 1500.0,
+    "q3": 4013.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_LAVADORA_US",
+   "nome": "Qualificação de lavadora ultrassônica",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "Temperatura da cuba, tempo, teste de cavitação, calibração do sensor.",
+   "horas": {
+    "tecnico": 4,
+    "engenheiro": 2
+   },
+   "padroes_rateio": 60,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 180.0,
+    "mao_obra_engenheiro": 264.0,
+    "custo_fixo": 111.0,
+    "padroes": 60,
+    "consumiveis_art": 20,
+    "total": 635.0
+   },
+   "preco_pela_conta": 1020.0,
+   "preco_minimo": 880.0,
+   "preco_normal": 1430.0,
+   "preco_urgente": 3010.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 38.3,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 7,
+     "min": 850.0,
+     "mediana": 1500.0,
+     "max": 2800.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": {
+     "n": 14,
+     "min": 700.0,
+     "mediana": 850.0,
+     "max": 3780.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 6,
+    "min": 1263.6,
+    "mediana": 1423.3,
+    "max": 3000.0,
+    "orgaos": 3,
+    "q1": 1295.76,
+    "q3": 1910.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_SECADORA",
+   "nome": "Qualificação de secadora ou gabinete de secagem",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "Mapeamento de temperatura da câmara e calibração do controlador.",
+   "horas": {
+    "tecnico": 3,
+    "engenheiro": 1.5
+   },
+   "padroes_rateio": 50,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 135.0,
+    "mao_obra_engenheiro": 198.0,
+    "custo_fixo": 83.25,
+    "padroes": 50,
+    "consumiveis_art": 0,
+    "total": 466.25
+   },
+   "preco_pela_conta": 750.0,
+   "preco_minimo": 650.0,
+   "preco_normal": 750.0,
+   "preco_urgente": 1580.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.6,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 4,
+     "min": 500.0,
+     "mediana": 650.0,
+     "max": 650.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 650.0,
+     "mediana": 650.0,
+     "max": 650.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs",
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_SELADORA",
+   "nome": "Validação de seladora térmica",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento",
+   "escopo": "Temperatura das barras, pressão e tempo, ensaio de integridade da selagem.",
+   "horas": {
+    "tecnico": 2,
+    "engenheiro": 1
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 30,
+   "custo": {
+    "mao_obra_tecnico": 90.0,
+    "mao_obra_engenheiro": 132.0,
+    "custo_fixo": 55.5,
+    "padroes": 40,
+    "consumiveis_art": 30,
+    "total": 347.5
+   },
+   "preco_pela_conta": 560.0,
+   "preco_minimo": 480.0,
+   "preco_normal": 560.0,
+   "preco_urgente": 1180.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 1,
+     "min": 550.0,
+     "mediana": 550.0,
+     "max": 550.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": {
+     "n": 2,
+     "min": 900.0,
+     "mediana": 900.0,
+     "max": 900.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 3,
+    "min": 805.61,
+    "mediana": 850.0,
+    "max": 856.82,
+    "orgaos": 1,
+    "q1": 805.61,
+    "q3": 856.82
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_CAMARA_CONSERVADORA",
+   "nome": "Qualificação térmica de câmara de conservação ou refrigerador (até 1.000 L)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento, 1 campanha de 24 h",
+   "escopo": "Mapeamento com cerca de 9 sensores por 24 h, abertura de porta e queda de energia; campanha com carga é adicional (ver regras).",
+   "horas": {
+    "tecnico": 4,
+    "engenheiro": 3
+   },
+   "padroes_rateio": 80,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 180.0,
+    "mao_obra_engenheiro": 396.0,
+    "custo_fixo": 144.0,
+    "padroes": 80,
+    "consumiveis_art": 20,
+    "total": 820.0
+   },
+   "preco_pela_conta": 1310.0,
+   "preco_minimo": 1130.0,
+   "preco_normal": 1310.0,
+   "preco_urgente": 2760.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.2,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 12,
+     "min": 1000.0,
+     "mediana": 1895.0,
+     "max": 2800.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 16,
+    "min": 316.8,
+    "mediana": 899.0,
+    "max": 1228.78,
+    "orgaos": 7,
+    "q1": 762.9,
+    "q3": 959.0
+   },
+   "mercado_centro_oeste": {
+    "n": 2,
+    "min": 920.0,
+    "mediana": 985.0,
+    "max": 1050.0
+   },
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do 3º quartil do mercado público: revisar horas ou aceitar perder licitação"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_FREEZER",
+   "nome": "Qualificação térmica de freezer (-10 a -30 °C)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento, 1 campanha de 24 h",
+   "escopo": "Mapeamento 24 h com sensores para baixa temperatura, abertura de porta e queda de energia.",
+   "horas": {
+    "tecnico": 4,
+    "engenheiro": 3
+   },
+   "padroes_rateio": 100,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 180.0,
+    "mao_obra_engenheiro": 396.0,
+    "custo_fixo": 144.0,
+    "padroes": 100,
+    "consumiveis_art": 20,
+    "total": 840.0
+   },
+   "preco_pela_conta": 1340.0,
+   "preco_minimo": 1160.0,
+   "preco_normal": 1800.0,
+   "preco_urgente": 3780.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 36.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 4,
+     "min": 1000.0,
+     "mediana": 1800.0,
+     "max": 2200.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 9,
+    "min": 639.98,
+    "mediana": 2200.0,
+    "max": 2381.1,
+    "orgaos": 4,
+    "q1": 1328.25,
+    "q3": 2381.1
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_ULTRAFREEZER",
+   "nome": "Qualificação térmica de ultracongelador (-65 a -86 °C)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento, 1 campanha de 24 h",
+   "escopo": "Como o freezer, com sensores e cabos para ultrabaixa temperatura.",
+   "horas": {
+    "tecnico": 4,
+    "engenheiro": 3.5
+   },
+   "padroes_rateio": 140,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 180.0,
+    "mao_obra_engenheiro": 462.0,
+    "custo_fixo": 160.5,
+    "padroes": 140,
+    "consumiveis_art": 20,
+    "total": 962.5
+   },
+   "preco_pela_conta": 1540.0,
+   "preco_minimo": 1330.0,
+   "preco_normal": 2160.0,
+   "preco_urgente": 4540.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 38.2,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 4,
+     "min": 1850.0,
+     "mediana": 3150.0,
+     "max": 3500.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo, com piso de 120% do freezer (ultrabaixa temperatura exige mais sensores e tempo)",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_CAMARA_FRIA",
+   "nome": "Qualificação térmica de câmara fria (walk-in, até 30 m³)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento, 1 campanha de 24 h",
+   "escopo": "Mapeamento com 15 ou mais sensores por 24 h, abertura de porta e queda de energia.",
+   "horas": {
+    "tecnico": 6,
+    "engenheiro": 5
+   },
+   "padroes_rateio": 200,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 270.0,
+    "mao_obra_engenheiro": 660.0,
+    "custo_fixo": 232.5,
+    "padroes": 200,
+    "consumiveis_art": 20,
+    "total": 1382.5
+   },
+   "preco_pela_conta": 2210.0,
+   "preco_minimo": 1910.0,
+   "preco_normal": 2210.0,
+   "preco_urgente": 4650.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.2,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 2,
+    "min": 1560.0,
+    "mediana": 1970.55,
+    "max": 2381.1,
+    "orgaos": 2,
+    "q1": 1560.0,
+    "q3": 2381.1
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_ESTUFA",
+   "nome": "Qualificação térmica de estufa, incubadora de laboratório ou banho-maria",
+   "grupo": "Qualificação térmica",
+   "unidade": "por equipamento, 1 temperatura de trabalho",
+   "escopo": "Mapeamento com cerca de 9 sensores, estabilidade, uniformidade e recuperação de porta.",
+   "horas": {
+    "tecnico": 3,
+    "engenheiro": 2.5
+   },
+   "padroes_rateio": 60,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 135.0,
+    "mao_obra_engenheiro": 330.0,
+    "custo_fixo": 116.25,
+    "padroes": 60,
+    "consumiveis_art": 20,
+    "total": 661.25
+   },
+   "preco_pela_conta": 1060.0,
+   "preco_minimo": 910.0,
+   "preco_normal": 1060.0,
+   "preco_urgente": 2230.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.4,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 450.0,
+     "mediana": 450.0,
+     "max": 550.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 19,
+    "min": 190.0,
+    "mediana": 957.53,
+    "max": 2790.0,
+    "orgaos": 10,
+    "q1": 694.31,
+    "q3": 1560.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs",
+    "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_SALA",
+   "nome": "Mapeamento térmico de ambiente (farmácia, almoxarifado, depósito)",
+   "grupo": "Qualificação térmica",
+   "unidade": "por ambiente, até 7 dias",
+   "escopo": "Cerca de 12 pontos de temperatura e 2 de umidade por até 7 dias; relatório conforme as normas sanitárias de armazenamento.",
+   "horas": {
+    "tecnico": 6,
+    "engenheiro": 6
+   },
+   "padroes_rateio": 250,
+   "consumiveis_art": 20,
+   "custo": {
+    "mao_obra_tecnico": 270.0,
+    "mao_obra_engenheiro": 792.0,
+    "custo_fixo": 265.5,
+    "padroes": 250,
+    "consumiveis_art": 20,
+    "total": 1597.5
+   },
+   "preco_pela_conta": 2550.0,
+   "preco_minimo": 2200.0,
+   "preco_normal": 2550.0,
+   "preco_urgente": 5360.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "QT_CAIXA_TERMICA",
+   "nome": "Qualificação térmica de caixa térmica de transporte",
+   "grupo": "Qualificação térmica",
+   "unidade": "por caixa",
+   "escopo": "Mapeamento do tempo de conservação com carga e gelo reciclável.",
+   "horas": {
+    "tecnico": 2,
+    "engenheiro": 1.5
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 90.0,
+    "mao_obra_engenheiro": 198.0,
+    "custo_fixo": 72.0,
+    "padroes": 40,
+    "consumiveis_art": 0,
+    "total": 400.0
+   },
+   "preco_pela_conta": 640.0,
+   "preco_minimo": 550.0,
+   "preco_normal": 640.0,
+   "preco_urgente": 1350.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.3,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 1,
+     "min": 380.0,
+     "mediana": 380.0,
+     "max": 380.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs",
+    "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_MONITOR",
+   "nome": "Calibração com teste de segurança elétrica de monitor multiparamétrico",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "ECG, SpO2, PNI, temperatura e respiração com simulador; segurança elétrica com analisador.",
+   "horas": {
+    "tecnico": 1.25,
+    "engenheiro": 0.3
+   },
+   "padroes_rateio": 35,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 56.25,
+    "mao_obra_engenheiro": 39.6,
+    "custo_fixo": 23.96,
+    "padroes": 35,
+    "consumiveis_art": 0,
+    "total": 154.81
+   },
+   "preco_pela_conta": 250.0,
+   "preco_minimo": 220.0,
+   "preco_normal": 350.0,
+   "preco_urgente": 740.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 38.5,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 15,
+     "min": 239.0,
+     "mediana": 350.0,
+     "max": 380.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 2,
+     "min": 151.0,
+     "mediana": 151.0,
+     "max": 151.0
+    }
+   },
+   "mercado_publico": {
+    "n": 23,
+    "min": 91.0,
+    "mediana": 430.0,
+    "max": 1600.0,
+    "orgaos": 16,
+    "q1": 390.0,
+    "q3": 520.0
+   },
+   "mercado_centro_oeste": {
+    "n": 3,
+    "min": 1005.0,
+    "mediana": 1005.0,
+    "max": 1600.0
+   },
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 151.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_DESFIBRILADOR",
+   "nome": "Calibração com teste de segurança elétrica de desfibrilador ou cardioversor",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Energia entregue, tempo de carga, sincronismo, segurança elétrica.",
+   "horas": {
+    "tecnico": 1,
+    "engenheiro": 0.3
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 45.0,
+    "mao_obra_engenheiro": 39.6,
+    "custo_fixo": 21.15,
+    "padroes": 40,
+    "consumiveis_art": 0,
+    "total": 145.75
+   },
+   "preco_pela_conta": 240.0,
+   "preco_minimo": 210.0,
+   "preco_normal": 280.0,
+   "preco_urgente": 590.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 30.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 11,
+     "min": 190.0,
+     "mediana": 280.0,
+     "max": 450.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 412.0,
+     "mediana": 450.0,
+     "max": 450.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 5,
+     "min": 164.8,
+     "mediana": 164.8,
+     "max": 164.8
+    }
+   },
+   "mercado_publico": {
+    "n": 47,
+    "min": 91.0,
+    "mediana": 399.0,
+    "max": 940.0,
+    "orgaos": 28,
+    "q1": 280.0,
+    "q3": 600.0
+   },
+   "mercado_centro_oeste": {
+    "n": 2,
+    "min": 550.0,
+    "mediana": 585.0,
+    "max": 620.0
+   },
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 164.80), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_BOMBA_INFUSAO",
+   "nome": "Calibração com teste de segurança elétrica de bomba de infusão",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Vazão e pressão de oclusão com analisador, alarmes, segurança elétrica.",
+   "horas": {
+    "tecnico": 1.5,
+    "engenheiro": 0.3
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 67.5,
+    "mao_obra_engenheiro": 39.6,
+    "custo_fixo": 26.77,
+    "padroes": 40,
+    "consumiveis_art": 0,
+    "total": 173.88
+   },
+   "preco_pela_conta": 280.0,
+   "preco_minimo": 240.0,
+   "preco_normal": 280.0,
+   "preco_urgente": 590.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 8,
+     "min": 200.0,
+     "mediana": 280.0,
+     "max": 950.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 200.0,
+     "mediana": 280.0,
+     "max": 280.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 5,
+     "min": 80.0,
+     "mediana": 80.0,
+     "max": 80.0
+    }
+   },
+   "mercado_publico": {
+    "n": 8,
+    "min": 174.0,
+    "mediana": 333.33,
+    "max": 395.0,
+    "orgaos": 5,
+    "q1": 315.0,
+    "q3": 395.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 80.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_VENTILADOR",
+   "nome": "Calibração com teste de segurança elétrica de ventilador pulmonar",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Volume, pressão, frequência, FiO2 e PEEP com analisador de fluxo, alarmes, segurança elétrica.",
+   "horas": {
+    "tecnico": 1.5,
+    "engenheiro": 0.4
+   },
+   "padroes_rateio": 50,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 67.5,
+    "mao_obra_engenheiro": 52.8,
+    "custo_fixo": 30.08,
+    "padroes": 50,
+    "consumiveis_art": 0,
+    "total": 200.38
+   },
+   "preco_pela_conta": 320.0,
+   "preco_minimo": 280.0,
+   "preco_normal": 350.0,
+   "preco_urgente": 740.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 25.5,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 15,
+     "min": 290.0,
+     "mediana": 350.0,
+     "max": 470.0
+    },
+    "crm_ganhos": {
+     "n": 3,
+     "min": 408.0,
+     "mediana": 470.0,
+     "max": 470.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 5,
+     "min": 163.2,
+     "mediana": 163.2,
+     "max": 163.2
+    }
+   },
+   "mercado_publico": {
+    "n": 6,
+    "min": 300.0,
+    "mediana": 1428.0,
+    "max": 4100.0,
+    "orgaos": 5,
+    "q1": 300.0,
+    "q3": 1780.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 163.20), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_ECG",
+   "nome": "Calibração com teste de segurança elétrica de eletrocardiógrafo",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Amplitude, frequência e velocidade com simulador, segurança elétrica.",
+   "horas": {
+    "tecnico": 0.75,
+    "engenheiro": 0.25
+   },
+   "padroes_rateio": 25,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 33.75,
+    "mao_obra_engenheiro": 33.0,
+    "custo_fixo": 16.69,
+    "padroes": 25,
+    "consumiveis_art": 0,
+    "total": 108.44
+   },
+   "preco_pela_conta": 180.0,
+   "preco_minimo": 150.0,
+   "preco_normal": 210.0,
+   "preco_urgente": 450.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 31.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 8,
+     "min": 180.0,
+     "mediana": 205.0,
+     "max": 235.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 34,
+    "min": 145.0,
+    "mediana": 382.0,
+    "max": 1549.5,
+    "orgaos": 24,
+    "q1": 260.0,
+    "q3": 395.0
+   },
+   "mercado_centro_oeste": {
+    "n": 1,
+    "min": 620.0,
+    "mediana": 620.0,
+    "max": 620.0
+   },
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_BISTURI",
+   "nome": "Calibração com teste de segurança elétrica de bisturi elétrico",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Potência de saída por modo e carga, fuga de RF, segurança elétrica.",
+   "horas": {
+    "tecnico": 1,
+    "engenheiro": 0.3
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 45.0,
+    "mao_obra_engenheiro": 39.6,
+    "custo_fixo": 21.15,
+    "padroes": 40,
+    "consumiveis_art": 0,
+    "total": 145.75
+   },
+   "preco_pela_conta": 240.0,
+   "preco_minimo": 210.0,
+   "preco_normal": 480.0,
+   "preco_urgente": 1010.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 52.4,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 7,
+     "min": 210.0,
+     "mediana": 480.0,
+     "max": 526.4
+    },
+    "crm_ganhos": {
+     "n": 2,
+     "min": 480.0,
+     "mediana": 480.0,
+     "max": 480.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 4,
+     "min": 263.2,
+     "mediana": 266.6,
+     "max": 270.0
+    }
+   },
+   "mercado_publico": {
+    "n": 3,
+    "min": 160.0,
+    "mediana": 473.33,
+    "max": 830.0,
+    "orgaos": 3,
+    "q1": 160.0,
+    "q3": 830.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 266.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_OXIMETRO",
+   "nome": "Calibração de oxímetro de pulso",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "SpO2 e frequência de pulso com simulador.",
+   "horas": {
+    "tecnico": 0.5,
+    "engenheiro": 0.2
+   },
+   "padroes_rateio": 20,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 22.5,
+    "mao_obra_engenheiro": 26.4,
+    "custo_fixo": 12.23,
+    "padroes": 20,
+    "consumiveis_art": 0,
+    "total": 81.12
+   },
+   "preco_pela_conta": 130.0,
+   "preco_minimo": 120.0,
+   "preco_normal": 180.0,
+   "preco_urgente": 380.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 37.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 7,
+     "min": 95.0,
+     "mediana": 200.0,
+     "max": 289.9
+    },
+    "crm_ganhos": {
+     "n": 1,
+     "min": 240.0,
+     "mediana": 240.0,
+     "max": 240.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 3,
+     "min": 120.0,
+     "mediana": 120.0,
+     "max": 120.0
+    }
+   },
+   "mercado_publico": {
+    "n": 13,
+    "min": 49.0,
+    "mediana": 174.0,
+    "max": 290.0,
+    "orgaos": 10,
+    "q1": 100.0,
+    "q3": 262.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 120.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_INCUBADORA_NEO",
+   "nome": "Calibração com teste de segurança elétrica de incubadora neonatal ou berço aquecido",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Temperatura, umidade, fluxo de ar e ruído com analisador, segurança elétrica.",
+   "horas": {
+    "tecnico": 1.5,
+    "engenheiro": 0.4
+   },
+   "padroes_rateio": 30,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 67.5,
+    "mao_obra_engenheiro": 52.8,
+    "custo_fixo": 30.08,
+    "padroes": 30,
+    "consumiveis_art": 0,
+    "total": 180.38
+   },
+   "preco_pela_conta": 290.0,
+   "preco_minimo": 250.0,
+   "preco_normal": 290.0,
+   "preco_urgente": 610.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.6,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 12,
+     "min": 97.5,
+     "mediana": 242.0,
+     "max": 385.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 13,
+    "min": 174.0,
+    "mediana": 404.69,
+    "max": 982.5,
+    "orgaos": 6,
+    "q1": 325.0,
+    "q3": 615.0
+   },
+   "mercado_centro_oeste": {
+    "n": 1,
+    "min": 615.0,
+    "mediana": 615.0,
+    "max": 615.0
+   },
+   "fonte_preco": "custo",
+   "alertas": [
+    "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_ASPIRADOR",
+   "nome": "Calibração com teste de segurança elétrica de aspirador cirúrgico",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Vácuo e vazão, segurança elétrica.",
+   "horas": {
+    "tecnico": 0.5,
+    "engenheiro": 0.15
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 22.5,
+    "mao_obra_engenheiro": 19.8,
+    "custo_fixo": 10.57,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 62.88
+   },
+   "preco_pela_conta": 110.0,
+   "preco_minimo": 90.0,
+   "preco_normal": 190.0,
+   "preco_urgente": 400.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 49.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 4,
+     "min": 60.0,
+     "mediana": 188.57,
+     "max": 199.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 3,
+    "min": 174.0,
+    "mediana": 230.0,
+    "max": 880.0,
+    "orgaos": 2,
+    "q1": 174.0,
+    "q3": 880.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_ANESTESIA",
+   "nome": "Calibração com teste de segurança elétrica de aparelho de anestesia",
+   "grupo": "Calibração de eletromédicos",
+   "unidade": "por equipamento",
+   "escopo": "Fluxômetros, pressões, ventilador do aparelho, vazamento, segurança elétrica.",
+   "horas": {
+    "tecnico": 2,
+    "engenheiro": 0.5
+   },
+   "padroes_rateio": 50,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 90.0,
+    "mao_obra_engenheiro": 66.0,
+    "custo_fixo": 39.0,
+    "padroes": 50,
+    "consumiveis_art": 0,
+    "total": 245.0
+   },
+   "preco_pela_conta": 400.0,
+   "preco_minimo": 340.0,
+   "preco_normal": 400.0,
+   "preco_urgente": 840.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.5,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 250.0,
+     "mediana": 250.0,
+     "max": 320.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs",
+    "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_ESFIGMO",
+   "nome": "Calibração de esfigmomanômetro (aneroide ou digital)",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Pressão em 5 pontos e vazamento.",
+   "horas": {
+    "tecnico": 0.33,
+    "engenheiro": 0.1
+   },
+   "padroes_rateio": 5,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 14.85,
+    "mao_obra_engenheiro": 13.2,
+    "custo_fixo": 7.01,
+    "padroes": 5,
+    "consumiveis_art": 0,
+    "total": 40.06
+   },
+   "preco_pela_conta": 65.0,
+   "preco_minimo": 60.0,
+   "preco_normal": 70.0,
+   "preco_urgente": 150.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 25.5,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 13,
+     "min": 59.0,
+     "mediana": 70.0,
+     "max": 120.0
+    },
+    "crm_ganhos": {
+     "n": 5,
+     "min": 59.0,
+     "mediana": 65.0,
+     "max": 120.0
+    },
+    "drive_2018_2023": {
+     "n": 14,
+     "min": 55.0,
+     "mediana": 115.0,
+     "max": 165.0
+    },
+    "custo_cadastrado_crm": {
+     "n": 5,
+     "min": 48.0,
+     "mediana": 48.0,
+     "max": 48.0
+    }
+   },
+   "mercado_publico": {
+    "n": 13,
+    "min": 40.0,
+    "mediana": 81.66,
+    "max": 357.3,
+    "orgaos": 9,
+    "q1": 55.0,
+    "q3": 158.1
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 48.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_TERMOMETRO",
+   "nome": "Calibração de termômetro (digital, espeto, máxima e mínima)",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Até 3 pontos de temperatura.",
+   "horas": {
+    "tecnico": 0.33,
+    "engenheiro": 0.1
+   },
+   "padroes_rateio": 8,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 14.85,
+    "mao_obra_engenheiro": 13.2,
+    "custo_fixo": 7.01,
+    "padroes": 8,
+    "consumiveis_art": 0,
+    "total": 43.06
+   },
+   "preco_pela_conta": 70.0,
+   "preco_minimo": 60.0,
+   "preco_normal": 70.0,
+   "preco_urgente": 150.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.2,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 28,
+     "min": 55.0,
+     "mediana": 70.0,
+     "max": 100.0
+    },
+    "crm_ganhos": {
+     "n": 9,
+     "min": 65.0,
+     "mediana": 75.0,
+     "max": 75.0
+    },
+    "drive_2018_2023": {
+     "n": 6,
+     "min": 50.0,
+     "mediana": 150.0,
+     "max": 180.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 143,
+    "min": 45.0,
+    "mediana": 132.0,
+    "max": 628.0,
+    "orgaos": 58,
+    "q1": 90.0,
+    "q3": 200.0
+   },
+   "mercado_centro_oeste": {
+    "n": 5,
+    "min": 60.0,
+    "mediana": 122.7,
+    "max": 456.0
+   },
+   "fonte_preco": "custo",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_TERMOHIGROMETRO",
+   "nome": "Calibração de termo-higrômetro",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Temperatura e umidade relativa, até 3 pontos cada, em lote no laboratório.",
+   "horas": {
+    "tecnico": 0.3,
+    "engenheiro": 0.1
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 13.5,
+    "mao_obra_engenheiro": 13.2,
+    "custo_fixo": 6.68,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 43.38
+   },
+   "preco_pela_conta": 70.0,
+   "preco_minimo": 60.0,
+   "preco_normal": 70.0,
+   "preco_urgente": 150.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.8,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 24,
+     "min": 50.0,
+     "mediana": 60.0,
+     "max": 95.0
+    },
+    "crm_ganhos": {
+     "n": 7,
+     "min": 50.0,
+     "mediana": 60.0,
+     "max": 65.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 89,
+    "min": 42.0,
+    "mediana": 188.03,
+    "max": 481.0,
+    "orgaos": 34,
+    "q1": 105.7,
+    "q3": 336.92
+   },
+   "mercado_centro_oeste": {
+    "n": 4,
+    "min": 42.0,
+    "mediana": 43.25,
+    "max": 72.0
+   },
+   "fonte_preco": "custo",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_DATALOGGER",
+   "nome": "Calibração de registrador de temperatura (data logger)",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Até 3 pontos de temperatura.",
+   "horas": {
+    "tecnico": 0.5,
+    "engenheiro": 0.15
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 22.5,
+    "mao_obra_engenheiro": 19.8,
+    "custo_fixo": 10.57,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 62.88
+   },
+   "preco_pela_conta": 110.0,
+   "preco_minimo": 90.0,
+   "preco_normal": 110.0,
+   "preco_urgente": 240.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 25.6,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 2,
+     "min": 140.0,
+     "mediana": 140.0,
+     "max": 140.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 2,
+     "min": 60.0,
+     "mediana": 60.0,
+     "max": 60.0
+    }
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 60.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado",
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_BALANCA_PEQ",
+   "nome": "Calibração de balança até 30 kg (neonatal, pediátrica, de bancada)",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Excentricidade, repetibilidade e carga em 5 pontos com pesos padrão.",
+   "horas": {
+    "tecnico": 0.6,
+    "engenheiro": 0.15
+   },
+   "padroes_rateio": 15,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 27.0,
+    "mao_obra_engenheiro": 19.8,
+    "custo_fixo": 11.7,
+    "padroes": 15,
+    "consumiveis_art": 0,
+    "total": 73.5
+   },
+   "preco_pela_conta": 120.0,
+   "preco_minimo": 110.0,
+   "preco_normal": 150.0,
+   "preco_urgente": 320.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 33.8,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 10,
+     "min": 102.0,
+     "mediana": 150.0,
+     "max": 550.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 3,
+     "min": 59.6,
+     "mediana": 59.6,
+     "max": 59.6
+    }
+   },
+   "mercado_publico": {
+    "n": 21,
+    "min": 115.0,
+    "mediana": 249.0,
+    "max": 410.66,
+    "orgaos": 15,
+    "q1": 173.18,
+    "q3": 320.0
+   },
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 59.60), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_BALANCA_ADULTO",
+   "nome": "Calibração de balança até 300 kg (antropométrica, plataforma)",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Excentricidade, repetibilidade e carga com pesos padrão transportados.",
+   "horas": {
+    "tecnico": 1,
+    "engenheiro": 0.2
+   },
+   "padroes_rateio": 40,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 45.0,
+    "mao_obra_engenheiro": 26.4,
+    "custo_fixo": 17.85,
+    "padroes": 40,
+    "consumiveis_art": 0,
+    "total": 129.25
+   },
+   "preco_pela_conta": 210.0,
+   "preco_minimo": 180.0,
+   "preco_normal": 250.0,
+   "preco_urgente": 530.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 31.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 14,
+     "min": 285.0,
+     "mediana": 295.0,
+     "max": 465.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": {
+     "n": 5,
+     "min": 177.0,
+     "mediana": 210.0,
+     "max": 279.0
+    }
+   },
+   "mercado_publico": {
+    "n": 72,
+    "min": 90.0,
+    "mediana": 249.0,
+    "max": 625.0,
+    "orgaos": 33,
+    "q1": 190.0,
+    "q3": 330.0
+   },
+   "mercado_centro_oeste": {
+    "n": 4,
+    "min": 219.0,
+    "mediana": 232.28,
+    "max": 259.01
+   },
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [
+    "o CRM tem custo cadastrado (mediana R$ 210.00), provável valor pago a parceiro: confirmar se o serviço é terceirizado"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_MANOMETRO",
+   "nome": "Calibração de manômetro, manovacuômetro ou transdutor de pressão",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por instrumento",
+   "escopo": "Até 5 pontos de pressão.",
+   "horas": {
+    "tecnico": 0.5,
+    "engenheiro": 0.15
+   },
+   "padroes_rateio": 15,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 22.5,
+    "mao_obra_engenheiro": 19.8,
+    "custo_fixo": 10.57,
+    "padroes": 15,
+    "consumiveis_art": 0,
+    "total": 67.88
+   },
+   "preco_pela_conta": 110.0,
+   "preco_minimo": 95.0,
+   "preco_normal": 110.0,
+   "preco_urgente": 240.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.0,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 2,
+     "min": 240.0,
+     "mediana": 379.0,
+     "max": 518.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": {
+     "n": 10,
+     "min": 138.0,
+     "mediana": 189.0,
+     "max": 525.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_VALVULA_SEG",
+   "nome": "Calibração de válvula de segurança com emissão de ART",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por válvula",
+   "escopo": "Pressão de abertura e fechamento em bancada, lacre, ART.",
+   "horas": {
+    "tecnico": 1,
+    "engenheiro": 0.5
+   },
+   "padroes_rateio": 20,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 45.0,
+    "mao_obra_engenheiro": 66.0,
+    "custo_fixo": 27.75,
+    "padroes": 20,
+    "consumiveis_art": 0,
+    "total": 158.75
+   },
+   "preco_pela_conta": 260.0,
+   "preco_minimo": 220.0,
+   "preco_normal": 260.0,
+   "preco_urgente": 550.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.7,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 320.0,
+     "mediana": 320.0,
+     "max": 350.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_CENTRIFUGA",
+   "nome": "Calibração de centrífuga",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por equipamento",
+   "escopo": "Rotação, tempo e temperatura (se refrigerada).",
+   "horas": {
+    "tecnico": 0.75,
+    "engenheiro": 0.2
+   },
+   "padroes_rateio": 15,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 33.75,
+    "mao_obra_engenheiro": 26.4,
+    "custo_fixo": 15.04,
+    "padroes": 15,
+    "consumiveis_art": 0,
+    "total": 90.19
+   },
+   "preco_pela_conta": 150.0,
+   "preco_minimo": 130.0,
+   "preco_normal": 150.0,
+   "preco_urgente": 320.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 22.6,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 10,
+     "min": 90.0,
+     "mediana": 350.0,
+     "max": 850.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_CAMARA",
+   "nome": "Calibração do indicador de câmara, refrigerador, estufa ou banho",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por equipamento",
+   "escopo": "Indicação do controlador em até 3 pontos (sem mapeamento).",
+   "horas": {
+    "tecnico": 0.75,
+    "engenheiro": 0.25
+   },
+   "padroes_rateio": 20,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 33.75,
+    "mao_obra_engenheiro": 33.0,
+    "custo_fixo": 16.69,
+    "padroes": 20,
+    "consumiveis_art": 0,
+    "total": 103.44
+   },
+   "preco_pela_conta": 170.0,
+   "preco_minimo": 150.0,
+   "preco_normal": 170.0,
+   "preco_urgente": 360.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.9,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 115.0,
+     "mediana": 115.0,
+     "max": 120.0
+    },
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "preço pela conta acima do maior preço já praticado pela Metrolabs",
+    "Metrolabs vem cotando abaixo do preço mínimo (margem de 10%) desta conta",
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "CAL_INCUBADORA_BIO",
+   "nome": "Calibração de incubadora de indicador biológico",
+   "grupo": "Calibração de instrumentos",
+   "unidade": "por equipamento",
+   "escopo": "Temperatura do bloco em 1 ponto.",
+   "horas": {
+    "tecnico": 0.4,
+    "engenheiro": 0.1
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 18.0,
+    "mao_obra_engenheiro": 13.2,
+    "custo_fixo": 7.8,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 49.0
+   },
+   "preco_pela_conta": 80.0,
+   "preco_minimo": 70.0,
+   "preco_normal": 80.0,
+   "preco_urgente": 170.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.5,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 8,
+     "min": 150.0,
+     "mediana": 190.0,
+     "max": 240.0
+    },
+    "crm_ganhos": {
+     "n": 1,
+     "min": 190.0,
+     "mediana": 190.0,
+     "max": 190.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "MP_AUTOCLAVE_GRANDE",
+   "nome": "Manutenção preventiva de autoclave hospitalar",
+   "grupo": "Manutenção preventiva",
+   "unidade": "por visita",
+   "escopo": "Inspeção, limpeza técnica, testes funcionais e de segurança, relatório com fotos; peças e kits à parte.",
+   "horas": {
+    "tecnico": 6,
+    "engenheiro": 0.5
+   },
+   "padroes_rateio": 20,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 270.0,
+    "mao_obra_engenheiro": 66.0,
+    "custo_fixo": 84.0,
+    "padroes": 20,
+    "consumiveis_art": 0,
+    "total": 440.0
+   },
+   "preco_pela_conta": 710.0,
+   "preco_minimo": 610.0,
+   "preco_normal": 750.0,
+   "preco_urgente": 1580.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 24.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 5,
+     "min": 700.0,
+     "mediana": 750.0,
+     "max": 1780.0
+    },
+    "crm_ganhos": {
+     "n": 2,
+     "min": 700.0,
+     "mediana": 787.5,
+     "max": 875.0
+    },
+    "drive_2018_2023": {
+     "n": 3,
+     "min": 500.0,
+     "mediana": 1000.0,
+     "max": 2000.0
+    },
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": {
+    "n": 82,
+    "min": 200.0,
+    "mediana": 900.0,
+    "max": 4733.28,
+    "orgaos": 31,
+    "q1": 649.0,
+    "q3": 1719.36
+   },
+   "mercado_centro_oeste": {
+    "n": 33,
+    "min": 350.0,
+    "mediana": 850.0,
+    "max": 4500.0
+   },
+   "fonte_preco": "custo + mercado + histórico (mercado e histórico acima da conta: sobe até o menor dos dois)",
+   "alertas": [],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "MP_AUTOCLAVE_BANCADA",
+   "nome": "Manutenção preventiva de autoclave de bancada",
+   "grupo": "Manutenção preventiva",
+   "unidade": "por visita",
+   "escopo": "Inspeção, limpeza, troca de guarnição se fornecida, testes; peças à parte.",
+   "horas": {
+    "tecnico": 2.5,
+    "engenheiro": 0.25
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 112.5,
+    "mao_obra_engenheiro": 33.0,
+    "custo_fixo": 36.38,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 191.88
+   },
+   "preco_pela_conta": 310.0,
+   "preco_minimo": 270.0,
+   "preco_normal": 310.0,
+   "preco_urgente": 660.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.9,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 2,
+     "min": 450.0,
+     "mediana": 625.0,
+     "max": 800.0
+    },
+    "crm_ganhos": {
+     "n": 2,
+     "min": 450.0,
+     "mediana": 625.0,
+     "max": 800.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "MP_LAVADORA_US",
+   "nome": "Manutenção preventiva de lavadora ultrassônica",
+   "grupo": "Manutenção preventiva",
+   "unidade": "por visita",
+   "escopo": "Inspeção, limpeza, testes funcionais; peças à parte.",
+   "horas": {
+    "tecnico": 2,
+    "engenheiro": 0.25
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 90.0,
+    "mao_obra_engenheiro": 33.0,
+    "custo_fixo": 30.75,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 163.75
+   },
+   "preco_pela_conta": 270.0,
+   "preco_minimo": 230.0,
+   "preco_normal": 270.0,
+   "preco_urgente": 570.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 22.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "MP_SELADORA",
+   "nome": "Manutenção preventiva de seladora",
+   "grupo": "Manutenção preventiva",
+   "unidade": "por visita",
+   "escopo": "Inspeção, limpeza das barras, testes; peças à parte.",
+   "horas": {
+    "tecnico": 1.5,
+    "engenheiro": 0.2
+   },
+   "padroes_rateio": 10,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 67.5,
+    "mao_obra_engenheiro": 26.4,
+    "custo_fixo": 23.48,
+    "padroes": 10,
+    "consumiveis_art": 0,
+    "total": 127.38
+   },
+   "preco_pela_conta": 210.0,
+   "preco_minimo": 180.0,
+   "preco_normal": 210.0,
+   "preco_urgente": 450.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 22.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": {
+     "n": 3,
+     "min": 300.0,
+     "mediana": 300.0,
+     "max": 300.0
+    },
+    "crm_ganhos": {
+     "n": 1,
+     "min": 300.0,
+     "mediana": 300.0,
+     "max": 300.0
+    },
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "MP_CAMARA",
+   "nome": "Manutenção preventiva de câmara de conservação ou refrigerador",
+   "grupo": "Manutenção preventiva",
+   "unidade": "por visita",
+   "escopo": "Condensador, vedação, degelo, alarmes, tensão e corrente, relatório com fotos; peças à parte.",
+   "horas": {
+    "tecnico": 3,
+    "engenheiro": 0.5
+   },
+   "padroes_rateio": 15,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 135.0,
+    "mao_obra_engenheiro": 66.0,
+    "custo_fixo": 50.25,
+    "padroes": 15,
+    "consumiveis_art": 0,
+    "total": 266.25
+   },
+   "preco_pela_conta": 430.0,
+   "preco_minimo": 370.0,
+   "preco_normal": 430.0,
+   "preco_urgente": 910.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 20.8,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas"
+   ],
+   "deslocamento": "à parte (regras de deslocamento)"
+  },
+  {
+   "codigo": "HORA_TECNICO",
+   "nome": "Hora técnica de técnico (corretiva, instalação, acompanhamento)",
+   "grupo": "Hora técnica",
+   "unidade": "por hora",
+   "escopo": "Hora em atendimento; mínimo de 2 horas por visita.",
+   "horas": {
+    "tecnico": 1,
+    "engenheiro": 0
+   },
+   "padroes_rateio": 0,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 45.0,
+    "mao_obra_engenheiro": 0.0,
+    "custo_fixo": 11.25,
+    "padroes": 0,
+    "consumiveis_art": 0,
+    "total": 56.25
+   },
+   "preco_pela_conta": 90.0,
+   "preco_minimo": 80.0,
+   "preco_normal": 190.0,
+   "preco_urgente": 400.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 53.1,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "material interno: planilha de precificação de 30/10/2026 usa R$ 190 por hora de instalação; a conta pura daria R$ 90",
+   "alertas": [
+    "sem preço comparável em compras públicas",
+    "hora avulsa tem ociosidade (espera, diagnóstico sem peça): a conta pura com 140 h faturáveis subestima"
+   ],
+   "deslocamento": "à parte"
+  },
+  {
+   "codigo": "HORA_ENGENHEIRO",
+   "nome": "Hora técnica de engenheiro (laudo, parecer, consultoria)",
+   "grupo": "Hora técnica",
+   "unidade": "por hora",
+   "escopo": "Hora de engenharia; mínimo de 1 hora.",
+   "horas": {
+    "tecnico": 0,
+    "engenheiro": 1
+   },
+   "padroes_rateio": 0,
+   "consumiveis_art": 0,
+   "custo": {
+    "mao_obra_tecnico": 0.0,
+    "mao_obra_engenheiro": 132.0,
+    "custo_fixo": 33.0,
+    "padroes": 0,
+    "consumiveis_art": 0,
+    "total": 165.0
+   },
+   "preco_pela_conta": 270.0,
+   "preco_minimo": 230.0,
+   "preco_normal": 270.0,
+   "preco_urgente": 570.0,
+   "prazo_normal_dias_uteis": 10,
+   "prazo_urgente_dias_uteis": 3,
+   "margem_no_preco_normal_pct": 21.6,
+   "historico_metrolabs": {
+    "crm_2025_2026": null,
+    "crm_ganhos": null,
+    "drive_2018_2023": null,
+    "custo_cadastrado_crm": null
+   },
+   "mercado_publico": null,
+   "mercado_centro_oeste": null,
+   "fonte_preco": "custo",
+   "alertas": [
+    "sem preço comparável em compras públicas",
+    "a planilha interna não traz hora de engenheiro; com a mesma folga usada na hora do técnico (R$ 190 sobre custo de R$ 56,25) daria cerca de R$ 560: decisão do dono"
+   ],
+   "deslocamento": "à parte"
+  }
+ ]
+}
