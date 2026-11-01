@@ -31,6 +31,8 @@ const MAPA = {
   "MANUAL_MODULO_AUTOCLAVE.md": { tela: "autoclave" },
   "MANUAL_MODULO_CADEIA_FRIO.md": { tela: "cadeia_frio" },
   "MANUAL_MODULO_COMERCIAL.md": { tela: "comercial", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "COMERCIAL", "FINANCEIRO"] },
+  // 01/11/2026 (Comercial C2): preços, ficha de custo e parâmetros: só a gestão (o manual do vendedor não mostra recursos de administração)
+  "MANUAL_COMERCIAL_PRECOS_GESTAO.md": { tela: "comercial_metodologia", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "FINANCEIRO"] },
   "MANUAL_MODULO_COMPRAS.md": { tela: "compras_pedir" },
   // 31/10/2026: cartões da empresa, conciliação das faturas, A pagar, painel e relatórios (Financeiro e gestão)
   "MANUAL_COMPRAS_FINANCEIRO.md": { tela: "compras_conciliacao", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "FINANCEIRO"] },

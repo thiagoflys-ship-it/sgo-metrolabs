@@ -68,7 +68,12 @@ var COM_COLUNAS = {
     'PRECO_REFERENCIA', 'PRECO_PEDIDO', 'PRECO_PEDIDO_SITUACAO', 'PRECO_PEDIDO_POR_ID', 'PRECO_PEDIDO_POR_NOME', 'PRECO_PEDIDO_EM', 'PRECO_PEDIDO_MOTIVO',
     'PRECO_DECISAO_POR_NOME', 'PRECO_DECISAO_EM', 'PRECO_DECISAO_TEXTO',
     // 29/10/2026 (Correções de cadastro): item repetido juntado em outro fica arquivado com a marca de para onde foi (nunca apagado)
-    'JUNTADO_COM_ID', 'JUNTADO_EM', 'JUNTADO_POR_NOME'],
+    'JUNTADO_COM_ID', 'JUNTADO_EM', 'JUNTADO_POR_NOME',
+    // 01/11/2026 (Comercial C2): ficha de custo do serviço (horas por função, padrões, consumíveis), a origem na tabela de preços
+    // da C1 (TABELA_CODIGO, chave da importação idempotente) e as referências de mercado e do histórico da Metrolabs. O custo e o
+    // preço sugerido são recalculados pela política em vigor (SGO_Comercial_Ficha.js); o preço de venda (PRECO) só muda quando a
+    // gestão confirma, com o motivo.
+    'HORAS_TECNICO', 'HORAS_ENGENHEIRO', 'PADROES_CUSTO', 'CONSUMIVEIS_CUSTO', 'TABELA_CODIGO', 'TABELA_VERSAO', 'REFERENCIA_JSON', 'FICHA_EM', 'FICHA_POR_NOME'],
   COM_PROPOSTAS: ['ID', 'NUMERO', 'REVISAO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TITULO', 'ESCOPO', 'APRESENTACAO', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'VALIDA_ATE',
     'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL', 'SITUACAO',
@@ -84,7 +89,9 @@ var COM_COLUNAS = {
     'DESLOCAMENTO_JSON', 'PRECIFICACAO_JSON',
     // 29/10/2026 (pedido do dono): proposta que nunca foi ao cliente pode ser excluída (SITUACAO EXCLUIDA; o registro fica
     // no banco e no histórico, o número não volta a ser usado; some das listas, do quadro, do painel e da gestora)
-    'EXCLUIDA_EM', 'EXCLUIDA_POR_ID', 'EXCLUIDA_POR_NOME', 'EXCLUIDA_MOTIVO'],
+    'EXCLUIDA_EM', 'EXCLUIDA_POR_ID', 'EXCLUIDA_POR_NOME', 'EXCLUIDA_MOTIVO',
+    // 01/11/2026 (Comercial C2): faixa de prazo da proposta inteira ({ faixa, licitacao }); cada item pode ter a sua (ITENS_JSON.faixa)
+    'PRAZO_JSON'],
   COM_REAJUSTES: ['ID', 'LOTE', 'PRODUTO_ID', 'CODIGO', 'NOME', 'PRECO_ANTERIOR', 'PRECO_NOVO', 'PRECO_DESDE_ANTERIOR', 'PERCENTUAL', 'ARREDONDAR_PARA', 'INDICE', 'VIGENCIA', 'MOTIVO', 'SITUACAO',
     'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'APLICADO_EM', 'DESFEITO_EM', 'DESFEITO_POR_NOME', 'DESFEITO_MOTIVO', 'CRIADO_EM'],
   COM_IA_SUGESTOES: ['ID', 'TIPO', 'REGRA', 'USUARIO_ID', 'OPORTUNIDADE_ID', 'PROPOSTA_ID', 'ORIGEM', 'TITULO', 'CONTEUDO_JSON', 'VERIFICACAO', 'DECISAO', 'DECISAO_EM', 'DECISAO_MOTIVO', 'DIA', 'CRIADO_EM'],
@@ -206,9 +213,17 @@ var COM_METODOLOGIA_PADRAO = {
   },
   politica: {
     descontoMaxPct: 15,
-    margemMinPct: 0,
+    // 01/11/2026 (C2): margem mínima ÚNICA em precificacao.margemMinPct. Este campo fica só para ler versões antigas
+    // (Com_unificarMargem_ copia o valor de lá para cá ao ler); não é mais conferido sozinho.
+    margemMinPct: 10,
     descontoPorVendedor: {},
-    texto: 'O vendedor concede até o limite de desconto sem pedir aprovação. Acima do limite (ou com margem abaixo da mínima, quando o item tem custo cadastrado), a proposta vai para a Caixa de decisões do gestor comercial antes de poder ser enviada. Quem pediu não aprova o próprio desconto.'
+    // 01/11/2026 (C2, provisório até o dono confirmar): alçadas sugeridas pela C1 sobre o preço de tabela. Hoje servem de alerta
+    // da gestora; quem trava é o limite do vendedor (descontoMaxPct) e a margem mínima.
+    alcadaGerentePct: 10,
+    alcadaDiretoriaPct: 13.75,
+    // desconto por pagamento até o dia 10 (8% a 10% nas propostas antigas): a C1 recomenda acabar. false = a gestora avisa.
+    descontoPontualidade: false,
+    texto: 'O vendedor concede até o limite de desconto sem pedir aprovação. Acima do limite, a proposta vai para a Caixa de decisões do gestor comercial antes de poder ser enviada. Com a margem abaixo da mínima (depois de impostos, comissão e deslocamento), só a Diretoria aprova. Quem pediu não aprova o próprio desconto.'
   },
   proposta: {
     validadeDias: 15,
@@ -260,7 +275,7 @@ var COM_METODOLOGIA_PADRAO = {
     // (CONGELADO_JSON.termos): mudar o padrão depois não altera proposta já enviada. Condições, frete e entrega continuam
     // nos campos da proposta (Condições comerciais), não aqui.
     termos: '1. DO OBJETO: Contratação de Comercialização de PRODUTOS E SERVIÇOS EM EQUIPAMENTOS MÉDICO-HOSPITALARES, conforme descrição, quantidade e valor acima.\n' +
-      '2. DO PRAZO DE ENTREGA: Uma vez que todas as condições propícias para a realização da entrega estiverem plenamente atendidas, a CONTRATANTE compromete-se a concluir a entrega do(s) item(ns) conforme delineado neste Termo de Referência, dentro de um prazo de 10 a 30 dias, iniciando-se a contagem a partir da data de assinatura desta minuta.\n' +
+      '2. DO PRAZO DE ENTREGA: Uma vez que todas as condições propícias para a realização da entrega estiverem plenamente atendidas, a CONTRATADA compromete-se a concluir a entrega do(s) item(ns) conforme delineado neste Termo de Referência, dentro do prazo da faixa escolhida em cada item desta proposta (seção Condições comerciais, prazo de execução), contado em dias úteis a partir da data de assinatura desta minuta.\n' +
       '3. DA FORMA DE RECEBIMENTO: O valor referente ao(s) item(ns) descrito(s) na cláusula 1 será faturado por meio de nota fiscal pela CONTRATADA, que se compromete a disponibilizá-lo dentro do prazo estipulado para pagamento, contendo o montante acordado e a data de vencimento correspondente.\n' +
       '4. DAS SANÇÕES Havendo inadimplemento do pagamento estabelecido na cláusula 1, incidirá uma multa de 30% (trinta por cento) sobre o valor total do contrato, acrescida de atualização pelo IGPDI-DI/FGV e juros moratórios de 1% (um por cento) ao mês, a partir da data do descumprimento. Além disso, a CONTRATADA reserva-se o direito de incluir o nome da CONTRATANTE em órgãos e/ou serviços de cadastro de proteção ao crédito (SPC/SERASA/PROTESTO), tornando o débito integralmente exigível, sem necessidade de qualquer outro ato ou notificação, sem prejuízo das perdas e danos decorrentes da negligência no cumprimento de suas obrigações. Caso requeira a intervenção do DEPARTAMENTO JURÍDICO da CONTRATADA, serão acrescidos honorários advocatícios à base de 20% (vinte por cento) sobre o valor total apurado, englobando, inclusive, multas, juros, atualização e correção monetária e custas judiciais, todos encargos devidos pela CONTRATANTE.\n' +
       '5. DA VALIDADE DE ASSINATURA ELETRÔNICA: Se necessário, as partes expressamente concordam em utilizar e reconhecem como válida a comprovação de autoria e integridade dos termos ora acordados, certificados por meio da plataforma DocuSign (www.docusign.com), por meio dos endereços eletrônicos das partes. A formalização das avenças na maneira supra acordada será suficiente para a validade e integral vinculação das partes ao presente instrumento, constituindo-o como título executivo extrajudicial, na forma da lei;\n' +
@@ -293,14 +308,40 @@ var COM_METODOLOGIA_PADRAO = {
     // alimentação, diárias e hospedagem são linhas à parte; "combustível adicional" só quando não é veículo da empresa.
     valorKm: 2.5,
     velocidadeMediaKmh: 70,
-    alimentacaoPessoaDia: null,
+    // 01/11/2026 (Comercial C2): valores iniciais da C1 (docs/COMERCIAL_C1_PRECIFICACAO_20261101.md), provisórios até o dono
+    // confirmar (confirmados: lista dos campos que ele já confirmou; os outros aparecem com "valor provisório" na tela).
+    alimentacaoPessoaDia: 100,
+    // diária em dinheiro: a C1 usa alimentação e hotel no lugar dela. Vazio = a linha fica "não se aplica" sozinha.
     diariaPessoaDia: { TECNICO: null, ENGENHEIRO: null },
-    hospedagemPessoaNoite: null,
+    hospedagemPessoaNoite: 150,
+    // horas de estrada: vazio = custo da hora da função com o custo fixo, só em trecho acima de estradaKmMinimo
     horaDeslocamento: { TECNICO: null, ENGENHEIRO: null },
+    estradaKmMinimo: 200,
+    // taxa por viagem (o dono ainda vai dizer o que é): só fora da Grande Goiânia (trecho acima de kmMinimo); o nome é editável
+    taxaViagem: { valor: 300, rotulo: 'Taxa por viagem (fora da Grande Goiânia)', kmMinimo: 60 },
+    // alimentação também só fora da Grande Goiânia (o mesmo raio da taxa por viagem), como na C1
+    alimentacaoForaDaRegiao: true,
     beneficioConduta: { valorPorColaborador: 300, kmMinimoTrecho: 200 },
-    impostosPct: null,
-    margemMinPct: null,
-    margemAlvoPct: null,
+    impostosPct: 14.25,
+    comissaoPct: 3,
+    margemMinPct: 10,
+    margemAlvoPct: 20,
+    // ficha de custo dos serviços: custo da hora por função e o custo fixo sobre a mão de obra
+    custoHora: { TECNICO: 45, ENGENHEIRO: 132 },
+    custoFixoPct: 25,
+    horaAvulsa: 190,
+    // faixas de prazo (decisão do dono, 01/11/2026). acrescimoPct vale só para serviço (deslocamento e peças ficam fora).
+    // A prioritária nasce desligada até o dono aprovar. contaAte: RELATORIO (até a entrega do relatório ou certificado) ou EXECUCAO.
+    prazo: {
+      contaAte: 'RELATORIO', relatorioDiasUteis: 5,
+      faixas: [
+        { codigo: 'NORMAL', nome: 'Normal', diasUteis: 10, acrescimoPct: 0, ativa: true },
+        { codigo: 'PRIORITARIA', nome: 'Prioritária', diasUteis: 5, acrescimoPct: 50, ativa: false },
+        { codigo: 'URGENTE', nome: 'Urgente', diasUteis: 3, acrescimoPct: 110, ativa: true }
+      ],
+      licitacaoSemAcrescimo: true, licitacaoRotulo: 'Licitação ou contrato: sem acréscimo de urgência'
+    },
+    confirmados: [],
     margemDeslocamentoPct: 0,
     arredondarPara: 10,
     repassePadrao: 'ITEM',
@@ -417,14 +458,14 @@ function Com_comTrava_(fn) {
 // ------------------------------------------------------------
 function Com_garantirAbas_() {
   var cache = null;
-  // V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
-  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V5')) return; } catch (e) {}
+  // V6 (01/11/2026): ficha de custo no catálogo e PRAZO_JSON nas propostas. V5 (29/10/2026): JUNTADO_* no catálogo (junção de itens repetidos). V4 (29/10/2026): DESLOCAMENTO_JSON e PRECIFICACAO_JSON nas propostas, PRECO_DESDE no catálogo e a aba COM_REAJUSTES
+  try { cache = CacheService.getScriptCache(); if (cache.get('COM_ABAS_OK_V6')) return; } catch (e) {}
   Object.keys(COM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, COM_COLUNAS[aba]);
     COM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (COM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('COM_ABAS_OK_V5', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('COM_ABAS_OK_V6', '1', 21600); } catch (e) {}
 }
 
 function Com_ler_(aba) {
@@ -476,8 +517,80 @@ function Com_metodologia_() {
       } else if (v !== undefined && v !== null) m[k] = v;
     });
   }
+  Com_normalizarMetodologia_(m);
+  Com_unificarMargem_(m, gravada);
+  if (m.proposta && typeof m.proposta.termos === 'string') m.proposta.termos = Com_corrigirTermos_(m.proposta.termos);
   COM_METODOLOGIA_MEMO = { em: Date.now(), m: m };
   return m;
+}
+
+/**
+ * 01/11/2026 (Comercial C2): compatibilidade de leitura com o formato antigo da metodologia, em que a tela mandava as listas
+ * como "texto com barras" (uma linha por item, campos separados por |). Aceita texto, lista de textos com barras ou a lista
+ * de objetos de hoje; devolve sempre a lista de objetos. Nada se perde: campo que não dá para ler fica como veio.
+ */
+function Com_linhasDe_(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') return v.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+  return v;
+}
+function Com_partes_(l) { return Com_s_(l).split('|').map(function (x) { return x.trim(); }); }
+function Com_normalizarMetodologia_(m) {
+  if (!m || typeof m !== 'object') return m;
+  var lista = function (v) { var l = Com_linhasDe_(v); return Array.isArray(l) ? l.map(function (x) { return typeof x === 'string' ? x.trim() : x; }).filter(function (x) { return x !== ''; }) : l; };
+  var objetos = function (v, montar) { var l = Com_linhasDe_(v); return Array.isArray(l) ? l.map(function (x, j) { return typeof x === 'string' ? montar(Com_partes_(x), j) : x; }) : l; };
+  ['regrasDeOuro', 'origens', 'motivosPerda'].forEach(function (k) { if (m[k] !== undefined) m[k] = lista(m[k]); });
+  if (Array.isArray(m.funis)) m.funis.forEach(function (f) {
+    if (!f) return;
+    f.etapas = objetos(f.etapas, function (p, j) { return { codigo: Com_s_(f.codigo).slice(0, 3) + '_' + (j + 1), nome: p[0], probabilidade: Com_num_(p[1]), maxDias: Com_num_(p[2]) || 0, criterio: p[3] || '', checklist: Com_s_(p[4]).split(';').map(function (x) { return x.trim(); }).filter(Boolean) }; });
+    (f.etapas || []).forEach(function (e) { if (e && typeof e.checklist === 'string') e.checklist = e.checklist.split(/;|\n/).map(function (x) { return x.trim(); }).filter(Boolean); });
+  });
+  if (m.cadencia && m.cadencia.passos !== undefined) m.cadencia.passos = objetos(m.cadencia.passos, function (p) { return { dia: Com_num_(p[0]) || 0, canal: Com_up_(p[1]) || 'LIGACAO', titulo: p[2] || '' }; });
+  if (m.estrategias !== undefined) m.estrategias = objetos(m.estrategias, function (p) { return { codigo: Com_up_(p[0]), titulo: p[1] || '', texto: p[2] || '' }; });
+  if (m.objecoes !== undefined) m.objecoes = objetos(m.objecoes, function (p) { return { objecao: p[0], resposta: p[1] || '' }; });
+  if (m.qualificacao && typeof m.qualificacao === 'object') {
+    if (m.qualificacao.itens !== undefined) m.qualificacao.itens = objetos(m.qualificacao.itens, function (p, j) { return { codigo: 'Q' + (j + 1), nome: p[0], pergunta: p[1] || '' }; });
+    if (m.qualificacao.perguntas !== undefined) m.qualificacao.perguntas = lista(m.qualificacao.perguntas);
+  }
+  if (m.posVenda && typeof m.posVenda === 'object') Object.keys(COM_SETORES).forEach(function (k) { if (m.posVenda[k] && m.posVenda[k].checklist !== undefined) m.posVenda[k].checklist = lista(m.posVenda[k].checklist); });
+  return m;
+}
+
+/**
+ * 01/11/2026 (Comercial C2): UMA margem mínima. Antes havia duas: politica.margemMinPct (margem bruta só dos itens com custo,
+ * sem impostos; padrão 0 = não conferia) e precificacao.margemMinPct (depois de impostos e da viagem; padrão vazio). Agora vale
+ * só precificacao.margemMinPct, depois de impostos, comissão e custos da viagem. Ao ler: o valor gravado na precificação vale;
+ * vazio, vale o da política antiga (se maior que zero); sem nenhum dos dois, o valor inicial (10%). Os dois valores antigos ficam
+ * em margemUnificada (a tela mostra de onde veio); a versão gravada no banco não muda até a gestão salvar a página.
+ */
+function Com_unificarMargem_(m, gravada) {
+  if (!m || !m.precificacao || !m.politica) return m;
+  var g = gravada && typeof gravada === 'object' ? gravada : {};
+  var vazio = function (v) { return v === null || v === undefined || Com_s_(v) === ''; };
+  var pr = g.precificacao && !vazio(g.precificacao.margemMinPct) ? Com_num_(g.precificacao.margemMinPct) : null;
+  var po = g.politica && !vazio(g.politica.margemMinPct) ? Com_num_(g.politica.margemMinPct) : null;
+  if (pr !== null && !isFinite(pr)) pr = null;
+  if (po !== null && !isFinite(po)) po = null;
+  var valor, origem;
+  if (pr !== null) { valor = pr; origem = 'PRECIFICACAO'; }
+  else if (po !== null && po > 0) { valor = po; origem = 'POLITICA_ANTIGA'; }
+  else { valor = COM_METODOLOGIA_PADRAO.precificacao.margemMinPct; origem = 'PADRAO'; }
+  m.precificacao.margemMinPct = valor;
+  m.politica.margemMinPct = valor;
+  m.margemUnificada = { valor: valor, origem: origem, antes: { politica: po, precificacao: pr }, divergiam: pr !== null && po !== null && po > 0 && Math.abs(pr - po) > 1e-9 };
+  return m;
+}
+
+/** 01/11/2026 (Comercial C2): os dois erros do texto padrão dos termos apontados pela C1, corrigidos também em texto já gravado. */
+var COM_TERMOS_CORRECOES = [
+  ['a CONTRATANTE compromete-se a concluir a entrega', 'a CONTRATADA compromete-se a concluir a entrega'],
+  ['dentro de um prazo de 10 a 30 dias, iniciando-se a contagem a partir da data de assinatura desta minuta', 'dentro do prazo da faixa escolhida em cada item desta proposta (seção Condições comerciais, prazo de execução), contado em dias úteis a partir da data de assinatura desta minuta']
+];
+function Com_corrigirTermos_(t) {
+  if (typeof t !== 'string') return t;
+  var s = t;
+  COM_TERMOS_CORRECOES.forEach(function (c) { s = s.split(c[0]).join(c[1]); });
+  return s;
 }
 
 /** Confere uma metodologia antes de gravar. Lança erro no padrão "o que + por que + o que fazer". */
@@ -499,8 +612,7 @@ function Com_validarMetodologia_(m) {
   if (!Array.isArray(m.origens) || !m.origens.length) throw new Error('a lista de origens está vazia. Acrescente pelo menos uma origem e salve de novo');
   var d = Com_num_(m.politica && m.politica.descontoMaxPct);
   if (!(d >= 0 && d <= 100)) throw new Error('o desconto máximo sem aprovação precisa ficar entre 0% e 100%. Corrija em Política de desconto e salve de novo');
-  var mg = Com_num_(m.politica && m.politica.margemMinPct);
-  if (!(mg >= 0 && mg < 100)) throw new Error('a margem mínima precisa ficar entre 0% e 99%. Use 0 para não conferir margem. Corrija e salve de novo');
+  // 01/11/2026: a margem mínima é uma só (precificacao.margemMinPct, conferida em ComPr_validarPolitica_)
   var c = m.cadencia || {};
   if (!(Com_num_(c.paradaDias) > Com_num_(c.esfriandoDias))) throw new Error('"parada" precisa ser mais dias que "esfriando" (hoje ' + c.paradaDias + ' e ' + c.esfriandoDias + '). Corrija em Cadência e salve de novo');
   if (!(Com_num_(c.propostaEscalaDiaUtil) > Com_num_(c.propostaLembreteDiaUtil))) throw new Error('a gestão entra depois do lembrete ao vendedor nas propostas sem resposta. Corrija em Cadência e salve de novo');
@@ -526,7 +638,8 @@ function Com_validarMetodologia_(m) {
 function Com_termosVigentes_() {
   var padrao = COM_METODOLOGIA_PADRAO.proposta;
   var r = { versao: 1, texto: Com_texto_(padrao.termos), concordancia: Com_texto_(padrao.termosConcordancia), desde: '', por: '' };
-  var norm = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
+  // 01/11/2026: o texto gravado antes da correção da C2 (CONTRATANTE, "10 a 30 dias") conta como o mesmo texto já corrigido
+  var norm = function (s) { return Com_texto_(Com_corrigirTermos_(Com_s_(s))).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
   try {
     var linhas = Com_ler_(COM_ABAS.CONFIG).filter(function (x) { return Com_s_(x.CHAVE) === 'METODOLOGIA'; })
       .sort(function (a, b) { return (Number(a.VERSAO) || 0) - (Number(b.VERSAO) || 0); });
@@ -534,7 +647,7 @@ function Com_termosVigentes_() {
       var pr = (Com_json_(l.VALOR_JSON, {}) || {}).proposta || {};
       if (typeof pr.termosConcordancia === 'string') r.concordancia = Com_texto_(pr.termosConcordancia);
       if (typeof pr.termos !== 'string' || norm(pr.termos) === norm(r.texto)) return;
-      r.versao++; r.texto = Com_texto_(pr.termos); r.desde = Com_br_(l.ATUALIZADO_EM); r.por = Com_s_(l.ATUALIZADO_POR_NOME);
+      r.versao++; r.texto = Com_texto_(Com_corrigirTermos_(pr.termos)); r.desde = Com_br_(l.ATUALIZADO_EM); r.por = Com_s_(l.ATUALIZADO_POR_NOME);
     });
   } catch (e) { /* sem histórico legível: vale o padrão */ }
   return r;
@@ -544,12 +657,42 @@ function Com_gravarMetodologia_(m, eu, motivo) {
   Com_validarMetodologia_(m);
   var atual = Com_metodologia_(), limpa = {};
   Object.keys(COM_METODOLOGIA_PADRAO).forEach(function (k) { if (k !== 'versao' && m[k] !== undefined) limpa[k] = m[k]; });
+  // 01/11/2026: a margem é uma só; o espelho antigo (politica.margemMinPct) acompanha a da precificação
+  if (limpa.precificacao && limpa.politica && limpa.precificacao.margemMinPct !== undefined) limpa.politica = Object.assign({}, limpa.politica, { margemMinPct: limpa.precificacao.margemMinPct });
   var versao = (Number(atual.versao) || 1) + 1;
   SGO_DATA.insert(COM_ABAS.CONFIG, { CHAVE: 'METODOLOGIA', VALOR_JSON: JSON.stringify(limpa), VERSAO: versao, MOTIVO: Com_texto_(motivo, 500),
     ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Com_agora_() });
   COM_METODOLOGIA_MEMO = null;
   Com_historico_('METODOLOGIA', 'METODOLOGIA', 'VERSAO', eu, { para: 'versão ' + versao, texto: Com_texto_(motivo, 500) });
   return versao;
+}
+
+/**
+ * 01/11/2026 (Comercial C2): a Metodologia em quatro páginas, cada uma com o próprio "Salvar". Cada página grava só as chaves
+ * dela, por cima da versão em vigor (merge): salvar "Como vendemos" nunca apaga o que outra pessoa salvou em "Preço e desconto".
+ */
+var COM_MET_PAGINAS = {
+  VENDEMOS: { nome: 'Como vendemos', chaves: ['tese', 'regrasDeOuro', 'funis', 'avanco', 'origens', 'motivosPerda', 'regraPerda', 'qualificacao', 'cadencia', 'estrategias', 'objecoes', 'modelosMensagem', 'gestores', 'referencias'] },
+  PRECO: { nome: 'Preço e desconto', chaves: ['precificacao', 'politica'] },
+  DOCUMENTO: { nome: 'Documento da proposta', chaves: ['proposta'] },
+  POSVENDA: { nome: 'Depois da venda', chaves: ['posVenda', 'avisos'] }
+};
+function Com_mesclarPagina_(pagina, parcial) {
+  var pg = COM_MET_PAGINAS[Com_up_(pagina)];
+  if (!pg) throw new Error('Não foi possível salvar: a página "' + Com_s_(pagina) + '" da metodologia não existe. Atualize a tela e salve de novo');
+  var n = Com_copia_(Com_metodologia_());
+  delete n.versao; delete n.atualizadaEm; delete n.atualizadaPor; delete n.margemUnificada;
+  var veio = 0;
+  pg.chaves.forEach(function (k) {
+    if (!parcial || parcial[k] === undefined) return;
+    var v = parcial[k], a = n[k];
+    // objeto de um nível (proposta, politica, precificacao, posVenda): campo que a tela não mandou fica como estava
+    if (a && typeof a === 'object' && !Array.isArray(a) && v && typeof v === 'object' && !Array.isArray(v)) { Object.keys(v).forEach(function (kk) { a[kk] = v[kk]; }); }
+    else n[k] = v;
+    veio++;
+  });
+  if (!veio) throw new Error('Não foi possível salvar: nada veio da página ' + pg.nome + '. Atualize a tela e salve de novo');
+  return n;
 }
 
 function Com_funil_(codigo, met) {

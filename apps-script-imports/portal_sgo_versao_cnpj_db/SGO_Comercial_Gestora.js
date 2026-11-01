@@ -237,6 +237,14 @@ function ComG_metodologiaTexto_(met) {
   l.push('OBJEÇÕES: ' + met.objecoes.map(function (o) { return '"' + o.objecao + '": ' + o.resposta; }).join(' | '));
   l.push('POLÍTICA DE DESCONTO: ' + met.politica.texto);
   if (met.precificacao && Com_s_(met.precificacao.texto)) l.push('POLÍTICA DE PRECIFICAÇÃO: ' + Com_s_(met.precificacao.texto));
+  // 01/11/2026 (Comercial C2): os parâmetros de preço e as faixas de prazo em vigor (a gestora não inventa número: usa estes)
+  if (typeof ComPr_politica_ === 'function') {
+    try {
+      var pp = ComPr_politica_(met);
+      l.push('REGRA DO PREÇO: preço = custo / (1 - impostos ' + Com_pct_(pp.impostosPct, 2) + ' - comissão ' + Com_pct_(pp.comissaoPct, 1) + ' - margem alvo ' + Com_pct_(pp.margemAlvoPct, 1) + '); margem mínima ' + Com_pct_(pp.margemMinPct, 1) + ' (abaixo dela, só a Diretoria aprova). Deslocamento à parte, sem margem e sem comissão.');
+      l.push('FAIXAS DE PRAZO: ' + pp.prazo.faixas.filter(function (x) { return x.ativa; }).map(function (x) { return x.nome + ' ' + x.diasUteis + ' dias úteis' + (x.acrescimoPct ? ' (+' + Com_pct_(x.acrescimoPct, 0) + ')' : ''); }).join('; ') + '. O prazo conta até ' + (pp.prazo.contaAte === 'EXECUCAO' ? 'a execução' : 'a entrega do relatório ou certificado') + '.' + (pp.prazo.licitacaoSemAcrescimo ? ' Licitação ou contrato: sem acréscimo de urgência.' : '') + ' Prazo curto só depois de a Área técnica confirmar a agenda.');
+    } catch (ePp) {}
+  }
   l.push('PERDA: ' + met.regraPerda + ' Motivos: ' + met.motivosPerda.join('; '));
   return l.join('\n');
 }

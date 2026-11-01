@@ -274,7 +274,14 @@ function Com_inicio_(eu) {
   base.funis = met.funis.map(function (f) { return { codigo: f.codigo, nome: f.nome, descricao: f.descricao, etapas: f.etapas.map(function (e) { return { codigo: e.codigo, nome: e.nome, probabilidade: e.probabilidade, maxDias: e.maxDias, criterio: e.criterio }; }) }; });
   base.origens = met.origens; base.motivosPerda = met.motivosPerda; base.regraPerda = met.regraPerda; base.tiposContato = COM_TIPOS_CONTATO; base.papeisContato = COM_PAPEIS_CONTATO;
   base.estrategias = met.estrategias; base.qualificacao = met.qualificacao.itens; base.situacoesProposta = COM_SITUACOES_PROP; base.tiposItem = COM_TIPOS_ITEM; base.setores = COM_SETORES;
-  base.politica = { descontoMaxPct: ComP_limiteDe_(eu.id, met), margemMinPct: met.politica.margemMinPct };
+  base.politica = { descontoMaxPct: ComP_limiteDe_(eu.id, met), margemMinPct: met.precificacao.margemMinPct };
+  // 01/11/2026 (Comercial C2): faixas de prazo para a proposta (a tela recalcula o preço do item ao trocar a faixa) e, para quem vê
+  // custo, os percentuais do quadro "Preço, custo, impostos e margem"
+  if (typeof ComPr_politica_ === 'function') {
+    var polI = ComPr_politica_(met);
+    base.prazo = { faixas: polI.prazo.faixas, contaAte: polI.prazo.contaAte, relatorioDiasUteis: polI.prazo.relatorioDiasUteis, licitacaoSemAcrescimo: polI.prazo.licitacaoSemAcrescimo, licitacaoRotulo: polI.prazo.licitacaoRotulo };
+    base.precoQuadro = { impostosPct: polI.impostosPct, comissaoPct: polI.comissaoPct, margemMinPct: eu.veCusto ? polI.margemMinPct : null, margemAlvoPct: eu.veCusto ? polI.margemAlvoPct : null };
+  }
   // 29/10/2026: alçada do vendedor para reduzir preço do catálogo sem aprovação
   if (eu.catalogoVenda) base.alcadaPreco = ComP_alcadaPreco_(eu, met);
   // 29/10/2026: política de precificação (só Diretoria e Administrador mudam) e reajuste do catálogo
@@ -351,6 +358,8 @@ function Com_metodologiaTela_(eu, d) {
     Com_exigir_(eu, 'GESTAO', 'salvar a metodologia');
     var motivo = Com_texto_(d.motivo, 500);
     if (motivo.length < 10) throw new Error('Não foi possível salvar: escreva o que mudou e por quê (pelo menos 10 letras). Cada versão fica no histórico');
+    // 01/11/2026 (Comercial C2): cada página da Metodologia salva só as chaves dela, por cima da versão em vigor (merge)
+    if (d.pagina) d.salvar = Com_mesclarPagina_(d.pagina, d.salvar);
     // 28/10/2026: termos e condições da contratação são cláusulas de contrato: só a Diretoria e o Administrador mudam
     var atualP = Com_metodologia_().proposta, novoP = (d.salvar && d.salvar.proposta) || {};
     var normT = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
@@ -359,17 +368,27 @@ function Com_metodologiaTela_(eu, d) {
     // 29/10/2026: política de precificação (valores da viagem, impostos, margens, reajuste): só a Diretoria e o Administrador
     if (d.salvar.precificacao !== undefined && typeof ComPr_politicaCanonica_ === 'function' && ComPr_politicaCanonica_(d.salvar.precificacao) !== ComPr_politicaCanonica_(Com_metodologia_().precificacao) && !(eu.diretoria || eu.perfil === 'ADMIN'))
       throw new Error('Não foi possível salvar: a política de precificação (km, diárias, alimentação, hospedagem, impostos, margens e reajuste) só é alterada pela Diretoria ou pelo Administrador. Desfaça a mudança nesses campos (ou atualize a tela) e salve de novo; para mudar a política, peça à Diretoria');
-    var v = Com_comTrava_(function () { Com_garantirAbas_(); return Com_gravarMetodologia_(d.salvar, eu, motivo); });
-    return { metodologia: Com_metodologia_(), termos: Com_termosVigentes_(), message: 'Metodologia salva (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.' };
+    var v = Com_comTrava_(function () { Com_garantirAbas_(); return Com_gravarMetodologia_(d.salvar, eu, Com_s_(d.pagina) && COM_MET_PAGINAS[Com_up_(d.pagina)] ? COM_MET_PAGINAS[Com_up_(d.pagina)].nome + ': ' + motivo : motivo); });
+    var depois = Com_metodologiaTela_(eu, {});
+    depois.message = (Com_s_(d.pagina) && COM_MET_PAGINAS[Com_up_(d.pagina)] ? 'Página "' + COM_MET_PAGINAS[Com_up_(d.pagina)].nome + '" salva' : 'Metodologia salva') + ' (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.';
+    return depois;
   }
   var r = { metodologia: Com_metodologia_(), podeEditar: eu.gestao, padrao: eu.gestao ? COM_METODOLOGIA_PADRAO : null,
     podeEditarTermos: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')), termos: Com_termosVigentes_(),
     podeEditarPrecificacao: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')) };
-  if (typeof ComPr_politica_ === 'function') { var polT = ComPr_politica_(); r.precificacao = { beneficio: ComPr_beneficio_(polT), incompleta: ComPr_politicaIncompleta_(polT).map(function (f) { return f.nome; }), repasses: COM_PR_REPASSES }; }
+  if (typeof ComPr_politica_ === 'function') {
+    var polT = ComPr_politica_();
+    r.precificacao = { beneficio: ComPr_beneficio_(polT), incompleta: ComPr_politicaIncompleta_(polT).map(function (f) { return f.nome; }), repasses: COM_PR_REPASSES,
+      // 01/11/2026 (Comercial C2): o que ainda é provisório, a lista para "confirmado pelo dono" e a política normalizada (faixas)
+      provisorios: COM_PR_PROVISORIOS, pendentes: ComPr_provisorios_(polT).map(function (x) { return x.campo; }), prazo: polT.prazo };
+  }
+  r.paginas = Object.keys(COM_MET_PAGINAS).map(function (k) { return { codigo: k, nome: COM_MET_PAGINAS[k].nome }; });
   // quem não vê custo (vendedor) vê os valores da viagem, mas não impostos nem margens da política
   if (!eu.veCusto && r.metodologia && r.metodologia.precificacao) {
     r.metodologia = Com_copia_(r.metodologia);
-    ['impostosPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    r.metodologia.politica = Com_copia_(r.metodologia.politica); r.metodologia.politica.margemMinPct = null;
+    delete r.metodologia.margemUnificada;
     r.precificacaoReservada = true;
   }
   if (eu.gestao) {
@@ -447,7 +466,12 @@ var COM_ACOES = {
   reajustePrevia: function (eu, sid, d) { var r = ComPr_previaReajuste_(eu, d); delete r._todas; return r; },
   reajusteAplicar: function (eu, sid, d) { return ComPr_aplicarReajuste_(eu, d); },
   reajustes: function (eu, sid, d) { return ComPr_historicoReajustes_(eu); },
-  reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); }
+  reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); },
+  // 01/11/2026 (Comercial C2): tabela de preços C1 (prévia e importação), ficha de custo e "usar o preço sugerido" (SGO_Comercial_Ficha.js)
+  importarC1Previa: function (eu, sid, d) { return ComF_previaImportacao_(eu); },
+  importarC1: function (eu, sid, d) { return ComF_importar_(eu, d); },
+  salvarFicha: function (eu, sid, d) { return ComF_salvarFicha_(eu, d); },
+  aplicarSugerido: function (eu, sid, d) { return ComF_aplicarSugerido_(eu, d); }
 };
 
 /** google.script.run: Comercial_api(sessionId, acao, dados). Nunca lança. */

@@ -32,7 +32,9 @@ test('modelo SERVIÇO (itens de serviço): documento como antes (Escopo, prazo d
   assert.equal(salvo.proposta.tipoOrcamento, 'SERVICOS'); assert.equal(salvo.proposta.tipoOrcamentoEscolhido, '');
   const html = gerar(amb, id), t = textoDe(html);
   assert.match(html, /\d+\. Escopo<\/h2>/);
-  assert.match(t, /Prazo de execução A combinar após o aceite da proposta\./);
+  // 01/11/2026 (Comercial C2): o prazo de execução segue a faixa de prazo (Normal: 10 dias úteis, até a entrega do relatório)
+  assert.match(t, /Prazo de execução Prazo normal: execução e entrega do relatório ou certificado em até 10 dias úteis, contados do aceite da proposta e da liberação do equipamento pelo cliente\./);
+  assert.match(t, /Prazo normal: até 10 dias úteis até a entrega do relatório ou certificado/);
   assert.match(t, /Local de execução ou entrega Nas instalações do cliente\./);
   assert.match(t, /Executar os serviços descritos nesta proposta/);
   assert.match(t, /As datas de execução serão agendadas em comum acordo após o aceite\./);

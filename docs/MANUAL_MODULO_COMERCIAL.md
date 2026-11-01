@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial.
+Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) e em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades, Quadro do funil, Gantt comercial, Propostas, Pedidos aprovados, Produtos e serviços, Painel comercial e Metodologia comercial.
 
 ## Para que serve
 
@@ -81,6 +81,44 @@ Primeiro valem as regras (funcionam sem a chave da IA); a IA reescreve e o verif
 
 Só o rascunho é editado. Antes do envio use "Editar (volta para rascunho)"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina. Editam a proposta o responsável por ela e a gestão comercial.
 
+### A proposta em quatro passos
+
+O rascunho abre em quatro passos. Toque no número do passo ou em "Próximo"; no celular, o Voltar do topo volta ao passo anterior. Nenhum passo apaga o que foi digitado em outro.
+
+1. **Itens.** Os produtos e serviços, a quantidade, o preço e o prazo de cada item. O preço de tabela vem do catálogo e da faixa de prazo.
+2. **Deslocamento.** Destino, km, dias, noites e quem vai. O sistema calcula o custo da viagem e o item "Despesas de deslocamento e estadia".
+3. **Prazo e condições.** A faixa de prazo da proposta, "Licitação ou contrato", validade, contato, condições e a apresentação.
+4. **Revisar e enviar.** Ao abrir, o rascunho é salvo. Mostra os itens com o prazo, o total, o prazo que vai no documento, o deslocamento e o que falta. Depois toque em "Concluir".
+
+No topo fica sempre o quadro do preço: preço, impostos e comissão e a situação da margem (verde dentro da margem alvo, laranja abaixo da alvo, vermelho abaixo da mínima). Margem abaixo da mínima ou desconto acima do seu limite vão para a Caixa de decisões quando você conclui.
+
+### Prazo de cada item: as faixas
+
+| Faixa | Prazo | Preço |
+|---|---|---|
+| Normal | 10 dias úteis | o da tabela |
+| Urgente | 3 dias úteis | tabela mais 110% (tabela x 2,1) |
+| Prioritária | 5 dias úteis | tabela mais 50%; só aparece quando a Diretoria liga |
+
+- A faixa do passo 3 vale para todos os itens de serviço. Um item com prazo diferente troca o "Prazo" dele no passo 1. O preço de tabela acompanha a faixa sozinho, se você não tinha mudado o preço à mão.
+- O acréscimo vale só para serviço: deslocamento e produto ficam de fora.
+- "Licitação ou contrato: sem acréscimo de urgência": marcado, o preço fica o normal em qualquer prazo.
+- O prazo conta do aceite da proposta (e da liberação do equipamento) até a entrega do relatório ou certificado. O documento diz isso em "Prazo de execução" e embaixo de cada item.
+- Antes de oferecer urgente ou prioritário, confirme a agenda com a Área técnica. A revisão da gestora lembra.
+
+### Deslocamento em bloco simples
+
+1. Em "Há viagem para executar o serviço?", escolha Sim ou Não (com o motivo).
+2. Escolha a cidade de destino. A lista vem da tabela de distâncias do Programa de conduta e já traz o km do trecho; sem referência, digite o km (só a ida).
+3. Informe os dias, as noites, quantos técnicos e engenheiros vão e o pedágio da viagem (0 se não há).
+4. Toque em "Calcular (salva o rascunho)".
+
+O sistema calcula o km rodado (ida e volta), a taxa por viagem (só fora da Grande Goiânia), o benefício da Conduta (trecho acima de 200 km), a alimentação (fora da Grande Goiânia), o hotel e as horas de estrada (trecho acima de 200 km). O custo vira o item "Despesas de deslocamento e estadia", com o preço igual ao custo mais os impostos, sem margem e sem comissão. O cliente vê só esse item, com a equipe e o que está incluído.
+
+Exemplo: Brasília (210 km), 2 técnicos, 2 dias e 1 noite. Km R$ 1.050,00 + taxa R$ 300,00 + Conduta R$ 600,00 + alimentação R$ 400,00 + hotel R$ 300,00 + estrada R$ 675,00 = custo de R$ 3.325,00; o item sai por R$ 3.880,00.
+
+Para digitar outro preço, use "Preço do deslocamento na proposta". Abaixo do custo da viagem, a tela avisa em vermelho (a empresa estaria pagando para ir), a gestora aponta e o valor conta como desconto. Em branco, vale o calculado. Transporte diferente do veículo da empresa, várias viagens ou um valor diferente ficam em "Ver a conta linha por linha e ajustar".
+
 ### Proposta errada: editar, excluir ou cancelar
 
 - Rascunho: edite e salve. Aguardando aprovação ou pronta (ainda não enviada): "Editar (volta para rascunho)", corrija e conclua de novo (a política de desconto é conferida outra vez).
@@ -104,12 +142,13 @@ Checklist obrigatório (caixa "Custos da viagem e do frete" do rascunho). Propos
 |---|---|---|
 | Km rodado | km do trecho x 2 (ida e volta) x viagens x valor por km | R$ 2,50 por km; cobre o veículo da empresa (combustível, desgaste, manutenção) |
 | Pedágios | valor por viagem (ida e volta) x viagens | sem padrão (depende da rota) |
-| Alimentação | pessoas x dias x viagens x valor | vazio até a Diretoria preencher |
-| Diárias | (técnicos x diária do técnico + engenheiros x diária do engenheiro) x dias x viagens | vazio até a Diretoria preencher |
-| Hospedagem | pessoas x noites x viagens x valor | vazio até a Diretoria preencher |
+| Taxa por viagem | valor por viagem x viagens | R$ 300 por viagem, só fora da Grande Goiânia (trecho acima de 60 km); valor provisório |
+| Alimentação | pessoas x dias x viagens x valor | R$ 100 por pessoa por dia, só fora da Grande Goiânia |
+| Diárias | (técnicos x diária do técnico + engenheiros x diária do engenheiro) x dias x viagens | sem diária em dinheiro: a linha fica "não se aplica" sozinha (a alimentação e o hotel cobrem a estadia) |
+| Hospedagem | pessoas x noites x viagens x valor | R$ 150 por pessoa por noite |
 | Benefício do Programa de conduta | colaboradores x viagens x valor | R$ 300 por colaborador por viagem, dos parâmetros do Programa de conduta; só em trecho de 200 km ou mais (regra da Conduta) |
 | Combustível adicional ou passagem | valor por viagem x viagens | só quando não é veículo da empresa (avião, ônibus, veículo locado) |
-| Horas de deslocamento (opcional) | horas por viagem x (valor da hora por função) x viagens | vazio; horas estimadas pela velocidade média da política (70 km/h) |
+| Horas de estrada | horas por viagem x (valor da hora por função) x viagens | custo da hora com o custo fixo (técnico R$ 56,25, engenheiro R$ 165,00), só em trecho acima de 200 km; horas pela velocidade média (70 km/h) |
 | Outros (opcional) | valor total com a descrição | — |
 
 - "Não se aplica" automático (com o motivo escrito pelo sistema): 0 km (km e pedágio), 0 noite (hospedagem), trecho abaixo do mínimo da Conduta (benefício) e veículo da empresa (combustível). Pedágio e combustível aceitam valor mesmo assim (pedágio urbano, abastecimento extra).
@@ -220,7 +259,14 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 ## Metodologia comercial
 
-É a cartilha da gestora. O padrão veio do Playbook e das regras do Comercial do COMMAND. Em "Critérios para avançar de etapa" a gestão escolhe o que o sistema exige para uma oportunidade avançar (lista da etapa confirmada, decisor mapeado, contato registrado, proposta enviada para passar da etapa de proposta, aceite para a etapa de 100%); a lista de cada etapa fica em "Funis e etapas". A gestão altera, escreve o motivo e salva uma versão nova; a anterior fica no histórico. Quando o modelo oficial de proposta da empresa chegar, os textos padrão (apresentação, condições, responsabilidades, validade) entram aqui, em três modelos: serviço, produto e serviço e produto (misto); o vendedor escolhe o tipo de orçamento na proposta. Os termos e condições da contratação também ficam aqui, mas só a Diretoria e o Administrador mudam (veja Propostas > Termos e condições da contratação). A política de precificação também (veja Propostas > Precificação); o vendedor vê os valores da viagem, mas não impostos nem margens.
+É a cartilha da gestora, em quatro páginas. Cada página tem o próprio "Salvar" e pede o motivo; salvar uma página não mexe nas outras. O vendedor lê; quem salva é a gestão.
+
+- **Como vendemos:** tese, regras de ouro, funis e etapas, critérios para avançar de etapa, origens, motivos de perda, qualificação, cadência, estratégias, objeções, modelos de mensagem e quem é a gestão comercial. Funis, cadência, estratégias, objeções e listas são tabelas: uma linha por item, com "+ adicionar" e "Remover".
+- **Preço e desconto:** a regra do preço, as faixas de prazo e o desconto. O vendedor vê as faixas e os valores da viagem; impostos, comissão, custo da hora e margens ficam com a gestão.
+- **Documento da proposta:** os modelos de serviço, de produto e misto e os termos e condições da contratação.
+- **Depois da venda:** a passagem do pedido aos setores.
+
+A versão antiga da metodologia (listas escritas com barras "|") é lida e aparece nas tabelas, linha por linha. Nada se perdeu.
 
 ## Dados trazidos do CRM antigo
 

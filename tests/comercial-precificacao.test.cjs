@@ -28,7 +28,10 @@ function politica(amb, campos, sid) {
   m.precificacao = Object.assign({}, m.precificacao, campos);
   return amb.api(sid || 's_dora', 'metodologia', { salvar: m, motivo: 'Política de precificação de teste' });
 }
-const POL = { impostosPct: 15, margemMinPct: 25, margemAlvoPct: 35, alimentacaoPessoaDia: 60, diariaPessoaDia: { TECNICO: 150, ENGENHEIRO: 250 }, hospedagemPessoaNoite: 180 };
+// 01/11/2026 (Comercial C2): estes testes conferem a mecânica de 29/10/2026 com uma política própria; a taxa por viagem, as horas
+// de estrada e a comissão (novas na C2, testadas em comercial-c2-precos.test.cjs) ficam zeradas aqui para os números não mudarem.
+const POL = { impostosPct: 15, margemMinPct: 25, margemAlvoPct: 35, alimentacaoPessoaDia: 60, diariaPessoaDia: { TECNICO: 150, ENGENHEIRO: 250 }, hospedagemPessoaNoite: 180,
+  taxaViagem: { valor: 0 }, horaDeslocamento: { TECNICO: 0, ENGENHEIRO: 0 }, comissaoPct: 0, alimentacaoForaDaRegiao: false };
 const VIAGEM = { ha: 'SIM', tecnicos: 1, engenheiros: 1, destino: 'Rio Verde/GO', kmTrecho: '228', dias: 2, noites: 1, viagens: 1, linhas: { PEDAGIO: { valor: '45,00' } } };
 
 function rascunho(amb, extra, itens) {
@@ -80,13 +83,15 @@ test('checklist obrigatório: serviço sem resposta sobre a viagem não conclui;
   assert.match(r.message, /checklist de custos está incompleto \(diga se o serviço tem viagem/);
   assert.match(r.message, /Todo custo de campo precisa entrar no preço/);
   assert.match(r.message, /preencha "Custos da viagem e do frete" no rascunho/);
-  // política sem valores de alimentação, diárias e hospedagem (padrão: vazios)
+  // política com alimentação e hospedagem zeradas e diária só do técnico (01/11/2026: vazio vale o valor inicial da C2; diária
+  // vazia nas duas funções fica "não se aplica" sozinha, testado em comercial-c2-precos.test.cjs)
+  ok(politica(amb, { alimentacaoPessoaDia: 0, hospedagemPessoaNoite: 0, diariaPessoaDia: { TECNICO: 150, ENGENHEIRO: null } }));
   const s = ok(amb.api('s_vera', 'salvarProposta', { id: a.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { viagem: VIAGEM } }));
   assert.match(s.message, /Custos da viagem e do frete: \d+ itens do checklist faltam/);
   r = amb.api('s_vera', 'concluirProposta', { id: a.id });
   assert.equal(r.ok, false);
-  assert.match(r.message, /Alimentação: sem valor \(a política ainda não tem o valor padrão\); informe o valor por pessoa por dia ou marque "não se aplica" com o motivo/);
-  assert.match(r.message, /Diária do técnico: sem valor/); assert.match(r.message, /Diária do engenheiro: sem valor/);
+  assert.match(r.message, /Alimentação: sem valor; informe o valor por pessoa por dia ou marque "não se aplica" com o motivo/);
+  assert.match(r.message, /Diária do engenheiro: sem valor \(a política ainda não tem o valor padrão\)/); assert.doesNotMatch(r.message, /Diária do técnico/);
   assert.match(r.message, /Hospedagem: sem valor/);
   assert.doesNotMatch(r.message, /Km rodado/, 'o km tem padrão na política (R$ 2,50)');
   // "não se aplica" sem motivo continua travando
@@ -320,18 +325,19 @@ test('reajuste do catálogo: só Diretoria; prévia por tipo, aplicar confere a 
 
 test('especialista contínuo: lista do vendedor cobra o checklist; panorama da gestão aponta política incompleta, benefício da Conduta tirado à mão e catálogo sem reajuste; painel "Precificação e estratégia"', () => {
   const amb = amb0();
-  // rascunho com checklist incompleto aparece na lista do dia da vendedora
-  const a = rascunho(amb, { deslocamento: { viagem: VIAGEM } });
+  // rascunho com checklist incompleto aparece na lista do dia da vendedora ("não se aplica" sem o motivo)
+  const a = rascunho(amb, { deslocamento: { viagem: Object.assign({}, VIAGEM, { linhas: { PEDAGIO: { valor: '45,00' }, ALIMENTACAO: { nsa: true, motivo: '' } } }) } });
   const hoje = ok(amb.api('s_vera', 'hoje', { papel: 'VENDEDOR' }));
   const it = hoje.itens.find((i) => i.regra === 'CHECKLIST_CUSTOS');
   assert.ok(it, JSON.stringify(hoje.itens.map((i) => i.regra)));
   assert.match(it.porque, /benefício do Programa de conduta de cada colaborador/); assert.match(it.acao, /Sem isso a proposta não conclui/);
   // panorama: política incompleta
   let pan = ok(amb.api('s_gaspar', 'hoje', { papel: 'GESTAO' }));
-  assert.ok(pan.itens.some((i) => i.regra === 'POLITICA_INCOMPLETA' && /impostos sobre o faturamento/.test(i.titulo)), pan.itens.map((i) => i.titulo).join(' | '));
+  // 01/11/2026 (C2): a política nasce com os valores iniciais da C1; o panorama aponta os que o dono ainda não confirmou
+  assert.ok(pan.itens.some((i) => i.regra === 'PARAMETROS_PROVISORIOS' && /valores da política de preço ainda são provisórios/.test(i.titulo) && /custo fixo sobre a mão de obra/.test(i.porque)), pan.itens.map((i) => i.titulo).join(' | '));
   // benefício tirado à mão numa viagem de 228 km
   ok(politica(amb, POL));
-  ok(amb.api('s_vera', 'salvarProposta', { id: a.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { viagem: { linhas: { CONDUTA: { nsa: true, motivo: 'Cliente não paga benefício' } } } } }));
+  ok(amb.api('s_vera', 'salvarProposta', { id: a.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { viagem: { linhas: { ALIMENTACAO: { nsa: false }, CONDUTA: { nsa: true, motivo: 'Cliente não paga benefício' } } } } }));
   ok(amb.api('s_vera', 'concluirProposta', { id: a.id }));
   // item do catálogo sem reajuste há mais de 12 meses
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'SRV-9', nome: 'Manutenção preventiva de autoclave', tipo: 'SERVICO', preco: '2.000,00' }));
@@ -382,9 +388,9 @@ test('telas: caixa de custos no rascunho, resumo fora dele, política na Metodol
   const a = rascunho(amb, { deslocamento: { viagem: VIAGEM } });
   const pv = ok(amb.api('s_vera', 'proposta', { id: a.id })).proposta;
   const cx = tela.Comercial_editorCustos_(pv);
-  assert.match(cx, /Custos da viagem e do frete \(checklist obrigatório\)/);
+  assert.match(cx, /Ver a conta linha por linha e ajustar/); assert.match(cx, /id="cmCvPed"/);
   assert.match(cx, /data-cvl="CONDUTA"/); assert.match(cx, /R\$ 3\.185,00/); assert.match(cx, /R\$ 3\.750,00/);
-  assert.match(cx, /Referência do Programa de conduta: Rio Verde\/GO, 228 km/);
+  assert.match(cx, /Tabela de distâncias: Rio Verde\/GO, 228 km/);
   assert.doesNotMatch(cx, /Precificação \(só gestão\)/, 'vendedor não vê a margem em número');
   const pg = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta;
   assert.match(tela.Comercial_editorCustos_(pg), /Precificação \(só gestão\):.*margem/);
@@ -392,9 +398,10 @@ test('telas: caixa de custos no rascunho, resumo fora dele, política na Metodol
   const pr = ok(amb.api('s_vera', 'proposta', { id: a.id })).proposta;
   assert.match(tela.Comercial_resumoCustos_(pr.deslocamento), /Benefício do Programa de conduta/);
   const met = ok(amb.api('s_dora', 'metodologia'));
-  const cp = tela.Comercial_caixaPrecificacao_(met);
-  assert.match(cp, /Política de precificação \(acréscimos e reajuste\)/); assert.doesNotMatch(cp, / disabled/);
-  assert.match(tela.Comercial_caixaPrecificacao_(ok(amb.api('s_gaspar', 'metodologia'))), / disabled/, 'gestor comercial vê, mas não edita');
+  // 01/11/2026 (C2): a política virou a página "Preço e desconto" da Metodologia
+  const cp = tela.Comercial_metPreco_(met);
+  assert.match(cp, /Impostos, comissão e margem/); assert.doesNotMatch(cp, /id="cmPrImp" inputmode="decimal" value="[^"]*" disabled/);
+  assert.match(tela.Comercial_metPreco_(ok(amb.api('s_gaspar', 'metodologia'))), /id="cmPrImp" inputmode="decimal" value="15" disabled/, 'gestor comercial vê, mas não edita');
   const pn = ok(amb.api('s_gaspar', 'painel', { competencia: '2026-10' })).precificacao;
   assert.match(tela.Comercial_quadroPrecificacao_(pn), /Precificação e estratégia/);
 });

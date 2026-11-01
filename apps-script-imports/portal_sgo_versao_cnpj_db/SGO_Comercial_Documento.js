@@ -70,9 +70,13 @@ function ComDoc_propostaHtml_(p, cong, marca) {
   ]));
   if (Com_s_(p.APRESENTACAO)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(p.APRESENTACAO));
   corpo += RelA4_secao_(ehProduto ? 'Resumo do fornecimento' : 'Escopo', RelA4_paragrafos_(ComP_escopo_(p) || 'Conforme os itens da tabela a seguir.'));
+  // 01/11/2026 (Comercial C2): prazo da faixa escolhida em cada item de serviço (o valor da linha já é o da faixa)
+  var prazoDoc = Com_json_(p.PRAZO_JSON, null), polDoc = prazoDoc && typeof ComPr_politica_ === 'function' ? ComPr_politica_(met) : null;
   var linhas = itens.map(function (i, k) {
     var q = Number(i.quantidade) || 0, pu = Number(i.precoUnitario) || 0;
-    var desc = '<b>' + ComDoc_esc_(i.descricao) + '</b>' + (Com_s_(i.codigo) ? '<span class="sub">Código: ' + ComDoc_esc_(i.codigo) + '</span>' : '') + (i.equipamentoTexto ? '<span class="sub">Equipamento: ' + ComDoc_esc_(i.equipamentoTexto) + '</span>' : '') + (i.detalhe ? '<span class="sub">' + ComDoc_esc_(i.detalhe) + '</span>' : '');
+    var fxDoc = polDoc && !i.auto && i.tipo !== 'PRODUTO' ? ComPr_faixa_(polDoc, i.faixa || prazoDoc.faixa) : null;
+    var desc = '<b>' + ComDoc_esc_(i.descricao) + '</b>' + (Com_s_(i.codigo) ? '<span class="sub">Código: ' + ComDoc_esc_(i.codigo) + '</span>' : '') + (i.equipamentoTexto ? '<span class="sub">Equipamento: ' + ComDoc_esc_(i.equipamentoTexto) + '</span>' : '') + (i.detalhe ? '<span class="sub">' + ComDoc_esc_(i.detalhe) + '</span>' : '') +
+      (fxDoc ? '<span class="sub">Prazo ' + ComDoc_esc_(fxDoc.nome.toLowerCase()) + ': até ' + ComDoc_esc_(Com_plural_(fxDoc.diasUteis, 'dia útil', 'dias úteis')) + (polDoc.prazo.contaAte === 'EXECUCAO' ? ' para a execução' : ' até a entrega do relatório ou certificado') + '</span>' : '');
     return [String(k + 1), COM_TIPOS_ITEM[i.tipo] || 'Serviço', { html: desc }, SGO_DocA4_num_(q, Math.round(q) === q ? 0 : 2), i.unidade || 'un.', Com_moeda_(pu), Com_moeda_(q * pu)];
   });
   var cols = [{ t: 'Nº', cen: true, w: '7mm' }, { t: 'Tipo', w: '17mm' }, { t: 'Descrição' }, { t: 'Qtd.', num: true }, { t: 'Un.', cen: true }, { t: 'Preço unit.', num: true }, { t: 'Total', num: true }];

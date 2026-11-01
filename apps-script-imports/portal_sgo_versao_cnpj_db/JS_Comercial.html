@@ -139,7 +139,67 @@
     .cm-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
     .cm-tabela td { border: 0; padding: 3px 0; text-align: left !important; }
     .cm-tabela td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+    /* 01/11/2026 (C2): conta aberta (ficha de custo e regra do preço) fica em duas colunas também no celular */
+    .cm-tabela.cm-conta tr { display: flex; justify-content: space-between; gap: 10px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; margin: 0; padding: 6px 0; background: transparent; }
+    .cm-tabela.cm-conta td { width: auto; }
+    .cm-tabela.cm-conta td.n { text-align: right !important; white-space: nowrap; }
+    .cm-tabela.cm-conta td[data-r]::before { content: none; }
     .cm-filtros > div { flex: 1 1 140px; }
+  }
+  /* 01/11/2026 (Comercial C2): proposta em passos, quadro de preço sempre à vista, tabelas editáveis da Metodologia e a página
+     "Preço e desconto". Botões de 44 px no celular; nada some atrás dos botões redondos do canto (folga no fim da gaveta). */
+  #cmGavetaCorpo { padding-bottom: 120px; }
+  /* toque de 44 px também no computador (as telas novas e as ações da proposta e do catálogo) */
+  .cm-acoes button, .cm-acoes .btn-primary, .cm-acoes .btn-secondary, .cm-campo input, .cm-campo select, .cm-tabela button, .cm-item-orig button, #cmGaveta .atv-drawer-cab button, .cm-filtros button, .module-header-right .btn-primary, .module-header-right .btn-secondary, .atv-modal-rod button, .cm-filtros select, .cm-filtros input, .cm-item-tirar { min-height: 44px !important; }
+  .cm-met-salvar { margin-bottom: 96px; }
+  .cm-editor { padding-top: 0; }
+  .cm-quadro-preco { position: sticky; top: -14px; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,.06); background: var(--card); border-bottom: 1px solid var(--border); margin: 0 -14px 10px; padding: 10px 14px; font-size: 13px; }
+  .cm-qp-linha { display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; }
+  .cm-qp-sobra { margin-top: 4px; padding: 4px 8px; border-radius: 6px; border-left: 4px solid var(--success); background: var(--bg); }
+  .cm-qp-sobra.aviso { border-left-color: var(--warning); } .cm-qp-sobra.erro { border-left-color: var(--danger); background: var(--danger-bg); }
+  .cm-passos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 12px; }
+  .cm-passo { min-height: 44px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 6px; text-align: center; line-height: 1.2; }
+  .cm-passo span { flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--bg); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .cm-passo.ativo { border-color: var(--info, #1f5fa8); box-shadow: inset 0 -3px 0 var(--info, #1f5fa8); }
+  .cm-passo.ativo span { background: var(--info, #1f5fa8); color: #fff; }
+  .cm-painel h3 { margin: 0 0 10px; font-size: 15px; }
+  .cm-painel[hidden], #cmCvSim[hidden], #cmCvNao[hidden] { display: none !important; }
+  .cm-passos-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .cm-passos-nav button { min-height: 44px; }
+  .cm-passos-nav .btn-primary { margin-left: auto; }
+  .cm-grade4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 12px; }
+  .cm-itens .cm-item { grid-template-columns: 2.2fr .55fr .55fr 1fr 1.2fr 1.2fr auto; }
+  .cm-check-grande { min-height: 44px; align-items: center; }
+  .cm-check-grande input { width: 20px; height: 20px; margin-top: 0; }
+  .cm-tabed { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .cm-tabed-l { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) auto; gap: 6px 10px; align-items: end; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+  .cm-tabed-l.uma { grid-template-columns: 1fr auto; }
+  .cm-tabed-l .cm-campo { margin: 0; }
+  .cm-tabed-l .cm-campo.largo { grid-column: span 2; }
+  .cm-tabed-l textarea { min-height: 44px; }
+  .cm-tabed-rem, .cm-tabed-add { min-height: 44px; }
+  .cm-tabed-add { align-self: flex-start; }
+  .cm-met-pags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .cm-met-pags .cm-tab { min-height: 44px; }
+  .cm-preco-grade { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .cm-regra { position: sticky; top: 8px; border-left: 4px solid var(--info, #1f5fa8); }
+  .cm-faixas { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .cm-faixa-l { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.4fr; gap: 6px 10px; align-items: end; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+  .cm-faixa-l .cm-campo { margin: 0; }
+  .cm-lista-simples { margin: 0 0 8px 18px; padding: 0; font-size: 13px; }
+  @media (max-width: 900px) {
+    .cm-passos { grid-template-columns: 1fr 1fr; }
+    .cm-grade4 { grid-template-columns: 1fr 1fr; }
+    .cm-itens .cm-item { grid-template-columns: 1fr 1fr; }
+    .cm-itens .cm-item .cm-item-tirar { grid-column: 1 / -1; }
+    .cm-preco-grade { grid-template-columns: 1fr; }
+    .cm-regra { position: static; }
+    .cm-faixa-l { grid-template-columns: 1fr 1fr; }
+    .cm-tabed-l { grid-template-columns: 1fr; }
+    .cm-tabed-l.uma { grid-template-columns: 1fr; }
+    .cm-tabed-l .cm-campo.largo { grid-column: auto; }
+    .cm-quadro-preco { margin: 0 -10px 10px; padding: 8px 10px; }
+    .cm-acoes button, .cm-acoes .btn-secondary, .cm-acoes .btn-primary, .cm-item-orig button, .cmk-card .cmk-bts button, .cm-campo input, .cm-campo select { min-height: 44px; }
   }
 </style>
 
@@ -675,10 +735,11 @@
     if (p.descontoSituacao === "APROVADO" || p.descontoSituacao === "EXCECAO_GESTAO") h += '<div class="cm-faixa ok">' + Com_esc_(p.descontoDecisao || "Desconto aprovado") + (p.descontoDecisaoPor ? ' (' + Com_esc_(p.descontoDecisaoPor) + ')' : '') + '</div>';
     h += '<dl class="cm-det"><dt>Cliente</dt><dd>' + Com_esc_(p.cliente) + (p.unidade ? ' · ' + Com_esc_(p.unidade) : '') + '</dd><dt>A/C</dt><dd>' + Com_esc_(p.contato || "—") + '</dd><dt>Responsável</dt><dd>' + Com_esc_(p.responsavel) + '</dd>' +
       '<dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.tipoOrcamentoNome ? '<dt>Tipo de orçamento</dt><dd>' + Com_esc_(p.tipoOrcamentoNome) + (p.tipoOrcamentoEscolhido ? '' : ' (automático pelos itens)') + '</dd>' : '') + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
-      (p.margemTxt ? '<dt>Margem (só gestão)</dt><dd>' + Com_esc_(p.margemTxt) + ' · custo ' + Com_esc_(p.custoTxt) + '</dd>' : '') + (p.enviadaEm ? '<dt>Enviada</dt><dd>' + Com_esc_(p.enviadaEm) + ' · ' + Com_esc_(p.envioComo) + '</dd>' : '') +
+      // 01/11/2026 (C2): a margem mostrada é a única (depois de impostos, comissão e deslocamento); no rascunho ela fica no quadro do preço
+      (p.margemTxt && !p.editavel ? '<dt>Margem (só gestão)</dt><dd>' + Com_esc_(p.deslocamento && p.deslocamento.analiseTxt ? p.deslocamento.analiseTxt.margem + ' depois de impostos, comissão e deslocamento · custo ' + p.deslocamento.analiseTxt.custoTotal : p.margemTxt + ' · custo ' + p.custoTxt) + '</dd>' : '') + (p.enviadaEm ? '<dt>Enviada</dt><dd>' + Com_esc_(p.enviadaEm) + ' · ' + Com_esc_(p.envioComo) + '</dd>' : '') +
       (p.respostaEm ? '<dt>Resposta</dt><dd>' + Com_esc_(p.respostaEm) + ' · ' + Com_esc_(p.respostaTexto) + (p.motivoRecusa ? ' (' + Com_esc_(p.motivoRecusa) + ')' : '') + (p.aceiteNome ? '<br>Aceite: ' + Com_esc_(p.aceiteNome) : '') + '</dd>' : '') +
       (p.faturamento ? '<dt>Faturamento</dt><dd>' + Com_esc_(p.faturamento.razao) + ' · CNPJ ' + Com_esc_(p.faturamento.cnpj || "não informado") + '<br>' + Com_esc_(p.faturamento.endereco || "endereço não informado") + '<br>Pagamento: ' + Com_esc_(p.faturamento.pagamento || "—") + '</dd>' : '') + '</dl>';
-    if (p.politica && s === "RASCUNHO") {
+    if (p.politica && s === "RASCUNHO" && !p.editavel) {
       var pct = Math.min(100, p.limiteTxt ? 0 : 0);
       var uso = p.politica.limite ? Math.min(100, (p.descontoPct || 0) / p.politica.limite * 100) : (p.descontoPct ? 100 : 0);
       var cor = uso < 80 ? "var(--success)" : uso <= 100 ? "var(--warning)" : "var(--danger)";
@@ -686,7 +747,7 @@
         (p.politica.motivos.length ? '<p class="cm-txt" style="color:var(--danger)">' + Com_esc_(p.politica.motivos.join("; ")) + '. Ao concluir, a proposta vai para a aprovação do gestor comercial.</p>' : '') + '</div>';
     }
     if (p.editavel) h += Comercial_editorProposta_(p);
-    else h += '<p class="cm-sec">Itens</p><table class="cm-tabela"><thead><tr><th>Descrição</th><th class="n">Qtd.</th><th>Un.</th>' + (p.totalTxt ? '<th class="n">Preço unit.</th><th class="n">Total</th>' : '') + '</tr></thead><tbody>' +
+    else h += (p.prazoTexto ? '<p class="cm-sec">Prazo</p><p class="cm-txt">' + Com_esc_(p.prazoTexto) + '</p>' : '') + '<p class="cm-sec">Itens</p><table class="cm-tabela"><thead><tr><th>Descrição</th><th class="n">Qtd.</th><th>Un.</th>' + (p.totalTxt ? '<th class="n">Preço unit.</th><th class="n">Total</th>' : '') + '</tr></thead><tbody>' +
       p.itens.map(function (i) { return '<tr><td data-r="Item"><b>' + Com_esc_(i.descricao) + '</b>' + (i.equipamentoTexto ? '<br><span class="cm-meta">' + Com_esc_(i.equipamentoTexto) + '</span>' : '') + '</td><td class="n" data-r="Qtd.">' + Com_esc_(String(i.quantidade).replace(".", ",")) + '</td><td data-r="Un.">' + Com_esc_(i.unidade) + '</td>' +
         (p.totalTxt ? '<td class="n" data-r="Preço unit.">' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '</td><td class="n" data-r="Total">' + Com_esc_(Comercial_moeda_(i.total)) + '</td>' : '') + '</tr>'; }).join("") + '</tbody></table>' +
       (p.escopo ? '<p class="cm-sec">Descrição (escopo)</p><p class="cm-txt" style="white-space:pre-wrap">' + Com_esc_(p.escopo) + '</p>' : '');
@@ -790,6 +851,8 @@
     };
     corpo.querySelectorAll("[data-acao]").forEach(function (el) { el.onclick = function () { acao[el.getAttribute("data-acao")](); }; });
     if (p.editavel) Comercial_ligarCustos_(function () { acao.salvar(); });
+    // 01/11/2026 (Comercial C2): os quatro passos da proposta (abrir "Revisar e enviar" salva o rascunho)
+    if (p.editavel) Comercial_ligarPassos_(p, function () { acao.salvar(); });
   }
 
   function Comercial_moeda_(v) { return "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -799,23 +862,143 @@
       (r.observacoes && r.observacoes.length ? '<div class="cm-faixa"><b>Comentários da gestora:</b><ul style="margin:4px 0 0 18px">' + r.observacoes.map(function (o) { return '<li>' + Com_esc_(o) + '</li>'; }).join("") + '</ul></div>' : '');
   }
 
+  // 01/11/2026 (Comercial C2): a proposta em quatro passos (1. Itens, 2. Deslocamento, 3. Prazo e condições, 4. Revisar e enviar).
+  // Todos os campos continuam na página (só um passo aparece por vez), para "Salvar" ler tudo de uma vez; cada passo grava um
+  // sub-nível do voltar (SGO_NAV.empilhar). O quadro "Preço, custo, impostos e margem" fica sempre à vista, no topo.
   function Comercial_editorProposta_(p) {
     var cond = p.condicoes || {};
-    // 28/10/2026: tipo de orçamento (modelo do documento). Os rótulos acompanham o tipo; trocar o tipo salva o rascunho e troca os
-    // textos que ainda são o padrão de outro modelo (o servidor decide; o que o vendedor escreveu fica).
     var tp = p.tipoOrcamento || "SERVICOS", tipos = p.tiposOrcamento || { SERVICOS: "Serviço", PRODUTOS: "Produto", MISTO: "Serviço e produto (misto)" };
-    var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: tp === "PRODUTOS" ? "Prazo de entrega" : tp === "MISTO" ? "Prazo de execução e de entrega" : "Prazo de execução ou entrega", garantia: "Garantia", frete: "Frete", impostos: "Impostos",
+    var rotCond = { pagamento: "Forma de pagamento", prazoExecucao: tp === "PRODUTOS" ? "Prazo de entrega" : tp === "MISTO" ? "Prazo de execução e de entrega" : "Prazo de execução (segue a faixa escolhida)", garantia: "Garantia", frete: "Frete", impostos: "Impostos",
       local: tp === "PRODUTOS" ? "Local de entrega (o documento acrescenta o endereço da unidade)" : tp === "MISTO" ? "Local de execução e de entrega" : "Local de execução ou entrega", gerais: "Condições gerais", observacoes: "Observações" };
     var opTipo = [{ v: "", t: "Automático pelos itens (agora: " + (tipos[p.tipoOrcamentoSugerido] || "Serviço") + ")" }].concat(Object.keys(tipos).map(function (k) { return { v: k, t: tipos[k] }; }));
-    return '<div class="cm-caixa"><h3>Rascunho</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
+    var pz = p.prazo || { faixa: "NORMAL", licitacao: false }, cfg = CM.ini.prazo || { faixas: [], contaAte: "RELATORIO" };
+    var faixasOp = (cfg.faixas || []).filter(function (x) { return x.ativa; }).map(function (x) { return { v: x.codigo, t: Comercial_rotuloFaixa_(x) }; });
+    var passos = [["1", "Itens"], ["2", "Deslocamento"], ["3", "Prazo e condições"], ["4", "Revisar e enviar"]];
+    var h = '<div class="cm-caixa cm-editor" id="cmEditor"><div class="cm-quadro-preco" id="cmQuadroPreco" aria-live="polite"></div>' +
+      '<nav class="cm-passos" aria-label="Passos da proposta">' + passos.map(function (x) { return '<button type="button" class="cm-passo" data-passo="' + x[0] + '"><span>' + x[0] + '</span>' + Com_esc_(x[1]) + '</button>'; }).join("") + '</nav>';
+    h += '<section class="cm-painel" data-painel="1"><h3>1. Itens</h3>' + Com_campo_("Título", '<input id="cmPrTit" maxlength="200" value="' + Com_esc_(p.titulo) + '">') +
       Com_campo_("Tipo de orçamento", '<select id="cmPrTipo">' + Com_opcoes_(opTipo, p.tipoOrcamentoEscolhido || "") + '</select>', "Muda os dizeres do documento (apresentação, prazo, local, responsabilidades e aceite). Ao trocar, o rascunho é salvo e os textos padrão passam para o modelo escolhido; o que você escreveu fica.") +
       (p.escopoTermosLegado ? '<div class="cm-faixa">As cláusulas que estavam na descrição (texto do CRM antigo) saíram daqui: agora vão fixas no documento, na seção "Termos e condições da contratação". Ficou só o restante. Ao salvar o rascunho, a descrição é gravada assim.</div>' : '') +
-      Com_campo_("Descrição (opcional: só o que for específico desta proposta)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:90px" placeholder="Deixe em branco se os itens já dizem tudo. Os termos e condições da contratação vão fixos no documento.">' + Com_esc_(p.escopo) + '</textarea>') +
-      '<p class="cm-sec">Itens</p><div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
-      '<div class="cm-grade3" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
-      Com_campo_("Validade (dias)", '<input id="cmPrVal" inputmode="numeric" value="' + Com_esc_(p.validadeDias || CM.ini.validadePadrao) + '">') + Com_campo_("Contato (A/C)", '<select id="cmPrCt">' + Com_opcoes_((p.contatosCliente || []).map(function (c) { return { v: c.id, t: c.nome }; }), p.contatoId) + '</select>') + '</div>' +
-      '<div id="cmItensAuto"></div><div id="cmPrTotais" class="cm-meta"></div>' + Comercial_editorCustos_(p) + '<p class="cm-sec">Condições comerciais</p><div class="cm-grade2">' + Object.keys(rotCond).map(function (k) { return Com_campo_(rotCond[k], '<textarea data-cond="' + k + '" maxlength="2000"' + (k === "gerais" ? ' style="min-height:90px"' : '') + '>' + Com_esc_(cond[k] || "") + '</textarea>'); }).join("") + '</div>' +
-      '<details><summary class="cm-meta">Apresentação (texto de abertura)</summary>' + Com_campo_("Apresentação", '<textarea id="cmPrApr" maxlength="4000" style="min-height:120px">' + Com_esc_(p.apresentacao) + '</textarea>') + '</details></div>';
+      '<div class="cm-itens" id="cmItens"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmAddItem">Acrescentar item</button><button type="button" class="btn-secondary" id="cmAddCat">Do catálogo</button></div>' +
+      '<p class="cm-meta">O prazo de cada item vem da faixa da proposta (passo 3). Para um item com prazo diferente, troque o "Prazo" dele: o preço de tabela acompanha a faixa.</p>' +
+      '<div class="cm-grade2" style="margin-top:10px">' + Com_campo_("Desconto geral (R$)", '<input id="cmPrDesc" inputmode="decimal" value="' + Com_esc_(p.descontoGeral ? String(p.descontoGeral).replace(".", ",") : "") + '">', "Desconto no preço de tabela também conta") +
+      Com_campo_("Descrição (opcional)", '<textarea id="cmPrEsc" maxlength="8000" style="min-height:70px" placeholder="Só o que for específico desta proposta. Os termos e condições vão fixos no documento.">' + Com_esc_(p.escopo) + '</textarea>') + '</div>' +
+      '<div id="cmItensAuto"></div><div id="cmPrTotais" class="cm-meta"></div></section>';
+    h += '<section class="cm-painel" data-painel="2" hidden><h3>2. Deslocamento</h3>' + Comercial_editorCustos_(p) + '</section>';
+    h += '<section class="cm-painel" data-painel="3" hidden><h3>3. Prazo e condições</h3>' +
+      '<div class="cm-grade2">' + Com_campo_("Faixa de prazo da proposta", '<select id="cmPrFaixa">' + Com_opcoes_(faixasOp, pz.faixa || "NORMAL") + '</select>', "Vale para todos os itens de serviço; um item pode ter a sua (passo 1). O acréscimo não vale para deslocamento nem para produto.") +
+      Com_campo_("Licitação ou contrato", '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmPrLic"' + (pz.licitacao ? " checked" : "") + '> ' + Com_esc_(cfg.licitacaoRotulo || "Licitação ou contrato: sem acréscimo de urgência") + '</label>', cfg.licitacaoSemAcrescimo ? "Marcado, o preço é o normal em qualquer prazo (edital não paga urgência)." : "A política atual cobra o acréscimo também em licitação.") + '</div>' +
+      '<div class="cm-faixa" id="cmPrazoExplica">' + Com_esc_(Comercial_explicaPrazo_(cfg)) + (p.prazoTexto ? '<br><b>No documento:</b> ' + Com_esc_(p.prazoTexto) : '') + '</div>' +
+      '<div class="cm-grade2">' + Com_campo_("Validade (dias)", '<input id="cmPrVal" inputmode="numeric" value="' + Com_esc_(p.validadeDias || CM.ini.validadePadrao) + '">') + Com_campo_("Contato (A/C)", '<select id="cmPrCt">' + Com_opcoes_((p.contatosCliente || []).map(function (c) { return { v: c.id, t: c.nome }; }), p.contatoId) + '</select>') + '</div>' +
+      '<p class="cm-sec">Condições comerciais</p><div class="cm-grade2">' + Object.keys(rotCond).map(function (k) { return Com_campo_(rotCond[k], '<textarea data-cond="' + k + '" maxlength="2000"' + (k === "gerais" ? ' style="min-height:90px"' : '') + '>' + Com_esc_(cond[k] || "") + '</textarea>', k === "prazoExecucao" ? "Ao salvar, o texto da faixa entra aqui sozinho. Se você escrever outro texto, ele fica." : ""); }).join("") + '</div>' +
+      '<details><summary class="cm-meta">Apresentação (texto de abertura)</summary>' + Com_campo_("Apresentação", '<textarea id="cmPrApr" maxlength="4000" style="min-height:120px">' + Com_esc_(p.apresentacao) + '</textarea>') + '</details></section>';
+    h += '<section class="cm-painel" data-painel="4" hidden><h3>4. Revisar e enviar</h3><div id="cmRevisar">' + Comercial_resumoRevisar_(p) + '</div></section>';
+    h += '<div class="cm-passos-nav"><button type="button" class="btn-secondary" id="cmPassoAnt">Voltar</button><button type="button" class="btn-primary" id="cmPassoProx">Próximo</button></div></div>';
+    return h;
+  }
+  function Comercial_rotuloFaixa_(x) { return x.nome + ": " + x.diasUteis + (x.diasUteis === 1 ? " dia útil" : " dias úteis") + (x.acrescimoPct ? " (+" + String(x.acrescimoPct).replace(".", ",") + "%)" : " (preço normal)"); }
+  function Comercial_explicaPrazo_(cfg) {
+    return cfg.contaAte === "EXECUCAO" ? "O prazo conta do aceite da proposta (e da liberação do equipamento) até a execução do serviço; o relatório ou certificado sai em até " + (cfg.relatorioDiasUteis || 5) + " dias úteis depois. O documento diz isso ao cliente."
+      : "O prazo conta do aceite da proposta (e da liberação do equipamento) até a entrega do relatório ou certificado ao cliente. O documento diz isso ao cliente. Prazo urgente ou prioritário: confirme a agenda com a Área técnica antes de enviar.";
+  }
+  /** Mesma conta do servidor (ComPr_precoNaFaixa_): normal x (1 + acréscimo), para cima a R$ 5 abaixo de R$ 100 e a R$ 10 acima. */
+  function Comercial_fatorFaixa_(codigo, licitacao) {
+    var cfg = CM.ini.prazo || { faixas: [] }, lic = licitacao !== undefined ? !!licitacao : (Com_$_("cmPrLic") ? Com_$_("cmPrLic").checked : false);
+    if (lic && cfg.licitacaoSemAcrescimo) return 1;
+    var fx = (cfg.faixas || []).filter(function (x) { return x.codigo === codigo; })[0];
+    return 1 + (fx ? Number(fx.acrescimoPct) || 0 : 0) / 100;
+  }
+  function Comercial_precoNaFaixa_(normal, codigo, tipo, licitacao) {
+    var n = Number(normal) || 0, f = tipo === "PRODUTO" ? 1 : Comercial_fatorFaixa_(codigo, licitacao);
+    if (!(n > 0)) return 0;
+    if (f === 1) return Math.round(n * 100) / 100;
+    var v = Math.round(n * f * 100) / 100, m = v < 100 ? 5 : 10;
+    return Math.ceil(v / m - 1e-9) * m;
+  }
+  function Comercial_faixaDoItem_(i) { return i.faixa || (Com_$_("cmPrFaixa") ? Com_$_("cmPrFaixa").value : "NORMAL"); }
+  /** Faixa trocada: o preço do item acompanha a tabela quando ele ainda está no preço de tabela da faixa anterior (ou vazio). */
+  function Comercial_reprecificar_(i, faixaAntes) {
+    if (!(Number(i.precoTabelaNormal) > 0)) return;
+    var antes = Comercial_precoNaFaixa_(i.precoTabelaNormal, faixaAntes, i.tipo), agora = Comercial_precoNaFaixa_(i.precoTabelaNormal, Comercial_faixaDoItem_(i), i.tipo);
+    var pu = Comercial_num_(i.precoUnitario);
+    if (String(i.precoUnitario).trim() === "" || Math.abs(pu - antes) < 0.005) i.precoUnitario = agora;
+    i.precoTabela = agora;
+  }
+  function Comercial_ligarPassos_(p, salvar) {
+    var ed = Com_$_("cmEditor"); if (!ed) return;
+    var nomes = { 1: "Itens", 2: "Deslocamento", 3: "Prazo e condições", 4: "Revisar e enviar" };
+    var mostrar = function (n) {
+      n = Math.max(1, Math.min(4, Number(n) || 1)); CM.passo = n; CM.passoProp = p.id;
+      ed.querySelectorAll("[data-painel]").forEach(function (s) { s.hidden = s.getAttribute("data-painel") !== String(n); });
+      ed.querySelectorAll("[data-passo]").forEach(function (b) { var at = b.getAttribute("data-passo") === String(n); b.classList.toggle("ativo", at); if (at) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+      var ant = Com_$_("cmPassoAnt"), prox = Com_$_("cmPassoProx");
+      // style.display (o [hidden] perde para o display dos botões do shell)
+      if (ant) ant.style.display = n === 1 ? "none" : "";
+      if (prox) { prox.style.display = n === 4 ? "none" : ""; prox.textContent = n < 4 ? "Próximo: " + nomes[n + 1] : ""; }
+    };
+    var ir = function (n) {
+      var de = CM.passo || 1;
+      if (n === de) return;
+      if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Proposta: " + nomes[n], function () { mostrar(de); }, { chave: "cm-passo-" + n });
+      mostrar(n);
+      var g = Com_$_("cmGavetaCorpo"); if (g && ed.getBoundingClientRect) g.scrollTop = Math.max(0, ed.offsetTop - 8);
+      // Revisar: salva o rascunho para mostrar os números do servidor (checklist, margem, prazo no documento)
+      if (n === 4 && typeof salvar === "function") salvar();
+    };
+    ed.querySelectorAll("[data-passo]").forEach(function (b) { b.onclick = function () { ir(Number(b.getAttribute("data-passo"))); }; });
+    Com_$_("cmPassoProx").onclick = function () { ir((CM.passo || 1) + 1); };
+    Com_$_("cmPassoAnt").onclick = function () { var de = CM.passo || 1; if (typeof SGO_voltarOu_ === "function" && window.SGO_NAV && SGO_NAV.ligado !== false) SGO_voltarOu_(function () { mostrar(de - 1); }); else mostrar(de - 1); };
+    var fx = Com_$_("cmPrFaixa"), lic = Com_$_("cmPrLic");
+    var trocouProposta = function () { Comercial_lerItens_(); var antes = CM.faixaProposta || "NORMAL"; CM.itens.forEach(function (i) { if (!i.faixa) Comercial_reprecificar_(i, antes); }); CM.faixaProposta = fx ? fx.value : "NORMAL"; Comercial_desenharItens_(); };
+    if (fx) { CM.faixaProposta = fx.value; fx.onchange = trocouProposta; }
+    if (lic) lic.onchange = function () {
+      Comercial_lerItens_();
+      CM.itens.forEach(function (i) {
+        if (!(Number(i.precoTabelaNormal) > 0)) return;
+        var pu = Comercial_num_(i.precoUnitario), antes = Comercial_precoNaFaixa_(i.precoTabelaNormal, Comercial_faixaDoItem_(i), i.tipo, !lic.checked);
+        if (String(i.precoUnitario).trim() === "" || Math.abs(pu - antes) < 0.005) i.precoUnitario = Comercial_precoNaFaixa_(i.precoTabelaNormal, Comercial_faixaDoItem_(i), i.tipo);
+      });
+      Comercial_desenharItens_();
+    };
+    mostrar(CM.passoProp === p.id ? CM.passo || 1 : 1);
+  }
+  /** Passo 4: o que vai ao cliente e o que falta (números do servidor, da última gravação). */
+  function Comercial_resumoRevisar_(p) {
+    var it = (p.itens || []), d = p.deslocamento || {}, ck = d.checklist || { faltas: [] }, pol = p.politica || { motivos: [] }, cfg = CM.ini.prazo || { faixas: [] };
+    var nomeFx = function (c) { var f = (cfg.faixas || []).filter(function (x) { return x.codigo === c; })[0]; return f ? f.nome : c; };
+    var h = '<p class="cm-meta">Números da última gravação (ao abrir este passo o rascunho é salvo).</p>';
+    h += '<table class="cm-tabela"><thead><tr><th>Item</th><th>Prazo</th><th class="n">Qtd.</th><th class="n">Total</th></tr></thead><tbody>' + it.map(function (i) {
+      return '<tr><td data-r="Item"><b>' + Com_esc_(i.descricao) + '</b>' + (i.auto ? ' <span class="cm-selo azul">automático</span>' : '') + '</td><td data-r="Prazo">' + Com_esc_(i.auto || i.tipo === "PRODUTO" ? "—" : nomeFx(i.faixa || (p.prazo && p.prazo.faixa) || "NORMAL")) + '</td><td class="n" data-r="Qtd.">' + Com_esc_(String(i.quantidade).replace(".", ",")) + '</td><td class="n" data-r="Total">' + Com_esc_(Comercial_moeda_(i.total)) + '</td></tr>';
+    }).join("") + '</tbody></table>';
+    h += '<dl class="cm-det"><dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt || "") + '</b>' + (p.descontoPctTxt ? ' (' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)' : '') + '</dd><dt>Prazo no documento</dt><dd>' + Com_esc_(p.prazoTexto || "") + '</dd>' +
+      '<dt>Deslocamento</dt><dd>' + Com_esc_(d.calculo && d.calculo.ha ? "custo " + d.calculo.custoTxt + (d.precoRepasseTxt ? "; na proposta " + (d.precoInformado !== null && d.precoInformado !== undefined ? Comercial_moeda_(d.precoInformado) : d.precoRepasseTxt) : "") : (d.dados && d.dados.viagem && d.dados.viagem.ha === false ? "sem viagem" : "ainda não informado")) + '</dd></dl>';
+    h += ck.ok ? '<div class="cm-faixa ok">Custos da viagem e do frete completos.</div>' : '<div class="cm-faixa erro"><b>Falta antes de concluir (passo 2):</b> ' + Com_esc_(ck.faltas.map(function (f) { return f.texto; }).join("; ")) + '.</div>';
+    if (d.abaixoDoCusto) h += '<div class="cm-faixa erro">O preço do deslocamento está abaixo do custo da viagem.</div>';
+    if (pol.motivos && pol.motivos.length) h += '<div class="cm-faixa aviso"><b>Vai para a Caixa de decisões ao concluir:</b> ' + Com_esc_(pol.motivos.join("; ")) + '.</div>';
+    return h + '<p class="cm-txt">Tudo certo? Toque em <b>Concluir</b> (abaixo). Depois: "Gerar documento" e "Enviar ao cliente".</p>';
+  }
+  /**
+   * Quadro "Preço, custo, impostos e margem" (sempre à vista no rascunho). Gestão: a conta inteira, ao vivo. Vendedor: preço,
+   * impostos e comissão ao vivo e a situação da margem que o servidor devolveu na última gravação (o custo é só da gestão).
+   */
+  function Comercial_quadroPreco_(sub, dg, auto) {
+    var el = Com_$_("cmQuadroPreco"); if (!el) return;
+    var q = CM.ini.precoQuadro || {}, tot = sub - dg, imp = tot * (Number(q.impostosPct) || 0) / 100, com = Math.max(0, tot - auto) * (Number(q.comissaoPct) || 0) / 100;
+    var m = CM.margemServidor || {};
+    var h = '<div class="cm-qp-linha"><span>Preço <b>' + Com_esc_(Comercial_moeda_(tot)) + '</b></span><span>Impostos ' + Com_esc_(Comercial_moeda_(imp)) + '</span><span>Comissão ' + Com_esc_(Comercial_moeda_(com)) + '</span>';
+    if (CM.ini.veCusto && q.margemMinPct !== null && q.margemMinPct !== undefined) {
+      var custo = (CM.custoDeslServidor || 0);
+      var semCusto = 0;
+      CM.itens.forEach(function (i) { var c = i.custoUnitario; if (c === null || c === undefined || c === "") semCusto++; else custo += Comercial_num_(i.quantidade) * Number(c); });
+      var sobra = tot - imp - com - custo, pct = tot > 0 ? sobra / tot * 100 : 0;
+      var cls = pct < q.margemMinPct ? "erro" : pct < q.margemAlvoPct ? "aviso" : "ok";
+      h += '<span>Custo ' + Com_esc_(Comercial_moeda_(custo)) + '</span></div><div class="cm-qp-sobra ' + cls + '">Sobra para a empresa: <b>' + Com_esc_(Comercial_moeda_(sobra)) + ', ' + Com_esc_(pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + '%</b>' +
+        ' <span class="cm-meta">(mínima ' + String(q.margemMinPct).replace(".", ",") + '%, alvo ' + String(q.margemAlvoPct).replace(".", ",") + '%' + (semCusto ? '; ' + semCusto + ' item(ns) sem custo ficam fora' : '') + ')</span>' +
+        (pct < q.margemMinPct && tot > 0 ? '<br>Abaixo da mínima: ao concluir, vai para a Caixa de decisões (só a Diretoria aprova).' : '') + '</div>';
+    } else {
+      h += '</div><div class="cm-qp-sobra ' + (m.situacao === "ABAIXO_MIN" ? "erro" : m.situacao === "ABAIXO_ALVO" ? "aviso" : "ok") + '">Margem: ' + Com_esc_(m.situacaoTxt || "calculada ao salvar") + (m.situacao === "ABAIXO_MIN" ? ". Ao concluir, vai para a Caixa de decisões." : "") + ' <span class="cm-meta">(atualiza ao salvar)</span></div>';
+    }
+    el.innerHTML = h;
   }
 
   function Comercial_ligarEditor_(p) {
@@ -823,12 +1006,16 @@
     CM.itens = (p.itens || []).filter(function (i) { return !i.auto; }).map(function (i) { return Object.assign({}, i); });
     CM.itensAuto = (p.itens || []).filter(function (i) { return i.auto; });
     CM.refsCustos = (p.deslocamento && p.deslocamento.referencias) || [];
+    // 01/11/2026 (C2): números do servidor para o quadro de preço
+    CM.margemServidor = (p.deslocamento && p.deslocamento.margem) || {};
+    CM.custoDeslServidor = p.deslocamento && p.deslocamento.analise ? Number(p.deslocamento.analise.custoDeslocamento) || 0 : 0;
+    CM.custoViagemServidor = p.deslocamento && p.deslocamento.calculo ? Number(p.deslocamento.calculo.custo) || 0 : 0;
     var ia = Com_$_("cmItensAuto");
-    if (ia) ia.innerHTML = CM.itensAuto.map(function (i) { return '<div class="cm-faixa"><span class="cm-selo azul">Automático</span><b>' + Com_esc_(i.descricao) + '</b> · ' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '<br><span class="cm-meta">Calculado pelos "Custos da viagem e do frete" abaixo e refeito a cada vez que o rascunho é salvo. ' + Com_esc_(i.detalhe || "") + '</span></div>'; }).join("");
+    if (ia) ia.innerHTML = CM.itensAuto.map(function (i) { return '<div class="cm-faixa"><span class="cm-selo azul">Automático</span><b>' + Com_esc_(i.descricao) + '</b> · ' + Com_esc_(Comercial_moeda_(i.precoUnitario)) + '<br><span class="cm-meta">Calculado no passo 2 (Deslocamento) e refeito a cada vez que o rascunho é salvo. ' + Com_esc_(i.detalhe || "") + '</span></div>'; }).join("");
     CM.equipProp = [];
     Com_chamar_("cliente", { clienteId: p.clienteId }, function (r) { CM.equipProp = r.equipamentos.filter(function (e) { return !p.unidadeId || !e.unidadeId || e.unidadeId === p.unidadeId; }); Comercial_desenharItens_(); }, function () {});
     Comercial_desenharItens_();
-    Com_$_("cmAddItem").onclick = function () { Comercial_lerItens_(); CM.itens.push({ tipo: "SERVICO", descricao: "", quantidade: 1, unidade: "un.", precoUnitario: "" }); Comercial_desenharItens_(); };
+    Com_$_("cmAddItem").onclick = function () { Comercial_lerItens_(); CM.itens.push({ tipo: "SERVICO", descricao: "", quantidade: 1, unidade: "un.", precoUnitario: "", faixa: "" }); Comercial_desenharItens_(); };
     // 27/10/2026: "Do catálogo" com busca no banco (mesma busca da aba Produtos e serviços), 50 itens por vez.
     Com_$_("cmAddCat").onclick = function () {
       var ov = Com_modal_("Escolher do catálogo", '<div class="cm-campo"><label for="cmEscBusca">Buscar no catálogo</label><input id="cmEscBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria"></div><p class="cm-meta" id="cmEscInfo" aria-live="polite">Carregando o catálogo…</p><div id="cmEscRes"></div>', '', 560);
@@ -838,10 +1025,10 @@
           var res = Com_$_("cmEscRes"), inf = Com_$_("cmEscInfo"); if (!res) return;
           if (!r.total) { inf.textContent = ""; res.innerHTML = '<div class="cm-vazio">O catálogo está vazio. A equipe comercial e a gestão cadastram os produtos e serviços em Comercial > Produtos e serviços; enquanto isso, feche esta janela e use "Acrescentar item".</div>'; return; }
           inf.textContent = r.produtos.length ? (r.limitado ? "Mostrando " + r.produtos.length + " de " + Number(r.encontrados).toLocaleString("pt-BR") + " itens; escreva mais para afinar." : Number(r.encontrados).toLocaleString("pt-BR") + (r.encontrados === 1 ? " item." : " itens.")) : "";
-          res.innerHTML = r.produtos.length ? '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '" tabindex="0" role="button"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + '</div>'; }).join("") + '</div>'
+          res.innerHTML = r.produtos.length ? '<div class="cm-lista">' + r.produtos.map(function (x, k) { return '<div class="cm-mini" data-k="' + k + '" tabindex="0" role="button"><b>' + Com_esc_(x.nome) + '</b>' + Com_esc_(x.codigo + " · " + x.tipoNome + " · " + x.precoTxt + " / " + x.unidade) + (x.ficha && x.ficha.mercado ? '<br><span class="cm-meta">Mercado público (mín. / mediana / máx.): ' + Com_esc_(x.ficha.mercadoTxt) + '</span>' : '') + '</div>'; }).join("") + '</div>'
             : '<div class="cm-vazio">Nenhum item ativo com "' + Com_esc_(q) + '". A busca ignora acentos e aceita parte das palavras; confira a grafia ou use "Acrescentar item" para digitar o item.</div>';
           res.querySelectorAll("[data-k]").forEach(function (el) {
-            el.onclick = function () { var x = r.produtos[+el.getAttribute("data-k")]; Comercial_lerItens_(); CM.itens.push({ produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao, quantidade: 1, unidade: x.unidade, precoUnitario: x.preco, precoTabela: x.preco }); ov.remove(); Comercial_desenharItens_(); };
+            el.onclick = function () { var x = r.produtos[+el.getAttribute("data-k")]; Comercial_lerItens_(); var it = { produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao, quantidade: 1, unidade: x.unidade, precoTabelaNormal: x.preco, custoUnitario: x.custo, faixa: "" }; it.precoUnitario = Comercial_precoNaFaixa_(x.preco, Comercial_faixaDoItem_(it), x.tipo); it.precoTabela = it.precoUnitario; CM.itens.push(it); ov.remove(); Comercial_desenharItens_(); };
             el.onkeydown = function (e) { if (e.key === "Enter") el.onclick(); };
           });
         }, function (m) { if (Com_$_("cmEscInfo")) Com_$_("cmEscInfo").textContent = ""; if (Com_$_("cmEscRes")) Com_msg_("cmEscRes", m); }, { chave: "catalogoEscolha" });
@@ -856,10 +1043,11 @@
   function Comercial_desenharItens_() {
     var alvo = Com_$_("cmItens"); if (!alvo) return;
     var tipos = Object.keys(CM.ini.tiposItem).map(function (k) { return { v: k, t: CM.ini.tiposItem[k] }; });
-    // 28/10/2026 (dono): o item escolhe o produto ou serviço do catálogo (Produtos e serviços, o mesmo cadastro importado do
-    // CRM): ao digitar no campo, aparecem os itens ativos mais parecidos; escolher preenche código, tipo, descrição, unidade
-    // e preço de tabela. Item sem catálogo continua possível ("avulso"). Preço diferente da tabela aparece no item e fica
-    // registrado no histórico ao salvar; abaixo da tabela conta como desconto na política.
+    // 01/11/2026 (C2): prazo do item ("" = o da proposta)
+    var cfg = CM.ini.prazo || { faixas: [] }, fxProp = Com_$_("cmPrFaixa") ? Com_$_("cmPrFaixa").value : (CM.faixaProposta || "NORMAL");
+    var nomeProp = ((cfg.faixas || []).filter(function (x) { return x.codigo === fxProp; })[0] || { nome: "Normal" }).nome;
+    var opFx = [{ v: "", t: "Da proposta (" + nomeProp + ")" }].concat((cfg.faixas || []).filter(function (x) { return x.ativa; }).map(function (x) { return { v: x.codigo, t: Comercial_rotuloFaixa_(x) }; }));
+    // 28/10/2026 (dono): o item escolhe o produto ou serviço do catálogo (busca enquanto digita). Item sem catálogo é "avulso".
     alvo.innerHTML = CM.itens.length ? CM.itens.map(function (i, k) {
       var cat = !!i.produtoId;
       return '<div class="cm-item" data-i="' + k + '"><div class="cm-campo cm-desc cm-prod"><label for="cmItD' + k + '">' + (cat ? "Produto ou serviço do catálogo" : "Produto ou serviço (digite para buscar no catálogo)") + '</label>' +
@@ -870,21 +1058,27 @@
         '<div class="cm-campo"><label>Qtd.</label><input data-f="quantidade" inputmode="decimal" value="' + Com_esc_(String(i.quantidade).replace(".", ",")) + '"></div>' +
         '<div class="cm-campo"><label>Un.</label><input data-f="unidade" maxlength="20" value="' + Com_esc_(i.unidade || "un.") + '"></div>' +
         '<div class="cm-campo"><label>Preço unit. (R$)' + (Number(i.precoTabela) > 0 ? ' · tabela ' + Com_esc_(Comercial_moeda_(i.precoTabela)) : '') + '</label><input data-f="precoUnitario" inputmode="decimal" value="' + Com_esc_(i.precoUnitario === "" || i.precoUnitario === undefined ? "" : String(i.precoUnitario).replace(".", ",")) + '"><span class="cm-item-dif" id="cmItDif' + k + '" aria-live="polite"></span></div>' +
+        '<div class="cm-campo"><label>Prazo</label><select data-f="faixa"' + (i.tipo === "PRODUTO" ? ' disabled title="Produto não tem faixa de prazo"' : '') + '>' + Com_opcoes_(opFx, i.faixa || "") + '</select></div>' +
         '<div class="cm-campo"><label>Equipamento</label><select data-f="equipamentoId">' + Com_opcoes_((CM.equipProp || []).map(function (e) { return { v: e.id, t: e.texto }; }), i.equipamentoId, "Nenhum") + '</select></div>' +
-        '<button type="button" class="btn-secondary" data-rem="' + k + '" aria-label="Tirar o item">Tirar</button>' +
+        '<button type="button" class="btn-secondary cm-item-tirar" data-rem="' + k + '" aria-label="Tirar o item">Tirar</button>' +
         '<div class="cm-campo cm-desc"><label>Tipo</label><select data-f="tipo">' + Com_opcoes_(tipos, i.tipo) + '</select></div></div>';
     }).join("") : '<p class="cm-meta">Nenhum item. Toque em "Acrescentar item" ou "Do catálogo".</p>';
     alvo.querySelectorAll("[data-rem]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); CM.itens.splice(+b.getAttribute("data-rem"), 1); Comercial_desenharItens_(); }; });
-    alvo.querySelectorAll("[data-avulso]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); var i = CM.itens[+b.getAttribute("data-avulso")]; if (!i) return; i.produtoId = ""; i.codigo = ""; i.precoTabela = 0; Comercial_desenharItens_(); }; });
+    alvo.querySelectorAll("[data-avulso]").forEach(function (b) { b.onclick = function () { Comercial_lerItens_(); var i = CM.itens[+b.getAttribute("data-avulso")]; if (!i) return; i.produtoId = ""; i.codigo = ""; i.precoTabela = 0; i.precoTabelaNormal = 0; Comercial_desenharItens_(); }; });
     alvo.querySelectorAll("input,select").forEach(function (x) { x.oninput = Comercial_totais_; x.onchange = Comercial_totais_; });
+    alvo.querySelectorAll("select[data-f=faixa]").forEach(function (x) {
+      x.onchange = function () { var k = +x.closest("[data-i]").getAttribute("data-i"), i = CM.itens[k]; if (!i) return; var antes = Comercial_faixaDoItem_(i); Comercial_lerItens_(); Comercial_reprecificar_(i, antes); Comercial_desenharItens_(); };
+    });
     alvo.querySelectorAll("input[data-f=descricao]").forEach(function (x) { Comercial_ligarBuscaItem_(x, +x.closest("[data-i]").getAttribute("data-i")); });
     Comercial_totais_();
   }
   /** Produto do catálogo escolhido no item: código, tipo, descrição, detalhe, unidade e preço de tabela. */
+  /** Produto do catálogo escolhido no item: código, tipo, descrição, detalhe, unidade e preço de tabela (na faixa do item). */
   function Comercial_aplicarProduto_(k, x) {
     Comercial_lerItens_();
     var i = CM.itens[k]; if (!i) return;
-    Object.assign(i, { produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao || "", unidade: x.unidade || "un.", precoUnitario: x.preco, precoTabela: x.preco });
+    Object.assign(i, { produtoId: x.id, codigo: x.codigo, tipo: x.tipo, descricao: x.nome, detalhe: x.descricao || "", unidade: x.unidade || "un.", precoTabelaNormal: x.preco, custoUnitario: x.custo });
+    i.precoUnitario = Comercial_precoNaFaixa_(x.preco, Comercial_faixaDoItem_(i), x.tipo); i.precoTabela = i.precoUnitario;
     Comercial_desenharItens_();
     var q = Com_$_("cmItens") && Com_$_("cmItens").querySelector('[data-i="' + k + '"] input[data-f=quantidade]'); if (q) q.focus();
   }
@@ -926,9 +1120,10 @@
   }
   function Comercial_totais_() {
     Comercial_lerItens_();
-    var sub = 0, bruto = 0;
-    (CM.itensAuto || []).forEach(function (i) { var t = (Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0); sub += t; bruto += t; });
+    var sub = 0, bruto = 0, auto = 0;
+    (CM.itensAuto || []).forEach(function (i) { var t = (Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0); sub += t; bruto += Math.max(t, (Number(i.quantidade) || 0) * (Number(i.precoTabela) || 0)); auto += t; });
     CM.itens.forEach(function (i, k) {
+      if (Number(i.precoTabelaNormal) > 0) i.precoTabela = Comercial_precoNaFaixa_(i.precoTabelaNormal, Comercial_faixaDoItem_(i), i.tipo);
       var q = Comercial_num_(i.quantidade), pu = Comercial_num_(i.precoUnitario), pt = Number(i.precoTabela) || 0; sub += q * pu; bruto += q * Math.max(pu, pt || pu);
       var dif = Com_$_("cmItDif" + k); if (!dif) return;
       if (!i.produtoId || !(pt > 0) || Math.abs(pu - pt) < 0.005 || String(i.precoUnitario).trim() === "") { dif.textContent = ""; return; }
@@ -939,13 +1134,16 @@
     var dg = Comercial_num_(Com_$_("cmPrDesc") ? Com_$_("cmPrDesc").value : 0), tot = sub - dg;
     var pct = bruto > 0 ? (bruto - tot) / bruto * 100 : 0;
     var el = Com_$_("cmPrTotais"); if (el) el.innerHTML = 'Subtotal ' + Com_esc_(Comercial_moeda_(sub)) + ' · desconto ' + Com_esc_(Comercial_moeda_(dg)) + ' · <b>total ' + Com_esc_(Comercial_moeda_(tot)) + '</b> · ' + pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + '% sobre a tabela (limite sem aprovação: ' + CM.ini.politica.descontoMaxPct + '%)';
+    Comercial_quadroPreco_(sub, dg, auto);
   }
   function Comercial_lerEditor_(p) {
     Comercial_lerItens_();
     var cond = {};
     document.querySelectorAll("[data-cond]").forEach(function (x) { cond[x.getAttribute("data-cond")] = x.value; });
     return { id: p.id, titulo: Com_$_("cmPrTit").value, tipoOrcamento: Com_$_("cmPrTipo") ? Com_$_("cmPrTipo").value : undefined, escopo: Com_$_("cmPrEsc").value, apresentacao: Com_$_("cmPrApr").value, contatoId: Com_$_("cmPrCt").value, descontoGeral: Com_$_("cmPrDesc").value || "0",
-      validadeDias: Com_$_("cmPrVal").value, condicoes: cond, deslocamento: Comercial_lerCustos_(), itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "" }; }) };
+      validadeDias: Com_$_("cmPrVal").value, condicoes: cond, deslocamento: Comercial_lerCustos_(),
+      prazo: Com_$_("cmPrFaixa") ? { faixa: Com_$_("cmPrFaixa").value, licitacao: !!(Com_$_("cmPrLic") && Com_$_("cmPrLic").checked) } : undefined,
+      itens: CM.itens.map(function (i) { return { produtoId: i.produtoId || "", codigo: i.codigo || "", tipo: i.tipo, descricao: i.descricao, detalhe: i.detalhe || "", quantidade: i.quantidade, unidade: i.unidade, precoUnitario: i.precoUnitario, equipamentoId: i.equipamentoId || "", faixa: i.tipo === "PRODUTO" ? "" : i.faixa || "" }; }) };
   }
 
   // =========================================================
@@ -956,6 +1154,9 @@
   // =========================================================
   function Comercial_valorBr_(v) { return v === null || v === undefined || v === "" ? "" : String(v).replace(".", ","); }
   function Comercial_semAcento_(v) { var t = String(v || "").toLowerCase(); try { t = t.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) {} return t.replace(/[^a-z0-9]+/g, " ").trim(); }
+  // 01/11/2026 (C2): o deslocamento num bloco simples (destino e km pela tabela de distâncias da Conduta, dias, noites e pessoas);
+  // o sistema calcula estrada, taxa por viagem, Conduta, alimentação e hotel. A conta linha por linha (o checklist de 29/10/2026)
+  // continua em "Ver a conta linha por linha e ajustar".
   function Comercial_editorCustos_(p) {
     var d = p.deslocamento; if (!d || !d.dados) return "";
     var dd = d.dados, v = dd.viagem || {}, pol = d.politica || {}, sug = d.sugestao || {}, tp = p.tipoOrcamento || "SERVICOS";
@@ -964,39 +1165,45 @@
     var calc = {}; ((d.calculo && d.calculo.linhas) || []).forEach(function (l) { calc[l.codigo] = l; });
     var dica = function (x) { return x === null || x === undefined ? "sem valor na política" : "política: " + Comercial_valorBr_(x); };
     var inp = function (campo, valor, rotulo, ph, extra) { return '<div class="cm-campo"><label>' + Com_esc_(rotulo) + '</label><input data-cvf="' + campo + '"' + (extra || ' inputmode="decimal"') + ' value="' + Com_esc_(Comercial_valorBr_(valor)) + '" placeholder="' + Com_esc_(ph || "") + '"></div>'; };
-    var h = '<div class="cm-caixa" id="cmCustos"><h3>Custos da viagem e do frete (checklist obrigatório)</h3>' +
-      '<p class="cm-meta">Todo custo de campo entra no preço: km rodado (ida e volta), pedágios, alimentação, diárias, hospedagem, o benefício do Programa de conduta de cada colaborador e, fora do veículo da empresa, o combustível ou a passagem. Cada linha precisa de valor ou de "não se aplica" com o motivo; sem isso a proposta não conclui. Valor em branco usa o da política. O cliente vê só "Despesas de deslocamento e estadia" (ou nada, se diluído): o benefício da Conduta nunca aparece com esse nome.</p>';
-    h += Com_campo_("Há viagem para executar o serviço?", '<select id="cmCvHa">' + Com_opcoes_([{ v: "SIM", t: "Sim: calcular os custos da viagem" }, { v: "NAO", t: "Não há viagem (informe o motivo)" }], ha, exV ? "Escolha (obrigatório)" : "Não se aplica: proposta só de produto") + '</select>');
-    h += '<div id="cmCvNao"' + (ha === "NAO" ? "" : " hidden") + '>' + Com_campo_("Por que não há viagem?", '<input id="cmCvMotSem" maxlength="500" value="' + Com_esc_(v.motivoSem || "") + '" placeholder="Ex.: serviço no laboratório da Metrolabs; o cliente envia o equipamento">') + '</div>';
     var temKm = v.kmTrecho !== null && v.kmTrecho !== undefined, temSug = sug.kmTrecho !== null && sug.kmTrecho !== undefined;
     var km = temKm ? v.kmTrecho : (temSug ? sug.kmTrecho : ""), kmFonte = temKm ? (v.kmFonte || "DIGITADO") : (sug.kmFonte || "DIGITADO");
+    var ped = (v.linhas || {}).PEDAGIO || {}, pedVal = ped.nsa && !ped.auto ? "0" : (ped.fonte === "VENDEDOR" ? ped.valor : "");
+    var h = '<div id="cmCustos">' +
+      '<p class="cm-meta">Todo serviço em campo leva o custo da viagem ao preço. Diga o destino, os dias e quem vai: o sistema calcula o km rodado, a taxa por viagem, o benefício da Conduta, a alimentação, o hotel e as horas de estrada, e o custo vira o item "Despesas de deslocamento e estadia" (custo mais impostos, sem margem). O cliente nunca vê o nome do benefício da Conduta.</p>';
+    h += Com_campo_("Há viagem para executar o serviço?", '<select id="cmCvHa">' + Com_opcoes_([{ v: "SIM", t: "Sim: calcular o deslocamento" }, { v: "NAO", t: "Não há viagem (informe o motivo)" }], ha, exV ? "Escolha (obrigatório)" : "Não se aplica: proposta só de produto") + '</select>');
+    h += '<div id="cmCvNao"' + (ha === "NAO" ? "" : " hidden") + '>' + Com_campo_("Por que não há viagem?", '<input id="cmCvMotSem" maxlength="500" value="' + Com_esc_(v.motivoSem || "") + '" placeholder="Ex.: serviço no laboratório da Metrolabs; o cliente envia o equipamento">') + '</div>';
     h += '<div id="cmCvSim"' + (ha === "SIM" ? "" : " hidden") + '>' +
-      '<div class="cm-grade3">' + Com_campo_("Técnicos", '<input id="cmCvTec" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.TECNICO || 0 : 0) + '">') + Com_campo_("Engenheiros", '<input id="cmCvEng" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.ENGENHEIRO || 0 : 0) + '">') +
-      Com_campo_("Transporte", '<select id="cmCvTr">' + Com_opcoes_(Object.keys(d.transportes || {}).map(function (k) { return { v: k, t: d.transportes[k] }; }), v.transporte || "VEICULO_EMPRESA") + '</select>') + '</div>' +
-      '<div class="cm-grade3">' + Com_campo_("Origem", '<input id="cmCvOri" maxlength="200" value="' + Com_esc_(v.origem || pol.origemPadrao || "") + '">') +
-      Com_campo_("Destino (cidade/UF ou endereço)", '<input id="cmCvDest" maxlength="300" list="cmCvRefs" value="' + Com_esc_(v.destino || sug.destino || "") + '"><datalist id="cmCvRefs">' + (d.referencias || []).map(function (r) { return '<option value="' + Com_esc_(r.destino) + '">' + Com_esc_(Comercial_valorBr_(r.km) + " km") + '</option>'; }).join("") + '</datalist>') +
-      Com_campo_("Km do trecho (só a ida)", '<input id="cmCvKm" inputmode="decimal" data-fonte="' + Com_esc_(kmFonte) + '" value="' + Com_esc_(Comercial_valorBr_(km)) + '">', sug.referencia ? "Referência do Programa de conduta: " + sug.referencia + ", " + Comercial_valorBr_(sug.kmTrecho) + " km a partir da sede." : "Sem referência na tabela de distâncias da Conduta: digite o km. 0 = atendimento na mesma cidade.") + '</div>' +
-      '<div class="cm-grade3">' + Com_campo_("Viagens", '<input id="cmCvVg" inputmode="numeric" value="' + Com_esc_(v.viagens || 1) + '">', "Mais de uma para contrato com visitas") + Com_campo_("Dias por viagem", '<input id="cmCvDias" inputmode="numeric" value="' + Com_esc_(v.dias || 1) + '">') + Com_campo_("Noites por viagem", '<input id="cmCvNoi" inputmode="numeric" value="' + Com_esc_(v.noites || 0) + '">') + '</div>';
+      '<div class="cm-grade2">' + Com_campo_("Cidade de destino", '<input id="cmCvDest" maxlength="300" list="cmCvRefs" value="' + Com_esc_(v.destino || sug.destino || "") + '"><datalist id="cmCvRefs">' + (d.referencias || []).map(function (r) { return '<option value="' + Com_esc_(r.destino) + '">' + Com_esc_(Comercial_valorBr_(r.km) + " km") + '</option>'; }).join("") + '</datalist>', "A lista vem da tabela de distâncias do Programa de conduta.") +
+      Com_campo_("Km do trecho (só a ida)", '<input id="cmCvKm" inputmode="decimal" data-fonte="' + Com_esc_(kmFonte) + '" value="' + Com_esc_(Comercial_valorBr_(km)) + '">', sug.referencia ? "Tabela de distâncias: " + sug.referencia + ", " + Comercial_valorBr_(sug.kmTrecho) + " km a partir da sede." : "Sem referência na tabela de distâncias: digite o km. 0 = atendimento na mesma cidade.") + '</div>' +
+      '<div class="cm-grade4">' + Com_campo_("Dias", '<input id="cmCvDias" inputmode="numeric" value="' + Com_esc_(v.dias || 1) + '">') + Com_campo_("Noites", '<input id="cmCvNoi" inputmode="numeric" value="' + Com_esc_(v.noites || 0) + '">') +
+      Com_campo_("Técnicos", '<input id="cmCvTec" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.TECNICO || 0 : 0) + '">') + Com_campo_("Engenheiros", '<input id="cmCvEng" inputmode="numeric" value="' + Com_esc_(v.equipe ? v.equipe.ENGENHEIRO || 0 : 0) + '">') + '</div>' +
+      '<div class="cm-grade2">' + Com_campo_("Pedágio da viagem (R$, ida e volta)", '<input id="cmCvPed" inputmode="decimal" value="' + Com_esc_(Comercial_valorBr_(pedVal)) + '" placeholder="0 se não há pedágio">') +
+      Com_campo_("Preço do deslocamento na proposta (opcional)", '<input id="cmCvPreco" inputmode="decimal" value="' + Com_esc_(Comercial_valorBr_(d.precoInformado)) + '" placeholder="' + Com_esc_(d.precoRepasse ? "calculado: " + Comercial_moeda_(d.precoRepasse) : "em branco = o calculado") + '">', "Em branco vale o calculado (custo mais impostos). Abaixo do calculado conta como desconto.") + '</div>' +
+      '<div id="cmCvAlerta" aria-live="polite">' + (d.abaixoDoCusto ? '<div class="cm-faixa erro">O preço do deslocamento (' + Com_esc_(Comercial_moeda_(d.precoInformado)) + ') está abaixo do custo da viagem (' + Com_esc_(d.calculo.custoTxt) + '): a empresa paga para ir. Use o calculado ou explique na Caixa de decisões.</div>' : '') + '</div>';
+    h += '<details class="cm-caixa"' + (CM.custosAbertos ? ' open' : '') + ' id="cmCvDet"><summary><b>Ver a conta linha por linha e ajustar</b> <span class="cm-meta">transporte, origem, várias viagens, valores diferentes da política e "não se aplica"</span></summary>' +
+      '<div class="cm-grade3">' + Com_campo_("Transporte", '<select id="cmCvTr">' + Com_opcoes_(Object.keys(d.transportes || {}).map(function (k) { return { v: k, t: d.transportes[k] }; }), v.transporte || "VEICULO_EMPRESA") + '</select>') +
+      Com_campo_("Origem", '<input id="cmCvOri" maxlength="200" value="' + Com_esc_(v.origem || pol.origemPadrao || "") + '">') + Com_campo_("Viagens", '<input id="cmCvVg" inputmode="numeric" value="' + Com_esc_(v.viagens || 1) + '">', "Mais de uma para contrato com visitas") + '</div>';
     (d.linhas || []).forEach(function (L) {
       var l = (v.linhas || {})[L.codigo] || {}, c = calc[L.codigo] || {}, auto = !!l.auto, vals;
       if (L.codigo === "DIARIA" || L.codigo === "HORAS") {
-        var vv = l.valor || {}, ff = l.fonteFuncao || {}, pv = (L.codigo === "DIARIA" ? pol.diariaPessoaDia : pol.horaDeslocamento) || {};
+        var vv = l.valor || {}, ff = l.fonteFuncao || {}, pv = (L.codigo === "DIARIA" ? pol.diariaPessoaDia : pol.horaEstrada || pol.horaDeslocamento) || {};
         vals = '<div class="cm-cv-duo">' + inp("valorTecnico", ff.TECNICO === "VENDEDOR" ? vv.TECNICO : "", "Técnico (R$)", dica(pv.TECNICO)) + inp("valorEngenheiro", ff.ENGENHEIRO === "VENDEDOR" ? vv.ENGENHEIRO : "", "Engenheiro (R$)", dica(pv.ENGENHEIRO)) + '</div>' +
           (L.codigo === "HORAS" ? inp("horas", l.horasFonte === "VENDEDOR" ? l.horas : "", "Horas por viagem", "cálculo: " + Comercial_valorBr_(l.horas || 0) + " h") : "");
       } else if (L.codigo === "OUTROS") {
         vals = '<div class="cm-cv-duo">' + inp("valor", l.valor, "Valor total (R$)", "") + inp("descricao", l.descricao, "O que é", "Ex.: táxi do aeroporto", ' maxlength="200"') + '</div>';
       } else {
-        var ph = L.codigo === "KM" ? dica(pol.valorKm) : L.codigo === "ALIMENTACAO" ? dica(pol.alimentacaoPessoaDia) : L.codigo === "HOSPEDAGEM" ? dica(pol.hospedagemPessoaNoite) : L.codigo === "CONDUTA" ? "Programa de conduta: " + Comercial_valorBr_(d.beneficio && d.beneficio.valor) : "informe o valor";
+        var ph = L.codigo === "KM" ? dica(pol.valorKm) : L.codigo === "ALIMENTACAO" ? dica(pol.alimentacaoPessoaDia) : L.codigo === "HOSPEDAGEM" ? dica(pol.hospedagemPessoaNoite) : L.codigo === "CONDUTA" ? "Programa de conduta: " + Comercial_valorBr_(d.beneficio && d.beneficio.valor) : L.codigo === "TAXA" ? dica(pol.taxaViagem && pol.taxaViagem.valor) : "informe o valor";
         vals = inp("valor", l.fonte === "VENDEDOR" ? l.valor : "", "Valor (R$)", ph);
       }
       var nsa = auto ? '<div class="cm-campo"><label>Não se aplica</label><span class="cm-selo cinza">automático</span></div>'
         : '<div class="cm-campo"><label class="cm-check"><input type="checkbox" data-cvf="nsa"' + (l.nsa ? " checked" : "") + '> Não se aplica</label></div>';
       var mot = auto ? '<div class="cm-campo mot"><span class="cm-meta">' + Com_esc_(l.motivo || "") + '</span></div>'
         : '<div class="cm-campo mot"><label>Motivo (se não se aplica)</label><input data-cvf="motivo" maxlength="300" value="' + Com_esc_(l.nsa ? l.motivo || "" : "") + '"></div>';
-      h += '<div class="cm-cv-linha' + (auto ? " auto" : "") + '" data-cvl="' + Com_esc_(L.codigo) + '" data-auto="' + (auto ? 1 : 0) + '"><div class="nome">' + Com_esc_(L.nome) + '<span>' + Com_esc_(L.unidade + (L.obrigatoria ? "" : " · opcional") + (c.quantidadeTxt ? " · " + c.quantidadeTxt : "")) + '</span></div>' +
+      var nomeL = L.codigo === "TAXA" && pol.taxaViagem ? pol.taxaViagem.rotulo : L.nome;
+      h += '<div class="cm-cv-linha' + (auto ? " auto" : "") + '" data-cvl="' + Com_esc_(L.codigo) + '" data-auto="' + (auto ? 1 : 0) + '"><div class="nome">' + Com_esc_(nomeL) + '<span>' + Com_esc_(L.unidade + (L.obrigatoria ? "" : " · opcional") + (c.quantidadeTxt ? " · " + c.quantidadeTxt : "")) + '</span></div>' +
         vals + nsa + mot + '<div class="tot">' + Com_esc_(c.totalTxt || "") + '</div></div>';
     });
-    h += Com_campo_("Como o custo entra no preço", '<select id="cmCvRep">' + Com_opcoes_(Object.keys(d.repasses || {}).map(function (k) { return { v: k, t: d.repasses[k] }; }), dd.repasse || pol.repassePadrao) + '</select>', 'Item separado: o cliente vê "Despesas de deslocamento e estadia" com o custo mais impostos. Diluído: nenhum item a mais; aumente o preço dos serviços (a tela mostra quanto).') + '</div>';
+    h += Com_campo_("Como o custo entra no preço", '<select id="cmCvRep">' + Com_opcoes_(Object.keys(d.repasses || {}).map(function (k) { return { v: k, t: d.repasses[k] }; }), dd.repasse || pol.repassePadrao) + '</select>', 'Item separado: o cliente vê "Despesas de deslocamento e estadia" com o custo mais impostos. Diluído: nenhum item a mais; aumente o preço dos serviços (a tela mostra quanto).') + '</details></div>';
     var fr = dd.frete || {};
     if (exF || Number(fr.valor) > 0 || fr.nsa) h += '<p class="cm-sec">Frete e entrega dos produtos</p><div class="cm-cv-linha"><div class="nome">Frete e entrega<span>custo total da entrega</span></div>' +
       '<div class="cm-campo"><label>Valor (R$)</label><input data-cff="valor" inputmode="decimal" value="' + Com_esc_(Comercial_valorBr_(fr.valor)) + '"></div>' +
@@ -1042,11 +1249,18 @@
       if (row.getAttribute("data-auto") === "1") o.auto = true;
       linhas[row.getAttribute("data-cvl")] = o;
     });
+    // 01/11/2026 (C2): o pedágio do bloco simples vale sobre a linha da conta (0 = não há pedágio no trajeto)
+    var ped = g("cmCvPed");
+    if (ped !== undefined && String(ped).trim() !== "") {
+      var pn = Comercial_num_(ped);
+      linhas.PEDAGIO = Object.assign(linhas.PEDAGIO || {}, pn > 0 ? { valor: ped, nsa: false, motivo: "", auto: false } : { valor: "", nsa: true, motivo: "Sem pedágio no trajeto", auto: false });
+    }
     var frete = {};
     document.querySelectorAll("#cmCustos [data-cff]").forEach(function (x) { frete[x.getAttribute("data-cff")] = x.type === "checkbox" ? x.checked : x.value; });
     var km = Com_$_("cmCvKm");
     return { viagem: { ha: g("cmCvHa"), motivoSem: g("cmCvMotSem"), tecnicos: g("cmCvTec"), engenheiros: g("cmCvEng"), transporte: g("cmCvTr"), origem: g("cmCvOri"), destino: g("cmCvDest"), kmTrecho: g("cmCvKm"),
-      kmFonte: km ? km.getAttribute("data-fonte") || "DIGITADO" : "DIGITADO", viagens: g("cmCvVg"), dias: g("cmCvDias"), noites: g("cmCvNoi"), linhas: linhas }, frete: Object.keys(frete).length ? frete : undefined, repasse: g("cmCvRep") };
+      kmFonte: km ? km.getAttribute("data-fonte") || "DIGITADO" : "DIGITADO", viagens: g("cmCvVg"), dias: g("cmCvDias"), noites: g("cmCvNoi"), linhas: linhas }, frete: Object.keys(frete).length ? frete : undefined, repasse: g("cmCvRep"),
+      precoInformado: g("cmCvPreco") };
   }
   function Comercial_ligarCustos_(calcular) {
     var ha = Com_$_("cmCvHa"); if (!ha) return;
@@ -1054,6 +1268,13 @@
     var dest = Com_$_("cmCvDest"), km = Com_$_("cmCvKm");
     if (dest) dest.onchange = function () { var r = (CM.refsCustos || []).filter(function (x) { return Comercial_semAcento_(x.destino) === Comercial_semAcento_(dest.value); })[0]; if (r && km) { km.value = Comercial_valorBr_(r.km); km.setAttribute("data-fonte", "REFERENCIA_CONDUTA"); } };
     if (km) km.oninput = function () { km.setAttribute("data-fonte", "DIGITADO"); };
+    var det = Com_$_("cmCvDet"); if (det) det.addEventListener("toggle", function () { CM.custosAbertos = det.open; });
+    // preço digitado abaixo do custo da última conta: alerta na hora (o servidor confere de novo ao salvar)
+    var pr = Com_$_("cmCvPreco"), al = Com_$_("cmCvAlerta"), custo = CM.custoViagemServidor || 0;
+    if (pr && al) pr.oninput = function () {
+      var n = Comercial_num_(pr.value);
+      al.innerHTML = String(pr.value).trim() !== "" && custo > 0 && n < custo - 0.004 ? '<div class="cm-faixa erro">Abaixo do custo da viagem (' + Com_esc_(Comercial_moeda_(custo)) + '): a empresa paga para ir. Use o calculado ou explique na Caixa de decisões.</div>' : '';
+    };
     var bt = Com_$_("cmCvCalc"); if (bt) bt.onclick = calcular;
   }
 
@@ -1085,12 +1306,63 @@
   // 27/10/2026: busca no banco (Comercial_api 'catalogo' com busca, tipo, categoria e situação), sem acento e por partes,
   // mostrando até 200 itens dos mais parecidos (o catálogo tem mais de 1.300 itens importados do CRM).
   var COM_CAT_LIMITE = 200;
+  // =========================================================
+  // TABELA DE PREÇOS C1 E FICHA DE CUSTO (01/11/2026, Comercial C2). Servidor: SGO_Comercial_Ficha.js.
+  // =========================================================
+  /** Importar a tabela de preços C1 (gestão): prévia lado a lado, escolha para o que já existe e "Importar". */
+  function Comercial_importarC1Janela_() {
+    var ov = Com_modal_("Importar tabela de preços C1", '<div id="cmImpCorpo"><div class="cm-vazio">Montando a prévia…</div></div>', '', 880);
+    var corpo = function () { return Com_$_("cmImpCorpo"); };
+    Com_chamar_("importarC1Previa", {}, function (r) {
+      var c = corpo(); if (!c) return;
+      var esc = Object.keys(r.escolhas || {}).map(function (k) { return { v: k, t: r.escolhas[k] }; });
+      var h = '<p class="cm-meta">' + r.linhas.length + ' serviços da tabela (' + Com_esc_(r.versao) + '), com horas por função, padrões, consumíveis, custo calculado pela política em vigor, preço sugerido, mercado público e histórico da Metrolabs. Nada é apagado; o que já existe só é completado no que estiver vazio. Rodar de novo não duplica.</p>' +
+        '<div class="cm-kpis">' + [["Novos", r.resumo.NOVO], ["Já existem (você escolhe)", r.resumo.EXISTE], ["Já importados", r.resumo.JA_IMPORTADO]].map(function (k) { return '<div class="cm-kpi"><span class="v">' + k[1] + '</span><span class="r">' + Com_esc_(k[0]) + '</span></div>'; }).join("") + '</div>' +
+        (r.politica && r.politica.provisorios ? '<div class="cm-faixa aviso">Os custos usam ' + r.politica.provisorios + ' valor(es) provisório(s) da política (Metodologia > Preço e desconto). O preço sugerido muda sozinho quando o dono confirmar os valores; o preço de venda só muda quando a gestão confirmar.</div>' : '') +
+        '<table class="cm-tabela"><thead><tr><th>Serviço</th><th>Situação</th><th class="n">Custo</th><th class="n">Preço sugerido</th><th>No catálogo hoje</th><th>O que fazer</th></tr></thead><tbody>' + r.linhas.map(function (l) {
+          return '<tr><td data-r="Serviço"><b>' + Com_esc_(l.nome) + '</b><br><span class="cm-meta">' + Com_esc_(l.codigoCatalogo + " · " + l.tabela.horasTxt) + '</span></td><td data-r="Situação">' + Com_esc_(l.situacaoTxt) + '</td>' +
+            '<td class="n" data-r="Custo">' + Com_esc_(l.tabela.custoTxt) + '</td><td class="n" data-r="Preço sugerido">' + Com_esc_(l.tabela.precoTxt) + '<br><span class="cm-meta">mínimo ' + Com_esc_(l.tabela.minimoTxt) + '</span></td>' +
+            '<td data-r="No catálogo hoje">' + (l.existente ? Com_esc_(l.existente.codigo + " · " + l.existente.nome) + '<br><span class="cm-meta">preço ' + Com_esc_(l.existente.precoTxt) + ' · custo ' + Com_esc_(l.existente.custoTxt) + (l.existente.ativo ? '' : ' · arquivado') + '</span>' + (l.vaiPreencher && l.vaiPreencher.length ? '<br><span class="cm-meta">Preenche: ' + Com_esc_(l.vaiPreencher.join(", ")) + '</span>' : '') : '—') + '</td>' +
+            '<td data-r="O que fazer">' + (l.situacao === "EXISTE" ? '<select data-esc="' + Com_esc_(l.codigo) + '" aria-label="O que fazer com ' + Com_esc_(l.nome) + '">' + Com_opcoes_(esc, l.escolha) + '</select>' : Com_esc_(l.situacao === "NOVO" ? "Cria o item" : "Nada (não duplica)")) + '</td></tr>';
+        }).join("") + '</tbody></table><div id="cmImpMsg"></div><div class="cm-acoes"><button type="button" class="btn-secondary" id="cmImpFechar">Fechar sem importar</button><button type="button" class="btn-primary" id="cmImpOk"' + (r.resumo.NOVO + r.resumo.EXISTE ? '' : ' disabled') + '>Importar</button></div>';
+      c.innerHTML = h;
+      Com_$_("cmImpFechar").onclick = function () { ov.remove(); };
+      Com_$_("cmImpOk").onclick = function () {
+        var escolhas = {}; c.querySelectorAll("[data-esc]").forEach(function (s) { escolhas[s.getAttribute("data-esc")] = s.value; });
+        if (!confirm("Importar " + r.resumo.NOVO + " serviço(s) novo(s) e completar " + c.querySelectorAll('[data-esc]').length + " item(ns) que já existem (só o que estiver vazio)?")) return;
+        Com_chamar_("importarC1", { marca: r.marca, escolhas: escolhas }, function (x) { ov.remove(); alert(x.message); Comercial_carregarCatalogo_(); }, function (m) { Com_msg_("cmImpMsg", m); }, { carregando: "Importando a tabela de preços…" });
+      };
+    }, function (m) { Com_msg_(corpo(), m); });
+  }
+  /** Ficha de custo do item: a conta aberta, o preço sugerido, mercado e histórico; a gestão edita a ficha e confirma o preço. */
+  function Comercial_fichaJanela_(p) {
+    var f = p.ficha || {}, c = f.conta, t = f.contaTxt || {}, gere = !!(CM.ini.gestao || CM.ini.catalogo);
+    var linha = function (a, b) { return '<tr><td data-r="Parcela">' + a + '</td><td class="n" data-r="R$">' + b + '</td></tr>'; };
+    var h = '<p class="cm-txt"><b>' + Com_esc_(p.nome) + '</b> <span class="cm-meta">' + Com_esc_(p.codigo + (f.unidadeTexto ? " · " + f.unidadeTexto : "")) + '</span></p>';
+    if (c) {
+      h += '<table class="cm-tabela cm-conta"><tbody>' + linha("Técnico: " + String(c.horasTecnico).replace(".", ",") + " h", Com_esc_(t.maoObraTecnico)) + linha("Engenheiro: " + String(c.horasEngenheiro).replace(".", ",") + " h", Com_esc_(t.maoObraEngenheiro)) +
+        linha("Custo fixo sobre a mão de obra", Com_esc_(t.custoFixo)) + linha("Padrões (rateio)", Com_esc_(t.padroes)) + linha("Consumíveis e ART", Com_esc_(t.consumiveis)) + linha("<b>Custo</b>", "<b>" + Com_esc_(t.custo) + "</b>") +
+        linha("Preço pela conta", Com_esc_(t.precoConta)) + linha("<b>Preço sugerido</b> (" + Com_esc_(c.fonteTxt) + ")", "<b>" + Com_esc_(t.precoSugerido) + "</b>") + linha("Preço mínimo (margem mínima)", Com_esc_(t.precoMinimo)) + linha("Urgente", Com_esc_(t.precoUrgente)) + '</tbody></table>' +
+        '<div class="cm-faixa' + (f.abaixoMinimo ? " erro" : Math.abs(f.diferenca || 0) >= 0.01 ? " aviso" : " ok") + '">Preço de venda hoje: <b>' + Com_esc_(p.precoTxt) + '</b>' + (Math.abs(f.diferenca || 0) >= 0.01 ? ' (' + Com_esc_(f.diferencaTxt) + (f.diferenca > 0 ? ' acima' : ' abaixo') + ' do sugerido)' : ' (igual ao sugerido)') + (f.abaixoMinimo ? '. Abaixo do preço mínimo: a margem não fecha.' : '.') + ' O preço de venda só muda quando a gestão confirma.</div>';
+    }
+    h += '<p class="cm-sec">Referências</p><dl class="cm-det"><dt>Mercado público</dt><dd>' + Com_esc_(f.mercadoTxt || "sem dados") + ' <span class="cm-meta">(mínimo / mediana / máximo)</span>' + (f.mercadoCentroOeste ? '<br><span class="cm-meta">Centro-Oeste: mediana ' + Com_esc_(Comercial_moeda_(f.mercadoCentroOeste.mediana)) + ' (' + f.mercadoCentroOeste.n + ')</span>' : '') + '</dd>' +
+      '<dt>Metrolabs CRM 2025-26</dt><dd>' + Com_esc_(f.historicoTxt || "sem dados") + '</dd><dt>Propostas ganhas</dt><dd>' + Com_esc_(f.ganhosTxt || "sem dados") + '</dd><dt>Drive 2018-23</dt><dd>' + Com_esc_(f.driveTxt || "sem dados") + ' <span class="cm-meta">(extração automática; só contexto)</span></dd></dl>' +
+      (f.alertas && f.alertas.length ? '<div class="cm-faixa aviso">' + Com_esc_(f.alertas.join("; ")) + '.</div>' : '');
+    if (gere && c) h += '<p class="cm-sec">Ajustar a ficha</p><div class="cm-grade2">' + Com_campo_("Horas do técnico", '<input id="cmFiHT" inputmode="decimal" value="' + Com_esc_(String(c.horasTecnico).replace(".", ",")) + '">') + Com_campo_("Horas do engenheiro", '<input id="cmFiHE" inputmode="decimal" value="' + Com_esc_(String(c.horasEngenheiro).replace(".", ",")) + '">') +
+      Com_campo_("Padrões (R$ por serviço)", '<input id="cmFiPad" inputmode="decimal" value="' + Com_esc_(String(c.padroes).replace(".", ",")) + '">') + Com_campo_("Consumíveis e ART (R$)", '<input id="cmFiCon" inputmode="decimal" value="' + Com_esc_(String(c.consumiveis).replace(".", ",")) + '">') + '</div>' +
+      Com_campo_("Motivo (para usar o preço sugerido)", '<input id="cmFiMot" maxlength="500" placeholder="Ex.: tabela C1 aprovada pela Diretoria">', "Fica no histórico do preço do item.");
+    var ov = Com_modal_("Ficha de custo de " + p.codigo, h + '<div id="cmFiMsg"></div>', (gere && c ? '<button type="button" class="btn-secondary" data-x="c">Fechar</button><button type="button" class="btn-secondary" id="cmFiSalvar">Salvar a ficha</button>' + (Math.abs(f.diferenca || 0) >= 0.01 ? '<button type="button" class="btn-primary" id="cmFiUsar">Usar o preço sugerido (' + Com_esc_(t.precoSugerido) + ')</button>' : '') : '<button type="button" class="btn-secondary" data-x="c">Fechar</button>'), 640);
+    ov.querySelector('[data-x="c"]').onclick = function () { ov.remove(); };
+    if (Com_$_("cmFiSalvar")) Com_$_("cmFiSalvar").onclick = function () { Com_chamar_("salvarFicha", { id: p.id, horasTecnico: Com_$_("cmFiHT").value, horasEngenheiro: Com_$_("cmFiHE").value, padroes: Com_$_("cmFiPad").value, consumiveis: Com_$_("cmFiCon").value }, function (x) { ov.remove(); alert(x.message); Comercial_carregarCatalogo_(); }, function (m) { Com_msg_("cmFiMsg", m); }); };
+    if (Com_$_("cmFiUsar")) Com_$_("cmFiUsar").onclick = function () { Com_chamar_("aplicarSugerido", { ids: [p.id], motivo: Com_$_("cmFiMot").value }, function (x) { ov.remove(); alert(x.message); Comercial_carregarCatalogo_(); }, function (m) { Com_msg_("cmFiMsg", m); }); };
+  }
   function Comercial_renderCatalogo_(div) {
     var ini = CM.ini, gere = !!(ini.gestao || ini.catalogo), cadastra = gere || !!ini.catalogoVenda;
     var f = CM.filtroCat = CM.filtroCat || { busca: "", tipo: "", categoria: "", situacao: "TODOS" };
     var tipos = Object.keys(ini.tiposItem || {}).map(function (k) { return { v: k, t: ini.tiposItem[k] }; });
     div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Produtos e serviços", "Catálogo usado nas propostas: código, nome, tipo, unidade e preço de venda" + (gere ? "; o custo é opcional e só a gestão vê." : ini.catalogoVenda ? ". Você cadastra itens e altera descrição, unidade, categoria e preço; redução de preço acima de " + String(ini.alcadaPreco === undefined ? 10 : ini.alcadaPreco).replace(".", ",") + "% vai para a aprovação da Diretoria ou da gestão comercial." : ". A gestão comercial cadastra e altera."),
       (gere ? '<button type="button" class="btn-secondary" id="cmReajHist"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i>&nbsp;Histórico de reajustes</button>' : '') +
+      (ini.gestao ? '<button type="button" class="btn-secondary" id="cmImpC1"><i class="fas fa-file-import" aria-hidden="true"></i>&nbsp;Importar tabela de preços C1</button>' : '') +
       (ini.podePrecificacao ? '<button type="button" class="btn-secondary" id="cmReajustar"><i class="fas fa-percent" aria-hidden="true"></i>&nbsp;Reajustar preços</button>' : '') +
       (cadastra ? '<button type="button" class="btn-primary" id="cmNovoProd"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo item</button>' : '')) +
       '<div class="cm-filtros" role="search"><div style="flex:2 1 260px"><label for="cmCatBusca">Buscar no catálogo</label><input id="cmCatBusca" type="search" autocomplete="off" placeholder="Código, nome, descrição ou categoria (ex.: fonte 9v, CRM-DF8F)" value="' + Com_esc_(f.busca) + '"></div>' +
@@ -1101,6 +1373,7 @@
       '<p class="cm-meta" id="cmCatInfo" aria-live="polite"></p><div id="cmCat"><div class="cm-vazio">Carregando…</div></div></div>';
     if (Com_$_("cmNovoProd")) Com_$_("cmNovoProd").onclick = function () { Comercial_formProduto_({}); };
     if (Com_$_("cmReajustar")) Com_$_("cmReajustar").onclick = function () { Comercial_reajusteJanela_(); };
+    if (Com_$_("cmImpC1")) Com_$_("cmImpC1").onclick = function () { Comercial_importarC1Janela_(); };
     if (Com_$_("cmReajHist")) Com_$_("cmReajHist").onclick = function () { Comercial_reajustesHistorico_(); };
     var ler = function () { f.busca = Com_$_("cmCatBusca").value; f.tipo = Com_$_("cmCatTipo").value; f.categoria = Com_$_("cmCatCateg").value; if (Com_$_("cmCatSit")) f.situacao = Com_$_("cmCatSit").value; Comercial_carregarCatalogo_(); };
     var t = null;
@@ -1125,6 +1398,7 @@
         (r.limitado ? ". Mostrando os " + r.produtos.length + " mais parecidos com a busca; escreva mais uma palavra do nome ou o código para afinar." : (r.total ? "." : "")) +
         (gere && r.duplicados && f.situacao !== "DUPLICADOS" ? " Atenção: " + r.duplicados + (r.duplicados === 1 ? " nome aparece" : " nomes aparecem") + " em mais de um item ativo (veja em Situação > Possíveis duplicados e arquive o que sobra)." : "") +
         (gere && r.semReajuste && f.situacao !== "SEM_REAJUSTE" ? " " + Number(r.semReajuste).toLocaleString("pt-BR") + (r.semReajuste === 1 ? " item está" : " itens estão") + " sem reajuste há mais de " + r.reajusteMeses + " meses (Situação > Sem reajuste)." : "") +
+        (gere && r.podeImportarC1 && !r.comFicha ? " A tabela de preços C1 (42 serviços com a conta de custo) ainda não foi importada: toque em \"Importar tabela de preços C1\"." : "") +
         (gere && r.precosPendentes && f.situacao !== "PRECO_PENDENTE" ? " " + r.precosPendentes + (r.precosPendentes === 1 ? " preço aguarda" : " preços aguardam") + " a sua aprovação (Situação > Preço aguardando aprovação)." : "");
       if (!r.total) { alvo.innerHTML = '<div class="cm-vazio">O catálogo está vazio. ' + (cadastra ? 'Toque em "Novo item" para cadastrar a lista de serviços e preços.' : 'A gestão comercial vai cadastrar a lista de serviços e preços; enquanto isso, as propostas aceitam itens digitados.') + '</div>'; return; }
       if (!r.produtos.length) { alvo.innerHTML = '<div class="cm-vazio">Nenhum item' + (f.busca ? ' com "' + Com_esc_(f.busca) + '"' : '') + ' com estes filtros. A busca ignora acentos e maiúsculas, aceita parte das palavras e procura no código, no nome, na descrição e na categoria. Confira a grafia, mude o tipo ou a categoria, ou toque em "Limpar".' + (cadastra ? ' Se o item não existe, cadastre em "Novo item".' : '') + '</div>'; return; }
@@ -1132,12 +1406,14 @@
         // 29/10/2026: redução de preço pedida pela equipe comercial (acima da alçada) e a última decisão
         var ped = p.precoPedido ? '<br><span class="cm-selo laranja" title="' + Com_esc_("Pedido de " + p.precoPedido.por + " em " + p.precoPedido.em + ". Motivo: " + p.precoPedido.motivo) + '">aguardando aprovação da Diretoria: ' + Com_esc_(p.precoPedido.precoTxt) + '</span>' :
           (p.precoDecisao && p.precoDecisao.situacao === "NEGADO" && !gere ? '<br><span class="cm-meta">redução para ' + Com_esc_(p.precoDecisao.precoTxt) + ' não aprovada por ' + Com_esc_(p.precoDecisao.por) + '</span>' : '');
-        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.duplicado ? ' <span class="cm-selo laranja" title="Outro item ativo tem o mesmo nome">mesmo nome de outro item</span>' : '') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + (p.precoDesde ? '<br><span class="cm-meta">desde ' + Com_esc_(p.precoDesde) + '</span>' : '') + (p.semReajuste ? '<br><span class="cm-selo laranja">sem reajuste</span>' : '') + ped + '</td>' +
+        return '<tr' + (p.ativo ? '' : ' style="opacity:.55"') + '><td data-r="Código">' + Com_esc_(p.codigo) + '</td><td data-r="Nome"><b>' + Com_esc_(p.nome) + '</b>' + (p.ativo ? '' : ' (arquivado)') + (p.duplicado ? ' <span class="cm-selo laranja" title="Outro item ativo tem o mesmo nome">mesmo nome de outro item</span>' : '') + (p.descricao ? '<br><span class="cm-meta">' + Com_esc_(p.descricao) + '</span>' : '') + '</td><td data-r="Tipo">' + Com_esc_(p.tipoNome) + '</td><td data-r="Un.">' + Com_esc_(p.unidade) + '</td><td class="n" data-r="Preço">' + Com_esc_(p.precoTxt) + (p.precoDesde ? '<br><span class="cm-meta">desde ' + Com_esc_(p.precoDesde) + '</span>' : '') + (p.semReajuste ? '<br><span class="cm-selo laranja">sem reajuste</span>' : '') + ped +
+          (p.ficha && p.ficha.conta && Math.abs(p.ficha.diferenca || 0) >= 0.01 ? '<br><span class="cm-selo ' + (p.ficha.abaixoMinimo ? 'vermelho' : 'azul') + '">sugerido ' + Com_esc_(p.ficha.contaTxt.precoSugerido) + '</span>' : '') + '</td>' +
           (gere ? '<td class="n" data-r="Custo">' + Com_esc_(p.custoTxt || "—") + '</td>' : '') +
-          (cadastra ? '<td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button>' + (gere || p.ativo ? ' <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button>' : '') +
+          (cadastra ? '<td><button type="button" class="btn-secondary" data-ed="' + k + '">Editar</button>' + (p.ficha ? ' <button type="button" class="btn-secondary" data-ficha="' + k + '">' + (p.ficha.conta ? 'Ficha de custo' : 'Referências de preço') + '</button>' : '') + (gere || p.ativo ? ' <button type="button" class="btn-secondary" data-arq="' + k + '">' + (p.ativo ? "Arquivar" : "Reativar") + '</button>' : '') +
             (p.precoPedido && p.precoPedido.podeDecidir ? ' <button type="button" class="btn-primary" data-preco="' + k + '">Decidir o preço</button>' : '') + '</td>' : '') + '</tr>';
       }).join("") + '</tbody></table>';
       alvo.querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () { Comercial_formProduto_(r.produtos[+b.getAttribute("data-ed")]); }; });
+      alvo.querySelectorAll("[data-ficha]").forEach(function (b) { b.onclick = function () { Comercial_fichaJanela_(r.produtos[+b.getAttribute("data-ficha")]); }; });
       alvo.querySelectorAll("[data-arq]").forEach(function (b) { b.onclick = function () { var p = r.produtos[+b.getAttribute("data-arq")]; Com_chamar_("arquivarProduto", { id: p.id, reativar: !p.ativo }, function (x) { alert(x.message); Comercial_carregarCatalogo_(); }); }; });
       alvo.querySelectorAll("[data-preco]").forEach(function (b) { b.onclick = function () { Comercial_decidirPreco_(r.produtos[+b.getAttribute("data-preco")]); }; });
     }, function (m) { var inf = Com_$_("cmCatInfo"); if (inf) inf.textContent = ""; Com_msg_("cmCat", m); }, { chave: "catalogo" });
@@ -1196,34 +1472,6 @@
     else s = s.replace(",", ".");
     var n = Number(s);
     return isFinite(n) ? n : String(t);
-  }
-  function Comercial_caixaPrecificacao_(r) {
-    var p = r.metodologia.precificacao; if (!p) return "";
-    var ed = !!r.podeEditarPrecificacao, dis = ed ? "" : " disabled", x = r.precificacao || {}, b = x.beneficio || {};
-    var res = !!r.precificacaoReservada;
-    var num = function (id, v, rot, aj, reservado) { return Com_campo_(rot, '<input id="' + id + '" inputmode="decimal" value="' + Com_esc_(reservado ? "" : Comercial_valorBr_(v)) + '"' + (reservado ? ' placeholder="só a gestão vê"' : '') + dis + '>', aj); };
-    var dia = p.diariaPessoaDia || {}, hora = p.horaDeslocamento || {}, bc = p.beneficioConduta || {};
-    return '<div class="cm-caixa" id="cmMPrec"><h3>Política de precificação (acréscimos e reajuste)</h3>' +
-      '<p class="cm-meta">Vale para os custos da viagem e do frete das propostas, para a margem (que trava abaixo da mínima e vai para a Diretoria) e para o alerta de reajuste do catálogo. Campo em branco = sem padrão: o vendedor informa o valor em cada proposta e a gestora aponta a política incompleta. ' +
-      (ed ? 'Cada gravação é uma versão nova da metodologia, com o motivo.' : 'Só a Diretoria e o Administrador mudam esta política.') + '</p>' +
-      (x.incompleta && x.incompleta.length && !res ? '<div class="cm-faixa aviso">Falta preencher: ' + Com_esc_(x.incompleta.join(", ")) + '.</div>' : '') +
-      '<p class="cm-sec">Viagem</p><div class="cm-grade3">' + Com_campo_("Origem padrão", '<input id="cmPrOri" maxlength="200" value="' + Com_esc_(p.origemPadrao || "") + '"' + dis + '>') +
-      num("cmPrKm", p.valorKm, "Valor por km rodado (R$)", "Ida e volta = km do trecho x 2. Cobre o veículo da empresa (combustível, desgaste, manutenção).") + num("cmPrVel", p.velocidadeMediaKmh, "Velocidade média (km/h)", "Estima as horas de deslocamento") + '</div>' +
-      '<div class="cm-grade3">' + num("cmPrAli", p.alimentacaoPessoaDia, "Alimentação por pessoa por dia (R$)") + num("cmPrHosp", p.hospedagemPessoaNoite, "Hospedagem por pessoa por noite (R$)") + Com_campo_("Como o custo entra no preço (padrão)", '<select id="cmPrRep"' + dis + '>' + Com_opcoes_(Object.keys(x.repasses || { ITEM: "Item separado", DILUIDO: "Diluído" }).map(function (k) { return { v: k, t: (x.repasses || {})[k] || k }; }), p.repassePadrao || "ITEM") + '</select>') + '</div>' +
-      '<div class="cm-grade2">' + num("cmPrDiaT", dia.TECNICO, "Diária do técnico por dia (R$)") + num("cmPrDiaE", dia.ENGENHEIRO, "Diária do engenheiro por dia (R$)") + num("cmPrHrT", hora.TECNICO, "Hora de deslocamento do técnico (R$, opcional)") + num("cmPrHrE", hora.ENGENHEIRO, "Hora de deslocamento do engenheiro (R$, opcional)") + '</div>' +
-      '<p class="cm-sec">Benefício do Programa de conduta</p><p class="cm-txt">Em vigor: ' + Com_esc_("R$ " + Comercial_valorBr_(b.valor)) + ' por colaborador por viagem, a partir de ' + Com_esc_(Comercial_valorBr_(b.kmMinimo)) + ' km de trecho (fonte: ' + Com_esc_(b.fonte || "") + '). Quem muda é o Programa de conduta (parâmetros do programa). Os campos abaixo só valem se o programa não responder.</p>' +
-      '<div class="cm-grade2">' + num("cmPrBenV", bc.valorPorColaborador, "Reserva: valor por colaborador (R$)") + num("cmPrBenK", bc.kmMinimoTrecho, "Reserva: km mínimo do trecho") + '</div>' +
-      '<p class="cm-sec">Acréscimos e margem</p><div class="cm-grade2">' + num("cmPrImp", p.impostosPct, "Impostos sobre o faturamento (%)", "", res) + num("cmPrMin", p.margemMinPct, "Margem mínima depois de impostos (%)", "Abaixo dela, só a Diretoria aprova", res) +
-      num("cmPrAlvo", p.margemAlvoPct, "Margem alvo (%)", "", res) + num("cmPrMDes", p.margemDeslocamentoPct, "Margem sobre o deslocamento (%)", "0 = repassa só o custo e os impostos", res) + '</div>' +
-      '<div class="cm-grade2">' + num("cmPrArr", p.arredondarPara, "Arredondar o item de deslocamento para cima a múltiplos de (R$)", "0 = centavos") + num("cmPrReaj", p.reajusteAlertaMeses, "Avisar item do catálogo sem reajuste há mais de (meses)") + '</div>' +
-      Com_campo_("Texto da política (a gestora usa)", '<textarea id="cmPrTxt" style="min-height:80px"' + dis + '>' + Com_esc_(p.texto || "") + '</textarea>') + '</div>';
-  }
-  function Comercial_lerPrecificacao_(atual) {
-    var v = function (id) { var el = Com_$_(id); return el ? el.value : ""; }, n = Comercial_numOuNulo_;
-    return Object.assign({}, atual || {}, { origemPadrao: v("cmPrOri"), valorKm: n(v("cmPrKm")), velocidadeMediaKmh: n(v("cmPrVel")), alimentacaoPessoaDia: n(v("cmPrAli")), hospedagemPessoaNoite: n(v("cmPrHosp")),
-      diariaPessoaDia: { TECNICO: n(v("cmPrDiaT")), ENGENHEIRO: n(v("cmPrDiaE")) }, horaDeslocamento: { TECNICO: n(v("cmPrHrT")), ENGENHEIRO: n(v("cmPrHrE")) },
-      beneficioConduta: { valorPorColaborador: n(v("cmPrBenV")), kmMinimoTrecho: n(v("cmPrBenK")) }, impostosPct: n(v("cmPrImp")), margemMinPct: n(v("cmPrMin")), margemAlvoPct: n(v("cmPrAlvo")),
-      margemDeslocamentoPct: n(v("cmPrMDes")) === null ? 0 : n(v("cmPrMDes")), arredondarPara: n(v("cmPrArr")), repassePadrao: v("cmPrRep") || "ITEM", reajusteAlertaMeses: n(v("cmPrReaj")), texto: v("cmPrTxt") });
   }
 
   /** Reajuste do catálogo (Diretoria): seleção, percentual, índice, vigência, prévia e aplicar. */
@@ -1339,96 +1587,314 @@
   // METODOLOGIA (a "cartilha" da gestora comercial)
   // =========================================================
   function Comercial_renderMetodologia_(div) {
-    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Metodologia comercial", "As regras que a gestora comercial segue: funis e etapas, qualificação, cadência, estratégias, objeções, política de precificação e de desconto, modelo da proposta e pós-venda. Quem escreve é a gestão; cada versão fica no histórico.") + '<div id="cmMet"><div class="cm-vazio">Carregando…</div></div></div>';
+    div.innerHTML = '<div class="module-shell">' + Comercial_cabecalho_("Metodologia comercial", "As regras que a gestora comercial segue, em quatro páginas: como vendemos, preço e desconto, documento da proposta e depois da venda. Quem escreve é a gestão; cada página salva uma versão nova, com o motivo.") + '<div id="cmMet"><div class="cm-vazio">Carregando…</div></div></div>';
     Com_chamar_("metodologia", {}, function (r) { Comercial_desenharMetodologia_(r); }, function (m) { Com_msg_("cmMet", m); });
   }
-  function Comercial_desenharMetodologia_(r) {
-    var m = r.metodologia, ed = r.podeEditar, alvo = Com_$_("cmMet"), dis = ed ? "" : " disabled";
-    var linhas = function (l) { return (l || []).join("\n"); };
-    var ta = function (id, v, alt) { return '<textarea id="' + id + '"' + dis + ' style="min-height:' + (alt || 90) + 'px">' + Com_esc_(v) + '</textarea>'; };
-    var h = '<p class="cm-meta">Versão ' + Com_esc_(m.versao) + (m.atualizadaEm ? ' · ' + Com_esc_(m.atualizadaEm) + ' por ' + Com_esc_(m.atualizadaPor) : ' · padrão trazido do Comercial do COMMAND') + '</p>';
-    h += '<div class="cm-caixa"><h3>Tese e regras de ouro</h3>' + Com_campo_("Tese", ta("cmMTese", m.tese, 60)) + Com_campo_("Regras de ouro (uma por linha)", ta("cmMOuro", linhas(m.regrasDeOuro), 110)) + '</div>';
-    h += '<div class="cm-caixa"><h3>Funis e etapas</h3><p class="cm-meta">Uma etapa por linha: nome | probabilidade % | máximo de dias na etapa | critério para sair | itens da lista separados por ;</p>' + m.funis.map(function (f, k) {
-      return Com_campo_("Funil " + f.nome + " — " + f.descricao, ta("cmMFunil" + k, f.etapas.map(function (e) { return [e.nome, e.probabilidade, e.maxDias, e.criterio, (e.checklist || []).join("; ")].join(" | "); }).join("\n"), 130));
+  // =========================================================
+  // TABELA EDITÁVEL (01/11/2026, Comercial C2): uma linha por item, "+ adicionar" e "Remover". Substitui o "texto com barras".
+  // cols: [{ k, t (rótulo), tipo: 'texto'|'num'|'area'|'select'|'lista' (uma por linha), op: [{v,t}], largo }]
+  // =========================================================
+  function Comercial_tabEd_(id, cols, linhas, dis, rotuloAdd) {
+    CM.tabCols = CM.tabCols || {}; CM.tabCols[id] = { cols: cols, dis: dis, add: rotuloAdd };
+    return '<div class="cm-tabed" id="' + id + '">' + Comercial_tabEdLinhas_(id, linhas) + '</div>';
+  }
+  function Comercial_tabEdLinhas_(id, linhas) {
+    var c = CM.tabCols[id], dis = c.dis ? " disabled" : "";
+    var campo = function (col, v, j) {
+      var nome = id + "_" + j + "_" + col.k, val = v === null || v === undefined ? "" : v;
+      var ctl = col.tipo === "area" || col.tipo === "lista" ? '<textarea id="' + nome + '" data-tk="' + col.k + '"' + dis + ' rows="2">' + Com_esc_(col.tipo === "lista" && Array.isArray(val) ? val.join("\n") : val) + '</textarea>'
+        : col.tipo === "select" ? '<select id="' + nome + '" data-tk="' + col.k + '"' + dis + '>' + Com_opcoes_(col.op, val) + '</select>'
+        : '<input id="' + nome + '" data-tk="' + col.k + '"' + (col.tipo === "num" ? ' inputmode="decimal"' : '') + dis + ' value="' + Com_esc_(String(val).replace(col.tipo === "num" ? "." : "\u0000", ",")) + '">';
+      return '<div class="cm-campo' + (col.largo ? " largo" : "") + '"><label for="' + nome + '">' + Com_esc_(col.t) + '</label>' + ctl + '</div>';
+    };
+    var h = (linhas || []).map(function (l, j) {
+      var o = typeof l === "object" && l !== null ? l : { texto: l };
+      return '<div class="cm-tabed-l' + (c.cols.length === 1 ? " uma" : "") + '" data-j="' + j + '">' + c.cols.map(function (col) { return campo(col, o[col.k], j); }).join("") +
+        (c.dis ? '' : '<button type="button" class="btn-secondary cm-tabed-rem" data-tabed-rem="' + id + '" data-j="' + j + '" aria-label="Remover a linha ' + (j + 1) + '">Remover</button>') + '</div>';
+    }).join("") || '<p class="cm-meta">Nenhuma linha.</p>';
+    return h + (c.dis ? '' : '<button type="button" class="btn-secondary cm-tabed-add" data-tabed-add="' + id + '">+ ' + Com_esc_(c.add || "adicionar") + '</button>');
+  }
+  /** Linhas da tabela como objetos ({ k: valor }); a de uma coluna "texto" vira lista de textos. Linha toda vazia sai. */
+  function Comercial_lerTabEd_(id) {
+    var c = CM.tabCols && CM.tabCols[id], el = Com_$_(id); if (!c || !el) return [];
+    var l = [];
+    el.querySelectorAll(".cm-tabed-l").forEach(function (row) {
+      var o = {}, algum = false;
+      c.cols.forEach(function (col) {
+        var x = row.querySelector('[data-tk="' + col.k + '"]'), v = x ? String(x.value) : "";
+        if (col.tipo === "lista") { v = v.split("\n").map(function (s) { return s.trim(); }).filter(Boolean); if (v.length) algum = true; }
+        else { v = v.trim(); if (v) algum = true; if (col.tipo === "num") v = v === "" ? null : Number(v.replace(/\./g, "").replace(",", ".")); }
+        o[col.k] = v;
+      });
+      if (algum) l.push(c.cols.length === 1 && c.cols[0].k === "texto" ? o.texto : o);
+    });
+    return l;
+  }
+  function Comercial_ligarTabEd_(raiz) {
+    raiz.addEventListener("click", function (e) {
+      var add = e.target.closest && e.target.closest("[data-tabed-add]"), rem = e.target.closest && e.target.closest("[data-tabed-rem]");
+      if (!add && !rem) return;
+      var id = (add || rem).getAttribute(add ? "data-tabed-add" : "data-tabed-rem"), el = Com_$_(id), c = CM.tabCols[id];
+      var atuais = Comercial_lerTabEdCru_(id);
+      if (add) atuais.push({}); else atuais.splice(+rem.getAttribute("data-j"), 1);
+      el.innerHTML = Comercial_tabEdLinhas_(id, atuais);
+      if (add) { var ult = el.querySelectorAll(".cm-tabed-l"); var f = ult.length && ult[ult.length - 1].querySelector("input,textarea,select"); if (f) f.focus(); }
+    });
+  }
+  /** Como Comercial_lerTabEd_, mas mantém as linhas vazias (para redesenhar ao adicionar ou remover). */
+  function Comercial_lerTabEdCru_(id) {
+    var c = CM.tabCols[id], el = Com_$_(id), l = [];
+    el.querySelectorAll(".cm-tabed-l").forEach(function (row) { var o = {}; c.cols.forEach(function (col) { var x = row.querySelector('[data-tk="' + col.k + '"]'); o[col.k] = x ? (col.tipo === "lista" ? String(x.value).split("\n") : x.value) : ""; }); l.push(o); });
+    return l;
+  }
+  // 01/11/2026 (Comercial C2): quatro páginas, cada uma com o próprio "Salvar" e o motivo (o servidor grava só as chaves da página,
+  // por cima da versão em vigor). Funis, cadência, estratégias e as listas viraram tabelas editáveis.
+  var CM_MET_PAGS = [["vendemos", "VENDEMOS", "Como vendemos"], ["preco", "PRECO", "Preço e desconto"], ["documento", "DOCUMENTO", "Documento da proposta"], ["posvenda", "POSVENDA", "Depois da venda"]];
+  function Comercial_desenharMetodologia_(r, aviso) {
+    var alvo = Com_$_("cmMet"); if (!alvo) return;
+    CM.metR = r;
+    var pag = CM.metPag || "vendemos", m = r.metodologia;
+    var h = '<p class="cm-meta">Versão ' + Com_esc_(m.versao) + (m.atualizadaEm ? ' · ' + Com_esc_(m.atualizadaEm) + ' por ' + Com_esc_(m.atualizadaPor) : ' · padrão do sistema') + '</p>' +
+      '<nav class="cm-met-pags" aria-label="Páginas da metodologia">' + CM_MET_PAGS.map(function (x) { return '<button type="button" class="cm-tab' + (x[0] === pag ? " active" : "") + '"' + (x[0] === pag ? ' aria-current="page"' : '') + ' data-met-pag="' + x[0] + '">' + Com_esc_(x[2]) + '</button>'; }).join("") + '</nav>' +
+      (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '');
+    var corpo = { vendemos: Comercial_metVendemos_, preco: Comercial_metPreco_, documento: Comercial_metDocumento_, posvenda: Comercial_metPosVenda_ }[pag](r);
+    h += corpo;
+    if (r.versoes && r.versoes.length) h += '<details class="cm-caixa"><summary><b>Versões</b></summary>' + r.versoes.slice(0, 30).map(function (v) { return '<p class="cm-txt">Versão ' + v.versao + ' · ' + Com_esc_(v.em) + ' · ' + Com_esc_(v.por) + ': ' + Com_esc_(v.motivo) + '</p>'; }).join("") + '</details>';
+    var podeSalvar = r.podeEditar && (pag !== "preco" || true);
+    if (podeSalvar) h += '<div class="cm-caixa cm-met-salvar">' + Com_campo_("O que mudou nesta página e por quê (obrigatório)", '<textarea id="cmMMotivo" maxlength="500"></textarea>') + '<div id="cmMMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmMSalvar">Salvar "' + Com_esc_(CM_MET_PAGS.filter(function (x) { return x[0] === pag; })[0][2]) + '"</button></div></div>';
+    alvo.innerHTML = h;
+    alvo.querySelectorAll("[data-met-pag]").forEach(function (b) {
+      b.onclick = function () {
+        var nova = b.getAttribute("data-met-pag"), de = CM.metPag || "vendemos"; if (nova === de) return;
+        if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Metodologia: " + b.textContent, function () { CM.metPag = de; Comercial_desenharMetodologia_(CM.metR); }, { chave: "cm-met-" + nova });
+        CM.metPag = nova; Comercial_desenharMetodologia_(CM.metR);
+      };
+    });
+    if (!alvo.getAttribute("data-tabed")) { alvo.setAttribute("data-tabed", "1"); Comercial_ligarTabEd_(alvo); }
+    if (pag === "preco") Comercial_ligarPreco_(r);
+    var bt = Com_$_("cmMSalvar");
+    if (bt) bt.onclick = function () {
+      var x = CM_MET_PAGS.filter(function (y) { return y[0] === pag; })[0], parcial;
+      try { parcial = { vendemos: Comercial_lerVendemos_, preco: Comercial_lerPreco_, documento: Comercial_lerDocumento_, posvenda: Comercial_lerPosVenda_ }[pag](r); }
+      catch (e) { Com_msg_("cmMMsg", "Não foi possível ler a página: " + (e && e.message ? e.message : e) + ". Confira os campos marcados e salve de novo."); return; }
+      Com_chamar_("metodologia", { pagina: x[1], salvar: parcial, motivo: Com_$_("cmMMotivo").value }, function (y) {
+        CM.ini = null; Comercial_garantirInicio_(function () {});
+        Comercial_desenharMetodologia_(y, y.message);
+      }, function (e) { Com_msg_("cmMMsg", e); }, { carregando: "Salvando a página…" });
+    };
+  }
+  function Comercial_metVendemos_(r) {
+    var m = r.metodologia, ed = r.podeEditar, dis = ed ? "" : " disabled";
+    var ta = function (id, v, alt) { return '<textarea id="' + id + '"' + dis + ' style="min-height:' + (alt || 70) + 'px">' + Com_esc_(v) + '</textarea>'; };
+    var num = function (id, v, rot, aj) { return Com_campo_(rot, '<input id="' + id + '" inputmode="numeric" value="' + Com_esc_(v) + '"' + dis + '>', aj); };
+    var um = [{ k: "texto", t: "Texto" }];
+    var h = '<div class="cm-caixa"><h3>Tese e regras de ouro</h3>' + Com_campo_("Tese", ta("cmMTese", m.tese, 60)) + '<p class="cm-sec">Regras de ouro</p>' + Comercial_tabEd_("cmTOuro", um, m.regrasDeOuro, !ed, "adicionar regra") + '</div>';
+    h += '<div class="cm-caixa"><h3>Funis e etapas</h3><p class="cm-meta">Uma etapa por linha. A probabilidade cresce de etapa em etapa; a lista da etapa é o que o vendedor confirma ao avançar (um item por linha).</p>' + m.funis.map(function (f, k) {
+      return '<p class="cm-sec">Funil ' + Com_esc_(f.nome) + ' <span class="cm-meta">' + Com_esc_(f.descricao) + '</span></p>' +
+        Comercial_tabEd_("cmTFunil" + k, [{ k: "nome", t: "Etapa" }, { k: "probabilidade", t: "Probabilidade (%)", tipo: "num" }, { k: "maxDias", t: "Máximo de dias", tipo: "num" }, { k: "criterio", t: "Critério para sair", largo: true }, { k: "checklist", t: "Lista da etapa (um item por linha)", tipo: "lista", largo: true }], f.etapas, !ed, "adicionar etapa");
     }).join("") + '</div>';
-    var av = m.avanco || {}, chk = function (id, v, t) { return '<label class="cm-check"><input type="checkbox" id="' + id + '"' + (v !== false ? ' checked' : '') + dis + '> ' + Com_esc_(t) + '</label>'; };
-    h += '<div class="cm-caixa"><h3>Critérios para avançar de etapa</h3><p class="cm-meta">Conferidos pelo sistema sempre que alguém move uma oportunidade para a frente (quadro do funil ou ficha). Faltando algo, a oportunidade não muda e a tela diz o que fazer. Voltar de etapa pede o motivo.</p>' +
+    var av = m.avanco || {}, chk = function (id, v, t) { return '<label class="cm-check cm-check-grande"><input type="checkbox" id="' + id + '"' + (v !== false ? ' checked' : '') + dis + '> ' + Com_esc_(t) + '</label>'; };
+    h += '<div class="cm-caixa"><h3>Critérios para avançar de etapa</h3><p class="cm-meta">Conferidos sempre que alguém move uma oportunidade para a frente. Faltando algo, a oportunidade não muda e a tela diz o que fazer.</p>' +
       chk('cmMAvLista', av.exigirLista, 'O vendedor confirma cada item da lista da etapa que está deixando') + chk('cmMAvDec', av.exigirDecisor, 'Decisor mapeado na qualificação') + chk('cmMAvCt', av.exigirContato, 'Pelo menos um contato com o cliente registrado') +
       chk('cmMAvProp', av.exigirPropostaEnviada, 'Passar da etapa de proposta só com proposta enviada ao cliente') + chk('cmMAvAce', av.exigirAceite, 'A etapa de 100% só com a aprovação do cliente registrada (com o aceite)') + '</div>';
-    h += '<div class="cm-caixa"><h3>Listas</h3><div class="cm-grade2">' + Com_campo_("Origens (uma por linha)", ta("cmMOrig", linhas(m.origens), 150)) + Com_campo_("Motivos de perda (um por linha)", ta("cmMPerda", linhas(m.motivosPerda), 150)) + '</div>' + Com_campo_("Regra da perda", ta("cmMRegraPerda", m.regraPerda, 50)) + '</div>';
-    h += '<div class="cm-caixa"><h3>Qualificação</h3>' + Com_campo_("Critério", ta("cmMQCrit", m.qualificacao.criterio, 50)) + Com_campo_("Itens (nome | pergunta, um por linha)", ta("cmMQItens", m.qualificacao.itens.map(function (i) { return i.nome + " | " + i.pergunta; }).join("\n"), 100)) +
-      Com_campo_("Perguntas de qualificação rápida (uma por linha)", ta("cmMQPerg", linhas(m.qualificacao.perguntas), 120)) + Com_campo_("Perfil de cliente atendido", ta("cmMQPerfil", m.qualificacao.perfilCliente, 60)) + '</div>';
-    var c = m.cadencia;
-    var num = function (id, v, rot, aj) { return Com_campo_(rot, '<input id="' + id + '" inputmode="numeric" value="' + Com_esc_(v) + '"' + dis + '>', aj); };
+    h += '<div class="cm-caixa"><h3>Listas</h3><div class="cm-grade2"><div><p class="cm-sec">Origens</p>' + Comercial_tabEd_("cmTOrig", um, m.origens, !ed, "adicionar origem") + '</div><div><p class="cm-sec">Motivos de perda</p>' + Comercial_tabEd_("cmTPerda", um, m.motivosPerda, !ed, "adicionar motivo") + '</div></div>' + Com_campo_("Regra da perda", ta("cmMRegraPerda", m.regraPerda, 50)) + '</div>';
+    h += '<div class="cm-caixa"><h3>Qualificação</h3>' + Com_campo_("Critério", ta("cmMQCrit", m.qualificacao.criterio, 50)) + '<p class="cm-sec">Itens da qualificação</p>' + Comercial_tabEd_("cmTQItens", [{ k: "nome", t: "Item" }, { k: "pergunta", t: "Pergunta", largo: true }], m.qualificacao.itens, !ed, "adicionar item") +
+      '<p class="cm-sec">Perguntas de qualificação rápida</p>' + Comercial_tabEd_("cmTQPerg", um, m.qualificacao.perguntas, !ed, "adicionar pergunta") + Com_campo_("Perfil de cliente atendido", ta("cmMQPerfil", m.qualificacao.perfilCliente, 60)) + '</div>';
+    var c = m.cadencia, canais = Object.keys(CM.ini.tiposContato || { LIGACAO: "Ligação", WHATSAPP: "WhatsApp", EMAIL: "E-mail", REUNIAO: "Reunião", VISITA: "Visita" }).map(function (k) { return { v: k, t: (CM.ini.tiposContato || {})[k] || k }; });
     h += '<div class="cm-caixa"><h3>Cadência de retorno</h3><div class="cm-grade3">' + num("cmMCEsf", c.esfriandoDias, "Esfriando após (dias sem contato)") + num("cmMCPar", c.paradaDias, "Parada após (dias sem contato)") + num("cmMCTent", c.tentativasMudarEstrategia, "Mudar a estratégia após (tentativas sem resposta)") +
       num("cmMCLemb", c.propostaLembreteDiaUtil, "Retorno da proposta no (dia útil)") + num("cmMCEsc", c.propostaEscalaDiaUtil, "Proposta sem resposta: gestão no (dia útil)") + num("cmMCVenc", c.propostaVencendoDias, "Avisar proposta vencendo (dias antes)") + '</div>' +
-      Com_campo_("Passos da cadência (dia | canal | título, um por linha; canais: LIGACAO, WHATSAPP, EMAIL, REUNIAO, VISITA)", ta("cmMCPassos", c.passos.map(function (p) { return p.dia + " | " + p.canal + " | " + p.titulo; }).join("\n"), 120)) +
-      '<p class="cm-meta">Não há cobrança a cada hora: o retorno vira atividade em Minhas atividades e é cobrado pela regra das atividades (sistema até resolver, e-mail no expediente, WhatsApp só no resumo diário).</p></div>';
-    h += '<div class="cm-caixa"><h3>Estratégias, objeções e mensagens</h3>' + Com_campo_("Estratégias quando o cliente não responde (código | título | texto)", ta("cmMEstr", m.estrategias.map(function (e) { return e.codigo + " | " + e.titulo + " | " + e.texto; }).join("\n"), 120)) +
-      Com_campo_("Objeções (objeção | resposta)", ta("cmMObj", m.objecoes.map(function (o) { return o.objecao + " | " + o.resposta; }).join("\n"), 120)) +
+      '<p class="cm-sec">Passos da cadência</p>' + Comercial_tabEd_("cmTPassos", [{ k: "dia", t: "Dia", tipo: "num" }, { k: "canal", t: "Canal", tipo: "select", op: canais }, { k: "titulo", t: "O que fazer", largo: true }], c.passos, !ed, "adicionar passo") +
+      '<p class="cm-meta">O retorno vira atividade em Minhas atividades e é cobrado pela regra das atividades (sistema até resolver, e-mail no expediente, WhatsApp só no resumo diário).</p></div>';
+    h += '<div class="cm-caixa"><h3>Estratégias, objeções e mensagens</h3><p class="cm-sec">Estratégias quando o cliente não responde</p>' + Comercial_tabEd_("cmTEstr", [{ k: "codigo", t: "Código" }, { k: "titulo", t: "Título" }, { k: "texto", t: "Como fazer", tipo: "area", largo: true }], m.estrategias, !ed, "adicionar estratégia") +
+      '<p class="cm-sec">Objeções</p>' + Comercial_tabEd_("cmTObj", [{ k: "objecao", t: "Objeção" }, { k: "resposta", t: "Resposta", tipo: "area", largo: true }], m.objecoes, !ed, "adicionar objeção") +
       Object.keys(m.modelosMensagem).map(function (k) { return Com_campo_("Modelo de mensagem: " + k + " (use {nome}, {assunto}, {eu}, {proposta})", ta("cmMMsg_" + k, m.modelosMensagem[k], 70)); }).join("") + '</div>';
-    h += Comercial_caixaPrecificacao_(r);
-    h += '<div class="cm-caixa"><h3>Política de desconto</h3><div class="cm-grade2">' + num("cmMDesc", m.politica.descontoMaxPct, "Desconto máximo sem aprovação (%)") + num("cmMMarg", m.politica.margemMinPct, "Margem mínima quando o item tem custo (%)", "0 = não confere margem") + '</div>' + Com_campo_("Texto da política", ta("cmMPolTxt", m.politica.texto, 70)) + '</div>';
-    var pr = m.proposta;
-    h += '<div class="cm-caixa"><h3>Modelo da proposta</h3><p class="cm-meta">Quando o modelo oficial da empresa chegar, os textos entram aqui. Valem para as propostas novas.</p>' + num("cmMVal", pr.validadeDias, "Validade padrão (dias)") + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
-      '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC_" + k, pr.condicoes[k], 60)); }).join("") + '</div>' + Com_campo_("Responsabilidades", ta("cmMPResp", pr.responsabilidades, 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite", pr.textoAceite, 60)) + '</div>';
-    // 28/10/2026: modelos de produto e de serviço e produto (misto). Os textos acima são o modelo de serviço.
-    [["Produto", "Modelo da proposta de produto (fornecimento)", "Vale quando o tipo de orçamento é Produto. O documento usa \"Resumo do fornecimento\", \"Prazo de entrega\" e \"Local de entrega\" (com o endereço da unidade)."],
-     ["Misto", "Modelo da proposta de serviço e produto (misto)", "Vale quando a proposta tem serviços e produtos (ou o vendedor escolhe Misto)."]].forEach(function (x) {
-      var cs = pr["condicoes" + x[0]] || {};
-      h += '<div class="cm-caixa"><h3>' + x[1] + '</h3><p class="cm-meta">' + Com_esc_(x[2]) + ' Os textos acima são o modelo de serviço; os termos e condições da contratação são os mesmos nos três modelos.</p>' + Com_campo_("Apresentação", ta("cmMPApr" + x[0], pr["apresentacao" + x[0]] || "", 120)) +
-        '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_("Condição padrão: " + k, ta("cmMPC" + x[0] + "_" + k, cs[k] !== undefined ? cs[k] : pr.condicoes[k], 60)); }).join("") + '</div>' +
-        Com_campo_("Responsabilidades", ta("cmMPResp" + x[0], pr["responsabilidades" + x[0]] || "", 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite" + x[0], pr["textoAceite" + x[0]] || "", 60)) + '</div>';
-    });
-    // 28/10/2026: termos e condições da contratação (cláusulas fixas do documento), versionados; só Diretoria e Administrador mudam
-    var tv = r.termos || {}, edT = ed && r.podeEditarTermos, disT = edT ? "" : " disabled";
-    h += '<div class="cm-caixa"><h3>Termos e condições da contratação</h3><p class="cm-meta">Vão fixos em toda proposta, na seção "Termos e condições da contratação", logo acima das assinaturas (texto justificado, uma cláusula por linha). ' +
-      'Versão em vigor: ' + Com_esc_(tv.versao || 1) + (tv.desde ? ' (desde ' + Com_esc_(tv.desde) + (tv.por ? ', ' + Com_esc_(tv.por) : '') + ')' : ' (texto padrão)') + '. Cada mudança do texto é uma versão nova; a proposta guarda a versão que estava em vigor quando o documento foi gerado, e mudar aqui não altera proposta já enviada.' +
-      (ed && !edT ? ' Só a Diretoria e o Administrador mudam estes textos.' : '') + '</p>' +
-      Com_campo_("Cláusulas (uma por linha)", '<textarea id="cmMPTermos"' + disT + ' style="min-height:260px">' + Com_esc_(pr.termos || "") + '</textarea>') +
-      Com_campo_("Frase de concordância (sai em negrito depois das cláusulas)", '<textarea id="cmMPTermosConc"' + disT + ' style="min-height:50px">' + Com_esc_(pr.termosConcordancia || "") + '</textarea>') + '</div>';
-    var pv = m.posVenda;
     var pessoas = (r.equipeSgo || []).map(function (u) { return { v: u.id, t: u.nome }; });
-    h += '<div class="cm-caixa"><h3>Pós-venda (passagem aos setores)</h3>' + Object.keys(CM.ini.setores).map(function (s) {
-      return '<div class="cm-grade3">' + num("cmMPV_" + s, pv[s].prazoDiasUteis, CM.ini.setores[s] + ": prazo (dias úteis)") + Com_campo_("Quem recebe", '<select id="cmMPVR_' + s + '"' + dis + '>' + Com_opcoes_(pessoas, (pv.destinatarios[s] || [])[0], "Padrão: gestor da área na Caixa de decisões") + '</select>') + Com_campo_("Lista de conferência (uma por linha)", ta("cmMPVC_" + s, linhas(pv[s].checklist), 90)) + '</div>';
-    }).join("") + num("cmMPVParado", pv.pedidoParadoDiasUteis, "Pedido sem passagem vai para a Caixa após (dias úteis)") + '</div>';
-    h += '<div class="cm-caixa"><h3>Gestão comercial</h3><p class="cm-meta">Gestor com área Comercial no cadastro já é gestão comercial. Aqui entram outras pessoas (por exemplo um Gestor de outra área que também responde pelo Comercial).</p>' +
-      (pessoas.length ? '<div style="max-height:180px;overflow:auto">' + pessoas.map(function (p) { return '<label class="cm-check"><input type="checkbox" data-gestor="' + Com_esc_(p.v) + '"' + ((m.gestores || []).indexOf(p.v) >= 0 ? ' checked' : '') + dis + '> ' + Com_esc_(p.t) + '</label>'; }).join("") + '</div>' : '') + '</div>';
+    h += '<div class="cm-caixa"><h3>Gestão comercial</h3><p class="cm-meta">Gestor com área Comercial no cadastro já é gestão comercial. Aqui entram outras pessoas.</p>' +
+      (pessoas.length ? '<div style="max-height:220px;overflow:auto">' + pessoas.map(function (p) { return '<label class="cm-check cm-check-grande"><input type="checkbox" data-gestor="' + Com_esc_(p.v) + '"' + ((m.gestores || []).indexOf(p.v) >= 0 ? ' checked' : '') + dis + '> ' + Com_esc_(p.t) + '</label>'; }).join("") + '</div>' : '') + '</div>';
     if (r.aprendizado && r.aprendizado.length) h += '<div class="cm-caixa"><h3>O que a equipe fez com as sugestões da gestora</h3><table class="cm-tabela"><thead><tr><th>Tipo</th><th>Regra</th><th class="n">Sugestões</th><th class="n">Usadas</th><th class="n">Não serviram</th><th>Por que não serviram</th></tr></thead><tbody>' +
       r.aprendizado.map(function (a) { return '<tr><td data-r="Tipo">' + Com_esc_(a.tipo) + '</td><td data-r="Regra">' + Com_esc_(a.regra) + '</td><td class="n" data-r="Sugestões">' + a.total + '</td><td class="n" data-r="Usadas">' + a.usadas + '</td><td class="n" data-r="Não serviram">' + a.descartadas + '</td><td data-r="Motivos">' + Com_esc_(a.motivos.join("; ")) + '</td></tr>'; }).join("") + '</tbody></table></div>';
-    if (r.versoes && r.versoes.length) h += '<div class="cm-caixa"><h3>Versões</h3>' + r.versoes.map(function (v) { return '<p class="cm-txt">Versão ' + v.versao + ' · ' + Com_esc_(v.em) + ' · ' + Com_esc_(v.por) + ': ' + Com_esc_(v.motivo) + '</p>'; }).join("") + '</div>';
-    if (ed) h += '<div class="cm-caixa">' + Com_campo_("O que mudou e por quê (obrigatório)", '<textarea id="cmMMotivo" maxlength="500"></textarea>') + '<div id="cmMMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmMSalvar">Salvar nova versão</button></div></div>';
-    alvo.innerHTML = h;
-    if (!ed) return;
-    Com_$_("cmMSalvar").onclick = function () {
-      try {
-        var v = function (id) { var el = Com_$_(id); return el ? el.value : ""; };
-        var ls = function (id) { return v(id).split("\n").map(function (x) { return x.trim(); }).filter(Boolean); };
-        var partes = function (l) { return l.split("|").map(function (x) { return x.trim(); }); };
-        var n = JSON.parse(JSON.stringify(m));
-        n.tese = v("cmMTese"); n.regrasDeOuro = ls("cmMOuro");
-        n.funis.forEach(function (f, k) { var antigas = f.etapas; f.etapas = ls("cmMFunil" + k).map(function (l, j) { var p = partes(l); return { codigo: (antigas[j] && antigas[j].codigo) || (f.codigo.slice(0, 3) + "_" + (j + 1)), nome: p[0], probabilidade: Number(p[1]), maxDias: Number(p[2]) || 0, criterio: p[3] || "", checklist: (p[4] || "").split(";").map(function (x) { return x.trim(); }).filter(Boolean) }; }); });
-        var ck = function (id) { var el = Com_$_(id); return el ? el.checked : true; };
-        n.avanco = { exigirLista: ck("cmMAvLista"), exigirDecisor: ck("cmMAvDec"), exigirContato: ck("cmMAvCt"), exigirPropostaEnviada: ck("cmMAvProp"), exigirAceite: ck("cmMAvAce") };
-        n.origens = ls("cmMOrig"); n.motivosPerda = ls("cmMPerda"); n.regraPerda = v("cmMRegraPerda");
-        n.qualificacao = { criterio: v("cmMQCrit"), perguntas: ls("cmMQPerg"), perfilCliente: v("cmMQPerfil"), itens: ls("cmMQItens").map(function (l, j) { var p = partes(l); var ant = m.qualificacao.itens[j]; return { codigo: ant ? ant.codigo : "Q" + (j + 1), nome: p[0], pergunta: p[1] || "" }; }) };
-        n.cadencia = { esfriandoDias: Number(v("cmMCEsf")), paradaDias: Number(v("cmMCPar")), tentativasMudarEstrategia: Number(v("cmMCTent")), propostaLembreteDiaUtil: Number(v("cmMCLemb")), propostaEscalaDiaUtil: Number(v("cmMCEsc")), propostaVencendoDias: Number(v("cmMCVenc")), carteiraEsquecidaDias: m.cadencia.carteiraEsquecidaDias,
-          passos: ls("cmMCPassos").map(function (l) { var p = partes(l); return { dia: Number(p[0]), canal: (p[1] || "LIGACAO").toUpperCase(), titulo: p[2] || "" }; }) };
-        n.estrategias = ls("cmMEstr").map(function (l) { var p = partes(l); return { codigo: (p[0] || "").toUpperCase(), titulo: p[1] || "", texto: p[2] || "" }; });
-        n.objecoes = ls("cmMObj").map(function (l) { var p = partes(l); return { objecao: p[0], resposta: p[1] || "" }; });
-        Object.keys(m.modelosMensagem).forEach(function (k) { n.modelosMensagem[k] = v("cmMMsg_" + k); });
-        n.politica.descontoMaxPct = Number(String(v("cmMDesc")).replace(",", ".")); n.politica.margemMinPct = Number(String(v("cmMMarg")).replace(",", ".")); n.politica.texto = v("cmMPolTxt");
-        n.proposta.validadeDias = Number(v("cmMVal")); n.proposta.apresentacao = v("cmMPApr"); Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta.condicoes[k] = v("cmMPC_" + k); }); n.proposta.responsabilidades = v("cmMPResp"); n.proposta.textoAceite = v("cmMPAceite");
-        ["Produto", "Misto"].forEach(function (x) { n.proposta["apresentacao" + x] = v("cmMPApr" + x); n.proposta["condicoes" + x] = {}; Object.keys(m.proposta.condicoes).forEach(function (k) { n.proposta["condicoes" + x][k] = v("cmMPC" + x + "_" + k); }); n.proposta["responsabilidades" + x] = v("cmMPResp" + x); n.proposta["textoAceite" + x] = v("cmMPAceite" + x); });
-        if (r.podeEditarTermos) { n.proposta.termos = v("cmMPTermos"); n.proposta.termosConcordancia = v("cmMPTermosConc"); }
-        if (r.podeEditarPrecificacao) n.precificacao = Comercial_lerPrecificacao_(m.precificacao);
-        Object.keys(CM.ini.setores).forEach(function (s) { n.posVenda[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; n.posVenda[s].checklist = ls("cmMPVC_" + s); n.posVenda.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
-        n.posVenda.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;
-        n.gestores = Array.prototype.map.call(document.querySelectorAll("[data-gestor]:checked"), function (x) { return x.getAttribute("data-gestor"); });
-        delete n.versao; delete n.atualizadaEm; delete n.atualizadaPor;
-        Com_chamar_("metodologia", { salvar: n, motivo: v("cmMMotivo") }, function (x) { CM.ini = null; Comercial_garantirInicio_(function () {}); Comercial_desenharMetodologia_(Object.assign(r, { metodologia: x.metodologia, termos: x.termos || r.termos })); Com_msg_("cmMMsg", x.message, "ok"); }, function (e) { Com_msg_("cmMMsg", e); });
-      } catch (e) { Com_msg_("cmMMsg", "Não foi possível ler a metodologia da tela: " + (e && e.message ? e.message : e) + ". Confira o formato das linhas (campos separados por |)."); }
+    return h;
+  }
+  function Comercial_lerVendemos_(r) {
+    var m = r.metodologia, v = function (id) { var el = Com_$_(id); return el ? el.value : ""; }, ck = function (id) { var el = Com_$_(id); return el ? el.checked : true; };
+    var n = { tese: v("cmMTese"), regrasDeOuro: Comercial_lerTabEd_("cmTOuro"), origens: Comercial_lerTabEd_("cmTOrig"), motivosPerda: Comercial_lerTabEd_("cmTPerda"), regraPerda: v("cmMRegraPerda") };
+    n.funis = m.funis.map(function (f, k) {
+      var antigas = f.etapas;
+      return Object.assign({}, f, { etapas: Comercial_lerTabEd_("cmTFunil" + k).map(function (e, j) {
+        if (!e.nome) throw new Error("a etapa " + (j + 1) + " do funil " + f.nome + " está sem nome");
+        return { codigo: (antigas[j] && antigas[j].codigo) || (f.codigo.slice(0, 3) + "_" + (j + 1)), nome: e.nome, probabilidade: e.probabilidade, maxDias: e.maxDias || 0, criterio: e.criterio || "", checklist: e.checklist || [] };
+      }) });
+    });
+    n.avanco = { exigirLista: ck("cmMAvLista"), exigirDecisor: ck("cmMAvDec"), exigirContato: ck("cmMAvCt"), exigirPropostaEnviada: ck("cmMAvProp"), exigirAceite: ck("cmMAvAce") };
+    n.qualificacao = { criterio: v("cmMQCrit"), perguntas: Comercial_lerTabEd_("cmTQPerg"), perfilCliente: v("cmMQPerfil"), itens: Comercial_lerTabEd_("cmTQItens").map(function (i, j) { var ant = m.qualificacao.itens[j]; return { codigo: ant ? ant.codigo : "Q" + (j + 1), nome: i.nome, pergunta: i.pergunta || "" }; }) };
+    n.cadencia = { esfriandoDias: Number(v("cmMCEsf")), paradaDias: Number(v("cmMCPar")), tentativasMudarEstrategia: Number(v("cmMCTent")), propostaLembreteDiaUtil: Number(v("cmMCLemb")), propostaEscalaDiaUtil: Number(v("cmMCEsc")), propostaVencendoDias: Number(v("cmMCVenc")), carteiraEsquecidaDias: m.cadencia.carteiraEsquecidaDias,
+      passos: Comercial_lerTabEd_("cmTPassos").map(function (p) { return { dia: p.dia || 0, canal: p.canal || "LIGACAO", titulo: p.titulo || "" }; }) };
+    n.estrategias = Comercial_lerTabEd_("cmTEstr").map(function (e) { return { codigo: String(e.codigo || "").toUpperCase(), titulo: e.titulo || "", texto: e.texto || "" }; });
+    n.objecoes = Comercial_lerTabEd_("cmTObj").map(function (o) { return { objecao: o.objecao || "", resposta: o.resposta || "" }; });
+    n.modelosMensagem = {}; Object.keys(m.modelosMensagem).forEach(function (k) { n.modelosMensagem[k] = v("cmMMsg_" + k); });
+    n.gestores = Array.prototype.map.call(document.querySelectorAll("[data-gestor]:checked"), function (x) { return x.getAttribute("data-gestor"); });
+    return n;
+  }
+  function Comercial_metDocumento_(r) {
+    var m = r.metodologia, ed = r.podeEditar, dis = ed ? "" : " disabled", pr = m.proposta;
+    var ta = function (id, v, alt) { return '<textarea id="' + id + '"' + dis + ' style="min-height:' + (alt || 90) + 'px">' + Com_esc_(v) + '</textarea>'; };
+    var rot = { pagamento: "Forma de pagamento", prazoExecucao: "Prazo de execução (texto padrão; com faixa escolhida, a proposta usa o prazo da faixa)", garantia: "Garantia", frete: "Frete", impostos: "Impostos", local: "Local", gerais: "Condições gerais" };
+    var h = '<div class="cm-caixa"><h3>Modelo da proposta de serviço</h3><p class="cm-meta">Valem para as propostas novas.</p>' + Com_campo_("Validade padrão (dias)", '<input id="cmMVal" inputmode="numeric" value="' + Com_esc_(pr.validadeDias) + '"' + dis + '>') + Com_campo_("Apresentação", ta("cmMPApr", pr.apresentacao, 120)) +
+      '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_(rot[k] || k, ta("cmMPC_" + k, pr.condicoes[k], 60)); }).join("") + '</div>' + Com_campo_("Responsabilidades", ta("cmMPResp", pr.responsabilidades, 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite", pr.textoAceite, 60)) + '</div>';
+    [["Produto", "Modelo da proposta de produto (fornecimento)", "Vale quando o tipo de orçamento é Produto."], ["Misto", "Modelo da proposta de serviço e produto (misto)", "Vale quando a proposta tem serviços e produtos."]].forEach(function (x) {
+      var cs = pr["condicoes" + x[0]] || {};
+      h += '<details class="cm-caixa"><summary><b>' + x[1] + '</b> <span class="cm-meta">' + Com_esc_(x[2]) + '</span></summary>' + Com_campo_("Apresentação", ta("cmMPApr" + x[0], pr["apresentacao" + x[0]] || "", 120)) +
+        '<div class="cm-grade2">' + Object.keys(pr.condicoes).map(function (k) { return Com_campo_(rot[k] || k, ta("cmMPC" + x[0] + "_" + k, cs[k] !== undefined ? cs[k] : pr.condicoes[k], 60)); }).join("") + '</div>' +
+        Com_campo_("Responsabilidades", ta("cmMPResp" + x[0], pr["responsabilidades" + x[0]] || "", 160)) + Com_campo_("Texto do aceite", ta("cmMPAceite" + x[0], pr["textoAceite" + x[0]] || "", 60)) + '</details>';
+    });
+    var tv = r.termos || {}, edT = ed && r.podeEditarTermos, disT = edT ? "" : " disabled";
+    h += '<div class="cm-caixa"><h3>Termos e condições da contratação</h3><p class="cm-meta">Vão fixos em toda proposta, logo acima das assinaturas. Versão em vigor: ' + Com_esc_(tv.versao || 1) + (tv.desde ? ' (desde ' + Com_esc_(tv.desde) + (tv.por ? ', ' + Com_esc_(tv.por) : '') + ')' : ' (texto padrão)') +
+      '. A proposta guarda a versão que estava em vigor quando o documento foi gerado. A cláusula do prazo remete à faixa escolhida em cada item.' + (ed && !edT ? ' Só a Diretoria e o Administrador mudam estes textos.' : '') + '</p>' +
+      Com_campo_("Cláusulas (uma por linha)", '<textarea id="cmMPTermos"' + disT + ' style="min-height:260px">' + Com_esc_(pr.termos || "") + '</textarea>') +
+      Com_campo_("Frase de concordância", '<textarea id="cmMPTermosConc"' + disT + ' style="min-height:50px">' + Com_esc_(pr.termosConcordancia || "") + '</textarea>') + '</div>';
+    return h;
+  }
+  function Comercial_lerDocumento_(r) {
+    var m = r.metodologia, v = function (id) { var el = Com_$_(id); return el ? el.value : ""; };
+    var pr = { validadeDias: Number(v("cmMVal")), apresentacao: v("cmMPApr"), condicoes: {}, responsabilidades: v("cmMPResp"), textoAceite: v("cmMPAceite") };
+    Object.keys(m.proposta.condicoes).forEach(function (k) { pr.condicoes[k] = v("cmMPC_" + k); });
+    ["Produto", "Misto"].forEach(function (x) { pr["apresentacao" + x] = v("cmMPApr" + x); pr["condicoes" + x] = {}; Object.keys(m.proposta.condicoes).forEach(function (k) { pr["condicoes" + x][k] = v("cmMPC" + x + "_" + k); }); pr["responsabilidades" + x] = v("cmMPResp" + x); pr["textoAceite" + x] = v("cmMPAceite" + x); });
+    if (r.podeEditarTermos) { pr.termos = v("cmMPTermos"); pr.termosConcordancia = v("cmMPTermosConc"); }
+    return { proposta: pr };
+  }
+  function Comercial_metPosVenda_(r) {
+    var m = r.metodologia, ed = r.podeEditar, dis = ed ? "" : " disabled", pv = m.posVenda;
+    var pessoas = (r.equipeSgo || []).map(function (u) { return { v: u.id, t: u.nome }; });
+    return '<div class="cm-caixa"><h3>Passagem aos setores</h3><p class="cm-meta">Pedido aprovado vira atividade para cada setor, com prazo e lista de conferência, sem valores.</p>' + Object.keys(CM.ini.setores).map(function (s) {
+      return '<p class="cm-sec">' + Com_esc_(CM.ini.setores[s]) + '</p><div class="cm-grade2">' + Com_campo_("Prazo (dias úteis)", '<input id="cmMPV_' + s + '" inputmode="numeric" value="' + Com_esc_(pv[s].prazoDiasUteis) + '"' + dis + '>') +
+        Com_campo_("Quem recebe", '<select id="cmMPVR_' + s + '"' + dis + '>' + Com_opcoes_(pessoas, (pv.destinatarios[s] || [])[0], "Padrão: gestor da área na Caixa de decisões") + '</select>') + '</div>' + Comercial_tabEd_("cmTPV_" + s, [{ k: "texto", t: "Item da lista de conferência" }], pv[s].checklist, !ed, "adicionar item");
+    }).join("") + Com_campo_("Pedido sem passagem vai para a Caixa após (dias úteis)", '<input id="cmMPVParado" inputmode="numeric" value="' + Com_esc_(pv.pedidoParadoDiasUteis) + '"' + dis + '>') + '</div>';
+  }
+  function Comercial_lerPosVenda_(r) {
+    var m = r.metodologia, v = function (id) { var el = Com_$_(id); return el ? el.value : ""; }, pv = JSON.parse(JSON.stringify(m.posVenda));
+    Object.keys(CM.ini.setores).forEach(function (s) { pv[s].prazoDiasUteis = Number(v("cmMPV_" + s)) || 1; pv[s].checklist = Comercial_lerTabEd_("cmTPV_" + s); pv.destinatarios[s] = v("cmMPVR_" + s) ? [v("cmMPVR_" + s)] : []; });
+    pv.pedidoParadoDiasUteis = Number(v("cmMPVParado")) || 1;
+    return { posVenda: pv };
+  }
+  // ---- Preço e desconto: parâmetros em campos de formulário, cada um com o que é, o aviso "valor provisório" e a regra do preço
+  // em linguagem simples com um exemplo calculado ao vivo (só para quem vê custo).
+  function Comercial_metPreco_(r) {
+    var m = r.metodologia, p = m.precificacao || {}, x = r.precificacao || {}, edP = !!r.podeEditarPrecificacao, edD = !!r.podeEditar, res = !!r.precificacaoReservada;
+    var pend = x.pendentes || [], prov = function (campo) { return pend.indexOf(campo) >= 0 ? ' <span class="cm-selo laranja" title="O dono ainda vai confirmar">valor provisório</span>' : ''; };
+    var disP = edP ? "" : " disabled", disD = edD ? "" : " disabled";
+    var vb = Comercial_valorBr_;
+    var cmp = function (id, v, rot, aj, o) { o = o || {}; var reservado = o.reservado && res; return '<div class="cm-campo"><label for="' + id + '">' + Com_esc_(rot) + (o.prov ? prov(o.prov) : '') + '</label><input id="' + id + '" inputmode="decimal" value="' + Com_esc_(reservado ? "" : vb(v)) + '"' + (reservado ? ' placeholder="só a gestão vê" disabled' : (o.dis !== undefined ? o.dis : disP)) + ' data-preco-vivo>' + (aj ? '<div class="cm-ajuda-campo">' + Com_esc_(aj) + '</div>' : '') + '</div>'; };
+    var ch = p.custoHora || {}, tv = p.taxaViagem || {}, bc = p.beneficioConduta || {}, pz = x.prazo || p.prazo || { faixas: [] }, po = m.politica || {}, b = x.beneficio || {};
+    var h = (pend.length ? '<div class="cm-faixa aviso"><b>Valores provisórios:</b> os campos marcados ainda dependem da confirmação do dono. O sistema já funciona com eles; quando o dono confirmar, a Diretoria marca abaixo, em "O que o dono já confirmou".</div>' : '') +
+      (edP ? '' : '<div class="cm-faixa">Só a Diretoria e o Administrador mudam os parâmetros de preço.' + (edD ? ' A gestão comercial muda o desconto.' : '') + '</div>');
+    h += '<div class="cm-preco-grade"><div>';
+    h += '<div class="cm-caixa"><h3>Impostos, comissão e margem</h3><div class="cm-grade2">' +
+      cmp("cmPrImp", p.impostosPct, "Impostos sobre a nota (%)", "PIS, COFINS e ISS no Lucro Real. Saem do preço antes da sobra.", { reservado: true }) +
+      cmp("cmPrCom", p.comissaoPct, "Comissão de venda (%)", "Sobre a venda dos itens (o deslocamento não paga comissão).", { reservado: true, prov: "comissaoPct" }) +
+      cmp("cmPrAlvo", p.margemAlvoPct, "Margem alvo (%)", "O que deve sobrar para a empresa no preço de tabela.", { reservado: true }) +
+      cmp("cmPrMin", p.margemMinPct, "Margem mínima (%)", "Abaixo dela a proposta vai para a Caixa de decisões e só a Diretoria aprova.", { reservado: true }) + '</div>' +
+      (m.margemUnificada && !res ? '<p class="cm-meta">Uma margem mínima só, depois de impostos, comissão e deslocamento. ' + Com_esc_({ PRECIFICACAO: 'Valor que já estava na política de precificação.', POLITICA_ANTIGA: 'Valor trazido da antiga margem da política de desconto (' + vb(m.margemUnificada.antes.politica) + '%).', PADRAO: 'Valor inicial da tabela C1 (não havia margem gravada).' }[m.margemUnificada.origem] || '') + (m.margemUnificada.divergiam ? ' A antiga margem da política de desconto era ' + vb(m.margemUnificada.antes.politica) + '% e ficou registrada no histórico.' : '') + '</p>' : '') + '</div>';
+    h += '<div class="cm-caixa"><h3>Custo do serviço (ficha de custo)</h3><div class="cm-grade2">' +
+      cmp("cmPrHT", ch.TECNICO, "Custo da hora do técnico (R$)", "Salário com encargos dividido pelas horas faturáveis do mês.", { reservado: true, prov: "custoHora" }) +
+      cmp("cmPrHE", ch.ENGENHEIRO, "Custo da hora do engenheiro (R$)", "Mesma conta, para o engenheiro.", { reservado: true, prov: "custoHora" }) +
+      cmp("cmPrFixo", p.custoFixoPct, "Custo fixo sobre a mão de obra (%)", "Aluguel, administração e veículos rateados sobre as horas de serviço.", { reservado: true, prov: "custoFixoPct" }) +
+      cmp("cmPrAvulsa", p.horaAvulsa, "Hora técnica avulsa (R$)", "Preço da hora de corretiva, instalação ou acompanhamento.") + '</div></div>';
+    h += '<div class="cm-caixa"><h3>Deslocamento</h3><p class="cm-meta">Sempre um item à parte na proposta: custo mais impostos, sem margem e sem comissão.</p><div class="cm-grade2">' +
+      cmp("cmPrKm", p.valorKm, "Valor por km rodado (R$)", "Ida e volta = km do trecho x 2. Cobre o veículo da empresa.") +
+      '<div class="cm-campo"><label for="cmPrTaxaRot">Nome da taxa por viagem' + prov("taxaViagem") + '</label><input id="cmPrTaxaRot" maxlength="80" value="' + Com_esc_(tv.rotulo || "") + '"' + disP + '><div class="cm-ajuda-campo">Aparece na conta do deslocamento (não vai para o cliente).</div></div>' +
+      cmp("cmPrTaxa", tv.valor, "Taxa por viagem (R$)", "Cobrada uma vez por viagem.", { prov: "taxaViagem" }) +
+      cmp("cmPrTaxaKm", tv.kmMinimo, "Grande Goiânia: até (km do trecho)", "Até este km não cobra a taxa por viagem.") +
+      '<div class="cm-campo"><label class="cm-check cm-check-grande"><input type="checkbox" id="cmPrAliReg"' + (p.alimentacaoForaDaRegiao !== false ? " checked" : "") + disP + '> Alimentação só fora da Grande Goiânia</label></div>' +
+      cmp("cmPrAli", p.alimentacaoPessoaDia, "Alimentação por pessoa por dia (R$)") + cmp("cmPrHosp", p.hospedagemPessoaNoite, "Hotel por pessoa por noite (R$)") +
+      cmp("cmPrEstr", p.estradaKmMinimo, "Horas de estrada só acima de (km do trecho)", "Pelo custo da hora com o custo fixo. Abaixo disso, as horas faturáveis já cobrem a estrada.") +
+      cmp("cmPrVel", p.velocidadeMediaKmh, "Velocidade média (km/h)", "Estima as horas de estrada.") + '</div>' +
+      '<p class="cm-txt">Benefício do Programa de conduta em vigor: ' + Com_esc_("R$ " + vb(b.valor)) + ' por pessoa por viagem, em trecho a partir de ' + Com_esc_(vb(b.kmMinimo)) + ' km (fonte: ' + Com_esc_(b.fonte || "") + '). Quem muda é o Programa de conduta.</p>' +
+      '<details><summary class="cm-meta">Mais ajustes do deslocamento (origem, diárias em dinheiro, arredondamento)</summary><div class="cm-grade2">' +
+      '<div class="cm-campo"><label for="cmPrOri">Origem padrão</label><input id="cmPrOri" maxlength="200" value="' + Com_esc_(p.origemPadrao || "") + '"' + disP + '></div>' +
+      '<div class="cm-campo"><label for="cmPrRep">Como o custo entra no preço (padrão)</label><select id="cmPrRep"' + disP + '>' + Com_opcoes_(Object.keys(x.repasses || { ITEM: "Item separado", DILUIDO: "Diluído" }).map(function (k) { return { v: k, t: (x.repasses || {})[k] || k }; }), p.repassePadrao || "ITEM") + '</select></div>' +
+      cmp("cmPrDiaT", (p.diariaPessoaDia || {}).TECNICO, "Diária em dinheiro do técnico (R$, opcional)", "Vazio: a alimentação e o hotel cobrem a estadia.") + cmp("cmPrDiaE", (p.diariaPessoaDia || {}).ENGENHEIRO, "Diária em dinheiro do engenheiro (R$, opcional)") +
+      cmp("cmPrHrT", (p.horaDeslocamento || {}).TECNICO, "Hora de estrada do técnico (R$, opcional)", "Vazio: custo da hora com o custo fixo.") + cmp("cmPrHrE", (p.horaDeslocamento || {}).ENGENHEIRO, "Hora de estrada do engenheiro (R$, opcional)") +
+      cmp("cmPrMDes", p.margemDeslocamentoPct, "Margem sobre o deslocamento (%)", "0 = repassa só o custo e os impostos.", { reservado: true }) + cmp("cmPrArr", p.arredondarPara, "Arredondar o deslocamento a múltiplos de (R$)") +
+      cmp("cmPrBenV", bc.valorPorColaborador, "Reserva do benefício da Conduta (R$)", "Só vale se o Programa de conduta não responder.") + cmp("cmPrBenK", bc.kmMinimoTrecho, "Reserva: km mínimo do benefício") + '</div></details></div>';
+    // faixas de prazo
+    h += '<div class="cm-caixa"><h3>Faixas de prazo</h3><p class="cm-meta">O vendedor escolhe a faixa por item ou para a proposta inteira; o documento mostra o prazo e o valor da faixa. O acréscimo vale só para serviço.</p>' +
+      '<div class="cm-faixas">' + pz.faixas.map(function (f, k) {
+        var nor = f.codigo === "NORMAL";
+        return '<div class="cm-faixa-l" data-faixa="' + f.codigo + '"><div class="cm-campo"><label for="cmFxN' + k + '">Faixa</label><input id="cmFxN' + k + '" data-fk="nome" maxlength="40" value="' + Com_esc_(f.nome) + '"' + disP + '></div>' +
+          '<div class="cm-campo"><label for="cmFxD' + k + '">Prazo (dias úteis)</label><input id="cmFxD' + k + '" data-fk="diasUteis" inputmode="numeric" value="' + Com_esc_(f.diasUteis) + '"' + disP + ' data-preco-vivo></div>' +
+          '<div class="cm-campo"><label for="cmFxA' + k + '">Acréscimo (%)</label><input id="cmFxA' + k + '" data-fk="acrescimoPct" inputmode="decimal" value="' + Com_esc_(vb(f.acrescimoPct)) + '"' + (nor ? ' disabled title="A Normal é o preço de tabela"' : disP) + ' data-preco-vivo></div>' +
+          '<div class="cm-campo"><label>' + (f.codigo === "PRIORITARIA" ? 'Ligada' + prov("prioritaria") : 'Ligada') + '</label><label class="cm-check cm-check-grande"><input type="checkbox" data-fk="ativa"' + (f.ativa ? " checked" : "") + (nor ? " disabled" : disP) + '> ' + (nor ? "sempre" : f.ativa ? "o vendedor pode escolher" : "desligada até o dono aprovar") + '</label></div></div>';
+      }).join("") + '</div>' +
+      '<div class="cm-grade2"><div class="cm-campo"><label for="cmPzConta">O prazo conta até' + prov("prazoConta") + '</label><select id="cmPzConta"' + disP + '>' + Com_opcoes_([{ v: "RELATORIO", t: "a entrega do relatório ou certificado" }, { v: "EXECUCAO", t: "a execução do serviço (relatório depois)" }], pz.contaAte) + '</select><div class="cm-ajuda-campo">O documento explica isso ao cliente em cada item.</div></div>' +
+      cmp("cmPzRel", pz.relatorioDiasUteis, "Relatório depois da execução (dias úteis)", "Usado quando o prazo conta até a execução.") + '</div>' +
+      '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmPzLic"' + (pz.licitacaoSemAcrescimo ? " checked" : "") + disP + '> Mostrar a opção de licitação ou contrato sem acréscimo de urgência' + prov("contratoUrgencia") + '</label>' +
+      '<div class="cm-campo"><label for="cmPzLicRot">Texto da opção</label><input id="cmPzLicRot" maxlength="120" value="' + Com_esc_(pz.licitacaoRotulo || "") + '"' + disP + '></div></div>';
+    // desconto
+    h += '<div class="cm-caixa"><h3>Desconto</h3><div class="cm-grade3">' +
+      cmp("cmMDesc", po.descontoMaxPct, "Limite do vendedor sem aprovação (%)", "Acima dele, a gestão comercial decide na Caixa de decisões.", { dis: disD, prov: "alcadas" }) +
+      cmp("cmMAlcG", po.alcadaGerentePct, "Alçada do gerente (%)", "Referência da C1; hoje a gestora avisa, não trava.", { dis: disD, prov: "alcadas" }) +
+      cmp("cmMAlcD", po.alcadaDiretoriaPct, "Alçada da Diretoria (%)", "Acima disso o preço passa da margem mínima na conta da tabela.", { dis: disD, prov: "alcadas" }) + '</div>' +
+      '<label class="cm-check cm-check-grande"><input type="checkbox" id="cmMPont"' + (po.descontoPontualidade ? " checked" : "") + disD + '> Permitir desconto por pagamento até o dia 10' + prov("pontualidade") + '</label><p class="cm-meta">Desligado, a gestora avisa quando uma proposta oferece esse desconto (ele come metade da margem).</p>' +
+      Com_campo_("Texto da política de desconto (a gestora usa)", '<textarea id="cmMPolTxt" style="min-height:70px"' + disD + '>' + Com_esc_(po.texto || "") + '</textarea>') + '</div>';
+    h += '<div class="cm-caixa"><h3>Reajuste e texto da política</h3>' + cmp("cmPrReaj", p.reajusteAlertaMeses, "Avisar item do catálogo sem reajuste há mais de (meses)") +
+      Com_campo_("Texto da política de precificação (a gestora usa)", '<textarea id="cmPrTxt" style="min-height:80px"' + disP + '>' + Com_esc_(p.texto || "") + '</textarea>') + '</div>';
+    // o que o dono já confirmou
+    h += '<div class="cm-caixa"><h3>O que o dono já confirmou</h3><p class="cm-meta">Marque quando o dono confirmar o valor. Enquanto não marcar, a tela mostra "valor provisório" e a gestora lembra a gestão.</p>' +
+      (x.provisorios || []).map(function (q) { return '<label class="cm-check cm-check-grande"><input type="checkbox" data-confirmado="' + Com_esc_(q.campo) + '"' + (pend.indexOf(q.campo) < 0 ? " checked" : "") + disP + '> ' + Com_esc_(q.nome) + '</label>'; }).join("") + '</div>';
+    h += '</div><div><div class="cm-caixa cm-regra" id="cmRegraPreco" aria-live="polite"></div></div></div>';
+    return h;
+  }
+  function Comercial_lerPreco_(r) {
+    var v = function (id) { var el = Com_$_(id); return el ? el.value : ""; }, n = Comercial_numOuNulo_, ck = function (id) { var el = Com_$_(id); return !!(el && el.checked); };
+    var out = {};
+    if (r.podeEditar) {
+      out.politica = { descontoMaxPct: Number(String(v("cmMDesc")).replace(",", ".")), alcadaGerentePct: n(v("cmMAlcG")), alcadaDiretoriaPct: n(v("cmMAlcD")), descontoPontualidade: ck("cmMPont"), texto: v("cmMPolTxt") };
+      if (!isFinite(out.politica.descontoMaxPct)) throw new Error('o limite do vendedor precisa ser um número (por exemplo 15)');
+    }
+    if (r.podeEditarPrecificacao) {
+      var atual = r.metodologia.precificacao || {};
+      var faixas = [];
+      document.querySelectorAll("#cmMet [data-faixa]").forEach(function (row) {
+        var g = function (k) { var el = row.querySelector('[data-fk="' + k + '"]'); return el ? (el.type === "checkbox" ? el.checked : el.value) : ""; };
+        faixas.push({ codigo: row.getAttribute("data-faixa"), nome: g("nome"), diasUteis: n(g("diasUteis")), acrescimoPct: n(g("acrescimoPct")), ativa: row.getAttribute("data-faixa") === "NORMAL" ? true : g("ativa") });
+      });
+      out.precificacao = Object.assign({}, atual, { impostosPct: n(v("cmPrImp")), comissaoPct: n(v("cmPrCom")), margemAlvoPct: n(v("cmPrAlvo")), margemMinPct: n(v("cmPrMin")),
+        custoHora: { TECNICO: n(v("cmPrHT")), ENGENHEIRO: n(v("cmPrHE")) }, custoFixoPct: n(v("cmPrFixo")), horaAvulsa: n(v("cmPrAvulsa")),
+        valorKm: n(v("cmPrKm")), taxaViagem: { valor: n(v("cmPrTaxa")), rotulo: v("cmPrTaxaRot"), kmMinimo: n(v("cmPrTaxaKm")) }, alimentacaoPessoaDia: n(v("cmPrAli")), hospedagemPessoaNoite: n(v("cmPrHosp")),
+        estradaKmMinimo: n(v("cmPrEstr")), alimentacaoForaDaRegiao: ck("cmPrAliReg"), velocidadeMediaKmh: n(v("cmPrVel")), origemPadrao: v("cmPrOri"), repassePadrao: v("cmPrRep") || "ITEM",
+        diariaPessoaDia: { TECNICO: n(v("cmPrDiaT")), ENGENHEIRO: n(v("cmPrDiaE")) }, horaDeslocamento: { TECNICO: n(v("cmPrHrT")), ENGENHEIRO: n(v("cmPrHrE")) },
+        margemDeslocamentoPct: n(v("cmPrMDes")) === null ? 0 : n(v("cmPrMDes")), arredondarPara: n(v("cmPrArr")), beneficioConduta: { valorPorColaborador: n(v("cmPrBenV")), kmMinimoTrecho: n(v("cmPrBenK")) },
+        reajusteAlertaMeses: n(v("cmPrReaj")), texto: v("cmPrTxt"),
+        prazo: { contaAte: v("cmPzConta"), relatorioDiasUteis: n(v("cmPzRel")), faixas: faixas, licitacaoSemAcrescimo: ck("cmPzLic"), licitacaoRotulo: v("cmPzLicRot") },
+        confirmados: Array.prototype.map.call(document.querySelectorAll("#cmMet [data-confirmado]:checked"), function (x) { return x.getAttribute("data-confirmado"); }) });
+    }
+    if (!out.politica && !out.precificacao) throw new Error("você não tem permissão para mudar esta página");
+    return out;
+  }
+  /** A regra do preço em linguagem simples, com o exemplo da C1 (qualificação de autoclave acima de 100 L) refeito ao vivo. */
+  function Comercial_ligarPreco_(r) {
+    var el = Com_$_("cmRegraPreco"); if (!el) return;
+    var desenhar = function () {
+      if (r.precificacaoReservada) { el.innerHTML = '<h3>A regra do preço</h3><p class="cm-txt">O preço de tabela de cada serviço cobre o custo (horas da equipe, padrões e consumíveis), os impostos, a comissão e a margem da empresa. Use o preço do catálogo; abaixo da tabela conta como desconto e pode ir para a Caixa de decisões.</p><p class="cm-txt">O prazo urgente e o prioritário custam mais porque tiram a equipe da agenda: o sistema calcula o valor sozinho quando você escolhe a faixa.</p>'; return; }
+      var n = function (id) { var x = Com_$_(id); var v = x ? Comercial_num_(x.value) : 0; return isFinite(v) ? v : 0; };
+      var imp = n("cmPrImp"), com = n("cmPrCom"), alvo = n("cmPrAlvo"), min = n("cmPrMin"), hT = n("cmPrHT"), hE = n("cmPrHE"), fixo = n("cmPrFixo");
+      var mo = 14 * hT + 5 * hE, cf = mo * fixo / 100, custo = mo + cf + 150 + 130;
+      var arr = function (v) { var m = v < 100 ? 5 : 10; return Math.ceil(Math.round(v * 100) / 100 / m - 1e-9) * m; };
+      var dA = 1 - (imp + com + alvo) / 100, dM = 1 - (imp + com + min) / 100;
+      var M = Comercial_moeda_, pct = function (v) { return v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%"; };
+      if (!(dA > 0.05) || !(dM > 0.05)) { el.innerHTML = '<h3>A regra do preço</h3><div class="cm-faixa erro">Impostos, comissão e margem passam de 95% do preço: a conta não fecha. Confira os percentuais.</div>'; return; }
+      var preco = arr(custo / dA), minimo = arr(custo / dM), impV = preco * imp / 100, comV = preco * com / 100, sobra = preco - impV - comV - custo;
+      var fx = []; document.querySelectorAll("#cmMet [data-faixa]").forEach(function (row) { var nome = row.querySelector('[data-fk="nome"]').value, a = Comercial_num_(row.querySelector('[data-fk="acrescimoPct"]').value) || 0, d = row.querySelector('[data-fk="diasUteis"]').value, at = row.querySelector('[data-fk="ativa"]').checked; fx.push({ nome: nome, a: a, d: d, at: at }); });
+      el.innerHTML = '<h3>A regra do preço</h3><p class="cm-txt"><b>Preço de tabela = custo ÷ (1 − impostos − comissão − margem alvo).</b> Com os números desta página: custo ÷ ' + Com_esc_(dA.toLocaleString("pt-BR", { maximumFractionDigits: 4 })) + ', ou seja, custo × ' + Com_esc_((1 / dA).toLocaleString("pt-BR", { maximumFractionDigits: 3 })) + '. O preço mínimo usa a margem mínima: custo × ' + Com_esc_((1 / dM).toLocaleString("pt-BR", { maximumFractionDigits: 3 })) + '. Arredonda para cima: R$ 5 abaixo de R$ 100, R$ 10 acima.</p>' +
+        '<p class="cm-sec">Exemplo: qualificação de autoclave acima de 100 L</p><table class="cm-tabela cm-conta"><tbody>' +
+        [["Técnico: 14 h × " + M(hT), M(14 * hT)], ["Engenheiro: 5 h × " + M(hE), M(5 * hE)], ["Custo fixo: " + pct(fixo) + " da mão de obra", M(cf)], ["Padrões e consumíveis/ART", M(280)], ["<b>Custo</b>", "<b>" + M(custo) + "</b>"],
+          ["<b>Preço normal</b>", "<b>" + M(preco) + "</b>"], ["Impostos (" + pct(imp) + ") e comissão (" + pct(com) + ")", M(impV + comV)], ["<b>Sobra para a empresa</b>", "<b>" + M(sobra) + " (" + pct(preco > 0 ? sobra / preco * 100 : 0) + ")</b>"], ["Preço mínimo (margem " + pct(min) + ")", M(minimo)]]
+          .map(function (l) { return '<tr><td data-r="Parcela">' + l[0] + '</td><td class="n" data-r="R$">' + l[1] + '</td></tr>'; }).join("") + '</tbody></table>' +
+        '<p class="cm-sec">Faixas de prazo deste exemplo</p><ul class="cm-lista-simples">' + fx.map(function (f) { return '<li>' + Com_esc_(f.nome + ": " + f.d + " dias úteis, " + M(f.a ? arr(preco * (1 + f.a / 100)) : preco) + (f.at ? "" : " (desligada)")) + '</li>'; }).join("") + '</ul>' +
+        '<p class="cm-meta">Deslocamento à parte: custo ÷ (1 − impostos), sem margem e sem comissão.</p>';
     };
+    Com_$_("cmMet").querySelectorAll("[data-preco-vivo], [data-fk]").forEach(function (x) { x.addEventListener("input", desenhar); x.addEventListener("change", desenhar); });
+    desenhar();
   }
 
   // =========================================================

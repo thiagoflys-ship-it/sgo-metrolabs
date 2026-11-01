@@ -295,5 +295,5 @@ test('telas: aviso fixo e "Ciente" no computador e no celular; menu, rota, inclu
   assert.match(ler('SGO_Assistente.js'), /var SGO_ASSIST_TELAS_RH = \[[\s\S]*?'cadastro_correcoes'\];/);
   assert.match(ler('SGO_Ajuda_Cadastros.js'), /"cadastro_correcoes": \{/);
   assert.match(ler('SGO_Comercial_Propostas.js'), /if \(!ativo && Com_s_\(p\.JUNTADO_COM_ID\)\)/);
-  assert.match(ler('SGO_Comercial_Config.js'), /'JUNTADO_COM_ID', 'JUNTADO_EM', 'JUNTADO_POR_NOME'\]/);
+  assert.match(ler('SGO_Comercial_Config.js'), /'JUNTADO_COM_ID', 'JUNTADO_EM', 'JUNTADO_POR_NOME'[,\]]/);
 });

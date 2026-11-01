@@ -42,6 +42,18 @@
  *    (configurável) aparece no catálogo, no painel e na gestora.
  *  - A gestora comercial (SGO_Comercial_Gestora.js) confere tudo isso em toda proposta e no panorama; o painel mostra o
  *    quadro "Precificação e estratégia". Só regras: nenhum número sai da IA.
+ *
+ * 01/11/2026 — COMERCIAL C2 (docs/COMERCIAL_C1_PRECIFICACAO_20261101.md):
+ *  - Valores iniciais da C1 na política (impostos 14,25%, comissão 3%, margem alvo 20%, mínima 10%, custo da hora, custo fixo,
+ *    alimentação, hotel, taxa por viagem e hora avulsa). Campo vazio vale o valor inicial ("preenche o que está vazio"); cada
+ *    valor fica marcado como provisório até a Diretoria marcar "confirmado pelo dono".
+ *  - Margem única (Com_unificarMargem_): depois de impostos, da comissão (sobre os itens que não são deslocamento nem frete) e
+ *    dos custos da viagem. Abaixo da mínima, a proposta vai para a Caixa de decisões e só a Diretoria aprova.
+ *  - Deslocamento: linha nova "Taxa por viagem" (fora da Grande Goiânia), horas de estrada pelo custo da hora com o custo fixo
+ *    (trecho acima de 200 km), diária vazia na política = "não se aplica" sozinha. O vendedor pode digitar o preço do item; abaixo
+ *    do custo, a tela e a gestora avisam.
+ *  - Faixas de prazo (Normal 10 d.u.; Urgente 3 d.u. +110%; Prioritária 5 d.u. +50%, desligada até o dono aprovar) por item ou
+ *    para a proposta inteira; "Licitação ou contrato" tira o acréscimo. O acréscimo vale só para serviço.
  ****************************************************/
 
 var COM_PR_FUNCOES = { TECNICO: 'Técnico', ENGENHEIRO: 'Engenheiro' };
@@ -51,12 +63,14 @@ var COM_PR_REPASSES = { ITEM: 'Item separado na proposta ("Despesas de deslocame
 var COM_PR_LINHAS = [
   { codigo: 'KM', nome: 'Km rodado (ida e volta)', unidade: 'por km', obrigatoria: true },
   { codigo: 'PEDAGIO', nome: 'Pedágios', unidade: 'por viagem (ida e volta)', obrigatoria: true },
+  // 01/11/2026 (C2): só fora da Grande Goiânia (trecho acima de taxaViagem.kmMinimo); o nome que aparece é o da política
+  { codigo: 'TAXA', nome: 'Taxa por viagem', unidade: 'por viagem', obrigatoria: true },
   { codigo: 'ALIMENTACAO', nome: 'Alimentação', unidade: 'por pessoa por dia', obrigatoria: true },
   { codigo: 'DIARIA', nome: 'Diárias', unidade: 'por pessoa por dia', obrigatoria: true, porFuncao: true },
   { codigo: 'HOSPEDAGEM', nome: 'Hospedagem', unidade: 'por pessoa por noite', obrigatoria: true },
   { codigo: 'CONDUTA', nome: 'Benefício do Programa de conduta', unidade: 'por colaborador por viagem', obrigatoria: true },
   { codigo: 'COMBUSTIVEL', nome: 'Combustível adicional ou passagem', unidade: 'por viagem', obrigatoria: true },
-  { codigo: 'HORAS', nome: 'Horas de deslocamento (mão de obra)', unidade: 'por hora por pessoa', obrigatoria: false, porFuncao: true },
+  { codigo: 'HORAS', nome: 'Horas de estrada (mão de obra)', unidade: 'por hora por pessoa', obrigatoria: false, porFuncao: true },
   { codigo: 'OUTROS', nome: 'Outros custos da viagem', unidade: 'total', obrigatoria: false }
 ];
 var COM_PR_ITEM_VIAGEM = 'Despesas de deslocamento e estadia';
@@ -101,22 +115,121 @@ function ComPr_qtd_(n) { return typeof SGO_DocA4_num_ === 'function' ? SGO_DocA4
 // ------------------------------------------------------------
 // POLÍTICA
 // ------------------------------------------------------------
+/** 01/11/2026 (C2): campos que nascem com o valor inicial da C1 e ficam "provisórios" até o dono confirmar. */
+var COM_PR_PROVISORIOS = [
+  { campo: 'custoHora', nome: 'custo da hora do técnico e do engenheiro (salários reais e horas faturáveis)' },
+  { campo: 'custoFixoPct', nome: 'custo fixo sobre a mão de obra' },
+  { campo: 'taxaViagem', nome: 'o que é a taxa por viagem' },
+  { campo: 'calibracaoParceiro', nome: 'calibração feita pela equipe própria ou por parceiro' },
+  { campo: 'comissaoPct', nome: 'comissão' },
+  { campo: 'prioritaria', nome: 'aprovação da faixa prioritária de 5 dias úteis' },
+  { campo: 'contratoUrgencia', nome: 'se o cliente de contrato paga urgência' },
+  { campo: 'alcadas', nome: 'alçadas de desconto (vendedor, gerente e Diretoria)' },
+  { campo: 'pontualidade', nome: 'fim do desconto por pagamento até o dia 10' },
+  { campo: 'prazoConta', nome: 'se o prazo conta até a execução ou até o relatório' }
+];
+/** Campos da política que, vazios, recebem o valor inicial (preenche só o que está vazio; nunca troca valor gravado). */
+var COM_PR_INICIAIS = ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses'];
+
 /** Política de precificação em vigor (metodologia), completa e normalizada. */
 function ComPr_politica_(met) {
   met = met || Com_metodologia_();
-  var p = Com_copia_(COM_METODOLOGIA_PADRAO.precificacao), g = met.precificacao || {};
+  var pad = COM_METODOLOGIA_PADRAO.precificacao;
+  var p = Com_copia_(pad), g = met.precificacao || {};
   Object.keys(g).forEach(function (k) { if (g[k] !== undefined) p[k] = Com_copia_(g[k] === undefined ? null : g[k]); });
-  ['diariaPessoaDia', 'horaDeslocamento'].forEach(function (k) {
-    var o = p[k] && typeof p[k] === 'object' ? p[k] : {};
+  ['diariaPessoaDia', 'horaDeslocamento', 'custoHora'].forEach(function (k) {
+    var o = p[k] && typeof p[k] === 'object' ? p[k] : {}, d = pad[k] || {};
     p[k] = { TECNICO: ComPr_num_(o.TECNICO), ENGENHEIRO: ComPr_num_(o.ENGENHEIRO) };
+    if (k === 'custoHora') { if (p[k].TECNICO === null) p[k].TECNICO = d.TECNICO; if (p[k].ENGENHEIRO === null) p[k].ENGENHEIRO = d.ENGENHEIRO; }
   });
   p.beneficioConduta = Object.assign({ valorPorColaborador: 300, kmMinimoTrecho: 200 }, p.beneficioConduta && typeof p.beneficioConduta === 'object' ? p.beneficioConduta : {});
-  ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'arredondarPara', 'reajusteAlertaMeses']
+  var tv = p.taxaViagem && typeof p.taxaViagem === 'object' ? p.taxaViagem : {};
+  p.taxaViagem = { valor: ComPr_num_(tv.valor), rotulo: Com_s_(tv.rotulo) || pad.taxaViagem.rotulo, kmMinimo: ComPr_num_(tv.kmMinimo) };
+  if (p.taxaViagem.valor === null && (tv.valor === undefined || tv.valor === null || Com_s_(tv.valor) === '')) p.taxaViagem.valor = pad.taxaViagem.valor;
+  if (p.taxaViagem.kmMinimo === null) p.taxaViagem.kmMinimo = pad.taxaViagem.kmMinimo;
+  ['valorKm', 'velocidadeMediaKmh', 'alimentacaoPessoaDia', 'hospedagemPessoaNoite', 'impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoFixoPct', 'horaAvulsa', 'estradaKmMinimo', 'arredondarPara', 'reajusteAlertaMeses']
     .forEach(function (k) { p[k] = ComPr_num_(p[k]); });
+  // 01/11/2026 (C2): campo vazio recebe o valor inicial da C1 (a política antiga nascia vazia)
+  COM_PR_INICIAIS.forEach(function (k) { if (p[k] === null && pad[k] !== null && pad[k] !== undefined) p[k] = pad[k]; });
+  p.alimentacaoForaDaRegiao = p.alimentacaoForaDaRegiao === undefined || p.alimentacaoForaDaRegiao === null ? pad.alimentacaoForaDaRegiao : !!p.alimentacaoForaDaRegiao && Com_s_(p.alimentacaoForaDaRegiao) !== 'false';
+  p.prazo = ComPr_prazoNormal_(p.prazo);
+  p.confirmados = Array.isArray(p.confirmados) ? p.confirmados.map(Com_s_).filter(Boolean) : [];
   if (!COM_PR_REPASSES[Com_up_(p.repassePadrao)]) p.repassePadrao = 'ITEM'; else p.repassePadrao = Com_up_(p.repassePadrao);
   p.origemPadrao = Com_s_(p.origemPadrao) || 'Goiânia/GO';
   p.versao = met.versao;
   return p;
+}
+
+/** 01/11/2026 (C2): faixas de prazo normalizadas (faixa que faltar vem do padrão; a Normal fica sempre ligada e sem acréscimo). */
+function ComPr_prazoNormal_(pz) {
+  var pad = COM_METODOLOGIA_PADRAO.precificacao.prazo, o = pz && typeof pz === 'object' ? pz : {};
+  var faixas = Array.isArray(o.faixas) && o.faixas.length ? o.faixas : pad.faixas;
+  var porCod = {};
+  faixas.forEach(function (fx) { if (fx && Com_up_(fx.codigo)) porCod[Com_up_(fx.codigo)] = fx; });
+  var l = pad.faixas.map(function (base) {
+    var fx = porCod[base.codigo] || {};
+    var dias = ComPr_num_(fx.diasUteis), acr = ComPr_num_(fx.acrescimoPct);
+    return { codigo: base.codigo, nome: Com_s_(fx.nome) || base.nome, diasUteis: dias === null ? base.diasUteis : dias, acrescimoPct: base.codigo === 'NORMAL' ? 0 : (acr === null ? base.acrescimoPct : acr),
+      ativa: base.codigo === 'NORMAL' ? true : (fx.ativa === undefined ? base.ativa : fx.ativa === true || Com_up_(fx.ativa) === 'SIM' || Com_up_(fx.ativa) === 'TRUE') };
+  });
+  var rd = ComPr_num_(o.relatorioDiasUteis);
+  return { contaAte: Com_up_(o.contaAte) === 'EXECUCAO' ? 'EXECUCAO' : 'RELATORIO', relatorioDiasUteis: rd === null ? pad.relatorioDiasUteis : rd, faixas: l,
+    licitacaoSemAcrescimo: o.licitacaoSemAcrescimo === undefined ? pad.licitacaoSemAcrescimo : !!o.licitacaoSemAcrescimo && Com_s_(o.licitacaoSemAcrescimo) !== 'false',
+    licitacaoRotulo: Com_s_(o.licitacaoRotulo) || pad.licitacaoRotulo };
+}
+/** Faixa pelo código (ou a Normal). */
+function ComPr_faixa_(pol, codigo) {
+  var l = pol.prazo.faixas;
+  return l.filter(function (x) { return x.codigo === Com_up_(codigo); })[0] || l[0];
+}
+/** Fator de preço da faixa: preço normal x (1 + acréscimo). Licitação ou contrato (quando a política manda) = 1. */
+function ComPr_fatorFaixa_(pol, codigo, licitacao) {
+  if (licitacao && pol.prazo.licitacaoSemAcrescimo) return 1;
+  return 1 + (Number(ComPr_faixa_(pol, codigo).acrescimoPct) || 0) / 100;
+}
+/** Arredondamento da tabela (C1): para cima, a múltiplos de R$ 5 abaixo de R$ 100 e de R$ 10 a partir de R$ 100. */
+function ComPr_arredondarTabela_(v) {
+  var n = Com_r2_(v);
+  if (!(n > 0)) return 0;
+  return ComPr_arredondarCima_(n, n < 100 ? 5 : 10);
+}
+/** Preço de tabela de um item de serviço na faixa (produto e itens automáticos não levam acréscimo). */
+function ComPr_precoNaFaixa_(normal, pol, codigo, licitacao, tipo) {
+  var n = Number(normal) || 0, fat = tipo === 'PRODUTO' ? 1 : ComPr_fatorFaixa_(pol, codigo, licitacao);
+  if (!(n > 0)) return 0;
+  return fat === 1 ? Com_r2_(n) : ComPr_arredondarTabela_(n * fat);
+}
+/** Prazo da faixa em linguagem simples (vai para "Prazo de execução" do documento). */
+function ComPr_textoFaixa_(pol, fx) {
+  var dias = Com_plural_(fx.diasUteis, 'dia útil', 'dias úteis');
+  return pol.prazo.contaAte === 'EXECUCAO'
+    ? 'execução em até ' + dias + ' após o aceite da proposta e a liberação do equipamento; relatório ou certificado em até ' + Com_plural_(pol.prazo.relatorioDiasUteis, 'dia útil', 'dias úteis') + ' após a execução'
+    : 'execução e entrega do relatório ou certificado em até ' + dias + ', contados do aceite da proposta e da liberação do equipamento pelo cliente';
+}
+/**
+ * Texto do prazo da proposta pelas faixas dos itens de serviço. prazo: { faixa, licitacao }; itens: os da proposta.
+ * Uma faixa: "Prazo normal: execução e entrega ... em até 10 dias úteis, ...". Várias: uma frase por faixa, dizendo os itens.
+ */
+function ComPr_textoPrazo_(pol, prazo, itens) {
+  var pz = prazo || {}, usadas = {}, ordem = [];
+  (itens || []).forEach(function (i, k) {
+    if (!i || i.auto || i.tipo === 'PRODUTO') return;
+    var c = ComPr_faixa_(pol, i.faixa || pz.faixa).codigo;
+    if (!usadas[c]) { usadas[c] = []; ordem.push(c); }
+    usadas[c].push(k + 1);
+  });
+  if (!ordem.length) ordem.push(ComPr_faixa_(pol, pz.faixa).codigo);
+  var partes = ordem.map(function (c) {
+    var fx = ComPr_faixa_(pol, c);
+    return 'Prazo ' + fx.nome.toLowerCase() + (ordem.length > 1 ? ' (' + (usadas[c].length > 1 ? 'itens ' : 'item ') + usadas[c].join(', ') + ')' : '') + ': ' + ComPr_textoFaixa_(pol, fx) + '.';
+  });
+  if (pz.licitacao && pol.prazo.licitacaoSemAcrescimo) partes.push('Preço único de licitação ou contrato, sem acréscimo de urgência.');
+  return partes.join(' ');
+}
+/** O que da política ainda é valor provisório (não confirmado pelo dono). [{ campo, nome }] */
+function ComPr_provisorios_(pol) {
+  var c = (pol && pol.confirmados) || [];
+  return COM_PR_PROVISORIOS.filter(function (x) { return c.indexOf(x.campo) < 0; });
 }
 
 /** O que falta na política (para a gestora e o painel): [{ campo, nome }]. */
@@ -125,8 +238,6 @@ function ComPr_politicaIncompleta_(pol) {
   var f = function (v, campo, nome) { if (v === null || v === undefined) l.push({ campo: campo, nome: nome }); };
   f(pol.valorKm, 'valorKm', 'valor por km rodado');
   f(pol.alimentacaoPessoaDia, 'alimentacaoPessoaDia', 'alimentação por pessoa por dia');
-  f(pol.diariaPessoaDia.TECNICO, 'diariaPessoaDia.TECNICO', 'diária do técnico');
-  f(pol.diariaPessoaDia.ENGENHEIRO, 'diariaPessoaDia.ENGENHEIRO', 'diária do engenheiro');
   f(pol.hospedagemPessoaNoite, 'hospedagemPessoaNoite', 'hospedagem por pessoa por noite');
   f(pol.impostosPct, 'impostosPct', 'impostos sobre o faturamento (%)');
   f(pol.margemMinPct, 'margemMinPct', 'margem mínima (%)');
@@ -156,9 +267,33 @@ function ComPr_validarPolitica_(pr) {
   });
   if (pr.beneficioConduta && typeof pr.beneficioConduta === 'object') { dinheiro(pr.beneficioConduta.valorPorColaborador, 'benefício do Programa de conduta (reserva)'); dinheiro(pr.beneficioConduta.kmMinimoTrecho, 'km mínimo do trecho para o benefício (reserva)'); }
   pct(pr.impostosPct, 'impostos sobre o faturamento', 60); pct(pr.margemMinPct, 'margem mínima', 90); pct(pr.margemAlvoPct, 'margem alvo', 90); pct(pr.margemDeslocamentoPct, 'margem sobre o deslocamento', 100);
-  var mn = ComPr_num_(pr.margemMinPct), al = ComPr_num_(pr.margemAlvoPct), im = ComPr_num_(pr.impostosPct) || 0;
+  // 01/11/2026 (C2): comissão, custo da hora, custo fixo, taxa por viagem, hora avulsa e faixas de prazo
+  pct(pr.comissaoPct, 'comissão', 20); pct(pr.custoFixoPct, 'custo fixo sobre a mão de obra', 300);
+  dinheiro(pr.horaAvulsa, 'hora técnica avulsa'); dinheiro(pr.estradaKmMinimo, 'km mínimo para cobrar as horas de estrada');
+  if (pr.custoHora !== undefined && pr.custoHora !== null) {
+    if (typeof pr.custoHora !== 'object' || Array.isArray(pr.custoHora)) throw new Error('na política de precificação, o custo da hora veio num formato inválido. Atualize a tela e salve de novo');
+    dinheiro(pr.custoHora.TECNICO, 'custo da hora do técnico'); dinheiro(pr.custoHora.ENGENHEIRO, 'custo da hora do engenheiro');
+  }
+  if (pr.taxaViagem !== undefined && pr.taxaViagem !== null) {
+    if (typeof pr.taxaViagem !== 'object' || Array.isArray(pr.taxaViagem)) throw new Error('na política de precificação, a taxa por viagem veio num formato inválido. Atualize a tela e salve de novo');
+    dinheiro(pr.taxaViagem.valor, 'taxa por viagem'); dinheiro(pr.taxaViagem.kmMinimo, 'km a partir do qual a taxa por viagem vale');
+    if (Com_s_(pr.taxaViagem.rotulo).length > 80) throw new Error('na política de precificação, o nome da taxa por viagem passa de 80 letras. Resuma e salve de novo');
+  }
+  if (pr.prazo !== undefined && pr.prazo !== null) {
+    var pz = pr.prazo;
+    if (typeof pz !== 'object' || Array.isArray(pz)) throw new Error('na política de precificação, as faixas de prazo vieram num formato inválido. Atualize a tela e salve de novo');
+    if (pz.contaAte !== undefined && ['RELATORIO', 'EXECUCAO'].indexOf(Com_up_(pz.contaAte)) < 0) throw new Error('na política de precificação, diga se o prazo conta até a entrega do relatório ou até a execução. Escolha e salve de novo');
+    (Array.isArray(pz.faixas) ? pz.faixas : []).forEach(function (fx) {
+      var nome = Com_s_(fx && fx.nome) || Com_s_(fx && fx.codigo), d = Com_num_(fx && fx.diasUteis), a = Com_num_(fx && fx.acrescimoPct);
+      if (!(isFinite(d) && Math.round(d) === d && d >= 1 && d <= 90)) throw new Error('na faixa de prazo ' + nome + ', o prazo precisa ser um número inteiro de 1 a 90 dias úteis. Corrija e salve de novo');
+      if (fx.acrescimoPct !== undefined && fx.acrescimoPct !== null && fx.acrescimoPct !== '' && !(isFinite(a) && a >= 0 && a <= 300)) throw new Error('na faixa de prazo ' + nome + ', o acréscimo fica entre 0% e 300%. Corrija e salve de novo');
+    });
+    var fl = ComPr_prazoNormal_(pz).faixas, nor = fl[0];
+    fl.slice(1).forEach(function (fx) { if (fx.ativa && fx.diasUteis >= nor.diasUteis) throw new Error('a faixa ' + fx.nome + ' (' + fx.diasUteis + ' dias úteis) precisa ser mais rápida que a Normal (' + nor.diasUteis + ' dias úteis). Corrija e salve de novo'); });
+  }
+  var mn = ComPr_num_(pr.margemMinPct), al = ComPr_num_(pr.margemAlvoPct), im = (ComPr_num_(pr.impostosPct) || 0) + (ComPr_num_(pr.comissaoPct) || 0);
   if (mn !== null && al !== null && al < mn) throw new Error('na política de precificação, a margem alvo (' + Com_pct_(al, 1) + ') não pode ser menor que a margem mínima (' + Com_pct_(mn, 1) + '). Corrija e salve de novo');
-  if (im + Math.max(mn || 0, al || 0) >= 95) throw new Error('na política de precificação, impostos mais margem passam de 95% do preço: a conta do preço mínimo não fecha. Confira os percentuais e salve de novo');
+  if (im + Math.max(mn || 0, al || 0) >= 95) throw new Error('na política de precificação, impostos, comissão e margem passam de 95% do preço: a conta do preço mínimo não fecha. Confira os percentuais e salve de novo');
   var v = ComPr_num_(pr.velocidadeMediaKmh);
   if (pr.velocidadeMediaKmh !== undefined && pr.velocidadeMediaKmh !== null && pr.velocidadeMediaKmh !== '' && !(v >= 20 && v <= 130)) throw new Error('na política de precificação, a velocidade média da viagem fica entre 20 e 130 km/h. Corrija e salve de novo');
   var ar = ComPr_num_(pr.arredondarPara);
@@ -225,6 +360,13 @@ function ComPr_sugestaoDestino_(p, refs) {
 // ------------------------------------------------------------
 // CUSTOS DA VIAGEM: normalizar, calcular, conferir
 // ------------------------------------------------------------
+/** 01/11/2026 (C2): valor da hora de estrada por função: o da política; vazio, o custo da hora com o custo fixo. */
+function ComPr_horaEstrada_(pol, f) {
+  if (pol.horaDeslocamento[f] !== null && pol.horaDeslocamento[f] !== undefined) return pol.horaDeslocamento[f];
+  var c = pol.custoHora && pol.custoHora[f];
+  return c === null || c === undefined ? null : Com_r2_(c * (1 + (Number(pol.custoFixoPct) || 0) / 100));
+}
+
 /** Vazio: proposta sem nada preenchido sobre a viagem. */
 function ComPr_vazio_(pol) {
   return { v: 1, viagem: { ha: null, motivoSem: '', equipe: { TECNICO: 0, ENGENHEIRO: 0 }, transporte: 'VEICULO_EMPRESA', origem: pol.origemPadrao, destino: '', kmTrecho: null, kmFonte: '',
@@ -279,7 +421,7 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
         var k = f === 'TECNICO' ? 'valorTecnico' : 'valorEngenheiro', ja = t[k] !== undefined;
         var val = ja ? ComPr_valor_(t[k], L.nome.toLowerCase() + ' do ' + COM_PR_FUNCOES[f].toLowerCase()) : (fonteAnt[f] === 'POLITICA' ? null : ComPr_num_(av[f]));
         var fonte = val === null ? '' : 'VENDEDOR';
-        var padrao = L.codigo === 'DIARIA' ? pol.diariaPessoaDia[f] : pol.horaDeslocamento[f];
+        var padrao = L.codigo === 'DIARIA' ? pol.diariaPessoaDia[f] : ComPr_horaEstrada_(pol, f);
         if (val === null && padrao !== null) { val = padrao; fonte = 'POLITICA'; }
         n.valor[f] = val; n.fonteFuncao[f] = fonte;
       });
@@ -293,7 +435,7 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
       var ja2 = t.valor !== undefined;
       var val2 = ja2 ? ComPr_valor_(t.valor, L.nome.toLowerCase()) : (a.fonte === 'POLITICA' ? null : ComPr_num_(a.valor));
       n.fonte = val2 === null ? '' : 'VENDEDOR';
-      var padrao2 = L.codigo === 'KM' ? pol.valorKm : L.codigo === 'ALIMENTACAO' ? pol.alimentacaoPessoaDia : L.codigo === 'HOSPEDAGEM' ? pol.hospedagemPessoaNoite : L.codigo === 'CONDUTA' ? benef.valor : null;
+      var padrao2 = L.codigo === 'KM' ? pol.valorKm : L.codigo === 'ALIMENTACAO' ? pol.alimentacaoPessoaDia : L.codigo === 'HOSPEDAGEM' ? pol.hospedagemPessoaNoite : L.codigo === 'CONDUTA' ? benef.valor : L.codigo === 'TAXA' ? pol.taxaViagem.valor : null;
       if (val2 === null && padrao2 !== null && padrao2 !== undefined) { val2 = padrao2; n.fonte = L.codigo === 'CONDUTA' ? 'CONDUTA' : 'POLITICA'; }
       n.valor = val2;
       if (L.codigo === 'OUTROS') n.descricao = t.descricao !== undefined ? Com_texto_(t.descricao, 200) : Com_s_(a.descricao);
@@ -305,6 +447,14 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
     if (L.codigo === 'HOSPEDAGEM' && v.noites === 0) auto = 'Sem pernoite (0 noite por viagem).';
     if (L.codigo === 'COMBUSTIVEL' && v.transporte === 'VEICULO_EMPRESA') auto = 'Veículo da empresa: o valor por km rodado já cobre o combustível.';
     if (L.codigo === 'CONDUTA' && v.kmTrecho !== null && v.kmTrecho < benef.kmMinimo) auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, abaixo do mínimo de ' + ComPr_qtd_(benef.kmMinimo) + ' km do Programa de conduta: não há benefício nesta viagem.';
+    // 01/11/2026 (C2): taxa só fora da Grande Goiânia; diária sem valor na política; horas de estrada só em trecho longo
+    if (L.codigo === 'TAXA' && v.kmTrecho !== null && v.kmTrecho <= pol.taxaViagem.kmMinimo) auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.taxaViagem.kmMinimo) + ' km (Grande Goiânia): sem taxa por viagem.';
+    if (L.codigo === 'TAXA' && !auto && !(Number(pol.taxaViagem.valor) > 0) && n.fonte !== 'VENDEDOR') auto = 'A política não cobra taxa por viagem.';
+    if (L.codigo === 'ALIMENTACAO' && pol.alimentacaoForaDaRegiao && v.kmTrecho !== null && v.kmTrecho <= pol.taxaViagem.kmMinimo && n.fonte !== 'VENDEDOR') auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.taxaViagem.kmMinimo) + ' km (Grande Goiânia): sem alimentação.';
+    if (L.codigo === 'DIARIA' && !vendedorNsa && Object.keys(COM_PR_FUNCOES).every(function (fu) { return !(Number(v.equipe[fu]) > 0) || (n.fonteFuncao[fu] !== 'VENDEDOR' && pol.diariaPessoaDia[fu] === null); }))
+      auto = 'Sem diária em dinheiro: a alimentação e a hospedagem cobrem a estadia (política de precificação).';
+    if (L.codigo === 'HORAS' && !vendedorNsa && n.horasFonte !== 'VENDEDOR' && Object.keys(COM_PR_FUNCOES).every(function (fu) { return n.fonteFuncao[fu] !== 'VENDEDOR'; }) && v.kmTrecho !== null && v.kmTrecho <= (pol.estradaKmMinimo || 0))
+      auto = 'Trecho de ' + ComPr_qtd_(v.kmTrecho) + ' km, até ' + ComPr_qtd_(pol.estradaKmMinimo) + ' km: o tempo de estrada já está nas horas faturáveis.';
     if (auto) {
       // pedágio e combustível: o vendedor pode informar um valor mesmo assim (pedágio urbano, abastecimento extra)
       var informou = (L.codigo === 'PEDAGIO' || L.codigo === 'COMBUSTIVEL') && !vendedorNsa && n.fonte === 'VENDEDOR' && Number(n.valor) > 0;
@@ -319,6 +469,8 @@ function ComPr_normalizar_(d, anterior, pol, ctx) {
     if (f.nsa !== undefined) base.frete.nsa = !!f.nsa && Com_s_(f.nsa) !== 'false';
     if (f.motivo !== undefined) base.frete.motivo = Com_texto_(f.motivo, 300);
   }
+  // 01/11/2026 (C2): preço do item "Despesas de deslocamento e estadia" digitado pelo vendedor (vazio = o calculado)
+  if (d.precoInformado !== undefined) base.precoInformado = Com_s_(d.precoInformado) === '' ? null : ComPr_valor_(d.precoInformado, 'preço do deslocamento');
   if (d.repasse !== undefined) { var rp = Com_up_(d.repasse); if (rp && !COM_PR_REPASSES[rp]) throw new Error('Não foi possível salvar: o repasse "' + Com_s_(d.repasse) + '" não existe. Escolha item separado ou diluído nos serviços'); base.repasse = rp || pol.repassePadrao; }
   if (!COM_PR_REPASSES[base.repasse]) base.repasse = pol.repassePadrao;
   base.v = 1;
@@ -335,13 +487,14 @@ function ComPr_calcularViagem_(desl, pol) {
   var T = Number(v.equipe.TECNICO) || 0, E = Number(v.equipe.ENGENHEIRO) || 0, P = T + E, km = Number(v.kmTrecho) || 0, vg = Number(v.viagens) || 1, dias = Number(v.dias) || 1, noites = Number(v.noites) || 0;
   r.pessoas = P;
   COM_PR_LINHAS.forEach(function (L) {
-    var l = v.linhas[L.codigo] || { valor: null, nsa: false }, x = { codigo: L.codigo, nome: L.nome, unidade: L.unidade, nsa: !!l.nsa, motivo: Com_s_(l.motivo), auto: !!l.auto, fonte: Com_s_(l.fonte), total: 0, quantidade: 0, quantidadeTxt: '', valorTxt: '' };
+    var l = v.linhas[L.codigo] || { valor: null, nsa: false }, x = { codigo: L.codigo, nome: L.codigo === 'TAXA' ? pol.taxaViagem.rotulo : L.nome, unidade: L.unidade, nsa: !!l.nsa, motivo: Com_s_(l.motivo), auto: !!l.auto, fonte: Com_s_(l.fonte), total: 0, quantidade: 0, quantidadeTxt: '', valorTxt: '' };
     var val = Number(l.valor) || 0;
     if (L.codigo === 'KM') { x.quantidade = km * 2 * vg; x.quantidadeTxt = ComPr_qtd_(x.quantidade) + ' km (' + ComPr_qtd_(km) + ' km x 2' + (vg > 1 ? ' x ' + vg + ' viagens' : '') + ')'; x.total = x.quantidade * val; }
     else if (L.codigo === 'PEDAGIO') { x.quantidade = vg; x.quantidadeTxt = Com_plural_(vg, 'viagem', 'viagens'); x.total = vg * val; }
     else if (L.codigo === 'ALIMENTACAO') { x.quantidade = P * dias * vg; x.quantidadeTxt = Com_plural_(P, 'pessoa', 'pessoas') + ' x ' + Com_plural_(dias * vg, 'dia', 'dias'); x.total = x.quantidade * val; }
     else if (L.codigo === 'HOSPEDAGEM') { x.quantidade = P * noites * vg; x.quantidadeTxt = Com_plural_(P, 'pessoa', 'pessoas') + ' x ' + Com_plural_(noites * vg, 'noite', 'noites'); x.total = x.quantidade * val; }
     else if (L.codigo === 'CONDUTA') { x.quantidade = P * vg; x.quantidadeTxt = Com_plural_(P, 'colaborador', 'colaboradores') + ' x ' + Com_plural_(vg, 'viagem', 'viagens'); x.total = x.quantidade * val; }
+    else if (L.codigo === 'TAXA') { x.quantidade = vg; x.quantidadeTxt = Com_plural_(vg, 'viagem', 'viagens'); x.total = vg * val; }
     else if (L.codigo === 'COMBUSTIVEL') { x.quantidade = vg; x.quantidadeTxt = Com_plural_(vg, 'viagem', 'viagens'); x.total = vg * val; }
     else if (L.codigo === 'OUTROS') { x.quantidade = 1; x.quantidadeTxt = Com_s_(l.descricao) || 'total'; x.total = val; }
     else if (L.porFuncao) {
@@ -448,8 +601,10 @@ function ComPr_itensAuto_(desl, pol) {
   var l = [], calc = ComPr_calcularViagem_(desl, pol);
   if (calc.ha && calc.custo > 0) {
     var pv = ComPr_precoRepasse_(calc.custo, pol);
+    // 01/11/2026 (C2): preço digitado pelo vendedor; a tabela fica a calculada (abaixo dela conta como desconto)
+    var pi = desl.precoInformado !== null && desl.precoInformado !== undefined ? Com_r2_(desl.precoInformado) : null;
     l.push({ ordem: 0, produtoId: '', codigo: '', tipo: 'SERVICO', auto: 'DESLOCAMENTO', descricao: COM_PR_ITEM_VIAGEM, detalhe: ComPr_detalheCliente_(desl.viagem, calc), equipamentoId: '', equipamentoTexto: '',
-      unidade: 'vb', quantidade: 1, precoUnitario: pv, precoTabela: pv, custoUnitario: calc.custo, precoDiferente: false });
+      unidade: 'vb', quantidade: 1, precoUnitario: pi === null ? pv : pi, precoTabela: pv, custoUnitario: calc.custo, precoDiferente: pi !== null && Math.abs(pi - pv) > 0.004 });
   }
   var cf = ComPr_custoFrete_(desl);
   if (cf > 0) {
@@ -470,7 +625,7 @@ function ComPr_itensAuto_(desl, pol) {
 function ComPr_analise_(itens, descontoGeral, desl, pol) {
   pol = pol || ComPr_politica_();
   var calc = ComP_calcular_(itens, descontoGeral);
-  var total = calc.total, imp = pol.impostosPct === null ? 0 : pol.impostosPct;
+  var total = calc.total, imp = pol.impostosPct === null ? 0 : pol.impostosPct, com = pol.comissaoPct === null || pol.comissaoPct === undefined ? 0 : pol.comissaoPct;
   var custoItens = 0, semCusto = 0, receitaAuto = {};
   var fator = calc.subtotal > 0 ? total / calc.subtotal : 1;
   (itens || []).forEach(function (i) {
@@ -481,12 +636,15 @@ function ComPr_analise_(itens, descontoGeral, desl, pol) {
   });
   var cv = ComPr_calcularViagem_(desl, pol), cf = ComPr_custoFrete_(desl);
   var custoDesl = Com_r2_(cv.custo + cf), impostos = Com_r2_(total * imp / 100), custoTotal = Com_r2_(custoItens + custoDesl);
-  var margemValor = Com_r2_(total - impostos - custoTotal);
+  // 01/11/2026 (C2): comissão sobre a venda dos itens (o deslocamento e o frete são repasse de custo: sem comissão)
+  var receitaAutoTotal = (receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0);
+  var comissao = Com_r2_(Math.max(0, total - receitaAutoTotal) * com / 100);
+  var margemValor = Com_r2_(total - impostos - comissao - custoTotal);
   var margemPct = total > 0 ? Math.round(margemValor / total * 10000) / 100 : null;
   var mn = pol.margemMinPct, al = pol.margemAlvoPct;
   var abaixoMin = mn !== null && margemPct !== null && margemPct < mn - 1e-9;
   var abaixoAlvo = al !== null && margemPct !== null && margemPct < al - 1e-9;
-  var divisor = function (m) { var x = 1 - imp / 100 - (m || 0) / 100; return x > 0.05 ? x : null; };
+  var divisor = function (m) { var x = 1 - imp / 100 - com / 100 - (m || 0) / 100; return x > 0.05 ? x : null; };
   var precoMin = semCusto === 0 && mn !== null && divisor(mn) ? Com_r2_(custoTotal / divisor(mn)) : null;
   var precoAlvo = semCusto === 0 && al !== null && divisor(al) ? Com_r2_(custoTotal / divisor(al)) : null;
   var repasse = desl ? desl.repasse : '';
@@ -495,7 +653,7 @@ function ComPr_analise_(itens, descontoGeral, desl, pol) {
     var receitaLiq = ((receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0)) * (1 - imp / 100);
     naoRepassado = Com_r2_(Math.max(0, custoDesl - receitaLiq));
   }
-  var r = { total: total, impostosPct: pol.impostosPct, impostos: impostos, semImpostos: pol.impostosPct === null, custoItens: Com_r2_(custoItens), custoViagem: cv.custo, custoFrete: cf, custoDeslocamento: custoDesl,
+  var r = { total: total, impostosPct: pol.impostosPct, impostos: impostos, semImpostos: pol.impostosPct === null, comissaoPct: com, comissao: comissao, custoItens: Com_r2_(custoItens), custoViagem: cv.custo, custoFrete: cf, custoDeslocamento: custoDesl,
     beneficio: cv.beneficio, custoTotal: custoTotal, margemValor: margemValor, margemPct: margemPct, completa: semCusto === 0, itensSemCusto: semCusto,
     margemMinPct: mn, margemAlvoPct: al, abaixoMin: abaixoMin, abaixoAlvo: abaixoAlvo, precoMinimo: precoMin, precoAlvo: precoAlvo, repasse: repasse,
     receitaDeslocamento: Com_r2_((receitaAuto.DESLOCAMENTO || 0) + (receitaAuto.FRETE || 0)), naoRepassado: naoRepassado };
@@ -529,7 +687,11 @@ function ComPr_paraTela_(eu, p, itens, editavel) {
   var t = { dados: desl, preenchido: !!x.desl, calculo: calc, custoFrete: ComPr_custoFrete_(desl), custoFreteTxt: Com_moeda_(ComPr_custoFrete_(desl)), checklist: x.checklist, tipo: x.tipo,
     linhas: COM_PR_LINHAS, funcoes: COM_PR_FUNCOES, transportes: COM_PR_TRANSPORTES, repasses: COM_PR_REPASSES, beneficio: benef,
     politica: { valorKm: pol.valorKm, alimentacaoPessoaDia: pol.alimentacaoPessoaDia, diariaPessoaDia: pol.diariaPessoaDia, hospedagemPessoaNoite: pol.hospedagemPessoaNoite, horaDeslocamento: pol.horaDeslocamento,
-      velocidadeMediaKmh: pol.velocidadeMediaKmh, origemPadrao: pol.origemPadrao, repassePadrao: pol.repassePadrao, versao: pol.versao, incompleta: ComPr_politicaIncompleta_(pol).map(function (f) { return f.nome; }) } };
+      velocidadeMediaKmh: pol.velocidadeMediaKmh, origemPadrao: pol.origemPadrao, repassePadrao: pol.repassePadrao, versao: pol.versao, incompleta: ComPr_politicaIncompleta_(pol).map(function (f) { return f.nome; }),
+      taxaViagem: pol.taxaViagem, estradaKmMinimo: pol.estradaKmMinimo, horaEstrada: { TECNICO: ComPr_horaEstrada_(pol, 'TECNICO'), ENGENHEIRO: ComPr_horaEstrada_(pol, 'ENGENHEIRO') } } };
+  // 01/11/2026 (C2): preço digitado do deslocamento e o alerta quando fica abaixo do custo
+  t.precoInformado = desl.precoInformado === undefined ? null : desl.precoInformado;
+  t.abaixoDoCusto = t.precoInformado !== null && calc.custo > 0 && t.precoInformado < calc.custo - 0.004;
   var a = x.analise;
   t.precoRepasse = desl.repasse === 'ITEM' ? ComPr_precoRepasse_(calc.custo, pol) : 0; t.precoRepasseTxt = Com_moeda_(t.precoRepasse);
   t.diluir = a.diluir; t.diluirTxt = Com_moeda_(a.diluir);
@@ -537,7 +699,7 @@ function ComPr_paraTela_(eu, p, itens, editavel) {
   if (eu && eu.veCusto) {
     t.analise = a;
     t.analiseTxt = { custoTotal: Com_moeda_(a.custoTotal), custoItens: Com_moeda_(a.custoItens), custoDeslocamento: Com_moeda_(a.custoDeslocamento), impostos: Com_moeda_(a.impostos), total: Com_moeda_(a.total),
-      margem: a.margemPct === null ? '—' : Com_pct_(a.margemPct) + ' (' + Com_moeda_(a.margemValor) + ')', minima: a.margemMinPct === null ? 'não definida' : Com_pct_(a.margemMinPct, 1), alvo: a.margemAlvoPct === null ? 'não definida' : Com_pct_(a.margemAlvoPct, 1),
+      margem: a.margemPct === null ? '—' : Com_pct_(a.margemPct) + ' (' + Com_moeda_(a.margemValor) + ')', comissao: Com_moeda_(a.comissao), comissaoPct: Com_pct_(a.comissaoPct, 1), sobra: Com_moeda_(a.margemValor), minima: a.margemMinPct === null ? 'não definida' : Com_pct_(a.margemMinPct, 1), alvo: a.margemAlvoPct === null ? 'não definida' : Com_pct_(a.margemAlvoPct, 1),
       impostosPct: a.impostosPct === null ? 'não definido na política' : Com_pct_(a.impostosPct, 1), precoMinimo: a.precoMinimo === null ? '' : Com_moeda_(a.precoMinimo), precoAlvo: a.precoAlvo === null ? '' : Com_moeda_(a.precoAlvo),
       naoRepassado: a.naoRepassado === null ? '' : Com_moeda_(a.naoRepassado) };
   }
@@ -755,6 +917,15 @@ function ComPr_problemas_(p, pol, x) {
     var manuais = (Com_json_(p.ITENS_JSON, []) || []).filter(function (i) { return i && !i.auto && /desloc|di[aá]ria|ped[aá]gio|hosped|quil[oô]metr|\bkm\b|estadia/i.test(Com_s_(i.descricao)); });
     if (manuais.length) add('VIAGEM_EM_DOBRO', 'há item digitado de deslocamento (' + manuais.slice(0, 2).map(function (i) { return Com_s_(i.descricao).slice(0, 50); }).join('; ') + ') além do cálculo da viagem: confira para não cobrar duas vezes', false);
   }
+  // 01/11/2026 (C2): preço do deslocamento digitado abaixo do custo (a C1 achou o deslocamento cobrado abaixo do custo no CRM)
+  var autoD = (Com_json_(p.ITENS_JSON, []) || []).filter(function (i) { return i && i.auto === 'DESLOCAMENTO'; })[0];
+  if (autoD && Number(autoD.custoUnitario) > 0 && Number(autoD.precoUnitario) < Number(autoD.custoUnitario) - 0.004) add('DESLOCAMENTO_ABAIXO_CUSTO', 'o deslocamento está a ' + Com_moeda_(autoD.precoUnitario) + ', abaixo do custo de ' + Com_moeda_(autoD.custoUnitario) + ' da viagem: a empresa paga para ir', true);
+  if (v && v.ha === true) {
+    var manD = (Com_json_(p.ITENS_JSON, []) || []).filter(function (i) { return i && !i.auto && /desloc|di[aá]ria|ped[aá]gio|hosped|estadia/i.test(Com_s_(i.descricao)); });
+    var somaMan = manD.reduce(function (t, i) { return t + (Number(i.quantidade) || 0) * (Number(i.precoUnitario) || 0); }, 0);
+    if (manD.length && d.repasse !== 'ITEM' && a.custoViagem > 0 && somaMan < a.custoViagem - 0.004) add('DESLOCAMENTO_ABAIXO_CUSTO', 'o deslocamento digitado soma ' + Com_moeda_(somaMan) + ', abaixo do custo de ' + Com_moeda_(a.custoViagem) + ' calculado para a viagem', true);
+  }
+  if (typeof ComF_problemasItens_ === 'function') ComF_problemasItens_(p, pol).forEach(function (q) { add(q.regra, q.texto, q.grave); });
   if (!x.checklist.ok && s === 'RASCUNHO') add('CHECKLIST', 'checklist de custos incompleto: ' + x.checklist.faltas.map(function (f) { return f.texto.split(':')[0]; }).slice(0, 4).join(', '), false);
   if (a.naoRepassado > 0.009) add('DESCONTO_NA_VIAGEM', 'o desconto geral reduz o repasse da viagem: ' + Com_moeda_(a.naoRepassado) + ' do custo de deslocamento não volta no preço', false);
   if (a.abaixoMin && ['APROVADO', 'EXCECAO_GESTAO'].indexOf(Com_up_(p.DESCONTO_SITUACAO)) < 0) add('MARGEM_MINIMA', 'margem de ' + Com_pct_(a.margemPct) + ' abaixo da mínima de ' + Com_pct_(a.margemMinPct, 1) + (a.completa ? '' : ' (mesmo sem o custo de ' + Com_plural_(a.itensSemCusto, 'item', 'itens') + ')'), true);
@@ -800,6 +971,9 @@ function ComPr_itensGestora_(ctx) {
       porque: 'Revisão de precificação (' + Com_s_(p.RESPONSAVEL_NOME) + ', ' + (COM_SITUACOES_PROP[s] || s).toLowerCase() + '): ' + pr.map(function (x) { return x.texto; }).join('; ') + '.',
       acao: s === 'ENVIADA' ? 'Se o custo ficou de fora, faça nova revisão com a viagem completa antes do aceite do cliente.' : 'Abra a proposta e ajuste com ' + ComG_primeiroNome_(p.RESPONSAVEL_NOME) + ' antes do envio.' });
   });
+  var prov = ComPr_provisorios_(pol);
+  if (prov.length) itens.push({ chave: 'PARAMETROS_PROVISORIOS', regra: 'PARAMETROS_PROVISORIOS', prioridade: 4, titulo: Com_plural_(prov.length, 'valor da política de preço ainda é provisório', 'valores da política de preço ainda são provisórios') + ' (falta a confirmação do dono)', ref: { tipo: 'metodologia' },
+    porque: 'Os preços da tabela usam os valores iniciais da C1 até o dono confirmar: ' + prov.map(function (x) { return x.nome; }).join('; ') + '.', acao: 'Confirme com o dono e marque cada valor em Comercial > Metodologia > Preço e desconto.' });
   var sr = ComPr_semReajuste_(null, pol.reajusteAlertaMeses || 12);
   if (sr.length) itens.push({ chave: 'SEM_REAJUSTE', regra: 'CATALOGO_SEM_REAJUSTE', prioridade: 4, titulo: Com_plural_(sr.length, 'item do catálogo está', 'itens do catálogo estão') + ' sem reajuste há mais de ' + Com_plural_(pol.reajusteAlertaMeses || 12, 'mês', 'meses'), ref: { tipo: 'catalogo' },
     porque: 'Política de reajuste: preço parado perde margem com a inflação e com o custo novo de peças e mão de obra.', acao: 'A Diretoria aplica o reajuste em Produtos e serviços > Reajustar preços (com prévia e histórico).' });
