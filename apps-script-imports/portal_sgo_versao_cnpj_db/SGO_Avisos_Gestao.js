@@ -485,6 +485,12 @@ function AvG_enviarComum_(uid, u, linhas, quando) {
       try { r = SGO_notificar_({ usuarios: [uid], canais: ['sgo', 'email'], evento: AvG_s_(l.EVENTO), origem: 'AVISOS_GESTAO_COMUM', refId: ('COMUM-' + AvG_s_(l.AVISO_ID)).slice(0, 80), titulo: AvG_s_(l.TITULO), texto: AvG_s_(l.TEXTO), link: AvG_link_(l.AVISO_ID) || undefined }) || {}; }
       catch (e) { r = { motivo: String((e && e.message) || e) }; }
       var ok = !!r.ok;
+      // revisão: pela regra comum da matriz o evento pode ser "só no sistema" (sem e-mail); não é falha, o item segue no sistema
+      if (!ok && /fica só no sistema/.test(AvG_s_(r.motivo))) {
+        campos.SITUACAO = 'RESOLVIDO'; campos.EMAIL_SITUACAO = 'NAO_SE_APLICA'; campos.EMAIL_MOTIVO = AvG_texto_(r.motivo, 300);
+        campos.RESOLVIDO_EM = agora; campos.RESOLUCAO = 'Fora da gestão: pela matriz este aviso fica só no sistema.';
+        SGO_DATA.update(AVG_ABA, l.ID, campos); return;
+      }
       campos.SITUACAO = ok ? (l.TIPO === 'IRREVERSIVEL' ? 'RESOLVIDO' : 'ENVIADO') : 'FALHOU';
       campos.EMAIL_SITUACAO = ok ? 'ENVIADO' : 'FALHOU'; campos.EMAIL_MOTIVO = ok ? (r.guardados ? AvG_texto_(r.motivo, 300) : 'Entregue pela regra comum da matriz.') : AvG_texto_(r.motivo || 'O e-mail não saiu.', 300);
       if (ok) { campos.ENVIADO_EM = agora; if (l.TIPO === 'IRREVERSIVEL') { campos.RESOLVIDO_EM = agora; campos.RESOLUCAO = 'Ato irreversível: aviso de informação, não exige ação.'; } }

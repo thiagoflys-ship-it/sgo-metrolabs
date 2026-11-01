@@ -203,7 +203,8 @@ function SGO_waPilotoSincronizarGestao_() {
   try {
     var cfg = SGO_waPilotoCfg_(), tg = SGO_waPilotoTelefonesGestao_();
     if (cfg.gravado && SGO_waPilotoMesmaLista_(cfg.telefonesGestao, tg)) return false;
-    SGO_waPilotoGravarProp_(cfg, cfg.gravado ? cfg.telefones : SGO_waPilotoTelefones_(cfg), cfg.atualizadoPor || 'sistema', tg);
+    // revisão: recalcula "telefones" (sem os gestores que a versão anterior pôs lá), em vez de regravar a lista antiga
+    SGO_waPilotoGravarProp_(cfg, SGO_waPilotoTelefones_(cfg), cfg.atualizadoPor || 'sistema', tg);
     return true;
   } catch (e) { console.error('Piloto do WhatsApp (lista da gestão): ' + ((e && e.message) || e)); return false; }
 }

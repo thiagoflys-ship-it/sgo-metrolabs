@@ -195,3 +195,10 @@ test('8. link ?aviso=: abre para o destinatário e para a gestão; os demais vee
   assert.match(t.message, /^Este aviso é de outra pessoa/);
   assert.equal(c.SGO_AvisosGestao_api('s_pj', 'abrir', { aviso: id }).outraPessoa, true);
 });
+
+test('segunda revisão: fora da gestão com evento "só no sistema" não vira falha; sincronização da gestão recalcula a lista do piloto', () => {
+  const fs2 = require('node:fs'), p2 = require('node:path');
+  const l = (f) => fs2.readFileSync(p2.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db', f), 'utf8');
+  assert.match(l('SGO_Avisos_Gestao.js'), /if \(!ok && \/fica só no sistema\/\.test\(AvG_s_\(r\.motivo\)\)\)/);
+  assert.match(l('SGO_WhatsappPiloto.js'), /SGO_waPilotoGravarProp_\(cfg, SGO_waPilotoTelefones_\(cfg\), cfg\.atualizadoPor \|\| 'sistema', tg\);/);
+});
