@@ -109,7 +109,10 @@ test('perda: "Completar quem ganhou" preenche só o que estava vazio, na oportun
   const o2 = amb.tabelas.COM_OPORTUNIDADES.find((x) => x.ID === a.oportunidade.id);
   assert.equal(o2.CONCORRENTE_VENCEDOR, ''); assert.equal(o2.VALOR_VENCEDOR, '');
   assert.ok(amb.tabelas.COM_HISTORICO.some((h) => h.TIPO === 'REABERTA' && /quem ganhou: CONCORRENTE TESTE LTDA, por R\$ 2\.900,00/.test(h.TEXTO)));
-  assert.equal(linha().CONCORRENTE, 'CONCORRENTE TESTE LTDA', 'o banco de preços continua com a perda');
+  // revisão da C4: o vencedor sai também do banco (fica no histórico acima); uma perda nova não herda o vencedor antigo
+  assert.equal(linha().CONCORRENTE, '', 'o vencedor sai do banco ao reabrir');
+  assert.ok(!(Number(linha().VALOR_VENCEDOR) > 0));
+  assert.equal(linha().RESULTADO, 'PERDIDO', 'a linha da perda continua no banco');
 });
 
 test('relatório preço × resultado: taxa, médias, quem ganhou, tabela e mercado por serviço; período; sem custo nem compra; vendedor sem o cliente dos outros', () => {
@@ -239,4 +242,13 @@ test('menu, ajuda, manual e base do assistente: Quadro e Gantt dentro de Oportun
   assert.match(base, /Completar quem ganhou/);
   // CRLF preservado nos arquivos que já eram CRLF
   for (const f of ['JS_Comercial.html', 'Index.html', 'SGO_Comercial_Propostas.js']) { const s = ler(f); assert.equal((s.match(/\r\n/g) || []).length, (s.match(/\n/g) || []).length, f + ' com CRLF em todas as linhas'); }
+});
+
+test('revisão da C4: reabrir a perda limpa o vencedor no banco e Oportunidades pelo menu abre na Lista', () => {
+  const fs2 = require('node:fs'), p2 = require('node:path');
+  const l = (f) => fs2.readFileSync(p2.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db', f), 'utf8');
+  assert.match(l('SGO_Comercial_BancoPrecos.js'), /function ComBP_limparVencedor_\(o\)/);
+  assert.match(l('SGO_Comercial_Oportunidades.js'), /if \(antes === 'PERDIDA' && typeof ComBP_limparVencedor_ === 'function'\) ComBP_limparVencedor_\(o\);/);
+  assert.match(l('JS_Comercial.html'), /function Comercial_abrirOportunidadesMenu_\(\) \{ CM\.visao = "lista";/);
+  assert.match(l('Index.html'), /Comercial_abrirOportunidadesMenu_\(\)/);
 });

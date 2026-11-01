@@ -83,7 +83,7 @@ function SGO_ajudaTelas_Comercial_() {
       perguntas: [
         { p: 'Outro vendedor vê as minhas oportunidades?', r: 'Não. O vendedor vê só as próprias; a gestão comercial vê todas.' },
         { p: 'Onde foram parar o Quadro do funil e o Gantt comercial?', r: 'Estão dentro de Oportunidades, nos botões "Quadro (Kanban)" e "Gantt" do topo. Funcionam como antes; os nomes continuam.' },
-        { p: 'Reabri uma oportunidade perdida. O que acontece com quem ganhou?', r: 'Sai da oportunidade junto com o motivo da perda e fica registrado no histórico e no Banco de preços. Se ela for perdida de novo, informe quem ganhou desta vez.' },
+        { p: 'Reabri uma oportunidade perdida. O que acontece com quem ganhou?', r: 'Sai da oportunidade junto com o motivo da perda e fica registrado no histórico da oportunidade (sai também do Banco de preços, para a perda nova não herdar o vencedor antigo). Se ela for perdida de novo, informe quem ganhou desta vez.' },
         { p: 'E-mail do cliente aparece aqui?', r: 'Sim: os e-mails registrados no cliente (E-mail > Registrar no cliente) e, para o responsável, os recebidos na própria caixa dele de um contato desse cliente.' }
       ],
       secoesManual: [{ titulo: 'Regras da oportunidade', paragrafos: [

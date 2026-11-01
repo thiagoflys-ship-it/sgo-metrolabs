@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "3676f56817dc",
+ "versao": "4f16e760aaa4",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -1735,7 +1735,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Oportunidades > Perda: quem ganhou e \"Completar quem ganhou\"",
-     "texto": "Na perda (e na recusa da proposta), \"Quem ganhou e por quanto?\" é opcional: o nome do concorrente e o valor total da proposta vencedora. O valor vai para o Banco de preços, repartido pelos itens da proposta, e o Orçamentista avisa quando um preço novo passa do que já perdemos.\n\nSe você souber depois, abra a oportunidade perdida e toque em Completar quem ganhou. A ficha mostra o que já está registrado. Só o que estava em branco é gravado, na oportunidade e nas linhas do Banco de preços desta perda (a data, o valor e o resultado das linhas não mudam). O que já foi informado nunca é trocado: para corrigir, a gestão comercial desconsidera o preço no Banco de preços, com o motivo, e registra o certo. Cada complemento fica no histórico da oportunidade.\n\nAo reabrir uma oportunidade perdida, quem ganhou sai da oportunidade junto com o motivo da perda; fica no histórico (\"quem ganhou: ...\") e no Banco de preços. Se ela for perdida de novo, informe quem ganhou desta vez."
+     "texto": "Na perda (e na recusa da proposta), \"Quem ganhou e por quanto?\" é opcional: o nome do concorrente e o valor total da proposta vencedora. O valor vai para o Banco de preços, repartido pelos itens da proposta, e o Orçamentista avisa quando um preço novo passa do que já perdemos.\n\nSe você souber depois, abra a oportunidade perdida e toque em Completar quem ganhou. A ficha mostra o que já está registrado. Só o que estava em branco é gravado, na oportunidade e nas linhas do Banco de preços desta perda (a data, o valor e o resultado das linhas não mudam). O que já foi informado nunca é trocado: para corrigir, a gestão comercial desconsidera o preço no Banco de preços, com o motivo, e registra o certo. Cada complemento fica no histórico da oportunidade.\n\nAo reabrir uma oportunidade perdida, quem ganhou sai da oportunidade junto com o motivo da perda; sai também das linhas da perda no Banco de preços e fica registrado no histórico da oportunidade (\"quem ganhou: ...\"). Se ela for perdida de novo, informe quem ganhou desta vez."
     },
     {
      "titulo": "Quadro do funil (modo Quadro (Kanban)) (parte 1)",

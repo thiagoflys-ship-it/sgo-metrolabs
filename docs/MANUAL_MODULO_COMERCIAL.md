@@ -66,7 +66,7 @@ Na perda (e na recusa da proposta), "Quem ganhou e por quanto?" é opcional: o n
 
 Se você souber depois, abra a oportunidade perdida e toque em **Completar quem ganhou**. A ficha mostra o que já está registrado. Só o que estava em branco é gravado, na oportunidade e nas linhas do Banco de preços desta perda (a data, o valor e o resultado das linhas não mudam). O que já foi informado nunca é trocado: para corrigir, a gestão comercial desconsidera o preço no Banco de preços, com o motivo, e registra o certo. Cada complemento fica no histórico da oportunidade.
 
-Ao reabrir uma oportunidade perdida, quem ganhou sai da oportunidade junto com o motivo da perda; fica no histórico ("quem ganhou: ...") e no Banco de preços. Se ela for perdida de novo, informe quem ganhou desta vez.
+Ao reabrir uma oportunidade perdida, quem ganhou sai da oportunidade junto com o motivo da perda; sai também das linhas da perda no Banco de preços e fica registrado no histórico da oportunidade ("quem ganhou: ..."). Se ela for perdida de novo, informe quem ganhou desta vez.
 
 ## Quadro do funil (modo Quadro (Kanban))
 

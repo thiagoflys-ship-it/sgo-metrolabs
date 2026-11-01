@@ -688,6 +688,26 @@ function ComBP_completarVencedor_(o, venc) {
   return { linhas: n };
 }
 
+/**
+ * Revisão da C4: ao reabrir uma perda, o vencedor sai também das linhas PERDIDO do banco (fica no histórico da oportunidade);
+ * senão uma perda nova herdava o vencedor antigo e o "Completar quem ganhou" não conseguia trocar. Nunca lança.
+ */
+function ComBP_limparVencedor_(o) {
+  var n = 0;
+  try {
+    var props = {};
+    ComP_lerPropostas_().forEach(function (p) { if (Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o && o.ID)) props[Com_s_(p.ID)] = true; });
+    var agora = Com_agora_();
+    ComBP_ler_().forEach(function (r) {
+      if (Com_s_(r.REF_TIPO) !== 'PROPOSTA' || !props[Com_s_(r.REF_ID)] || Com_up_(r.RESULTADO) !== 'PERDIDO') return;
+      if (!Com_s_(r.CONCORRENTE) && !(ComBP_num_(r.VALOR_VENCEDOR) > 0)) return;
+      SGO_DATA.update(COM_ABAS.PRECOS, r.ID, { CONCORRENTE: '', VALOR_VENCEDOR: '', ATUALIZADO_EM: agora });
+      n++;
+    });
+  } catch (e) { console.error('Banco de preços, limpar quem ganhou ' + Com_s_(o && o.ID) + ': ' + ((e && e.message) || e)); }
+  return { linhas: n };
+}
+
 /** "12% acima", "8% abaixo", "igual" (pt-BR). x: diferença em %, ou null. */
 function ComBP_difTxt_(x) {
   if (x === null || x === undefined || !isFinite(x)) return '';

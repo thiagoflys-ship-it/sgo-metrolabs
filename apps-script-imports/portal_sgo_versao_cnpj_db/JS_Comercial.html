@@ -364,6 +364,8 @@
   }
 
   /** Ponto de entrada de abrir(mod). */
+  /** Revisão da C4: "Oportunidades" pelo menu abre sempre na Lista (o modo do atalho Kanban ou Gantt não fica guardado). */
+  function Comercial_abrirOportunidadesMenu_() { CM.visao = "lista"; abrir("comercial_oportunidades"); }
   function Comercial_render_(mod, alvo) {
     var div = Com_$_("conteudo");
     if (!div) return;

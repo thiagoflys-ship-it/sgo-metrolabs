@@ -554,6 +554,7 @@ function ComOpo_reabrir_(eu, sessionId, d) {
     var novo = Object.assign({}, o, campos);
     campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, novo, prox);
     SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    if (antes === 'PERDIDA' && typeof ComBP_limparVencedor_ === 'function') ComBP_limparVencedor_(o);
     Com_historico_('OPORTUNIDADE', o.ID, 'REABERTA', eu, { de: COM_SITUACOES_OPO[antes], para: 'Aberta', texto: motivo + (antes === 'PERDIDA' ? ' (motivo da perda anterior: ' + Com_s_(o.MOTIVO_PERDA) + (Com_s_(o.CONCORRENTE_VENCEDOR) || Number(o.VALOR_VENCEDOR) > 0 ? '; quem ganhou: ' + (Com_s_(o.CONCORRENTE_VENCEDOR) || 'não informado') + (Number(o.VALOR_VENCEDOR) > 0 ? ', por ' + Com_moeda_(o.VALOR_VENCEDOR) : '') : '') + ')' : '') });
     if (Com_s_(o.RESPONSAVEL_ID) !== eu.id) Com_avisar_(o.RESPONSAVEL_ID, 'REABERTA', 'Oportunidade ' + o.CODIGO + ' reaberta', eu.nome + ' reabriu a oportunidade: ' + motivo + ' A próxima ação está em Minhas atividades.', { tipo: 'oportunidade', id: o.ID }, { email: true });
     return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Oportunidade reaberta. A próxima ação está em Minhas atividades do responsável.' };
