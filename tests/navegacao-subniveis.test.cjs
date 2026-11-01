@@ -252,3 +252,19 @@ test('ajudas: documento que abre em aba nova diz o que acontece no celular; manu
   assert.match(tec, /data-sgo-janela/);
   assert.match(ler('SGO_AssistenteManuais.js'), /Voltar ao SGO\+/);
 });
+
+test('revisão: formulário alterado sem texto digitado também pergunta; Frota no computador e volta à oportunidade sem sobra', () => {
+  const nav = ler('JS_Navegacao.html');
+  assert.match(nav, /function marcadoSujo\(el\)/);
+  assert.match(nav, /querySelectorAll\("\[data-sgo-sujo\]"\)/);
+  assert.match(ler('JS_Cadastros.html'), /setAttribute\("data-sgo-sujo", sim \? "1" : "0"\)/);
+  const pdr = ler('JS_Padroes_Documentos.html');
+  assert.match(pdr, /function pdrNavSujo_\(\)/);
+  assert.equal((pdr.match(/pdrNavSujo_\(\);corpo\.oninput/g) || []).length, 2);
+  const core = ler('JS_Core.html');
+  assert.match(core, /FS\.navForm = SGO_NAV\.empilhar\(/);
+  assert.match(core, /SGO_NAV\.descartar\(FS\.navForm\)/);
+  const com = ler('JS_Comercial.html');
+  assert.match(com, /CM\.voltaOpoNova = \{ prop: propId, opo: opoId \}/);
+  assert.match(com, /CM\.voltaOpo = nova && nova\.prop === id \? nova : null/);
+});

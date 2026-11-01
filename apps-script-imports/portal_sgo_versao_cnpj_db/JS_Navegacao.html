@@ -541,8 +541,19 @@
       });
     }
     var NAO_CONTA = /busca|buscar|pesquis|filtro|search|procurar/i;
+    // Revisão da Etapa 2: o módulo que já sabe que o formulário mudou (preenchido pela leitura do certificado, lista de escolha,
+    // caixa de marcar) avisa a casca com data-sgo-sujo no painel: "1" fixo ou, se o elemento tiver __sgoSujo(), o que ela responder.
+    function marcadoSujo(el) {
+      if (!el.hasAttribute || !el.hasAttribute("data-sgo-sujo")) return false;
+      if (typeof el.__sgoSujo === "function") { try { return !!el.__sgoSujo(); } catch (e) { return false; } }
+      return el.getAttribute("data-sgo-sujo") === "1";
+    }
     function sujoEm(raiz) {
-      if (!raiz || !editados) return false;
+      if (!raiz) return false;
+      if (marcadoSujo(raiz)) return true;
+      var marcados = raiz.querySelectorAll ? raiz.querySelectorAll("[data-sgo-sujo]") : [];
+      for (var m = 0; m < marcados.length; m++) if (marcadoSujo(marcados[m])) return true;
+      if (!editados) return false;
       var campos = raiz.querySelectorAll("input, textarea, [contenteditable='true'], [contenteditable='']");
       for (var i = 0; i < campos.length; i++) {
         var c = campos[i];

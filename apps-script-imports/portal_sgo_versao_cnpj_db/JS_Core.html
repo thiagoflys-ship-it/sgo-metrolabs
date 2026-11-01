@@ -2904,6 +2904,9 @@
 
   function fsDesenharInicio_() {
     try { if (window.SGO_NAV && !fsNoComputador_()) SGO_NAV.limparSubniveis(); } catch (e) {}
+    // no computador a pilha não é limpa: tira só o passo do formulário (salvou ou cancelou), senão o voltar seguinte não faz nada
+    try { if (FS.navForm && window.SGO_NAV && SGO_NAV.descartar) SGO_NAV.descartar(FS.navForm); } catch (e) {}
+    FS.navForm = null;
     const host = fsHost_();
     const d = FS.inicio;
     if (!host || !d) return;
@@ -4081,7 +4084,7 @@
   // passar o carro, ajustar KM, partida) são um passo do voltar; voltar (ou "Cancelar") volta à tela inicial da Frota, na mesma
   // altura e com a mesma base escolhida. Ao voltar à tela inicial por conta própria (salvou, cancelou), o passo sai da pilha.
   function fsEntrarForm_(rotulo) {
-    if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar(rotulo, function () { renderMobileFrotaOperacional_(); }, { chave: "fs-form" });
+    if (window.SGO_NAV && SGO_NAV.empilhar) FS.navForm = SGO_NAV.empilhar(rotulo, function () { renderMobileFrotaOperacional_(); }, { chave: "fs-form" }) || null;
   }
   function fsCancelar_() {
     const f = FS.fluxo;

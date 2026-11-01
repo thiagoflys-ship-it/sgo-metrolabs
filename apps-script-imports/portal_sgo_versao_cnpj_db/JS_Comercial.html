@@ -746,7 +746,9 @@
   }
 
   function Comercial_abrirProposta_(id, aviso) {
-    if (!CM.voltaOpo || CM.voltaOpo.prop !== id) CM.voltaOpo = null; // aberta pela lista: o voltar só fecha a proposta
+    // a volta à oportunidade vale só para a abertura feita de dentro dela; aberta pela lista ou pelo Hoje, o voltar só fecha a proposta
+    var nova = CM.voltaOpoNova; CM.voltaOpoNova = null;
+    CM.voltaOpo = nova && nova.prop === id ? nova : null;
     var g = Com_gaveta_("Proposta", '<div class="cm-vazio">Carregando…</div>');
     Comercial_ligarVoltaOpo_(g, id);
     Com_chamar_("proposta", { id: id }, function (r) { Comercial_desenharProposta_(g, r.proposta, aviso); }, function (m) { Com_$_("cmGavetaCorpo").innerHTML = '<div class="cm-faixa erro">' + Com_esc_(m) + '</div>'; });
@@ -755,7 +757,7 @@
 
   /** Etapa 2: proposta aberta de dentro da oportunidade. Fecha pelo voltar e a oportunidade reabre (com os dados de agora). */
   function Comercial_abrirPropostaDaOportunidade_(propId, opoId, aviso) {
-    CM.voltaOpo = { prop: propId, opo: opoId };
+    CM.voltaOpoNova = { prop: propId, opo: opoId };
     Comercial_abrirProposta_(propId, aviso);
   }
   function Comercial_ligarVoltaOpo_(g, propId) {

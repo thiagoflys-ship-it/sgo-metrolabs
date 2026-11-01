@@ -326,7 +326,8 @@
     if (chave) CadTela_marcarSelecionado_(chave, "");
   }
   /** Marca o formulário do painel como alterado (pede confirmação ao fechar). */
-  function CadUI_painelSujo_(sim) { var p = document.getElementById("cadxPainel"); if (p) p.__sujo = !!sim; }
+  // data-sgo-sujo avisa a casca do voltar (JS_Navegacao) que o formulário mudou, mesmo sem texto digitado (lista, caixa de marcar)
+  function CadUI_painelSujo_(sim) { var p = document.getElementById("cadxPainel"); if (p) { p.__sujo = !!sim; p.setAttribute("data-sgo-sujo", sim ? "1" : "0"); } }
 
   // ---------- peças de HTML ----------
   function CadUI_selo_(status) {

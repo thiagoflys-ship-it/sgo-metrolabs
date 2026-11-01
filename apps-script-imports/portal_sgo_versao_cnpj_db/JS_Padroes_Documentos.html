@@ -326,6 +326,8 @@ function pdrAbas_(id,modo){var pode=pdrPodeEditar_();var abas=[['resumo','Resumo
 function pdrCampoLeitura_(rot,val){return '<div class="pdr-dl-item"><dt>'+rot+'</dt><dd>'+(val===''||val==null?'<span class="pdr-mudo">—</span>':val)+'</dd></div>';}
 // Etapa 2 do programa de melhoria (01/11/2026): com o painel aberto, trocar de aba (Resumo, Cadastro, Dados) ou ir do grupo para um
 // canal é um passo do voltar; voltar devolve o painel como estava. "Cancelar" e salvar, que já voltam ao Resumo, tiram o passo da pilha.
+// Revisão da Etapa 2: o painel diz à casca do voltar se o formulário mudou (também quando a leitura do certificado preencheu os campos).
+function pdrNavSujo_(){var p=document.getElementById('pdr-painel');if(!p||p.__sgoSujo)return;p.setAttribute('data-sgo-sujo','');p.__sgoSujo=function(){return !!(PDR.painel&&PDR.painel.sujo&&/cadastro|dados|novo/.test(PDR.painel.modo));};}
 function pdrPassoPainel_(novo){
   var pp=document.getElementById('pdr-painel');if(!pp||pp.hidden||!PDR.painel||!window.SGO_NAV||!SGO_NAV.empilhar||PDR.voltandoPainel)return;
   var ant={modo:PDR.painel.modo,id:PDR.painel.id,grupo:PDR.painel.grupo};var kAnt=ant.modo+'|'+(ant.id||ant.grupo||''),kNovo=novo.modo+'|'+(novo.id||novo.grupo||'');
@@ -352,7 +354,7 @@ function pdrAbrirPainel_(id,modo){
     rod.innerHTML=pode?'<button type="button" class="pdr-btn pdr-btn-primario" data-pdr-p="aba" data-modo="cadastro" data-id="'+pdEsc(id)+'">Editar</button><button type="button" class="pdr-btn" data-pdr-p="aba" data-modo="dados" data-id="'+pdEsc(id)+'">Dados e foto</button><span class="pdr-espaco"></span>'+(x.ativo?'<button type="button" class="pdr-btn pdr-btn-perigo" data-pdr-p="inativar" data-id="'+pdEsc(id)+'">Inativar</button>':'<button type="button" class="pdr-btn" data-pdr-p="reativar" data-id="'+pdEsc(id)+'">Reativar</button>'):'<span class="pdr-mudo">Seu perfil só consulta.</span><span class="pdr-espaco"></span><button type="button" class="pdr-btn" data-pdr-p="fechar">Fechar</button>';
     if(x.FOTO_ID)pdPhoto(id,document.getElementById('pdr-foto'));pdrCarregarHistorico_(id);}
   corpo.scrollTop=0;
-  corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
+  pdrNavSujo_();corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
   pdrMostrarPainel_();
 }
 function pdrResumoHtml_(x){
@@ -480,7 +482,7 @@ function pdrAbrirNovo_(){
   document.getElementById('pdr-painel-sub').textContent='TAG, certificado, incerteza e validade. Os dados do equipamento entram depois, em Dados, localização e foto.';
   document.getElementById('pdr-painel-abas').hidden=true;pdrPainelMsg_('');
   var corpo=document.getElementById('pdr-painel-corpo');corpo.innerHTML=pdrFormCadastro_(null);
-  corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
+  pdrNavSujo_();corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
   document.getElementById('pdr-painel-rodape').innerHTML='<button type="button" class="pdr-btn pdr-btn-primario" data-pdr-p="salvar-novo">Salvar padrão</button><button type="button" class="pdr-btn" data-pdr-p="fechar">Cancelar</button>';
   pdrMostrarPainel_('pdr-f-tag');
 }
