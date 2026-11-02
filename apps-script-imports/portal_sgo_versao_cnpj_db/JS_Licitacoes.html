@@ -560,12 +560,14 @@
       '<div class="lic-ficha-cab">' + Lic_notaHtml_(o) + '<div><h2>' + Lic_esc_(o.orgao) + ' <span class="cm-meta lic-mono">' + Lic_esc_(o.codigo) + '</span></h2><p class="cm-meta">' + Lic_esc_((o.unidade ? o.unidade + " · " : "") + (o.municipio ? o.municipio + "/" : "") + o.uf) + " · " + Lic_esc_(Lic_sessaoTexto_(o)) + "</p>" +
       '<p class="cm-txt" style="margin:4px 0 0">' + Lic_selosHtml_(o) + '</p><div class="lic-ficha-num">' + num.map(function (n) { return "<div><span>" + Lic_esc_(n[0]) + "</span><b>" + n[1] + "</b></div>"; }).join("") + "</div></div></div>" +
       '<div class="lic-abas cm-tabs" role="tablist" aria-label="Partes da ficha">' + [["resumo", "Resumo"], ["prazos", "Prazos" + (d.prazos && d.prazos.eventos ? " (" + d.prazos.eventos.filter(function (e) { return e.situacao !== "RETIFICADO"; }).length + ")" : "")], ["arquivos", "Arquivos" + (d.arquivos && d.arquivos.arquivos ? " (" + d.arquivos.arquivos.filter(function (x) { return !x.substituidoEm; }).length + ")" : "")],
-        ["analise", "Análise" + (o.nota !== null && o.nota !== undefined ? " (" + Lic_num_(o.nota) + ")" : "")], ["fonte", "Fonte"], ["historico", "Histórico (" + (d.historico || []).length + ")"]].map(function (a) {
+        ["analise", "Análise" + (o.nota !== null && o.nota !== undefined ? " (" + Lic_num_(o.nota) + ")" : "")], ["leitura", "Leitura do edital"], ["fonte", "Fonte"], ["historico", "Histórico (" + (d.historico || []).length + ")"]].map(function (a) {
         return '<button type="button" class="cm-tab' + (a[0] === aba ? " active" : "") + '" role="tab" aria-selected="' + (a[0] === aba) + '" data-lic-fab="' + a[0] + '">' + Lic_esc_(a[1]) + "</button>";
       }).join("") + "</div>";
     if (aba === "prazos") h += Lic_htmlPrazos_(d);
     else if (aba === "arquivos") h += Lic_htmlArquivos_(d);
     else if (aba === "analise") h += Lic_htmlAnalise_(d);
+    // leitura especialista do edital (02/11/2026): JS_Licitacoes_Leitura.html
+    else if (aba === "leitura") h += typeof LicLeit_casca_ === "function" ? LicLeit_casca_(d) : Lic_faixa_("A leitura do edital não carregou: atualize a página (F5).", "aviso");
     else if (aba === "fonte") {
       var f = d.fonte;
       h += (d.fonteAviso ? Lic_faixa_(d.fonteAviso, "aviso") : "") + '<div class="cm-caixa"><h3>De onde veio</h3>' + Lic_tabelaHtml_(["Campo", "Valor"], [
@@ -612,6 +614,7 @@
         Lic_ligarCartoes_(c);
         Lic_ligarFichaEtapa2_(c, d, id);
         if (LIC.fichaAba === "prazos") Lic_ligarPrazos_(c, d, id);
+        if (LIC.fichaAba === "leitura" && typeof LicLeit_montar_ === "function") LicLeit_montar_(c, d, id);
       };
       desenhar();
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, function () { Lic_renderFicha_(id); }); });
@@ -816,7 +819,7 @@
 
   // ---------------- Portais e configurações ----------------
   function Lic_htmlPortaisCab_(aba) {
-    return '<div class="cm-tabs" role="tablist" aria-label="Partes">' + [["portais", "Portais e integrações"], ["registro", "Registro das chamadas"], ["radar", "Regras do radar"], ["alertas", "Regras dos alertas"], ["permissoes", "Permissões"]].map(function (a) {
+    return '<div class="cm-tabs" role="tablist" aria-label="Partes">' + [["portais", "Portais e integrações"], ["registro", "Registro das chamadas"], ["radar", "Regras do radar"], ["alertas", "Regras dos alertas"], ["leitura", "Leitura do edital"], ["permissoes", "Permissões"]].map(function (a) {
       return '<button type="button" class="cm-tab' + (a[0] === aba ? " active" : "") + '" role="tab" aria-selected="' + (a[0] === aba) + '" data-lic-pab="' + a[0] + '">' + Lic_esc_(a[1]) + "</button>";
     }).join("") + '</div><div id="licPortaisCorpo"></div>';
   }
@@ -871,6 +874,7 @@
     c.querySelectorAll("[data-lic-pab]").forEach(function (b) { b.onclick = function () { var de = LIC.portaisAba, para = b.getAttribute("data-lic-pab"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Portais: " + b.textContent, function () { LIC.portaisAba = de; if (LIC.mod === "licitacoes_portais") Lic_renderPortais_(); }); LIC.portaisAba = para; Lic_renderPortais_(); }; });
     var corpo = Lic_$_("licPortaisCorpo"), aba = LIC.portaisAba;
     if (aba === "permissoes") { corpo.innerHTML = Lic_htmlPermissoes_(); return; }
+    if (aba === "leitura" && typeof LicLeit_renderCfg_ === "function") { LicLeit_renderCfg_(corpo); return; }
     if (aba === "alertas") { Lic_renderRegrasAlertas_(corpo); return; }
     if (aba === "registro") {
       corpo.innerHTML = Lic_htmlRegistro_(null);

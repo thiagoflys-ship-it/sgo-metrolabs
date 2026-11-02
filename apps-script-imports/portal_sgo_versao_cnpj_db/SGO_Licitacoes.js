@@ -65,7 +65,17 @@ var LIC_ACOES = {
   kanban: function (eu, d) { return Lic_kanban_(eu, d); },
   kanbanMover: function (eu, d) { return Lic_kanbanMover_(eu, d); },
   gantt: function (eu, d) { return Lic_gantt_(eu, d); },
-  painel: function (eu) { return Lic_painel_(eu); }
+  painel: function (eu) { return Lic_painel_(eu); },
+  // leitura especialista do edital (02/11/2026, SGO_Licitacoes_Leitura.js)
+  leitura: function (eu, d) { return LicLeit_telaAcao_(eu, d); },
+  leituraProgresso: function (eu, d) { return LicLeit_progressoAcao_(eu, d); },
+  leituraIniciar: function (eu, d) { return LicLeit_iniciarAcao_(eu, d); },
+  leituraContinuar: function (eu, d) { return LicLeit_continuarAcao_(eu, d); },
+  leituraTentarDeNovo: function (eu, d) { return LicLeit_tentarDeNovoAcao_(eu, d); },
+  leituraConsolidar: function (eu, d) { return LicLeit_consolidarAcao_(eu, d); },
+  palavrasSalvar: function (eu, d) { return LicLeit_palavrasAcao_(eu, d); },
+  leituraCfg: function (eu) { return LicLeit_cfgAcao_(eu); },
+  leituraCfgSalvar: function (eu, d) { return LicLeit_cfgSalvar_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */

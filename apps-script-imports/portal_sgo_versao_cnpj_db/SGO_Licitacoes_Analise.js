@@ -1434,5 +1434,7 @@ function Lic_aposArquivos_(d) {
     var x = Lic_analisar_(sistema, l, { origem: 'AUTOMATICA', motivo: 'Arquivos ou dados da fonte mudaram' });
     if (x.semMudanca) r.semMudanca++; else r.analisadas++;
   });
+  // leitura especialista do edital (02/11/2026, SGO_Licitacoes_Leitura.js): com a leitura automática ligada, põe a candidata na fila
+  try { if (typeof Lic_leituraAposArquivos_ === 'function') r.leitura = Lic_leituraAposArquivos_(chaves); } catch (e) { r.leitura = { erro: Lic_s_(e && e.message) }; }
   return r;
 }

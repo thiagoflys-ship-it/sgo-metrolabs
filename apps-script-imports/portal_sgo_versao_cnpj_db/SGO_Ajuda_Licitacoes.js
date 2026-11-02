@@ -113,6 +113,14 @@ function SGO_ajudaTelas_Licitacoes_() {
           "\"Analisar agora\" faz a primeira análise; \"Refazer análise\" pede o motivo (pelo menos 10 letras). Cada análise é uma versão nova: a anterior continua guardada em \"Todas as versões da análise\".",
           "A análise roda sozinha quando chegam arquivos novos ou a fonte muda; se nada mudou, ela não é refeita.",
           "Edital grande: a IA recebe as páginas que mais importam (termo de referência, itens, habilitação, garantia, multa, prazos), até 140 mil caracteres; o que não foi enviado aparece para ela como \"página(s) não enviada(s) à IA\" e vira pendência. O verificador confere contra o texto inteiro."
+        ] },
+        { titulo: "Leitura do edital (especialista)", itens: [
+          "A aba \"Leitura do edital\" tem as palavras-chave da Diretoria (as gerais e as desta oportunidade, em \"Editar as palavras desta oportunidade\"). A busca é do SISTEMA, linha por linha, em todas as páginas de todos os arquivos com texto: cada ocorrência com o arquivo, a página, a linha e a frase; palavra que não aparece mostra \"não encontrada em nenhuma das N páginas\".",
+          "\"Ler edital inteiro\": a IA lê o edital INTEIRO, bloco por bloco (sem o corte de 140 mil caracteres da nota), e extrai o que realmente precisamos (habilitação, qualificação técnica, atestados, equipe, visita técnica, amostras, prazos, garantia, multas, RBC e Inmetro, pagamento, subcontratação, registro de preços), cada item com o trecho e a página. O verificador da nota confere cada trecho no edital; página e linha são do sistema.",
+          "A leitura segue em segundo plano (pode fechar a tela): \"Lendo bloco 7 de 23\" mostra o progresso. A Cobertura diz quantas páginas foram lidas de cada arquivo; bloco não lido aparece com o motivo e o botão \"Ler de novo os blocos não lidos\". Arquivo escaneado (sem texto) aparece para ler à mão.",
+          "\"O que realmente precisamos\" é montado pelo sistema, por tema, sem item repetido e com todas as fontes. Item com negação ou exceção perto do trecho vem com \"Confirmar no edital\".",
+          "Depois vêm o \"Resumo do edital\" (cada frase com a fonte) e a \"Estratégia sugerida\" (o que fazer primeiro, riscos, documentos a providenciar e perguntas de esclarecimento ao órgão, com o prazo da agenda). É sugestão: a IA não decide participar nem descartar, não promete RBC e não cita fabricante.",
+          "\"Refazer\" pede o motivo; os blocos com o mesmo texto não são lidos de novo, salvo marcando \"Ler de novo também os blocos já lidos\". Arquivos mudaram: \"Ler a versão nova\". Cada leitura é uma versão nova, no histórico."
         ] }
       ],
       cores: [
@@ -133,7 +141,9 @@ function SGO_ajudaTelas_Licitacoes_() {
         { situacao: "Um arquivo aparece como \"Texto não extraído\"", oQueFazer: "Leia o arquivo à mão (botão Abrir): é imagem escaneada, RAR ou outro formato que o SGO+ não lê. A análise por IA não usa esse arquivo e diz isso nas pendências." },
         { situacao: "Aparece \"Trava a confirmar\"", oQueFazer: "A IA achou um impeditivo, mas quem decide é a Diretoria: a nota calculada continua até alguém decidir. Abra a aba Análise, leia o trecho (se houver o aviso de negação ou exceção perto, leia o parágrafo no arquivo) e toque em \"Confirmar trava\" ou \"Não é trava\", com o motivo. Confirmar não descarta: para descartar, use \"Descartar\"." },
         { situacao: "Aparece a pendência \"Confirmar no edital: há negação ou exceção perto do trecho\"", oQueFazer: "A IA achou uma exigência impeditiva (RBC, acreditação, registro, atestado), mas há uma negação ou exceção perto do trecho no edital (\"não\", \"exceto\", \"opcional\", \"subcontratar\"...). Ela não conta como exigência. Abra o arquivo (aba Arquivos), leia o parágrafo e decida." },
-        { situacao: "A última análise foi \"recusada pelo verificador\"", oQueFazer: "Leia a faixa: ela diz o que faltou (em geral, os arquivos do edital ainda não chegaram). A nota anterior continua valendo. Depois que os arquivos chegarem (aba Arquivos), toque em \"Refazer análise\" com o motivo. O detalhe técnico e as respostas da IA ficam em \"Ver o motivo técnico\" e \"Ver respostas da IA\"." }
+        { situacao: "A última análise foi \"recusada pelo verificador\"", oQueFazer: "Leia a faixa: ela diz o que faltou (em geral, os arquivos do edital ainda não chegaram). A nota anterior continua valendo. Depois que os arquivos chegarem (aba Arquivos), toque em \"Refazer análise\" com o motivo. O detalhe técnico e as respostas da IA ficam em \"Ver o motivo técnico\" e \"Ver respostas da IA\"." },
+        { situacao: "Na aba Leitura do edital, um bloco aparece como \"não lido\"", oQueFazer: "A IA não respondeu (tempo, limite ou fora do ar) ou a resposta dela foi recusada pelo verificador 3 vezes (trecho que não está no edital, número trocado). A cobertura mostra as páginas e o motivo. Toque em \"Ler de novo os blocos não lidos\"; se continuar, leia aquelas páginas à mão (aba Arquivos)." },
+        { situacao: "A leitura do edital está parada em \"Lendo bloco N de M\"", oQueFazer: "A rotina do servidor continua sozinha a cada minuto. Se não andar, toque em \"Continuar agora\" (lê os próximos blocos na hora)." }
       ],
       quemPode: quem,
       perguntas: [
@@ -174,6 +184,10 @@ function SGO_ajudaTelas_Licitacoes_() {
           "\"Coletor ligado\" liga ou desliga a coleta automática. Porte da matriz: EPP (decisão do dono).",
           "O motivo é obrigatório; cada salvamento vira versão nova. A próxima rodada do coletor já usa.",
           "A tela mostra os termos de interesse, os termos que descartam, as travas e os sinais de compra de produto que a triagem do servidor usa."
+        ] },
+        { titulo: "Leitura do edital", itens: [
+          "Palavras-chave gerais da Diretoria: valem para todas as oportunidades, na aba \"Leitura do edital\" da ficha. Uma por linha; acento e maiúscula não contam; o plural simples entra sozinho; \"*\" no fim procura o começo da palavra (ex.: calibr*). Motivo obrigatório; cada salvamento vira versão nova e, se outra pessoa salvou antes, as duas mudanças são juntadas.",
+          "\"Ler sozinho o edital das candidatas\" (desligado no padrão): a rotina do servidor põe na fila a leitura do edital inteiro das candidatas no prazo quando os arquivos chegam ou mudam. Gasta IA em cada uma; com motivo e versão."
         ] },
         { titulo: "Permissões", itens: [
           "Diretoria e Administrador: tudo. Demais perfis: não veem o módulo."

@@ -1,0 +1,252 @@
+<!--
+  SGO+ LICITAÇÕES — LEITURA ESPECIALISTA DO EDITAL (02/11/2026): aba "Leitura do edital" da ficha (palavras-chave com as
+  ocorrências, cobertura da leitura, "O que realmente precisamos", resumo e estratégia sugerida, "Ler edital inteiro" e
+  "Refazer") e a parte "Leitura do edital" de Portais e configurações (palavras-chave gerais e leitura automática).
+  Servidor: SGO_Licitacoes_Leitura.js (ações em Licitacoes_api). Usa os utilitários de JS_Licitacoes.html (Lic_esc_,
+  Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_) e as classes do SGO+ (cm-*, lic-*). Todo texto que vem do edital ou
+  da IA passa por Lic_esc_. Só Diretoria e Administrador (o servidor confere). Enquanto a leitura roda, só a caixa do progresso
+  é atualizada (de 20 em 20 s, com a aba aberta); nada redesenha formulário ou janela aberta.
+-->
+<style>
+  .lic-leit-prog { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .lic-leit-prog .lic-barra { flex: 1 1 160px; height: 8px; }
+  .lic-leit-tema { margin: 10px 0 4px; font-size: 13.5px; }
+  .lic-leit-item { padding: 8px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+  .lic-leit-item:last-child { border-bottom: 0; }
+  .lic-leit-id { font-family: var(--bc-mono); font-size: 11.5px; color: var(--muted); margin-right: 6px; }
+  .lic-leit-pal { border-top: 1px solid var(--border); padding: 8px 0; overflow-wrap: anywhere; }
+  .lic-leit-pal summary { cursor: pointer; min-height: 44px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-weight: 700; }
+  .lic-leit-occ { list-style: none; margin: 6px 0 0; padding: 0; }
+  .lic-leit-occ li { padding: 6px 0; border-top: 1px dashed var(--border); font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+  .lic-leit-occ mark { background: var(--bc-warn-bg); color: inherit; padding: 0 2px; border-radius: 2px; }
+  .lic-leit-sug { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; color: var(--info); border: 1px solid var(--bc-info-line); background: var(--info-bg); margin-right: 6px; }
+  .lic-leit-ref { font-family: var(--bc-mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .lic-leit-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+</style>
+<script>
+  var LIC_LEIT = { vigia: null, fichaId: "" };
+  var LIC_LEIT_SECOES = [["primeiro", "O que fazer primeiro"], ["riscos", "Riscos"], ["documentos", "Documentos a providenciar"], ["perguntas", "Perguntas de esclarecimento ao órgão"]];
+
+  /** Casca da aba na ficha (JS_Licitacoes.html chama); o conteúdo vem da ação "leitura" (LicLeit_montar_). */
+  function LicLeit_casca_(d) { return '<div id="licLeitura" aria-live="polite">' + Lic_carregando_(3) + "</div>"; }
+  function LicLeit_montar_(c, d, id) {
+    var el = Lic_$_("licLeitura"); if (!el) return;
+    LIC_LEIT.fichaId = id;
+    Lic_chamar_("leitura", { id: id }, function (r) { LicLeit_desenhar_(el, r.leitura, id); }, function (m) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicLeit_montar_(c, d, id); }); }, { ignorarVelha: true });
+  }
+  function LicLeit_desenhar_(el, t, id) {
+    el.innerHTML = LicLeit_htmlAba_(t);
+    LicLeit_ligar_(el, t, id);
+    LicLeit_vigiar_(t, id);
+  }
+
+  // ---------------- partes da aba ----------------
+  function LicLeit_frase_(o) {
+    var f = String(o.frase || ""), m = o.marca || [0, 0];
+    if (!(m[1] > m[0])) return Lic_esc_(f);
+    return Lic_esc_(f.slice(0, m[0])) + "<mark>" + Lic_esc_(f.slice(m[0], m[1])) + "</mark>" + Lic_esc_(f.slice(m[1]));
+  }
+  function LicLeit_htmlPalavras_(t) {
+    var p = t.palavras || {}, b = p.busca || { palavras: [] }, geral = (p.geral || {}).palavras || [], op = (p.op || {}).palavras || [];
+    var h = '<div class="cm-caixa"><h3>Palavras-chave da Diretoria</h3><p class="cm-ajuda-campo">A busca é feita pelo SISTEMA, linha por linha, em todas as páginas de todos os arquivos com texto (sem acento, sem caixa, com o plural simples e a palavra partida no fim da linha do PDF). Não depende da IA.</p>' +
+      '<p class="cm-meta">Gerais (valem para todas as oportunidades): ' + (geral.length ? Lic_esc_(geral.join(", ")) : "nenhuma") + ' · <a href="#" data-lic-leit-geral>editar em Portais e configurações</a></p>' +
+      '<p class="cm-meta">Desta oportunidade' + ((p.op || {}).versao ? " (versão " + Lic_esc_(p.op.versao) + ")" : "") + ": " + (op.length ? Lic_esc_(op.join(", ")) : "nenhuma") + "</p>" +
+      '<div class="lic-acoes-linha" style="margin:6px 0"><button type="button" class="btn-secondary" data-lic-leit-pal>Editar as palavras desta oportunidade</button></div>';
+    if (!(b.palavras || []).length) return h + '<p class="cm-vazio">Nenhuma palavra-chave ainda. Exemplos: atestado, visita técnica, RBC, Inmetro, amostra, garantia, multa, responsável técnico.</p></div>';
+    h += '<p class="cm-meta">' + Lic_esc_(b.paginas || 0) + " página(s) em " + Lic_esc_(b.arquivosComTexto || 0) + " arquivo(s) com texto" + ((b.arquivosSemTexto || []).length ? "; sem texto legível (não procurados): " + Lic_esc_(b.arquivosSemTexto.map(function (x) { return x.ref + " " + x.nome; }).join("; ")) : "") + ".</p>";
+    h += b.palavras.map(function (w) {
+      var cab = "<span>" + Lic_esc_(w.palavra) + '</span><span class="cm-selo ' + (w.total ? "verde" : "cinza") + '">' + (w.total ? Lic_esc_(w.total) + " ocorrência" + (w.total === 1 ? "" : "s") + " em " + Lic_esc_(w.arquivos) + " arquivo(s)" : "não encontrada") + '</span><span class="cm-meta">' + (w.origem === "GERAL" ? "geral" : "desta oportunidade") + "</span>";
+      if (!w.total) return '<div class="lic-leit-pal"><p class="cm-txt" style="margin:0"><b>' + Lic_esc_(w.palavra) + '</b> <span class="cm-selo cinza">não encontrada</span></p><p class="cm-meta" style="margin:2px 0 0">' + Lic_esc_(w.zeroTexto) + "</p></div>";
+      return '<details class="lic-leit-pal"><summary>' + cab + '</summary><ul class="lic-leit-occ">' + (w.ocorrencias || []).map(function (o) {
+        return '<li><span class="lic-leit-ref">' + Lic_esc_(o.ref + " · " + (o.arquivo || "") + (o.rotulo ? " · " + o.rotulo : "") + (o.linha ? " · linha " + o.linha : "")) + "</span><br>" + LicLeit_frase_(o) + "</li>";
+      }).join("") + "</ul>" + (w.cortadas ? '<p class="cm-meta">Mostrando as primeiras ' + Lic_esc_((w.ocorrencias || []).length) + " de " + Lic_esc_(w.total) + ".</p>" : "") + "</details>";
+    }).join("");
+    return h + "</div>";
+  }
+  function LicLeit_htmlProgresso_(le) {
+    if (!le) return "";
+    var p = le.progresso || {}, pct = p.total ? Math.round(100 * p.lidos / p.total) : 0, ativa = le.situacao === "EM_ANDAMENTO";
+    return '<div class="cm-caixa" id="licLeitProg"><div class="lic-leit-prog"><b>' + Lic_esc_(p.texto || "") + '</b><span class="lic-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Blocos lidos"><i style="width:' + pct + '%"></i></span><span class="cm-meta">' + pct + "%</span></div>" +
+      (ativa ? '<p class="cm-meta" style="margin:6px 0 0">' + (le.trabalhando ? "Lendo agora no servidor." : "Na fila: a rotina do servidor continua em até 1 minuto (pode fechar a tela).") + " A IA lê cada bloco sozinho, com calma; o verificador confere cada item no texto do edital.</p>" +
+        '<div class="lic-acoes-linha" style="margin-top:6px"><button type="button" class="btn-secondary" data-lic-leit-continuar>Continuar agora</button><button type="button" class="btn-secondary" data-lic-leit-atualizar>Atualizar</button></div>' : "") + "</div>";
+  }
+  function LicLeit_htmlCobertura_(le) {
+    var cob = le && le.cobertura;
+    if (!cob) return "";
+    var h = '<div class="cm-caixa"><h3>Cobertura da leitura</h3><p class="cm-txt">' + Lic_esc_((cob.total || {}).texto || "") + "</p>" +
+      Lic_tabelaHtml_(["Arquivo", "Páginas lidas", "Blocos", "Observação"], (cob.arquivos || []).map(function (a) {
+        return ['<span class="lic-mono">' + Lic_esc_(a.ref) + "</span> " + Lic_esc_(a.nome), a.semTexto ? '<span class="cm-selo vermelho">sem texto</span>' : "<b>" + Lic_esc_(a.lidas) + "</b> de " + Lic_esc_(a.paginas),
+          Lic_esc_(a.blocosLidos + " de " + a.blocos), Lic_esc_(a.motivo || ((a.naoLidos || []).length ? "não lidos: " + a.naoLidos.map(function (x) { return x.rotulo + " (" + (x.erro || x.situacao) + ")"; }).join("; ") : "inteiro"))];
+      }));
+    if ((le.falhos || []).length) h += '<details style="margin-top:8px"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Blocos não lidos (' + le.falhos.length + ")</summary>" +
+      le.falhos.map(function (x) { return '<p class="cm-meta" style="margin:6px 0 2px"><b>Bloco ' + Lic_esc_(x.ordem) + "</b> · " + Lic_esc_(x.ref + " " + x.arquivo + " · " + x.rotulo) + " · " + Lic_esc_(x.tentativas) + " tentativa(s)</p><p class=\"cm-txt\" style=\"margin:0\">" + Lic_esc_(x.erro) + "</p>" + ((x.problemas || []).length ? '<ul style="margin:2px 0;padding-left:18px">' + x.problemas.slice(0, 6).map(function (p) { return '<li class="cm-meta">' + Lic_esc_(p) + "</li>"; }).join("") + "</ul>" : ""); }).join("") +
+      '</details><div class="lic-acoes-linha" style="margin-top:8px"><button type="button" class="btn-secondary" data-lic-leit-denovo>Ler de novo os blocos não lidos</button></div>';
+    return h + "</div>";
+  }
+  function LicLeit_fonteHtml_(f) {
+    return '<blockquote class="lic-trecho">"' + Lic_esc_(f.trecho) + '"<cite>' + Lic_esc_(f.ref + " · " + ((f.arquivo && (f.arquivo.titulo || f.arquivo.nome)) || "") + (f.rotulo ? " · " + f.rotulo : "") + (f.linha ? " · linha " + f.linha : "") + (f.arquivo && f.arquivo.sha256 ? " · SHA-256 " + String(f.arquivo.sha256).slice(0, 16) + "…" : "")) + "</cite></blockquote>";
+  }
+  function LicLeit_htmlChecklist_(le) {
+    var l = (le && le.checklist) || [];
+    if (!le || le.situacao === "EM_ANDAMENTO" && !l.length) return "";
+    var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Montado pelo sistema com os itens que a IA extraiu de cada bloco e que o verificador achou no edital, palavra por palavra. Item igual em vários lugares aparece uma vez, com todas as fontes. Página e linha são do sistema.</p>";
+    if (!l.length) return h + '<p class="cm-vazio">Nenhuma exigência dos temas foi encontrada nos blocos lidos.</p></div>';
+    var tema = "";
+    l.forEach(function (e) {
+      if (e.tema !== tema) { tema = e.tema; h += '<h4 class="lic-leit-tema">' + Lic_esc_(e.temaNome || e.tema) + "</h4>"; }
+      h += '<div class="lic-leit-item"><p class="cm-txt" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.texto) + "</p>" +
+        (e.alerta ? '<p class="lic-motivo pend">Confirmar no edital: há negação ou exceção perto do trecho ("' + Lic_esc_(e.alerta) + '"). Não conte como exigência certa até a Diretoria ler o parágrafo.</p>' : "") +
+        LicLeit_fonteHtml_(e.fontes[0] || {}) + ((e.fontes || []).length > 1 ? '<details><summary class="cm-meta" style="min-height:32px;display:flex;align-items:center;cursor:pointer">Mais ' + (e.fontes.length - 1) + " fonte(s)</summary>" + e.fontes.slice(1).map(LicLeit_fonteHtml_).join("") + "</details>" : "") + "</div>";
+    });
+    return h + "</div>";
+  }
+  function LicLeit_fontesTxt_(fs) { return '<span class="lic-leit-ref">fontes: ' + Lic_esc_((fs || []).join(", ")) + "</span>"; }
+  function LicLeit_htmlResumoEstrategia_(t) {
+    var le = t.leitura;
+    if (!le || le.situacao === "EM_ANDAMENTO") return "";
+    var c = le.consolidacao || {}, h = "";
+    if (c.situacao !== "OK") {
+      var msg = { SEM_ITENS: "Sem itens extraídos: o resumo e a estratégia não foram gerados.", ERRO: "A IA não respondeu ao montar o resumo e a estratégia. O checklist acima vale.", RECUSADA: "O resumo e a estratégia foram recusados pelo verificador (número, data ou fonte que não confere, ou frase de decisão). O checklist acima vale." }[c.situacao] || "Resumo e estratégia ainda não gerados.";
+      h += Lic_faixa_(msg, "aviso");
+      if ((c.problemas || []).length) h += '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Ver o motivo técnico</summary>' + c.problemas.map(function (x) { return '<ul style="margin:4px 0;padding-left:18px">' + (x.problemas || []).map(function (p) { return '<li class="cm-meta">' + Lic_esc_(p) + "</li>"; }).join("") + "</ul>"; }).join("") + "</details>";
+    } else {
+      h += '<div class="cm-caixa"><h3>Resumo do edital</h3><ul class="lic-af">' + (le.resumo || []).map(function (f) { return '<li><span class="lic-af-tipo FATO">Fato</span>' + Lic_esc_(f.texto) + "<br>" + LicLeit_fontesTxt_(f.fontes) + "</li>"; }).join("") + "</ul></div>";
+      var es = le.estrategia || {};
+      h += '<div class="cm-caixa"><h3>Estratégia sugerida</h3><p class="lic-motivo pend">Sugestão da IA (inferência a partir dos itens citados). A IA não decide: participar ou descartar é da Diretoria.</p>' + LIC_LEIT_SECOES.map(function (s) {
+        var l = es[s[0]] || [], extra = "";
+        if (s[0] === "perguntas") extra = (t.prazos || []).length ? '<p class="cm-meta">Prazo na agenda (calculado ou confirmado pelo sistema): ' + Lic_esc_(t.prazos.map(function (p) { return p.nome + " " + p.quando + " (" + String(p.natureza || "").toLowerCase() + ")"; }).join("; ")) + ".</p>" : '<p class="cm-meta">Sem prazo de esclarecimento na agenda: confira no edital (tema "Esclarecimento, impugnação e sessão").</p>';
+        return '<h4 class="lic-leit-tema">' + Lic_esc_(s[1]) + "</h4>" + extra + (l.length ? '<ul class="lic-af">' + l.map(function (x) { return '<li><span class="lic-leit-sug">Sugestão</span>' + Lic_esc_(x.texto) + "<br>" + LicLeit_fontesTxt_(x.fontes) + "</li>"; }).join("") + "</ul>" : '<p class="cm-vazio">Nenhuma.</p>');
+      }).join("") + "</div>";
+    }
+    h += '<div class="lic-acoes-linha" style="margin:0 0 12px"><button type="button" class="btn-secondary" data-lic-leit-consolidar' + (t.iaDisponivel ? "" : ' disabled aria-disabled="true"') + ">Refazer resumo e estratégia</button></div>";
+    return h;
+  }
+  function LicLeit_htmlAba_(t) {
+    t = t || {};
+    var le = t.leitura, h = '<p class="cm-modo-dica">Leitura especialista do edital: a IA lê o edital INTEIRO, bloco por bloco, e diz o que realmente precisamos, cada item com o trecho e a página; o verificador recusa o que não está no texto. Depois vêm o resumo e a estratégia sugerida. A decisão continua com a Diretoria.</p>';
+    if (!t.iaDisponivel) h += Lic_faixa_(t.aviso || "Leitura pela IA indisponível: falta a chave da IA.", "aviso");
+    if (t.textosAviso) h += Lic_faixa_(t.textosAviso, "aviso");
+    if (t.podeLer) h += Lic_faixa_("Leitura não disponível: " + t.podeLer + ".", "aviso");
+    if (le && le.desatualizada && le.situacao !== "EM_ANDAMENTO") h += Lic_faixa_("Os arquivos do edital mudaram depois da leitura versão " + le.versao + '. Toque em "Ler a versão nova" (os blocos iguais aos já lidos não são lidos de novo).', "aviso");
+    var semTexto = !(t.arquivos || []).some(function (a) { return a.caracteres > 0; }), pode = t.iaDisponivel && !t.podeLer && !semTexto;
+    var rotulo = !le ? "Ler edital inteiro" : le.desatualizada ? "Ler a versão nova" : "Refazer";
+    var modo = !le ? "primeira" : le.desatualizada ? "nova" : "refazer";
+    h += '<div class="lic-acoes-linha" style="margin:8px 0 12px">' + (le && le.situacao === "EM_ANDAMENTO" ? "" : '<button type="button" class="btn-primary" data-lic-leit-ler="' + modo + '"' + (pode ? "" : ' disabled aria-disabled="true"') + ">" + rotulo + "</button>") +
+      '<button type="button" class="btn-secondary" data-lic-leit-atualizar>Atualizar</button></div>';
+    if (semTexto) h += '<p class="cm-meta">Nenhum arquivo do edital com texto legível ainda: veja a aba Arquivos ("Buscar arquivos agora"). Arquivo escaneado precisa ser lido à mão.</p>';
+    h += LicLeit_htmlProgresso_(le) + LicLeit_htmlPalavras_(t);
+    if (!le) h += '<div class="cm-vazio">Ainda sem leitura do edital inteiro. ' + (t.iaDisponivel ? 'Toque em "Ler edital inteiro": a leitura segue em segundo plano e o progresso aparece aqui.' : "Sem a chave da IA, só a busca das palavras-chave funciona: nada é inventado.") + "</div>";
+    else {
+      h += LicLeit_htmlCobertura_(le) + LicLeit_htmlChecklist_(le) + LicLeit_htmlResumoEstrategia_(t);
+      h += '<p class="cm-meta">Leitura versão ' + Lic_esc_(le.versao) + " · " + Lic_esc_(le.situacaoNome) + " · " + Lic_esc_(Lic_dataHora_(le.em)) + " · " + Lic_esc_(le.origem === "AUTOMATICA" ? "rotina automática" : "pedida por " + le.por) + (le.motivo ? " (" + Lic_esc_(le.motivo) + ")" : "") + " · modelo " + Lic_esc_(le.modelo) + "</p>";
+    }
+    if ((t.versoes || []).length > 1) h += '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Todas as versões da leitura (' + t.versoes.length + ")</summary>" +
+      Lic_tabelaHtml_(["Versão", "Quando", "Situação", "Itens", "Quem", "Motivo"], t.versoes.map(function (v) { return [Lic_esc_(v.versao), Lic_esc_(Lic_dataHora_(v.em)), Lic_esc_(v.situacaoNome), Lic_esc_(v.itens), Lic_esc_(v.origem === "AUTOMATICA" ? "rotina" : v.por), Lic_esc_(v.motivo || "—")]; })) + "</details>";
+    if (le) h += '<p class="cm-meta lic-mono">Regras ' + Lic_esc_(le.regras) + " · base " + Lic_esc_(String(le.base || "").slice(0, 17)) + "…" + (le.hash ? " · hash " + Lic_esc_(String(le.hash).slice(0, 16)) + "…" : "") + "</p>";
+    return h;
+  }
+
+  // ---------------- ações ----------------
+  function LicLeit_ligar_(el, t, id) {
+    var q = function (s) { return el.querySelectorAll(s); };
+    q("[data-lic-leit-atualizar]").forEach(function (b) { b.onclick = function () { LicLeit_montar_(null, null, id); }; });
+    q("[data-lic-leit-geral]").forEach(function (b) { b.onclick = function (e) { if (e && e.preventDefault) e.preventDefault(); LIC.portaisAba = "leitura"; abrir("licitacoes_portais"); }; });
+    q("[data-lic-leit-pal]").forEach(function (b) { b.onclick = function () { LicLeit_janelaPalavras_("OPORTUNIDADE", id, (t.palavras || {}).op || {}, b, function (r) { if (r.leitura) LicLeit_desenhar_(el, r.leitura, id); else LicLeit_montar_(null, null, id); }); }; });
+    q("[data-lic-leit-ler]").forEach(function (b) { b.onclick = function () { if (!b.disabled) LicLeit_janelaLer_(id, b.getAttribute("data-lic-leit-ler"), b, el); }; });
+    var acao = function (sel, nome, msgCarregando) {
+      q(sel).forEach(function (b) { b.onclick = function () { if (b.disabled) return; b.disabled = true; Lic_chamar_(nome, { id: id }, function (r) { Lic_toast_(r.texto || "Feito."); LicLeit_desenhar_(el, r.leitura, id); }, function (m) { b.disabled = false; Lic_toast_(m, "erro"); }, { ignorarVelha: true, carregando: msgCarregando }); }; });
+    };
+    acao("[data-lic-leit-continuar]", "leituraContinuar", "A IA está lendo os próximos blocos…");
+    acao("[data-lic-leit-denovo]", "leituraTentarDeNovo", "A IA está lendo de novo os blocos não lidos…");
+    q("[data-lic-leit-consolidar]").forEach(function (b) { b.onclick = function () { if (!b.disabled) LicLeit_janelaMotivo_("Refazer resumo e estratégia", "O checklist continua o mesmo (os blocos não são lidos de novo); a IA escreve de novo o resumo e a estratégia, conferidos pelo verificador. A versão anterior fica no histórico.", "leituraConsolidar", id, b, el); }; });
+  }
+  function LicLeit_janelaLer_(id, modo, origem, el) {
+    var primeira = modo === "primeira", refazer = modo === "refazer";
+    var ov = Lic_janela_(primeira ? "Ler edital inteiro" : refazer ? "Refazer a leitura" : "Ler a versão nova dos arquivos",
+      '<p class="cm-txt">A IA lê todas as páginas de todos os arquivos com texto, em blocos, e o verificador confere cada item no edital. Leva alguns minutos e segue em segundo plano (pode fechar a tela). ' + (refazer ? "A leitura anterior continua guardada como versão antiga." : "Os blocos com o mesmo texto de uma leitura anterior não são lidos de novo.") + " A decisão continua com a Diretoria.</p>" +
+      '<div class="cm-campo"><label for="licLeitMot">' + (primeira ? "Motivo (opcional)" : "Motivo (obrigatório)") + '</label><textarea id="licLeitMot" rows="3" maxlength="1000" placeholder="Ex.: o órgão publicou o edital retificado"></textarea><p class="cm-ajuda-campo">Fica no histórico com o seu nome, a data e a versão.</p></div>' +
+      (refazer ? '<label class="cm-check" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="licLeitTudo"> Ler de novo também os blocos já lidos (mais demorado; use se desconfiar da leitura)</label>' : "") + '<div id="licJanMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>' + (primeira ? "Ler edital inteiro" : refazer ? "Refazer a leitura" : "Ler a versão nova") + "</button>", origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = ((Lic_$_("licLeitMot") || {}).value || "").trim();
+      if (!primeira && mot.length < 10) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      Lic_chamar_("leituraIniciar", { id: id, motivo: mot, refazer: refazer, relerTudo: !!(Lic_$_("licLeitTudo") || {}).checked }, function (r) {
+        ov.fechar(); Lic_toast_(r.texto || "Leitura iniciada."); LicLeit_desenhar_(el, r.leitura, id);
+      }, function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true, carregando: "Preparando os blocos e lendo os primeiros…" });
+    };
+  }
+  function LicLeit_janelaMotivo_(titulo, texto, acao, id, origem, el) {
+    var ov = Lic_janela_(titulo, '<p class="cm-txt">' + Lic_esc_(texto) + '</p><div class="cm-campo"><label for="licLeitMot2">Motivo (obrigatório)</label><textarea id="licLeitMot2" rows="3" maxlength="1000"></textarea></div><div id="licJanMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>' + Lic_esc_(titulo) + "</button>", origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = ((Lic_$_("licLeitMot2") || {}).value || "").trim();
+      if (mot.length < 10) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      Lic_chamar_(acao, { id: id, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Feito."); LicLeit_desenhar_(el, r.leitura, id); }, function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true, carregando: "A IA está escrevendo o resumo e a estratégia…" });
+    };
+  }
+  /** Editar uma lista de palavras-chave (escopo GERAL ou OPORTUNIDADE). Manda a lista que a pessoa viu: o servidor junta com a de agora. */
+  function LicLeit_janelaPalavras_(escopo, id, lista, origem, depois) {
+    var base = (lista && lista.palavras) || [];
+    var ov = Lic_janela_(escopo === "GERAL" ? "Palavras-chave gerais da Diretoria" : "Palavras-chave desta oportunidade",
+      '<p class="cm-txt">Uma por linha (ou separadas por vírgula). Acento e maiúscula não contam; o plural simples entra sozinho; "*" no fim procura o começo da palavra (ex.: calibr*).' + (escopo === "GERAL" ? " Vale para todas as oportunidades." : " Somam-se às gerais.") + "</p>" +
+      '<div class="cm-campo"><label for="licLeitPal">Palavras-chave</label><textarea id="licLeitPal" rows="6" maxlength="4000">' + Lic_esc_(base.join("\n")) + '</textarea></div>' +
+      '<div class="cm-campo"><label for="licLeitPalMot">Motivo (obrigatório)</label><textarea id="licLeitPalMot" rows="2" maxlength="500" placeholder="Ex.: a Diretoria quer acompanhar exigência de visita técnica"></textarea></div><div id="licJanMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Salvar</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = ((Lic_$_("licLeitPalMot") || {}).value || "").trim(), pal = ((Lic_$_("licLeitPal") || {}).value || "").split(/[\n,;]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+      if (mot.length < 5) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 5 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      Lic_chamar_("palavrasSalvar", { escopo: escopo, id: id || "", palavras: pal, base: base, versaoBase: (lista && lista.versao) || 0, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Salvo."); if (depois) depois(r); },
+        function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+    };
+  }
+  /** Enquanto a leitura roda e a aba está aberta: só a caixa do progresso é trocada (nada de formulário ou janela). */
+  function LicLeit_vigiar_(t, id) {
+    if (LIC_LEIT.vigia) { clearTimeout(LIC_LEIT.vigia); LIC_LEIT.vigia = null; }
+    var le = t && t.leitura;
+    if (!le || le.situacao !== "EM_ANDAMENTO") return;
+    var voltas = 0;
+    var passo = function () {
+      LIC_LEIT.vigia = null;
+      var caixa = Lic_$_("licLeitProg");
+      if (!caixa || LIC.fichaAba !== "leitura" || LIC_LEIT.fichaId !== id || ++voltas > 90) return;
+      Lic_chamar_("leituraProgresso", { id: id, leituraId: le.id }, function (r) {
+        var p = r.progresso, cx = Lic_$_("licLeitProg");
+        if (!p || !cx) return;
+        if (p.situacao !== "EM_ANDAMENTO") { cx.innerHTML = Lic_faixa_("Leitura versão " + p.versao + ": " + p.situacaoNome.toLowerCase() + '. Toque em "Atualizar" para ver o resultado.', "ok") + '<div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lic-leit-atualizar>Atualizar</button></div>'; var b = cx.querySelector("[data-lic-leit-atualizar]"); if (b) b.onclick = function () { LicLeit_montar_(null, null, id); }; return; }
+        var pct = p.progresso.total ? Math.round(100 * p.progresso.lidos / p.progresso.total) : 0, tx = cx.querySelector("b"), bar = cx.querySelector(".lic-barra i");
+        if (tx) tx.textContent = p.progresso.texto; if (bar) bar.style.width = pct + "%";
+        LIC_LEIT.vigia = setTimeout(passo, 20000);
+      }, function () { LIC_LEIT.vigia = setTimeout(passo, 40000); }, { ignorarVelha: true });
+    };
+    LIC_LEIT.vigia = setTimeout(passo, 20000);
+  }
+
+  // ---------------- Portais e configurações › Leitura do edital ----------------
+  function LicLeit_htmlCfg_(r) {
+    var g = r.geral || {}, c = r.cfg || {};
+    return '<div class="cm-caixa"><h3>Palavras-chave gerais da Diretoria</h3><p class="cm-ajuda-campo">Valem para todas as oportunidades, na aba "Leitura do edital" da ficha. A busca é do sistema, em todas as páginas; a IA também dá atenção a elas ao ler cada bloco.</p>' +
+      '<p class="cm-txt">' + ((g.palavras || []).length ? Lic_esc_(g.palavras.join(", ")) : "Nenhuma ainda.") + "</p>" + (g.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(g.versao) + " · " + Lic_esc_(g.por) + " · " + Lic_esc_(Lic_dataHora_(g.em)) + " · " + Lic_esc_(g.motivo) + "</p>" : "") +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lic-leit-geral-ed>Editar as palavras gerais</button></div></div>' +
+      '<div class="cm-caixa"><h3>Leitura automática do edital</h3><p class="cm-ajuda-campo">Ligada, a rotina do servidor põe na fila a leitura do edital inteiro das candidatas no prazo quando os arquivos chegam ou mudam (gasta IA em cada uma). Desligada, só a Diretoria pede, na ficha.</p>' +
+      '<label class="cm-check" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="licLeitAuto"' + (c.automatica ? " checked" : "") + "> Ler sozinho o edital das candidatas</label>" +
+      '<div class="cm-campo"><label for="licLeitAutoMot">Motivo (obrigatório)</label><textarea id="licLeitAutoMot" rows="2" maxlength="500"></textarea></div><div id="licLeitCfgMsg" aria-live="assertive"></div>' +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-leit-auto>Salvar</button></div>' + (c.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(c.versao) + " · " + Lic_esc_(c.por) + " · " + Lic_esc_(c.motivo) + "</p>" : "") + "</div>";
+  }
+  function LicLeit_renderCfg_(corpo) {
+    corpo.innerHTML = Lic_carregando_(2);
+    Lic_chamar_("leituraCfg", {}, function (r) {
+      corpo.innerHTML = LicLeit_htmlCfg_(r);
+      var ed = corpo.querySelector("[data-lic-leit-geral-ed]"); if (ed) ed.onclick = function () { LicLeit_janelaPalavras_("GERAL", "", r.geral, ed, function () { LicLeit_renderCfg_(corpo); }); };
+      var sv = corpo.querySelector("[data-lic-leit-auto]");
+      if (sv) sv.onclick = function () {
+        var mot = ((Lic_$_("licLeitAutoMot") || {}).value || "").trim();
+        if (mot.length < 5) { Lic_$_("licLeitCfgMsg").innerHTML = Lic_faixa_("Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado.", "erro"); return; }
+        sv.disabled = true;
+        Lic_chamar_("leituraCfgSalvar", { automatica: !!(Lic_$_("licLeitAuto") || {}).checked, motivo: mot }, function (x) { Lic_toast_(x.semMudanca ? x.texto : "Salvo como versão " + x.versao + "."); LicLeit_renderCfg_(corpo); }, function (m) { sv.disabled = false; Lic_$_("licLeitCfgMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+      };
+    }, function (m) { corpo.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(corpo, function () { LicLeit_renderCfg_(corpo); }); });
+  }
+</script>

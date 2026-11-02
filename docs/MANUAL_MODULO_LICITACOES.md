@@ -1,6 +1,6 @@
 # Manual do módulo Licitações (SGO+) — etapas 1, 2, 3 e 4
 
-Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento; etapa 4: Kanban, Gantt e Painel). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
+Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento; etapa 4: Kanban, Gantt e Painel; leitura especialista do edital, seção 6.6.1). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
 
 ## 1. Para que serve
 
@@ -260,6 +260,30 @@ Quando roda: sozinha, quando chegam arquivos novos ou mudados ou a fonte tem ver
 Sem a chave da IA: nada é calculado nem inventado; a tela diz "análise por IA indisponível: falta a chave" e o botão fica desligado. O Administrador cadastra a chave GEMINI_API_KEY em Administração > Chaves e senhas (o modelo é o de IA_MODEL, o mesmo do restante do SGO+).
 
 Versões: cada análise é uma linha nova em LIC_ANALISES (versão, data, quem pediu, motivo, modelo, a base analisada, os arquivos com o SHA-256 e o hash da própria análise). "Todas as versões da análise" mostra as anteriores.
+
+### 6.6.1 Leitura especialista do edital (aba Leitura do edital da ficha)
+
+Pedido do dono (02/11/2026): uma IA que resuma o edital e diga o que realmente precisamos, com palavras-chave da Diretoria, sem inventar e sem só passar o olho: lendo linha por linha, como um especialista, e depois passando a estratégia. Só Diretoria e Administrador.
+
+**Palavras-chave.** Há duas listas: as gerais da Diretoria (Portais e configurações > Leitura do edital; valem para todas as oportunidades) e as desta oportunidade ("Editar as palavras desta oportunidade"). Uma por linha; acento e maiúscula não contam; o plural simples entra sozinho ("atestado" acha "atestados"; "calibração" acha "calibrações"); "*" no fim procura o começo da palavra (calibr*). Motivo obrigatório; cada salvamento vira versão nova; se outra pessoa salvou antes, só o que você tirou e pôs é aplicado sobre a lista de agora (nada se perde). A busca é feita pelo SISTEMA, não pela IA: em todas as páginas de todos os arquivos com texto, com a palavra partida no fim da linha do PDF ("pri-" e "vado") juntada. Cada ocorrência mostra o arquivo, a página, a linha e a frase, com a palavra marcada. Palavra que não aparece: "não encontrada em nenhuma das N páginas", e os arquivos sem texto legível (escaneados) aparecem como não procurados.
+
+**Ler edital inteiro.** A IA lê TODAS as páginas de todos os arquivos com texto, sem o corte de 140 mil caracteres da nota. Cada arquivo é dividido em blocos de páginas inteiras (até 18 mil caracteres e 12 páginas); cada bloco vai sozinho à IA, que extrai o que a Metrolabs precisa fazer, apresentar ou cumprir nos temas: objeto, habilitação jurídica, regularidade fiscal, qualificação econômico-financeira, qualificação técnica, atestados, equipe e responsável técnico, visita técnica, amostras, prazos, garantia, penalidades e multas, RBC/acreditação/Inmetro/rastreabilidade, pagamento, subcontratação, registro de preços e quantidades, esclarecimento e impugnação. Cada item vem com o trecho copiado do edital.
+
+O MESMO verificador da nota confere cada item: o trecho tem de estar no bloco, palavra por palavra (número com o separador entre dígitos, "0,2%" não é "2%"); trecho que corta uma negação ("admitida a participação" quando o edital diz "Não será admitida a participação") é recusado; número no texto do item tem de estar no trecho (número trocado é recusado); frase de decisão, promessa de RBC, fabricante, emoji e markdown são recusados. A página e a linha são calculadas pelo sistema (posição do trecho no arquivo), nunca pela IA. Item impeditivo (RBC, acreditação, registro, atestado, Inmetro) com negação ou exceção na mesma página ou na seguinte vem com "Confirmar no edital". Resposta recusada é refeita até 2 vezes com os problemas apontados.
+
+**Progresso e retomada.** A leitura segue em segundo plano (pode fechar a tela): na tela, a IA lê os primeiros blocos; o resto fica com a rotina do servidor, que continua a cada minuto até acabar ("Lendo bloco 7 de 23"). "Continuar agora" lê os próximos blocos na hora. Bloco com o mesmo texto de outro (o mesmo termo de referência em dois arquivos) é lido uma vez só. Na leitura nova (arquivos mudaram ou "Refazer"), os blocos com o mesmo texto e as mesmas regras de uma leitura anterior são aproveitados; só o que mudou vai à IA.
+
+**Cobertura.** Por arquivo: páginas lidas / total, blocos lidos e o que ficou de fora. Bloco não lido (a IA não respondeu duas vezes, recusou por conteúdo, ou a resposta foi recusada pelo verificador 3 vezes) aparece com o motivo e o botão "Ler de novo os blocos não lidos". Arquivo sem texto legível aparece para ler à mão. Arquivo maior que o corte do servidor (400 mil caracteres) é lido inteiro, em pedaços; se o servidor não entregar o resto, a cobertura diz quantos caracteres foram lidos.
+
+**O que realmente precisamos.** Montado pelo sistema com os itens conferidos: agrupado por tema, sem item repetido (mesmo trecho, um trecho dentro do outro, ou o mesmo texto com os mesmos números) e com todas as fontes (arquivo, página, linha, SHA-256).
+
+**Resumo do edital e Estratégia sugerida.** No fim, a IA escreve o resumo (cada frase com a fonte: os itens I1, I2..., um campo do PNCP ou um prazo da agenda) e a estratégia sugerida: o que fazer primeiro, riscos, documentos a providenciar e perguntas de esclarecimento ao órgão. O prazo para pedir esclarecimento vem da agenda (calculado ou confirmado pelo sistema), nunca da IA. O verificador recusa número ou data que não estejam nas fontes citadas, fonte que não existe, frase de decisão ("vale a pena participar"), RBC sem dizer como tratar (a Metrolabs é rastreável, não acreditada: esclarecimento, confirmação no edital ou subcontratação de laboratório acreditado), Inmetro fora de balanças e esfigmomanômetros, e fabricante. A estratégia é sempre marcada como sugestão: participar ou descartar é da Diretoria. Recusado, o checklist continua valendo e "Refazer resumo e estratégia" (com motivo) tenta de novo sem reler os blocos.
+
+**Versões.** Cada leitura é uma versão (pela base dos arquivos e das regras). "Ler edital inteiro" na mesma base é recusado: use "Refazer" com o motivo (marque "Ler de novo também os blocos já lidos" se desconfiar da leitura). Arquivos mudaram: "Ler a versão nova". Pedido, conclusão, refação, blocos lidos de novo e recusas ficam no histórico com quem, quando, a versão, os arquivos (SHA-256) e o hash.
+
+**Sem a chave da IA:** a busca das palavras-chave continua (é do sistema); "Ler edital inteiro" fica desligado e a tela diz "leitura pela IA indisponível: falta a chave".
+
+**Leitura automática (opcional).** Portais e configurações > Leitura do edital > "Ler sozinho o edital das candidatas" (desligado no padrão, com motivo e versão): quando os arquivos de uma candidata no prazo chegam ou mudam, a rotina do servidor põe a leitura na fila.
 
 ### 6.7 Agenda e prazos
 
