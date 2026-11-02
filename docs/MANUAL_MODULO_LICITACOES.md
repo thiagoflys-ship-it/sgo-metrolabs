@@ -1,6 +1,6 @@
-# Manual do módulo Licitações (SGO+) — etapas 1, 2 e 3
+# Manual do módulo Licitações (SGO+) — etapas 1, 2, 3 e 4
 
-Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
+Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento; etapa 4: Kanban, Gantt e Painel). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
 
 ## 1. Para que serve
 
@@ -21,7 +21,13 @@ Na etapa 3 (02/11/2026):
 7. Monta a agenda de prazos de cada licitação a partir da fonte, com a natureza de cada data (confirmada, calculada pela lei ou pendente de confirmação), os feriados, a retificação como versão nova e a suspensão (seção 6.7).
 8. Avisa a Diretoria de Licitações (interno, e-mail e WhatsApp oficial), pede a ciência, escalona sem ciência e usa o canal alternativo quando um falha (seções 6.8 e 6.9).
 
-Ficam para as próximas etapas: Kanban e Gantt, painel, tabela de preços, simulador, proposta, disputa e contratos.
+Na etapa 4 (02/11/2026):
+
+9. Kanban das licitações por etapa, do Radar ao Contrato, com a passagem de etapa sempre com motivo e histórico (seção 6.10).
+10. Gantt dos prazos no tempo, com a natureza de cada data e o momento atual marcado (seção 6.11).
+11. Painel (Dashboard) com os indicadores do módulo, cada número com a fonte e o clique para a lista que o compõe (seção 6.12).
+
+Ficam para as próximas etapas: tabela de preços, simulador, proposta, habilitação, disputa e contratos.
 
 ## 2. Quem pode usar
 
@@ -33,12 +39,15 @@ Ficam para as próximas etapas: Kanban e Gantt, painel, tabela de preços, simul
 Menu lateral, grupo "Licitações":
 
 - Hoje em Licitações
+- Painel (Dashboard)
 - Oportunidades
+- Kanban
+- Gantt
 - Agenda e prazos
 - Central de alertas
 - Portais e configurações
 
-No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo.
+No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra "Lista · Kanban · Gantt" troca a forma de ver as mesmas licitações.
 
 ## 4. Como a coleta funciona
 
@@ -366,6 +375,82 @@ Página do botão "Confirmar ciência" (sem login): mostra só o primeiro nome, 
 
 O motivo é obrigatório. Cada salvamento vira versão nova; só o que mudou é gravado (o resto fica como estava, por merge) e cada mudança vai para o histórico (de, para). Os alertas programados passam a seguir a regra nova e os que saem dela são cancelados com o motivo.
 
+### 6.10 Kanban
+
+Uma coluna por etapa, na ordem do pedido do dono: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato.
+
+| Coluna | O que entra |
+|---|---|
+| Radar | Candidatas e travadas da triagem por regras, sem decisão da Diretoria |
+| Em análise | As enviadas para análise (arquivos do edital e nota da IA na ficha) |
+| Decisão | As descartadas pela Diretoria, com o motivo. "Participar" entra aqui quando a etapa de preços e proposta chegar |
+| Proposta | Vazia: chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4) |
+| Disputa | Vazia: chega na etapa de disputas |
+| Resultado | Vazia: chega na etapa de disputas (resultado de cada item) |
+| Contrato | Vazia: chega na etapa de contratos |
+
+As descartadas só pela regra do radar ficam fora do quadro (Oportunidades › Descartadas); o quadro diz quantas são.
+
+Cartão: órgão, objeto resumido, código LIC, cidade e UF, fim das propostas com o selo de tempo, nota da IA e a classe (ou "Sem nota da IA"), responsável, selos "Trava a confirmar", "Travada (decisão da Diretoria)", "Suspensa na fonte" e, na Decisão, quem descartou, quando e o motivo. Borda vermelha: menos de 2 dias ou trava a confirmar; amarela: menos de 5 dias ou travada; cinza: descartada.
+
+Filtros (feitos no servidor): busca, UF (ou a prioridade GO, DF, vizinhos e RJ), nota (alta, média, baixa, descarte, trava a confirmar, sem nota), prazo das propostas (7 dias, 30 dias, encerrado, sem data) e responsável. Dentro da coluna, o prazo mais perto vem primeiro; cada coluna mostra até 120 cartões (os demais pelos filtros).
+
+Mudar de etapa: arrastar o cartão (computador) ou "Mover para" (qualquer aparelho). Só as passagens que já existem:
+
+| De | Para | O que acontece |
+|---|---|---|
+| Radar | Em análise | Enviar para análise (você fica como responsável; o servidor lê os arquivos do edital) |
+| Radar ou Em análise | Decisão | Descartar (decisão da Diretoria; os alertas pendentes são cancelados) |
+| Decisão (descartada) | Radar | Reabrir (a regra do radar não descarta de novo) |
+
+O motivo é obrigatório em todas (pelo menos 10 letras) e vai para o histórico da ficha com quem, quando, de → para e a fonte "Kanban". As outras passagens ficam desabilitadas com o porquê escrito embaixo do botão (Em análise não volta direto ao Radar: descarte e reabra; Proposta, Disputa, Resultado e Contrato chegam nas próximas etapas; "Participar" exige o preço mínimo aprovado). Soltar numa coluna travada abre a janela com o porquê e "Nada foi alterado". Se outra pessoa mudou a oportunidade enquanto o quadro estava aberto, a mudança é recusada com "alguém mudou agora há pouco" e nada é alterado.
+
+No celular (390 px), o quadro vira uma lista por etapa: as abas no alto (com a quantidade de cada uma) escolhem a etapa; a página não rola para os lados.
+
+### 6.11 Gantt
+
+Os prazos da Agenda (LIC_EVENTOS) no tempo. Cada linha é uma licitação em andamento (as descartadas não entram; as travadas aparecem marcadas). A barra clara é o recebimento das propostas (do início ao fim). Os símbolos são os prazos: círculo, fim das propostas; quadrado, sessão pública; losango, impugnação; triângulo, esclarecimento; triângulo invertido, recurso; traço, início das propostas.
+
+| Aparência | Natureza |
+|---|---|
+| Símbolo cheio | Confirmado (veio da fonte ou foi conferido por pessoa) |
+| Símbolo vazado | Calculado pela regra legal |
+| Símbolo tracejado | Pendente de confirmação |
+| Riscado | Suspenso na fonte |
+| Apagado | Já passou |
+
+A linha azul escura marca agora (Brasília). Fim de semana fica cinza claro; feriado nacional, amarelado. Zoom: Semana (9 dias, a partir de ontem) ou Mês (35 dias, a partir de 3 dias atrás); "Anterior", "Hoje" e "Próximo" andam a janela. Filtros: UF, etapa (Radar, só as travadas, Em análise, Decisão) e natureza da data. Versões substituídas e prazos cancelados não aparecem (ficam na ficha, aba Prazos). Os prazos sem data ficam na lista "prazos sem data" acima do gráfico. Licitação que só está recebendo propostas, sem nenhum prazo dentro da janela, não vira linha: a tela diz quantas são, e elas aparecem quando a janela chegar ao prazo. Tocar na linha abre a ficha na aba Prazos. Até 150 linhas, com o prazo mais perto primeiro.
+
+No celular, o gráfico vira uma linha do tempo vertical, dia a dia, com a marca "agora". No computador, a mesma lista fica em "Ver os mesmos prazos em lista" (também para leitor de tela).
+
+### 6.12 Painel (Dashboard)
+
+Números contados na hora em que a tela abre, cada um com a fonte (aba e regra da contagem) e o clique para a lista que o compõe.
+
+| Indicador | Fonte | Abre |
+|---|---|---|
+| Em andamento, oportunidades por etapa | LIC_OPORTUNIDADES, SITUACAO (as descartadas só pela regra ficam fora do Kanban e são contadas à parte) | Kanban (na etapa) |
+| Em andamento por UF | LIC_OPORTUNIDADES, UF; primeiro a prioridade: GO e DF, vizinhos de GO (MG, BA, TO, MT, MS) e RJ, mesmo em zero | Kanban filtrado pela UF |
+| Distribuição das notas | NOTA, NOTA_CLASSE e TRAVAS_A_CONFIRMAR: alta (75 a 100), média (50 a 74), baixa (30 a 49), descarte, trava a confirmar, sem nota | Kanban filtrado pela nota |
+| Prazos nos próximos 7 e 30 dias, críticos, pendentes | LIC_EVENTOS, com a mesma regra da Agenda (sem versões substituídas, sem descartadas e sem travadas): o número bate com a lista | Agenda no período |
+| Alertas sem ciência | LIC_ALERTAS, a mesma regra da Central de alertas | Central de alertas, "Sem ciência" |
+| Travas a confirmar | TRAVAS_A_CONFIRMAR maior que zero | Kanban, nota "Trava a confirmar" |
+| Saúde do coletor | Coletor do servidor (ligado, última rodada, último sucesso, falhas seguidas no PNCP, rotas com falha), registro das chamadas (últimas 300, janela de 24 h) e LIC_PORTAIS (operacionais, com restrições, em teste, com falha, ligados) | Portais e configurações |
+| Análises por IA | LIC_ANALISES: concluídas, recusadas pelo verificador, erro da IA, total, última e tempo médio (só das análises com a duração gravada, desde a etapa 4) | Oportunidades ordenadas por nota |
+
+Fora do servidor próprio, a saúde do coletor diz que a coleta roda só lá. O Painel não atualiza sozinho: "Atualizar" conta de novo.
+
+### 6.13 Desempenho das três telas
+
+Cada tela lê cada aba uma vez e agrega no servidor (nada de uma chamada por cartão). Medidas de 02/11/2026, no ensaio local do servidor próprio (tempo de processamento dentro do servidor, 3 repetições):
+
+| Dados | Kanban | Gantt (semana) | Gantt (mês) | Painel |
+|---|---|---|---|---|
+| Cópia da produção: 186 oportunidades, 246 prazos, 1.014 alertas | 8 a 24 ms | 15 a 22 ms | 14 a 17 ms | 57 a 79 ms |
+| Volume: 388 oportunidades (260 em andamento), 1.085 prazos | 43 a 64 ms | 88 a 100 ms | 63 a 125 ms | 81 a 162 ms |
+
+No navegador, do toque no menu até a tela pronta: 77 a 131 ms no ensaio (computador e celular). O teste automático com 260 oportunidades e 960 prazos confere que cada tela lê cada aba uma só vez.
+
 ## 7. Problemas comuns
 
 | Situação | O que fazer |
@@ -390,6 +475,11 @@ O motivo é obrigatório. Cada salvamento vira versão nova; só o que mudou é 
 | "A rotina dos alertas está parada" | Avise o responsável pelo sistema: o agendador do servidor pode ter parado |
 | "Escreva onde você conferiu a data" | Pelo menos 10 letras (documento e item); nada foi alterado |
 | Um alerta de 7 dias não saiu | A oportunidade entrou quando a antecedência já tinha passado; sai só o aviso mais recente |
+| Kanban: "Escreva o motivo da mudança de etapa" | Pelo menos 10 letras; nada foi alterado |
+| Kanban: botão de etapa apagado | O texto embaixo do botão diz o porquê (passagem que ainda não existe ou etapa futura) |
+| Kanban: "alguém mudou agora há pouco" | Outra pessoa (ou a ficha) mudou a oportunidade; toque em "Atualizar". Nada foi alterado |
+| Gantt vazio | Mude o zoom para "Mês", use "Próximo" ou limpe os filtros; prazos sem data ficam na lista acima do gráfico |
+| Painel: tempo médio "sem medida ainda" | Nenhuma análise foi feita desde que a duração passou a ser gravada |
 
 ## 8. Rastreabilidade
 
@@ -401,6 +491,8 @@ O motivo é obrigatório. Cada salvamento vira versão nova; só o que mudou é 
 - Análise por IA: uma linha por versão em LIC_ANALISES, com o hash; no histórico, ANALISE_IA (ou recusada, ou falhou) com a versão, o modelo, a versão da fonte e os arquivos lidos com o SHA-256.
 - Agenda: uma linha por versão de cada prazo em LIC_EVENTOS (natureza, fonte, regra, fuso, versão, quem conferiu, hash); no histórico, AGENDA_MONTADA, AGENDA_RETIFICADA, AGENDA_SUSPENSA, AGENDA_REVOGACAO, AGENDA_ANULACAO, AGENDA_REABERTA, AGENDA_CONFIRMADA, AGENDA_CONFERIDA e AGENDA_RECURSO.
 - Alertas: uma linha por prazo, antecedência e pessoa em LIC_ALERTAS (e por mudança, escalonamento e reenvio), cada canal com a situação e o motivo; no histórico, ALERTA_ENVIADO, ALERTA_FALHOU, ALERTA_WHATSAPP_ENVIADO, ALERTA_WHATSAPP_ENTREGUE, ALERTA_WHATSAPP_LIDO, ALERTA_WHATSAPP_FALHOU, ALERTA_CIENCIA (quem, quando, canal), ALERTA_ESCALONADO e ALERTA_REENVIO_PEDIDO. Regras dos alertas: REGRAS_DOS_ALERTAS (de, para, versão, motivo).
+- Kanban: a mudança de etapa grava o mesmo fato da lista (ENVIADA_PARA_ANALISE, DESCARTADA_PELA_DIRETORIA, REABERTA) com a fonte "Kanban", o motivo, de → para e o hash.
+- Análise por IA: DURACAO_MS em LIC_ANALISES (desde a etapa 4) guarda quanto a análise levou, para o tempo médio do Painel.
 - Nada é apagado: a situação muda.
 
 ### 8.1 Regra de guarda (aprovada pelo dono em 02/11/2026)

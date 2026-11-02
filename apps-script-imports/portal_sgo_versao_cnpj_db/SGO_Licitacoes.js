@@ -21,6 +21,9 @@
  * (SGO_Licitacoes_Alertas.js). Depois de cada sincronia, as oportunidades novas ou com versão nova da fonte têm a agenda
  * refeita (retificação = versão nova do prazo + alerta de mudança); a ficha ganha a aba "Prazos"; telas novas "Agenda e
  * prazos" e "Central de alertas"; "Regras dos alertas" em Portais e configurações.
+ *
+ * Etapa 4 (02/11/2026): Kanban (etapas da licitação, mover só nas transições que existem, com motivo e histórico), Gantt (prazos
+ * de LIC_EVENTOS no tempo) e Painel (Dashboard) com a fonte de cada número (SGO_Licitacoes_Painel.js).
  ****************************************************/
 
 var LIC_CAMPOS_RETIFICACAO = { OBJETO: 'Objeto', ABERTURA_PROPOSTAS: 'Abertura das propostas', ENCERRAMENTO_PROPOSTAS: 'Encerramento das propostas', VALOR_ESTIMADO: 'Valor estimado',
@@ -57,7 +60,12 @@ var LIC_ACOES = {
   alertaCiente: function (eu, d) { return Lic_alertaCienteTela_(eu, d); },
   alertaReenviar: function (eu, d) { return Lic_alertaReenviar_(eu, d); },
   alertasCfg: function (eu) { return { cfg: Lic_alertasCfgTela_() }; },
-  alertasCfgSalvar: function (eu, d) { return Lic_alertasCfgSalvar_(eu, d); }
+  alertasCfgSalvar: function (eu, d) { return Lic_alertasCfgSalvar_(eu, d); },
+  // etapa 4 (02/11/2026)
+  kanban: function (eu, d) { return Lic_kanban_(eu, d); },
+  kanbanMover: function (eu, d) { return Lic_kanbanMover_(eu, d); },
+  gantt: function (eu, d) { return Lic_gantt_(eu, d); },
+  painel: function (eu) { return Lic_painel_(eu); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -308,10 +316,10 @@ function Lic_ficha_(eu, d) {
 function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
   return Lic_comTrava_(function () {
     var l = Lic_acharOp_(d.id);
-    if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira');
+    if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira; nada foi alterado');
     var agora = Lic_agora_(), mud = Object.assign({ SITUACAO: para, SITUACAO_DESDE: agora, ATUALIZADO_EM: agora }, extra || {});
     SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mud);
-    var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: 'Tela Oportunidades' });
+    var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' ? 'Kanban' : 'Tela Oportunidades' });
     return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: para, hash: h.HASH };
   });
 }
@@ -319,14 +327,14 @@ function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
 function Lic_descartar_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva o motivo do descarte (pelo menos 10 letras): ele fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. Nada foi alterado');
-  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo }, ['RADAR', 'ANALISE'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
+  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo, fonte: d.fonte }, ['RADAR', 'ANALISE'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
     { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar'));
 }
 /** Etapa 3: depois de mudar a situação, a agenda e os alertas acompanham (descartada = alertas pendentes cancelados com o motivo). */
 function Lic_aposSituacao_(id, r) { if (typeof Lic_agendaAposSituacao_ === 'function') Lic_agendaAposSituacao_(Lic_s_(id)); return r; }
 function Lic_enviarAnalise_(eu, d) {
   var obs = Lic_texto_(d.obs, 1000);
-  var r = Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Enviada para análise' + (obs ? ': ' + obs : '.') }, ['RADAR'], 'ANALISE', 'ENVIADA_PARA_ANALISE',
+  var r = Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Enviada para análise' + (obs ? ': ' + obs : '.'), fonte: d.fonte }, ['RADAR'], 'ANALISE', 'ENVIADA_PARA_ANALISE',
     { ANALISE_OBS: obs, RESPONSAVEL_ID: eu.id, RESPONSAVEL_NOME: eu.nome }, 'enviar para análise');
   Lic_aposSituacao_(d.id, r);
   // etapa 2: em análise, o servidor lê os arquivos do edital (se ainda não leu); falha aqui não desfaz o envio
@@ -336,7 +344,7 @@ function Lic_enviarAnalise_(eu, d) {
 function Lic_reabrir_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva por que a oportunidade volta para o radar (pelo menos 10 letras). Nada foi alterado');
-  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: 'REABERTA' }, 'reabrir'));
+  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo, fonte: d.fonte }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: 'REABERTA' }, 'reabrir'));
 }
 
 function Lic_situacaoColetor_() {

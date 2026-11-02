@@ -43,7 +43,9 @@ var LIC_COLUNAS = {
     'TRAVAS_JSON', 'AFIRMACOES_JSON', 'ARQUIVOS_JSON', 'ARQUIVOS_BASE', 'BASE_HASH', 'FONTE_VERSAO', 'FONTE_HASH', 'PESOS_JSON', 'REGRAS', 'MODELO', 'TENTATIVAS', 'RECUSAS_JSON',
     'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'HASH', 'CRIADO_EM',
     // revisão de 02/11/2026 (prova real): respostas cruas da IA de cada tentativa (truncadas), só a Diretoria vê
-    'RESPOSTAS_IA_JSON'],
+    'RESPOSTAS_IA_JSON',
+    // etapa 4 (02/11/2026): quanto a análise levou (do pedido à gravação), para o tempo médio do Painel
+    'DURACAO_MS'],
   // etapa 3 (02/11/2026): agenda de prazos (SGO_Licitacoes_Agenda.js). UMA LINHA POR VERSÃO de cada prazo: retificação cria a
   // linha nova (SUBSTITUI_ID) e a anterior fica RETIFICADO; nada é apagado. NATUREZA: CONFIRMADO (veio da fonte ou de pessoa),
   // CALCULADO (regra legal, sempre marcado como cálculo) ou PREVISTO (depende do edital ou de ato do pregoeiro).
@@ -63,7 +65,7 @@ var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNC
   LIC_ALERTAS: ['ALVO_ISO', 'LIBERAR_EM', 'ENVIANDO_EM', 'ENVIADO_EM', 'INTERNO_EM', 'EMAIL_EM', 'WA_EM', 'WA_ID', 'ENTREGUE_EM', 'LIDO_EM', 'FALHOU_EM', 'CIENTE_EM', 'ABERTO_EM',
     'ESCALONAR_EM', 'ESCALONADO_EM', 'CANCELADO_EM', 'CONCLUIDO_EM'] };
 
-/** Situações no fluxo (o Kanban da etapa seguinte usa as mesmas; nesta etapa a tela mexe em RADAR, ANALISE e DESCARTADA). */
+/** Situações no fluxo (o Kanban da etapa 4 usa as mesmas; as telas mexem em RADAR, ANALISE e DESCARTADA; SGO_Licitacoes_Painel.js). */
 var LIC_SITUACOES = ['RADAR', 'ANALISE', 'DECISAO', 'PROPOSTA', 'DISPUTA', 'RESULTADO', 'CONTRATO', 'DESCARTADA'];
 var LIC_SITUACAO_NOMES = { RADAR: 'No radar', ANALISE: 'Em análise', DECISAO: 'Decisão', PROPOSTA: 'Proposta', DISPUTA: 'Disputa', RESULTADO: 'Resultado', CONTRATO: 'Contrato', DESCARTADA: 'Descartada' };
 /** Estados de um portal (missão, gerenciador de conectores). */
@@ -157,14 +159,15 @@ function Lic_garantirAbas_() {
   var cache = null;
   // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
   // V4 (02/11/2026, etapa 3): abas LIC_EVENTOS e LIC_ALERTAS e as colunas da agenda em LIC_OPORTUNIDADES
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V5')) return; } catch (e) {}
+  // V6 (02/11/2026, etapa 4): coluna DURACAO_MS em LIC_ANALISES
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V6')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V5', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V6', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

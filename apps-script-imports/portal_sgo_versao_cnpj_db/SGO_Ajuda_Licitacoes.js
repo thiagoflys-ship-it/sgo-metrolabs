@@ -1,14 +1,16 @@
 /****************************************************
  * AJUDA "COMO USAR ESTA TELA" — SGO+ LICITAÇÕES, ETAPA 1 (01/11/2026), ETAPA 2 (02/11/2026: arquivos do edital e nota pela IA)
- * E ETAPA 3 (02/11/2026: agenda de prazos, alertas com ciência e escalonamento, regras dos alertas)
+ * E ETAPA 3 (02/11/2026: agenda de prazos, alertas com ciência e escalonamento, regras dos alertas) E ETAPA 4 (02/11/2026: Kanban,
+ * Gantt e Painel)
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Manual completo: docs/MANUAL_MODULO_LICITACOES.md.
  * Telas: licitacoes (Hoje em Licitações), licitacoes_oportunidades (lista e ficha), licitacoes_agenda (Agenda e prazos),
- * licitacoes_alertas (Central de alertas) e licitacoes_portais (Portais e configurações). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
+ * licitacoes_alertas (Central de alertas), licitacoes_portais (Portais e configurações), licitacoes_kanban (Kanban),
+ * licitacoes_gantt (Gantt) e licitacoes_painel (Painel). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
  * do servidor (sgo_servidor/src/servicos/licitacoes). Texto puro, sem HTML.
  ****************************************************/
 function SGO_ajudaTelas_Licitacoes_() {
   var quem = [
-    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
+    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar a etapa no Kanban (com motivo), ver o Gantt e o Painel, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
     { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026)." }
   ];
   return {
@@ -272,6 +274,108 @@ function SGO_ajudaTelas_Licitacoes_() {
       perguntas: [
         { p: "Por que um alerta de 7 dias não saiu?", r: "A oportunidade entrou no radar quando a antecedência de 7 dias já tinha passado. Sai só o aviso mais recente; os anteriores não são enviados para não mandar vários de uma vez." },
         { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica só no SGO+." }
+      ]
+    },
+    "licitacoes_kanban": {
+      titulo: "Kanban das licitações",
+      paraQueServe: "Mostra cada licitação numa etapa, do Radar ao Contrato: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato. Mudar de etapa pede o motivo e fica no histórico com quem e quando.",
+      antesDeComecar: [
+        "Só as passagens que já existem no SGO+ estão liberadas: Radar para Em análise (enviar para análise), Radar ou Em análise para Decisão (descartar) e Decisão para Radar (reabrir uma descartada).",
+        "Proposta, Disputa, Resultado e Contrato aparecem vazias e dizem em que etapa do módulo chegam. \"Participar\" (na coluna Decisão) chega com a etapa de preços e proposta, porque exige o preço mínimo aprovado pela Diretoria.",
+        "As descartadas só pela regra do radar não entram no quadro: ficam em Oportunidades › Descartadas (o quadro diz quantas são)."
+      ],
+      passos: [
+        { titulo: "Ler o quadro", itens: [
+          "Cada cartão mostra o órgão, o objeto resumido, o código, a cidade e a UF, o fim das propostas com o selo de tempo, a nota da IA com a classe, o responsável e os selos (\"Trava a confirmar\", \"Travada\", \"Suspensa na fonte\").",
+          "Borda vermelha: menos de 2 dias para o fim das propostas ou trava a confirmar. Borda amarela: menos de 5 dias ou travada. Borda cinza: descartada pela Diretoria.",
+          "No computador, role o quadro para os lados. No celular, toque no nome da etapa (as abas do alto) para ver as licitações dela.",
+          "Filtros: UF (ou só a prioridade: GO, DF, vizinhos e RJ), nota, prazo das propostas (7 dias, 30 dias, encerrado, sem data), responsável e busca por órgão, objeto ou número. \"Limpar filtros\" volta ao quadro inteiro."
+        ] },
+        { titulo: "Mudar de etapa", itens: [
+          "No computador, arraste o cartão para a coluna. Em qualquer aparelho, toque em \"Mover para\": a lista mostra todas as etapas, as liberadas com a ação e as travadas com o porquê.",
+          "Escreva o motivo (pelo menos 10 letras) e confirme. O histórico da ficha guarda quem, quando, de onde para onde, o motivo e a fonte \"Kanban\".",
+          "Soltar numa etapa que ainda não existe abre uma janela com o porquê e \"Nada foi alterado\". Soltar na mesma coluna não faz nada.",
+          "\"Abrir ficha\" leva à ficha completa (prazos, arquivos, análise e histórico)."
+        ] }
+      ],
+      cores: [
+        { nome: "Borda vermelha", significado: "Menos de 2 dias para o fim das propostas, ou trava a confirmar." },
+        { nome: "Borda amarela", significado: "Menos de 5 dias para o fim das propostas, ou travada pela triagem." },
+        { nome: "Borda cinza", significado: "Descartada pela Diretoria (coluna Decisão), com o motivo." },
+        { nome: "Coluna tracejada", significado: "Etapa futura: o texto diz em que etapa do módulo ela chega." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"alguém mudou agora há pouco\"", oQueFazer: "A oportunidade mudou de situação enquanto o quadro estava aberto (por outra pessoa ou na ficha). Toque em \"Atualizar\" e confira. Nada foi alterado." },
+        { situacao: "O botão de uma etapa está apagado", oQueFazer: "Leia o texto logo abaixo dele: diz o que falta ou em que etapa do módulo a passagem chega." },
+        { situacao: "Uma oportunidade sumiu do quadro", oQueFazer: "Confira os filtros (a linha \"Filtros ligados\" mostra quantas estão no quadro) ou se ela foi descartada pela regra do radar (Oportunidades › Descartadas)." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "Por que a coluna Decisão tem descartadas?", r: "Descartar é a decisão da Diretoria que já existe no SGO+ (com o motivo). \"Participar\" entra na mesma coluna quando a etapa de preços e proposta chegar." },
+        { p: "Mover no Kanban é diferente de usar os botões da lista?", r: "Não. É a mesma ação (enviar para análise, descartar, reabrir), com o mesmo histórico. A diferença é que no Kanban o motivo é obrigatório em todas." }
+      ]
+    },
+    "licitacoes_gantt": {
+      titulo: "Gantt dos prazos",
+      paraQueServe: "Mostra os prazos das licitações no tempo: início e fim das propostas, sessão pública, impugnação, esclarecimento e recurso, com a natureza de cada data e o momento atual marcado.",
+      antesDeComecar: [
+        "Os prazos vêm da Agenda e prazos (nascem da fonte quando a oportunidade entra no radar). As descartadas não aparecem; as travadas aparecem com a marca \"travada\".",
+        "Prazo sem data (pendente de confirmação) não tem lugar no tempo: fica na lista \"prazos sem data\" acima do gráfico até alguém confirmar a data."
+      ],
+      passos: [
+        { titulo: "Ler o Gantt", itens: [
+          "Cada linha é uma licitação. A barra azul clara é o recebimento das propostas (do início ao fim). Os símbolos são os prazos: círculo = fim das propostas, quadrado = sessão pública, losango = impugnação, triângulo = esclarecimento, triângulo invertido = recurso, traço = início das propostas.",
+          "Natureza: símbolo cheio = Confirmado (veio da fonte ou foi conferido por pessoa); vazado = Calculado pela regra legal; tracejado = Pendente de confirmação. Riscado = suspenso na fonte. Apagado = já passou.",
+          "A linha azul escura marca agora. Fim de semana fica cinza claro e feriado nacional, amarelado.",
+          "Passe o mouse (ou toque e segure) num símbolo para ver o prazo com dia, hora e fuso. Toque na linha para abrir a ficha na aba Prazos."
+        ] },
+        { titulo: "Zoom, janela e filtros", itens: [
+          "\"Semana\" mostra 9 dias a partir de ontem; \"Mês\", 35 dias a partir de 3 dias atrás. \"Anterior\" e \"Próximo\" andam a janela; \"Hoje\" volta.",
+          "Filtros: UF (ou a prioridade), etapa (Radar, só as travadas, Em análise, Decisão) e natureza da data.",
+          "No celular, o gráfico vira uma linha do tempo vertical, dia a dia, com a marca \"agora\". No computador, a mesma lista fica em \"Ver os mesmos prazos em lista\"."
+        ] }
+      ],
+      cores: [
+        { nome: "Símbolo cheio, vazado ou tracejado", significado: "Confirmado, Calculado (regra legal) ou Pendente de confirmação." },
+        { nome: "Vermelho, roxo, laranja, azul, cinza e verde", significado: "Fim das propostas, sessão, impugnação, esclarecimento, recurso e início das propostas." },
+        { nome: "Linha azul escura", significado: "Agora (horário de Brasília)." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"Nenhuma licitação com prazo nesta janela\"", oQueFazer: "Mude o zoom para \"Mês\", use \"Próximo\" ou limpe os filtros. Se a Agenda também estiver vazia, o radar ainda não trouxe candidatas." },
+        { situacao: "Um prazo calculado está diferente do edital", oQueFazer: "Abra a ficha (toque na linha), aba Prazos, e use \"Confirmar data\" com o que está no edital. A versão nova passa a valer no Gantt e nos alertas." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "Por que a hora mostra \"Brasília, presumido\"?", r: "O PNCP não informa o fuso. O SGO+ trata o horário como de Brasília e avisa; em UF com outro fuso, confira no edital." }
+      ]
+    },
+    "licitacoes_painel": {
+      titulo: "Painel de Licitações (Dashboard)",
+      paraQueServe: "Reúne os indicadores do módulo com números reais: oportunidades por etapa, por UF e por nota, prazos dos próximos 7 e 30 dias, alertas sem ciência, travas a confirmar, saúde do coletor e dos portais e as análises por IA.",
+      antesDeComecar: [
+        "Tudo é contado na hora em que a tela abre, a partir das abas do módulo (LIC_OPORTUNIDADES, LIC_EVENTOS, LIC_ALERTAS, LIC_ANALISES, LIC_PORTAIS) e do coletor do servidor.",
+        "Cada caixa termina com \"Fonte\": de onde vem o número e a regra da contagem. Nos números do alto, passe o mouse para ver a fonte."
+      ],
+      passos: [
+        { titulo: "Ler e abrir", itens: [
+          "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa, UF ou nota), a Agenda no período, a Central de alertas em \"Sem ciência\", Portais e configurações ou Oportunidades por nota.",
+          "Os prazos de 7 e 30 dias seguem a mesma regra da Agenda (sem descartadas e sem travadas), por isso o número bate com a lista que abre.",
+          "\"Em andamento por UF\" mostra primeiro a prioridade da pontuação: GO e DF, os vizinhos de GO e o RJ (filial), mesmo quando estão em zero.",
+          "\"Análises por IA\" conta cada análise registrada (concluída, recusada pelo verificador ou erro da IA). O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."
+        ] }
+      ],
+      cores: [
+        { nome: "Número vermelho", significado: "Pede ação: alerta sem ciência, prazo crítico em 7 dias ou portal com falha." },
+        { nome: "Número amarelo", significado: "Atenção: trava a confirmar ou prazo pendente de confirmação." },
+        { nome: "Barra cinza", significado: "UF fora da prioridade da pontuação." }
+      ],
+      problemas: [
+        { situacao: "A saúde do coletor diz que ele roda só no servidor próprio", oQueFazer: "Neste ambiente não há coleta. No SGO+ do servidor (sgo.metrolabs.com.br) os números do coletor aparecem." },
+        { situacao: "O tempo médio da IA aparece \"sem medida ainda\"", oQueFazer: "Nenhuma análise foi feita desde que a duração passou a ser gravada. A próxima análise já entra na conta." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "O painel atualiza sozinho?", r: "Não. Toque em \"Atualizar\" para contar de novo. Nenhuma tela de Licitações redesenha sozinha." }
       ]
     }
   };

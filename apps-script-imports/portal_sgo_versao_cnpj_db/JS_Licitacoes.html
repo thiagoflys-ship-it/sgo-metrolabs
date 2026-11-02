@@ -11,6 +11,11 @@
   "Central de alertas" (estados 1 a 10, ciência, escalonamento, canal alternativo, retorno da Meta), aba "Prazos" na ficha
   (versões de cada prazo, confirmar data, data da ata) e "Regras dos alertas" em Portais e configurações. Servidor:
   SGO_Licitacoes_Agenda.js e SGO_Licitacoes_Alertas.js. Sem atualização automática: nada redesenha formulário aberto.
+  Etapa 4 (02/11/2026): "Kanban" (licitações por etapa, do Radar ao Contrato; mover só nas transições que existem, sempre com
+  motivo e histórico; no celular, uma etapa por aba), "Gantt" (prazos de LIC_EVENTOS no tempo, natureza visível, hoje marcado,
+  zoom semana/mês; no celular, linha do tempo vertical) e "Painel" (Dashboard: números reais com a fonte, cada um abre a
+  lista filtrada). Kanban e Gantt no molde dos do Comercial (cmk-*, cmg-*); barras de indicador das Atividades (atv-barra-ind).
+  Servidor: SGO_Licitacoes_Painel.js.
 -->
 <style>
   .lic-nota { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 58px; height: 58px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
@@ -108,6 +113,39 @@
   .lic-pessoa { border-top: 1px solid var(--border); padding: 8px 0; }
   .lic-pessoa-ch { display: flex; flex-wrap: wrap; gap: 0 18px; }
   .cm-label { display: block; font-weight: 700; font-size: 12.5px; margin-bottom: 2px; }
+  /* etapa 4: Kanban, Gantt e Painel (componentes do Comercial e das Atividades; aqui só o que é novo) */
+  .lic-link { background: none; border: 0; padding: 0; font: inherit; color: var(--info); text-decoration: underline; cursor: pointer; min-height: 0; text-align: left; overflow-wrap: anywhere; }
+  .lic-kb-quadro .cmk-col { flex-basis: 250px; }
+  .lic-kb-col-futura { background: transparent; border-style: dashed; }
+  .lic-kb-futura { font-size: 12.5px; color: var(--muted); padding: 10px 6px; line-height: 1.45; }
+  .lic-kb-futura b { display: block; color: var(--text); margin-bottom: 4px; }
+  .lic-kb-card .lic-kb-obj { display: block; margin-top: 2px; color: var(--text); }
+  .lic-kb-card.perdida { border-left-color: var(--muted); }
+  .lic-kb-nota { font-weight: 800; }
+  .lic-kb-nota.n-alta { color: var(--success); } .lic-kb-nota.n-media { color: var(--info); } .lic-kb-nota.n-baixa { color: var(--warning); } .lic-kb-nota.n-descarte { color: var(--danger); } .lic-kb-nota.sem { color: var(--muted); font-weight: 700; }
+  .lic-kb-porque { margin: -2px 0 6px; padding: 0 4px; }
+  .cmk-lista-mover button[disabled] { opacity: .6; cursor: not-allowed; }
+  .lic-kb-mob { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+  .lic-kb-mob-corpo { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .lic-gt-barra { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin: 4px 0 8px; }
+  .lic-gt-barra .cm-tabs { margin: 0; }
+  .lic-tl { list-style: none; margin: 0 0 12px 6px; padding: 0 0 0 14px; border-left: 3px solid var(--border); }
+  .lic-tl-dia { margin: 12px 0 4px -14px; padding-left: 14px; font-size: 14px; text-transform: capitalize; }
+  .lic-tl-dia.hoje b { color: var(--info); }
+  .lic-tl-agora { position: relative; margin: 6px 0 6px -14px; padding-left: 14px; font-size: 11.5px; font-weight: 800; color: #1E4F7A; text-transform: uppercase; letter-spacing: .04em; border-top: 2px solid #1E4F7A; }
+  .lic-tl-item { position: relative; margin: 0 0 6px; }
+  .lic-tl-item::before { content: ""; position: absolute; left: -22px; top: 14px; width: 11px; height: 11px; border-radius: 50%; background: var(--lic-tl-cor, var(--info)); border: 2px solid var(--card); }
+  .lic-tl-item.passou { opacity: .6; }
+  .lic-tl-item.suspenso .lic-tl-txt b { text-decoration: line-through; }
+  .lic-tl-bt { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; width: 100%; min-height: 44px; text-align: left; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--lic-tl-cor, var(--info)); border-radius: 8px; padding: 8px 10px; font: inherit; color: inherit; cursor: pointer; }
+  .lic-tl-hora { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .lic-tl-txt { min-width: 0; overflow-wrap: anywhere; }
+  .lic-pn-grade { align-items: start; }
+  .lic-pn-caixa h3 { margin-top: 0; }
+  .lic-pn-barra { width: 100%; background: none; border: 0; border-radius: 4px; padding: 4px 2px; font: inherit; color: inherit; cursor: pointer; text-align: left; min-height: 32px; }
+  .lic-pn-barra:hover { background: var(--bc-surface-2); }
+  .lic-pn-fonte { margin: 10px 0 0; padding-top: 6px; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  .lic-pn-mini .cm-kpi { min-width: 0; }
   @media (max-width: 900px) {
     .lic-op { grid-template-columns: auto minmax(0, 1fr); }
     .lic-op-acoes { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; min-width: 0; }
@@ -116,6 +154,10 @@
     .lic-acoes-linha .btn-secondary, .lic-acoes-linha .btn-primary, .lic-acoes-linha a { flex: 1 1 140px; }
     .lic-ev { grid-template-columns: minmax(0, 1fr); gap: 4px; }
     .lic-ev-hora .cm-meta { display: inline; margin-left: 4px; }
+    .lic-pn-barra { min-height: 44px; }
+    .lic-kb-mob-corpo .cmk-card .cmk-bts button { flex: 1 1 120px; }
+    .lic-gt-barra .lic-acoes-linha { width: 100%; }
+    .lic-link { min-height: 32px; }
   }
 </style>
 <script>
@@ -125,8 +167,9 @@
   var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte", TRAVA_A_CONFIRMAR: "n-descarte" };
   var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte", TRAVA_A_CONFIRMAR: "trava a confirmar" };
   var LIC_CRITERIOS = [["capacidade", "Capacidade técnica"], ["margem", "Margem"], ["documentacao", "Documentação"], ["localizacao", "Localização"], ["prazo", "Prazo"], ["valor", "Valor"], ["riscos", "Riscos"]];
-  var LIC_NAV = [["licitacoes", "Hoje"], ["licitacoes_oportunidades", "Oportunidades"], ["licitacoes_agenda", "Agenda"], ["licitacoes_alertas", "Alertas"], ["licitacoes_portais", "Portais e configurações"]];
-  var LIC_TITULOS = { licitacoes: "Hoje em Licitações", licitacoes_oportunidades: "Oportunidades", licitacoes_agenda: "Agenda e prazos", licitacoes_alertas: "Central de alertas", licitacoes_portais: "Portais e configurações" };
+  var LIC_NAV = [["licitacoes", "Hoje"], ["licitacoes_painel", "Painel"], ["licitacoes_oportunidades", "Oportunidades"], ["licitacoes_kanban", "Kanban"], ["licitacoes_gantt", "Gantt"], ["licitacoes_agenda", "Agenda"], ["licitacoes_alertas", "Alertas"], ["licitacoes_portais", "Portais e configurações"]];
+  var LIC_TITULOS = { licitacoes: "Hoje em Licitações", licitacoes_oportunidades: "Oportunidades", licitacoes_agenda: "Agenda e prazos", licitacoes_alertas: "Central de alertas", licitacoes_portais: "Portais e configurações",
+    licitacoes_kanban: "Kanban das licitações", licitacoes_gantt: "Gantt dos prazos", licitacoes_painel: "Painel de Licitações (Dashboard)" };
   var LIC_ABAS_OP = [["analisar", "Para analisar"], ["travadas", "Travadas"], ["analise", "Em análise"], ["descartadas", "Descartadas"]];
   var LIC_DICAS = {
     analisar: "Candidatas da triagem por regras: têm termo de interesse e nada que descarte ou trave. O servidor baixa o edital e a IA dá a nota de 0 a 100 com fatos e fontes (a IA não decide). Ordene por prioridade da UF, por nota ou por prazo.",
@@ -235,23 +278,29 @@
       return;
     }
     var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
-    var botoes = LIC.mod === "licitacoes_portais" ? "" : LIC.mod === "licitacoes_agenda" || LIC.mod === "licitacoes_alertas" ? '<button type="button" class="btn-secondary" data-lic-recarregar-tela><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' : '<button type="button" class="btn-secondary" data-lic-atualizar><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+    var botoes = LIC.mod === "licitacoes_portais" ? "" : LIC_TELAS_RECARREGAR[LIC.mod] ? '<button type="button" class="btn-secondary" data-lic-recarregar-tela><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' : '<button type="button" class="btn-secondary" data-lic-atualizar><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
       '<button type="button" class="btn-secondary" data-lic-coletar><i class="fas fa-cloud-arrow-down" aria-hidden="true"></i>&nbsp;Coletar agora</button>';
     var sub = { licitacoes: "O que entrou no radar, os prazos dos próximos 7 dias e a situação do coletor do PNCP e do Compras.gov.br.",
       licitacoes_oportunidades: "O radar lê o PNCP, faz a triagem por regras e mostra o motivo com o trecho da fonte. Descartar e enviar para análise ficam no histórico com quem e quando.",
       licitacoes_agenda: "Prazos das licitações por dia, com a fonte, o fuso e a natureza de cada data (confirmada, calculada pela lei ou pendente de confirmação), os feriados e os alertas.",
       licitacoes_alertas: "Cada alerta com o caminho completo: criado, enviado, aceito, entregue e lido (retorno da Meta), ciência de quem e quando, escalonamento e canal alternativo.",
-      licitacoes_portais: "Os 33 portais com o tipo de integração, a situação e o último teste; o registro das chamadas; as regras do radar e dos alertas; quem vê o quê." }[LIC.mod];
+      licitacoes_portais: "Os 33 portais com o tipo de integração, a situação e o último teste; o registro das chamadas; as regras do radar e dos alertas; quem vê o quê.",
+      licitacoes_kanban: "Cada licitação numa etapa: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato. Mudar de etapa pede o motivo e fica no histórico com quem e quando.",
+      licitacoes_gantt: "Os prazos das licitações no tempo: fim das propostas, sessão, impugnação, esclarecimento e recurso, com a natureza de cada data e o dia de hoje marcado.",
+      licitacoes_painel: "Indicadores do módulo com números reais: cada um diz de onde vem e abre a lista que o compõe." }[LIC.mod];
     div.innerHTML = Lic_cascaHtml_(LIC.mod, sub, botoes, celular);
     if (typeof atualizarTituloMobile_ === "function") { try { atualizarTituloMobile_(LIC_TITULOS[LIC.mod]); } catch (e) {} }
     div.querySelectorAll("[data-lic-nav]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-lic-nav"); if (m !== LIC.mod) abrir(m); }; });
     var at = div.querySelector("[data-lic-atualizar]"); if (at) at.onclick = function () { Lic_atualizar_(); };
     var co = div.querySelector("[data-lic-coletar]"); if (co) co.onclick = function () { Lic_coletarAgora_(co); };
-    var rt = div.querySelector("[data-lic-recarregar-tela]"); if (rt) rt.onclick = function () { LIC.mod === "licitacoes_agenda" ? Lic_renderAgenda_() : Lic_renderAlertas_(); };
+    var rt = div.querySelector("[data-lic-recarregar-tela]"); if (rt) rt.onclick = function () { var fn = LIC_TELAS_RECARREGAR[LIC.mod]; if (fn) fn(); };
     if (LIC.mod === "licitacoes") Lic_renderHoje_();
     else if (LIC.mod === "licitacoes_oportunidades") { LIC.fichaId = LIC.abrirFicha || ""; LIC.abrirFicha = ""; LIC.fichaAba = LIC.abrirFichaAba || "resumo"; LIC.abrirFichaAba = ""; Lic_renderOportunidades_(); }
     else if (LIC.mod === "licitacoes_agenda") Lic_renderAgenda_();
     else if (LIC.mod === "licitacoes_alertas") Lic_renderAlertas_();
+    else if (LIC.mod === "licitacoes_kanban") Lic_renderKanban_();
+    else if (LIC.mod === "licitacoes_gantt") Lic_renderGantt_();
+    else if (LIC.mod === "licitacoes_painel") Lic_renderPainel_();
     else Lic_renderPortais_();
   }
   function Lic_corpo_() { return Lic_$_("licCorpo"); }
@@ -434,8 +483,9 @@
     var aba = LIC.aba;
     Lic_chamar_("oportunidades", { aba: aba, ordem: LIC.ordem }, function (d) {
       LIC.lista = d;
-      c.innerHTML = Lic_htmlListaCab_(d, aba, LIC.filtros) + '<div id="licLista" class="cm-lista" aria-live="polite">' + Lic_htmlListaItens_(d, aba, LIC.filtros) + "</div>";
+      c.innerHTML = Lic_modosHtml_("licitacoes_oportunidades") + Lic_htmlListaCab_(d, aba, LIC.filtros) + '<div id="licLista" class="cm-lista" aria-live="polite">' + Lic_htmlListaItens_(d, aba, LIC.filtros) + "</div>";
       c.querySelectorAll("[data-lic-aba]").forEach(function (b) { b.onclick = function () { var de = LIC.aba, para = b.getAttribute("data-lic-aba"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Oportunidades: " + b.textContent, function () { LIC.aba = de; if (LIC.mod === "licitacoes_oportunidades") Lic_renderOportunidades_(); }); LIC.aba = para; Lic_renderOportunidades_(); }; });
+      Lic_ligarModos_(c);
       var redesenhar = function () { var l = Lic_$_("licLista"); if (l) { l.innerHTML = Lic_htmlListaItens_(LIC.lista, aba, LIC.filtros); Lic_ligarCartoes_(l); } };
       [["licFBusca", "busca", "input"], ["licFUf", "uf", "change"], ["licFSelo", "selo", "change"], ["licFSessao", "sessao", "change"]].forEach(function (x) {
         var el = Lic_$_(x[0]); if (el) el.addEventListener(x[2], function () { LIC.filtros[x[1]] = el.value; redesenhar(); });
@@ -1173,5 +1223,363 @@
           function (m) { bt.disabled = false; msg.innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
       };
     }, function (m) { corpo.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(corpo, function () { Lic_renderRegrasAlertas_(corpo); }); });
+  }
+  // ---------------- etapa 4 (02/11/2026): Kanban, Gantt e Painel (Dashboard) ----------------
+  var LIC_TELAS_RECARREGAR = { licitacoes_agenda: function () { Lic_renderAgenda_(); }, licitacoes_alertas: function () { Lic_renderAlertas_(); },
+    licitacoes_kanban: function () { Lic_renderKanban_(); }, licitacoes_gantt: function () { Lic_renderGantt_(); }, licitacoes_painel: function () { Lic_renderPainel_(); } };
+  var LIC_MODOS = [["licitacoes_oportunidades", "Lista", "fa-list", "Lista por situação, com o motivo da triagem e o trecho da fonte. Toque em Kanban para ver as etapas ou em Gantt para ver os prazos no tempo."],
+    ["licitacoes_kanban", "Kanban", "fa-table-columns", "Uma coluna por etapa, do Radar ao Contrato. Arraste o cartão ou toque em \"Mover para\": só as passagens que já existem ficam liberadas, sempre com o motivo."],
+    ["licitacoes_gantt", "Gantt", "fa-chart-gantt", "Os prazos no tempo, com a natureza de cada data (confirmada, calculada pela lei ou pendente) e o dia de hoje marcado. Toque numa linha para abrir a ficha."]];
+  var LIC_KB_NOTAS = [["", "Todas"], ["ALTA", "Alta (75 a 100)"], ["MEDIA", "Média (50 a 74)"], ["BAIXA", "Baixa (30 a 49)"], ["DESCARTE", "Descarte (abaixo de 30 ou trava)"], ["TRAVA", "Trava a confirmar"], ["SEM", "Sem nota da IA"]];
+  var LIC_KB_PRAZOS = [["", "Todos"], ["7", "Próximos 7 dias"], ["30", "Próximos 30 dias"], ["VENCIDO", "Encerrado"], ["SEM", "Sem data na fonte"]];
+  var LIC_GT_ETAPAS = [["", "Todas em andamento"], ["RADAR", "Radar"], ["TRAVADAS", "Só as travadas"], ["ANALISE", "Em análise"], ["DECISAO", "Decisão"]];
+  var LIC_GT_NAT = [["", "Todas"], ["CONFIRMADO", "Confirmado"], ["CALCULADO", "Calculado (regra legal)"], ["PREVISTO", "Pendente de confirmação"]];
+  var LIC_GT_CORES = { LIMITE_PROPOSTA: "#b3261e", SESSAO_PUBLICA: "#7a1f6b", PRAZO_IMPUGNACAO: "#b26a00", PRAZO_ESCLARECIMENTO: "#1f5fa8", PRAZO_RECURSO: "#4a5a6a", ABERTURA_PROPOSTAS: "#2e7d4f" };
+  var LIC_GT_TIPOS = [["LIMITE_PROPOSTA", "Fim das propostas"], ["SESSAO_PUBLICA", "Sessão pública"], ["PRAZO_IMPUGNACAO", "Impugnação"], ["PRAZO_ESCLARECIMENTO", "Esclarecimento"], ["PRAZO_RECURSO", "Recurso"], ["ABERTURA_PROPOSTAS", "Início das propostas"]];
+  LIC.kanbanFiltros = LIC.kanbanFiltros || { uf: "", nota: "", prazo: "", responsavel: "", busca: "" }; LIC.kanbanColMob = LIC.kanbanColMob || "RADAR";
+  LIC.ganttZoom = LIC.ganttZoom || "semana"; LIC.ganttInicio = LIC.ganttInicio || ""; LIC.ganttFiltros = LIC.ganttFiltros || { uf: "", etapa: "", natureza: "" };
+
+  function Lic_modosHtml_(atual) {
+    var m = LIC_MODOS.filter(function (x) { return x[0] === atual; })[0] || LIC_MODOS[0];
+    return '<div class="cm-modos" role="tablist" aria-label="Como ver as licitações">' + LIC_MODOS.map(function (x) { var at = x[0] === m[0]; return '<button type="button" role="tab" class="cm-modo' + (at ? " ativo" : "") + '" aria-selected="' + at + '" data-lic-modo="' + x[0] + '"><i class="fas ' + x[2] + '" aria-hidden="true"></i>&nbsp;' + Lic_esc_(x[1]) + "</button>"; }).join("") +
+      '</div><p class="cm-modo-dica">' + Lic_esc_(m[3]) + "</p>";
+  }
+  function Lic_ligarModos_(el) { el.querySelectorAll("[data-lic-modo]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-lic-modo"); if (m !== LIC.mod) { LIC.fichaId = ""; abrir(m); } }; }); }
+  /** Abre a ficha na aba pedida (o Voltar do celular volta para a tela de onde saiu). */
+  function Lic_irFicha_(id, aba) { if (!id) return; LIC.abrirFicha = String(id); LIC.abrirFichaAba = aba || "resumo"; abrir("licitacoes_oportunidades"); }
+  /** Destino de um número do Painel: a lista filtrada (Kanban, Agenda, Central de alertas, Portais ou Oportunidades). */
+  function Lic_irLink_(x) {
+    if (!x || !x.mod) return;
+    if (x.kanban) { LIC.kanbanFiltros = Object.assign({ uf: "", nota: "", prazo: "", responsavel: "", busca: "" }, x.kanban); if (x.coluna) LIC.kanbanColMob = x.coluna; }
+    if (x.agenda) { LIC.agendaPeriodo = x.agenda.periodo || "7"; LIC.agendaFiltros = { nivel: x.agenda.nivel || "", natureza: x.agenda.natureza || "", sessao: "", travadas: false }; }
+    if (x.alertas) LIC.alertasFiltro = x.alertas;
+    if (x.portais) LIC.portaisAba = x.portais;
+    if (x.aba) { LIC.aba = x.aba; LIC.filtros = { busca: "", uf: "", selo: "", sessao: "" }; }
+    if (x.ordem) LIC.ordem = x.ordem;
+    LIC.fichaId = "";
+    abrir(x.mod);
+  }
+  function Lic_linkAttr_(x) { return " data-lic-ir=\"" + Lic_esc_(JSON.stringify(x)) + "\""; }
+  function Lic_ligarLinks_(el) { el.querySelectorAll("[data-lic-ir]").forEach(function (b) { b.onclick = function () { var x = null; try { x = JSON.parse(b.getAttribute("data-lic-ir")); } catch (e) { x = null; } Lic_irLink_(x); }; }); }
+  function Lic_notaCurta_(c) {
+    if (c.nota === null || c.nota === undefined) return "Sem nota da IA";
+    return "Nota " + Lic_num_(c.nota) + " · " + (LIC_CLASSE_NOME[c.notaClasse] || "nota");
+  }
+
+  // ---------------- Kanban ----------------
+  function Lic_kbFiltrosHtml_(r) {
+    var f = LIC.kanbanFiltros, resp = [["", "Todos"], ["SEM", "Sem responsável"]].concat((r.responsaveis || []).map(function (u) { return [u.id, u.nome]; }));
+    var ativo = f.uf || f.nota || f.prazo || f.responsavel || f.busca;
+    return '<div class="cm-filtros">' +
+      '<div><label for="licKbBusca">Buscar</label><input id="licKbBusca" type="search" placeholder="órgão, objeto, número" value="' + Lic_esc_(f.busca) + '"></div>' +
+      '<div><label for="licKbUf">UF</label><select id="licKbUf"><option value="">Brasil inteiro</option><option value="PRIO"' + (f.uf === "PRIO" ? " selected" : "") + '>Prioridade (GO, DF, vizinhos e RJ)</option>' + Lic_opcoes_(LIC_UFS_TODAS.map(function (u) { return [u, u]; }), f.uf) + "</select></div>" +
+      '<div><label for="licKbNota">Nota</label><select id="licKbNota">' + Lic_opcoes_(LIC_KB_NOTAS, f.nota) + "</select></div>" +
+      '<div><label for="licKbPrazo">Prazo das propostas</label><select id="licKbPrazo">' + Lic_opcoes_(LIC_KB_PRAZOS, f.prazo) + "</select></div>" +
+      '<div><label for="licKbResp">Responsável</label><select id="licKbResp">' + Lic_opcoes_(resp, f.responsavel) + "</select></div></div>" +
+      (ativo ? '<p class="cm-meta">Filtros ligados: ' + r.total + " de " + r.semFiltro + ' no quadro. <button type="button" class="btn-secondary" data-lic-kb-limpar>Limpar filtros</button></p>' : "");
+  }
+  function Lic_kbClasse_(c) {
+    var t = Date.parse(c.encerramentoIso || ""), ms = isFinite(t) ? t - Date.now() : null;
+    if (c.coluna === "DECISAO") return "perdida";
+    if (c.travasAConfirmar > 0 || (ms !== null && ms > 0 && ms < 2 * 864e5)) return "risco";
+    if (c.travada || (ms !== null && ms > 0 && ms < 5 * 864e5)) return "atencao";
+    return "";
+  }
+  function Lic_kbPodeMover_(c, regras) { return LIC_KANBAN_COLS.some(function (k) { var g = regras[(c.situacao === "DESCARTADA" ? "DESCARTADA" : c.situacao) + ">" + k[0]]; return g && g.acao; }); }
+  var LIC_KANBAN_COLS = [["RADAR", "Radar"], ["ANALISE", "Em análise"], ["DECISAO", "Decisão"], ["PROPOSTA", "Proposta"], ["DISPUTA", "Disputa"], ["RESULTADO", "Resultado"], ["CONTRATO", "Contrato"]];
+  function Lic_kbCartaoHtml_(c, regras) {
+    var pode = Lic_kbPodeMover_(c, regras), selos = "";
+    if (c.travasAConfirmar > 0) selos += '<span class="cm-selo vermelho">Trava a confirmar</span>';
+    if (c.travada) selos += '<span class="cm-selo vermelho">Travada (decisão da Diretoria)</span>';
+    if (c.estadoFonte) selos += '<span class="cm-selo laranja">' + Lic_esc_({ SUSPENSAO: "Suspensa na fonte", REVOGACAO: "Revogada na fonte", ANULACAO: "Anulada na fonte" }[c.estadoFonte] || c.estadoFonte) + "</span>";
+    if (c.situacao === "DESCARTADA") selos += '<span class="cm-selo cinza">Descartada pela Diretoria</span>';
+    var prazo = c.encerramentoIso ? "Propostas até " + Lic_esc_(Lic_dataFonte_(c.encerramento)) + (c.fusoPresumido ? " (Brasília)" : "") + " " + Lic_tempo_(c.encerramentoIso) : "Prazo das propostas: a fonte não informa";
+    return '<div class="cmk-card lic-kb-card ' + Lic_kbClasse_(c) + '" draggable="' + (pode ? "true" : "false") + '" data-lic-kb="' + Lic_esc_(c.id) + '" tabindex="0" aria-label="' + Lic_esc_(c.codigo + " · " + c.orgao + " · " + Lic_notaCurta_(c)) + '">' +
+      '<b class="cli">' + Lic_esc_(c.orgao) + "</b>" + '<span class="lic-kb-obj">' + Lic_esc_(c.objeto) + "</span>" +
+      '<p class="cmk-l"><span class="lic-mono">' + Lic_esc_(c.codigo) + "</span> · " + Lic_esc_((c.municipio ? c.municipio + "/" : "") + (c.uf || "UF não informada")) + "</p>" +
+      '<p class="cmk-l">' + prazo + "</p>" +
+      '<p class="cmk-l"><b class="lic-kb-nota ' + Lic_esc_(LIC_CLASSE_CSS[c.notaClasse] || (c.nota === null ? "sem" : "n-media")) + '">' + Lic_esc_(Lic_notaCurta_(c)) + "</b> · " + (c.responsavel ? "Responsável: " + Lic_esc_(c.responsavel) : "Sem responsável") + "</p>" +
+      (c.descarte ? '<p class="cmk-l">Descartada por ' + Lic_esc_(c.descarte.por || "Diretoria") + (c.descarte.em ? " em " + Lic_esc_(Lic_dataHora_(c.descarte.em)) : "") + ": " + Lic_esc_(c.descarte.motivo) + "</p>" : "") +
+      (selos ? '<div style="margin-top:4px">' + selos + "</div>" : "") +
+      '<div class="cmk-bts"><button type="button" class="btn-secondary" data-lic-kb-abrir="' + Lic_esc_(c.id) + '">Abrir ficha</button><button type="button" class="btn-secondary" data-lic-kb-mover="' + Lic_esc_(c.id) + '">Mover para</button></div></div>';
+  }
+  function Lic_kbColunaCorpoHtml_(k, regras) {
+    if (k.futura) return '<div class="lic-kb-futura"><b>Etapa futura</b>' + Lic_esc_(k.futura) + "</div>";
+    if (!k.cartoes.length) return '<div class="cm-meta" style="text-align:center;padding:14px 4px">' + Lic_esc_({ RADAR: "Nenhuma oportunidade no radar com estes filtros.", ANALISE: "Nada em análise. Arraste uma do Radar para cá (com o motivo) ou use \"Mover para\".", DECISAO: "Nenhuma descartada pela Diretoria com estes filtros. Descartar com o motivo traz para cá." }[k.codigo] || "Nenhuma") + "</div>";
+    return k.cartoes.map(function (c) { return Lic_kbCartaoHtml_(c, regras); }).join("") + (k.cortados ? '<p class="cm-meta">Mostrando ' + k.cartoes.length + " de " + k.qtd + ". Use os filtros para achar as demais.</p>" : "");
+  }
+  function Lic_kbColCabHtml_(k) { return '<div class="cmk-col-cab"><b>' + Lic_esc_(k.nome) + "</b><span>" + k.qtd + (k.qtd === 1 ? " licitação" : " licitações") + "</span><br><span>" + Lic_esc_(k.futura ? "Chega numa próxima etapa" : k.dica) + "</span></div>"; }
+  function Lic_htmlKanban_(r, celular) {
+    var regras = r.regras || {}, fora = r.foraDoQuadro || {};
+    var h = Lic_modosHtml_("licitacoes_kanban") + Lic_kbFiltrosHtml_(r) +
+      '<p class="cm-meta">' + r.total + (r.total === 1 ? " licitação" : " licitações") + " no quadro. " + (fora.descartadasRegra ? fora.descartadasRegra + ' descartadas só pela regra do radar ficam fora (<button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas" }) + ">ver em Oportunidades › Descartadas</button>). " : "") +
+      (celular ? "Toque na etapa para ver as licitações dela; \"Mover para\" muda de etapa." : "Role o quadro para os lados para ver todas as etapas. Arraste o cartão ou use \"Mover para\".") + "</p>";
+    if (celular) {
+      var at = r.colunas.filter(function (k) { return k.codigo === LIC.kanbanColMob; })[0] || r.colunas[0];
+      h += '<div class="lic-abas cm-tabs" role="tablist" aria-label="Etapas do Kanban">' + r.colunas.map(function (k) { var sel = k.codigo === at.codigo; return '<button type="button" class="cm-tab' + (sel ? " active" : "") + '" role="tab" aria-selected="' + sel + '" data-lic-kb-col="' + k.codigo + '">' + Lic_esc_(k.nome) + " (" + k.qtd + ")</button>"; }).join("") + "</div>" +
+        '<div class="lic-kb-mob" role="tabpanel" aria-label="' + Lic_esc_(at.nome) + '">' + Lic_kbColCabHtml_(at) + '<div class="lic-kb-mob-corpo">' + Lic_kbColunaCorpoHtml_(at, regras) + "</div></div>";
+      return h;
+    }
+    return h + '<div class="cmk-quadro lic-kb-quadro" id="licKbQuadro">' + r.colunas.map(function (k) {
+      return '<div class="cmk-col' + (k.futura ? " lic-kb-col-futura" : "") + '" data-lic-kb-coluna="' + k.codigo + '" role="region" aria-label="' + Lic_esc_(k.nome + ", " + k.qtd) + '">' + Lic_kbColCabHtml_(k) + '<div class="cmk-col-corpo">' + Lic_kbColunaCorpoHtml_(k, regras) + "</div></div>";
+    }).join("") + "</div>";
+  }
+  function Lic_renderKanban_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    var f = LIC.kanbanFiltros;
+    Lic_chamar_("kanban", { uf: f.uf, nota: f.nota, prazo: f.prazo, responsavel: f.responsavel, busca: f.busca }, function (r) {
+      LIC.kanban = r;
+      var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
+      var desenhar = function () {
+        c.innerHTML = Lic_htmlKanban_(r, celular);
+        Lic_ligarModos_(c); Lic_ligarLinks_(c);
+        [["licKbUf", "uf"], ["licKbNota", "nota"], ["licKbPrazo", "prazo"], ["licKbResp", "responsavel"], ["licKbBusca", "busca"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.addEventListener("change", function () { LIC.kanbanFiltros[x[1]] = el.value; Lic_renderKanban_(); }); });
+        var lim = c.querySelector("[data-lic-kb-limpar]"); if (lim) lim.onclick = function () { LIC.kanbanFiltros = { uf: "", nota: "", prazo: "", responsavel: "", busca: "" }; Lic_renderKanban_(); };
+        // celular: trocar de etapa só redesenha a lista (os dados já estão aqui; nenhum pedido novo ao servidor)
+        c.querySelectorAll("[data-lic-kb-col]").forEach(function (b) { b.onclick = function () { var de = LIC.kanbanColMob, para = b.getAttribute("data-lic-kb-col"); if (de === para) return; LIC.kanbanColMob = para; desenhar(); var t = c.querySelector('[data-lic-kb-col="' + para + '"]'); if (t && t.focus) { try { t.focus(); } catch (e) {} } }; });
+        Lic_ligarKanban_(c, r);
+      };
+      desenhar();
+    }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, Lic_renderKanban_); });
+  }
+  function Lic_ligarKanban_(c, r) {
+    var porId = {};
+    r.colunas.forEach(function (k) { k.cartoes.forEach(function (x) { porId[x.id] = x; }); });
+    c.querySelectorAll("[data-lic-kb-abrir]").forEach(function (b) { b.onclick = function () { Lic_irFicha_(b.getAttribute("data-lic-kb-abrir"), "resumo"); }; });
+    c.querySelectorAll("[data-lic-kb-mover]").forEach(function (b) { b.onclick = function () { Lic_kbMoverPara_(porId[b.getAttribute("data-lic-kb-mover")], r, b); }; });
+    var arrastando = "";
+    c.querySelectorAll(".lic-kb-card").forEach(function (el) {
+      el.addEventListener("dragstart", function (ev) { arrastando = el.getAttribute("data-lic-kb"); el.classList.add("arrastando"); try { ev.dataTransfer.setData("text/plain", arrastando); ev.dataTransfer.effectAllowed = "move"; } catch (e) {} });
+      el.addEventListener("dragend", function () { el.classList.remove("arrastando"); c.querySelectorAll(".cmk-col").forEach(function (k) { k.classList.remove("alvo"); }); });
+      el.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && ev.target === el) Lic_irFicha_(el.getAttribute("data-lic-kb"), "resumo"); });
+    });
+    c.querySelectorAll("[data-lic-kb-coluna]").forEach(function (k) {
+      k.addEventListener("dragover", function (ev) { ev.preventDefault(); k.classList.add("alvo"); });
+      k.addEventListener("dragleave", function () { k.classList.remove("alvo"); });
+      k.addEventListener("drop", function (ev) {
+        ev.preventDefault(); k.classList.remove("alvo");
+        var id = arrastando; try { id = ev.dataTransfer.getData("text/plain") || id; } catch (e) {}
+        arrastando = "";
+        if (porId[id]) Lic_kbSoltar_(porId[id], k.getAttribute("data-lic-kb-coluna"), r, null);
+      });
+    });
+  }
+  function Lic_kbRegra_(c, para, r) { return (r.regras || {})[(c.situacao === "DESCARTADA" ? "DESCARTADA" : c.situacao) + ">" + para] || { porque: "Essa passagem ainda não existe no SGO+." }; }
+  /** Alternativa ao arrastar (celular e teclado): todas as etapas, as liberadas com a ação e as travadas com o porquê. */
+  function Lic_kbMoverPara_(c, r, origem) {
+    if (!c) return;
+    var regras = r.regras || {};
+    var itens = LIC_KANBAN_COLS.map(function (k) {
+      var g = Lic_kbRegra_(c, k[0], r), atual = c.coluna === k[0];
+      if (g.acao) return '<button type="button" class="btn-secondary" data-lic-kb-dest="' + k[0] + '"><b>' + Lic_esc_(k[1]) + "</b> · " + Lic_esc_(g.nome) + "</button>" +
+        (k[0] === "DECISAO" ? '<button type="button" class="btn-secondary" disabled aria-disabled="true"><b>Decisão</b> · Participar</button><p class="cm-meta lic-kb-porque">' + Lic_esc_(regras.participar ? regras.participar.porque : "") + "</p>" : "");
+      return '<button type="button" class="btn-secondary" disabled aria-disabled="true"><b>' + Lic_esc_(k[1]) + "</b>" + (atual ? " · etapa atual" : "") + '</button><p class="cm-meta lic-kb-porque">' + Lic_esc_(g.porque) + "</p>";
+    }).join("");
+    var ov = Lic_janela_("Mover " + c.codigo, '<p class="cm-txt"><b>' + Lic_esc_(c.orgao) + "</b> · " + Lic_esc_(c.objeto) + '</p><p class="cm-meta">Escolha a etapa. Só as passagens que já existem no SGO+ estão liberadas; as outras dizem o porquê. Nada muda sem você confirmar com o motivo.</p><div class="cmk-lista-mover">' + itens + "</div>",
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button>', origem);
+    ov.querySelectorAll("[data-lic-kb-dest]").forEach(function (b) { b.onclick = function () { ov.fechar(); Lic_kbSoltar_(c, b.getAttribute("data-lic-kb-dest"), r, origem); }; });
+  }
+  var LIC_KB_EXPLICA = {
+    enviarAnalise: ["Enviar para análise", "Sai do Radar e vai para Em análise, com você como responsável. O servidor lê os arquivos do edital (se ainda não leu) e a nota da IA aparece na ficha. A decisão continua com a Diretoria.", "Ex.: objeto casa com calibração de equipamentos de laboratório"],
+    descartar: ["Descartar (decisão da Diretoria)", "Vai para Decisão como descartada pela Diretoria, com o seu nome e o motivo. Os alertas pendentes dela são cancelados. Pode ser reaberta depois.", "Ex.: escopo é fornecimento de peças, não serviço"],
+    reabrir: ["Reabrir", "Volta para o Radar. A regra do radar não descarta de novo; os prazos e os alertas voltam a valer.", "Ex.: o edital aceita calibração rastreável"]
+  };
+  function Lic_kbSoltar_(c, para, r, origem) {
+    if (!c || !para) return;
+    if (c.coluna === para) return;
+    var g = Lic_kbRegra_(c, para, r), nome = (LIC_KANBAN_COLS.filter(function (k) { return k[0] === para; })[0] || [para, para])[1];
+    if (!g.acao) {
+      var ov0 = Lic_janela_("Não dá para mover para " + nome, Lic_faixa_(g.porque + " Nada foi alterado: " + c.codigo + " continua em " + ((LIC_KANBAN_COLS.filter(function (k) { return k[0] === c.coluna; })[0] || ["", c.coluna])[1]) + ".", "aviso"),
+        '<button type="button" class="btn-secondary" data-lic-cancelar>Fechar</button><button type="button" class="btn-primary" data-lic-kb-ficha>Abrir a ficha</button>', origem);
+      ov0.querySelector("[data-lic-kb-ficha]").onclick = function () { ov0.fechar(); Lic_irFicha_(c.id, "resumo"); };
+      return;
+    }
+    var x = LIC_KB_EXPLICA[g.acao];
+    var ov = Lic_janela_(x[0] + ": " + c.codigo, '<p class="cm-txt"><b>' + Lic_esc_(c.orgao) + "</b> · " + Lic_esc_(c.objeto) + '</p><p class="cm-txt">' + Lic_esc_(x[1]) + "</p>" +
+      '<div class="cm-campo"><label for="licKbMotivo">Motivo (obrigatório, fica no histórico)</label><textarea id="licKbMotivo" rows="3" maxlength="1000" placeholder="' + Lic_esc_(x[2]) + '"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras. O histórico guarda quem, quando, de onde para onde e o motivo.</p></div><div id="licJanMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>' + Lic_esc_(x[0]) + "</button>", origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, motivo = (Lic_$_("licKbMotivo") || {}).value || "";
+      if (motivo.trim().length < 10) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      Lic_chamar_("kanbanMover", { id: c.id, para: para, situacao: c.situacao, motivo: motivo }, function (res) { ov.fechar(); Lic_toast_(res.texto || "Movida. Registrado no histórico."); if (LIC.mod === "licitacoes_kanban") Lic_renderKanban_(); },
+        function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+    };
+  }
+
+  // ---------------- Gantt ----------------
+  function Lic_gtDia_(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null; }
+  function Lic_gtDiaTxt_(dia) { var t = Lic_gtDia_(dia); if (t === null) return ""; var d = new Date(t); return ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][d.getUTCDay()] + " " + dia.slice(8, 10) + "/" + dia.slice(5, 7); }
+  function Lic_gtSomar_(dia, n) { var t = Lic_gtDia_(dia); if (t === null) return dia; return new Date(t + n * 864e5).toISOString().slice(0, 10); }
+  function Lic_gtTip_(l, m) {
+    return l.codigo + " · " + l.orgao + "\n" + m.nome + ": " + Lic_gtDiaTxt_(m.dia) + (m.diaTodo ? " (até o fim do dia)" : " " + m.hora + (m.fusoPresumido ? " (Brasília, presumido)" : "")) + "\n" + (LIC_NAT_SELO[m.natureza] || ["", m.natureza])[1] +
+      (m.situacao === "SUSPENSO" ? " · SUSPENSO na fonte" : "") + (m.versao > 1 ? " · versão " + m.versao : "") + (m.passou ? " · já passou" : "");
+  }
+  /** Marco do Gantt: a forma diz o tipo do prazo; o preenchimento diz a natureza (cheio = confirmado, vazado = calculado, tracejado = pendente). */
+  function Lic_gtMarco_(m, cx, cy, l) {
+    var cor = m.situacao === "SUSPENSO" ? "#8a96a8" : (LIC_GT_CORES[m.tipo] || "#555"), nat = m.natureza;
+    var fill = nat === "CONFIRMADO" ? cor : "var(--card)", sw = nat === "CONFIRMADO" ? 1 : 2.2, dash = nat === "PREVISTO" ? ' stroke-dasharray="2 2"' : "", st = nat === "CONFIRMADO" ? "#fff" : cor;
+    var op = m.passou ? ' opacity=".5"' : "", t = "<title>" + Lic_esc_(Lic_gtTip_(l, m)) + "</title>", a = ' fill="' + fill + '" stroke="' + st + '" stroke-width="' + sw + '"' + dash + op, s;
+    if (m.tipo === "SESSAO_PUBLICA") s = '<rect x="' + (cx - 6) + '" y="' + (cy - 6) + '" width="12" height="12"' + a + "/>";
+    else if (m.tipo === "PRAZO_IMPUGNACAO") s = '<path d="M' + cx + " " + (cy - 7) + " L" + (cx + 7) + " " + cy + " L" + cx + " " + (cy + 7) + " L" + (cx - 7) + " " + cy + ' Z"' + a + "/>";
+    else if (m.tipo === "PRAZO_ESCLARECIMENTO") s = '<path d="M' + (cx - 6) + " " + (cy + 6) + " L" + cx + " " + (cy - 6) + " L" + (cx + 6) + " " + (cy + 6) + ' Z"' + a + "/>";
+    else if (m.tipo === "PRAZO_RECURSO") s = '<path d="M' + (cx - 6) + " " + (cy - 6) + " L" + cx + " " + (cy + 6) + " L" + (cx + 6) + " " + (cy - 6) + ' Z"' + a + "/>";
+    else if (m.tipo === "ABERTURA_PROPOSTAS") s = '<rect x="' + (cx - 2) + '" y="' + (cy - 8) + '" width="4" height="16"' + a + "/>";
+    else s = '<circle cx="' + cx + '" cy="' + cy + '" r="6.5"' + a + "/>";
+    if (m.situacao === "SUSPENSO") s += '<line x1="' + (cx - 8) + '" y1="' + (cy + 8) + '" x2="' + (cx + 8) + '" y2="' + (cy - 8) + '" stroke="#8a96a8" stroke-width="2"/>';
+    return "<g>" + t + s + "</g>";
+  }
+  function Lic_ganttSvgHtml_(r, largura) {
+    var ini = Lic_gtDia_(r.de), dias = r.dias, rotW = 260, W = Math.max(largura - 2, rotW + dias * 26), area = W - rotW - 10, px = area / dias, lh = 34, cab = 42;
+    var xDia = function (dia, frac) { var d = Lic_gtDia_(dia); if (d === null) return rotW; return rotW + ((d - ini) / 864e5 + (frac === undefined ? 0.5 : frac)) * px; };
+    var frac = function (m) { if (m.diaTodo) return 0.97; var h = /^(\d{2}):(\d{2})/.exec(m.hora || ""); return h ? (+h[1] + +h[2] / 60) / 24 : 0.5; };
+    var fer = {}; (r.feriados || []).forEach(function (f) { fer[f.dia] = f.motivo; });
+    var H = cab + Math.max(1, r.linhas.length) * lh + 8, s = [];
+    s.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Gantt dos prazos de ' + Lic_esc_(Lic_gtDiaTxt_(r.de) + " a " + Lic_gtDiaTxt_(r.ate)) + ', ' + r.linhas.length + ' licitações. A mesma informação está na lista abaixo do gráfico." style="display:block">');
+    var meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    for (var i = 0; i < dias; i++) {
+      var dia = Lic_gtSomar_(r.de, i), d = new Date(Lic_gtDia_(dia)), xx = rotW + i * px, fds = d.getUTCDay() === 0 || d.getUTCDay() === 6;
+      if (fds || fer[dia]) s.push('<rect x="' + xx.toFixed(1) + '" y="' + cab + '" width="' + px.toFixed(1) + '" height="' + (H - cab) + '" fill="' + (fer[dia] ? "rgba(178,106,0,.10)" : "rgba(127,127,127,.08)") + '">' + (fer[dia] ? "<title>" + Lic_esc_(Lic_gtDiaTxt_(dia) + ": " + fer[dia]) + "</title>" : "") + "</rect>");
+      if (d.getUTCDate() === 1 || i === 0) s.push('<text x="' + (xx + 3).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + meses[d.getUTCMonth()] + "/" + d.getUTCFullYear() + "</text>");
+      var passo = px >= 40 ? 1 : px >= 20 ? 2 : 7;
+      if (i % passo === 0 || px >= 40) { s.push('<line x1="' + xx.toFixed(1) + '" y1="' + (cab - 6) + '" x2="' + xx.toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,.18)"/>'); s.push('<text x="' + (xx + 3).toFixed(1) + '" y="' + (cab - 10) + '" font-size="10.5" fill="var(--muted)">' + Lic_esc_(px >= 60 ? Lic_gtDiaTxt_(dia) : dia.slice(8, 10)) + "</text>"); }
+    }
+    r.linhas.forEach(function (l, idx) {
+      var y = cab + idx * lh, cy = y + lh / 2, rot = l.codigo + " · " + l.orgao; if (rot.length > 38) rot = rot.slice(0, 37) + "…";
+      s.push('<g data-lic-gt="' + Lic_esc_(l.id) + '" style="cursor:pointer"><title>' + Lic_esc_(l.codigo + " · " + l.orgao + " (" + (l.uf || "") + ")\n" + l.situacaoNome + (l.travada ? ", travada" : "") + (l.nota !== null ? ", nota " + Lic_num_(l.nota) : "") + "\nToque para abrir a ficha (aba Prazos)") + "</title>");
+      s.push('<rect x="0" y="' + y + '" width="' + W + '" height="' + lh + '" fill="' + (idx % 2 ? "rgba(127,127,127,.035)" : "transparent") + '"/>');
+      s.push('<text x="8" y="' + (y + 14) + '" font-size="11.5" font-weight="700" fill="var(--text)">' + Lic_esc_(rot) + '</text><text x="8" y="' + (y + 27) + '" font-size="10" fill="var(--muted)">' + Lic_esc_(((l.municipio ? l.municipio + "/" : "") + l.uf + " · " + l.situacaoNome + (l.travada ? " · travada" : "") + (l.nota !== null ? " · nota " + Lic_num_(l.nota) : "")).slice(0, 48)) + "</text>");
+      if (l.inicio && l.fim && l.inicio <= r.ate && l.fim >= r.de) {
+        var a0 = l.inicio < r.de ? r.de : l.inicio, a1 = l.fim > r.ate ? r.ate : l.fim, x0 = xDia(a0, 0), x1 = xDia(a1, 1);
+        s.push('<rect x="' + x0.toFixed(1) + '" y="' + (cy - 5) + '" width="' + Math.max(3, x1 - x0).toFixed(1) + '" height="10" rx="3" fill="rgba(31,95,168,.18)" stroke="rgba(31,95,168,.45)"/>');
+      }
+      l.marcos.forEach(function (m) { s.push(Lic_gtMarco_(m, xDia(m.dia, frac(m)).toFixed(1), cy, l)); });
+      s.push("</g>");
+    });
+    if (r.hoje >= r.de && r.hoje <= r.ate) {
+      var agora = new Date(), fh = (((agora.getUTCHours() + 21) % 24) + agora.getUTCMinutes() / 60) / 24, xh = xDia(r.hoje, fh);
+      s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cab - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/><text x="' + (xh + 3).toFixed(1) + '" y="' + (cab - 24) + '" font-size="10.5" font-weight="700" fill="#1E4F7A">agora</text>');
+    }
+    s.push("</svg>");
+    return s.join("");
+  }
+  function Lic_gtLegendaHtml_() {
+    return '<div class="cmg-legenda" aria-label="Legenda do Gantt">' + LIC_GT_TIPOS.map(function (t) { return '<span><i style="background:' + LIC_GT_CORES[t[0]] + (t[0] === "SESSAO_PUBLICA" ? "" : t[0] === "LIMITE_PROPOSTA" ? ";border-radius:50%" : t[0] === "PRAZO_IMPUGNACAO" ? ";transform:rotate(45deg)" : t[0] === "PRAZO_ESCLARECIMENTO" ? ";clip-path:polygon(50% 0,100% 100%,0 100%)" : t[0] === "PRAZO_RECURSO" ? ";clip-path:polygon(0 0,100% 0,50% 100%)" : ";width:4px") + '"></i>' + Lic_esc_(t[1]) + "</span>"; }).join("") +
+      '<span><i style="background:#555"></i>Cheio: Confirmado</span><span><i style="background:transparent;outline:2px solid #555;outline-offset:-2px"></i>Vazado: Calculado (regra legal)</span><span><i style="background:transparent;outline:2px dashed #555;outline-offset:-2px"></i>Tracejado: Pendente de confirmação</span>' +
+      '<span><i style="background:rgba(31,95,168,.25);outline:1px solid rgba(31,95,168,.45)"></i>Recebimento das propostas</span><span><i style="background:#8a96a8"></i>Riscado: suspenso na fonte</span><span><i style="background:rgba(178,106,0,.25)"></i>Feriado nacional</span><span><i style="background:#1E4F7A;width:3px"></i>Agora</span><span>Apagado: já passou</span></div>';
+  }
+  /** Lista dos prazos da janela por dia (celular: linha do tempo vertical; computador: a mesma informação do gráfico, para leitor de tela). */
+  function Lic_gtLinhaTempoHtml_(r) {
+    var itens = [];
+    r.linhas.forEach(function (l) { l.marcos.forEach(function (m) { itens.push({ l: l, m: m }); }); });
+    itens.sort(function (a, b) { return a.m.iso < b.m.iso ? -1 : a.m.iso > b.m.iso ? 1 : 0; });
+    if (!itens.length) return '<div class="cm-vazio">Nenhum prazo com data nesta janela e nestes filtros. Mude o zoom para "Mês", avance a janela ou limpe os filtros.</div>';
+    var agoraIso = new Date().toISOString(), marcou = false, dia = "", h = '<ol class="lic-tl" aria-label="Prazos por dia">';
+    itens.forEach(function (x) {
+      var m = x.m, l = x.l;
+      if (m.dia !== dia) { dia = m.dia; h += '<li class="lic-tl-dia' + (dia === r.hoje ? " hoje" : "") + '"><b>' + Lic_esc_(Lic_gtDiaTxt_(dia)) + (dia === r.hoje ? " · hoje" : "") + "</b></li>"; }
+      if (!marcou && m.iso >= agoraIso && r.hoje >= r.de && r.hoje <= r.ate) { marcou = true; h += '<li class="lic-tl-agora" aria-label="Agora">agora</li>'; }
+      var nat = LIC_NAT_SELO[m.natureza] || ["cinza", m.natureza];
+      h += '<li class="lic-tl-item' + (m.passou ? " passou" : "") + (m.situacao === "SUSPENSO" ? " suspenso" : "") + '" style="--lic-tl-cor:' + (LIC_GT_CORES[m.tipo] || "#555") + '"><button type="button" class="lic-tl-bt" data-lic-gt="' + Lic_esc_(l.id) + '">' +
+        '<span class="lic-tl-hora">' + Lic_esc_(m.diaTodo ? "dia todo" : m.hora) + "</span>" +
+        '<span class="lic-tl-txt"><b>' + Lic_esc_(m.nome) + "</b>" + (m.situacao === "SUSPENSO" ? ' <span class="cm-selo cinza">Suspenso na fonte</span>' : "") + ' <span class="cm-selo ' + nat[0] + '">' + Lic_esc_(nat[1]) + "</span><br>" +
+        '<span class="cm-meta">' + Lic_esc_(l.codigo + " · " + l.orgao + " · " + (l.municipio ? l.municipio + "/" : "") + l.uf) + (l.travada ? " · travada" : "") + "</span></span></button></li>";
+    });
+    if (!marcou && r.hoje >= r.de && r.hoje <= r.ate) h += '<li class="lic-tl-agora" aria-label="Agora">agora</li>';
+    return h + "</ol>";
+  }
+  function Lic_htmlGantt_(r, celular, largura) {
+    var f = LIC.ganttFiltros;
+    var h = Lic_modosHtml_("licitacoes_gantt") +
+      '<div class="lic-gt-barra"><div class="cm-tabs" role="tablist" aria-label="Zoom">' + [["semana", "Semana"], ["mes", "Mês"]].map(function (z) { var s = z[0] === r.zoom; return '<button type="button" class="cm-tab' + (s ? " active" : "") + '" role="tab" aria-selected="' + s + '" data-lic-gt-zoom="' + z[0] + '">' + z[1] + "</button>"; }).join("") + "</div>" +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-gt-nav="-1" aria-label="Janela anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i>&nbsp;Anterior</button><button type="button" class="btn-secondary" data-lic-gt-nav="0">Hoje</button><button type="button" class="btn-secondary" data-lic-gt-nav="1" aria-label="Próxima janela">Próximo&nbsp;<i class="fas fa-chevron-right" aria-hidden="true"></i></button></div></div>' +
+      '<div class="cm-filtros"><div><label for="licGtUf">UF</label><select id="licGtUf"><option value="">Brasil inteiro</option><option value="PRIO"' + (f.uf === "PRIO" ? " selected" : "") + '>Prioridade (GO, DF, vizinhos e RJ)</option>' + Lic_opcoes_(LIC_UFS_TODAS.map(function (u) { return [u, u]; }), f.uf) + "</select></div>" +
+      '<div><label for="licGtEtapa">Etapa</label><select id="licGtEtapa">' + Lic_opcoes_(LIC_GT_ETAPAS, f.etapa) + "</select></div>" +
+      '<div><label for="licGtNat">Natureza da data</label><select id="licGtNat">' + Lic_opcoes_(LIC_GT_NAT, f.natureza) + "</select></div></div>" +
+      '<p class="cm-meta"><b>' + Lic_esc_(Lic_gtDiaTxt_(r.de) + " a " + Lic_gtDiaTxt_(r.ate)) + "</b> · " + r.total + (r.total === 1 ? " licitação" : " licitações") + " com prazo na janela · " + (r.contagens.marcos || 0) + " prazos" + (r.contagens.soRecebimento ? " · outras " + r.contagens.soRecebimento + " estão recebendo propostas sem prazo nesta janela (aparecem quando ela chegar ao prazo)" : "") + ". Horário de Brasília (presumido quando a fonte não informa o fuso).</p>" +
+      (r.cortadas ? Lic_faixa_("Mostrando as " + r.linhas.length + " licitações com o prazo mais perto; " + r.cortadas + " ficaram de fora. Use os filtros ou o zoom Semana.", "aviso") : "") +
+      ((r.pendentes || []).length ? '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">' + (r.contagens.semData || r.pendentes.length) + ' prazos sem data (pendentes de confirmação) não aparecem no tempo</summary><p class="cm-meta">Dependem do edital ou do pregoeiro. Confirme a data em Agenda e prazos ou na ficha, aba Prazos: depois de confirmada, ela entra no Gantt.</p><ul class="lic-af">' +
+        r.pendentes.slice(0, 30).map(function (p) { return '<li><button type="button" class="lic-link" data-lic-gt="' + Lic_esc_(p.opId) + '">' + Lic_esc_(p.codigo + " · " + p.orgao) + "</button> · " + Lic_esc_(p.nome) + "</li>"; }).join("") + "</ul></details>" : "");
+    if (!r.linhas.length) return h + '<div class="cm-vazio">Nenhuma licitação com prazo nesta janela e nestes filtros. Mude o zoom para "Mês", use "Próximo" ou limpe os filtros. Os prazos nascem da fonte quando a oportunidade entra no radar (Agenda e prazos).</div>';
+    if (celular) return h + '<p class="cm-sec">Linha do tempo</p>' + Lic_gtLinhaTempoHtml_(r);
+    return h + Lic_gtLegendaHtml_() + '<div class="cmg-wrap">' + Lic_ganttSvgHtml_(r, largura) + "</div>" +
+      '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Ver os mesmos prazos em lista</summary>' + Lic_gtLinhaTempoHtml_(r) + "</details>";
+  }
+  function Lic_renderGantt_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    var f = LIC.ganttFiltros;
+    Lic_chamar_("gantt", { zoom: LIC.ganttZoom, inicio: LIC.ganttInicio, uf: f.uf, etapa: f.etapa, natureza: f.natureza }, function (r) {
+      LIC.gantt = r;
+      var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
+      c.innerHTML = Lic_htmlGantt_(r, celular, c.clientWidth || 1100);
+      Lic_ligarModos_(c);
+      c.querySelectorAll("[data-lic-gt]").forEach(function (g) { g.addEventListener("click", function () { Lic_irFicha_(g.getAttribute("data-lic-gt"), "prazos"); }); });
+      c.querySelectorAll("[data-lic-gt-zoom]").forEach(function (b) { b.onclick = function () { var z = b.getAttribute("data-lic-gt-zoom"); if (z === LIC.ganttZoom) return; LIC.ganttZoom = z; LIC.ganttInicio = ""; Lic_renderGantt_(); }; });
+      c.querySelectorAll("[data-lic-gt-nav]").forEach(function (b) { b.onclick = function () { var n = Number(b.getAttribute("data-lic-gt-nav")); LIC.ganttInicio = n === 0 ? "" : Lic_gtSomar_(r.de, n * (r.zoom === "mes" ? 28 : 7)); Lic_renderGantt_(); }; });
+      [["licGtUf", "uf"], ["licGtEtapa", "etapa"], ["licGtNat", "natureza"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.addEventListener("change", function () { LIC.ganttFiltros[x[1]] = el.value; Lic_renderGantt_(); }); });
+    }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, Lic_renderGantt_); });
+  }
+
+  // ---------------- Painel (Dashboard) ----------------
+  function Lic_pnBarras_(itens, max) {
+    max = Math.max(1, max || 0, Math.max.apply(null, itens.map(function (x) { return x.n || 0; }).concat([0])));
+    return itens.map(function (x) {
+      return '<button type="button" class="atv-barra-ind lic-pn-barra"' + Lic_linkAttr_(x.link) + ' aria-label="' + Lic_esc_(x.t + ": " + x.n + ". " + (x.dica || "Abre a lista filtrada.")) + '"><span class="t" title="' + Lic_esc_(x.t) + '">' + Lic_esc_(x.t) + (x.sub ? ' <span class="cm-meta">' + Lic_esc_(x.sub) + "</span>" : "") + '</span><span class="b" aria-hidden="true"><div style="width:' + Math.round((x.n || 0) * 100 / max) + "%" + (x.cor ? ";background:" + x.cor : "") + '"></div></span><span class="n">' + Lic_esc_(x.n) + "</span></button>";
+    }).join("");
+  }
+  function Lic_pnKpi_(v, rotulo, tipo, link, fonte) {
+    return '<button type="button" class="cm-kpi ' + (tipo || "") + '"' + Lic_linkAttr_(link) + ' title="' + Lic_esc_("Fonte: " + fonte) + '" style="text-align:left;cursor:pointer"><span class="v">' + Lic_esc_(v) + '</span><span class="r">' + Lic_esc_(rotulo) + "</span></button>";
+  }
+  function Lic_pnCaixa_(titulo, corpo, fonte) { return '<section class="cm-caixa lic-pn-caixa"><h3>' + Lic_esc_(titulo) + "</h3>" + corpo + '<p class="cm-meta lic-pn-fonte"><b>Fonte:</b> ' + Lic_esc_(fonte) + "</p></section>"; }
+  function Lic_tempoMedio_(ms) { if (ms === null || ms === undefined) return "sem medida ainda"; var s = Math.round(ms / 1000); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + (s % 60 ? (s % 60) + " s" : ""); }
+  function Lic_htmlPainel_(d) {
+    var e = d.etapas, u = d.ufs, n = d.notas, p = d.prazos, col = d.coletor, ia = d.ia, cx = col.conexoes || {}, po = col.portais || {};
+    var kb = function (f, coluna) { return { mod: "licitacoes_kanban", kanban: f || {}, coluna: coluna || "" }; };
+    var h = '<div class="cm-kpis">' +
+      Lic_pnKpi_(e.andamento, "Em andamento (sem as descartadas)", "", kb({}), e.fonte) +
+      Lic_pnKpi_(p.d7, "Prazos nos próximos 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) +
+      Lic_pnKpi_(p.d30, "Prazos nos próximos 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) +
+      Lic_pnKpi_(d.alertas.semCiencia, "Alertas sem ciência", d.alertas.semCiencia ? "erro" : "", { mod: "licitacoes_alertas", alertas: "semCiencia" }, d.alertas.fonte) +
+      Lic_pnKpi_(d.travas.n, "Travas a confirmar", d.travas.n ? "aviso" : "", kb({ nota: "TRAVA" }), d.travas.fonte) +
+      Lic_pnKpi_(po.operacionais + " de " + po.total, "Portais operacionais", po.falha ? "erro" : "", { mod: "licitacoes_portais", portais: "portais" }, col.fonte) + "</div>" +
+      '<p class="cm-modo-dica">Todos os números são contados agora, a partir das abas do módulo e do coletor do servidor (' + Lic_esc_(Lic_dataHora_(d.geradoEm)) + '). Toque num número ou numa barra para abrir a lista que o compõe. "Fonte" diz de onde vem cada um.</p>';
+    var g = '<div class="atv-ind-grade lic-pn-grade">';
+    g += Lic_pnCaixa_("Oportunidades por etapa (Kanban)", Lic_pnBarras_(e.itens.map(function (x) { return { t: x.nome, sub: x.futura ? "(próxima etapa)" : "", n: x.n, link: kb({}, x.codigo), dica: "Abre o Kanban nesta etapa." }; })) +
+      '<p class="cm-meta">' + e.travadas + " travadas no Radar (decisão da Diretoria) · " + e.descartadasPessoa + ' descartadas pela Diretoria (na coluna Decisão) · <button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas" }) + ">" + e.descartadasRegra + " descartadas só pela regra</button> (fora do Kanban).</p>", e.fonte);
+    var ufItens = u.itens.filter(function (x) { return x.prioridade || x.n; }), outras = ufItens.filter(function (x) { return !x.prioridade; }), mostrar = ufItens.filter(function (x) { return x.prioridade; }).concat(outras.slice(0, 8));
+    var resto = outras.slice(8).reduce(function (s, x) { return s + x.n; }, 0);
+    g += Lic_pnCaixa_("Em andamento por UF", Lic_pnBarras_(mostrar.map(function (x) { return { t: x.uf, sub: x.grupo, n: x.n, link: kb({ uf: x.uf }), cor: x.prioridade ? "" : "var(--muted)", dica: "Abre o Kanban só com " + x.uf + "." }; }), 0) +
+      (resto ? '<p class="cm-meta">Outras UFs: ' + resto + ".</p>" : "") + '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_(kb({ uf: "PRIO" })) + ">Ver só a prioridade (GO, DF, vizinhos e RJ) no Kanban</button></p>", u.fonte);
+    var corNota = { ALTA: "var(--success)", MEDIA: "var(--info)", BAIXA: "var(--warning)", DESCARTE: "var(--danger)", TRAVA: "var(--danger)", SEM: "var(--muted)" };
+    g += Lic_pnCaixa_("Distribuição das notas (IA)", Lic_pnBarras_(n.faixas.map(function (x) { return { t: x.nome, n: x.n, cor: corNota[x.codigo], link: kb({ nota: x.codigo }), dica: "Abre o Kanban só com esta faixa de nota." }; })) +
+      '<p class="cm-meta">' + n.comNota + " de " + e.andamento + " em andamento têm nota. A nota é da IA com verificador; quem decide é a Diretoria.</p>", n.fonte);
+    g += Lic_pnCaixa_("Prazos dos próximos dias", '<div class="cm-kpis lic-pn-mini">' + Lic_pnKpi_(p.d7, "em 7 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) + Lic_pnKpi_(p.criticos7, "críticos em 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7", nivel: "CRITICO" } }, p.fonte) +
+      Lic_pnKpi_(p.d30, "em 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) + Lic_pnKpi_(p.pendentes30, "pendentes de confirmação (30 dias)", p.pendentes30 ? "aviso" : "", { mod: "licitacoes_agenda", agenda: { periodo: "30", natureza: "PENDENTE" } }, p.fonte) + "</div>" +
+      (p.porTipo7.length ? '<p class="cm-sec">Nos próximos 7 dias, por tipo</p>' + Lic_pnBarras_(p.porTipo7.map(function (x) { return { t: x.nome, n: x.n, link: { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, dica: "Abre a Agenda dos próximos 7 dias." }; })) : '<p class="cm-meta">Nenhum prazo nos próximos 7 dias.</p>') +
+      '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_gantt" }) + ">Ver no Gantt</button></p>", p.fonte);
+    var quando = function (iso) { return iso ? Lic_dataHora_(iso) : "ainda não houve"; };
+    var saude = !col.noServidor ? Lic_faixa_(col.aviso || "O coletor roda só no servidor próprio do SGO+.", "aviso") :
+      '<dl class="cm-det"><dt>Coletor</dt><dd>' + (col.ligado ? '<span class="cm-selo verde">Ligado</span>' : '<span class="cm-selo cinza">Desligado</span> (Portais e configurações › Regras do radar)') + "</dd>" +
+      "<dt>Última rodada</dt><dd>" + Lic_esc_(quando(col.ultimaRodadaEm)) + "</dd><dt>Último sucesso</dt><dd>" + Lic_esc_(quando(col.ultimoSucessoEm)) + "</dd>" +
+      "<dt>Falhas seguidas no PNCP</dt><dd>" + (col.falhasSeguidasPncp ? '<span class="cm-selo vermelho">' + col.falhasSeguidasPncp + "</span>" : "0") + "</dd>" +
+      "<dt>Rotas com falha</dt><dd>" + col.rotasComFalha + " de " + col.rotas + "</dd>" +
+      "<dt>Chamadas nas últimas 24 h</dt><dd>" + (cx.erroLeitura ? Lic_esc_(cx.erroLeitura) : (cx.chamadas24h || 0) + " · " + (cx.erros24h ? '<span class="cm-selo vermelho">' + cx.erros24h + " com erro</span>" : "nenhuma com erro")) + "</dd>" +
+      (cx.ultimoErro ? "<dt>Último erro</dt><dd>" + Lic_esc_(cx.ultimoErro) + "</dd>" : "") + (col.ultimoErro ? "<dt>Erro da rodada</dt><dd>" + Lic_esc_(col.ultimoErro) + "</dd>" : "") + "</dl>" + (col.aviso ? Lic_faixa_(col.aviso, "aviso") : "");
+    g += Lic_pnCaixa_("Saúde do coletor e dos portais", saude + Lic_pnBarras_([
+      { t: "Operacionais", n: po.operacionais, cor: "var(--success)", link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Operacionais com restrições", n: po.restricoes, cor: "var(--warning)", link: { mod: "licitacoes_portais", portais: "portais" } },
+      { t: "Em teste", n: po.emTeste, link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Com falha", n: po.falha, cor: "var(--danger)", link: { mod: "licitacoes_portais", portais: "portais" } },
+      { t: "Ligados para a coleta", n: po.ligados, link: { mod: "licitacoes_portais", portais: "portais" } }], po.total) +
+      '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_portais", portais: "registro" }) + ">Ver o registro das chamadas</button> · " + po.total + " portais cadastrados.</p>", col.fonte);
+    g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" }, dica: "Abre Oportunidades ordenadas por nota." },
+      { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" } }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" } }]) +
+      '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Total registrado</dt><dd>" + ia.total + "</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd></dl>", ia.fonte);
+    return h + g + "</div>";
+  }
+  function Lic_renderPainel_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    Lic_chamar_("painel", {}, function (d) { LIC.painel = d; c.innerHTML = Lic_htmlPainel_(d); Lic_ligarLinks_(c); }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, Lic_renderPainel_); });
   }
 </script>

@@ -1170,7 +1170,7 @@ function Lic_analisar_(eu, l, o) {
   var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), VERSAO: versao, BASE_HASH: base, FONTE_VERSAO: Number(l.VERSAO_FONTE) || 1, FONTE_HASH: Lic_s_(l.VERSAO_HASH),
     ARQUIVOS_BASE: srv.arquivos ? Lic_s_(srv.arquivos.baseHash) : '', ARQUIVOS_JSON: JSON.stringify(arqs).slice(0, 20000), PESOS_JSON: JSON.stringify(pesos), REGRAS: LIC_ANALISE_REGRAS + ' · ' + LIC_CAPACIDADE_VERSAO,
     MODELO: Lic_modeloIA_(), TENTATIVAS: tentativas, RECUSAS_JSON: JSON.stringify(recusas).slice(0, 20000), RESPOSTAS_IA_JSON: Lic_respostasJson_(respostas), MOTIVO: Lic_texto_(o.motivo, 1000), ORIGEM_PEDIDO: o.origem || 'PEDIDO',
-    PEDIDO_POR_ID: Lic_s_(eu && eu.id), PEDIDO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', CRIADO_EM: agora };
+    PEDIDO_POR_ID: Lic_s_(eu && eu.id), PEDIDO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', CRIADO_EM: agora, DURACAO_MS: Math.max(0, Date.now() - inicio) };
   var mudOp = { ANALISE_EM: agora, ANALISE_BASE_HASH: base, ATUALIZADO_EM: agora };
   var resultado;
   if (saida) {
