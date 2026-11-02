@@ -18,7 +18,33 @@
  ****************************************************/
 
 var LIC_GUARDA_VERSAO = 'GUARDA-2026-11-02';
-var LIC_GUARDA_LOTE = 200;
+/** Revisão de 02/11/2026: lotes pequenos (a trava geral é solta entre eles; outros módulos não esperam) e tempo máximo por
+ *  execução (o resto fica para a semana seguinte; a execução no servidor tem 300 s). */
+var LIC_GUARDA_LOTE = 20;
+var LIC_GUARDA_TEMPO_MS = 200000;
+
+/**
+ * Reconciliação no início de cada execução: "SAIU_PELA_GUARDA" de linha que AINDA existe (execução cortada entre o registro
+ * e a remoção) ganha um estorno no histórico ("GUARDA_ESTORNO"), uma vez só. Devolve quantas foram estornadas.
+ */
+function Lic_guardaReconciliar_(sistema) {
+  var hist = Lic_ler_(LIC_ABAS.HISTORICO), ultimo = {};
+  hist.forEach(function (h) {
+    if (Lic_s_(h.ENTIDADE) !== 'OPORTUNIDADE' || ['SAIU_PELA_GUARDA', 'GUARDA_FALHOU', 'GUARDA_ESTORNO'].indexOf(Lic_s_(h.TIPO)) < 0) return;
+    var id = Lic_s_(h.ENTIDADE_ID), a = ultimo[id];
+    if (!a || Lic_s_(h.DATA) >= Lic_s_(a.DATA)) ultimo[id] = h;
+  });
+  var existe = {};
+  Lic_ler_(LIC_ABAS.OPORTUNIDADES).forEach(function (l) { existe[Lic_s_(l.ID)] = l; });
+  var n = 0;
+  Object.keys(ultimo).forEach(function (id) {
+    var h = ultimo[id];
+    if (Lic_s_(h.TIPO) !== 'SAIU_PELA_GUARDA' || !existe[id]) return;
+    Lic_historico_('OPORTUNIDADE', id, existe[id].CODIGO, 'GUARDA_ESTORNO', sistema, { texto: 'Estorno: o registro de saída pela guarda (' + Lic_s_(h.DATA) + ') não chegou a remover a linha (execução cortada). A oportunidade continua em LIC_OPORTUNIDADES e protegida.', versao: existe[id].VERSAO_FONTE, fonte: LIC_GUARDA_VERSAO });
+    n++;
+  });
+  return n;
+}
 
 /** Datas em ISO aaaa-mm-dd a partir de hoje (fuso de Brasília). */
 function Lic_guardaLimite_(hojeIso, anos) { var d = new Date(hojeIso + 'T12:00:00Z'); d.setUTCFullYear(d.getUTCFullYear() - anos); return d.toISOString().slice(0, 10); }
@@ -58,7 +84,9 @@ function Lic_guarda_(o) {
   var hoje = Lic_s_(o.hoje) || Lic_hojeSp_(), lim2 = Lic_guardaLimite_(hoje, 2), lim1 = Lic_guardaLimite_(hoje, 1);
   var vence = function (l, regra) { var data = Lic_guardaData_(l); return regra === 2 ? !!data && data < lim2 : regra === 3 ? !!data && data < lim1 : false; };
   var tocadas = Lic_guardaTocadas_(), linhas = Lic_ler_(LIC_ABAS.OPORTUNIDADES);
-  var r = { ok: true, previa: !!o.previa, versao: LIC_GUARDA_VERSAO, hoje: hoje, protegidas: [], existentes: [], linhasLegado: 0, saem: { regra2: 0, regra3: 0 }, ficam: { regra1: 0, regra2: 0, regra3: 0 }, saiu: [], falhas: [] };
+  var r = { ok: true, previa: !!o.previa, versao: LIC_GUARDA_VERSAO, hoje: hoje, protegidas: [], existentes: [], linhasLegado: 0, saem: { regra2: 0, regra3: 0 }, ficam: { regra1: 0, regra2: 0, regra3: 0 }, saiu: [], falhas: [], estornos: 0, cortada: 0 };
+  var inicio = Date.now(), limite = Number(o.tempoMs) || LIC_GUARDA_TEMPO_MS;
+  if (!o.previa) r.estornos = Lic_comTrava_(function () { return Lic_guardaReconciliar_({ id: '', nome: 'Regra de guarda (manutenção semanal)' }); });
   var sair = [];
   linhas.forEach(function (l) {
     var regra = Lic_guardaRegra_(l, tocadas);
@@ -68,13 +96,18 @@ function Lic_guarda_(o) {
   if (!o.previa) {
     var sistema = { id: '', nome: 'Regra de guarda (manutenção semanal)' };
     r.saem = { regra2: 0, regra3: 0 };
+    // de baixo para cima (a remoção de uma linha não desloca as que ainda vão sair)
+    var posicao = {};
+    linhas.forEach(function (l, k) { posicao[Lic_s_(l.ID)] = k; });
+    sair.sort(function (a, b) { return posicao[b.id] - posicao[a.id]; });
     for (var i = 0; i < sair.length; i += LIC_GUARDA_LOTE) {
+      if (Date.now() - inicio > limite) { r.cortada = sair.length - i; break; }
       var lote = sair.slice(i, i + LIC_GUARDA_LOTE);
       Lic_comTrava_(function () {
         // relidos na trava, uma vez por lote: se alguém mexeu agora há pouco, a linha não sai
-        var tocadasAgora = Lic_guardaTocadas_(), porId = {};
-        Lic_ler_(LIC_ABAS.OPORTUNIDADES).forEach(function (l) { porId[Lic_s_(l.ID)] = l; });
-        lote.forEach(function (x) {
+        var tocadasAgora = Lic_guardaTocadas_(), porId = {}, pos = {};
+        Lic_ler_(LIC_ABAS.OPORTUNIDADES).forEach(function (l, k) { porId[Lic_s_(l.ID)] = l; pos[Lic_s_(l.ID)] = k; });
+        lote.slice().sort(function (a, b) { return (pos[b.id] || 0) - (pos[a.id] || 0); }).forEach(function (x) {
           var l = porId[x.id];
           if (!l) return;
           var regra = Lic_guardaRegra_(l, tocadasAgora);
@@ -109,6 +142,6 @@ function Lic_guarda_(o) {
     if (Lic_guardaRegra_(l, tocadasFim) !== 3) r.protegidas.push(chave);
   });
   r.texto = 'Licitações (legado): ' + (o.previa ? 'prévia, nada apagado. ' : '') + 'Ficam: para sempre (Diretoria mexeu) ' + r.ficam.regra1 + '; candidatas e travadas dentro dos 2 anos ' + r.ficam.regra2 + '; descartadas pela regra dentro de 1 ano ' + r.ficam.regra3 +
-    '. ' + (o.previa ? 'Sairiam' : 'Saíram') + ' de LIC_OPORTUNIDADES: ' + r.saem.regra2 + ' pela regra 2 e ' + r.saem.regra3 + ' pela regra 3' + (r.falhas.length ? '; ' + r.falhas.length + ' falha(s), que continuam protegidas: ' + r.falhas.slice(0, 3).join(' | ') : '') + '.';
+    '. ' + (o.previa ? 'Sairiam' : 'Saíram') + ' de LIC_OPORTUNIDADES: ' + r.saem.regra2 + ' pela regra 2 e ' + r.saem.regra3 + ' pela regra 3' + (r.cortada ? '; ' + r.cortada + ' ficaram para a próxima semana (tempo máximo da execução)' : '') + (r.estornos ? '; ' + r.estornos + ' registro(s) de saída sem remoção estornado(s)' : '') + (r.falhas.length ? '; ' + r.falhas.length + ' falha(s), que continuam protegidas: ' + r.falhas.slice(0, 3).join(' | ') : '') + '.';
   return r;
 }

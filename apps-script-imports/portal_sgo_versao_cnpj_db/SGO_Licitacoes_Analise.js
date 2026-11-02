@@ -76,6 +76,41 @@ var LIC_CAPACIDADE_TEXTO = [
   'Manutenção preventiva: MP_AUTOCLAVE_GRANDE, MP_AUTOCLAVE_BANCADA, MP_LAVADORA_US, MP_SELADORA, MP_CAMARA. Corretiva com peças: risco de custo. Hora técnica: HORA_TECNICO, HORA_ENGENHEIRO.',
   'SEM serviço no catálogo hoje: osmose reversa e tratamento de água, compressores fora da NR-13, metrologia dimensional, acústica e audiologia (decibelímetro, audiômetro), engenharia clínica com dedicação exclusiva e software de gestão, manutenção industrial em geral, compra de equipamento sem representada.'
 ].join('\n');
+/**
+ * Revisão de 02/11/2026: os códigos que a IA pode usar em "servico" (os do catálogo B1 acima) e os termos que o trecho
+ * citado precisa ter para aquele serviço (sem acento, sem caixa). Grau ALTA ou MÉDIA exige código desta lista e trecho
+ * com um termo dele; termo negativo da triagem no trecho (pneu, castração, reagente...) recusa. Muda junto com o catálogo.
+ */
+var LIC_SERVICOS = {
+  'CAL-001': ['termometro'], 'CAL-002': ['espeto', 'termometro'], 'CAL-007': ['sensor de temperatura', 'termopar', 'pt100', 'termorresistencia', 'sensor'],
+  'CAL-008': ['pirometro', 'infravermelho'], 'CAL_DATALOGGER': ['registrador', 'datalogger', 'data logger'], 'CAL_CAMARA': ['camara', 'estufa', 'banho', 'indicador de temperatura'],
+  'CAL_INCUBADORA_BIO': ['incubadora'], 'CAL-003': ['higrometro', 'umidade'], 'CAL-004': ['manometro'], 'CAL-005': ['manovacuometro'], 'CAL-006': ['vacuometro'],
+  'CAL-010': ['manometro', 'valvula', 'autoclave'], 'CAL-009': ['valvula'], 'CAL-011': ['centrifuga'], 'CAL_BALANCA_PEQ': ['balanca'], 'CAL_BALANCA_ADULTO': ['balanca'],
+  'CAL_MONITOR': ['monitor'], 'CAL_DESFIBRILADOR': ['desfibrilador', 'cardioversor'], 'CAL_BOMBA_INFUSAO': ['bomba de infusao', 'bomba infusora', 'bombas de infusao'],
+  'CAL_VENTILADOR': ['ventilador pulmonar', 'ventilador mecanico', 'ventiladores pulmonares'], 'CAL_ECG': ['eletrocardiografo', 'ecg'], 'CAL_BISTURI': ['bisturi', 'eletrocauterio'],
+  'CAL_OXIMETRO': ['oximetro'], 'CAL_INCUBADORA_NEO': ['incubadora'], 'CAL_ASPIRADOR': ['aspirador'], 'CAL_ANESTESIA': ['anestesia'], 'CAL_ESFIGMO': ['esfigmomanometro', 'esfigmo'],
+  'QUA-001': ['autoclave', 'esterilizador'], 'QUA-005': ['autoclave', 'esterilizador'], 'QUA-011': ['peroxido'], 'QUA-012': ['formaldeido'], 'QT_AUTOCLAVE_BT': ['oxido de etileno'],
+  'QUA-002': ['termodesinfectora', 'termo desinfectora', 'termodesinfetora'], 'QUA-004': ['ultrassonica', 'ultrassom de limpeza'], 'QUA-003': ['secagem', 'secadora'], 'QT_SELADORA': ['seladora'],
+  'QUA-006': ['camara de conservacao', 'camara fria', 'geladeira', 'refrigerador', 'camara'], 'QUA-007': ['ultrafreezer', 'ultra freezer'], 'QUA-008': ['estufa'], 'QUA-009': ['banho maria'],
+  'QT_FREEZER': ['freezer'], 'QT_CAMARA_FRIA': ['camara fria'], 'QT_SALA': ['mapeamento', 'sala'], 'QT_CAIXA_TERMICA': ['caixa termica'], 'QUA-010': ['centrifuga'],
+  'NR13-001': ['compressor', 'vaso de pressao', 'vasos de pressao', 'nr 13'], 'NR13-002': ['autoclave', 'vaso de pressao', 'nr 13'], 'NR13-003': ['autoclave', 'vaso de pressao', 'nr 13'],
+  'MP_AUTOCLAVE_GRANDE': ['autoclave'], 'MP_AUTOCLAVE_BANCADA': ['autoclave'], 'MP_LAVADORA_US': ['ultrassonica'], 'MP_SELADORA': ['seladora'], 'MP_CAMARA': ['camara'],
+  'HORA_TECNICO': ['hora tecnica', 'horas tecnicas', 'hora de tecnico'], 'HORA_ENGENHEIRO': ['hora de engenheiro', 'horas de engenharia', 'hora tecnica']
+};
+/** Termos negativos da triagem (doc 03, B2): no trecho que prova capacidade, recusam (palavra parecida não é serviço). */
+var LIC_TERMOS_NEGATIVOS = ['pneu', 'pneus', 'borracharia', 'castracao', 'caes', 'gatos', 'felinos', 'caninos', 'reagente', 'reagentes', 'solucao de calibracao', 'solucoes de calibracao',
+  'embalagem para esterilizacao', 'vidraria', 'vidrarias', 'nobreak', 'audiometro', 'audiometrica', 'deflectometro', 'extintor', 'extintores', 'tacografo', 'tacografos'];
+/** O trecho tem o termo compatível com o serviço e nenhum termo negativo? '' = sim; senão, o motivo. */
+function Lic_servicoCompativel_(servico, trecho) {
+  var termos = LIC_SERVICOS[servico];
+  if (!termos) return 'código de serviço "' + (servico || 'vazio') + '" fora do catálogo (use um código da lista O QUE A METROLABS FAZ)';
+  var n = ' ' + Lic_normTrecho_(trecho) + ' ';
+  var neg = LIC_TERMOS_NEGATIVOS.filter(function (t) { return n.indexOf(' ' + t + ' ') >= 0; })[0];
+  if (neg) return 'o trecho tem termo que não é serviço da Metrolabs ("' + neg + '")';
+  if (!termos.some(function (t) { return n.indexOf(' ' + t) >= 0; })) return 'o trecho não fala de ' + termos.slice(0, 3).join(', ') + ' (o que o serviço ' + servico + ' cobre)';
+  return '';
+}
+
 var LIC_REGRAS_DONO = [
   'A Metrolabs NÃO é acreditada RBC (ISO/IEC 17025); as calibrações são RASTREÁVEIS (padrões com certificados rastreáveis). Edital que exige laboratório acreditado RBC/17025 = trava RBC_OBRIGATORIA, salvo se o edital aceitar rastreabilidade ou subcontratação de laboratório acreditado (aí não trava: vira pendência). Pedir só "certificado rastreável à RBC" não trava.',
   'A Metrolabs tem registro/autorização do Inmetro para BALANÇAS e ESFIGMOMANÔMETROS (escopo exato a confirmar com o documento): item desses instrumentos que exige empresa autorizada pelo Inmetro é ponto forte.',
@@ -229,11 +264,39 @@ function Lic_conferirFonte_(onde, fonte, ctx, problemas, o) {
 }
 
 /** Números (2 dígitos ou mais) e citações entre aspas de um texto livre precisam existir nas fontes ou nos cálculos do sistema. */
+var LIC_MESES = /^(de\s+)?(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/i;
+/** Números de um texto em pt-BR: { texto, valor, casas, ignorar }. "8,4 mil" = 8400; "R$ 8.431,44" = 8431,44; "8431.44" (fonte) = 8431,44. */
+function Lic_numerosDoTexto_(t) {
+  var re = /(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(\s*(mil|milh[aãoõ]es|milh[aã]o|bilh[aãoõ]es|bilh[aã]o)\b)?/gi, m, out = [];
+  while ((m = re.exec(t))) {
+    var bruto = m[1], depois = t.slice(re.lastIndex, re.lastIndex + 20), antes = t.slice(Math.max(0, m.index - 1), m.index);
+    var n = /\.\d{3}(,|$)/.test(bruto) || /,/.test(bruto) ? Number(bruto.replace(/\./g, '').replace(',', '.')) : Number(bruto);
+    var casas = /[.,](\d+)$/.test(bruto) && !/\.\d{3}$/.test(bruto) ? RegExp.$1.length : 0;
+    var mult = m[3] ? (/^mil$/i.test(m[3]) ? 1e3 : /^milh/i.test(m[3]) ? 1e6 : 1e9) : 1;
+    var valor = n * mult;
+    var ano = !m[3] && /^\d{4}$/.test(bruto) && n >= 1900 && n <= 2100;
+    var data = n <= 31 && (LIC_MESES.test(depois.trim()) || /^\/\d/.test(depois) || antes === '/');
+    out.push({ texto: m[0].trim(), valor: valor, casas: m[3] ? 1 : casas, ignorar: ano || data || (valor < 10 && !m[3]) });
+  }
+  return out;
+}
+/** O valor do texto bate com o da fonte, dentro do arredondamento de quem escreveu (casas decimais, "mil", 1%). */
+function Lic_numeroBate_(v, fonte, casas) {
+  if (!isFinite(v) || !isFinite(fonte)) return false;
+  if (Math.abs(v - fonte) < 1e-6) return true;
+  var meio = 0.5 * Math.pow(10, -(casas || 0));
+  return Math.abs(v - fonte) <= Math.max(meio, Math.abs(fonte) * 0.01);
+}
 function Lic_conferirSemFatoSolto_(onde, texto, ctx, problemas) {
   var t = Lic_s_(texto);
   if (!t) return;
-  var numeros = ctx.numeros || {};
-  (Lic_normTrecho_(t).match(/\b\d{2,}\b/g) || []).forEach(function (n) { if (!numeros[n]) problemas.push(onde + ': o número ' + n + ' não está nas fontes nem nos cálculos do sistema (não escreva fato que não foi conferido)'); });
+  // revisão de 02/11/2026: compara VALORES (pt-BR ou não, "mil"/"milhão"), com tolerância de arredondamento; ignora anos,
+  // dia em data por extenso e números menores que 10 (contagens pequenas); número inventado continua recusado
+  var valores = ctx.valores || [];
+  Lic_numerosDoTexto_(t).forEach(function (x) {
+    if (x.ignorar) return;
+    if (!valores.some(function (v) { return Lic_numeroBate_(x.valor, v, x.casas); })) problemas.push(onde + ': o número ' + x.texto + ' não está nas fontes nem nos cálculos do sistema (não escreva fato que não foi conferido)');
+  });
   (t.match(/["“]([^"”]{12,300})["”]/g) || []).forEach(function (q) {
     var nq = Lic_normTrecho_(q);
     if (nq && !Object.keys(ctx.fontes).some(function (k) { return ctx.fontes[k].norm.indexOf(nq) >= 0; })) problemas.push(onde + ': a citação ' + q.slice(0, 60) + ' não está em nenhuma fonte');
@@ -269,14 +332,22 @@ function Lic_verificarAnalise_(j, ctx) {
     var onde = 'capacidade, item ' + (k + 1), grau = Lic_up_(it.grau).replace(/[ÃÁ]/g, 'A').replace(/É/g, 'E');
     if (!LIC_GRAUS[grau]) problemas.push(onde + ': grau fora da lista (ALTA, MEDIA, BAIXA, NAO_ATENDE)');
     var fo = Lic_conferirFonte_(onde, it.fonte, ctx, problemas, { capacidade: true });
+    var cod = Lic_up_(it.servico).replace(/\s+/g, '');
+    if (fo && (grau === 'ALTA' || grau === 'MEDIA')) {
+      var inc = Lic_servicoCompativel_(cod, fo.trecho);
+      if (inc) { problemas.push(onde + ': grau ' + grau + ' com ' + inc); fo = null; }
+    }
     if (fo) { temFato = true; if (grau === 'ALTA') temAlta = true; }
-    saida.capacidade.itens.push({ descricao: Lic_texto_(Lic_conferirTexto_(onde + ', descrição', it.descricao, ctx, problemas, true), 400), grau: LIC_GRAUS[grau] ? grau : '', grauNome: LIC_GRAUS[grau] || '', servico: Lic_texto_(it.servico, 60), fonte: fo });
+    saida.capacidade.itens.push({ descricao: Lic_texto_(Lic_conferirTexto_(onde + ', descrição', it.descricao, ctx, problemas, true), 400), grau: LIC_GRAUS[grau] ? grau : '', grauNome: LIC_GRAUS[grau] || '', servico: LIC_SERVICOS[cod] ? cod : Lic_texto_(it.servico, 60), fonte: fo });
   });
   // proporção de itens: ALTA provada conta 1, MÉDIA provada conta meio, o resto zero (sem trecho conta zero)
-  var nItens = saida.capacidade.itens.length, conta = 0;
+  // denominador: os itens da FONTE (ITEM:n), quando houver; senão os que a IA classificou
+  var nFonte = Object.keys(ctx.fontes).filter(function (k) { return /^ITEM:/.test(k); }).length;
+  var nItens = Math.max(saida.capacidade.itens.length, nFonte), conta = 0;
   saida.capacidade.itens.forEach(function (it) { if (it.fonte) conta += it.grau === 'ALTA' ? 1 : it.grau === 'MEDIA' ? 0.5 : 0; });
+  conta = Math.min(conta, nItens);
   saida.capacidade.pontos = nItens ? Lic_r1_(pesos.capacidade * conta / nItens) : 0;
-  saida.capacidade.como = nItens ? nItens + ' item(ns) classificado(s): ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'ALTA'; }).length + ' de grau alto e ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'MEDIA'; }).length + ' médio provados por trecho (alto conta 1, médio meio, o resto zero).' : '';
+  saida.capacidade.como = nItens ? nItens + ' item(ns)' + (nFonte && nFonte >= saida.capacidade.itens.length ? ' na fonte' : ' classificado(s)') + ': ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'ALTA'; }).length + ' de grau alto e ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'MEDIA'; }).length + ' médio provados por trecho (alto conta 1, médio meio, o resto zero).' : '';
   void temFato; void temAlta;
   // documentação (sem cadastro de habilitação no SGO+: no máximo metade)
   var doc = j.documentacao && typeof j.documentacao === 'object' ? j.documentacao : {};
@@ -358,7 +429,11 @@ function Lic_ctxVerificador_(l, fontes, pesos, codigo) {
   var junta = Object.keys(fontes).map(function (k) { return fontes[k].norm; }).concat(codigo ? Object.keys(codigo.criterios).map(function (k) { return Lic_normTrecho_(codigo.criterios[k].como); }) : []).join(' ');
   (junta.match(/\b\d{2,}\b/g) || []).forEach(function (n) { numeros[n] = 1; });
   ['10', '15', '30', '100'].forEach(function (n) { numeros[n] = 1; });
-  return { fontes: fontes, pesos: pesos, fabricantes: Lic_fabricantesLista_(), numeros: numeros, triagemTravada: Lic_s_(l.TRIAGEM) === 'TRAVADA', triagemMotivo: Lic_s_(l.TRIAGEM_MOTIVO) };
+  // valores numéricos das fontes (texto original) e dos cálculos do sistema, para a comparação com tolerância
+  var valores = [10, 15, 30, 100];
+  Object.keys(fontes).map(function (k) { return fontes[k].texto; }).concat(codigo ? Object.keys(codigo.criterios).map(function (k) { return codigo.criterios[k].como; }) : [])
+    .forEach(function (tx) { Lic_numerosDoTexto_(tx).forEach(function (x) { valores.push(x.valor); }); });
+  return { fontes: fontes, pesos: pesos, fabricantes: Lic_fabricantesLista_(), numeros: numeros, valores: valores, triagemTravada: Lic_s_(l.TRIAGEM) === 'TRAVADA', triagemMotivo: Lic_s_(l.TRIAGEM_MOTIVO) };
 }
 
 // ------------------------------------------------------------ prompt

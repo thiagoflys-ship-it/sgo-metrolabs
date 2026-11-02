@@ -295,6 +295,44 @@ test('refação: resposta recusada volta à IA com os problemas; recusada de nov
   assert.equal(a.analises()[2].SITUACAO, 'ERRO');
 });
 
+test('revisão 2: capacidade não infla: código fora do catálogo, trecho sem termo do serviço ou com termo negativo (pneus) não contam; denominador é o total de itens da fonte', () => {
+  const a = ambiente();
+  const pneus = Object.assign({}, OP, { OBJETO: 'Prestação de serviços de borracharia, com manutenção de pneus e calibragem da frota municipal' });
+  const fontes = a.ctx.Lic_fontesAnalise_(pneus, null, []);
+  const ctx = a.ctx.Lic_ctxVerificador_(pneus, fontes, a.ctx.Lic_pesos_(), null);
+  const r = respostaValida({ capacidade: { justificativa: 'Calibração de pneus.', itens: [{ descricao: 'Calibração de pneus', grau: 'ALTA', servico: 'CAL-001', fonte: { ref: 'CAMPO:objeto', trecho: 'manutenção de pneus e calibragem' } }] },
+    documentacao: { pontos: 0, justificativa: 'Sem exigência lida.', exigencias: [] }, riscos: [],
+    afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'Objeto de borracharia.', fonte: { ref: 'CAMPO:objeto', trecho: 'serviços de borracharia, com manutenção' } }] });
+  const v = a.ctx.Lic_verificarAnalise_(r, ctx);
+  assert.match(v.problemas.join('\n'), /capacidade, item 1: grau ALTA com o trecho tem termo que não é serviço da Metrolabs \("pneus"\)/);
+  const inventado = JSON.parse(JSON.stringify(r)); inventado.capacidade.itens[0].servico = 'CAL-999';
+  assert.match(a.ctx.Lic_verificarAnalise_(inventado, ctx).problemas.join('\n'), /código de serviço "CAL-999" fora do catálogo/);
+  // código certo, mas o trecho não fala do instrumento
+  const ctxA = a.ctx.Lic_ctxVerificador_(OP, a.ctx.Lic_fontesAnalise_(OP, null, TEXTOS), a.ctx.Lic_pesos_(), null);
+  const sem = respostaValida(); sem.capacidade.itens[0] = { descricao: 'Termômetros', grau: 'ALTA', servico: 'CAL-001', fonte: { ref: 'A1', trecho: '01 autoclave horizontal 21 litros' } };
+  assert.match(a.ctx.Lic_verificarAnalise_(sem, ctxA).problemas.join('\n'), /o trecho não fala de termometro/);
+  // denominador: a fonte tem 3 itens; a IA lista só 1, de grau alto → 30 × 1/3 = 10, não 30
+  const tres = { itens: [1, 2, 3].map((n) => ({ numeroItem: n, descricao: 'Manutenção de autoclave horizontal número ' + n, materialServico: 'S' })) };
+  const ctx3 = a.ctx.Lic_ctxVerificador_(OP, a.ctx.Lic_fontesAnalise_(OP, tres, TEXTOS), a.ctx.Lic_pesos_(), null);
+  const um = respostaValida(); um.capacidade.itens = [{ descricao: 'Autoclave', grau: 'ALTA', servico: 'MP_AUTOCLAVE_BANCADA', fonte: { ref: 'ITEM:1', trecho: 'Manutenção de autoclave horizontal número 1' } }];
+  const v3 = a.ctx.Lic_verificarAnalise_(um, ctx3);
+  assert.equal(v3.ok, true, v3.problemas.join('; '));
+  assert.equal(v3.saida.capacidade.pontos, 10);
+  assert.match(v3.saida.capacidade.como, /^3 item\(ns\) na fonte: 1 de grau alto/);
+});
+
+test('revisão 2: número no resumo com tolerância (arredondado, "mil", ano, dia de data por extenso passam; inventado não)', () => {
+  const a = ambiente();
+  const fontes = a.ctx.Lic_fontesAnalise_(OP, null, TEXTOS);
+  const ctx = a.ctx.Lic_ctxVerificador_(OP, fontes, a.ctx.Lic_pesos_(), a.ctx.Lic_criteriosCodigo_(OP, a.ctx.Lic_pesos_(), '2026-11-01'));
+  const v = (resumo) => a.ctx.Lic_verificarAnalise_(respostaValida({ resumo }), ctx);
+  for (const ok of ['Dispensa estimada em R$ 8,4 mil para 4 equipamentos. O termo de referência não foi lido.', 'Valor de R$ 8.431 no aviso de 2026. Propostas até 5 de novembro.',
+    'Valor estimado de cerca de R$ 8.430,00. Atendimento em até 24 horas.', 'Propostas até 05/11/2026 às 11:00. Prazo de 3 dias úteis.'])
+    assert.equal(v(ok).ok, true, ok + ' → ' + v(ok).problemas.join('; '));
+  assert.match(v('Dispensa para 37 equipamentos. O termo de referência não foi lido.').problemas.join(' '), /o número 37 não está nas fontes/);
+  assert.match(v('Valor estimado de R$ 12 mil. O termo de referência não foi lido.').problemas.join(' '), /o número 12 mil não está nas fontes/);
+});
+
 test('revisão: triagem TRAVADA exige trava provada ou pendência "trava"; fontes vão entre marcadores aleatórios (conteúdo é dado, não instrução)', () => {
   const travada = Object.assign({}, OP, { TRIAGEM: 'TRAVADA', TRIAGEM_MOTIVO: 'Travada: exige acreditação RBC.' });
   const a = ambiente();

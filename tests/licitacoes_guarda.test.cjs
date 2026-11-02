@@ -72,15 +72,16 @@ test('guarda no legado: regras 1 e 2 ficam (e vão protegidas ao servidor); 2 an
   // revisão: o registro vem antes da remoção
   assert.ok(a.ordem.indexOf('insert:LIC_HISTORICO:SAIU_PELA_GUARDA:A') < a.ordem.indexOf('remove:A'));
   // revisão: o histórico é lido uma vez no começo, uma por lote e uma no fim (não uma vez por linha)
-  assert.ok(a.leituras.LIC_HISTORICO - lidasAntes <= 3, 'leituras do histórico: ' + (a.leituras.LIC_HISTORICO - lidasAntes));
+  assert.ok(a.leituras.LIC_HISTORICO - lidasAntes <= 4, 'leituras do histórico (reconciliação, início, um lote, fim): ' + (a.leituras.LIC_HISTORICO - lidasAntes));
   const saiu = a.tabelas.LIC_HISTORICO.filter((h) => h.TIPO === 'SAIU_PELA_GUARDA');
-  assert.equal(saiu.map((h) => h.ENTIDADE_ID).join(','), 'A,E');
-  assert.match(saiu[0].TEXTO, /^Regra 2 da guarda: candidata ou travada nunca tocada pela Diretoria, publicada há mais de 2 anos\. Resumo: \{"orgao":"ÓRGÃO A","objeto":"Calibração A","valor":1000,"uf":"GO"/);
-  assert.match(saiu[0].TEXTO, /"numeroControlePncp":"A","hash":"hA"/);
-  assert.match(saiu[1].TEXTO, /^Regra 3 da guarda: descartada só pela regra do radar/);
-  assert.equal(saiu[0].HASH, 'hA');
-  assert.equal(saiu[0].FONTE, 'GUARDA-2026-11-02');
-  assert.equal(saiu[0].USUARIO_NOME, 'Regra de guarda (manutenção semanal)');
+  assert.equal(saiu.map((h) => h.ENTIDADE_ID).join(','), 'E,A', 'de baixo para cima');
+  const saiuA = saiu.find((h) => h.ENTIDADE_ID === 'A'), saiuE = saiu.find((h) => h.ENTIDADE_ID === 'E');
+  assert.match(saiuA.TEXTO, /^Regra 2 da guarda: candidata ou travada nunca tocada pela Diretoria, publicada há mais de 2 anos\. Resumo: \{"orgao":"ÓRGÃO A","objeto":"Calibração A","valor":1000,"uf":"GO"/);
+  assert.match(saiuA.TEXTO, /"numeroControlePncp":"A","hash":"hA"/);
+  assert.match(saiuE.TEXTO, /^Regra 3 da guarda: descartada só pela regra do radar/);
+  assert.equal(saiuA.HASH, 'hA');
+  assert.equal(saiuA.FONTE, 'GUARDA-2026-11-02');
+  assert.equal(saiuA.USUARIO_NOME, 'Regra de guarda (manutenção semanal)');
   assert.ok(a.tabelas.LIC_HISTORICO.find((h) => h.ID === 'h2'), 'o histórico antigo da que saiu não é apagado');
   // segunda rodada: nada mais sai
   const r2 = a.ctx.Lic_guarda_({ hoje: '2026-11-02' });
@@ -103,6 +104,38 @@ test('revisão: linha que ia sair e não saiu (tocada agora há pouco, ou remoç
   // prévia: o que sairia não vai nas existentes (o servidor conta junto o que sairia)
   const p = ambiente().ctx.Lic_guarda_({ previa: true, hoje: '2026-11-02' });
   assert.equal([...p.existentes].sort().join(','), 'PNCP:B,PNCP:C,PNCP:D,PNCP:F,PNCP:G,PNCP:H');
+});
+
+test('revisão 2: lotes de 20 com a trava solta entre eles, de baixo para cima; tempo máximo deixa o resto para depois; registro de saída sem remoção é estornado', () => {
+  // 45 candidatas intocadas vencidas: 3 lotes (20, 20, 5), cada um numa trava
+  const muitas = [];
+  for (let i = 0; i < 45; i++) muitas.push({ ID: 'M' + i, CODIGO: 'LIC-M' + i, CHAVE_FONTE: 'PNCP:M' + i, SITUACAO: 'RADAR', TRIAGEM: 'CANDIDATA', PUBLICACAO_EM: '2024-01-01T12:00:00Z', VERSAO_HASH: 'h' + i });
+  let travas = 0;
+  const a = ambiente({ naTrava: () => { travas++; } });
+  a.tabelas.LIC_OPORTUNIDADES.push(...muitas);
+  const r = a.ctx.Lic_guarda_({ hoje: '2026-11-02' });
+  assert.equal(r.saem.regra2, 46, 'as 45 e a A');
+  assert.equal(travas, 1 + 3, 'reconciliação + 3 lotes de até 20');
+  const removidas = a.ordem.filter((x) => x.startsWith('remove:')).map((x) => x.slice(7));
+  assert.deepEqual(removidas.slice(0, 3), ['M44', 'M43', 'M42'], 'de baixo para cima');
+  // tempo máximo: o que não coube fica para a próxima semana, sem registro de saída
+  const b = ambiente();
+  b.tabelas.LIC_OPORTUNIDADES.push(...muitas.map((m) => Object.assign({}, m)));
+  const rb = b.ctx.Lic_guarda_({ hoje: '2026-11-02', tempoMs: -1 });
+  assert.equal(rb.cortada, 47, "as 45, a A e a E");
+  assert.equal(b.tabelas.LIC_HISTORICO.filter((h) => h.TIPO === 'SAIU_PELA_GUARDA').length, 0);
+  assert.match(rb.texto, /47 ficaram para a próxima semana/);
+  assert.ok(rb.protegidas.includes('PNCP:M0') && rb.existentes.includes('PNCP:M0'), 'o que ficou continua protegido');
+  // execução anterior cortada entre o registro e a remoção: estorno no início (uma vez só)
+  const c = ambiente();
+  c.tabelas.LIC_HISTORICO.push({ ID: 'hs', ENTIDADE: 'OPORTUNIDADE', ENTIDADE_ID: 'B', TIPO: 'SAIU_PELA_GUARDA', USUARIO_ID: '', DATA: '2026-10-26T09:30:00.000Z' });
+  const rc = c.ctx.Lic_guarda_({ hoje: '2026-11-02' });
+  assert.equal(rc.estornos, 1);
+  const est = c.tabelas.LIC_HISTORICO.filter((h) => h.TIPO === 'GUARDA_ESTORNO');
+  assert.equal(est.length, 1);
+  assert.equal(est[0].ENTIDADE_ID, 'B');
+  assert.match(est[0].TEXTO, /não chegou a remover a linha \(execução cortada\)/);
+  assert.equal(c.ctx.Lic_guarda_({ hoje: '2026-11-02' }).estornos, 0, 'não estorna duas vezes');
 });
 
 test('guarda: a sincronização grava a data de publicação (conta os 2 anos); manual e doc 00 trazem a regra', () => {
