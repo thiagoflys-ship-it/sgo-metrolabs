@@ -529,24 +529,52 @@ function LicLeit_numerosForaDaFonte_(texto, fonte) {
  */
 var LIC_LEIT_NEG = /^(nao|nem|nunca|jamais|nenhum|nenhuma|sem|vedad[oa]s?|vedada|proibid[oa]s?|inadmitid[oa]s?|inadmissive(l|is)|impedid[oa]s?|tampouco|inexigivel|inaplicavel)$/;
 var LIC_LEIT_EXC = /^(salvo|exceto|excecao|excecoes|ressalvad[oa]s?|facultad[oa]s?|facultativ[oa]s?|opciona(l|is)|podera|poderao|alternativ[oa]s?|alternativamente|dispensad[oa]s?|dispensavel|desnecessari[oa]s?|isent[oa]s?|desobrigad[oa]s?)$/;
-var LIC_LEIT_LIM = /^(apenas|somente|exclusivamente|unicamente|so|minimo|minima|maximo|maxima|ate|inferior|superior|limite|limitad[oa]s?)$/;
-function LicLeit_classesSentido_(t) {
-  var tk = Lic_tokens_(Lic_s_(t).replace(/[-‐‑–—]/g, ' ')).toks, c = { NEG: '', EXC: '', LIM: '' };
-  tk.forEach(function (w) { if (!c.NEG && LIC_LEIT_NEG.test(w)) c.NEG = w; else if (!c.EXC && LIC_LEIT_EXC.test(w)) c.EXC = w; else if (!c.LIM && LIC_LEIT_LIM.test(w)) c.LIM = w; });
-  return c;
+/**
+ * Forma do sentido (revisão de 6700f26): as expressões de limite viram marcas com a DIREÇÃO, antes de contar as negações.
+ *   MÍNIMO: "não será inferior a", "não poderá ser menor que", "no mínimo", "pelo menos", "ao menos";
+ *   MÁXIMO: "não será superior a", "não excederá", "não ultrapassará", "até", "no máximo", "limitado a";
+ *   EXCLUSIVIDADE: "apenas", "somente", "exclusivamente", "unicamente".
+ * Só o "não" que faz parte da expressão de limite sai da conta; cada um dos outros continua exigindo um "não" no texto.
+ */
+var LIC_LEIT_SENTIDO_TROCAS = [
+  [/\bnao (sera |podera ser |deve ser |devera ser |pode ser )?(inferior|menor)( a| ao| que| do que)?\b/g, ' @min '],
+  [/\bnao (sera |podera ser |deve ser |devera ser |pode ser )?(superior|maior)( a| ao| que| do que)?\b/g, ' @max '],
+  [/\bnao (excedera|excede|ultrapassara|ultrapassa|podera exceder|podera ultrapassar)\b/g, ' @max '],
+  [/\b(no minimo|minimo de|minima de|pelo menos|ao menos|minimo|minima|minimos|minimas)\b/g, ' @min '],
+  [/\b(no maximo|maximo de|maxima de|limitad[oa]s? a|ate|maximo|maxima|maximos|maximas)\b/g, ' @max '],
+  [/\b(apenas|somente|exclusivamente|unicamente)\b/g, ' @exc ']
+];
+function LicLeit_formaSentido_(t) {
+  var x = ' ' + Lic_tokens_(Lic_s_(t).replace(/[-‐‑–—]/g, ' ')).toks.join(' ') + ' ';
+  LIC_LEIT_SENTIDO_TROCAS.forEach(function (r) { x = x.replace(r[0], r[1]); });
+  var tk = x.split(/\s+/).filter(Boolean), out = { neg: [], exc: [], lim: {}, porNumero: [] }, marca = '', desde = 99;
+  tk.forEach(function (w, i) {
+    if (w === '@min' || w === '@max' || w === '@exc') { out.lim[w] = 1; marca = w; desde = i; return; }
+    if (/^-?[0-9]/.test(w)) { out.porNumero.push({ n: w.replace(/^0+(?=\d)/, ''), lim: i - desde <= 4 ? marca : '' }); marca = ''; return; }
+    if (LIC_LEIT_NEG.test(w)) out.neg.push(w);
+    else if (LIC_LEIT_EXC.test(w)) out.exc.push(w);
+  });
+  return out;
 }
+var LIC_LEIT_LIM_NOME = { '@min': 'mínimo', '@max': 'máximo', '@exc': 'exclusividade (apenas, somente)' };
 /** '' = o texto tem o mesmo sentido do trecho; senão, o problema. */
 function LicLeit_sentidoDiferente_(texto, trecho) {
-  var a = LicLeit_classesSentido_(texto), b = LicLeit_classesSentido_(trecho), nt = ' ' + Lic_normTrecho_(trecho) + ' ', nx = ' ' + Lic_normTrecho_(texto) + ' ';
-  // "não será inferior a 90 dias" = "no mínimo 90 dias" (e o mesmo com superior/máximo)
-  var minimo = / nao (sera |podera ser |deve ser |devera ser )?(inferior|menor) /.test(nt) && / (minim[oa]|pelo menos) /.test(nx);
-  var maximo = / nao (sera |podera ser |deve ser |devera ser )?(superior|maior) /.test(nt) && / (maxim[oa]|ate) /.test(nx);
-  if (minimo || maximo) { if (b.NEG) b.NEG = ''; a.LIM = ''; b.LIM = ''; }
-  if (b.NEG && !a.NEG) return 'o trecho tem negação ("' + b.NEG + '") e o texto não: diga no texto o que o trecho nega (apenas, somente ou exceto não equivalem a um "não"; não inverta o sentido)';
-  if (a.NEG && !b.NEG) return 'o texto tem negação ("' + a.NEG + '") que o trecho não tem: o texto inverte o sentido do trecho';
-  if (a.EXC && !b.EXC) return 'o texto tem exceção ("' + a.EXC + '") que o trecho não tem: não acrescente exceção que o edital não escreveu neste trecho';
-  if (b.EXC && !a.EXC) return 'o trecho tem exceção ("' + b.EXC + '") e o texto não: diga a exceção no texto';
-  if (a.LIM && !b.LIM) return 'o texto tem limite ("' + a.LIM + '") que o trecho não tem: não acrescente restrição que o edital não escreveu neste trecho';
+  var a = LicLeit_formaSentido_(texto), b = LicLeit_formaSentido_(trecho);
+  // cada negação do trecho (fora da expressão de limite) exige uma no texto, e o texto não tem negação a mais
+  if (b.neg.length > a.neg.length) return 'o trecho tem ' + b.neg.length + ' negação(ões) ("' + b.neg.join('", "') + '") e o texto ' + (a.neg.length ? 'só ' + a.neg.length : 'nenhuma') + ': diga no texto cada coisa que o trecho nega (apenas, somente ou exceto não equivalem a um "não"; não inverta o sentido)';
+  if (a.neg.length > b.neg.length) return 'o texto tem negação ("' + a.neg[0] + '") que o trecho não tem: o texto inverte o sentido do trecho';
+  if (a.exc.length && !b.exc.length) return 'o texto tem exceção ("' + a.exc[0] + '") que o trecho não tem: não acrescente exceção que o edital não escreveu neste trecho';
+  if (b.exc.length && !a.exc.length) return 'o trecho tem exceção ("' + b.exc[0] + '") e o texto não: diga a exceção no texto';
+  var limA = Object.keys(a.lim).filter(function (k) { return !b.lim[k]; });
+  if (limA.length) return 'o texto tem limite de ' + LIC_LEIT_LIM_NOME[limA[0]] + ' que o trecho não tem: não acrescente nem troque a direção do limite (até = no máximo; não inferior = no mínimo)';
+  // para cada número, a mesma direção de limite dos dois lados ("até 10 dias" não é "no mínimo 10 dias")
+  for (var i = 0; i < a.porNumero.length; i++) {
+    var x = a.porNumero[i], ys = b.porNumero.filter(function (y) { return y.n === x.n; });
+    if (ys.length && !ys.some(function (y) { return y.lim === x.lim; })) {
+      var y = ys[0];
+      return 'o número ' + x.n.replace(/#/g, ',') + ' tem no texto ' + (x.lim ? 'limite de ' + LIC_LEIT_LIM_NOME[x.lim] : 'nenhum limite') + ' e no trecho ' + (y.lim ? 'limite de ' + LIC_LEIT_LIM_NOME[y.lim] : 'nenhum limite') + ': use a mesma direção do trecho';
+    }
+  }
   return '';
 }
 /**
@@ -708,7 +736,7 @@ function LicLeit_criar_(eu, l, tx, palavras, o) {
       ARQUIVOS_JSON: JSON.stringify(tx.arquivos.map(function (a) {
         var ind = a.texto ? (a._ind || LicLeit_indice_(a.texto)) : null;
         return { ref: a.ref, id: a.id, titulo: a.titulo, nome: a.nome, sha256: a.sha256, situacao: a.situacao, motivo: a.motivo, caracteres: a.texto.length, total: a.totalFonte, paginas: ind ? ind.paginas.length : a.paginasFonte, marcado: ind ? ind.marcado : false, completo: a.completo,
-          semTexto: ind ? ind.paginas.filter(function (p) { return p.util < LIC_LEIT_UTIL_MIN && p.palavras <= LIC_LEIT_VAZIO_MAX; }).map(function (p) { return p.seq; }).slice(0, 500) : [] };
+          semTexto: ind ? LicLeit_paginasVazias_(plano, a) : [] };
       })).slice(0, 40000),
       PALAVRAS_JSON: JSON.stringify(palavras || []).slice(0, 8000), BLOCOS_TOTAL: plano.length, BLOCOS_LIDOS: 0, BLOCOS_FALHOS: 0, CONSOLIDACAO_SITUACAO: 'PENDENTE', RELER_TUDO: o.relerTudo ? 'SIM' : 'NAO', MOTIVO: Lic_texto_(o.motivo, 1000),
       ORIGEM_PEDIDO: o.origem || 'PEDIDO', PEDIDO_POR_ID: Lic_s_(eu && eu.id), PEDIDO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', MODELO: Lic_modeloIA_(), REGRAS: LIC_LEIT_REGRAS + ' · ' + LIC_ANALISE_REGRAS,
@@ -751,6 +779,12 @@ function LicLeit_criar_(eu, l, tx, palavras, o) {
       versao: versao, fonte: 'Arquivos: ' + tx.arquivos.map(function (a) { return a.ref + ' ' + Lic_s_(a.sha256).slice(0, 12); }).join(', '), hash: base });
     return { id: lid, versao: versao, blocos: plano.length, aproveitados: aproveitados };
   });
+}
+/** Páginas "sem texto" de um arquivo: só as que ficaram num bloco vazio (não vão à IA); página de bloco lido conta como lida. */
+function LicLeit_paginasVazias_(plano, a) {
+  var out = [];
+  plano.forEach(function (b) { if (b.vazio && Lic_s_(b.sha) === Lic_s_(a.sha256)) for (var p = b.pIni; p <= b.pFim; p++) out.push(p); });
+  return out.slice(0, 500);
 }
 function LicLeit_bDe_(x) { return { ref: Lic_s_(x.REF), ordem: Number(x.ORDEM) || 0, ini: Number(x.CAR_INI) || 0, fim: Number(x.CAR_FIM) || 0, rotulo: Lic_s_(x.PAGINAS_ROTULO) }; }
 /** Bloco REPETIDO cujo original foi lido: os itens do original reencontrados nele (arquivo e página dele). Não achou: vai à IA. */

@@ -530,7 +530,7 @@ test('revisão: número com a unidade do trecho (permuta, extenso, data invertid
   let r = verBloco(a, 3, [{ tema: 'PENALIDADES', texto: 'Multa de 10% por dia de atraso até 0,2 dias.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
   assert.equal(r.ok, false); assert.match(r.p, /no texto, 10%, 0,2 dia não está no trecho citado com a mesma unidade/);
   r = verBloco(a, 1, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]);
-  assert.equal(r.ok, false); assert.match(r.p, /o trecho tem negação \("nao"\) e o texto não/);
+  assert.equal(r.ok, false); assert.match(r.p, /o trecho tem 1 negação\(ões\) \("nao"\) e o texto nenhuma/);
   r = verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo sessenta dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]);
   assert.equal(r.ok, false); assert.match(r.p, /sessenta dia não está no trecho/);
   assert.equal(verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo noventa dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]).ok, true, 'por extenso igual ao do trecho passa');
@@ -681,9 +681,9 @@ test('reconferência: exceção, negação e limite nos dois sentidos (inventado
   const casos = [
     ['VISITA_TECNICA', 'Visita técnica obrigatória, salvo declaração formal de conhecimento das condições.', 'A visita técnica é obrigatória para todas as licitantes interessadas', /o texto tem exceção \("salvo"\) que o trecho não tem/],
     ['VISITA_TECNICA', 'Visita técnica não é obrigatória.', 'A visita técnica é obrigatória para todas as licitantes interessadas', /o texto tem negação \("nao"\) que o trecho não tem/],
-    ['SUBCONTRATACAO', 'Consórcio admitido apenas entre empresas do mesmo grupo.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem negação \("nao"\) e o texto não/],
-    ['SUBCONTRATACAO', 'Consórcio admitido, exceto com empresas estrangeiras.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem negação \("nao"\) e o texto não/],
-    ['SUBCONTRATACAO', 'Consórcio não é admitido, apenas empresa isolada.', 'Não será admitida a participação de empresas em consórcio', /o texto tem limite \("apenas"\) que o trecho não tem/]
+    ['SUBCONTRATACAO', 'Consórcio admitido apenas entre empresas do mesmo grupo.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem 1 negação\(ões\) \("nao"\) e o texto nenhuma/],
+    ['SUBCONTRATACAO', 'Consórcio admitido, exceto com empresas estrangeiras.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem 1 negação\(ões\) \("nao"\) e o texto nenhuma/],
+    ['SUBCONTRATACAO', 'Consórcio não é admitido, apenas empresa isolada.', 'Não será admitida a participação de empresas em consórcio', /o texto tem limite de exclusividade \(apenas, somente\) que o trecho não tem/]
   ];
   for (const [tema, texto, trecho, re] of casos) { const r = verTexto(T5, [{ tema, texto, trecho }]); assert.equal(r.ok, false, texto); assert.match(r.p, re, texto); }
   assert.equal(verTexto(T5, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio não é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]).ok, true);
@@ -715,4 +715,33 @@ test('reconferência: tabela de itens com linhas iguais é texto (só as linhas 
   const le = b.api('s_dora', 'leitura', { id: 'op1' }).leitura.leitura;
   assert.deepEqual([le.situacao, le.situacaoNome], ['LER_A_MAO', 'Concluída com páginas para ler à mão']);
   assert.equal(b.hist('LEITURA_CONCLUIDA_LER_A_MAO').length, 1);
+});
+
+// ---------------- reconferência de 6700f26 (probe6) ----------------
+const T6 = '[página 1]\n5.1. O prazo de entrega não será inferior a 10 dias e não será admitida a subcontratação do serviço.\n5.2. O atendimento corretivo ocorrerá em até 10 dias contados do chamado técnico.\n5.3. O licitante deverá ter no mínimo 2 técnicos certificados em seu quadro permanente.\n';
+test('reconferência 2: "não será inferior" só retira a própria negação; a direção do limite (máximo, mínimo, exclusividade) é a mesma nos dois lados para cada número', () => {
+  const recusa = [
+    ['PRAZOS', 'Entrega em no máximo 10 dias.', 'O prazo de entrega não será inferior a 10 dias', /limite de máximo que o trecho não tem/],
+    ['PRAZOS', 'Entrega em no mínimo 10 dias, com subcontratação do serviço permitida.', 'O prazo de entrega não será inferior a 10 dias e não será admitida a subcontratação do serviço', /o trecho tem 1 negação\(ões\) \("nao"\) e o texto nenhuma/],
+    ['PRAZOS', 'Atendimento corretivo em no mínimo 10 dias do chamado.', 'O atendimento corretivo ocorrerá em até 10 dias contados do chamado técnico', /limite de mínimo que o trecho não tem/],
+    ['EQUIPE_RT', 'No máximo 2 técnicos certificados no quadro.', 'O licitante deverá ter no mínimo 2 técnicos certificados em seu quadro permanente', /limite de máximo que o trecho não tem/],
+    ['EQUIPE_RT', '2 técnicos certificados no quadro, no mínimo um engenheiro.', 'O licitante deverá ter no mínimo 2 técnicos certificados em seu quadro permanente', /o número 2 tem no texto nenhum limite e no trecho limite de mínimo/]
+  ];
+  for (const [tema, texto, trecho, re] of recusa) { const r = verTexto(T6, [{ tema, texto, trecho }]); assert.equal(r.ok, false, texto); assert.match(r.p, re, texto); }
+  const aceita = [
+    ['PRAZOS', 'Entrega em no mínimo 10 dias; subcontratação do serviço não admitida.', 'O prazo de entrega não será inferior a 10 dias e não será admitida a subcontratação do serviço'],
+    ['PRAZOS', 'Atendimento corretivo em no máximo 10 dias do chamado.', 'O atendimento corretivo ocorrerá em até 10 dias contados do chamado técnico'],
+    ['EQUIPE_RT', 'Pelo menos 2 técnicos certificados no quadro permanente.', 'O licitante deverá ter no mínimo 2 técnicos certificados em seu quadro permanente']
+  ];
+  for (const [tema, texto, trecho] of aceita) { const r = verTexto(T6, [{ tema, texto, trecho }]); assert.equal(r.ok, true, texto + ' | ' + r.p); }
+});
+
+test('reconferência 2: página de tabela cujo cabeçalho de coluna foi descontado conta como lida quando o bloco foi à IA', () => {
+  let tab = ''; for (let p = 1; p <= 4; p++) { tab += '[página ' + p + ']\nANEXO I - RELAÇÃO DE EQUIPAMENTOS\nItem Equipamento Qtd Exigência: calibração com certificado RBC obrigatório\nSecretaria Municipal de Saúde\n'; for (let i = 0; i < 6; i++) tab += (p * 10 + i) + ' Autoclave ' + (i + 1) + '\n'; }
+  const a = ambiente({ custoMs: 1000, respostas: [() => ({ itens: [] }), () => ({ itens: [] })], textos: [{ ref: 'A1', id: 21, titulo: 'Anexo I', nome: 'a.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: tab, cortado: false }] });
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' }); a.ctx.Licitacoes_rotinaLeitura();
+  const le = a.leituras()[0], cob = JSON.parse(le.COBERTURA_JSON);
+  assert.equal(cob.total.texto.indexOf('sem texto'), -1, cob.total.texto);
+  assert.match(cob.total.texto, /^Lidas 4 de 4 página\(s\) com texto/);
+  assert.equal(le.SITUACAO, 'CONCLUIDA');
 });
