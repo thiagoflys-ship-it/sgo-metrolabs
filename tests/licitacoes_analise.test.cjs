@@ -66,7 +66,7 @@ function ambiente(o) {
   tabelas.CAD_USUARIOS.forEach((u) => { sessoes['s_' + u.USUARIO] = { userId: u.ID, usuario: u.USUARIO, nome: u.NOME, perfil: u.PERFIL }; });
   let seq = 0;
   const srv = { pedidos: [], conteudos: [], arquivos: JSON.parse(JSON.stringify(ARQS)), textos: TEXTOS.map((t) => Object.assign({}, t)) };
-  const ia = { respostas: (o.respostas || []).slice(), prompts: [] };
+  const ia = { respostas: (o.respostas || []).slice(), prompts: [], opcoes: [] };
   const SGO_LICITACOES = {
     listar: () => ({ itens: [], ate: '', mais: false }), conexoes: () => [], situacao: () => ({ ligado: true }), testar: () => ({ ok: true }), coletarAgora: () => ({ pedido: true }),
     obter: (f) => ({ atual: null, versoes: [], itens: f.chave === CHAVE ? [{ numeroItem: 1, descricao: 'Manutenção corretiva de equipamentos médicos', materialServico: 'S', quantidade: 4, unidade: 'UNIDADE', valorUnitario: 2107.86, hash: 'i1' }] : [] }),
@@ -93,7 +93,7 @@ function ambiente(o) {
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_EQUIPAMENTOS: 'CAD_EQUIPAMENTOS' } },
     exigirSessao: (sid) => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada. Entre de novo'); return sessoes[sid]; },
     SGO_execucaoInterna_: () => o.interna !== false,
-    SGO_DocA4_chamarGemini_: (prompt) => { ia.prompts.push(prompt); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); const r = ia.respostas.shift(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
+    SGO_DocA4_chamarGemini_: (prompt, opc) => { ia.prompts.push(prompt); ia.opcoes.push(opc); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); const r = ia.respostas.shift(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
     ComEsp_fabricantes_: () => ['marca exemplo'],
     SGO_LICITACOES
   });
@@ -151,9 +151,14 @@ test('análise com a IA: nota pelo código (prazo com Finados, localização, va
   const r = a.api('s_dora', 'analisar', { id: 'op1' });
   assert.equal(r.ok, true, r.message);
   assert.equal(r.resultado.analisada, true);
+  // revisão de 02/11/2026: raciocínio limitado, JSON puro e prazo para não abrir chamada nova perto do limite do servidor
+  const op1 = a.ia.opcoes[0];
+  assert.deepEqual([op1.tokens, op1.temperatura, op1.raciocinio, op1.json], [16384, 0.1, 4096, true]);
+  assert.equal(op1.prazoAte, Date.parse('2026-11-01T13:00:00-03:00') + 170000);
   const an = a.analises()[0];
   assert.equal(an.SITUACAO, 'CONCLUIDA');
   assert.equal(an.VERSAO, 1);
+  assert.deepEqual(JSON.parse(an.ARQUIVOS_JSON).map((x) => [x.ref, x.caracteres, x.enviadosIA]), [['A1', EDITAL.length, EDITAL.length], ['A2', 0, 0]], 'quanto do texto foi lido e quanto foi no pedido');
   const crit = JSON.parse(an.CRITERIOS_JSON);
   // prazo: de dom 01/11 até qui 05/11 = seg 02 é Finados → 3 dias úteis (03, 04, 05) → 4 pontos
   assert.equal(crit.prazo.pontos, 4);
@@ -179,7 +184,7 @@ test('análise com a IA: nota pelo código (prazo com Finados, localização, va
   assert.ok(af.some((x) => x.tipo === 'INFERENCIA' && x.origem === 'IA'));
   // o prompt leva os dias úteis e os feriados calculados (a IA não conta datas) e as regras do dono
   const p = a.ia.prompts[0];
-  assert.match(p, /CALCULADO PELO SISTEMA \(não recalcule\): hoje 01\/11\/2026; 3 dias úteis até 05\/11\/2026 \(feriados no caminho: 02\/11\/2026/);
+  assert.match(p, /CALCULADO PELO SISTEMA \(não recalcule; se citar, a ref é SISTEMA\): hoje 01\/11\/2026; 3 dias úteis até 05\/11\/2026 \(feriados no caminho: 02\/11\/2026/);
   assert.match(p, /NÃO é acreditada RBC/);
   assert.match(p, /BALANÇAS e ESFIGMOMANÔMETROS/);
   assert.match(p, /EMPRESA DE PEQUENO PORTE \(EPP\)/);
@@ -411,7 +416,7 @@ test('revisão 3: respostas cruas da IA guardadas por tentativa (truncadas) e mo
   const an = a.analises()[0];
   const resp = JSON.parse(an.RESPOSTAS_IA_JSON);
   assert.equal(resp.length, 3);
-  assert.equal(resp[0].texto.length, 15000);
+  assert.equal(resp[0].texto.length, 24000);
   assert.equal(resp[0].cortada, true);
   assert.equal(resp[0].aceita, false);
   assert.match(resp[1].problemas.join(' '), /FATO sem fonte/);
@@ -421,7 +426,7 @@ test('revisão 3: respostas cruas da IA guardadas por tentativa (truncadas) e mo
   const html = tela().ctx.Lic_htmlFicha_(f, 'analise');
   assert.match(html, /foi recusada pelo verificador\. A IA não conseguiu provar/);
   assert.match(html, /<details class="cm-caixa"><summary[^>]*>Ver o motivo técnico \(3 recusas\)<\/summary>/);
-  assert.match(html, /<summary[^>]*>Ver respostas da IA \(3 tentativas\)<\/summary>[\s\S]*cortada em 15 mil caracteres/);
+  assert.match(html, /<summary[^>]*>Ver respostas da IA \(3 tentativas\)<\/summary>[\s\S]*cortada \(guardamos até 24 mil caracteres por tentativa\)/);
   assert.equal(a.ctx.LIC_COLUNAS.LIC_ANALISES.includes('RESPOSTAS_IA_JSON'), true, 'coluna nova por merge');
 });
 

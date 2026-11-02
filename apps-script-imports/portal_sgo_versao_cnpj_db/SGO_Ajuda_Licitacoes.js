@@ -109,7 +109,8 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Fatos vêm com o trecho entre aspas e a fonte (arquivo A1, A2... com o nome e o SHA-256, ou o campo do PNCP). Inferências são conclusões a partir dos fatos. Pendências são o que falta conferir para decidir.",
           "Trava provada com trecho (por exemplo, exige laboratório acreditado RBC sem aceitar rastreabilidade) deixa a nota em 0, com o motivo; a oportunidade continua no radar até a Diretoria decidir.",
           "\"Analisar agora\" faz a primeira análise; \"Refazer análise\" pede o motivo (pelo menos 10 letras). Cada análise é uma versão nova: a anterior continua guardada em \"Todas as versões da análise\".",
-          "A análise roda sozinha quando chegam arquivos novos ou a fonte muda; se nada mudou, ela não é refeita."
+          "A análise roda sozinha quando chegam arquivos novos ou a fonte muda; se nada mudou, ela não é refeita.",
+          "Edital grande: a IA recebe as páginas que mais importam (termo de referência, itens, habilitação, garantia, multa, prazos), até 140 mil caracteres; o que não foi enviado aparece para ela como \"página(s) não enviada(s) à IA\" e vira pendência. O verificador confere contra o texto inteiro."
         ] }
       ],
       cores: [
@@ -136,7 +137,7 @@ function SGO_ajudaTelas_Licitacoes_() {
         { p: "A regra pode desfazer o que eu decidi?", r: "Não. A regra só muda a situação enquanto ninguém mexeu (no radar, ou descartada pela regra). O que a Diretoria enviou para análise ou descartou com motivo fica como está." },
         { p: "Por que uma licitação travada por RBC aparece?", r: "Para a Diretoria decidir: às vezes o edital aceita calibração rastreável ou subcontratação de laboratório acreditado. A pendência fica escrita no cartão." },
         { p: "A IA pode descartar ou mandar participar?", r: "Não. A IA lê, classifica e aponta fatos, inferências e pendências com a fonte. Descartar, analisar e participar são decisões da Diretoria, registradas com o nome e a data." },
-        { p: "Como sei que o fato citado está mesmo no edital?", r: "O verificador procura cada trecho, palavra por palavra, no texto do arquivo citado (sem acento e sem caixa). Se não achar, a resposta da IA é recusada e refeita; o trecho fica na tela com o arquivo e o SHA-256." },
+        { p: "Como sei que o fato citado está mesmo no edital?", r: "O verificador procura cada trecho, letra por letra e na mesma ordem, no texto inteiro do arquivo citado (sem acento, sem caixa, sem contar espaço, quebra de linha e o hífen de fim de linha do PDF). Vale também trecho com (...) entre dois pedaços do mesmo arquivo, a quebra de página no meio da frase e a numeração de cláusula que a IA tirou. Se não achar, a resposta da IA é recusada e refeita com o pedaço mais parecido do edital; o trecho fica na tela com o arquivo e o SHA-256." },
         { p: "Por que a margem vale 5 e a distância vale metade?", r: "Ainda não há piso calculado (a tabela de preços de Licitações vem na próxima etapa) nem a distância rodoviária confirmada. São pendências: a nota não finge certeza." }
       ]
     },

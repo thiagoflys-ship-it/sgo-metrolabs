@@ -1472,6 +1472,10 @@ function SGO_DocA4_limparTextoIA_(t) {
  * Resposta cortada (MAX_TOKENS) ou bloqueada nunca é devolvida pela metade:
  * tenta o próximo modelo e, se todos falharem, lança erro com o motivo.
  * opcoes: { tokens, temperatura, msgChave: function(codigo) }
+ * Opções só de quem pede (02/11/2026, Licitações; sem elas, nada muda para os outros chamadores):
+ *   raciocinio: orçamento de raciocínio (thinkingBudget) no lugar do dinâmico (-1);
+ *   json: true pede a resposta em JSON puro (responseMimeType application/json);
+ *   prazoAte: instante (ms) depois do qual não começa chamada nova (outro modelo ou nova tentativa): lança o último erro.
  */
 function SGO_DocA4_chamarGemini_(prompt, opcoes) {
   opcoes = opcoes || {};
@@ -1491,8 +1495,10 @@ function SGO_DocA4_chamarGemini_(prompt, opcoes) {
     var m = modelos[mi];
     var config = { maxOutputTokens: tokens, temperature: temperatura };
     // Raciocínio dinâmico (-1) só nos modelos que aceitam o parâmetro (2.5 em diante).
-    if (/gemini-(2\.5|[3-9])/.test(m)) config.thinkingConfig = { thinkingBudget: -1 };
+    if (/gemini-(2\.5|[3-9])/.test(m)) config.thinkingConfig = { thinkingBudget: typeof opcoes.raciocinio === 'number' ? opcoes.raciocinio : -1 };
+    if (opcoes.json) config.responseMimeType = 'application/json';
     for (var tent = 0; tent < 3; tent++) {
+      if (opcoes.prazoAte && (mi > 0 || tent > 0) && Date.now() > opcoes.prazoAte) throw new Error(ultimo + ' (sem tempo para tentar de novo)');
       if (tent > 0) Utilities.sleep(tent === 1 ? 800 : 1600);
       var resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + chave, {
         method: 'post', muteHttpExceptions: true, contentType: 'application/json',
