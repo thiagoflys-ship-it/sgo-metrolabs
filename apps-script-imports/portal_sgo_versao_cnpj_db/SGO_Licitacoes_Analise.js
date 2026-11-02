@@ -16,8 +16,8 @@
  *       prazo (10): dias úteis até o fim das propostas, contados com os feriados do SGO+ (SGO_Expediente.js);
  *       localização (15): prioridade da UF (até 8) + distância (até 7: metade, como pendência, até a distância
  *       rodoviária ser confirmada; Goiânia = 7);
- *       valor (10): pelo valor estimado da fonte; margem (15): 5 com pendência enquanto não houver piso (a tabela de preços
- *       de Licitações é de etapa seguinte);
+ *       valor (10): pelo valor estimado da fonte; margem (15): pela última simulação salva na aba Preço (LicP_margemNota_,
+ *       SGO_Licitacoes_Precos.js); sem simulação, 5 com pendência;
  *   - capacidade técnica (30): a IA classifica cada item (grau e trecho) e o CÓDIGO calcula os pontos (alto provado 1, médio
  *     meio, o resto zero; revisão de 02/11/2026);
  *   - pela IA, conferidos pelo verificador: documentação (até 7,5 dos 15 enquanto o SGO+ não
@@ -219,8 +219,13 @@ function Lic_criteriosCodigo_(l, pesos, hojeIso) {
     af.push({ tipo: 'FATO', criterio: 'valor', texto: 'Valor estimado total ' + Lic_moeda_(l.VALOR_ESTIMADO) + '.', fonte: { ref: 'CAMPO:valorEstimado', trecho: String(l.VALOR_ESTIMADO) } });
     af.push({ tipo: 'INFERENCIA', criterio: 'valor', texto: 'A nota de valor usa o total estimado; a parte que a Metrolabs atende depende do grau de cada item (critério capacidade).' });
   }
-  c.margem = { pontos: 5 * pesos.margem / 15, peso: pesos.margem, origem: 'CODIGO', como: 'Sem piso calculado: 5 de 15, como pendência (a tabela de preços de Licitações é da etapa seguinte).' };
-  af.push({ tipo: 'PENDENCIA', criterio: 'margem', texto: 'Calcular o piso por item com a tabela de preços de Licitações (Diretoria) e comparar com o preço de referência do edital.' });
+  // 02/11/2026 (tabela de preços e simulador, SGO_Licitacoes_Precos.js): com simulação salva na aba Preço, a margem vem dela
+  var simM = typeof LicP_margemNota_ === 'function' ? LicP_margemNota_(l, pesos) : null;
+  if (simM) { c.margem = simM.criterio; simM.afirmacoes.forEach(function (a) { af.push(a); }); }
+  else {
+    c.margem = { pontos: 5 * pesos.margem / 15, peso: pesos.margem, origem: 'CODIGO', como: 'Sem simulação de preço salva: 5 de 15, como pendência.' };
+    af.push({ tipo: 'PENDENCIA', criterio: 'margem', texto: 'Simular o preço na aba Preço (tabela de preços de licitação da Diretoria) e salvar: o piso por item é comparado com o preço de referência do edital.' });
+  }
   return { criterios: c, afirmacoes: af, prazo: pz, fimIso: fimIso, hoje: hojeIso, pesos: pesos };
 }
 function Lic_dataFonteTxt_(t) { var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(Lic_s_(t)); return m ? m[3] + '/' + m[2] + '/' + m[1] + (m[4] ? ' ' + m[4] + ':' + m[5] : '') : Lic_s_(t); }
@@ -1113,7 +1118,9 @@ function Lic_promptAnalise_(l, fontes, codigo, pesos, hojeIso, marca) {
 // ------------------------------------------------------------ base (versão do que foi analisado)
 function Lic_baseAnalise_(l, fonte, arqs, pesos) {
   var itens = ((fonte && fonte.itens) || []).map(function (i) { return [i.numeroItem, i.hash || Lic_s_(i.descricao).slice(0, 80)]; });
-  return Lic_hash_(JSON.stringify([LIC_ANALISE_REGRAS, LIC_CAPACIDADE_VERSAO, pesos.versao, Lic_s_(l.VERSAO_HASH), itens, arqs ? arqs.baseHash : '']));
+  // 02/11/2026: a simulação de preço salva entra na base (só quando existe: a base das análises sem simulação não muda)
+  var sim = typeof LicP_baseNota_ === 'function' ? LicP_baseNota_(l) : '';
+  return Lic_hash_(JSON.stringify([LIC_ANALISE_REGRAS, LIC_CAPACIDADE_VERSAO, pesos.versao, Lic_s_(l.VERSAO_HASH), itens, arqs ? arqs.baseHash : ''].concat(sim ? [sim] : [])));
 }
 function Lic_analisesDe_(oid) {
   return Lic_ler_(LIC_ABAS.ANALISES).filter(function (a) { return Lic_s_(a.OPORTUNIDADE_ID) === Lic_s_(oid); })

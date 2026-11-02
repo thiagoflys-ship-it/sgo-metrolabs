@@ -51,7 +51,9 @@ var SGO_AJUDA_NOMES = {
   lavadora_ciclos: 'Relatórios de ciclo',
   // 01/11/2026: SGO+ Licitações, etapa 1 (SGO_Ajuda_Licitacoes.js)
   licitacoes: 'Hoje em Licitações', licitacoes_oportunidades: 'Oportunidades (Licitações)', licitacoes_agenda: 'Agenda e prazos (Licitações)', licitacoes_alertas: 'Central de alertas (Licitações)', licitacoes_portais: 'Portais e configurações (Licitações)',
-  licitacoes_kanban: 'Kanban (Licitações)', licitacoes_gantt: 'Gantt (Licitações)', licitacoes_painel: 'Painel de Licitações (Dashboard)'
+  licitacoes_kanban: 'Kanban (Licitações)', licitacoes_gantt: 'Gantt (Licitações)', licitacoes_painel: 'Painel de Licitações (Dashboard)',
+  // 02/11/2026: tabela de preços de licitação (SGO_Ajuda_LicitacoesPrecos.js)
+  licitacoes_precos: 'Preços de licitação'
 };
 
 /**
@@ -99,6 +101,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_LavCiclo_ === 'function') fontes.push(['LavCiclo', SGO_ajudaTelas_LavCiclo_]);
   // 01/11/2026: SGO+ Licitações, etapa 1 (SGO_Ajuda_Licitacoes.js).
   if (typeof SGO_ajudaTelas_Licitacoes_ === 'function') fontes.push(['Licitacoes', SGO_ajudaTelas_Licitacoes_]);
+  // 02/11/2026: Preços de licitação (SGO_Ajuda_LicitacoesPrecos.js).
+  if (typeof SGO_ajudaTelas_LicitacoesPrecos_ === 'function') fontes.push(['LicitacoesPrecos', SGO_ajudaTelas_LicitacoesPrecos_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

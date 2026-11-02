@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "2232afe1ca8c",
+ "versao": "3380801b91f3",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3096,7 +3096,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Onde fica",
-     "texto": "Menu lateral, grupo \"Licitações\":\nHoje em Licitações\nPainel (Dashboard)\nOportunidades\nKanban\nGantt\nAgenda e prazos\nCentral de alertas\nPortais e configurações\n\nNo celular, a tela inicial ganha o atalho \"Licitações\" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra \"Lista · Kanban · Gantt\" troca a forma de ver as mesmas licitações."
+     "texto": "Menu lateral, grupo \"Licitações\":\nHoje em Licitações\nPainel (Dashboard)\nOportunidades\nKanban\nGantt\nAgenda e prazos\nCentral de alertas\nPreços de licitação\nPortais e configurações\n\nNo celular, a tela inicial ganha o atalho \"Licitações\" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra \"Lista · Kanban · Gantt\" troca a forma de ver as mesmas licitações."
     },
     {
      "titulo": "Como a coleta funciona > O que é lido",
@@ -3297,6 +3297,26 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "Telas > Desempenho das três telas",
      "texto": "Cada tela lê cada aba uma vez e agrega no servidor (nada de uma chamada por cartão). Medidas de 02/11/2026, no ensaio local do servidor próprio (tempo de processamento dentro do servidor, 3 repetições):\nDados | Kanban | Gantt (semana) | Gantt (mês) | PainelCópia da produção: 186 oportunidades, 246 prazos, 1.014 alertas | 8 a 24 ms | 15 a 22 ms | 14 a 17 ms | 57 a 79 ms\nVolume: 388 oportunidades (260 em andamento), 1.085 prazos | 43 a 64 ms | 88 a 100 ms | 63 a 125 ms | 81 a 162 ms\nNo navegador, do toque no menu até a tela pronta: 77 a 131 ms no ensaio (computador e celular). O teste automático com 260 oportunidades e 960 prazos confere que cada tela lê cada aba uma só vez."
+    },
+    {
+     "titulo": "Preços de licitação e simulador",
+     "texto": "Decisão do dono: \"Os preços não serão do Comercial; isso será cadastrado no módulo\". A tabela de preços de licitação é da Diretoria; o catálogo do Comercial serve só de ponto de partida e de custo."
+    },
+    {
+     "titulo": "Preços de licitação e simulador > Tela \"Preços de licitação\" (parte 1)",
+     "texto": "Importar do catálogo: a prévia mostra os serviços do catálogo que ainda não estão na tabela (preço, custo e execução sugerida). Desmarque o que não serve e importe. O que já está na tabela nunca é sobrescrito; produtos e peças ficam fora. Eletromédicos entram como parceiro; balança, esfigmomanômetro e o resto, pela equipe própria. O óxido de etileno (QT-AUTOCLAVE-BT) entra com o preço \"a confirmar\".\nEditar: preço de referência, situação do preço (confirmado ou a confirmar), execução (equipe própria ou parceiro), custo de referência (do catálogo, pela ficha de custo e pela política do Comercial em vigor, ou informado pela Diretoria), custo do parceiro, vigência, observações e ativo. O motivo é obrigatório; só o que mudou muda; cada gravação é uma versão nova, com a fotografia da linha e o histórico (de → para). \"Histórico\" mostra as versões.\nColunas: piso sem deslocamento (o preço unitário que deixa a sobra mínima com o custo de referência) e a sobra no preço de referência, em vermelho com \"abaixo do piso\" quando fica abaixo da mínima.\nMudar a política (versão e motivo): sobra mínima (nunca abaixo de 35%, decisão do dono), margem alvo, comissão, UFs da equipe do Rio, piso por item ou no lote, deslocamento diluído ou numa linha própria."
+    },
+    {
+     "titulo": "Preços de licitação e simulador > Tela \"Preços de licitação\" (parte 2)",
+     "texto": "Padrões adotados em 02/11/2026 (o dono não soube responder; a Diretoria muda na tela): sobra de 35% e alvo de 40% sobre o preço inteiro; deslocamento e seguro-garantia diluídos no preço unitário, proporcionalmente ao custo de cada item (o edital pede preço com todas as despesas); piso por item (nenhum item abaixo de 35%, mesmo que o lote feche); sem comissão; RJ e ES pela equipe do Rio, o resto pela de Goiânia; impostos sempre da matriz de Goiânia (CNPJ da proposta, EPP); eletromédicos por parceiro, com o custo do parceiro e a mesma sobra; seguro-garantia só quando o edital exigir, com o custo da corretora."
+    },
+    {
+     "titulo": "Preços de licitação e simulador > Aba \"Preço\" da ficha (simulador)",
+     "texto": "1. Os itens do edital vêm do PNCP/Compras.gov.br quando a fonte informa (número, descrição, quantidade e valor unitário estimado; item sigiloso fica sem preço). Sem itens, digite. Em cada item escolha o serviço da tabela; serviço por pontos (REG-CAL-001) pede os pontos por equipamento (o mínimo de 3 está incluído); serviço por parceiro aceita o custo do parceiro.\n2. \"Onde é executado\": UF, município, km do trecho (só a ida; o SGO+ sugere pela tabela de distâncias do Programa de conduta, a partir de Goiânia), viagens, técnicos, engenheiros, dias e noites por viagem, transporte, passagem, pedágio e outros custos. Seguro-garantia: se o edital exige e o custo cotado.\n3. \"Calcular\" (não grava) mostra a conta inteira: custo por equipamento e a fonte, custo direto, deslocamento e seguro diluídos, custo unitário total, piso = custo ÷ (1 − impostos − comissão − 35%), alvo com 40%, a sobra no preço do edital e na proposta, as linhas do deslocamento (km R$ 2,50 ida e volta, pedágio, alimentação, hospedagem, horas de estrada e Incentivo de Missão de R$ 300 por executante em trecho de 200 km ou mais), as premissas e as versões da política de Licitações e do Comercial usadas. Item abaixo do piso fica em vermelho, com o texto \"abaixo do piso\".\n4. Pendências dizem o que falta e o que fazer: km desconhecido, pedágio, equipe, custo do parceiro, item sem custo, preço \"a confirmar\" (sem piso), seguro exigido sem o custo.\n5. \"Salvar simulação\" pede o motivo e grava uma versão nova: a conta é refeita no servidor, e a versão guarda a entrada, o resultado, as premissas e o hash. Uma versão salva nunca muda; em \"Ver\" abra uma versão e use \"Começar uma versão nova a partir desta\" para corrigir. Se o registro for alterado fora do SGO+, a versão aparece como \"alterada fora do SGO+\"."
+    },
+    {
+     "titulo": "Preços de licitação e simulador > Nota da análise (critério margem)",
+     "texto": "Com simulação salva, o critério margem (15 pontos) usa a última versão: com pendência ou sem o preço do edital, 5 como pendência; sobra no edital abaixo da mínima, 0; algum item do edital abaixo do piso (com piso por item), 6; sobra a partir da mínima, 11; a partir do alvo, 15. Sem simulação, continua 5 como pendência. A simulação entra na base da análise: depois de salvar, a aba Análise fica desatualizada; toque em \"Refazer análise\"."
     },
     {
      "titulo": "Problemas comuns (parte 1)",

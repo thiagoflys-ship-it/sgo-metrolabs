@@ -167,9 +167,9 @@
   var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte", TRAVA_A_CONFIRMAR: "n-descarte" };
   var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte", TRAVA_A_CONFIRMAR: "trava a confirmar" };
   var LIC_CRITERIOS = [["capacidade", "Capacidade técnica"], ["margem", "Margem"], ["documentacao", "Documentação"], ["localizacao", "Localização"], ["prazo", "Prazo"], ["valor", "Valor"], ["riscos", "Riscos"]];
-  var LIC_NAV = [["licitacoes", "Hoje"], ["licitacoes_painel", "Painel"], ["licitacoes_oportunidades", "Oportunidades"], ["licitacoes_kanban", "Kanban"], ["licitacoes_gantt", "Gantt"], ["licitacoes_agenda", "Agenda"], ["licitacoes_alertas", "Alertas"], ["licitacoes_portais", "Portais e configurações"]];
+  var LIC_NAV = [["licitacoes", "Hoje"], ["licitacoes_painel", "Painel"], ["licitacoes_oportunidades", "Oportunidades"], ["licitacoes_kanban", "Kanban"], ["licitacoes_gantt", "Gantt"], ["licitacoes_agenda", "Agenda"], ["licitacoes_alertas", "Alertas"], ["licitacoes_precos", "Preços"], ["licitacoes_portais", "Portais e configurações"]];
   var LIC_TITULOS = { licitacoes: "Hoje em Licitações", licitacoes_oportunidades: "Oportunidades", licitacoes_agenda: "Agenda e prazos", licitacoes_alertas: "Central de alertas", licitacoes_portais: "Portais e configurações",
-    licitacoes_kanban: "Kanban das licitações", licitacoes_gantt: "Gantt dos prazos", licitacoes_painel: "Painel de Licitações (Dashboard)" };
+    licitacoes_kanban: "Kanban das licitações", licitacoes_gantt: "Gantt dos prazos", licitacoes_painel: "Painel de Licitações (Dashboard)", licitacoes_precos: "Preços de licitação" };
   var LIC_ABAS_OP = [["analisar", "Para analisar"], ["travadas", "Travadas"], ["analise", "Em análise"], ["descartadas", "Descartadas"]];
   var LIC_DICAS = {
     analisar: "Candidatas da triagem por regras: têm termo de interesse e nada que descarte ou trave. O servidor baixa o edital e a IA dá a nota de 0 a 100 com fatos e fontes (a IA não decide). Ordene por prioridade da UF, por nota ou por prazo.",
@@ -278,7 +278,7 @@
       return;
     }
     var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
-    var botoes = LIC.mod === "licitacoes_portais" ? "" : LIC_TELAS_RECARREGAR[LIC.mod] ? '<button type="button" class="btn-secondary" data-lic-recarregar-tela><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' : '<button type="button" class="btn-secondary" data-lic-atualizar><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+    var botoes = LIC.mod === "licitacoes_portais" || LIC.mod === "licitacoes_precos" ? "" : LIC_TELAS_RECARREGAR[LIC.mod] ? '<button type="button" class="btn-secondary" data-lic-recarregar-tela><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' : '<button type="button" class="btn-secondary" data-lic-atualizar><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
       '<button type="button" class="btn-secondary" data-lic-coletar><i class="fas fa-cloud-arrow-down" aria-hidden="true"></i>&nbsp;Coletar agora</button>';
     var sub = { licitacoes: "O que entrou no radar, os prazos dos próximos 7 dias e a situação do coletor do PNCP e do Compras.gov.br.",
       licitacoes_oportunidades: "O radar lê o PNCP, faz a triagem por regras e mostra o motivo com o trecho da fonte. Descartar e enviar para análise ficam no histórico com quem e quando.",
@@ -287,7 +287,8 @@
       licitacoes_portais: "Os 33 portais com o tipo de integração, a situação e o último teste; o registro das chamadas; as regras do radar e dos alertas; quem vê o quê.",
       licitacoes_kanban: "Cada licitação numa etapa: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato. Mudar de etapa pede o motivo e fica no histórico com quem e quando.",
       licitacoes_gantt: "Os prazos das licitações no tempo: fim das propostas, sessão, impugnação, esclarecimento e recurso, com a natureza de cada data e o dia de hoje marcado.",
-      licitacoes_painel: "Indicadores do módulo com números reais: cada um diz de onde vem e abre a lista que o compõe." }[LIC.mod];
+      licitacoes_painel: "Indicadores do módulo com números reais: cada um diz de onde vem e abre a lista que o compõe.",
+      licitacoes_precos: "Tabela própria de preços de licitação da Diretoria (versão e histórico) e a política do piso; a simulação de cada licitação fica na ficha, aba Preço." }[LIC.mod];
     div.innerHTML = Lic_cascaHtml_(LIC.mod, sub, botoes, celular);
     if (typeof atualizarTituloMobile_ === "function") { try { atualizarTituloMobile_(LIC_TITULOS[LIC.mod]); } catch (e) {} }
     div.querySelectorAll("[data-lic-nav]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-lic-nav"); if (m !== LIC.mod) abrir(m); }; });
@@ -301,6 +302,7 @@
     else if (LIC.mod === "licitacoes_kanban") Lic_renderKanban_();
     else if (LIC.mod === "licitacoes_gantt") Lic_renderGantt_();
     else if (LIC.mod === "licitacoes_painel") Lic_renderPainel_();
+    else if (LIC.mod === "licitacoes_precos") { if (typeof LicPr_renderTabela_ === "function") LicPr_renderTabela_(); else Lic_corpo_().innerHTML = Lic_faixa_("A tela de preços não carregou: atualize a página (F5).", "aviso"); }
     else Lic_renderPortais_();
   }
   function Lic_corpo_() { return Lic_$_("licCorpo"); }
@@ -560,7 +562,7 @@
       '<div class="lic-ficha-cab">' + Lic_notaHtml_(o) + '<div><h2>' + Lic_esc_(o.orgao) + ' <span class="cm-meta lic-mono">' + Lic_esc_(o.codigo) + '</span></h2><p class="cm-meta">' + Lic_esc_((o.unidade ? o.unidade + " · " : "") + (o.municipio ? o.municipio + "/" : "") + o.uf) + " · " + Lic_esc_(Lic_sessaoTexto_(o)) + "</p>" +
       '<p class="cm-txt" style="margin:4px 0 0">' + Lic_selosHtml_(o) + '</p><div class="lic-ficha-num">' + num.map(function (n) { return "<div><span>" + Lic_esc_(n[0]) + "</span><b>" + n[1] + "</b></div>"; }).join("") + "</div></div></div>" +
       '<div class="lic-abas cm-tabs" role="tablist" aria-label="Partes da ficha">' + [["resumo", "Resumo"], ["prazos", "Prazos" + (d.prazos && d.prazos.eventos ? " (" + d.prazos.eventos.filter(function (e) { return e.situacao !== "RETIFICADO"; }).length + ")" : "")], ["arquivos", "Arquivos" + (d.arquivos && d.arquivos.arquivos ? " (" + d.arquivos.arquivos.filter(function (x) { return !x.substituidoEm; }).length + ")" : "")],
-        ["analise", "Análise" + (o.nota !== null && o.nota !== undefined ? " (" + Lic_num_(o.nota) + ")" : "")], ["leitura", "Leitura do edital"], ["fonte", "Fonte"], ["historico", "Histórico (" + (d.historico || []).length + ")"]].map(function (a) {
+        ["analise", "Análise" + (o.nota !== null && o.nota !== undefined ? " (" + Lic_num_(o.nota) + ")" : "")], ["leitura", "Leitura do edital"], ["preco", "Preço"], ["fonte", "Fonte"], ["historico", "Histórico (" + (d.historico || []).length + ")"]].map(function (a) {
         return '<button type="button" class="cm-tab' + (a[0] === aba ? " active" : "") + '" role="tab" aria-selected="' + (a[0] === aba) + '" data-lic-fab="' + a[0] + '">' + Lic_esc_(a[1]) + "</button>";
       }).join("") + "</div>";
     if (aba === "prazos") h += Lic_htmlPrazos_(d);
@@ -568,6 +570,7 @@
     else if (aba === "analise") h += Lic_htmlAnalise_(d);
     // leitura especialista do edital (02/11/2026): JS_Licitacoes_Leitura.html
     else if (aba === "leitura") h += typeof LicLeit_casca_ === "function" ? LicLeit_casca_(d) : Lic_faixa_("A leitura do edital não carregou: atualize a página (F5).", "aviso");
+    else if (aba === "preco") h += typeof LicPr_htmlAbaPreco_ === "function" ? LicPr_htmlAbaPreco_(d) : Lic_faixa_("A aba Preço não carregou: atualize a página (F5).", "aviso");
     else if (aba === "fonte") {
       var f = d.fonte;
       h += (d.fonteAviso ? Lic_faixa_(d.fonteAviso, "aviso") : "") + '<div class="cm-caixa"><h3>De onde veio</h3>' + Lic_tabelaHtml_(["Campo", "Valor"], [
@@ -615,6 +618,7 @@
         Lic_ligarFichaEtapa2_(c, d, id);
         if (LIC.fichaAba === "prazos") Lic_ligarPrazos_(c, d, id);
         if (LIC.fichaAba === "leitura" && typeof LicLeit_montar_ === "function") LicLeit_montar_(c, d, id);
+        if (LIC.fichaAba === "preco" && typeof LicPr_ligarAbaPreco_ === "function") LicPr_ligarAbaPreco_(c, d, id);
       };
       desenhar();
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, function () { Lic_renderFicha_(id); }); });

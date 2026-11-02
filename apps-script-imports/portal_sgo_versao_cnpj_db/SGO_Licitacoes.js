@@ -75,7 +75,9 @@ var LIC_ACOES = {
   leituraConsolidar: function (eu, d) { return LicLeit_consolidarAcao_(eu, d); },
   palavrasSalvar: function (eu, d) { return LicLeit_palavrasAcao_(eu, d); },
   leituraCfg: function (eu) { return LicLeit_cfgAcao_(eu); },
-  leituraCfgSalvar: function (eu, d) { return LicLeit_cfgSalvar_(eu, d); }
+  leituraCfgSalvar: function (eu, d) { return LicLeit_cfgSalvar_(eu, d); },
+  // tabela de preços de licitação e simulador (02/11/2026, SGO_Licitacoes_Precos.js): { op: tabela | itemSalvar | simulacao | ... }
+  precos: function (eu, d) { return LicP_acao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
