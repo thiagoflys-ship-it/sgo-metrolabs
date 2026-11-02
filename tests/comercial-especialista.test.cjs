@@ -408,3 +408,15 @@ test('cota de IA por pessoa e hora (a mesma do Comercial): sem cota, sai pelas r
   assert.match(r3.aviso, /chave da IA não está cadastrada/);
   assert.equal(r3.sugestao.planos.length, 3);
 });
+
+// 02/11/2026: a Metrolabs é fabricante de equipamentos próprios, mas não é marca de terceiro para o verificador
+test('fabricantes: a própria Metrolabs fica fora da lista (o verificador não recusa quem cita a empresa)', () => {
+  const amb = ambiente({ tabelas: { CAD_EQUIPAMENTOS: [
+    { ID: 'eq1', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'Autoclave', FABRICANTE: 'FABRICANTE X', TAG: 'AC-01', STATUS: 'ATIVO' },
+    { ID: 'eq2', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'Lavadora', FABRICANTE: 'METROLABS', TAG: 'LV-01', STATUS: 'ATIVO' },
+    { ID: 'eq3', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'Lavadora', FABRICANTE: 'Metro Labs Soluções', TAG: 'LV-02', STATUS: 'ATIVO' }
+  ] } });
+  const lista = amb.ctx.ComEsp_fabricantes_();
+  assert.ok(lista.includes('fabricante x'), lista.join(','));
+  assert.ok(!lista.some((n) => /metro ?labs/.test(n)), lista.join(','));
+});

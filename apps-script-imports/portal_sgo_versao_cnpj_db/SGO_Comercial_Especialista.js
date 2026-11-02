@@ -632,10 +632,14 @@ function ComEsp_registrar_(eu, t, origem, saida, verificacao) {
 // VERIFICADOR ANTI-GENÉRICO
 // ------------------------------------------------------------
 /** Fabricantes e marcas conhecidos pelo sistema (o texto não pode citá-los). */
+// 02/11/2026: a própria Metrolabs aparece como fabricante (equipamentos que ela fabrica) e não é marca de terceiro; sem isso
+//   o verificador recusava toda resposta que citasse a empresa (Licitações usa esta mesma lista)
+var COM_ESP_PROPRIA_MARCA = /(?:^| )metro ?labs(?: |$)/;
 function ComEsp_fabricantes_() {
   var s = {};
-  try { Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { var n = ComEsp_norm_(e.FABRICANTE); if (n.length >= 3) s[n] = 1; }); } catch (e) {}
-  try { Com_ler_(COM_ABAS.PRECOS).forEach(function (r) { var n = ComEsp_norm_(r.MARCA); if (n.length >= 3) s[n] = 1; }); } catch (e) {}
+  var add = function (t) { var n = ComEsp_norm_(t); if (n.length >= 3 && !COM_ESP_PROPRIA_MARCA.test(n)) s[n] = 1; };
+  try { Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { add(e.FABRICANTE); }); } catch (e) {}
+  try { Com_ler_(COM_ABAS.PRECOS).forEach(function (r) { add(r.MARCA); }); } catch (e) {}
   return Object.keys(s);
 }
 
