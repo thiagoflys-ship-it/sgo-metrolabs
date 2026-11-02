@@ -85,17 +85,19 @@
     return h + "</div>";
   }
   function LicLeit_fonteHtml_(f) {
-    return '<blockquote class="lic-trecho">"' + Lic_esc_(f.trecho) + '"<cite>' + Lic_esc_(f.ref + " · " + ((f.arquivo && (f.arquivo.titulo || f.arquivo.nome)) || "") + (f.rotulo ? " · " + f.rotulo : "") + (f.linha ? " · linha " + f.linha : "") + (f.arquivo && f.arquivo.sha256 ? " · SHA-256 " + String(f.arquivo.sha256).slice(0, 16) + "…" : "")) + "</cite></blockquote>";
+    // a frase inteira do edital, com o pedaço que a IA citou marcado
+    var corpo = f.citado && f.citado[1] > f.citado[0] ? LicLeit_frase_({ frase: f.trecho, marca: f.citado }) : Lic_esc_(f.trecho);
+    return '<blockquote class="lic-trecho">"' + corpo + '"<cite>' + Lic_esc_(f.ref + " · " + ((f.arquivo && (f.arquivo.titulo || f.arquivo.nome)) || "") + (f.rotulo ? " · " + f.rotulo : "") + (f.linha ? " · linha " + f.linha : "") + (f.arquivo && f.arquivo.sha256 ? " · SHA-256 " + String(f.arquivo.sha256).slice(0, 16) + "…" : "")) + "</cite></blockquote>";
   }
   function LicLeit_htmlChecklist_(le) {
     var l = (le && le.checklist) || [];
     if (!le || le.situacao === "EM_ANDAMENTO" && !l.length) return "";
-    var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Cada item é o TRECHO DO EDITAL, copiado e conferido palavra por palavra pelo sistema, com o arquivo, a página e a linha. A IA só escolhe o tema e um rótulo curto (sem número, negação ou limite): leia o trecho. Trecho igual em vários lugares aparece uma vez, com todas as fontes.</p>";
+    var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Cada item é o TRECHO DO EDITAL, copiado e conferido palavra por palavra pelo sistema, com o arquivo, a página e a linha. A IA só aponta o trecho e o tema; o sistema mostra a frase inteira do edital, com o pedaço citado marcado: leia a frase. Trecho igual em vários lugares aparece uma vez, com todas as fontes.</p>";
     if (!l.length) return h + '<p class="cm-vazio">Nenhuma exigência dos temas foi encontrada nos blocos lidos.</p></div>';
     var tema = "";
     l.forEach(function (e) {
       if (e.tema !== tema) { tema = e.tema; h += '<h4 class="lic-leit-tema">' + Lic_esc_(e.temaNome || e.tema) + "</h4>"; }
-      h += '<div class="lic-leit-item"><p class="cm-meta" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.temaNome || e.tema) + (e.titulo ? " · " + Lic_esc_(e.titulo) : "") + "</p>" +
+      h += '<div class="lic-leit-item"><p class="cm-meta" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.temaNome || e.tema) + (e.tema === "A_CONFIRMAR" && e.temaIA ? ' <span class="cm-meta">(a IA indicou "' + Lic_esc_(e.temaIA) + '", mas a frase não fala desse tema: confira)</span>' : "") + "</p>" +
         (e.tipo === "PENDENCIA" ? '<p class="lic-motivo pend"><span class="lic-af-tipo PENDENCIA">Pendência</span>Confirmar no edital: há negação ou exceção perto do trecho ("' + Lic_esc_(e.alerta) + '"). Não conte como exigência certa até a Diretoria ler o parágrafo.</p>' : "") +
         LicLeit_fonteHtml_(e.fontes[0] || {}) + ((e.fontes || []).length > 1 ? '<details><summary class="cm-meta" style="min-height:32px;display:flex;align-items:center;cursor:pointer">Mais ' + (e.fontes.length - 1) + " fonte(s)</summary>" + e.fontes.slice(1).map(LicLeit_fonteHtml_).join("") + "</details>" : "") + "</div>";
     });

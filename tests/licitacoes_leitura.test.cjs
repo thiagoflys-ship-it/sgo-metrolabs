@@ -219,8 +219,10 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   const cl = JSON.parse(le.CHECKLIST_JSON);
   // sem duplicata: o atestado do edital e o do anexo são um item com as duas fontes
   assert.deepEqual(cl.map((e) => [e.id, e.tema]), [['I1', 'ATESTADOS'], ['I2', 'PRAZOS'], ['I3', 'PENALIDADES'], ['I4', 'RBC_INMETRO'], ['I5', 'CONSORCIO'], ['I6', 'OUTRO']]);
-  // o item é o trecho do edital (não há paráfrase da IA)
-  assert.deepEqual([cl[0].trecho, cl[0].titulo, cl[0].texto], ['quantitativo compatível em 50%(cinquenta por cento) do quantitativo dos equipamentos', 'Atestado do quantitativo dos equipamentos', undefined]);
+  // o item é a FRASE INTEIRA do edital em volta do que a IA citou (sem rótulo nem paráfrase), com o pedaço citado marcado
+  assert.equal(cl[0].trecho, 'b.1) A comprovação referida no item anterior deverá ser realizada mediante apresentação de certidões ou atestado(s) fornecido(s) por pessoa(s) jurídica(s) de direito público ou pri- vado, em nome da empresa licitante, devidamente registrado(s) na entidade profissional competente, em quantitativo compatível em 50%(cinquenta por cento) do quantitativo dos equipamentos.');
+  assert.equal(cl[0].trecho.slice(cl[0].fontes[0].citado[0], cl[0].fontes[0].citado[1]), 'quantitativo compatível em 50%(cinquenta por cento) do quantitativo dos equipamentos');
+  assert.deepEqual([cl[0].titulo, cl[0].texto], [undefined, undefined]);
   assert.deepEqual(cl[0].fontes.map((f) => [f.ref, f.pagina, f.linha]), [['A1', 2, 5], ['A2', 1, 5]]);
   assert.equal(cl[0].fontes[1].rotulo, 'página 1', 'o anexo repete a página 2: o trecho é reencontrado no anexo, com a página e a linha dele');
   assert.equal(cl[0].fontes[0].arquivo.sha256, 'a'.repeat(64));
@@ -324,12 +326,9 @@ test('verificador do bloco (o mesmo da nota): recusa item inventado, número tro
   // inventado: trecho que não está no bloco
   let r = v([{ tema: 'GARANTIA', texto: 'Garantia de 5% do contrato.', trecho: 'a contratada prestará garantia de cinco por cento do valor' }]);
   assert.equal(r.ok, false); assert.match(r.problemas.join(' | '), /não está em A1/);
-  // o rótulo não pode ter número, negação, exceção ou limite, nem mais de 6 palavras; paráfrase ("texto") é ignorada
-  r = v([{ tema: 'PENALIDADES', rotulo: 'Multa de 0,5% por dia', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
-  assert.equal(r.ok, false); assert.match(r.problemas[0], /o rótulo não pode ter número/);
-  for (const rot of ['Multa não aplicada', 'Multa só por atraso', 'Multa até o limite', 'Multa por atraso no serviço de manutenção corretiva']) assert.equal(v([{ tema: 'PENALIDADES', rotulo: rot, trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]).ok, false, rot);
-  r = v([{ tema: 'PENALIDADES', rotulo: 'Multa por atraso', texto: 'Multa de 10% por dia até 0,2 dias, salvo exceções.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
-  assert.equal(r.ok, true); assert.equal(r.itens[0].texto, undefined, 'a paráfrase da IA não é guardada');
+  // rótulo e paráfrase da IA são ignorados: o item é o tema e o trecho
+  r = v([{ tema: 'PENALIDADES', rotulo: 'Multa não aplicada', texto: 'Multa de 10% por dia até 0,2 dias, salvo exceções.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
+  assert.equal(r.ok, true); assert.deepEqual([r.itens[0].texto, r.itens[0].titulo], [undefined, undefined], 'nem a paráfrase nem o rótulo são guardados');
   // número trocado no próprio trecho (separador entre dígitos): "0,2%" ≠ "2%"
   r = v([{ tema: 'PENALIDADES', texto: 'Multa por dia de atraso.', trecho: 'atraso de até 10 dias = multa de 2% por dia de atraso' }]);
   assert.equal(r.ok, false);
@@ -338,10 +337,9 @@ test('verificador do bloco (o mesmo da nota): recusa item inventado, número tro
   const ctx1 = { fontes: { A1: c.LicLeit_fonteBloco_(arq, b1) }, pesos: c.LIC_NOTA_PADRAO, fabricantes: [] };
   r = c.LicLeit_verificarBloco_({ itens: [{ tema: 'CONSORCIO', rotulo: 'Consórcio', trecho: 'admitida a participação de empresas em consórcio conforme justificativa' }] }, arq, b1, ctx1);
   assert.equal(r.ok, false); assert.match(r.problemas[0], /vem logo depois de "nao"|vem logo depois de "Não"|negação/i);
-  // tema fora da lista, frase de decisão, promessa de RBC e fabricante
-  r = v([{ tema: 'PRECO', rotulo: 'Recomendo participar', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }, { tema: 'PENALIDADES', rotulo: 'Metrolabs é acreditada', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }, { tema: 'PENALIDADES', rotulo: 'Multa da marca exemplo', trecho: 'atraso de 11 a 20 dias = multa de 0,4% por dia de atraso' }]);
-  const p = r.problemas.join(' | ');
-  assert.match(p, /tema fora da lista/); assert.match(p, /a IA não decide/); assert.match(p, /não afirme nem prometa acreditação RBC/); assert.match(p, /cita fabricante ou marca/);
+  // tema fora da lista
+  r = v([{ tema: 'PRECO', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
+  assert.match(r.problemas.join(' | '), /tema fora da lista/);
   // resposta que não é o JSON pedido
   assert.equal(c.LicLeit_verificarBloco_('texto solto', arq, b, ctx).ok, false);
 });
@@ -468,10 +466,10 @@ test('tela: aba "Leitura do edital" na ficha (palavras, cobertura, checklist, re
   assert.match(h, /Cobertura da leitura<\/h3><p class="cm-txt">Lidas 4 de 4 página\(s\) com texto/);
   assert.match(h, /O que realmente precisamos \(6\)/);
   assert.match(h, /<h4 class="lic-leit-tema">Atestado de capacidade técnica<\/h4>/);
-  assert.match(h, /<span class="lic-leit-id">I1<\/span>Atestado de capacidade técnica · Atestado do quantitativo dos equipamentos<\/p>(<p class="lic-motivo pend">.*?<\/p>)?<blockquote class="lic-trecho">"quantitativo compatível em 50%\(cinquenta por cento\) do quantitativo dos equipamentos"<cite>A1 · Edital PE 399\/2026 · página 2 · linha 5/);
+  assert.match(h, /<span class="lic-leit-id">I1<\/span>Atestado de capacidade técnica<\/p>(<p class="lic-motivo pend">.*?<\/p>)?<blockquote class="lic-trecho">"b\.1\) A comprovação [^<]*em <mark>quantitativo compatível em 50%\(cinquenta por cento\) do quantitativo dos equipamentos<\/mark>\."<cite>A1 · Edital PE 399\/2026 · página 2 · linha 5/);
   assert.match(h, /Mais 1 fonte\(s\)/);
   assert.match(h, /<h3>Sugestão da IA — confira nos trechos<\/h3>/);
-  assert.match(h, /Resumo do edital[\s\S]*Trechos citados \(I6, CAMPO:objeto\)<\/summary><p class="cm-meta" style="margin:6px 0 0"><span class="lic-leit-id">I6<\/span>Outro<\/p><blockquote class="lic-trecho">"PRESTAÇÃO DE SERVIÇOS/);
+  assert.match(h, /Resumo do edital[\s\S]*Trechos citados \(I6, CAMPO:objeto\)<\/summary><p class="cm-meta" style="margin:6px 0 0"><span class="lic-leit-id">I6<\/span>Outro<\/p><blockquote class="lic-trecho">"[^"]*PRESTAÇÃO DE SERVIÇOS/);
   assert.match(h, /A IA não decide: participar ou descartar é da Diretoria\./);
   assert.match(h, /<span class="lic-leit-sug">Sugestão<\/span>Perguntar ao órgão/);
   assert.match(h, /Prazo na agenda \(calculado ou confirmado pelo sistema\): Limite para pedir esclarecimento seg 09\/11\/2026 23:59 \(calculado\)/);
@@ -480,7 +478,7 @@ test('tela: aba "Leitura do edital" na ficha (palavras, cobertura, checklist, re
   assert.ok(tds.length >= 4 && tds.every((x) => /data-r="/.test(x)), 'toda célula com data-r (vira cartão no celular)');
   // escape: texto do edital e da IA nunca vira HTML
   const mal = JSON.parse(JSON.stringify(d));
-  mal.leitura.checklist[0].titulo = '<img src=x onerror=alert(1)>';
+  mal.leitura.checklist[0].temaNome = '<img src=x onerror=alert(1)>';
   mal.leitura.checklist[0].fontes[0].trecho = '"><script>alert(2)</script>';
   mal.palavras.busca.palavras[0].ocorrencias[0].frase = '<b>atestado</b>';
   mal.leitura.resumo[0].texto = '<iframe>';
@@ -777,12 +775,7 @@ test('decisão do coordenador: o item do checklist é o TRECHO; paráfrase inver
   assert.equal(r.ok, true, r.p);
   assert.deepEqual(r.itens.map((i) => [i.trecho.slice(0, 22), i.texto]), [['Não é vedada a subcont', undefined], ['Não será exigida visit', undefined], ['A multa será de 10% e ', undefined], ['As propostas serão rec', undefined]]);
   const cl = a.ctx.LicLeit_checklist_(r.itens), h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(cl) });
-  for (const x of invertidos) { assert.ok(h.includes(x.trecho), 'o trecho do edital aparece'); assert.ok(!h.includes(x.texto), 'a paráfrase não aparece: ' + x.texto); }
-  // rótulo com negação, número ou limite: recusado (o sentido fica só no trecho)
-  for (const rotulo of ['Subcontratação vedada', 'Visita sem exigência', 'Multa de dez por cento', 'Prazo até a entrega']) {
-    const x = verBloco(a, 1, [{ tema: 'OUTRO', rotulo, trecho: 'A multa será de 10% e o prazo de entrega de até 10 dias contados da ordem' }]);
-    assert.equal(x.ok, false, rotulo);
-  }
+  for (const x of invertidos) { assert.ok(h.includes(x.trecho), 'o trecho do edital aparece'); assert.ok(!h.includes(x.texto), 'a paráfrase não aparece: ' + x.texto); assert.ok(!h.includes(x.rotulo), 'o rótulo não aparece: ' + x.rotulo); }
 });
 
 test('decisão do coordenador: no resumo e na estratégia, frase com o sentido trocado (negação dupla ou trocada, "até" migrando, "a partir de" × "até") é retirada e listada', () => {
@@ -813,4 +806,40 @@ test('decisão do coordenador: no resumo e na estratégia, frase com o sentido t
   const p = [];
   CTX_FRASE.LicLeit_conferirFrase_('x', { texto: 'Pregão eletrônico.', fontes: ['CAMPO:objeto'] }, { fontes: {}, fabricantes: [], fontesCons: { 'CAMPO:objeto': { texto: 'Pregão eletrônico' } } }, p, false);
   assert.match(p.join(' | '), /sem item citado/);
+});
+
+// ---------------- reconferência de 88c564d (probe9 e probe10) ----------------
+test('reconferência 4: sem rótulo; a frase inteira do edital é a prova (a exceção depois da vírgula aparece e vira pendência); tema conferido por palavras mínimas', () => {
+  const T9 = '[página 1]\n8.1. A vistoria técnica é obrigatória, podendo ser substituída por declaração formal de pleno conhecimento das condições do local.\n8.2. Não será admitida a participação de empresas em consórcio nesta licitação.\n8.3. O pagamento será efetuado em até 30 dias após o aceite da nota fiscal.\n';
+  const a = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: T9, cortado: false }], blocoCar: 5000 });
+  const r = verBloco(a, 1, [
+    { tema: 'VISITA_TECNICA', rotulo: 'Visita técnica obrigatória', trecho: 'A vistoria técnica é obrigatória' },
+    { tema: 'CONSORCIO', rotulo: 'Consórcio permitido e aceito', trecho: 'Não será admitida a participação de empresas em consórcio' },
+    { tema: 'GARANTIA', trecho: 'O pagamento será efetuado em até 30 dias após o aceite da nota fiscal' }
+  ]);
+  assert.equal(r.ok, true, r.p);
+  const [vis, con, pag] = r.itens;
+  assert.equal(vis.trecho, 'A vistoria técnica é obrigatória, podendo ser substituída por declaração formal de pleno conhecimento das condições do local.', 'a frase inteira, com a exceção (a numeração 8.1. fica de fora)');
+  assert.equal(vis.trecho.slice(vis.citado[0], vis.citado[1]), 'A vistoria técnica é obrigatória');
+  assert.deepEqual([vis.tipo, vis.alerta], ['PENDENCIA', 'podendo']);
+  assert.equal(con.trecho, 'Não será admitida a participação de empresas em consórcio nesta licitação.');
+  assert.deepEqual([vis.titulo, con.titulo], [undefined, undefined], 'o rótulo da IA não é guardado');
+  assert.deepEqual([pag.tema, pag.temaIA], ['A_CONFIRMAR', 'GARANTIA'], 'a frase não fala de garantia: tema a confirmar');
+  const cl = a.ctx.LicLeit_checklist_(r.itens), h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(cl) });
+  assert.doesNotMatch(h, /Visita técnica obrigatória|Consórcio permitido e aceito/);
+  assert.match(h, /"<mark>A vistoria técnica é obrigatória<\/mark>, podendo ser substituída por declaração formal/);
+  assert.match(h, /<h4 class="lic-leit-tema">Tema a confirmar<\/h4>[\s\S]*\(a IA indicou "GARANTIA", mas a frase não fala desse tema: confira\)/);
+  // a IA do resumo recebe só o tema e o trecho (frase inteira), sem rótulo
+  const fontes = a.ctx.LicLeit_fontesConsolidacao_(a.op(), cl, [], 'cobertura');
+  const prompt = a.ctx.LicLeit_promptConsolidar_(a.op(), cl, fontes, [], 'cobertura', 'FONTE-x');
+  assert.doesNotMatch(prompt, /Visita técnica obrigatória|Consórcio permitido/);
+  assert.match(prompt, /\[VISITA_TECNICA\] PENDÊNCIA \(confirmar no edital: negação ou exceção perto do trecho, "podendo"\): trecho do edital: "A vistoria técnica é obrigatória, podendo/);
+  // a frase longa demais é cortada em 600 caracteres, com "…", sem cortar o pedaço citado
+  const longa = '[página 1]\n' + 'Cláusula de teste com muitas palavras repetidas para alongar a frase do edital com outras palavras '.repeat(12) + 'e o atestado de capacidade técnica será exigido de todas as licitantes ' + 'com mais palavras repetidas no final da mesma frase longa do edital '.repeat(10) + 'acabando aqui.\n';
+  const b = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: longa, cortado: false }], blocoCar: 5000 });
+  const rl = verBloco(b, 1, [{ tema: 'ATESTADOS', trecho: 'e o atestado de capacidade técnica será exigido de todas as licitantes' }]);
+  assert.equal(rl.ok, true, rl.p);
+  const it = rl.itens[0];
+  assert.ok(it.trecho.length <= 602 && it.cortada && /^…/.test(it.trecho) && /…$/.test(it.trecho), it.trecho.length + ' ' + it.cortada);
+  assert.equal(it.trecho.slice(it.citado[0], it.citado[1]), 'e o atestado de capacidade técnica será exigido de todas as licitantes');
 });
