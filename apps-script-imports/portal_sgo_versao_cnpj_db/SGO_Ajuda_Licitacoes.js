@@ -64,7 +64,7 @@ function SGO_ajudaTelas_Licitacoes_() {
         { titulo: "Filtrar", itens: [
           "Buscar procura no órgão, no objeto, no número de controle, no município e no código LIC.",
           "UF: Brasil inteiro, a prioridade (GO, DF, MG, BA, TO, MT, MS e RJ) ou uma UF.",
-          "Selo: exclusivo ME/EPP, Autorizada Inmetro, exige RBC, acreditação opcional, Lei 13.303 (estatal), suspensa, dedicação exclusiva, software exigido.",
+          "Selo: exclusivo ME/EPP, Autorizada Inmetro, exige RBC, acreditação opcional, rastreabilidade à RBC (não trava), Lei 13.303 (estatal), suspensa, dedicação exclusiva, software exigido.",
           "Onde é a sessão: o portal de disputa quando a fonte permite saber; \"Sistema municipal ou outro\" quando a plataforma da sessão precisa ser lida no edital."
         ] },
         { titulo: "Ler o cartão", itens: [
@@ -77,7 +77,7 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Abrir ficha: resumo, fonte (versões, itens, hashes) e histórico.",
           "Enviar para análise: escreva uma observação se quiser; você fica como responsável.",
           "Descartar: o motivo é obrigatório (pelo menos 10 letras) e fica no histórico com o seu nome e a data.",
-          "Reabrir: devolve uma descartada ao radar; o motivo é obrigatório.",
+          "Reabrir: devolve uma descartada ao radar; o motivo é obrigatório. Depois de reaberta pela Diretoria, a regra do radar não descarta de novo (a triagem nova fica só no histórico).",
           "Abrir no portal: abre o processo no sistema de origem em nova aba (quando a fonte informa o link). Ver no PNCP: abre a página da contratação no PNCP."
         ] },
         { titulo: "Ficha da licitação", itens: [

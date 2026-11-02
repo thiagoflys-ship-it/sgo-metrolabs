@@ -89,7 +89,7 @@ var LIC_PORTAIS_SEMENTE = [
 var LIC_TERMOS_PADRAO = {
   positivos: 'calibração, aferição, metrologia, qualificação térmica e de equipamento, validação de processo de esterilização, mapeamento térmico, termodesinfectora, lavadora ultrassônica, autoclave, esterilização, seladora, NR-13, vaso de pressão, caldeira, válvula de segurança, engenharia clínica, registrador de temperatura, osmose reversa, termo-higrômetro, esfigmomanômetro, manutenção de equipamentos de saúde ou laboratório',
   negativos: 'castração e esterilização de animais, reagentes e soluções de calibração, borracharia e calibragem de pneus, embalagem para esterilização, terceirização da esterilização de materiais, vidraria calibrada, equipamento de pavimento, audiologia, nobreak, locação de equipamento, insumos para CME',
-  travas: 'exige acreditação RBC (salvo quando opcional), dedicação exclusiva de mão de obra, software de gestão exigido, suspensa na fonte, exclusivo ME/EPP com a matriz fora do porte',
+  travas: 'exige acreditação RBC (salvo quando opcional ou quando pede só certificado rastreável à RBC), dedicação exclusiva de mão de obra, software de gestão exigido, suspensa na fonte, exclusivo ME/EPP com a matriz fora do porte',
   produto: 'dois sinais juntos: objeto de aquisição ou fornecimento, itens de material, especificação construtiva, garantia de fábrica ou prazo de entrega, adesão a ata, lista de insumos, objeto sem serviço'
 };
 
@@ -116,6 +116,8 @@ function Lic_hash_(texto) {
 function Lic_ler_(aba) {
   try { return SGO_DATA.getAll(aba) || []; } catch (e) { if (/Aba não encontrada/i.test(String((e && e.message) || e))) return []; throw e; }
 }
+/** Endereço externo (vem do PNCP, dado do órgão): só http/https, sem espaço nem aspas; o resto vira '' (nunca vai a um href). */
+function Lic_url_(v) { var t = Lic_s_(v); return /^https?:\/\/[^\s"'<>`]+$/i.test(t) ? t : ''; }
 function Lic_lista_(v) {
   return (Array.isArray(v) ? v : Lic_s_(v).split(/[,;\n]+/)).map(function (x) { return Lic_s_(x); }).filter(Boolean);
 }

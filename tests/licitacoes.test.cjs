@@ -252,6 +252,61 @@ test('retificação na fonte: campos da fonte acompanham a versão nova e o hist
   assert.ok(a.hist('TRIAGEM').some((h) => h.ENTIDADE_ID === an.ID && h.DE === 'TRAVADA' && h.PARA === 'CANDIDATA'));
 });
 
+test('revisão: reaberta pela Diretoria não é descartada de novo pela regra; link que não é http/https não é gravado', () => {
+  const a = ambiente();
+  a.coletor.itens = [item('PNCP:' + CAJAMAR.numeroControlePncp, 1, Object.assign({}, CAJAMAR, { linkSistemaOrigem: 'javascript:alert(1)', linkPncp: 'https://pncp.gov.br/app/editais/46523023000181/2026/171' }), TRI_CAJAMAR)];
+  a.ctx.Lic_sincronizar_(null);
+  const ca = op(a, CAJAMAR.numeroControlePncp);
+  assert.equal(ca.SITUACAO, 'DESCARTADA');
+  assert.equal(ca.LINK_ORIGEM, '', 'javascript: não vira link');
+  assert.equal(ca.LINK_PNCP, 'https://pncp.gov.br/app/editais/46523023000181/2026/171');
+  assert.equal(a.api('s_dora', 'reabrir', { id: ca.ID, motivo: 'O edital inclui qualificação da autoclave do centro cirúrgico' }).ok, true);
+  assert.equal(ca.DESCARTE_ORIGEM, 'REABERTA');
+  // regras novas (outro motivo de descarte): a regra não desfaz a reabertura; a triagem nova fica no histórico
+  a.coletor.itens = [item('PNCP:' + CAJAMAR.numeroControlePncp, 1, CAJAMAR, Object.assign({}, TRI_CAJAMAR, { motivo: 'Descartada pela regra: prazo vencido.', regra: 'prazo_vencido', versao: '2026-11-01.2:def' }), { alteradoEm: '2026-11-02T10:00:00.000Z' })];
+  const s = a.ctx.Lic_sincronizar_(null);
+  assert.equal(s.triagemMudou, 1);
+  assert.equal(s.situacaoMudou, 0);
+  assert.equal(ca.SITUACAO, 'RADAR', 'decisão da Diretoria (reabrir) não é desfeita pela regra');
+  assert.equal(ca.TRIAGEM_REGRA, 'prazo_vencido');
+  assert.ok(a.hist('TRIAGEM').some((h) => h.ENTIDADE_ID === ca.ID && /prazo vencido/.test(h.TEXTO)));
+  // descartar de novo é decisão de pessoa e vale
+  assert.equal(a.api('s_dora', 'descartar', { id: ca.ID, motivo: 'Prazo encerrado, não dá para participar' }).ok, true);
+  assert.equal(ca.DESCARTE_ORIGEM, 'PESSOA');
+});
+
+test('revisão: sincronia por página grava o cursor a cada página e solta a trava entre elas (falha no meio não perde o que já entrou)', () => {
+  const a = ambiente();
+  const travas = [];
+  a.ctx.LockService = { getScriptLock: () => ({ waitLock() { travas.push('pega'); }, releaseLock() { travas.push('solta'); } }) };
+  const base = [IMBEL, ANSN, CAJAMAR].map((c, i) => item('PNCP:' + c.numeroControlePncp, 1, c, [TRI_IMBEL, TRI_ANSN, TRI_CAJAMAR][i], { alteradoEm: '2026-11-01T22:00:0' + i + '.000Z' }));
+  let chamadas = 0;
+  a.ctx.SGO_LICITACOES.listar = (f) => {
+    chamadas++;
+    if (chamadas === 3) throw new Error('ponte caiu');
+    const d = String((f && f.desde) || ''); const resto = base.filter((i) => i.alteradoEm > d), l = resto.slice(0, 1);
+    return { itens: l, ate: l.length ? l[0].alteradoEm : d, mais: resto.length > 1 };
+  };
+  assert.throws(() => a.ctx.Lic_sincronizar_(null), /ponte caiu/);
+  assert.equal(a.tabelas.LIC_OPORTUNIDADES.length, 2, 'as duas primeiras páginas ficaram');
+  assert.equal(a.props.LIC_SYNC_DESDE, '2026-11-01T22:00:01.000Z', 'cursor gravado na última página concluída');
+  assert.deepEqual(travas, ['pega', 'solta', 'pega', 'solta', 'pega', 'solta'], 'uma trava curta por página');
+  const s = a.ctx.Lic_sincronizar_(null);
+  assert.equal(s.novas, 1);
+  assert.equal(a.tabelas.LIC_OPORTUNIDADES.length, 3, 'continua de onde parou, sem duplicar');
+  // a tela traz no máximo 5 páginas e avisa que há mais
+  const b = ambiente();
+  let n = 0;
+  b.ctx.SGO_LICITACOES.listar = () => {
+    n++;
+    const nc = '00000000000000-1-00000' + n + '/2026', em = '2026-11-01T22:00:' + String(n).padStart(2, '0') + '.000Z';
+    return { itens: [item('PNCP:' + nc, 1, Object.assign({}, IMBEL, { numeroControlePncp: nc }), TRI_IMBEL, { alteradoEm: em })], ate: em, mais: true };
+  };
+  const r = b.api('s_dora', 'sincronizar', {});
+  assert.equal(r.sincronia.paginas, 5);
+  assert.equal(r.sincronia.mais, true);
+});
+
 test('ações da Diretoria: descartar exige motivo; enviar para análise; reabrir; situação concorrente é recusada; tudo no histórico', () => {
   const a = ambiente();
   a.coletor.itens = [item('PNCP:' + IMBEL.numeroControlePncp, 1, IMBEL, TRI_IMBEL)];
@@ -373,8 +428,8 @@ test('telas: menu e casca no computador e no celular (390 px), cartão no padrã
   assert.match(c, /class="lic-motivo pend">PENDENTE: Quantidade/);
   assert.match(c, /cm-selo azul">Lei 13.303\/2016 \(estatal\)/);
   assert.match(c, /cm-selo laranja">Versão 2 da fonte/);
-  assert.match(c, /href="https:\/\/cnetmobile[^"]+" target="_blank" rel="noopener"[^>]*>Abrir no portal<\/a>/);
-  assert.match(c, /href="https:\/\/pncp.gov.br\/app\/editais\/00444232000139\/2026\/1311" target="_blank" rel="noopener"[^>]*>Ver no PNCP<\/a>/);
+  assert.match(c, /href="https:\/\/cnetmobile[^"]+" target="_blank" rel="noopener noreferrer"[^>]*>Abrir no portal<\/a>/);
+  assert.match(c, /href="https:\/\/pncp.gov.br\/app\/editais\/00444232000139\/2026\/1311" target="_blank" rel="noopener noreferrer"[^>]*>Ver no PNCP<\/a>/);
   assert.match(c, /data-lic-analise="id1">Enviar para análise/);
   assert.match(c, /data-lic-descartar="id1">Descartar/);
   assert.match(c, /\(Brasília, presumido\)/);
@@ -396,11 +451,21 @@ test('telas: menu e casca no computador e no celular (390 px), cartão no padrã
   const portais = pc.ctx.Lic_htmlPortais_({ porTipo: { A: 2, B: 1, C: 7, E: 23 }, coletor: { noServidor: true, ligado: false }, portais: [
     { codigo: 'PUB-001', nome: 'PNCP', categoria: 'PUB', tipo: 'A', tipoNome: 'API pública', situacao: 'Em teste', ligado: true, url: 'https://pncp.gov.br', testavel: true },
     { codigo: 'PUB-004', nome: 'BLL Compras', categoria: 'PUB', tipo: 'E', tipoNome: 'Operação manual assistida', situacao: 'Não configurado', ligado: false, url: 'https://bllcompras.com', testavel: false, alternativo: 'Publicação pelo PNCP' }] }, '');
-  assert.match(portais, /href="https:\/\/pncp.gov.br" target="_blank" rel="noopener" title="Abre o portal em nova aba">Acessar<\/a>/);
+  assert.match(portais, /href="https:\/\/pncp.gov.br" target="_blank" rel="noopener noreferrer" title="Abre o portal em nova aba">Acessar<\/a>/);
   assert.match(portais, /data-lic-testar="PUB-001">Testar conexão/);
   assert.doesNotMatch(portais, /data-lic-testar="PUB-004"/);
   assert.match(portais, /Coletor <b>desligado<\/b>/);
   assert.match(portais, /<span class="lic-tipo E"/);
+
+  // revisão de 01/11/2026: link vindo do PNCP (dado do órgão) só vai a um href se for http/https
+  const mau = pc.ctx.Lic_cartaoHtml_(Object.assign({}, CARTAO, { linkOrigem: 'javascript:alert(document.cookie)', linkPncp: 'data:text/html,<script>x</script>' }));
+  assert.doesNotMatch(mau, /javascript:|data:text/i);
+  assert.doesNotMatch(mau, />Abrir no portal<|>Ver no PNCP</);
+  const fichaMa = pc.ctx.Lic_htmlFicha_({ op: Object.assign({}, CARTAO, { linkOrigem: ' JavaScript:alert(1)', linkPncp: 'https://x/"onmouseover="alert(1)' }), historico: [], fonte: null }, 'fonte');
+  assert.doesNotMatch(fichaMa, /href="[^"]*(javascript|onmouseover)/i);
+  const portalMau = pc.ctx.Lic_htmlPortais_({ porTipo: {}, portais: [{ codigo: 'SAU-009', nome: 'X', categoria: 'SAU', tipo: 'E', situacao: 'Não configurado', url: 'javascript:alert(1)', testavel: false }] }, '');
+  assert.doesNotMatch(portalMau, /javascript:/);
+  assert.match(pc.ctx.Lic_motivosHtml_(Object.assign({}, CARTAO, { situacao: 'RADAR', triagem: 'DESCARTADA', descarteOrigem: 'REABERTA', motivo: 'Descartada pela regra: x', pendencias: [] })), /Reaberta pela Diretoria[\s\S]*class="lic-motivo ">Descartada pela regra/);
 
   // celular de 390 px: nada com largura fixa maior que a tela; ações e cartões quebram linha; toque de 44 px
   const css = pc.html.slice(pc.html.indexOf('<style>'), pc.html.indexOf('</style>'));

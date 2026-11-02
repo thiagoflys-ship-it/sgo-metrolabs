@@ -26,7 +26,7 @@ var LIC_ACOES = {
   descartar: function (eu, d) { return Lic_descartar_(eu, d); },
   enviarAnalise: function (eu, d) { return Lic_enviarAnalise_(eu, d); },
   reabrir: function (eu, d) { return Lic_reabrir_(eu, d); },
-  sincronizar: function (eu) { return { sincronia: Lic_sincronizar_(eu) }; },
+  sincronizar: function (eu) { return { sincronia: Lic_sincronizar_(eu, { voltas: 5 }) }; },
   coletarAgora: function (eu) { return Lic_coletarAgora_(eu); },
   portais: function (eu) { return Lic_portais_(eu); },
   portalSalvar: function (eu, d) { return Lic_portalSalvar_(eu, d); },
@@ -79,7 +79,7 @@ function Lic_camposFonte_(it) {
     VALOR_ESTIMADO: c.valorEstimado === null || c.valorEstimado === undefined ? '' : Number(c.valorEstimado),
     ABERTURA_PROPOSTAS: Lic_s_(c.aberturaTexto), ENCERRAMENTO_PROPOSTAS: Lic_s_(c.encerramentoTexto), ENCERRAMENTO_ISO: Lic_s_(c.encerramentoEm),
     FUSO: Lic_s_(c.fuso), FUSO_PRESUMIDO: c.fusoPresumido ? 'SIM' : 'NAO', FUSO_ALERTA: Lic_s_(c.fusoAlerta), SITUACAO_FONTE: Lic_s_(c.situacaoNome),
-    LINK_ORIGEM: Lic_s_(c.linkSistemaOrigem || c.linkProcesso), LINK_PNCP: Lic_s_(c.linkPncp), VERSAO_FONTE: Number(it.versao) || 1, VERSAO_HASH: Lic_s_(it.hash),
+    LINK_ORIGEM: Lic_url_(c.linkSistemaOrigem) || Lic_url_(c.linkProcesso), LINK_PNCP: Lic_url_(c.linkPncp), VERSAO_FONTE: Number(it.versao) || 1, VERSAO_HASH: Lic_s_(it.hash),
     BRUTO_HASH: Lic_s_(it.brutoHash), ATUALIZACAO_FONTE: Lic_s_(c.atualizacaoGlobalTexto), PRIMEIRA_COLETA_EM: Lic_s_(it.primeiraColetaEm)
   };
 }
@@ -101,20 +101,29 @@ function Lic_proximoCodigo_(lista) {
 
 /**
  * Traz do coletor o que mudou desde a última sincronia (LIC_SYNC_DESDE). Idempotente: a mesma versão não gera nada.
- * eu = quem pediu (tela) ou null (rotina do servidor).
+ * eu = quem pediu (tela) ou null (rotina do servidor). o.voltas = páginas de 200 (padrão 25; a tela usa 5).
+ *
+ * Revisão de 01/11/2026: a trava do script (a mesma de todos os módulos) fica presa só durante UMA página, e o cursor
+ * é gravado ao fim de cada página. Antes a sincronia inteira (até 5.000 linhas) segurava a trava — as gravações dos
+ * outros módulos esperavam e desistiam — e o cursor só era gravado no fim: uma execução cortada pelo limite de tempo
+ * recomeçava do zero. As linhas são relidas dentro da trava a cada página, para não decidir com a situação velha de
+ * algo que a Diretoria mudou entre uma página e outra.
  */
-function Lic_sincronizar_(eu) {
+function Lic_sincronizar_(eu, o) {
   if (!Lic_temColetor_()) return { ok: false, motivo: LIC_MSG_SEM_COLETOR + '.' };
-  return Lic_comTrava_(function () {
-    var props = PropertiesService.getScriptProperties();
-    var desde = Lic_s_(props.getProperty('LIC_SYNC_DESDE'));
-    var linhas = Lic_ler_(LIC_ABAS.OPORTUNIDADES), porChave = {};
-    linhas.forEach(function (l) { if (Lic_s_(l.CHAVE_FONTE)) porChave[Lic_s_(l.CHAVE_FONTE)] = l; });
-    var r = { ok: true, lidas: 0, novas: 0, retificadas: 0, triagemMudou: 0, situacaoMudou: 0, ate: desde };
-    var sistema = { id: '', nome: 'Coletor de licitações (servidor)' }, agora = Lic_agora_();
-    for (var volta = 0; volta < 25; volta++) {
+  o = o || {};
+  var props = PropertiesService.getScriptProperties();
+  var maxVoltas = Math.max(1, Math.min(25, Number(o.voltas) || 25));
+  var r = { ok: true, lidas: 0, novas: 0, retificadas: 0, triagemMudou: 0, situacaoMudou: 0, paginas: 0, mais: false, ate: Lic_s_(props.getProperty('LIC_SYNC_DESDE')) };
+  var sistema = { id: '', nome: 'Coletor de licitações (servidor)' };
+  for (var volta = 0; volta < maxVoltas; volta++) {
+    var continuar = Lic_comTrava_(function () {
+      var desde = Lic_s_(props.getProperty('LIC_SYNC_DESDE'));   // relido na trava: duas sincronias seguem o mesmo cursor
       var pag = SGO_LICITACOES.listar({ desde: desde, limite: 200 }) || {};
       var itens = Array.isArray(pag.itens) ? pag.itens : [];
+      if (!itens.length) { r.ate = desde; return false; }
+      var linhas = Lic_ler_(LIC_ABAS.OPORTUNIDADES), porChave = {}, agora = Lic_agora_();
+      linhas.forEach(function (l) { if (Lic_s_(l.CHAVE_FONTE)) porChave[Lic_s_(l.CHAVE_FONTE)] = l; });
       itens.forEach(function (it) {
         r.lidas++;
         var fonte = Lic_camposFonte_(it), tri = Lic_camposTriagem_(it.triagem), atual = porChave[fonte.CHAVE_FONTE];
@@ -148,7 +157,8 @@ function Lic_sincronizar_(eu) {
           r.triagemMudou++;
           Lic_historico_('OPORTUNIDADE', atual.ID, atual.CODIGO, 'TRIAGEM', sistema, { de: Lic_s_(atual.TRIAGEM), para: tri.TRIAGEM, texto: tri.TRIAGEM_MOTIVO, versao: fonte.VERSAO_FONTE, fonte: 'Regras do radar ' + tri.TRIAGEM_VERSAO, hash: fonte.VERSAO_HASH });
           var sit = Lic_s_(atual.SITUACAO), novaSit = '';
-          if (sit === 'RADAR' && tri.TRIAGEM === 'DESCARTADA') novaSit = 'DESCARTADA';
+          // reaberta pela Diretoria (DESCARTE_ORIGEM = REABERTA): a regra não descarta de novo; a triagem nova fica só no histórico
+          if (sit === 'RADAR' && tri.TRIAGEM === 'DESCARTADA' && Lic_s_(atual.DESCARTE_ORIGEM) !== 'REABERTA') novaSit = 'DESCARTADA';
           if (sit === 'DESCARTADA' && Lic_s_(atual.DESCARTE_ORIGEM) === 'REGRA' && tri.TRIAGEM !== 'DESCARTADA') novaSit = 'RADAR';
           if (novaSit) {
             mud.SITUACAO = novaSit; mud.SITUACAO_DESDE = agora; r.situacaoMudou++;
@@ -161,13 +171,15 @@ function Lic_sincronizar_(eu) {
         SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, atual.ID, mud);
         Object.keys(mud).forEach(function (k) { atual[k] = mud[k]; });
       });
-      if (pag.ate) desde = Lic_s_(pag.ate);
-      if (!pag.mais) break;
-    }
-    props.setProperty('LIC_SYNC_DESDE', desde);
-    r.ate = desde;
-    return r;
-  });
+      var ate = pag.ate ? Lic_s_(pag.ate) : desde;
+      props.setProperty('LIC_SYNC_DESDE', ate);
+      r.ate = ate; r.paginas++;
+      return !!pag.mais;
+    });
+    if (!continuar) break;
+    if (volta === maxVoltas - 1) r.mais = true;
+  }
+  return r;
 }
 
 // ------------------------------------------------------------ leitura para as telas
@@ -185,7 +197,7 @@ function Lic_cartao_(l, portais) {
     regra: Lic_s_(l.TRIAGEM_REGRA), selos: Lic_selos_(l), pendencias: Lic_json_(l.PENDENCIAS_JSON, []), prioridade: Number(l.PRIORIDADE_UF) || 0,
     situacao: Lic_s_(l.SITUACAO), situacaoNome: LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || Lic_s_(l.SITUACAO), situacaoDesde: Lic_s_(l.SITUACAO_DESDE),
     descarteOrigem: Lic_s_(l.DESCARTE_ORIGEM), descarteMotivo: Lic_s_(l.DESCARTE_MOTIVO), descartePor: Lic_s_(l.DESCARTE_POR_NOME), descarteEm: Lic_s_(l.DESCARTE_EM), analiseObs: Lic_s_(l.ANALISE_OBS),
-    linkOrigem: Lic_s_(l.LINK_ORIGEM), linkPncp: Lic_s_(l.LINK_PNCP), versao: Number(l.VERSAO_FONTE) || 1, retificadaEm: Lic_s_(l.RETIFICADA_EM), responsavel: Lic_s_(l.RESPONSAVEL_NOME)
+    linkOrigem: Lic_url_(l.LINK_ORIGEM), linkPncp: Lic_url_(l.LINK_PNCP), versao: Number(l.VERSAO_FONTE) || 1, retificadaEm: Lic_s_(l.RETIFICADA_EM), responsavel: Lic_s_(l.RESPONSAVEL_NOME)
   };
 }
 function Lic_abaDe_(l) {
@@ -268,7 +280,7 @@ function Lic_enviarAnalise_(eu, d) {
 function Lic_reabrir_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva por que a oportunidade volta para o radar (pelo menos 10 letras). Nada foi alterado');
-  return Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: '' }, 'reabrir');
+  return Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: 'REABERTA' }, 'reabrir');
 }
 
 function Lic_situacaoColetor_() {
@@ -306,7 +318,7 @@ function Lic_portalParaTela_(p) {
   var ref = Lic_s_(p.CREDENCIAL_REF), existe = false;
   if (ref) { try { existe = PropertiesService.getScriptProperties().getProperty(ref) !== null; } catch (e) { existe = false; } }
   return {
-    id: Lic_s_(p.ID), codigo: Lic_up_(p.CODIGO), nome: Lic_s_(p.NOME), categoria: Lic_s_(p.CATEGORIA), url: Lic_s_(p.URL), urlApi: Lic_s_(p.URL_API), documentacao: Lic_s_(p.DOCUMENTACAO),
+    id: Lic_s_(p.ID), codigo: Lic_up_(p.CODIGO), nome: Lic_s_(p.NOME), categoria: Lic_s_(p.CATEGORIA), url: Lic_url_(p.URL), urlApi: Lic_url_(p.URL_API), documentacao: Lic_url_(p.DOCUMENTACAO),
     tipo: Lic_up_(p.TIPO), tipoNome: LIC_TIPOS_PORTAL[Lic_up_(p.TIPO)] || '', autenticacao: Lic_s_(p.AUTENTICACAO), credencialRef: ref, credencialExiste: existe, situacao: Lic_s_(p.SITUACAO),
     prioridade: Lic_s_(p.PRIORIDADE), ligado: Lic_up_(p.LIGADO) === 'SIM', positivas: Lic_s_(p.PALAVRAS_POSITIVAS), negativas: Lic_s_(p.PALAVRAS_NEGATIVAS), ufs: Lic_s_(p.UFS),
     valorMinimo: Lic_num_(p.VALOR_MINIMO) || 0, frequenciaMin: Number(p.FREQUENCIA_MIN) || 0, responsavelId: Lic_s_(p.RESPONSAVEL_ID), responsavelNome: Lic_s_(p.RESPONSAVEL_NOME),

@@ -73,7 +73,7 @@
     analise: "Enviadas para análise pela Diretoria. A análise técnica, documental e financeira com IA chega na próxima etapa.",
     descartadas: "Descartadas pela regra do radar (com o motivo e o trecho da fonte) ou pela Diretoria (com o motivo escrito). Podem ser reabertas."
   };
-  var LIC_SELOS_FILTRO = [["epp", "Exclusivo ME/EPP"], ["inmetro", "Autorizada Inmetro"], ["rbc", "Exige acreditação RBC"], ["rbc_opcional", "Acreditação opcional"], ["lei", "Lei 13.303/2016 (estatal)"], ["suspensa", "Suspensa na fonte"], ["dedicacao", "Dedicação exclusiva"], ["software", "Software exigido"]];
+  var LIC_SELOS_FILTRO = [["epp", "Exclusivo ME/EPP"], ["inmetro", "Autorizada Inmetro"], ["rbc", "Exige acreditação RBC"], ["rbc_opcional", "Acreditação opcional"], ["rbc_rastreavel", "Rastreabilidade à RBC"], ["lei", "Lei 13.303/2016 (estatal)"], ["suspensa", "Suspensa na fonte"], ["dedicacao", "Dedicação exclusiva"], ["software", "Software exigido"]];
   var LIC_UFS_PRIO = ["GO", "DF", "MG", "BA", "TO", "MT", "MS", "RJ"];
   var LIC_UFS_TODAS = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
   var LIC_CATEGORIAS = [["", "Todas (33)"], ["PUB", "Públicos nacionais"], ["EST", "Estaduais"], ["SAU", "Compras hospitalares"], ["IND", "Corporativas e industriais"]];
@@ -81,6 +81,8 @@
 
   function Lic_$_(id) { return document.getElementById(id); }
   function Lic_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  /** Endereço externo (PNCP, portal): só http/https vai a um href; o resto (javascript:, data:, aspas) vira "". */
+  function Lic_url_(v) { var t = String(v === null || v === undefined ? "" : v).trim(); return /^https?:\/\/[^\s"'<>`]+$/i.test(t) ? t : ""; }
   function Lic_brl_(v) { if (v === null || v === undefined || v === "" || !isFinite(Number(v))) return "não informado"; return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
   /** Texto da fonte sem fuso ("2026-11-13T08:00:00") → "sex 13/11/2026 08:00" sem converter (é o horário de Brasília presumido). */
   function Lic_dataFonte_(t) {
@@ -193,7 +195,7 @@
     Lic_chamar_("sincronizar", {}, function (r) {
       var s = r.sincronia || {};
       if (s.ok === false) Lic_toast_(s.motivo || "Sem coletor neste ambiente.", "erro");
-      else Lic_toast_("Atualizado: " + (s.novas || 0) + " novas, " + (s.retificadas || 0) + " com versão nova da fonte, " + (s.triagemMudou || 0) + " com triagem refeita.");
+      else Lic_toast_("Atualizado: " + (s.novas || 0) + " novas, " + (s.retificadas || 0) + " com versão nova da fonte, " + (s.triagemMudou || 0) + " com triagem refeita." + (s.mais ? " Ainda há mais: toque em \"Atualizar\" de novo (a rotina do servidor também continua sozinha)." : ""));
       Licitacoes_render_(LIC.mod);
     }, null, { carregando: "Trazendo o que o coletor encontrou…" });
   }
@@ -270,7 +272,7 @@
     if (o.sessao) return "sessão em: " + o.sessao;
     return o.publicadoPor ? "publicado por: " + o.publicadoPor + " (plataforma da sessão: ler no edital)" : "plataforma da sessão: ler no edital";
   }
-  function Lic_linkPortal_(o) { return o.linkOrigem || o.linkPncp || ""; }
+  function Lic_linkPortal_(o) { return Lic_url_(o.linkOrigem) || Lic_url_(o.linkPncp); }
   function Lic_acoesCartaoHtml_(o, naFicha) {
     var id = Lic_esc_(o.id), b = "";
     if (!naFicha) b += '<button type="button" class="btn-primary" data-lic-ficha="' + id + '">Abrir ficha</button>';
@@ -278,13 +280,14 @@
     if (o.situacao === "RADAR" || o.situacao === "ANALISE") b += '<button type="button" class="btn-secondary" data-lic-descartar="' + id + '">Descartar</button>';
     if (o.situacao === "DESCARTADA") b += '<button type="button" class="btn-secondary" data-lic-reabrir="' + id + '">Reabrir</button>';
     var link = Lic_linkPortal_(o);
-    if (link) b += '<a class="btn-secondary" href="' + Lic_esc_(link) + '" target="_blank" rel="noopener" title="Abre o processo no portal de origem, em nova aba">Abrir no portal</a>';
-    if (o.linkPncp && o.linkPncp !== link) b += '<a class="btn-secondary" href="' + Lic_esc_(o.linkPncp) + '" target="_blank" rel="noopener" title="Abre a contratação no site do PNCP, em nova aba">Ver no PNCP</a>';
+    if (link) b += '<a class="btn-secondary" href="' + Lic_esc_(link) + '" target="_blank" rel="noopener noreferrer" title="Abre o processo no portal de origem, em nova aba">Abrir no portal</a>';
+    if (Lic_url_(o.linkPncp) && o.linkPncp !== link) b += '<a class="btn-secondary" href="' + Lic_esc_(Lic_url_(o.linkPncp)) + '" target="_blank" rel="noopener noreferrer" title="Abre a contratação no site do PNCP, em nova aba">Ver no PNCP</a>';
     return b;
   }
   function Lic_motivosHtml_(o) {
-    var cls = o.situacao === "DESCARTADA" || o.triagem === "TRAVADA" ? "" : "forte";
+    var cls = o.situacao === "DESCARTADA" || o.triagem === "TRAVADA" || o.triagem === "DESCARTADA" ? "" : "forte";
     var h = "";
+    if (o.situacao !== "DESCARTADA" && o.descarteOrigem === "REABERTA") h += '<p class="lic-motivo pend">Reaberta pela Diretoria (ver o histórico): a regra do radar não descarta de novo; a triagem abaixo é só informação.</p>';
     if (o.situacao === "DESCARTADA" && o.descarteOrigem === "PESSOA") h += '<p class="lic-motivo">Descartada por ' + Lic_esc_(o.descartePor) + " em " + Lic_esc_(Lic_dataHora_(o.descarteEm)) + ": " + Lic_esc_(o.descarteMotivo) + "</p>";
     if (o.motivo) h += '<p class="lic-motivo ' + cls + '">' + Lic_esc_(o.motivo) + "</p>";
     if (o.trecho) h += '<blockquote class="lic-trecho">"' + Lic_esc_(o.trecho) + '"<cite>Fonte: ' + Lic_esc_(o.fonteTrecho ? (o.fonteTrecho === "objeto" ? "objeto da contratação" : o.fonteTrecho) : "fonte") + " (PNCP" + (o.numeroControle ? ", " + Lic_esc_(o.numeroControle) : "") + ")</cite></blockquote>";
@@ -333,6 +336,7 @@
       '<p class="cm-txt"><span class="cm-selo azul">Empate ficto (EPP)</span> Em pregão, lance até 5% acima do melhor lance de empresa que não é ME/EPP pode ser coberto (LC 123, arts. 44 e 45).</p>' +
       '<p class="cm-txt"><span class="cm-selo verde">Autorizada Inmetro</span> Ponto forte: a Metrolabs tem registro no Inmetro para balanças e esfigmomanômetros (escopo exato a confirmar com o documento).</p>' +
       '<p class="cm-txt"><span class="cm-selo vermelho">Exige acreditação RBC — não atendemos</span> A Metrolabs não é acreditada RBC (ISO/IEC 17025); as calibrações são rastreáveis. Fica travada com a pendência "o edital aceita rastreabilidade ou subcontratação de laboratório acreditado?".</p>' +
+      '<p class="cm-txt"><span class="cm-selo laranja">Rastreabilidade à RBC: atendemos com padrões rastreáveis (conferir)</span> O edital pede só certificado rastreável à RBC, não laboratório acreditado: não trava, mas confira no edital.</p>' +
       '<p class="cm-txt"><span class="cm-selo azul">Lei 13.303/2016 (estatal)</span> A lei vem do amparo legal da contratação, não da modalidade: estatal segue regulamento próprio e prazos diferentes.</p></details>';
   }
   function Lic_htmlListaItens_(d, aba, f) {
@@ -426,8 +430,8 @@
       var f = d.fonte;
       h += (d.fonteAviso ? Lic_faixa_(d.fonteAviso, "aviso") : "") + '<div class="cm-caixa"><h3>De onde veio</h3>' + Lic_tabelaHtml_(["Campo", "Valor"], [
         ["Fonte", Lic_esc_(o.portalOrigem)], ["Onde é a sessão", Lic_esc_(o.sessao || "ler no edital")], ["Publicado no PNCP por", Lic_esc_(o.publicadoPor || "não informado")],
-        ["Link do sistema de origem", o.linkOrigem ? '<a href="' + Lic_esc_(o.linkOrigem) + '" target="_blank" rel="noopener">abrir em nova aba</a>' : "não informado pela fonte"],
-        ["Página no PNCP", o.linkPncp ? '<a href="' + Lic_esc_(o.linkPncp) + '" target="_blank" rel="noopener">abrir em nova aba</a>' : "—"],
+        ["Link do sistema de origem", Lic_url_(o.linkOrigem) ? '<a href="' + Lic_esc_(Lic_url_(o.linkOrigem)) + '" target="_blank" rel="noopener noreferrer">abrir em nova aba</a>' : "não informado pela fonte"],
+        ["Página no PNCP", Lic_url_(o.linkPncp) ? '<a href="' + Lic_esc_(Lic_url_(o.linkPncp)) + '" target="_blank" rel="noopener noreferrer">abrir em nova aba</a>' : "—"],
         ["Órgão (CNPJ)", '<span class="lic-mono">' + Lic_esc_(o.orgaoCnpj) + "</span>"], ["Compra no Compras.gov.br", '<span class="lic-mono">' + Lic_esc_(o.idComprasGov || "—") + "</span>"],
         ["Abertura das propostas", Lic_esc_(Lic_dataFonte_(o.abertura))], ["Encerramento das propostas", Lic_esc_(Lic_dataFonte_(o.encerramento))],
         ["Fuso", Lic_esc_(o.fusoAlerta || "não informado")], ["Situação na fonte", Lic_esc_(o.situacaoFonte || "—")], ["Última atualização na fonte", Lic_esc_(o.atualizacaoFonte || "—")],
@@ -486,7 +490,7 @@
       '<p class="cm-modo-dica"><span class="lic-tipo A">A</span> API pública · <span class="lic-tipo B">B</span> API com chave · <span class="lic-tipo C">C</span> parceiro comercial · <span class="lic-tipo D">D</span> consulta automatizada permitida · <span class="lic-tipo E">E</span> manual assistida. Os editais dos portais públicos chegam pelo PNCP; sessão, lances e chat não.</p>' +
       '<div class="cm-filtros"><div><label for="licFCat">Categoria</label><select id="licFCat">' + Lic_opcoes_(LIC_CATEGORIAS, cat) + "</select></div></div>" +
       '<div class="cm-caixa">' + Lic_tabelaHtml_(["Código", "Portal", "Tipo", "Situação", "Último teste", "Ação"], lista.map(function (p) {
-        var acoes = '<div class="lic-acoes-linha"><a class="btn-secondary" href="' + Lic_esc_(p.url) + '" target="_blank" rel="noopener" title="Abre o portal em nova aba">Acessar</a><button type="button" class="btn-secondary" data-lic-param="' + Lic_esc_(p.codigo) + '">Parametrizar</button>' +
+        var acoes = '<div class="lic-acoes-linha">' + (Lic_url_(p.url) ? '<a class="btn-secondary" href="' + Lic_esc_(Lic_url_(p.url)) + '" target="_blank" rel="noopener noreferrer" title="Abre o portal em nova aba">Acessar</a>' : "") + '<button type="button" class="btn-secondary" data-lic-param="' + Lic_esc_(p.codigo) + '">Parametrizar</button>' +
           (p.testavel ? '<button type="button" class="btn-secondary" data-lic-testar="' + Lic_esc_(p.codigo) + '">Testar conexão</button>' : "") + "</div>" +
           (p.testavel ? "" : '<span class="cm-meta" style="display:block;margin-top:4px">' + Lic_esc_(p.tipo === "C" ? "Integração depende de contrato ou documentação da plataforma." : p.tipo === "B" ? "API com chave: falta a credencial." : "Sem API: " + (p.alternativo || "e-mail da plataforma e operação assistida.")) + "</span>");
         return ['<span class="lic-mono">' + Lic_esc_(p.codigo) + "</span>", "<b>" + Lic_esc_(p.nome) + "</b>" + (p.responsavelNome ? '<span class="cm-meta" style="display:block">Responsável: ' + Lic_esc_(p.responsavelNome) + "</span>" : ""),
@@ -569,7 +573,7 @@
   function Lic_htmlParametrizar_(p, d) {
     var resp = [["", "Sem responsável"]].concat((d.responsaveis || []).map(function (u) { return [u.id, u.nome + " (" + (u.perfil === "ADMIN" ? "Administrador" : "Diretoria") + ")"]; }));
     var freqs = (d.frequencias || []).map(function (f) { return [String(f), f < 60 ? f + " minutos" : f === 1440 ? "1 vez por dia" : (f / 60) + (f === 60 ? " hora" : " horas")]; });
-    return '<p class="cm-meta">' + Lic_esc_(p.codigo) + " · tipo " + Lic_esc_(p.tipo) + " (" + Lic_esc_(p.tipoNome) + ') · <a href="' + Lic_esc_(p.url) + '" target="_blank" rel="noopener">' + Lic_esc_(p.url) + "</a> · versão " + Lic_esc_(p.versao) + (p.atualizadoPor ? " por " + Lic_esc_(p.atualizadoPor) : "") + "</p>" +
+    return '<p class="cm-meta">' + Lic_esc_(p.codigo) + " · tipo " + Lic_esc_(p.tipo) + " (" + Lic_esc_(p.tipoNome) + ') · ' + (Lic_url_(p.url) ? '<a href="' + Lic_esc_(Lic_url_(p.url)) + '" target="_blank" rel="noopener noreferrer">' + Lic_esc_(p.url) + "</a>" : Lic_esc_(p.url || "sem endereço")) + " · versão " + Lic_esc_(p.versao) + (p.atualizadoPor ? " por " + Lic_esc_(p.atualizadoPor) : "") + "</p>" +
       (p.obs ? '<p class="cm-ajuda-campo">' + Lic_esc_(p.obs) + "</p>" : "") +
       '<label class="cm-check cm-check-grande" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="licPLig"' + (p.ligado ? " checked" : "") + (p.automatico ? "" : " disabled") + "> Ligado (coleta automática)" + (p.automatico ? "" : " — sem API: só a publicação pelo PNCP, avisos por e-mail da plataforma e operação assistida") + "</label>" +
       '<div class="cm-grade2"><div class="cm-campo"><label for="licPPos">Palavras a mais que interessam</label><textarea id="licPPos" rows="3" placeholder="separadas por vírgula">' + Lic_esc_(p.positivas) + '</textarea><p class="cm-ajuda-campo">Somam-se aos termos padrão da triagem (Regras do radar).</p></div>' +

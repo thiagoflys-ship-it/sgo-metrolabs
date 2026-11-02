@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "9e18b7c6527e",
+ "versao": "f07f1d5fbdcc",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3132,7 +3132,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Triagem por regras > O que trava",
-     "texto": "Exige acreditação RBC (ISO/IEC 17025): a Metrolabs não é acreditada; as calibrações são rastreáveis. Fica a pendência \"o edital aceita calibração rastreável ou subcontratação de laboratório acreditado?\". Quando o objeto diz que a acreditação é opcional, não trava (selo verde \"Acreditação opcional\").\nDedicação exclusiva de mão de obra (equipe residente). \"Sem dedicação exclusiva\" não trava.\nSoftware de gestão exigido.\nSuspensa na fonte.\nExclusivo ME/EPP com o porte da matriz configurado como \"Demais\". Com o porte EPP (padrão, decisão do dono), o item exclusivo não trava: ganha os selos \"Exclusivo ME/EPP — podemos participar (EPP)\" e \"Empate ficto (EPP)\"."
+     "texto": "Exige acreditação RBC (ISO/IEC 17025): a Metrolabs não é acreditada; as calibrações são rastreáveis. Fica a pendência \"o edital aceita calibração rastreável ou subcontratação de laboratório acreditado?\". Quando o objeto diz que a acreditação é opcional, não trava (selo verde \"Acreditação opcional\"). Quando pede só certificado \"rastreável à RBC\" (padrões calibrados por laboratório acreditado), também não trava: fica o selo laranja \"Rastreabilidade à RBC\" e a pendência para conferir no edital. Se o texto fala em laboratório acreditado ou empresa pertencente à RBC, trava.\nDedicação exclusiva de mão de obra (equipe residente). \"Sem dedicação exclusiva\" não trava.\nSoftware de gestão exigido.\nSuspensa na fonte.\nExclusivo ME/EPP com o porte da matriz configurado como \"Demais\". Com o porte EPP (padrão, decisão do dono), o item exclusivo não trava: ganha os selos \"Exclusivo ME/EPP — podemos participar (EPP)\" e \"Empate ficto (EPP)\"."
     },
     {
      "titulo": "Triagem por regras > Selos de ponto forte e de informação",
@@ -3144,7 +3144,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Triagem por regras > Quando as regras mudam",
-     "texto": "Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a triagem de tudo o que está em aberto. A regra só muda a situação de uma oportunidade enquanto ninguém mexeu nela (no radar, ou descartada pela regra). O que a Diretoria enviou para análise ou descartou com motivo nunca é desfeito pela regra; a mudança de triagem fica só no histórico."
+     "texto": "Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a triagem de tudo o que está em aberto. A regra só muda a situação de uma oportunidade enquanto ninguém mexeu nela (no radar, ou descartada pela regra). O que a Diretoria enviou para análise, descartou com motivo ou reabriu nunca é desfeito pela regra; a mudança de triagem fica só no histórico (a ficha de uma reaberta avisa \"a regra do radar não descarta de novo\")."
     },
     {
      "titulo": "Telas > Hoje em Licitações",
@@ -3152,7 +3152,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Telas > Oportunidades",
-     "texto": "Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo e onde é a sessão.\n\nCada cartão mostra a UF e a situação, o órgão e o código LIC, município, modalidade, modo de disputa, registro de preços, onde é a sessão, os selos, o objeto com o termo destacado, o número de controle, o valor estimado, o prazo de proposta com o tempo restante, o motivo, o trecho da fonte e as pendências.\n\nOnde é a sessão: quando a publicação veio de um portal de disputa conhecido (Compras.gov.br, BLL, BNC, Licitanet, Licitar Digital, BBMNET, Licitações-e, Portal de Compras Públicas e portais estaduais), o cartão diz qual. Quando veio de um sistema municipal de gestão, a plataforma da sessão precisa ser lida no edital.\n\nAções:\nBotão | O que faz | RegraAbrir ficha | Resumo, Fonte e Histórico | —\nEnviar para análise | Leva para \"Em análise\", com você como responsável | Observação opcional\nDescartar | Leva para \"Descartadas\" | Motivo obrigatório (pelo menos 10 letras)\nReabrir | Devolve uma descartada ao radar | Motivo obrigatório\nAbrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link\nVer no PNCP | Abre a contratação no site do PNCP, em nova aba | —"
+     "texto": "Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo e onde é a sessão.\n\nCada cartão mostra a UF e a situação, o órgão e o código LIC, município, modalidade, modo de disputa, registro de preços, onde é a sessão, os selos, o objeto com o termo destacado, o número de controle, o valor estimado, o prazo de proposta com o tempo restante, o motivo, o trecho da fonte e as pendências.\n\nOnde é a sessão: quando a publicação veio de um portal de disputa conhecido (Compras.gov.br, BLL, BNC, Licitanet, Licitar Digital, BBMNET, Licitações-e, Portal de Compras Públicas e portais estaduais), o cartão diz qual. Quando veio de um sistema municipal de gestão, a plataforma da sessão precisa ser lida no edital.\n\nAções:\nBotão | O que faz | RegraAbrir ficha | Resumo, Fonte e Histórico | —\nEnviar para análise | Leva para \"Em análise\", com você como responsável | Observação opcional\nDescartar | Leva para \"Descartadas\" | Motivo obrigatório (pelo menos 10 letras)\nReabrir | Devolve uma descartada ao radar; a regra não a descarta de novo | Motivo obrigatório\nAbrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link e ele é um endereço http/https (outro tipo de link vindo da fonte é ignorado, por segurança)\nVer no PNCP | Abre a contratação no site do PNCP, em nova aba | —"
     },
     {
      "titulo": "Telas > Ficha da licitação",

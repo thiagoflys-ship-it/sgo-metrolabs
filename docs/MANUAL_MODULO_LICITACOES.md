@@ -91,7 +91,7 @@ Calibração, aferição, metrologia, qualificação térmica e de equipamento, 
 
 ### 5.4 O que trava
 
-- Exige acreditação RBC (ISO/IEC 17025): a Metrolabs não é acreditada; as calibrações são rastreáveis. Fica a pendência "o edital aceita calibração rastreável ou subcontratação de laboratório acreditado?". Quando o objeto diz que a acreditação é opcional, não trava (selo verde "Acreditação opcional").
+- Exige acreditação RBC (ISO/IEC 17025): a Metrolabs não é acreditada; as calibrações são rastreáveis. Fica a pendência "o edital aceita calibração rastreável ou subcontratação de laboratório acreditado?". Quando o objeto diz que a acreditação é opcional, não trava (selo verde "Acreditação opcional"). Quando pede só certificado "rastreável à RBC" (padrões calibrados por laboratório acreditado), também não trava: fica o selo laranja "Rastreabilidade à RBC" e a pendência para conferir no edital. Se o texto fala em laboratório acreditado ou empresa pertencente à RBC, trava.
 - Dedicação exclusiva de mão de obra (equipe residente). "Sem dedicação exclusiva" não trava.
 - Software de gestão exigido.
 - Suspensa na fonte.
@@ -110,7 +110,7 @@ Nesta etapa não há nota de 0 a 100. A lista é ordenada pela prioridade da UF 
 
 ### 5.7 Quando as regras mudam
 
-Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a triagem de tudo o que está em aberto. A regra só muda a situação de uma oportunidade enquanto ninguém mexeu nela (no radar, ou descartada pela regra). O que a Diretoria enviou para análise ou descartou com motivo nunca é desfeito pela regra; a mudança de triagem fica só no histórico.
+Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a triagem de tudo o que está em aberto. A regra só muda a situação de uma oportunidade enquanto ninguém mexeu nela (no radar, ou descartada pela regra). O que a Diretoria enviou para análise, descartou com motivo ou reabriu nunca é desfeito pela regra; a mudança de triagem fica só no histórico (a ficha de uma reaberta avisa "a regra do radar não descarta de novo").
 
 ## 6. Telas
 
@@ -136,8 +136,8 @@ Ações:
 | Abrir ficha | Resumo, Fonte e Histórico | — |
 | Enviar para análise | Leva para "Em análise", com você como responsável | Observação opcional |
 | Descartar | Leva para "Descartadas" | Motivo obrigatório (pelo menos 10 letras) |
-| Reabrir | Devolve uma descartada ao radar | Motivo obrigatório |
-| Abrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link |
+| Reabrir | Devolve uma descartada ao radar; a regra não a descarta de novo | Motivo obrigatório |
+| Abrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link e ele é um endereço http/https (outro tipo de link vindo da fonte é ignorado, por segurança) |
 | Ver no PNCP | Abre a contratação no site do PNCP, em nova aba | — |
 
 ### 6.3 Ficha da licitação
