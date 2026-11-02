@@ -236,3 +236,27 @@ test('SGO_DocA4_chamarGemini_: raciocínio, JSON e prazo só para quem pede; sem
   assert.throws(() => g.SGO_DocA4_chamarGemini_('p', { tokens: 20480, raciocinio: 4096, json: true, prazoAte: agora + 30000 }), /resposta incompleta \(MAX_TOKENS\) \(sem tempo para tentar de novo\)/);
   assert.equal(pedidos.length, 1);
 });
+
+// reconferência da revisão independente (02/11/2026): a junção do PDF apagava a negação; a negação longe e depois de "?" ou "–"
+test('negação: junção do PDF nunca come a negação; negação no começo da frase (até 12 palavras) e depois de ? – | ou quebra de linha recusa', () => {
+  const texto = ['Grupo D vedada a participação de consórcios no certame.', 'Lote B nenhuma certidão será exigida para o lote.',
+    'Não será, sob qualquer pretexto, exigida acreditação RBC do laboratório.', 'A empresa não precisará, nesta fase, apresentar certidão de regularidade fiscal.',
+    'Exige acreditação RBC do laboratório? Não.', 'Exige garantia de proposta do licitante – Não', 'Exige vistoria técnica prévia obrigatória\nNÃO',
+    'Exige atestado de capacidade técnica | NÃO |', 'Garantia: 5 % do valor do contrato, dispensada para microempresas.',
+    'Anexo P essoas jurídicas impedidas de licitar serão inabilitadas.', 'O prazo de entrega será de 10 dias corridos não prorrogáveis.',
+    'Hora técnica: HORA_TECNICO, HORA_ENGENHEIRO.', 'SEM serviço no catálogo hoje: osmose reversa.'].join('\n');
+  const f = { texto };
+  const r = (t) => ctx.Lic_trechoNaFonte_(t, f);
+  for (const t of ['a participação de consórcios no certame', 'certidão será exigida para o lote', 'exigida acreditação RBC do laboratório',
+    'apresentar certidão de regularidade fiscal', 'Exige acreditação RBC do laboratório', 'Exige garantia de proposta do licitante',
+    'Exige vistoria técnica prévia obrigatória', 'Exige atestado de capacidade técnica', 'Garantia: 5 % do valor do contrato']) {
+    const x = r(t);
+    assert.equal(x.ok, false, 'aceitou: ' + t);
+    assert.match(x.motivo || '', /copie a negação junto/, t);
+  }
+  assert.deepEqual(Array.from(ctx.Lic_tokens_('Grupo D vedada a participação', true).toks), ['grupo', 'd', 'vedada', 'a', 'participacao'], 'não junta antes de negação');
+  assert.equal(r('Pessoas jurídicas impedidas de licitar serão inabilitadas').ok, true, 'a junção legítima continua');
+  assert.equal(r('O prazo de entrega será de 10 dias corridos').ok, true, 'negação depois de só espaço não conta');
+  assert.equal(r('Hora técnica: HORA_TECNICO, HORA_ENGENHEIRO.').ok, true, 'negação na frase seguinte (depois do ponto) não conta');
+  assert.equal(r('Não será, sob qualquer pretexto, exigida acreditação RBC do laboratório').ok, true, 'com a negação junto vale');
+});

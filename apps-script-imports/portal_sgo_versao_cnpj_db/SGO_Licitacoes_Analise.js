@@ -402,10 +402,12 @@ function Lic_tokens_(t, pdf) {
       var h = /^[ \t]*(\r?\n)?[ \t]*/.exec(s.slice(i + 1, i + 16));
       if ((h[0] === '' || h[1]) && letraEm(i + 1 + h[0].length)) { i += h[0].length; continue; }
     }
-    // PDF que parte a palavra depois da maiúscula ("P essoas", "S erviço"): só na FONTE, só consoante sozinha seguida de minúscula
-    //   (a letra vem depois de espaço e de palavra que não é número, e a continuação tem 4 letras minúsculas ou mais: "8 °C na" não junta)
+    // PDF que parte a palavra depois da maiúscula ("P essoas", "S erviço"): só na vista ALTERNATIVA da fonte (pdf), só consoante
+    //   sozinha depois de espaço e de palavra que não é número, continuação de 4 letras minúsculas ou mais ("8 °C na" não junta) e
+    //   nunca antes de negação ("Grupo D vedada", "Lote B nenhuma"); a negação é conferida sempre na vista sem junção
     if (pdf && ult === 'l' && ch === ' ' && cur.length === 1 && /[B-DF-HJ-NP-TV-Z]/.test(s.charAt(i - 1)) && (i < 2 || /\s/.test(s.charAt(i - 2))) &&
-      !(toks.length && /[0-9]/.test(toks[toks.length - 1])) && /^[a-zà-ÿ]{4}/.test(s.slice(i + 1, i + 5))) continue;
+      !(toks.length && /[0-9]/.test(toks[toks.length - 1])) && /^[a-zà-ÿ]{4}/.test(s.slice(i + 1, i + 5)) &&
+      !LIC_NEGACAO.test((Lic_tokens_((/^\S+/.exec(s.slice(i + 1)) || [''])[0]).toks[0]) || '')) continue;
     fechar();
     // sinal de número negativo, colado ou separado por espaço ou quebra de linha ("-20 °C", "temperatura: -\n10 °C"), nos dois lados
     var neg = (ch === '-' || ch === '−') && (i === 0 || /[\s(\[;:]/.test(s.charAt(i - 1))) ? /^[ \t]*(\r?\n)?[ \t]*(?=[0-9])/.exec(s.slice(i + 1, i + 12)) : null;
@@ -433,12 +435,15 @@ function Lic_tokensSemNumeracao_(ft, texto) {
   }
   return Lic_tokensMontar_(toks, ini, fim);
 }
-/** Palavras da fonte (vistas: 'cheio' = texto inteiro; 'pedido' = o que foi à IA; 'pedidoSemNum' = sem a numeração da linha). */
+/**
+ * Palavras da fonte. Vistas: 'cheio' = texto inteiro; 'cheioPdf' = o mesmo com a junção "P essoas" (só para achar; a negação
+ * se confere em 'cheio'); 'pedido' = o que foi à IA; 'pedidoSemNum' = o pedido sem a numeração que abre a linha.
+ */
 function Lic_tokFonte_(f, visao) {
   var k = '_tok_' + visao;
   if (!f[k]) {
-    var t = visao === 'cheio' ? f.texto : Lic_textoPedido_(f);
-    var v = visao === 'pedidoSemNum' ? Lic_tokensSemNumeracao_(Lic_tokFonte_(f, 'pedido'), t) : visao === 'pedido' && t === f.texto ? Lic_tokFonte_(f, 'cheio') : Lic_tokens_(t, true);
+    var t = /^cheio/.test(visao) ? f.texto : Lic_textoPedido_(f);
+    var v = visao === 'pedidoSemNum' ? Lic_tokensSemNumeracao_(Lic_tokFonte_(f, 'pedido'), t) : visao === 'pedido' && t === f.texto ? Lic_tokFonte_(f, 'cheio') : Lic_tokens_(t, visao === 'cheioPdf');
     Object.defineProperty(f, k, { value: v, enumerable: false, configurable: true });
   }
   return f[k];
@@ -458,23 +463,47 @@ function Lic_acharTok_(ft, pal, desde) {
   var q = ft.S.indexOf(' ' + pal.join(' ') + ' ', desde > 0 ? ft.pos[desde] : 0);
   return q < 0 ? -1 : Lic_tokIndice_(ft, q);
 }
-/** O casamento [a, b] começa logo depois de uma negação da fonte (na mesma frase) ou corta um "...: não"? Devolve a negação ou ''. */
-function Lic_cortaNegacao_(ft, texto, a, b) {
-  for (var k = a - 1; k >= 0 && k >= a - 2; k--) {
-    if (/[.;!?]/.test(texto.slice(ft.fim[k], ft.ini[a]))) break;
+/**
+ * O casamento [a, b] corta uma negação da fonte? Devolve a negação ou ''.
+ *   - antes: negação em qualquer palavra desde o começo da frase ou da oração (até . ; ! ? ou linha em branco, no máximo
+ *     LIC_NEGACAO_JANELA palavras): "Não será, sob qualquer pretexto, exigida acreditação" recusa "exigida acreditação";
+ *   - depois: negação logo em seguida, separada por pontuação ou quebra de linha ("...laboratório? Não.", "... – Não",
+ *     "...: não", "| NÃO |", "obrigatória\nNÃO"); só espaço não conta ("o prazo de 10 dias não será prorrogado"), nem a
+ *     frase seguinte depois de ponto final ou ponto e vírgula.
+ * fn: a lista em que a negação é conferida (a sem junção de PDF), quando o casamento foi feito em outra vista.
+ */
+var LIC_NEGACAO_JANELA = 12;
+function Lic_cortaNegacao_(ft, texto, a, b, fn) {
+  if (fn && fn !== ft) {
+    var ia = Lic_tokPorPos_(fn.ini, ft.ini[a]), ib = Lic_tokPorPos_(fn.fim, ft.fim[b]);
+    if (ia < 0 || ib < 0) return '';
+    ft = fn; a = ia; b = ib;
+  }
+  for (var k = a - 1; k >= 0 && k >= a - LIC_NEGACAO_JANELA; k--) {
+    if (/[.;!?]|\n[ \t]*\n/.test(texto.slice(ft.fim[k], ft.ini[k + 1]))) break;
     if (LIC_NEGACAO.test(ft.toks[k])) return ft.toks[k];
   }
   var d = b + 1;
-  if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d]) && /:/.test(texto.slice(ft.fim[b], ft.ini[d]))) return ft.toks[d];
+  if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d])) {
+    var sep = texto.slice(ft.fim[b], ft.ini[d]);
+    // ponto final ou ponto e vírgula = outra frase ("HORA_ENGENHEIRO.\nSEM serviço..."); "?" continua valendo ("laboratório? Não.")
+    if ((/[^\s\p{L}\p{N}]/u.test(sep) || /\n/.test(sep)) && !/[.;]/.test(sep)) return ft.toks[d];
+  }
   return '';
 }
-/** Literal com a guarda da negação: { a, b } da primeira ocorrência boa, { neg } se todas cortam negação, ou null. */
-function Lic_casarLiteral_(ft, texto, pal, desde) {
+/** Índice exato de uma posição numa lista crescente de posições (ini ou fim das palavras); -1 se não houver. */
+function Lic_tokPorPos_(lista, p) {
+  var lo = 0, hi = lista.length - 1;
+  while (lo <= hi) { var m = (lo + hi) >> 1; if (lista[m] === p) return m; if (lista[m] < p) lo = m + 1; else hi = m - 1; }
+  return -1;
+}
+/** Literal com a guarda da negação: { a, b } da primeira ocorrência boa, { neg } se todas cortam negação, ou null. fn: ver Lic_cortaNegacao_. */
+function Lic_casarLiteral_(ft, texto, pal, desde, fn) {
   var a = desde || 0, neg = '';
   for (var n = 0; n < 50; n++) {
     a = Lic_acharTok_(ft, pal, a);
     if (a < 0) break;
-    var b = a + pal.length - 1, c = Lic_cortaNegacao_(ft, texto, a, b);
+    var b = a + pal.length - 1, c = Lic_cortaNegacao_(ft, texto, a, b, fn);
     if (!c) return { a: a, b: b };
     neg = c; a++;
   }
@@ -550,6 +579,8 @@ function Lic_trechoNaFonte_(tr, f, o) {
   if (pedacos.length <= 1) {
     var r = Lic_casarLiteral_(fc, cheio, pal, 0);
     if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fc, cheio, r.a, r.b), ajuste: '' };
+    // palavra partida pelo PDF ("P essoas"): acha na vista com a junção, confere a negação na vista sem junção
+    if (!r) { var fj = Lic_tokFonte_(f, 'cheioPdf'), rj = Lic_casarLiteral_(fj, cheio, pal, 0, fc); if (rj) r = rj; if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fj, cheio, r.a, r.b), ajuste: '' }; }
     if (r && r.neg) return { ok: false, motivo: 'na fonte, o trecho vem logo depois de "' + r.neg + '" (ou corta um "' + r.neg + '" que vem em seguida), o que muda o sentido: copie a negação junto' };
   }
   // fora do literal: só no texto que a IA recebeu
