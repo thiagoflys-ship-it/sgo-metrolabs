@@ -77,7 +77,9 @@ var LIC_ACOES = {
   leituraCfg: function (eu) { return LicLeit_cfgAcao_(eu); },
   leituraCfgSalvar: function (eu, d) { return LicLeit_cfgSalvar_(eu, d); },
   // tabela de preços de licitação e simulador (02/11/2026, SGO_Licitacoes_Precos.js): { op: tabela | itemSalvar | simulacao | ... }
-  precos: function (eu, d) { return LicP_acao_(eu, d); }
+  precos: function (eu, d) { return LicP_acao_(eu, d); },
+  // documentos de habilitação, cruzamento com o edital e relação para conferência (02/11/2026, SGO_Licitacoes_Habilitacao.js)
+  habilitacao: function (eu, d) { return LicH_acao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -384,7 +386,9 @@ function Lic_hoje_(eu) {
   // etapa 3: alertas enviados e sem ciência (da Diretoria de Licitações inteira), para a faixa de cima
   var semC = [];
   try { if (typeof Lic_alertasSemCiencia_ === 'function') semC = Lic_alertasSemCiencia_(null).map(Lic_alertaParaTela_).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; }); } catch (e) { semC = []; }
-  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_() };
+  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_(),
+    // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte
+    habilitacao: typeof LicH_resumo_ === 'function' ? LicH_resumo_() : null };
 }
 
 function Lic_coletarAgora_(eu) {

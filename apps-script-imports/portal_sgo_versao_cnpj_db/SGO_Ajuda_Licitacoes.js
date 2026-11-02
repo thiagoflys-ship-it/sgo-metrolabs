@@ -127,6 +127,12 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Em \"Onde é executado\" ficam a UF, o município, o km do trecho (só a ida; o SGO+ sugere pela tabela de distâncias quando conhece), as viagens, a equipe, os dias e as noites, o pedágio e a passagem. RJ e ES saem da equipe do Rio; o resto, da equipe de Goiânia.",
           "\"Calcular\" mostra a conta inteira sem gravar: custo por item, deslocamento diluído no unitário, impostos, piso (sobra mínima de 35%) e alvo (40%), a sobra no preço do edital e na proposta, as premissas e as versões da política usadas. Item abaixo do piso fica em vermelho com o texto \"abaixo do piso\".",
           "\"Salvar simulação\" pede o motivo e grava uma versão nova, que nunca muda. Para corrigir, escolha a versão em \"Ver\", toque em \"Começar uma versão nova a partir desta\" e salve outra. A nota da análise passa a usar a última versão no critério margem depois de \"Refazer análise\"."
+        ] },
+        { titulo: "Habilitação (documentos do edital)", itens: [
+          "A aba Habilitação lista cada exigência de habilitação do edital: as do checklist \"O que realmente precisamos\" da Leitura do edital (temas jurídica, fiscal, econômica, técnica, atestados, equipe, RBC e Inmetro, visita) e as exigências de documentação da Análise, com a frase do edital e a página.",
+          "Para cada uma, o sistema sugere o documento do cadastro de habilitação pela regra de palavras (não é a IA): \"Atende\", \"Vence antes da sessão\" (a validade acaba antes da data da sessão), \"Falta\" (não há documento em uso, ou está sem arquivo) ou \"A conferir\" (atestado, escopo de acreditação ou do Inmetro, declaração por certame, ou o sistema não reconheceu o documento).",
+          "A Diretoria confere e toca em \"Marcar atende\" (escolhendo o documento, se houver) ou \"Marcar não atende\", sempre com o motivo. Cada decisão fica no histórico da exigência; marcar de novo cria outra versão.",
+          "Falta, vence antes da sessão e não atende viram pendência no Hoje e no Painel. \"Gerar relação para conferência (A4)\" abre a lista dos documentos desta licitação com a validade e o SHA-256 de cada arquivo; cada relação gerada é uma versão que não muda. Nada é enviado a portal."
         ] }
       ],
       cores: [

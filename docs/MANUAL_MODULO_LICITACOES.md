@@ -501,6 +501,47 @@ Padrões adotados em 02/11/2026 (o dono não soube responder; a Diretoria muda n
 
 Com simulação salva, o critério margem (15 pontos) usa a última versão: com pendência, com algum item sem o preço do edital ou com o registro alterado fora do SGO+, 5 como pendência; sobra no edital abaixo da mínima, 0; algum item do edital abaixo do piso (com piso por item), 6; sobra a partir da mínima, 11; a partir do alvo, 15. Sem simulação, continua 5 como pendência. A simulação entra na base da análise: depois de salvar, a aba Análise fica desatualizada; toque em "Refazer análise". A IA externa recebe só a pontuação da margem ("calculada pelo sistema"), nunca o piso, o preço do edital ou a sobra. A simulação aceita até 40 itens.
 
+## Documentos de habilitação
+
+Cadastro único dos documentos de habilitação da Metrolabs, consumido pelas licitações. Regras do levantamento (docs/LICITACOES_03_REGRAS_NEGOCIO_20261101.md, seção A4) e decisões do dono: CNPJ sempre da matriz de Goiânia; porte EPP (LC 123/2006, com a regularidade fiscal e trabalhista tardia do art. 43); a Metrolabs não é acreditada RBC (só rastreável); registro do Inmetro para balanças e esfigmomanômetros, com o escopo exato a confirmar com o documento. Não há cadastro paralelo: os certificados dos padrões vêm de Metrologia › Padrões de referência (CAD_PADROES); o SGO+ não tinha outro cadastro de documentos da empresa (o Arquivo de documentos é dos equipamentos dos clientes).
+
+### Tela "Documentos de habilitação" (Licitações › Documentos de habilitação)
+
+- **Cadastrar documento**: escolha na lista (os 27 do levantamento, na mesma ordem, mais o registro do Inmetro, o enquadramento EPP, o alvará e "Outro documento"). A categoria vem com o documento (jurídica; fiscal, social e trabalhista; econômico-financeira; técnica; declarações); só "Outro documento" escolhe. Campos: número, emissão, validade impressa, órgão emissor, link de verificação oficial (só http ou https), responsável (Diretoria ou Administrador), escopo, palavras extras do cruzamento e observações.
+- **Atestado de capacidade técnica**: contratante (e CNPJ), objeto, período, serviços e quantidades (uma linha por serviço: serviço; quantidade; unidade), CAT ou acervo e a O.S. ou o relatório que comprova.
+- **Arquivo**: PDF, PNG, JPG ou WEBP, até 10 MB. O SGO+ confere a assinatura do arquivo (a extensão tem de bater com o conteúdo), guarda restrito no serviço de arquivos do SGO+ e grava o SHA-256 dos bytes. "Abrir o arquivo" e "Baixar" conferem o SHA-256 antes de entregar; se não conferir, nada é entregue e o caso vai para o histórico (ARQUIVO_NAO_CONFERE).
+- **Versão**: mudar um campo ou trocar o arquivo grava uma versão nova com o motivo (pelo menos 10 letras); só o que mudou muda. A versão guarda a fotografia do documento e o arquivo daquela versão (LIC_HAB_VERSOES, com o hash); o arquivo anterior nunca é apagado e abre pelo "Histórico". "Retirar de uso" e "Voltar a usar" também são versões. Não existe apagar.
+- **Situação** (dia de Brasília): Vigente; Vence em até 30, 15 ou 7 dias; Vencido (depois do último dia de validade); Sem validade (contrato social, declaração por certame, emitir na data, ou "validade não informada" quando o documento tem data impressa e ela falta). A validade nunca é presumida.
+- "Documentos da lista ainda sem cadastro" mostra o que falta cadastrar. O item 20 (responsável técnico) depende do cadastro de RH técnico, que ainda não existe no SGO+.
+
+### Avisos de vencimento
+
+Pela mesma infraestrutura dos alertas de licitação (LIC_ALERTAS, Central de alertas, ciência, tetos), para a Diretoria de Licitações (o responsável do documento, se for integrante; senão os dois):
+
+| Quando | Canais | Nível |
+|---|---|---|
+| Faltam 30 dias ou menos | SGO+ e e-mail | normal |
+| Faltam 15 dias ou menos | SGO+ e e-mail | normal |
+| Faltam 7 dias ou menos | SGO+, e-mail e WhatsApp oficial (modelo sgo_licitacao_prazo) | importante |
+| Vencido | SGO+, e-mail e WhatsApp oficial | importante |
+
+- Um aviso por faixa e por versão do documento: rodar de novo não repete, e a faixa que já passou não sai. O aviso de validade sai das 8h às 18h (Brasília); fora disso, às 8h.
+- Versão nova do documento (renovação): os avisos da versão anterior que ainda esperam são cancelados e os enviados sem ciência ficam concluídos, com o motivo.
+- Licitação em análise, decisão, proposta ou disputa: documento que vence antes da sessão gera um aviso (crítico nos 3 últimos dias antes da sessão; escalona como os prazos); documentos que faltam geram um aviso por licitação e data da sessão, só por e-mail.
+- Nenhum modelo novo na Meta: o WhatsApp usa o modelo já previsto para "documento vencendo" (sgo_licitacao_prazo).
+
+### Aba "Habilitação" da ficha
+
+1. As exigências vêm do checklist "O que realmente precisamos" da leitura do edital (temas de habilitação: jurídica, fiscal, econômico-financeira, qualificação técnica, atestados, equipe e responsável técnico, RBC e Inmetro, visita técnica), com a frase literal, o arquivo, a página e a linha, e das exigências de documentação da análise concluída (sem repetir o mesmo trecho).
+2. Para cada exigência, o sistema sugere o documento pela regra de palavras do código (não é a IA) e confere a validade contra a data da sessão (a abertura da sessão pública da agenda; sem ela, o fim das propostas da fonte):
+   - **Atende**: há documento em uso, com arquivo, válido na data da sessão.
+   - **Vence antes da sessão**: a validade acaba antes da sessão (documento vencido na data da sessão não se corrige depois, art. 64). Nas certidões fiscais e trabalhistas, a observação da regularidade tardia da EPP.
+   - **Falta**: não há documento em uso, ou está sem arquivo. Acreditação RBC aparece como falta, com o motivo.
+   - **A conferir**: atestado (quantidade e parcela de maior relevância), escopo da acreditação ou do Inmetro, padrões (o cadastro da Metrologia), declaração por certame, documento "emitir na data", exceção perto do trecho, documentos alternativos ("ou", "salvo", "substituído") ou o sistema não reconheceu o documento.
+3. A Diretoria marca "atende" (com o documento, se houver) ou "não atende", sempre com o motivo. Cada decisão é uma linha nova (LIC_HAB_CONFERENCIAS, com o hash); a última vale e as anteriores ficam no histórico. Com o documento indicado, a validade dele continua conferida contra a sessão.
+4. Falta, vence antes da sessão e "não atende" são pendências: aparecem no Hoje em Licitações e no Painel, com a fonte da contagem (licitações em análise, decisão, proposta ou disputa com a sessão por vir).
+5. **Gerar relação para conferência (A4)**: abre em nova aba a lista dos documentos desta licitação (exigência, documento, número, emissão, validade, versão e SHA-256 do arquivo) e as pendências. Cada relação é uma versão que não muda (LIC_HAB_PACOTES, com o hash). Nada é enviado a portal.
+
 ## 7. Problemas comuns
 
 | Situação | O que fazer |
@@ -543,6 +584,7 @@ Com simulação salva, o critério margem (15 pontos) usa a última versão: com
 - Alertas: uma linha por prazo, antecedência e pessoa em LIC_ALERTAS (e por mudança, escalonamento e reenvio), cada canal com a situação e o motivo; no histórico, ALERTA_ENVIADO, ALERTA_FALHOU, ALERTA_WHATSAPP_ENVIADO, ALERTA_WHATSAPP_ENTREGUE, ALERTA_WHATSAPP_LIDO, ALERTA_WHATSAPP_FALHOU, ALERTA_CIENCIA (quem, quando, canal), ALERTA_ESCALONADO e ALERTA_REENVIO_PEDIDO. Regras dos alertas: REGRAS_DOS_ALERTAS (de, para, versão, motivo).
 - Kanban: a mudança de etapa grava o mesmo fato da lista (ENVIADA_PARA_ANALISE, DESCARTADA_PELA_DIRETORIA, REABERTA) com a fonte "Kanban", o motivo, de → para e o hash.
 - Análise por IA: DURACAO_MS em LIC_ANALISES (desde a etapa 4) guarda quanto a análise levou, para o tempo médio do Painel.
+- Documentos de habilitação: LIC_HAB_DOCUMENTOS (estado atual), LIC_HAB_VERSOES (uma linha por versão, com a fotografia, o arquivo e o hash), LIC_HAB_CONFERENCIAS (decisões da Diretoria por exigência) e LIC_HAB_PACOTES (relações geradas); no histórico, DOCUMENTO_CADASTRADO, DOCUMENTO_VERSAO, DOCUMENTO_RETIRADO, DOCUMENTO_REATIVADO, ARQUIVO_ABERTO, ARQUIVO_NAO_CONFERE, HABILITACAO_CONFERENCIA e HABILITACAO_RELACAO.
 - Nada é apagado: a situação muda.
 
 ### 8.1 Regra de guarda (aprovada pelo dono em 02/11/2026)

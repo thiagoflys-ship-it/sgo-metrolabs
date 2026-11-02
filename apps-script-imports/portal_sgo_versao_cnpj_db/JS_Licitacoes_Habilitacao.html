@@ -1,0 +1,362 @@
+<!--
+  SGO+ LICITAÇÕES — DOCUMENTOS DE HABILITAÇÃO (02/11/2026): tela "Documentos de habilitação" (cadastro único da empresa, com
+  validade, arquivo restrito com SHA-256, versão, motivo e histórico; atestados com contratante, objeto, período, serviços e CAT),
+  a aba "Habilitação" da ficha (cada exigência do edital com a sugestão do documento pela regra de palavras, a decisão da
+  Diretoria e a relação A4 para conferência) e os quadros do Hoje e do Painel. Servidor: SGO_Licitacoes_Habilitacao.js
+  (Licitacoes_api ação "habilitacao" com { op }). Usa os utilitários de JS_Licitacoes.html (Lic_esc_, Lic_url_, Lic_chamar_,
+  Lic_janela_, Lic_faixa_, Lic_toast_, Lic_dataHora_, Lic_pnCaixa_, Lic_pnBarras_, Lic_pnKpi_, Lic_linkAttr_, Lic_ligarLinks_).
+  Todo texto passa por Lic_esc_; link externo só http/https (Lic_url_). Sem atualização automática: nada redesenha formulário aberto.
+-->
+<style>
+  .lhb-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .lhb-grade label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lhb-grade input, .lhb-grade select, .lhb-grade textarea { width: 100%; min-height: 40px; box-sizing: border-box; max-width: 100%; }
+  .lhb-grade .lhb-largo { grid-column: 1 / -1; }
+  .lhb-doc { overflow-wrap: anywhere; }
+  .lhb-doc-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-start; justify-content: space-between; }
+  .lhb-doc-cab .cm-card-tit { margin: 0; min-width: 0; flex: 1 1 220px; }
+  .lhb-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 14px; margin: 8px 0; font-size: 12.5px; }
+  .lhb-dl div { min-width: 0; }
+  .lhb-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .lhb-dl b { font-weight: 600; overflow-wrap: anywhere; }
+  .lhb-ex { border: 1px solid var(--border); border-left: 4px solid var(--bc-line-2); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; background: var(--card); overflow-wrap: anywhere; }
+  .lhb-ex.vermelho { border-left-color: var(--danger); }
+  .lhb-ex.laranja { border-left-color: var(--warning); }
+  .lhb-ex.verde { border-left-color: var(--success); }
+  .lhb-ex-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .lhb-tipos { list-style: none; margin: 6px 0; padding: 0; font-size: 12.5px; }
+  .lhb-tipos > li { padding: 4px 0; border-top: 1px dashed var(--border); }
+  .lhb-tipos ul { margin: 2px 0 0 16px; padding: 0; }
+  .lhb-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  .lhb-falta { list-style: none; margin: 6px 0 0; padding: 0; }
+  .lhb-falta li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--border); }
+  .lhb-falta li > span { min-width: 0; flex: 1 1 200px; overflow-wrap: anywhere; }
+  .lhb-oculto { display: none; }
+  @media (max-width: 900px) { .lhb-doc .lic-acoes-linha .btn-secondary, .lhb-ex .lic-acoes-linha .btn-secondary, .lhb-ex .lic-acoes-linha .btn-primary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICHB = { tela: null, busca: "", categoria: "", situacao: "", aba: {} };
+  var LICHB_CRUZ_COR = { ATENDE: "verde", A_CONFERIR: "laranja", VENCE_ANTES: "vermelho", FALTA: "vermelho", NAO_ATENDE: "vermelho" };
+  var LICHB_CRUZ_NOME = { ATENDE: "Atende", A_CONFERIR: "A conferir", VENCE_ANTES: "Vence antes da sessão", FALTA: "Falta", NAO_ATENDE: "Não atende (Diretoria)" };
+
+  function LicHb_chamar_(op, dados, ok, erro, o) { Lic_chamar_("habilitacao", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicHb_dia_(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || "")); return m ? m[3] + "/" + m[2] + "/" + m[1] : ""; }
+  function LicHb_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicHb_tamanho_(n) { n = Number(n) || 0; return n < 1024 ? n + " B" : n < 1048576 ? (Math.round(n / 102.4) / 10).toLocaleString("pt-BR") + " KB" : (Math.round(n / 104857.6) / 10).toLocaleString("pt-BR") + " MB"; }
+  function LicHb_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+
+  // ================= tela "Documentos de habilitação" =================
+  function LicHb_renderTela_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    LicHb_chamar_("tela", {}, function (d) { LICHB.tela = d; LicHb_desenharTela_(); }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicHb_renderTela_); });
+  }
+  function LicHb_kpi_(v, rotulo, tipo, filtro) {
+    return '<button type="button" class="cm-kpi ' + (tipo || "") + '" data-lhb-filtro="' + Lic_esc_(filtro) + '" style="text-align:left;cursor:pointer"><span class="v">' + Lic_esc_(v) + '</span><span class="r">' + Lic_esc_(rotulo) + "</span></button>";
+  }
+  function LicHb_docHtml_(x) {
+    var a = x.arquivo, s = "";
+    s += '<article class="cm-card lhb-doc ' + (x.situacao === "VENCIDO" || x.situacao === "VENCE_7" ? "p1" : x.situacao === "VENCE_15" || x.situacao === "VENCE_30" ? "p2" : "p3") + '" id="lhbDoc-' + Lic_esc_(x.id) + '">' +
+      '<div class="lhb-doc-cab"><p class="cm-card-tit"><span class="lic-mono">' + Lic_esc_(x.codigo) + "</span> " + Lic_esc_(x.nome) + "</p><span>" + LicHb_selo_(x.situacaoCor, x.situacaoNome) + (a ? "" : " " + LicHb_selo_("vermelho", "Sem arquivo")) + (x.ativo ? "" : " " + LicHb_selo_("cinza", "Retirado de uso")) + "</span></div>" +
+      '<p class="cm-meta" style="margin:4px 0 0">' + Lic_esc_(x.situacaoTexto) + " · " + Lic_esc_(x.tipoNome) + (x.item ? " (item " + Lic_esc_(x.item) + " do doc 03)" : "") + " · " + Lic_esc_(x.categoriaNome) + "</p>" +
+      '<div class="lhb-dl">' + [["Número", x.numero || "não informado"], ["Emissão", LicHb_dia_(x.emissao) || "não informada"], ["Validade", LicHb_dia_(x.validade) || x.regraValidade], ["Órgão emissor", x.orgao || "não informado"],
+        ["Responsável", x.responsavel || "Diretoria de Licitações"], ["Versão", x.versao + (x.atualizadoPor ? " · " + x.atualizadoPor + " em " + Lic_dataHora_(x.atualizadoEm) : "")]].map(function (p) { return "<div><span>" + Lic_esc_(p[0]) + "</span><b>" + Lic_esc_(p[1]) + "</b></div>"; }).join("") +
+      (a ? '<div class="lhb-largo"><span>Arquivo</span><b>' + Lic_esc_(a.nome) + " · " + Lic_esc_(LicHb_tamanho_(a.tamanho)) + '</b> <span class="lic-hash" title="SHA-256">SHA-256 ' + Lic_esc_(a.sha256) + "</span></div>" : "") + "</div>";
+    if (x.atestado) {
+      s += '<div class="lhb-dl">' + [["Contratante", x.contratante + (x.contratanteCnpj ? " (CNPJ " + x.contratanteCnpj + ")" : "")], ["Período", (LicHb_dia_(x.periodoInicio) || "?") + " a " + (LicHb_dia_(x.periodoFim) || "?")], ["CAT ou acervo", x.cat || "não informado"], ["O.S. ou relatório", x.os || "não informado"]]
+        .map(function (p) { return "<div><span>" + Lic_esc_(p[0]) + "</span><b>" + Lic_esc_(p[1]) + "</b></div>"; }).join("") + "</div>" +
+        '<p class="cm-txt" style="margin:4px 0"><b>Objeto:</b> ' + Lic_esc_(x.objeto) + "</p>" +
+        ((x.servicos || []).length ? '<ul class="lhb-tipos">' + x.servicos.map(function (v) { return "<li>" + Lic_esc_(v.servico) + (v.quantidade !== null && v.quantidade !== undefined ? " · " + Lic_esc_(Number(v.quantidade).toLocaleString("pt-BR")) + " " + Lic_esc_(v.unidade || "") : "") + "</li>"; }).join("") + "</ul>" : "");
+    }
+    if (x.escopo) s += '<p class="cm-meta" style="margin:4px 0"><b>Escopo:</b> ' + Lic_esc_(x.escopo) + "</p>";
+    if (x.obs) s += '<p class="cm-meta" style="margin:4px 0"><b>Observações:</b> ' + Lic_esc_(x.obs) + "</p>";
+    if (x.palavras) s += '<p class="cm-meta" style="margin:4px 0"><b>Palavras extras do cruzamento:</b> ' + Lic_esc_(x.palavras) + "</p>";
+    if (x.dependencia) s += '<p class="cm-meta" style="margin:4px 0">Depende de outro módulo: ' + Lic_esc_(x.dependencia) + ".</p>";
+    if (x.faltaData) s += Lic_faixa_("Validade não informada: escreva a data impressa no documento (o SGO+ nunca presume a validade).", "aviso");
+    var link = Lic_url_(x.link);
+    s += '<div class="lic-acoes-linha">' + (a ? '<button type="button" class="btn-secondary" data-lhb-abrir="' + Lic_esc_(x.id) + '">Abrir o arquivo</button><button type="button" class="btn-secondary" data-lhb-baixar="' + Lic_esc_(x.id) + '">Baixar</button>' : "") +
+      (link ? '<a class="btn-secondary" href="' + Lic_esc_(link) + '" target="_blank" rel="noopener noreferrer" title="Abre o site oficial do emissor, em nova aba">Verificar no emissor</a>' : "") +
+      (x.ativo ? '<button type="button" class="btn-primary" data-lhb-editar="' + Lic_esc_(x.id) + '">' + (a ? "Editar ou trocar o arquivo" : "Editar e anexar o arquivo") + "</button>" : "") +
+      '<button type="button" class="btn-secondary" data-lhb-versoes="' + Lic_esc_(x.id) + '">Histórico (' + Lic_esc_(x.versao) + ")</button>" +
+      (x.ativo ? '<button type="button" class="btn-secondary" data-lhb-retirar="' + Lic_esc_(x.id) + '">Retirar de uso</button>' : '<button type="button" class="btn-secondary" data-lhb-reativar="' + Lic_esc_(x.id) + '">Voltar a usar</button>') + "</div></article>";
+    return s;
+  }
+  function LicHb_htmlTela_(d) {
+    var k = d.contagens || {}, b = (LICHB.busca || "").toLowerCase();
+    var lista = (d.documentos || []).filter(function (x) {
+      if (LICHB.categoria && x.categoria !== LICHB.categoria) return false;
+      if (LICHB.situacao === "SEM_ARQUIVO" ? !!x.arquivo || !x.ativo : LICHB.situacao && (x.situacao !== LICHB.situacao || !x.ativo)) return false;
+      if (b && (x.codigo + " " + x.nome + " " + x.numero + " " + x.orgao + " " + x.contratante + " " + x.objeto).toLowerCase().indexOf(b) < 0) return false;
+      return true;
+    });
+    var h = Lic_faixa_("Cadastro único dos documentos de habilitação da Metrolabs (matriz de Goiânia, EPP). Cada mudança pede o motivo e vira uma versão nova; trocar o arquivo guarda o anterior. O arquivo fica restrito no SGO+ com o SHA-256, conferido a cada abertura.", "ok") +
+      '<div class="cm-kpis">' + LicHb_kpi_(k.total || 0, "Documentos em uso", "", "") + LicHb_kpi_(k.VENCIDO || 0, "Vencidos", k.VENCIDO ? "erro" : "", "VENCIDO") + LicHb_kpi_(k.VENCE_7 || 0, "Vencem em até 7 dias", k.VENCE_7 ? "erro" : "", "VENCE_7") +
+      LicHb_kpi_(k.VENCE_15 || 0, "Vencem em até 15 dias", k.VENCE_15 ? "aviso" : "", "VENCE_15") + LicHb_kpi_(k.VENCE_30 || 0, "Vencem em até 30 dias", k.VENCE_30 ? "aviso" : "", "VENCE_30") + LicHb_kpi_(k.semArquivo || 0, "Sem arquivo", k.semArquivo ? "erro" : "", "SEM_ARQUIVO") + "</div>" +
+      '<div class="cm-filtros"><div><label for="lhbBusca">Buscar</label><input id="lhbBusca" type="search" placeholder="código, nome, número, emissor" value="' + Lic_esc_(LICHB.busca) + '"></div>' +
+      '<div><label for="lhbCat">Categoria</label><select id="lhbCat"><option value="">Todas</option>' + Object.keys(d.categorias || {}).map(function (c) { return '<option value="' + Lic_esc_(c) + '"' + (c === LICHB.categoria ? " selected" : "") + ">" + Lic_esc_(d.categorias[c]) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label for="lhbSit">Situação</label><select id="lhbSit"><option value="">Todas</option>' + [["VENCIDO", "Vencido"], ["VENCE_7", "Vence em até 7 dias"], ["VENCE_15", "Vence em até 15 dias"], ["VENCE_30", "Vence em até 30 dias"], ["VIGENTE", "Vigente"], ["SEM_VALIDADE", "Sem validade"], ["SEM_ARQUIVO", "Sem arquivo"]]
+        .map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === LICHB.situacao ? " selected" : "") + ">" + Lic_esc_(s[1]) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lhb-novo>Cadastrar documento</button></div></div>';
+    var p = d.padroes || {};
+    h += '<div class="cm-caixa"><h3>Certificados dos padrões (rastreabilidade)</h3><p class="cm-txt">Vêm de Metrologia › Padrões de referência, sem cadastro paralelo: ' + Lic_esc_(p.ativos || 0) + " padrões ativos, " + Lic_esc_(p.vigentes || 0) + " com certificado vigente, " + Lic_esc_(p.vencidos || 0) + " vencidos" + (p.proximo ? "; o próximo vence em " + Lic_esc_(LicHb_dia_(p.proximo)) : "") + ".</p>" +
+      (p.aviso ? Lic_faixa_(p.aviso, "aviso") : "") + '<p class="cm-ajuda-campo">A Metrolabs não é acreditada RBC: as calibrações são rastreáveis. Exigência de laboratório acreditado aparece como "falta" na aba Habilitação da licitação.</p></div>';
+    if ((d.faltamTipos || []).length) h += '<details class="cm-caixa lhb-det"><summary>Documentos da lista ainda sem cadastro (' + d.faltamTipos.length + ")</summary><ul class=\"lhb-falta\">" + d.faltamTipos.map(function (t) {
+      return "<li><span>" + (t.item ? "<b>" + Lic_esc_(t.item) + ".</b> " : "") + Lic_esc_(t.nome) + ' <span class="cm-meta">' + Lic_esc_((d.categorias || {})[t.categoria] || "") + (t.dependencia ? " · depende de outro módulo: " + t.dependencia : "") + '</span></span><button type="button" class="btn-secondary" data-lhb-novo-tipo="' + Lic_esc_(t.codigo) + '">Cadastrar</button></li>';
+    }).join("") + "</ul></details>";
+    if (!(d.documentos || []).length) return h + '<div class="cm-vazio">Nenhum documento cadastrado ainda. Toque em "Cadastrar documento" e comece pelas certidões que mais vencem (FGTS, federal, trabalhista).</div>';
+    var ativos = lista.filter(function (x) { return x.ativo; }), fora = lista.filter(function (x) { return !x.ativo; });
+    Object.keys(d.categorias || {}).forEach(function (c) {
+      var g = ativos.filter(function (x) { return x.categoria === c; });
+      if (g.length) h += '<h3 class="cm-sec">' + Lic_esc_(d.categorias[c]) + " (" + g.length + ")</h3>" + g.map(LicHb_docHtml_).join("");
+    });
+    if (!ativos.length) h += '<div class="cm-vazio">Nenhum documento em uso com estes filtros.</div>';
+    if (fora.length) h += '<details class="cm-caixa lhb-det"><summary>Retirados de uso (' + fora.length + ")</summary>" + fora.map(LicHb_docHtml_).join("") + "</details>";
+    return h;
+  }
+  function LicHb_desenharTela_() {
+    var c = Lic_corpo_(); if (!c || !LICHB.tela) return;
+    c.innerHTML = LicHb_htmlTela_(LICHB.tela);
+    var bu = Lic_$_("lhbBusca"); if (bu) bu.addEventListener("change", function () { LICHB.busca = bu.value; LicHb_desenharTela_(); });
+    var ca = Lic_$_("lhbCat"); if (ca) ca.addEventListener("change", function () { LICHB.categoria = ca.value; LicHb_desenharTela_(); });
+    var si = Lic_$_("lhbSit"); if (si) si.addEventListener("change", function () { LICHB.situacao = si.value; LicHb_desenharTela_(); });
+    c.querySelectorAll("[data-lhb-filtro]").forEach(function (b) { b.onclick = function () { LICHB.situacao = b.getAttribute("data-lhb-filtro"); LicHb_desenharTela_(); }; });
+    var nv = c.querySelector("[data-lhb-novo]"); if (nv) nv.onclick = function () { LicHb_janelaDoc_(null, "", nv); };
+    c.querySelectorAll("[data-lhb-novo-tipo]").forEach(function (b) { b.onclick = function () { LicHb_janelaDoc_(null, b.getAttribute("data-lhb-novo-tipo"), b); }; });
+    c.querySelectorAll("[data-lhb-editar]").forEach(function (b) { b.onclick = function () { LicHb_janelaDoc_(LicHb_doc_(b.getAttribute("data-lhb-editar")), "", b); }; });
+    c.querySelectorAll("[data-lhb-versoes]").forEach(function (b) { b.onclick = function () { LicHb_janelaVersoes_(b.getAttribute("data-lhb-versoes"), b); }; });
+    c.querySelectorAll("[data-lhb-abrir]").forEach(function (b) { b.onclick = function () { LicHb_abrirArquivo_(b.getAttribute("data-lhb-abrir"), "", false); }; });
+    c.querySelectorAll("[data-lhb-baixar]").forEach(function (b) { b.onclick = function () { LicHb_abrirArquivo_(b.getAttribute("data-lhb-baixar"), "", true); }; });
+    c.querySelectorAll("[data-lhb-retirar]").forEach(function (b) { b.onclick = function () { LicHb_janelaMotivo_("retirar", b.getAttribute("data-lhb-retirar"), b); }; });
+    c.querySelectorAll("[data-lhb-reativar]").forEach(function (b) { b.onclick = function () { LicHb_janelaMotivo_("reativar", b.getAttribute("data-lhb-reativar"), b); }; });
+  }
+  function LicHb_doc_(id) { return ((LICHB.tela && LICHB.tela.documentos) || []).filter(function (x) { return x.id === id; })[0] || null; }
+  function LicHb_tipoDe_(codigo) { return ((LICHB.tela && LICHB.tela.tipos) || []).filter(function (t) { return t.codigo === codigo; })[0] || null; }
+
+  /** Formulário de cadastro e de mudança (versão nova). Só o servidor decide o que mudou (merge campo a campo). */
+  function LicHb_janelaDoc_(x, tipoInicial, origem) {
+    var d = LICHB.tela || {}, novo = !x, tipoAtual = x ? x.tipo : (tipoInicial || "CND_FEDERAL");
+    var cats = d.categorias || {}, opTipos = Object.keys(cats).map(function (c) {
+      var ts = (d.tipos || []).filter(function (t) { return t.categoria === c && t.fonte !== "PADROES"; });
+      return ts.length ? '<optgroup label="' + Lic_esc_(cats[c]) + '">' + ts.map(function (t) { return '<option value="' + Lic_esc_(t.codigo) + '"' + (t.codigo === tipoAtual ? " selected" : "") + ">" + Lic_esc_((t.item ? t.item + ". " : "") + t.nome) + "</option>"; }).join("") + "</optgroup>" : "";
+    }).join("") + '<option value="OUTRO"' + (tipoAtual === "OUTRO" ? " selected" : "") + ">Outro documento</option>";
+    var v = function (k) { return x ? (x[k] === null || x[k] === undefined ? "" : x[k]) : ""; };
+    var servTxt = x && x.servicos ? x.servicos.map(function (s) { return s.servico + "; " + (s.quantidade === null || s.quantidade === undefined ? "" : String(s.quantidade).replace(".", ",")) + "; " + (s.unidade || ""); }).join("\n") : "";
+    var corpo = (x ? '<p class="cm-txt"><span class="lic-mono">' + Lic_esc_(x.codigo) + "</span> · versão " + Lic_esc_(x.versao) + "</p>" : "") + '<div class="lhb-grade">' +
+      '<div class="lhb-largo"><label for="lhbTipo">Documento (lista do doc 03)</label><select id="lhbTipo">' + opTipos + "</select></div>" +
+      '<div class="lhb-largo"><p class="cm-ajuda-campo" id="lhbTipoDica"></p></div>' +
+      '<div class="lhb-largo" id="lhbNomeCx"><label for="lhbNome">Nome do documento</label><input id="lhbNome" maxlength="200" value="' + Lic_esc_(v("nome")) + '"></div>' +
+      '<div id="lhbCatCx"><label for="lhbCatF">Categoria</label><select id="lhbCatF">' + Object.keys(cats).map(function (c) { return '<option value="' + Lic_esc_(c) + '"' + (c === v("categoria") ? " selected" : "") + ">" + Lic_esc_(cats[c]) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label for="lhbNum">Número</label><input id="lhbNum" maxlength="120" value="' + Lic_esc_(v("numero")) + '"></div>' +
+      '<div><label for="lhbEmi">Emissão</label><input id="lhbEmi" type="date" value="' + Lic_esc_(v("emissao")) + '"></div>' +
+      '<div><label for="lhbVal">Validade (data impressa)</label><input id="lhbVal" type="date" value="' + Lic_esc_(v("validade")) + '"></div>' +
+      '<div><label for="lhbOrg">Órgão emissor</label><input id="lhbOrg" maxlength="200" value="' + Lic_esc_(v("orgao")) + '"></div>' +
+      '<div class="lhb-largo"><label for="lhbLink">Link de verificação oficial (http ou https)</label><input id="lhbLink" type="url" inputmode="url" maxlength="500" placeholder="https://" value="' + Lic_esc_(v("link")) + '"></div>' +
+      '<div><label for="lhbResp">Responsável</label><select id="lhbResp"><option value="">Diretoria de Licitações</option>' + (d.responsaveis || []).map(function (u) { return '<option value="' + Lic_esc_(u.id) + '"' + (u.id === v("responsavelId") ? " selected" : "") + ">" + Lic_esc_(u.nome) + "</option>"; }).join("") + "</select></div>" +
+      '<div id="lhbAtestado" class="lhb-largo"><div class="lhb-grade">' +
+        '<div class="lhb-largo"><label for="lhbContr">Contratante</label><input id="lhbContr" maxlength="200" value="' + Lic_esc_(v("contratante")) + '"></div>' +
+        '<div><label for="lhbContrCnpj">CNPJ do contratante</label><input id="lhbContrCnpj" inputmode="numeric" maxlength="18" value="' + Lic_esc_(v("contratanteCnpj")) + '"></div>' +
+        '<div><label for="lhbPerIni">Início do período</label><input id="lhbPerIni" type="date" value="' + Lic_esc_(v("periodoInicio")) + '"></div>' +
+        '<div><label for="lhbPerFim">Fim do período</label><input id="lhbPerFim" type="date" value="' + Lic_esc_(v("periodoFim")) + '"></div>' +
+        '<div class="lhb-largo"><label for="lhbObj">Objeto do atestado</label><textarea id="lhbObj" rows="2" maxlength="2000">' + Lic_esc_(v("objeto")) + "</textarea></div>" +
+        '<div class="lhb-largo"><label for="lhbServ">Serviços e quantidades (uma linha por serviço: serviço; quantidade; unidade)</label><textarea id="lhbServ" rows="4" maxlength="8000" placeholder="Calibração de termômetros; 120; equipamentos">' + Lic_esc_(servTxt) + "</textarea></div>" +
+        '<div><label for="lhbCatAc">CAT ou acervo</label><input id="lhbCatAc" maxlength="200" value="' + Lic_esc_(v("cat")) + '"></div>' +
+        '<div><label for="lhbOs">O.S. ou relatório que comprova</label><input id="lhbOs" maxlength="300" value="' + Lic_esc_(v("os")) + '"></div></div></div>' +
+      '<div class="lhb-largo"><label for="lhbEsc">Escopo (acreditação, registro do Inmetro: grandezas, instrumentos, faixas)</label><textarea id="lhbEsc" rows="2" maxlength="1000">' + Lic_esc_(v("escopo")) + "</textarea></div>" +
+      '<div class="lhb-largo"><label for="lhbPal">Palavras extras do cruzamento (separadas por vírgula)</label><input id="lhbPal" maxlength="1500" value="' + Lic_esc_(v("palavras")) + '"><p class="cm-ajuda-campo">Quando o edital usar estas palavras, o sistema sugere este documento (regra de palavras, nunca a IA).</p></div>' +
+      '<div class="lhb-largo"><label for="lhbObs">Observações</label><textarea id="lhbObs" rows="2" maxlength="2000">' + Lic_esc_(v("obs")) + "</textarea></div>" +
+      '<div class="lhb-largo"><label for="lhbArq">' + (x && x.arquivo ? "Trocar o arquivo (opcional; o atual fica na versão " + Lic_esc_(x.versao) + ")" : "Arquivo do documento (PDF ou foto, até 10 MB)") + '</label><input id="lhbArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"></div>' +
+      '<div class="lhb-largo"><label for="lhbMot">' + (novo ? "Motivo (opcional no cadastro)" : "Motivo da mudança (obrigatório, fica no histórico)") + '</label><textarea id="lhbMot" rows="2" maxlength="1000"></textarea></div></div><div id="lhbMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_(novo ? "Cadastrar documento de habilitação" : "Mudar o documento " + x.codigo, corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lhb-gravar>' + (novo ? "Cadastrar" : "Gravar versão nova") + "</button>", origem);
+    var ajustar = function () {
+      var t = LicHb_tipoDe_(LicHb_valor_("lhbTipo")) || {}, outro = !t.categoria;
+      Lic_$_("lhbAtestado").className = "lhb-largo" + (t.atestado ? "" : " lhb-oculto");
+      Lic_$_("lhbCatCx").className = outro ? "" : "lhb-oculto";
+      var nm = Lic_$_("lhbNome"); if (nm && novo && !outro && (!nm.value || nm.getAttribute("data-auto") === "1")) { nm.value = t.nome || ""; nm.setAttribute("data-auto", "1"); }
+      Lic_$_("lhbTipoDica").textContent = "Validade: " + (t.regraValidade || "data impressa") + (t.obs ? ". " + t.obs : "") + (t.dependencia ? ". Depende de outro módulo: " + t.dependencia : "") + ".";
+    };
+    var sel = Lic_$_("lhbTipo"); if (sel) sel.addEventListener("change", ajustar);
+    var nmI = Lic_$_("lhbNome"); if (nmI) nmI.addEventListener("input", function () { nmI.setAttribute("data-auto", "0"); });
+    ajustar();
+    ov.querySelector("[data-lhb-gravar]").onclick = function () {
+      var bt = this, msg = Lic_$_("lhbMsg");
+      var campos = { tipo: LicHb_valor_("lhbTipo"), nome: LicHb_valor_("lhbNome"), categoria: LicHb_valor_("lhbCatF"), numero: LicHb_valor_("lhbNum"), emissao: LicHb_valor_("lhbEmi"), validade: LicHb_valor_("lhbVal"),
+        orgao: LicHb_valor_("lhbOrg"), link: LicHb_valor_("lhbLink"), responsavelId: LicHb_valor_("lhbResp"), escopo: LicHb_valor_("lhbEsc"), palavras: LicHb_valor_("lhbPal"), obs: LicHb_valor_("lhbObs") };
+      var t = LicHb_tipoDe_(campos.tipo) || {};
+      if (t.atestado) Object.assign(campos, { contratante: LicHb_valor_("lhbContr"), contratanteCnpj: LicHb_valor_("lhbContrCnpj"), periodoInicio: LicHb_valor_("lhbPerIni"), periodoFim: LicHb_valor_("lhbPerFim"), objeto: LicHb_valor_("lhbObj"), servicos: LicHb_valor_("lhbServ"), cat: LicHb_valor_("lhbCatAc"), os: LicHb_valor_("lhbOs") });
+      var motivo = LicHb_valor_("lhbMot");
+      if (!novo && motivo.trim().length < 10) { msg.innerHTML = Lic_faixa_("Escreva o motivo da mudança com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      var enviar = function (arquivo) {
+        bt.disabled = true;
+        LicHb_chamar_("salvar", { id: x ? x.id : "", campos: campos, arquivo: arquivo, motivo: motivo }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicHb_renderTela_(); },
+          function (m) { bt.disabled = false; msg.innerHTML = Lic_faixa_(m, "erro"); }, { carregando: arquivo ? "Guardando o arquivo e calculando o SHA-256…" : "" });
+      };
+      var inp = Lic_$_("lhbArq"), f = inp && inp.files && inp.files[0];
+      if (!f) { enviar(null); return; }
+      if (f.size > 10 * 1024 * 1024) { msg.innerHTML = Lic_faixa_("O arquivo passa de 10 MB. Salve o PDF em tamanho menor e escolha de novo. Nada foi alterado.", "erro"); return; }
+      var rd = new FileReader();
+      rd.onload = function () { enviar({ nome: f.name, tipo: f.type, base64: String(rd.result || "").replace(/^data:[^,]*,/, "") }); };
+      rd.onerror = function () { msg.innerHTML = Lic_faixa_("Não foi possível ler o arquivo no aparelho. Escolha de novo. Nada foi alterado.", "erro"); };
+      rd.readAsDataURL(f);
+    };
+    return ov;
+  }
+  function LicHb_janelaMotivo_(op, id, origem) {
+    var ret = op === "retirar";
+    var ov = Lic_janela_(ret ? "Retirar o documento de uso" : "Voltar a usar o documento", '<div class="cm-campo"><label for="lhbMotR">Motivo (obrigatório)</label><textarea id="lhbMotR" rows="3" maxlength="1000" placeholder="' + (ret ? "Ex.: substituído por certidão nova cadastrada como HAB-0012" : "Ex.: retirado por engano") + '"></textarea><p class="cm-ajuda-campo">' +
+      (ret ? "O documento não é apagado: fica no histórico, com os arquivos, e pode voltar a ser usado." : "Vira uma versão nova, com o seu nome e a data.") + '</p></div><div id="lhbMsgR" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lhb-ok>' + (ret ? "Retirar de uso" : "Voltar a usar") + "</button>", origem);
+    ov.querySelector("[data-lhb-ok]").onclick = function () {
+      var bt = this, m = LicHb_valor_("lhbMotR");
+      if (m.trim().length < 10) { Lic_$_("lhbMsgR").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      LicHb_chamar_(op, { id: id, motivo: m }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicHb_renderTela_(); }, function (e) { bt.disabled = false; Lic_$_("lhbMsgR").innerHTML = Lic_faixa_(e, "erro"); });
+    };
+  }
+  function LicHb_janelaVersoes_(id, origem) {
+    var ov = Lic_janela_("Histórico do documento", '<div id="lhbVers">' + Lic_carregando_(2) + "</div>", '<button type="button" class="btn-secondary" data-lic-cancelar>Fechar</button>', origem);
+    LicHb_chamar_("versoes", { id: id }, function (r) {
+      var el = Lic_$_("lhbVers"); if (!el) return;
+      el.innerHTML = '<ul class="cm-hist" style="list-style:none;padding:0;margin:0">' + (r.versoes || []).map(function (v) {
+        return '<li style="padding:8px 0;border-bottom:1px solid var(--border)"><p class="cm-meta" style="margin:0"><b>Versão ' + Lic_esc_(v.versao) + "</b> · " + Lic_esc_(Lic_dataHora_(v.em)) + " · " + Lic_esc_(v.por) + (v.validade ? " · validade " + Lic_esc_(LicHb_dia_(v.validade)) : "") +
+          (v.integra ? "" : ' · <span class="cm-selo vermelho">registro alterado fora do SGO+</span>') + '</p><p class="cm-txt" style="margin:4px 0">' + Lic_esc_(v.mudou) + '</p><p class="cm-meta" style="margin:0">Motivo: ' + Lic_esc_(v.motivo) + "</p>" +
+          (v.arquivo ? '<p class="cm-meta" style="margin:4px 0 0">Arquivo: ' + Lic_esc_(v.arquivo.nome) + ' <span class="lic-hash">SHA-256 ' + Lic_esc_(v.arquivo.sha256) + '</span></p><div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lhb-arqv="' + Lic_esc_(v.id) + '">Abrir o arquivo desta versão</button></div>' : "") + "</li>";
+      }).join("") + "</ul>";
+      el.querySelectorAll("[data-lhb-arqv]").forEach(function (b) { b.onclick = function () { LicHb_abrirArquivo_(id, b.getAttribute("data-lhb-arqv"), false); }; });
+    }, function (m) { var el = Lic_$_("lhbVers"); if (el) el.innerHTML = Lic_faixa_(m, "erro"); });
+    return ov;
+  }
+  /** Abrir (nova aba, aberta no toque) ou baixar. O servidor confere o SHA-256 antes de entregar. */
+  function LicHb_abrirArquivo_(id, versaoId, baixar) {
+    var janela = null;
+    if (!baixar) { try { janela = window.open("", "_blank"); if (janela && janela.document) janela.document.title = "Abrindo o documento…"; } catch (e) { janela = null; } }
+    LicHb_chamar_("arquivo", { id: id, versaoId: versaoId || "", baixar: !!baixar }, function (r) {
+      var bin = atob(r.base64 || ""), u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      var seguro = !r.forcarBaixar;
+      if (!seguro) { baixar = true; if (janela) { try { janela.close(); } catch (e) {} janela = null; } }
+      var url = URL.createObjectURL(new Blob([u8], { type: seguro ? r.tipo : "application/octet-stream" }));
+      if (janela && !baixar) janela.location.href = url;
+      else { var a = document.createElement("a"); a.href = url; a.download = r.nome || "documento"; document.body.appendChild(a); a.click(); try { a.remove(); } catch (e) {} }
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
+      Lic_toast_((baixar ? "Baixado: " : "Aberto: ") + (r.nome || "documento") + " (SHA-256 conferido no servidor).");
+    }, function (m) { if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); }, { carregando: "Buscando o documento no servidor…" });
+  }
+  /** Página A4 (HTML do servidor, sem script e com todo texto escapado) em nova aba; a aba é aberta no toque. */
+  function LicHb_abrirHtml_(janela, html) {
+    var url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    if (janela) janela.location.href = url; else { var a = document.createElement("a"); a.href = url; a.download = "relacao-habilitacao.html"; document.body.appendChild(a); a.click(); try { a.remove(); } catch (e) {} }
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
+  }
+
+  // ================= aba "Habilitação" da ficha =================
+  function LicHb_htmlAba_(d) { return '<div id="licHab">' + Lic_carregando_(2) + "</div>"; }
+  function LicHb_ligarAba_(c, d, id) {
+    LicHb_chamar_("aba", { id: id }, function (r) { LICHB.aba[id] = r; LicHb_desenharAba_(id); }, function (m) { var el = Lic_$_("licHab"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicHb_ligarAba_(c, d, id); }); } });
+  }
+  function LicHb_exHtml_(e) {
+    var cor = LICHB_CRUZ_COR[e.efetivo] || "cinza", f = (e.fontes || [])[0] || {};
+    var onde = [f.arquivo, f.rotulo || (f.pagina ? "p. " + f.pagina : ""), f.linha ? "linha " + f.linha : ""].filter(Boolean).join(", ");
+    var h = '<article class="lhb-ex ' + cor + '"><div class="lhb-ex-cab"><b>' + Lic_esc_(e.ref) + " · " + Lic_esc_(e.temaNome) + "</b>" + LicHb_selo_(cor, LICHB_CRUZ_NOME[e.efetivo] || e.efetivoNome) + "</div>" +
+      '<blockquote class="lic-trecho">"' + Lic_esc_(e.texto) + '"' + (onde ? "<cite>" + Lic_esc_((e.origem === "LEITURA" ? "Leitura do edital: " : "Análise: ") + onde) + "</cite>" : "") + "</blockquote>" +
+      (e.resumo ? '<p class="cm-meta" style="margin:4px 0">Resumo da análise: ' + Lic_esc_(e.resumo) + "</p>" : "") +
+      '<p class="cm-txt" style="margin:6px 0">' + Lic_esc_(e.efetivoTexto) + "</p>";
+    if (e.manual) h += '<p class="cm-meta" style="margin:2px 0">Sugestão do sistema (regra de palavras): ' + Lic_esc_(LICHB_CRUZ_NOME[e.sugestao.situacao]) + ". " + Lic_esc_(e.sugestao.texto) + "</p>";
+    else h += '<p class="cm-meta" style="margin:2px 0">Sugestão do sistema pela regra de palavras (não é a IA): a Diretoria confirma.</p>';
+    if ((e.tiposAvaliados || []).length) h += '<ul class="lhb-tipos">' + e.tiposAvaliados.map(function (t) {
+      return "<li>" + LicHb_selo_(LICHB_CRUZ_COR[t.situacao], LICHB_CRUZ_NOME[t.situacao]) + " <b>" + Lic_esc_(t.nome) + "</b>" + (t.texto ? ': <span class="cm-meta">' + Lic_esc_(t.texto) + "</span>" : "") +
+        ((t.documentos || []).length ? "<ul>" + t.documentos.map(function (x) { return '<li><span class="lic-mono">' + Lic_esc_(x.codigo) + "</span> " + Lic_esc_(x.nome) + ' <span class="cm-meta">· ' + Lic_esc_(x.estadoTexto) + (x.comum && x.comum.length ? " · em comum: " + Lic_esc_(x.comum.slice(0, 6).join(", ")) : "") + "</span></li>"; }).join("") + "</ul>" : "") + "</li>";
+    }).join("") + "</ul>";
+    if (e.alerta) h += '<p class="lic-motivo pend">A leitura achou "' + Lic_esc_(e.alerta) + '" perto deste trecho: confirme no edital se a exigência vale.</p>';
+    h += '<div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lhb-conf="ATENDE" data-lhb-chave="' + Lic_esc_(e.chave) + '">Marcar "atende"</button><button type="button" class="btn-secondary" data-lhb-conf="NAO_ATENDE" data-lhb-chave="' + Lic_esc_(e.chave) + '">Marcar "não atende"</button></div>';
+    if ((e.historico || []).length) h += '<details class="lhb-det"><summary>Decisões da Diretoria (' + e.historico.length + ")</summary><ul class=\"lhb-tipos\">" + e.historico.map(function (x) {
+      return "<li><b>Versão " + Lic_esc_(x.versao) + "</b> · " + Lic_esc_(LICHB_CRUZ_NOME[x.decisao] || x.decisao) + (x.documento ? " com " + Lic_esc_(x.documento) : "") + " · " + Lic_esc_(x.por) + " em " + Lic_esc_(Lic_dataHora_(x.em)) + (x.integra ? "" : ' · <span class="cm-selo vermelho">registro alterado fora do SGO+</span>') + '<br><span class="cm-meta">Motivo: ' + Lic_esc_(x.motivo) + "</span></li>";
+    }).join("") + "</ul></details>";
+    return h + "</article>";
+  }
+  function LicHb_htmlAbaDados_(r) {
+    var hb = r.habilitacao || {}, c = hb.contagens || {}, s = hb.sessao || {}, inf = hb.info || {};
+    var h = (r.op && !r.op.acompanhada ? Lic_faixa_("Esta oportunidade ainda não está em análise: a habilitação entra nas pendências do Hoje e do Painel a partir de \"Em análise\". O cruzamento abaixo já vale para conferir.", "aviso") : "") +
+      '<div class="cm-caixa"><h3>Habilitação desta licitação</h3><p class="cm-txt">Sessão: <b>' + Lic_esc_(LicHb_dia_(s.dia) || "sem data") + "</b> · " + Lic_esc_(s.fonte) + "</p>" +
+      '<p class="cm-meta">Exigências: ' + (inf.leitura ? "leitura do edital versão " + Lic_esc_(inf.leitura.versao) + (inf.leitura.atual ? "" : " (há leitura mais nova em andamento)") : "sem leitura do edital consolidada") + " · " + (inf.analise ? "análise versão " + Lic_esc_(inf.analise.versao) : "sem análise concluída") + ". Cruzamento com o cadastro de habilitação pela regra de palavras do sistema (" + Lic_esc_(hb.regras) + ").</p>" +
+      (inf.avisos || []).map(function (a) { return Lic_faixa_(a, "aviso"); }).join("") + (hb.cortadas ? Lic_faixa_("Mais " + hb.cortadas + " exigências ficaram fora da lista (limite da tela). Confira na aba Leitura do edital.", "aviso") : "") +
+      '<div class="cm-kpis">' + [["ATENDE", c.ATENDE, ""], ["A_CONFERIR", c.A_CONFERIR, c.A_CONFERIR ? "aviso" : ""], ["VENCE_ANTES", c.VENCE_ANTES, c.VENCE_ANTES ? "erro" : ""], ["FALTA", c.FALTA, c.FALTA ? "erro" : ""], ["NAO_ATENDE", c.NAO_ATENDE, c.NAO_ATENDE ? "erro" : ""]]
+        .map(function (k) { return '<div class="cm-kpi ' + k[2] + '"><span class="v">' + Lic_esc_(k[1] || 0) + '</span><span class="r">' + Lic_esc_(LICHB_CRUZ_NOME[k[0]]) + "</span></div>"; }).join("") + "</div>" +
+      (c.pendencias ? Lic_faixa_(c.pendencias + (c.pendencias === 1 ? " pendência" : " pendências") + " de habilitação (falta, vence antes da sessão ou não atende). Documento vencido na data da sessão não se corrige depois (art. 64).", "erro") : "") +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lhb-pacote' + ((hb.itens || []).length ? "" : " disabled") + '>Gerar relação para conferência (A4)</button><button type="button" class="btn-secondary" data-lhb-ir-cadastro>Abrir o cadastro de habilitação</button></div>' +
+      '<p class="cm-ajuda-campo">A relação lista cada exigência com o documento, a validade e o SHA-256 do arquivo, para conferir antes de enviar no portal. Nada é enviado pelo SGO+.</p></div>';
+    if (!(hb.itens || []).length) return h + '<div class="cm-vazio">Ainda não há exigências de habilitação lidas para esta licitação. Faça a leitura do edital (o checklist "O que realmente precisamos") ou a análise; depois volte aqui.<div class="lic-acoes-linha" style="justify-content:center;margin-top:8px"><button type="button" class="btn-secondary" data-lhb-ir-leitura>Ir para a Leitura do edital</button></div></div>';
+    h += (hb.itens || []).map(LicHb_exHtml_).join("");
+    if ((hb.pacotes || []).length) h += '<div class="cm-caixa"><h3>Relações geradas</h3>' + Lic_tabelaHtml_(["Versão", "Gerada em", "Por", "Pendências", "SHA-256", ""], hb.pacotes.map(function (p) {
+      return [Lic_esc_(p.versao), Lic_esc_(Lic_dataHora_(p.em)), Lic_esc_(p.por), Lic_esc_(p.pendencias), '<span class="lic-hash" title="' + Lic_esc_(p.hash) + '">' + Lic_esc_(String(p.hash || "").slice(0, 16)) + "…</span>" + (p.integra ? "" : ' <span class="cm-selo vermelho">alterado fora do SGO+</span>'),
+        '<button type="button" class="btn-secondary" data-lhb-pacote-ver="' + Lic_esc_(p.id) + '">Abrir</button>'];
+    })) + "</div>";
+    return h;
+  }
+  function LicHb_desenharAba_(id) {
+    var el = Lic_$_("licHab"), r = LICHB.aba[id]; if (!el || !r) return;
+    el.innerHTML = LicHb_htmlAbaDados_(r);
+    var ir = el.querySelector("[data-lhb-ir-cadastro]"); if (ir) ir.onclick = function () { abrir("licitacoes_habilitacao"); };
+    var il = el.querySelector("[data-lhb-ir-leitura]"); if (il) il.onclick = function () { LIC.fichaAba = "leitura"; Lic_renderFicha_(id); };
+    el.querySelectorAll("[data-lhb-conf]").forEach(function (b) { b.onclick = function () { LicHb_janelaConferir_(id, b.getAttribute("data-lhb-chave"), b.getAttribute("data-lhb-conf"), b); }; });
+    var pg = el.querySelector("[data-lhb-pacote]"); if (pg) pg.onclick = function () {
+      var janela = null; try { janela = window.open("", "_blank"); if (janela && janela.document) janela.document.title = "Gerando a relação…"; } catch (e) { janela = null; }
+      pg.disabled = true;
+      LicHb_chamar_("pacoteGerar", { id: id }, function (x) { pg.disabled = false; LicHb_abrirHtml_(janela, x.html); Lic_toast_(x.texto || "Relação gerada."); LicHb_ligarAba_(null, null, id); },
+        function (m) { pg.disabled = false; if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); }, { carregando: "Montando a relação de documentos…" });
+    };
+    el.querySelectorAll("[data-lhb-pacote-ver]").forEach(function (b) { b.onclick = function () {
+      var janela = null; try { janela = window.open("", "_blank"); } catch (e) { janela = null; }
+      LicHb_chamar_("pacoteVer", { id: id, pacoteId: b.getAttribute("data-lhb-pacote-ver") }, function (x) { LicHb_abrirHtml_(janela, x.html); if (!x.integra) Lic_toast_("Atenção: o registro desta relação não confere com o hash gravado.", "erro"); },
+        function (m) { if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); });
+    }; });
+  }
+  function LicHb_janelaConferir_(id, chave, decisao, origem) {
+    var r = LICHB.aba[id] || {}, hb = r.habilitacao || {}, e = (hb.itens || []).filter(function (x) { return x.chave === chave; })[0];
+    if (!e) return;
+    var atende = decisao === "ATENDE", sugeridos = {};
+    (e.tiposAvaliados || []).forEach(function (t) { (t.documentos || []).forEach(function (x) { sugeridos[x.id] = true; }); });
+    var docs = (hb.documentos || []).slice().sort(function (a, b) { return (sugeridos[b.id] ? 1 : 0) - (sugeridos[a.id] ? 1 : 0); });
+    var corpo = '<blockquote class="lic-trecho">"' + Lic_esc_(String(e.texto || "").slice(0, 600)) + '"<cite>' + Lic_esc_(e.ref) + "</cite></blockquote>" +
+      (atende ? '<div class="cm-campo"><label for="lhbConfDoc">Documento que atende (opcional)</label><select id="lhbConfDoc"><option value="">Nenhum do cadastro (explique no motivo)</option>' + docs.map(function (x) {
+        return '<option value="' + Lic_esc_(x.id) + '"' + (e.manual && e.manual.documentoId === x.id ? " selected" : "") + ">" + Lic_esc_(x.codigo + " · " + x.nome + (x.validade ? " · até " + LicHb_dia_(x.validade) : "") + (x.temArquivo ? "" : " · sem arquivo") + (sugeridos[x.id] ? " · sugerido" : "")) + "</option>";
+      }).join("") + '</select><p class="cm-ajuda-campo">Com o documento, o SGO+ continua conferindo a validade dele contra a data da sessão.</p></div>' : "") +
+      '<div class="cm-campo"><label for="lhbConfMot">Motivo (obrigatório)</label><textarea id="lhbConfMot" rows="3" maxlength="1000" placeholder="' + (atende ? "Ex.: o edital aceita a certidão conjunta; conferido no item 8.3" : "Ex.: o edital exige acreditação RBC na grandeza massa") + '"></textarea><p class="cm-ajuda-campo">Fica no histórico desta exigência, com o seu nome e a data. A decisão anterior não é apagada.</p></div><div id="lhbConfMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_(atende ? "Marcar \"atende\"" : "Marcar \"não atende\"", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lhb-conf-ok>Gravar</button>', origem);
+    ov.querySelector("[data-lhb-conf-ok]").onclick = function () {
+      var bt = this, mot = LicHb_valor_("lhbConfMot");
+      if (mot.trim().length < 10) { Lic_$_("lhbConfMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      LicHb_chamar_("conferir", { id: id, chave: chave, decisao: decisao, motivo: mot, documentoId: atende ? LicHb_valor_("lhbConfDoc") : "" }, function (x) { ov.fechar(); Lic_toast_(x.texto || "Gravado."); LicHb_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; Lic_$_("lhbConfMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+
+  // ================= Hoje e Painel =================
+  function LicHb_hojeHtml_(h) {
+    if (!h) return "";
+    if (h.erro) return Lic_faixa_(h.erro, "aviso");
+    var d = h.documentos || {}, l = h.licitacoes || {}, ruim = (d.VENCIDO || 0) + (d.VENCE_7 || 0) + (l.pendencias || 0);
+    var s = '<div class="cm-caixa"><h3>Documentos de habilitação</h3><div class="cm-kpis">' +
+      Lic_pnKpi_(d.VENCIDO || 0, "Vencidos", d.VENCIDO ? "erro" : "", { mod: "licitacoes_habilitacao" }, h.fonteDocumentos) + Lic_pnKpi_(d.VENCE_7 || 0, "Vencem em até 7 dias", d.VENCE_7 ? "erro" : "", { mod: "licitacoes_habilitacao" }, h.fonteDocumentos) +
+      Lic_pnKpi_((d.VENCE_15 || 0) + (d.VENCE_30 || 0), "Vencem em 8 a 30 dias", "", { mod: "licitacoes_habilitacao" }, h.fonteDocumentos) + Lic_pnKpi_(d.semArquivo || 0, "Sem arquivo", d.semArquivo ? "aviso" : "", { mod: "licitacoes_habilitacao" }, h.fonteDocumentos) +
+      Lic_pnKpi_(l.pendencias || 0, "Pendências nas licitações", l.pendencias ? "erro" : "", { mod: "licitacoes_habilitacao" }, h.fonteLicitacoes) + "</div>";
+    if ((l.ops || []).length) s += '<ul class="lhb-falta">' + l.ops.slice(0, 5).map(function (o) {
+      return '<li><span><b class="lic-mono">' + Lic_esc_(o.codigo) + "</b> " + Lic_esc_(o.orgao) + ' <span class="cm-meta">· ' + Lic_esc_(o.pendencias) + (o.pendencias === 1 ? " pendência" : " pendências") + (o.sessaoDia ? " · sessão " + Lic_esc_(LicHb_dia_(o.sessaoDia)) : "") + "</span></span>" +
+        '<button type="button" class="btn-secondary"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", ficha: o.id, fichaAba: "habilitacao" }) + ">Abrir a habilitação</button></li>";
+    }).join("") + "</ul>";
+    s += '<p class="cm-meta lic-pn-fonte"><b>Fonte:</b> ' + Lic_esc_(h.fonteDocumentos) + " " + Lic_esc_(h.fonteLicitacoes) + "</p>" + (ruim ? "" : '<p class="cm-meta">Nada vencido e nenhuma pendência nas licitações acompanhadas.</p>') + "</div>";
+    return s;
+  }
+  function LicHb_painelHtml_(h) {
+    if (!h) return "";
+    if (h.erro) return Lic_pnCaixa_("Documentos de habilitação", Lic_faixa_(h.erro, "aviso"), "LIC_HAB_DOCUMENTOS");
+    var d = h.documentos || {}, l = h.licitacoes || {}, cad = { mod: "licitacoes_habilitacao" };
+    var corpo = '<div class="cm-kpis lic-pn-mini">' + Lic_pnKpi_(l.pendencias || 0, "pendências nas licitações", l.pendencias ? "erro" : "", cad, h.fonteLicitacoes) + Lic_pnKpi_(l.comPendencia || 0, "licitações com pendência", l.comPendencia ? "erro" : "", cad, h.fonteLicitacoes) +
+      Lic_pnKpi_(l.aConferir || 0, "exigências a conferir", l.aConferir ? "aviso" : "", cad, h.fonteLicitacoes) + "</div>" +
+      Lic_pnBarras_([{ t: "Vencidos", n: d.VENCIDO || 0, cor: "var(--danger)", link: cad }, { t: "Vencem em até 7 dias", n: d.VENCE_7 || 0, cor: "var(--danger)", link: cad }, { t: "Vencem em até 15 dias", n: d.VENCE_15 || 0, cor: "var(--warning)", link: cad },
+        { t: "Vencem em até 30 dias", n: d.VENCE_30 || 0, cor: "var(--warning)", link: cad }, { t: "Sem arquivo", n: d.semArquivo || 0, cor: "var(--danger)", link: cad }], d.total || 0) +
+      ((l.ops || []).length ? '<p class="cm-sec">Licitações com pendência</p><ul class="lhb-falta">' + l.ops.slice(0, 8).map(function (o) { return '<li><span>' + Lic_esc_(o.codigo + " · " + o.orgao) + ' <span class="cm-meta">· falta ' + Lic_esc_(o.falta) + ", vence antes " + Lic_esc_(o.venceAntes) + ", não atende " + Lic_esc_(o.naoAtende) + '</span></span><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", ficha: o.id, fichaAba: "habilitacao" }) + ">Abrir</button></li>"; }).join("") + "</ul>" : "") +
+      '<p class="cm-meta">' + Lic_esc_(d.total || 0) + " documentos em uso. " + Lic_esc_(h.fonteDocumentos) + "</p>";
+    return Lic_pnCaixa_("Documentos de habilitação", corpo, h.fonteLicitacoes);
+  }
+</script>

@@ -363,6 +363,8 @@ function Lic_painel_(eu) {
     prazos: { d7: pz.d7, d30: pz.d30, criticos7: pz.criticos7, pendentes30: pz.pendentes30, porTipo7: Object.keys(pz.porTipo7).map(function (t) { return { nome: t, n: pz.porTipo7[t] }; }).sort(function (a, b) { return b.n - a.n; }),
       fonte: 'LIC_EVENTOS (' + pz.eventosLidos + ' linhas lidas): prazos com data de hoje até ' + Lic_somarDia_(hoje, 7).split('-').reverse().join('/') + ' (7 dias) e até ' + ate30.split('-').reverse().join('/') + ' (30 dias), horário de Brasília, sem versões substituídas, sem descartadas e sem travadas (a mesma regra da Agenda). Pendentes de confirmação: os da janela de 30 dias e os sem data (não cancelados), como no contador da Agenda.' },
     alertas: { semCiencia: semC.length, fonte: 'LIC_ALERTAS: enviados, sem ciência e com o prazo ainda por vir (a mesma regra da Central de alertas, aba "Sem ciência").' },
+    // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte
+    habilitacao: typeof LicH_resumo_ === 'function' ? LicH_resumo_() : null,
     travas: { n: k.travasAConfirmar, fonte: 'LIC_OPORTUNIDADES, coluna TRAVAS_A_CONFIRMAR maior que zero (a IA apontou trava e a Diretoria ainda não decidiu), das ' + k.andamento + ' em andamento.' },
     coletor: { noServidor: !!(col && col.noServidor), ligado: !!(col && col.ligado), ultimaRodadaEm: (col && col.ultimaRodadaEm) || '', ultimoSucessoEm: (col && col.ultimoSucessoEm) || '', ultimoErro: (col && col.ultimoErro) || '',
       falhasSeguidasPncp: col && col.falhasSeguidasPncp ? Number(col.falhasSeguidasPncp) : 0, rotasComFalha: rotasFalha, rotas: col && col.rotas ? col.rotas.length : 0, aviso: (col && (col.erroLeitura || (!col.noServidor ? col.texto : ''))) || '',

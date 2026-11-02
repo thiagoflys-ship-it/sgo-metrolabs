@@ -53,7 +53,9 @@ var SGO_AJUDA_NOMES = {
   licitacoes: 'Hoje em Licitações', licitacoes_oportunidades: 'Oportunidades (Licitações)', licitacoes_agenda: 'Agenda e prazos (Licitações)', licitacoes_alertas: 'Central de alertas (Licitações)', licitacoes_portais: 'Portais e configurações (Licitações)',
   licitacoes_kanban: 'Kanban (Licitações)', licitacoes_gantt: 'Gantt (Licitações)', licitacoes_painel: 'Painel de Licitações (Dashboard)',
   // 02/11/2026: tabela de preços de licitação (SGO_Ajuda_LicitacoesPrecos.js)
-  licitacoes_precos: 'Preços de licitação'
+  licitacoes_precos: 'Preços de licitação',
+  // 02/11/2026: documentos de habilitação (SGO_Ajuda_LicitacoesHabilitacao.js)
+  licitacoes_habilitacao: 'Documentos de habilitação'
 };
 
 /**
@@ -103,6 +105,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Licitacoes_ === 'function') fontes.push(['Licitacoes', SGO_ajudaTelas_Licitacoes_]);
   // 02/11/2026: Preços de licitação (SGO_Ajuda_LicitacoesPrecos.js).
   if (typeof SGO_ajudaTelas_LicitacoesPrecos_ === 'function') fontes.push(['LicitacoesPrecos', SGO_ajudaTelas_LicitacoesPrecos_]);
+  // 02/11/2026: Documentos de habilitação (SGO_Ajuda_LicitacoesHabilitacao.js).
+  if (typeof SGO_ajudaTelas_LicitacoesHabilitacao_ === 'function') fontes.push(['LicitacoesHabilitacao', SGO_ajudaTelas_LicitacoesHabilitacao_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

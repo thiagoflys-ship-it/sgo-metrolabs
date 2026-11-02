@@ -274,6 +274,8 @@ function Lic_jaAvisado_(e, min, uid, porChave, evPorId) {
  * deixou de valer ou que já passou. Conferido na programação, no envio e no escalonamento (revisão de 02/11/2026).
  */
 function Lic_alertaSemValer_(a, ops, evPorId, cfg, agoraMs) {
+  // avisos dos documentos de habilitação (SGO_Licitacoes_Habilitacao.js): a regra é do documento (versão, faixa, sessão)
+  if (Lic_s_(a.TIPO) === 'DOCUMENTO') return typeof LicH_alertaSemValer_ === 'function' ? LicH_alertaSemValer_(a, ops, cfg, agoraMs) : 'O cadastro de habilitação não está disponível neste ambiente.';
   var l = ops[Lic_s_(a.OPORTUNIDADE_ID)], m = Lic_opSemAlerta_(l, cfg);
   if (m) return 'Sem alerta: oportunidade ' + m + '.';
   if (Lic_s_(a.TIPO) === 'PRAZO') {
@@ -463,6 +465,7 @@ function Lic_linkCiencia_(avisoId, canal) {
 }
 /** Conteúdo do alerta: { titulo, texto (e-mail), params (os 9 do modelo do WhatsApp) }. */
 function Lic_alertaConteudo_(a, l, e, quando) {
+  if (Lic_s_(a.TIPO) === 'DOCUMENTO' && typeof LicH_alertaConteudo_ === 'function') return LicH_alertaConteudo_(a, l, quando);
   var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), nivel = LIC_NIVEIS[Lic_up_(a.NIVEL)] || 'normal';
   var orgao = Lic_s_(l && l.ORGAO_NOME) || 'Órgão não informado', local = l ? (Lic_s_(l.MUNICIPIO) ? Lic_s_(l.MUNICIPIO) + '/' : '') + Lic_s_(l.UF) : '';
   var processo = (Lic_s_(l && l.NUMERO_CONTROLE_PNCP) || Lic_s_(a.CODIGO)) + (l && Lic_s_(l.MODALIDADE) ? ' (' + Lic_s_(l.MODALIDADE) + ')' : '');
@@ -535,7 +538,7 @@ function Lic_alertaEnviarUm_(a, quando, cfg, ops, evs) {
     else if (!wa && cfg.canais.whatsapp !== false) { wa = Lic_alertaWhatsapp_(a, ct); waOk = wa.situacao === 'ACEITO'; alt = 'E-mail não saiu (' + (em ? em.motivo : 'sem canal') + '): WhatsApp tentado como canal alternativo' + (waOk ? '' : ', e também não saiu') + '.'; }
   }
   var chegou = emOk || waOk, papel = Lic_s_(a.PAPEL), escalona = papel === 'TITULAR' || papel === 'TODOS';
-  var campos = { TITULO: Lic_texto_(ct.titulo, 300), TEXTO: Lic_s_(a.TIPO) === 'MUDANCA' ? Lic_s_(a.TEXTO) : Lic_texto_(ct.texto, 3000), TENTATIVAS: tent, INTERNO_EM: Lic_s_(a.INTERNO_EM) || agora,
+  var campos = { TITULO: Lic_texto_(ct.titulo, 300), TEXTO: Lic_s_(a.TIPO) === 'MUDANCA' || Lic_s_(a.TIPO) === 'DOCUMENTO' ? Lic_s_(a.TEXTO) : Lic_texto_(ct.texto, 3000), TENTATIVAS: tent, INTERNO_EM: Lic_s_(a.INTERNO_EM) || agora,
     ENVIADO_EM: chegou ? agora : Lic_s_(a.ENVIADO_EM), SITUACAO: chegou ? 'ENVIADO' : 'FALHOU', CANAL_ALTERNATIVO: Lic_texto_(alt, 300), ATUALIZADO_EM: agora };
   if (em) { campos.EMAIL_SITUACAO = em.situacao; campos.EMAIL_MOTIVO = em.motivo; campos.EMAIL_EM = agora; }
   if (wa) { campos.WA_SITUACAO = wa.situacao; campos.WA_MOTIVO = wa.motivo; campos.WA_ID = wa.id || ''; campos.WA_EM = agora; if (wa.situacao === 'FALHOU') campos.FALHOU_EM = agora; }
@@ -886,6 +889,8 @@ function Lic_alertasRodada_(quando) {
   // implantação: só depois que a agenda inteira foi montada (rodadas com sobra continuam sem a marca)
   passo('implantacao', function () { var ag = r.agenda || {}; return ag.erro || ag.restam ? (Lic_alertasImplantadoEm_() || 'aguardando a agenda inteira') : Lic_alertasMarcarImplantacao_(quando.toISOString()); });
   passo('programar', function () { return Lic_alertasProgramar_(quando); });
+  // avisos dos documentos de habilitação (validade e licitações acompanhadas), no máximo a cada 30 min (SGO_Licitacoes_Habilitacao.js)
+  passo('habilitacao', function () { return typeof LicH_alertasProgramar_ === 'function' ? LicH_alertasProgramar_(quando) : null; });
   passo('escalonar', function () { return Lic_alertasEscalonar_(quando); });
   passo('enviar', function () { return Lic_alertasEnviar_(quando); });
   passo('concluir', function () { return Lic_alertasConcluir_(quando); });
@@ -940,7 +945,8 @@ function Lic_alertaParaTela_(a) {
   if (Lic_s_(a.ESCALONADO_EM)) estados.push({ n: 10, nome: 'Escalonado', em: Lic_s_(a.ESCALONADO_EM), feito: true, escalado: true });
   return {
     id: Lic_s_(a.ID), avisoId: Lic_s_(a.AVISO_ID), opId: Lic_s_(a.OPORTUNIDADE_ID), codigo: Lic_s_(a.CODIGO), eventoId: Lic_s_(a.EVENTO_ID), eventoTipo: Lic_s_(a.EVENTO_TIPO), tipo: Lic_s_(a.TIPO), papel: Lic_s_(a.PAPEL),
-    antecedencia: Lic_s_(a.ANTECEDENCIA), nivel: Lic_up_(a.NIVEL), nivelNome: LIC_NIVEIS[Lic_up_(a.NIVEL)] || '', pessoa: Lic_s_(a.USUARIO_NOME), pessoaId: Lic_s_(a.USUARIO_ID), titulo: Lic_s_(a.TITULO), texto: Lic_s_(a.TIPO) === 'MUDANCA' ? Lic_s_(a.TEXTO) : '',
+    antecedencia: Lic_s_(a.ANTECEDENCIA), nivel: Lic_up_(a.NIVEL), nivelNome: LIC_NIVEIS[Lic_up_(a.NIVEL)] || '', pessoa: Lic_s_(a.USUARIO_NOME), pessoaId: Lic_s_(a.USUARIO_ID), titulo: Lic_s_(a.TITULO), texto: Lic_s_(a.TIPO) === 'MUDANCA' || Lic_s_(a.TIPO) === 'DOCUMENTO' ? Lic_s_(a.TEXTO) : '',
+    abrirAba: Lic_s_(a.TIPO) === 'DOCUMENTO' ? 'habilitacao' : 'prazos',
     situacao: s, situacaoNome: LIC_ALERTA_SITUACOES[s] || s, liberarEm: Lic_s_(a.LIBERAR_EM), alvoIso: Lic_s_(a.ALVO_ISO), email: em, emailMotivo: Lic_s_(a.EMAIL_MOTIVO), whatsapp: wa,
     whatsappNome: wa ? LIC_WA_ROTULOS[wa] || wa : '', whatsappMotivo: Lic_s_(a.WA_MOTIVO), alternativo: Lic_s_(a.CANAL_ALTERNATIVO), cienteEm: Lic_s_(a.CIENTE_EM), cientePor: Lic_s_(a.CIENTE_POR_NOME),
     cienteCanal: LIC_CANAIS_CIENCIA[Lic_s_(a.CIENTE_CANAL).replace(/_OUTRO$/, '')] || Lic_s_(a.CIENTE_CANAL), cienteOutro: /_OUTRO$/.test(Lic_s_(a.CIENTE_CANAL)), escalonarEm: Lic_s_(a.ESCALONAR_EM),
@@ -1005,6 +1011,9 @@ function Lic_avisoAbrir_(s, avisoId) {
   var a = Lic_ler_(LIC_ABAS.ALERTAS).filter(function (x) { return Lic_s_(x.AVISO_ID) === Lic_s_(avisoId); })[0];
   if (!a) return { ok: false, tela: { tipo: 'modulo', mod: 'licitacoes_alertas' }, message: 'Não encontramos este alerta (o link pode ser de outro ambiente ou ter sido copiado pela metade). Abrimos a Central de alertas de Licitações.' };
   if (Lic_s_(a.USUARIO_ID) === eu.id && !Lic_s_(a.ABERTO_EM)) { try { SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { ABERTO_EM: Lic_agora_() }); } catch (e) {} }
+  // aviso de documento de habilitação: sem licitação, abre o cadastro; com licitação, a aba Habilitação da ficha
+  if (Lic_s_(a.TIPO) === 'DOCUMENTO') return { ok: true, tela: Lic_s_(a.OPORTUNIDADE_ID) ? { tipo: 'licitacao', id: Lic_s_(a.OPORTUNIDADE_ID), aba: 'habilitacao', alerta: Lic_s_(a.ID) } : { tipo: 'licitacao', mod: 'licitacoes_habilitacao', alerta: Lic_s_(a.ID) },
+    message: Lic_s_(a.CIENTE_EM) ? '' : 'Confirme a ciência deste aviso na Central de alertas (botão "Ciente") ou pelo link do e-mail.' };
   return { ok: true, tela: { tipo: 'licitacao', id: Lic_s_(a.OPORTUNIDADE_ID), aba: 'prazos', alerta: Lic_s_(a.ID) },
     message: Lic_s_(a.CIENTE_EM) ? '' : 'Confirme a ciência deste alerta na aba Prazos (botão "Ciente") ou pelo botão do WhatsApp.' };
 }
