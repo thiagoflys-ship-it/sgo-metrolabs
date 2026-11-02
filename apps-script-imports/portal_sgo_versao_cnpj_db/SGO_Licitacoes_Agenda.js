@@ -309,14 +309,25 @@ function Lic_agendaAtualizar_(o) {
   var agora = o.agora ? Lic_isoDe_(o.agora) : Lic_agora_(), limite = Math.max(1, Number(o.limite) || 60), ids = o.ids ? o.ids.map(Lic_s_) : null, r = { atualizadas: 0, criados: 0, retificados: 0, cancelados: 0, suspensos: 0, mudancas: 0, restam: 0 };
   var fila = Lic_ativas_().filter(function (l) { return ids ? ids.indexOf(Lic_s_(l.ID)) >= 0 : Lic_s_(l.EVENTOS_BASE_HASH) !== Lic_agendaBase_(l); });
   r.restam = Math.max(0, fila.length - limite);
+  r.erros = [];
   fila.slice(0, limite).forEach(function (l0) {
-    var x = Lic_comTrava_(function () {
-      var l = SGO_DATA.getById(LIC_ABAS.OPORTUNIDADES, l0.ID);
-      if (!l || Lic_s_(l.EXCLUIDO_EM)) return null;
-      var s = Lic_eventosSincronizar_(l, Lic_eventosDe_(l.ID), agora);
-      s.op = l;
-      return s;
-    });
+    // revisão 02/11/2026: o erro de uma oportunidade fica registrado e as demais seguem (antes derrubava a agenda inteira e a
+    // implantação dos alertas nunca era marcada)
+    var x = null;
+    try {
+      x = Lic_comTrava_(function () {
+        var l = SGO_DATA.getById(LIC_ABAS.OPORTUNIDADES, l0.ID);
+        if (!l || Lic_s_(l.EXCLUIDO_EM)) return null;
+        var s = Lic_eventosSincronizar_(l, Lic_eventosDe_(l.ID), agora);
+        s.op = l;
+        return s;
+      });
+    } catch (e) {
+      var msg = Lic_texto_(String((e && e.message) || e), 200);
+      r.erros.push({ id: Lic_s_(l0.ID), codigo: Lic_s_(l0.CODIGO), erro: msg });
+      console.error('Licitações, agenda de ' + Lic_s_(l0.CODIGO) + ': ' + msg);
+      return;
+    }
     if (!x) return;
     r.atualizadas++; r.criados += x.criados; r.retificados += x.retificados; r.cancelados += x.cancelados; r.suspensos += x.suspensos; r.mudancas += x.mudancas.length;
     if (typeof Lic_alertasAposAgenda_ === 'function') { try { Lic_alertasAposAgenda_(x.op, x, o.agora); } catch (e) { console.error('Licitações, alertas depois da agenda: ' + ((e && e.message) || e)); } }

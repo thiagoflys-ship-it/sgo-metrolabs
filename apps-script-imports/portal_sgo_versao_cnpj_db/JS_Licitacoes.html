@@ -1051,7 +1051,7 @@
     var c = d.contagens || {}, h = "";
     h += Lic_faixa_(d.modelo && d.modelo.texto ? d.modelo.texto : "", d.modelo && d.modelo.aprovado ? "ok" : "aviso");
     h += Lic_faixa_((d.retorno || {}).texto || "", d.retorno && d.retorno.recebido ? "ok" : "aviso");
-    if (d.rotina) h += Lic_faixa_(d.rotina.texto, d.rotina.parada ? "erro" : d.rotina.rodou ? "ok" : "aviso");
+    if (d.rotina) h += Lic_faixa_(d.rotina.texto, d.rotina.parada ? "erro" : d.rotina.rodou && !d.rotina.implantacaoAguardando && !(d.rotina.errosAgenda || []).length ? "ok" : "aviso");
     if (!d.ligado) h += Lic_faixa_('Alertas de licitação <b>desligados</b> nas regras: nada é programado nem enviado. Para ligar: Portais e configurações › Regras dos alertas (com o motivo).', "erro", true);
     h += '<p class="cm-meta">Recebem: <b>' + Lic_esc_((d.integrantes || []).join(" e ") || "ninguém (ligue alguém nas regras)") + '</b> · interno sempre, e-mail e WhatsApp conforme as regras · inclusive fora do expediente (decisão do dono). A ciência não conclui a tarefa.</p>';
     h += '<div class="cm-tabs" role="tablist" aria-label="Alertas">' + LIC_FILTROS_ALERTA.map(function (x) { return '<button type="button" class="cm-tab' + (x[0] === d.filtro ? " active" : "") + '" role="tab" aria-selected="' + (x[0] === d.filtro) + '" data-lic-afiltro="' + x[0] + '">' + Lic_esc_(x[1]) + " (" + (c[x[0]] || 0) + ")</button>"; }).join("") + "</div>";

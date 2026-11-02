@@ -35,7 +35,9 @@ var LIC_FUNCAO_ROTINA = 'Licitacoes_rotinaAlertas';
 var LIC_ENVIANDO_MAX_MIN = 10;
 var LIC_NIVEIS = { NORMAL: 'normal', IMPORTANTE: 'importante', CRITICO: 'crítico' };
 var LIC_ALERTA_SITUACOES = { PROGRAMADO: 'Programado', ENVIANDO: 'Enviando', ENVIADO: 'Enviado', CIENTE: 'Ciência registrada', ESCALONADO: 'Escalonado', FALHOU: 'Falhou',
-  CANCELADO: 'Cancelado', CONCLUIDO: 'Concluído', PULADO: 'Não enviado' };
+  CANCELADO: 'Cancelado', CONCLUIDO: 'Concluído', PULADO: 'Não enviado', NO_RESUMO: 'No resumo do dia (teto atingido)' };
+/** Situações que esperam a ciência (faixa "sem ciência" e Central de alertas). NO_RESUMO: barrado pelo teto do dia, foi no resumo. */
+var LIC_SITUACOES_SEM_CIENCIA = ['ENVIADO', 'FALHOU', 'ESCALONADO', 'NO_RESUMO'];
 var LIC_WA_ROTULOS = { ACEITO: 'Aceito pela Meta', ENVIADO: 'Enviado (retorno da Meta)', ENTREGUE: 'Entregue (retorno da Meta)', LIDO: 'Lido (retorno da Meta)', FALHOU: 'WhatsApp falhou',
   AGUARDANDO_MODELO: 'WhatsApp aguardando aprovação do modelo na Meta', SEM_NUMERO: 'Sem celular no cadastro', RETIDO: 'Retido pelo piloto do WhatsApp', NAO_CONFIGURADO: 'WhatsApp não configurado',
   NAO_ENVIADO: 'WhatsApp não enviado' };
@@ -281,7 +283,7 @@ function Lic_alertaSemValer_(a, ops, evPorId, cfg, agoraMs) {
   if (Lic_s_(a.ALVO_ISO) && Date.parse(Lic_s_(a.ALVO_ISO)) <= agoraMs) return 'O prazo passou.';
   return '';
 }
-function Lic_chegadaDe_(l, e) { return Lic_s_(l && l.PRIMEIRA_COLETA_EM) || Lic_s_(l && l.CRIADO_EM) || Lic_s_(e && e.CRIADO_EM); }
+function Lic_chegadaDe_(l, e) { return Lic_s_(l && l.ALERTAVEL_DESDE) || Lic_s_(l && l.PRIMEIRA_COLETA_EM) || Lic_s_(l && l.CRIADO_EM) || Lic_s_(e && e.CRIADO_EM); }
 
 // ------------------------------------------------------------ programação (uma linha por prazo + antecedência + pessoa)
 /**
@@ -299,6 +301,14 @@ function Lic_alertasProgramar_(quando, o) {
   return Lic_comTrava_(function () {
     var linhas = Lic_ler_(LIC_ABAS.ALERTAS), porChave = {}, desejadas = {}, novos = [];
     linhas.forEach(function (a) { porChave[Lic_s_(a.CHAVE)] = a; });
+    // revisão 02/11/2026: ALERTAVEL_DESDE = quando a oportunidade passou a poder ter alerta (candidata, em análise ou adiante);
+    // é a referência para "existia antes da implantação" (uma coletada antes e triada candidata depois recebe o aviso mais recente)
+    Object.keys(ops).forEach(function (k) {
+      if (soOps && soOps.indexOf(k) < 0) return;
+      var l = ops[k], pode = !Lic_opSemAlerta_(l, cfg), tem = Lic_s_(l.ALERTAVEL_DESDE);
+      if (pode && !tem) { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { ALERTAVEL_DESDE: agora }); l.ALERTAVEL_DESDE = agora; }
+      else if (!pode && tem) { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { ALERTAVEL_DESDE: '' }); l.ALERTAVEL_DESDE = ''; }
+    });
     if (cfg.ligado) eventos.forEach(function (e) {
       if (soOps && soOps.indexOf(Lic_s_(e.OPORTUNIDADE_ID)) < 0) return;
       if (Lic_up_(e.SITUACAO) !== 'ATIVO' || Lic_up_(e.NATUREZA) === 'PREVISTO') return;
@@ -563,11 +573,13 @@ function Lic_alertasEnviar_(quando) {
       var kg = Lic_s_(a.GRUPO) + '|' + Lic_s_(a.USUARIO_ID); porGrupo[kg] = (porGrupo[kg] || 0) + 1;
       if (Lic_diaSp_(Lic_s_(a.WA_EM) || Lic_s_(a.EMAIL_EM)) === hoje) porDia[Lic_s_(a.USUARIO_ID)] = (porDia[Lic_s_(a.USUARIO_ID)] || 0) + 1;
     });
-    var prontas = todas.filter(function (a) { var s = Lic_up_(a.SITUACAO); return (s === 'PROGRAMADO' && Lic_s_(a.LIBERAR_EM) <= agora) || (s === 'ENVIANDO' && Lic_s_(a.ENVIANDO_EM) < velho); });
+    // ENVIANDO só é abandonado se não há outro envio em curso (ou se o "em curso" também está parado há mais de 10 minutos)
+    var emCurso = Lic_s_(PropertiesService.getScriptProperties().getProperty('LIC_ENVIO_EM_CURSO')), cursoVivo = !!emCurso && emCurso >= velho;
+    var prontas = todas.filter(function (a) { var s = Lic_up_(a.SITUACAO); return (s === 'PROGRAMADO' && Lic_s_(a.LIBERAR_EM) <= agora) || (s === 'ENVIANDO' && !cursoVivo && Lic_s_(a.ENVIANDO_EM) < velho); });
     var maisRecente = {};
     var ehTitular = function (a) { return Lic_s_(a.TIPO) === 'PRAZO' && (Lic_s_(a.PAPEL) === 'TITULAR' || Lic_s_(a.PAPEL) === 'TODOS'); };
     prontas.forEach(function (a) { if (!ehTitular(a)) return; var k = Lic_s_(a.EVENTO_ID) + '|' + Lic_s_(a.USUARIO_ID); if (!maisRecente[k] || Number(a.ANTECEDENCIA_MIN) < Number(maisRecente[k].ANTECEDENCIA_MIN)) maisRecente[k] = a; });
-    var enviosOk = null;
+    var enviosOk = null, resumos = {};
     prontas.forEach(function (a) {
       var mot = '', uid = Lic_s_(a.USUARIO_ID);
       if (!integ[uid]) mot = 'A pessoa não recebe mais alertas de licitação (saiu da Diretoria de Licitações ou foi desligada nas regras).';
@@ -585,7 +597,14 @@ function Lic_alertasEnviar_(quando) {
       // tetos duros: por pessoa em cada alerta (original + reenvio + escalonamento) e por pessoa no dia
       var kg = Lic_s_(a.GRUPO) + '|' + uid, motT = '';
       if ((porGrupo[kg] || 0) >= tetoA) motT = 'Teto de ' + tetoA + ' mensagens para esta pessoa neste alerta atingido: não foi enviada de novo (o alerta continua na Central de alertas).';
-      else if ((porDia[uid] || 0) >= tetoD) motT = 'Teto de ' + tetoD + ' mensagens de licitação para esta pessoa hoje atingido: não foi enviada (o alerta continua na Central de alertas).';
+      else if ((porDia[uid] || 0) >= tetoD && Lic_up_(a.NIVEL) !== 'CRITICO') {
+        // revisão 02/11/2026: o crítico é isento do teto do dia; normal e importante barrados não somem: vão num resumo só
+        // (interno + e-mail) por pessoa nesta rodada e ficam pendentes de ciência na faixa e na Central
+        SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'NO_RESUMO', INTERNO_EM: agora, CANCELADO_MOTIVO: 'Teto de ' + tetoD + ' mensagens de licitação para esta pessoa hoje atingido: foi no resumo por e-mail, sem WhatsApp. Confirme a ciência na Central de alertas.', ESCALONAR_EM: '', ATUALIZADO_EM: agora });
+        Lic_historico_('OPORTUNIDADE', a.OPORTUNIDADE_ID, a.CODIGO, 'ALERTA_TETO', { id: '', nome: 'Alertas de licitação (sistema)' }, { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · teto do dia (' + tetoD + ') atingido: vai no resumo por e-mail e fica pendente de ciência.', fonte: 'Alertas de licitação' });
+        (resumos[uid] = resumos[uid] || []).push(a);
+        res.teto++; return;
+      }
       if (motT) {
         SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'PULADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: motT, ESCALONAR_EM: '', ATUALIZADO_EM: agora });
         Lic_historico_('OPORTUNIDADE', a.OPORTUNIDADE_ID, a.CODIGO, 'ALERTA_TETO', { id: '', nome: 'Alertas de licitação (sistema)' }, { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · ' + motT, fonte: 'Alertas de licitação' });
@@ -604,9 +623,38 @@ function Lic_alertasEnviar_(quando) {
       ESCALONAR_EM: esc && !Lic_s_(a.CIENTE_EM) ? Lic_maisMin_(quando, Number(cfg.escalonarMin[Lic_up_(a.NIVEL)]) || 60) : '', ATUALIZADO_EM: agora });
     res.enviados++;
   });
+  Object.keys(resumos).forEach(function (uid) { if (Lic_alertasResumoTeto_(uid, resumos[uid], quando, ops, evs)) res.resumos = (res.resumos || 0) + 1; });
   if (!lote.length) return res;
-  lote.forEach(function (a) { var x = Lic_alertaEnviarUm_(a, quando, cfg, ops, evs); if (x.chegou) res.enviados++; else res.falhas++; });
+  // revisão 02/11/2026: "envio em curso" marcado antes do lote (prova para a outra rodada não pegar como abandonada a linha que
+  // ainda vai sair), e cada linha marca a tentativa e o instante logo antes de chamar o notificador
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('LIC_ENVIO_EM_CURSO', new Date().toISOString());
+  try {
+    lote.forEach(function (a) {
+      var ini = new Date().toISOString();
+      SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { ENVIANDO_EM: ini, TENTATIVAS: a.TENTATIVAS });
+      a.ENVIANDO_EM = ini;
+      props.setProperty('LIC_ENVIO_EM_CURSO', ini);
+      var x = Lic_alertaEnviarUm_(a, quando, cfg, ops, evs); if (x.chegou) res.enviados++; else res.falhas++;
+    });
+  } finally { try { props.setProperty('LIC_ENVIO_EM_CURSO', ''); } catch (e) {} }
   return res;
+}
+/** Resumo (interno + e-mail, sem WhatsApp) dos alertas normais e importantes barrados pelo teto do dia. Nunca lança. */
+function Lic_alertasResumoTeto_(uid, linhas, quando, ops, evs) {
+  try {
+    var agora = quando.toISOString(), itens = linhas.map(function (a, i) {
+      var ct = Lic_alertaConteudo_(a, ops[Lic_s_(a.OPORTUNIDADE_ID)], evs[Lic_s_(a.EVENTO_ID)] || null, quando);
+      return (i + 1) + '. ' + ct.titulo + '\n   Confirmar ciência: ' + Lic_linkCiencia_(a.AVISO_ID, 'e') + '\n   Abrir: ' + (Lic_linkAviso_(a.AVISO_ID) || 'abra o SGO+');
+    });
+    var r = SGO_notificar_({ usuarios: [uid], canais: ['email'], origem: 'LICITACOES', refId: ('LR-' + Lic_hash_(uid + '|' + linhas.map(function (a) { return a.ID; }).join(',')).slice(0, 20)),
+      titulo: 'Licitações: ' + linhas.length + (linhas.length === 1 ? ' alerta' : ' alertas') + ' no resumo (teto do dia atingido)',
+      texto: 'O teto de mensagens de licitação por pessoa no dia foi atingido. Os alertas abaixo (normais e importantes) vão juntos neste e-mail, sem WhatsApp, e ficam pendentes de ciência na Central de alertas. Alertas críticos não entram no teto.\n\n' + itens.join('\n\n'),
+      link: (typeof Notificar_linkSgo_ === 'function' ? Notificar_linkSgo_() : '') || undefined, rotuloLink: 'Abrir o SGO+' }) || {};
+    var em = r.ok ? { s: 'ENVIADO', m: 'Foi no resumo por e-mail (teto do dia).' } : { s: 'FALHOU', m: Lic_texto_(r.motivo || 'O resumo por e-mail não saiu.', 300) };
+    linhas.forEach(function (a) { SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { EMAIL_SITUACAO: em.s, EMAIL_MOTIVO: em.m, EMAIL_EM: agora, ATUALIZADO_EM: agora }); });
+    return !!r.ok;
+  } catch (e) { console.error('Licitações, resumo do teto: ' + ((e && e.message) || e)); return false; }
 }
 
 // ------------------------------------------------------------ ciência
@@ -833,6 +881,7 @@ function Lic_alertasRodada_(quando) {
   var r = {};
   var passo = function (nome, fn) { try { r[nome] = fn(); } catch (e) { r[nome] = { erro: String((e && e.message) || e).slice(0, 300) }; console.error('Licitações, alertas (' + nome + '): ' + r[nome].erro); } };
   try { Lic_garantirAbas_(); } catch (e) {}
+  try { Lic_cienciaSegredo_(); } catch (e) { console.error('Licitações, segredo dos links de ciência: ' + ((e && e.message) || e)); }
   passo('agenda', function () { return Lic_agendaAtualizar_({ agora: quando, limite: 80 }); });
   // implantação: só depois que a agenda inteira foi montada (rodadas com sobra continuam sem a marca)
   passo('implantacao', function () { var ag = r.agenda || {}; return ag.erro || ag.restam ? (Lic_alertasImplantadoEm_() || 'aguardando a agenda inteira') : Lic_alertasMarcarImplantacao_(quando.toISOString()); });
@@ -867,8 +916,10 @@ function Lic_rotinaSituacao_() {
   var j = null;
   try { j = Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ALERTAS_ULTIMA_RODADA'), null); } catch (e) { j = null; }
   if (!j || !j.em) return { rodou: false, texto: 'A rotina dos alertas (a cada 5 minutos) ainda não rodou neste ambiente.' };
-  var parada = Date.now() - Date.parse(j.em) > 20 * 60000;
-  return { rodou: true, em: j.em, parada: parada, texto: (parada ? 'A rotina dos alertas está parada: a última rodada foi em ' : 'Última rodada dos alertas: ') + Lic_brDiaHora_(j.em) + '.' + (parada ? ' Avise o responsável pelo sistema (o agendador do servidor pode ter parado).' : '') };
+  var parada = Date.now() - Date.parse(j.em) > 20 * 60000, ag = (j.r && j.r.agenda) || {}, impl = Lic_alertasImplantadoEm_();
+  var aguardando = impl ? '' : ' Implantação dos alertas aguardando a agenda inteira' + (ag.erro ? ' (a montagem da agenda falhou: ' + ag.erro + ')' : ag.restam ? ' (faltam ' + ag.restam + ' oportunidades)' : '') + '.';
+  var erros = ag.erros && ag.erros.length ? ' Agenda com erro em ' + ag.erros.length + ' oportunidade(s): ' + ag.erros.slice(0, 3).map(function (x) { return x.codigo + ' (' + x.erro + ')'; }).join('; ') + '. As demais seguiram.' : '';
+  return { rodou: true, em: j.em, parada: parada, implantacaoAguardando: !impl, errosAgenda: ag.erros || [], texto: (parada ? 'A rotina dos alertas está parada: a última rodada foi em ' : 'Última rodada dos alertas: ') + Lic_brDiaHora_(j.em) + '.' + (parada ? ' Avise o responsável pelo sistema (o agendador do servidor pode ter parado).' : '') + aguardando + erros };
 }
 
 // ------------------------------------------------------------ leitura para as telas
@@ -894,7 +945,7 @@ function Lic_alertaParaTela_(a) {
     whatsappNome: wa ? LIC_WA_ROTULOS[wa] || wa : '', whatsappMotivo: Lic_s_(a.WA_MOTIVO), alternativo: Lic_s_(a.CANAL_ALTERNATIVO), cienteEm: Lic_s_(a.CIENTE_EM), cientePor: Lic_s_(a.CIENTE_POR_NOME),
     cienteCanal: LIC_CANAIS_CIENCIA[Lic_s_(a.CIENTE_CANAL).replace(/_OUTRO$/, '')] || Lic_s_(a.CIENTE_CANAL), cienteOutro: /_OUTRO$/.test(Lic_s_(a.CIENTE_CANAL)), escalonarEm: Lic_s_(a.ESCALONAR_EM),
     escalonadoEm: Lic_s_(a.ESCALONADO_EM), escalonadoPara: Lic_s_(a.ESCALONADO_PARA), canceladoMotivo: Lic_s_(a.CANCELADO_MOTIVO), estados: estados, criadoEm: Lic_s_(a.CRIADO_EM),
-    podeCiente: !Lic_s_(a.CIENTE_EM) && ['ENVIADO', 'FALHOU', 'ESCALONADO'].indexOf(s) >= 0, podeReenviar: ['ENVIADO', 'FALHOU', 'ESCALONADO', 'CIENTE'].indexOf(s) >= 0
+    podeCiente: !Lic_s_(a.CIENTE_EM) && LIC_SITUACOES_SEM_CIENCIA.indexOf(s) >= 0, podeReenviar: ['ENVIADO', 'FALHOU', 'ESCALONADO', 'CIENTE'].indexOf(s) >= 0
   };
 }
 function Lic_alertasDaOp_(opId) {
@@ -919,7 +970,7 @@ function Lic_alertasSemCiencia_(eu) {
   var agora = Lic_agora_();
   return Lic_ler_(LIC_ABAS.ALERTAS).filter(function (a) {
     var s = Lic_up_(a.SITUACAO);
-    if (['ENVIADO', 'FALHOU', 'ESCALONADO'].indexOf(s) < 0 || Lic_s_(a.CIENTE_EM)) return false;
+    if (LIC_SITUACOES_SEM_CIENCIA.indexOf(s) < 0 || Lic_s_(a.CIENTE_EM)) return false;
     if (Lic_s_(a.ALVO_ISO) && Lic_s_(a.ALVO_ISO) < agora) return false;
     return !eu || Lic_s_(a.USUARIO_ID) === Lic_s_(eu.id);
   });
@@ -933,7 +984,7 @@ function Lic_alertasCentral_(eu, d) {
   var filtro = ['semCiencia', 'programados', 'enviados', 'falhas', 'cancelados', 'todos'].indexOf(Lic_s_(d.filtro)) >= 0 ? Lic_s_(d.filtro) : 'semCiencia';
   var agora = Lic_agora_(), todas = Lic_ler_(LIC_ABAS.ALERTAS), ops = {};
   Lic_ativas_().forEach(function (l) { ops[Lic_s_(l.ID)] = l; });
-  var semC = function (a) { var s = Lic_up_(a.SITUACAO); return ['ENVIADO', 'FALHOU', 'ESCALONADO'].indexOf(s) >= 0 && !Lic_s_(a.CIENTE_EM) && !(Lic_s_(a.ALVO_ISO) && Lic_s_(a.ALVO_ISO) < agora); };
+  var semC = function (a) { var s = Lic_up_(a.SITUACAO); return LIC_SITUACOES_SEM_CIENCIA.indexOf(s) >= 0 && !Lic_s_(a.CIENTE_EM) && !(Lic_s_(a.ALVO_ISO) && Lic_s_(a.ALVO_ISO) < agora); };
   var teste = { semCiencia: semC, programados: function (a) { return Lic_up_(a.SITUACAO) === 'PROGRAMADO'; }, enviados: function (a) { return ['ENVIADO', 'CIENTE', 'ESCALONADO', 'CONCLUIDO'].indexOf(Lic_up_(a.SITUACAO)) >= 0; },
     falhas: function (a) { return Lic_up_(a.SITUACAO) === 'FALHOU' || Lic_up_(a.WA_SITUACAO) === 'FALHOU' || Lic_up_(a.EMAIL_SITUACAO) === 'FALHOU' || !!Lic_s_(a.CANAL_ALTERNATIVO); },
     cancelados: function (a) { return Lic_up_(a.SITUACAO) === 'CANCELADO' || Lic_up_(a.SITUACAO) === 'PULADO'; }, todos: function () { return true; } };

@@ -313,11 +313,13 @@ Antecedências padrão (ajustáveis):
 | Razões de recurso (do limite interno) | 48 h importante, 24 h importante, 4 h crítico |
 | Mudança na fonte | Retificação e reabertura: importante, para quem recebe primeiro. Suspensão, revogação e anulação: crítico, para os dois |
 
-Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada: sai só o aviso mais recente, e só para oportunidade que chegou da fonte depois da implantação. A implantação é marcada pela rotina só quando a agenda inteira já está montada; oportunidade que já existia antes dela nunca manda aviso vencido (salvar as regras ou abrir uma ficha antes da primeira rodada não dispara atrasados).
+Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada: sai só o aviso mais recente, e só para oportunidade que passou a poder ter alerta (virou candidata, entrou em análise ou foi reaberta) depois da implantação. A implantação é marcada pela rotina só quando a agenda inteira já está montada; oportunidade que já existia antes dela nunca manda aviso vencido (salvar as regras ou abrir uma ficha antes da primeira rodada não dispara atrasados).
 
 Retificação: a versão nova do prazo herda os avisos já enviados (e a ciência) de cada antecedência, para a mesma pessoa: o de 7 dias não sai de novo. As mudanças de uma oportunidade vão juntas num alerta de mudança só. Prazo pendente de confirmação não gera alerta de mudança, nem recálculo que não muda nenhuma data.
 
-Tetos: no máximo 3 mensagens por pessoa em cada alerta (o original, o reenvio e o escalonamento somados) e 30 mensagens de licitação por pessoa no dia (ajustáveis). O que o teto segura fica na Central de alertas como "Não enviado", com o motivo, e no histórico (ALERTA_TETO).
+Tetos: no máximo 3 mensagens por pessoa em cada alerta (o original, o reenvio e o escalonamento somados) e 30 mensagens de licitação por pessoa no dia (ajustáveis). O alerta crítico não entra no teto do dia. Os normais e importantes que passam do teto do dia vão juntos num resumo por e-mail (sem WhatsApp), ficam como "No resumo do dia" e continuam pendentes de ciência na faixa e na Central. O que o teto por alerta segura fica como "Não enviado", com o motivo; os dois casos ficam no histórico (ALERTA_TETO).
+
+Se a agenda de uma oportunidade der erro, ela fica de fora daquela rodada e as demais seguem; a situação da rotina, na Central de alertas, mostra a oportunidade com erro e, enquanto a implantação não foi marcada, "Implantação dos alertas aguardando a agenda inteira".
 
 Estados de cada alerta (Central de alertas):
 

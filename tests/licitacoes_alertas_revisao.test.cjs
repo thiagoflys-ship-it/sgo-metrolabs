@@ -47,7 +47,7 @@ test('MÉDIO 2, implantação: com a agenda em mais de uma rodada (85 oportunida
   assert.equal(a.emails.length, 0);
   assert.ok(a.al({ SITUACAO: 'PROGRAMADO' }).length > 0, 'as antecedências futuras continuam programadas');
   // regras salvas antes da primeira rodada
-  const b = ambiente({ ops: ops.slice(0, 3).map((o) => Object.assign({}, o)), agora: '2026-10-26T09:00:00-03:00' });
+  const b = ambiente({ ops: [0, 1, 2].map((i) => OP('op_' + String(1000 + i), { ENCERRAMENTO_PROPOSTAS: '2026-10-28T10:00:00', ENCERRAMENTO_ISO: '2026-10-28T13:00:00.000Z' })), agora: '2026-10-26T09:00:00-03:00' });
   assert.equal(b.api('s_cha', 'alertasCfgSalvar', { campos: { escalonarMin: { NORMAL: 50 } }, motivo: 'ajuste inicial' }).ok, true);
   assert.equal(b.props.LIC_ALERTAS_IMPLANTADO_EM, undefined, 'salvar as regras não marca a implantação');
   const f = b.api('s_cha', 'ficha', { id: 'op_1000' }); assert.equal(f.ok, true, f.message);
@@ -57,10 +57,71 @@ test('MÉDIO 2, implantação: com a agenda em mais de uma rodada (85 oportunida
   b.tabelas.LIC_OPORTUNIDADES.push(OP('op_nova', { PRIMEIRA_COLETA_EM: '2026-10-27T12:00:00.000Z', ENCERRAMENTO_PROPOSTAS: '2026-10-29T10:00:00', ENCERRAMENTO_ISO: '2026-10-29T13:00:00.000Z' }));
   b.rodada('2026-10-27T09:05:00-03:00');
   assert.ok(b.al({ OPORTUNIDADE_ID: 'op_nova', SITUACAO: 'ENVIADO' }).length >= 1);
-  // oportunidade que já existia antes da implantação, mesmo com a agenda refeita depois, não manda aviso vencido
-  b.tabelas.LIC_OPORTUNIDADES.push(OP('op_velha', { PRIMEIRA_COLETA_EM: '2026-10-01T12:00:00.000Z', ENCERRAMENTO_PROPOSTAS: '2026-10-29T11:00:00', ENCERRAMENTO_ISO: '2026-10-29T14:00:00.000Z' }));
+  // candidata que já existia antes da implantação, com a agenda refeita depois (retificação), não manda aviso vencido
+  assert.equal(b.al({ OPORTUNIDADE_ID: 'op_1000', SITUACAO: 'ENVIADO' }).length, 0);
+  Object.assign(b.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_1001'), { ENCERRAMENTO_PROPOSTAS: '2026-10-28T11:00:00', ENCERRAMENTO_ISO: '2026-10-28T14:00:00.000Z', VERSAO_FONTE: 2, RETIFICADA_EM: '2026-10-27T12:00:00Z' });
   b.rodada('2026-10-27T09:10:00-03:00');
-  assert.equal(b.al({ OPORTUNIDADE_ID: 'op_velha', SITUACAO: 'ENVIADO' }).length, 0);
+  assert.equal(b.al({ OPORTUNIDADE_ID: 'op_1001', TIPO: 'PRAZO', SITUACAO: 'ENVIADO' }).length, 0);
+});
+
+test('conferência 1: teto do dia não corta crítico; normal e importante barrados vão num resumo por e-mail e ficam pendentes de ciência', () => {
+  const ops = []; for (let i = 0; i < 32; i++) ops.push(OP('op_' + (2000 + i), { RESPONSAVEL_ID: 'u_cha', RESPONSAVEL_NOME: 'CHARLES', ENCERRAMENTO_PROPOSTAS: '2026-11-04T11:05:00', ENCERRAMENTO_ISO: '2026-11-04T14:05:00.000Z', PRIMEIRA_COLETA_EM: '2026-10-20T10:00:00.000Z' }));
+  const b = ambiente({ ops, agora: '2026-11-03T10:00:00-03:00' });
+  b.rodada('2026-11-03T10:00:00-03:00');
+  const r = b.rodada('2026-11-04T10:05:30-03:00');
+  assert.equal(r.enviar.enviados, 32, 'os 32 críticos de 1 h saem (antes 2 ficavam "Não enviado" pelo teto de 30)');
+  assert.equal(b.al({ NIVEL: 'CRITICO', SITUACAO: 'PULADO', CANCELADO_MOTIVO: (m) => /Teto/.test(m || '') }).length, 0);
+  // normal/importante além do teto: resumo único por e-mail, pendente na faixa e na Central
+  const c = ambiente({ ops: [IMBEL()] });
+  c.rodada();
+  assert.equal(c.api('s_cha', 'alertasCfgSalvar', { campos: { tetoDia: 1 }, motivo: 'teste do teto diário' }).ok, true);
+  c.rodada('2026-11-06T08:00:30-03:00');   // 7 dias (normal): 1ª mensagem do dia
+  const base = c.al({ ANTECEDENCIA: '7 dias' })[0];
+  for (let i = 0; i < 2; i++) c.tabelas.LIC_ALERTAS.push(Object.assign({}, base, { ID: 'imp' + i, AVISO_ID: 'LA00000000d' + i, GRUPO: 'g' + i, CHAVE: 'M|imp|' + i, TIPO: 'MUDANCA', EVENTO_ID: '', ALVO_ISO: '', TITULO: 'Prazo alterado na fonte', NIVEL: 'IMPORTANTE', PAPEL: 'TITULAR', SITUACAO: 'PROGRAMADO', WA_EM: '', EMAIL_EM: '', ENVIADO_EM: '', WA_ID: '', CIENTE_EM: '', LIBERAR_EM: '2026-11-06T11:01:00.000Z' }));
+  const e0 = c.emails.length, z0 = c.zap().length;
+  c.rodada('2026-11-06T08:02:00-03:00');
+  const barr = c.al({ SITUACAO: 'NO_RESUMO' });
+  assert.equal(barr.length, 2); assert.ok(barr.every((x) => x.EMAIL_SITUACAO === 'ENVIADO' && x.INTERNO_EM));
+  assert.equal(c.emails.length, e0 + 1, 'um e-mail só com os dois'); assert.equal(c.zap().length, z0, 'sem WhatsApp');
+  assert.match(c.emails[c.emails.length - 1].subject, /2 alertas no resumo \(teto do dia atingido\)/);
+  assert.ok(c.ctx.Lic_alertasSemCiencia_(null).some((x) => x.SITUACAO === 'NO_RESUMO'), 'aparece na faixa "sem ciência"');
+  assert.ok(c.api('s_cha', 'alertas', { filtro: 'semCiencia' }).lista.some((x) => x.situacao === 'NO_RESUMO' && x.podeCiente));
+  assert.equal(c.api('s_cha', 'alertaCiente', { id: barr[0].ID }).ok, true);
+});
+
+test('conferência 2 a 5: erro de uma oportunidade não derruba a agenda; candidata depois da implantação recebe o aviso; segredo no início da rodada; ENVIANDO em curso não é reenviado', () => {
+  const a = ambiente({ ops: [OP('op_ok01'), OP('op_ruim'), OP('op_desc', { SITUACAO: 'DESCARTADA', TRIAGEM: 'DESCARTADA', DESCARTE_ORIGEM: 'REGRA', PRIMEIRA_COLETA_EM: '2026-10-01T10:00:00.000Z', ENCERRAMENTO_PROPOSTAS: '2026-10-28T10:00:00', ENCERRAMENTO_ISO: '2026-10-28T13:00:00.000Z' })] });
+  const orig = a.ctx.Lic_eventosSincronizar_;
+  a.ctx.Lic_eventosSincronizar_ = function (l) { if (l.ID === 'op_ruim') throw new Error('linha com data corrompida'); return orig.apply(this, arguments); };
+  const r = a.rodada();
+  assert.equal(r.agenda.atualizadas, 2); assert.equal(r.agenda.erros.length, 1); assert.equal(r.agenda.erros[0].codigo, 'LIC-2026-ruim');
+  assert.ok(a.ev('op_ok01').length > 0, 'as outras seguiram');
+  assert.ok(a.props.LIC_ALERTAS_IMPLANTADO_EM, 'a implantação é marcada mesmo com o erro isolado');
+  assert.match(a.api('s_cha', 'alertas', {}).rotina.texto, /Agenda com erro em 1 oportunidade\(s\): LIC-2026-ruim \(linha com data corrompida\)/);
+  assert.ok(a.props.LIC_CIENCIA_SEGREDO, 'o segredo dos links nasce no início da rodada');
+  // coletada antes da implantação (descartada pela regra) e triada candidata depois: recebe o aviso vencido mais recente
+  Object.assign(a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_desc'), { SITUACAO: 'RADAR', TRIAGEM: 'CANDIDATA', DESCARTE_ORIGEM: '' });
+  a.rodada('2026-10-26T10:10:00-03:00');
+  assert.ok(a.al({ OPORTUNIDADE_ID: 'op_desc', SITUACAO: 'ENVIADO' }).length >= 1);
+  assert.ok(a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_desc').ALERTAVEL_DESDE > a.props.LIC_ALERTAS_IMPLANTADO_EM);
+  // implantação aguardando aparece na situação da rotina
+  const b = ambiente({ ops: [OP('op_x001')] });
+  b.ctx.Lic_agendaAtualizar_ = () => { throw new Error('base fora do ar'); };
+  b.rodada();
+  assert.equal(b.props.LIC_ALERTAS_IMPLANTADO_EM, undefined);
+  assert.match(b.api('s_cha', 'alertas', {}).rotina.texto, /Implantação dos alertas aguardando a agenda inteira \(a montagem da agenda falhou: base fora do ar\)/);
+  // ENVIANDO há mais de 10 min com outro envio em curso (lote longo): não é pego como abandonado
+  const c = ambiente({ ops: [IMBEL()] });
+  c.rodada();
+  const x = c.al({ SITUACAO: 'PROGRAMADO' })[0];
+  Object.assign(x, { SITUACAO: 'ENVIANDO', ENVIANDO_EM: '2026-10-26T12:30:00.000Z', TENTATIVAS: 1 });
+  c.props.LIC_ENVIO_EM_CURSO = '2026-10-26T12:59:00.000Z';
+  c.ctx.Lic_alertasEnviar_();
+  assert.equal(c.al({ ID: x.ID })[0].SITUACAO, 'ENVIANDO', 'envio em curso: a linha é dele');
+  delete c.props.LIC_ENVIO_EM_CURSO;
+  c.ctx.Lic_alertasEnviar_();
+  assert.equal(c.al({ ID: x.ID })[0].SITUACAO, 'ENVIADO', 'sem envio em curso, a abandonada sai');
+  assert.ok(!c.props.LIC_ENVIO_EM_CURSO, 'a marca do envio em curso é limpa no fim');
 });
 
 test('MÉDIO 3, descarte: escalonamento e reenvio pendentes param; envio e escalonamento reconferem a oportunidade e o prazo', () => {

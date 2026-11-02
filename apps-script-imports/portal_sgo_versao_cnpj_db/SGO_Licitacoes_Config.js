@@ -33,7 +33,9 @@ var LIC_COLUNAS = {
     // regra de guarda (02/11/2026): a data de publicação na fonte conta os 2 anos da candidata intocada (SGO_Licitacoes_Guarda.js)
     'PUBLICACAO_EM',
     // etapa 3 (02/11/2026): a agenda foi montada sobre esta base (datas, lei, modalidade, situação na fonte) e o último estado da fonte
-    'EVENTOS_BASE_HASH', 'EVENTOS_EM', 'AGENDA_ESTADO_FONTE'],
+    'EVENTOS_BASE_HASH', 'EVENTOS_EM', 'AGENDA_ESTADO_FONTE',
+    // revisão 02/11/2026: quando a oportunidade passou a poder ter alerta (referência da implantação dos alertas)
+    'ALERTAVEL_DESDE'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
@@ -155,14 +157,14 @@ function Lic_garantirAbas_() {
   var cache = null;
   // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
   // V4 (02/11/2026, etapa 3): abas LIC_EVENTOS e LIC_ALERTAS e as colunas da agenda em LIC_OPORTUNIDADES
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V4')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V5')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V4', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V5', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

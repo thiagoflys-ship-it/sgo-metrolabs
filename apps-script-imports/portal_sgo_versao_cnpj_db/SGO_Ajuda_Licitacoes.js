@@ -159,7 +159,7 @@ function SGO_ajudaTelas_Licitacoes_() {
           "HTTP 429 é limite de requisições: o coletor espera 30, 60 e 120 segundos antes de desistir. HTTP 503 é o portal fora do ar."
         ] },
         { titulo: "Regras dos alertas", itens: [
-          "Quem recebe: por padrão, Diretoria e Administrador ativos com a área Diretoria no cadastro. Marcando \"Na lista de destinatários\", vale só a lista. Os tetos limitam as mensagens por pessoa em cada alerta (padrão 3) e no dia (padrão 30).",
+          "Quem recebe: por padrão, Diretoria e Administrador ativos com a área Diretoria no cadastro. Marcando \"Na lista de destinatários\", vale só a lista. Os tetos limitam as mensagens por pessoa em cada alerta (padrão 3) e no dia (padrão 30). O crítico não entra no teto do dia; normal e importante além dele vão num resumo por e-mail e ficam pendentes de ciência.",
           "Liga e desliga os alertas de licitação, escolhe quem recebe (só Diretoria e Administrador) e por onde (e-mail e WhatsApp por pessoa; o interno vale sempre), quem recebe primeiro quando a oportunidade não tem responsável, os minutos até escalonar (padrão 60, 15 e 5) e as antecedências de cada prazo.",
           "Antecedências se escrevem como \"7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico\" (d = dias, h = horas, min = minutos).",
           "O motivo é obrigatório; cada salvamento vira versão nova, e só o que mudou é gravado (o resto fica como estava). Os alertas programados passam a seguir a regra nova; os que saem dela são cancelados com o motivo.",
