@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Central de alertas · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="hoje" data-titulo="Central de alertas" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Central de alertas</h2>
+      <p class="content-subtitle">Cada alerta com o caminho completo: criado, enviado, aceito, entregue, lido, ciência de quem e quando, escalonamento e canal alternativo. Ciência não conclui a tarefa.</p></div>
+    <div class="module-header-right"><a class="btn-secondary" href="portais.html#alertas" style="text-decoration:none"><i class="fas fa-sliders" aria-hidden="true"></i>&nbsp;Regras dos alertas</a></div>
+  </div>
+  <div class="cm-tabs" role="tablist"><a class="cm-tab" role="tab" href="hoje.html" style="text-decoration:none;display:inline-flex;align-items:center">Hoje</a><a class="cm-tab" role="tab" href="painel.html" style="text-decoration:none;display:inline-flex;align-items:center">Painel</a><span class="cm-tab active" role="tab" aria-selected="true">Central de alertas</span></div>
+
+  <div class="cm-faixa aviso"><b>Entregue e Lido</b> dependem do retorno de status da Meta, que ainda não está ligado no SGO+ (dependência do diagnóstico, 1 a 2 dias). Nesta tela eles aparecem como vão ficar depois de ligado. Até lá, o último estado garantido é "Aceito pelo provedor" e a ciência só conta pelo botão ou pelo link autenticado.</div>
+  <div class="cm-faixa erro"><b>Segundo responsável da Diretoria não definido.</b> O escalonamento de alertas importantes e críticos não tem uma segunda pessoa: hoje vai para e-mail e aviso interno do próprio Charles. <a href="portais.html#alertas">Definir em Regras dos alertas</a></div>
+
+  <div class="cm-kpis"><div class="cm-kpi critico"><span class="v">1</span><span class="r">Sem ciência</span></div><div class="cm-kpi aviso"><span class="v">1</span><span class="r">Escalonado</span></div><div class="cm-kpi aviso"><span class="v">1</span><span class="r">Falha no WhatsApp (e-mail usado)</span></div><div class="cm-kpi"><span class="v">23</span><span class="r">Programados até 13/11</span></div></div>
+
+  <div class="cm-preco-grade">
+    <div>
+      <div class="cm-card p1"><p class="cm-card-tit"><span class="cm-selo vermelho">Importante</span><span class="cm-selo laranja">Escalonado</span>Embrapa — prazo das propostas em 3 dias e 17 h</p>
+        <p class="cm-meta">Para: Charles · WhatsApp (modelo sgo_licitacao_prazo, depois de aprovado na Meta) · antecedência "7 dias" (já passada quando o radar achou: sai na hora)</p>
+        <div class="lic-estados" aria-label="Estados do alerta"><span class="lic-est feito">1 Criado</span><span class="lic-est feito">2 Enviado ao provedor</span><span class="lic-est feito">3 Aceito pelo provedor</span><span class="lic-est feito">4 Entregue</span><span class="lic-est feito">5 Lido</span><span class="lic-est espera">6 Ciência</span><span class="lic-est escalado">10 Escalonado</span></div>
+        <div class="lic-linha-tempo"><div><span class="q">20:58</span>Criado pelo radar (LIC-2026-0002).</div><div><span class="q">20:58</span>Enviado e aceito pela Meta.</div><div><span class="q">20:59</span>Entregue no celular. <span class="q">21:01</span> Lido.</div><div><span class="q">21:13</span>15 min sem ciência (regra "importante"): escalonado. Sem segundo responsável: e-mail para Charles e aviso interno no SGO+.</div></div>
+        <div class="cm-acoes"><button type="button" class="btn-primary" onclick="Lic.toast('Ciência registrada: Charles, 01/11/2026 21:00 (pelo SGO+). O alerta fica Em atendimento até a proposta ser enviada.')">Confirmar ciência</button><a class="btn-secondary" href="simulador.html" style="text-decoration:none">Abrir a licitação</a></div></div>
+
+      <div class="cm-card p2"><p class="cm-card-tit"><span class="cm-selo vermelho">Importante</span><span class="cm-selo azul">Em atendimento</span>Unioeste (Cascavel/PR) — prazo das propostas em 2 dias e 11 h</p>
+        <p class="cm-meta">Para: Charles · WhatsApp · antecedência "3 dias"</p>
+        <div class="lic-estados"><span class="lic-est feito">1 Criado</span><span class="lic-est feito">2 Enviado</span><span class="lic-est feito">3 Aceito</span><span class="lic-est feito">4 Entregue</span><span class="lic-est feito">5 Lido</span><span class="lic-est feito">6 Ciência</span><span class="lic-est atual">7 Em atendimento</span><span class="lic-est espera">8 Concluído</span></div>
+        <div class="lic-linha-tempo"><div><span class="q">20:58</span>Criado, enviado e aceito.</div><div><span class="q">21:02</span>Entregue e lido.</div><div><span class="q">21:03</span><b>Ciência: Charles</b>, pelo botão "Confirmar ciência" do WhatsApp.</div><div><span class="q">21:04</span>Charles abriu a licitação pelo link (Em atendimento). Conclui quando a decisão ou a proposta for registrada.</div></div></div>
+
+      <div class="cm-card p2"><p class="cm-card-tit"><span class="cm-selo vermelho">Importante</span><span class="cm-selo vermelho">Falha no WhatsApp</span>Unioeste (Cascavel/PR, leite humano) — prazo em 3 dias e 11 h</p>
+        <p class="cm-meta">Para: Charles · canal principal WhatsApp · canal alternativo e-mail</p>
+        <div class="lic-estados"><span class="lic-est feito">1 Criado</span><span class="lic-est falha">9 Falha (WhatsApp)</span><span class="lic-est feito">2 Enviado (e-mail)</span><span class="lic-est espera">6 Ciência</span></div>
+        <div class="lic-linha-tempo"><div><span class="q">20:58</span>WhatsApp não saiu: a Meta não respondeu em 60 segundos (tempo esgotado). Nova tentativa automática às 21:00, depois 21:15.</div><div><span class="q">20:58</span>Canal alternativo: e-mail enviado por sistema@metrolabs.com.br e aviso interno no SGO+.</div></div>
+        <div class="cm-acoes"><button type="button" class="btn-secondary" onclick="Lic.toast('Reenvio na fila agora. O e-mail já foi entregue ao servidor de envio.')">Reenviar</button></div></div>
+
+      <div class="cm-card p4"><p class="cm-card-tit"><span class="cm-selo cinza">Programados</span>IMBEL — 5 alertas do limite das propostas (13/11 08:00)</p>
+        <div class="lic-estados"><span class="lic-est espera">7 dias · 06/11 08:00</span><span class="lic-est espera">3 dias · 10/11 08:00</span><span class="lic-est espera">24 h · 12/11 08:00</span><span class="lic-est espera">4 h · 13/11 04:00</span><span class="lic-est espera">1 h · 13/11 07:00</span></div>
+        <p class="cm-meta">Se a data mudar na fonte, estes são cancelados com o motivo e os novos são criados; o histórico fica.</p></div>
+
+      <div class="cm-card p4"><p class="cm-card-tit"><span class="cm-selo cinza">Cancelados</span>Hospital Ophir Loyola e Comando da Aeronáutica (Belém/PA) — 10 alertas</p>
+        <p class="cm-meta">Motivo: licitações suspensas no PNCP (detectado em 01/11/2026 20:58). Nenhuma mensagem foi enviada.</p></div>
+    </div>
+
+    <aside aria-label="Como a mensagem aparece no celular">
+      <h3 class="cm-sec" style="margin-top:0">Como chega no celular</h3>
+      <div class="lic-cel" role="img" aria-label="Exemplo de mensagem de WhatsApp com os botões Confirmar ciência e Abrir no SGO+">
+        <div class="lic-cel-topo"><span class="av">ML</span><div>Metrolabs SGO+<small>conta comercial verificada</small></div></div>
+        <div class="lic-cel-corpo">
+          <div class="lic-wa-dia"><span>HOJE</span></div>
+          <div class="lic-wa-bolha"><b>METROLABS — ALERTA DE LICITAÇÃO</b>
+Órgão: Universidade Estadual do Oeste do Paraná (Cascavel/PR)
+Processo: Pregão eletrônico 78680337000770-1-000430/2026
+Objeto: manutenção preventiva com certificado de calibração
+Prazo das propostas: qua 04/11/2026 08:30 (Brasília)
+Tempo restante: 2 dias e 11 horas
+Responsável: Charles
+Ação necessária: decidir se participa
+<span class="hora">20:58</span></div>
+          <div class="lic-wa-bt"><i class="fas fa-reply" aria-hidden="true"></i> Confirmar ciência</div>
+          <div class="lic-wa-bt"><i class="fas fa-up-right-from-square" aria-hidden="true"></i> Abrir no SGO+</div>
+          <div class="lic-wa-resp">Confirmar ciência<span class="hora">21:03 ✓✓</span></div>
+          <div class="lic-wa-sis">Ciência registrada às 21:03. A tarefa continua aberta até a decisão ou a proposta.<span class="hora" style="display:block;text-align:right;font-size:10.5px;color:#667781">21:03</span></div>
+        </div>
+      </div>
+      <p class="cm-ajuda-campo">"Abrir no SGO+" leva ao link <span class="lic-mono">?aviso=&lt;código&gt;</span>, que abre esta licitação direto (pede login se a sessão tiver expirado). Valor estimado não vai na mensagem. Modelo novo a aprovar na Meta: sgo_licitacao_prazo (categoria Utilidade).</p>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

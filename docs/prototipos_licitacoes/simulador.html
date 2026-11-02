@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de preço · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="oportunidades" data-titulo="LIC-2026-0002 · Preço" data-voltar="radar.html" data-navmob="0">
+<div id="licConteudo" class="module-shell">
+  <p class="cm-meta" style="margin:0"><a href="radar.html">Oportunidades</a> › LIC-2026-0002 › Itens e preço</p>
+  <section class="lic-ficha-cab" aria-label="Resumo da licitação">
+    <div class="lic-nota media"><b>61</b><span>média</span></div>
+    <div><h2>Embrapa (Rio de Janeiro) — calibração e manutenção de equipamentos de laboratório</h2>
+      <p class="cm-meta" style="margin:0 0 6px">Pregão eletrônico, aberto e fechado · registro de preços · julgamento por item · Lei 14.133, art. 28, I · sessão no Compras.gov.br</p>
+      <p style="margin:0"><span class="cm-selo azul">Em análise</span><span class="cm-selo verde">Autorizada Inmetro (balanças)</span><span class="cm-selo azul">Empate ficto (EPP)</span><span class="cm-selo cinza">Orçamento sigiloso em 16 itens</span></p>
+      <div class="lic-ficha-num"><div><span>Referência com valor</span><b>R$ 14.525,00</b></div><div><span>Propostas até</span><b>qui 05/11/2026 14:00</b> <span class="lic-tempo aviso" style="display:inline-flex">3 d 17 h</span></div><div><span>Número de controle PNCP</span><b class="lic-mono">00348003000110-1-001347/2026</b></div><div><span>Itens</span><b>18 (8 na nossa tabela)</b></div></div></div>
+    <div class="lic-ficha-acoes cm-acoes" style="flex-direction:column;margin:0"><button type="button" class="btn-primary" onclick="aprovar()"><i class="fas fa-lock" aria-hidden="true"></i>&nbsp;Aprovar preço mínimo</button><a class="btn-secondary" href="proposta_ia.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>&nbsp;Gerar proposta com IA</a></div>
+  </section>
+
+  <nav class="lic-abas" role="tablist" aria-label="Partes da ficha"><a class="cm-tab" href="ficha.html#resumo" style="text-decoration:none;display:inline-flex;align-items:center">Resumo</a><span class="cm-tab active" role="tab" aria-selected="true" style="display:inline-flex;align-items:center">Itens e preço</span><a class="cm-tab" href="ficha.html#analise" style="text-decoration:none;display:inline-flex;align-items:center">Análise</a><a class="cm-tab" href="ficha.html#documentos" style="text-decoration:none;display:inline-flex;align-items:center">Documentos</a><a class="cm-tab" href="ficha.html#prazos" style="text-decoration:none;display:inline-flex;align-items:center">Prazos</a><a class="cm-tab" href="ficha.html#decisao" style="text-decoration:none;display:inline-flex;align-items:center">Decisão</a></nav>
+
+  <div class="lic-proto" role="group" aria-label="Controle do protótipo"><b>Protótipo:</b> ver como
+    <button type="button" class="btn-secondary" data-ver="dir" aria-pressed="true">Diretoria (com custo e sobra)</button>
+    <button type="button" class="btn-secondary" data-ver="ana" aria-pressed="false">Analista (sem custo)</button></div>
+
+  <div class="cm-faixa">O preço vem da <b>Tabela de preços de licitação</b> (versão 1, de 01/11/2026), cadastrada pela Diretoria dentro deste módulo. O catálogo do Comercial entra só como referência de código e de custo da ficha para o piso. <a href="tabela_precos.html">Abrir a tabela</a></div>
+
+  <div class="cm-quadro-preco" id="quadro" aria-live="polite"></div>
+
+  <div class="cm-caixa"><h3>Deslocamento (diluído no preço unitário, como o edital pede)</h3>
+    <div class="cm-grade4">
+      <div class="cm-campo"><label for="dBase">Quem executa</label><select id="dBase"><option value="go">Goiânia (avião)</option><option value="rj">Filial do Rio (a confirmar)</option></select></div>
+      <div class="cm-campo"><label for="dDias">Dias em campo</label><input id="dDias" type="number" min="1" value="5" inputmode="numeric"></div>
+      <div class="cm-campo"><label for="dPess">Pessoas</label><input id="dPess" type="number" min="1" value="1" inputmode="numeric"></div>
+      <div class="cm-campo"><label for="dPass">Passagem ida e volta por pessoa</label><input id="dPass" type="number" min="0" step="10" value="1800" inputmode="decimal"><p class="cm-ajuda-campo">Valor de exemplo: informe a cotação.</p></div>
+    </div>
+    <p class="cm-meta" id="dConta"></p></div>
+
+  <div class="cm-caixa lic-dir-wrap"><h3>Itens do edital</h3>
+    <div style="overflow-x:auto"><table class="lic-sim" id="tab"><thead><tr><th>Part.</th><th>Item do edital</th><th>Nossa tabela</th><th class="n">Qtd.</th><th class="n">Referência do edital</th><th class="n">Preço da tabela</th><th class="n lic-dir">Custo unit.</th><th class="n lic-dir">Piso unit.</th><th class="n lic-dir">Sobra</th><th class="n">Proposta</th></tr></thead><tbody></tbody></table></div>
+    <p class="cm-ajuda-campo">Piso = custo do item com o deslocamento rateado ÷ 0,4775 (impostos de Goiânia 14,25%, comissão 3%, sobra mínima 35%). Proposta = o menor entre o preço da tabela e a referência do edital; nunca acima da referência (art. 59, III). Item com orçamento sigiloso: decisão pelo piso e pelo mercado.</p>
+  </div>
+</div>
+<div class="lic-rodape"><button type="button" class="btn-secondary" onclick="document.getElementById('quadro').scrollIntoView({behavior:'smooth'})">Ver totais</button><button type="button" class="btn-primary" onclick="aprovar()">Aprovar preço mínimo</button></div>
+
+<script>
+var TAB = {
+  "LIC-CAL-INC": { nome: "Calibração de incubadora (B.O.D. ou bacteriológica)", ref: "CAL_INCUBADORA_BIO", p: 320, c: 118 },
+  "LIC-CAL-CAM": { nome: "Calibração de indicador de câmara, estufa ou banho", ref: "CAL_CAMARA", p: 300, c: 104 },
+  "LIC-CAL-BAL": { nome: "Calibração de balança até 30 kg", ref: "CAL_BALANCA_PEQ", p: 180, c: 95, inmetro: true },
+  "LIC-CAL-DLG": { nome: "Calibração de registrador de temperatura (datalogger)", ref: "CAL_DATALOGGER", p: 260, c: 86 },
+  "LIC-CAL-003": { nome: "Calibração de termo-higrômetro", ref: "CAL-003", p: 230, c: 78 }
+};
+var ITENS = [
+  [1, "Manutenção de capela de fluxo laminar", 2, null, null, "Fora: manutenção de capela não é serviço da Metrolabs"],
+  [2, "Manutenção de capela de segurança biológica", 14, null, null, "Fora"],
+  [3, "Manutenção de capela de exaustão", 12, null, null, "Fora"],
+  [4, "Calibração de medidor de pH", 9, null, null, "Fora do catálogo (grandeza não atendida)"],
+  [5, "Calibração de medidor de condutividade", 2, null, null, "Fora do catálogo"],
+  [6, "Calibração de incubadora B.O.D.", 29, 325, "LIC-CAL-INC"],
+  [7, "Calibração de banho-maria e banho Dubnoff", 6, null, "LIC-CAL-CAM"],
+  [8, "Calibração de balança analítica", 12, null, "LIC-CAL-BAL"],
+  [9, "Calibração de balança semianalítica", 10, null, "LIC-CAL-BAL"],
+  [10, "Calibração de balança semianalítica", 12, null, "LIC-CAL-BAL"],
+  [11, "Calibração de incubadora bacteriológica", 10, null, "LIC-CAL-INC"],
+  [12, "Calibração de datalogger 2 canais", 8, null, "LIC-CAL-DLG"],
+  [13, "Calibração de termômetro digital e termo-higrômetro", 6, null, "LIC-CAL-003", null, "Item junta termômetro e termo-higrômetro: usado o preço maior (INFERÊNCIA)"],
+  [14, "Calibração de micropipetas monocanal", 80, null, null, "Fora do catálogo (volume)"],
+  [15, "Calibração de micropipetas multicanal", 6, 850, null, "Fora do catálogo (volume)"],
+  [16, "Calibração de micropipetas monocanal", 120, null, null, "Fora do catálogo (volume)"],
+  [17, "Calibração de conjunto de pesos padrão", 16, null, null, "Fora do catálogo (massa de referência)"],
+  [18, "Calibração de conjunto de pesos padrão", 1, null, null, "Fora do catálogo"]
+];
+var PART = {}; ITENS.forEach(function (i) { PART[i[0]] = !!i[4]; });
+var VER = "dir";
+function c2(v) { return Math.ceil(v * 100 - 1e-9) / 100; }
+function viagem() {
+  var b = document.getElementById("dBase").value, dias = +document.getElementById("dDias").value || 1, pe = +document.getElementById("dPess").value || 1, pas = +document.getElementById("dPass").value || 0;
+  if (b === "rj") { var km = 30 * 2 * 2.5 * dias; return { tot: km, txt: "Filial do Rio: 30 km por dia ida e volta × R$ 2,50 × " + dias + " dias = " + Lic.brl(km) + ". Até 60 km não há alimentação nem hotel. A filial executar é pergunta ao dono (doc 03)." }; }
+  var ali = 100 * pe * dias, hot = 150 * pe * (dias - 1), inc = 300 * pe, p = pas * pe, t = ali + hot + inc + p;
+  return { tot: t, txt: "Passagens " + Lic.brl(p) + " + alimentação " + pe + " × " + dias + " × R$ 100 = " + Lic.brl(ali) + " + hotel " + pe + " × " + (dias - 1) + " × R$ 150 = " + Lic.brl(hot) + " + Incentivo de Missão " + Lic.brl(inc) + " = " + Lic.brl(t) + "." };
+}
+function calcular() {
+  var v = viagem(); document.getElementById("dConta").textContent = v.txt;
+  var rec = 0, cus = 0, linhas = [];
+  ITENS.forEach(function (i) { var t = TAB[i[4]]; if (t && PART[i[0]]) { var pr = i[3] ? Math.min(t.p, i[3]) : t.p; rec += pr * i[2]; cus += t.c * i[2]; } });
+  var tb = document.querySelector("#tab tbody"), abaixo = 0;
+  tb.innerHTML = ITENS.map(function (i) {
+    var t = TAB[i[4]], part = !!t && PART[i[0]];
+    if (!t) return '<tr class="fora"><td data-r="Part."><input type="checkbox" disabled aria-label="Item ' + i[0] + ' não participa"></td><td data-r="Item"><b>' + i[0] + '.</b> ' + i[1] + '</td><td data-r="Nossa tabela" colspan="1"><span class="cm-selo cinza">Não atendemos</span> ' + i[5] + '</td><td class="n" data-r="Qtd.">' + i[2] + '</td><td class="n" data-r="Referência">' + (i[3] ? Lic.brl(i[3]) : "sigiloso") + '</td><td class="n" data-r="Preço da tabela">—</td><td class="n lic-dir">—</td><td class="n lic-dir">—</td><td class="n lic-dir">—</td><td class="n" data-r="Proposta">—</td></tr>';
+    var pr = i[3] ? Math.min(t.p, i[3]) : t.p, rateio = rec ? v.tot * (pr * i[2]) / rec : 0;
+    var piso = c2((t.c * i[2] + rateio) / 0.4775 / i[2]);
+    var sobra = (pr * i[2] * 0.8275 - t.c * i[2] - rateio) / (pr * i[2]);
+    var baixo = part && pr < piso; if (baixo) abaixo++;
+    return '<tr class="' + (baixo && VER === "dir" ? "abaixo" : "") + (part ? "" : " fora") + '"><td data-r="Part."><input type="checkbox" ' + (part ? "checked" : "") + ' aria-label="Participar do item ' + i[0] + '" onchange="PART[' + i[0] + ']=this.checked;calcular()"></td>' +
+      '<td data-r="Item"><b>' + i[0] + '.</b> ' + i[1] + (i[6] ? '<div class="cm-meta">' + i[6] + '</div>' : '') + '</td>' +
+      '<td data-r="Nossa tabela"><span class="lic-mono">' + i[4] + '</span> ' + (t.inmetro ? '<span class="cm-selo verde">Autorizada Inmetro</span>' : '') + '<div class="cm-meta">Ref. catálogo: ' + t.ref + '</div></td>' +
+      '<td class="n" data-r="Qtd.">' + i[2] + '</td><td class="n" data-r="Referência">' + (i[3] ? Lic.brl(i[3]) : '<span class="cm-selo cinza">sigiloso</span>') + '</td>' +
+      '<td class="n" data-r="Preço da tabela">' + Lic.brl(t.p) + '</td><td class="n lic-dir" data-r="Custo unit.">' + Lic.brl(t.c) + '</td>' +
+      '<td class="n lic-dir" data-r="Piso unit."><b>' + Lic.brl(piso) + '</b>' + (baixo ? '<div class="cm-ruim" style="font-size:11.5px">tabela abaixo do piso</div>' : '') + (i[3] && i[3] < piso ? '<div class="cm-ruim" style="font-size:11.5px">referência do edital abaixo do piso: não participar, participar no piso ou decisão estratégica</div>' : '') + '</td>' +
+      '<td class="n lic-dir" data-r="Sobra"' + (sobra < 0.35 ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + Lic.pct(sobra) + '</td>' +
+      '<td class="n" data-r="Proposta">' + (part ? Lic.brl(pr) : 'fora') + '</td></tr>';
+  }).join("");
+  var imp = rec * 0.1425, com = rec * 0.03, sob = rec - imp - com - cus - v.tot, sp = rec ? sob / rec : 0;
+  var cls = sp >= 0.35 ? "" : sp >= 0.2 ? "aviso" : "erro";
+  document.getElementById("quadro").innerHTML =
+    '<div class="lic-total"><div><span>Proposta (itens marcados)</span><b>' + Lic.brl(rec) + '</b></div><div class="lic-dir"><span>Impostos e comissão</span><b>' + Lic.brl(imp + com) + '</b></div><div class="lic-dir"><span>Custo dos serviços</span><b>' + Lic.brl(cus) + '</b></div><div class="lic-dir"><span>Deslocamento</span><b>' + Lic.brl(v.tot) + '</b></div><div class="lic-dir"><span>Sobra</span><b>' + Lic.brl(sob) + '</b></div></div>' +
+    '<div class="cm-qp-sobra lic-dir ' + cls + '"><b>Sobra ' + Lic.pct(sp) + '</b> · mínima 35% · alvo 40%' + (sp < 0.35 ? ' — <b>abaixo da mínima: só com decisão da Diretoria registrada com motivo.</b>' : ' — dentro da política.') + (abaixo ? ' ' + abaixo + ' item(ns) com preço da tabela abaixo do piso.' : '') + '</div>' +
+    '<p class="cm-meta" style="margin:6px 0 0">Empate ficto (EPP): se o nosso lance ficar até 5% acima do melhor lance de empresa que não é ME/EPP, o Compras.gov.br nos convoca a cobrir. O piso continua valendo.</p>';
+  document.getElementById("licConteudo").classList.toggle("lic-ver-analista", VER === "ana");
+}
+function aprovar() {
+  if (VER === "ana") { Lic.toast("Só a Diretoria aprova o preço mínimo. O pedido foi para a Caixa de decisões.", "erro"); return; }
+  var linhas = ITENS.filter(function (i) { return TAB[i[4]] && PART[i[0]]; }).map(function (i) { return "<li>Item " + i[0] + ": " + i[1] + "</li>"; }).join("");
+  Lic.modal("Aprovar o preço mínimo", '<p class="cm-txt">O piso de cada item fica congelado com a versão 1 da Tabela de preços de licitação e da política de preço. Nenhum lance abaixo dele; o valor mínimo digitado no Compras.gov.br tem de ser igual ou maior.</p><ul class="cm-lista-simples">' + linhas + '</ul>' +
+    '<div class="cm-campo"><label for="apMot">Observação (obrigatória se a sobra estiver abaixo de 35%)</label><textarea id="apMot"></textarea></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="Lic.fechar();Lic.toast(\'Preço mínimo aprovado por Charles em 01/11/2026 21:00. A Disputa já mostra os pisos.\')">Aprovar</button>');
+}
+["dBase", "dDias", "dPess", "dPass"].forEach(function (id) { document.getElementById(id).addEventListener("input", calcular); document.getElementById(id).addEventListener("change", calcular); });
+document.querySelectorAll("[data-ver]").forEach(function (b) { b.addEventListener("click", function () { VER = b.getAttribute("data-ver"); document.querySelectorAll("[data-ver]").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); calcular(); }); });
+if (Lic.param("ver") === "ana") { VER = "ana"; document.querySelectorAll("[data-ver]").forEach(function (x) { x.setAttribute("aria-pressed", x.getAttribute("data-ver") === "ana" ? "true" : "false"); }); }
+if (Lic.param("base") === "rj") document.getElementById("dBase").value = "rj";
+calcular();
+</script>
+</body>
+</html>

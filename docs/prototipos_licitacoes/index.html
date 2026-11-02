@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Licitações · protótipos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="" data-titulo="Licitações · protótipos" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header"><div class="module-header-left"><h2 class="content-title">SGO+ Licitações — protótipos para aprovação</h2>
+    <p class="content-subtitle">Telas clicáveis com o visual real do SGO+ (mesmo CSS do sistema). Nada aqui grava no sistema. Versão de 01/11/2026.</p></div>
+    <div class="module-header-right"><a class="btn-primary" href="hoje.html" style="text-decoration:none">Começar por "Hoje em Licitações"</a></div></div>
+  <div class="cm-faixa"><b>O que é real e o que é exemplo.</b> Órgãos, números do PNCP, objetos, valores, datas, itens, situações (inclusive "Suspensa") e as falhas 503 do PNCP vêm de consultas reais de 01/11/2026. São exemplo: preços da Tabela de preços de licitação (exceto o custo do CAL-001), datas de validade das certidões, lances da disputa, horários de ciência e escalonamento. Cada exemplo está marcado na tela.</div>
+
+  <div class="cm-entrada"><h3>Telas</h3><div class="cm-entrada-grade">
+    <a class="cm-caminho" href="hoje.html" style="text-decoration:none"><span class="ic"><i class="fas fa-gavel" aria-hidden="true"></i></span><span class="t">Hoje em Licitações</span><span class="s">O que precisa de ação hoje (a)</span></a>
+    <a class="cm-caminho" href="painel.html" style="text-decoration:none"><span class="ic"><i class="fas fa-chart-column" aria-hidden="true"></i></span><span class="t">Painel</span><span class="s">Indicadores e relatório do período</span></a>
+    <a class="cm-caminho alerta" href="alertas.html" style="text-decoration:none"><span class="ic"><i class="fas fa-bell" aria-hidden="true"></i></span><span class="t">Central de alertas</span><span class="s">Estados, ciência, escalonamento e o WhatsApp (f)</span></a>
+    <a class="cm-caminho" href="radar.html" style="text-decoration:none"><span class="ic"><i class="fas fa-satellite-dish" aria-hidden="true"></i></span><span class="t">Oportunidades (radar)</span><span class="s">Nota 0 a 100, selos, descartar, enviar para análise (b)</span></a>
+    <a class="cm-caminho" href="kanban.html" style="text-decoration:none"><span class="ic"><i class="fas fa-table-columns" aria-hidden="true"></i></span><span class="t">Kanban</span><span class="s">Radar → análise → decisão → proposta → disputa → resultado → contrato</span></a>
+    <a class="cm-caminho" href="gantt.html" style="text-decoration:none"><span class="ic"><i class="fas fa-chart-gantt" aria-hidden="true"></i></span><span class="t">Gantt</span><span class="s">Prazos, sessões e execução no tempo</span></a>
+    <a class="cm-caminho" href="ficha.html#analise" style="text-decoration:none"><span class="ic"><i class="fas fa-file-contract" aria-hidden="true"></i></span><span class="t">Ficha: IMBEL NR-13</span><span class="s">Análise por especialista, fato × inferência × pendente, decisão, histórico (c)</span></a>
+    <a class="cm-caminho" href="simulador.html" style="text-decoration:none"><span class="ic"><i class="fas fa-calculator" aria-hidden="true"></i></span><span class="t">Simulador: Embrapa</span><span class="s">18 itens reais × tabela de preços, piso e sobra (d)</span></a>
+    <a class="cm-caminho" href="tabela_precos.html" style="text-decoration:none"><span class="ic"><i class="fas fa-tags" aria-hidden="true"></i></span><span class="t">Tabela de preços de licitação</span><span class="s">Preço próprio do módulo, com versão e histórico</span></a>
+    <a class="cm-caminho" href="agenda.html" style="text-decoration:none"><span class="ic"><i class="fas fa-calendar-days" aria-hidden="true"></i></span><span class="t">Agenda e prazos</span><span class="s">Fonte, fuso, pendente de confirmação, suspensão (e)</span></a>
+    <a class="cm-caminho" href="disputas.html" style="text-decoration:none"><span class="ic"><i class="fas fa-arrow-trend-down" aria-hidden="true"></i></span><span class="t">Disputas</span><span class="s">Modo assistido, piso, empate ficto (h)</span></a>
+    <a class="cm-caminho" href="habilitacao.html" style="text-decoration:none"><span class="ic"><i class="fas fa-file-shield" aria-hidden="true"></i></span><span class="t">Habilitação e documentos</span><span class="s">Certidões, EPP, Inmetro, cadastros (i)</span></a>
+    <a class="cm-caminho" href="portais.html" style="text-decoration:none"><span class="ic"><i class="fas fa-plug" aria-hidden="true"></i></span><span class="t">Portais e configurações</span><span class="s">33 portais: acessar, parametrizar, testar (g)</span></a>
+    <a class="cm-caminho" href="proposta_ia.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span><span class="t">Proposta gerada com IA (A4)</span><span class="s">Rascunho com selo, para a Diretoria aprovar</span></a>
+    <a class="cm-caminho" href="relatorio_licitacao.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span class="t">Relatório da licitação (A4)</span><span class="s">Com rastreabilidade e hash</span></a>
+    <a class="cm-caminho" href="relatorio_desempenho.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span class="t">Relatório de desempenho (A4)</span><span class="s">Radar, plataformas, alertas e portais</span></a>
+  </div></div>
+
+  <div class="cm-caixa"><h3>Onde ficaram os 14 itens do menu da missão</h3>
+    <table class="lic-mapa"><thead><tr><th>Item da missão</th><th>Onde ficou</th></tr></thead><tbody>
+      <tr><td>Visão Geral</td><td>Hoje em Licitações (aba Hoje) + aba Painel</td></tr>
+      <tr><td>Radar de Oportunidades</td><td>Oportunidades (Lista)</td></tr>
+      <tr><td>Análise por IA</td><td>Ficha › aba Análise</td></tr>
+      <tr><td>Editais e Documentos</td><td>Ficha › aba Documentos</td></tr>
+      <tr><td>Propostas</td><td>Ficha › aba Proposta (Gerar proposta com IA) e Kanban › coluna Proposta</td></tr>
+      <tr><td>Simulador de Preços</td><td>Ficha › aba Itens e preço</td></tr>
+      <tr><td>Central de Disputas</td><td>Disputas</td></tr>
+      <tr><td>Agenda e Prazos</td><td>Agenda e prazos (e o Gantt)</td></tr>
+      <tr><td>Cadastro de Fornecedores</td><td>Habilitação e documentos › Cadastros nas plataformas</td></tr>
+      <tr><td>Contratos Conquistados</td><td>Kanban › coluna Contrato e Painel (até o módulo Contratos existir)</td></tr>
+      <tr><td>Inteligência de Mercado</td><td>Painel e Relatório de desempenho; preços vencedores no Banco de preços do Comercial</td></tr>
+      <tr><td>Notificações e Alertas</td><td>Hoje em Licitações › Central de alertas</td></tr>
+      <tr><td>Portais e Integrações</td><td>Portais e configurações › Portais e integrações</td></tr>
+      <tr><td>Configurações e Permissões</td><td>Portais e configurações › Regras do radar, Regras dos alertas, Permissões; Tabela de preços</td></tr>
+    </tbody></table></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Disputas · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="disputas" data-titulo="Disputas" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Disputas</h2>
+      <p class="content-subtitle">Modo assistido: o SGO+ mostra o piso aprovado, o melhor lance e uma sugestão. Quem dá o lance é você, no portal. Nenhum lance sai do SGO+.</p></div>
+  </div>
+  <div class="cm-faixa">Nenhuma plataforma encontrada autoriza lance por API para fornecedor. O único lance automático permitido é o <b>valor final mínimo</b> do próprio Compras.gov.br, e ele tem de ser igual ou maior que o piso aprovado pela Diretoria.</div>
+
+  <div class="cm-caixa"><h3>Sessões</h3>
+    <div class="cm-vazio" style="margin-bottom:10px">Nenhuma sessão hoje (domingo 01/11).</div>
+    <div class="cm-vence-l HOJE"><div><b>qua 04/11 08:30</b> · Unioeste, Cascavel/PR · SEAP-PR<div class="cm-meta" style="margin:2px 0 0"><span class="cm-selo vermelho">Sem preço mínimo aprovado</span> Sem piso aprovado não há disputa: decida a participação e aprove o piso antes.</div></div><a class="btn-secondary" href="radar.html" style="text-decoration:none">Abrir</a></div>
+    <div class="cm-vence-l HOJE"><div><b>qui 05/11 14:00</b> · Embrapa, Rio de Janeiro · Compras.gov.br · aberto e fechado<div class="cm-meta" style="margin:2px 0 0"><span class="cm-selo laranja">Piso aguardando aprovação</span> 8 itens</div></div><a class="btn-secondary" href="simulador.html" style="text-decoration:none">Abrir</a></div>
+  </div>
+
+  <div class="lic-proto"><b>Protótipo:</b> o painel abaixo é um ensaio da sessão da Embrapa com <b>lances de exemplo</b>. Teste "Registrar lance" com um valor abaixo de R$ 251,34.</div>
+
+  <div class="cm-caixa" style="border-left:4px solid var(--info)">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+      <div><h3 style="margin:0">Embrapa — item 6: calibração de incubadora B.O.D. (29 unidades)</h3>
+        <p class="cm-meta" style="margin:2px 0 0">Fase aberta do modo aberto e fechado: 15 min, depois encerramento aleatório em até 10 min · intervalo mínimo entre lances: R$ 1,00 <span class="lic-exemplo">exemplo</span></p></div>
+      <div style="text-align:right"><span class="lic-cronometro" aria-live="off">12:47</span><div class="cm-meta" style="margin:0">tempo da fase (digitado do portal)</div></div>
+    </div>
+    <div class="lic-disp-grade">
+      <div class="lic-disp-num melhor"><span class="v">R$ 300,00</span><span class="r">Melhor lance · Concorrente B (não é ME/EPP)</span></div>
+      <div class="lic-disp-num"><span class="v">R$ 312,00</span><span class="r">Nosso último lance · 2º lugar</span></div>
+      <div class="lic-disp-num sug"><span class="v">R$ 299,00</span><span class="r">Sugestão: cobrir com o intervalo mínimo</span></div>
+      <div class="lic-disp-num piso"><span class="v">R$ 251,34</span><span class="r">Piso aprovado (unitário) · margem até ele: R$ 48,66</span></div>
+    </div>
+    <div class="cm-faixa ok" style="margin-top:0"><span class="cm-selo azul">Empate ficto (EPP)</span> Estamos 4,0% acima de empresa que não é ME/EPP. Se a fase terminar assim, o Compras.gov.br nos convoca a cobrir o melhor lance em até 5 minutos. A cobertura também não pode passar do piso.</div>
+    <div class="cm-grade3">
+      <div class="cm-campo"><label for="lance">Lance que você deu no portal (unitário)</label><input id="lance" inputmode="decimal" placeholder="Ex.: 299,00"></div>
+      <div class="cm-campo"><label for="conc">Lance de concorrente (opcional)</label><input id="conc" inputmode="decimal" placeholder="Ex.: 295,00"></div>
+      <div class="cm-campo"><label for="vfm">Valor final mínimo digitado no Compras.gov.br</label><input id="vfm" inputmode="decimal" value="251,34"><p class="cm-ajuda-campo">Conferido contra o piso: igual ou maior.</p></div>
+    </div>
+    <div id="msg" aria-live="polite"></div>
+    <div class="cm-acoes"><button type="button" class="btn-primary" onclick="registrar()">Registrar lance</button><button type="button" class="btn-secondary" onclick="Lic.toast('Resultado registrado. O item vai para habilitação; o histórico de lances fica guardado.')">Registrar resultado do item</button><button type="button" class="btn-secondary lic-parar" onclick="Lic.toast('Sugestões interrompidas nesta sessão. Para religar, toque em Retomar.', 'erro')"><i class="fas fa-hand" aria-hidden="true"></i>&nbsp;Parar sugestões</button></div>
+    <h3 class="cm-sec">Lances registrados <span class="lic-exemplo">exemplo</span></h3>
+    <table class="cm-tabela" id="hist"><thead><tr><th>Hora</th><th>Quem</th><th class="n">Valor</th><th>Origem</th><th>Registrado por</th></tr></thead><tbody>
+      <tr><td data-r="Hora">14:03:10</td><td data-r="Quem">Concorrente A</td><td class="n" data-r="Valor">R$ 320,00</td><td data-r="Origem">digitado</td><td data-r="Registrado por">Charles</td></tr>
+      <tr><td data-r="Hora">14:04:02</td><td data-r="Quem"><b>Metrolabs</b></td><td class="n" data-r="Valor">R$ 312,00</td><td data-r="Origem">digitado · sugestão aceita</td><td data-r="Registrado por">Charles</td></tr>
+      <tr><td data-r="Hora">14:05:40</td><td data-r="Quem">Concorrente B</td><td class="n" data-r="Valor">R$ 300,00</td><td data-r="Origem">digitado</td><td data-r="Registrado por">Charles</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<div class="lic-rodape"><button type="button" class="btn-secondary lic-parar" onclick="Lic.toast('Sugestões interrompidas.', 'erro')">Parar</button><button type="button" class="btn-primary" onclick="document.getElementById('lance').focus()">Registrar lance</button></div>
+<script>
+var PISO = 251.34;
+function num(s) { return parseFloat(String(s || "").replace(/\./g, "").replace(",", ".")); }
+function registrar() {
+  var v = num(document.getElementById("lance").value), m = document.getElementById("msg"), vf = num(document.getElementById("vfm").value);
+  if (!(v > 0)) { m.innerHTML = '<div class="gd-msg erro" role="alert">Digite o valor do lance que você deu no portal, por exemplo 299,00.</div>'; document.getElementById("lance").focus(); return; }
+  if (vf < PISO) { m.innerHTML = '<div class="gd-msg erro" role="alert">O valor final mínimo digitado no Compras.gov.br (' + Lic.brl(vf) + ') está abaixo do piso aprovado (' + Lic.brl(PISO) + '). Corrija no portal antes de continuar.</div>'; return; }
+  if (v < PISO) { m.innerHTML = '<div class="gd-msg erro" role="alert"><b>Abaixo do piso aprovado.</b> ' + Lic.brl(v) + ' é menor que ' + Lic.brl(PISO) + '. Não dê este lance. O piso só muda por nova decisão da Diretoria, registrada no SGO+ (mensagem de WhatsApp não vale como aprovação).</div>'; return; }
+  var tb = document.querySelector("#hist tbody"); tb.insertAdjacentHTML("beforeend", '<tr><td data-r="Hora">agora</td><td data-r="Quem"><b>Metrolabs</b></td><td class="n" data-r="Valor">' + Lic.brl(v) + '</td><td data-r="Origem">digitado</td><td data-r="Registrado por">Charles</td></tr>');
+  m.innerHTML = '<div class="gd-msg ok" role="status">Lance de ' + Lic.brl(v) + ' registrado. Distância para o piso: ' + Lic.brl(v - PISO) + '.</div>'; document.getElementById("lance").value = "";
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+/* Cópia das regras de SGO_DocA4_estilos_ (SGO_DocA4.js, 01/11/2026). O @page com logo e numeração é gerado pelo servidor; aqui vai a versão fixa. */
+@page{size:A4 portrait;margin:25mm 15mm 18mm 18mm}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:9.6pt;line-height:1.45;color:#1f2933;background:#e4e8ed}
+.folha{background:#fff;width:210mm;max-width:100%;margin:14px auto 40px;padding:14mm 15mm 18mm 18mm;box-shadow:0 1px 6px rgba(0,0,0,.18)}
+.barra-tela{max-width:210mm;margin:12px auto 0;display:flex;gap:8px;justify-content:flex-end;font:13px Arial,sans-serif}
+.barra-tela button{background:#0b3d6e;color:#fff;border:0;border-radius:4px;padding:8px 16px;font-weight:700;cursor:pointer}
+.barra-tela .barra-voltar{margin-right:auto;display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border:1px solid #0b3d6e;border-radius:4px;color:#0b3d6e;font-weight:700;text-decoration:none}.barra-tela .barra-voltar[hidden]{display:none}
+.cab-tela{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.6pt solid #9aa5b1;padding-bottom:2.2mm;margin-bottom:6mm}
+.cab-tela img{height:13mm;width:auto;display:block}
+.cab-tela .meta{text-align:right;font-size:7.8pt;line-height:1.35;color:#3e4c59}
+@media print{body{background:#fff}.folha{width:auto;margin:0;padding:0;box-shadow:none}.cab-tela,.barra-tela,.so-tela{display:none!important}}
+h1{font-size:15.5pt;line-height:1.2;margin:0 0 1.2mm;color:#0b3d6e;font-weight:700}
+.subtitulo{margin:0 0 4mm;color:#3e4c59;font-size:10.2pt;text-align:left}
+h2{font-size:11pt;color:#0b3d6e;margin:6.5mm 0 2.4mm;padding-bottom:1mm;border-bottom:.8pt solid #0b3d6e;break-after:avoid;page-break-after:avoid}
+h3{font-size:10pt;color:#243b53;margin:4.5mm 0 1.6mm;break-after:avoid;page-break-after:avoid}
+h4{font-size:9.6pt;color:#243b53;margin:3mm 0 1mm;break-after:avoid}
+p{margin:0 0 2.2mm;text-align:justify;hyphens:auto;-webkit-hyphens:auto;orphans:3;widows:3}
+li{text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+section{margin:0}
+.manter{break-inside:avoid;page-break-inside:avoid}
+.quebra{break-before:page;page-break-before:always}
+table.t{width:100%;border-collapse:collapse;margin:1.6mm 0 3.2mm;font-size:8.6pt;line-height:1.32}
+table.t th,table.t td{border:.5pt solid #bcc5cf;padding:1.2mm 1.8mm;vertical-align:top;text-align:left}
+table.t thead th{background:#eef2f6;color:#243b53;font-weight:700}
+table.t thead{display:table-header-group}
+table.t tr{break-inside:avoid;page-break-inside:avoid}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t td.cen,table.t th.cen{text-align:center}
+table.t tr.total td{font-weight:700;background:#f5f7fa}
+table.t.compacta{font-size:8pt;line-height:1.2}table.t.compacta th,table.t.compacta td{padding:.55mm 1.6mm}
+table.ident th{width:19%;background:#f5f7fa;font-weight:600;color:#3e4c59}
+table.ident td{width:31%}
+table.ficha{font-size:8.3pt}
+table.ficha th{width:auto;white-space:nowrap}
+.ok-txt{color:#1d6b3f;font-weight:700}.nok-txt{color:#a61b1b;font-weight:700}.info-txt{color:#3e4c59;font-weight:700}
+.resultado{border:1pt solid #52606d;border-left-width:4pt;padding:2.6mm 4mm;margin:3mm 0 4mm;break-inside:avoid;page-break-inside:avoid}
+.resultado .rot{font-size:8.4pt;color:#52606d;margin:0 0 .6mm}
+.resultado .val{font-size:13.5pt;font-weight:700;margin:0 0 .8mm}
+.resultado .mot{font-size:9pt;color:#1f2933;margin:0;text-align:left}
+.resultado.ok{border-color:#1d6b3f;background:#f2f8f4}.resultado.ok .val{color:#1d6b3f}
+.resultado.nok{border-color:#a61b1b;background:#fcf3f3}.resultado.nok .val{color:#a61b1b}
+.resultado.info{border-color:#52606d;background:#f5f7fa}.resultado.info .val{color:#3e4c59}
+.aviso-simulado{border:1pt dashed #a61b1b;color:#a61b1b;padding:2mm 3mm;margin:0 0 3mm;font-weight:700;font-size:9pt}
+ul.lista{margin:0 0 2.4mm 4.5mm;padding:0}ul.lista li{margin:0 0 1.1mm}
+.nota{font-size:8.3pt;color:#52606d;text-align:left}
+.leigo{background:#f5f7fa;border-left:2.5pt solid #9fb3c8;padding:2.6mm 3.6mm .8mm;margin:1mm 0 3mm}
+figure{margin:2mm 0 4mm;break-inside:avoid;page-break-inside:avoid}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:8.3pt;color:#3e4c59;margin-top:1.2mm;text-align:left}
+figcaption b{color:#1f2933}
+.assinaturas{display:flex;flex-wrap:wrap;gap:8mm 12mm;margin-top:5mm;break-inside:avoid;page-break-inside:avoid}
+.assinatura{flex:1 1 48mm;text-align:center}
+.assinatura .img{height:19mm;display:flex;align-items:flex-end;justify-content:center}
+.assinatura .img svg,.assinatura .img img{max-height:19mm;max-width:100%;width:auto;height:auto;display:block}
+.assinatura .linha{border-top:.6pt solid #3e4c59;margin-top:1mm;padding-top:1.2mm;font-weight:700;font-size:9pt}
+.assinatura .cargo{font-size:8pt;color:#52606d;line-height:1.35}
+.fotos{display:flex;flex-wrap:wrap;gap:4mm}
+.foto{flex:1 1 76mm;border:.5pt solid #bcc5cf;break-inside:avoid;page-break-inside:avoid}
+.foto .q{height:60mm;display:flex;align-items:center;justify-content:center;background:#fafbfc}
+.foto img{max-width:100%;max-height:60mm;display:block}
+.foto .leg{font-size:8pt;padding:1.2mm 2mm;color:#3e4c59;text-align:left}
+.formula{font-family:"Times New Roman",Times,serif;font-style:italic;font-size:11pt;text-align:center;margin:2mm 0 3mm}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta técnica e comercial (rascunho) · Embrapa</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_doca4.css">
+<style>
+  /* só o rascunho: selo e conferência interna (não saem na impressão aprovada) */
+  .selo-rascunho{border:1.2pt solid #a61b1b;color:#a61b1b;font-weight:700;padding:2mm 3mm;margin:0 0 4mm;font-size:9.4pt;text-align:left}
+  .conferencia{border:1pt dashed #7A5200;background:#fbf6ea;padding:2.4mm 3.4mm;margin:0 0 4mm;font-size:8.6pt}
+  .conferencia b{color:#7A5200}
+  .foto .q i{font-size:28pt;color:#9aa5b1}
+  @media (max-width:700px){table.t{table-layout:fixed}table.t td,table.t th{overflow-wrap:anywhere;word-break:break-word}.barra{max-width:22vw}.cab-tela img{height:9mm}.folha{padding:6mm 5mm}.barra-tela{flex-wrap:wrap;padding:0 8px}.barra-tela button,.barra-tela a{min-height:44px}table.t{font-size:8pt}}
+</style>
+</head>
+<body>
+<div class="barra-tela so-tela"><a class="barra-voltar" href="ficha.html#proposta">Voltar</a><button type="button" onclick="window.print()">Imprimir</button><button type="button" onclick="alert('Somente a Diretoria aprova. A versão aprovada fica congelada (v1) com o SHA-256 do arquivo.')">Aprovar (Diretoria)</button></div>
+<div class="folha">
+  <div class="cab-tela"><img src="assets/logo_metrolabs.jpg" alt="Metrolabs"><div class="meta">Proposta técnica e comercial<br>Pregão eletrônico 00348003000110-1-001347/2026 · Revisão 00 · versão 0.1 (rascunho)</div></div>
+  <div class="selo-rascunho">RASCUNHO — APROVAR ANTES DE USAR. Gerado com auxílio de IA em 01/11/2026 21:10 a partir da Tabela de preços de licitação (v1) e do cadastro de serviços. Cada número foi conferido pelo verificador; a Diretoria confere e aprova antes de qualquer envio.</div>
+  <div class="conferencia so-tela"><b>Conferência interna (não sai na impressão):</b> 0 fabricantes ou marcas citados · acreditação RBC não declarada (a Metrolabs faz calibração rastreável) · 24 números conferidos com a tabela v1 e com o edital · <b>3 pendências:</b> itens 8 a 10 com preço da tabela abaixo do piso; prazo de execução e validade da proposta a confirmar no edital; CNPJ e dados bancários vêm do cadastro da matriz.</div>
+
+  <h1>Proposta técnica e comercial</h1>
+  <p class="subtitulo">Calibração de equipamentos de laboratório — itens 6 a 13</p>
+  <table class="t ident"><tbody>
+    <tr><th>Órgão</th><td>Empresa Brasileira de Pesquisa Agropecuária (Embrapa)<br>CNPJ 00.348.003/0001-10 · Rio de Janeiro/RJ</td><th>Processo</th><td>Pregão eletrônico, registro de preços<br>PNCP 00348003000110-1-001347/2026</td></tr>
+    <tr><th>Proponente</th><td>Metrolab Soluções em Engenharia Clínica LTDA — matriz de Goiânia/GO<br>Empresa de Pequeno Porte (EPP)</td><th>Validade</th><td>Conforme o edital (a confirmar)</td></tr>
+  </tbody></table>
+
+  <h2>1. Objeto</h2>
+  <p>Prestação de serviços de calibração de incubadoras, banhos, balanças, registradores de temperatura e termômetros dos laboratórios da Embrapa no Rio de Janeiro, nos itens 6 a 13 do edital, com emissão de certificado de calibração para cada instrumento.</p>
+
+  <h2>2. Características técnicas dos serviços</h2>
+  <figure class="manter">
+    <svg viewBox="0 0 640 120" role="img" aria-label="Cadeia de rastreabilidade da calibração">
+      <g font-family="Arial" font-size="12" fill="#1f2933">
+        <rect x="6" y="30" width="138" height="60" rx="4" fill="#eef2f6" stroke="#0b3d6e"/><text x="75" y="56" text-anchor="middle" font-weight="700">Padrão de referência</text><text x="75" y="74" text-anchor="middle" font-size="10.5">certificado rastreável</text>
+        <rect x="170" y="30" width="138" height="60" rx="4" fill="#eef2f6" stroke="#0b3d6e"/><text x="239" y="56" text-anchor="middle" font-weight="700">Instrumento padrão</text><text x="239" y="74" text-anchor="middle" font-size="10.5">da Metrolabs, calibrado</text>
+        <rect x="334" y="30" width="138" height="60" rx="4" fill="#fff" stroke="#0b3d6e"/><text x="403" y="56" text-anchor="middle" font-weight="700">Equipamento</text><text x="403" y="74" text-anchor="middle" font-size="10.5">do laboratório</text>
+        <rect x="498" y="30" width="136" height="60" rx="4" fill="#f2f8f4" stroke="#1d6b3f"/><text x="566" y="56" text-anchor="middle" font-weight="700">Certificado</text><text x="566" y="74" text-anchor="middle" font-size="10.5">com incerteza</text>
+        <path d="M146 60 h18" stroke="#0b3d6e" stroke-width="2" marker-end="url(#s)"/><path d="M310 60 h18" stroke="#0b3d6e" stroke-width="2" marker-end="url(#s)"/><path d="M474 60 h18" stroke="#0b3d6e" stroke-width="2" marker-end="url(#s)"/>
+        <defs><marker id="s" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#0b3d6e"/></marker></defs>
+      </g></svg>
+    <figcaption><b>Figura 1.</b> Rastreabilidade das medições: cada certificado informa os padrões usados e a validade da calibração deles.</figcaption>
+  </figure>
+  <table class="t"><thead><tr><th>Serviço</th><th>Grandeza e pontos</th><th>Entregável</th></tr></thead><tbody>
+    <tr><td>Calibração de incubadora (B.O.D. e bacteriológica) — itens 6 e 11</td><td>Temperatura; no mínimo 3 pontos na faixa de uso informada pelo laboratório</td><td>Certificado por equipamento, com erro, incerteza e padrões usados</td></tr>
+    <tr><td>Calibração de banho-maria e banho Dubnoff — item 7</td><td>Temperatura; no mínimo 3 pontos</td><td>Certificado por equipamento</td></tr>
+    <tr><td>Calibração de balança analítica e semianalítica — itens 8 a 10</td><td>Massa; pontos conforme a capacidade da balança. Empresa com registro/autorização do Inmetro para balanças</td><td>Certificado por balança</td></tr>
+    <tr><td>Calibração de registrador de temperatura (2 canais) — item 12</td><td>Temperatura; no mínimo 3 pontos por canal</td><td>Certificado por registrador</td></tr>
+    <tr><td>Calibração de termômetro digital e termo-higrômetro — item 13</td><td>Temperatura e umidade relativa (grandezas separadas)</td><td>Certificado por instrumento</td></tr>
+  </tbody></table>
+  <div class="fotos">
+    <div class="foto"><div class="q"><i class="fas fa-temperature-half" aria-hidden="true"></i></div><div class="leg"><b>Imagem 1.</b> Foto do padrão de temperatura usado (escolher em Calibração › Padrões de referência).</div></div>
+    <div class="foto"><div class="q"><i class="fas fa-scale-balanced" aria-hidden="true"></i></div><div class="leg"><b>Imagem 2.</b> Foto do conjunto de massas padrão usado nas balanças (escolher no cadastro).</div></div>
+  </div>
+
+  <h2>3. Proposta comercial</h2>
+  <table class="t"><thead><tr><th class="cen">Item</th><th>Descrição</th><th class="num">Qtd.</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead><tbody>
+    <tr><td class="cen">6</td><td>Calibração de incubadora B.O.D.</td><td class="num">29</td><td class="num">R$ 320,00</td><td class="num">R$ 9.280,00</td></tr>
+    <tr><td class="cen">7</td><td>Calibração de banho-maria e banho Dubnoff</td><td class="num">6</td><td class="num">R$ 300,00</td><td class="num">R$ 1.800,00</td></tr>
+    <tr><td class="cen">8</td><td>Calibração de balança analítica</td><td class="num">12</td><td class="num">R$ 180,00</td><td class="num">R$ 2.160,00</td></tr>
+    <tr><td class="cen">9</td><td>Calibração de balança semianalítica</td><td class="num">10</td><td class="num">R$ 180,00</td><td class="num">R$ 1.800,00</td></tr>
+    <tr><td class="cen">10</td><td>Calibração de balança semianalítica</td><td class="num">12</td><td class="num">R$ 180,00</td><td class="num">R$ 2.160,00</td></tr>
+    <tr><td class="cen">11</td><td>Calibração de incubadora bacteriológica</td><td class="num">10</td><td class="num">R$ 320,00</td><td class="num">R$ 3.200,00</td></tr>
+    <tr><td class="cen">12</td><td>Calibração de registrador de temperatura 2 canais</td><td class="num">8</td><td class="num">R$ 260,00</td><td class="num">R$ 2.080,00</td></tr>
+    <tr><td class="cen">13</td><td>Calibração de termômetro digital e termo-higrômetro</td><td class="num">6</td><td class="num">R$ 230,00</td><td class="num">R$ 1.380,00</td></tr>
+    <tr class="total"><td colspan="4">Total dos itens cotados</td><td class="num">R$ 23.860,00</td></tr>
+  </tbody></table>
+  <p class="nota">Preços unitários com todos os custos incluídos (deslocamento, impostos, encargos). Itens 1 a 5 e 14 a 18 não cotados.</p>
+
+  <h2>4. Declarações</h2>
+  <ul class="lista"><li>A proponente é Empresa de Pequeno Porte e não está impedida de usufruir o tratamento da Lei Complementar 123/2006.</li><li>A proposta cobre todos os custos trabalhistas, previdenciários e tributários.</li><li>As calibrações são rastreáveis aos padrões de referência listados em cada certificado.</li></ul>
+
+  <div class="assinaturas"><div class="assinatura"><div class="img"></div><div class="linha">Charles</div><div class="cargo">Diretoria · Metrolab Soluções em Engenharia Clínica LTDA</div></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel de Licitações · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="hoje" data-titulo="Painel" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Painel de Licitações</h2>
+      <p class="content-subtitle">Indicadores do módulo. Cada número abre a lista que o compõe. Período: rodada de 01/11/2026 (publicações de 18/10 a 31/10).</p></div>
+    <div class="module-header-right"><a class="btn-secondary" href="relatorio_desempenho.html" target="_blank" rel="noopener" style="text-decoration:none"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Relatório do período (A4)</a></div>
+  </div>
+  <div class="cm-tabs" role="tablist"><a class="cm-tab" href="hoje.html" style="text-decoration:none;display:inline-flex;align-items:center">Hoje</a><span class="cm-tab active" aria-selected="true" role="tab">Painel</span><a class="cm-tab" href="alertas.html" style="text-decoration:none;display:inline-flex;align-items:center">Central de alertas</a></div>
+
+  <div class="gd-kpis">
+    <a class="gd-kpi" href="radar.html" style="text-decoration:none;color:inherit"><span class="v">8</span><span class="r">Oportunidades em andamento</span></a>
+    <a class="gd-kpi aviso" href="agenda.html" style="text-decoration:none;color:inherit"><span class="v">8</span><span class="r">Prazos até seg 09/11</span></a>
+    <a class="gd-kpi aviso" href="disputas.html" style="text-decoration:none;color:inherit"><span class="v">4</span><span class="r">Sessões nesta semana</span></a>
+    <a class="gd-kpi critico" href="alertas.html" style="text-decoration:none;color:inherit"><span class="v">1</span><span class="r">Alerta sem ciência</span></a>
+    <a class="gd-kpi critico" href="portais.html" style="text-decoration:none;color:inherit"><span class="v">1</span><span class="r">Portal com falha (PNCP arquivos: 503)</span></a>
+  </div>
+  <div class="cm-kpis">
+    <div class="cm-kpi"><span class="v">R$ 231.540,27</span><span class="r">Valor estimado em análise e decisão (4 licitações)</span></div>
+    <div class="cm-kpi"><span class="v">—</span><span class="r">Taxa de vitória: nenhuma disputa registrada ainda; conta a partir da primeira</span></div>
+    <div class="cm-kpi"><span class="v">0</span><span class="r">Propostas enviadas</span></div>
+    <div class="cm-kpi ok"><span class="v">0</span><span class="r">Contratos conquistados</span></div>
+  </div>
+
+  <div class="atv-ind-grade">
+    <div class="cm-caixa"><h3>Oportunidades por aderência</h3>
+      <div class="atv-barra-ind"><span class="t">Alta (75 a 100)</span><span class="b"><div style="width:0%"></div></span><span class="n">0</span></div>
+      <div class="atv-barra-ind"><span class="t">Média (50 a 74)</span><span class="b"><div style="width:71%"></div></span><span class="n">5</span></div>
+      <div class="atv-barra-ind"><span class="t">Baixa (30 a 49)</span><span class="b"><div style="width:43%"></div></span><span class="n">3</span></div>
+      <div class="atv-barra-ind"><span class="t">Travadas</span><span class="b"><div style="width:57%;background:var(--warning)"></div></span><span class="n">4</span></div>
+      <div class="atv-barra-ind"><span class="t">Descartadas pela regra</span><span class="b"><div style="width:100%;background:var(--muted)"></div></span><span class="n">7</span></div>
+      <p class="cm-ajuda-campo">Na varredura completa de teste: 76 com termo de interesse; 48 descartados pela regra (22 palavra parecida, 26 compra de produto).</p></div>
+    <div class="cm-caixa"><h3>Licitações por etapa (Kanban)</h3>
+      <div class="atv-barra-ind"><span class="t">Radar</span><span class="b"><div style="width:100%"></div></span><span class="n">4</span></div>
+      <div class="atv-barra-ind"><span class="t">Análise</span><span class="b"><div style="width:50%"></div></span><span class="n">2</span></div>
+      <div class="atv-barra-ind"><span class="t">Decisão</span><span class="b"><div style="width:50%"></div></span><span class="n">2</span></div>
+      <div class="atv-barra-ind"><span class="t">Proposta</span><span class="b"><div style="width:0%"></div></span><span class="n">0</span></div>
+      <div class="atv-barra-ind"><span class="t">Disputa · Resultado · Contrato</span><span class="b"><div style="width:0%"></div></span><span class="n">0</span></div>
+      <p class="cm-ajuda-campo"><a href="kanban.html">Abrir o Kanban</a> · <a href="gantt.html">Abrir o Gantt</a></p></div>
+    <div class="cm-caixa"><h3>Em andamento por UF</h3>
+      <div class="atv-barra-ind"><span class="t">PR</span><span class="b"><div style="width:100%"></div></span><span class="n">4</span></div>
+      <div class="atv-barra-ind"><span class="t">RJ (filial)</span><span class="b"><div style="width:50%"></div></span><span class="n">2</span></div>
+      <div class="atv-barra-ind"><span class="t">MG</span><span class="b"><div style="width:50%"></div></span><span class="n">2</span></div>
+      <div class="atv-barra-ind"><span class="t">GO e DF</span><span class="b"><div style="width:0%"></div></span><span class="n">0</span></div>
+      <p class="cm-ajuda-campo">GO teve 2 achados nesta rodada, os dois compra de produto (descartados).</p></div>
+    <div class="cm-caixa"><h3>Onde é a sessão</h3>
+      <div class="atv-barra-ind"><span class="t">Compras.gov.br</span><span class="b"><div style="width:100%"></div></span><span class="n">5</span></div>
+      <div class="atv-barra-ind"><span class="t">BLL Compras</span><span class="b"><div style="width:20%"></div></span><span class="n">1</span></div>
+      <div class="atv-barra-ind"><span class="t">SEAP-PR</span><span class="b"><div style="width:20%"></div></span><span class="n">1</span></div>
+      <div class="atv-barra-ind"><span class="t">Sistema municipal</span><span class="b"><div style="width:20%"></div></span><span class="n">1</span></div>
+      <p class="cm-ajuda-campo">Cadastro de fornecedor necessário em cada uma (Habilitação › Cadastros nas plataformas).</p></div>
+  </div>
+</div>
+</body>
+</html>

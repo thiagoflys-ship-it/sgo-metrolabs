@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hoje em Licitações · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="hoje" data-titulo="Hoje em Licitações" data-voltar="index.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Hoje em Licitações</h2>
+      <p class="content-subtitle">O que precisa da Diretoria agora: prazos, sessões, alertas sem ciência e oportunidades novas. Domingo, 01/11/2026, 21:00 (Brasília).</p></div>
+    <div class="module-header-right"><button type="button" class="btn-secondary" onclick="Lic.toast('Atualizado agora: nada mudou desde 20:58.')"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>
+      <a class="btn-primary" href="radar.html" style="text-decoration:none"><i class="fas fa-satellite-dish" aria-hidden="true"></i>&nbsp;Abrir o radar</a></div>
+  </div>
+
+  <div class="cm-tabs" role="tablist"><span class="cm-tab active" role="tab" aria-selected="true">Hoje</span><a class="cm-tab" role="tab" href="painel.html" style="text-decoration:none;display:inline-flex;align-items:center">Painel</a><a class="cm-tab" role="tab" href="alertas.html" style="text-decoration:none;display:inline-flex;align-items:center">Central de alertas&nbsp;<span class="cm-selo vermelho" style="margin:0">1 sem ciência</span></a></div>
+
+  <div class="cm-faixa erro" role="alert"><b>Alerta sem ciência há 47 min.</b> EMBRAPA (Rio de Janeiro) — prazo das propostas: quinta 05/11/2026 14:00. Enviado às 20:58, entregue, lido às 21:01, sem confirmação; escalonado às 21:13.
+    <b>O segundo responsável da Diretoria ainda não foi definido</b>, por isso o escalonamento foi para e-mail e aviso interno.
+    <div class="cm-acoes"><button type="button" class="btn-primary" onclick="Lic.toast('Ciência registrada: Charles, 01/11/2026 21:00. O alerta continua até a proposta ser enviada.')"><i class="fas fa-check" aria-hidden="true"></i>&nbsp;Confirmar ciência</button>
+      <a class="btn-secondary" href="simulador.html" style="text-decoration:none">Abrir a licitação</a></div></div>
+  <div class="cm-faixa aviso">Amanhã, segunda 02/11, é feriado nacional (Finados). O prazo de quarta 04/11 08:30 tem só a terça 03/11 como dia útil antes dele.</div>
+
+  <div class="cm-kpis">
+    <div class="cm-kpi critico"><span class="v">3</span><span class="r">Propostas que encerram em até 4 dias</span></div>
+    <div class="cm-kpi aviso"><span class="v">8</span><span class="r">Propostas e sessões até seg 09/11</span></div>
+    <div class="cm-kpi critico"><span class="v">1</span><span class="r">Alerta sem ciência</span></div>
+    <div class="cm-kpi ok"><span class="v">0</span><span class="r">Novas com nota 75 ou mais</span></div>
+  </div>
+
+  <div class="cm-entrada"><h3>O que precisa de ação hoje</h3>
+    <div class="cm-entrada-grade">
+      <a class="cm-caminho alerta" href="radar.html#op-430" style="text-decoration:none"><span class="ic"><i class="fas fa-hourglass-half" aria-hidden="true"></i></span><span class="t">Unioeste (Cascavel/PR) — propostas até qua 04/11 08:30</span><span class="s">Decidir se participa. Impugnação já vencida; acreditação opcional no edital.</span></a>
+      <a class="cm-caminho alerta" href="simulador.html" style="text-decoration:none"><span class="ic"><i class="fas fa-calculator" aria-hidden="true"></i></span><span class="t">Embrapa (Rio de Janeiro) — propostas até qui 05/11 14:00</span><span class="s">8 de 18 itens na nossa tabela de preços. Aprovar o preço mínimo por item.</span></a>
+      <a class="cm-caminho aviso" href="agenda.html#incoerente" style="text-decoration:none"><span class="ic"><i class="fas fa-calendar-xmark" aria-hidden="true"></i></span><span class="t">Patos de Minas — data da fonte incoerente</span><span class="s">Abertura 13/11 07:59 e encerramento 08:00 no PNCP. Conferir no edital; sem alerta até lá.</span></a>
+      <a class="cm-caminho aviso" href="radar.html#op-ansn" style="text-decoration:none"><span class="ic"><i class="fas fa-ban" aria-hidden="true"></i></span><span class="t">ANSN (Rio de Janeiro) — exige laboratório acreditado RBC</span><span class="s">Não atendemos. Confirmar se o aviso aceita rastreabilidade ou subcontratação.</span></a>
+    </div></div>
+
+  <div class="cm-caixa"><h3>Prazos e sessões até segunda 09/11</h3>
+    <div class="cm-vence-l HOJE"><div><b>qua 04/11 08:30</b> · Limite das propostas e sessão · Unioeste, Cascavel/PR · Pregão eletrônico (SEAP-PR)<div class="cm-meta" style="margin:2px 0 0">Fonte: PNCP, dataEncerramentoProposta · fuso presumido: Brasília</div></div><span class="lic-tempo critico">2 d 11 h</span></div>
+    <div class="cm-vence-l HOJE"><div><b>qui 05/11 08:30</b> · Limite das propostas · Unioeste, Cascavel/PR (leite humano) · Compras.gov.br<div class="cm-meta" style="margin:2px 0 0">Fonte: PNCP · fuso presumido: Brasília</div></div><span class="lic-tempo aviso">3 d 11 h</span></div>
+    <div class="cm-vence-l HOJE"><div><b>qui 05/11 14:00</b> · Limite das propostas · Embrapa, Rio de Janeiro · Compras.gov.br · aberto e fechado<div class="cm-meta" style="margin:2px 0 0">Fonte: PNCP · confirmado no edital por Charles em 01/11 21:05 (exemplo)</div></div><span class="lic-tempo aviso">3 d 17 h</span></div>
+    <div class="cm-vence-l"><div><b>sex 06/11 09:30</b> · Limite das propostas · Município de Simão Pereira/MG · BLL Compras · registro de preços<div class="cm-meta" style="margin:2px 0 0">Itens não vieram pela API: ler o edital na BLL</div></div><span class="lic-tempo">4 d 12 h</span></div>
+    <div class="cm-vence-l"><div><b>seg 09/11 08:00</b> · Dispensa com disputa · ANSN, Rio de Janeiro · balanças <span class="cm-selo vermelho">Exige RBC</span></div><span class="lic-tempo">7 d 11 h</span></div>
+    <div class="cm-vence-l"><div><b>seg 09/11 09:00</b> · Limite das propostas · Município de Arapongas/PR · 12 autoclaves odontológicas</div><span class="lic-tempo">7 d 12 h</span></div>
+    <p class="cm-meta" style="margin:8px 0 0"><a href="agenda.html">Ver a agenda completa (hoje, 7 dias, mês)</a></p>
+  </div>
+
+  <div class="cm-caixa"><h3>Oportunidades novas com nota 75 ou mais</h3>
+    <div class="cm-vazio"><i class="fas fa-circle-check" aria-hidden="true"></i> Nenhuma oportunidade nova chegou a 75 na rodada de 20:58. A melhor nota é 64 (Arapongas/PR).
+      As 5 com nota entre 50 e 74 vão no resumo diário das 07:00, sem WhatsApp.<br><a href="radar.html">Ver as oportunidades com nota média</a></div>
+    <p class="cm-meta" style="margin:8px 0 0">Última rodada do radar: domingo 01/11/2026 20:58 · PNCP: 12.343 contratações lidas · 76 com termo de interesse · 60 com proposta aberta · 14 prováveis · 48 descartadas por regra (22 palavra parecida, 26 compra de produto) · 14 só para preço de mercado.</p>
+  </div>
+
+  <div class="cm-caixa"><h3>Decisões da Diretoria esperando</h3>
+    <div class="gd-lista">
+      <div class="gd-card DIRETORIA"><div class="gd-card-tit"><span class="gd-selo DIRETORIA">Preço mínimo</span>Embrapa — aprovar o preço mínimo de 8 itens antes de qui 05/11 14:00</div>
+        <p class="gd-meta">Licitações · pedido pelo radar em 01/11 20:58 · prazo de decisão: qua 04/11 18:00</p>
+        <div class="gd-acoes"><a class="btn-primary" href="simulador.html" style="text-decoration:none">Abrir o simulador</a></div></div>
+      <div class="gd-card DIRETORIA"><div class="gd-card-tit"><span class="gd-selo DIRETORIA">Trava</span>Ministério da Saúde (RJ) — engenharia clínica com dedicação exclusiva de mão de obra</div>
+        <p class="gd-meta">Licitações · a nota fica em zero até a Diretoria decidir se participa com equipe residente · propostas até seg 09/11 10:00</p>
+        <div class="gd-acoes"><button type="button" class="btn-secondary" onclick="Lic.modal('Não participar', '<div class=&quot;cm-campo&quot;><label for=&quot;mot&quot;>Motivo (obrigatório)</label><textarea id=&quot;mot&quot;>Dedicação exclusiva de mão de obra: não temos equipe residente no Rio de Janeiro.</textarea></div>', '<button type=&quot;button&quot; class=&quot;btn-secondary&quot; onclick=&quot;Lic.fechar()&quot;>Cancelar</button><button type=&quot;button&quot; class=&quot;btn-primary&quot; onclick=&quot;Lic.fechar();Lic.toast(\'Registrado: não participar. Os alertas desta licitação foram cancelados com o motivo.\')&quot;>Registrar decisão</button>')">Não participar</button>
+          <a class="btn-secondary" href="radar.html" style="text-decoration:none">Ver a oportunidade</a></div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

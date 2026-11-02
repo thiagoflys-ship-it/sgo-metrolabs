@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tabela de preços de licitação · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="precos" data-titulo="Tabela de preços" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Tabela de preços de licitação</h2>
+      <p class="content-subtitle">Preço próprio das licitações, cadastrado pela Diretoria. Separado do catálogo do Comercial: o catálogo entra só como referência de código e de custo para o piso.</p></div>
+    <div class="module-header-right"><button type="button" class="btn-primary" onclick="novo()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Novo preço</button></div>
+  </div>
+  <div class="cm-faixa">Versão vigente: <b>1</b>, desde 01/11/2026. Mudar um preço cria uma versão nova com data, motivo e nome de quem mudou; a anterior fica no histórico. Licitação com preço mínimo já aprovado continua com a versão daquele dia. <span class="lic-exemplo">preços de exemplo</span></div>
+  <div class="cm-kpis"><div class="cm-kpi"><span class="v">11</span><span class="r">Serviços na tabela</span></div><div class="cm-kpi critico"><span class="v">1</span><span class="r">Preço abaixo do piso</span></div><div class="cm-kpi aviso"><span class="v">2</span><span class="r">Sem preço (Diretoria define)</span></div><div class="cm-kpi ok"><span class="v">2</span><span class="r">Com autorização do Inmetro</span></div></div>
+  <div class="cm-filtros"><div><label for="b">Buscar</label><input id="b" type="search" placeholder="código ou serviço" oninput="filtrar()"></div></div>
+  <div class="cm-caixa">
+    <table class="cm-tabela" id="t"><thead><tr><th>Código</th><th>Serviço</th><th>Referência do catálogo</th><th>Unidade</th><th class="n">Preço de licitação</th><th class="n">Custo da ficha</th><th class="n">Piso (sem viagem)</th><th class="n">Sobra</th><th>Vigência e quem alterou</th><th></th></tr></thead><tbody></tbody></table>
+    <p class="cm-ajuda-campo">Piso sem viagem = custo da ficha ÷ 0,4775 (impostos de Goiânia 14,25%, comissão 3%, sobra mínima 35%). Na licitação, o simulador soma o deslocamento. O preço do Comercial não aparece nesta tela de propósito.</p>
+  </div>
+</div>
+<script>
+var L = [
+  ["LIC-CAL-001", "Calibração de termômetro digital (3 pontos)", "CAL-001", "instrumento", 150, 63.16, "custo da ficha C1 (real)"],
+  ["LIC-CAL-003", "Calibração de termo-higrômetro", "CAL-003", "instrumento", 230, 78],
+  ["LIC-CAL-DLG", "Calibração de registrador de temperatura (datalogger)", "CAL_DATALOGGER", "instrumento", 260, 86],
+  ["LIC-CAL-CAM", "Calibração de indicador de câmara, estufa ou banho", "CAL_CAMARA", "equipamento", 300, 104],
+  ["LIC-CAL-INC", "Calibração de incubadora (B.O.D. ou bacteriológica)", "CAL_INCUBADORA_BIO", "equipamento", 320, 118],
+  ["LIC-CAL-BAL", "Calibração de balança até 30 kg", "CAL_BALANCA_PEQ", "instrumento", 180, 95, "", true],
+  ["LIC-CAL-ESF", "Calibração de esfigmomanômetro", "CAL_ESFIGMO", "instrumento", 95, 41, "", true],
+  ["LIC-MP-ACB", "Manutenção preventiva de autoclave de bancada", "MP_AUTOCLAVE_BANCADA", "equipamento/ano", 640, 270],
+  ["LIC-QUA-001", "Qualificação térmica de autoclave hospitalar", "QUA-001", "equipamento", 3900, 1650],
+  ["LIC-NR13-VP", "Inspeção NR-13 de vaso de pressão", "NR13-001 (compressor: referência parcial)", "vaso", null, null],
+  ["LIC-QT-OE", "Qualificação de esterilizador a óxido de etileno", "QT_AUTOCLAVE_BT", "equipamento", null, null]
+];
+function c2(v) { return Math.ceil(v * 100 - 1e-9) / 100; }
+function filtrar() {
+  var b = (document.getElementById("b").value || "").toLowerCase();
+  document.querySelector("#t tbody").innerHTML = L.filter(function (r) { return !b || (r[0] + r[1] + r[2]).toLowerCase().indexOf(b) !== -1; }).map(function (r) {
+    if (r[4] === null) return '<tr><td data-r="Código" class="lic-mono">' + r[0] + '</td><td data-r="Serviço">' + r[1] + '</td><td data-r="Referência" class="lic-mono">' + r[2] + '</td><td data-r="Unidade">' + r[3] + '</td><td class="n" data-r="Preço"><span class="cm-selo laranja">Sem preço</span></td><td class="n" data-r="Custo">a definir</td><td class="n" data-r="Piso">—</td><td class="n" data-r="Sobra">—</td><td data-r="Vigência">Sem preço, o simulador não calcula este serviço</td><td><button type="button" class="btn-primary" onclick="novo(\'' + r[0] + '\')">Definir preço</button></td></tr>';
+    var piso = c2(r[5] / 0.4775), sobra = 0.8275 - r[5] / r[4], baixo = r[4] < piso;
+    return '<tr' + (baixo ? ' style="background:var(--danger-bg)"' : '') + '><td data-r="Código" class="lic-mono">' + r[0] + '</td><td data-r="Serviço">' + r[1] + (r[7] ? ' <span class="cm-selo verde">Autorizada Inmetro</span>' : '') + '</td><td data-r="Referência" class="lic-mono">' + r[2] + '</td><td data-r="Unidade">' + r[3] + '</td>' +
+      '<td class="n" data-r="Preço de licitação"><b>' + Lic.brl(r[4]) + '</b></td><td class="n" data-r="Custo da ficha">' + Lic.brl(r[5]) + (r[6] ? '<div class="cm-meta">' + r[6] + '</div>' : '') + '</td><td class="n" data-r="Piso">' + Lic.brl(piso) + '</td>' +
+      '<td class="n" data-r="Sobra"' + (baixo ? ' style="color:var(--danger);font-weight:700"' : '') + '>' + Lic.pct(sobra) + (baixo ? '<div style="font-size:11.5px">abaixo do piso</div>' : '') + '</td>' +
+      '<td data-r="Vigência">desde 01/11/2026 · v1<div class="cm-meta">Charles (Diretoria), 01/11/2026 20:40</div></td><td><button type="button" class="btn-secondary" onclick="hist(\'' + r[0] + '\')">Histórico</button> <button type="button" class="btn-secondary" onclick="novo(\'' + r[0] + '\')">Alterar</button></td></tr>';
+  }).join("") || '<tr><td colspan="10"><div class="cm-vazio">Nenhum serviço com esse texto. Use "Novo preço" para cadastrar.</div></td></tr>';
+}
+function novo(cod) {
+  var r = L.filter(function (x) { return x[0] === cod; })[0] || ["", "", "", "", "", ""];
+  Lic.modal(cod ? "Alterar preço de " + cod : "Novo preço de licitação",
+    '<div class="cm-grade2"><div class="cm-campo"><label for="nCod">Código</label><input id="nCod" value="' + r[0] + '"' + (cod ? ' readonly' : '') + '></div><div class="cm-campo"><label for="nRef">Referência do catálogo do Comercial</label><select id="nRef"><option>' + (r[2] || "Escolha o serviço") + '</option><option>CAL-001</option><option>CAL-003</option><option>CAL_BALANCA_PEQ</option><option>NR13-001</option></select><p class="cm-ajuda-campo">Só para código e custo da ficha. O preço do Comercial não é usado.</p></div></div>' +
+    '<div class="cm-campo"><label for="nNome">Serviço</label><input id="nNome" value="' + r[1] + '"></div>' +
+    '<div class="cm-grade3"><div class="cm-campo"><label for="nUn">Unidade</label><input id="nUn" value="' + r[3] + '"></div><div class="cm-campo"><label for="nPr">Preço de licitação (R$)</label><input id="nPr" inputmode="decimal" value="' + (r[4] ? String(r[4]).replace(".", ",") : "") + '"></div><div class="cm-campo"><label for="nVig">Vale a partir de</label><input id="nVig" type="date" value="2026-11-02"></div></div>' +
+    '<div class="cm-campo"><label for="nMot">Motivo da mudança (obrigatório)</label><textarea id="nMot"></textarea></div><div id="nErr"></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="salvar()">Salvar versão nova</button>');
+}
+function salvar() {
+  if ((document.getElementById("nMot").value || "").trim().length < 5) { document.getElementById("nErr").innerHTML = '<div class="gd-msg erro" role="alert">Escreva o motivo. Toda mudança de preço de licitação fica no histórico com o motivo e o seu nome.</div>'; document.getElementById("nMot").focus(); return; }
+  Lic.fechar(); Lic.toast("Versão 2 salva. Vale a partir de 02/11/2026; licitações com preço mínimo já aprovado continuam na versão 1.");
+}
+function hist(cod) {
+  Lic.modal("Histórico de " + cod, '<div class="cm-hist"><div><b>Versão 1 criada</b> com o preço atual. Motivo: "Tabela inicial da Diretoria para licitações". <span class="q">01/11/2026 20:40 · Charles (Diretoria)</span></div><div><b>Usada em</b> LIC-2026-0002 (Embrapa), simulação sem aprovação. <span class="q">01/11/2026 21:00</span></div></div>');
+}
+filtrar();
+</script>
+</body>
+</html>

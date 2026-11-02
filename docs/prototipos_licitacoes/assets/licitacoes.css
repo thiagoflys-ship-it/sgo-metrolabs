@@ -1,0 +1,209 @@
+/* =========================================================================
+   SGO+ LICITAÇÕES — componentes NOVOS do protótipo (01/11/2026).
+   Tudo aqui usa só os tokens do SGO+ (UI_Estilos: --bc-*, --card, --border, --muted,
+   --danger, --warning, --success, --info). O que já existe no SGO+ (cm-*, gd-*, atv-*,
+   module-*, btn-*) vem das cópias fiéis em sgo_*.css e NÃO é redefinido aqui.
+   Prefixo único: lic-. Na implementação, este bloco vai para o <style> de JS_Licitacoes.html.
+   ========================================================================= */
+
+/* barra de controle do protótipo (não existe no sistema; só para o dono navegar os estados) */
+.lic-proto { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0 0 12px; padding: 8px 12px; border: 1px dashed var(--bc-line-2); border-radius: 8px; background: var(--bc-surface-3); font-size: 12px; color: var(--bc-text-2); }
+.lic-proto b { font-weight: 700; color: var(--bc-text); }
+.lic-proto button { min-height: 32px; padding: 0 10px; font-size: 12px; }
+.lic-proto button[aria-pressed="true"] { background: var(--bc-text) !important; color: #fff !important; border-color: var(--bc-text) !important; }
+.lic-exemplo { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--bc-text-3); border: 1px dashed var(--bc-line-2); border-radius: 4px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+
+/* nota de aderência 0 a 100 */
+.lic-nota { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 58px; height: 58px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.lic-nota b { font-size: 21px; line-height: 1; font-weight: 800; color: var(--text-strong, var(--text)); }
+.lic-nota span { font-size: 10.5px; font-weight: 700; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .03em; }
+.lic-nota.alta { border-color: var(--success); box-shadow: inset 0 -4px 0 var(--success); }
+.lic-nota.media { border-color: var(--bc-info-line); box-shadow: inset 0 -4px 0 var(--info); }
+.lic-nota.baixa { border-color: var(--bc-warn-line); box-shadow: inset 0 -4px 0 var(--warning); }
+.lic-nota.trava, .lic-nota.descartada { border-color: var(--bc-danger-line); box-shadow: inset 0 -4px 0 var(--danger); }
+.lic-nota.trava b, .lic-nota.descartada b { color: var(--danger); }
+.lic-barra-nota { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 54px; gap: 8px; align-items: center; font-size: 12.5px; margin: 0 0 6px; }
+.lic-barra-nota .b { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.lic-barra-nota .b > i { display: block; height: 100%; background: var(--info); }
+.lic-barra-nota .n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* cartão de oportunidade do radar (base: .cm-card) */
+.lic-op { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.lic-op-acoes { display: flex; flex-direction: column; gap: 6px; min-width: 168px; }
+.lic-op-acoes button { min-height: 44px; }
+.lic-op.descartada { opacity: .78; }
+.lic-objeto { font-size: 13px; line-height: 1.5; margin: 4px 0 6px; }
+.lic-objeto mark { background: var(--bc-warn-bg); color: inherit; padding: 0 2px; border-radius: 2px; }
+.lic-motivo { font-size: 12.5px; padding: 6px 10px; border-left: 3px solid var(--danger); background: var(--danger-bg); border-radius: 4px; margin: 6px 0 0; }
+.lic-motivo.forte { border-left-color: var(--success); background: var(--success-bg); }
+.lic-motivo.pend { border-left-color: var(--warning); background: var(--warning-bg); }
+.lic-mono { font-family: var(--bc-mono); font-size: 12px; letter-spacing: 0; }
+
+/* contagem de prazo */
+.lic-tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lic-tempo.critico { color: var(--danger); border-color: var(--bc-danger-line); background: var(--danger-bg); }
+.lic-tempo.aviso { color: var(--warning); border-color: var(--bc-warn-line); background: var(--warning-bg); }
+.lic-tempo.ok { color: var(--success); border-color: var(--bc-action-line); background: var(--success-bg); }
+
+/* cabeçalho da ficha */
+.lic-ficha-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.lic-ficha-cab h2 { margin: 0 0 4px; font-size: 17px; line-height: 1.3; }
+.lic-ficha-num { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 14px; margin-top: 10px; font-size: 12.5px; }
+.lic-ficha-num span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+.lic-ficha-num b { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* fato x inferência x pendente */
+.lic-evid { border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 8px; padding: 10px 12px; margin: 0 0 8px; background: var(--card); }
+.lic-evid.FATO { border-left-color: var(--success); }
+.lic-evid.INFERENCIA { border-left-color: var(--info); }
+.lic-evid.PENDENTE { border-left-color: var(--warning); }
+.lic-evid.IMPEDITIVO { border-left-color: var(--danger); background: var(--danger-bg); }
+.lic-classe { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; padding: 1px 7px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; }
+.lic-classe.FATO { color: var(--success); background: var(--success-bg); border: 1px solid var(--bc-action-line); }
+.lic-classe.INFERENCIA { color: var(--info); background: var(--info-bg); border: 1px solid var(--bc-info-line); }
+.lic-classe.PENDENTE { color: var(--warning); background: var(--warning-bg); border: 1px solid var(--bc-warn-line); }
+.lic-classe.IMPEDITIVO { color: #fff; background: var(--danger); border: 1px solid var(--danger); }
+.lic-evid p { margin: 4px 0; font-size: 13px; line-height: 1.5; }
+.lic-trecho { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--bc-line-2); background: var(--bc-surface-2); font-size: 12.5px; line-height: 1.5; color: var(--bc-text-2); }
+.lic-trecho cite { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); margin-top: 3px; font-family: var(--bc-mono); overflow-wrap: anywhere; }
+.lic-verif { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.lic-verif .ok { color: var(--success); font-weight: 700; } .lic-verif .nao { color: var(--warning); font-weight: 700; }
+
+/* item do edital ligado à tabela de preços */
+.lic-item { display: grid; grid-template-columns: 40px minmax(0, 2.2fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px 12px; align-items: start; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 12.5px; }
+.lic-item .num { font-family: var(--bc-mono); font-weight: 600; color: var(--muted); }
+.lic-item .ref { font-family: var(--bc-mono); font-size: 12px; }
+.lic-item.fora { opacity: .7; }
+
+/* simulador */
+.lic-sim { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.lic-sim th, .lic-sim td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+.lic-sim th { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.lic-sim td.n, .lic-sim th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lic-sim tr.abaixo td { background: var(--danger-bg); }
+.lic-sim tr.fora td { color: var(--muted); }
+.lic-sim input[type=checkbox] { width: 20px; height: 20px; }
+.lic-dir { }                                   /* coluna só da Diretoria */
+.lic-ver-analista .lic-dir { display: none !important; }
+.lic-total { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 14px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.lic-total span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+.lic-total b { font-size: 16px; }
+
+/* agenda */
+.lic-dia { margin: 0 0 14px; }
+.lic-dia-cab { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--bc-text); font-size: 13px; font-weight: 800; }
+.lic-dia-cab span { font-weight: 500; color: var(--muted); font-size: 12px; }
+.lic-ev { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--border); border-left: 4px solid var(--info); border-radius: 8px; background: var(--card); margin-bottom: 8px; }
+.lic-ev.critico { border-left-color: var(--danger); } .lic-ev.importante { border-left-color: var(--warning); } .lic-ev.retificado { border-left-color: var(--muted); border-style: dashed; opacity: .8; }
+.lic-ev .h { font-family: var(--bc-mono); font-size: 14px; font-weight: 600; }
+.lic-ev .h small { display: block; font-family: var(--bc-sans); font-size: 11px; color: var(--muted); font-weight: 600; }
+.lic-ev .f { font-size: 11.5px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.lic-ev .riscado { text-decoration: line-through; color: var(--muted); }
+.lic-ev-acoes { display: flex; flex-direction: column; gap: 6px; }
+.lic-ev-acoes button { min-height: 44px; }
+
+/* estados do alerta (1 a 10) */
+.lic-estados { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.lic-est { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: var(--card); white-space: nowrap; }
+.lic-est.feito { color: var(--success); border-color: var(--bc-action-line); background: var(--success-bg); }
+.lic-est.atual { color: #fff; background: var(--info); border-color: var(--info); }
+.lic-est.falha { color: #fff; background: var(--danger); border-color: var(--danger); }
+.lic-est.escalado { color: var(--bc-text); background: var(--warning-bg); border-color: var(--warning); }
+.lic-est.espera { border-style: dashed; }
+.lic-linha-tempo { margin: 6px 0 0 4px; padding-left: 12px; border-left: 2px solid var(--border); font-size: 12.5px; }
+.lic-linha-tempo div { margin-bottom: 6px; } .lic-linha-tempo .q { font-family: var(--bc-mono); font-size: 11.5px; color: var(--muted); margin-right: 6px; }
+
+/* celular de exemplo com a mensagem do WhatsApp (tela da Central de alertas) */
+.lic-cel { width: 300px; max-width: 100%; margin: 0 auto; border: 10px solid #1C1F1D; border-radius: 30px; background: #ECE5DD; overflow: hidden; }
+.lic-cel-topo { background: #075E54; color: #fff; padding: 10px 12px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.lic-cel-topo .av { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #1F6B2A; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; }
+.lic-cel-topo small { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
+.lic-cel-corpo { padding: 10px 8px 14px; min-height: 380px; }
+.lic-wa-dia { text-align: center; margin: 2px 0 8px; } .lic-wa-dia span { background: #D9F0F7; color: #1C1F1D; font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+.lic-wa-bolha { background: #fff; border-radius: 0 8px 8px 8px; padding: 8px 9px 4px; font-size: 12.5px; line-height: 1.45; color: #111B21; box-shadow: 0 1px 1px rgba(0,0,0,.12); white-space: pre-line; }
+.lic-wa-bolha .hora { display: block; text-align: right; font-size: 10.5px; color: #667781; margin-top: 2px; }
+.lic-wa-bt { display: flex; align-items: center; justify-content: center; gap: 6px; background: #fff; color: #027EB5; font-size: 13px; font-weight: 600; border-radius: 8px; margin-top: 3px; min-height: 40px; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+.lic-wa-resp { margin: 8px 0 0 auto; width: max-content; max-width: 80%; background: #D9FDD3; border-radius: 8px 0 8px 8px; padding: 6px 9px 3px; font-size: 12.5px; color: #111B21; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+.lic-wa-resp .hora { display: block; text-align: right; font-size: 10.5px; color: #667781; }
+.lic-wa-sis { margin-top: 8px; background: #fff; border-radius: 0 8px 8px 8px; padding: 6px 9px 4px; font-size: 12.5px; color: #111B21; width: 88%; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+
+/* disputa assistida */
+.lic-disp-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.lic-disp-num { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info); border-radius: 8px; padding: 10px 12px; }
+.lic-disp-num .v { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-strong, var(--text)); }
+.lic-disp-num .r { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.lic-disp-num.piso { border-top-color: var(--danger); } .lic-disp-num.sug { border-top-color: var(--success); } .lic-disp-num.melhor { border-top-color: var(--warning); }
+.lic-cronometro { font-family: var(--bc-mono); font-size: 28px; font-weight: 600; letter-spacing: .02em; }
+.lic-parar { background: var(--bc-danger) !important; border-color: var(--bc-danger) !important; color: #fff !important; }
+
+/* tabela de portais: tipo A a E */
+.lic-tipo { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; font-weight: 800; font-size: 13px; border: 1px solid var(--border); background: var(--card); }
+.lic-tipo.A { color: var(--success); border-color: var(--bc-action-line); background: var(--success-bg); }
+.lic-tipo.B { color: var(--info); border-color: var(--bc-info-line); background: var(--info-bg); }
+.lic-tipo.C { color: var(--warning); border-color: var(--bc-warn-line); background: var(--warning-bg); }
+.lic-tipo.D { color: var(--bc-text-2); }
+.lic-tipo.E { color: var(--muted); border-style: dashed; }
+.lic-log { font-family: var(--bc-mono); font-size: 11.5px; line-height: 1.6; background: var(--bc-surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow-x: auto; white-space: pre; max-width: 100%; }
+
+/* carregando (esqueleto) */
+.lic-esq { display: block; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--bc-surface-3) 0%, var(--bc-surface-2) 50%, var(--bc-surface-3) 100%); background-size: 200% 100%; animation: lic-esq 1.2s ease-in-out infinite; margin: 6px 0; }
+@keyframes lic-esq { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .lic-esq { animation: none; } }
+
+/* ações fixas no rodapé do celular (folga à direita para os dois botões redondos do canto) */
+.lic-rodape { display: none; }
+.app-shell.modo-mobile .lic-rodape { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 390; gap: 8px; padding: 10px 76px calc(10px + env(safe-area-inset-bottom, 0px)) 12px; background: #fff; border-top: 1px solid var(--bc-line); }
+.app-shell.modo-mobile .lic-rodape button { flex: 1 1 0; min-height: 48px !important; height: auto !important; font-size: 14px !important; }
+.app-shell.modo-mobile.tem-rodape #conteudo { padding-bottom: 150px; }
+
+/* botões redondos do canto (bate-papo e "Tire sua dúvida"): só a aparência, para o protótipo mostrar a folga real */
+.lic-redondos { position: fixed; right: 14px; bottom: 14px; z-index: 395; display: flex; flex-direction: column; gap: 10px; }
+.lic-redondos span { width: 50px; height: 50px; border-radius: 50%; background: var(--bc-action); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 19px; box-shadow: 0 4px 12px rgba(28,31,29,.25); }
+.lic-redondos span + span { background: var(--bc-info); }
+
+/* aviso flutuante (sucesso / erro) */
+.lic-toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 100010; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 20px rgba(28,31,29,.18); }
+.lic-toast.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+.lic-toast.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+
+/* mapa da navegação (índice do protótipo) */
+.lic-mapa { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.lic-mapa th, .lic-mapa td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+
+:focus-visible { outline: 3px solid var(--info) !important; outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .lic-op { grid-template-columns: auto minmax(0, 1fr); }
+  .lic-op-acoes { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; min-width: 0; }
+  .lic-op-acoes button { flex: 1 1 140px; }
+  .lic-ficha-cab { grid-template-columns: auto minmax(0, 1fr); }
+  .lic-ficha-cab .lic-ficha-acoes { display: none; }
+  .lic-ficha-num { grid-template-columns: 1fr 1fr; }
+  .lic-item { grid-template-columns: 32px minmax(0, 1fr); }
+  .lic-item > :nth-child(n+3) { grid-column: 2; }
+  .lic-ev { grid-template-columns: 64px minmax(0, 1fr); }
+  .lic-ev-acoes { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+  .lic-ev-acoes button { flex: 1 1 140px; }
+  .lic-disp-grade { grid-template-columns: 1fr 1fr; }
+  .lic-total { grid-template-columns: 1fr 1fr; }
+  .lic-barra-nota { grid-template-columns: minmax(0, 1fr) 46px; }
+  .lic-barra-nota .b { grid-column: 1 / -1; grid-row: 2; }
+  .lic-sim thead { display: none; }
+  .lic-sim, .lic-sim tbody, .lic-sim tr, .lic-sim td { display: block; width: 100%; box-sizing: border-box; }
+  .lic-sim tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+  .lic-sim td { border: 0; padding: 3px 0; text-align: left !important; white-space: normal !important; }
+  .lic-sim td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+  .lic-mapa thead { display: none; }
+  .lic-mapa, .lic-mapa tbody, .lic-mapa tr, .lic-mapa td { display: block; width: 100%; box-sizing: border-box; }
+  .lic-mapa tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+  .lic-mapa td { border: 0; padding: 2px 0; }
+  .lic-cel { width: 100%; }
+}
+.lic-proto button { width: auto !important; flex: 0 1 auto; }
+.app-shell.modo-mobile .lic-proto button { flex: 1 1 40%; min-height: 40px !important; }
+.lic-aba[hidden] { display: none !important; }
+.lic-abas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 12px; padding-bottom: 2px; }
+.lic-abas::-webkit-scrollbar { display: none; }
+.lic-abas .cm-tab { flex: 0 0 auto; min-height: 44px; }
+.lic-cel-topo small { color: #fff !important; opacity: .85; }
+.lic-ev-acoes .cm-selo { align-self: flex-start; flex: 0 0 auto; }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kanban das licitações · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="kanban" data-titulo="Kanban" data-voltar="radar.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header"><div class="module-header-left"><h2 class="content-title">Oportunidades — Kanban</h2>
+    <p class="content-subtitle">Cada licitação numa etapa: radar → análise → decisão → proposta → disputa → resultado → contrato. Arraste o cartão ou toque em "Mover". Mudar de etapa fica no histórico.</p></div></div>
+  <div class="cm-modos" aria-label="Modo de ver"><a class="cm-modo" href="radar.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Lista</a><a class="cm-modo ativo" data-cm-modo="kanban" href="kanban.html" aria-current="page" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Kanban</a><a class="cm-modo" href="gantt.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Gantt</a></div>
+  <p class="cm-modo-dica">Travadas e descartadas não entram no Kanban (estão na Lista). Etapas vazias mostram o que ainda não aconteceu: nenhuma proposta foi enviada pelo SGO+ até hoje. Deslize o quadro para os lados para ver Disputa, Resultado e Contrato.</p>
+  <div class="cmk-area"><div class="cmk-quadro" id="q"></div></div>
+</div>
+<script>
+var COLS = [["RADAR", "Radar"], ["ANALISE", "Análise"], ["DECISAO", "Decisão"], ["PROPOSTA", "Proposta"], ["DISPUTA", "Disputa"], ["RESULTADO", "Resultado"], ["CONTRATO", "Contrato"]];
+var C = [
+  { id: "unila", et: "RADAR", t: "UNILA — Foz do Iguaçu/PR", l: "Manutenção e calibração de equipamentos de laboratório", v: "R$ 268.763,16", p: "09/11 09:01", n: 52, cls: "" },
+  { id: "simao", et: "RADAR", t: "Município de Simão Pereira/MG", l: "Manutenção e calibração · BLL", v: "R$ 227.760,00", p: "06/11 09:30", n: 50, cls: "" },
+  { id: "431", et: "RADAR", t: "Unioeste — Cascavel/PR (leite humano)", l: "3 de 23 itens podem casar", v: "R$ 28.523,26", p: "05/11 08:30", n: 48, cls: "atencao" },
+  { id: "patos", et: "RADAR", t: "Município de Patos de Minas/MG", l: "Engenharia clínica · data da fonte incoerente", v: "R$ 4.555.900,20", p: "13/11 08:00", n: 41, cls: "atencao" },
+  { id: "arap", et: "ANALISE", t: "Município de Arapongas/PR", l: "12 autoclaves odontológicas · LIC-MP-ACB", v: "R$ 87.938,28", p: "09/11 09:00", n: 64, cls: "" },
+  { id: "imbel", et: "ANALISE", t: "IMBEL — Magé/RJ", l: "NR-13 em vasos de pressão · 4 pendências", v: "R$ 100.553,73", p: "13/11 08:00", n: 55.5, cls: "", url: "ficha.html" },
+  { id: "emb", et: "DECISAO", t: "Embrapa — Rio de Janeiro", l: "Aprovar preço mínimo de 8 itens", v: "R$ 14.525,00", p: "05/11 14:00", n: 61, cls: "risco", url: "simulador.html" },
+  { id: "430", et: "DECISAO", t: "Unioeste — Cascavel/PR", l: "Decidir se participa", v: "R$ 28.523,26", p: "04/11 08:30", n: 45, cls: "risco" }
+];
+function desenhar() {
+  document.getElementById("q").innerHTML = COLS.map(function (c) {
+    var l = C.filter(function (x) { return x.et === c[0]; });
+    return '<section class="cmk-col" aria-label="' + c[1] + '"><div class="cmk-col-cab"><b>' + c[1] + '</b><span>' + l.length + (l.length === 1 ? ' licitação' : ' licitações') + '</span></div><div class="cmk-col-corpo">' +
+      (l.length ? l.map(function (x) {
+        return '<article class="cmk-card ' + x.cls + '" draggable="true"><b class="cli">' + x.t + '</b><p class="cmk-l">' + x.l + '</p><p class="cmk-l">' + x.v + ' · propostas até <b>' + x.p + '</b> · nota ' + String(x.n).replace(".", ",") + '</p>' +
+          '<div class="cmk-bts"><a class="btn-secondary" href="' + (x.url || 'ficha.html') + '" style="text-decoration:none;display:inline-flex;align-items:center">Abrir</a><button type="button" class="btn-secondary" onclick="mover(\'' + x.id + '\')">Mover</button></div></article>';
+      }).join("") : '<div class="cm-vazio" style="padding:12px">Nenhuma</div>') + '</div></section>';
+  }).join("");
+}
+function mover(id) {
+  var x = C.filter(function (c) { return c.id === id; })[0];
+  Lic.modal("Mover " + x.t, '<div class="cmk-lista-mover">' + COLS.map(function (c) { return '<button type="button" class="btn-secondary"' + (c[0] === x.et ? ' disabled' : '') + ' onclick="moverPara(\'' + id + '\',\'' + c[0] + '\')">' + c[1] + (c[0] === x.et ? ' (atual)' : '') + '</button>'; }).join("") + '</div><p class="cm-ajuda-campo">"Proposta" exige decisão "Participar" e preço mínimo aprovado; sem isso o SGO+ diz o que falta.</p>');
+}
+function moverPara(id, et) {
+  var x = C.filter(function (c) { return c.id === id; })[0];
+  if ((et === "PROPOSTA" || et === "DISPUTA") && x.et !== "DECISAO" && x.et !== "PROPOSTA") { Lic.fechar(); Lic.toast("Não foi possível mover: falta a decisão \"Participar\" e o preço mínimo aprovado. Abra a ficha, aba Decisão.", "erro"); return; }
+  if (et === "PROPOSTA" && x.id === "emb") { Lic.fechar(); Lic.toast("Não foi possível mover: o preço mínimo dos 8 itens ainda não foi aprovado. Abra o simulador e aprove.", "erro"); return; }
+  x.et = et; Lic.fechar(); desenhar(); Lic.toast("Movida para " + COLS.filter(function (c) { return c[0] === et; })[0][1] + ". Registrado no histórico: Charles, 01/11/2026 21:00.");
+}
+desenhar();
+</script>
+</body>
+</html>

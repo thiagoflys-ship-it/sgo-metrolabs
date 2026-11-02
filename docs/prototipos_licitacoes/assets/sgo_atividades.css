@@ -1,0 +1,195 @@
+/* Cópia fiel do bloco <style> de JS_Atividades.html (modais atv-overlay/atv-modal, gaveta atv-drawer, 01/11/2026). Não editar aqui. */
+
+  /* MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE (2026-10-16) — ver SGO_Atividades.js */
+  .atv-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 0 0 14px; }
+  .atv-barra label { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .atv-barra select, .atv-barra input { min-width: 140px; height: 34px; }
+  .atv-tabs { margin-bottom: 14px; }
+  .atv-agora-faixa { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--border); border-left: 4px solid var(--info); border-radius: var(--radius); background: var(--card); font-size: 13px; }
+  .atv-agora-faixa.vazia { border-left-color: var(--muted); color: var(--muted); }
+  .atv-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+  .atv-selo.vencida { color: var(--danger); background: var(--danger-bg); }
+  .atv-selo.hoje { color: var(--warning); background: var(--warning-bg); }
+  .atv-selo.emdia { color: var(--success); background: var(--success-bg); }
+  .atv-selo.neutro { color: var(--muted); }
+  .atv-sit { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 700; color: var(--bc-text); white-space: nowrap; }
+  .atv-pri-Urgente { color: var(--danger); font-weight: 800; }
+  .atv-pri-Alta { color: var(--warning); font-weight: 700; }
+  .atv-pri-Baixa { color: var(--muted); }
+  .atv-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .atv-acoes button, .atv-mini { min-height: 28px !important; height: 28px !important; padding: 0 10px !important; font-size: 12px !important; }
+  .atv-titulo-link { background: none; border: none; padding: 0; color: var(--text-strong, var(--text)); font-weight: 700; cursor: pointer; text-align: left; font-size: 13px; }
+  .atv-titulo-link:hover { text-decoration: underline; }
+  .atv-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .atv-vazio { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  .atv-msg { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; }
+  .atv-msg.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+  .atv-msg.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+
+  /* Kanban */
+  .atv-kanban { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+  .atv-kcol { background: var(--card-soft, var(--card)); border: 1px solid var(--border); border-radius: var(--radius); min-height: 240px; display: flex; flex-direction: column; }
+  .atv-kcol.alvo { outline: 2px dashed var(--info); outline-offset: -4px; }
+  .atv-kcol-cab { padding: 10px 12px; font-weight: 800; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .atv-kcol-cab span.qtd { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .atv-kcol-corpo { padding: 8px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .atv-kcard { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 6px; padding: 8px 10px; cursor: grab; font-size: 12.5px; }
+  .atv-kcard:hover { border-color: var(--border-strong, var(--border)); }
+  .atv-kcard.arrastando { opacity: .45; }
+  .atv-kcard.vencida { box-shadow: inset 0 0 0 1px var(--danger); }
+  .atv-kcard-tit { font-weight: 700; color: var(--text-strong, var(--text)); margin-bottom: 4px; }
+  .atv-kcard-rod { display: flex; justify-content: space-between; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .atv-barra-prog { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+  .atv-barra-prog > div { height: 100%; background: var(--info); }
+
+  /* Agenda */
+  .atv-ag-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .atv-ag-nav .rotulo { font-weight: 800; font-size: 14px; margin: 0 8px; }
+  .atv-semana { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 6px; }
+  .atv-dia { background: var(--card); border: 1px solid var(--border); border-radius: 6px; min-height: 180px; display: flex; flex-direction: column; }
+  .atv-dia.hoje { border-color: var(--info); box-shadow: inset 0 0 0 1px var(--info); }
+  .atv-dia.fora { opacity: .5; }
+  .atv-dia-cab { padding: 6px 8px; font-size: 12px; font-weight: 800; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .atv-dia.hoje .atv-dia-cab { color: var(--info); }
+  .atv-dia-corpo { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .atv-mes { display: grid; grid-template-columns: repeat(7, minmax(90px, 1fr)); gap: 4px; }
+  .atv-mes .atv-dia { min-height: 96px; }
+  .atv-mes-sem { font-size: 11px; font-weight: 800; color: var(--muted); text-align: center; padding: 4px; }
+  .atv-ev { display: block; width: 100%; text-align: left; border: none; border-left: 3px solid var(--muted); background: var(--bc-surface-3); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .atv-ev.inicio { border-left-style: dashed; opacity: .85; }
+  .atv-ev.vencida { color: var(--danger); }
+  .atv-ev.fechada { opacity: .55; text-decoration: line-through; }
+
+  /* Equipe */
+  .atv-ind { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .atv-ind-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .atv-ind-card .v { font-size: 26px; font-weight: 800; color: var(--text-strong, var(--text)); }
+  .atv-ind-card .l { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .atv-ind-card.alerta .v { color: var(--danger); }
+  .atv-duas { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+  .atv-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+  .atv-caixa h3 { margin: 0 0 10px; font-size: 14px; color: var(--metro-blue-dark); }
+  .atv-just { border-left: 3px solid var(--warning); padding: 6px 10px; margin-bottom: 8px; font-size: 12.5px; background: var(--bc-surface-3); border-radius: 4px; }
+  .atv-lista-rolagem { max-height: 320px; overflow: auto; }
+  .atv-caixa .table { min-width: 0; }
+  .atv-caixa .table thead th, .atv-caixa .table tbody td { padding: 8px 8px; }
+  .atv-gantt-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+  .atv-gantt-wrap svg text { font-family: inherit; }
+  .atv-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 8px 0; }
+  .atv-legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
+
+  /* Modais e painel lateral */
+  .atv-overlay { position: fixed; inset: 0; z-index: 99990; background: rgba(28,31,29,.42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .atv-overlay.bloqueante { z-index: 100001; background: rgba(28,31,29,.42); }
+  .atv-modal { background: var(--card); color: var(--text-strong, var(--text)); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(28,31,29,0.1); }
+  .atv-modal-cab { padding: 14px 18px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .atv-modal-cab h3 { margin: 0; font-size: 16px; }
+  .atv-modal-corpo { padding: 14px 18px; overflow-y: auto; font-size: 13px; }
+  .atv-modal-rod { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .atv-fechar { background: none; border: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+  .atv-campo { margin-bottom: 12px; }
+  .atv-campo label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .atv-campo input, .atv-campo select, .atv-campo textarea { width: 100%; box-sizing: border-box; }
+  .atv-campo textarea { min-height: 70px; resize: vertical; }
+  .atv-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .atv-det-grade { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin-bottom: 12px; font-size: 12.5px; }
+  .atv-det-grade dt { color: var(--muted); font-weight: 700; }
+  .atv-det-grade dd { margin: 0; }
+  .atv-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
+  .atv-hist-item { margin-bottom: 10px; font-size: 12.5px; }
+  .atv-hist-item .q { color: var(--muted); font-size: 11.5px; }
+  .atv-selo-os { background: #e8f0fc; color: #1f4f9a; border: 1px solid #b9cdf0; }
+  .atv-leg-cor { display: inline-block; width: 12px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 2px; }
+  .atv-hist-item.JUSTIFICATIVA { border-left: 3px solid var(--warning); padding-left: 8px; margin-left: -15px; }
+  .atv-just-card { border: 1px solid var(--danger); border-left: 4px solid var(--danger); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: var(--danger-bg); }
+  .atv-just-card .t { font-weight: 800; margin-bottom: 4px; }
+  .atv-contador { font-size: 11px; color: var(--muted); text-align: right; }
+  .atv-contador.curto { color: var(--danger); }
+  .atv-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 100vw); z-index: 99980; background: var(--bg); border-left: 1px solid var(--border); box-shadow: -10px 0 40px rgba(28,31,29,0.1); display: flex; flex-direction: column; }
+  .atv-drawer-cab { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .atv-drawer-cab h3 { margin: 0; font-size: 16px; }
+  .atv-drawer-corpo { padding: 14px 18px; overflow: auto; flex: 1; }
+  .atv-btn-modulo { margin-left: auto; }
+  /* 19/10/2026: 5W2H, restrita, cartão só para acompanhar, indicadores */
+  .atv-5w2h { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
+  .atv-5w2h summary { cursor: pointer; font-weight: 700; font-size: 12.5px; color: var(--text-strong, var(--text)); }
+  .atv-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 0 0 10px; cursor: pointer; }
+  .atv-check input { width: auto !important; margin-top: 2px; }
+  .atv-kcard.so-ver { cursor: pointer; border-style: dashed; border-left-style: solid; }
+  .atv-ind-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+  .atv-barra-ind { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr) 36px; gap: 8px; align-items: center; font-size: 12.5px; margin: 0 0 6px; }
+  .atv-barra-ind .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .atv-barra-ind .b { height: 10px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .atv-barra-ind .b > div { height: 100%; background: var(--info); }
+  .atv-barra-ind .n { text-align: right; font-weight: 700; }
+  .atv-cfg-dias { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .atv-cfg-dias label { display: flex; gap: 6px; align-items: center; font-weight: 600 !important; color: var(--text) !important; }
+  .atv-cfg-dias input { width: auto !important; }
+  .atv-agora-cel { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .atv-agora-cel:last-child { border-bottom: 0; }
+  /* Celular (fase 3, 17/10): título só na barra do topo, abas numa linha, lista em cartões */
+  #app.modo-mobile .atv-cab-titulo { display: none; }
+  #app.modo-mobile .atv-cab .module-header-right { width: 100%; }
+  #app.modo-mobile .atv-cab .module-header-right .btn-primary { flex: 1; }
+  #conteudo .motores-tabs.atv-tabs { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
+  #conteudo .motores-tabs.atv-tabs .motores-tab-btn { flex: 1 1 0; white-space: nowrap; }
+  .atv-cartoes { display: flex; flex-direction: column; gap: 10px; }
+  .atv-cartao { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 8px; padding: 10px 12px; }
+  .atv-cartao.vencida { border-left-color: var(--danger) !important; }
+  .atv-cartao-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; font-size: 12.5px; }
+  .atv-cartao .atv-acoes { margin-top: 8px; }
+  .atv-cartao .atv-acoes button { flex: 1 1 auto; min-height: 44px !important; height: auto !important; }
+  .atv-cartao .atv-acoes-fim { margin: 10px 0 0; }
+  #app.modo-mobile .atv-agora-faixa .atv-resumo-faixa { margin-left: 0 !important; width: 100%; }
+  /* 31/10/2026 (pedido do dono): "quem age agora", pedido de nova data, andamento do dia e confirmação de Concluir */
+  .atv-selo.pedido { color: #8a5a00; background: var(--warning-bg); }
+  .atv-agir { border: 1px solid var(--border); border-left: 5px solid var(--muted); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; background: var(--card); }
+  .atv-agir.eu { border-left-color: var(--danger); background: var(--danger-bg); }
+  .atv-agir.decidir { border-left-color: var(--info); background: var(--bc-surface-3, var(--card)); }
+  .atv-agir.espera { border-left-color: var(--warning); background: var(--warning-bg); }
+  .atv-agir-tit { font-weight: 800; font-size: 14px; color: var(--text-strong, var(--text)); line-height: 1.35; }
+  .atv-agir-det { font-size: 12.5px; margin-top: 4px; line-height: 1.45; }
+  .atv-agir-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: center; }
+  .atv-agir-acoes .atv-sep { flex: 1 1 auto; }
+  .atv-pedido-resumo { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--border); font-size: 12.5px; line-height: 1.5; }
+  .atv-pedido-resumo b { color: var(--text-strong, var(--text)); }
+  .atv-agir-mini { font-size: 12px; font-weight: 700; margin-top: 4px; line-height: 1.35; }
+  .atv-agir-mini.eu { color: var(--danger); }
+  .atv-agir-mini.decidir { color: var(--info); }
+  .atv-agir-mini.espera { color: #8a5a00; }
+  .atv-andamento { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; }
+  .atv-andamento h4 { margin: 0 0 6px; font-size: 13px; }
+  .atv-andamento-linha { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .atv-andamento-linha .atv-campo { margin: 0; width: 120px; }
+  .atv-acoes-fim { display: flex; justify-content: flex-end; gap: 10px; margin: 0 0 14px; padding-top: 10px; border-top: 1px dashed var(--border); flex-wrap: wrap; }
+  .atv-acoes-fim .atv-esq { margin-right: auto; }
+  td .atv-acoes .atv-btn-concluir { margin-left: 12px; }
+  .atv-overlay.acima { z-index: 100003; }
+  .atv-conf-pergunta { font-size: 15px; font-weight: 700; margin: 0 0 8px; color: var(--text-strong, var(--text)); line-height: 1.4; }
+  .atv-just-card .atv-acoes-fim { border-top-color: rgba(0,0,0,.12); }
+  @media (max-width: 700px) {
+    /* celular: a janela termina acima dos botões redondos do canto (bate-papo e dúvida), que ficam por cima de tudo */
+    .atv-overlay, .atv-overlay.bloqueante { align-items: flex-start; padding: 8px 8px calc(64px + env(safe-area-inset-bottom, 0px)); }
+    /* vence a regra geral da casca (UI_Estilos: calc(100dvh - 32px)), que deixava o rodapé da janela embaixo dos botões redondos */
+    .atv-overlay .atv-modal, .atv-overlay.bloqueante .atv-modal { max-height: 100% !important; }
+    .atv-modal-corpo { padding: 12px 14px; }
+    .atv-modal .atv-mini, .atv-acoes button, .atv-agir-acoes button, .atv-acoes-fim button, .atv-andamento button, .atv-modal-rod button { min-height: 44px !important; height: auto !important; font-size: 14px !important; }
+    .atv-modal-rod.empilha { flex-direction: column-reverse; gap: 12px; }
+    .atv-modal-rod.empilha button { width: 100%; }
+    .atv-agir-acoes button { flex: 1 1 100%; }
+    .atv-agir-acoes .atv-sep { display: none; }
+    .atv-acoes-fim button { flex: 1 1 100%; }
+    .atv-acoes-fim .atv-esq { margin-right: 0; }
+    .atv-andamento-linha .atv-campo { width: 100%; }
+    .atv-andamento-linha button { flex: 1 1 100%; }
+  }
+  @media (max-width: 900px) {
+    .atv-kanban { grid-template-columns: 1fr; }
+    .atv-semana { grid-template-columns: 1fr; }
+    .atv-ind { grid-template-columns: 1fr 1fr; }
+    .atv-duas { grid-template-columns: 1fr; }
+    .atv-grade2 { grid-template-columns: 1fr; }
+    .atv-det-grade { grid-template-columns: 110px 1fr; }
+    .atv-ind-grade { grid-template-columns: 1fr; }
+  }
+

@@ -1,0 +1,78 @@
+/* Cópia fiel do bloco <style> de JS_Gestao.html (Caixa de decisões, 01/11/2026). Não editar aqui. */
+
+  /* CAIXA DE DECISÕES E DESEMPENHO DA GESTÃO (20/10/2026) — servidor: SGO_Gestao_Decisoes.js, SGO_Gestao_Escada.js, SGO_Gestao_Avaliacao.js */
+  .gd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .gd-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 40px; }
+  .gd-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .gd-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .gd-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 10px 12px; }
+  .gd-kpi .v { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; }
+  .gd-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .gd-kpi.critico { border-top-color: var(--danger); } .gd-kpi.critico .v { color: var(--danger); }
+  .gd-kpi.aviso { border-top-color: var(--warning); } .gd-kpi.aviso .v { color: var(--warning); }
+  .gd-kpi.ok { border-top-color: var(--success); }
+  .gd-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--bc-line-2, var(--border)); border-left: 4px solid var(--warning); border-radius: 8px; background: var(--bc-surface-2, var(--card)); font-size: 13px; line-height: 1.5; }
+  .gd-faixa.info { border-left-color: var(--info, #1f5fa8); }
+  /* Etapa 5 (01/11/2026): "Como funciona" recolhido, para a lista aparecer mais cedo no celular */
+  details.gd-como { padding: 0; }
+  details.gd-como > summary { cursor: pointer; font-weight: 700; padding: 12px 14px; min-height: 44px; box-sizing: border-box; line-height: 20px; } /* mantém o triângulo de abrir */
+  details.gd-como > div { padding: 0 14px 10px; }
+  .gd-lista { display: flex; flex-direction: column; gap: 10px; }
+  .gd-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-card.DIRETORIA { border-left-color: var(--danger); } .gd-card.WHATSAPP { border-left-color: var(--warning); }
+  .gd-card.PAUSADO { border-left-color: var(--success); } .gd-card.ACOMPANHAMENTO { border-left-color: var(--muted); }
+  .gd-card-tit { font-weight: 700; font-size: 14px; color: var(--text-strong, var(--text)); margin: 0 0 4px; overflow-wrap: anywhere; }
+  .gd-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin-right: 6px; white-space: nowrap; }
+  .gd-selo.DIRETORIA { color: var(--danger); background: var(--danger-bg); } .gd-selo.WHATSAPP { color: var(--warning); background: var(--warning-bg); }
+  .gd-selo.EMAIL, .gd-selo.NA_HORA { color: var(--info, #1f5fa8); background: var(--info-bg, transparent); } .gd-selo.PAUSADO { color: var(--success); background: var(--success-bg); }
+  .gd-selo.ACOMPANHAMENTO, .gd-selo.neutro { color: var(--muted); }
+  .gd-selo.vencido { color: var(--danger); }
+  .gd-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .gd-form { margin-top: 10px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; background: var(--bc-surface-2, transparent); }
+  .gd-form label { display: block; font-size: 12.5px; font-weight: 700; margin: 6px 0 4px; }
+  .gd-form textarea { width: 100%; box-sizing: border-box; min-height: 64px; font: inherit; }
+  .gd-form input[type=date] { min-height: 40px; }
+  .gd-msg { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; }
+  .gd-msg.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+  .gd-msg.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+  .gd-vazio { padding: 22px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .gd-regras { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gd-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .gd-area { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  .gd-area:last-child { border-bottom: 0; }
+  .gd-area b { display: block; font-size: 13px; margin-bottom: 4px; }
+  .gd-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .gd-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+  .gd-linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+  .gd-linha input[type=number], .gd-linha input[type=time], .gd-linha select { min-height: 36px; max-width: 180px; }
+  .gd-tabela-rolagem { overflow-x: auto; }
+  .gd-sedna { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+  .gd-sedna th, .gd-sedna td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  .gd-sedna input[type=number] { width: 80px; min-height: 34px; }
+  .gd-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .gd-tabela th, .gd-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .gd-tabela td.n, .gd-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gd-farol { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 12px; }
+  .gd-farol.VERDE { background: var(--success-bg); color: var(--success); } .gd-farol.AMARELO { background: var(--warning-bg); color: var(--warning); }
+  .gd-farol.VERMELHO { background: var(--danger-bg); color: var(--danger); } .gd-farol.SEM_DADOS { color: var(--muted); border: 1px solid var(--border); }
+  .gd-gestor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; margin-bottom: 12px; }
+  .gd-gestor-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .gd-nota { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gd-comp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .gd-comp > div { border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; }
+  .gd-comp b { display: block; font-size: 15px; }
+  .gd-barra { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .gd-barra > i { display: block; height: 100%; background: var(--info, #1f5fa8); }
+  .gd-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .gd-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .gd-filtros select { min-height: 38px; }
+  @media (max-width: 900px) {
+    .gd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-regras { grid-template-columns: 1fr; }
+    .gd-comp { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-tabela-rolar { overflow-x: auto; }
+  }
+

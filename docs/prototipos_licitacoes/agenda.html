@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda e prazos · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="agenda" data-titulo="Agenda e prazos" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Agenda e prazos</h2>
+      <p class="content-subtitle">Cada data mostra a fonte, o fuso e quem confirmou. Data mudada na fonte nunca some: a antiga fica riscada no histórico.</p></div>
+    <div class="module-header-right"><button type="button" class="btn-secondary" onclick="Lic.toast('As datas de Licitações já aparecem em Minhas atividades e no Início (agenda única).')"><i class="fas fa-calendar-check" aria-hidden="true"></i>&nbsp;Ver na agenda única</button></div>
+  </div>
+  <div class="cm-modos" role="tablist" id="modos">
+    <button type="button" class="cm-modo" data-v="hoje" role="tab">Hoje</button>
+    <button type="button" class="cm-modo" data-v="7" role="tab">7 dias</button>
+    <button type="button" class="cm-modo" data-v="30" role="tab">30 dias</button>
+  </div>
+  <div class="cm-filtros">
+    <div><label for="fPri">Prioridade</label><select id="fPri" onchange="desenhar()"><option value="">Todas</option><option value="critico">Crítico</option><option value="importante">Importante</option></select></div>
+    <div><label for="fPor">Onde é a sessão</label><select id="fPor" onchange="desenhar()"><option value="">Todas</option><option>Compras.gov.br</option><option>BLL Compras</option><option>SEAP-PR</option></select></div>
+    <div><label for="fResp">Responsável</label><select id="fResp"><option>Charles</option><option>Segundo responsável (a definir)</option></select></div>
+    <div><label for="fConf">Situação da data</label><select id="fConf" onchange="desenhar()"><option value="">Todas</option><option value="pend">Pendente de confirmação</option></select></div>
+  </div>
+  <div id="ag"></div>
+</div>
+<script>
+var EV = [
+  { d: "2026-11-02", dia: "segunda 02/11", feriado: "Feriado nacional (Finados): não conta como dia útil." },
+  { d: "2026-11-03", dia: "terça 03/11", h: "17:00", cls: "importante", t: "Limite interno para enviar a proposta", o: "Unioeste, Cascavel/PR (78680337000770-1-000430/2026)", f: "INFERÊNCIA · regra interna: 1 dia útil antes do limite real", conf: "pend", por: "SEAP-PR" },
+  { d: "2026-11-04", dia: "quarta 04/11", h: "08:30", cls: "critico", t: "Limite das propostas e sessão", o: "Unioeste, Cascavel/PR · Pregão eletrônico", f: "FATO · PNCP dataEncerramentoProposta · fuso presumido: Brasília · conferido 01/11 20:58", por: "SEAP-PR", alertas: "7 dias e 3 dias enviados · 24 h: 03/11 08:30 · 4 h: 04/11 04:30 · 1 h: 07:30" },
+  { d: "2026-11-05", dia: "quinta 05/11", h: "08:30", cls: "critico", t: "Limite das propostas", o: "Unioeste, Cascavel/PR (leite humano)", f: "FATO · PNCP · fuso presumido: Brasília", por: "Compras.gov.br" },
+  { d: "2026-11-05", h: "14:00", cls: "critico", t: "Limite das propostas e sessão (aberto e fechado)", o: "Embrapa, Rio de Janeiro · LIC-2026-0002", f: "FATO · PNCP · confirmado no edital por Charles em 01/11/2026 21:05 (exemplo de data confirmada) · fuso: Brasília", por: "Compras.gov.br", ok: true, link: "simulador.html" },
+  { d: "2026-11-06", dia: "sexta 06/11", h: "o dia todo", cls: "importante", t: "Limite para impugnar e pedir esclarecimento", o: "IMBEL, Magé/RJ · LIC-2026-0003", f: "INFERÊNCIA · cálculo pela Lei 13.303 (5 dias úteis antes da sessão) · confirmar no regulamento da IMBEL", conf: "pend", por: "Compras.gov.br", link: "ficha.html#prazos" },
+  { d: "2026-11-06", h: "09:00", cls: "retificado", t: "Sessão — SUSPENSA na fonte", o: "Hospital Ophir Loyola, Belém/PA (engenharia clínica)", f: "Situação no PNCP mudou para \"Suspensa\" (detectado em 01/11/2026 20:58). Alertas cancelados com o motivo; nova data entra quando reabrir.", riscado: true, por: "Compras.gov.br" },
+  { d: "2026-11-06", h: "09:30", cls: "importante", t: "Limite das propostas", o: "Município de Simão Pereira/MG · registro de preços", f: "FATO · PNCP · itens e edital só na BLL (sem API)", por: "BLL Compras" },
+  { d: "2026-11-09", dia: "segunda 09/11", h: "08:00", cls: "importante", t: "Fim da dispensa com disputa", o: "ANSN, Rio de Janeiro · balanças · exige acreditação RBC", f: "FATO · PNCP · trava: não atendemos a acreditação", por: "Compras.gov.br" },
+  { d: "2026-11-09", h: "09:00", cls: "importante", t: "Limite das propostas", o: "Município de Arapongas/PR · 12 autoclaves odontológicas", f: "FATO · PNCP · fuso presumido: Brasília", por: "Compras.gov.br" },
+  { d: "2026-11-09", h: "09:01", cls: "importante", t: "Limite das propostas", o: "UNILA, Foz do Iguaçu/PR", f: "FATO · PNCP · fuso presumido: Brasília", por: "Compras.gov.br" },
+  { d: "2026-11-13", dia: "sexta 13/11", h: "08:00", cls: "critico", t: "Limite das propostas e sessão", o: "IMBEL, Magé/RJ · LIC-2026-0003", f: "FATO · PNCP · fuso presumido: Brasília", por: "Compras.gov.br", link: "ficha.html#prazos", alertas: "7 dias: 06/11 08:00 · 3 dias: 10/11 · 24 h: 12/11 · 4 h · 1 h" },
+  { d: "2026-11-13", h: "08:00", cls: "importante", t: "Data da fonte incoerente — conferir", o: "Município de Patos de Minas/MG (engenharia clínica)", f: "PNCP: abertura 13/11 07:59 e encerramento 13/11 08:00. Nenhum alerta até alguém confirmar no edital.", conf: "pend", id: "incoerente", por: "Publicenter" }
+];
+var VER = Lic.param("ver") || "30";
+var LIM = { hoje: "2026-11-01", "7": "2026-11-08", "30": "2026-12-01" };
+function desenhar() {
+  var pri = document.getElementById("fPri").value, por = document.getElementById("fPor").value, cf = document.getElementById("fConf").value;
+  var l = EV.filter(function (e) { return e.d <= LIM[VER] && (!pri || e.cls === pri || e.feriado) && (!por || e.por === por || e.feriado) && (!cf || e.conf === "pend"); });
+  var html = VER === "hoje" || !l.some(function (e) { return !e.feriado; }) ? '<div class="cm-vazio">Hoje (domingo 01/11) não há prazo de licitação. O próximo é quarta 04/11 às 08:30 (Unioeste, Cascavel/PR).<br>Alerta sem ciência: 1 — <a href="alertas.html">ver na Central de alertas</a>.</div>' : "";
+  var dia = "";
+  if (VER !== "hoje") l.forEach(function (e) {
+    if (e.dia && e.dia !== dia) { html += (dia ? '</div>' : '') + '<div class="lic-dia"><div class="lic-dia-cab">' + e.dia + (e.feriado ? ' <span>' + e.feriado + '</span>' : '') + '</div>'; dia = e.dia; }
+    if (e.feriado) return;
+    html += '<div class="lic-ev ' + e.cls + '"' + (e.id ? ' id="' + e.id + '"' : '') + '><div class="h">' + e.h + '<small>Brasília</small></div><div><b class="' + (e.riscado ? 'riscado' : '') + '">' + e.t + '</b> · ' + e.o +
+      '<div class="f">' + e.f + '</div>' + (e.alertas ? '<div class="f"><i class="fas fa-bell" aria-hidden="true"></i> ' + e.alertas + '</div>' : '') +
+      (e.riscado ? '<div class="f">Histórico: 06/11 09:00 (publicada em 20/10) → suspensa em 01/11. <a href="#" onclick="Lic.modal(\'Histórico da data\', \'<div class=&quot;cm-hist&quot;><div><b>06/11/2026 09:00</b> publicada no PNCP <span class=&quot;q&quot;>20/10/2026 16:09 · fonte</span></div><div><b>Suspensa</b>: situação na fonte mudou <span class=&quot;q&quot;>01/11/2026 20:58 · coletor</span></div><div><b>Alertas cancelados</b> (5), motivo: licitação suspensa <span class=&quot;q&quot;>01/11/2026 20:58 · sistema</span></div></div>\');return false">ver histórico</a></div>' : '') + '</div>' +
+      '<div class="lic-ev-acoes">' + (e.conf === "pend" ? '<span class="cm-selo laranja">Pendente de confirmação</span><button type="button" class="btn-secondary" onclick="confirmar(this)">Confirmar data</button>' : e.ok ? '<span class="cm-selo verde">Confirmada</span>' : e.riscado ? '<span class="cm-selo cinza">Cancelada</span>' : '<span class="cm-selo azul">Fonte: PNCP</span>') +
+      (e.link ? '<a class="btn-secondary" href="' + e.link + '" style="text-decoration:none">Abrir</a>' : '') + '</div></div>';
+  });
+  if (dia) html += '</div>';
+  document.getElementById("ag").innerHTML = html;
+}
+function confirmar(b) {
+  Lic.modal("Confirmar data", '<p class="cm-txt">Confirmar é dizer que você conferiu a data na fonte oficial. Fica registrado com o seu nome.</p><div class="cm-grade2"><div class="cm-campo"><label for="cData">Data e hora</label><input id="cData" type="datetime-local" value="2026-11-06T23:59"></div><div class="cm-campo"><label for="cFuso">Fuso</label><select id="cFuso"><option>Brasília (America/Sao_Paulo)</option><option>Manaus (America/Manaus)</option><option>Cuiabá (America/Cuiaba)</option></select></div></div><div class="cm-campo"><label for="cFonte">Onde conferiu</label><input id="cFonte" placeholder="Ex.: edital, item 5.1, página 4"></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="Lic.fechar();Lic.toast(\'Data confirmada por Charles em 01/11/2026 21:00. Alertas recalculados.\')">Confirmar</button>');
+}
+document.querySelectorAll("#modos .cm-modo").forEach(function (b) { var on = b.getAttribute("data-v") === VER; b.classList.toggle("ativo", on); b.setAttribute("aria-selected", on); b.addEventListener("click", function () { VER = b.getAttribute("data-v"); document.querySelectorAll("#modos .cm-modo").forEach(function (x) { x.classList.toggle("ativo", x === b); x.setAttribute("aria-selected", x === b); }); desenhar(); }); });
+desenhar();
+</script>
+</body>
+</html>

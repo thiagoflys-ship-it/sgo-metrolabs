@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Habilitação e documentos · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="habilitacao" data-titulo="Habilitação" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Habilitação e documentos da empresa</h2>
+      <p class="content-subtitle">Documentos da matriz de Goiânia (CNPJ que participa) com validade. Documento vencido na data da sessão não se corrige depois.</p></div>
+    <div class="module-header-right"><button type="button" class="btn-primary" onclick="enviar('Novo documento')"><i class="fas fa-file-arrow-up" aria-hidden="true"></i>&nbsp;Novo documento</button></div>
+  </div>
+  <div class="cm-faixa aviso"><b>Dependência declarada:</b> o cadastro "Documentos da empresa" ainda não existe no SGO+ e deve morar no grupo Documentos, não dentro de Licitações. Esta tela mostra como Licitações vai consumir esse cadastro. <span class="lic-exemplo">datas de exemplo</span></div>
+  <div class="cm-tabs" role="tablist" id="abas"><button type="button" class="cm-tab active" data-a="docs" role="tab" aria-selected="true">Documentos da empresa</button><button type="button" class="cm-tab" data-a="cad" role="tab" aria-selected="false">Cadastros nas plataformas</button></div>
+
+  <section data-a="docs">
+    <div class="cm-kpis"><div class="cm-kpi critico"><span class="v">1</span><span class="r">Vencido</span></div><div class="cm-kpi aviso"><span class="v">1</span><span class="r">Vence antes de uma sessão</span></div><div class="cm-kpi ok"><span class="v">6</span><span class="r">Válidos</span></div><div class="cm-kpi"><span class="v">19</span><span class="r">A cadastrar (de 27)</span></div></div>
+    <div class="cm-caixa"><h3>Porte, acreditação e autorizações</h3>
+      <table class="cm-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Validade</th><th>Observação</th></tr></thead><tbody>
+        <tr><td data-r="Documento"><b>Enquadramento como Empresa de Pequeno Porte (EPP)</b></td><td data-r="Situação"><span class="cm-selo verde">EPP</span></td><td data-r="Validade">por exercício · conferir a cada balanço</td><td data-r="Observação">Decisão do dono, 01/11/2026. Permite itens exclusivos ME/EPP, empate ficto e regularidade fiscal tardia, dentro do limite de faturamento. Comprovar com a certidão simplificada da Junta.</td></tr>
+        <tr><td data-r="Documento"><b>Registro/autorização do Inmetro — balanças e esfigmomanômetros</b></td><td data-r="Situação"><span class="cm-selo verde">Autorizada Inmetro</span></td><td data-r="Validade">30/06/2027 <span class="lic-exemplo">exemplo</span></td><td data-r="Observação">Ponto forte: aparece nos itens de balança e de esfigmomanômetro do radar, da ficha e do simulador.</td></tr>
+        <tr><td data-r="Documento"><b>Acreditação de laboratório (RBC / ISO/IEC 17025)</b></td><td data-r="Situação"><span class="cm-selo cinza">Não possui</span></td><td data-r="Validade">—</td><td data-r="Observação">As calibrações da Metrolabs são rastreáveis aos padrões de referência. Edital que exige acreditação RBC na grandeza vira impeditivo, salvo se aceitar rastreabilidade ou subcontratação de laboratório acreditado.</td></tr>
+        <tr><td data-r="Documento"><b>Certificados de calibração dos padrões</b></td><td data-r="Situação"><span class="cm-selo verde">No SGO+</span></td><td data-r="Validade">por padrão</td><td data-r="Observação">Já existe: Calibração › Padrões de referência (lido daqui, sem cadastro repetido).</td></tr>
+      </tbody></table></div>
+    <div class="cm-caixa"><h3>Fiscal, trabalhista e jurídica</h3>
+      <table class="cm-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Validade</th><th>Licitações afetadas</th><th></th></tr></thead><tbody>
+        <tr style="background:var(--danger-bg)"><td data-r="Documento"><b>Certificado de regularidade do FGTS</b></td><td data-r="Situação"><span class="cm-selo vermelho">Vencido</span></td><td data-r="Validade">29/10/2026</td><td data-r="Afetadas">Todas as 8 em análise</td><td><button type="button" class="btn-primary" onclick="enviar('Certificado do FGTS')">Enviar o novo</button></td></tr>
+        <tr><td data-r="Documento"><b>Certidão negativa de débitos trabalhistas</b></td><td data-r="Situação"><span class="cm-selo laranja">Vence antes da sessão</span></td><td data-r="Validade">10/11/2026</td><td data-r="Afetadas">IMBEL (sessão 13/11)</td><td><button type="button" class="btn-secondary" onclick="enviar('CNDT')">Renovar</button></td></tr>
+        <tr><td data-r="Documento">Certidão conjunta Receita Federal e PGFN</td><td data-r="Situação"><span class="cm-selo verde">Válida</span></td><td data-r="Validade">15/03/2027</td><td data-r="Afetadas">—</td><td></td></tr>
+        <tr><td data-r="Documento">Certidão estadual (Goiás)</td><td data-r="Situação"><span class="cm-selo verde">Válida</span></td><td data-r="Validade">20/12/2026</td><td data-r="Afetadas">—</td><td></td></tr>
+        <tr><td data-r="Documento">Certidão municipal (Goiânia)</td><td data-r="Situação"><span class="cm-selo verde">Válida</span></td><td data-r="Validade">05/01/2027</td><td data-r="Afetadas">—</td><td></td></tr>
+        <tr><td data-r="Documento">Comprovante de CNPJ da matriz (Goiânia)</td><td data-r="Situação"><span class="cm-selo verde">Emitir na data</span></td><td data-r="Validade">—</td><td data-r="Afetadas">—</td><td></td></tr>
+        <tr><td data-r="Documento">Contrato social consolidado</td><td data-r="Situação"><span class="cm-selo verde">Vigente</span></td><td data-r="Validade">versão vigente</td><td data-r="Afetadas">—</td><td></td></tr>
+        <tr><td data-r="Documento">Balanço, DRE e índices (2 últimos exercícios)</td><td data-r="Situação"><span class="cm-selo cinza">A cadastrar</span></td><td data-r="Validade">até o próximo balanço exigível</td><td data-r="Afetadas">Todas</td><td><button type="button" class="btn-secondary" onclick="enviar('Balanço')">Enviar</button></td></tr>
+        <tr><td data-r="Documento">Atestados de capacidade técnica</td><td data-r="Situação"><span class="cm-selo cinza">A cadastrar</span></td><td data-r="Validade">sem validade</td><td data-r="Afetadas">Ligados à O.S. e ao relatório que comprova</td><td><button type="button" class="btn-secondary" onclick="enviar('Atestado')">Enviar</button></td></tr>
+        <tr><td data-r="Documento">Responsável técnico: registro no conselho e acervo</td><td data-r="Situação"><span class="cm-selo cinza">Depende do RH técnico</span></td><td data-r="Validade">registro anual</td><td data-r="Afetadas">IMBEL (NR-13 exige profissional habilitado)</td><td></td></tr>
+      </tbody></table>
+      <p class="cm-ajuda-campo">Lista completa: 27 documentos (doc 03, seção A4). Vencido ou a vencer antes de uma sessão gera alerta importante; crítico se houver sessão até a data.</p></div>
+  </section>
+
+  <section data-a="cad" hidden>
+    <div class="cm-caixa"><h3>Cadastro de fornecedor em cada plataforma</h3>
+      <table class="cm-tabela"><thead><tr><th>Plataforma</th><th>Situação</th><th>Válido até</th><th>Observação</th></tr></thead><tbody>
+        <tr><td data-r="Plataforma"><b>SICAF / Compras.gov.br</b></td><td data-r="Situação"><span class="cm-selo laranja">A confirmar</span></td><td data-r="Validade">—</td><td data-r="Obs.">Onde acontecem 5 das 8 sessões em análise.</td></tr>
+        <tr><td data-r="Plataforma">BLL Compras</td><td data-r="Situação"><span class="cm-selo laranja">A confirmar</span></td><td data-r="Validade">—</td><td data-r="Obs.">Simão Pereira/MG (06/11). Ativar os e-mails de aviso da plataforma.</td></tr>
+        <tr><td data-r="Plataforma">SEAP-PR (Paraná)</td><td data-r="Situação"><span class="cm-selo laranja">A confirmar</span></td><td data-r="Validade">—</td><td data-r="Obs.">Unioeste (04/11).</td></tr>
+        <tr><td data-r="Plataforma">Portal de Compras Públicas</td><td data-r="Situação"><span class="cm-selo laranja">A confirmar</span></td><td data-r="Validade">—</td><td data-r="Obs.">Pedir também a chave da API (publicKey).</td></tr>
+        <tr><td data-r="Plataforma">ComprasNet.GO (Goiás)</td><td data-r="Situação"><span class="cm-selo laranja">A confirmar</span></td><td data-r="Validade">—</td><td data-r="Obs.">Estado prioritário.</td></tr>
+        <tr><td data-r="Plataforma">BNC, Licitanet, Licitar Digital, BBMNET, Licitações-e</td><td data-r="Situação"><span class="cm-selo cinza">Não cadastrado</span></td><td data-r="Validade">—</td><td data-r="Obs.">Cadastrar quando surgir a primeira licitação de interesse.</td></tr>
+      </tbody></table></div>
+  </section>
+</div>
+<script>
+function enviar(t) {
+  Lic.modal(t, '<div class="cm-campo"><label for="arq">Arquivo (PDF)</label><input id="arq" type="file" accept="application/pdf"></div><div class="cm-grade2"><div class="cm-campo"><label for="emi">Emitido em</label><input id="emi" type="date"></div><div class="cm-campo"><label for="val">Válido até (como está impresso)</label><input id="val" type="date"></div></div><p class="cm-ajuda-campo">A validade nunca é presumida: vale a data impressa ou a regra do emissor. A versão anterior fica guardada.</p>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="Lic.fechar();Lic.toast(\'Documento guardado (versão nova). Os alertas de vencimento foram recalculados.\')">Guardar</button>');
+}
+document.querySelectorAll("#abas .cm-tab").forEach(function (b) { b.addEventListener("click", function () { var a = b.getAttribute("data-a"); document.querySelectorAll("#abas .cm-tab").forEach(function (x) { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); }); document.querySelectorAll("section[data-a]").forEach(function (s) { s.hidden = s.getAttribute("data-a") !== a; }); }); });
+</script>
+</body>
+</html>

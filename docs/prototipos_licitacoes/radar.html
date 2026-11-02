@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar de Oportunidades · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="oportunidades" data-titulo="Oportunidades" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Oportunidades</h2>
+      <p class="content-subtitle">O radar lê o PNCP, dá nota de 0 a 100 e mostra o motivo com o trecho da fonte. Descartar e enviar para análise ficam registrados com quem e quando.</p></div>
+    <div class="module-header-right"><button type="button" class="btn-secondary" onclick="Lic.modal('Trazer licitação à mão', '<div class=&quot;cm-campo&quot;><label for=&quot;nc&quot;>Número de controle do PNCP ou link do edital</label><input id=&quot;nc&quot; placeholder=&quot;00000000000000-1-000000/2026&quot;></div><p class=&quot;cm-ajuda-campo&quot;>Para portais sem API (BLL, BNC, Licitanet e outros), o edital também pode ser enviado em PDF.</p>', '<button type=&quot;button&quot; class=&quot;btn-secondary&quot; onclick=&quot;Lic.fechar()&quot;>Cancelar</button><button type=&quot;button&quot; class=&quot;btn-primary&quot; onclick=&quot;Lic.fechar()&quot;>Buscar</button>')"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Trazer à mão</button>
+      <a class="btn-secondary" href="portais.html#radar" style="text-decoration:none"><i class="fas fa-sliders" aria-hidden="true"></i>&nbsp;Regras do radar</a></div>
+  </div>
+
+  <div class="lic-proto" role="group" aria-label="Controle do protótipo"><b>Protótipo:</b> ver a tela
+    <button type="button" class="btn-secondary" data-estado="normal" aria-pressed="true">com dados</button>
+    <button type="button" class="btn-secondary" data-estado="carregando">carregando</button>
+    <button type="button" class="btn-secondary" data-estado="vazio">vazia</button>
+    <button type="button" class="btn-secondary" data-estado="erro">com erro</button>
+    <span>· "Enviar para análise" mostra o aviso de sucesso.</span></div>
+
+  <div class="cm-faixa aviso">Coleta de 01/11/2026 20:58: a parte de <b>itens e arquivos</b> do PNCP respondeu "HTTP 503" (indisponível). Os itens vieram do Compras.gov.br dados abertos; os editais em PDF serão baixados na próxima tentativa (22:00). <a href="portais.html">Ver o registro</a></div>
+
+  <div class="cm-modos" aria-label="Modo de ver"><a class="cm-modo ativo" href="radar.html" aria-current="page" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Lista</a><a class="cm-modo" href="kanban.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Kanban</a><a class="cm-modo" href="gantt.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Gantt</a></div>
+  <div class="cm-tabs" role="tablist" id="modos">
+    <button type="button" class="cm-tab active" data-modo="analisar" role="tab" aria-selected="true">Para analisar (8)</button>
+    <button type="button" class="cm-tab" data-modo="trava" role="tab" aria-selected="false">Travadas (4)</button>
+    <button type="button" class="cm-tab" data-modo="descartada" role="tab" aria-selected="false">Descartadas pela regra (7)</button>
+  </div>
+  <p class="cm-modo-dica" id="dica">Nota de 50 a 74: resumo diário, sem WhatsApp. Nota 75 ou mais: alerta na hora para a Diretoria. Abaixo de 30 ou com trava: fica registrada e pode ser reaberta.</p>
+
+  <div class="cm-filtros">
+    <div><label for="fBusca">Buscar</label><input id="fBusca" type="search" placeholder="órgão, objeto, número" oninput="desenhar()"></div>
+    <div><label for="fUf">UF</label><select id="fUf" onchange="desenhar()"><option value="">Brasil inteiro</option><option value="prio">Prioridade (GO, DF, vizinhos e RJ)</option><option>RJ</option><option>PR</option><option>MG</option><option>PA</option><option>SP</option><option>GO</option><option>CE</option></select></div>
+    <div><label for="fSelo">Selo</label><select id="fSelo" onchange="desenhar()"><option value="">Todos</option><option value="epp">Exclusivo ME/EPP (0 nesta rodada)</option><option value="inmetro">Autorizada Inmetro</option><option value="rbc">Exige acreditação RBC</option><option value="tabela">Itens na tabela de preços</option></select></div>
+    <div><label for="fPortal">Onde é a sessão</label><select id="fPortal" onchange="desenhar()"><option value="">Todas</option><option>Compras.gov.br</option><option>BLL Compras</option><option>SEAP-PR</option><option value="outro">Sistema municipal (ler no edital)</option></select></div>
+  </div>
+
+  <details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Legenda dos selos e do porte da empresa</summary>
+    <p class="cm-txt"><span class="cm-selo verde">Exclusivo ME/EPP — podemos participar</span> A matriz de Goiânia é Empresa de Pequeno Porte (decisão do dono, 01/11/2026). Item exclusivo ou cota reservada a ME/EPP não é descartado: entra com este selo. Nenhum item desta rodada veio com esse benefício no PNCP ("Sem benefício" ou "Não se aplica").</p>
+    <p class="cm-txt"><span class="cm-selo azul">Empate ficto (EPP)</span> Em pregão, se o nosso lance ficar até 5% acima do melhor lance de empresa que não é ME/EPP, o sistema da disputa nos convoca a cobrir (LC 123, art. 44 e 45). Aparece na ficha e na disputa.</p>
+    <p class="cm-txt"><span class="cm-selo verde">Autorizada Inmetro</span> Ponto forte: a Metrolabs tem registro/autorização do Inmetro para balanças e esfigmomanômetros.</p>
+    <p class="cm-txt"><span class="cm-selo vermelho">Exige acreditação RBC — não atendemos</span> A Metrolabs não é acreditada RBC/ISO 17025; as calibrações são rastreáveis. Fica como impeditivo, com a pendência "o edital aceita rastreabilidade ou subcontratação de laboratório acreditado?".</p>
+    <div class="cm-card p3" style="margin-top:8px"><div class="lic-op"><div class="lic-nota media"><b>—</b><span>exemplo</span></div><div><p class="cm-card-tit">Como o cartão aparece com item exclusivo ME/EPP <span class="lic-exemplo">ilustrativo</span></p>
+      <p class="cm-txt"><span class="cm-selo verde">Exclusivo ME/EPP — podemos participar</span><span class="cm-selo azul">Empate ficto (EPP)</span><span class="cm-selo verde">Autorizada Inmetro</span> Item 3: "Calibração de esfigmomanômetros" · tipo de benefício no PNCP: "Participação exclusiva para ME/EPP".</p></div></div></div>
+  </details>
+
+  <div id="lista" class="cm-lista" aria-live="polite"></div>
+</div>
+
+<script>
+var OPS = [
+  { id: "arapongas", modo: "analisar", nota: 64, classe: "media", uf: "PR", org: "Município de Arapongas", mun: "Arapongas/PR", nc: "76958966000106-1-000427/2026", mod: "Pregão eletrônico · aberto e fechado", portal: "Compras.gov.br", valor: 87938.28, enc: "seg 09/11/2026 09:00", tempo: "7 d 12 h", tcls: "",
+    obj: "Contratação de serviço especializado em <mark>manutenção preventiva</mark>, corretiva, instalação e deslocamento de <mark>autoclaves odontológicas</mark>, em atendimento a Secretaria Municipal...",
+    selos: [["verde", "1 de 1 item na tabela de preços"], ["laranja", "Corretiva e instalação: confirmar escopo"]],
+    mot: [["forte", "FATO: item 1 \"Manutenção de autoclaves\", 12 unidades, R$ 7.328,19 cada (Compras.gov.br). Tabela de licitação: LIC-MP-ACB."], ["pend", "PENDENTE: peças na corretiva têm teto? Ler o termo de referência."]] },
+  { id: "embrapa", modo: "analisar", nota: 61, classe: "media", uf: "RJ", org: "Empresa Brasileira de Pesquisa Agropecuária (Embrapa)", mun: "Rio de Janeiro/RJ", nc: "00348003000110-1-001347/2026", mod: "Pregão eletrônico · aberto e fechado · registro de preços", portal: "Compras.gov.br", valor: 14525, enc: "qui 05/11/2026 14:00", tempo: "3 d 17 h", tcls: "aviso", ficha: "simulador.html",
+    obj: "Contratação de empresa especializada na prestação de serviços de <mark>calibração</mark> e manutenção preventiva e corretiva de equipamentos de laboratório, com fornecimento de peças...",
+    selos: [["verde", "8 de 18 itens na tabela de preços"], ["verde", "Autorizada Inmetro (balanças)"], ["cinza", "Orçamento sigiloso em 16 itens"], ["azul", "Empate ficto (EPP)"]],
+    mot: [["forte", "FATO: itens 6, 7, 8 a 13 pedem calibração de incubadora B.O.D., banho-maria, balanças, incubadora bacteriológica, datalogger e termômetro."], ["", "Não atendemos: capelas (1 a 3), pH e condutividade (4, 5), micropipetas (14 a 16), pesos padrão (17, 18)."]] },
+  { id: "imbel", modo: "analisar", nota: 55.5, classe: "media", uf: "RJ", org: "Indústria de Material Bélico do Brasil (IMBEL)", mun: "Magé/RJ · Fábrica da Estrela", nc: "00444232000139-1-001311/2026", mod: "Pregão eletrônico · aberto · registro de preços", portal: "Compras.gov.br", valor: 100553.73, enc: "sex 13/11/2026 08:00", tempo: "11 d 11 h", tcls: "ok", ficha: "ficha.html",
+    obj: "Contratação de empresa especializada em Inspeção de Segurança, <mark>NR-13</mark>, em <mark>vasos de Pressão</mark> instalados na dependências da IMBEL - Fábrica da Estrela...",
+    selos: [["azul", "Lei 13.303/2016 (estatal)"], ["cinza", "Item sem código CATSER"], ["laranja", "4 pendências"]],
+    mot: [["forte", "FATO: objeto cita \"NR-13\" e \"vasos de Pressão\" (PNCP, objetoCompra)."], ["pend", "PENDENTE: quantidade, categoria e PMTA dos vasos; regulamento de licitações da IMBEL."]] },
+  { id: "unila", modo: "analisar", nota: 52, classe: "media", uf: "PR", org: "Universidade Federal da Integração Latino-Americana", mun: "Foz do Iguaçu/PR", nc: "11806275000133-1-000075/2026", mod: "Pregão eletrônico · aberto e fechado", portal: "Compras.gov.br", valor: 268763.16, enc: "seg 09/11/2026 09:01", tempo: "7 d 12 h", tcls: "",
+    obj: "Contratação de empresa especializada na prestação de serviços contínuos de manutenção preventiva, corretiva e <mark>calibração</mark> nos equipamentos dos laboratórios da UNILA...",
+    selos: [["laranja", "Lista de equipamentos só no termo de referência"], ["laranja", "Item 2 é peça (produto)"]],
+    mot: [["pend", "PENDENTE: item 1 (12 × R$ 18.896,93) agrupa equipamentos; aderência depende da lista."]] },
+  { id: "simao", modo: "analisar", nota: 50, classe: "media", uf: "MG", org: "Município de Simão Pereira", mun: "Simão Pereira/MG", nc: "18338293000187-1-000090/2026", mod: "Pregão eletrônico · aberto · registro de preços", portal: "BLL Compras", valor: 227760, enc: "sex 06/11/2026 09:30", tempo: "4 d 12 h", tcls: "",
+    obj: "REGISTRO DE PREÇOS VISANDO A FUTURA E EVENTUAL CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA REALIZAR MANUTENÇÃO PREVENTIVA, CORRETIVA E <mark>CALIBRAÇÃO</mark>, BEM COMO O FORN...",
+    selos: [["cinza", "Itens não vieram pela API"], ["cinza", "Sessão na BLL: operação manual"]],
+    mot: [["pend", "PENDENTE: objeto truncado na fonte; baixar o edital na BLL e enviar em PDF."]] },
+  { id: "431", modo: "analisar", nota: 48, classe: "baixa", uf: "PR", org: "Universidade Estadual do Oeste do Paraná (Unioeste)", mun: "Cascavel/PR", nc: "78680337000770-1-000431/2026", mod: "Pregão eletrônico · aberto", portal: "Compras.gov.br", valor: 28523.26, enc: "qui 05/11/2026 08:30", tempo: "3 d 11 h", tcls: "aviso",
+    obj: "Manutenção preventiva com serviço de <mark>calibração</mark> para equipamentos laboratoriais e de armazenamento de leite humano...",
+    selos: [["laranja", "3 de 23 itens podem casar"]],
+    mot: [["", "A maioria dos itens é geladeira, cozinha industrial e microscópio (fora). Câmara fria (4, 5, 23) e autoclaves (12) a confirmar."]] },
+  { id: "430", modo: "analisar", nota: 45, classe: "baixa", uf: "PR", org: "Universidade Estadual do Oeste do Paraná (Unioeste)", mun: "Cascavel/PR", nc: "78680337000770-1-000430/2026", mod: "Pregão eletrônico · aberto", portal: "SEAP-PR", valor: 28523.26, enc: "qua 04/11/2026 08:30", tempo: "2 d 11 h", tcls: "critico",
+    obj: "Manutenção preventiva com certificado de <mark>calibração</mark> e ajuste, sendo opcional à empresa contratada a apresentação dos laudos com acreditação...",
+    selos: [["verde", "Acreditação opcional: não trava"], ["vermelho", "Impugnação já vencida"]],
+    mot: [["forte", "FATO: \"sendo opcional à empresa contratada a apresentação dos laudos com acreditação\" (PNCP, objetoCompra)."], ["pend", "PENDENTE: itens não vieram pela API (sessão no sistema da SEAP-PR)."]] },
+  { id: "patos", modo: "analisar", nota: 41, classe: "baixa", uf: "MG", org: "Município de Patos de Minas", mun: "Patos de Minas/MG", nc: "18602011000107-1-000249/2026", mod: "Pregão eletrônico · aberto", portal: "Publicenter (sistema municipal)", valor: 4555900.2, enc: "sex 13/11/2026 08:00", tempo: "data a conferir", tcls: "aviso",
+    obj: "Contratação de empresa especializada na prestação de serviços continuados de Engenharia Clínica para a gestão, manutenção preventiva e corretiva... <mark>calibração</mark>",
+    selos: [["laranja", "Data da fonte incoerente"], ["laranja", "Equipe local e peças"]],
+    mot: [["pend", "PENDENTE: abertura 13/11 07:59 e encerramento 13/11 08:00 no PNCP. Nenhum alerta até conferir no edital."]] },
+  { id: "ansn", modo: "trava", nota: 0, classe: "trava", uf: "RJ", org: "ANSN — Autoridade Nacional de Segurança Nuclear", mun: "Rio de Janeiro/RJ", nc: "62759595000110-1-000048/2026", mod: "Dispensa com disputa · Lei 14.133, art. 75, II", portal: "Compras.gov.br", valor: 10000, enc: "seg 09/11/2026 08:00", tempo: "7 d 11 h", tcls: "",
+    obj: "<mark>Calibrações das balanças</mark> da DIRAD, com contratação de empresa pertencente à rede brasileira de calibração.",
+    selos: [["vermelho", "Exige acreditação RBC — não atendemos"], ["verde", "Autorizada Inmetro (balanças)"]],
+    mot: [["", "IMPEDITIVO: \"empresa pertencente à rede brasileira de calibração\" (PNCP, objetoCompra). A Metrolabs faz calibração rastreável, não acreditada."], ["pend", "PENDENTE a confirmar: o aviso aceita rastreabilidade ou subcontratação de laboratório acreditado?"]] },
+  { id: "ms", modo: "trava", nota: 0, classe: "trava", uf: "RJ", org: "Ministério da Saúde", mun: "Rio de Janeiro/RJ", nc: "00394544000185-1-002305/2026", mod: "Pregão eletrônico · aberto e fechado", portal: "Compras.gov.br", valor: 5696575.02, enc: "seg 09/11/2026 10:00", tempo: "7 d 13 h", tcls: "",
+    obj: "... SERVIÇO COMUM DE ENGENHARIA, A SEREM EXECUTADOS COM REGIME DE <mark>DEDICAÇÃO EXCLUSIVA DE MÃO DE OBRA</mark>, PARA SERV...",
+    selos: [["vermelho", "Trava: dedicação exclusiva"]], mot: [["", "Trava até decisão da Diretoria: equipe residente (doc 03, B4)."]] },
+  { id: "aer", modo: "trava", nota: 0, classe: "trava", uf: "PA", org: "Comando da Aeronáutica", mun: "Belém/PA", nc: "00394429000100-1-002721/2026", mod: "Pregão eletrônico · aberto e fechado", portal: "Compras.gov.br", valor: 22311899.88, enc: "sex 06/11/2026 09:00", tempo: "suspensa", tcls: "",
+    obj: "... engenharia biomédica/clínica, sem dedicação exclusiva de mão de obra, utilizando <mark>software dedicado</mark> de gestão...",
+    selos: [["vermelho", "Trava: software próprio exigido"], ["cinza", "Suspensa no PNCP"]], mot: [["", "Situação na fonte: \"Suspensa\". Alertas cancelados com o motivo."]] },
+  { id: "ophir139", modo: "trava", nota: 0, classe: "trava", uf: "PA", org: "Hospital Ophir Loyola", mun: "Belém/PA", nc: "08109444000171-1-000139/2026", mod: "Pregão eletrônico · aberto", portal: "Compras.gov.br", valor: 8943820.08, enc: "sex 06/11/2026 09:00", tempo: "suspensa", tcls: "",
+    obj: "Contratação de empresa especializada, com <mark>dedicação exclusiva de mão de obra</mark>, na prestação de serviços de Engenharia Clínica...",
+    selos: [["vermelho", "Trava: dedicação exclusiva"], ["cinza", "Suspensa no PNCP"]], mot: [["", "Situação na fonte: \"Suspensa\"."]] },
+  { id: "cajamar", modo: "descartada", nota: 0, classe: "descartada", uf: "SP", org: "Município de Cajamar", mun: "Cajamar/SP", nc: "46523023000181-1-000171/2026", mod: "Pregão eletrônico", portal: "BLL Compras", valor: 1195500, enc: "ter 03/11/2026 08:30", tempo: "", tcls: "",
+    obj: "... manejo populacional de <mark>cães e gatos</mark>, por meio de procedimentos cirúrgicos de <mark>esterilização</mark>...", selos: [["cinza", "Palavra parecida"]], mot: [["", "Descartada pela regra: termo negativo \"cães e gatos\" junto de \"esterilização\" (castração). 10 semelhantes em SP, PR, RS, PA e SC."]] },
+  { id: "pereiro", modo: "descartada", nota: 0, classe: "descartada", uf: "CE", org: "Município de Pereiro", mun: "Pereiro/CE", nc: "07570518000100-1-000060/2026", mod: "Pregão eletrônico", portal: "BR Conectado", valor: 260531.2, enc: "sex 30/10/2026 08:00", tempo: "", tcls: "",
+    obj: "AQUISIÇÃO DE REAGENTES, <mark>SOLUÇÕES DE CALIBRAÇÃO</mark>, CONTROLES E SOLUÇÕES DE MANUTENÇÃO...", selos: [["cinza", "Compra de produto"], ["cinza", "Prazo vencido"]], mot: [["", "Descartada pela regra: \"soluções de calibração\" é reagente; objeto começa por \"aquisição\"."]] },
+  { id: "laranjeiras", modo: "descartada", nota: 0, classe: "descartada", uf: "PR", org: "Município de Laranjeiras do Sul", mun: "Laranjeiras do Sul/PR", nc: "76205970000195-1-000145/2026", mod: "Pregão eletrônico · registro de preços", portal: "Equiplano (sistema municipal)", valor: 208600, enc: "sex 13/11/2026 08:00", tempo: "", tcls: "",
+    obj: "... SERVIÇOS DE <mark>BORRACHARIA</mark> E NO FORNECIMENTO DE PRODUTOS...", selos: [["cinza", "Palavra parecida"]], mot: [["", "Descartada pela regra: \"borracharia\" (calibração de pneus)."]] },
+  { id: "ophir137", modo: "descartada", nota: 0, classe: "descartada", uf: "PA", org: "Hospital Ophir Loyola", mun: "Belém/PA", nc: "08109444000171-1-000137/2026", mod: "Pregão eletrônico · registro de preços", portal: "Compras.gov.br", valor: 10222623.58, enc: "sex 06/11/2026 09:00", tempo: "", tcls: "",
+    obj: "... serviço de <mark>esterilização por vapor saturado</mark> e baixa temperatura de forma contínua...", selos: [["cinza", "Serviço que não prestamos"]], mot: [["", "Descartada pela regra: terceirização de esterilização em planta externa (a Metrolabs qualifica equipamentos, não esteriliza materiais)."]] },
+  { id: "rioverde", modo: "descartada", nota: 0, classe: "descartada", uf: "GO", org: "Município de Rio Verde", mun: "Rio Verde/GO", nc: "02056729000105-1-000724/2026", mod: "Pregão eletrônico · registro de preços", portal: "CENTI (sistema municipal)", valor: 146192.37, enc: "qua 11/11/2026 08:59", tempo: "", tcls: "",
+    obj: "REGISTRO DE PREÇO PARA FUTURA AQUISIÇÃO DE ESCOVAS, <mark>TESTES DE VALIDAÇÃO</mark> E INSUMOS PARA CME...", selos: [["cinza", "Compra de produto"]], mot: [["", "Descartada pela regra: \"testes de validação\" é insumo; objeto de aquisição."]] },
+  { id: "turvelandia", modo: "descartada", nota: 0, classe: "descartada", uf: "GO", org: "Fundo Municipal de Saúde", mun: "Turvelândia/GO", nc: "11211433000102-1-000033/2026", mod: "Pregão eletrônico · adesão a ata", portal: "Megasoft (sistema municipal)", valor: 278082.33, enc: "ter 09/06/2026 09:00", tempo: "", tcls: "",
+    obj: "AQUISIÇÃO DE <mark>AUTOCLAVE</mark> HORIZONTAL HOSPITALAR ... CÂMARA DE 405 LITROS ... POR MEIO DA ADESÃO (CARONA)...", selos: [["cinza", "Compra de produto"], ["cinza", "Prazo vencido"]], mot: [["", "Descartada pela regra: aquisição de equipamento sem produto no catálogo nem representada."]] },
+  { id: "ceara", modo: "descartada", nota: 0, classe: "descartada", uf: "CE", org: "Estado do Ceará", mun: "Fortaleza/CE", nc: "07954480000179-1-026509/2026", mod: "Pregão eletrônico · aberto e fechado", portal: "Seplag-CE", valor: 66454.17, enc: "qua 11/11/2026 09:00", tempo: "", tcls: "",
+    obj: "... manutenção preventiva, corretiva, <mark>calibração</mark> e ensaio de segurança elétrica do equipamento NOBREAK...", selos: [["cinza", "Fora do catálogo"]], mot: [["", "Descartada pela regra: nobreak não é serviço da Metrolabs; \"calibração\" é palavra parecida."]] }
+];
+var ESTADO = Lic.param("estado") || "normal", MODO = Lic.param("modo") || "analisar";
+var PRIO = ["GO", "DF", "MG", "BA", "TO", "MT", "MS", "RJ"];
+
+function cartao(o) {
+  var nota = o.classe === "trava" ? "trava" : o.classe === "descartada" ? "fora" : o.classe;
+  var p = o.classe === "trava" || o.classe === "descartada" ? "p1" : o.classe === "baixa" ? "p2" : "p3";
+  var abrir = o.ficha || "ficha.html";
+  var acoes = o.modo === "descartada"
+    ? '<button type="button" class="btn-secondary" onclick="reabrir(\'' + o.id + '\')">Reabrir</button>'
+    : '<a class="btn-primary" href="' + abrir + '" style="text-decoration:none">Abrir ficha</a>' +
+      (o.modo === "analisar" ? '<button type="button" class="btn-secondary" onclick="enviarAnalise(\'' + o.id + '\')">Enviar para análise</button>' : '') +
+      '<button type="button" class="btn-secondary" onclick="descartar(\'' + o.id + '\')">Descartar</button>';
+  return '<article class="cm-card ' + p + ' lic-op' + (o.modo === "descartada" ? ' descartada' : '') + '" id="op-' + o.id + '">' +
+    '<div class="lic-nota ' + o.classe + '" aria-label="Nota de aderência ' + String(o.nota).replace(".", ",") + ' de 100"><b>' + (o.classe === "trava" ? "0" : o.classe === "descartada" ? "—" : String(o.nota).replace(".", ",")) + '</b><span>' + (o.classe === "trava" ? "trava" : o.classe === "descartada" ? "fora" : o.classe === "media" ? "média" : o.classe) + '</span></div>' +
+    '<div><p class="cm-card-tit">' + o.org + '</p><p class="cm-meta">' + o.mun + ' · ' + o.mod + ' · sessão em: ' + o.portal + '</p>' +
+    '<p class="cm-txt" style="margin:0 0 4px">' + o.selos.map(function (s) { return '<span class="cm-selo ' + s[0] + '">' + s[1] + '</span>'; }).join("") + '</p>' +
+    '<p class="lic-objeto">' + o.obj + '</p>' +
+    '<p class="cm-meta"><span class="lic-mono">' + o.nc + '</span> · estimado ' + Lic.brl(o.valor) + ' · propostas até <b>' + o.enc + '</b> ' + (o.tempo ? '<span class="lic-tempo ' + o.tcls + '">' + o.tempo + '</span>' : '') + '</p>' +
+    o.mot.map(function (m) { return '<p class="lic-motivo ' + m[0] + '">' + m[1] + '</p>'; }).join("") + '</div>' +
+    '<div class="lic-op-acoes">' + acoes + '</div></article>';
+}
+
+function desenhar() {
+  var el = document.getElementById("lista");
+  if (ESTADO === "carregando") { el.innerHTML = [1, 2, 3].map(function () { return '<div class="cm-card" aria-hidden="true"><span class="lic-esq" style="width:40%"></span><span class="lic-esq" style="width:85%"></span><span class="lic-esq" style="width:65%"></span></div>'; }).join("") + '<p class="cm-meta" role="status">Carregando as oportunidades do radar...</p>'; return; }
+  if (ESTADO === "erro") { el.innerHTML = '<div class="gd-msg erro" role="alert">Não foi possível falar com o servidor (tempo esgotado). Verifique a conexão e tente de novo; nada foi alterado.</div><p><button type="button" class="btn-secondary" onclick="trocarEstado(\'normal\')">Tentar de novo</button></p>'; return; }
+  var b = (document.getElementById("fBusca").value || "").toLowerCase(), uf = document.getElementById("fUf").value, selo = document.getElementById("fSelo").value, portal = document.getElementById("fPortal").value;
+  var l = ESTADO === "vazio" ? [] : OPS.filter(function (o) {
+    if (o.modo !== MODO) return false;
+    if (b && (o.org + o.obj + o.nc + o.mun).toLowerCase().indexOf(b) === -1) return false;
+    if (uf === "prio" && PRIO.indexOf(o.uf) === -1) return false;
+    if (uf && uf !== "prio" && o.uf !== uf) return false;
+    var ss = o.selos.map(function (s) { return s[1]; }).join(" ");
+    if (selo === "epp" && ss.indexOf("ME/EPP") === -1) return false;
+    if (selo === "inmetro" && ss.indexOf("Inmetro") === -1) return false;
+    if (selo === "rbc" && ss.indexOf("RBC") === -1) return false;
+    if (selo === "tabela" && ss.indexOf("tabela de preços") === -1) return false;
+    if (portal === "outro" && o.portal.indexOf("sistema municipal") === -1) return false;
+    if (portal && portal !== "outro" && o.portal !== portal) return false;
+    return true;
+  });
+  if (!l.length) { el.innerHTML = '<div class="cm-vazio">Nenhuma oportunidade com estes filtros.' + (selo === "epp" ? ' Nenhum item desta rodada veio do PNCP com benefício exclusivo para ME/EPP.' : '') + ' Limpe os filtros ou veja as outras abas acima. O radar roda de novo às 22:00.</div>'; return; }
+  el.innerHTML = l.map(cartao).join("");
+}
+function trocarEstado(e) { ESTADO = e; document.querySelectorAll(".lic-proto [data-estado]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-estado") === e ? "true" : "false"); }); desenhar(); }
+function achar(id) { return OPS.filter(function (o) { return o.id === id; })[0]; }
+function enviarAnalise(id) {
+  var o = achar(id);
+  Lic.modal("Enviar para análise", '<p class="cm-txt"><b>' + o.org + '</b><br><span class="lic-mono">' + o.nc + '</span></p>' +
+    '<p class="cm-txt">A análise roda nesta ordem e cada parte fica com o nome de quem fez:</p><ol class="cm-lista-simples"><li>Licitações: modalidade, lei pelo amparo legal, prazos, habilitação.</li><li>Técnico: item por item contra a nossa tabela de preços.</li><li>Financeiro: custo, preço mínimo e sobra.</li><li>Resumo da IA: junta as três, aponta divergências, sempre com o trecho da fonte.</li></ol>' +
+    '<div class="cm-campo"><label for="obs">Observação para a análise (opcional)</label><textarea id="obs" placeholder="Ex.: conferir se a filial do Rio pode executar"></textarea></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="confirmarAnalise(\'' + id + '\')">Enviar para análise</button>');
+}
+function confirmarAnalise(id) { Lic.fechar(); var o = achar(id); o.selos.unshift(["azul", "Em análise desde 21:00"]); desenhar(); Lic.toast("Enviada para análise: " + o.org + ". Você recebe o resumo quando as três partes terminarem."); }
+function descartar(id) {
+  var o = achar(id);
+  Lic.modal("Descartar oportunidade", '<p class="cm-txt"><b>' + o.org + '</b></p><div class="cm-campo"><label for="motSel">Motivo</label><select id="motSel"><option>Serviço que não prestamos</option><option>Compra de produto sem catálogo</option><option>Prazo curto para preparar</option><option>Valor ou margem</option><option>Distância ou equipe</option><option>Exigência que não atendemos</option><option>Outro</option></select></div>' +
+    '<div class="cm-campo"><label for="motTxt">Explique em uma frase (obrigatório)</label><textarea id="motTxt"></textarea><p class="cm-ajuda-campo">Fica no histórico com o seu nome. A oportunidade pode ser reaberta.</p></div><div id="motErro"></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="confirmarDescarte(\'' + id + '\')">Descartar</button>');
+}
+function confirmarDescarte(id) {
+  var t = (document.getElementById("motTxt").value || "").trim();
+  if (t.length < 5) { document.getElementById("motErro").innerHTML = '<div class="gd-msg erro" role="alert">Escreva o motivo (pelo menos uma frase curta). Ele é obrigatório porque a Diretoria pode reabrir depois e precisa saber por que saiu.</div>'; document.getElementById("motTxt").focus(); return; }
+  var o = achar(id); o.modo = "descartada"; o.classe = "descartada"; o.mot = [["", "Descartada por Charles em 01/11/2026 21:00: " + document.getElementById("motSel").value + " — " + t]]; Lic.fechar(); desenhar(); Lic.toast("Descartada. Está na aba \"Descartadas pela regra\" e pode ser reaberta.");
+}
+function reabrir(id) { var o = achar(id); o.modo = "analisar"; o.classe = "baixa"; o.nota = 30; desenhar(); Lic.toast("Reaberta: volta para \"Para analisar\" com o histórico."); }
+document.querySelectorAll(".lic-proto [data-estado]").forEach(function (b) { b.addEventListener("click", function () { trocarEstado(b.getAttribute("data-estado")); }); });
+document.querySelectorAll("#modos .cm-tab").forEach(function (b) { b.addEventListener("click", function () { MODO = b.getAttribute("data-modo"); document.querySelectorAll("#modos .cm-tab").forEach(function (x) { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b ? "true" : "false"); }); desenhar(); }); });
+document.querySelectorAll("#modos .cm-tab").forEach(function (x) { var on = x.getAttribute("data-modo") === MODO; x.classList.toggle("active", on); x.setAttribute("aria-selected", on ? "true" : "false"); });
+trocarEstado(ESTADO);
+</script>
+
+</body>
+</html>

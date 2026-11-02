@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gantt das licitações · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="gantt" data-titulo="Gantt" data-voltar="radar.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header"><div class="module-header-left"><h2 class="content-title">Oportunidades — Gantt</h2>
+    <p class="content-subtitle">Prazos, sessões e execução no tempo. A barra vai da publicação ao limite das propostas; a execução aparece depois da homologação.</p></div></div>
+  <div class="cm-modos" aria-label="Modo de ver"><a class="cm-modo" href="radar.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Lista</a><a class="cm-modo" href="kanban.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Kanban</a><a class="cm-modo ativo" href="gantt.html" aria-current="page" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Gantt</a></div>
+  <div id="g"></div>
+</div>
+<script>
+var CORES = { ABERTA: "#1E4F7A", DECISAO: "#A3261B", EXEC: "#1F6B2A" };
+var R = { de: "2026-10-19", ate: "2026-12-20", hoje: "2026-11-01", linhas: [
+  { cod: "LIC-0002", cli: "Embrapa (RJ)", et: "Decisão", ini: "2026-10-20", fim: "2026-11-05", sit: "DECISAO", marcos: [["2026-11-05", "SESSAO", "Sessão 14:00"], ["2026-11-04", "PISO", "Aprovar preço mínimo até 04/11 18:00"]], exec: ["2026-11-23", "2026-12-04", "Execução prevista se ganhar (exemplo: 2 semanas após a assinatura)"] },
+  { cod: "LIC-0007", cli: "Unioeste 430 (PR)", et: "Decisão", ini: "2026-10-19", fim: "2026-11-04", sit: "DECISAO", marcos: [["2026-11-04", "SESSAO", "Sessão 08:30"]] },
+  { cod: "LIC-0006", cli: "Unioeste 431 (PR)", et: "Radar", ini: "2026-10-19", fim: "2026-11-05", sit: "ABERTA", marcos: [["2026-11-05", "SESSAO", "Limite 08:30"]] },
+  { cod: "LIC-0005", cli: "Simão Pereira (MG)", et: "Radar", ini: "2026-10-21", fim: "2026-11-06", sit: "ABERTA", marcos: [["2026-11-06", "SESSAO", "Limite 09:30"]] },
+  { cod: "LIC-0001", cli: "Arapongas (PR)", et: "Análise", ini: "2026-10-21", fim: "2026-11-09", sit: "ABERTA", marcos: [["2026-11-09", "SESSAO", "Limite 09:00"]] },
+  { cod: "LIC-0004", cli: "UNILA (PR)", et: "Radar", ini: "2026-10-21", fim: "2026-11-09", sit: "ABERTA", marcos: [["2026-11-09", "SESSAO", "Limite 09:01"]] },
+  { cod: "LIC-0003", cli: "IMBEL (RJ)", et: "Análise", ini: "2026-10-19", fim: "2026-11-13", sit: "ABERTA", marcos: [["2026-11-06", "IMPUG", "Limite para impugnar (cálculo, a confirmar)"], ["2026-11-13", "SESSAO", "Sessão 08:00"]], exec: ["2026-12-01", "2026-12-18", "Execução prevista se ganhar (exemplo)"] },
+  { cod: "LIC-0008", cli: "Patos de Minas (MG)", et: "Radar", ini: "2026-10-22", fim: "2026-11-13", sit: "ABERTA", marcos: [["2026-11-13", "INCOER", "Data da fonte incoerente"]] }
+] };
+function p(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso); return Date.UTC(+m[1], +m[2] - 1, +m[3]); }
+function desenhar() {
+  var movel = document.getElementById("app") && document.getElementById("app").classList.contains("modo-mobile");
+  var largura = (document.getElementById("g").clientWidth || 1000);
+  var ini = p(R.de), dias = Math.round((p(R.ate) - ini) / 864e5) + 1;
+  var rotW = movel ? 128 : 250, W = Math.max(largura - 2, rotW + dias * (movel ? 9 : 6)), area = W - rotW - 10, px = area / dias, lh = 34, cab = 40;
+  var x = function (iso) { return rotW + (p(iso) - ini) / 864e5 * px + px / 2; };
+  var H = cab + R.linhas.length * lh + 10, s = [];
+  s.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Gantt das licitações" style="display:block">');
+  var meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"], passo = px >= 14 ? 1 : px >= 7 ? 2 : 7;
+  for (var i = 0; i < dias; i++) {
+    var d = new Date(ini + i * 864e5), xx = rotW + i * px, iso = d.toISOString().slice(0, 10);
+    if (d.getUTCDay() === 0 || d.getUTCDay() === 6 || iso === "2026-11-02" || iso === "2026-11-15" || iso === "2026-11-20") s.push('<rect x="' + xx.toFixed(1) + '" y="' + cab + '" width="' + px.toFixed(1) + '" height="' + (H - cab) + '" fill="rgba(127,127,127,.07)"/>');
+    if (d.getUTCDate() === 1 || i === 0) s.push('<text x="' + (xx + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="#1C1F1D">' + meses[d.getUTCMonth()] + "/" + d.getUTCFullYear() + '</text>');
+    if (i % passo === 0) { s.push('<line x1="' + xx.toFixed(1) + '" y1="' + (cab - 6) + '" x2="' + xx.toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,.16)"/><text x="' + (xx + 2).toFixed(1) + '" y="' + (cab - 10) + '" font-size="10" fill="#5F645F">' + ("0" + d.getUTCDate()).slice(-2) + '</text>'); }
+  }
+  R.linhas.forEach(function (l, k) {
+    var y = cab + k * lh, rot = l.cod + " · " + l.cli, by = y + 9, bh = lh - 18;
+    s.push('<g><title>' + rot + '\nEtapa: ' + l.et + '\nPublicada ' + l.ini + ' · limite ' + l.fim + '</title>');
+    s.push('<text x="8" y="' + (y + 14) + '" font-size="11.5" font-weight="700" fill="#1C1F1D">' + (movel && rot.length > 18 ? rot.slice(0, 17) + "…" : rot) + '</text><text x="8" y="' + (y + 27) + '" font-size="9.5" fill="#5F645F">' + l.et + '</text>');
+    s.push('<rect x="' + (x(l.ini) - px / 2).toFixed(1) + '" y="' + by + '" width="' + (x(l.fim) - x(l.ini) + px).toFixed(1) + '" height="' + bh + '" rx="3" fill="' + CORES[l.sit] + '"/>');
+    if (l.exec) s.push('<rect x="' + (x(l.exec[0]) - px / 2).toFixed(1) + '" y="' + by + '" width="' + (x(l.exec[1]) - x(l.exec[0]) + px).toFixed(1) + '" height="' + bh + '" rx="3" fill="' + CORES.EXEC + '" fill-opacity=".35" stroke="' + CORES.EXEC + '" stroke-dasharray="4 3"><title>' + l.exec[2] + '</title></rect>');
+    l.marcos.forEach(function (m) {
+      var cx = x(m[0]).toFixed(1), cy = y + lh / 2, cor = m[1] === "SESSAO" ? "#1C1F1D" : m[1] === "PISO" ? "#A3261B" : "#7A5200";
+      if (m[1] === "IMPUG" || m[1] === "INCOER") s.push('<path d="M' + cx + ' ' + (cy - 6) + ' L' + (+cx + 6) + ' ' + cy + ' L' + cx + ' ' + (cy + 6) + ' L' + (cx - 6) + ' ' + cy + ' Z" fill="' + cor + '" stroke="#fff"><title>' + m[2] + '</title></path>');
+      else s.push('<circle cx="' + cx + '" cy="' + cy + '" r="5.5" fill="' + cor + '" stroke="#fff" stroke-width="1.2"><title>' + m[2] + '</title></circle>');
+    });
+    s.push('</g>');
+  });
+  var xh = x(R.hoje); s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cab - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/><text x="' + (xh + 3).toFixed(1) + '" y="' + (H - 4) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje</text>');
+  s.push('</svg>');
+  var leg = '<div class="cmg-legenda"><span><i style="background:' + CORES.ABERTA + '"></i>Publicação até o limite das propostas</span><span><i style="background:' + CORES.DECISAO + '"></i>Esperando decisão da Diretoria</span><span><i style="background:' + CORES.EXEC + ';opacity:.45;outline:1px dashed ' + CORES.EXEC + '"></i>Execução prevista (se ganhar)</span><span><i style="background:#1C1F1D;border-radius:50%"></i>Sessão</span><span><i style="background:#7A5200;transform:rotate(45deg)"></i>Prazo calculado ou data a conferir</span><span><i style="background:rgba(127,127,127,.25)"></i>Fim de semana e feriado</span></div>';
+  var lista = movel ? '<p class="cm-sec">Lista</p><div class="cm-lista">' + R.linhas.map(function (l) { return '<a class="cm-mini" href="ficha.html" style="text-decoration:none;color:inherit;display:block"><b>' + l.cod + ' · ' + l.cli + '</b>' + l.et + ' · limite ' + l.fim.split("-").reverse().slice(0, 2).join("/") + '</a>'; }).join("") + '</div>' : '';
+  document.getElementById("g").innerHTML = '<p class="cm-meta">' + R.linhas.length + ' licitações em andamento · 19/10 a 20/12/2026' + (movel ? ' · deslize o gráfico para os lados.' : '') + '</p>' + leg + '<div class="cmg-wrap">' + s.join("") + '</div>' + lista;
+}
+window.addEventListener("load", desenhar);
+</script>
+</body>
+</html>

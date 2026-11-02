@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portais e configurações · SGO+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="assets/sgo_ui_estilos.css"><link rel="stylesheet" href="assets/sgo_comercial.css"><link rel="stylesheet" href="assets/sgo_gestao.css"><link rel="stylesheet" href="assets/sgo_atividades.css"><link rel="stylesheet" href="assets/licitacoes.css">
+<script src="assets/casca.js"></script>
+</head>
+<body data-tela="config" data-titulo="Portais e configurações" data-voltar="hoje.html">
+<div id="licConteudo" class="module-shell">
+  <div class="module-header">
+    <div class="module-header-left"><h2 class="content-title">Portais e configurações</h2>
+      <p class="content-subtitle">Os 33 portais com o tipo de integração, a situação e o último teste; as regras do radar e dos alertas; quem vê o quê.</p></div>
+  </div>
+  <div class="cm-tabs" role="tablist" id="abas">
+    <button type="button" class="cm-tab active" data-a="portais" role="tab">Portais e integrações</button>
+    <button type="button" class="cm-tab" data-a="radar" role="tab">Regras do radar</button>
+    <button type="button" class="cm-tab" data-a="alertas" role="tab">Regras dos alertas</button>
+    <button type="button" class="cm-tab" data-a="perm" role="tab">Permissões</button>
+  </div>
+
+  <section data-a="portais">
+    <div class="cm-kpis"><div class="cm-kpi ok"><span class="v">2</span><span class="r">Com API pública testada (tipo A)</span></div><div class="cm-kpi aviso"><span class="v">1</span><span class="r">Aguardando chave (tipo B)</span></div><div class="cm-kpi aviso"><span class="v">7</span><span class="r">Parceiro, depende de contrato (tipo C)</span></div><div class="cm-kpi"><span class="v">23</span><span class="r">Operação manual assistida (tipo E)</span></div></div>
+    <p class="cm-modo-dica"><span class="lic-tipo A">A</span> API pública · <span class="lic-tipo B">B</span> API com chave · <span class="lic-tipo C">C</span> parceiro comercial · <span class="lic-tipo D">D</span> consulta automatizada permitida · <span class="lic-tipo E">E</span> manual assistida. Os editais de portais públicos tipo E chegam pelo PNCP; sessão, lances e chat não.</p>
+    <div class="cm-filtros"><div><label for="fCat">Categoria</label><select id="fCat" onchange="desenhar()"><option value="">Todas (33)</option><option value="PUB">Públicos nacionais (10)</option><option value="EST">Estaduais (9)</option><option value="SAU">Compras hospitalares (9)</option><option value="IND">Corporativas e industriais (5)</option></select></div></div>
+    <div class="cm-caixa"><table class="cm-tabela" id="tp"><thead><tr><th>Código</th><th>Portal</th><th>Tipo</th><th>Situação</th><th>Último teste</th><th>Ação</th></tr></thead><tbody></tbody></table></div>
+    <div class="cm-caixa"><h3>Registro das chamadas <span class="cm-meta">(teste real deste estudo, 01/11/2026)</span></h3>
+      <div class="lic-log" id="log">20:52:31  GET pncp.gov.br/api/consulta/v1/orgaos/00444232000139/compras/2026/1311   200   253 ms
+20:52:34  GET pncp.gov.br/api/consulta/v1/orgaos/00348003000110/compras/2026/1347   200    56 ms
+20:52:37  GET pncp.gov.br/api/consulta/v1/orgaos/11806275000133/compras/2026/75     200   380 ms
+ ...      mais 16 detalhes do PNCP, todos 200, 1 chamada a cada 3 s (regra contra o limite 429)
+20:53:45  GET dadosabertos.compras.gov.br/.../2.1_consultarItensContratacoes_PNCP_14133_Id  200   1 item
+20:53:48  GET dadosabertos.compras.gov.br/... (Unioeste 431)                                  200  23 itens
+20:53:51  GET dadosabertos.compras.gov.br/... (Embrapa)                                       200  18 itens
+Antes (doc 02): pncp.gov.br/api/pncp/.../itens e /arquivos  503 "No server is available" (domingo 21h-22h)</div></div>
+  </section>
+
+  <section data-a="radar" hidden>
+    <div class="cm-caixa"><h3>Regras do radar <span class="cm-meta">versão 1 · 01/11/2026 · proposta padrão, a Diretoria ajusta</span></h3>
+      <div class="cm-grade2">
+        <div class="cm-campo"><label for="rUf">Onde procurar</label><select id="rUf"><option>Brasil inteiro, sem valor mínimo</option></select><p class="cm-ajuda-campo">Decisão do dono: Brasil inteiro; a prioridade vai na nota.</p></div>
+        <div class="cm-campo"><label for="rPri">UFs com prioridade na nota</label><input id="rPri" value="GO, DF (8) · MG, BA, TO, MT, MS, RJ (6) · demais Sudeste e Sul (3) · Norte e Nordeste (2)"></div>
+      </div>
+      <div class="cm-campo"><label for="rTer">Termos de interesse</label><textarea id="rTer">calibração, qualificação térmica, validação de autoclave, termodesinfectora, lavadora ultrassônica, NR-13, vaso de pressão, engenharia clínica, metrologia, esterilizador, datalogger</textarea></div>
+      <div class="cm-campo"><label for="rNeg">Termos que descartam (com o motivo gravado)</label><textarea id="rNeg">castração, cães e gatos, soluções de calibração, borracharia, embalagem para esterilização, planta externa, dedicação exclusiva (trava, não descarte)</textarea></div>
+      <div class="cm-grade3">
+        <div class="cm-campo"><label for="rA">Nota para alerta na hora</label><input id="rA" value="75" inputmode="numeric"></div>
+        <div class="cm-campo"><label for="rM">Nota para o resumo diário</label><input id="rM" value="50" inputmode="numeric"></div>
+        <div class="cm-campo"><label for="rP">Porte da matriz</label><select id="rP"><option>Empresa de Pequeno Porte (EPP)</option><option>Microempresa</option><option>Demais</option></select><p class="cm-ajuda-campo">EPP: item exclusivo ME/EPP não é descartado.</p></div>
+      </div>
+      <h3 class="cm-sec">Pesos da nota (somam 100)</h3>
+      <div class="lic-barra-nota"><span>Capacidade técnica</span><span class="b"><i style="width:100%"></i></span><span class="n">30</span></div>
+      <div class="lic-barra-nota"><span>Margem</span><span class="b"><i style="width:50%"></i></span><span class="n">15</span></div>
+      <div class="lic-barra-nota"><span>Documentação</span><span class="b"><i style="width:50%"></i></span><span class="n">15</span></div>
+      <div class="lic-barra-nota"><span>Localização</span><span class="b"><i style="width:50%"></i></span><span class="n">15</span></div>
+      <div class="lic-barra-nota"><span>Prazo · Valor · Riscos</span><span class="b"><i style="width:83%"></i></span><span class="n">10·10·5</span></div>
+      <div class="cm-campo"><label for="rMot">Motivo da mudança (obrigatório para salvar)</label><input id="rMot"></div>
+      <div class="cm-acoes"><button type="button" class="btn-primary" onclick="Lic.toast('Regras salvas como versão 2. A próxima rodada do radar já usa.')">Salvar versão nova</button></div></div>
+  </section>
+
+  <section data-a="alertas" hidden>
+    <div class="cm-caixa"><h3>Quem recebe e quando</h3>
+      <div class="cm-faixa erro">Segundo responsável da Diretoria: <b>não definido</b>. Sem ele, o escalonamento não tem para quem subir.</div>
+      <div class="cm-grade2">
+        <div class="cm-campo"><label for="aR1">Responsável principal</label><select id="aR1"><option>Charles (Diretoria) · WhatsApp e e-mail</option></select></div>
+        <div class="cm-campo"><label for="aR2">Segundo responsável</label><select id="aR2"><option>Escolher (a definir pelo dono)</option></select></div>
+      </div>
+      <p class="cm-txt">Horário: <b>a qualquer hora</b>, inclusive fora do expediente (exceção do dono para licitações, só para a Diretoria).</p>
+      <table class="cm-tabela"><thead><tr><th>Gravidade</th><th>Sem ciência em</th><th>Escalona para</th><th>Canal alternativo</th></tr></thead><tbody>
+        <tr><td data-r="Gravidade"><span class="cm-selo azul">Normal</span></td><td data-r="Sem ciência em">60 min</td><td data-r="Escalona">Reenvia ao responsável</td><td data-r="Alternativo">E-mail</td></tr>
+        <tr><td data-r="Gravidade"><span class="cm-selo laranja">Importante</span></td><td data-r="Sem ciência em">15 min</td><td data-r="Escalona">Segundo responsável</td><td data-r="Alternativo">E-mail e aviso interno</td></tr>
+        <tr><td data-r="Gravidade"><span class="cm-selo vermelho">Crítico</span></td><td data-r="Sem ciência em">5 min</td><td data-r="Escalona">Segundo responsável e gestão</td><td data-r="Alternativo">E-mail, aviso interno e outro canal autorizado</td></tr>
+      </tbody></table>
+      <p class="cm-txt" style="margin-top:10px">Antecedências — propostas: 7 dias, 3 dias, 24 h, 4 h, 1 h · sessões: 24 h, 4 h, 1 h, 30 min, 10 min, início.</p></div>
+  </section>
+
+  <section data-a="perm" hidden>
+    <div class="cm-caixa"><h3>Quem vê o quê</h3>
+      <table class="cm-tabela"><thead><tr><th>Nível</th><th>Quem</th><th>Pode</th><th>Não vê</th></tr></thead><tbody>
+        <tr><td data-r="Nível"><b>Gestão</b></td><td data-r="Quem">Diretoria (Charles e o segundo, a definir), Administrador</td><td data-r="Pode">Tudo: decidir, aprovar preço mínimo, tabela de preços, regras</td><td data-r="Não vê">—</td></tr>
+        <tr><td data-r="Nível">Analista</td><td data-r="Quem">Quem a Diretoria liberar</td><td data-r="Pode">Triagem, análise, documentos, agenda</td><td data-r="Não vê">Custo, piso e sobra</td></tr>
+        <tr><td data-r="Nível">Técnico / Metrologia</td><td data-r="Quem">Por convite na análise</td><td data-r="Pode">Parecer técnico do item</td><td data-r="Não vê">Valores</td></tr>
+        <tr><td data-r="Nível">Demais</td><td data-r="Quem">RH, cliente, representada</td><td data-r="Pode">—</td><td data-r="Não vê">O módulo</td></tr>
+      </tbody></table><p class="cm-ajuda-campo">O servidor confere sempre; o menu só esconde.</p></div>
+  </section>
+</div>
+<script>
+var P = [
+  ["PUB-001", "PNCP", "A", "Operacional com restrições", "01/11 20:53 · consulta 200 · itens e arquivos 503", "ok"],
+  ["PUB-002", "Compras.gov.br (dados abertos)", "A", "Em teste", "01/11 20:54 · itens 200", "ok"],
+  ["PUB-003", "Portal de Compras Públicas", "B", "Aguardando credenciais", "01/11 · 400 sem a chave publicKey", "chave"],
+  ["PUB-004", "BLL Compras", "E", "Não configurado", "login com reCAPTCHA · publica no PNCP"],
+  ["PUB-005", "Licitanet", "E", "Não configurado", "403 a acesso automatizado · publica no PNCP"],
+  ["PUB-006", "Licitações-e (Banco do Brasil)", "E", "Não configurado", "desafio Cloudflare · publica no PNCP"],
+  ["PUB-007", "BNC Compras", "E", "Não configurado", "login com reCAPTCHA · publica no PNCP"],
+  ["PUB-008", "BBMNET (bbmnet.com.br)", "E", "Aguardando documentação", "endereço da lista dava 404; perguntar API de ERP"],
+  ["PUB-009", "Licitar Digital", "E", "Não configurado", "403 a acesso automatizado"],
+  ["PUB-010", "Compras BR (comprasbr.com.br)", "E", "Não configurado", "site 200 · sem API encontrada"],
+  ["EST-001", "Goiás (ComprasNet.GO / SISLOG)", "E", "Não configurado", "site 200 · publica no PNCP"],
+  ["EST-002", "Rio de Janeiro (SIGA)", "E", "Não configurado", "site 200"], ["EST-003", "Minas Gerais", "E", "Não configurado", "site 200"],
+  ["EST-004", "São Paulo (BEC)", "E", "Não configurado", "site 200 · plataforma por órgão a confirmar"], ["EST-005", "Rio Grande do Sul (CELIC)", "E", "Não configurado", "site 200"],
+  ["EST-006", "Santa Catarina (e-LIC)", "E", "Não configurado", "site 200"], ["EST-007", "Mato Grosso (SIAG)", "E", "Não configurado", "redireciona para portalaquisicoes"],
+  ["EST-008", "Amazonas (e-Compras)", "E", "Não configurado", "site 200 · fuso de Manaus (UTC−4)"], ["EST-009", "Pernambuco (PE-Integrado)", "E", "Não configurado", "site 200"],
+  ["SAU-001", "Bionexo", "C", "Aguardando documentação", "integração de ERP com taxa · decisão do dono"], ["SAU-002", "Apoio Cotações", "E", "Não configurado", "só tela de login"],
+  ["SAU-003", "Huma", "E", "Não configurado", "nome ambíguo: confirmar a plataforma"], ["SAU-004", "GTPLAN", "C", "Aguardando documentação", "sem documentação pública"],
+  ["SAU-005", "UNIDAS Saúde", "E", "Não configurado", "pré-cadastro de fornecedor"], ["SAU-006", "SmartCompras", "C", "Aguardando documentação", "página de integração com ERP"],
+  ["SAU-007", "GC Cotações", "E", "Não configurado", "custo zero para fornecedor"], ["SAU-008", "Gênesis Next", "E", "Não configurado", "—"], ["SAU-009", "Compra Ágil", "E", "Não configurado", "—"],
+  ["IND-001", "Petronect", "C", "Aguardando documentação", "API Store com taxa de acesso"], ["IND-002", "Mercado Eletrônico", "C", "Aguardando documentação", "portal de desenvolvedor documentado"],
+  ["IND-003", "SAP Ariba", "C", "Não configurado", "conta gratuita recebe avisos por e-mail"], ["IND-004", "Nimbi", "C", "Não configurado", "API do lado comprador"], ["IND-005", "Senior Sistemas", "E", "Não configurado", "—"]
+];
+var URL = { "PUB-001": "https://pncp.gov.br", "PUB-002": "https://www.gov.br/compras", "PUB-003": "https://www.portaldecompraspublicas.com.br", "PUB-004": "https://bllcompras.com", "PUB-005": "https://licitanet.com.br", "PUB-006": "https://www.licitacoes-e.com.br", "PUB-007": "https://bnccompras.com", "PUB-008": "https://bbmnet.com.br", "PUB-009": "https://www.licitardigital.com.br", "PUB-010": "https://comprasbr.com.br",
+  "EST-001": "https://www.comprasnet.go.gov.br", "EST-002": "https://www.compras.rj.gov.br", "EST-003": "https://compras.mg.gov.br", "EST-004": "https://www.bec.sp.gov.br", "EST-005": "https://www.compras.rs.gov.br", "EST-006": "https://e-lic.sc.gov.br", "EST-007": "https://portalaquisicoes.seplag.mt.gov.br", "EST-008": "https://www.e-compras.am.gov.br", "EST-009": "https://www.peintegrado.pe.gov.br",
+  "SAU-001": "https://bionexo.com", "SAU-002": "https://www.apoiocotacoes.com.br", "SAU-003": "https://huma.com.br", "SAU-004": "https://gtplan.net", "SAU-005": "https://www.portalunidas.com.br", "SAU-006": "https://smartcompras.com.br", "SAU-007": "https://www.gccotacoes.com.br", "SAU-008": "https://www.genesisnext.com.br", "SAU-009": "https://www.compragil.com.br",
+  "IND-001": "https://www.petronect.com.br", "IND-002": "https://www.mercadoeletronico.com", "IND-003": "https://www.ariba.com", "IND-004": "https://nimbi.com.br", "IND-005": "https://www.senior.com.br" };
+var LIGADO = { "PUB-001": true, "PUB-002": true };
+var CL = { "Operacional com restrições": "laranja", "Em teste": "azul", "Aguardando credenciais": "laranja", "Aguardando documentação": "laranja", "Não configurado": "cinza" };
+function desenhar() {
+  var c = document.getElementById("fCat").value;
+  document.querySelector("#tp tbody").innerHTML = P.filter(function (p) { return !c || p[0].indexOf(c) === 0; }).map(function (p, k) {
+    var bt = '<div class="cm-acoes" style="margin:0"><a class="btn-secondary" href="' + URL[p[0]] + '" target="_blank" rel="noopener" style="text-decoration:none" title="Abre o portal em nova aba">Acessar</a><button type="button" class="btn-secondary" onclick="parametrizar(\'' + p[0] + '\')">Parametrizar</button>' + (p[5] ? '<button type="button" class="btn-secondary" onclick="testar(this,\'' + p[0] + '\')">Testar conexão</button>' : '') + '</div>' + (p[5] ? '' : '<span class="cm-meta" style="margin:4px 0 0;display:block">' + (p[2] === "C" ? "Integração depende de contrato" : "Sem API: e-mail da plataforma e operação assistida") + '</span>');
+    return '<tr><td data-r="Código" class="lic-mono">' + p[0] + '</td><td data-r="Portal"><b>' + p[1] + '</b></td><td data-r="Tipo"><span class="lic-tipo ' + p[2] + '">' + p[2] + '</span></td><td data-r="Situação"><span class="cm-selo ' + (CL[p[3]] || "cinza") + '">' + p[3] + '</span>' + (LIGADO[p[0]] ? ' <span class="cm-selo verde">Ligado</span>' : ' <span class="cm-selo cinza">Desligado</span>') + '</td><td data-r="Último teste">' + p[4] + '</td><td data-r="Ação">' + bt + '</td></tr>';
+  }).join("");
+}
+function parametrizar(cod) {
+  var p = P.filter(function (x) { return x[0] === cod; })[0], lig = !!LIGADO[cod], auto = p[2] === "A" || p[2] === "B";
+  Lic.modal("Parametrizar " + p[1], '<p class="cm-meta">' + cod + ' · tipo ' + p[2] + ' · <a href="' + URL[cod] + '" target="_blank" rel="noopener">' + URL[cod] + '</a></p>' +
+    '<label class="cm-check cm-check-grande"><input type="checkbox" id="pLig"' + (lig ? ' checked' : '') + (auto ? '' : ' disabled') + '> Ligado (coleta automática)' + (auto ? '' : ' — sem API: só avisos por e-mail da plataforma e operação assistida') + '</label>' +
+    '<div class="cm-grade2"><div class="cm-campo"><label for="pPos">Palavras que interessam</label><textarea id="pPos">calibração, qualificação térmica, NR-13, vaso de pressão, autoclave, termodesinfectora</textarea></div><div class="cm-campo"><label for="pNeg">Palavras que descartam</label><textarea id="pNeg">castração, cães e gatos, soluções de calibração, borracharia</textarea></div></div>' +
+    '<div class="cm-grade3"><div class="cm-campo"><label for="pUf">UFs</label><input id="pUf" value="Todas (prioridade GO, DF, vizinhos e RJ)"></div><div class="cm-campo"><label for="pVal">Valor mínimo (R$)</label><input id="pVal" value="0" inputmode="decimal"></div><div class="cm-campo"><label for="pFreq">Frequência</label><select id="pFreq"><option>A cada 2 horas, das 06:00 às 22:00</option><option>Diária, 22:00</option><option>Manual</option></select></div></div>' +
+    '<div class="cm-grade2"><div class="cm-campo"><label for="pCred">Credencial (referência em Chaves e senhas)</label><select id="pCred"><option>' + (cod === "PUB-003" ? "LIC_PCP_PUBLICKEY (ainda não cadastrada)" : "Não precisa (consulta pública)") + '</option></select><p class="cm-ajuda-campo">O valor nunca aparece aqui nem no registro; só o nome da chave.</p></div><div class="cm-campo"><label for="pResp">Responsável</label><select id="pResp"><option>Charles (Diretoria)</option></select></div></div>' +
+    '<div class="cm-campo"><label for="pMot">Motivo da mudança (obrigatório)</label><input id="pMot"></div>',
+    '<button type="button" class="btn-secondary" onclick="Lic.fechar()">Cancelar</button><button type="button" class="btn-primary" onclick="Lic.fechar();Lic.toast(&quot;Parâmetros salvos como versão nova. A próxima coleta usa.&quot;)">Salvar</button>');
+}
+function testar(b, cod) {
+  b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>&nbsp;Testando...';
+  setTimeout(function () {
+    b.disabled = false; b.textContent = "Testar conexão";
+    var log = document.getElementById("log");
+    if (cod === "PUB-003") { log.textContent = "21:00:04  GET apipcp.portaldecompraspublicas.com.br/publico/processosAbertos   400   publicKey ausente\n" + log.textContent; Lic.toast("Portal de Compras Públicas: HTTP 400 — falta a chave publicKey. Pedir pelo formulário do portal.", "erro"); return; }
+    log.textContent = "21:00:04  GET " + (cod === "PUB-001" ? "pncp.gov.br/api/consulta/v1/contratacoes/proposta?...&tamanhoPagina=10   200   430 ms" : "dadosabertos.compras.gov.br/modulo-contratacoes/...   200   300 ms") + "\n" + log.textContent;
+    Lic.toast((cod === "PUB-001" ? "PNCP" : "Compras.gov.br") + ": conexão funcionando (HTTP 200).");
+  }, 900);
+}
+function aba(a) { document.querySelectorAll("#abas .cm-tab").forEach(function (x) { var on = x.getAttribute("data-a") === a; x.classList.toggle("active", on); x.setAttribute("aria-selected", on); }); document.querySelectorAll("section[data-a]").forEach(function (s) { s.hidden = s.getAttribute("data-a") !== a; }); }
+document.querySelectorAll("#abas .cm-tab").forEach(function (b) { b.addEventListener("click", function () { aba(b.getAttribute("data-a")); }); });
+desenhar(); if (location.hash) aba(location.hash.slice(1));
+</script>
+</body>
+</html>
