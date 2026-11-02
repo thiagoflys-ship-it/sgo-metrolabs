@@ -869,3 +869,41 @@ test('reconferência 5: exceção em subitem filho da cláusula vira pendência;
   assert.equal(r.ok, true, r.p);
   assert.deepEqual(r.itens.map((i) => i.tema), ['A_CONFIRMAR', 'A_CONFIRMAR', 'A_CONFIRMAR', 'QUALIFICACAO_TECNICA']);
 });
+
+// ---------------- reconferência de efceb90 (probe12) ----------------
+function verArquivo(texto, itens, outros) {
+  const a = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto, cortado: false }].concat(outros || []), blocoCar: 18000 });
+  const c = a.ctx, todos = c.LicLeit_textos_(a.op()).arquivos.filter((x) => x.texto), arq = todos[0];
+  arq._ind = c.LicLeit_indice_(arq.texto);
+  const b = c.LicLeit_dividir_(arq, '')[0]; b.ordem = 1;
+  const v = c.LicLeit_verificarBloco_({ itens }, arq, b, { fontes: { A1: c.LicLeit_fonteBloco_(arq, b) }, pesos: c.LIC_NOTA_PADRAO, fabricantes: [], arquivos: todos });
+  return { ok: v.ok, p: v.problemas.join(' | '), itens: J(v.itens), a };
+}
+test('reconferência 6: negação no cabeçalho da cláusula-mãe e errata longe da cláusula (no mesmo arquivo ou em outro) fazem do item uma pendência, com a frase', () => {
+  const H = '[página 1]\n8.2. Não serão exigidos, nesta contratação, os seguintes documentos de habilitação técnica:\n8.2.1. Certidão de registro da empresa no CREA da sede da licitante.\n8.2.2. Comprovação de responsável técnico com vínculo permanente com a licitante.\n9. DO PAGAMENTO\n9.1. O pagamento será feito em 30 dias após a medição.\n';
+  let r = verArquivo(H, [{ tema: 'EQUIPE_RT', trecho: 'Comprovação de responsável técnico com vínculo permanente com a licitante' }, { tema: 'PAGAMENTO', trecho: 'O pagamento será feito em 30 dias após a medição' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual([r.itens[0].tipo, r.itens[0].alerta], ['PENDENCIA', 'nao']);
+  assert.equal(r.itens[0].origemAlerta, 'o cabeçalho da cláusula 8.2 diz: "Não serão exigidos, nesta contratação, os seguintes documentos de habilitação técnica:"');
+  assert.deepEqual([r.itens[1].tipo, r.itens[1].origemAlerta], ['EXIGENCIA', ''], 'a cláusula 9.1 não está sob o 8.2');
+  // alínea sob cláusula que dispensa
+  const A = '[página 1]\n8.5. Ficam dispensados os documentos abaixo, para as microempresas.\na) comprovação de responsável técnico com vínculo permanente;\n8.6. A garantia será de 5% do valor do contrato.\n';
+  r = verArquivo(A, [{ tema: 'EQUIPE_RT', trecho: 'comprovação de responsável técnico com vínculo permanente' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.match(r.itens[0].origemAlerta, /^o cabeçalho da cláusula 8\.5 diz: "Ficam dispensados/);
+  // errata longe, no mesmo arquivo
+  const E = '[página 1]\n8.3. A visita prévia é obrigatória para as licitantes deste certame.\n8.4. Outras disposições gerais constam do termo de referência anexo.\n' + '9. Texto de enchimento das cláusulas seguintes do edital, para afastar.\n'.repeat(60) + '15. ERRATA: fica revogado o subitem 8.3 deste edital, por decisão do pregoeiro.\n';
+  r = verArquivo(E, [{ tema: 'VISITA_TECNICA', trecho: 'A visita prévia é obrigatória para as licitantes deste certame' }, { tema: 'OUTRO', trecho: 'Outras disposições gerais constam do termo de referência anexo' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.equal(r.itens[0].tipo, 'PENDENCIA');
+  assert.match(r.itens[0].origemAlerta, /^errata sobre a cláusula 8\.3 \(A1, página 1\): ".*fica revogado o subitem 8\.3 deste edital/);
+  assert.equal(r.itens[1].tipo, 'EXIGENCIA', 'o 8.4 não foi revogado');
+  // errata em OUTRO arquivo da oportunidade
+  const T = '[página 1]\n8.3. A visita prévia é obrigatória para as licitantes deste certame.\n8.4. Outras disposições gerais constam do termo de referência anexo.\n';
+  r = verArquivo(T, [{ tema: 'VISITA_TECNICA', trecho: 'A visita prévia é obrigatória para as licitantes deste certame' }], [{ ref: 'A2', id: 22, titulo: 'Errata 1', nome: 'errata.pdf', sha256: 'f'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: '[página 1]\nO item 8.3 do edital passa a ter a seguinte nova redação: a visita é facultativa.\n', cortado: false }]);
+  assert.equal(r.ok, true, r.p);
+  assert.match(r.itens[0].origemAlerta, /^errata sobre a cláusula 8\.3 \(A2, página 1\)/);
+  // a tela mostra de onde veio o alerta
+  const h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(r.a.ctx.LicLeit_checklist_(r.itens)) });
+  assert.match(h, /Confirmar no edital: errata sobre a cláusula 8\.3 \(A2, página 1\)/);
+});

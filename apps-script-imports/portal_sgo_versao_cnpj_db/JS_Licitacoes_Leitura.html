@@ -98,7 +98,7 @@
     l.forEach(function (e) {
       if (e.tema !== tema) { tema = e.tema; h += '<h4 class="lic-leit-tema">' + Lic_esc_(e.temaNome || e.tema) + "</h4>"; }
       h += '<div class="lic-leit-item"><p class="cm-meta" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.temaNome || e.tema) + (e.tema === "A_CONFIRMAR" && e.temaIA ? ' <span class="cm-meta">(a IA indicou "' + Lic_esc_(e.temaIA) + '", mas a frase não fala desse tema: confira)</span>' : "") + "</p>" +
-        (e.tipo === "PENDENCIA" ? '<p class="lic-motivo pend"><span class="lic-af-tipo PENDENCIA">Pendência</span>' + (e.alerta ? 'Confirmar no edital: há negação ou exceção perto do trecho ("' + Lic_esc_(e.alerta) + '"). ' : "") + (e.longa ? "Frase longa: a tela mostra até 600 caracteres; leia o restante no edital. " : "") + "Não conte como exigência certa até a Diretoria ler o parágrafo.</p>" : "") +
+        (e.tipo === "PENDENCIA" ? '<p class="lic-motivo pend"><span class="lic-af-tipo PENDENCIA">Pendência</span>' + (e.origemAlerta ? "Confirmar no edital: " + Lic_esc_(e.origemAlerta) + ". " : e.alerta ? 'Confirmar no edital: há negação ou exceção perto do trecho ("' + Lic_esc_(e.alerta) + '"). ' : "") + (e.longa ? "Frase longa: a tela mostra até 600 caracteres; leia o restante no edital. " : "") + "Não conte como exigência certa até a Diretoria ler o parágrafo.</p>" : "") +
         LicLeit_fonteHtml_(e.fontes[0] || {}) + ((e.fontes || []).length > 1 ? '<details><summary class="cm-meta" style="min-height:32px;display:flex;align-items:center;cursor:pointer">Mais ' + (e.fontes.length - 1) + " fonte(s)</summary>" + e.fontes.slice(1).map(LicLeit_fonteHtml_).join("") + "</details>" : "") + "</div>";
     });
     return h + "</div>";

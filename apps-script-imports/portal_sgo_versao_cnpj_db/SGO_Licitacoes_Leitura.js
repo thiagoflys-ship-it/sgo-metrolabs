@@ -657,14 +657,102 @@ function LicLeit_negacaoPerto_(a, fo, pos, impeditivo) {
  * aparece junto), com o pedaço citado marcado. Fonte (ref, SHA-256, página, linha) calculada pelo código; rede de segurança:
  * negação ou exceção perto = PENDÊNCIA. Sem texto da IA no item: nada para inverter o sentido.
  */
-function LicLeit_montarItem_(tema, fo, a, b, pos) {
+function LicLeit_montarItem_(tema, fo, a, b, pos, todos) {
   var on = LicLeit_onde_(a._ind, a.texto, pos), fr = LicLeit_fraseInteira_(a.texto, pos, fo.trecho);
-  var imp = Lic_impeditivo_(fr.frase), alerta = LicLeit_negacaoPerto_(a, fo, pos, imp);
+  var imp = Lic_impeditivo_(fr.frase), alerta = LicLeit_negacaoPerto_(a, fo, pos, imp), origem = '';
+  // o cabeçalho de uma cláusula-mãe nega, excetua ou dispensa ("8.2. Não serão exigidos os seguintes documentos:")
+  if (!alerta) { var cab = LicLeit_cabecalhoMae_(a.texto, pos); if (cab) { alerta = cab.palavra; origem = 'o cabeçalho da cláusula ' + cab.num + ' diz: "' + cab.texto + '"'; } }
+  // errata em qualquer parte do arquivo (ou dos outros arquivos) que revoga ou altera a cláusula do trecho
+  if (!alerta) { var er = LicLeit_errata_(a, pos, todos); if (er) { alerta = er.palavra; origem = 'errata sobre a cláusula ' + er.num + ' (' + er.ref + ', ' + er.rotulo + '): "' + er.frase + '"'; } }
   // tema conferido por palavras mínimas: sem elas, "tema a confirmar"
   var temaIA = tema, conf = LicLeit_temaConfere_(tema, fr.frase);
   // frase cortada pelo limite da tela: pendência "frase longa" (o resto pode ter a exceção)
   return { tema: conf ? tema : 'A_CONFIRMAR', temaIA: temaIA, trecho: fr.frase, citado: fr.citado, trechoIA: Lic_texto_(fo.trecho, 600), cortada: fr.cortada, longa: !!fr.cortada, ajuste: fo.ajuste || '', ref: a.ref,
-    arquivo: { id: a.id, nome: a.nome, titulo: a.titulo, sha256: a.sha256 }, pagina: on.pagina, rotulo: on.rotulo, linha: on.linha, bloco: b.ordem, alerta: alerta, tipo: alerta || fr.cortada ? 'PENDENCIA' : 'EXIGENCIA' };
+    arquivo: { id: a.id, nome: a.nome, titulo: a.titulo, sha256: a.sha256 }, pagina: on.pagina, rotulo: on.rotulo, linha: on.linha, bloco: b.ordem, alerta: alerta, origemAlerta: origem, tipo: alerta || fr.cortada ? 'PENDENCIA' : 'EXIGENCIA' };
+}
+/** Numeração da cláusula do trecho: a da linha dele ou a da linha numerada mais perto acima. { num, ini, alinea } ou null. */
+function LicLeit_numeroDaClausula_(t, pos) {
+  var p = t.lastIndexOf('\n', pos - 1) + 1, alinea = false;
+  for (var k = 0; k < 40; k++) {
+    var m = LIC_LEIT_NUMERACAO.exec(t.slice(p, p + 24));
+    if (m && m[1]) return { num: m[1], ini: p, alinea: alinea };
+    if (m && k === 0) alinea = true;      // o trecho está numa alínea (a), b), I -): a cláusula de cima é a mãe
+    if (p <= 0) break;
+    p = t.lastIndexOf('\n', p - 2) + 1;
+  }
+  return null;
+}
+/**
+ * Cabeçalhos das cláusulas-mãe do trecho (8.2 e 8 para o 8.2.2; a própria 8.2 quando o trecho está numa alínea dela): se algum tem
+ * negação, exceção ou dispensa, devolve { num, palavra, texto }. O cabeçalho vai do número até o primeiro ":" ou o fim da frase.
+ */
+function LicLeit_cabecalhoMae_(t, pos) {
+  var c = LicLeit_numeroDaClausula_(t, pos);
+  if (!c) return null;
+  var partes = c.num.split('.'), maes = [];
+  if (c.alinea) maes.push(c.num);
+  for (var n = partes.length - 1; n >= 1; n--) maes.push(partes.slice(0, n).join('.'));
+  for (var i = 0; i < maes.length; i++) {
+    var num = maes[i], q = c.alinea && i === 0 ? c.ini : LicLeit_linhaDaClausula_(t, num, c.ini);
+    if (q < 0) continue;
+    var cab = t.slice(q, q + 400).replace(LIC_LEIT_NUMERACAO, ''), corte = cab.search(/:|[.;](\s|$)/);
+    cab = (corte >= 0 ? cab.slice(0, corte + 1) : cab.split('\n')[0]).replace(/\s+/g, ' ').trim();
+    var w = LicLeit_palavraDeExcecao_(cab);
+    if (w) return { num: num, palavra: w, texto: Lic_texto_(cab, 300) };
+  }
+  return null;
+}
+/** Início da linha que abre a cláusula "num", procurando para cima a partir de "antes" (até LIC_LEIT_MAE_MAX caracteres). */
+var LIC_LEIT_MAE_MAX = 20000;
+function LicLeit_linhaDaClausula_(t, num, antes) {
+  var p = antes, lim = Math.max(0, antes - LIC_LEIT_MAE_MAX);
+  while (p > lim) {
+    p = t.lastIndexOf('\n', p - 2) + 1;
+    var m = LIC_LEIT_NUMERACAO.exec(t.slice(p, p + 24));
+    if (m && m[1] === num) return p;
+    if (p <= 0) break;
+  }
+  return -1;
+}
+/** Palavra de negação, exceção ou dispensa num texto curto (a mesma lista da rede), ou ''. */
+function LicLeit_palavraDeExcecao_(x) {
+  var tk = Lic_tokens_(Lic_s_(x).replace(/[-‐‑–—]/g, ' ')).toks;
+  for (var i = 0; i < tk.length; i++) if (LIC_NEGACAO.test(tk[i]) || LIC_EXCECAO.test(tk[i]) || LIC_LEIT_POLO_DISPENSAR.test(tk[i])) return tk[i];
+  var m = LIC_LEIT_EXCECAO_EXTRA.exec(LicLeit_semAcento_(x).replace(/[^a-z0-9]+/g, ' '));
+  return m ? m[1] : '';
+}
+/**
+ * Errata longe da cláusula ("15. ERRATA: fica revogado o subitem 8.3"): procura, no texto inteiro do arquivo e dos outros arquivos
+ * da oportunidade, o número da cláusula do trecho (e das mães com dois níveis ou mais) perto de revogad*, excluíd*, suprimid*,
+ * alterad*, nova redação, errata ou retificad*. Devolve { num, palavra, frase, ref, rotulo } ou null.
+ */
+var LIC_LEIT_ERRATA = /(revogad\w*|revoga |excluid\w*|suprimid\w*|alterad\w*|nova redacao|errata|retificad\w*|retifica |sem efeito|cancelad\w*)/;
+function LicLeit_errata_(a, pos, todos) {
+  var c = LicLeit_numeroDaClausula_(a.texto, pos);
+  if (!c) return null;
+  var partes = c.num.split('.'), nums = [];
+  for (var n = partes.length; n >= 2; n--) nums.push(partes.slice(0, n).join('.'));
+  if (!nums.length) return null;
+  var arqs = (todos && todos.length ? todos : [a]).filter(function (x) { return x && x.texto; });
+  for (var i = 0; i < nums.length; i++) {
+    var num = nums[i], re = new RegExp('(^|[^0-9.])' + num.replace(/\./g, '\\.') + '(?![0-9]|\\.[0-9])', 'g');
+    for (var k = 0; k < arqs.length; k++) {
+      var x = arqs[k], t = x.texto, m;
+      re.lastIndex = 0;
+      while ((m = re.exec(t))) {
+        var at = m.index + m[1].length;
+        // a própria cláusula (a linha que abre com o número) não é errata
+        if (x === a && (at === c.ini || /\n[ \t]*$/.test(t.slice(Math.max(0, at - 40), at)) || at === 0)) continue;
+        var viz = LicLeit_semAcento_(t.slice(Math.max(0, at - 200), at + 200)).replace(/[^a-z0-9]+/g, ' ');
+        var w = LIC_LEIT_ERRATA.exec(viz);
+        if (!w) continue;
+        x._ind = x._ind || LicLeit_indice_(t);
+        var fr = LicLeit_frase_(t, at, at + num.length), on = LicLeit_onde_(x._ind, t, at);
+        return { num: num, palavra: w[1].trim(), frase: Lic_texto_(fr.frase, 300), ref: x.ref, rotulo: on.rotulo };
+      }
+    }
+  }
+  return null;
 }
 /**
  * A FRASE INTEIRA da fonte em volta do trecho citado (o que se mostra e se guarda como prova): do começo da oração ou da frase
@@ -747,7 +835,7 @@ function LicLeit_verificarBloco_(j, a, b, ctx) {
     var chave = tema + '|' + Lic_normTrecho_(fo.trecho);
     if (vistos[chave]) return;
     vistos[chave] = 1;
-    itens.push(LicLeit_montarItem_(tema, fo, a, b, pos));
+    itens.push(LicLeit_montarItem_(tema, fo, a, b, pos, ctx.arquivos));
   });
   var vv = {};
   problemas = problemas.filter(function (p) { if (vv[p]) return false; vv[p] = 1; return true; });
@@ -758,7 +846,7 @@ function LicLeit_verificarBloco_(j, a, b, ctx) {
  * reencontrado no bloco atual e o arquivo (SHA-256), a página, a linha e a rede são recalculados. Trecho que não se acha = null
  * (o bloco é lido de novo pela IA).
  */
-function LicLeit_relocar_(itens, a, b) {
+function LicLeit_relocar_(itens, a, b, todos) {
   a._ind = a._ind || LicLeit_indice_(a.texto);
   var f = LicLeit_fonteBloco_(a, b), out = [];
   for (var i = 0; i < (itens || []).length; i++) {
@@ -768,7 +856,7 @@ function LicLeit_relocar_(itens, a, b) {
     Object.defineProperty(fo, '_onde', { value: { texto: achou.base === 'pedido' ? f.textoPrompt : f.texto, ini: achou.ini, fim: achou.fim }, enumerable: false });
     var pos = LicLeit_posicao_(f, fo);
     if (pos < 0) return null;
-    out.push(LicLeit_montarItem_(it.temaIA || it.tema, fo, a, b, pos));
+    out.push(LicLeit_montarItem_(it.temaIA || it.tema, fo, a, b, pos, todos));
   }
   return out;
 }
@@ -877,7 +965,7 @@ function LicLeit_criar_(eu, l, tx, palavras, o) {
       if (Lic_up_(x.SITUACAO) !== 'PENDENTE') return;
       var ant = lidos[Lic_s_(x.BLOCO_HASH)], a = porSha[Lic_s_(x.ARQUIVO_SHA)];
       if (!ant || !a) return;
-      var itens = LicLeit_relocar_(Lic_json_(res[Lic_s_(ant.RESULTADO_ID)].ITENS_JSON, []), a, LicLeit_bDe_(x));
+      var itens = LicLeit_relocar_(Lic_json_(res[Lic_s_(ant.RESULTADO_ID)].ITENS_JSON, []), a, LicLeit_bDe_(x), arqs);
       if (!itens) return;
       var rid = LicLeit_gravarResultado_(x, itens, '', 'APROVEITADO:' + Lic_s_(ant.RESULTADO_ID));
       LicLeit_mudarBloco_(x, { SITUACAO: 'LIDO', RESULTADO_ID: rid, ITENS_QTD: itens.length, REAPROVEITADO_DE: Lic_s_(ant.ID), LIDO_EM: Lic_s_(ant.LIDO_EM) });
@@ -908,7 +996,7 @@ function LicLeit_preencherRepetidos_(blocos, porSha, resultados) {
     if (Lic_up_(x.SITUACAO) !== 'REPETIDO' || Lic_s_(x.RESULTADO_ID)) return;
     var o = porOrdem[Lic_s_(x.REPETIDO_DE)], a = porSha[Lic_s_(x.ARQUIVO_SHA)];
     if (!o || Lic_up_(o.SITUACAO) !== 'LIDO' || !resultados[Lic_s_(o.RESULTADO_ID)] || !a) return;
-    var itens = LicLeit_relocar_(Lic_json_(resultados[Lic_s_(o.RESULTADO_ID)].ITENS_JSON, []), a, LicLeit_bDe_(x));
+    var itens = LicLeit_relocar_(Lic_json_(resultados[Lic_s_(o.RESULTADO_ID)].ITENS_JSON, []), a, LicLeit_bDe_(x), Object.keys(porSha).map(function (k) { return porSha[k]; }));
     if (!itens) { LicLeit_mudarBloco_(x, { SITUACAO: 'PENDENTE', REPETIDO_DE: '', ATUALIZADO_EM: Lic_agora_() }); return; }
     var rid = LicLeit_gravarResultado_(x, itens, '', 'REPETIDO:' + Lic_s_(o.RESULTADO_ID));
     resultados[rid] = { ID: rid, ITENS_JSON: JSON.stringify(itens) };
@@ -932,14 +1020,14 @@ function LicLeit_soltar_(lid, dono) {
 }
 
 /** Lê UM bloco: até 1 + LIC_LEIT_REFACOES respostas, cada uma conferida. Devolve { lido, falhou, erroIA, parar, tempo }. */
-function LicLeit_lerBloco_(l, x, a, total, palavras, cp, inicio, limiteMs) {
+function LicLeit_lerBloco_(l, x, a, total, palavras, cp, inicio, limiteMs, todos) {
   var b = LicLeit_bDe_(x), agora = function () { return Lic_agora_(); };
   // o texto do arquivo mudou desde o plano: o bloco não é o mesmo (a leitura nova pega a mudança)
   if (Lic_s_(a.sha256) !== Lic_s_(x.ARQUIVO_SHA) || LicLeit_hashBloco_(a.texto.slice(b.ini, b.fim), cp) !== Lic_s_(x.BLOCO_HASH)) {
     LicLeit_mudarBloco_(x, { SITUACAO: 'FALHOU', ERRO: 'O arquivo mudou depois que a leitura começou: toque em "Ler a versão nova" (os blocos iguais não são lidos de novo).', ATUALIZADO_EM: agora() });
     return { falhou: true };
   }
-  var f = LicLeit_fonteBloco_(a, b), ctx = { fontes: {}, pesos: LIC_NOTA_PADRAO, fabricantes: Lic_fabricantesLista_() };
+  var f = LicLeit_fonteBloco_(a, b), ctx = { fontes: {}, pesos: LIC_NOTA_PADRAO, fabricantes: Lic_fabricantesLista_(), arquivos: todos || [a] };
   ctx.fontes[a.ref] = f;
   var marca = Lic_marcador_(), prompt = LicLeit_promptBloco_(l, a, b, total, palavras, marca);
   var problemas = Lic_json_(x.PROBLEMAS_JSON, []), tent = Number(x.TENTATIVAS) || 0, resp = '';
@@ -1001,7 +1089,7 @@ function LicLeit_trabalhar_(lid, o) {
         if (Date.now() - inicio > limiteMs) break;
         var x = pend[i], a = porSha[Lic_s_(x.ARQUIVO_SHA)];
         if (!a) { LicLeit_mudarBloco_(x, { SITUACAO: 'FALHOU', ERRO: 'O arquivo deste bloco não está mais entre os arquivos atuais do edital (foi substituído ou retirado da fonte): toque em "Ler a versão nova".', ATUALIZADO_EM: Lic_agora_() }); r.falhos++; continue; }
-        var rb = LicLeit_lerBloco_(l, x, a, blocos.length, palavras, cp, inicio, limiteMs);
+        var rb = LicLeit_lerBloco_(l, x, a, blocos.length, palavras, cp, inicio, limiteMs, tx.arquivos.filter(function (z) { return z.texto; }));
         if (rb.tempo) break;
         if (rb.lido) r.lidos++;
         if (rb.falhou) r.falhos++;
@@ -1048,7 +1136,7 @@ function LicLeit_checklist_(itens) {
     if (!e) { e = { tema: tema, temaNome: tema === 'A_CONFIRMAR' ? 'Tema a confirmar' : LIC_LEIT_TEMAS[tema], temaIA: it.temaIA && it.temaIA !== tema ? it.temaIA : '', trecho: it.trecho, tipo: 'EXIGENCIA', alerta: '', fontes: [], _trechos: [] }; g.push(e); }
     if (!e.fontes.some(function (f) { return Lic_s_(f.arquivo && f.arquivo.sha256) === Lic_s_(fonte.arquivo && fonte.arquivo.sha256) && f.rotulo === fonte.rotulo && f.linha === fonte.linha && Lic_normTrecho_(f.trecho) === nt; })) e.fontes.push(fonte);
     if (e._trechos.indexOf(nt) < 0) e._trechos.push(nt);
-    if (it.alerta && !e.alerta) e.alerta = it.alerta;
+    if (it.alerta && !e.alerta) { e.alerta = it.alerta; e.origemAlerta = it.origemAlerta || ''; }
     if (it.longa) e.longa = true;
     if (it.tipo === 'PENDENCIA' || it.alerta || it.longa) e.tipo = 'PENDENCIA';
   });
@@ -1139,7 +1227,7 @@ function LicLeit_verificarConsolidacao_(j, ctx) {
   return problemas.length ? { ok: false, problemas: problemas } : { ok: true, problemas: [], saida: saida };
 }
 function LicLeit_promptConsolidar_(l, checklist, fontesCons, prazos, cobTexto, marca) {
-  var itens = checklist.map(function (e) { var f = e.fontes[0] || {}; return e.id + ' [' + e.tema + '] ' + (e.tipo === 'PENDENCIA' ? 'PENDÊNCIA (confirmar no edital: ' + (e.alerta ? 'negação ou exceção perto do trecho, "' + e.alerta + '"' : 'frase longa, leia o restante no edital') + '): ' : '') + 'trecho do edital: "' + Lic_texto_(f.trecho, 300).split(marca).join('') + '" | ' + f.ref + ' ' + (f.rotulo || '') + (e.fontes.length > 1 ? ' (+' + (e.fontes.length - 1) + ' fonte(s))' : ''); }).join('\n');
+  var itens = checklist.map(function (e) { var f = e.fontes[0] || {}; return e.id + ' [' + e.tema + '] ' + (e.tipo === 'PENDENCIA' ? 'PENDÊNCIA (confirmar no edital: ' + (e.origemAlerta ? e.origemAlerta : e.alerta ? 'negação ou exceção perto do trecho, "' + e.alerta + '"' : 'frase longa, leia o restante no edital') + '): ' : '') + 'trecho do edital: "' + Lic_texto_(f.trecho, 300).split(marca).join('') + '" | ' + f.ref + ' ' + (f.rotulo || '') + (e.fontes.length > 1 ? ' (+' + (e.fontes.length - 1) + ' fonte(s))' : ''); }).join('\n');
   var campos = Object.keys(fontesCons).filter(function (k) { return /^CAMPO:/.test(k); }).map(function (k) { return k + ': ' + fontesCons[k].texto.split(marca).join(''); }).join('\n');
   return [
     'Você é especialista em licitações públicas (Lei 14.133/2021 e Lei 13.303/2016), em engenharia clínica e em metrologia. Com base SOMENTE no que está abaixo (os itens que a leitura do edital inteiro extraiu e conferiu, os dados do PNCP e os prazos da agenda), escreva para a Diretoria da Metrolabs:',

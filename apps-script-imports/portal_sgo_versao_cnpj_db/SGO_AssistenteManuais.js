@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "b8482c6348ac",
+ "versao": "f62f77265b16",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3220,7 +3220,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Telas > Leitura especialista do edital (aba Leitura do edital da ficha) (parte 3)",
-     "texto": "sem elas, o item vai para \"Tema a confirmar\".\n\nO MESMO verificador da nota confere cada trecho: tem de estar DENTRO do bloco que a IA recebeu, palavra por palavra (número com o separador entre dígitos, \"0,2%\" não é \"2%\"); trecho que corta uma negação (\"admitida a participação\" quando o edital diz \"Não será admitida a participação\") é recusado. A página e a linha são calculadas pelo sistema (posição do trecho no arquivo), nunca pela IA. Rede de segurança em todos os temas: negação ou exceção perto do trecho (na frase e na seguinte; no item impeditivo, como RBC, acreditação, registro, atestado e Inmetro, na página e na seguinte) faz do item uma Pendência \"Confirmar no edital\"; a rede olha também os subitens filhos da cláusula do trecho (o 8.3.1 sob o 8.3, as alíneas a) e b) sob o item) e para na cláusula irmã ou acima (8.4, 9.); além das palavras da nota, contam \"podendo\", \"poderá ser substituída\", \"substituir\", \"desde que\", \"caso\", \"quando\", \"ou declaração\" e \"facultado\". Resposta recusada é refeita até 2 vezes com os problemas apontados."
+     "texto": "sem elas, o item vai para \"Tema a confirmar\".\n\nO MESMO verificador da nota confere cada trecho: tem de estar DENTRO do bloco que a IA recebeu, palavra por palavra (número com o separador entre dígitos, \"0,2%\" não é \"2%\"); trecho que corta uma negação (\"admitida a participação\" quando o edital diz \"Não será admitida a participação\") é recusado. A página e a linha são calculadas pelo sistema (posição do trecho no arquivo), nunca pela IA. Rede de segurança em todos os temas: negação ou exceção perto do trecho (na frase e na seguinte; no item impeditivo, como RBC, acreditação, registro, atestado e Inmetro, na página e na seguinte) faz do item uma Pendência \"Confirmar no edital\"; a rede sobe pelos cabeçalhos das cláusulas-mãe (no 8.2.2, os cabeçalhos do 8.2 e do 8; na alínea, o da cláusula dela): cabeçalho com negação, exceção ou dispensa (\"8.2. Não serão exigidos os seguintes documentos:\") faz do item uma Pendência que mostra a frase do cabeçalho; procura no texto inteiro do arquivo e nos outros arquivos da oportunidade uma errata sobre a cláusula do trecho (o número dela perto de revogado, excluído, suprimido, alterado, nova redação, errata ou retificado), que também vira Pendência com a frase da errata; olha também os subitens filhos da cláusula do trecho (o 8.3.1 sob o 8.3, as alíneas a) e b) sob o item) e para na cláusula irmã ou acima (8.4, 9.); além das palavras da nota, contam \"podendo\", \"poderá ser substituída\", \"substituir\", \"desde que\", \"caso\", \"quando\", \"ou declaração\" e \"facultado\". Resposta recusada é refeita até 2 vezes com os problemas apontados."
     },
     {
      "titulo": "Telas > Leitura especialista do edital (aba Leitura do edital da ficha) (parte 4)",
