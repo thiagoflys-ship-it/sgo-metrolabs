@@ -877,7 +877,7 @@ function Lic_verificarAnalise_(j, ctx) {
     if (cod === 'FORA_DO_CATALOGO' && !(foR && foR.ref === 'REGRA:catalogo')) { problemas.push(onde + ': FORA_DO_CATALOGO precisa de fonteRegra REGRA:catalogo (a frase do catálogo que mostra que o serviço não está lá)'); return; }
     // decisão do coordenador (02/11/2026): trava da IA NUNCA zera a nota sozinha; fica "a confirmar" pela Diretoria. A rede de
     // segurança só marca o alerta de exceção (negação ou exceção perto do trecho) para quem vai confirmar
-    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: foT ? Lic_chaveTrava_(cod, foT.trecho) : '', excecao: foT ? Lic_negacaoPerto_(foT) : '' });
+    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: foT ? Lic_chaveTrava_(cod, foT.trecho) : '', excecao: foT ? Lic_negacaoPerto_(foT) : '', assinatura: foT ? Lic_assinaturaTrava_(foT) : '' });
   });
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
@@ -948,6 +948,26 @@ function Lic_comOnde_(fo, texto, ini, fim) {
   return fo;
 }
 /** A primeira palavra de negação ou exceção perto do trecho (como está no texto), ou ''. */
+/** O parágrafo do trecho e o seguinte (desde a última linha em branco antes; até a segunda depois), com os limites da rede. */
+function Lic_paragrafoDe_(fo) {
+  var o = fo && fo._onde;
+  if (!o || typeof o.texto !== 'string') return '';
+  var t = o.texto, ini = Math.max(0, o.ini), fim = Math.min(t.length, o.fim);
+  var antes = t.slice(Math.max(0, ini - LIC_REDE_ANTES), ini), depois = t.slice(fim, fim + LIC_REDE_DEPOIS);
+  var m, re = /\n[ \t]*\n/g, ult = -1;
+  while ((m = re.exec(antes))) ult = m.index + m[0].length;
+  if (ult >= 0) antes = antes.slice(ult);
+  var r2 = /\n[ \t]*\n/g, n = 0, corte = -1;
+  while ((m = r2.exec(depois))) { n++; if (n === 2) { corte = m.index; break; } }
+  if (corte >= 0) depois = depois.slice(0, corte);
+  return antes + t.slice(ini, fim) + depois;
+}
+/**
+ * Assinatura da fonte da trava (conferência de 1f353a5): o hash do parágrafo do trecho (e do seguinte), normalizado. Edital
+ * retificado que muda a frase ("..., sendo aceita alternativamente a rastreabilidade") muda a assinatura: a decisão antiga
+ * da Diretoria não se reaplica sozinha.
+ */
+function Lic_assinaturaTrava_(fo) { var par = Lic_paragrafoDe_(fo); return par ? Lic_hash_(Lic_tokens_(par).s).slice(0, 24) : ''; }
 function Lic_negacaoPerto_(fo) {
   var o = fo && fo._onde;
   // regra da empresa e números do sistema não são o edital: a rede não se aplica a eles
@@ -982,6 +1002,9 @@ function Lic_notaPelasTravas_(soma, travas, decisoes) {
     var x = Object.assign({}, t);
     if (x.codigo === 'PRAZO_VENCIDO' || x.estado === 'CODIGO') { x.estado = 'CODIGO'; return x; }
     var d = x.chave ? decisoes[x.chave] : null;
+    // a decisão só se reaplica se a fonte do trecho não mudou (mesma assinatura do parágrafo) e não surgiu alerta de exceção
+    // novo; senão volta a "a confirmar", com a decisão antiga ao lado ("confirmada na decisão N — reconfirmar")
+    if (d && (!d.assinatura || d.assinatura !== x.assinatura || (x.excecao && x.excecao !== d.excecao))) { x.estado = 'A_CONFIRMAR'; x.decisao = null; x.reconfirmar = d; return x; }
     x.estado = d ? (d.decisao === 'CONFIRMADA' ? 'CONFIRMADA' : 'NAO_E_TRAVA') : 'A_CONFIRMAR';
     x.decisao = d || null;
     return x;
@@ -1157,7 +1180,13 @@ function Lic_analisar_(eu, l, o) {
   var ins = SGO_DATA.insert(LIC_ABAS.ANALISES, reg);
   reg.ID = ins && ins.ID ? ins.ID : reg.ID;
   mudOp.ANALISE_ID = Lic_s_(reg.ID);
-  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mudOp);
+  Lic_comTrava_(function () {
+    if (saida) {
+      var atual = Lic_acharOp_(l.ID), r2 = Lic_notaPelasTravas_(nf.soma, nf.travas, Lic_json_(atual.TRAVAS_DECISOES_JSON, {}));
+      Object.assign(mudOp, { NOTA: r2.nota, NOTA_CLASSE: r2.classe, NOTA_TRAVA: r2.efetivas.map(function (t) { return t.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r2.aConfirmar.length });
+    }
+    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mudOp);
+  });
   Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, saida ? 'ANALISE_IA' : reg.SITUACAO === 'ERRO' ? 'ANALISE_IA_FALHOU' : 'ANALISE_IA_RECUSADA', eu || { id: '', nome: 'Sistema' }, {
     de: Lic_s_(l.NOTA) !== '' ? 'nota ' + Lic_fmtNum_(l.NOTA) + ' (análise ' + Lic_s_(l.ANALISE_VERSAO) + ')' : 'sem nota',
     para: saida ? 'nota ' + Lic_fmtNum_(reg.NOTA) + ' · ' + LIC_CLASSES[reg.CLASSE] + ' (análise ' + versao + ')' : reg.SITUACAO.toLowerCase(),
@@ -1214,9 +1243,16 @@ function Lic_comDecisoes_(at, l) {
  * oportunidade (TRAVAS_DECISOES_JSON) e vale nas próximas análises para a mesma trava e o mesmo trecho.
  */
 function Lic_travaDecidirAcao_(eu, d) {
-  var l = Lic_acharOp_(d.id), motivo = Lic_texto_(d.motivo, 1000), dec = Lic_up_(d.decisao);
+  var motivo = Lic_texto_(d.motivo, 1000), dec = Lic_up_(d.decisao);
   if (dec !== 'CONFIRMAR' && dec !== 'NAO_E_TRAVA') throw new Error('Escolha "Confirmar trava" ou "Não é trava". Nada foi alterado');
   if (motivo.length < 10) throw new Error('Escreva o motivo (pelo menos 10 letras): ele fica no histórico com o seu nome, a data e o trecho. Nada foi alterado');
+  // conferência de 1f353a5: dentro da trava de gravação, relendo a oportunidade (duas decisões ao mesmo tempo não se apagam)
+  var res = Lic_comTrava_(function () { return Lic_travaDecidirGravar_(eu, d, motivo, dec); });
+  var l2 = Lic_acharOp_(d.id);
+  return { nota: res.nota, classe: res.classe, analise: Lic_analiseFicha_(l2, Lic_lerFonteServidor_(l2)) };
+}
+function Lic_travaDecidirGravar_(eu, d, motivo, dec) {
+  var l = Lic_acharOp_(d.id);
   var concluida = Lic_analisesDe_(l.ID).filter(function (a) { return Lic_s_(a.SITUACAO) === 'CONCLUIDA'; })[0];
   var travas = concluida ? Lic_json_(concluida.TRAVAS_JSON, []) : [];
   var t = travas.filter(function (x) { return x.chave && x.chave === Lic_s_(d.chave) && x.codigo !== 'PRAZO_VENCIDO'; })[0];
@@ -1224,7 +1260,7 @@ function Lic_travaDecidirAcao_(eu, d) {
   var decisoes = Lic_json_(l.TRAVAS_DECISOES_JSON, {}), antes = decisoes[t.chave] || null, agora = Lic_agora_(), soma = Number(concluida.SOMA) || 0;
   var antesR = Lic_notaPelasTravas_(soma, travas, decisoes);
   decisoes[t.chave] = { decisao: dec === 'CONFIRMAR' ? 'CONFIRMADA' : 'NAO_E_TRAVA', motivo: motivo, porId: Lic_s_(eu && eu.id), porNome: Lic_s_(eu && eu.nome), em: agora,
-    versao: (antes ? Number(antes.versao) || 1 : 0) + 1, codigo: t.codigo, nome: t.nome, trecho: Lic_texto_(t.fonte && t.fonte.trecho, 600), ref: Lic_s_(t.fonte && t.fonte.ref), analiseVersao: Number(concluida.VERSAO) || 0 };
+    versao: (antes ? Number(antes.versao) || 1 : 0) + 1, codigo: t.codigo, nome: t.nome, assinatura: Lic_s_(t.assinatura), excecao: Lic_s_(t.excecao), trecho: Lic_texto_(t.fonte && t.fonte.trecho, 600), ref: Lic_s_(t.fonte && t.fonte.ref), analiseVersao: Number(concluida.VERSAO) || 0 };
   var r = Lic_notaPelasTravas_(soma, travas, decisoes), nd = decisoes[t.chave];
   SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { TRAVAS_DECISOES_JSON: JSON.stringify(decisoes).slice(0, 45000), NOTA: r.nota, NOTA_CLASSE: r.classe,
     NOTA_TRAVA: r.efetivas.map(function (x) { return x.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r.aConfirmar.length, ATUALIZADO_EM: agora });
@@ -1234,8 +1270,7 @@ function Lic_travaDecidirAcao_(eu, d) {
     para: nome(nd.decisao) + ' · nota ' + Lic_fmtNum_(r.nota) + ' · ' + (LIC_CLASSES[r.classe] || r.classe),
     texto: 'Trava "' + t.nome + '" (' + t.codigo + '): ' + nome(nd.decisao) + ', pela Diretoria. Motivo: ' + motivo + '. Trecho (' + nd.ref + '): "' + nd.trecho + '".' + (t.excecao ? ' Alerta de exceção perto do trecho: "' + t.excecao + '".' : ''),
     versao: 'decisão ' + nd.versao + ' · análise ' + nd.analiseVersao, fonte: nd.ref + (t.fonte && t.fonte.arquivo && t.fonte.arquivo.sha256 ? ' ' + Lic_s_(t.fonte.arquivo.sha256).slice(0, 12) : '') });
-  var l2 = Lic_acharOp_(d.id);
-  return { nota: r.nota, classe: r.classe, analise: Lic_analiseFicha_(l2, Lic_lerFonteServidor_(l2)) };
+  return { nota: r.nota, classe: r.classe };
 }
 
 /** Bloco "Análise" da ficha: a última análise concluída, a última tentativa, as versões e se a base mudou. */

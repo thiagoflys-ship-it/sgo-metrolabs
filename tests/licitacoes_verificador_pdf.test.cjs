@@ -17,7 +17,8 @@ const ler = (f) => fs.readFileSync(path.join(pasta, f), 'utf8').replace(/\r\n/g,
 function contexto(fabricantes) {
   const ctx = vm.createContext({
     console, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, isFinite, parseInt,
-    Utilities: { getUuid: () => '0123456789abcdef0123456789abcdef' }, Session: { getScriptTimeZone: () => 'America/Sao_Paulo' },
+    Utilities: { getUuid: () => '0123456789abcdef0123456789abcdef', DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF-8' },
+      computeDigest: (alg, t) => Array.from(require('node:crypto').createHash('sha256').update(String(t), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)) }, Session: { getScriptTimeZone: () => 'America/Sao_Paulo' },
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     SGO_DATA: { getAll: () => [] }, SGO_CFG: { SHEETS: {} },
     ComEsp_fabricantes_: () => fabricantes || ['ortosintese', 'nova', 'teste', 'generico', 'nao consta']
@@ -331,8 +332,10 @@ test('rede de segurança: trava com negação perto fica a confirmar com alerta 
   assert.equal(v.saida.afirmacoes.some((a) => /Confirmar no edital: há negação/.test(a.texto)), false);
   const nf = ctx.Lic_notaFinal_(v.saida, codigo, pesos);
   assert.deepEqual([nf.nota > 0, nf.classe], [true, 'TRAVA_A_CONFIRMAR'], 'nem a trava limpa zera sozinha');
-  const conf = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA' } });
+  const conf = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA', assinatura: v.saida.travas[0].assinatura, excecao: '' } });
   assert.deepEqual([conf.nota, conf.classe], [0, 'DESCARTE'], 'confirmada pela Diretoria, zera');
+  const semAss = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA', versao: 1 } });
+  assert.deepEqual([semAss.nota > 0, semAss.travas[0].estado, semAss.travas[0].reconfirmar.versao], [true, 'A_CONFIRMAR', 1], 'decisão sem a assinatura da fonte não se reaplica');
 });
 
 // revisão de a3655e1 (trava.cjs): 7 de 7 zeravam a nota com trava falsa

@@ -93,7 +93,7 @@ function ambiente(o) {
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_EQUIPAMENTOS: 'CAD_EQUIPAMENTOS' } },
     exigirSessao: (sid) => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada. Entre de novo'); return sessoes[sid]; },
     SGO_execucaoInterna_: () => o.interna !== false,
-    SGO_DocA4_chamarGemini_: (prompt, opc) => { ia.prompts.push(prompt); ia.opcoes.push(opc); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); const r = ia.respostas.shift(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
+    SGO_DocA4_chamarGemini_: (prompt, opc) => { ia.prompts.push(prompt); ia.opcoes.push(opc); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); let r = ia.respostas.shift(); if (typeof r === 'function') r = r(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
     ComEsp_fabricantes_: () => ['marca exemplo'],
     SGO_LICITACOES
   });
@@ -688,4 +688,43 @@ test('aba Análise: trava a confirmar com selo, alerta de exceção e os botões
   assert.match(html, /Trava confirmada pela Diretoria/);
   assert.match(html, /Confirmada por DORA DIRETORA TESTE em .* \(decisão 1\): Conferido no edital, exige RBC/);
   assert.match(html, /Nota 0 de 100 · Candidata a descarte/);
+});
+
+// conferência de 1f353a5 (decisao.cjs): edital retificado não reaplica a decisão antiga; decisão durante a análise não se perde
+test('decisão da Diretoria só se reaplica com a mesma fonte: parágrafo retificado ou exceção nova voltam a "a confirmar" (reconfirmar)', () => {
+  const frase = 'A contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
+  const T1 = 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração';
+  const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC.', fonte: { ref: 'A1', trecho: T1 } }] });
+  for (const dec of ['CONFIRMAR', 'NAO_E_TRAVA']) {
+    const a = ambiente({ respostas: [resp, resp] });
+    a.srv.textos = TEXTOS.map((t) => Object.assign({}, t));
+    a.srv.textos[0].texto = EDITAL + '\n\n' + frase;
+    assert.equal(a.api('s_dora', 'analisar', { id: 'op1' }).ok, true);
+    const chave = a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0].chave;
+    assert.equal(a.api('s_dora', 'travaDecidir', { id: 'op1', chave, decisao: dec, motivo: 'Li o edital da versão 1 com atenção' }).ok, true);
+    // retificação: a mesma frase ganha uma exceção ("sendo aceita alternativamente a rastreabilidade")
+    a.srv.textos[0].texto = EDITAL + '\n\n' + frase.replace('massa.', 'massa, sendo aceita alternativamente a rastreabilidade.');
+    assert.equal(a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Edital retificado publicado no PNCP' }).ok, true);
+    const t = a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0];
+    assert.equal(t.chave, chave, 'mesma trava e mesmo trecho');
+    assert.deepEqual([t.estado, t.reconfirmar && t.reconfirmar.versao, Number(a.op().TRAVAS_A_CONFIRMAR)], ['A_CONFIRMAR', 1, 1], dec);
+    assert.ok(Number(a.op().NOTA) > 0, 'a nota não zera com a decisão antiga: ' + dec);
+    const html = tela().ctx.Lic_htmlFicha_(a.api('s_dora', 'ficha', { id: 'op1' }), 'analise');
+    assert.match(html, /<b>Reconfirmar:<\/b> (confirmada|marcada como não é trava) na decisão 1 .*mas o parágrafo do trecho mudou no edital ou surgiu uma exceção perto dele/);
+  }
+});
+
+test('decisão tomada durante uma análise em andamento vale na gravação final (a lista não fica com a nota errada)', () => {
+  const T1 = 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração';
+  const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC.', fonte: { ref: 'A1', trecho: T1 } }] });
+  let a;
+  // a segunda análise demora: enquanto a IA responde, a Diretoria confirma a trava em outra tela
+  const durante = () => { const chave = a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0].chave; assert.equal(a.api('s_admin', 'travaDecidir', { id: 'op1', chave, decisao: 'CONFIRMAR', motivo: 'Confirmada enquanto a análise rodava' }).ok, true); return resp; };
+  a = ambiente({ respostas: [resp, durante] });
+  a.srv.textos = TEXTOS.map((t) => Object.assign({}, t));
+  a.srv.textos[0].texto = EDITAL + '\n\nA contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
+  assert.equal(a.api('s_dora', 'analisar', { id: 'op1' }).ok, true);
+  assert.equal(a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Refazer enquanto a Diretoria decide' }).ok, true);
+  assert.deepEqual([Number(a.op().NOTA), a.op().NOTA_CLASSE, Number(a.op().TRAVAS_A_CONFIRMAR)], [0, 'DESCARTE', 0]);
+  assert.equal(JSON.parse(a.op().TRAVAS_DECISOES_JSON)[Object.keys(JSON.parse(a.op().TRAVAS_DECISOES_JSON))[0]].motivo, 'Confirmada enquanto a análise rodava');
 });
