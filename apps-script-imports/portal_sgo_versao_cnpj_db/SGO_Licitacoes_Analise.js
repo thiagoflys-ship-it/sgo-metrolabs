@@ -232,7 +232,7 @@ function Lic_dataFonteTxt_(t) { var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d
  */
 function Lic_fontesAnalise_(l, fonte, textos) {
   var f = {};
-  function por(ref, rotulo, texto) { var t = Lic_s_(texto); if (!t) return; f[ref] = { ref: ref, rotulo: rotulo, texto: t, norm: Lic_normTrecho_(t) }; }
+  function por(ref, rotulo, texto) { var t = Lic_s_(texto); if (!t) return; f[ref] = { ref: ref, rotulo: rotulo, texto: t, norm: Lic_normTrecho_(t), versaoHash: Lic_s_(l.VERSAO_HASH) }; }
   por('CAMPO:objeto', 'Objeto da contratação (PNCP)', l.OBJETO);
   por('CAMPO:orgao', 'Órgão (PNCP)', [l.ORGAO_NOME, l.UNIDADE_NOME].filter(Boolean).join(' · '));
   por('CAMPO:modalidade', 'Modalidade (PNCP)', [l.MODALIDADE, l.MODO_DISPUTA].filter(Boolean).join(' · '));
@@ -877,7 +877,7 @@ function Lic_verificarAnalise_(j, ctx) {
     if (cod === 'FORA_DO_CATALOGO' && !(foR && foR.ref === 'REGRA:catalogo')) { problemas.push(onde + ': FORA_DO_CATALOGO precisa de fonteRegra REGRA:catalogo (a frase do catálogo que mostra que o serviço não está lá)'); return; }
     // decisão do coordenador (02/11/2026): trava da IA NUNCA zera a nota sozinha; fica "a confirmar" pela Diretoria. A rede de
     // segurança só marca o alerta de exceção (negação ou exceção perto do trecho) para quem vai confirmar
-    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: foT ? Lic_chaveTrava_(cod, foT.trecho) : '', excecao: foT ? Lic_negacaoPerto_(foT) : '', assinatura: foT ? Lic_assinaturaTrava_(foT) : '' });
+    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: foT ? Lic_chaveTrava_(cod, foT.trecho) : '', excecao: foT ? Lic_negacaoPerto_(foT) : '', assinatura: foT ? Lic_assinaturaTrava_(foT) : '', assinaturaFonte: Lic_assinaturaFonteTrava_(foT, ctx) });
   });
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
@@ -968,6 +968,18 @@ function Lic_paragrafoDe_(fo) {
  * da Diretoria não se reaplica sozinha.
  */
 function Lic_assinaturaTrava_(fo) { var par = Lic_paragrafoDe_(fo); return par ? Lic_hash_(Lic_tokens_(par).s).slice(0, 24) : ''; }
+/**
+ * Assinatura da FONTE inteira da trava (conferência de bb6c86f): o SHA-256 do arquivo; campo do PNCP, a versão da fonte
+ * (VERSAO_HASH); sem os dois, o hash do texto inteiro. Uma errata em OUTRO parágrafo do mesmo arquivo ("o subitem abaixo foi
+ * REVOGADO") muda o arquivo: "Confirmar trava" não se reaplica sozinho ("Não é trava" usa só o parágrafo).
+ */
+function Lic_assinaturaFonteTrava_(fo, ctx) {
+  if (!fo) return '';
+  if (fo.arquivo && Lic_s_(fo.arquivo.sha256)) return 'sha:' + Lic_s_(fo.arquivo.sha256);
+  var f = ctx && ctx.fontes ? ctx.fontes[fo.ref] : null;
+  if (f && /^CAMPO:/.test(fo.ref) && Lic_s_(f.versaoHash)) return 'v:' + Lic_s_(f.versaoHash);
+  return f ? 'h:' + Lic_hash_(f.texto).slice(0, 32) : '';
+}
 function Lic_negacaoPerto_(fo) {
   var o = fo && fo._onde;
   // regra da empresa e números do sistema não são o edital: a rede não se aplica a eles
@@ -1004,7 +1016,9 @@ function Lic_notaPelasTravas_(soma, travas, decisoes) {
     var d = x.chave ? decisoes[x.chave] : null;
     // a decisão só se reaplica se a fonte do trecho não mudou (mesma assinatura do parágrafo) e não surgiu alerta de exceção
     // novo; senão volta a "a confirmar", com a decisão antiga ao lado ("confirmada na decisão N — reconfirmar")
-    if (d && (!d.assinatura || d.assinatura !== x.assinatura || (x.excecao && x.excecao !== d.excecao))) { x.estado = 'A_CONFIRMAR'; x.decisao = null; x.reconfirmar = d; return x; }
+    // "Confirmar trava" zera a nota: exige também o mesmo arquivo (ou a mesma versão da fonte, para campo do PNCP)
+    var mudou = d && (!d.assinatura || d.assinatura !== x.assinatura || (x.excecao && x.excecao !== d.excecao) || (d.decisao === 'CONFIRMADA' && (!d.assinaturaFonte || d.assinaturaFonte !== x.assinaturaFonte)));
+    if (mudou) { x.estado = 'A_CONFIRMAR'; x.decisao = null; x.reconfirmar = d; return x; }
     x.estado = d ? (d.decisao === 'CONFIRMADA' ? 'CONFIRMADA' : 'NAO_E_TRAVA') : 'A_CONFIRMAR';
     x.decisao = d || null;
     return x;
@@ -1180,13 +1194,12 @@ function Lic_analisar_(eu, l, o) {
   var ins = SGO_DATA.insert(LIC_ABAS.ANALISES, reg);
   reg.ID = ins && ins.ID ? ins.ID : reg.ID;
   mudOp.ANALISE_ID = Lic_s_(reg.ID);
-  Lic_comTrava_(function () {
-    if (saida) {
-      var atual = Lic_acharOp_(l.ID), r2 = Lic_notaPelasTravas_(nf.soma, nf.travas, Lic_json_(atual.TRAVAS_DECISOES_JSON, {}));
-      Object.assign(mudOp, { NOTA: r2.nota, NOTA_CLASSE: r2.classe, NOTA_TRAVA: r2.efetivas.map(function (t) { return t.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r2.aConfirmar.length });
-    }
-    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mudOp);
-  });
+  try { Lic_comTrava_(function () { Lic_gravarNaOportunidade_(l.ID, mudOp, saida ? { soma: nf.soma, travas: nf.travas } : null); }); }
+  catch (eTrava) {
+    // a trava de gravação não veio em 20 s: a análise já está gravada; a oportunidade passa a apontar para ela na próxima rodada
+    Lic_notaPendenteGuardar_(l.ID, mudOp, saida ? { soma: nf.soma, travas: nf.travas } : null);
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'ANALISE_IA_NOTA_PENDENTE', eu || { id: '', nome: 'Sistema' }, { texto: 'A análise versão ' + versao + ' foi gravada, mas a oportunidade estava sendo gravada por outra pessoa: a nota da lista é acertada na próxima rodada da rotina (' + Lic_texto_(eTrava && eTrava.message, 200) + ').', versao: versao });
+  }
   Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, saida ? 'ANALISE_IA' : reg.SITUACAO === 'ERRO' ? 'ANALISE_IA_FALHOU' : 'ANALISE_IA_RECUSADA', eu || { id: '', nome: 'Sistema' }, {
     de: Lic_s_(l.NOTA) !== '' ? 'nota ' + Lic_fmtNum_(l.NOTA) + ' (análise ' + Lic_s_(l.ANALISE_VERSAO) + ')' : 'sem nota',
     para: saida ? 'nota ' + Lic_fmtNum_(reg.NOTA) + ' · ' + LIC_CLASSES[reg.CLASSE] + ' (análise ' + versao + ')' : reg.SITUACAO.toLowerCase(),
@@ -1195,6 +1208,43 @@ function Lic_analisar_(eu, l, o) {
     hash: reg.HASH });
   resultado.versao = versao; resultado.id = reg.ID;
   return resultado;
+}
+
+/** Grava na oportunidade o resultado da análise, com as decisões de trava de AGORA (relidas dentro da trava de gravação). */
+function Lic_gravarNaOportunidade_(id, mudOp, notaBase) {
+  var m = Object.assign({}, mudOp);
+  if (notaBase) {
+    var atual = Lic_acharOp_(id), r2 = Lic_notaPelasTravas_(notaBase.soma, notaBase.travas, Lic_json_(atual.TRAVAS_DECISOES_JSON, {}));
+    Object.assign(m, { NOTA: r2.nota, NOTA_CLASSE: r2.classe, NOTA_TRAVA: r2.efetivas.map(function (t) { return t.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r2.aConfirmar.length });
+  }
+  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, id, m);
+}
+var LIC_NOTA_PENDENTE = 'LIC_NOTA_PENDENTE';
+function Lic_notaPendenteGuardar_(id, mudOp, notaBase) {
+  try {
+    var props = PropertiesService.getScriptProperties(), m = Lic_json_(props.getProperty(LIC_NOTA_PENDENTE), {});
+    m[Lic_s_(id)] = { mudOp: mudOp, notaBase: notaBase ? { soma: notaBase.soma, travas: notaBase.travas } : null };
+    props.setProperty(LIC_NOTA_PENDENTE, JSON.stringify(m).slice(0, 8500));
+  } catch (e) { console.error('Licitações, nota pendente: ' + ((e && e.message) || e)); }
+}
+/** Próxima rodada (rotina de arquivos ou do coletor): grava na oportunidade as análises que ficaram sem apontar para ela. */
+function Lic_acertarNotasPendentes_() {
+  var props, m;
+  try { props = PropertiesService.getScriptProperties(); m = Lic_json_(props.getProperty(LIC_NOTA_PENDENTE), {}); } catch (e) { return 0; }
+  var ids = Object.keys(m || {}), feitas = 0;
+  if (!ids.length) return 0;
+  try {
+    Lic_comTrava_(function () {
+      ids.forEach(function (id) {
+        var x = m[id], l = Lic_acharOp_(id);
+        // só se ninguém gravou uma análise mais nova depois
+        if (l && x && x.mudOp && (Number(l.ANALISE_VERSAO) || 0) <= (Number(x.mudOp.ANALISE_VERSAO) || 0)) { Lic_gravarNaOportunidade_(id, x.mudOp, x.notaBase); feitas++; }
+        delete m[id];
+      });
+    });
+  } catch (e) { return 0; }
+  try { props.setProperty(LIC_NOTA_PENDENTE, JSON.stringify(m)); } catch (e) {}
+  return feitas;
 }
 
 var LIC_RESPOSTA_MAX = 24000;   // 02/11/2026: era 15000 e cortava 41 de 49 respostas; Lic_respostasJson_ corta a mais antiga primeiro
@@ -1260,7 +1310,7 @@ function Lic_travaDecidirGravar_(eu, d, motivo, dec) {
   var decisoes = Lic_json_(l.TRAVAS_DECISOES_JSON, {}), antes = decisoes[t.chave] || null, agora = Lic_agora_(), soma = Number(concluida.SOMA) || 0;
   var antesR = Lic_notaPelasTravas_(soma, travas, decisoes);
   decisoes[t.chave] = { decisao: dec === 'CONFIRMAR' ? 'CONFIRMADA' : 'NAO_E_TRAVA', motivo: motivo, porId: Lic_s_(eu && eu.id), porNome: Lic_s_(eu && eu.nome), em: agora,
-    versao: (antes ? Number(antes.versao) || 1 : 0) + 1, codigo: t.codigo, nome: t.nome, assinatura: Lic_s_(t.assinatura), excecao: Lic_s_(t.excecao), trecho: Lic_texto_(t.fonte && t.fonte.trecho, 600), ref: Lic_s_(t.fonte && t.fonte.ref), analiseVersao: Number(concluida.VERSAO) || 0 };
+    versao: (antes ? Number(antes.versao) || 1 : 0) + 1, codigo: t.codigo, nome: t.nome, assinatura: Lic_s_(t.assinatura), assinaturaFonte: Lic_s_(t.assinaturaFonte), excecao: Lic_s_(t.excecao), trecho: Lic_texto_(t.fonte && t.fonte.trecho, 600), ref: Lic_s_(t.fonte && t.fonte.ref), analiseVersao: Number(concluida.VERSAO) || 0 };
   var r = Lic_notaPelasTravas_(soma, travas, decisoes), nd = decisoes[t.chave];
   SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { TRAVAS_DECISOES_JSON: JSON.stringify(decisoes).slice(0, 45000), NOTA: r.nota, NOTA_CLASSE: r.classe,
     NOTA_TRAVA: r.efetivas.map(function (x) { return x.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r.aConfirmar.length, ATUALIZADO_EM: agora });
@@ -1359,6 +1409,7 @@ function Lic_aposArquivos_(d) {
   try { Lic_garantirAbas_(); } catch (e) {}
   var chaves = ((d && d.chaves) || []).map(Lic_s_).filter(Boolean), r = { lidas: 0, registradas: 0, analisadas: 0, indisponivel: false, semMudanca: 0, outras: [] };
   var sistema = { id: '', nome: 'Rotina de arquivos (servidor)' };
+  r.notasAcertadas = Lic_acertarNotasPendentes_();
   chaves.slice(0, 5).forEach(function (chave) {
     var l = Lic_ativas_().filter(function (x) { return Lic_s_(x.CHAVE_FONTE) === chave; })[0];
     if (!l) return;

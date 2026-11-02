@@ -332,7 +332,7 @@ test('rede de segurança: trava com negação perto fica a confirmar com alerta 
   assert.equal(v.saida.afirmacoes.some((a) => /Confirmar no edital: há negação/.test(a.texto)), false);
   const nf = ctx.Lic_notaFinal_(v.saida, codigo, pesos);
   assert.deepEqual([nf.nota > 0, nf.classe], [true, 'TRAVA_A_CONFIRMAR'], 'nem a trava limpa zera sozinha');
-  const conf = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA', assinatura: v.saida.travas[0].assinatura, excecao: '' } });
+  const conf = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA', assinatura: v.saida.travas[0].assinatura, assinaturaFonte: v.saida.travas[0].assinaturaFonte, excecao: '' } });
   assert.deepEqual([conf.nota, conf.classe], [0, 'DESCARTE'], 'confirmada pela Diretoria, zera');
   const semAss = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA', versao: 1 } });
   assert.deepEqual([semAss.nota > 0, semAss.travas[0].estado, semAss.travas[0].reconfirmar.versao], [true, 'A_CONFIRMAR', 1], 'decisão sem a assinatura da fonte não se reaplica');

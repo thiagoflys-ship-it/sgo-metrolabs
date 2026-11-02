@@ -90,6 +90,7 @@ function Lic_aposColeta_(resumo) {
   if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
   try { Lic_garantirAbas_(); } catch (e) {}
   var r = Lic_sincronizar_(null);
+  try { if (typeof Lic_acertarNotasPendentes_ === 'function') Lic_acertarNotasPendentes_(); } catch (e) {}
   try { PropertiesService.getScriptProperties().setProperty('LIC_ULTIMA_COLETA', JSON.stringify({ em: Lic_agora_(), resumo: resumo || null, sincronia: r })); } catch (e) {}
   return r;
 }

@@ -728,3 +728,48 @@ test('decisão tomada durante uma análise em andamento vale na gravação final
   assert.deepEqual([Number(a.op().NOTA), a.op().NOTA_CLASSE, Number(a.op().TRAVAS_A_CONFIRMAR)], [0, 'DESCARTE', 0]);
   assert.equal(JSON.parse(a.op().TRAVAS_DECISOES_JSON)[Object.keys(JSON.parse(a.op().TRAVAS_DECISOES_JSON))[0]].motivo, 'Confirmada enquanto a análise rodava');
 });
+
+// conferência de bb6c86f (decisao2.cjs): errata em OUTRO parágrafo do mesmo arquivo; trava de gravação ocupada no fim da análise
+test('"Confirmar trava" exige o mesmo arquivo (SHA-256): errata em outro parágrafo volta a "reconfirmar"; "Não é trava" usa só o parágrafo', () => {
+  const frase = 'A contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
+  const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC.', fonte: { ref: 'A1', trecho: 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração' } }] });
+  const esperado = { CONFIRMAR: 'A_CONFIRMAR', NAO_E_TRAVA: 'NAO_E_TRAVA' };
+  for (const dec of ['CONFIRMAR', 'NAO_E_TRAVA']) {
+    const a = ambiente({ respostas: [resp, resp, resp] });
+    a.srv.textos = TEXTOS.map((t) => Object.assign({}, t));
+    a.srv.textos[0].texto = EDITAL + '\n\n' + frase;
+    assert.equal(a.api('s_dora', 'analisar', { id: 'op1' }).ok, true);
+    const chave = a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0].chave;
+    assert.equal(a.api('s_dora', 'travaDecidir', { id: 'op1', chave, decisao: dec, motivo: 'Li o edital da versão 1 com atenção' }).ok, true);
+    // mesmo arquivo, refazer: a decisão vale
+    assert.equal(a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Refazer com o mesmo arquivo do edital' }).ok, true);
+    assert.equal(a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0].estado, dec === 'CONFIRMAR' ? 'CONFIRMADA' : 'NAO_E_TRAVA');
+    // errata em outro parágrafo (outro arquivo: SHA-256 novo)
+    a.srv.textos[0].texto = 'ERRATA 1: o subitem abaixo foi REVOGADO e substituído pela rastreabilidade simples.\n\n' + EDITAL + '\n\n' + frase;
+    a.srv.textos[0].sha256 = 'f'.repeat(64);
+    assert.equal(a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Errata publicada no PNCP hoje' }).ok, true);
+    const t = a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.travas[0];
+    assert.equal(t.estado, esperado[dec], dec);
+    assert.ok(Number(a.op().NOTA) > 0, 'a errata não deixa a confirmação antiga zerar a nota: ' + dec);
+    if (dec === 'CONFIRMAR') assert.equal(t.reconfirmar.versao, 1);
+  }
+});
+
+test('trava de gravação ocupada no fim da análise: a análise fica gravada, o histórico registra, e a próxima rodada faz a oportunidade apontar para ela', () => {
+  const a = ambiente({ respostas: [respostaValida()] });
+  const lockOk = a.ctx.LockService;
+  a.ctx.LockService = { getScriptLock: () => ({ waitLock() { throw new Error('Lock timeout'); }, releaseLock() {}, tryLock: () => false }) };
+  const r = a.api('s_dora', 'analisar', { id: 'op1' });
+  a.ctx.LockService = lockOk;
+  assert.equal(r.ok, true, r.message);
+  assert.equal(a.analises().length, 1);
+  assert.equal(Lic_s(a.op().ANALISE_ID), '', 'a oportunidade ainda não aponta');
+  assert.equal(a.hist('ANALISE_IA_NOTA_PENDENTE').length, 1);
+  assert.equal(a.api('s_dora', 'ficha', { id: 'op1' }).analise.atual.versao, 1, 'a ficha mostra a análise gravada');
+  const x = a.ctx.Lic_aposArquivos_({ chaves: [] });
+  assert.equal(x.notasAcertadas, 1);
+  assert.deepEqual([a.op().ANALISE_ID, Number(a.op().ANALISE_VERSAO), a.op().ANALISE_SITUACAO], [a.analises()[0].ID, 1, 'CONCLUIDA']);
+  assert.equal(Number(a.op().NOTA), Number(a.analises()[0].NOTA));
+  assert.equal(a.ctx.Lic_aposArquivos_({ chaves: [] }).notasAcertadas, 0, 'uma vez só');
+});
+function Lic_s(v) { return v === null || v === undefined ? '' : String(v); }
