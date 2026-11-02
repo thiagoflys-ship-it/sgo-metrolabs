@@ -85,3 +85,12 @@ Robô identifica → IA interpreta e classifica → aviso no SGO+ e WhatsApp →
   5. Arquivos do edital (etapa 2) seguem a vida da oportunidade (regra 1: para sempre).
   Execução: automática toda segunda às 06:30, pedida pela manutenção semanal e feita DENTRO do servidor principal (rota interna, coleta e arquivos pausados, mesma trava da sincronização) (deploy/backup/manutencao_semanal.sh, antes do VACUUM), em lotes pequenos; o resumo (linhas que saíram de cada tabela e o espaço) vai no e-mail da manutenção. Prévia sem apagar: `npx tsx scripts/licitacoes_guarda.ts --previa`. Enquanto o resumo existe, a deduplicação do coletor reconhece a contratação (não volta como "nova"); depois de 1 ano, se reaparecer, entra como nova. Se o legado não devolver a lista das protegidas, nada das licitações é apagado. Código: SGO_Licitacoes_Guarda.js (legado) e sgo_servidor/src/servicos/licitacoes/guarda.ts.
 - Perguntas de preço do doc 03 (35% sobre deslocamento, piso por item ou lote, comissão, equipe do Rio, eletromédicos e balanças, seguro-garantia): o dono não sabe responder. Ficam como padrão as respostas propostas na conversa de 02/11, que a Diretoria pode mudar depois na tela.
+
+## Pedido do dono (02/11/2026, fim da tarde) — leitura especialista do edital
+"Coloque uma I.A para resumir os edital e dizer o que realmente precisamos mais, com o poder de colocarmos palavras-chave, mas ela não pode inventar, ou só passar o olho, tem que ler linha por linha com calma, ou seja, um especialista, depois passar a estratégia pra nós."
+Desenho adotado:
+- Palavras-chave da Diretoria (gerais nas regras e por oportunidade): busca feita pelo SISTEMA (código), linha por linha em todas as páginas de todos os arquivos, com página, linha e frase de cada ocorrência — não depende da IA.
+- Leitura pela IA do edital INTEIRO em blocos (todas as páginas, sem o corte de 140 mil caracteres da nota), com relatório de cobertura (páginas lidas / total; página não lida aparece como pendência).
+- "O que realmente precisamos": exigências de habilitação, qualificação técnica, atestados, equipe, visita técnica, amostras, prazos, garantias, penalidades, RBC/Inmetro — cada item com trecho literal e página, conferido pelo mesmo verificador da nota (sem invenção, com as proteções de negação e número).
+- Resumo e estratégia sugerida (o que fazer primeiro, riscos, perguntas de esclarecimento ao órgão), marcados como sugestão e citando os itens; a decisão é da Diretoria.
+- Roda em segundo plano, retomável, com progresso visível; acurácia acima do custo.
