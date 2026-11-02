@@ -73,11 +73,11 @@ test('editar item: merge, motivo obrigatório, versão + 1, fotografia e histór
   const n = linha(a, 'CAL-001');
   assert.equal(n.CUSTO_REFERENCIA, 50); assert.equal(n.CUSTO_ORIGEM, 'DIRETORIA'); assert.equal(n.CUSTO_MOTIVO, 'Custo real da bancada'); assert.equal(n.PRECO_REFERENCIA, 75.5, 'campo não enviado fica');
   const h = a.tabelas.LIC_HISTORICO.filter((x) => x.ENTIDADE === 'PRECO' && x.TIPO === 'PRECO_ITEM');
-  assert.ok(h.some((x) => x.DE === 'CATALOGO' && x.PARA === 'DIRETORIA'));
-  assert.ok(h.some((x) => x.PARA === '50'));
+  assert.ok(h.some((x) => x.DE === 'do catálogo' && x.PARA === 'informado pela Diretoria'));
+  assert.ok(h.some((x) => x.DE === 'R$ 64,70' && x.PARA === 'R$ 50,00'), 'de → para em pt-BR, sem JSON cru');
   const vs = ok(a.lic('s_dora', 'itemVersoes', { id: r.ID })).versoes;
   assert.deepEqual(vs.map((v) => v.versao), [2, 1]); assert.ok(vs.every((v) => v.integra));
-  assert.match(vs[0].mudou, /Custo de referência: "64.7" → "50"/);
+  assert.match(vs[0].mudou, /Custo de referência: R\$ 64,70 → R\$ 50,00/); assert.match(vs[0].mudou, /Origem do custo: do catálogo → informado pela Diretoria/);
   assert.equal(ok(a.lic('s_dora', 'tabela')).itens.find((i) => i.codigo === 'CAL-001').custo, 50);
   assert.equal(ok(a.lic('s_dora', 'itemSalvar', { id: r.ID, campos: { custo: '50' }, motivo: 'Mesmo valor de novo' })).semMudanca, true);
   ok(a.lic('s_dora', 'itemSalvar', { id: r.ID, campos: { custo: 'CATALOGO' }, motivo: 'Volta ao custo do catálogo' }));
@@ -104,7 +104,7 @@ test('CAL-001 R$ 75,50 x 100 em Rio Verde (228 km): custo do catálogo, deslocam
   assert.equal(i.custoTotal, 8991.25); assert.equal(i.custoUnitTotal, 89.9125);
   assert.equal(i.impostosPct, 14.25); assert.equal(i.comissaoPct, 0);
   assert.equal(i.pisoUnit, Math.ceil(89.9125 / (1 - 0.1425 - 0.35) * 100 - 1e-9) / 100); assert.equal(i.pisoUnit, 177.17);
-  assert.equal(i.alvoUnit, 196.53); assert.equal(i.pisoTotal, 17717);
+  assert.equal(i.alvoUnit, 196.54, "89,9125 ÷ 0,4575 = 196,5301: para cima no centavo"); assert.equal(i.pisoTotal, 17717);
   const sobra = (p) => (p - p * 0.1425 - 89.9125) / p;
   assert.ok(sobra(i.pisoUnit) >= 0.35 - 1e-9 && sobra(i.pisoUnit - 0.01) < 0.35, 'o piso é o menor preço com 35%');
   assert.equal(i.abaixoPisoEdital, true); assert.ok(i.margemEditalPct < 0);

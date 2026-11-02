@@ -41,13 +41,14 @@ var LICP_COLUNAS = {
     'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   LIC_PRECOS_VERSOES: ['ID', 'PRECO_ID', 'CODIGO', 'VERSAO', 'DADOS_JSON', 'MUDOU', 'MOTIVO', 'POR_ID', 'POR_NOME', 'EM', 'HASH'],
   LIC_SIMULACOES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'VERSAO', 'MOTIVO', 'SITUACAO', 'ENTRADA_JSON', 'RESULTADO_JSON', 'TOTAL_CUSTO', 'TOTAL_PISO', 'TOTAL_ALVO',
-    'TOTAL_EDITAL', 'TOTAL_PROPOSTA', 'MARGEM_EDITAL_PCT', 'MARGEM_PROPOSTA_PCT', 'ITENS_ABAIXO_PISO', 'PENDENCIAS', 'POLITICA_VERSAO', 'HASH', 'POR_ID', 'POR_NOME', 'CRIADO_EM']
+    'TOTAL_EDITAL', 'TOTAL_PROPOSTA', 'MARGEM_EDITAL_PCT', 'MARGEM_PROPOSTA_PCT', 'ITENS_ABAIXO_PISO_PROPOSTA', 'ITENS_ABAIXO_PISO_EDITAL', 'PENDENCIAS', 'POLITICA_VERSAO', 'HASH', 'POR_ID', 'POR_NOME', 'CRIADO_EM']
 };
 var LICP_COLUNAS_TEXTO = { LIC_PRECOS: ['CODIGO', 'VIGENCIA_DESDE', 'VIGENCIA_ATE'] };
 var LICP_REGRAS = 'LIC-PRECO-2026-11-02.1';
 var LICP_EXECUCOES = { PROPRIA: 'Equipe própria', PARCEIRO: 'Parceiro' };
 var LICP_SITUACOES_PRECO = { CONFIRMADO: 'Confirmado', A_CONFIRMAR: 'A confirmar pela Diretoria' };
-var LICP_MAX_ITENS = 60;
+// revisão de ca99fe5: 40 itens cabem com folga numa célula (o resultado gravado é enxuto); Calcular e Salvar usam o mesmo limite
+var LICP_MAX_ITENS = 40;
 var LICP_POLITICA_PADRAO = {
   margemMinPct: 35, margemAlvoPct: 40, comissaoPct: 0, pisoPorItem: true, diluir: true, ufsEquipeRio: ['RJ', 'ES'], unidadeEmissora: 'GO',
   origem: 'Padrões adotados em 02/11/2026 (o dono não soube responder; a Diretoria pode mudar nesta tela, com versão)'
@@ -90,13 +91,13 @@ var LICP_MSG_SEM_COMERCIAL = 'a política de preços do Comercial (impostos, cus
 
 function LicP_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LICP_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LICP_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(LICP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LICP_COLUNAS[aba]);
     LICP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LICP_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('LICP_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LICP_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 
 // ------------------------------------------------------------ política de preços de licitação (LIC_CONFIG, uma linha por versão)
@@ -151,7 +152,15 @@ function LicP_politicaSalvar_(eu, d) {
   }
   return Lic_comTrava_(function () {
     var a2 = LicP_politica_(), mud = [];
-    Object.keys(LICP_POLITICA_PADRAO).forEach(function (k) { if (k !== 'origem' && JSON.stringify(a2[k]) !== JSON.stringify(novo[k])) mud.push(k + ': ' + JSON.stringify(a2[k]) + ' → ' + JSON.stringify(novo[k])); });
+    var nomes = { margemMinPct: 'Sobra mínima', margemAlvoPct: 'Margem alvo', comissaoPct: 'Comissão', pisoPorItem: 'Piso', diluir: 'Deslocamento e seguro', ufsEquipeRio: 'UFs da equipe do Rio', unidadeEmissora: 'Unidade emissora' };
+    var txtP = function (k, v) {
+      if (/Pct$/.test(k)) return LicP_pct_(v, 2);
+      if (k === 'pisoPorItem') return v ? 'por item' : 'só no lote';
+      if (k === 'diluir') return v ? 'diluídos no preço unitário' : 'numa linha própria';
+      if (k === 'ufsEquipeRio') return (v || []).length ? v.join(', ') : 'nenhuma';
+      return Lic_s_(v);
+    };
+    Object.keys(LICP_POLITICA_PADRAO).forEach(function (k) { if (k !== 'origem' && JSON.stringify(a2[k]) !== JSON.stringify(novo[k])) mud.push((nomes[k] || k) + ': ' + txtP(k, a2[k]) + ' → ' + txtP(k, novo[k])); });
     if (!mud.length) return { politica: a2, semMudanca: true, texto: 'Nada mudou: os valores são iguais aos atuais. Nenhuma versão nova foi criada.' };
     var versao = (a2.versao || 0) + 1, agora = Lic_agora_();
     novo.origem = 'Decisão da Diretoria (' + eu.nome + ', ' + LicP_dia_(agora) + ')';
@@ -174,8 +183,11 @@ function LicP_polConta_(lp) {
 function LicP_precoQueGarante_(custoUnit, tipo, pc, margem) {
   if (!(custoUnit > 0)) return null;
   if (tipo === 'PRODUTO' && typeof ComPr_precoProduto_ === 'function') return ComPr_precoProduto_(custoUnit, pc.pol, margem);
-  var v = ComPr_precoServicoConta_(custoUnit, pc.pol, margem);
-  return v === null ? null : ComPr_arredondarCima_(v, 0.01);
+  // revisão de ca99fe5: a divisão é arredondada PARA CIMA no centavo (ComPr_precoServicoConta_ arredonda ao mais próximo antes, e o
+  // piso podia ficar 1 centavo abaixo da sobra). Mesma fórmula do Comercial; só Licitações usa este arredondamento.
+  var d = 1 - ((Number(pc.imp) || 0) + (Number(pc.comissao) || 0) + (Number(margem) || 0)) / 100;
+  if (!(d > 0.05)) return null;
+  return Math.ceil(custoUnit / d * 100 - 1e-7) / 100;
 }
 /** Sobra de um preço unitário: { sobra, pct, impostos, comissao }. */
 function LicP_sobra_(preco, custoUnit, tipo, pc) {
@@ -250,6 +262,17 @@ function LicP_tabela_(eu) {
     comercial: pc ? { versao: pc.com.versao || 0, impostosPct: pc.imp, unidade: pc.pol.unidadeNome } : null, aviso: aviso, execucoes: LICP_EXECUCOES, situacoesPreco: LICP_SITUACOES_PRECO,
     resumo: { total: itens.length, aConfirmar: itens.filter(function (i) { return i.precoSituacao === 'A_CONFIRMAR'; }).length, semCusto: itens.filter(function (i) { return i.custo === null || !(i.custo > 0); }).length, abaixo: itens.filter(function (i) { return i.abaixoDoPiso; }).length } };
 }
+/** Valor de uma coluna da tabela em texto pt-BR, para o histórico (de → para). */
+function LicP_valorTxt_(col, v) {
+  if (Lic_s_(v) === '') return 'vazio';
+  if (['PRECO_REFERENCIA', 'CUSTO_REFERENCIA', 'CUSTO_PARCEIRO'].indexOf(col) >= 0) { var n = LicP_n_(v); return n === null ? Lic_s_(v) : LicP_moeda_(n); }
+  if (col === 'PRECO_SITUACAO') return LICP_SITUACOES_PRECO[Lic_up_(v)] || Lic_s_(v);
+  if (col === 'EXECUCAO') return LICP_EXECUCOES[Lic_up_(v)] || Lic_s_(v);
+  if (col === 'CUSTO_ORIGEM') return Lic_up_(v) === 'DIRETORIA' ? 'informado pela Diretoria' : 'do catálogo';
+  if (col === 'VIGENCIA_DESDE' || col === 'VIGENCIA_ATE') return LicP_dia_(v);
+  if (col === 'ATIVO') return Lic_up_(v) === 'NAO' ? 'Não' : 'Sim';
+  return '"' + Lic_texto_(v, 200) + '"';
+}
 /** Fotografia da linha (o que a versão guarda). */
 function LicP_foto_(r) { var o = {}; LICP_COLUNAS.LIC_PRECOS.forEach(function (k) { if (k !== 'HASH') o[k] = r[k] === undefined ? '' : r[k]; }); return o; }
 function LicP_gravarVersao_(r, mudou, motivo, eu) {
@@ -321,13 +344,13 @@ function LicP_itemSalvar_(eu, d) {
     if (!cols.length) return { semMudanca: true, texto: 'Nada mudou: os valores enviados são iguais aos atuais. Nenhuma versão nova foi criada.' };
     var versao = (Number(r.VERSAO) || 1) + 1, agora = Lic_agora_();
     var antes = {};
-    cols.forEach(function (k) { antes[k] = Lic_s_(r[k]); });
-    var txt = cols.map(function (k) { return rot[k] + ': "' + antes[k] + '" → "' + Lic_s_(mud[k]) + '"'; }).join('; ');
+    cols.forEach(function (k) { antes[k] = LicP_valorTxt_(k, r[k]); });
+    var txt = cols.map(function (k) { return rot[k] + ': ' + antes[k] + ' → ' + LicP_valorTxt_(k, mud[k]); }).join('; ');
     Object.assign(mud, { VERSAO: versao, MOTIVO: motivo, ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora });
     Object.keys(mud).forEach(function (k) { r[k] = mud[k]; });
     mud.HASH = LicP_gravarVersao_(r, txt, motivo, eu);
     SGO_DATA.update(LICP_ABAS.PRECOS, r.ID, mud);
-    cols.forEach(function (k) { Lic_historico_('PRECO', r.ID, r.CODIGO, 'PRECO_ITEM', eu, { de: antes[k], para: Lic_s_(mud[k]), texto: rot[k] + '. Motivo: ' + motivo, versao: versao, fonte: 'Tela Preços de licitação' }); });
+    cols.forEach(function (k) { Lic_historico_('PRECO', r.ID, r.CODIGO, 'PRECO_ITEM', eu, { de: antes[k], para: LicP_valorTxt_(k, mud[k]), texto: rot[k] + '. Motivo: ' + motivo, versao: versao, fonte: 'Tela Preços de licitação' }); });
     return { versao: versao, mudou: cols.map(function (k) { return rot[k]; }), texto: 'Item ' + r.CODIGO + ' gravado na versão ' + versao + ' (' + txt + '). As simulações já salvas guardam a versão que usaram.' };
   });
 }
@@ -340,9 +363,13 @@ function LicP_aConfirmarIds_() {
 }
 function LicP_importarPrevia_(eu) {
   if (typeof COM_ABAS === 'undefined') throw new Error('Não foi possível ver a prévia: o catálogo do Comercial não está disponível neste ambiente');
-  var lp = LicP_politica_(), pc = LicP_temComercial_() ? LicP_polConta_(lp) : null, ja = LicP_porCodigo_(), conf = LicP_aConfirmarIds_(), linhas = [], fora = 0;
-  Lic_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
-    if (Lic_up_(p.ATIVO || 'SIM') === 'NAO' || !Lic_s_(p.CODIGO)) return;
+  var lp = LicP_politica_(), pc = LicP_temComercial_() ? LicP_polConta_(lp) : null, ja = LicP_porCodigo_(), conf = LicP_aConfirmarIds_(), linhas = [], fora = 0, vistos = {}, duplicados = [];
+  // revisão de ca99fe5: o mesmo código ativo duas vezes no catálogo entra uma vez só (vale o oficial; senão o primeiro)
+  var prods = Lic_ler_(COM_ABAS.PRODUTOS).filter(function (p) { return Lic_up_(p.ATIVO || 'SIM') !== 'NAO' && Lic_s_(p.CODIGO); });
+  prods = prods.filter(function (p) { return Lic_s_(p.CATALOGO_OFICIAL) !== ''; }).concat(prods.filter(function (p) { return Lic_s_(p.CATALOGO_OFICIAL) === ''; }));
+  prods.forEach(function (p) {
+    if (vistos[Lic_up_(p.CODIGO)]) { duplicados.push(Lic_up_(p.CODIGO)); return; }
+    vistos[Lic_up_(p.CODIGO)] = true;
     var tipo = Lic_up_(p.TIPO) || 'SERVICO';
     if (tipo !== 'SERVICO') { fora++; return; }
     var cod = Lic_up_(p.CODIGO), custo = pc ? LicP_custoCatalogo_(p, pc) : { valor: LicP_n_(p.CUSTO), fonte: 'custo cadastrado' };
@@ -355,7 +382,7 @@ function LicP_importarPrevia_(eu) {
   });
   linhas.sort(function (a, b) { return (a.oficial === b.oficial ? 0 : a.oficial ? -1 : 1) || (a.codigo < b.codigo ? -1 : 1); });
   var marca = Lic_hash_(JSON.stringify(linhas.map(function (l) { return [l.codigo, l.preco, l.custo, l.situacao, l.acao]; }))).slice(0, 32);
-  return { linhas: linhas, novos: linhas.filter(function (l) { return l.acao === 'NOVO'; }).length, jaNaTabela: linhas.filter(function (l) { return l.acao !== 'NOVO'; }).length, foraNaoServico: fora, marca: marca };
+  return { linhas: linhas, novos: linhas.filter(function (l) { return l.acao === 'NOVO'; }).length, jaNaTabela: linhas.filter(function (l) { return l.acao !== 'NOVO'; }).length, foraNaoServico: fora, duplicados: duplicados, marca: marca };
 }
 /** Aplicar: só os códigos NOVOS escolhidos entram (versão 1); o que já está na tabela fica como está (nunca sobrescreve). d: { marca, codigos, motivo } */
 function LicP_importar_(eu, d) {
@@ -396,12 +423,13 @@ function LicP_distancia_(uf, mun, base) {
 /** Rascunho: a última versão salva (para continuar) ou os itens do edital (PNCP/Compras.gov.br). */
 function LicP_rascunho_(l, fonte) {
   var lp = LicP_politica_(), base = LicP_baseDaUf_(l.UF, lp), dist = LicP_distancia_(l.UF, l.MUNICIPIO, base);
-  var itens = ((fonte && fonte.itens) || []).slice(0, LICP_MAX_ITENS).map(function (i) {
+  var todos = (fonte && fonte.itens) || [];
+  var itens = todos.slice(0, LICP_MAX_ITENS).map(function (i) {
     return { numero: Lic_s_(i.numeroItem), descricao: Lic_texto_(i.descricao, 300), codigo: '', quantidade: i.quantidade === null || i.quantidade === undefined ? '' : i.quantidade, pontos: '',
       precoEdital: i.sigiloso || i.valorUnitario === null || i.valorUnitario === undefined ? '' : i.valorUnitario, precoProposta: '', custoParceiro: '', origem: 'PNCP' };
   });
   if (!itens.length) itens.push({ numero: '1', descricao: '', codigo: '', quantidade: 1, pontos: '', precoEdital: '', precoProposta: '', custoParceiro: '', origem: 'DIGITADO' });
-  return { itens: itens, execucao: { uf: Lic_up_(l.UF), municipio: Lic_s_(l.MUNICIPIO), kmTrecho: dist ? dist.km : '', kmFonte: dist ? 'SUGERIDO' : '', viagens: 1, tecnicos: 1, engenheiros: 0, dias: 1, noites: 0,
+  return { cortados: Math.max(0, todos.length - LICP_MAX_ITENS), itens: itens, execucao: { uf: Lic_up_(l.UF), municipio: Lic_s_(l.MUNICIPIO), kmTrecho: dist ? dist.km : '', kmFonte: dist ? 'SUGERIDO' : '', viagens: 1, tecnicos: 1, engenheiros: 0, dias: 1, noites: 0,
     transporte: 'VEICULO_EMPRESA', passagem: '', pedagio: '', outros: '', outrosDescricao: '' }, seguro: { exige: false, custo: '', obs: '' } };
 }
 function LicP_int_(v, padrao, min, max, rotulo) {
@@ -434,19 +462,22 @@ function LicP_calcular_(l, e) {
   if (km !== null && (km < 0 || km > 5000)) throw new Error('Escreva o km do trecho (só a ida) de 0 a 5.000. Nada foi gravado');
   if (km !== null) kmFonte = Lic_up_(x.kmFonte) === 'SUGERIDO' ? 'sugerido pelo SGO+ e mantido' : 'informado na simulação';
   else { var dist = LicP_distancia_(uf, mun, base); if (dist) { km = dist.km; kmFonte = dist.fonte; } }
-  if (km === null) pend.push({ codigo: 'KM', texto: 'Informe o km do trecho (só a ida) de ' + (polBase.origemUnidade || (base === 'RJ' ? 'Rio de Janeiro/RJ' : 'Goiânia/GO')) + ' até ' + (mun ? mun + '/' : '') + (uf || 'o local de execução') + ': o SGO+ não tem essa distância. Sem o km, o deslocamento fica sem o custo do km.' });
+  // revisão de ca99fe5: a viagem é da equipe própria; lote só de parceiro não tem viagem da equipe (o parceiro põe a dele no custo)
+  var temPropria = (Array.isArray(e.itens) ? e.itens : []).some(function (it) { var t0 = tabela[Lic_up_(it.codigo)]; return !t0 || Lic_up_(t0.EXECUCAO) !== 'PARCEIRO'; });
+  if (!temPropria) avisos.push('O lote só tem itens por parceiro: sem viagem da equipe própria (o deslocamento do parceiro entra no custo dele).');
+  if (km === null && temPropria) pend.push({ codigo: 'KM', texto: 'Informe o km do trecho (só a ida) de ' + (polBase.origemUnidade || (base === 'RJ' ? 'Rio de Janeiro/RJ' : 'Goiânia/GO')) + ' até ' + (mun ? mun + '/' : '') + (uf || 'o local de execução') + ': o SGO+ não tem essa distância. Sem o km, o deslocamento fica sem o custo do km.' });
   var T = LicP_int_(x.tecnicos, 1, 0, 20, 'o número de técnicos'), E = LicP_int_(x.engenheiros, 0, 0, 20, 'o número de engenheiros');
   var vg = LicP_int_(x.viagens, 1, 1, 365, 'o número de viagens'), dias = LicP_int_(x.dias, 1, 1, 365, 'os dias por viagem'), noites = LicP_int_(x.noites, 0, 0, 365, 'as noites por viagem');
-  if (!(T + E)) pend.push({ codigo: 'EQUIPE', texto: 'Informe quantos técnicos e engenheiros vão (pelo menos 1): o Incentivo de Missão, a alimentação e a hospedagem são por pessoa.' });
+  if (temPropria && !(T + E)) pend.push({ codigo: 'EQUIPE', texto: 'Informe quantos técnicos e engenheiros vão (pelo menos 1): o Incentivo de Missão, a alimentação e a hospedagem são por pessoa.' });
   var tr = Lic_up_(x.transporte) || 'VEICULO_EMPRESA';
   if (typeof COM_PR_TRANSPORTES !== 'undefined' && !COM_PR_TRANSPORTES[tr]) throw new Error('Escolha o transporte na lista. Nada foi gravado');
   var pedagio = LicP_valorOuNull_(x.pedagio, 'o pedágio por viagem'), passagem = LicP_valorOuNull_(x.passagem, 'a passagem ou combustível por viagem'), outros = LicP_valorOuNull_(x.outros, 'os outros custos da viagem');
-  if (km !== null && km > 0 && pedagio === null) pend.push({ codigo: 'PEDAGIO', texto: 'Informe o pedágio por viagem (ida e volta), ou 0 se a rota não tem pedágio.' });
-  if (tr !== 'VEICULO_EMPRESA' && passagem === null) pend.push({ codigo: 'PASSAGEM', texto: 'Com transporte que não é o veículo da empresa, informe a passagem ou o combustível por viagem.' });
+  if (temPropria && km !== null && km > 0 && pedagio === null) pend.push({ codigo: 'PEDAGIO', texto: 'Informe o pedágio por viagem (ida e volta), ou 0 se a rota não tem pedágio.' });
+  if (temPropria && tr !== 'VEICULO_EMPRESA' && passagem === null) pend.push({ codigo: 'PASSAGEM', texto: 'Com transporte que não é o veículo da empresa, informe a passagem ou o combustível por viagem.' });
   var linhasViagem = { PEDAGIO: { valor: pedagio === null ? '' : pedagio }, COMBUSTIVEL: { valor: passagem === null ? '' : passagem }, OUTROS: { valor: outros === null ? '' : outros, descricao: Lic_texto_(x.outrosDescricao, 200) } };
   var desl = ComPr_normalizar_({ unidade: base, viagem: { ha: true, tecnicos: T, engenheiros: E, transporte: tr, origem: polBase.origemUnidade, destino: (mun ? mun + '/' : '') + uf, kmTrecho: km === null ? '' : km, kmFonte: 'DIGITADO',
     viagens: vg, dias: dias, noites: noites, linhas: linhasViagem } }, null, pc.com, {});
-  var cv = ComPr_calcularViagem_(desl, polBase);
+  var cv = temPropria ? ComPr_calcularViagem_(desl, polBase) : { pessoas: 0, custo: 0, beneficio: 0, linhas: [] };
   var viagem = { base: base, baseNome: base === 'RJ' ? 'Equipe do Rio de Janeiro' : 'Equipe de Goiânia', origem: Lic_s_(polBase.origemUnidade), destino: (mun ? mun + '/' : '') + uf, km: km, kmFonte: kmFonte,
     pessoas: cv.pessoas, viagens: vg, dias: dias, noites: noites, custo: LicP_r2_(cv.custo), incentivo: LicP_r2_(cv.beneficio),
     linhas: cv.linhas.map(function (L) { return { nome: L.nome, quantidade: L.quantidadeTxt, valor: L.valorTxt, total: L.total, nsa: L.nsa, motivo: L.nsa ? Lic_texto_(L.motivo, 200) : '' }; }) };
@@ -459,7 +490,7 @@ function LicP_calcular_(l, e) {
   if (!entrada.length) pend.push({ codigo: 'ITENS', texto: 'Inclua pelo menos um item do edital.' });
   if (entrada.length > LICP_MAX_ITENS) throw new Error('A simulação aceita até ' + LICP_MAX_ITENS + ' itens. Separe o edital em lotes. Nada foi gravado');
   var itens = entrada.map(function (it, i) {
-    var r = { n: i + 1, numero: Lic_texto_(it.numero, 20), descricao: Lic_texto_(it.descricao, 300), codigo: Lic_up_(it.codigo), pendencias: [], semPiso: false };
+    var r = { n: i + 1, numero: Lic_texto_(it.numero, 20), descricao: Lic_texto_(it.descricao, 120), codigo: Lic_up_(it.codigo), pendencias: [], semPiso: false };
     var q = LicP_n_(it.quantidade);
     if (q === null || !(q > 0) || q > 1000000) { r.pendencias.push('informe a quantidade (maior que zero)'); q = 0; }
     r.quantidade = q;
@@ -497,18 +528,28 @@ function LicP_calcular_(l, e) {
   });
   // ---- rateio do deslocamento e do seguro (em centavos; o resto vai ao último item com custo)
   var comCusto = itens.filter(function (r) { return r.custoUnitBase !== null && r.custoUnitBase > 0 && r.quantidade > 0; });
+  var propria = comCusto.filter(function (r) { return r.execucao !== 'PARCEIRO'; });
   itens.forEach(function (r) { r.custoDireto = r.custoUnitBase !== null && r.quantidade > 0 ? LicP_r2_(r.custoUnitBase * r.quantidade) : 0; r.rateioDeslocamento = 0; r.rateioSeguro = 0; });
-  var somaDireto = comCusto.reduce(function (s, r) { return s + r.custoDireto; }, 0);
-  var linhaExtra = null;
-  var ratear = function (valor, campo) {
-    var cent = Math.round(valor * 100), usado = 0;
-    comCusto.forEach(function (r, k) { var c = k === comCusto.length - 1 ? cent - usado : Math.floor(cent * r.custoDireto / somaDireto); usado += c; r[campo] = c / 100; });
+  var soma = function (l) { return l.reduce(function (s, r) { return s + r.custoDireto; }, 0); };
+  var linhaExtra = null, sobraExtra = 0;
+  // rateio em centavos, proporcional ao custo direto; o resto vai ao último item da lista
+  var ratear = function (valor, campo, lista) {
+    var cent = Math.round(valor * 100), usado = 0, tot0 = soma(lista);
+    lista.forEach(function (r, k) { var c = k === lista.length - 1 ? cent - usado : Math.floor(cent * r.custoDireto / tot0); usado += c; r[campo] = c / 100; });
   };
-  if (lp.diluir && somaDireto > 0) { ratear(viagem.custo, 'rateioDeslocamento'); ratear(seguro.custo, 'rateioSeguro'); }
-  else if (viagem.custo + seguro.custo > 0) {
-    if (lp.diluir) pend.push({ codigo: 'RATEIO', texto: 'Nenhum item tem custo: o deslocamento e o seguro não têm onde ser diluídos.' });
-    var cx = LicP_r2_(viagem.custo + seguro.custo);
+  var naoDiluido = 0;
+  if (lp.diluir) {
+    // a viagem só entre os itens da equipe própria; o seguro entre todos os itens com custo
+    if (viagem.custo > 0) { if (propria.length) ratear(viagem.custo, 'rateioDeslocamento', propria); else naoDiluido += viagem.custo; }
+    if (seguro.custo > 0) { if (comCusto.length) ratear(seguro.custo, 'rateioSeguro', comCusto); else naoDiluido += seguro.custo; }
+    if (naoDiluido > 0) pend.push({ codigo: 'RATEIO', texto: 'Nenhum item ' + (viagem.custo > 0 && !propria.length ? 'da equipe própria ' : '') + 'tem custo: o deslocamento e o seguro não têm onde ser diluídos. Informe o custo dos itens.' });
+  } else naoDiluido = viagem.custo + seguro.custo;
+  if (naoDiluido > 0) {
+    var cx = LicP_r2_(naoDiluido);
     linhaExtra = { nome: 'Despesas de deslocamento e estadia' + (seguro.custo ? ' e seguro-garantia' : ''), custo: cx, piso: LicP_precoQueGarante_(cx, 'SERVICO', pc, lp.margemMinPct), alvo: LicP_precoQueGarante_(cx, 'SERVICO', pc, lp.margemAlvoPct) };
+    // revisão de ca99fe5 (grave): na linha própria, o edital e a proposta digitada não pagam a viagem: a sobra do lote desconta o custo dela
+    sobraExtra = cx;
+    if (linhaExtra.piso === null) pend.push({ codigo: 'LINHA', texto: 'A conta do piso da linha de deslocamento não fecha com os impostos e a sobra da política.' });
   }
   // ---- piso, alvo e margens por item
   var tot = { custoDireto: 0, deslocamento: viagem.custo, seguro: seguro.custo, custo: 0, piso: 0, alvo: 0, pisoCompleto: true, edital: 0, editalSobra: 0, editalItens: 0, proposta: 0, propostaSobra: 0, propostaItens: 0, referencia: 0, abaixoEdital: 0, abaixoProposta: 0, semPiso: 0 };
@@ -539,7 +580,17 @@ function LicP_calcular_(l, e) {
     if (r.semPiso && r.precoRefSituacao !== 'A_CONFIRMAR' && !r.pendencias.length) r.pendencias.push('sem piso');
     r.pendencias.forEach(function (p) { pend.push({ codigo: 'ITEM', item: r.numero || String(r.n), texto: 'Item ' + (r.numero || r.n) + ': ' + p + '.' }); });
   });
-  if (linhaExtra) { tot.custo += linhaExtra.custo; if (linhaExtra.piso !== null) { tot.piso += linhaExtra.piso; tot.alvo += linhaExtra.alvo || 0; } }
+  if (linhaExtra) {
+    tot.custo += linhaExtra.custo;
+    if (linhaExtra.piso !== null) { tot.piso += linhaExtra.piso; tot.alvo += linhaExtra.alvo || 0; } else tot.pisoCompleto = false;
+    // a viagem e o seguro da linha própria saem da sobra do lote (o preço digitado por item não os paga)
+    if (tot.editalItens) tot.editalSobra -= sobraExtra;
+    if (tot.propostaItens) tot.propostaSobra -= sobraExtra;
+    tot.linhaPropriaCusto = sobraExtra;
+    avisos.push('Deslocamento e seguro numa linha própria (' + LicP_moeda_(sobraExtra) + ' de custo): a sobra do lote no edital e na proposta já desconta esse custo. Para cobrir, a proposta precisa da linha com o preço de ' + (linhaExtra.piso === null ? '(sem piso)' : LicP_moeda_(linhaExtra.piso)) + ' ou mais.');
+  }
+  // revisão de ca99fe5: item com piso e sem preço do edital (a nota não calcula a sobra só com parte dos itens)
+  tot.semEdital = itens.filter(function (r) { return r.pisoUnit !== null && r.precoEdital === null; }).length;
   ['custoDireto', 'custo', 'piso', 'alvo', 'edital', 'editalSobra', 'proposta', 'propostaSobra', 'referencia'].forEach(function (k) { tot[k] = LicP_r2_(tot[k]); });
   tot.margemEditalPct = tot.edital > 0 ? Math.round(tot.editalSobra / tot.edital * 10000) / 100 : null;
   tot.margemPropostaPct = tot.proposta > 0 ? Math.round(tot.propostaSobra / tot.proposta * 10000) / 100 : null;
@@ -569,7 +620,7 @@ function LicP_simulacoesDe_(oid) {
 function LicP_hashSim_(s) { return Lic_hash_([Lic_s_(s.OPORTUNIDADE_ID), Number(s.VERSAO) || 0, Lic_s_(s.MOTIVO), Lic_s_(s.ENTRADA_JSON), Lic_s_(s.RESULTADO_JSON), Lic_s_(s.POR_ID), Lic_s_(s.CRIADO_EM)].join('|')); }
 function LicP_versaoResumo_(s) {
   return { versao: Number(s.VERSAO) || 0, motivo: Lic_s_(s.MOTIVO), situacao: Lic_s_(s.SITUACAO), por: Lic_s_(s.POR_NOME), em: Lic_s_(s.CRIADO_EM), piso: LicP_n_(s.TOTAL_PISO), alvo: LicP_n_(s.TOTAL_ALVO),
-    edital: LicP_n_(s.TOTAL_EDITAL), proposta: LicP_n_(s.TOTAL_PROPOSTA), margemEditalPct: LicP_n_(s.MARGEM_EDITAL_PCT), margemPropostaPct: LicP_n_(s.MARGEM_PROPOSTA_PCT), abaixo: Number(s.ITENS_ABAIXO_PISO) || 0, hash: Lic_s_(s.HASH) };
+    edital: LicP_n_(s.TOTAL_EDITAL), proposta: LicP_n_(s.TOTAL_PROPOSTA), margemEditalPct: LicP_n_(s.MARGEM_EDITAL_PCT), margemPropostaPct: LicP_n_(s.MARGEM_PROPOSTA_PCT), abaixoProposta: Number(s.ITENS_ABAIXO_PISO_PROPOSTA) || 0, abaixoEdital: Number(s.ITENS_ABAIXO_PISO_EDITAL) || 0, hash: Lic_s_(s.HASH) };
 }
 function LicP_simulacaoCompleta_(s) {
   var v = LicP_versaoResumo_(s);
@@ -587,7 +638,7 @@ function LicP_simulacao_(eu, d) {
   if (!ultima) { try { var srv = Lic_lerFonteServidor_(l); fonte = srv.fonte; if (srv.aviso && !fonte) aviso = srv.aviso; } catch (e) { aviso = 'Não foi possível ler os itens do edital agora (' + Lic_s_(e && e.message) + '): digite os itens.'; } }
   var lp = LicP_politica_();
   return { oportunidade: { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), uf: Lic_s_(l.UF), municipio: Lic_s_(l.MUNICIPIO), valor: l.VALOR_ESTIMADO === '' || l.VALOR_ESTIMADO === undefined ? null : Number(l.VALOR_ESTIMADO) },
-    rascunho: ultima ? ultima.entrada : LicP_rascunho_(l, fonte), rascunhoDe: ultima ? 'VERSAO' : (fonte && (fonte.itens || []).length ? 'PNCP' : 'VAZIO'), aviso: aviso,
+    rascunho: ultima ? ultima.entrada : LicP_rascunho_(l, fonte), limiteItens: LICP_MAX_ITENS, rascunhoDe: ultima ? 'VERSAO' : (fonte && (fonte.itens || []).length ? 'PNCP' : 'VAZIO'), aviso: aviso,
     ultima: ultima, versoes: sims.map(LicP_versaoResumo_), tabela: LicP_tabelaParaSelecao_(), politica: lp, politicaTexto: LicP_politicaTexto_(lp), comercialDisponivel: LicP_temComercial_(),
     msgSemComercial: LicP_temComercial_() ? '' : 'Neste ambiente ' + LICP_MSG_SEM_COMERCIAL + '. O simulador calcula no SGO+ completo.', ufsEquipeRio: lp.ufsEquipeRio };
 }
@@ -595,7 +646,7 @@ function LicP_simulacaoCalcular_(eu, d) { var l = Lic_acharOp_(d.id); return { r
 function LicP_entradaLimpa_(e) {
   e = e || {};
   var x = e.execucao || {}, s = e.seguro || {};
-  return { itens: (Array.isArray(e.itens) ? e.itens : []).slice(0, LICP_MAX_ITENS).map(function (i) { return { numero: Lic_texto_(i.numero, 20), descricao: Lic_texto_(i.descricao, 300), codigo: Lic_up_(i.codigo), quantidade: Lic_texto_(i.quantidade, 20), pontos: Lic_texto_(i.pontos, 10), precoEdital: Lic_texto_(i.precoEdital, 20), precoProposta: Lic_texto_(i.precoProposta, 20), custoParceiro: Lic_texto_(i.custoParceiro, 20), origem: Lic_up_(i.origem) === 'PNCP' ? 'PNCP' : 'DIGITADO' }; }),
+  return { itens: (Array.isArray(e.itens) ? e.itens : []).slice(0, LICP_MAX_ITENS + 1).map(function (i) { return { numero: Lic_texto_(i.numero, 20), descricao: Lic_texto_(i.descricao, 300), codigo: Lic_up_(i.codigo), quantidade: Lic_texto_(i.quantidade, 20), pontos: Lic_texto_(i.pontos, 10), precoEdital: Lic_texto_(i.precoEdital, 20), precoProposta: Lic_texto_(i.precoProposta, 20), custoParceiro: Lic_texto_(i.custoParceiro, 20), origem: Lic_up_(i.origem) === 'PNCP' ? 'PNCP' : 'DIGITADO' }; }),
     execucao: { uf: Lic_up_(x.uf), municipio: Lic_texto_(x.municipio, 120), kmTrecho: Lic_texto_(x.kmTrecho, 10), kmFonte: Lic_up_(x.kmFonte) === 'SUGERIDO' ? 'SUGERIDO' : '', viagens: Lic_texto_(x.viagens, 5), tecnicos: Lic_texto_(x.tecnicos, 3), engenheiros: Lic_texto_(x.engenheiros, 3), dias: Lic_texto_(x.dias, 5), noites: Lic_texto_(x.noites, 5),
       transporte: Lic_up_(x.transporte), passagem: Lic_texto_(x.passagem, 20), pedagio: Lic_texto_(x.pedagio, 20), outros: Lic_texto_(x.outros, 20), outrosDescricao: Lic_texto_(x.outrosDescricao, 200) },
     seguro: { exige: s.exige === true || Lic_up_(s.exige) === 'SIM', custo: Lic_texto_(s.custo, 20), obs: Lic_texto_(s.obs, 300) } };
@@ -611,7 +662,7 @@ function LicP_simulacaoSalvar_(eu, d) {
     var ant = LicP_simulacoesDe_(l.ID)[0] || null, versao = (ant ? Number(ant.VERSAO) || 0 : 0) + 1, agora = Lic_agora_(), t = res.totais;
     var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), VERSAO: versao, MOTIVO: motivo, SITUACAO: res.situacao, ENTRADA_JSON: JSON.stringify(entrada), RESULTADO_JSON: resJson,
       TOTAL_CUSTO: t.custo, TOTAL_PISO: t.piso, TOTAL_ALVO: t.alvo, TOTAL_EDITAL: t.edital || '', TOTAL_PROPOSTA: t.proposta || '', MARGEM_EDITAL_PCT: t.margemEditalPct === null ? '' : t.margemEditalPct,
-      MARGEM_PROPOSTA_PCT: t.margemPropostaPct === null ? '' : t.margemPropostaPct, ITENS_ABAIXO_PISO: t.abaixoProposta || t.abaixoEdital || 0, PENDENCIAS: res.pendencias.length, POLITICA_VERSAO: res.politica.licitacao.versao,
+      MARGEM_PROPOSTA_PCT: t.margemPropostaPct === null ? '' : t.margemPropostaPct, ITENS_ABAIXO_PISO_PROPOSTA: t.abaixoProposta || 0, ITENS_ABAIXO_PISO_EDITAL: t.abaixoEdital || 0, PENDENCIAS: res.pendencias.length, POLITICA_VERSAO: res.politica.licitacao.versao,
       POR_ID: eu.id, POR_NOME: eu.nome, CRIADO_EM: agora };
     reg.HASH = LicP_hashSim_(reg);
     SGO_DATA.insert(LICP_ABAS.SIMULACOES, reg);
@@ -647,13 +698,19 @@ function LicP_margemNota_(l, pesos) {
     if (!res || !res.totais) return null;
     var t = res.totais, pl = (res.politica && res.politica.licitacao) || LICP_POLITICA_PADRAO, v = Number(s.VERSAO) || 0, peso = pesos.margem;
     var onde = 'Simulação de preço versão ' + v + ' (' + LicP_dia_(s.CRIADO_EM) + ', ' + Lic_s_(s.POR_NOME) + ')';
+    // a IA externa recebe só a pontuação (nem piso, nem preço do edital, nem sobra): textoIA vai ao pedido no lugar de "como"
+    var crit = function (pts, como) { return { pontos: pts * peso / 15, peso: peso, origem: 'SIMULACAO', como: como, textoIA: LicP_fmt_(pts * peso / 15, 1).replace(/,0$/, '') + ' de ' + peso + ', calculada pelo sistema.', simulacaoVersao: v }; };
+    // revisão de ca99fe5: registro alterado fora do SGO+ não vale para a nota
+    if (LicP_hashSim_(s) !== Lic_s_(s.HASH)) return { criterio: crit(5, onde + ': o registro não confere com o hash gravado (simulação alterada fora do SGO+): 5 de 15, como pendência.'),
+      afirmacoes: [{ tipo: 'PENDENCIA', criterio: 'margem', texto: 'Simulação de preço alterada fora do SGO+: salve uma versão nova na aba Preço.' }] };
     var fonte = { ref: 'SIMULACAO:v' + v, rotulo: onde + ' — aba Preço', trecho: 'piso ' + LicP_moeda_(t.piso) };
     var af = [], pts, como;
     var pend = (res.pendencias || []).length;
-    if (pend || !t.editalItens) {
+    var semEdital = t.semEdital !== undefined ? t.semEdital : (res.itens || []).filter(function (r) { return r.pisoUnit !== null && r.precoEdital === null; }).length;
+    if (pend || !t.editalItens || semEdital) {
       pts = 5;
-      como = onde + (pend ? ' com ' + pend + ' pendência(s)' : ' sem o preço de referência do edital nos itens') + ': 5 de 15, como pendência.';
-      af.push({ tipo: 'PENDENCIA', criterio: 'margem', texto: pend ? 'Resolver as pendências da simulação de preço (aba Preço): ' + res.pendencias.slice(0, 3).map(function (p) { return p.texto; }).join(' ') : 'Informar o preço de referência do edital por item na simulação (aba Preço) para comparar com o piso.' });
+      como = onde + (pend ? ' com ' + pend + ' pendência(s)' : semEdital && t.editalItens ? ' com ' + semEdital + ' item(ns) sem o preço de referência do edital' : ' sem o preço de referência do edital nos itens') + ': 5 de 15, como pendência.';
+      af.push({ tipo: 'PENDENCIA', criterio: 'margem', texto: pend ? 'Resolver as pendências da simulação de preço (aba Preço): ' + res.pendencias.slice(0, 3).map(function (p) { return p.texto; }).join(' ') : 'Informar o preço de referência do edital em todos os itens da simulação (aba Preço) para comparar com o piso.' });
     } else {
       var m = t.margemEditalPct, abaixo = t.abaixoEdital || 0;
       if (m < pl.margemMinPct - 1e-9) pts = 0;
@@ -668,7 +725,7 @@ function LicP_margemNota_(l, pesos) {
       });
       if (pts === 0) af.push({ tipo: 'INFERENCIA', criterio: 'margem', texto: 'Pelo preço do edital, a sobra fica abaixo da mínima: participar só com decisão da Diretoria.' });
     }
-    return { criterio: { pontos: pts * peso / 15, peso: peso, origem: 'SIMULACAO', como: como, simulacaoVersao: v }, afirmacoes: af };
+    return { criterio: crit(pts, como), afirmacoes: af };
   } catch (e) { return null; }
 }
 

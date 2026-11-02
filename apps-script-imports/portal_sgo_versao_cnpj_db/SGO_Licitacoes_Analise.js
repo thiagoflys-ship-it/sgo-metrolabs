@@ -1073,7 +1073,7 @@ function Lic_ctxVerificador_(l, fontes, pesos, codigo) {
 // ------------------------------------------------------------ prompt
 /** A linha dos números calculados pelo sistema: a mesma no pedido à IA e na fonte SISTEMA do verificador. */
 function Lic_textoCalculado_(codigo, pesos, hojeIso) {
-  return (hojeIso ? 'hoje ' + Lic_brDia_(hojeIso) + '; ' : '') + codigo.criterios.prazo.como + ' Prazo: ' + Lic_fmtNum_(codigo.criterios.prazo.pontos) + ' de ' + pesos.prazo + '. Localização: ' + codigo.criterios.localizacao.como + ' Valor: ' + codigo.criterios.valor.como + ' Margem: ' + codigo.criterios.margem.como;
+  return (hojeIso ? 'hoje ' + Lic_brDia_(hojeIso) + '; ' : '') + codigo.criterios.prazo.como + ' Prazo: ' + Lic_fmtNum_(codigo.criterios.prazo.pontos) + ' de ' + pesos.prazo + '. Localização: ' + codigo.criterios.localizacao.como + ' Valor: ' + codigo.criterios.valor.como + ' Margem: ' + (codigo.criterios.margem.textoIA || codigo.criterios.margem.como);   // 02/11/2026: com simulação, a IA externa recebe só a pontuação
 }
 function Lic_marcador_() { var t = ''; for (var i = 0; i < 4; i++) t += Math.floor(Math.random() * 0x100000000).toString(16); try { if (typeof Utilities !== 'undefined' && Utilities.getUuid) t = String(Utilities.getUuid()).replace(/-/g, '').slice(0, 24); } catch (e) {} return 'FONTE-' + t; }
 function Lic_promptAnalise_(l, fontes, codigo, pesos, hojeIso, marca) {

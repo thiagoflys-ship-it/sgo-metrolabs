@@ -252,6 +252,7 @@
     var d = st.dados, vs = d.versoes || [];
     var h = (d.msgSemComercial ? Lic_faixa_(d.msgSemComercial, "aviso") : "") + (d.aviso ? Lic_faixa_(d.aviso, "aviso") : "") +
       Lic_faixa_("Simulação de preço: o custo vem da tabela de Preços de licitação (Diretoria) e da política do Comercial; o piso garante a sobra mínima sobre o preço inteiro de cada item. \"Calcular\" não grava; \"Salvar\" cria uma versão nova que não muda mais.", "ok") +
+      (d.rascunho && d.rascunho.cortados ? Lic_faixa_("O edital tem " + (d.rascunho.cortados + (d.limiteItens || 40)) + " itens; a simulação aceita até " + (d.limiteItens || 40) + ": vieram os primeiros. Simule o resto num lote separado (outra oportunidade ou versão).", "aviso") : "") +
       (!(d.tabela || []).length ? Lic_faixa_("A tabela de preços de licitação está vazia: peça à Diretoria para importar o catálogo em Preços de licitação.", "aviso") : "") +
       '<div class="cm-filtros"><div><label for="lprVer">Ver</label><select id="lprVer">' + Lic_opcoes_([["0", "Rascunho (editar)"]].concat(vs.map(function (v) { return [String(v.versao), "Versão " + v.versao + " · " + Lic_dataHora_(v.em) + " · " + v.por + (v.situacao === "COM_PENDENCIA" ? " (com pendência)" : "")]; })), String(st.ver || 0)) + "</select></div></div>";
     if (st.ver) {

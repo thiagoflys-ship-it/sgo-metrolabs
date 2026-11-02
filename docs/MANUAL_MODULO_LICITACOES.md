@@ -48,7 +48,7 @@ Menu lateral, grupo "Licitações":
 - Preços de licitação
 - Portais e configurações
 
-No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra "Lista · Kanban · Gantt" troca a forma de ver as mesmas licitações.
+No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Preços, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra "Lista · Kanban · Gantt" troca a forma de ver as mesmas licitações.
 
 ## 4. Como a coleta funciona
 
@@ -493,13 +493,13 @@ Padrões adotados em 02/11/2026 (o dono não soube responder; a Diretoria muda n
 
 1. Os itens do edital vêm do PNCP/Compras.gov.br quando a fonte informa (número, descrição, quantidade e valor unitário estimado; item sigiloso fica sem preço). Sem itens, digite. Em cada item escolha o serviço da tabela; serviço por pontos (REG-CAL-001) pede os pontos por equipamento (o mínimo de 3 está incluído); serviço por parceiro aceita o custo do parceiro.
 2. "Onde é executado": UF, município, km do trecho (só a ida; o SGO+ sugere pela tabela de distâncias do Programa de conduta, a partir de Goiânia), viagens, técnicos, engenheiros, dias e noites por viagem, transporte, passagem, pedágio e outros custos. Seguro-garantia: se o edital exige e o custo cotado.
-3. "Calcular" (não grava) mostra a conta inteira: custo por equipamento e a fonte, custo direto, deslocamento e seguro diluídos, custo unitário total, piso = custo ÷ (1 − impostos − comissão − 35%), alvo com 40%, a sobra no preço do edital e na proposta, as linhas do deslocamento (km R$ 2,50 ida e volta, pedágio, alimentação, hospedagem, horas de estrada e Incentivo de Missão de R$ 300 por executante em trecho de 200 km ou mais), as premissas e as versões da política de Licitações e do Comercial usadas. Item abaixo do piso fica em vermelho, com o texto "abaixo do piso".
+3. "Calcular" (não grava) mostra a conta inteira: custo por equipamento e a fonte, custo direto, deslocamento e seguro diluídos, custo unitário total, piso = custo ÷ (1 − impostos − comissão − 35%), alvo com 40%, a sobra no preço do edital e na proposta, as linhas do deslocamento (km R$ 2,50 ida e volta, pedágio, alimentação, hospedagem, horas de estrada e Incentivo de Missão de R$ 300 por executante em trecho de 200 km ou mais), as premissas e as versões da política de Licitações e do Comercial usadas. Item abaixo do piso fica em vermelho, com o texto "abaixo do piso". O deslocamento é rateado só entre os itens da equipe própria (lote só de parceiro não tem viagem da equipe); o seguro, entre todos. Com o deslocamento numa linha própria, a sobra do lote no edital e na proposta desconta o custo dessa linha.
 4. Pendências dizem o que falta e o que fazer: km desconhecido, pedágio, equipe, custo do parceiro, item sem custo, preço "a confirmar" (sem piso), seguro exigido sem o custo.
 5. "Salvar simulação" pede o motivo e grava uma versão nova: a conta é refeita no servidor, e a versão guarda a entrada, o resultado, as premissas e o hash. Uma versão salva nunca muda; em "Ver" abra uma versão e use "Começar uma versão nova a partir desta" para corrigir. Se o registro for alterado fora do SGO+, a versão aparece como "alterada fora do SGO+".
 
 ### Nota da análise (critério margem)
 
-Com simulação salva, o critério margem (15 pontos) usa a última versão: com pendência ou sem o preço do edital, 5 como pendência; sobra no edital abaixo da mínima, 0; algum item do edital abaixo do piso (com piso por item), 6; sobra a partir da mínima, 11; a partir do alvo, 15. Sem simulação, continua 5 como pendência. A simulação entra na base da análise: depois de salvar, a aba Análise fica desatualizada; toque em "Refazer análise".
+Com simulação salva, o critério margem (15 pontos) usa a última versão: com pendência, com algum item sem o preço do edital ou com o registro alterado fora do SGO+, 5 como pendência; sobra no edital abaixo da mínima, 0; algum item do edital abaixo do piso (com piso por item), 6; sobra a partir da mínima, 11; a partir do alvo, 15. Sem simulação, continua 5 como pendência. A simulação entra na base da análise: depois de salvar, a aba Análise fica desatualizada; toque em "Refazer análise". A IA externa recebe só a pontuação da margem ("calculada pelo sistema"), nunca o piso, o preço do edital ou a sobra. A simulação aceita até 40 itens.
 
 ## 7. Problemas comuns
 
