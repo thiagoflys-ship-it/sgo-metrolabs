@@ -15,7 +15,7 @@
  * Nada é apagado: a situação muda; parâmetros mudam com merge, versão e motivo.
  ****************************************************/
 
-var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG' };
+var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG', ANALISES: 'LIC_ANALISES' };
 var LIC_COLUNAS = {
   LIC_PORTAIS: ['ID', 'CODIGO', 'NOME', 'CATEGORIA', 'URL', 'URL_API', 'DOCUMENTACAO', 'TIPO', 'AUTENTICACAO', 'CREDENCIAL_REF', 'SITUACAO', 'PRIORIDADE',
     'LIGADO', 'PALAVRAS_POSITIVAS', 'PALAVRAS_NEGATIVAS', 'UFS', 'VALOR_MINIMO', 'FREQUENCIA_MIN', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME',
@@ -27,9 +27,17 @@ var LIC_COLUNAS = {
     'TRIAGEM', 'TRIAGEM_MOTIVO', 'TRIAGEM_TRECHO', 'TRIAGEM_TERMO', 'TRIAGEM_FONTE_TRECHO', 'TRIAGEM_REGRA', 'TRIAGEM_VERSAO', 'SELOS_JSON', 'PENDENCIAS_JSON', 'PRIORIDADE_UF',
     'SITUACAO', 'SITUACAO_DESDE', 'DESCARTE_ORIGEM', 'DESCARTE_MOTIVO', 'DESCARTE_POR_ID', 'DESCARTE_POR_NOME', 'DESCARTE_EM', 'ANALISE_OBS',
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'VERSAO_FONTE', 'VERSAO_HASH', 'BRUTO_HASH', 'RETIFICADA_EM', 'ATUALIZACAO_FONTE', 'PRIMEIRA_COLETA_EM',
-    'ULTIMA_SINCRONIA_EM', 'EXCLUIDO_EM', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'ULTIMA_SINCRONIA_EM', 'EXCLUIDO_EM', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // etapa 2 (02/11/2026): nota da última análise concluída e os arquivos do edital (SGO_Licitacoes_Analise.js)
+    'NOTA', 'NOTA_CLASSE', 'NOTA_TRAVA', 'ANALISE_ID', 'ANALISE_VERSAO', 'ANALISE_EM', 'ANALISE_BASE_HASH', 'ANALISE_SITUACAO', 'ANALISE_ERRO', 'ARQUIVOS_BASE_HASH', 'ARQUIVOS_QTD', 'ARQUIVOS_EM',
+    // regra de guarda (02/11/2026): a data de publicação na fonte conta os 2 anos da candidata intocada (SGO_Licitacoes_Guarda.js)
+    'PUBLICACAO_EM'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
-  LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM']
+  LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
+  LIC_ANALISES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'VERSAO', 'SITUACAO', 'NOTA', 'SOMA', 'CLASSE', 'TRAVADA', 'RESUMO', 'CRITERIOS_JSON', 'ITENS_JSON', 'EXIGENCIAS_JSON', 'RISCOS_JSON',
+    'TRAVAS_JSON', 'AFIRMACOES_JSON', 'ARQUIVOS_JSON', 'ARQUIVOS_BASE', 'BASE_HASH', 'FONTE_VERSAO', 'FONTE_HASH', 'PESOS_JSON', 'REGRAS', 'MODELO', 'TENTATIVAS', 'RECUSAS_JSON',
+    'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'HASH', 'CRIADO_EM']
 };
 var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNCP', 'ID_COMPRAS_GOV', 'ABERTURA_PROPOSTAS', 'ENCERRAMENTO_PROPOSTAS', 'ATUALIZACAO_FONTE'] };
 
@@ -125,14 +133,15 @@ function Lic_lista_(v) {
 /** Abas do módulo (no banco principal, como o Comercial). Colunas novas entram por merge; nada é apagado. */
 function Lic_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V1')) return; } catch (e) {}
+  // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

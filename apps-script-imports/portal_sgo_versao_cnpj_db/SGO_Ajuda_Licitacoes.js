@@ -1,5 +1,5 @@
 /****************************************************
- * AJUDA "COMO USAR ESTA TELA" — SGO+ LICITAÇÕES, ETAPA 1 (01/11/2026)
+ * AJUDA "COMO USAR ESTA TELA" — SGO+ LICITAÇÕES, ETAPA 1 (01/11/2026) E ETAPA 2 (02/11/2026: arquivos do edital e nota pela IA)
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Manual completo: docs/MANUAL_MODULO_LICITACOES.md.
  * Telas: licitacoes (Hoje em Licitações), licitacoes_oportunidades (lista e ficha) e licitacoes_portais (Portais e
  * configurações). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
@@ -7,7 +7,7 @@
  ****************************************************/
 function SGO_ajudaTelas_Licitacoes_() {
   var quem = [
-    { perfil: "DIRETORIA,ADMIN", pode: "Tudo nesta etapa: ver o radar, enviar para análise, descartar com motivo, reabrir, parametrizar os portais, testar a conexão e ligar o coletor." },
+    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
     { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026)." }
   ];
   return {
@@ -43,8 +43,9 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       quemPode: quem,
       perguntas: [
-        { p: "Por que não aparece nota de 0 a 100?", r: "A nota de aderência e a leitura do edital pela IA chegam na próxima etapa. Nesta etapa a lista é ordenada pela prioridade da UF (GO, DF, vizinhos e RJ primeiro) e pelo prazo." },
-        { p: "Recebo aviso no WhatsApp?", r: "Ainda não. Os alertas da Diretoria (inclusive fora do expediente) entram numa etapa seguinte." }
+        { p: "Onde vejo a nota de 0 a 100?", r: "No cartão de cada oportunidade em Oportunidades (no lugar da UF) e na ficha, aba \"Análise\". Sem a chave da IA cadastrada, a nota não é calculada e a tela diz \"análise por IA indisponível: falta a chave\"." },
+        { p: "Recebo aviso no WhatsApp?", r: "Ainda não. Os alertas da Diretoria (inclusive fora do expediente) entram numa etapa seguinte." },
+        { p: "Por quanto tempo as licitações ficam guardadas?", r: "Regra de guarda aprovada pelo dono em 02/11/2026: o que a Diretoria mexeu fica para sempre, com o histórico e os arquivos; candidata ou travada nunca tocada, 2 anos a partir da publicação; fora do ramo, só o resumo por 1 ano (dados brutos 30 dias); registro das chamadas, 6 meses. A limpeza roda toda segunda, na manutenção do servidor, e o que sai fica resumido no histórico." }
       ]
     },
     "licitacoes_oportunidades": {
@@ -65,16 +66,18 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Buscar procura no órgão, no objeto, no número de controle, no município e no código LIC.",
           "UF: Brasil inteiro, a prioridade (GO, DF, MG, BA, TO, MT, MS e RJ) ou uma UF.",
           "Selo: exclusivo ME/EPP, Autorizada Inmetro, exige RBC, acreditação opcional, rastreabilidade à RBC (não trava), Lei 13.303 (estatal), suspensa, dedicação exclusiva, software exigido.",
-          "Onde é a sessão: o portal de disputa quando a fonte permite saber; \"Sistema municipal ou outro\" quando a plataforma da sessão precisa ser lida no edital."
+          "Onde é a sessão: o portal de disputa quando a fonte permite saber; \"Sistema municipal ou outro\" quando a plataforma da sessão precisa ser lida no edital.",
+          "Ordenar por: prioridade da UF e prazo (padrão), nota (maior primeiro; sem nota no fim) ou prazo (mais perto primeiro)."
         ] },
         { titulo: "Ler o cartão", itens: [
-          "O quadro à esquerda mostra a UF e a situação (radar, trava, análise ou fora). A borda vermelha indica trava ou descarte.",
+          "O quadro à esquerda mostra a nota de 0 a 100 e a classe (alta, média, baixa ou descarte) quando a análise por IA já foi feita; sem nota, mostra a UF e a situação (radar, trava, análise ou fora). A borda vermelha indica trava ou descarte.",
+          "Abaixo do motivo, a linha \"Nota da análise por IA\" diz a versão e a data da análise e a trava, se houver. A IA não decide: descartar ou participar é da Diretoria.",
           "Selos verdes são pontos fortes (exclusivo ME/EPP: a matriz é EPP e pode participar; Autorizada Inmetro para balanças e esfigmomanômetros). Selo vermelho \"Exige acreditação RBC — não atendemos\": a Metrolabs faz calibração rastreável, não acreditada.",
           "Propostas até: data e hora como a fonte informa, presumidas de Brasília (o PNCP não informa o fuso). Em AM, MT, MS, RO, RR e AC confirme no edital se o horário é local.",
           "O motivo e o trecho entre aspas mostram de onde veio a decisão da regra. PENDENTE é o que precisa ser conferido no edital."
         ] },
         { titulo: "Agir", itens: [
-          "Abrir ficha: resumo, fonte (versões, itens, hashes) e histórico.",
+          "Abrir ficha: resumo, arquivos do edital, análise por IA, fonte (versões, itens, hashes) e histórico.",
           "Enviar para análise: escreva uma observação se quiser; você fica como responsável.",
           "Descartar: o motivo é obrigatório (pelo menos 10 letras) e fica no histórico com o seu nome e a data.",
           "Reabrir: devolve uma descartada ao radar; o motivo é obrigatório. Depois de reaberta pela Diretoria, a regra do radar não descarta de novo (a triagem nova fica só no histórico).",
@@ -85,6 +88,20 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Fonte: de onde veio, links, CNPJ do órgão, datas como a fonte informou, o fuso presumido, o hash da versão e da resposta original, as versões da fonte e os itens lidos do Compras.gov.br.",
           "Histórico: quem, quando, o quê, versão, fonte e hash de cada fato (entrada no radar, retificação na fonte, triagem refeita, descarte, análise).",
           "Retificação na fonte nunca apaga a versão anterior: vira versão nova, e o histórico diz o que mudou."
+        ] },
+        { titulo: "Arquivos do edital", itens: [
+          "A aba Arquivos lista o edital e os anexos baixados do PNCP pelo servidor, cada um com o SHA-256 do conteúdo (prova de que é o arquivo publicado), o tamanho e a data.",
+          "Situação do texto: \"Texto extraído\" (com páginas e caracteres), \"Texto parcial\" ou \"Texto não extraído\" com o motivo (imagem escaneada sem OCR, RAR, formato que o SGO+ não abre). Nada é inventado: o que não foi lido aparece assim.",
+          "Abrir mostra o arquivo em outra aba; Baixar salva no aparelho. O servidor confere o SHA-256 antes de entregar, e o histórico registra quem abriu.",
+          "\"Buscar arquivos agora\" pede a leitura ao servidor; ela roda em segundo plano (1 chamada a cada 3 s no PNCP). Depois de alguns minutos, toque em \"Atualizar a ficha\".",
+          "Se o PNCP de arquivos estiver fora do ar, a faixa vermelha diz o erro e a hora da nova tentativa automática. Enquanto isso, leia o edital pelo botão \"Ver no PNCP\"."
+        ] },
+        { titulo: "Análise por IA", itens: [
+          "A aba Análise mostra a nota de 0 a 100, a classe, o resumo, os critérios (capacidade técnica, margem, documentação, localização, prazo, valor e riscos) e quem pontuou cada um: o sistema (dados reais) ou a IA (conferida).",
+          "Fatos vêm com o trecho entre aspas e a fonte (arquivo A1, A2... com o nome e o SHA-256, ou o campo do PNCP). Inferências são conclusões a partir dos fatos. Pendências são o que falta conferir para decidir.",
+          "Trava provada com trecho (por exemplo, exige laboratório acreditado RBC sem aceitar rastreabilidade) deixa a nota em 0, com o motivo; a oportunidade continua no radar até a Diretoria decidir.",
+          "\"Analisar agora\" faz a primeira análise; \"Refazer análise\" pede o motivo (pelo menos 10 letras). Cada análise é uma versão nova: a anterior continua guardada em \"Todas as versões da análise\".",
+          "A análise roda sozinha quando chegam arquivos novos ou a fonte muda; se nada mudou, ela não é refeita."
         ] }
       ],
       cores: [
@@ -99,13 +116,20 @@ function SGO_ajudaTelas_Licitacoes_() {
         { situacao: "Ao descartar aparece \"Escreva o motivo do descarte\"", oQueFazer: "Escreva pelo menos 10 letras explicando por que não interessa. Nada foi alterado." },
         { situacao: "Aparece que a oportunidade está em outra situação", oQueFazer: "Outra pessoa mudou agora há pouco. Toque em \"Atualizar\" e confira." },
         { situacao: "\"Abrir no portal\" não aparece", oQueFazer: "A fonte não informou o link do sistema de origem. Use \"Ver no PNCP\" e, se precisar, procure o processo no portal da sessão." },
-        { situacao: "A sessão diz \"ler no edital\"", oQueFazer: "A publicação veio de um sistema municipal de gestão; a plataforma da disputa está no edital." }
+        { situacao: "A sessão diz \"ler no edital\"", oQueFazer: "A publicação veio de um sistema municipal de gestão; a plataforma da disputa está no edital." },
+        { situacao: "Aparece \"análise por IA indisponível: falta a chave\"", oQueFazer: "A chave da IA (GEMINI_API_KEY) não está cadastrada. Peça ao Administrador para cadastrar em Administração > Chaves e senhas e depois toque em \"Analisar agora\". Os arquivos continuam disponíveis." },
+        { situacao: "A aba Arquivos diz que a leitura falhou (HTTP 503)", oQueFazer: "O PNCP de arquivos estava fora do ar. O servidor tenta de novo sozinho na hora indicada; enquanto isso, use \"Ver no PNCP\". Nada foi apagado." },
+        { situacao: "Um arquivo aparece como \"Texto não extraído\"", oQueFazer: "Leia o arquivo à mão (botão Abrir): é imagem escaneada, RAR ou outro formato que o SGO+ não lê. A análise por IA não usa esse arquivo e diz isso nas pendências." },
+        { situacao: "A última análise foi \"recusada pelo verificador\"", oQueFazer: "A resposta da IA citou trecho que não está no edital ou faltou fonte. A nota anterior continua valendo; toque em \"Refazer análise\" com o motivo." }
       ],
       quemPode: quem,
       perguntas: [
         { p: "Uma licitação pode aparecer duas vezes?", r: "Não. O número de controle do PNCP é a chave; a mesma compra vinda do Compras.gov.br é reconhecida pelo mesmo número." },
         { p: "A regra pode desfazer o que eu decidi?", r: "Não. A regra só muda a situação enquanto ninguém mexeu (no radar, ou descartada pela regra). O que a Diretoria enviou para análise ou descartou com motivo fica como está." },
-        { p: "Por que uma licitação travada por RBC aparece?", r: "Para a Diretoria decidir: às vezes o edital aceita calibração rastreável ou subcontratação de laboratório acreditado. A pendência fica escrita no cartão." }
+        { p: "Por que uma licitação travada por RBC aparece?", r: "Para a Diretoria decidir: às vezes o edital aceita calibração rastreável ou subcontratação de laboratório acreditado. A pendência fica escrita no cartão." },
+        { p: "A IA pode descartar ou mandar participar?", r: "Não. A IA lê, classifica e aponta fatos, inferências e pendências com a fonte. Descartar, analisar e participar são decisões da Diretoria, registradas com o nome e a data." },
+        { p: "Como sei que o fato citado está mesmo no edital?", r: "O verificador procura cada trecho, palavra por palavra, no texto do arquivo citado (sem acento e sem caixa). Se não achar, a resposta da IA é recusada e refeita; o trecho fica na tela com o arquivo e o SHA-256." },
+        { p: "Por que a margem vale 5 e a distância vale metade?", r: "Ainda não há piso calculado (a tabela de preços de Licitações vem na próxima etapa) nem a distância rodoviária confirmada. São pendências: a nota não finge certeza." }
       ]
     },
     "licitacoes_portais": {

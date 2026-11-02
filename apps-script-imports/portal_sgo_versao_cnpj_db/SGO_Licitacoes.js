@@ -12,6 +12,10 @@
  *     com a versão e o hash; a versão anterior continua no servidor (lic_contratacoes);
  *   - triagem mudou: atualiza os campos da triagem; só muda a situação enquanto ninguém mexeu (RADAR, ou DESCARTADA
  *     pela regra). O que a Diretoria decidiu (análise, descarte com motivo) nunca é desfeito pela regra.
+ *
+ * Etapa 2 (02/11/2026): arquivos do edital e nota 0–100 pela IA (SGO_Licitacoes_Analise.js). A ficha traz as abas
+ * "Arquivos" (lista com SHA-256, abrir e baixar, situação da extração) e "Análise" (nota, critérios, fatos com fonte,
+ * inferências, pendências, versão); a lista mostra a nota no cartão e ordena por nota.
  ****************************************************/
 
 var LIC_CAMPOS_RETIFICACAO = { OBJETO: 'Objeto', ABERTURA_PROPOSTAS: 'Abertura das propostas', ENCERRAMENTO_PROPOSTAS: 'Encerramento das propostas', VALOR_ESTIMADO: 'Valor estimado',
@@ -32,7 +36,13 @@ var LIC_ACOES = {
   portalSalvar: function (eu, d) { return Lic_portalSalvar_(eu, d); },
   portalTestar: function (eu, d) { return Lic_portalTestar_(eu, d); },
   conexoes: function (eu, d) { return Lic_conexoes_(eu, d); },
-  radarSalvar: function (eu, d) { return Lic_radarSalvar_(eu, d); }
+  radarSalvar: function (eu, d) { return Lic_radarSalvar_(eu, d); },
+  // etapa 2 (02/11/2026)
+  arquivos: function (eu, d) { return Lic_arquivosAcao_(eu, d); },
+  buscarArquivos: function (eu, d) { return Lic_buscarArquivos_(eu, d); },
+  arquivoBaixar: function (eu, d) { return Lic_arquivoBaixar_(eu, d); },
+  analise: function (eu, d) { return Lic_analiseAcao_(eu, d); },
+  analisar: function (eu, d) { return Lic_analisarAcao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -80,7 +90,7 @@ function Lic_camposFonte_(it) {
     ABERTURA_PROPOSTAS: Lic_s_(c.aberturaTexto), ENCERRAMENTO_PROPOSTAS: Lic_s_(c.encerramentoTexto), ENCERRAMENTO_ISO: Lic_s_(c.encerramentoEm),
     FUSO: Lic_s_(c.fuso), FUSO_PRESUMIDO: c.fusoPresumido ? 'SIM' : 'NAO', FUSO_ALERTA: Lic_s_(c.fusoAlerta), SITUACAO_FONTE: Lic_s_(c.situacaoNome),
     LINK_ORIGEM: Lic_url_(c.linkSistemaOrigem) || Lic_url_(c.linkProcesso), LINK_PNCP: Lic_url_(c.linkPncp), VERSAO_FONTE: Number(it.versao) || 1, VERSAO_HASH: Lic_s_(it.hash),
-    BRUTO_HASH: Lic_s_(it.brutoHash), ATUALIZACAO_FONTE: Lic_s_(c.atualizacaoGlobalTexto), PRIMEIRA_COLETA_EM: Lic_s_(it.primeiraColetaEm)
+    BRUTO_HASH: Lic_s_(it.brutoHash), ATUALIZACAO_FONTE: Lic_s_(c.atualizacaoGlobalTexto), PRIMEIRA_COLETA_EM: Lic_s_(it.primeiraColetaEm), PUBLICACAO_EM: Lic_s_(c.publicacaoEm)
   };
 }
 function Lic_camposTriagem_(t) {
@@ -197,7 +207,10 @@ function Lic_cartao_(l, portais) {
     regra: Lic_s_(l.TRIAGEM_REGRA), selos: Lic_selos_(l), pendencias: Lic_json_(l.PENDENCIAS_JSON, []), prioridade: Number(l.PRIORIDADE_UF) || 0,
     situacao: Lic_s_(l.SITUACAO), situacaoNome: LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || Lic_s_(l.SITUACAO), situacaoDesde: Lic_s_(l.SITUACAO_DESDE),
     descarteOrigem: Lic_s_(l.DESCARTE_ORIGEM), descarteMotivo: Lic_s_(l.DESCARTE_MOTIVO), descartePor: Lic_s_(l.DESCARTE_POR_NOME), descarteEm: Lic_s_(l.DESCARTE_EM), analiseObs: Lic_s_(l.ANALISE_OBS),
-    linkOrigem: Lic_url_(l.LINK_ORIGEM), linkPncp: Lic_url_(l.LINK_PNCP), versao: Number(l.VERSAO_FONTE) || 1, retificadaEm: Lic_s_(l.RETIFICADA_EM), responsavel: Lic_s_(l.RESPONSAVEL_NOME)
+    linkOrigem: Lic_url_(l.LINK_ORIGEM), linkPncp: Lic_url_(l.LINK_PNCP), versao: Number(l.VERSAO_FONTE) || 1, retificadaEm: Lic_s_(l.RETIFICADA_EM), responsavel: Lic_s_(l.RESPONSAVEL_NOME),
+    // etapa 2: nota da última análise concluída (null = sem nota) e a situação da última tentativa
+    nota: l.NOTA === '' || l.NOTA === null || l.NOTA === undefined || !isFinite(Number(l.NOTA)) ? null : Number(l.NOTA), notaClasse: Lic_s_(l.NOTA_CLASSE), notaTrava: Lic_s_(l.NOTA_TRAVA),
+    analiseVersao: Number(l.ANALISE_VERSAO) || 0, analiseEm: Lic_s_(l.ANALISE_EM), analiseSituacao: Lic_s_(l.ANALISE_SITUACAO), arquivosQtd: l.ARQUIVOS_QTD === '' || l.ARQUIVOS_QTD === undefined ? null : Number(l.ARQUIVOS_QTD)
   };
 }
 function Lic_abaDe_(l) {
@@ -207,6 +220,12 @@ function Lic_abaDe_(l) {
   return 'analise';
 }
 function Lic_ativas_() { return Lic_ler_(LIC_ABAS.OPORTUNIDADES).filter(function (l) { return !Lic_s_(l.EXCLUIDO_EM); }); }
+/** Ordem "nota": maior nota primeiro; sem nota no fim; empate pela ordem padrão. */
+function Lic_ordenarNota_(a, b) {
+  var na = a.nota === null || a.nota === undefined ? -1 : a.nota, nb = b.nota === null || b.nota === undefined ? -1 : b.nota;
+  return nb !== na ? nb - na : Lic_ordenar_(a, b);
+}
+function Lic_ordenarPrazo_(a, b) { var ea = a.encerramentoIso || '9999', eb = b.encerramentoIso || '9999'; return ea < eb ? -1 : ea > eb ? 1 : 0; }
 function Lic_ordenar_(a, b) {
   if (b.prioridade !== a.prioridade) return b.prioridade - a.prioridade;
   var ea = a.encerramentoIso || '9999', eb = b.encerramentoIso || '9999';
@@ -225,9 +244,9 @@ function Lic_oportunidades_(eu, d) {
     if (sessao === 'OUTRO' && o.sessaoCodigo) return false;
     if (sessao && sessao !== 'OUTRO' && o.sessaoCodigo !== sessao) return false;
     return true;
-  }).sort(Lic_ordenar_);
+  }).sort(Lic_s_(d.ordem) === 'nota' ? Lic_ordenarNota_ : Lic_s_(d.ordem) === 'prazo' ? Lic_ordenarPrazo_ : Lic_ordenar_);
   var total = lista.length;
-  return { aba: aba, contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
+  return { aba: aba, ordem: ['nota', 'prazo'].indexOf(Lic_s_(d.ordem)) >= 0 ? Lic_s_(d.ordem) : 'prioridade', iaDisponivel: Lic_iaDisponivel_(), contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
 }
 
 function Lic_acharOp_(id) {
@@ -241,10 +260,11 @@ function Lic_ficha_(eu, d) {
   var hist = Lic_ler_(LIC_ABAS.HISTORICO).filter(function (h) { return Lic_s_(h.ENTIDADE) === 'OPORTUNIDADE' && Lic_s_(h.ENTIDADE_ID) === Lic_s_(l.ID); })
     .sort(function (a, b) { return Lic_s_(b.DATA) < Lic_s_(a.DATA) ? -1 : Lic_s_(b.DATA) > Lic_s_(a.DATA) ? 1 : 0; })
     .map(function (h) { return { tipo: Lic_s_(h.TIPO), de: Lic_s_(h.DE), para: Lic_s_(h.PARA), texto: Lic_s_(h.TEXTO), versao: Lic_s_(h.VERSAO), fonte: Lic_s_(h.FONTE), hash: Lic_s_(h.HASH), quem: Lic_s_(h.USUARIO_NOME), quando: Lic_s_(h.DATA) }; });
-  var fonte = null, fonteAviso = '';
+  var fonte = null, fonteAviso = '', srv = Lic_lerFonteServidor_(l);
   if (Lic_temColetor_()) {
     try {
-      var o = SGO_LICITACOES.obter({ chave: Lic_s_(l.CHAVE_FONTE) });
+      var o = srv.fonte;
+      if (srv.aviso && !o) throw new Error(srv.aviso);
       if (o) fonte = { versoes: o.versoes || [], itens: (o.itens || []).map(function (i) { return { numero: i.numeroItem, descricao: Lic_texto_(i.descricao, 600), tipo: i.materialServico === 'M' ? 'Material' : i.materialServico === 'S' ? 'Serviço' : '', quantidade: i.quantidade, unidade: i.unidade, valorUnitario: i.valorUnitario, valorTotal: i.valorTotal, beneficio: i.beneficio, sigiloso: !!i.sigiloso, situacao: i.situacao }; }), coletadaEm: o.atual ? o.atual.primeiraColetaEm : '', itensEm: o.atual ? o.atual.itensColetadosEm : '' };
     } catch (e) { fonteAviso = 'Não foi possível ler as versões da fonte agora (' + Lic_s_(e && e.message) + '). O resumo e o histórico abaixo continuam valendo.'; }
   } else fonteAviso = LIC_MSG_SEM_COLETOR + '.';
@@ -252,7 +272,10 @@ function Lic_ficha_(eu, d) {
   c.portalOrigem = Lic_s_(l.PORTAL_ORIGEM) === 'COMPRAS_GOV' ? 'Compras.gov.br dados abertos' : 'PNCP (API de consulta)';
   c.versaoHash = Lic_s_(l.VERSAO_HASH); c.brutoHash = Lic_s_(l.BRUTO_HASH); c.atualizacaoFonte = Lic_s_(l.ATUALIZACAO_FONTE); c.primeiraColeta = Lic_s_(l.PRIMEIRA_COLETA_EM);
   c.ultimaSincronia = Lic_s_(l.ULTIMA_SINCRONIA_EM); c.orgaoCnpj = Lic_s_(l.ORGAO_CNPJ); c.idComprasGov = Lic_s_(l.ID_COMPRAS_GOV); c.triagemVersao = Lic_s_(l.TRIAGEM_VERSAO);
-  return { op: c, historico: hist, fonte: fonte, fonteAviso: fonteAviso };
+  // etapa 2: arquivos do edital (servidor) e a análise por IA
+  var arquivos = srv.arquivos, analise = null;
+  try { analise = Lic_analiseFicha_(l, srv); } catch (e) { analise = { erro: 'Não foi possível montar a análise agora (' + Lic_s_(e && e.message) + ').' }; }
+  return { op: c, historico: hist, fonte: fonte, fonteAviso: fonteAviso, arquivos: arquivos, arquivosAviso: Lic_temArquivos_() ? '' : LIC_MSG_SEM_COLETOR + '.', analise: analise };
 }
 
 function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
@@ -274,8 +297,11 @@ function Lic_descartar_(eu, d) {
 }
 function Lic_enviarAnalise_(eu, d) {
   var obs = Lic_texto_(d.obs, 1000);
-  return Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Enviada para análise' + (obs ? ': ' + obs : '.') }, ['RADAR'], 'ANALISE', 'ENVIADA_PARA_ANALISE',
+  var r = Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Enviada para análise' + (obs ? ': ' + obs : '.') }, ['RADAR'], 'ANALISE', 'ENVIADA_PARA_ANALISE',
     { ANALISE_OBS: obs, RESPONSAVEL_ID: eu.id, RESPONSAVEL_NOME: eu.nome }, 'enviar para análise');
+  // etapa 2: em análise, o servidor lê os arquivos do edital (se ainda não leu); falha aqui não desfaz o envio
+  if (Lic_temArquivos_()) { try { var l = Lic_acharOp_(d.id); SGO_LICITACOES.arquivosPedir({ chave: Lic_s_(l.CHAVE_FONTE), quem: eu.nome, motivo: 'Enviada para análise' }); r.arquivosPedidos = true; } catch (e) { r.arquivosAviso = Lic_s_(e && e.message); } }
+  return r;
 }
 function Lic_reabrir_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);

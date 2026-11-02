@@ -1,0 +1,84 @@
+/****************************************************
+ * SGO+ LICITAÇÕES — REGRA DE GUARDA (aprovada pelo dono em 02/11/2026; docs/LICITACOES_00, decisões de 02/11)
+ *
+ *   1. Oportunidade em que a Diretoria mexeu (qualquer ato de pessoa no histórico: análise, descarte manual, reabertura,
+ *      arquivos pedidos ou abertos, análise por IA pedida; ou situação fora de "No radar"/"Descartada pela regra"):
+ *      PARA SEMPRE, com o histórico e os arquivos do edital.
+ *   2. Candidata ou travada nunca tocada por pessoa: 2 anos a partir da publicação (na falta da data de publicação, a
+ *      primeira coleta, que é sempre depois); depois sai de LIC_OPORTUNIDADES.
+ *   3. Descartada só pela regra, nunca tocada: a linha (resumo) fica 1 ano; depois sai de LIC_OPORTUNIDADES.
+ *   Toda saída grava no LIC_HISTORICO o resumo do que saiu (órgão, objeto, valor, UF, modalidade, datas, número de controle,
+ *   hash) e a regra. O histórico antigo da oportunidade não é apagado.
+ *
+ * O servidor (sgo_servidor/src/servicos/licitacoes/guarda.ts) faz a parte das tabelas lic_* (bruto em 30 dias, resumo em
+ * 1 ano, registro das chamadas em 6 meses, arquivos com a vida da oportunidade) e SÓ apaga o que não está na lista de
+ * protegidas que esta função devolve. Sem esta lista (legado falhou), o servidor não apaga nada das licitações.
+ * Roda uma vez por semana na manutenção do servidor (segunda 06:30), em lotes; prévia = conta sem apagar.
+ ****************************************************/
+
+var LIC_GUARDA_VERSAO = 'GUARDA-2026-11-02';
+var LIC_GUARDA_LOTE = 200;
+
+/** Datas em ISO aaaa-mm-dd a partir de hoje (fuso de Brasília). */
+function Lic_guardaLimite_(hojeIso, anos) { var d = new Date(hojeIso + 'T12:00:00Z'); d.setUTCFullYear(d.getUTCFullYear() - anos); return d.toISOString().slice(0, 10); }
+/** Data que conta para a guarda: publicação; na falta, a primeira coleta; na falta, a criação da linha. */
+function Lic_guardaData_(l) { return (Lic_s_(l.PUBLICACAO_EM) || Lic_s_(l.PRIMEIRA_COLETA_EM) || Lic_s_(l.CRIADO_EM)).slice(0, 10); }
+
+/** Ids das oportunidades com ato de pessoa no histórico (USUARIO_ID preenchido). */
+function Lic_guardaTocadas_() {
+  var t = {};
+  Lic_ler_(LIC_ABAS.HISTORICO).forEach(function (h) { if (Lic_s_(h.ENTIDADE) === 'OPORTUNIDADE' && Lic_s_(h.USUARIO_ID)) t[Lic_s_(h.ENTIDADE_ID)] = 1; });
+  return t;
+}
+/** Regra de cada linha: 1 (para sempre), 2 (candidata/travada intocada) ou 3 (descartada só pela regra, intocada). */
+function Lic_guardaRegra_(l, tocadas) {
+  var s = Lic_s_(l.SITUACAO), dor = Lic_s_(l.DESCARTE_ORIGEM);
+  if (tocadas[Lic_s_(l.ID)] || Lic_s_(l.RESPONSAVEL_ID) || (s !== 'RADAR' && s !== 'DESCARTADA') || dor === 'PESSOA' || dor === 'REABERTA') return 1;
+  if (s === 'DESCARTADA') return 3;
+  return 2;
+}
+
+/**
+ * A regra de guarda nas abas do legado. o: { previa, hoje (aaaa-mm-dd) }. Só execução interna (script da manutenção).
+ * Devolve { protegidas: [chaves das regras 1 e 2], saem: { regra2, regra3 }, ficam: { regra1, regra2, regra3 }, texto }.
+ */
+function Lic_guarda_(o) {
+  if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
+  o = o || {};
+  try { Lic_garantirAbas_(); } catch (e) {}
+  var hoje = Lic_s_(o.hoje) || Lic_hojeSp_(), lim2 = Lic_guardaLimite_(hoje, 2), lim1 = Lic_guardaLimite_(hoje, 1);
+  var tocadas = Lic_guardaTocadas_(), linhas = Lic_ler_(LIC_ABAS.OPORTUNIDADES);
+  var r = { ok: true, previa: !!o.previa, versao: LIC_GUARDA_VERSAO, hoje: hoje, protegidas: [], saem: { regra2: 0, regra3: 0 }, ficam: { regra1: 0, regra2: 0, regra3: 0 }, saiu: [], falhas: [] };
+  var sair = [];
+  linhas.forEach(function (l) {
+    var regra = Lic_guardaRegra_(l, tocadas), data = Lic_guardaData_(l), chave = Lic_s_(l.CHAVE_FONTE);
+    var vence = regra === 2 ? data && data < lim2 : regra === 3 ? data && data < lim1 : false;
+    if (vence) { sair.push({ l: l, regra: regra }); r.saem['regra' + regra]++; return; }
+    r.ficam['regra' + regra]++;
+    if (regra !== 3 && chave) r.protegidas.push(chave);
+  });
+  if (!o.previa) {
+    var sistema = { id: '', nome: 'Regra de guarda (manutenção semanal)' };
+    for (var i = 0; i < sair.length; i += LIC_GUARDA_LOTE) {
+      Lic_comTrava_(function () {
+        sair.slice(i, i + LIC_GUARDA_LOTE).forEach(function (x) {
+          var l = x.l, atual = SGO_DATA.getById(LIC_ABAS.OPORTUNIDADES, l.ID);
+          // relida na trava: se alguém mexeu agora há pouco, não sai
+          if (!atual || Lic_guardaRegra_(atual, Lic_guardaTocadas_()) !== x.regra) return;
+          var resumo = { orgao: Lic_s_(l.ORGAO_NOME), objeto: Lic_texto_(l.OBJETO, 600), valor: l.VALOR_ESTIMADO, uf: Lic_s_(l.UF), municipio: Lic_s_(l.MUNICIPIO), modalidade: Lic_s_(l.MODALIDADE),
+            publicacao: Lic_s_(l.PUBLICACAO_EM), primeiraColeta: Lic_s_(l.PRIMEIRA_COLETA_EM), encerramento: Lic_s_(l.ENCERRAMENTO_PROPOSTAS), numeroControlePncp: Lic_s_(l.NUMERO_CONTROLE_PNCP), hash: Lic_s_(l.VERSAO_HASH), triagem: Lic_s_(l.TRIAGEM), situacao: Lic_s_(l.SITUACAO) };
+          try {
+            SGO_DATA.remove(LIC_ABAS.OPORTUNIDADES, l.ID);
+            Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'SAIU_PELA_GUARDA', sistema, { de: Lic_s_(l.SITUACAO), para: 'fora de LIC_OPORTUNIDADES',
+              texto: (x.regra === 2 ? 'Regra 2 da guarda: candidata ou travada nunca tocada pela Diretoria, publicada há mais de 2 anos. ' : 'Regra 3 da guarda: descartada só pela regra do radar, nunca tocada, há mais de 1 ano. ') + 'Resumo: ' + JSON.stringify(resumo),
+              versao: l.VERSAO_FONTE, fonte: LIC_GUARDA_VERSAO, hash: Lic_s_(l.VERSAO_HASH) });
+            r.saiu.push(Lic_s_(l.CODIGO));
+          } catch (e) { r.falhas.push(Lic_s_(l.CODIGO) + ': ' + Lic_s_(e && e.message)); }
+        });
+      });
+    }
+  }
+  r.texto = 'Licitações (legado): ' + (o.previa ? 'prévia, nada apagado. ' : '') + 'Ficam: para sempre (Diretoria mexeu) ' + r.ficam.regra1 + '; candidatas e travadas dentro dos 2 anos ' + r.ficam.regra2 + '; descartadas pela regra dentro de 1 ano ' + r.ficam.regra3 +
+    '. ' + (o.previa ? 'Sairiam' : 'Saíram') + ' de LIC_OPORTUNIDADES: ' + r.saem.regra2 + ' pela regra 2 e ' + r.saem.regra3 + ' pela regra 3' + (r.falhas.length ? '; ' + r.falhas.length + ' falha(s): ' + r.falhas.slice(0, 3).join(' | ') : '') + '.';
+  return r;
+}

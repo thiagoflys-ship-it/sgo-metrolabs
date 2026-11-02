@@ -77,7 +77,7 @@ function ambiente(o) {
     SGO_execucaoInterna_: () => true,
     SGO_LICITACOES
   });
-  for (const f of ['SGO_Licitacoes_Config.js', 'SGO_Licitacoes.js', 'SGO_Ajuda.js', 'SGO_Ajuda_Licitacoes.js']) vm.runInContext(ler(f), ctx, { filename: f });
+  for (const f of ['SGO_Licitacoes_Config.js', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Analise.js', 'SGO_Ajuda.js', 'SGO_Ajuda_Licitacoes.js']) vm.runInContext(ler(f), ctx, { filename: f });
   const api = (sid, acao, d) => ctx.Licitacoes_api(sid, acao, d || {});
   return { ctx, tabelas, props, coletor, api, hist: (tipo) => (tabelas.LIC_HISTORICO || []).filter((h) => !tipo || h.TIPO === tipo) };
 }
