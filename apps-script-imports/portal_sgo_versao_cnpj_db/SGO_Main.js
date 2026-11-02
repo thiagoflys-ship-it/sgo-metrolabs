@@ -10,6 +10,8 @@ function doGet(e) {
   try {
     // 21/10/2026: link do assistente do ponto (?ponto=<token>): página leve de confirmação, sem login (SGO_Ponto_Api.js)
     if (e && e.parameter && e.parameter.ponto && typeof Ponto_pagina_ === "function") return Ponto_pagina_(e.parameter.ponto);
+    // 02/11/2026: botão "Confirmar ciência" do alerta de licitação (?licciente=<token>): página leve, sem login (SGO_Licitacoes_Alertas.js)
+    if (e && e.parameter && e.parameter.licciente && typeof Lic_cientePagina_ === "function") return Lic_cientePagina_(e.parameter.licciente);
     const template = HtmlService.createTemplateFromFile("Index");
 
     return template

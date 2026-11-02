@@ -1,6 +1,6 @@
-# Manual do módulo Licitações (SGO+) — etapas 1 e 2
+# Manual do módulo Licitações (SGO+) — etapas 1, 2 e 3
 
-Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
+Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
 
 ## 1. Para que serve
 
@@ -16,7 +16,12 @@ Na etapa 2 (02/11/2026) o módulo ganhou mais duas:
 5. Baixa os arquivos do edital (edital, termo de referência, anexos) das candidatas, travadas e das que a Diretoria pedir, guarda cada um no servidor com o SHA-256 e extrai o texto (seção 6.5).
 6. Dá uma nota de 0 a 100 com a IA, por critério, com cada afirmação classificada como FATO (com o trecho e a fonte), INFERÊNCIA ou PENDÊNCIA (seção 6.6). A IA não decide: descartar ou participar continua com a Diretoria.
 
-Ficam para as próximas etapas: agenda e prazos, alertas por WhatsApp, Kanban e Gantt, tabela de preços, simulador, proposta, disputa e contratos.
+Na etapa 3 (02/11/2026):
+
+7. Monta a agenda de prazos de cada licitação a partir da fonte, com a natureza de cada data (confirmada, calculada pela lei ou pendente de confirmação), os feriados, a retificação como versão nova e a suspensão (seção 6.7).
+8. Avisa a Diretoria de Licitações (interno, e-mail e WhatsApp oficial), pede a ciência, escalona sem ciência e usa o canal alternativo quando um falha (seções 6.8 e 6.9).
+
+Ficam para as próximas etapas: Kanban e Gantt, painel, tabela de preços, simulador, proposta, disputa e contratos.
 
 ## 2. Quem pode usar
 
@@ -29,6 +34,8 @@ Menu lateral, grupo "Licitações":
 
 - Hoje em Licitações
 - Oportunidades
+- Agenda e prazos
+- Central de alertas
 - Portais e configurações
 
 No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo.
@@ -149,6 +156,7 @@ Ações:
 
 - Resumo: objeto completo, triagem com o trecho, pendências, fuso e as ações.
 - Fonte: de onde veio, onde é a sessão, quem publicou, links, CNPJ do órgão, número da compra no Compras.gov.br, abertura e encerramento das propostas como a fonte informou, fuso, situação na fonte, última atualização na fonte, primeira coleta, última sincronia, hash da versão (SHA-256), hash da resposta original, versão das regras da triagem, tabela das versões e tabela dos itens.
+- Prazos: os prazos com a fonte e a natureza, os alertas de cada um e as versões anteriores (seção 6.7).
 - Arquivos: os arquivos do edital (seção 6.5).
 - Análise: a nota e a leitura do edital pela IA (seção 6.6).
 - Histórico: cada fato com quando, quem, o quê (de → para), versão, fonte e hash.
@@ -160,7 +168,8 @@ Partes:
 1. Portais e integrações: os 33 portais com código, nome, tipo (A a E), situação, ligado ou desligado, último teste e as ações "Acessar" (abre o portal em nova aba), "Parametrizar" e, no PNCP e no Compras.gov.br, "Testar conexão".
 2. Registro das chamadas: as últimas chamadas do coletor e dos testes.
 3. Regras do radar: "Coletor ligado", porte da matriz e os termos e regras que a triagem usa.
-4. Permissões: quem vê o quê.
+4. Regras dos alertas: quem recebe, canais, antecedências, níveis e escalonamento (seção 6.9).
+5. Permissões: quem vê o quê.
 
 Situação dos portais no cadastro inicial:
 
@@ -239,6 +248,113 @@ Sem a chave da IA: nada é calculado nem inventado; a tela diz "análise por IA 
 
 Versões: cada análise é uma linha nova em LIC_ANALISES (versão, data, quem pediu, motivo, modelo, a base analisada, os arquivos com o SHA-256 e o hash da própria análise). "Todas as versões da análise" mostra as anteriores.
 
+### 6.7 Agenda e prazos
+
+A agenda nasce sozinha da fonte: quando uma oportunidade entra no radar (ou quando a fonte muda), o SGO+ monta os prazos dela e cada prazo diz de onde veio e qual é a natureza da data.
+
+| Natureza | O que é | Exemplos | Gera alerta? |
+|---|---|---|---|
+| CONFIRMADO | Veio da fonte, ou uma pessoa conferiu no edital | Início do recebimento e fim do envio das propostas (dataAberturaProposta e dataEncerramentoProposta do PNCP) | Sim |
+| CALCULADO | Regra legal sobre a data da fonte. É sempre um cálculo, marcado como tal, com a regra escrita | Impugnação e esclarecimento: 3 dias úteis antes da abertura (Lei 14.133/2021, art. 164); impugnação em estatal: 5 dias úteis (Lei 13.303/2016, art. 87, § 1º); razões de recurso: 3 dias úteis da ata (art. 165) ou 5 (Lei 13.303, art. 59) | Sim, a partir do limite interno |
+| PREVISTO (pendente de confirmação) | Depende do edital ou de ato do pregoeiro | Sessão fora do Compras.gov.br (a fonte não informa a hora); esclarecimento de estatal (regulamento próprio); regime jurídico sem amparo da 14.133 ou da 13.303; data da fonte incoerente (abertura e encerramento com menos de 1 hora entre eles) | Não, até alguém confirmar |
+
+Regras do cálculo (art. 183): exclui o dia do começo e inclui o do vencimento.
+
+- Prazo contado para trás (impugnação, esclarecimento): não contam sábado, domingo, feriado nacional, Carnaval, Sexta-feira Santa, Corpus Christi e os feriados cadastrados no SGO+. O limite interno dos alertas fica 1 dia útil antes, às 17:00, porque feriado municipal e ponto facultativo do órgão não chegam por API.
+- Prazo contado para frente (recurso): só os feriados nacionais fixos, para o limite mostrado nunca passar do limite real.
+- Exemplo real: abertura em 04/11/2026 (quarta). 03/11 é o 1º dia útil antes, 02/11 é Finados (não conta), 30/10 é o 2º e 29/10 é o 3º: impugnação até 29/10/2026; limite interno 28/10/2026 17:00.
+- No Compras.gov.br a proposta vai até a abertura da sessão (IN SEGES/ME 73/2022, art. 18): o prazo aparece como "Fim do envio das propostas e abertura da sessão". Dispensa e inexigibilidade não têm impugnação.
+
+Tela "Agenda e prazos" (menu Licitações):
+
+- Período: Hoje, 7 dias, 30 dias ou Tudo. Filtros: prioridade, situação da data (pendentes), onde é a sessão, mostrar as travadas.
+- Números: prazos no período, críticos, pendentes de confirmação, suspensos ou cancelados. Linha "Próximo prazo".
+- Um bloco por dia, com o aviso do feriado ("não conta como dia útil nos cálculos"). Cada prazo: hora e fuso (Brasília, presumido quando a fonte não informa), nome, órgão, código, selos de natureza e nível, a fonte, a regra do cálculo, o limite interno, o motivo de uma mudança e os alertas (programados, próximo, enviados, sem ciência).
+- Prazo suspenso ou cancelado aparece riscado, com o motivo. A data antiga de um prazo retificado fica na ficha.
+- "Confirmar data" (prazo pendente) e "Conferir no edital" (confirmado com fuso presumido): data, hora ou dia todo, fuso e onde conferiu (obrigatório). Data diferente cria a versão nova do prazo e os alertas passam a seguir a nova; mesma data só registra a conferência.
+- No fim, "Prazos sem data (pendentes de confirmação)".
+
+Ficha da licitação, aba Prazos: todos os prazos com a fonte e a natureza, os alertas de cada prazo (com os estados e o botão "Ciente"), os alertas de mudança, o botão "Informar a data da ata" (prazo de recurso) e as "Versões anteriores dos prazos", riscadas.
+
+Retificação, suspensão, revogação e anulação:
+
+- Data mudou na fonte: a linha do prazo nunca é alterada. Nasce a versão nova (com o motivo "de ... para ...") e a anterior fica como "Substituído por versão nova". Os alertas pendentes do prazo antigo são cancelados com o motivo e a Diretoria recebe o alerta "Prazo alterado na fonte".
+- Data conferida por uma pessoa vale enquanto a data da fonte em que ela se baseou não mudar. Se a fonte mudar, o prazo volta a seguir a fonte e o motivo pede para conferir de novo.
+- Suspensa na fonte: prazos suspensos, alertas pendentes cancelados com o motivo e alerta crítico "Licitação suspensa na fonte". Revogada ou anulada: prazos cancelados e alerta crítico. Quando a situação volta, os prazos voltam a valer e vem o alerta "Licitação reaberta na fonte".
+- Licitação que já estava suspensa quando a agenda foi montada: os prazos aparecem suspensos, sem alerta de mudança.
+
+### 6.8 Alertas de licitação e Central de alertas
+
+Quem recebe: só a Diretoria de Licitações, que no sistema são os perfis Diretoria e Administrador ativos (decisão do dono, 02/11/2026: Charles e Thiago). Nenhum nome ou número fica no código: a lista sai do cadastro de usuários e das Regras dos alertas.
+
+Fora do expediente: exceção aprovada pelo dono só para Licitações. Os alertas saem a qualquer hora, só para essas pessoas. Os demais avisos do SGO+ continuam com a matriz de avisos (expediente, vínculo, teto do dia).
+
+De quais oportunidades: candidatas, em análise e as que avançaram. Nunca as descartadas nem as sem termo de interesse; as travadas só com a chave "Alertar também as travadas".
+
+Quem recebe primeiro: o responsável da oportunidade (quem enviou para análise); sem responsável, o titular escolhido nas regras; sem titular, os dois.
+
+Canais:
+
+| Canal | Quando | Observação |
+|---|---|---|
+| Interno | Sempre | Central de alertas, faixa vermelha "alertas sem ciência" no Hoje e na Agenda, aba Prazos da ficha |
+| E-mail | Ligado por pessoa | Sai por sistema@metrolabs.com.br, com o botão "Abrir a licitação no SGO+" (link ?aviso=, pede login) e o link "Confirmar ciência" |
+| WhatsApp | Ligado por pessoa | Só o WhatsApp oficial (Meta), pelo modelo sgo_licitacao_prazo. Nunca WhatsApp Web nem outro provedor. Sem o modelo aprovado, a linha diz "WhatsApp aguardando aprovação do modelo na Meta" e o alerta vai pelo interno e pelo e-mail |
+
+A mensagem do WhatsApp leva o nível, o órgão, o processo, o objeto resumido, o prazo, quando (com o fuso), o tempo restante e a ação necessária, o link para abrir no SGO+ e o botão "Confirmar ciência". O valor estimado não vai na mensagem.
+
+Antecedências padrão (ajustáveis):
+
+| Prazo | Antecedências e níveis |
+|---|---|
+| Fim do envio das propostas | 7 dias normal, 3 dias importante, 24 h importante, 4 h crítico, 1 h crítico |
+| Abertura da sessão (quando confirmada) | 24 h importante, 4 h importante, 1 h crítico, 30 min crítico, 10 min crítico |
+| Impugnação e esclarecimento (do limite interno) | 48 h normal, 24 h importante, 4 h importante |
+| Razões de recurso (do limite interno) | 48 h importante, 24 h importante, 4 h crítico |
+| Mudança na fonte | Retificação e reabertura: importante, para quem recebe primeiro. Suspensão, revogação e anulação: crítico, para os dois |
+
+Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada: sai só o aviso mais recente. Na implantação (primeira rodada), as já passadas não saem, para não mandar uma rajada de mensagens antigas.
+
+Estados de cada alerta (Central de alertas):
+
+| Nº | Estado | Como chega lá |
+|---|---|---|
+| 1 | Criado | Programado com a hora de sair |
+| 2 | Enviado ao provedor | O SGO+ entregou o e-mail ou a mensagem ao provedor |
+| 3 | Aceito pelo provedor | A Meta devolveu o id da mensagem ("Aceito pela Meta"); o e-mail entrou na fila de envio |
+| 4 | Entregue | Só pelo retorno de status da Meta (delivered) |
+| 5 | Lido | Só pelo retorno de status da Meta (read) |
+| 6 | Ciência | "Ciente" na tela, botão "Confirmar ciência" do WhatsApp, link do e-mail ou resposta CIENTE à mensagem |
+| 7 | Em atendimento | A pessoa abriu a licitação pelo link do alerta |
+| 8 | Concluído | O prazo passou com a ciência registrada |
+| 9 | Falha | Com o motivo e o canal alternativo usado |
+| 10 | Escalonado | Sem ciência no tempo do nível |
+
+A ciência registra que a pessoa viu o alerta; ela não conclui a tarefa. A ciência de um integrante encerra a cobrança daquele alerta para os dois.
+
+Escalonamento: sem ciência em 60 min (normal), 15 min (importante) ou 5 min (crítico), o alerta vai para o outro integrante, por e-mail e WhatsApp, e é reenviado a quem recebeu primeiro pelo outro canal. Se os dois receberam juntos (sem titular, ou mudança crítica), o escalonamento é só o reenvio por outro canal. Se nenhum canal saiu, escalona na hora. Depois que o prazo passa, o escalonamento para. A rotina roda a cada 5 minutos: o envio e o escalonamento saem até 5 minutos depois da hora marcada.
+
+Falha e canal alternativo: se o canal escolhido não sai (sem celular, sem modelo aprovado, retido pelo piloto, erro da Meta ou do e-mail), o SGO+ usa o outro canal e registra ("WhatsApp não saiu: e-mail enviado como canal alternativo"). Se a Meta devolver falha depois (retorno failed), o e-mail sai na hora, se ainda não tinha saído.
+
+Central de alertas (menu Licitações): faixas com a situação do modelo na Meta, do último retorno de status e da rotina; quem recebe; partes Sem ciência, Programados, Enviados, Falhas e canal alternativo, Cancelados e Todos. Cada alerta mostra o nível, a situação, para quem, a antecedência, os estados de 1 a 10 com a hora, o que cada canal fez, a ciência (de quem, quando e por onde), o escalonamento e o motivo do cancelamento; botões "Ciente", "Reenviar" e "Abrir a licitação".
+
+Página do botão "Confirmar ciência" (sem login): mostra só o primeiro nome, o prazo e o código LIC, e o botão para confirmar. O link vale só para aquele alerta e por 30 dias.
+
+### 6.9 Regras dos alertas (Portais e configurações)
+
+| Campo | Regra |
+|---|---|
+| Alertas de licitação ligados | Desligado: nada é programado nem enviado; os programados são cancelados com o motivo |
+| Alertar também as travadas | Padrão desligado |
+| Quem recebe e por onde | Só Diretoria e Administrador ativos; por pessoa: recebe, e-mail, WhatsApp. Com os alertas ligados, pelo menos uma pessoa precisa receber |
+| Quem recebe primeiro sem responsável | Uma pessoa ou os dois |
+| Canais para todos | E-mail e WhatsApp oficial |
+| Escalonamento (min) | De 1 a 1.440 por nível |
+| Antecedências | "7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico"; até 8 por prazo, de 1 minuto a 30 dias, sem repetir |
+| Mudanças na fonte | Nível de cada tipo de mudança |
+
+O motivo é obrigatório. Cada salvamento vira versão nova; só o que mudou é gravado (o resto fica como estava, por merge) e cada mudança vai para o histórico (de, para). Os alertas programados passam a seguir a regra nova e os que saem dela são cancelados com o motivo.
+
 ## 7. Problemas comuns
 
 | Situação | O que fazer |
@@ -256,6 +372,13 @@ Versões: cada análise é uma linha nova em LIC_ANALISES (versão, data, quem p
 | Arquivo com "texto não extraído" | Abra e leia à mão (imagem escaneada, RAR ou formato que o SGO+ não lê); a análise lista isso nas pendências |
 | "A última tentativa foi recusada pelo verificador" | A IA citou trecho que não está no edital; a nota anterior vale. Use "Refazer análise" com o motivo |
 | "Escreva o motivo para refazer a análise" | Pelo menos 10 letras; nada foi alterado |
+| "WhatsApp aguardando aprovação do modelo na Meta" | O dono cadastra o modelo sgo_licitacao_prazo em Chaves e senhas › Cadastrar modelos na Meta e confere a situação; até lá os alertas vão pelo SGO+ e pelo e-mail |
+| "Sem celular no cadastro" num alerta | O administrador preenche o celular em Administração › Usuários |
+| "Retido pelo piloto do WhatsApp" num alerta | O celular não está na lista da Diretoria de Licitações do piloto; confira o celular no cadastro (a lista é refeita a cada envio) |
+| Entregue e Lido nunca aparecem | A Meta ainda não mandou o retorno de status (webhook assinado do número do sistema). O último estado garantido é "Aceito pela Meta" |
+| "A rotina dos alertas está parada" | Avise o responsável pelo sistema: o agendador do servidor pode ter parado |
+| "Escreva onde você conferiu a data" | Pelo menos 10 letras (documento e item); nada foi alterado |
+| Um alerta de 7 dias não saiu | A oportunidade entrou quando a antecedência já tinha passado; sai só o aviso mais recente |
 
 ## 8. Rastreabilidade
 
@@ -265,6 +388,8 @@ Versões: cada análise é uma linha nova em LIC_ANALISES (versão, data, quem p
 - Todo fato no SGO+ (entrada no radar, retificação, triagem refeita, descarte, análise, reabertura, parâmetro de portal, teste de conexão, regras do radar, coleta pedida): histórico com quem, quando, o quê, versão, fonte e hash.
 - Arquivos do edital: cada um com SHA-256, tamanho, nome, origem e datas (lic_arquivos no servidor); versão nova quando muda na fonte; o histórico registra os arquivos lidos (ARQUIVOS_DA_FONTE, com o hash da base) e quem abriu ou baixou (ARQUIVO_ABERTO, com o SHA-256).
 - Análise por IA: uma linha por versão em LIC_ANALISES, com o hash; no histórico, ANALISE_IA (ou recusada, ou falhou) com a versão, o modelo, a versão da fonte e os arquivos lidos com o SHA-256.
+- Agenda: uma linha por versão de cada prazo em LIC_EVENTOS (natureza, fonte, regra, fuso, versão, quem conferiu, hash); no histórico, AGENDA_MONTADA, AGENDA_RETIFICADA, AGENDA_SUSPENSA, AGENDA_REVOGACAO, AGENDA_ANULACAO, AGENDA_REABERTA, AGENDA_CONFIRMADA, AGENDA_CONFERIDA e AGENDA_RECURSO.
+- Alertas: uma linha por prazo, antecedência e pessoa em LIC_ALERTAS (e por mudança, escalonamento e reenvio), cada canal com a situação e o motivo; no histórico, ALERTA_ENVIADO, ALERTA_FALHOU, ALERTA_WHATSAPP_ENVIADO, ALERTA_WHATSAPP_ENTREGUE, ALERTA_WHATSAPP_LIDO, ALERTA_WHATSAPP_FALHOU, ALERTA_CIENCIA (quem, quando, canal), ALERTA_ESCALONADO e ALERTA_REENVIO_PEDIDO. Regras dos alertas: REGRAS_DOS_ALERTAS (de, para, versão, motivo).
 - Nada é apagado: a situação muda.
 
 ### 8.1 Regra de guarda (aprovada pelo dono em 02/11/2026)
@@ -287,3 +412,7 @@ Os dados brutos das oportunidades que ficam (para sempre ou nos 2 anos) nunca s�
 - Arquivos do edital: tabelas lic_arquivos e lic_arquivos_estado no servidor; o conteúdo fica no serviço de arquivos do servidor, restrito (RESTRITO:LICITACOES). A rotina roda a cada 5 minutos com o coletor ligado (os pedidos da tela rodam sempre).
 - Regra de guarda: `npx tsx scripts/licitacoes_guarda.ts --previa` conta sem apagar; sem `--previa` aplica (a manutenção semanal já chama). O script só chama a rota interna POST /interno/licitacoes/guarda do próprio servidor (aceita só de dentro do contêiner), que pausa o coletor e os arquivos, roda Lic_guarda_ (SGO_Licitacoes_Guarda.js) no pool principal, com a mesma trava da sincronização, e depois servicos/licitacoes/guarda.ts. Tudo que ainda está em LIC_OPORTUNIDADES fica com a contratação, os itens e os arquivos no servidor.
 - Análise por IA: chave GEMINI_API_KEY e modelo IA_MODEL (as mesmas do SGO+); pesos da nota em LIC_CONFIG, chave NOTA (sem linha, vale o padrão do doc 03, B6).
+- Alertas: rotina Licitacoes_rotinaAlertas a cada 5 minutos (instalada sozinha quando a Diretoria abre Licitações; agenda que mudou, programar, escalonar, enviar, concluir). Regras em LIC_CONFIG, chave ALERTAS. Propriedades: LIC_ALERTAS_IMPLANTADO_EM (primeira rodada), LIC_ALERTAS_ULTIMA_RODADA, LIC_CIENCIA_SEGREDO (assinatura dos links de ciência; gerada sozinha, nunca aparece na tela).
+- Modelo do WhatsApp: sgo_licitacao_prazo (categoria Utilidade, botão de link "Confirmar ciência"), definido em NTF_MODELOS_META (SGO_Notificar.js) e cadastrado como os outros (Chaves e senhas › Cadastrar modelos na Meta, ou npx tsx scripts/cadastrar_modelos_meta.ts no servidor). A aprovação na Meta é do dono.
+- Piloto do WhatsApp: a lista telefonesLicitacoes (celulares da Diretoria de Licitações) libera só o modelo sgo_licitacao_prazo vindo dos alertas de licitação, no SGO+ e no servidor (regra 7 de servicos/whatsappPiloto.ts).
+- Retorno de status da Meta (sent, delivered, read, failed) e resposta CIENTE: o webhook do número do sistema chega à rota do COMMAND; o servidor confere a assinatura X-Hub-Signature-256 (META_APP_SECRET; sem a chave, o segredo da rota) e repassa os status e as respostas ao SGO+ (SGO_whatsappRetornoMeta_), que atualiza os avisos da gestão e os alertas de licitação. Sem assinatura válida, nada é repassado.

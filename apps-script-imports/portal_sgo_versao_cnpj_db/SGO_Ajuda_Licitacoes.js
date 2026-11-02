@@ -1,13 +1,14 @@
 /****************************************************
- * AJUDA "COMO USAR ESTA TELA" — SGO+ LICITAÇÕES, ETAPA 1 (01/11/2026) E ETAPA 2 (02/11/2026: arquivos do edital e nota pela IA)
+ * AJUDA "COMO USAR ESTA TELA" — SGO+ LICITAÇÕES, ETAPA 1 (01/11/2026), ETAPA 2 (02/11/2026: arquivos do edital e nota pela IA)
+ * E ETAPA 3 (02/11/2026: agenda de prazos, alertas com ciência e escalonamento, regras dos alertas)
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Manual completo: docs/MANUAL_MODULO_LICITACOES.md.
- * Telas: licitacoes (Hoje em Licitações), licitacoes_oportunidades (lista e ficha) e licitacoes_portais (Portais e
- * configurações). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
+ * Telas: licitacoes (Hoje em Licitações), licitacoes_oportunidades (lista e ficha), licitacoes_agenda (Agenda e prazos),
+ * licitacoes_alertas (Central de alertas) e licitacoes_portais (Portais e configurações). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
  * do servidor (sgo_servidor/src/servicos/licitacoes). Texto puro, sem HTML.
  ****************************************************/
 function SGO_ajudaTelas_Licitacoes_() {
   var quem = [
-    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
+    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
     { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026)." }
   ];
   return {
@@ -89,6 +90,13 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Histórico: quem, quando, o quê, versão, fonte e hash de cada fato (entrada no radar, retificação na fonte, triagem refeita, descarte, análise).",
           "Retificação na fonte nunca apaga a versão anterior: vira versão nova, e o histórico diz o que mudou."
         ] },
+        { titulo: "Prazos da licitação", itens: [
+          "A aba Prazos mostra cada prazo com a fonte e a natureza: Confirmado (veio da fonte ou foi conferido no edital), Calculado (regra legal sobre a data da fonte, como a impugnação do art. 164 da Lei 14.133) ou Pendente de confirmação (depende do edital ou do pregoeiro).",
+          "Prazo calculado mostra a regra, os feriados que não contaram e o limite interno dos alertas (1 dia útil antes, às 17:00). Feriado estadual ou municipal do órgão não chega por API: confira no edital.",
+          "\"Confirmar data\" (ou \"Conferir no edital\") pede a data, a hora ou dia todo, o fuso e onde você conferiu. Data diferente cria a versão nova do prazo; a anterior fica em \"Versões anteriores\". Prazo pendente não gera alerta até ser confirmado.",
+          "\"Informar a data da ata\" calcula as razões de recurso (3 dias úteis na Lei 14.133, 5 na Lei 13.303) e programa os alertas.",
+          "Embaixo de cada prazo ficam os alertas dele, com os estados e o botão \"Ciente\"."
+        ] },
         { titulo: "Arquivos do edital", itens: [
           "A aba Arquivos lista o edital e os anexos baixados do PNCP pelo servidor, cada um com o SHA-256 do conteúdo (prova de que é o arquivo publicado), o tamanho e a data.",
           "Situação do texto: \"Texto extraído\" (com páginas e caracteres), \"Texto parcial\" ou \"Texto não extraído\" com o motivo (imagem escaneada sem OCR, RAR, formato que o SGO+ não abre). Nada é inventado: o que não foi lido aparece assim.",
@@ -150,6 +158,12 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Cada chamada do coletor e dos testes: quando, portal, rota, HTTP, duração, registros e erro.",
           "HTTP 429 é limite de requisições: o coletor espera 30, 60 e 120 segundos antes de desistir. HTTP 503 é o portal fora do ar."
         ] },
+        { titulo: "Regras dos alertas", itens: [
+          "Liga e desliga os alertas de licitação, escolhe quem recebe (só Diretoria e Administrador) e por onde (e-mail e WhatsApp por pessoa; o interno vale sempre), quem recebe primeiro quando a oportunidade não tem responsável, os minutos até escalonar (padrão 60, 15 e 5) e as antecedências de cada prazo.",
+          "Antecedências se escrevem como \"7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico\" (d = dias, h = horas, min = minutos).",
+          "O motivo é obrigatório; cada salvamento vira versão nova, e só o que mudou é gravado (o resto fica como estava). Os alertas programados passam a seguir a regra nova; os que saem dela são cancelados com o motivo.",
+          "A faixa do alto diz se o modelo sgo_licitacao_prazo do WhatsApp está aprovado na Meta e quando chegou o último retorno de status."
+        ] },
         { titulo: "Regras do radar", itens: [
           "\"Coletor ligado\" liga ou desliga a coleta automática. Porte da matriz: EPP (decisão do dono).",
           "O motivo é obrigatório; cada salvamento vira versão nova. A próxima rodada do coletor já usa.",
@@ -176,6 +190,84 @@ function SGO_ajudaTelas_Licitacoes_() {
       perguntas: [
         { p: "Por que o Compras.gov.br não é o radar principal?", r: "Ele é um espelho do PNCP com atraso (em 30/10/2026 tinha 47 pregões contra 316 no PNCP). Serve de reserva quando o PNCP falha e para ler os itens." },
         { p: "Onde fica a senha ou a chave de um portal?", r: "Em Chaves e senhas. Aqui só aparece o nome da chave e se ela está cadastrada; o valor nunca volta para a tela nem para o registro." }
+      ]
+    },
+    "licitacoes_agenda": {
+      titulo: "Agenda e prazos",
+      paraQueServe: "Mostra os prazos das licitações por dia: fim das propostas, abertura da sessão, impugnação, esclarecimento e recurso, cada um com a fonte, o fuso, a natureza da data e os alertas programados.",
+      antesDeComecar: [
+        "Os prazos nascem sozinhos da fonte (PNCP e Compras.gov.br) quando a oportunidade entra no radar e são refeitos quando a fonte muda.",
+        "Os horários são os da fonte, presumidos de Brasília (o PNCP não informa o fuso). Em UF com outro fuso, confira no edital se o horário é local."
+      ],
+      passos: [
+        { titulo: "Ler a agenda", itens: [
+          "Escolha o período: Hoje, 7 dias, 30 dias ou Tudo. Os filtros escolhem a prioridade, a situação da data e onde é a sessão.",
+          "Cada dia tem o cabeçalho com a data; feriado nacional aparece com o aviso de que não conta como dia útil.",
+          "Cada prazo mostra a hora, o fuso, o órgão, a natureza (Confirmado, Calculado ou Pendente de confirmação), a fonte, a regra do cálculo, o limite interno e os alertas.",
+          "Prazo riscado está suspenso ou cancelado na fonte; a data antiga de um prazo retificado fica na ficha, aba Prazos."
+        ] },
+        { titulo: "Confirmar uma data", itens: [
+          "Toque em \"Confirmar data\" num prazo pendente (ou \"Conferir no edital\" num confirmado com fuso presumido).",
+          "Informe a data, a hora (ou dia todo), o fuso e onde conferiu. Data diferente cria a versão nova do prazo e os alertas passam a seguir a nova.",
+          "Prazo pendente de confirmação não gera alerta. Prazos sem data (regime pendente, esclarecimento de estatal) ficam no fim da agenda."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo verde Confirmado", significado: "A data veio da fonte ou foi conferida por uma pessoa no edital." },
+        { nome: "Selo azul Calculado", significado: "Regra legal sobre a data da fonte. É sempre um cálculo: confira no edital." },
+        { nome: "Selo laranja Pendente de confirmação", significado: "Depende do edital ou do pregoeiro; sem alerta até alguém confirmar." },
+        { nome: "Borda vermelha, laranja ou azul", significado: "Prazo crítico, importante ou normal." }
+      ],
+      problemas: [
+        { situacao: "Ao confirmar aparece \"Escreva onde você conferiu a data\"", oQueFazer: "Escreva o documento e o item (por exemplo: edital, item 5.1, página 3). Fica no histórico com o seu nome." },
+        { situacao: "Ao confirmar aparece que o prazo foi substituído", oQueFazer: "A fonte mudou a data enquanto a janela estava aberta. Toque em \"Atualizar\" e confira a versão nova." },
+        { situacao: "Um prazo de impugnação está em dia diferente do edital", oQueFazer: "O cálculo usa só o calendário nacional conhecido. Confirme a data do edital em \"Confirmar data\": a versão nova passa a valer e a calculada fica guardada." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "Por que a impugnação tem um limite interno antes do limite da lei?", r: "Prazo contado para trás leva 1 dia útil de folga (às 17:00) porque feriado municipal e ponto facultativo do órgão não chegam por API. Os alertas usam o limite interno." },
+        { p: "O que acontece quando o órgão retifica o edital?", r: "O prazo ganha uma versão nova com o motivo (de, para), a versão anterior fica guardada, os alertas pendentes do prazo antigo são cancelados com o motivo e a Diretoria recebe o alerta de mudança." }
+      ]
+    },
+    "licitacoes_alertas": {
+      titulo: "Central de alertas",
+      paraQueServe: "Mostra cada alerta de licitação com o caminho completo: criado, enviado, aceito, entregue e lido (só pelo retorno da Meta), ciência de quem e quando, escalonamento e canal alternativo.",
+      antesDeComecar: [
+        "Os alertas vão só para a Diretoria de Licitações (perfis Diretoria e Administrador), inclusive fora do expediente: exceção aprovada pelo dono só para Licitações.",
+        "Canais: o aviso interno (esta tela e a faixa das telas de Licitações) vale sempre; e-mail e WhatsApp oficial conforme Portais e configurações › Regras dos alertas.",
+        "Sem o modelo sgo_licitacao_prazo aprovado na Meta, o WhatsApp não sai e a linha diz \"WhatsApp aguardando aprovação do modelo na Meta\": o alerta vai pelo interno e pelo e-mail."
+      ],
+      passos: [
+        { titulo: "Dar ciência", itens: [
+          "Toque em \"Ciente\" no alerta (aqui, no Hoje, na Agenda ou na aba Prazos da ficha). Também vale o botão \"Confirmar ciência\" do WhatsApp, o link do e-mail ou responder CIENTE à mensagem.",
+          "A ciência de um integrante encerra a cobrança daquele alerta para os dois. Ciência não conclui a tarefa: a ação continua no portal e no SGO+."
+        ] },
+        { titulo: "Entender os estados", itens: [
+          "1 Criado, 2 Enviado ao provedor, 3 Aceito pelo provedor, 4 Entregue, 5 Lido, 6 Ciência, 7 Em atendimento (abriu pelo link), 8 Concluído (o prazo passou com ciência), 9 Falha, 10 Escalonado.",
+          "Entregue e Lido só aparecem quando a Meta manda o retorno de status. Sem retorno, o último estado garantido é \"Aceito pela Meta\".",
+          "Sem ciência no tempo do nível (padrão 60, 15 e 5 minutos), o alerta vai para o outro integrante e é reenviado por outro canal. Falha nos dois canais escalona na hora."
+        ] },
+        { titulo: "Falhas e reenvio", itens: [
+          "Na aba \"Falhas e canal alternativo\" ficam os alertas em que um canal falhou, com o motivo e o que foi feito (por exemplo: WhatsApp falhou, e-mail enviado como canal alternativo).",
+          "\"Reenviar\" manda de novo pelos dois canais e fica no histórico."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo vermelho, laranja ou cinza", significado: "Nível crítico, importante ou normal." },
+        { nome: "Estado verde", significado: "Etapa feita, com a hora (toque e segure para ver)." },
+        { nome: "Estado tracejado", significado: "Ainda não aconteceu (Entregue e Lido dependem do retorno da Meta)." },
+        { nome: "Estado vermelho ou laranja", significado: "Falha ou escalonamento." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"WhatsApp aguardando aprovação do modelo na Meta\"", oQueFazer: "O dono cadastra o modelo em Chaves e senhas › Cadastrar modelos na Meta e confere a situação. Até a aprovação, os alertas seguem pelo SGO+ e pelo e-mail." },
+        { situacao: "Aparece \"Sem celular no cadastro\"", oQueFazer: "Peça ao administrador para preencher o celular em Administração › Usuários." },
+        { situacao: "Aparece \"Retido pelo piloto do WhatsApp\"", oQueFazer: "O celular não está na lista da Diretoria de Licitações do piloto. Confira o celular no cadastro; a lista é refeita sozinha a cada envio." },
+        { situacao: "Aparece que a rotina dos alertas está parada", oQueFazer: "Avise o responsável pelo sistema: o agendador do servidor pode ter parado. Os alertas atrasados saem quando ele voltar (só o mais recente de cada prazo)." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "Por que um alerta de 7 dias não saiu?", r: "A oportunidade entrou no radar quando a antecedência de 7 dias já tinha passado. Sai só o aviso mais recente; os anteriores não são enviados para não mandar vários de uma vez." },
+        { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica só no SGO+." }
       ]
     }
   };

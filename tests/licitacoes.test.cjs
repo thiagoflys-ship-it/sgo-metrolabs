@@ -480,8 +480,9 @@ test('telas: menu e casca no computador e no celular (390 px), cartão no padrã
 test('integração na casca: menu só da Diretoria, rota, atalho do celular, ajuda das 3 telas, manual do assistente e item da sentinela', () => {
   const idx = ler('Index.html'), core = ler('JS_Core.html');
   assert.match(idx, /id="menu-secao-licitacoes" style="display:none;"/);
-  for (const m of ['licitacoes', 'licitacoes_oportunidades', 'licitacoes_portais']) assert.match(idx, new RegExp('data-mod="' + m + '"'));
-  assert.doesNotMatch(idx, /data-mod="licitacoes_(kanban|gantt|agenda|alertas|disputas)"/, 'Kanban, Gantt, agenda, alertas e disputas ficam para as próximas etapas');
+  for (const m of ['licitacoes', 'licitacoes_oportunidades', 'licitacoes_agenda', 'licitacoes_alertas', 'licitacoes_portais']) assert.match(idx, new RegExp('data-mod="' + m + '"'));
+  // etapa 3 (02/11/2026): agenda e alertas entraram; Kanban, Gantt e disputas ficam para as próximas etapas
+  assert.doesNotMatch(idx, /data-mod="licitacoes_(kanban|gantt|disputas)"/, 'Kanban, Gantt e disputas ficam para as próximas etapas');
   assert.match(idx, /<\?!= include\('JS_Licitacoes'\); \?>/);
   assert.match(core, /if \(\(mod === "licitacoes" \|\| mod\.indexOf\("licitacoes_"\) === 0\) && typeof Licitacoes_render_ === "function"\)/);
   assert.equal((core.match(/Licitacoes_iniciar_\(\);/g) || []).length, 2);

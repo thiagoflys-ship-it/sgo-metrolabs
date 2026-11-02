@@ -686,8 +686,9 @@ function SGO_avisosGestaoRodada_(quando) {
 // RETORNO DA META (entregue / lido), pronto para o servidor chamar
 // ------------------------------------------------------------
 /**
- * O webhook do WhatsApp oficial (statuses: sent, delivered, read, failed) ainda não é registrado no SGO+. Quando for, chame
- * SGO_avisosGestaoRetornoMeta_(wamid, status, quandoIso, motivo) para cada retorno. Devolve quantas linhas mudaram.
+ * Retorno de um status do WhatsApp oficial (sent, delivered, read, failed) para os avisos da gestão. Ligado em 02/11/2026: o
+ * servidor recebe o webhook da Meta (rota do número do sistema, assinatura conferida) e chama SGO_whatsappRetornoMeta_ abaixo,
+ * que repassa cada status para cá e para os alertas de licitação. Devolve quantas linhas mudaram.
  */
 function SGO_avisosGestaoRetornoMeta_(wamid, status, quandoIso, motivo) {
   try {
@@ -704,6 +705,32 @@ function SGO_avisosGestaoRetornoMeta_(wamid, status, quandoIso, motivo) {
     });
     return n;
   } catch (e) { return 0; }
+}
+
+/**
+ * 02/11/2026: entrada única do retorno da Meta no SGO+ (chamada pelo servidor, sgo_servidor servicos/whatsappRetorno.ts, depois de
+ * conferir a assinatura X-Hub-Signature-256 ou o segredo da rota). lista = [{ tipo: STATUS, id (wamid), status, quando, motivo } |
+ * { tipo: RESPOSTA, contexto (wamid da mensagem respondida), de (número), texto, quando }]. Repassa os status aos avisos da gestão
+ * e aos alertas de licitação; a resposta "ciente" a um alerta de licitação registra a ciência. Só execução interna. Nunca lança.
+ */
+function SGO_whatsappRetornoMeta_(lista) {
+  if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
+  var r = { status: 0, gestao: 0, licitacoes: 0, respostas: 0, ciencias: 0 };
+  try {
+    (Array.isArray(lista) ? lista : []).slice(0, 500).forEach(function (x) {
+      if (!x || typeof x !== 'object') return;
+      if (x.tipo === 'STATUS') {
+        r.status++;
+        r.gestao += SGO_avisosGestaoRetornoMeta_(x.id, x.status, x.quando, x.motivo) || 0;
+        if (typeof Lic_alertasRetornoMeta_ === 'function') r.licitacoes += Lic_alertasRetornoMeta_(x.id, x.status, x.quando, x.motivo) || 0;
+      } else if (x.tipo === 'RESPOSTA') {
+        r.respostas++;
+        if (typeof Lic_alertasRespostaWhatsapp_ === 'function') r.ciencias += Lic_alertasRespostaWhatsapp_(x.contexto, x.de, x.texto, x.quando) || 0;
+      }
+    });
+    if (r.status || r.respostas) PropertiesService.getScriptProperties().setProperty('SGO_WA_RETORNO_ULTIMO', JSON.stringify({ em: new Date().toISOString(), status: r.status, gestao: r.gestao, licitacoes: r.licitacoes, respostas: r.respostas, ciencias: r.ciencias }));
+  } catch (e) { r.erro = String((e && e.message) || e).slice(0, 200); }
+  return r;
 }
 
 // ------------------------------------------------------------
@@ -802,6 +829,8 @@ function SGO_AvisosGestao_api(sessionId, acao, dados) {
     var d = dados || {};
     if (acao !== 'abrir') throw new Error('Ação desconhecida.');
     var id = AvG_s_(d.aviso);
+    // 02/11/2026: link de alerta de licitação (LA + 10): abre a ficha na aba Prazos (SGO_Licitacoes_Alertas.js)
+    if (/^LA[0-9a-f]{10}$/.test(id) && typeof Lic_avisoAbrir_ === 'function') return Lic_avisoAbrir_(s, id);
     var l = /^[A-Za-z0-9-]{4,40}$/.test(id) ? AvG_ler_().filter(function (x) { return AvG_s_(x.AVISO_ID) === id; })[0] : null;
     if (!l) return { ok: false, tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, message: 'Não encontramos este aviso (o link pode ser de outro ambiente ou ter sido copiado pela metade). Abrimos a Caixa de decisões: o item continua lá até ser resolvido.' };
     // revisão 01/11/2026: só o destinatário do aviso e a gestão abrem pelo link

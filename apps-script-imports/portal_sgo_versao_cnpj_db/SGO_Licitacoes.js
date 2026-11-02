@@ -16,6 +16,11 @@
  * Etapa 2 (02/11/2026): arquivos do edital e nota 0–100 pela IA (SGO_Licitacoes_Analise.js). A ficha traz as abas
  * "Arquivos" (lista com SHA-256, abrir e baixar, situação da extração) e "Análise" (nota, critérios, fatos com fonte,
  * inferências, pendências, versão); a lista mostra a nota no cartão e ordena por nota.
+ *
+ * Etapa 3 (02/11/2026): agenda de prazos (SGO_Licitacoes_Agenda.js) e alertas com ciência e escalonamento
+ * (SGO_Licitacoes_Alertas.js). Depois de cada sincronia, as oportunidades novas ou com versão nova da fonte têm a agenda
+ * refeita (retificação = versão nova do prazo + alerta de mudança); a ficha ganha a aba "Prazos"; telas novas "Agenda e
+ * prazos" e "Central de alertas"; "Regras dos alertas" em Portais e configurações.
  ****************************************************/
 
 var LIC_CAMPOS_RETIFICACAO = { OBJETO: 'Objeto', ABERTURA_PROPOSTAS: 'Abertura das propostas', ENCERRAMENTO_PROPOSTAS: 'Encerramento das propostas', VALOR_ESTIMADO: 'Valor estimado',
@@ -42,7 +47,16 @@ var LIC_ACOES = {
   buscarArquivos: function (eu, d) { return Lic_buscarArquivos_(eu, d); },
   arquivoBaixar: function (eu, d) { return Lic_arquivoBaixar_(eu, d); },
   analise: function (eu, d) { return Lic_analiseAcao_(eu, d); },
-  analisar: function (eu, d) { return Lic_analisarAcao_(eu, d); }
+  analisar: function (eu, d) { return Lic_analisarAcao_(eu, d); },
+  // etapa 3 (02/11/2026)
+  agenda: function (eu, d) { return Lic_agenda_(eu, d); },
+  eventoConfirmar: function (eu, d) { return Lic_eventoConfirmar_(eu, d); },
+  eventoAta: function (eu, d) { return Lic_eventoAta_(eu, d); },
+  alertas: function (eu, d) { return Lic_alertasCentral_(eu, d); },
+  alertaCiente: function (eu, d) { return Lic_alertaCienteTela_(eu, d); },
+  alertaReenviar: function (eu, d) { return Lic_alertaReenviar_(eu, d); },
+  alertasCfg: function (eu) { return { cfg: Lic_alertasCfgTela_() }; },
+  alertasCfgSalvar: function (eu, d) { return Lic_alertasCfgSalvar_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -52,7 +66,7 @@ function Licitacoes_api(sessionId, acao, dados) {
     if (!fn) return { ok: false, message: 'Ação de Licitações desconhecida (' + Lic_s_(acao) + '). Atualize a página (F5) e tente de novo.' };
     var eu = Lic_eu_(sessionId);
     if (acao !== 'acesso') Lic_exigir_(eu, 'abrir');
-    if (eu.gestao) { try { Lic_garantirAbas_(); } catch (e) {} }
+    if (eu.gestao) { try { Lic_garantirAbas_(); } catch (e) {} try { if (typeof Lic_garantirRotinaTalvez_ === 'function') Lic_garantirRotinaTalvez_(); } catch (e) {} }
     var r = fn(eu, dados || {});
     return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
   } catch (e) {
@@ -125,7 +139,7 @@ function Lic_sincronizar_(eu, o) {
   var props = PropertiesService.getScriptProperties();
   var maxVoltas = Math.max(1, Math.min(25, Number(o.voltas) || 25));
   var r = { ok: true, lidas: 0, novas: 0, retificadas: 0, triagemMudou: 0, situacaoMudou: 0, paginas: 0, mais: false, ate: Lic_s_(props.getProperty('LIC_SYNC_DESDE')) };
-  var sistema = { id: '', nome: 'Coletor de licitações (servidor)' };
+  var sistema = { id: '', nome: 'Coletor de licitações (servidor)' }, mexidas = {};
   for (var volta = 0; volta < maxVoltas; volta++) {
     var continuar = Lic_comTrava_(function () {
       var desde = Lic_s_(props.getProperty('LIC_SYNC_DESDE'));   // relido na trava: duas sincronias seguem o mesmo cursor
@@ -145,7 +159,7 @@ function Lic_sincronizar_(eu, o) {
             ULTIMA_SINCRONIA_EM: agora, CRIADO_POR_NOME: sistema.nome, ATUALIZADO_EM: agora, CRIADO_EM: agora });
           var ins = SGO_DATA.insert(LIC_ABAS.OPORTUNIDADES, nova);
           nova.ID = ins && ins.ID ? ins.ID : nova.ID;
-          linhas.push(nova); porChave[fonte.CHAVE_FONTE] = nova; r.novas++;
+          linhas.push(nova); porChave[fonte.CHAVE_FONTE] = nova; r.novas++; mexidas[Lic_s_(nova.ID)] = true;
           Lic_historico_('OPORTUNIDADE', nova.ID, nova.CODIGO, desc ? 'DESCARTADA_PELA_REGRA' : 'ENTROU_NO_RADAR', sistema,
             { para: nova.SITUACAO, texto: (desc ? 'Descartada pela regra do radar: ' : 'Entrou no radar (' + tri.TRIAGEM.toLowerCase() + '): ') + tri.TRIAGEM_MOTIVO + (tri.TRIAGEM_TRECHO ? ' Trecho: "' + tri.TRIAGEM_TRECHO + '"' : ''),
               versao: fonte.VERSAO_FONTE, fonte: origem, hash: fonte.VERSAO_HASH });
@@ -177,7 +191,7 @@ function Lic_sincronizar_(eu, o) {
             Lic_historico_('OPORTUNIDADE', atual.ID, atual.CODIGO, 'SITUACAO', sistema, { de: sit, para: novaSit, texto: novaSit === 'DESCARTADA' ? 'A regra do radar passou a descartar: ' + tri.TRIAGEM_MOTIVO : 'A regra do radar deixou de descartar (regras ou fonte mudaram); volta para o radar.', versao: fonte.VERSAO_FONTE, fonte: 'Regras do radar ' + tri.TRIAGEM_VERSAO, hash: fonte.VERSAO_HASH });
           }
         }
-        if (Object.keys(mud).length > 1) mud.ATUALIZADO_EM = agora;
+        if (Object.keys(mud).length > 1) { mud.ATUALIZADO_EM = agora; mexidas[Lic_s_(atual.ID)] = true; }
         SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, atual.ID, mud);
         Object.keys(mud).forEach(function (k) { atual[k] = mud[k]; });
       });
@@ -188,6 +202,12 @@ function Lic_sincronizar_(eu, o) {
     });
     if (!continuar) break;
     if (volta === maxVoltas - 1) r.mais = true;
+  }
+  // etapa 3: agenda das novas e das que mudaram na fonte (fora da trava da página: cada oportunidade pega a trava sozinha)
+  var ids = Object.keys(mexidas);
+  if (ids.length && typeof Lic_agendaAtualizar_ === 'function') {
+    try { var ag = Lic_agendaAtualizar_({ ids: ids, limite: ids.length }); r.agenda = { atualizadas: ag.atualizadas, retificados: ag.retificados, mudancas: ag.mudancas }; }
+    catch (e) { r.agendaAviso = 'A agenda será refeita na próxima rodada dos alertas (' + Lic_s_(e && e.message) + ').'; }
   }
   return r;
 }
@@ -275,7 +295,12 @@ function Lic_ficha_(eu, d) {
   // etapa 2: arquivos do edital (servidor) e a análise por IA
   var arquivos = srv.arquivos, analise = null;
   try { analise = Lic_analiseFicha_(l, srv); } catch (e) { analise = { erro: 'Não foi possível montar a análise agora (' + Lic_s_(e && e.message) + ').' }; }
-  return { op: c, historico: hist, fonte: fonte, fonteAviso: fonteAviso, arquivos: arquivos, arquivosAviso: Lic_temArquivos_() ? '' : LIC_MSG_SEM_COLETOR + '.', analise: analise };
+  // etapa 3: prazos (todas as versões) e os alertas de cada um
+  var prazos = null;
+  // agenda ainda não montada (oportunidade nova entre duas rodadas) ou com base velha: monta agora
+  try { if (typeof Lic_agendaBase_ === 'function' && Lic_s_(l.EVENTOS_BASE_HASH) !== Lic_agendaBase_(l)) { Lic_agendaAposSituacao_(l.ID); l = Lic_acharOp_(l.ID); } } catch (e) {}
+  try { prazos = typeof Lic_prazosFicha_ === 'function' ? Lic_prazosFicha_(l) : null; } catch (e) { prazos = { erro: 'Não foi possível montar os prazos agora (' + Lic_s_(e && e.message) + ').' }; }
+  return { op: c, historico: hist, fonte: fonte, fonteAviso: fonteAviso, arquivos: arquivos, arquivosAviso: Lic_temArquivos_() ? '' : LIC_MSG_SEM_COLETOR + '.', analise: analise, prazos: prazos };
 }
 
 function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
@@ -292,13 +317,16 @@ function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
 function Lic_descartar_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva o motivo do descarte (pelo menos 10 letras): ele fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. Nada foi alterado');
-  return Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo }, ['RADAR', 'ANALISE'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
-    { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar');
+  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo }, ['RADAR', 'ANALISE'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
+    { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar'));
 }
+/** Etapa 3: depois de mudar a situação, a agenda e os alertas acompanham (descartada = alertas pendentes cancelados com o motivo). */
+function Lic_aposSituacao_(id, r) { if (typeof Lic_agendaAposSituacao_ === 'function') Lic_agendaAposSituacao_(Lic_s_(id)); return r; }
 function Lic_enviarAnalise_(eu, d) {
   var obs = Lic_texto_(d.obs, 1000);
   var r = Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Enviada para análise' + (obs ? ': ' + obs : '.') }, ['RADAR'], 'ANALISE', 'ENVIADA_PARA_ANALISE',
     { ANALISE_OBS: obs, RESPONSAVEL_ID: eu.id, RESPONSAVEL_NOME: eu.nome }, 'enviar para análise');
+  Lic_aposSituacao_(d.id, r);
   // etapa 2: em análise, o servidor lê os arquivos do edital (se ainda não leu); falha aqui não desfaz o envio
   if (Lic_temArquivos_()) { try { var l = Lic_acharOp_(d.id); SGO_LICITACOES.arquivosPedir({ chave: Lic_s_(l.CHAVE_FONTE), quem: eu.nome, motivo: 'Enviada para análise' }); r.arquivosPedidos = true; } catch (e) { r.arquivosAviso = Lic_s_(e && e.message); } }
   return r;
@@ -306,7 +334,7 @@ function Lic_enviarAnalise_(eu, d) {
 function Lic_reabrir_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva por que a oportunidade volta para o radar (pelo menos 10 letras). Nada foi alterado');
-  return Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: 'REABERTA' }, 'reabrir');
+  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Reaberta: ' + motivo }, ['DESCARTADA'], 'RADAR', 'REABERTA', { DESCARTE_ORIGEM: 'REABERTA' }, 'reabrir'));
 }
 
 function Lic_situacaoColetor_() {
@@ -329,7 +357,10 @@ function Lic_hoje_(eu) {
   });
   prazos.sort(function (a, b) { return a.encerramentoIso < b.encerramentoIso ? -1 : 1; });
   novas.sort(function (a, b) { return (b.situacaoDesde || '') < (a.situacaoDesde || '') ? -1 : 1; });
-  return { kpis: k, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_() };
+  // etapa 3: alertas enviados e sem ciência (da Diretoria de Licitações inteira), para a faixa de cima
+  var semC = [];
+  try { if (typeof Lic_alertasSemCiencia_ === 'function') semC = Lic_alertasSemCiencia_(null).map(Lic_alertaParaTela_).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; }); } catch (e) { semC = []; }
+  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_() };
 }
 
 function Lic_coletarAgora_(eu) {

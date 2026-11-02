@@ -470,7 +470,9 @@ function Mtz_pertoDoPonto_(uid, agora) {
 function Mtz_foraDaMatriz_(o) {
   var cat = Mtz_up_(o.categoria), org = Mtz_up_(o.origem);
   // 01/11/2026: AVISOS_GESTAO = o envio do próprio aviso da gestão (SGO_Avisos_Gestao.js), que já passou pela regra
-  return cat === 'PONTO' || org.indexOf('PONTO') === 0 || cat === 'RESUMO_DIA' || org === 'RESUMO_DIA' || org === 'WA_PILOTO' || org === 'AVISOS_GESTAO';
+  // 02/11/2026: LICITACOES = alertas de licitação (SGO_Licitacoes_Alertas.js), com regra própria aprovada pelo dono: só a Diretoria
+  // de Licitações recebe e pode sair fora do expediente; a matriz (expediente, vínculo CLT, teto do dia) não se aplica a eles
+  return cat === 'PONTO' || org.indexOf('PONTO') === 0 || cat === 'RESUMO_DIA' || org === 'RESUMO_DIA' || org === 'WA_PILOTO' || org === 'AVISOS_GESTAO' || org === 'LICITACOES';
 }
 
 /** Evento da chamada: o informado ou o da origem (Comercial: pelo tipo do aviso guardado). */

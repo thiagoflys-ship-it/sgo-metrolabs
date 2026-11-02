@@ -50,7 +50,7 @@ var SGO_AJUDA_NOMES = {
   // 31/10/2026: relatório do ciclo da lavadora (SGO_Ajuda_LavCiclo.js)
   lavadora_ciclos: 'Relatórios de ciclo',
   // 01/11/2026: SGO+ Licitações, etapa 1 (SGO_Ajuda_Licitacoes.js)
-  licitacoes: 'Hoje em Licitações', licitacoes_oportunidades: 'Oportunidades (Licitações)', licitacoes_portais: 'Portais e configurações (Licitações)'
+  licitacoes: 'Hoje em Licitações', licitacoes_oportunidades: 'Oportunidades (Licitações)', licitacoes_agenda: 'Agenda e prazos (Licitações)', licitacoes_alertas: 'Central de alertas (Licitações)', licitacoes_portais: 'Portais e configurações (Licitações)'
 };
 
 /**

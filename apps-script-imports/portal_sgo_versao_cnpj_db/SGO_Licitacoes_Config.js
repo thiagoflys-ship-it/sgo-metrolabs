@@ -15,7 +15,7 @@
  * Nada é apagado: a situação muda; parâmetros mudam com merge, versão e motivo.
  ****************************************************/
 
-var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG', ANALISES: 'LIC_ANALISES' };
+var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG', ANALISES: 'LIC_ANALISES', EVENTOS: 'LIC_EVENTOS', ALERTAS: 'LIC_ALERTAS' };
 var LIC_COLUNAS = {
   LIC_PORTAIS: ['ID', 'CODIGO', 'NOME', 'CATEGORIA', 'URL', 'URL_API', 'DOCUMENTACAO', 'TIPO', 'AUTENTICACAO', 'CREDENCIAL_REF', 'SITUACAO', 'PRIORIDADE',
     'LIGADO', 'PALAVRAS_POSITIVAS', 'PALAVRAS_NEGATIVAS', 'UFS', 'VALOR_MINIMO', 'FREQUENCIA_MIN', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME',
@@ -31,7 +31,9 @@ var LIC_COLUNAS = {
     // etapa 2 (02/11/2026): nota da última análise concluída e os arquivos do edital (SGO_Licitacoes_Analise.js)
     'NOTA', 'NOTA_CLASSE', 'NOTA_TRAVA', 'ANALISE_ID', 'ANALISE_VERSAO', 'ANALISE_EM', 'ANALISE_BASE_HASH', 'ANALISE_SITUACAO', 'ANALISE_ERRO', 'ARQUIVOS_BASE_HASH', 'ARQUIVOS_QTD', 'ARQUIVOS_EM',
     // regra de guarda (02/11/2026): a data de publicação na fonte conta os 2 anos da candidata intocada (SGO_Licitacoes_Guarda.js)
-    'PUBLICACAO_EM'],
+    'PUBLICACAO_EM',
+    // etapa 3 (02/11/2026): a agenda foi montada sobre esta base (datas, lei, modalidade, situação na fonte) e o último estado da fonte
+    'EVENTOS_BASE_HASH', 'EVENTOS_EM', 'AGENDA_ESTADO_FONTE'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
@@ -39,9 +41,25 @@ var LIC_COLUNAS = {
     'TRAVAS_JSON', 'AFIRMACOES_JSON', 'ARQUIVOS_JSON', 'ARQUIVOS_BASE', 'BASE_HASH', 'FONTE_VERSAO', 'FONTE_HASH', 'PESOS_JSON', 'REGRAS', 'MODELO', 'TENTATIVAS', 'RECUSAS_JSON',
     'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'HASH', 'CRIADO_EM',
     // revisão de 02/11/2026 (prova real): respostas cruas da IA de cada tentativa (truncadas), só a Diretoria vê
-    'RESPOSTAS_IA_JSON']
+    'RESPOSTAS_IA_JSON'],
+  // etapa 3 (02/11/2026): agenda de prazos (SGO_Licitacoes_Agenda.js). UMA LINHA POR VERSÃO de cada prazo: retificação cria a
+  // linha nova (SUBSTITUI_ID) e a anterior fica RETIFICADO; nada é apagado. NATUREZA: CONFIRMADO (veio da fonte ou de pessoa),
+  // CALCULADO (regra legal, sempre marcado como cálculo) ou PREVISTO (depende do edital ou de ato do pregoeiro).
+  LIC_EVENTOS: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'CHAVE', 'TIPO', 'NOME', 'NATUREZA', 'SITUACAO', 'QUANDO_ISO', 'QUANDO_TEXTO', 'DIA_TODO', 'FUSO', 'FUSO_PRESUMIDO',
+    'LIMITE_INTERNO_ISO', 'NIVEL', 'FONTE', 'FONTE_REF', 'REGRA', 'OBS', 'BASE_ISO', 'VERSAO', 'SUBSTITUI_ID', 'SUBSTITUIDO_POR_ID', 'MOTIVO_MUDANCA', 'VERSAO_FONTE', 'FONTE_HASH',
+    'CONFIRMADO_POR_ID', 'CONFIRMADO_POR_NOME', 'CONFIRMADO_EM', 'CONFIRMACAO_ONDE', 'HASH', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  // etapa 3 (02/11/2026): alertas da Diretoria de Licitações (SGO_Licitacoes_Alertas.js), uma linha por prazo + antecedência + pessoa
+  // (ou por mudança, escalonamento e reenvio). Cada canal com a situação própria; Entregue e Lido só pelo retorno real da Meta.
+  LIC_ALERTAS: ['ID', 'AVISO_ID', 'CHAVE', 'GRUPO', 'OPORTUNIDADE_ID', 'CODIGO', 'EVENTO_ID', 'EVENTO_TIPO', 'TIPO', 'PAPEL', 'ANTECEDENCIA_MIN', 'ANTECEDENCIA', 'NIVEL',
+    'USUARIO_ID', 'USUARIO_NOME', 'CANAIS', 'TITULO', 'TEXTO', 'ALVO_ISO', 'LIBERAR_EM', 'SITUACAO', 'TENTATIVAS', 'ENVIANDO_EM', 'ENVIADO_EM', 'INTERNO_EM',
+    'EMAIL_SITUACAO', 'EMAIL_MOTIVO', 'EMAIL_EM', 'WA_SITUACAO', 'WA_MOTIVO', 'WA_ID', 'WA_EM', 'ENTREGUE_EM', 'LIDO_EM', 'FALHOU_EM', 'CANAL_ALTERNATIVO',
+    'CIENTE_EM', 'CIENTE_POR_ID', 'CIENTE_POR_NOME', 'CIENTE_CANAL', 'ABERTO_EM', 'ESCALONAR_EM', 'ESCALONADO_EM', 'ESCALONADO_PARA', 'ORIGEM_ALERTA_ID',
+    'CANCELADO_EM', 'CANCELADO_MOTIVO', 'CONCLUIDO_EM', 'ATUALIZADO_EM', 'CRIADO_EM']
 };
-var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNCP', 'ID_COMPRAS_GOV', 'ABERTURA_PROPOSTAS', 'ENCERRAMENTO_PROPOSTAS', 'ATUALIZACAO_FONTE'] };
+var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNCP', 'ID_COMPRAS_GOV', 'ABERTURA_PROPOSTAS', 'ENCERRAMENTO_PROPOSTAS', 'ATUALIZACAO_FONTE'],
+  LIC_EVENTOS: ['QUANDO_ISO', 'QUANDO_TEXTO', 'LIMITE_INTERNO_ISO', 'BASE_ISO', 'CONFIRMADO_EM'],
+  LIC_ALERTAS: ['ALVO_ISO', 'LIBERAR_EM', 'ENVIANDO_EM', 'ENVIADO_EM', 'INTERNO_EM', 'EMAIL_EM', 'WA_EM', 'WA_ID', 'ENTREGUE_EM', 'LIDO_EM', 'FALHOU_EM', 'CIENTE_EM', 'ABERTO_EM',
+    'ESCALONAR_EM', 'ESCALONADO_EM', 'CANCELADO_EM', 'CONCLUIDO_EM'] };
 
 /** Situações no fluxo (o Kanban da etapa seguinte usa as mesmas; nesta etapa a tela mexe em RADAR, ANALISE e DESCARTADA). */
 var LIC_SITUACOES = ['RADAR', 'ANALISE', 'DECISAO', 'PROPOSTA', 'DISPUTA', 'RESULTADO', 'CONTRATO', 'DESCARTADA'];
@@ -136,14 +154,15 @@ function Lic_lista_(v) {
 function Lic_garantirAbas_() {
   var cache = null;
   // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V3')) return; } catch (e) {}
+  // V4 (02/11/2026, etapa 3): abas LIC_EVENTOS e LIC_ALERTAS e as colunas da agenda em LIC_OPORTUNIDADES
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V4')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V3', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V4', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

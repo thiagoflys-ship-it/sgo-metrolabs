@@ -295,6 +295,19 @@ var NTF_MODELOS_META = {
       '1) Caixa de decisões: Aprovação de desconto da proposta PROP-2026-0012 rev.00: https://sgo.metrolabs.com.br/?aviso=AG1x2y3z | 2) Atraso · Caixa de decisões: Prazo vencido no pedido de compra RC-2026-0040: https://sgo.metrolabs.com.br/?aviso=AG4k5m6n',
       'https://sgo.metrolabs.com.br/?tela=gestao_decisoes']
   },
+  // 02/11/2026 (SGO+ Licitações, etapa 3; SGO_Licitacoes_Alertas.js): alerta de prazo para a Diretoria de Licitações (só os perfis
+  // Diretoria e Administrador; pode sair fora do expediente, exceção aprovada pelo dono só para Licitações). Categoria Utilidade:
+  // aviso sobre um processo concreto, sem oferta. Sem valor estimado. Botão de link com o token de ciência de um toque (?licciente=).
+  // Enquanto a Meta não aprovar, o alerta vai pelo SGO+ e pelo e-mail com a marca "WhatsApp aguardando aprovação do modelo na Meta"
+  // (modeloSemReserva: nunca troca pelo sgo_aviso_geral).
+  sgo_licitacao_prazo: {
+    uso: 'Licitações: alerta de prazo, mudança ou escalonamento para a Diretoria de Licitações (nível, órgão, processo, objeto, prazo, quando, tempo restante, ação, link; botão Confirmar ciência)',
+    limites: [12, 160, 90, 140, 80, 70, 80, 200, 300],
+    texto: 'Alerta de licitação da Metrolabs, nível {{1}}.\n\nÓrgão: {{2}}\nProcesso: {{3}}\nObjeto: {{4}}\nPrazo: {{5}}\nQuando: {{6}}\nTempo restante: {{7}}\nAção necessária: {{8}}\n\nPara abrir a licitação no SGO+, com login: {{9}}\n\nPara registrar que você viu este alerta, toque em "Confirmar ciência" ou responda CIENTE.\n\nMetrolabs — SGO+',
+    exemplos: ['crítico', 'Universidade Estadual do Oeste do Paraná (Cascavel/PR)', '78680337000770-1-000430/2026 (Pregão - Eletrônico)', 'Manutenção preventiva e corretiva com calibração dos equipamentos do laboratório',
+      'Fim do envio das propostas', 'qua 04/11/2026 08:30 (horário de Brasília)', '4 h', 'concluir a análise e enviar a proposta no portal antes do fim', 'https://sgo.metrolabs.com.br/?aviso=LA0a1b2c3d4e'],
+    botao: { texto: 'Confirmar ciência', url: 'https://sgo.metrolabs.com.br/?licciente={{1}}', exemplo: 'https://sgo.metrolabs.com.br/?licciente=c1w.LA0a1b2c3d4e.0123456789abcdef01234567' }
+  },
   sgo_justificativa_recebida: {
     uso: 'Minhas atividades: justificativa de atraso (colaborador, atividade, motivo, nova previsão)',
     limites: [80, 200, 300, 40],
@@ -807,6 +820,8 @@ function SGO_notificar_(opcoes) {
             if (pilotoCfg === null) {
               SGO_waPilotoSincronizar_(false);
               if (origem === 'AVISOS_GESTAO' && typeof SGO_waPilotoSincronizarGestao_ === 'function') SGO_waPilotoSincronizarGestao_();
+              // 02/11/2026: alertas de licitação (modelo sgo_licitacao_prazo) passam pela lista própria da Diretoria de Licitações
+              if (origem === 'LICITACOES' && typeof SGO_waPilotoSincronizarLicitacoes_ === 'function') SGO_waPilotoSincronizarLicitacoes_();
               pilotoCfg = SGO_waPilotoCfg_();
             }
             var barradoPiloto = SGO_waPilotoMotivo_(c, pilotoCfg, { categoria: categoria, origem: origem, modelo: modelo ? modelo.nome : '' }); // 26/10/2026: e o grupo que a pessoa recebe

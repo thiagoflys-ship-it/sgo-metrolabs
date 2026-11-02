@@ -24,6 +24,10 @@
  *     (SGO_waPilotoMotivo_) e no servidor (regra 6 de servicos/whatsappPiloto.ts: sistema "sgo" + modelo sgo_gestao_acao).
  *     Nunca vale para contato externo nem para outro modelo; o COMMAND não lê este campo. Sincronizada a cada envio dos
  *     avisos da gestão (SGO_waPilotoSincronizarGestao_), além da sincronização comum.
+ *   - telefonesLicitacoes (02/11/2026, SGO+ Licitações, etapa 3): lista SEPARADA com o celular da Diretoria de Licitações (perfis
+ *     Diretoria e Administrador ativos que recebem alertas; Lic_integrantes_, SGO_Licitacoes_Alertas.js). Libera SÓ o modelo
+ *     sgo_licitacao_prazo vindo dos alertas de licitação (origem LICITACOES), aqui e no servidor (regra 7 de
+ *     servicos/whatsappPiloto.ts). Nunca vale para contato externo nem para outro modelo.
  *
  * Relatório: SGO_WaPiloto_api('relatorio') junta NTF_ENVIOS (WhatsApp do SGO+: enviado, retido, falhou, pulado) e o
  * registro do servidor (SGO_WHATSAPP.pilotoRegistros: tudo do COMMAND e o que o servidor bloqueou). Telefone só para o
@@ -84,7 +88,7 @@ function SGO_waPilotoCfg_() {
   var j = null;
   try { j = bruto ? JSON.parse(bruto) : null; } catch (e) { j = null; }
   if (!j || typeof j !== 'object') {
-    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], telefonesGestao: [], grupos: {}, gravado: false, atualizadoEm: '', atualizadoPor: '' };
+    return { ligado: true, usuarios: SGO_waPilotoDonos_(), areas: [], telefones: [], telefonesGestao: [], telefonesLicitacoes: [], grupos: {}, gravado: false, atualizadoEm: '', atualizadoPor: '' };
   }
   return {
     ligado: j.ligado !== false,
@@ -93,6 +97,7 @@ function SGO_waPilotoCfg_() {
     areas: SGO_waPilotoLista_(j.areas).map(function (a) { return a.toUpperCase(); }).filter(function (a) { return WAP_AREAS.indexOf(a) >= 0; }),
     telefones: SGO_waPilotoLista_(j.telefones).map(SGO_waPilotoCanon_).filter(Boolean),
     telefonesGestao: SGO_waPilotoLista_(j.telefonesGestao).map(SGO_waPilotoCanon_).filter(Boolean),
+    telefonesLicitacoes: SGO_waPilotoLista_(j.telefonesLicitacoes).map(SGO_waPilotoCanon_).filter(Boolean),
     gravado: true, atualizadoEm: String(j.atualizadoEm || ''), atualizadoPor: String(j.atualizadoPor || '')
   };
 }
@@ -138,6 +143,11 @@ function SGO_waPilotoMotivo_(contato, cfg, ctx) {
     if (contato && !contato.externo && ctx && String(ctx.origem || '').toUpperCase() === 'AVISOS_GESTAO' && String(ctx.modelo || '') === WAP_MODELO_GESTAO) {
       var kg = SGO_waPilotoCanon_(contato.telefone);
       if (kg && (cfg.telefonesGestao || []).indexOf(kg) >= 0) return '';
+    }
+    // 02/11/2026: alerta de licitação (só o modelo sgo_licitacao_prazo, só pessoa interna) passa pela lista da Diretoria de Licitações
+    if (contato && !contato.externo && ctx && String(ctx.origem || '').toUpperCase() === 'LICITACOES' && String(ctx.modelo || '') === WAP_MODELO_LICITACOES) {
+      var kl = SGO_waPilotoCanon_(contato.telefone);
+      if (kl && (cfg.telefonesLicitacoes || []).indexOf(kl) >= 0) return '';
     }
     if (contato && contato.externo) {
       var k = SGO_waPilotoCanon_(contato.telefone);
@@ -193,6 +203,32 @@ function SGO_waPilotoTelefonesGestao_() {
   return out;
 }
 
+var WAP_MODELO_LICITACOES = 'sgo_licitacao_prazo';
+
+/** 02/11/2026: telefones (sem o 9) da Diretoria de Licitações que recebe alertas. Vazio sem SGO_Licitacoes_Alertas.js. */
+function SGO_waPilotoTelefonesLicitacoes_() {
+  var ids = [];
+  try { ids = typeof Lic_integrantes_ === 'function' ? Lic_integrantes_().map(function (u) { return u.id; }) : []; } catch (e) { ids = []; }
+  var mapa = ids.length ? Notificar_contatos_(ids) : {}, out = [];
+  ids.forEach(function (id) {
+    var c = mapa[id];
+    if (!c || !c.ativo) return;
+    var k = SGO_waPilotoCanon_(c.telefone);
+    if (k && out.indexOf(k) < 0) out.push(k);
+  });
+  return out;
+}
+
+/** 02/11/2026: grava telefonesLicitacoes quando mudou (a cada envio dos alertas de licitação). Não mexe no resto. Nunca lança. */
+function SGO_waPilotoSincronizarLicitacoes_() {
+  try {
+    var cfg = SGO_waPilotoCfg_(), tl = SGO_waPilotoTelefonesLicitacoes_();
+    if (cfg.gravado && SGO_waPilotoMesmaLista_(cfg.telefonesLicitacoes, tl)) return false;
+    SGO_waPilotoGravarProp_(cfg, SGO_waPilotoTelefones_(cfg), cfg.atualizadoPor || 'sistema', undefined, tl);
+    return true;
+  } catch (e) { console.error('Piloto do WhatsApp (lista de Licitações): ' + ((e && e.message) || e)); return false; }
+}
+
 function SGO_waPilotoMesmaLista_(a, b) { a = a || []; b = b || []; return a.length === b.length && a.every(function (t) { return b.indexOf(t) >= 0; }); }
 
 /**
@@ -238,19 +274,22 @@ function SGO_waPilotoSincronizar_(forcar) {
     var cfg = SGO_waPilotoCfg_();
     var tel = SGO_waPilotoTelefones_(cfg);
     var tg = SGO_waPilotoTelefonesGestao_();
-    var igual = cfg.gravado && cfg.telefones.length === tel.length && tel.every(function (t) { return cfg.telefones.indexOf(t) >= 0; }) && SGO_waPilotoMesmaLista_(cfg.telefonesGestao, tg);
-    if (!igual) SGO_waPilotoGravarProp_(cfg, tel, cfg.atualizadoPor || 'sistema', tg);
+    var tl = SGO_waPilotoTelefonesLicitacoes_();
+    var igual = cfg.gravado && cfg.telefones.length === tel.length && tel.every(function (t) { return cfg.telefones.indexOf(t) >= 0; }) && SGO_waPilotoMesmaLista_(cfg.telefonesGestao, tg) && SGO_waPilotoMesmaLista_(cfg.telefonesLicitacoes, tl);
+    if (!igual) SGO_waPilotoGravarProp_(cfg, tel, cfg.atualizadoPor || 'sistema', tg, tl);
     SGO_waPilotoGarantirGatilho_();   // resumo das 18h mesmo sem ninguém abrir a tela
     if (cache) cache.put('WAP_SYNC_V1', '1', 1800);
   } catch (e) { console.error('Piloto do WhatsApp (sincronizar): ' + ((e && e.message) || e)); }
 }
 
-function SGO_waPilotoGravarProp_(cfg, telefones, por, telefonesGestao) {
+function SGO_waPilotoGravarProp_(cfg, telefones, por, telefonesGestao, telefonesLicitacoes) {
   var agora = Utilities.formatDate(new Date(), WAP_FUSO, "yyyy-MM-dd'T'HH:mm:ss");
   // 01/11/2026: telefonesGestao (lista separada da gestão); sem o parâmetro, recalcula
   var tg = Array.isArray(telefonesGestao) ? telefonesGestao : SGO_waPilotoTelefonesGestao_();
+  // 02/11/2026: telefonesLicitacoes (lista da Diretoria de Licitações); sem o parâmetro, recalcula
+  var tl = Array.isArray(telefonesLicitacoes) ? telefonesLicitacoes : SGO_waPilotoTelefonesLicitacoes_();
   PropertiesService.getScriptProperties().setProperty(WAP_PROP, JSON.stringify({
-    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones, telefonesGestao: tg, grupos: cfg.grupos || {},
+    v: 1, ligado: cfg.ligado !== false, usuarios: cfg.usuarios, areas: cfg.areas, telefones: telefones, telefonesGestao: tg, telefonesLicitacoes: tl, grupos: cfg.grupos || {},
     atualizadoEm: agora, atualizadoPor: String(por || '').slice(0, 80)
   }));
 }
