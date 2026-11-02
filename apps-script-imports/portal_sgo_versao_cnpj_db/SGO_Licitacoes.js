@@ -266,7 +266,9 @@ function Lic_oportunidades_(eu, d) {
   var portais = Lic_portaisPorCodigo_(), aba = Lic_s_(d.aba) || 'analisar', busca = Lic_s_(d.busca).toLowerCase(), uf = Lic_up_(d.uf), selo = Lic_s_(d.selo), sessao = Lic_up_(d.sessao);
   var todas = Lic_ativas_(), contagens = { analisar: 0, travadas: 0, analise: 0, descartadas: 0 }, sessoes = {};
   todas.forEach(function (l) { contagens[Lic_abaDe_(l)]++; var c = Lic_up_(l.PORTAL_SESSAO); if (c && portais[c]) sessoes[c] = Lic_s_(portais[c].NOME); });
-  var lista = todas.filter(function (l) { return Lic_abaDe_(l) === aba; }).map(function (l) { return Lic_cartao_(l, portais); }).filter(function (o) {
+  // revisão de 02/11/2026: origem = REGRA (descartada só pela regra do radar) ou PESSOA (pela Diretoria), na aba Descartadas
+  var origem = Lic_up_(d.origem);
+  var lista = todas.filter(function (l) { return Lic_abaDe_(l) === aba && (aba !== 'descartadas' || !origem || (origem === 'PESSOA') === (Lic_s_(l.DESCARTE_ORIGEM) === 'PESSOA')); }).map(function (l) { return Lic_cartao_(l, portais); }).filter(function (o) {
     if (busca && [o.orgao, o.objeto, o.numeroControle, o.municipio, o.codigo, o.unidade].join(' ').toLowerCase().indexOf(busca) < 0) return false;
     if (uf === 'PRIO' && LIC_UFS_PRIORIDADE.indexOf(o.uf) < 0) return false;
     if (uf && uf !== 'PRIO' && o.uf !== uf) return false;
@@ -276,7 +278,7 @@ function Lic_oportunidades_(eu, d) {
     return true;
   }).sort(Lic_s_(d.ordem) === 'nota' ? Lic_ordenarNota_ : Lic_s_(d.ordem) === 'prazo' ? Lic_ordenarPrazo_ : Lic_ordenar_);
   var total = lista.length;
-  return { aba: aba, ordem: ['nota', 'prazo'].indexOf(Lic_s_(d.ordem)) >= 0 ? Lic_s_(d.ordem) : 'prioridade', iaDisponivel: Lic_iaDisponivel_(), contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
+  return { aba: aba, origem: aba === 'descartadas' && (origem === 'REGRA' || origem === 'PESSOA') ? origem : '', ordem: ['nota', 'prazo'].indexOf(Lic_s_(d.ordem)) >= 0 ? Lic_s_(d.ordem) : 'prioridade', iaDisponivel: Lic_iaDisponivel_(), contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
 }
 
 function Lic_acharOp_(id) {

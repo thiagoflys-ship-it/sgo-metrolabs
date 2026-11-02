@@ -83,14 +83,20 @@ function Lic_faixaNota_(l) {
 /** f = { uf: ''|'PRIO'|UF, nota: ''|ALTA|MEDIA|BAIXA|DESCARTE|TRAVA|SEM, prazo: ''|'7'|'30'|'VENCIDO'|'SEM', responsavel: ''|'SEM'|id, busca }. */
 function Lic_filtrosKanban_(d) {
   d = d || {};
-  var f = { uf: Lic_up_(d.uf), nota: Lic_up_(d.nota), prazo: Lic_up_(d.prazo), responsavel: Lic_s_(d.responsavel), busca: Lic_texto_(d.busca, 100).toLowerCase() };
+  // revisão de 02/11/2026: andamento = '1' esconde as descartadas (os números do Painel contam só as em andamento; o clique
+  // tem de abrir a mesma lista); ia = situação da última análise por IA da oportunidade (CONCLUIDA, RECUSADA, ERRO)
+  var f = { uf: Lic_up_(d.uf), nota: Lic_up_(d.nota), prazo: Lic_up_(d.prazo), responsavel: Lic_s_(d.responsavel), busca: Lic_texto_(d.busca, 100).toLowerCase(),
+    andamento: Lic_s_(d.andamento) === '1' || d.andamento === true ? '1' : '', ia: Lic_up_(d.ia) };
   if (f.uf && f.uf !== 'PRIO' && LIC_UFS.indexOf(f.uf) < 0) f.uf = '';
   if (['ALTA', 'MEDIA', 'BAIXA', 'DESCARTE', 'TRAVA', 'SEM'].indexOf(f.nota) < 0) f.nota = '';
   if (['7', '30', 'VENCIDO', 'SEM'].indexOf(f.prazo) < 0) f.prazo = '';
+  if (['CONCLUIDA', 'RECUSADA', 'ERRO'].indexOf(f.ia) < 0) f.ia = '';
   return f;
 }
 function Lic_passaFiltro_(l, f, agoraMs) {
   var uf = Lic_up_(l.UF);
+  if (f.andamento && Lic_s_(l.SITUACAO) === 'DESCARTADA') return false;
+  if (f.ia && Lic_up_(l.ANALISE_SITUACAO) !== f.ia) return false;
   if (f.uf === 'PRIO' && LIC_UFS_PRIORIDADE.indexOf(uf) < 0) return false;
   if (f.uf && f.uf !== 'PRIO' && uf !== f.uf) return false;
   if (f.nota && Lic_faixaNota_(l) !== f.nota) return false;
@@ -99,7 +105,11 @@ function Lic_passaFiltro_(l, f, agoraMs) {
     if (f.prazo === 'SEM') { if (isFinite(enc)) return false; }
     else if (!isFinite(enc)) return false;
     else if (f.prazo === 'VENCIDO' && enc >= agoraMs) return false;
-    else if ((f.prazo === '7' || f.prazo === '30') && (enc < agoraMs || enc > agoraMs + Number(f.prazo) * 864e5)) return false;
+    else if (f.prazo === '7' || f.prazo === '30') {
+      // revisão de 02/11/2026: por dia de calendário em Brasília, de hoje até hoje + 7 (ou + 30), como a Agenda
+      var hoje = Lic_brDe_(agoraMs).dia, dia = Lic_brDe_(enc).dia;
+      if (dia < hoje || dia > Lic_somarDia_(hoje, Number(f.prazo))) return false;
+    }
   }
   if (f.responsavel === 'SEM' && Lic_s_(l.RESPONSAVEL_ID)) return false;
   if (f.responsavel && f.responsavel !== 'SEM' && Lic_s_(l.RESPONSAVEL_ID) !== f.responsavel) return false;
@@ -133,11 +143,12 @@ function Lic_ordemKanban_(agora) {
 /** Tela Kanban: d = filtros (Lic_filtrosKanban_). Uma leitura de LIC_OPORTUNIDADES. */
 function Lic_kanban_(eu, d) {
   var t0 = Date.now(), agoraMs = t0, f = Lic_filtrosKanban_(d), todas = Lic_ativas_();
-  var cols = {}, fora = { descartadasRegra: 0 }, resp = {}, ufs = {}, total = 0, semFiltro = 0;
+  var cols = {}, fora = { descartadasRegra: 0, situacaoDesconhecida: 0 }, resp = {}, ufs = {}, total = 0, semFiltro = 0;
   LIC_KANBAN_COLUNAS.forEach(function (c) { cols[c.codigo] = []; });
   todas.forEach(function (l) {
     var col = Lic_colunaKanban_(l);
-    if (!col) { if (Lic_s_(l.SITUACAO) === 'DESCARTADA') fora.descartadasRegra++; return; }
+    // revisão de 02/11/2026: situação que não é etapa do Kanban também é contada (nunca some sem aviso)
+    if (!col) { if (Lic_s_(l.SITUACAO) === 'DESCARTADA') fora.descartadasRegra++; else fora.situacaoDesconhecida++; return; }
     semFiltro++;
     if (Lic_s_(l.RESPONSAVEL_ID)) resp[Lic_s_(l.RESPONSAVEL_ID)] = Lic_s_(l.RESPONSAVEL_NOME) || Lic_s_(l.RESPONSAVEL_ID);
     if (Lic_up_(l.UF)) ufs[Lic_up_(l.UF)] = (ufs[Lic_up_(l.UF)] || 0) + 1;
@@ -180,7 +191,13 @@ function Lic_kanbanMover_(eu, d) {
  * Lic_hojeSp_ assumem). O mesmo resultado de Lic_diaSp_/Lic_horaSp_, sem formatar data a data (500+ prazos por tela).
  */
 function Lic_brDe_(ms) { var t = new Date(ms - 3 * 3600e3).toISOString(); return { dia: t.slice(0, 10), hora: t.slice(11, 16) }; }
-function Lic_diaValido_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(Lic_s_(v)) ? Lic_s_(v) : ''; }
+/** Dia "aaaa-mm-dd" que existe no calendário (31/02 ou 13º mês caem no padrão: ''). */
+function Lic_diaValido_(v) {
+  var t = Lic_s_(v);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return '';
+  var ms = Date.parse(t + 'T12:00:00Z');
+  return isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === t ? t : '';
+}
 /**
  * Tela Gantt: d = { zoom: 'semana'|'mes', inicio: 'aaaa-mm-dd' (opcional), uf, etapa (situação), natureza }. Uma leitura de
  * LIC_OPORTUNIDADES e uma de LIC_EVENTOS. Linhas = oportunidades (sem as descartadas) com prazo dentro da janela (com a barra
@@ -260,6 +277,8 @@ function Lic_conexoesPainel_(agoraMs) {
       var st = Number(c.status), erro = Lic_s_(c.erro) || !(st >= 200 && st < 300);
       if (erro) { r.erros24h++; if (!r.ultimoErro) r.ultimoErro = Lic_texto_(Lic_s_(c.portal) + ' ' + Lic_s_(c.rota) + ': ' + (Lic_s_(c.erro) || 'HTTP ' + (c.status === null ? 'sem resposta' : c.status)), 300); }
     });
+    // revisão de 02/11/2026: a leitura traz as 300 mais recentes; se a 300ª ainda é das últimas 24 h, o número real é maior
+    r.noLimite = l.length >= 300 && Date.parse(Lic_s_(l[l.length - 1].inicio)) >= desde;
     return r;
   } catch (e) { return { erroLeitura: 'Não foi possível ler o registro das chamadas agora (' + Lic_s_(e && e.message) + ').' }; }
 }
@@ -267,13 +286,15 @@ function Lic_conexoesPainel_(agoraMs) {
 /** Tela Painel: números reais, cada um com a fonte e o destino do clique. */
 function Lic_painel_(eu) {
   var t0 = Date.now(), agoraMs = t0, agoraIso = new Date(t0).toISOString(), hoje = Lic_diaSp_(agoraIso);
-  var todas = Lic_ativas_(), ops = {}, etapas = {}, ufs = {}, notas = { ALTA: 0, MEDIA: 0, BAIXA: 0, DESCARTE: 0, TRAVA: 0, SEM: 0 }, k = { andamento: 0, descartadasRegra: 0, descartadasPessoa: 0, travadas: 0, travasAConfirmar: 0, comNota: 0 };
+  var todas = Lic_ativas_(), ops = {}, etapas = {}, ufs = {}, notas = { ALTA: 0, MEDIA: 0, BAIXA: 0, DESCARTE: 0, TRAVA: 0, SEM: 0 }, k = { andamento: 0, descartadasRegra: 0, descartadasPessoa: 0, travadas: 0, travasAConfirmar: 0, comNota: 0, situacaoDesconhecida: 0 }, iaOp = { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 };
   LIC_KANBAN_COLUNAS.forEach(function (c) { etapas[c.codigo] = 0; });
   todas.forEach(function (l) {
     ops[Lic_s_(l.ID)] = l;
     var col = Lic_colunaKanban_(l), s = Lic_s_(l.SITUACAO);
     if (s === 'DESCARTADA') { if (col) k.descartadasPessoa++; else k.descartadasRegra++; }
-    if (col) etapas[col]++;
+    if (col) etapas[col]++; else if (s !== 'DESCARTADA') k.situacaoDesconhecida++;
+    // revisão de 02/11/2026: análise por IA contada por oportunidade (a situação da última tentativa), só as do Kanban
+    if (col && iaOp[Lic_up_(l.ANALISE_SITUACAO)] !== undefined) iaOp[Lic_up_(l.ANALISE_SITUACAO)]++;
     if (s === 'DESCARTADA') return;
     k.andamento++;
     if (s === 'RADAR' && Lic_s_(l.TRIAGEM) === 'TRAVADA') k.travadas++;
@@ -289,7 +310,9 @@ function Lic_painel_(eu) {
     var l = ops[Lic_s_(e.OPORTUNIDADE_ID)], sit = Lic_up_(e.SITUACAO);
     if (!l || sit === 'RETIFICADO') return;
     if (Lic_s_(l.SITUACAO) === 'DESCARTADA' || (Lic_s_(l.SITUACAO) === 'RADAR' && Lic_s_(l.TRIAGEM) === 'TRAVADA')) return;
-    var iso = Lic_s_(e.QUANDO_ISO); if (!iso) return;
+    var iso = Lic_s_(e.QUANDO_ISO);
+    // revisão de 02/11/2026: prazo sem data e não cancelado conta como pendente de confirmação (a mesma conta da Agenda)
+    if (!iso) { if (sit !== 'CANCELADO') pz.pendentes30++; return; }
     var ms = Date.parse(iso);
     if (!isFinite(ms) || ms < janIni || ms > janFim) return;
     var dia = Lic_brDe_(ms).dia;
@@ -306,11 +329,11 @@ function Lic_painel_(eu) {
   });
   var semC = typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(null) : [];
   // análises por IA: uma linha por tentativa registrada (LIC_ANALISES); tempo médio só das que têm a medida (DURACAO_MS, desde 02/11/2026)
-  var ia = { concluidas: 0, recusadas: 0, erro: 0, total: 0, medidas: 0, somaMs: 0, ultima: '' };
+  var ia = { concluidas: iaOp.CONCLUIDA, recusadas: iaOp.RECUSADA, erro: iaOp.ERRO, total: 0, tentativas: { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 }, medidas: 0, somaMs: 0, ultima: '' };
   Lic_ler_(LIC_ABAS.ANALISES).forEach(function (a) {
     ia.total++;
     var s = Lic_up_(a.SITUACAO);
-    if (s === 'CONCLUIDA') ia.concluidas++; else if (s === 'RECUSADA') ia.recusadas++; else if (s === 'ERRO') ia.erro++;
+    if (ia.tentativas[s] !== undefined) ia.tentativas[s]++;
     var dur = Number(a.DURACAO_MS); if (a.DURACAO_MS !== '' && a.DURACAO_MS !== null && a.DURACAO_MS !== undefined && isFinite(dur) && dur > 0) { ia.medidas++; ia.somaMs += dur; }
     if (Lic_s_(a.CRIADO_EM) > ia.ultima) ia.ultima = Lic_s_(a.CRIADO_EM);
   });
@@ -331,20 +354,20 @@ function Lic_painel_(eu) {
   var linhasOp = todas.length;
   return {
     hoje: hoje, geradoEm: agoraIso, ms: Date.now() - t0,
-    etapas: { itens: LIC_KANBAN_COLUNAS.map(function (c) { return { codigo: c.codigo, nome: c.nome, n: etapas[c.codigo], futura: !!c.futura }; }), andamento: k.andamento, travadas: k.travadas, descartadasRegra: k.descartadasRegra, descartadasPessoa: k.descartadasPessoa,
+    etapas: { itens: LIC_KANBAN_COLUNAS.map(function (c) { return { codigo: c.codigo, nome: c.nome, n: etapas[c.codigo], futura: !!c.futura }; }), andamento: k.andamento, travadas: k.travadas, descartadasRegra: k.descartadasRegra, descartadasPessoa: k.descartadasPessoa, situacaoDesconhecida: k.situacaoDesconhecida,
       fonte: 'LIC_OPORTUNIDADES, coluna SITUACAO (' + linhasOp + ' oportunidades lidas). Decisão = descartadas pela Diretoria; as descartadas só pela regra ficam fora do Kanban.' },
     ufs: { itens: listaUf, total: k.andamento, fonte: 'LIC_OPORTUNIDADES, coluna UF, das ' + k.andamento + ' em andamento (sem as descartadas). Prioridade da pontuação: GO e DF, vizinhos (MG, BA, TO, MT, MS) e RJ (decisão do dono, 01/11/2026).' },
     notas: { faixas: [{ codigo: 'ALTA', nome: 'Alta (75 a 100)', n: notas.ALTA }, { codigo: 'MEDIA', nome: 'Média (50 a 74)', n: notas.MEDIA }, { codigo: 'BAIXA', nome: 'Baixa (30 a 49)', n: notas.BAIXA },
       { codigo: 'DESCARTE', nome: 'Descarte (abaixo de 30 ou trava confirmada)', n: notas.DESCARTE }, { codigo: 'TRAVA', nome: 'Trava a confirmar', n: notas.TRAVA }, { codigo: 'SEM', nome: 'Sem nota da IA', n: notas.SEM }],
       comNota: k.comNota, fonte: 'LIC_OPORTUNIDADES, colunas NOTA, NOTA_CLASSE e TRAVAS_A_CONFIRMAR (nota da última análise por IA concluída), das ' + k.andamento + ' em andamento.' },
     prazos: { d7: pz.d7, d30: pz.d30, criticos7: pz.criticos7, pendentes30: pz.pendentes30, porTipo7: Object.keys(pz.porTipo7).map(function (t) { return { nome: t, n: pz.porTipo7[t] }; }).sort(function (a, b) { return b.n - a.n; }),
-      fonte: 'LIC_EVENTOS (' + pz.eventosLidos + ' linhas lidas): prazos com data de hoje até ' + Lic_somarDia_(hoje, 7).split('-').reverse().join('/') + ' (7 dias) e até ' + ate30.split('-').reverse().join('/') + ' (30 dias), horário de Brasília, sem versões substituídas, sem descartadas e sem travadas (a mesma regra da Agenda).' },
+      fonte: 'LIC_EVENTOS (' + pz.eventosLidos + ' linhas lidas): prazos com data de hoje até ' + Lic_somarDia_(hoje, 7).split('-').reverse().join('/') + ' (7 dias) e até ' + ate30.split('-').reverse().join('/') + ' (30 dias), horário de Brasília, sem versões substituídas, sem descartadas e sem travadas (a mesma regra da Agenda). Pendentes de confirmação: os da janela de 30 dias e os sem data (não cancelados), como no contador da Agenda.' },
     alertas: { semCiencia: semC.length, fonte: 'LIC_ALERTAS: enviados, sem ciência e com o prazo ainda por vir (a mesma regra da Central de alertas, aba "Sem ciência").' },
     travas: { n: k.travasAConfirmar, fonte: 'LIC_OPORTUNIDADES, coluna TRAVAS_A_CONFIRMAR maior que zero (a IA apontou trava e a Diretoria ainda não decidiu), das ' + k.andamento + ' em andamento.' },
     coletor: { noServidor: !!(col && col.noServidor), ligado: !!(col && col.ligado), ultimaRodadaEm: (col && col.ultimaRodadaEm) || '', ultimoSucessoEm: (col && col.ultimoSucessoEm) || '', ultimoErro: (col && col.ultimoErro) || '',
       falhasSeguidasPncp: col && col.falhasSeguidasPncp ? Number(col.falhasSeguidasPncp) : 0, rotasComFalha: rotasFalha, rotas: col && col.rotas ? col.rotas.length : 0, aviso: (col && (col.erroLeitura || (!col.noServidor ? col.texto : ''))) || '',
       conexoes: cx, portais: portais,
-      fonte: 'Coletor do servidor (lic_coleta_estado: última rodada e falhas seguidas por rota), registro das chamadas (lic_conexoes_log, últimas 300, janela de 24 h) e LIC_PORTAIS (situação de cada um dos ' + portais.total + ' portais).' },
-    ia: Object.assign(ia, { fonte: 'LIC_ANALISES (' + ia.total + ' linhas, uma por análise registrada): concluída, recusada pelo verificador ou erro da IA. Tempo médio só das análises com a duração medida (gravada desde a etapa 4, 02/11/2026).' })
+      fonte: 'Coletor do servidor (lic_coleta_estado: última rodada e falhas seguidas por rota), registro das chamadas (lic_conexoes_log: as 300 mais recentes, janela de 24 h; quando as 300 são todas das últimas 24 h, a tela mostra "300 ou mais") e LIC_PORTAIS (situação de cada um dos ' + portais.total + ' portais).' },
+    ia: Object.assign(ia, { fonte: 'LIC_OPORTUNIDADES, coluna ANALISE_SITUACAO (situação da última análise por IA de cada oportunidade do Kanban): concluída, recusada pelo verificador ou erro da IA. Total e tempo médio: LIC_ANALISES (' + ia.total + ' linhas, uma por tentativa). Tempo médio só das análises com a duração medida (gravada desde a etapa 4, 02/11/2026).' })
   };
 }

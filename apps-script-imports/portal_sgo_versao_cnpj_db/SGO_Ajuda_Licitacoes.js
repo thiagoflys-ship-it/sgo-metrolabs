@@ -289,7 +289,7 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Cada cartão mostra o órgão, o objeto resumido, o código, a cidade e a UF, o fim das propostas com o selo de tempo, a nota da IA com a classe, o responsável e os selos (\"Trava a confirmar\", \"Travada\", \"Suspensa na fonte\").",
           "Borda vermelha: menos de 2 dias para o fim das propostas ou trava a confirmar. Borda amarela: menos de 5 dias ou travada. Borda cinza: descartada pela Diretoria.",
           "No computador, role o quadro para os lados. No celular, toque no nome da etapa (as abas do alto) para ver as licitações dela.",
-          "Filtros: UF (ou só a prioridade: GO, DF, vizinhos e RJ), nota, prazo das propostas (7 dias, 30 dias, encerrado, sem data), responsável e busca por órgão, objeto ou número. \"Limpar filtros\" volta ao quadro inteiro."
+          "Filtros: UF (ou só a prioridade: GO, DF, vizinhos e RJ), nota, prazo das propostas (7 ou 30 dias por dia de calendário, como a Agenda; encerrado; sem data), responsável, situação (só em andamento esconde as descartadas), análise por IA e busca por órgão, objeto ou número. \"Limpar filtros\" volta ao quadro inteiro."
         ] },
         { titulo: "Mudar de etapa", itens: [
           "No computador, arraste o cartão para a coluna. Em qualquer aparelho, toque em \"Mover para\": a lista mostra todas as etapas, as liberadas com a ação e as travadas com o porquê.",
@@ -358,10 +358,10 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       passos: [
         { titulo: "Ler e abrir", itens: [
-          "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa, UF ou nota), a Agenda no período, a Central de alertas em \"Sem ciência\", Portais e configurações ou Oportunidades por nota.",
+          "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa; UF, nota e travas só com as em andamento; situação da análise por IA), Oportunidades › Descartadas só da regra do radar, a Agenda no período, a Central de alertas em \"Sem ciência\" ou Portais e configurações.",
           "Os prazos de 7 e 30 dias seguem a mesma regra da Agenda (sem descartadas e sem travadas), por isso o número bate com a lista que abre.",
           "\"Em andamento por UF\" mostra primeiro a prioridade da pontuação: GO e DF, os vizinhos de GO e o RJ (filial), mesmo quando estão em zero.",
-          "\"Análises por IA\" conta cada análise registrada (concluída, recusada pelo verificador ou erro da IA). O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."
+          "\"Análises por IA\" conta as oportunidades pela situação da última análise (concluída, recusada pelo verificador ou erro da IA); as tentativas registradas aparecem à parte. O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."
         ] }
       ],
       cores: [

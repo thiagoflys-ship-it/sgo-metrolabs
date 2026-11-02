@@ -243,7 +243,8 @@ test('Painel: números com a fonte; prazos batem com a Agenda, alertas com a Cen
   const fx = Object.fromEntries(d.notas.faixas.map((x) => [x.codigo, x.n]));
   assert.deepEqual(fx, { ALTA: 1, MEDIA: 0, BAIXA: 1, DESCARTE: 0, TRAVA: 1, SEM: 4 });
   // IA: tempo médio só das 2 medidas
-  assert.equal(d.ia.concluidas, 2); assert.equal(d.ia.recusadas, 1); assert.equal(d.ia.erro, 1); assert.equal(d.ia.total, 4); assert.equal(d.ia.medidas, 2); assert.equal(d.ia.tempoMedioMs, 60000);
+  // revisão de 02/11/2026: concluídas/recusadas/erro contam oportunidades (ANALISE_SITUACAO atual; aqui nenhuma tem); as linhas são tentativas
+  assert.equal(d.ia.concluidas, 0); assert.deepEqual(d.ia.tentativas, { CONCLUIDA: 2, RECUSADA: 1, ERRO: 1 }); assert.equal(d.ia.total, 4); assert.equal(d.ia.medidas, 2); assert.equal(d.ia.tempoMedioMs, 60000);
   // sem coletor neste ambiente: diz o porquê; portais contados
   assert.equal(d.coletor.noServidor, false); assert.match(d.coletor.aviso, /roda só no servidor próprio/);
   assert.equal(d.coletor.portais.total, 33); assert.equal(d.coletor.portais.emTeste, 2);
@@ -396,4 +397,70 @@ test('integração: menu da Diretoria com Painel, Kanban e Gantt; ajuda das trê
   assert.doesNotMatch(html, /setInterval/);
   assert.match(fs.readFileSync(path.join(pastaLegado, 'JS_Licitacoes.html'), 'utf8'), /\r\n/, 'CRLF preservado');
   assert.doesNotMatch(fs.readFileSync(path.join(pastaLegado, 'JS_Licitacoes.html'), 'utf8'), /[^\r]\n/, 'nenhuma linha em LF solto');
+});
+
+// ------------------------------------------------------------------ revisão independente de 914f4fc (02/11/2026)
+test('revisão 1: números do Painel contados só nas em andamento abrem o Kanban com andamento=1 e batem com ele', () => {
+  const a = ambiente({ ops: opsBase().concat([OP('op_godp', { UF: 'GO', SITUACAO: 'DESCARTADA', DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: 'fora do escopo do laboratório', NOTA: 81, NOTA_CLASSE: 'ALTA' })]) });
+  const d = a.api('s_cha', 'painel');
+  const soma = (f) => a.api('s_cha', 'kanban', f).total;
+  assert.equal(d.ufs.itens.find((x) => x.uf === 'GO').n, 1);
+  assert.equal(soma({ uf: 'GO' }), 2, 'sem o filtro, a descartada pela Diretoria entra (coluna Decisão)');
+  assert.equal(soma({ uf: 'GO', andamento: '1' }), 1, 'com andamento=1, bate com o Painel');
+  assert.equal(soma({ andamento: '1' }), d.etapas.andamento);
+  const alta = d.notas.faixas.find((x) => x.codigo === 'ALTA').n;
+  assert.equal(soma({ nota: 'ALTA', andamento: '1' }), alta); assert.equal(soma({ nota: 'ALTA' }), alta + 1);
+  assert.equal(soma({ nota: 'TRAVA', andamento: '1' }), d.travas.n);
+  const h = tela().ctx.Lic_htmlPainel_(d);
+  const links = [...h.matchAll(/data-lic-ir="([^"]+)"/g)].map((m) => JSON.parse(m[1].replace(/&quot;/g, '"')));
+  for (const l of links.filter((x) => x.kanban && (x.kanban.uf || x.kanban.nota))) assert.equal(l.kanban.andamento, '1', JSON.stringify(l));
+  assert.ok(links.some((l) => l.kanban && l.kanban.andamento === '1' && !l.kanban.uf && !l.kanban.nota && !l.kanban.ia), 'KPI "Em andamento"');
+});
+
+test('revisão 2: "descartadas só pela regra" abre a aba Descartadas filtrada pela origem; IA contada por oportunidade e aberta filtrada', () => {
+  const sit = { op_imbe: 'CONCLUIDA', op_imb2: 'RECUSADA', op_casc: 'ERRO' };
+  const a = ambiente({ ops: opsBase().map((l) => (sit[l.ID] ? Object.assign(l, { ANALISE_SITUACAO: sit[l.ID] }) : l)) });
+  const reg = a.api('s_cha', 'oportunidades', { aba: 'descartadas', origem: 'REGRA' }), pes = a.api('s_cha', 'oportunidades', { aba: 'descartadas', origem: 'PESSOA' }), tod = a.api('s_cha', 'oportunidades', { aba: 'descartadas' });
+  assert.deepEqual(reg.lista.map((x) => x.id), ['op_desr']); assert.deepEqual(pes.lista.map((x) => x.id), ['op_desp']); assert.equal(tod.lista.length, 2); assert.equal(reg.origem, 'REGRA');
+  assert.equal(reg.lista.length, a.api('s_cha', 'painel').etapas.descartadasRegra);
+  // tentativas: a mesma oportunidade com 3 linhas em LIC_ANALISES conta 1 vez (vale a situação atual de cada oportunidade)
+  a.tabelas.LIC_ANALISES = [{ ID: 'x1', OPORTUNIDADE_ID: 'op_imbe', SITUACAO: 'ERRO' }, { ID: 'x2', OPORTUNIDADE_ID: 'op_imbe', SITUACAO: 'RECUSADA' }, { ID: 'x3', OPORTUNIDADE_ID: 'op_imbe', SITUACAO: 'CONCLUIDA', DURACAO_MS: 1000 }];
+  const d = a.api('s_cha', 'painel');
+  assert.equal(d.ia.concluidas, 1); assert.equal(d.ia.recusadas, 1); assert.equal(d.ia.erro, 1); assert.equal(d.ia.total, 3); assert.deepEqual(d.ia.tentativas, { CONCLUIDA: 1, RECUSADA: 1, ERRO: 1 });
+  for (const [s, n] of [['CONCLUIDA', d.ia.concluidas], ['RECUSADA', d.ia.recusadas], ['ERRO', d.ia.erro]]) assert.equal(a.api('s_cha', 'kanban', { ia: s }).total, n, s);
+  const h = tela().ctx.Lic_htmlPainel_(d);
+  assert.match(h, /&quot;aba&quot;:&quot;descartadas&quot;,&quot;origem&quot;:&quot;REGRA&quot;/);
+  assert.match(h, /&quot;ia&quot;:&quot;RECUSADA&quot;/); assert.match(h, /Tentativas registradas<\/dt><dd>3 \(concluídas 1, recusadas 1, erro 1\)/);
+  const t = tela();
+  t.ctx.Lic_irLink_({ mod: 'licitacoes_oportunidades', aba: 'descartadas', origem: 'REGRA' });
+  assert.equal(vm.runInContext('LIC.filtros.origem', t.ctx), 'REGRA'); assert.equal(t.abertos.pop(), 'licitacoes_oportunidades');
+  assert.match(t.ctx.Lic_htmlListaCab_({ contagens: {} }, 'descartadas', vm.runInContext('LIC.filtros', t.ctx)), /<select id="licFOrigem">[\s\S]*value="REGRA" selected/);
+  assert.doesNotMatch(t.ctx.Lic_htmlListaCab_({ contagens: {} }, 'analisar', vm.runInContext('LIC.filtros', t.ctx)), /licFOrigem/, 'só na aba Descartadas');
+});
+
+test('revisão 3, 5, 6, 7 e 9: pendentes iguais à Agenda, "300 ou mais", prazo por dia de Brasília, data inválida do Gantt e situação desconhecida', () => {
+  const a = ambiente({ ops: opsBase().concat([OP('op_hoje', { ENCERRAMENTO_PROPOSTAS: '2026-11-02T08:00:00', ENCERRAMENTO_ISO: '2026-11-02T11:00:00.000Z' }), OP('op_d9', { ENCERRAMENTO_PROPOSTAS: '2026-11-09T23:30:00', ENCERRAMENTO_ISO: '2026-11-10T02:30:00.000Z' }), OP('op_xxx', { SITUACAO: 'ESTRANHA' })]) });
+  a.ctx.Lic_agendaAtualizar_({ limite: 50 });
+  const d = a.api('s_cha', 'painel');
+  const ag = a.api('s_cha', 'agenda', { periodo: '30' }).contagens;
+  assert.ok(ag.pendentes > 0); assert.equal(d.prazos.pendentes30, ag.pendentes, '3: mesma conta da Agenda (com os sem data)');
+  // 6: por dia de calendário em Brasília: o encerrado hoje cedo e o de 09/11 às 23:30 (10/11 em UTC) entram nos 7 dias
+  const k7 = a.api('s_cha', 'kanban', { prazo: '7' }).colunas.flatMap((c) => c.cartoes.map((x) => x.id));
+  assert.ok(k7.includes('op_hoje') && k7.includes('op_d9'), k7.join(','));
+  // 7: data impossível volta à janela padrão
+  for (const x of ['2026-02-31', '2026-13-01', '2026-11-00']) assert.equal(a.api('s_cha', 'gantt', { inicio: x }).de, '2026-11-01', x);
+  assert.equal(a.api('s_cha', 'gantt', { inicio: '2028-02-29' }).de, '2028-02-29');
+  // 9: situação desconhecida contada fora do quadro e no Painel
+  const kb = a.api('s_cha', 'kanban');
+  assert.equal(kb.foraDoQuadro.situacaoDesconhecida, 1); assert.equal(d.etapas.situacaoDesconhecida, 1);
+  assert.match(tela().ctx.Lic_htmlKanban_(kb, false), /1 com situação que não é etapa do Kanban ficam fora/);
+  // 5: as 300 lidas são todas das últimas 24 h -> "300 ou mais"
+  const agora = Date.parse('2026-11-02T12:00:00.000Z');
+  a.ctx.SGO_LICITACOES = { listar: () => ({ itens: [], ate: '', mais: false }), situacao: () => ({ ligado: true, rotas: [] }),
+    conexoes: () => Array.from({ length: 300 }, (_, i) => ({ portal: 'PUB-001', rota: '/x', inicio: new Date(agora - i * 60000).toISOString(), status: i % 10 ? 200 : 503, erro: '' })) };
+  const p = a.api('s_cha', 'painel'), c = p.coletor.conexoes;
+  assert.equal(c.noLimite, true); assert.equal(c.chamadas24h, 300); assert.equal(c.erros24h, 30);
+  assert.match(tela().ctx.Lic_htmlPainel_(p), /300 ou mais[\s\S]*pelo menos 30 com erro/);
+  a.ctx.SGO_LICITACOES.conexoes = () => [{ portal: 'PUB-001', rota: '/x', inicio: new Date(agora).toISOString(), status: 200, erro: '' }];
+  assert.equal(a.api('s_cha', 'painel').coletor.conexoes.noLimite, false);
 });

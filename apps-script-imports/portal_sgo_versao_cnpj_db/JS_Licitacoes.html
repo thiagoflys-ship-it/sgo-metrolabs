@@ -461,6 +461,7 @@
       '<div><label for="licFUf">UF</label><select id="licFUf"><option value="">Brasil inteiro</option><option value="PRIO"' + (f.uf === "PRIO" ? " selected" : "") + '>Prioridade (GO, DF, vizinhos e RJ)</option>' + Lic_opcoes_(LIC_UFS_TODAS.map(function (u) { return [u, u]; }), f.uf) + "</select></div>" +
       '<div><label for="licFSelo">Selo</label><select id="licFSelo"><option value="">Todos</option>' + Lic_opcoes_(LIC_SELOS_FILTRO, f.selo) + "</select></div>" +
       '<div><label for="licFSessao">Onde é a sessão</label><select id="licFSessao">' + Lic_opcoes_(sessoes, f.sessao) + "</select></div>" +
+      (aba === "descartadas" ? '<div><label for="licFOrigem">Quem descartou</label><select id="licFOrigem">' + Lic_opcoes_([["", "Todas"], ["REGRA", "Só a regra do radar"], ["PESSOA", "A Diretoria"]], f.origem) + "</select></div>" : "") +
       '<div><label for="licFOrdem">Ordenar por</label><select id="licFOrdem">' + Lic_opcoes_(LIC_ORDENS, LIC.ordem) + "</select></div></div>" +
       '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Legenda dos selos e do porte da empresa</summary>' +
       '<p class="cm-txt"><span class="cm-selo verde">Exclusivo ME/EPP — podemos participar (EPP)</span> A matriz de Goiânia é Empresa de Pequeno Porte (decisão do dono, 01/11/2026): item exclusivo ou cota reservada a ME/EPP não é descartado.</p>' +
@@ -481,7 +482,7 @@
     if (LIC.fichaId) { Lic_renderFicha_(LIC.fichaId); return; }
     c.innerHTML = Lic_carregando_(4);
     var aba = LIC.aba;
-    Lic_chamar_("oportunidades", { aba: aba, ordem: LIC.ordem }, function (d) {
+    Lic_chamar_("oportunidades", { aba: aba, ordem: LIC.ordem, origem: aba === "descartadas" ? LIC.filtros.origem || "" : "" }, function (d) {
       LIC.lista = d;
       c.innerHTML = Lic_modosHtml_("licitacoes_oportunidades") + Lic_htmlListaCab_(d, aba, LIC.filtros) + '<div id="licLista" class="cm-lista" aria-live="polite">' + Lic_htmlListaItens_(d, aba, LIC.filtros) + "</div>";
       c.querySelectorAll("[data-lic-aba]").forEach(function (b) { b.onclick = function () { var de = LIC.aba, para = b.getAttribute("data-lic-aba"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Oportunidades: " + b.textContent, function () { LIC.aba = de; if (LIC.mod === "licitacoes_oportunidades") Lic_renderOportunidades_(); }); LIC.aba = para; Lic_renderOportunidades_(); }; });
@@ -491,6 +492,7 @@
         var el = Lic_$_(x[0]); if (el) el.addEventListener(x[2], function () { LIC.filtros[x[1]] = el.value; redesenhar(); });
       });
       // ordem: o servidor ordena antes de cortar em 300 (a nota da 301ª também conta)
+      var ori = Lic_$_("licFOrigem"); if (ori) ori.addEventListener("change", function () { LIC.filtros.origem = ori.value; Lic_renderOportunidades_(); });
       var ord = Lic_$_("licFOrdem"); if (ord) ord.addEventListener("change", function () { LIC.ordem = ord.value; Lic_renderOportunidades_(); });
       var l = Lic_$_("licLista"); if (l) Lic_ligarCartoes_(l);
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, Lic_renderOportunidades_); });
@@ -500,7 +502,7 @@
     el.querySelectorAll("[data-lic-analise]").forEach(function (b) { b.onclick = function () { Lic_janelaAnalise_(b.getAttribute("data-lic-analise"), b); }; });
     el.querySelectorAll("[data-lic-descartar]").forEach(function (b) { b.onclick = function () { Lic_janelaMotivo_("descartar", b.getAttribute("data-lic-descartar"), b); }; });
     el.querySelectorAll("[data-lic-reabrir]").forEach(function (b) { b.onclick = function () { Lic_janelaMotivo_("reabrir", b.getAttribute("data-lic-reabrir"), b); }; });
-    var lim = el.querySelector("[data-lic-limpar]"); if (lim) lim.onclick = function () { LIC.filtros = { busca: "", uf: "", selo: "", sessao: "" }; Lic_renderOportunidades_(); };
+    var lim = el.querySelector("[data-lic-limpar]"); if (lim) lim.onclick = function () { LIC.filtros = { busca: "", uf: "", selo: "", sessao: "", origem: "" }; Lic_renderOportunidades_(); };
   }
 
   // ---------------- janelas (descartar, reabrir, enviar para análise) ----------------
@@ -1236,7 +1238,8 @@
   var LIC_GT_NAT = [["", "Todas"], ["CONFIRMADO", "Confirmado"], ["CALCULADO", "Calculado (regra legal)"], ["PREVISTO", "Pendente de confirmação"]];
   var LIC_GT_CORES = { LIMITE_PROPOSTA: "#b3261e", SESSAO_PUBLICA: "#7a1f6b", PRAZO_IMPUGNACAO: "#b26a00", PRAZO_ESCLARECIMENTO: "#1f5fa8", PRAZO_RECURSO: "#4a5a6a", ABERTURA_PROPOSTAS: "#2e7d4f" };
   var LIC_GT_TIPOS = [["LIMITE_PROPOSTA", "Fim das propostas"], ["SESSAO_PUBLICA", "Sessão pública"], ["PRAZO_IMPUGNACAO", "Impugnação"], ["PRAZO_ESCLARECIMENTO", "Esclarecimento"], ["PRAZO_RECURSO", "Recurso"], ["ABERTURA_PROPOSTAS", "Início das propostas"]];
-  LIC.kanbanFiltros = LIC.kanbanFiltros || { uf: "", nota: "", prazo: "", responsavel: "", busca: "" }; LIC.kanbanColMob = LIC.kanbanColMob || "RADAR";
+  var LIC_KB_VAZIO = function () { return { uf: "", nota: "", prazo: "", responsavel: "", busca: "", andamento: "", ia: "" }; };
+  LIC.kanbanFiltros = LIC.kanbanFiltros || LIC_KB_VAZIO(); LIC.kanbanColMob = LIC.kanbanColMob || "RADAR";
   LIC.ganttZoom = LIC.ganttZoom || "semana"; LIC.ganttInicio = LIC.ganttInicio || ""; LIC.ganttFiltros = LIC.ganttFiltros || { uf: "", etapa: "", natureza: "" };
 
   function Lic_modosHtml_(atual) {
@@ -1250,11 +1253,11 @@
   /** Destino de um número do Painel: a lista filtrada (Kanban, Agenda, Central de alertas, Portais ou Oportunidades). */
   function Lic_irLink_(x) {
     if (!x || !x.mod) return;
-    if (x.kanban) { LIC.kanbanFiltros = Object.assign({ uf: "", nota: "", prazo: "", responsavel: "", busca: "" }, x.kanban); if (x.coluna) LIC.kanbanColMob = x.coluna; }
+    if (x.kanban) { LIC.kanbanFiltros = Object.assign(LIC_KB_VAZIO(), x.kanban); if (x.coluna) LIC.kanbanColMob = x.coluna; }
     if (x.agenda) { LIC.agendaPeriodo = x.agenda.periodo || "7"; LIC.agendaFiltros = { nivel: x.agenda.nivel || "", natureza: x.agenda.natureza || "", sessao: "", travadas: false }; }
     if (x.alertas) LIC.alertasFiltro = x.alertas;
     if (x.portais) LIC.portaisAba = x.portais;
-    if (x.aba) { LIC.aba = x.aba; LIC.filtros = { busca: "", uf: "", selo: "", sessao: "" }; }
+    if (x.aba) { LIC.aba = x.aba; LIC.filtros = { busca: "", uf: "", selo: "", sessao: "", origem: x.origem || "" }; }
     if (x.ordem) LIC.ordem = x.ordem;
     LIC.fichaId = "";
     abrir(x.mod);
@@ -1269,13 +1272,15 @@
   // ---------------- Kanban ----------------
   function Lic_kbFiltrosHtml_(r) {
     var f = LIC.kanbanFiltros, resp = [["", "Todos"], ["SEM", "Sem responsável"]].concat((r.responsaveis || []).map(function (u) { return [u.id, u.nome]; }));
-    var ativo = f.uf || f.nota || f.prazo || f.responsavel || f.busca;
+    var ativo = f.uf || f.nota || f.prazo || f.responsavel || f.busca || f.andamento || f.ia;
     return '<div class="cm-filtros">' +
       '<div><label for="licKbBusca">Buscar</label><input id="licKbBusca" type="search" placeholder="órgão, objeto, número" value="' + Lic_esc_(f.busca) + '"></div>' +
       '<div><label for="licKbUf">UF</label><select id="licKbUf"><option value="">Brasil inteiro</option><option value="PRIO"' + (f.uf === "PRIO" ? " selected" : "") + '>Prioridade (GO, DF, vizinhos e RJ)</option>' + Lic_opcoes_(LIC_UFS_TODAS.map(function (u) { return [u, u]; }), f.uf) + "</select></div>" +
       '<div><label for="licKbNota">Nota</label><select id="licKbNota">' + Lic_opcoes_(LIC_KB_NOTAS, f.nota) + "</select></div>" +
       '<div><label for="licKbPrazo">Prazo das propostas</label><select id="licKbPrazo">' + Lic_opcoes_(LIC_KB_PRAZOS, f.prazo) + "</select></div>" +
-      '<div><label for="licKbResp">Responsável</label><select id="licKbResp">' + Lic_opcoes_(resp, f.responsavel) + "</select></div></div>" +
+      '<div><label for="licKbResp">Responsável</label><select id="licKbResp">' + Lic_opcoes_(resp, f.responsavel) + "</select></div>" +
+      '<div><label for="licKbAnd">Situação</label><select id="licKbAnd">' + Lic_opcoes_([["", "Todas (com as descartadas pela Diretoria)"], ["1", "Só em andamento (sem descartadas)"]], f.andamento) + "</select></div>" +
+      '<div><label for="licKbIa">Análise por IA</label><select id="licKbIa">' + Lic_opcoes_([["", "Todas"], ["CONCLUIDA", "Última concluída"], ["RECUSADA", "Última recusada pelo verificador"], ["ERRO", "Última com erro da IA"]], f.ia) + "</select></div></div>" +
       (ativo ? '<p class="cm-meta">Filtros ligados: ' + r.total + " de " + r.semFiltro + ' no quadro. <button type="button" class="btn-secondary" data-lic-kb-limpar>Limpar filtros</button></p>' : "");
   }
   function Lic_kbClasse_(c) {
@@ -1312,7 +1317,8 @@
   function Lic_htmlKanban_(r, celular) {
     var regras = r.regras || {}, fora = r.foraDoQuadro || {};
     var h = Lic_modosHtml_("licitacoes_kanban") + Lic_kbFiltrosHtml_(r) +
-      '<p class="cm-meta">' + r.total + (r.total === 1 ? " licitação" : " licitações") + " no quadro. " + (fora.descartadasRegra ? fora.descartadasRegra + ' descartadas só pela regra do radar ficam fora (<button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas" }) + ">ver em Oportunidades › Descartadas</button>). " : "") +
+      '<p class="cm-meta">' + r.total + (r.total === 1 ? " licitação" : " licitações") + " no quadro. " + (fora.descartadasRegra ? fora.descartadasRegra + ' descartadas só pela regra do radar ficam fora (<button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas", origem: "REGRA" }) + ">ver em Oportunidades › Descartadas</button>). " : "") +
+      (fora.situacaoDesconhecida ? fora.situacaoDesconhecida + " com situação que não é etapa do Kanban ficam fora (ver na Lista). " : "") +
       (celular ? "Toque na etapa para ver as licitações dela; \"Mover para\" muda de etapa." : "Role o quadro para os lados para ver todas as etapas. Arraste o cartão ou use \"Mover para\".") + "</p>";
     if (celular) {
       var at = r.colunas.filter(function (k) { return k.codigo === LIC.kanbanColMob; })[0] || r.colunas[0];
@@ -1328,14 +1334,14 @@
     var c = Lic_corpo_(); if (!c) return;
     c.innerHTML = Lic_carregando_(3);
     var f = LIC.kanbanFiltros;
-    Lic_chamar_("kanban", { uf: f.uf, nota: f.nota, prazo: f.prazo, responsavel: f.responsavel, busca: f.busca }, function (r) {
+    Lic_chamar_("kanban", { uf: f.uf, nota: f.nota, prazo: f.prazo, responsavel: f.responsavel, busca: f.busca, andamento: f.andamento, ia: f.ia }, function (r) {
       LIC.kanban = r;
       var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
       var desenhar = function () {
         c.innerHTML = Lic_htmlKanban_(r, celular);
         Lic_ligarModos_(c); Lic_ligarLinks_(c);
-        [["licKbUf", "uf"], ["licKbNota", "nota"], ["licKbPrazo", "prazo"], ["licKbResp", "responsavel"], ["licKbBusca", "busca"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.addEventListener("change", function () { LIC.kanbanFiltros[x[1]] = el.value; Lic_renderKanban_(); }); });
-        var lim = c.querySelector("[data-lic-kb-limpar]"); if (lim) lim.onclick = function () { LIC.kanbanFiltros = { uf: "", nota: "", prazo: "", responsavel: "", busca: "" }; Lic_renderKanban_(); };
+        [["licKbUf", "uf"], ["licKbNota", "nota"], ["licKbPrazo", "prazo"], ["licKbResp", "responsavel"], ["licKbBusca", "busca"], ["licKbAnd", "andamento"], ["licKbIa", "ia"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.addEventListener("change", function () { LIC.kanbanFiltros[x[1]] = el.value; Lic_renderKanban_(); }); });
+        var lim = c.querySelector("[data-lic-kb-limpar]"); if (lim) lim.onclick = function () { LIC.kanbanFiltros = LIC_KB_VAZIO(); Lic_renderKanban_(); };
         // celular: trocar de etapa só redesenha a lista (os dados já estão aqui; nenhum pedido novo ao servidor)
         c.querySelectorAll("[data-lic-kb-col]").forEach(function (b) { b.onclick = function () { var de = LIC.kanbanColMob, para = b.getAttribute("data-lic-kb-col"); if (de === para) return; LIC.kanbanColMob = para; desenhar(); var t = c.querySelector('[data-lic-kb-col="' + para + '"]'); if (t && t.focus) { try { t.focus(); } catch (e) {} } }; });
         Lic_ligarKanban_(c, r);
@@ -1537,23 +1543,25 @@
   function Lic_htmlPainel_(d) {
     var e = d.etapas, u = d.ufs, n = d.notas, p = d.prazos, col = d.coletor, ia = d.ia, cx = col.conexoes || {}, po = col.portais || {};
     var kb = function (f, coluna) { return { mod: "licitacoes_kanban", kanban: f || {}, coluna: coluna || "" }; };
+    // revisão de 02/11/2026: números contados só nas em andamento abrem o Kanban sem as descartadas (andamento=1)
+    var kbA = function (f) { return kb(Object.assign({ andamento: "1" }, f || {})); };
     var h = '<div class="cm-kpis">' +
-      Lic_pnKpi_(e.andamento, "Em andamento (sem as descartadas)", "", kb({}), e.fonte) +
+      Lic_pnKpi_(e.andamento, "Em andamento (sem as descartadas)", "", kbA({}), e.fonte) +
       Lic_pnKpi_(p.d7, "Prazos nos próximos 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) +
       Lic_pnKpi_(p.d30, "Prazos nos próximos 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) +
       Lic_pnKpi_(d.alertas.semCiencia, "Alertas sem ciência", d.alertas.semCiencia ? "erro" : "", { mod: "licitacoes_alertas", alertas: "semCiencia" }, d.alertas.fonte) +
-      Lic_pnKpi_(d.travas.n, "Travas a confirmar", d.travas.n ? "aviso" : "", kb({ nota: "TRAVA" }), d.travas.fonte) +
+      Lic_pnKpi_(d.travas.n, "Travas a confirmar", d.travas.n ? "aviso" : "", kbA({ nota: "TRAVA" }), d.travas.fonte) +
       Lic_pnKpi_(po.operacionais + " de " + po.total, "Portais operacionais", po.falha ? "erro" : "", { mod: "licitacoes_portais", portais: "portais" }, col.fonte) + "</div>" +
       '<p class="cm-modo-dica">Todos os números são contados agora, a partir das abas do módulo e do coletor do servidor (' + Lic_esc_(Lic_dataHora_(d.geradoEm)) + '). Toque num número ou numa barra para abrir a lista que o compõe. "Fonte" diz de onde vem cada um.</p>';
     var g = '<div class="atv-ind-grade lic-pn-grade">';
     g += Lic_pnCaixa_("Oportunidades por etapa (Kanban)", Lic_pnBarras_(e.itens.map(function (x) { return { t: x.nome, sub: x.futura ? "(próxima etapa)" : "", n: x.n, link: kb({}, x.codigo), dica: "Abre o Kanban nesta etapa." }; })) +
-      '<p class="cm-meta">' + e.travadas + " travadas no Radar (decisão da Diretoria) · " + e.descartadasPessoa + ' descartadas pela Diretoria (na coluna Decisão) · <button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas" }) + ">" + e.descartadasRegra + " descartadas só pela regra</button> (fora do Kanban).</p>", e.fonte);
+      '<p class="cm-meta">' + e.travadas + " travadas no Radar (decisão da Diretoria) · " + e.descartadasPessoa + ' descartadas pela Diretoria (na coluna Decisão) · <button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas", origem: "REGRA" }) + ">" + e.descartadasRegra + " descartadas só pela regra</button> (fora do Kanban)." + (e.situacaoDesconhecida ? " " + e.situacaoDesconhecida + " com situação que não é etapa do Kanban (ver na Lista)." : "") + "</p>", e.fonte);
     var ufItens = u.itens.filter(function (x) { return x.prioridade || x.n; }), outras = ufItens.filter(function (x) { return !x.prioridade; }), mostrar = ufItens.filter(function (x) { return x.prioridade; }).concat(outras.slice(0, 8));
     var resto = outras.slice(8).reduce(function (s, x) { return s + x.n; }, 0);
-    g += Lic_pnCaixa_("Em andamento por UF", Lic_pnBarras_(mostrar.map(function (x) { return { t: x.uf, sub: x.grupo, n: x.n, link: kb({ uf: x.uf }), cor: x.prioridade ? "" : "var(--muted)", dica: "Abre o Kanban só com " + x.uf + "." }; }), 0) +
-      (resto ? '<p class="cm-meta">Outras UFs: ' + resto + ".</p>" : "") + '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_(kb({ uf: "PRIO" })) + ">Ver só a prioridade (GO, DF, vizinhos e RJ) no Kanban</button></p>", u.fonte);
+    g += Lic_pnCaixa_("Em andamento por UF", Lic_pnBarras_(mostrar.map(function (x) { return { t: x.uf, sub: x.grupo, n: x.n, link: kbA({ uf: x.uf }), cor: x.prioridade ? "" : "var(--muted)", dica: "Abre o Kanban só com " + x.uf + "." }; }), 0) +
+      (resto ? '<p class="cm-meta">Outras UFs: ' + resto + ".</p>" : "") + '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_(kbA({ uf: "PRIO" })) + ">Ver só a prioridade (GO, DF, vizinhos e RJ) no Kanban</button></p>", u.fonte);
     var corNota = { ALTA: "var(--success)", MEDIA: "var(--info)", BAIXA: "var(--warning)", DESCARTE: "var(--danger)", TRAVA: "var(--danger)", SEM: "var(--muted)" };
-    g += Lic_pnCaixa_("Distribuição das notas (IA)", Lic_pnBarras_(n.faixas.map(function (x) { return { t: x.nome, n: x.n, cor: corNota[x.codigo], link: kb({ nota: x.codigo }), dica: "Abre o Kanban só com esta faixa de nota." }; })) +
+    g += Lic_pnCaixa_("Distribuição das notas (IA)", Lic_pnBarras_(n.faixas.map(function (x) { return { t: x.nome, n: x.n, cor: corNota[x.codigo], link: kbA({ nota: x.codigo }), dica: "Abre o Kanban só com esta faixa de nota." }; })) +
       '<p class="cm-meta">' + n.comNota + " de " + e.andamento + " em andamento têm nota. A nota é da IA com verificador; quem decide é a Diretoria.</p>", n.fonte);
     g += Lic_pnCaixa_("Prazos dos próximos dias", '<div class="cm-kpis lic-pn-mini">' + Lic_pnKpi_(p.d7, "em 7 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) + Lic_pnKpi_(p.criticos7, "críticos em 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7", nivel: "CRITICO" } }, p.fonte) +
       Lic_pnKpi_(p.d30, "em 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) + Lic_pnKpi_(p.pendentes30, "pendentes de confirmação (30 dias)", p.pendentes30 ? "aviso" : "", { mod: "licitacoes_agenda", agenda: { periodo: "30", natureza: "PENDENTE" } }, p.fonte) + "</div>" +
@@ -1565,16 +1573,16 @@
       "<dt>Última rodada</dt><dd>" + Lic_esc_(quando(col.ultimaRodadaEm)) + "</dd><dt>Último sucesso</dt><dd>" + Lic_esc_(quando(col.ultimoSucessoEm)) + "</dd>" +
       "<dt>Falhas seguidas no PNCP</dt><dd>" + (col.falhasSeguidasPncp ? '<span class="cm-selo vermelho">' + col.falhasSeguidasPncp + "</span>" : "0") + "</dd>" +
       "<dt>Rotas com falha</dt><dd>" + col.rotasComFalha + " de " + col.rotas + "</dd>" +
-      "<dt>Chamadas nas últimas 24 h</dt><dd>" + (cx.erroLeitura ? Lic_esc_(cx.erroLeitura) : (cx.chamadas24h || 0) + " · " + (cx.erros24h ? '<span class="cm-selo vermelho">' + cx.erros24h + " com erro</span>" : "nenhuma com erro")) + "</dd>" +
+      "<dt>Chamadas nas últimas 24 h</dt><dd>" + (cx.erroLeitura ? Lic_esc_(cx.erroLeitura) : (cx.noLimite ? "300 ou mais (o registro lido traz as 300 mais recentes)" : (cx.chamadas24h || 0)) + " · " + (cx.erros24h ? '<span class="cm-selo vermelho">' + (cx.noLimite ? "pelo menos " : "") + cx.erros24h + " com erro</span>" : "nenhuma com erro")) + "</dd>" +
       (cx.ultimoErro ? "<dt>Último erro</dt><dd>" + Lic_esc_(cx.ultimoErro) + "</dd>" : "") + (col.ultimoErro ? "<dt>Erro da rodada</dt><dd>" + Lic_esc_(col.ultimoErro) + "</dd>" : "") + "</dl>" + (col.aviso ? Lic_faixa_(col.aviso, "aviso") : "");
     g += Lic_pnCaixa_("Saúde do coletor e dos portais", saude + Lic_pnBarras_([
       { t: "Operacionais", n: po.operacionais, cor: "var(--success)", link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Operacionais com restrições", n: po.restricoes, cor: "var(--warning)", link: { mod: "licitacoes_portais", portais: "portais" } },
       { t: "Em teste", n: po.emTeste, link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Com falha", n: po.falha, cor: "var(--danger)", link: { mod: "licitacoes_portais", portais: "portais" } },
       { t: "Ligados para a coleta", n: po.ligados, link: { mod: "licitacoes_portais", portais: "portais" } }], po.total) +
       '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_portais", portais: "registro" }) + ">Ver o registro das chamadas</button> · " + po.total + " portais cadastrados.</p>", col.fonte);
-    g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" }, dica: "Abre Oportunidades ordenadas por nota." },
-      { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" } }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: { mod: "licitacoes_oportunidades", aba: "analisar", ordem: "nota" } }]) +
-      '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Total registrado</dt><dd>" + ia.total + "</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd></dl>", ia.fonte);
+    g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: kb({ ia: "CONCLUIDA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi concluída." },
+      { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: kb({ ia: "RECUSADA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi recusada." }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: kb({ ia: "ERRO" }), dica: "Abre o Kanban só com as oportunidades cuja última análise deu erro da IA." }]) +
+      '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Tentativas registradas</dt><dd>" + ia.total + " (concluídas " + ((ia.tentativas || {}).CONCLUIDA || 0) + ", recusadas " + ((ia.tentativas || {}).RECUSADA || 0) + ", erro " + ((ia.tentativas || {}).ERRO || 0) + ")</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd></dl>", ia.fonte);
     return h + g + "</div>";
   }
   function Lic_renderPainel_() {

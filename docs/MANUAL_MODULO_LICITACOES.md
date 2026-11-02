@@ -144,7 +144,7 @@ Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a t
 
 ### 6.2 Oportunidades
 
-Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo, onde é a sessão e "Ordenar por" (prioridade da UF e prazo, nota, prazo).
+Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo, onde é a sessão, "Quem descartou" (só na parte Descartadas: todas, só a regra do radar ou a Diretoria; feito no servidor) e "Ordenar por" (prioridade da UF e prazo, nota, prazo).
 
 Cada cartão mostra a nota de 0 a 100 e a classe quando a análise por IA já foi feita (sem nota: a UF e a situação), o órgão e o código LIC, município, modalidade, modo de disputa, registro de preços, onde é a sessão, os selos, o objeto com o termo destacado, o número de controle, o valor estimado, o prazo de proposta com o tempo restante, o motivo, o trecho da fonte e as pendências.
 
@@ -393,7 +393,7 @@ As descartadas só pela regra do radar ficam fora do quadro (Oportunidades › D
 
 Cartão: órgão, objeto resumido, código LIC, cidade e UF, fim das propostas com o selo de tempo, nota da IA e a classe (ou "Sem nota da IA"), responsável, selos "Trava a confirmar", "Travada (decisão da Diretoria)", "Suspensa na fonte" e, na Decisão, quem descartou, quando e o motivo. Borda vermelha: menos de 2 dias ou trava a confirmar; amarela: menos de 5 dias ou travada; cinza: descartada.
 
-Filtros (feitos no servidor): busca, UF (ou a prioridade GO, DF, vizinhos e RJ), nota (alta, média, baixa, descarte, trava a confirmar, sem nota), prazo das propostas (7 dias, 30 dias, encerrado, sem data) e responsável. Dentro da coluna, o prazo mais perto vem primeiro; cada coluna mostra até 120 cartões (os demais pelos filtros).
+Filtros (feitos no servidor): busca, UF (ou a prioridade GO, DF, vizinhos e RJ), nota (alta, média, baixa, descarte, trava a confirmar, sem nota), prazo das propostas (7 ou 30 dias contados por dia de calendário em Brasília, de hoje em diante, como a Agenda; encerrado; sem data), responsável, situação (todas ou só em andamento, sem as descartadas) e análise por IA (situação da última análise: concluída, recusada pelo verificador, erro da IA). Oportunidade com situação que não é etapa do Kanban não some: o quadro diz quantas ficaram fora. Dentro da coluna, o prazo mais perto vem primeiro; cada coluna mostra até 120 cartões (os demais pelos filtros).
 
 Mudar de etapa: arrastar o cartão (computador) ou "Mover para" (qualquer aparelho). Só as passagens que já existem:
 
@@ -429,16 +429,16 @@ Números contados na hora em que a tela abre, cada um com a fonte (aba e regra d
 
 | Indicador | Fonte | Abre |
 |---|---|---|
-| Em andamento, oportunidades por etapa | LIC_OPORTUNIDADES, SITUACAO (as descartadas só pela regra ficam fora do Kanban e são contadas à parte) | Kanban (na etapa) |
-| Em andamento por UF | LIC_OPORTUNIDADES, UF; primeiro a prioridade: GO e DF, vizinhos de GO (MG, BA, TO, MT, MS) e RJ, mesmo em zero | Kanban filtrado pela UF |
-| Distribuição das notas | NOTA, NOTA_CLASSE e TRAVAS_A_CONFIRMAR: alta (75 a 100), média (50 a 74), baixa (30 a 49), descarte, trava a confirmar, sem nota | Kanban filtrado pela nota |
-| Prazos nos próximos 7 e 30 dias, críticos, pendentes | LIC_EVENTOS, com a mesma regra da Agenda (sem versões substituídas, sem descartadas e sem travadas): o número bate com a lista | Agenda no período |
+| Em andamento, oportunidades por etapa | LIC_OPORTUNIDADES, SITUACAO (as descartadas só pela regra ficam fora do Kanban e são contadas à parte; o número delas abre Oportunidades › Descartadas filtrada em "Só a regra do radar") | Kanban (na etapa; "Em andamento" abre só as em andamento) |
+| Em andamento por UF | LIC_OPORTUNIDADES, UF; primeiro a prioridade: GO e DF, vizinhos de GO (MG, BA, TO, MT, MS) e RJ, mesmo em zero; só as em andamento | Kanban filtrado pela UF, só em andamento |
+| Distribuição das notas | NOTA, NOTA_CLASSE e TRAVAS_A_CONFIRMAR: alta (75 a 100), média (50 a 74), baixa (30 a 49), descarte, trava a confirmar, sem nota; só as em andamento | Kanban filtrado pela nota, só em andamento |
+| Prazos nos próximos 7 e 30 dias, críticos, pendentes | LIC_EVENTOS, com a mesma regra da Agenda (sem versões substituídas, sem descartadas e sem travadas): o número bate com a lista. "Pendentes de confirmação" soma os da janela e os sem data não cancelados, como o contador da Agenda | Agenda no período |
 | Alertas sem ciência | LIC_ALERTAS, a mesma regra da Central de alertas | Central de alertas, "Sem ciência" |
-| Travas a confirmar | TRAVAS_A_CONFIRMAR maior que zero | Kanban, nota "Trava a confirmar" |
-| Saúde do coletor | Coletor do servidor (ligado, última rodada, último sucesso, falhas seguidas no PNCP, rotas com falha), registro das chamadas (últimas 300, janela de 24 h) e LIC_PORTAIS (operacionais, com restrições, em teste, com falha, ligados) | Portais e configurações |
-| Análises por IA | LIC_ANALISES: concluídas, recusadas pelo verificador, erro da IA, total, última e tempo médio (só das análises com a duração gravada, desde a etapa 4) | Oportunidades ordenadas por nota |
+| Travas a confirmar | TRAVAS_A_CONFIRMAR maior que zero, só as em andamento | Kanban, nota "Trava a confirmar", só em andamento |
+| Saúde do coletor | Coletor do servidor (ligado, última rodada, último sucesso, falhas seguidas no PNCP, rotas com falha), registro das chamadas (as 300 mais recentes, janela de 24 h; quando as 300 são todas das últimas 24 h, mostra "300 ou mais" e "pelo menos N com erro") e LIC_PORTAIS (operacionais, com restrições, em teste, com falha, ligados) | Portais e configurações |
+| Análises por IA | Concluídas, recusadas pelo verificador e erro da IA contam oportunidades do Kanban pela situação da última análise (LIC_OPORTUNIDADES, ANALISE_SITUACAO); LIC_ANALISES dá as tentativas registradas, a última e o tempo médio (só das análises com a duração gravada, desde a etapa 4) | Kanban filtrado pela situação da análise |
 
-Fora do servidor próprio, a saúde do coletor diz que a coleta roda só lá. O Painel não atualiza sozinho: "Atualizar" conta de novo.
+Fora do servidor próprio, a saúde do coletor diz que a coleta roda só lá. Os itens 4 e 8 da revisão independente de 02/11/2026 ficaram para uma rodada seguinte, por decisão do coordenador. O Painel não atualiza sozinho: "Atualizar" conta de novo.
 
 ### 6.13 Desempenho das três telas
 
