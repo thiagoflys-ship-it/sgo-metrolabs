@@ -107,6 +107,9 @@ function Lic_guarda_(o) {
         // relidos na trava, uma vez por lote: se alguém mexeu agora há pouco, a linha não sai
         var tocadasAgora = Lic_guardaTocadas_(), porId = {}, pos = {};
         Lic_ler_(LIC_ABAS.OPORTUNIDADES).forEach(function (l, k) { porId[Lic_s_(l.ID)] = l; pos[Lic_s_(l.ID)] = k; });
+        // etapa 3 (revisão 02/11/2026): os prazos e os alertas da oportunidade saem junto (sem órfãos), com o resumo no histórico
+        var filhos = { LIC_EVENTOS: {}, LIC_ALERTAS: {} };
+        [LIC_ABAS.EVENTOS, LIC_ABAS.ALERTAS].forEach(function (aba) { if (!aba) return; Lic_ler_(aba).forEach(function (x) { var k = Lic_s_(x.OPORTUNIDADE_ID); (filhos[aba][k] = filhos[aba][k] || []).push(x); }); });
         lote.slice().sort(function (a, b) { return (pos[b.id] || 0) - (pos[a.id] || 0); }).forEach(function (x) {
           var l = porId[x.id];
           if (!l) return;
@@ -120,7 +123,17 @@ function Lic_guarda_(o) {
             versao: l.VERSAO_FONTE, fonte: LIC_GUARDA_VERSAO, hash: Lic_s_(l.VERSAO_HASH) });
           var saiu = false, erro = '';
           try { saiu = SGO_DATA.remove(LIC_ABAS.OPORTUNIDADES, l.ID) !== false; } catch (e) { erro = Lic_s_(e && e.message); }
-          if (saiu) { r.saiu.push(Lic_s_(l.CODIGO)); r.saem['regra' + regra]++; }
+          if (saiu) {
+            r.saiu.push(Lic_s_(l.CODIGO)); r.saem['regra' + regra]++;
+            var qt = {};
+            [LIC_ABAS.EVENTOS, LIC_ABAS.ALERTAS].forEach(function (aba) {
+              if (!aba) return;
+              qt[aba] = 0;
+              (filhos[aba][Lic_s_(l.ID)] || []).forEach(function (x) { try { if (SGO_DATA.remove(aba, x.ID) !== false) qt[aba]++; } catch (e) {} });
+              r.filhos = r.filhos || {}; r.filhos[aba] = (r.filhos[aba] || 0) + qt[aba];
+            });
+            if (qt[LIC_ABAS.EVENTOS] || qt[LIC_ABAS.ALERTAS]) Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'SAIU_PELA_GUARDA_AGENDA', sistema, { texto: 'Junto com a oportunidade saíram ' + (qt[LIC_ABAS.EVENTOS] || 0) + ' prazo(s) de LIC_EVENTOS e ' + (qt[LIC_ABAS.ALERTAS] || 0) + ' alerta(s) de LIC_ALERTAS (regra ' + regra + ' da guarda).', versao: l.VERSAO_FONTE, fonte: LIC_GUARDA_VERSAO });
+          }
           else {
             r.falhas.push(Lic_s_(l.CODIGO) + ': ' + (erro || 'a linha não foi removida'));
             Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'GUARDA_FALHOU', sistema, { texto: 'A remoção pela regra de guarda falhou (' + (erro || 'linha não removida') + '); a oportunidade continua em LIC_OPORTUNIDADES e protegida.', versao: l.VERSAO_FONTE, fonte: LIC_GUARDA_VERSAO });

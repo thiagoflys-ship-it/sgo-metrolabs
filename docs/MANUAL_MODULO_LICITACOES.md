@@ -285,7 +285,7 @@ Retificação, suspensão, revogação e anulação:
 
 ### 6.8 Alertas de licitação e Central de alertas
 
-Quem recebe: só a Diretoria de Licitações, que no sistema são os perfis Diretoria e Administrador ativos (decisão do dono, 02/11/2026: Charles e Thiago). Nenhum nome ou número fica no código: a lista sai do cadastro de usuários e das Regras dos alertas.
+Quem recebe: só a Diretoria de Licitações (decisão do dono, 02/11/2026: Charles e Thiago). Padrão: perfis Diretoria e Administrador ativos com a área Diretoria no cadastro de usuários; uma conta técnica de administrador, sem a área, não recebe. Com a lista de destinatários das Regras dos alertas preenchida (com versão e motivo), vale só ela. Nenhum nome ou número fica no código.
 
 Fora do expediente: exceção aprovada pelo dono só para Licitações. Os alertas saem a qualquer hora, só para essas pessoas. Os demais avisos do SGO+ continuam com a matriz de avisos (expediente, vínculo, teto do dia).
 
@@ -313,7 +313,11 @@ Antecedências padrão (ajustáveis):
 | Razões de recurso (do limite interno) | 48 h importante, 24 h importante, 4 h crítico |
 | Mudança na fonte | Retificação e reabertura: importante, para quem recebe primeiro. Suspensão, revogação e anulação: crítico, para os dois |
 
-Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada: sai só o aviso mais recente. Na implantação (primeira rodada), as já passadas não saem, para não mandar uma rajada de mensagens antigas.
+Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada: sai só o aviso mais recente, e só para oportunidade que chegou da fonte depois da implantação. A implantação é marcada pela rotina só quando a agenda inteira já está montada; oportunidade que já existia antes dela nunca manda aviso vencido (salvar as regras ou abrir uma ficha antes da primeira rodada não dispara atrasados).
+
+Retificação: a versão nova do prazo herda os avisos já enviados (e a ciência) de cada antecedência, para a mesma pessoa: o de 7 dias não sai de novo. As mudanças de uma oportunidade vão juntas num alerta de mudança só. Prazo pendente de confirmação não gera alerta de mudança, nem recálculo que não muda nenhuma data.
+
+Tetos: no máximo 3 mensagens por pessoa em cada alerta (o original, o reenvio e o escalonamento somados) e 30 mensagens de licitação por pessoa no dia (ajustáveis). O que o teto segura fica na Central de alertas como "Não enviado", com o motivo, e no histórico (ALERTA_TETO).
 
 Estados de cada alerta (Central de alertas):
 
@@ -324,7 +328,7 @@ Estados de cada alerta (Central de alertas):
 | 3 | Aceito pelo provedor | A Meta devolveu o id da mensagem ("Aceito pela Meta"); o e-mail entrou na fila de envio |
 | 4 | Entregue | Só pelo retorno de status da Meta (delivered) |
 | 5 | Lido | Só pelo retorno de status da Meta (read) |
-| 6 | Ciência | "Ciente" na tela, botão "Confirmar ciência" do WhatsApp, link do e-mail ou resposta CIENTE à mensagem |
+| 6 | Ciência | "Ciente" na tela, botão "Confirmar ciência" do WhatsApp, link do e-mail ou resposta CIENTE à mensagem (só a palavra CIENTE; "ok" ou outra frase não vale) |
 | 7 | Em atendimento | A pessoa abriu a licitação pelo link do alerta |
 | 8 | Concluído | O prazo passou com a ciência registrada |
 | 9 | Falha | Com o motivo e o canal alternativo usado |
@@ -332,9 +336,9 @@ Estados de cada alerta (Central de alertas):
 
 A ciência registra que a pessoa viu o alerta; ela não conclui a tarefa. A ciência de um integrante encerra a cobrança daquele alerta para os dois.
 
-Escalonamento: sem ciência em 60 min (normal), 15 min (importante) ou 5 min (crítico), o alerta vai para o outro integrante, por e-mail e WhatsApp, e é reenviado a quem recebeu primeiro pelo outro canal. Se os dois receberam juntos (sem titular, ou mudança crítica), o escalonamento é só o reenvio por outro canal. Se nenhum canal saiu, escalona na hora. Depois que o prazo passa, o escalonamento para. A rotina roda a cada 5 minutos: o envio e o escalonamento saem até 5 minutos depois da hora marcada.
+Escalonamento (uma vez por alerta, só o de quem recebeu primeiro; reenvio e escalonamento nunca escalonam de novo; oportunidade descartada ou prazo vencido param o escalonamento): sem ciência em 60 min (normal), 15 min (importante) ou 5 min (crítico), o alerta vai para o outro integrante, por e-mail e WhatsApp, e é reenviado a quem recebeu primeiro pelo outro canal. Se os dois receberam juntos (sem titular, ou mudança crítica), o escalonamento é só o reenvio por outro canal. Se nenhum canal saiu, escalona na hora. Depois que o prazo passa, o escalonamento para. A rotina roda a cada 5 minutos: o envio e o escalonamento saem até 5 minutos depois da hora marcada.
 
-Falha e canal alternativo: se o canal escolhido não sai (sem celular, sem modelo aprovado, retido pelo piloto, erro da Meta ou do e-mail), o SGO+ usa o outro canal e registra ("WhatsApp não saiu: e-mail enviado como canal alternativo"). Se a Meta devolver falha depois (retorno failed), o e-mail sai na hora, se ainda não tinha saído.
+Falha e canal alternativo: se o canal escolhido não sai (sem celular, sem modelo aprovado, retido pelo piloto, erro da Meta ou do e-mail), o SGO+ usa o outro canal e registra ("WhatsApp não saiu: e-mail enviado como canal alternativo"). Se a Meta devolver falha depois (retorno failed), o e-mail sai na hora, se ainda não tinha saído e se a ciência ainda não foi registrada nem o prazo passou.
 
 Central de alertas (menu Licitações): faixas com a situação do modelo na Meta, do último retorno de status e da rotina; quem recebe; partes Sem ciência, Programados, Enviados, Falhas e canal alternativo, Cancelados e Todos. Cada alerta mostra o nível, a situação, para quem, a antecedência, os estados de 1 a 10 com a hora, o que cada canal fez, a ciência (de quem, quando e por onde), o escalonamento e o motivo do cancelamento; botões "Ciente", "Reenviar" e "Abrir a licitação".
 
@@ -346,7 +350,8 @@ Página do botão "Confirmar ciência" (sem login): mostra só o primeiro nome, 
 |---|---|
 | Alertas de licitação ligados | Desligado: nada é programado nem enviado; os programados são cancelados com o motivo |
 | Alertar também as travadas | Padrão desligado |
-| Quem recebe e por onde | Só Diretoria e Administrador ativos; por pessoa: recebe, e-mail, WhatsApp. Com os alertas ligados, pelo menos uma pessoa precisa receber |
+| Quem recebe e por onde | Só Diretoria e Administrador ativos; padrão: os da área Diretoria; "Na lista de destinatários" (lista explícita) manda quando marcada; por pessoa: recebe, e-mail, WhatsApp. Com os alertas ligados, pelo menos uma pessoa precisa receber |
+| Tetos | Mensagens por pessoa em cada alerta (1 a 10, padrão 3) e por pessoa no dia (1 a 200, padrão 30) |
 | Quem recebe primeiro sem responsável | Uma pessoa ou os dois |
 | Canais para todos | E-mail e WhatsApp oficial |
 | Escalonamento (min) | De 1 a 1.440 por nível |

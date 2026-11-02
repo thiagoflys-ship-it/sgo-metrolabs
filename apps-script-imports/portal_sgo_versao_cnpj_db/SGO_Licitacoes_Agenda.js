@@ -193,6 +193,17 @@ function Lic_eventoQuandoTxt_(e) {
   var iso = Lic_s_(e.QUANDO_ISO || e.quandoIso);
   return Lic_up_(e.DIA_TODO) === 'SIM' || e.diaTodo === true ? Lic_brDia_(Lic_diaSp_(iso)) + ' (dia todo)' : Lic_brDiaHora_(iso);
 }
+/**
+ * A retificação merece alerta de mudança? (revisão de 02/11/2026) Só quando a data de um prazo CONFIRMADO ou CALCULADO mudou de
+ * fato (não só a natureza), o novo também não é pendente e o prazo ainda está em aberto. Recálculo em massa (feriado novo da
+ * empresa, regra de cálculo nova) que não mexe na data não alerta; o que mexe vira um alerta só por oportunidade.
+ */
+function Lic_mudancaAlerta_(at, d, agora) {
+  if (Lic_up_(at.NATUREZA) === 'PREVISTO' || d.natureza === 'PREVISTO') return false;
+  if (Lic_s_(at.QUANDO_ISO) === Lic_s_(d.quandoIso) && Lic_s_(at.LIMITE_INTERNO_ISO) === Lic_s_(d.limiteInternoIso)) return false;
+  var ag = Date.parse(agora), velho = Date.parse(Lic_s_(at.LIMITE_INTERNO_ISO) || Lic_s_(at.QUANDO_ISO)), novo = Date.parse(Lic_s_(d.limiteInternoIso) || Lic_s_(d.quandoIso));
+  return (isFinite(velho) && velho > ag) || (isFinite(novo) && novo > ag);
+}
 /** Mudou o que importa para os alertas (data, limite interno, natureza)? */
 function Lic_eventoMudou_(at, d) {
   return Lic_s_(at.QUANDO_ISO) !== Lic_s_(d.quandoIso) || Lic_s_(at.LIMITE_INTERNO_ISO) !== Lic_s_(d.limiteInternoIso) || Lic_up_(at.NATUREZA) !== d.natureza || (Lic_up_(at.DIA_TODO) === 'SIM') !== !!d.diaTodo;
@@ -239,7 +250,7 @@ function Lic_eventosSincronizar_(l, existentes, agora) {
     SGO_DATA.update(LIC_ABAS.EVENTOS, at.ID, { SITUACAO: 'RETIFICADO', SUBSTITUIDO_POR_ID: nova.ID, MOTIVO_MUDANCA: mot, ATUALIZADO_EM: agora });
     versaoMax[d.tipo] = nova.VERSAO; valendo[d.tipo] = nova;
     r.retificados++; r.fora.push(Lic_s_(at.ID)); r.novos.push(Lic_s_(nova.ID));
-    r.mudancas.push({ tipo: 'RETIFICACAO', texto: mot, eventoId: Lic_s_(nova.ID), eventoTipo: d.tipo });
+    if (Lic_mudancaAlerta_(at, d, agora)) r.mudancas.push({ tipo: 'RETIFICACAO', texto: mot, eventoId: Lic_s_(nova.ID), eventoTipo: d.tipo });
     hist('AGENDA_RETIFICADA', Lic_eventoQuandoTxt_(at), Lic_eventoQuandoTxt_(d), mot);
   });
   if (!desc) Object.keys(valendo).forEach(function (t) {
@@ -248,7 +259,7 @@ function Lic_eventosSincronizar_(l, existentes, agora) {
     SGO_DATA.update(LIC_ABAS.EVENTOS, e.ID, { SITUACAO: 'CANCELADO', MOTIVO_MUDANCA: motC, ATUALIZADO_EM: agora });
     delete valendo[t];
     r.cancelados++; r.fora.push(Lic_s_(e.ID));
-    r.mudancas.push({ tipo: 'RETIFICACAO', texto: (e.NOME || t) + ': ' + motC });
+    if (Lic_up_(e.NATUREZA) !== 'PREVISTO' && Date.parse(Lic_s_(e.LIMITE_INTERNO_ISO) || Lic_s_(e.QUANDO_ISO)) > Date.parse(agora)) r.mudancas.push({ tipo: 'RETIFICACAO', texto: (e.NOME || t) + ': ' + motC });
     hist('AGENDA_PRAZO_CANCELADO', Lic_eventoQuandoTxt_(e), 'cancelado', motC);
   });
   if (criadas.length) hist(primeira ? 'AGENDA_MONTADA' : 'AGENDA_PRAZO_NOVO', '', criadas.length + (criadas.length === 1 ? ' prazo' : ' prazos'), (primeira ? 'Agenda montada pela fonte: ' : 'Prazos novos: ') +

@@ -245,7 +245,8 @@ test('ciência: na tela, pelo link do botão do WhatsApp e pela resposta CIENTE;
   const t4 = a.al({ EVENTO_ID: imp.ID, ANTECEDENCIA: '1 dia', USUARIO_ID: 'u_thi' })[0];
   assert.ok(t4.WA_ID);
   assert.equal(a.ctx.SGO_whatsappRetornoMeta_([{ tipo: 'RESPOSTA', contexto: t4.WA_ID, de: '5562999990021', texto: 'Ciente', quando: '' }]).ciencias, 0, 'outro número não dá ciência pelo outro');
-  assert.equal(a.ctx.SGO_whatsappRetornoMeta_([{ tipo: 'RESPOSTA', contexto: t4.WA_ID, de: '556299990022', texto: 'ciente, obrigado', quando: '' }]).ciencias, 1, 'mesmo número sem o 9');
+  for (const t of ['ok', 'ciente, obrigado', 'não estou ciente', 'Ok, vou ver']) assert.equal(a.ctx.SGO_whatsappRetornoMeta_([{ tipo: 'RESPOSTA', contexto: t4.WA_ID, de: '556299990022', texto: t, quando: '' }]).ciencias, 0, 'não é ciência: ' + t);
+  assert.equal(a.ctx.SGO_whatsappRetornoMeta_([{ tipo: 'RESPOSTA', contexto: t4.WA_ID, de: '556299990022', texto: ' Ciente. ', quando: '' }]).ciencias, 1, 'mesmo número sem o 9');
   assert.equal(a.al({ ID: t4.ID })[0].CIENTE_CANAL, 'WHATSAPP_RESPOSTA');
 });
 

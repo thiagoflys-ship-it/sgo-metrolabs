@@ -214,7 +214,7 @@ function Lic_responsaveis_() {
   return Lic_ler_(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
     var p = Lic_up_(u.PERFIL), st = Lic_up_(u.STATUS);
     return (p === 'DIRETORIA' || p === 'ADMIN') && (!st || st === 'ATIVO');
-  }).map(function (u) { return { id: Lic_s_(u.ID), nome: Lic_s_(u.NOME) || Lic_s_(u.USUARIO), perfil: Lic_up_(u.PERFIL) }; })
+  }).map(function (u) { return { id: Lic_s_(u.ID), nome: Lic_s_(u.NOME) || Lic_s_(u.USUARIO), perfil: Lic_up_(u.PERFIL), area: Lic_up_(u.AREA) }; })
     .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
 }
 
