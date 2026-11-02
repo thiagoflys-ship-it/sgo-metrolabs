@@ -662,6 +662,8 @@ function LicLeit_montarItem_(tema, fo, a, b, pos, todos) {
   var imp = Lic_impeditivo_(fr.frase), alerta = LicLeit_negacaoPerto_(a, fo, pos, imp), origem = '';
   // o cabeçalho de uma cláusula-mãe nega, excetua ou dispensa ("8.2. Não serão exigidos os seguintes documentos:")
   if (!alerta) { var cab = LicLeit_cabecalhoMae_(a.texto, pos); if (cab) { alerta = cab.palavra; origem = 'o cabeçalho da cláusula ' + cab.num + ' diz: "' + cab.texto + '"'; } }
+  // lista com marcadores (•, –, *, alínea) sob um cabeçalho que termina em ":" ("Não serão exigidos os documentos a seguir:")
+  if (!alerta) { var li = LicLeit_cabecalhoLista_(a.texto, pos); if (li) { alerta = li.palavra; origem = 'o cabeçalho da lista diz: "' + li.texto + '"'; } }
   // errata em qualquer parte do arquivo (ou dos outros arquivos) que revoga ou altera a cláusula do trecho
   if (!alerta) { var er = LicLeit_errata_(a, pos, todos); if (er) { alerta = er.palavra; origem = 'errata sobre a cláusula ' + er.num + ' (' + er.ref + ', ' + er.rotulo + '): "' + er.frase + '"'; } }
   // tema conferido por palavras mínimas: sem elas, "tema a confirmar"
@@ -699,6 +701,36 @@ function LicLeit_cabecalhoMae_(t, pos) {
     cab = (corte >= 0 ? cab.slice(0, corte + 1) : cab.split('\n')[0]).replace(/\s+/g, ' ').trim();
     var w = LicLeit_palavraDeExcecao_(cab);
     if (w) return { num: num, palavra: w, texto: Lic_texto_(cab, 300) };
+  }
+  return null;
+}
+/**
+ * Cabeçalho de lista com marcadores: o trecho está numa linha de marcador (•, –, -, *, ▪, ○, ·, ou alínea "a)", "b)", "I -"), ou na
+ * continuação dela; sobe só pelos itens da mesma lista (marcadores e as continuações deles) até a primeira linha sem marcador. Se essa
+ * linha termina em ":", é o cabeçalho; negação, exceção ou dispensa nele = { palavra, texto }. Senão, null.
+ */
+var LIC_LEIT_MARCADOR = /^[ \t]*(?:[•\-–—*▪○·◦]|[a-z]\)|[IVX]{1,4}\s*[-–)])\s/;
+function LicLeit_cabecalhoLista_(t, pos) {
+  var linhaDe = function (p) { var e = t.indexOf('\n', p); return t.slice(p, e < 0 ? t.length : e); };
+  var anterior = function (p) { return p <= 0 ? -1 : t.lastIndexOf('\n', p - 2) + 1; };
+  var p = t.lastIndexOf('\n', pos - 1) + 1, k;
+  // acha a linha do marcador do item do trecho (a própria, ou até 3 linhas acima, quando o trecho está na continuação)
+  for (k = 0; k < 4 && p >= 0 && !LIC_LEIT_MARCADOR.test(linhaDe(p)); k++) { if (/:\s*$/.test(linhaDe(p)) && k) return null; p = anterior(p); }
+  if (p < 0 || !LIC_LEIT_MARCADOR.test(linhaDe(p))) return null;
+  // sobe pelos itens da mesma lista
+  for (k = 0; k < 60; k++) {
+    var q = anterior(p);
+    if (q < 0) return null;
+    var lq = linhaDe(q);
+    if (LIC_LEIT_MARCADOR.test(lq)) { p = q; continue; }
+    if (/:\s*$/.test(lq)) {
+      var cab = lq.replace(LIC_LEIT_NUMERACAO, '').replace(/\s+/g, ' ').trim(), w = LicLeit_palavraDeExcecao_(cab);
+      return w ? { palavra: w, texto: Lic_texto_(cab, 300) } : null;
+    }
+    // continuação de um item de cima (o item anterior é marcador): segue subindo; senão, acabou a lista sem cabeçalho
+    var q2 = anterior(q);
+    if (q2 >= 0 && LIC_LEIT_MARCADOR.test(linhaDe(q2))) { p = q2; continue; }
+    return null;
   }
   return null;
 }

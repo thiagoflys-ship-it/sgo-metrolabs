@@ -907,3 +907,19 @@ test('reconferência 6: negação no cabeçalho da cláusula-mãe e errata longe
   const h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(r.a.ctx.LicLeit_checklist_(r.itens)) });
   assert.match(h, /Confirmar no edital: errata sobre a cláusula 8\.3 \(A2, página 1\)/);
 });
+
+// ---------------- reconferência de 452a6dd (probe13) ----------------
+test('reconferência 7: lista com marcadores sob cabeçalho negativo sem numeração vira pendência mostrando o cabeçalho; sob cabeçalho comum, exigência', () => {
+  const B = '[página 1]\nDOCUMENTOS DE HABILITAÇÃO\nNão serão exigidos nesta contratação os documentos relacionados a seguir:\n• Certidão de registro da empresa no CREA da sede da licitante.\n• Comprovação de responsável técnico com vínculo permanente\ncom a licitante, por contrato ou carteira de trabalho.\n– Declaração de conhecimento das condições locais da execução.\nDO PAGAMENTO\nSerão exigidos os documentos a seguir:\n* Certidão negativa de débitos trabalhistas da licitante.\n';
+  const r = verArquivo(B, [
+    { tema: 'EQUIPE_RT', trecho: 'Comprovação de responsável técnico com vínculo permanente' },
+    { tema: 'EQUIPE_RT', trecho: 'com a licitante, por contrato ou carteira de trabalho' },
+    { tema: 'OUTRO', trecho: 'Declaração de conhecimento das condições locais da execução' },
+    { tema: 'HAB_FISCAL', trecho: 'Certidão negativa de débitos trabalhistas da licitante' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual(r.itens.map((i) => [i.tipo, i.alerta]), [['PENDENCIA', 'nao'], ['PENDENCIA', 'nao'], ['PENDENCIA', 'nao'], ['EXIGENCIA', '']]);
+  assert.equal(r.itens[0].origemAlerta, 'o cabeçalho da lista diz: "Não serão exigidos nesta contratação os documentos relacionados a seguir:"');
+  const c = r.a.ctx;
+  assert.equal(c.LicLeit_cabecalhoLista_(B, B.indexOf('Certidão negativa de débitos')), null, 'cabeçalho comum ("Serão exigidos...:") não é exceção');
+  assert.equal(c.LicLeit_cabecalhoLista_('[página 1]\nTexto corrido sem lista.\nNão é lista: frase solta.\n', 30), null);
+});
