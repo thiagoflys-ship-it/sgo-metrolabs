@@ -260,3 +260,24 @@ test('negação: junção do PDF nunca come a negação; negação no começo da
   assert.equal(r('Hora técnica: HORA_TECNICO, HORA_ENGENHEIRO.').ok, true, 'negação na frase seguinte (depois do ponto) não conta');
   assert.equal(r('Não será, sob qualquer pretexto, exigida acreditação RBC do laboratório').ok, true, 'com a negação junto vale');
 });
+
+// segunda reconferência (02/11/2026): negação sozinha depois do trecho, janela até o começo da frase, negações novas
+test('negação sozinha depois do trecho recusa com qualquer separador; negação que abre outra oração com conteúdo não; janela até 40 palavras; inaplicável, dispensável, isenta', () => {
+  const r = (src, t) => ctx.Lic_trechoNaFonte_(t, { texto: src });
+  const recusam = [
+    ['Exige acreditação RBC do laboratório; NÃO\nOutro item.', 'Exige acreditação RBC do laboratório'],
+    ['Exige acreditação RBC do laboratório. Não.', 'Exige acreditação RBC do laboratório'],
+    ['Exige acreditação RBC do laboratório Não\nExige vistoria Sim', 'Exige acreditação RBC do laboratório'],
+    ['Não será, em hipótese alguma e por qualquer motivo que venha a ser alegado pelos participantes deste certame ou por terceiros interessados, exigida acreditação RBC do laboratório.', 'exigida acreditação RBC do laboratório'],
+    ['É inaplicável a exigência de acreditação RBC do laboratório.', 'a exigência de acreditação RBC do laboratório'],
+    ['Fica dispensável a apresentação de atestado de capacidade técnica.', 'a apresentação de atestado de capacidade técnica'],
+    ['A microempresa fica isenta da garantia contratual de 5% do valor.', 'da garantia contratual de 5% do valor'],
+    ['A vistoria é facultativa e a visita técnica ao local poderá ser agendada.', 'a visita técnica ao local poderá ser agendada'],
+    ['Não P essoas jurídicas impedidas serão aceitas.', 'Pessoas jurídicas impedidas serão aceitas']
+  ];
+  for (const [src, t] of recusam) { const x = r(src, t); assert.equal(x.ok, false, 'aceitou: ' + src); }
+  assert.equal(r('Será exigida acreditação RBC do laboratório; não se aplica aos itens de balança.', 'Será exigida acreditação RBC do laboratório').ok, true);
+  assert.equal(r('A contratada deverá apresentar acreditação RBC não sendo aceita a rastreabilidade.', 'A contratada deverá apresentar acreditação RBC').ok, true);
+  // item numerado que abre a linha começa outra cláusula: a negação da cláusula de cima não conta
+  assert.equal(r('8.7 Documento sem rasura\n8.8 portaria de autorização de funcionamento no Brasil', 'portaria de autorização de funcionamento no Brasil').ok, true);
+});

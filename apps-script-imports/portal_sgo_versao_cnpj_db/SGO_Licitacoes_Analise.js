@@ -84,7 +84,8 @@ var LIC_CAPACIDADE_TEXTO = [
   'Qualificação térmica de armazenamento: QUA-006 câmara de conservação, QUA-007 ultrafreezer, QUA-008 estufa, QUA-009 banho-maria, QT_FREEZER, QT_CAMARA_FRIA, QT_SALA (mapeamento), QT_CAIXA_TERMICA. Centrífuga: QUA-010.',
   'NR-13: NR13-001 compressor, NR13-002 autoclave até 75 L, NR13-003 autoclave com ensaios e ART (enquadramento nunca presumido).',
   'Manutenção preventiva: MP_AUTOCLAVE_GRANDE, MP_AUTOCLAVE_BANCADA, MP_LAVADORA_US, MP_SELADORA, MP_CAMARA. Corretiva com peças: risco de custo. Hora técnica: HORA_TECNICO, HORA_ENGENHEIRO.',
-  'SEM serviço no catálogo hoje: osmose reversa e tratamento de água, compressores fora da NR-13, metrologia dimensional, acústica e audiologia (decibelímetro, audiômetro), engenharia clínica com dedicação exclusiva e software de gestão, manutenção industrial em geral, compra de equipamento sem representada.'
+  // (revisão de 02/11/2026: a linha abaixo não começa com negação, para a citação de um item dela valer como prova sem cortar o sentido)
+  'FORA DO CATÁLOGO hoje: osmose reversa e tratamento de água, compressores fora da NR-13, metrologia dimensional, acústica e audiologia (decibelímetro, audiômetro), engenharia clínica com dedicação exclusiva e software de gestão, manutenção industrial em geral, compra de equipamento sem representada.'
 ].join('\n');
 /**
  * Revisão de 02/11/2026: os códigos que a IA pode usar em "servico" (os do catálogo B1 acima) e os termos que o trecho
@@ -359,7 +360,7 @@ var LIC_PAGINA_CABECALHO_MAX = 200;     // quebra de página: do marcador até o
 var LIC_RELAXADO_MIN = 5;               // palavras de cada pedaço nas reticências e na quebra de página
 var LIC_DICAS_MAX = 15;                 // recusas por verificação que recebem a dica "o mais perto" e "está em outra fonte"
 var LIC_RETICENCIAS = /\s*(?:\(\s*(?:\.\s*){3,}\)|\[\s*(?:\.\s*){3,}\]|\.{3,}|…)\s*/;
-var LIC_NEGACAO = /^(nao|sem|nem|nunca|jamais|exceto|salvo|tampouco|nenhum|nenhuma|vedad[oa]s?|proibid[oa]s?|dispensad[oa]s?|inexigivel|desnecessari[oa]s?)$/;
+var LIC_NEGACAO = /^(nao|sem|nem|nunca|jamais|exceto|salvo|tampouco|nenhum|nenhuma|vedad[oa]s?|proibid[oa]s?|dispensad[oa]s?|inexigivel|inaplicavel|dispensavel|desnecessari[oa]s?|isent[oa]s?|facultativ[oa]s?|desobrigad[oa]s?)$/;
 var LIC_PAGINA_MARCA = /\[p[aá]gina \d+\]/i;
 // rótulo: palavra de rótulo ("Item", "LOTE", "UND", "nº"), numeração de cláusula ("4.23", "12.", "3)", "n)", "18.1.d)", "IV -")
 // e número solto SÓ logo depois de palavra de rótulo ("Item 29", "LOTE 02"): "50 unidades" não perde o 50
@@ -469,10 +470,12 @@ function Lic_acharTok_(ft, pal, desde) {
  *     LIC_NEGACAO_JANELA palavras): "Não será, sob qualquer pretexto, exigida acreditação" recusa "exigida acreditação";
  *   - depois: negação logo em seguida, separada por pontuação ou quebra de linha ("...laboratório? Não.", "... – Não",
  *     "...: não", "| NÃO |", "obrigatória\nNÃO"); só espaço não conta ("o prazo de 10 dias não será prorrogado"), nem a
- *     frase seguinte depois de ponto final ou ponto e vírgula.
+ *     frase seguinte depois de ponto final ou ponto e vírgula. Mas negação SOZINHA (o resto da linha ou da frase vazio ou só
+ *     pontuação: "laboratório Não⏎", "; NÃO⏎", ". Não.") recusa com qualquer separador; "; não se aplica aos itens" e "RBC não
+ *     sendo aceita" abrem outra oração e não recusam.
  * fn: a lista em que a negação é conferida (a sem junção de PDF), quando o casamento foi feito em outra vista.
  */
-var LIC_NEGACAO_JANELA = 12;
+var LIC_NEGACAO_JANELA = 40;
 function Lic_cortaNegacao_(ft, texto, a, b, fn) {
   if (fn && fn !== ft) {
     var ia = Lic_tokPorPos_(fn.ini, ft.ini[a]), ib = Lic_tokPorPos_(fn.fim, ft.fim[b]);
@@ -480,14 +483,19 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
     ft = fn; a = ia; b = ib;
   }
   for (var k = a - 1; k >= 0 && k >= a - LIC_NEGACAO_JANELA; k--) {
-    if (/[.;!?]|\n[ \t]*\n/.test(texto.slice(ft.fim[k], ft.ini[k + 1]))) break;
+    var entre = texto.slice(ft.fim[k], ft.ini[k + 1]);
+    if (/[.;!?]|\n[ \t]*\n/.test(entre)) break;
+    // item numerado que abre a linha ("8.8 portaria...", "12. Alvará") começa outra cláusula
+    if (/\n/.test(entre) && (/^\d{1,2}(#\d{1,2}){1,5}$/.test(ft.toks[k + 1]) || (/^\d{1,3}$/.test(ft.toks[k + 1]) && /[.)]/.test(texto.charAt(ft.fim[k + 1]))))) break;
     if (LIC_NEGACAO.test(ft.toks[k])) return ft.toks[k];
   }
   var d = b + 1;
   if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d])) {
     var sep = texto.slice(ft.fim[b], ft.ini[d]);
     // ponto final ou ponto e vírgula = outra frase ("HORA_ENGENHEIRO.\nSEM serviço..."); "?" continua valendo ("laboratório? Não.")
-    if ((/[^\s\p{L}\p{N}]/u.test(sep) || /\n/.test(sep)) && !/[.;]/.test(sep)) return ft.toks[d];
+    // negação SOZINHA (o resto da linha ou da frase vazio ou só pontuação) é a resposta àquele trecho: recusa com qualquer separador
+    var sozinha = /^[^\p{L}\p{N}.;!?\n]*([.;!?\n]|$)/u.test(texto.slice(ft.fim[d], ft.fim[d] + 80));
+    if (sozinha || ((/[^\s\p{L}\p{N}]/u.test(sep) || /\n/.test(sep)) && !/[.;]/.test(sep))) return ft.toks[d];
   }
   return '';
 }
