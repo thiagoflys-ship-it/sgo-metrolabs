@@ -316,7 +316,7 @@ function Lic_conferirFonte_(onde, fonte, ctx, problemas, o) {
   // campo do PNCP (valor, UF, datas, modalidade): vale o valor inteiro do campo, sem a regra das 3 palavras
   if (/^CAMPO:/.test(ref) && ref !== 'CAMPO:objeto' && Lic_campoIgual_(tr, f.texto)) {
     if (o.capacidade) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
-    return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(tr, 600), arquivo: null };
+    return Lic_comOnde_({ ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(tr, 600), arquivo: null }, f.texto, 0, f.texto.length);
   }
   if (!nt || nt.split(' ').length < 3) { problemas.push(onde + ': trecho curto demais para conferir ("' + tr.slice(0, 40) + '"); copie pelo menos 3 palavras seguidas da fonte'); return null; }
   if (o.capacidade && !Lic_refProvaServico_(ref)) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
@@ -331,7 +331,8 @@ function Lic_conferirFonte_(onde, fonte, ctx, problemas, o) {
       (achou.motivo ? '; ' + achou.motivo : outra ? '; ele está em ' + outra + ': cite a ref ' + outra : perto ? '; o mais perto em ' + ref + ' é "' + perto + '" (copie dali, sem juntar frases distantes nem acrescentar rótulo, item ou número que não esteja colado à frase)' : dica ? '; nenhum pedaço de 4 palavras seguidas dele está em ' + ref + ': não escreva trecho que a fonte não tem' : ''));
     return null;
   }
-  return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(achou.trecho, 600), arquivo: f.arquivo || null, regra: !!f.regra, sistema: !!f.sistema, ajuste: achou.ajuste || '' };
+  return Lic_comOnde_({ ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(achou.trecho, 600), arquivo: f.arquivo || null, regra: !!f.regra, sistema: !!f.sistema, ajuste: achou.ajuste || '' },
+    achou.base === 'pedido' ? Lic_textoPedido_(f) : f.texto, achou.ini, achou.fim);
 }
 
 // ------------------------------------------------------------ trecho na fonte (revisão de 02/11/2026: banco de prova e revisão independente)
@@ -476,18 +477,26 @@ function Lic_acharTok_(ft, pal, desde) {
  * fn: a lista em que a negação é conferida (a sem junção de PDF), quando o casamento foi feito em outra vista.
  */
 var LIC_NEGACAO_JANELA = 40;
+var LIC_NEGACAO_LISTA_MAX = 150;   // palavras para trás quando o trecho está numa lista com cabeçalho ("...:")
 function Lic_cortaNegacao_(ft, texto, a, b, fn) {
   if (fn && fn !== ft) {
     var ia = Lic_tokPorPos_(fn.ini, ft.ini[a]), ib = Lic_tokPorPos_(fn.fim, ft.fim[b]);
     if (ia < 0 || ib < 0) return '';
     ft = fn; a = ia; b = ib;
   }
-  for (var k = a - 1; k >= 0 && k >= a - LIC_NEGACAO_JANELA; k--) {
+  // para trás: até o começo da frase (. ! ? ou linha em branco). Item de lista (depois de ";") só olha o cabeçalho da lista
+  // (o que vem antes do ":"): "Não serão exigidos: alvará; certificado RBC" põe "certificado RBC" sob o "não". O ponto ou o
+  // parêntese que fecha a numeração do item ("8.8.", "1)", "a)") não é fim de frase, e item numerado não corta a frase
+  // (reconferência de 02/11/2026: "Não serão exigidos os seguintes documentos:\n8.8 certificado..." e "conforme o item\n8.8 do edital").
+  var estado = '';
+  for (var k = a - 1, passos = 0; k >= 0 && passos < LIC_NEGACAO_LISTA_MAX; k--, passos++) {
     var entre = texto.slice(ft.fim[k], ft.ini[k + 1]);
-    if (/[.;!?]|\n[ \t]*\n/.test(entre)) break;
-    // item numerado que abre a linha ("8.8 portaria...", "12. Alvará") começa outra cláusula
-    if (/\n/.test(entre) && (/^\d{1,2}(#\d{1,2}){1,5}$/.test(ft.toks[k + 1]) || (/^\d{1,3}$/.test(ft.toks[k + 1]) && /[.)]/.test(texto.charAt(ft.fim[k + 1]))))) break;
-    if (LIC_NEGACAO.test(ft.toks[k])) return ft.toks[k];
+    if (Lic_numeracaoDaLinha_(ft, texto, k)) entre = entre.replace(/^[.)]/, '');
+    if (/[.!?]|\n[ \t]*\n/.test(entre)) break;
+    if (/;/.test(entre) && !estado) estado = 'lista';
+    else if (/:/.test(entre) && estado === 'lista') estado = 'cabecalho';
+    if (!estado && passos >= LIC_NEGACAO_JANELA) break;
+    if (LIC_NEGACAO.test(ft.toks[k]) && estado !== 'lista') return ft.toks[k];
   }
   var d = b + 1;
   if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d])) {
@@ -498,6 +507,12 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
     if (sozinha || ((/[^\s\p{L}\p{N}]/u.test(sep) || /\n/.test(sep)) && !/[.;]/.test(sep))) return ft.toks[d];
   }
   return '';
+}
+/** A palavra k é numeração que abre a linha ("8.8", "12", "a" de "a)")? */
+function Lic_numeracaoDaLinha_(ft, texto, k) {
+  if (k < 0 || k >= ft.toks.length || !/^(\d{1,3}(#\d{1,2}){0,5}|[a-z])$/.test(ft.toks[k])) return false;
+  var antes = (ft.ini[k] <= 40 ? '\n' : '') + texto.slice(Math.max(0, ft.ini[k] - 40), ft.ini[k]);
+  return /\n[ \t]*$/.test(antes);
 }
 /** Índice exato de uma posição numa lista crescente de posições (ini ou fim das palavras); -1 se não houver. */
 function Lic_tokPorPos_(lista, p) {
@@ -538,7 +553,7 @@ function Lic_casarReticencias_(ft, texto, pcs) {
       if (pulado.length > LIC_RETIC_LACUNA_MAX || /[.!?](\s|$)|\n[ \t]*\n/.test(pulado) || LIC_PAGINA_MARCA.test(pulado) || palavrasPuladas.some(function (w) { return LIC_NEGACAO.test(w); })) { ok = false; break; }
       partes.push(Lic_recorte_(ft, texto, x, x + pcs[k].length - 1)); fimAnt = x + pcs[k].length - 1;
     }
-    if (ok) return partes.join(' (...) ');
+    if (ok) return { t: partes.join(' (...) '), ini: ft.ini[r.a], fim: ft.fim[fimAnt] };
     a = r.a + 1;
   }
   return null;
@@ -568,7 +583,7 @@ function Lic_casarPagina_(ft, texto, pal, cheio) {
       if (!m || m.index > LIC_PAGINA_RODAPE_MAX || !Lic_soRepetido_(resto.slice(0, m.index), cheio)) continue;
       var depois = ft.fim[r.b] + m.index + m[0].length, x = Lic_acharTok_(ft, B, r.b + 1);
       if (x < 0 || ft.ini[x] - depois > LIC_PAGINA_CABECALHO_MAX || ft.ini[x] < depois || !Lic_soRepetido_(texto.slice(depois, ft.ini[x]), cheio)) continue;
-      return Lic_recorte_(ft, texto, r.a, r.b) + ' [quebra de página] ' + Lic_recorte_(ft, texto, x, x + B.length - 1);
+      return { t: Lic_recorte_(ft, texto, r.a, r.b) + ' [quebra de página] ' + Lic_recorte_(ft, texto, x, x + B.length - 1), ini: ft.ini[r.a], fim: ft.fim[x + B.length - 1] };
     }
   }
   return null;
@@ -586,9 +601,9 @@ function Lic_trechoNaFonte_(tr, f, o) {
   var pal = Lic_tokens_(pedacos.length === 1 ? pedacos[0] : tr).toks;
   if (pedacos.length <= 1) {
     var r = Lic_casarLiteral_(fc, cheio, pal, 0);
-    if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fc, cheio, r.a, r.b), ajuste: '' };
+    if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fc, cheio, r.a, r.b), ajuste: '', ini: fc.ini[r.a], fim: fc.fim[r.b], base: 'cheio' };
     // palavra partida pelo PDF ("P essoas"): acha na vista com a junção, confere a negação na vista sem junção
-    if (!r) { var fj = Lic_tokFonte_(f, 'cheioPdf'), rj = Lic_casarLiteral_(fj, cheio, pal, 0, fc); if (rj) r = rj; if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fj, cheio, r.a, r.b), ajuste: '' }; }
+    if (!r) { var fj = Lic_tokFonte_(f, 'cheioPdf'), rj = Lic_casarLiteral_(fj, cheio, pal, 0, fc); if (rj) r = rj; if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fj, cheio, r.a, r.b), ajuste: '', ini: fj.ini[r.a], fim: fj.fim[r.b], base: 'cheio' }; }
     if (r && r.neg) return { ok: false, motivo: 'na fonte, o trecho vem logo depois de "' + r.neg + '" (ou corta um "' + r.neg + '" que vem em seguida), o que muda o sentido: copie a negação junto' };
   }
   // fora do literal: só no texto que a IA recebeu
@@ -600,12 +615,12 @@ function Lic_trechoNaFonte_(tr, f, o) {
     if (pcs.some(function (x) { return x.length < LIC_RELAXADO_MIN; })) return { ok: false, motivo: 'com reticências, cada pedaço precisa de pelo menos ' + LIC_RELAXADO_MIN + ' palavras seguidas da fonte' };
     if (pcs.some(function (x) { return LIC_NEGACAO.test(x[0]) || LIC_NEGACAO.test(x[x.length - 1]); })) return { ok: false, motivo: 'com reticências, nenhum pedaço pode começar ou terminar em negação ("não", "sem", "exceto"...): copie a frase inteira' };
     var rt = Lic_casarReticencias_(fp, tp, pcs);
-    if (rt) return { ok: true, trecho: rt, ajuste: 'reticencias' };
+    if (rt) return { ok: true, trecho: rt.t, ajuste: 'reticencias', ini: rt.ini, fim: rt.fim, base: 'pedido' };
     return { ok: false, motivo: 'com reticências, os pedaços têm de estar na mesma frase da fonte, em ordem, a até ' + LIC_RETIC_LACUNA_MAX + ' caracteres um do outro, sem ponto final nem negação no meio' };
   }
   var rn = Lic_casarLiteral_(fpn, tp, pal, 0);
-  if (rn && !rn.neg) return { ok: true, trecho: Lic_recorte_(fpn, tp, rn.a, rn.b), ajuste: 'numeracao' };
-  if (!o.estrito) { var pg = Lic_casarPagina_(fp, tp, pal, cheio); if (pg) return { ok: true, trecho: pg, ajuste: 'pagina' }; }
+  if (rn && !rn.neg) return { ok: true, trecho: Lic_recorte_(fpn, tp, rn.a, rn.b), ajuste: 'numeracao', ini: fpn.ini[rn.a], fim: fpn.fim[rn.b], base: 'pedido' };
+  if (!o.estrito) { var pg = Lic_casarPagina_(fp, tp, pal, cheio); if (pg) return { ok: true, trecho: pg.t, ajuste: 'pagina', ini: pg.ini, fim: pg.fim, base: 'pedido' }; }
   var w = tr.split(/\s+/), i = Lic_rotuloNaFrente_(w);
   if (i > 0) {
     var resto = Lic_tokens_(w.slice(i).join(' ')).toks;
@@ -620,7 +635,7 @@ function Lic_trechoNaFonte_(tr, f, o) {
         // o último número do rótulo da IA (o que vem colado à frase) tem de ser o último da fonte na linha
         var ultIA = numsIA[numsIA.length - 1], ultF = numsF[numsF.length - 1];
         if (ultIA && ultF && ultIA.replace(/^0+(?=\d)/, '') !== ultF.replace(/^0+(?=\d)/, '')) return { ok: false, motivo: 'o número do rótulo ("' + ultIA.replace(/#/g, '.') + '") não é o da fonte ("' + ultF.replace(/#/g, '.') + '"): copie o rótulo como está na fonte ou tire-o' };
-        return { ok: true, trecho: Lic_recorte_(vv, tp, rr.a, rr.b), ajuste: 'rotulo' };
+        return { ok: true, trecho: Lic_recorte_(vv, tp, rr.a, rr.b), ajuste: 'rotulo', ini: vv.ini[rr.a], fim: vv.fim[rr.b], base: 'pedido' };
       }
     }
   }
@@ -774,7 +789,7 @@ function Lic_conferirSemFatoSolto_(onde, texto, ctx, problemas) {
  * A resposta só passa inteira (nota de uma resposta pela metade fingiria certeza).
  */
 function Lic_verificarAnalise_(j, ctx) {
-  var problemas = [], pesos = ctx.pesos || LIC_NOTA_PADRAO;
+  var problemas = [], pesos = ctx.pesos || LIC_NOTA_PADRAO, rede = [];
   ctx._dicas = 0;
   if (!j || typeof j !== 'object') return { ok: false, problemas: ['a resposta não é o JSON pedido'], saida: null };
   var saida = { resumo: '', capacidade: { pontos: 0, itens: [], justificativa: '' }, documentacao: { pontos: 0, exigencias: [], justificativa: '' }, riscos: [], travas: [], afirmacoes: [] };
@@ -830,7 +845,11 @@ function Lic_verificarAnalise_(j, ctx) {
   (Array.isArray(doc.exigencias) ? doc.exigencias : []).slice(0, 30).forEach(function (x, k) {
     x = x || {};
     var onde = 'documentação, exigência ' + (k + 1);
-    saida.documentacao.exigencias.push({ texto: Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 400), fonte: Lic_conferirFonte_(onde, x.fonte, ctx, problemas) });
+    var txE = Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 400), foE = Lic_conferirFonte_(onde, x.fonte, ctx, problemas);
+    // rede de segurança: exigência impeditiva (RBC, acreditação, registro, atestado) com negação no parágrafo vira pendência
+    var negE = foE && Lic_impeditivo_(txE + ' ' + foE.trecho) ? Lic_negacaoPerto_(foE) : '';
+    if (negE) rede.push(Lic_pendenciaRede_('documentacao', 'da exigência "' + Lic_texto_(txE, 120) + '"', negE, foE));
+    else saida.documentacao.exigencias.push({ texto: txE, fonte: foE });
   });
   // riscos (lista fechada; cada um provado)
   var vistosR = {};
@@ -852,7 +871,12 @@ function Lic_verificarAnalise_(j, ctx) {
     var foT = Lic_conferirFonte_(onde, x.fonte, ctx, problemas, { tipo: 'FATO', estrito: true });
     var foR = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, problemas, { tipo: 'TRAVA', estrito: true }) : null;
     if (foR && !foR.regra) { problemas.push(onde + ', fonteRegra: use uma REGRA:... (o trecho do edital vai em fonte)'); foR = null; }
-    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600), fonte: foT, fonteRegra: foR });
+    var txT = Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600);
+    // rede de segurança (decisão do coordenador, 02/11/2026): trava zera a nota; com QUALQUER negação no parágrafo do trecho,
+    // não zera: vira pendência "confirmar no edital" com o trecho e o motivo
+    var negT = foT ? Lic_negacaoPerto_(foT) : '';
+    if (negT) rede.push(Lic_pendenciaRede_('trava', 'da trava "' + LIC_TRAVAS[cod] + '"', negT, foT));
+    else saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR });
   });
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
@@ -868,8 +892,11 @@ function Lic_verificarAnalise_(j, ctx) {
     var texto = Lic_texto_(Lic_conferirTexto_(onde, a.texto, ctx, problemas, true), 600);
     var temFonte = a.fonte && typeof a.fonte === 'object' && (Lic_s_(a.fonte.ref) || Lic_s_(a.fonte.trecho));
     var fo = tipo === 'FATO' || temFonte ? Lic_conferirFonte_(onde, a.fonte, ctx, problemas, { tipo: tipo, permiteSistema: true }) : null;
+    var negA = tipo === 'FATO' && fo && Lic_impeditivo_(texto + ' ' + fo.trecho) ? Lic_negacaoPerto_(fo) : '';
+    if (negA) { saida.afirmacoes.push({ tipo: 'PENDENCIA', criterio: Lic_s_(a.criterio).toLowerCase().slice(0, 20), texto: Lic_texto_('Confirmar no edital: há negação ou exceção perto do trecho ("' + negA + '"). A IA afirmou: ' + texto, 600), fonte: fo, origem: 'IA', rede: true }); return; }
     saida.afirmacoes.push({ tipo: tipo, criterio: Lic_s_(a.criterio).toLowerCase().slice(0, 20), texto: texto, fonte: fo, origem: 'IA' });
   });
+  saida.afirmacoes = saida.afirmacoes.concat(rede);
   if (!nTipos.FATO) problemas.push('afirmações: nenhum FATO com fonte');
   if (ctx.triagemTravada && !saida.travas.length && !saida.afirmacoes.some(function (a) { return a.tipo === 'PENDENCIA' && a.criterio === 'trava'; }))
     problemas.push('trava: a triagem por regras travou esta oportunidade (' + Lic_texto_(ctx.triagemMotivo, 160) + '); prove a trava com o trecho ou escreva uma PENDENCIA com criterio "trava" dizendo o que confirmar no edital');
@@ -880,6 +907,43 @@ function Lic_verificarAnalise_(j, ctx) {
   var vistos = {};
   problemas = problemas.filter(function (p) { if (vistos[p]) return false; vistos[p] = 1; return true; });
   return problemas.length ? { ok: false, problemas: problemas, saida: null } : { ok: true, problemas: [], saida: saida };
+}
+
+// ------------------------------------------------------------ rede de segurança (decisão do coordenador, 02/11/2026)
+/*
+ * Para parar a caça a casos de negação: TRAVA (zera a nota) e FATO ou exigência que diga que o edital exige algo impeditivo
+ * (RBC, acreditação, 17025, registro, atestado, Inmetro), com QUALQUER palavra de negação no mesmo parágrafo do trecho (desde
+ * a última linha em branco, até LIC_REDE_ANTES caracteres antes e LIC_REDE_DEPOIS depois), não valem como prova: viram
+ * PENDÊNCIA "confirmar no edital: há negação ou exceção perto do trecho", com o trecho e o motivo, na aba Análise.
+ */
+var LIC_REDE_ANTES = 1500;
+var LIC_REDE_DEPOIS = 400;
+var LIC_IMPEDITIVO = /(^| )(rbc|acreditad[oa]s?|acreditacao|17025|registro|registros|atestado|atestados|inmetro)( |$)/;
+function Lic_impeditivo_(t) { return LIC_IMPEDITIVO.test(Lic_normTrecho_(t)); }
+/** Guarda onde a prova está no texto da fonte (fica fora do JSON gravado). */
+function Lic_comOnde_(fo, texto, ini, fim) {
+  if (fo && typeof ini === 'number') Object.defineProperty(fo, '_onde', { value: { texto: texto, ini: ini, fim: fim }, enumerable: false, configurable: true });
+  return fo;
+}
+/** A primeira palavra de negação do parágrafo do trecho (como está no texto), ou ''. */
+function Lic_negacaoPerto_(fo) {
+  var o = fo && fo._onde;
+  // regra da empresa e números do sistema não são o edital: a rede não se aplica a eles
+  if (!o || typeof o.texto !== 'string' || fo.regra || fo.sistema) return '';
+  var t = o.texto, ini = Math.max(0, o.ini), fim = Math.min(t.length, o.fim);
+  var antes = t.slice(Math.max(0, ini - LIC_REDE_ANTES), ini), depois = t.slice(fim, fim + LIC_REDE_DEPOIS);
+  var m, re = /\n[ \t]*\n/g, ult = -1;
+  while ((m = re.exec(antes))) ult = m.index + m[0].length;
+  if (ult >= 0) antes = antes.slice(ult);
+  var bD = depois.search(/\n[ \t]*\n/);
+  if (bD >= 0) depois = depois.slice(0, bD);
+  var par = antes + t.slice(ini, fim) + depois, tk = Lic_tokens_(par);
+  for (var k = 0; k < tk.toks.length; k++) if (LIC_NEGACAO.test(tk.toks[k])) return par.slice(tk.ini[k], tk.fim[k]);
+  return '';
+}
+function Lic_pendenciaRede_(criterio, oque, neg, fo) {
+  return { tipo: 'PENDENCIA', criterio: criterio, origem: 'SISTEMA', rede: true, fonte: fo,
+    texto: 'Confirmar no edital: há negação ou exceção perto do trecho ' + oque + ' ("' + neg + '"). ' + (criterio === 'trava' ? 'A trava não zerou a nota; a Diretoria confere e decide.' : 'Não conta como exigência até a Diretoria conferir.') };
 }
 
 /** Nota final e classe (código). Trava provada = 0. */

@@ -278,6 +278,55 @@ test('negação sozinha depois do trecho recusa com qualquer separador; negaçã
   for (const [src, t] of recusam) { const x = r(src, t); assert.equal(x.ok, false, 'aceitou: ' + src); }
   assert.equal(r('Será exigida acreditação RBC do laboratório; não se aplica aos itens de balança.', 'Será exigida acreditação RBC do laboratório').ok, true);
   assert.equal(r('A contratada deverá apresentar acreditação RBC não sendo aceita a rastreabilidade.', 'A contratada deverá apresentar acreditação RBC').ok, true);
-  // item numerado que abre a linha começa outra cláusula: a negação da cláusula de cima não conta
-  assert.equal(r('8.7 Documento sem rasura\n8.8 portaria de autorização de funcionamento no Brasil', 'portaria de autorização de funcionamento no Brasil').ok, true);
+  // item numerado só começa outra cláusula quando a linha de cima fecha a frase (. ! ou ; sem cabeçalho negado)
+  assert.equal(r('8.7 Documento sem rasura.\n8.8 portaria de autorização de funcionamento no Brasil', 'portaria de autorização de funcionamento no Brasil').ok, true);
+  assert.equal(r('8.7 Documento sem rasura\n8.8 portaria de autorização de funcionamento no Brasil', 'portaria de autorização de funcionamento no Brasil').ok, false);
+});
+
+// terceira reconferência (02/11/2026): lista com cabeçalho negado e a REDE DE SEGURANÇA das travas (decisão do coordenador)
+const LISTAS = [
+  '8.7 Não serão exigidos os seguintes documentos:\n8.8 certificado de acreditação RBC do laboratório\n8.9 alvará sanitário',
+  'Não serão exigidos os seguintes documentos: alvará sanitário; certificado de acreditação RBC do laboratório; balanço.',
+  'Ficam dispensados da habilitação:\n1) certificado de acreditação RBC do laboratório\n2) balanço',
+  'Não será exigido, conforme o item\n8.8 do edital, o certificado de acreditação RBC do laboratório.',
+  'A contratada não precisará apresentar, na forma do subitem\n12. deste termo, certificado de acreditação RBC do laboratório.'
+];
+const RBC = 'certificado de acreditação RBC do laboratório';
+test('negação no cabeçalho da lista ou antes de numeração no meio da frase alcança o trecho; item numerado só corta depois de ". ! ;"', () => {
+  for (const src of LISTAS) assert.equal(ctx.Lic_trechoNaFonte_(RBC, { texto: src }).ok, false, src);
+  assert.equal(ctx.Lic_trechoNaFonte_(RBC, { texto: 'Serão exigidos: alvará sanitário; ' + RBC + '; balanço.' }).ok, true, 'lista sem negação');
+  assert.equal(ctx.Lic_trechoNaFonte_(RBC, { texto: '8.7 Não será exigido o alvará.\n8.8 ' + RBC + '.' }).ok, true, 'cláusula de cima fechada com ponto');
+});
+
+function analiseComTrava(texto, trecho) {
+  const b = montar([{ ref: 'A1', id: 1, titulo: 'Edital', nome: 'edital.pdf', texto: 'Manutenção preventiva de autoclave hospitalar de 21 litros.\n\n' + texto }]);
+  const j = { resumo: 'Pregão para manutenção de autoclave. O edital trata de acreditação RBC.',
+    capacidade: { justificativa: 'Autoclave está no catálogo.', itens: [{ descricao: 'Manutenção de autoclave', grau: 'MEDIA', servico: 'MP_AUTOCLAVE_BANCADA', fonte: { ref: 'A1', trecho: 'Manutenção preventiva de autoclave hospitalar' } }] },
+    documentacao: { pontos: 5, justificativa: 'Exigências comuns.', exigencias: [{ texto: 'Certificado de acreditação RBC', fonte: { ref: 'A1', trecho } }] },
+    riscos: [], travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'O edital exige laboratório acreditado RBC.', fonte: { ref: 'A1', trecho } }],
+    afirmacoes: [{ tipo: 'FATO', criterio: 'trava', texto: 'O edital exige certificado de acreditação RBC.', fonte: { ref: 'A1', trecho } }] };
+  return ctx.Lic_verificarAnalise_(j, b.cv);
+}
+test('rede de segurança: trava, exigência e FATO impeditivos com negação no parágrafo viram pendência "confirmar no edital", nunca trava; caso limpo continua trava', () => {
+  for (const src of LISTAS) {
+    // trecho curto (sem a negação): o verificador recusa; trecho com a negação junto: passa, mas a trava vira pendência
+    assert.equal(analiseComTrava(src, RBC).ok, false, 'curto: ' + src);
+    const comNeg = src.slice(0, src.indexOf(RBC) + RBC.length);
+    const v = analiseComTrava(src, comNeg);
+    assert.equal(v.ok, true, v.problemas.join(' | '));
+    assert.equal(v.saida.travas.length, 0, 'nunca trava: ' + src);
+    assert.equal(v.saida.documentacao.exigencias.length, 0);
+    const pend = v.saida.afirmacoes.filter((a) => a.tipo === 'PENDENCIA' && /^Confirmar no edital: há negação ou exceção perto do trecho/.test(a.texto));
+    assert.equal(pend.length, 3, src);
+    assert.ok(pend.some((a) => a.criterio === 'trava' && /A trava não zerou a nota/.test(a.texto) && a.fonte && a.fonte.trecho));
+    assert.equal(v.saida.afirmacoes.some((a) => a.tipo === 'FATO' && /acreditação RBC/.test(a.texto)), false);
+    const nf = ctx.Lic_notaFinal_(v.saida, montar().codigo, Object.assign({}, ctx.LIC_NOTA_PADRAO));
+    assert.ok(nf.nota > 0, 'a nota não zera');
+  }
+  const limpo = 'O licitante deverá apresentar certificado de acreditação RBC do laboratório.';
+  const v = analiseComTrava(limpo, 'deverá apresentar certificado de acreditação RBC do laboratório');
+  assert.equal(v.ok, true, v.problemas.join(' | '));
+  assert.deepEqual(Array.from(v.saida.travas, (t) => t.codigo), ['RBC_OBRIGATORIA']);
+  assert.equal(v.saida.afirmacoes.some((a) => /Confirmar no edital: há negação/.test(a.texto)), false);
+  assert.equal(ctx.Lic_notaFinal_(v.saida, montar().codigo, Object.assign({}, ctx.LIC_NOTA_PADRAO)).nota, 0);
 });

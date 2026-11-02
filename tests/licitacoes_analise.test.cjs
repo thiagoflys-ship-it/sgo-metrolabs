@@ -479,8 +479,9 @@ test('revisão: anexo HTML, XML ou SVG nunca abre no endereço do SGO+ (sai como
 });
 
 test('trava provada com trecho zera a nota (classe "candidata a descarte"); quem descarta é a Diretoria', () => {
+  // revisão de 02/11/2026 (rede de segurança): a frase da trava fica no próprio parágrafo; com "sem" no parágrafo ela viraria pendência
   const edital = TEXTOS.map((t) => Object.assign({}, t));
-  edital[0].texto = EDITAL + '\nA contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
+  edital[0].texto = EDITAL + '\n\nA contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
   const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC e o edital não aceita rastreabilidade.', fonte: { ref: 'A1', trecho: 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração' } }] });
   const a = ambiente({ respostas: [resp] });
   a.srv.textos = edital;

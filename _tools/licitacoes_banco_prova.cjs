@@ -206,6 +206,14 @@ for (const a of analises) {
       const fo = ctx.Lic_conferirFonte_('par', { ref: par.ref, trecho: par.trecho }, cv, probs, { tipo, capacidade: par.secao === 'itens' });
       if (fo) {
         resultado.paresAceitos++; tl.paresAceitos++;
+        // rede de segurança: prova de trava (ou de exigência impeditiva) com negação no parágrafo vira pendência
+        if (typeof ctx.Lic_negacaoPerto_ === 'function' && (par.secao === 'travas' && !par.regra || (/exigencias|afirmacoes/.test(par.secao) && ctx.Lic_impeditivo_(par.trecho)))) {
+          const chave = par.secao === 'travas' ? 'travas' : 'impeditivos';
+          resultado.rede = resultado.rede || { travas: 0, travasPendencia: 0, impeditivos: 0, impeditivosPendencia: 0, exemplos: [] };
+          resultado.rede[chave]++;
+          const ng = ctx.Lic_negacaoPerto_(fo);
+          if (ng) { resultado.rede[chave + 'Pendencia']++; if (resultado.rede.exemplos.length < 12) resultado.rede.exemplos.push(chave + ' [' + ng + '] ' + par.trecho.slice(0, 110)); }
+        }
         if (resultado.aceitosAmostra.length < 4000) resultado.aceitosAmostra.push({ analise: a.ID, tentativa: t.tentativa, ref: fo.ref, trecho: par.trecho, ajuste: fo.ajuste || '' });
         // a prova está no texto que foi no pedido? (mede se a seleção de páginas tira o que a IA usou)
         if (/^A\d+$/.test(fo.ref) && typeof ctx.Lic_trechoNaFonte_ === 'function') {
@@ -238,6 +246,8 @@ const tab = (o) => Object.entries(o).sort((x, y) => y[1] - x[1]).forEach(([k, v]
 const P = resultado.pedido, med = (x) => Math.round(x / Math.max(1, P.analises));
 console.log('Pedido à IA: média ' + med(P.caracteres) + ' caracteres (~' + med(P.caracteres / 4) + ' tokens, a 4 caracteres por token), maior ' + P.max + '; texto dos arquivos lido: média ' + med(P.arquivos));
 if (resultado.cobertura.provas) console.log('Provas de arquivo aceitas que estão no texto enviado à IA: ' + resultado.cobertura.noPedido + ' de ' + resultado.cobertura.provas + ' (' + pct(resultado.cobertura.noPedido, resultado.cobertura.provas) + ')');
+if (resultado.rede) console.log('Rede de segurança: provas de trava aceitas ' + resultado.rede.travas + ', viram pendência ' + resultado.rede.travasPendencia + '; provas impeditivas (RBC, acreditação, registro, atestado) ' + resultado.rede.impeditivos + ', viram pendência ' + resultado.rede.impeditivosPendencia);
+if (resultado.rede && opc.detalhe) resultado.rede.exemplos.forEach((x) => console.log('  ' + x));
 console.log('\nCausas (verificador desta pasta: respostas inteiras + pares):'); tab(resultado.causasNovas);
 console.log('\nTrechos "não está na fonte" — diagnóstico (a IA estava certa?):'); tab(resultado.diagnosticos);
 if (opc.detalhe) {
