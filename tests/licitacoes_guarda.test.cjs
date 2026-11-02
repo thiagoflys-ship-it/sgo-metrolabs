@@ -33,24 +33,25 @@ function ambiente(o) {
       { ID: 'h2', ENTIDADE: 'OPORTUNIDADE', ENTIDADE_ID: 'A', TIPO: 'ENTROU_NO_RADAR', USUARIO_ID: '', USUARIO_NOME: 'Coletor' }]
   };
   let seq = 0;
+  const leituras = {}, ordem = [];
   const ctx = vm.createContext({
     console, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, isFinite, parseInt, Buffer,
     Utilities: criarUtilities({ computeDigest: (alg, texto) => Array.from(crypto.createHash('sha256').update(String(texto), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)), DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF-8' } }),
     Session: criarSession(),
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => null, setProperty() {} }) },
     CacheService: { getScriptCache: () => ({ get: () => '1', put() {} }) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() { if (o.naTrava) o.naTrava(tabelas); }, releaseLock() {} }) },
     SGO_DATA: {
-      getAll: (t) => (tabelas[t] || []).map((r) => Object.assign({}, r)),
+      getAll: (t) => { leituras[t] = (leituras[t] || 0) + 1; return (tabelas[t] || []).map((r) => Object.assign({}, r)); },
       getById: (t, id) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); return r ? Object.assign({}, r) : null; },
       update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (r) Object.assign(r, d); return !!r; },
-      insert: (t, d) => { const r = Object.assign({ ID: 'n' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); },
-      remove: (t, id) => { const i = (tabelas[t] || []).findIndex((x) => String(x.ID) === String(id)); if (i < 0) return false; tabelas[t].splice(i, 1); return true; }
+      insert: (t, d) => { const r = Object.assign({ ID: 'n' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); ordem.push('insert:' + t + ':' + d.TIPO + ':' + d.ENTIDADE_ID); return Object.assign({}, r); },
+      remove: (t, id) => { ordem.push('remove:' + id); if ((o.removeFalha || []).includes(id)) throw new Error('planilha ocupada'); const i = (tabelas[t] || []).findIndex((x) => String(x.ID) === String(id)); if (i < 0) return false; tabelas[t].splice(i, 1); return true; }
     },
     SGO_execucaoInterna_: () => o.interna !== false
   });
   for (const f of ['SGO_Licitacoes_Config.js', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Analise.js', 'SGO_Licitacoes_Guarda.js']) vm.runInContext(ler(f), ctx, { filename: f });
-  return { ctx, tabelas, ids: () => tabelas.LIC_OPORTUNIDADES.map((l) => l.ID) };
+  return { ctx, tabelas, leituras, ordem, ids: () => tabelas.LIC_OPORTUNIDADES.map((l) => l.ID) };
 }
 
 test('guarda no legado: regras 1 e 2 ficam (e vão protegidas ao servidor); 2 anos e 1 ano saem com o resumo no histórico; prévia só conta', () => {
@@ -62,9 +63,16 @@ test('guarda no legado: regras 1 e 2 ficam (e vão protegidas ao servidor); 2 an
   assert.equal(a.ids().join(','), 'A,B,C,D,E,F,G,H', 'a prévia não apaga nada');
   assert.equal(a.tabelas.LIC_HISTORICO.length, 2);
 
+  const lidasAntes = a.leituras.LIC_HISTORICO;
   const r = a.ctx.Lic_guarda_({ hoje: '2026-11-02' });
   assert.equal(a.ids().join(','), 'B,C,D,F,G,H');
   assert.equal([...r.protegidas].sort().join(','), 'PNCP:B,PNCP:C,PNCP:D,PNCP:G,PNCP:H', 'regras 1 e 2 protegidas; regra 3 não');
+  assert.equal([...r.existentes].sort().join(','), 'PNCP:B,PNCP:C,PNCP:D,PNCP:F,PNCP:G,PNCP:H', 'tudo que ficou na aba vai em existentes (o servidor nunca apaga a contratação delas)');
+  assert.equal(r.linhasLegado, 6);
+  // revisão: o registro vem antes da remoção
+  assert.ok(a.ordem.indexOf('insert:LIC_HISTORICO:SAIU_PELA_GUARDA:A') < a.ordem.indexOf('remove:A'));
+  // revisão: o histórico é lido uma vez no começo, uma por lote e uma no fim (não uma vez por linha)
+  assert.ok(a.leituras.LIC_HISTORICO - lidasAntes <= 3, 'leituras do histórico: ' + (a.leituras.LIC_HISTORICO - lidasAntes));
   const saiu = a.tabelas.LIC_HISTORICO.filter((h) => h.TIPO === 'SAIU_PELA_GUARDA');
   assert.equal(saiu.map((h) => h.ENTIDADE_ID).join(','), 'A,E');
   assert.match(saiu[0].TEXTO, /^Regra 2 da guarda: candidata ou travada nunca tocada pela Diretoria, publicada há mais de 2 anos\. Resumo: \{"orgao":"ÓRGÃO A","objeto":"Calibração A","valor":1000,"uf":"GO"/);
@@ -79,6 +87,22 @@ test('guarda no legado: regras 1 e 2 ficam (e vão protegidas ao servidor); 2 an
   assert.equal(r2.saem.regra2 + r2.saem.regra3, 0);
   // só execução interna
   assert.equal(ambiente({ interna: false }).ctx.Lic_guarda_({ hoje: '2026-11-02' }), null);
+});
+
+test('revisão: linha que ia sair e não saiu (tocada agora há pouco, ou remoção falhou) continua protegida e nas existentes', () => {
+  // durante a trava, a Diretoria abre um arquivo da A (candidata vencida): ela não sai; a E falha ao remover
+  const a = ambiente({ removeFalha: ['E'], naTrava: (t) => { if (!t.LIC_HISTORICO.some((h) => h.ID === 'hx')) t.LIC_HISTORICO.push({ ID: 'hx', ENTIDADE: 'OPORTUNIDADE', ENTIDADE_ID: 'A', TIPO: 'ARQUIVO_ABERTO', USUARIO_ID: 'u_dir' }); } });
+  const r = a.ctx.Lic_guarda_({ hoje: '2026-11-02' });
+  assert.equal(a.ids().join(','), 'A,B,C,D,E,F,G,H', 'nada saiu');
+  assert.ok(r.protegidas.includes('PNCP:A'), 'A tocada agora: protegida (regra 1)');
+  assert.ok(r.existentes.includes('PNCP:A') && r.existentes.includes('PNCP:E'), 'as duas continuam em existentes');
+  assert.equal(r.saem.regra2 + r.saem.regra3, 0);
+  assert.match(r.falhas.join(' '), /LIC-E: planilha ocupada/);
+  assert.equal(a.tabelas.LIC_HISTORICO.filter((h) => h.TIPO === 'GUARDA_FALHOU').map((h) => h.ENTIDADE_ID).join(','), 'E');
+  assert.match(r.texto, /1 falha\(s\), que continuam protegidas/);
+  // prévia: o que sairia não vai nas existentes (o servidor conta junto o que sairia)
+  const p = ambiente().ctx.Lic_guarda_({ previa: true, hoje: '2026-11-02' });
+  assert.equal([...p.existentes].sort().join(','), 'PNCP:B,PNCP:C,PNCP:D,PNCP:F,PNCP:G,PNCP:H');
 });
 
 test('guarda: a sincronização grava a data de publicação (conta os 2 anos); manual e doc 00 trazem a regra', () => {

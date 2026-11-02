@@ -92,12 +92,12 @@ function SGO_ajudaTelas_Licitacoes_() {
         { titulo: "Arquivos do edital", itens: [
           "A aba Arquivos lista o edital e os anexos baixados do PNCP pelo servidor, cada um com o SHA-256 do conteúdo (prova de que é o arquivo publicado), o tamanho e a data.",
           "Situação do texto: \"Texto extraído\" (com páginas e caracteres), \"Texto parcial\" ou \"Texto não extraído\" com o motivo (imagem escaneada sem OCR, RAR, formato que o SGO+ não abre). Nada é inventado: o que não foi lido aparece assim.",
-          "Abrir mostra o arquivo em outra aba; Baixar salva no aparelho. O servidor confere o SHA-256 antes de entregar, e o histórico registra quem abriu.",
+          "Abrir mostra o arquivo em outra aba; Baixar salva no aparelho. O servidor confere o SHA-256 antes de entregar, e o histórico registra quem abriu. Por segurança, só PDF, imagem e texto abrem na tela; página da internet (HTML), XML, SVG e os demais saem só como download.",
           "\"Buscar arquivos agora\" pede a leitura ao servidor; ela roda em segundo plano (1 chamada a cada 3 s no PNCP). Depois de alguns minutos, toque em \"Atualizar a ficha\".",
           "Se o PNCP de arquivos estiver fora do ar, a faixa vermelha diz o erro e a hora da nova tentativa automática. Enquanto isso, leia o edital pelo botão \"Ver no PNCP\"."
         ] },
         { titulo: "Análise por IA", itens: [
-          "A aba Análise mostra a nota de 0 a 100, a classe, o resumo, os critérios (capacidade técnica, margem, documentação, localização, prazo, valor e riscos) e quem pontuou cada um: o sistema (dados reais) ou a IA (conferida).",
+          "A aba Análise mostra a nota de 0 a 100, a classe, o resumo, os critérios (capacidade técnica, margem, documentação, localização, prazo, valor e riscos) e quem pontuou cada um: o sistema (dados reais), a IA conferida, ou, na capacidade técnica, a IA classifica cada item e o sistema calcula os pontos.",
           "Fatos vêm com o trecho entre aspas e a fonte (arquivo A1, A2... com o nome e o SHA-256, ou o campo do PNCP). Inferências são conclusões a partir dos fatos. Pendências são o que falta conferir para decidir.",
           "Trava provada com trecho (por exemplo, exige laboratório acreditado RBC sem aceitar rastreabilidade) deixa a nota em 0, com o motivo; a oportunidade continua no radar até a Diretoria decidir.",
           "\"Analisar agora\" faz a primeira análise; \"Refazer análise\" pede o motivo (pelo menos 10 letras). Cada análise é uma versão nova: a anterior continua guardada em \"Todas as versões da análise\".",

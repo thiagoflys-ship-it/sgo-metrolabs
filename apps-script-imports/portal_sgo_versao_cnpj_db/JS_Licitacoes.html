@@ -599,7 +599,7 @@
       '<p class="cm-meta" style="margin:6px 0 0">Análise versão ' + Lic_esc_(at.versao) + " · " + Lic_esc_(Lic_dataHora_(at.em)) + " · " + Lic_esc_(at.origem === "AUTOMATICA" ? "rotina automática" : "pedida por " + at.por) + (at.motivo ? " (" + Lic_esc_(at.motivo) + ")" : "") + " · versão " + Lic_esc_(at.fonteVersao) + " da fonte · modelo " + Lic_esc_(at.modelo) + "</p></div></div></div>";
     var tab = Lic_tabelaHtml_(["Critério", "Pontos", "Quem pontuou", "Como"], LIC_CRITERIOS.map(function (c) {
       var x = crit[c[0]] || {}, pct = x.peso ? Math.max(0, Math.min(100, Math.round(100 * Number(x.pontos || 0) / Number(x.peso)))) : 0;
-      return [Lic_esc_(c[1]), "<b>" + Lic_esc_(Lic_num_(x.pontos || 0)) + "</b> de " + Lic_esc_(Lic_num_(x.peso || 0)) + '<span class="lic-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>', Lic_esc_(x.origem === "CODIGO" ? "Sistema (dados reais)" : "IA (conferida)"), Lic_esc_(x.como || "")];
+      return [Lic_esc_(c[1]), "<b>" + Lic_esc_(Lic_num_(x.pontos || 0)) + "</b> de " + Lic_esc_(Lic_num_(x.peso || 0)) + '<span class="lic-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>', Lic_esc_(x.origem === "CODIGO" ? "Sistema (dados reais)" : x.origem === "IA_CODIGO" ? "IA classifica, sistema calcula" : "IA (conferida)"), Lic_esc_(x.como || "")];
     }));
     h += cab + '<div class="cm-caixa"><h3>Critérios (doc 03, B6)</h3>' + tab + "</div>";
     if ((at.itens || []).length) h += '<div class="cm-caixa"><h3>Itens e serviços do edital</h3>' + Lic_tabelaHtml_(["Item", "Grau", "Serviço", "Fonte"], at.itens.map(function (i) {
@@ -620,6 +620,8 @@
     h += '<p class="cm-meta lic-mono">Regras ' + Lic_esc_(at.regras) + " · base " + Lic_esc_(String(at.baseHash).slice(0, 16)) + "… · hash da análise " + Lic_esc_(String(at.hash).slice(0, 16)) + "…</p>";
     return h;
   }
+  /** Tipos que podem abrir em outra aba (o navegador mostra, não executa). HTML, XML, SVG e o resto: só baixar. */
+  var LIC_TIPOS_ABRIR = ["application/pdf", "image/png", "image/jpeg", "image/gif", "text/plain"];
   /** Abrir (nova aba) ou baixar um arquivo guardado. A aba é aberta no toque (antes da resposta) para não ser bloqueada. */
   function Lic_abrirArquivo_(opId, arqId, baixar) {
     var janela = null;
@@ -627,11 +629,14 @@
     Lic_chamar_("arquivoBaixar", { id: opId, arquivo: arqId, baixar: !!baixar }, function (r) {
       var bin = atob(r.base64 || ""), u8 = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      var url = URL.createObjectURL(new Blob([u8], { type: r.tipo || "application/octet-stream" }));
+      // revisão de 02/11/2026: arquivo do órgão nunca abre no endereço do SGO+ se o tipo puder executar algo
+      var seguro = !r.forcarBaixar && LIC_TIPOS_ABRIR.indexOf(String(r.tipo || "").toLowerCase()) >= 0;
+      if (!seguro) { baixar = true; if (janela) { try { janela.close(); } catch (e) {} janela = null; } }
+      var url = URL.createObjectURL(new Blob([u8], { type: seguro ? r.tipo : "application/octet-stream" }));
       if (janela && !baixar) janela.location.href = url;
       else { var a = document.createElement("a"); a.href = url; a.download = r.nome || "arquivo"; document.body.appendChild(a); a.click(); try { a.remove(); } catch (e) {} }
       setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
-      Lic_toast_((baixar ? "Baixado: " : "Aberto: ") + (r.nome || "arquivo") + " (SHA-256 conferido no servidor).");
+      Lic_toast_((baixar ? "Baixado: " : "Aberto: ") + (r.nome || "arquivo") + " (SHA-256 conferido no servidor)." + (!seguro ? " Este tipo de arquivo não abre na tela por segurança: abra pelo aparelho." : ""));
     }, function (m) { if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); }, { ignorarVelha: true, carregando: "Buscando o arquivo no servidor…" });
   }
   function Lic_janelaAnalisar_(id, refazer, origem) {

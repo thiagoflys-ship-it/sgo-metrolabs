@@ -197,11 +197,11 @@ O que fica guardado de cada arquivo: título e tipo do documento, nome, tamanho,
 
 Sem repetição: o mesmo conteúdo (mesmo SHA-256) é guardado uma vez só, mesmo que apareça em dois documentos; a tabela diz "Conteúdo igual a ...". Documento que muda na fonte com o mesmo número vira versão nova; a anterior continua guardada em "Versões anteriores". Documento que some da lista da fonte fica marcado "retirado da fonte", nunca apagado.
 
-Texto: extraído do PDF com texto, do Word (DOCX), de planilhas e dos PDFs dentro de ZIP. O que não dá para ler fica como "texto não extraído" com o motivo, sem inventar nada: PDF escaneado (imagem, precisa de OCR, que o SGO+ não faz), RAR, 7z, imagem, Word antigo (.doc), PDF com senha. PDF com algumas páginas sem texto fica "Texto parcial", com a contagem.
+Texto: extraído do PDF com texto, do Word (DOCX), de planilhas e dos PDFs dentro de ZIP, num processo separado com memória e tempo limitados (arquivo que trava a leitura vira "texto não extraído" com o motivo; parte de ZIP acima de 50 MB não é aberta). O download só segue redirecionamento dentro do pncp.gov.br; arquivo acima de 80 MB ou redirecionado para fora fica "recusado" e não é baixado de novo, salvo se mudar na fonte. O que não dá para ler fica como "texto não extraído" com o motivo, sem inventar nada: PDF escaneado (imagem, precisa de OCR, que o SGO+ não faz), RAR, 7z, imagem, Word antigo (.doc), PDF com senha. PDF com algumas páginas sem texto fica "Texto parcial", com a contagem.
 
 Falha da fonte: se a lista ou o download falham (por exemplo, HTTP 503 "No server is available"), a faixa vermelha diz o erro e a hora da nova tentativa automática (15 min, 1 h, 4 h, 12 h e depois a cada 24 h). A rodada para no primeiro 503 para não insistir com a fonte fora do ar. Enquanto isso, leia o edital pelo botão "Ver no PNCP".
 
-Botões: "Abrir" (outra aba) e "Baixar" (salva no aparelho), até 25 MB pela tela; "Buscar arquivos agora" (pedido em segundo plano); "Atualizar a ficha" (a tela não se atualiza sozinha).
+Botões: "Abrir" (outra aba; só PDF, imagem e texto, por segurança: HTML, XML, SVG e os demais saem como download) e "Baixar" (salva no aparelho), até 25 MB pela tela; "Buscar arquivos agora" (pedido em segundo plano); "Atualizar a ficha" (a tela não se atualiza sozinha).
 
 ### 6.6 Análise por IA e nota de 0 a 100 (aba Análise da ficha)
 
@@ -215,7 +215,7 @@ Critérios e quem pontua (pesos do doc 03, B6; ficam em LIC_CONFIG, chave NOTA, 
 
 | Critério | Peso | Quem pontua |
 |---|---|---|
-| Capacidade técnica | 30 | IA, conferida: cada item com grau (alta, média, baixa, não atende), o código do catálogo e o trecho. Acima de 0 exige fato; acima de 15 exige item de grau alto provado |
+| Capacidade técnica | 30 | A IA classifica cada item com grau (alta, média, baixa, não atende), o código do catálogo e o trecho (do objeto, de um item ou de um arquivo; UF, valor e datas não provam serviço). O sistema calcula os pontos: item de grau alto provado conta 1, médio meio, o resto zero, sobre o total de itens |
 | Margem | 15 | Sistema: 5 com pendência enquanto não houver piso (a tabela de preços de Licitações é da próxima etapa) |
 | Documentação | 15 | IA, conferida: as exigências de habilitação com o trecho. No máximo 7,5 (metade, como pendência) enquanto o SGO+ não tiver o cadastro de habilitação |
 | Localização | 15 | Sistema: prioridade da UF (até 8) + distância (até 7; metade como pendência até a distância rodoviária ser confirmada; Goiânia vale 7) |
@@ -227,7 +227,7 @@ Trava provada com trecho zera a nota, com o motivo (exige laboratório acreditad
 
 Regras do dono que a IA recebe: a Metrolabs não é acreditada RBC (é rastreável); tem autorização do Inmetro para balanças e esfigmomanômetros; participa a matriz de Goiânia, empresa de pequeno porte (EPP); prioridade GO, DF, vizinhos e RJ. O texto do sistema nunca cita fabricante.
 
-O verificador: antes de valer, a resposta da IA é conferida. Todo FATO precisa da fonte, e o trecho é procurado palavra por palavra no texto daquela fonte (sem acento, sem caixa, espaços normalizados). Trecho que não está lá, fonte inexistente, pontos fora do peso, código de risco ou trava fora da lista, frase de decisão ("recomendo participar"), afirmação de acreditação RBC, fabricante citado, emoji ou markdown fazem a resposta ser recusada e refeita (até 2 vezes, com os problemas apontados). Recusada de novo, fica registrada como "recusada pelo verificador" e a nota anterior continua valendo.
+O verificador: antes de valer, a resposta da IA é conferida. Todo FATO precisa da fonte, e o trecho (pelo menos 3 palavras seguidas) é procurado palavra por palavra no texto daquela fonte (sem acento, sem caixa, espaços normalizados). Cada fonte vai para a IA entre marcadores sorteados a cada análise, com a ordem de tratar o conteúdo como dado: instrução escrita dentro do edital é ignorada. Número ou citação no resumo e nas justificativas tem de estar nas fontes ou nos cálculos do sistema. Se a triagem por regras travou a oportunidade, a IA tem de provar a trava ou deixar a pendência "trava". Trecho que não está lá, fonte inexistente, pontos fora do peso, código de risco ou trava fora da lista, frase de decisão ("recomendo participar"), afirmação de acreditação RBC, fabricante citado, emoji ou markdown fazem a resposta ser recusada e refeita (até 2 vezes, com os problemas apontados). Recusada de novo, fica registrada como "recusada pelo verificador" e a nota anterior continua valendo.
 
 Quando roda: sozinha, quando chegam arquivos novos ou mudados ou a fonte tem versão nova, só nas oportunidades no radar ou em análise com prazo aberto, e só se a base mudou (assim não gasta à toa). "Analisar agora" faz a primeira; "Refazer análise" pede o motivo (pelo menos 10 letras). Leva de 1 a 3 minutos.
 
@@ -272,7 +272,7 @@ Versões: cada análise é uma linha nova em LIC_ANALISES (versão, data, quem p
 | Fora do ramo (sem termo de interesse, ou descartada só pela regra e nunca tocada) | Só o resumo (órgão, objeto, valor, UF, modalidade, datas, número de controle, hash) por 1 ano; os dados brutos da fonte, 30 dias |
 | Registro das chamadas aos portais | 6 meses |
 
-Os dados brutos das oportunidades que ficam (para sempre ou nos 2 anos) nunca são apagados: são a prova do que estava publicado. A limpeza roda sozinha toda segunda às 06:30, na manutenção semanal do servidor, em lotes pequenos, e o resumo (quantas linhas saíram de cada tabela e o espaço) vem no e-mail da manutenção. Enquanto o resumo existe, a mesma licitação não volta como "nova"; depois de 1 ano, se reaparecer na fonte, entra como nova. Se algo der errado na conferência do que é protegido, nada das licitações é apagado.
+Os dados brutos das oportunidades que ficam (para sempre ou nos 2 anos) nunca são apagados: são a prova do que estava publicado. A limpeza roda sozinha toda segunda às 06:30, dentro do servidor (a manutenção semanal só pede), com a coleta e a leitura de arquivos pausadas enquanto ela roda, em lotes pequenos, e o resumo (quantas linhas saíram de cada tabela e o espaço) vem no e-mail da manutenção. Enquanto o resumo existe, a mesma licitação não volta como "nova"; depois de 1 ano, se reaparecer na fonte, entra como nova. Se algo der errado na conferência do que é protegido, nada das licitações é apagado.
 
 ## 9. Para o Administrador
 
@@ -281,5 +281,5 @@ Os dados brutos das oportunidades que ficam (para sempre ou nos 2 anos) nunca s�
 - Coleta real sob demanda no servidor: `npx tsx scripts/licitacoes_coletar.ts` (opções `--dias`, `--modalidades`, `--propostas`, `--testar`, `--sincronizar`).
 - A sentinela de infraestrutura mostra o item "Coletor de licitações (PNCP e Compras.gov.br)" em Saúde da infraestrutura.
 - Arquivos do edital: tabelas lic_arquivos e lic_arquivos_estado no servidor; o conteúdo fica no serviço de arquivos do servidor, restrito (RESTRITO:LICITACOES). A rotina roda a cada 5 minutos com o coletor ligado (os pedidos da tela rodam sempre).
-- Regra de guarda: `npx tsx scripts/licitacoes_guarda.ts --previa` conta sem apagar; sem `--previa` aplica (a manutenção semanal já chama). Legado: Lic_guarda_ (SGO_Licitacoes_Guarda.js); servidor: servicos/licitacoes/guarda.ts.
+- Regra de guarda: `npx tsx scripts/licitacoes_guarda.ts --previa` conta sem apagar; sem `--previa` aplica (a manutenção semanal já chama). O script só chama a rota interna POST /interno/licitacoes/guarda do próprio servidor (aceita só de dentro do contêiner), que pausa o coletor e os arquivos, roda Lic_guarda_ (SGO_Licitacoes_Guarda.js) no pool principal, com a mesma trava da sincronização, e depois servicos/licitacoes/guarda.ts. Tudo que ainda está em LIC_OPORTUNIDADES fica com a contratação, os itens e os arquivos no servidor.
 - Análise por IA: chave GEMINI_API_KEY e modelo IA_MODEL (as mesmas do SGO+); pesos da nota em LIC_CONFIG, chave NOTA (sem linha, vale o padrão do doc 03, B6).
