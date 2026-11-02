@@ -369,7 +369,7 @@ test('consolidação: checklist sem duplicata pelo código; resumo e estratégia
   assert.equal(cl.length, 3, 'o atestado repetido (um trecho dentro do outro) é um item; as duas multas (números diferentes) são dois');
   assert.deepEqual(J(cl[0].fontes).map((f) => f.ref), ['A1', 'A2']);
   // estratégia que decide, promete RBC, inventa número e data
-  const ruim = (ids) => ({ resumo: [{ texto: 'O edital tem 3 exigências e encerra em 20/11/2026.', fontes: [ids.ATESTADOS] }, { texto: 'Multa de 0,2% por dia de atraso.', fontes: [ids.PENALIDADES] }],
+  const ruim = (ids) => ({ resumo: [{ texto: 'O edital tem 3 exigências e encerra em 20/11/2026.', fontes: [ids.ATESTADOS] }, { texto: 'Multa de 0,5% por dia de atraso.', fontes: [ids.PENALIDADES] }],
     estrategia: { primeiro: [{ texto: 'Vale a pena participar desta licitação.', fontes: [ids.ATESTADOS] }], riscos: [{ texto: 'Apresentar o certificado de acreditação RBC da Metrolabs.', fontes: [ids.RBC_INMETRO] }],
       documentos: [{ texto: 'Atestados.', fontes: ['I99'] }], perguntas: [] } });
   const b = ambiente({ consolidacao: ruim, custoMs: 1000 });
@@ -922,4 +922,39 @@ test('reconferência 7: lista com marcadores sob cabeçalho negativo sem numera�
   const c = r.a.ctx;
   assert.equal(c.LicLeit_cabecalhoLista_(B, B.indexOf('Certidão negativa de débitos')), null, 'cabeçalho comum ("Serão exigidos...:") não é exceção');
   assert.equal(c.LicLeit_cabecalhoLista_('[página 1]\nTexto corrido sem lista.\nNão é lista: frase solta.\n', 30), null);
+});
+
+// ---------------- calibração com a prova real (Aparecida do Rio Doce, 02/11/2026; _tools/licitacoes_leitura_banco_prova.cjs) ----------------
+test('calibração: consolidação publica as frases que passaram e lista as retiradas; referências no texto não viram número; JSON grande em partes; retorno por regra; bloco menor', () => {
+  // frases boas e ruins na mesma resposta: a consolidação não cai inteira
+  const mista = (ids) => ({ resumo: [{ texto: 'Exige atestado de 50% do quantitativo dos equipamentos (I1).', fontes: [ids.ATESTADOS] }, { texto: 'Multa de 0,5% por dia de atraso.', fontes: [ids.PENALIDADES] }, { texto: 'Pregão para manutenção de autoclaves com fornecimento de peças.', fontes: [ids.OUTRO, 'CAMPO:objeto'] }],
+    estrategia: { primeiro: [{ texto: 'Vale a pena participar desta licitação.', fontes: [ids.ATESTADOS] }, { texto: 'Separar os atestados de autoclave (I1).', fontes: [ids.ATESTADOS] }], riscos: [{ texto: 'Páginas não lidas.', fontes: ['COBERTURA'] }], documentos: [{ texto: 'Certificados rastreáveis dos padrões.', fontes: [ids.RBC_INMETRO] }], perguntas: [] } });
+  const a = ambiente({ consolidacao: mista, custoMs: 1000 });
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  const le = a.leituras()[0];
+  assert.equal(le.CONSOLIDACAO_SITUACAO, 'OK', 'publicada com as frases que passaram');
+  const t = a.api('s_dora', 'leitura', { id: 'op1' }).leitura.leitura;
+  assert.deepEqual(J(t.resumo).map((x) => x.texto), ['Exige atestado de 50% do quantitativo dos equipamentos (I1).', 'Pregão para manutenção de autoclaves com fornecimento de peças.'], '"(I1)" no texto não é o número 1');
+  assert.deepEqual(J(t.estrategia.primeiro).map((x) => x.texto), ['Separar os atestados de autoclave (I1).']);
+  const ret = J(t.estrategia.retiradas);
+  assert.deepEqual(ret.map((x) => x.secao), ['Resumo do edital', 'O que fazer primeiro', 'Riscos']);
+  assert.match(ret[0].motivo, /o número 0,5% não está/); assert.match(ret[1].motivo, /a IA não decide/); assert.match(ret[2].motivo, /sem item citado/);
+  assert.equal(a.ia.prompts.filter((p) => /ITENS \(o que precisamos/.test(p)).length, 3, 'refez com o retorno antes de publicar a melhor');
+  assert.match(a.ia.prompts[a.ia.prompts.length - 1], /ALGUMAS FRASES DA SUA RESPOSTA ANTERIOR FORAM RETIRADAS PELO VERIFICADOR \(as outras valem\)/);
+  // JSON grande: em partes (nunca cortado no meio), lido de volta inteiro
+  const c = a.ctx, grande = Array.from({ length: 120 }, (_, i) => ({ id: 'I' + (i + 1), tema: 'OUTRO', trecho: 'x'.repeat(600), fontes: [{ ref: 'A1', rotulo: 'página ' + i }] }));
+  const partes = J(c.LicLeit_partes_('CHECKLIST_JSON', grande, 4));
+  assert.deepEqual(Object.keys(partes), ['CHECKLIST_JSON', 'CHECKLIST_JSON_2', 'CHECKLIST_JSON_3', 'CHECKLIST_JSON_4']);
+  assert.ok(Object.values(partes).every((v) => v.length <= 45000));
+  assert.equal(J(c.LicLeit_lerPartes_(partes, 'CHECKLIST_JSON', [])).length, 120);
+  // retorno da nova tentativa do bloco: agrupado por regra, com o que fazer
+  const r = c.LicLeit_retorno_(['no máximo 40 itens por bloco (vieram 70): o mesmo trecho vira um item só', 'item 7: o trecho "x y z" não está em A1 (copie literalmente do texto da fonte); na fonte, o trecho vem logo depois de "sem"', 'item 30: trecho curto demais para conferir ("CPF:")']);
+  assert.match(r, /Itens demais: mande no máximo 40 itens/); assert.match(r, /copie a frase inteira até o ponto final/); assert.match(r, /campos de formulário e títulos não são exigências/);
+  // bloco menor e prompt com o que o verificador recusa
+  const b = ambiente();
+  vm.runInContext('LIC_LEIT_BLOCO_CAR = 8000;', b.ctx);
+  assert.equal(b.ctx.LIC_LEIT_BLOCO_PAGINAS, 6);
+  const tx = b.ctx.LicLeit_textos_(b.op()), arq = tx.arquivos[0]; arq._ind = b.ctx.LicLeit_indice_(arq.texto);
+  const pr = b.ctx.LicLeit_promptBloco_(b.op(), arq, Object.assign(b.ctx.LicLeit_dividir_(arq, '')[0], { ordem: 1 }), 1, [], 'FONTE-x');
+  for (const re of [/NO MÁXIMO 40 itens por bloco/, /Nunca pare antes de uma negação ou exceção/, /campos de formulário para preencher/, /não invente uma frase para cada parte/, /Errado: parar em "recebimento definitivo"/]) assert.match(pr, re);
 });
