@@ -420,3 +420,11 @@ test('fabricantes: a própria Metrolabs fica fora da lista (o verificador não r
   assert.ok(lista.includes('fabricante x'), lista.join(','));
   assert.ok(!lista.some((n) => /metro ?labs/.test(n)), lista.join(','));
 });
+
+// 02/11/2026 (revisão de Licitações): "nova", "teste", "genérico", "não consta" do cadastro não são marca; só pelo nome INTEIRO
+test('fabricantes: palavra comum do cadastro fica fora da lista pelo nome inteiro ("Nova Medical" continua marca)', () => {
+  const amb = ambiente({ tabelas: { CAD_EQUIPAMENTOS: ['Nova', 'TESTE', 'Genérico', 'Não consta', 'Nova Medical', 'Fabricante X'].map((fab, i) =>
+    ({ ID: 'eq' + i, CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'Autoclave', FABRICANTE: fab, TAG: 'AC-0' + i, STATUS: 'ATIVO' })) } });
+  const lista = amb.ctx.ComEsp_fabricantes_().slice().sort();
+  assert.deepEqual(lista, ['fabricante x', 'nova medical']);
+});

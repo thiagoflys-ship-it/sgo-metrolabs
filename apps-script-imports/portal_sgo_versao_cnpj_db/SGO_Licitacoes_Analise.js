@@ -26,10 +26,10 @@
  *     com trava "candidata a descarte" (quem descarta é a Diretoria; a IA nunca decide).
  *
  * Verificador (Lic_verificarAnalise_): todo FATO tem fonte (arquivo A1, A2..., campo do PNCP ou item) e o trecho é
- * procurado LITERALMENTE no texto dessa fonte, letra por letra e na mesma ordem (sem acento, sem caixa, sem espaço, quebra
- * de linha, pontuação e hífen de fim de linha do PDF; revisão de 02/11/2026 com o banco de prova _tools/licitacoes_banco_prova.cjs:
- * também reticências entre pedaços literais, quebra de página no meio da frase, numeração de cláusula tirada e rótulo posto
- * na frente, ver Lic_trechoNaFonte_); trecho que não está lá = recusa, e a nova tentativa recebe o pedaço mais parecido. Capacidade acima de zero exige fato; acima de 15 exige item com grau ALTA provado. Código de risco ou trava fora
+ * procurado LITERALMENTE no texto dessa fonte, palavra por palavra e na mesma ordem, com número, sinal e negação conferidos
+ * (revisão de 02/11/2026 com o banco de prova _tools/licitacoes_banco_prova.cjs e a revisão independente; só no texto enviado à
+ * IA, também reticências na mesma frase, quebra de página, numeração de cláusula tirada e rótulo; grava sempre o texto da fonte;
+ * ver Lic_trechoNaFonte_); trecho que não está lá = recusa, e a nova tentativa recebe o pedaço mais parecido. Capacidade acima de zero exige fato; acima de 15 exige item com grau ALTA provado. Código de risco ou trava fora
  * da lista, pontos fora do peso, documentação acima de 7,5, frase de decisão ("recomendo participar/descartar"), promessa
  * de acreditação RBC, fabricante citado, emoji ou markdown: recusa. Resposta recusada é refeita até 2 vezes com os
  * problemas apontados; recusada de novo, fica registrada como RECUSADA (a nota anterior continua valendo).
@@ -43,12 +43,15 @@
 var LIC_ANALISE_REGRAS = 'LIC-NOTA-2026-11-02.2';
 var LIC_NOTA_PADRAO = { versao: 0, capacidade: 30, margem: 15, documentacao: 15, localizacao: 15, prazo: 10, valor: 10, riscos: 5, documentacaoSemCadastro: 7.5 };
 var LIC_ANALISE_REFACOES = 2;
-var LIC_ANALISE_LIMITE_MS = 170000;
+// revisão de 02/11/2026: nova tentativa só começa antes de 140 s (300 s do pool do servidor menos 120 s da chamada à IA e a
+// margem da verificação e da gravação); o mesmo prazo vale para a troca de modelo dentro de SGO_DocA4_chamarGemini_
+var LIC_ANALISE_LIMITE_MS = 140000;
 // revisão de 02/11/2026: o verificador lê o texto inteiro que o servidor entrega (limites do servidor); o pedido à IA leva só
 // LIC_PROMPT_ORCAMENTO caracteres (Lic_selecionarTextos_). Raciocínio da IA limitado e resposta em JSON puro, para caber nos 120 s.
 var LIC_TEXTO_MAX_ARQUIVO = 400000;
 var LIC_TEXTO_MAX_TOTAL = 900000;
-var LIC_IA_OPCOES = { tokens: 16384, temperatura: 0.1, raciocinio: 4096, json: true };
+// maxOutputTokens inclui o raciocínio: 20480 = 4096 de raciocínio + ~16 mil para o JSON
+var LIC_IA_OPCOES = { tokens: 20480, temperatura: 0.1, raciocinio: 4096, json: true };
 var LIC_RISCOS = {
   SRP_SEM_MINIMO: 'Registro de preços sem quantidade mínima por pedido', GARANTIA_ACIMA_5: 'Garantia de contrato acima de 5%', GARANTIA_PROPOSTA: 'Garantia de proposta exigida',
   PECAS_SEM_TETO: 'Peças por conta da contratada sem teto', SLA_HORAS: 'Atendimento em horas (SLA curto)', MEDICAO_LONGA: 'Pagamento por medição longa',
@@ -260,7 +263,7 @@ function Lic_fontesAnalise_(l, fonte, textos) {
  * "teste", "genérico", "não consta"); como marca, recusava frase honesta ("nova data", "testes de segurança"). Ficam de fora só
  * aqui (o Comercial usa a lista como está); marca de verdade (inclusive a que o edital cita) continua recusada no texto da IA.
  */
-var LIC_FABRICANTE_COMUM = /^(nova|novo|teste|testes|generic[oa]|nao consta|nao informado|nao identificado|sem marca|diversos|diversas|outros|outras|varios|nacional|importado|propri[oa]|padrao|n a|nd|sm|xxx)$/;
+var LIC_FABRICANTE_COMUM = /^(nova|novo|teste|testes|generic[oa]|nao consta|nao informado|nao identificado|sem marca|diversos|diversas|outros|outras|varios|nacional|importado|propri[oa]|padrao|digital|analogic[oa]|universal|original|manual|automatic[oa]|eletronic[oa]|n a|nd|sm|xxx)$/;
 function Lic_fabricantesLista_() {
   var l = [];
   try { l = typeof ComEsp_fabricantes_ === 'function' ? ComEsp_fabricantes_() : []; } catch (e) { l = []; }
@@ -317,32 +320,47 @@ function Lic_conferirFonte_(onde, fonte, ctx, problemas, o) {
   if (!nt || nt.split(' ').length < 3) { problemas.push(onde + ': trecho curto demais para conferir ("' + tr.slice(0, 40) + '"); copie pelo menos 3 palavras seguidas da fonte'); return null; }
   if (o.capacidade && !Lic_refProvaServico_(ref)) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
   if (tr.length > LIC_TRECHO_MAX) { problemas.push(onde + ': trecho longo demais (' + tr.length + ' caracteres; o máximo é ' + LIC_TRECHO_MAX + ' e o pedido é até 300); copie só a frase que prova'); return null; }
-  var achou = Lic_trechoNaFonte_(tr, f);
+  // capacidade e trava: sem reticências nem quebra de página (o.estrito)
+  var achou = Lic_trechoNaFonte_(tr, f, { estrito: !!(o.capacidade || o.estrito) });
   if (!achou.ok) {
-    var outra = achou.motivo ? '' : Lic_trechoEmOutraFonte_(tr, ref, ctx);
+    // dicas (o mais perto, a ref certa) só nas primeiras recusas: resposta com dezenas de trechos inventados não estoura o tempo
+    var dica = !achou.motivo && (ctx._dicas = (ctx._dicas || 0) + 1) <= LIC_DICAS_MAX;
+    var outra = dica ? Lic_trechoEmOutraFonte_(tr, ref, ctx) : '', perto = dica && !outra ? Lic_trechoPerto_(f, tr) : '';
     problemas.push(onde + ': o trecho "' + tr.slice(0, 80) + '" não está em ' + ref + ' (copie literalmente do texto da fonte)' +
-      (achou.motivo ? '; ' + achou.motivo : outra ? '; ele está em ' + outra + ': cite a ref ' + outra : achou.perto ? '; o mais perto em ' + ref + ' é "' + achou.perto + '" (copie dali, sem juntar frases distantes nem acrescentar rótulo, item ou número que não esteja colado à frase)' : '; nenhum pedaço de 4 palavras seguidas dele está em ' + ref + ': não escreva trecho que a fonte não tem'));
+      (achou.motivo ? '; ' + achou.motivo : outra ? '; ele está em ' + outra + ': cite a ref ' + outra : perto ? '; o mais perto em ' + ref + ' é "' + perto + '" (copie dali, sem juntar frases distantes nem acrescentar rótulo, item ou número que não esteja colado à frase)' : dica ? '; nenhum pedaço de 4 palavras seguidas dele está em ' + ref + ': não escreva trecho que a fonte não tem' : ''));
     return null;
   }
   return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(achou.trecho, 600), arquivo: f.arquivo || null, regra: !!f.regra, sistema: !!f.sistema, ajuste: achou.ajuste || '' };
 }
 
-// ------------------------------------------------------------ trecho na fonte (revisão de 02/11/2026, banco de prova)
+// ------------------------------------------------------------ trecho na fonte (revisão de 02/11/2026: banco de prova e revisão independente)
 /*
  * Por que existe: o texto extraído do PDF quebra linha no meio da frase, hifeniza fim de linha ("Con-\ntratada"), troca aspas
- * e ligaduras e põe o cabeçalho da página no meio do parágrafo. Na produção (02/11), trechos copiados certos eram recusados
- * por isso. A comparação continua LITERAL nas letras e nos números, na mesma ordem; só deixa de olhar espaço, pontuação,
- * acento, caixa e hífen de fim de linha. Número no começo ou no fim do trecho tem de começar e terminar onde o número da fonte
- * começa e termina ("10 dias" não casa dentro de "110 dias" nem de "1.100 dias").
- * Aceita também, sem inventar nada (a parte gravada como prova está na fonte):
- *   - reticências entre pedaços literais da mesma fonte, em ordem, cada um com 3 palavras ou mais e perto um do outro;
- *   - a quebra de página no meio da frase (cabeçalho e rodapé entre os dois pedaços, com o marcador [página N]);
- *   - rótulo que a IA pôs na frente ("Item 1", "LOTE 02 ITEM 01 UND", "4.23 n)"): grava só o resto, que está na fonte.
+ * e ligaduras e põe o cabeçalho da página no meio do parágrafo; na produção (02/11), trechos copiados certos eram recusados.
+ * A comparação é por PALAVRA, na mesma ordem e com limite de palavra ("necessária" não casa dentro de "desnecessária"). Não
+ * contam acento, caixa, espaço, quebra de linha e pontuação solta; o hífen dentro da palavra e o de fim de linha juntam as
+ * partes. Número é palavra inteira e guarda um separador fixo entre dígitos ("1,5" não é "15", "1/12" não é "11/2",
+ * "15.000,00" não é "1.500.000"); "%", "≥", "≤", "<", ">", "±" e o sinal de número negativo contam ("-20 °C" não é "20 °C").
+ * Trecho que começa logo depois de uma negação da fonte ("não será exigida ...") ou que corta um "...: não" é recusado.
+ * Além do literal, e SÓ no texto que a IA recebeu (f.textoPrompt; fora dele, só o literal):
+ *   - numeração de cláusula ou alínea no começo da linha da fonte, que a IA tirou ("no mínimo: 1.3.1. inspeção geral");
+ *   - rótulo que a IA pôs na frente ("Item 1", "LOTE 02 ITEM 01 UND"), que não é gravado;
+ *   - reticências entre pedaços da MESMA frase (5 palavras ou mais cada, até 300 caracteres de distância, sem ponto final,
+ *     linha em branco nem negação no que foi pulado, pedaço sem negação na ponta);
+ *   - quebra de página no meio da frase (o pedaço de antes termina na página; entre os dois, só rodapé e cabeçalho repetidos;
+ *     5 palavras ou mais de cada lado).
+ * Reticências e quebra de página não valem em capacidade nem em trava (o.estrito). O que se grava como prova é sempre o
+ * texto DA FONTE recortado pelas posições do casamento, nunca o texto da IA.
  */
-var LIC_TRECHO_MAX = 1200;          // trecho literal aceito até aqui (gravado até 600); acima, recusa
-var LIC_TRECHO_LACUNA_MAX = 1500;   // reticências: distância máxima entre dois pedaços (caracteres da fonte)
-var LIC_TRECHO_PAGINA_MAX = 600;    // quebra de página: cabeçalho e rodapé entre os pedaços (caracteres da fonte)
+var LIC_TRECHO_MAX = 1200;              // trecho literal aceito até aqui (gravado até 600); acima, recusa
+var LIC_RETIC_LACUNA_MAX = 300;         // reticências: distância máxima entre dois pedaços (caracteres da fonte)
+var LIC_PAGINA_RODAPE_MAX = 120;        // quebra de página: do fim do pedaço de antes até o marcador [página N]
+var LIC_PAGINA_CABECALHO_MAX = 200;     // quebra de página: do marcador até o começo do pedaço de depois
+var LIC_RELAXADO_MIN = 5;               // palavras de cada pedaço nas reticências e na quebra de página
+var LIC_DICAS_MAX = 15;                 // recusas por verificação que recebem a dica "o mais perto" e "está em outra fonte"
 var LIC_RETICENCIAS = /\s*(?:\(\s*(?:\.\s*){3,}\)|\[\s*(?:\.\s*){3,}\]|\.{3,}|…)\s*/;
+var LIC_NEGACAO = /^(nao|sem|nem|nunca|jamais|exceto|salvo|tampouco|nenhum|nenhuma|vedad[oa]s?|proibid[oa]s?|dispensad[oa]s?|inexigivel|desnecessari[oa]s?)$/;
+var LIC_PAGINA_MARCA = /\[p[aá]gina \d+\]/i;
 // rótulo: palavra de rótulo ("Item", "LOTE", "UND", "nº"), numeração de cláusula ("4.23", "12.", "3)", "n)", "18.1.d)", "IV -")
 // e número solto SÓ logo depois de palavra de rótulo ("Item 29", "LOTE 02"): "50 unidades" não perde o 50
 var LIC_ROTULO_PALAVRA = /^(?:item|itens|lote|subitem|und|un|unid|unidade|qtd|qtde|quant|cod|c[oó]d|c[oó]digo|n[º°]|n[º°o]?\.|[-–—:•])$/i;
@@ -357,6 +375,7 @@ function Lic_rotuloNaFrente_(pal) {
   return i;
 }
 var LIC_COMPACTO_CAR_ = {};
+/** Uma letra ou dígito sem acento e sem caixa ("ﬁ" vira "fi", "º" vira "o"); '' para o resto. */
 function Lic_compactarCar_(ch) {
   var c = ch.charCodeAt(0);
   if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) return ch;
@@ -367,135 +386,230 @@ function Lic_compactarCar_(ch) {
   return x;
 }
 /**
- * Numeração de cláusula e alínea ("1.3.1.", "12.2.", "13.7.2.1", "a)"): a IA tira do meio da frase que copia ("no mínimo:
- * inspeção geral" onde a fonte diz "no mínimo: 1.3.1. inspeção geral"). Só numeração de 1 ou 2 dígitos por nível, com dois
- * pontos ou mais ou ponto no fim: valor ("4.412,50", "1.234.567"), CNPJ, data e "2.5 kW" não são numeração e ficam.
+ * Palavras de um texto, com a posição de cada uma no original: { toks, ini, fim, s (palavras com um espaço), pos (início de
+ * cada palavra em s), S (s entre espaços) }. Número guarda "#" no lugar de , . / : entre dígitos; "%", "≥", "≤", "<", ">",
+ * "±" são palavras; "-" de número negativo fica colado ao número; hífen dentro da palavra e de fim de linha juntam as partes.
  */
-var LIC_NUMERACAO = /(^|[^0-9.,\/])(\d{1,2}(?:\.\d{1,2}){1,5}\.?)(?![0-9,\/-])/g;
-var LIC_ALINEA = /(^|[^\p{L}0-9])([a-z]\))(?=\s)/giu;
-function Lic_numeracaoFaixas_(s) {
-  var fx = [];
-  s.replace(LIC_NUMERACAO, function (m, a, n, pos) { if ((n.match(/\./g) || []).length >= 2 || /\.$/.test(n)) fx.push([pos + a.length, pos + a.length + n.length]); return m; });
-  s.replace(LIC_ALINEA, function (m, a, n, pos) { fx.push([pos + a.length, pos + a.length + n.length]); return m; });
-  return fx;
-}
-/** Só letras e números (sem acento, sem caixa; "ﬁ" vira "fi", "º" vira "o") e, para cada um, a posição no texto original. semNumeracao: pula a numeração. */
-function Lic_compacto_(t, semNumeracao) {
-  var s = String(t === null || t === undefined ? '' : t), out = [], mapa = [], pular = null;
-  if (semNumeracao) { pular = new Uint8Array(s.length); Lic_numeracaoFaixas_(s).forEach(function (x) { for (var j = x[0]; j < x[1]; j++) pular[j] = 1; }); }
-  for (var i = 0; i < s.length; i++) { if (pular && pular[i]) continue; var x = Lic_compactarCar_(s.charAt(i)); for (var k = 0; k < x.length; k++) { out.push(x.charAt(k)); mapa.push(i); } }
-  return { c: out.join(''), m: mapa };
-}
-function Lic_compactoFonte_(f) { if (!f._compacto) Object.defineProperty(f, '_compacto', { value: Lic_compacto_(f.texto), enumerable: false }); return f._compacto; }
-/** A mesma fonte vista sem a numeração (as posições continuam as do texto original). */
-function Lic_visaoSemNumeracao_(f) {
-  if (!f._semNumeracao) Object.defineProperty(f, '_semNumeracao', { value: { texto: f.texto, _compacto: Lic_compacto_(f.texto, true) }, enumerable: false });
-  return f._semNumeracao;
-}
-function Lic_tirarNumeracao_(t) {
-  var s = Lic_s_(t), fx = Lic_numeracaoFaixas_(s).sort(function (a, b) { return b[0] - a[0]; });
-  fx.forEach(function (x) { s = s.slice(0, x[0]) + ' ' + s.slice(x[1]); });
-  return s.replace(/\s+/g, ' ').trim();
-}
-/** O número da fonte continua do lado de fora do pedaço (dígito, ou "." / "," seguido de dígito)? */
-function Lic_numeroColado_(t, i, dir) { var a = t.charAt(i + dir), b = t.charAt(i + 2 * dir); return /[0-9]/.test(a) || (/[.,]/.test(a) && /[0-9]/.test(b)); }
-/** Primeira posição (no compacto) do pedaço a partir de "desde", respeitando a borda dos números; -1 se não houver. */
-function Lic_acharEm_(f, pc, desde) {
-  var fc = Lic_compactoFonte_(f), t = f.texto, n = pc.length, p = desde || 0;
-  if (!n) return -1;
-  var d0 = /[0-9]/.test(pc.charAt(0)), d1 = /[0-9]/.test(pc.charAt(n - 1));
-  while ((p = fc.c.indexOf(pc, p)) >= 0) {
-    if (!(d0 && Lic_numeroColado_(t, fc.m[p], -1)) && !(d1 && Lic_numeroColado_(t, fc.m[p + n - 1], 1))) return p;
-    p++;
+function Lic_tokens_(t, pdf) {
+  var s = String(t === null || t === undefined ? '' : t), toks = [], ini = [], fim = [], cur = '', ci = -1, cf = -1, ult = '';
+  function fechar() { if (cur && cur !== '-') { toks.push(cur); ini.push(ci); fim.push(cf); } cur = ''; ult = ''; }
+  function letraEm(j) { var x = j < s.length ? Lic_compactarCar_(s.charAt(j)) : ''; return /^[a-z]/.test(x); }
+  for (var i = 0; i < s.length; i++) {
+    var ch = s.charAt(i), x = Lic_compactarCar_(ch);
+    if (x) { if (!cur) ci = i; cur += x; cf = i + 1; ult = /[0-9]$/.test(x) ? 'd' : 'l'; continue; }
+    if (ult === 'd' && /[.,\/:]/.test(ch) && /[0-9]/.test(s.charAt(i + 1))) { cur += '#'; continue; }
+    if (ult === 'l' && /[-­‐‑]/.test(ch)) {
+      var h = /^[ \t]*(\r?\n)?[ \t]*/.exec(s.slice(i + 1, i + 16));
+      if ((h[0] === '' || h[1]) && letraEm(i + 1 + h[0].length)) { i += h[0].length; continue; }
+    }
+    // PDF que parte a palavra depois da maiúscula ("P essoas", "S erviço"): só na FONTE, só consoante sozinha seguida de minúscula
+    //   (a letra vem depois de espaço e de palavra que não é número, e a continuação tem 4 letras minúsculas ou mais: "8 °C na" não junta)
+    if (pdf && ult === 'l' && ch === ' ' && cur.length === 1 && /[B-DF-HJ-NP-TV-Z]/.test(s.charAt(i - 1)) && (i < 2 || /\s/.test(s.charAt(i - 2))) &&
+      !(toks.length && /[0-9]/.test(toks[toks.length - 1])) && /^[a-zà-ÿ]{4}/.test(s.slice(i + 1, i + 5))) continue;
+    fechar();
+    // sinal de número negativo, colado ou separado por espaço ou quebra de linha ("-20 °C", "temperatura: -\n10 °C"), nos dois lados
+    var neg = (ch === '-' || ch === '−') && (i === 0 || /[\s(\[;:]/.test(s.charAt(i - 1))) ? /^[ \t]*(\r?\n)?[ \t]*(?=[0-9])/.exec(s.slice(i + 1, i + 12)) : null;
+    if (neg) { cur = '-'; ci = i; cf = i + 1; ult = 's'; i += neg[0].length; continue; }
+    if ('%≥≤<>±'.indexOf(ch) >= 0) { toks.push(ch); ini.push(i); fim.push(i + 1); }
   }
+  fechar();
+  return Lic_tokensMontar_(toks, ini, fim);
+}
+function Lic_tokensMontar_(toks, ini, fim) {
+  var pos = [], n = 0;
+  for (var k = 0; k < toks.length; k++) { pos.push(n); n += toks[k].length + 1; }
+  var s = toks.join(' ');
+  return { toks: toks, ini: ini, fim: fim, pos: pos, s: s, S: ' ' + s + ' ' };
+}
+/** A mesma lista sem a numeração de cláusula ou alínea que abre a linha ("1.3.1.", "12.", "a)"): as posições continuam as do original. */
+function Lic_tokensSemNumeracao_(ft, texto) {
+  var toks = [], ini = [], fim = [];
+  for (var k = 0; k < ft.toks.length; k++) {
+    var w = ft.toks[k], depois = texto.charAt(ft.fim[k]);
+    var numero = (/^\d{1,2}(#\d{1,2}){0,5}$/.test(w) && /[.)]/.test(depois)) || (/^[a-z]$/.test(w) && depois === ')');
+    var antes = (ft.ini[k] <= 40 ? '\n' : '') + texto.slice(Math.max(0, ft.ini[k] - 40), ft.ini[k]);
+    if (numero && /\n[ \t]*$/.test(antes)) continue;
+    toks.push(w); ini.push(ft.ini[k]); fim.push(ft.fim[k]);
+  }
+  return Lic_tokensMontar_(toks, ini, fim);
+}
+/** Palavras da fonte (vistas: 'cheio' = texto inteiro; 'pedido' = o que foi à IA; 'pedidoSemNum' = sem a numeração da linha). */
+function Lic_tokFonte_(f, visao) {
+  var k = '_tok_' + visao;
+  if (!f[k]) {
+    var t = visao === 'cheio' ? f.texto : Lic_textoPedido_(f);
+    var v = visao === 'pedidoSemNum' ? Lic_tokensSemNumeracao_(Lic_tokFonte_(f, 'pedido'), t) : visao === 'pedido' && t === f.texto ? Lic_tokFonte_(f, 'cheio') : Lic_tokens_(t, true);
+    Object.defineProperty(f, k, { value: v, enumerable: false, configurable: true });
+  }
+  return f[k];
+}
+function Lic_textoPedido_(f) { return typeof f.textoPrompt === 'string' ? f.textoPrompt : f.texto; }
+/** Índice da palavra que começa na posição p de s. */
+function Lic_tokIndice_(ft, p) {
+  var lo = 0, hi = ft.pos.length - 1;
+  while (lo <= hi) { var m = (lo + hi) >> 1; if (ft.pos[m] === p) return m; if (ft.pos[m] < p) lo = m + 1; else hi = m - 1; }
   return -1;
 }
-/** Pedaços (já compactos) em ordem na mesma fonte, cada um a no máximo "lacuna" caracteres do anterior (e, se "pagina", com quebra de página no meio). */
-function Lic_acharPedacos_(f, pcs, lacuna, pagina) {
-  var fc = Lic_compactoFonte_(f), passos = 0;
-  function seguir(k, desde, fimAnterior) {
-    if (k === pcs.length) return true;
-    var p = desde;
-    while (passos++ < 400 && (p = Lic_acharEm_(f, pcs[k], p)) >= 0) {
-      if (k > 0) {
-        if (fc.m[p] - fimAnterior > lacuna) return false;
-        if (pagina && !/\[p[aá]gina \d+\]/i.test(f.texto.slice(fimAnterior, fc.m[p]))) { p++; continue; }
-      }
-      if (seguir(k + 1, p + pcs[k].length, fc.m[p + pcs[k].length - 1] + 1)) return true;
-      p++;
-    }
-    return false;
-  }
-  return seguir(0, 0, 0);
+/** Primeira ocorrência das palavras a partir da palavra "desde": índice da primeira palavra, ou -1. */
+function Lic_acharTok_(ft, pal, desde) {
+  if (!pal.length) return -1;
+  desde = desde || 0;
+  if (desde >= ft.toks.length) return -1;
+  var q = ft.S.indexOf(' ' + pal.join(' ') + ' ', desde > 0 ? ft.pos[desde] : 0);
+  return q < 0 ? -1 : Lic_tokIndice_(ft, q);
 }
-function Lic_palavrasCompactas_(t) { return Lic_s_(t).split(/\s+/).map(function (w) { return Lic_compacto_(w).c; }).filter(Boolean); }
-/** Quantas palavras do começo (no mínimo 1) estão seguidas na fonte (busca binária: se o começo com k palavras está, com k-1 também). */
-function Lic_prefixoNaFonte_(f, pal) {
-  var lo = 0, hi = pal.length;
-  while (lo < hi) { var mid = Math.ceil((lo + hi) / 2); if (Lic_acharEm_(f, pal.slice(0, mid).join(''), 0) >= 0) lo = mid; else hi = mid - 1; }
-  return lo;
-}
-/** Um trecho sem reticências: literal, ou com a quebra de página no meio (antes dela, 3 palavras ou mais; depois, 2 ou mais). */
-function Lic_trechoSimples_(f, t) {
-  var pal = Lic_palavrasCompactas_(t);
-  if (!pal.length) return '';
-  if (Lic_acharEm_(f, pal.join(''), 0) >= 0) return 'literal';
-  if (pal.length < 6) return '';
-  var k = Lic_prefixoNaFonte_(f, pal);
-  for (var j = Math.min(k, pal.length - 2); j >= 3 && j >= k - 4; j--) {
-    if (Lic_acharPedacos_(f, [pal.slice(0, j).join(''), pal.slice(j).join('')], LIC_TRECHO_PAGINA_MAX, true)) return 'pagina';
+/** O casamento [a, b] começa logo depois de uma negação da fonte (na mesma frase) ou corta um "...: não"? Devolve a negação ou ''. */
+function Lic_cortaNegacao_(ft, texto, a, b) {
+  for (var k = a - 1; k >= 0 && k >= a - 2; k--) {
+    if (/[.;!?]/.test(texto.slice(ft.fim[k], ft.ini[a]))) break;
+    if (LIC_NEGACAO.test(ft.toks[k])) return ft.toks[k];
   }
+  var d = b + 1;
+  if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d]) && /:/.test(texto.slice(ft.fim[b], ft.ini[d]))) return ft.toks[d];
   return '';
 }
-/**
- * Procura o trecho citado na fonte. Devolve { ok, trecho (o que se grava como prova), ajuste, perto, motivo }:
- * ajuste '' (literal, com a normalização do PDF), 'reticencias', 'pagina', 'rotulo' ou 'numeracao'; perto = o pedaço da fonte mais parecido,
- * para a IA corrigir na nova tentativa; motivo = regra de forma que a IA quebrou (reticências com pedaço curto...).
- */
-function Lic_trechoNaFonte_(tr, f) {
-  tr = Lic_s_(tr);
-  var r = Lic_trechoNaVisao_(tr, f);
-  if (r.ok || r.motivo) return r;
-  // sem a numeração de cláusula e alínea, dos dois lados (grava o trecho como a IA escreveu, ou o resto sem o rótulo)
-  var semNum = Lic_tirarNumeracao_(tr);
-  var r2 = Lic_palavrasCompactas_(semNum).length >= 3 ? Lic_trechoNaVisao_(semNum, Lic_visaoSemNumeracao_(f)) : { ok: false };
-  if (r2.ok) return { ok: true, trecho: r2.ajuste === 'rotulo' ? r2.trecho : tr, ajuste: 'numeracao' };
-  var pedacos = tr.split(LIC_RETICENCIAS).map(function (x) { return x.trim(); }).filter(function (x) { return Lic_palavrasCompactas_(x).length; });
-  return { ok: false, perto: Lic_trechoPerto_(f, pedacos[0] || tr) };
-}
-function Lic_trechoNaVisao_(tr, f) {
-  var pedacos = tr.split(LIC_RETICENCIAS).map(function (x) { return x.trim(); }).filter(function (x) { return Lic_palavrasCompactas_(x).length; });
-  if (pedacos.length > 1) {
-    if (pedacos.length > 4) return { ok: false, motivo: 'com reticências, no máximo 4 pedaços' };
-    if (pedacos.some(function (x) { return Lic_palavrasCompactas_(x).length < 3; })) return { ok: false, motivo: 'com reticências, cada pedaço precisa de pelo menos 3 palavras seguidas da fonte' };
-    if (Lic_acharPedacos_(f, pedacos.map(function (x) { return Lic_palavrasCompactas_(x).join(''); }), LIC_TRECHO_LACUNA_MAX, false)) return { ok: true, trecho: tr, ajuste: 'reticencias' };
-    return { ok: false };
+/** Literal com a guarda da negação: { a, b } da primeira ocorrência boa, { neg } se todas cortam negação, ou null. */
+function Lic_casarLiteral_(ft, texto, pal, desde) {
+  var a = desde || 0, neg = '';
+  for (var n = 0; n < 50; n++) {
+    a = Lic_acharTok_(ft, pal, a);
+    if (a < 0) break;
+    var b = a + pal.length - 1, c = Lic_cortaNegacao_(ft, texto, a, b);
+    if (!c) return { a: a, b: b };
+    neg = c; a++;
   }
-  var so = pedacos[0] || tr, r = Lic_trechoSimples_(f, so);
-  if (r) return { ok: true, trecho: tr, ajuste: r === 'pagina' ? 'pagina' : '' };
-  // rótulo na frente: tira até 6 palavras de numeração ("LOTE 02 ITEM 01 UND", "4.23 n)") e confere o resto (5 palavras ou mais)
-  var pal = so.split(/\s+/), i = 0;
-  i = Lic_rotuloNaFrente_(pal);
-  if (i > 0 && Lic_palavrasCompactas_(pal.slice(i).join(' ')).length >= 5) {
-    var resto = pal.slice(i).join(' ');
-    if (Lic_trechoSimples_(f, resto)) return { ok: true, trecho: resto, ajuste: 'rotulo' };
+  return neg ? { neg: neg } : null;
+}
+/** O texto da fonte entre a palavra a e a palavra b (com o parêntese ou a aspa que fecha logo depois), em uma linha. */
+function Lic_recorte_(ft, texto, a, b) {
+  var fim = ft.fim[b];
+  while (fim < texto.length && /[)\]"”’]/.test(texto.charAt(fim))) fim++;
+  return texto.slice(ft.ini[a], fim).replace(/\s+/g, ' ').trim();
+}
+/** Reticências: pedaços em ordem, na mesma frase (sem ponto final, linha em branco, página nem negação no que foi pulado). */
+function Lic_casarReticencias_(ft, texto, pcs) {
+  var a = 0;
+  for (var n = 0; n < 50; n++) {
+    var r = Lic_casarLiteral_(ft, texto, pcs[0], a);
+    if (!r || r.neg) return null;
+    var partes = [Lic_recorte_(ft, texto, r.a, r.b)], fimAnt = r.b, ok = true;
+    for (var k = 1; k < pcs.length && ok; k++) {
+      var x = Lic_acharTok_(ft, pcs[k], fimAnt + 1);
+      if (x < 0) { ok = false; break; }
+      var pulado = texto.slice(ft.fim[fimAnt], ft.ini[x]);
+      var palavrasPuladas = ft.toks.slice(fimAnt + 1, x);
+      if (pulado.length > LIC_RETIC_LACUNA_MAX || /[.!?](\s|$)|\n[ \t]*\n/.test(pulado) || LIC_PAGINA_MARCA.test(pulado) || palavrasPuladas.some(function (w) { return LIC_NEGACAO.test(w); })) { ok = false; break; }
+      partes.push(Lic_recorte_(ft, texto, x, x + pcs[k].length - 1)); fimAnt = x + pcs[k].length - 1;
+    }
+    if (ok) return partes.join(' (...) ');
+    a = r.a + 1;
+  }
+  return null;
+}
+/** Rodapé ou cabeçalho: cada linha é número de página ou se repete no arquivo (cabeçalho e rodapé repetidos). */
+function Lic_soRepetido_(t, cheio) {
+  // linha só de pontuação (a vírgula que fecha o pedaço de antes) não conta
+  return Lic_s_(t).split('\n').map(function (x) { return x.trim(); }).filter(function (x) { return Lic_tokens_(x).toks.length; }).every(function (x) {
+    if (/^(\d{1,4}|p[aá]gina \d+( de \d+)?)$/i.test(x)) return true;
+    var p = cheio.indexOf(x);
+    return x.length >= 4 && p >= 0 && cheio.indexOf(x, p + x.length) >= 0;
+  });
+}
+/** Quebra de página no meio da frase: o pedaço de antes termina na página, depois só rodapé, o marcador e o cabeçalho repetido. */
+function Lic_casarPagina_(ft, texto, pal, cheio) {
+  var n = pal.length;
+  if (n < 2 * LIC_RELAXADO_MIN) return null;
+  var lo = 0, hi = n;
+  while (lo < hi) { var mid = Math.ceil((lo + hi) / 2); if (Lic_acharTok_(ft, pal.slice(0, mid), 0) >= 0) lo = mid; else hi = mid - 1; }
+  for (var j = Math.min(lo, n - LIC_RELAXADO_MIN); j >= LIC_RELAXADO_MIN && j >= lo - 3; j--) {
+    var A = pal.slice(0, j), B = pal.slice(j), a = 0;
+    for (var t = 0; t < 20; t++) {
+      var r = Lic_casarLiteral_(ft, texto, A, a);
+      if (!r || r.neg) break;
+      a = r.a + 1;
+      var resto = texto.slice(ft.fim[r.b], ft.fim[r.b] + LIC_PAGINA_RODAPE_MAX + 20), m = LIC_PAGINA_MARCA.exec(resto);
+      if (!m || m.index > LIC_PAGINA_RODAPE_MAX || !Lic_soRepetido_(resto.slice(0, m.index), cheio)) continue;
+      var depois = ft.fim[r.b] + m.index + m[0].length, x = Lic_acharTok_(ft, B, r.b + 1);
+      if (x < 0 || ft.ini[x] - depois > LIC_PAGINA_CABECALHO_MAX || ft.ini[x] < depois || !Lic_soRepetido_(texto.slice(depois, ft.ini[x]), cheio)) continue;
+      return Lic_recorte_(ft, texto, r.a, r.b) + ' [quebra de página] ' + Lic_recorte_(ft, texto, x, x + B.length - 1);
+    }
+  }
+  return null;
+}
+/**
+ * Procura o trecho citado na fonte. Devolve { ok, trecho (o recorte DA FONTE que se grava), ajuste, perto, motivo }:
+ * ajuste '' (literal), 'numeracao', 'rotulo', 'reticencias' ou 'pagina'; motivo = regra que a IA quebrou (vai direto para ela).
+ * o.estrito (capacidade e trava): sem reticências nem quebra de página.
+ */
+function Lic_trechoNaFonte_(tr, f, o) {
+  o = o || {};
+  tr = Lic_s_(tr);
+  var cheio = f.texto, fc = Lic_tokFonte_(f, 'cheio');
+  var pedacos = tr.split(LIC_RETICENCIAS).filter(function (x) { return Lic_tokens_(x).toks.length; });
+  var pal = Lic_tokens_(pedacos.length === 1 ? pedacos[0] : tr).toks;
+  if (pedacos.length <= 1) {
+    var r = Lic_casarLiteral_(fc, cheio, pal, 0);
+    if (r && !r.neg) return { ok: true, trecho: Lic_recorte_(fc, cheio, r.a, r.b), ajuste: '' };
+    if (r && r.neg) return { ok: false, motivo: 'na fonte, o trecho vem logo depois de "' + r.neg + '" (ou corta um "' + r.neg + '" que vem em seguida), o que muda o sentido: copie a negação junto' };
+  }
+  // fora do literal: só no texto que a IA recebeu
+  var tp = Lic_textoPedido_(f), fp = Lic_tokFonte_(f, 'pedido'), fpn = Lic_tokFonte_(f, 'pedidoSemNum');
+  if (pedacos.length > 1) {
+    if (o.estrito) return { ok: false, motivo: 'reticências não valem em capacidade nem em trava: copie uma frase inteira, seguida, da fonte' };
+    if (pedacos.length > 4) return { ok: false, motivo: 'com reticências, no máximo 4 pedaços' };
+    var pcs = pedacos.map(function (x) { return Lic_tokens_(x).toks; });
+    if (pcs.some(function (x) { return x.length < LIC_RELAXADO_MIN; })) return { ok: false, motivo: 'com reticências, cada pedaço precisa de pelo menos ' + LIC_RELAXADO_MIN + ' palavras seguidas da fonte' };
+    if (pcs.some(function (x) { return LIC_NEGACAO.test(x[0]) || LIC_NEGACAO.test(x[x.length - 1]); })) return { ok: false, motivo: 'com reticências, nenhum pedaço pode começar ou terminar em negação ("não", "sem", "exceto"...): copie a frase inteira' };
+    var rt = Lic_casarReticencias_(fp, tp, pcs);
+    if (rt) return { ok: true, trecho: rt, ajuste: 'reticencias' };
+    return { ok: false, motivo: 'com reticências, os pedaços têm de estar na mesma frase da fonte, em ordem, a até ' + LIC_RETIC_LACUNA_MAX + ' caracteres um do outro, sem ponto final nem negação no meio' };
+  }
+  var rn = Lic_casarLiteral_(fpn, tp, pal, 0);
+  if (rn && !rn.neg) return { ok: true, trecho: Lic_recorte_(fpn, tp, rn.a, rn.b), ajuste: 'numeracao' };
+  if (!o.estrito) { var pg = Lic_casarPagina_(fp, tp, pal, cheio); if (pg) return { ok: true, trecho: pg, ajuste: 'pagina' }; }
+  var w = tr.split(/\s+/), i = Lic_rotuloNaFrente_(w);
+  if (i > 0) {
+    var resto = Lic_tokens_(w.slice(i).join(' ')).toks;
+    if (resto.length >= LIC_RELAXADO_MIN) {
+      var rr = Lic_casarLiteral_(fp, tp, resto, 0), vv = fp;
+      if (!rr || rr.neg) { rr = Lic_casarLiteral_(fpn, tp, resto, 0); vv = fpn; }
+      if (rr && !rr.neg) {
+        // o número do rótulo da IA tem de ser o da fonte, quando a fonte tem número na mesma linha ("Item 99" onde está "Item 12" recusa)
+        // o número do lote fica no cabeçalho da tabela, não na linha do item: não entra na conferência
+        var numsIA = Lic_tokens_(w.slice(0, i).join(' ')).toks.filter(function (x, k, l) { return /[0-9]/.test(x) && l[k - 1] !== 'lote'; });
+        var numsF = Lic_antesNaLinha_(fp, tp, vv.ini[rr.a]).filter(function (x) { return /[0-9]/.test(x); });
+        // o último número do rótulo da IA (o que vem colado à frase) tem de ser o último da fonte na linha
+        var ultIA = numsIA[numsIA.length - 1], ultF = numsF[numsF.length - 1];
+        if (ultIA && ultF && ultIA.replace(/^0+(?=\d)/, '') !== ultF.replace(/^0+(?=\d)/, '')) return { ok: false, motivo: 'o número do rótulo ("' + ultIA.replace(/#/g, '.') + '") não é o da fonte ("' + ultF.replace(/#/g, '.') + '"): copie o rótulo como está na fonte ou tire-o' };
+        return { ok: true, trecho: Lic_recorte_(vv, tp, rr.a, rr.b), ajuste: 'rotulo' };
+      }
+    }
   }
   return { ok: false };
 }
+/** Palavras da fonte antes da posição "ini", na mesma linha (até 6): o rótulo que a fonte tem ali. */
+function Lic_antesNaLinha_(ft, texto, ini) {
+  var lo = 0, hi = ft.ini.length;
+  while (lo < hi) { var m = (lo + hi) >> 1; if (ft.ini[m] < ini) lo = m + 1; else hi = m; }
+  var out = [];
+  for (var k = lo - 1; k >= 0 && out.length < 6 && !/\n/.test(texto.slice(ft.fim[k], ini)); k--) out.unshift(ft.toks[k]);
+  return out;
+}
 /** O pedaço da fonte que mais se parece com o trecho (a partir do maior começo achado, ou da primeira janela de 4 palavras achada). */
 function Lic_trechoPerto_(f, tr) {
-  var pal = Lic_palavrasCompactas_(tr), fc = Lic_compactoFonte_(f), p = -1;
-  var k = Lic_prefixoNaFonte_(f, pal);
-  if (k >= 3) p = Lic_acharEm_(f, pal.slice(0, k).join(''), 0);
-  for (var i = 1; p < 0 && i + 4 <= pal.length; i++) p = Lic_acharEm_(f, pal.slice(i, i + 4).join(''), 0);
+  var fc = Lic_tokFonte_(f, 'cheio'), pal = Lic_tokens_(tr).toks, p = -1;
+  var lo = 0, hi = pal.length;
+  while (lo < hi) { var mid = Math.ceil((lo + hi) / 2); if (Lic_acharTok_(fc, pal.slice(0, mid), 0) >= 0) lo = mid; else hi = mid - 1; }
+  if (lo >= 3) p = Lic_acharTok_(fc, pal.slice(0, lo), 0);
+  for (var i = 1; p < 0 && i + 4 <= pal.length && i < 40; i++) p = Lic_acharTok_(fc, pal.slice(i, i + 4), 0);
   if (p < 0) return '';
-  var ini = fc.m[p];
-  return f.texto.slice(ini, ini + 220).replace(/\s+/g, ' ').trim().replace(/"/g, '\'') + '…';
+  return f.texto.slice(fc.ini[p], fc.ini[p] + 220).replace(/\s+/g, ' ').trim().replace(/"/g, '\'') + '…';
 }
-/** O trecho inteiro está em outra fonte do edital (a IA errou a ref)? Devolve a ref certa ou ''. */
+/** O trecho inteiro (literal) está em outra fonte do edital (a IA errou a ref)? Devolve a ref certa ou ''. */
 function Lic_trechoEmOutraFonte_(tr, ref, ctx) {
+  var pal = Lic_tokens_(tr).toks;
   var ks = Object.keys(ctx.fontes).filter(function (k) { return k !== ref && !ctx.fontes[k].regra && !ctx.fontes[k].sistema && /^(A\d+|ITEM:|CAMPO:)/.test(k); });
-  for (var i = 0; i < ks.length; i++) { var x = Lic_trechoNaFonte_(tr, ctx.fontes[ks[i]]); if (x.ok) return ks[i]; }
+  for (var i = 0; i < ks.length; i++) { var f = ctx.fontes[ks[i]], r = Lic_casarLiteral_(Lic_tokFonte_(f, 'cheio'), f.texto, pal, 0); if (r && !r.neg) return ks[i]; }
   return '';
 }
 
@@ -549,7 +663,7 @@ function Lic_selecionarTextos_(fontes, orcamento) {
     var f = fontes[ref], pri = Lic_prioridadeArquivo_(f);
     f._paginas = Lic_paginas_(f.texto).map(function (p, pi) {
       var n = Lic_semAcento_(p).replace(/[^a-z0-9]+/g, ' ');
-      var chave = Lic_compacto_(p.replace(/\[p[aá]gina \d+\]/gi, '').replace(/p[aá]gina \d+ de \d+/gi, '')).c;
+      var chave = Lic_tokens_(p.replace(/\[p[aá]gina \d+\]/gi, '').replace(/p[aá]gina \d+ de \d+/gi, '')).s;
       var temas = 0;
       LIC_PAGINA_TEMAS.forEach(function (re) { var m = n.match(re); if (m) temas += 3 + Math.min(3, m.length - 1); });
       var x = { ref: ref, ai: ai, pi: pi, texto: p, nota: pri * 10 + Math.min(18, temas) - (LIC_PAGINA_MODELO.test(n) ? 12 : 0), enviada: false, repetida: false };
@@ -622,6 +736,7 @@ function Lic_conferirSemFatoSolto_(onde, texto, ctx, problemas) {
  */
 function Lic_verificarAnalise_(j, ctx) {
   var problemas = [], pesos = ctx.pesos || LIC_NOTA_PADRAO;
+  ctx._dicas = 0;
   if (!j || typeof j !== 'object') return { ok: false, problemas: ['a resposta não é o JSON pedido'], saida: null };
   var saida = { resumo: '', capacidade: { pontos: 0, itens: [], justificativa: '' }, documentacao: { pontos: 0, exigencias: [], justificativa: '' }, riscos: [], travas: [], afirmacoes: [] };
   var resumo = Lic_conferirTexto_('resumo', j.resumo, ctx, problemas, true);
@@ -695,8 +810,8 @@ function Lic_verificarAnalise_(j, ctx) {
     var onde = 'trava ' + (k + 1), cod = Lic_up_(x.codigo);
     if (!LIC_TRAVAS[cod]) { problemas.push(onde + ': código fora da lista (' + (Lic_s_(x.codigo) || 'vazio') + ')'); return; }
     // a trava se prova pelo edital (fonte); a regra da empresa vai junto em fonteRegra (ex.: FORA_DO_CATALOGO com REGRA:catalogo)
-    var foT = Lic_conferirFonte_(onde, x.fonte, ctx, problemas, { tipo: 'FATO' });
-    var foR = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, problemas, { tipo: 'TRAVA' }) : null;
+    var foT = Lic_conferirFonte_(onde, x.fonte, ctx, problemas, { tipo: 'FATO', estrito: true });
+    var foR = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, problemas, { tipo: 'TRAVA', estrito: true }) : null;
     if (foR && !foR.regra) { problemas.push(onde + ', fonteRegra: use uma REGRA:... (o trecho do edital vai em fonte)'); foR = null; }
     saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600), fonte: foT, fonteRegra: foR });
   });

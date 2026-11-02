@@ -153,8 +153,8 @@ test('análise com a IA: nota pelo código (prazo com Finados, localização, va
   assert.equal(r.resultado.analisada, true);
   // revisão de 02/11/2026: raciocínio limitado, JSON puro e prazo para não abrir chamada nova perto do limite do servidor
   const op1 = a.ia.opcoes[0];
-  assert.deepEqual([op1.tokens, op1.temperatura, op1.raciocinio, op1.json], [16384, 0.1, 4096, true]);
-  assert.equal(op1.prazoAte, Date.parse('2026-11-01T13:00:00-03:00') + 170000);
+  assert.deepEqual([op1.tokens, op1.temperatura, op1.raciocinio, op1.json], [20480, 0.1, 4096, true]);
+  assert.equal(op1.prazoAte, Date.parse('2026-11-01T13:00:00-03:00') + 140000);
   const an = a.analises()[0];
   assert.equal(an.SITUACAO, 'CONCLUIDA');
   assert.equal(an.VERSAO, 1);

@@ -635,9 +635,13 @@ function ComEsp_registrar_(eu, t, origem, saida, verificacao) {
 // 02/11/2026: a própria Metrolabs aparece como fabricante (equipamentos que ela fabrica) e não é marca de terceiro; sem isso
 //   o verificador recusava toda resposta que citasse a empresa (Licitações usa esta mesma lista)
 var COM_ESP_PROPRIA_MARCA = /(?:^| )metro ?labs(?: |$)/;
+// 02/11/2026 (revisão de Licitações): o cadastro tem "fabricante" preenchido com palavra comum ("nova", "teste", "genérico",
+//   "não consta"); como marca, recusava frase honesta ("nova data", "testes de segurança"). Sai só quando o nome INTEIRO é a
+//   palavra comum ("Nova Medical" continua marca). A mesma lista vale em Licitações (LIC_FABRICANTE_COMUM).
+var COM_ESP_FABRICANTE_COMUM = /^(nova|novo|teste|testes|generic[oa]|nao consta|nao informado|nao identificado|sem marca|diversos|diversas|outros|outras|varios|nacional|importado|propri[oa]|padrao|digital|analogic[oa]|universal|original|manual|automatic[oa]|eletronic[oa]|n a|nd|sm|xxx)$/;
 function ComEsp_fabricantes_() {
   var s = {};
-  var add = function (t) { var n = ComEsp_norm_(t); if (n.length >= 3 && !COM_ESP_PROPRIA_MARCA.test(n)) s[n] = 1; };
+  var add = function (t) { var n = ComEsp_norm_(t); if (n.length >= 3 && !COM_ESP_PROPRIA_MARCA.test(n) && !COM_ESP_FABRICANTE_COMUM.test(n)) s[n] = 1; };
   try { Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { add(e.FABRICANTE); }); } catch (e) {}
   try { Com_ler_(COM_ABAS.PRECOS).forEach(function (r) { add(r.MARCA); }); } catch (e) {}
   return Object.keys(s);
