@@ -81,7 +81,7 @@ var LIC_LEIT_PALAVRAS_MAX = 60;
 var LIC_LEIT_UTIL_MIN = 5;
 var LIC_LEIT_CABECALHO_LINHAS = 3;     // linhas do começo e do fim da página que podem ser cabeçalho ou rodapé repetidos
 var LIC_LEIT_VAZIO_MAX = 40;           // bloco com mais palavras que isto (contando tudo) nunca é dado como vazio             // palavras de texto útil (sem cabeçalho e rodapé repetidos) para a página contar como lida
-var LIC_LEIT_FRASE_MAX = 600;           // a rede, no item não impeditivo, olha a frase do trecho e a seguinte (até 600 caracteres cada)
+var LIC_LEIT_FRASE_MAX = 3000;           // a rede, no item não impeditivo, olha a frase do trecho e a seguinte (até 600 caracteres cada)
 var LIC_LEIT_FUNCAO_ROTINA = 'Licitacoes_rotinaLeitura';
 var LIC_LEIT_TEMAS = {
   HAB_JURIDICA: 'Habilitação jurídica',
@@ -593,6 +593,32 @@ function LicLeit_sentidoDiferente_(texto, trecho) {
   }
   return '';
 }
+/**
+ * Fim da cláusula do trecho com os SUBITENS FILHOS: acha a numeração da cláusula (na linha do trecho ou na mais perto acima, como
+ * "8.3." ou "8.3.1.") e segue as linhas de baixo enquanto forem continuação, subitem dela ("8.3.1", "8.3.2.4") ou alínea (a), b),
+ * I -); para na cláusula irmã ou acima ("8.4", "9."). No máximo LIC_LEIT_CLAUSULA_MAX caracteres depois do trecho.
+ */
+var LIC_LEIT_CLAUSULA_MAX = 3000;
+var LIC_LEIT_NUMERACAO = /^[ \t]*(?:(\d{1,3}(?:\.\d{1,3})*)[.)\-–]?|[a-z]\)|[IVX]{1,4}\s*[-–)])\s/;
+function LicLeit_fimDaClausula_(t, pos, fimTrecho) {
+  var base = '', p = t.lastIndexOf('\n', pos - 1) + 1;
+  for (var k = 0; k < 20; k++) {
+    var m = LIC_LEIT_NUMERACAO.exec(t.slice(p, p + 24));
+    if (m && m[1]) { base = m[1]; break; }
+    if (p <= 0 || /^\[p[aá]gina \d+\]/.test(t.slice(p, p + 14))) break;
+    p = t.lastIndexOf('\n', p - 2) + 1;
+  }
+  if (!base) return fimTrecho;
+  var fim = fimTrecho, q = t.indexOf('\n', fimTrecho), limite = Math.min(t.length, fimTrecho + LIC_LEIT_CLAUSULA_MAX);
+  while (q >= 0 && q < limite) {
+    var linha = t.slice(q + 1, q + 25), m2 = LIC_LEIT_NUMERACAO.exec(linha);
+    if (m2 && m2[1] && m2[1].indexOf(base + '.') !== 0) break;
+    var nq = t.indexOf('\n', q + 1);
+    fim = nq < 0 ? t.length : nq;
+    q = nq;
+  }
+  return Math.min(fim, limite);
+}
 /** Exceções que a rede da nota não pega e que costumam vir na mesma frase ("é obrigatória, podendo ser substituída por declaração"). */
 var LIC_LEIT_EXCECAO_EXTRA = /(?:^| )(podendo|substitui\w*|substituid\w*|desde que|caso|quando|ou declaracao|facultad\w*)(?= |$)/;
 /**
@@ -615,6 +641,8 @@ function LicLeit_negacaoPerto_(a, fo, pos, impeditivo) {
     var resto = t.slice(fim + 1, fim + 1 + LIC_LEIT_FRASE_MAX);
     if (!/^\s*\n\s*(\d{1,3}(\.\d{1,3})*[.)]|[a-z]\)|[IVX]{1,4}\s*[-–)])/.test(resto) && !/^\s*\n\s*\n/.test(resto)) { var q2 = resto.search(/[.!?;](\s|$)/); fim = fim + 1 + (q2 < 0 ? resto.length : q2 + 1); }
   }
+  // os subitens filhos da cláusula do trecho ("8.3.1. Fica dispensada..." sob "8.3. ... é obrigatória") contam como perto
+  fim = Math.max(fim, LicLeit_fimDaClausula_(t, pos, fimTrecho));
   var pedaco = t.slice(ini, pos) + t.slice(pos, fimTrecho).replace(/[^\n]/g, ' ') + t.slice(fimTrecho, fim);
   var z = { ref: fo.ref, trecho: fo.trecho };
   Object.defineProperty(z, '_onde', { value: { texto: pedaco.replace(/\n[ \t]*\n/g, '\n'), ini: pos - ini, fim: fimTrecho - ini }, enumerable: false });
@@ -634,8 +662,9 @@ function LicLeit_montarItem_(tema, fo, a, b, pos) {
   var imp = Lic_impeditivo_(fr.frase), alerta = LicLeit_negacaoPerto_(a, fo, pos, imp);
   // tema conferido por palavras mínimas: sem elas, "tema a confirmar"
   var temaIA = tema, conf = LicLeit_temaConfere_(tema, fr.frase);
-  return { tema: conf ? tema : 'A_CONFIRMAR', temaIA: temaIA, trecho: fr.frase, citado: fr.citado, trechoIA: Lic_texto_(fo.trecho, 600), cortada: fr.cortada, ajuste: fo.ajuste || '', ref: a.ref,
-    arquivo: { id: a.id, nome: a.nome, titulo: a.titulo, sha256: a.sha256 }, pagina: on.pagina, rotulo: on.rotulo, linha: on.linha, bloco: b.ordem, alerta: alerta, tipo: alerta ? 'PENDENCIA' : 'EXIGENCIA' };
+  // frase cortada pelo limite da tela: pendência "frase longa" (o resto pode ter a exceção)
+  return { tema: conf ? tema : 'A_CONFIRMAR', temaIA: temaIA, trecho: fr.frase, citado: fr.citado, trechoIA: Lic_texto_(fo.trecho, 600), cortada: fr.cortada, longa: !!fr.cortada, ajuste: fo.ajuste || '', ref: a.ref,
+    arquivo: { id: a.id, nome: a.nome, titulo: a.titulo, sha256: a.sha256 }, pagina: on.pagina, rotulo: on.rotulo, linha: on.linha, bloco: b.ordem, alerta: alerta, tipo: alerta || fr.cortada ? 'PENDENCIA' : 'EXIGENCIA' };
 }
 /**
  * A FRASE INTEIRA da fonte em volta do trecho citado (o que se mostra e se guarda como prova): do começo da oração ou da frase
@@ -678,22 +707,22 @@ function LicLeit_fraseInteira_(t, pos, trecho) {
 var LIC_LEIT_FRASE_PROVA = 600;
 /** Palavras mínimas de cada tema (no trecho inteiro, sem acento): sem nenhuma, o item fica "tema a confirmar". */
 var LIC_LEIT_TEMA_PALAVRAS = {
-  HAB_JURIDICA: /contrato social|ato constitutivo|estatuto|registro comercial|procuracao|habilitacao juridica|cnpj|inscricao|empresario|sociedade/,
-  HAB_FISCAL: /certida|regularidade|fgts|fiscal|debito|tribut|trabalhist|cndt|fazenda|sicaf|seguridade/,
-  HAB_ECONOMICA: /balanco|patrimoni|liquidez|capital|falencia|recuperacao judicial|economico|financeir|demonstracoes contabeis/,
-  QUALIFICACAO_TECNICA: /tecnic|crea|cft|conselho|registro|licenca|alvara|certificad|qualificacao|anvisa|vigilancia/,
-  ATESTADOS: /atestad|acervo|capacidade tecnica|certidao de acervo/,
-  EQUIPE_RT: /responsavel tecnic|engenheir|tecnic|equipe|profissiona|art |quadro|vinculo|pessoal/,
+  HAB_JURIDICA: /contrato social|ato constitutivo|estatuto social|registro comercial|procuracao|habilitacao juridica|cnpj|empresario individual|sociedade empresaria/,
+  HAB_FISCAL: /certidao negativa|certidao positiva|certidoes negativas|regularidade fiscal|regularidade trabalhista|regularidade perante|fgts|cndt|debitos|fazenda|sicaf|seguridade social|tributos/,
+  HAB_ECONOMICA: /balanco patrimonial|patrimonio liquido|liquidez|capital social|capital minimo|falencia|recuperacao judicial|economico financeir|demonstracoes contabeis/,
+  QUALIFICACAO_TECNICA: /qualificacao tecnica|capacidade tecnica|responsavel tecnico|acervo tecnico| cat |crea|cft|conselho regional|registro no conselho|licenca sanitaria|alvara sanitario|autorizacao de funcionamento/,
+  ATESTADOS: /atestad|acervo tecnico|capacidade tecnica| cat /,
+  EQUIPE_RT: /responsavel tecnico|tecnico responsavel|engenheir|equipe tecnica|equipe minima|profissional|profissionais|quadro permanente|vinculo| art /,
   VISITA_TECNICA: /visita|vistoria/,
   AMOSTRAS: /amostra|prototipo|prova de conceito|demonstracao/,
-  PRAZOS: /prazo|dias|dia |horas|hora |entrega|execucao|vigencia|cronograma|atendimento|validade|inicio/,
+  PRAZOS: /prazo|dias|horas|entrega|execucao|vigencia|cronograma|atendimento|validade/,
   GARANTIA: /garantia/,
-  PENALIDADES: /multa|penalidade|sanc|advertencia|impediment|inexecucao|inidone|suspensao/,
-  RBC_INMETRO: /rbc|acredita|17025|inmetro|rastreab|rastreav|calibra|metrolog/,
-  PAGAMENTO: /pagamento|pago|paga |nota fiscal|fatura|medicao|empenho|liquidacao/,
+  PENALIDADES: /multa|penalidade|sancao|sancoes|advertencia|impedimento de licitar|impedido de licitar|inexecucao|inidoneidade|suspensao temporaria/,
+  RBC_INMETRO: /acreditacao|acreditad| rbc |17025|inmetro|rastreab|rastreavel|rastreaveis/,
+  PAGAMENTO: /pagamento|nota fiscal|fatura|medicao|empenho|liquidacao da despesa/,
   SUBCONTRATACAO: /subcontrat/,
   CONSORCIO: /consorci/,
-  SRP_QUANTIDADES: /registro de precos|ata |quantidade|quantitativ|estimad|demanda/
+  SRP_QUANTIDADES: /registro de precos|ata de registro|quantidade|quantitativ|estimad/
 };
 function LicLeit_temaConfere_(tema, frase) {
   var re = LIC_LEIT_TEMA_PALAVRAS[tema];
@@ -1020,7 +1049,8 @@ function LicLeit_checklist_(itens) {
     if (!e.fontes.some(function (f) { return Lic_s_(f.arquivo && f.arquivo.sha256) === Lic_s_(fonte.arquivo && fonte.arquivo.sha256) && f.rotulo === fonte.rotulo && f.linha === fonte.linha && Lic_normTrecho_(f.trecho) === nt; })) e.fontes.push(fonte);
     if (e._trechos.indexOf(nt) < 0) e._trechos.push(nt);
     if (it.alerta && !e.alerta) e.alerta = it.alerta;
-    if (it.tipo === 'PENDENCIA' || it.alerta) e.tipo = 'PENDENCIA';
+    if (it.longa) e.longa = true;
+    if (it.tipo === 'PENDENCIA' || it.alerta || it.longa) e.tipo = 'PENDENCIA';
   });
   var out = [], n = 0;
   ordemTemas.forEach(function (t) { (porTema[t] || []).forEach(function (e) { n++; delete e._trechos; e.id = 'I' + n; e.fontes = e.fontes.slice(0, 12); out.push(e); }); });
@@ -1109,7 +1139,7 @@ function LicLeit_verificarConsolidacao_(j, ctx) {
   return problemas.length ? { ok: false, problemas: problemas } : { ok: true, problemas: [], saida: saida };
 }
 function LicLeit_promptConsolidar_(l, checklist, fontesCons, prazos, cobTexto, marca) {
-  var itens = checklist.map(function (e) { var f = e.fontes[0] || {}; return e.id + ' [' + e.tema + '] ' + (e.tipo === 'PENDENCIA' ? 'PENDÊNCIA (confirmar no edital: negação ou exceção perto do trecho, "' + e.alerta + '"): ' : '') + 'trecho do edital: "' + Lic_texto_(f.trecho, 300).split(marca).join('') + '" | ' + f.ref + ' ' + (f.rotulo || '') + (e.fontes.length > 1 ? ' (+' + (e.fontes.length - 1) + ' fonte(s))' : ''); }).join('\n');
+  var itens = checklist.map(function (e) { var f = e.fontes[0] || {}; return e.id + ' [' + e.tema + '] ' + (e.tipo === 'PENDENCIA' ? 'PENDÊNCIA (confirmar no edital: ' + (e.alerta ? 'negação ou exceção perto do trecho, "' + e.alerta + '"' : 'frase longa, leia o restante no edital') + '): ' : '') + 'trecho do edital: "' + Lic_texto_(f.trecho, 300).split(marca).join('') + '" | ' + f.ref + ' ' + (f.rotulo || '') + (e.fontes.length > 1 ? ' (+' + (e.fontes.length - 1) + ' fonte(s))' : ''); }).join('\n');
   var campos = Object.keys(fontesCons).filter(function (k) { return /^CAMPO:/.test(k); }).map(function (k) { return k + ': ' + fontesCons[k].texto.split(marca).join(''); }).join('\n');
   return [
     'Você é especialista em licitações públicas (Lei 14.133/2021 e Lei 13.303/2016), em engenharia clínica e em metrologia. Com base SOMENTE no que está abaixo (os itens que a leitura do edital inteiro extraiu e conferiu, os dados do PNCP e os prazos da agenda), escreva para a Diretoria da Metrolabs:',

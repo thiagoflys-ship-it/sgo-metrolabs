@@ -843,3 +843,29 @@ test('reconferência 4: sem rótulo; a frase inteira do edital é a prova (a exc
   assert.ok(it.trecho.length <= 602 && it.cortada && /^…/.test(it.trecho) && /…$/.test(it.trecho), it.trecho.length + ' ' + it.cortada);
   assert.equal(it.trecho.slice(it.citado[0], it.citado[1]), 'e o atestado de capacidade técnica será exigido de todas as licitantes');
 });
+
+// ---------------- reconferência de 6b92b2a (probe11) ----------------
+test('reconferência 5: exceção em subitem filho da cláusula vira pendência; frase cortada pelo limite = pendência "frase longa"; palavras mínimas do tema específicas', () => {
+  const T11 = '[página 1]\n8.3. A visita prévia é obrigatória para as licitantes deste certame.\n8.3.1. Fica dispensada da visita a empresa que apresentar declaração formal.\n8.4. A visita técnica será agendada pelo telefone da unidade.\n9. A garantia contratual será de 5% do valor do contrato.\n';
+  const a = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: T11, cortado: false }], blocoCar: 5000 });
+  let r = verBloco(a, 1, [{ tema: 'VISITA_TECNICA', trecho: 'A visita prévia é obrigatória para as licitantes deste certame' }, { tema: 'VISITA_TECNICA', trecho: 'A visita técnica será agendada pelo telefone da unidade' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual([r.itens[0].tipo, r.itens[0].alerta], ['PENDENCIA', 'dispensada'], 'o subitem 8.3.1 excetua o 8.3');
+  assert.deepEqual([r.itens[1].tipo, r.itens[1].alerta], ['EXIGENCIA', ''], 'a cláusula irmã 8.4 não herda a exceção do 8.3.1');
+  assert.equal(a.ctx.LicLeit_fimDaClausula_(T11, T11.indexOf('A visita prévia'), T11.indexOf('8.3.1.') - 1), T11.indexOf('\n8.4.'));
+  // frase longa cortada na tela: pendência, e a rede olha até o fim real da frase
+  const longa = '[página 1]\n9.1. A visita técnica ao local de execução dos serviços é obrigatória para todas as licitantes interessadas em participar do certame' + ', devendo ser realizada em dia útil e no horário de expediente da unidade' .repeat(9) + ', ficando dispensadas as empresas que já prestaram serviço à Secretaria.\n';
+  const b = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: longa, cortado: false }], blocoCar: 5000 });
+  r = verBloco(b, 1, [{ tema: 'VISITA_TECNICA', trecho: 'A visita técnica ao local de execução dos serviços é obrigatória para todas as licitantes interessadas em participar do certame' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual([r.itens[0].tipo, r.itens[0].longa, r.itens[0].alerta], ['PENDENCIA', true, 'dispensadas']);
+  const h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(b.ctx.LicLeit_checklist_(r.itens)) });
+  assert.match(h, /Frase longa: a tela mostra até 600 caracteres; leia o restante no edital\./);
+  // palavras mínimas: "técnica", "calibração" e "registro" soltos não confirmam o tema
+  const T3 = '[página 1]\n8.4. A multa por atraso na assistência técnica será de 2% do valor mensal.\n8.5. O atestado deverá comprovar serviços de calibração de autoclaves.\n8.6. A contratada manterá registro dos chamados técnicos no sistema da unidade.\n8.7. A licitante comprovará qualificação técnica por certidão de acervo técnico.\n';
+  const c = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: T3, cortado: false }], blocoCar: 5000 });
+  r = verBloco(c, 1, [{ tema: 'QUALIFICACAO_TECNICA', trecho: 'A multa por atraso na assistência técnica será de 2% do valor mensal' }, { tema: 'RBC_INMETRO', trecho: 'O atestado deverá comprovar serviços de calibração de autoclaves' },
+    { tema: 'QUALIFICACAO_TECNICA', trecho: 'A contratada manterá registro dos chamados técnicos no sistema da unidade' }, { tema: 'QUALIFICACAO_TECNICA', trecho: 'A licitante comprovará qualificação técnica por certidão de acervo técnico' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual(r.itens.map((i) => i.tema), ['A_CONFIRMAR', 'A_CONFIRMAR', 'A_CONFIRMAR', 'QUALIFICACAO_TECNICA']);
+});
