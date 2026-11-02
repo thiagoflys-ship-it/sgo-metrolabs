@@ -120,7 +120,7 @@ function SGO_ajudaTelas_Licitacoes_() {
         { situacao: "Aparece \"análise por IA indisponível: falta a chave\"", oQueFazer: "A chave da IA (GEMINI_API_KEY) não está cadastrada. Peça ao Administrador para cadastrar em Administração > Chaves e senhas e depois toque em \"Analisar agora\". Os arquivos continuam disponíveis." },
         { situacao: "A aba Arquivos diz que a leitura falhou (HTTP 503)", oQueFazer: "O PNCP de arquivos estava fora do ar. O servidor tenta de novo sozinho na hora indicada; enquanto isso, use \"Ver no PNCP\". Nada foi apagado." },
         { situacao: "Um arquivo aparece como \"Texto não extraído\"", oQueFazer: "Leia o arquivo à mão (botão Abrir): é imagem escaneada, RAR ou outro formato que o SGO+ não lê. A análise por IA não usa esse arquivo e diz isso nas pendências." },
-        { situacao: "A última análise foi \"recusada pelo verificador\"", oQueFazer: "A resposta da IA citou trecho que não está no edital ou faltou fonte. A nota anterior continua valendo; toque em \"Refazer análise\" com o motivo." }
+        { situacao: "A última análise foi \"recusada pelo verificador\"", oQueFazer: "Leia a faixa: ela diz o que faltou (em geral, os arquivos do edital ainda não chegaram). A nota anterior continua valendo. Depois que os arquivos chegarem (aba Arquivos), toque em \"Refazer análise\" com o motivo. O detalhe técnico e as respostas da IA ficam em \"Ver o motivo técnico\" e \"Ver respostas da IA\"." }
       ],
       quemPode: quem,
       perguntas: [

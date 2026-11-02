@@ -586,7 +586,8 @@
     if (a.erro) return Lic_faixa_(a.erro, "aviso");
     var at = a.atual, ul = a.ultima, h = '<p class="cm-modo-dica">A IA lê o edital e os dados da fonte e separa fatos (com o trecho e o arquivo), inferências e pendências. Ela não decide: descartar ou participar é da Diretoria.</p>';
     if (!a.iaDisponivel) h += Lic_faixa_(a.aviso || "Análise por IA indisponível: falta a chave da IA.", "aviso");
-    if (ul && (!at || ul.versao > at.versao)) h += Lic_faixa_("A última tentativa (versão " + ul.versao + ", " + Lic_dataHora_(ul.em) + ") " + (ul.situacao === "RECUSADA" ? "foi recusada pelo verificador" : "não terminou") + ": " + ul.resumo + (at ? " A nota mostrada é da versão " + at.versao + "." : ""), "aviso");
+    if (ul && (!at || ul.versao > at.versao)) h += Lic_faixa_("A última tentativa (versão " + ul.versao + ", " + Lic_dataHora_(ul.em) + ") " + (ul.situacao === "RECUSADA" ? "foi recusada pelo verificador" : "não terminou") + ". " + ul.resumo + (at ? " A nota mostrada é da versão " + at.versao + "." : ""), "aviso") +
+      Lic_detalheTecnicoHtml_(ul);
     if (at && a.desatualizada) h += Lic_faixa_("Os dados da fonte ou os arquivos mudaram depois da análise versão " + at.versao + ". " + (a.iaDisponivel ? "A rotina refaz sozinha; ou toque em \"Refazer análise\"." : "Sem a chave da IA, ela não é refeita."), "aviso");
     var pode = a.iaDisponivel && !a.elegivel;
     h += '<div class="lic-acoes-linha" style="margin:8px 0 12px"><button type="button" class="btn-primary" data-lic-analisar="' + (at || ul ? "refazer" : "primeira") + '"' + (pode ? "" : ' disabled aria-disabled="true"') + ">" + (at || ul ? "Refazer análise" : "Analisar agora") + "</button>" +
@@ -617,11 +618,22 @@
       Lic_tabelaHtml_(["Versão", "Quando", "Situação", "Nota", "Quem", "Motivo", "Hash"], a.versoes.map(function (v) {
         return [Lic_esc_(v.versao), Lic_esc_(Lic_dataHora_(v.em)), Lic_esc_({ CONCLUIDA: "concluída", RECUSADA: "recusada pelo verificador", ERRO: "IA não respondeu" }[v.situacao] || v.situacao), Lic_esc_(v.nota === null ? "—" : Lic_num_(v.nota)), Lic_esc_(v.origem === "AUTOMATICA" ? "rotina" : v.por), Lic_esc_(v.motivo || "—"), '<span class="lic-hash">' + Lic_esc_(String(v.hash || "").slice(0, 16)) + "…</span>"];
       })) + "</details>";
+    if (ul && ul.versao === at.versao) h += Lic_detalheTecnicoHtml_(at);
     h += '<p class="cm-meta lic-mono">Regras ' + Lic_esc_(at.regras) + " · base " + Lic_esc_(String(at.baseHash).slice(0, 16)) + "… · hash da análise " + Lic_esc_(String(at.hash).slice(0, 16)) + "…</p>";
     return h;
   }
   /** Tipos que podem abrir em outra aba (o navegador mostra, não executa). HTML, XML, SVG e o resto: só baixar. */
   var LIC_TIPOS_ABRIR = ["application/pdf", "image/png", "image/jpeg", "image/gif", "text/plain"];
+  /** Detalhe técnico recolhido: os motivos do verificador e as respostas cruas da IA (rastreabilidade; só a Diretoria vê o módulo). */
+  function Lic_detalheTecnicoHtml_(a) {
+    if (!a) return "";
+    var h = "", rec = a.recusas || [], resp = a.respostas || [];
+    if (rec.length) h += '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Ver o motivo técnico (' + rec.length + " recusa" + (rec.length === 1 ? "" : "s") + ")</summary>" +
+      rec.map(function (x) { return '<p class="cm-meta" style="margin:8px 0 2px"><b>Tentativa ' + Lic_esc_(x.tentativa) + "</b></p><ul style=\"margin:0;padding-left:18px\">" + (x.problemas || []).map(function (p) { return '<li class="cm-txt" style="overflow-wrap:anywhere">' + Lic_esc_(p) + "</li>"; }).join("") + "</ul>"; }).join("") + "</details>";
+    if (resp.length) h += '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Ver respostas da IA (' + resp.length + " tentativa" + (resp.length === 1 ? "" : "s") + ")</summary>" +
+      resp.map(function (x) { return '<p class="cm-meta" style="margin:8px 0 2px"><b>Tentativa ' + Lic_esc_(x.tentativa) + "</b> · " + Lic_esc_(x.aceita ? "aceita" : "recusada") + (x.cortada ? " · cortada em 15 mil caracteres" : "") + '</p><pre class="lic-mono" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;margin:0;padding:8px;background:var(--bc-surface-2);border-radius:6px">' + Lic_esc_(x.texto) + "</pre>"; }).join("") + "</details>";
+    return h;
+  }
   /** Abrir (nova aba) ou baixar um arquivo guardado. A aba é aberta no toque (antes da resposta) para não ser bloqueada. */
   function Lic_abrirArquivo_(opId, arqId, baixar) {
     var janela = null;

@@ -95,8 +95,28 @@ var LIC_SERVICOS = {
   'QT_FREEZER': ['freezer'], 'QT_CAMARA_FRIA': ['camara fria'], 'QT_SALA': ['mapeamento', 'sala'], 'QT_CAIXA_TERMICA': ['caixa termica'], 'QUA-010': ['centrifuga'],
   'NR13-001': ['compressor', 'vaso de pressao', 'vasos de pressao', 'nr 13'], 'NR13-002': ['autoclave', 'vaso de pressao', 'nr 13'], 'NR13-003': ['autoclave', 'vaso de pressao', 'nr 13'],
   'MP_AUTOCLAVE_GRANDE': ['autoclave'], 'MP_AUTOCLAVE_BANCADA': ['autoclave'], 'MP_LAVADORA_US': ['ultrassonica'], 'MP_SELADORA': ['seladora'], 'MP_CAMARA': ['camara'],
-  'HORA_TECNICO': ['hora tecnica', 'horas tecnicas', 'hora de tecnico'], 'HORA_ENGENHEIRO': ['hora de engenheiro', 'horas de engenharia', 'hora tecnica']
+  // catálogo C1: "Hora técnica de técnico (corretiva, instalação, acompanhamento)" e "Hora técnica de engenheiro (laudo, parecer,
+  // consultoria)". É o código mais próximo da manutenção CORRETIVA genérica de equipamentos médico-hospitalares (o catálogo
+  // não tem esse serviço com preço próprio): vale no máximo grau MÉDIO (LIC_SERVICOS_GRAU_MAX), com a lista de equipamentos como pendência.
+  'HORA_TECNICO': ['hora tecnica', 'horas tecnicas', 'hora de tecnico', 'manutencao corretiva', 'manutencoes corretivas', 'corretiva', 'corretivas', 'reparo', 'reparos', 'conserto', 'instalacao'],
+  'HORA_ENGENHEIRO': ['hora de engenheiro', 'horas de engenharia', 'hora tecnica', 'laudo', 'laudos', 'parecer tecnico', 'consultoria']
 };
+/** Serviços genéricos: grau máximo aceito (a IA não pode dar ALTA a "hora técnica" de equipamento que ninguém listou). */
+var LIC_SERVICOS_GRAU_MAX = { HORA_TECNICO: 'MEDIA', HORA_ENGENHEIRO: 'MEDIA' };
+/** Códigos do catálogo cujos termos aparecem no trecho (para o retorno à IA dizer o que cabe). */
+function Lic_servicosQueCabem_(trecho) {
+  return Object.keys(LIC_SERVICOS).filter(function (c) { return !Lic_servicoCompativel_(c, trecho); });
+}
+/**
+ * Regras da empresa como fontes citáveis (revisão de 02/11/2026, prova real): só para INFERÊNCIA, PENDÊNCIA e TRAVA
+ * (ao lado do trecho do edital), nunca como FATO sobre o edital nem como prova de capacidade.
+ */
+function Lic_fontesRegras_() {
+  var l = LIC_REGRAS_DONO.split('\n');
+  return { 'REGRA:catalogo': { rotulo: 'Regra da empresa: o que a Metrolabs faz (catálogo ' + LIC_CAPACIDADE_VERSAO + ')', texto: LIC_CAPACIDADE_TEXTO },
+    'REGRA:rbc': { rotulo: 'Regra da empresa: acreditação RBC', texto: l[0] || '' }, 'REGRA:inmetro': { rotulo: 'Regra da empresa: autorização Inmetro', texto: l[1] || '' },
+    'REGRA:porte': { rotulo: 'Regra da empresa: porte e CNPJ participante', texto: l[2] || '' }, 'REGRA:regiao': { rotulo: 'Regra da empresa: prioridade regional', texto: l[3] || '' } };
+}
 /** Termos negativos da triagem (doc 03, B2): no trecho que prova capacidade, recusam (palavra parecida não é serviço). */
 var LIC_TERMOS_NEGATIVOS = ['pneu', 'pneus', 'borracharia', 'castracao', 'caes', 'gatos', 'felinos', 'caninos', 'reagente', 'reagentes', 'solucao de calibracao', 'solucoes de calibracao',
   'embalagem para esterilizacao', 'vidraria', 'vidrarias', 'nobreak', 'audiometro', 'audiometrica', 'deflectometro', 'extintor', 'extintores', 'tacografo', 'tacografos'];
@@ -222,6 +242,8 @@ function Lic_fontesAnalise_(l, fonte, textos) {
   (textos || []).forEach(function (t) {
     if (Lic_s_(t.texto)) f[t.ref] = { ref: t.ref, rotulo: (t.titulo || t.nome || 'Arquivo') + (t.nome ? ' (' + t.nome + ')' : ''), texto: Lic_s_(t.texto), norm: Lic_normTrecho_(t.texto), arquivo: { id: t.id, nome: t.nome, titulo: t.titulo, sha256: t.sha256 } };
   });
+  var regras = Lic_fontesRegras_();
+  Object.keys(regras).forEach(function (k) { f[k] = { ref: k, rotulo: regras[k].rotulo, texto: regras[k].texto, norm: Lic_normTrecho_(regras[k].texto), regra: true }; });
   return f;
 }
 
@@ -247,20 +269,34 @@ function Lic_conferirTexto_(onde, t, ctx, problemas, obrig) {
 /** Refs que provam QUE serviço é pedido (capacidade): objeto, itens e arquivos. UF, valor e datas não provam capacidade. */
 function Lic_refProvaServico_(ref) { return ref === 'CAMPO:objeto' || /^ITEM:/.test(ref) || /^A\d+$/.test(ref); }
 /** Revisão de 02/11/2026: trecho com pelo menos 3 palavras (normalizadas) em qualquer fonte; vazio nunca passa. */
+/** Campo do PNCP citado pelo valor inteiro: igual depois de normalizar, ou o mesmo número em outra formatação (8431.44 = 8.431,44 = R$ 8.431,44). */
+function Lic_campoIgual_(trecho, campo) {
+  var a = Lic_normTrecho_(trecho), b = Lic_normTrecho_(campo);
+  if (a && a === b) return true;
+  var na = Lic_numerosDoTexto_(trecho), nb = Lic_numerosDoTexto_(campo);
+  return na.length === 1 && nb.length === 1 && Math.abs(na[0].valor - nb[0].valor) < 0.005 && Lic_normTrecho_(trecho.replace(/r\$|reais/gi, '')).replace(/[0-9 ]/g, '') === '';
+}
 function Lic_conferirFonte_(onde, fonte, ctx, problemas, o) {
   o = o || {};
   fonte = fonte && typeof fonte === 'object' ? fonte : {};
-  var ref = Lic_s_(fonte.ref).replace(/^(campo|item):/i, function (m) { return m.toUpperCase(); });
+  var ref = Lic_s_(fonte.ref).replace(/^(campo|item|regra):/i, function (m) { return m.toUpperCase(); }).replace(/^REGRA:(.*)$/, function (m, x) { return 'REGRA:' + x.toLowerCase(); });
   var tr = Lic_s_(fonte.trecho);
-  if (!ref || !tr) { problemas.push(onde + ': FATO sem fonte (diga a ref da fonte e copie o trecho literal)'); return null; }
+  if (!ref || !tr) { problemas.push(onde + ': ' + (o.tipo || 'FATO') + ' sem fonte (diga a ref da fonte e copie o trecho literal)'); return null; }
   var f = ctx.fontes[ref];
-  if (!f) { problemas.push(onde + ': fonte "' + ref + '" não existe (use só as refs da lista FONTES)'); return null; }
+  if (!f) { problemas.push(onde + ': fonte "' + ref + '" não existe (use só as refs da lista FONTES' + (/regra|metrolabs|empresa|cat[aá]logo/i.test(ref) ? '; as regras da empresa se citam como REGRA:catalogo, REGRA:rbc, REGRA:inmetro, REGRA:porte ou REGRA:regiao' : '') + ')'); return null; }
+  if (f.regra && (o.tipo || 'FATO') === 'FATO') { problemas.push(onde + ': ' + ref + ' é regra da empresa, não fato do edital (cite o edital no FATO; a regra vai em INFERÊNCIA, PENDÊNCIA ou em fonteRegra da TRAVA)'); return null; }
+  if (f.regra && o.capacidade) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
   var nt = Lic_normTrecho_(tr);
+  // campo do PNCP (valor, UF, datas, modalidade): vale o valor inteiro do campo, sem a regra das 3 palavras
+  if (/^CAMPO:/.test(ref) && ref !== 'CAMPO:objeto' && Lic_campoIgual_(tr, f.texto)) {
+    if (o.capacidade) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
+    return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(tr, 600), arquivo: null };
+  }
   if (!nt || nt.split(' ').length < 3) { problemas.push(onde + ': trecho curto demais para conferir ("' + tr.slice(0, 40) + '"); copie pelo menos 3 palavras seguidas da fonte'); return null; }
   if (o.capacidade && !Lic_refProvaServico_(ref)) { problemas.push(onde + ': ' + ref + ' não prova o serviço pedido (use o objeto, um item ou um arquivo do edital)'); return null; }
   if (tr.length > 700) { problemas.push(onde + ': trecho longo demais (máximo 600 caracteres); copie só a frase que prova'); return null; }
   if (f.norm.indexOf(nt) < 0) { problemas.push(onde + ': o trecho "' + tr.slice(0, 80) + '" não está em ' + ref + ' (copie literalmente do texto da fonte)'); return null; }
-  return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(tr, 600), arquivo: f.arquivo || null };
+  return { ref: ref, rotulo: f.rotulo, trecho: Lic_texto_(tr, 600), arquivo: f.arquivo || null, regra: !!f.regra };
 }
 
 /** Números (2 dígitos ou mais) e citações entre aspas de um texto livre precisam existir nas fontes ou nos cálculos do sistema. */
@@ -335,7 +371,13 @@ function Lic_verificarAnalise_(j, ctx) {
     var cod = Lic_up_(it.servico).replace(/\s+/g, '');
     if (fo && (grau === 'ALTA' || grau === 'MEDIA')) {
       var inc = Lic_servicoCompativel_(cod, fo.trecho);
-      if (inc) { problemas.push(onde + ': grau ' + grau + ' com ' + inc); fo = null; }
+      if (!inc && LIC_SERVICOS_GRAU_MAX[cod] === 'MEDIA' && grau === 'ALTA') inc = 'serviço genérico ' + cod + ' (vale no máximo grau MEDIA; escreva PENDENCIA pedindo a lista de equipamentos no termo de referência)';
+      if (inc) {
+        var cabem = Lic_servicosQueCabem_(fo.trecho);
+        problemas.push(onde + ': grau ' + grau + ' com ' + inc + '. ' + (cabem.length ? 'Códigos do catálogo que cabem neste trecho: ' + cabem.slice(0, 6).join(', ') + '.' : 'Nenhum código do catálogo cabe neste trecho.') +
+          ' Se nenhum encaixar, use grau BAIXA ou NAO_ATENDE e escreva uma PENDENCIA (por exemplo: "conferir a lista de equipamentos no termo de referência")');
+        fo = null;
+      }
     }
     if (fo) { temFato = true; if (grau === 'ALTA') temAlta = true; }
     saida.capacidade.itens.push({ descricao: Lic_texto_(Lic_conferirTexto_(onde + ', descrição', it.descricao, ctx, problemas, true), 400), grau: LIC_GRAUS[grau] ? grau : '', grauNome: LIC_GRAUS[grau] || '', servico: LIC_SERVICOS[cod] ? cod : Lic_texto_(it.servico, 60), fonte: fo });
@@ -375,7 +417,11 @@ function Lic_verificarAnalise_(j, ctx) {
     x = x || {};
     var onde = 'trava ' + (k + 1), cod = Lic_up_(x.codigo);
     if (!LIC_TRAVAS[cod]) { problemas.push(onde + ': código fora da lista (' + (Lic_s_(x.codigo) || 'vazio') + ')'); return; }
-    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600), fonte: Lic_conferirFonte_(onde, x.fonte, ctx, problemas) });
+    // a trava se prova pelo edital (fonte); a regra da empresa vai junto em fonteRegra (ex.: FORA_DO_CATALOGO com REGRA:catalogo)
+    var foT = Lic_conferirFonte_(onde, x.fonte, ctx, problemas, { tipo: 'FATO' });
+    var foR = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, problemas, { tipo: 'TRAVA' }) : null;
+    if (foR && !foR.regra) { problemas.push(onde + ', fonteRegra: use uma REGRA:... (o trecho do edital vai em fonte)'); foR = null; }
+    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600), fonte: foT, fonteRegra: foR });
   });
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
@@ -389,7 +435,8 @@ function Lic_verificarAnalise_(j, ctx) {
     if (!nTipos.hasOwnProperty(tipo)) { problemas.push(onde + ': tipo fora da lista (FATO, INFERENCIA, PENDENCIA)'); return; }
     nTipos[tipo]++;
     var texto = Lic_texto_(Lic_conferirTexto_(onde, a.texto, ctx, problemas, true), 600);
-    var fo = tipo === 'FATO' ? Lic_conferirFonte_(onde, a.fonte, ctx, problemas) : null;
+    var temFonte = a.fonte && typeof a.fonte === 'object' && (Lic_s_(a.fonte.ref) || Lic_s_(a.fonte.trecho));
+    var fo = tipo === 'FATO' || temFonte ? Lic_conferirFonte_(onde, a.fonte, ctx, problemas, { tipo: tipo }) : null;
     saida.afirmacoes.push({ tipo: tipo, criterio: Lic_s_(a.criterio).toLowerCase().slice(0, 20), texto: texto, fonte: fo, origem: 'IA' });
   });
   if (!nTipos.FATO) problemas.push('afirmações: nenhum FATO com fonte');
@@ -454,10 +501,10 @@ function Lic_promptAnalise_(l, fontes, codigo, pesos, hojeIso, marca) {
     (Lic_s_(l.TRIAGEM) === 'TRAVADA' ? '- A triagem por regras TRAVOU esta oportunidade. Se o edital provar a trava, ponha em travas com o trecho; se não provar, escreva uma PENDENCIA com criterio "trava" dizendo o que confirmar.' : ''),
     '- Não escreva número nem citação no resumo e nas justificativas que não estejam nas fontes ou nos números calculados pelo sistema.',
     '',
-    'REGRAS DA EMPRESA (decisões do dono):', LIC_REGRAS_DONO, '',
-    'O QUE A METROLABS FAZ (catálogo ' + LIC_CAPACIDADE_VERSAO + '):', LIC_CAPACIDADE_TEXTO, '',
+    'REGRAS DA EMPRESA: estão nas FONTES como REGRA:catalogo (o que a Metrolabs faz), REGRA:rbc, REGRA:inmetro, REGRA:porte e REGRA:regiao. Cite-as só em INFERENCIA, PENDENCIA ou em "fonteRegra" de uma TRAVA; FATO é sempre do edital ou do PNCP.', '',
     'CRITÉRIOS QUE VOCÊ PONTUA:',
-    '- capacidade: classifique cada item ou serviço do edital com grau ALTA, MEDIA, BAIXA ou NAO_ATENDE, o código do catálogo quando houver (campo servico) e a fonte (o objeto, um ITEM ou um arquivo; UF, valor e datas não provam serviço). O SISTEMA calcula os pontos (alto conta 1, médio meio, de ' + pesos.capacidade + '); não mande pontos de capacidade.',
+    '- capacidade: classifique cada item ou serviço do edital com grau ALTA, MEDIA, BAIXA ou NAO_ATENDE, o código do catálogo (campo servico, só códigos de REGRA:catalogo) e a fonte (o objeto, um ITEM ou um arquivo; UF, valor e datas não provam serviço). ALTA ou MEDIA exige que o trecho fale do equipamento ou serviço daquele código. Manutenção CORRETIVA genérica de "equipamentos médicos" sem lista: use HORA_TECNICO com no máximo MEDIA e escreva PENDENCIA pedindo a lista de equipamentos no termo de referência. Serviço que não está no catálogo (por exemplo acústica, decibelímetro, calibrador acústico): grau NAO_ATENDE e, se nada do edital couber, trava FORA_DO_CATALOGO com o trecho do edital em fonte e REGRA:catalogo em fonteRegra. O SISTEMA calcula os pontos (alto conta 1, médio meio, de ' + pesos.capacidade + '); não mande pontos de capacidade.',
+    '- Campo do PNCP (CAMPO:valorEstimado, CAMPO:uf, CAMPO:encerramento...) se cita com o valor inteiro do campo, como está na fonte.',
     '- documentacao (0 a ' + pesos.documentacao + ', mas no máximo ' + pesos.documentacaoSemCadastro + ' porque o SGO+ ainda não tem o cadastro de habilitação): liste as exigências de habilitação do edital com a fonte; exigência impossível de cumprir vira trava.',
     '- riscos: só os códigos ' + Object.keys(LIC_RISCOS).join(', ') + ', cada um com a fonte (o sistema tira 1 ponto de ' + pesos.riscos + ' por risco).',
     '- travas: só os códigos ' + Object.keys(LIC_TRAVAS).join(', ') + ', cada uma com a fonte. Trava zera a nota; use só quando o trecho provar.',
@@ -468,7 +515,7 @@ function Lic_promptAnalise_(l, fontes, codigo, pesos, hojeIso, marca) {
     'FONTES (cite pela ref: CAMPO:..., ITEM:n ou A1, A2...):', lista, '',
     'Formato: {"resumo":"2 a 4 frases com os fatos principais","capacidade":{"justificativa":"...","itens":[{"descricao":"...","grau":"ALTA","servico":"CAL-001","fonte":{"ref":"A1","trecho":"..."}}]},' +
     '"documentacao":{"pontos":0,"justificativa":"...","exigencias":[{"texto":"...","fonte":{"ref":"A1","trecho":"..."}}]},"riscos":[{"codigo":"SLA_HORAS","texto":"...","fonte":{"ref":"A2","trecho":"..."}}],' +
-    '"travas":[{"codigo":"RBC_OBRIGATORIA","texto":"...","fonte":{"ref":"A1","trecho":"..."}}],"afirmacoes":[{"tipo":"FATO","criterio":"capacidade","texto":"...","fonte":{"ref":"CAMPO:objeto","trecho":"..."}},{"tipo":"INFERENCIA","criterio":"riscos","texto":"..."},{"tipo":"PENDENCIA","criterio":"documentacao","texto":"..."}]}'
+    '"travas":[{"codigo":"RBC_OBRIGATORIA","texto":"...","fonte":{"ref":"A1","trecho":"..."},"fonteRegra":{"ref":"REGRA:rbc","trecho":"..."}}],"afirmacoes":[{"tipo":"FATO","criterio":"capacidade","texto":"...","fonte":{"ref":"CAMPO:objeto","trecho":"..."}},{"tipo":"INFERENCIA","criterio":"riscos","texto":"..."},{"tipo":"PENDENCIA","criterio":"documentacao","texto":"..."}]}'
   ].join('\n');
 }
 
@@ -509,7 +556,7 @@ function Lic_analisar_(eu, l, o) {
   var codigo = Lic_criteriosCodigo_(l, pesos, hoje);
   var ctx = Lic_ctxVerificador_(l, fontes, pesos, codigo);
   var prompt = Lic_promptAnalise_(l, fontes, codigo, pesos, hoje);
-  var inicio = Date.now(), problemas = [], recusas = [], tentativas = 0, saida = null, erroIA = '';
+  var inicio = Date.now(), problemas = [], recusas = [], respostas = [], tentativas = 0, saida = null, erroIA = '';
   var maxRefacoes = o.origem === 'AUTOMATICA' ? 1 : LIC_ANALISE_REFACOES;
   for (var k = 0; k <= maxRefacoes; k++) {
     if (k > 0 && Date.now() - inicio > LIC_ANALISE_LIMITE_MS) break;
@@ -520,6 +567,8 @@ function Lic_analisar_(eu, l, o) {
     catch (e) { erroIA = Lic_s_(e && e.message).replace(/[.\s]+$/, ''); break; }
     var j = typeof ComG_lerJson_ === 'function' ? ComG_lerJson_(texto) : Lic_json_(Lic_s_(texto).replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, ''), null);
     var v = Lic_verificarAnalise_(j, ctx);
+    // rastreabilidade (revisão de 02/11/2026, prova real): a resposta crua de cada tentativa, truncada
+    respostas.push({ tentativa: tentativas, em: Lic_agora_(), aceita: !!v.ok, texto: Lic_s_(texto).slice(0, LIC_RESPOSTA_MAX), cortada: Lic_s_(texto).length > LIC_RESPOSTA_MAX, problemas: v.ok ? [] : v.problemas.slice(0, 15) });
     if (v.ok) { saida = v.saida; break; }
     problemas = v.problemas;
     recusas.push({ tentativa: tentativas, problemas: v.problemas.slice(0, 10) });
@@ -528,7 +577,7 @@ function Lic_analisar_(eu, l, o) {
   var anteriores = Lic_analisesDe_(l.ID), versao = (anteriores.length ? Number(anteriores[0].VERSAO) || anteriores.length : 0) + 1, agora = Lic_agora_();
   var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), VERSAO: versao, BASE_HASH: base, FONTE_VERSAO: Number(l.VERSAO_FONTE) || 1, FONTE_HASH: Lic_s_(l.VERSAO_HASH),
     ARQUIVOS_BASE: srv.arquivos ? Lic_s_(srv.arquivos.baseHash) : '', ARQUIVOS_JSON: JSON.stringify(arqs).slice(0, 20000), PESOS_JSON: JSON.stringify(pesos), REGRAS: LIC_ANALISE_REGRAS + ' · ' + LIC_CAPACIDADE_VERSAO,
-    MODELO: Lic_modeloIA_(), TENTATIVAS: tentativas, RECUSAS_JSON: JSON.stringify(recusas).slice(0, 20000), MOTIVO: Lic_texto_(o.motivo, 1000), ORIGEM_PEDIDO: o.origem || 'PEDIDO',
+    MODELO: Lic_modeloIA_(), TENTATIVAS: tentativas, RECUSAS_JSON: JSON.stringify(recusas).slice(0, 20000), RESPOSTAS_IA_JSON: Lic_respostasJson_(respostas), MOTIVO: Lic_texto_(o.motivo, 1000), ORIGEM_PEDIDO: o.origem || 'PEDIDO',
     PEDIDO_POR_ID: Lic_s_(eu && eu.id), PEDIDO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', CRIADO_EM: agora };
   var mudOp = { ANALISE_EM: agora, ANALISE_BASE_HASH: base, ATUALIZADO_EM: agora };
   var resultado;
@@ -541,11 +590,12 @@ function Lic_analisar_(eu, l, o) {
     Object.assign(mudOp, { NOTA: nf.nota, NOTA_CLASSE: nf.classe, NOTA_TRAVA: nf.travas.length ? nf.travas.map(function (t) { return t.nome; }).join('; ').slice(0, 500) : '', ANALISE_VERSAO: versao, ANALISE_SITUACAO: 'CONCLUIDA', ANALISE_ERRO: '' });
     resultado = { analisada: true, nota: nf.nota, classe: nf.classe };
   } else {
-    Object.assign(reg, { SITUACAO: erroIA ? 'ERRO' : 'RECUSADA', RESUMO: erroIA ? 'A IA não respondeu: ' + erroIA : 'Resposta da IA recusada pelo verificador ' + tentativas + (tentativas > 1 ? ' vezes' : ' vez') + ': ' + (recusas.length ? recusas[recusas.length - 1].problemas.slice(0, 3).join('; ') : '') });
+    var simples = erroIA ? '' : Lic_motivoRecusaSimples_(recusas, textos, srv.arquivos);
+    Object.assign(reg, { SITUACAO: erroIA ? 'ERRO' : 'RECUSADA', RESUMO: erroIA ? 'A IA não respondeu: ' + erroIA : simples });
     // erro da IA não grava a base: a próxima mudança (ou o "Refazer análise") tenta de novo; recusa grava (não gasta de novo à toa)
     if (erroIA) delete mudOp.ANALISE_BASE_HASH;
     Object.assign(mudOp, { ANALISE_SITUACAO: reg.SITUACAO, ANALISE_ERRO: Lic_texto_(reg.RESUMO, 500) });
-    resultado = erroIA ? { erro: true, texto: 'A IA não respondeu agora (' + erroIA + '). A nota anterior (se houver) continua valendo; tente "Refazer análise" mais tarde.' } : { recusada: true, texto: 'A resposta da IA foi recusada pelo verificador ' + tentativas + (tentativas > 1 ? ' vezes' : ' vez') + ' (' + (recusas.length ? recusas[recusas.length - 1].problemas.slice(0, 2).join('; ') : '') + '). A nota anterior (se houver) continua valendo.' };
+    resultado = erroIA ? { erro: true, texto: 'A IA não respondeu agora (' + erroIA + '). A nota anterior (se houver) continua valendo; tente "Refazer análise" mais tarde.' } : { recusada: true, texto: simples + ' A nota anterior (se houver) continua valendo.', detalhe: recusas.length ? recusas[recusas.length - 1].problemas.slice(0, 6) : [] };
   }
   reg.HASH = Lic_hash_(JSON.stringify([reg.OPORTUNIDADE_ID, reg.VERSAO, reg.BASE_HASH, reg.SITUACAO, reg.NOTA, reg.CRITERIOS_JSON, reg.AFIRMACOES_JSON, reg.TRAVAS_JSON, reg.CRIADO_EM]));
   var ins = SGO_DATA.insert(LIC_ABAS.ANALISES, reg);
@@ -562,13 +612,36 @@ function Lic_analisar_(eu, l, o) {
   return resultado;
 }
 
+var LIC_RESPOSTA_MAX = 15000;
+/** Respostas cruas em JSON cabendo na célula (no máximo ~48 mil caracteres): corta o texto das tentativas mais antigas primeiro. */
+function Lic_respostasJson_(respostas) {
+  var l = JSON.parse(JSON.stringify(respostas || [])), j = JSON.stringify(l);
+  for (var i = 0; j.length > 48000 && i < l.length; i++) { l[i].texto = l[i].texto.slice(0, Math.max(500, l[i].texto.length - (j.length - 48000) - 100)); l[i].cortada = true; j = JSON.stringify(l); }
+  return j.length > 48000 ? j.slice(0, 48000) : j;
+}
+/**
+ * Por que a análise foi recusada, em linguagem simples, com o que fazer (o detalhe técnico fica em RECUSAS_JSON e na tela,
+ * recolhido). Revisão de 02/11/2026 (prova real: as 2 primeiras análises reais foram recusadas sem dizer o porquê ao operador).
+ */
+function Lic_motivoRecusaSimples_(recusas, textos, arquivos) {
+  var prob = recusas.length ? recusas[recusas.length - 1].problemas.join(' | ') : '';
+  var comTexto = (textos || []).filter(function (t) { return Lic_s_(t.texto); }).length;
+  var est = arquivos && arquivos.estado;
+  var partes = ['A IA não conseguiu provar a análise com trechos das fontes (o verificador recusou ' + recusas.length + (recusas.length === 1 ? ' resposta' : ' respostas') + ').'];
+  if (!comTexto) partes.push(est && est.listaOk === false ? 'Os arquivos do edital ainda não foram baixados (a fonte estava fora do ar: ' + Lic_texto_(est.listaErro, 120) + '). Tente de novo depois que os arquivos chegarem (aba Arquivos).' : 'Nenhum arquivo do edital com texto legível foi lido ainda: a IA só tinha o objeto e os dados do PNCP. Tente de novo depois que os arquivos chegarem (aba Arquivos, "Buscar arquivos agora").');
+  if (/fora do catálogo|não fala de|Nenhum código do catálogo|cabem neste trecho/.test(prob)) partes.push('O serviço pedido não encaixou bem no catálogo da Metrolabs: confira na aba Arquivos o que o edital pede; se não for serviço do catálogo, a Diretoria pode descartar com o motivo.');
+  if (/não está em|não existe/.test(prob)) partes.push('A IA citou trecho ou fonte que não existe nas fontes.');
+  partes.push('O detalhe técnico está em "Ver o motivo técnico" e "Ver respostas da IA".');
+  return partes.join(' ');
+}
+
 /** O que a tela mostra de uma linha de LIC_ANALISES. */
 function Lic_analiseTela_(a) {
   if (!a) return null;
   return { id: Lic_s_(a.ID), versao: Number(a.VERSAO) || 0, situacao: Lic_s_(a.SITUACAO), nota: a.NOTA === '' || a.NOTA === null || a.NOTA === undefined ? null : Number(a.NOTA), soma: a.SOMA === '' || a.SOMA === undefined ? null : Number(a.SOMA),
     classe: Lic_s_(a.CLASSE), classeNome: LIC_CLASSES[Lic_s_(a.CLASSE)] || '', travada: Lic_s_(a.TRAVADA) === 'SIM', resumo: Lic_s_(a.RESUMO), criterios: Lic_json_(a.CRITERIOS_JSON, {}), itens: Lic_json_(a.ITENS_JSON, []),
     exigencias: Lic_json_(a.EXIGENCIAS_JSON, []), riscos: Lic_json_(a.RISCOS_JSON, []), travas: Lic_json_(a.TRAVAS_JSON, []), afirmacoes: Lic_json_(a.AFIRMACOES_JSON, []), arquivos: Lic_json_(a.ARQUIVOS_JSON, []),
-    recusas: Lic_json_(a.RECUSAS_JSON, []), modelo: Lic_s_(a.MODELO), tentativas: Number(a.TENTATIVAS) || 0, motivo: Lic_s_(a.MOTIVO), origem: Lic_s_(a.ORIGEM_PEDIDO), por: Lic_s_(a.PEDIDO_POR_NOME),
+    recusas: Lic_json_(a.RECUSAS_JSON, []), respostas: Lic_json_(a.RESPOSTAS_IA_JSON, []), modelo: Lic_s_(a.MODELO), tentativas: Number(a.TENTATIVAS) || 0, motivo: Lic_s_(a.MOTIVO), origem: Lic_s_(a.ORIGEM_PEDIDO), por: Lic_s_(a.PEDIDO_POR_NOME),
     em: Lic_s_(a.CRIADO_EM), baseHash: Lic_s_(a.BASE_HASH), fonteVersao: Number(a.FONTE_VERSAO) || 1, regras: Lic_s_(a.REGRAS), hash: Lic_s_(a.HASH) };
 }
 

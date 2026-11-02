@@ -233,7 +233,7 @@ test('verificador recusa: FATO sem fonte, trecho que não está na fonte, frase 
   // revisão: capacidade 30/30 "provada" pela UF não passa; trecho que normaliza para vazio ou com menos de 3 palavras não passa
   const pelaUf = respostaValida(); pelaUf.capacidade.itens = [{ descricao: 'Tudo', grau: 'ALTA', servico: 'CAL-001', fonte: { ref: 'CAMPO:uf', trecho: 'GO' } }];
   const pu = v(pelaUf);
-  assert.match(pu.problemas.join('\n'), /capacidade, item 1: trecho curto demais/);
+  assert.match(pu.problemas.join('\n'), /capacidade, item 1: CAMPO:uf não prova o serviço pedido/);
   const pelaUf2 = respostaValida(); pelaUf2.capacidade.itens = [{ descricao: 'Tudo', grau: 'ALTA', servico: 'CAL-001', fonte: { ref: 'CAMPO:modalidade', trecho: 'Dispensa · Dispensa Com Disputa' } }];
   assert.match(v(pelaUf2).problemas.join('\n'), /CAMPO:modalidade não prova o serviço pedido/);
   const vazio = respostaValida(); vazio.riscos[0].fonte = { ref: 'A1', trecho: '«» — …' };
@@ -331,6 +331,113 @@ test('revisão 2: número no resumo com tolerância (arredondado, "mil", ano, di
     assert.equal(v(ok).ok, true, ok + ' → ' + v(ok).problemas.join('; '));
   assert.match(v('Dispensa para 37 equipamentos. O termo de referência não foi lido.').problemas.join(' '), /o número 37 não está nas fontes/);
   assert.match(v('Valor estimado de R$ 12 mil. O termo de referência não foi lido.').problemas.join(' '), /o número 12 mil não está nas fontes/);
+});
+
+// ---------- prova real em produção (02/11/2026): as duas análises foram recusadas 3 vezes; estes são os casos exatos ----------
+const MIRASSOL = Object.assign({}, OP, { ID: 'op2', CODIGO: 'LIC-2026-0004', ORGAO_NOME: 'MUNICIPIO DE MIRASSOL', UF: 'SP', MUNICIPIO: 'Mirassol', VALOR_ESTIMADO: 1650,
+  OBJETO: 'CONTRATACAO DE EMPRESA ESPECIALIZADA EM SERVICO DE CALIBRACAO DE MEDIDOR DE NIVEL SONORO E CALIBRADOR ACUSTICO   SECRETARIA MUNICIPAL DE TRIBUTOS E FISCALIZACAO.', ENCERRAMENTO_PROPOSTAS: '2026-11-04T09:00:00' });
+
+test('prova real A (Aparecida do Rio Doce): HORA_TECNICO para corretiva genérica vale só MÉDIO (com o retorno do que cabe); CAMPO:valorEstimado "8431.44" é citável pelo valor', () => {
+  const a = ambiente();
+  const fontes = a.ctx.Lic_fontesAnalise_(OP, null, []);   // sem arquivos (PNCP de arquivos fora do ar), como na produção
+  const ctx = a.ctx.Lic_ctxVerificador_(OP, fontes, a.ctx.Lic_pesos_(), a.ctx.Lic_criteriosCodigo_(OP, a.ctx.Lic_pesos_(), '2026-11-01'));
+  const resp = (grau) => respostaValida({ resumo: 'Dispensa para manutenção corretiva de equipamentos médicos e fisioterapêuticos. A lista de equipamentos não foi lida.',
+    capacidade: { justificativa: 'Manutenção corretiva genérica.', itens: [{ descricao: 'Manutenção corretiva de equipamentos médicos', grau, servico: 'HORA_TECNICO', fonte: { ref: 'CAMPO:objeto', trecho: 'MANUTENÇÃO CORRETIVA DE 04 (QUATRO) EQUIPAMENTOS MÉDICOS' } }] },
+    documentacao: { pontos: 3, justificativa: 'Sem edital lido.', exigencias: [] }, riscos: [],
+    afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'Objeto de manutenção corretiva.', fonte: { ref: 'CAMPO:objeto', trecho: 'MANUTENÇÃO CORRETIVA DE 04 (QUATRO) EQUIPAMENTOS MÉDICOS' } },
+      { tipo: 'FATO', criterio: 'valor', texto: 'Valor estimado de R$ 8.431,44.', fonte: { ref: 'CAMPO:valorEstimado', trecho: '8431.44' } },
+      { tipo: 'PENDENCIA', criterio: 'capacidade', texto: 'Conferir a lista de equipamentos no termo de referência.' }] });
+  const alta = a.ctx.Lic_verificarAnalise_(resp('ALTA'), ctx);
+  const pa = alta.problemas.join('\n');
+  assert.match(pa, /capacidade, item 1: grau ALTA com serviço genérico HORA_TECNICO \(vale no máximo grau MEDIA/);
+  assert.match(pa, /Códigos do catálogo que cabem neste trecho: [^.]*HORA_TECNICO/);
+  assert.doesNotMatch(pa, /trecho curto demais para conferir \("8431\.44"\)/, 'o caso real "8431.44" agora passa');
+  const media = a.ctx.Lic_verificarAnalise_(resp('MEDIA'), ctx);
+  assert.equal(media.ok, true, media.problemas.join('; '));
+  assert.equal(media.saida.capacidade.pontos, 15, '1 item médio em 1 = metade de 30');
+  for (const t of ['8.431,44', 'R$ 8.431,44']) { const x = resp('MEDIA'); x.afirmacoes[1].fonte.trecho = t; assert.equal(a.ctx.Lic_verificarAnalise_(x, ctx).ok, true, t); }
+  const errado = resp('MEDIA'); errado.afirmacoes[1].fonte.trecho = '8431';
+  assert.match(a.ctx.Lic_verificarAnalise_(errado, ctx).problemas.join(' '), /trecho curto demais/);
+  const uf = resp('MEDIA'); uf.afirmacoes[1] = { tipo: 'FATO', criterio: 'localizacao', texto: 'Execução em Goiás.', fonte: { ref: 'CAMPO:uf', trecho: 'GO' } };
+  assert.equal(a.ctx.Lic_verificarAnalise_(uf, ctx).ok, true, 'CAMPO:uf pelo valor inteiro');
+});
+
+test('prova real B (Mirassol, nível sonoro): as regras da empresa são citáveis (REGRA:catalogo) só fora de FATO; acústica é FORA_DO_CATALOGO honesto', () => {
+  const a = ambiente();
+  const fontes = a.ctx.Lic_fontesAnalise_(MIRASSOL, null, []);
+  const ctx = a.ctx.Lic_ctxVerificador_(MIRASSOL, fontes, a.ctx.Lic_pesos_(), a.ctx.Lic_criteriosCodigo_(MIRASSOL, a.ctx.Lic_pesos_(), '2026-11-01'));
+  const base = () => respostaValida({ resumo: 'Dispensa para calibração de medidor de nível sonoro e calibrador acústico. Acústica não está no catálogo da Metrolabs.',
+    capacidade: { justificativa: 'Serviço de acústica.', itens: [{ descricao: 'Calibração de medidor de nível sonoro', grau: 'NAO_ATENDE', servico: '', fonte: { ref: 'CAMPO:objeto', trecho: 'SERVICO DE CALIBRACAO DE MEDIDOR DE NIVEL SONORO' } }] },
+    documentacao: { pontos: 0, justificativa: 'Sem edital lido.', exigencias: [] }, riscos: [],
+    travas: [{ codigo: 'FORA_DO_CATALOGO', texto: 'Acústica não é serviço da Metrolabs.', fonte: { ref: 'CAMPO:objeto', trecho: 'CALIBRACAO DE MEDIDOR DE NIVEL SONORO E CALIBRADOR ACUSTICO' }, fonteRegra: { ref: 'REGRA:catalogo', trecho: 'acústica e audiologia (decibelímetro, audiômetro)' } }],
+    afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'O objeto é calibração de medidor de nível sonoro.', fonte: { ref: 'CAMPO:objeto', trecho: 'CALIBRACAO DE MEDIDOR DE NIVEL SONORO' } },
+      { tipo: 'INFERENCIA', criterio: 'capacidade', texto: 'O catálogo não tem serviço de acústica.', fonte: { ref: 'REGRA:catalogo', trecho: 'acústica e audiologia (decibelímetro, audiômetro)' } }] });
+  // o erro real: a IA citou o título do bloco do prompt como fonte
+  const real = base(); real.travas[0].fonte = { ref: 'REGRAS DA EMPRESA: O QUE A METROLABS FAZ', trecho: 'acústica e audiologia' };
+  assert.match(a.ctx.Lic_verificarAnalise_(real, ctx).problemas.join('\n'), /fonte "REGRAS DA EMPRESA: O QUE A METROLABS FAZ" não existe \(use só as refs da lista FONTES; as regras da empresa se citam como REGRA:catalogo/);
+  const ok = a.ctx.Lic_verificarAnalise_(base(), ctx);
+  assert.equal(ok.ok, true, ok.problemas.join('; '));
+  assert.equal(ok.saida.travas[0].fonteRegra.ref, 'REGRA:catalogo');
+  assert.equal(ok.saida.afirmacoes[1].fonte.ref, 'REGRA:catalogo', 'inferência com a fonte da regra, conferida');
+  // a regra nunca é FATO sobre o edital, nem prova de capacidade, nem a fonte principal da trava
+  const fato = base(); fato.afirmacoes[0].fonte = { ref: 'REGRA:catalogo', trecho: 'acústica e audiologia (decibelímetro, audiômetro)' };
+  assert.match(a.ctx.Lic_verificarAnalise_(fato, ctx).problemas.join(' '), /REGRA:catalogo é regra da empresa, não fato do edital/);
+  const trava = base(); trava.travas[0].fonte = { ref: 'REGRA:catalogo', trecho: 'acústica e audiologia (decibelímetro, audiômetro)' };
+  assert.match(a.ctx.Lic_verificarAnalise_(trava, ctx).problemas.join(' '), /trava 1: REGRA:catalogo é regra da empresa/);
+  const inventada = base(); inventada.afirmacoes[1].fonte.trecho = 'a Metrolabs calibra decibelímetros';
+  assert.match(a.ctx.Lic_verificarAnalise_(inventada, ctx).problemas.join(' '), /não está em REGRA:catalogo/);
+  // nível sonoro com CAL-001 (palavra "calibração"): não cabe em nenhum código; o retorno diz isso
+  const forcado = base(); forcado.capacidade.itens[0] = { descricao: 'Calibração', grau: 'ALTA', servico: 'CAL-001', fonte: { ref: 'CAMPO:objeto', trecho: 'SERVICO DE CALIBRACAO DE MEDIDOR DE NIVEL SONORO' } };
+  assert.match(a.ctx.Lic_verificarAnalise_(forcado, ctx).problemas.join(' '), /o trecho não fala de termometro[\s\S]*Nenhum código do catálogo cabe neste trecho\. Se nenhum encaixar, use grau BAIXA ou NAO_ATENDE/);
+  // prompt: as regras aparecem como fontes e a instrução diz para quê
+  const pr = a.ctx.Lic_promptAnalise_(MIRASSOL, fontes, a.ctx.Lic_criteriosCodigo_(MIRASSOL, a.ctx.Lic_pesos_(), '2026-11-01'), a.ctx.Lic_pesos_(), '2026-11-01', 'FONTE-x1');
+  assert.match(pr, /<<<FONTE-x1 INICIO REGRA:catalogo · Regra da empresa: o que a Metrolabs faz/);
+  assert.match(pr, /Cite-as só em INFERENCIA, PENDENCIA ou em "fonteRegra" de uma TRAVA; FATO é sempre do edital ou do PNCP/);
+  assert.match(pr, /trava FORA_DO_CATALOGO com o trecho do edital em fonte e REGRA:catalogo em fonteRegra/);
+  assert.match(pr, /use HORA_TECNICO com no máximo MEDIA e escreva PENDENCIA pedindo a lista de equipamentos/);
+});
+
+test('revisão 3: respostas cruas da IA guardadas por tentativa (truncadas) e motivo da recusa em linguagem simples, com o técnico recolhido na tela', () => {
+  const ruim = respostaValida(); ruim.afirmacoes[0] = { tipo: 'FATO', texto: 'Sem fonte.' };
+  const longa = JSON.stringify(ruim) + ' observação '.repeat(2000);
+  const a = ambiente({ respostas: [longa, ruim, ruim] });
+  a.srv.textos = [];   // como na produção: arquivos não baixados
+  a.srv.arquivos.estado = { listaOk: false, listaErro: 'HTTP 503: No server is available', proximaTentativaEm: '2026-11-02T09:00:00.000Z' };
+  const r = a.api('s_dora', 'analisar', { id: 'op1' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.resultado.recusada, true);
+  assert.match(r.resultado.texto, /^A IA não conseguiu provar a análise com trechos das fontes \(o verificador recusou 3 respostas\)\. Os arquivos do edital ainda não foram baixados \(a fonte estava fora do ar: HTTP 503/);
+  assert.match(r.resultado.texto, /Tente de novo depois que os arquivos chegarem \(aba Arquivos\)/);
+  const an = a.analises()[0];
+  const resp = JSON.parse(an.RESPOSTAS_IA_JSON);
+  assert.equal(resp.length, 3);
+  assert.equal(resp[0].texto.length, 15000);
+  assert.equal(resp[0].cortada, true);
+  assert.equal(resp[0].aceita, false);
+  assert.match(resp[1].problemas.join(' '), /FATO sem fonte/);
+  assert.ok(an.RESPOSTAS_IA_JSON.length <= 48000);
+  assert.match(an.RESUMO, /^A IA não conseguiu provar/);
+  const f = a.api('s_dora', 'ficha', { id: 'op1' });
+  const html = tela().ctx.Lic_htmlFicha_(f, 'analise');
+  assert.match(html, /foi recusada pelo verificador\. A IA não conseguiu provar/);
+  assert.match(html, /<details class="cm-caixa"><summary[^>]*>Ver o motivo técnico \(3 recusas\)<\/summary>/);
+  assert.match(html, /<summary[^>]*>Ver respostas da IA \(3 tentativas\)<\/summary>[\s\S]*cortada em 15 mil caracteres/);
+  assert.equal(a.ctx.LIC_COLUNAS.LIC_ANALISES.includes('RESPOSTAS_IA_JSON'), true, 'coluna nova por merge');
+});
+
+test('revisão 3: os códigos aceitos em "servico" existem no catálogo real da Diretoria (oficial ou tabela C1 ativa)', () => {
+  const a = ambiente();
+  const oficial = ler('SGO_Comercial_CatalogoOficial.js'), c1 = ler('SGO_Comercial_TabelaC1.js');
+  const codigos = new Set([...oficial.matchAll(/codigo: '([A-Z0-9_-]+)'/g)].map((m) => m[1]).concat([...c1.matchAll(/"codigo": "([A-Z0-9_]+)"/g)].map((m) => m[1])));
+  const subst = oficial.slice(oficial.indexOf('var COM_CAT_SUBSTITUI'), oficial.indexOf('};', oficial.indexOf('var COM_CAT_SUBSTITUI')));
+  const substituidos = new Set([...subst.matchAll(/([A-Z_]+): \[/g)].map((m) => m[1]));
+  const lic = Object.keys(a.ctx.LIC_SERVICOS);
+  for (const c of lic) {
+    assert.ok(codigos.has(c), c + ' não está no catálogo');
+    assert.ok(!substituidos.has(c), c + ' foi substituído no catálogo oficial');
+  }
+  assert.ok(lic.includes('HORA_TECNICO') && lic.includes('MP_AUTOCLAVE_BANCADA') && lic.includes('CAL_MONITOR'));
+  assert.ok(!lic.some((c) => /SONORO|ACUST|DECIB/.test(c)), 'acústica não está no catálogo');
 });
 
 test('revisão: triagem TRAVADA exige trava provada ou pendência "trava"; fontes vão entre marcadores aleatórios (conteúdo é dado, não instrução)', () => {

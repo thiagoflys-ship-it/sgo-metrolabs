@@ -37,7 +37,9 @@ var LIC_COLUNAS = {
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
   LIC_ANALISES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'VERSAO', 'SITUACAO', 'NOTA', 'SOMA', 'CLASSE', 'TRAVADA', 'RESUMO', 'CRITERIOS_JSON', 'ITENS_JSON', 'EXIGENCIAS_JSON', 'RISCOS_JSON',
     'TRAVAS_JSON', 'AFIRMACOES_JSON', 'ARQUIVOS_JSON', 'ARQUIVOS_BASE', 'BASE_HASH', 'FONTE_VERSAO', 'FONTE_HASH', 'PESOS_JSON', 'REGRAS', 'MODELO', 'TENTATIVAS', 'RECUSAS_JSON',
-    'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'HASH', 'CRIADO_EM']
+    'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'HASH', 'CRIADO_EM',
+    // revisão de 02/11/2026 (prova real): respostas cruas da IA de cada tentativa (truncadas), só a Diretoria vê
+    'RESPOSTAS_IA_JSON']
 };
 var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNCP', 'ID_COMPRAS_GOV', 'ABERTURA_PROPOSTAS', 'ENCERRAMENTO_PROPOSTAS', 'ATUALIZACAO_FONTE'] };
 
@@ -134,14 +136,14 @@ function Lic_lista_(v) {
 function Lic_garantirAbas_() {
   var cache = null;
   // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V2')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V3')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V2', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V3', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */
