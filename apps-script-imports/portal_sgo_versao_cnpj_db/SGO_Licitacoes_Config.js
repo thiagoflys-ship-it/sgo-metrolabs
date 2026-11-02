@@ -29,7 +29,7 @@ var LIC_COLUNAS = {
     'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'VERSAO_FONTE', 'VERSAO_HASH', 'BRUTO_HASH', 'RETIFICADA_EM', 'ATUALIZACAO_FONTE', 'PRIMEIRA_COLETA_EM',
     'ULTIMA_SINCRONIA_EM', 'EXCLUIDO_EM', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
     // etapa 2 (02/11/2026): nota da última análise concluída e os arquivos do edital (SGO_Licitacoes_Analise.js)
-    'NOTA', 'NOTA_CLASSE', 'NOTA_TRAVA', 'ANALISE_ID', 'ANALISE_VERSAO', 'ANALISE_EM', 'ANALISE_BASE_HASH', 'ANALISE_SITUACAO', 'ANALISE_ERRO', 'ARQUIVOS_BASE_HASH', 'ARQUIVOS_QTD', 'ARQUIVOS_EM',
+    'NOTA', 'NOTA_CLASSE', 'NOTA_TRAVA', 'TRAVAS_A_CONFIRMAR', 'TRAVAS_DECISOES_JSON', 'ANALISE_ID', 'ANALISE_VERSAO', 'ANALISE_EM', 'ANALISE_BASE_HASH', 'ANALISE_SITUACAO', 'ANALISE_ERRO', 'ARQUIVOS_BASE_HASH', 'ARQUIVOS_QTD', 'ARQUIVOS_EM',
     // regra de guarda (02/11/2026): a data de publicação na fonte conta os 2 anos da candidata intocada (SGO_Licitacoes_Guarda.js)
     'PUBLICACAO_EM',
     // etapa 3 (02/11/2026): a agenda foi montada sobre esta base (datas, lei, modalidade, situação na fonte) e o último estado da fonte

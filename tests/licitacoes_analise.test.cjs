@@ -478,20 +478,63 @@ test('revisão: anexo HTML, XML ou SVG nunca abre no endereço do SGO+ (sai como
   assert.match(html, /new Blob\(\[u8\], \{ type: seguro \? r\.tipo : "application\/octet-stream" \}\)/);
 });
 
-test('trava provada com trecho zera a nota (classe "candidata a descarte"); quem descarta é a Diretoria', () => {
-  // revisão de 02/11/2026 (rede de segurança): a frase da trava fica no próprio parágrafo; com "sem" no parágrafo ela viraria pendência
+test('trava da IA não zera a nota sozinha: fica "a confirmar"; só "Confirmar trava" (Diretoria, com motivo) leva a 0; refazer a análise preserva a decisão', () => {
+  // decisão do coordenador (02/11/2026): a IA não decide; a frase da trava fica no próprio parágrafo (sem negação perto)
   const edital = TEXTOS.map((t) => Object.assign({}, t));
   edital[0].texto = EDITAL + '\n\nA contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa.';
-  const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC e o edital não aceita rastreabilidade.', fonte: { ref: 'A1', trecho: 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração' } }] });
-  const a = ambiente({ respostas: [resp] });
+  const trava = (trecho) => ({ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC e o edital não aceita rastreabilidade.', fonte: { ref: 'A1', trecho } });
+  const T1 = 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração', T2 = 'acreditado pela Cgcre na Rede Brasileira de Calibração para a grandeza massa';
+  const resp = respostaValida({ travas: [trava(T1)] }), resp2 = respostaValida({ travas: [trava(T1), trava(T2)] });
+  const a = ambiente({ respostas: [resp, resp, resp2] });
   a.srv.textos = edital;
-  const r = a.api('s_dora', 'analisar', { id: 'op1' });
+  let r = a.api('s_dora', 'analisar', { id: 'op1' });
   assert.equal(r.ok, true, r.message);
   const an = a.analises()[0];
-  assert.deepEqual([an.NOTA, an.CLASSE, an.TRAVADA], [0, 'DESCARTE', 'SIM']);
-  assert.ok(Number(an.SOMA) > 0, 'a soma sem a trava fica registrada');
-  assert.match(a.op().NOTA_TRAVA, /Exige laboratório acreditado RBC/);
+  assert.ok(Number(an.SOMA) > 0);
+  assert.deepEqual([Number(an.NOTA), an.CLASSE, an.TRAVADA], [Number(an.SOMA), 'TRAVA_A_CONFIRMAR', 'A_CONFIRMAR'], 'a nota calculada continua');
+  assert.deepEqual([Number(a.op().NOTA), a.op().NOTA_CLASSE, a.op().NOTA_TRAVA, Number(a.op().TRAVAS_A_CONFIRMAR)], [Number(an.SOMA), 'TRAVA_A_CONFIRMAR', '', 1]);
   assert.equal(a.op().SITUACAO, 'RADAR', 'a IA não descarta: a situação não muda');
+  assert.match(a.hist('ANALISE_IA')[0].TEXTO, /Trava\(s\) a confirmar pela Diretoria: Exige laboratório acreditado RBC/);
+  // selo "trava a confirmar" na lista de Oportunidades (e no Hoje, que usa o mesmo cartão)
+  const lista = a.api('s_dora', 'oportunidades', { aba: 'analisar' });
+  assert.ok(lista.lista.find((o) => o.id === 'op1').selos.some((s) => s.texto === 'Trava a confirmar'), JSON.stringify(lista.lista[0] && lista.lista[0].selos));
+  let f = a.api('s_dora', 'ficha', { id: 'op1' });
+  const at = f.analise.atual, chave = at.travas[0].chave;
+  assert.deepEqual([at.classeNome, at.aConfirmar, at.travas[0].estado], ['Candidata a descarte (trava a confirmar)', true, 'A_CONFIRMAR']);
+  // permissão: só Diretoria e Administrador; motivo obrigatório; trava que não é da análise atual
+  for (const sid of ['s_gil', 's_vera', 's_tiago']) assert.equal(a.api(sid, 'travaDecidir', { id: 'op1', chave, decisao: 'CONFIRMAR', motivo: 'tentativa sem permissão' }).semAcesso, true, sid);
+  assert.match(a.api('s_dora', 'travaDecidir', { id: 'op1', chave, decisao: 'CONFIRMAR', motivo: 'curto' }).message, /^Escreva o motivo \(pelo menos 10 letras\)/);
+  assert.match(a.api('s_dora', 'travaDecidir', { id: 'op1', chave: 'Tinexistente', decisao: 'CONFIRMAR', motivo: 'motivo bem escrito aqui' }).message, /^Escolha uma trava da análise atual/);
+  assert.equal(Number(a.op().TRAVAS_A_CONFIRMAR), 1, 'nada mudou');
+  // confirmar: nota a 0, classe candidata a descarte, histórico com quem, o motivo, o trecho e a nota de antes
+  r = a.api('s_dora', 'travaDecidir', { id: 'op1', chave, decisao: 'CONFIRMAR', motivo: 'Li o edital: exige RBC sem aceitar rastreabilidade' });
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual([Number(a.op().NOTA), a.op().NOTA_CLASSE, Number(a.op().TRAVAS_A_CONFIRMAR)], [0, 'DESCARTE', 0]);
+  assert.match(a.op().NOTA_TRAVA, /Exige laboratório acreditado RBC/);
+  const h = a.hist('TRAVA_CONFIRMADA')[0];
+  assert.equal(h.USUARIO_NOME, 'DORA DIRETORA TESTE');
+  assert.match(h.DE, /^trava a confirmar · nota /); assert.match(h.PARA, /^trava confirmada · nota 0 · Candidata a descarte$/);
+  assert.match(h.TEXTO, /Motivo: Li o edital: exige RBC sem aceitar rastreabilidade\. Trecho \(A1\): "deverá ser laboratório acreditado/);
+  assert.equal(h.VERSAO, 'decisão 1 · análise 1');
+  assert.equal(a.op().SITUACAO, 'RADAR', 'confirmar a trava não descarta: descartar continua sendo outra ação da Diretoria');
+  assert.equal(a.analises()[0].NOTA, an.NOTA, 'a análise gravada não é sobrescrita');
+  // "Não é trava" volta a nota calculada (decisão 2, com histórico)
+  r = a.api('s_admin', 'travaDecidir', { id: 'op1', chave, decisao: 'NAO_E_TRAVA', motivo: 'O edital aceita certificado rastreável (item 9.3)' });
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual([Number(a.op().NOTA), a.op().NOTA_CLASSE === 'TRAVA_A_CONFIRMAR'], [Number(an.SOMA), false]);
+  assert.equal(a.hist('TRAVA_REJEITADA')[0].VERSAO, 'decisão 2 · análise 1');
+  // refazer a análise: a mesma trava no mesmo trecho não pede confirmação de novo
+  r = a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Refazer para conferir a decisão preservada' });
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual([Number(a.op().TRAVAS_A_CONFIRMAR), a.op().NOTA_CLASSE === 'TRAVA_A_CONFIRMAR', Number(a.op().NOTA) > 0], [0, false, true]);
+  f = a.api('s_dora', 'ficha', { id: 'op1' });
+  assert.equal(f.analise.atual.travas[0].estado, 'NAO_E_TRAVA');
+  // trava nova (outro trecho) pede confirmação nova
+  r = a.api('s_dora', 'analisar', { id: 'op1', motivo: 'Refazer com o termo de referência novo' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(Number(a.op().TRAVAS_A_CONFIRMAR), 1);
+  f = a.api('s_dora', 'ficha', { id: 'op1' });
+  assert.deepEqual(Array.from(f.analise.atual.travas, (t) => t.estado), ['NAO_E_TRAVA', 'A_CONFIRMAR']);
 });
 
 test('rotina do servidor (Lic_aposArquivos_): analisa só quando a base muda, só no radar/em análise com prazo aberto, uma por chamada; só execução interna', () => {
@@ -622,4 +665,27 @@ test('ajuda da tela, manual e base do assistente falam de Arquivos, Análise e d
   const textos = ['SGO_Licitacoes_Analise.js', 'SGO_Ajuda_Licitacoes.js', 'JS_Licitacoes.html'].map(ler).join('\n') + manual;
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /somos acreditad|Metrolabs é acreditad/i);
+});
+
+test('aba Análise: trava a confirmar com selo, alerta de exceção e os botões "Confirmar trava" e "Não é trava"; depois da decisão, quem e o motivo', () => {
+  const edital = TEXTOS.map((t) => Object.assign({}, t));
+  edital[0].texto = EDITAL + '\n\nA contratada deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração, podendo subcontratar laboratório acreditado.';
+  const resp = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige laboratório acreditado na RBC.', fonte: { ref: 'A1', trecho: 'deverá ser laboratório acreditado pela Cgcre na Rede Brasileira de Calibração' } }] });
+  const a = ambiente({ respostas: [resp] });
+  a.srv.textos = edital;
+  assert.equal(a.api('s_dora', 'analisar', { id: 'op1' }).ok, true);
+  let f = a.api('s_dora', 'ficha', { id: 'op1' });
+  let html = tela().ctx.Lic_htmlFicha_(f, 'analise');
+  assert.match(html, /Candidata a descarte \(trava a confirmar\)/);
+  assert.match(html, /<span class="cm-selo vermelho">Trava a confirmar<\/span> Exige laboratório acreditado RBC/);
+  assert.match(html, /há negação ou exceção perto do trecho \("subcontratar"\)/);
+  assert.match(html, /data-lic-trava-dec="CONFIRMAR"[^>]*>Confirmar trava<\/button>/);
+  assert.match(html, /data-lic-trava-dec="NAO_E_TRAVA"[^>]*>Não é trava<\/button>/);
+  const chave = f.analise.atual.travas[0].chave;
+  assert.equal(a.api('s_dora', 'travaDecidir', { id: 'op1', chave, decisao: 'CONFIRMAR', motivo: 'Conferido no edital, exige RBC' }).ok, true);
+  f = a.api('s_dora', 'ficha', { id: 'op1' });
+  html = tela().ctx.Lic_htmlFicha_(f, 'analise');
+  assert.match(html, /Trava confirmada pela Diretoria/);
+  assert.match(html, /Confirmada por DORA DIRETORA TESTE em .* \(decisão 1\): Conferido no edital, exige RBC/);
+  assert.match(html, /Nota 0 de 100 · Candidata a descarte/);
 });

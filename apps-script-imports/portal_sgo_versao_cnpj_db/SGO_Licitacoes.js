@@ -48,6 +48,7 @@ var LIC_ACOES = {
   arquivoBaixar: function (eu, d) { return Lic_arquivoBaixar_(eu, d); },
   analise: function (eu, d) { return Lic_analiseAcao_(eu, d); },
   analisar: function (eu, d) { return Lic_analisarAcao_(eu, d); },
+  travaDecidir: function (eu, d) { return Lic_travaDecidirAcao_(eu, d); },
   // etapa 3 (02/11/2026)
   agenda: function (eu, d) { return Lic_agenda_(eu, d); },
   eventoConfirmar: function (eu, d) { return Lic_eventoConfirmar_(eu, d); },
@@ -224,12 +225,12 @@ function Lic_cartao_(l, portais) {
     objeto: Lic_texto_(l.OBJETO, 1200), valor: l.VALOR_ESTIMADO === '' || l.VALOR_ESTIMADO === null || l.VALOR_ESTIMADO === undefined ? null : Number(l.VALOR_ESTIMADO),
     abertura: Lic_s_(l.ABERTURA_PROPOSTAS), encerramento: Lic_s_(l.ENCERRAMENTO_PROPOSTAS), encerramentoIso: Lic_s_(l.ENCERRAMENTO_ISO), fusoAlerta: Lic_s_(l.FUSO_ALERTA), fusoPresumido: Lic_s_(l.FUSO_PRESUMIDO) === 'SIM',
     situacaoFonte: Lic_s_(l.SITUACAO_FONTE), triagem: Lic_s_(l.TRIAGEM), motivo: Lic_s_(l.TRIAGEM_MOTIVO), trecho: Lic_s_(l.TRIAGEM_TRECHO), termo: Lic_s_(l.TRIAGEM_TERMO), fonteTrecho: Lic_s_(l.TRIAGEM_FONTE_TRECHO),
-    regra: Lic_s_(l.TRIAGEM_REGRA), selos: Lic_selos_(l), pendencias: Lic_json_(l.PENDENCIAS_JSON, []), prioridade: Number(l.PRIORIDADE_UF) || 0,
+    regra: Lic_s_(l.TRIAGEM_REGRA), selos: Lic_selos_(l).concat(Number(l.TRAVAS_A_CONFIRMAR) > 0 ? [{ texto: 'Trava a confirmar', cor: 'vermelho', codigo: 'TRAVA_A_CONFIRMAR' }] : []), pendencias: Lic_json_(l.PENDENCIAS_JSON, []), prioridade: Number(l.PRIORIDADE_UF) || 0,
     situacao: Lic_s_(l.SITUACAO), situacaoNome: LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || Lic_s_(l.SITUACAO), situacaoDesde: Lic_s_(l.SITUACAO_DESDE),
     descarteOrigem: Lic_s_(l.DESCARTE_ORIGEM), descarteMotivo: Lic_s_(l.DESCARTE_MOTIVO), descartePor: Lic_s_(l.DESCARTE_POR_NOME), descarteEm: Lic_s_(l.DESCARTE_EM), analiseObs: Lic_s_(l.ANALISE_OBS),
     linkOrigem: Lic_url_(l.LINK_ORIGEM), linkPncp: Lic_url_(l.LINK_PNCP), versao: Number(l.VERSAO_FONTE) || 1, retificadaEm: Lic_s_(l.RETIFICADA_EM), responsavel: Lic_s_(l.RESPONSAVEL_NOME),
     // etapa 2: nota da última análise concluída (null = sem nota) e a situação da última tentativa
-    nota: l.NOTA === '' || l.NOTA === null || l.NOTA === undefined || !isFinite(Number(l.NOTA)) ? null : Number(l.NOTA), notaClasse: Lic_s_(l.NOTA_CLASSE), notaTrava: Lic_s_(l.NOTA_TRAVA),
+    nota: l.NOTA === '' || l.NOTA === null || l.NOTA === undefined || !isFinite(Number(l.NOTA)) ? null : Number(l.NOTA), notaClasse: Lic_s_(l.NOTA_CLASSE), notaTrava: Lic_s_(l.NOTA_TRAVA), travasAConfirmar: Number(l.TRAVAS_A_CONFIRMAR) || 0,
     analiseVersao: Number(l.ANALISE_VERSAO) || 0, analiseEm: Lic_s_(l.ANALISE_EM), analiseSituacao: Lic_s_(l.ANALISE_SITUACAO), arquivosQtd: l.ARQUIVOS_QTD === '' || l.ARQUIVOS_QTD === undefined ? null : Number(l.ARQUIVOS_QTD)
   };
 }

@@ -246,7 +246,7 @@ const tab = (o) => Object.entries(o).sort((x, y) => y[1] - x[1]).forEach(([k, v]
 const P = resultado.pedido, med = (x) => Math.round(x / Math.max(1, P.analises));
 console.log('Pedido à IA: média ' + med(P.caracteres) + ' caracteres (~' + med(P.caracteres / 4) + ' tokens, a 4 caracteres por token), maior ' + P.max + '; texto dos arquivos lido: média ' + med(P.arquivos));
 if (resultado.cobertura.provas) console.log('Provas de arquivo aceitas que estão no texto enviado à IA: ' + resultado.cobertura.noPedido + ' de ' + resultado.cobertura.provas + ' (' + pct(resultado.cobertura.noPedido, resultado.cobertura.provas) + ')');
-if (resultado.rede) console.log('Rede de segurança: provas de trava aceitas ' + resultado.rede.travas + ', viram pendência ' + resultado.rede.travasPendencia + '; provas impeditivas (RBC, acreditação, registro, atestado) ' + resultado.rede.impeditivos + ', viram pendência ' + resultado.rede.impeditivosPendencia);
+if (resultado.rede) console.log('Rede de segurança: provas de trava aceitas ' + resultado.rede.travas + ' (todas ficam a confirmar), com alerta de exceção ' + resultado.rede.travasPendencia + '; provas impeditivas (RBC, acreditação, registro, atestado) ' + resultado.rede.impeditivos + ', viram pendência ' + resultado.rede.impeditivosPendencia);
 if (resultado.rede && opc.detalhe) resultado.rede.exemplos.forEach((x) => console.log('  ' + x));
 console.log('\nCausas (verificador desta pasta: respostas inteiras + pares):'); tab(resultado.causasNovas);
 console.log('\nTrechos "não está na fonte" — diagnóstico (a IA estava certa?):'); tab(resultado.diagnosticos);

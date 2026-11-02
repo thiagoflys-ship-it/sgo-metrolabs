@@ -64,7 +64,7 @@ var LIC_TRAVAS = {
   EXCLUSIVA_ME_EPP_FORA: 'Exclusiva ME/EPP com a matriz fora do porte'
 };
 var LIC_GRAUS = { ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa', NAO_ATENDE: 'Não atende' };
-var LIC_CLASSES = { ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa', DESCARTE: 'Candidata a descarte' };
+var LIC_CLASSES = { ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa', DESCARTE: 'Candidata a descarte', TRAVA_A_CONFIRMAR: 'Candidata a descarte (trava a confirmar)' };
 var LIC_UF_PONTOS = { GO: 8, DF: 8, MG: 6, BA: 6, TO: 6, MT: 6, MS: 6, RJ: 6, SP: 3, ES: 3, PR: 3, SC: 3, RS: 3 };
 var LIC_MSG_SEM_IA = 'Análise por IA indisponível: falta a chave da IA (GEMINI_API_KEY em Administração > Chaves e senhas; quem cadastra é o Administrador). Os arquivos e o texto extraído continuam disponíveis; quando a chave for cadastrada, toque em "Analisar agora"';
 
@@ -872,11 +872,12 @@ function Lic_verificarAnalise_(j, ctx) {
     var foR = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, problemas, { tipo: 'TRAVA', estrito: true }) : null;
     if (foR && !foR.regra) { problemas.push(onde + ', fonteRegra: use uma REGRA:... (o trecho do edital vai em fonte)'); foR = null; }
     var txT = Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, problemas, true), 600);
-    // rede de segurança (decisão do coordenador, 02/11/2026): trava zera a nota; com QUALQUER negação no parágrafo do trecho,
-    // não zera: vira pendência "confirmar no edital" com o trecho e o motivo
-    var negT = foT ? Lic_negacaoPerto_(foT) : '';
-    if (negT) rede.push(Lic_pendenciaRede_('trava', 'da trava "' + LIC_TRAVAS[cod] + '"', negT, foT));
-    else saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR });
+    // assunto (revisão de 02/11/2026): o trecho tem de falar do assunto da trava (DEDICACAO_EXCLUSIVA não se prova com o prazo de execução)
+    if (foT && !Lic_travaNoAssunto_(cod, foT.trecho)) { problemas.push(onde + ': o trecho não fala do assunto da trava ' + cod + ' (precisa falar de ' + LIC_TRAVA_ASSUNTO[cod].rotulo + '); cite o trecho do edital que trata disso ou escreva uma PENDENCIA'); return; }
+    if (cod === 'FORA_DO_CATALOGO' && !(foR && foR.ref === 'REGRA:catalogo')) { problemas.push(onde + ': FORA_DO_CATALOGO precisa de fonteRegra REGRA:catalogo (a frase do catálogo que mostra que o serviço não está lá)'); return; }
+    // decisão do coordenador (02/11/2026): trava da IA NUNCA zera a nota sozinha; fica "a confirmar" pela Diretoria. A rede de
+    // segurança só marca o alerta de exceção (negação ou exceção perto do trecho) para quem vai confirmar
+    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: foT ? Lic_chaveTrava_(cod, foT.trecho) : '', excecao: foT ? Lic_negacaoPerto_(foT) : '' });
   });
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
@@ -911,21 +912,42 @@ function Lic_verificarAnalise_(j, ctx) {
 
 // ------------------------------------------------------------ rede de segurança (decisão do coordenador, 02/11/2026)
 /*
- * Para parar a caça a casos de negação: TRAVA (zera a nota) e FATO ou exigência que diga que o edital exige algo impeditivo
- * (RBC, acreditação, 17025, registro, atestado, Inmetro), com QUALQUER palavra de negação no mesmo parágrafo do trecho (desde
- * a última linha em branco, até LIC_REDE_ANTES caracteres antes e LIC_REDE_DEPOIS depois), não valem como prova: viram
- * PENDÊNCIA "confirmar no edital: há negação ou exceção perto do trecho", com o trecho e o motivo, na aba Análise.
+ * Para parar a caça a casos de negação e exceção:
+ *   - TRAVA da IA nunca zera a nota sozinha (Lic_notaPelasTravas_): fica "a confirmar" pela Diretoria; a rede só põe nela o
+ *     alerta de exceção, quando há negação ou exceção perto do trecho;
+ *   - FATO ou exigência que diga que o edital exige algo impeditivo (RBC, acreditação, 17025, registro, atestado, Inmetro), com
+ *     negação ou exceção perto do trecho, não vale como prova: vira PENDÊNCIA "confirmar no edital".
+ * "Perto" = o parágrafo inteiro do trecho (desde a última linha em branco) e o parágrafo seguinte (a resposta a um
+ * esclarecimento costuma vir logo abaixo), até LIC_REDE_ANTES caracteres antes e LIC_REDE_DEPOIS depois. Hífen separa as
+ * palavras ("não-obrigatoriedade"). Além das negações, contam palavras de exceção: alternativa, opcional, facultado,
+ * subcontratar, rastreável, poderá, aceito.
  */
-var LIC_REDE_ANTES = 1500;
-var LIC_REDE_DEPOIS = 400;
+var LIC_REDE_ANTES = 6000;
+var LIC_REDE_DEPOIS = 4000;
+var LIC_EXCECAO = /^(alternativ\w*|opciona\w*|facultad\w*|subcontrat\w*|rastreab\w*|rastreave\w*|podera\w*|poderao|aceit\w*)$/;
 var LIC_IMPEDITIVO = /(^| )(rbc|acreditad[oa]s?|acreditacao|17025|registro|registros|atestado|atestados|inmetro)( |$)/;
 function Lic_impeditivo_(t) { return LIC_IMPEDITIVO.test(Lic_normTrecho_(t)); }
+/** Assunto de cada trava: o trecho que a prova tem de falar disso (revisão de 02/11/2026). null = conferido de outro jeito. */
+var LIC_TRAVA_ASSUNTO = {
+  RBC_OBRIGATORIA: { re: /(^| )(rbc|acredit\w*|17025|iso iec 17025)/, rotulo: 'RBC, acreditação ou ISO/IEC 17025' },
+  DEDICACAO_EXCLUSIVA: { re: /dedicacao exclusiva|mao de obra exclusiva|regime de dedicacao|postos? de trabalho|residente/, rotulo: 'dedicação exclusiva de mão de obra' },
+  SOFTWARE_PROPRIO: { re: /(^| )(software|sistema informatizado|sistema de gestao|plataforma|aplicativo)/, rotulo: 'software ou sistema de gestão' },
+  VISTORIA_VENCIDA: { re: /(^| )(vistoria|visita tecnica)/, rotulo: 'vistoria ou visita técnica' },
+  EMPRESA_IMPEDIDA: { re: /(^| )(impedid\w*|suspens\w*|inidone\w*|proibid\w*|sancionad\w*)/, rotulo: 'impedimento, suspensão ou inidoneidade' },
+  CONTRATACAO_DIRETA_DECIDIDA: { re: /(^| )(inexigibilidade|contratacao direta|ratifica\w*|adjudica\w*|homologa\w*|contratad[oa] diretamente)/, rotulo: 'contratação direta, ratificação ou adjudicação' },
+  FORA_DO_CATALOGO: null,
+  PRODUTO_SEM_CATALOGO: { re: /(^| )(aquisica\w*|aquisic\w*|compra\w*|fornecimento|material|materiais|equipamento\w*|produto\w*|bens)( |$)/, rotulo: 'compra ou fornecimento de produto' },
+  EXCLUSIVA_ME_EPP_FORA: { re: /(^| )(exclusiv\w*|me epp|microempresa\w*|pequeno porte|mei)( |$)/, rotulo: 'participação exclusiva de ME/EPP' }
+};
+function Lic_travaNoAssunto_(cod, trecho) { var a = LIC_TRAVA_ASSUNTO[cod]; return !a || a.re.test(Lic_normTrecho_(trecho)); }
+/** Chave da trava (código + trecho): a decisão da Diretoria vale para a mesma trava e o mesmo trecho nas análises seguintes. */
+function Lic_chaveTrava_(cod, trecho) { return 'T' + Lic_hash_(Lic_up_(cod) + '|' + Lic_normTrecho_(trecho)).slice(0, 16); }
 /** Guarda onde a prova está no texto da fonte (fica fora do JSON gravado). */
 function Lic_comOnde_(fo, texto, ini, fim) {
   if (fo && typeof ini === 'number') Object.defineProperty(fo, '_onde', { value: { texto: texto, ini: ini, fim: fim }, enumerable: false, configurable: true });
   return fo;
 }
-/** A primeira palavra de negação do parágrafo do trecho (como está no texto), ou ''. */
+/** A primeira palavra de negação ou exceção perto do trecho (como está no texto), ou ''. */
 function Lic_negacaoPerto_(fo) {
   var o = fo && fo._onde;
   // regra da empresa e números do sistema não são o edital: a rede não se aplica a eles
@@ -935,19 +957,44 @@ function Lic_negacaoPerto_(fo) {
   var m, re = /\n[ \t]*\n/g, ult = -1;
   while ((m = re.exec(antes))) ult = m.index + m[0].length;
   if (ult >= 0) antes = antes.slice(ult);
-  var bD = depois.search(/\n[ \t]*\n/);
-  if (bD >= 0) depois = depois.slice(0, bD);
-  var par = antes + t.slice(ini, fim) + depois, tk = Lic_tokens_(par);
-  for (var k = 0; k < tk.toks.length; k++) if (LIC_NEGACAO.test(tk.toks[k])) return par.slice(tk.ini[k], tk.fim[k]);
+  // o parágrafo do trecho e o seguinte: corta na segunda linha em branco depois do trecho
+  var r2 = /\n[ \t]*\n/g, n = 0, corte = -1;
+  while ((m = r2.exec(depois))) { n++; if (n === 2) { corte = m.index; break; } }
+  if (corte >= 0) depois = depois.slice(0, corte);
+  var par = antes + t.slice(ini, fim) + depois, tk = Lic_tokens_(par.replace(/[-‐‑–—]/g, ' '));
+  for (var k = 0; k < tk.toks.length; k++) if (LIC_NEGACAO.test(tk.toks[k]) || LIC_EXCECAO.test(tk.toks[k])) return par.slice(tk.ini[k], tk.fim[k]);
   return '';
 }
 function Lic_pendenciaRede_(criterio, oque, neg, fo) {
   return { tipo: 'PENDENCIA', criterio: criterio, origem: 'SISTEMA', rede: true, fonte: fo,
-    texto: 'Confirmar no edital: há negação ou exceção perto do trecho ' + oque + ' ("' + neg + '"). ' + (criterio === 'trava' ? 'A trava não zerou a nota; a Diretoria confere e decide.' : 'Não conta como exigência até a Diretoria conferir.') };
+    texto: 'Confirmar no edital: há negação ou exceção perto do trecho ' + oque + ' ("' + neg + '"). Não conta como exigência até a Diretoria conferir.' };
 }
 
-/** Nota final e classe (código). Trava provada = 0. */
-function Lic_notaFinal_(saida, codigo, pesos) {
+/**
+ * Estado das travas e a nota (decisão do coordenador, 02/11/2026: "a IA não decide"). Trava da IA fica A_CONFIRMAR até a
+ * Diretoria decidir (decisoes[chave].decisao = CONFIRMADA ou NAO_E_TRAVA, em LIC_OPORTUNIDADES.TRAVAS_DECISOES_JSON); só a
+ * confirmada e a do código (PRAZO_VENCIDO) zeram a nota. Com trava a confirmar, a nota calculada continua e a classe é
+ * "candidata a descarte (trava a confirmar)". Devolve { nota, classe, efetivas, aConfirmar, travas } (travas com o estado).
+ */
+function Lic_notaPelasTravas_(soma, travas, decisoes) {
+  decisoes = decisoes || {};
+  var lista = (travas || []).map(function (t) {
+    var x = Object.assign({}, t);
+    if (x.codigo === 'PRAZO_VENCIDO' || x.estado === 'CODIGO') { x.estado = 'CODIGO'; return x; }
+    var d = x.chave ? decisoes[x.chave] : null;
+    x.estado = d ? (d.decisao === 'CONFIRMADA' ? 'CONFIRMADA' : 'NAO_E_TRAVA') : 'A_CONFIRMAR';
+    x.decisao = d || null;
+    return x;
+  });
+  var efetivas = lista.filter(function (t) { return t.estado === 'CODIGO' || t.estado === 'CONFIRMADA'; });
+  var aConfirmar = lista.filter(function (t) { return t.estado === 'A_CONFIRMAR'; });
+  var nota = efetivas.length ? 0 : Lic_r1_(soma);
+  var classe = efetivas.length ? 'DESCARTE' : aConfirmar.length ? 'TRAVA_A_CONFIRMAR' : nota < 30 ? 'DESCARTE' : nota >= 75 ? 'ALTA' : nota >= 50 ? 'MEDIA' : 'BAIXA';
+  return { nota: nota, classe: classe, classeNome: LIC_CLASSES[classe], efetivas: efetivas, aConfirmar: aConfirmar, travas: lista };
+}
+
+/** Nota final e classe (código). Trava do código (prazo vencido) ou confirmada pela Diretoria = 0; trava da IA fica a confirmar. */
+function Lic_notaFinal_(saida, codigo, pesos, decisoes) {
   var riscosPts = Math.max(0, pesos.riscos - saida.riscos.length);
   var crit = {
     capacidade: { pontos: saida.capacidade.pontos, peso: pesos.capacidade, origem: 'IA_CODIGO', como: (saida.capacidade.como ? saida.capacidade.como + ' ' : '') + saida.capacidade.justificativa },
@@ -959,12 +1006,10 @@ function Lic_notaFinal_(saida, codigo, pesos) {
   var soma = 0;
   Object.keys(crit).forEach(function (k) { crit[k].pontos = Lic_r1_(crit[k].pontos); soma += crit[k].pontos; });
   var travas = saida.travas.slice();
-  if (codigo.prazo.vencido && codigo.fimIso) travas.push({ codigo: 'PRAZO_VENCIDO', nome: 'Prazo de propostas encerrado', texto: 'O fim das propostas (' + Lic_brDia_(codigo.fimIso) + ') já passou.', fonte: { ref: 'CAMPO:encerramento', rotulo: 'Fim das propostas (PNCP)', trecho: codigo.fimIso } });
-  var nota = travas.length ? 0 : Lic_r1_(soma);
-  var classe = travas.length || nota < 30 ? 'DESCARTE' : nota >= 75 ? 'ALTA' : nota >= 50 ? 'MEDIA' : 'BAIXA';
-  return { nota: nota, soma: Lic_r1_(soma), classe: classe, classeNome: LIC_CLASSES[classe], criterios: crit, travas: travas };
+  if (codigo.prazo.vencido && codigo.fimIso) travas.push({ codigo: 'PRAZO_VENCIDO', nome: 'Prazo de propostas encerrado', texto: 'O fim das propostas (' + Lic_brDia_(codigo.fimIso) + ') já passou.', fonte: { ref: 'CAMPO:encerramento', rotulo: 'Fim das propostas (PNCP)', trecho: codigo.fimIso }, estado: 'CODIGO', chave: 'PRAZO_VENCIDO' });
+  var r = Lic_notaPelasTravas_(soma, travas, decisoes);
+  return { nota: r.nota, soma: Lic_r1_(soma), classe: r.classe, classeNome: r.classeNome, criterios: crit, travas: r.travas, efetivas: r.efetivas, aConfirmar: r.aConfirmar };
 }
-
 /** Contexto do verificador: fontes, pesos, fabricantes, números permitidos (fontes + cálculos do sistema) e a triagem. */
 function Lic_ctxVerificador_(l, fontes, pesos, codigo) {
   // revisão de 02/11/2026 (banco de prova): os números do sistema como fonte citável (só em afirmação; nunca provam serviço)
@@ -1092,12 +1137,13 @@ function Lic_analisar_(eu, l, o) {
   var mudOp = { ANALISE_EM: agora, ANALISE_BASE_HASH: base, ATUALIZADO_EM: agora };
   var resultado;
   if (saida) {
-    var nf = Lic_notaFinal_(saida, codigo, pesos);
+    // a decisão da Diretoria sobre a mesma trava e o mesmo trecho vale de novo (não se pede a mesma coisa duas vezes)
+    var nf = Lic_notaFinal_(saida, codigo, pesos, Lic_json_(l.TRAVAS_DECISOES_JSON, {}));
     var afirmacoes = codigo.afirmacoes.map(function (a) { return Object.assign({ origem: 'SISTEMA' }, a, { fonte: a.fonte ? Object.assign({ rotulo: (fontes[a.fonte.ref] || {}).rotulo || a.fonte.ref }, a.fonte) : null }); }).concat(saida.afirmacoes);
-    Object.assign(reg, { SITUACAO: 'CONCLUIDA', NOTA: nf.nota, SOMA: nf.soma, CLASSE: nf.classe, TRAVADA: nf.travas.length ? 'SIM' : 'NAO', RESUMO: Lic_texto_(saida.resumo, 1500),
+    Object.assign(reg, { SITUACAO: 'CONCLUIDA', NOTA: nf.nota, SOMA: nf.soma, CLASSE: nf.classe, TRAVADA: nf.efetivas.length ? 'SIM' : nf.aConfirmar.length ? 'A_CONFIRMAR' : 'NAO', RESUMO: Lic_texto_(saida.resumo, 1500),
       CRITERIOS_JSON: JSON.stringify(nf.criterios), ITENS_JSON: JSON.stringify(saida.capacidade.itens).slice(0, 30000), EXIGENCIAS_JSON: JSON.stringify(saida.documentacao.exigencias).slice(0, 30000),
       RISCOS_JSON: JSON.stringify(saida.riscos).slice(0, 20000), TRAVAS_JSON: JSON.stringify(nf.travas).slice(0, 20000), AFIRMACOES_JSON: JSON.stringify(afirmacoes).slice(0, 45000) });
-    Object.assign(mudOp, { NOTA: nf.nota, NOTA_CLASSE: nf.classe, NOTA_TRAVA: nf.travas.length ? nf.travas.map(function (t) { return t.nome; }).join('; ').slice(0, 500) : '', ANALISE_VERSAO: versao, ANALISE_SITUACAO: 'CONCLUIDA', ANALISE_ERRO: '' });
+    Object.assign(mudOp, { NOTA: nf.nota, NOTA_CLASSE: nf.classe, NOTA_TRAVA: nf.efetivas.map(function (t) { return t.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: nf.aConfirmar.length, ANALISE_VERSAO: versao, ANALISE_SITUACAO: 'CONCLUIDA', ANALISE_ERRO: '' });
     resultado = { analisada: true, nota: nf.nota, classe: nf.classe };
   } else {
     var simples = erroIA ? '' : Lic_motivoRecusaSimples_(recusas, textos, srv.arquivos);
@@ -1115,7 +1161,7 @@ function Lic_analisar_(eu, l, o) {
   Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, saida ? 'ANALISE_IA' : reg.SITUACAO === 'ERRO' ? 'ANALISE_IA_FALHOU' : 'ANALISE_IA_RECUSADA', eu || { id: '', nome: 'Sistema' }, {
     de: Lic_s_(l.NOTA) !== '' ? 'nota ' + Lic_fmtNum_(l.NOTA) + ' (análise ' + Lic_s_(l.ANALISE_VERSAO) + ')' : 'sem nota',
     para: saida ? 'nota ' + Lic_fmtNum_(reg.NOTA) + ' · ' + LIC_CLASSES[reg.CLASSE] + ' (análise ' + versao + ')' : reg.SITUACAO.toLowerCase(),
-    texto: (o.origem === 'AUTOMATICA' ? 'Análise automática (arquivos ou dados da fonte mudaram). ' : 'Análise pedida' + (o.motivo ? ': ' + o.motivo + '. ' : '. ')) + Lic_s_(reg.RESUMO) + (saida && reg.TRAVADA === 'SIM' ? ' Travas: ' + mudOp.NOTA_TRAVA + '.' : '') + ' A decisão continua com a Diretoria.',
+    texto: (o.origem === 'AUTOMATICA' ? 'Análise automática (arquivos ou dados da fonte mudaram). ' : 'Análise pedida' + (o.motivo ? ': ' + o.motivo + '. ' : '. ')) + Lic_s_(reg.RESUMO) + (saida && reg.TRAVADA === 'SIM' ? ' Travas: ' + mudOp.NOTA_TRAVA + '.' : '') + (saida && nf.aConfirmar.length ? ' Trava(s) a confirmar pela Diretoria: ' + nf.aConfirmar.map(function (t) { return t.nome; }).join('; ') + ' (a nota só vai a 0 depois de "Confirmar trava").' : '') + ' A decisão continua com a Diretoria.',
     versao: versao, fonte: 'IA (' + reg.MODELO + ') sobre a versão ' + reg.FONTE_VERSAO + ' da fonte e ' + arqs.length + ' arquivo(s): ' + arqs.map(function (a) { return a.ref + ' ' + Lic_s_(a.sha256).slice(0, 12); }).join(', '),
     hash: reg.HASH });
   resultado.versao = versao; resultado.id = reg.ID;
@@ -1149,10 +1195,47 @@ function Lic_motivoRecusaSimples_(recusas, textos, arquivos) {
 function Lic_analiseTela_(a) {
   if (!a) return null;
   return { id: Lic_s_(a.ID), versao: Number(a.VERSAO) || 0, situacao: Lic_s_(a.SITUACAO), nota: a.NOTA === '' || a.NOTA === null || a.NOTA === undefined ? null : Number(a.NOTA), soma: a.SOMA === '' || a.SOMA === undefined ? null : Number(a.SOMA),
-    classe: Lic_s_(a.CLASSE), classeNome: LIC_CLASSES[Lic_s_(a.CLASSE)] || '', travada: Lic_s_(a.TRAVADA) === 'SIM', resumo: Lic_s_(a.RESUMO), criterios: Lic_json_(a.CRITERIOS_JSON, {}), itens: Lic_json_(a.ITENS_JSON, []),
+    classe: Lic_s_(a.CLASSE), classeNome: LIC_CLASSES[Lic_s_(a.CLASSE)] || '', travada: Lic_s_(a.TRAVADA) === 'SIM', aConfirmar: Lic_s_(a.TRAVADA) === 'A_CONFIRMAR', resumo: Lic_s_(a.RESUMO), criterios: Lic_json_(a.CRITERIOS_JSON, {}), itens: Lic_json_(a.ITENS_JSON, []),
     exigencias: Lic_json_(a.EXIGENCIAS_JSON, []), riscos: Lic_json_(a.RISCOS_JSON, []), travas: Lic_json_(a.TRAVAS_JSON, []), afirmacoes: Lic_json_(a.AFIRMACOES_JSON, []), arquivos: Lic_json_(a.ARQUIVOS_JSON, []),
     recusas: Lic_json_(a.RECUSAS_JSON, []), respostas: Lic_json_(a.RESPOSTAS_IA_JSON, []), modelo: Lic_s_(a.MODELO), tentativas: Number(a.TENTATIVAS) || 0, motivo: Lic_s_(a.MOTIVO), origem: Lic_s_(a.ORIGEM_PEDIDO), por: Lic_s_(a.PEDIDO_POR_NOME),
     em: Lic_s_(a.CRIADO_EM), baseHash: Lic_s_(a.BASE_HASH), fonteVersao: Number(a.FONTE_VERSAO) || 1, regras: Lic_s_(a.REGRAS), hash: Lic_s_(a.HASH) };
+}
+
+/** A análise na tela com o estado de hoje das travas (decisões da Diretoria gravadas na oportunidade depois da análise). */
+function Lic_comDecisoes_(at, l) {
+  if (!at || at.soma === null || at.soma === undefined || isNaN(at.soma)) return at;
+  var r = Lic_notaPelasTravas_(at.soma, at.travas, Lic_json_(l.TRAVAS_DECISOES_JSON, {}));
+  return Object.assign(at, { notaAnalise: at.nota, nota: r.nota, classe: r.classe, classeNome: r.classeNome, travas: r.travas, travada: r.efetivas.length > 0, aConfirmar: r.aConfirmar.length > 0 });
+}
+/**
+ * "Confirmar trava" e "Não é trava" (decisão do coordenador, 02/11/2026). d: { id, chave, decisao: CONFIRMAR | NAO_E_TRAVA,
+ * motivo }. Só Diretoria e Administrador (o módulo inteiro), motivo obrigatório (10 letras), versão da decisão, LIC_HISTORICO
+ * com quem, quando, o trecho e a nota de antes e de depois. A análise gravada não muda (nada é sobrescrito): a decisão fica na
+ * oportunidade (TRAVAS_DECISOES_JSON) e vale nas próximas análises para a mesma trava e o mesmo trecho.
+ */
+function Lic_travaDecidirAcao_(eu, d) {
+  var l = Lic_acharOp_(d.id), motivo = Lic_texto_(d.motivo, 1000), dec = Lic_up_(d.decisao);
+  if (dec !== 'CONFIRMAR' && dec !== 'NAO_E_TRAVA') throw new Error('Escolha "Confirmar trava" ou "Não é trava". Nada foi alterado');
+  if (motivo.length < 10) throw new Error('Escreva o motivo (pelo menos 10 letras): ele fica no histórico com o seu nome, a data e o trecho. Nada foi alterado');
+  var concluida = Lic_analisesDe_(l.ID).filter(function (a) { return Lic_s_(a.SITUACAO) === 'CONCLUIDA'; })[0];
+  var travas = concluida ? Lic_json_(concluida.TRAVAS_JSON, []) : [];
+  var t = travas.filter(function (x) { return x.chave && x.chave === Lic_s_(d.chave) && x.codigo !== 'PRAZO_VENCIDO'; })[0];
+  if (!t) throw new Error('Escolha uma trava da análise atual (a análise mudou depois que a tela abriu: toque em "Atualizar a ficha"). Nada foi alterado');
+  var decisoes = Lic_json_(l.TRAVAS_DECISOES_JSON, {}), antes = decisoes[t.chave] || null, agora = Lic_agora_(), soma = Number(concluida.SOMA) || 0;
+  var antesR = Lic_notaPelasTravas_(soma, travas, decisoes);
+  decisoes[t.chave] = { decisao: dec === 'CONFIRMAR' ? 'CONFIRMADA' : 'NAO_E_TRAVA', motivo: motivo, porId: Lic_s_(eu && eu.id), porNome: Lic_s_(eu && eu.nome), em: agora,
+    versao: (antes ? Number(antes.versao) || 1 : 0) + 1, codigo: t.codigo, nome: t.nome, trecho: Lic_texto_(t.fonte && t.fonte.trecho, 600), ref: Lic_s_(t.fonte && t.fonte.ref), analiseVersao: Number(concluida.VERSAO) || 0 };
+  var r = Lic_notaPelasTravas_(soma, travas, decisoes), nd = decisoes[t.chave];
+  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { TRAVAS_DECISOES_JSON: JSON.stringify(decisoes).slice(0, 45000), NOTA: r.nota, NOTA_CLASSE: r.classe,
+    NOTA_TRAVA: r.efetivas.map(function (x) { return x.nome; }).join('; ').slice(0, 500), TRAVAS_A_CONFIRMAR: r.aConfirmar.length, ATUALIZADO_EM: agora });
+  var nome = function (x) { return x === 'CONFIRMADA' ? 'trava confirmada' : 'não é trava'; };
+  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, nd.decisao === 'CONFIRMADA' ? 'TRAVA_CONFIRMADA' : 'TRAVA_REJEITADA', eu, {
+    de: (antes ? nome(antes.decisao) : 'trava a confirmar') + ' · nota ' + Lic_fmtNum_(antesR.nota),
+    para: nome(nd.decisao) + ' · nota ' + Lic_fmtNum_(r.nota) + ' · ' + (LIC_CLASSES[r.classe] || r.classe),
+    texto: 'Trava "' + t.nome + '" (' + t.codigo + '): ' + nome(nd.decisao) + ', pela Diretoria. Motivo: ' + motivo + '. Trecho (' + nd.ref + '): "' + nd.trecho + '".' + (t.excecao ? ' Alerta de exceção perto do trecho: "' + t.excecao + '".' : ''),
+    versao: 'decisão ' + nd.versao + ' · análise ' + nd.analiseVersao, fonte: nd.ref + (t.fonte && t.fonte.arquivo && t.fonte.arquivo.sha256 ? ' ' + Lic_s_(t.fonte.arquivo.sha256).slice(0, 12) : '') });
+  var l2 = Lic_acharOp_(d.id);
+  return { nota: r.nota, classe: r.classe, analise: Lic_analiseFicha_(l2, Lic_lerFonteServidor_(l2)) };
 }
 
 /** Bloco "Análise" da ficha: a última análise concluída, a última tentativa, as versões e se a base mudou. */
@@ -1162,7 +1245,7 @@ function Lic_analiseFicha_(l, srv) {
   var base = Lic_baseAnalise_(l, srv && srv.fonte, srv && srv.arquivos, pesos);
   return {
     iaDisponivel: Lic_iaDisponivel_(), aviso: Lic_iaDisponivel_() ? '' : LIC_MSG_SEM_IA + '.',
-    atual: Lic_analiseTela_(concluida), ultima: Lic_analiseTela_(lista[0] || null),
+    atual: Lic_comDecisoes_(Lic_analiseTela_(concluida), l), ultima: Lic_analiseTela_(lista[0] || null),
     versoes: lista.slice(0, 30).map(function (a) { return { versao: Number(a.VERSAO) || 0, situacao: Lic_s_(a.SITUACAO), nota: a.NOTA === '' || a.NOTA === undefined ? null : Number(a.NOTA), classe: Lic_s_(a.CLASSE), em: Lic_s_(a.CRIADO_EM), por: Lic_s_(a.PEDIDO_POR_NOME), motivo: Lic_s_(a.MOTIVO), origem: Lic_s_(a.ORIGEM_PEDIDO), hash: Lic_s_(a.HASH) }; }),
     desatualizada: !!Lic_s_(l.ANALISE_BASE_HASH) && Lic_s_(l.ANALISE_BASE_HASH) !== base, baseAtual: base, pesos: pesos,
     elegivel: Lic_elegivelAnalise_(l), regras: LIC_ANALISE_REGRAS

@@ -122,8 +122,8 @@
   // ---------------- estado e utilitários ----------------
   var LIC = { nivel: "NENHUM", nome: "", mod: "", seq: 0, aba: "analisar", ordem: "prioridade", filtros: { busca: "", uf: "", selo: "", sessao: "" }, lista: null, portais: null, portaisAba: "portais", fichaAba: "resumo", fichaId: "", abrirFicha: "" };
   var LIC_ORDENS = [["prioridade", "Prioridade da UF e prazo"], ["nota", "Nota (maior primeiro)"], ["prazo", "Prazo (mais perto primeiro)"]];
-  var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte" };
-  var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte" };
+  var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte", TRAVA_A_CONFIRMAR: "n-descarte" };
+  var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte", TRAVA_A_CONFIRMAR: "trava a confirmar" };
   var LIC_CRITERIOS = [["capacidade", "Capacidade técnica"], ["margem", "Margem"], ["documentacao", "Documentação"], ["localizacao", "Localização"], ["prazo", "Prazo"], ["valor", "Valor"], ["riscos", "Riscos"]];
   var LIC_NAV = [["licitacoes", "Hoje"], ["licitacoes_oportunidades", "Oportunidades"], ["licitacoes_agenda", "Agenda"], ["licitacoes_alertas", "Alertas"], ["licitacoes_portais", "Portais e configurações"]];
   var LIC_TITULOS = { licitacoes: "Hoje em Licitações", licitacoes_oportunidades: "Oportunidades", licitacoes_agenda: "Agenda e prazos", licitacoes_alertas: "Central de alertas", licitacoes_portais: "Portais e configurações" };
@@ -639,7 +639,7 @@
     if (!at) return h + '<div class="cm-vazio">Ainda sem análise por IA. ' + (a.iaDisponivel ? "Ela roda sozinha quando os arquivos do edital chegam (aba Arquivos), ou toque em \"Analisar agora\"." : "Sem a chave da IA, a nota não é calculada: nada é inventado.") + "</div>";
     var crit = at.criterios || {};
     var cab = '<div class="cm-caixa"><div class="lic-analise-cab">' + Lic_notaHtml_({ nota: at.nota, notaClasse: at.classe, notaTrava: at.travada ? "sim" : "" }, true) + "<div><h3 style=\"margin:0 0 4px\">Nota " + Lic_esc_(Lic_num_(at.nota)) + " de 100 · " + Lic_esc_(at.classeNome) + "</h3>" +
-      (at.travada ? (at.travas || []).map(function (t) { return '<p class="lic-motivo">Trava: ' + Lic_esc_(t.nome) + (t.texto ? " — " + Lic_esc_(t.texto) : "") + "</p>" + Lic_fonteCitHtml_(t.fonte); }).join("") + '<p class="cm-meta">Soma dos critérios sem a trava: ' + Lic_esc_(Lic_num_(at.soma)) + ".</p>" : "") +
+      Lic_travasHtml_(at) +
       '<p class="cm-txt" style="margin:6px 0 0">' + Lic_esc_(at.resumo) + "</p>" +
       '<p class="cm-meta" style="margin:6px 0 0">Análise versão ' + Lic_esc_(at.versao) + " · " + Lic_esc_(Lic_dataHora_(at.em)) + " · " + Lic_esc_(at.origem === "AUTOMATICA" ? "rotina automática" : "pedida por " + at.por) + (at.motivo ? " (" + Lic_esc_(at.motivo) + ")" : "") + " · versão " + Lic_esc_(at.fonteVersao) + " da fonte · modelo " + Lic_esc_(at.modelo) + "</p></div></div></div>";
     var tab = Lic_tabelaHtml_(["Critério", "Pontos", "Quem pontuou", "Como"], LIC_CRITERIOS.map(function (c) {
@@ -695,6 +695,41 @@
       Lic_toast_((baixar ? "Baixado: " : "Aberto: ") + (r.nome || "arquivo") + " (SHA-256 conferido no servidor)." + (!seguro ? " Este tipo de arquivo não abre na tela por segurança: abra pelo aparelho." : ""));
     }, function (m) { if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); }, { ignorarVelha: true, carregando: "Buscando o arquivo no servidor…" });
   }
+  /**
+   * Travas da análise (decisão do coordenador, 02/11/2026: a IA não decide). Trava da IA fica "a confirmar" e não zera a nota;
+   * a Diretoria toca em "Confirmar trava" (a nota vai a 0) ou "Não é trava", sempre com motivo. Prazo vencido (do sistema) zera direto.
+   */
+  function Lic_travasHtml_(at) {
+    var tv = (at.travas || []);
+    if (!tv.length) return "";
+    var rot = { A_CONFIRMAR: ["vermelho", "Trava a confirmar"], CONFIRMADA: ["vermelho", "Trava confirmada pela Diretoria"], NAO_E_TRAVA: ["cinza", "Não é trava (Diretoria)"], CODIGO: ["vermelho", "Trava do sistema"] };
+    return tv.map(function (t) {
+      var e = rot[t.estado] || rot.A_CONFIRMAR, d = t.decisao;
+      return '<div class="cm-caixa" style="margin:8px 0"><p class="lic-motivo"><span class="cm-selo ' + e[0] + '">' + Lic_esc_(e[1]) + "</span> " + Lic_esc_(t.nome) + (t.texto ? " — " + Lic_esc_(t.texto) : "") + "</p>" + Lic_fonteCitHtml_(t.fonte) +
+        (t.excecao ? '<p class="cm-meta"><b>Atenção:</b> há negação ou exceção perto do trecho ("' + Lic_esc_(t.excecao) + '"). Leia o parágrafo no edital antes de decidir.</p>' : "") +
+        (d ? '<p class="cm-meta">' + Lic_esc_(d.decisao === "CONFIRMADA" ? "Confirmada" : "Marcada como não é trava") + " por " + Lic_esc_(d.porNome) + " em " + Lic_esc_(Lic_dataHora_(d.em)) + " (decisão " + Lic_esc_(d.versao) + "): " + Lic_esc_(d.motivo) + "</p>" : "") +
+        (t.estado !== "CODIGO" && t.chave ? '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-trava="' + Lic_esc_(t.chave) + '" data-lic-trava-dec="CONFIRMAR" data-lic-trava-nome="' + Lic_esc_(t.nome) + '"' + (t.estado === "CONFIRMADA" ? " disabled" : "") + ">Confirmar trava</button>" +
+          '<button type="button" class="btn-secondary" data-lic-trava="' + Lic_esc_(t.chave) + '" data-lic-trava-dec="NAO_E_TRAVA" data-lic-trava-nome="' + Lic_esc_(t.nome) + '"' + (t.estado === "NAO_E_TRAVA" ? " disabled" : "") + ">Não é trava</button></div>" : "") + "</div>";
+    }).join("") + (at.aConfirmar ? '<p class="cm-meta">A nota calculada continua valendo até a Diretoria decidir: só "Confirmar trava" leva a nota a 0. A decisão vale para a mesma trava e o mesmo trecho nas próximas análises.</p>' : "") +
+      (at.travada ? '<p class="cm-meta">Soma dos critérios sem a trava: ' + Lic_esc_(Lic_num_(at.soma)) + ".</p>" : "");
+  }
+  function Lic_janelaTrava_(id, chave, dec, nome, origem) {
+    var conf = dec === "CONFIRMAR";
+    var ov = Lic_janela_(conf ? "Confirmar trava" : "Não é trava",
+      '<p class="cm-txt">' + Lic_esc_(nome) + ". " + (conf ? "Confirmando, a nota vai a 0 e a oportunidade fica como candidata a descarte (descartar continua sendo outra ação)." : "A trava deixa de valer e a nota calculada volta a contar.") + " A decisão fica no histórico com o seu nome, a data, o motivo e o trecho, e vale nas próximas análises para a mesma trava e o mesmo trecho.</p>" +
+      '<div class="cm-campo"><label for="licTvMot">Motivo (obrigatório)</label><textarea id="licTvMot" rows="3" maxlength="1000" placeholder="Ex.: li o item 9.3 do edital: aceita certificado rastreável"></textarea></div><div id="licJanMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>' + (conf ? "Confirmar trava" : "Não é trava") + "</button>", origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = ((Lic_$_("licTvMot") || {}).value || "").trim();
+      if (mot.length < 10) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      Lic_chamar_("travaDecidir", { id: id, chave: chave, decisao: dec, motivo: mot }, function (r) {
+        ov.fechar();
+        Lic_toast_((conf ? "Trava confirmada" : "Marcada como não é trava") + ": nota " + Lic_num_(r.nota) + ".", "ok");
+        LIC.fichaAba = "analise"; Lic_renderFicha_(id);
+      }, function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+    };
+  }
   function Lic_janelaAnalisar_(id, refazer, origem) {
     var ov = Lic_janela_(refazer ? "Refazer análise" : "Analisar agora",
       '<p class="cm-txt">A IA lê de novo o edital e os dados da fonte; o verificador confere cada fato no texto da fonte. A análise anterior continua guardada (vira uma versão antiga). Leva de 1 a 3 minutos. A decisão continua com a Diretoria.</p>' +
@@ -723,6 +758,7 @@
     c.querySelectorAll("[data-lic-arq-abrir]").forEach(function (b) { b.onclick = function () { Lic_abrirArquivo_(id, b.getAttribute("data-lic-arq-abrir"), false); }; });
     c.querySelectorAll("[data-lic-arq-baixar]").forEach(function (b) { b.onclick = function () { Lic_abrirArquivo_(id, b.getAttribute("data-lic-arq-baixar"), true); }; });
     c.querySelectorAll("[data-lic-analisar]").forEach(function (b) { b.onclick = function () { if (!b.disabled) Lic_janelaAnalisar_(id, b.getAttribute("data-lic-analisar") === "refazer", b); }; });
+    c.querySelectorAll("[data-lic-trava]").forEach(function (b) { b.onclick = function () { if (!b.disabled) Lic_janelaTrava_(id, b.getAttribute("data-lic-trava"), b.getAttribute("data-lic-trava-dec"), b.getAttribute("data-lic-trava-nome"), b); }; });
   }
 
   // ---------------- Portais e configurações ----------------

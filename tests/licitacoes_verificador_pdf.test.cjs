@@ -307,26 +307,66 @@ function analiseComTrava(texto, trecho) {
     afirmacoes: [{ tipo: 'FATO', criterio: 'trava', texto: 'O edital exige certificado de acreditação RBC.', fonte: { ref: 'A1', trecho } }] };
   return ctx.Lic_verificarAnalise_(j, b.cv);
 }
-test('rede de segurança: trava, exigência e FATO impeditivos com negação no parágrafo viram pendência "confirmar no edital", nunca trava; caso limpo continua trava', () => {
+test('rede de segurança: trava com negação perto fica a confirmar com alerta de exceção; exigência e FATO impeditivos viram pendência; nenhuma zera a nota', () => {
+  const pesos = Object.assign({}, ctx.LIC_NOTA_PADRAO), codigo = montar().codigo;
   for (const src of LISTAS) {
-    // trecho curto (sem a negação): o verificador recusa; trecho com a negação junto: passa, mas a trava vira pendência
+    // trecho curto (sem a negação): o verificador recusa; com a negação junto: passa, a trava fica a confirmar com o alerta
     assert.equal(analiseComTrava(src, RBC).ok, false, 'curto: ' + src);
     const comNeg = src.slice(0, src.indexOf(RBC) + RBC.length);
     const v = analiseComTrava(src, comNeg);
     assert.equal(v.ok, true, v.problemas.join(' | '));
-    assert.equal(v.saida.travas.length, 0, 'nunca trava: ' + src);
+    assert.equal(v.saida.travas.length, 1);
+    assert.ok(v.saida.travas[0].excecao, 'alerta de exceção: ' + src);
     assert.equal(v.saida.documentacao.exigencias.length, 0);
     const pend = v.saida.afirmacoes.filter((a) => a.tipo === 'PENDENCIA' && /^Confirmar no edital: há negação ou exceção perto do trecho/.test(a.texto));
-    assert.equal(pend.length, 3, src);
-    assert.ok(pend.some((a) => a.criterio === 'trava' && /A trava não zerou a nota/.test(a.texto) && a.fonte && a.fonte.trecho));
-    assert.equal(v.saida.afirmacoes.some((a) => a.tipo === 'FATO' && /acreditação RBC/.test(a.texto)), false);
-    const nf = ctx.Lic_notaFinal_(v.saida, montar().codigo, Object.assign({}, ctx.LIC_NOTA_PADRAO));
+    assert.equal(pend.length, 2, 'exigência e FATO viram pendência: ' + src);
+    const nf = ctx.Lic_notaFinal_(v.saida, codigo, pesos);
     assert.ok(nf.nota > 0, 'a nota não zera');
+    assert.equal(nf.classe, 'TRAVA_A_CONFIRMAR');
   }
   const limpo = 'O licitante deverá apresentar certificado de acreditação RBC do laboratório.';
   const v = analiseComTrava(limpo, 'deverá apresentar certificado de acreditação RBC do laboratório');
   assert.equal(v.ok, true, v.problemas.join(' | '));
-  assert.deepEqual(Array.from(v.saida.travas, (t) => t.codigo), ['RBC_OBRIGATORIA']);
+  assert.deepEqual(Array.from(v.saida.travas, (t) => [t.codigo, t.excecao]), [['RBC_OBRIGATORIA', '']]);
   assert.equal(v.saida.afirmacoes.some((a) => /Confirmar no edital: há negação/.test(a.texto)), false);
-  assert.equal(ctx.Lic_notaFinal_(v.saida, montar().codigo, Object.assign({}, ctx.LIC_NOTA_PADRAO)).nota, 0);
+  const nf = ctx.Lic_notaFinal_(v.saida, codigo, pesos);
+  assert.deepEqual([nf.nota > 0, nf.classe], [true, 'TRAVA_A_CONFIRMAR'], 'nem a trava limpa zera sozinha');
+  const conf = ctx.Lic_notaFinal_(v.saida, codigo, pesos, { [v.saida.travas[0].chave]: { decisao: 'CONFIRMADA' } });
+  assert.deepEqual([conf.nota, conf.classe], [0, 'DESCARTE'], 'confirmada pela Diretoria, zera');
+});
+
+// revisão de a3655e1 (trava.cjs): 7 de 7 zeravam a nota com trava falsa
+test('trava falsa nunca zera a nota: sem assunto é recusada; exceção, hífen, negação longe, resposta no parágrafo seguinte, opcional e subcontratação ficam a confirmar com alerta', () => {
+  const lista = Array.from({ length: 40 }, (_, i) => 'certidão número ' + (i + 1) + ' emitida pelo órgão competente da sede da licitante').join(', ');
+  const casos = [
+    ['O prazo de execução será de 20 dias corridos contados da ordem de serviço.', 'DEDICACAO_EXCLUSIVA', 'O prazo de execução será de 20 dias corridos'],
+    ['Será exigido laboratório acreditado RBC ou, alternativamente, certificado de calibração rastreável aos padrões nacionais.', 'RBC_OBRIGATORIA', 'Será exigido laboratório acreditado RBC'],
+    ['Fica estabelecida a não-obrigatoriedade da acreditação RBC do laboratório para a habilitação das licitantes.', 'RBC_OBRIGATORIA', 'da acreditação RBC do laboratório para a habilitação das licitantes'],
+    ['Não serão exigidos, para fins de habilitação, os seguintes documentos, ' + lista + ', e o certificado de acreditação RBC do laboratório responsável pelas calibrações.', 'RBC_OBRIGATORIA', 'o certificado de acreditação RBC do laboratório responsável pelas calibrações'],
+    ['Pergunta 3: o edital exige laboratório acreditado RBC para as calibrações?\n\nResposta: Não. Basta a rastreabilidade.', 'RBC_OBRIGATORIA', 'o edital exige laboratório acreditado RBC para as calibrações'],
+    ['A apresentação de certificado de laboratório acreditado RBC será opcional e contará como critério de desempate.', 'RBC_OBRIGATORIA', 'certificado de laboratório acreditado RBC será opcional'],
+    ['A contratada deverá emitir certificados de laboratório acreditado RBC, podendo subcontratar laboratório acreditado para esse fim.', 'RBC_OBRIGATORIA', 'A contratada deverá emitir certificados de laboratório acreditado RBC']
+  ];
+  const pesos = Object.assign({}, ctx.LIC_NOTA_PADRAO);
+  casos.forEach(([texto, cod, tr], i) => {
+    const b = montar([{ ref: 'A1', id: 1, titulo: 'Edital', nome: 'e.pdf', texto: 'Objeto: manutenção preventiva e corretiva de autoclaves hospitalares do hospital municipal.\n\n' + texto + '\n' }]);
+    const j = { resumo: 'A oportunidade trata de manutenção de autoclaves. O edital tem uma trava.', capacidade: { justificativa: 'Autoclaves estão no catálogo.', itens: [{ descricao: 'Manutenção de autoclaves', grau: 'ALTA', servico: 'QUA-001', fonte: { ref: 'A1', trecho: 'manutenção preventiva e corretiva de autoclaves hospitalares' } }] },
+      documentacao: { pontos: 5, justificativa: 'Habilitação a conferir.', exigencias: [] }, riscos: [], travas: [{ codigo: cod, texto: 'O edital traz a condição citada.', fonte: { ref: 'A1', trecho: tr }, fonteRegra: { ref: 'REGRA:rbc', trecho: 'A Metrolabs NÃO é acreditada RBC' } }],
+      afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'O objeto é manutenção de autoclaves.', fonte: { ref: 'A1', trecho: 'manutenção preventiva e corretiva de autoclaves hospitalares' } }] };
+    const v = ctx.Lic_verificarAnalise_(j, b.cv);
+    if (i === 0) { assert.equal(v.ok, false); assert.match(v.problemas.join(' '), /não fala do assunto da trava DEDICACAO_EXCLUSIVA/); return; }
+    assert.equal(v.ok, true, texto + ' :: ' + v.problemas.join(' | '));
+    assert.ok(v.saida.travas[0].excecao, 'alerta de exceção: ' + texto.slice(0, 60));
+    const nf = ctx.Lic_notaFinal_(v.saida, b.codigo, pesos);
+    assert.ok(nf.nota > 0, 'não zera: ' + texto.slice(0, 60));
+    assert.equal(nf.classe, 'TRAVA_A_CONFIRMAR');
+  });
+});
+
+test('trava a confirmar não silencia alerta nem descarta: a oportunidade continua alertável e no radar', () => {
+  const g = contexto();
+  vm.runInContext(ler('SGO_Licitacoes_Alertas.js'), g, { filename: 'SGO_Licitacoes_Alertas.js' });
+  const op = { ID: 'op1', SITUACAO: 'RADAR', TRIAGEM: 'CANDIDATA', NOTA: 62, NOTA_CLASSE: 'TRAVA_A_CONFIRMAR', TRAVAS_A_CONFIRMAR: 1, NOTA_TRAVA: '' };
+  assert.equal(g.Lic_opSemAlerta_(op, { alertarTravadas: false }), '');
+  assert.equal(g.Lic_opSemAlerta_(Object.assign({}, op, { NOTA: 0, NOTA_CLASSE: 'DESCARTE', NOTA_TRAVA: 'Exige laboratório acreditado RBC' }), { alertarTravadas: false }), '', 'nem a confirmada descarta sozinha: quem descarta é a Diretoria');
 });
