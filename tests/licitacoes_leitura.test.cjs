@@ -81,6 +81,7 @@ function ambiente(o) {
   const props = Object.assign({}, o.semChave ? {} : { GEMINI_API_KEY: 'chave-de-teste', IA_MODEL: 'gemini-2.5-flash' }), cache = {}, sessoes = {};
   tabelas.CAD_USUARIOS.forEach((u) => { sessoes['s_' + u.USUARIO] = { userId: u.ID, usuario: u.USUARIO, nome: u.NOME, perfil: u.PERFIL }; });
   let seq = 0;
+  const lidas = {};
   const srv = { textos: o.textos || TEXTOS(), arquivos: ARQS(), pedacos: [] };
   const ia = { prompts: [], opcoes: [], fila: (o.respostas || []).slice(), custoMs: o.custoMs === undefined ? 30000 : o.custoMs };
   const gatilhos = [];
@@ -101,11 +102,11 @@ function ambiente(o) {
       newTrigger: (funcao) => { const d = { funcao, id: 'g' + (++seq) }; const tb = { timeBased: () => tb, after: (ms) => { d.ms = ms; return tb; }, everyMinutes: () => tb, create: () => { gatilhos.push(d); return d; } }; return tb; } },
     CertCal_garantirTabela_: (t) => { tabelas[t] = tabelas[t] || []; }, CertCal_garantirColuna_() {}, CertCal_forcarColunaTexto_() {},
     SGO_DATA: {
-      getAll: (t) => { if (!tabelas[t]) throw new Error('Aba não encontrada: ' + t); return tabelas[t].map((r) => Object.assign({}, r)); },
+      getAll: (t) => { lidas[t] = (lidas[t] || 0) + 1; if (!tabelas[t]) throw new Error('Aba não encontrada: ' + t); return tabelas[t].map((r) => Object.assign({}, r)); },
       getById: (t, id) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); return r ? Object.assign({}, r) : null; },
       update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (!r) return false; Object.assign(r, d); return true; },
       insert: (t, d) => { const r = Object.assign({ ID: 'id' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); },
-      insertMany: (t, l) => { l.forEach((d) => (tabelas[t] = tabelas[t] || []).push(Object.assign({ ID: 'id' + (++seq) }, d))); }
+      insertMany: (t, l) => l.map((d) => { const r = Object.assign({ ID: 'id' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); })
     },
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_EQUIPAMENTOS: 'CAD_EQUIPAMENTOS' } },
     exigirSessao: (sid) => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada. Entre de novo'); return sessoes[sid]; },
@@ -125,7 +126,7 @@ function ambiente(o) {
   // páginas curtas do teste: um bloco por página (o padrão é 18 mil caracteres)
   vm.runInContext('LIC_LEIT_BLOCO_CAR = ' + (o.blocoCar || 700) + ';', ctx);
   const api = (sid, acao, d) => ctx.Licitacoes_api(sid, acao, d || {});
-  return { ctx, tabelas, props, srv, ia, api, gatilhos, op: () => tabelas.LIC_OPORTUNIDADES[0], hist: (tipo) => (tabelas.LIC_HISTORICO || []).filter((h) => !tipo || h.TIPO === tipo),
+  return { ctx, tabelas, props, srv, ia, api, gatilhos, lidas, op: () => tabelas.LIC_OPORTUNIDADES[0], hist: (tipo) => (tabelas.LIC_HISTORICO || []).filter((h) => !tipo || h.TIPO === tipo),
     leituras: () => tabelas.LIC_LEITURAS || [], blocos: () => (tabelas.LIC_LEITURA_BLOCOS || []).slice().sort((a, b) => a.ORDEM - b.ORDEM) };
 }
 const J = (x) => JSON.parse(JSON.stringify(x));
@@ -218,13 +219,13 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   const cl = JSON.parse(le.CHECKLIST_JSON);
   // sem duplicata: o atestado do edital e o do anexo são um item com as duas fontes
   assert.deepEqual(cl.map((e) => [e.id, e.tema]), [['I1', 'OBJETO'], ['I2', 'ATESTADOS'], ['I3', 'PRAZOS'], ['I4', 'PENALIDADES'], ['I5', 'RBC_INMETRO'], ['I6', 'SUBCONTRATACAO']]);
-  assert.deepEqual(cl[1].fontes.map((f) => [f.ref, f.pagina, f.linha]), [['A1', 2, 5], ['A2', '', '']]);
-  assert.match(cl[1].fontes[1].rotulo, /mesmo texto do bloco 2/);
+  assert.deepEqual(cl[1].fontes.map((f) => [f.ref, f.pagina, f.linha]), [['A1', 2, 5], ['A2', 1, 5]]);
+  assert.equal(cl[1].fontes[1].rotulo, 'página 1', 'o anexo repete a página 2: o trecho é reencontrado no anexo, com a página e a linha dele');
   assert.equal(cl[1].fontes[0].arquivo.sha256, 'a'.repeat(64));
   assert.equal(cl[5].alerta, '', 'consórcio não é exigência impeditiva: sem alerta');
   // cobertura: 4 de 6 páginas lidas (A3 sem texto, 2 páginas)
   const cob = JSON.parse(le.COBERTURA_JSON);
-  assert.equal(cob.total.texto, 'Lidas 4 de 6 página(s) (4 de 4 bloco(s)) em 3 arquivo(s). Sem texto legível (ler à mão): A3 Planilha escaneada.');
+  assert.equal(cob.total.texto, 'Lidas 4 de 4 página(s) com texto (4 de 4 bloco(s)) em 3 arquivo(s). Sem texto legível (ler à mão): A3 Planilha escaneada.');
   // resumo e estratégia conferidos; a pergunta cita o prazo da agenda
   const tela = a.api('s_dora', 'leitura', { id: 'op1' }).leitura;
   assert.equal(tela.leitura.resumo.length, 3);
@@ -232,7 +233,7 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   assert.deepEqual(tela.prazos.map((p) => [p.ref, p.quando]), [['PRAZO:PRAZO_ESCLARECIMENTO', 'seg 09/11/2026 23:59']]);
   const cons = a.ia.prompts[a.ia.prompts.length - 1];
   assert.match(cons, /PRAZO:PRAZO_ESCLARECIMENTO: Limite para pedir esclarecimento seg 09\/11\/2026 23:59 \(calculado\)/);
-  assert.match(cons, /COBERTURA: Lidas 4 de 6/);
+  assert.match(cons, /COBERTURA: Lidas 4 de 4/);
   // histórico: pedido e conclusão, com versão, fonte (SHA-256) e hash
   const hp = a.hist('LEITURA_PEDIDA')[0];
   assert.equal(hp.USUARIO_NOME, 'DORA DIRETORA TESTE');
@@ -243,7 +244,7 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   assert.equal(hc.HASH, le.HASH);
   assert.match(hc.TEXTO, /6 item\(ns\) em "O que realmente precisamos"\. Resumo e estratégia sugerida gerados e conferidos/);
   // ler de novo sem mudança: recusa; refazer exige motivo; refazer reaproveita os blocos lidos (mesmo hash)
-  assert.match(a.api('s_dora', 'leituraIniciar', { id: 'op1' }).message, /já é desta versão dos arquivos\. Para ler de novo, use "Refazer"/);
+  assert.match(a.api('s_dora', 'leituraIniciar', { id: 'op1' }).message, /já é desta versão dos arquivos e das palavras-chave\. Para ler de novo, use "Refazer"/);
   assert.match(a.api('s_dora', 'leituraIniciar', { id: 'op1', refazer: true, motivo: 'curto' }).message, /Escreva o motivo/);
   const n = a.ia.prompts.length;
   const rf = a.api('s_dora', 'leituraIniciar', { id: 'op1', refazer: true, motivo: 'conferir a leitura de novo' });
@@ -269,7 +270,7 @@ test('bloco não lido (IA fora do ar e verificador recusando) aparece na cobertu
   assert.equal(bloco(a, 3).TENTATIVAS, 3, '1 resposta + 2 refações, cada uma com os problemas apontados');
   assert.match(a.ia.prompts[3], /SUA RESPOSTA ANTERIOR FOI RECUSADA PELO VERIFICADOR[\s\S]*não está em A1/);
   const t = r.leitura.leitura;
-  assert.match(t.cobertura.total.texto, /^Lidas 3 de 6 página\(s\) \(3 de 4 bloco\(s\)\) em 3 arquivo\(s\)\. Não lidos: A1 página 3\./);
+  assert.match(t.cobertura.total.texto, /^Lidas 3 de 4 página\(s\) com texto \(3 de 4 bloco\(s\)\) em 3 arquivo\(s\)\. Não lidos: A1 página 3\./);
   assert.equal(t.falhos.length, 1);
   assert.match(t.falhos[0].erro, /recusada pelo verificador 3 vezes/);
   // nova tentativa: o bloco volta para a fila e é lido
@@ -302,8 +303,9 @@ test('arquivo maior que o corte do servidor: lido inteiro em pedaços (textoPeda
   b.api('s_dora', 'leituraIniciar', { id: 'op1' });
   b.ctx.Licitacoes_rotinaLeitura();
   const cob = JSON.parse(b.leituras()[0].COBERTURA_JSON);
-  assert.match(cob.arquivos[0].motivo, /o servidor entregou só os primeiros 900 caracteres: o resto não foi lido/);
-  assert.match(cob.total.texto, /Arquivo com texto incompleto: A1\./);
+  assert.match(cob.arquivos[0].motivo, /não lido inteiro: o servidor entregou 900 caracteres; o resto não foi lido/);
+  assert.match(cob.total.texto, /Não lido inteiro: A1\./);
+  assert.equal(b.leituras()[0].SITUACAO, 'PARCIAL', 'arquivo não lido inteiro: a leitura não é Concluída');
 });
 
 // ---------------- o verificador ----------------
@@ -322,7 +324,7 @@ test('verificador do bloco (o mesmo da nota): recusa item inventado, número tro
   assert.equal(r.ok, false); assert.match(r.problemas.join(' | '), /não está em A1/);
   // número trocado: texto diz 0,5% e o trecho diz 0,2%
   r = v([{ tema: 'PENALIDADES', texto: 'Multa de 0,5% por dia de atraso.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
-  assert.equal(r.ok, false); assert.match(r.problemas[0], /o número 0,5 do texto não está no trecho citado/);
+  assert.equal(r.ok, false); assert.match(r.problemas[0], /0,5% não está no trecho citado com a mesma unidade/);
   // número trocado no próprio trecho (separador entre dígitos): "0,2%" ≠ "2%"
   r = v([{ tema: 'PENALIDADES', texto: 'Multa por dia de atraso.', trecho: 'atraso de até 10 dias = multa de 2% por dia de atraso' }]);
   assert.equal(r.ok, false);
@@ -373,8 +375,8 @@ test('consolidação: checklist sem duplicata pelo código; resumo e estratégia
   assert.equal(le.CONSOLIDACAO_SITUACAO, 'RECUSADA');
   assert.equal(JSON.parse(le.CHECKLIST_JSON).length, 6, 'o checklist vale mesmo com o resumo recusado');
   const p = JSON.parse(le.CONSOLIDACAO_PROBLEMAS_JSON)[0].problemas.join(' | ');
-  assert.match(p, /a data 20\/11\/2026 não está nas fontes citadas/);
-  assert.match(p, /o número 3 não está nas fontes citadas/);
+  assert.match(p, /o número 3, a data 20\/11\/2026 não está, com a mesma unidade, em nenhuma das fontes citadas/);
+
   assert.match(p, /a IA não decide/);
   assert.match(p, /falou de RBC ou acreditação sem dizer como tratar/);
   assert.match(p, /fonte que não existe \(I99\)/);
@@ -458,7 +460,7 @@ test('tela: aba "Leitura do edital" na ficha (palavras, cobertura, checklist, re
   assert.match(h, /<summary><span>atestado<\/span><span class="cm-selo verde">5 ocorrências em 2 arquivo\(s\)/);
   assert.match(h, /A1 · Edital PE 399\/2026 · página 2 · linha 3<\/span><br>[^<]*certidões ou <mark>atestado<\/mark>\(s\)/);
   assert.match(h, /<b>visita técnica<\/b> <span class="cm-selo cinza">não encontrada<\/span><\/p><p class="cm-meta" style="margin:2px 0 0">não encontrada em nenhuma das 4 página\(s\)/);
-  assert.match(h, /Cobertura da leitura<\/h3><p class="cm-txt">Lidas 4 de 6 página\(s\)/);
+  assert.match(h, /Cobertura da leitura<\/h3><p class="cm-txt">Lidas 4 de 4 página\(s\) com texto/);
   assert.match(h, /O que realmente precisamos \(6\)/);
   assert.match(h, /<h4 class="lic-leit-tema">Atestados de capacidade técnica<\/h4>/);
   assert.match(h, /<span class="lic-leit-id">I2<\/span>Atestado de 50% do quantitativo/);
@@ -513,4 +515,158 @@ test('ajuda, manual e base do assistente falam da leitura do edital; nada de "an
   const textos = ['SGO_Licitacoes_Leitura.js', 'JS_Licitacoes_Leitura.html'].map(ler).join('\n');
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /somos acreditad|Metrolabs é acreditad/i);
+});
+
+// ---------------- revisão independente de 7b401dc (cada caso falhava antes da correção) ----------------
+function verBloco(a, pagina, itens) {
+  const c = a.ctx, arq = c.LicLeit_textos_(a.op()).arquivos[0];
+  arq._ind = c.LicLeit_indice_(arq.texto);
+  const b = c.LicLeit_dividir_(arq, '').find((x) => x.pIni === pagina); b.ordem = pagina;
+  const v = c.LicLeit_verificarBloco_({ itens }, arq, b, { fontes: { A1: c.LicLeit_fonteBloco_(arq, b) }, pesos: c.LIC_NOTA_PADRAO, fabricantes: [] });
+  return { ok: v.ok, p: v.problemas.join(' | '), itens: J(v.itens) };
+}
+test('revisão: número com a unidade do trecho (permuta, extenso, data invertida), sentido invertido, trecho fora do bloco, consolidação contra UM item', () => {
+  const a = ambiente();
+  let r = verBloco(a, 3, [{ tema: 'PENALIDADES', texto: 'Multa de 10% por dia de atraso até 0,2 dias.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /no texto, 10%, 0,2 dia não está no trecho citado com a mesma unidade/);
+  r = verBloco(a, 1, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /o trecho tem negação ou exceção \("nao"\) e o texto não/);
+  r = verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo sessenta dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /sessenta dia não está no trecho/);
+  assert.equal(verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo noventa dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]).ok, true, 'por extenso igual ao do trecho passa');
+  r = verBloco(a, 3, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio não é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /não está NESTE bloco/);
+  // data invertida (dia e mês) e hora
+  const c = a.ctx;
+  assert.deepEqual(J(c.LicLeit_numerosForaDaFonte_('Sessão em 11/10/2026 às 09:00.', 'A sessão pública será em 10/11/2026, às 09:00.')), ['11/10/2026']);
+  assert.deepEqual(J(c.LicLeit_numerosForaDaFonte_('Sessão em 10/11/2026 às 10:00.', 'A sessão pública será em 10/11/2026, às 09:00.')), ['10:00']);
+  // consolidação: cada número com a unidade numa fonte só (90 dias de I2 e 10% que não existe em nenhuma)
+  const p = [];
+  c.LicLeit_conferirFrase_('x', { texto: 'Prazo de execução de 90 dias com multa de 10%.', fontes: ['I1', 'I2'] }, { fontes: {}, fabricantes: [], fontesCons: { I1: { texto: 'Multa 0,2% até 10 dias' }, I2: { texto: 'validade 90 dias' } } }, p, true);
+  assert.match(p.join(' | '), /o número 10% não está, com a mesma unidade, em nenhuma das fontes citadas/);
+});
+
+test('revisão: rede de segurança em todos os temas; item com negação perto (fora do trecho) vira pendência; o checklist mostra "Pendência"', () => {
+  const texto = '[página 1]\nPRAZOS\nO prazo de entrega das peças será de 15 dias corridos. Poderá ser prorrogado a critério da fiscalização.\n9.2. Não será exigida garantia contratual.\n';
+  const a = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto, cortado: false }] });
+  const r = verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Entrega das peças em 15 dias corridos.', trecho: 'O prazo de entrega das peças será de 15 dias corridos' }]);
+  assert.equal(r.ok, true, r.p);
+  assert.deepEqual([r.itens[0].tipo, r.itens[0].alerta], ['PENDENCIA', 'Poderá'], 'a frase seguinte excetua; a cláusula 9.2 (outra) não conta');
+  const cl = a.ctx.LicLeit_checklist_(r.itens);
+  assert.equal(cl[0].tipo, 'PENDENCIA');
+  const t = tela();
+  const h = t.ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: J(cl) });
+  assert.match(h, /<span class="lic-af-tipo PENDENCIA">Pendência<\/span>Confirmar no edital: há negação ou exceção perto do trecho \("Poderá"\)/);
+});
+
+test('revisão: versão nova com os arquivos em outra ordem e uma errata na frente: o que é aproveitado tem arquivo (SHA-256), página e linha do bloco atual', () => {
+  const a = ambiente({ custoMs: 1000 });
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  const nova = '[página 1]\nERRATA: fica alterado o item 9.9 do edital, conforme publicação no diário oficial do município.\n' + P1.replace('[página 1]', '[página 2]') + P2.replace('[página 2]', '[página 3]') + P3.replace('[página 3]', '[página 4]');
+  const t = TEXTOS();
+  a.srv.textos = [Object.assign({}, t[1], { ref: 'A1' }), Object.assign({}, t[0], { ref: 'A2', texto: nova, sha256: 'e'.repeat(64), id: 31 }), t[2]];
+  a.srv.arquivos = Object.assign(ARQS(), { baseHash: 'f'.repeat(64) });
+  a.ia.fila.push(() => ({ itens: [] }));   // a errata entra no bloco da página seguinte (texto novo): esse vai à IA; o resto é aproveitado
+  const r = a.api('s_dora', 'leituraIniciar', { id: 'op1', motivo: 'edital retificado publicado' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.criada.aproveitados, 2, 'o anexo (que agora é o original) e a página 4 do edital; a página 3 repete o anexo');
+  a.ctx.Licitacoes_rotinaLeitura();
+  const cl = a.api('s_dora', 'leitura', { id: 'op1' }).leitura.leitura.checklist;
+  const at = cl.find((e) => e.tema === 'ATESTADOS');
+  assert.deepEqual(at.fontes.map((f) => [f.ref, f.arquivo.nome, f.arquivo.sha256.slice(0, 1), f.pagina, f.linha]).sort(), [['A1', 'anexo.pdf', 'b', 1, 5], ['A2', 'edital.pdf', 'e', 3, 5]]);
+  const mu = cl.find((e) => e.tema === 'PENALIDADES');
+  assert.deepEqual([mu.fontes[0].ref, mu.fontes[0].pagina, mu.fontes[0].linha], ['A2', 4, 2]);
+});
+
+test('revisão: arquivo cortado sem textoPedaco = PARCIAL e a busca avisa; página só com cabeçalho repetido conta como "sem texto"', () => {
+  const t = TEXTOS(); t[0].texto = P1 + P2; t[0].cortado = true;
+  const a = ambiente({ semPedaco: true, textos: t, custoMs: 1000 });
+  a.srv.arquivos.arquivos[0].textoCaracteres = EDITAL.length;
+  const r = a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  assert.equal(r.leitura.leitura.situacao, 'PARCIAL');
+  const pal = a.api('s_dora', 'palavrasSalvar', { escopo: 'OPORTUNIDADE', id: 'op1', palavras: ['multa'], motivo: 'teste multa' });
+  assert.match(pal.leitura.palavras.busca.palavras[0].zeroTexto, /atenção: A1 Edital PE 399\/2026 não foi lido inteiro \(\d[\d.]* de \d[\d.]* caracteres\): a palavra pode estar no resto/);
+  const tl = tela().ctx.LicLeit_htmlPalavras_(pal.leitura);
+  assert.match(tl, /Atenção: A1 Edital PE 399\/2026 não foi lido inteiro/);
+  // escaneado: 4 páginas com o mesmo cabeçalho; a 3 só tem o cabeçalho
+  const cab = 'Município de São José do Rio Preto\nSecretaria Municipal de Administração\nDiretoria de Contratações Públicas\n';
+  const sc = [1, 2, 3, 4].map((n) => '[página ' + n + ']\n' + cab + (n === 3 ? '' : ['', 'A contratada apresentará o atestado de capacidade técnica do serviço.', 'O pagamento será feito em trinta dias após a medição aprovada.', '', 'A garantia dos serviços prestados cobre os doze meses seguintes.'][n] + '\n')).join('');
+  const b = ambiente({ custoMs: 1000, respostas: [() => ({ itens: [] }), () => ({ itens: [] }), () => ({ itens: [] }), () => ({ itens: [] })], textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto: sc, cortado: false }], blocoCar: 260 });
+  b.api('s_dora', 'leituraIniciar', { id: 'op1' }); b.ctx.Licitacoes_rotinaLeitura();
+  const cob = JSON.parse(b.leituras()[0].COBERTURA_JSON);
+  assert.match(cob.total.texto, /^Lidas 3 de 3 página\(s\) com texto .* 1 página\(s\) sem texto \(provável imagem; ler à mão\): A1 1 página\(s\)\./);
+  assert.equal(b.blocos().filter((x) => x.SITUACAO === 'VAZIO').length, 1, 'a página só com cabeçalho não vai à IA');
+});
+
+test('revisão: falha passageira ao ler os textos deixa os blocos na fila; sem a chave a rotina não se reagenda; o fim cabe no tempo da execução', () => {
+  const a = ambiente({ custoMs: 30000 });
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  const orig = a.ctx.SGO_LICITACOES.textos;
+  a.ctx.SGO_LICITACOES.textos = () => { throw new Error('ECONNRESET'); };
+  const x = a.ctx.Licitacoes_rotinaLeitura();
+  assert.match(x.erroTexto, /ECONNRESET/);
+  assert.equal(a.leituras()[0].SITUACAO, 'EM_ANDAMENTO');
+  assert.deepEqual(a.blocos().map((b) => b.SITUACAO), ['LIDO', 'LIDO', 'PENDENTE', 'REPETIDO'], 'nada vira "não lido" por falha passageira');
+  assert.equal(a.gatilhos.length, 1, 'tenta de novo em 1 minuto');
+  a.ctx.SGO_LICITACOES.textos = orig;
+  // sem a chave: a rotina não lê nem se reagenda
+  delete a.props.GEMINI_API_KEY;
+  for (let i = 0; i < 3; i++) { const r = a.ctx.Licitacoes_rotinaLeitura(); assert.equal(r.semChave, true); }
+  assert.equal(a.gatilhos.length, 0);
+  assert.equal(a.ctx.LicLeit_agendar_(), 'sem a chave da IA: não agendada');
+  // a chave volta: a tela aberta reagenda e a rotina termina; a consolidação usa o prazo do INÍCIO da execução
+  a.props.GEMINI_API_KEY = 'chave-de-teste';
+  a.api('s_dora', 'leitura', { id: 'op1' });
+  assert.equal(a.gatilhos.length, 1);
+  const inicio = relogio.agora;
+  a.lidas.LIC_LEITURA_BLOCOS = 0;
+  a.ctx.Licitacoes_rotinaLeitura();
+  assert.equal(a.lidas.LIC_LEITURA_BLOCOS, 1, 'a fila é lida uma vez na rodada');
+  assert.equal(a.leituras()[0].SITUACAO, 'CONCLUIDA');
+  assert.equal(a.ia.opcoes[a.ia.opcoes.length - 1].prazoAte, inicio + 140000, 'a consolidação não ganha 140 s próprios');
+  // a linha da fila é pequena: itens e resposta da IA ficam em LIC_LEITURA_RESULTADOS
+  for (const b of a.tabelas.LIC_LEITURA_BLOCOS) assert.ok(JSON.stringify(b).length < 3000, 'linha da fila pequena');
+  assert.ok((a.tabelas.LIC_LEITURA_RESULTADOS || []).length >= 3);
+});
+
+test('revisão: hífen e espaço nos dois sentidos; palavra nova muda a base (Refazer procura a palavra); substituída fica substituída; "Ler de novo" zera as tentativas; tempo gasto fica gravado', () => {
+  const texto = '[página 1]\nCalibração do termo higrômetro digital e do termo-higrômetro de parede, com certificado.\n';
+  const a = ambiente({ custoMs: 1000, textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto, cortado: false }], respostas: [() => ({ itens: [] }), () => ({ itens: [] })] });
+  const b = a.ctx.LicLeit_buscar_(a.ctx.LicLeit_textos_(a.op()).arquivos, [{ palavra: 'termo-higrômetro', origem: 'GERAL' }, { palavra: 'termo higrômetro', origem: 'GERAL' }]);
+  assert.deepEqual(J(b.palavras.map((x) => x.total)), [2, 2]);
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  a.ctx.Licitacoes_rotinaLeitura();
+  a.api('s_dora', 'palavrasSalvar', { escopo: 'OPORTUNIDADE', id: 'op1', palavras: ['certificado'], motivo: 'palavra nova' });
+  const t = a.api('s_dora', 'leitura', { id: 'op1' }).leitura;
+  assert.equal(t.leitura.desatualizada, true, 'palavra nova: a leitura fica desatualizada');
+  const n = a.ia.prompts.length;
+  a.api('s_dora', 'leituraIniciar', { id: 'op1', motivo: 'procurar a palavra nova' });
+  assert.match(a.ia.prompts[n], /Palavras-chave da Diretoria[^\n]*certificado/, 'o bloco vai de novo à IA, com a palavra nova');
+  // a leitura antiga, consolidada depois de substituída, continua substituída
+  const velha = a.leituras()[0];
+  assert.equal(velha.SITUACAO, 'CONCLUIDA', 'a antiga já estava concluída: continua concluída');
+  const c0 = ambiente({ custoMs: 30000 });
+  c0.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  c0.api('s_dora', 'leituraIniciar', { id: 'op1', refazer: true, motivo: 'substituir a leitura em andamento' });
+  const sub = c0.leituras()[0];
+  assert.equal(sub.SITUACAO, 'SUBSTITUIDA');
+  c0.ctx.LicLeit_consolidar_(c0.ctx.SGO_DATA.getById('LIC_LEITURAS', sub.ID), c0.ctx.LicLeit_blocosDe_(sub.ID), c0.op(), null, '');
+  assert.equal(c0.leituras()[0].SITUACAO, 'SUBSTITUIDA');
+  // "Ler de novo": tentativas zeradas (a primeira falha da IA volta para a fila em vez de virar "não lido")
+  const lixo = () => ({ itens: [{ tema: 'GARANTIA', texto: 'x y z', trecho: 'nada disso existe no edital de verdade' }] });
+  const c = ambiente({ custoMs: 1000, respostas: [null, null, lixo, lixo, lixo] });
+  c.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  assert.equal(bloco(c, 3).SITUACAO, 'FALHOU'); assert.equal(bloco(c, 3).TENTATIVAS, 3);
+  c.ia.fila.push(new Error('Serviço de IA indisponível (HTTP 503)'));
+  c.api('s_dora', 'leituraTentarDeNovo', { id: 'op1' });
+  assert.equal(bloco(c, 3).SITUACAO, 'PENDENTE'); assert.equal(bloco(c, 3).TENTATIVAS, 1);
+  // tempo acabou entre a resposta recusada e a nova tentativa: a tentativa gasta e os problemas ficam gravados
+  const d = ambiente({ custoMs: 50000, respostas: [lixo] });
+  d.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  assert.equal(bloco(d, 1).SITUACAO, 'PENDENTE'); assert.equal(bloco(d, 1).TENTATIVAS, 1);
+  assert.match(bloco(d, 1).PROBLEMAS_JSON, /não está em A1/);
+  // tela: o resumo não se chama "Fato"
+  const h = tela().ctx.LicLeit_htmlResumoEstrategia_({ iaDisponivel: true, prazos: [], leitura: { situacao: 'CONCLUIDA', consolidacao: { situacao: 'OK' }, resumo: [{ texto: 'Frase.', fontes: ['I1'] }], estrategia: {} } });
+  assert.match(h, /Resumo \(conferido número e data\)<\/span>Frase\./);
+  assert.doesNotMatch(h, />Fato</);
 });
