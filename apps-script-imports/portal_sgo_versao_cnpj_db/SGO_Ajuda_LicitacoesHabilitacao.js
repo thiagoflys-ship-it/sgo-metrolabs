@@ -36,8 +36,8 @@ function SGO_ajudaTelas_LicitacoesHabilitacao_() {
           "\"Verificar no emissor\" abre o site oficial informado no cadastro, em nova aba."
         ] },
         { titulo: "Avisos de vencimento", itens: [
-          "A 30 e a 15 dias do vencimento: aviso no SGO+ e por e-mail. A 7 dias e vencido: também pelo WhatsApp oficial. Um aviso por faixa e por versão: a faixa que já passou não sai de novo.",
-          "Os avisos de validade saem das 8h às 18h (Brasília), para a Diretoria de Licitações (o responsável do documento, se for da Diretoria). Confirme a ciência na Central de alertas.",
+          "A 30 e a 15 dias do vencimento: aviso no SGO+ e por e-mail (nunca pelo WhatsApp). A 7 dias e vencido: também pelo WhatsApp oficial. Um aviso por faixa e por versão: a faixa que já passou não sai de novo, e o aviso mais novo tira o anterior da lista \"sem ciência\".",
+          "Os avisos de documento saem das 8h às 18h (Brasília), para a Diretoria de Licitações (o responsável do documento, se for da Diretoria), com teto próprio de 10 por pessoa no dia. Documento que vence antes da sessão: um aviso só, com as licitações afetadas. Quem desligou o e-mail nas regras dos alertas vê o aviso só no SGO+.",
           "Cadastrou a versão renovada: os avisos da versão anterior saem da fila sozinhos."
         ] }
       ],

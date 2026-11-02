@@ -116,13 +116,13 @@ var LICH_TIPOS = [
     termos: ['patrimonio liquido', 'capital social minimo', 'capital minimo'] },
   { codigo: 'ATESTADO', item: 18, nome: 'Atestado de capacidade técnica', categoria: 'TECNICA', validade: 'SEM', atestado: true, obs: 'Por serviço, quantidade, contratante, período e responsável técnico.',
     termos: ['atestado', 'capacidade tecnica', 'capacidade tecnico operacional', 'capacitacao tecnico operacional', 'aptidao para o desempenho'] },
-  { codigo: 'REGISTRO_CONSELHO', item: 19, nome: 'Certidão de registro e quitação da empresa no conselho profissional', categoria: 'TECNICA', validade: 'DATA', obs: 'Quando o objeto exigir.',
+  { codigo: 'REGISTRO_CONSELHO', item: 19, nome: 'Certidão de registro e quitação da empresa no conselho profissional', categoria: 'TECNICA', validade: 'DATA', escopo: true, escopoTexto: 'confira se é o conselho pedido (CREA, CFT, CRQ, CRF, CRBio...) e a área do objeto', obs: 'Quando o objeto exigir.',
     termos: ['crea', 'conselho regional', 'conselho profissional', 'entidade profissional competente', 'certidao de registro e quitacao', 'cft', 'conselho federal dos tecnicos'] },
-  { codigo: 'RESPONSAVEL_TECNICO', item: 20, nome: 'Responsável técnico: registro no conselho, acervo técnico (CAT) e vínculo', categoria: 'TECNICA', validade: 'DATA', dependencia: 'o cadastro de RH técnico ainda não existe no SGO+ (dependência 2 do doc 01)',
+  { codigo: 'RESPONSAVEL_TECNICO', item: 20, nome: 'Responsável técnico: registro no conselho, acervo técnico (CAT) e vínculo', categoria: 'TECNICA', validade: 'DATA', escopo: true, escopoTexto: 'confira a formação e o registro do profissional pedidos (ex.: engenheiro eletricista ou mecânico)', dependencia: 'o cadastro de RH técnico ainda não existe no SGO+ (dependência 2 do doc 01)',
     termos: ['responsavel tecnico', 'acervo tecnico', 'certidao de acervo', 'profissional legalmente habilitado', 'vinculo profissional', 'quadro permanente', 'engenheiro mecanico', 'engenheiro'] },
   { codigo: 'ART', item: 21, nome: 'ART do serviço', categoria: 'TECNICA', validade: 'CERTAME', obs: 'Emitida na execução.',
     termos: ['anotacao de responsabilidade tecnica', 'termo de responsabilidade tecnica'] },
-  { codigo: 'ACREDITACAO_RBC', item: 22, nome: 'Acreditação de laboratório (Cgcre/Inmetro, ABNT NBR ISO/IEC 17025) com escopo', categoria: 'TECNICA', validade: 'DATA', escopo: true,
+  { codigo: 'ACREDITACAO_RBC', item: 22, nome: 'Acreditação de laboratório (Cgcre/Inmetro, ABNT NBR ISO/IEC 17025) com escopo', categoria: 'TECNICA', validade: 'DATA', escopo: true, escopoTexto: 'confira se o escopo da acreditação cobre a grandeza e a faixa pedidas',
     obs: 'Escopo por grandeza e faixa. A Metrolabs não é acreditada RBC (decisão do dono, 01/11/2026).',
     termos: ['acreditado', 'acreditada', 'acreditacao', '17025', 'cgcre', 'rbc'] },
   { codigo: 'CERT_PADROES', item: 23, nome: 'Certificados de calibração dos padrões (rastreabilidade)', categoria: 'TECNICA', validade: 'DATA', fonte: 'PADROES',
@@ -134,14 +134,14 @@ var LICH_TIPOS = [
     termos: ['vistoria', 'visita tecnica', 'condicoes locais', 'conhecimento das condicoes', 'pleno conhecimento'] },
   { codigo: 'COMPROMISSOS', item: 26, nome: 'Relação de compromissos assumidos', categoria: 'ECONOMICA', validade: 'CERTAME',
     termos: ['compromissos assumidos', 'relacao de compromissos'] },
-  { codigo: 'CADASTRO_FORNECEDOR', item: 27, nome: 'Cadastros de fornecedor: SICAF, cadastros estaduais e das plataformas', categoria: 'FISCAL', validade: 'DATA',
+  { codigo: 'CADASTRO_FORNECEDOR', item: 27, nome: 'Cadastros de fornecedor: SICAF, cadastros estaduais e das plataformas', categoria: 'FISCAL', validade: 'DATA', escopo: true, escopoTexto: 'confira se é o cadastro pedido (SICAF, cadastro estadual, CRC de prefeitura ou da plataforma)',
     termos: ['sicaf', 'certificado de registro cadastral', 'registro cadastral', 'cadastro de fornecedores', 'cagef', 'caufesp'] },   // 'crc' fica de fora: também é o registro do contador no CRC
-  { codigo: 'INMETRO', item: 0, nome: 'Registro ou autorização do Inmetro (balanças e esfigmomanômetros)', categoria: 'TECNICA', validade: 'DATA', escopo: true,
+  { codigo: 'INMETRO', item: 0, nome: 'Registro ou autorização do Inmetro (balanças e esfigmomanômetros)', categoria: 'TECNICA', validade: 'DATA', escopo: true, escopoTexto: 'confira se o registro cobre o instrumento pedido (balanças e esfigmomanômetros; o escopo exato depende do documento, decisão do dono de 01/11/2026)',
     obs: 'Escopo exato do registro a confirmar com o documento (reparo, manutenção ou verificação), decisão do dono de 01/11/2026.',
     termos: ['inmetro', 'permissionaria', 'oficina autorizada', 'empresa autorizada', 'oficina permissionaria', 'autorizada pelo inmetro', 'registrada no inmetro'] },
   { codigo: 'ENQUADRAMENTO_EPP', item: 0, nome: 'Comprovação do enquadramento como EPP (LC 123/2006)', categoria: 'JURIDICA', validade: 'EDITAL', obs: 'A matriz é EPP (decisão do dono, 01/11/2026).',
     termos: ['empresa de pequeno porte', 'enquadramento', 'lei complementar 123', 'lei complementar n 123', 'lc 123', 'microempresa'] },
-  { codigo: 'ALVARA', item: 0, nome: 'Alvará de funcionamento ou licença sanitária', categoria: 'TECNICA', validade: 'DATA',
+  { codigo: 'ALVARA', item: 0, nome: 'Alvará de funcionamento ou licença sanitária', categoria: 'TECNICA', validade: 'DATA', escopo: true, escopoTexto: 'confira se é o documento pedido (alvará de funcionamento ou licença sanitária) e de qual município',
     termos: ['alvara', 'licenca de funcionamento', 'licenca sanitaria', 'vigilancia sanitaria'] },
   { codigo: 'OUTRO', item: 0, nome: 'Outro documento', categoria: '', validade: 'DATA', termos: [] }
 ];
@@ -185,6 +185,7 @@ function LicH_hoje_(ms) {
 }
 /** 'aaaa-mm-dd' válido ou '' (aceita também dd/mm/aaaa). */
 function LicH_dia_(v) {
+  if (v && typeof v === 'object' && typeof v.getTime === 'function') return isFinite(v.getTime()) ? LicH_hoje_(v.getTime()) : '';
   var t = Lic_s_(v), m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t) || null;
   if (!m) { var b = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t); if (b) m = [t, b[3], b[2], b[1]]; }
   if (!m) return '';
@@ -376,8 +377,8 @@ function LicH_camposLimpos_(c, atual) {
   }
   return { campos: out, rotulos: rot, tipo: t };
 }
-/** Arquivo enviado pela tela: confere extensão, tamanho e assinatura (os primeiros bytes) e guarda RESTRITO. */
-function LicH_guardarArquivo_(arq, codigo, versao) {
+/** Arquivo enviado pela tela: confere extensão, tamanho e assinatura (os primeiros bytes) e calcula o SHA-256. Não grava nada. */
+function LicH_lerArquivo_(arq) {
   var nome = Lic_s_(arq && arq.nome), b64 = String((arq && arq.base64) || '').replace(/^data:[^,]+,/, '').replace(/\s/g, '');
   if (!nome || b64.length < 8) throw new Error('O arquivo veio vazio. Toque em "Escolher arquivo", selecione o PDF ou a foto do documento e tente de novo. Nada foi alterado');
   if (b64.length > LICH_MAX_BASE64) throw new Error('O arquivo passa de 10 MB. Salve o PDF em tamanho menor (ou a foto reduzida) e anexe de novo. Nada foi alterado');
@@ -387,13 +388,21 @@ function LicH_guardarArquivo_(arq, codigo, versao) {
   var assinatura = ext === 'pdf' ? (u(0) === 0x25 && u(1) === 0x50 && u(2) === 0x44 && u(3) === 0x46) : ext === 'png' ? (u(0) === 0x89 && u(1) === 0x50 && u(2) === 0x4e && u(3) === 0x47)
     : ext === 'webp' ? (u(0) === 0x52 && u(1) === 0x49 && u(2) === 0x46 && u(3) === 0x46 && u(8) === 0x57 && u(9) === 0x45) : (u(0) === 0xff && u(1) === 0xd8);
   if (!assinatura) throw new Error('O conteúdo do arquivo não é um ' + ext.toUpperCase() + ' de verdade (a extensão não confere com o arquivo). Gere o PDF de novo ou tire a foto de novo. Nada foi alterado');
-  var sha = LicH_shaBytes_(bytes);
+  return { bytes: bytes, nome: Lic_texto_(nome, 200), arquivoNome: nome, tipo: mime, tamanho: bytes.length, sha256: LicH_shaBytes_(bytes) };
+}
+/**
+ * Grava o arquivo já conferido (LicH_lerArquivo_) no serviço de arquivos do SGO+, RESTRITO: no servidor próprio, arquivo
+ * "RESTRITO" não abre por /arquivos/:id nem aparece em /pastas/:id (só o código do SGO+ lê, como os relatórios de ciclo,
+ * LavCic_restrito_); PRIVATE é só a reserva do Google Drive. Só é chamado quando o arquivo entra de fato (sem órfão).
+ */
+function LicH_gravarArquivo_(lido, codigo, versao) {
   var pasta = SGO_DocSalvar_pastaPersistente_('LIC_HAB_PASTA_ID', LICH_PASTA, '');
   var sub = typeof RelA4_subpasta_ === 'function' ? RelA4_subpasta_(pasta, codigo) : pasta;
-  var f = sub.createFile(Utilities.newBlob(bytes, mime, SGO_DocSalvar_sanitizarNome_(codigo + ' v' + versao + ' - ' + nome)));
-  try { if (DriveApp.Access && DriveApp.Access.PRIVATE && f.setSharing) f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (e) {}
-  return { id: Lic_s_(f.getId()), nome: Lic_texto_(nome, 200), tipo: mime, tamanho: bytes.length, sha256: sha };
+  var f = sub.createFile(Utilities.newBlob(lido.bytes, lido.tipo, SGO_DocSalvar_sanitizarNome_(codigo + ' v' + versao + ' - ' + lido.arquivoNome)));
+  LicH_restrito_(f);
+  return { id: Lic_s_(f.getId()), nome: lido.nome, tipo: lido.tipo, tamanho: lido.tamanho, sha256: lido.sha256 };
 }
+function LicH_restrito_(f) { try { f.setSharing('RESTRITO', 'SISTEMA'); } catch (e) { try { if (DriveApp.Access && DriveApp.Access.PRIVATE) f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (x) {} } }
 function LicH_foto_(d) { var o = {}; LICH_COLUNAS.LIC_HAB_DOCUMENTOS.forEach(function (k) { if (k !== 'VERSAO_ID') o[k] = d[k] === undefined ? '' : d[k]; }); return o; }
 function LicH_hashVersao_(v) { return Lic_hash_([Lic_s_(v.DOCUMENTO_ID), Number(v.VERSAO) || 0, Lic_s_(v.DADOS_JSON), Lic_s_(v.ARQUIVO_SHA256), Lic_s_(v.MOTIVO), Lic_s_(v.POR_ID), Lic_s_(v.EM)].join('|')); }
 function LicH_gravarVersao_(d, mudou, motivo, eu, agora) {
@@ -421,14 +430,14 @@ function LicH_salvar_(eu, d) {
   var atual = novo ? null : LicH_acharDoc_(d.id);
   if (atual && !LicH_ativo_(atual) && !d.reativar) throw new Error('Este documento foi retirado de uso. Para mudar, toque em "Voltar a usar" (com o motivo) antes. Nada foi alterado');
   var lim = LicH_camposLimpos_(c, atual);
-  var temArquivo = !!(d.arquivo && (d.arquivo.base64 || d.arquivo.nome));
-  LICH_CACHE_AV = { ms: null, docs: null };   // o cache dos avisos não pode ver o documento antigo
+  var temArquivo = !!(d.arquivo && (d.arquivo.base64 || d.arquivo.nome)), lido = temArquivo ? LicH_lerArquivo_(d.arquivo) : null;
+  LICH_CACHE_AV = { ms: null, docs: null, ctx: null };   // o cache dos avisos não pode ver o documento antigo
   return Lic_comTrava_(function () {
     var agora = Lic_agora_();
     if (novo) {
       var docs = LicH_documentos_(), codigo = LicH_proximoCodigo_(docs);
       var reg = Object.assign({ CODIGO: codigo, TIPO: lim.tipo.codigo, ATIVO: 'SIM', VERSAO: 1, MOTIVO: motivo || 'Cadastro inicial', ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora, CRIADO_POR_NOME: eu.nome, CRIADO_EM: agora }, lim.campos);
-      if (temArquivo) { var a = LicH_guardarArquivo_(d.arquivo, codigo, 1); Object.assign(reg, { ARQUIVO_ID: a.id, ARQUIVO_NOME: a.nome, ARQUIVO_TIPO: a.tipo, ARQUIVO_TAMANHO: a.tamanho, ARQUIVO_SHA256: a.sha256, ARQUIVO_EM: agora }); }
+      if (temArquivo) { var a = LicH_gravarArquivo_(lido, codigo, 1); Object.assign(reg, { ARQUIVO_ID: a.id, ARQUIVO_NOME: a.nome, ARQUIVO_TIPO: a.tipo, ARQUIVO_TAMANHO: a.tamanho, ARQUIVO_SHA256: a.sha256, ARQUIVO_EM: agora }); }
       var ins = SGO_DATA.insert(LICH_ABAS.DOCUMENTOS, reg);
       reg.ID = Lic_s_(ins && ins.ID);
       var vid = LicH_gravarVersao_(reg, 'Cadastro inicial' + (temArquivo ? ' com o arquivo "' + reg.ARQUIVO_NOME + '" (SHA-256 ' + reg.ARQUIVO_SHA256 + ')' : ' sem arquivo'), motivo || 'Cadastro inicial', eu, agora);
@@ -446,10 +455,12 @@ function LicH_salvar_(eu, d) {
     if (d.reativar && !LicH_ativo_(at)) { mud.ATIVO = 'SIM'; difs.push('Situação: retirado de uso → em uso'); }
     if (d.retirar && LicH_ativo_(at)) { mud.ATIVO = 'NAO'; difs.push('Situação: em uso → retirado de uso'); }
     var versao = (Number(at.VERSAO) || 1) + 1;
-    if (temArquivo) {
-      var a2 = LicH_guardarArquivo_(d.arquivo, at.CODIGO, versao);
-      if (a2.sha256 === Lic_s_(at.ARQUIVO_SHA256)) difs.push('Arquivo: o mesmo enviado de novo (SHA-256 igual), sem troca');
-      else { Object.assign(mud, { ARQUIVO_ID: a2.id, ARQUIVO_NOME: a2.nome, ARQUIVO_TIPO: a2.tipo, ARQUIVO_TAMANHO: a2.tamanho, ARQUIVO_SHA256: a2.sha256, ARQUIVO_EM: agora }); difs.push('Arquivo: ' + (Lic_s_(at.ARQUIVO_NOME) || '(sem arquivo)') + ' → ' + a2.nome + ' (SHA-256 ' + a2.sha256 + '); o anterior continua guardado na versão ' + (Number(at.VERSAO) || 1)); }
+    var trocaArquivo = temArquivo && lido.sha256 !== Lic_s_(at.ARQUIVO_SHA256);
+    if (temArquivo && !trocaArquivo) difs.push('Arquivo: o mesmo enviado de novo (SHA-256 igual), sem troca');
+    if (!Object.keys(mud).length && !trocaArquivo) return { documento: LicH_docTela_(at), semMudanca: true, texto: 'Nada mudou: os valores enviados são iguais aos atuais' + (temArquivo ? ' e o arquivo é o mesmo (SHA-256 igual)' : '') + '. Nenhuma versão nova foi criada.' };
+    if (trocaArquivo) {
+      var a2 = LicH_gravarArquivo_(lido, at.CODIGO, versao);
+      { Object.assign(mud, { ARQUIVO_ID: a2.id, ARQUIVO_NOME: a2.nome, ARQUIVO_TIPO: a2.tipo, ARQUIVO_TAMANHO: a2.tamanho, ARQUIVO_SHA256: a2.sha256, ARQUIVO_EM: agora }); difs.push('Arquivo: ' + (Lic_s_(at.ARQUIVO_NOME) || '(sem arquivo)') + ' → ' + a2.nome + ' (SHA-256 ' + a2.sha256 + '); o anterior continua guardado na versão ' + (Number(at.VERSAO) || 1)); }
     }
     if (!Object.keys(mud).length) return { documento: LicH_docTela_(at), semMudanca: true, texto: 'Nada mudou: os valores enviados são iguais aos atuais' + (temArquivo ? ' e o arquivo é o mesmo (SHA-256 igual)' : '') + '. Nenhuma versão nova foi criada.' };
     Object.assign(mud, { VERSAO: versao, MOTIVO: motivo, ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora });
@@ -507,7 +518,12 @@ function LicH_tiposDaExigencia_(texto, docs) {
   var rastreio = /rastreab|rastreav/.test(n), acreditacao = /acreditad|acreditac|17025|cgcre/.test(n);
   // "rastreável à RBC" é rastreabilidade (padrões), não acreditação; "acreditado pelo Inmetro" é acreditação, não o registro do Inmetro
   if (achou.indexOf('ACREDITACAO_RBC') >= 0 && rastreio && !acreditacao) achou.splice(achou.indexOf('ACREDITACAO_RBC'), 1);
-  if (achou.indexOf('INMETRO') >= 0 && acreditacao) achou.splice(achou.indexOf('INMETRO'), 1);
+  // "rastreável ao Inmetro" é rastreabilidade dos padrões, não o registro do Inmetro
+  if (achou.indexOf('INMETRO') >= 0 && (acreditacao || rastreio)) achou.splice(achou.indexOf('INMETRO'), 1);
+  // "CRF" com "conselho" é o Conselho Regional de Farmácia, não o certificado do FGTS
+  if (achou.indexOf('CRF_FGTS') >= 0 && /conselho/.test(n) && !/fgts|fundo de garantia/.test(n)) achou.splice(achou.indexOf('CRF_FGTS'), 1);
+  // esferas citadas numa exigência fiscal ("Fazenda Nacional, Estadual e Municipal"): cada esfera pede a sua certidão
+  LicH_esferas_(texto).tipos.forEach(function (c) { if (achou.indexOf(c) < 0) achou.push(c); });
   // palavras extras de cada documento (a Diretoria escreve no cadastro): o tipo daquele documento entra
   (docs || []).forEach(function (d) {
     if (!LicH_ativo_(d)) return;
@@ -515,6 +531,33 @@ function LicH_tiposDaExigencia_(texto, docs) {
     if (ps.some(function (p) { return LicH_tem_(pad, p); }) && achou.indexOf(Lic_up_(d.TIPO)) < 0) achou.push(Lic_up_(d.TIPO));
   });
   return achou;
+}
+/**
+ * Esferas de uma exigência de regularidade fiscal ou trabalhista: { tipos, nomes, fora }. fora = município ou estado citado
+ * que não é o da matriz (Goiânia/GO), ou o Distrito Federal: a certidão do cadastro pode não servir.
+ */
+function LicH_esferas_(texto) {
+  var n = LicH_norm_(texto), pad = ' ' + n + ' ', r = { tipos: [], nomes: [], fora: '' };
+  if (!/(fazenda|tribut|receita|debito|fiscal|divida ativa|certidao negativa| cnd )/.test(pad)) return r;
+  var tem = function (ws) { return ws.some(function (w) { return pad.indexOf(' ' + w + ' ') >= 0; }); };
+  var add = function (nome, tipo) { r.nomes.push(nome); if (r.tipos.indexOf(tipo) < 0) r.tipos.push(tipo); };
+  if (tem(['federal', 'federais', 'nacional', 'uniao', 'pgfn'])) add('federal', 'CND_FEDERAL');
+  if (tem(['estadual', 'estaduais', 'estado', 'distrital'])) add('estadual', 'CND_ESTADUAL');
+  if (tem(['municipal', 'municipais', 'municipio', 'prefeitura'])) add('municipal', 'CND_MUNICIPAL');
+  if (tem(['trabalhista', 'trabalhistas']) || pad.indexOf(' justica do trabalho ') >= 0) add('trabalhista', 'CNDT');
+  var m = /(?:municipio|prefeitura municipal|prefeitura) de ([a-z]+(?: (?:do|da|dos|das|de) [a-z]+| [a-z]+){0,3})/.exec(n);
+  if (m && !/^goiania/.test(m[1])) r.fora = 'município de ' + m[1];
+  var e = /estado de ([a-z]+(?: [a-z]+)?)/.exec(n);
+  if (!r.fora && e && !/^goias/.test(e[1])) r.fora = 'estado de ' + e[1];
+  if (!r.fora && tem(['distrital']) && !tem(['estadual', 'estaduais'])) r.fora = 'Distrito Federal';
+  return r;
+}
+/** Prazo de emissão pedido ("emitida há no máximo 60 dias"): o número de dias ou null. */
+function LicH_prazoEmissao_(texto) {
+  var n = LicH_norm_(texto);
+  if (!/(emitid|emissao|expedid|expedicao)/.test(n)) return null;
+  var m = /([0-9]{1,3}) dias?( |$)/.exec(n);
+  return m ? Number(m[1]) : null;
 }
 /** Palavras de 4 letras ou mais em comum (atestado × exigência), sem as que não dizem nada. */
 var LICH_PALAVRAS_VAZIAS = ' para pelo pela pelos pelas como mais menos sera serao deve devem devera deverao comprovar comprovacao atestado atestados capacidade tecnica tecnico emitido emitidos pessoa juridica direito publico privado licitante empresa servico servicos compativel compativeis caracteristicas quantidades prazos objeto desta deste nesta neste qual quais onde quando sendo seja sejam entre sobre ';
@@ -525,9 +568,14 @@ function LicH_comum_(a, b) {
   return out;
 }
 /** Estado de UM documento para a sessão: OK, VENCE_ANTES, VENCIDO, SEM_ARQUIVO, SEM_DATA, CERTAME, EMITIR. */
-function LicH_estadoNaSessao_(d, sessaoDia, hoje) {
+function LicH_estadoNaSessao_(d, sessaoDia, hoje, prazoEmissao) {
   var t = LicH_tipo_(d.TIPO) || LicH_tipo_('OUTRO'), val = LicH_dia_(d.VALIDADE);
   if (!Lic_s_(d.ARQUIVO_ID)) return { estado: 'SEM_ARQUIVO', texto: 'cadastrado sem arquivo (se não está no SGO+, não existe): anexe o documento' };
+  if (prazoEmissao !== null && prazoEmissao !== undefined) {
+    var emi = LicH_dia_(d.EMISSAO), ref = sessaoDia || hoje;
+    if (!emi) return { estado: 'SEM_DATA', texto: 'o edital pede emissão em até ' + prazoEmissao + ' dias: escreva a data de emissão no cadastro' };
+    if (LicH_diasEntre_(emi, ref) > prazoEmissao) return { estado: 'VENCE_ANTES', texto: 'emitido em ' + LicH_br_(emi) + ', mais de ' + prazoEmissao + ' dias antes da ' + (sessaoDia ? 'sessão (' + LicH_br_(sessaoDia) + ')' : 'data de hoje') + ': emita de novo' };
+  }
   if (val) {
     if (val < hoje) return { estado: 'VENCIDO', texto: 'venceu em ' + LicH_br_(val) };
     if (sessaoDia && val < sessaoDia) return { estado: 'VENCE_ANTES', texto: 'vale até ' + LicH_br_(val) + ', antes da sessão (' + LicH_br_(sessaoDia) + ')' };
@@ -547,7 +595,7 @@ function LicH_docCurto_(d, est) {
 var LICH_ORDEM_ESTADO = { OK: 1, CERTAME: 2, EMITIR: 3, SEM_DATA: 4, VENCE_ANTES: 5, VENCIDO: 6, SEM_ARQUIVO: 7 };
 /** Situação de um tipo de documento para a exigência, com os documentos do cadastro que o atendem (o melhor primeiro). */
 function LicH_avaliarTipo_(codigo, ctx, sessaoDia, texto) {
-  var t = LicH_tipo_(codigo), r = { codigo: codigo, nome: t.nome, situacao: 'FALTA', texto: '', documentos: [] };
+  var t = LicH_tipo_(codigo), r = { codigo: codigo, nome: t.nome, situacao: 'FALTA', texto: '', documentos: [] }, pe = LicH_prazoEmissao_(texto);
   if (t.fonte === 'PADROES') {
     var p = ctx.padroes;
     if (p.aviso) { r.situacao = 'A_CONFERIR'; r.texto = p.aviso; return r; }
@@ -558,19 +606,21 @@ function LicH_avaliarTipo_(codigo, ctx, sessaoDia, texto) {
     r.padroes = { ativos: p.ativos, validos: validos };
     return r;
   }
-  var docs = ctx.docs.filter(function (d) { return LicH_ativo_(d) && Lic_up_(d.TIPO) === codigo; }).map(function (d) { var e = LicH_estadoNaSessao_(d, sessaoDia, ctx.hoje); var x = LicH_docCurto_(d, e); if (t.atestado) x.comum = LicH_comum_(texto, Lic_s_(d.OBJETO) + ' ' + LicH_servicos_(d).map(function (s) { return s.servico; }).join(' ')); return x; });
+  var docs = ctx.docs.filter(function (d) { return LicH_ativo_(d) && Lic_up_(d.TIPO) === codigo; }).map(function (d) { var e = LicH_estadoNaSessao_(d, sessaoDia, ctx.hoje, pe); var x = LicH_docCurto_(d, e); if (t.atestado) x.comum = LicH_comum_(texto, Lic_s_(d.OBJETO) + ' ' + LicH_servicos_(d).map(function (s) { return s.servico; }).join(' ')); return x; });
   docs.sort(function (a, b) { return (t.atestado ? (b.comum.length - a.comum.length) : 0) || (LICH_ORDEM_ESTADO[a.estado] - LICH_ORDEM_ESTADO[b.estado]) || (a.validade > b.validade ? -1 : 1); });
   r.documentos = docs.slice(0, t.atestado ? 5 : 3);
   if (!docs.length) {
     r.texto = codigo === 'ACREDITACAO_RBC' ? 'A Metrolabs não é acreditada RBC (ABNT NBR ISO/IEC 17025): as calibrações são rastreáveis (decisão do dono, 01/11/2026). Confira se o edital aceita rastreabilidade ou subcontratação de laboratório acreditado.'
       : 'Não há "' + t.nome + '" em uso no cadastro de habilitação.' + (t.dependencia ? ' Depende de outro módulo: ' + t.dependencia + '.' : '');
+    // registro do Inmetro: o dono ainda vai mandar o documento (escopo a confirmar); sem ele, a Diretoria confere
+    if (codigo === 'INMETRO') { r.situacao = 'A_CONFERIR'; r.texto = 'O registro do Inmetro (balanças e esfigmomanômetros) ainda não está no cadastro: cadastre o documento quando chegar e confira se o item exige empresa autorizada pelo Inmetro.'; }
     return r;
   }
   var melhor = docs.slice().sort(function (a, b) { return LICH_ORDEM_ESTADO[a.estado] - LICH_ORDEM_ESTADO[b.estado]; })[0];
   if (melhor.estado === 'OK') {
     r.situacao = 'ATENDE'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '.';
     if (t.atestado) { r.situacao = 'A_CONFERIR'; r.texto = docs.length + (docs.length === 1 ? ' atestado' : ' atestados') + ' no cadastro' + (docs[0].comum.length ? '; o que mais se parece com a exigência tem em comum: ' + docs[0].comum.slice(0, 8).join(', ') : '; nenhum tem palavra em comum com a exigência') + '. Confira as quantidades e a parcela de maior relevância (art. 67, §§ 1º e 2º).'; }
-    else if (t.escopo) { r.situacao = 'A_CONFERIR'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '. Confira se o escopo do documento cobre o que o edital pede' + (codigo === 'INMETRO' ? ' (balanças e esfigmomanômetros; o escopo exato depende do documento, decisão do dono de 01/11/2026)' : ' (grandeza e faixa)') + '.'; }
+    else if (t.escopo) { r.situacao = 'A_CONFERIR'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '. ' + t.escopoTexto.charAt(0).toUpperCase() + t.escopoTexto.slice(1) + '.'; }
   } else if (melhor.estado === 'VENCE_ANTES' || melhor.estado === 'VENCIDO') {
     r.situacao = 'VENCE_ANTES'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + ': renove antes da sessão (documento vencido na data da sessão não se corrige depois, art. 64).';
     if (t.fiscal) r.texto += ' Como EPP, a regularidade fiscal e trabalhista pode ser apresentada com restrição e regularizada em 5 dias úteis depois de declarada vencedora, prorrogáveis (LC 123/2006, art. 43): o documento continua sendo exigido.';
@@ -676,6 +726,8 @@ function LicH_cruzar_(l, ctx) {
       // "ou", "salvo", "substituído", "dispensado": os documentos podem ser alternativos; com um que serve, a Diretoria confere
       if (tipos.length > 1 && LICH_CRUZ[pior.situacao].pendencia && algumBom && LICH_RX_ALTERNATIVA.test(' ' + LicH_norm_(e.texto) + ' ')) { sug.situacao = 'A_CONFERIR'; sug.texto = 'O texto cita documentos que podem ser alternativos (' + tipos.map(function (t) { return t.nome + ': ' + LICH_CRUZ[t.situacao].nome.toLowerCase(); }).join('; ') + '). Confira no edital se basta um deles.'; }
     }
+    var esf = LicH_esferas_(e.texto);
+    if (sug.situacao === 'ATENDE' && (esf.nomes.length > 1 || esf.fora)) { sug.situacao = 'A_CONFERIR'; sug.texto = (esf.fora ? 'O texto cita ' + esf.fora + ', fora da matriz (Goiânia/GO): a certidão do cadastro pode não servir. ' : '') + (esf.nomes.length > 1 ? 'O texto pede regularidade em mais de uma esfera (' + esf.nomes.join(', ') + '): confira se há certidão de cada uma. ' : '') + tipos.map(function (t) { return t.nome + ': ' + LICH_CRUZ[t.situacao].nome.toLowerCase(); }).join('; ') + '.'; }
     if ((e.pendenciaLeitura || e.alerta) && sug.situacao === 'ATENDE') { sug.situacao = 'A_CONFERIR'; sug.texto = 'O documento existe, mas a leitura marcou este trecho como pendência' + (e.alerta ? ' ("' + e.alerta + '" perto do trecho)' : '') + ': confirme no edital se a exigência vale.'; }
     var d = dec[e.chave], manual = null, efetivo = sug.situacao, efTexto = sug.texto;
     if (d && d.atual) {
@@ -721,6 +773,7 @@ function LicH_conferir_(eu, d) {
       if (!doc || !LicH_ativo_(doc)) throw new Error('Escolha um documento em uso do cadastro de habilitação (ou nenhum). Nada foi alterado');
       if (decisao === 'NAO_ATENDE') doc = null;
     }
+    LICH_CACHE_AV = { ms: null, docs: null, ctx: null };
     var ant = LicH_decisoes_(ctx.conferencias[Lic_s_(l.ID)])[ex.chave], versao = ant ? (Number(ant.atual.VERSAO) || 1) + 1 : 1, agora = Lic_agora_();
     var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), CHAVE: ex.chave, EXIGENCIA_REF: ex.ref, EXIGENCIA_TEXTO: LicH_txt_(ex.texto, 1500), DECISAO: decisao,
       DOCUMENTO_ID: doc ? Lic_s_(doc.ID) : '', DOCUMENTO_CODIGO: doc ? Lic_s_(doc.CODIGO) : '', DOCUMENTO_VERSAO: doc ? Number(doc.VERSAO) || 1 : '', MOTIVO: motivo, VERSAO: versao, POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
@@ -823,15 +876,41 @@ function LicH_liberar_(agoraMs) {
   var alvo = h < 8 ? dia : new Date(Date.parse(dia + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
   return new Date(Date.parse(alvo + 'T08:00:00-03:00')).toISOString();
 }
-var LICH_CACHE_AV = { ms: null, docs: null };
+/** Teto próprio dos avisos de habilitação por pessoa no dia (não entram no teto dos alertas de prazo; Lic_alertasEnviar_). */
+var LICH_TETO_DIA = 10;
+var LICH_SEM_CIENCIA = ['ENVIADO', 'FALHOU', 'ESCALONADO', 'NO_RESUMO'];
+/**
+ * Leitura de um instante (a rodada inteira usa o mesmo): documentos e o contexto do cruzamento das licitações acompanhadas
+ * (LIC_EVENTOS, leituras, análises e decisões lidos uma vez). Toda gravação de documento ou decisão limpa o cache.
+ */
+var LICH_CACHE_AV = { ms: null, docs: null, ctx: null };
 function LicH_docsDoInstante_(ms) {
-  if (LICH_CACHE_AV.ms !== ms || !LICH_CACHE_AV.docs) { var m = {}; LicH_documentos_().forEach(function (d) { m[Lic_s_(d.ID)] = d; }); LICH_CACHE_AV = { ms: ms, docs: m }; }
+  if (LICH_CACHE_AV.ms !== ms || !LICH_CACHE_AV.docs) { var m = {}; LicH_documentos_().forEach(function (d) { m[Lic_s_(d.ID)] = d; }); LICH_CACHE_AV = { ms: ms, docs: m, ctx: null }; }
   return LICH_CACHE_AV.docs;
 }
+function LicH_ctxDoInstante_(ms, ops) {
+  LicH_docsDoInstante_(ms);
+  if (!LICH_CACHE_AV.ctx) LICH_CACHE_AV.ctx = LicH_contexto_({ opIds: (ops || []).map(function (l) { return l.ID; }) });
+  return LICH_CACHE_AV.ctx;
+}
+function LicH_opsAcompanhadas_(cfg) { return Lic_ativas_().filter(function (l) { return LICH_SITUACOES_OP.indexOf(Lic_s_(l.SITUACAO)) >= 0 && !Lic_opSemAlerta_(l, cfg); }); }
+/** Aviso mais novo do mesmo documento: os anteriores enviados e sem ciência saem da faixa "sem ciência" (concluídos, com o motivo). */
+function LicH_concluirAnteriores_(linhas, filtro, motivo, agora) {
+  var n = 0;
+  linhas.forEach(function (a) {
+    if (!filtro(Lic_s_(a.GRUPO).split('|'), a) || Lic_s_(a.CIENTE_EM) || LICH_SEM_CIENCIA.indexOf(Lic_up_(a.SITUACAO)) < 0) return;
+    SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CONCLUIDO', CONCLUIDO_EM: agora, ESCALONAR_EM: '', CANCELADO_MOTIVO: Lic_texto_('Concluído sem ciência: ' + motivo, 500), ATUALIZADO_EM: agora });
+    a.SITUACAO = 'CONCLUIDO'; n++;
+  });
+  return n;
+}
 /**
- * Programa os avisos de habilitação (chamado pela rodada dos alertas e depois de cada gravação). Sem repetir: a chave leva o
- * documento, a VERSÃO e a faixa; só a faixa atual é criada (a que já passou não sai) e a programada que ficou para trás é
- * cancelada. Vence antes da sessão: um aviso por licitação, documento e versão. Falta: um por licitação e conjunto de faltas.
+ * Programa os avisos de habilitação (chamado pela rodada dos alertas e depois de cada gravação). Sem repetir:
+ *   - validade (D|V|doc|versão|faixa): só a faixa atual (a que já passou não sai); a programada que ficou para trás é cancelada
+ *     e a enviada sem ciência é concluída quando sai a mais nova;
+ *   - vence antes da sessão (D|S|doc|versão): UM aviso por documento e versão, juntando as licitações em que ele vence antes;
+ *     das 8h às 18h, nível importante, sem escalonamento;
+ *   - falta (D|F|licitação|dia da sessão): um por licitação e data da sessão, só por e-mail.
  */
 function LicH_alertasProgramar_(quando, o) {
   quando = quando instanceof Date ? quando : new Date(quando || Date.now());
@@ -840,72 +919,82 @@ function LicH_alertasProgramar_(quando, o) {
   var props = PropertiesService.getScriptProperties(), ult = Date.parse(Lic_s_(props.getProperty('LICH_PROGRAMADO_EM'))), agoraMs = quando.getTime();
   if (!o.forcar && isFinite(ult) && agoraMs - ult < LICH_PROGRAMAR_MIN * 60000 && agoraMs >= ult) return { pulado: 'programado há menos de ' + LICH_PROGRAMAR_MIN + ' minutos' };
   LicH_garantirAbas_();
-  var cfg = Lic_alertasCfg_(), r = { criados: 0, cancelados: 0 };
+  var cfg = Lic_alertasCfg_(), r = { criados: 0, cancelados: 0, concluidos: 0 };
   if (!cfg.ligado) return { desligado: true };
   var integ = Lic_integrantes_(cfg), agora = quando.toISOString(), hoje = LicH_hoje_(agoraMs);
   if (!integ.length) return { semDestinatarios: true };
-  var ops = Lic_ativas_().filter(function (l) { return LICH_SITUACOES_OP.indexOf(Lic_s_(l.SITUACAO)) >= 0 && !Lic_opSemAlerta_(l, cfg); });
-  var ctx = LicH_contexto_({ opIds: ops.map(function (l) { return l.ID; }) });
+  var ops = LicH_opsAcompanhadas_(cfg);
+  LICH_CACHE_AV = { ms: null, docs: null, ctx: null };
+  var ctx = LicH_ctxDoInstante_(agoraMs, ops);
   var cruz = ops.map(function (l) { return { l: l, cr: LicH_cruzar_(l, ctx) }; });
+  var paraDoc = function (d) { var resp = Lic_s_(d.RESPONSAVEL_ID); return resp && integ.some(function (u) { return u.id === resp; }) ? integ.filter(function (u) { return u.id === resp; }) : integ; };
   var res = Lic_comTrava_(function () {
     var linhas = Lic_ler_(LIC_ABAS.ALERTAS), porChave = {}, novos = [];
     linhas.forEach(function (a) { porChave[Lic_s_(a.CHAVE)] = a; });
-    var nova = function (x) { if (porChave[x.CHAVE]) return; porChave[x.CHAVE] = x; novos.push(x); r.criados++; };
-    var base = function (extra) { return Object.assign({ AVISO_ID: Lic_avisoId_(), TIPO: 'DOCUMENTO', CANAIS: '', SITUACAO: 'PROGRAMADO', TENTATIVAS: 0, ATUALIZADO_EM: agora, CRIADO_EM: agora }, extra); };
+    var nova = function (x) { if (porChave[x.CHAVE]) return false; porChave[x.CHAVE] = x; novos.push(x); r.criados++; return true; };
+    var base = function (extra) { return Object.assign({ AVISO_ID: Lic_avisoId_(), TIPO: 'DOCUMENTO', CANAIS: '', SITUACAO: 'PROGRAMADO', TENTATIVAS: 0, PAPEL: 'AVISO', ATUALIZADO_EM: agora, CRIADO_EM: agora }, extra); };
     // 1. validade de cada documento em uso: a faixa atual (30, 15, 7 ou vencido), por versão
     ctx.docs.forEach(function (d) {
       if (!LicH_ativo_(d)) return;
-      var sit = LicH_situacao_(d, hoje), fx = LicH_faixa_(sit);
-      // faixas da mesma versão que ficaram para trás e ainda não saíram: canceladas (vale o aviso mais recente)
+      var sit = LicH_situacao_(d, hoje), fx = LicH_faixa_(sit), ver = String(Number(d.VERSAO) || 1);
       linhas.forEach(function (a) {
         var g = Lic_s_(a.GRUPO).split('|');
         if (g[0] !== 'D' || g[1] !== 'V' || g[2] !== Lic_s_(d.ID) || Lic_up_(a.SITUACAO) !== 'PROGRAMADO') return;
-        if (fx === null || Number(g[4]) > fx || g[3] !== String(Number(d.VERSAO) || 1)) {
-          SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: fx === null ? 'O documento não está mais perto de vencer (versão ' + (Number(d.VERSAO) || 1) + ').' : 'Passou para a faixa mais próxima do vencimento: vale o aviso mais recente.', ATUALIZADO_EM: agora });
+        if (fx === null || Number(g[4]) > fx || g[3] !== ver) {
+          SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: fx === null ? 'O documento não está mais perto de vencer (versão ' + ver + ').' : 'Passou para a faixa mais próxima do vencimento: vale o aviso mais recente.', ATUALIZADO_EM: agora });
           a.SITUACAO = 'CANCELADO'; r.cancelados++;
         }
       });
       if (fx === null) return;
-      var resp = Lic_s_(d.RESPONSAVEL_ID), para = resp && integ.some(function (u) { return u.id === resp; }) ? integ.filter(function (u) { return u.id === resp; }) : integ;
-      var grupo = 'D|V|' + Lic_s_(d.ID) + '|' + (Number(d.VERSAO) || 1) + '|' + fx, val = LicH_dia_(d.VALIDADE);
-      para.forEach(function (u) {
-        nova(base({ CHAVE: grupo + '|' + u.id, GRUPO: grupo, OPORTUNIDADE_ID: '', CODIGO: Lic_s_(d.CODIGO), EVENTO_ID: Lic_s_(d.ID), EVENTO_TIPO: 'HAB_VALIDADE', PAPEL: 'AVISO',
+      var grupo = 'D|V|' + Lic_s_(d.ID) + '|' + ver + '|' + fx, val = LicH_dia_(d.VALIDADE), criou = false;
+      paraDoc(d).forEach(function (u) {
+        // 30 e 15 dias: só e-mail (CANAIS "email"; nunca cai para o WhatsApp); 7 dias e vencido: os canais da pessoa
+        if (nova(base({ CHAVE: grupo + '|' + u.id, GRUPO: grupo, OPORTUNIDADE_ID: '', CODIGO: Lic_s_(d.CODIGO), EVENTO_ID: Lic_s_(d.ID), EVENTO_TIPO: 'HAB_VALIDADE',
           ANTECEDENCIA_MIN: fx * 1440, ANTECEDENCIA: fx ? fx + ' dias' : 'vencido', NIVEL: fx <= 7 ? 'IMPORTANTE' : 'NORMAL', USUARIO_ID: u.id, USUARIO_NOME: u.nome, CANAIS: fx <= 7 ? '' : 'email',
-          TITULO: 'Habilitação ' + Lic_s_(d.CODIGO) + ': ' + Lic_texto_(d.NOME, 80) + ' · ' + LicH_situacao_(d, hoje).texto, TEXTO: '', ALVO_ISO: fx ? LicH_fimDoDia_(val) : '', LIBERAR_EM: LicH_liberar_(agoraMs) }));
+          TITULO: 'Habilitação ' + Lic_s_(d.CODIGO) + ': ' + Lic_texto_(d.NOME, 80) + ' · ' + sit.texto, TEXTO: '', ALVO_ISO: fx ? LicH_fimDoDia_(val) : '', LIBERAR_EM: LicH_liberar_(agoraMs) }))) criou = true;
       });
+      if (criou) r.concluidos += LicH_concluirAnteriores_(linhas, function (g) { return g[0] === 'D' && g[1] === 'V' && g[2] === Lic_s_(d.ID) && (g[3] !== ver || Number(g[4]) > fx); }, 'saiu o aviso mais novo do documento ' + Lic_s_(d.CODIGO) + ' (' + (fx ? fx + ' dias' : 'vencido') + ').', agora);
     });
-    // 2. licitações acompanhadas: documento que vence antes da sessão e documentos que faltam
+    // 2. vence antes da sessão: juntado por documento (as licitações em que ele vence antes)
+    var porDoc = {};
     cruz.forEach(function (x) {
       var l = x.l, cr = x.cr, sMs = Date.parse(cr.sessao.iso);
       if (!cr.itens.length || !isFinite(sMs) || sMs <= agoraMs) return;
-      var tits = Lic_titulares_(l, cfg, integ), papel = tits.length > 1 ? 'TODOS' : 'TITULAR', perto = sMs - agoraMs <= 3 * 864e5, vistos = {};
       cr.itens.forEach(function (e) {
         if (e.efetivo !== 'VENCE_ANTES') return;
         var ds = e.manual && e.manual.documentoId ? [{ id: e.manual.documentoId }] : [];
         if (!ds.length) e.tiposAvaliados.forEach(function (t) { (t.documentos || []).forEach(function (dd) { if (dd.estado === 'VENCE_ANTES' || dd.estado === 'VENCIDO') ds.push(dd); }); });
         ds.forEach(function (dd) {
-          var doc = ctx.docs.filter(function (z) { return Lic_s_(z.ID) === Lic_s_(dd.id); })[0];
-          if (!doc || vistos[doc.ID]) return; vistos[doc.ID] = true;
-          var grupo = 'D|S|' + Lic_s_(l.ID) + '|' + Lic_s_(doc.ID) + '|' + (Number(doc.VERSAO) || 1);
-          tits.forEach(function (u) {
-            nova(base({ CHAVE: grupo + '|' + u.id, GRUPO: grupo, OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), EVENTO_ID: Lic_s_(doc.ID), EVENTO_TIPO: 'HAB_SESSAO', PAPEL: papel,
-              ANTECEDENCIA_MIN: 0, ANTECEDENCIA: 'vence antes da sessão', NIVEL: perto ? 'CRITICO' : 'IMPORTANTE', USUARIO_ID: u.id, USUARIO_NOME: u.nome,
-              TITULO: 'Licitação ' + Lic_s_(l.CODIGO) + ': ' + Lic_s_(doc.CODIGO) + ' vence antes da sessão (' + LicH_br_(cr.sessao.dia) + ')', TEXTO: '', ALVO_ISO: cr.sessao.iso, LIBERAR_EM: perto ? agora : LicH_liberar_(agoraMs) }));
-          });
+          var j = porDoc[Lic_s_(dd.id)] = porDoc[Lic_s_(dd.id)] || { ops: {}, primeira: null };
+          if (!j.ops[Lic_s_(l.ID)]) { j.ops[Lic_s_(l.ID)] = { codigo: Lic_s_(l.CODIGO), orgao: Lic_texto_(l.ORGAO_NOME, 80), dia: cr.sessao.dia, iso: cr.sessao.iso }; if (!j.primeira || cr.sessao.iso < j.primeira.iso) j.primeira = j.ops[Lic_s_(l.ID)]; }
         });
       });
+    });
+    Object.keys(porDoc).forEach(function (id) {
+      var d = ctx.docs.filter(function (z) { return Lic_s_(z.ID) === id; })[0];
+      if (!d || !LicH_ativo_(d)) return;
+      var j = porDoc[id], lista = Object.keys(j.ops).map(function (k) { return j.ops[k]; }).sort(function (a, b) { return a.iso < b.iso ? -1 : 1; });
+      var grupo = 'D|S|' + id + '|' + (Number(d.VERSAO) || 1), opUnica = lista.length === 1 ? Object.keys(j.ops)[0] : '';
+      paraDoc(d).forEach(function (u) {
+        nova(base({ CHAVE: grupo + '|' + u.id, GRUPO: grupo, OPORTUNIDADE_ID: opUnica, CODIGO: Lic_s_(d.CODIGO), EVENTO_ID: id, EVENTO_TIPO: 'HAB_SESSAO',
+          ANTECEDENCIA_MIN: 0, ANTECEDENCIA: 'vence antes da sessão', NIVEL: 'IMPORTANTE', USUARIO_ID: u.id, USUARIO_NOME: u.nome,
+          TITULO: 'Habilitação ' + Lic_s_(d.CODIGO) + ' vence antes da sessão de ' + lista.length + (lista.length === 1 ? ' licitação' : ' licitações') + ' (a primeira em ' + LicH_br_(j.primeira.dia) + ')',
+          TEXTO: lista.slice(0, 10).map(function (o) { return o.codigo + ' · ' + o.orgao + ' · sessão ' + LicH_br_(o.dia); }).join(' | '), ALVO_ISO: j.primeira.iso, LIBERAR_EM: LicH_liberar_(agoraMs) }));
+      });
+    });
+    // 3. documentos que faltam: um aviso por licitação e data da sessão (a lista atual fica na aba e nas pendências)
+    cruz.forEach(function (x) {
+      var l = x.l, cr = x.cr, sMs = Date.parse(cr.sessao.iso);
+      if (!cr.itens.length || !isFinite(sMs) || sMs <= agoraMs) return;
       var faltas = cr.itens.filter(function (e) { return e.efetivo === 'FALTA' || e.efetivo === 'NAO_ATENDE'; });
-      if (faltas.length) {
-        // um aviso por licitação e data da sessão (a sessão mudou na fonte = aviso novo); falta resolvida ou nova não repete o aviso:
-        // a lista atual fica na aba Habilitação e nas pendências do Hoje e do Painel
-        var grupoF = 'D|F|' + Lic_s_(l.ID) + '|' + cr.sessao.dia;
-        tits.forEach(function (u) {
-          nova(base({ CHAVE: grupoF + '|' + u.id, GRUPO: grupoF, OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), EVENTO_ID: '', EVENTO_TIPO: 'HAB_FALTA', PAPEL: 'AVISO',
-            ANTECEDENCIA_MIN: 0, ANTECEDENCIA: 'documento faltando', NIVEL: 'IMPORTANTE', USUARIO_ID: u.id, USUARIO_NOME: u.nome, CANAIS: 'email',
-            TITULO: 'Licitação ' + Lic_s_(l.CODIGO) + ': ' + faltas.length + (faltas.length === 1 ? ' documento de habilitação faltando' : ' documentos de habilitação faltando'),
-            TEXTO: faltas.slice(0, 8).map(function (e) { return e.ref + ' ' + Lic_texto_(e.efetivoTexto, 160); }).join(' | '), ALVO_ISO: cr.sessao.iso, LIBERAR_EM: LicH_liberar_(agoraMs) }));
-        });
-      }
+      if (!faltas.length) return;
+      var grupoF = 'D|F|' + Lic_s_(l.ID) + '|' + cr.sessao.dia;
+      Lic_titulares_(l, cfg, integ).forEach(function (u) {
+        nova(base({ CHAVE: grupoF + '|' + u.id, GRUPO: grupoF, OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), EVENTO_ID: '', EVENTO_TIPO: 'HAB_FALTA',
+          ANTECEDENCIA_MIN: 0, ANTECEDENCIA: 'documento faltando', NIVEL: 'IMPORTANTE', USUARIO_ID: u.id, USUARIO_NOME: u.nome, CANAIS: 'email',
+          TITULO: 'Licitação ' + Lic_s_(l.CODIGO) + ': ' + faltas.length + (faltas.length === 1 ? ' documento de habilitação faltando' : ' documentos de habilitação faltando'),
+          TEXTO: faltas.slice(0, 8).map(function (e) { return e.ref + ' ' + Lic_texto_(e.efetivoTexto, 160); }).join(' | '), ALVO_ISO: cr.sessao.iso, LIBERAR_EM: LicH_liberar_(agoraMs) }));
+      });
     });
     if (novos.length) { if (typeof SGO_DATA.insertMany === 'function') SGO_DATA.insertMany(LIC_ABAS.ALERTAS, novos); else novos.forEach(function (n) { SGO_DATA.insert(LIC_ABAS.ALERTAS, n); }); }
     return r;
@@ -913,26 +1002,31 @@ function LicH_alertasProgramar_(quando, o) {
   props.setProperty('LICH_PROGRAMADO_EM', agora);
   return res;
 }
-/** Versão nova do documento: avisos de validade da versão anterior que esperam são cancelados; os sem ciência, concluídos. */
+/** Versão nova do documento: avisos da versão anterior (validade e vence antes da sessão) que esperam são cancelados; os sem ciência, concluídos. */
 function LicH_encerrarAvisosDoc_(d, motivo, agora) {
   try {
-    Lic_ler_(LIC_ABAS.ALERTAS).forEach(function (a) {
-      var g = Lic_s_(a.GRUPO).split('|');
-      if (g[0] !== 'D' || g[1] !== 'V' || g[2] !== Lic_s_(d.ID) || g[3] === String(Number(d.VERSAO) || 1)) return;
-      var s = Lic_up_(a.SITUACAO);
-      if (s === 'PROGRAMADO') SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: Lic_texto_(motivo, 500), ATUALIZADO_EM: agora });
-      else if (['ENVIADO', 'FALHOU', 'ESCALONADO', 'NO_RESUMO'].indexOf(s) >= 0 && !Lic_s_(a.CIENTE_EM)) SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CONCLUIDO', CONCLUIDO_EM: agora, ESCALONAR_EM: '', CANCELADO_MOTIVO: Lic_texto_('Concluído sem ciência: ' + motivo, 500), ATUALIZADO_EM: agora });
+    var ver = String(Number(d.VERSAO) || 1), linhas = Lic_ler_(LIC_ABAS.ALERTAS), doDoc = function (g) { return g[0] === 'D' && (g[1] === 'V' || g[1] === 'S') && g[2] === Lic_s_(d.ID) && g[3] !== ver; };
+    linhas.forEach(function (a) {
+      if (!doDoc(Lic_s_(a.GRUPO).split('|')) || Lic_up_(a.SITUACAO) !== 'PROGRAMADO') return;
+      SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: Lic_texto_(motivo, 500), ATUALIZADO_EM: agora });
     });
+    LicH_concluirAnteriores_(linhas, doDoc, motivo, agora);
   } catch (e) { console.error('Licitações, habilitação, avisos da versão anterior: ' + ((e && e.message) || e)); }
 }
 /** '' = o aviso de habilitação ainda vale; senão o motivo. Chamado por Lic_alertaSemValer_ (SGO_Licitacoes_Alertas.js). */
 function LicH_alertaSemValer_(a, ops, cfg, agoraMs) {
   var g = Lic_s_(a.GRUPO).split('|'), docs = LicH_docsDoInstante_(agoraMs);
   if (g[0] !== 'D') return 'Aviso de habilitação sem grupo reconhecido.';
-  if (g[1] === 'V') {
+  if (g[1] === 'V' || g[1] === 'S') {
     var d = docs[g[2]];
     if (!d || !LicH_ativo_(d)) return 'O documento saiu de uso.';
     if (String(Number(d.VERSAO) || 1) !== g[3]) return 'O documento tem versão nova (' + (Number(d.VERSAO) || 1) + ').';
+    if (g[1] === 'S') {
+      var val = LicH_dia_(d.VALIDADE), alvo = Date.parse(Lic_s_(a.ALVO_ISO));
+      if (!isFinite(alvo) || alvo <= agoraMs) return 'A sessão já passou.';
+      if (val && val >= LicH_hoje_(alvo)) return 'O documento vale até a sessão.';
+      return '';
+    }
     var fx = LicH_faixa_(LicH_situacao_(d, LicH_hoje_(agoraMs)));
     if (fx === null) return 'O documento não está mais perto de vencer.';
     if (Lic_up_(a.SITUACAO) === 'PROGRAMADO' && fx < Number(g[4])) return 'Passou para a faixa mais próxima do vencimento: vale o aviso mais recente.';
@@ -941,43 +1035,46 @@ function LicH_alertaSemValer_(a, ops, cfg, agoraMs) {
   var l = ops[Lic_s_(a.OPORTUNIDADE_ID)], m = Lic_opSemAlerta_(l, cfg);
   if (m) return 'Sem alerta: oportunidade ' + m + '.';
   if (LICH_SITUACOES_OP.indexOf(Lic_s_(l.SITUACAO)) < 0) return 'A licitação não está mais em análise, decisão, proposta ou disputa.';
-  var s = LicH_sessao_(l, typeof Lic_eventosDe_ === 'function' ? Lic_eventosDe_(l.ID) : []);
-  if (!s.iso || Date.parse(s.iso) <= agoraMs) return 'A sessão já passou.';
-  if (g[1] === 'S') {
-    var doc = docs[g[3]];
-    if (!doc || !LicH_ativo_(doc)) return 'O documento saiu de uso.';
-    if (String(Number(doc.VERSAO) || 1) !== g[4]) return 'O documento tem versão nova (' + (Number(doc.VERSAO) || 1) + ').';
-    var val = LicH_dia_(doc.VALIDADE);
-    if (val && val >= s.dia) return 'O documento vale até a sessão.';
-  }
+  // falta: reconfere antes do envio (com o contexto do instante: LIC_EVENTOS e o resto lidos uma vez na rodada)
+  var ctx = LicH_ctxDoInstante_(agoraMs, LicH_opsAcompanhadas_(cfg)), cr = LicH_cruzar_(l, ctx);
+  if (!cr.sessao.iso || Date.parse(cr.sessao.iso) <= agoraMs) return 'A sessão já passou.';
+  if (g[1] === 'F' && !cr.itens.some(function (e) { return e.efetivo === 'FALTA' || e.efetivo === 'NAO_ATENDE'; })) return 'Não falta mais documento nesta licitação.';
   return '';
 }
-/** Texto do aviso de habilitação: { titulo, texto (e-mail), params (os 9 do modelo sgo_licitacao_prazo) }. Chamado por Lic_alertaConteudo_. */
+/**
+ * Texto do aviso de habilitação: { titulo, texto (e-mail), params (os 9 do modelo sgo_licitacao_prazo) }. Chamado por
+ * Lic_alertaConteudo_. No WhatsApp, {{2}} é sempre "Metrolabs (documento de habilitação)" e o emissor vai no {{4}}.
+ */
 function LicH_alertaConteudo_(a, l, quando) {
   var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), nivel = LIC_NIVEIS[Lic_up_(a.NIVEL)] || 'normal', tipo = Lic_s_(a.EVENTO_TIPO);
   var d = Lic_s_(a.EVENTO_ID) ? SGO_DATA.getById(LICH_ABAS.DOCUMENTOS, Lic_s_(a.EVENTO_ID)) : null, hoje = LicH_hoje_(agoraMs);
   var sit = d ? LicH_situacao_(d, hoje) : null, esc = Lic_s_(a.PAPEL) === 'ESCALONAMENTO', reenvio = Lic_s_(a.PAPEL) === 'REENVIO';
-  var docTxt = d ? Lic_s_(d.CODIGO) + ' · ' + Lic_s_(d.NOME) : 'documento de habilitação', acao, titulo, linhas, params;
-  var ciencia = 'Confirmar ciência (registra que você viu este aviso; não conclui a tarefa): ' + Lic_linkCiencia_(a.AVISO_ID, 'e');
+  var docTxt = d ? Lic_s_(d.CODIGO) + ' · ' + Lic_s_(d.NOME) : 'documento de habilitação', val = d ? LicH_br_(LicH_dia_(d.VALIDADE)) : '', acao, titulo, linhas, params;
+  var emissor = d && Lic_s_(d.ORGAO_EMISSOR) ? ' (emissor: ' + Lic_s_(d.ORGAO_EMISSOR) + ')' : '', quem = 'Metrolabs (documento de habilitação)';
+  var ciencia = 'Confirmar ciência (registra que você viu este aviso; não conclui a tarefa): ' + Lic_linkCiencia_(a.AVISO_ID, 'e'), link = Lic_linkAviso_(a.AVISO_ID) || '@LINK';
   if (tipo === 'HAB_VALIDADE') {
     acao = 'renovar o documento e cadastrar a versão nova em Licitações › Documentos de habilitação';
     titulo = 'Habilitação ' + (d ? Lic_s_(d.CODIGO) : '') + ': ' + (d ? Lic_texto_(d.NOME, 80) : 'documento') + ' · ' + (sit ? sit.texto : '');
     linhas = ['METROLABS · AVISO DE DOCUMENTO DE HABILITAÇÃO (' + nivel + ')', '', 'Documento: ' + docTxt, 'Número: ' + (d && Lic_s_(d.NUMERO) || 'não informado'), 'Emissor: ' + (d && Lic_s_(d.ORGAO_EMISSOR) || 'não informado'),
-      'Validade: ' + (d && LicH_br_(LicH_dia_(d.VALIDADE)) || 'sem data'), 'Situação: ' + (sit ? sit.texto : '-'), 'Responsável: ' + (d && Lic_s_(d.RESPONSAVEL_NOME) || 'Diretoria de Licitações'), 'Ação necessária: ' + acao];
-    params = [nivel, (d && Lic_s_(d.ORGAO_EMISSOR)) || 'Metrolabs (habilitação)', 'Documento de habilitação ' + (d ? Lic_s_(d.CODIGO) : ''), d ? Lic_texto_(d.NOME, 140) : '-', 'Validade do documento',
-      (d && LicH_br_(LicH_dia_(d.VALIDADE))) || 'sem data', sit ? sit.texto : '-', acao, Lic_linkAviso_(a.AVISO_ID) || '@LINK'];
+      'Validade: ' + (val || 'sem data'), 'Situação: ' + (sit ? sit.texto : '-'), 'Responsável: ' + (d && Lic_s_(d.RESPONSAVEL_NOME) || 'Diretoria de Licitações'), 'Ação necessária: ' + acao];
+    params = [nivel, quem, 'Documento de habilitação ' + (d ? Lic_s_(d.CODIGO) : ''), Lic_texto_((d ? Lic_s_(d.NOME) : '-') + emissor, 140), 'Validade do documento', val || 'sem data', sit ? sit.texto : '-', acao, link];
+  } else if (tipo === 'HAB_SESSAO') {
+    var alvoMs = Date.parse(Lic_s_(a.ALVO_ISO)), restante = typeof Lic_tempoRestante_ === 'function' ? Lic_tempoRestante_(alvoMs - agoraMs) : '';
+    acao = 'renovar ' + (d ? Lic_s_(d.CODIGO) : 'o documento') + ' antes da sessão e cadastrar a versão nova';
+    titulo = (reenvio ? 'Lembrete · ' : '') + (Lic_s_(a.TITULO) || 'Habilitação: documento vence antes da sessão');
+    linhas = ['METROLABS · AVISO DE DOCUMENTO DE HABILITAÇÃO (' + nivel + ')', '', 'Documento: ' + docTxt + emissor, 'Validade: ' + (val || 'sem data'), 'Vence antes da sessão de: ' + (Lic_s_(a.TEXTO) || '-'),
+      'Primeira sessão: ' + LicH_brHora_(a.ALVO_ISO) + ' (horário de Brasília)', 'Tempo restante: ' + restante, 'Ação necessária: ' + acao];
+    params = [nivel, quem, 'Documento de habilitação ' + (d ? Lic_s_(d.CODIGO) : ''), Lic_texto_((d ? Lic_s_(d.NOME) : '-') + emissor, 140), 'Vence antes da sessão de licitação', LicH_brHora_(a.ALVO_ISO) + ' (Brasília)', restante, acao, link];
   } else {
     var orgao = Lic_s_(l && l.ORGAO_NOME) || 'Órgão não informado', local = l ? (Lic_s_(l.MUNICIPIO) ? Lic_s_(l.MUNICIPIO) + '/' : '') + Lic_s_(l.UF) : '';
     var processo = (Lic_s_(l && l.NUMERO_CONTROLE_PNCP) || Lic_s_(a.CODIGO)) + (l && Lic_s_(l.MODALIDADE) ? ' (' + Lic_s_(l.MODALIDADE) + ')' : '');
-    var alvoMs = Date.parse(Lic_s_(a.ALVO_ISO)), quandoTxt = LicH_brHora_(a.ALVO_ISO) + ' (horário de Brasília)', restante = typeof Lic_tempoRestante_ === 'function' ? Lic_tempoRestante_(alvoMs - agoraMs) : '';
-    var falta = tipo === 'HAB_FALTA';
-    acao = falta ? 'providenciar e cadastrar os documentos que faltam (aba Habilitação da licitação)' : 'renovar ' + (d ? Lic_s_(d.CODIGO) : 'o documento') + ' antes da sessão e cadastrar a versão nova';
+    acao = 'providenciar e cadastrar os documentos que faltam (aba Habilitação da licitação)';
     if (esc) acao = 'sem ciência de ' + Lic_s_(a.ESCALONADO_PARA || 'quem recebeu primeiro') + ': confirme a ciência e ' + acao;
     if (reenvio) acao = 'lembrete (sem ciência): ' + acao;
-    titulo = (esc ? 'Sem ciência · ' : reenvio ? 'Lembrete · ' : '') + (Lic_s_(a.TITULO) || ('Licitação ' + Lic_s_(a.CODIGO) + ': habilitação'));
-    linhas = ['METROLABS · ALERTA DE LICITAÇÃO, HABILITAÇÃO (' + nivel + ')', '', 'Órgão: ' + orgao + (local ? ' (' + local + ')' : ''), 'Processo: ' + processo, 'Sessão: ' + quandoTxt, 'Tempo restante: ' + restante,
-      falta ? 'Faltam: ' + Lic_s_(a.TEXTO) : 'Documento: ' + docTxt + ' (validade ' + (d && LicH_br_(LicH_dia_(d.VALIDADE)) || 'sem data') + ')', 'Ação necessária: ' + acao];
-    params = [nivel, orgao + (local ? ' (' + local + ')' : ''), processo, falta ? 'Documentos de habilitação faltando' : Lic_texto_(docTxt, 140), falta ? 'Habilitação incompleta' : 'Documento vence antes da sessão', quandoTxt, restante, acao, Lic_linkAviso_(a.AVISO_ID) || '@LINK'];
+    titulo = (reenvio ? 'Lembrete · ' : '') + (Lic_s_(a.TITULO) || ('Licitação ' + Lic_s_(a.CODIGO) + ': habilitação'));
+    linhas = ['METROLABS · ALERTA DE LICITAÇÃO, HABILITAÇÃO (' + nivel + ')', '', 'Órgão: ' + orgao + (local ? ' (' + local + ')' : ''), 'Processo: ' + processo, 'Sessão: ' + LicH_brHora_(a.ALVO_ISO) + ' (horário de Brasília)',
+      'Faltam: ' + Lic_s_(a.TEXTO), 'Ação necessária: ' + acao];
+    params = [nivel, quem, processo, 'Documentos de habilitação faltando', 'Habilitação incompleta', LicH_brHora_(a.ALVO_ISO) + ' (Brasília)', '-', acao, link];
   }
   var texto = linhas.concat(['', ciencia, '', 'O botão abaixo abre o SGO+, com login. Aviso da Diretoria de Licitações; a renovação é registrada no cadastro de habilitação, com versão e histórico.']).join('\n');
   return { titulo: titulo, texto: texto, params: params };

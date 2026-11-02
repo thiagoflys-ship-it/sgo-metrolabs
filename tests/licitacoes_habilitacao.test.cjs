@@ -28,7 +28,7 @@ function amb(o) {
     base64Encode: (v) => bytesDe(v).toString('base64'),
     newBlob: (bytes, tipo, nome) => ({ bytes: Array.from(bytes), tipo, nome })
   });
-  const pastaFalsa = { getFoldersByName: () => ({ hasNext: () => true, next: () => pastaFalsa }), createFolder: () => pastaFalsa, createFile: (blob) => { const id = 'arq' + (++n); arquivos[id] = { bytes: blob.bytes.slice(), tipo: blob.tipo, nome: blob.nome, compart: '' }; return { getId: () => id, getUrl: () => 'https://drive/' + id, setSharing: (x) => { arquivos[id].compart = x; } }; } };
+  const pastaFalsa = { getFoldersByName: () => ({ hasNext: () => true, next: () => pastaFalsa }), createFolder: () => pastaFalsa, createFile: (blob) => { const id = 'arq' + (++n); arquivos[id] = { bytes: blob.bytes.slice(), tipo: blob.tipo, nome: blob.nome, compart: '' }; return { getId: () => id, getUrl: () => 'https://drive/' + id, setSharing: (x, y) => { if (a.recusaRestrito && x === 'RESTRITO') throw new Error('não existe no Drive'); arquivos[id].compart = x + ':' + y; } }; } };
   a.ctx.SGO_DocSalvar_pastaPersistente_ = () => pastaFalsa;
   a.ctx.SGO_DocSalvar_sanitizarNome_ = (s) => String(s);
   a.ctx.DriveApp = { Access: { PRIVATE: 'PRIVATE' }, Permission: { NONE: 'NONE' }, getFileById: (id) => { const f = arquivos[id]; if (!f) throw new Error('não existe'); return { getBlob: () => ({ getBytes: () => f.bytes.slice(), getContentType: () => f.tipo }) }; } };
@@ -74,7 +74,7 @@ test('cadastro: arquivo restrito com SHA-256, versão nova com motivo, nada é a
   assert.equal(d.arquivo.sha256, sha(buf), 'SHA-256 dos bytes do arquivo');
   assert.equal(d.situacao, 'VENCE_30'); assert.equal(d.responsavel, 'CHARLES DIRETOR TESTE');
   const reg = a.tabelas.LIC_HAB_DOCUMENTOS[0];
-  assert.equal(a.arquivos[reg.ARQUIVO_ID].compart, 'PRIVATE', 'arquivo guardado restrito');
+  assert.equal(a.arquivos[reg.ARQUIVO_ID].compart, 'RESTRITO:SISTEMA', 'arquivo guardado RESTRITO (não abre por /arquivos/:id)');
   assert.equal(a.tabelas.LIC_HAB_VERSOES.length, 1);
   // recusas: sem motivo, link que não é http(s), PDF falso, data inválida, emissão depois da validade, padrões, sem acesso
   assert.match(a.hab('s_cha', 'salvar', { id: d.id, campos: { numero: 'x' } }).message, /Escreva o motivo da mudança/);
@@ -307,13 +307,14 @@ test('avisos da licitação: documento que vence antes da sessão e documentos q
   const a = cenario();
   a.rodada('2026-11-02T10:00:00-03:00');
   const s = a.al({ TIPO: 'DOCUMENTO', EVENTO_TIPO: 'HAB_SESSAO' });
-  assert.equal(s.length, 1, 'para o responsável da licitação'); assert.equal(s[0].OPORTUNIDADE_ID, 'op_hab1'); assert.equal(s[0].USUARIO_ID, 'u_cha');
+  assert.equal(s.length, 2, 'a CNDT não tem responsável: os dois integrantes'); assert.equal(s[0].OPORTUNIDADE_ID, 'op_hab1', 'uma licitação só: o link abre a ficha');
+  assert.ok(s.every((x) => x.PAPEL === 'AVISO' && x.NIVEL === 'IMPORTANTE'));
   assert.equal(s[0].EVENTO_ID, a.tabelas.LIC_HAB_DOCUMENTOS.find((d) => d.TIPO === 'CNDT').ID); assert.equal(s[0].SITUACAO, 'ENVIADO');
   const f = a.al({ TIPO: 'DOCUMENTO', EVENTO_TIPO: 'HAB_FALTA' });
   assert.equal(f.length, 1); assert.match(f[0].TITULO, /documentos de habilitação faltando/); assert.equal(f[0].CANAIS, 'email');
   a.esquecerProgramacao(); a.rodada('2026-11-02T11:00:00-03:00');
-  assert.equal(a.al({ TIPO: 'DOCUMENTO', OPORTUNIDADE_ID: 'op_hab1', PAPEL: (p) => p !== 'ESCALONAMENTO' && p !== 'REENVIO' }).length, 2, 'sem repetir');
-  assert.equal(a.al({ TIPO: 'DOCUMENTO', EVENTO_TIPO: 'HAB_SESSAO', PAPEL: 'ESCALONAMENTO' })[0].USUARIO_ID, 'u_thi', 'sem ciência em 15 min (importante): escalona para o outro integrante');
+  assert.equal(a.al({ TIPO: 'DOCUMENTO', OPORTUNIDADE_ID: 'op_hab1' }).length, 3, 'sem repetir');
+  assert.equal(a.al({ TIPO: 'DOCUMENTO', PAPEL: (p) => p === 'ESCALONAMENTO' || p === 'REENVIO' }).length, 0, 'avisos de documento não escalonam');
   assert.equal(a.al({ TIPO: 'DOCUMENTO', EVENTO_TIPO: 'HAB_FALTA', PAPEL: 'ESCALONAMENTO' }).length, 0, 'o aviso de falta não escalona');
   // o link do alerta abre a aba Habilitação da ficha; o de validade, o cadastro
   const t = a.ctx.Lic_avisoAbrir_({ userId: 'u_cha', usuario: 'charles', perfil: 'DIRETORIA' }, s[0].AVISO_ID);
@@ -325,7 +326,7 @@ test('avisos da licitação: documento que vence antes da sessão e documentos q
   assert.ok(central.lista.some((x) => x.tipo === 'DOCUMENTO' && x.abrirAba === 'habilitacao'));
   // descartada: o aviso da licitação que ainda não saiu é cancelado
   a.ok(a.api('s_cha', 'descartar', { id: 'op_hab1', motivo: 'decidimos não participar desta' }));
-  assert.equal(a.ctx.LicH_alertaSemValer_(s[0], { op_hab1: a.tabelas.LIC_OPORTUNIDADES[0] }, a.ctx.Lic_alertasCfg_(), Date.now()), 'Sem alerta: oportunidade descartada pela Diretoria.');
+  assert.equal(a.ctx.LicH_alertaSemValer_(f[0], { op_hab1: a.tabelas.LIC_OPORTUNIDADES[0] }, a.ctx.Lic_alertasCfg_(), Date.now()), 'Sem alerta: oportunidade descartada pela Diretoria.');
 });
 
 // ---------------------------------------------------------------- telas
@@ -408,4 +409,178 @@ test('integração na casca: menu, rota, inclusão do arquivo, navegação, aler
   assert.match(manual, /## Documentos de habilitação/);
   const textos = ['SGO_Licitacoes_Habilitacao.js', 'JS_Licitacoes_Habilitacao.html', 'SGO_Ajuda_LicitacoesHabilitacao.js'].map(lerF).join('\n') + manual;
   assert.doesNotMatch(textos, /antiburro/i);
+});
+
+// ---------------------------------------------------------------- revisão independente de 6d6a652 (cada caso do script de prova vira teste)
+const docsProva = (tipos, extra) => tipos.map((t, i) => Object.assign({ ID: 'd' + i, CODIGO: 'HAB-00' + (10 + i), TIPO: t, NOME: t, ATIVO: 'SIM', VERSAO: 1, ARQUIVO_ID: 'x', VALIDADE: '2027-06-01', ORGAO_EMISSOR: 'Caixa' }, (extra || {})[t] || {}));
+const efetivo = (a, frase, docs, padroes) => {
+  const l = { ID: 'opx', CODIGO: 'LIC-X', ENCERRAMENTO_ISO: '2026-11-20T12:00:00.000Z' };
+  const ctx = { hoje: '2026-11-02', docs, padroes: padroes || { ativos: 0, lista: [] }, leituras: {}, checklist: {}, analises: { opx: [{ SITUACAO: 'CONCLUIDA', VERSAO: 1, EXIGENCIAS_JSON: JSON.stringify([{ texto: frase }]) }] }, conferencias: {}, eventos: {} };
+  const it = a.ctx.LicH_cruzar_(l, ctx).itens[0];
+  return J({ efetivo: it.efetivo, texto: it.efetivoTexto, tipos: it.tiposAvaliados.map((t) => t.codigo) });
+};
+
+test('revisão GRAVE 1: o arquivo é gravado RESTRITO (como os relatórios de ciclo); PRIVATE só quando RESTRITO não existe', () => {
+  const a = amb();
+  a.novo({ tipo: 'CNDT', validade: '2026-12-01' }, PDF('cndt'));
+  assert.equal(Object.values(a.arquivos)[0].compart, 'RESTRITO:SISTEMA');
+  a.recusaRestrito = true;
+  a.novo({ tipo: 'CRF_FGTS', validade: '2026-12-01' }, PDF('crf'));
+  assert.equal(Object.values(a.arquivos)[1].compart, 'PRIVATE:NONE', 'reserva do Google Drive');
+  assert.match(ler('SGO_Licitacoes_Habilitacao.js'), /f\.setSharing\('RESTRITO', 'SISTEMA'\)/);
+});
+
+test('revisão GRAVE 2: várias esferas ou esfera fora da matriz não "atendem" só com a federal', () => {
+  const a = amb();
+  const tres = docsProva(['CND_FEDERAL', 'CND_ESTADUAL', 'CND_MUNICIPAL']), so = docsProva(['CND_FEDERAL']);
+  const r1 = efetivo(a, 'Prova de regularidade fiscal perante a Fazenda Nacional, Estadual e Municipal do domicílio ou sede do licitante', so);
+  assert.equal(r1.efetivo, 'A_CONFERIR', 'antes: ATENDE só com a federal'); assert.deepEqual(r1.tipos, ['CND_FEDERAL', 'CND_ESTADUAL', 'CND_MUNICIPAL']);
+  assert.equal(efetivo(a, 'Prova de regularidade fiscal perante a Fazenda Nacional, Estadual e Municipal', so).efetivo, 'FALTA', 'só a federal no cadastro: faltam a estadual e a municipal');
+  const r2 = efetivo(a, 'Prova de regularidade fiscal perante a Fazenda Nacional, Estadual e Municipal', tres);
+  assert.equal(r2.efetivo, 'A_CONFERIR'); assert.match(r2.texto, /mais de uma esfera \(federal, estadual, municipal\)/);
+  assert.equal(efetivo(a, 'Certidão de regularidade relativa aos tributos federais e estaduais', tres).efetivo, 'A_CONFERIR');
+  assert.equal(efetivo(a, 'Prova de regularidade junto à Receita Federal, Estadual e Municipal', tres).efetivo, 'A_CONFERIR');
+  const r3 = efetivo(a, 'Certidão Negativa de Débitos com a Fazenda Pública do Município de Aparecida do Rio Doce', tres);
+  assert.equal(r3.efetivo, 'A_CONFERIR'); assert.match(r3.texto, /município de aparecida do rio doce, fora da matriz/);
+  assert.equal(efetivo(a, 'Prova de regularidade com a Fazenda Federal (certidão conjunta da Receita Federal e PGFN)', tres).efetivo, 'ATENDE', 'uma esfera só, a da certidão: atende');
+  assert.equal(efetivo(a, 'Certidão negativa de débitos municipais do Município de Goiânia', tres).efetivo, 'ATENDE', 'Goiânia é a matriz');
+});
+
+test('revisão MÉDIO 3: conselho, responsável técnico, cadastro e alvará genéricos ficam "a conferir"; CRF do conselho não é o FGTS', () => {
+  const a = amb();
+  const docs = docsProva(['REGISTRO_CONSELHO', 'CADASTRO_FORNECEDOR', 'ALVARA', 'RESPONSAVEL_TECNICO', 'CRF_FGTS']);
+  for (const [frase, tipo] of [['Registro da empresa no Conselho Regional de Química (CRQ)', 'REGISTRO_CONSELHO'], ['Inscrição no Conselho Regional de Farmácia - CRF', 'REGISTRO_CONSELHO'],
+    ['Certificado de Registro Cadastral (CRC) emitido pela Prefeitura Municipal de Anápolis', 'CADASTRO_FORNECEDOR'], ['Licença sanitária emitida pela vigilância sanitária', 'ALVARA'],
+    ['Indicação de engenheiro eletricista como responsável técnico', 'RESPONSAVEL_TECNICO']]) {
+    const r = efetivo(a, frase, docs);
+    assert.deepEqual(r.tipos, [tipo], frase); assert.equal(r.efetivo, 'A_CONFERIR', frase); assert.match(r.texto, /Confira/);
+  }
+  assert.deepEqual(efetivo(a, 'Certificado de Regularidade do FGTS (CRF)', docs).tipos, ['CRF_FGTS']);
+});
+
+test('revisão MÉDIO 4: "emitida há no máximo N dias" confere a data de emissão contra a sessão', () => {
+  const a = amb();
+  const frase = 'Certidão negativa de falência emitida há no máximo 60 dias da data da sessão';
+  assert.equal(efetivo(a, frase, docsProva(['CERT_FALENCIA'], { CERT_FALENCIA: { EMISSAO: '2026-11-01' } })).efetivo, 'ATENDE');
+  const velho = efetivo(a, frase, docsProva(['CERT_FALENCIA'], { CERT_FALENCIA: { EMISSAO: '2026-08-01' } }));
+  assert.equal(velho.efetivo, 'VENCE_ANTES'); assert.match(velho.texto, /emitido em 01\/08\/2026, mais de 60 dias antes da sessão \(20\/11\/2026\)/);
+  const sem = efetivo(a, 'Certidão simplificada da Junta Comercial emitida nos últimos 30 dias', docsProva(['CERTIDAO_JUNTA']));
+  assert.equal(sem.efetivo, 'A_CONFERIR'); assert.match(sem.texto, /escreva a data de emissão/);
+});
+
+test('revisão MÉDIO 5: Inmetro sem documento fica "a conferir" (o dono ainda manda); "rastreável ao Inmetro" é rastreabilidade', () => {
+  const a = amb();
+  const r = efetivo(a, 'A empresa deverá ser autorizada pelo Inmetro para manutenção de balanças', []);
+  assert.equal(r.efetivo, 'A_CONFERIR'); assert.match(r.texto, /ainda não está no cadastro/);
+  const p = efetivo(a, 'Os serviços deverão ser executados com padrões rastreáveis ao INMETRO', [], { ativos: 1, lista: [{ validade: '2027-01-01' }] });
+  assert.deepEqual(p.tipos, ['CERT_PADROES']);
+  assert.deepEqual(efetivo(a, 'Calibração rastreável ao Inmetro com certificado da RBC', []).tipos, ['CERT_PADROES']);
+});
+
+test('revisão MÉDIO 6: "vence antes da sessão" juntado por documento, das 8h às 18h, importante e sem escalonamento', () => {
+  const a = cenario({ agora: '2026-11-02T20:00:00-03:00' });
+  // a segunda licitação, com a mesma leitura (a CNDT vence antes nas duas)
+  const op2 = Object.assign({}, a.tabelas.LIC_OPORTUNIDADES[0], { ID: 'op_hab2', CODIGO: 'LIC-2026-hab2', CHAVE_FONTE: 'PNCP:op_hab2' });
+  a.tabelas.LIC_OPORTUNIDADES.push(op2);
+  a.tabelas.LIC_EVENTOS.push({ ID: 'ev_s2', OPORTUNIDADE_ID: 'op_hab2', TIPO: 'SESSAO_PUBLICA', SITUACAO: 'ATIVO', NATUREZA: 'CONFIRMADO', QUANDO_ISO: '2026-11-25T12:00:00.000Z', VERSAO: 1 });
+  a.tabelas.LIC_LEITURAS.push(Object.assign({}, a.tabelas.LIC_LEITURAS[0], { ID: 'le2', OPORTUNIDADE_ID: 'op_hab2', CHECKLIST_CHAVE: 'ck2' }));
+  a.tabelas.LIC_LEITURA_CHECKLIST.filter((c) => c.CHAVE === 'ck1').forEach((c) => a.tabelas.LIC_LEITURA_CHECKLIST.push(Object.assign({}, c, { ID: c.ID + 'b', OPORTUNIDADE_ID: 'op_hab2', CHAVE: 'ck2' })));
+  a.tabelas.LIC_ALERTAS.length = 0;
+  a.esquecerProgramacao(); a.rodada('2026-11-02T20:00:00-03:00');
+  const s = a.al({ EVENTO_TIPO: 'HAB_SESSAO' });
+  assert.equal(s.length, 2, 'um por integrante, não um por licitação'); assert.ok(s.every((x) => x.OPORTUNIDADE_ID === '' && /2 licitações/.test(x.TITULO)));
+  assert.match(s[0].TEXTO, /LIC-2026-hab1 .* \| LIC-2026-hab2/); assert.equal(s[0].NIVEL, 'IMPORTANTE'); assert.equal(s[0].PAPEL, 'AVISO');
+  assert.equal(s[0].SITUACAO, 'PROGRAMADO'); assert.equal(s[0].LIBERAR_EM, '2026-11-03T11:00:00.000Z', 'às 8h do dia seguinte');
+  a.rodada('2026-11-03T08:05:00-03:00'); a.rodada('2026-11-03T10:00:00-03:00');
+  assert.ok(a.al({ EVENTO_TIPO: 'HAB_SESSAO' }).every((x) => x.PAPEL === 'AVISO'), 'sem escalonamento nem reenvio');
+  assert.equal(a.al({ EVENTO_TIPO: 'HAB_SESSAO' }).length, 2);
+  // sem licitação única, o link abre o cadastro
+  assert.equal(J(a.ctx.Lic_avisoAbrir_({ userId: 'u_cha', usuario: 'charles', perfil: 'DIRETORIA' }, s[0].AVISO_ID).tela).mod, 'licitacoes_habilitacao');
+});
+
+test('revisão MÉDIO 7: avisos de documento não gastam o teto diário dos alertas de prazo (e têm o teto próprio)', () => {
+  const a = amb();
+  assert.equal(a.api('s_cha', 'alertasCfgSalvar', { campos: { tetoDia: 1 }, motivo: 'teste do teto diário' }).ok, true);
+  const hojeIso = '2026-11-02T12:00:00.000Z';
+  const enviado = (i, tipo) => ({ ID: 'env' + i, AVISO_ID: 'LA00000e' + String(i).padStart(4, '0'), CHAVE: 'X|' + i, GRUPO: 'X|' + i, TIPO: tipo, USUARIO_ID: 'u_cha', USUARIO_NOME: 'CHARLES', SITUACAO: 'ENVIADO', EMAIL_EM: hojeIso, CRIADO_EM: hojeIso, CIENTE_EM: hojeIso });
+  a.tabelas.LIC_ALERTAS.push(enviado(1, 'DOCUMENTO'));
+  a.tabelas.LIC_OPORTUNIDADES.push(OP('op_mud', { SITUACAO: 'ANALISE' }));
+  a.tabelas.LIC_ALERTAS.push({ ID: 'mud1', AVISO_ID: 'LA0000mud01', CHAVE: 'M|op_mud|x|u_cha', GRUPO: 'M|op_mud|x', OPORTUNIDADE_ID: 'op_mud', CODIGO: 'LIC-mud', TIPO: 'MUDANCA', PAPEL: 'TITULAR', ANTECEDENCIA: 'RETIFICACAO', NIVEL: 'IMPORTANTE', USUARIO_ID: 'u_cha', USUARIO_NOME: 'CHARLES DIRETOR TESTE', TITULO: 'Prazo alterado na fonte', TEXTO: 'mudou', ALVO_ISO: '', LIBERAR_EM: hojeIso, SITUACAO: 'PROGRAMADO', TENTATIVAS: 0 });
+  a.ctx.Lic_alertasEnviar_(new Date());
+  assert.equal(a.al({ ID: 'mud1' })[0].SITUACAO, 'ENVIADO', 'o aviso de documento de hoje não conta no teto de 1 dos alertas de prazo');
+  // teto próprio: com 10 avisos de documento hoje, o 11º vai para o resumo
+  for (let i = 2; i <= 10; i++) a.tabelas.LIC_ALERTAS.push(enviado(i, 'DOCUMENTO'));
+  a.novo({ tipo: 'CRF_FGTS', validade: '2026-11-05', responsavelId: 'u_cha' }, PDF('crf'));
+  const novo = a.al({ EVENTO_TIPO: 'HAB_VALIDADE' })[0];
+  assert.equal(novo.SITUACAO, 'PROGRAMADO'); a.ctx.Lic_alertasEnviar_(new Date());
+  assert.equal(a.al({ ID: novo.ID })[0].SITUACAO, 'NO_RESUMO'); assert.match(a.al({ ID: novo.ID })[0].CANCELADO_MOTIVO, /Teto de 10 avisos de documento de habilitação/);
+});
+
+test('revisão menores 8 e 9: 30/15 dias nunca vão para o WhatsApp, quem desligou o e-mail fica só no SGO+; {{2}} é a Metrolabs e o emissor vai no {{4}}', () => {
+  const us = require('./_licitacoes_alertas_ambiente.cjs').USUARIOS.map((u) => Object.assign({}, u)); us[0].EMAIL = '';
+  const a = amb({ tabelas: { CAD_USUARIOS: us } });
+  a.novo({ tipo: 'CRF_FGTS', validade: '2026-11-25', orgao: 'Caixa Econômica Federal', responsavelId: 'u_cha' }, PDF('crf'));   // 23 dias, Charles sem e-mail
+  a.rodada('2026-11-02T10:00:00-03:00');
+  const x = a.al({ EVENTO_TIPO: 'HAB_VALIDADE' })[0];
+  assert.equal(a.zap().length, 0, 'e-mail falhou e o WhatsApp não entra como alternativo'); assert.notEqual(x.WA_SITUACAO, 'ACEITO');
+  // pessoa que desligou o e-mail: o aviso de 15 dias fica só no SGO+
+  const b = amb();
+  assert.equal(b.api('s_cha', 'alertasCfgSalvar', { campos: { pessoas: { u_cha: { email: false } } }, motivo: 'Charles sem e-mail de licitação' }).ok, true);
+  b.novo({ tipo: 'CRF_FGTS', validade: '2026-11-12', responsavelId: 'u_cha' }, PDF('crf'));
+  b.rodada('2026-11-02T10:00:00-03:00');
+  const y = b.al({ EVENTO_TIPO: 'HAB_VALIDADE' })[0];
+  assert.equal(y.SITUACAO, 'ENVIADO'); assert.equal(b.emails.length, 0); assert.equal(b.zap().length, 0); assert.match(y.CANAL_ALTERNATIVO, /Só no SGO\+/);
+  // 7 dias: parâmetros do modelo
+  const c = amb();
+  c.novo({ tipo: 'CRF_FGTS', validade: '2026-11-06', orgao: 'Caixa Econômica Federal', responsavelId: 'u_cha' }, PDF('crf'));
+  c.rodada('2026-11-02T10:00:00-03:00');
+  const p = c.zap()[0].corpo.template.components[0].parameters.map((q) => q.text);
+  assert.equal(p[1], 'Metrolabs (documento de habilitação)'); assert.match(p[3], /emissor: Caixa Econômica Federal/);
+});
+
+test('revisão menores 10 e 12: aviso de falta reconfere antes de sair; aviso mais novo e renovação tiram os anteriores da faixa "sem ciência"', () => {
+  const a = cenario({ agora: '2026-11-02T20:00:00-03:00' });
+  a.tabelas.LIC_ALERTAS.length = 0;
+  a.esquecerProgramacao(); a.rodada('2026-11-02T20:00:00-03:00');
+  const f = a.al({ EVENTO_TIPO: 'HAB_FALTA' })[0];
+  assert.equal(f.SITUACAO, 'PROGRAMADO');
+  // de madrugada a Diretoria resolve todas as faltas
+  const aba = a.ok(a.hab('s_cha', 'aba', { id: 'op_hab1' })).habilitacao;
+  aba.itens.filter((e) => e.efetivo === 'FALTA').forEach((e) => a.ok(a.hab('s_cha', 'conferir', { id: 'op_hab1', chave: e.chave, decisao: 'ATENDE', motivo: 'conferido no edital, dispensado' })));
+  a.rodada('2026-11-03T08:05:00-03:00');
+  assert.equal(a.al({ ID: f.ID })[0].SITUACAO, 'CANCELADO'); assert.match(a.al({ ID: f.ID })[0].CANCELADO_MOTIVO, /Não falta mais documento/);
+  // 12: o de 30 dias enviado sem ciência sai da faixa quando sai o de 15
+  const b = amb();
+  b.novo({ tipo: 'CRF_FGTS', validade: '2026-11-25', responsavelId: 'u_cha' }, PDF('crf'));
+  b.rodada('2026-11-02T10:00:00-03:00');
+  const trinta = b.al({ ANTECEDENCIA: '30 dias' })[0];
+  assert.equal(trinta.SITUACAO, 'ENVIADO'); assert.ok(b.ctx.Lic_alertasSemCiencia_(null).some((x) => x.ID === trinta.ID));
+  b.esquecerProgramacao(); b.rodada('2026-11-11T10:00:00-03:00');
+  assert.equal(b.al({ ID: trinta.ID })[0].SITUACAO, 'CONCLUIDO'); assert.ok(!b.ctx.Lic_alertasSemCiencia_(null).some((x) => x.ID === trinta.ID));
+  assert.equal(b.ctx.Lic_alertasSemCiencia_(null).filter((x) => x.TIPO === 'DOCUMENTO').length, 1, 'só o mais novo espera a ciência');
+});
+
+test('revisão menores 11, 13 e 14: arquivo só é gravado quando entra; data do banco como Date; LIC_EVENTOS lido uma vez', () => {
+  const a = amb();
+  const buf = PDF('cndt');
+  const d = a.novo({ tipo: 'CNDT', validade: '2026-12-01' }, buf);
+  assert.equal(Object.keys(a.arquivos).length, 1);
+  a.ok(a.hab('s_cha', 'salvar', { id: d.id, campos: { numero: '' }, arquivo: { nome: 'x.pdf', base64: b64(buf) }, motivo: 'mesmo arquivo de novo' }));
+  a.ok(a.hab('s_cha', 'salvar', { id: d.id, campos: { numero: 'N-2' }, arquivo: { nome: 'x.pdf', base64: b64(buf) }, motivo: 'número novo, mesmo arquivo' }));
+  assert.equal(Object.keys(a.arquivos).length, 1, 'nenhum arquivo órfão gravado');
+  assert.match(a.hab('s_cha', 'salvar', { id: d.id, campos: { validade: 'xx' }, arquivo: { nome: 'y.pdf', base64: b64(PDF('outro')) }, motivo: 'data errada com arquivo novo' }).message, /data válida/);
+  assert.equal(Object.keys(a.arquivos).length, 1, 'recusa não deixa arquivo');
+  // 13
+  assert.equal(a.ctx.LicH_dia_(new Date('2026-11-02T01:00:00Z')), '2026-11-01', 'Date do banco no dia de Brasília');
+  assert.equal(a.ctx.LicH_situacao_({ TIPO: 'CNDT', VALIDADE: new Date('2026-11-01T15:00:00Z') }, '2026-11-02').codigo, 'VENCIDO');
+  // 14
+  const c = cenario();
+  const ops = { op_hab1: c.tabelas.LIC_OPORTUNIDADES[0] }, cfg = c.ctx.Lic_alertasCfg_(), ms = Date.now();
+  const al = [1, 2, 3].map((i) => ({ ID: 'f' + i, TIPO: 'DOCUMENTO', GRUPO: 'D|F|op_hab1|2026-11-20', OPORTUNIDADE_ID: 'op_hab1', SITUACAO: 'PROGRAMADO' }));
+  const getAll = c.ctx.SGO_DATA.getAll; let leituras = 0;
+  c.ctx.SGO_DATA.getAll = (t) => { if (t === 'LIC_EVENTOS') leituras++; return getAll(t); };
+  c.ctx.LICH_CACHE_AV = { ms: null, docs: null, ctx: null };
+  al.forEach((x) => assert.equal(c.ctx.LicH_alertaSemValer_(x, ops, cfg, ms), ''));
+  c.ctx.SGO_DATA.getAll = getAll;
+  assert.equal(leituras, 1, 'uma leitura de LIC_EVENTOS para os três avisos');
 });
