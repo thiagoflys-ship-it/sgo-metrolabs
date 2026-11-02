@@ -47,6 +47,8 @@ const MAPA = {
   "MANUAL_MODULO_FROTA.md": { tela: "frota" },
   "MANUAL_MODULO_GESTAO_DECISOES.md": { tela: "gestao_decisoes", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"] },
   "MANUAL_MODULO_INVENTARIO_EQUIPAMENTOS.md": { tela: "inventario" },
+  // 01/11/2026: SGO+ Licitações, etapa 1 — só a Diretoria e o Administrador usam o módulo
+  "MANUAL_MODULO_LICITACOES.md": { tela: "licitacoes", perfis: ["ADMIN", "DIRETORIA"] },
   "MANUAL_MODULO_LAVADORA.md": { tela: "lavadora" },
   "MANUAL_MODULO_PGT_POP.md": { tela: "pgt_pop" },
   "MANUAL_MODULO_PLANEJAMENTO_CME.md": { tela: "planejamento_cme" },

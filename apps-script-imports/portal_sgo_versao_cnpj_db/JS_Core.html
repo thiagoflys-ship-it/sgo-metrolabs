@@ -268,6 +268,7 @@
           if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
           if (typeof Email_iniciar_ === "function") Email_iniciar_();
           if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
+          if (typeof Licitacoes_iniciar_ === "function") Licitacoes_iniciar_();
           if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
           if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
           if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
@@ -372,6 +373,7 @@
         if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
         if (typeof Email_iniciar_ === "function") Email_iniciar_();
         if (typeof Comercial_iniciar_ === "function") Comercial_iniciar_();
+        if (typeof Licitacoes_iniciar_ === "function") Licitacoes_iniciar_();
         if (typeof Compras_iniciar_ === "function") Compras_iniciar_();
         if (typeof Assistencia_iniciar_ === "function") Assistencia_iniciar_();
         if (typeof Ponto_iniciar_ === "function") Ponto_iniciar_();
@@ -751,6 +753,7 @@
     if (typeof ModoPers_parar_ === "function") ModoPers_parar_();
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
     if (typeof Comercial_parar_ === "function") Comercial_parar_();
+    if (typeof Licitacoes_parar_ === "function") Licitacoes_parar_();
     if (typeof Compras_parar_ === "function") Compras_parar_();
     if (typeof Assistencia_parar_ === "function") Assistencia_parar_();
     if (typeof Ponto_parar_ === "function") Ponto_parar_();
@@ -1038,6 +1041,12 @@
     // COMPRAS E PEÇAS NATIVO (2026-10-21) — ver JS_Compras.html / SGO_Compras_*.js. O servidor confere o acesso em toda chamada e nunca manda valor a quem não pode ver.
     if ((mod === "compras" || mod.indexOf("compras_") === 0) && typeof Compras_render_ === "function") {
       Compras_render_(mod);
+      return;
+    }
+
+    // SGO+ LICITAÇÕES (2026-11-01, etapa 1) — ver JS_Licitacoes.html / SGO_Licitacoes*.js. Só Diretoria e Administrador; o servidor confere em toda chamada.
+    if ((mod === "licitacoes" || mod.indexOf("licitacoes_") === 0) && typeof Licitacoes_render_ === "function") {
+      Licitacoes_render_(mod);
       return;
     }
 
@@ -4966,6 +4975,9 @@
         var soPedidos = !!document.querySelector('#menu .menu-btn[data-mod="comercial"]') && document.querySelector('#menu .menu-btn[data-mod="comercial"]').style.display === "none";
         itens.push(soPedidos ? { icone: '<i class="fas fa-clipboard-check" aria-hidden="true"></i>', legenda: "Pedidos aprovados", mod: "comercial_pedidos" } : { icone: '<i class="fas fa-briefcase" aria-hidden="true"></i>', legenda: "Comercial", mod: "comercial" });
       }
+      // 01/11/2026: Licitações (só Diretoria e Administrador; o grupo aparece depois que o servidor responde o acesso).
+      var grupoLic = document.getElementById("menu-secao-licitacoes");
+      if (grupoLic && grupoLic.style.display !== "none") itens.push({ icone: '<i class="fas fa-gavel" aria-hidden="true"></i>', legenda: "Licitações", mod: "licitacoes" });
       // 21/10/2026: Compras (todo colaborador interno pede peça; o grupo aparece depois que o servidor responde o acesso).
       var grupoCmp = document.getElementById("menu-secao-compras");
       if (grupoCmp && grupoCmp.style.display !== "none") itens.push({ icone: '<i class="fas fa-cart-plus" aria-hidden="true"></i>', legenda: "Pedir peça", mod: "compras_pedir" });
@@ -7259,7 +7271,7 @@
     qualificacao: "fa-temperature-half", frota: "fa-car", conduta: "fa-scale-balanced", qualidade: "fa-clipboard-check",
     auvo: "fa-screwdriver-wrench", atividades: "fa-list-check", avisos: "fa-bullhorn", email: "fa-envelope",
     comercial: "fa-handshake", ponto: "fa-clock", automacao: "fa-building-shield", assistencia: "fa-headset",
-    compras: "fa-cart-shopping", representacao: "fa-briefcase"
+    compras: "fa-cart-shopping", representacao: "fa-briefcase", licitacoes: "fa-gavel"
   };
 
   function Avisos_num_(n) {

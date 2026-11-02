@@ -48,7 +48,9 @@ var SGO_AJUDA_NOMES = {
   // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js)
   representacao: 'Representação',
   // 31/10/2026: relatório do ciclo da lavadora (SGO_Ajuda_LavCiclo.js)
-  lavadora_ciclos: 'Relatórios de ciclo'
+  lavadora_ciclos: 'Relatórios de ciclo',
+  // 01/11/2026: SGO+ Licitações, etapa 1 (SGO_Ajuda_Licitacoes.js)
+  licitacoes: 'Hoje em Licitações', licitacoes_oportunidades: 'Oportunidades (Licitações)', licitacoes_portais: 'Portais e configurações (Licitações)'
 };
 
 /**
@@ -94,6 +96,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Representacao_ === 'function') fontes.push(['Representacao', SGO_ajudaTelas_Representacao_]);
   // 31/10/2026: relatório do ciclo da lavadora (SGO_Ajuda_LavCiclo.js).
   if (typeof SGO_ajudaTelas_LavCiclo_ === 'function') fontes.push(['LavCiclo', SGO_ajudaTelas_LavCiclo_]);
+  // 01/11/2026: SGO+ Licitações, etapa 1 (SGO_Ajuda_Licitacoes.js).
+  if (typeof SGO_ajudaTelas_Licitacoes_ === 'function') fontes.push(['Licitacoes', SGO_ajudaTelas_Licitacoes_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

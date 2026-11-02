@@ -243,6 +243,16 @@
           </div>
         </div>
 
+        <!-- 01/11/2026: SGO+ Licitações, etapa 1 (JS_Licitacoes.html / SGO_Licitacoes*.js). Grupo só da Diretoria e do Administrador (Licitacoes_mostrarMenu_; o servidor confere toda chamada). Kanban, Gantt, agenda, alertas, IA, simulador, propostas e disputas entram nas próximas etapas. -->
+        <div class="sidebar-section menu-grupo" data-grupo="licitacoes" id="menu-secao-licitacoes" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-licitacoes" onclick="Menu_alternarGrupo_('licitacoes')"><span class="menu-grupo-nome">Licitações</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-licitacoes">
+          <button type="button" class="menu-btn" data-mod="licitacoes" data-busca="licitacoes licitacao hoje radar pncp pregao edital prazos coletor" onclick="abrir('licitacoes')"><span class="menu-btn-icon"><i class="fas fa-gavel" aria-hidden="true"></i></span>Hoje em Licitações</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_oportunidades" data-busca="oportunidades licitacao radar pncp compras gov pregao dispensa concorrencia triagem descartar analise orgao edital" onclick="abrir('licitacoes_oportunidades')"><span class="menu-btn-icon"><i class="fas fa-binoculars" aria-hidden="true"></i></span>Oportunidades</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_portais" data-busca="portais licitacao integracoes api pncp compras gov bll bionexo parametrizar testar conexao regras do radar" onclick="abrir('licitacoes_portais')"><span class="menu-btn-icon"><i class="fas fa-plug" aria-hidden="true"></i></span>Portais e configurações</button>
+          </div>
+        </div>
+
         <!-- 29/10/2026: módulo Representação (JS_Representacao.html / SGO_Representacao*.js): a representada (perfil REPRESENTADA) vê só este grupo; a Metrolabs trata pedidos, conversas, representadas e catálogo. -->
         <div class="sidebar-section menu-grupo" data-grupo="representacao" id="menu-secao-representacao">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-representacao" onclick="Menu_alternarGrupo_('representacao')"><span class="menu-grupo-nome">Representação</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
@@ -373,6 +383,7 @@
 <?!= include('JS_PainelAtendimento'); ?>
 <?!= include('JS_Assistencia'); ?>
 <?!= include('JS_Representacao'); ?>
+<?!= include('JS_Licitacoes'); ?>
 <?!= include('JS_LavCiclo'); ?>
 <?!= include('JS_Ponto'); ?>
 <?!= include('JS_Email'); ?>

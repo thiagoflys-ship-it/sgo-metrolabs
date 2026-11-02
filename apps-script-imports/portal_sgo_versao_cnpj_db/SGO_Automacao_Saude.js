@@ -51,7 +51,9 @@ var AUT_SAUDE_NOMES = {
   ponte_portoes: 'Ponte local dos portões (celular na rede da empresa)',
   auto_abertura: 'Abertura automática da porta (campainha)',
   agendador: 'Rotinas agendadas do servidor', rotina_minuto: 'Rotina de 1 minuto da automação', rotina_rapida: 'Abertura automática (rotina rápida)',
-  servidor: 'Servidor do SGO+', sentinela: 'Sentinela'
+  servidor: 'Servidor do SGO+', sentinela: 'Sentinela',
+  // 01/11/2026: SGO+ Licitações — coletor do PNCP e do Compras.gov.br no servidor (servicos/licitacoes/coletor.ts)
+  licitacoes: 'Coletor de licitações (PNCP e Compras.gov.br)'
 };
 var AUT_SAUDE_TOM = { ok: 'verde', atencao: 'amarelo', falha: 'vermelho', desligado: 'cinza' };
 var AUT_ORIGENS_USO = { COMANDO: 'Comandos de pessoas', MANUAL: 'Leituras pedidas na tela', TELA: 'Releitura automática das telas', AUTOMATICA: 'Consultas das rotinas',

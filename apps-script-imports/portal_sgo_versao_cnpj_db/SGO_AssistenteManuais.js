@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "465bf3a04d99",
+ "versao": "9e18b7c6527e",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3066,6 +3066,113 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "No celular (01/11/2026)",
      "texto": "Índice das seções. Acima do formulário fica uma linha com o nome de cada seção (1. Cliente, 2. Equipamento...). Toque num nome para ir direto à seção, ou em \"Próxima\" para ir à seguinte. Ao rolar, o índice fica preso logo abaixo da barra do topo e mostra, escura, a seção em que você está. Os campos e a ordem são os mesmos do computador.\nCaixas de marcar. Toque em qualquer ponto da linha (na caixa ou no texto): a linha inteira marca e desmarca. As caixas soltas dos sensores (S1, S2...) ficam com 40 px.\nVoltar com o formulário preenchido. Se você digitou, escolheu numa lista, marcou uma caixa ou importou um arquivo (inclusive para a leitura pela IA) e o documento ainda não foi gerado, o Voltar pergunta \"Sair deste formulário?\" antes de descartar. Cancelar continua na tela; OK sai e o que foi preenchido se perde.\nPré-visualização do documento. No celular, o documento abre dentro do SGO+, com Voltar, Imprimir e o nome no alto. Tabela mais larga que a tela rola de lado dentro da própria caixa: arraste a tabela com o dedo. Quando aparece \"Tamanho real\", ele mostra a folha na largura do papel. No computador, o documento continua abrindo em aba nova.\nO documento A4 não muda. Nada disso altera o texto, os cálculos, os critérios, as normas citadas, a numeração ou a folha impressa e o PDF."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_LICITACOES.md",
+   "titulo": "Manual do módulo Licitações (SGO+) — etapa 1",
+   "tela": "licitacoes",
+   "perfis": [
+    "ADMIN",
+    "DIRETORIA"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 01/11/2026. Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O módulo Licitações acompanha as contratações públicas que interessam à Metrolabs. Nesta etapa ele faz quatro coisas:\n1. Coleta, no servidor próprio do SGO+, as contratações publicadas no PNCP (Portal Nacional de Contratações Públicas), sem depender de ninguém com a tela aberta. O Compras.gov.br dados abertos é a reserva quando o PNCP falha e a fonte dos itens de cada contratação.\n2. Faz a triagem por regras: separa o que interessa (candidatas), o que tem impeditivo a decidir (travadas) e o que a regra descarta (com o motivo e o trecho da fonte).\n3. Mostra tudo nas telas Hoje em Licitações e Oportunidades, com a ficha básica de cada licitação e o histórico completo.\n4. Mantém o cadastro dos 33 portais da missão, com o tipo de integração, a situação, o teste de conexão real, o registro das chamadas e a parametrização.\n\nFicam para as próximas etapas: nota de aderência de 0 a 100, leitura do edital pela IA, agenda e prazos, alertas por WhatsApp, Kanban e Gantt, tabela de preços, simulador, proposta, disputa e contratos."
+    },
+    {
+     "titulo": "Quem pode usar",
+     "texto": "Diretoria e Administrador: tudo nesta etapa.\nGestor, Comercial, Financeiro, Técnico, Metrologia, RH, cliente e representada: não usam. O menu não aparece e o servidor recusa as chamadas, mesmo que alguém tente abrir o endereço da tela."
+    },
+    {
+     "titulo": "Onde fica",
+     "texto": "Menu lateral, grupo \"Licitações\":\nHoje em Licitações\nOportunidades\nPortais e configurações\n\nNo celular, a tela inicial ganha o atalho \"Licitações\" e cada tela do módulo abre com a barra de seções no topo."
+    },
+    {
+     "titulo": "Como a coleta funciona > O que é lido",
+     "texto": "Fonte | O que o SGO+ lê | Para quêPNCP, contratações por data de publicação | Pregão eletrônico, concorrência eletrônica e dispensa | Radar diário\nPNCP, contratações com proposta em aberto | As mesmas modalidades | Conferência diária (a partir das 22h) para não perder nada\nCompras.gov.br, contratações | O mesmo período, quando o PNCP falha | Reserva (espelho do PNCP com atraso)\nCompras.gov.br, itens | Itens das candidatas e travadas | Triagem mais precisa (material ou serviço, benefício ME/EPP)\nFicam fora do radar por padrão: a inexigibilidade (contratação sem disputa, útil só para inteligência de mercado) e o credenciamento (o código dessa modalidade ainda não foi conferido na tabela oficial do PNCP). As duas podem ser ligadas pelo Administrador quando forem necessárias."
+    },
+    {
+     "titulo": "Como a coleta funciona > Regras de uso das APIs",
+     "texto": "No máximo 1 chamada a cada 3 segundos no PNCP (o próprio PNCP bloqueia com HTTP 429 acima disso).\nHTTP 429 ou 503: o coletor espera 30 segundos, depois 60, depois 120, e então desiste daquela rodada; a próxima tenta de novo.\nCada chamada fica no registro (portal, rota, parâmetros, HTTP, duração, quantidade, erro).\nA coleta é incremental: começa um dia antes da última data lida por inteiro. A data só avança quando todas as páginas foram lidas."
+    },
+    {
+     "titulo": "Como a coleta funciona > Uma licitação nunca aparece duas vezes",
+     "texto": "A chave é o número de controle do PNCP (por exemplo, 00444232000139-1-001311/2026). O Compras.gov.br devolve o mesmo número; a compra dele é reconhecida como a mesma."
+    },
+    {
+     "titulo": "Como a coleta funciona > Retificação na fonte",
+     "texto": "Quando o órgão retifica a publicação (data, objeto, valor, situação), o SGO+ grava uma versão nova ligada à anterior. A versão anterior nunca é alterada nem apagada. A ficha mostra todas as versões, e o histórico diz o que mudou (de → para), com a versão e o hash."
+    },
+    {
+     "titulo": "Como a coleta funciona > Horários e fuso",
+     "texto": "O PNCP informa as datas sem fuso. O SGO+ guarda o texto como veio e trata o horário como de Brasília, marcado como presumido. Nas UFs com outro fuso (AM, MT, MS, RO, RR e AC), a ficha pede para confirmar no edital se o horário é local."
+    },
+    {
+     "titulo": "Como a coleta funciona > Lei aplicável",
+     "texto": "A lei vem do amparo legal da contratação, não da modalidade. Estatal (por exemplo, IMBEL) usa pregão pela Lei 13.303/2016, com regulamento e prazos próprios; o cartão mostra o selo \"Lei 13.303/2016 (estatal)\"."
+    },
+    {
+     "titulo": "Triagem por regras > Resultado",
+     "texto": "Resultado | Quando | Onde apareceCandidata | Tem termo de interesse e nada que descarte ou trave | Oportunidades > Para analisar\nTravada | Tem termo de interesse e um impeditivo que depende de decisão da Diretoria | Oportunidades > Travadas\nDescartada pela regra | Tem termo de interesse, mas a regra descarta | Oportunidades > Descartadas\nFora | Nenhum termo de interesse | Não aparece\nToda decisão da regra vem com o motivo e o trecho literal do objeto, da informação complementar ou do item que a disparou."
+    },
+    {
+     "titulo": "Triagem por regras > Termos de interesse",
+     "texto": "Calibração, aferição, metrologia, qualificação térmica e de equipamento, validação de processo de esterilização, mapeamento térmico, termodesinfectora, lavadora ultrassônica, autoclave, esterilização, seladora, NR-13, vaso de pressão, caldeira, válvula de segurança, engenharia clínica, registrador de temperatura, osmose reversa, termo-higrômetro, esfigmomanômetro e manutenção de equipamentos de saúde ou de laboratório. Palavras a mais podem ser incluídas em Parametrizar (PNCP e Compras.gov.br)."
+    },
+    {
+     "titulo": "Triagem por regras > O que descarta",
+     "texto": "Termos negativos, tirados de falsos positivos reais: castração e esterilização de animais, reagentes e soluções de calibração, borracharia e calibragem de pneus, embalagem para esterilização, terceirização da esterilização de materiais, vidraria calibrada, equipamento de pavimento, audiologia, nobreak, locação de equipamento, insumos para CME. Se um termo mais específico também aparece (por exemplo, \"calibração de termômetros\"), a regra não descarta e põe o selo \"Termo negativo junto: conferir\".\nCompra de produto: dois sinais juntos entre objeto de aquisição ou fornecimento, itens de material, especificação construtiva (volume em litros, inox), garantia de fábrica ou prazo de entrega, adesão a ata, lista de insumos e objeto sem nenhuma palavra de serviço. O último sinal é uma leitura desta etapa: quando a Diretoria cadastrar produtos ou representadas, a trilha de produto passa a ser avaliada em vez de descartada.\nContratação direta já decidida (ato que autoriza a contratação direta).\nPrazo de propostas encerrado.\nUF fora das configuradas ou valor abaixo do mínimo configurado (por padrão, Brasil inteiro e sem mínimo; valor não informado nunca é descartado por isso)."
+    },
+    {
+     "titulo": "Triagem por regras > O que trava",
+     "texto": "Exige acreditação RBC (ISO/IEC 17025): a Metrolabs não é acreditada; as calibrações são rastreáveis. Fica a pendência \"o edital aceita calibração rastreável ou subcontratação de laboratório acreditado?\". Quando o objeto diz que a acreditação é opcional, não trava (selo verde \"Acreditação opcional\").\nDedicação exclusiva de mão de obra (equipe residente). \"Sem dedicação exclusiva\" não trava.\nSoftware de gestão exigido.\nSuspensa na fonte.\nExclusivo ME/EPP com o porte da matriz configurado como \"Demais\". Com o porte EPP (padrão, decisão do dono), o item exclusivo não trava: ganha os selos \"Exclusivo ME/EPP — podemos participar (EPP)\" e \"Empate ficto (EPP)\"."
+    },
+    {
+     "titulo": "Triagem por regras > Selos de ponto forte e de informação",
+     "texto": "Autorizada Inmetro: o objeto ou o item fala de balança ou esfigmomanômetro (a Metrolabs tem registro no Inmetro para esses instrumentos; o escopo exato está a confirmar com o documento).\nLei 13.303/2016 (estatal).\nValor estimado não informado ou sigiloso.\nVersão N da fonte (houve retificação)."
+    },
+    {
+     "titulo": "Triagem por regras > Ordem da lista",
+     "texto": "Nesta etapa não há nota de 0 a 100. A lista é ordenada pela prioridade da UF (GO e DF 8; MG, BA, TO, MT, MS e RJ 6; demais do Sudeste e Sul 3; Norte e Nordeste 2) e, depois, pelo prazo de proposta mais próximo."
+    },
+    {
+     "titulo": "Triagem por regras > Quando as regras mudam",
+     "texto": "Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a triagem de tudo o que está em aberto. A regra só muda a situação de uma oportunidade enquanto ninguém mexeu nela (no radar, ou descartada pela regra). O que a Diretoria enviou para análise ou descartou com motivo nunca é desfeito pela regra; a mudança de triagem fica só no histórico."
+    },
+    {
+     "titulo": "Telas > Hoje em Licitações",
+     "texto": "Faixa da situação do coletor: última coleta, quantos registros lidos, novos, candidatos, travados e descartados; ou o motivo da falha e o que fazer.\nNúmeros clicáveis: Para analisar, Travadas, Em análise, Prazos de proposta em 7 dias, Descartadas pela regra (7 dias), Com versão nova da fonte (7 dias).\nPrazos de proposta nos próximos 7 dias e as últimas que entraram no radar, cada uma com \"Abrir ficha\".\n\"Atualizar\" traz o que o coletor já encontrou. \"Coletar agora\" pede uma rodada fora da frequência (começa em até 1 minuto)."
+    },
+    {
+     "titulo": "Telas > Oportunidades",
+     "texto": "Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo e onde é a sessão.\n\nCada cartão mostra a UF e a situação, o órgão e o código LIC, município, modalidade, modo de disputa, registro de preços, onde é a sessão, os selos, o objeto com o termo destacado, o número de controle, o valor estimado, o prazo de proposta com o tempo restante, o motivo, o trecho da fonte e as pendências.\n\nOnde é a sessão: quando a publicação veio de um portal de disputa conhecido (Compras.gov.br, BLL, BNC, Licitanet, Licitar Digital, BBMNET, Licitações-e, Portal de Compras Públicas e portais estaduais), o cartão diz qual. Quando veio de um sistema municipal de gestão, a plataforma da sessão precisa ser lida no edital.\n\nAções:\nBotão | O que faz | RegraAbrir ficha | Resumo, Fonte e Histórico | —\nEnviar para análise | Leva para \"Em análise\", com você como responsável | Observação opcional\nDescartar | Leva para \"Descartadas\" | Motivo obrigatório (pelo menos 10 letras)\nReabrir | Devolve uma descartada ao radar | Motivo obrigatório\nAbrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link\nVer no PNCP | Abre a contratação no site do PNCP, em nova aba | —"
+    },
+    {
+     "titulo": "Telas > Ficha da licitação",
+     "texto": "Resumo: objeto completo, triagem com o trecho, pendências, fuso e as ações.\nFonte: de onde veio, onde é a sessão, quem publicou, links, CNPJ do órgão, número da compra no Compras.gov.br, abertura e encerramento das propostas como a fonte informou, fuso, situação na fonte, última atualização na fonte, primeira coleta, última sincronia, hash da versão (SHA-256), hash da resposta original, versão das regras da triagem, tabela das versões e tabela dos itens.\nHistórico: cada fato com quando, quem, o quê (de → para), versão, fonte e hash."
+    },
+    {
+     "titulo": "Telas > Portais e configurações",
+     "texto": "Partes:\n1. Portais e integrações: os 33 portais com código, nome, tipo (A a E), situação, ligado ou desligado, último teste e as ações \"Acessar\" (abre o portal em nova aba), \"Parametrizar\" e, no PNCP e no Compras.gov.br, \"Testar conexão\".\n2. Registro das chamadas: as últimas chamadas do coletor e dos testes.\n3. Regras do radar: \"Coletor ligado\", porte da matriz e os termos e regras que a triagem usa.\n4. Permissões: quem vê o quê.\n\nSituação dos portais no cadastro inicial:\nSituação | PortaisEm teste (vira \"Operacional\" no primeiro teste real bem-sucedido) | PNCP, Compras.gov.br\nAguardando credenciais | Portal de Compras Públicas (chave publicKey pedida por formulário)\nAguardando documentação | BBMNET, Bionexo, GTPLAN, SmartCompras, Petronect, Mercado Eletrônico\nNão configurado | Demais (sem API para fornecedor: publicação pelo PNCP, sessão no próprio portal)\nParametrizar (o motivo é obrigatório; cada salvamento vira versão nova; só os campos alterados mudam):\nCampo | RegraLigado | Só portais com API (tipos A e B); o tipo B exige a credencial\nPalavras a mais que interessam | Separadas por vírgula; somam-se aos termos padrão\nPalavras que descartam | Separadas por vírgula; o descarte fica registrado\nUFs | Siglas separadas por vírgula; em branco = Brasil inteiro\nValor mínimo | Em reais; 0 = sem mínimo\nFrequência | 30 min, 1 h, 2 h (padrão), 4 h, 12 h ou 1 vez por dia\nCredencial | O NOME da chave em Chaves e senhas (letras maiúsculas, números e _), nunca o valor\nResponsável | Diretoria ou Administrador ativos\nSituação | \"Operacional\" só depois de um teste real bem-sucedido\nNesta etapa, as palavras, UFs, valor mínimo e frequência do PNCP valem para o que vem do PNCP; os do Compras.gov.br, para o que vem pela reserva."
+    },
+    {
+     "titulo": "Problemas comuns",
+     "texto": "Situação | O que fazer\"O coletor de licitações roda só no servidor próprio do SGO+\" | Abra o SGO+ em sgo.metrolabs.com.br\nFaixa \"Coletor desligado\" | Portais e configurações > Regras do radar > \"Coletor ligado\", motivo, \"Salvar versão nova\"\nFaixa vermelha: PNCP sem sucesso em 5 rodadas | Veja o registro das chamadas e use \"Testar conexão\"; HTTP 429 é limite, 503 é PNCP fora do ar. Enquanto isso o Compras.gov.br cobre\n\"Escreva o motivo do descarte\" | Pelo menos 10 letras; nada foi alterado\n\"Não foi possível ligar: o portal é do tipo E\" | Portal sem API; a publicação chega pelo PNCP\n\"Escreva o NOME da chave\" | Cadastre o valor em Chaves e senhas e escreva só o nome aqui\n\"precisa de um teste de conexão real\" | Toque em \"Testar conexão\" antes de marcar \"Operacional\"\nLicitação com \"ler no edital\" na sessão | Publicação de sistema municipal; a plataforma da disputa está no edital"
+    },
+    {
+     "titulo": "Rastreabilidade",
+     "texto": "Toda chamada a portal: registro no servidor (lic_conexoes_log).\nToda resposta original: guardada com hash no servidor (prova do que estava publicado na data).\nToda versão da fonte: linha própria, ligada à anterior, nunca alterada.\nTodo fato no SGO+ (entrada no radar, retificação, triagem refeita, descarte, análise, reabertura, parâmetro de portal, teste de conexão, regras do radar, coleta pedida): histórico com quem, quando, o quê, versão, fonte e hash.\nNada é apagado: a situação muda."
+    },
+    {
+     "titulo": "Para o Administrador",
+     "texto": "Chave geral do coletor: propriedade LIC_COLETOR_LIGADO (\"1\" liga). A tela grava a chave quando a Diretoria salva as Regras do radar; antes disso, vale o que estiver na propriedade.\nParâmetros que o servidor lê: propriedade LIC_CFG_COLETOR (gravada pela tela; não editar à mão).\nColeta real sob demanda no servidor: npx tsx scripts/licitacoes_coletar.ts (opções --dias, --modalidades, --propostas, --testar, --sincronizar).\nA sentinela de infraestrutura mostra o item \"Coletor de licitações (PNCP e Compras.gov.br)\" em Saúde da infraestrutura."
     }
    ]
   },
