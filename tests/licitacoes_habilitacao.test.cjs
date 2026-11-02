@@ -584,3 +584,35 @@ test('revisão menores 11, 13 e 14: arquivo só é gravado quando entra; data do
   c.ctx.SGO_DATA.getAll = getAll;
   assert.equal(leituras, 1, 'uma leitura de LIC_EVENTOS para os três avisos');
 });
+
+// ---------------------------------------------------------------- reconferência de 14fb85b
+test('reconferência 1 (GRAVE): "Distrito Federal" é a esfera distrital, não a certidão federal', () => {
+  const a = amb();
+  const so = docsProva(['CND_FEDERAL']), tres = docsProva(['CND_FEDERAL', 'CND_ESTADUAL', 'CND_MUNICIPAL']);
+  const r = efetivo(a, 'Certidão negativa de débitos com a Fazenda Pública do Distrito Federal', so);
+  assert.notEqual(r.efetivo, 'ATENDE'); assert.deepEqual(r.tipos, ['CND_ESTADUAL'], 'antes: CND_FEDERAL (casava "federal")'); assert.equal(r.efetivo, 'FALTA');
+  const r2 = efetivo(a, 'Certidão negativa de débitos com a Fazenda Pública do Distrito Federal', tres);
+  assert.equal(r2.efetivo, 'A_CONFERIR'); assert.match(r2.texto, /Distrito Federal, fora da matriz/);
+  assert.equal(efetivo(a, 'Certidão conjunta da Receita Federal e da Procuradoria-Geral da Fazenda Nacional', so).efetivo, 'ATENDE', 'a federal continua valendo');
+});
+
+test('reconferência 2 (MÉDIO): INSS, previdência e seguridade são da certidão federal; regularidade com órgão não reconhecido fica "a conferir"', () => {
+  const a = amb();
+  const r = efetivo(a, 'CNDT e prova de regularidade com o INSS', docsProva(['CNDT']));
+  assert.deepEqual(r.tipos.sort(), ['CNDT', 'CND_FEDERAL']); assert.equal(r.efetivo, 'FALTA', 'antes: ATENDE só com a CNDT');
+  assert.equal(efetivo(a, 'CNDT e prova de regularidade com o INSS', docsProva(['CNDT', 'CND_FEDERAL'])).efetivo, 'ATENDE', 'com a CNDT e a certidão federal (conjunta, que cobre o INSS)');
+  assert.deepEqual(efetivo(a, 'Certidão negativa de débitos relativos às contribuições previdenciárias', docsProva(['CND_FEDERAL'])).tipos, ['CND_FEDERAL']);
+  assert.equal(efetivo(a, 'Certidão negativa de débitos relativos às contribuições previdenciárias', docsProva(['CND_FEDERAL'])).efetivo, 'ATENDE');
+  const d = efetivo(a, 'Certidão negativa de débitos trabalhistas e prova de regularidade junto ao SEST/SENAT', docsProva(['CNDT']));
+  assert.equal(d.efetivo, 'A_CONFERIR'); assert.match(d.texto, /regularidade com "sest", que o sistema não reconhece/);
+});
+
+test('reconferência 3 (MENOR): procuração com poderes específicos ou firma reconhecida fica "a conferir"', () => {
+  const a = amb();
+  const docs = docsProva(['PROCURACAO']);
+  assert.equal(efetivo(a, 'Procuração do representante legal da empresa', docs).efetivo, 'ATENDE');
+  for (const frase of ['Procuração com poderes específicos para formular lances e praticar todos os atos', 'Instrumento de mandato (procuração) com firma reconhecida em cartório']) {
+    const r = efetivo(a, frase, docs);
+    assert.equal(r.efetivo, 'A_CONFERIR', frase); assert.match(r.texto, /poderes específicos ou firma reconhecida/);
+  }
+});

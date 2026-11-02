@@ -91,7 +91,7 @@ var LICH_TIPOS = [
   { codigo: 'INSCRICAO_EST_MUN', item: 5, nome: 'Inscrição estadual e municipal', categoria: 'FISCAL', validade: 'EMITIR', fiscal: true,
     termos: ['inscricao estadual', 'inscricao municipal', 'cadastro de contribuintes', 'cadastro de contribuinte', 'cadastro estadual', 'cadastro municipal'] },
   { codigo: 'CND_FEDERAL', item: 6, nome: 'Certidão conjunta Receita Federal e PGFN', categoria: 'FISCAL', validade: 'DATA', fiscal: true,
-    termos: ['fazenda nacional', 'receita federal', 'divida ativa da uniao', 'tributos federais', 'certidao conjunta', 'pgfn', 'seguridade social'] },
+    termos: ['fazenda nacional', 'receita federal', 'divida ativa da uniao', 'tributos federais', 'certidao conjunta', 'pgfn', 'seguridade social', 'inss', 'previdencia social', 'contribuicoes previdenciarias', 'debitos previdenciarios'] },
   { codigo: 'CND_ESTADUAL', item: 7, nome: 'Certidão de débitos estaduais (GO)', categoria: 'FISCAL', validade: 'DATA', fiscal: true,
     termos: ['fazenda estadual', 'debitos estaduais', 'tributos estaduais', 'fazenda publica estadual', 'receita estadual', 'fazenda estadual ou distrital'] },
   { codigo: 'CND_MUNICIPAL', item: 8, nome: 'Certidão de débitos municipais (Goiânia)', categoria: 'FISCAL', validade: 'DATA', fiscal: true,
@@ -537,11 +537,13 @@ function LicH_tiposDaExigencia_(texto, docs) {
  * que não é o da matriz (Goiânia/GO), ou o Distrito Federal: a certidão do cadastro pode não servir.
  */
 function LicH_esferas_(texto) {
-  var n = LicH_norm_(texto), pad = ' ' + n + ' ', r = { tipos: [], nomes: [], fora: '' };
-  if (!/(fazenda|tribut|receita|debito|fiscal|divida ativa|certidao negativa| cnd )/.test(pad)) return r;
+  // "Distrito Federal" é a esfera distrital: troca antes de procurar "federal" (não é a certidão federal)
+  var n = LicH_norm_(texto).replace(/(^| )distrito federal( |$)/g, '$1distrital$2'), pad = ' ' + n + ' ', r = { tipos: [], nomes: [], fora: '', desconhecido: '' };
+  if (!/(fazenda|tribut|receita|debito|fiscal|divida ativa|certidao negativa| cnd | inss |previdenci|seguridade|regularidade)/.test(pad)) return r;
   var tem = function (ws) { return ws.some(function (w) { return pad.indexOf(' ' + w + ' ') >= 0; }); };
   var add = function (nome, tipo) { r.nomes.push(nome); if (r.tipos.indexOf(tipo) < 0) r.tipos.push(tipo); };
-  if (tem(['federal', 'federais', 'nacional', 'uniao', 'pgfn'])) add('federal', 'CND_FEDERAL');
+  // INSS, previdência e seguridade social estão na certidão conjunta RFB/PGFN (a certidão federal)
+  if (tem(['federal', 'federais', 'nacional', 'uniao', 'pgfn', 'inss', 'seguridade']) || /previdenci/.test(n)) add('federal', 'CND_FEDERAL');
   if (tem(['estadual', 'estaduais', 'estado', 'distrital'])) add('estadual', 'CND_ESTADUAL');
   if (tem(['municipal', 'municipais', 'municipio', 'prefeitura'])) add('municipal', 'CND_MUNICIPAL');
   if (tem(['trabalhista', 'trabalhistas']) || pad.indexOf(' justica do trabalho ') >= 0) add('trabalhista', 'CNDT');
@@ -550,6 +552,10 @@ function LicH_esferas_(texto) {
   var e = /estado de ([a-z]+(?: [a-z]+)?)/.exec(n);
   if (!r.fora && e && !/^goias/.test(e[1])) r.fora = 'estado de ' + e[1];
   if (!r.fora && tem(['distrital']) && !tem(['estadual', 'estaduais'])) r.fora = 'Distrito Federal';
+  // "regularidade com/perante/junto a X": X que o sistema não reconhece (outro órgão ou cadastro) fica para a Diretoria conferir
+  var conhecidos = /^(a|o|as|os|ao|aos|fazenda|fazendas|receita|inss|previdencia|seguridade|fgts|fundo|justica|uniao|municipio|estado|prefeitura|distrital|divida|tributos|debitos|seguranca|caixa|orgaos|entidades|fisco|trabalhista|federal|estadual|municipal|nacional|cef|pgfn|secretaria|procuradoria)$/;
+  var re = /regularidade(?: fiscal)?(?: e trabalhista)? (?:com|perante|junto|para com)(?: a| ao| as| aos| o| os)? ([a-z]+)/g, x;
+  while ((x = re.exec(n))) { if (!conhecidos.test(x[1])) { r.desconhecido = x[1]; break; } }
   return r;
 }
 /** Prazo de emissão pedido ("emitida há no máximo 60 dias"): o número de dias ou null. */
@@ -620,6 +626,7 @@ function LicH_avaliarTipo_(codigo, ctx, sessaoDia, texto) {
   if (melhor.estado === 'OK') {
     r.situacao = 'ATENDE'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '.';
     if (t.atestado) { r.situacao = 'A_CONFERIR'; r.texto = docs.length + (docs.length === 1 ? ' atestado' : ' atestados') + ' no cadastro' + (docs[0].comum.length ? '; o que mais se parece com a exigência tem em comum: ' + docs[0].comum.slice(0, 8).join(', ') : '; nenhum tem palavra em comum com a exigência') + '. Confira as quantidades e a parcela de maior relevância (art. 67, §§ 1º e 2º).'; }
+    else if (codigo === 'PROCURACAO' && /poderes especific|firma reconhecid|reconhecimento de firma|reconhecida em cartorio/.test(LicH_norm_(texto))) { r.situacao = 'A_CONFERIR'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '. O edital pede poderes específicos ou firma reconhecida: confira se a procuração cadastrada atende.'; }
     else if (t.escopo) { r.situacao = 'A_CONFERIR'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + '. ' + t.escopoTexto.charAt(0).toUpperCase() + t.escopoTexto.slice(1) + '.'; }
   } else if (melhor.estado === 'VENCE_ANTES' || melhor.estado === 'VENCIDO') {
     r.situacao = 'VENCE_ANTES'; r.texto = melhor.codigo + ' ' + melhor.estadoTexto + ': renove antes da sessão (documento vencido na data da sessão não se corrige depois, art. 64).';
@@ -727,7 +734,7 @@ function LicH_cruzar_(l, ctx) {
       if (tipos.length > 1 && LICH_CRUZ[pior.situacao].pendencia && algumBom && LICH_RX_ALTERNATIVA.test(' ' + LicH_norm_(e.texto) + ' ')) { sug.situacao = 'A_CONFERIR'; sug.texto = 'O texto cita documentos que podem ser alternativos (' + tipos.map(function (t) { return t.nome + ': ' + LICH_CRUZ[t.situacao].nome.toLowerCase(); }).join('; ') + '). Confira no edital se basta um deles.'; }
     }
     var esf = LicH_esferas_(e.texto);
-    if (sug.situacao === 'ATENDE' && (esf.nomes.length > 1 || esf.fora)) { sug.situacao = 'A_CONFERIR'; sug.texto = (esf.fora ? 'O texto cita ' + esf.fora + ', fora da matriz (Goiânia/GO): a certidão do cadastro pode não servir. ' : '') + (esf.nomes.length > 1 ? 'O texto pede regularidade em mais de uma esfera (' + esf.nomes.join(', ') + '): confira se há certidão de cada uma. ' : '') + tipos.map(function (t) { return t.nome + ': ' + LICH_CRUZ[t.situacao].nome.toLowerCase(); }).join('; ') + '.'; }
+    if (sug.situacao === 'ATENDE' && (esf.nomes.length > 1 || esf.fora || esf.desconhecido)) { sug.situacao = 'A_CONFERIR'; sug.texto = (esf.desconhecido ? 'O texto pede regularidade com "' + esf.desconhecido + '", que o sistema não reconhece: confira qual certidão serve. ' : '') + (esf.fora ?'O texto cita ' + esf.fora + ', fora da matriz (Goiânia/GO): a certidão do cadastro pode não servir. ' : '') + (esf.nomes.length > 1 ? 'O texto pede regularidade em mais de uma esfera (' + esf.nomes.join(', ') + '): confira se há certidão de cada uma. ' : '') + tipos.map(function (t) { return t.nome + ': ' + LICH_CRUZ[t.situacao].nome.toLowerCase(); }).join('; ') + '.'; }
     if ((e.pendenciaLeitura || e.alerta) && sug.situacao === 'ATENDE') { sug.situacao = 'A_CONFERIR'; sug.texto = 'O documento existe, mas a leitura marcou este trecho como pendência' + (e.alerta ? ' ("' + e.alerta + '" perto do trecho)' : '') + ': confirme no edital se a exigência vale.'; }
     var d = dec[e.chave], manual = null, efetivo = sug.situacao, efTexto = sug.texto;
     if (d && d.atual) {
