@@ -77,5 +77,5 @@ Robô identifica → IA interpreta e classifica → aviso no SGO+ e WhatsApp →
 
 ## Decisões do dono (02/11/2026)
 - Segundo integrante da Diretoria em Licitações: THIAGO (o próprio dono; usuário Administrador, área Diretoria). Diretoria de Licitações = Charles + Thiago; os alertas vão para os dois. No sistema não precisa mudar nada: os dois já têm acesso pelo perfil.
-- Prazo de guarda: o dono pediu sugestão (proposta na conversa de 02/11, aguarda o "ok"). Nada é apagado até o ok.
+- Prazo de guarda APROVADO pelo dono em 02/11 ("Vamos"): para sempre o que a Diretoria mexeu; 2 anos as candidatas nunca abertas; 1 ano só o resumo das fora do ramo (dados brutos 30 dias); registro das chamadas 6 meses. Limpeza semanal junto da manutenção de segunda. Entra com a etapa 2.
 - Perguntas de preço do doc 03 (35% sobre deslocamento, piso por item ou lote, comissão, equipe do Rio, eletromédicos e balanças, seguro-garantia): o dono não sabe responder. Ficam como padrão as respostas propostas na conversa de 02/11, que a Diretoria pode mudar depois na tela.
