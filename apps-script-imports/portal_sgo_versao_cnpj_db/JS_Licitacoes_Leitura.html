@@ -90,41 +90,51 @@
   function LicLeit_htmlChecklist_(le) {
     var l = (le && le.checklist) || [];
     if (!le || le.situacao === "EM_ANDAMENTO" && !l.length) return "";
-    var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Montado pelo sistema com os itens que a IA extraiu de cada bloco e que o verificador achou no edital, palavra por palavra. Item igual em vários lugares aparece uma vez, com todas as fontes. Página e linha são do sistema.</p>";
+    var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Cada item é o TRECHO DO EDITAL, copiado e conferido palavra por palavra pelo sistema, com o arquivo, a página e a linha. A IA só escolhe o tema e um rótulo curto (sem número, negação ou limite): leia o trecho. Trecho igual em vários lugares aparece uma vez, com todas as fontes.</p>";
     if (!l.length) return h + '<p class="cm-vazio">Nenhuma exigência dos temas foi encontrada nos blocos lidos.</p></div>';
     var tema = "";
     l.forEach(function (e) {
       if (e.tema !== tema) { tema = e.tema; h += '<h4 class="lic-leit-tema">' + Lic_esc_(e.temaNome || e.tema) + "</h4>"; }
-      h += '<div class="lic-leit-item"><p class="cm-txt" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.texto) + "</p>" +
+      h += '<div class="lic-leit-item"><p class="cm-meta" style="margin:0"><span class="lic-leit-id">' + Lic_esc_(e.id) + "</span>" + Lic_esc_(e.temaNome || e.tema) + (e.titulo ? " · " + Lic_esc_(e.titulo) : "") + "</p>" +
         (e.tipo === "PENDENCIA" ? '<p class="lic-motivo pend"><span class="lic-af-tipo PENDENCIA">Pendência</span>Confirmar no edital: há negação ou exceção perto do trecho ("' + Lic_esc_(e.alerta) + '"). Não conte como exigência certa até a Diretoria ler o parágrafo.</p>' : "") +
         LicLeit_fonteHtml_(e.fontes[0] || {}) + ((e.fontes || []).length > 1 ? '<details><summary class="cm-meta" style="min-height:32px;display:flex;align-items:center;cursor:pointer">Mais ' + (e.fontes.length - 1) + " fonte(s)</summary>" + e.fontes.slice(1).map(LicLeit_fonteHtml_).join("") + "</details>" : "") + "</div>";
     });
     return h + "</div>";
   }
-  function LicLeit_fontesTxt_(fs) { return '<span class="lic-leit-ref">fontes: ' + Lic_esc_((fs || []).join(", ")) + "</span>"; }
+  /** Frase da IA com os trechos dos itens citados (expansíveis): a frase é sugestão; o que vale é o trecho. */
+  function LicLeit_fraseHtml_(x, porId, etiqueta) {
+    var itens = (x.fontes || []).filter(function (r) { return porId[r]; });
+    return '<li><span class="lic-leit-sug">' + Lic_esc_(etiqueta) + "</span>" + Lic_esc_(x.texto) +
+      '<details><summary class="cm-meta" style="min-height:32px;display:flex;align-items:center;cursor:pointer">Trechos citados (' + Lic_esc_((x.fontes || []).join(", ")) + ")</summary>" +
+      itens.map(function (r) { var e = porId[r]; return '<p class="cm-meta" style="margin:6px 0 0"><span class="lic-leit-id">' + Lic_esc_(r) + "</span>" + Lic_esc_(e.temaNome || e.tema) + "</p>" + LicLeit_fonteHtml_(e.fontes[0] || {}); }).join("") + "</details></li>";
+  }
   function LicLeit_htmlResumoEstrategia_(t) {
     var le = t.leitura;
     if (!le || le.situacao === "EM_ANDAMENTO") return "";
-    var c = le.consolidacao || {}, h = "";
+    var c = le.consolidacao || {}, h = "", porId = {};
+    (le.checklist || []).forEach(function (e) { porId[e.id] = e; });
     if (c.situacao !== "OK") {
       var msg = { SEM_ITENS: "Sem itens extraídos: o resumo e a estratégia não foram gerados.", ERRO: "A IA não respondeu ao montar o resumo e a estratégia. O checklist acima vale.", RECUSADA: "O resumo e a estratégia foram recusados pelo verificador (número, data ou fonte que não confere, ou frase de decisão). O checklist acima vale." }[c.situacao] || "Resumo e estratégia ainda não gerados.";
       h += Lic_faixa_(msg, "aviso");
       if ((c.problemas || []).length) h += '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Ver o motivo técnico</summary>' + c.problemas.map(function (x) { return '<ul style="margin:4px 0;padding-left:18px">' + (x.problemas || []).map(function (p) { return '<li class="cm-meta">' + Lic_esc_(p) + "</li>"; }).join("") + "</ul>"; }).join("") + "</details>";
     } else {
-      h += '<div class="cm-caixa"><h3>Resumo do edital</h3><ul class="lic-af">' + (le.resumo || []).map(function (f) { return '<li><span class="lic-af-tipo FATO">Resumo (conferido número e data)</span>' + Lic_esc_(f.texto) + "<br>" + LicLeit_fontesTxt_(f.fontes) + "</li>"; }).join("") + "</ul></div>";
       var es = le.estrategia || {};
-      h += '<div class="cm-caixa"><h3>Estratégia sugerida</h3><p class="lic-motivo pend">Sugestão da IA (inferência a partir dos itens citados). A IA não decide: participar ou descartar é da Diretoria.</p>' + LIC_LEIT_SECOES.map(function (s) {
-        var l = es[s[0]] || [], extra = "";
-        if (s[0] === "perguntas") extra = (t.prazos || []).length ? '<p class="cm-meta">Prazo na agenda (calculado ou confirmado pelo sistema): ' + Lic_esc_(t.prazos.map(function (p) { return p.nome + " " + p.quando + " (" + String(p.natureza || "").toLowerCase() + ")"; }).join("; ")) + ".</p>" : '<p class="cm-meta">Sem prazo de esclarecimento na agenda: confira no edital (tema "Esclarecimento, impugnação e sessão").</p>';
-        return '<h4 class="lic-leit-tema">' + Lic_esc_(s[1]) + "</h4>" + extra + (l.length ? '<ul class="lic-af">' + l.map(function (x) { return '<li><span class="lic-leit-sug">Sugestão</span>' + Lic_esc_(x.texto) + "<br>" + LicLeit_fontesTxt_(x.fontes) + "</li>"; }).join("") + "</ul>" : '<p class="cm-vazio">Nenhuma.</p>');
-      }).join("") + "</div>";
+      h += '<div class="cm-caixa"><h3>Sugestão da IA — confira nos trechos</h3><p class="lic-motivo pend">O resumo e a estratégia são texto da IA, conferidos (cada frase cita itens; números e datas estão no item citado; frase com o sentido contrário ao trecho é retirada). O que vale é o trecho do edital. A IA não decide: participar ou descartar é da Diretoria.</p>' +
+        '<h4 class="lic-leit-tema">Resumo do edital</h4><ul class="lic-af">' + (le.resumo || []).map(function (f) { return LicLeit_fraseHtml_(f, porId, "Resumo (conferido número e data)"); }).join("") + "</ul>" +
+        '<h4 class="lic-leit-tema">Estratégia sugerida</h4>' + LIC_LEIT_SECOES.map(function (s) {
+          var l = es[s[0]] || [], extra = "";
+          if (s[0] === "perguntas") extra = (t.prazos || []).length ? '<p class="cm-meta">Prazo na agenda (calculado ou confirmado pelo sistema): ' + Lic_esc_(t.prazos.map(function (p) { return p.nome + " " + p.quando + " (" + String(p.natureza || "").toLowerCase() + ")"; }).join("; ")) + ".</p>" : '<p class="cm-meta">Sem prazo de esclarecimento na agenda: confira no edital.</p>';
+          return '<p class="cm-txt" style="margin:10px 0 2px"><b>' + Lic_esc_(s[1]) + "</b></p>" + extra + (l.length ? '<ul class="lic-af">' + l.map(function (x) { return LicLeit_fraseHtml_(x, porId, "Sugestão"); }).join("") + "</ul>" : '<p class="cm-vazio">Nenhuma.</p>');
+        }).join("") +
+        ((es.retiradas || []).length ? '<details style="margin-top:8px"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Frases retiradas pelo verificador (' + es.retiradas.length + ")</summary><ul class=\"lic-af\">" +
+          es.retiradas.map(function (x) { return '<li><p class="cm-txt" style="margin:0"><s>' + Lic_esc_(x.texto) + '</s></p><p class="cm-meta" style="margin:2px 0 0">' + Lic_esc_(x.secao + ": " + x.motivo) + " · fontes: " + Lic_esc_((x.fontes || []).join(", ")) + "</p></li>"; }).join("") + "</ul></details>" : "") + "</div>";
     }
     h += '<div class="lic-acoes-linha" style="margin:0 0 12px"><button type="button" class="btn-secondary" data-lic-leit-consolidar' + (t.iaDisponivel ? "" : ' disabled aria-disabled="true"') + ">Refazer resumo e estratégia</button></div>";
     return h;
   }
   function LicLeit_htmlAba_(t) {
     t = t || {};
-    var le = t.leitura, h = '<p class="cm-modo-dica">Leitura especialista do edital: a IA lê o edital INTEIRO, bloco por bloco, e diz o que realmente precisamos, cada item com o trecho e a página; o verificador recusa o que não está no texto. Depois vêm o resumo e a estratégia sugerida. A decisão continua com a Diretoria.</p>';
+    var le = t.leitura, h = '<p class="cm-modo-dica">Leitura especialista do edital: a IA lê o edital INTEIRO, bloco por bloco, e aponta o que realmente precisamos: cada item é o trecho do edital, com o arquivo e a página; o verificador recusa o que não está no texto. Depois vêm o resumo e a estratégia sugerida. A decisão continua com a Diretoria.</p>';
     if (!t.iaDisponivel) h += Lic_faixa_(t.aviso || "Leitura pela IA indisponível: falta a chave da IA.", "aviso");
     if (t.textosAviso) h += Lic_faixa_(t.textosAviso, "aviso");
     if (t.podeLer) h += Lic_faixa_("Leitura não disponível: " + t.podeLer + ".", "aviso");
