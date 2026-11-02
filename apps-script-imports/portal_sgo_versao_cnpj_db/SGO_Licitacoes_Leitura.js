@@ -62,7 +62,7 @@ var LIC_LEIT_COLUNAS = {
 };
 var LIC_LEIT_COLUNAS_TEXTO = { LIC_LEITURAS: ['BASE_HASH', 'ARQUIVOS_BASE', 'HASH', 'TRABALHANDO_ATE', 'INICIO_EM', 'FIM_EM', 'CONSOLIDACAO_EM'], LIC_LEITURA_BLOCOS: ['BLOCO_HASH', 'ARQUIVO_SHA', 'LIDO_EM'],
   LIC_LEITURA_RESULTADOS: ['BLOCO_HASH', 'CRIADO_EM'] };
-var LIC_LEIT_SITUACOES = { EM_ANDAMENTO: 'Lendo', CONCLUIDA: 'Concluída', PARCIAL: 'Concluída com partes não lidas', SUBSTITUIDA: 'Substituída por uma versão nova' };
+var LIC_LEIT_SITUACOES = { EM_ANDAMENTO: 'Lendo', CONCLUIDA: 'Concluída', LER_A_MAO: 'Concluída com páginas para ler à mão', PARCIAL: 'Concluída com partes não lidas', SUBSTITUIDA: 'Substituída por uma versão nova' };
 /** Blocos: PENDENTE (na fila), LIDO, FALHOU (não lido), REPETIDO (mesmo texto de outro bloco), VAZIO (páginas sem texto útil). */
 var LIC_LEIT_BLOCO_CAR = 18000;
 var LIC_LEIT_BLOCO_PAGINAS = 12;
@@ -78,7 +78,9 @@ var LIC_LEIT_ITENS_MAX = 40;
 var LIC_LEIT_CHECKLIST_MAX = 150;
 var LIC_LEIT_OCORRENCIAS_MAX = 60;
 var LIC_LEIT_PALAVRAS_MAX = 60;
-var LIC_LEIT_UTIL_MIN = 5;             // palavras de texto útil (sem cabeçalho e rodapé repetidos) para a página contar como lida
+var LIC_LEIT_UTIL_MIN = 5;
+var LIC_LEIT_CABECALHO_LINHAS = 3;     // linhas do começo e do fim da página que podem ser cabeçalho ou rodapé repetidos
+var LIC_LEIT_VAZIO_MAX = 40;           // bloco com mais palavras que isto (contando tudo) nunca é dado como vazio             // palavras de texto útil (sem cabeçalho e rodapé repetidos) para a página contar como lida
 var LIC_LEIT_FRASE_MAX = 600;           // a rede, no item não impeditivo, olha a frase do trecho e a seguinte (até 600 caracteres cada)
 var LIC_LEIT_FUNCAO_ROTINA = 'Licitacoes_rotinaLeitura';
 var LIC_LEIT_TEMAS = {
@@ -286,13 +288,20 @@ function LicLeit_indice_(texto) {
     }
   } else { pags[0].ini = 0; }
   for (var i = 0; i < pags.length; i++) pags[i].fim = i + 1 < pags.length ? pags[i + 1].ini : texto.length;
-  // texto útil: sem os marcadores e sem as linhas repetidas em 3 páginas ou mais (cabeçalho e rodapé)
+  // texto útil: sem os marcadores e sem o cabeçalho e o rodapé. Cabeçalho e rodapé = só as LIC_LEIT_CABECALHO_LINHAS primeiras e
+  // últimas linhas da página que se repetem nessa posição em 3 páginas ou mais (uma tabela de itens com linhas iguais no meio da
+  // página continua sendo texto)
   var linhasDe = pags.map(function (p) {
     return texto.slice(p.ini, p.fim).replace(/\[p[aá]gina \d+\]|\[arquivo interno: [^\]\n]*\]/gi, ' ').split('\n').map(function (x) { return Lic_normTrecho_(x).replace(/\b\d+\b/g, '#'); }).filter(function (x) { return x.length >= 3; });
   });
-  var freq = {};
-  linhasDe.forEach(function (ls) { var vistas = {}; ls.forEach(function (x) { if (!vistas[x]) { vistas[x] = 1; freq[x] = (freq[x] || 0) + 1; } }); });
-  pags.forEach(function (p, k) { p.util = linhasDe[k].filter(function (x) { return !(freq[x] >= 3); }).join(' ').split(' ').filter(function (w) { return w && w !== '#'; }).length; });
+  var nCab = LIC_LEIT_CABECALHO_LINHAS, freq = {};
+  var bordas = function (ls) { return ls.length <= 2 * nCab ? ls.map(function (x, i) { return i; }) : ls.map(function (x, i) { return i; }).filter(function (i) { return i < nCab || i >= ls.length - nCab; }); };
+  linhasDe.forEach(function (ls) { var vistas = {}; bordas(ls).forEach(function (i) { var x = ls[i]; if (!vistas[x]) { vistas[x] = 1; freq[x] = (freq[x] || 0) + 1; } }); });
+  pags.forEach(function (p, k) {
+    var ls = linhasDe[k], b = {}; bordas(ls).forEach(function (i) { b[i] = 1; });
+    p.util = ls.filter(function (x, i) { return !(b[i] && freq[x] >= 3); }).join(' ').split(' ').filter(function (w) { return w && w !== '#'; }).length;
+    p.palavras = ls.join(' ').split(' ').filter(function (w) { return w && w !== '#'; }).length;
+  });
   return { paginas: pags, marcado: marcado };
 }
 function LicLeit_rotuloPagina_(ind, p) { return p ? (ind.marcado ? 'página ' + p.n + (p.interno ? ' de "' + p.interno + '"' : '') : 'parte ' + p.n) : ''; }
@@ -406,8 +415,8 @@ function LicLeit_dividir_(a, chavePalavras) {
   return out.map(function (b) {
     var tx = t.slice(b.ini, b.fim), pi = ind.paginas[b.pIni - 1], pf = ind.paginas[b.pFim - 1];
     var rot = b.pIni === b.pFim ? LicLeit_rotuloPagina_(ind, pi) + (b.parte ? ' (parte)' : '') : (ind.marcado ? 'páginas ' + pi.n + (pi.interno ? ' de "' + pi.interno + '"' : '') + ' a ' + pf.n + (pf.interno && pf.interno !== pi.interno ? ' de "' + pf.interno + '"' : '') : 'partes ' + pi.n + ' a ' + pf.n);
-    var util = 0; for (var k = b.pIni; k <= b.pFim; k++) util += ind.paginas[k - 1].util;
-    return { ref: a.ref, arquivoId: a.id, sha: a.sha256, nome: a.titulo || a.nome, pIni: b.pIni, pFim: b.pFim, rotulo: rot, ini: b.ini, fim: b.fim, caracteres: tx.length, hash: LicLeit_hashBloco_(tx, chavePalavras), vazio: util < LIC_LEIT_UTIL_MIN };
+    var util = 0, todas = 0; for (var k = b.pIni; k <= b.pFim; k++) { util += ind.paginas[k - 1].util; todas += ind.paginas[k - 1].palavras; }
+    return { ref: a.ref, arquivoId: a.id, sha: a.sha256, nome: a.titulo || a.nome, pIni: b.pIni, pFim: b.pFim, rotulo: rot, ini: b.ini, fim: b.fim, caracteres: tx.length, hash: LicLeit_hashBloco_(tx, chavePalavras), vazio: util < LIC_LEIT_UTIL_MIN && todas <= LIC_LEIT_VAZIO_MAX };
   });
 }
 /** Base da leitura: regras, palavras-chave e o conteúdo de cada arquivo (SHA-256, tamanho e hash do texto que o sistema leu). */
@@ -443,7 +452,9 @@ function LicLeit_posicao_(f, fo) {
 // números com a unidade ou a palavra vizinha (revisão de 02/11/2026: "10% por dia até 0,2 dias" não é "até 10 dias = multa de 0,2%")
 var LIC_LEIT_UNIDADES = { '%': '%', porcento: '%', percent: '%', percentual: '%', dia: 'dia', 'dia(s)': 'dia', hora: 'hora', h: 'hora', hs: 'hora', minuto: 'minuto', min: 'minuto', semana: 'semana',
   mes: 'mes', ano: 'ano', real: 'real', reai: 'real', rs: 'real', unidade: 'unidade', und: 'unidade', un: 'unidade', item: 'item', equipamento: 'equipamento', vez: 'vez', parcela: 'parcela',
-  atestado: 'atestado', ponto: 'ponto', metro: 'metro', m: 'metro', km: 'km', kg: 'kg', litro: 'litro', l: 'litro', grau: 'grau', c: 'grau', ciclo: 'ciclo', visita: 'visita', mil: 'mil' };
+  atestado: 'atestado', ponto: 'ponto', metro: 'metro', m: 'metro', km: 'km', kg: 'kg', litro: 'litro', l: 'litro', grau: 'grau', c: 'grau', ciclo: 'ciclo', visita: 'visita' };
+var LIC_LEIT_QUALIFICADOR = { util: 'util', uteis: 'util', corrido: 'corrido', corridos: 'corrido', consecutivo: 'corrido', consecutivos: 'corrido', ininterrupto: 'corrido', ininterruptos: 'corrido' };
+var LIC_LEIT_MULTIPLICADOR = /^\s*(mil|milh[aãoõ]es|milh[aã]o|bilh[aãoõ]es|bilh[aã]o)\b/i;
 var LIC_LEIT_EXTENSO = { dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15,
   dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100,
   duzentos: 200, trezentos: 300, quatrocentos: 400, quinhentos: 500, seiscentos: 600, setecentos: 700, oitocentos: 800, novecentos: 900 };
@@ -461,18 +472,38 @@ function LicLeit_numeros_(t) {
   var re = /(r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(\s*%)?/gi;
   while ((m = re.exec(s))) {
     var bruto = m[2], v = /\.\d{3}(,|$)/.test(bruto) || /,/.test(bruto) ? Number(bruto.replace(/\./g, '').replace(',', '.')) : Number(bruto);
-    var un = m[3] ? '%' : m[1] ? 'real' : '';
-    if (!un) { var dep = /^\s*(?:\([^)]{0,40}\)\s*)?(?:de\s+)?([A-Za-zÀ-ÿ$%º°]+(?:\(s\))?)/.exec(s.slice(re.lastIndex, re.lastIndex + 60)); if (dep) un = LicLeit_unidade_(dep[1]); }
-    nums.push({ valor: v, unidade: un, texto: m[0].trim() });
+    var un = m[3] ? '%' : m[1] ? 'real' : '', depois = s.slice(re.lastIndex, re.lastIndex + 80), txt = m[0].trim();
+    // "R$ 10 mil" = 10.000 (não é "R$ 10,00"); "2 milhões" = 2.000.000
+    var mult = m[3] ? null : LIC_LEIT_MULTIPLICADOR.exec(depois);
+    if (mult) { v = v * (/^mil$/i.test(mult[1]) ? 1e3 : /^milh/i.test(mult[1]) ? 1e6 : 1e9); depois = depois.slice(mult[0].length); txt += ' ' + mult[1]; }
+    if (!un) { var dep = /^\s*(?:\([^)]{0,40}\)\s*)?(?:de\s+)?([A-Za-zÀ-ÿ$%º°]+(?:\(s\))?)/.exec(depois); if (dep) { un = LicLeit_unidade_(dep[1]); depois = depois.slice(dep[0].length); } }
+    // qualificador faz parte da unidade: "10 dias úteis" não é "10 dias corridos"
+    if (un) { var q = /^\s*([A-Za-zÀ-ÿ]+)/.exec(depois), qq = q ? LIC_LEIT_QUALIFICADOR[LicLeit_semAcento_(q[1])] : ''; if (qq) un += ' ' + qq; }
+    nums.push({ valor: v, unidade: un, texto: txt });
   }
   var pal = LicLeit_semAcento_(s).split(/[^a-z0-9%()]+/).filter(Boolean);
   pal.forEach(function (w, i) {
     if (!LIC_LEIT_EXTENSO.hasOwnProperty(w)) return;
     var un = '';
-    for (var j = i + 1; j < pal.length && j <= i + 4 && !un; j++) { if (/^(e|de|por|cento)$/.test(pal[j]) && pal[j] !== 'cento') continue; if (pal[j] === 'cento') { un = '%'; break; } un = LicLeit_unidade_(pal[j]); if (!un && !LIC_LEIT_EXTENSO.hasOwnProperty(pal[j])) break; }
-    nums.push({ valor: LIC_LEIT_EXTENSO[w], unidade: un, texto: w, extenso: true });
+    var mult = 1;
+    for (var j = i + 1; j < pal.length && j <= i + 4 && !un; j++) {
+      if (/^(e|de|por)$/.test(pal[j])) continue;
+      if (pal[j] === 'cento') { un = '%'; break; }
+      if (pal[j] === 'mil') { mult = 1e3; continue; }
+      if (/^milh/.test(pal[j])) { mult = 1e6; continue; }
+      un = LicLeit_unidade_(pal[j]);
+      if (un && LIC_LEIT_QUALIFICADOR[pal[j + 1]]) un += ' ' + LIC_LEIT_QUALIFICADOR[pal[j + 1]];
+      if (!un && !LIC_LEIT_EXTENSO.hasOwnProperty(pal[j])) break;
+    }
+    nums.push({ valor: LIC_LEIT_EXTENSO[w] * mult, unidade: un, texto: w, extenso: true });
   });
   return { nums: nums, datas: datas, horas: horas };
+}
+/** Mesmo valor e mesma unidade; unidade sem qualificador no texto aceita a qualificada na fonte ("10 dias" sobre "10 dias corridos"). */
+function LicLeit_mesmoNumero_(x, y) {
+  if (Math.abs(x.valor - y.valor) >= 1e-6) return false;
+  if (!x.unidade || x.unidade === y.unidade) return true;
+  return x.unidade.indexOf(' ') < 0 && y.unidade.split(' ')[0] === x.unidade;
 }
 /**
  * O que do texto não está na fonte: cada número com a mesma unidade (sem unidade no texto, qualquer ocorrência do valor), cada
@@ -481,22 +512,42 @@ function LicLeit_numeros_(t) {
 function LicLeit_numerosForaDaFonte_(texto, fonte) {
   var a = LicLeit_numeros_(texto), b = LicLeit_numeros_(fonte), fora = [];
   a.nums.forEach(function (x) {
-    var ok = b.nums.some(function (y) { return Math.abs(x.valor - y.valor) < 1e-6 && (!x.unidade || x.unidade === y.unidade); });
+    var ok = b.nums.some(function (y) { return LicLeit_mesmoNumero_(x, y); });
     if (!ok) fora.push(x.texto + (x.unidade && !/%|r\$/i.test(x.texto) ? ' ' + x.unidade : ''));
   });
   a.datas.forEach(function (x) { if (!b.datas.some(function (y) { return y.d === x.d && y.m === x.m && (!x.a || !y.a || x.a === y.a); })) fora.push(('0' + x.d).slice(-2) + '/' + ('0' + x.m).slice(-2) + (x.a ? '/' + x.a : '')); });
   a.horas.forEach(function (x) { if (b.horas.indexOf(x) < 0) fora.push(x); });
   return fora;
 }
-var LIC_LEIT_LIMITE = /^(minimo|minima|maximo|maxima|ate|apenas|somente|so|limite|limitad[oa]s?|inferior|superior|menos|vedad[oa]s?|proibid[oa]s?|inadmitid[oa]s?|impedid[oa]s?|obrigatori[oa]s?|exclusivamente)$/;
-/** O trecho tem negação ou exceção ("não", "salvo", "poderá"...)? Devolve a palavra ou ''. */
-function LicLeit_negacaoNoTrecho_(trecho) {
-  var tk = Lic_tokens_(Lic_s_(trecho).replace(/[-‐‑–—]/g, ' ')).toks;
-  for (var i = 0; i < tk.length; i++) if (LIC_NEGACAO.test(tk[i]) || LIC_EXCECAO.test(tk[i])) return tk[i];
-  return '';
+/**
+ * Sentido do item (revisão de 02/11/2026, nos DOIS sentidos): três classes de palavra. NEGAÇÃO ("não", "nem", "vedado",
+ * "proibido"...), EXCEÇÃO ("salvo", "exceto", "facultado", "poderá", "dispensado"...) e LIMITE ("apenas", "somente", "mínimo",
+ * "máximo", "até"...). Classe que o texto tem e o trecho não = sentido inventado ("visita técnica não é obrigatória" sobre "é
+ * obrigatória"; "admitido apenas entre empresas do grupo" sobre "Não será admitida"); negação no trecho exige negação no texto
+ * (apenas, somente e exceto não cobrem um "não"). Única equivalência: "não será inferior a" = "no mínimo"; "não será superior a" =
+ * "no máximo".
+ */
+var LIC_LEIT_NEG = /^(nao|nem|nunca|jamais|nenhum|nenhuma|sem|vedad[oa]s?|vedada|proibid[oa]s?|inadmitid[oa]s?|inadmissive(l|is)|impedid[oa]s?|tampouco|inexigivel|inaplicavel)$/;
+var LIC_LEIT_EXC = /^(salvo|exceto|excecao|excecoes|ressalvad[oa]s?|facultad[oa]s?|facultativ[oa]s?|opciona(l|is)|podera|poderao|alternativ[oa]s?|alternativamente|dispensad[oa]s?|dispensavel|desnecessari[oa]s?|isent[oa]s?|desobrigad[oa]s?)$/;
+var LIC_LEIT_LIM = /^(apenas|somente|exclusivamente|unicamente|so|minimo|minima|maximo|maxima|ate|inferior|superior|limite|limitad[oa]s?)$/;
+function LicLeit_classesSentido_(t) {
+  var tk = Lic_tokens_(Lic_s_(t).replace(/[-‐‑–—]/g, ' ')).toks, c = { NEG: '', EXC: '', LIM: '' };
+  tk.forEach(function (w) { if (!c.NEG && LIC_LEIT_NEG.test(w)) c.NEG = w; else if (!c.EXC && LIC_LEIT_EXC.test(w)) c.EXC = w; else if (!c.LIM && LIC_LEIT_LIM.test(w)) c.LIM = w; });
+  return c;
 }
-function LicLeit_textoTemNegacao_(texto) {
-  return Lic_tokens_(Lic_s_(texto).replace(/[-‐‑–—]/g, ' ')).toks.some(function (w) { return LIC_NEGACAO.test(w) || LIC_EXCECAO.test(w) || LIC_LEIT_LIMITE.test(w); });
+/** '' = o texto tem o mesmo sentido do trecho; senão, o problema. */
+function LicLeit_sentidoDiferente_(texto, trecho) {
+  var a = LicLeit_classesSentido_(texto), b = LicLeit_classesSentido_(trecho), nt = ' ' + Lic_normTrecho_(trecho) + ' ', nx = ' ' + Lic_normTrecho_(texto) + ' ';
+  // "não será inferior a 90 dias" = "no mínimo 90 dias" (e o mesmo com superior/máximo)
+  var minimo = / nao (sera |podera ser |deve ser |devera ser )?(inferior|menor) /.test(nt) && / (minim[oa]|pelo menos) /.test(nx);
+  var maximo = / nao (sera |podera ser |deve ser |devera ser )?(superior|maior) /.test(nt) && / (maxim[oa]|ate) /.test(nx);
+  if (minimo || maximo) { if (b.NEG) b.NEG = ''; a.LIM = ''; b.LIM = ''; }
+  if (b.NEG && !a.NEG) return 'o trecho tem negação ("' + b.NEG + '") e o texto não: diga no texto o que o trecho nega (apenas, somente ou exceto não equivalem a um "não"; não inverta o sentido)';
+  if (a.NEG && !b.NEG) return 'o texto tem negação ("' + a.NEG + '") que o trecho não tem: o texto inverte o sentido do trecho';
+  if (a.EXC && !b.EXC) return 'o texto tem exceção ("' + a.EXC + '") que o trecho não tem: não acrescente exceção que o edital não escreveu neste trecho';
+  if (b.EXC && !a.EXC) return 'o trecho tem exceção ("' + b.EXC + '") e o texto não: diga a exceção no texto';
+  if (a.LIM && !b.LIM) return 'o texto tem limite ("' + a.LIM + '") que o trecho não tem: não acrescente restrição que o edital não escreveu neste trecho';
+  return '';
 }
 /**
  * Rede de segurança da nota (Lic_negacaoPerto_) para TODOS os temas, fora do próprio trecho (a negação que está no trecho já foi
@@ -549,8 +600,8 @@ function LicLeit_verificarBloco_(j, a, b, ctx) {
     if (pos < 0) { problemas.push(onde + ': o trecho "' + Lic_texto_(fo.trecho, 80) + '" não está NESTE bloco (está em outra parte do edital, que você não recebeu): cite só o que está no bloco'); return; }
     var fora = LicLeit_numerosForaDaFonte_(texto, fo.trecho);
     if (fora.length) { problemas.push(onde + ': no texto, ' + fora.join(', ') + ' não está no trecho citado com a mesma unidade ("' + Lic_texto_(fo.trecho, 80) + '"): copie cada número junto da palavra que o acompanha no trecho (%, dias, horas, R$...) e a data inteira'); return; }
-    var neg = LicLeit_negacaoNoTrecho_(fo.trecho);
-    if (neg && !LicLeit_textoTemNegacao_(texto)) { problemas.push(onde + ': o trecho tem negação ou exceção ("' + neg + '") e o texto não: diga no texto o que o trecho nega ou excetua (não inverta o sentido)'); return; }
+    var sentido = LicLeit_sentidoDiferente_(texto, fo.trecho);
+    if (sentido) { problemas.push(onde + ': ' + sentido); return; }
     var chave = tema + '|' + Lic_normTrecho_(fo.trecho);
     if (vistos[chave]) return;
     vistos[chave] = 1;
@@ -657,7 +708,7 @@ function LicLeit_criar_(eu, l, tx, palavras, o) {
       ARQUIVOS_JSON: JSON.stringify(tx.arquivos.map(function (a) {
         var ind = a.texto ? (a._ind || LicLeit_indice_(a.texto)) : null;
         return { ref: a.ref, id: a.id, titulo: a.titulo, nome: a.nome, sha256: a.sha256, situacao: a.situacao, motivo: a.motivo, caracteres: a.texto.length, total: a.totalFonte, paginas: ind ? ind.paginas.length : a.paginasFonte, marcado: ind ? ind.marcado : false, completo: a.completo,
-          semTexto: ind ? ind.paginas.filter(function (p) { return p.util < LIC_LEIT_UTIL_MIN; }).map(function (p) { return p.seq; }).slice(0, 500) : [] };
+          semTexto: ind ? ind.paginas.filter(function (p) { return p.util < LIC_LEIT_UTIL_MIN && p.palavras <= LIC_LEIT_VAZIO_MAX; }).map(function (p) { return p.seq; }).slice(0, 500) : [] };
       })).slice(0, 40000),
       PALAVRAS_JSON: JSON.stringify(palavras || []).slice(0, 8000), BLOCOS_TOTAL: plano.length, BLOCOS_LIDOS: 0, BLOCOS_FALHOS: 0, CONSOLIDACAO_SITUACAO: 'PENDENTE', RELER_TUDO: o.relerTudo ? 'SIM' : 'NAO', MOTIVO: Lic_texto_(o.motivo, 1000),
       ORIGEM_PEDIDO: o.origem || 'PEDIDO', PEDIDO_POR_ID: Lic_s_(eu && eu.id), PEDIDO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', MODELO: Lic_modeloIA_(), REGRAS: LIC_LEIT_REGRAS + ' · ' + LIC_ANALISE_REGRAS,
@@ -903,7 +954,7 @@ function LicLeit_conferirFrase_(onde, x, ctx, problemas, estrategia) {
   if (faltam.length) { problemas.push(onde + ': fonte que não existe (' + faltam.join(', ') + '); use só as da lista'); return null; }
   var n = LicLeit_numeros_(t), textos = fontes.map(function (r) { return ctx.fontesCons[r].texto; }), fora = [];
   n.nums.forEach(function (z) {
-    var ok = textos.some(function (tf) { return LicLeit_numeros_(tf).nums.some(function (y) { return Math.abs(z.valor - y.valor) < 1e-6 && (!z.unidade || z.unidade === y.unidade); }); });
+    var ok = textos.some(function (tf) { return LicLeit_numeros_(tf).nums.some(function (y) { return LicLeit_mesmoNumero_(z, y); }); });
     if (!ok) fora.push('o número ' + z.texto + (z.unidade && z.extenso ? ' ' + z.unidade : ''));
   });
   n.datas.forEach(function (z) { if (!textos.some(function (tf) { return LicLeit_numeros_(tf).datas.some(function (y) { return y.d === z.d && y.m === z.m && (!z.a || !y.a || z.a === y.a); }); })) fora.push('a data ' + ('0' + z.d).slice(-2) + '/' + ('0' + z.m).slice(-2) + (z.a ? '/' + z.a : '')); });
@@ -1015,7 +1066,7 @@ function LicLeit_consolidar_(le, blocos, l, eu, motivo, o) {
       problemas = v.problemas; recusas.push({ tentativa: k + 1, problemas: v.problemas.slice(0, 12) });
     }
   }
-  var c = LicLeit_contar_(blocos), agora = Lic_agora_(), situacao = c.falhos || cob.total.incompletos ? 'PARCIAL' : 'CONCLUIDA';
+  var c = LicLeit_contar_(blocos), agora = Lic_agora_(), situacao = c.falhos || cob.total.incompletos ? 'PARCIAL' : cob.total.semTexto || cob.arquivos.some(function (x) { return x.semTexto; }) ? 'LER_A_MAO' : 'CONCLUIDA';
   var cons = !checklist.length ? 'SEM_ITENS' : saida ? 'OK' : erro ? 'ERRO' : 'RECUSADA';
   var mud = { SITUACAO: situacao, BLOCOS_LIDOS: c.lidos, BLOCOS_FALHOS: c.falhos, COBERTURA_JSON: JSON.stringify(cob).slice(0, 40000), CHECKLIST_JSON: JSON.stringify(checklist).slice(0, 48000),
     RESUMO_JSON: saida ? JSON.stringify(saida.resumo).slice(0, 20000) : '', ESTRATEGIA_JSON: saida ? JSON.stringify(saida.estrategia).slice(0, 30000) : '', CONSOLIDACAO_SITUACAO: cons,
@@ -1025,7 +1076,7 @@ function LicLeit_consolidar_(le, blocos, l, eu, motivo, o) {
   if (atual && Lic_up_(atual.SITUACAO) === 'SUBSTITUIDA') { delete mud.SITUACAO; situacao = 'SUBSTITUIDA'; }
   mud.HASH = Lic_hash_(JSON.stringify([le.ID, le.VERSAO, le.BASE_HASH, situacao, mud.CHECKLIST_JSON, mud.RESUMO_JSON, mud.ESTRATEGIA_JSON, agora]));
   SGO_DATA.update(LIC_LEIT_ABAS.LEITURAS, le.ID, mud);
-  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, cons === 'OK' || cons === 'SEM_ITENS' ? (situacao === 'PARCIAL' ? 'LEITURA_PARCIAL' : 'LEITURA_CONCLUIDA') : 'LEITURA_CONSOLIDACAO_' + cons, eu || { id: '', nome: 'Sistema' }, {
+  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, cons === 'OK' || cons === 'SEM_ITENS' ? (situacao === 'PARCIAL' ? 'LEITURA_PARCIAL' : situacao === 'LER_A_MAO' ? 'LEITURA_CONCLUIDA_LER_A_MAO' : 'LEITURA_CONCLUIDA') : 'LEITURA_CONSOLIDACAO_' + cons, eu || { id: '', nome: 'Sistema' }, {
     de: motivo ? 'resumo e estratégia anteriores' : 'lendo', para: (LIC_LEIT_SITUACOES[situacao] || situacao).toLowerCase() + ' · ' + checklist.length + ' item(ns)',
     texto: (motivo ? 'Resumo e estratégia refeitos: ' + motivo + '. ' : '') + cob.total.texto + ' ' + checklist.length + ' item(ns) em "O que realmente precisamos".' +
       (cons === 'OK' ? ' Resumo e estratégia sugerida gerados e conferidos (a estratégia é sugestão; a decisão é da Diretoria).' : cons === 'SEM_ITENS' ? ' Nenhum item extraído: sem resumo nem estratégia.' : cons === 'ERRO' ? ' A IA não respondeu no resumo e na estratégia (' + erro + '): o checklist vale; tente "Refazer resumo e estratégia".' : ' O resumo e a estratégia foram recusados pelo verificador ' + recusas.length + ' vez(es): o checklist vale; tente "Refazer resumo e estratégia".'),

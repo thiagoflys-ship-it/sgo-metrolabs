@@ -214,7 +214,7 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   assert.equal(x.restam, 0);
   assert.equal(a.gatilhos.length, 0, 'sem pendência, sem gatilho');
   const le = a.leituras()[0];
-  assert.equal(le.SITUACAO, 'CONCLUIDA');
+  assert.equal(le.SITUACAO, 'LER_A_MAO', 'a A3 é escaneada: páginas para ler à mão');
   assert.equal(le.CONSOLIDACAO_SITUACAO, 'OK');
   const cl = JSON.parse(le.CHECKLIST_JSON);
   // sem duplicata: o atestado do edital e o do anexo são um item com as duas fontes
@@ -239,7 +239,7 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   assert.equal(hp.USUARIO_NOME, 'DORA DIRETORA TESTE');
   assert.match(hp.TEXTO, /4 bloco\(s\) em 2 arquivo\(s\) com texto/);
   assert.match(hp.FONTE, /A1 aaaaaaaaaaaa, A2 bbbbbbbbbbbb, A3 cccccccccccc/);
-  const hc = a.hist('LEITURA_CONCLUIDA')[0];
+  const hc = a.hist('LEITURA_CONCLUIDA_LER_A_MAO')[0];
   assert.equal(hc.USUARIO_NOME, 'Sistema');
   assert.equal(hc.HASH, le.HASH);
   assert.match(hc.TEXTO, /6 item\(ns\) em "O que realmente precisamos"\. Resumo e estratégia sugerida gerados e conferidos/);
@@ -277,7 +277,7 @@ test('bloco não lido (IA fora do ar e verificador recusando) aparece na cobertu
   const d = a.api('s_dora', 'leituraTentarDeNovo', { id: 'op1' });
   assert.equal(d.ok, true, d.message);
   assert.equal(bloco(a, 3).SITUACAO, 'LIDO');
-  assert.equal(a.leituras()[0].SITUACAO, 'CONCLUIDA');
+  assert.equal(a.leituras()[0].SITUACAO, 'LER_A_MAO', 'a A3 é escaneada: páginas para ler à mão');
   assert.equal(a.hist('LEITURA_BLOCOS_DE_NOVO').length, 1);
   // IA fora do ar: o bloco fica na fila na 1ª vez e vira "não lido" na 2ª
   const b = ambiente({ custoMs: 1000, respostas: [new Error('Serviço de IA indisponível (HTTP 503): fora'), new Error('Serviço de IA indisponível (HTTP 503): fora')] });
@@ -530,7 +530,7 @@ test('revisão: número com a unidade do trecho (permuta, extenso, data invertid
   let r = verBloco(a, 3, [{ tema: 'PENALIDADES', texto: 'Multa de 10% por dia de atraso até 0,2 dias.', trecho: 'atraso de até 10 dias = multa de 0,2% por dia de atraso' }]);
   assert.equal(r.ok, false); assert.match(r.p, /no texto, 10%, 0,2 dia não está no trecho citado com a mesma unidade/);
   r = verBloco(a, 1, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]);
-  assert.equal(r.ok, false); assert.match(r.p, /o trecho tem negação ou exceção \("nao"\) e o texto não/);
+  assert.equal(r.ok, false); assert.match(r.p, /o trecho tem negação \("nao"\) e o texto não/);
   r = verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo sessenta dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]);
   assert.equal(r.ok, false); assert.match(r.p, /sessenta dia não está no trecho/);
   assert.equal(verBloco(a, 1, [{ tema: 'PRAZOS', texto: 'Validade da proposta de no mínimo noventa dias.', trecho: 'O prazo de validade da proposta não será inferior 90 (noventa) dias' }]).ok, true, 'por extenso igual ao do trecho passa');
@@ -622,7 +622,7 @@ test('revisão: falha passageira ao ler os textos deixa os blocos na fila; sem a
   a.lidas.LIC_LEITURA_BLOCOS = 0;
   a.ctx.Licitacoes_rotinaLeitura();
   assert.equal(a.lidas.LIC_LEITURA_BLOCOS, 1, 'a fila é lida uma vez na rodada');
-  assert.equal(a.leituras()[0].SITUACAO, 'CONCLUIDA');
+  assert.equal(a.leituras()[0].SITUACAO, 'LER_A_MAO', 'a A3 é escaneada: páginas para ler à mão');
   assert.equal(a.ia.opcoes[a.ia.opcoes.length - 1].prazoAte, inicio + 140000, 'a consolidação não ganha 140 s próprios');
   // a linha da fila é pequena: itens e resposta da IA ficam em LIC_LEITURA_RESULTADOS
   for (const b of a.tabelas.LIC_LEITURA_BLOCOS) assert.ok(JSON.stringify(b).length < 3000, 'linha da fila pequena');
@@ -669,4 +669,50 @@ test('revisão: hífen e espaço nos dois sentidos; palavra nova muda a base (Re
   const h = tela().ctx.LicLeit_htmlResumoEstrategia_({ iaDisponivel: true, prazos: [], leitura: { situacao: 'CONCLUIDA', consolidacao: { situacao: 'OK' }, resumo: [{ texto: 'Frase.', fontes: ['I1'] }], estrategia: {} } });
   assert.match(h, /Resumo \(conferido número e data\)<\/span>Frase\./);
   assert.doesNotMatch(h, />Fato</);
+});
+
+// ---------------- reconferência de ed92c50 (probe4 e probe5) ----------------
+const T5 = '[página 1]\n5.1. O prazo de execução será de 10 dias corridos, contados da ordem de serviço.\n5.2. O valor unitário de referência é R$ 10,00 por item calibrado.\n5.3. A garantia contratual será de 10% do valor do contrato.\n5.4. A visita técnica é obrigatória para todas as licitantes interessadas.\n5.5. Não será admitida a participação de empresas em consórcio nesta licitação.\n';
+function verTexto(texto, itens) {
+  const a = ambiente({ textos: [{ ref: 'A1', id: 21, titulo: 'Edital', nome: 'e.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', motivo: '', texto, cortado: false }] });
+  return verBloco(a, 1, itens);
+}
+test('reconferência: exceção, negação e limite nos dois sentidos (inventados no texto são recusados; "apenas" e "exceto" não cobrem um "não")', () => {
+  const casos = [
+    ['VISITA_TECNICA', 'Visita técnica obrigatória, salvo declaração formal de conhecimento das condições.', 'A visita técnica é obrigatória para todas as licitantes interessadas', /o texto tem exceção \("salvo"\) que o trecho não tem/],
+    ['VISITA_TECNICA', 'Visita técnica não é obrigatória.', 'A visita técnica é obrigatória para todas as licitantes interessadas', /o texto tem negação \("nao"\) que o trecho não tem/],
+    ['SUBCONTRATACAO', 'Consórcio admitido apenas entre empresas do mesmo grupo.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem negação \("nao"\) e o texto não/],
+    ['SUBCONTRATACAO', 'Consórcio admitido, exceto com empresas estrangeiras.', 'Não será admitida a participação de empresas em consórcio', /o trecho tem negação \("nao"\) e o texto não/],
+    ['SUBCONTRATACAO', 'Consórcio não é admitido, apenas empresa isolada.', 'Não será admitida a participação de empresas em consórcio', /o texto tem limite \("apenas"\) que o trecho não tem/]
+  ];
+  for (const [tema, texto, trecho, re] of casos) { const r = verTexto(T5, [{ tema, texto, trecho }]); assert.equal(r.ok, false, texto); assert.match(r.p, re, texto); }
+  assert.equal(verTexto(T5, [{ tema: 'SUBCONTRATACAO', texto: 'Consórcio não é admitido.', trecho: 'Não será admitida a participação de empresas em consórcio' }]).ok, true);
+  assert.equal(verTexto(T5, [{ tema: 'VISITA_TECNICA', texto: 'Visita técnica obrigatória para todas as licitantes.', trecho: 'A visita técnica é obrigatória para todas as licitantes interessadas' }]).ok, true);
+});
+
+test('reconferência: unidade com o qualificador (úteis × corridos) e "mil"/"milhão" multiplicam o valor', () => {
+  let r = verTexto(T5, [{ tema: 'PRAZOS', texto: 'Execução em 10 dias úteis.', trecho: 'O prazo de execução será de 10 dias corridos' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /10 dia util não está no trecho/);
+  assert.equal(verTexto(T5, [{ tema: 'PRAZOS', texto: 'Execução em 10 dias corridos.', trecho: 'O prazo de execução será de 10 dias corridos' }]).ok, true);
+  assert.equal(verTexto(T5, [{ tema: 'PRAZOS', texto: 'Execução em 10 dias.', trecho: 'O prazo de execução será de 10 dias corridos' }]).ok, true, 'sem qualificador no texto: aceita o do trecho');
+  r = verTexto(T5, [{ tema: 'PAGAMENTO', texto: 'Valor de referência de R$ 10 mil por item calibrado.', trecho: 'O valor unitário de referência é R$ 10,00 por item calibrado' }]);
+  assert.equal(r.ok, false); assert.match(r.p, /R\$ 10 mil não está no trecho/);
+  const c = ambiente().ctx;
+  assert.deepEqual(J(c.LicLeit_numerosForaDaFonte_('Valor estimado de R$ 2 milhões.', 'valor estimado de R$ 2.000.000,00')), []);
+  assert.deepEqual(J(c.LicLeit_numerosForaDaFonte_('Garantia de dez mil reais.', 'garantia de R$ 10.000,00')), []);
+});
+
+test('reconferência: tabela de itens com linhas iguais é texto (só as linhas de cima e de baixo repetidas são cabeçalho); página e arquivo sem texto = "Concluída com páginas para ler à mão"', () => {
+  let tab = ''; for (let p = 1; p <= 4; p++) { tab += '[página ' + p + ']\n'; for (let i = 0; i < 8; i++) tab += 'Calibração de termômetro digital com certificado RBC - ' + (p * 10 + i) + ' unidades\n'; }
+  const a = ambiente();
+  const arq = { ref: 'A1', id: 1, titulo: 'Itens', nome: 'i.pdf', sha256: 'a'.repeat(64), texto: tab };
+  arq._ind = a.ctx.LicLeit_indice_(tab);
+  assert.ok(arq._ind.paginas.every((p) => p.util >= 10), 'a tabela tem texto útil');
+  assert.ok(a.ctx.LicLeit_dividir_(arq, '').every((b) => !b.vazio), 'nenhum bloco da tabela é vazio');
+  // o edital do teste tem a A3 escaneada: a leitura inteira lida fica "com páginas para ler à mão", não "Concluída"
+  const b = ambiente({ custoMs: 1000 });
+  b.api('s_dora', 'leituraIniciar', { id: 'op1' }); b.ctx.Licitacoes_rotinaLeitura();
+  const le = b.api('s_dora', 'leitura', { id: 'op1' }).leitura.leitura;
+  assert.deepEqual([le.situacao, le.situacaoNome], ['LER_A_MAO', 'Concluída com páginas para ler à mão']);
+  assert.equal(b.hist('LEITURA_CONCLUIDA_LER_A_MAO').length, 1);
 });
