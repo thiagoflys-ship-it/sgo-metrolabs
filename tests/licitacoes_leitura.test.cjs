@@ -216,7 +216,7 @@ test('ler edital inteiro: blocos de páginas, bloco repetido lido uma vez, retom
   const le = a.leituras()[0];
   assert.equal(le.SITUACAO, 'LER_A_MAO', 'a A3 é escaneada: páginas para ler à mão');
   assert.equal(le.CONSOLIDACAO_SITUACAO, 'OK');
-  const cl = JSON.parse(le.CHECKLIST_JSON);
+  const cl = J(a.ctx.LicLeit_checklistDe_(le).itens);
   // sem duplicata: o atestado do edital e o do anexo são um item com as duas fontes
   assert.deepEqual(cl.map((e) => [e.id, e.tema]), [['I1', 'ATESTADOS'], ['I2', 'PRAZOS'], ['I3', 'PENALIDADES'], ['I4', 'RBC_INMETRO'], ['I5', 'CONSORCIO'], ['I6', 'OUTRO']]);
   // o item é a FRASE INTEIRA do edital em volta do que a IA citou (sem rótulo nem paráfrase), com o pedaço citado marcado
@@ -376,7 +376,7 @@ test('consolidação: checklist sem duplicata pelo código; resumo e estratégia
   b.api('s_dora', 'leituraIniciar', { id: 'op1' });
   const le = b.leituras()[0];
   assert.equal(le.CONSOLIDACAO_SITUACAO, 'RECUSADA');
-  assert.equal(JSON.parse(le.CHECKLIST_JSON).length, 6, 'o checklist vale mesmo com o resumo recusado');
+  assert.equal(b.ctx.LicLeit_checklistDe_(le).itens.length, 6, 'o checklist vale mesmo com o resumo recusado');
   const p = JSON.parse(le.CONSOLIDACAO_PROBLEMAS_JSON)[0].problemas.join(' | ');
   assert.match(p, /o número 3, a data 20\/11\/2026 não está, com a mesma unidade, em nenhuma das fontes citadas/);
 
@@ -957,4 +957,47 @@ test('calibração: consolidação publica as frases que passaram e lista as ret
   const tx = b.ctx.LicLeit_textos_(b.op()), arq = tx.arquivos[0]; arq._ind = b.ctx.LicLeit_indice_(arq.texto);
   const pr = b.ctx.LicLeit_promptBloco_(b.op(), arq, Object.assign(b.ctx.LicLeit_dividir_(arq, '')[0], { ordem: 1 }), 1, [], 'FONTE-x');
   for (const re of [/NO MÁXIMO 40 itens por bloco/, /Nunca pare antes de uma negação ou exceção/, /campos de formulário para preencher/, /não invente uma frase para cada parte/, /Errado: parar em "recebimento definitivo"/]) assert.match(pr, re);
+});
+
+// ---------------- conferência de 31c18d0 ----------------
+test('conferência de 31c18d0: referência só sai da conta se existir e não vier colada a %, dígito ou unidade ("I30%", "I45 dias" e "I99" retiram a frase)', () => {
+  const c = ambiente().ctx, cx = { fontes: {}, fabricantes: [], fontesCons: { I1: { texto: 'garantia de 30% do valor e entrega em até 45 dias', item: true }, I2: { texto: 'visita técnica obrigatória', item: true } } };
+  const conf = (texto, fontes) => { const p = []; const r = c.LicLeit_conferirFrase_('x', { texto, fontes }, cx, p, false); return { r: J(r), p: p.join(' | ') }; };
+  let x = conf('Garantia de 30% e entrega em até 45 dias (I1, I2).', ['I1', 'I2']);
+  assert.equal(x.p, '', 'referências que existem, soltas: fora da conta');
+  for (const t of ['Garantia de I30% do valor.', 'Entrega em até I45 dias.', 'Visita técnica obrigatória (I99).', 'Garantia de I1,5 do valor.']) {
+    x = conf(t, ['I1']);
+    assert.match(x.p, /referência mal escrita no texto/, t);
+    assert.equal(x.r, null, t);
+  }
+});
+
+test('conferência de 31c18d0: checklist gravado uma linha por item (150 itens, nenhum some); faltando linha ou JSON quebrado = "checklist ilegível — refaça a leitura"; parte de texto não começa com = + - @', () => {
+  const a = ambiente({ custoMs: 1000 });
+  a.api('s_dora', 'leituraIniciar', { id: 'op1' });
+  const le = a.leituras()[0], c = a.ctx;
+  assert.equal(le.CHECKLIST_QTD, 6);
+  const linhas = a.tabelas.LIC_LEITURA_CHECKLIST.filter((x) => x.CHAVE === le.CHECKLIST_CHAVE);
+  assert.deepEqual(linhas.map((x) => [x.ORDEM, x.ITEM_ID]), [[1, 'I1'], [2, 'I2'], [3, 'I3'], [4, 'I4'], [5, 'I5'], [6, 'I6']]);
+  assert.ok(linhas.every((x) => x.ITEM_JSON.charAt(0) === '{'), 'célula começa com "{": nunca vira fórmula');
+  // 150 itens com frases longas: todos gravados e lidos de volta (antes, 86 sumiam do fim sem aviso)
+  const muitos = Array.from({ length: 150 }, (_, i) => ({ tema: 'OUTRO', trecho: 'Frase ' + i + ' ' + 'x'.repeat(590), ref: 'A1', arquivo: { sha256: 'a'.repeat(64) }, pagina: 1, rotulo: 'página 1', linha: i + 1, bloco: 1, alerta: '', tipo: 'EXIGENCIA' }));
+  const cl = c.LicLeit_checklist_(muitos);
+  assert.equal(cl.length, 150);
+  const leF = { ID: 'lx', CHECKLIST_CHAVE: 'Kteste', CHECKLIST_QTD: 150 };
+  a.tabelas.LIC_LEITURA_CHECKLIST.push(...cl.map((e, i) => ({ ID: 'c' + i, LEITURA_ID: 'lx', CHAVE: 'Kteste', ORDEM: i + 1, ITEM_ID: e.id, ITEM_JSON: JSON.stringify(e) })));
+  assert.equal(c.LicLeit_checklistDe_(leF).itens.length, 150);
+  // uma linha a menos ou JSON quebrado: ilegível (nunca "nenhuma exigência")
+  a.tabelas.LIC_LEITURA_CHECKLIST.splice(a.tabelas.LIC_LEITURA_CHECKLIST.findIndex((x) => x.CHAVE === 'Kteste' && x.ORDEM === 77), 1);
+  assert.deepEqual(J(c.LicLeit_checklistDe_(leF)), { itens: [], ilegivel: true });
+  const h = tela().ctx.LicLeit_htmlChecklist_({ situacao: 'CONCLUIDA', checklist: [], checklistIlegivel: true });
+  assert.match(h, /Checklist ilegível — refaça a leitura/); assert.doesNotMatch(h, /Nenhuma exigência/);
+  // leitura antiga com JSON em células: parte faltando no meio = ilegível
+  assert.deepEqual(J(c.LicLeit_checklistDe_({ CHECKLIST_JSON: '[{"id":"I1"', CHECKLIST_JSON_2: '', CHECKLIST_JSON_3: '}]' })), { itens: [], ilegivel: true });
+  assert.deepEqual(J(c.LicLeit_checklistDe_({ CHECKLIST_JSON: '[{"id":"I1"', CHECKLIST_JSON_2: '}]' })).itens.length, 1);
+  // partes dos itens de cada bloco: nenhuma começa com = + - @ ' e o conjunto volta inteiro
+  const itens = Array.from({ length: 40 }, (_, i) => ({ trecho: '=' + '-'.repeat(1000) + '@' + i, ref: 'A1' }));
+  const partes = J(c.LicLeit_partes_('ITENS_JSON', itens, 3));
+  assert.ok(Object.keys(partes).every((k) => !/^[=+\-@']/.test(partes[k])), JSON.stringify(Object.keys(partes).map((k) => partes[k].charAt(0))));
+  assert.equal(J(c.LicLeit_lerPartes_(partes, 'ITENS_JSON', null)).length, 40);
 });

@@ -93,8 +93,9 @@
   }
   function LicLeit_htmlChecklist_(le) {
     var l = (le && le.checklist) || [];
-    if (!le || le.situacao === "EM_ANDAMENTO" && !l.length) return "";
+    if (!le || le.situacao === "EM_ANDAMENTO" && !l.length && !le.checklistIlegivel) return "";
     var h = '<div class="cm-caixa"><h3>O que realmente precisamos (' + l.length + ")</h3><p class=\"cm-ajuda-campo\">Cada item é o TRECHO DO EDITAL, copiado e conferido palavra por palavra pelo sistema, com o arquivo, a página e a linha. A IA só aponta o trecho e o tema; o sistema mostra a frase inteira do edital, com o pedaço citado marcado: leia a frase. Trecho igual em vários lugares aparece uma vez, com todas as fontes.</p>";
+    if (le.checklistIlegivel) return h + Lic_faixa_("Checklist ilegível — refaça a leitura (Refazer, com \"Ler de novo também os blocos já lidos\"). O que foi gravado não se lê inteiro: nada é mostrado pela metade.", "erro") + "</div>";
     if (!l.length) return h + '<p class="cm-vazio">Nenhuma exigência dos temas foi encontrada nos blocos lidos.</p></div>';
     var tema = "";
     l.forEach(function (e) {

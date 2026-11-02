@@ -48,20 +48,24 @@
  ****************************************************/
 
 var LIC_LEIT_REGRAS = 'LIC-LEITURA-2026-11-02.3';
-var LIC_LEIT_ABAS = { LEITURAS: 'LIC_LEITURAS', BLOCOS: 'LIC_LEITURA_BLOCOS', RESULTADOS: 'LIC_LEITURA_RESULTADOS' };
+var LIC_LEIT_ABAS = { LEITURAS: 'LIC_LEITURAS', BLOCOS: 'LIC_LEITURA_BLOCOS', RESULTADOS: 'LIC_LEITURA_RESULTADOS', CHECKLIST: 'LIC_LEITURA_CHECKLIST' };
 var LIC_LEIT_COLUNAS = {
   LIC_LEITURAS: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'VERSAO', 'SITUACAO', 'BASE_HASH', 'ARQUIVOS_BASE', 'ARQUIVOS_JSON', 'BLOCOS_TOTAL', 'BLOCOS_LIDOS', 'BLOCOS_FALHOS',
-    'COBERTURA_JSON', 'PALAVRAS_JSON', 'CHECKLIST_JSON', 'CHECKLIST_JSON_2', 'CHECKLIST_JSON_3', 'CHECKLIST_JSON_4', 'RESUMO_JSON', 'ESTRATEGIA_JSON', 'CONSOLIDACAO_SITUACAO', 'CONSOLIDACAO_PROBLEMAS_JSON', 'CONSOLIDACAO_RESPOSTA',
+    'COBERTURA_JSON', 'PALAVRAS_JSON', 'CHECKLIST_JSON', 'CHECKLIST_JSON_2', 'CHECKLIST_JSON_3', 'CHECKLIST_JSON_4', 'CHECKLIST_CHAVE', 'CHECKLIST_QTD', 'RESUMO_JSON', 'ESTRATEGIA_JSON', 'CONSOLIDACAO_SITUACAO', 'CONSOLIDACAO_PROBLEMAS_JSON', 'CONSOLIDACAO_RESPOSTA',
     'CONSOLIDACAO_EM', 'RELER_TUDO', 'MOTIVO', 'ORIGEM_PEDIDO', 'PEDIDO_POR_ID', 'PEDIDO_POR_NOME', 'MODELO', 'REGRAS', 'TRABALHANDO_ATE', 'TRABALHANDO_ID', 'SUBSTITUIDA_POR',
     'HASH', 'INICIO_EM', 'FIM_EM', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // a fila: linha pequena (lida inteira pela rotina); itens e resposta da IA ficam em LIC_LEITURA_RESULTADOS
   LIC_LEITURA_BLOCOS: ['ID', 'LEITURA_ID', 'OPORTUNIDADE_ID', 'ORDEM', 'REF', 'ARQUIVO_ID', 'ARQUIVO_SHA', 'ARQUIVO_NOME', 'PAGINA_INI', 'PAGINA_FIM', 'PAGINAS_ROTULO', 'CAR_INI',
     'CAR_FIM', 'CARACTERES', 'BLOCO_HASH', 'SITUACAO', 'TENTATIVAS', 'ERRO', 'PROBLEMAS_JSON', 'RESULTADO_ID', 'ITENS_QTD', 'REAPROVEITADO_DE', 'REPETIDO_DE', 'LIDO_EM',
     'ATUALIZADO_EM', 'CRIADO_EM'],
+  // conferência de 31c18d0: o checklist "O que realmente precisamos" é gravado UMA LINHA POR ITEM (sem limite de célula, sem
+  // corte); CHAVE = a consolidação que gravou (refazer o resumo grava uma chave nova; as linhas antigas ficam, nada é apagado);
+  // ITEM_JSON = o item inteiro (frase do edital, fontes, alerta) em JSON, que começa com "{" (célula nunca vira fórmula)
+  LIC_LEITURA_CHECKLIST: ['ID', 'LEITURA_ID', 'OPORTUNIDADE_ID', 'CHAVE', 'ORDEM', 'ITEM_ID', 'TEMA', 'TIPO', 'ARQUIVO_REF', 'PAGINA', 'ITEM_JSON', 'CRIADO_EM'],
   LIC_LEITURA_RESULTADOS: ['ID', 'LEITURA_ID', 'BLOCO_ID', 'OPORTUNIDADE_ID', 'BLOCO_HASH', 'ORIGEM', 'ITENS_JSON', 'ITENS_JSON_2', 'ITENS_JSON_3', 'RESPOSTA_IA', 'CRIADO_EM']
 };
 var LIC_LEIT_COLUNAS_TEXTO = { LIC_LEITURAS: ['BASE_HASH', 'ARQUIVOS_BASE', 'HASH', 'TRABALHANDO_ATE', 'INICIO_EM', 'FIM_EM', 'CONSOLIDACAO_EM'], LIC_LEITURA_BLOCOS: ['BLOCO_HASH', 'ARQUIVO_SHA', 'LIDO_EM'],
-  LIC_LEITURA_RESULTADOS: ['BLOCO_HASH', 'CRIADO_EM'] };
+  LIC_LEITURA_RESULTADOS: ['BLOCO_HASH', 'CRIADO_EM'], LIC_LEITURA_CHECKLIST: ['CHAVE', 'PAGINA', 'CRIADO_EM'] };
 var LIC_LEIT_SITUACOES = { EM_ANDAMENTO: 'Lendo', CONCLUIDA: 'Concluída', LER_A_MAO: 'Concluída com páginas para ler à mão', PARCIAL: 'Concluída com partes não lidas', SUBSTITUIDA: 'Substituída por uma versão nova' };
 /** Blocos: PENDENTE (na fila), LIDO, FALHOU (não lido), REPETIDO (mesmo texto de outro bloco), VAZIO (páginas sem texto útil). */
 // prova real de 02/11/2026 (Aparecida do Rio Doce): blocos de ~16 mil caracteres deram 60 a 70 itens (o limite é 40) e o bloco
@@ -127,13 +131,13 @@ var LIC_LEIT_TEMAS_DICA = {
 // ------------------------------------------------------------ utilitários
 function LicLeit_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_LEITURA_ABAS_OK_V3')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_LEITURA_ABAS_OK_V4')) return; } catch (e) {}
   Object.keys(LIC_LEIT_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_LEIT_COLUNAS[aba]);
     LIC_LEIT_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_LEIT_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('LIC_LEITURA_ABAS_OK_V3', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_LEITURA_ABAS_OK_V4', '1', 21600); } catch (e) {}
 }
 /** Hash com letra na frente (célula da planilha nunca vira número: "12e45..." seria lido como 1,2 × 10^45). */
 function LicLeit_hash_(letra, x) { return letra + Lic_hash_(typeof x === 'string' ? x : JSON.stringify(x)).slice(0, 40); }
@@ -146,15 +150,43 @@ var LIC_LEIT_PARTE = 45000;
 function LicLeit_partes_(coluna, valor, nPartes) {
   var lista = Array.isArray(valor) ? valor.slice() : null, j = JSON.stringify(valor), cortados = 0;
   while (lista && j.length > LIC_LEIT_PARTE * nPartes && lista.length) { lista.pop(); cortados++; j = JSON.stringify(lista); }
-  var out = {};
-  for (var i = 0; i < nPartes; i++) out[i ? coluna + '_' + (i + 1) : coluna] = j.slice(i * LIC_LEIT_PARTE, (i + 1) * LIC_LEIT_PARTE);
+  var out = {}, ini = 0;
+  for (var i = 0; i < nPartes; i++) {
+    var fim = Math.min(j.length, ini + LIC_LEIT_PARTE);
+    // a parte seguinte não pode começar com = + - @ ' (a planilha leria como fórmula ou tiraria o apóstrofo)
+    while (fim < j.length && fim > ini + 1 && /[=+\-@']/.test(j.charAt(fim))) fim--;
+    out[i ? coluna + '_' + (i + 1) : coluna] = j.slice(ini, fim);
+    ini = fim;
+  }
+  if (ini < j.length) { console.error('Licitações, leitura: ' + coluna + ' não coube em ' + nPartes + ' células'); for (var k = 0; k < nPartes; k++) out[k ? coluna + '_' + (k + 1) : coluna] = ''; out[coluna] = JSON.stringify(null); }
   if (cortados) console.error('Licitações, leitura: ' + coluna + ' sem ' + cortados + ' item(ns) do fim (não couberam em ' + nPartes + ' células)');
   return out;
 }
 function LicLeit_lerPartes_(linha, coluna, padrao) {
-  var j = '';
-  for (var i = 0; i < 6; i++) { var v = linha[i ? coluna + '_' + (i + 1) : coluna]; if (v === undefined || v === null || v === '') break; j += String(v); }
-  return Lic_json_(j, padrao);
+  var j = '', vazio = false;
+  for (var i = 0; i < 6; i++) {
+    var v = linha[i ? coluna + '_' + (i + 1) : coluna];
+    if (v === undefined || v === null || v === '') { vazio = true; continue; }
+    if (vazio) return padrao;            // parte depois de um buraco: ilegível
+    j += String(v);
+  }
+  return j ? Lic_json_(j, padrao) : padrao;
+}
+/**
+ * Checklist gravado de uma leitura: as linhas da chave da última consolidação, em ordem. Quantidade diferente da gravada, ordem com
+ * buraco ou item que não é JSON = ilegível ("checklist ilegível — refaça a leitura"), nunca "nenhuma exigência". Leitura antiga (JSON
+ * em células): lida das partes; parte faltando ou JSON quebrado = ilegível.
+ */
+function LicLeit_checklistDe_(le) {
+  var chave = Lic_s_(le.CHECKLIST_CHAVE);
+  if (chave) {
+    var qtd = Number(le.CHECKLIST_QTD) || 0, linhas = Lic_ler_(LIC_LEIT_ABAS.CHECKLIST).filter(function (x) { return Lic_s_(x.CHAVE) === chave; }).sort(function (a, b) { return (Number(a.ORDEM) || 0) - (Number(b.ORDEM) || 0); });
+    var itens = [], ruim = linhas.length !== qtd;
+    linhas.forEach(function (x, i) { if (Number(x.ORDEM) !== i + 1) ruim = true; var e = Lic_json_(x.ITEM_JSON, null); if (!e || typeof e !== 'object') ruim = true; else itens.push(e); });
+    return ruim ? { itens: [], ilegivel: true } : { itens: itens, ilegivel: false };
+  }
+  if (Lic_s_(le.CHECKLIST_JSON)) { var v = LicLeit_lerPartes_(le, 'CHECKLIST_JSON', null); return Array.isArray(v) ? { itens: v, ilegivel: false } : { itens: [], ilegivel: true }; }
+  return { itens: [], ilegivel: false };
 }
 /** Grava a mudança no bloco e na cópia em memória (a fila é lida uma vez por ação). */
 function LicLeit_mudarBloco_(x, mud) { SGO_DATA.update(LIC_LEIT_ABAS.BLOCOS, x.ID, mud); Object.assign(x, mud); }
@@ -1190,7 +1222,9 @@ function LicLeit_itensDe_(blocos, resultados) {
   blocos.forEach(function (x) {
     if (LicLeit_situacao_(x, porOrdem) !== 'LIDO' || !Lic_s_(x.RESULTADO_ID)) return;
     var r = resultados[Lic_s_(x.RESULTADO_ID)];
-    if (r) LicLeit_lerPartes_(r, 'ITENS_JSON', []).forEach(function (it) { out.push(Object.assign({}, it, { bloco: Number(x.ORDEM) || it.bloco })); });
+    var lidos = r ? LicLeit_lerPartes_(r, 'ITENS_JSON', null) : null;
+    if (r && !Array.isArray(lidos)) { console.error('Licitações, leitura: itens ilegíveis no bloco ' + Lic_s_(x.ORDEM)); out.ilegiveis = (out.ilegiveis || 0) + 1; return; }
+    if (r) lidos.forEach(function (it) { out.push(Object.assign({}, it, { bloco: Number(x.ORDEM) || it.bloco })); });
   });
   return out;
 }
@@ -1257,7 +1291,16 @@ function LicLeit_conferirFrase_(onde, x, ctx, problemas, estrategia) {
   if (faltam.length) { problemas.push(onde + ': fonte que não existe (' + faltam.join(', ') + '); use só as da lista'); return null; }
   if (!fontes.some(function (r) { return ctx.fontesCons[r].item; })) { problemas.push(onde + ': sem item citado (toda frase cita pelo menos um item I1, I2...; CAMPO:, PRAZO: e COBERTURA vão junto)'); return null; }
   // as referências escritas no texto ("(I9, I23)", "CAMPO:objeto") não são números do edital (prova real: viraram "o número 9")
-  var semRefs = t.replace(/\b(I\d{1,3}|CAMPO:[A-Za-z]+|PRAZO:[A-Z_]+|COBERTURA)\b/g, ' ');
+  // só sai da conta a referência que EXISTE na lista de itens e não vem colada a %, dígito ou unidade ("garantia de I30%" ou
+  // "entrega em até I45 dias" não são referência: a frase é retirada, "referência mal escrita")
+  var malEscrita = [];
+  var semRefs = t.replace(/\bI(\d{1,3})(?![0-9])/g, function (m, n, pos) {
+    var depois = t.slice(pos + m.length, pos + m.length + 30), id = 'I' + n;
+    var unidade = /^\s*(%|[.,]\d)/.test(depois) || !!(/^\s*([A-Za-zÀ-ÿ]+)/.exec(depois) && LicLeit_unidade_(/^\s*([A-Za-zÀ-ÿ]+)/.exec(depois)[1]));
+    if (!ctx.fontesCons[id] || !ctx.fontesCons[id].item || unidade) { malEscrita.push(m); return m; }
+    return ' ';
+  }).replace(/\b(CAMPO:[A-Za-z]+|PRAZO:[A-Z_]+|COBERTURA)\b/g, ' ');
+  if (malEscrita.length) { problemas.push(onde + ': referência mal escrita no texto (' + malEscrita.join(', ') + '): item que não existe ou colado a número ou unidade; escreva os números como estão no edital e as referências só em "fontes"'); return null; }
   var n = LicLeit_numeros_(semRefs), textos = fontes.map(function (r) { return ctx.fontesCons[r].texto; }), fora = [];
   n.nums.forEach(function (z) {
     var ok = textos.some(function (tf) { return LicLeit_numeros_(tf).nums.some(function (y) { return LicLeit_mesmoNumero_(z, y); }); });
@@ -1367,7 +1410,9 @@ function LicLeit_consolidar_(le, blocos, l, eu, motivo, o) {
   o = o || {};
   var inicio = o.inicio || Date.now(), limiteMs = o.limiteMs || LIC_LEIT_ROTINA_MS;
   var resultados = LicLeit_resultados_(function (r) { return Lic_s_(r.LEITURA_ID) === Lic_s_(le.ID); });
-  var arqs = Lic_json_(le.ARQUIVOS_JSON, []), cob = LicLeit_cobertura_(le, blocos), checklist = LicLeit_checklist_(LicLeit_itensDe_(blocos, resultados));
+  var arqs = Lic_json_(le.ARQUIVOS_JSON, []), cob = LicLeit_cobertura_(le, blocos), todosItens = LicLeit_itensDe_(blocos, resultados), checklist = LicLeit_checklist_(todosItens);
+  // itens gravados que não se leem mais (parte faltando): avisados na cobertura e a leitura fica parcial; nunca somem calados
+  if (todosItens.ilegiveis) { cob.total.ilegiveis = todosItens.ilegiveis; cob.total.texto += ' Itens ilegíveis em ' + todosItens.ilegiveis + ' bloco(s): refaça a leitura com "Ler de novo também os blocos já lidos".'; }
   var prazos = LicLeit_prazos_(l), fontesCons = LicLeit_fontesConsolidacao_(l, checklist, prazos, cob.total.texto);
   var ctx = { fontes: {}, fontesCons: fontesCons, pesos: LIC_NOTA_PADRAO, fabricantes: Lic_fabricantesLista_() };
   var marca = Lic_marcador_(), prompt = LicLeit_promptConsolidar_(l, checklist, fontesCons, prazos, cob.total.texto, marca);
@@ -1387,13 +1432,20 @@ function LicLeit_consolidar_(le, blocos, l, eu, motivo, o) {
   }
   // nenhuma resposta inteira certa: vale a melhor aproveitável (as frases que passaram), com as retiradas listadas
   if (!saida && melhor) saida = melhor.saida;
-  var c = LicLeit_contar_(blocos), agora = Lic_agora_(), situacao = c.falhos || cob.total.incompletos ? 'PARCIAL' : cob.total.semTexto || cob.arquivos.some(function (x) { return x.semTexto; }) ? 'LER_A_MAO' : 'CONCLUIDA';
+  var c = LicLeit_contar_(blocos), agora = Lic_agora_(), situacao = c.falhos || cob.total.incompletos || cob.total.ilegiveis ? 'PARCIAL' : cob.total.semTexto || cob.arquivos.some(function (x) { return x.semTexto; }) ? 'LER_A_MAO' : 'CONCLUIDA';
   var cons = !checklist.length ? 'SEM_ITENS' : saida ? 'OK' : erro ? 'ERRO' : 'RECUSADA';
   var mud = { SITUACAO: situacao, BLOCOS_LIDOS: c.lidos, BLOCOS_FALHOS: c.falhos, COBERTURA_JSON: JSON.stringify(cob).slice(0, 40000),
     RESUMO_JSON: saida ? JSON.stringify(saida.resumo).slice(0, 20000) : '', ESTRATEGIA_JSON: saida ? JSON.stringify(Object.assign({}, saida.estrategia, { retiradas: saida.retiradas })).slice(0, 30000) : '', CONSOLIDACAO_SITUACAO: cons,
     CONSOLIDACAO_PROBLEMAS_JSON: JSON.stringify(erro ? [{ tentativa: 0, problemas: ['A IA não respondeu: ' + erro] }] : recusas).slice(0, 20000), CONSOLIDACAO_RESPOSTA: Lic_s_(resp).slice(0, 24000),
     CONSOLIDACAO_EM: agora, FIM_EM: agora, TRABALHANDO_ATE: '', ATUALIZADO_EM: agora };
-  Object.assign(mud, LicLeit_partes_('CHECKLIST_JSON', checklist, 4));
+  // checklist: uma linha por item, com a chave desta consolidação e a quantidade (para conferir na leitura)
+  var chaveCk = LicLeit_hash_('K', [le.ID, agora, checklist.length]);
+  var linhasCk = checklist.map(function (e, i) {
+    var f0 = (e.fontes || [])[0] || {};
+    return { LEITURA_ID: Lic_s_(le.ID), OPORTUNIDADE_ID: Lic_s_(l.ID), CHAVE: chaveCk, ORDEM: i + 1, ITEM_ID: e.id, TEMA: e.tema, TIPO: e.tipo, ARQUIVO_REF: Lic_s_(f0.ref), PAGINA: Lic_s_(f0.pagina), ITEM_JSON: JSON.stringify(e), CRIADO_EM: agora };
+  });
+  if (linhasCk.length) { if (typeof SGO_DATA.insertMany === 'function') SGO_DATA.insertMany(LIC_LEIT_ABAS.CHECKLIST, linhasCk); else linhasCk.forEach(function (x) { SGO_DATA.insert(LIC_LEIT_ABAS.CHECKLIST, x); }); }
+  Object.assign(mud, { CHECKLIST_CHAVE: chaveCk, CHECKLIST_QTD: checklist.length, CHECKLIST_JSON: '', CHECKLIST_JSON_2: '', CHECKLIST_JSON_3: '', CHECKLIST_JSON_4: '' });
   var atual = SGO_DATA.getById(LIC_LEIT_ABAS.LEITURAS, le.ID);
   if (atual && Lic_up_(atual.SITUACAO) === 'SUBSTITUIDA') { delete mud.SITUACAO; situacao = 'SUBSTITUIDA'; }
   mud.HASH = Lic_hash_(JSON.stringify([le.ID, le.VERSAO, le.BASE_HASH, situacao, JSON.stringify(checklist), mud.RESUMO_JSON, mud.ESTRATEGIA_JSON, agora]));
@@ -1496,6 +1548,7 @@ function LicLeit_podeLer_(l) {
 }
 function LicLeit_leituraTela_(le, blocos, baseAtual) {
   if (!le) return null;
+  var ck = LicLeit_checklistDe_(le);
   var c = LicLeit_contar_(blocos), ate = Date.parse(Lic_s_(le.TRABALHANDO_ATE)), prox = blocos.filter(function (x) { return Lic_up_(x.SITUACAO) === 'PENDENTE'; })[0];
   var cob = Lic_json_(le.COBERTURA_JSON, null) || (LicLeit_ativa_(le) ? LicLeit_cobertura_(le, blocos) : null);
   var falhos = blocos.filter(function (x) { return Lic_up_(x.SITUACAO) === 'FALHOU'; }).map(function (x) { return { ordem: Number(x.ORDEM), ref: Lic_s_(x.REF), arquivo: Lic_s_(x.ARQUIVO_NOME), rotulo: Lic_s_(x.PAGINAS_ROTULO), erro: Lic_s_(x.ERRO), problemas: Lic_json_(x.PROBLEMAS_JSON, []), tentativas: Number(x.TENTATIVAS) || 0 }; });
@@ -1507,7 +1560,7 @@ function LicLeit_leituraTela_(le, blocos, baseAtual) {
     trabalhando: ativa && isFinite(ate) && ate > Date.now(),
     progresso: { total: c.total, lidos: c.lidos, falhos: c.falhos, pendentes: c.pendentes, repetidos: c.repetidos, vazios: c.vazios, proximo: prox ? Number(prox.ORDEM) : 0,
       texto: ativa ? (c.pendentes ? 'Lendo bloco ' + (prox ? Number(prox.ORDEM) : c.lidos + 1) + ' de ' + c.total + ' (' + c.lidos + ' lido(s)' + (c.falhos ? ', ' + c.falhos + ' não lido(s)' : '') + ')' : 'Blocos lidos: montando o resumo e a estratégia') : c.lidos + ' de ' + c.total + ' bloco(s) lido(s)' + (c.falhos ? ', ' + c.falhos + ' não lido(s)' : '') },
-    cobertura: cob, falhos: falhos, checklist: LicLeit_lerPartes_(le, 'CHECKLIST_JSON', []), resumo: Lic_json_(le.RESUMO_JSON, []), estrategia: Lic_json_(le.ESTRATEGIA_JSON, null),
+    cobertura: cob, falhos: falhos, checklist: ck.itens, checklistIlegivel: ck.ilegivel, resumo: Lic_json_(le.RESUMO_JSON, []), estrategia: Lic_json_(le.ESTRATEGIA_JSON, null),
     consolidacao: { situacao: Lic_s_(le.CONSOLIDACAO_SITUACAO), problemas: Lic_json_(le.CONSOLIDACAO_PROBLEMAS_JSON, []), em: Lic_s_(le.CONSOLIDACAO_EM) }
   };
 }
@@ -1524,7 +1577,7 @@ function LicLeit_tela_(l) {
     arquivos: tx.arquivos.map(function (a) { var ind = a.texto ? (a._ind = a._ind || LicLeit_indice_(a.texto)) : null; return { ref: a.ref, nome: a.titulo || a.nome, arquivo: a.nome, paginas: ind ? ind.paginas.length : a.paginasFonte, caracteres: a.texto.length, situacao: a.situacao, motivo: a.motivo, completo: a.completo }; }),
     palavras: { geral: LicLeit_palavrasDe_(LIC_LEIT_CHAVE_GERAL), op: LicLeit_palavrasDe_(LicLeit_chaveOp_(l.ID)), busca: LicLeit_buscar_(tx.arquivos, palavras) },
     leitura: LicLeit_leituraTela_(atual, blocos, baseAtual), baseAtual: baseAtual,
-    versoes: lista.slice(0, 20).map(function (x) { return { versao: Number(x.VERSAO) || 0, situacao: Lic_up_(x.SITUACAO), situacaoNome: LIC_LEIT_SITUACOES[Lic_up_(x.SITUACAO)] || Lic_s_(x.SITUACAO), em: Lic_s_(x.CRIADO_EM), por: Lic_s_(x.PEDIDO_POR_NOME), origem: Lic_s_(x.ORIGEM_PEDIDO), motivo: Lic_s_(x.MOTIVO), itens: LicLeit_lerPartes_(x, 'CHECKLIST_JSON', []).length, hash: Lic_s_(x.HASH) }; }),
+    versoes: lista.slice(0, 20).map(function (x) { return { versao: Number(x.VERSAO) || 0, situacao: Lic_up_(x.SITUACAO), situacaoNome: LIC_LEIT_SITUACOES[Lic_up_(x.SITUACAO)] || Lic_s_(x.SITUACAO), em: Lic_s_(x.CRIADO_EM), por: Lic_s_(x.PEDIDO_POR_NOME), origem: Lic_s_(x.ORIGEM_PEDIDO), motivo: Lic_s_(x.MOTIVO), itens: Number(x.CHECKLIST_QTD) || (LicLeit_lerPartes_(x, 'CHECKLIST_JSON', []) || []).length, hash: Lic_s_(x.HASH) }; }),
     prazos: LicLeit_prazos_(l), cfg: LicLeit_cfg_(), regras: LIC_LEIT_REGRAS
   };
 }
