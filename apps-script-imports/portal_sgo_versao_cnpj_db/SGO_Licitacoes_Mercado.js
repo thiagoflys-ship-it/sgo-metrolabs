@@ -100,9 +100,10 @@ function LicM_nomeChave_(t) { return LicM_norm_(LicM_semCpf_(t)).replace(/\b(ltd
 /**
  * Revisão de 642380b (privacidade): sequência de CPF (11 dígitos, com ou sem pontuação) sai do nome do fornecedor, ao gravar E ao mostrar
  * (vale para o que já estava gravado). Empresário individual costuma vir com o CPF no nome; CNPJ (14 dígitos) e outros números ficam.
+ * Revisão de 743cb45: CPF colado por traço ("FULANO-12345678909") também sai; número de processo ("23000-12345678909/2026") fica.
  */
 function LicM_semCpf_(t) {
-  return Lic_s_(t).replace(/(?<![\d.\/-])\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s]?\d{2}(?![\d\/-])/g, ' ').replace(/\s*[-–]\s*$/, '').replace(/^\s*[-–]\s*/, '').replace(/\s{2,}/g, ' ').trim();
+  return Lic_s_(t).replace(/(?:(?<=[A-Za-zÀ-ÖØ-öø-ÿ])[-–])?(?<![\d.\/])(?<!\d-)\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s]?\d{2}(?![\d\/]|-\d)/g, ' ').replace(/\s*[-–]\s*$/, '').replace(/^\s*[-–]\s*/, '').replace(/\s{2,}/g, ' ').trim();
 }
 function LicM_txt_(v, max) { return Lic_texto_(Lic_s_(v).replace(/\r\n/g, '\n').replace(/^(?:[=+@\s]|-(?!\d))+/, ''), max || 1000); }
 function LicM_n_(v) {
@@ -366,22 +367,28 @@ function LicM_observacoes_(o) {
     x.desconto = x.estimado > 0 && x.valor > 0 && x.papel === 'VENCEDOR' ? Math.round((1 - x.valor / x.estimado) * 1000) / 10 : null;
     out.push(x);
   };
-  // 1 e 3. espelho do PNCP e registros manuais. Revisão de 642380b: (a) registro de preços: do PNCP, vence o item só a ordem de
-  // classificação 1, ou o único resultado não cancelado do item; os demais entram como participação ("cadastro de reserva"); (b) o
+  // 1 e 3. espelho do PNCP e registros manuais. Revisão de 642380b: (a) registro de preços: do PNCP, vence o item a MENOR ordem de
+  // classificação entre os não cancelados (revisão de 2904eb7; sem ordem em nenhum, todos vencem); os demais entram como participação ("cadastro de reserva"); (b) o
   // registro manual do mesmo item que o PNCP já trouxe não entra duas vezes (vale o PNCP, como nas disputas)
-  var validas = [], porItem = {}, doPncp = {};
+  var validas = [], menorOrdem = {}, doPncp = {};
   Lic_ler_(LICM_ABAS.RESULTADOS).forEach(function (r) {
     if (LicM_hashResultado_(r) !== Lic_s_(r.HASH)) { fora.alterados++; return; }
     if (Lic_s_(r.ANULADO_EM) || /cancelad/i.test(Lic_s_(r.SITUACAO))) { fora.cancelados++; return; }
     validas.push(r);
-    if (Lic_up_(r.ORIGEM) !== 'MANUAL') { var k = Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM); porItem[k] = (porItem[k] || 0) + 1; doPncp[k] = true; }
+    if (Lic_up_(r.ORIGEM) !== 'MANUAL') {
+      var k = Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM), ord = LicM_n_(r.ORDEM_CLASSIFICACAO);
+      doPncp[k] = true;
+      // revisão de 2904eb7: vence a MENOR ordem entre os não cancelados (1º cancelado e 2º convocado: vence o 2º)
+      if (ord !== null && ord > 0 && (menorOrdem[k] === undefined || ord < menorOrdem[k])) menorOrdem[k] = ord;
+    }
   });
   validas.sort(function (a, b) { return (Lic_up_(a.ORIGEM) === 'MANUAL' ? 1 : 0) - (Lic_up_(b.ORIGEM) === 'MANUAL' ? 1 : 0); });
   validas.forEach(function (r) {
     var cnpj = LicM_cnpj_(r.FORNECEDOR_CNPJ), pf = Lic_up_(r.FORNECEDOR_TIPO) === 'PF', k = Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM), manual = Lic_up_(r.ORIGEM) === 'MANUAL';
     var papel = Lic_up_(r.PAPEL) || 'VENCEDOR', reserva = false;
     if (manual && papel === 'VENCEDOR' && Lic_s_(r.CHAVE_FONTE) && doPncp[k]) { fora.duplicados++; return; }
-    if (!manual && porItem[k] > 1 && Number(r.ORDEM_CLASSIFICACAO) !== 1) { papel = 'PARTICIPANTE'; reserva = true; }
+    // sem ordem em nenhum resultado do item: todos contam como vencedores (como antes do registro de preços)
+    if (!manual && menorOrdem[k] !== undefined && LicM_n_(r.ORDEM_CLASSIFICACAO) !== menorOrdem[k]) { papel = 'PARTICIPANTE'; reserva = true; }
     vistos[k] = true;
     add({ origem: Lic_up_(r.ORIGEM) || 'COLETOR', papel: papel, reserva: reserva, ordem: LicM_n_(r.ORDEM_CLASSIFICACAO), contratacao: Lic_s_(r.CHAVE_FONTE) || ('MANUAL:' + Lic_s_(r.ID)), oportunidadeId: Lic_s_(r.OPORTUNIDADE_ID),
       orgaoCnpj: Lic_s_(r.ORGAO_CNPJ).replace(/\D/g, ''), orgaoNome: Lic_s_(r.ORGAO_NOME), uf: Lic_up_(r.UF), objeto: Lic_s_(r.OBJETO), item: Lic_s_(r.ITEM), descricao: Lic_s_(r.ITEM_DESCRICAO), unidade: Lic_s_(r.ITEM_UNIDADE),

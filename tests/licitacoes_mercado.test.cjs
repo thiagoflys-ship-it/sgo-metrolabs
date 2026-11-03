@@ -338,12 +338,31 @@ test('revisão: registro de preços — vence só a ordem 1 (ou o único resulta
   assert.ok(det.registros.some((r) => /^Cadastro de reserva \(registro de preços, ordem 2\)/.test(r.papelNome)));
 });
 
+test('revisão de 2904eb7: vence a MENOR ordem entre os não cancelados (1º cancelado, 2º convocado: vence o 2º); sem ordem em nenhum, todos vencem', () => {
+  const a = amb();
+  a.srv.res = [RES(1, { seq: 1, ordem: 1, situacao: 'Cancelado', valor: 100 }), RES(2, { seq: 2, ordem: 2, cnpj: C2, nome: 'TERMO RIVAL TESTE', valor: 130 }), RES(3, { seq: 3, ordem: 3, cnpj: C3, nome: 'OUTRA CALIBRA TESTE SA', valor: 140 }),
+    // item 2 sem ordem nenhuma (dois resultados): os dois contam como vencedores, como antes
+    RES(4, { item: 2, seq: 1, valor: 150 }), RES(5, { item: 2, seq: 2, cnpj: C3, nome: 'OUTRA CALIBRA TESTE SA', valor: 155 })];
+  a.sinc();
+  const conc = a.ok(a.m('s_cha', 'concorrentes')).lista, por = (c) => conc.find((x) => x.cnpj === c);
+  assert.equal(por(C2).itensGanhos, 1, 'o 2º convocado vence o item 1');
+  assert.equal(por(C3).itensGanhos, 1, 'o 3º fica de reserva no item 1 e vence no item 2 (sem ordem)');
+  assert.equal(por(C1).itensGanhos, 1, 'item 2 sem ordem: vence');
+  const g = a.ok(a.m('s_cha', 'referencia')).lista.find((x) => x.nome === 'Calibração de termômetro (por unidade)');
+  assert.deepEqual([g.estat.n, g.estat.min, g.estat.max], [3, 130, 155], '130 (ordem 2), 150 e 155; fora: 100 cancelado e 140 reserva');
+  assert.ok(a.ok(a.m('s_cha', 'concorrente', { chave: 'CNPJ:' + C3 })).registros.some((r) => /ordem 3/.test(r.papelNome)));
+});
+
 test('revisão: CPF sai do nome do fornecedor ao gravar e ao mostrar (também o que já estava gravado); CNPJ e outros números ficam', () => {
   const a = amb();
   assert.equal(a.ctx.LicM_semCpf_('FULANO DE TAL 123.456.789-09'), 'FULANO DE TAL');
   assert.equal(a.ctx.LicM_semCpf_('12345678909 - FULANO ME'), 'FULANO ME');
   assert.equal(a.ctx.LicM_semCpf_('CALIBRA LTDA 11.222.333/0001-81'), 'CALIBRA LTDA 11.222.333/0001-81');
   assert.equal(a.ctx.LicM_semCpf_('CALIBRA 11222333000181'), 'CALIBRA 11222333000181');
+  // revisão de 2904eb7: colado por traço também sai; processo ".../2026" fica
+  assert.equal(a.ctx.LicM_semCpf_('FULANO-12345678909'), 'FULANO');
+  assert.equal(a.ctx.LicM_semCpf_('FULANO-123.456.789-09 ME'), 'FULANO ME');
+  assert.equal(a.ctx.LicM_semCpf_('PROCESSO 23000-12345678909/2026'), 'PROCESSO 23000-12345678909/2026');
   a.srv.res = [RES(1, { nome: 'FULANO DE TAL 123.456.789-09' })];
   a.sinc();
   assert.equal(a.tabelas.LIC_MERCADO_RESULTADOS[0].FORNECEDOR_NOME, 'FULANO DE TAL');

@@ -24,7 +24,7 @@ function SGO_ajudaTelas_LicitacoesMercado_() {
         { titulo: "Ler os números com cuidado", itens: [
           "\"Amostra pequena\" (menos de 5 preços): use como indício, não como referência de preço.",
           "\"Sem dados\": nenhum preço no período. O sistema nunca inventa um número.",
-          "Registro de preços: vence o item só o resultado de ordem 1 (ou o único não cancelado); os demais aparecem como \"cadastro de reserva\", contam como participação e ficam fora do preço.",
+          "Registro de preços: vence o item a menor ordem de classificação entre os resultados não cancelados (sem ordem em nenhum, todos vencem); os demais aparecem como \"cadastro de reserva\", contam como participação e ficam fora do preço.",
           "Registro manual do mesmo item que o PNCP já trouxe não conta duas vezes: vale o PNCP.",
           "O grupo é reconhecido pelo texto do item (calibração, manutenção, qualificação, NR-13, segurança elétrica e o equipamento). Item com texto genérico cai em \"Outro serviço\"."
         ] },
