@@ -501,7 +501,7 @@ test('revisão MÉDIO 6: "vence antes da sessão" juntado por documento, das 8h 
 test('revisão MÉDIO 7: avisos de documento não gastam o teto diário dos alertas de prazo (e têm o teto próprio)', () => {
   const a = amb();
   assert.equal(a.api('s_cha', 'alertasCfgSalvar', { campos: { tetoDia: 1 }, motivo: 'teste do teto diário' }).ok, true);
-  const hojeIso = '2026-11-02T12:00:00.000Z';
+  const hojeIso = new Date().toISOString(); // 03/11/2026: data de hoje (fixa em 02/11 o teste quebrava depois da meia-noite)
   const enviado = (i, tipo) => ({ ID: 'env' + i, AVISO_ID: 'LA00000e' + String(i).padStart(4, '0'), CHAVE: 'X|' + i, GRUPO: 'X|' + i, TIPO: tipo, USUARIO_ID: 'u_cha', USUARIO_NOME: 'CHARLES', SITUACAO: 'ENVIADO', EMAIL_EM: hojeIso, CRIADO_EM: hojeIso, CIENTE_EM: hojeIso });
   a.tabelas.LIC_ALERTAS.push(enviado(1, 'DOCUMENTO'));
   a.tabelas.LIC_OPORTUNIDADES.push(OP('op_mud', { SITUACAO: 'ANALISE' }));
