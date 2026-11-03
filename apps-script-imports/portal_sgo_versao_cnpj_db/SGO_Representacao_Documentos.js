@@ -908,8 +908,8 @@ function RepDI_documentos_(eu, d) {
   d = d || {};
   var podeVer = {}, repDoChamado = {};
   Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) { if (AstC_podeVer_(eu, c)) podeVer[RepD_s_(c.ID)] = true; repDoChamado[RepD_s_(c.ID)] = RepD_s_(c.REPRESENTADA_ID); });
-  // 03/11/2026: a representada do documento vem do próprio registro ou do chamado (as versões interna e do cliente de um
-  // chamado de representada ficam sem REPRESENTADA_ID). No módulo Representação (soRepresentadas) só entram os documentos
+  // 03/11/2026: a representada do documento vem do próprio registro ou , se vazia (registros antigos),
+  // do chamado. No módulo Representação (soRepresentadas) só entram os documentos
   // de chamados de representada e os relatórios do período do próprio módulo; antes apareciam os de qualquer cliente.
   return RepD_listar_(function (r) {
     var cid = RepD_s_(r.CHAMADO_ID), rep = RepD_s_(r.REPRESENTADA_ID) || (cid ? repDoChamado[cid] || '' : '');
