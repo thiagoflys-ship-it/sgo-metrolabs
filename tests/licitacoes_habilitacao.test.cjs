@@ -686,3 +686,28 @@ test('ajuste final 1: a análise grava a documentação do cruzamento e a base c
   a.ok(a.hab('s_cha', 'conferir', { id: 'op_hab1', chave: alvo.chave, decisao: 'NAO_ATENDE', motivo: 'Documento não serve para este edital' }));
   assert.equal(fichaDe().desatualizada, true);
 });
+
+test('revisão de 5437ff1 (MÉDIO): documentação pela habilitação limitada a metade sem o checklist da leitura ou com falta, vencimento ou "não atende"', () => {
+  const a = cenario();
+  const l = a.tabelas.LIC_OPORTUNIDADES.find((x) => x.ID === 'op_hab1');
+  const cruz = (itens) => { const cont = { total: itens.length, ATENDE: 0, VENCE_ANTES: 0, FALTA: 0, A_CONFERIR: 0, NAO_ATENDE: 0 }; itens.forEach((x) => cont[x.efetivo]++); return { itens, contagens: cont, info: {} }; };
+  const orig = a.ctx.LicH_cruzar_;
+  const it = (n, efetivo, origem) => Array.from({ length: n }, (_, k) => ({ chave: efetivo + origem + k, efetivo, origem }));
+  // tudo atende, com o checklist da leitura: 15
+  a.ctx.LicH_cruzar_ = () => cruz(it(4, 'ATENDE', 'LEITURA'));
+  assert.equal(a.ctx.Lic_docHabilitacao_(l, null).criterio.pontos, 15);
+  // tudo atende, mas só da análise da IA (sem checklist consolidado): teto de 7,5
+  a.ctx.LicH_cruzar_ = () => cruz(it(4, 'ATENDE', 'ANALISE'));
+  let d = a.ctx.Lic_docHabilitacao_(l, null).criterio;
+  assert.equal(d.pontos, 7.5); assert.match(d.como, /só da análise da IA, sem o checklist consolidado/);
+  // 9 atendem e 1 falta (13,5 pela conta): falta inabilita, no máximo metade
+  for (const ruim of ['FALTA', 'VENCE_ANTES', 'NAO_ATENDE']) {
+    a.ctx.LicH_cruzar_ = () => cruz(it(9, 'ATENDE', 'LEITURA').concat(it(1, ruim, 'LEITURA')));
+    d = a.ctx.Lic_docHabilitacao_(l, null).criterio;
+    assert.equal(d.pontos, 7.5, ruim); assert.match(d.como, /falta na habilitação inabilita/);
+  }
+  // abaixo da metade, a conta vale como está
+  a.ctx.LicH_cruzar_ = () => cruz(it(1, 'ATENDE', 'LEITURA').concat(it(3, 'FALTA', 'LEITURA')));
+  assert.equal(a.ctx.Lic_docHabilitacao_(l, null).criterio.pontos, 3.8);
+  a.ctx.LicH_cruzar_ = orig;
+});

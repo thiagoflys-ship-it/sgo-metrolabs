@@ -1024,3 +1024,31 @@ test('ajuste final 5: formulário de marcar — a negação de uma opção NÃO 
   assert.equal(ok('Dispensa da visita técnica', 'Visita técnica: ( ) Obrigatória ( ) Não exigida ( ) Dispensa da visita técnica, com declaração.').ok, false, 'opção não marcada: a regra de sempre');
   assert.equal(ok('admitida a participação de empresas em consórcio', '4.3. Não será admitida a participação de empresas em consórcio conforme justificativa').ok, false, 'sem formulário: igual');
 });
+
+test('revisão de 5437ff1 (GRAVE): no formulário de marcar, a negação do RÓTULO da própria opção marcada continua valendo; só as vizinhas deixam de valer', () => {
+  const c = ambiente().ctx;
+  const T = 'acreditação RBC do laboratório responsável';
+  const casos = [
+    ['Não serão exigidos ( ) atestado de acreditação RBC do laboratório responsável.', T, false],
+    ['Não serão exigidos (X) atestado de acreditação RBC do laboratório responsável.', T, false],
+    ['( ) Sim (X) Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['(X) Não se aplica: acreditação RBC do laboratório responsável.', T, false],
+    ['Item 4: ( ) Exigida (X) Dispensada a acreditação RBC do laboratório responsável.', 'a ' + T, false],
+    ['Qualificação: ( ) Com exigência de (X) Sem exigência de acreditação RBC do laboratório responsável.', T, false],
+    ['Não serão exigidos: (IX) alvará; (X) acreditação RBC do laboratório responsável.', T, false],
+    ['Requisitos: ( ) Não exige nada (X) Exige acreditação RBC do laboratório responsável.', 'Exige ' + T, true],
+    ['Exige acreditação RBC do laboratório responsável? (X) Não ( ) Sim', 'Exige ' + T, false],
+    ['Exige acreditação RBC do laboratório responsável? ( x ) Não ( ) Sim', 'Exige ' + T, false],
+    ['(X) Exige acreditação RBC do laboratório responsável [ ] Não', 'Exige ' + T, true],
+    ['Exige acreditação RBC do laboratório responsável ( ) Não', 'Exige ' + T, false],
+    ['Não exigido? ( ) Sim ( x ) Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['( ) Sim (  X  ) Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['[ ] Sim [x] Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['☐ Sim ☒ Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['Exige acreditação RBC do laboratório responsável? ☒ Não ☐ Sim', 'Exige ' + T, false],
+    ['(\u00a0) Sim (\u00a0X\u00a0) Não — exige acreditação RBC do laboratório responsável.', 'exige ' + T, false],
+    ['Exige acreditação RBC do laboratório responsável? (✓) Não', 'Exige ' + T, false],
+    ['Não será exigida acreditação RBC do laboratório responsável.', '(X) acreditação RBC do laboratório responsável', false]
+  ];
+  for (const [src, tr, aceita] of casos) assert.equal(c.Lic_trechoNaFonte_(tr, { texto: src }).ok, aceita, src);
+});

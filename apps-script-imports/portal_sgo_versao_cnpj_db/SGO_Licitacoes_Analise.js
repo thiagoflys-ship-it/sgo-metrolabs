@@ -498,9 +498,10 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
   var estado = '', cx = Lic_caixasAntes_(texto, ft.ini[a]);
   for (var k = a - 1, passos = 0; k >= 0 && passos < LIC_NEGACAO_LISTA_MAX; k--, passos++) {
     var entre = texto.slice(ft.fim[k], ft.ini[k + 1]);
-    // formulário de marcar (03/11/2026): o trecho é de uma opção MARCADA; as opções vizinhas (de "( )" em diante) são outras
-    // orações e a negação delas não vale para este trecho. O texto antes da primeira caixa (o enunciado) continua valendo.
-    if (cx && ft.fim[k] > cx.ini) {
+    // formulário de marcar (03/11/2026): o trecho é de uma opção MARCADA; só as opções VIZINHAS (da primeira caixa do grupo até
+    // o começo da caixa marcada) são outras orações e a negação delas não vale. O rótulo da própria opção marcada (da caixa até o
+    // trecho: "(X) Não — exige...", "(X) Dispensada a...") e o enunciado antes da primeira caixa continuam valendo.
+    if (cx && cx.marcadaIni > cx.ini && ft.fim[k] <= cx.marcadaIni && ft.fim[k] > cx.ini) {
       while (k >= 0 && ft.fim[k] > cx.ini) k--;
       if (k < 0) break;
       entre = texto.slice(ft.fim[k], cx.ini);
@@ -528,9 +529,10 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
 }
 /**
  * Formulário de marcar ("( ) Sim ( ) Não (X) Dispensa", "[ ]", "[X]"), revisão independente de 03/11/2026: cada opção é uma
- * oração. Se a caixa mais perto ANTES do trecho (na mesma frase) está MARCADA (X, x, ✓), devolve { ini, fim, marcada }: ini = o
- * começo da primeira caixa do grupo (caixas seguidas sem fim de frase entre elas, até 300 caracteres de uma para outra), fim = o
- * fim da caixa do trecho. Caixa vazia antes do trecho (o trecho é de opção NÃO marcada) ou sem caixa: null, e a regra de sempre vale.
+ * oração. Se a caixa mais perto ANTES do trecho (na mesma frase) está MARCADA (X, x, ✓), devolve { ini, marcadaIni, fim, marcada }:
+ * ini = o começo da primeira caixa do grupo (caixas seguidas sem fim de frase entre elas, até 300 caracteres de uma para outra),
+ * marcadaIni e fim = o começo e o fim da caixa marcada (a do trecho). Só o que fica entre ini e marcadaIni (as opções vizinhas)
+ * deixa de valer para a negação; o rótulo da opção marcada, até o trecho, continua valendo. Caixa vazia antes do trecho (o trecho é de opção NÃO marcada) ou sem caixa: null, e a regra de sempre vale.
  */
 var LIC_RX_CAIXA = /(^|[^\p{L}\p{N}])([(\[][ \t]*[xX✓✔]?[ \t]*[)\]])/gu;
 var LIC_RX_CAIXA_VAZIA = /(^|[^\p{L}\p{N}])[(\[][ \t]*[)\]]/u;
@@ -544,7 +546,7 @@ function Lic_caixasAntes_(texto, pos) {
   if (!ult[2] || fimFrase.test(texto.slice(ult[1], pos))) return null;
   var ini = ult[0];
   for (var j = cx.length - 2; j >= 0; j--) { var gap = texto.slice(cx[j][1], ini); if (fimFrase.test(gap) || gap.length > 300) break; ini = cx[j][0]; }
-  return { ini: ini, fim: ult[1], marcada: true };
+  return { ini: ini, marcadaIni: ult[0], fim: ult[1], marcada: true };
 }
 /** A palavra k é numeração que abre a linha ("8.8", "12", "a" de "a)")? */
 function Lic_numeracaoDaLinha_(ft, texto, k) {
@@ -1107,13 +1109,19 @@ function Lic_docHabilitacao_(l, exigencias, pesos) {
   pesos = pesos || LIC_NOTA_PADRAO;
   var c = cr.contagens, n = c.total, conta = c.ATENDE + 0.5 * c.A_CONFERIR;
   var partes = [c.ATENDE + ' atende', c.A_CONFERIR + ' a conferir', c.FALTA + ' falta', c.VENCE_ANTES + ' vence antes da sessão'].concat(c.NAO_ATENDE ? [c.NAO_ATENDE + ' não atende (Diretoria)'] : []);
-  var como = n + ' exigência(s) de habilitação cruzadas com o cadastro de documentos (aba Habilitação): ' + partes.join(', ') + '. Atende conta inteiro, a conferir conta metade (pendência), falta, vence antes da sessão e não atende contam zero. Calculado pelo sistema, não pela IA.';
+  var pend = c.FALTA + c.VENCE_ANTES + c.NAO_ATENDE, pontos = Lic_r1_(pesos.documentacao * conta / n), teto = '';
+  // revisão de 5437ff1: sem o checklist consolidado da leitura (exigências só da IA), o teto de antes (metade) continua; com
+  // qualquer falta, vencimento antes da sessão ou "não atende", também no máximo metade (falta na habilitação inabilita)
+  var metade = Lic_r1_(pesos.documentacaoSemCadastro !== undefined ? pesos.documentacaoSemCadastro : pesos.documentacao / 2);
+  var temLeitura = cr.itens.some(function (x) { return x.origem === 'LEITURA'; });
+  if (!temLeitura && pontos > metade) { pontos = metade; teto = ' Limitado a ' + Lic_fmtNum_(metade) + ' (metade): as exigências vieram só da análise da IA, sem o checklist consolidado da leitura do edital.'; }
+  if (pend && pontos > metade) { pontos = metade; teto = ' Limitado a ' + Lic_fmtNum_(metade) + ' (metade): há exigência com documento faltando, vencendo antes da sessão ou marcada "não atende" (falta na habilitação inabilita).'; }
+  var como = n + ' exigência(s) de habilitação cruzadas com o cadastro de documentos (aba Habilitação): ' + partes.join(', ') + '. Atende conta inteiro, a conferir conta metade (pendência), falta, vence antes da sessão e não atende contam zero. Calculado pelo sistema, não pela IA.' + teto;
   var afs = [];
-  var pend = c.FALTA + c.VENCE_ANTES + c.NAO_ATENDE;
   if (pend) afs.push({ tipo: 'PENDENCIA', criterio: 'documentacao', origem: 'SISTEMA', texto: 'Habilitação: ' + pend + ' exigência(s) com documento faltando, vencendo antes da sessão ou marcada "não atende". Veja a aba Habilitação e providencie antes da sessão.' });
   if (c.A_CONFERIR) afs.push({ tipo: 'PENDENCIA', criterio: 'documentacao', origem: 'SISTEMA', texto: 'Habilitação: ' + c.A_CONFERIR + ' exigência(s) a conferir pela Diretoria (contam metade até a conferência). Marque "atende" ou "não atende" na aba Habilitação.' });
   var assinatura = Lic_hash_(JSON.stringify(cr.itens.map(function (x) { return [x.chave, x.efetivo]; }).sort())).slice(0, 24);
-  return { criterio: { pontos: Lic_r1_(pesos.documentacao * conta / n), peso: pesos.documentacao, origem: 'HABILITACAO', como: como, habAssinatura: assinatura, contagens: { total: n, atende: c.ATENDE, aConferir: c.A_CONFERIR, falta: c.FALTA, venceAntes: c.VENCE_ANTES, naoAtende: c.NAO_ATENDE } }, afirmacoes: afs, assinatura: assinatura };
+  return { criterio: { pontos: pontos, peso: pesos.documentacao, origem: 'HABILITACAO', como: como, habAssinatura: assinatura, contagens: { total: n, atende: c.ATENDE, aConferir: c.A_CONFERIR, falta: c.FALTA, venceAntes: c.VENCE_ANTES, naoAtende: c.NAO_ATENDE } }, afirmacoes: afs, assinatura: assinatura };
 }
 /**
  * Parte da habilitação na base da análise: só quando a última análise concluída já foi pontuada pelo cruzamento (tem a
