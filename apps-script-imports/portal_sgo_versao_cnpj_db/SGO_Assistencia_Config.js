@@ -65,7 +65,9 @@ var AST_COLUNAS = {
     'ENVIADO_CLIENTE_POR_NOME', 'ENVIADO_CLIENTE_CANAL', 'ENVIADO_CLIENTE_PARA', 'RELATORIO_REVISAO', 'RESERVA_ID',
     'RESERVA_CODIGO', 'ATIVIDADE_ID', 'SERIE_TRATADA_EM', 'SERIE_TRATADA_POR_NOME', 'SERIE_TRATADA_TEXTO', 'ENCERRADA_EM', 'ENCERRADA_POR_NOME', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'ULTIMA_SINC_EM', 'ABERTA_EM_CAMPO',
     // 27/10/2026: O.S. de chamado excluído (teste ou simulação) sai junto, pela mesma exclusão (EXCLUSAO_ID); nada é apagado
-    'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 03/11/2026 (logística): termo de entrega ou retirada (itens, de quem/para quem, motivo e destino) e a assinatura do colaborador da Metrolabs
+    'LOGISTICA_JSON', 'COLAB_ASSINATURA_ARQUIVO_ID', 'COLAB_ASSINATURA_NOME', 'COLAB_ASSINATURA_DOCUMENTO', 'COLAB_ASSINATURA_EM'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
   ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM'],
   ATEC_PECAS: ['ID', 'OS_ID', 'ID_LOCAL', 'DESCRICAO', 'CODIGO', 'QUANTIDADE', 'UNIDADE', 'SITUACAO', 'URGENCIA', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'ATIVA', 'REMOVIDA_EM',
@@ -94,7 +96,7 @@ var AST_COLUNAS_TEXTO = {
     'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ASSUMIDO_EM', 'FILA_LIVRE_EM',
     'EXCLUIDO_EM', 'RESTAURADO_EM'],
   ATEC_OS: ['NUMERO', 'AGENDADO_PARA', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'INICIO_EM', 'CONCLUIU_EM', 'CONCLUIU_EM_APARELHO', 'ASSINATURA_EM', 'RELATORIO_EM',
-    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM'],
+    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM'],
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM', 'EXCLUIDO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
@@ -172,6 +174,30 @@ var AST_TRIAGEM_ITENS = [
 ];
 var AST_PREPARO = [['ferramentas', 'ferramentas separadas'], ['instrumentos', 'instrumentos calibrados e válidos'], ['acesso', 'acesso ao cliente combinado'], ['documentacao', 'documentação em mãos']];
 var AST_MOTIVOS_SEM_ASSINATURA = { RESPONSAVEL_AUSENTE: 'Responsável ausente (informar quem recebeu)' };
+/**
+ * 03/11/2026 (logística): entrega, retirada (recebimento) ou envio de equipamento, documento ou material. O formulário é o
+ * termo (itens, de quem/para quem, motivo e destino), no lugar do relato de manutenção; o relatório A4 vira o termo.
+ * O sentido vem do código ou do nome do tipo (tipo criado pela gestão no grupo Logística também entra).
+ */
+var AST_LOG_SENTIDOS = { ENTREGA: 'Entrega', RETIRADA: 'Retirada (recebimento)', ENVIO: 'Envio' };
+var AST_LOG_ESTADOS = { BOM: 'Bom estado', AVARIA: 'Com avaria', NA: 'Não se aplica' };
+var AST_LOG_DESTINOS = { OFICINA: 'Oficina da Metrolabs', CALIBRACAO: 'Calibração (laboratório)', QUALIFICACAO: 'Qualificação', ANALISE: 'Análise técnica em bancada', OUTRO: 'Outro (ver motivo)' };
+var AST_LOG_EMBALAGENS = { ORIGINAL: 'Embalagem original', OUTRA: 'Outra embalagem', SEM: 'Sem embalagem' };
+/** Textos do termo por sentido: título do documento, quem assina de cada lado e o verbo ("entregue", "retirado"). */
+var AST_LOG_ROTULOS = {
+  ENTREGA: { titulo: 'Termo de entrega', verbo: 'entregue', contraparte: 'quem recebe', papelCliente: 'Recebido por', papelColab: 'Entregue por (Metrolabs)',
+    declaracao: 'Declaro que recebi os itens relacionados acima, nas condições descritas neste termo.' },
+  RETIRADA: { titulo: 'Termo de retirada (recebimento)', verbo: 'retirado', contraparte: 'quem entrega', papelCliente: 'Entregue por', papelColab: 'Recebido por (Metrolabs)',
+    declaracao: 'Declaro que entreguei à Metrolabs os itens relacionados acima, nas condições descritas neste termo.' },
+  ENVIO: { titulo: 'Termo de envio', verbo: 'enviado', contraparte: 'o destinatário', papelCliente: 'Recebido por', papelColab: 'Despachado por (Metrolabs)',
+    declaracao: 'Os itens relacionados acima foram despachados nas condições descritas neste termo.' }
+};
+function Ast_sentidoLogistica_(codigo, nome) {
+  var s = Ast_semAcento_(Ast_s_(codigo) + ' ' + Ast_s_(nome));
+  if (/ENVIO|ENVIAR|TRANSPORTADORA|CORREIO/.test(s)) return 'ENVIO';
+  if (/RETIRADA|RETIRAR|ENTRADA|RECEBIMENTO|COLETA/.test(s)) return 'RETIRADA';
+  return 'ENTREGA';
+}
 var AST_TIPOS_PERGUNTA = { TEXTO: 'Texto', NUMERO: 'Número', SIM_NAO: 'Sim ou não', OPCAO: 'Uma opção', MULTIPLA: 'Várias opções', DATA: 'Data', FOTO: 'Foto', ASSINATURA: 'Assinatura' };
 var AST_DOCS_TECNICOS = { '': 'Nenhum', CERTCAL: 'Certificado de calibração', RELCAL: 'Relatório de calibração', QUALIFICACAO: 'Relatório de qualificação (autoclave, lavadora, cadeia de frio, estufa)',
   DECLARACAO: 'Declaração de execução de serviço', QIQO: 'Relatório QI/QO/QD', NR13: 'Laudo NR-13' };
@@ -436,13 +462,13 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V5')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V6')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V5', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V6', '1', 21600); } catch (e) {}
 }
 /**
  * 27/10/2026: chamado de teste ou simulação excluído pela gestão (EXCLUIDO_EM preenchido) e as O.S. e orçamentos que saíram
@@ -687,7 +713,9 @@ function Ast_tipoPublico_(t) {
   return { id: Ast_s_(t.ID), codigo: Ast_up_(t.CODIGO), nome: Ast_s_(t.NOME), grupo: Ast_up_(t.GRUPO), descricao: Ast_s_(t.DESCRICAO),
     exige: { relato: Ast_sim_(t.EXIGE_RELATO), assinatura: Ast_sim_(t.EXIGE_ASSINATURA), fotosMin: Number(t.FOTOS_MIN) || 0, qrOuSerie: Ast_sim_(t.EXIGE_QR_SERIE), checklist: !!Ast_s_(t.MODELO_CODIGO) },
     modeloCodigo: Ast_up_(t.MODELO_CODIGO), documentoTecnico: Ast_up_(t.DOCUMENTO_TECNICO), semVisita: Ast_sim_(t.SEM_VISITA), auvoTipos: Ast_s_(t.AUVO_TIPOS), ativo: Ast_up_(t.ATIVO || 'SIM') === 'SIM',
-    ordem: Number(t.ORDEM) || 99 };
+    ordem: Number(t.ORDEM) || 99,
+    // 03/11/2026: tipo de logística (termo de entrega, retirada ou envio); null nos demais
+    logistica: Ast_up_(t.GRUPO) === 'LOGISTICA' ? { sentido: Ast_sentidoLogistica_(t.CODIGO, t.NOME), colaborador: !Ast_sim_(t.SEM_VISITA) } : null };
 }
 function Ast_tipos_(todos) {
   return Ast_ler_(AST_ABAS.TIPOS).map(Ast_tipoPublico_).filter(function (t) { return todos || t.ativo; }).sort(function (a, b) { return a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'); });

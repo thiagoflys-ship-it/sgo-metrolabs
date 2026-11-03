@@ -175,6 +175,37 @@ funcional, conferência do equipamento, checklist obrigatório, fotos mínimas e
 algo, fica "Documentação pendente": o técnico vê o que falta e recebe a cobrança; passadas 24 horas, a gestão também.
 Quando o que falta chega, a O.S. fecha sozinha.
 
+### Logística: entrega, retirada e envio de equipamento (03/11/2026)
+
+Os tipos do grupo Logística (Entrega de equipamento, de documentação e de insumos; Retirada de equipamento, para
+análise, preventiva, qualificação e dos sensores; Entrada de equipamento para calibração; Envio de equipamento, e os
+tipos novos que a gestão criar nesse grupo) têm formulário próprio, o **termo**, no lugar do relato de manutenção:
+
+- **Itens**: nome, quantidade, identificação (série, patrimônio ou TAG), estado aparente (bom estado, com avaria, não se
+  aplica), descrição da avaria e acessórios. O equipamento da O.S. aparece como item 1.
+- **De quem / para quem**: nome, documento ou matrícula e setor; local ou setor.
+- **Retirada**: motivo e destino (oficina, calibração, qualificação, análise técnica em bancada, outro). **Envio**:
+  transportadora e rastreio. Em todos: embalagem, lacre e observações.
+- **Assinaturas**: a de quem recebe (entrega) ou de quem entrega (retirada), no lugar da "assinatura do cliente", e a do
+  colaborador da Metrolabs, feita no SGO+ Campo.
+
+Para fechar, a O.S. de logística pede chegada, o termo com pelo menos um item, o checklist do tipo, as fotos mínimas e a
+assinatura de quem recebe ou entrega (ou a exceção). **Não pede** condição encontrada, causa, teste funcional, peças nem
+conferência de QR ou série, mesmo que o tipo esteja marcado com QR/série. A assinatura do colaborador é cobrada pelo
+aplicativo; sem ela, o termo sai com o nome do colaborador da O.S. e a linha em branco. O.S. de logística registrada antes
+de 03/11/2026 (só com o relato escrito) continua fechando pelo relato e o documento mostra o equipamento da O.S. como item
+e o relato nas observações.
+
+Na ficha da O.S. (tela do computador), a O.S. de logística mostra o termo para conferir e completar (itens, "Acrescentar
+item", de quem/para quem, motivo e destino, embalagem, lacre, observações) e grava pelo mesmo "Salvar o que preenchi".
+
+O documento A4 dessas O.S. é o **Termo de entrega**, o **Termo de retirada (recebimento)** ou o **Termo de envio**:
+identificação, movimentação (tipo, colaborador, chegada, conclusão, de quem/para quem, motivo e destino), tabela de itens,
+avarias, conferência, observações, fotos, a declaração e as duas assinaturas ("Entregue por" e "Recebido por") e a linha do
+tempo. Sem as seções de serviço, teste funcional e peças. O arquivo leva o nome "Termo de entrega da OS - ..." (ou de
+retirada, de envio), entra no Arquivo de documentos como Ordem de Serviço e vai ao cliente pelo mesmo envio, com o
+assunto "Termo de entrega OS-...".
+
 Calibração e qualificação: emita o documento no módulo (certificado, relatório de qualificação). O documento do mesmo
 equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; também dá para ligar pela ficha da O.S.
 

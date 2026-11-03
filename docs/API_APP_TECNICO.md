@@ -270,6 +270,17 @@ resumo da sessão).
 
 ## Mudanças
 
+- 03/11/2026 (logística): `tipo.grupo` e `tipo.logistica` (`{ sentido: ENTREGA|RETIRADA|ENVIO, termo: true, colaborador, titulo }`,
+  `null` fora do grupo Logística) nas O.S. e nos `tipos` do `Ast_appMeuDia`; nos tipos de logística, `exige.relatoCampos` vem
+  vazio e `exige.qrOuSerie` falso. Evento `RELATO` aceita `dados.logistica` (termo: `itens[{ descricao, quantidade, identificacao,
+  estado: BOM|AVARIA|NA, avaria, acessorios }]`, `contraparte{ nome, documento, setor }`, `local`, `motivo`, `destino:
+  OFICINA|CALIBRACAO|QUALIFICACAO|ANALISE|OUTRO`, `embalagem: ORIGINAL|OUTRA|SEM`, `lacre`, `rastreio`, `observacoes`), gravado em
+  `LOGISTICA_JSON`; termo em O.S. que não é de logística é recusado em definitivo. Evento `ASSINATURA` com `dados.papel =
+  "COLABORADOR"` grava a assinatura do colaborador da Metrolabs à parte (`COLAB_ASSINATURA_*`), sem tocar na do cliente.
+  `registrado.logistica` e `registrado.assinaturaColaborador` voltam ao aparelho. Encerramento de logística: termo com pelo
+  menos um item (ou, para O.S. antiga, o relato escrito), sem condição encontrada, teste funcional nem QR/série. Tudo
+  acrescentado: o aplicativo anterior continua valendo pelo relato.
+
 - 22/10/2026 (etapa 2 do estudo): campo `envio` nas O.S. do `Ast_appMeuDia`, do `Ast_appOS` e do `os[]` do
   `Ast_appSincronizar`; evento `ENVIAR_CLIENTE` na fila (seção 5a). Só acrescentado; o aplicativo anterior continua valendo.
 - 22/10/2026: versão 2 (seção 7): `Ast_appBuscarCadastro`, `Ast_appConsultarCnpj`, `Ast_appCadastrar`, `Ast_appAbrirOS`; ids

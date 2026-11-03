@@ -64,7 +64,7 @@ function AstApp_os_(os, eu, opcoes) {
     id: Ast_s_(os.ID), numero: Ast_s_(os.NUMERO), chamadoId: Ast_s_(os.CHAMADO_ID), chamadoNumero: Ast_s_(os.CHAMADO_NUMERO), situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s,
     ordem: Number(os.ORDEM_DIA) || 0, agendadoPara: Ast_iso_(os.AGENDADO_PARA), duracaoMin: Number(os.DURACAO_MIN) || 0,
     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', prazoAtendimento: { ate: sla.ate || '', estado: sla.estado },
-    tipo: { codigo: tipo.codigo, nome: tipo.nome, exige: AstApp_exige_(tipo) },
+    tipo: { codigo: tipo.codigo, nome: tipo.nome, grupo: tipo.grupo || '', exige: AstApp_exige_(tipo), logistica: AstApp_logistica_(tipo) },
     abertaEmCampo: Ast_sim_(os.ABERTA_EM_CAMPO),
     sintoma: Ast_s_(c.SINTOMA), orientacao: Ast_s_(os.ORIENTACAO),
     cliente: { id: Ast_s_(os.CLIENTE_ID), nome: Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), cnpj: Ast_s_(cli.CNPJ), telefone: Ast_s_(cli.TELEFONE) },
@@ -79,7 +79,10 @@ function AstApp_os_(os, eu, opcoes) {
       pecas: pecas.map(function (p) { return { idLocal: Ast_s_(p.ID_LOCAL), descricao: Ast_s_(p.DESCRICAO), codigo: Ast_s_(p.CODIGO), quantidade: Number(p.QUANTIDADE) || 0, unidade: Ast_s_(p.UNIDADE), situacao: Ast_up_(p.SITUACAO) }; }),
       relato: { relato: Ast_s_(os.RELATO), condicaoEncontrada: Ast_s_(os.CONDICAO_ENCONTRADA), causa: Ast_s_(os.CAUSA), servicoRealizado: Ast_s_(os.SERVICO_REALIZADO), testeFuncional: Ast_s_(os.TESTE_FUNCIONAL),
         recomendacoes: Ast_s_(os.RECOMENDACOES), serieConfirmada: Ast_s_(os.SERIE_CONFIRMADA), identificadoPor: Ast_up_(os.IDENTIFICADO_POR) },
-      assinatura: Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.ASSINATURA_NOME), em: Ast_iso_(os.ASSINATURA_EM) } : (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? { semAssinatura: true, recebidoPor: Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) } : null) },
+      assinatura: Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.ASSINATURA_NOME), em: Ast_iso_(os.ASSINATURA_EM) } : (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? { semAssinatura: true, recebidoPor: Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) } : null),
+      // 03/11/2026 (logística): o termo e a assinatura do colaborador já gravados (troca de celular)
+      logistica: AstO_logistica_(os),
+      assinaturaColaborador: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.COLAB_ASSINATURA_NOME), em: Ast_iso_(os.COLAB_ASSINATURA_EM) } : null },
     historicoEquipamento: hist,
     pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os, fotos).map(function (x) { return 'falta ' + x; }) : [],
     relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL),
@@ -120,17 +123,29 @@ function AstApp_enviarCliente_(eu, ev) {
   }
 }
 
-/** Exigências de um tipo no formato do contrato (relatoCampos = campos do RELATO que AstO_faltas_ exige para encerrar, 21/10/2026). */
+/**
+ * Exigências de um tipo no formato do contrato (relatoCampos = campos do RELATO que AstO_faltas_ exige para encerrar, 21/10/2026).
+ * 03/11/2026: tipo de logística não exige campo de manutenção (relatoCampos vazio) nem QR/série; o que vale é o termo.
+ */
 function AstApp_exige_(tipo) {
-  var ex = tipo.exige || {};
-  return { relato: !!ex.relato, assinatura: !!ex.assinatura, fotosMin: Number(ex.fotosMin) || 0, qrOuSerie: !!ex.qrOuSerie, checklist: !!ex.checklist,
-    relatoCampos: ex.relato ? ['servicoRealizado'].concat(tipo.semVisita ? [] : ['condicaoEncontrada']).concat(tipo.grupo === 'TECNICO' ? ['testeFuncional'] : []) : [] };
+  var ex = tipo.exige || {}, logi = !!tipo.logistica;
+  return { relato: !!ex.relato, assinatura: !!ex.assinatura, fotosMin: Number(ex.fotosMin) || 0, qrOuSerie: !!ex.qrOuSerie && !logi, checklist: !!ex.checklist,
+    relatoCampos: ex.relato && !logi ? ['servicoRealizado'].concat(tipo.semVisita ? [] : ['condicaoEncontrada']).concat(tipo.grupo === 'TECNICO' ? ['testeFuncional'] : []) : [] };
+}
+/**
+ * 03/11/2026: o aparelho monta o formulário próprio da logística (termo de entrega, retirada ou envio) quando o tipo traz este
+ * bloco; aplicativo antigo ignora e segue pelo relato. colaborador: o termo pede também a assinatura de quem é da Metrolabs.
+ */
+function AstApp_logistica_(tipo) {
+  if (!tipo || !tipo.logistica) return null;
+  var s = tipo.logistica.sentido;
+  return { sentido: s, termo: true, colaborador: !!tipo.logistica.colaborador, titulo: (AST_LOG_ROTULOS[s] || AST_LOG_ROTULOS.ENTREGA).titulo };
 }
 /** Tipos de serviço que o técnico pode escolher ao abrir a O.S. em campo (ativos, com visita), com o checklist para o aparelho montar a O.S. sem internet. */
 function AstApp_tipos_() {
   return Ast_tipos_(false).filter(function (t) { return !t.semVisita; }).map(function (t) {
     var m = t.modeloCodigo ? Ast_modelo_(t.modeloCodigo) : null;
-    return { codigo: t.codigo, nome: t.nome, grupo: t.grupo, descricao: t.descricao, exige: AstApp_exige_(t),
+    return { codigo: t.codigo, nome: t.nome, grupo: t.grupo, descricao: t.descricao, exige: AstApp_exige_(t), logistica: AstApp_logistica_(t),
       checklist: { modeloId: m ? m.codigo : '', versao: m ? m.versao : 0, nome: m ? m.nome : '', perguntas: m ? m.perguntas : [] } };
   });
 }

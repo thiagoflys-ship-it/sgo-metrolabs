@@ -30,19 +30,51 @@ function AstO_pecas_(osId) { return Ast_ler_(AST_ABAS.PECAS).filter(function (p)
 function AstO_perguntas_(os) { return Ast_normPerguntas_(Ast_json_(os.PERGUNTAS_JSON, [])); }
 function AstO_respostas_(os) { return Ast_json_(os.RESPOSTAS_JSON, {}) || {}; }
 
+/**
+ * 03/11/2026 (logística): termo de entrega, retirada ou envio. v: o que veio do aparelho ou da tela; tipo: Ast_tipo_ da O.S.
+ * Itens sem descrição nem identificação saem; quantidade inválida fica 0 (o que falta aparece no AstO_faltas_ do aparelho).
+ */
+function AstO_normLogistica_(v, tipo) {
+  v = v && typeof v === 'object' ? v : {};
+  tipo = tipo || {};
+  var c = v.contraparte && typeof v.contraparte === 'object' ? v.contraparte : {};
+  var opc = function (mapa, x) { var k = Ast_up_(x); return mapa[k] ? k : ''; };
+  var itens = (Array.isArray(v.itens) ? v.itens : []).slice(0, 50).map(function (i) {
+    i = i && typeof i === 'object' ? i : {};
+    var q = Ast_num_(i.quantidade);
+    return { descricao: Ast_texto_(i.descricao, 300), quantidade: q > 0 ? q : 0, identificacao: Ast_texto_(i.identificacao, 200), estado: opc(AST_LOG_ESTADOS, i.estado),
+      avaria: Ast_texto_(i.avaria, 1000), acessorios: Ast_texto_(i.acessorios, 500) };
+  }).filter(function (i) { return i.descricao || i.identificacao; });
+  return { versao: 1, sentido: (tipo.logistica && tipo.logistica.sentido) || Ast_sentidoLogistica_(tipo.codigo, tipo.nome), itens: itens,
+    contraparte: { nome: Ast_texto_(c.nome, 120), documento: Ast_texto_(c.documento, 60), setor: Ast_texto_(c.setor, 120) },
+    local: Ast_texto_(v.local, 200), motivo: Ast_texto_(v.motivo, 1000), destino: opc(AST_LOG_DESTINOS, v.destino), embalagem: opc(AST_LOG_EMBALAGENS, v.embalagem),
+    lacre: Ast_texto_(v.lacre, 120), rastreio: Ast_texto_(v.rastreio, 200), observacoes: Ast_texto_(v.observacoes, 3000) };
+}
+/** Termo gravado na O.S. (LOGISTICA_JSON) ou null. */
+function AstO_logistica_(os) {
+  var v = Ast_json_(os && os.LOGISTICA_JSON, null);
+  return v && typeof v === 'object' && Array.isArray(v.itens) ? v : null;
+}
+
 /** O que falta para fechar (lista de frases; vazia = pode encerrar). */
 function AstO_faltas_(os, fotos, regras) {
   regras = regras || Ast_regras_();
   fotos = fotos || AstO_fotos_(os.ID);
   var tipo = Ast_tipo_(os.TIPO_CODIGO) || { exige: { relato: true, assinatura: true, fotosMin: 0, qrOuSerie: false }, semVisita: false };
   var f = [];
+  // 03/11/2026: logística (entrega, retirada, envio) pede o termo, nunca condição encontrada, teste funcional nem QR/série.
+  // O.S. de logística antiga (sem termo, só com o relato escrito) continua valendo pelo relato.
+  var logi = tipo.logistica || null, rot = logi ? AST_LOG_ROTULOS[logi.sentido] || AST_LOG_ROTULOS.ENTREGA : null;
   if (!tipo.semVisita && !Ast_s_(os.CHEGOU_EM)) f.push('registrar a chegada (Cheguei)');
-  if (tipo.exige.relato) {
+  if (tipo.exige.relato && logi) {
+    var lg = AstO_logistica_(os);
+    if (!(lg && lg.itens.length) && Ast_s_(os.RELATO).length < 10 && Ast_s_(os.SERVICO_REALIZADO).length < 10) f.push('o termo: o que foi ' + rot.verbo + ' (itens e quantidade)');
+  } else if (tipo.exige.relato) {
     if (Ast_s_(os.RELATO).length < 10 && Ast_s_(os.SERVICO_REALIZADO).length < 10) f.push('o relato do serviço realizado');
     if (!tipo.semVisita && Ast_s_(os.CONDICAO_ENCONTRADA).length < 3) f.push('a condição encontrada');
     if (tipo.grupo === 'TECNICO' && Ast_s_(os.TESTE_FUNCIONAL).length < 3) f.push('o teste funcional');
   }
-  if (tipo.exige.qrOuSerie) {
+  if (tipo.exige.qrOuSerie && !logi) {
     if (!Ast_s_(os.EQUIPAMENTO_ID)) f.push('o equipamento ligado ao cadastro (a gestão liga na ficha do chamado)');
     else if (!Ast_s_(os.SERIE_CONFIRMADA) && !Ast_s_(os.IDENTIFICADO_POR)) f.push('a conferência do equipamento (ler o QR ou digitar a série)');
   }
@@ -61,7 +93,7 @@ function AstO_faltas_(os, fotos, regras) {
   var precisaAss = tipo.exige.assinatura && regras.assinatura && regras.assinatura.obrigatoria !== false;
   if (precisaAss && !Ast_s_(os.ASSINATURA_ARQUIVO_ID)) {
     var semOk = AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] && Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR).length >= 3 && Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA).length >= 10;
-    if (!semOk) f.push('a assinatura do cliente (ou "responsável ausente" com o nome de quem recebeu e a justificativa)');
+    if (!semOk) f.push(logi ? 'a assinatura de ' + rot.contraparte + ' (ou "responsável ausente" com o nome de quem acompanhou e a justificativa)' : 'a assinatura do cliente (ou "responsável ausente" com o nome de quem recebeu e a justificativa)');
   }
   if (Ast_sim_(os.AGUARDANDO_PECA)) f.push('a peça que falta (pedido de compra aberto); depois de trocar, conclua de novo');
   return f;
@@ -212,9 +244,18 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
         if (div && !Ast_sim_(os.SERIE_DIVERGENTE)) avisoSerie = 'Série no local ' + cr.SERIE_CONFIRMADA + ', no cadastro ' + cad + '.';
         cr.SERIE_DIVERGENTE = div ? 'SIM' : '';
       }
+      // 03/11/2026: termo de logística (entrega, retirada, envio) no mesmo evento RELATO
+      var termo = null;
+      if (d.logistica && typeof d.logistica === 'object') {
+        if (!tipoOs.logistica) return { ok: false, definitivo: true, motivo: 'o termo de entrega ou retirada só vale para O.S. de logística (esta é ' + (tipoOs.nome || os.TIPO_NOME || 'serviço técnico') + ')', corrigir: 'Atualize o aplicativo e o Meu dia; registre o atendimento pelo relato.' };
+        termo = AstO_normLogistica_(d.logistica, tipoOs);
+        cr.LOGISTICA_JSON = JSON.stringify(termo);
+      }
       if (!Object.keys(cr).length) return { ok: false, definitivo: false, motivo: 'o relato veio vazio', corrigir: 'Preencha pelo menos um campo do relato e sincronize de novo.' };
+      var maisQueTermo = Object.keys(cr).filter(function (k) { return k !== 'LOGISTICA_JSON'; }).length > 0;
       gravar(cr);
-      Ast_evento_('OS', os.ID, 'RELATO', eu, 'Relato atualizado' + (cr.RELATO ? ': ' + cr.RELATO.slice(0, 200) : ''), extraEv);
+      Ast_evento_('OS', os.ID, 'RELATO', eu, (termo ? (AST_LOG_ROTULOS[termo.sentido] || AST_LOG_ROTULOS.ENTREGA).titulo + ' atualizado: ' + Ast_plural_(termo.itens.length, 'item', 'itens') +
+        (termo.contraparte.nome ? ', ' + (AST_LOG_ROTULOS[termo.sentido] || AST_LOG_ROTULOS.ENTREGA).contraparte + ': ' + termo.contraparte.nome : '') + (maisQueTermo ? '. Relato atualizado' : '') : 'Relato atualizado') + (cr.RELATO ? ': ' + cr.RELATO.slice(0, 200) : ''), extraEv);
       if (avisoSerie) {
         Ast_evento_('OS', os.ID, 'SERIE_DIVERGENTE', eu, avisoSerie + ' O cadastro não foi alterado.', extraEv);
         Ast_avisar_(Ast_gestoresTecnica_(), 'SERIE_DIVERGENTE', 'Série divergente na ' + os.NUMERO, avisoSerie + ' Equipamento: ' + Ast_s_(os.EQUIPAMENTO_TEXTO) + ' (' + Ast_s_(os.CLIENTE_NOME) + '). Confira e corrija o cadastro em Cadastros > Equipamentos, se for o caso.', os.ID, { autorId: eu.id, evento: 'AT10' });
@@ -259,7 +300,7 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       return { ok: true, nota: sitp === 'FALTA' ? 'a O.S. ficou aguardando peça; o pedido de compra é aberto' : '' };
     case 'ASSINATURA':
       if (!exigeLocal()) return { ok: false, definitivo: false, motivo: 'a chegada ainda não foi registrada', corrigir: 'Toque em "Cheguei" antes da assinatura e sincronize de novo.' };
-      if (d.semAssinatura === true || Ast_sim_(d.semAssinatura)) {
+      if ((d.semAssinatura === true || Ast_sim_(d.semAssinatura)) && Ast_up_(d.papel) !== 'COLABORADOR') {
         var mot = Ast_up_(d.motivo), rec = Ast_texto_(d.recebidoPor, 120), just = Ast_texto_(d.justificativa, 1000);
         if (!AST_MOTIVOS_SEM_ASSINATURA[mot]) return { ok: false, definitivo: false, motivo: 'motivo de falta de assinatura não aceito', corrigir: 'Use o motivo RESPONSAVEL_AUSENTE.' };
         if (rec.length < 3) return { ok: false, definitivo: false, motivo: 'falta o nome de quem recebeu o serviço', corrigir: 'Escreva o nome de quem acompanhou e sincronize de novo.' };
@@ -268,6 +309,8 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
         Ast_evento_('OS', os.ID, 'SEM_ASSINATURA', eu, 'Sem assinatura (' + AST_MOTIVOS_SEM_ASSINATURA[mot] + '): recebido por ' + rec + '. ' + just, extraEv);
         return { ok: true };
       }
+      // 03/11/2026 (logística): a assinatura do colaborador da Metrolabs (quem entrega ou quem recebe) fica ao lado da do cliente
+      var colab = Ast_up_(d.papel) === 'COLABORADOR';
       var nome = Ast_texto_(d.nome, 120), img = String(d.imagem || '');
       if (nome.length < 3) return { ok: false, definitivo: false, motivo: 'falta o nome de quem assinou', corrigir: 'Escreva o nome de quem assinou e sincronize de novo.' };
       if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(img) || img.length < AST_ASS_MIN) return { ok: false, definitivo: false, motivo: 'a assinatura veio vazia ou em formato errado', corrigir: 'Peça para o cliente assinar no quadro de novo (imagem PNG).' };
@@ -275,9 +318,14 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       var arq = null;
       try {
         var pasta = Ast_pastaPrivadaOS_(os.NUMERO);
-        var blob = Utilities.newBlob(Utilities.base64Decode(img.replace(/^data:[^,]+,/, '')), 'image/png', 'Assinatura ' + os.NUMERO + ' - ' + nome.replace(/[\\\/:*?"<>|]/g, '') + '.png');
+        var blob = Utilities.newBlob(Utilities.base64Decode(img.replace(/^data:[^,]+,/, '')), 'image/png', (colab ? 'Assinatura do colaborador ' : 'Assinatura ') + os.NUMERO + ' - ' + nome.replace(/[\\\/:*?"<>|]/g, '') + '.png');
         arq = pasta.createFile(blob); Ast_privado_(arq);
       } catch (eA) { return { ok: false, definitivo: false, motivo: 'o servidor não conseguiu guardar a assinatura (' + String((eA && eA.message) || eA) + ')', corrigir: 'Tente sincronizar de novo em alguns minutos.' }; }
+      if (colab) {
+        gravar({ COLAB_ASSINATURA_ARQUIVO_ID: arq.getId(), COLAB_ASSINATURA_NOME: nome, COLAB_ASSINATURA_DOCUMENTO: Ast_texto_(d.documento, 60), COLAB_ASSINATURA_EM: hora });
+        Ast_evento_('OS', os.ID, 'ASSINATURA_COLABORADOR', eu, 'Assinado pelo colaborador da Metrolabs ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : ''), extraEv);
+        return { ok: true };
+      }
       gravar({ ASSINATURA_ARQUIVO_ID: arq.getId(), ASSINATURA_NOME: nome, ASSINATURA_DOCUMENTO: Ast_texto_(d.documento, 60), ASSINATURA_EM: hora });
       Ast_evento_('OS', os.ID, 'ASSINATURA', eu, 'Assinado por ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : ''), extraEv);
       return { ok: true };
@@ -383,6 +431,10 @@ function AstO_publico_(os, eu) {
     aguardandoPeca: Ast_sim_(os.AGUARDANDO_PECA),
     assinatura: Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.ASSINATURA_NOME), documento: Ast_s_(os.ASSINATURA_DOCUMENTO), em: Ast_br_(os.ASSINATURA_EM) } : null,
     semAssinatura: Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? { motivo: AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || os.SEM_ASSINATURA_MOTIVO, recebidoPor: Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR), justificativa: Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) } : null,
+    // 03/11/2026 (logística): termo (itens, de quem/para quem, motivo, destino) e a assinatura do colaborador da Metrolabs
+    logistica: tipo && tipo.logistica ? { sentido: tipo.logistica.sentido, rotulos: AST_LOG_ROTULOS[tipo.logistica.sentido] || AST_LOG_ROTULOS.ENTREGA, termo: AstO_logistica_(os),
+      estados: AST_LOG_ESTADOS, destinos: AST_LOG_DESTINOS, embalagens: AST_LOG_EMBALAGENS } : null,
+    assinaturaColaborador: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.COLAB_ASSINATURA_NOME), documento: Ast_s_(os.COLAB_ASSINATURA_DOCUMENTO), em: Ast_br_(os.COLAB_ASSINATURA_EM) } : null,
     faltas: faltas, podeEncerrar: s === 'DOC_PENDENTE' && !faltas.length,
     docTecnico: Ast_s_(os.DOC_TECNICO_REF) ? { tipo: Ast_s_(os.DOC_TECNICO_TIPO), nome: Ast_s_(os.DOC_TECNICO_REF), url: Ast_s_(os.DOC_TECNICO_URL) } : null,
     documentoTecnicoTipo: tipo ? tipo.documentoTecnico : '', documentoTecnicoNome: tipo && tipo.documentoTecnico ? AST_DOCS_TECNICOS[tipo.documentoTecnico] : '',

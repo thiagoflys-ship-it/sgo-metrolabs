@@ -862,6 +862,53 @@
     if (p.tipo === "ASSINATURA") return '<p class="at-meta">Use o quadro de assinatura abaixo.</p>';
     return '<textarea data-perg="' + At_esc_(p.id) + '" maxlength="3000">' + At_esc_(v || "") + '</textarea>';
   }
+  /**
+   * 03/11/2026 (logística): termo de entrega, retirada ou envio na ficha da O.S. (mesmo formulário do SGO+ Campo): itens com
+   * quantidade, identificação, estado aparente e acessórios; de quem / para quem; local; na retirada, motivo e destino; no envio,
+   * transportadora; embalagem, lacre e observações. Grava pelo mesmo evento RELATO (campo "logistica").
+   */
+  function At_termoLinha_(i, k, lg) {
+    i = i || {};
+    return '<div class="at-card fim" data-titem="' + k + '"><div class="at-grade4">' + At_campo_("Item " + (k + 1), '<input data-tc="descricao" maxlength="300" value="' + At_esc_(i.descricao || "") + '">') +
+      At_campo_("Quantidade", '<input data-tc="quantidade" type="number" min="0" step="any" value="' + At_esc_(i.quantidade === undefined || i.quantidade === null ? "1" : i.quantidade) + '">') +
+      At_campo_("Série, patrimônio ou TAG", '<input data-tc="identificacao" maxlength="200" value="' + At_esc_(i.identificacao || "") + '">') +
+      At_campo_("Estado aparente", '<select data-tc="estado">' + At_opcoes_(At_mapaOpcoes_(lg.estados), i.estado, "Escolha") + '</select>') + '</div><div class="at-grade2">' +
+      At_campo_("Avaria (se houver)", '<input data-tc="avaria" maxlength="1000" value="' + At_esc_(i.avaria || "") + '">') + At_campo_("Acessórios", '<input data-tc="acessorios" maxlength="500" value="' + At_esc_(i.acessorios || "") + '">') + '</div></div>';
+  }
+  function At_termoEditor_(o) {
+    var lg = o.logistica, t = lg.termo || {}, c = t.contraparte || {}, s = lg.sentido, rot = lg.rotulos || {};
+    var itens = t.itens && t.itens.length ? t.itens : [{ descricao: o.equipamentoTexto || "", quantidade: 1 }];
+    var h = '<div class="at-sec">' + At_esc_(rot.titulo || "Termo") + '</div>' +
+      (lg.termo ? '' : '<p class="at-meta">Ainda sem termo. O equipamento da O.S. aparece como item 1; confira, complete e salve.' + (o.relato || o.servicoRealizado ? ' O relato escrito antes do termo continua na O.S. e aparece nas observações do documento.' : '') + '</p>') +
+      '<div id="atTermoItens">' + itens.map(function (i, k) { return At_termoLinha_(i, k, lg); }).join("") + '</div>' +
+      '<div class="at-acoes"><button type="button" class="btn-secondary" id="atTermoMais">Acrescentar item</button></div>' +
+      '<div class="at-grade3">' + At_campo_(s === "ENTREGA" ? "Para quem (quem recebe)" : s === "RETIRADA" ? "De quem (quem entrega)" : "Destinatário", '<input data-tg="contraparte.nome" maxlength="120" value="' + At_esc_(c.nome || "") + '">') +
+      At_campo_("Documento ou matrícula", '<input data-tg="contraparte.documento" maxlength="60" value="' + At_esc_(c.documento || "") + '">') + At_campo_("Setor ou cargo", '<input data-tg="contraparte.setor" maxlength="120" value="' + At_esc_(c.setor || "") + '">') + '</div>' +
+      '<div class="at-grade3">' + At_campo_("Local ou setor", '<input data-tg="local" maxlength="200" value="' + At_esc_(t.local || "") + '">') +
+      At_campo_("Embalagem", '<select data-tg="embalagem">' + At_opcoes_(At_mapaOpcoes_(lg.embalagens), t.embalagem, "Não informada") + '</select>') + At_campo_("Lacre", '<input data-tg="lacre" maxlength="120" value="' + At_esc_(t.lacre || "") + '">') + '</div>' +
+      (s === "RETIRADA" ? '<div class="at-grade2">' + At_campo_("Motivo da retirada", '<textarea data-tg="motivo" maxlength="1000">' + At_esc_(t.motivo || "") + '</textarea>') +
+        At_campo_("Destino", '<select data-tg="destino">' + At_opcoes_(At_mapaOpcoes_(lg.destinos), t.destino, "Escolha") + '</select>') + '</div>' : '') +
+      (s === "ENVIO" ? At_campo_("Transportadora e código de rastreio", '<input data-tg="rastreio" maxlength="200" value="' + At_esc_(t.rastreio || "") + '">') : '') +
+      At_campo_("Observações", '<textarea data-tg="observacoes" maxlength="3000">' + At_esc_(t.observacoes || "") + '</textarea>') +
+      '<p class="at-meta">Logística não pede condição encontrada, causa, teste funcional, peças nem conferência de QR ou série. O documento gerado é o ' + At_esc_((rot.titulo || "termo").toLowerCase()) + ', com a assinatura de quem entrega e de quem recebe.</p>';
+    return h;
+  }
+  function At_lerTermo_(corpo) {
+    var t = { itens: [], contraparte: {} };
+    corpo.querySelectorAll("[data-titem]").forEach(function (l) { var i = {}; l.querySelectorAll("[data-tc]").forEach(function (c) { i[c.getAttribute("data-tc")] = c.value; }); if (String(i.descricao || "").trim() || String(i.identificacao || "").trim()) t.itens.push(i); });
+    corpo.querySelectorAll("[data-tg]").forEach(function (c) { var k = c.getAttribute("data-tg").split("."); if (k[0] === "contraparte") t.contraparte[k[1]] = c.value; else t[k[0]] = c.value; });
+    return t;
+  }
+  /** O termo da tela mudou em relação ao gravado? (compara só o que a pessoa vê) */
+  function At_termoMudou_(o, t) {
+    var g = (o.logistica && o.logistica.termo) || null, n = function (x) { return String(x === undefined || x === null ? "" : x).trim(); };
+    if (!g) return t.itens.length > 0 || Object.keys(t.contraparte).some(function (k) { return n(t.contraparte[k]); });
+    var campos = ["local", "motivo", "destino", "embalagem", "lacre", "rastreio", "observacoes"];
+    if (campos.some(function (k) { return t[k] !== undefined && n(t[k]) !== n(g[k]); })) return true;
+    if (["nome", "documento", "setor"].some(function (k) { return n(t.contraparte[k]) !== n((g.contraparte || {})[k]); })) return true;
+    if (t.itens.length !== (g.itens || []).length) return true;
+    return t.itens.some(function (i, k) { var a = g.itens[k] || {}; return ["descricao", "identificacao", "estado", "avaria", "acessorios"].some(function (c) { return n(i[c]) !== n(a[c]); }) || Number(i.quantidade) !== Number(a.quantidade); });
+  }
   function At_desenharOs_(o, msg, tipo) {
     var ini = AT.ini, campo = o.podeCampo, s = o.situacao;
     var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
@@ -877,22 +924,26 @@
         (["NO_LOCAL", "EM_EXECUCAO", "PAUSADA"].indexOf(s) >= 0 ? '<button type="button" class="btn-primary" data-marco="CONCLUI">Concluí a execução</button>' : '') + '</div>' +
         '<p class="at-meta">A localização é registrada só nos toques Cheguei e Concluí, se o navegador permitir. Longe do endereço vira observação para a gestão, não bloqueio.</p>';
       h += '<div class="at-sec">Checklist</div>' + (o.perguntas.length ? o.perguntas.map(function (p) { return '<div class="at-pergunta"><div class="tp">' + At_esc_(p.texto) + (p.obrigatoria ? '<span class="obr">*</span>' : '') + '</div>' + At_inputPergunta_(p) + '</div>'; }).join("") : '<p class="at-meta">Este tipo de serviço não tem checklist.</p>');
-      h += '<div class="at-sec">Relato e conferência</div><div class="at-grade2">' + [["condicaoEncontrada", "Condição encontrada", o.condicaoEncontrada], ["causa", "Causa ou diagnóstico", o.causa], ["servicoRealizado", "Serviço realizado", o.servicoRealizado], ["testeFuncional", "Teste funcional", o.testeFuncional]]
+      if (o.logistica) h += At_termoEditor_(o);
+      else {
+        h += '<div class="at-sec">Relato e conferência</div><div class="at-grade2">' + [["condicaoEncontrada", "Condição encontrada", o.condicaoEncontrada], ["causa", "Causa ou diagnóstico", o.causa], ["servicoRealizado", "Serviço realizado", o.servicoRealizado], ["testeFuncional", "Teste funcional", o.testeFuncional]]
         .map(function (x) { return At_campo_(x[1], '<textarea data-rel="' + x[0] + '" maxlength="3000">' + At_esc_(x[2] || "") + '</textarea>'); }).join("") + '</div>' +
         At_campo_("Relato do técnico", '<textarea data-rel="relato" maxlength="4000">' + At_esc_(o.relato || "") + '</textarea>') + At_campo_("Recomendações ao cliente", '<textarea data-rel="recomendacoes" maxlength="3000">' + At_esc_(o.recomendacoes || "") + '</textarea>') +
         '<div class="at-grade2">' + At_campo_("Número de série conferido no local", '<input id="atOsSerie" maxlength="80" value="' + At_esc_(o.serieConfirmada || "") + '" placeholder="Cadastro: ' + At_esc_(o.serieCadastro || "—") + '">', "Se for diferente do cadastro, a gestão é avisada; o cadastro não muda sozinho.") +
         At_campo_("Equipamento conferido por", '<select id="atOsIdent">' + At_opcoes_([{ v: "QR", t: "Leitura do QR" }, { v: "SERIE", t: "Número de série" }, { v: "TAG", t: "TAG" }], o.identificadoPor, "Escolha") + '</select>') + '</div>';
+      }
       h += '<div class="at-sec">Fotos gerais</div><input type="file" accept="image/*" capture="environment" multiple id="atOsFotos">';
     }
     h += '<div class="at-fotos">' + (o.fotos || []).map(function (f) { return f.url ? '<a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.nome) + '</a>' : '<span>' + At_esc_(f.nome) + '</span>'; }).join("") + '</div>';
-    h += '<div class="at-sec">Peças</div>' + ((o.pecas || []).length ? '<div class="at-lista">' + o.pecas.map(function (p) { return '<div class="at-card fim"><p class="at-txt">' + At_esc_(p.quantidade) + ' × ' + At_esc_(p.descricao) + (p.codigo ? ' (' + At_esc_(p.codigo) + ')' : '') + ' · ' + (p.situacao === "FALTA" ? "Em falta" + (p.requisicao ? " · pedido " + At_esc_(p.requisicao) : "") : "Aplicada") +
+    if (!o.logistica || (o.pecas || []).length) h += '<div class="at-sec">Peças</div>' + ((o.pecas || []).length ? '<div class="at-lista">' + o.pecas.map(function (p) { return '<div class="at-card fim"><p class="at-txt">' + At_esc_(p.quantidade) + ' × ' + At_esc_(p.descricao) + (p.codigo ? ' (' + At_esc_(p.codigo) + ')' : '') + ' · ' + (p.situacao === "FALTA" ? "Em falta" + (p.requisicao ? " · pedido " + At_esc_(p.requisicao) : "") : "Aplicada") +
       (campo ? ' <button type="button" class="btn-secondary" data-peca-tirar="' + At_esc_(p.idLocal) + '">Desfazer</button>' : '') + '</p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhuma peça lançada.</p>');
-    if (campo) h += '<div class="at-grade4">' + At_campo_("Peça", '<input id="atPcDesc" maxlength="300">') + At_campo_("Código", '<input id="atPcCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atPcQtd" type="number" min="0.01" step="0.01" value="1">') +
+    if (campo && !o.logistica) h += '<div class="at-grade4">' + At_campo_("Peça", '<input id="atPcDesc" maxlength="300">') + At_campo_("Código", '<input id="atPcCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atPcQtd" type="number" min="0.01" step="0.01" value="1">') +
       At_campo_("Situação", '<select id="atPcSit">' + At_opcoes_([{ v: "APLICADA", t: "Aplicada" }, { v: "FALTA", t: "Em falta (abre pedido de compra)" }], "APLICADA") + '</select>') + '</div><div class="at-acoes"><button type="button" class="btn-secondary" id="atPcAdd">Lançar a peça</button></div>';
-    h += '<div class="at-sec">Assinatura do cliente</div>' + (o.assinatura ? '<p class="at-txt">Assinado por ' + At_esc_(o.assinatura.nome) + (o.assinatura.documento ? ' (' + At_esc_(o.assinatura.documento) + ')' : '') + ' em ' + At_esc_(o.assinatura.em) + '.</p>' :
+    h += '<div class="at-sec">' + (o.logistica ? At_esc_((o.logistica.rotulos && o.logistica.rotulos.papelCliente) || "Assinatura") + ' (assinatura)' : 'Assinatura do cliente') + '</div>' + (o.assinatura ? '<p class="at-txt">Assinado por ' + At_esc_(o.assinatura.nome) + (o.assinatura.documento ? ' (' + At_esc_(o.assinatura.documento) + ')' : '') + ' em ' + At_esc_(o.assinatura.em) + '.</p>' :
       o.semAssinatura ? '<p class="at-txt">Sem assinatura: ' + At_esc_(o.semAssinatura.motivo) + '. Recebido por ' + At_esc_(o.semAssinatura.recebidoPor) + '. ' + At_esc_(o.semAssinatura.justificativa) + '</p>' : '');
     if (campo && !o.assinatura) h += '<canvas class="at-assinatura" id="atAssQuadro" width="520" height="170" aria-label="Quadro de assinatura"></canvas><div class="at-grade2">' + At_campo_("Nome de quem assina", '<input id="atAssNome" maxlength="120">') + At_campo_("Documento (opcional)", '<input id="atAssDoc" maxlength="60">') + '</div>' +
       '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAssLimpar">Limpar o quadro</button><button type="button" class="btn-secondary" id="atAssOk">Guardar a assinatura</button><button type="button" class="btn-secondary" id="atAssAus">Responsável ausente</button></div>';
+    if (o.logistica) h += '<div class="at-sec">' + At_esc_((o.logistica.rotulos && o.logistica.rotulos.papelColab) || "Colaborador") + '</div>' + (o.assinaturaColaborador ? '<p class="at-txt">Assinado por ' + At_esc_(o.assinaturaColaborador.nome) + (o.assinaturaColaborador.documento ? ' (' + At_esc_(o.assinaturaColaborador.documento) + ')' : '') + ' em ' + At_esc_(o.assinaturaColaborador.em) + ', no SGO+ Campo.</p>' : '<p class="at-meta">O colaborador assina pelo SGO+ Campo. Sem a assinatura dele, o termo sai com o nome do colaborador da O.S. e a linha em branco.</p>');
     if (campo) h += '<div id="atOsMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atOsSalvar">Salvar o que preenchi</button>' + (o.podeEncerrar ? '<button type="button" class="btn-primary" id="atOsEncerrar">Encerrar a O.S.</button>' : '') + '</div>';
     h += At_blocoDocumentoEnvio_(o, ini);
     h += '<div class="at-acoes">' + (s === "ENCERRADA" ? "" : '<button type="button" class="btn-secondary" id="atOsRel">Prévia do relatório (rascunho)</button>') +
@@ -935,7 +986,9 @@
       });
       var rel = {}, mudouRel = false;
       corpo.querySelectorAll("[data-rel]").forEach(function (t) { var k = t.getAttribute("data-rel"); if (t.value !== (o[k] || "")) { rel[k] = t.value; mudouRel = true; } });
-      var serie = corpo.querySelector("#atOsSerie").value.trim(), ident = corpo.querySelector("#atOsIdent").value;
+      var cSerie = corpo.querySelector("#atOsSerie"), cIdent = corpo.querySelector("#atOsIdent");
+      var serie = cSerie ? cSerie.value.trim() : "", ident = cIdent ? cIdent.value : "";
+      if (o.logistica) { var termo = At_lerTermo_(corpo); if (At_termoMudou_(o, termo)) { rel.logistica = termo; mudouRel = true; } }
       if (serie && serie !== o.serieConfirmada) { rel.serieConfirmada = serie; mudouRel = true; }
       if (ident && ident !== o.identificadoPor) { rel.identificadoPor = ident; mudouRel = true; }
       if (mudouRel) ev.push({ tipo: "RELATO", dados: rel });
@@ -959,6 +1012,7 @@
       lerProx(0);
     };
     var b;
+    if ((b = corpo.querySelector("#atTermoMais"))) b.onclick = function () { var box = corpo.querySelector("#atTermoItens"), k = box.querySelectorAll("[data-titem]").length; box.insertAdjacentHTML("beforeend", At_termoLinha_({ quantidade: 1 }, k, o.logistica)); var n = box.querySelector('[data-titem="' + k + '"] [data-tc="descricao"]'); if (n) n.focus(); };
     if ((b = corpo.querySelector("#atPcAdd"))) b.onclick = function () { enviarEventos([{ tipo: "PECA", dados: { descricao: At_$_("atPcDesc").value, codigo: At_$_("atPcCod").value, quantidade: At_$_("atPcQtd").value, situacao: At_$_("atPcSit").value } }]); };
     corpo.querySelectorAll("[data-peca-tirar]").forEach(function (x) { x.onclick = function () { enviarEventos([{ tipo: "PECA", dados: { removerIdLocal: x.getAttribute("data-peca-tirar") } }]); }; });
     var cv = corpo.querySelector("#atAssQuadro");

@@ -101,7 +101,7 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
 6. **Peças**: **Aplicada** para a peça usada; **Falta (pedir)** para a peça que precisa ser comprada (abre o pedido em
    Compras e a O.S. fica aguardando peça), com urgência Normal ou Urgente. Lançou errado: **Desfazer**.
 7. **Relato**: condição encontrada, causa, serviço realizado, teste funcional, recomendações e observações. Pode usar o
-   microfone do teclado para ditar. Toque em **Guardar relato** (sair da tela também guarda).
+   microfone do teclado para ditar. Toque em **Guardar relato** (sair da tela também guarda): o app guarda e segue para o próximo passo que falta.
 8. **Assinatura do cliente**: o responsável assina no quadro com o dedo e informa nome e documento (CPF, RG ou
    matrícula). Sem quem assine: **Registrar sem assinatura**, com o motivo, o nome de quem recebeu o serviço e a
    justificativa.
@@ -116,6 +116,51 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
    **Enviar**: o pedido entra na fila como qualquer registro (sem sinal, sobe depois) e o servidor manda o PDF num e-mail
    da Metrolabs, com o número do chamado no assunto. A O.S. passa a mostrar "Enviado às ..."; o mesmo envio nunca sai
    duas vezes. Sem envio em 1 dia útil, a gestão recebe a cobrança e pode enviar pela tela do SGO+.
+
+### Continuar e Seguir (03/11/2026)
+
+- Na O.S., o botão **Continuar** (acima do passo a passo) abre o próximo passo que ainda falta. No fim de cada passo, o
+  botão **Seguir** leva ao seguinte. Não é preciso voltar à O.S. a cada passo; "Voltar à O.S." continua lá.
+- **Guardar relato**, **Guardar o termo**, **Guardar assinatura**, **Registrar sem assinatura** e a confirmação do
+  equipamento guardam e já levam ao próximo passo que falta (ou ao Concluí). Se ainda faltar algo no próprio passo, a
+  tela fica e diz o quê ("Ainda falta neste passo: a condição encontrada").
+- O **Concluí** mostra o que falta separado por passo, cada grupo com o botão **Ir para** que abre o passo certo.
+- **Antes do Cheguei**: checklist, fotos, relato, peças e assinatura só valem depois da chegada (o servidor recusa antes).
+  Se abrir um desses passos antes, o app pergunta "Registrar a chegada agora" ou "Ainda não cheguei". Registro que já foi
+  recusado só por falta da chegada volta sozinho para a fila depois do Cheguei.
+
+## 3a. Retirada, entrega e envio de equipamento (03/11/2026)
+
+Nas O.S. de logística (Entrega de equipamento, Entrega de documentação, Entrega de insumos, Retirada de equipamento,
+Retirada para análise, preventiva, qualificação ou sensores, Entrada de equipamento para calibração, Envio de
+equipamento) o formulário é o **termo**, e não o relato de manutenção. Condição encontrada, causa, teste funcional, peças
+e conferência de QR ou série **não se aplicam e não travam** o Concluí.
+
+Passo a passo:
+
+1. **Cheguei**. O termo pode ser preparado antes de chegar: fica no celular e sobe depois do Cheguei.
+2. **Termo de entrega** / **Termo de retirada (recebimento)** / **Termo de envio**:
+   - **O que está sendo entregue (ou retirado)**: o equipamento da O.S. já vem como item 1, com série, patrimônio e TAG.
+     **Acrescentar outro item** para acessórios, documentos ou insumos. Para cada item: nome, quantidade, série,
+     patrimônio ou TAG, **estado aparente** (Bom estado, Com avaria, Não se aplica) e acessórios. Com avaria, descreva a
+     avaria e fotografe em Fotos.
+   - **Para quem** (entrega) ou **De quem** (retirada): nome (os botões "Responsável da unidade" e "Quem pediu"
+     preenchem com um toque), documento ou matrícula e setor; o local ou setor.
+   - **Retirada**: o **motivo** (vem do pedido) e **para onde vai** (Oficina da Metrolabs, Calibração, Qualificação,
+     Análise técnica em bancada, Outro). O destino já vem marcado pelo tipo quando dá para saber.
+   - **Envio**: transportadora e código de rastreio.
+   - Embalagem (original, outra, sem), número do lacre e observações, quando houver.
+   - Toque em **Guardar o termo**. Embaixo, a tela lista o que ainda falta no termo.
+3. **Conferência** (checklist do tipo): o que o termo já diz entra sozinho nas perguntas ainda em branco (conferido,
+   estado, acessórios). Confira e mude se precisar.
+4. **Fotos** do que foi entregue ou retirado e de cada avaria.
+5. **Assinatura de quem recebe** (entrega) ou **de quem entrega** (retirada): nome e documento já vêm do termo. Sem quem
+   assine, "Registrar sem assinatura" com quem acompanhou e a justificativa.
+6. **Sua assinatura**: o colaborador da Metrolabs assina com o dedo (na entrega, como quem entrega; na retirada, como
+   quem recebe). No envio sem visita esse passo não aparece.
+7. **Concluí**. O documento gerado no encerramento é o **Termo de entrega** ou o **Termo de retirada (recebimento)**:
+   itens com quantidade, identificação e estado, avarias, de quem e para quem, motivo e destino, fotos e as duas
+   assinaturas, com a declaração de recebimento. Ele vai ao cliente pelo mesmo "Enviar ao cliente por e-mail".
 
 ## 4. Sem sinal (subsolo, centro cirúrgico, estrada)
 
