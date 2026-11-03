@@ -410,3 +410,172 @@ test('integração na casca: menu, rota, inclusão do arquivo novo, ação do se
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
   for (const f of ['SGO_Licitacoes_Disputa.js', 'JS_Licitacoes_Disputa.html', 'SGO_Ajuda_LicitacoesDisputas.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
 });
+
+// ---------------------------------------------------------------- revisão independente de bddf933 (um teste para cada ataque)
+test('revisão ALTA 1a: a gravação da linha deu certo e a da disputa falhou: a cadeia confere e retoma sozinha na próxima gravação, com histórico', () => {
+  const a = base(); a.abrir();
+  ok(a.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '195,00' }));
+  const orig = a.ctx.SGO_DATA.update; let falhar = true;
+  a.ctx.SGO_DATA.update = function (aba, id, mud) { if (falhar && aba === 'LIC_DISPUTAS' && mud.ULTIMO_SEQ !== undefined) { falhar = false; throw new Error('serviço de dados fora do ar'); } return orig.apply(this, arguments); };
+  assert.equal(a.d('lance', { item: '1', autor: 'NOS', valor: '194,00' }).ok, false, 'a segunda escrita falhou');
+  a.ctx.SGO_DATA.update = orig;
+  assert.equal(a.reg().length, 2); assert.equal(a.tabelas.LIC_DISPUTAS[0].ULTIMO_SEQ, 1, 'a disputa ficou no registro 1');
+  let t = a.tela().disputa;
+  assert.equal(t.integra, true); assert.equal(t.cadeia.integra, true); assert.deepEqual(J(t.cadeia.ajustar), { de: 1, seq: 2, hash: a.reg()[1].HASH });
+  ok(a.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '193,00' }));
+  assert.deepEqual(a.reg().map((x) => x.SEQ), [1, 2, 3]); assert.equal(a.reg()[2].HASH_ANTERIOR, a.reg()[1].HASH);
+  assert.equal(a.tabelas.LIC_DISPUTAS[0].ULTIMO_SEQ, 3);
+  t = a.tela().disputa; assert.equal(t.cadeia.integra, true); assert.equal(t.cadeia.ajustar, null); assert.equal(a.item('1').nossoAtual, 194, 'o lance da linha que ficou vale');
+  const h = a.hist('DISPUTA_REGISTRO_RETOMADO'); assert.equal(h.length, 1); assert.equal(h[0].DE, 'registro 1'); assert.equal(h[0].PARA, 'registro 2'); assert.match(h[0].TEXTO, /falha no meio da gravação/);
+});
+
+test('revisão ALTA 1b: quebra de verdade: mensagem diz o que fazer; só o Administrador reconhece, com motivo, numa âncora; a cadeia recomeça dela e o relatório mostra', () => {
+  const a = base(); a.abrir();
+  ok(a.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '195,00' })); ok(a.d('lance', { item: '1', autor: 'NOS', valor: '194,00' }));
+  assert.match(a.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'Conferi a planilha e não há nada errado' }).message, /Não há quebra/);
+  a.reg()[0].VALOR = 150;
+  const r = a.d('lance', { item: '1', autor: 'NOS', valor: '193,00' });
+  assert.match(r.message, /mexido fora do SGO\+.*Peça ao Administrador para conferir a planilha e tocar em "Reconhecer a quebra"/);
+  assert.equal(a.tela().disputa.podeReconhecer, true);
+  const n0 = a.reg().length;
+  assert.match(a.d('reconhecerQuebra', { motivo: 'A Diretoria quer seguir com a sessão agora' }).message, /só o Administrador/);
+  assert.match(a.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'curto demais' }).message, /pelo menos 20 letras/);
+  assert.equal(a.reg().length, n0);
+  const q = ok(a.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'Conferido: o valor do registro 1 foi digitado na planilha por engano' }));
+  assert.match(q.texto, /âncora 3/);
+  const anc = a.reg().slice(-1)[0];
+  assert.equal(anc.TIPO, 'ANCORA'); assert.equal(anc.SEQ, 3); assert.equal(anc.HASH_ANTERIOR, a.reg()[1].HASH); assert.match(anc.TEXTO, /o registro 1 foi alterado/); assert.equal(anc.POR_NOME, 'Administrador');
+  const t = a.tela().disputa;
+  assert.equal(t.cadeia.integra, true); assert.equal(t.cadeia.ancora.seq, 3); assert.match(t.cadeia.ancora.motivo, /digitado na planilha por engano/);
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '193,00' }));
+  assert.equal(a.reg().slice(-1)[0].SEQ, 4); assert.equal(a.reg().slice(-1)[0].HASH_ANTERIOR, anc.HASH);
+  assert.equal(a.hist('DISPUTA_QUEBRA_RECONHECIDA').length, 1);
+  const rel = ok(a.d('relatorio')).html;
+  assert.match(rel, /Quebra do registro reconhecida pelo Administrador Administrador/); assert.match(rel, /âncora 3/);
+  // abertura alterada: a âncora não vale para ela
+  const b = base(); b.abrir();
+  const d = b.tabelas.LIC_DISPUTAS[0]; d.BASE_JSON = d.BASE_JSON.replace('"pisoSimulacao":177.17', '"pisoSimulacao":1').replace('"pisoSimulacao":172.66', '"pisoSimulacao":1');
+  assert.match(b.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'Tentar limpar a abertura alterada' }).message, /dados da abertura da disputa foram alterados/);
+});
+
+test('revisão ALTA 1c: com o registro de lances quebrado, o resultado e a conclusão continuam (com o aviso no histórico e no relatório)', () => {
+  const a = base(); a.abrir();
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '190,00' }));
+  a.reg()[0].POR_NOME = 'OUTRA PESSOA';
+  assert.equal(a.d('piso', { item: '1', valor: '180,00', motivo: 'Mudar o piso com o registro quebrado' }).ok, false);
+  const r = ok(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '190,00', fonte: 'ata da sessão' }));
+  assert.match(r.texto, /Registro de lances com quebra \(o registro 1 foi alterado\): gravado mesmo assim/);
+  ok(a.d('resultado', { item: '2', situacao: 'PERDIDO', fonte: 'ata da sessão' }));
+  const c = ok(a.d('concluir', { motivo: 'Sessão encerrada; a quebra fica no relatório' }));
+  assert.equal(a.op().SITUACAO, 'RESULTADO'); assert.match(a.hist('RESULTADO_REGISTRADO')[0].TEXTO, /Registro de lances com quebra/); assert.ok(c.texto);
+  assert.match(ok(a.d('relatorio')).html, /Registro de lances alterado fora do SGO\+: o registro 1 foi alterado/);
+});
+
+test('revisão ALTA 2: depois de concluir, o resultado novo (ganho virou perdido no recurso) refaz o dado do Contrato, com histórico', () => {
+  const a = base(); a.abrir();
+  ok(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '199,00', homologacao: '2026-11-24', fonte: 'ata da sessão' }));
+  ok(a.d('resultado', { item: '2', situacao: 'PERDIDO', fonte: 'ata da sessão' }));
+  ok(a.d('concluir', { motivo: 'Todos os itens com resultado' }));
+  assert.equal(JSON.parse(a.tabelas.LIC_DISPUTAS[0].CONTRATO_JSON).itens.length, 1);
+  const r = ok(a.d('resultado', { item: '1', situacao: 'PERDIDO', vencedor: 'Empresa Concorrente Teste', fonte: 'recurso provido, decisão no portal' }));
+  assert.match(r.texto, /O dado do Contrato foi refeito: Nenhum item ganho/);
+  const ct = JSON.parse(a.tabelas.LIC_DISPUTAS[0].CONTRATO_JSON);
+  assert.equal(ct.itens.length, 0); assert.equal(ct.total, 0); assert.equal(ct.pronto, false);
+  assert.equal(a.tela().disputa.contrato.itens.length, 0);
+  const h = a.hist('DISPUTA_CONTRATO_ATUALIZADO'); assert.equal(h.length, 1); assert.match(h[0].DE, /1 item\(ns\) ganho\(s\), total R\$\s19\.900,00, pronto/); assert.match(h[0].PARA, /0 item\(ns\) ganho\(s\), total R\$\s0,00/);
+  // o mesmo resultado de novo não gera histórico novo
+  ok(a.d('resultado', { item: '1', situacao: 'PERDIDO', vencedor: 'Empresa Concorrente Teste', fonte: 'recurso provido, decisão no portal' }));
+  assert.equal(a.hist('DISPUTA_CONTRATO_ATUALIZADO').length, 1);
+  // disputa ainda aberta: o dado só nasce ao concluir
+  const b = base(); b.abrir(); ok(b.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '199,00', fonte: 'ata da sessão' }));
+  assert.equal(b.tabelas.LIC_DISPUTAS[0].CONTRATO_JSON || '', ''); assert.equal(b.hist('DISPUTA_CONTRATO_ATUALIZADO').length, 0);
+});
+
+test('revisão MÉDIA-ALTA 3: ganho acima do nosso último lance só com motivo; item desistido não é ganho; "185.405" recusado (use vírgula)', () => {
+  const a = base(); a.abrir();
+  const r = a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '250,00', fonte: 'ata da sessão' });
+  assert.equal(r.ok, false); assert.match(r.message, /maior que o nosso último lance do item 1 \(R\$\s199,00, o valor da proposta\).*escreva o motivo/);
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '190,00' }));
+  assert.match(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '195,00', fonte: 'ata da sessão' }).message, /maior que o nosso último lance do item 1 \(R\$\s190,00\)/);
+  const ok2 = ok(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '195,00', motivo: 'Ata registra 195,00 por erro de digitação do pregoeiro', fonte: 'ata da sessão' }));
+  assert.match(ok2.texto, /acima do nosso último lance \(R\$\s190,00\), aceito com o motivo/);
+  assert.match(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '185.405', fonte: 'ata da sessão' }).message, /use vírgula para os centavos/);
+  assert.match(a.d('lance', { item: '1', autor: 'NOS', valor: '185.40' }).message, /use vírgula para os centavos/);
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '185,40' })); assert.equal(a.item('1').nossoAtual, 185.4);
+  ok(a.d('desistir', { item: '2', motivo: 'Fora da nossa logística na data' }));
+  assert.match(a.d('resultado', { item: '2', situacao: 'GANHO', valorFinal: '380,00', motivo: 'Tentar marcar ganho no desistido', fonte: 'ata da sessão' }).message, /desistiu do item 2.*não pode ficar como ganho/);
+  ok(a.d('resultado', { item: '2', situacao: 'PERDIDO', fonte: 'ata da sessão' }));
+});
+
+test('revisão MÉDIA 4: mais de 2 casas decimais recusado ("177,165" não vira 177,17 e não fura o piso); a tela confere igual ao servidor', () => {
+  const a = base(); a.abrir();
+  const piso = a.item('1').piso, tres = String((piso - 0.005).toFixed(3)).replace('.', ',');
+  const r = a.d('lance', { item: '1', autor: 'NOS', valor: tres });
+  assert.equal(r.ok, false); assert.match(r.message, /no máximo 2 casas decimais/); assert.equal(a.reg().length, 0);
+  assert.match(a.d('piso', { item: '1', valor: '160,005', motivo: 'Piso com três casas decimais' }).message, /no máximo 2 casas/);
+  const t = telaCliente();
+  for (const v of ['185,40', '1.234,56', '185', '185.40', '185.405', '177,165', '190%', 'R$ 185,40', 'abc', '', '1.234', '12,3', 185.4, 185.405]) {
+    assert.deepEqual(J(t.ctx.LicDp_lerReais_(v)), J(a.ctx.LicD_lerReais_(v)), 'mesma leitura: ' + v);
+  }
+  assert.equal(a.ctx.LicD_lerReais_('1.234,56').valor, 1234.56); assert.equal(a.ctx.LicD_lerReais_('R$ 185,40').valor, 185.4);
+});
+
+test('revisão MÉDIA 5: "%" num campo em reais é recusado na disputa; o intervalo em % aceita; o simulador de preços (LicP_n_) não muda', () => {
+  const a = base(); a.abrir();
+  assert.match(a.d('lance', { item: '1', autor: 'NOS', valor: '190%' }).message, /sem o sinal "%" \(o campo é em reais\)/);
+  assert.match(a.d('piso', { item: '1', valor: '160%', motivo: 'Piso em percentual por engano' }).message, /sem o sinal "%"/);
+  assert.match(a.d('intervalo', { item: '1', tipo: 'VALOR', valor: '1%', fonte: 'edital, item 7', motivo: 'Intervalo em reais com %' }).message, /sem o sinal "%"/);
+  ok(a.d('intervalo', { item: '1', tipo: 'PERCENTUAL', valor: '0,5%', fonte: 'edital, item 7', motivo: 'Intervalo em % com o sinal' }));
+  assert.equal(a.item('1').intervalo.valor, 0.5);
+  assert.equal(a.ctx.LicP_n_('190%'), 190, 'o simulador continua como era');
+});
+
+test('revisão BAIXA 6: recurso que deixa de existir (ganho, ou só um lado recorre) cancela os prazos pendentes que vieram do resultado, com motivo', () => {
+  const a = base(); a.abrir();
+  ok(a.d('resultado', { item: '1', situacao: 'RECURSO', recursoParte: 'AMBOS', ata: '2026-10-20', fonte: 'ata da sessão' }));
+  const ativos = () => a.tabelas.LIC_EVENTOS.filter((e) => /^PRAZO_(RECURSO|CONTRARRAZOES)$/.test(e.TIPO) && e.SITUACAO === 'ATIVO').map((e) => e.TIPO).sort();
+  assert.deepEqual(ativos(), ['PRAZO_CONTRARRAZOES', 'PRAZO_RECURSO']);
+  const r1 = ok(a.d('resultado', { item: '1', situacao: 'RECURSO', recursoParte: 'NOS', ata: '2026-10-20', fonte: 'só nós recorremos' }));
+  assert.deepEqual(ativos(), ['PRAZO_RECURSO']); assert.match(r1.texto, /Prazos pendentes cancelados \(sem recurso\): Contrarrazões de recurso/);
+  // outro item ainda em recurso segura o prazo
+  ok(a.d('resultado', { item: '2', situacao: 'RECURSO', recursoParte: 'NOS', ata: '2026-10-20', fonte: 'ata da sessão' }));
+  ok(a.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '199,00', fonte: 'decisão do recurso' }));
+  assert.deepEqual(ativos(), ['PRAZO_RECURSO'], 'o item 2 continua em recurso');
+  ok(a.d('resultado', { item: '2', situacao: 'PERDIDO', fonte: 'decisão do recurso' }));
+  assert.deepEqual(ativos(), []);
+  const canc = a.tabelas.LIC_EVENTOS.filter((e) => e.SITUACAO === 'CANCELADO');
+  assert.equal(canc.length, 2); assert.ok(canc.every((e) => /Nenhum item continua em recurso/.test(e.MOTIVO_MUDANCA)));
+  assert.equal(a.hist('AGENDA_PRAZO_CANCELADO').length, 2);
+  // prazo já confirmado por pessoa não é cancelado pelo resultado
+  const b = base(); b.abrir();
+  ok(b.d('resultado', { item: '1', situacao: 'RECURSO', recursoParte: 'NOS', ata: '2026-10-20', fonte: 'ata da sessão' }));
+  const ev = b.tabelas.LIC_EVENTOS.find((e) => e.TIPO === 'PRAZO_RECURSO' && e.SITUACAO === 'ATIVO');
+  ok(b.ctx.Licitacoes_api('s_dora', 'eventoConfirmar', { eventoId: ev.ID, data: '2026-10-23', hora: '23:59', fuso: 'America/Sao_Paulo', onde: 'portal Compras.gov.br, prazo do recurso' }));
+  ok(b.d('resultado', { item: '1', situacao: 'GANHO', valorFinal: '199,00', fonte: 'decisão do recurso' }));
+  assert.equal(b.tabelas.LIC_EVENTOS.filter((e) => e.TIPO === 'PRAZO_RECURSO' && e.SITUACAO === 'ATIVO' && e.NATUREZA === 'CONFIRMADO').length, 1);
+});
+
+test('revisão BAIXA 7: o hash da linha cobre sobra, sobra % e quem registrou; o da disputa cobre o último registro (mexer em ULTIMO_* não muda o que vale)', () => {
+  for (const campo of ['SOBRA', 'SOBRA_PCT', 'POR_NOME']) {
+    const a = base(); a.abrir(); ok(a.d('lance', { item: '1', autor: 'NOS', valor: '190,00' }));
+    a.reg()[0][campo] = campo === 'POR_NOME' ? 'OUTRA PESSOA' : 1;
+    assert.match(a.tela().disputa.cadeia.problema, /o registro 1 foi alterado/, campo);
+  }
+  const a = base(); a.abrir(); ok(a.d('lance', { item: '1', autor: 'NOS', valor: '190,00' }));
+  const d = a.tabelas.LIC_DISPUTAS[0];
+  assert.notEqual(a.ctx.LicD_hashDisputa_(d), a.ctx.LicD_hashDisputa_(d, { seq: 0, hash: '' }));
+  assert.equal(d.HASH, a.ctx.LicD_hashDisputa_(d));
+  d.ULTIMO_SEQ = 0; d.ULTIMO_HASH = '';   // "apagar" o último registro pela disputa
+  const t = a.tela().disputa;
+  assert.equal(t.integra, true); assert.equal(t.cadeia.integra, true, 'vale o último registro assinado pelo hash');
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '189,00' })); assert.equal(a.reg()[1].SEQ, 2); assert.equal(a.reg()[1].HASH_ANTERIOR, a.reg()[0].HASH);
+});
+
+test('revisão BAIXA 8 e 9: colunas de texto livre forçadas como texto; ação com nome de propriedade do objeto é desconhecida', () => {
+  const a = base();
+  for (const c of ['CONCORRENTE', 'MOTIVO', 'TEXTO', 'POR_ID']) assert.ok(a.ctx.LICD_COLUNAS_TEXTO.LIC_DISPUTA_LANCES.includes(c), c);
+  for (const op of ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf']) {
+    const r = a.d(op); assert.equal(r.ok, false, op); assert.match(r.message, /ação de disputa desconhecida/, op);
+  }
+  for (const sid of ['s_gaspar', 's_vera']) assert.equal(a.dsp(sid, 'reconhecerQuebra', { id: 'op1', motivo: 'tentativa sem permissão nenhuma' }).semAcesso, true);
+});

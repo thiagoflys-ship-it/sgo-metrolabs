@@ -50,16 +50,21 @@
   function LicDp_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
   function LicDp_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
   function LicDp_curto_(h) { return '<span class="lic-hash" title="' + Lic_esc_(h) + '">' + Lic_esc_(String(h || "").slice(0, 12)) + (h ? "…" : "—") + "</span>"; }
-  /** Número digitado em pt-BR ("1.234,56", "185,4", "185.40") ou null; a mesma leitura do servidor (LicP_n_). */
-  function LicDp_num_(v) {
-    if (typeof v === "number") return isFinite(v) ? v : null;
-    var s = String(v === null || v === undefined ? "" : v).replace(/R\$|%|\s/g, "");
-    if (!s) return null;
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
-    else if (/^-?\d+,\d+$/.test(s)) s = s.replace(",", ".");
-    else if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
-    var n = Number(s); return isFinite(n) ? n : null;
+  /**
+   * Leitura ESTRITA do valor em reais, a mesma do servidor (LicD_lerReais_, SGO_Licitacoes_Disputa.js; revisão de bddf933): vírgula para
+   * os centavos, ponto só como milhar junto da vírgula, no máximo 2 casas, sem "%". { valor } ou { erro }.
+   */
+  function LicDp_lerReais_(v) {
+    if (typeof v === "number") return !isFinite(v) ? { erro: "valor inválido" } : Math.abs(Math.round(v * 100) - v * 100) > 1e-6 ? { erro: "use no máximo 2 casas decimais (centavos)" } : { valor: v };
+    var s = String(v === null || v === undefined ? "" : v).replace(/^R\$\s*/i, "").replace(/\s+/g, "");
+    if (!s) return { erro: "vazio" };
+    if (/%/.test(s)) return { erro: 'sem o sinal "%" (o campo é em reais)' };
+    if (/\./.test(s) && !/^\d{1,3}(\.\d{3})+,\d+$/.test(s)) return { erro: "use vírgula para os centavos (por exemplo 185,40); ponto só para o milhar junto da vírgula (1.234,56)" };
+    if (!/^\d{1,3}(\.\d{3})+(,\d+)?$|^\d+(,\d+)?$/.test(s)) return { erro: "escreva só números (por exemplo 185,40)" };
+    if ((s.split(",")[1] || "").length > 2) return { erro: "use no máximo 2 casas decimais (centavos)" };
+    var n = Number(s.replace(/\./g, "").replace(",", ".")); return isFinite(n) ? { valor: n } : { erro: "valor inválido" };
   }
+  function LicDp_num_(v) { var r = LicDp_lerReais_(v); return r.erro ? null : r.valor; }
   function LicDp_pct_(v) { return v === null || v === undefined || !isFinite(Number(v)) ? "—" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"; }
   /** Sobra de um valor unitário: a mesma conta do servidor (LicP_sobra_), com os impostos gravados na simulação. */
   function LicDp_sobra_(it, preco) {
@@ -165,7 +170,10 @@
   function LicDp_painelHtml_(t) {
     var d = t.disputa, h = Lic_faixa_(d.aviso || t.aviso || "", "aviso");
     if (!d.integra) h += Lic_faixa_("Os dados desta disputa não conferem com o hash gravado (alterados fora do SGO+): o SGO+ não grava nada nela. Avise o Administrador; durante a sessão, anote os lances fora do SGO+.", "erro");
-    if (d.cadeia && !d.cadeia.integra) h += Lic_faixa_("O registro de lances foi mexido fora do SGO+ (" + d.cadeia.problema + "): o SGO+ não grava sobre ele. Avise o Administrador; durante a sessão, anote os lances fora do SGO+.", "erro");
+    if (d.cadeia && !d.cadeia.integra) h += Lic_faixa_("O registro de lances foi mexido fora do SGO+ (" + d.cadeia.problema + "): o SGO+ não grava lance nem decisão sobre ele (o resultado e a conclusão continuam, com o aviso). O Administrador confere a planilha e toca em \"Reconhecer a quebra\"; durante a sessão, anote os lances fora do SGO+.", "erro") +
+      (d.podeReconhecer && LicDp_ehAdmin_() ? '<div class="lic-acoes-linha ldp-acoes"><button type="button" class="btn-secondary" data-ldp-reconhecer>Reconhecer a quebra (Administrador)</button></div>' : "");
+    if (d.cadeia && d.cadeia.ajustar) h += Lic_faixa_("Há registro(s) gravado(s) sem a atualização da disputa (falha no meio da gravação). Eles conferem: a cadeia é retomada sozinha na próxima gravação.", "aviso");
+    if (d.cadeia && d.cadeia.ancora) h += Lic_faixa_("Quebra do registro reconhecida por " + d.cadeia.ancora.por + " em " + Lic_dataHora_(d.cadeia.ancora.quando) + ": " + d.cadeia.ancora.motivo + ". Os registros antes da âncora " + d.cadeia.ancora.seq + " ficam como estavam.", "aviso");
     h += '<div class="cm-caixa"><div class="ldp-cab"><h3>Disputa · ' + Lic_esc_(t.op.codigo) + "</h3>" + LicDp_selo_(d.situacao === "ABERTA" ? "azul" : "verde", d.situacaoNome) + (d.paradas ? " " + LicDp_selo_("laranja", "Sugestões paradas") : "") + "</div>" +
       '<div class="ldp-dl"><div><span>Sessão</span><b>' + Lic_esc_(d.sessaoTexto || "a informar") + (d.sessaoFonte ? " · " + Lic_esc_(d.sessaoFonte) : "") + "</b></div><div><span>Portal</span><b>" + Lic_esc_(d.portal || "—") + "</b></div>" +
       "<div><span>Proposta</span><b>" + Lic_esc_(d.proposta.numero) + " · " + LicDp_curto_(d.proposta.sha256) + "</b></div><div><span>Simulação</span><b>versão " + Lic_esc_(d.simulacao.versao) + "</b></div>" +
@@ -184,11 +192,13 @@
       })) : '<p class="cm-vazio">Nenhum lance registrado ainda.</p>') + "</details></div>";
     return h;
   }
+  function LicDp_ehAdmin_() { return typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "ADMIN"; }
   function LicDp_htmlAbaDados_(t) { return t && t.disputa ? LicDp_painelHtml_(t) : LicDp_previaHtml_(t || {}); }
   function LicDp_item_(id, k) { var t = LICDP.aba[id] || {}; return ((t.disputa && t.disputa.itens) || []).filter(function (i) { return i.item === k; })[0] || null; }
   function LicDp_previaLance_(id, k) {
-    var it = LicDp_item_(id, k), el = Lic_$_("ldpPrev_" + k), v = LicDp_num_(LicDp_valor_("ldpNos_" + k));
+    var it = LicDp_item_(id, k), el = Lic_$_("ldpPrev_" + k), lr = LicDp_lerReais_(LicDp_valor_("ldpNos_" + k)), v = lr.erro ? null : lr.valor;
     if (!el || !it) return;
+    if (lr.erro && lr.erro !== "vazio") { el.innerHTML = '<span class="ldp-vermelho">Não dá para registrar: ' + Lic_esc_(lr.erro) + ".</span>"; return; }
     if (v === null || !(v > 0)) { el.innerHTML = ""; return; }
     var s = LicDp_sobra_(it, v);
     if (v < it.piso - 0.004) el.innerHTML = '<span class="ldp-vermelho">Abaixo do piso autorizado (' + Lic_esc_(Lic_brl_(it.piso)) + "): o SGO+ vai recusar. Não dê esse lance no portal.</span>";
@@ -202,6 +212,7 @@
     var at = el.querySelector("[data-ldp-atualizar]"); if (at) at.onclick = function () { LicDp_ligarAba_(null, null, id); };
     var rl = el.querySelector("[data-ldp-relatorio]"); if (rl) rl.onclick = function () { LicDp_relatorio_(id, rl); };
     var sg = el.querySelector("[data-ldp-sugestoes]"); if (sg) sg.onclick = function () { LicDp_janelaMotivo_(id, "sugestoes", { parar: sg.getAttribute("data-ldp-sugestoes") === "1" }, sg); };
+    var rq = el.querySelector("[data-ldp-reconhecer]"); if (rq) rq.onclick = function () { LicDp_janelaMotivo_(id, "reconhecerQuebra", {}, rq); };
     var co = el.querySelector("[data-ldp-concluir]"); if (co) co.onclick = function () { LicDp_janelaMotivo_(id, "concluir", {}, co); };
     el.querySelectorAll("[data-ldp-nos]").forEach(function (i) { i.oninput = function () { LicDp_previaLance_(id, i.getAttribute("data-ldp-nos")); }; });
     el.querySelectorAll("[data-ldp-usar]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-ldp-usar"), i = Lic_$_("ldpNos_" + k); if (i) { i.value = b.getAttribute("data-valor"); LicDp_previaLance_(id, k); try { i.focus(); } catch (e) {} } Lic_toast_("Valor sugerido no campo. Dê o lance no portal e toque em \"Registrar o nosso lance\"."); }; });
@@ -221,7 +232,8 @@
       function (r) { Lic_toast_(r.texto || "Disputa aberta."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; if (msg) msg.innerHTML = Lic_faixa_(m, "erro"); });
   }
   function LicDp_lance_(id, k, autor, valor, conc, bt) {
-    if (LicDp_num_(valor) === null) { Lic_toast_("Escreva o valor do lance em reais (por exemplo 185,40). Nada foi gravado.", "erro"); return; }
+    var lr = LicDp_lerReais_(valor);
+    if (lr.erro) { Lic_toast_("Escreva o valor do lance em reais: " + (lr.erro === "vazio" ? "o campo está vazio" : lr.erro) + ". Nada foi gravado.", "erro"); return; }
     bt.disabled = true;
     LicDp_chamar_("lance", { id: id, item: k, autor: autor, valor: valor, concorrente: conc }, function (r) { Lic_toast_(r.texto || "Lance registrado.", r.avisos && r.avisos.length ? "erro" : "ok"); LicDp_ligarAba_(null, null, id); },
       function (m) { bt.disabled = false; Lic_toast_(m, "erro"); var p = Lic_$_("ldpPrev_" + k); if (p && autor === "NOS") p.innerHTML = '<span class="ldp-vermelho">' + Lic_esc_(m) + "</span>"; });
@@ -265,8 +277,9 @@
   }
   /** Janela só com o motivo: desistir do item, parar/voltar as sugestões, concluir o resultado. */
   function LicDp_janelaMotivo_(id, op, extra, origem) {
-    var tit = { desistir: "Desistir do item " + (extra.item || ""), sugestoes: extra.parar ? "Parar as sugestões" : "Voltar as sugestões", concluir: "Concluir o resultado" }[op];
+    var tit = { desistir: "Desistir do item " + (extra.item || ""), sugestoes: extra.parar ? "Parar as sugestões" : "Voltar as sugestões", concluir: "Concluir o resultado", reconhecerQuebra: "Reconhecer a quebra do registro" }[op];
     var txt = { desistir: "A desistência fica no registro com o motivo; depois dela o SGO+ não registra mais lances neste item. O resultado do item é registrado depois da sessão.", sugestoes: extra.parar ? "O SGO+ deixa de mostrar o próximo lance sugerido. O piso continua valendo para todo lance registrado." : "O SGO+ volta a mostrar o próximo lance sugerido.",
+      reconhecerQuebra: "Só depois de conferir a planilha. O SGO+ grava uma âncora com o seu motivo e o que estava quebrado; o registro recomeça dela e o que veio antes fica marcado no relatório. Motivo com pelo menos 20 letras.",
       concluir: "A licitação vai para \"Resultado\" no Kanban, com o motivo no histórico. O dado dos itens ganhos fica preparado para a etapa de Contrato. Depois disso, o resultado de um item ainda pode ser atualizado (versão nova)." }[op];
     var ov = Lic_janela_(tit, '<p class="cm-txt">' + Lic_esc_(txt) + '</p><div class="cm-campo"><label for="ldpMotJ">Motivo (obrigatório)</label><textarea id="ldpMotJ" rows="3" maxlength="1000"></textarea></div><div id="ldpMotMsg" aria-live="assertive"></div>',
       '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Confirmar</button>', origem);

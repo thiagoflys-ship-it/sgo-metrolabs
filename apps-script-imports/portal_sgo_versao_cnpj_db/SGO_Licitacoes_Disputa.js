@@ -54,12 +54,12 @@ var LICD_COLUNAS = {
 };
 var LICD_COLUNAS_TEXTO = {
   LIC_DISPUTAS: ['PROPOSTA_NUMERO', 'PROPOSTA_SHA256', 'SIMULACAO_HASH', 'SESSAO_ISO', 'BASE_HASH', 'ABERTA_EM', 'ULTIMO_HASH', 'RESULTADO_EM', 'HASH', 'ATUALIZADO_EM'],
-  LIC_DISPUTA_LANCES: ['ITEM', 'QUANDO', 'HASH_ANTERIOR', 'HASH'],
+  LIC_DISPUTA_LANCES: ['ITEM', 'CONCORRENTE', 'MOTIVO', 'TEXTO', 'POR_ID', 'QUANDO', 'HASH_ANTERIOR', 'HASH'],
   LIC_RESULTADOS: ['ITEM', 'VENCEDOR_CNPJ', 'ADJUDICACAO_EM', 'HOMOLOGACAO_EM', 'ATA_EM', 'EM', 'HASH']
 };
 var LICD_SITUACOES = { ABERTA: 'Disputa aberta (modo assistido)', RESULTADO: 'Resultado registrado' };
 var LICD_RESULTADOS = { GANHO: 'Ganho', PERDIDO: 'Perdido', FRACASSADO: 'Fracassado', DESERTO: 'Deserto', DESCLASSIFICADO: 'Desclassificado', HABILITACAO_PENDENTE: 'Habilitação pendente', RECURSO: 'Em recurso' };
-var LICD_TIPOS = { LANCE: 'Lance', PISO: 'Piso autorizado', INTERVALO: 'Intervalo mínimo', DESISTENCIA: 'Desistência do item', SUGESTOES: 'Sugestões' };
+var LICD_TIPOS = { LANCE: 'Lance', PISO: 'Piso autorizado', INTERVALO: 'Intervalo mínimo', DESISTENCIA: 'Desistência do item', SUGESTOES: 'Sugestões', ANCORA: 'Quebra do registro reconhecida pelo Administrador' };
 var LICD_ABRIR_DE = ['RADAR', 'ANALISE', 'DECISAO', 'PROPOSTA'];
 var LICD_INTERVALO_PADRAO = 0.01;
 var LICD_AVISO_ASSISTIDO = 'Modo assistido: o SGO+ não envia lance nem acessa o portal. Dê o lance no portal e registre aqui o valor que você deu e o melhor lance do concorrente.';
@@ -97,10 +97,41 @@ function LicD_motivo_(v, oQue) {
   if (m.length < 10) throw new Error('Escreva o motivo ' + oQue + ' (pelo menos 10 letras): ele fica no registro da disputa e no histórico, com o seu nome e a hora. Nada foi gravado');
   return m;
 }
+/**
+ * Leitura ESTRITA de um valor digitado (revisão de bddf933): vírgula para os centavos, ponto só como milhar junto da vírgula
+ * ("1.234,56"); no máximo 2 casas; sem "%". { valor } ou { erro } com o que fazer. Número (não texto) passa com até 2 casas.
+ * É a mesma conferência da tela (LicDp_lerReais_, JS_Licitacoes_Disputa.html). O simulador de preços (LicP_n_) não muda.
+ * o.pct: campo em % (aceita o sinal "%" no fim).
+ */
+function LicD_lerReais_(v, o) {
+  o = o || {};
+  if (typeof v === 'number') {
+    if (!isFinite(v)) return { erro: 'valor inválido' };
+    return Math.abs(Math.round(v * 100) - v * 100) > 1e-6 ? { erro: 'use no máximo 2 casas decimais (centavos)' } : { valor: v };
+  }
+  var s = Lic_s_(v).replace(/^R\$\s*/i, '').replace(/\s+/g, '');
+  if (o.pct) s = s.replace(/%$/, '');
+  if (!s) return { erro: 'vazio' };
+  if (/%/.test(s)) return { erro: o.pct ? 'escreva só o número do percentual' : 'sem o sinal "%" (o campo é em reais)' };
+  if (/\./.test(s) && !/^\d{1,3}(\.\d{3})+,\d+$/.test(s)) return { erro: 'use vírgula para os centavos (por exemplo 185,40); ponto só para o milhar junto da vírgula (1.234,56)' };
+  if (!/^\d{1,3}(\.\d{3})+(,\d+)?$|^\d+(,\d+)?$/.test(s)) return { erro: 'escreva só números (por exemplo 185,40)' };
+  var dec = (s.split(',')[1] || '');
+  if (dec.length > 2) return { erro: 'use no máximo 2 casas decimais (centavos)' };
+  var n = Number(s.replace(/\./g, '').replace(',', '.'));
+  return isFinite(n) ? { valor: n } : { erro: 'valor inválido' };
+}
 function LicD_valor_(v, rotulo) {
-  var n = LicD_n_(v);
+  var r = LicD_lerReais_(v);
+  if (r.erro && r.erro !== 'vazio' && r.erro !== 'escreva só números (por exemplo 185,40)') throw new Error('Escreva ' + rotulo + ' em reais: ' + r.erro + '. Nada foi gravado');
+  var n = r.erro ? null : r.valor;
   if (n === null || !(n > 0) || n > 100000000) throw new Error('Escreva ' + rotulo + ' em reais, maior que zero (por exemplo 185,40). Nada foi gravado');
   return LicD_r2_(n);
+}
+/** Percentual digitado (intervalo em %): mesmas regras, com "%" opcional no fim. */
+function LicD_pctDigitado_(v, rotulo) {
+  var r = LicD_lerReais_(v, { pct: true });
+  if (r.erro) throw new Error('Escreva ' + rotulo + ': ' + (r.erro === 'vazio' ? 'o campo está vazio' : r.erro) + '. Nada foi gravado');
+  return r.valor;
 }
 
 // ------------------------------------------------------------ conta (a mesma da simulação)
@@ -135,11 +166,23 @@ function LicD_intervaloTxt_(iv) { return iv ? (iv.tipo === 'PERCENTUAL' ? LicP_p
 
 // ------------------------------------------------------------ fontes: proposta emitida e a simulação que ela usou
 function LicD_disputasDe_(oid) { return Lic_ler_(LICD_ABAS.DISPUTAS).filter(function (x) { return Lic_s_(x.OPORTUNIDADE_ID) === Lic_s_(oid); }).sort(function (a, b) { return Lic_s_(b.ABERTA_EM) < Lic_s_(a.ABERTA_EM) ? -1 : 1; }); }
-function LicD_hashDisputa_(r) {
+/** Revisão de bddf933: o hash cobre também o último registro (ULTIMO_SEQ e ULTIMO_HASH). u: { seq, hash } no lugar dos gravados. */
+function LicD_hashDisputa_(r, u) {
+  var seq = u ? u.seq : r.ULTIMO_SEQ, h = u ? u.hash : r.ULTIMO_HASH;
   return Lic_hash_([Lic_s_(r.OPORTUNIDADE_ID), Lic_s_(r.PROPOSTA_ID), Lic_s_(r.PROPOSTA_SHA256), Lic_s_(r.SIMULACAO_HASH), Lic_s_(r.BASE_HASH), Lic_s_(r.SESSAO_ISO), Lic_s_(r.INTERVALO_TIPO),
-    LicD_h_(r.INTERVALO_VALOR), Lic_s_(r.MOTIVO), Lic_s_(r.ABERTA_POR_ID), Lic_s_(r.ABERTA_EM), Lic_s_(r.MODO)].join('|'));
+    LicD_h_(r.INTERVALO_VALOR), Lic_s_(r.MOTIVO), Lic_s_(r.ABERTA_POR_ID), Lic_s_(r.ABERTA_EM), Lic_s_(r.MODO), String(Number(seq) || 0), Lic_s_(h)].join('|'));
 }
 function LicD_integra_(r) { return LicD_hashDisputa_(r) === Lic_s_(r.HASH) && Lic_hash_(Lic_s_(r.BASE_JSON)) === Lic_s_(r.BASE_HASH); }
+/**
+ * O último registro que a disputa ASSINOU (o HASH da disputa confere com ele): o gravado, o começo (0) ou um registro da lista.
+ * Prova que os dados da abertura não mudaram mesmo quando ULTIMO_* foi mexido. null: a abertura foi alterada fora do SGO+.
+ */
+function LicD_assinado_(r, lista) {
+  if (Lic_hash_(Lic_s_(r.BASE_JSON)) !== Lic_s_(r.BASE_HASH)) return null;
+  var cands = [{ seq: Number(r.ULTIMO_SEQ) || 0, hash: Lic_s_(r.ULTIMO_HASH) }, { seq: 0, hash: '' }].concat((lista || []).map(function (x) { return { seq: Number(x.SEQ) || 0, hash: Lic_s_(x.HASH) }; }));
+  for (var i = 0; i < cands.length; i++) if (LicD_hashDisputa_(r, cands[i]) === Lic_s_(r.HASH)) return cands[i];
+  return null;
+}
 
 /**
  * O que a disputa precisa para abrir: { bloqueios: [texto com o que fazer], avisos, proposta, simulacao, itens (base de cada item) }.
@@ -210,22 +253,46 @@ function LicD_sessaoAgenda_(l) {
 // ------------------------------------------------------------ registro imutável (lances e decisões)
 function LicD_hashLance_(x) {
   return Lic_hash_([Lic_s_(x.DISPUTA_ID), String(Number(x.SEQ) || 0), Lic_s_(x.ITEM), Lic_up_(x.TIPO), Lic_up_(x.AUTOR), Lic_s_(x.CONCORRENTE), LicD_h_(x.VALOR), LicD_h_(x.VALOR_ANTERIOR), Lic_up_(x.ORIGEM),
-    Lic_up_(x.SUGERIDO), LicD_h_(x.SUGESTAO), LicD_h_(x.PISO), Lic_up_(x.ASSUMO), Lic_s_(x.MOTIVO), Lic_s_(x.TEXTO), Lic_s_(x.QUANDO), Lic_s_(x.POR_ID), Lic_s_(x.HASH_ANTERIOR)].join('|'));
+    Lic_up_(x.SUGERIDO), LicD_h_(x.SUGESTAO), LicD_h_(x.PISO), Lic_up_(x.ASSUMO), Lic_s_(x.MOTIVO), Lic_s_(x.TEXTO), Lic_s_(x.QUANDO), Lic_s_(x.POR_ID), Lic_s_(x.HASH_ANTERIOR),
+    LicD_h_(x.SOBRA), LicD_h_(x.SOBRA_PCT), Lic_s_(x.POR_NOME)].join('|'));
 }
 function LicD_lancesDe_(did) { return Lic_ler_(LICD_ABAS.LANCES).filter(function (x) { return Lic_s_(x.DISPUTA_ID) === Lic_s_(did); }).sort(function (a, b) { return (Number(a.SEQ) || 0) - (Number(b.SEQ) || 0); }); }
-/** Confere a cadeia: cada hash, o encadeamento, a sequência e o último gravado na disputa. { integra, problema } */
-function LicD_cadeia_(d, lista) {
-  var ant = '', problema = '';
-  for (var i = 0; i < lista.length && !problema; i++) {
-    var x = lista[i];
-    if ((Number(x.SEQ) || 0) !== i + 1) problema = 'falta o registro ' + (i + 1) + ' ou a ordem mudou';
+/**
+ * Confere a cadeia contra o último registro ASSINADO pela disputa (ass: LicD_assinado_). Conta a partir da última âncora válida
+ * (quebra reconhecida pelo Administrador). { integra, problema, ajustar, ancora }:
+ *   - ajustar: registros a mais, válidos e encadeados a partir do assinado (a gravação da linha deu certo e a da disputa não):
+ *     a cadeia confere e ULTIMO_* avança sozinho na próxima gravação (revisão de bddf933, ALTA 1, a);
+ *   - ancora: a quebra anterior reconhecida (quem, quando, motivo, o que estava quebrado).
+ */
+function LicD_cadeia_(d, lista, ass) {
+  ass = ass || { seq: Number(d.ULTIMO_SEQ) || 0, hash: Lic_s_(d.ULTIMO_HASH) };
+  var k = -1;
+  for (var j = lista.length - 1; j >= 0; j--) if (Lic_up_(lista[j].TIPO) === 'ANCORA' && LicD_hashLance_(lista[j]) === Lic_s_(lista[j].HASH)) { k = j; break; }
+  var seq0 = k >= 0 ? Number(lista[k].SEQ) || 0 : 0, ant = k >= 0 ? Lic_s_(lista[k].HASH) : '', problema = '', vistos = {};
+  vistos[seq0] = ant;
+  for (var i = k + 1; i < lista.length && !problema; i++) {
+    var x = lista[i], esp = seq0 + (i - k);
+    if ((Number(x.SEQ) || 0) !== esp) problema = 'falta o registro ' + esp + ' ou a ordem mudou';
     else if (Lic_s_(x.HASH_ANTERIOR) !== ant) problema = 'o registro ' + x.SEQ + ' não se liga ao anterior';
     else if (LicD_hashLance_(x) !== Lic_s_(x.HASH)) problema = 'o registro ' + x.SEQ + ' foi alterado';
-    ant = Lic_s_(x.HASH);
+    ant = Lic_s_(x.HASH); vistos[Number(x.SEQ) || 0] = ant;
   }
-  if (!problema && (Number(d.ULTIMO_SEQ) || 0) !== lista.length) problema = 'a disputa registra ' + (Number(d.ULTIMO_SEQ) || 0) + ' registro(s) e há ' + lista.length;
-  if (!problema && lista.length && Lic_s_(d.ULTIMO_HASH) !== ant) problema = 'o último registro não é o que a disputa guardou';
-  return { integra: !problema, problema: problema };
+  var ultSeq = lista.length ? (k >= 0 ? seq0 + (lista.length - 1 - k) : lista.length) : 0, ajustar = null;
+  if (!problema) {
+    if (ass.seq === ultSeq && ass.hash === ant) { /* confere */ }
+    else if (ass.seq < ultSeq && vistos[ass.seq] !== undefined && vistos[ass.seq] === ass.hash) ajustar = { de: ass.seq, seq: ultSeq, hash: ant };
+    else if (ass.seq > ultSeq) problema = 'a disputa registra ' + ass.seq + ' registro(s) e há ' + ultSeq + ' (registro apagado)';
+    else problema = 'o último registro não é o que a disputa guardou';
+  }
+  var anc = k >= 0 ? { seq: seq0, por: Lic_s_(lista[k].POR_NOME), quando: Lic_s_(lista[k].QUANDO), motivo: Lic_s_(lista[k].MOTIVO), texto: Lic_s_(lista[k].TEXTO) } : null;
+  return { integra: !problema, problema: problema, ajustar: ajustar, ancora: anc };
+}
+/** Grava ULTIMO_* (e o HASH da disputa, que os cobre) e espelha em d. */
+function LicD_gravarUltimo_(d, seq, hash, agora) {
+  var mud = { ULTIMO_SEQ: seq, ULTIMO_HASH: hash, ATUALIZADO_EM: agora || Lic_agora_() };
+  mud.HASH = LicD_hashDisputa_(d, { seq: seq, hash: hash });
+  SGO_DATA.update(LICD_ABAS.DISPUTAS, d.ID, mud);
+  d.ULTIMO_SEQ = seq; d.ULTIMO_HASH = hash; d.HASH = mud.HASH;
 }
 /** Grava uma linha no registro (quem chama segura a trava e já conferiu a cadeia). Atualiza ULTIMO_SEQ/ULTIMO_HASH. */
 function LicD_registrar_(eu, d, campos) {
@@ -235,8 +302,8 @@ function LicD_registrar_(eu, d, campos) {
   x.SEQ = seq; x.QUANDO = agora; x.HASH_ANTERIOR = seq === 1 ? '' : Lic_s_(d.ULTIMO_HASH);
   x.HASH = LicD_hashLance_(x);
   var ins = SGO_DATA.insert(LICD_ABAS.LANCES, x); x.ID = Lic_s_(ins && ins.ID);
-  SGO_DATA.update(LICD_ABAS.DISPUTAS, d.ID, { ULTIMO_SEQ: seq, ULTIMO_HASH: x.HASH, ATUALIZADO_EM: agora });
-  d.ULTIMO_SEQ = seq; d.ULTIMO_HASH = x.HASH;
+  // se esta segunda escrita falhar, a linha acima continua válida e encadeada: a próxima gravação avança ULTIMO_* (LicD_cadeia_)
+  LicD_gravarUltimo_(d, seq, x.HASH, agora);
   return x;
 }
 
@@ -312,7 +379,7 @@ function LicD_lanceTela_(x) {
 }
 /** Disputa completa para a tela e para o relatório. */
 function LicD_montar_(d) {
-  var lances = LicD_lancesDe_(d.ID), cad = LicD_cadeia_(d, lances), resultados = LicD_resultadosDe_(d.ID), est = LicD_estado_(d, lances, resultados);
+  var lances = LicD_lancesDe_(d.ID), ass = LicD_assinado_(d, lances), cad = LicD_cadeia_(d, lances, ass || undefined), resultados = LicD_resultadosDe_(d.ID), est = LicD_estado_(d, lances, resultados);
   var itens = est.ordem.map(function (k) { return LicD_itemTela_(est.itens[k], est.paradas, est.resultados[k]); });
   var comResultado = itens.filter(function (i) { return i.resultado; }).length;
   return { id: Lic_s_(d.ID), situacao: Lic_up_(d.SITUACAO), situacaoNome: LICD_SITUACOES[Lic_up_(d.SITUACAO)] || Lic_s_(d.SITUACAO), modo: Lic_s_(d.MODO) || 'ASSISTIDO',
@@ -320,7 +387,7 @@ function LicD_montar_(d) {
     sessaoIso: Lic_s_(d.SESSAO_ISO), sessaoTexto: Lic_s_(d.SESSAO_ISO) ? Lic_brDiaHora_(d.SESSAO_ISO) : '', sessaoFonte: Lic_s_(d.SESSAO_FONTE), portal: Lic_s_(d.PORTAL_NOME),
     intervalo: { tipo: Lic_up_(d.INTERVALO_TIPO) || 'VALOR', valor: LicD_n_(d.INTERVALO_VALOR), fonte: Lic_s_(d.INTERVALO_FONTE) }, motivo: Lic_s_(d.MOTIVO), abertaPor: Lic_s_(d.ABERTA_POR_NOME), abertaEm: Lic_s_(d.ABERTA_EM),
     resultadoEm: Lic_s_(d.RESULTADO_EM), resultadoPor: Lic_s_(d.RESULTADO_POR_NOME), resultadoMotivo: Lic_s_(d.RESULTADO_MOTIVO), contrato: Lic_json_(d.CONTRATO_JSON, null),
-    integra: LicD_integra_(d), cadeia: cad, paradas: est.paradas, paradasMotivo: est.paradasTexto, itens: itens, lances: lances.map(LicD_lanceTela_).reverse(), resultados: resultados.map(LicD_resultadoTela_).reverse(),
+    integra: !!ass, cadeia: cad, podeReconhecer: !!ass && !cad.integra, paradas: est.paradas, paradasMotivo: est.paradasTexto, itens: itens, lances: lances.map(LicD_lanceTela_).reverse(), resultados: resultados.map(LicD_resultadoTela_).reverse(),
     comResultado: comResultado, podeConcluir: Lic_up_(d.SITUACAO) === 'ABERTA' && itens.length > 0 && comResultado === itens.length, hash: Lic_s_(d.HASH), regras: LICD_REGRAS, aviso: LICD_AVISO_ASSISTIDO };
 }
 
@@ -370,11 +437,24 @@ function LicD_paraGravar_(l, o) {
   var d = LicD_disputasDe_(l.ID)[0];
   if (!d) throw new Error('Não foi possível: esta licitação ainda não tem disputa aberta. Abra a disputa na aba Disputa da ficha. Nada foi gravado');
   if (o.situacoes && o.situacoes.indexOf(Lic_up_(d.SITUACAO)) < 0) throw new Error('Não foi possível: a disputa está "' + (LICD_SITUACOES[Lic_up_(d.SITUACAO)] || d.SITUACAO) + '"' + (Lic_up_(d.SITUACAO) === 'RESULTADO' ? ' e não recebe mais lances nem decisões da sessão (o resultado pode ser atualizado)' : '') + '. Nada foi gravado');
-  if (!LicD_integra_(d)) throw new Error('Não foi possível: os dados da disputa não conferem com o hash gravado (alterados fora do SGO+). Nada foi gravado. Avise o Administrador; durante a sessão, anote os lances fora do SGO+');
-  var lances = LicD_lancesDe_(d.ID), cad = LicD_cadeia_(d, lances);
-  if (!cad.integra) throw new Error('Não foi possível: o registro de lances desta disputa foi mexido fora do SGO+ (' + cad.problema + '). O SGO+ não grava sobre um registro alterado: nada foi gravado. Avise o Administrador; durante a sessão, anote os lances fora do SGO+');
+  var lances = LicD_lancesDe_(d.ID), ass = LicD_assinado_(d, lances);
+  if (!ass) throw new Error('Não foi possível: os dados da abertura da disputa (proposta, simulação, itens e pisos) não conferem com o hash gravado (alterados fora do SGO+). Nada foi gravado. Avise o Administrador do sistema: a disputa precisa ser conferida na planilha; durante a sessão, anote os lances fora do SGO+');
+  // o último registro assinado vale (ULTIMO_* mexido na planilha não muda nada)
+  d.ULTIMO_SEQ = ass.seq; d.ULTIMO_HASH = ass.hash;
+  var cad = LicD_cadeia_(d, lances, ass), aviso = '';
+  if (cad.integra && cad.ajustar) {
+    // revisão de bddf933 (ALTA 1, a): linha gravada e disputa não atualizada (falha no meio da gravação): a cadeia confere, retoma sozinha
+    LicD_gravarUltimo_(d, cad.ajustar.seq, cad.ajustar.hash);
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_REGISTRO_RETOMADO', { id: '', nome: 'Central de disputas (sistema)' }, { de: 'registro ' + cad.ajustar.de, para: 'registro ' + cad.ajustar.seq,
+      texto: 'O registro de lances tinha ' + (cad.ajustar.seq - cad.ajustar.de) + ' linha(s) gravada(s) sem a atualização da disputa (falha no meio da gravação). As linhas conferem e se ligam ao último registro assinado: a cadeia foi retomada.', versao: 'disputa · registro ' + cad.ajustar.seq, fonte: 'Central de disputas', hash: cad.ajustar.hash });
+  } else if (!cad.integra) {
+    var oQueFazer = 'Peça ao Administrador para conferir a planilha e tocar em "Reconhecer a quebra" na aba Disputa (ele escreve o motivo e o registro recomeça a partir dali); durante a sessão, anote os lances fora do SGO+';
+    // revisão de bddf933 (ALTA 1, c): o resultado e a conclusão não dependem da cadeia de lances (gravam com o aviso)
+    if (!o.semCadeia) throw new Error('Não foi possível: o registro de lances desta disputa foi mexido fora do SGO+ (' + cad.problema + '). O SGO+ não grava lance nem decisão sobre um registro alterado: nada foi gravado. ' + oQueFazer);
+    aviso = 'Registro de lances com quebra (' + cad.problema + '): gravado mesmo assim; o relatório da disputa mostra a quebra.';
+  }
   var est = LicD_estado_(d, lances, LicD_resultadosDe_(d.ID));
-  return { d: d, lances: lances, est: est };
+  return { d: d, lances: lances, est: est, cadeia: cad, aviso: aviso };
 }
 function LicD_item_(g, item) {
   var it = g.est.itens[Lic_s_(item)];
@@ -385,7 +465,7 @@ function LicD_item_(g, item) {
 /** Abrir: d = { id, motivo, sessaoData, sessaoHora, sessaoFonte, portal, intervaloTipo, intervaloValor, intervaloFonte }. */
 function LicD_abrir_(eu, d) {
   var motivo = LicD_motivo_(d.motivo, 'da abertura da disputa');
-  var ivTipo = Lic_up_(d.intervaloTipo) === 'PERCENTUAL' ? 'PERCENTUAL' : 'VALOR', ivTxt = Lic_s_(d.intervaloValor), ivValor = ivTxt ? LicD_n_(ivTxt) : null, ivFonte = LicD_txt_(d.intervaloFonte, 300);
+  var ivTipo = Lic_up_(d.intervaloTipo) === 'PERCENTUAL' ? 'PERCENTUAL' : 'VALOR', ivTxt = Lic_s_(d.intervaloValor), ivValor = ivTxt ? (ivTipo === 'PERCENTUAL' ? LicD_pctDigitado_(ivTxt, 'o intervalo em %') : LicD_valor_(ivTxt, 'o intervalo mínimo entre lances')) : null, ivFonte = LicD_txt_(d.intervaloFonte, 300);
   if (ivTxt && (ivValor === null || !(ivValor > 0) || (ivTipo === 'PERCENTUAL' && ivValor >= 50) || (ivTipo === 'VALOR' && ivValor > 1000000))) throw new Error('Escreva o intervalo mínimo entre lances ' + (ivTipo === 'PERCENTUAL' ? 'em %, maior que zero e menor que 50 (por exemplo 0,5)' : 'em reais, maior que zero (por exemplo 1,00)') + ', ou deixe em branco para R$ 0,01. Nada foi gravado');
   if (ivValor === null) { ivTipo = 'VALOR'; ivValor = LICD_INTERVALO_PADRAO; ivFonte = 'Padrão do SGO+: o edital não informa intervalo (menor variação, R$ 0,01)'; }
   else if (ivFonte.length < 5) throw new Error('Escreva de onde veio o intervalo (por exemplo "edital, item 7.3"). Nada foi gravado');
@@ -443,7 +523,7 @@ function LicD_piso_(eu, d) {
 
 /** Intervalo mínimo: d = { id, item ('' = todos), tipo, valor, fonte, motivo }. */
 function LicD_intervalo_(eu, d) {
-  var motivo = LicD_motivo_(d.motivo, 'da mudança do intervalo'), tipo = Lic_up_(d.tipo) === 'PERCENTUAL' ? 'PERCENTUAL' : 'VALOR', v = LicD_n_(d.valor), fonte = LicD_txt_(d.fonte, 300);
+  var motivo = LicD_motivo_(d.motivo, 'da mudança do intervalo'), tipo = Lic_up_(d.tipo) === 'PERCENTUAL' ? 'PERCENTUAL' : 'VALOR', v = tipo === 'PERCENTUAL' ? LicD_pctDigitado_(d.valor, 'o intervalo em %') : LicD_valor_(d.valor, 'o intervalo em reais'), fonte = LicD_txt_(d.fonte, 300);
   if (v === null || !(v > 0) || (tipo === 'PERCENTUAL' && v >= 50)) throw new Error('Escreva o intervalo ' + (tipo === 'PERCENTUAL' ? 'em %, maior que zero e menor que 50' : 'em reais, maior que zero') + '. Nada foi gravado');
   if (fonte.length < 5) throw new Error('Escreva de onde veio o intervalo (por exemplo "edital, item 7.3" ou "aviso do pregoeiro no chat"). Nada foi gravado');
   return Lic_comTrava_(function () {
@@ -538,6 +618,39 @@ function LicD_prazosRecurso_(eu, l, parte, ataDia, fonte, agora) {
   return criados;
 }
 
+var LICD_PRAZOS_RECURSO = { NOS: ['PRAZO_RECURSO'], CONCORRENTE: ['PRAZO_CONTRARRAZOES'], AMBOS: ['PRAZO_RECURSO', 'PRAZO_CONTRARRAZOES'] };
+/**
+ * Revisão de bddf933 (BAIXA 6): quando nenhum item continua em recurso (ou ninguém mais recorre de um lado), os prazos PENDENTES que
+ * vieram do resultado (natureza PREVISTO, fonte "Resultado registrado por") são cancelados com o motivo. Prazo já confirmado por
+ * pessoa fica (o alerta dele é decisão de quem confirmou). ultimos: { item: linha de LIC_RESULTADOS mais nova }.
+ */
+function LicD_cancelarPrazosOrfaos_(eu, l, ultimos, agora) {
+  var precisa = {}, cancelados = [];
+  Object.keys(ultimos).forEach(function (k) { var x = ultimos[k]; if (Lic_up_(x.SITUACAO) === 'RECURSO') (LICD_PRAZOS_RECURSO[Lic_up_(x.RECURSO_PARTE)] || []).forEach(function (t) { precisa[t] = true; }); });
+  Lic_eventosDe_(l.ID).forEach(function (e) {
+    var t = Lic_s_(e.TIPO);
+    if (!/^PRAZO_(RECURSO|CONTRARRAZOES)$/.test(t) || precisa[t] || Lic_up_(e.SITUACAO) !== 'ATIVO' || Lic_up_(e.NATUREZA) !== 'PREVISTO' || Lic_s_(e.FONTE_REF).indexOf('Resultado registrado por') !== 0) return;
+    var mot = 'Nenhum item continua em recurso com ' + (t === 'PRAZO_RECURSO' ? 'razões nossas' : 'contrarrazões nossas') + ' (resultado atualizado por ' + eu.nome + '): o prazo pendente foi cancelado.';
+    SGO_DATA.update(LIC_ABAS.EVENTOS, e.ID, { SITUACAO: 'CANCELADO', MOTIVO_MUDANCA: mot, ATUALIZADO_EM: agora });
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'AGENDA_PRAZO_CANCELADO', eu, { de: Lic_eventoQuandoTxt_(e), para: 'cancelado', texto: (LIC_EVENTO_TIPOS[t] || { nome: t }).nome + ': ' + mot, versao: e.VERSAO, fonte: 'Central de disputas (resultado)' });
+    cancelados.push((LIC_EVENTO_TIPOS[t] || { nome: t }).nome);
+  });
+  return cancelados;
+}
+/** Revisão de bddf933 (ALTA 2): com a disputa em RESULTADO, o dado do Contrato acompanha cada resultado gravado (com histórico). */
+function LicD_atualizarContrato_(eu, l, d) {
+  if (Lic_up_(d.SITUACAO) !== 'RESULTADO') return null;
+  var antes = Lic_json_(d.CONTRATO_JSON, null), novo = LicD_contratoDado_(l, LicD_montar_(d));
+  var txt = function (c) { return c ? (c.itens || []).length + ' item(ns) ganho(s), total ' + LicD_moeda_(c.total || 0) + (c.pronto ? ', pronto' : '') : 'sem dado'; };
+  var chave = function (c) { return c ? JSON.stringify([c.itens, c.total, c.pendentes, c.pronto, c.homologadoEm]) : ''; };
+  if (chave(antes) === chave(novo)) return null;
+  var agora = Lic_agora_();
+  SGO_DATA.update(LICD_ABAS.DISPUTAS, d.ID, { CONTRATO_JSON: JSON.stringify(novo), ATUALIZADO_EM: agora });
+  d.CONTRATO_JSON = JSON.stringify(novo);
+  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_CONTRATO_ATUALIZADO', eu, { de: txt(antes), para: txt(novo), texto: 'Dado preparado para a etapa de Contrato refeito depois do resultado novo: ' + txt(novo) + '. ' + novo.aviso, versao: LICD_REGRAS, fonte: 'Central de disputas' });
+  return novo;
+}
+
 /**
  * Resultado de um item (versão nova; nada é alterado): d = { id, item, situacao, colocacao, vencedor, vencedorCnpj, valorFinal, motivo,
  * adjudicacao, homologacao, fonte, ata, recursoParte (NOS|CONCORRENTE|AMBOS), obs }.
@@ -563,22 +676,30 @@ function LicD_resultado_(eu, d) {
   var venc = LicD_txt_(d.vencedor, 200), cnpj = Lic_s_(d.vencedorCnpj).replace(/\D/g, '');
   if (cnpj && cnpj.length !== 14) throw new Error('Escreva o CNPJ do vencedor com os 14 números (ou deixe em branco). Nada foi gravado');
   var r = Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id), g = LicD_paraGravar_(l, { situacoes: ['ABERTA', 'RESULTADO'] }), it = LicD_item_(g, d.item), agora = Lic_agora_();
+    var l = Lic_acharOp_(d.id), g = LicD_paraGravar_(l, { situacoes: ['ABERTA', 'RESULTADO'], semCadeia: true }), it = LicD_item_(g, d.item), agora = Lic_agora_();
+    // revisão de bddf933 (MÉDIA-ALTA 3): item desistido não é ganho; valor final acima do nosso último lance (ou da proposta) só com o motivo
+    if (sit === 'GANHO' && it.desistiu) throw new Error('Não foi possível: a Diretoria desistiu do item ' + it.item + ' na sessão (' + it.desistenciaMotivo + '); ele não pode ficar como ganho. Registre perdido (ou o resultado da ata). Nada foi gravado');
+    if (sit === 'GANHO' && vf > it.nossoAtual + 0.004 && motivo.length < 10) throw new Error('Não foi possível: o valor final de ' + LicD_moeda_(vf) + ' é maior que o nosso último lance do item ' + it.item + ' (' + LicD_moeda_(it.nossoAtual) + (it.nossoInformado ? '' : ', o valor da proposta') + '). Confira a ata; se o valor está certo, escreva o motivo (pelo menos 10 letras). Nada foi gravado');
     if (sit === 'GANHO' && vf < it.piso - 0.004) throw new Error('O valor final de ' + LicD_moeda_(vf) + ' fica abaixo do piso autorizado do item ' + it.item + ' (' + LicD_moeda_(it.piso) + '). Se a Diretoria aceitou um valor menor na negociação, autorize antes o piso menor (com o motivo). Nada foi gravado');
     var ant = LicD_resultadosDe_(g.d.ID).filter(function (x) { return Lic_s_(x.ITEM) === it.item; }), versao = ant.reduce(function (m, x) { return Math.max(m, Number(x.VERSAO) || 0); }, 0) + 1, prev = ant[ant.length - 1];
     var eventos = sit === 'RECURSO' ? LicD_prazosRecurso_(eu, l, parte, ata, fonte, agora) : [];
+    var acima = sit === 'GANHO' && vf > it.nossoAtual + 0.004;
     var reg = { DISPUTA_ID: Lic_s_(g.d.ID), OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), ITEM: it.item, VERSAO: versao, SITUACAO: sit, COLOCACAO: col, VENCEDOR: sit === 'GANHO' ? 'Metrolabs (nós)' : venc, VENCEDOR_CNPJ: sit === 'GANHO' ? '' : cnpj,
       VALOR_FINAL: vf === null ? '' : vf, VALOR_TOTAL: vf === null ? '' : LicD_r2_(vf * it.quantidade), MOTIVO: motivo, ADJUDICACAO_EM: adj, HOMOLOGACAO_EM: hom, ATA_EM: ata, RECURSO_PARTE: parte, FONTE: fonte, OBS: LicD_txt_(d.obs, 500),
       EVENTOS: Lic_texto_(eventos.join('; '), 500), POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
     reg.HASH = LicD_hashResultado_(reg);
     SGO_DATA.insert(LICD_ABAS.RESULTADOS, reg);
+    var ultimos = {}; LicD_resultadosDe_(g.d.ID).forEach(function (x) { ultimos[Lic_s_(x.ITEM)] = x; });
+    var cancelados = LicD_cancelarPrazosOrfaos_(eu, l, ultimos, agora);
     var deTxt = prev ? (LICD_RESULTADOS[Lic_up_(prev.SITUACAO)] || prev.SITUACAO) + ' (versão ' + prev.VERSAO + ')' : 'sem resultado';
     var texto = 'Resultado do item ' + it.item + ': ' + LICD_RESULTADOS[sit] + (col ? ', ' + col + 'º lugar' : '') + (vf !== null ? ', valor final ' + LicD_moeda_(vf) + ' (total ' + LicD_moeda_(reg.VALOR_TOTAL) + ')' : '') + (sit !== 'GANHO' && venc ? ', vencedor ' + venc : '') +
-      (motivo ? '. Motivo: ' + motivo : '') + (adj ? '. Adjudicação em ' + LicD_dia_(adj) : '') + (hom ? '. Homologação em ' + LicD_dia_(hom) : '') + (eventos.length ? '. Prazos na agenda, pendentes de confirmação: ' + eventos.join('; ') : '') + '. Fonte: ' + fonte + '.';
+      (motivo ? '. Motivo: ' + motivo : '') + (adj ? '. Adjudicação em ' + LicD_dia_(adj) : '') + (hom ? '. Homologação em ' + LicD_dia_(hom) : '') + (eventos.length ? '. Prazos na agenda, pendentes de confirmação: ' + eventos.join('; ') : '') + (cancelados.length ? '. Prazos pendentes cancelados (sem recurso): ' + cancelados.join('; ') : '') +
+      (acima ? '. Valor final acima do nosso último lance (' + LicD_moeda_(it.nossoAtual) + '), aceito com o motivo' : '') + '. Fonte: ' + fonte + '.' + (g.aviso ? ' ' + g.aviso : '');
     Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_RESULTADO_ITEM', eu, { de: deTxt, para: LICD_RESULTADOS[sit] + ' (versão ' + versao + ')', texto: texto, versao: 'resultado ' + versao, fonte: 'Central de disputas', hash: reg.HASH });
-    return { texto: texto, eventos: eventos, op: l };
+    var contrato = LicD_atualizarContrato_(eu, l, g.d);
+    return { texto: texto, eventos: eventos, cancelados: cancelados, op: l, contrato: contrato };
   });
-  return { texto: r.texto + (r.eventos.length ? ' Confirme as datas na aba Prazos: sem confirmação não há alerta.' : ''), eventos: r.eventos };
+  return { texto: r.texto + (r.eventos.length ? ' Confirme as datas na aba Prazos: sem confirmação não há alerta.' : '') + (r.contrato ? ' O dado do Contrato foi refeito: ' + r.contrato.aviso : ''), eventos: r.eventos, cancelados: r.cancelados, contrato: r.contrato };
 }
 
 /** Dado preparado para a etapa de Contrato (só o dado): itens ganhos, valores, datas e o que ainda falta. */
@@ -597,14 +718,14 @@ function LicD_contratoDado_(l, m) {
 function LicD_concluir_(eu, d) {
   var motivo = LicD_motivo_(d.motivo, 'da conclusão do resultado');
   var r = Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id), g = LicD_paraGravar_(l, { situacoes: ['ABERTA'] }), m = LicD_montar_(g.d), faltam = m.itens.filter(function (i) { return !i.resultado; });
+    var l = Lic_acharOp_(d.id), g = LicD_paraGravar_(l, { situacoes: ['ABERTA'], semCadeia: true }), m = LicD_montar_(g.d), faltam = m.itens.filter(function (i) { return !i.resultado; });
     if (faltam.length) throw new Error('Não foi possível concluir: falta o resultado do(s) item(ns) ' + faltam.map(function (i) { return i.item; }).join(', ') + '. Registre o resultado de cada item na aba Disputa (com a fonte). Nada foi alterado');
     if (Lic_s_(l.SITUACAO) !== 'DISPUTA') throw new Error('Não foi possível concluir: a oportunidade está em "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '", não em Disputa (alguém mudou agora há pouco). Atualize e confira. Nada foi alterado');
     var contrato = LicD_contratoDado_(l, m), agora = Lic_agora_();
     var cont = {}; m.itens.forEach(function (i) { cont[i.resultado.situacaoNome] = (cont[i.resultado.situacaoNome] || 0) + 1; });
     var resumo = Object.keys(cont).map(function (k) { return cont[k] + ' ' + k.toLowerCase(); }).join(', ');
     SGO_DATA.update(LICD_ABAS.DISPUTAS, g.d.ID, { SITUACAO: 'RESULTADO', RESULTADO_EM: agora, RESULTADO_POR_ID: eu.id, RESULTADO_POR_NOME: eu.nome, RESULTADO_MOTIVO: motivo, CONTRATO_JSON: JSON.stringify(contrato), ATUALIZADO_EM: agora });
-    var texto = 'Resultado da disputa registrado: ' + resumo + (contrato.itens.length ? '; ' + contrato.itens.length + ' item(ns) ganho(s), total ' + LicD_moeda_(contrato.total) + ' (dado preparado para a etapa de Contrato)' : '') + '. Motivo: ' + motivo;
+    var texto = 'Resultado da disputa registrado: ' + resumo + (contrato.itens.length ? '; ' + contrato.itens.length + ' item(ns) ganho(s), total ' + LicD_moeda_(contrato.total) + ' (dado preparado para a etapa de Contrato)' : '') + '. Motivo: ' + motivo + (g.aviso ? '. ' + g.aviso : '');
     var mud = Lic_mudarSituacaoSemTrava_(eu, { id: l.ID, textoHistorico: texto, fonte: d.fonte === 'Kanban' ? 'Kanban' : 'Central de disputas' }, ['DISPUTA'], 'RESULTADO', 'RESULTADO_REGISTRADO', {}, 'concluir o resultado');
     return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: 'RESULTADO', hash: mud.hash, resumo: resumo, contrato: contrato };
   });
@@ -634,6 +755,7 @@ function LicD_relatorioHtml_(l, m, o) {
     lan.map(function (x) { return [String(x.seq), x.quandoBr, x.item, x.autor === 'NOS' ? 'Nós' : 'Concorrente' + (x.concorrente ? ' (' + x.concorrente + ')' : ''), LicD_moeda_(x.valor), x.autor === 'NOS' && x.sobraPct !== null ? LicP_pct_(x.sobraPct, 2) : '—',
       'Digitado' + (x.sugerido ? ' (= sugestão)' : ''), x.por, x.hash.slice(0, 12)]; }), { legenda: 'Lances digitados pela Diretoria, na ordem', vazio: 'Nenhum lance registrado.', compacta: true }) +
     (m.cadeia.integra ? '<p>' + esc('Cadeia do registro conferida: ' + m.lances.length + ' registro(s), cada um ligado ao anterior pelo hash, sem alteração.') + '</p>' : RelA4_caixa_('Registro de lances alterado fora do SGO+: ' + m.cadeia.problema + '.', 'critico')) +
+    (m.cadeia.ancora ? RelA4_caixa_('Quebra do registro reconhecida pelo Administrador ' + m.cadeia.ancora.por + ' em ' + LicD_br_(m.cadeia.ancora.quando) + ' (âncora ' + m.cadeia.ancora.seq + '): ' + m.cadeia.ancora.motivo + '. A conferência vale a partir da âncora; os registros anteriores ficam como estavam.', 'aviso') : '') +
     F('LIC_DISPUTA_LANCES (uma linha por lance, imutável; hash encadeado). O SGO+ não envia lance: todo valor foi digitado por quem registrou. Sobra pela conta da simulação (LicP_sobra_).'));
   corpo += RelA4_secao_('Resultado', RelA4_tabela_([{ t: 'Item', cen: true, w: '11mm' }, { t: 'Situação' }, { t: 'Colocação', cen: true }, { t: 'Vencedor' }, { t: 'Valor final', num: true }, { t: 'Adjudicação' }, { t: 'Homologação' }, { t: 'Fonte' }],
     m.itens.map(function (i) { var r = i.resultado; return r ? [i.item, r.situacaoNome + (r.motivo ? ': ' + Lic_texto_(r.motivo, 200) : '') + (r.eventos ? ' (' + r.eventos + ')' : ''), r.colocacao || '—', r.vencedor || '—', r.valorFinal === null ? '—' : LicD_moeda_(r.valorFinal), LicD_dia_(r.adjudicacao) || '—', LicD_dia_(r.homologacao) || '—', r.fonte + ' · versão ' + r.versao + (r.integra ? '' : ' (alterado fora do SGO+)')] : [i.item, 'sem resultado', '—', '—', '—', '—', '—', '—']; }),
@@ -653,6 +775,31 @@ function LicD_relatorio_(eu, d) {
     function (reg) { Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'RELATORIO_GERADO', eu, { para: reg.NUMERO, texto: 'Relatório da disputa gerado em A4 e guardado (SHA-256 ' + reg.HTML_SHA256 + '). ' + resumo, versao: 'relatório ' + reg.VERSAO + ' · ' + LICD_REGRAS, fonte: 'Central de disputas', hash: reg.HASH }); });
 }
 
+/**
+ * Revisão de bddf933 (ALTA 1, b): só o Administrador. Com o registro quebrado (linha mudada ou apagada na planilha), grava uma
+ * ÂNCORA com o motivo e o que estava quebrado; a cadeia recomeça dela (o que veio antes fica marcado no painel e no relatório).
+ * Os dados da abertura (proposta, simulação, pisos) precisam conferir: âncora não "limpa" abertura alterada. d = { id, motivo }.
+ */
+function LicD_reconhecerQuebra_(eu, d) {
+  if (Lic_up_(eu.perfil) !== 'ADMIN') throw new Error('Não foi possível: só o Administrador reconhece a quebra do registro de lances (ele confere a planilha antes). Peça ao Administrador. Nada foi gravado');
+  var motivo = LicD_txt_(d.motivo, 1000);
+  if (motivo.length < 20) throw new Error('Escreva o motivo da quebra com o que você conferiu na planilha (pelo menos 20 letras): fica na âncora do registro e no histórico. Nada foi gravado');
+  return Lic_comTrava_(function () {
+    var l = Lic_acharOp_(d.id), x = LicD_disputasDe_(l.ID)[0];
+    if (!x) throw new Error('Não foi possível: esta licitação não tem disputa. Nada foi gravado');
+    var lances = LicD_lancesDe_(x.ID), ass = LicD_assinado_(x, lances);
+    if (!ass) throw new Error('Não foi possível: os dados da abertura da disputa foram alterados fora do SGO+; a âncora não vale para eles. A disputa precisa ser conferida na planilha pelo Administrador do sistema. Nada foi gravado');
+    var cad = LicD_cadeia_(x, lances, ass);
+    if (cad.integra) throw new Error('Não há quebra: o registro de lances confere' + (cad.ajustar ? ' (a retomada automática acontece na próxima gravação)' : '') + '. Nada foi gravado');
+    var ult = lances[lances.length - 1], maxSeq = lances.reduce(function (m, y) { return Math.max(m, Number(y.SEQ) || 0); }, 0);
+    x.ULTIMO_SEQ = maxSeq; x.ULTIMO_HASH = ult ? Lic_s_(ult.HASH) : '';
+    var texto = 'Quebra reconhecida pelo Administrador: ' + cad.problema + '. ' + lances.length + ' registro(s) antes desta âncora ficam como estão, marcados no painel e no relatório.';
+    var reg = LicD_registrar_(eu, x, { TIPO: 'ANCORA', AUTOR: 'ADMINISTRADOR', MOTIVO: motivo, TEXTO: texto });
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_QUEBRA_RECONHECIDA', eu, { de: 'registro quebrado', para: 'âncora ' + reg.SEQ, texto: texto + ' Motivo: ' + motivo, versao: 'disputa · registro ' + reg.SEQ, fonte: 'Central de disputas', hash: reg.HASH });
+    return { texto: 'Quebra reconhecida (âncora ' + reg.SEQ + '). O registro de lances recomeça a partir dela; o que veio antes fica marcado no relatório.' };
+  });
+}
+
 // ------------------------------------------------------------ ações (Licitacoes_api 'disputa', { op })
 var LICD_OPS = {
   central: function (eu) { return LicD_central_(eu); },
@@ -665,12 +812,13 @@ var LICD_OPS = {
   sugestoes: function (eu, d) { return LicD_sugestoes_(eu, d); },
   resultado: function (eu, d) { return LicD_resultado_(eu, d); },
   concluir: function (eu, d) { return LicD_concluir_(eu, d); },
-  relatorio: function (eu, d) { return LicD_relatorio_(eu, d); }
+  relatorio: function (eu, d) { return LicD_relatorio_(eu, d); },
+  reconhecerQuebra: function (eu, d) { return LicD_reconhecerQuebra_(eu, d); }
 };
 /** Licitacoes_api já conferiu a sessão e a permissão (Diretoria e Administrador). */
 function LicD_acao_(eu, d) {
   Lic_exigir_(eu, 'usar a Central de disputas');
-  var fn = LICD_OPS[Lic_s_(d && d.op)];
+  var op = Lic_s_(d && d.op), fn = Object.prototype.hasOwnProperty.call(LICD_OPS, op) ? LICD_OPS[op] : null;
   if (!fn) throw new Error('Não foi possível: ação de disputa desconhecida (' + Lic_s_(d && d.op) + '). Atualize a página (F5) e tente de novo');
   LicD_garantirAbas_();
   try { if (typeof LicProp_garantirAbas_ === 'function') LicProp_garantirAbas_(); } catch (e) {}
