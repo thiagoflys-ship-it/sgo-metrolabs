@@ -1241,12 +1241,15 @@ function Lic_analisar_(eu, l, o) {
   var prompt = Lic_promptAnalise_(l, fontes, codigo, pesos, hoje);
   var inicio = Date.now(), problemas = [], recusas = [], respostas = [], tentativas = 0, saida = null, erroIA = '';
   var maxRefacoes = o.origem === 'AUTOMATICA' ? 1 : LIC_ANALISE_REFACOES;
+  // revisão de fe62a18: o.prazoAte (fila) = início da RODADA + 140 s; nenhuma chamada nova à IA depois do menor dos dois prazos
+  var prazoIA = inicio + LIC_ANALISE_LIMITE_MS;
+  if (o.prazoAte && Number(o.prazoAte) < prazoIA) prazoIA = Number(o.prazoAte);
   for (var k = 0; k <= maxRefacoes; k++) {
-    if (k > 0 && Date.now() - inicio > LIC_ANALISE_LIMITE_MS) break;
+    if (k > 0 && (Date.now() - inicio > LIC_ANALISE_LIMITE_MS || Date.now() > prazoIA)) break;
     tentativas++;
     var p2 = k === 0 ? prompt : prompt + '\n\nSUA RESPOSTA ANTERIOR FOI RECUSADA PELO VERIFICADOR. Corrija todos os pontos e responda de novo, completa:\n- ' + problemas.slice(0, 15).join('\n- ');
     var texto = '';
-    try { texto = SGO_DocA4_chamarGemini_(p2, Object.assign({}, LIC_IA_OPCOES, { prazoAte: inicio + LIC_ANALISE_LIMITE_MS })); }
+    try { texto = SGO_DocA4_chamarGemini_(p2, Object.assign({}, LIC_IA_OPCOES, { prazoAte: prazoIA })); }
     catch (e) { erroIA = Lic_s_(e && e.message).replace(/[.\s]+$/, ''); break; }
     var j = typeof ComG_lerJson_ === 'function' ? ComG_lerJson_(texto) : Lic_json_(Lic_s_(texto).replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, ''), null);
     var v = Lic_verificarAnalise_(j, ctx);
@@ -1286,7 +1289,7 @@ function Lic_analisar_(eu, l, o) {
     // erro da IA não grava a base: a próxima mudança (ou o "Refazer análise") tenta de novo; recusa grava (não gasta de novo à toa)
     if (erroIA) { delete mudOp.ANALISE_BASE_HASH; delete mudOp.ANALISE_PENDENTE_SITUACAO; delete mudOp.ANALISE_PENDENTE_BASE; delete mudOp.ANALISE_PENDENTE_PROXIMA; delete mudOp.ANALISE_PENDENTE_ERRO; }
     Object.assign(mudOp, { ANALISE_SITUACAO: reg.SITUACAO, ANALISE_ERRO: Lic_texto_(reg.RESUMO, 500) });
-    resultado = erroIA ? { erro: true, texto: 'A IA não respondeu agora (' + erroIA + '). A nota anterior (se houver) continua valendo; tente "Refazer análise" mais tarde.' } : { recusada: true, texto: simples + ' A nota anterior (se houver) continua valendo.', detalhe: recusas.length ? recusas[recusas.length - 1].problemas.slice(0, 6) : [] };
+    resultado = erroIA ? { erro: true, erroIA: erroIA, texto: 'A IA não respondeu agora (' + erroIA + '). A nota anterior (se houver) continua valendo; tente "Refazer análise" mais tarde.' } : { recusada: true, texto: simples + ' A nota anterior (se houver) continua valendo.', detalhe: recusas.length ? recusas[recusas.length - 1].problemas.slice(0, 6) : [] };
   }
   reg.HASH = Lic_hash_(JSON.stringify([reg.OPORTUNIDADE_ID, reg.VERSAO, reg.BASE_HASH, reg.SITUACAO, reg.NOTA, reg.CRITERIOS_JSON, reg.AFIRMACOES_JSON, reg.TRAVAS_JSON, reg.CRIADO_EM]));
   var ins = SGO_DATA.insert(LIC_ABAS.ANALISES, reg);
@@ -1509,7 +1512,14 @@ function Lic_analisarAcao_(eu, d) {
   var el = Lic_elegivelAnalise_(l);
   if (el) throw new Error('Não foi possível analisar: ' + el + '. A análise por IA roda só nas oportunidades no radar ou em análise, com prazo em aberto. Nada foi alterado');
   if (!Lic_iaDisponivel_()) throw new Error('Não foi possível analisar: ' + LIC_MSG_SEM_IA.charAt(0).toLowerCase() + LIC_MSG_SEM_IA.slice(1) + '. Nada foi alterado');
-  var r = Lic_analisar_(eu, l, { origem: 'PEDIDO', motivo: motivo || 'Primeira análise pedida pela Diretoria', forcar: true });
+  // revisão de fe62a18: a mesma reserva da fila (nunca duas análises da mesma oportunidade ao mesmo tempo)
+  // (trava de gravação ocupada por mais de 20 s: segue sem a reserva, como antes; a gravação final tem a proteção própria)
+  var rs = { ok: true };
+  try { if (typeof Lic_reservarAnalise_ === 'function') rs = Lic_reservarAnalise_(l.ID, false); } catch (eTrava) { rs = { ok: true, semTrava: true }; }
+  if (rs.ocupada) throw new Error('Não foi possível analisar: esta oportunidade já está sendo analisada agora (pela fila automática ou por outra pessoa). Espere de 1 a 3 minutos e toque em "Atualizar a ficha". Nada foi alterado');
+  var r;
+  try { r = Lic_analisar_(eu, Lic_acharOp_(l.ID), { origem: 'PEDIDO', motivo: motivo || 'Primeira análise pedida pela Diretoria', forcar: true }); }
+  finally { if (typeof Lic_liberarAnalise_ === 'function') Lic_liberarAnalise_(l.ID); }
   var l2 = Lic_acharOp_(d.id);
   return { resultado: r, analise: Lic_analiseFicha_(l2, Lic_lerFonteServidor_(l2)) };
 }
@@ -1635,7 +1645,73 @@ function Lic_filaOrdem_(a, b) {
 }
 /** A fila na ordem, só das que ainda podem ser analisadas (as que saíram do radar ou do prazo saem na hora da vez). */
 function Lic_filaOrdenada_(todas) { return (todas || []).filter(function (l) { return Lic_naFila_(l) && !Lic_elegivelAnalise_(l); }).sort(Lic_filaOrdem_); }
-/** Contagem para o Hoje e o Painel: na fila (com as que esperam nova tentativa) e as que falharam 3 vezes, só das elegíveis. */
+// revisão de fe62a18 (03/11/2026): tempo da rodada, reserva comum com "Analisar agora", uma rodada por vez, 429 e chave recusada
+// sem contar tentativa, teto de análises automáticas por dia
+var LIC_FILA_SEGUNDA_MS = 40000;            // a 2ª análise da rodada só começa se passaram menos de 40 s do início
+var LIC_FILA_RODANDO_MS = 330000;           // validade da marca "rodando" (300 s do pool e a margem)
+var LIC_FILA_ESPERA_LIMITE_MS = 30 * 60000; // limite de uso da IA (HTTP 429): espera, sem contar tentativa
+var LIC_FILA_PAUSA_MAX_MS = 24 * 3600e3;    // chave recusada: pausa enquanto a chave for a mesma (no máximo 24 h, depois tenta de novo)
+var LIC_FILA_TETO_PADRAO = 150;             // análises automáticas por dia (LIC_CONFIG chave FILA_ANALISE, com versão)
+var LIC_FILA_TETO_MAX = 1000;
+var LIC_RX_CHAVE_RECUSADA = /chave da IA foi recusada|HTTP 40[13]\b/i;
+var LIC_RX_LIMITE_IA = /HTTP 429|Limite de uso da IA/i;
+
+// ------------------------------------------------------------ reserva comum (fila e "Analisar agora")
+/** Reserva a análise da oportunidade (sob trava). { ok } ou { ocupada } (outra execução analisando) ou { pulada } (exigirFila e não vencida). */
+function Lic_reservarAnalise_(id, exigirFila) {
+  return Lic_comTrava_(function () {
+    var x = Lic_acharOp_(id), ate = Date.parse(Lic_s_(x.ANALISE_PENDENTE_RESERVA_ATE));
+    if (isFinite(ate) && ate > Date.now()) return { ocupada: true, ate: Lic_s_(x.ANALISE_PENDENTE_RESERVA_ATE) };
+    if (exigirFila && !Lic_filaVencida_(x)) return { pulada: true };
+    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, x.ID, { ANALISE_PENDENTE_RESERVA_ATE: new Date(Date.now() + LIC_FILA_RESERVA_MS).toISOString() });
+    return { ok: true };
+  });
+}
+function Lic_liberarAnalise_(id) { try { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, Lic_s_(id), { ANALISE_PENDENTE_RESERVA_ATE: '' }); } catch (e) {} }
+
+// ------------------------------------------------------------ teto do dia e pausa por chave recusada
+function Lic_filaCfgLinha_() { return Lic_ler_(LIC_ABAS.CONFIG).filter(function (c) { return Lic_s_(c.CHAVE) === 'FILA_ANALISE'; })[0] || null; }
+/** Regras da fila (LIC_CONFIG chave FILA_ANALISE, { tetoDia }), com versão; sem linha, o padrão de 150 por dia. */
+function Lic_filaCfg_() {
+  var l = Lic_filaCfgLinha_(), v = l ? Lic_json_(l.VALOR_JSON, {}) : {}, t = Math.floor(Number(v.tetoDia));
+  return { tetoDia: t >= 1 && t <= LIC_FILA_TETO_MAX ? t : LIC_FILA_TETO_PADRAO, padrao: LIC_FILA_TETO_PADRAO, versao: l ? Number(l.VERSAO) || 1 : 0, motivo: l ? Lic_s_(l.MOTIVO) : '', por: l ? Lic_s_(l.ATUALIZADO_POR_NOME) : '', em: l ? Lic_s_(l.ATUALIZADO_EM) : '' };
+}
+/** "Salvar" do teto (Portais e configurações › Leitura do edital e análise): motivo obrigatório, versão nova, histórico. */
+function Lic_filaCfgSalvar_(eu, d) {
+  var motivo = Lic_texto_(d.motivo, 500), teto = Number(String(Lic_s_(d.tetoDia)).replace(',', '.'));
+  if (motivo.length < 5) throw new Error('Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado');
+  if (!(teto >= 1 && teto <= LIC_FILA_TETO_MAX) || Math.floor(teto) !== teto) throw new Error('O teto de análises automáticas por dia precisa ser um número inteiro de 1 a ' + LIC_FILA_TETO_MAX + '. Nada foi alterado');
+  return Lic_comTrava_(function () {
+    var antes = Lic_filaCfg_(), linha = Lic_filaCfgLinha_(), agora = Lic_agora_();
+    if (antes.versao && antes.tetoDia === teto) return { cfg: antes, semMudanca: true, texto: 'Nada mudou. Nenhuma versão nova foi criada.' };
+    var versao = antes.versao + 1, reg = { CHAVE: 'FILA_ANALISE', VALOR_JSON: JSON.stringify({ tetoDia: teto }), VERSAO: versao, MOTIVO: motivo, ATUALIZADO_POR_ID: Lic_s_(eu.id), ATUALIZADO_POR_NOME: Lic_s_(eu.nome), ATUALIZADO_EM: agora };
+    if (linha) SGO_DATA.update(LIC_ABAS.CONFIG, linha.ID, reg); else SGO_DATA.insert(LIC_ABAS.CONFIG, Object.assign({ CRIADO_EM: agora }, reg));
+    Lic_historico_('CONFIG', 'FILA_ANALISE', '', 'FILA_ANALISE_CONFIG', eu, { de: antes.tetoDia + ' análises automáticas por dia', para: teto + ' análises automáticas por dia', texto: 'Motivo: ' + motivo, versao: versao, fonte: 'Tela Portais e configurações' });
+    return { cfg: Lic_filaCfg_(), versao: versao };
+  });
+}
+/** Análises automáticas feitas hoje (dia de Brasília), pela fila e pela chamada do servidor. */
+function Lic_filaDia_() {
+  var j = null; try { j = Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_FILA_DIA'), null); } catch (e) { j = null; }
+  return j && j.dia === Lic_hojeSp_() ? Number(j.n) || 0 : 0;
+}
+function Lic_filaContarDia_() {
+  try { PropertiesService.getScriptProperties().setProperty('LIC_FILA_DIA', JSON.stringify({ dia: Lic_hojeSp_(), n: Lic_filaDia_() + 1 })); } catch (e) {}
+}
+function Lic_filaTetoAtingido_() { return Lic_filaDia_() >= Lic_filaCfg_().tetoDia; }
+function Lic_hashChaveIA_() { try { return Lic_hash_(Lic_s_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'))).slice(0, 16); } catch (e) { return ''; } }
+/** Pausa por chave recusada: vale enquanto a chave for a mesma (cadastrada outra, retoma sozinha) e por no máximo 24 h. */
+function Lic_filaPausa_() {
+  var j = null; try { j = Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_FILA_PAUSA'), null); } catch (e) { j = null; }
+  if (!j || !j.em) return null;
+  if (j.chave !== Lic_hashChaveIA_() || Date.now() - Date.parse(j.em) > LIC_FILA_PAUSA_MAX_MS) { try { PropertiesService.getScriptProperties().deleteProperty('LIC_FILA_PAUSA'); } catch (e) {} return null; }
+  return { em: j.em, erro: Lic_s_(j.erro), texto: 'A fila da análise automática está pausada: a chave da IA foi recusada (' + Lic_s_(j.erro) + '). O Administrador confere a chave GEMINI_API_KEY em Administração > Chaves e senhas; com a chave nova, a fila retoma sozinha.' };
+}
+function Lic_filaPausar_(erro) {
+  try { PropertiesService.getScriptProperties().setProperty('LIC_FILA_PAUSA', JSON.stringify({ em: Lic_agora_(), erro: Lic_texto_(erro, 200), chave: Lic_hashChaveIA_() })); } catch (e) {}
+}
+
+/** Contagem para o Hoje e o Painel: na fila (com as que esperam nova tentativa), as que falharam 3 vezes, o teto do dia e a pausa. */
 function Lic_filaContagem_(todas) {
   var c = { naFila: 0, esperando: 0, falharam: 0 }, agora = Date.now();
   (todas || []).forEach(function (l) {
@@ -1645,9 +1721,12 @@ function Lic_filaContagem_(todas) {
     c.naFila++;
     if ((Number(l.ANALISE_PENDENTE_TENTATIVAS) || 0) > 0 && !Lic_filaVencida_(l, agora)) c.esperando++;
   });
+  var cfg = Lic_filaCfg_(), p = Lic_filaPausa_();
+  c.hoje = Lic_filaDia_(); c.tetoDia = cfg.tetoDia; c.tetoAtingido = c.hoje >= cfg.tetoDia;
+  if (p) c.pausada = p.texto;
   return c;
 }
-/** Estado da fila na ficha (aba Análise): posição, tentativas, próxima tentativa ou a falha. null = fora da fila. */
+/** Estado da fila na ficha (aba Análise): posição, tentativas, próxima tentativa, teto do dia, pausa ou a falha. null = fora da fila. */
 function Lic_filaEstado_(l, todas) {
   var s = Lic_up_(l.ANALISE_PENDENTE_SITUACAO), tent = Number(l.ANALISE_PENDENTE_TENTATIVAS) || 0;
   if (Lic_elegivelAnalise_(l)) return null;
@@ -1655,12 +1734,16 @@ function Lic_filaEstado_(l, todas) {
   if (s !== 'NA_FILA') return null;
   var fila = Lic_filaOrdenada_(todas || Lic_ativas_()), pos = 0;
   fila.some(function (x, i) { if (Lic_s_(x.ID) === Lic_s_(l.ID)) { pos = i + 1; return true; } return false; });
-  var px = Date.parse(Lic_s_(l.ANALISE_PENDENTE_PROXIMA)), espera = tent > 0 && isFinite(px) && px > Date.now();
-  var hora = espera ? new Date(px - 3 * 3600e3).toISOString() : '';
-  return { situacao: 'NA_FILA', posicao: pos, total: fila.length, tentativas: tent, proxima: espera ? Lic_s_(l.ANALISE_PENDENTE_PROXIMA) : '', erro: Lic_s_(l.ANALISE_PENDENTE_ERRO), desde: Lic_s_(l.ANALISE_PENDENTE_EM),
-    texto: 'Na fila de análise' + (pos ? ' (posição ' + pos + ' de ' + fila.length + ')' : '') + '.' +
-      (espera ? ' A IA não respondeu na tentativa anterior (' + (Lic_s_(l.ANALISE_PENDENTE_ERRO) || 'erro') + '): nova tentativa a partir de ' + hora.slice(8, 10) + '/' + hora.slice(5, 7) + ' às ' + hora.slice(11, 16) + ' (tentativa ' + (tent + 1) + ' de ' + LIC_FILA_TENTATIVAS + ').' : ' A rotina analisa até 2 por vez: prazo de até 72 h primeiro, depois a UF prioritária, cada grupo pelo prazo mais próximo.') +
-      (Lic_iaDisponivel_() ? '' : ' Sem a chave da IA, a fila fica parada.') };
+  var px = Date.parse(Lic_s_(l.ANALISE_PENDENTE_PROXIMA)), espera = isFinite(px) && px > Date.now();
+  var hora = espera ? new Date(px - 3 * 3600e3).toISOString() : '', quando = espera ? hora.slice(8, 10) + '/' + hora.slice(5, 7) + ' às ' + hora.slice(11, 16) : '';
+  var limite = espera && LIC_RX_LIMITE_IA.test(Lic_s_(l.ANALISE_PENDENTE_ERRO)), cfg = Lic_filaCfg_(), p = Lic_filaPausa_();
+  var meio = limite ? ' A IA atingiu o limite de uso: nova tentativa a partir de ' + quando + ' (não conta como tentativa).'
+    : espera && tent > 0 ? ' A IA não respondeu na tentativa anterior (' + (Lic_s_(l.ANALISE_PENDENTE_ERRO) || 'erro') + '): nova tentativa a partir de ' + quando + ' (tentativa ' + (tent + 1) + ' de ' + LIC_FILA_TENTATIVAS + ').'
+    : ' A rotina analisa até 2 por vez: prazo de até 72 h primeiro, depois a UF prioritária, cada grupo pelo prazo mais próximo.';
+  return { situacao: 'NA_FILA', posicao: pos, total: fila.length, tentativas: tent, proxima: espera ? Lic_s_(l.ANALISE_PENDENTE_PROXIMA) : '', erro: Lic_s_(l.ANALISE_PENDENTE_ERRO), desde: Lic_s_(l.ANALISE_PENDENTE_EM), pausada: !!p,
+    texto: 'Na fila de análise' + (pos ? ' (posição ' + pos + ' de ' + fila.length + ')' : '') + '.' + meio +
+      (Lic_filaDia_() >= cfg.tetoDia ? ' O teto de ' + cfg.tetoDia + ' análises automáticas por dia foi atingido: a fila continua amanhã.' : '') +
+      (p ? ' ' + p.texto : '') + (Lic_iaDisponivel_() ? '' : ' Sem a chave da IA, a fila fica parada.') };
 }
 /** Erro da IA: conta a tentativa; volta à fila com espera (1 h, 6 h) ou, na 3ª, sai da fila como falha. */
 function Lic_filaErro_(l, texto) {
@@ -1673,34 +1756,47 @@ function Lic_filaErro_(l, texto) {
   return { tentativas: n, falhou: falhou };
 }
 /**
- * Analisa uma oportunidade da fila: reserva (outra execução não pega a mesma), registra os arquivos novos, confere se ainda
- * é elegível e chama Lic_analisar_ sem forçar (base igual = nada refeito). Sem a chave da IA, a reserva é desfeita e nada conta.
+ * Analisa uma oportunidade da fila: confere o teto do dia e a pausa, reserva (a mesma reserva do "Analisar agora": nunca duas
+ * análises da mesma oportunidade ao mesmo tempo), registra os arquivos novos, confere se ainda é elegível e chama Lic_analisar_
+ * sem forçar (base igual = nada refeito), com o prazo da rodada (o.prazoAte: nenhuma chamada nova à IA depois dele).
+ * Limite de uso (429) e chave recusada não contam tentativa: esperam (a chave recusada pausa a fila).
  */
-function Lic_filaAnalisarUma_(l, sistema) {
-  var reservou = Lic_comTrava_(function () {
-    var x = Lic_acharOp_(l.ID);
-    if (!Lic_filaVencida_(x)) return false;
-    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, x.ID, { ANALISE_PENDENTE_PROXIMA: new Date(Date.now() + LIC_FILA_RESERVA_MS).toISOString() });
-    return true;
-  });
-  if (!reservou) return { pulada: true };
-  var op = Lic_acharOp_(l.ID), quem = sistema || LIC_FILA_SISTEMA, x;
-  try { op = Lic_registrarArquivos_(op, quem, null); } catch (e) {}
-  var el = Lic_elegivelAnalise_(op);
-  if (el) { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_SITUACAO: '', ANALISE_PENDENTE_PROXIMA: '', ANALISE_PENDENTE_ERRO: 'Saiu da fila: ' + el }); return { fora: true, texto: el }; }
-  // a marca acompanha os arquivos registrados agora (a análise grava "feita" sobre ela)
-  var marca = Lic_filaMarca_(op);
-  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_BASE: marca });
-  op.ANALISE_PENDENTE_BASE = marca;
-  try { x = Lic_analisar_(quem, op, { origem: 'AUTOMATICA', motivo: 'Arquivos ou dados da fonte mudaram (fila da análise automática)' }); }
-  catch (e) { x = { erro: true, texto: 'A análise automática parou (' + Lic_s_(e && e.message).replace(/[.\s]+$/, '') + ').' }; }
-  if (x.indisponivel) { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_PROXIMA: '' }); return { semChave: true }; }
-  if (x.erro) {
-    var m = /\(([^)]*)\)/.exec(Lic_s_(x.texto)), e2 = Lic_filaErro_(Lic_acharOp_(op.ID), m ? m[1] : Lic_s_(x.texto));
-    return Object.assign(x, { tentativas: e2.tentativas, falhou: e2.falhou });
-  }
-  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_SITUACAO: 'FEITA', ANALISE_PENDENTE_BASE: marca, ANALISE_PENDENTE_PROXIMA: '', ANALISE_PENDENTE_ERRO: '' });
-  return x;
+function Lic_filaAnalisarUma_(l, sistema, o) {
+  o = o || {};
+  if (Lic_filaPausa_()) return { pausada: true };
+  if (Lic_filaTetoAtingido_()) return { teto: true };
+  var rs = Lic_reservarAnalise_(l.ID, true);
+  if (!rs.ok) return { pulada: true, ocupada: !!rs.ocupada };
+  try {
+    var op = Lic_acharOp_(l.ID), quem = sistema || LIC_FILA_SISTEMA, x;
+    try { op = Lic_registrarArquivos_(op, quem, null); } catch (e) {}
+    var el = Lic_elegivelAnalise_(op);
+    if (el) { SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_SITUACAO: '', ANALISE_PENDENTE_PROXIMA: '', ANALISE_PENDENTE_ERRO: 'Saiu da fila: ' + el }); return { fora: true, texto: el }; }
+    // a marca acompanha os arquivos registrados agora (a análise grava "feita" sobre ela)
+    var marca = Lic_filaMarca_(op);
+    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_BASE: marca });
+    op.ANALISE_PENDENTE_BASE = marca;
+    try { x = Lic_analisar_(quem, op, { origem: 'AUTOMATICA', motivo: 'Arquivos ou dados da fonte mudaram (fila da análise automática)', prazoAte: o.prazoAte }); }
+    catch (e) { x = { erro: true, texto: 'A análise automática parou (' + Lic_s_(e && e.message).replace(/[.\s]+$/, '') + ').' }; }
+    if (x.indisponivel) return { semChave: true };
+    if (!x.semMudanca) Lic_filaContarDia_();
+    if (x.erro) {
+      var msg = Lic_s_(x.erroIA) || Lic_s_(x.texto);
+      if (LIC_RX_CHAVE_RECUSADA.test(msg)) {
+        Lic_filaPausar_(msg);
+        SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_PROXIMA: '', ANALISE_PENDENTE_ERRO: Lic_texto_(msg, 300) });
+        return Object.assign(x, { chaveRecusada: true, tentativas: Number(op.ANALISE_PENDENTE_TENTATIVAS) || 0 });
+      }
+      if (LIC_RX_LIMITE_IA.test(msg)) {
+        SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_PROXIMA: new Date(Date.now() + LIC_FILA_ESPERA_LIMITE_MS).toISOString(), ANALISE_PENDENTE_ERRO: Lic_texto_(msg, 300) });
+        return Object.assign(x, { limite: true, tentativas: Number(op.ANALISE_PENDENTE_TENTATIVAS) || 0 });
+      }
+      var e2 = Lic_filaErro_(Lic_acharOp_(op.ID), msg);
+      return Object.assign(x, { tentativas: e2.tentativas, falhou: e2.falhou });
+    }
+    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, op.ID, { ANALISE_PENDENTE_SITUACAO: 'FEITA', ANALISE_PENDENTE_BASE: marca, ANALISE_PENDENTE_PROXIMA: '', ANALISE_PENDENTE_ERRO: '' });
+    return x;
+  } finally { Lic_liberarAnalise_(l.ID); }
 }
 /** Elegíveis sem análise em dia que ainda não estão na fila (nunca analisadas, último erro da IA, ou arquivos mais novos que a análise). */
 function Lic_filaVarrer_(todas) {
@@ -1721,9 +1817,12 @@ function Lic_filaVarrerTalvez_(todas, forcar) {
   p.setProperty('LIC_FILA_VARRIDA_EM', String(Date.now()));
   return Lic_filaVarrer_(todas);
 }
+/** Agenda a rotina da fila (1 minuto). Não agenda sem a chave, com a fila pausada (chave recusada) nem com o teto do dia atingido. */
 function Lic_filaAgendar_() {
   try {
     if (!Lic_iaDisponivel_()) return 'sem a chave da IA: não agendada';
+    if (Lic_filaPausa_()) return 'fila pausada (chave da IA recusada): não agendada';
+    if (Lic_filaTetoAtingido_()) return 'teto do dia atingido: não agendada';
     var props = PropertiesService.getScriptProperties(), em = Number(props.getProperty('LIC_FILA_GATILHO_EM')) || 0;
     var ts = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === LIC_FUNCAO_ROTINA_ANALISE; });
     if (ts.length && Date.now() - em < 10 * 60000) return 'já agendada';
@@ -1733,45 +1832,66 @@ function Lic_filaAgendar_() {
     return 'agendada';
   } catch (e) { console.error('Licitações, gatilho da fila de análise: ' + ((e && e.message) || e)); return 'sem gatilho'; }
 }
-/** Uma rodada: as vencidas da fila, na ordem, até 2 análises e só começando antes do limite (contado do início da rodada). */
+/**
+ * Uma rodada: as vencidas da fila, na ordem, até 2 análises. Uma rodada por vez (marca LIC_FILA_RODANDO_ATE, sob trava, com
+ * validade). Prazo da rodada: nenhuma chamada nova à IA depois de início + 140 s (o.inicioMs); a 2ª análise só começa se
+ * passaram menos de 40 s do início (o.segundaMs). Assim a rodada cabe nos 300 s do pool.
+ */
 function Lic_filaRodada_(o) {
   o = o || {};
-  var inicio = Date.now(), max = o.max || LIC_FILA_MAX_POR_RODADA, limite = o.inicioMs || LIC_FILA_INICIO_MS;
+  var inicio = Date.now(), max = o.max || LIC_FILA_MAX_POR_RODADA, limite = o.inicioMs || LIC_FILA_INICIO_MS, segunda = o.segundaMs || LIC_FILA_SEGUNDA_MS;
   var r = { analisadas: 0, recusadas: 0, semMudanca: 0, erros: 0, falharam: 0, fora: 0, restam: 0, esperando: 0 };
-  try { Lic_garantirAbas_(); } catch (e) {}
-  try { r.notasAcertadas = Lic_acertarNotasPendentes_(); } catch (e) {}
-  var todas = Lic_ativas_();
-  try { r.varridas = Lic_filaVarrerTalvez_(todas, o.varrer); if (r.varridas) todas = Lic_ativas_(); } catch (e) { r.varridas = { erro: Lic_s_(e && e.message) }; }
-  var agora = Date.now(), fila = Lic_filaOrdenada_(todas), vencidas = fila.filter(function (l) { return Lic_filaVencida_(l, agora); });
-  r.esperando = fila.length - vencidas.length;
-  if (!vencidas.length) return r;
-  if (!Lic_iaDisponivel_()) { r.semChave = true; r.restam = vencidas.length; return r; }
-  var chamadas = 0;
-  for (var i = 0; i < vencidas.length; i++) {
-    if (chamadas >= max || Date.now() - inicio > limite) { r.restam = vencidas.length - i; break; }
-    var x = Lic_filaAnalisarUma_(vencidas[i], LIC_FILA_SISTEMA);
-    if (x.pulada) continue;
-    if (x.semChave) { r.semChave = true; r.restam = vencidas.length - i; break; }
-    if (x.fora) { r.fora++; continue; }
-    if (x.semMudanca) { r.semMudanca++; continue; }
-    chamadas++;
-    if (x.analisada) r.analisadas++; else if (x.recusada) r.recusadas++;
-    else if (x.erro) {
-      r.erros++; if (x.falhou) r.falharam++;
-      // limite da IA (429) ou chave recusada: não insiste nas outras desta rodada (a vigia retoma depois)
-      if (/429|quota|cota|chave/i.test(Lic_s_(x.texto))) { r.restam = vencidas.length - i - 1; break; }
+  var props = PropertiesService.getScriptProperties();
+  var ocupada = Lic_comTrava_(function () {
+    var ate = Number(props.getProperty('LIC_FILA_RODANDO_ATE')) || 0;
+    if (ate > Date.now()) return true;
+    props.setProperty('LIC_FILA_RODANDO_ATE', String(Date.now() + LIC_FILA_RODANDO_MS));
+    return false;
+  });
+  if (ocupada) { r.ocupada = true; return r; }
+  try {
+    try { Lic_garantirAbas_(); } catch (e) {}
+    try { r.notasAcertadas = Lic_acertarNotasPendentes_(); } catch (e) {}
+    var todas = Lic_ativas_();
+    try { r.varridas = Lic_filaVarrerTalvez_(todas, o.varrer); if (r.varridas) todas = Lic_ativas_(); } catch (e) { r.varridas = { erro: Lic_s_(e && e.message) }; }
+    var agora = Date.now(), fila = Lic_filaOrdenada_(todas), vencidas = fila.filter(function (l) { return Lic_filaVencida_(l, agora); });
+    r.esperando = fila.length - vencidas.length;
+    if (!vencidas.length) return r;
+    if (!Lic_iaDisponivel_()) { r.semChave = true; r.restam = vencidas.length; return r; }
+    if (Lic_filaPausa_()) { r.pausada = true; r.restam = vencidas.length; return r; }
+    if (Lic_filaTetoAtingido_()) { r.teto = true; r.restam = vencidas.length; return r; }
+    var chamadas = 0;
+    for (var i = 0; i < vencidas.length; i++) {
+      var passou = Date.now() - inicio;
+      if (chamadas >= max || passou > limite || (chamadas > 0 && passou > segunda)) { r.restam = vencidas.length - i; break; }
+      var x = Lic_filaAnalisarUma_(vencidas[i], LIC_FILA_SISTEMA, { prazoAte: inicio + limite });
+      if (x.pulada) continue;
+      if (x.semChave) { r.semChave = true; r.restam = vencidas.length - i; break; }
+      if (x.pausada) { r.pausada = true; r.restam = vencidas.length - i; break; }
+      if (x.teto) { r.teto = true; r.restam = vencidas.length - i; break; }
+      if (x.fora) { r.fora++; continue; }
+      if (x.semMudanca) { r.semMudanca++; continue; }
+      chamadas++;
+      if (x.analisada) r.analisadas++; else if (x.recusada) r.recusadas++;
+      else if (x.erro) {
+        r.erros++; if (x.falhou) r.falharam++;
+        // chave recusada (pausa a fila) ou limite de uso (429): não insiste nas outras desta rodada
+        if (x.chaveRecusada) { r.pausada = true; r.restam = vencidas.length - i - 1; break; }
+        if (x.limite) { r.limite = true; r.restam = vencidas.length - i - 1; break; }
+      }
     }
-  }
-  try { PropertiesService.getScriptProperties().setProperty('LIC_FILA_ULTIMA_RODADA', JSON.stringify({ em: Lic_agora_(), r: r })); } catch (e) {}
-  return r;
+    try { props.setProperty('LIC_FILA_ULTIMA_RODADA', JSON.stringify({ em: Lic_agora_(), r: r })); } catch (e) {}
+    return r;
+  } finally { try { props.deleteProperty('LIC_FILA_RODANDO_ATE'); } catch (e) {} }
 }
-/** Gatilho (nome sem "_" para o agendador achar). Recusado quando chamado pelo navegador. Sem a chave da IA, não se reagenda. */
+/** Gatilho (nome sem "_" para o agendador achar). Recusado quando chamado pelo navegador. Sem a chave, pausada ou no teto, não se reagenda. */
 function Licitacoes_rotinaAnalise() {
   if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
   try { ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === LIC_FUNCAO_ROTINA_ANALISE) ScriptApp.deleteTrigger(t); }); } catch (e) {}
   try { PropertiesService.getScriptProperties().deleteProperty('LIC_FILA_GATILHO_EM'); } catch (e) {}
   var r = Lic_filaRodada_({});
-  if (r.restam && !r.semChave) r.gatilho = Lic_filaAgendar_();
+  // outra rodada em andamento: ela se reagenda; limite de uso: a vigia retoma depois da espera
+  if (r.restam && !r.semChave && !r.pausada && !r.teto && !r.limite && !r.ocupada) r.gatilho = Lic_filaAgendar_();
   return r;
 }
 /** Passo da rotina dos alertas (a cada 5 min): varredura (no máximo a cada 30 min) e, com análise vencida na fila, agenda a rotina. */

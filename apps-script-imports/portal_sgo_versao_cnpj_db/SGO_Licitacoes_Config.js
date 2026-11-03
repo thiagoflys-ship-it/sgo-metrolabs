@@ -38,7 +38,9 @@ var LIC_COLUNAS = {
     'ALERTAVEL_DESDE',
     // 03/11/2026: fila da análise automática (SGO_Licitacoes_Analise.js, Lic_filaPor_): situação NA_FILA, FEITA ou FALHOU, a marca da base,
     // quando entrou, as tentativas com erro da IA, a próxima tentativa (espera ou reserva) e o último erro
-    'ANALISE_PENDENTE_SITUACAO', 'ANALISE_PENDENTE_BASE', 'ANALISE_PENDENTE_EM', 'ANALISE_PENDENTE_TENTATIVAS', 'ANALISE_PENDENTE_PROXIMA', 'ANALISE_PENDENTE_ERRO'],
+    'ANALISE_PENDENTE_SITUACAO', 'ANALISE_PENDENTE_BASE', 'ANALISE_PENDENTE_EM', 'ANALISE_PENDENTE_TENTATIVAS', 'ANALISE_PENDENTE_PROXIMA', 'ANALISE_PENDENTE_ERRO',
+    // revisão de fe62a18: reserva comum da análise (fila e "Analisar agora"; nunca duas da mesma oportunidade ao mesmo tempo)
+    'ANALISE_PENDENTE_RESERVA_ATE'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).

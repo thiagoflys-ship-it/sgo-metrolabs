@@ -1660,4 +1660,6 @@ function LicLeit_palavrasAcao_(eu, d) {
   if (Lic_up_(d.escopo) === 'OPORTUNIDADE' || d.id) { try { r.leitura = LicLeit_tela_(Lic_acharOp_(d.id)); } catch (e) {} }
   return r;
 }
-function LicLeit_cfgAcao_() { return { geral: LicLeit_palavrasDe_(LIC_LEIT_CHAVE_GERAL), cfg: LicLeit_cfg_(), temas: LIC_LEIT_TEMAS }; }
+function LicLeit_cfgAcao_() { return { geral: LicLeit_palavrasDe_(LIC_LEIT_CHAVE_GERAL), cfg: LicLeit_cfg_(), temas: LIC_LEIT_TEMAS,
+  // revisão de fe62a18: teto de análises automáticas por dia (fila da análise), na mesma aba de configurações da IA
+  fila: typeof Lic_filaCfg_ === 'function' ? Object.assign(Lic_filaCfg_(), { hoje: Lic_filaDia_() }) : null }; }

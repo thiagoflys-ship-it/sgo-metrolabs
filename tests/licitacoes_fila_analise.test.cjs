@@ -55,7 +55,7 @@ function ambiente(o) {
   let seq = 0;
   const bases = {};   // base dos arquivos por chave (o teste muda para simular arquivo novo)
   tabelas.LIC_OPORTUNIDADES.forEach((l) => { bases[l.CHAVE_FONTE] = crypto.createHash('sha256').update(l.CHAVE_FONTE + ':1').digest('hex'); });
-  const ia = { respostas: (o.respostas || []).slice(), prompts: [], porChave: [] };
+  const ia = { respostas: (o.respostas || []).slice(), prompts: [], opcoes: [], porChave: [] };
   const gatilhos = [];
   const SGO_LICITACOES = {
     listar: () => ({ itens: [], ate: '', mais: false }), conexoes: () => [], situacao: () => ({ ligado: true }),
@@ -83,7 +83,7 @@ function ambiente(o) {
     SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_EQUIPAMENTOS: 'CAD_EQUIPAMENTOS' } },
     exigirSessao: (sid) => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada. Entre de novo'); return sessoes[sid]; },
     SGO_execucaoInterna_: () => true,
-    SGO_DocA4_chamarGemini_: (prompt) => { ia.prompts.push(prompt); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); let r = ia.respostas.shift(); if (typeof r === 'function') r = r(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
+    SGO_DocA4_chamarGemini_: (prompt, opc) => { ia.prompts.push(prompt); ia.opcoes.push(opc); if (!ia.respostas.length) throw new Error('A IA está temporariamente indisponível'); let r = ia.respostas.shift(); if (typeof r === 'function') r = r(); if (r instanceof Error) throw r; return typeof r === 'string' ? r : JSON.stringify(r); },
     ComEsp_fabricantes_: () => ['marca exemplo'],
     SGO_LICITACOES
   });
@@ -92,6 +92,7 @@ function ambiente(o) {
   return { ctx, tabelas, props, ia, api, gatilhos, relogio, bases, op: (id) => tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === id), hist: (tipo) => (tabelas.LIC_HISTORICO || []).filter((h) => !tipo || h.TIPO === tipo), analises: () => tabelas.LIC_ANALISES || [] };
 }
 const CHAVES = ['PNCP:opsp', 'PNCP:opgo', 'PNCP:oprj', 'PNCP:opba'];
+const fc = (a) => { const f = a.api('s_dora', 'hoje').filaAnalise; return { naFila: f.naFila, esperando: f.esperando, falharam: f.falharam }; };
 const ordemAnalisada = (a) => a.analises().map((x) => x.OPORTUNIDADE_ID);
 
 // ---------------------------------------------------------------- 1. o defeito: as outras vão para a fila
@@ -137,7 +138,7 @@ test('rotina da fila: até 2 por execução, na ordem (UF prioritária e prazo m
   assert.ok(a.analises().every((x) => x.ORIGEM_PEDIDO === 'AUTOMATICA' && x.SITUACAO === 'CONCLUIDA'));
   assert.equal(a.analises().find((x) => x.OPORTUNIDADE_ID === 'opgo').PEDIDO_POR_NOME, 'Fila da análise automática');
   assert.ok(['opsp', 'opgo', 'oprj', 'opba'].every((id) => a.op(id).ANALISE_PENDENTE_SITUACAO === 'FEITA' && a.op(id).NOTA !== undefined));
-  assert.deepEqual(a.api('s_dora', 'hoje').filaAnalise, { naFila: 0, esperando: 0, falharam: 0 });
+  assert.deepEqual(fc(a), { naFila: 0, esperando: 0, falharam: 0 });
 });
 
 test('tempo da execução: uma análise nova só começa antes de 140 s (300 s do pool menos a análise); a que não coube fica para a próxima', () => {
@@ -210,7 +211,7 @@ test('erro da IA: conta tentativa e volta à fila com espera (1 h, depois 6 h); 
   f = a.api('s_dora', 'ficha', { id: 'oprj' }).analise.fila;
   assert.equal(f.situacao, 'FALHOU');
   assert.match(f.texto, /^Análise automática falhou 3 vezes nesta versão dos arquivos \(último erro: A IA está temporariamente indisponível\) — use "Analisar agora"\.$/);
-  assert.deepEqual(a.api('s_dora', 'hoje').filaAnalise, { naFila: 0, esperando: 0, falharam: 1 });
+  assert.deepEqual(fc(a), { naFila: 0, esperando: 0, falharam: 1 });
   // depois de falhar: nem a varredura nem a chamada do servidor põem a mesma base de volta; nenhuma chamada nova
   const n1 = a.ia.prompts.length;
   a.relogio.agora += 24 * H;
@@ -224,7 +225,7 @@ test('erro da IA: conta tentativa e volta à fila com espera (1 h, depois 6 h); 
   assert.equal(m.ok, true, m.message);
   assert.equal(a.op('oprj').ANALISE_PENDENTE_SITUACAO, 'FEITA');
   assert.equal(m.analise.fila, null);
-  assert.deepEqual(a.api('s_dora', 'hoje').filaAnalise, { naFila: 0, esperando: 0, falharam: 0 });
+  assert.deepEqual(fc(a), { naFila: 0, esperando: 0, falharam: 0 });
 });
 
 test('sem a chave da IA: a fila guarda as oportunidades, nada é chamado nem agendado (sem laço); cadastrada a chave, a vigia retoma', () => {
@@ -419,4 +420,166 @@ test('ordem da fila: prazo de propostas em até 72 h passa na frente (qualquer U
   a.relogio.agora = Date.parse('2026-11-17T15:00:00.000Z');
   const fila2 = a.ctx.Lic_filaOrdenada_(a.ctx.Lic_ativas_()).map((l) => l.ID);
   assert.deepEqual(fila2, ['opgo'], 'as de prazo vencido saem da fila; a GO (20/11) segue');
+});
+
+// ---------------------------------------------------------------- revisão de fe62a18
+const RUIM = () => Object.assign(respostaValida(), { capacidade: { pontos: 30, justificativa: 'x', itens: [{ descricao: 'inventado', grau: 'TOTAL', servico: 'NAO_EXISTE', fonte: { ref: 'A1', trecho: 'trecho que não existe no edital' } }] } });
+/** As 4 na fila, sem espera (a chamada do servidor encontrou a IA fora). */
+function quatroNaFila(a) {
+  a.ia.respostas.push(new Error('A IA está temporariamente indisponível (503)'));
+  a.ctx.Lic_aposArquivos_({ chaves: CHAVES });
+  for (const l of a.tabelas.LIC_OPORTUNIDADES) { l.ANALISE_PENDENTE_PROXIMA = ''; l.ANALISE_PENDENTE_TENTATIVAS = 0; }
+  a.ia.prompts.length = 0; a.ia.opcoes.length = 0; a.gatilhos.length = 0;
+  delete a.props.LIC_FILA_DIA;
+}
+
+test('revisão MÉDIO 1 (script tempo.cjs): a 1ª análise levou 130 s: a 2ª não começa; a rodada cabe nos 300 s', () => {
+  let a;
+  const lenta = (ms, r) => () => { a.relogio.agora += ms; return r; };
+  a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  a.ia.respostas = [lenta(130e3, respostaValida()), lenta(120e3, RUIM()), lenta(120e3, RUIM()), lenta(120e3, respostaValida())];
+  const t0 = a.relogio.agora;
+  const r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.ok(a.relogio.agora - t0 <= 300e3, 'duração simulada ' + (a.relogio.agora - t0) / 1000 + ' s');
+  assert.equal(a.ia.prompts.length, 1, 'só a primeira análise (passou de 40 s, a 2ª fica para a próxima rodada)');
+  assert.equal(r.analisadas, 1); assert.equal(r.restam, 3);
+  assert.equal(a.ctx.LIC_FILA_SEGUNDA_MS, 40000);
+});
+
+test('revisão MÉDIO 1: a 2ª análise começa antes de 40 s e recebe o prazo da RODADA (início + 140 s): nenhuma tentativa nova depois dele', () => {
+  let a;
+  const lenta = (ms, r) => () => { a.relogio.agora += ms; return r; };
+  a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  a.ia.respostas = [lenta(30e3, respostaValida()), lenta(120e3, RUIM()), lenta(120e3, RUIM()), lenta(120e3, respostaValida())];
+  const t0 = a.relogio.agora;
+  const r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.deepEqual([r.analisadas, r.recusadas], [1, 1]);
+  assert.equal(a.ia.prompts.length, 2, 'a 2ª terminou aos 150 s (depois do prazo da rodada): a refação não abre chamada nova');
+  assert.equal(a.ia.opcoes[0].prazoAte, t0 + 140000, 'prazo da 1ª: o da rodada');
+  assert.equal(a.ia.opcoes[1].prazoAte, t0 + 140000, 'prazo da 2ª: o da rodada, não o início dela + 140 s');
+  assert.ok(a.relogio.agora - t0 <= 300e3);
+  // fora da fila ("Analisar agora"), o prazo continua o da própria análise
+  const b = ambiente({ respostas: [respostaValida()] });
+  const t1 = b.relogio.agora;
+  assert.equal(b.api('s_dora', 'analisar', { id: 'oprj' }).ok, true);
+  assert.equal(b.ia.opcoes[0].prazoAte, t1 + 140000);
+});
+
+test('revisão MENOR 2: "Analisar agora" usa a mesma reserva da fila: com a fila analisando, "já está sendo analisada agora", sem 2ª análise', () => {
+  let a, dentro = null;
+  a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  // durante a análise da fila (oprj é a 1ª da ordem), a Diretoria toca em "Analisar agora" na mesma oportunidade
+  a.ia.respostas = [() => { dentro = a.api('s_dora', 'analisar', { id: 'oprj', motivo: 'quero ver agora a nota' }); return respostaValida(); }, respostaValida()];
+  a.ctx.Lic_filaRodada_({ varrer: false, max: 1 });
+  assert.equal(dentro.ok, false);
+  assert.match(dentro.message, /^Não foi possível analisar: esta oportunidade já está sendo analisada agora \(pela fila automática ou por outra pessoa\)\. Espere de 1 a 3 minutos e toque em "Atualizar a ficha"\. Nada foi alterado/);
+  assert.equal(a.analises().filter((x) => x.OPORTUNIDADE_ID === 'oprj').length, 1, 'uma análise só');
+  assert.equal(a.op('oprj').ANALISE_PENDENTE_RESERVA_ATE, '', 'a reserva é desfeita no fim');
+  // e o contrário: "Analisar agora" reservou; a fila pula a oportunidade
+  a.op('opba').ANALISE_PENDENTE_RESERVA_ATE = new Date(a.relogio.agora + 60000).toISOString();
+  const n = a.ia.prompts.length;
+  const x = a.ctx.Lic_filaAnalisarUma_(a.op('opba'));
+  assert.deepEqual([x.pulada, x.ocupada], [true, true]); assert.equal(a.ia.prompts.length, n);
+  // reserva vencida (execução que caiu) não trava para sempre
+  a.relogio.agora += 61000;
+  a.ia.respostas.push(respostaValida());
+  assert.equal(a.api('s_dora', 'analisar', { id: 'opba', motivo: 'a reserva venceu, analisar' }).ok, true);
+});
+
+test('revisão MENOR 3: duas rotinas da fila não rodam em paralelo (marca "rodando" com validade, sob trava)', () => {
+  let a, dentro = null;
+  a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  a.ia.respostas = [() => { dentro = a.ctx.Licitacoes_rotinaAnalise(); return respostaValida(); }, respostaValida()];
+  const r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.equal(dentro.ocupada, true, 'a 2ª rotina viu a 1ª rodando');
+  assert.equal(dentro.analisadas, 0);
+  assert.equal(r.analisadas, 2); assert.equal(a.ia.prompts.length, 2);
+  assert.equal(a.props.LIC_FILA_RODANDO_ATE, undefined, 'a marca sai no fim');
+  // marca de uma execução que caiu: vale até a validade (330 s), depois a rotina volta
+  a.gatilhos.length = 0;
+  a.props.LIC_FILA_RODANDO_ATE = String(a.relogio.agora + 330000);
+  assert.equal(a.ctx.Licitacoes_rotinaAnalise().ocupada, true);
+  assert.equal(a.gatilhos.length, 0, 'ocupada não se reagenda (a outra reagenda)');
+  a.relogio.agora += 331000;
+  a.ia.respostas.push(respostaValida(), respostaValida());
+  assert.equal(a.ctx.Licitacoes_rotinaAnalise().analisadas, 2);
+});
+
+test('revisão MENOR 4: limite de uso (HTTP 429) não conta tentativa, só espera 30 min; a rodada para', () => {
+  const a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  a.ia.respostas = [new Error('Limite de uso da IA atingido (HTTP 429). Aguarde alguns minutos e tente novamente')];
+  const r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.equal(r.limite, true); assert.equal(r.erros, 1); assert.equal(a.ia.prompts.length, 1, 'não insiste nas outras');
+  const l = a.op('oprj');
+  assert.deepEqual([l.ANALISE_PENDENTE_SITUACAO, Number(l.ANALISE_PENDENTE_TENTATIVAS)], ['NA_FILA', 0]);
+  assert.equal(l.ANALISE_PENDENTE_PROXIMA, new Date(a.relogio.agora + 30 * 60000).toISOString());
+  assert.match(a.api('s_dora', 'ficha', { id: 'oprj' }).analise.fila.texto, /A IA atingiu o limite de uso: nova tentativa a partir de 03\/11 às 09:30 \(não conta como tentativa\)\./);
+  assert.equal(a.gatilhos.length, 0, 'não se reagenda no limite: a vigia retoma depois');
+  // 3 limites seguidos não viram "falhou"
+  for (let i = 0; i < 3; i++) { a.relogio.agora += 31 * 60000; for (const x of a.tabelas.LIC_OPORTUNIDADES) x.ANALISE_PENDENTE_PROXIMA = ''; a.ia.respostas.push(new Error('Limite de uso da IA atingido (HTTP 429). Aguarde')); a.ctx.Licitacoes_rotinaAnalise(); }
+  assert.equal(a.op('oprj').ANALISE_PENDENTE_SITUACAO, 'NA_FILA'); assert.equal(Number(a.op('oprj').ANALISE_PENDENTE_TENTATIVAS), 0);
+});
+
+test('revisão MENOR 4: chave recusada não conta tentativa e PAUSA a fila com aviso na tela; chave nova retoma sozinha', () => {
+  const a = ambiente({ respostas: [] });
+  quatroNaFila(a);
+  a.ia.respostas = [new Error('a chave da IA foi recusada pelo serviço (HTTP 403); peça ao administrador para conferi-la em Chaves e senhas')];
+  let r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.equal(r.pausada, true); assert.equal(a.ia.prompts.length, 1);
+  assert.equal(Number(a.op('oprj').ANALISE_PENDENTE_TENTATIVAS), 0); assert.equal(a.op('oprj').ANALISE_PENDENTE_SITUACAO, 'NA_FILA');
+  const hoje = a.api('s_dora', 'hoje').filaAnalise;
+  assert.match(hoje.pausada, /^A fila da análise automática está pausada: a chave da IA foi recusada \(a chave da IA foi recusada pelo serviço \(HTTP 403\).*com a chave nova, a fila retoma sozinha\.$/);
+  assert.match(a.api('s_dora', 'ficha', { id: 'opgo' }).analise.fila.texto, /A fila da análise automática está pausada/);
+  assert.equal(a.ctx.Lic_filaVigiar_().gatilho, 'fila pausada (chave da IA recusada): não agendada');
+  r = a.ctx.Licitacoes_rotinaAnalise(); assert.equal(r.pausada, true); assert.equal(a.ia.prompts.length, 1, 'pausada: nenhuma chamada');
+  // a tela do Hoje mostra a pausa em vermelho
+  const t = telaCliente();
+  assert.match(t.Lic_filaHojeHtml_(hoje), /<div class="cm-faixa erro" role="alert">A fila da análise automática está pausada/);
+  // o Administrador cadastra outra chave: a pausa cai sozinha
+  a.props.GEMINI_API_KEY = 'chave-nova';
+  assert.equal(a.ctx.Lic_filaVigiar_().gatilho, 'agendada');
+  a.ia.respostas.push(respostaValida(), respostaValida());
+  assert.equal(a.ctx.Licitacoes_rotinaAnalise().analisadas, 2);
+  assert.equal(a.api('s_dora', 'hoje').filaAnalise.pausada, undefined);
+});
+
+test('revisão MENOR 5: teto de análises automáticas por dia (padrão 150, nas regras com versão); o excedente fica para o dia seguinte', () => {
+  const a = ambiente({ respostas: [respostaValida(), respostaValida(), respostaValida(), respostaValida()] });
+  assert.equal(a.ctx.Lic_filaCfg_().tetoDia, 150, 'padrão');
+  for (const [d, re] of [[{ tetoDia: 2 }, /motivo da mudança/], [{ tetoDia: 0, motivo: 'teste do teto' }, /inteiro de 1 a 1000/], [{ tetoDia: '2,5', motivo: 'teste do teto' }, /inteiro de 1 a 1000/], [{ tetoDia: 'abc', motivo: 'teste do teto' }, /inteiro de 1 a 1000/], [{ tetoDia: 1001, motivo: 'teste do teto' }, /inteiro de 1 a 1000/]]) {
+    const x = a.api('s_dora', 'filaCfgSalvar', d); assert.equal(x.ok, false); assert.match(x.message, re);
+  }
+  const s = a.api('s_dora', 'filaCfgSalvar', { tetoDia: '2', motivo: 'conter o gasto de IA no teste' });
+  assert.equal(s.ok, true, s.message); assert.equal(s.versao, 1); assert.equal(s.cfg.tetoDia, 2);
+  assert.equal(a.api('s_dora', 'filaCfgSalvar', { tetoDia: 2, motivo: 'de novo o mesmo' }).semMudanca, true);
+  const h = a.hist('FILA_ANALISE_CONFIG'); assert.equal(h.length, 1); assert.equal(h[0].DE, '150 análises automáticas por dia'); assert.equal(h[0].PARA, '2 análises automáticas por dia');
+  a.ctx.Lic_aposArquivos_({ chaves: CHAVES });   // 1ª do dia
+  let r = a.ctx.Licitacoes_rotinaAnalise();      // 2ª do dia; a 3ª esbarra no teto
+  assert.equal(r.analisadas, 1); assert.equal(r.teto, true); assert.equal(r.restam, 2);
+  assert.equal(a.gatilhos.length, 0, 'no teto, não se reagenda');
+  assert.equal(a.ctx.Lic_filaAgendar_(), 'teto do dia atingido: não agendada');
+  const f = a.api('s_dora', 'hoje').filaAnalise;
+  assert.deepEqual([f.hoje, f.tetoDia, f.tetoAtingido, f.naFila], [2, 2, true, 2]);
+  assert.match(a.api('s_dora', 'ficha', { id: 'opgo' }).analise.fila.texto, /O teto de 2 análises automáticas por dia foi atingido: a fila continua amanhã\./);
+  assert.match(telaCliente().Lic_filaHojeHtml_(f), /cm-faixa info">O teto de 2 análises automáticas por dia foi atingido \(2 hoje\): as outras ficam na fila para amanhã\./);
+  // "Analisar agora" não conta e continua valendo
+  assert.equal(a.api('s_dora', 'analisar', { id: 'opgo' }).ok, true);
+  assert.equal(a.api('s_dora', 'hoje').filaAnalise.hoje, 2);
+  // dia seguinte (Brasília): a fila continua
+  a.relogio.agora = Date.parse('2026-11-04T09:00:00-03:00');
+  a.ia.respostas.push(respostaValida());
+  assert.equal(a.ctx.Lic_filaVigiar_().gatilho, 'agendada');
+  r = a.ctx.Licitacoes_rotinaAnalise();
+  assert.equal(r.analisadas + r.semMudanca, 1); assert.equal(a.api('s_dora', 'hoje').filaAnalise.naFila, 0);
+  // a tela de configurações mostra o teto, com o motivo e a versão
+  const t = telaCliente(['JS_Licitacoes_Leitura.html']);
+  const html = t.LicLeit_htmlFilaCfg_(Object.assign(a.ctx.Lic_filaCfg_(), { hoje: 1 }));
+  assert.match(html, /<h3>Análise automática por IA \(fila\)<\/h3>/); assert.match(html, /id="licFilaTeto" inputmode="numeric" value="2"/);
+  assert.match(html, /Hoje: <b>1<\/b> de 2 análises automáticas/); assert.match(html, /Versão 1 · DORA DIRETORA TESTE · conter o gasto de IA no teste/);
+  assert.match(ler('SGO_Licitacoes_Leitura.js'), /fila: typeof Lic_filaCfg_ === 'function' \? Object\.assign\(Lic_filaCfg_\(\), \{ hoje: Lic_filaDia_\(\) \}\) : null/);
 });

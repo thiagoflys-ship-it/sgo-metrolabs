@@ -375,8 +375,11 @@
   }
   /** Fila da análise automática no Hoje: as que esperam nova tentativa e as que falharam 3 vezes (03/11/2026). */
   function Lic_filaHojeHtml_(f) {
-    if (!f || (!f.esperando && !f.falharam)) return "";
-    return Lic_faixa_((f.esperando ? f.esperando + (f.esperando === 1 ? " oportunidade espera" : " oportunidades esperam") + " nova tentativa da análise automática (a IA não respondeu; a fila tenta de novo em 1 h e depois em 6 h). " : "") +
+    if (!f) return "";
+    // revisão de fe62a18: fila pausada (chave da IA recusada) em vermelho; teto do dia em azul
+    var extra = (f.pausada ? Lic_faixa_(f.pausada, "erro") : "") + (f.tetoAtingido ? Lic_faixa_("O teto de " + f.tetoDia + " análises automáticas por dia foi atingido (" + f.hoje + " hoje): as outras ficam na fila para amanhã. \"Analisar agora\" na ficha continua valendo.", "info") : "");
+    if (!f.esperando && !f.falharam) return extra;
+    return extra + Lic_faixa_((f.esperando ? f.esperando + (f.esperando === 1 ? " oportunidade espera" : " oportunidades esperam") + " nova tentativa da análise automática (a IA não respondeu; a fila tenta de novo em 1 h e depois em 6 h). " : "") +
       (f.falharam ? f.falharam + (f.falharam === 1 ? " oportunidade ficou" : " oportunidades ficaram") + " sem nota: a análise automática falhou 3 vezes. Abra a ficha e use \"Analisar agora\"." : ""), f.falharam ? "aviso" : "info");
   }
   function Lic_renderHoje_() {
@@ -1635,7 +1638,7 @@
     g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: kb({ ia: "CONCLUIDA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi concluída." },
       { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: kb({ ia: "RECUSADA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi recusada." }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: kb({ ia: "ERRO" }), dica: "Abre o Kanban só com as oportunidades cuja última análise deu erro da IA." }]) +
       '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Tentativas registradas</dt><dd>" + ia.total + " (concluídas " + ((ia.tentativas || {}).CONCLUIDA || 0) + ", recusadas " + ((ia.tentativas || {}).RECUSADA || 0) + ", erro " + ((ia.tentativas || {}).ERRO || 0) + ")</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd>" +
-      (ia.fila ? "<dt>Fila de análise</dt><dd>" + Lic_esc_((ia.fila.naFila || 0) + " na fila" + (ia.fila.esperando ? " (" + ia.fila.esperando + " esperando nova tentativa)" : "") + (ia.fila.falharam ? " · " + ia.fila.falharam + " com a análise automática falha (use \"Analisar agora\" na ficha)" : "")) + "</dd>" : "") + "</dl>", ia.fonte);
+      (ia.fila ? "<dt>Fila de análise</dt><dd>" + Lic_esc_((ia.fila.naFila || 0) + " na fila" + (ia.fila.esperando ? " (" + ia.fila.esperando + " esperando nova tentativa)" : "") + (ia.fila.falharam ? " · " + ia.fila.falharam + " com a análise automática falha (use \"Analisar agora\" na ficha)" : "") + " · hoje " + (ia.fila.hoje || 0) + " de " + (ia.fila.tetoDia || 0) + " automáticas" + (ia.fila.pausada ? " · pausada: chave da IA recusada" : "")) + "</dd>" : "") + "</dl>", ia.fonte);
     // documentos de habilitação (JS_Licitacoes_Habilitacao.html): vencimentos e pendências das licitações, com a fonte
     if (typeof LicHb_painelHtml_ === "function") g += LicHb_painelHtml_(d.habilitacao);
     return h + g + "</div>";

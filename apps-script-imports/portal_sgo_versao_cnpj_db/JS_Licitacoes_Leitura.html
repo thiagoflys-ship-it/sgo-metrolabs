@@ -249,7 +249,16 @@
       '<div class="cm-caixa"><h3>Leitura automática do edital</h3><p class="cm-ajuda-campo">Ligada, a rotina do servidor põe na fila a leitura do edital inteiro das candidatas no prazo quando os arquivos chegam ou mudam (gasta IA em cada uma). Desligada, só a Diretoria pede, na ficha.</p>' +
       '<label class="cm-check" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="licLeitAuto"' + (c.automatica ? " checked" : "") + "> Ler sozinho o edital das candidatas</label>" +
       '<div class="cm-campo"><label for="licLeitAutoMot">Motivo (obrigatório)</label><textarea id="licLeitAutoMot" rows="2" maxlength="500"></textarea></div><div id="licLeitCfgMsg" aria-live="assertive"></div>' +
-      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-leit-auto>Salvar</button></div>' + (c.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(c.versao) + " · " + Lic_esc_(c.por) + " · " + Lic_esc_(c.motivo) + "</p>" : "") + "</div>";
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-leit-auto>Salvar</button></div>' + (c.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(c.versao) + " · " + Lic_esc_(c.por) + " · " + Lic_esc_(c.motivo) + "</p>" : "") + "</div>" + LicLeit_htmlFilaCfg_(r.fila);
+  }
+  /** Teto de análises automáticas por dia (fila da análise; revisão de fe62a18). O excedente fica na fila para o dia seguinte. */
+  function LicLeit_htmlFilaCfg_(f) {
+    if (!f) return "";
+    return '<div class="cm-caixa"><h3>Análise automática por IA (fila)</h3><p class="cm-ajuda-campo">Teto de análises automáticas por dia (padrão ' + Lic_esc_(f.padrao) + '). Passou do teto, as outras ficam na fila para o dia seguinte; "Analisar agora" na ficha não conta e continua valendo.</p>' +
+      '<p class="cm-txt">Hoje: <b>' + Lic_esc_(f.hoje || 0) + "</b> de " + Lic_esc_(f.tetoDia) + ' análises automáticas.</p>' +
+      '<div class="cm-campo"><label for="licFilaTeto">Teto por dia (1 a 1000)</label><input id="licFilaTeto" inputmode="numeric" value="' + Lic_esc_(f.tetoDia) + '"></div>' +
+      '<div class="cm-campo"><label for="licFilaTetoMot">Motivo (obrigatório)</label><textarea id="licFilaTetoMot" rows="2" maxlength="500"></textarea></div><div id="licFilaTetoMsg" aria-live="assertive"></div>' +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lic-fila-teto>Salvar</button></div>' + (f.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(f.versao) + " · " + Lic_esc_(f.por) + " · " + Lic_esc_(f.motivo) + "</p>" : "") + "</div>";
   }
   function LicLeit_renderCfg_(corpo) {
     corpo.innerHTML = Lic_carregando_(2);
@@ -262,6 +271,13 @@
         if (mot.length < 5) { Lic_$_("licLeitCfgMsg").innerHTML = Lic_faixa_("Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado.", "erro"); return; }
         sv.disabled = true;
         Lic_chamar_("leituraCfgSalvar", { automatica: !!(Lic_$_("licLeitAuto") || {}).checked, motivo: mot }, function (x) { Lic_toast_(x.semMudanca ? x.texto : "Salvo como versão " + x.versao + "."); LicLeit_renderCfg_(corpo); }, function (m) { sv.disabled = false; Lic_$_("licLeitCfgMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+      };
+      var ft = corpo.querySelector("[data-lic-fila-teto]");
+      if (ft) ft.onclick = function () {
+        var mot = ((Lic_$_("licFilaTetoMot") || {}).value || "").trim();
+        if (mot.length < 5) { Lic_$_("licFilaTetoMsg").innerHTML = Lic_faixa_("Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado.", "erro"); return; }
+        ft.disabled = true;
+        Lic_chamar_("filaCfgSalvar", { tetoDia: ((Lic_$_("licFilaTeto") || {}).value || "").trim(), motivo: mot }, function (x) { Lic_toast_(x.semMudanca ? x.texto : "Salvo como versão " + x.versao + "."); LicLeit_renderCfg_(corpo); }, function (m) { ft.disabled = false; Lic_$_("licFilaTetoMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
       };
     }, function (m) { corpo.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(corpo, function () { LicLeit_renderCfg_(corpo); }); });
   }
