@@ -169,3 +169,54 @@ test('coluna nova ENVIO_GRUPO entra por merge (cache das abas V7); ajuda, manual
   assert.match(ler('SGO_Ajuda_Licitacoes.js'), /Vários prazos numa mensagem só/);
   assert.match(ler('SGO_AssistenteManuais.js'), /Envio agrupado \(03\/11\/2026/);
 });
+
+test('revisão MÉDIO 1: o link de ciência vale 30 dias a partir do ENVIO (no grupo, o mais recente), não da criação da linha', () => {
+  // licitação publicada 45 dias antes: as linhas nascem em 03/11 e o aviso de 7 dias sai em 11/12
+  const a = ambiente({ ops: [OP('op_e001', { RESPONSAVEL_ID: 'u_cha', RESPONSAVEL_NOME: 'CHARLES', ENCERRAMENTO_PROPOSTAS: '2026-12-18T10:00:00', ENCERRAMENTO_ISO: '2026-12-18T13:00:00.000Z' })], agora: '2026-11-03T10:00:00-03:00' });
+  a.rodada('2026-11-03T10:00:00-03:00');
+  a.rodada('2026-12-11T10:00:30-03:00');
+  const x = a.al({ SITUACAO: 'ENVIADO' })[0];
+  assert.ok(x && x.CRIADO_EM < '2026-11-04', 'a linha nasceu 38 dias antes do envio');
+  const tok = a.ctx.Lic_cienciaToken_(x.ENVIO_GRUPO || x.AVISO_ID, 'w');
+  a.mudar('2026-12-11T10:01:00-03:00');
+  const ver = a.ctx.Licitacoes_cienciaLink(tok, 'ver');
+  assert.equal(ver.ok, true, 'antes: "Este link de ciência venceu" na hora do envio; ' + ver.message);
+  a.mudar('2027-01-11T10:01:00-03:00');
+  assert.match(a.ctx.Licitacoes_cienciaLink(tok, 'ver').message, /venceu \(vale 30 dias a partir do envio\)/);
+  // grupo: conta o envio mais recente das linhas
+  const b = ambiente({ ops: CASO(), agora: '2026-11-02T08:00:00-03:00' });
+  preparar(b); b.rodada('2026-11-02T17:00:30-03:00');
+  const g = b.al({ OPORTUNIDADE_ID: 'op_0131', USUARIO_ID: 'u_cha', ENVIO_GRUPO: (v) => !!v });
+  g.forEach((y) => { y.CRIADO_EM = '2026-09-01T10:00:00.000Z'; });
+  assert.equal(b.ctx.Licitacoes_cienciaLink(b.ctx.Lic_cienciaToken_(g[0].ENVIO_GRUPO, 'e'), 'ver').ok, true);
+});
+
+test('revisão MENOR 2: o sufixo "(e mais N itens ...)" nunca some da ação no WhatsApp; com 4 ou mais tipos o resumo fica curto', () => {
+  const a = ambiente({ ops: CASO(), agora: '2026-11-02T08:00:00-03:00' });
+  preparar(a);
+  a.ctx.Lic_acaoAlerta_ = () => 'x'.repeat(400);
+  a.rodada('2026-11-02T17:00:30-03:00');
+  const z = a.zap().find((w) => JSON.stringify(w.corpo).includes('fim das propostas'));
+  const p8 = z.corpo.template.components[0].parameters[7].text;
+  assert.ok(p8.length <= 200, 'até 200 caracteres: ' + p8.length); assert.match(p8, /\(e mais 2 itens no e-mail e no SGO\+\)$/);
+  const tipos = ['PRAZO_IMPUGNACAO', 'PRAZO_ESCLARECIMENTO', 'LIMITE_PROPOSTA', 'SESSAO_PUBLICA', 'CONTRATO_FIM'];
+  const linhas = tipos.map((t, i) => ({ ID: 'r' + i, TIPO: 'PRAZO', EVENTO_TIPO: t, EVENTO_ID: '', NIVEL: 'NORMAL', ALVO_ISO: '2026-11-1' + i + 'T12:00:00.000Z' }));
+  assert.equal(a.ctx.Lic_resumoGrupo_(linhas, true, {}).texto, '5 prazos: impugnação, esclarecimento, fim das propostas e outros 2');
+  assert.equal(a.ctx.Lic_resumoGrupo_(linhas.slice(0, 3), true, {}).texto, '3 prazos: impugnação, esclarecimento e fim das propostas');
+});
+
+test('revisão MENOR 3: linha cancelada durante o envio agrupado não volta a "Enviado"; as outras do grupo seguem', () => {
+  const a = ambiente({ ops: CASO(), agora: '2026-11-02T08:00:00-03:00' });
+  preparar(a);
+  const orig = a.ctx.Lic_alertaEmail_;
+  let alvo = null;
+  a.ctx.Lic_alertaEmail_ = function (x, ct) {
+    if (!alvo && ct.refId) { alvo = a.al({ ENVIO_GRUPO: ct.refId, EVENTO_TIPO: 'LIMITE_PROPOSTA' })[0] || a.al({ ENVIO_GRUPO: ct.refId })[0]; a.ctx.SGO_DATA.update('LIC_ALERTAS', alvo.ID, { SITUACAO: 'CANCELADO', CANCELADO_MOTIVO: 'O prazo mudou durante o envio.' }); }
+    return orig.apply(this, arguments);
+  };
+  a.rodada('2026-11-02T17:00:30-03:00');
+  assert.ok(alvo, 'houve envio agrupado');
+  const y = a.al({ ID: alvo.ID })[0];
+  assert.equal(y.SITUACAO, 'CANCELADO', 'antes: voltava a ENVIADO'); assert.equal(y.CANCELADO_MOTIVO, 'O prazo mudou durante o envio.'); assert.ok(!y.ESCALONAR_EM);
+  assert.ok(a.al({ ENVIO_GRUPO: alvo.ENVIO_GRUPO }).filter((x) => x.ID !== alvo.ID).every((x) => x.SITUACAO === 'ENVIADO'));
+});

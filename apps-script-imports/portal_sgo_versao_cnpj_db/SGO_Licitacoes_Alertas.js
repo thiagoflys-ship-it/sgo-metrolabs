@@ -542,7 +542,9 @@ function Lic_resumoGrupo_(linhas, curto, evs) {
     var n = Lic_s_(a.TIPO) === 'MUDANCA' ? (Lic_s_(a.TITULO) || 'mudança na licitação').toLowerCase() : curto ? (LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || Lic_s_(a.EVENTO_TIPO).toLowerCase()) : Lic_s_((evs[Lic_s_(a.EVENTO_ID)] || {}).NOME) || LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || 'prazo';
     if (nomes.indexOf(n) < 0) nomes.push(n);
   });
-  return { rotulo: linhas.length + (todosPrazo ? ' prazos' : ' alertas'), texto: linhas.length + (todosPrazo ? ' prazos: ' : ' alertas: ') + Lic_listaE_(nomes), todosPrazo: todosPrazo };
+  // revisão de 03/11/2026: com 4 ou mais tipos, o resumo fica curto (os 3 primeiros e "outros N"); a lista toda vai no e-mail
+  var lista = nomes.length >= 4 ? nomes.slice(0, 3).join(', ') + ' e outros ' + (nomes.length - 3) : Lic_listaE_(nomes);
+  return { rotulo: linhas.length + (todosPrazo ? ' prazos' : ' alertas'), texto: linhas.length + (todosPrazo ? ' prazos: ' : ' alertas: ') + lista, todosPrazo: todosPrazo };
 }
 /**
  * Conteúdo do envio agrupado (mesma licitação, mesma pessoa, mesma rodada): { titulo, texto, params, refId, botao, link }.
@@ -579,7 +581,8 @@ function Lic_alertaConteudoGrupo_(linhas, l, evs, quando, envioId) {
   texto = texto.concat(['', 'Confirmar ciência ' + (linhas.length === 2 ? 'dos 2' : 'de todos os ' + linhas.length) + (rs.todosPrazo ? ' prazos' : ' alertas') + ' (um clique registra a ciência de todos; não conclui as tarefas): ' + Lic_linkCiencia_(envioId, 'e'), '',
     'O botão abaixo abre a licitação no SGO+, com login. Alerta da Diretoria de Licitações: pode chegar fora do expediente (decisão do dono, 01/11/2026).']).join('\n');
   var link = Lic_linkAviso_(a0.AVISO_ID) || '@LINK', mais = itens.length - 1;
-  var acao8 = Lic_texto_(urg.acao, 200) + (mais ? ' (e ' + (mais === 1 ? 'mais 1 item' : 'mais ' + mais + ' itens') + ' no e-mail e no SGO+)' : '');
+  // o sufixo "(e mais N itens ...)" nunca é cortado: a ação é que cabe no que sobra dos 200 caracteres
+  var suf = mais ? ' (e ' + (mais === 1 ? 'mais 1 item' : 'mais ' + mais + ' itens') + ' no e-mail e no SGO+)' : '', acao8 = Lic_texto_(urg.acao, 200 - suf.length) + suf;
   var params = [nivelG, cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), cb.processo, cb.objeto || '-', rc.texto, urg.quandoTxt, urg.restante, acao8, link];
   return { titulo: titulo, texto: texto, params: params, refId: envioId, botao: Lic_cienciaToken_(envioId, 'w'), link: Lic_linkAviso_(a0.AVISO_ID) || '' };
 }
@@ -677,6 +680,9 @@ function Lic_alertaEnviarGrupo_(linhas, quando, cfg, ops, evs) {
   var resumo = 'interno: registrado na Central de alertas' + (em ? '; e-mail: ' + (em.situacao === 'ENVIADO' ? 'entregue ao serviço de e-mail' : em.motivo) : '') + (wa ? '; WhatsApp: ' + (LIC_WA_ROTULOS[wa.situacao] || wa.situacao) + (wa.situacao === 'ACEITO' ? '' : ' (' + wa.motivo + ')') : '') + (alt ? '; ' + alt : '');
   var juntos = 'numa mensagem só com ' + (linhas.length - 1) + (linhas.length === 2 ? ' outro alerta' : ' outros alertas') + ' da mesma licitação (envio ' + envioId + '; assunto: ' + ct.titulo + ')';
   linhas.forEach(function (a) {
+    // revisão de 03/11/2026: linha cancelada (ou com ciência) durante o envio fica como está; grava só a que ainda está "Enviando"
+    var atual = SGO_DATA.getById(LIC_ABAS.ALERTAS, a.ID);
+    if (atual && Lic_up_(atual.SITUACAO) !== 'ENVIANDO') return;
     var e = evs[Lic_s_(a.EVENTO_ID)] || null, cA = Lic_alertaConteudo_(a, l, e, quando), papel = Lic_s_(a.PAPEL), escalona = papel === 'TITULAR' || papel === 'TODOS';
     var campos = { TITULO: Lic_texto_(cA.titulo, 300), TEXTO: Lic_s_(a.TIPO) === 'MUDANCA' ? Lic_s_(a.TEXTO) : Lic_texto_(cA.texto, 3000), TENTATIVAS: Number(a.TENTATIVAS) || 1, INTERNO_EM: Lic_s_(a.INTERNO_EM) || agora,
       ENVIADO_EM: chegou ? agora : Lic_s_(a.ENVIADO_EM), SITUACAO: chegou ? 'ENVIADO' : 'FALHOU', CANAL_ALTERNATIVO: Lic_texto_(alt, 300), ENVIO_GRUPO: envioId, ATUALIZADO_EM: agora };
@@ -895,7 +901,10 @@ function Lic_cienciaResolver_(token) {
   if (d) return { erro: 'Este link de ciência não é válido. Abra o SGO+ e confirme na Central de alertas de Licitações.' };
   var grupo = m[2].charAt(1) === 'G', doEnvio = Lic_ler_(LIC_ABAS.ALERTAS).filter(function (x) { return grupo ? Lic_s_(x.ENVIO_GRUPO) === m[2] : Lic_s_(x.AVISO_ID) === m[2]; }), a = doEnvio[0];
   if (!a) return { erro: 'Não encontramos este alerta (o link pode ser de outro ambiente). Abra o SGO+ e confira a Central de alertas.' };
-  if (Date.now() - Date.parse(Lic_s_(a.CRIADO_EM)) > 30 * 864e5) return { erro: 'Este link de ciência venceu (vale 30 dias). Abra o SGO+ para ver a licitação.' };
+  // revisão de 03/11/2026: os 30 dias contam do ENVIO (no grupo, o envio mais recente das linhas), não da criação da linha:
+  // o aviso de 7 dias de uma licitação publicada 45 dias antes chegava com o link vencido
+  var enviadoEm = doEnvio.map(function (x) { return Lic_s_(x.ENVIADO_EM) || Lic_s_(x.EMAIL_EM) || Lic_s_(x.WA_EM) || Lic_s_(x.CRIADO_EM); }).sort().pop();
+  if (Date.now() - Date.parse(enviadoEm) > 30 * 864e5) return { erro: 'Este link de ciência venceu (vale 30 dias a partir do envio). Abra o SGO+ para ver a licitação.' };
   return { alerta: a, envio: grupo ? m[2] : '', linhas: grupo ? doEnvio : [a], canal: m[1] === 'e' ? 'EMAIL_LINK' : 'WHATSAPP_BOTAO' };
 }
 /** google.script.run da página do link (sem login): acao 'ver' ou 'confirmar'. Só o primeiro nome, o código e o prazo. Nunca lança. */
