@@ -790,3 +790,185 @@ test('ajuste final 6: fato repetido (mesma fonte e mesmo trecho) aparece uma vez
   const tela = JSON.parse(JSON.stringify(a.ctx.Lic_analiseTela_({ ID: 'x', VERSAO: 1, AFIRMACOES_JSON: JSON.stringify([fato, fato, { tipo: 'PENDENCIA', texto: 'Ler o TR.' }, { tipo: 'PENDENCIA', texto: 'Ler o TR.' }, Object.assign({}, fato, { tipo: 'INFERENCIA' })]) })));
   assert.deepEqual(tela.afirmacoes.map((x) => x.tipo), ['FATO', 'PENDENCIA', 'PENDENCIA', 'INFERENCIA'], 'só o FATO repetido sai; pendência e inferência ficam');
 });
+
+// ---------- calibração de 03/11/2026: 53 de 59 análises reais da fila recusadas (banco de prova); casos reais curtos ----------
+const ADUANA = Object.assign({}, OP, { ID: 'op3', CODIGO: 'LIC-2026-0227', ORGAO_NOME: 'UNIVERSIDADE FEDERAL FLUMINENSE', UF: 'RJ', MUNICIPIO: 'Niterói', VALOR_ESTIMADO: 120000,
+  OBJETO: 'Contratação de serviços de despacho aduaneiro, bem como o desembaraço alfandegário de mercadorias importadas de diversos países', TRIAGEM: 'CANDIDATA', TRIAGEM_MOTIVO: '' });
+/** Do contexto isolado para o deste arquivo (deepEqual compara o protótipo do Array). */
+const local = (x) => JSON.parse(JSON.stringify(x));
+function ctxDe(a, l, textos, itens) {
+  const fontes = a.ctx.Lic_fontesAnalise_(l, itens ? { itens } : null, textos || []);
+  return a.ctx.Lic_ctxVerificador_(l, fontes, a.ctx.Lic_pesos_(), a.ctx.Lic_criteriosCodigo_(l, a.ctx.Lic_pesos_(), '2026-11-01'));
+}
+function respostaAduana(extra) {
+  return Object.assign({
+    resumo: 'A Universidade Federal Fluminense contrata despacho aduaneiro e desembaraço alfandegário. O serviço não está no catálogo da Metrolabs.',
+    capacidade: { justificativa: 'Despacho aduaneiro não é serviço da Metrolabs.', itens: [
+      // o erro real: reticências no trecho de capacidade (não vale) e o código da trava em "servico"
+      { descricao: 'Despacho aduaneiro', grau: 'NAO_ATENDE', servico: 'FORA_DO_CATALOGO', fonte: { ref: 'CAMPO:objeto', trecho: 'serviços de despacho aduaneiro (...) mercadorias importadas de diversos países' } }] },
+    documentacao: { pontos: 0, justificativa: 'Sem exigência lida.', exigencias: [] }, riscos: [],
+    travas: [{ codigo: 'FORA_DO_CATALOGO', texto: 'Despacho aduaneiro não é serviço da Metrolabs.', fonte: { ref: 'CAMPO:objeto', trecho: 'despacho aduaneiro (...) desembaraço alfandegário' },
+      fonteRegra: { ref: 'REGRA:catalogo', trecho: 'FORA DO CATÁLOGO hoje: ... manutenção industrial em geral' } }],
+    afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'O objeto é despacho aduaneiro.', fonte: { ref: 'CAMPO:objeto', trecho: 'Contratação de serviços de despacho aduaneiro' } },
+      { tipo: 'INFERENCIA', criterio: 'capacidade', texto: 'A Metrolabs pode disputar como EPP.', fonte: { ref: 'REGRA:porte', trecho: 'EMPRESA DE PEQUENO PORTE (EPP): pode disputar item exclusivo ou cota de ME/EPP' } }]
+  }, extra || {});
+}
+
+test('calibração 03/11 (despacho aduaneiro, prova real): fora do ramo PASSA com capacidade 0 e FORA_DO_CATALOGO a confirmar, pelo objeto inteiro e pela frase do catálogo; nada zera sozinho', () => {
+  const a = ambiente();
+  const ctx = ctxDe(a, ADUANA);
+  const v = a.ctx.Lic_verificarAnalise_(respostaAduana(), ctx);
+  assert.equal(v.ok, true, v.problemas.join('; '));
+  assert.equal(v.parcial, true, 'o item com reticências caiu');
+  assert.match(v.problemas.join('\n'), /capacidade, item 1: .*reticências não valem em capacidade nem em trava/);
+  const it = v.saida.capacidade.itens;
+  assert.equal(it.length, 1);
+  assert.deepEqual([it[0].grau, it[0].origem, it[0].fonte.ref, it[0].fonte.trecho], ['NAO_ATENDE', 'SISTEMA', 'CAMPO:objeto', ADUANA.OBJETO], 'o código cita o objeto inteiro');
+  assert.equal(v.saida.capacidade.pontos, 0);
+  const t = v.saida.travas;
+  assert.equal(t.length, 1);
+  assert.deepEqual([t[0].codigo, t[0].fonte.ref, t[0].fonte.trecho, t[0].fonteRegra.ref, t[0].fonteRegra.trecho], ['FORA_DO_CATALOGO', 'CAMPO:objeto', ADUANA.OBJETO, 'REGRA:catalogo', a.ctx.LIC_FORA_REGRA_TRECHO]);
+  assert.ok(t[0].chave && t[0].assinatura, 'a trava tem chave e assinatura para a decisão da Diretoria');
+  assert.ok(a.ctx.LIC_CAPACIDADE_TEXTO.split('\n').includes(a.ctx.LIC_FORA_REGRA_TRECHO), 'a frase está no catálogo que a IA recebe');
+  // a regra do porte agora se cita sem cortar negação ("(não trava)" saiu da frase)
+  assert.equal(v.saida.afirmacoes.find((x) => x.tipo === 'INFERENCIA').fonte.ref, 'REGRA:porte');
+  // pendência visível do que caiu, sem o trecho que não conferiu
+  const caiu = v.saida.afirmacoes.filter((x) => x.caiu);
+  assert.equal(caiu.length, 1);
+  assert.match(caiu[0].texto, /^Não conferido \(o trecho junta pedaços da fonte com reticências\): o item "Despacho aduaneiro" com grau Não atende, que conta zero na capacidade\. Não conta na nota; conferir no edital\.$/);
+  // nota: trava a confirmar (não zera), capacidade 0
+  const nf = a.ctx.Lic_notaFinal_(v.saida, a.ctx.Lic_criteriosCodigo_(ADUANA, a.ctx.Lic_pesos_(), '2026-11-01'), a.ctx.Lic_pesos_());
+  assert.equal(nf.classe, 'TRAVA_A_CONFIRMAR');
+  assert.ok(nf.nota > 0, 'a trava da IA não zera a nota sozinha');
+  assert.equal(nf.criterios.capacidade.pontos, 0);
+  // todos "não atende" e a IA sem a trava: o código põe FORA_DO_CATALOGO (a confirmar)
+  const sem = respostaAduana({ travas: [] }); sem.capacidade.itens[0].fonte.trecho = 'serviços de despacho aduaneiro, bem como o desembaraço alfandegário';
+  const v2 = a.ctx.Lic_verificarAnalise_(sem, ctx);
+  assert.equal(v2.ok, true, v2.problemas.join('; '));
+  assert.equal(v2.parcial, false);
+  assert.deepEqual(local(v2.saida.travas.map((x) => [x.codigo, x.origem])), [['FORA_DO_CATALOGO', 'SISTEMA']]);
+  assert.equal(v2.saida.capacidade.itens[0].fonte.trecho, 'serviços de despacho aduaneiro, bem como o desembaraço alfandegário', 'trecho da IA que confere vale (não é trocado pelo objeto)');
+  // trava repetida (uma por item, como a IA fez em 4 análises reais) conta uma vez
+  const rep = respostaAduana(); rep.travas.push(JSON.parse(JSON.stringify(rep.travas[0])));
+  assert.equal(a.ctx.Lic_verificarAnalise_(rep, ctx).saida.travas.length, 1);
+});
+
+test('calibração 03/11: FORA_DO_CATALOGO não vale com item que a IA classificou como alto ou médio (vira pendência, não recusa); grau alto exige serviço, não compra', () => {
+  const a = ambiente();
+  const ctx = ctxDe(a, OP, TEXTOS);
+  const r = respostaValida({ travas: [{ codigo: 'FORA_DO_CATALOGO', texto: 'Fisioterapia não é do catálogo.', fonte: { ref: 'A1', trecho: '01 aparelho de ultrassom fisioterapêutico, 01 eletroestimulador' }, fonteRegra: { ref: 'REGRA:catalogo', trecho: a.ctx.LIC_FORA_REGRA_TRECHO } }] });
+  const v = a.ctx.Lic_verificarAnalise_(r, ctx);
+  assert.equal(v.ok, true, v.problemas.join('; '));
+  assert.deepEqual(local(v.saida.travas), []);
+  assert.ok(v.saida.afirmacoes.some((x) => x.tipo === 'PENDENCIA' && x.criterio === 'trava' && /a trava \(todos os itens fora\) não vale/.test(x.texto)));
+  // compra do equipamento ("o fornecimento de 03 monitores", prova real) não prova calibração de monitor
+  const compra = Object.assign({}, OP, { OBJETO: 'Aquisição de equipamentos médico-hospitalares, compreendendo o fornecimento de monitores multiparamétricos e a calibração inicial quando aplicável' });
+  const tc = [{ ref: 'A1', id: 11, titulo: 'TR', nome: 'tr.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', texto: 'Constitui objeto deste lote o fornecimento de 03 (três) Monitores Multiparamétricos destinados à classificação de risco.', cortado: false }];
+  const ctxC = ctxDe(a, compra, tc);
+  const rc = respostaValida({ capacidade: { justificativa: 'Monitores.', itens: [{ descricao: 'Monitores', grau: 'ALTA', servico: 'CAL_MONITOR', fonte: { ref: 'A1', trecho: 'o fornecimento de 03 (três) Monitores Multiparamétricos destinados à classificação de risco' } }] }, riscos: [], documentacao: { pontos: 0, justificativa: 'Sem exigência.', exigencias: [] },
+    afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'Compra de monitores.', fonte: { ref: 'CAMPO:objeto', trecho: 'compreendendo o fornecimento de monitores multiparamétricos' } }] });
+  const vc = a.ctx.Lic_verificarAnalise_(rc, ctxC);
+  assert.equal(vc.ok, false, 'o único item caiu: capacidade sem item conferido');
+  assert.match(vc.problemas.join('\n'), /capacidade, item 1: grau ALTA com o trecho é de compra ou fornecimento do equipamento, não de serviço sobre ele/);
+  assert.match(vc.problemas.join('\n'), /capacidade: nenhum item conferiu com trecho da fonte/);
+  // objeto que é só lista de produtos (prova real: "AGITADOR, DENSITOMETRO, ESTERILIZADOR, INCUBADORA, MOINHO..."): nome do equipamento não prova serviço
+  const lista = Object.assign({}, OP, { OBJETO: 'AGITADOR, DENSITOMETRO, ESTERILIZADOR, INCUBADORA, MOINHO, MICROCENTRIFUGA e BANHO-MARIA' });
+  const rl = JSON.parse(JSON.stringify(rc)); rl.capacidade.itens = [{ descricao: 'Incubadora', grau: 'ALTA', servico: 'CAL_INCUBADORA_BIO', fonte: { ref: 'CAMPO:objeto', trecho: 'ESTERILIZADOR, INCUBADORA, MOINHO' } }];
+  rl.afirmacoes[0].fonte.trecho = 'AGITADOR, DENSITOMETRO, ESTERILIZADOR, INCUBADORA';
+  assert.match(a.ctx.Lic_verificarAnalise_(rl, ctxDe(a, lista)).problemas.join('\n'), /trecho que só nomeia o equipamento, e o objeto não pede serviço/);
+  // o mesmo nome de equipamento vale quando o objeto pede serviço (lista de equipamentos de um contrato de manutenção)
+  const manut = Object.assign({}, lista, { OBJETO: 'Manutenção preventiva e calibração de AGITADOR, DENSITOMETRO, ESTERILIZADOR, INCUBADORA, MOINHO' });
+  const rm = JSON.parse(JSON.stringify(rl)); rm.capacidade.itens[0].fonte.trecho = 'ESTERILIZADOR, INCUBADORA, MOINHO'; rm.afirmacoes[0].fonte.trecho = 'Manutenção preventiva e calibração de AGITADOR';
+  const vm2 = a.ctx.Lic_verificarAnalise_(rm, ctxDe(a, manut));
+  assert.equal(vm2.ok, true, vm2.problemas.join('; '));
+  assert.equal(vm2.saida.capacidade.pontos, 30);
+});
+
+test('calibração 03/11: resposta aceita em parte: o que não confere cai (fora da nota) e vira pendência sem o trecho nem número inventado; os limites da recusa inteira continuam', () => {
+  const a = ambiente();
+  const ctx = Object.assign(ctxDe(a, OP, TEXTOS), { fabricantes: ['marca exemplo'] });
+  const r = respostaValida();
+  r.riscos[1].fonte.trecho = 'As peças serão fornecidas pela contratada com teto anual';
+  r.afirmacoes.push({ tipo: 'FATO', criterio: 'capacidade', texto: 'O edital pede calibração de 37 termômetros.', fonte: { ref: 'A1', trecho: 'calibração de 37 termômetros digitais' } });
+  r.afirmacoes.push({ tipo: 'INFERENCIA', criterio: 'documentacao', texto: 'A Metrolabs é acreditada RBC para massa, o que atende o edital.' });
+  r.afirmacoes.push({ tipo: 'PENDENCIA', criterio: 'documentacao', texto: 'Ver se o termo de referência pede atestado.', fonte: { ref: 'A2', trecho: 'atestado de capacidade técnica' } });
+  const v = a.ctx.Lic_verificarAnalise_(r, ctx);
+  assert.equal(v.ok, true, v.problemas.join('; '));
+  assert.equal(v.parcial, true);
+  assert.equal(v.caidos.length, 3);
+  assert.deepEqual(local(v.saida.riscos.map((x) => x.codigo)), ['SLA_HORAS'], 'o risco que caiu não desconta');
+  assert.equal(v.saida.caidos, 3);
+  const pend = local(v.saida.afirmacoes.filter((x) => x.caiu).map((x) => x.texto));
+  assert.deepEqual(pend, [
+    'Não conferido (o trecho citado não está na fonte): o risco "Peças por conta da contratada sem teto", que não desconta. Não conta na nota; conferir no edital.',
+    'Não conferido (o trecho citado não está na fonte): um fato da IA. Não conta na nota; conferir no edital.',
+    'Não conferido (texto recusado: frase de decisão, promessa de RBC, marca ou formatação): uma inferência da IA. Não conta na nota; conferir no edital.']);
+  assert.doesNotMatch(pend.join(' '), /37|acreditada|teto anual/, 'nem o número inventado, nem a promessa de RBC, nem o trecho que não confere aparecem');
+  const p = v.saida.afirmacoes.find((x) => x.tipo === 'PENDENCIA' && /atestado/.test(x.texto));
+  assert.equal(p.fonte, null, 'pendência é pergunta: fica, sem a fonte que não conferiu');
+  assert.match(v.problemas.join('\n'), /risco 2: o trecho "As peças serão fornecidas pela contratada com teto anual" não está em A1/, 'o que caiu vai para a nova tentativa');
+  // a resposta inteira continua recusada pelo que é dela toda
+  const decide = respostaValida({ resumo: 'O serviço é simples e barato. Recomendo participar desta dispensa pela proximidade.' });
+  assert.equal(a.ctx.Lic_verificarAnalise_(decide, ctx).ok, false);
+  const semCap = respostaValida(); semCap.capacidade.itens.forEach((x) => { x.fonte.trecho += ' inventado pela IA'; });
+  assert.match(a.ctx.Lic_verificarAnalise_(semCap, ctx).problemas.join('\n'), /^capacidade: nenhum item conferiu com trecho da fonte/m);
+  const semTrava = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige RBC.', fonte: { ref: 'A1', trecho: 'laboratório acreditado pela RBC para a calibração' }, fonteRegra: { ref: 'REGRA:rbc', trecho: 'A Metrolabs NÃO é acreditada RBC (ISO/IEC 17025)' } }] });
+  const vt = a.ctx.Lic_verificarAnalise_(semTrava, ctx);
+  assert.equal(vt.ok, false);
+  assert.match(vt.problemas.join('\n'), /travas: nenhuma das 1 trava\(s\) apontadas conferiu/);
+  const metade = respostaValida(); metade.riscos.forEach((x) => { x.fonte.trecho += ' inventado'; }); metade.documentacao.exigencias[0].fonte.trecho += ' inventado';
+  metade.afirmacoes.push({ tipo: 'FATO', criterio: 'riscos', texto: 'Multa alta.', fonte: { ref: 'A1', trecho: 'multa de vinte por cento do valor' } });
+  metade.capacidade.itens[1].fonte.trecho += ' inventado';
+  const vmet = a.ctx.Lic_verificarAnalise_(metade, ctx);
+  assert.equal(vmet.ok, false);
+  assert.match(vmet.problemas.join('\n'), /^resposta: 5 de 9 itens, exigências, riscos, travas e afirmações não conferiram com as fontes \(o máximo aceito é a metade\)/m);
+  const semFato = respostaValida(); semFato.afirmacoes[0].fonte.trecho = 'MANUTENÇÃO PREVENTIVA DE 04 EQUIPAMENTOS';
+  assert.match(a.ctx.Lic_verificarAnalise_(semFato, ctx).problemas.join('\n'), /afirmações: nenhum FATO com fonte conferida/);
+  // a regra da RBC: a trava cita a frase de cima inteira; cortar o "NÃO" continua recusado
+  const rbc = [{ ref: 'A1', id: 11, titulo: 'TR', nome: 'tr.pdf', sha256: 'a'.repeat(64), situacao: 'EXTRAIDO', texto: EDITAL + '\nA empresa contratada deverá ser integrante da Rede Brasileira de Calibração (RBC), possuindo certificado de acreditação válido.', cortado: false }];
+  const ctxR = ctxDe(a, OP, rbc);
+  const comTrava = respostaValida({ travas: [{ codigo: 'RBC_OBRIGATORIA', texto: 'Exige RBC.', fonte: { ref: 'A1', trecho: 'A empresa contratada deverá ser integrante da Rede Brasileira de Calibração (RBC)' },
+    fonteRegra: { ref: 'REGRA:rbc', trecho: 'Edital que exige laboratório acreditado RBC/17025 = trava RBC_OBRIGATORIA' } }] });
+  const vr = a.ctx.Lic_verificarAnalise_(comTrava, ctxR);
+  assert.equal(vr.ok, true, vr.problemas.join('; '));
+  assert.equal(vr.saida.travas[0].fonteRegra.ref, 'REGRA:rbc');
+  const corta = JSON.parse(JSON.stringify(comTrava)); corta.travas[0].fonteRegra.trecho = 'é acreditada RBC (ISO/IEC 17025)';
+  assert.match(a.ctx.Lic_verificarAnalise_(corta, ctxR).problemas.join('\n'), /trava 1, fonteRegra: o trecho "é acreditada RBC \(ISO\/IEC 17025\)" não está em REGRA:rbc .*negação/);
+  // reticências em capacidade: a nova tentativa recebe o pedaço mais perto
+  const ret = respostaValida(); ret.capacidade.itens[0].fonte.trecho = '01 autoclave horizontal 21 litros (...) bicicleta ergométrica';
+  assert.match(a.ctx.Lic_verificarAnalise_(ret, ctx).problemas.join('\n'), /reticências não valem em capacidade nem em trava: copie uma frase inteira, seguida, da fonte; o mais perto em A1 é "01 autoclave horizontal 21 litros/);
+});
+
+test('calibração 03/11: na análise, resposta em parte pede nova tentativa e vale a melhor; a gravação e a tela mostram o que não conferiu', () => {
+  const parcial = respostaValida(); parcial.riscos[1].fonte.trecho = 'As peças serão fornecidas pela contratada com teto anual';
+  const ruim = respostaValida({ resumo: 'O serviço é simples e barato. Recomendo participar desta dispensa pela proximidade.' });
+  // a segunda veio inteira: vale ela
+  let a = ambiente({ respostas: [parcial, respostaValida()] });
+  let r = a.api('s_dora', 'analisar', { id: 'op1' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(a.ia.prompts.length, 2);
+  assert.match(a.ia.prompts[1], /PARTE DA SUA RESPOSTA ANTERIOR NÃO CONFERIU COM AS FONTES \(o resto foi aceito\)[\s\S]*risco 2: o trecho "As peças serão fornecidas pela contratada com teto anual"/);
+  let an = a.analises()[0];
+  assert.equal(an.SITUACAO, 'CONCLUIDA');
+  assert.equal(JSON.parse(an.RISCOS_JSON).length, 2, 'vale a segunda (inteira)');
+  assert.deepEqual(JSON.parse(an.RESPOSTAS_IA_JSON).map((x) => [x.aceita, x.parcial, x.caidos]), [[true, true, 1], [true, false, 0]]);
+  // as outras foram recusadas: vale a primeira (em parte), com a pendência e a faixa
+  a = ambiente({ respostas: [parcial, ruim, ruim] });
+  r = a.api('s_dora', 'analisar', { id: 'op1' });
+  assert.equal(r.resultado.analisada, true);
+  assert.equal(a.ia.prompts.length, 3);
+  an = a.analises()[0];
+  assert.equal(an.SITUACAO, 'CONCLUIDA');
+  assert.equal(JSON.parse(an.CRITERIOS_JSON).riscos.pontos, 4, 'só o risco que conferiu desconta');
+  assert.ok(JSON.parse(an.AFIRMACOES_JSON).some((x) => x.caiu && /^Não conferido \(o trecho citado não está na fonte\): o risco "Peças por conta da contratada sem teto"/.test(x.texto)));
+  assert.equal(JSON.parse(an.RECUSAS_JSON).length, 2, 'as duas recusadas ficam registradas');
+  assert.match(a.hist('ANALISE_IA')[0].TEXTO, /1 ponto\(s\) da resposta da IA não conferiram com as fontes: ficaram fora da nota e viraram pendência "não conferido"\./);
+  const html = tela().ctx.Lic_htmlFicha_(a.api('s_dora', 'ficha', { id: 'op1' }), 'analise');
+  assert.match(html, /1 ponto da resposta da IA não conferiu com as fontes: ficaram fora da nota e estão em Pendências, marcados &quot;Não conferido&quot;|1 ponto da resposta da IA não conferiu com as fontes: ficaram fora da nota e estão em Pendências, marcados "Não conferido"/);
+  // o pedido à IA explica o fora do ramo, com o formato, os códigos aceitos e a frase do catálogo
+  const p = a.ia.prompts[0];
+  assert.match(p, /OBJETO FORA DO RAMO \(compra de produto, obra, despacho aduaneiro/);
+  assert.ok(p.includes('"fonteRegra":{"ref":"REGRA:catalogo","trecho":"' + a.ctx.LIC_FORA_REGRA_TRECHO + '"}'));
+  assert.match(p, /Códigos aceitos em servico: CAL-001, CAL-002/);
+  assert.match(p, /esse marcador nunca é trecho nem fonte/);
+});

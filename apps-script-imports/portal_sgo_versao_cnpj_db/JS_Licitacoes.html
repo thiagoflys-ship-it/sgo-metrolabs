@@ -745,7 +745,11 @@
       var x = crit[c[0]] || {}, pct = x.peso ? Math.max(0, Math.min(100, Math.round(100 * Number(x.pontos || 0) / Number(x.peso)))) : 0;
       return [Lic_esc_(c[1]), "<b>" + Lic_esc_(Lic_num_(x.pontos || 0)) + "</b> de " + Lic_esc_(Lic_num_(x.peso || 0)) + '<span class="lic-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>', Lic_esc_(x.origem === "CODIGO" ? "Sistema (dados reais)" : x.origem === "IA_CODIGO" ? "IA classifica, sistema calcula" : x.origem === "HABILITACAO" ? "Sistema (cadastro de habilitação)" : "IA (conferida)"), Lic_esc_(x.como || "")];
     }));
-    h += cab + '<div class="cm-caixa"><h3>Critérios (doc 03, B6)</h3>' + tab + "</div>";
+    h += cab;
+    // 03/11/2026: resposta aceita em parte: o que não conferiu ficou fora da nota e está em Pendências ("Não conferido")
+    var nCaiu = (at.afirmacoes || []).filter(function (x) { return x && x.caiu; }).length;
+    if (nCaiu) h += Lic_faixa_(nCaiu + (nCaiu === 1 ? " ponto da resposta da IA não conferiu" : " pontos da resposta da IA não conferiram") + " com as fontes: ficaram fora da nota e estão em Pendências, marcados \"Não conferido\". Confira no edital antes de decidir.", "aviso");
+    h += '<div class="cm-caixa"><h3>Critérios (doc 03, B6)</h3>' + tab + "</div>";
     if ((at.itens || []).length) h += '<div class="cm-caixa"><h3>Itens e serviços do edital</h3>' + Lic_tabelaHtml_(["Item", "Grau", "Serviço", "Fonte"], at.itens.map(function (i) {
       return [Lic_esc_(i.descricao), '<span class="cm-selo ' + ({ ALTA: "verde", MEDIA: "azul", BAIXA: "laranja", NAO_ATENDE: "vermelho" }[i.grau] || "cinza") + '">' + Lic_esc_(i.grauNome || i.grau) + "</span>", '<span class="lic-mono">' + Lic_esc_(i.servico || "—") + "</span>", Lic_fonteCitHtml_(i.fonte)];
     })) + "</div>";

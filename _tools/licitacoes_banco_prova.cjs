@@ -55,7 +55,7 @@ analises.forEach((a) => { (String(a.RECUSAS_JSON || '') + String(a.RESPOSTAS_IA_
 // (a própria Metrolabs saiu da lista na produção em 02/11, antes destas respostas: COM_ESP_PROPRIA_MARCA)
 const ctx = carregar();
 const arqPorId = {};
-Object.values(d.arquivos).forEach((a) => { arqPorId[String(a.ref_id)] = a; });
+Object.values(d.arquivos).forEach((a) => { arqPorId[String(a.ref_id != null ? a.ref_id : a.id)] = a; });
 const itensPorChave = {};
 (d.itens || []).forEach((i) => { (itensPorChave[i.chave] = itensPorChave[i.chave] || []).push(i.dados); });
 
@@ -182,10 +182,15 @@ for (const a of analises) {
       resultado.inteiras++;
       const v = ctx.Lic_verificarAnalise_(j, cv);
       tl.aceita = v.ok; tl.problemas = v.problemas;
+      // 03/11/2026: resposta aceita em parte (o que caiu vira pendência); o verificador antigo não devolve caidos
+      tl.caidos = (v.caidos || []).length; tl.parcial = !!v.parcial;
       if (v.ok) {
         resultado.inteirasAceitas++;
         const nf = ctx.Lic_notaFinal_(v.saida, codigo, pesos);
-        tl.nota = nf.nota; tl.classe = nf.classe; tl.travas = nf.travas.map((x) => x.codigo);
+        tl.nota = nf.nota; tl.classe = nf.classe; tl.travas = nf.travas.map((x) => x.codigo + (x.origem === 'SISTEMA' ? '(código)' : ''));
+        tl.capacidade = v.saida.capacidade.pontos; tl.itens = v.saida.capacidade.itens.map((x) => x.grau + (x.origem === 'SISTEMA' ? '(código)' : ''));
+        tl.itensDet = v.saida.capacidade.itens.map((x) => ({ grau: x.grau, servico: x.servico, ref: x.fonte && x.fonte.ref, trecho: x.fonte && x.fonte.trecho.slice(0, 200) }));
+        tl.caidosDet = (v.caidos || []).map((c) => c.criterio + ': ' + c.oque);
         // para a conferência à mão: cada prova gravada, com o ajuste e o texto da fonte em volta
         tl.provas = [].concat(v.saida.capacidade.itens.map((x) => x.fonte), v.saida.documentacao.exigencias.map((x) => x.fonte), v.saida.riscos.map((x) => x.fonte), v.saida.travas.map((x) => x.fonte), v.saida.afirmacoes.map((x) => x.fonte))
           .filter(Boolean).map((fo) => ({ ref: fo.ref, ajuste: fo.ajuste || '', trecho: fo.trecho }));
@@ -241,6 +246,15 @@ const pct = (a, b) => (b ? (100 * a / b).toFixed(1).replace('.', ',') + '%' : '-
 console.log('Banco de prova — verificador de ' + path.relative(process.cwd(), pasta));
 console.log('Análises com resposta guardada: ' + resultado.analises + ' · tentativas: ' + resultado.tentativas + ' (inteiras: ' + resultado.inteiras + ', cortadas na gravação: ' + resultado.cortadas + ')');
 console.log('Respostas inteiras aceitas: ' + resultado.inteirasAceitas + ' de ' + resultado.inteiras);
+// por análise: passa se alguma tentativa inteira passa (a melhor: a aceita com menos elementos caídos)
+{
+  const porA = resultado.porAnalise.map((x) => ({ x, ac: x.tentativas.filter((t) => t.aceita).sort((p, q) => (p.caidos || 0) - (q.caidos || 0))[0], medida: x.tentativas.some((t) => !t.cortada) }));
+  const med = porA.filter((p) => p.medida), ok = med.filter((p) => p.ac);
+  const cl = {}; ok.forEach((p) => conta(cl, p.ac.classe + (p.ac.travas.length ? ' [' + p.ac.travas.join(',') + ']' : '')));
+  console.log('Análises que passariam: ' + ok.length + ' de ' + med.length + ' com resposta inteira guardada (' + (porA.length - med.length) + ' só com respostas cortadas na gravação, sem como medir)' + (ok.length ? '; em parte: ' + ok.filter((p) => p.ac.parcial).length + ', elementos caídos na melhor: média ' + (ok.reduce((s, p) => s + (p.ac.caidos || 0), 0) / ok.length).toFixed(1).replace('.', ',') : ''));
+  if (opc.detalhe) { console.log('Classe das que passariam:'); Object.entries(cl).sort((p, q) => q[1] - p[1]).forEach(([k, v]) => console.log('  ' + String(v).padStart(4) + '  ' + k)); }
+  resultado.passariam = ok.map((p) => ({ id: p.x.id, nota: p.ac.nota, classe: p.ac.classe, travas: p.ac.travas, itens: p.ac.itens, capacidade: p.ac.capacidade, caidos: p.ac.caidos || 0, tentativa: p.ac.tentativa }));
+}
 console.log('Pares ref+trecho conferidos um a um: ' + resultado.pares + ' · aceitos: ' + resultado.paresAceitos + ' (' + pct(resultado.paresAceitos, resultado.pares) + ')');
 const tab = (o) => Object.entries(o).sort((x, y) => y[1] - x[1]).forEach(([k, v]) => console.log('  ' + String(v).padStart(5) + '  ' + k));
 const P = resultado.pedido, med = (x) => Math.round(x / Math.max(1, P.analises));
