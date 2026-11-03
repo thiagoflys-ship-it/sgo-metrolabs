@@ -51,7 +51,10 @@ var LICPAR_COLUNAS = {
     'USUARIO_PERFIL', 'BASE_JSON', 'REGRAS', 'EM', 'HASH'],
   // UMA LINHA POR APROVAÇÃO DE UMA PESSOA DA DIRETORIA; nunca muda depois de gravada
   LIC_APROVACOES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'TIPO', 'USUARIO_ID', 'USUARIO_NOME', 'MOTIVO', 'VALOR_BASE', 'VALOR_ORIGEM', 'FAIXA', 'APROVACOES_NECESSARIAS',
-    'ALCADA_VERSAO', 'PARECERES_JSON', 'DIVERGENCIAS_JSON', 'EM', 'HASH']
+    'ALCADA_VERSAO', 'PARECERES_JSON', 'DIVERGENCIAS_JSON', 'EM', 'HASH',
+    // revisão de e361160: a versão da simulação aprovada, as alçadas em vigor naquela aprovação (congeladas para a oportunidade) e a origem
+    // (APROVACAO na aba Pareceres ou no Kanban; DISPUTA ou CONTRATO quando quem abre a disputa ou registra o contrato conta como aprovação)
+    'SIMULACAO_VERSAO', 'ALCADA_JSON', 'ORIGEM']
 };
 var LICPAR_COLUNAS_TEXTO = {
   LIC_PARECER_PEDIDOS: ['PRAZO_DIA', 'PRAZO_ISO', 'ATIVIDADE_RESERVA_ATE', 'PEDIDO_EM', 'RESPONDIDO_EM', 'CANCELADO_EM', 'HASH', 'ATUALIZADO_EM'],
@@ -80,13 +83,13 @@ var LICPAR_FONTE = 'Pareceres e alçadas';
 // ------------------------------------------------------------ abas e utilitários
 function LicPar_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LICPAR_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LICPAR_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(LICPAR_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LICPAR_COLUNAS[aba]);
     LICPAR_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LICPAR_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('LICPAR_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LICPAR_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 function LicPar_area_(cod) { var c = Lic_up_(cod); return LICPAR_AREAS.filter(function (a) { return a.codigo === c; })[0] || null; }
 function LicPar_letras_(t) { return Lic_s_(t).replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '').length; }
@@ -113,7 +116,8 @@ function LicPar_reais_(v) {
 }
 function LicPar_hashPedido_(p) { return Lic_hash_([Lic_s_(p.OPORTUNIDADE_ID), Lic_s_(p.AREA), Lic_s_(p.USUARIO_ID), Lic_s_(p.PERGUNTA), Lic_s_(p.PRAZO_DIA), Lic_s_(p.PEDIDO_POR_ID), Lic_s_(p.PEDIDO_EM)].join('|')); }
 function LicPar_hashParecer_(p) { return Lic_hash_([Lic_s_(p.OPORTUNIDADE_ID), Lic_s_(p.AREA), Number(p.VERSAO) || 0, Lic_s_(p.POSICAO), Lic_s_(p.MOTIVO), Lic_s_(p.MOTIVO_NOVA_VERSAO), Lic_s_(p.PEDIDO_ID), Lic_s_(p.SUBSTITUI_ID), Lic_s_(p.USUARIO_ID), Lic_s_(p.BASE_JSON), Lic_s_(p.EM)].join('|')); }
-function LicPar_hashAprovacao_(a) { return Lic_hash_([Lic_s_(a.OPORTUNIDADE_ID), Lic_s_(a.TIPO), Lic_s_(a.USUARIO_ID), Lic_s_(a.MOTIVO), Lic_s_(a.VALOR_BASE), Lic_s_(a.FAIXA), Lic_s_(a.APROVACOES_NECESSARIAS), Lic_s_(a.EM)].join('|')); }
+function LicPar_hashAprovacao_(a) { return Lic_hash_([Lic_s_(a.OPORTUNIDADE_ID), Lic_s_(a.TIPO), Lic_s_(a.USUARIO_ID), Lic_s_(a.MOTIVO), Lic_s_(a.VALOR_BASE), Lic_s_(a.FAIXA), Lic_s_(a.APROVACOES_NECESSARIAS), Lic_s_(a.EM),
+  Lic_s_(a.SIMULACAO_VERSAO), Lic_s_(a.ALCADA_VERSAO), Lic_s_(a.ALCADA_JSON), Lic_s_(a.ORIGEM)].join('|')); }
 function LicPar_pedidosDe_(oid) { return Lic_ler_(LICPAR_ABAS.PEDIDOS).filter(function (p) { return Lic_s_(p.OPORTUNIDADE_ID) === Lic_s_(oid); }); }
 function LicPar_pareceresDe_(oid) { return Lic_ler_(LICPAR_ABAS.PARECERES).filter(function (p) { return Lic_s_(p.OPORTUNIDADE_ID) === Lic_s_(oid); }); }
 function LicPar_aprovacoesDe_(oid) { return Lic_ler_(LICPAR_ABAS.APROVACOES).filter(function (p) { return Lic_s_(p.OPORTUNIDADE_ID) === Lic_s_(oid); }); }
@@ -175,15 +179,18 @@ function LicPar_cfgTela_(eu) {
   var cfg = LicPar_cfg_(), ativos = LicPar_ativos_();
   return { cfg: cfg, faixasTxt: cfg.faixas.map(function (f, i) { return LicPar_faixaTxt_(cfg, i); }), bases: LICPAR_BASES, diretoria: Lic_responsaveis_().length,
     areas: LICPAR_AREAS.map(function (a) { return { codigo: a.codigo, nome: a.nome, foco: a.foco, doCadastro: a.cadastro, lista: ((cfg.areas || {})[a.codigo] || {}).pessoas || [], candidatos: LicPar_candidatos_(a.codigo, cfg, ativos).map(function (u) { return { id: u.id, nome: u.nome }; }) }; }),
-    pessoas: ativos.map(function (u) { return { id: u.id, nome: u.nome, area: u.area, perfil: u.perfil }; }), regras: LICPAR_REGRAS };
+    pessoas: ativos.map(function (u) { return { id: u.id, nome: u.nome, area: u.area, perfil: u.perfil }; }), regras: LICPAR_REGRAS, podeMudar: LicPar_podeMudarCfg_(eu) };
 }
 /**
  * Grava as alçadas (versão nova com motivo; o que não veio fica como estava). d = { faixas: [{ ate, aprovacoes, pareceres }], base,
  * areas: { TECNICA: { pessoas: [ids] } }, motivo }. A última faixa não tem teto; os tetos crescem; aprovações de 1 até o número de
  * pessoas ativas da Diretoria (no máximo 3).
  */
+/** Revisão de e361160 (decisão do coordenador): só o Administrador (e o responsável pelo sistema) muda as alçadas. */
+function LicPar_podeMudarCfg_(eu) { return !!eu && (Lic_up_(eu.perfil) === 'ADMIN' || Lic_ehDono_(eu.login)); }
 function LicPar_cfgSalvar_(eu, d) {
   Lic_exigir_(eu, 'mudar as alçadas');
+  if (!LicPar_podeMudarCfg_(eu)) throw new Error('Não foi possível mudar as alçadas: só o Administrador muda as alçadas de decisão (quem aprova não define a própria regra). Peça ao Administrador. Nada foi alterado');
   var motivo = Lic_texto_(d.motivo, 500);
   if (motivo.length < 10) throw new Error('Escreva o motivo da mudança das alçadas (pelo menos 10 letras): ele fica no histórico com o seu nome e a data. Nada foi alterado');
   var antes = LicPar_cfg_(), novo = { base: antes.base, faixas: antes.faixas, areas: antes.areas };
@@ -229,7 +236,7 @@ function LicPar_cfgSalvar_(eu, d) {
     if (l) SGO_DATA.update(LIC_ABAS.CONFIG, l.ID, reg); else SGO_DATA.insert(LIC_ABAS.CONFIG, Object.assign({ CRIADO_EM: agora }, reg));
     var desc = function (c) { return c.faixas.map(function (f, i) { return LicPar_faixaTxt_(c, i) + ': ' + f.aprovacoes + ' aprovação(ões)' + (f.pareceres.length ? ', pareceres ' + f.pareceres.map(function (x) { return LicPar_area_(x).rotulo; }).join(', ') : ', sem parecer obrigatório'); }).join('; ') + ' · valor: ' + (LICPAR_BASES[c.base] || c.base).toLowerCase(); };
     Lic_historico_('CONFIG', 'ALCADAS', '', 'ALCADAS', eu, { de: antes.versao ? 'versão ' + antes.versao + ': ' + desc(antes) : 'padrão (um diretor basta, sem parecer obrigatório)', para: 'versão ' + versao + ': ' + desc(novo), texto: 'Motivo: ' + motivo, versao: versao, fonte: 'Tela Portais e configurações › Alçadas e pareceres' });
-    return { cfg: LicPar_cfgTela_(eu), versao: versao, texto: 'Alçadas salvas como versão ' + versao + '. Valem a partir da próxima aprovação.' };
+    return { cfg: LicPar_cfgTela_(eu), versao: versao, texto: 'Alçadas salvas como versão ' + versao + '. Valem para as oportunidades sem aprovação em andamento; as que já têm aprovação seguem a versão da primeira aprovação.' };
   });
 }
 
@@ -337,33 +344,50 @@ function LicPar_divergencias_(l, porArea, ctx) {
 
 // ------------------------------------------------------------ alçada da oportunidade
 /** Aprovações que valem: depois do último descarte (descartar e reabrir zera), íntegras, uma por pessoa. */
-function LicPar_aprovacoesValidas_(l, linhas) {
+/** Revisão de e361160: só contam as aprovações sobre a simulação ATUAL (simVersao; 0 = sem simulação). */
+function LicPar_aprovacoesValidas_(l, linhas, simVersao) {
   var corte = Lic_s_(l.DESCARTE_EM), vistos = {};
-  return (linhas || []).filter(function (a) { return Lic_up_(a.TIPO) === 'PARTICIPAR' && (!corte || Lic_s_(a.EM) > corte) && LicPar_hashAprovacao_(a) === Lic_s_(a.HASH); })
+  return (linhas || []).filter(function (a) { return Lic_up_(a.TIPO) === 'PARTICIPAR' && (!corte || Lic_s_(a.EM) > corte) && LicPar_hashAprovacao_(a) === Lic_s_(a.HASH) && (Number(a.SIMULACAO_VERSAO) || 0) === (Number(simVersao) || 0); })
     .sort(function (a, b) { return Lic_s_(a.EM) < Lic_s_(b.EM) ? -1 : 1; })
     .filter(function (a) { var k = Lic_s_(a.USUARIO_ID); if (vistos[k]) return false; vistos[k] = true; return true; })
-    .map(function (a) { return { id: Lic_s_(a.USUARIO_ID), nome: Lic_s_(a.USUARIO_NOME), em: Lic_s_(a.EM), emBr: Lic_brDiaHora_(a.EM), motivo: Lic_s_(a.MOTIVO) }; });
+    .map(function (a) { return { id: Lic_s_(a.USUARIO_ID), nome: Lic_s_(a.USUARIO_NOME), em: Lic_s_(a.EM), emBr: Lic_brDiaHora_(a.EM), motivo: Lic_s_(a.MOTIVO), origem: Lic_up_(a.ORIGEM) || 'APROVACAO', alcadaVersao: Number(a.ALCADA_VERSAO) || 0, alcadaJson: Lic_s_(a.ALCADA_JSON) }; });
 }
+/** Alçadas gravadas numa aprovação (congeladas para a oportunidade), no formato de LicPar_cfg_. null = ilegível. */
+function LicPar_cfgDaAprovacao_(ap) {
+  var v = Lic_json_(ap && ap.alcadaJson, null);
+  if (!v || !Array.isArray(v.faixas) || !v.faixas.length) return null;
+  var c = { base: LICPAR_BASES[Lic_up_(v.base)] ? Lic_up_(v.base) : 'ESTIMADO', faixas: v.faixas.map(function (f) { return { ate: f.ate === null || f.ate === undefined || f.ate === '' ? null : Number(f.ate), aprovacoes: Math.max(1, Number(f.aprovacoes) || 1), pareceres: (Array.isArray(f.pareceres) ? f.pareceres : []).map(Lic_up_).filter(LicPar_area_) }; }), areas: {} };
+  c.versao = ap.alcadaVersao; c.padrao = !ap.alcadaVersao; c.congelada = true;
+  return c;
+}
+function LicPar_cfgJson_(cfg) { return JSON.stringify({ base: cfg.base, faixas: cfg.faixas }); }
 /**
  * A alçada que vale agora: faixa, aprovações necessárias e as que já existem, pareceres obrigatórios e os que faltam, e as faltas em
  * texto ("falta o parecer Financeiro"; "falta a 2ª aprovação da Diretoria, valor acima de R$ X"). contarEu = a pessoa que está agindo
  * conta como uma aprovação (abrir a disputa direto, ou a aprovação que vai ser gravada agora).
  */
 function LicPar_alcada_(l, ctx, contarEu) {
-  var cfg = LicPar_cfg_(), vb = LicPar_valorBase_(l, cfg, ctx.sim), i = LicPar_faixaDe_(cfg, vb.valor), f = cfg.faixas[i], faixaTxt = LicPar_faixaTxt_(cfg, i);
-  var porArea = LicPar_porArea_(ctx.pareceres), aprov = LicPar_aprovacoesValidas_(l, ctx.aprovacoes);
+  var simV = ctx.sim ? Number(ctx.sim.VERSAO) || 0 : 0, aprov = LicPar_aprovacoesValidas_(l, ctx.aprovacoes, simV);
+  // revisão de e361160: com aprovação em andamento vale a versão das alçadas em que a primeira aprovação foi dada
+  var cfg = (aprov.length && LicPar_cfgDaAprovacao_(aprov[0])) || LicPar_cfg_();
+  var vb = LicPar_valorBase_(l, cfg, ctx.sim), i = LicPar_faixaDe_(cfg, vb.valor), f = cfg.faixas[i], faixaTxt = LicPar_faixaTxt_(cfg, i);
+  var porArea = LicPar_porArea_(ctx.pareceres);
   var conta = aprov.slice();
   if (contarEu && !conta.some(function (a) { return a.id === Lic_s_(contarEu.id); })) conta.push({ id: Lic_s_(contarEu.id), nome: Lic_s_(contarEu.nome), agora: true });
-  var faltamPar = f.pareceres.filter(function (c) { return !(porArea[c] && porArea[c].atual); });
+  // revisão de e361160: o parecer obrigatório só conta se foi dado sobre a simulação atual
+  var sobreAtual = function (c) { var p = porArea[c] && porArea[c].atual; return !!p && (Number((Lic_json_(p.BASE_JSON, {}) || {}).simulacaoVersao) || 0) === simV; };
+  var faltamPar = f.pareceres.filter(function (c) { return !sobreAtual(c); });
+  var antigos = faltamPar.filter(function (c) { return porArea[c] && porArea[c].atual; });
   var valorTxt = vb.valor === null ? 'sem valor informado' : LicPar_moeda_(vb.valor) + ', ' + vb.origem;
   var faltas = [];
-  if (faltamPar.length) faltas.push((faltamPar.length > 1 ? 'faltam os pareceres ' : 'falta o parecer ') + LicPar_juntar_(faltamPar.map(function (c) { return LicPar_area_(c).rotulo; })) + ' (obrigatório' + (faltamPar.length > 1 ? 's' : '') + ' na faixa ' + faixaTxt + ': ' + valorTxt + ')');
+  if (faltamPar.length) faltas.push((faltamPar.length > 1 ? 'faltam os pareceres ' : 'falta o parecer ') + LicPar_juntar_(faltamPar.map(function (c) { return LicPar_area_(c).rotulo; })) + ' (obrigatório' + (faltamPar.length > 1 ? 's' : '') + ' na faixa ' + faixaTxt + ': ' + valorTxt +
+    (antigos.length ? '; o parecer ' + LicPar_juntar_(antigos.map(function (c) { return LicPar_area_(c).rotulo; })) + ' que existe foi dado sobre outra versão da simulação; vale a versão ' + simV : '') + ')');
   var faltamAp = Math.max(0, f.aprovacoes - conta.length);
   if (faltamAp) {
     var ords = []; for (var k = conta.length + 1; k <= f.aprovacoes; k++) ords.push(LicPar_ordinal_(k));
     faltas.push((faltamAp > 1 ? 'faltam a ' + LicPar_juntar_(ords) + ' aprovações' : 'falta a ' + ords[0] + ' aprovação') + ' da Diretoria, ' + (f.ate === null && i === 0 ? 'em qualquer valor' : 'valor ' + faixaTxt) + ' (' + valorTxt + ')');
   }
-  return { cfg: cfg, versao: cfg.versao, padrao: cfg.padrao, valor: vb.valor, valorOrigem: vb.origem, faixa: i, faixaTxt: faixaTxt, necessarias: f.aprovacoes, obrigatorios: f.pareceres, aprovacoes: aprov, contadas: conta.length,
+  return { cfg: cfg, versao: cfg.versao, padrao: cfg.padrao, congelada: !!cfg.congelada, simVersao: simV, valor: vb.valor, valorOrigem: vb.origem, faixa: i, faixaTxt: faixaTxt, necessarias: f.aprovacoes, obrigatorios: f.pareceres, aprovacoes: aprov, contadas: conta.length,
     faltamPareceres: faltamPar, faltamAprovacoes: faltamAp, faltas: faltas, ok: !faltas.length, porArea: porArea };
 }
 /** Texto curto dos pareceres que valem (para o histórico da decisão). */
@@ -377,11 +401,25 @@ function LicPar_pareceresTxt_(porArea) {
  * abertura É a decisão de participar, então confere a alçada contando quem abre como uma aprovação. Decisão ou Proposta: já passou
  * pela alçada. Com o padrão (um diretor, nenhum parecer), nunca recusa. Erro interno não bloqueia (fica no registro).
  */
-function LicPar_conferirAbertura_(eu, l) {
-  if (LICPAR_SITUACOES_DECISAO.indexOf(Lic_s_(l.SITUACAO)) < 0) return;
-  var al = null;
-  try { al = LicPar_alcada_(l, LicPar_contexto_(l), eu); } catch (e) { console.error('Licitações, alçada na abertura da disputa: ' + ((e && e.message) || e)); return; }
-  if (!al.ok) throw new Error('Não foi possível abrir a disputa: a participação ainda não passou pela alçada (' + al.faltas.join('; ') + '). Peça o parecer ou a aprovação na ficha, aba Pareceres. Nada foi gravado');
+function LicPar_conferirAbertura_(eu, l, o) {
+  o = o || {};
+  var acao = o.acao || 'abrir a disputa';
+  if (LICPAR_SITUACOES_DECISAO.indexOf(Lic_s_(l.SITUACAO)) < 0) return null;
+  var ctx = null, al = null;
+  // revisão de e361160: erro no cálculo da alçada RECUSA (o controle não abre sem conferir)
+  try { ctx = LicPar_contexto_(l); al = LicPar_alcada_(l, ctx, eu); }
+  catch (e) { throw new Error('Não foi possível ' + acao + ': a alçada não pôde ser conferida agora (' + Lic_s_(e && e.message).replace(/[.\s]+$/, '') + '). Tente de novo em instantes; se continuar, avise o Administrador. Nada foi gravado'); }
+  if (!al.ok) throw new Error('Não foi possível ' + acao + ': a participação ainda não passou pela alçada (' + al.faltas.join('; ') + '). Peça o parecer ou a aprovação na ficha, aba Pareceres. Nada foi gravado');
+  return { al: al, ctx: ctx, origem: o.origem || 'DISPUTA' };
+}
+/**
+ * Revisão de e361160: quem abre a disputa (ou registra o contrato) direto do Radar ou de Em análise grava a aprovação dele (sob a trava
+ * de quem chama, logo antes de mudar a situação). tok = o que LicPar_conferirAbertura_ devolveu (null = já tinha passado pela alçada).
+ */
+function LicPar_gravarAbertura_(eu, l, tok, motivo) {
+  if (!tok) return null;
+  if (tok.al.aprovacoes.some(function (a) { return a.id === Lic_s_(eu.id); })) return null;
+  return LicPar_gravarAprovacao_(eu, l, tok.al, tok.ctx, Lic_texto_(motivo, 1000), tok.origem, Lic_agora_());
 }
 
 // ------------------------------------------------------------ prazo do pedido
@@ -592,10 +630,12 @@ function LicPar_tela_(eu, d) {
   var p = LicPar_pedidoDaPessoa_(eu, d.pedidoId), l = Lic_acharOp_(p.OPORTUNIDADE_ID), ctx = LicPar_contexto_(l), gestao = !!eu.gestao;
   var an = ctx.analise, crit = Lic_json_(an && an.CRITERIOS_JSON, {}) || {};
   var nota = l.NOTA === '' || l.NOTA === null || l.NOTA === undefined || !isFinite(Number(l.NOTA)) ? null : Number(l.NOTA);
-  var s = ctx.simResumo, preco = null;
-  if (s) {
-    preco = { versao: s.versao, em: s.em, totalProposta: s.totalProposta, totalEdital: s.totalEdital, acimaDoPiso: s.acimaDoPiso, abaixoPiso: s.abaixoPiso, pendencias: s.pendencias };
-    if (gestao) { preco.totalPiso = s.totalPiso; preco.totalCusto = s.totalCusto; preco.margemPct = s.margemPct; }
+  // revisão de e361160: o preço por área. Técnica e Comercial não veem preço nenhum; Licitações vê o preço da proposta; Financeira (e a
+  // gestão) vê custo, piso, margem e o preço da simulação
+  var s = ctx.simResumo, preco = null, areaP = Lic_up_(p.AREA), nivelPreco = gestao || areaP === 'FINANCEIRA' ? 'COMPLETO' : areaP === 'LICITACOES' ? 'PROPOSTA' : 'NENHUM';
+  if (s && nivelPreco !== 'NENHUM') {
+    preco = { versao: s.versao, em: s.em, totalProposta: s.totalProposta, totalEdital: s.totalEdital, pendencias: s.pendencias };
+    if (nivelPreco === 'COMPLETO') { preco.acimaDoPiso = s.acimaDoPiso; preco.abaixoPiso = s.abaixoPiso; preco.totalPiso = s.totalPiso; preco.totalCusto = s.totalCusto; preco.margemPct = s.margemPct; }
   }
   var porArea = LicPar_porArea_(ctx.pareceres), ar = LicPar_area_(p.AREA), atual = porArea[ar.codigo] && porArea[ar.codigo].atual;
   return {
@@ -606,8 +646,8 @@ function LicPar_tela_(eu, d) {
     nota: { nota: nota, classe: Lic_s_(l.NOTA_CLASSE), classeNome: (typeof LIC_CLASSES !== 'undefined' && LIC_CLASSES[Lic_s_(l.NOTA_CLASSE)]) || Lic_s_(l.NOTA_CLASSE), versao: an ? Number(an.VERSAO) || 0 : 0,
       resumo: an ? Lic_texto_(an.RESUMO, 2000) : '', travasAConfirmar: Number(l.TRAVAS_A_CONFIRMAR) || 0, trava: Lic_s_(l.NOTA_TRAVA),
       // a "margem" sai sem o texto do cálculo para quem não é da gestão (o texto cita a sobra e o piso)
-      criterios: Object.keys(crit).map(function (k) { var c = crit[k] || {}; return { codigo: k, nome: (typeof LIC_ALTA_CRITERIOS_NOMES !== 'undefined' && LIC_ALTA_CRITERIOS_NOMES[k]) || k, pontos: Number(c.pontos), peso: Number(c.peso), como: k === 'margem' && !gestao ? '' : Lic_texto_(c.como, 300) }; }) },
-    leitura: LicPar_leitura_(l), preco: preco, habilitacao: ctx.habilitacao,
+      criterios: Object.keys(crit).map(function (k) { var c = crit[k] || {}; return { codigo: k, nome: (typeof LIC_ALTA_CRITERIOS_NOMES !== 'undefined' && LIC_ALTA_CRITERIOS_NOMES[k]) || k, pontos: Number(c.pontos), peso: Number(c.peso), como: k === 'margem' && nivelPreco !== 'COMPLETO' ? '' : Lic_texto_(c.como, 300) }; }) },
+    leitura: LicPar_leitura_(l), preco: preco, nivelPreco: nivelPreco, temSimulacao: !!s, habilitacao: ctx.habilitacao,
     atual: atual ? LicPar_parecerTela_(atual) : null, posicoes: LICPAR_POSICOES
   };
 }
@@ -650,6 +690,54 @@ function LicPar_registrar_(eu, d) {
 }
 
 // ------------------------------------------------------------ aba Pareceres da ficha (Diretoria) e a aprovação por alçada
+/** Grava UMA aprovação (sob a trava de quem chama): valor, faixa, simulação aprovada, alçadas em vigor (congeladas), pareceres e divergências. */
+function LicPar_gravarAprovacao_(eu, l, al, ctx, motivo, origem, agora) {
+  var div = LicPar_divergencias_(l, al.porArea, ctx);
+  var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), TIPO: 'PARTICIPAR', USUARIO_ID: eu.id, USUARIO_NOME: eu.nome, MOTIVO: motivo, VALOR_BASE: al.valor === null ? '' : al.valor, VALOR_ORIGEM: al.valorOrigem,
+    FAIXA: al.faixaTxt, APROVACOES_NECESSARIAS: al.necessarias, ALCADA_VERSAO: al.versao || 0, PARECERES_JSON: JSON.stringify(LICPAR_AREAS.filter(function (a) { return al.porArea[a.codigo] && al.porArea[a.codigo].atual; }).map(function (a) { var p = al.porArea[a.codigo].atual; return { area: a.codigo, versao: Number(p.VERSAO) || 1, posicao: Lic_up_(p.POSICAO), por: Lic_s_(p.USUARIO_NOME), hash: Lic_s_(p.HASH) }; })),
+    DIVERGENCIAS_JSON: JSON.stringify(div.map(function (x) { return { codigo: x.codigo, area: x.area, texto: x.texto }; })), EM: agora,
+    SIMULACAO_VERSAO: al.simVersao || 0, ALCADA_JSON: LicPar_cfgJson_(al.cfg), ORIGEM: origem || 'APROVACAO' };
+  reg.HASH = LicPar_hashAprovacao_(reg);
+  var ins = SGO_DATA.insert(LICPAR_ABAS.APROVACOES, reg); reg.ID = Lic_s_(ins && ins.ID);
+  if (origem && origem !== 'APROVACAO') Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'APROVACAO_REGISTRADA', eu, { para: 'aprovação de ' + eu.nome, texto: 'Aprovação da participação por ' + eu.nome + ' ao ' + (origem === 'CONTRATO' ? 'registrar o contrato' : 'abrir a disputa') + ' direto de "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (faixa ' + al.faixaTxt + ', simulação versão ' + (al.simVersao || 0) + ', alçadas ' + (al.versao ? 'versão ' + al.versao : 'padrão') + '). Motivo: ' + motivo, versao: LICPAR_REGRAS, fonte: origem === 'CONTRATO' ? 'Contratos' : 'Central de disputas', hash: reg.HASH });
+  return reg;
+}
+/**
+ * Revisão de e361160 (ALTA 1): a decisão tomada (participação aprovada, descarte, disputa aberta, contrato registrado) fecha os pedidos de
+ * parecer abertos da oportunidade: o pedido fica CANCELADO com o motivo, os avisos que não saíram são cancelados e a atividade de cada um é
+ * cancelada pela própria função de Minhas atividades (com a sessão de quem decidiu). Reabrir não traz o pedido de volta: a Diretoria pede
+ * de novo. Fora da trava (chama Minhas atividades). Nunca lança: devolve { cancelados, erros }.
+ */
+function LicPar_fecharPedidosDaOp_(eu, oid, motivo) {
+  var out = { cancelados: 0, erros: [] }, fechados = [];
+  try {
+    fechados = Lic_comTrava_(function () {
+      var agora = Lic_agora_(), lista = [];
+      LicPar_pedidosDe_(oid).filter(LicPar_aberto_).forEach(function (p) {
+        SGO_DATA.update(LICPAR_ABAS.PEDIDOS, p.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_POR_NOME: Lic_s_(eu && eu.nome) || 'Sistema', CANCELADO_MOTIVO: Lic_texto_(motivo, 1000), ATUALIZADO_EM: agora });
+        LicPar_fecharAlertas_(p.ID, 'Pedido de parecer encerrado: ' + motivo, null, agora);
+        Lic_historico_('OPORTUNIDADE', p.OPORTUNIDADE_ID, p.CODIGO, 'PARECER_PEDIDO_CANCELADO', eu, { de: 'pedido aberto para ' + Lic_s_(p.USUARIO_NOME), para: 'cancelado', texto: 'Pedido de parecer ' + (LicPar_area_(p.AREA) || {}).rotulo + ' encerrado pela decisão: ' + motivo + '. Se a oportunidade for reaberta, a Diretoria pede de novo.', versao: LICPAR_REGRAS, fonte: LICPAR_FONTE, hash: Lic_s_(p.HASH) });
+        lista.push(p);
+      });
+      return lista;
+    });
+  } catch (e) { out.erros.push(Lic_s_(e && e.message)); return out; }
+  out.cancelados = fechados.length;
+  fechados.forEach(function (p) {
+    if (!Lic_s_(p.ATIVIDADE_ID)) return;
+    if (typeof Atividades_apiMudarSituacao !== 'function' || !eu || !eu.sessao) { out.erros.push(Lic_s_(p.USUARIO_NOME) + ': Minhas atividades não está disponível agora'); return; }
+    try {
+      var r = Atividades_apiMudarSituacao(eu.sessao, { id: Lic_s_(p.ATIVIDADE_ID), situacao: 'Cancelada', motivo: Lic_texto_('Pedido de parecer encerrado pela decisão da Diretoria: ' + motivo, 1500) });
+      if (r && r.ok) SGO_DATA.update(LICPAR_ABAS.PEDIDOS, p.ID, { ATIVIDADE_SITUACAO: 'Cancelada' }); else out.erros.push(Lic_s_(p.USUARIO_NOME) + ': ' + Lic_s_(r && r.message));
+    } catch (e) { out.erros.push(Lic_s_(p.USUARIO_NOME) + ': ' + Lic_s_(e && e.message)); }
+  });
+  return out;
+}
+/** Texto da resposta sobre os pedidos fechados pela decisão ('' = nenhum). */
+function LicPar_fechadosTxt_(x) {
+  if (!x || (!x.cancelados && !x.erros.length)) return '';
+  return (x.cancelados ? ' ' + x.cancelados + ' pedido(s) de parecer aberto(s) foram cancelados, com as atividades.' : '') + (x.erros.length ? ' Não foi possível cancelar em Minhas atividades (cancele lá): ' + x.erros.join('; ') + '.' : '');
+}
 function LicPar_ficha_(eu, d) {
   Lic_exigir_(eu, 'abrir os pareceres');
   var l = Lic_acharOp_(d.id), ctx = LicPar_contexto_(l), al = LicPar_alcada_(l, ctx, eu), porArea = al.porArea, cfg = al.cfg, ativos = LicPar_ativos_(), agoraMs = Date.now();
@@ -666,7 +754,7 @@ function LicPar_ficha_(eu, d) {
     pedidos: pedidos.map(function (p) { return LicPar_pedidoTela_(p, agoraMs); }),
     consolidacao: { divergencias: LicPar_divergencias_(l, porArea, ctx), pareceres: LicPar_pareceresTxt_(porArea), sim: ctx.simResumo ? { versao: ctx.simResumo.versao, acimaDoPiso: ctx.simResumo.acimaDoPiso, abaixoPiso: ctx.simResumo.abaixoPiso } : null,
       capacidade: ctx.capacidade, nota: l.NOTA === '' || l.NOTA === undefined ? null : Number(l.NOTA), fonte: 'Divergências calculadas pelo sistema (regras ' + LICPAR_REGRAS + '), sem IA: pareceres que valem × análise, simulação de preço e habilitação.' },
-    alcada: { versao: al.versao, padrao: al.padrao, valor: al.valor, valorOrigem: al.valorOrigem, faixaTxt: al.faixaTxt, necessarias: al.necessarias, obrigatorios: al.obrigatorios.map(function (c) { return LicPar_area_(c).nome; }),
+    alcada: { versao: al.versao, padrao: al.padrao, congelada: al.congelada, simVersao: al.simVersao, valor: al.valor, valorOrigem: al.valorOrigem, faixaTxt: al.faixaTxt, necessarias: al.necessarias, obrigatorios: al.obrigatorios.map(function (c) { return LicPar_area_(c).nome; }),
       aprovacoes: al.aprovacoes, faltas: al.faltas, ok: al.ok, base: LICPAR_BASES[cfg.base] },
     temSimulacao: !!ctx.sim, prazoPadrao: pz, podeAprovar: antes && !euJa, euJaAprovou: euJa, motivoMin: LICPAR_MOTIVO_MIN, regras: LICPAR_REGRAS
   };
@@ -691,13 +779,7 @@ function LicPar_aprovar_(eu, d) {
     var ja = al.aprovacoes.filter(function (a) { return a.id === eu.id; })[0];
     if (ja && al.aprovacoes.length < al.necessarias) throw new Error('Você já aprovou em ' + ja.emBr + ': ' + al.faltas.join('; ') + ', de outra pessoa da Diretoria. Nada foi alterado');
     var div = LicPar_divergencias_(l, al.porArea, ctx);
-    if (!ja) {
-      var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), TIPO: 'PARTICIPAR', USUARIO_ID: eu.id, USUARIO_NOME: eu.nome, MOTIVO: motivo, VALOR_BASE: al.valor === null ? '' : al.valor, VALOR_ORIGEM: al.valorOrigem,
-        FAIXA: al.faixaTxt, APROVACOES_NECESSARIAS: al.necessarias, ALCADA_VERSAO: al.versao, PARECERES_JSON: JSON.stringify(LICPAR_AREAS.filter(function (a) { return al.porArea[a.codigo] && al.porArea[a.codigo].atual; }).map(function (a) { var p = al.porArea[a.codigo].atual; return { area: a.codigo, versao: Number(p.VERSAO) || 1, posicao: Lic_up_(p.POSICAO), por: Lic_s_(p.USUARIO_NOME), hash: Lic_s_(p.HASH) }; })),
-        DIVERGENCIAS_JSON: JSON.stringify(div.map(function (x) { return { codigo: x.codigo, area: x.area, texto: x.texto }; })), EM: agora };
-      reg.HASH = LicPar_hashAprovacao_(reg);
-      SGO_DATA.insert(LICPAR_ABAS.APROVACOES, reg);
-    }
+    if (!ja) LicPar_gravarAprovacao_(eu, l, al, ctx, motivo, 'APROVACAO', agora);
     var nomes = al.aprovacoes.map(function (a) { return a.nome; }).concat(ja ? [] : [eu.nome]), conta = nomes.length;
     var txtBase = 'faixa ' + al.faixaTxt + ' (' + (al.valor === null ? 'sem valor' : LicPar_moeda_(al.valor) + ', ' + al.valorOrigem) + ', alçadas ' + (al.versao ? 'versão ' + al.versao : 'padrão') + '); pareceres: ' + LicPar_pareceresTxt_(al.porArea) + (div.length ? '; ' + div.length + ' divergência(s) apontada(s) pelo sistema' : '; nenhuma divergência apontada');
     if (conta < al.necessarias) {
@@ -711,8 +793,9 @@ function LicPar_aprovar_(eu, d) {
   });
   if (r.transicao) {
     Lic_aposSituacao_(d.id, r);
-    // os pedidos ainda abertos deixam de valer (a decisão foi tomada): saem da tela da pessoa; as atividades ficam para ela concluir ou a Diretoria cancelar
-    return { aprovado: true, transicao: true, situacao: 'DECISAO', texto: 'Participação aprovada (' + r.conta + ' de ' + r.necessarias + '): a licitação foi para Decisão (participar). Próximo passo: monte e emita a proposta (aba Proposta) e abra a disputa (aba Disputa).' + (r.divergencias ? ' Atenção: ' + r.divergencias + ' divergência(s) entre os pareceres e os dados ficaram no histórico.' : '') };
+    // revisão de e361160: a decisão foi tomada: os pedidos ainda abertos são cancelados, com as atividades
+    var fx = LicPar_fecharPedidosDaOp_(eu, d.id, 'participação aprovada pela alçada');
+    return { aprovado: true, transicao: true, situacao: 'DECISAO', pedidosCancelados: fx.cancelados, texto: 'Participação aprovada (' + r.conta + ' de ' + r.necessarias + '): a licitação foi para Decisão (participar). Próximo passo: monte e emita a proposta (aba Proposta) e abra a disputa (aba Disputa).' + (r.divergencias ? ' Atenção: ' + r.divergencias + ' divergência(s) entre os pareceres e os dados ficaram no histórico.' : '') + LicPar_fechadosTxt_(fx) };
   }
   return { aprovado: true, transicao: false, faltas: r.faltas, texto: 'Sua aprovação ficou registrada (' + r.conta + ' de ' + r.necessarias + '). A passagem para Decisão (participar) foi recusada: ' + r.faltas.join('; ') + '.' };
 }
@@ -793,7 +876,7 @@ var LICPAR_OPS = {
 };
 /** Só "meus", "tela" e "registrar" passam sem a gestão (cada um confere o pedido da pessoa); o resto exige Diretoria ou Administrador. */
 function LicPar_acao_(eu, d) {
-  var op = Lic_s_(d && d.op), fn = LICPAR_OPS[op];
+  var op = Lic_s_(d && d.op), fn = Object.prototype.hasOwnProperty.call(LICPAR_OPS, op) ? LICPAR_OPS[op] : null;
   if (!fn) throw new Error('Não foi possível: operação de pareceres desconhecida (' + op + '). Atualize a página (F5) e tente de novo');
   if (['meus', 'tela', 'registrar'].indexOf(op) < 0) Lic_exigir_(eu, 'usar os pareceres e as alçadas');
   if (eu.gestao) LicPar_garantirAbas_();

@@ -70,7 +70,8 @@
     h += '<div class="cm-caixa"><h3>Decisão pela alçada</h3>' + LicPa_dl_([
       ["Valor que decide a faixa", al.valor === null || al.valor === undefined ? "sem valor" : Lic_brlHtml_(al.valor)], ["De onde vem", Lic_esc_(al.valorOrigem || "")],
       ["Faixa", Lic_esc_(al.faixaTxt || "")], ["Aprovações da Diretoria", Lic_esc_((al.aprovacoes || []).length + " de " + (al.necessarias || 1))],
-      ["Pareceres obrigatórios", Lic_esc_((al.obrigatorios || []).length ? al.obrigatorios.join(", ") : "nenhum")], ["Regras", Lic_esc_(al.padrao ? "padrão (um diretor basta)" : "alçadas versão " + al.versao)]]);
+      ["Pareceres obrigatórios", Lic_esc_((al.obrigatorios || []).length ? al.obrigatorios.join(", ") : "nenhum")], ["Regras", Lic_esc_((al.padrao ? "padrão (um diretor basta)" : "alçadas versão " + al.versao) + (al.congelada ? ", a da primeira aprovação" : ""))], ["Simulação aprovada", Lic_esc_(al.simVersao ? "versão " + al.simVersao : "nenhuma")]]);
+    if (al.congelada) h += '<p class="cm-ajuda-campo">Com aprovação em andamento, vale a versão das alçadas da primeira aprovação. Só contam as aprovações e os pareceres obrigatórios sobre a simulação atual: simulação nova recomeça a contagem.</p>';
     if ((al.aprovacoes || []).length) h += '<ul class="lpa-lista">' + al.aprovacoes.map(function (a) { return "<li><b>" + Lic_esc_(a.nome) + "</b> aprovou em " + Lic_esc_(a.emBr) + ": " + Lic_esc_(a.motivo) + "</li>"; }).join("") + "</ul>";
     if (t.op.situacao === "DECISAO") h += Lic_faixa_("Participação aprovada: a licitação está em Decisão. Próximo passo: proposta (aba Proposta) e disputa (aba Disputa). Para desistir, descarte com o motivo.", "ok");
     else if (!t.op.antesDaDecisao) h += Lic_faixa_("A oportunidade está \"" + t.op.situacaoNome + "\": a decisão pela alçada vale só no Radar e Em análise.", "aviso");
@@ -211,10 +212,11 @@
     var le = t.leitura;
     h += '<div class="cm-caixa"><h3>Leitura do edital</h3>' + (!le ? '<p class="cm-vazio">Leitura do edital indisponível neste ambiente.</p>' : le.erro ? Lic_faixa_(le.erro, "aviso") : !(le.itens || []).length ? '<p class="cm-vazio">Sem leitura do edital concluída ainda.</p>' :
       '<p class="cm-meta">Versão ' + Lic_esc_(le.versao) + " · " + Lic_esc_(le.total) + " item(ns)" + (le.total > le.itens.length ? " (mostrando " + le.itens.length + ")" : "") + '</p><ul class="lpa-lista">' + le.itens.map(function (x) { return "<li><b>" + Lic_esc_(x.tema) + ":</b> " + Lic_esc_(x.trecho) + (x.fonte ? ' <span class="cm-meta">(' + Lic_esc_(x.fonte) + ")</span>" : "") + "</li>"; }).join("") + "</ul>") + "</div>";
-    var pr = t.preco;
-    h += '<div class="cm-caixa"><h3>Preço</h3>' + (!pr ? '<p class="cm-vazio">Sem simulação de preço salva ainda.</p>' : LicPa_dl_([["Simulação", Lic_esc_("versão " + pr.versao)], ["Total da proposta", Lic_brlHtml_(pr.totalProposta)], ["Total pelo preço do edital", Lic_brlHtml_(pr.totalEdital)],
-      ["Piso da Diretoria", pr.acimaDoPiso ? LicPa_selo_("verde", "respeitado") : LicPa_selo_("vermelho", pr.abaixoPiso ? pr.abaixoPiso + " item(ns) abaixo" : "abaixo")]].concat(t.gestao && pr.totalPiso !== undefined ? [["Piso (gestão)", Lic_brlHtml_(pr.totalPiso)], ["Custo (gestão)", Lic_brlHtml_(pr.totalCusto)]] : [])) +
-      (t.gestao ? "" : '<p class="cm-ajuda-campo">Custo, piso e margem são da Diretoria: aqui aparece só se o preço respeita o piso.</p>')) + "</div>";
+    // revisão de e361160: o preço por área (Técnica e Comercial: nenhum; Licitações: o preço da proposta; Financeira e gestão: tudo)
+    var pr = t.preco, np = t.nivelPreco || "NENHUM";
+    h += '<div class="cm-caixa"><h3>Preço</h3>' + (np === "NENHUM" ? '<p class="cm-txt">O preço não faz parte do parecer da sua área: custo, piso e preço da proposta são da Diretoria, da área Financeira e da área de Licitações.</p>' : !pr ? '<p class="cm-vazio">Sem simulação de preço salva ainda.</p>' :
+      LicPa_dl_([["Simulação", Lic_esc_("versão " + pr.versao)], ["Total da proposta", Lic_brlHtml_(pr.totalProposta)], ["Total pelo preço do edital", Lic_brlHtml_(pr.totalEdital)]].concat(np === "COMPLETO" ? [["Piso da Diretoria", pr.acimaDoPiso ? LicPa_selo_("verde", "respeitado") : LicPa_selo_("vermelho", pr.abaixoPiso ? pr.abaixoPiso + " item(ns) abaixo" : "abaixo")], ["Piso", Lic_brlHtml_(pr.totalPiso)], ["Custo", Lic_brlHtml_(pr.totalCusto)], ["Margem da proposta", Lic_esc_(pr.margemPct === null || pr.margemPct === undefined ? "não calculada" : Lic_num_(pr.margemPct) + "%")]] : [])) +
+      (np === "PROPOSTA" ? '<p class="cm-ajuda-campo">Custo, piso e margem são da Diretoria e da área Financeira: aqui aparece o preço da proposta.</p>' : "")) + "</div>";
     var hb = t.habilitacao;
     h += '<div class="cm-caixa"><h3>Habilitação</h3>' + (!hb ? '<p class="cm-vazio">Cruzamento da habilitação indisponível neste ambiente.</p>' : hb.erro ? Lic_faixa_(hb.erro, "aviso") : !(hb.itens || []).length ? '<p class="cm-vazio">Nenhuma exigência de habilitação lida ainda.</p>' :
       '<p class="cm-meta">' + Lic_esc_(hb.contagens.total + " exigência(s), " + hb.contagens.pendencias + " pendente(s)") + '</p><ul class="lpa-lista">' + hb.itens.map(function (x) { return "<li>" + LicPa_selo_(x.cor || "cinza", x.situacaoNome) + " " + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul>") + "</div>";
@@ -269,7 +271,7 @@
         }).join("") + "</div></details>";
       }).join("") + "</div>";
     h += '<div class="cm-caixa"><div class="lpa-campo"><label for="lpaMotCfg">Motivo da mudança (obrigatório)</label><textarea id="lpaMotCfg" rows="2" maxlength="500" placeholder="Ex.: decisão do dono: acima de R$ 500 mil, duas aprovações e o parecer Financeiro"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras. Cada gravação é uma versão nova, no histórico.</p></div>' +
-      '<div id="lpaMsgCfg" aria-live="assertive"></div><div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-salvar>Salvar versão nova</button></div></div>';
+      '<div id="lpaMsgCfg" aria-live="assertive"></div>' + (r.podeMudar ? '<div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-salvar>Salvar versão nova</button></div>' : Lic_faixa_("Só o Administrador muda as alçadas de decisão. Você vê a regra em vigor; para mudar, peça ao Administrador.", "aviso")) + "</div>";
     return h;
   }
   function LicPa_lerFaixas_(corpo, n) {

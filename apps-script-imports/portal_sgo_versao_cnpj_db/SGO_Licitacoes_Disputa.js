@@ -508,7 +508,7 @@ function LicD_abrir_(eu, d) {
     if (LicD_disputasDe_(l.ID).length) throw new Error('Não foi possível abrir: esta licitação já tem disputa. Atualize a aba Disputa. Nada foi gravado');
     if (Lic_s_(l.SITUACAO) === 'DESCARTADA') throw new Error('Não foi possível abrir: a oportunidade está descartada. Reabra antes (com o motivo). Nada foi gravado');
     // 03/11/2026 (alçadas, SGO_Licitacoes_Pareceres.js): abrir direto do Radar ou de Em análise é a decisão de participar; quem abre conta como uma aprovação
-    if (typeof LicPar_conferirAbertura_ === 'function') LicPar_conferirAbertura_(eu, l);
+    var tokAlcada = typeof LicPar_conferirAbertura_ === 'function' ? LicPar_conferirAbertura_(eu, l, { acao: 'abrir a disputa', origem: 'DISPUTA' }) : null;
     var f = LicD_fontes_(l);
     if (f.bloqueios.length) throw new Error('Não foi possível abrir a disputa: ' + f.bloqueios.join(' ') + ' Nada foi gravado');
     if (!sessaoIso) { var s = LicD_sessaoAgenda_(l); if (s) { sessaoIso = s.iso; sessaoFonte = s.fonte; } }
@@ -523,11 +523,15 @@ function LicD_abrir_(eu, d) {
     var de = Lic_s_(l.SITUACAO), txtItens = f.itens.map(function (i) { return 'item ' + i.item + ' ' + LicD_moeda_(i.valorInicial) + ' (piso ' + LicD_moeda_(i.pisoSimulacao) + ')'; }).join('; ');
     var texto = 'Disputa aberta no modo assistido (o SGO+ não envia lance nem acessa o portal). Proposta ' + f.proposta.numero + ' (SHA-256 ' + f.proposta.sha256.slice(0, 16) + '…), simulação versão ' + f.simulacao.versao +
       '. Itens: ' + Lic_texto_(txtItens, 2000) + '. Intervalo mínimo: ' + LicD_intervaloTxt_({ tipo: ivTipo, valor: ivValor }) + ' (' + ivFonte + '). Sessão: ' + (sessaoIso ? Lic_brDiaHora_(sessaoIso) + ' (' + sessaoFonte + ')' : 'a informar') + '. Motivo: ' + motivo;
+    // revisão de e361160: quem abre direto do Radar ou de Em análise grava a aprovação dele (conta na alçada)
+    if (typeof LicPar_gravarAbertura_ === 'function') LicPar_gravarAbertura_(eu, l, tokAlcada, 'Abriu a disputa: ' + motivo);
     var mud = Lic_mudarSituacaoSemTrava_(eu, { id: l.ID, textoHistorico: texto, fonte: 'Central de disputas' }, LICD_ABRIR_DE, 'DISPUTA', 'DISPUTA_ABERTA', {}, 'abrir a disputa');
     return { disputaId: reg.ID, de: de, hash: mud.hash, itens: f.itens.length };
   });
   Lic_aposSituacao_(d.id, r);
-  return { disputaId: r.disputaId, texto: 'Disputa aberta com ' + r.itens + ' item(ns). A licitação foi para "Disputa" no Kanban. ' + LICD_AVISO_ASSISTIDO };
+  // revisão de e361160: a decisão foi tomada: pedidos de parecer abertos são cancelados, com as atividades
+  var fx = typeof LicPar_fecharPedidosDaOp_ === 'function' ? LicPar_fecharPedidosDaOp_(eu, d.id, 'disputa aberta pela Diretoria') : null;
+  return { disputaId: r.disputaId, texto: 'Disputa aberta com ' + r.itens + ' item(ns). A licitação foi para "Disputa" no Kanban. ' + LICD_AVISO_ASSISTIDO + (fx ? LicPar_fechadosTxt_(fx) : '') };
 }
 
 /** Piso do item: d = { id, item, valor, motivo, assumo }. Abaixo do custo + impostos só com assumo. */

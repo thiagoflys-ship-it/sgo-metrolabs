@@ -702,10 +702,12 @@ Pedido da missão: "Análise: Licitações (modalidade, prazos, exigências, hab
 
 ### Registrar o parecer (Licitações › Meus pareceres)
 
-- A pessoa vê só a oportunidade do pedido dela, e só enquanto o pedido está aberto e a oportunidade está no Radar ou Em análise: resumo, nota da análise com os critérios, leitura do edital (checklist), preço (total da proposta, total do edital e se o piso é respeitado) e habilitação. Custo, piso e margem só para a Diretoria e o Administrador (o texto do critério margem também sai).
+- A pessoa vê só a oportunidade do pedido dela, e só enquanto o pedido está aberto e a oportunidade está no Radar ou Em análise: resumo, nota da análise com os critérios, leitura do edital (checklist) e habilitação.
+- Preço por área (revisão de e361160): Técnica e Comercial não veem preço nenhum (nem o total da proposta, nem se o piso é respeitado); Licitações vê o preço da proposta (total da proposta e total pelo preço do edital); Financeira vê custo, piso, margem e o preço da simulação, como a Diretoria e o Administrador. O texto do critério margem só aparece para a Financeira e a gestão.
 - Posição: favorável, com ressalva ou contrário; motivo com pelo menos 20 letras. O parecer guarda a fotografia do que a pessoa viu (nota, versão da análise, da simulação e da leitura, versão da fonte) e se foi depois do prazo.
 - O parecer não muda depois de gravado (LIC_PARECERES, uma linha por versão, com o hash). Parecer novo da mesma área é a versão seguinte, num pedido novo, e pede o que mudou; a versão anterior continua no histórico. Versão alterada fora do SGO+ (hash que não confere) não vale e aparece como divergência.
 - Quem pediu recebe o aviso PARECER_RECEBIDO (também só no expediente).
+- A decisão fecha os pedidos (revisão de e361160): aprovar a participação, descartar, abrir a disputa ou registrar o contrato cancela os pedidos de parecer ainda abertos da oportunidade, com o motivo, os avisos que não saíram e as atividades de cada um (pela função de cancelar de Minhas atividades, com o motivo). Reabrir não traz o pedido de volta: a Diretoria pede de novo.
 
 ### Consolidação e divergências (sem IA nesta etapa)
 
@@ -726,14 +728,17 @@ O quadro mostra o parecer que vale de cada área e as divergências calculadas p
 - Faixas de valor (até 6): o teto de cada uma (a última não tem teto), as aprovações distintas da Diretoria necessárias (de 1 até o número de pessoas ativas da Diretoria e do Administrador, no máximo 3) e os pareceres obrigatórios antes de participar.
 - Valor que decide a faixa: o estimado do edital (padrão), o total da proposta na simulação salva ou o maior dos dois. Sem valor nenhum (estimado sigiloso e sem simulação), vale a faixa mais alta.
 - Padrão: uma faixa, qualquer valor, uma aprovação, nenhum parecer obrigatório. Cada gravação é uma versão nova em LIC_CONFIG (chave ALCADAS), com o motivo (10 letras ou mais) e o histórico ALCADAS (de → para).
+- Só o Administrador muda as alçadas (decisão do coordenador, revisão de e361160): a Diretoria vê a regra em vigor, sem o botão de gravar.
+- A versão nova das alçadas não se aplica à oportunidade que já tem aprovação em andamento: nela vale a versão em que a primeira aprovação foi dada (gravada na própria aprovação, ALCADA_JSON). As demais seguem a versão nova.
 
 ### Aprovar a participação
 
 - Na aba Pareceres ("Aprovar a participação") ou no Kanban ("Participar" em Mover). Pede o motivo (10 letras ou mais).
 - Exige a simulação de preço salva (o preço mínimo é o piso dela) e os pareceres obrigatórios da faixa; faltando, recusa: "falta o parecer Financeiro (obrigatório na faixa acima de R$ ...)". Nada é gravado.
-- Grava a aprovação da pessoa em LIC_APROVACOES (uma por pessoa, com o valor, a faixa, os pareceres e as divergências do momento, e o hash). Faltando aprovação, a sua fica registrada e a passagem é recusada: "falta a 2ª aprovação da Diretoria, valor acima de R$ ...". A mesma pessoa não aprova duas vezes.
+- Grava a aprovação da pessoa em LIC_APROVACOES (uma por pessoa, com o valor, a faixa, a versão da simulação, as alçadas em vigor, os pareceres e as divergências do momento, e o hash).
+- Só contam as aprovações e os pareceres obrigatórios dados sobre a simulação ATUAL: salvar uma simulação nova recomeça a contagem ("o parecer Financeiro que existe foi dado sobre outra versão da simulação; vale a versão 2"). Faltando aprovação, a sua fica registrada e a passagem é recusada: "falta a 2ª aprovação da Diretoria, valor acima de R$ ...". A mesma pessoa não aprova duas vezes.
 - Completa a alçada, a oportunidade vai para Decisão (participar), com os nomes de quem aprovou, a faixa, os pareceres e as divergências no histórico (PARTICIPACAO_APROVADA). Depois: proposta (aba Proposta) e disputa (aba Disputa).
-- Abrir a disputa direto do Radar ou de Em análise (aba Disputa) confere a mesma alçada: quem abre conta como uma aprovação. No padrão, nada muda.
+- Abrir a disputa direto do Radar ou de Em análise (aba Disputa) e registrar o contrato manualmente a partir do Radar ou de Em análise conferem a mesma alçada: quem abre (ou registra) conta como uma aprovação, gravada em LIC_APROVACOES (origem DISPUTA ou CONTRATO). Erro ao conferir a alçada recusa a abertura (nada é gravado). No padrão, nada muda.
 - Descartar (rejeitar) continua com um diretor, também depois de aprovada (desistir). Descartar e reabrir zera as aprovações.
 
 ### Rastreabilidade

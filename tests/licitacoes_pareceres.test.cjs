@@ -38,7 +38,7 @@ function amb(o) {
   a.registrar = (sid, pedidoId, posicao, motivo, extra) => a.par(sid, 'registrar', Object.assign({ pedidoId, posicao, motivo: motivo || 'Conferi o edital, a equipe e os padrões disponíveis para o prazo' }, extra || {}));
   a.atvs = () => (a.tabelas.ATV_ATIVIDADES || []).filter((x) => /pedido de parecer/.test(x.DESCRICAO || ''));
   a.op = (id) => a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === id);
-  a.cfg = (faixas, extra) => a.ok(a.par('s_cha', 'cfgSalvar', Object.assign({ faixas, motivo: 'Decisão do dono para os testes das alçadas' }, extra || {})));
+  a.cfg = (faixas, extra) => a.ok(a.par('s_thi', 'cfgSalvar', Object.assign({ faixas, motivo: 'Decisão do dono para os testes das alçadas' }, extra || {})));
   return a;
 }
 
@@ -117,10 +117,9 @@ test('permissão: a pessoa vê só a oportunidade do pedido dela, só com o pedi
   // tela do pedido: resumo, nota, preço SEM custo, piso nem margem
   const t = a.ok(a.par('s_gil', 'tela', { pedidoId: r.pedido.id }));
   assert.equal(t.op.codigo, 'LIC-2026-op1'); assert.equal(t.nota.nota, 72); assert.equal(t.podeRegistrar, true);
-  assert.equal(t.preco.totalProposta, 95000); assert.equal(t.preco.acimaDoPiso, true);
-  for (const k of ['totalPiso', 'totalCusto', 'margemPct']) assert.equal(t.preco[k], undefined, k);
+  assert.equal(t.preco, null, 'Técnica não vê preço nenhum'); assert.equal(t.nivelPreco, 'NENHUM');
   assert.equal(t.nota.criterios.find((c) => c.codigo === 'margem').como, '', 'o cálculo da margem cita o piso');
-  assert.doesNotMatch(JSON.stringify(t), /52000|80000|80\.000|45\.3/, 'nenhum número de custo, piso ou margem');
+  assert.doesNotMatch(JSON.stringify(t), /52000|80000|80\.000|45\.3|95000|acimaDoPiso/, 'nenhum preço, custo, piso ou margem');
   // a Diretoria acompanhando vê o custo
   const tg = a.ok(a.par('s_cha', 'tela', { pedidoId: r.pedido.id }));
   assert.equal(tg.preco.totalPiso, 80000); assert.equal(tg.podeRegistrar, false);
@@ -132,11 +131,11 @@ test('permissão: a pessoa vê só a oportunidade do pedido dela, só com o pedi
   assert.match(a.par('s_gil', 'tela', { pedidoId: r.pedido.id }).message, /respondido.*saiu da sua tela/);
   assert.equal(a.ok(a.par('s_gil', 'meus')).abertos.length, 0);
   assert.equal(J(a.api('s_gil', 'acesso')).pareceresAbertos, 0);
-  // pedido aberto, mas a Diretoria já decidiu (descartou): fora da tela
+  // pedido aberto e a Diretoria decidiu (descartou): o pedido é cancelado e sai da tela (revisão de e361160)
   const p2 = a.pedir('FINANCEIRA', 'u_fab');
   a.ok(J(a.api('s_cha', 'descartar', { id: 'op1', motivo: 'Desistimos desta licitação agora' })));
-  assert.match(a.par('s_fab', 'tela', { pedidoId: p2.pedido.id }).message, /A Diretoria já decidiu/);
-  assert.match(a.par('s_fab', 'registrar', { pedidoId: p2.pedido.id, posicao: 'FAVORAVEL', motivo: 'Parecer depois do descarte não vale mais' }).message, /A Diretoria já decidiu/);
+  assert.match(a.par('s_fab', 'tela', { pedidoId: p2.pedido.id }).message, /cancelado \(descartada pela Diretoria/);
+  assert.match(a.par('s_fab', 'registrar', { pedidoId: p2.pedido.id, posicao: 'FAVORAVEL', motivo: 'Parecer depois do descarte não vale mais' }).message, /cancelado/);
   // cliente nunca entra
   a.sessoes.s_cli = { userId: 'u_cli', usuario: 'cli', nome: 'CLIENTE TESTE', perfil: 'CLIENTE' };
   assert.equal(a.par('s_cli', 'meus').ok, false);
@@ -235,14 +234,14 @@ test('alçada configurada: recusa com o que falta (parecer Financeiro, 2ª aprov
   const a = amb();
   a.sim('op1');
   // configuração: versão, motivo e validação
-  assert.match(a.par('s_cha', 'cfgSalvar', { faixas: [{ ate: '50.000,00', aprovacoes: 1 }, { aprovacoes: 3 }], motivo: 'Teste de três aprovações' }).message, /só há 2 pessoa\(s\) ativa\(s\) da Diretoria/);
-  assert.match(a.par('s_cha', 'cfgSalvar', { faixas: [{ ate: '50.000', aprovacoes: 1 }, { ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Tetos fora de ordem' }).message, /têm de crescer/);
-  assert.match(a.par('s_cha', 'cfgSalvar', { faixas: [{ aprovacoes: 1 }], motivo: 'curto' }).message, /pelo menos 10 letras/);
+  assert.match(a.par('s_thi', 'cfgSalvar', { faixas: [{ ate: '50.000,00', aprovacoes: 1 }, { aprovacoes: 3 }], motivo: 'Teste de três aprovações' }).message, /só há 2 pessoa\(s\) ativa\(s\) da Diretoria/);
+  assert.match(a.par('s_thi', 'cfgSalvar', { faixas: [{ ate: '50.000', aprovacoes: 1 }, { ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Tetos fora de ordem' }).message, /têm de crescer/);
+  assert.match(a.par('s_thi', 'cfgSalvar', { faixas: [{ aprovacoes: 1 }], motivo: 'curto' }).message, /pelo menos 10 letras/);
   const c = a.cfg([{ ate: '50.000', aprovacoes: 1, pareceres: [] }, { aprovacoes: 2, pareceres: ['FINANCEIRA'] }]);
   assert.equal(c.versao, 1);
   assert.deepEqual(J(a.ctx.LicPar_cfg_().faixas), [{ ate: 50000, aprovacoes: 1, pareceres: [] }, { ate: null, aprovacoes: 2, pareceres: ['FINANCEIRA'] }]);
   assert.ok(a.tabelas.LIC_HISTORICO.some((h) => h.TIPO === 'ALCADAS' && /acima de R\$ 50\.000,00: 2 aprovação/.test(h.PARA)));
-  assert.equal(a.par('s_cha', 'cfgSalvar', { faixas: [{ ate: 50000, aprovacoes: 1, pareceres: [] }, { aprovacoes: 2, pareceres: ['FINANCEIRA'] }], motivo: 'Mesma coisa de novo' }).semMudanca, true);
+  assert.equal(a.par('s_thi', 'cfgSalvar', { faixas: [{ ate: 50000, aprovacoes: 1, pareceres: [] }, { aprovacoes: 2, pareceres: ['FINANCEIRA'] }], motivo: 'Mesma coisa de novo' }).semMudanca, true);
   // R$ 98.765,43 está acima de R$ 50.000: falta o parecer Financeiro
   const r0 = a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Nota boa e equipe disponível' });
   assert.equal(r0.ok, false); assert.match(r0.message, /falta o parecer Financeiro \(obrigatório na faixa acima de R\$ 50\.000,00: R\$ 98\.765,43, valor estimado do edital\).*Nada foi alterado/);
@@ -293,7 +292,7 @@ test('Central de disputas: abrir direto de Em análise com a alçada padrão con
   ok(a.abrir('s_dora'));
   assert.equal(a.tabelas.LIC_OPORTUNIDADES[0].SITUACAO, 'DISPUTA', 'padrão: um diretor abre, como antes');
   const b = prep();
-  ok(b.par('s_dora', 'cfgSalvar', { faixas: [{ ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de dez mil, duas aprovações' }));
+  ok(b.par('s_admin', 'cfgSalvar', { faixas: [{ ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de dez mil, duas aprovações' }));
   const r = b.abrir('s_dora');
   assert.equal(r.ok, false); assert.match(r.message, /falta a 2ª aprovação da Diretoria, valor acima de R\$ 10\.000,00.*Nada foi gravado/);
   assert.equal(b.tabelas.LIC_OPORTUNIDADES[0].SITUACAO, 'ANALISE'); assert.equal((b.tabelas.LIC_DISPUTAS || []).length, 0);
@@ -378,13 +377,17 @@ test('telas: aba Pareceres (quadro, divergências, alçada, pedir por área), Me
   const tp = a.ok(a.par('s_fab', 'tela', { pedidoId: meus.abertos[0].id }));
   const ht = t.ctx.LicPa_htmlTela_(tp);
   for (const s of ['Resumo', 'Nota da análise', 'Leitura do edital', 'Preço', 'Habilitação', 'Registrar o parecer', 'name="lpaPos" value="CONTRARIO"']) assert.ok(ht.includes(s), s);
-  assert.match(ht, /Custo, piso e margem são da Diretoria/); assert.doesNotMatch(ht, /Piso \(gestão\)|Custo \(gestão\)/);
+  assert.equal(tp.nivelPreco, 'COMPLETO'); assert.match(ht, />Custo</); assert.match(ht, />Margem da proposta</); assert.match(ht, /Piso da Diretoria/);
+  // Técnica: o quadro do preço diz que o preço não faz parte do parecer
+  const tt = a.ok(a.par('s_cha', 'tela', { pedidoId: ped.pedido.id }));
+  assert.match(t.ctx.LicPa_htmlTela_(Object.assign({}, tt, { gestao: false, nivelPreco: 'NENHUM', preco: null })), /O preço não faz parte do parecer da sua área/);
   // a Diretoria vê todos os abertos
   assert.match(t.ctx.LicPa_htmlMeus_(a.ok(a.par('s_cha', 'meus'))), /Todos os pedidos em aberto \(Diretoria\) \(1\)/);
   // Alçadas e pareceres (Portais e configurações)
   const cfg = a.ok(a.par('s_cha', 'cfg'));
   const hc = t.ctx.LicPa_htmlCfg_(cfg);
-  assert.match(hc, /Em uso o padrão: um diretor basta/); assert.match(hc, /id="lpaBase"/); assert.match(hc, /Quem dá o parecer de cada área/); assert.match(hc, /Salvar versão nova/);
+  assert.match(hc, /Em uso o padrão: um diretor basta/); assert.match(hc, /id="lpaBase"/); assert.match(hc, /Quem dá o parecer de cada área/); assert.match(hc, /Só o Administrador muda as alçadas/); assert.doesNotMatch(hc, /data-lpa-salvar/);
+  assert.match(t.ctx.LicPa_htmlCfg_(a.ok(a.par('s_thi', 'cfg'))), /data-lpa-salvar/, 'o Administrador grava');
   // menu: quem não é da Diretoria e tem pedido aberto vê o grupo; sem pedido, não
   const m1 = tela({ perfil: 'FINANCEIRO', respostas: { acesso: { nivel: 'NENHUM', pareceresAbertos: 1 } } }); m1.ctx.Licitacoes_iniciar_();
   assert.equal(m1.els['menu-secao-licitacoes'].style.display, '');
@@ -427,4 +430,131 @@ test('integração: arquivos ligados no Index, menu, ajuda da tela, manual e bas
   for (const f of ['SGO_Licitacoes_Pareceres.js', 'JS_Licitacoes_Pareceres.html', 'SGO_Ajuda_LicitacoesPareceres.js', 'JS_Licitacoes.html', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Alertas.js', 'SGO_Licitacoes_Painel.js', 'SGO_Licitacoes_Disputa.js']) {
     assert.match(lerCru(f), /\r\n/, f + ' em CRLF'); assert.doesNotMatch(lerCru(f), /[^\r]\n/, f + ' sem LF solto');
   }
+});
+
+// ------------------------------------------------------------------ revisão de e361160 (um teste para cada ponto)
+test('revisão ALTA 1: aprovar a participação e descartar cancelam os pedidos abertos e as atividades (Minhas atividades, com o motivo); reabrir não traz o pedido de volta', () => {
+  const a = amb();
+  a.sim('op1');
+  const t = a.pedir('TECNICA', 'u_gil'), f = a.pedir('FINANCEIRA', 'u_fab');
+  const r = a.ok(a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Nota boa, piso coberto e equipe disponível' }));
+  assert.equal(r.pedidosCancelados, 2); assert.match(r.texto, /2 pedido\(s\) de parecer aberto\(s\) foram cancelados/);
+  assert.ok(a.tabelas.LIC_PARECER_PEDIDOS.every((p) => p.SITUACAO === 'CANCELADO' && /participação aprovada/.test(p.CANCELADO_MOTIVO)));
+  assert.equal(a.atvs().length, 2); assert.ok(a.atvs().every((x) => x.SITUACAO === 'Cancelada'), 'atividades canceladas pela função de Minhas atividades');
+  assert.ok((a.tabelas.ATV_HISTORICO || []).some((h) => /Pedido de parecer encerrado pela decisão/.test(h.TEXTO || '')), 'com o motivo no histórico da atividade');
+  assert.ok(a.al({ TIPO: 'PARECER_PEDIDO' }).every((x) => x.SITUACAO === 'CANCELADO'));
+  assert.match(a.par('s_gil', 'tela', { pedidoId: t.pedido.id }).message, /cancelado/);
+  // descartar e reabrir
+  const b = amb();
+  const p = b.pedir('COMERCIAL', 'u_vera');
+  b.ok(J(b.api('s_cha', 'descartar', { id: 'op1', motivo: 'O órgão exige acreditação que não temos' })));
+  assert.equal(b.tabelas.LIC_PARECER_PEDIDOS[0].SITUACAO, 'CANCELADO'); assert.equal(b.atvs()[0].SITUACAO, 'Cancelada');
+  b.ok(J(b.api('s_cha', 'reabrir', { id: 'op1', motivo: 'Errata tirou a exigência de acreditação' })));
+  assert.equal(b.tabelas.LIC_PARECER_PEDIDOS[0].SITUACAO, 'CANCELADO', 'o pedido antigo não volta');
+  assert.equal(b.ok(b.par('s_vera', 'meus')).abertos.length, 0);
+  assert.match(b.par('s_vera', 'tela', { pedidoId: p.pedido.id }).message, /cancelado/);
+  assert.ok(b.pedir('COMERCIAL', 'u_vera').pedido.id, 'a Diretoria pede de novo');
+  assert.equal(b.atvs().filter((x) => x.SITUACAO !== 'Cancelada').length, 1);
+});
+
+test('revisão ALTA 1 e MÉDIA 2: abrir a disputa e registrar o contrato manual cancelam os pedidos; o contrato manual de Em análise confere a alçada', () => {
+  const { ambienteContratos } = require('./_licitacoes_contratos_ambiente.cjs');
+  const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
+  // disputa aberta na preparação do ambiente: o pedido feito antes precisa de um ambiente sem a disputa aberta
+  const a = ambienteProposta();
+  for (const x of ['SGO_Licitacoes_Disputa.js', 'SGO_Licitacoes_Painel.js']) vm.runInContext(a.ler(x), a.ctx, { filename: x });
+  a.tabelas.LIC_OPORTUNIDADES[0].LEI = '14133';
+  a.simular('op1', [{ numero: '1', descricao: 'Calibração de termômetro digital com certificado', codigo: 'CAL-001', quantidade: 100, precoEdital: '200,00', precoProposta: '199,00', origem: 'PNCP' }], 'Simulação para a disputa');
+  ok(a.prop('s_dora', 'montar', { id: 'op1', usarIA: false }));
+  const pid = ok(a.prop('s_dora', 'tela', { id: 'op1' })).proposta.atual.id;
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: pid, motivo: 'Preços e escopo conferidos' })); ok(a.prop('s_dora', 'emitir', { id: 'op1', propostaId: pid }));
+  const ped = ok(a.ctx.Licitacoes_api('s_dora', 'pareceres', { op: 'pedir', id: 'op1', area: 'LICITACOES', usuarioId: 'u_adm' }));
+  const rd = ok(a.ctx.Licitacoes_api('s_dora', 'disputa', { op: 'abrir', id: 'op1', motivo: 'Proposta emitida e piso conferido pela Diretoria' }));
+  assert.match(rd.texto, /1 pedido\(s\) de parecer aberto\(s\) foram cancelados/);
+  assert.equal(a.tabelas.LIC_PARECER_PEDIDOS.find((x) => x.ID === ped.pedido.id).SITUACAO, 'CANCELADO');
+  assert.equal(a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === ped.atividade.id).SITUACAO, 'Cancelada');
+  // BAIXA 5: quem abriu a disputa direto de Em análise gravou a aprovação dele
+  const ap = a.tabelas.LIC_APROVACOES.find((x) => x.OPORTUNIDADE_ID === 'op1');
+  assert.equal(ap.USUARIO_ID, 'u_dir'); assert.equal(ap.ORIGEM, 'DISPUTA'); assert.equal(Number(ap.SIMULACAO_VERSAO), 1);
+  // contrato manual de op2 (Em análise): com duas aprovações acima de R$ 1.000, recusa; com a aprovação do Administrador, passa e fecha o pedido
+  const c = ambienteContratos();
+  ok(c.ctx.Licitacoes_api('s_admin', 'pareceres', { op: 'cfgSalvar', faixas: [{ ate: '1.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de mil reais, duas aprovações' }));
+  const pedC = ok(c.ctx.Licitacoes_api('s_dora', 'pareceres', { op: 'pedir', id: 'op2', area: 'LICITACOES', usuarioId: 'u_adm' }));
+  const m = () => c.ct('s_dora', 'criar', { id: 'op2', origem: 'MANUAL', motivo: 'Resultado da disputa feito fora do SGO+, no portal do órgão', fonte: 'termo de homologação publicado no PNCP em 20/11/2026',
+    campos: { numeroContrato: 'CT 45/2026', inicio: '2026-12-01', fim: '2027-05-31', itens: [{ item: '1', codigo: 'QUA-001', nome: 'Qualificação de autoclave', quantidade: '2', valorUnit: '3.200,00' }] } });
+  const r0 = m();
+  assert.equal(r0.ok, false); assert.match(r0.message, /registrar o contrato: a participação ainda não passou pela alçada \(falta a 2ª aprovação da Diretoria, valor acima de R\$ 1\.000,00/);
+  assert.equal(c.op('op2').SITUACAO, 'ANALISE'); assert.equal((c.tabelas.LIC_CONTRATOS || []).filter((x) => x.OPORTUNIDADE_ID === 'op2').length, 0);
+  c.simular('op2', [{ numero: '1', descricao: 'Qualificação de autoclave', codigo: 'QUA-001', quantidade: 2, precoEdital: '3.500,00', precoProposta: '3.200,00', origem: 'PNCP' }], 'Simulação da qualificação');
+  ok(c.ctx.Licitacoes_api('s_admin', 'pareceres', { op: 'aprovar', id: 'op2', motivo: 'Primeira aprovação do Administrador' }));
+  ok(m());
+  assert.equal(c.op('op2').SITUACAO, 'CONTRATO');
+  assert.equal(c.tabelas.LIC_PARECER_PEDIDOS.find((x) => x.ID === pedC.pedido.id).SITUACAO, 'CANCELADO');
+  assert.ok(c.tabelas.LIC_APROVACOES.some((x) => x.OPORTUNIDADE_ID === 'op2' && x.ORIGEM === 'CONTRATO' && x.USUARIO_ID === 'u_dir'));
+});
+
+test('revisão MÉDIA 3: a aprovação guarda a simulação, o valor, a faixa e as alçadas; simulação nova recomeça a contagem (aprovações e pareceres obrigatórios)', () => {
+  const a = amb();
+  a.sim('op1');
+  a.cfg([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 2, pareceres: ['FINANCEIRA'] }]);
+  a.ok(a.registrar('s_fab', a.pedir('FINANCEIRA', 'u_fab').pedido.id, 'FAVORAVEL'));
+  a.ok(a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Parecer Financeiro favorável e nota boa' }));
+  const ap = a.tabelas.LIC_APROVACOES[0];
+  assert.equal(Number(ap.SIMULACAO_VERSAO), 1); assert.equal(Number(ap.ALCADA_VERSAO), 1); assert.equal(Number(ap.VALOR_BASE), 98765.43);
+  assert.match(ap.FAIXA, /acima de R\$ 50\.000,00/); assert.deepEqual(JSON.parse(ap.ALCADA_JSON).faixas[1], { ate: null, aprovacoes: 2, pareceres: ['FINANCEIRA'] });
+  // simulação nova: a aprovação de Charles e o parecer Financeiro deixam de contar
+  a.sim('op1', { TOTAL_PROPOSTA: 97000 });
+  const al = a.ok(a.par('s_thi', 'ficha', { id: 'op1' })).alcada;
+  assert.equal(al.aprovacoes.length, 0); assert.equal(al.simVersao, 2);
+  assert.match(al.faltas.join(' '), /falta o parecer Financeiro .*foi dado sobre outra versão da simulação; vale a versão 2/);
+  assert.match(a.par('s_thi', 'aprovar', { id: 'op1', motivo: 'Aprovar sobre a simulação nova' }).message, /falta o parecer Financeiro/);
+  // parecer novo sobre a simulação 2 e duas aprovações novas
+  a.ok(a.registrar('s_fab', a.pedir('FINANCEIRA', 'u_fab').pedido.id, 'FAVORAVEL', 'Com a simulação nova o piso continua coberto em todos os itens', { motivoNovaVersao: 'Simulação refeita com o preço novo' }));
+  assert.equal(a.ok(a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Aprovação sobre a simulação versão dois' })).transicao, false);
+  assert.equal(a.ok(a.par('s_thi', 'aprovar', { id: 'op1', motivo: 'Segunda aprovação sobre a versão dois' })).transicao, true);
+  // o hash protege os campos novos
+  a.tabelas.LIC_APROVACOES[0].SIMULACAO_VERSAO = 2;
+  assert.notEqual(a.ctx.LicPar_hashAprovacao_(a.tabelas.LIC_APROVACOES[0]), a.tabelas.LIC_APROVACOES[0].HASH);
+});
+
+test('revisão MÉDIA 4: só o Administrador muda as alçadas; a versão nova não se aplica à oportunidade com aprovação em andamento', () => {
+  const a = amb();
+  a.sim('op1'); a.sim('op2');
+  const r = a.par('s_cha', 'cfgSalvar', { faixas: [{ aprovacoes: 1 }], motivo: 'Diretor tentando mudar a regra' });
+  assert.equal(r.ok, false); assert.match(r.message, /só o Administrador muda as alçadas.*Nada foi alterado/);
+  assert.equal(a.ok(a.par('s_cha', 'cfg')).podeMudar, false); assert.equal(a.ok(a.par('s_thi', 'cfg')).podeMudar, true);
+  a.cfg([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 2 }]);
+  a.ok(a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Primeira aprovação na versão um' }));
+  // versão 2: passa a exigir o parecer Financeiro
+  a.cfg([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 2, pareceres: ['FINANCEIRA'] }], { motivo: 'Dono pediu o parecer Financeiro acima de 50 mil' });
+  const f1 = a.ok(a.par('s_thi', 'ficha', { id: 'op1' })).alcada;
+  assert.equal(f1.versao, 1); assert.equal(f1.congelada, true); assert.deepEqual(f1.obrigatorios, []);
+  assert.equal(a.ok(a.par('s_thi', 'aprovar', { id: 'op1', motivo: 'Segunda aprovação, regra da versão um' })).transicao, true, 'vale a versão da primeira aprovação');
+  // a outra oportunidade, sem aprovação, já segue a versão 2
+  const f2 = a.ok(a.par('s_thi', 'ficha', { id: 'op2' })).alcada;
+  assert.equal(f2.versao, 2); assert.deepEqual(f2.obrigatorios, ['Financeira']);
+  assert.match(a.par('s_thi', 'aprovar', { id: 'op2', motivo: 'Sem o parecer Financeiro' }).message, /falta o parecer Financeiro/);
+});
+
+test('revisão BAIXA 5: preço por área (Técnica e Comercial nada, Licitações o preço da proposta, Financeira tudo); erro na alçada recusa a disputa; operação herdada recusada', () => {
+  const a = amb();
+  a.sim('op1');
+  const vis = (area, uid, sid) => { const p = a.pedir(area, uid); const t = a.ok(a.par(sid, 'tela', { pedidoId: p.pedido.id })); return t; };
+  const tc = vis('COMERCIAL', 'u_vera', 's_vera');
+  assert.equal(tc.preco, null); assert.equal(tc.nivelPreco, 'NENHUM'); assert.doesNotMatch(JSON.stringify(tc), /95000|acimaDoPiso/);
+  const tf = vis('FINANCEIRA', 'u_fab', 's_fab');
+  assert.equal(tf.nivelPreco, 'COMPLETO'); assert.equal(tf.preco.totalCusto, 52000); assert.equal(tf.preco.totalPiso, 80000); assert.equal(tf.preco.margemPct, 45.3); assert.equal(tf.preco.acimaDoPiso, true);
+  assert.match(tf.nota.criterios.find((c) => c.codigo === 'margem').como, /Sobra/);
+  // Licitações: a pessoa da área é da Diretoria; quem não é gestão e foi posta na lista da área vê só o preço da proposta
+  a.cfg([{ aprovacoes: 1 }], { areas: { LICITACOES: { pessoas: ['u_gil'] } }, motivo: 'Gil responde pela área de Licitações' });
+  const tl = vis('LICITACOES', 'u_gil', 's_gil');
+  assert.equal(tl.nivelPreco, 'PROPOSTA'); assert.equal(tl.preco.totalProposta, 95000);
+  for (const k of ['totalPiso', 'totalCusto', 'margemPct', 'acimaDoPiso', 'abaixoPiso']) assert.equal(tl.preco[k], undefined, k);
+  // erro no cálculo da alçada: a abertura da disputa é recusada
+  const orig = a.ctx.LicPar_alcada_;
+  a.ctx.LicPar_alcada_ = () => { throw new Error('planilha das alçadas ilegível'); };
+  assert.throws(() => a.ctx.LicPar_conferirAbertura_({ id: 'u_cha', nome: 'CHARLES DIRETOR TESTE' }, a.op('op1')), /abrir a disputa: a alçada não pôde ser conferida agora \(planilha das alçadas ilegível\)/);
+  a.ctx.LicPar_alcada_ = orig;
+  // operação herdada do Object não vira ação
+  for (const op of ['toString', 'constructor', 'hasOwnProperty', '__proto__']) { const x = a.par('s_cha', op, {}); assert.equal(x.ok, false, op); assert.match(x.message, /operação de pareceres desconhecida/, op); }
 });

@@ -550,6 +550,8 @@ function LicC_criar_(eu, d) {
     } else {
       var pm = LicC_previaManual_(l);
       if (!pm.pode) throw new Error('Não foi possível registrar: ' + pm.bloqueios.join(' ').replace(/[.\s]+$/, '') + '. Nada foi gravado');
+      // revisão de e361160: registro manual a partir do Radar ou de Em análise é também a decisão de participar: confere a alçada
+      var tokAlcada = typeof LicPar_conferirAbertura_ === 'function' ? LicPar_conferirAbertura_(eu, l, { acao: 'registrar o contrato', origem: 'CONTRATO' }) : null;
       dados = LicC_limpar_(campos, pm.base);
       dados.origem = { tipo: 'MANUAL', motivo: motivo, fonte: fonte };
     }
@@ -565,12 +567,15 @@ function LicC_criar_(eu, d) {
     SGO_DATA.update(LICC_ABAS.CONTRATOS, row.ID, { VERSAO_ID: row.VERSAO_ID, VERSAO_HASH: row.VERSAO_HASH, HASH: row.HASH });
     var texto = 'Contrato registrado (' + (origem === 'RESULTADO' ? 'resultado homologado' : 'registro manual; fonte: ' + fonte) + '): ' + LICC_TIPOS[dados.tipo].toLowerCase() + ' ' + dados.numeroContrato + ', vigência ' + LicC_br_(dados.inicio) + ' a ' + LicC_br_(dados.fim) +
       ', ' + dados.itens.length + ' item(ns), total ' + LicC_moeda_(dados.valorTotal) + (arq ? ', arquivo "' + arq.nome + '" (SHA-256 ' + arq.sha256 + ')' : ', sem o arquivo assinado') + '. Motivo: ' + motivo;
+    if (tokAlcada && typeof LicPar_gravarAbertura_ === 'function') LicPar_gravarAbertura_(eu, l, tokAlcada, 'Registrou o contrato manualmente: ' + motivo);
     var mud = Lic_mudarSituacaoSemTrava_(eu, { id: l.ID, textoHistorico: texto, fonte: 'Contratos' }, [sit], 'CONTRATO', 'CONTRATO_REGISTRADO', {}, 'registrar o contrato');
     var ag = LicC_agendaSincronizar_(eu, l, row, dados, LicC_ref_(row, 1, v.HASH, dados.numeroContrato), 'Contrato registrado', agora);
     return { id: row.ID, opId: Lic_s_(l.ID), numero: numero, ag: ag, hash: mud.hash, texto: texto, semArquivo: !arq };
   });
   try { if (typeof Lic_agendaAposSituacao_ === 'function') Lic_agendaAposSituacao_(r.opId); } catch (e) {}
   if (r.ag.fora.length) LicC_alertasDepois_(r.opId, r.ag, 'Contrato registrado.');
+  // revisão de e361160: pedidos de parecer ainda abertos são cancelados, com as atividades
+  if (typeof LicPar_fecharPedidosDaOp_ === 'function') LicPar_fecharPedidosDaOp_(eu, r.opId, 'contrato registrado');
   return { contratoId: r.id, numero: r.numero, texto: 'Contrato ' + r.numero + ' registrado (versão 1). A licitação foi para "Contrato" no Kanban; ' + (r.ag.criados ? r.ag.criados + ' prazo(s) do contrato entraram na agenda, com os alertas da Diretoria' : 'nenhum prazo futuro na agenda') + '.' +
     (r.semArquivo ? ' Falta anexar o contrato assinado (versão de correção com o arquivo).' : '') };
 }
